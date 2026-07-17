@@ -136,6 +136,7 @@ void UMovementDiagnosticsRecorder::Update(
     {
       world.MovementDiag.genQueuePending = sched->GetPendingQueueCount();
       world.MovementDiag.genInFlight = sched->GetGenInFlightCount();
+      world.MovementDiag.genBacklogTotal = sched->GetGenBacklogTotal();
     }
   }
   {

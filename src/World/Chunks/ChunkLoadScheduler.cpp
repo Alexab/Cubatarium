@@ -4,6 +4,7 @@
 #include "Core/Jobs/JobThreadBudget.h"
 #include "WorldGen/Core/WorldGenContentPin.h"
 #include <algorithm>
+#include <chrono>
 #include <thread>
 
 namespace cutum
@@ -137,11 +138,13 @@ void UChunkLoadScheduler::ScheduleWorker(const PendingRequest &request)
   { return Tokens.Current(coord).sequence != start_sequence; };
   populateRequest.content = CaptureWorldGenContentSnapshot();
   const int priority = request.priority;
+  const int max_height = request.settings.MaxHeight;
   Pool.Enqueue(
-      [this, populateRequest, priority]()
+      [this, populateRequest, priority, max_height]()
       {
         PendingResult pending;
         pending.priority = priority;
+        pending.maxHeight = max_height;
         pending.result = Populator.Populate(populateRequest);
         Completed.Push(std::move(pending));
       });
@@ -150,6 +153,7 @@ void UChunkLoadScheduler::ScheduleWorker(const PendingRequest &request)
 void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
                                int maxGenerationStartsPerFrame)
 {
+  LastTickApplyMs = 0.0;
   int generationStarts = 0;
   while (!Queue.empty() && generationStarts < maxGenerationStartsPerFrame)
   {
@@ -190,18 +194,24 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
       Completed.Push(std::move(pending));
       continue;
     }
+    const auto apply_t0 = std::chrono::high_resolution_clock::now();
     pending.result.buffer.ApplyTo(world);
+    LastTickApplyMs += std::chrono::duration<double, std::milli>(
+                           std::chrono::high_resolution_clock::now() - apply_t0)
+                           .count();
     States[pending.result.coord] = ChunkLoadState::Committed;
     ActiveTokens.erase(pending.result.coord);
     RequestPriorities.erase(pending.result.coord);
-    if (ColumnMeshDirty && pending.result.buffer.HasYBounds())
+    int min_y = 0;
+    int max_y = pending.maxHeight;
+    if (pending.result.buffer.HasYBounds())
     {
-      ColumnMeshDirty(pending.result.coord, pending.result.buffer.GetMinY(),
-                      pending.result.buffer.GetMaxY());
+      min_y = pending.result.buffer.GetMinY();
+      max_y = pending.result.buffer.GetMaxY();
     }
     if (MarkDirty)
     {
-      MarkDirty(pending.result.coord);
+      MarkDirty(pending.result.coord, min_y, max_y);
     }
     ++committed;
   }
@@ -242,6 +252,16 @@ int UChunkLoadScheduler::GetPendingQueueCount() const
 int UChunkLoadScheduler::GetGenInFlightCount() const
 {
   return static_cast<int>(Pool.GetActiveJobCount());
+}
+
+int UChunkLoadScheduler::GetCompletedReadyCount() const
+{
+  return static_cast<int>(Completed.Size());
+}
+
+int UChunkLoadScheduler::GetGenBacklogTotal() const
+{
+  return GetPendingQueueCount() + GetGenInFlightCount() + GetCompletedReadyCount();
 }
 
 } // namespace cutum

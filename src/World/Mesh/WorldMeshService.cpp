@@ -234,10 +234,11 @@ void UWorldMeshService::RebuildDirtyChunks(UBlockWorld &world,
 
 MeshRebuildTickStats UWorldMeshService::RebuildDirtyChunksWithStats(
     UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
-    int max_schedule_per_frame, bool force_sync)
+    int max_schedule_per_frame, bool force_sync, int max_sync_rebuild)
 {
   return Cache.RebuildDirtyChunksWithStats(world, registry, max_drain_per_frame,
-                                           max_schedule_per_frame, force_sync);
+                                           max_schedule_per_frame, force_sync,
+                                           max_sync_rebuild);
 }
 
 void UWorldMeshService::DrainAsyncMeshResults(UBlockWorld &world,
@@ -303,6 +304,16 @@ uint64_t UWorldMeshService::GetMeshDiscardedLateCount() const
 double UWorldMeshService::GetLastFlatRebuildMs() const
 {
   return Cache.GetLastFlatRebuildMs();
+}
+
+double UWorldMeshService::GetLastMeshSyncMs() const
+{
+  return Cache.GetLastMeshSyncMs();
+}
+
+double UWorldMeshService::GetLastMeshSnapshotMs() const
+{
+  return Cache.GetLastMeshSnapshotMs();
 }
 
 size_t UWorldMeshService::GetGreedyCacheSize() const

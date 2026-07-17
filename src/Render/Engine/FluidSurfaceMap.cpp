@@ -206,6 +206,49 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
     return true;
   }
 
+  // Window scroll: reuse overlapping staging and patch only new strips.
+  if (!sizeChanged && windowMoved && Valid && SizeBlocks == sizeBlocks)
+  {
+    const glm::ivec2 oldOrigin = WindowOriginBlock;
+    ScrollFluidSurfaceStagingWindow(SurfaceStaging, FluidIndexStaging,
+                                    FluidBottomStaging, SizeBlocks, oldOrigin,
+                                    originBlock, kNoSurfaceSentinel);
+    WindowOriginBlock = originBlock;
+    OriginBlockXZ = glm::vec2(static_cast<float>(originBlock.x),
+                              static_cast<float>(originBlock.y));
+    InvSizeBlocks =
+        glm::vec2(1.0f / static_cast<float>(std::max(SizeBlocks, 1)),
+                  1.0f / static_cast<float>(std::max(SizeBlocks, 1)));
+    PendingGpuGroundChunks.clear();
+
+    int processed = 0;
+    for (int gz = cz - renderDistChunks; gz <= cz + renderDistChunks; ++gz)
+    {
+      for (int gx = cx - renderDistChunks; gx <= cx + renderDistChunks; ++gx)
+      {
+        const glm::ivec3 groundChunk(gx, 0, gz);
+        if (!FluidSurfaceChunkNeedsStripPatch(groundChunk, oldOrigin, originBlock,
+                                              SizeBlocks))
+        {
+          continue;
+        }
+        const FluidSurfaceColumnSlice *slice =
+            cache.GetFluidSurfaceSlice(world, registry, groundChunk, scanHintY);
+        PatchGroundChunkStaging(SurfaceStaging, FluidIndexStaging,
+                                FluidBottomStaging, SizeBlocks, originBlock,
+                                groundChunk, slice, registry);
+        ++processed;
+      }
+    }
+    LastFrameStats.DirtyChunksProcessed = processed;
+    LastFrameStats.FullRebuild = false;
+    NeedFullGpuUpload = true;
+    LastCameraBlockXZ = glm::ivec2(cameraBlockXZ.x, cameraBlockXZ.z);
+    LastMeshRevision = cache.GetMeshRevision();
+    finish_cpu();
+    return true;
+  }
+
   LastFrameStats.FullRebuild = true;
   SizeBlocks = sizeBlocks;
   WindowOriginBlock = originBlock;

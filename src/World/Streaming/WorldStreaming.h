@@ -100,6 +100,10 @@ private:
   double FrameStreamingGenMs{0.0};
   double FrameStreamingIoMs{0.0};
   std::deque<glm::ivec3> DeferredPhysicsSeedQueue;
+  std::deque<glm::ivec3> DeferredShoreSealQueue;
+  int AdaptiveEffectiveRd{-1};
+  double PhysMsEma{0.0};
+  std::chrono::steady_clock::time_point AdaptiveRdLastAdjust{};
 };
 
 } // namespace cutum

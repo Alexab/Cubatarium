@@ -431,7 +431,7 @@ bool UChunkStreamer::ShouldKeepChunkLoaded(glm::ivec3 chunkCoord,
   const int dx = std::abs(chunkCoord.x - feetChunk.x);
   const int dz = std::abs(chunkCoord.z - feetChunk.z);
   const int horizDist = std::max(dx, dz);
-  if (horizDist <= RenderDistance + UnloadMargin)
+  if (horizDist <= KeepRenderDistance + UnloadMargin)
   {
     return true;
   }
@@ -502,7 +502,7 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
                                          const PlayerCapsule &cap)
 {
   const glm::ivec3 feetChunk = UChunkManager::WorldToChunk(feetBlockPos);
-  const int limit = RenderDistance + UnloadMargin;
+  const int limit = KeepRenderDistance + UnloadMargin;
   const int maxCy = (MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
   const int player_cy_min =
       UChunkManager::WorldToChunk(glm::ivec3(0, static_cast<int>(cap.feetY(eyePos)), 0))
@@ -607,13 +607,13 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
   const glm::ivec3 loadCenter = LoadPriorityCenter;
 
   std::vector<glm::ivec3> toLoad;
-  toLoad.reserve(static_cast<size_t>((2 * RenderDistance + 1) *
-                                     (2 * RenderDistance + 1)));
-  for (int cx = loadCenter.x - RenderDistance;
-       cx <= loadCenter.x + RenderDistance; ++cx)
+  toLoad.reserve(static_cast<size_t>((2 * VisualRenderDistance + 1) *
+                                     (2 * VisualRenderDistance + 1)));
+  for (int cx = loadCenter.x - VisualRenderDistance;
+       cx <= loadCenter.x + VisualRenderDistance; ++cx)
   {
-    for (int cz = loadCenter.z - RenderDistance;
-         cz <= loadCenter.z + RenderDistance; ++cz)
+    for (int cz = loadCenter.z - VisualRenderDistance;
+         cz <= loadCenter.z + VisualRenderDistance; ++cz)
     {
       const glm::ivec3 coord(cx, 0, cz);
       if (ProcedurallyGenerated.count(coord) &&
@@ -654,21 +654,40 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
 
 void UChunkStreamer::PrefetchAhead(glm::ivec3 feet_chunk,
                                    glm::vec3 view_forward_xz,
-                                   float movement_speed, float speed_threshold)
+                                   float movement_speed, float speed_threshold,
+                                   int *out_ops)
 {
-  if (!Enabled || !AsyncGeneration || !OnRequestAsyncChunk ||
-      movement_speed < speed_threshold)
+  int queued = 0;
+  if (!Enabled || !AsyncGeneration || !OnRequestAsyncChunk)
   {
+    if (out_ops)
+    {
+      *out_ops = 0;
+    }
+    return;
+  }
+  if (movement_speed < speed_threshold)
+  {
+    if (out_ops)
+    {
+      *out_ops = 0;
+    }
     return;
   }
   view_forward_xz.y = 0.0f;
   if (glm::length(view_forward_xz) < 0.01f)
   {
+    if (out_ops)
+    {
+      *out_ops = 0;
+    }
     return;
   }
   const glm::vec3 forward = glm::normalize(view_forward_xz);
   const glm::ivec3 feet_ground(feet_chunk.x, 0, feet_chunk.z);
-  for (int step = 1; step <= 2; ++step)
+  LoadPriorityCenter = feet_ground;
+  constexpr int kMaxMovementPrefetchSteps = 2;
+  for (int step = 1; step <= kMaxMovementPrefetchSteps; ++step)
   {
     const float ahead_blocks =
         static_cast<float>(step * CHUNK_SIZE) + static_cast<float>(CHUNK_SIZE) * 0.5f;
@@ -678,6 +697,12 @@ void UChunkStreamer::PrefetchAhead(glm::ivec3 feet_chunk,
     const int cz = feet_ground.z +
                    static_cast<int>(std::round(ahead_xz.y / static_cast<float>(CHUNK_SIZE)));
     const glm::ivec3 coord(cx, 0, cz);
+    const int dist = std::max(std::abs(coord.x - feet_ground.x),
+                              std::abs(coord.z - feet_ground.z));
+    if (dist > VisualRenderDistance)
+    {
+      continue;
+    }
     if (ProcedurallyGenerated.count(coord) &&
         IsTerrainChunkCompleteCached(coord))
     {
@@ -687,7 +712,96 @@ void UChunkStreamer::PrefetchAhead(glm::ivec3 feet_chunk,
     {
       continue;
     }
-    OnRequestAsyncChunk(coord, ChunkLoadPriorityFor(coord) - PriorityParams.ViewAheadBonus);
+    if (OnIsColumnPending && OnIsColumnPending(coord))
+    {
+      continue;
+    }
+    if (!RingPrerequisitesMet(coord))
+    {
+      continue;
+    }
+    OnRequestAsyncChunk(coord, ChunkLoadPriorityFor(coord));
+    ++queued;
+  }
+  if (out_ops)
+  {
+    *out_ops = queued;
+  }
+}
+
+void UChunkStreamer::PrefetchKeepShell(glm::ivec3 feet_chunk, int max_ops,
+                                       int *out_ops)
+{
+  int queued = 0;
+  if (!Enabled || !AsyncGeneration || !OnRequestAsyncChunk || max_ops <= 0)
+  {
+    if (out_ops)
+    {
+      *out_ops = 0;
+    }
+    return;
+  }
+
+  const glm::ivec3 feet_ground(feet_chunk.x, 0, feet_chunk.z);
+  LoadPriorityCenter = feet_ground;
+
+  std::vector<glm::ivec3> candidates;
+  candidates.reserve(static_cast<size_t>(
+      std::max(0, (2 * KeepRenderDistance + 1) * (2 * KeepRenderDistance + 1) -
+                      (2 * VisualRenderDistance + 1) *
+                          (2 * VisualRenderDistance + 1))));
+  for (int cx = feet_ground.x - KeepRenderDistance;
+       cx <= feet_ground.x + KeepRenderDistance; ++cx)
+  {
+    for (int cz = feet_ground.z - KeepRenderDistance;
+         cz <= feet_ground.z + KeepRenderDistance; ++cz)
+    {
+      const int dist = std::max(std::abs(cx - feet_ground.x),
+                                std::abs(cz - feet_ground.z));
+      if (dist <= VisualRenderDistance || dist > KeepRenderDistance)
+      {
+        continue;
+      }
+      const glm::ivec3 coord(cx, 0, cz);
+      if (ProcedurallyGenerated.count(coord) &&
+          IsTerrainChunkCompleteCached(coord))
+      {
+        continue;
+      }
+      if (OnIsChunkCommitted && OnIsChunkCommitted(coord))
+      {
+        continue;
+      }
+      if (OnIsColumnPending && OnIsColumnPending(coord))
+      {
+        continue;
+      }
+      candidates.push_back(coord);
+    }
+  }
+
+  std::sort(candidates.begin(), candidates.end(),
+            [this](const glm::ivec3 &a, const glm::ivec3 &b)
+            { return ChunkLoadPriorityFor(a) < ChunkLoadPriorityFor(b); });
+
+  for (const glm::ivec3 &coord : candidates)
+  {
+    if (queued >= max_ops)
+    {
+      break;
+    }
+    if (!RingPrerequisitesMet(coord))
+    {
+      continue;
+    }
+    const int prio =
+        ChunkLoadPriorityFor(coord) + PriorityParams.ViewAheadBonus + 500;
+    OnRequestAsyncChunk(coord, prio);
+    ++queued;
+  }
+  if (out_ops)
+  {
+    *out_ops = queued;
   }
 }
 

@@ -84,6 +84,12 @@ public:
     return Items.empty();
   }
 
+  std::size_t Size() const
+  {
+    std::lock_guard<std::mutex> lock(Mutex);
+    return Items.size();
+  }
+
 private:
   mutable std::mutex Mutex;
   std::vector<T> Items;

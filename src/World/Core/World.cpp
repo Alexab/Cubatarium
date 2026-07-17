@@ -1227,11 +1227,14 @@ void UWorld::TickAsyncChunkSystems()
   }
   const int pending_bg =
       Persistence ? Persistence->GetPendingTerrainColumnRelightCount() : 0;
+  const int pending_player =
+      Persistence ? Persistence->GetPendingPlayerRelightCount() : 0;
   const int drain_budget = std::clamp(
       4 + (pending_bg + GetAsyncRelightInFlightCount()) / 4, 4, 12);
-  // Always priority remesh after light so streamed columns are not left black.
+  // Priority remesh for player edits; accumulate for background stream relight.
+  const bool priority_mesh = pending_player > 0;
   const int applied =
-      DrainAsyncRelightResults(drain_budget, /*priority_mesh=*/true, true);
+      DrainAsyncRelightResults(drain_budget, priority_mesh, true);
   if (applied > 0)
   {
     const double dt = WallFrameDeltaSec > 0.0 ? WallFrameDeltaSec : (1.0 / 60.0);
@@ -1480,20 +1483,45 @@ void UWorld::PrepareForShutdown()
   {
     CoopSession->Cancel();
   }
-  // Always fully quiesce: SaveMetadata may have skipped streamer resume on
-  // quit, or an earlier quiesce may have been followed by ResumeStreamer.
-  BackgroundQuiesceFinished = false;
-  QuiesceBackgroundWork(std::chrono::milliseconds(10000));
-  if (Streaming)
+
+  using clock = std::chrono::high_resolution_clock;
+  const auto t0 = clock::now();
+  auto phase_ms = [&](const char *phase)
   {
-    Streaming->PauseChunkGeneration(std::chrono::milliseconds(10000));
+    const double ms =
+        std::chrono::duration<double, std::milli>(clock::now() - t0).count();
+    std::cerr << "[Shutdown] phase=" << phase << " elapsed_ms=" << ms
+              << std::endl;
+  };
+
+  // Quit path already ran budgeted TickBackgroundQuiesce; do not reset the
+  // latch and re-enter 10s WaitIdle (hangs after "World saved.").
+  if (!BackgroundQuiesceFinished)
+  {
+    QuiesceBackgroundWork(std::chrono::milliseconds(2000));
+    phase_ms("quiesce");
   }
+  else
+  {
+    AllowProceduralFill = false;
+    if (Streaming && Streaming->HasStreamer())
+    {
+      Streaming->GetStreamer()->SetEnabled(false);
+    }
+    phase_ms("quiesce_skip");
+  }
+
   CancelAsyncRelightWork();
+  phase_ms("cancel_relight");
   if (MeshService)
   {
     MeshService->CancelAsyncMeshWork();
-    (void)MeshService->WaitForAsyncMeshIdleFor(std::chrono::milliseconds(2000));
+    (void)MeshService->WaitForAsyncMeshIdleFor(std::chrono::milliseconds(500));
   }
+  phase_ms("mesh_idle");
+  const double total_ms =
+      std::chrono::duration<double, std::milli>(clock::now() - t0).count();
+  std::cerr << "[Shutdown] shutdown_finalize_ms=" << total_ms << std::endl;
 }
 
 void UWorld::RefreshBlockRegistry()
@@ -1509,7 +1537,17 @@ void UWorld::RefreshBlockRegistry()
   }
   if (Streaming)
   {
-    Streaming->PauseChunkGeneration(std::chrono::milliseconds(10000));
+    // Save/quit paths already quiesce workers before RefreshBlockRegistry().
+    // Avoid re-entering a long wait here, which can look like a hang after
+    // "World saved." or during save init.
+    if (BackgroundQuiesceFinished)
+    {
+      Streaming->PauseChunkGeneration(std::chrono::milliseconds(200));
+    }
+    else
+    {
+      Streaming->PauseChunkGeneration(std::chrono::milliseconds(10000));
+    }
   }
   if (BlockRegistry)
   {
@@ -2087,18 +2125,67 @@ bool UWorld::TickBackgroundQuiesce(UBackgroundQuiesceState &state,
     return false;
 
   case UBackgroundQuiesceState::Phase::StreamingOff:
+    AllowProceduralFill = false;
+    if (Streaming && Streaming->HasStreamer())
+    {
+      Streaming->GetStreamer()->SetEnabled(false);
+    }
     if (Streaming)
     {
-      Streaming->QuiesceBackgroundWork(*this, step_timeout);
+      // Cancel queued gen immediately; active workers drain in ChunkGenCancel.
+      Streaming->PauseChunkGeneration(std::chrono::milliseconds(0));
     }
-    report("streaming", 0.2f, "Stopping streaming...");
-    state.phase = UBackgroundQuiesceState::Phase::CancelWorkers;
+    report("streaming", 0.15f, "Stopping streaming...");
+    state.phase = UBackgroundQuiesceState::Phase::ChunkGenCancel;
     return false;
 
   case UBackgroundQuiesceState::Phase::ChunkGenCancel:
-  case UBackgroundQuiesceState::Phase::DrainIo:
-    state.phase = UBackgroundQuiesceState::Phase::CancelWorkers;
+  {
+    bool idle = true;
+    if (Streaming && Streaming->GetChunkScheduler())
+    {
+      Streaming->PauseChunkGeneration(step_timeout);
+      idle = Streaming->GetChunkScheduler()->GetGenBacklogTotal() == 0 &&
+             Streaming->GetChunkScheduler()->WaitForWorkersIdle(step_timeout);
+    }
+    const float frac =
+        0.15f + 0.15f * static_cast<float>(state.waitChunkGenPasses) /
+                    static_cast<float>(UBackgroundQuiesceState::kMaxWaitPasses);
+    report("chunk_gen", std::min(0.3f, frac), "Waiting for chunk workers...");
+    if (idle || ++state.waitChunkGenPasses >=
+                    UBackgroundQuiesceState::kMaxWaitPasses)
+    {
+      state.phase = UBackgroundQuiesceState::Phase::DrainIo;
+    }
     return false;
+  }
+
+  case UBackgroundQuiesceState::Phase::DrainIo:
+  {
+    bool drained = true;
+    if (Persistence)
+    {
+      drained = Persistence->TickDrainAsyncChunkIo(*this, 8);
+      if (!drained)
+      {
+        drained = Persistence->AbortAsyncChunkIoFor(step_timeout);
+      }
+    }
+    const float frac =
+        0.3f + 0.05f * static_cast<float>(state.drainIoPasses) /
+                   static_cast<float>(UBackgroundQuiesceState::kMaxDrainIoPasses);
+    report("drain_io", std::min(0.35f, frac), "Flushing chunk IO...");
+    if (drained || ++state.drainIoPasses >=
+                       UBackgroundQuiesceState::kMaxDrainIoPasses)
+    {
+      if (Persistence && !drained)
+      {
+        (void)Persistence->AbortAsyncChunkIoFor(step_timeout);
+      }
+      state.phase = UBackgroundQuiesceState::Phase::CancelWorkers;
+    }
+    return false;
+  }
 
   case UBackgroundQuiesceState::Phase::CancelWorkers:
     CancelAsyncRelightWork();

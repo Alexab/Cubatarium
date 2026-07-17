@@ -91,9 +91,10 @@ struct UBackgroundQuiesceState
 
   Phase phase{Phase::Start};
   int drainIoPasses{0};
+  int waitChunkGenPasses{0};
   int waitRelightPasses{0};
   int waitMeshPasses{0};
-  static constexpr int kMaxDrainIoPasses = 64;
+  static constexpr int kMaxDrainIoPasses = 32;
   static constexpr int kMaxWaitPasses = 120;
 };
 
@@ -629,6 +630,7 @@ public:
     int asyncMeshInFlight{0};
     int genQueuePending{0};
     int genInFlight{0};
+    int genBacklogTotal{0};
     double populateMsLast{0.0};
     double populateMsEma{0.0};
     double populateSampleMs{0.0};

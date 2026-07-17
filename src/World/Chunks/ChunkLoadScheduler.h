@@ -28,7 +28,8 @@ enum class ChunkLoadState
 class UChunkLoadScheduler
 {
 public:
-  using MarkChunkDirtyFn = std::function<void(glm::ivec3)>;
+  using MarkChunkDirtyFn =
+      std::function<void(glm::ivec3 coord, int minY, int maxY)>;
   using ColumnMeshDirtyFn =
       std::function<void(glm::ivec3 groundCoord, int minY, int maxY)>;
 
@@ -54,6 +55,9 @@ public:
   ChunkLoadState GetState(glm::ivec3 coord) const;
   int GetPendingQueueCount() const;
   int GetGenInFlightCount() const;
+  int GetCompletedReadyCount() const;
+  int GetGenBacklogTotal() const;
+  double GetLastTickApplyMs() const { return LastTickApplyMs; }
 
 private:
   struct PendingRequest
@@ -70,6 +74,7 @@ private:
   {
     ChunkPopulateResult result;
     int priority{0};
+    int maxHeight{256};
   };
 
   struct RequestCompare
@@ -95,6 +100,7 @@ private:
   std::unordered_map<glm::ivec3, ChunkLoadState, IVec3Hash> States;
   std::unordered_map<glm::ivec3, ChunkGenerationToken, IVec3Hash> ActiveTokens;
   std::unordered_map<glm::ivec3, int, IVec3Hash> RequestPriorities;
+  double LastTickApplyMs{0.0};
 };
 
 } // namespace cutum

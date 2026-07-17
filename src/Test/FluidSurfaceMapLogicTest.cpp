@@ -447,6 +447,45 @@ static void TestChunkWindowRebuildBudget()
   }
 }
 
+static void TestScrollStagingPreservesOverlap()
+{
+  constexpr int kSize = 48;
+  const size_t n = static_cast<size_t>(kSize) * kSize;
+  const float sentinel = cutum::FluidSurfaceStagingSentinel();
+  std::vector<float> surface(n, sentinel);
+  std::vector<uint8_t> index(n, 0);
+  std::vector<float> bottom(n, sentinel);
+  // Mark a known texel at local (20, 10).
+  const size_t marked =
+      static_cast<size_t>(10) * kSize + static_cast<size_t>(20);
+  surface[marked] = 42.5f;
+  index[marked] = 3;
+  bottom[marked] = 12.0f;
+
+  const glm::ivec2 oldOrigin(0, 0);
+  const glm::ivec2 newOrigin(16, 0);
+  Expect(cutum::ScrollFluidSurfaceStagingWindow(surface, index, bottom, kSize,
+                                                oldOrigin, newOrigin, sentinel),
+         "scroll returns true on origin shift");
+
+  // World block (20, 10) was at staging (20,10); after origin +=16x it is at (4,10).
+  const size_t scrolled =
+      static_cast<size_t>(10) * kSize + static_cast<size_t>(4);
+  Expect(std::abs(surface[scrolled] - 42.5f) < 0.001f,
+         "scrolled surface preserves overlap texel");
+  Expect(index[scrolled] == 3, "scrolled index preserves overlap texel");
+  Expect(std::abs(bottom[scrolled] - 12.0f) < 0.001f,
+         "scrolled bottom preserves overlap texel");
+  Expect(surface[marked] == sentinel || std::abs(surface[marked] - 42.5f) > 0.1f,
+         "old edge slot vacated or rewritten");
+  Expect(cutum::FluidSurfaceChunkNeedsStripPatch(glm::ivec3(3, 0, 0), oldOrigin,
+                                                 newOrigin, kSize),
+         "new right strip chunk needs patch");
+  Expect(!cutum::FluidSurfaceChunkNeedsStripPatch(glm::ivec3(1, 0, 0), oldOrigin,
+                                                  newOrigin, kSize),
+         "fully interior old chunk does not need strip patch");
+}
+
 } // namespace
 
 int main()
@@ -457,6 +496,7 @@ int main()
   TestUnderwaterFogPolicyV3();
   TestChunkStagingParityWithPerCell();
   TestChunkWindowRebuildBudget();
+  TestScrollStagingPreservesOverlap();
   std::cout << kTestName << ": OK" << std::endl;
   return 0;
 }

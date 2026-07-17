@@ -62,7 +62,8 @@ public:
                           int max_drain_per_frame, int max_schedule_per_frame);
   MeshRebuildTickStats RebuildDirtyChunksWithStats(
       UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
-      int max_schedule_per_frame, bool force_sync = false);
+      int max_schedule_per_frame, bool force_sync = false,
+      int max_sync_rebuild = -1);
   void DrainAsyncMeshResults(UBlockWorld &world, UBlockRegistry &registry,
                              int max_per_frame);
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,
@@ -80,6 +81,8 @@ public:
   int GetAsyncInFlightCount() const;
   uint64_t GetMeshDiscardedLateCount() const;
   double GetLastFlatRebuildMs() const;
+  double GetLastMeshSyncMs() const;
+  double GetLastMeshSnapshotMs() const;
   size_t GetGreedyCacheSize() const;
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
   bool IsChunkMeshDirty(glm::ivec3 chunk_coord) const;

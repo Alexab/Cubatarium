@@ -374,8 +374,10 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
 
   case Stage::ShutdownQuiesce:
     sink.Begin(WorldOperationKind::Shutdown);
+    // 100ms/step: active chunk populate often takes 2–4s; 50ms was too short
+    // per pass and left workers alive into DrainAsyncIo.
     if (!World.TickBackgroundQuiesce(ShutdownQuiesceState,
-                                     std::chrono::milliseconds(50), &sink))
+                                     std::chrono::milliseconds(100), &sink))
     {
       return false;
     }

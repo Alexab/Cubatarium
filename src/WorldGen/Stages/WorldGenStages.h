@@ -28,7 +28,12 @@ bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z
 bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry,
                                     const ProceduralSettings &settings,
                                     const std::string &worldgen_owner_pack_id,
-                                    glm::ivec3 chunk_coord);
+                                    glm::ivec3 chunk_coord,
+                                    bool include_shore_air = true);
+bool SealFluidShoreAirOnChunkCommitted(
+    UBlockWorld &world, UBlockRegistry &registry,
+    const ProceduralSettings &settings, const std::string &worldgen_owner_pack_id,
+    glm::ivec3 chunk_coord);
 
 int PruneFloatingVegetationInChunk(WorldGenContext &ctx, int base_x, int base_z);
 

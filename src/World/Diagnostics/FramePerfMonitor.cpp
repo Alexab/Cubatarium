@@ -115,6 +115,16 @@ struct FrameNumbers
   double fluid_map_gpu_ms{0.0};
   int fluid_map_dirty{0};
   int fluid_map_full_rebuild{0};
+  double commit_apply_ms{0.0};
+  double commit_seal_ms{0.0};
+  double mesh_sync_ms{0.0};
+  double mesh_snapshot_ms{0.0};
+  int keep_cols{0};
+  int visual_cols{0};
+  double idle_prefetch_ms{0.0};
+  int prefetch_visual_ops{0};
+  int prefetch_keep_ops{0};
+  int gen_backlog_total{0};
   int gen_q{0};
   int mesh_async{0};
   int dirty{0};
@@ -147,6 +157,16 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.fluid_map_gpu_ms = world.GetLastFluidMapGpuMs();
   n.fluid_map_dirty = world.GetLastFluidMapDirtyChunks();
   n.fluid_map_full_rebuild = world.GetLastFluidMapFullRebuild() ? 1 : 0;
+  n.commit_apply_ms = phys.CommitApplyMs;
+  n.commit_seal_ms = phys.CommitSealMs;
+  n.mesh_sync_ms = phys.MeshSyncMs;
+  n.mesh_snapshot_ms = phys.MeshSnapshotMs;
+  n.keep_cols = phys.KeepCols;
+  n.visual_cols = phys.VisualCols;
+  n.idle_prefetch_ms = phys.IdlePrefetchMs;
+  n.prefetch_visual_ops = phys.PrefetchVisualOps;
+  n.prefetch_keep_ops = phys.PrefetchKeepOps;
+  n.gen_backlog_total = phys.GenBacklogTotal;
   n.residual_ms = n.unaccounted_ms - n.input_ms - n.app_update_ms -
                   n.world_extra_ms - n.prepare_frame_ms - n.post_scene_ms -
                   n.gui_overlay_ms;
@@ -179,6 +199,16 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind)
           << ",\"fluid_map_gpu_ms\":" << n.fluid_map_gpu_ms
           << ",\"fluid_map_dirty\":" << n.fluid_map_dirty
           << ",\"fluid_map_full_rebuild\":" << n.fluid_map_full_rebuild
+          << ",\"commit_apply_ms\":" << n.commit_apply_ms
+          << ",\"commit_seal_ms\":" << n.commit_seal_ms
+          << ",\"mesh_sync_ms\":" << n.mesh_sync_ms
+          << ",\"mesh_snapshot_ms\":" << n.mesh_snapshot_ms
+          << ",\"keep_cols\":" << n.keep_cols
+          << ",\"visual_cols\":" << n.visual_cols
+          << ",\"idle_prefetch_ms\":" << n.idle_prefetch_ms
+          << ",\"prefetch_visual_ops\":" << n.prefetch_visual_ops
+          << ",\"prefetch_keep_ops\":" << n.prefetch_keep_ops
+          << ",\"gen_backlog_total\":" << n.gen_backlog_total
           << ",\"phys_ms\":" << n.phys_ms << ",\"scene_ms\":" << n.scene_ms
           << ",\"view_ms\":" << n.view_ms << ",\"flat_ms\":" << n.flat_ms
           << ",\"gen_q\":" << n.gen_q << ",\"mesh_async\":" << n.mesh_async
@@ -203,6 +233,10 @@ void LogLine(const FrameNumbers &n, const char *kind, int frames,
             << " fluid_map_gpu_ms=" << n.fluid_map_gpu_ms
             << " fluid_map_dirty=" << n.fluid_map_dirty
             << " fluid_full=" << n.fluid_map_full_rebuild
+            << " commit_apply_ms=" << n.commit_apply_ms
+            << " commit_seal_ms=" << n.commit_seal_ms
+            << " mesh_sync_ms=" << n.mesh_sync_ms
+            << " mesh_snapshot_ms=" << n.mesh_snapshot_ms
             << " phys_ms=" << n.phys_ms
             << " scene_ms=" << n.scene_ms << " GenQ=" << n.gen_q
             << " MeshAsync=" << n.mesh_async << " Dirty=" << n.dirty

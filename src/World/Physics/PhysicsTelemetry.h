@@ -37,6 +37,16 @@ struct PhysicsTelemetry
   double CommitPhysicsMs{0.0};
   double CommitRelightMs{0.0};
   double CommitMeshMs{0.0};
+  double CommitApplyMs{0.0};
+  double CommitSealMs{0.0};
+  double MeshSyncMs{0.0};
+  double MeshSnapshotMs{0.0};
+  int PrefetchVisualOps{0};
+  int PrefetchKeepOps{0};
+  int GenBacklogTotal{0};
+  int KeepCols{0};
+  int VisualCols{0};
+  double IdlePrefetchMs{0.0};
 };
 
 } // namespace cutum

@@ -59,7 +59,8 @@ public:
                           int max_schedule_per_frame = 8);
   MeshRebuildTickStats RebuildDirtyChunksWithStats(
       UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
-      int max_schedule_per_frame, bool force_sync = false);
+      int max_schedule_per_frame, bool force_sync = false,
+      int max_sync_rebuild = -1);
   void RebuildAll(UBlockWorld &world, UBlockRegistry &registry);
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,
                              glm::ivec3 chunkCoord);
@@ -74,6 +75,8 @@ public:
   void DrainAsyncMeshResults(UBlockWorld &world, UBlockRegistry &registry,
                              int max_per_frame);
   double GetLastFlatRebuildMs() const { return LastFlatRebuildMs; }
+  double GetLastMeshSyncMs() const { return LastMeshSyncMs; }
+  double GetLastMeshSnapshotMs() const { return LastMeshSnapshotMs; }
   int GetAsyncInFlightCount() const;
   uint64_t GetMeshDiscardedLateCount() const;
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
@@ -204,6 +207,8 @@ private:
   RenderSettings Render;
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
   double LastFlatRebuildMs{0.0};
+  double LastMeshSyncMs{0.0};
+  double LastMeshSnapshotMs{0.0};
   std::chrono::steady_clock::time_point LastFlatRebuildAt{};
   bool PendingMeshRevisionBump{false};
   UChunkMeshRevisionRegistry MeshRevisions;

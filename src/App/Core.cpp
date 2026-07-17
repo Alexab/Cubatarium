@@ -412,6 +412,8 @@ void UCore::LoadConfig(const std::string &config_file_name)
             r.value("distance_fog_horizontal", Render.DistanceFogHorizontal);
         Render.AltitudeAdaptiveFog =
             r.value("altitude_adaptive_fog", Render.AltitudeAdaptiveFog);
+        Render.AdaptiveRenderDistance = r.value(
+            "adaptive_render_distance", Render.AdaptiveRenderDistance);
         Render.AltitudeFogThresholdBlocks = r.value(
             "altitude_fog_threshold_blocks", Render.AltitudeFogThresholdBlocks);
         Render.AltitudeFogPenaltyPer16Blocks =
@@ -734,6 +736,7 @@ void UCore::SaveConfigFile()
   render_json["distance_fog_density"] = Render.DistanceFogDensity;
   render_json["distance_fog_horizontal"] = Render.DistanceFogHorizontal;
   render_json["altitude_adaptive_fog"] = Render.AltitudeAdaptiveFog;
+  render_json["adaptive_render_distance"] = Render.AdaptiveRenderDistance;
   render_json["altitude_fog_threshold_blocks"] =
       Render.AltitudeFogThresholdBlocks;
   render_json["altitude_fog_penalty_per_16_blocks"] =

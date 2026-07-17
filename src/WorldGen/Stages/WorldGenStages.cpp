@@ -374,7 +374,8 @@ bool SealFluidPermeableDecorInChunk(WorldGenContext &ctx, int base_x, int base_z
 bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry,
                                     const ProceduralSettings &settings,
                                     const std::string &worldgen_owner_pack_id,
-                                    glm::ivec3 chunk_coord)
+                                    glm::ivec3 chunk_coord,
+                                    bool include_shore_air)
 {
   if (!settings.FillWater)
   {
@@ -393,8 +394,33 @@ bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry
   const bool permeable = SealFluidPermeableDecorInChunk(ctx, base_x, base_z);
   const bool sealed_after_permeable =
       permeable ? SealFluidPocketsInChunk(ctx, base_x, base_z) : false;
-  const bool shore_air = SealShoreAirAdjacencyInChunk(ctx, base_x, base_z);
+  bool shore_air = false;
+  if (include_shore_air)
+  {
+    shore_air = SealShoreAirAdjacencyInChunk(ctx, base_x, base_z);
+  }
   return sealed || permeable || sealed_after_permeable || shore_air;
+}
+
+bool SealFluidShoreAirOnChunkCommitted(
+    UBlockWorld &world, UBlockRegistry &registry,
+    const ProceduralSettings &settings, const std::string &worldgen_owner_pack_id,
+    glm::ivec3 chunk_coord)
+{
+  if (!settings.FillWater)
+  {
+    return false;
+  }
+  WorldGenContext ctx(world, registry, settings);
+  ctx.WorldgenOwnerPackId = worldgen_owner_pack_id;
+  ctx.ResolveBlockIds();
+  if (ctx.Blocks.Water == BLOCK_AIR)
+  {
+    return false;
+  }
+  const int base_x = chunk_coord.x * CHUNK_SIZE;
+  const int base_z = chunk_coord.z * CHUNK_SIZE;
+  return SealShoreAirAdjacencyInChunk(ctx, base_x, base_z);
 }
 
 int PruneFloatingVegetationInChunk(WorldGenContext &ctx, int base_x, int base_z)

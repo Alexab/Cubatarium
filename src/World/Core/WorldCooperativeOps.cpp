@@ -1018,7 +1018,21 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     }
     else if (Kind == WorldCoopKind::Save)
     {
-      world.QuiesceBackgroundWork(std::chrono::milliseconds(2000));
+      // Prefer budgeted quiesce from quit path; only block if not yet done.
+      if (!world.BackgroundQuiesceFinished)
+      {
+        world.QuiesceBackgroundWork(std::chrono::milliseconds(500));
+      }
+      else if (world.Streaming)
+      {
+        // Ensure gen workers are cancelled before drain/save.
+        world.Streaming->PauseChunkGeneration(std::chrono::milliseconds(100));
+      }
+      if (world.Persistence)
+      {
+        (void)world.Persistence->AbortAsyncChunkIoFor(
+            std::chrono::milliseconds(100));
+      }
       world.RefreshBlockRegistry();
       std::filesystem::create_directories(FolderPath);
       world.SetWorldFolderPath(FolderPath);
@@ -1666,6 +1680,20 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   }
   case Phase::DrainAsyncIo:
   {
+    // First frame: hard-cancel leftover gen + stale pending IO maps so drain
+    // cannot wait forever on cancelled jobs.
+    if (SaveDrainIoFrames == 0)
+    {
+      if (world.Streaming)
+      {
+        world.Streaming->PauseChunkGeneration(std::chrono::milliseconds(50));
+      }
+      if (world.Persistence)
+      {
+        (void)world.Persistence->AbortAsyncChunkIoFor(
+            std::chrono::milliseconds(50));
+      }
+    }
     bool drained = true;
     if (world.Persistence)
     {
@@ -1673,16 +1701,14 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
           world, std::max(budget * 2, 8));
     }
     ++SaveDrainIoFrames;
-    const float frac = std::min(0.04f, 0.04f * static_cast<float>(SaveDrainIoFrames) /
-                                           64.0f);
+    const float frac = std::min(
+        0.04f, 0.04f * static_cast<float>(SaveDrainIoFrames) / 48.0f);
     Report(sink, "init", frac, "Flushing pending terrain IO...");
-    if (drained)
+    // Abort quickly: stale pending maps / late worker completions must not
+    // block quit-save (was hanging at 512 frames / multi-second populate).
+    if (drained || SaveDrainIoFrames >= 48)
     {
-      CurrentPhase = Phase::ScanSaveChunks;
-    }
-    else if (SaveDrainIoFrames >= 512)
-    {
-      if (world.Persistence)
+      if (!drained && world.Persistence)
       {
         (void)world.Persistence->AbortAsyncChunkIoFor(
             std::chrono::milliseconds(100));

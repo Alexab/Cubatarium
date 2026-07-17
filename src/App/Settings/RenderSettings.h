@@ -37,6 +37,8 @@ struct RenderSettings
   /// Use horizontal (XZ) distance for distance fog (classic render fog).
   bool DistanceFogHorizontal{true};
   bool AltitudeAdaptiveFog{true};
+  /// When true, lower effective RD under Dirty/GenQ/phys pressure (hysteresis).
+  bool AdaptiveRenderDistance{false};
   int AltitudeFogThresholdBlocks{32};
   float AltitudeFogPenaltyPer16Blocks{0.05f};
   /// Gradient sky pass before world geometry (greedy path).
