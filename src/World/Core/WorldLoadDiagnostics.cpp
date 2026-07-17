@@ -39,17 +39,33 @@ std::string FormatWorldLoadDiagLine(const std::string &phase, const UWorld &worl
                                     const std::optional<glm::vec3> &camera_pos)
 {
   const UWorldMeshService &mesh = world.GetMeshService();
+  // Skip full-world scans on save/shutdown — CountNonAir (and even chunk
+  // iteration under worker contention) can stall and look like a hang.
+  const bool skip_world_scan =
+      phase == "drain_async_io" || phase == "scan_save_chunks" ||
+      phase == "save_chunks" || phase == "save_metadata" || phase == "done" ||
+      phase == "init";
   std::ostringstream out;
-  out << "[WorldLoad] phase=" << phase << " chunks=" << CountLoadedChunks(world.GetBlockWorld())
-      << " blocks_non_air=" << world.GetBlockWorld().CountNonAir()
+  out << "[WorldLoad] phase=" << phase
+      << " chunks="
+      << (skip_world_scan ? 0 : CountLoadedChunks(world.GetBlockWorld()))
+      << " blocks_non_air="
+      << (skip_world_scan ? 0 : world.GetBlockWorld().CountNonAir())
       << " mesh_dirty=" << mesh.GetDirtyCount()
       << " mesh_in_flight=" << mesh.GetAsyncInFlightCount()
       << " greedy_cache=" << mesh.GetGreedyCacheSize()
       << " greedy_batches="
-      << (mesh.GetCache().GetGreedyOpaqueCutoutRefs().size() +
-          mesh.GetCache().GetGreedyTransparentRefs().size())
-      << " greedy_vertices=" << mesh.GetGreedyVertexCount()
+      << (skip_world_scan
+              ? 0
+              : (mesh.GetCache().GetGreedyOpaqueCutoutRefs().size() +
+                 mesh.GetCache().GetGreedyTransparentRefs().size()))
+      << " greedy_vertices="
+      << (skip_world_scan ? 0 : mesh.GetGreedyVertexCount())
       << " flat_rebuild_ms=" << mesh.GetLastFlatRebuildMs();
+  if (skip_world_scan)
+  {
+    out << " world_scan_skipped=1";
+  }
   if (camera_pos)
   {
     out << " camera=(" << camera_pos->x << "," << camera_pos->y << ","

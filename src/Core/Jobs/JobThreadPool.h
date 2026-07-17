@@ -27,6 +27,9 @@ public:
   void WaitIdle();
   bool WaitIdleFor(std::chrono::milliseconds timeout);
   void CancelPendingJobs();
+  /// Stop workers for process exit: wait up to timeout, then detach leftovers
+  /// so destructors never block forever on late ChunkPopulate/carve.
+  void ShutdownForProcessExit(std::chrono::milliseconds timeout);
   std::size_t GetPendingJobCount() const;
   std::size_t GetActiveJobCount() const;
 

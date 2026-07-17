@@ -491,6 +491,12 @@ void UWindowManager::TickBudgetedAutosave()
   if (!World || !Core || !Application ||
       Application->GetState() != AppState::InGame)
   {
+    if (AutosaveInProgress && Application &&
+        Application->GetState() != AppState::InGame)
+    {
+      AutosaveInProgress = false;
+      AutosaveRequested = false;
+    }
     return;
   }
   if (AutosaveRequested && !AutosaveInProgress)

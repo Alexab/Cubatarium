@@ -156,9 +156,17 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
 {
   if (!world.BlockRegistry)
   {
-    ChunkPopulator.reset();
+    // Destroy scheduler first so workers cannot touch a freed populator.
     ChunkScheduler.reset();
+    ChunkPopulator.reset();
     return;
+  }
+  // Cancel/join old pool before replacing the populator it references.
+  if (ChunkScheduler)
+  {
+    ChunkScheduler->CancelAllPending(std::chrono::milliseconds(0));
+    (void)ChunkScheduler->WaitForWorkersIdle(std::chrono::milliseconds(500));
+    ChunkScheduler.reset();
   }
   ChunkPopulator = std::make_unique<UPipelineChunkPopulator>(
       *world.BlockRegistry, world.ObjectLibrary, world.WorldgenOwnerPackId);
@@ -555,6 +563,42 @@ void UWorldStreaming::QuiesceBackgroundWork(
   }
 }
 
+void UWorldStreaming::CancelChunkGeneration()
+{
+  if (!ChunkScheduler)
+  {
+    return;
+  }
+  // Zero wait: clear queue + bump tokens so shouldCancel trips; do not join.
+  ChunkScheduler->CancelAllPending(std::chrono::milliseconds(0));
+}
+
+void UWorldStreaming::AbandonWorkersForProcessExit(
+    const std::chrono::milliseconds timeout)
+{
+  if (Streamer)
+  {
+    Streamer->SetEnabled(false);
+  }
+  CancelChunkGeneration();
+  if (!ChunkScheduler)
+  {
+    ChunkPopulator.reset();
+    return;
+  }
+  if (ChunkScheduler->WaitForWorkersIdle(timeout))
+  {
+    ChunkScheduler.reset();
+    ChunkPopulator.reset();
+    return;
+  }
+  // Workers still in carve/populate: detach threads, then leak scheduler +
+  // populator so in-flight jobs do not use-after-free during process teardown.
+  ChunkScheduler->ShutdownForProcessExit(std::chrono::milliseconds(0));
+  (void)ChunkScheduler.release();
+  (void)ChunkPopulator.release();
+}
+
 void UWorldStreaming::PauseChunkGeneration(
     const std::chrono::milliseconds worker_wait)
 {
@@ -563,7 +607,10 @@ void UWorldStreaming::PauseChunkGeneration(
     return;
   }
   ChunkScheduler->CancelAllPending(worker_wait);
-  (void)ChunkScheduler->WaitForWorkersIdle(worker_wait);
+  if (worker_wait.count() > 0)
+  {
+    (void)ChunkScheduler->WaitForWorkersIdle(worker_wait);
+  }
 }
 
 void UWorldStreaming::ResumeStreamerAfterQuiesce()

@@ -331,10 +331,13 @@ void UApplication::BeginShutdownOperation(const bool saveSession,
                         {
                           GameSession->SaveCommandHistory();
                         }
-                        if (Core)
-                        {
-                          Core->SaveSystem("config.json");
-                        }
+                          if (Core)
+                          {
+                            // World terrain already saved by ShutdownSave.
+                            // SaveSystem→SaveWorld would re-enter snapshot/
+                            // InitChunkScheduler and can hang on worker join.
+                            Core->SaveConfigFile();
+                          }
                         if (ShutdownCloseAfter)
                         {
                           RequestQuit();

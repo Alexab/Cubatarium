@@ -1424,8 +1424,8 @@ bool UWorld::WaitForPendingRelightJobsFor(
   }
   if (timeout.count() <= 0)
   {
-    AsyncRelight->WaitIdle();
-    return true;
+    // Cancel-only / zero-budget: never block unboundedly on WaitIdle().
+    return !AsyncRelight->HasPendingWork();
   }
   return AsyncRelight->WaitIdleFor(timeout);
 }
@@ -1516,9 +1516,14 @@ void UWorld::PrepareForShutdown()
   if (MeshService)
   {
     MeshService->CancelAsyncMeshWork();
-    (void)MeshService->WaitForAsyncMeshIdleFor(std::chrono::milliseconds(500));
+    (void)MeshService->WaitForAsyncMeshIdleFor(std::chrono::milliseconds(250));
   }
   phase_ms("mesh_idle");
+  if (Streaming)
+  {
+    Streaming->AbandonWorkersForProcessExit(std::chrono::milliseconds(250));
+  }
+  phase_ms("abandon_workers");
   const double total_ms =
       std::chrono::duration<double, std::milli>(clock::now() - t0).count();
   std::cerr << "[Shutdown] shutdown_finalize_ms=" << total_ms << std::endl;
@@ -1533,7 +1538,10 @@ void UWorld::RefreshBlockRegistry()
   if (MeshService)
   {
     MeshService->CancelAsyncInFlightKeepDirty();
-    (void)MeshService->WaitForAsyncMeshIdleFor(std::chrono::milliseconds(1000));
+    const auto mesh_wait = BackgroundQuiesceFinished
+                               ? std::chrono::milliseconds(50)
+                               : std::chrono::milliseconds(1000);
+    (void)MeshService->WaitForAsyncMeshIdleFor(mesh_wait);
   }
   if (Streaming)
   {
@@ -1542,7 +1550,7 @@ void UWorld::RefreshBlockRegistry()
     // "World saved." or during save init.
     if (BackgroundQuiesceFinished)
     {
-      Streaming->PauseChunkGeneration(std::chrono::milliseconds(200));
+      Streaming->CancelChunkGeneration();
     }
     else
     {
@@ -2026,7 +2034,12 @@ void UWorld::SaveSessionSnapshot(const std::string &world_folder_path,
   SaveCreatures(world_folder_path + "/creatures.json");
   SaveWorldData(world_folder_path + "/world_data.json");
   ModifiedChunks.clear();
-  EnsureStreamingActiveAfterBackgroundQuiesce();
+  // Quit path must not recreate the chunk scheduler (join while populate
+  // finishes). Autosave / menu save still resume streaming.
+  if (!BackgroundQuiesceFinished)
+  {
+    EnsureStreamingActiveAfterBackgroundQuiesce();
+  }
 }
 
 void UWorld::BeginCooperativeLoad(const std::string &world_folder_path)
@@ -2089,6 +2102,14 @@ bool UWorld::HasActiveCooperativeOperation() const
   return CoopSession && CoopSession->Active;
 }
 
+void UWorld::CancelCooperativeOperation()
+{
+  if (CoopSession && CoopSession->Active)
+  {
+    CoopSession->Cancel();
+  }
+}
+
 bool UWorld::BlocksAsyncRelightDrain() const
 {
   return CoopSession && CoopSession->Active && CoopSession->BlocksStreamingTick();
@@ -2144,9 +2165,19 @@ bool UWorld::TickBackgroundQuiesce(UBackgroundQuiesceState &state,
     bool idle = true;
     if (Streaming && Streaming->GetChunkScheduler())
     {
-      Streaming->PauseChunkGeneration(step_timeout);
-      idle = Streaming->GetChunkScheduler()->GetGenBacklogTotal() == 0 &&
-             Streaming->GetChunkScheduler()->WaitForWorkersIdle(step_timeout);
+      // First passes: brief wait. Later: cancel-only so long carve cannot pin
+      // the quit path for the full kMaxWaitPasses budget.
+      if (state.waitChunkGenPasses < 8)
+      {
+        Streaming->PauseChunkGeneration(step_timeout);
+        idle = Streaming->GetChunkScheduler()->GetGenBacklogTotal() == 0 &&
+               Streaming->GetChunkScheduler()->WaitForWorkersIdle(step_timeout);
+      }
+      else
+      {
+        Streaming->CancelChunkGeneration();
+        idle = Streaming->GetChunkScheduler()->GetGenInFlightCount() == 0;
+      }
     }
     const float frac =
         0.15f + 0.15f * static_cast<float>(state.waitChunkGenPasses) /
@@ -2231,10 +2262,11 @@ bool UWorld::TickBackgroundQuiesce(UBackgroundQuiesceState &state,
     if (MeshService)
     {
       MeshService->CancelAsyncMeshWork();
+      (void)MeshService->WaitForAsyncMeshIdleFor(std::chrono::milliseconds(100));
     }
     if (Persistence)
     {
-      Persistence->AbortAsyncChunkIo();
+      (void)Persistence->AbortAsyncChunkIoFor(std::chrono::milliseconds(0));
     }
     BackgroundQuiesceFinished = true;
     report("done", 1.f, "Background work stopped.");

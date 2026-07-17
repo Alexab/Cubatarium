@@ -25,6 +25,10 @@ UJobThreadPool::~UJobThreadPool()
 {
   {
     std::lock_guard<std::mutex> lock(QueueMutex);
+    if (Stop && Workers.empty())
+    {
+      return;
+    }
     Stop = true;
   }
   QueueCv.notify_all();
@@ -35,6 +39,40 @@ UJobThreadPool::~UJobThreadPool()
       worker.join();
     }
   }
+  Workers.clear();
+}
+
+void UJobThreadPool::ShutdownForProcessExit(
+    const std::chrono::milliseconds timeout)
+{
+  {
+    std::lock_guard<std::mutex> lock(QueueMutex);
+    if (Stop && Workers.empty())
+    {
+      return;
+    }
+    Stop = true;
+    Jobs.clear();
+  }
+  QueueCv.notify_all();
+  const bool idle = WaitIdleFor(timeout);
+  for (std::thread &worker : Workers)
+  {
+    if (!worker.joinable())
+    {
+      continue;
+    }
+    if (idle)
+    {
+      worker.join();
+    }
+    else
+    {
+      // Process is exiting; do not block forever on carve/populate.
+      worker.detach();
+    }
+  }
+  Workers.clear();
 }
 
 void UJobThreadPool::Enqueue(std::function<void()> job)

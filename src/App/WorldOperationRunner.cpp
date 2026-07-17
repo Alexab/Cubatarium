@@ -85,6 +85,12 @@ void UWorldOperationRunner::Start(WorldRunnerRequest request)
     break;
   case WorldRunnerOp::Shutdown:
     CurrentStage = Stage::ShutdownQuiesce;
+    // Drop any in-flight autosave: TickBudgetedAutosave stops in Loading and
+    // would otherwise leave a half-finished coop session for ShutdownSave.
+    if (World.HasActiveCooperativeOperation())
+    {
+      World.CancelCooperativeOperation();
+    }
     World.BeginBackgroundQuiesce(ShutdownQuiesceState);
     break;
   }

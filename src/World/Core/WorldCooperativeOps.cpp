@@ -1,5 +1,6 @@
 #include "World/Core/WorldCooperativeOps.h"
 #include "World/Core/WorldLoadDiagnostics.h"
+#include "App/Platform/Log.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "Core/Jobs/JobThreadPool.h"
@@ -26,6 +27,7 @@
 #include <chrono>
 #include <cmath>
 #include <iostream>
+#include <string>
 #include <thread>
 #include <unordered_set>
 
@@ -1018,28 +1020,45 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     }
     else if (Kind == WorldCoopKind::Save)
     {
-      // Prefer budgeted quiesce from quit path; only block if not yet done.
-      if (!world.BackgroundQuiesceFinished)
+      // Never QuiesceBackgroundWork here: it latches BackgroundQuiesceFinished
+      // and disables the streamer mid-autosave. Quit already budget-quiesced.
+      if (world.Streaming)
       {
-        world.QuiesceBackgroundWork(std::chrono::milliseconds(500));
-      }
-      else if (world.Streaming)
-      {
-        // Ensure gen workers are cancelled before drain/save.
-        world.Streaming->PauseChunkGeneration(std::chrono::milliseconds(100));
+        world.Streaming->CancelChunkGeneration();
       }
       if (world.Persistence)
       {
+        // Cancel pending IO only — do not WaitIdle (can stick on late disk IO).
         (void)world.Persistence->AbortAsyncChunkIoFor(
-            std::chrono::milliseconds(100));
+            std::chrono::milliseconds(0));
       }
-      world.RefreshBlockRegistry();
+      // Quit-save: skip catalog reload (unchanged after quiesce).
+      if (ResumeStreamingAfterSave)
+      {
+        world.RefreshBlockRegistry();
+      }
       std::filesystem::create_directories(FolderPath);
       world.SetWorldFolderPath(FolderPath);
       std::filesystem::create_directories(FolderPath + "/chunks");
       SaveDrainIoFrames = 0;
-      CurrentPhase = Phase::DrainAsyncIo;
-      Report(sink, "init", 0.f, "Preparing save...");
+      // Quit path: skip DrainAsyncIo and run scan inline so we never hang
+      // between "skip → scan" and the next Tick (log stopped after skip).
+      if (!ResumeStreamingAfterSave)
+      {
+        CubatariumLogInfo("Save", "quit-save: inline scan after quiesce");
+        ScanSaveChunkCoords(world);
+        CurrentPhase = Phase::SaveChunks;
+        Report(sink, "scan", 0.02f, "Collecting chunks...");
+        CubatariumLogInfo(
+            "Save",
+            std::string("scan_save_chunks end count=") +
+                std::to_string(SaveChunkCoords.size()));
+      }
+      else
+      {
+        CurrentPhase = Phase::DrainAsyncIo;
+        Report(sink, "init", 0.f, "Preparing save...");
+      }
     }
     else
     {
@@ -1686,13 +1705,14 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     {
       if (world.Streaming)
       {
-        world.Streaming->PauseChunkGeneration(std::chrono::milliseconds(50));
+        world.Streaming->CancelChunkGeneration();
       }
       if (world.Persistence)
       {
         (void)world.Persistence->AbortAsyncChunkIoFor(
-            std::chrono::milliseconds(50));
+            std::chrono::milliseconds(0));
       }
+      CubatariumLogInfo("Save", "drain_async_io begin");
     }
     bool drained = true;
     if (world.Persistence)
@@ -1701,27 +1721,38 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
           world, std::max(budget * 2, 8));
     }
     ++SaveDrainIoFrames;
+    const int max_drain_frames =
+        world.BackgroundQuiesceFinished ? 4 : 24;
     const float frac = std::min(
-        0.04f, 0.04f * static_cast<float>(SaveDrainIoFrames) / 48.0f);
+        0.04f, 0.04f * static_cast<float>(SaveDrainIoFrames) /
+                    static_cast<float>(std::max(1, max_drain_frames)));
     Report(sink, "init", frac, "Flushing pending terrain IO...");
-    // Abort quickly: stale pending maps / late worker completions must not
-    // block quit-save (was hanging at 512 frames / multi-second populate).
-    if (drained || SaveDrainIoFrames >= 48)
+    if (drained || SaveDrainIoFrames >= max_drain_frames)
     {
       if (!drained && world.Persistence)
       {
         (void)world.Persistence->AbortAsyncChunkIoFor(
-            std::chrono::milliseconds(100));
+            std::chrono::milliseconds(0));
       }
+      CubatariumLogInfo(
+          "Save",
+          std::string("drain_async_io end frames=") +
+              std::to_string(SaveDrainIoFrames) +
+              " drained=" + (drained ? "1" : "0"));
       CurrentPhase = Phase::ScanSaveChunks;
     }
     break;
   }
   case Phase::ScanSaveChunks:
   {
+    CubatariumLogInfo("Save", "scan_save_chunks begin");
     ScanSaveChunkCoords(world);
     CurrentPhase = Phase::SaveChunks;
     Report(sink, "scan", 0.02f, "Collecting chunks...");
+    CubatariumLogInfo(
+        "Save",
+        std::string("scan_save_chunks end count=") +
+            std::to_string(SaveChunkCoords.size()));
     break;
   }
   case Phase::SaveChunks:

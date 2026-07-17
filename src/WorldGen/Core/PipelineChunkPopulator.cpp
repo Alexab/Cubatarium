@@ -287,25 +287,31 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
       const auto carve_start = std::chrono::steady_clock::now();
       if (settings.Tuning.useAnalyticValleys)
       {
-        ValleyParams valley_params;
-        const PackValleysConfig &pack = UWorldGenPack::ValleysConfig();
-        if (pack.Loaded)
+        if (!(request.shouldCancel && request.shouldCancel()))
         {
-          valley_params.enabled = pack.Enabled;
-          valley_params.maxDepth = pack.MaxDepth;
-          valley_params.widthSigma = pack.WidthSigma;
-          valley_params.aquaticDepthScale = pack.AquaticDepthScale;
-          valley_params.riverNoiseScale = pack.RiverNoiseScale;
+          ValleyParams valley_params;
+          const PackValleysConfig &pack = UWorldGenPack::ValleysConfig();
+          if (pack.Loaded)
+          {
+            valley_params.enabled = pack.Enabled;
+            valley_params.maxDepth = pack.MaxDepth;
+            valley_params.widthSigma = pack.WidthSigma;
+            valley_params.aquaticDepthScale = pack.AquaticDepthScale;
+            valley_params.riverNoiseScale = pack.RiverNoiseScale;
+          }
+          CarveChunkValleys(ctx, base_x, base_z, settings.Seed, valley_params,
+                            settings.SeaLevel, settings.Tuning.riverWidth,
+                            get_surface_y);
         }
-        CarveChunkValleys(ctx, base_x, base_z, settings.Seed, valley_params,
-                          settings.SeaLevel, settings.Tuning.riverWidth,
-                          get_surface_y);
       }
 
       if (composable->GetStageMask().IsEnabled(WorldGenStageId::Ravines))
       {
-        CarveChunkRavines(ctx, base_x, base_z, settings.Seed, settings.Ravines,
-                          settings.SeaLevel, get_surface_y);
+        if (!(request.shouldCancel && request.shouldCancel()))
+        {
+          CarveChunkRavines(ctx, base_x, base_z, settings.Seed, settings.Ravines,
+                            settings.SeaLevel, get_surface_y);
+        }
       }
       timing.carveMs = ElapsedMs(carve_start);
 

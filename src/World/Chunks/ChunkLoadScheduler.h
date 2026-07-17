@@ -47,6 +47,9 @@ public:
                             std::chrono::milliseconds(2000));
   bool WaitForWorkersIdle(std::chrono::milliseconds timeout =
                                std::chrono::milliseconds(10000));
+  /// Cancel + short wait, then detach leftover workers for process exit.
+  void ShutdownForProcessExit(std::chrono::milliseconds timeout =
+                                  std::chrono::milliseconds(250));
   void Invalidate(glm::ivec3 coord);
   void Tick(UBlockWorld &world, int maxCommitsPerFrame,
             int maxGenerationStartsPerFrame = 4);

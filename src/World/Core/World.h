@@ -202,6 +202,7 @@ public:
   void BeginCooperativeCreate(const std::string &world_name);
   bool TickCooperativeCreate(class IUProgressSink &sink, int columnBudget);
   bool HasActiveCooperativeOperation() const;
+  void CancelCooperativeOperation();
   bool BlocksAsyncRelightDrain() const;
 
   std::shared_ptr<UUser> GetUser(const std::string &Name);

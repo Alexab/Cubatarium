@@ -97,7 +97,10 @@ void UChunkLoadScheduler::CancelAllPending(
   RequestPriorities.clear();
   Pool.CancelPendingJobs();
   (void)Completed.DrainAll();
-  (void)Pool.WaitIdleFor(worker_wait);
+  if (worker_wait.count() > 0)
+  {
+    (void)Pool.WaitIdleFor(worker_wait);
+  }
   (void)Completed.DrainAll();
 }
 
@@ -115,6 +118,14 @@ bool UChunkLoadScheduler::WaitForWorkersIdle(
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
   }
   return Pool.GetActiveJobCount() == 0 && Queue.empty();
+}
+
+void UChunkLoadScheduler::ShutdownForProcessExit(
+    const std::chrono::milliseconds timeout)
+{
+  CancelAllPending(std::chrono::milliseconds(0));
+  Pool.ShutdownForProcessExit(timeout);
+  (void)Completed.DrainAll();
 }
 
 void UChunkLoadScheduler::Invalidate(glm::ivec3 coord)
