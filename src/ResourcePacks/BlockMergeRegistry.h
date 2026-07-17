@@ -6,6 +6,7 @@
 #include "ResourcePacks/ResourcePack.h"
 #include <array>
 #include <memory>
+#include <shared_mutex>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -55,10 +56,7 @@ public:
     PrimaryPackIds = ids;
   }
 
-  bool HasBlock(const std::string &name) const
-  {
-    return BlocksByName.find(name) != BlocksByName.end();
-  }
+  bool HasBlock(const std::string &name) const;
 
   BlockId RegisterRuntimeBlock(const BlockDefinition &def,
                                const std::array<std::string, 6> &stems);
@@ -72,6 +70,9 @@ public:
   void PopulateBlockDefinitionStorage(UBlockDefinitionStorage &out) const;
   void PopulateTextureBaseStorage(UTextureBaseStorage &out) const;
 
+  bool HasBlockId(BlockId id) const;
+  const std::string *GetTypeNameById(BlockId id) const;
+
   const std::vector<MergedCubeDesc> &GetCubeDescriptors() const
   {
     return CubeDescs;
@@ -80,15 +81,7 @@ public:
   {
     return NameToId;
   }
-  const std::string *GetTypeNameById(BlockId id) const
-  {
-    const auto it = IdToName.find(id);
-    if (it != IdToName.end())
-    {
-      return &it->second;
-    }
-    return nullptr;
-  }
+  std::unordered_map<std::string, BlockId> SnapshotNameToId() const;
 
   std::string ComputeCatalogFingerprint() const;
 
@@ -125,6 +118,7 @@ private:
   bool RuntimeOverlayDirty{false};
   std::shared_ptr<UPlaceholderTextureCache> PlaceholderCache;
   int PlaceholderTileSize{16};
+  mutable std::shared_mutex CatalogMutex;
   static const std::unordered_set<std::string> kTierAWorldgenNames;
 };
 

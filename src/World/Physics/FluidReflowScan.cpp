@@ -48,6 +48,17 @@ void TryEnqueueCell(UWorld &world, glm::ivec3 pos)
         {
           return;
         }
+        // Calm ocean source water at/below sea level: skip frontier seed on
+        // terrain commit. Shore/cave flow still starts from edits / seal.
+        if (def->Physics.IsLiquid && def->Physics.FluidMaxLevel >= 7)
+        {
+          const FluidCellState state =
+              world.GetBlockWorld().GetFluidState(pos);
+          if (state.IsSource())
+          {
+            return;
+          }
+        }
       }
     }
   }

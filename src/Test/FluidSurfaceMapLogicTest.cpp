@@ -28,6 +28,12 @@
 
 #include <unordered_map>
 
+#include <vector>
+
+#include <cstdint>
+
+#include <chrono>
+
 
 
 namespace
@@ -114,7 +120,7 @@ static void TestSentinelAndTuningDefaults()
 
   cutum::URuntimeTuning::ResetToDefaults();
 
-  Expect(cutum::URuntimeTuning::Get().FluidSurfaceWindowMoveThreshold == 8,
+  Expect(cutum::URuntimeTuning::Get().FluidSurfaceWindowMoveThreshold == 16,
 
          "window move threshold default");
 
@@ -140,11 +146,15 @@ static void TestWindowMoveThreshold()
 
          "small window shift does not refresh");
 
-  Expect(cutum::ShouldRefreshFluidSurfaceWindow(0, 0, 8, 0),
+  Expect(!cutum::ShouldRefreshFluidSurfaceWindow(0, 0, 8, 0),
+
+         "sub-threshold x shift does not refresh");
+
+  Expect(cutum::ShouldRefreshFluidSurfaceWindow(0, 0, 16, 0),
 
          "x shift at threshold refreshes");
 
-  Expect(cutum::ShouldRefreshFluidSurfaceWindow(0, 0, 0, 8),
+  Expect(cutum::ShouldRefreshFluidSurfaceWindow(0, 0, 0, 16),
 
          "z shift at threshold refreshes");
 
@@ -292,26 +302,201 @@ static void TestUnderwaterFogPolicyV3()
 }
 
 
+static void TestChunkStagingParityWithPerCell()
+{
+  constexpr cutum::BlockId kWater = 9;
+  cutum::UBlockWorld world;
+  const auto definitions = MakeDefinitions();
+  cutum::UBlockRegistry registry(nullptr, definitions);
+  for (int z = 0; z < 16; ++z)
+  {
+    for (int x = 0; x < 16; ++x)
+    {
+      world.SetBlock(glm::ivec3(x, 40, z), kWater);
+    }
+  }
+
+  const int sizeBlocks = 16;
+  const glm::ivec2 origin(0, 0);
+  const size_t n = static_cast<size_t>(sizeBlocks) * sizeBlocks;
+  const float sentinel = cutum::FluidSurfaceStagingSentinel();
+
+  std::vector<float> chunkSurface(n, sentinel);
+  std::vector<uint8_t> chunkIndex(n, 0);
+  std::vector<float> chunkBottom(n, sentinel);
+  const cutum::FluidSurfaceColumnSlice slice =
+      cutum::BuildFluidSurfaceColumnSlice(world, registry, glm::ivec3(0, 0, 0),
+                                          45);
+  cutum::PatchFluidSurfaceStagingChunk(chunkSurface, chunkIndex, chunkBottom,
+                                       sizeBlocks, origin, glm::ivec3(0, 0, 0),
+                                       &slice, registry, sentinel);
+
+  std::vector<float> cellSurface(n, sentinel);
+  std::vector<uint8_t> cellIndex(n, 0);
+  std::vector<float> cellBottom(n, sentinel);
+  for (int dz = 0; dz < sizeBlocks; ++dz)
+  {
+    for (int dx = 0; dx < sizeBlocks; ++dx)
+    {
+      const cutum::FluidColumnSurface column =
+          cutum::FindFluidColumnSurfaceAt(world, registry, dx, dz, 45);
+      const size_t i = static_cast<size_t>(dz) * sizeBlocks + dx;
+      if (!column.valid)
+      {
+        continue;
+      }
+      cellSurface[i] = cutum::BlockTopY(column.surfaceBlockY);
+      cellBottom[i] = static_cast<float>(column.bottomBlockY);
+      cellIndex[i] =
+          cutum::FluidSurfaceIndexForBlock(column.fluidId, registry);
+    }
+  }
+
+  for (size_t i = 0; i < n; ++i)
+  {
+    Expect(std::abs(chunkSurface[i] - cellSurface[i]) < 0.001f,
+           "chunk staging surface matches per-cell");
+    Expect(chunkIndex[i] == cellIndex[i],
+           "chunk staging fluid index matches per-cell");
+    Expect(std::abs(chunkBottom[i] - cellBottom[i]) < 0.001f,
+           "chunk staging bottom matches per-cell");
+  }
+}
+
+static void TestChunkWindowRebuildBudget()
+{
+  // Steady-state win is "no rebuild" when FluidSurfaceDirty is empty; this
+  // checks that a single window fill via chunk iteration matches per-cell
+  // reference data (RD=2).
+  constexpr cutum::BlockId kWater = 9;
+  constexpr int kRenderDist = 2;
+  cutum::UBlockWorld world;
+  const auto definitions = MakeDefinitions();
+  cutum::UBlockRegistry registry(nullptr, definitions);
+  for (int gz = -kRenderDist; gz <= kRenderDist; ++gz)
+  {
+    for (int gx = -kRenderDist; gx <= kRenderDist; ++gx)
+    {
+      for (int z = 0; z < 16; ++z)
+      {
+        for (int x = 0; x < 16; ++x)
+        {
+          world.SetBlock(glm::ivec3(gx * 16 + x, 40, gz * 16 + z), kWater);
+        }
+      }
+    }
+  }
+
+  const int sizeBlocks = (2 * kRenderDist + 1) * 16;
+  const glm::ivec2 origin(-kRenderDist * 16, -kRenderDist * 16);
+  const size_t n = static_cast<size_t>(sizeBlocks) * sizeBlocks;
+  const float sentinel = cutum::FluidSurfaceStagingSentinel();
+
+  std::vector<float> cellSurface(n, sentinel);
+  std::vector<uint8_t> cellIndex(n, 0);
+  std::vector<float> cellBottom(n, sentinel);
+  for (int dz = 0; dz < sizeBlocks; ++dz)
+  {
+    for (int dx = 0; dx < sizeBlocks; ++dx)
+    {
+      const int bx = origin.x + dx;
+      const int bz = origin.y + dz;
+      const cutum::FluidColumnSurface column =
+          cutum::FindFluidColumnSurfaceAt(world, registry, bx, bz, 45);
+      const size_t i = static_cast<size_t>(dz) * sizeBlocks + dx;
+      if (!column.valid)
+      {
+        continue;
+      }
+      cellSurface[i] = cutum::BlockTopY(column.surfaceBlockY);
+      cellBottom[i] = static_cast<float>(column.bottomBlockY);
+      cellIndex[i] =
+          cutum::FluidSurfaceIndexForBlock(column.fluidId, registry);
+    }
+  }
+
+  std::vector<float> chunkSurface(n, sentinel);
+  std::vector<uint8_t> chunkIndex(n, 0);
+  std::vector<float> chunkBottom(n, sentinel);
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  for (int gz = -kRenderDist; gz <= kRenderDist; ++gz)
+  {
+    for (int gx = -kRenderDist; gx <= kRenderDist; ++gx)
+    {
+      const glm::ivec3 ground(gx, 0, gz);
+      const cutum::FluidSurfaceColumnSlice slice =
+          cutum::BuildFluidSurfaceColumnSlice(world, registry, ground, 45);
+      cutum::PatchFluidSurfaceStagingChunk(chunkSurface, chunkIndex,
+                                           chunkBottom, sizeBlocks, origin,
+                                           ground, &slice, registry, sentinel);
+    }
+  }
+  const double chunk_ms = std::chrono::duration<double, std::milli>(
+                              std::chrono::high_resolution_clock::now() - t0)
+                              .count();
+  std::cout << kTestName << ": window chunk-path ms=" << chunk_ms << std::endl;
+
+  for (size_t i = 0; i < n; ++i)
+  {
+    Expect(std::abs(chunkSurface[i] - cellSurface[i]) < 0.001f,
+           "window chunk staging surface matches per-cell");
+    Expect(chunkIndex[i] == cellIndex[i],
+           "window chunk staging index matches per-cell");
+    Expect(std::abs(chunkBottom[i] - cellBottom[i]) < 0.001f,
+           "window chunk staging bottom matches per-cell");
+  }
+}
+
+static void TestScrollStagingPreservesOverlap()
+{
+  constexpr int kSize = 48;
+  const size_t n = static_cast<size_t>(kSize) * kSize;
+  const float sentinel = cutum::FluidSurfaceStagingSentinel();
+  std::vector<float> surface(n, sentinel);
+  std::vector<uint8_t> index(n, 0);
+  std::vector<float> bottom(n, sentinel);
+  // Mark a known texel at local (20, 10).
+  const size_t marked =
+      static_cast<size_t>(10) * kSize + static_cast<size_t>(20);
+  surface[marked] = 42.5f;
+  index[marked] = 3;
+  bottom[marked] = 12.0f;
+
+  const glm::ivec2 oldOrigin(0, 0);
+  const glm::ivec2 newOrigin(16, 0);
+  Expect(cutum::ScrollFluidSurfaceStagingWindow(surface, index, bottom, kSize,
+                                                oldOrigin, newOrigin, sentinel),
+         "scroll returns true on origin shift");
+
+  // World block (20, 10) was at staging (20,10); after origin +=16x it is at (4,10).
+  const size_t scrolled =
+      static_cast<size_t>(10) * kSize + static_cast<size_t>(4);
+  Expect(std::abs(surface[scrolled] - 42.5f) < 0.001f,
+         "scrolled surface preserves overlap texel");
+  Expect(index[scrolled] == 3, "scrolled index preserves overlap texel");
+  Expect(std::abs(bottom[scrolled] - 12.0f) < 0.001f,
+         "scrolled bottom preserves overlap texel");
+  Expect(surface[marked] == sentinel || std::abs(surface[marked] - 42.5f) > 0.1f,
+         "old edge slot vacated or rewritten");
+  Expect(cutum::FluidSurfaceChunkNeedsStripPatch(glm::ivec3(3, 0, 0), oldOrigin,
+                                                 newOrigin, kSize),
+         "new right strip chunk needs patch");
+  Expect(!cutum::FluidSurfaceChunkNeedsStripPatch(glm::ivec3(1, 0, 0), oldOrigin,
+                                                  newOrigin, kSize),
+         "fully interior old chunk does not need strip patch");
+}
 
 } // namespace
 
-
-
 int main()
-
 {
-
   TestSentinelAndTuningDefaults();
-
   TestWindowMoveThreshold();
-
   TestColumnScanFindsSurface();
-
   TestUnderwaterFogPolicyV3();
-
+  TestChunkStagingParityWithPerCell();
+  TestChunkWindowRebuildBudget();
+  TestScrollStagingPreservesOverlap();
   std::cout << kTestName << ": OK" << std::endl;
-
   return 0;
-
 }
-

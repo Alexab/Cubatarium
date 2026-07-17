@@ -51,4 +51,57 @@ void UColumnGenerationService::GenerateColumn(
   ctx.FlushColumnDirty();
 }
 
+ColumnSampleContext UColumnGenerationService::GenerateColumnTerrainOnly(
+    UComposableWorldGenerator &generator, IUColumnWriter &writer, int world_x,
+    int world_z)
+{
+  ColumnSampleContext sample{};
+  WorldGenContext &ctx = generator.GetContext();
+  if (&writer.GetBlockWorld() != &ctx.World || &writer.GetRegistry() != &ctx.Registry)
+  {
+    return sample;
+  }
+  const ComposableWorldGenConfig &config = generator.GetConfig();
+  ctx.ResetColumnDirty(world_x, world_z);
+  if (config.TerrainMode == ComposableTerrainMode::Flat)
+  {
+    FillFlatColumn(ctx, world_x, world_z);
+    ctx.FlushColumnDirty();
+    return sample;
+  }
+  if (config.TerrainMode == ComposableTerrainMode::LegacyHash)
+  {
+    FillLegacyHashColumn(ctx, world_x, world_z);
+    ctx.FlushColumnDirty();
+    return sample;
+  }
+
+  sample = generator.BuildColumnSample(world_x, world_z);
+  RunTerrainStage(generator, sample, world_x, world_z);
+  ctx.FlushColumnDirty();
+  return sample;
+}
+
+void UColumnGenerationService::GenerateColumnPostTerrain(
+    UComposableWorldGenerator &generator, IUColumnWriter &writer, int world_x,
+    int world_z, uint32_t skip_stage_mask, const ColumnSampleContext &sample)
+{
+  WorldGenContext &ctx = generator.GetContext();
+  if (&writer.GetBlockWorld() != &ctx.World || &writer.GetRegistry() != &ctx.Registry)
+  {
+    return;
+  }
+  const ComposableWorldGenConfig &config = generator.GetConfig();
+  if (config.TerrainMode == ComposableTerrainMode::Flat ||
+      config.TerrainMode == ComposableTerrainMode::LegacyHash)
+  {
+    return;
+  }
+
+  ctx.ResetColumnDirty(world_x, world_z);
+  RunPostTerrainStagesExcluding(generator, sample, world_x, world_z,
+                                skip_stage_mask);
+  ctx.FlushColumnDirty();
+}
+
 } // namespace cutum

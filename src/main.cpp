@@ -22,6 +22,9 @@ int main(int argc, char *argv[])
 #ifdef _WIN32
   cutum::CubatariumInstallWindowsDiagnostics();
 #endif
+  const bool also_stderr =
+      argc > 1; // CLI / console modes also get ERROR+ on stderr via wrappers
+  cutum::CubatariumInitLogging(argc > 0 ? argv[0] : "Cubatarium", also_stderr);
 
   for (int i = 1; i < argc; ++i)
   {
@@ -57,7 +60,12 @@ int main(int argc, char *argv[])
 #endif
       auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
       cutum::IUPlatformPaths::SetGlobal(paths);
-      return cutum::RunEnterGameSmoke(*paths);
+      int in_game_frames = 5;
+      if (i + 1 < argc && argv[i + 1][0] != '-')
+      {
+        in_game_frames = std::atoi(argv[i + 1]);
+      }
+      return cutum::RunEnterGameSmoke(*paths, in_game_frames);
     }
     if (std::strcmp(argv[i], "--validate-load") == 0)
     {

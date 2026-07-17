@@ -2,11 +2,11 @@
 
 #include <algorithm>
 #include <chrono>
-#include <condition_variable>
 #include <cstddef>
 #include <deque>
 #include <functional>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -16,7 +16,8 @@ namespace cutum
 class UJobThreadPool
 {
 public:
-  explicit UJobThreadPool(std::size_t threadCount = 0);
+  explicit UJobThreadPool(std::size_t threadCount = 0,
+                          const char *worker_job_kind = "Worker");
   ~UJobThreadPool();
 
   UJobThreadPool(const UJobThreadPool &) = delete;
@@ -26,16 +27,22 @@ public:
   void WaitIdle();
   bool WaitIdleFor(std::chrono::milliseconds timeout);
   void CancelPendingJobs();
+  /// Stop workers for process exit: wait up to timeout, then detach leftovers
+  /// so destructors never block forever on late ChunkPopulate/carve.
+  void ShutdownForProcessExit(std::chrono::milliseconds timeout);
+  std::size_t GetPendingJobCount() const;
+  std::size_t GetActiveJobCount() const;
 
 private:
   void WorkerLoop();
 
   std::vector<std::thread> Workers;
-  std::mutex QueueMutex;
+  mutable std::mutex QueueMutex;
   std::condition_variable QueueCv;
   std::deque<std::function<void()>> Jobs;
   std::size_t ActiveJobs{0};
   bool Stop{false};
+  std::string WorkerJobKind;
 };
 
 template <typename T> class UCompletedJobQueue
@@ -78,6 +85,12 @@ public:
   {
     std::lock_guard<std::mutex> lock(Mutex);
     return Items.empty();
+  }
+
+  std::size_t Size() const
+  {
+    std::lock_guard<std::mutex> lock(Mutex);
+    return Items.size();
   }
 
 private:

@@ -90,6 +90,8 @@
         "horizon_fog_celestial_tint": true,
         "distance_fog_end_margin_blocks": 12,
         "altitude_use_terrain_surface": true,
+        "vsync": false,
+        "msaa_samples": 0,
         "underwater_fog": {
             "surface_scan_up": 32,
             "surface_scan_down": 64,
@@ -98,6 +100,8 @@
     },
     "ui": {
         "legacy_hud": false,
+        "show_performance": true,
+        "perf_log_interval_sec": 2.0,
         "console_key": "grave",
         "palette_key": "b"
     },

@@ -56,6 +56,7 @@ ComposableWorldGenConfig ApplyPackPipelineMask(ComposableWorldGenConfig config)
   }
   config.Fluids = StageEnabled(pipeline, config.Fluids, pipeline.Fluids);
   config.Ravines = StageEnabled(pipeline, config.Ravines, pipeline.Ravines);
+  config.Valleys = StageEnabled(pipeline, config.Valleys, pipeline.Valleys);
   config.Ores = StageEnabled(pipeline, config.Ores, pipeline.Ores);
   config.Caves = StageEnabled(pipeline, config.Caves, pipeline.Caves);
   config.Vegetation =
@@ -81,10 +82,19 @@ WorldGenStageMask BuildWorldGenStageMask(
   WorldGenStageMask mask;
   mask.Set(WorldGenStageId::Terrain, true);
 
-  const bool ravines = StageEnabled(pack_pipeline, generator_config.Ravines,
-                                    pack_pipeline.Ravines) &&
-                       settings.Ravines.enabled;
+  const bool use_valleys = settings.Tuning.useAnalyticValleys;
+  const bool ravines =
+      !use_valleys &&
+      StageEnabled(pack_pipeline, generator_config.Ravines,
+                   pack_pipeline.Ravines) &&
+      settings.Ravines.enabled;
   mask.Set(WorldGenStageId::Ravines, ravines);
+
+  const bool valleys =
+      use_valleys &&
+      StageEnabled(pack_pipeline, generator_config.Valleys,
+                   pack_pipeline.Valleys);
+  mask.Set(WorldGenStageId::Valleys, valleys);
 
   const bool caves = StageEnabled(pack_pipeline, generator_config.Caves,
                                   pack_pipeline.Caves) &&
@@ -144,6 +154,10 @@ std::optional<WorldGenStageId> WorldGenStageIdFromPipelineString(
   {
     return WorldGenStageId::Ravines;
   }
+  if (stage == "valleys")
+  {
+    return WorldGenStageId::Valleys;
+  }
   if (stage == "caves")
   {
     return WorldGenStageId::Caves;
@@ -186,11 +200,12 @@ std::optional<WorldGenStageId> WorldGenStageIdFromPipelineString(
 
 std::vector<WorldGenStageId> DefaultPostTerrainStageOrder()
 {
-  return {WorldGenStageId::Ravines,     WorldGenStageId::Caves,
-          WorldGenStageId::Fluids,      WorldGenStageId::Ores,
-          WorldGenStageId::Vegetation,  WorldGenStageId::GroundCover,
-          WorldGenStageId::Decoration,  WorldGenStageId::Structures,
-          WorldGenStageId::LavaPools,   WorldGenStageId::FirePatch};
+  return {WorldGenStageId::Ravines,     WorldGenStageId::Valleys,
+          WorldGenStageId::Caves,       WorldGenStageId::Fluids,
+          WorldGenStageId::Ores,        WorldGenStageId::Vegetation,
+          WorldGenStageId::GroundCover, WorldGenStageId::Decoration,
+          WorldGenStageId::Structures,  WorldGenStageId::LavaPools,
+          WorldGenStageId::FirePatch};
 }
 
 } // namespace cutum

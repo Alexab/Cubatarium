@@ -23,8 +23,12 @@ ROUGHNESS = 0.58
 AMPLITUDE_BLOCKS = 4.5 * (MAX_HEIGHT / 12.0 if MAX_HEIGHT > 15 else 1.0) * ROUGHNESS
 
 # Legacy single-sided proxy budgets (kept for quick regression signal).
-MAX_MEAN_ABS_DELTA_Y = 1.35
-MAX_PCT_DELTA_GT_2 = 4.5
+MAX_MEAN_ABS_DELTA_Y = 1.1
+MAX_PCT_DELTA_GT_2 = 2.5
+MAX_PCT_DELTA_GT_3 = 0.5
+MAX_UNDERWATER_CLIFF_COUNT = 120
+RAVINE_RARITY = 600
+RAVINE_AQUATIC_MAX_DEPTH = 5
 
 
 def load_thresholds() -> dict:
@@ -33,6 +37,8 @@ def load_thresholds() -> dict:
     baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
     thresholds = dict(baseline.get("thresholds", {}))
     thresholds["max_height"] = baseline.get("max_height", MAX_HEIGHT)
+    smoothness = baseline.get("smoothness_thresholds", {})
+    thresholds.update(smoothness)
     return thresholds
 
 
@@ -158,12 +164,14 @@ def height_smoothness_metrics(seed: int, height_cfg: dict) -> dict:
         return {
             "mean_abs_delta_y": 0.0,
             "pct_delta_gt_2": 0.0,
+            "pct_delta_gt_3": 0.0,
             "flatness_pct": 0.0,
             "rolling_hill_pct": 0.0,
             "delta_ge_4_pct": 0.0,
         }
     mean_abs = sum(deltas) / len(deltas)
     pct_gt_2 = 100.0 * sum(1 for d in deltas if d > 2) / len(deltas)
+    pct_gt_3 = 100.0 * sum(1 for d in deltas if d > 3) / len(deltas)
     flatness_pct = 100.0 * sum(1 for d in deltas if d == 0) / len(deltas)
     rolling_hill_pct = (
         100.0 * sum(1 for d in deltas if 1 <= d <= 3) / len(deltas)
@@ -172,10 +180,37 @@ def height_smoothness_metrics(seed: int, height_cfg: dict) -> dict:
     return {
         "mean_abs_delta_y": mean_abs,
         "pct_delta_gt_2": pct_gt_2,
+        "pct_delta_gt_3": pct_gt_3,
         "flatness_pct": flatness_pct,
         "rolling_hill_pct": rolling_hill_pct,
         "delta_ge_4_pct": delta_ge_4_pct,
     }
+
+
+def ravine_hash(x: int, z: int, seed: int) -> int:
+    return ((x * 374761393 + z * 668265263) ^ (seed + 4400)) & 0xFFFFFFFF
+
+
+def underwater_cliff_proxy_count(seed: int, height_cfg: dict) -> int:
+    """Count aquatic columns where ravine gate would carve deeper than aquatic cap."""
+    count = 0
+    for x in range(-SAMPLE_RADIUS, SAMPLE_RADIUS):
+        for z in range(-SAMPLE_RADIUS, SAMPLE_RADIUS):
+            surface_y = layered_height_y(x, z, seed, height_cfg)
+            if surface_y > SEA_LEVEL + 2:
+                continue
+            if ravine_hash(x, z, seed) % RAVINE_RARITY != 0:
+                continue
+            ridge = 1.0 - abs(_fbm(x * 0.004, z * 0.004, seed + 4400, 3) * 2.0 - 1.0)
+            path = _fbm(x * 0.015, z * 0.015, seed + 4401, 2)
+            combined = ridge * path
+            if combined < 0.82:
+                continue
+            depth_factor = _smoothstep((combined - 0.82) / (0.95 - 0.82))
+            carve_depth = 8 + int(depth_factor * (40 - 8))
+            if carve_depth > RAVINE_AQUATIC_MAX_DEPTH:
+                count += 1
+    return count
 
 
 def check_bidirectional_budgets(metrics: dict, thresholds: dict) -> tuple[list[str], list[str]]:
@@ -221,6 +256,12 @@ def check_bidirectional_budgets(metrics: dict, thresholds: dict) -> tuple[list[s
 def main() -> int:
     height_cfg = check_schema_files()
     thresholds = load_thresholds()
+    mean_abs_max = thresholds.get("mean_abs_delta_y_max", MAX_MEAN_ABS_DELTA_Y)
+    pct_gt_2_max = thresholds.get("pct_delta_gt_2_max", MAX_PCT_DELTA_GT_2)
+    pct_gt_3_max = thresholds.get("pct_delta_gt_3_max", MAX_PCT_DELTA_GT_3)
+    underwater_cliff_max = thresholds.get(
+        "max_underwater_cliff_count", MAX_UNDERWATER_CLIFF_COUNT
+    )
     all_biomes, covered = object_biome_coverage()
     missing = sorted(all_biomes - covered)
     if missing:
@@ -231,16 +272,21 @@ def main() -> int:
     bidirectional_failed = False
     for seed in REFERENCE_SEEDS:
         metrics = height_smoothness_metrics(seed, height_cfg)
+        underwater_cliffs = underwater_cliff_proxy_count(seed, height_cfg)
         print(
             f"seed={seed}: mean_abs_delta_y={metrics['mean_abs_delta_y']:.3f} "
             f"pct_delta_gt_2={metrics['pct_delta_gt_2']:.2f}% "
+            f"pct_delta_gt_3={metrics['pct_delta_gt_3']:.2f}% "
             f"flatness={metrics['flatness_pct']:.2f}% "
             f"rolling_hills={metrics['rolling_hill_pct']:.2f}% "
-            f"delta_ge_4={metrics['delta_ge_4_pct']:.2f}%"
+            f"delta_ge_4={metrics['delta_ge_4_pct']:.2f}% "
+            f"underwater_cliffs={underwater_cliffs}"
         )
         if (
-            metrics["mean_abs_delta_y"] > MAX_MEAN_ABS_DELTA_Y
-            or metrics["pct_delta_gt_2"] > MAX_PCT_DELTA_GT_2
+            metrics["mean_abs_delta_y"] > mean_abs_max
+            or metrics["pct_delta_gt_2"] > pct_gt_2_max
+            or metrics["pct_delta_gt_3"] > pct_gt_3_max
+            or underwater_cliffs > underwater_cliff_max
         ):
             failed = True
         budget_failures, budget_warnings = check_bidirectional_budgets(
@@ -261,7 +307,8 @@ def main() -> int:
     if failed:
         print(
             f"WARN: legacy smoothness budgets exceeded "
-            f"(mean_abs<={MAX_MEAN_ABS_DELTA_Y}, pct_gt_2<={MAX_PCT_DELTA_GT_2}%)",
+            f"(mean_abs<={mean_abs_max}, pct_gt_2<={pct_gt_2_max}%, "
+            f"pct_gt_3<={pct_gt_3_max}%, underwater_cliffs<={underwater_cliff_max})",
             file=sys.stderr,
         )
         return 1

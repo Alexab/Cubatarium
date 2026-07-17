@@ -232,6 +232,8 @@ int RunEnterGameSmoke(IUPlatformPaths &paths, int in_game_frames)
 
     window.Run();
 
+    world->PrepareForShutdown();
+
     LogWorldLoadDiag("enter_game_smoke_end", *world);
     WarnIfTerrainMeshesMissing(*world, "enter-game-smoke");
 

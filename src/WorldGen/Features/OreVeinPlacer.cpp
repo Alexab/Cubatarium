@@ -3,12 +3,12 @@
 #include "ResourcePacks/BlockNameUtil.h"
 #include "World/Core/BlockWorld.h"
 #include "WorldGen/Core/Noise.h"
+#include "WorldGen/Core/WorldGenBlockResolver.h"
 #include "WorldGen/Core/WorldGenContext.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Core/WorldGenRefs.h"
 #include <algorithm>
 #include <cmath>
-#include <unordered_set>
 
 namespace cutum
 {
@@ -47,26 +47,18 @@ BlockId ResolveOreBlockId(const WorldGenContext &ctx, const std::string &slot)
     return ctx.Blocks.OreIron;
   }
 
-  std::unordered_set<std::string> visited;
   const WorldGenSlotSpec *spec = UWorldGenRefs::GetSlot(slot);
-  if (spec)
+  if (!spec)
   {
-    for (const std::string &block_name : spec->BlockNames)
+    return BLOCK_AIR;
+  }
+  for (const std::string &block_name : spec->BlockNames)
+  {
+    const BlockId id = ResolvePackScatterBlockId(
+        ctx.Registry, ctx.WorldgenOwnerPackId, block_name);
+    if (id != BLOCK_AIR)
     {
-      BlockId id = BLOCK_AIR;
-      if (!ctx.WorldgenOwnerPackId.empty())
-      {
-        id = ctx.Registry.GetIdByTypeName(
-            MakeQualifiedBlockName(ctx.WorldgenOwnerPackId, block_name));
-      }
-      if (id == BLOCK_AIR)
-      {
-        id = ctx.Registry.GetIdByTypeName(block_name);
-      }
-      if (id != BLOCK_AIR)
-      {
-        return id;
-      }
+      return id;
     }
   }
   return BLOCK_AIR;

@@ -85,6 +85,12 @@ void UWorldOperationRunner::Start(WorldRunnerRequest request)
     break;
   case WorldRunnerOp::Shutdown:
     CurrentStage = Stage::ShutdownQuiesce;
+    // Drop any in-flight autosave: TickBudgetedAutosave stops in Loading and
+    // would otherwise leave a half-finished coop session for ShutdownSave.
+    if (World.HasActiveCooperativeOperation())
+    {
+      World.CancelCooperativeOperation();
+    }
     World.BeginBackgroundQuiesce(ShutdownQuiesceState);
     break;
   }
@@ -374,8 +380,10 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
 
   case Stage::ShutdownQuiesce:
     sink.Begin(WorldOperationKind::Shutdown);
+    // 100ms/step: active chunk populate often takes 2–4s; 50ms was too short
+    // per pass and left workers alive into DrainAsyncIo.
     if (!World.TickBackgroundQuiesce(ShutdownQuiesceState,
-                                     std::chrono::milliseconds(50), &sink))
+                                     std::chrono::milliseconds(100), &sink))
     {
       return false;
     }
@@ -395,7 +403,8 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
       if (!World.HasActiveCooperativeOperation())
       {
         sink.Report("save", 0.92f, "Saving world...");
-        World.BeginCooperativeSave(folder);
+        // Do not resume streaming after quit-save — PrepareForShutdown follows.
+        World.BeginCooperativeSave(folder, /*resume_streaming_after_save=*/false);
       }
       if (!World.TickCooperativeSave(sink, budget))
       {

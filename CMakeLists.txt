@@ -4,16 +4,36 @@ if(POLICY CMP0091)
     cmake_policy(SET CMP0091 NEW)
 endif()
 
-# Static CRT (/MT) and vcpkg libs for MSVC Windows. Runtime output goes to bin/.
+# Static vcpkg triplet on Windows hosts. /MT runtime is applied after project()
+# only for MSVC / clang-cl — GNU-style Clang (linux-ninja preset) must not get /Zc flags.
 if(WIN32)
     set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "vcpkg triplet" FORCE)
     set(VCPKG_APPLOCAL_DEPS OFF CACHE BOOL "Copy DLL deps next to exe" FORCE)
     set(VCPKG_MANIFEST_MODE ON CACHE BOOL "vcpkg manifest mode" FORCE)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
-        CACHE STRING "MSVC runtime library (/MT)" FORCE)
 endif()
 
 project(Cubatarium VERSION 0.0.1.1 LANGUAGES CXX)
+
+# MSVC desktop static CRT (/MT). Skip for GNU-style Clang on Windows (e.g. linux-ninja preset).
+set(CUBATARIUM_MSVC_DESKTOP FALSE)
+if(WIN32)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        set(CUBATARIUM_MSVC_DESKTOP TRUE)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
+           AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        set(CUBATARIUM_MSVC_DESKTOP TRUE)
+    endif()
+endif()
+if(CUBATARIUM_MSVC_DESKTOP)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+        CACHE STRING "MSVC runtime library (/MT)" FORCE)
+    include(${CMAKE_SOURCE_DIR}/cmake/AssertWindowsStatic.cmake)
+elseif(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
+       AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
+    # clang++ on Windows with x64-windows-static vcpkg deps must use /MT too.
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+        CACHE STRING "MSVC runtime library (/MT for static vcpkg)" FORCE)
+endif()
 
 option(CUBATARIUM_ENABLE_TSAN "Build with ThreadSanitizer (Linux Clang/GCC)" OFF)
 if(CUBATARIUM_ENABLE_TSAN)
@@ -23,10 +43,6 @@ if(CUBATARIUM_ENABLE_TSAN)
     else()
         message(WARNING "CUBATARIUM_ENABLE_TSAN is only supported on Linux with Clang/GCC")
     endif()
-endif()
-
-if(WIN32)
-    include(${CMAKE_SOURCE_DIR}/cmake/AssertWindowsStatic.cmake)
 endif()
 
 include(${CMAKE_SOURCE_DIR}/cmake/GetVersionFromGit.cmake)
@@ -63,6 +79,12 @@ if(NOT ANDROID)
     find_package(GLEW REQUIRED)
     find_package(Freetype REQUIRED)
     find_package(nlohmann_json REQUIRED)
+    find_package(glog CONFIG REQUIRED)
+    # vcpkg glog exports /Zc:__cplusplus for MSVC ABI; clang++ (GNU driver) rejects it.
+    if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
+       AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
+        set_target_properties(glog::glog PROPERTIES INTERFACE_COMPILE_OPTIONS "")
+    endif()
 endif()
 
 set(STB_IMAGE_HEADER "${CMAKE_SOURCE_DIR}/src/ThirdParty/stb_image.h")
@@ -211,6 +233,7 @@ set(SOURCES
     src/World/Physics/MaterialReactionRulesRegistry.cpp
     src/World/Physics/Replay/ReplayWorldFixture.cpp
     src/World/Diagnostics/MovementDiagnosticsRecorder.cpp
+    src/World/Diagnostics/FramePerfMonitor.cpp
     src/World/Diagnostics/BlockInspectDiagnostics.cpp
     src/World/Mesh/WorldMeshService.cpp
     src/World/Mesh/WorldMeshDirtyPolicy.cpp
@@ -267,8 +290,11 @@ set(SOURCES
     src/WorldGen/Core/ColumnWriteContext.h
     src/WorldGen/Core/WorldGenRefs.cpp
     src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
     src/WorldGen/Core/IUWorldGenPipeline.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
+    src/WorldGen/Stages/MudflowErosion.cpp
     src/WorldGen/Stages/DensityTerrainFill.cpp
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
     src/WorldGen/Sampling/ClimateSampler.cpp
@@ -284,6 +310,7 @@ set(SOURCES
     src/WorldGen/Features/CaveCarver.cpp
     src/WorldGen/Features/CaveDepthBand.cpp
     src/WorldGen/Features/RavineCarver.cpp
+    src/WorldGen/Features/ValleyCarver.cpp
     src/WorldGen/Features/OreVeinPlacer.cpp
     src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/WorldGen/Features/ObjectPlacementConstraints.cpp
@@ -391,6 +418,7 @@ set(SOURCES
     src/App/Platform/DesktopPlatformWindow.cpp
     src/App/Platform/IUPlatformPaths.cpp
     src/App/Platform/Log.cpp
+    src/App/Platform/WorkerJobKind.cpp
 )
 
 set(HEADERS
@@ -1056,6 +1084,7 @@ add_executable(fluid_surface_map_logic_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Core/FluidColumnSurfaceQuery.cpp
     src/World/Core/RuntimeTuning.cpp
+    src/Render/Mesh/FluidSurfaceColumnSlice.cpp
     src/Test/FluidSurfaceMapLogicTest.cpp)
 target_include_directories(fluid_surface_map_logic_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -1159,6 +1188,7 @@ target_link_libraries(fluid_placement_liquid_decor_test glm::glm nlohmann_json::
 add_executable(decor_mesh_integration_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/Core/Jobs/JobThreadPool.cpp
+    src/App/Platform/WorkerJobKind.cpp
     src/Core/Jobs/JobThreadBudget.cpp
     src/Render/Engine/DistanceFog.cpp
     src/Render/Engine/HorizonFogColor.cpp
@@ -1197,6 +1227,13 @@ add_executable(fluid_worldgen_seal_test
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
+    src/ThirdParty/stb_image.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/WorldGen/Core/Noise.cpp
     src/Test/FluidWorldGenSealTest.cpp)
 target_include_directories(fluid_worldgen_seal_test PRIVATE
@@ -1204,6 +1241,124 @@ target_include_directories(fluid_worldgen_seal_test PRIVATE
 target_compile_definitions(fluid_worldgen_seal_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_worldgen_seal_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(ravine_carver_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/ResourcePacks/BlockNameUtil.cpp
+    src/WorldGen/Core/WorldGenContext.cpp
+    src/WorldGen/Core/WorldGenBlockResolver.cpp
+    src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
+    src/ThirdParty/stb_image.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
+    src/WorldGen/Core/Noise.cpp
+    src/WorldGen/Features/RavineCarver.cpp
+    src/Test/RavineCarverTest.cpp)
+target_include_directories(ravine_carver_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(ravine_carver_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(ravine_carver_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(valley_carver_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/ResourcePacks/BlockNameUtil.cpp
+    src/WorldGen/Core/WorldGenContext.cpp
+    src/WorldGen/Core/WorldGenBlockResolver.cpp
+    src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Core/Noise.cpp
+    src/WorldGen/Sampling/ClimateSampler.cpp
+    src/WorldGen/Sampling/TerrainClimateMapper.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
+    src/WorldGen/Features/ValleyCarver.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
+    src/ThirdParty/stb_image.cpp
+    src/Test/ValleyCarverTest.cpp)
+target_include_directories(valley_carver_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(valley_carver_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(valley_carver_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(mudflow_erosion_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/ResourcePacks/BlockNameUtil.cpp
+    src/World/Objects/ObjectUtil.cpp
+    src/WorldGen/Core/WorldGenContext.cpp
+    src/WorldGen/Core/WorldGenBlockResolver.cpp
+    src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
+    src/ThirdParty/stb_image.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
+    src/WorldGen/Stages/MudflowErosion.cpp
+    src/Test/MudflowErosionTest.cpp)
+target_include_directories(mudflow_erosion_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(mudflow_erosion_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(mudflow_erosion_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(density_refine_parity_test
+    src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/WorldGenPack.cpp
+    src/ThirdParty/stb_image.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Core/Noise.cpp
+    src/WorldGen/Sampling/BiomeSampler.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
+    src/WorldGen/Sampling/ClimateSampler.cpp
+    src/WorldGen/Sampling/TerrainClimateMapper.cpp
+    src/WorldGen/Sampling/OverworldHeightSampler.cpp
+    src/WorldGen/Sampling/DensityRouter.cpp
+    src/WorldGen/Sampling/DensityFieldSampler.cpp
+    src/WorldGen/Sampling/ColumnSample.cpp
+    src/WorldGen/Features/CaveDepthBand.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
+    src/ThirdParty/stb_image.cpp
+    src/Test/DensityRefineParityTest.cpp)
+target_include_directories(density_refine_parity_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(density_refine_parity_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(worldgen_smoothness_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/ResourcePacks/BlockNameUtil.cpp
+    src/WorldGen/Core/WorldGenContext.cpp
+    src/WorldGen/Core/WorldGenBlockResolver.cpp
+    src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Core/Noise.cpp
+    src/WorldGen/Sampling/BiomeSampler.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
+    src/WorldGen/Sampling/ClimateSampler.cpp
+    src/WorldGen/Sampling/TerrainClimateMapper.cpp
+    src/WorldGen/Sampling/OverworldHeightSampler.cpp
+    src/WorldGen/Sampling/ColumnSample.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
+    src/ThirdParty/stb_image.cpp
+    src/Test/WorldGenSmoothnessTest.cpp)
+target_include_directories(worldgen_smoothness_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(worldgen_smoothness_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(worldgen_smoothness_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(worldgen_vegetation_placement_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
@@ -1219,6 +1374,13 @@ add_executable(worldgen_vegetation_placement_test
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
+    src/ThirdParty/stb_image.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/WorldGen/Core/Noise.cpp
     src/Test/WorldGenVegetationPlacementTest.cpp)
 target_include_directories(worldgen_vegetation_placement_test PRIVATE
@@ -1248,6 +1410,13 @@ set(WORLDGEN_PIPELINE_TEST_SOURCES
     src/WorldGen/Core/WorldGenContext.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
+    src/ThirdParty/stb_image.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/WorldGen/Core/Noise.cpp)
 
 add_executable(worldgen_fluid_vegetation_pipeline_test
@@ -1274,7 +1443,10 @@ target_include_directories(chunk_generation_registry_test PRIVATE
 target_link_libraries(chunk_generation_registry_test glm::glm)
 
 add_executable(worldgen_biome_features_test
+    src/WorldGen/Core/WorldGenRefs.cpp
     src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
     src/WorldGen/Core/WorldGenStageMask.cpp
     src/WorldGen/Core/Noise.cpp
     src/WorldGen/Sampling/BiomeRegistry.cpp
@@ -1324,6 +1496,13 @@ add_executable(worldgen_scatter_block_resolve_test
     src/ThirdParty/stb_image.cpp
     src/WorldGen/Core/WorldGenBlockResolver.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
+    src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenStageMask.cpp
+    src/WorldGen/Sampling/BiomeRegistry.cpp
+    src/ThirdParty/stb_image.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
+    src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/Test/WorldGenScatterBlockResolveTest.cpp)
 target_include_directories(worldgen_scatter_block_resolve_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -1478,8 +1657,11 @@ set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     src/WorldGen/Core/BlockWorldColumnWriter.cpp
     src/WorldGen/Core/WorldGenRefs.cpp
     src/WorldGen/Core/WorldGenPack.cpp
+    src/WorldGen/Core/WorldGenContentPin.cpp
+    src/WorldGen/Core/WorldGenContentPinTls.cpp
     src/WorldGen/Core/IUWorldGenPipeline.cpp
     src/WorldGen/Stages/WorldGenStages.cpp
+    src/WorldGen/Stages/MudflowErosion.cpp
     src/WorldGen/Stages/DensityTerrainFill.cpp
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
     src/WorldGen/Sampling/ClimateSampler.cpp
@@ -1495,13 +1677,16 @@ set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     src/WorldGen/Features/CaveCarver.cpp
     src/WorldGen/Features/CaveDepthBand.cpp
     src/WorldGen/Features/RavineCarver.cpp
+    src/WorldGen/Features/ValleyCarver.cpp
     src/WorldGen/Features/OreVeinPlacer.cpp
     src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/WorldGen/Features/ObjectPlacementConstraints.cpp
     src/WorldGen/Features/ObjectFeaturePlacer.cpp
     src/WorldGen/Features/BuiltinWorldGenFeatures.cpp
     src/WorldGen/Core/PipelineChunkPopulator.cpp
-    src/WorldGen/Core/ProceduralWorldGenFactory.cpp)
+    src/WorldGen/Core/ProceduralWorldGenFactory.cpp
+    src/App/Platform/Log.cpp
+    src/App/Platform/WorkerJobKind.cpp)
 
 add_executable(fluid_worldgen_chunk_test
     ${WORLDGEN_FLUID_CHUNK_TEST_SOURCES}
@@ -1510,7 +1695,10 @@ target_include_directories(fluid_worldgen_chunk_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_compile_definitions(fluid_worldgen_chunk_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(fluid_worldgen_chunk_test glm::glm nlohmann_json::nlohmann_json)
+target_link_libraries(fluid_worldgen_chunk_test glm::glm nlohmann_json::nlohmann_json glog::glog)
+if(WIN32)
+  target_link_libraries(fluid_worldgen_chunk_test dbghelp)
+endif()
 
 add_executable(worldgen_vegetation_placement_integration_test
     ${WORLDGEN_FLUID_CHUNK_TEST_SOURCES}
@@ -1519,7 +1707,10 @@ target_include_directories(worldgen_vegetation_placement_integration_test PRIVAT
     ${CMAKE_SOURCE_DIR}/src)
 target_compile_definitions(worldgen_vegetation_placement_integration_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(worldgen_vegetation_placement_integration_test glm::glm nlohmann_json::nlohmann_json)
+target_link_libraries(worldgen_vegetation_placement_integration_test glm::glm nlohmann_json::nlohmann_json glog::glog)
+if(WIN32)
+  target_link_libraries(worldgen_vegetation_placement_integration_test dbghelp)
+endif()
 
 add_executable(physics_integration_test
     ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
@@ -1624,7 +1815,9 @@ if(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
 
-if(MSVC)
+if(CUBATARIUM_MSVC_DESKTOP
+   OR (WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
+       AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU"))
     set_property(TARGET ${PROJECT_NAME} PROPERTY
         MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
@@ -1641,6 +1834,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     GLEW::GLEW
     Freetype::Freetype
     nlohmann_json::nlohmann_json
+    glog::glog
 )
 
 if(WIN32)

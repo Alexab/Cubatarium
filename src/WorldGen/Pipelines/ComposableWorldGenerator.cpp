@@ -80,7 +80,16 @@ ColumnSampleContext UComposableWorldGenerator::BuildColumnSample(
         BiomeSampler->WeightsAt(world_x, world_z, sample.PreliminarySurfaceY,
                                 Ctx.Settings.SeaLevel, Ctx.Settings.MaxHeight);
     sample.DominantBiome = DominantBiome(sample.Biomes);
-    sample.SurfaceY = DensitySampler->SurfaceYAt(world_x, world_z);
+    const int raw_y = DensitySampler->SurfaceYAt(world_x, world_z);
+    if (Ctx.Settings.Tuning.useDensityRefineParity)
+    {
+      sample.SurfaceY = BiomeSampler->RefineSurfaceY(world_x, world_z, raw_y,
+                                                       Ctx.Settings);
+    }
+    else
+    {
+      sample.SurfaceY = raw_y;
+    }
     const CoarseHeightCallback coarse_fn = [this](int hx, int hz)
     { return DensitySampler->CoarseSurfaceYAt(hx, hz); };
     sample.SurfaceGradient =
@@ -93,6 +102,8 @@ ColumnSampleContext UComposableWorldGenerator::BuildColumnSample(
     sample.HeightNorm = std::clamp(
         static_cast<float>(sample.SurfaceY - Ctx.Settings.SeaLevel) / denom, 0.f,
         1.f);
+    sample.CoastFactor = ComputeCoastBeachStrength(
+        world_x, world_z, sample.SurfaceY, Ctx.Settings, coarse_fn);
     return sample;
   }
   ColumnSampleContext sample;
@@ -197,9 +208,19 @@ ColumnLayerRule UComposableWorldGenerator::BuildTerrainRuleFromSample(
   rule.subsurfaceBlock = Ctx.Blocks.Dirt;
   if ((Config.TerrainMode == ComposableTerrainMode::NoiseHeightmap ||
        Config.TerrainMode == ComposableTerrainMode::Density3D) &&
-      Config.HeightPreset == HeightPreset::Mountains && HeightSampler)
+      Config.HeightPreset == HeightPreset::Mountains &&
+      (HeightSampler || DensitySampler))
   {
-    const int stone_above = HeightSampler->params().stoneSurfaceAboveY;
+    int stone_above = -1;
+    if (HeightSampler)
+    {
+      stone_above = HeightSampler->params().stoneSurfaceAboveY;
+    }
+    else if (DensitySampler)
+    {
+      stone_above =
+          MountainsStoneSurfaceAboveY(Ctx.Settings.SeaLevel, Ctx.Settings.MaxHeight);
+    }
     if (stone_above > 0 && sample.SurfaceY >= stone_above)
     {
       rule.surfaceBlock = Ctx.Blocks.Stone;

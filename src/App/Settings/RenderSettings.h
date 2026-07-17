@@ -37,6 +37,8 @@ struct RenderSettings
   /// Use horizontal (XZ) distance for distance fog (classic render fog).
   bool DistanceFogHorizontal{true};
   bool AltitudeAdaptiveFog{true};
+  /// When true, lower effective RD under Dirty/GenQ/phys pressure (hysteresis).
+  bool AdaptiveRenderDistance{false};
   int AltitudeFogThresholdBlocks{32};
   float AltitudeFogPenaltyPer16Blocks{0.05f};
   /// Gradient sky pass before world geometry (greedy path).
@@ -49,6 +51,12 @@ struct RenderSettings
   int DistanceFogEndMarginBlocks{12};
   /// Use terrain surface height for altitude-adaptive fog (not feet Y).
   bool AltitudeUseTerrainSurface{true};
+  /// glfwSwapInterval: false → 0 (uncapped present). Default off to avoid
+  /// driver-forced stalls when Wall FPS ≪ Sim FPS.
+  bool VSync{false};
+  /// Request MSAA sample count at window create (0 = off). Applied only when
+  /// the window is created before config; prefer 0 for GPU-bound present.
+  int MsaaSamples{0};
 
   static RenderSettings Legacy()
   {

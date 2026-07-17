@@ -1,5 +1,9 @@
 #include "WorldGen/Features/ObjectFeatureConfig.h"
+#include "WorldGen/Core/WorldGenContentPin.h"
+#include "WorldGen/Core/WorldGenContentPinTls.h"
 #include "WorldGen/Sampling/BiomeRegistry.h"
+#include <algorithm>
+#include <atomic>
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -7,8 +11,8 @@
 namespace cutum
 {
 
-ObjectFeatureConfig UObjectFeatureConfigStorage::Config{};
-bool UObjectFeatureConfigStorage::Loaded = false;
+std::shared_ptr<const ObjectFeatureConfig> UObjectFeatureConfigStorage::Active =
+    std::make_shared<ObjectFeatureConfig>();
 
 namespace
 {
@@ -215,8 +219,7 @@ const char *SubBiomeIdToString(SubBiomeId subBiome)
 bool UObjectFeatureConfigStorage::LoadFromFile(
     const std::filesystem::path &path)
 {
-  Loaded = false;
-  Config = ObjectFeatureConfig{};
+  auto next = std::make_shared<ObjectFeatureConfig>();
   std::ifstream in(path);
   if (!in.is_open())
   {
@@ -227,19 +230,19 @@ bool UObjectFeatureConfigStorage::LoadFromFile(
   {
     const nlohmann::json root = nlohmann::json::parse(in);
     ParseRuleArray(root.value("vegetation", nlohmann::json::array()),
-                   Config.Vegetation);
+                   next->Vegetation);
     ParseRuleArray(root.value("ground_cover", nlohmann::json::array()),
-                   Config.GroundCover);
+                   next->GroundCover);
     ParseRuleArray(root.value("decoration", nlohmann::json::array()),
-                   Config.Decoration);
+                   next->Decoration);
     ParseRuleArray(root.value("structures", nlohmann::json::array()),
-                   Config.Structures);
+                   next->Structures);
     if (root.contains("structure_placement") && root["structure_placement"].is_object())
     {
       const auto &sp = root["structure_placement"];
-      Config.structureCellSize = std::max(16, sp.value("cell_size", 64));
-      Config.structureChancePerCell = std::max(1, sp.value("chance_per_cell", 12));
-      Config.structureMinSpacing = std::max(32, sp.value("min_spacing", 128));
+      next->structureCellSize = std::max(16, sp.value("cell_size", 64));
+      next->structureChancePerCell = std::max(1, sp.value("chance_per_cell", 12));
+      next->structureMinSpacing = std::max(32, sp.value("min_spacing", 128));
     }
   }
   catch (const nlohmann::json::exception &e)
@@ -248,17 +251,45 @@ bool UObjectFeatureConfigStorage::LoadFromFile(
               << std::endl;
     return false;
   }
-  Loaded = true;
-  std::cout << "ObjectFeatureConfig: loaded "
-            << Config.Vegetation.size() + Config.GroundCover.size() +
-                   Config.Decoration.size() +
-                   Config.Structures.size()
-            << " rules from " << path << std::endl;
+  const size_t rule_count = next->Vegetation.size() + next->GroundCover.size() +
+                            next->Decoration.size() + next->Structures.size();
+  std::atomic_store_explicit(
+      &Active, std::shared_ptr<const ObjectFeatureConfig>(std::move(next)),
+      std::memory_order_release);
+  std::cout << "ObjectFeatureConfig: loaded " << rule_count << " rules from "
+            << path << std::endl;
   return true;
 }
 
-const ObjectFeatureConfig &UObjectFeatureConfigStorage::Get() { return Config; }
+std::shared_ptr<const ObjectFeatureConfig>
+UObjectFeatureConfigStorage::GetSnapshot()
+{
+  return std::atomic_load_explicit(&Active, std::memory_order_acquire);
+}
 
-bool UObjectFeatureConfigStorage::IsLoaded() { return Loaded; }
+const ObjectFeatureConfig &UObjectFeatureConfigStorage::Get()
+{
+  if (const WorldGenContentSnapshot *pin = GetPinnedWorldGenContent())
+  {
+    if (pin->Features)
+    {
+      return *pin->Features;
+    }
+  }
+  thread_local std::shared_ptr<const ObjectFeatureConfig> keep;
+  keep = GetSnapshot();
+  return *keep;
+}
+
+bool UObjectFeatureConfigStorage::IsLoaded()
+{
+  const auto snap = GetSnapshot();
+  if (!snap)
+  {
+    return false;
+  }
+  return !(snap->Vegetation.empty() && snap->GroundCover.empty() &&
+           snap->Decoration.empty() && snap->Structures.empty());
+}
 
 } // namespace cutum

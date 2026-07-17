@@ -127,12 +127,24 @@ void UChunkMeshCache::SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord,
 
 int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
                                                UBlockRegistry &registry,
-                                               int max_sync)
+                                               int max_sync, double max_ms)
 {
   if (!MeshFocusValid || max_sync <= 0 || !Render.GreedyMeshing)
   {
     return 0;
   }
+
+  const auto budget_t0 = std::chrono::high_resolution_clock::now();
+  auto sync_budget_exhausted = [&]() -> bool
+  {
+    if (max_ms <= 0.0)
+    {
+      return false;
+    }
+    return std::chrono::duration<double, std::milli>(
+               std::chrono::high_resolution_clock::now() - budget_t0)
+               .count() >= max_ms;
+  };
 
   struct Candidate
   {
@@ -173,7 +185,7 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
   int rebuilt = 0;
   for (const Candidate &candidate : candidates)
   {
-    if (rebuilt >= max_sync)
+    if (rebuilt >= max_sync || sync_budget_exhausted())
     {
       break;
     }
@@ -424,7 +436,6 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
     return;
   }
   BumpChunkMeshRevision(chunkCoord);
-  InvalidateFluidSurfaceForChunk(chunkCoord);
   InstancesDirty = true;
   GreedyBatchesDirty = true;
   CrossBatchesDirty = true;
@@ -433,7 +444,6 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
 {
   Dirty.MarkDirtyPriority(chunkCoord);
   BumpChunkMeshRevision(chunkCoord);
-  InvalidateFluidSurfaceForChunk(chunkCoord);
   InstancesDirty = true;
   GreedyBatchesDirty = true;
   CrossBatchesDirty = true;
@@ -803,7 +813,6 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   InstancesDirty = true;
   CrossBatchesDirty = true;
   GreedyBatchesDirty = true;
-  InvalidateFluidSurfaceForChunk(result.coord);
 }
 
 void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
@@ -817,9 +826,12 @@ void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
 
 MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
-    int max_schedule_per_frame, bool force_sync)
+    int max_schedule_per_frame, bool force_sync, int max_sync_rebuild,
+    double max_sync_ms)
 {
   MeshRebuildTickStats stats;
+  LastMeshSyncMs = 0.0;
+  LastMeshSnapshotMs = 0.0;
   bool mesh_data_changed = false;
   if (!Dirty.empty())
   {
@@ -834,9 +846,15 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   if (!force_sync && Render.AsyncMeshing && Render.GreedyMeshing)
   {
     const int sync_cap =
-        std::max(2, std::min(12, max_schedule_per_frame));
+        max_sync_rebuild >= 0
+            ? max_sync_rebuild
+            : std::max(2, std::min(12, max_schedule_per_frame));
+    const auto sync_t0 = std::chrono::high_resolution_clock::now();
     const int sync_filled =
-        SyncRebuildVisibleMissing(world, registry, sync_cap);
+        SyncRebuildVisibleMissing(world, registry, sync_cap, max_sync_ms);
+    LastMeshSyncMs = std::chrono::duration<double, std::milli>(
+                         std::chrono::high_resolution_clock::now() - sync_t0)
+                         .count();
     stats.SyncRebuilt += sync_filled;
     stats.Completed += sync_filled;
     mesh_data_changed = sync_filled > 0;
@@ -854,11 +872,20 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
 
     const int max_pipeline = std::max(
         max_schedule_per_frame, AsyncBuilder->GetMaxPipelineDepth());
+    // Cap main-thread snapshot capture so dirty backlog cannot spend >~6ms
+    // capturing meshes in a single frame (death spiral at dirty~200).
+    constexpr double kSnapshotBudgetMs = 6.0;
     int scheduled = 0;
+    int outside_focus_scheduled = 0;
+    constexpr int kMaxOutsideFocusPerFrame = 2;
     for (auto it = Dirty.begin();
          it != Dirty.end() && scheduled < max_schedule_per_frame;)
     {
       if (AsyncBuilder->GetInFlightCount() >= max_pipeline)
+      {
+        break;
+      }
+      if (LastMeshSnapshotMs >= kSnapshotBudgetMs)
       {
         break;
       }
@@ -867,19 +894,45 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         ++it;
         continue;
       }
+      bool outside_focus = false;
+      if (MeshFocusValid)
+      {
+        const int dx = std::abs(it->x - MeshFocusGroundChunk.x);
+        const int dz = std::abs(it->z - MeshFocusGroundChunk.z);
+        if (std::max(dx, dz) > MeshFocusRadiusChunks)
+        {
+          outside_focus = true;
+          // Keep-shell dirty: allow a tiny trickle so standing still can
+          // recover; never starve near-focus scheduling.
+          if (outside_focus_scheduled >= kMaxOutsideFocusPerFrame)
+          {
+            ++it;
+            continue;
+          }
+        }
+      }
       if (!world.GetChunkManager().HasChunk(*it))
       {
         it = Dirty.RemoveAt(it);
         continue;
       }
       const uint64_t source_revision = MeshRevisions.Current(*it);
+      const auto snap_t0 = std::chrono::high_resolution_clock::now();
       ChunkMeshSnapshot snapshot =
           ChunkMeshSnapshot::Capture(world, *it, source_revision);
+      LastMeshSnapshotMs += std::chrono::duration<double, std::milli>(
+                                std::chrono::high_resolution_clock::now() -
+                                snap_t0)
+                                .count();
       ActiveMeshSourceRevision[*it] = snapshot.sourceRevision;
       AsyncBuilder->Enqueue(std::move(snapshot), registry);
       it = Dirty.RemoveAt(it);
       ++scheduled;
       ++stats.Scheduled;
+      if (outside_focus)
+      {
+        ++outside_focus_scheduled;
+      }
     }
     if (InstancesDirty)
     {
@@ -1076,7 +1129,6 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
   InstancesDirty = true;
   CrossBatchesDirty = true;
   GreedyBatchesDirty = true;
-  InvalidateFluidSurfaceForChunk(chunkCoord);
 }
 
 void UChunkMeshCache::InvalidateFluidSurfaceForChunk(glm::ivec3 chunkCoord)

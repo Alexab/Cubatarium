@@ -28,7 +28,8 @@ enum class ChunkLoadState
 class UChunkLoadScheduler
 {
 public:
-  using MarkChunkDirtyFn = std::function<void(glm::ivec3)>;
+  using MarkChunkDirtyFn =
+      std::function<void(glm::ivec3 coord, int minY, int maxY)>;
   using ColumnMeshDirtyFn =
       std::function<void(glm::ivec3 groundCoord, int minY, int maxY)>;
 
@@ -44,12 +45,22 @@ public:
   void Cancel(glm::ivec3 coord);
   void CancelAllPending(std::chrono::milliseconds worker_wait =
                             std::chrono::milliseconds(2000));
+  bool WaitForWorkersIdle(std::chrono::milliseconds timeout =
+                               std::chrono::milliseconds(10000));
+  /// Cancel + short wait, then detach leftover workers for process exit.
+  void ShutdownForProcessExit(std::chrono::milliseconds timeout =
+                                  std::chrono::milliseconds(250));
   void Invalidate(glm::ivec3 coord);
   void Tick(UBlockWorld &world, int maxCommitsPerFrame,
             int maxGenerationStartsPerFrame = 4);
   bool IsCommitted(glm::ivec3 coord) const;
   bool IsPending(glm::ivec3 coord) const;
   ChunkLoadState GetState(glm::ivec3 coord) const;
+  int GetPendingQueueCount() const;
+  int GetGenInFlightCount() const;
+  int GetCompletedReadyCount() const;
+  int GetGenBacklogTotal() const;
+  double GetLastTickApplyMs() const { return LastTickApplyMs; }
 
 private:
   struct PendingRequest
@@ -66,6 +77,7 @@ private:
   {
     ChunkPopulateResult result;
     int priority{0};
+    int maxHeight{256};
   };
 
   struct RequestCompare
@@ -80,8 +92,9 @@ private:
 
   IUChunkPopulator &Populator;
   UChunkGenerationRegistry &Tokens;
-  UJobThreadPool Pool;
+  // Completed must outlive Pool (members destroy in reverse declaration order).
   UCompletedJobQueue<PendingResult> Completed;
+  UJobThreadPool Pool;
   MarkChunkDirtyFn MarkDirty;
   ColumnMeshDirtyFn ColumnMeshDirty;
   std::priority_queue<PendingRequest, std::vector<PendingRequest>,
@@ -90,6 +103,7 @@ private:
   std::unordered_map<glm::ivec3, ChunkLoadState, IVec3Hash> States;
   std::unordered_map<glm::ivec3, ChunkGenerationToken, IVec3Hash> ActiveTokens;
   std::unordered_map<glm::ivec3, int, IVec3Hash> RequestPriorities;
+  double LastTickApplyMs{0.0};
 };
 
 } // namespace cutum

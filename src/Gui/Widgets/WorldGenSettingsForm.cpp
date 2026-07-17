@@ -26,6 +26,10 @@ int PresetIndexFromId(const std::string &id)
   {
     return 2;
   }
+  if (id == "smooth")
+  {
+    return 3;
+  }
   return 0;
 }
 
@@ -37,6 +41,8 @@ std::string PresetIdFromIndex(int index)
     return "realistic";
   case 2:
     return "sparse_structures";
+  case 3:
+    return "smooth";
   default:
     return "balanced";
   }
@@ -90,6 +96,18 @@ void SetWidgetVisible(UGuiWidget *widget, bool visible)
 UWorldGenSettingsForm::UWorldGenSettingsForm(const GuiTheme *theme)
     : Theme(theme)
 {
+}
+
+void UWorldGenSettingsForm::WireTerrainQualityHint(UGuiCheckbox &box,
+                                                 const char *description)
+{
+  box.SetDescription(description);
+  box.SetOnDescriptionHover([this](const std::string &text) {
+    if (TerrainQualityHintLabel)
+    {
+      TerrainQualityHintLabel->SetText(text);
+    }
+  });
 }
 
 void UWorldGenSettingsForm::SetHintText(const std::string &text)
@@ -255,6 +273,23 @@ void UWorldGenSettingsForm::SetSettings(const ProceduralSettings &settings)
   {
     CavesBox->SetChecked(FormSettings.EnableCaves);
   }
+  if (RavinesBox)
+  {
+    RavinesBox->SetChecked(FormSettings.Ravines.enabled);
+  }
+  if (RavineRarityInput)
+  {
+    RavineRarityInput->SetText(std::to_string(FormSettings.Ravines.rarity));
+  }
+  if (RavineAquaticMaxDepthInput)
+  {
+    RavineAquaticMaxDepthInput->SetText(
+        std::to_string(FormSettings.Ravines.aquaticMaxDepth));
+  }
+  if (RavineFillWaterBox)
+  {
+    RavineFillWaterBox->SetChecked(FormSettings.Ravines.fillWater);
+  }
   if (OresBox)
   {
     OresBox->SetChecked(FormSettings.EnableOres);
@@ -286,6 +321,23 @@ void UWorldGenSettingsForm::SetSettings(const ProceduralSettings &settings)
   if (FireBox)
   {
     FireBox->SetChecked(FormSettings.FillFire);
+  }
+  if (UnifiedHeightFieldBox)
+  {
+    UnifiedHeightFieldBox->SetChecked(FormSettings.Tuning.useUnifiedHeightField);
+  }
+  if (AnalyticValleysBox)
+  {
+    AnalyticValleysBox->SetChecked(FormSettings.Tuning.useAnalyticValleys);
+  }
+  if (MudflowErosionBox)
+  {
+    MudflowErosionBox->SetChecked(FormSettings.Tuning.useMudflowErosion);
+  }
+  if (DensityRefineParityBox)
+  {
+    DensityRefineParityBox->SetChecked(
+        FormSettings.Tuning.useDensityRefineParity);
   }
   RefreshGeneratorDescription();
   UpdateFieldVisibility();
@@ -421,6 +473,25 @@ ProceduralSettings UWorldGenSettingsForm::ReadSettings() const
   {
     s.EnableCaves = CavesBox->IsChecked();
   }
+  if (RavinesBox)
+  {
+    s.Ravines.enabled = RavinesBox->IsChecked();
+  }
+  if (RavineRarityInput)
+  {
+    s.Ravines.rarity =
+        std::max(1, ParseIntOr(RavineRarityInput->GetText(), s.Ravines.rarity));
+  }
+  if (RavineAquaticMaxDepthInput)
+  {
+    s.Ravines.aquaticMaxDepth = std::max(
+        0, ParseIntOr(RavineAquaticMaxDepthInput->GetText(),
+                      s.Ravines.aquaticMaxDepth));
+  }
+  if (RavineFillWaterBox)
+  {
+    s.Ravines.fillWater = RavineFillWaterBox->IsChecked();
+  }
   if (OresBox)
   {
     s.EnableOres = OresBox->IsChecked();
@@ -457,6 +528,22 @@ ProceduralSettings UWorldGenSettingsForm::ReadSettings() const
   {
     const int selected = PresetList->GetSelectedIndex();
     ApplyWorldGenPreset(s, PresetIdFromIndex(selected));
+  }
+  if (UnifiedHeightFieldBox)
+  {
+    s.Tuning.useUnifiedHeightField = UnifiedHeightFieldBox->IsChecked();
+  }
+  if (AnalyticValleysBox)
+  {
+    s.Tuning.useAnalyticValleys = AnalyticValleysBox->IsChecked();
+  }
+  if (MudflowErosionBox)
+  {
+    s.Tuning.useMudflowErosion = MudflowErosionBox->IsChecked();
+  }
+  if (DensityRefineParityBox)
+  {
+    s.Tuning.useDensityRefineParity = DensityRefineParityBox->IsChecked();
   }
   ResolveProceduralDefaults(s);
   return s;
@@ -595,6 +682,12 @@ void UWorldGenSettingsForm::UpdateFieldVisibility()
   SetWidgetVisible(CaveMaxDepthInput, showCaves);
   SetWidgetVisible(CaveStyleLabel, showCaves);
   SetWidgetVisible(CaveStyleInput, showCaves);
+  SetWidgetVisible(RavinesBox, showCaves);
+  SetWidgetVisible(RavineRarityLabel, showCaves);
+  SetWidgetVisible(RavineRarityInput, showCaves);
+  SetWidgetVisible(RavineAquaticMaxDepthLabel, showCaves);
+  SetWidgetVisible(RavineAquaticMaxDepthInput, showCaves);
+  SetWidgetVisible(RavineFillWaterBox, showCaves);
 }
 
 void UWorldGenSettingsForm::BuildInto(UGuiPanel &panel)
@@ -653,7 +746,7 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   panel.AddChild(std::move(presetLabel));
   auto presetList = std::make_unique<UGuiListView>(Theme);
   PresetList = presetList.get();
-  presetList->SetItems({"Balanced", "Realistic", "Sparse structures"});
+  presetList->SetItems({"Balanced", "Realistic", "Sparse structures", "Smooth terrain"});
   presetList->SetVisibleRowCount(3);
   presetList->SetSelectedIndex(PresetIndexFromId(FormSettings.WorldGenPresetId));
   panel.AddChild(std::move(presetList));
@@ -863,6 +956,37 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   caves->SetOnChanged([this](bool v) { FormSettings.EnableCaves = v; });
   panel.AddChild(std::move(caves));
 
+  auto ravines = std::make_unique<UGuiCheckbox>(Theme, "Ravines");
+  RavinesBox = ravines.get();
+  ravines->SetChecked(FormSettings.Ravines.enabled);
+  ravines->SetOnChanged([this](bool v) { FormSettings.Ravines.enabled = v; });
+  panel.AddChild(std::move(ravines));
+
+  auto ravineRarityLabel = std::make_unique<UGuiLabel>(Theme, "Ravine rarity:");
+  RavineRarityLabel = ravineRarityLabel.get();
+  panel.AddChild(std::move(ravineRarityLabel));
+  auto ravineRarityIn = std::make_unique<UGuiTextInput>(Theme);
+  RavineRarityInput = ravineRarityIn.get();
+  ravineRarityIn->SetText(std::to_string(FormSettings.Ravines.rarity));
+  panel.AddChild(std::move(ravineRarityIn));
+
+  auto ravineAquaticLabel =
+      std::make_unique<UGuiLabel>(Theme, "Ravine aquatic max depth:");
+  RavineAquaticMaxDepthLabel = ravineAquaticLabel.get();
+  panel.AddChild(std::move(ravineAquaticLabel));
+  auto ravineAquaticIn = std::make_unique<UGuiTextInput>(Theme);
+  RavineAquaticMaxDepthInput = ravineAquaticIn.get();
+  ravineAquaticIn->SetText(std::to_string(FormSettings.Ravines.aquaticMaxDepth));
+  panel.AddChild(std::move(ravineAquaticIn));
+
+  auto ravineFillWater =
+      std::make_unique<UGuiCheckbox>(Theme, "Fill ravines with water");
+  RavineFillWaterBox = ravineFillWater.get();
+  ravineFillWater->SetChecked(FormSettings.Ravines.fillWater);
+  ravineFillWater->SetOnChanged(
+      [this](bool v) { FormSettings.Ravines.fillWater = v; });
+  panel.AddChild(std::move(ravineFillWater));
+
   auto ores = std::make_unique<UGuiCheckbox>(Theme, "Ores");
   OresBox = ores.get();
   ores->SetChecked(FormSettings.EnableOres);
@@ -913,6 +1037,61 @@ void UWorldGenSettingsForm::AddWidgetsTo(UGuiPanel &panel)
   fire->SetChecked(FormSettings.FillFire);
   fire->SetOnChanged([this](bool v) { FormSettings.FillFire = v; });
   panel.AddChild(std::move(fire));
+
+  auto terrainQualityLabel =
+      std::make_unique<UGuiLabel>(Theme, "Terrain quality (experimental):");
+  TerrainQualityLabel = terrainQualityLabel.get();
+  panel.AddChild(std::move(terrainQualityLabel));
+
+  auto unifiedHeight = std::make_unique<UGuiCheckbox>(Theme, "Unified height field");
+  UnifiedHeightFieldBox = unifiedHeight.get();
+  unifiedHeight->SetChecked(FormSettings.Tuning.useUnifiedHeightField);
+  unifiedHeight->SetOnChanged([this](bool v)
+                              { FormSettings.Tuning.useUnifiedHeightField = v; });
+  WireTerrainQualityHint(
+      *unifiedHeight,
+      "Blend biome height profiles (offset + amplitude) into one continuous "
+      "surface Y before coast and erosion passes.");
+  panel.AddChild(std::move(unifiedHeight));
+
+  auto analyticValleys = std::make_unique<UGuiCheckbox>(Theme, "Analytic valleys");
+  AnalyticValleysBox = analyticValleys.get();
+  analyticValleys->SetChecked(FormSettings.Tuning.useAnalyticValleys);
+  analyticValleys->SetOnChanged([this](bool v)
+                                { FormSettings.Tuning.useAnalyticValleys = v; });
+  WireTerrainQualityHint(
+      *analyticValleys,
+      "Gaussian river valleys with smooth walls; disables hash ravines when on. "
+      "Best with Smooth terrain preset.");
+  panel.AddChild(std::move(analyticValleys));
+
+  auto mudflow = std::make_unique<UGuiCheckbox>(Theme, "Mudflow erosion");
+  MudflowErosionBox = mudflow.get();
+  mudflow->SetChecked(FormSettings.Tuning.useMudflowErosion);
+  mudflow->SetOnChanged([this](bool v)
+                       { FormSettings.Tuning.useMudflowErosion = v; });
+  WireTerrainQualityHint(
+      *mudflow,
+      "Chunk post-pass: moves dirt/gravel/sand one block down steep slopes "
+      "(max 2 iterations) before fluid fill.");
+  panel.AddChild(std::move(mudflow));
+
+  auto densityParity =
+      std::make_unique<UGuiCheckbox>(Theme, "Density refine parity");
+  DensityRefineParityBox = densityParity.get();
+  densityParity->SetChecked(FormSettings.Tuning.useDensityRefineParity);
+  densityParity->SetOnChanged([this](bool v)
+                              { FormSettings.Tuning.useDensityRefineParity = v; });
+  WireTerrainQualityHint(
+      *densityParity,
+      "Apply RefineSurfaceY (rivers, coast, smoothing) to density_3d backend "
+      "so 3D terrain matches heightmap refinement.");
+  panel.AddChild(std::move(densityParity));
+
+  auto terrainHint = std::make_unique<UGuiLabel>(
+      Theme, "Hover a terrain quality option above for details.");
+  TerrainQualityHintLabel = terrainHint.get();
+  panel.AddChild(std::move(terrainHint));
 
   auto packLabel = std::make_unique<UGuiLabel>(Theme, "Worldgen pack:");
   WorldGenPackIdLabel = packLabel.get();
@@ -1010,16 +1189,28 @@ std::vector<GuiGridItem> UWorldGenSettingsForm::BuildGridItems() const
   items.push_back({CaveStyleInput, 26, 1, 1, 1, 32});
   items.push_back({CavesBox, 27, 0, 1, 1, 30});
   items.push_back({OresBox, 27, 1, 1, 1, 30});
-  items.push_back({TreesBox, 28, 0, 1, 1, 30});
-  items.push_back({GroundCoverBox, 28, 1, 1, 1, 30});
-  items.push_back({DecorationBox, 29, 0, 1, 1, 30});
-  items.push_back({StructuresBox, 29, 1, 1, 1, 30});
-  items.push_back({WaterBox, 30, 0, 1, 1, 30});
-  items.push_back({LavaBox, 30, 1, 1, 1, 30});
-  items.push_back({FireBox, 31, 0, 1, 1, 30});
-  items.push_back({WorldGenPackIdLabel, 32, 0, 1, 1, 28});
-  items.push_back({WorldGenPackList, 32, 1, 1, 1, 72});
-  items.push_back({WorldGenPackDescLabel, 33, 0, 1, 2, 36});
+  items.push_back({RavinesBox, 28, 0, 1, 1, 30});
+  items.push_back({RavineRarityLabel, 28, 0, 1, 1, 28});
+  items.push_back({RavineRarityInput, 28, 1, 1, 1, 32});
+  items.push_back({RavineAquaticMaxDepthLabel, 29, 0, 1, 1, 28});
+  items.push_back({RavineAquaticMaxDepthInput, 29, 1, 1, 1, 32});
+  items.push_back({RavineFillWaterBox, 30, 0, 1, 2, 30});
+  items.push_back({TreesBox, 31, 0, 1, 1, 30});
+  items.push_back({GroundCoverBox, 31, 1, 1, 1, 30});
+  items.push_back({DecorationBox, 32, 0, 1, 1, 30});
+  items.push_back({StructuresBox, 32, 1, 1, 1, 30});
+  items.push_back({WaterBox, 33, 0, 1, 1, 30});
+  items.push_back({LavaBox, 33, 1, 1, 1, 30});
+  items.push_back({FireBox, 34, 0, 1, 1, 30});
+  items.push_back({TerrainQualityLabel, 35, 0, 1, 2, 28});
+  items.push_back({UnifiedHeightFieldBox, 36, 0, 1, 1, 30});
+  items.push_back({AnalyticValleysBox, 36, 1, 1, 1, 30});
+  items.push_back({MudflowErosionBox, 37, 0, 1, 1, 30});
+  items.push_back({DensityRefineParityBox, 37, 1, 1, 1, 30});
+  items.push_back({TerrainQualityHintLabel, 38, 0, 1, 2, 48});
+  items.push_back({WorldGenPackIdLabel, 39, 0, 1, 1, 28});
+  items.push_back({WorldGenPackList, 39, 1, 1, 1, 72});
+  items.push_back({WorldGenPackDescLabel, 40, 0, 1, 2, 36});
   return items;
 }
 

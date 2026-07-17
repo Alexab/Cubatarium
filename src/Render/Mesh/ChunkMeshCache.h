@@ -48,6 +48,9 @@ public:
                              bool clear_existing_caches = false);
   void MarkDirty(glm::ivec3 chunkCoord);
   void MarkDirtyPriority(glm::ivec3 chunkCoord);
+  /// Fluid column cache invalidation — call on fluid voxel changes only, not
+  /// on every mesh remesh.
+  void InvalidateFluidSurfaceForChunk(glm::ivec3 chunkCoord);
   void RemoveChunk(glm::ivec3 chunkCoord);
   /// Removes all Y slices for a terrain column with one greedy-list invalidation.
   void RemoveColumn(glm::ivec3 ground_coord, int max_cy);
@@ -56,7 +59,8 @@ public:
                           int max_schedule_per_frame = 8);
   MeshRebuildTickStats RebuildDirtyChunksWithStats(
       UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
-      int max_schedule_per_frame, bool force_sync = false);
+      int max_schedule_per_frame, bool force_sync = false,
+      int max_sync_rebuild = -1, double max_sync_ms = 6.0);
   void RebuildAll(UBlockWorld &world, UBlockRegistry &registry);
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,
                              glm::ivec3 chunkCoord);
@@ -71,6 +75,8 @@ public:
   void DrainAsyncMeshResults(UBlockWorld &world, UBlockRegistry &registry,
                              int max_per_frame);
   double GetLastFlatRebuildMs() const { return LastFlatRebuildMs; }
+  double GetLastMeshSyncMs() const { return LastMeshSyncMs; }
+  double GetLastMeshSnapshotMs() const { return LastMeshSnapshotMs; }
   int GetAsyncInFlightCount() const;
   uint64_t GetMeshDiscardedLateCount() const;
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
@@ -201,6 +207,8 @@ private:
   RenderSettings Render;
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
   double LastFlatRebuildMs{0.0};
+  double LastMeshSyncMs{0.0};
+  double LastMeshSnapshotMs{0.0};
   std::chrono::steady_clock::time_point LastFlatRebuildAt{};
   bool PendingMeshRevisionBump{false};
   UChunkMeshRevisionRegistry MeshRevisions;
@@ -213,7 +221,6 @@ private:
   std::unordered_set<glm::ivec3, IVec3Hash> FluidSurfaceDirty;
   void BumpMeshRevisionIfNeeded();
   void BumpChunkMeshRevision(glm::ivec3 chunk_coord);
-  void InvalidateFluidSurfaceForChunk(glm::ivec3 chunkCoord);
   void RebuildFluidSurfaceSlice(const UBlockWorld &world,
                                 UBlockRegistry &registry,
                                 glm::ivec3 groundChunkCoord, int scanHintY);
@@ -222,7 +229,7 @@ private:
                                           const glm::vec3 *cameraPos,
                                           float maxCullDistance);
   int SyncRebuildVisibleMissing(UBlockWorld &world, UBlockRegistry &registry,
-                                int max_sync);
+                                int max_sync, double max_ms = 0.0);
   float MaxCullDistance() const;
   glm::ivec3 MeshFocusGroundChunk{0};
   int MeshFocusRadiusChunks{6};

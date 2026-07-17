@@ -3,6 +3,7 @@
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "WorldGen/Core/WorldGenStageId.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -108,11 +109,34 @@ struct PackCavesConfig
   bool Loaded{false};
 };
 
+struct PackRavinesConfig
+{
+  bool Enabled{true};
+  int Rarity{600};
+  int MinDepth{8};
+  int MaxDepth{40};
+  int AquaticMaxDepth{5};
+  bool FillWater{false};
+  std::string FeatherMode{"smoothstep"};
+  bool Loaded{false};
+};
+
+struct PackValleysConfig
+{
+  bool Enabled{true};
+  int MaxDepth{12};
+  float WidthSigma{2.5f};
+  float AquaticDepthScale{0.4f};
+  float RiverNoiseScale{0.008f};
+  bool Loaded{false};
+};
+
 struct WorldGenPackPipeline
 {
   bool Loaded{false};
   bool Fluids{false};
   bool Ravines{false};
+  bool Valleys{false};
   bool Ores{false};
   bool Caves{false};
   bool Vegetation{false};
@@ -142,6 +166,8 @@ struct WorldGenPack
   PackClimateConfig Climate;
   PackOresConfig Ores;
   PackCavesConfig Caves;
+  PackRavinesConfig Ravines;
+  PackValleysConfig Valleys;
   std::unordered_map<std::string, BiomePackDefinition> Biomes;
 };
 
@@ -153,12 +179,17 @@ public:
   static bool ReloadActive();
   static std::vector<std::string> ListPackIds();
   static std::vector<WorldGenPackInfo> ListPackInfos();
+  /// Prefer GetSnapshot() for cross-thread / long-lived readers.
   static const WorldGenPack &Get();
+  static std::shared_ptr<const WorldGenPack> GetSnapshot();
   static const PackHeightConfig &HeightConfig();
   static const PackClimateConfig &ClimateConfig();
   static const PackOresConfig &OresConfig();
   static const PackCavesConfig &CavesConfig();
+  static const PackRavinesConfig &RavinesConfig();
+  static const PackValleysConfig &ValleysConfig();
   static void ApplyPackCaveDefaults(ProceduralSettings &settings);
+  static void ApplyPackRavineDefaults(ProceduralSettings &settings);
   static const BiomeHeightProfile *HeightProfileFor(const std::string &biomeId);
   static const BiomePackDefinition *BiomeDefinitionFor(const std::string &biomeId);
   static float FeatureWeightMultiplier(const std::string &biomeId,
@@ -169,7 +200,9 @@ public:
   static BiomeId BiomeAtImage(int worldX, int worldZ);
 
 private:
-  static WorldGenPack ActivePack;
+  static void Publish(std::shared_ptr<const WorldGenPack> pack);
+  // Published via atomic load/store for cross-thread readers.
+  static std::shared_ptr<const WorldGenPack> Active;
   static std::string ActivePackDir;
 };
 

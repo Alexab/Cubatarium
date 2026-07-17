@@ -508,12 +508,30 @@ void UWorld::RunLegacyPhysicsFrame()
     is_moved = true;
   }
 
+  const auto t_after_move = std::chrono::high_resolution_clock::now();
+  PhysicsTelemetryData.StreamMs = 0.0;
+  PhysicsTelemetryData.MeshEmergeMs = 0.0;
+
   if (camera)
   {
+    const auto t_before_stream = std::chrono::high_resolution_clock::now();
     UpdateStreaming();
     TickAsyncChunkSystems();
+    const auto t_after_stream = std::chrono::high_resolution_clock::now();
     TickMeshEmerge();
+    const auto t_after_mesh = std::chrono::high_resolution_clock::now();
     BlockWorldReady = true;
+
+    PhysicsTelemetryData.StreamMs =
+        std::chrono::duration<double, std::milli>(t_after_stream - t_before_stream)
+            .count();
+    PhysicsTelemetryData.MeshEmergeMs =
+        std::chrono::duration<double, std::milli>(t_after_mesh - t_after_stream)
+            .count();
+    PhysicsTelemetryData.MeshSyncMs =
+        GetMeshService().GetLastMeshSyncMs();
+    PhysicsTelemetryData.MeshSnapshotMs =
+        GetMeshService().GetLastMeshSnapshotMs();
   }
 
   if (is_moved && camera)
@@ -530,8 +548,18 @@ void UWorld::RunLegacyPhysicsFrame()
   DurationDoMovementMks = static_cast<uint64_t>(
       std::chrono::duration<double, std::micro>(t_end - t_begin).count());
   PhysicsTelemetryData.MovementStepMs =
-      std::chrono::duration<double, std::milli>(t_end - t_begin).count();
-  SetLastMovementFrameMs(PhysicsTelemetryData.MovementStepMs);
+      std::chrono::duration<double, std::milli>(t_after_move - t_begin).count();
+  PhysicsTelemetryData.PhysicsStepMs = PhysicsTelemetryData.MovementStepMs;
+  if (camera)
+  {
+    PhysicsTelemetryData.PhysicsSubsteps = camera->GetLastPhysicsSubsteps();
+    PhysicsTelemetryData.PhysicsAccumMs =
+        static_cast<double>(camera->GetPhysicsAccumulatorSec()) * 1000.0;
+  }
+  const double hitch_ms =
+      GetWallFrameDelta() > 0.0 ? GetWallFrameDelta() * 1000.0
+                                : PhysicsTelemetryData.MovementStepMs;
+  SetLastMovementFrameMs(hitch_ms);
   UMovementDiagnosticsRecorder::Update(*this, camera, prevPlayerY);
 }
 

@@ -24,6 +24,7 @@ struct ColumnSampleContext
   BiomeId DominantBiome{BiomeId::Plains};
   BiomeId SurfaceBiome{BiomeId::Plains};
   bool SpawnSurfaceOverride{false};
+  float CoastFactor{0.f};
 };
 
 class UColumnSampleBuilder

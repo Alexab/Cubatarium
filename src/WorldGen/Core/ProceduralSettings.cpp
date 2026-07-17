@@ -298,6 +298,25 @@ void ApplyWorldGenPreset(ProceduralSettings &s, const std::string &presetId)
     s.Tuning.vegetationDensity = 0.75f;
     s.Tuning.decorationDensity = 0.75f;
   }
+  else if (presetId == "smooth")
+  {
+    s.WorldGenPresetId = "smooth";
+    s.Tuning.terrainRoughness = 0.58f;
+    s.Tuning.terrainErosion = 0.36f;
+    s.Tuning.structureDensity = 0.3f;
+    s.Tuning.vegetationDensity = 0.78f;
+    s.Tuning.decorationDensity = 0.6f;
+    s.Tuning.biomeBlendRadius = 16.0f;
+    s.Tuning.erosionStrength = 0.35f;
+    s.Tuning.heightSmoothing = true;
+    s.Tuning.heightSmoothingRadius = 2;
+    s.Tuning.useUnifiedHeightField = true;
+    s.Tuning.useAnalyticValleys = true;
+    s.Tuning.useMudflowErosion = true;
+    s.Tuning.useDensityRefineParity = true;
+    s.Ravines.enabled = false;
+    s.FillFire = false;
+  }
   else
   {
     s.WorldGenPresetId = "balanced";
@@ -308,8 +327,8 @@ void ApplyWorldGenPreset(ProceduralSettings &s, const std::string &presetId)
     s.Tuning.decorationDensity = 0.55f;
     s.Tuning.biomeBlendRadius = 14.0f;
     s.Tuning.erosionStrength = 0.25f;
-    s.Tuning.heightSmoothing = false;
-    s.Tuning.heightSmoothingRadius = 0;
+    s.Tuning.heightSmoothing = true;
+    s.Tuning.heightSmoothingRadius = 2;
     s.FillFire = false;
   }
   ClampTuning(s.Tuning);

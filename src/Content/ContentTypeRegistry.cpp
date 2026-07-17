@@ -120,7 +120,7 @@ void UContentTypeRegistry::IndexBlocks(const UBlockDefinitionStorage &storage)
   {
     BlockEntries[type.Id] = {};
   }
-  for (const auto &pair : storage.GetAll())
+  for (const auto &pair : storage.GetCatalogSnapshot()->ById)
   {
     const BlockDefinition &def = pair.second;
     const auto typeIds = GetTypesForTags(def.Types);

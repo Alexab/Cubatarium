@@ -22,7 +22,7 @@ std::size_t ResolveMeshWorkerCount(std::size_t thread_count)
 } // namespace
 
 UAsyncMeshBuilder::UAsyncMeshBuilder(std::size_t thread_count)
-    : Pool(ResolveMeshWorkerCount(thread_count)),
+    : Pool(ResolveMeshWorkerCount(thread_count), "MeshBuild"),
       WorkerCount(static_cast<int>(ResolveMeshWorkerCount(thread_count)))
 {
 }
@@ -69,10 +69,15 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
     InFlight[coord] = jobId;
   }
 
+  // Keep the definitions catalog alive for the whole job even if Reload swaps
+  // Active mid-flight. Registry maps are separately mutex-protected.
+  auto catalogKeep = registry.GetDefinitionsCatalogSnapshot();
+
   Pool.Enqueue(
-      [this, snapshot = std::move(snapshot), registryPtr = &registry, jobId,
-       submitEpoch]() mutable
+      [this, snapshot = std::move(snapshot), registryPtr = &registry,
+       catalogKeep = std::move(catalogKeep), jobId, submitEpoch]() mutable
       {
+        (void)catalogKeep;
         MeshBuildResult result;
         result.coord = snapshot.coord;
         result.sourceRevision = snapshot.sourceRevision;

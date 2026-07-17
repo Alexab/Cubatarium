@@ -91,9 +91,10 @@ struct UBackgroundQuiesceState
 
   Phase phase{Phase::Start};
   int drainIoPasses{0};
+  int waitChunkGenPasses{0};
   int waitRelightPasses{0};
   int waitMeshPasses{0};
-  static constexpr int kMaxDrainIoPasses = 64;
+  static constexpr int kMaxDrainIoPasses = 32;
   static constexpr int kMaxWaitPasses = 120;
 };
 
@@ -195,11 +196,13 @@ public:
 
   void BeginCooperativeLoad(const std::string &world_folder_path);
   bool TickCooperativeLoad(class IUProgressSink &sink, int chunkBudget);
-  void BeginCooperativeSave(const std::string &world_folder_path);
+  void BeginCooperativeSave(const std::string &world_folder_path,
+                            bool resume_streaming_after_save = true);
   bool TickCooperativeSave(class IUProgressSink &sink, int chunkBudget);
   void BeginCooperativeCreate(const std::string &world_name);
   bool TickCooperativeCreate(class IUProgressSink &sink, int columnBudget);
   bool HasActiveCooperativeOperation() const;
+  void CancelCooperativeOperation();
   bool BlocksAsyncRelightDrain() const;
 
   std::shared_ptr<UUser> GetUser(const std::string &Name);
@@ -548,8 +551,36 @@ public:
   glm::ivec3 GetPlaceBlockPos() const { return PlaceBlockPos; }
 
   uint64_t GetDurationDoMovementMks() const;
+  uint64_t GetDurationDrawSceneMks() const { return DurationDrawSceneMks; }
+  uint64_t GetDurationViewUpdateMks() const { return DurationViewUpdateMks; }
   void SetWallFrameDelta(double seconds);
   double GetWallFrameDelta() const { return WallFrameDeltaSec; }
+  void SetLastSwapWaitMs(double ms) { LastSwapWaitMs = ms; }
+  double GetLastSwapWaitMs() const { return LastSwapWaitMs; }
+
+  /// Per-frame phase timings (ms) for unaccounted breakdown in FramePerfMonitor.
+  void SetLastInputMs(double ms) { LastInputMs = ms; }
+  void SetLastAppUpdateMs(double ms) { LastAppUpdateMs = ms; }
+  void SetLastWorldTickMs(double ms) { LastWorldTickMs = ms; }
+  void SetLastPrepareFrameMs(double ms) { LastPrepareFrameMs = ms; }
+  void SetLastPostSceneMs(double ms) { LastPostSceneMs = ms; }
+  void SetLastGuiOverlayMs(double ms) { LastGuiOverlayMs = ms; }
+  double GetLastInputMs() const { return LastInputMs; }
+  double GetLastAppUpdateMs() const { return LastAppUpdateMs; }
+  double GetLastWorldTickMs() const { return LastWorldTickMs; }
+  double GetLastPrepareFrameMs() const { return LastPrepareFrameMs; }
+  double GetLastPostSceneMs() const { return LastPostSceneMs; }
+  double GetLastGuiOverlayMs() const { return LastGuiOverlayMs; }
+
+  void SetLastFluidMapCpuMs(double ms) { LastFluidMapCpuMs = ms; }
+  void SetLastFluidMapGpuMs(double ms) { LastFluidMapGpuMs = ms; }
+  void SetLastFluidMapDirtyChunks(int n) { LastFluidMapDirtyChunks = n; }
+  void SetLastFluidMapFullRebuild(bool v) { LastFluidMapFullRebuild = v; }
+  double GetLastFluidMapCpuMs() const { return LastFluidMapCpuMs; }
+  double GetLastFluidMapGpuMs() const { return LastFluidMapGpuMs; }
+  int GetLastFluidMapDirtyChunks() const { return LastFluidMapDirtyChunks; }
+  bool GetLastFluidMapFullRebuild() const { return LastFluidMapFullRebuild; }
+
   void SetPhysicsProfile(PhysicsProfile profile);
   PhysicsProfile GetPhysicsProfile() const { return ActivePhysicsProfile; }
   void SetPhysicsFeatureFlags(const PhysicsFeatureFlags &flags);
@@ -598,6 +629,15 @@ public:
     double flatRebuildMs{0.0};
     double countNonAirMs{0.0};
     int asyncMeshInFlight{0};
+    int genQueuePending{0};
+    int genInFlight{0};
+    int genBacklogTotal{0};
+    double populateMsLast{0.0};
+    double populateMsEma{0.0};
+    double populateSampleMs{0.0};
+    double populateTerrainMs{0.0};
+    double populateCarveMs{0.0};
+    double populatePostMs{0.0};
     bool asyncMeshingEnabled{true};
     int greedyCacheEntries{0};
     int framesSinceLoad{0};
@@ -607,6 +647,9 @@ public:
     double physicsBlockMs{0.0};
     double physicsDrainMs{0.0};
     double wallFrameMs{0.0};
+    double swapWaitMs{0.0};
+    double simMs{0.0};
+    double unaccountedMs{0.0};
     int physicsSimulationSteps{0};
     uint64_t physicsBlockQueueDepth{0};
     uint64_t physicsLiquidQueueDepth{0};
@@ -991,6 +1034,18 @@ private:
 
   uint64_t DurationDoMovementMks;
   uint64_t DurationDrawSceneMks{0};
+  uint64_t DurationViewUpdateMks{0};
+  double LastSwapWaitMs{0.0};
+  double LastInputMs{0.0};
+  double LastAppUpdateMs{0.0};
+  double LastWorldTickMs{0.0};
+  double LastPrepareFrameMs{0.0};
+  double LastPostSceneMs{0.0};
+  double LastGuiOverlayMs{0.0};
+  double LastFluidMapCpuMs{0.0};
+  double LastFluidMapGpuMs{0.0};
+  int LastFluidMapDirtyChunks{0};
+  bool LastFluidMapFullRebuild{false};
   MovementDiagnostics MovementDiag;
   std::vector<MovementDiagnostics> MovementDiagHistory;
   std::unique_ptr<UWorldCooperativeSession> CoopSession;

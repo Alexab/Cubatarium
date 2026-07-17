@@ -1,5 +1,6 @@
 #include "World/Core/WorldCooperativeOps.h"
 #include "World/Core/WorldLoadDiagnostics.h"
+#include "App/Platform/Log.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "Core/Jobs/JobThreadPool.h"
@@ -19,12 +20,14 @@
 #include "World/Persistence/WorldPersistence.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
+#include "WorldGen/Core/WorldGenContentPin.h"
 #include "WorldGen/Core/WorldGenSets.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <iostream>
+#include <string>
 #include <thread>
 #include <unordered_set>
 
@@ -34,7 +37,8 @@ namespace cutum
 struct CooperativeParallelGenState
 {
   CooperativeParallelGenState()
-      : Pool(ComputeWorkerThreadCount(JobPoolKind::CoopGeneration))
+      : Pool(ComputeWorkerThreadCount(JobPoolKind::CoopGeneration),
+             "CoopGeneration")
   {
   }
 
@@ -608,13 +612,15 @@ void UWorldCooperativeSession::BeginLoad(UWorld &world,
 }
 
 void UWorldCooperativeSession::BeginSave(UWorld &world,
-                                         const std::string &world_folder_path)
+                                         const std::string &world_folder_path,
+                                         bool resume_streaming_after_save)
 {
   delete ParallelGen;
   *this = UWorldCooperativeSession{};
   ParallelGen = nullptr;
   Kind = WorldCoopKind::Save;
   Active = true;
+  ResumeStreamingAfterSave = resume_streaming_after_save;
   FolderPath = world_folder_path;
   CurrentPhase = Phase::Init;
   (void)world;
@@ -818,10 +824,32 @@ bool UWorldCooperativeSession::AdvanceParallelGeneration(UWorld &world,
   const ProceduralSettings settings = world.GetProceduralSettings();
   const std::size_t max_inflight =
       ComputeWorkerThreadCount(JobPoolKind::CoopGeneration) * 2;
+  UChunkGenerationRegistry *tokens =
+      world.Streaming ? &world.Streaming->GetChunkGenTokens() : nullptr;
 
   for (ChunkPopulateResult &result :
        ParallelGen->Completed.DrainUpTo(static_cast<std::size_t>(budget) * 2))
   {
+    if (result.discarded)
+    {
+      if (ParallelGen->InFlight > 0)
+      {
+        --ParallelGen->InFlight;
+      }
+      continue;
+    }
+    if (tokens)
+    {
+      const uint64_t current = tokens->Current(result.coord).sequence;
+      if (!result.token.IsValidFor(result.coord, current))
+      {
+        if (ParallelGen->InFlight > 0)
+        {
+          --ParallelGen->InFlight;
+        }
+        continue;
+      }
+    }
     result.buffer.ApplyTo(world.BlockWorld);
     GenDoneColumns += CHUNK_SIZE * CHUNK_SIZE;
     if (ParallelGen->InFlight > 0)
@@ -839,11 +867,23 @@ bool UWorldCooperativeSession::AdvanceParallelGeneration(UWorld &world,
     ChunkPopulateRequest request;
     request.chunkCoord = glm::ivec3(entry.Cx, 0, entry.Cz);
     request.settings = settings;
-    request.token.coord = request.chunkCoord;
-    request.token.sequence = 1;
+    if (tokens)
+    {
+      request.token = tokens->Current(request.chunkCoord);
+      const uint64_t start_sequence = request.token.sequence;
+      const glm::ivec3 coord = request.chunkCoord;
+      request.shouldCancel = [tokens, coord, start_sequence]()
+      { return tokens->Current(coord).sequence != start_sequence; };
+    }
+    else
+    {
+      request.token.coord = request.chunkCoord;
+      request.token.sequence = 1;
+    }
     request.columnOrigin = glm::ivec2(GenCenterX, GenCenterZ);
     request.hasColumnOrigin = true;
     request.objects = world.ObjectLibrary;
+    request.content = CaptureWorldGenContentSnapshot();
     ++ParallelGen->InFlight;
     ++scheduled;
     UPipelineChunkPopulator *populator = ParallelGen->Populator.get();
@@ -861,7 +901,14 @@ bool UWorldCooperativeSession::AdvanceParallelGeneration(UWorld &world,
       ParallelGen->Completed.Empty();
   if (queue_empty)
   {
-    ParallelGen->Pool.WaitIdle();
+    if (!ParallelGen->Pool.WaitIdleFor(std::chrono::milliseconds(2000)))
+    {
+      std::cerr << "CoopGeneration: WaitIdleFor timed out with pending workers"
+                << std::endl;
+      ParallelGen->Pool.CancelPendingJobs();
+      (void)ParallelGen->Completed.DrainAll();
+      ParallelGen->InFlight = 0;
+    }
     world.SetCooperativeBulkGenerating(false);
     return true;
   }
@@ -981,13 +1028,45 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     }
     else if (Kind == WorldCoopKind::Save)
     {
-      world.RefreshBlockRegistry();
+      // Never QuiesceBackgroundWork here: it latches BackgroundQuiesceFinished
+      // and disables the streamer mid-autosave. Quit already budget-quiesced.
+      if (world.Streaming)
+      {
+        world.Streaming->CancelChunkGeneration();
+      }
+      if (world.Persistence)
+      {
+        // Cancel pending IO only — do not WaitIdle (can stick on late disk IO).
+        (void)world.Persistence->AbortAsyncChunkIoFor(
+            std::chrono::milliseconds(0));
+      }
+      // Quit-save: skip catalog reload (unchanged after quiesce).
+      if (ResumeStreamingAfterSave)
+      {
+        world.RefreshBlockRegistry();
+      }
       std::filesystem::create_directories(FolderPath);
       world.SetWorldFolderPath(FolderPath);
       std::filesystem::create_directories(FolderPath + "/chunks");
       SaveDrainIoFrames = 0;
-      CurrentPhase = Phase::DrainAsyncIo;
-      Report(sink, "init", 0.f, "Preparing save...");
+      // Quit path: skip DrainAsyncIo and run scan inline so we never hang
+      // between "skip → scan" and the next Tick (log stopped after skip).
+      if (!ResumeStreamingAfterSave)
+      {
+        CubatariumLogInfo("Save", "quit-save: inline scan after quiesce");
+        ScanSaveChunkCoords(world);
+        CurrentPhase = Phase::SaveChunks;
+        Report(sink, "scan", 0.02f, "Collecting chunks...");
+        CubatariumLogInfo(
+            "Save",
+            std::string("scan_save_chunks end count=") +
+                std::to_string(SaveChunkCoords.size()));
+      }
+      else
+      {
+        CurrentPhase = Phase::DrainAsyncIo;
+        Report(sink, "init", 0.f, "Preparing save...");
+      }
     }
     else
     {
@@ -1113,11 +1192,20 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       }
       if (world.BlockRegistry)
       {
+        const glm::ivec3 ground(SpatialCenter.x + SpatialDx, 0,
+                                SpatialCenter.z + SpatialDz);
         world.GetChunkStorage().LoadTerrainColumn(
-            glm::ivec3(SpatialCenter.x + SpatialDx, 0,
-                       SpatialCenter.z + SpatialDz),
-            world.BlockWorld, FolderPath, *world.BlockRegistry,
+            ground, world.BlockWorld, FolderPath, *world.BlockRegistry,
             world.ProceduralTemplate.MaxHeight);
+        if (!IsTerrainChunkComplete(world.BlockWorld, ground,
+                                    world.ProceduralTemplate.MaxHeight))
+        {
+          // Stale/torn column: drop disk + RAM so streaming regenerates.
+          ClearTerrainColumnChunks(world.BlockWorld, ground,
+                                   world.ProceduralTemplate.MaxHeight);
+          world.GetChunkStorage().RemoveTerrainColumnFromDisk(
+              FolderPath, ground, world.ProceduralTemplate.MaxHeight);
+        }
       }
       ++loaded;
       ++SpatialDz;
@@ -1628,6 +1716,21 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   }
   case Phase::DrainAsyncIo:
   {
+    // First frame: hard-cancel leftover gen + stale pending IO maps so drain
+    // cannot wait forever on cancelled jobs.
+    if (SaveDrainIoFrames == 0)
+    {
+      if (world.Streaming)
+      {
+        world.Streaming->CancelChunkGeneration();
+      }
+      if (world.Persistence)
+      {
+        (void)world.Persistence->AbortAsyncChunkIoFor(
+            std::chrono::milliseconds(0));
+      }
+      CubatariumLogInfo("Save", "drain_async_io begin");
+    }
     bool drained = true;
     if (world.Persistence)
     {
@@ -1635,29 +1738,38 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
           world, std::max(budget * 2, 8));
     }
     ++SaveDrainIoFrames;
-    const float frac = std::min(0.04f, 0.04f * static_cast<float>(SaveDrainIoFrames) /
-                                           64.0f);
+    const int max_drain_frames =
+        world.BackgroundQuiesceFinished ? 4 : 24;
+    const float frac = std::min(
+        0.04f, 0.04f * static_cast<float>(SaveDrainIoFrames) /
+                    static_cast<float>(std::max(1, max_drain_frames)));
     Report(sink, "init", frac, "Flushing pending terrain IO...");
-    if (drained)
+    if (drained || SaveDrainIoFrames >= max_drain_frames)
     {
-      CurrentPhase = Phase::ScanSaveChunks;
-    }
-    else if (SaveDrainIoFrames >= 512)
-    {
-      if (world.Persistence)
+      if (!drained && world.Persistence)
       {
         (void)world.Persistence->AbortAsyncChunkIoFor(
-            std::chrono::milliseconds(100));
+            std::chrono::milliseconds(0));
       }
+      CubatariumLogInfo(
+          "Save",
+          std::string("drain_async_io end frames=") +
+              std::to_string(SaveDrainIoFrames) +
+              " drained=" + (drained ? "1" : "0"));
       CurrentPhase = Phase::ScanSaveChunks;
     }
     break;
   }
   case Phase::ScanSaveChunks:
   {
+    CubatariumLogInfo("Save", "scan_save_chunks begin");
     ScanSaveChunkCoords(world);
     CurrentPhase = Phase::SaveChunks;
     Report(sink, "scan", 0.02f, "Collecting chunks...");
+    CubatariumLogInfo(
+        "Save",
+        std::string("scan_save_chunks end count=") +
+            std::to_string(SaveChunkCoords.size()));
     break;
   }
   case Phase::SaveChunks:
@@ -1680,6 +1792,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
           world.GetChunkStorage().SaveTerrainColumn(
               coord, world.BlockWorld, FolderPath, *world.BlockRegistry,
               world.ProceduralTemplate.MaxHeight);
+        }
+        else
+        {
+          world.GetChunkStorage().RemoveTerrainColumnFromDisk(
+              FolderPath, coord, world.ProceduralTemplate.MaxHeight);
         }
       }
       else
@@ -1715,7 +1832,10 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     world.SaveWorldData(FolderPath + "/world_data.json");
     world.SaveMovementDiagnostics(FolderPath + "/movement_diagnostics.json");
     world.ModifiedChunks.clear();
-    world.EnsureStreamingActiveAfterBackgroundQuiesce();
+    if (ResumeStreamingAfterSave)
+    {
+      world.EnsureStreamingActiveAfterBackgroundQuiesce();
+    }
     CurrentPhase = Phase::Done;
     Active = false;
     Report(sink, "done", 1.f, "World saved.");

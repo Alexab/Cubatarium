@@ -4,12 +4,14 @@
 #include "Blocks/BlockDefinition.h"
 #include "World/Math/BlockTypes.h"
 #include <memory>
+#include <shared_mutex>
 #include <string>
 #include <unordered_map>
 
 namespace cutum
 {
 
+struct BlockDefinitionCatalog;
 class UTextureCubeStorage;
 class UBlockDefinitionStorage;
 class UBlockMergeRegistry;
@@ -29,6 +31,12 @@ public:
   {
     return Definitions.get();
   }
+  std::shared_ptr<UBlockDefinitionStorage> GetDefinitionsShared() const
+  {
+    return Definitions;
+  }
+  std::shared_ptr<const BlockDefinitionCatalog> GetDefinitionsCatalogSnapshot()
+      const;
 
   BlockId GetIdByTypeName(const std::string &Name) const;
   BlockId GetPackBlockIdByTypeName(const std::string &Name) const;
@@ -60,6 +68,7 @@ private:
   std::shared_ptr<UBlockMergeRegistry> MergeRegistry;
   std::unordered_map<std::string, BlockId> NameToId;
   std::unordered_map<BlockId, std::string> IdToName;
+  mutable std::shared_mutex MapsMutex;
   mutable BlockPhysicsProfile SolidDefault;
   BlockAnimationSpec DefaultAnimation{};
 };

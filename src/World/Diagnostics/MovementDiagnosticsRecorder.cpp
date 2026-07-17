@@ -11,6 +11,7 @@
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Physics/PhysicsTelemetry.h"
 #include "World/Streaming/WorldStreaming.h"
+#include "WorldGen/Core/IUChunkPopulator.h"
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -45,6 +46,14 @@ void UMovementDiagnosticsRecorder::SaveToFile(const UWorld &world,
         {"flat_rebuild_ms", sample.flatRebuildMs},
         {"count_non_air_ms", sample.countNonAirMs},
         {"async_mesh_in_flight", sample.asyncMeshInFlight},
+        {"gen_queue_pending", sample.genQueuePending},
+        {"gen_inflight", sample.genInFlight},
+        {"populate_ms_last", sample.populateMsLast},
+        {"populate_ms_ema", sample.populateMsEma},
+        {"populate_sample_ms", sample.populateSampleMs},
+        {"populate_terrain_ms", sample.populateTerrainMs},
+        {"populate_carve_ms", sample.populateCarveMs},
+        {"populate_post_ms", sample.populatePostMs},
         {"async_meshing_enabled", sample.asyncMeshingEnabled},
         {"greedy_cache_entries", sample.greedyCacheEntries},
         {"frames_since_load", sample.framesSinceLoad},
@@ -56,6 +65,9 @@ void UMovementDiagnosticsRecorder::SaveToFile(const UWorld &world,
         {"physics_block_ms", sample.physicsBlockMs},
         {"physics_drain_ms", sample.physicsDrainMs},
         {"wall_frame_ms", sample.wallFrameMs},
+        {"swap_wait_ms", sample.swapWaitMs},
+        {"sim_ms", sample.simMs},
+        {"unaccounted_ms", sample.unaccountedMs},
         {"physics_simulation_steps", sample.physicsSimulationSteps},
         {"physics_block_queue_depth", sample.physicsBlockQueueDepth},
         {"physics_liquid_queue_depth", sample.physicsLiquidQueueDepth},
@@ -118,6 +130,41 @@ void UMovementDiagnosticsRecorder::Update(
   world.MovementDiag.flatRebuildMs = world.MeshService->GetLastFlatRebuildMs();
   world.MovementDiag.asyncMeshInFlight =
       world.MeshService->GetAsyncInFlightCount();
+  if (world.Streaming)
+  {
+    if (const UChunkLoadScheduler *sched = world.Streaming->GetChunkScheduler())
+    {
+      world.MovementDiag.genQueuePending = sched->GetPendingQueueCount();
+      world.MovementDiag.genInFlight = sched->GetGenInFlightCount();
+      world.MovementDiag.genBacklogTotal = sched->GetGenBacklogTotal();
+    }
+  }
+  {
+    const ChunkPopulateTiming populate = ChunkPopulateDiagnostics::GetLast();
+    world.MovementDiag.populateMsLast = populate.totalMs;
+    world.MovementDiag.populateSampleMs = populate.sampleMs;
+    world.MovementDiag.populateTerrainMs = populate.terrainMs;
+    world.MovementDiag.populateCarveMs = populate.carveMs;
+    world.MovementDiag.populatePostMs = populate.postMs;
+    constexpr double kEmaAlpha = 0.15;
+    const double prev_ema =
+        world.MovementDiagHistory.empty()
+            ? 0.0
+            : world.MovementDiagHistory.back().populateMsEma;
+    if (prev_ema <= 0.0)
+    {
+      world.MovementDiag.populateMsEma = populate.totalMs;
+    }
+    else if (populate.totalMs > 0.0)
+    {
+      world.MovementDiag.populateMsEma =
+          kEmaAlpha * populate.totalMs + (1.0 - kEmaAlpha) * prev_ema;
+    }
+    else
+    {
+      world.MovementDiag.populateMsEma = prev_ema;
+    }
+  }
   world.MovementDiag.asyncMeshingEnabled = world.Render.AsyncMeshing;
   world.MovementDiag.greedyCacheEntries =
       static_cast<int>(world.MeshService->GetGreedyCacheSize());
@@ -129,6 +176,14 @@ void UMovementDiagnosticsRecorder::Update(
   world.MovementDiag.physicsBlockMs = physicsTelemetry.BlockStepMs;
   world.MovementDiag.physicsDrainMs = physicsTelemetry.DrainStepMs;
   world.MovementDiag.wallFrameMs = world.WallFrameDeltaSec * 1000.0;
+  world.MovementDiag.swapWaitMs = world.LastSwapWaitMs;
+  world.MovementDiag.simMs =
+      world.MovementDiag.physicsStepMs +
+      (world.GetDurationViewUpdateMks() / 1000.0) +
+      (world.GetDurationDrawSceneMks() / 1000.0);
+  world.MovementDiag.unaccountedMs = world.MovementDiag.wallFrameMs -
+                                     world.MovementDiag.simMs -
+                                     world.MovementDiag.swapWaitMs;
   world.MovementDiag.physicsSimulationSteps =
       physicsTelemetry.SimulationStepsThisFrame;
   world.MovementDiag.physicsBlockQueueDepth = physicsTelemetry.BlockQueueDepth;

@@ -44,6 +44,8 @@
 /bin/*_out*.txt
 /bin/*_err*.txt
 /bin/*report*.json
+/bin/logs/
+/bin/cubatarium.log
 
 # Desktop CMake build trees
 /build/desktop-msvc/

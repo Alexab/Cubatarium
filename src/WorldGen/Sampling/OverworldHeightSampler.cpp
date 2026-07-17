@@ -212,9 +212,14 @@ UOverworldHeightSampler::UOverworldHeightSampler(uint32_t Seed, int SeaLevel,
   if (preset == HeightPreset::Mountains)
   {
     Params.stoneSurfaceAboveY =
-        SeaLevel +
-        static_cast<int>(12.0f * (MaxHeight > 15 ? MaxHeight / 96.0f : 1.0f));
+        MountainsStoneSurfaceAboveY(SeaLevel, MaxHeight);
   }
+}
+
+int MountainsStoneSurfaceAboveY(int sea_level, int max_height)
+{
+  return sea_level +
+         static_cast<int>(12.0f * (max_height > 15 ? max_height / 96.0f : 1.0f));
 }
 
 int UOverworldHeightSampler::CoarseSurfaceYAt(int x, int z) const

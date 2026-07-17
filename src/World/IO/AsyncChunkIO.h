@@ -39,7 +39,7 @@ class UAsyncChunkIO
 {
 public:
   UAsyncChunkIO()
-      : Pool(ComputeWorkerThreadCount(JobPoolKind::ChunkIo))
+      : Pool(ComputeWorkerThreadCount(JobPoolKind::ChunkIo), "ChunkIo")
   {
   }
 
@@ -59,9 +59,10 @@ public:
   bool CompletedSavesEmpty() const;
 
 private:
-  UJobThreadPool Pool;
+  // Completion queues must outlive Pool (destroy order = reverse declaration).
   UCompletedJobQueue<AsyncChunkLoadResult> CompletedLoads;
   UCompletedJobQueue<AsyncChunkSaveRequest> CompletedSaves;
+  UJobThreadPool Pool;
 };
 
 UChunkBuffer ParseChunkJsonToBuffer(const std::string &jsonText,

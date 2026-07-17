@@ -10,10 +10,14 @@ struct PhysicsTelemetry
 {
   double PhysicsStepMs{0.0};
   double MovementStepMs{0.0};
+  double StreamMs{0.0};
+  double MeshEmergeMs{0.0};
   double BlockStepMs{0.0};
   double DrainStepMs{0.0};
   double FluidStepMs{0.0};
   int SimulationStepsThisFrame{0};
+  int PhysicsSubsteps{0};
+  double PhysicsAccumMs{0.0};
   uint64_t BlockQueueDepth{0};
   uint64_t LiquidQueueDepth{0};
   uint64_t CollisionRebuildBacklog{0};
@@ -37,6 +41,16 @@ struct PhysicsTelemetry
   double CommitPhysicsMs{0.0};
   double CommitRelightMs{0.0};
   double CommitMeshMs{0.0};
+  double CommitApplyMs{0.0};
+  double CommitSealMs{0.0};
+  double MeshSyncMs{0.0};
+  double MeshSnapshotMs{0.0};
+  int PrefetchVisualOps{0};
+  int PrefetchKeepOps{0};
+  int GenBacklogTotal{0};
+  int KeepCols{0};
+  int VisualCols{0};
+  double IdlePrefetchMs{0.0};
 };
 
 } // namespace cutum

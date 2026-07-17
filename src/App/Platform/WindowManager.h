@@ -70,6 +70,9 @@ public:
   void SetGradientSky(bool useGradient);
   bool IsGradientSky() const;
 
+  /// Apply VSync / present settings from Core render config (after Startup).
+  void ApplyPresentSettings();
+
 private:
   static void FramebufferSizeCallback(GLFWwindow *window, int width,
                                       int height);
@@ -120,7 +123,12 @@ private: // Window and rendering state
   std::chrono::high_resolution_clock::time_point LastFrameTime;
   std::chrono::steady_clock::time_point LastAutosaveTime;
   static constexpr double KAutosaveIntervalSec = 60.0;
+  /// Budgeted cooperative autosave (avoids multi-second hitch in Update).
+  bool AutosaveRequested{false};
+  bool AutosaveInProgress{false};
   double DeltaTime;
+
+  void TickBudgetedAutosave();
 
   glm::vec4 SkyColor;
   bool UseGradientSky;

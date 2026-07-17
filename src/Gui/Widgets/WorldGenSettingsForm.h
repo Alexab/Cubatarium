@@ -81,6 +81,8 @@ private:
   UGuiLabel *CaveScaleLabel{nullptr};
   UGuiLabel *CaveMaxDepthLabel{nullptr};
   UGuiLabel *CaveStyleLabel{nullptr};
+  UGuiLabel *RavineRarityLabel{nullptr};
+  UGuiLabel *RavineAquaticMaxDepthLabel{nullptr};
   UGuiLabel *BedrockTopYLabel{nullptr};
   UGuiTextInput *SeedInput{nullptr};
   UGuiTextInput *SeaLevelInput{nullptr};
@@ -104,7 +106,11 @@ private:
   UGuiTextInput *CaveScaleInput{nullptr};
   UGuiTextInput *CaveMaxDepthInput{nullptr};
   UGuiTextInput *CaveStyleInput{nullptr};
+  UGuiTextInput *RavineRarityInput{nullptr};
+  UGuiTextInput *RavineAquaticMaxDepthInput{nullptr};
   UGuiCheckbox *CavesBox{nullptr};
+  UGuiCheckbox *RavinesBox{nullptr};
+  UGuiCheckbox *RavineFillWaterBox{nullptr};
   UGuiCheckbox *OresBox{nullptr};
   UGuiCheckbox *TreesBox{nullptr};
   UGuiCheckbox *GroundCoverBox{nullptr};
@@ -113,8 +119,15 @@ private:
   UGuiCheckbox *WaterBox{nullptr};
   UGuiCheckbox *LavaBox{nullptr};
   UGuiCheckbox *FireBox{nullptr};
+  UGuiLabel *TerrainQualityLabel{nullptr};
+  UGuiCheckbox *UnifiedHeightFieldBox{nullptr};
+  UGuiCheckbox *AnalyticValleysBox{nullptr};
+  UGuiCheckbox *MudflowErosionBox{nullptr};
+  UGuiCheckbox *DensityRefineParityBox{nullptr};
+  UGuiLabel *TerrainQualityHintLabel{nullptr};
 
   std::vector<GuiGridItem> BuildGridItems() const;
+  void WireTerrainQualityHint(UGuiCheckbox &box, const char *description);
 };
 
 } // namespace cutum

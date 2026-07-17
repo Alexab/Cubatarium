@@ -68,4 +68,20 @@ bool UGuiCheckbox::OnMouseDown(const GuiMouseEvent &event)
   return Activate();
 }
 
+bool UGuiCheckbox::OnMouseMove(const GuiMouseEvent &event)
+{
+  if (!Visible || Description.empty() || !OnDescriptionHover)
+  {
+    return false;
+  }
+  const bool inside = Bounds.Contains(event.X, event.Y);
+  if (inside == Hovered)
+  {
+    return inside;
+  }
+  Hovered = inside;
+  OnDescriptionHover(inside ? Description : std::string{});
+  return inside;
+}
+
 } // namespace cutum

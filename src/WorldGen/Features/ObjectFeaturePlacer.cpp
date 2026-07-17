@@ -126,7 +126,8 @@ int ResolvePlacementYOffset(const WorldGenContext &ctx,
   {
     return 0;
   }
-  const WorldObjectDefinition *prefab = ctx.Objects->Get(rule.ObjectName);
+  const auto prefabOwned = ctx.Objects->GetShared(rule.ObjectName);
+  const WorldObjectDefinition *prefab = prefabOwned.get();
   if (!prefab)
   {
     return 0;
@@ -163,7 +164,8 @@ bool PlaceObjectAtWaterSurface(WorldGenContext &ctx, const std::string &prefabNa
   {
     return false;
   }
-  const WorldObjectDefinition *prefab = ctx.Objects->Get(prefabName);
+  const auto prefabOwned = ctx.Objects->GetShared(prefabName);
+  const WorldObjectDefinition *prefab = prefabOwned.get();
   if (!prefab)
   {
     return false;
@@ -337,7 +339,7 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
         continue;
       }
     }
-    else if (!ctx.Objects->Get(rule.ObjectName))
+    else if (!ctx.Objects->GetShared(rule.ObjectName))
     {
       if (pool == ObjectFeaturePool::Decoration)
       {
@@ -426,7 +428,8 @@ bool TryPlaceObjectPool(WorldGenContext &ctx, int x, int z, int surfaceY,
     }
     return PlaceObjectAtWaterSurface(ctx, chosen->ObjectName, water_anchor);
   }
-  const WorldObjectDefinition *prefab = ctx.Objects->Get(chosen->ObjectName);
+  const auto prefabOwned = ctx.Objects->GetShared(chosen->ObjectName);
+  const WorldObjectDefinition *prefab = prefabOwned.get();
   if (!prefab)
   {
     return false;
@@ -475,7 +478,8 @@ bool CanPlaceObjectAt(const WorldGenContext &ctx, const std::string &prefabName,
   {
     return false;
   }
-  const WorldObjectDefinition *prefab = ctx.Objects->Get(prefabName);
+  const auto prefabOwned = ctx.Objects->GetShared(prefabName);
+  const WorldObjectDefinition *prefab = prefabOwned.get();
   if (!prefab)
   {
     return false;
@@ -490,7 +494,8 @@ bool PlaceObjectAt(WorldGenContext &ctx, const std::string &prefabName,
   {
     return false;
   }
-  const WorldObjectDefinition *prefab = ctx.Objects->Get(prefabName);
+  const auto prefabOwned = ctx.Objects->GetShared(prefabName);
+  const WorldObjectDefinition *prefab = prefabOwned.get();
   if (!prefab)
   {
     return false;

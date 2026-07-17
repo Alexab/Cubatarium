@@ -1,4 +1,5 @@
 #include "World/Objects/ObjectLibrary.h"
+#include "App/Platform/Log.h"
 #include "Blocks/BlockRegistry.h"
 #include "ResourcePacks/BlockNameUtil.h"
 #include "ResourcePacks/ResourcePack.h"
@@ -7,6 +8,7 @@
 #include <iostream>
 #include <limits>
 #include <nlohmann/json.hpp>
+#include <shared_mutex>
 
 using json = nlohmann::json;
 
@@ -89,7 +91,10 @@ void UObjectLibrary::LoadMerged(
     const std::filesystem::path &baseFolder,
     const std::vector<ResourcePackManifest> &packs, UBlockRegistry &registry)
 {
-  Objects.clear();
+  {
+    std::unique_lock lock(ObjectsMutex);
+    Objects.clear();
+  }
   LoggedUnknownTypes.clear();
   LoadDirectory(baseFolder, "", ObjectOrigin::Builtin, registry);
   LoadDirectoryRecursive(baseFolder / "imported", "", ObjectOrigin::Imported,
@@ -100,6 +105,10 @@ void UObjectLibrary::LoadMerged(
     LoadDirectoryRecursive(pack.Root / "objects", pack.Id,
                            ObjectOrigin::ResourcePack, registry);
   }
+  std::shared_lock lock(ObjectsMutex);
+  CubatariumLogInfo("ObjectLibrary",
+                    "LoadMerged mapSize=" + std::to_string(Objects.size()) +
+                        " base=" + baseFolder.string());
   std::cout << "UObjectLibrary: loaded " << Objects.size() << " objects"
             << std::endl;
 }
@@ -210,7 +219,12 @@ bool UObjectLibrary::LoadFile(const std::string &path, UBlockRegistry &registry,
       return false;
     }
 
-    Objects[object.Name] = std::move(object);
+    std::unique_lock lock(ObjectsMutex);
+    auto stored =
+        std::make_shared<WorldObjectDefinition>(std::move(object));
+    // Capture name before/via stored: `Objects[object.Name] = make_shared(move(object))`
+    // is undefined-order and collapses every entry onto key "" after move.
+    Objects[stored->Name] = std::move(stored);
     return true;
   }
   catch (const json::exception &e)
@@ -223,9 +237,14 @@ bool UObjectLibrary::LoadFile(const std::string &path, UBlockRegistry &registry,
 
 void UObjectLibrary::RebindBlockIds(UBlockRegistry &registry)
 {
+  std::unique_lock lock(ObjectsMutex);
   for (auto &pair : Objects)
   {
-    for (ObjectVoxel &voxel : pair.second.voxels)
+    if (!pair.second)
+    {
+      continue;
+    }
+    for (ObjectVoxel &voxel : pair.second->voxels)
     {
       if (voxel.Type.empty())
       {
@@ -245,13 +264,21 @@ bool UObjectLibrary::ValidateCriticalPrefabs() const
   static const char *kRequired[] = {"deco_log_pine", "path_cobble_3x3",
                                     "campfire_ring"};
   bool ok = true;
+  size_t map_size = 0;
+  {
+    std::shared_lock lock(ObjectsMutex);
+    map_size = Objects.size();
+  }
   for (const char *name : kRequired)
   {
-    const WorldObjectDefinition *prefab = Get(name);
+    const auto prefab = GetShared(name);
     if (!prefab || prefab->voxels.empty())
     {
-      std::cerr << "UObjectLibrary: CRITICAL prefab missing or empty: " << name
-                << std::endl;
+      const std::string msg =
+          std::string("CRITICAL prefab missing or empty: ") + name +
+          " (mapSize=" + std::to_string(map_size) + ")";
+      std::cerr << "UObjectLibrary: " << msg << std::endl;
+      CubatariumLogError("ObjectLibrary", msg);
       ok = false;
       continue;
     }
@@ -259,9 +286,11 @@ bool UObjectLibrary::ValidateCriticalPrefabs() const
     {
       if (voxel.Id == BLOCK_AIR)
       {
-        std::cerr << "UObjectLibrary: CRITICAL prefab '" << name
-                  << "' has unresolved block type '" << voxel.Type << "'"
-                  << std::endl;
+        const std::string msg =
+            std::string("CRITICAL prefab '") + name +
+            "' has unresolved block type '" + voxel.Type + "'";
+        std::cerr << "UObjectLibrary: " << msg << std::endl;
+        CubatariumLogError("ObjectLibrary", msg);
         ok = false;
       }
     }
@@ -269,23 +298,33 @@ bool UObjectLibrary::ValidateCriticalPrefabs() const
   return ok;
 }
 
-const WorldObjectDefinition *UObjectLibrary::Get(const std::string &Name) const
+std::shared_ptr<const WorldObjectDefinition>
+UObjectLibrary::GetShared(const std::string &Name) const
 {
+  std::shared_lock lock(ObjectsMutex);
   const auto it = Objects.find(Name);
   if (it == Objects.end())
   {
     return nullptr;
   }
-  return &it->second;
+  return it->second;
+}
+
+const WorldObjectDefinition *UObjectLibrary::Get(const std::string &Name) const
+{
+  thread_local std::shared_ptr<const WorldObjectDefinition> keep;
+  keep = GetShared(Name);
+  return keep.get();
 }
 
 std::vector<std::string> UObjectLibrary::ListNames() const
 {
+  std::shared_lock lock(ObjectsMutex);
   std::vector<std::string> names;
   names.reserve(Objects.size());
   for (const auto &entry : Objects)
   {
-    if (!entry.second.Hidden)
+    if (entry.second && !entry.second->Hidden)
     {
       names.push_back(entry.first);
     }

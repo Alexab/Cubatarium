@@ -406,6 +406,7 @@ void UGeometryEngine::Paint(int width_size, int height_size,
     WorldInstance->UpdateFrameHitchDiagnostics(DurationDrawSceneMks,
                                                view_duration);
   }
+  const auto post_begin = std::chrono::high_resolution_clock::now();
   if (OverlayTintAlpha > 0.01f)
   {
     RenderFluidOverlay(width_size, height_size);
@@ -428,6 +429,13 @@ void UGeometryEngine::Paint(int width_size, int height_size,
   if (ShowPerformance)
   {
     RenderPerformanceText(width_size, height_size, view_duration);
+  }
+  if (WorldInstance)
+  {
+    WorldInstance->SetLastPostSceneMs(
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - post_begin)
+            .count());
   }
 }
 
@@ -813,12 +821,34 @@ void UGeometryEngine::PrepareFrameRendering()
   {
     inv_view_rot = glm::transpose(glm::mat3(camera->GetViewMatrix()));
   }
+  FluidSurfaceMap.ClearLastFrameStats();
   UnderwaterFogPass_.Update(*WorldInstance, Render, FluidSurfaceMap,
                             BaseSkyColor, inv_view_rot);
   skyColor = glm::vec4(UnderwaterFogPass_.GetSkyTint(), 1.0f);
   OverlayTintColor = UnderwaterFogPass_.GetOverlayTintColor();
   OverlayTintAlpha = UnderwaterFogPass_.GetOverlayTintAlpha();
   OverlayBlockId = UnderwaterFogPass_.GetOverlayBlockId();
+  const FluidSurfaceMapFrameStats &fluid_stats =
+      FluidSurfaceMap.GetLastFrameStats();
+  WorldInstance->SetLastFluidMapCpuMs(fluid_stats.CpuMs);
+  WorldInstance->SetLastFluidMapGpuMs(fluid_stats.GpuMs);
+  WorldInstance->SetLastFluidMapDirtyChunks(fluid_stats.DirtyChunksPending);
+  WorldInstance->SetLastFluidMapFullRebuild(fluid_stats.FullRebuild);
+}
+
+PerformancePreset UGeometryEngine::EffectiveWeatherPreset() const
+{
+  if (!WorldInstance)
+  {
+    return Render.Preset;
+  }
+  // When SwapBuffers stalls (Wall ≪ Sim), cut weather/sky GPU cost.
+  if (WorldInstance->GetLastSwapWaitMs() > 40.0 ||
+      WorldInstance->GetWallFrameDelta() * 1000.0 > 50.0)
+  {
+    return PerformancePreset::Fast;
+  }
+  return Render.Preset;
 }
 
 void UGeometryEngine::ApplyFogUniforms(
@@ -1401,7 +1431,7 @@ void UGeometryEngine::DrawSkyGradient()
   }
 
   SkyGradientPass_.Draw(skyShader, skyColor, UnderwaterFogPass_, env, Render,
-                        Render.Preset, AnimationClock.ElapsedSeconds(),
+                        EffectiveWeatherPreset(), AnimationClock.ElapsedSeconds(),
                         inv_view_rot, camera_pos, horizon_boost);
   DurationSkyGradientMks = SkyGradientPass_.GetLastDrawMs();
 }
@@ -1520,7 +1550,7 @@ void UGeometryEngine::RenderWeatherOverlay(int width, int height)
   ctx.CameraUp = camera_up;
   ctx.ElapsedSec = AnimationClock.ElapsedSeconds();
   ctx.DeltaSec = static_cast<float>(camera->GetDeltaTime());
-  ctx.Preset = Render.Preset;
+  ctx.Preset = EffectiveWeatherPreset();
 
   WeatherPass.Render(ctx, *WorldInstance);
   DurationWeatherStreakMks = WeatherPass.GetLastStreakMs();
@@ -1589,6 +1619,8 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
       "Weather: " + WorldInstance->GetWeatherName(),
       "Wall FPS: " + std::to_string(wall_fps).substr(0, 6),
       "Sim FPS: " + std::to_string(sim_fps).substr(0, 6),
+      "Swap: " + std::to_string(WorldInstance->GetLastSwapWaitMs()).substr(0, 6) +
+          " ms",
       "Blocks: " + std::to_string(blockCount) +
           " draw: " + std::to_string(drawCount),
       "Phys: " + std::to_string(phys.PhysicsStepMs).substr(0, 6) + " ms" +
@@ -1608,7 +1640,14 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
       "Flat: " + std::to_string(md.flatRebuildMs).substr(0, 5) + " ms" +
           " Greedy: " + std::to_string(md.greedyCacheEntries) +
           " Dirty: " + std::to_string(md.dirtyChunksPending) +
-          " Async: " + std::to_string(md.asyncMeshInFlight),
+          " MeshAsync: " + std::to_string(md.asyncMeshInFlight) +
+          " GenQ: " + std::to_string(md.genQueuePending) +
+          "/" + std::to_string(md.genInFlight),
+      "Populate: " + std::to_string(md.populateMsLast).substr(0, 5) + " ms" +
+          " ema " + std::to_string(md.populateMsEma).substr(0, 5) +
+          " (t " + std::to_string(md.populateTerrainMs).substr(0, 4) +
+          " c " + std::to_string(md.populateCarveMs).substr(0, 4) +
+          " p " + std::to_string(md.populatePostMs).substr(0, 4) + ")",
       "Relight: p=" + std::to_string(md.pendingPlayerRelights) +
           " bg=" + std::to_string(md.pendingBgRelights) +
           " inflight=" + std::to_string(md.asyncRelightInflight) +

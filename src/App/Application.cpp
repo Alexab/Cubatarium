@@ -60,6 +60,7 @@
 #endif
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <cmath>
 #include <iostream>
 
@@ -330,10 +331,13 @@ void UApplication::BeginShutdownOperation(const bool saveSession,
                         {
                           GameSession->SaveCommandHistory();
                         }
-                        if (Core)
-                        {
-                          Core->SaveSystem("config.json");
-                        }
+                          if (Core)
+                          {
+                            // World terrain already saved by ShutdownSave.
+                            // SaveSystem→SaveWorld would re-enter snapshot/
+                            // InitChunkScheduler and can hang on worker join.
+                            Core->SaveConfigFile();
+                          }
                         if (ShutdownCloseAfter)
                         {
                           RequestQuit();
@@ -1423,6 +1427,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
                            static_cast<float>(height > 0 ? height : 1);
       camera->SetAspectRatio(aspect);
     }
+    const auto prepare_begin = std::chrono::high_resolution_clock::now();
     Geometry->PrepareFrameRendering();
     const glm::vec4 clearColor = Geometry->GetSkyColor();
     glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
@@ -1431,9 +1436,14 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     {
       Geometry->DrawSkyGradient();
     }
+    World->SetLastPrepareFrameMs(
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - prepare_begin)
+            .count());
     Geometry->Paint(width, height, viewDuration);
   }
 
+  const auto gui_begin = std::chrono::high_resolution_clock::now();
   if (State == AppState::InGame && IconSource)
   {
     IconSource->WarmupObjectIcons(2);
@@ -1480,6 +1490,13 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   if (State == AppState::InGame)
   {
     DrawDragGhost(width, height);
+  }
+  if (World)
+  {
+    World->SetLastGuiOverlayMs(
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - gui_begin)
+            .count());
   }
 }
 

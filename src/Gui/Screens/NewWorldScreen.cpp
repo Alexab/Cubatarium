@@ -13,6 +13,7 @@
 #include "Gui/Widgets/WorldGenSettingsForm.h"
 #include "Gui/Widgets/ResourcePackPickerForm.h"
 #include <algorithm>
+#include <iostream>
 
 namespace cutum
 {
@@ -53,12 +54,16 @@ void UNewWorldScreen::OnCreate()
   const ProceduralSettings settings = WorldForm->ReadSettings();
   ResourcePackSelection packs =
       PackForm ? PackForm->ReadSelection() : ResourcePackSelection{};
-  if (packs.Primary.empty() && Host)
+  if (packs.Primary.empty())
   {
     packs = Host->GetDefaultResourcePackSelection();
   }
   if (packs.Primary.empty())
   {
+    // Keep the dialog open but make the failure visible in logs/console.
+    std::cerr << "NewWorld: Create ignored — no primary resource pack selected "
+                 "and no default packs configured."
+              << std::endl;
     return;
   }
   if (packs.WorldgenOwner.empty())

@@ -27,7 +27,10 @@ glm::vec4 ReadVec4(const nlohmann::json &arr, const glm::vec4 &fallback)
 
 void USkinDefinitionStorage::Load(const std::string &folder)
 {
-  Definitions.clear();
+  {
+    std::unique_lock lock(DefinitionsMutex);
+    Definitions.clear();
+  }
   if (!std::filesystem::exists(folder))
   {
     return;
@@ -44,8 +47,8 @@ void USkinDefinitionStorage::Load(const std::string &folder)
       LoadFile(jsonPath.string());
     }
   }
-  std::cout << "USkinDefinitionStorage: loaded " << Definitions.size()
-            << " skins" << std::endl;
+  std::cout << "USkinDefinitionStorage: loaded " << Count() << " skins"
+            << std::endl;
 }
 
 void USkinDefinitionStorage::LoadOverlay(const std::string &folder)
@@ -76,6 +79,7 @@ void USkinDefinitionStorage::LoadOverlay(const std::string &folder)
 
 bool USkinDefinitionStorage::LoadFile(const std::string &path)
 {
+  SkinDefinition def;
   try
   {
     std::ifstream file(path);
@@ -85,7 +89,6 @@ bool USkinDefinitionStorage::LoadFile(const std::string &path)
     }
     nlohmann::json data;
     file >> data;
-    SkinDefinition def;
     def.Id = data.value("id", "");
     if (def.Id.empty())
     {
@@ -136,7 +139,9 @@ bool USkinDefinitionStorage::LoadFile(const std::string &path)
                      def.iconFallbackColor);
       }
     }
-    Definitions[def.Id] = def;
+
+    std::unique_lock lock(DefinitionsMutex);
+    Definitions[def.Id] = std::move(def);
     return true;
   }
   catch (const std::exception &e)
@@ -149,6 +154,7 @@ bool USkinDefinitionStorage::LoadFile(const std::string &path)
 
 const SkinDefinition *USkinDefinitionStorage::Get(const std::string &Id) const
 {
+  std::shared_lock lock(DefinitionsMutex);
   const auto it = Definitions.find(Id);
   if (it == Definitions.end())
   {
@@ -157,8 +163,15 @@ const SkinDefinition *USkinDefinitionStorage::Get(const std::string &Id) const
   return &it->second;
 }
 
+size_t USkinDefinitionStorage::Count() const
+{
+  std::shared_lock lock(DefinitionsMutex);
+  return Definitions.size();
+}
+
 std::vector<std::string> USkinDefinitionStorage::ListEquippable() const
 {
+  std::shared_lock lock(DefinitionsMutex);
   std::vector<std::string> ids;
   for (const auto &[Id, def] : Definitions)
   {
@@ -167,24 +180,26 @@ std::vector<std::string> USkinDefinitionStorage::ListEquippable() const
       ids.push_back(Id);
     }
   }
-  SortDefinitionIdsByCatalogOrder(ids,
-                                  [this](const std::string &id) -> int
-                                  {
-                                    const auto *def = Get(id);
-                                    return def ? def->catalog.sortOrder : 0;
-                                  });
+  SortDefinitionIdsByCatalogOrder(
+      ids,
+      [&defs = Definitions](const std::string &id) -> int
+      {
+        const auto it = defs.find(id);
+        return it != defs.end() ? it->second.catalog.sortOrder : 0;
+      });
   return ids;
 }
 
 bool USkinDefinitionStorage::IsCompatible(const std::string &skinId,
                                           const std::string &speciesId) const
 {
-  const SkinDefinition *skin = Get(skinId);
-  if (!skin)
+  std::shared_lock lock(DefinitionsMutex);
+  const auto it = Definitions.find(skinId);
+  if (it == Definitions.end())
   {
     return false;
   }
-  return skin->creatureId == speciesId;
+  return it->second.creatureId == speciesId;
 }
 
 } // namespace cutum

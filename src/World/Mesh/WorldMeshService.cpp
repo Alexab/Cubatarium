@@ -63,6 +63,34 @@ void UWorldMeshService::MarkDirtyPriority(glm::ivec3 chunk_coord)
   NotifyChunkBlocksChanged(chunk_coord);
 }
 
+void UWorldMeshService::NotifyFluidSurfaceDirtyAtBlock(
+    const UBlockWorld &world, UBlockRegistry *registry, glm::ivec3 block_pos)
+{
+  if (!registry)
+  {
+    return;
+  }
+  auto touches_liquid = [&](glm::ivec3 p)
+  { return registry->IsLiquid(world.GetBlock(p)); };
+  if (!touches_liquid(block_pos))
+  {
+    bool neighbor_liquid = false;
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      if (touches_liquid(block_pos + offset))
+      {
+        neighbor_liquid = true;
+        break;
+      }
+    }
+    if (!neighbor_liquid)
+    {
+      return;
+    }
+  }
+  Cache.InvalidateFluidSurfaceForChunk(UChunkManager::WorldToChunk(block_pos));
+}
+
 void UWorldMeshService::MarkAllDirtyFromWorld(const UBlockWorld &world)
 {
   Cache.MarkAllDirtyFromWorld(world);
@@ -206,10 +234,12 @@ void UWorldMeshService::RebuildDirtyChunks(UBlockWorld &world,
 
 MeshRebuildTickStats UWorldMeshService::RebuildDirtyChunksWithStats(
     UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
-    int max_schedule_per_frame, bool force_sync)
+    int max_schedule_per_frame, bool force_sync, int max_sync_rebuild,
+    double max_sync_ms)
 {
   return Cache.RebuildDirtyChunksWithStats(world, registry, max_drain_per_frame,
-                                           max_schedule_per_frame, force_sync);
+                                           max_schedule_per_frame, force_sync,
+                                           max_sync_rebuild, max_sync_ms);
 }
 
 void UWorldMeshService::DrainAsyncMeshResults(UBlockWorld &world,
@@ -275,6 +305,16 @@ uint64_t UWorldMeshService::GetMeshDiscardedLateCount() const
 double UWorldMeshService::GetLastFlatRebuildMs() const
 {
   return Cache.GetLastFlatRebuildMs();
+}
+
+double UWorldMeshService::GetLastMeshSyncMs() const
+{
+  return Cache.GetLastMeshSyncMs();
+}
+
+double UWorldMeshService::GetLastMeshSnapshotMs() const
+{
+  return Cache.GetLastMeshSnapshotMs();
 }
 
 size_t UWorldMeshService::GetGreedyCacheSize() const

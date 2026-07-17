@@ -28,6 +28,7 @@ struct ComposableWorldGenConfig
   bool UseBiomeSurface{false};
   bool Fluids{true};
   bool Ravines{false};
+  bool Valleys{false};
   bool Caves{false};
   bool Ores{false};
   bool Vegetation{false};

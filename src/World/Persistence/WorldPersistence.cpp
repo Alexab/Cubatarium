@@ -300,6 +300,7 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     if (has_disk)
     {
       ClearTerrainColumnChunks(world.BlockWorld, ground_coord, max_height);
+      RemoveTerrainColumnFromDisk(ground_coord, max_height);
     }
     return;
   }
@@ -358,8 +359,11 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world)
       PendingAsyncColumnLoadState &state = pending_it->second;
       const ChunkDiskFormat disk_format =
           ChunkStorage->DetectFormatOnDisk(WorldFolderPath, load.coord);
-      const bool token_valid =
-          load.token.IsValidFor(load.coord, load.token.sequence);
+      const uint64_t current_sequence =
+          world.Streaming
+              ? world.Streaming->GetChunkGenTokens().Current(ground).sequence
+              : load.token.sequence;
+      const bool token_valid = load.token.IsValidFor(ground, current_sequence);
 
       if (load.success && token_valid && world.BlockRegistry)
       {
@@ -560,6 +564,7 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
   const int max_height = world.ProceduralTemplate.MaxHeight;
   if (!IsTerrainChunkComplete(world.BlockWorld, ground_coord, max_height))
   {
+    RemoveTerrainColumnFromDisk(ground_coord, max_height);
     return;
   }
   const int max_cy = (max_height + CHUNK_SIZE - 1) / CHUNK_SIZE;
@@ -648,10 +653,40 @@ void UWorldPersistence::SaveTerrainColumn(glm::ivec3 ground_coord,
   }
   if (!IsTerrainChunkComplete(block_world, ground_coord, max_height))
   {
+    // Incomplete in RAM must not preserve a stale complete column on disk
+    // (e.g. ocean file left after quit mid-land-gen → straight coast cut).
+    RemoveTerrainColumnFromDisk(ground_coord, max_height);
     return;
   }
   ChunkStorage->SaveTerrainColumn(ground_coord, block_world, WorldFolderPath,
                                   registry, max_height);
+}
+
+void UWorldPersistence::RemoveTerrainColumnFromDisk(glm::ivec3 ground_coord,
+                                                    int max_height)
+{
+  if (!ChunkStorage)
+  {
+    return;
+  }
+  if (ground_coord.y != 0)
+  {
+    ground_coord.y = 0;
+  }
+  ChunkStorage->RemoveTerrainColumnFromDisk(WorldFolderPath, ground_coord,
+                                            max_height);
+}
+
+void UWorldPersistence::PurgeIncompleteTerrainColumn(UBlockWorld &block_world,
+                                                     glm::ivec3 ground_coord,
+                                                     int max_height)
+{
+  if (ground_coord.y != 0)
+  {
+    ground_coord.y = 0;
+  }
+  ClearTerrainColumnChunks(block_world, ground_coord, max_height);
+  RemoveTerrainColumnFromDisk(ground_coord, max_height);
 }
 
 void UWorldPersistence::LoadInitialTerrainColumns(UWorld &world,
@@ -669,9 +704,15 @@ void UWorldPersistence::LoadInitialTerrainColumns(UWorld &world,
   {
     for (int dz = -radius; dz <= radius; ++dz)
     {
-      LoadTerrainColumn(glm::ivec3(center_chunk.x + dx, 0, center_chunk.z + dz),
-                        world.BlockWorld, *world.BlockRegistry,
+      const glm::ivec3 ground(center_chunk.x + dx, 0, center_chunk.z + dz);
+      LoadTerrainColumn(ground, world.BlockWorld, *world.BlockRegistry,
                         world.ProceduralTemplate.MaxHeight);
+      if (!IsTerrainChunkComplete(world.BlockWorld, ground,
+                                  world.ProceduralTemplate.MaxHeight))
+      {
+        PurgeIncompleteTerrainColumn(world.BlockWorld, ground,
+                                     world.ProceduralTemplate.MaxHeight);
+      }
     }
   }
 }

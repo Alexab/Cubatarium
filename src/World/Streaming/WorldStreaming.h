@@ -57,6 +57,15 @@ public:
   void QuiesceBackgroundWork(UWorld &world,
                              std::chrono::milliseconds async_io_timeout =
                                  std::chrono::milliseconds(2000));
+  void PauseChunkGeneration(
+      std::chrono::milliseconds worker_wait =
+          std::chrono::milliseconds(10000));
+  /// Cancel queued gen + bump tokens without waiting for in-flight populate.
+  void CancelChunkGeneration();
+  /// Process exit: cancel gen, brief wait, then drop or leak workers so
+  /// Join never blocks forever on late ChunkPopulate/carve.
+  void AbandonWorkersForProcessExit(
+      std::chrono::milliseconds timeout = std::chrono::milliseconds(250));
   void ResumeStreamerAfterQuiesce();
 
   UChunkEmergeCoordinator &GetEmergeCoordinator() { return *EmergeCoordinator; }
@@ -97,6 +106,10 @@ private:
   double FrameStreamingGenMs{0.0};
   double FrameStreamingIoMs{0.0};
   std::deque<glm::ivec3> DeferredPhysicsSeedQueue;
+  std::deque<glm::ivec3> DeferredShoreSealQueue;
+  int AdaptiveEffectiveRd{-1};
+  double PhysMsEma{0.0};
+  std::chrono::steady_clock::time_point AdaptiveRdLastAdjust{};
 };
 
 } // namespace cutum

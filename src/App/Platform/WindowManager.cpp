@@ -18,7 +18,9 @@
 #include "Render/Pipeline/GlStateScope.h"
 #include "ThirdParty/stb_image.h"
 #include "World/Core/World.h"
+#include "World/Diagnostics/FramePerfMonitor.h"
 #include "WorldGen/Core/ProceduralSettings.h"
+#include "Core/Progress/IUProgressSink.h"
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -114,18 +116,25 @@ bool UWindowManager::Initialize(int width, int height, const char *title,
     {
       glfwWindowHint(GLFW_SAMPLES, 4);
     }
+    else
+    {
+      glfwWindowHint(GLFW_SAMPLES, 0);
+    }
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
     return glfwCreateWindow(width, height, title, nullptr, nullptr);
   };
 
-  Window = createWindow(true);
+  // Prefer no MSAA: Wall≪Sim cases are often GPU/present bound; 4x MSAA
+  // inflates fragment cost. Config msaa_samples>0 can request MSAA later only
+  // at recreate (not supported yet) — create without MSAA by default.
+  Window = createWindow(false);
   if (!Window)
   {
     CubatariumLogInfo("Window",
-                      "OpenGL window with MSAA failed, retrying without MSAA");
-    Window = createWindow(false);
+                      "OpenGL window without MSAA failed, retrying with MSAA");
+    Window = createWindow(true);
   }
   if (!Window)
   {
@@ -144,6 +153,11 @@ bool UWindowManager::Initialize(int width, int height, const char *title,
 
   // OpenGL context creation
   glfwMakeContextCurrent(Window);
+
+  // Default uncapped present; ApplyPresentSettings after config load may
+  // enable VSync.
+  glfwSwapInterval(0);
+  CubatariumLogInfo("Window", "SwapInterval set to 0 (vsync off)");
 
   // GLEW initialization (must be after context creation)
 #ifndef __ANDROID__
@@ -180,8 +194,8 @@ void UWindowManager::InitializeOpenGL()
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LESS);
 
-  // Enable MSAA
-  glEnable(GL_MULTISAMPLE);
+  // MSAA off by default (window created without samples).
+  glDisable(GL_MULTISAMPLE);
 
   // Enable blending for transparency
   glEnable(GL_BLEND);
@@ -262,6 +276,21 @@ void UWindowManager::SetupCallbacks()
                       });
 }
 
+void UWindowManager::ApplyPresentSettings()
+{
+  if (!Window || !Core)
+  {
+    return;
+  }
+  const bool vsync = Core->GetRenderSettings().VSync;
+  const int interval = vsync ? 1 : 0;
+  glfwSwapInterval(interval);
+  CubatariumLogInfo("Window",
+                    std::string("ApplyPresentSettings vsync=") +
+                        (vsync ? "true" : "false") +
+                        " SwapInterval=" + std::to_string(interval));
+}
+
 void UWindowManager::Run()
 {
   if (!IsInitialized)
@@ -271,14 +300,15 @@ void UWindowManager::Run()
   }
 
   IsRunning = true;
+  ApplyPresentSettings();
+  UFramePerfMonitor::EnsureSession();
 
   while (!glfwWindowShouldClose(Window) && IsRunning)
   {
-    // Time update
-    auto current_time = std::chrono::high_resolution_clock::now();
+    const auto frame_begin = std::chrono::high_resolution_clock::now();
     DeltaTime =
-        std::chrono::duration<double>(current_time - LastFrameTime).count();
-    LastFrameTime = current_time;
+        std::chrono::duration<double>(frame_begin - LastFrameTime).count();
+    LastFrameTime = frame_begin;
 
     glfwPollEvents();
 
@@ -288,25 +318,76 @@ void UWindowManager::Run()
     }
 
     // Input processing
+    const auto input_begin = std::chrono::high_resolution_clock::now();
     ProcessInput();
+    const double input_ms = std::chrono::duration<double, std::milli>(
+                                std::chrono::high_resolution_clock::now() -
+                                input_begin)
+                                .count();
+    const auto app_begin = std::chrono::high_resolution_clock::now();
     if (Application)
     {
       Application->Update(DeltaTime);
     }
+    const double app_ms = std::chrono::duration<double, std::milli>(
+                              std::chrono::high_resolution_clock::now() -
+                              app_begin)
+                              .count();
 
-    // Logic update
+    // Logic update (includes DoMovement → phys_ms)
+    const auto world_begin = std::chrono::high_resolution_clock::now();
     Update();
+    const double world_ms = std::chrono::duration<double, std::milli>(
+                                std::chrono::high_resolution_clock::now() -
+                                world_begin)
+                                .count();
+    if (World)
+    {
+      World->SetLastInputMs(input_ms);
+      World->SetLastAppUpdateMs(app_ms);
+      World->SetLastWorldTickMs(world_ms);
+    }
+
+    // Outside world_ms so autosave Init/Ticks do not inflate world_extra.
+    TickBudgetedAutosave();
 
     // Rendering
     Render();
 
+    const auto swap_begin = std::chrono::high_resolution_clock::now();
     glfwSwapBuffers(Window);
+    const auto frame_end = std::chrono::high_resolution_clock::now();
+    const double swap_wait_ms =
+        std::chrono::duration<double, std::milli>(frame_end - swap_begin)
+            .count();
+    const double frame_wall_ms =
+        std::chrono::duration<double, std::milli>(frame_end - frame_begin)
+            .count();
+    if (World)
+    {
+      World->SetLastSwapWaitMs(swap_wait_ms);
+      // Same-frame wall for perf log (HUD still uses inter-frame DeltaTime).
+      World->SetWallFrameDelta(frame_wall_ms / 1000.0);
+    }
+    if (World && Application && Application->GetState() == AppState::InGame)
+    {
+      double interval = 2.0;
+      if (Core)
+      {
+        interval = Core->GetUiSettings().PerfLogIntervalSec;
+      }
+      UFramePerfMonitor::OnInGameFrame(*World, swap_wait_ms, interval);
+      // Restore inter-frame delta for gameplay timing consistency next frame.
+      World->SetWallFrameDelta(DeltaTime);
+    }
 
     if (StopPredicate && StopPredicate())
     {
       IsRunning = false;
     }
   }
+
+  UFramePerfMonitor::Shutdown();
 }
 
 void UWindowManager::SetStopPredicate(std::function<bool()> predicate)
@@ -396,11 +477,54 @@ void UWindowManager::Update()
     const auto now = std::chrono::steady_clock::now();
     const double elapsed =
         std::chrono::duration<double>(now - LastAutosaveTime).count();
-    if (elapsed >= KAutosaveIntervalSec)
+    if (!AutosaveInProgress && !AutosaveRequested &&
+        elapsed >= KAutosaveIntervalSec)
     {
-      Core->SaveWorld(World->GetWorldName());
+      AutosaveRequested = true;
       LastAutosaveTime = now;
     }
+  }
+}
+
+void UWindowManager::TickBudgetedAutosave()
+{
+  if (!World || !Core || !Application ||
+      Application->GetState() != AppState::InGame)
+  {
+    if (AutosaveInProgress && Application &&
+        Application->GetState() != AppState::InGame)
+    {
+      AutosaveInProgress = false;
+      AutosaveRequested = false;
+    }
+    return;
+  }
+  if (AutosaveRequested && !AutosaveInProgress)
+  {
+    AutosaveRequested = false;
+    const std::string folder = Core->GetActiveWorldFolder().string();
+    if (folder.empty() || World->HasActiveCooperativeOperation())
+    {
+      return;
+    }
+    World->BeginCooperativeSave(folder);
+    AutosaveInProgress = true;
+  }
+  if (!AutosaveInProgress)
+  {
+    return;
+  }
+  if (!World->HasActiveCooperativeOperation())
+  {
+    AutosaveInProgress = false;
+    return;
+  }
+  UNullProgressSink sink;
+  if (World->TickCooperativeSave(sink, /*chunkBudget=*/8))
+  {
+    World->ResumeAfterSessionSave();
+    AutosaveInProgress = false;
+    LastAutosaveTime = std::chrono::steady_clock::now();
   }
 }
 

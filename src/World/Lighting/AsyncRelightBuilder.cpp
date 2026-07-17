@@ -21,7 +21,7 @@ std::mutex gRelightCaptureMutex;
 
 UAsyncRelightBuilder::UAsyncRelightBuilder(std::size_t thread_count)
     : WorkerCount(static_cast<int>(ResolveRelightWorkerCount(thread_count))),
-      Pool(ResolveRelightWorkerCount(thread_count))
+      Pool(ResolveRelightWorkerCount(thread_count), "Relight")
 {
 }
 
@@ -37,9 +37,13 @@ void UAsyncRelightBuilder::Enqueue(UChunkRelightSnapshot snapshot,
     InFlight[job_id] = job_id;
   }
 
+  auto catalogKeep = registry.GetDefinitionsCatalogSnapshot();
+
   Pool.Enqueue([this, snapshot = std::move(snapshot), registryPtr = &registry,
-                job_id, submit_epoch]() mutable
+                catalogKeep = std::move(catalogKeep), job_id,
+                submit_epoch]() mutable
                {
+                 (void)catalogKeep;
                  RelightComputeResult result = snapshot.Compute(*registryPtr);
                  result.job_id = job_id;
                  result.submitEpoch = submit_epoch;
@@ -68,9 +72,13 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
     InFlight[job_id] = job_id;
   }
 
+  auto catalogKeep = registry.GetDefinitionsCatalogSnapshot();
+
   Pool.Enqueue([this, snapshot = std::move(snapshot), registry = &registry,
-                job_id, submit_epoch]() mutable
+                catalogKeep = std::move(catalogKeep), job_id,
+                submit_epoch]() mutable
                {
+                 (void)catalogKeep;
                  RelightComputeResult result = snapshot.Compute(*registry);
                  result.job_id = job_id;
                  result.submitEpoch = submit_epoch;
@@ -96,6 +104,12 @@ UAsyncRelightBuilder::DrainCompleted(int max_per_frame)
       {
         DiscardedLate.fetch_add(1, std::memory_order_relaxed);
         InFlight.erase(result.job_id);
+        {
+          std::lock_guard<std::mutex> src_lock(DiscardedSourcesMutex);
+          DiscardedSources.insert(DiscardedSources.end(),
+                                  result.source_block_positions.begin(),
+                                  result.source_block_positions.end());
+        }
         continue;
       }
       InFlight.erase(result.job_id);
@@ -142,8 +156,20 @@ void UAsyncRelightBuilder::CancelPending()
     if (result.submitEpoch != current_epoch)
     {
       DiscardedLate.fetch_add(1, std::memory_order_relaxed);
+      std::lock_guard<std::mutex> src_lock(DiscardedSourcesMutex);
+      DiscardedSources.insert(DiscardedSources.end(),
+                              result.source_block_positions.begin(),
+                              result.source_block_positions.end());
     }
   }
+}
+
+std::vector<glm::ivec3> UAsyncRelightBuilder::TakeDiscardedSourcePositions()
+{
+  std::lock_guard<std::mutex> src_lock(DiscardedSourcesMutex);
+  std::vector<glm::ivec3> out;
+  out.swap(DiscardedSources);
+  return out;
 }
 
 } // namespace cutum

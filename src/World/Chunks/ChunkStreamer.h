@@ -5,6 +5,7 @@
 #include "World/Chunks/ChunkLoadPriority.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
+#include <algorithm>
 #include <functional>
 #include <glm/glm.hpp>
 #include <string>
@@ -64,10 +65,35 @@ public:
                                   std::function<void(glm::ivec3)> relight_column);
   void NotifyChunkCommitted(glm::ivec3 chunkCoord);
   void MarkPersistedColumnsFromWorld();
-  void SetRenderDistance(int chunks) { RenderDistance = chunks; }
+  void SetRenderDistance(int chunks)
+  {
+    VisualRenderDistance = std::max(1, chunks);
+    KeepRenderDistance =
+        std::max(VisualRenderDistance, VisualRenderDistance + KeepPrefetchMargin);
+  }
+  void SetVisualRenderDistance(int chunks)
+  {
+    VisualRenderDistance = std::max(1, chunks);
+  }
+  void SetKeepPrefetchMargin(int margin)
+  {
+    KeepPrefetchMargin = std::max(0, margin);
+    KeepRenderDistance =
+        std::max(VisualRenderDistance, VisualRenderDistance + KeepPrefetchMargin);
+  }
+  void SetKeepRenderDistance(int chunks)
+  {
+    KeepRenderDistance = std::max(VisualRenderDistance, chunks);
+  }
+  int GetVisualRenderDistance() const { return VisualRenderDistance; }
+  int GetKeepRenderDistance() const { return KeepRenderDistance; }
   void SetMaxTerrainHeight(int height) { MaxHeight = height; }
   void SetEnabled(bool enabled) { Enabled = enabled; }
   void SetMaxLoadOpsPerFrame(int value) { MaxLoadOpsPerFrame = value; }
+  void SetMaxKeepPrefetchOpsPerFrame(int value)
+  {
+    MaxKeepPrefetchOpsPerFrame = std::max(0, value);
+  }
   void SetMaxUnloadOpsPerFrame(int value)
   {
     MaxUnloadOpsPerFrame = value;
@@ -98,7 +124,10 @@ public:
   void Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
               const PlayerCapsule &cap);
   void PrefetchAhead(glm::ivec3 feet_chunk, glm::vec3 view_forward_xz,
-                     float movement_speed, float speed_threshold);
+                     float movement_speed, float speed_threshold,
+                     int *out_ops = nullptr);
+  void PrefetchKeepShell(glm::ivec3 feet_chunk, int max_ops,
+                         int *out_ops = nullptr);
 
   const StreamingFrameStats &GetLastFrameStats() const
   {
@@ -125,9 +154,12 @@ private:
   uint32_t Seed;
   int BaseY;
   int MaxHeight;
-  int RenderDistance{4};
+  int VisualRenderDistance{4};
+  int KeepRenderDistance{6};
+  int KeepPrefetchMargin{2};
   int UnloadMargin{1};
   int MaxLoadOpsPerFrame{4};
+  int MaxKeepPrefetchOpsPerFrame{2};
   int MaxUnloadOpsPerFrame{2};
   int EffectiveUnloadOpsPerFrame{2};
   bool Enabled{true};

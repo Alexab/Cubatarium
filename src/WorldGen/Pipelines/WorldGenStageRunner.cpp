@@ -7,6 +7,8 @@
 #include "WorldGen/Features/OreVeinPlacer.h"
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "WorldGen/Features/RavineCarver.h"
+#include "WorldGen/Features/ValleyCarver.h"
+#include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 #include "WorldGen/Sampling/DensityFieldSampler.h"
 #include <unordered_map>
@@ -51,8 +53,33 @@ void RunRavinesStage(UComposableWorldGenerator &generator,
                      int world_z, PostTerrainState &)
 {
   WorldGenContext &ctx = generator.GetContext();
+  const RavineSurfaceYCallback get_surface_y =
+      [&generator](int hx, int hz) { return generator.SurfaceYAt(hx, hz); };
   CarveColumnRavines(ctx, world_x, world_z, sample.SurfaceY, ctx.Settings.Seed,
-                     ctx.Settings.Ravines);
+                     ctx.Settings.Ravines, ctx.Settings.SeaLevel,
+                     get_surface_y);
+}
+
+void RunValleysStage(UComposableWorldGenerator &generator,
+                     const ColumnSampleContext &sample, int world_x,
+                     int world_z, PostTerrainState &)
+{
+  WorldGenContext &ctx = generator.GetContext();
+  ValleyParams params;
+  const PackValleysConfig &pack = UWorldGenPack::ValleysConfig();
+  if (pack.Loaded)
+  {
+    params.enabled = pack.Enabled;
+    params.maxDepth = pack.MaxDepth;
+    params.widthSigma = pack.WidthSigma;
+    params.aquaticDepthScale = pack.AquaticDepthScale;
+    params.riverNoiseScale = pack.RiverNoiseScale;
+  }
+  const ValleySurfaceYCallback get_surface_y =
+      [&generator](int hx, int hz) { return generator.SurfaceYAt(hx, hz); };
+  CarveColumnValleys(ctx, world_x, world_z, sample.SurfaceY, ctx.Settings.Seed,
+                     params, ctx.Settings.SeaLevel,
+                     ctx.Settings.Tuning.riverWidth, get_surface_y);
 }
 
 void RunCavesStage(UComposableWorldGenerator &generator,
@@ -129,6 +156,7 @@ const std::unordered_map<WorldGenStageId, PostTerrainStageFn> &StageFnMap()
 {
   static const std::unordered_map<WorldGenStageId, PostTerrainStageFn> map = {
       {WorldGenStageId::Ravines, RunRavinesStage},
+      {WorldGenStageId::Valleys, RunValleysStage},
       {WorldGenStageId::Caves, RunCavesStage},
       {WorldGenStageId::Fluids, RunFluidsStage},
       {WorldGenStageId::Ores, RunOresStage},
@@ -171,20 +199,37 @@ const std::vector<WorldGenStageId> &ResolvedStageOrder()
 
 } // namespace
 
-void RunPostTerrainStages(UComposableWorldGenerator &generator,
-                          const ColumnSampleContext &sample, int world_x,
-                          int world_z)
+uint32_t WorldGenStageSkipBit(WorldGenStageId id)
+{
+  return 1u << static_cast<uint32_t>(id);
+}
+
+void RunPostTerrainStagesExcluding(UComposableWorldGenerator &generator,
+                                   const ColumnSampleContext &sample,
+                                   int world_x, int world_z,
+                                   uint32_t skip_stage_mask)
 {
   const WorldGenStageMask &mask = generator.GetStageMask();
   PostTerrainState state;
   for (WorldGenStageId stage_id : ResolvedStageOrder())
   {
+    if ((skip_stage_mask & WorldGenStageSkipBit(stage_id)) != 0)
+    {
+      continue;
+    }
     if (!mask.IsEnabled(stage_id))
     {
       continue;
     }
     RunStage(generator, sample, world_x, world_z, state, stage_id);
   }
+}
+
+void RunPostTerrainStages(UComposableWorldGenerator &generator,
+                          const ColumnSampleContext &sample, int world_x,
+                          int world_z)
+{
+  RunPostTerrainStagesExcluding(generator, sample, world_x, world_z, 0);
 }
 
 } // namespace cutum

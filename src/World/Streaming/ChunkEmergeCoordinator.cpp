@@ -37,20 +37,14 @@ UChunkEmergeCoordinator::ComputeBudget(const ProceduralSettings &procedural,
   budget.MaxMeshSchedule = kDefaultMeshSchedule;
   if (last_frame_ms > 24.0)
   {
-    budget.MaxChunkCommits = std::max(1, budget.MaxChunkCommits / 2);
+    // Hitch: cut commits/load, keep mesh drain so Dirty does not spiral.
+    budget.MaxChunkCommits = 1;
     budget.MaxLoadOps = std::max(1, budget.MaxLoadOps / 2);
-    budget.MaxMeshDrain = std::max(2, budget.MaxMeshDrain / 2);
-    budget.MaxMeshSchedule = budget.MaxMeshDrain;
   }
   else if (last_frame_ms > 20.0 && boost)
   {
     budget.MaxChunkCommits = std::max(1, budget.MaxChunkCommits - 1);
     budget.MaxLoadOps = std::max(1, budget.MaxLoadOps - 1);
-  }
-  else if (last_frame_ms > 16.0)
-  {
-    budget.MaxMeshDrain = std::max(4, budget.MaxMeshDrain - 2);
-    budget.MaxMeshSchedule = budget.MaxMeshDrain;
   }
   if (boost && last_frame_ms <= 20.0)
   {
@@ -121,7 +115,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   const glm::ivec3 focus_ground =
       UChunkManager::WorldToChunk(focus_block);
   const glm::ivec3 focus_ground_horiz(focus_ground.x, 0, focus_ground.z);
-  const int focus_radius = world.GetRenderDistanceChunks() + 1;
+  const int focus_radius = world.GetEffectiveRenderDistance() + 1;
   mesh_service.SetMeshRebuildFocus(focus_ground_horiz, focus_radius);
 
   int mesh_drain = LastBudget.MaxMeshDrain;
@@ -150,27 +144,90 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
     }
   }
 
+  // Standing still with backlog: prioritize drain/complete over new commits so
+  // FPS can recover (dirty outside focus used to never clear).
+  if (!moving && pending_dirty > 32)
+  {
+    mesh_drain = std::max(mesh_drain, 20);
+    mesh_schedule = std::max(mesh_schedule, 12);
+  }
+  else if (!moving && pending_dirty > 8)
+  {
+    mesh_drain = std::max(mesh_drain, 16);
+    mesh_schedule = std::max(mesh_schedule, 10);
+  }
+
   if (world.GetPlayerRelightMeshBurstFrames() > 0)
   {
     mesh_drain = std::max(mesh_drain, 24);
     mesh_schedule = std::max(mesh_schedule, 24);
   }
 
-  if (last_frame_ms > 24.0)
+  // Near dirty must keep MeshAsync draining even under hitch frames.
+  if (near_mesh_backlog)
   {
-    mesh_drain = std::max(2, mesh_drain / 2);
-    mesh_schedule = mesh_drain;
-  }
-  else if (last_frame_ms > 16.0 && !moving)
-  {
-    mesh_drain = std::max(4, mesh_drain - 2);
-    mesh_schedule = mesh_drain;
+    mesh_drain = std::max(mesh_drain, 12);
+    mesh_schedule = std::max(mesh_schedule, 12);
   }
 
+  // Floor drain by Dirty backlog so hitch frames do not starve MeshAsync.
+  if (pending_dirty > 0)
+  {
+    const int dirty_floor =
+        std::min(24, std::max(1, static_cast<int>(pending_dirty) / 4));
+    mesh_drain = std::max(mesh_drain, dirty_floor);
+    // Under hitch, still drain completed results, but limit new snapshots.
+    if (last_frame_ms > 24.0)
+    {
+      mesh_drain = std::max(mesh_drain, 8);
+      mesh_schedule = std::min(mesh_schedule, 4);
+    }
+    else
+    {
+      mesh_schedule = std::max(mesh_schedule, dirty_floor);
+    }
+  }
+
+  // Remesh after light before consuming other dirty work so black (light=0)
+  // meshes do not stick for many frames under ocean stream backlog.
+  world.FlushPendingRelightMeshColumns(24);
+
+  const bool missing_visible_mesh =
+      mesh_service.HasMissingGreedyMeshInHorizontalRadius(
+          world.GetBlockWorld(), focus_ground_horiz, focus_radius);
+
+  // Sync-fill holes where voxels exist but GreedyCache entry is missing.
+  int sync_cap = last_frame_ms > 16.0 ? 1 : -1;
+  if (pending_async > 0 && last_frame_ms > 24.0)
+  {
+    sync_cap = sync_cap < 0 ? 2 : std::min(sync_cap, 2);
+  }
+  if (missing_visible_mesh)
+  {
+    const int missing_cap = moving ? 4 : 6;
+    if (pending_async > 0 && last_frame_ms > 24.0)
+    {
+      sync_cap = std::max(sync_cap, 2);
+    }
+    else
+    {
+      sync_cap = std::max(sync_cap, missing_cap);
+    }
+  }
+  else if (near_mesh_backlog)
+  {
+    sync_cap = std::max(sync_cap, pending_async > 0 && last_frame_ms > 24.0 ? 1
+                                                                             : 2);
+  }
+  else if (!moving && pending_dirty > 64 && last_frame_ms <= 20.0)
+  {
+    sync_cap = 2;
+  }
+  constexpr double kSyncRebuildBudgetMs = 6.0;
   const MeshRebuildTickStats tick_stats = mesh_service.RebuildDirtyChunksWithStats(
-      world.GetBlockWorld(), registry, mesh_drain, mesh_schedule);
+      world.GetBlockWorld(), registry, mesh_drain, mesh_schedule,
+      /*force_sync=*/false, sync_cap, kSyncRebuildBudgetMs);
   mesh_service.DrainAsyncMeshResults(world.GetBlockWorld(), registry, mesh_drain);
-  world.FlushPendingRelightMeshColumns(8);
 
 #ifndef NDEBUG
   ++gMeshTelemetryTick;

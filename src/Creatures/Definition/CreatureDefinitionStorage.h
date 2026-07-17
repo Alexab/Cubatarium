@@ -2,6 +2,7 @@
 #define CREATUREDEFINITIONSTORAGE_H
 
 #include "Creatures/Definition/CreatureDefinition.h"
+#include <shared_mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -15,7 +16,7 @@ public:
   void Load(const std::string &folder);
   void LoadOverlay(const std::string &folder);
   const CreatureDefinition *Get(const std::string &Id) const;
-  size_t Count() const { return Definitions.size(); }
+  size_t Count() const;
 
   std::vector<std::string> ListAllIds() const;
   std::vector<std::string> ListSpawnable() const;
@@ -25,6 +26,7 @@ private:
   bool LoadFile(const std::string &path);
 
   std::unordered_map<std::string, CreatureDefinition> Definitions;
+  mutable std::shared_mutex DefinitionsMutex;
 };
 
 } // namespace cutum

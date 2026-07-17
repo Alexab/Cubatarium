@@ -1002,6 +1002,13 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       static_cast<uint64_t>(AsyncRelight->GetInFlightCount());
   PhysicsTelemetryData.RelightDiscardedLate =
       AsyncRelight->GetDiscardedLateCount();
+  if (Persistence)
+  {
+    for (const glm::ivec3 &pos : AsyncRelight->TakeDiscardedSourcePositions())
+    {
+      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z);
+    }
+  }
   return applied;
 }
 
@@ -1218,13 +1225,16 @@ void UWorld::TickAsyncChunkSystems()
   {
     return;
   }
-  const int pending_player =
-      Persistence ? Persistence->GetPendingPlayerRelightCount() : 0;
   const int pending_bg =
       Persistence ? Persistence->GetPendingTerrainColumnRelightCount() : 0;
+  const int pending_player =
+      Persistence ? Persistence->GetPendingPlayerRelightCount() : 0;
   const int drain_budget = std::clamp(
       4 + (pending_bg + GetAsyncRelightInFlightCount()) / 4, 4, 12);
-  const int applied = DrainAsyncRelightResults(drain_budget, pending_player > 0, true);
+  // Priority remesh for player edits; accumulate for background stream relight.
+  const bool priority_mesh = pending_player > 0;
+  const int applied =
+      DrainAsyncRelightResults(drain_budget, priority_mesh, true);
   if (applied > 0)
   {
     const double dt = WallFrameDeltaSec > 0.0 ? WallFrameDeltaSec : (1.0 / 60.0);
@@ -1414,8 +1424,8 @@ bool UWorld::WaitForPendingRelightJobsFor(
   }
   if (timeout.count() <= 0)
   {
-    AsyncRelight->WaitIdle();
-    return true;
+    // Cancel-only / zero-budget: never block unboundedly on WaitIdle().
+    return !AsyncRelight->HasPendingWork();
   }
   return AsyncRelight->WaitIdleFor(timeout);
 }
@@ -1427,6 +1437,15 @@ void UWorld::CancelAsyncRelightWork()
     return;
   }
   AsyncRelight->CancelPending();
+  // During shutdown / quiesce Persistence may clear queues next; still re-queue
+  // discarded sources when Persistence is alive so mid-game cancels recover.
+  if (Persistence && !ShutdownPrepared)
+  {
+    for (const glm::ivec3 &pos : AsyncRelight->TakeDiscardedSourcePositions())
+    {
+      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z);
+    }
+  }
 }
 
 void UWorld::QuiesceBackgroundWork(const std::chrono::milliseconds async_timeout)
@@ -1464,18 +1483,80 @@ void UWorld::PrepareForShutdown()
   {
     CoopSession->Cancel();
   }
+
+  using clock = std::chrono::high_resolution_clock;
+  const auto t0 = clock::now();
+  auto phase_ms = [&](const char *phase)
+  {
+    const double ms =
+        std::chrono::duration<double, std::milli>(clock::now() - t0).count();
+    std::cerr << "[Shutdown] phase=" << phase << " elapsed_ms=" << ms
+              << std::endl;
+  };
+
+  // Quit path already ran budgeted TickBackgroundQuiesce; do not reset the
+  // latch and re-enter 10s WaitIdle (hangs after "World saved.").
   if (!BackgroundQuiesceFinished)
   {
     QuiesceBackgroundWork(std::chrono::milliseconds(2000));
+    phase_ms("quiesce");
   }
+  else
+  {
+    AllowProceduralFill = false;
+    if (Streaming && Streaming->HasStreamer())
+    {
+      Streaming->GetStreamer()->SetEnabled(false);
+    }
+    phase_ms("quiesce_skip");
+  }
+
+  CancelAsyncRelightWork();
+  phase_ms("cancel_relight");
   if (MeshService)
   {
     MeshService->CancelAsyncMeshWork();
+    (void)MeshService->WaitForAsyncMeshIdleFor(std::chrono::milliseconds(250));
   }
+  phase_ms("mesh_idle");
+  if (Streaming)
+  {
+    Streaming->AbandonWorkersForProcessExit(std::chrono::milliseconds(250));
+  }
+  phase_ms("abandon_workers");
+  const double total_ms =
+      std::chrono::duration<double, std::milli>(clock::now() - t0).count();
+  std::cerr << "[Shutdown] shutdown_finalize_ms=" << total_ms << std::endl;
 }
 
 void UWorld::RefreshBlockRegistry()
 {
+  // Drain in-flight mesh/relight readers before swapping catalogs. Do not call
+  // QuiesceBackgroundWork here: it permanently disables the streamer and sets
+  // BackgroundQuiesceFinished, which breaks create/load cooperative paths.
+  CancelAsyncRelightWork();
+  if (MeshService)
+  {
+    MeshService->CancelAsyncInFlightKeepDirty();
+    const auto mesh_wait = BackgroundQuiesceFinished
+                               ? std::chrono::milliseconds(50)
+                               : std::chrono::milliseconds(1000);
+    (void)MeshService->WaitForAsyncMeshIdleFor(mesh_wait);
+  }
+  if (Streaming)
+  {
+    // Save/quit paths already quiesce workers before RefreshBlockRegistry().
+    // Avoid re-entering a long wait here, which can look like a hang after
+    // "World saved." or during save init.
+    if (BackgroundQuiesceFinished)
+    {
+      Streaming->CancelChunkGeneration();
+    }
+    else
+    {
+      Streaming->PauseChunkGeneration(std::chrono::milliseconds(10000));
+    }
+  }
   if (BlockRegistry)
   {
     if (BlockMergeRegistry)
@@ -1945,6 +2026,11 @@ void UWorld::SaveSessionSnapshot(const std::string &world_folder_path,
             ground, BlockWorld, world_folder_path, *BlockRegistry,
             ProceduralTemplate.MaxHeight);
       }
+      else
+      {
+        GetChunkStorage().RemoveTerrainColumnFromDisk(
+            world_folder_path, ground, ProceduralTemplate.MaxHeight);
+      }
     }
   }
 
@@ -1953,7 +2039,12 @@ void UWorld::SaveSessionSnapshot(const std::string &world_folder_path,
   SaveCreatures(world_folder_path + "/creatures.json");
   SaveWorldData(world_folder_path + "/world_data.json");
   ModifiedChunks.clear();
-  EnsureStreamingActiveAfterBackgroundQuiesce();
+  // Quit path must not recreate the chunk scheduler (join while populate
+  // finishes). Autosave / menu save still resume streaming.
+  if (!BackgroundQuiesceFinished)
+  {
+    EnsureStreamingActiveAfterBackgroundQuiesce();
+  }
 }
 
 void UWorld::BeginCooperativeLoad(const std::string &world_folder_path)
@@ -1974,13 +2065,14 @@ bool UWorld::TickCooperativeLoad(IUProgressSink &sink, int chunkBudget)
   return CoopSession->Tick(*this, sink, chunkBudget);
 }
 
-void UWorld::BeginCooperativeSave(const std::string &world_folder_path)
+void UWorld::BeginCooperativeSave(const std::string &world_folder_path,
+                                  bool resume_streaming_after_save)
 {
   if (!CoopSession)
   {
     CoopSession = std::make_unique<UWorldCooperativeSession>();
   }
-  CoopSession->BeginSave(*this, world_folder_path);
+  CoopSession->BeginSave(*this, world_folder_path, resume_streaming_after_save);
 }
 
 bool UWorld::TickCooperativeSave(IUProgressSink &sink, int chunkBudget)
@@ -2013,6 +2105,14 @@ bool UWorld::TickCooperativeCreate(IUProgressSink &sink, int columnBudget)
 bool UWorld::HasActiveCooperativeOperation() const
 {
   return CoopSession && CoopSession->Active;
+}
+
+void UWorld::CancelCooperativeOperation()
+{
+  if (CoopSession && CoopSession->Active)
+  {
+    CoopSession->Cancel();
+  }
 }
 
 bool UWorld::BlocksAsyncRelightDrain() const
@@ -2051,18 +2151,77 @@ bool UWorld::TickBackgroundQuiesce(UBackgroundQuiesceState &state,
     return false;
 
   case UBackgroundQuiesceState::Phase::StreamingOff:
+    AllowProceduralFill = false;
+    if (Streaming && Streaming->HasStreamer())
+    {
+      Streaming->GetStreamer()->SetEnabled(false);
+    }
     if (Streaming)
     {
-      Streaming->QuiesceBackgroundWork(*this, step_timeout);
+      // Cancel queued gen immediately; active workers drain in ChunkGenCancel.
+      Streaming->PauseChunkGeneration(std::chrono::milliseconds(0));
     }
-    report("streaming", 0.2f, "Stopping streaming...");
-    state.phase = UBackgroundQuiesceState::Phase::CancelWorkers;
+    report("streaming", 0.15f, "Stopping streaming...");
+    state.phase = UBackgroundQuiesceState::Phase::ChunkGenCancel;
     return false;
 
   case UBackgroundQuiesceState::Phase::ChunkGenCancel:
-  case UBackgroundQuiesceState::Phase::DrainIo:
-    state.phase = UBackgroundQuiesceState::Phase::CancelWorkers;
+  {
+    bool idle = true;
+    if (Streaming && Streaming->GetChunkScheduler())
+    {
+      // First passes: brief wait. Later: cancel-only so long carve cannot pin
+      // the quit path for the full kMaxWaitPasses budget.
+      if (state.waitChunkGenPasses < 8)
+      {
+        Streaming->PauseChunkGeneration(step_timeout);
+        idle = Streaming->GetChunkScheduler()->GetGenBacklogTotal() == 0 &&
+               Streaming->GetChunkScheduler()->WaitForWorkersIdle(step_timeout);
+      }
+      else
+      {
+        Streaming->CancelChunkGeneration();
+        idle = Streaming->GetChunkScheduler()->GetGenInFlightCount() == 0;
+      }
+    }
+    const float frac =
+        0.15f + 0.15f * static_cast<float>(state.waitChunkGenPasses) /
+                    static_cast<float>(UBackgroundQuiesceState::kMaxWaitPasses);
+    report("chunk_gen", std::min(0.3f, frac), "Waiting for chunk workers...");
+    if (idle || ++state.waitChunkGenPasses >=
+                    UBackgroundQuiesceState::kMaxWaitPasses)
+    {
+      state.phase = UBackgroundQuiesceState::Phase::DrainIo;
+    }
     return false;
+  }
+
+  case UBackgroundQuiesceState::Phase::DrainIo:
+  {
+    bool drained = true;
+    if (Persistence)
+    {
+      drained = Persistence->TickDrainAsyncChunkIo(*this, 8);
+      if (!drained)
+      {
+        drained = Persistence->AbortAsyncChunkIoFor(step_timeout);
+      }
+    }
+    const float frac =
+        0.3f + 0.05f * static_cast<float>(state.drainIoPasses) /
+                   static_cast<float>(UBackgroundQuiesceState::kMaxDrainIoPasses);
+    report("drain_io", std::min(0.35f, frac), "Flushing chunk IO...");
+    if (drained || ++state.drainIoPasses >=
+                       UBackgroundQuiesceState::kMaxDrainIoPasses)
+    {
+      if (Persistence && !drained)
+      {
+        (void)Persistence->AbortAsyncChunkIoFor(step_timeout);
+      }
+      state.phase = UBackgroundQuiesceState::Phase::CancelWorkers;
+    }
+    return false;
+  }
 
   case UBackgroundQuiesceState::Phase::CancelWorkers:
     CancelAsyncRelightWork();
@@ -2108,10 +2267,11 @@ bool UWorld::TickBackgroundQuiesce(UBackgroundQuiesceState &state,
     if (MeshService)
     {
       MeshService->CancelAsyncMeshWork();
+      (void)MeshService->WaitForAsyncMeshIdleFor(std::chrono::milliseconds(100));
     }
     if (Persistence)
     {
-      Persistence->AbortAsyncChunkIo();
+      (void)Persistence->AbortAsyncChunkIoFor(std::chrono::milliseconds(0));
     }
     BackgroundQuiesceFinished = true;
     report("done", 1.f, "Background work stopped.");
@@ -3086,6 +3246,7 @@ void UWorld::UpdateFrameHitchDiagnostics(double draw_scene_mks,
                                          double view_update_mks)
 {
   DurationDrawSceneMks = static_cast<uint64_t>(draw_scene_mks);
+  DurationViewUpdateMks = static_cast<uint64_t>(view_update_mks);
   const double sim_ms =
       (DurationDoMovementMks + view_update_mks + draw_scene_mks) / 1000.0;
   const double wall_ms =
@@ -3094,6 +3255,9 @@ void UWorld::UpdateFrameHitchDiagnostics(double draw_scene_mks,
   MovementDiag.hitchDetected = frameMs > 50.0 ||
                                PhysicsTelemetryData.PhysicsStepMs > 50.0 ||
                                MovementDiag.deltaTime > 0.1f;
+  MovementDiag.simMs = sim_ms;
+  MovementDiag.swapWaitMs = LastSwapWaitMs;
+  MovementDiag.unaccountedMs = wall_ms - sim_ms - LastSwapWaitMs;
 }
 
 void UWorld::ResetMeshLoadDiagnostics()
@@ -3209,6 +3373,8 @@ void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos)
 {
   MeshService->MarkBlockChunkDirtyFromEdit(BlockWorld, BlockRegistry.get(),
                                            blockPos, ModifiedChunks);
+  MeshService->NotifyFluidSurfaceDirtyAtBlock(BlockWorld, BlockRegistry.get(),
+                                              blockPos);
 }
 
 void UWorld::MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos)
@@ -3216,7 +3382,20 @@ void UWorld::MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos)
   if (ChunkDirtyService)
   {
     ChunkDirtyService->MarkVisualRemesh(*this, blockPos);
-    ChunkDirtyService->MarkCollisionRebuild(*this, blockPos);
+    // Pure fluid cells do not change solid occupancy — skip collision rebuild.
+    const BlockId id = BlockWorld.GetBlock(blockPos);
+    const bool needs_collision =
+        !BlockRegistry || !BlockRegistry->IsLiquid(id) ||
+        BlockRegistry->BlocksMovement(id);
+    if (needs_collision)
+    {
+      ChunkDirtyService->MarkCollisionRebuild(*this, blockPos);
+    }
+    if (MeshService)
+    {
+      MeshService->NotifyFluidSurfaceDirtyAtBlock(BlockWorld,
+                                                  BlockRegistry.get(), blockPos);
+    }
     return;
   }
   MarkBlockChunkDirty(blockPos);

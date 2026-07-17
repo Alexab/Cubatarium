@@ -3,6 +3,7 @@
 #include "Render/GlIncludes.h"
 #include <cstdint>
 #include <functional>
+#include <mutex>
 #include <vector>
 
 namespace cutum
@@ -26,9 +27,12 @@ GLuint CreatureMeshGpuCache::GetOrCreateSkeletalMeshVao(
   {
     hash = hash * 31 + idx;
   }
-  if (const auto it = SkeletalCache.find(hash); it != SkeletalCache.end())
   {
-    return it->second.vao;
+    std::lock_guard<std::mutex> lock(CacheMutex);
+    if (const auto it = SkeletalCache.find(hash); it != SkeletalCache.end())
+    {
+      return it->second.vao;
+    }
   }
 
   SkeletalMeshGpuBuffers buffers;
@@ -52,7 +56,26 @@ GLuint CreatureMeshGpuCache::GetOrCreateSkeletalMeshVao(
                         (void *)(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
   glBindVertexArray(0);
-  SkeletalCache[hash] = buffers;
+  {
+    std::lock_guard<std::mutex> lock(CacheMutex);
+    if (const auto it = SkeletalCache.find(hash); it != SkeletalCache.end())
+    {
+      if (buffers.ebo)
+      {
+        glDeleteBuffers(1, &buffers.ebo);
+      }
+      if (buffers.vbo)
+      {
+        glDeleteBuffers(1, &buffers.vbo);
+      }
+      if (buffers.vao)
+      {
+        glDeleteVertexArrays(1, &buffers.vao);
+      }
+      return it->second.vao;
+    }
+    SkeletalCache[hash] = buffers;
+  }
   return buffers.vao;
 }
 
@@ -72,10 +95,13 @@ GLuint CreatureMeshGpuCache::GetOrCreateGltfSkinnedMeshVao(
   {
     hash = hash * 31 + std::hash<float>{}(w);
   }
-  if (const auto it = GltfSkinnedCache.find(hash); it != GltfSkinnedCache.end())
   {
-    outIndexCount = it->second.indexCount;
-    return it->second.vao;
+    std::lock_guard<std::mutex> lock(CacheMutex);
+    if (const auto it = GltfSkinnedCache.find(hash); it != GltfSkinnedCache.end())
+    {
+      outIndexCount = it->second.indexCount;
+      return it->second.vao;
+    }
   }
 
   const size_t vertCount = mesh.mesh.interleavedPosUv.size() / 5;
@@ -134,12 +160,33 @@ GLuint CreatureMeshGpuCache::GetOrCreateGltfSkinnedMeshVao(
   glBindVertexArray(0);
   buffers.indexCount = mesh.mesh.indices.size();
   outIndexCount = buffers.indexCount;
-  GltfSkinnedCache[hash] = buffers;
+  {
+    std::lock_guard<std::mutex> lock(CacheMutex);
+    if (const auto it = GltfSkinnedCache.find(hash); it != GltfSkinnedCache.end())
+    {
+      if (buffers.ebo)
+      {
+        glDeleteBuffers(1, &buffers.ebo);
+      }
+      if (buffers.vbo)
+      {
+        glDeleteBuffers(1, &buffers.vbo);
+      }
+      if (buffers.vao)
+      {
+        glDeleteVertexArrays(1, &buffers.vao);
+      }
+      outIndexCount = it->second.indexCount;
+      return it->second.vao;
+    }
+    GltfSkinnedCache[hash] = buffers;
+  }
   return buffers.vao;
 }
 
 void CreatureMeshGpuCache::DestroyAll()
 {
+  std::lock_guard<std::mutex> lock(CacheMutex);
   for (auto &[key, buffers] : SkeletalCache)
   {
     (void)key;
