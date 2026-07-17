@@ -60,7 +60,7 @@ public:
   MeshRebuildTickStats RebuildDirtyChunksWithStats(
       UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
       int max_schedule_per_frame, bool force_sync = false,
-      int max_sync_rebuild = -1);
+      int max_sync_rebuild = -1, double max_sync_ms = 6.0);
   void RebuildAll(UBlockWorld &world, UBlockRegistry &registry);
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,
                              glm::ivec3 chunkCoord);
@@ -229,7 +229,7 @@ private:
                                           const glm::vec3 *cameraPos,
                                           float maxCullDistance);
   int SyncRebuildVisibleMissing(UBlockWorld &world, UBlockRegistry &registry,
-                                int max_sync);
+                                int max_sync, double max_ms = 0.0);
   float MaxCullDistance() const;
   glm::ivec3 MeshFocusGroundChunk{0};
   int MeshFocusRadiusChunks{6};

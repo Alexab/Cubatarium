@@ -234,11 +234,12 @@ void UWorldMeshService::RebuildDirtyChunks(UBlockWorld &world,
 
 MeshRebuildTickStats UWorldMeshService::RebuildDirtyChunksWithStats(
     UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
-    int max_schedule_per_frame, bool force_sync, int max_sync_rebuild)
+    int max_schedule_per_frame, bool force_sync, int max_sync_rebuild,
+    double max_sync_ms)
 {
   return Cache.RebuildDirtyChunksWithStats(world, registry, max_drain_per_frame,
                                            max_schedule_per_frame, force_sync,
-                                           max_sync_rebuild);
+                                           max_sync_rebuild, max_sync_ms);
 }
 
 void UWorldMeshService::DrainAsyncMeshResults(UBlockWorld &world,

@@ -127,12 +127,24 @@ void UChunkMeshCache::SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord,
 
 int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
                                                UBlockRegistry &registry,
-                                               int max_sync)
+                                               int max_sync, double max_ms)
 {
   if (!MeshFocusValid || max_sync <= 0 || !Render.GreedyMeshing)
   {
     return 0;
   }
+
+  const auto budget_t0 = std::chrono::high_resolution_clock::now();
+  auto sync_budget_exhausted = [&]() -> bool
+  {
+    if (max_ms <= 0.0)
+    {
+      return false;
+    }
+    return std::chrono::duration<double, std::milli>(
+               std::chrono::high_resolution_clock::now() - budget_t0)
+               .count() >= max_ms;
+  };
 
   struct Candidate
   {
@@ -173,7 +185,7 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
   int rebuilt = 0;
   for (const Candidate &candidate : candidates)
   {
-    if (rebuilt >= max_sync)
+    if (rebuilt >= max_sync || sync_budget_exhausted())
     {
       break;
     }
@@ -814,7 +826,8 @@ void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
 
 MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
-    int max_schedule_per_frame, bool force_sync, int max_sync_rebuild)
+    int max_schedule_per_frame, bool force_sync, int max_sync_rebuild,
+    double max_sync_ms)
 {
   MeshRebuildTickStats stats;
   LastMeshSyncMs = 0.0;
@@ -838,7 +851,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             : std::max(2, std::min(12, max_schedule_per_frame));
     const auto sync_t0 = std::chrono::high_resolution_clock::now();
     const int sync_filled =
-        SyncRebuildVisibleMissing(world, registry, sync_cap);
+        SyncRebuildVisibleMissing(world, registry, sync_cap, max_sync_ms);
     LastMeshSyncMs = std::chrono::duration<double, std::milli>(
                          std::chrono::high_resolution_clock::now() - sync_t0)
                          .count();

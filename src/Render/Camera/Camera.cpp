@@ -680,23 +680,29 @@ bool UCamera::DoMovement(const UWorld *world)
 
   bool is_moved(false);
   SyncFreeMoveFromController();
+  LastPhysicsSubsteps = 0;
 
   if (GetFreeMove())
   {
-    const float dt = std::min(frameDt, kMaxPhysicsDelta);
-    const bool groundedInFlight =
-        world && world->HasGroundSupport(Position, flightCap);
-    if (groundedInFlight)
+    PhysicsAccumulator += frameDt;
+    while (PhysicsAccumulator >= kFixedPhysicsDt &&
+           LastPhysicsSubsteps < kMaxPhysicsSubsteps)
     {
-      if (IsShiftDown())
+      PhysicsAccumulator -= kFixedPhysicsDt;
+      ++LastPhysicsSubsteps;
+      const float dt = kFixedPhysicsDt;
+      const bool groundedInFlight =
+          world && world->HasGroundSupport(Position, flightCap);
+      if (groundedInFlight)
       {
-        ClearShiftKeyState();
+        if (IsShiftDown())
+        {
+          ClearShiftKeyState();
+        }
+        Locomotion.OnLandedFromFlight(world, Position, false);
+        SyncFreeMoveFromController();
+        break;
       }
-      Locomotion.OnLandedFromFlight(world, Position, false);
-      SyncFreeMoveFromController();
-    }
-    else
-    {
       if (KeysStatus[GLFW_KEY_W])
       {
         ProcessKeyboard(world, FORWARD, dt, flightCap);
@@ -737,23 +743,25 @@ bool UCamera::DoMovement(const UWorld *world)
   else if (world)
   {
     PhysicsAccumulator += frameDt;
-    int substeps = 0;
     while (PhysicsAccumulator >= kFixedPhysicsDt &&
-           substeps < kMaxPhysicsSubsteps)
+           LastPhysicsSubsteps < kMaxPhysicsSubsteps)
     {
       PhysicsAccumulator -= kFixedPhysicsDt;
-      ++substeps;
+      ++LastPhysicsSubsteps;
+
+      if (IsStepUpAnimationActive())
+      {
+        if (TickStepUpAnimation(world, kFixedPhysicsDt))
+        {
+          is_moved = true;
+        }
+        UpdatePose();
+        continue;
+      }
 
       if (ApplyHorizontalMovement(world, kFixedPhysicsDt))
       {
         is_moved = true;
-      }
-
-      if (IsStepUpAnimationActive())
-      {
-        is_moved = true;
-        UpdatePose();
-        return is_moved;
       }
 
       if (Position.y < kMinReasonablePlayerY)

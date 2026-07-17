@@ -101,6 +101,8 @@ struct FrameNumbers
   double swap_wait_ms{0.0};
   double unaccounted_ms{0.0};
   double phys_ms{0.0};
+  double stream_ms{0.0};
+  double mesh_emerge_ms{0.0};
   double scene_ms{0.0};
   double view_ms{0.0};
   double flat_ms{0.0};
@@ -136,9 +138,11 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   const PhysicsTelemetry &phys = world.GetPhysicsTelemetry();
   n.wall_ms = world.GetWallFrameDelta() * 1000.0;
   n.phys_ms = phys.PhysicsStepMs;
+  n.stream_ms = phys.StreamMs;
+  n.mesh_emerge_ms = phys.MeshEmergeMs;
   n.scene_ms = world.GetDurationDrawSceneMks() / 1000.0;
   n.view_ms = world.GetDurationViewUpdateMks() / 1000.0;
-  n.sim_ms = n.phys_ms + n.view_ms + n.scene_ms;
+  n.sim_ms = n.phys_ms + n.stream_ms + n.mesh_emerge_ms + n.view_ms + n.scene_ms;
   n.swap_wait_ms = swap_wait_ms;
   n.unaccounted_ms = n.wall_ms - n.sim_ms - n.swap_wait_ms;
   if (n.unaccounted_ms < 0.0 && n.unaccounted_ms > -1.0)
@@ -149,7 +153,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.app_update_ms = world.GetLastAppUpdateMs();
   // World tick includes DoMovement (phys); only the overhead is "unaccounted".
   n.world_extra_ms =
-      (std::max)(0.0, world.GetLastWorldTickMs() - n.phys_ms);
+      (std::max)(0.0,
+                 world.GetLastWorldTickMs() - n.phys_ms - n.stream_ms -
+                     n.mesh_emerge_ms);
   n.prepare_frame_ms = world.GetLastPrepareFrameMs();
   n.post_scene_ms = world.GetLastPostSceneMs();
   n.gui_overlay_ms = world.GetLastGuiOverlayMs();
@@ -209,7 +215,9 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind)
           << ",\"prefetch_visual_ops\":" << n.prefetch_visual_ops
           << ",\"prefetch_keep_ops\":" << n.prefetch_keep_ops
           << ",\"gen_backlog_total\":" << n.gen_backlog_total
-          << ",\"phys_ms\":" << n.phys_ms << ",\"scene_ms\":" << n.scene_ms
+          << ",\"phys_ms\":" << n.phys_ms << ",\"stream_ms\":" << n.stream_ms
+          << ",\"mesh_emerge_ms\":" << n.mesh_emerge_ms
+          << ",\"scene_ms\":" << n.scene_ms
           << ",\"view_ms\":" << n.view_ms << ",\"flat_ms\":" << n.flat_ms
           << ",\"gen_q\":" << n.gen_q << ",\"mesh_async\":" << n.mesh_async
           << ",\"dirty\":" << n.dirty << "}\n";
@@ -237,7 +245,8 @@ void LogLine(const FrameNumbers &n, const char *kind, int frames,
             << " commit_seal_ms=" << n.commit_seal_ms
             << " mesh_sync_ms=" << n.mesh_sync_ms
             << " mesh_snapshot_ms=" << n.mesh_snapshot_ms
-            << " phys_ms=" << n.phys_ms
+            << " phys_ms=" << n.phys_ms << " stream_ms=" << n.stream_ms
+            << " mesh_emerge_ms=" << n.mesh_emerge_ms
             << " scene_ms=" << n.scene_ms << " GenQ=" << n.gen_q
             << " MeshAsync=" << n.mesh_async << " Dirty=" << n.dirty
             << " frames=" << frames << " max_wall_ms=" << max_wall;

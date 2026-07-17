@@ -10,10 +10,14 @@ struct PhysicsTelemetry
 {
   double PhysicsStepMs{0.0};
   double MovementStepMs{0.0};
+  double StreamMs{0.0};
+  double MeshEmergeMs{0.0};
   double BlockStepMs{0.0};
   double DrainStepMs{0.0};
   double FluidStepMs{0.0};
   int SimulationStepsThisFrame{0};
+  int PhysicsSubsteps{0};
+  double PhysicsAccumMs{0.0};
   uint64_t BlockQueueDepth{0};
   uint64_t LiquidQueueDepth{0};
   uint64_t CollisionRebuildBacklog{0};

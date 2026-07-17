@@ -179,6 +179,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
     // Under hitch, still drain completed results, but limit new snapshots.
     if (last_frame_ms > 24.0)
     {
+      mesh_drain = std::max(mesh_drain, 8);
       mesh_schedule = std::min(mesh_schedule, 4);
     }
     else
@@ -191,15 +192,41 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   // meshes do not stick for many frames under ocean stream backlog.
   world.FlushPendingRelightMeshColumns(24);
 
-  // Hitch: at most one sync rebuild; idle with backlog: allow a few sync fills.
+  const bool missing_visible_mesh =
+      mesh_service.HasMissingGreedyMeshInHorizontalRadius(
+          world.GetBlockWorld(), focus_ground_horiz, focus_radius);
+
+  // Sync-fill holes where voxels exist but GreedyCache entry is missing.
   int sync_cap = last_frame_ms > 16.0 ? 1 : -1;
-  if (!moving && pending_dirty > 64 && last_frame_ms <= 20.0)
+  if (pending_async > 0 && last_frame_ms > 24.0)
+  {
+    sync_cap = sync_cap < 0 ? 2 : std::min(sync_cap, 2);
+  }
+  if (missing_visible_mesh)
+  {
+    const int missing_cap = moving ? 4 : 6;
+    if (pending_async > 0 && last_frame_ms > 24.0)
+    {
+      sync_cap = std::max(sync_cap, 2);
+    }
+    else
+    {
+      sync_cap = std::max(sync_cap, missing_cap);
+    }
+  }
+  else if (near_mesh_backlog)
+  {
+    sync_cap = std::max(sync_cap, pending_async > 0 && last_frame_ms > 24.0 ? 1
+                                                                             : 2);
+  }
+  else if (!moving && pending_dirty > 64 && last_frame_ms <= 20.0)
   {
     sync_cap = 2;
   }
+  constexpr double kSyncRebuildBudgetMs = 6.0;
   const MeshRebuildTickStats tick_stats = mesh_service.RebuildDirtyChunksWithStats(
       world.GetBlockWorld(), registry, mesh_drain, mesh_schedule,
-      /*force_sync=*/false, sync_cap);
+      /*force_sync=*/false, sync_cap, kSyncRebuildBudgetMs);
   mesh_service.DrainAsyncMeshResults(world.GetBlockWorld(), registry, mesh_drain);
 
 #ifndef NDEBUG

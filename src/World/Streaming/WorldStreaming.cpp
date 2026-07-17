@@ -320,20 +320,26 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           std::max(1, chunk_budget.MaxChunkCommits / 2);
       chunk_budget.MaxLoadOps = std::max(1, chunk_budget.MaxLoadOps / 2);
     }
-    // Standing with large dirty: stop feeding more commits so mesh can catch up.
+    // Standing with large dirty: stop feeding new load ops; still apply commits.
     if (!moving_fast && mesh_dirty > 96)
     {
-      chunk_budget.MaxChunkCommits = 0;
-      chunk_budget.MaxLoadOps = std::max(1, chunk_budget.MaxLoadOps / 2);
+      chunk_budget.MaxLoadOps = 0;
+      chunk_budget.MaxChunkCommits = std::max(1, chunk_budget.MaxChunkCommits);
     }
     else if (!moving_fast && mesh_dirty > 48)
     {
-      chunk_budget.MaxChunkCommits = 1;
+      chunk_budget.MaxChunkCommits = std::max(1, chunk_budget.MaxChunkCommits);
     }
     if (frame_ms > kBadFrameMs && !near_mesh_backlog)
     {
       chunk_budget.MaxChunkCommits = std::min(chunk_budget.MaxChunkCommits, 1);
       chunk_budget.MaxLoadOps = std::max(1, chunk_budget.MaxLoadOps / 2);
+    }
+    const int completed_ready =
+        ChunkScheduler ? ChunkScheduler->GetCompletedReadyCount() : 0;
+    if (gen_backlog_total > 0 || completed_ready > 0)
+    {
+      chunk_budget.MaxChunkCommits = std::max(1, chunk_budget.MaxChunkCommits);
     }
     ChunkScheduler->Tick(world.BlockWorld, chunk_budget.MaxChunkCommits,
                          chunk_budget.MaxLoadOps);
