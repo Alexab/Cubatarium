@@ -219,7 +219,7 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               /*min_y=*/0, settings.MaxHeight);
         }
         // Mesh gate band = occupied ∪ sea (not 0..MaxHeight — that flooded Dirty
-        // and remeshed unlit slices). After light, MarkRelit uses full column.
+        // and remeshed unlit slices). MarkRelit remeshes lit ∪ pending ∪ sea.
         int dirty_min = std::max(0, min_y);
         int dirty_max = std::min(settings.MaxHeight, max_y);
         if (settings.FillWater)

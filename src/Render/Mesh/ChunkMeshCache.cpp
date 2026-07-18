@@ -179,7 +179,8 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
           // clear baked light=0 into GreedyCache (black holes fixed by place).
           return;
         }
-        // Sync hole-fill only for immediate focus (dist<=1); farther use async.
+        // Sync hole-fill: dist==0 (under camera) always; dist==1 when budget
+        // allows. Farther only MarkDirtyPriority for async.
         if (dist > 1)
         {
           Dirty.MarkDirtyPriority(coord);
@@ -191,9 +192,16 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
   {
     return 0;
   }
+  // Dist 0 first, then dist 1 — underfeet before ring-1.
   std::sort(candidates.begin(), candidates.end(),
             [](const Candidate &a, const Candidate &b)
-            { return a.dist < b.dist; });
+            {
+              if (a.dist != b.dist)
+              {
+                return a.dist < b.dist;
+              }
+              return false;
+            });
 
   int rebuilt = 0;
   for (const Candidate &candidate : candidates)
@@ -412,9 +420,25 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
         {
           return;
         }
-        if (GreedyCache.find(coord) == GreedyCache.end())
+        if (GreedyCache.find(coord) != GreedyCache.end())
         {
-          missing = true;
+          return;
+        }
+        // Ignore empty air slices — they never get a mesh and must not keep
+        // underfeet_need / near_focus_holes stuck true forever.
+        for (int z = 0; z < CHUNK_SIZE; z += 4)
+        {
+          for (int x = 0; x < CHUNK_SIZE; x += 4)
+          {
+            for (int y = 0; y < CHUNK_SIZE; y += 4)
+            {
+              if (chunk.GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+              {
+                missing = true;
+                return;
+              }
+            }
+          }
         }
       });
   return missing;
@@ -858,6 +882,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     if (MeshFocusValid)
     {
       Dirty.PrioritizeNearHorizontal(MeshFocusGroundChunk, MeshFocusRadiusChunks);
+      // Underfeet (±1) ahead of the rest of the focus ring.
+      Dirty.PrioritizeNearHorizontal(MeshFocusGroundChunk, 1);
       if (MeshVerticalPriorityValid)
       {
         Dirty.PrioritizeVerticalCy(MeshFocusGroundChunk, MeshFocusRadiusChunks,

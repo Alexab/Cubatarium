@@ -158,7 +158,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   const bool pending_near_light =
       world.HasPendingLightBeforeMeshNear(focus_ground_horiz, focus_radius);
   const bool near_focus_holes = missing_visible_mesh || pending_near_light;
-  mesh_service.SetStarveOutsideFocusMesh(near_focus_holes);
+  // Underfeet = camera column ±1 only. Do NOT key off global Dirty count —
+  // Dirty>256 is true almost every frame and the old flood path burned
+  // mesh_emerge (sync 10–12 + drain 28+) even when feet already had mesh.
+  const bool missing_underfeet =
+      mesh_service.HasMissingGreedyMeshInHorizontalRadius(
+          world.GetBlockWorld(), focus_ground_horiz, /*radius=*/1);
+  const bool pending_underfeet =
+      world.HasPendingLightBeforeMeshNear(focus_ground_horiz, /*radius=*/1);
+  const bool underfeet_need = missing_underfeet || pending_underfeet;
+  mesh_service.SetStarveOutsideFocusMesh(near_focus_holes || underfeet_need);
 
   if (moving && near_mesh_backlog)
   {
@@ -200,29 +209,41 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
     mesh_schedule = std::max(mesh_schedule, 12);
   }
 
-  // Awaiting first light under feet: keep mesh drain ready for MarkRelit burst.
-  if (pending_near_light || near_focus_holes)
+  // Awaiting first light / missing mesh under feet only — modest boost.
+  if (underfeet_need)
+  {
+    mesh_drain = std::max(mesh_drain, 20);
+    mesh_schedule = std::max(mesh_schedule, 16);
+  }
+  else if (pending_near_light || near_focus_holes)
   {
     mesh_drain = std::max(mesh_drain, 16);
     mesh_schedule = std::max(mesh_schedule, 16);
   }
 
   // Floor drain by Dirty backlog so hitch frames do not starve MeshAsync.
+  // Cap schedule aggressiveness when underfeet is already OK — flooding
+  // schedule while Dirty is high only burns CPU on far-within-focus remesh.
   if (pending_dirty > 0)
   {
     const int dirty_floor =
-        std::min(24, std::max(1, static_cast<int>(pending_dirty) / 4));
+        std::min(underfeet_need ? 24 : 16,
+                 std::max(1, static_cast<int>(pending_dirty) / 4));
     mesh_drain = std::max(mesh_drain, dirty_floor);
-    // Under hitch, still drain completed results, but limit new snapshots —
-    // except when the focus ring still has holes or awaiting first light.
-    if (last_frame_ms > 24.0 && !missing_visible_mesh && !pending_near_light)
+    if (last_frame_ms > 24.0 && !underfeet_need && !missing_visible_mesh &&
+        !pending_near_light)
     {
       mesh_drain = std::max(mesh_drain, 8);
       mesh_schedule = std::min(mesh_schedule, 4);
     }
-    else
+    else if (underfeet_need)
     {
       mesh_schedule = std::max(mesh_schedule, dirty_floor);
+    }
+    else
+    {
+      // No underfeet hole: drain results, but do not ramp schedule with Dirty.
+      mesh_schedule = std::max(mesh_schedule, std::min(dirty_floor, 12));
     }
   }
 
@@ -238,32 +259,40 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   // (neighbor lit) and missing GreedyCache after gate clear.
   {
     int recover_n = moving ? 4 : 6;
-    if (pending_near_light || missing_visible_mesh)
+    if (underfeet_need)
     {
       recover_n = moving ? 8 : 12;
+    }
+    else if (pending_near_light || missing_visible_mesh)
+    {
+      recover_n = moving ? 6 : 8;
     }
     world.RecoverUnlitFocusMeshes(recover_n);
   }
 
-  // Sync-fill holes where voxels exist but GreedyCache entry is missing.
-  // After Recover clears gates under feet, prefer dist<=1 sync hole-fill.
+  // After Recover may have just cleared PendingLight underfeet — force sync
+  // hole-fill this frame (same path place uses, without waiting Dirty drain).
+  const bool underfeet_need_after =
+      mesh_service.HasMissingGreedyMeshInHorizontalRadius(
+          world.GetBlockWorld(), focus_ground_horiz, /*radius=*/1) ||
+      world.HasPendingLightBeforeMeshNear(focus_ground_horiz, /*radius=*/1);
+
+  // Sync-fill holes: aggressive only for underfeet, not global Dirty flood.
   int sync_cap = last_frame_ms > 16.0 ? 1 : -1;
   if (pending_async > 0 && last_frame_ms > 24.0)
   {
     sync_cap = sync_cap < 0 ? 2 : std::min(sync_cap, 2);
   }
-  if (missing_visible_mesh || pending_near_light)
+  if (underfeet_need || underfeet_need_after)
   {
-    // Prefer filling visible holes (incl. water/transparent) over hitch gates.
-    const int missing_cap = moving ? 6 : 8;
-    if (pending_async > 0 && last_frame_ms > 28.0)
-    {
-      sync_cap = std::max(sync_cap, 3);
-    }
-    else
-    {
-      sync_cap = std::max(sync_cap, missing_cap);
-    }
+    const int missing_cap = moving ? 8 : 10;
+    sync_cap = std::max(sync_cap, missing_cap);
+    mesh_schedule = std::max(mesh_schedule, moving ? 12 : 16);
+    mesh_drain = std::max(mesh_drain, moving ? 12 : 16);
+  }
+  else if (missing_visible_mesh || pending_near_light)
+  {
+    sync_cap = std::max(sync_cap, moving ? 4 : 6);
     mesh_schedule = std::max(mesh_schedule, moving ? 12 : 16);
     mesh_drain = std::max(mesh_drain, moving ? 12 : 16);
   }
@@ -276,10 +305,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   {
     sync_cap = 2;
   }
-  constexpr double kSyncRebuildBudgetMs = 6.0;
+  const double sync_budget_ms = underfeet_need ? 10.0 : 6.0;
   const MeshRebuildTickStats tick_stats = mesh_service.RebuildDirtyChunksWithStats(
       world.GetBlockWorld(), registry, mesh_drain, mesh_schedule,
-      /*force_sync=*/false, sync_cap, kSyncRebuildBudgetMs);
+      /*force_sync=*/false, sync_cap, sync_budget_ms);
   mesh_service.DrainAsyncMeshResults(world.GetBlockWorld(), registry, mesh_drain);
 
 #ifndef NDEBUG

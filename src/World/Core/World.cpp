@@ -792,6 +792,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     band.max_y = std::max(band.max_y, chunk_base_y + CHUNK_SIZE - 1);
   }
   const int column_max_y = ProceduralTemplate.MaxHeight;
+  const int sea = ProceduralTemplate.SeaLevel;
   for (auto &[key, band] : bands)
   {
     const glm::ivec3 ground(key.x, 0, key.y);
@@ -800,11 +801,30 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     // Neighbors remesh for seams only after they are already LitReady.
     if (is_primary)
     {
+      // Dirty = lit cy ∪ pending gate band ∪ sea±CHUNK — not 0..MaxHeight
+      // (full-column remesh flooded Dirty to 1000+ and starved underfeet).
+      int dirty_min = std::max(0, band.min_y - 1);
+      int dirty_max = std::min(column_max_y, band.max_y + 1);
+      if (const auto pit = PendingLightBeforeMesh.find(key);
+          pit != PendingLightBeforeMesh.end())
+      {
+        dirty_min = std::min(dirty_min, pit->second.min_y);
+        dirty_max = std::max(dirty_max, pit->second.max_y);
+      }
+      if (ProceduralTemplate.FillWater)
+      {
+        dirty_min =
+            std::min(dirty_min, std::max(0, sea - CHUNK_SIZE));
+        dirty_max = std::max(
+            dirty_max, std::min(column_max_y, sea + CHUNK_SIZE * 2));
+      }
       PendingLightBeforeMesh.erase(key);
       SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
-      // Full column remesh so upper slices are not left for place-block.
-      const int dirty_min = 0;
-      const int dirty_max = column_max_y;
+      if (dirty_max < dirty_min)
+      {
+        dirty_min = 0;
+        dirty_max = column_max_y;
+      }
       if (priority_mesh)
       {
         MeshService->MarkTerrainChunkMeshDirtySeamedPriority(ground, dirty_min,
@@ -996,31 +1016,48 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
           continue;
         }
         const bool pending = IsPendingLightBeforeMesh(key);
-        // Neighbor column relight often writes sky into this column while the
-        // mesh gate remains — SyncRebuild skips, place RebuildChunkImmediate
-        // does not. If sky is already present, drop the gate and remesh.
+        // Near remesh band: occupied∪sea — avoid full 0..MaxHeight Dirty flood.
+        const int sea = ProceduralTemplate.SeaLevel;
+        int remesh_min = std::max(0, sea - CHUNK_SIZE);
+        int remesh_max = std::min(max_y, sea + CHUNK_SIZE * 2);
+        if (const auto pit = PendingLightBeforeMesh.find(key);
+            pit != PendingLightBeforeMesh.end())
+        {
+          remesh_min = std::min(remesh_min, pit->second.min_y);
+          remesh_max = std::max(remesh_max, pit->second.max_y);
+        }
+        // Under feet / ±1: full column — latency matters more than Dirty cost.
+        if (r <= 1)
+        {
+          remesh_min = 0;
+          remesh_max = max_y;
+        }
+        // Underfeet (±1): never wait on any_sky. Place-block proves light is
+        // often already usable; DeferMeshUntilLit left the column invisible
+        // forever while FPS stayed high (only enqueued relight).
         if (pending)
         {
           Persistence->EnqueueTerrainColumnRelight(
               key.x * CHUNK_SIZE, key.y * CHUNK_SIZE, /*priority=*/true, 0,
               max_y);
-          if (any_sky)
+          const bool unblock = (r <= 1) || any_sky;
+          if (unblock)
           {
             ClearPendingLightBeforeMesh(key);
             SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
-            MeshService->MarkTerrainChunkMeshDirtySeamedPriority(ground, 0,
-                                                                max_y, true);
+            MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+                ground, remesh_min, remesh_max, true);
             SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
           }
           ++repaired;
           continue;
         }
-        // Gate cleared but GreedyCache still incomplete (narrow dirty Y / drain).
+        // Gate cleared but GreedyCache still incomplete.
         if (missing_mesh)
         {
           SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
-          MeshService->MarkTerrainChunkMeshDirtySeamedPriority(ground, 0, max_y,
-                                                               true);
+          MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+              ground, remesh_min, remesh_max, true);
           ++repaired;
           continue;
         }
