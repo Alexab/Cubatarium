@@ -801,7 +801,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     // Neighbors remesh for seams only after they are already LitReady.
     if (is_primary)
     {
-      // Dirty = lit cy ∪ narrow pending ∪ sea±CHUNK — not 0..MaxHeight.
+      // Dirty = lit cy ∪ narrow pending ∪ sea±CHUNK ∪ player band when near.
       // Ignore pending bands that span most of the world (legacy NotePending
       // used full height and flooded Dirty back to 1000+).
       int dirty_min = std::max(0, band.min_y - 1);
@@ -822,6 +822,20 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
             std::min(dirty_min, std::max(0, sea - CHUNK_SIZE));
         dirty_max = std::max(
             dirty_max, std::min(column_max_y, sea + CHUNK_SIZE * 2));
+      }
+      {
+        const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+        const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
+        const int horiz = std::max(std::abs(key.x - focus_chunk.x),
+                                   std::abs(key.y - focus_chunk.z));
+        if (horiz <= 1)
+        {
+          dirty_min =
+              std::min(dirty_min, std::max(0, focus_block.y - CHUNK_SIZE));
+          dirty_max = std::max(
+              dirty_max,
+              std::min(column_max_y, focus_block.y + CHUNK_SIZE * 2));
+        }
       }
       PendingLightBeforeMesh.erase(key);
       SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
@@ -1035,15 +1049,24 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
             remesh_max = std::max(remesh_max, pit->second.max_y);
           }
         }
-        // Under feet (±1): only the vertical band around the player (one
-        // chunk below, two above). Rest of the (cx,cz) stack waits for
-        // MarkRelit / async Dirty — urgent full-column remesh flooded Dirty.
+        // Under feet (±1): urgent band = player vertical strip ∪ sea (water
+        // surface must not wait until MarkRelit). Rest of the stack stays async.
         const bool underfeet = r <= 1;
         if (underfeet)
         {
-          remesh_min = std::max(0, focus.y * CHUNK_SIZE - CHUNK_SIZE);
-          remesh_max =
-              std::min(max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
+          const int player_min =
+              std::max(0, focus.y * CHUNK_SIZE - CHUNK_SIZE);
+          const int player_max = std::min(
+              max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
+          remesh_min = player_min;
+          remesh_max = player_max;
+          if (ProceduralTemplate.FillWater)
+          {
+            remesh_min =
+                std::min(remesh_min, std::max(0, sea - CHUNK_SIZE));
+            remesh_max = std::max(
+                remesh_max, std::min(max_y, sea + CHUNK_SIZE * 2));
+          }
         }
         // Underfeet: never wait on any_sky. Place-block proves light is often
         // already usable; DeferMeshUntilLit left slices invisible forever.

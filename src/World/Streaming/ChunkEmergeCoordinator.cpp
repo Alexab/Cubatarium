@@ -132,19 +132,23 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   {
     int preferred_cy = focus_ground.y;
     bool prefer_lower_cy = false;
+    const int sea_cy = FloorDiv(procedural.SeaLevel, CHUNK_SIZE);
     if (const auto camera = world.GetCurrentUserCamera())
     {
       const glm::vec3 eye = camera->GetPosition();
       preferred_cy = FloorDiv(static_cast<int>(std::floor(eye.y)), CHUNK_SIZE);
       const FluidColumnSurface column = world.FindFluidColumnSurface(eye);
-      if (column.valid)
+      if (column.valid && eye.y < column.surfaceY)
       {
-        // Prefer surface when submerged, else eye height.
-        if (eye.y < column.surfaceY)
-        {
-          preferred_cy = FloorDiv(column.surfaceBlockY, CHUNK_SIZE);
-          prefer_lower_cy = true;
-        }
+        // Underwater / in fluid: pull mesh toward the water surface.
+        preferred_cy = FloorDiv(column.surfaceBlockY, CHUNK_SIZE);
+        prefer_lower_cy = true;
+      }
+      else if (procedural.FillWater &&
+               std::abs(preferred_cy - sea_cy) <= 3)
+      {
+        // Near sea level (beach / low flight): water surface first.
+        preferred_cy = sea_cy;
       }
     }
     mesh_service.SetMeshVerticalPriority(preferred_cy, prefer_lower_cy);
@@ -282,26 +286,47 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   if (underfeet_need)
   {
     const int max_y = procedural.MaxHeight;
-    const int band_min_y = std::max(0, focus_block.y - CHUNK_SIZE);
-    const int band_max_y =
-        std::min(max_y, focus_block.y + CHUNK_SIZE * 2);
+    int band_min_y = std::max(0, focus_block.y - CHUNK_SIZE);
+    int band_max_y = std::min(max_y, focus_block.y + CHUNK_SIZE * 2);
+    if (procedural.FillWater)
+    {
+      band_min_y =
+          std::min(band_min_y, std::max(0, procedural.SeaLevel - CHUNK_SIZE));
+      band_max_y = std::max(
+          band_max_y,
+          std::min(max_y, procedural.SeaLevel + CHUNK_SIZE * 2));
+    }
     const int cy0 = FloorDiv(band_min_y, CHUNK_SIZE);
     const int cy1 = FloorDiv(band_max_y, CHUNK_SIZE);
-    const int prefer_cy = focus_ground.y;
-    // Prefer player cy, then ±1, ±2… within [cy0, cy1].
+    const int sea_cy = FloorDiv(procedural.SeaLevel, CHUNK_SIZE);
+    int prefer_cy = focus_ground.y;
+    if (procedural.FillWater && std::abs(focus_ground.y - sea_cy) <= 3)
+    {
+      prefer_cy = sea_cy;
+    }
+    // Prefer prefer_cy, then sea (if distinct), then expand within [cy0, cy1].
     std::vector<int> cy_order;
     cy_order.reserve(static_cast<size_t>(cy1 - cy0 + 1));
-    cy_order.push_back(prefer_cy);
+    auto push_cy = [&](int cy)
+    {
+      if (cy < cy0 || cy > cy1)
+      {
+        return;
+      }
+      if (std::find(cy_order.begin(), cy_order.end(), cy) == cy_order.end())
+      {
+        cy_order.push_back(cy);
+      }
+    };
+    push_cy(prefer_cy);
+    if (procedural.FillWater)
+    {
+      push_cy(sea_cy);
+    }
     for (int d = 1; d <= std::max(prefer_cy - cy0, cy1 - prefer_cy); ++d)
     {
-      if (prefer_cy - d >= cy0)
-      {
-        cy_order.push_back(prefer_cy - d);
-      }
-      if (prefer_cy + d <= cy1)
-      {
-        cy_order.push_back(prefer_cy + d);
-      }
+      push_cy(prefer_cy - d);
+      push_cy(prefer_cy + d);
     }
     int immediate = 0;
     constexpr int kMaxImmediateUnderfeet = 6;

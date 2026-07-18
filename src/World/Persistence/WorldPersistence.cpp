@@ -32,6 +32,7 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <sstream>
+#include <vector>
 
 using json = nlohmann::json;
 
@@ -367,12 +368,43 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     retry_state.highest_cy_on_disk = state.highest_cy_on_disk;
     retry_state.retry_generation = state.retry_generation + 1;
     PendingAsyncColumnLoadSlices[ground_coord] = retry_state;
+    const glm::ivec3 focus =
+        UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+    const int sea_cy =
+        FloorDiv(world.ProceduralTemplate.SeaLevel, CHUNK_SIZE);
+    std::vector<int> cy_order;
+    cy_order.reserve(static_cast<size_t>(load_to_cy + 1));
+    auto push_cy = [&](int cy)
+    {
+      if (cy < 0 || cy > load_to_cy)
+      {
+        return;
+      }
+      if (std::find(cy_order.begin(), cy_order.end(), cy) == cy_order.end())
+      {
+        cy_order.push_back(cy);
+      }
+    };
+    push_cy(focus.y);
+    if (world.ProceduralTemplate.FillWater)
+    {
+      push_cy(sea_cy);
+    }
+    for (int d = 1; d <= load_to_cy; ++d)
+    {
+      push_cy(focus.y - d);
+      push_cy(focus.y + d);
+    }
     for (int cy = 0; cy <= load_to_cy; ++cy)
     {
-      const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
-      AsyncChunkIo->RequestLoad(
-          slice, *ChunkStorage, WorldFolderPath,
-          world.Streaming->GetChunkGenTokens().Current(ground_coord));
+      push_cy(cy);
+    }
+    const auto token =
+        world.Streaming->GetChunkGenTokens().Current(ground_coord);
+    for (int cy : cy_order)
+    {
+      AsyncChunkIo->RequestLoad(glm::ivec3(ground_coord.x, cy, ground_coord.z),
+                                *ChunkStorage, WorldFolderPath, token);
     }
     return;
   }
@@ -415,8 +447,22 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     }
     else
     {
-      world.MarkTerrainChunkMeshDirtySeamed(ground_coord, 0, settings.MaxHeight,
-                                            true);
+      // Disk already lit: remesh visible band only (player ∪ sea), not full
+      // 0..MaxHeight (that flooded Dirty on every column load).
+      const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
+      int dirty_min = std::max(0, focus_block.y - CHUNK_SIZE);
+      int dirty_max =
+          std::min(settings.MaxHeight, focus_block.y + CHUNK_SIZE * 2);
+      if (settings.FillWater)
+      {
+        dirty_min =
+            std::min(dirty_min, std::max(0, settings.SeaLevel - CHUNK_SIZE));
+        dirty_max = std::max(
+            dirty_max,
+            std::min(settings.MaxHeight, settings.SeaLevel + CHUNK_SIZE * 2));
+      }
+      world.MarkTerrainChunkMeshDirtySeamed(ground_coord, dirty_min, dirty_max,
+                                            near_focus);
     }
   }
   world.Streaming->GetStreamer()->NotifyChunkCommitted(ground_coord);
@@ -635,12 +681,46 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
   }
   state.remaining_results = state.highest_cy_on_disk + 1;
   PendingAsyncColumnLoadSlices[ground_coord] = state;
+
+  // I/O order: player cy / sea surface first, then expand. Finalize still waits
+  // for the full column, but near-surface slices land in RAM sooner and mesh
+  // can start as soon as light finishes after finalize.
+  const glm::ivec3 focus =
+      UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+  const int sea_cy =
+      FloorDiv(world.ProceduralTemplate.SeaLevel, CHUNK_SIZE);
+  std::vector<int> cy_order;
+  cy_order.reserve(static_cast<size_t>(state.highest_cy_on_disk + 1));
+  auto push_cy = [&](int cy)
+  {
+    if (cy < 0 || cy > state.highest_cy_on_disk)
+    {
+      return;
+    }
+    if (std::find(cy_order.begin(), cy_order.end(), cy) == cy_order.end())
+    {
+      cy_order.push_back(cy);
+    }
+  };
+  push_cy(focus.y);
+  if (world.ProceduralTemplate.FillWater)
+  {
+    push_cy(sea_cy);
+  }
+  for (int d = 1; d <= state.highest_cy_on_disk; ++d)
+  {
+    push_cy(focus.y - d);
+    push_cy(focus.y + d);
+  }
   for (int cy = 0; cy <= state.highest_cy_on_disk; ++cy)
   {
-    const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
-    AsyncChunkIo->RequestLoad(
-        slice, *ChunkStorage, WorldFolderPath,
-        world.Streaming->GetChunkGenTokens().Current(ground_coord));
+    push_cy(cy);
+  }
+  const auto token = world.Streaming->GetChunkGenTokens().Current(ground_coord);
+  for (int cy : cy_order)
+  {
+    AsyncChunkIo->RequestLoad(glm::ivec3(ground_coord.x, cy, ground_coord.z),
+                              *ChunkStorage, WorldFolderPath, token);
   }
 }
 
