@@ -29,9 +29,25 @@ void UWorldMeshService::SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord,
   Cache.SetMeshRebuildFocus(ground_chunk_coord, radius_chunks);
 }
 
+void UWorldMeshService::SetMeshVerticalPriority(int preferred_cy,
+                                                bool prefer_lower_cy)
+{
+  Cache.SetMeshVerticalPriority(preferred_cy, prefer_lower_cy);
+}
+
+void UWorldMeshService::ClearMeshVerticalPriority()
+{
+  Cache.ClearMeshVerticalPriority();
+}
+
 void UWorldMeshService::SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn)
 {
   Cache.SetDeferMeshUntilLitFn(std::move(fn));
+}
+
+void UWorldMeshService::SetStarveOutsideFocusMesh(bool starve)
+{
+  Cache.SetStarveOutsideFocusMesh(starve);
 }
 
 void UWorldMeshService::SetAltitudeCullState(float altitude_above_terrain,
@@ -94,6 +110,12 @@ void UWorldMeshService::NotifyFluidSurfaceDirtyAtBlock(
     }
   }
   Cache.InvalidateFluidSurfaceForChunk(UChunkManager::WorldToChunk(block_pos));
+}
+
+void UWorldMeshService::InvalidateFluidSurfaceForColumn(
+    glm::ivec3 ground_chunk_coord, bool include_neighbors)
+{
+  Cache.InvalidateFluidSurfaceForColumn(ground_chunk_coord, include_neighbors);
 }
 
 void UWorldMeshService::MarkAllDirtyFromWorld(const UBlockWorld &world)

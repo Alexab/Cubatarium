@@ -715,7 +715,10 @@ void UWorld::RelightTerrainColumn(int world_x, int world_z, int min_y,
   RelightColumnWithFrontier(BlockWorld, *BlockRegistry, world_x, world_z, min_y,
                             max_y, include_block_light, include_skylight,
                             &relit_chunks);
-  MarkRelitChunksForMesh(relit_chunks, priority_mesh);
+  const glm::ivec3 primary_chunk =
+      UChunkManager::WorldToChunk(glm::ivec3(world_x, 0, world_z));
+  MarkRelitChunksForMesh(relit_chunks, priority_mesh,
+                         {glm::ivec2(primary_chunk.x, primary_chunk.z)});
   const auto t1 = std::chrono::high_resolution_clock::now();
   PhysicsTelemetryData.FullRelightMs =
       std::chrono::duration<double, std::milli>(t1 - t0).count();
@@ -738,7 +741,14 @@ void UWorld::RelightPlayerEdit(const std::vector<glm::ivec3> &block_positions,
   const RelightFrontierOutcome outcome = RelightBlocksAroundAllEx(
       BlockWorld, *BlockRegistry, block_positions, min_world_y, max_y, true,
       kRelightFrontierIterationsEdit);
-  MarkRelitChunksForMesh(outcome.relit_chunks, true);
+  std::vector<glm::ivec2> primary_grounds;
+  primary_grounds.reserve(block_positions.size());
+  for (const glm::ivec3 &pos : block_positions)
+  {
+    const glm::ivec3 chunk = UChunkManager::WorldToChunk(pos);
+    primary_grounds.push_back(glm::ivec2(chunk.x, chunk.z));
+  }
+  MarkRelitChunksForMesh(outcome.relit_chunks, true, primary_grounds);
   PlayerRelightMeshBurstFrames = 3;
   if (outcome.frontier_unfinished && Persistence)
   {
@@ -753,54 +763,82 @@ void UWorld::RelightPlayerEdit(const std::vector<glm::ivec3> &block_positions,
 }
 
 void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
-                                    bool priority_mesh)
+                                    bool priority_mesh,
+                                    const std::vector<glm::ivec2> &primary_grounds)
 {
   if (relit_chunks.empty())
   {
     return;
   }
-  int remesh_min_y = INT32_MAX;
-  int remesh_max_y = INT32_MIN;
-  std::unordered_set<glm::ivec3, IVec3Hash> grounds;
-  grounds.reserve(relit_chunks.size());
+  std::unordered_set<glm::ivec2, GroundColumnHash> primary_set;
+  primary_set.reserve(primary_grounds.size() * 2 + 1);
+  for (const glm::ivec2 &g : primary_grounds)
+  {
+    primary_set.insert(g);
+  }
+  // Per-column Y from chunks that were actually lit.
+  struct YBand
+  {
+    int min_y{INT32_MAX};
+    int max_y{INT32_MIN};
+  };
+  std::unordered_map<glm::ivec2, YBand, GroundColumnHash> bands;
+  bands.reserve(relit_chunks.size());
   for (const glm::ivec3 &coord : relit_chunks)
   {
-    grounds.insert(glm::ivec3(coord.x, 0, coord.z));
+    YBand &band = bands[glm::ivec2(coord.x, coord.z)];
     const int chunk_base_y = coord.y * CHUNK_SIZE;
-    remesh_min_y = std::min(remesh_min_y, chunk_base_y);
-    remesh_max_y = std::max(remesh_max_y, chunk_base_y + CHUNK_SIZE - 1);
+    band.min_y = std::min(band.min_y, chunk_base_y);
+    band.max_y = std::max(band.max_y, chunk_base_y + CHUNK_SIZE - 1);
   }
-  remesh_min_y = std::max(0, remesh_min_y - 1);
-  remesh_max_y = remesh_max_y + 1;
-  for (const glm::ivec3 &ground : grounds)
+  const int column_max_y = ProceduralTemplate.MaxHeight;
+  for (auto &[key, band] : bands)
   {
-    const glm::ivec2 key(ground.x, ground.z);
-    const auto pending_it = PendingLightBeforeMesh.find(key);
-    if (pending_it != PendingLightBeforeMesh.end())
+    const glm::ivec3 ground(key.x, 0, key.y);
+    const bool is_primary = primary_set.count(key) != 0;
+    // Only the column whose light job finished may leave the mesh gate.
+    // Neighbors remesh for seams only after they are already LitReady.
+    if (is_primary)
     {
-      const int min_y = pending_it->second.min_y;
-      const int max_y = pending_it->second.max_y;
-      PendingLightBeforeMesh.erase(pending_it);
+      PendingLightBeforeMesh.erase(key);
+      SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
+      // Full column remesh so upper slices are not left for place-block.
+      const int dirty_min = 0;
+      const int dirty_max = column_max_y;
       if (priority_mesh)
       {
-        MeshService->MarkTerrainChunkMeshDirtySeamedPriority(ground, min_y, max_y,
-                                                             true);
+        MeshService->MarkTerrainChunkMeshDirtySeamedPriority(ground, dirty_min,
+                                                             dirty_max, true);
       }
       else
       {
-        MeshService->MarkTerrainChunkMeshDirtySeamed(ground, min_y, max_y, true);
+        MeshService->MarkTerrainChunkMeshDirtySeamed(ground, dirty_min,
+                                                     dirty_max, true);
       }
+      SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+      continue;
+    }
+    // Neighbor: skip Dirty while still awaiting own first light.
+    if (PendingLightBeforeMesh.count(key) != 0 ||
+        !IsColumnLitReady(ground))
+    {
+      continue;
+    }
+    int dirty_min = std::max(0, band.min_y - 1);
+    int dirty_max = std::min(column_max_y, band.max_y + 1);
+    if (dirty_max < dirty_min)
+    {
       continue;
     }
     if (priority_mesh)
     {
-      MeshService->MarkTerrainChunkMeshDirtySeamedPriority(ground, remesh_min_y,
-                                                           remesh_max_y, true);
+      MeshService->MarkTerrainChunkMeshDirtySeamedPriority(ground, dirty_min,
+                                                           dirty_max, true);
     }
     else
     {
-      MeshService->MarkTerrainChunkMeshDirtySeamed(ground, remesh_min_y,
-                                                   remesh_max_y, true);
+      MeshService->MarkTerrainChunkMeshDirtySeamed(ground, dirty_min, dirty_max,
+                                                   true);
     }
   }
 }
@@ -879,8 +917,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
   }
   const glm::ivec3 focus =
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
-  const int radius =
-      std::min(std::max(1, GetEffectiveRenderDistance()), 6);
+  const int radius = GetStreamingFocusRadius();
   const int max_y = ProceduralTemplate.MaxHeight;
   const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
   int repaired = 0;
@@ -895,15 +932,9 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
           continue;
         }
         const glm::ivec2 key(focus.x + dx, focus.z + dz);
-        if (IsPendingLightBeforeMesh(key))
-        {
-          Persistence->EnqueueTerrainColumnRelight(
-              key.x * CHUNK_SIZE, key.y * CHUNK_SIZE, /*priority=*/true);
-          ++repaired;
-          continue;
-        }
         const glm::ivec3 ground(key.x, 0, key.y);
         bool has_mesh = false;
+        bool missing_mesh = false;
         bool any_sky = false;
         bool any_solid = false;
         for (int cy = 0; cy <= cy1; ++cy)
@@ -917,6 +948,28 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
           if (MeshService->HasGreedyMesh(coord))
           {
             has_mesh = true;
+          }
+          else
+          {
+            // Only count missing when the slice has something to draw.
+            bool slice_solid = false;
+            for (int z = 0; z < CHUNK_SIZE && !slice_solid; z += 4)
+            {
+              for (int x = 0; x < CHUNK_SIZE && !slice_solid; x += 4)
+              {
+                for (int y = 0; y < CHUNK_SIZE && !slice_solid; y += 4)
+                {
+                  if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+                  {
+                    slice_solid = true;
+                  }
+                }
+              }
+            }
+            if (slice_solid)
+            {
+              missing_mesh = true;
+            }
           }
           for (int z = 0; z < CHUNK_SIZE && (!any_sky || !any_solid); z += 4)
           {
@@ -938,14 +991,47 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
             }
           }
         }
-        if (!has_mesh || !any_solid || any_sky)
+        if (!any_solid)
         {
           continue;
         }
-        Persistence->EnqueueTerrainColumnRelight(
-            ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true, 0,
-            max_y);
-        ++repaired;
+        const bool pending = IsPendingLightBeforeMesh(key);
+        // Neighbor column relight often writes sky into this column while the
+        // mesh gate remains — SyncRebuild skips, place RebuildChunkImmediate
+        // does not. If sky is already present, drop the gate and remesh.
+        if (pending)
+        {
+          Persistence->EnqueueTerrainColumnRelight(
+              key.x * CHUNK_SIZE, key.y * CHUNK_SIZE, /*priority=*/true, 0,
+              max_y);
+          if (any_sky)
+          {
+            ClearPendingLightBeforeMesh(key);
+            SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
+            MeshService->MarkTerrainChunkMeshDirtySeamedPriority(ground, 0,
+                                                                max_y, true);
+            SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+          }
+          ++repaired;
+          continue;
+        }
+        // Gate cleared but GreedyCache still incomplete (narrow dirty Y / drain).
+        if (missing_mesh)
+        {
+          SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+          MeshService->MarkTerrainChunkMeshDirtySeamedPriority(ground, 0, max_y,
+                                                               true);
+          ++repaired;
+          continue;
+        }
+        // Stuck black mesh: solid + no sky.
+        if (has_mesh && !any_sky)
+        {
+          Persistence->EnqueueTerrainColumnRelight(
+              ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true, 0,
+              max_y);
+          ++repaired;
+        }
       }
     }
   }
@@ -959,6 +1045,7 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
     ground.y = 0;
   }
   const glm::ivec2 key(ground.x, ground.z);
+  SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
   auto [it, inserted] = PendingLightBeforeMesh.try_emplace(key);
   if (inserted)
   {
@@ -978,6 +1065,63 @@ void UWorld::ClearPendingLightBeforeMesh(glm::ivec2 ground_xz)
 bool UWorld::IsPendingLightBeforeMesh(glm::ivec2 ground_xz) const
 {
   return PendingLightBeforeMesh.find(ground_xz) != PendingLightBeforeMesh.end();
+}
+
+void UWorld::SetColumnEmergeState(glm::ivec3 ground, ColumnEmergeState state)
+{
+  if (ground.y != 0)
+  {
+    ground.y = 0;
+  }
+  ColumnEmergeStates[glm::ivec2(ground.x, ground.z)] = state;
+}
+
+ColumnEmergeState UWorld::GetColumnEmergeState(glm::ivec3 ground) const
+{
+  if (ground.y != 0)
+  {
+    ground.y = 0;
+  }
+  const auto it = ColumnEmergeStates.find(glm::ivec2(ground.x, ground.z));
+  if (it == ColumnEmergeStates.end())
+  {
+    return ColumnEmergeState::Empty;
+  }
+  return it->second;
+}
+
+void UWorld::ClearColumnEmergeState(glm::ivec2 ground_xz)
+{
+  ColumnEmergeStates.erase(ground_xz);
+}
+
+bool UWorld::IsColumnLitReady(glm::ivec3 ground) const
+{
+  if (ground.y != 0)
+  {
+    ground.y = 0;
+  }
+  if (IsPendingLightBeforeMesh(glm::ivec2(ground.x, ground.z)))
+  {
+    return false;
+  }
+  const ColumnEmergeState state = GetColumnEmergeState(ground);
+  switch (state)
+  {
+  case ColumnEmergeState::LitReady:
+  case ColumnEmergeState::Meshing:
+  case ColumnEmergeState::RenderReady:
+  case ColumnEmergeState::Empty:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool UWorld::IsColumnVisualReadyForRing(glm::ivec3 ground) const
+{
+  // Outer rings unlock once the column has left the first-light gate.
+  return IsColumnLitReady(ground);
 }
 
 bool UWorld::HasPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,
@@ -1202,7 +1346,14 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     }
     // Always remesh after light apply. Deferring via Accumulate/Flush left
     // light=0 meshes stuck black under Dirty backlog (especially while flying).
-    MarkRelitChunksForMesh(relit_coords, /*priority_mesh=*/true);
+    std::vector<glm::ivec2> primary_grounds;
+    primary_grounds.reserve(result.source_block_positions.size());
+    for (const glm::ivec3 &pos : result.source_block_positions)
+    {
+      const glm::ivec3 chunk = UChunkManager::WorldToChunk(pos);
+      primary_grounds.push_back(glm::ivec2(chunk.x, chunk.z));
+    }
+    MarkRelitChunksForMesh(relit_coords, /*priority_mesh=*/true, primary_grounds);
     if (priority_mesh)
     {
       PlayerRelightMeshBurstFrames = 3;
@@ -1453,14 +1604,17 @@ void UWorld::TickAsyncChunkSystems()
       Persistence ? Persistence->GetPendingTerrainColumnRelightCount() : 0;
   const int pending_player =
       Persistence ? Persistence->GetPendingPlayerRelightCount() : 0;
-  const int drain_budget = std::clamp(
+  const int drain_budget_base = std::clamp(
       4 + (pending_bg + GetAsyncRelightInFlightCount()) / 4, 4, 16);
   const glm::ivec3 focus_ground =
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
-  const int focus_radius = GetEffectiveRenderDistance() + 1;
+  const int focus_radius = GetStreamingFocusRadius();
   const bool near_pending_light =
       HasPendingLightBeforeMeshNear(glm::ivec3(focus_ground.x, 0, focus_ground.z),
                                     focus_radius);
+  // Near awaiting first light: apply results faster so mesh gate clears.
+  const int drain_budget =
+      near_pending_light ? std::max(drain_budget_base, 8) : drain_budget_base;
   // Player edits and near first-light columns remesh immediately.
   const bool priority_mesh =
       pending_player > 0 || near_pending_light ||
@@ -1745,20 +1899,23 @@ void UWorld::PrepareForShutdown()
 
   CancelAsyncRelightWork();
   phase_ms("cancel_relight");
+  if (Streaming)
+  {
+    // Abandon before mesh WaitIdle so long populate cannot hang shutdown.
+    Streaming->AbandonWorkersForProcessExit(std::chrono::milliseconds(150));
+    phase_ms("abandon_workers");
+  }
   if (MeshService)
   {
     MeshService->CancelAsyncMeshWork();
-    (void)MeshService->WaitForAsyncMeshIdleFor(std::chrono::milliseconds(250));
+    // After abandon do not wait long on Dirty backlog — cancel is enough.
+    (void)MeshService->WaitForAsyncMeshIdleFor(std::chrono::milliseconds(50));
   }
   phase_ms("mesh_idle");
-  if (Streaming)
-  {
-    Streaming->AbandonWorkersForProcessExit(std::chrono::milliseconds(250));
-  }
-  phase_ms("abandon_workers");
   const double total_ms =
       std::chrono::duration<double, std::milli>(clock::now() - t0).count();
-  std::cerr << "[Shutdown] shutdown_finalize_ms=" << total_ms << std::endl;
+  std::cerr << "[Shutdown] PrepareForShutdown: done elapsed_ms=" << total_ms
+            << std::endl;
 }
 
 void UWorld::RefreshBlockRegistry()

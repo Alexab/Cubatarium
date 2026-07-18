@@ -82,6 +82,51 @@ void UChunkDirtySet::PrioritizeNearHorizontal(glm::ivec3 focus_ground_chunk,
   Queue.insert(Queue.end(), far_chunks.begin(), far_chunks.end());
 }
 
+void UChunkDirtySet::PrioritizeVerticalCy(glm::ivec3 focus_ground_chunk,
+                                          int radius_chunks, int preferred_cy,
+                                          bool prefer_lower_cy)
+{
+  if (Queue.size() < 2)
+  {
+    return;
+  }
+  auto vert_less = [preferred_cy, prefer_lower_cy](const glm::ivec3 &a,
+                                                   const glm::ivec3 &b)
+  {
+    if (prefer_lower_cy)
+    {
+      return a.y < b.y;
+    }
+    const int da = std::abs(a.y - preferred_cy);
+    const int db = std::abs(b.y - preferred_cy);
+    return da < db;
+  };
+  size_t near_count = 0;
+  for (const glm::ivec3 &coord : Queue)
+  {
+    const int dx = std::abs(coord.x - focus_ground_chunk.x);
+    const int dz = std::abs(coord.z - focus_ground_chunk.z);
+    if (radius_chunks >= 0 && std::max(dx, dz) <= radius_chunks)
+    {
+      ++near_count;
+    }
+    else
+    {
+      break;
+    }
+  }
+  if (near_count > 1)
+  {
+    std::stable_sort(Queue.begin(), Queue.begin() + static_cast<std::ptrdiff_t>(near_count),
+                     vert_less);
+  }
+  if (Queue.size() > near_count + 1)
+  {
+    std::stable_sort(Queue.begin() + static_cast<std::ptrdiff_t>(near_count),
+                     Queue.end(), vert_less);
+  }
+}
+
 void UChunkDirtySet::PrioritizeChunksWithoutMesh(
     const std::function<bool(glm::ivec3)> &missing_mesh)
 {

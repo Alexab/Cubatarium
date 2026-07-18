@@ -52,6 +52,9 @@ public:
   /// Fluid column cache invalidation — call on fluid voxel changes only, not
   /// on every mesh remesh.
   void InvalidateFluidSurfaceForChunk(glm::ivec3 chunkCoord);
+  /// Once per terrain column (gen/light), not on every cy MarkDirty.
+  void InvalidateFluidSurfaceForColumn(glm::ivec3 ground_chunk_coord,
+                                       bool include_neighbors = true);
   void RemoveChunk(glm::ivec3 chunkCoord);
   /// Removes all Y slices for a terrain column with one greedy-list invalidation.
   void RemoveColumn(glm::ivec3 ground_coord, int max_cy);
@@ -107,11 +110,21 @@ public:
     RenderDistanceChunks = distance;
   }
   void SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord, int radius_chunks);
-  /// When true for a chunk coord, SyncRebuildVisibleMissing skips it (await light).
+  /// preferred_cy: sea/surface slice; prefer_lower_cy=true when camera underwater.
+  void SetMeshVerticalPriority(int preferred_cy, bool prefer_lower_cy)
+  {
+    MeshVerticalPreferredCy = preferred_cy;
+    MeshPreferLowerCy = prefer_lower_cy;
+    MeshVerticalPriorityValid = true;
+  }
+  void ClearMeshVerticalPriority() { MeshVerticalPriorityValid = false; }
+  /// When true for a chunk coord, SyncRebuildVisibleMissing skips rebuild (await light).
   void SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn)
   {
     DeferMeshUntilLit = std::move(fn);
   }
+  /// When true, skip outside-focus dirty trickle (near holes / pending light).
+  void SetStarveOutsideFocusMesh(bool starve) { StarveOutsideFocusMesh = starve; }
   void SetAltitudeCullState(float altitude_above_terrain, int threshold_blocks)
   {
     AltitudeAboveTerrain = altitude_above_terrain;
@@ -240,6 +253,10 @@ private:
   glm::ivec3 MeshFocusGroundChunk{0};
   int MeshFocusRadiusChunks{6};
   bool MeshFocusValid{false};
+  int MeshVerticalPreferredCy{0};
+  bool MeshPreferLowerCy{false};
+  bool MeshVerticalPriorityValid{false};
+  bool StarveOutsideFocusMesh{false};
   std::function<bool(glm::ivec3)> DeferMeshUntilLit;
 };
 } // namespace cutum

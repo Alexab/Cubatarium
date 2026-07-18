@@ -35,7 +35,10 @@ public:
   void SetRenderSettings(const RenderSettings &settings);
   void SetRenderDistanceChunks(int distance);
   void SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord, int radius_chunks);
+  void SetMeshVerticalPriority(int preferred_cy, bool prefer_lower_cy);
+  void ClearMeshVerticalPriority();
   void SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn);
+  void SetStarveOutsideFocusMesh(bool starve);
   void SetAltitudeCullState(float altitude_above_terrain, int threshold_blocks);
 
   void MarkDirty(glm::ivec3 chunk_coord);
@@ -44,6 +47,8 @@ public:
   void NotifyFluidSurfaceDirtyAtBlock(const UBlockWorld &world,
                                       UBlockRegistry *registry,
                                       glm::ivec3 block_pos);
+  void InvalidateFluidSurfaceForColumn(glm::ivec3 ground_chunk_coord,
+                                       bool include_neighbors = true);
   void MarkAllDirtyFromWorld(const UBlockWorld &world);
   void RemoveChunk(glm::ivec3 chunk_coord);
   void RemoveColumn(glm::ivec3 ground_coord, int max_cy);

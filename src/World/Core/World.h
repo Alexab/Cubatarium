@@ -50,6 +50,18 @@ namespace cutum
 
 struct RuntimeOverlayFlushResult;
 
+/// Ground-column visual emerge lifecycle (Minecraft/Sodium-style ready gate).
+enum class ColumnEmergeState : uint8_t
+{
+  Empty = 0,
+  Generating,
+  VoxelsReady,
+  Lighting,
+  LitReady,
+  Meshing,
+  RenderReady,
+};
+
 class UCreatureDefinitionStorage;
 class USkinDefinitionStorage;
 struct CreatureDefinition;
@@ -679,6 +691,11 @@ public:
   void SetRenderDistanceChunks(int distance);
   int GetRenderDistanceChunks() const { return RenderDistanceChunks; }
   int GetEffectiveRenderDistance() const { return EffectiveRenderDistance; }
+  /// Visual/effective RD + 1: promote, mesh focus, incomplete scan, recover.
+  int GetStreamingFocusRadius() const
+  {
+    return std::max(1, EffectiveRenderDistance) + 1;
+  }
   float GetEffectiveFogStartRatio() const { return EffectiveFogStartRatio; }
   float GetAltitudeAboveTerrain() const { return AltitudeAboveTerrain; }
   void SetAltitudeAboveTerrain(float altitude) { AltitudeAboveTerrain = altitude; }
@@ -836,6 +853,14 @@ public:
   void PromotePendingLightBeforeMesh(const std::vector<glm::ivec3> &relit_chunks,
                                      bool priority_mesh);
 
+  void SetColumnEmergeState(glm::ivec3 ground, ColumnEmergeState state);
+  ColumnEmergeState GetColumnEmergeState(glm::ivec3 ground) const;
+  void ClearColumnEmergeState(glm::ivec2 ground_xz);
+  /// True when column has left the light gate (LitReady / Meshing / RenderReady).
+  bool IsColumnLitReady(glm::ivec3 ground) const;
+  /// True when column may unlock outer streaming rings (LitReady+).
+  bool IsColumnVisualReadyForRing(glm::ivec3 ground) const;
+
   void SetStepUpEnabled(bool enabled) { StepUpEnabled = enabled; }
   bool IsStepUpEnabled() const { return StepUpEnabled; }
 
@@ -913,8 +938,11 @@ private:
                                  int min_world_y);
   void EnsureAsyncRelightBuilder();
   void CancelAsyncRelightWork();
+  /// primary_grounds: column XZ whose light job completed — only these clear
+  /// PendingLightBeforeMesh. Neighbors in relit_chunks remesh for seams only.
   void MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
-                              bool priority_mesh);
+                              bool priority_mesh,
+                              const std::vector<glm::ivec2> &primary_grounds);
   void AccumulateRelightMeshColumns(
       const std::vector<glm::ivec3> &relit_chunks);
   void EnsurePlayerOnGround();
@@ -1017,6 +1045,8 @@ private:
   /// Near columns: light must apply before first mesh dirty.
   std::unordered_map<glm::ivec2, PendingRelightMeshColumnRange, GroundColumnHash>
       PendingLightBeforeMesh;
+  std::unordered_map<glm::ivec2, ColumnEmergeState, GroundColumnHash>
+      ColumnEmergeStates;
   bool SpawnAreaPreparedByCooperativeLoad{false};
   bool ShutdownPrepared{false};
   bool BackgroundQuiesceFinished{false};

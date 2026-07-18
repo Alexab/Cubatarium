@@ -174,6 +174,9 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
         }
         if (DeferMeshUntilLit && DeferMeshUntilLit(coord))
         {
+          // Await column light; MarkRelit dirty’ит lit cy after primary clear.
+          // Do not MarkDirtyPriority here — premature Dirty + neighbor pending
+          // clear baked light=0 into GreedyCache (black holes fixed by place).
           return;
         }
         // Sync hole-fill only for immediate focus (dist<=1); farther use async.
@@ -450,6 +453,9 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
     return;
   }
   BumpChunkMeshRevision(chunkCoord);
+  // Do not InvalidateFluidSurface here: full-column remesh calls MarkDirty for
+  // every cy×seam and kept fluid_map_dirty permanently high (100+), burning
+  // 100–500ms/frame. Fluid map is invalidated once per column on gen/light.
   InstancesDirty = true;
   GreedyBatchesDirty = true;
   CrossBatchesDirty = true;
@@ -852,6 +858,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     if (MeshFocusValid)
     {
       Dirty.PrioritizeNearHorizontal(MeshFocusGroundChunk, MeshFocusRadiusChunks);
+      if (MeshVerticalPriorityValid)
+      {
+        Dirty.PrioritizeVerticalCy(MeshFocusGroundChunk, MeshFocusRadiusChunks,
+                                   MeshVerticalPreferredCy, MeshPreferLowerCy);
+      }
     }
     Dirty.PrioritizeChunksWithoutMesh(
         [this](glm::ivec3 coord)
@@ -916,9 +927,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         if (std::max(dx, dz) > MeshFocusRadiusChunks)
         {
           outside_focus = true;
-          // Keep-shell dirty: allow a tiny trickle so standing still can
-          // recover; never starve near-focus scheduling.
-          if (outside_focus_scheduled >= kMaxOutsideFocusPerFrame)
+          // Near holes / pending light: do not trickle keep-shell dirty.
+          const int outside_cap =
+              StarveOutsideFocusMesh ? 0 : kMaxOutsideFocusPerFrame;
+          if (outside_focus_scheduled >= outside_cap)
           {
             ++it;
             continue;
@@ -1156,6 +1168,26 @@ void UChunkMeshCache::InvalidateFluidSurfaceForChunk(glm::ivec3 chunkCoord)
 {
   const glm::ivec3 ground(chunkCoord.x, 0, chunkCoord.z);
   FluidSurfaceDirty.insert(ground);
+}
+
+void UChunkMeshCache::InvalidateFluidSurfaceForColumn(glm::ivec3 ground_chunk_coord,
+                                                      bool include_neighbors)
+{
+  if (ground_chunk_coord.y != 0)
+  {
+    ground_chunk_coord.y = 0;
+  }
+  const int x0 = include_neighbors ? ground_chunk_coord.x - 1 : ground_chunk_coord.x;
+  const int x1 = include_neighbors ? ground_chunk_coord.x + 1 : ground_chunk_coord.x;
+  const int z0 = include_neighbors ? ground_chunk_coord.z - 1 : ground_chunk_coord.z;
+  const int z1 = include_neighbors ? ground_chunk_coord.z + 1 : ground_chunk_coord.z;
+  for (int cx = x0; cx <= x1; ++cx)
+  {
+    for (int cz = z0; cz <= z1; ++cz)
+    {
+      FluidSurfaceDirty.insert(glm::ivec3(cx, 0, cz));
+    }
+  }
 }
 
 void UChunkMeshCache::RebuildFluidSurfaceSlice(const UBlockWorld &world,

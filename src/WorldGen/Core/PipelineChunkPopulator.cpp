@@ -405,19 +405,41 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     }
 
     const auto seal_start = std::chrono::steady_clock::now();
-    if (settings.Tuning.useMudflowErosion)
+    auto seal_cancelled = [&]() -> bool
+    {
+      return request.shouldCancel && request.shouldCancel();
+    };
+    if (settings.Tuning.useMudflowErosion && !seal_cancelled())
     {
       ApplyMudflowToChunk(composable->GetContext(), base_x, base_z, 2);
     }
-    if (settings.FillWater)
+    // Pocket seal on worker (with shouldCancel). Main only drains cheap ShoreAir.
+    if (settings.FillWater && !seal_cancelled())
     {
       SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z);
-      if (SealFluidPermeableDecorInChunk(composable->GetContext(), base_x,
+      if (!seal_cancelled() &&
+          SealFluidPermeableDecorInChunk(composable->GetContext(), base_x,
                                          base_z))
       {
-        SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z);
+        if (!seal_cancelled())
+        {
+          SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z);
+        }
       }
-      result.fluidSealed = true;
+      result.fluidSealed = !seal_cancelled();
+    }
+    if (seal_cancelled())
+    {
+      if (composable)
+      {
+        composable->EndChunkCoarseCache();
+      }
+      result.discarded = true;
+      result.buffer.Clear();
+      timing.sealMs = ElapsedMs(seal_start);
+      timing.totalMs = ElapsedMs(populate_start);
+      ChunkPopulateDiagnostics::Record(timing);
+      return result;
     }
     PruneFloatingVegetationInChunk(composable->GetContext(), base_x, base_z);
     timing.sealMs = ElapsedMs(seal_start);

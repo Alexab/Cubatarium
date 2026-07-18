@@ -30,6 +30,25 @@ int main()
   Expect(dirty.GetCount() == 1,
           "Erase should remove coord from dirty queue (RemoveChunk uses this)");
 
+  // Vertical priority: after near/far split, surface cy before deep when above water.
+  dirty.Clear();
+  dirty.MarkDirty(glm::ivec3{0, 0, 0});
+  dirty.MarkDirty(glm::ivec3{0, 3, 0});
+  dirty.MarkDirty(glm::ivec3{0, 1, 0});
+  dirty.PrioritizeNearHorizontal(glm::ivec3{0, 0, 0}, 2);
+  dirty.PrioritizeVerticalCy(glm::ivec3{0, 0, 0}, 2, /*preferred_cy=*/3,
+                             /*prefer_lower_cy=*/false);
+  Expect(dirty.begin()->y == 3, "above water: preferred cy should drain first");
+
+  dirty.Clear();
+  dirty.MarkDirty(glm::ivec3{0, 3, 0});
+  dirty.MarkDirty(glm::ivec3{0, 0, 0});
+  dirty.MarkDirty(glm::ivec3{0, 1, 0});
+  dirty.PrioritizeNearHorizontal(glm::ivec3{0, 0, 0}, 2);
+  dirty.PrioritizeVerticalCy(glm::ivec3{0, 0, 0}, 2, /*preferred_cy=*/3,
+                             /*prefer_lower_cy=*/true);
+  Expect(dirty.begin()->y == 0, "underwater: lower cy should drain first");
+
   std::cout << "world_mesh_service_test: OK" << std::endl;
   return 0;
 }

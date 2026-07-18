@@ -1054,6 +1054,16 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       if (!ResumeStreamingAfterSave)
       {
         CubatariumLogInfo("Save", "quit-save: inline scan after quiesce");
+        // Cancel + abandon workers before WaitIdle — populate/seal must not
+        // block Save Init (hang after "World saved.").
+        if (world.Streaming)
+        {
+          world.Streaming->CancelChunkGeneration();
+          CubatariumLogInfo("Save", "quit-save: abandon");
+          world.Streaming->AbandonWorkersForProcessExit(
+              std::chrono::milliseconds(150));
+        }
+        CubatariumLogInfo("Save", "quit-save: scanning chunks");
         ScanSaveChunkCoords(world);
         CurrentPhase = Phase::SaveChunks;
         Report(sink, "scan", 0.02f, "Collecting chunks...");

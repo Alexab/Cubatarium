@@ -1,8 +1,10 @@
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "Blocks/BlockRegistry.h"
+#include "Render/Camera/Camera.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
+#include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include <algorithm>
@@ -115,7 +117,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   const glm::ivec3 focus_ground =
       UChunkManager::WorldToChunk(focus_block);
   const glm::ivec3 focus_ground_horiz(focus_ground.x, 0, focus_ground.z);
-  const int focus_radius = world.GetEffectiveRenderDistance() + 1;
+  const int focus_radius = world.GetStreamingFocusRadius();
   mesh_service.SetMeshRebuildFocus(focus_ground_horiz, focus_radius);
   mesh_service.SetDeferMeshUntilLitFn(
       [&world](glm::ivec3 chunk_coord)
@@ -124,6 +126,23 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
             glm::ivec2(chunk_coord.x, chunk_coord.z));
       });
 
+  {
+    const int sea_cy =
+        FloorDiv(world.GetProceduralSettings().SeaLevel, CHUNK_SIZE);
+    int preferred_cy = sea_cy;
+    bool prefer_lower_cy = false;
+    if (const auto camera = world.GetCurrentUserCamera())
+    {
+      const glm::vec3 eye = camera->GetPosition();
+      const FluidColumnSurface column = world.FindFluidColumnSurface(eye);
+      if (column.valid)
+      {
+        preferred_cy = FloorDiv(column.surfaceBlockY, CHUNK_SIZE);
+        prefer_lower_cy = eye.y < column.surfaceY;
+      }
+    }
+    mesh_service.SetMeshVerticalPriority(preferred_cy, prefer_lower_cy);
+  }
   int mesh_drain = LastBudget.MaxMeshDrain;
   int mesh_schedule = LastBudget.MaxMeshSchedule;
 
@@ -138,6 +157,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
       missing_visible_mesh;
   const bool pending_near_light =
       world.HasPendingLightBeforeMeshNear(focus_ground_horiz, focus_radius);
+  const bool near_focus_holes = missing_visible_mesh || pending_near_light;
+  mesh_service.SetStarveOutsideFocusMesh(near_focus_holes);
 
   if (moving && near_mesh_backlog)
   {
@@ -179,6 +200,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
     mesh_schedule = std::max(mesh_schedule, 12);
   }
 
+  // Awaiting first light under feet: keep mesh drain ready for MarkRelit burst.
+  if (pending_near_light || near_focus_holes)
+  {
+    mesh_drain = std::max(mesh_drain, 16);
+    mesh_schedule = std::max(mesh_schedule, 16);
+  }
+
   // Floor drain by Dirty backlog so hitch frames do not starve MeshAsync.
   if (pending_dirty > 0)
   {
@@ -206,16 +234,25 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
     world.FlushPendingRelightMeshColumns(flush_n);
   }
   // Already-meshed focus columns with sky=0 never remesh unless relight is
-  // re-queued (stuck black after premature light=0 mesh).
-  world.RecoverUnlitFocusMeshes(moving ? 2 : 4);
+  // re-queued (stuck black after premature light=0 mesh). Also: pending+sky
+  // (neighbor lit) and missing GreedyCache after gate clear.
+  {
+    int recover_n = moving ? 4 : 6;
+    if (pending_near_light || missing_visible_mesh)
+    {
+      recover_n = moving ? 8 : 12;
+    }
+    world.RecoverUnlitFocusMeshes(recover_n);
+  }
 
   // Sync-fill holes where voxels exist but GreedyCache entry is missing.
+  // After Recover clears gates under feet, prefer dist<=1 sync hole-fill.
   int sync_cap = last_frame_ms > 16.0 ? 1 : -1;
   if (pending_async > 0 && last_frame_ms > 24.0)
   {
     sync_cap = sync_cap < 0 ? 2 : std::min(sync_cap, 2);
   }
-  if (missing_visible_mesh)
+  if (missing_visible_mesh || pending_near_light)
   {
     // Prefer filling visible holes (incl. water/transparent) over hitch gates.
     const int missing_cap = moving ? 6 : 8;

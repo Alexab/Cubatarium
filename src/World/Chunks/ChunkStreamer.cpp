@@ -95,6 +95,11 @@ void UChunkStreamer::SetColumnPendingCallback(IsColumnPendingFn fn)
   OnIsColumnPending = std::move(fn);
 }
 
+void UChunkStreamer::SetColumnPendingLightCallback(IsColumnPendingLightFn fn)
+{
+  OnIsColumnPendingLight = std::move(fn);
+}
+
 void UChunkStreamer::SetGenerationLightingHooks(
     std::function<void(bool)> defer_relight,
     std::function<void(glm::ivec3)> relight_column)
@@ -161,7 +166,7 @@ int UChunkStreamer::ChunkLoadPriorityFor(glm::ivec3 groundCoord) const
          std::abs(groundCoord.z - CollisionUrgentCenter.z)});
     if (dist <= CollisionUrgentRadius)
     {
-      priority += 10000;
+      priority = ApplyCollisionUrgentBias(priority, true);
     }
   }
   return priority;
@@ -177,13 +182,39 @@ void UChunkStreamer::SetCollisionUrgentRing(glm::ivec3 feet_chunk, int radius_ch
 
 bool UChunkStreamer::RingPrerequisitesMet(glm::ivec3 coord)
 {
-  if (!RingGateEnabled)
-  {
-    return true;
-  }
   const int ring = ChunkHorizontalDistance(coord);
   if (ring <= 1)
   {
+    return true;
+  }
+  // Visual-ready gate for outer rings: do not unlock ring 2+ while an inner
+  // neighbor is still awaiting first light (hole under / near camera).
+  auto neighbor_pending_light = [&](glm::ivec3 neighbor) -> bool
+  {
+    return OnIsColumnPendingLight && OnIsColumnPendingLight(neighbor);
+  };
+  if (!RingGateEnabled)
+  {
+    for (int dx = -1; dx <= 1; ++dx)
+    {
+      for (int dz = -1; dz <= 1; ++dz)
+      {
+        if (dx == 0 && dz == 0)
+        {
+          continue;
+        }
+        const glm::ivec3 neighbor(coord.x + dx, 0, coord.z + dz);
+        const int neighbor_ring = ChunkHorizontalDistance(neighbor);
+        if (neighbor_ring >= ring)
+        {
+          continue;
+        }
+        if (neighbor_pending_light(neighbor))
+        {
+          return false;
+        }
+      }
+    }
     return true;
   }
   for (int dx = -1; dx <= 1; ++dx)
@@ -199,6 +230,10 @@ bool UChunkStreamer::RingPrerequisitesMet(glm::ivec3 coord)
       if (neighbor_ring >= ring)
       {
         continue;
+      }
+      if (neighbor_pending_light(neighbor))
+      {
+        return false;
       }
       if (!ProcedurallyGenerated.count(neighbor) ||
           !IsTerrainChunkCompleteCached(neighbor))
@@ -643,6 +678,15 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
     if (loadOps >= MaxLoadOpsPerFrame)
     {
       break;
+    }
+    if (NearLoadRadius >= 0)
+    {
+      const int dist = std::max(std::abs(coord.x - LoadPriorityCenter.x),
+                                std::abs(coord.z - LoadPriorityCenter.z));
+      if (dist > NearLoadRadius)
+      {
+        continue;
+      }
     }
     if (!RingPrerequisitesMet(coord))
     {

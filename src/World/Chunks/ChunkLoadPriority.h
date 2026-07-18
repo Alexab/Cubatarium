@@ -16,6 +16,11 @@ struct ChunkLoadPriorityParams
 /// Applied when collision ring is not ready: subtract from score (lower = sooner).
 constexpr int kCollisionUrgentBoost = 10000;
 
+inline int ApplyCollisionUrgentBias(int priority, bool in_urgent_ring)
+{
+  return in_urgent_ring ? priority - kCollisionUrgentBoost : priority;
+}
+
 int ChunkChebyshevDistance(glm::ivec3 chunk_ground, glm::ivec3 feet_chunk);
 bool IsFeetNeighborhood(glm::ivec3 chunk_ground, glm::ivec3 feet_chunk);
 int ComputeChunkLoadPriority(glm::ivec3 chunk_ground, glm::ivec3 feet_chunk,

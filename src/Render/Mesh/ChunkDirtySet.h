@@ -35,6 +35,9 @@ public:
   void PrioritizeChunksWithoutMesh(
       const std::function<bool(glm::ivec3)> &missing_mesh);
   void PrioritizeNearHorizontal(glm::ivec3 focus_ground_chunk, int radius_chunks);
+  /// After near/far split: reorder by cy (surface-first or bottom-first).
+  void PrioritizeVerticalCy(glm::ivec3 focus_ground_chunk, int radius_chunks,
+                            int preferred_cy, bool prefer_lower_cy);
 
 private:
   std::vector<glm::ivec3> Queue;
