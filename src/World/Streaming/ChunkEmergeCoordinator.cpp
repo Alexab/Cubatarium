@@ -4,12 +4,15 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
+#include "World/Math/BlockTypes.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <thread>
+#include <vector>
 
 namespace cutum
 {
@@ -127,18 +130,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
       });
 
   {
-    const int sea_cy =
-        FloorDiv(world.GetProceduralSettings().SeaLevel, CHUNK_SIZE);
-    int preferred_cy = sea_cy;
+    int preferred_cy = focus_ground.y;
     bool prefer_lower_cy = false;
     if (const auto camera = world.GetCurrentUserCamera())
     {
       const glm::vec3 eye = camera->GetPosition();
+      preferred_cy = FloorDiv(static_cast<int>(std::floor(eye.y)), CHUNK_SIZE);
       const FluidColumnSurface column = world.FindFluidColumnSurface(eye);
       if (column.valid)
       {
-        preferred_cy = FloorDiv(column.surfaceBlockY, CHUNK_SIZE);
-        prefer_lower_cy = eye.y < column.surfaceY;
+        // Prefer surface when submerged, else eye height.
+        if (eye.y < column.surfaceY)
+        {
+          preferred_cy = FloorDiv(column.surfaceBlockY, CHUNK_SIZE);
+          prefer_lower_cy = true;
+        }
       }
     }
     mesh_service.SetMeshVerticalPriority(preferred_cy, prefer_lower_cy);
@@ -268,6 +274,93 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
       recover_n = moving ? 6 : 8;
     }
     world.RecoverUnlitFocusMeshes(recover_n);
+  }
+
+  // Place-equivalent: sync-rebuild only solid slices around the player
+  // (1 chunk below, 2 above; horizontal ±1). Rest of the vertical stack
+  // stays on Dirty/async — do not burn the frame on full columns.
+  if (underfeet_need)
+  {
+    const int max_y = procedural.MaxHeight;
+    const int band_min_y = std::max(0, focus_block.y - CHUNK_SIZE);
+    const int band_max_y =
+        std::min(max_y, focus_block.y + CHUNK_SIZE * 2);
+    const int cy0 = FloorDiv(band_min_y, CHUNK_SIZE);
+    const int cy1 = FloorDiv(band_max_y, CHUNK_SIZE);
+    const int prefer_cy = focus_ground.y;
+    // Prefer player cy, then ±1, ±2… within [cy0, cy1].
+    std::vector<int> cy_order;
+    cy_order.reserve(static_cast<size_t>(cy1 - cy0 + 1));
+    cy_order.push_back(prefer_cy);
+    for (int d = 1; d <= std::max(prefer_cy - cy0, cy1 - prefer_cy); ++d)
+    {
+      if (prefer_cy - d >= cy0)
+      {
+        cy_order.push_back(prefer_cy - d);
+      }
+      if (prefer_cy + d <= cy1)
+      {
+        cy_order.push_back(prefer_cy + d);
+      }
+    }
+    int immediate = 0;
+    constexpr int kMaxImmediateUnderfeet = 6;
+    for (int dz = -1; dz <= 1 && immediate < kMaxImmediateUnderfeet; ++dz)
+    {
+      for (int dx = -1; dx <= 1 && immediate < kMaxImmediateUnderfeet; ++dx)
+      {
+        // Camera column first (dx=dz=0), then ring.
+        const int ring = std::max(std::abs(dx), std::abs(dz));
+        if (ring > 0 && immediate >= 3)
+        {
+          // Keep most of the budget for under-camera slices.
+          continue;
+        }
+        for (int cy : cy_order)
+        {
+          if (immediate >= kMaxImmediateUnderfeet)
+          {
+            break;
+          }
+          const glm::ivec3 coord(focus_ground.x + dx, cy, focus_ground.z + dz);
+          if (world.IsPendingLightBeforeMesh(glm::ivec2(coord.x, coord.z)))
+          {
+            continue;
+          }
+          if (mesh_service.HasGreedyMesh(coord))
+          {
+            continue;
+          }
+          const UChunk *chunk =
+              world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+          if (!chunk)
+          {
+            continue;
+          }
+          bool any_solid = false;
+          for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+          {
+            for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+            {
+              for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+              {
+                if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+                {
+                  any_solid = true;
+                }
+              }
+            }
+          }
+          if (!any_solid)
+          {
+            continue;
+          }
+          mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
+                                             coord);
+          ++immediate;
+        }
+      }
+    }
   }
 
   // After Recover may have just cleared PendingLight underfeet — force sync

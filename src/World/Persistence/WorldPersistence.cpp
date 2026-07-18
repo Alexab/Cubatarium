@@ -405,7 +405,13 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     const ProceduralSettings &settings = world.GetProceduralSettings();
     if (!world.IsLightingRelightDeferred() && !state.had_disk_light)
     {
-      world.NotePendingLightBeforeMesh(ground_coord, 0, settings.MaxHeight);
+      // Mesh gate band = sea±CHUNK (same idea as streaming commit). Full
+      // 0..MaxHeight made MarkRelit expand Dirty across the whole stack.
+      const int sea = settings.SeaLevel;
+      const int dirty_min = std::max(0, sea - CHUNK_SIZE);
+      const int dirty_max =
+          std::min(settings.MaxHeight, sea + CHUNK_SIZE * 2);
+      world.NotePendingLightBeforeMesh(ground_coord, dirty_min, dirty_max);
     }
     else
     {

@@ -150,9 +150,12 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
   {
     glm::ivec3 coord;
     int dist;
+    int vert_dist;
   };
   std::vector<Candidate> candidates;
   candidates.reserve(64);
+  const int prefer_cy =
+      MeshVerticalPriorityValid ? MeshVerticalPreferredCy : MeshFocusGroundChunk.y;
   world.GetChunkManager().ForEachChunk(
       [&](const UChunk &chunk)
       {
@@ -179,6 +182,26 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
           // clear baked light=0 into GreedyCache (black holes fixed by place).
           return;
         }
+        // Skip empty air slices — they would burn sync budget before solid
+        // underfeet (and get an empty GreedyCache entry either way later).
+        bool any_solid = false;
+        for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+        {
+          for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+          {
+            for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+            {
+              if (chunk.GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+              {
+                any_solid = true;
+              }
+            }
+          }
+        }
+        if (!any_solid)
+        {
+          return;
+        }
         // Sync hole-fill: dist==0 (under camera) always; dist==1 when budget
         // allows. Farther only MarkDirtyPriority for async.
         if (dist > 1)
@@ -186,19 +209,24 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
           Dirty.MarkDirtyPriority(coord);
           return;
         }
-        candidates.push_back({coord, dist});
+        candidates.push_back(
+            {coord, dist, std::abs(coord.y - prefer_cy)});
       });
   if (candidates.empty())
   {
     return 0;
   }
-  // Dist 0 first, then dist 1 — underfeet before ring-1.
+  // Dist 0 first, then near player cy, then dist 1.
   std::sort(candidates.begin(), candidates.end(),
             [](const Candidate &a, const Candidate &b)
             {
               if (a.dist != b.dist)
               {
                 return a.dist < b.dist;
+              }
+              if (a.vert_dist != b.vert_dist)
+              {
+                return a.vert_dist < b.vert_dist;
               }
               return false;
             });

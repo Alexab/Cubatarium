@@ -801,15 +801,20 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     // Neighbors remesh for seams only after they are already LitReady.
     if (is_primary)
     {
-      // Dirty = lit cy ∪ pending gate band ∪ sea±CHUNK — not 0..MaxHeight
-      // (full-column remesh flooded Dirty to 1000+ and starved underfeet).
+      // Dirty = lit cy ∪ narrow pending ∪ sea±CHUNK — not 0..MaxHeight.
+      // Ignore pending bands that span most of the world (legacy NotePending
+      // used full height and flooded Dirty back to 1000+).
       int dirty_min = std::max(0, band.min_y - 1);
       int dirty_max = std::min(column_max_y, band.max_y + 1);
       if (const auto pit = PendingLightBeforeMesh.find(key);
           pit != PendingLightBeforeMesh.end())
       {
-        dirty_min = std::min(dirty_min, pit->second.min_y);
-        dirty_max = std::max(dirty_max, pit->second.max_y);
+        const int span = pit->second.max_y - pit->second.min_y;
+        if (span >= 0 && span <= CHUNK_SIZE * 4)
+        {
+          dirty_min = std::min(dirty_min, pit->second.min_y);
+          dirty_max = std::max(dirty_max, pit->second.max_y);
+        }
       }
       if (ProceduralTemplate.FillWater)
       {
@@ -822,8 +827,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
       if (dirty_max < dirty_min)
       {
-        dirty_min = 0;
-        dirty_max = column_max_y;
+        dirty_min = std::max(0, band.min_y - 1);
+        dirty_max = std::min(column_max_y, band.max_y + 1);
       }
       if (priority_mesh)
       {
@@ -1016,37 +1021,47 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
           continue;
         }
         const bool pending = IsPendingLightBeforeMesh(key);
-        // Near remesh band: occupied∪sea — avoid full 0..MaxHeight Dirty flood.
+        // Default remesh: sea band ∪ narrow pending — never 0..MaxHeight.
         const int sea = ProceduralTemplate.SeaLevel;
         int remesh_min = std::max(0, sea - CHUNK_SIZE);
         int remesh_max = std::min(max_y, sea + CHUNK_SIZE * 2);
         if (const auto pit = PendingLightBeforeMesh.find(key);
             pit != PendingLightBeforeMesh.end())
         {
-          remesh_min = std::min(remesh_min, pit->second.min_y);
-          remesh_max = std::max(remesh_max, pit->second.max_y);
+          const int span = pit->second.max_y - pit->second.min_y;
+          if (span >= 0 && span <= CHUNK_SIZE * 4)
+          {
+            remesh_min = std::min(remesh_min, pit->second.min_y);
+            remesh_max = std::max(remesh_max, pit->second.max_y);
+          }
         }
-        // Under feet / ±1: full column — latency matters more than Dirty cost.
-        if (r <= 1)
+        // Under feet (±1): only the vertical band around the player (one
+        // chunk below, two above). Rest of the (cx,cz) stack waits for
+        // MarkRelit / async Dirty — urgent full-column remesh flooded Dirty.
+        const bool underfeet = r <= 1;
+        if (underfeet)
         {
-          remesh_min = 0;
-          remesh_max = max_y;
+          remesh_min = std::max(0, focus.y * CHUNK_SIZE - CHUNK_SIZE);
+          remesh_max =
+              std::min(max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
         }
-        // Underfeet (±1): never wait on any_sky. Place-block proves light is
-        // often already usable; DeferMeshUntilLit left the column invisible
-        // forever while FPS stayed high (only enqueued relight).
+        // Underfeet: never wait on any_sky. Place-block proves light is often
+        // already usable; DeferMeshUntilLit left slices invisible forever.
         if (pending)
         {
           Persistence->EnqueueTerrainColumnRelight(
               key.x * CHUNK_SIZE, key.y * CHUNK_SIZE, /*priority=*/true, 0,
               max_y);
-          const bool unblock = (r <= 1) || any_sky;
+          const bool unblock = underfeet || any_sky;
           if (unblock)
           {
             ClearPendingLightBeforeMesh(key);
             SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
+            // Underfeet: camera column only (no 3×3 seamed). Neighbors get
+            // seams when their own light/MarkRelit runs.
             MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-                ground, remesh_min, remesh_max, true);
+                ground, remesh_min, remesh_max, /*include_horizontal_neighbors=*/
+                !underfeet);
             SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
           }
           ++repaired;
@@ -1057,7 +1072,8 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
         {
           SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
           MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-              ground, remesh_min, remesh_max, true);
+              ground, remesh_min, remesh_max, /*include_horizontal_neighbors=*/
+              !underfeet);
           ++repaired;
           continue;
         }
