@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 
 namespace cutum
@@ -23,5 +24,8 @@ float NormalizedFBM2D(float x, float z, uint32_t Seed, int octaves,
                       float persistence, float lacunarity);
 float Smoothstep(float edge0, float edge1, float x);
 float TriangularYFactor(int y, int yMin, int yPeak, int yMax);
+
+/// Builds permutation without the thread-local cache (parity tests).
+std::array<int, 512> BuildNoisePermutationForSeed(uint32_t seed);
 
 } // namespace cutum

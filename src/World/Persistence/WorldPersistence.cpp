@@ -130,11 +130,30 @@ ChunkWriteFormat UWorldPersistence::GetChunkWriteFormat() const
 }
 
 void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z,
-                                                    const bool priority)
+                                                    const bool priority,
+                                                    int min_y, int max_y)
 {
   const glm::ivec2 key(world_x, world_z);
+  if (max_y >= min_y)
+  {
+    auto &band = PendingTerrainColumnRelightYBands[key];
+    if (PendingTerrainColumnRelightKeys.count(key) == 0)
+    {
+      band = glm::ivec2(min_y, max_y);
+    }
+    else
+    {
+      band.x = std::min(band.x, min_y);
+      band.y = std::max(band.y, max_y);
+    }
+  }
   if (!PendingTerrainColumnRelightKeys.insert(key).second)
   {
+    // Already queued: if caller now wants priority, promote out of the far FIFO.
+    if (priority)
+    {
+      PromoteTerrainColumnRelight(key);
+    }
     return;
   }
   if (priority)
@@ -145,6 +164,53 @@ void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z,
   {
     PendingTerrainColumnRelights.push_back(key);
   }
+}
+
+void UWorldPersistence::PromoteTerrainColumnRelight(glm::ivec2 key)
+{
+  for (const glm::ivec2 &queued : PendingTerrainColumnRelightsPriority)
+  {
+    if (queued == key)
+    {
+      return;
+    }
+  }
+  auto it = std::find(PendingTerrainColumnRelights.begin(),
+                      PendingTerrainColumnRelights.end(), key);
+  if (it == PendingTerrainColumnRelights.end())
+  {
+    return;
+  }
+  PendingTerrainColumnRelights.erase(it);
+  PendingTerrainColumnRelightsPriority.push_back(key);
+}
+
+int UWorldPersistence::PromoteNearTerrainColumnRelights(glm::ivec3 focus_ground,
+                                                        int radius_chunks)
+{
+  if (radius_chunks < 0 || PendingTerrainColumnRelights.empty())
+  {
+    return 0;
+  }
+  int promoted = 0;
+  for (auto it = PendingTerrainColumnRelights.begin();
+       it != PendingTerrainColumnRelights.end();)
+  {
+    // Keys are block-space column origins (world_x, world_z).
+    const int cx = FloorDiv(it->x, CHUNK_SIZE);
+    const int cz = FloorDiv(it->y, CHUNK_SIZE);
+    const int dist = std::max(std::abs(cx - focus_ground.x),
+                              std::abs(cz - focus_ground.z));
+    if (dist > radius_chunks)
+    {
+      ++it;
+      continue;
+    }
+    PendingTerrainColumnRelightsPriority.push_back(*it);
+    it = PendingTerrainColumnRelights.erase(it);
+    ++promoted;
+  }
+  return promoted;
 }
 
 void UWorldPersistence::EnqueuePlayerRelight(
@@ -217,13 +283,28 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       return false;
     }
     PendingTerrainColumnRelightKeys.erase(col);
+    int relight_min = 0;
+    int relight_max = max_y;
+    const auto band_it = PendingTerrainColumnRelightYBands.find(col);
+    if (band_it != PendingTerrainColumnRelightYBands.end())
+    {
+      relight_min = std::max(0, band_it->second.x);
+      relight_max = std::min(max_y, band_it->second.y);
+      PendingTerrainColumnRelightYBands.erase(band_it);
+      if (relight_max < relight_min)
+      {
+        relight_min = 0;
+        relight_max = max_y;
+      }
+    }
     if (async_bg)
     {
-      world.EnqueueAsyncTerrainColumnRelight(col.x, col.y, 0, max_y);
+      world.EnqueueAsyncTerrainColumnRelight(col.x, col.y, relight_min,
+                                             relight_max);
     }
     else
     {
-      world.RelightTerrainColumn(col.x, col.y, 0, max_y, false);
+      world.RelightTerrainColumn(col.x, col.y, relight_min, relight_max, false);
     }
     ++drained_bg;
     return true;
@@ -250,6 +331,7 @@ void UWorldPersistence::ClearPendingRelights()
   PendingTerrainColumnRelights.clear();
   PendingTerrainColumnRelightsPriority.clear();
   PendingTerrainColumnRelightKeys.clear();
+  PendingTerrainColumnRelightYBands.clear();
 }
 
 int UWorldPersistence::GetPendingPlayerRelightCount() const
@@ -321,8 +403,15 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
                                 ground_coord.z * CHUNK_SIZE, near_focus);
     const ProceduralSettings &settings = world.GetProceduralSettings();
-    world.MarkTerrainChunkMeshDirtySeamed(ground_coord, 0, settings.MaxHeight,
-                                          true);
+    if (!world.IsLightingRelightDeferred() && !state.had_disk_light)
+    {
+      world.NotePendingLightBeforeMesh(ground_coord, 0, settings.MaxHeight);
+    }
+    else
+    {
+      world.MarkTerrainChunkMeshDirtySeamed(ground_coord, 0, settings.MaxHeight,
+                                            true);
+    }
   }
   world.Streaming->GetStreamer()->NotifyChunkCommitted(ground_coord);
 }
@@ -372,6 +461,10 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world)
         if (!buffer.IsEmpty())
         {
           buffer.ApplyTo(world.BlockWorld);
+          if (buffer.HasChunkLightData())
+          {
+            state.had_disk_light = true;
+          }
         }
         else
         {

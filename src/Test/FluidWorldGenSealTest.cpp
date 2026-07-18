@@ -270,6 +270,41 @@ static void TestSealAirAboveWaterloggedDecor()
                     "air above waterlogged decor seals to water");
 }
 
+/// V_fluid: IntraChunkSeal helper must match full commit seal with shore_air=false.
+static void TestIntraChunkSealMatchesShoreFalse()
+{
+  auto run = [](bool use_intra_api)
+  {
+    cutum::UBlockWorld world;
+    cutum::UBlockRegistry registry(nullptr, FluidTest::MakeTestFluidDefinitions());
+    cutum::ProceduralSettings settings;
+    settings.FillWater = true;
+    settings.SeaLevel = 63;
+    FillStoneColumn(world, 0, 0, 58);
+    world.SetBlock(glm::ivec3(0, 60, 0), cutum::BLOCK_AIR);
+    world.SetBlock(glm::ivec3(0, 61, 0), cutum::BLOCK_AIR);
+    world.SetBlock(glm::ivec3(0, 62, 0), cutum::BLOCK_AIR);
+    world.SetBlock(glm::ivec3(0, 63, 0), kWater);
+    world.SetFluidState(glm::ivec3(0, 63, 0), cutum::FluidCellState::Source());
+    if (use_intra_api)
+    {
+      cutum::SealFluidIntraChunkOnCommitted(world, registry, settings, "",
+                                            glm::ivec3(0, 0, 0));
+    }
+    else
+    {
+      cutum::SealFluidShoreOnChunkCommitted(world, registry, settings, "",
+                                            glm::ivec3(0, 0, 0),
+                                            /*include_shore_air=*/false);
+    }
+    return world.GetBlock(glm::ivec3(0, 62, 0));
+  };
+  FluidTest::Expect(run(true) == run(false), kTestName,
+                    "IntraChunkSeal API matches shore_air=false path");
+  FluidTest::Expect(run(true) == kWater, kTestName,
+                    "IntraChunkSeal fills wet pocket");
+}
+
 } // namespace
 
 int main()
@@ -286,6 +321,7 @@ int main()
   TestSealSeabedDecorWithWaterAbove();
   TestRestoreWaterColumnReplacesPrefabDirt();
   TestSealAirAboveWaterloggedDecor();
+  TestIntraChunkSealMatchesShoreFalse();
 
   std::cout << kTestName << ": OK" << std::endl;
   return 0;

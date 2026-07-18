@@ -117,18 +117,27 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   const glm::ivec3 focus_ground_horiz(focus_ground.x, 0, focus_ground.z);
   const int focus_radius = world.GetEffectiveRenderDistance() + 1;
   mesh_service.SetMeshRebuildFocus(focus_ground_horiz, focus_radius);
+  mesh_service.SetDeferMeshUntilLitFn(
+      [&world](glm::ivec3 chunk_coord)
+      {
+        return world.IsPendingLightBeforeMesh(
+            glm::ivec2(chunk_coord.x, chunk_coord.z));
+      });
 
   int mesh_drain = LastBudget.MaxMeshDrain;
   int mesh_schedule = LastBudget.MaxMeshSchedule;
 
   const size_t pending_dirty = mesh_service.GetDirtyCount();
   const int pending_async = mesh_service.GetAsyncInFlightCount();
+  const bool missing_visible_mesh =
+      mesh_service.HasMissingGreedyMeshInHorizontalRadius(
+          world.GetBlockWorld(), focus_ground_horiz, focus_radius);
   const bool near_mesh_backlog =
       mesh_service.HasDirtyWithinHorizontalRadius(focus_ground_horiz,
                                                  focus_radius) ||
-      mesh_service.HasMissingGreedyMeshInHorizontalRadius(world.GetBlockWorld(),
-                                                         focus_ground_horiz,
-                                                         focus_radius);
+      missing_visible_mesh;
+  const bool pending_near_light =
+      world.HasPendingLightBeforeMeshNear(focus_ground_horiz, focus_radius);
 
   if (moving && near_mesh_backlog)
   {
@@ -176,8 +185,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
     const int dirty_floor =
         std::min(24, std::max(1, static_cast<int>(pending_dirty) / 4));
     mesh_drain = std::max(mesh_drain, dirty_floor);
-    // Under hitch, still drain completed results, but limit new snapshots.
-    if (last_frame_ms > 24.0)
+    // Under hitch, still drain completed results, but limit new snapshots —
+    // except when the focus ring still has holes or awaiting first light.
+    if (last_frame_ms > 24.0 && !missing_visible_mesh && !pending_near_light)
     {
       mesh_drain = std::max(mesh_drain, 8);
       mesh_schedule = std::min(mesh_schedule, 4);
@@ -190,11 +200,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
 
   // Remesh after light before consuming other dirty work so black (light=0)
   // meshes do not stick for many frames under ocean stream backlog.
-  world.FlushPendingRelightMeshColumns(24);
-
-  const bool missing_visible_mesh =
-      mesh_service.HasMissingGreedyMeshInHorizontalRadius(
-          world.GetBlockWorld(), focus_ground_horiz, focus_radius);
+  {
+    const int flush_n =
+        pending_dirty < 16 ? 64 : (pending_dirty < 48 ? 32 : 24);
+    world.FlushPendingRelightMeshColumns(flush_n);
+  }
+  // Already-meshed focus columns with sky=0 never remesh unless relight is
+  // re-queued (stuck black after premature light=0 mesh).
+  world.RecoverUnlitFocusMeshes(moving ? 2 : 4);
 
   // Sync-fill holes where voxels exist but GreedyCache entry is missing.
   int sync_cap = last_frame_ms > 16.0 ? 1 : -1;
@@ -204,15 +217,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   }
   if (missing_visible_mesh)
   {
-    const int missing_cap = moving ? 4 : 6;
-    if (pending_async > 0 && last_frame_ms > 24.0)
+    // Prefer filling visible holes (incl. water/transparent) over hitch gates.
+    const int missing_cap = moving ? 6 : 8;
+    if (pending_async > 0 && last_frame_ms > 28.0)
     {
-      sync_cap = std::max(sync_cap, 2);
+      sync_cap = std::max(sync_cap, 3);
     }
     else
     {
       sync_cap = std::max(sync_cap, missing_cap);
     }
+    mesh_schedule = std::max(mesh_schedule, moving ? 12 : 16);
+    mesh_drain = std::max(mesh_drain, moving ? 12 : 16);
   }
   else if (near_mesh_backlog)
   {

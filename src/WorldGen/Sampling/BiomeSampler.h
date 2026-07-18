@@ -64,7 +64,8 @@ using CoarseHeightCallback = std::function<int(int, int)>;
 int RefineSurfaceYWithBiomes(int x, int z, int coarseY,
                              const ProceduralSettings &settings, uint32_t seed,
                              const WorldGenTuning &tuning,
-                             const CoarseHeightCallback &getCoarseY = nullptr);
+                             const CoarseHeightCallback &getCoarseY = nullptr,
+                             const BiomeWeightSet *weights_override = nullptr);
 
 void ComputeBiomeClimate(int x, int z, uint32_t seed, float &temperature,
                          float &moisture);
@@ -85,12 +86,17 @@ public:
   UBiomeSampler(uint32_t Seed, const WorldGenTuning &tuning);
 
   void SetCoarseHeightCallback(CoarseHeightCallback callback);
+  bool HasCoarseHeightCallback() const { return static_cast<bool>(CoarseHeightFn); }
+  int CoarseYAt(int x, int z, int fallback_y) const;
 
   BiomeId At(int x, int z, int surfaceY, int SeaLevel, int MaxHeight) const;
   BiomeWeightSet WeightsAt(int x, int z, int surfaceY, int SeaLevel,
                            int MaxHeight) const;
   int RefineSurfaceY(int x, int z, int coarseY,
                      const ProceduralSettings &settings) const;
+  int RefineSurfaceY(int x, int z, int coarseY,
+                     const ProceduralSettings &settings,
+                     const BiomeWeightSet &weights) const;
   BiomeSurfaceRule SurfaceRule(BiomeId biome, const WorldGenContext &ctx) const;
   BiomeSurfaceRule BlendedSurfaceRule(int x, int z, const BiomeWeightSet &weights,
                                       const WorldGenContext &ctx,

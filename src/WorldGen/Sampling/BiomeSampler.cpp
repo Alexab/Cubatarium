@@ -916,11 +916,14 @@ int SmoothBlendedSurfaceY(int x, int z, int baseY,
 int RefineSurfaceYWithBiomes(int x, int z, int coarseY,
                              const ProceduralSettings &settings, uint32_t seed,
                              const WorldGenTuning &tuning,
-                             const CoarseHeightCallback &getCoarseY)
+                             const CoarseHeightCallback &getCoarseY,
+                             const BiomeWeightSet *weights_override)
 {
-  const BiomeWeightSet weights = BlendedBiomeWeights(
-      x, z, coarseY, settings.SeaLevel, settings.MaxHeight, seed, tuning,
-      getCoarseY);
+  const BiomeWeightSet weights =
+      weights_override
+          ? *weights_override
+          : BlendedBiomeWeights(x, z, coarseY, settings.SeaLevel,
+                                settings.MaxHeight, seed, tuning, getCoarseY);
   float volatilityJitter = 0.0f;
   for (int i = 0; i < kBiomeCount; ++i)
   {
@@ -1062,6 +1065,15 @@ void UBiomeSampler::SetCoarseHeightCallback(CoarseHeightCallback callback)
   CoarseHeightFn = std::move(callback);
 }
 
+int UBiomeSampler::CoarseYAt(int x, int z, int fallback_y) const
+{
+  if (CoarseHeightFn)
+  {
+    return CoarseHeightFn(x, z);
+  }
+  return fallback_y;
+}
+
 BiomeId UBiomeSampler::At(int x, int z, int surfaceY, int SeaLevel,
                           int MaxHeight) const
 {
@@ -1079,7 +1091,15 @@ int UBiomeSampler::RefineSurfaceY(int x, int z, int coarseY,
                                   const ProceduralSettings &settings) const
 {
   return RefineSurfaceYWithBiomes(x, z, coarseY, settings, Seed, Tuning,
-                                  CoarseHeightFn);
+                                  CoarseHeightFn, nullptr);
+}
+
+int UBiomeSampler::RefineSurfaceY(int x, int z, int coarseY,
+                                  const ProceduralSettings &settings,
+                                  const BiomeWeightSet &weights) const
+{
+  return RefineSurfaceYWithBiomes(x, z, coarseY, settings, Seed, Tuning,
+                                  CoarseHeightFn, &weights);
 }
 
 BiomeSurfaceRule UBiomeSampler::SurfaceRule(BiomeId biome,

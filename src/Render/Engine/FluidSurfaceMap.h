@@ -31,7 +31,9 @@ class UFluidSurfaceMap
 public:
   static constexpr float kNoSurfaceSentinel = URenderFogSettings::NoSurfaceSentinel;
   static constexpr int kMaxFluidShaderSlots = URenderFogSettings::MaxFluidShaderSlots;
+  /// Baseline per-frame chunk patches; raised adaptively when backlog is large.
   static constexpr int kMaxChunkUpdatesPerFrame = 8;
+  static constexpr int kMaxChunkUpdatesBurst = 32;
 
   void EnsureGpuResources();
   void DestroyGpuResources();
@@ -74,6 +76,8 @@ private:
   std::vector<uint8_t> FluidIndexStaging;
   std::vector<float> FluidBottomStaging;
   std::unordered_set<glm::ivec3, IVec3Hash> PendingGpuGroundChunks;
+  std::vector<glm::ivec3> PendingRebuildGroundChunks;
+  int PendingRebuildScanHintY{0};
   FluidSurfaceMapFrameStats LastFrameStats{};
 };
 

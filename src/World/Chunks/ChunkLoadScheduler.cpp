@@ -48,6 +48,19 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
         return;
       }
     }
+    else if (stateIt->second == ChunkLoadState::Generating ||
+             stateIt->second == ChunkLoadState::Ready)
+    {
+      // Job already running / ready: refresh live priority so commit order
+      // tracks the player even if the column was started far away.
+      const auto prioIt = RequestPriorities.find(coord);
+      if (prioIt != RequestPriorities.end() && priority >= prioIt->second)
+      {
+        return;
+      }
+      RequestPriorities[coord] = priority;
+      return;
+    }
     else if (stateIt->second != ChunkLoadState::Absent)
     {
       return;
@@ -185,8 +198,19 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
 
   std::vector<PendingResult> ready = Completed.DrainAll();
   std::sort(ready.begin(), ready.end(),
-            [](const PendingResult &a, const PendingResult &b)
-            { return a.priority < b.priority; });
+            [this](const PendingResult &a, const PendingResult &b)
+            {
+              auto live_priority = [this](const PendingResult &pending) -> int
+              {
+                const auto it = RequestPriorities.find(pending.result.coord);
+                if (it != RequestPriorities.end())
+                {
+                  return std::min(pending.priority, it->second);
+                }
+                return pending.priority;
+              };
+              return live_priority(a) < live_priority(b);
+            });
   int committed = 0;
   for (PendingResult &pending : ready)
   {
@@ -223,7 +247,8 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
     }
     if (MarkDirty)
     {
-      MarkDirty(pending.result.coord, min_y, max_y);
+      MarkDirty(pending.result.coord, min_y, max_y,
+                pending.result.fluidSealed);
     }
     ++committed;
   }

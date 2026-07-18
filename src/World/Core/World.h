@@ -821,6 +821,20 @@ public:
   }
   void TickPlayerRelightMeshBurst();
   void FlushPendingRelightMeshColumns(int max_columns_per_flush = 8);
+  /// Re-enqueue skylight for focus columns that already have a mesh but no sky.
+  int RecoverUnlitFocusMeshes(int max_columns = 4);
+
+  /// Near-focus columns waiting for first light before first mesh (plan A).
+  void NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y);
+  void ClearPendingLightBeforeMesh(glm::ivec2 ground_xz);
+  bool IsPendingLightBeforeMesh(glm::ivec2 ground_xz) const;
+  bool HasPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,
+                                     int radius_chunks) const;
+  /// Re-queue priority relight for PendingLightBeforeMesh columns under focus.
+  int PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,
+                                      int radius_chunks);
+  void PromotePendingLightBeforeMesh(const std::vector<glm::ivec3> &relit_chunks,
+                                     bool priority_mesh);
 
   void SetStepUpEnabled(bool enabled) { StepUpEnabled = enabled; }
   bool IsStepUpEnabled() const { return StepUpEnabled; }
@@ -1000,6 +1014,9 @@ private:
   };
   std::unordered_map<glm::ivec2, PendingRelightMeshColumnRange, GroundColumnHash>
       PendingRelightMeshColumns;
+  /// Near columns: light must apply before first mesh dirty.
+  std::unordered_map<glm::ivec2, PendingRelightMeshColumnRange, GroundColumnHash>
+      PendingLightBeforeMesh;
   bool SpawnAreaPreparedByCooperativeLoad{false};
   bool ShutdownPrepared{false};
   bool BackgroundQuiesceFinished{false};

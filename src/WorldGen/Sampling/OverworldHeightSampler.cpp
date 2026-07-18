@@ -96,31 +96,22 @@ HeightSampleParams ParamsForPreset(HeightPreset preset, int MaxHeight)
 
 } // namespace
 
-float SeaBiasForPreset(HeightPreset preset)
+namespace
 {
-  HeightSampleParams params;
-  const float scale = 128.0f / 12.0f;
-  params.octavesBase = 4;
-  params.amplitudeBlocks = 4.5f * scale;
-  params.detailWeight = 0.05f;
-  params.continental = {0.003f, 2, 0.63f};
-  params.regional = {0.008f, 3, 0.32f};
-  params.detail = {0.025f, 2, 0.05f};
-  params.seaBias = 0.45f;
-  params.curveExponent = 1.12f;
-  const PackHeightConfig &pack = UWorldGenPack::HeightConfig();
-  if (pack.Loaded)
-  {
-    params.seaBias = pack.SeaBias;
-  }
-  (void)preset;
-  return params.seaBias;
-}
 
-float SampleLayeredHeight01(int x, int z, uint32_t seed,
-                            const HeightSampleParams &params,
-                            HeightPreset preset)
+struct LayeredHeightParts
 {
+  float h01{0.f};
+  float continental01{0.f};
+  float regional01{0.f};
+  float detail01{0.f};
+};
+
+LayeredHeightParts SampleLayeredHeightParts(int x, int z, uint32_t seed,
+                                            const HeightSampleParams &params,
+                                            HeightPreset preset)
+{
+  LayeredHeightParts out;
   const float wx = static_cast<float>(x);
   const float wz = static_cast<float>(z);
 
@@ -163,7 +154,41 @@ float SampleLayeredHeight01(int x, int z, uint32_t seed,
   {
     h01 = std::pow(h01, params.curveExponent);
   }
-  return h01;
+  out.h01 = h01;
+  out.continental01 = continental;
+  out.regional01 = regional;
+  out.detail01 = detail;
+  return out;
+}
+
+} // namespace
+
+float SeaBiasForPreset(HeightPreset preset)
+{
+  HeightSampleParams params;
+  const float scale = 128.0f / 12.0f;
+  params.octavesBase = 4;
+  params.amplitudeBlocks = 4.5f * scale;
+  params.detailWeight = 0.05f;
+  params.continental = {0.003f, 2, 0.63f};
+  params.regional = {0.008f, 3, 0.32f};
+  params.detail = {0.025f, 2, 0.05f};
+  params.seaBias = 0.45f;
+  params.curveExponent = 1.12f;
+  const PackHeightConfig &pack = UWorldGenPack::HeightConfig();
+  if (pack.Loaded)
+  {
+    params.seaBias = pack.SeaBias;
+  }
+  (void)preset;
+  return params.seaBias;
+}
+
+float SampleLayeredHeight01(int x, int z, uint32_t seed,
+                            const HeightSampleParams &params,
+                            HeightPreset preset)
+{
+  return SampleLayeredHeightParts(x, z, seed, params, preset).h01;
 }
 
 float OverworldMacroHeight01(int x, int z, uint32_t seed)
@@ -224,40 +249,40 @@ int MountainsStoneSurfaceAboveY(int sea_level, int max_height)
 
 int UOverworldHeightSampler::CoarseSurfaceYAt(int x, int z) const
 {
-  const float h01 = SampleLayeredHeight01(x, z, Seed, Params, Preset);
+  return SampleAt(x, z).surfaceY;
+}
+
+OverworldHeightSample UOverworldHeightSampler::SampleAt(int x, int z) const
+{
+  OverworldHeightSample out;
+  const LayeredHeightParts layered =
+      SampleLayeredHeightParts(x, z, Seed, Params, Preset);
+  out.h01 = layered.h01;
+  out.continental01 = layered.continental01;
+  out.regional01 = layered.regional01;
+  out.detail01 = layered.detail01;
+
   if (Preset == HeightPreset::Overworld)
   {
-    const ClimateSample climate = SampleClimate(x, z, Seed);
-    const float wx = static_cast<float>(x);
-    const float wz = static_cast<float>(z);
-    const float regional01 =
-        (NormalizedFBM2D(wx * Params.regional.scale, wz * Params.regional.scale,
-                         Seed + 10, Params.regional.octaves, Params.persistence,
-                         Params.lacunarity) +
-         1.0f) *
-        0.5f;
-    const float detail01 =
-        (NormalizedFBM2D(wx * Params.detail.scale, wz * Params.detail.scale,
-                         Seed + 20, Params.detail.octaves, Params.persistence,
-                         Params.lacunarity) +
-         1.0f) *
-        0.5f;
+    out.climate = SampleClimate(x, z, Seed);
     const float offset = ClimateTerrainOffset(
-        climate, SeaLevel, MaxHeight, regional01, detail01, Params.detailWeight,
-        Params.amplitudeBlocks, TerrainRoughness, x, z, Seed,
-        Params.rolling.weight, Params.rolling.scale, Params.rolling.octaves);
-    const float delta = (h01 - Params.seaBias) * Params.amplitudeBlocks * 0.32f;
+        out.climate, SeaLevel, MaxHeight, out.regional01, out.detail01,
+        Params.detailWeight, Params.amplitudeBlocks, TerrainRoughness, x, z,
+        Seed, Params.rolling.weight, Params.rolling.scale, Params.rolling.octaves);
+    const float delta = (out.h01 - Params.seaBias) * Params.amplitudeBlocks * 0.32f;
     float heightDelta = offset + delta;
     const float maxUp = Params.amplitudeBlocks * 0.62f;
     const float maxDown = Params.amplitudeBlocks * 0.55f;
     heightDelta = std::clamp(heightDelta, -maxDown, maxUp);
-    int surfaceY =
+    out.surfaceY =
         SeaLevel + static_cast<int>(std::floor(heightDelta + 0.5f));
-    return std::clamp(surfaceY, 1, MaxHeight);
+    out.surfaceY = std::clamp(out.surfaceY, 1, MaxHeight);
+    return out;
   }
-  const float delta = (h01 - Params.seaBias) * Params.amplitudeBlocks;
-  int surfaceY = SeaLevel + static_cast<int>(std::floor(delta + 0.5f));
-  return std::clamp(surfaceY, 1, MaxHeight);
+  const float delta = (out.h01 - Params.seaBias) * Params.amplitudeBlocks;
+  out.surfaceY = SeaLevel + static_cast<int>(std::floor(delta + 0.5f));
+  out.surfaceY = std::clamp(out.surfaceY, 1, MaxHeight);
+  return out;
 }
 
 int UOverworldHeightSampler::SurfaceYAt(int x, int z) const

@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <chrono>
 #include <climits>
+#include <functional>
 #include <glm/glm.hpp>
 #include <memory>
 #include <unordered_map>
@@ -106,6 +107,11 @@ public:
     RenderDistanceChunks = distance;
   }
   void SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord, int radius_chunks);
+  /// When true for a chunk coord, SyncRebuildVisibleMissing skips it (await light).
+  void SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn)
+  {
+    DeferMeshUntilLit = std::move(fn);
+  }
   void SetAltitudeCullState(float altitude_above_terrain, int threshold_blocks)
   {
     AltitudeAboveTerrain = altitude_above_terrain;
@@ -234,6 +240,7 @@ private:
   glm::ivec3 MeshFocusGroundChunk{0};
   int MeshFocusRadiusChunks{6};
   bool MeshFocusValid{false};
+  std::function<bool(glm::ivec3)> DeferMeshUntilLit;
 };
 } // namespace cutum
 #endif

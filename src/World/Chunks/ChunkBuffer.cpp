@@ -1,4 +1,6 @@
 #include "World/Chunks/ChunkBuffer.h"
+#include "World/Chunks/Chunk.h"
+#include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
 #include <algorithm>
@@ -24,6 +26,7 @@ void UChunkBuffer::SetBlock(glm::ivec3 worldPos, BlockId id)
   {
     Blocks.erase(worldPos);
     FluidPacked.erase(worldPos);
+    LightPacked.erase(worldPos);
     return;
   }
   Blocks[worldPos] = id;
@@ -48,6 +51,24 @@ void UChunkBuffer::SetFluidPacked(glm::ivec3 worldPos, uint8_t packed)
   FluidPacked[worldPos] = packed;
 }
 
+void UChunkBuffer::SetLightPacked(glm::ivec3 worldPos, uint8_t packed)
+{
+  if (packed == 0)
+  {
+    LightPacked.erase(worldPos);
+    return;
+  }
+  LightPacked[worldPos] = packed;
+}
+
+void UChunkBuffer::SetChunkLightData(
+    glm::ivec3 chunkCoord, const std::array<uint8_t, CHUNK_VOLUME> &light)
+{
+  HasChunkLight = true;
+  ChunkLightCoord = chunkCoord;
+  ChunkLight = light;
+}
+
 BlockId UChunkBuffer::GetBlock(glm::ivec3 worldPos) const
 {
   const auto it = Blocks.find(worldPos);
@@ -68,6 +89,27 @@ uint8_t UChunkBuffer::GetFluidPacked(glm::ivec3 worldPos) const
   return it->second;
 }
 
+uint8_t UChunkBuffer::GetLightPacked(glm::ivec3 worldPos) const
+{
+  if (HasChunkLight)
+  {
+    const glm::ivec3 local = worldPos - ChunkLightCoord * CHUNK_SIZE;
+    if (local.x >= 0 && local.x < CHUNK_SIZE && local.y >= 0 &&
+        local.y < CHUNK_SIZE && local.z >= 0 && local.z < CHUNK_SIZE)
+    {
+      const int index =
+          local.x + CHUNK_SIZE * (local.y + CHUNK_SIZE * local.z);
+      return ChunkLight[static_cast<size_t>(index)];
+    }
+  }
+  const auto it = LightPacked.find(worldPos);
+  if (it == LightPacked.end())
+  {
+    return 0;
+  }
+  return it->second;
+}
+
 void UChunkBuffer::ApplyTo(UBlockWorld &world) const
 {
   for (const auto &entry : Blocks)
@@ -80,12 +122,36 @@ void UChunkBuffer::ApplyTo(UBlockWorld &world) const
                          UnpackFluidCellState(fluid_it->second));
     }
   }
+  if (HasChunkLight)
+  {
+    world.GetChunkManager().EnsureChunk(ChunkLightCoord);
+    if (UChunk *chunk = world.GetChunkManager().GetChunk(ChunkLightCoord))
+    {
+      chunk->GetLightDataMutable() = ChunkLight;
+    }
+  }
+  for (const auto &entry : LightPacked)
+  {
+    const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(entry.first);
+    world.GetChunkManager().EnsureChunk(chunk_coord);
+    UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord);
+    if (!chunk)
+    {
+      continue;
+    }
+    const glm::ivec3 local = UChunkManager::WorldToLocal(entry.first);
+    chunk->GetLightDataMutable()[static_cast<size_t>(UChunk::LocalIndex(local))] =
+        entry.second;
+  }
 }
 
 void UChunkBuffer::Clear()
 {
   Blocks.clear();
   FluidPacked.clear();
+  LightPacked.clear();
+  HasChunkLight = false;
+  ChunkLight.fill(0);
   HasBounds = false;
   MinY = 0;
   MaxY = -1;

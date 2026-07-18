@@ -6,7 +6,6 @@
 #include "World/Math/FluidCellState.h"
 #include <array>
 #include <glm/glm.hpp>
-#include <unordered_map>
 
 namespace cutum
 {
@@ -14,16 +13,20 @@ namespace cutum
 class UBlockWorld;
 
 /// Read-only voxel view for background meshing (center chunk + one-block
-/// shell).
+/// shell). Shell faces are dense arrays (6 * CHUNK_SIZE^2), not hash maps.
 struct ChunkMeshSnapshot
 {
+  static constexpr int kShellFaceCount = 6;
+  static constexpr int kShellFaceCells = CHUNK_SIZE * CHUNK_SIZE;
+  static constexpr int kShellCells = kShellFaceCount * kShellFaceCells;
+
   glm::ivec3 coord{0};
   std::array<BlockId, CHUNK_VOLUME> blocks{};
   std::array<uint8_t, CHUNK_VOLUME> fluid_packed{};
   std::array<uint8_t, CHUNK_VOLUME> light_packed{};
-  std::unordered_map<glm::ivec3, BlockId, IVec3Hash> shellBlocks;
-  std::unordered_map<glm::ivec3, uint8_t, IVec3Hash> shellFluid;
-  std::unordered_map<glm::ivec3, uint8_t, IVec3Hash> shellLight;
+  std::array<BlockId, kShellCells> shellBlocks{};
+  std::array<uint8_t, kShellCells> shellFluid{};
+  std::array<uint8_t, kShellCells> shellLight{};
   uint64_t sourceRevision{0};
 
   static ChunkMeshSnapshot Capture(const UBlockWorld &world,

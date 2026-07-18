@@ -29,6 +29,11 @@ void UWorldMeshService::SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord,
   Cache.SetMeshRebuildFocus(ground_chunk_coord, radius_chunks);
 }
 
+void UWorldMeshService::SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn)
+{
+  Cache.SetDeferMeshUntilLitFn(std::move(fn));
+}
+
 void UWorldMeshService::SetAltitudeCullState(float altitude_above_terrain,
                                              int threshold_blocks)
 {

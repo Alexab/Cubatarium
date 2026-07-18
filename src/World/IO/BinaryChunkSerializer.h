@@ -9,7 +9,9 @@ class UBinaryChunkSerializer : public IUChunkSerializer
 {
 public:
   static constexpr char kMagic[4] = {'C', 'C', 'H', 'K'};
-  static constexpr uint8_t kVersion = 2;
+  /// v3: blocks + fluid + light. v2: blocks + fluid. v1: blocks (+ liquid heuristic).
+  static constexpr uint8_t kVersion = 3;
+  static constexpr uint8_t kVersionFluid = 2;
   static constexpr uint8_t kVersionLegacy = 1;
 
   ChunkDiskFormat GetFormat() const override { return ChunkDiskFormat::Binary; }

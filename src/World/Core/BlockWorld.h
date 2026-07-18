@@ -11,6 +11,7 @@ namespace cutum
 {
 
 class UBlockDefinitionStorage;
+class UChunkBuffer;
 
 class UBlockWorld
 {
@@ -19,6 +20,11 @@ public:
   {
     FluidDefinitions = definitions;
   }
+
+  /// Optional gen-scratch mirror: every SetBlock/SetFluid also updates this
+  /// buffer (worker populate → ApplyTo live world without a final world scan).
+  void SetCaptureBuffer(UChunkBuffer *buffer) { CaptureBuffer = buffer; }
+  UChunkBuffer *GetCaptureBuffer() const { return CaptureBuffer; }
 
   BlockId GetBlock(glm::ivec3 pos) const;
   FluidCellState GetFluidState(glm::ivec3 pos) const;
@@ -36,6 +42,7 @@ public:
 private:
   UChunkManager Chunks;
   const UBlockDefinitionStorage *FluidDefinitions{nullptr};
+  UChunkBuffer *CaptureBuffer{nullptr};
 };
 
 } // namespace cutum

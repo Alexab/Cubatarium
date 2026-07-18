@@ -3,6 +3,7 @@
 #include "WorldGen/Core/IUColumnWriter.h"
 #include "WorldGen/Pipelines/WorldGenStageRunner.h"
 #include "WorldGen/Stages/WorldGenStages.h"
+#include <chrono>
 
 namespace cutum
 {
@@ -46,6 +47,7 @@ void UColumnGenerationService::GenerateColumn(
 
   const ColumnSampleContext sample =
       generator.BuildColumnSample(world_x, world_z);
+  generator.PrimeChunkCoarseY(world_x, world_z, sample.PreliminarySurfaceY);
   RunTerrainStage(generator, sample, world_x, world_z);
   RunPostTerrainStages(generator, sample, world_x, world_z);
   ctx.FlushColumnDirty();
@@ -53,7 +55,7 @@ void UColumnGenerationService::GenerateColumn(
 
 ColumnSampleContext UColumnGenerationService::GenerateColumnTerrainOnly(
     UComposableWorldGenerator &generator, IUColumnWriter &writer, int world_x,
-    int world_z)
+    int world_z, double *out_sample_ms, double *out_fill_ms)
 {
   ColumnSampleContext sample{};
   WorldGenContext &ctx = generator.GetContext();
@@ -76,9 +78,25 @@ ColumnSampleContext UColumnGenerationService::GenerateColumnTerrainOnly(
     return sample;
   }
 
+  using clock = std::chrono::steady_clock;
+  const auto sample_t0 = clock::now();
   sample = generator.BuildColumnSample(world_x, world_z);
+  generator.PrimeChunkCoarseY(world_x, world_z, sample.PreliminarySurfaceY);
+  if (out_sample_ms)
+  {
+    *out_sample_ms += std::chrono::duration<double, std::milli>(clock::now() -
+                                                                sample_t0)
+                          .count();
+  }
+  const auto fill_t0 = clock::now();
   RunTerrainStage(generator, sample, world_x, world_z);
   ctx.FlushColumnDirty();
+  if (out_fill_ms)
+  {
+    *out_fill_ms +=
+        std::chrono::duration<double, std::milli>(clock::now() - fill_t0)
+            .count();
+  }
   return sample;
 }
 

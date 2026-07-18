@@ -59,7 +59,13 @@ public:
   void AbortAsyncChunkIo();
   bool AbortAsyncChunkIoFor(std::chrono::milliseconds timeout);
   void EnqueueTerrainColumnRelight(int world_x, int world_z,
-                                   bool priority = false);
+                                   bool priority = false, int min_y = 0,
+                                   int max_y = -1);
+  /// Move an already-queued column from the far FIFO into the priority deque.
+  void PromoteTerrainColumnRelight(glm::ivec2 key);
+  /// Promote all pending far-FIFO columns within focus radius (block keys).
+  int PromoteNearTerrainColumnRelights(glm::ivec3 focus_ground,
+                                       int radius_chunks);
   void EnqueuePlayerRelight(const std::vector<glm::ivec3> &block_positions);
   void DrainRelightQueues(UWorld &world, int max_player_jobs, int max_bg_columns);
   void DrainTerrainColumnRelights(UWorld &world, int max_columns);
@@ -91,6 +97,7 @@ private:
     int highest_cy_on_disk{-1};
     bool had_disk_read_failure{false};
     bool had_invalid_token{false};
+    bool had_disk_light{false};
     int retry_generation{0};
   };
 
@@ -113,6 +120,9 @@ private:
   std::deque<glm::ivec2> PendingTerrainColumnRelights;
   std::deque<glm::ivec2> PendingTerrainColumnRelightsPriority;
   std::unordered_set<glm::ivec2, IVec2Hash> PendingTerrainColumnRelightKeys;
+  /// Optional Y band per pending column (min,max); missing => full 0..MaxHeight.
+  std::unordered_map<glm::ivec2, glm::ivec2, IVec2Hash>
+      PendingTerrainColumnRelightYBands;
   std::string WorldFolderPath;
 };
 

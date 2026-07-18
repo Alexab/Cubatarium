@@ -7,6 +7,7 @@
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include "World/Interfaces/IUWorldMeshSink.h"
 #include <chrono>
+#include <functional>
 #include <glm/glm.hpp>
 #include <memory>
 #include <unordered_set>
@@ -34,6 +35,7 @@ public:
   void SetRenderSettings(const RenderSettings &settings);
   void SetRenderDistanceChunks(int distance);
   void SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord, int radius_chunks);
+  void SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn);
   void SetAltitudeCullState(float altitude_above_terrain, int threshold_blocks);
 
   void MarkDirty(glm::ivec3 chunk_coord);

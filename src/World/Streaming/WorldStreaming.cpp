@@ -1,4 +1,6 @@
 #include "World/Streaming/WorldStreaming.h"
+#include "WorldGen/Pipelines/ComposableWorldGenerator.h"
+#include "World/Math/GridMath.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Physics/ChunkPhysicsSeed.h"
 #include "App/Settings/RenderSettings.h"
@@ -17,10 +19,13 @@
 #include "World/Persistence/WorldPersistence.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
+#include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 #include "World/Core/RuntimeTuning.h"
 #include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <cstdint>
 
 namespace cutum
 {
@@ -173,7 +178,7 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
   ChunkScheduler =
       std::make_unique<UChunkLoadScheduler>(*ChunkPopulator, ChunkGenTokens);
   ChunkScheduler->SetMarkDirtyFn(
-      [this, &world](glm::ivec3 coord, int min_y, int max_y)
+      [this, &world](glm::ivec3 coord, int min_y, int max_y, bool fluid_sealed)
       {
         const glm::ivec3 ground(coord.x, 0, coord.z);
         if (Streamer)
@@ -190,21 +195,27 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         DeferredPhysicsSeedQueue.push_back(coord);
         if (settings.FillWater)
         {
-          const auto seal_t0 = std::chrono::high_resolution_clock::now();
-          SealFluidShoreOnChunkCommitted(
-              world.BlockWorld, *world.BlockRegistry, settings,
-              world.WorldgenOwnerPackId, coord, /*include_shore_air=*/false);
-          world.PhysicsTelemetryData.CommitSealMs +=
-              std::chrono::duration<double, std::milli>(
-                  std::chrono::high_resolution_clock::now() - seal_t0)
-                  .count();
+          // V_fluid: IntraChunkSeal once (populate XOR commit); LiveShoreAir always.
+          if (!fluid_sealed)
+          {
+            const auto seal_t0 = std::chrono::high_resolution_clock::now();
+            SealFluidShoreOnChunkCommitted(
+                world.BlockWorld, *world.BlockRegistry, settings,
+                world.WorldgenOwnerPackId, coord, /*include_shore_air=*/false);
+            world.PhysicsTelemetryData.CommitSealMs +=
+                std::chrono::duration<double, std::milli>(
+                    std::chrono::high_resolution_clock::now() - seal_t0)
+                    .count();
+          }
           DeferredShoreSealQueue.push_back(coord);
         }
         if (!world.IsLightingRelightDeferred())
         {
-          world.Persistence->EnqueueTerrainColumnRelight(ground.x * CHUNK_SIZE,
-                                                         ground.z * CHUNK_SIZE,
-                                                         near_focus);
+          // Full column height for skylight: narrow C2 Y-band is for mesh dirty
+          // only. Relight must see sky→surface or meshes stay black after emerge.
+          world.Persistence->EnqueueTerrainColumnRelight(
+              ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, near_focus,
+              /*min_y=*/0, settings.MaxHeight);
         }
         // Single seamed dirty for occupied Y / sea band; full height remesh
         // after async relight via FlushPendingRelightMeshColumns.
@@ -223,7 +234,13 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
           dirty_min = 0;
           dirty_max = settings.MaxHeight;
         }
-        if (near_focus)
+        if (!world.IsLightingRelightDeferred())
+        {
+          // Light before first mesh for all new columns (near and far). Far used
+          // to mark dirty immediately → permanent black under remesh backlog.
+          world.NotePendingLightBeforeMesh(ground, dirty_min, dirty_max);
+        }
+        else if (near_focus)
         {
           world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
               ground, dirty_min, dirty_max, true);
@@ -316,7 +333,30 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           std::min(chunk_budget.MaxLoadOps, procedural.MaxLoadOpsPerFrame);
     }
     // Near-complete first: do not starve commits when focus Dirty is high.
-    if (near_mesh_backlog)
+    const bool missing_near_mesh =
+        world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
+            world.GetBlockWorld(), focus_horiz, focus_radius);
+    bool incomplete_near_column = false;
+    {
+      const int max_y = procedural.MaxHeight;
+      const int scan_r = std::min(focus_radius, visual_rd);
+      for (int dz = -scan_r; dz <= scan_r && !incomplete_near_column; ++dz)
+      {
+        for (int dx = -scan_r; dx <= scan_r; ++dx)
+        {
+          const glm::ivec3 ground(focus_horiz.x + dx, 0, focus_horiz.z + dz);
+          if (!IsTerrainChunkComplete(world.BlockWorld, ground, max_y))
+          {
+            incomplete_near_column = true;
+            break;
+          }
+        }
+      }
+    }
+    const bool near_focus_holes =
+        missing_near_mesh || incomplete_near_column ||
+        world.HasPendingLightBeforeMeshNear(focus_horiz, focus_radius);
+    if (near_mesh_backlog || near_focus_holes)
     {
       chunk_budget.MaxChunkCommits =
           std::max(chunk_budget.MaxChunkCommits, 2);
@@ -328,8 +368,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           std::max(1, chunk_budget.MaxChunkCommits / 2);
       chunk_budget.MaxLoadOps = std::max(1, chunk_budget.MaxLoadOps / 2);
     }
-    // Standing with large dirty: stop feeding new load ops; still apply commits.
-    if (!moving_fast && mesh_dirty > 96)
+    // Standing with large dirty: stop feeding NEW far loads, but never starve
+    // the focus ring while columns/meshes under the camera are incomplete.
+    if (!moving_fast && mesh_dirty > 96 && !near_focus_holes)
     {
       chunk_budget.MaxLoadOps = 0;
       chunk_budget.MaxChunkCommits = std::max(1, chunk_budget.MaxChunkCommits);
@@ -337,6 +378,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     else if (!moving_fast && mesh_dirty > 48)
     {
       chunk_budget.MaxChunkCommits = std::max(1, chunk_budget.MaxChunkCommits);
+    }
+    if (!moving_fast && near_focus_holes)
+    {
+      chunk_budget.MaxLoadOps = std::max(chunk_budget.MaxLoadOps, 2);
+      chunk_budget.MaxChunkCommits =
+          std::max(chunk_budget.MaxChunkCommits, 2);
     }
     if (frame_ms > kBadFrameMs && !near_mesh_backlog)
     {
@@ -522,18 +569,39 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   }
   if (now < gBgRelightClampUntil)
   {
-    bg_budget = pending_bg > 0 ? std::min(bg_budget, 1) : 0;
+    bg_budget = pending_bg > 0 ? std::min(std::max(bg_budget, 1), 1) : 0;
   }
-  if (pending_bg > 0)
-  {
-    // Never fully starve background relight: otherwise streamed columns can
-    // stay black indefinitely while near work keeps the frame "busy".
-    bg_budget = std::max(bg_budget, 1);
-  }
-  if (far_exhausted() && pending_player == 0 && !near_mesh_backlog)
+  // Far-budget gate may throttle prewarm, but must not cancel lighting for
+  // already-committed columns: meshes built at light=0 stay black forever.
+  if (far_exhausted() && pending_player == 0 && !near_mesh_backlog &&
+      pending_bg == 0)
   {
     bg_budget = 0;
   }
+  if (pending_bg > 0)
+  {
+    bg_budget = std::max(bg_budget, 1);
+    // Idle/FPS-recovered frames: catch up lighting instead of idling black.
+    if (!near_mesh_backlog && frame_ms <= kBadFrameMs)
+    {
+      bg_budget = std::max(bg_budget, pending_bg > 16 ? 4 : 2);
+    }
+  }
+  // Near holes / awaiting first light: keep draining even under hitch frames.
+  if (pending_bg > 0 &&
+      (near_mesh_backlog ||
+       world.HasPendingLightBeforeMeshNear(focus_horiz, focus_radius)))
+  {
+    bg_budget = std::max(bg_budget, pending_bg > 8 ? 4 : 2);
+  }
+  // Columns enqueued far stay in the non-priority FIFO forever unless promoted
+  // when the player approaches — that left transparent PendingLightBeforeMesh holes.
+  if (pending_bg > 0)
+  {
+    world.Persistence->PromoteNearTerrainColumnRelights(focus_horiz,
+                                                        focus_radius);
+  }
+  world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
 
   world.Persistence->DrainRelightQueues(world, player_budget, bg_budget);
   finish_telemetry();
@@ -580,6 +648,7 @@ void UWorldStreaming::AbandonWorkersForProcessExit(
   {
     Streamer->SetEnabled(false);
   }
+  SyncCoarseCacheGround = glm::ivec3(INT32_MAX, 0, INT32_MAX);
   CancelChunkGeneration();
   if (!ChunkScheduler)
   {
@@ -736,6 +805,28 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         {
           return;
         }
+        // Same CoarseHeightCache as async Populate (D: unify sampling entry).
+        if (auto *composable =
+                dynamic_cast<UComposableWorldGenerator *>(world.WorldGen.get()))
+        {
+          const glm::ivec3 ground(FloorDiv(x, CHUNK_SIZE), 0,
+                                  FloorDiv(z, CHUNK_SIZE));
+          if (ground != SyncCoarseCacheGround)
+          {
+            if (SyncCoarseCacheGround.x != INT32_MAX)
+            {
+              composable->EndChunkCoarseCache();
+            }
+            const int blend_pad = std::clamp(
+                static_cast<int>(
+                    std::lround(world.GetProceduralSettings().Tuning.biomeBlendRadius)),
+                0, 16);
+            composable->BeginChunkCoarseCache(ground.x * CHUNK_SIZE,
+                                              ground.z * CHUNK_SIZE,
+                                              blend_pad + 8);
+            SyncCoarseCacheGround = ground;
+          }
+        }
         const auto t0 = std::chrono::high_resolution_clock::now();
         world.WorldGen->GenerateColumn(x, z);
         FrameStreamingGenMs +=
@@ -754,6 +845,7 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
   Streamer->SetUnloadColumnCallback(
       [this, &world](glm::ivec3 ground, int max_cy)
       {
+        world.ClearPendingLightBeforeMesh(glm::ivec2(ground.x, ground.z));
         world.GetMeshService().RemoveColumn(ground, max_cy);
         for (int cy = 0; cy <= max_cy; ++cy)
         {
@@ -815,8 +907,14 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
               world.WorldgenOwnerPackId, ground, /*include_shore_air=*/false);
           DeferredShoreSealQueue.push_back(ground);
         }
-        world.Persistence->EnqueueTerrainColumnRelight(ground.x * CHUNK_SIZE,
-                                                       ground.z * CHUNK_SIZE);
+        const glm::ivec3 focus_ground =
+            UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+        const int focus_radius = world.GetRenderDistanceChunks() + 1;
+        const bool near_focus =
+            std::max(std::abs(ground.x - focus_ground.x),
+                     std::abs(ground.z - focus_ground.z)) <= focus_radius;
+        world.Persistence->EnqueueTerrainColumnRelight(
+            ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, near_focus);
       });
 }
 

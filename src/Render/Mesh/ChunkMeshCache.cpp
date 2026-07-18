@@ -172,6 +172,16 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
         {
           return;
         }
+        if (DeferMeshUntilLit && DeferMeshUntilLit(coord))
+        {
+          return;
+        }
+        // Sync hole-fill only for immediate focus (dist<=1); farther use async.
+        if (dist > 1)
+        {
+          Dirty.MarkDirtyPriority(coord);
+          return;
+        }
         candidates.push_back({coord, dist});
       });
   if (candidates.empty())
@@ -190,6 +200,10 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
       break;
     }
     if (!world.GetChunkManager().HasChunk(candidate.coord))
+    {
+      continue;
+    }
+    if (DeferMeshUntilLit && DeferMeshUntilLit(candidate.coord))
     {
       continue;
     }
@@ -914,6 +928,13 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (!world.GetChunkManager().HasChunk(*it))
       {
         it = Dirty.RemoveAt(it);
+        continue;
+      }
+      // Do not capture first mesh (or remesh) while column awaits skylight —
+      // otherwise light=0 batches stick in GreedyCache as permanent black.
+      if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
+      {
+        ++it;
         continue;
       }
       const uint64_t source_revision = MeshRevisions.Current(*it);

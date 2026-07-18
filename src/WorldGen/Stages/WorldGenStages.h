@@ -30,6 +30,17 @@ bool SealFluidShoreOnChunkCommitted(UBlockWorld &world, UBlockRegistry &registry
                                     const std::string &worldgen_owner_pack_id,
                                     glm::ivec3 chunk_coord,
                                     bool include_shore_air = true);
+/// Intra-chunk pockets+permeable only (V_fluid IntraChunkSeal). Prefer this name
+/// over SealFluidShoreOnChunkCommitted(..., false) at commit sites.
+inline bool SealFluidIntraChunkOnCommitted(
+    UBlockWorld &world, UBlockRegistry &registry,
+    const ProceduralSettings &settings, const std::string &worldgen_owner_pack_id,
+    glm::ivec3 chunk_coord)
+{
+  return SealFluidShoreOnChunkCommitted(world, registry, settings,
+                                        worldgen_owner_pack_id, chunk_coord,
+                                        /*include_shore_air=*/false);
+}
 bool SealFluidShoreAirOnChunkCommitted(
     UBlockWorld &world, UBlockRegistry &registry,
     const ProceduralSettings &settings, const std::string &worldgen_owner_pack_id,

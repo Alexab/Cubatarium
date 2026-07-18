@@ -123,14 +123,48 @@ float SamplePerlin3D(float x, float y, float z,
   return Lerp(y1, y2, w);
 }
 
-std::array<int, 512> PermutationForSeed(uint32_t Seed)
+std::array<int, 512> PermutationForSeedUncached(uint32_t Seed)
 {
   std::array<int, 512> perm{};
   BuildPermutation(Seed, perm);
   return perm;
 }
 
+const std::array<int, 512> &PermutationForSeed(uint32_t Seed)
+{
+  // Thread-local LRU of recent seeds — same math as uncached BuildPermutation.
+  constexpr size_t kCacheSlots = 16;
+  struct Slot
+  {
+    uint32_t seed{0};
+    bool valid{false};
+    std::array<int, 512> perm{};
+  };
+  static thread_local Slot cache[kCacheSlots];
+  static thread_local size_t next_slot = 0;
+
+  for (size_t i = 0; i < kCacheSlots; ++i)
+  {
+    if (cache[i].valid && cache[i].seed == Seed)
+    {
+      return cache[i].perm;
+    }
+  }
+
+  Slot &slot = cache[next_slot];
+  next_slot = (next_slot + 1) % kCacheSlots;
+  slot.seed = Seed;
+  BuildPermutation(Seed, slot.perm);
+  slot.valid = true;
+  return slot.perm;
+}
+
 } // namespace
+
+std::array<int, 512> BuildNoisePermutationForSeed(uint32_t seed)
+{
+  return PermutationForSeedUncached(seed);
+}
 
 float HashNoise2D(int x, int z, uint32_t Seed)
 {
@@ -158,20 +192,20 @@ int HeightAt(int x, int z, uint32_t Seed, int baseY, int MaxHeight)
 
 float Perlin2D(float x, float z, uint32_t Seed)
 {
-  const auto perm = PermutationForSeed(Seed);
+  const auto &perm = PermutationForSeed(Seed);
   return SamplePerlin2D(x, z, perm);
 }
 
 float Perlin3D(float x, float y, float z, uint32_t Seed)
 {
-  const auto perm = PermutationForSeed(Seed);
+  const auto &perm = PermutationForSeed(Seed);
   return SamplePerlin3D(x, y, z, perm);
 }
 
 float FBM2D(float x, float z, uint32_t Seed, int octaves, float persistence,
             float lacunarity)
 {
-  const auto perm = PermutationForSeed(Seed);
+  const auto &perm = PermutationForSeed(Seed);
   float value = 0.0f;
   float amplitude = 1.0f;
   float frequency = 1.0f;
@@ -187,7 +221,7 @@ float FBM2D(float x, float z, uint32_t Seed, int octaves, float persistence,
 float FBM3D(float x, float y, float z, uint32_t Seed, int octaves,
             float persistence, float lacunarity)
 {
-  const auto perm = PermutationForSeed(Seed);
+  const auto &perm = PermutationForSeed(Seed);
   float value = 0.0f;
   float amplitude = 1.0f;
   float frequency = 1.0f;
@@ -204,7 +238,7 @@ float FBM3D(float x, float y, float z, uint32_t Seed, int octaves,
 float NormalizedFBM2D(float x, float z, uint32_t Seed, int octaves,
                       float persistence, float lacunarity)
 {
-  const auto perm = PermutationForSeed(Seed);
+  const auto &perm = PermutationForSeed(Seed);
   float value = 0.0f;
   float amplitude = 1.0f;
   float frequency = 1.0f;

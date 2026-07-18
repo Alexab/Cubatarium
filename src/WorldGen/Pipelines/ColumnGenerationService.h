@@ -8,6 +8,10 @@ namespace cutum
 
 class IUColumnWriter;
 
+/// Shared column entry for sync streaming and async chunk populate.
+/// Sync: GenerateColumn (sample+terrain+post in one call).
+/// Async Populate: GenerateColumnTerrainOnly → chunk carve → GenerateColumnPostTerrain
+/// → IntraChunkSeal (same ColumnGenerationService + optional chunk phases).
 class UColumnGenerationService
 {
 public:
@@ -19,7 +23,9 @@ public:
   // reuse by carve callbacks and post-terrain stages.
   static ColumnSampleContext
   GenerateColumnTerrainOnly(UComposableWorldGenerator &generator,
-                            IUColumnWriter &writer, int world_x, int world_z);
+                            IUColumnWriter &writer, int world_x, int world_z,
+                            double *out_sample_ms = nullptr,
+                            double *out_fill_ms = nullptr);
   static void GenerateColumnPostTerrain(UComposableWorldGenerator &generator,
                                         IUColumnWriter &writer, int world_x,
                                         int world_z, uint32_t skip_stage_mask,
