@@ -1688,15 +1688,28 @@ void UWorld::TickAsyncChunkSystems()
   const bool near_pending_light =
       HasPendingLightBeforeMeshNear(glm::ivec3(focus_ground.x, 0, focus_ground.z),
                                     focus_radius);
+  const bool underfeet_pending_light =
+      HasPendingLightBeforeMeshNear(glm::ivec3(focus_ground.x, 0, focus_ground.z),
+                                    /*radius=*/1);
   // Near awaiting first light: apply results faster so mesh gate clears.
-  const int drain_budget =
+  // Underfeet: even more aggressive — empty feet at high FPS was relight_drain≈0.
+  int drain_budget =
       near_pending_light ? std::max(drain_budget_base, 8) : drain_budget_base;
+  if (underfeet_pending_light)
+  {
+    drain_budget = std::max(drain_budget, 16);
+  }
   // Player edits and near first-light columns remesh immediately.
   const bool priority_mesh =
-      pending_player > 0 || near_pending_light ||
+      pending_player > 0 || near_pending_light || underfeet_pending_light ||
       (MeshService && MeshService->GetDirtyCount() < 48);
+  const auto relight_t0 = std::chrono::high_resolution_clock::now();
   const int applied =
       DrainAsyncRelightResults(drain_budget, priority_mesh, true);
+  PhysicsTelemetryData.RelightDrainMs +=
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - relight_t0)
+          .count();
   if (applied > 0)
   {
     const double dt = WallFrameDeltaSec > 0.0 ? WallFrameDeltaSec : (1.0 / 60.0);

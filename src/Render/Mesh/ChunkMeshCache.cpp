@@ -909,8 +909,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   {
     if (MeshFocusValid)
     {
+      // Missing-mesh first, then re-apply distance so underfeet is not buried
+      // under dist-2/3 holes (PrioritizeChunksWithoutMesh alone ignores XY).
+      Dirty.PrioritizeChunksWithoutMesh(
+          [this](glm::ivec3 coord)
+          { return GreedyCache.find(coord) == GreedyCache.end(); });
       Dirty.PrioritizeNearHorizontal(MeshFocusGroundChunk, MeshFocusRadiusChunks);
-      // Underfeet (±1) ahead of the rest of the focus ring.
       Dirty.PrioritizeNearHorizontal(MeshFocusGroundChunk, 1);
       if (MeshVerticalPriorityValid)
       {
@@ -918,9 +922,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                                    MeshVerticalPreferredCy, MeshPreferLowerCy);
       }
     }
-    Dirty.PrioritizeChunksWithoutMesh(
-        [this](glm::ivec3 coord)
-        { return GreedyCache.find(coord) == GreedyCache.end(); });
+    else
+    {
+      Dirty.PrioritizeChunksWithoutMesh(
+          [this](glm::ivec3 coord)
+          { return GreedyCache.find(coord) == GreedyCache.end(); });
+    }
   }
   if (!force_sync && Render.AsyncMeshing && Render.GreedyMeshing)
   {
@@ -956,6 +963,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     constexpr double kSnapshotBudgetMs = 6.0;
     int scheduled = 0;
     int outside_focus_scheduled = 0;
+    int overflow_scheduled = 0;
     constexpr int kMaxOutsideFocusPerFrame = 2;
     for (auto it = Dirty.begin();
          it != Dirty.end() && scheduled < max_schedule_per_frame;)
@@ -974,11 +982,25 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         continue;
       }
       bool outside_focus = false;
+      bool schedule_overflow = false;
       if (MeshFocusValid)
       {
         const int dx = std::abs(it->x - MeshFocusGroundChunk.x);
         const int dz = std::abs(it->z - MeshFocusGroundChunk.z);
-        if (std::max(dx, dz) > MeshFocusRadiusChunks)
+        const int horiz = std::max(dx, dz);
+        // Soft underfeet prefer: fill dist<=cap first; allow a few farther so
+        // PendingLight underfeet does not idle the pipeline (Dirty→1400, FPS die).
+        if (MeshScheduleMaxHorizontalDist >= 0 &&
+            horiz > MeshScheduleMaxHorizontalDist)
+        {
+          if (overflow_scheduled >= MeshScheduleOverflowPerFrame)
+          {
+            ++it;
+            continue;
+          }
+          schedule_overflow = true;
+        }
+        if (horiz > MeshFocusRadiusChunks)
         {
           outside_focus = true;
           // Near holes / pending light: do not trickle keep-shell dirty.
@@ -1016,6 +1038,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       it = Dirty.RemoveAt(it);
       ++scheduled;
       ++stats.Scheduled;
+      if (schedule_overflow)
+      {
+        ++overflow_scheduled;
+      }
       if (outside_focus)
       {
         ++outside_focus_scheduled;

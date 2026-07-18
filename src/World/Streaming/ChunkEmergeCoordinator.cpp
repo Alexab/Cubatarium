@@ -178,6 +178,25 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
       world.HasPendingLightBeforeMeshNear(focus_ground_horiz, /*radius=*/1);
   const bool underfeet_need = missing_underfeet || pending_underfeet;
   mesh_service.SetStarveOutsideFocusMesh(near_focus_holes || underfeet_need);
+  // Soft prefer underfeet: strict only when feet are meshable (gate clear).
+  // Hard lock while PendingLight idled async → Dirty 1400+ and FPS collapse
+  // with the same fill rate as before.
+  if (missing_underfeet && !pending_underfeet)
+  {
+    mesh_service.SetMeshScheduleMaxHorizontalDist(1);
+    mesh_service.SetMeshScheduleOverflowPerFrame(0);
+  }
+  else if (underfeet_need)
+  {
+    mesh_service.SetMeshScheduleMaxHorizontalDist(1);
+    // Keep workers busy beyond feet while light catches up; still prefer r<=1.
+    mesh_service.SetMeshScheduleOverflowPerFrame(moving ? 6 : 4);
+  }
+  else
+  {
+    mesh_service.SetMeshScheduleMaxHorizontalDist(-1);
+    mesh_service.SetMeshScheduleOverflowPerFrame(0);
+  }
 
   if (moving && near_mesh_backlog)
   {
@@ -329,14 +348,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
       push_cy(prefer_cy + d);
     }
     int immediate = 0;
-    constexpr int kMaxImmediateUnderfeet = 6;
+    // Hitch frames: at most 2 immediate rebuilds — logs showed emerge 270–414ms.
+    // Healthy / mild frames: fill underfeet aggressively (empty feet at 100 FPS).
+    const int kMaxImmediateUnderfeet =
+        last_frame_ms > 24.0 ? 2 : (moving ? 4 : 6);
     for (int dz = -1; dz <= 1 && immediate < kMaxImmediateUnderfeet; ++dz)
     {
       for (int dx = -1; dx <= 1 && immediate < kMaxImmediateUnderfeet; ++dx)
       {
         // Camera column first (dx=dz=0), then ring.
         const int ring = std::max(std::abs(dx), std::abs(dz));
-        if (ring > 0 && immediate >= 3)
+        if (ring > 0 && immediate >= (last_frame_ms > 24.0 ? 1 : 3))
         {
           // Keep most of the budget for under-camera slices.
           continue;
@@ -396,6 +418,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
       world.HasPendingLightBeforeMeshNear(focus_ground_horiz, /*radius=*/1);
 
   // Sync-fill holes: aggressive only for underfeet, not global Dirty flood.
+  // Hitch: keep sync tiny — emerge spikes were 270–414ms with sync_cap 8–10.
   int sync_cap = last_frame_ms > 16.0 ? 1 : -1;
   if (pending_async > 0 && last_frame_ms > 24.0)
   {
@@ -403,8 +426,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   }
   if (underfeet_need || underfeet_need_after)
   {
-    const int missing_cap = moving ? 8 : 10;
-    sync_cap = std::max(sync_cap, missing_cap);
+    // Idle/healthy: fill underfeet fast. Hitch: small sync only.
+    if (last_frame_ms > 24.0)
+    {
+      sync_cap = std::max(sync_cap, 2);
+    }
+    else if (last_frame_ms > 16.0)
+    {
+      sync_cap = std::max(sync_cap, moving ? 4 : 6);
+    }
+    else
+    {
+      const int missing_cap = moving ? 8 : 10;
+      sync_cap = std::max(sync_cap, missing_cap);
+    }
     mesh_schedule = std::max(mesh_schedule, moving ? 12 : 16);
     mesh_drain = std::max(mesh_drain, moving ? 12 : 16);
   }
@@ -423,7 +458,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   {
     sync_cap = 2;
   }
-  const double sync_budget_ms = underfeet_need ? 10.0 : 6.0;
+  const double sync_budget_ms =
+      (underfeet_need && last_frame_ms <= 16.0) ? 10.0
+      : (last_frame_ms > 24.0)                    ? 4.0
+                                                  : 6.0;
   const MeshRebuildTickStats tick_stats = mesh_service.RebuildDirtyChunksWithStats(
       world.GetBlockWorld(), registry, mesh_drain, mesh_schedule,
       /*force_sync=*/false, sync_cap, sync_budget_ms);

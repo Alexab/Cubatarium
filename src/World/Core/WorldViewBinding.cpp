@@ -510,6 +510,9 @@ void UWorld::RunLegacyPhysicsFrame()
 
   const auto t_after_move = std::chrono::high_resolution_clock::now();
   PhysicsTelemetryData.StreamMs = 0.0;
+  PhysicsTelemetryData.StreamerUpdateMs = 0.0;
+  PhysicsTelemetryData.AsyncIoMs = 0.0;
+  PhysicsTelemetryData.RelightDrainMs = 0.0;
   PhysicsTelemetryData.MeshEmergeMs = 0.0;
 
   if (camera)

@@ -50,6 +50,16 @@ void UWorldMeshService::SetStarveOutsideFocusMesh(bool starve)
   Cache.SetStarveOutsideFocusMesh(starve);
 }
 
+void UWorldMeshService::SetMeshScheduleMaxHorizontalDist(int radius_chunks)
+{
+  Cache.SetMeshScheduleMaxHorizontalDist(radius_chunks);
+}
+
+void UWorldMeshService::SetMeshScheduleOverflowPerFrame(int count)
+{
+  Cache.SetMeshScheduleOverflowPerFrame(count);
+}
+
 void UWorldMeshService::SetAltitudeCullState(float altitude_above_terrain,
                                              int threshold_blocks)
 {

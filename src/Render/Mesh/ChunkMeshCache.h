@@ -125,6 +125,16 @@ public:
   }
   /// When true, skip outside-focus dirty trickle (near holes / pending light).
   void SetStarveOutsideFocusMesh(bool starve) { StarveOutsideFocusMesh = starve; }
+  /// When >= 0, prefer scheduling within this Chebyshev distance. Chunks
+  /// farther may still schedule up to MeshScheduleOverflowPerFrame (soft prefer).
+  void SetMeshScheduleMaxHorizontalDist(int radius_chunks)
+  {
+    MeshScheduleMaxHorizontalDist = radius_chunks;
+  }
+  void SetMeshScheduleOverflowPerFrame(int count)
+  {
+    MeshScheduleOverflowPerFrame = std::max(0, count);
+  }
   void SetAltitudeCullState(float altitude_above_terrain, int threshold_blocks)
   {
     AltitudeAboveTerrain = altitude_above_terrain;
@@ -257,6 +267,10 @@ private:
   bool MeshPreferLowerCy{false};
   bool MeshVerticalPriorityValid{false};
   bool StarveOutsideFocusMesh{false};
+  /// -1 = no extra horizontal schedule cap (only focus starve applies).
+  int MeshScheduleMaxHorizontalDist{-1};
+  /// When MaxHorizontalDist >= 0, allow this many farther schedules/frame.
+  int MeshScheduleOverflowPerFrame{0};
   std::function<bool(glm::ivec3)> DeferMeshUntilLit;
 };
 } // namespace cutum

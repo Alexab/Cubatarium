@@ -43,6 +43,10 @@ struct PhysicsTelemetry
   double CommitMeshMs{0.0};
   double CommitApplyMs{0.0};
   double CommitSealMs{0.0};
+  /// Breakdown inside StreamMs (UpdateStreaming + TickAsyncChunkSystems).
+  double StreamerUpdateMs{0.0};
+  double AsyncIoMs{0.0};
+  double RelightDrainMs{0.0};
   double MeshSyncMs{0.0};
   double MeshSnapshotMs{0.0};
   int PrefetchVisualOps{0};
