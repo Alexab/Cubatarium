@@ -437,13 +437,25 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     const ProceduralSettings &settings = world.GetProceduralSettings();
     if (!world.IsLightingRelightDeferred() && !state.had_disk_light)
     {
-      // Mesh gate band = sea±CHUNK (same idea as streaming commit). Full
-      // 0..MaxHeight made MarkRelit expand Dirty across the whole stack.
+      // Mesh gate band = sea±2 CHUNK ∪ player when near (same as commit).
       const int sea = settings.SeaLevel;
-      const int dirty_min = std::max(0, sea - CHUNK_SIZE);
-      const int dirty_max =
+      int dirty_min = std::max(0, sea - CHUNK_SIZE);
+      int dirty_max =
           std::min(settings.MaxHeight, sea + CHUNK_SIZE * 2);
+      if (near_focus)
+      {
+        const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
+        dirty_min =
+            std::min(dirty_min, std::max(0, focus_block.y - CHUNK_SIZE));
+        dirty_max = std::max(
+            dirty_max,
+            std::min(settings.MaxHeight, focus_block.y + CHUNK_SIZE * 2));
+      }
       world.NotePendingLightBeforeMesh(ground_coord, dirty_min, dirty_max);
+      // Always Dirty first mesh (near priority). Skipping far left empty
+      // columns until MarkRelit — transverse strips on disk-load worlds.
+      world.MarkTerrainChunkMeshDirtySeamed(ground_coord, dirty_min, dirty_max,
+                                            near_focus);
     }
     else
     {

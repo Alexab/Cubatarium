@@ -150,6 +150,8 @@ struct FrameNumbers
   int stream_near_skipped{0};
   int stream_load_candidates{0};
   int pending_light{0};
+  int stream_pressure{0};
+  int pending_light_focus{0};
   int focus_cx{0};
   int focus_cz{0};
   int underfeet_need{0};
@@ -223,6 +225,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.stream_near_skipped = phys.StreamNearSkipped;
   n.stream_load_candidates = phys.StreamLoadCandidates;
   n.pending_light = phys.PendingLightCount;
+  n.stream_pressure = phys.StreamPressure;
+  n.pending_light_focus = phys.PendingLightFocus;
   n.focus_cx = phys.FocusChunkX;
   n.focus_cz = phys.FocusChunkZ;
   n.underfeet_need = phys.UnderfeetNeed;
@@ -277,6 +281,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"stream_near_skipped\":" << n.stream_near_skipped
           << ",\"stream_load_candidates\":" << n.stream_load_candidates
           << ",\"pending_light\":" << n.pending_light
+          << ",\"stream_pressure\":" << n.stream_pressure
+          << ",\"pending_light_focus\":" << n.pending_light_focus
           << ",\"focus_cx\":" << n.focus_cx << ",\"focus_cz\":" << n.focus_cz
           << ",\"underfeet_need\":" << n.underfeet_need
           << ",\"near_focus_holes\":" << n.near_focus_holes
@@ -306,6 +312,8 @@ void LogLine(const FrameNumbers &n, const char *kind, int frames,
             << " ring_blocked=" << n.stream_ring_blocked
             << " near_skip=" << n.stream_near_skipped
             << " pending_light=" << n.pending_light
+            << " stream_pressure=" << n.stream_pressure
+            << " pending_light_focus=" << n.pending_light_focus
             << " focus=(" << n.focus_cx << "," << n.focus_cz << ")"
             << " underfeet=" << n.underfeet_need
             << " holes=" << n.near_focus_holes

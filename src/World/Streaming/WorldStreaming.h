@@ -5,6 +5,7 @@
 #include "World/Chunks/ChunkLoadScheduler.h"
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Chunks/StreamingAltitudePolicy.h"
+#include "World/Streaming/StreamingPressure.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
 #include <chrono>
 #include <deque>
@@ -94,8 +95,14 @@ public:
 
   void MarkPersistedColumnsFromWorld();
 
+  const StreamingPressureCaps &GetLastPressureCaps() const
+  {
+    return LastPressureCaps;
+  }
+
 private:
   void InitChunkScheduler(UWorld &world);
+  void RefreshStreamingPressure(UWorld &world);
 
   std::unique_ptr<UChunkStreamer> Streamer;
   std::unique_ptr<UChunkEmergeCoordinator> EmergeCoordinator;
@@ -112,6 +119,8 @@ private:
   int AdaptiveEffectiveRd{-1};
   double PhysMsEma{0.0};
   std::chrono::steady_clock::time_point AdaptiveRdLastAdjust{};
+  StreamingPressureState PressureState{};
+  StreamingPressureCaps LastPressureCaps{};
 };
 
 } // namespace cutum

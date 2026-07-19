@@ -66,6 +66,10 @@ struct PhysicsTelemetry
   int FocusChunkZ{0};
   int UnderfeetNeed{0};
   int NearFocusHoles{0};
+  /// 0=Green, 1=Yellow, 2=Red (StreamingPressureLevel).
+  int StreamPressure{0};
+  /// PendingLightBeforeMesh count inside focus radius (vs global PendingLightCount).
+  int PendingLightFocus{0};
 };
 
 } // namespace cutum

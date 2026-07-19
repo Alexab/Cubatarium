@@ -996,9 +996,16 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         if (horiz > MeshFocusRadiusChunks)
         {
           outside_focus = true;
-          // Near holes / pending light: do not trickle keep-shell dirty.
-          const int outside_cap =
-              StarveOutsideFocusMesh ? 0 : kMaxOutsideFocusPerFrame;
+          // When focus still has holes: prefer first-mesh outside, but always
+          // trickle lit remesh too — outside_cap=0 left MarkRelit Dirty stuck
+          // forever → permanent black ocean plains behind the bubble.
+          int outside_cap = kMaxOutsideFocusPerFrame;
+          if (StarveOutsideFocusMesh)
+          {
+            const bool missing =
+                GreedyCache.find(*it) == GreedyCache.end();
+            outside_cap = missing ? kMaxOutsideFocusPerFrame : 1;
+          }
           if (outside_focus_scheduled >= outside_cap)
           {
             ++it;
@@ -1008,7 +1015,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (!world.GetChunkManager().HasChunk(*it))
       {
-        it = Dirty.RemoveAt(it);
+        // Keep Dirty until the chunk exists. Seamed Dirty for neighbors that
+        // are not loaded yet used to RemoveAt → alternating empty strips
+        // (meshed column next to never-dirtied neighbor after it commits far).
+        ++it;
         continue;
       }
       // Do not capture first mesh (or remesh) while column awaits skylight —

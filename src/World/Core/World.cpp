@@ -1049,17 +1049,18 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
             remesh_max = std::max(remesh_max, pit->second.max_y);
           }
         }
-        // Under feet (±1): urgent band = player vertical strip ∪ sea (water
-        // surface must not wait until MarkRelit). Rest of the stack stays async.
         const bool underfeet = r <= 1;
-        if (underfeet)
+        // Missing mesh anywhere in focus: include player altitude (flight cy),
+        // not only sea — otherwise cruise leaves transverse GreedyCache holes
+        // while columns are already in RAM.
+        if (missing_mesh || underfeet)
         {
           const int player_min =
               std::max(0, focus.y * CHUNK_SIZE - CHUNK_SIZE);
           const int player_max = std::min(
               max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
-          remesh_min = player_min;
-          remesh_max = player_max;
+          remesh_min = std::min(remesh_min, player_min);
+          remesh_max = std::max(remesh_max, player_max);
           if (ProceduralTemplate.FillWater)
           {
             remesh_min =
@@ -1068,23 +1069,23 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
                 remesh_max, std::min(max_y, sea + CHUNK_SIZE * 2));
           }
         }
-        // Focus ring: never wait on any_sky to clear PendingLight. Waiting left
-        // pending_light~45–55 and holes=1 while columns sat on disk. Always
-        // enqueue relight, release the gate, and Dirty a narrow band; MarkRelit
-        // remeshes when light lands.
+        // Focus ring: enqueue relight and unlock ring via LitReady. Keep
+        // PendingLight until MarkRelit so soft-defer blocks light=0 remesh of
+        // an already-built mesh (ClearPending here caused frequent dark chunks).
         if (pending)
         {
           Persistence->EnqueueTerrainColumnRelight(
               key.x * CHUNK_SIZE, key.y * CHUNK_SIZE, /*priority=*/true, 0,
               max_y);
-          ClearPendingLightBeforeMesh(key);
           SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
-          // No 3×3 seamed flood — neighbors get seams on their own Recover /
-          // MarkRelit. Underfeet still uses the player∪sea remesh band above.
-          MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-              ground, remesh_min, remesh_max,
-              /*include_horizontal_neighbors=*/false);
-          SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+          if (missing_mesh)
+          {
+            // First mesh may be dark briefly; MarkRelit remeshes when lit.
+            MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+                ground, remesh_min, remesh_max,
+                /*include_horizontal_neighbors=*/false);
+            SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+          }
           ++repaired;
           continue;
         }
@@ -1098,12 +1099,16 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
           ++repaired;
           continue;
         }
-        // Stuck black mesh: solid + no sky.
+        // Stuck black mesh: solid + no sky in chunk light, OR lit chunk data
+        // with stale dark GreedyCache (MarkRelit Dirty lost to starve remesh=0).
         if (has_mesh && !any_sky)
         {
           Persistence->EnqueueTerrainColumnRelight(
               ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true, 0,
               max_y);
+          MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+              ground, remesh_min, remesh_max,
+              /*include_horizontal_neighbors=*/false);
           ++repaired;
         }
       }
@@ -1175,10 +1180,8 @@ bool UWorld::IsColumnLitReady(glm::ivec3 ground) const
   {
     ground.y = 0;
   }
-  if (IsPendingLightBeforeMesh(glm::ivec2(ground.x, ground.z)))
-  {
-    return false;
-  }
+  // LitReady/Meshing unlocks the ring even while PendingLight remains — Recover
+  // keeps the gate until MarkRelit so soft-defer can block light=0 remesh.
   const ColumnEmergeState state = GetColumnEmergeState(ground);
   switch (state)
   {
@@ -1188,8 +1191,13 @@ bool UWorld::IsColumnLitReady(glm::ivec3 ground) const
   case ColumnEmergeState::Empty:
     return true;
   default:
+    break;
+  }
+  if (IsPendingLightBeforeMesh(glm::ivec2(ground.x, ground.z)))
+  {
     return false;
   }
+  return false;
 }
 
 bool UWorld::IsColumnVisualReadyForRing(glm::ivec3 ground) const
@@ -1201,20 +1209,27 @@ bool UWorld::IsColumnVisualReadyForRing(glm::ivec3 ground) const
 bool UWorld::HasPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,
                                            int radius_chunks) const
 {
+  return CountPendingLightBeforeMeshNear(focus_ground_horiz, radius_chunks) > 0;
+}
+
+int UWorld::CountPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,
+                                            int radius_chunks) const
+{
   if (PendingLightBeforeMesh.empty() || radius_chunks < 0)
   {
-    return false;
+    return 0;
   }
+  int count = 0;
   for (const auto &entry : PendingLightBeforeMesh)
   {
     const int dx = std::abs(entry.first.x - focus_ground_horiz.x);
     const int dz = std::abs(entry.first.y - focus_ground_horiz.z);
     if (std::max(dx, dz) <= radius_chunks)
     {
-      return true;
+      ++count;
     }
   }
-  return false;
+  return count;
 }
 
 int UWorld::PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,
@@ -1694,6 +1709,16 @@ void UWorld::TickAsyncChunkSystems()
   int drain_budget =
       near_pending_light ? std::max(drain_budget_base, 8) : drain_budget_base;
   if (underfeet_pending_light)
+  {
+    drain_budget = std::max(drain_budget, 16);
+  }
+  const int pending_light_focus_n = CountPendingLightBeforeMeshNear(
+      glm::ivec3(focus_ground.x, 0, focus_ground.z), focus_radius);
+  if (pending_light_focus_n > 15)
+  {
+    drain_budget = std::max(drain_budget, 24);
+  }
+  else if (pending_light_focus_n > 8)
   {
     drain_budget = std::max(drain_budget, 16);
   }

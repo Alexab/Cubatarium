@@ -1,6 +1,8 @@
 #ifndef CHUNKEMERGECOORDINATOR_H
 #define CHUNKEMERGECOORDINATOR_H
 
+#include "World/Streaming/StreamingPressure.h"
+
 namespace cutum
 {
 
@@ -36,7 +38,7 @@ public:
   void BeginFrame(const ProceduralSettings &procedural, float movement_speed,
                   int default_load_ops, double last_frame_ms = 0.0);
 
-  void TickMeshEmerge(UWorld &world);
+  void TickMeshEmerge(UWorld &world, const StreamingPressureCaps &pressure);
 
 private:
   FrameBudget LastBudget{};
