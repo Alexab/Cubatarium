@@ -57,6 +57,7 @@ struct PhysicsTelemetry
   double IdlePrefetchMs{0.0};
   /// Streaming gate diagnostics (filled each UpdateStreaming).
   int StreamLoads{0};
+  int StreamAsyncQueued{0};
   int StreamRingBlocked{0};
   int StreamNearSkipped{0};
   int StreamLoadCandidates{0};

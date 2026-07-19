@@ -245,6 +245,11 @@ void ParseProceduralStreamingOptions(const nlohmann::json &p,
     settings.MovementSpeedBoostThreshold =
         p["movement_speed_boost_threshold"].get<float>();
   }
+  if (p.contains("movement_prefetch_threshold"))
+  {
+    settings.MovementPrefetchThreshold =
+        p["movement_prefetch_threshold"].get<float>();
+  }
   if (p.contains("streaming") && p["streaming"].is_object())
   {
     ParseProceduralStreamingOptions(p["streaming"], settings);
@@ -267,6 +272,8 @@ void WriteProceduralStreamingOptions(const ProceduralSettings &settings,
   procedural["max_load_ops_per_frame_boost"] = settings.MaxLoadOpsPerFrameBoost;
   procedural["movement_speed_boost_threshold"] =
       settings.MovementSpeedBoostThreshold;
+  procedural["movement_prefetch_threshold"] =
+      settings.MovementPrefetchThreshold;
 }
 
 void WriteTuning(const WorldGenTuning &tuning, nlohmann::json &out)

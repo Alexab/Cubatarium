@@ -179,7 +179,8 @@ void UChunkStreamer::SetCollisionUrgentRing(glm::ivec3 feet_chunk, int radius_ch
   CollisionUrgentRadius = radius_chunks;
 }
 
-bool UChunkStreamer::RingPrerequisitesMet(glm::ivec3 coord)
+bool UChunkStreamer::RingPrerequisitesMet(glm::ivec3 coord,
+                                          bool allow_pending_inward)
 {
   const int ring = ChunkHorizontalDistance(coord);
   if (ring <= 1)
@@ -209,9 +210,9 @@ bool UChunkStreamer::RingPrerequisitesMet(glm::ivec3 coord)
     {
       return true;
     }
-    if (!RingGateEnabled)
+    if (allow_pending_inward || !RingGateEnabled)
     {
-      // Soft: also allow if inward disk load already queued.
+      // Soft: also allow if inward load already queued (prefetch deep corridor).
       return OnIsColumnPending && OnIsColumnPending(neighbor);
     }
     return false;
@@ -329,8 +330,21 @@ bool UChunkStreamer::AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord,
   return complete;
 }
 
-bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
+bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
+                                       bool *out_async_queued)
 {
+  if (out_async_queued)
+  {
+    *out_async_queued = false;
+  }
+  auto note_queued = [&]()
+  {
+    if (out_async_queued)
+    {
+      *out_async_queued = true;
+    }
+  };
+
   // UTerrain columns are generated at world Y=0..surface; only fill ground
   // layer chunks.
   if (chunkCoord.y != 0)
@@ -366,6 +380,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
     if (OnRequestAsyncChunk)
     {
       OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
+      note_queued();
     }
     return false;
   }
@@ -392,6 +407,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
     {
       const int priority = ChunkLoadPriorityFor(chunkCoord);
       OnRequestAsyncChunk(chunkCoord, priority);
+      note_queued();
       return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord) &&
              IsTerrainChunkCompleteCached(chunkCoord);
     }
@@ -405,6 +421,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
     if (AsyncGeneration && !forceSync && OnRequestAsyncChunk)
     {
       OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
+      note_queued();
       return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord) &&
              IsTerrainChunkCompleteCached(chunkCoord);
     }
@@ -419,6 +436,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync)
     InvalidateTerrainCompleteCache(chunkCoord);
     ColumnGenStates.erase(chunkCoord);
     OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
+    note_queued();
     return OnIsChunkCommitted && OnIsChunkCommitted(chunkCoord) &&
            IsTerrainChunkCompleteCached(chunkCoord);
   }
@@ -676,10 +694,19 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
       ++LastFrameStats.ringGateBlocked;
       continue;
     }
-    if (EnsureChunkLoaded(coord))
+    bool async_queued = false;
+    if (EnsureChunkLoaded(coord, false, &async_queued))
     {
       LastFrameStats.loadedCoords.push_back(coord);
       ++LastFrameStats.loadsThisFrame;
+      ++loadOps;
+    }
+    else if (async_queued)
+    {
+      // Count async requests toward the per-frame budget — previously only
+      // completed columns counted, so MaxLoadOps never tripped and telemetry
+      // showed stream_loads=0 while flying into empty space.
+      ++LastFrameStats.asyncQueuedThisFrame;
       ++loadOps;
     }
   }
@@ -721,42 +748,90 @@ void UChunkStreamer::PrefetchAhead(glm::ivec3 feet_chunk,
   const glm::vec3 forward = glm::normalize(view_forward_xz);
   const glm::ivec3 feet_ground(feet_chunk.x, 0, feet_chunk.z);
   LoadPriorityCenter = feet_ground;
-  constexpr int kMaxMovementPrefetchSteps = 2;
-  for (int step = 1; step <= kMaxMovementPrefetchSteps; ++step)
+  // Scale ahead depth with speed so flight does not outrun the fill bubble.
+  // Threshold: 2 steps; 1.5x: 4; 2.5x+: 6. Also queue ±1 lateral at each step.
+  int max_steps = 2;
+  if (movement_speed >= speed_threshold * 2.5f)
   {
-    const float ahead_blocks =
-        static_cast<float>(step * CHUNK_SIZE) + static_cast<float>(CHUNK_SIZE) * 0.5f;
-    const glm::vec2 ahead_xz(forward.x * ahead_blocks, forward.z * ahead_blocks);
-    const int cx = feet_ground.x +
-                   static_cast<int>(std::round(ahead_xz.x / static_cast<float>(CHUNK_SIZE)));
-    const int cz = feet_ground.z +
-                   static_cast<int>(std::round(ahead_xz.y / static_cast<float>(CHUNK_SIZE)));
+    max_steps = 6;
+  }
+  else if (movement_speed >= speed_threshold * 1.5f)
+  {
+    max_steps = 4;
+  }
+  max_steps = std::min(max_steps, std::max(2, VisualRenderDistance));
+
+  const glm::vec3 right(-forward.z, 0.0f, forward.x);
+  auto try_queue = [&](int cx, int cz)
+  {
     const glm::ivec3 coord(cx, 0, cz);
     const int dist = std::max(std::abs(coord.x - feet_ground.x),
                               std::abs(coord.z - feet_ground.z));
-    if (dist > VisualRenderDistance)
+    if (dist > VisualRenderDistance || dist < 1)
     {
-      continue;
+      return;
+    }
+    if (NearLoadRadius >= 0 && dist > NearLoadRadius)
+    {
+      return;
     }
     if (ProcedurallyGenerated.count(coord) &&
         IsTerrainChunkCompleteCached(coord))
     {
-      continue;
+      return;
     }
     if (OnIsChunkCommitted && OnIsChunkCommitted(coord))
     {
-      continue;
+      return;
     }
     if (OnIsColumnPending && OnIsColumnPending(coord))
     {
-      continue;
+      return;
     }
-    if (!RingPrerequisitesMet(coord))
+    // Prefetch may queue several steps ahead; pending inward is enough so the
+    // corridor does not wait a full commit per step.
+    if (!RingPrerequisitesMet(coord, /*allow_pending_inward=*/true))
     {
-      continue;
+      return;
     }
     OnRequestAsyncChunk(coord, ChunkLoadPriorityFor(coord));
     ++queued;
+  };
+
+  for (int step = 1; step <= max_steps; ++step)
+  {
+    const float ahead_blocks =
+        static_cast<float>(step * CHUNK_SIZE) +
+        static_cast<float>(CHUNK_SIZE) * 0.5f;
+    const float ax = forward.x * ahead_blocks;
+    const float az = forward.z * ahead_blocks;
+    const int cx = feet_ground.x +
+                   static_cast<int>(std::round(ax / static_cast<float>(CHUNK_SIZE)));
+    const int cz = feet_ground.z +
+                   static_cast<int>(std::round(az / static_cast<float>(CHUNK_SIZE)));
+    try_queue(cx, cz);
+    if (step >= 2 && glm::length(right) > 0.01f)
+    {
+      const float side = static_cast<float>(CHUNK_SIZE);
+      const int cx_l =
+          feet_ground.x +
+          static_cast<int>(std::round((ax - right.x * side) /
+                                      static_cast<float>(CHUNK_SIZE)));
+      const int cz_l =
+          feet_ground.z +
+          static_cast<int>(std::round((az - right.z * side) /
+                                      static_cast<float>(CHUNK_SIZE)));
+      const int cx_r =
+          feet_ground.x +
+          static_cast<int>(std::round((ax + right.x * side) /
+                                      static_cast<float>(CHUNK_SIZE)));
+      const int cz_r =
+          feet_ground.z +
+          static_cast<int>(std::round((az + right.z * side) /
+                                      static_cast<float>(CHUNK_SIZE)));
+      try_queue(cx_l, cz_l);
+      try_queue(cx_r, cz_r);
+    }
   }
   if (out_ops)
   {

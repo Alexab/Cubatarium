@@ -112,7 +112,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   UWorldMeshService &mesh_service = world.GetMeshService();
   const ProceduralSettings &procedural = world.GetProceduralSettings();
   const float movement_speed = world.GetLastMovementSpeed();
+  // Mesh-while-moving uses prefetch threshold so cruise flight drains Dirty.
   const bool moving =
+      movement_speed > procedural.MovementPrefetchThreshold;
+  const bool moving_fast =
       movement_speed > procedural.MovementSpeedBoostThreshold;
   const double last_frame_ms = world.GetLastMovementFrameMs();
 
@@ -204,10 +207,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
 
   if (moving && near_mesh_backlog)
   {
-    if (pending_dirty > 48 || pending_async > 16)
+    if (pending_dirty > 256 || pending_async > 24)
     {
-      mesh_drain = std::max(mesh_drain, 16);
-      mesh_schedule = std::max(mesh_schedule, 16);
+      // Flight into unmeshed terrain: Dirty often 500–1000; need a hard floor.
+      mesh_drain = std::max(mesh_drain, moving_fast ? 28 : 24);
+      mesh_schedule = std::max(mesh_schedule, moving_fast ? 24 : 20);
+    }
+    else if (pending_dirty > 48 || pending_async > 16)
+    {
+      mesh_drain = std::max(mesh_drain, moving_fast ? 20 : 16);
+      mesh_schedule = std::max(mesh_schedule, moving_fast ? 20 : 16);
     }
     else if (pending_dirty > 16 || pending_async > 8)
     {

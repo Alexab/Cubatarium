@@ -145,6 +145,7 @@ struct FrameNumbers
   int mesh_async{0};
   int dirty{0};
   int stream_loads{0};
+  int stream_async_queued{0};
   int stream_ring_blocked{0};
   int stream_near_skipped{0};
   int stream_load_candidates{0};
@@ -217,6 +218,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.mesh_async = md.asyncMeshInFlight;
   n.dirty = md.dirtyChunksPending;
   n.stream_loads = phys.StreamLoads;
+  n.stream_async_queued = phys.StreamAsyncQueued;
   n.stream_ring_blocked = phys.StreamRingBlocked;
   n.stream_near_skipped = phys.StreamNearSkipped;
   n.stream_load_candidates = phys.StreamLoadCandidates;
@@ -270,6 +272,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"gen_q\":" << n.gen_q << ",\"mesh_async\":" << n.mesh_async
           << ",\"dirty\":" << n.dirty
           << ",\"stream_loads\":" << n.stream_loads
+          << ",\"stream_async_queued\":" << n.stream_async_queued
           << ",\"stream_ring_blocked\":" << n.stream_ring_blocked
           << ",\"stream_near_skipped\":" << n.stream_near_skipped
           << ",\"stream_load_candidates\":" << n.stream_load_candidates

@@ -26,6 +26,7 @@ struct StreamingFrameStats
     loadsThisFrame = 0;
     unloadsThisFrame = 0;
     savesThisFrame = 0;
+    asyncQueuedThisFrame = 0;
     ringGateBlocked = 0;
     nearLoadSkipped = 0;
     loadCandidates = 0;
@@ -36,6 +37,8 @@ struct StreamingFrameStats
   int loadsThisFrame{0};
   int unloadsThisFrame{0};
   int savesThisFrame{0};
+  /// Async column requests issued this frame (EnsureChunkLoaded queued work).
+  int asyncQueuedThisFrame{0};
   /// Candidates that failed RingPrerequisitesMet this frame.
   int ringGateBlocked{0};
   /// Candidates skipped by NearLoadRadius clamp.
@@ -152,7 +155,8 @@ public:
   }
 
 private:
-  bool EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync = false);
+  bool EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync = false,
+                         bool *out_async_queued = nullptr);
   bool AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord, int max_sub_columns,
                                       bool only_empty_columns);
   bool IsTerrainChunkCompleteCached(glm::ivec3 groundCoord);
@@ -164,7 +168,11 @@ private:
                              const PlayerCapsule &cap) const;
   int ChunkHorizontalDistance(glm::ivec3 groundCoord) const;
   int ChunkLoadPriorityFor(glm::ivec3 groundCoord) const;
-  bool RingPrerequisitesMet(glm::ivec3 coord);
+  /// Inward ring gate. When allow_pending_inward, a queued/pending neighbor
+  /// counts as ready (used by PrefetchAhead so deep steps are not stuck
+  /// waiting for commit of the previous step).
+  bool RingPrerequisitesMet(glm::ivec3 coord,
+                            bool allow_pending_inward = false);
 
   UBlockWorld &World;
   UBlockRegistry &Registry;

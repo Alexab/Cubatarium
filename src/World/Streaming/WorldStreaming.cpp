@@ -370,9 +370,14 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     }
     if (Streamer)
     {
-      // Underfeet first: only load r<=1..2 so far focus ring does not steal
-      // gen/commit while the camera column is still dark/missing mesh.
-      if (underfeet_pressure)
+      // Underfeet first when standing: only load r<=1..2 so far focus does not
+      // steal gen/commit. While flying, never clamp — that carved stripe
+      // corridors (Update/Prefetch saw NearLoadRadius=2 from this tick).
+      if (moving_fast)
+      {
+        Streamer->SetNearLoadRadius(-1);
+      }
+      else if (underfeet_pressure)
       {
         Streamer->SetNearLoadRadius(2);
       }
@@ -443,6 +448,16 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     if (gen_backlog_total > 0 || completed_ready > 0)
     {
       chunk_budget.MaxChunkCommits = std::max(1, chunk_budget.MaxChunkCommits);
+    }
+    // Flying floor: near-hole caps above can leave MaxLoadOps=2 and the
+    // player outruns the fill bubble. Keep boost while the frame is healthy.
+    if (moving_fast && frame_ms <= kBadFrameMs)
+    {
+      chunk_budget.MaxLoadOps =
+          std::max(chunk_budget.MaxLoadOps, procedural.MaxLoadOpsPerFrameBoost);
+      chunk_budget.MaxChunkCommits = std::max(
+          chunk_budget.MaxChunkCommits,
+          std::min(3, procedural.MaxChunkCommitsPerFrameBoost));
     }
     ChunkScheduler->Tick(world.BlockWorld, chunk_budget.MaxChunkCommits,
                          chunk_budget.MaxLoadOps);
@@ -1188,15 +1203,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       unload_ops = std::min(unload_ops, 1);
     }
     Streamer->SetEffectiveUnloadOpsPerFrame(unload_ops);
-    {
-      const auto update_t0 = std::chrono::high_resolution_clock::now();
-      Streamer->Update(WorldPosToBlock(eye), eye, cap);
-      world.PhysicsTelemetryData.StreamerUpdateMs +=
-          std::chrono::duration<double, std::milli>(
-              std::chrono::high_resolution_clock::now() - update_t0)
-              .count();
-    }
 
+    // NearLoadRadius / MaxLoadOps must be set BEFORE Update — previously they
+    // were applied only for Prefetch, so the load loop always saw TickAsync's
+    // underfeet clamp (often 2) and stream_loads stayed ~0 while flying.
     const glm::ivec3 feet_chunk = UChunkManager::WorldToChunk(
         WorldPosToBlock(glm::vec3(eye.x, cap.feetY(eye) + 0.01f, eye.z)));
     const glm::ivec3 focus_horiz(feet_chunk.x, 0, feet_chunk.z);
@@ -1223,31 +1233,42 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         lastMovementSpeed >= procedural.MovementSpeedBoostThreshold;
     if (Streamer)
     {
-      // Flying over holes used to clamp NearLoadRadius=2 and kill PrefetchAhead,
-      // which carved permanent empty corridors along the flight path.
-      if (underfeet_need && !moving_fast)
+      if (moving_fast)
+      {
+        Streamer->SetNearLoadRadius(-1);
+        Streamer->SetMaxLoadOpsPerFrame(procedural.MaxLoadOpsPerFrameBoost);
+      }
+      else if (underfeet_need)
       {
         Streamer->SetNearLoadRadius(2);
-      }
-      else if (underfeet_need && moving_fast)
-      {
-        Streamer->SetNearLoadRadius(std::max(4, focus_radius));
+        Streamer->SetMaxLoadOpsPerFrame(world.MaxLoadOpsPerFrame);
       }
       else if (near_focus_holes)
       {
         Streamer->SetNearLoadRadius(focus_radius);
+        Streamer->SetMaxLoadOpsPerFrame(world.MaxLoadOpsPerFrame);
       }
       else
       {
         Streamer->SetNearLoadRadius(-1);
+        Streamer->SetMaxLoadOpsPerFrame(world.MaxLoadOpsPerFrame);
       }
     }
+    {
+      const auto update_t0 = std::chrono::high_resolution_clock::now();
+      Streamer->Update(WorldPosToBlock(eye), eye, cap);
+      world.PhysicsTelemetryData.StreamerUpdateMs +=
+          std::chrono::duration<double, std::milli>(
+              std::chrono::high_resolution_clock::now() - update_t0)
+              .count();
+    }
+
     const auto prefetch_t0 = std::chrono::high_resolution_clock::now();
     int prefetch_visual_ops = 0;
-    // PrefetchAhead itself no-ops below MovementSpeedBoostThreshold; keep it
-    // enabled during holes so the forward corridor can unlock (inward ring gate).
+    // Prefetch uses a lower gate than boost budgets — cruise flight (~2–4
+    // blocks/s) must still queue ahead columns.
     Streamer->PrefetchAhead(feet_chunk, forward, lastMovementSpeed,
-                            procedural.MovementSpeedBoostThreshold,
+                            procedural.MovementPrefetchThreshold,
                             &prefetch_visual_ops);
     int prefetch_keep_ops = 0;
     // Idle in a hole pocket: keep-shell used to wait until holes cleared, so
@@ -1280,6 +1301,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     if (const StreamingFrameStats *st = &Streamer->GetLastFrameStats())
     {
       world.PhysicsTelemetryData.StreamLoads = st->loadsThisFrame;
+      world.PhysicsTelemetryData.StreamAsyncQueued = st->asyncQueuedThisFrame;
       world.PhysicsTelemetryData.StreamRingBlocked = st->ringGateBlocked;
       world.PhysicsTelemetryData.StreamNearSkipped = st->nearLoadSkipped;
       world.PhysicsTelemetryData.StreamLoadCandidates = st->loadCandidates;
