@@ -1068,25 +1068,23 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
                 remesh_max, std::min(max_y, sea + CHUNK_SIZE * 2));
           }
         }
-        // Underfeet: never wait on any_sky. Place-block proves light is often
-        // already usable; DeferMeshUntilLit left slices invisible forever.
+        // Focus ring: never wait on any_sky to clear PendingLight. Waiting left
+        // pending_light~45–55 and holes=1 while columns sat on disk. Always
+        // enqueue relight, release the gate, and Dirty a narrow band; MarkRelit
+        // remeshes when light lands.
         if (pending)
         {
           Persistence->EnqueueTerrainColumnRelight(
               key.x * CHUNK_SIZE, key.y * CHUNK_SIZE, /*priority=*/true, 0,
               max_y);
-          const bool unblock = underfeet || any_sky;
-          if (unblock)
-          {
-            ClearPendingLightBeforeMesh(key);
-            SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
-            // Underfeet: camera column only (no 3×3 seamed). Neighbors get
-            // seams when their own light/MarkRelit runs.
-            MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-                ground, remesh_min, remesh_max, /*include_horizontal_neighbors=*/
-                !underfeet);
-            SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
-          }
+          ClearPendingLightBeforeMesh(key);
+          SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
+          // No 3×3 seamed flood — neighbors get seams on their own Recover /
+          // MarkRelit. Underfeet still uses the player∪sea remesh band above.
+          MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+              ground, remesh_min, remesh_max,
+              /*include_horizontal_neighbors=*/false);
+          SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
           ++repaired;
           continue;
         }

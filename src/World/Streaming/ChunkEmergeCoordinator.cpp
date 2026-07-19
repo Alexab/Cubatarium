@@ -125,13 +125,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   const glm::ivec3 focus_ground_horiz(focus_ground.x, 0, focus_ground.z);
   const int focus_radius = world.GetStreamingFocusRadius();
   mesh_service.SetMeshRebuildFocus(focus_ground_horiz, focus_radius);
-  // Camera column only: mesh without waiting on PendingLight. Full r≤1 soft
-  // defer flooded MeshAsync/scene and collapsed FPS; neighbors still defer.
+  // Focus ring: mesh without waiting on PendingLight. Camera-only soft-defer
+  // left neighbors invisible while pending_light stuck ~45–55. Remesh after
+  // light via MarkRelit / RecoverUnlitFocusMeshes. Fly drain caps below keep
+  // FPS from collapsing the way full r≤1 soft-defer did.
   mesh_service.SetDeferMeshUntilLitFn(
-      [&world, focus_ground_horiz](glm::ivec3 chunk_coord)
+      [&world, focus_ground_horiz, focus_radius](glm::ivec3 chunk_coord)
       {
-        if (chunk_coord.x == focus_ground_horiz.x &&
-            chunk_coord.z == focus_ground_horiz.z)
+        const int horiz =
+            std::max(std::abs(chunk_coord.x - focus_ground_horiz.x),
+                     std::abs(chunk_coord.z - focus_ground_horiz.z));
+        if (horiz <= focus_radius)
         {
           return false;
         }
@@ -318,6 +322,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   // re-queued (stuck black after premature light=0 mesh). Also: pending+sky
   // (neighbor lit) and missing GreedyCache after gate clear.
   {
+    const int pending_light_n =
+        static_cast<int>(world.GetPendingLightBeforeMeshCount());
     int recover_n = moving ? 3 : 6;
     if (missing_underfeet || pending_underfeet)
     {
@@ -326,6 +332,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
     else if (pending_near_light || missing_visible_mesh)
     {
       recover_n = moving ? 4 : 6;
+    }
+    // pending_light>~15 kept holes=1 forever — flush the focus gate harder.
+    if (pending_light_n > 15)
+    {
+      recover_n = std::max(recover_n, moving ? 10 : 16);
     }
     world.RecoverUnlitFocusMeshes(recover_n);
   }

@@ -698,12 +698,24 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   }
   // Standing in a dark focus pocket: pending_light stays ~30 while wall~14ms
   // because far remesh kept workers busy and bg drain stayed tiny.
+  const int pending_light_n =
+      static_cast<int>(world.GetPendingLightBeforeMeshCount());
   if (near_pending_light && frame_ms <= kBadFrameMs)
   {
-    const int pending_light_n =
-        static_cast<int>(world.GetPendingLightBeforeMeshCount());
     bg_budget =
         std::max(bg_budget, std::min(24, std::max(8, pending_light_n / 2)));
+  }
+  // Pressure valve: pending_light>~15 kept focus holes permanently open.
+  // Drain hard even on hitch frames so the gate cannot grow unboundedly.
+  if (pending_light_n > 15)
+  {
+    bg_budget =
+        std::max(bg_budget, frame_ms > kBadFrameMs ? 8 : 16);
+  }
+  else if (pending_light_n > 10)
+  {
+    bg_budget =
+        std::max(bg_budget, frame_ms > kBadFrameMs ? 4 : 10);
   }
   // Two-tier promote: underfeet first, then rest of focus — so far-in-focus
   // columns do not jump ahead of the camera column in the priority FIFO.
