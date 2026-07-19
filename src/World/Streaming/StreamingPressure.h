@@ -19,7 +19,8 @@ struct StreamingPressureInput
   int pending_light{0};
   int dirty{0};
   double frame_ms{0.0};
-  bool near_focus_holes{false};
+  /// Missing GreedyCache in focus only (not pending light).
+  bool visual_holes{false};
   bool underfeet_need{false};
 };
 
@@ -63,7 +64,8 @@ inline constexpr int kExitPendingRed = 15;
 inline constexpr int kExitDirtyYellow = 300;
 /// Was 600: Dirty often plateaus ~600–700 while holes remain, trapping Red
 /// forever and starving idle focus recover/mesh. Allow leave-Red sooner.
-inline constexpr int kExitDirtyRed = 800;
+/// Exit at 500 so plateaus ~850–950 cannot oscillate forever at the 800 edge.
+inline constexpr int kExitDirtyRed = 750;
 inline constexpr double kExitWallYellowMs = 16.0;
 inline constexpr double kExitWallRedMs = 28.0;
 inline constexpr int kLevelHoldFrames = 45;
@@ -143,7 +145,7 @@ EvaluateStreamingPressure(const StreamingPressureInput &in,
     state.deescalate_hold_frames = kLevelHoldFrames;
   }
 
-  if (in.near_focus_holes || in.underfeet_need)
+  if (in.visual_holes || in.underfeet_need)
   {
     state.focus_mode_hold_frames = kFocusModeHoldFrames;
   }
@@ -154,7 +156,7 @@ EvaluateStreamingPressure(const StreamingPressureInput &in,
 
   StreamingPressureCaps caps;
   caps.level = state.level;
-  caps.focus_pressure_mode = in.near_focus_holes || in.underfeet_need ||
+  caps.focus_pressure_mode = in.visual_holes || in.underfeet_need ||
                              state.focus_mode_hold_frames > 0;
 
   switch (state.level)
@@ -187,18 +189,8 @@ EvaluateStreamingPressure(const StreamingPressureInput &in,
     caps.bg_budget_floor = std::min(24, std::max(8, in.pending_light / 2));
     break;
   }
-  // Healthy focus-hole fill: do not clamp fly mesh caps. Uncap recover when
-  // focus still awaits first light — capped Recover left pending_light~70 at
-  // exit while wall was already ~10ms.
-  if ((in.near_focus_holes || in.underfeet_need) &&
-      in.frame_ms <= kEnterWallYellowMs)
-  {
-    caps.mesh_fly_cap = -1;
-    if (in.dirty <= 600 || in.pending_light > 10)
-    {
-      caps.recover_n_cap = -1;
-    }
-  }
+  // Do NOT uncap mesh/recover on holes — that defeated Red admission during
+  // crisis. Reserved focus mesh slots (MeshPriorityQueue) replace uncap.
   return caps;
 }
 

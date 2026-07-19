@@ -957,7 +957,94 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     int scheduled = 0;
     int outside_focus_scheduled = 0;
     int overflow_scheduled = 0;
+    int reserved_focus_scheduled = 0;
     constexpr int kMaxOutsideFocusPerFrame = 2;
+    constexpr int kReservedFocusMissingSlots = 6;
+
+    auto try_schedule = [&](auto it, bool count_outside, bool count_overflow,
+                            bool count_reserved) -> decltype(it)
+    {
+      if (AsyncBuilder->GetInFlightCount() >= max_pipeline)
+      {
+        return Dirty.end();
+      }
+      if (LastMeshSnapshotMs >= kSnapshotBudgetMs)
+      {
+        return Dirty.end();
+      }
+      if (AsyncBuilder->IsInFlight(*it))
+      {
+        return std::next(it);
+      }
+      if (!world.GetChunkManager().HasChunk(*it))
+      {
+        return std::next(it);
+      }
+      if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
+      {
+        return std::next(it);
+      }
+      const uint64_t source_revision = MeshRevisions.Current(*it);
+      const auto snap_t0 = std::chrono::high_resolution_clock::now();
+      ChunkMeshSnapshot snapshot =
+          ChunkMeshSnapshot::Capture(world, *it, source_revision);
+      LastMeshSnapshotMs += std::chrono::duration<double, std::milli>(
+                                std::chrono::high_resolution_clock::now() -
+                                snap_t0)
+                                .count();
+      ActiveMeshSourceRevision[*it] = snapshot.sourceRevision;
+      AsyncBuilder->Enqueue(std::move(snapshot), registry);
+      it = Dirty.RemoveAt(it);
+      ++scheduled;
+      ++stats.Scheduled;
+      if (count_overflow)
+      {
+        ++overflow_scheduled;
+      }
+      if (count_outside)
+      {
+        ++outside_focus_scheduled;
+      }
+      if (count_reserved)
+      {
+        ++reserved_focus_scheduled;
+      }
+      return it;
+    };
+
+    // Pass 1: reserved slots for focus missing (highest priority).
+    if (MeshFocusValid)
+    {
+      for (auto it = Dirty.begin();
+           it != Dirty.end() && scheduled < max_schedule_per_frame &&
+           reserved_focus_scheduled < kReservedFocusMissingSlots;)
+      {
+        const int dx = std::abs(it->x - MeshFocusGroundChunk.x);
+        const int dz = std::abs(it->z - MeshFocusGroundChunk.z);
+        const int horiz = std::max(dx, dz);
+        if (horiz > MeshFocusRadiusChunks ||
+            GreedyCache.find(*it) != GreedyCache.end())
+        {
+          ++it;
+          continue;
+        }
+        auto next = try_schedule(it, false, false, true);
+        if (next == Dirty.end() && it != Dirty.end() &&
+            AsyncBuilder->GetInFlightCount() >= max_pipeline)
+        {
+          break;
+        }
+        if (next == it)
+        {
+          ++it;
+        }
+        else
+        {
+          it = next;
+        }
+      }
+    }
+
     for (auto it = Dirty.begin();
          it != Dirty.end() && scheduled < max_schedule_per_frame;)
     {
@@ -981,8 +1068,6 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         const int dx = std::abs(it->x - MeshFocusGroundChunk.x);
         const int dz = std::abs(it->z - MeshFocusGroundChunk.z);
         const int horiz = std::max(dx, dz);
-        // Soft underfeet prefer: fill dist<=cap first; allow a few farther so
-        // PendingLight underfeet does not idle the pipeline.
         if (MeshScheduleMaxHorizontalDist >= 0 &&
             horiz > MeshScheduleMaxHorizontalDist)
         {
@@ -996,9 +1081,6 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         if (horiz > MeshFocusRadiusChunks)
         {
           outside_focus = true;
-          // When focus still has holes: prefer first-mesh outside, but always
-          // trickle lit remesh too — outside_cap=0 left MarkRelit Dirty stuck
-          // forever → permanent black ocean plains behind the bubble.
           int outside_cap = kMaxOutsideFocusPerFrame;
           if (StarveOutsideFocusMesh)
           {
@@ -1015,14 +1097,22 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (!world.GetChunkManager().HasChunk(*it))
       {
-        // Keep Dirty until the chunk exists. Seamed Dirty for neighbors that
-        // are not loaded yet used to RemoveAt → alternating empty strips
-        // (meshed column next to never-dirtied neighbor after it commits far).
+        // Keep briefly for in-flight commits; prune far ghosts so Dirty cannot
+        // plateau forever on never-loaded seamed neighbors.
+        if (MeshFocusValid)
+        {
+          const int dx = std::abs(it->x - MeshFocusGroundChunk.x);
+          const int dz = std::abs(it->z - MeshFocusGroundChunk.z);
+          const int horiz = std::max(dx, dz);
+          if (horiz > MeshFocusRadiusChunks + 2)
+          {
+            it = Dirty.RemoveAt(it);
+            continue;
+          }
+        }
         ++it;
         continue;
       }
-      // Do not capture first mesh (or remesh) while column awaits skylight —
-      // otherwise light=0 batches stick in GreedyCache as permanent black.
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
       {
         ++it;

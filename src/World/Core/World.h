@@ -866,6 +866,8 @@ public:
   bool IsColumnLitReady(glm::ivec3 ground) const;
   /// True when column may unlock outer streaming rings (LitReady+).
   bool IsColumnVisualReadyForRing(glm::ivec3 ground) const;
+  /// Authoritative mesh gate: LitReady+ or underfeet first-mesh preview.
+  bool MayMeshColumn(glm::ivec3 ground, bool underfeet_preview) const;
 
   void SetStepUpEnabled(bool enabled) { StepUpEnabled = enabled; }
   bool IsStepUpEnabled() const { return StepUpEnabled; }

@@ -3,12 +3,15 @@
 #include "App/Application.h"
 #include "App/Core.h"
 #include "App/Platform/DesktopPlatformWindow.h"
+#include "App/Platform/GlfwKeyCompat.h"
 #include "App/Platform/IUPlatformPaths.h"
 #include "App/Platform/IUPlatformWindow.h"
 #include "App/Platform/Log.h"
+#include "App/Settings/AppSettingsSnapshot.h"
 #include "App/Settings/AppState.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Gui/Core/GuiMetrics.h"
+#include "Render/Camera/Camera.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/TextRenderer.h"
 #include "Render/Engine/ViewEngine.h"
@@ -16,12 +19,15 @@
 #include "Render/Textures/TextureCube.h"
 #include "World/Core/World.h"
 #include "World/Core/WorldLoadDiagnostics.h"
+#include "World/Diagnostics/FramePerfMonitor.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Objects/ObjectLibrary.h"
 
 #include <chrono>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 namespace cutum
 {
@@ -288,6 +294,222 @@ int RunEnterGameSmoke(IUPlatformPaths &paths, int in_game_frames)
   catch (const std::exception &e)
   {
     std::cerr << "enter-game-smoke: exception: " << e.what() << std::endl;
+    return 1;
+  }
+}
+
+int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
+{
+  double in_game_seconds = options.InGameSeconds;
+  if (in_game_seconds < 5.0)
+  {
+    in_game_seconds = 5.0;
+  }
+  double safety_timeout = options.SafetyTimeoutSec;
+  if (safety_timeout < in_game_seconds + 30.0)
+  {
+    safety_timeout = in_game_seconds + 30.0;
+  }
+
+  UDesktopPlatformWindow window;
+  if (!window.InitializeHidden(1280, 720, "flight-sim"))
+  {
+    std::cerr << "flight-sim: failed to initialize window" << std::endl;
+    return 1;
+  }
+
+  try
+  {
+    IUPlatformPaths::SetGlobal(
+        std::shared_ptr<IUPlatformPaths>(&paths, [](IUPlatformPaths *) {}));
+
+    auto texture_base_instance = std::make_shared<UTextureBaseStorage>();
+    auto texture_cube_instance =
+        std::make_shared<UTextureCubeStorage>(texture_base_instance);
+    auto block_definitions = std::make_shared<UBlockDefinitionStorage>();
+    auto object_library = std::make_shared<UObjectLibrary>();
+    auto view_engine = std::make_shared<UViewEngine>();
+    auto world = std::make_shared<UWorld>(texture_cube_instance, view_engine);
+    auto text_renderer = std::make_shared<UTextRenderer>();
+    if (!text_renderer->Initialize(16))
+    {
+      std::cerr << "flight-sim: text renderer init failed" << std::endl;
+      return 1;
+    }
+    text_renderer->SetWindowSize(1280, 720);
+
+    auto geometry_engine = std::make_shared<UGeometryEngine>(
+        world, texture_base_instance, texture_cube_instance, text_renderer);
+    if (!geometry_engine->InitEngine())
+    {
+      std::cerr << "flight-sim: geometry engine init failed" << std::endl;
+      return 1;
+    }
+
+    auto core = std::make_shared<UCore>(
+        texture_base_instance, texture_cube_instance, object_library, world,
+        geometry_engine, view_engine);
+    geometry_engine->SetGameContent(core.get());
+    texture_cube_instance->SetBlockDefinitions(block_definitions);
+    world->SetBlockDefinitionStorage(block_definitions);
+
+    window.SetInstances(core, world, geometry_engine, view_engine);
+    window.SetTextRenderer(text_renderer);
+
+    auto application = std::make_shared<UApplication>(
+        core, world, geometry_engine, view_engine, text_renderer,
+        geometry_engine->GetShaderManager(), block_definitions);
+    window.SetApplication(application);
+
+    application->Startup(paths.ResolveWritable("config.json").string());
+    if (!application->StartupSucceeded())
+    {
+      std::cerr << "flight-sim: startup failed" << std::endl;
+      return 1;
+    }
+
+    if (!options.WorldName.empty())
+    {
+      AppSettingsSnapshot settings = core->GetAppSettings();
+      settings.DefaultWorld = options.WorldName;
+      core->ApplyAppSettings(settings);
+    }
+
+    UFramePerfMonitor::EnsureSession();
+    application->ScheduleEnterGame();
+
+    const auto started = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point ingame_started{};
+    bool ingame_clock_started = false;
+    bool loading_seen = false;
+    bool autopilot_armed = false;
+    int ingame_frames_seen = 0;
+
+    window.SetStopPredicate(
+        [&]()
+        {
+          const auto now = std::chrono::steady_clock::now();
+          const double elapsed_sec =
+              std::chrono::duration<double>(now - started).count();
+          if (elapsed_sec > safety_timeout)
+          {
+            return true;
+          }
+          if (application->GetState() == AppState::Loading)
+          {
+            loading_seen = true;
+          }
+          if (application->GetState() == AppState::InGame)
+          {
+            ++ingame_frames_seen;
+            if (!ingame_clock_started)
+            {
+              ingame_started = now;
+              ingame_clock_started = true;
+            }
+            if (!autopilot_armed && (options.Fly || options.HoldForward))
+            {
+              if (auto camera = world->GetCurrentUserCamera())
+              {
+                if (options.Fly)
+                {
+                  camera->SetFreeMove(true);
+                }
+                if (options.HoldForward)
+                {
+                  camera->UpdateKeyStatus(GLFW_KEY_W, true);
+                }
+                autopilot_armed = true;
+                std::cout << "flight-sim: autopilot armed fly="
+                          << (options.Fly ? 1 : 0)
+                          << " hold_forward=" << (options.HoldForward ? 1 : 0)
+                          << std::endl;
+              }
+            }
+            else if (autopilot_armed && options.HoldForward)
+            {
+              // Re-assert W each frame (input router may clear keys).
+              if (auto camera = world->GetCurrentUserCamera())
+              {
+                camera->UpdateKeyStatus(GLFW_KEY_W, true);
+              }
+            }
+            const double ingame_sec =
+                std::chrono::duration<double>(now - ingame_started).count();
+            return ingame_sec >= in_game_seconds;
+          }
+          return false;
+        });
+
+    window.Run();
+
+    world->PrepareForShutdown();
+    UFramePerfMonitor::Shutdown();
+
+    const std::string perf_path = UFramePerfMonitor::GetLastSessionPath();
+    const std::string world_name = core->GetAppSettings().DefaultWorld;
+    int exit_code = 0;
+    if (!loading_seen)
+    {
+      std::cerr << "flight-sim: FAIL loading screen never shown" << std::endl;
+      exit_code = 1;
+    }
+    else if (!ingame_clock_started || ingame_frames_seen < 30)
+    {
+      std::cerr << "flight-sim: FAIL insufficient in-game frames="
+                << ingame_frames_seen << std::endl;
+      exit_code = 1;
+    }
+
+    if (!options.PerfOutPath.empty() && !perf_path.empty())
+    {
+      std::error_code ec;
+      std::filesystem::create_directories(
+          std::filesystem::path(options.PerfOutPath).parent_path(), ec);
+      std::filesystem::copy_file(
+          perf_path, options.PerfOutPath,
+          std::filesystem::copy_options::overwrite_existing, ec);
+      if (ec)
+      {
+        std::cerr << "flight-sim: warn copy perf failed: " << ec.message()
+                  << std::endl;
+      }
+    }
+
+    const std::filesystem::path report_path =
+        options.ReportPath.empty()
+            ? (GetExecutableDirectory() / "flight_sim_report.json")
+            : std::filesystem::path(options.ReportPath);
+    {
+      std::error_code ec;
+      std::filesystem::create_directories(report_path.parent_path(), ec);
+      std::ofstream report(report_path);
+      if (report)
+      {
+        report << "{\n"
+               << "  \"exit_code\": " << exit_code << ",\n"
+               << "  \"loading_seen\": " << (loading_seen ? "true" : "false")
+               << ",\n"
+               << "  \"ingame_frames\": " << ingame_frames_seen << ",\n"
+               << "  \"ingame_seconds_requested\": " << in_game_seconds << ",\n"
+               << "  \"world\": \"" << world_name << "\",\n"
+               << "  \"autopilot_armed\": "
+               << (autopilot_armed ? "true" : "false") << ",\n"
+               << "  \"perf_jsonl\": \"" << perf_path << "\",\n"
+               << "  \"analyze\": \"run tools/flight_sim_analyze.py on perf\"\n"
+               << "}\n";
+      }
+    }
+
+    std::cout << "flight-sim: done exit=" << exit_code
+              << " world=" << world_name << " frames=" << ingame_frames_seen
+              << " perf=" << perf_path << " report=" << report_path.string()
+              << std::endl;
+    return exit_code;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "flight-sim: exception: " << e.what() << std::endl;
     return 1;
   }
 }

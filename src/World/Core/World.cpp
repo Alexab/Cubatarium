@@ -844,15 +844,16 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         dirty_min = std::max(0, band.min_y - 1);
         dirty_max = std::min(column_max_y, band.max_y + 1);
       }
+      const bool seam_ok = MeshService->GetDirtyCount() < 350;
       if (priority_mesh)
       {
         MeshService->MarkTerrainChunkMeshDirtySeamedPriority(ground, dirty_min,
-                                                             dirty_max, true);
+                                                             dirty_max, seam_ok);
       }
       else
       {
         MeshService->MarkTerrainChunkMeshDirtySeamed(ground, dirty_min,
-                                                     dirty_max, true);
+                                                     dirty_max, seam_ok);
       }
       SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
       continue;
@@ -860,6 +861,10 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     // Neighbor: skip Dirty while still awaiting own first light.
     if (PendingLightBeforeMesh.count(key) != 0 ||
         !IsColumnLitReady(ground))
+    {
+      continue;
+    }
+    if (MeshService->GetDirtyCount() >= 350)
     {
       continue;
     }
@@ -1204,6 +1209,36 @@ bool UWorld::IsColumnVisualReadyForRing(glm::ivec3 ground) const
 {
   // Outer rings unlock once the column has left the first-light gate.
   return IsColumnLitReady(ground);
+}
+
+bool UWorld::MayMeshColumn(glm::ivec3 ground, bool underfeet_preview) const
+{
+  if (ground.y != 0)
+  {
+    ground.y = 0;
+  }
+  const ColumnEmergeState state = GetColumnEmergeState(ground);
+  switch (state)
+  {
+  case ColumnEmergeState::LitReady:
+  case ColumnEmergeState::Meshing:
+  case ColumnEmergeState::RenderReady:
+    return true;
+  default:
+    break;
+  }
+  // Underfeet preview: allow first mesh while still Lighting (never remesh).
+  if (underfeet_preview && IsPendingLightBeforeMesh(glm::ivec2(ground.x, ground.z)))
+  {
+    return true;
+  }
+  if (IsPendingLightBeforeMesh(glm::ivec2(ground.x, ground.z)))
+  {
+    return false;
+  }
+  // No pending gate and empty/unknown state: allow (legacy columns).
+  return state == ColumnEmergeState::Empty ||
+         state == ColumnEmergeState::VoxelsReady;
 }
 
 bool UWorld::HasPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,

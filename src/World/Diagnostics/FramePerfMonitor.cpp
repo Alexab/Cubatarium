@@ -156,6 +156,10 @@ struct FrameNumbers
   int focus_cz{0};
   int underfeet_need{0};
   int near_focus_holes{0};
+  int visual_holes{0};
+  int light_debt{0};
+  int focus_missing_mesh{0};
+  int focus_dark_mesh{0};
   double max_wall_ms{0.0};
   double max_stream_ms{0.0};
   double max_mesh_emerge_ms{0.0};
@@ -231,6 +235,10 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.focus_cz = phys.FocusChunkZ;
   n.underfeet_need = phys.UnderfeetNeed;
   n.near_focus_holes = phys.NearFocusHoles;
+  n.visual_holes = phys.VisualHoles;
+  n.light_debt = phys.LightDebt;
+  n.focus_missing_mesh = phys.FocusMissingMesh;
+  n.focus_dark_mesh = phys.FocusDarkMesh;
   return n;
 }
 
@@ -286,6 +294,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"focus_cx\":" << n.focus_cx << ",\"focus_cz\":" << n.focus_cz
           << ",\"underfeet_need\":" << n.underfeet_need
           << ",\"near_focus_holes\":" << n.near_focus_holes
+          << ",\"visual_holes\":" << n.visual_holes
+          << ",\"light_debt\":" << n.light_debt
+          << ",\"focus_missing_mesh\":" << n.focus_missing_mesh
+          << ",\"focus_dark_mesh\":" << n.focus_dark_mesh
           << ",\"max_wall_ms\":" << n.max_wall_ms
           << ",\"max_stream_ms\":" << n.max_stream_ms
           << ",\"max_mesh_emerge_ms\":" << n.max_mesh_emerge_ms
@@ -479,6 +491,13 @@ void UFramePerfMonitor::Shutdown()
     s.Jsonl.close();
   }
   s.Opened = false;
+}
+
+std::string UFramePerfMonitor::GetLastSessionPath()
+{
+  Session &s = GetSession();
+  std::lock_guard<std::mutex> lock(s.Mutex);
+  return s.Path;
 }
 
 } // namespace cutum

@@ -65,7 +65,16 @@ struct PhysicsTelemetry
   int FocusChunkX{0};
   int FocusChunkZ{0};
   int UnderfeetNeed{0};
+  /// Legacy OR latch (missing mesh OR pending light) — prefer VisualHoles.
   int NearFocusHoles{0};
+  /// Missing GreedyCache in focus (visual holes only).
+  int VisualHoles{0};
+  /// PendingLightBeforeMesh in focus (light debt, not visual holes).
+  int LightDebt{0};
+  /// Count of focus columns with missing mesh (0..N).
+  int FocusMissingMesh{0};
+  /// Count of focus columns with mesh but no sky light sample.
+  int FocusDarkMesh{0};
   /// 0=Green, 1=Yellow, 2=Red (StreamingPressureLevel).
   int StreamPressure{0};
   /// PendingLightBeforeMesh count inside focus radius (vs global PendingLightCount).

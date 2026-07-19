@@ -126,18 +126,28 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const glm::ivec3 focus_ground_horiz(focus_ground.x, 0, focus_ground.z);
   const int focus_radius = world.GetStreamingFocusRadius();
   mesh_service.SetMeshRebuildFocus(focus_ground_horiz, focus_radius);
-  // Soft-defer: remesh of existing mesh while PendingLight waits for MarkRelit
-  // (avoids rebaking light=0). First missing mesh always allowed — empty holes
-  // are worse than briefly-dark; lit remesh must land via starve trickle.
+  // Soft-defer via ColumnEmerge MayMesh: remesh while PendingLight deferred;
+  // first mesh only LitReady (underfeet r<=1 preview allowed).
   mesh_service.SetDeferMeshUntilLitFn(
-      [&world, &mesh_service](glm::ivec3 chunk_coord)
+      [&world, &mesh_service, focus_ground_horiz](glm::ivec3 chunk_coord)
       {
-        if (!world.IsPendingLightBeforeMesh(
+        const glm::ivec3 ground(chunk_coord.x, 0, chunk_coord.z);
+        const int horiz =
+            std::max(std::abs(chunk_coord.x - focus_ground_horiz.x),
+                     std::abs(chunk_coord.z - focus_ground_horiz.z));
+        const bool underfeet = horiz <= 1;
+        if (mesh_service.HasGreedyMesh(chunk_coord) &&
+            world.IsPendingLightBeforeMesh(
                 glm::ivec2(chunk_coord.x, chunk_coord.z)))
         {
-          return false;
+          // Never rebake existing mesh at light=0.
+          return true;
         }
-        return mesh_service.HasGreedyMesh(chunk_coord);
+        if (!mesh_service.HasGreedyMesh(chunk_coord))
+        {
+          return !world.MayMeshColumn(ground, underfeet);
+        }
+        return false;
       });
 
   const bool missing_visible_mesh =
@@ -149,7 +159,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       missing_visible_mesh;
   const bool pending_near_light =
       world.HasPendingLightBeforeMeshNear(focus_ground_horiz, focus_radius);
-  const bool near_focus_holes = missing_visible_mesh || pending_near_light;
+  // visual_holes = missing mesh only; near_focus_holes kept for legacy paths
+  // that still want light-debt urgency for relight (not starve).
+  const bool visual_holes = missing_visible_mesh;
+  const bool near_focus_holes = visual_holes || pending_near_light;
   const bool missing_underfeet =
       mesh_service.HasMissingGreedyMeshInHorizontalRadius(
           world.GetBlockWorld(), focus_ground_horiz, /*radius=*/1);
@@ -173,10 +186,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       }
       else if (procedural.FillWater &&
                (std::abs(preferred_cy - sea_cy) <= 3 ||
-                (near_focus_holes && preferred_cy > sea_cy)))
+                (visual_holes && preferred_cy > sea_cy)))
       {
-        // Near sea, or flying with focus holes: prefer water surface cy so
-        // transverse blank-water strips fill before higher flight slices.
+        // Near sea, or flying with visual holes: prefer water surface cy.
         preferred_cy = sea_cy;
       }
     }
@@ -191,8 +203,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Including pending_light / focus_pressure_mode latched starve for the whole
   // flight (pending stays 30–60) and permanently blocked trail/sea Dirty →
   // transverse blank and black strips with water already in RAM.
-  mesh_service.SetStarveOutsideFocusMesh(missing_visible_mesh ||
-                                         missing_underfeet);
+  mesh_service.SetStarveOutsideFocusMesh(visual_holes || missing_underfeet);
   // Schedule ring: pending_underfeet alone must NOT clamp to r=1 — that latched
   // MaxHorizontalDist during flight while PendingLight stayed high and carved
   // transverse "roads" of missing GreedyCache (columns loaded, mesh starved).
@@ -202,23 +213,34 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_service.SetMeshScheduleMaxHorizontalDist(1);
     mesh_service.SetMeshScheduleOverflowPerFrame(0);
   }
-  else if (missing_underfeet || near_focus_holes || pressure.focus_pressure_mode ||
-           pending_underfeet)
+  else if (missing_underfeet || visual_holes || pressure.focus_pressure_mode)
   {
-    // Flight / focus holes / pending feet: whole focus so lateral columns mesh.
+    // Flight / visual holes: whole focus so lateral columns mesh.
     mesh_service.SetMeshScheduleMaxHorizontalDist(focus_radius);
     const int overflow =
         missing_underfeet ? (moving_fast ? 2 : 1)
-        // Flight with holes: trickle trail/sea first-mesh outside focus ring
-        // (was 1/0 — Dirty sat forever behind the bubble).
-        : missing_visible_mesh ? (moving ? 3 : 1)
-                               : (moving ? 2 : 1);
+        : visual_holes ? (moving ? 3 : 1)
+                       : (moving ? 2 : 1);
     mesh_service.SetMeshScheduleOverflowPerFrame(overflow);
   }
   else
   {
     mesh_service.SetMeshScheduleMaxHorizontalDist(-1);
     mesh_service.SetMeshScheduleOverflowPerFrame(0);
+  }
+
+  // Healthy flight with no visual holes: flush Dirty so pressure can leave Red
+  // (Dirty plateaus ~700 trapped Red when exit required dirty<=500).
+  if (!visual_holes && !missing_underfeet && pending_dirty > 200 &&
+      last_frame_ms <= 28.0)
+  {
+    mesh_drain = std::max(mesh_drain, moving ? 16 : 22);
+    mesh_schedule = std::max(mesh_schedule, moving ? 16 : 22);
+  }
+  if (!visual_holes && pending_dirty > 400 && last_frame_ms <= 20.0)
+  {
+    mesh_drain = std::max(mesh_drain, 24);
+    mesh_schedule = std::max(mesh_schedule, 24);
   }
 
   if (moving && near_mesh_backlog)
@@ -319,7 +341,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
 
   // Flight FPS guard: later floors (underfeet/holes/Dirty) can push drain to
   // 20–24; clamp while moving so emerge+draw do not own the frame.
-  if (moving)
+  // Exception: Dirty flush with no visual holes may exceed fly_cap.
+  if (moving && (visual_holes || missing_underfeet || pending_dirty <= 400))
   {
     int fly_cap = last_frame_ms > 20.0 ? 10 : 12;
     fly_cap = ApplyPressureCap(fly_cap, pressure.mesh_fly_cap);
@@ -372,7 +395,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       recover_n = std::min(recover_n, moving ? 2 : 3);
     }
     recover_n = ApplyPressureCap(recover_n, pressure.recover_n_cap);
-    world.RecoverUnlitFocusMeshes(recover_n);
+    // Event-driven remesh is MarkRelit; Recover is a low-frequency watchdog.
+    static int recover_watchdog_frames = 0;
+    ++recover_watchdog_frames;
+    const bool recover_now =
+        visual_holes || missing_underfeet || recover_watchdog_frames >= 8;
+    if (recover_now && recover_n > 0)
+    {
+      world.RecoverUnlitFocusMeshes(recover_n);
+      recover_watchdog_frames = 0;
+    }
   }
 
   // Sync-rebuild missing solid slices: underfeet always; idle focus holes too

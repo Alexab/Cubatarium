@@ -452,10 +452,17 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
             std::min(settings.MaxHeight, focus_block.y + CHUNK_SIZE * 2));
       }
       world.NotePendingLightBeforeMesh(ground_coord, dirty_min, dirty_max);
-      // Always Dirty first mesh (near priority). Skipping far left empty
-      // columns until MarkRelit — transverse strips on disk-load worlds.
-      world.MarkTerrainChunkMeshDirtySeamed(ground_coord, dirty_min, dirty_max,
-                                            near_focus);
+      // Underfeet preview only; other columns wait MarkRelit (FSM gate).
+      const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
+      const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
+      const int horiz =
+          std::max(std::abs(ground_coord.x - focus_chunk.x),
+                   std::abs(ground_coord.z - focus_chunk.z));
+      if (horiz <= 1)
+      {
+        world.MarkTerrainChunkMeshDirtySeamed(ground_coord, dirty_min, dirty_max,
+                                              false);
+      }
     }
     else
     {
