@@ -1236,7 +1236,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       if (moving_fast)
       {
         Streamer->SetNearLoadRadius(-1);
-        Streamer->SetMaxLoadOpsPerFrame(procedural.MaxLoadOpsPerFrameBoost);
+        // Hitch: keep fill alive but drop boost so load+mesh do not stack.
+        Streamer->SetMaxLoadOpsPerFrame(
+            frame_ms > 20.0 ? world.MaxLoadOpsPerFrame
+                           : procedural.MaxLoadOpsPerFrameBoost);
       }
       else if (underfeet_need)
       {
@@ -1265,11 +1268,14 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
 
     const auto prefetch_t0 = std::chrono::high_resolution_clock::now();
     int prefetch_visual_ops = 0;
-    // Prefetch uses a lower gate than boost budgets — cruise flight (~2–4
-    // blocks/s) must still queue ahead columns.
-    Streamer->PrefetchAhead(feet_chunk, forward, lastMovementSpeed,
-                            procedural.MovementPrefetchThreshold,
-                            &prefetch_visual_ops);
+    // Prefetch at cruise speed, but skip when the previous frame already
+    // hitch'd — Update still loads; deep ahead would only pile GenQ/Dirty.
+    if (frame_ms <= 20.0)
+    {
+      Streamer->PrefetchAhead(feet_chunk, forward, lastMovementSpeed,
+                              procedural.MovementPrefetchThreshold,
+                              &prefetch_visual_ops);
+    }
     int prefetch_keep_ops = 0;
     // Idle in a hole pocket: keep-shell used to wait until holes cleared, so
     // standing at 100 FPS never requested the missing ring.

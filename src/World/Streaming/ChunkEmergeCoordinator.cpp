@@ -125,9 +125,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   const glm::ivec3 focus_ground_horiz(focus_ground.x, 0, focus_ground.z);
   const int focus_radius = world.GetStreamingFocusRadius();
   mesh_service.SetMeshRebuildFocus(focus_ground_horiz, focus_radius);
+  // Underfeet (horiz≤1): never defer on PendingLight — disk/RAM columns stayed
+  // invisible while Dirty~900 and pending_light~30 ate the schedule. Remesh
+  // after light via MarkRelit / RecoverUnlitFocusMeshes.
   mesh_service.SetDeferMeshUntilLitFn(
-      [&world](glm::ivec3 chunk_coord)
+      [&world, focus_ground_horiz](glm::ivec3 chunk_coord)
       {
+        const int horiz =
+            std::max(std::abs(chunk_coord.x - focus_ground_horiz.x),
+                     std::abs(chunk_coord.z - focus_ground_horiz.z));
+        if (horiz <= 1)
+        {
+          return false;
+        }
         return world.IsPendingLightBeforeMesh(
             glm::ivec2(chunk_coord.x, chunk_coord.z));
       });
@@ -184,20 +194,23 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   // Prefer near mesh work whenever the focus ring has holes — not only
   // underfeet. Otherwise standing in a lit-but-unmeshed / pending-light pocket
   // leaves MaxHorizontalDist unlimited and far Dirty starves the fill.
-  if (missing_underfeet && !pending_underfeet)
+  // Missing feet mesh: zero overflow — pending_underfeet used to keep overflow
+  // 4–6 and far Dirty (~900) starved the camera column forever.
+  if (missing_underfeet)
   {
     mesh_service.SetMeshScheduleMaxHorizontalDist(1);
     mesh_service.SetMeshScheduleOverflowPerFrame(0);
   }
-  else if (underfeet_need)
+  else if (pending_underfeet)
   {
     mesh_service.SetMeshScheduleMaxHorizontalDist(1);
-    mesh_service.SetMeshScheduleOverflowPerFrame(moving ? 6 : 4);
+    mesh_service.SetMeshScheduleOverflowPerFrame(moving ? 2 : 1);
   }
   else if (near_focus_holes)
   {
     mesh_service.SetMeshScheduleMaxHorizontalDist(focus_radius);
-    mesh_service.SetMeshScheduleOverflowPerFrame(moving ? 4 : 2);
+    mesh_service.SetMeshScheduleOverflowPerFrame(
+        missing_visible_mesh ? 0 : (moving ? 2 : 1));
   }
   else
   {
@@ -207,16 +220,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
 
   if (moving && near_mesh_backlog)
   {
-    if (pending_dirty > 256 || pending_async > 24)
+    // Cap fly drain hard — 24–28 collapsed FPS (~3) while Dirty stayed >1000.
+    // Prefer steady 12–16 so mesh/scene can breathe; idle still flushes harder.
+    if (pending_dirty > 48 || pending_async > 16)
     {
-      // Flight into unmeshed terrain: Dirty often 500–1000; need a hard floor.
-      mesh_drain = std::max(mesh_drain, moving_fast ? 28 : 24);
-      mesh_schedule = std::max(mesh_schedule, moving_fast ? 24 : 20);
-    }
-    else if (pending_dirty > 48 || pending_async > 16)
-    {
-      mesh_drain = std::max(mesh_drain, moving_fast ? 20 : 16);
-      mesh_schedule = std::max(mesh_schedule, moving_fast ? 20 : 16);
+      mesh_drain = std::max(mesh_drain, moving_fast ? 16 : 14);
+      mesh_schedule = std::max(mesh_schedule, moving_fast ? 14 : 12);
     }
     else if (pending_dirty > 16 || pending_async > 8)
     {
@@ -280,7 +289,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
     }
     else if (underfeet_need)
     {
-      mesh_schedule = std::max(mesh_schedule, dirty_floor);
+      // High drain to finish in-flight underfeet; do not ramp schedule off
+      // global Dirty — that re-fed far overflow before feet were visible.
+      mesh_schedule = std::max(mesh_schedule, missing_underfeet ? 8 : 12);
     }
     else
     {
@@ -296,14 +307,26 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
         pending_dirty < 16 ? 64 : (pending_dirty < 48 ? 32 : 24);
     world.FlushPendingRelightMeshColumns(flush_n);
   }
+
+  // Flight FPS guard: later floors (underfeet/holes/Dirty) can push drain to
+  // 20–24; clamp while moving so emerge+draw do not own the frame.
+  // Missing underfeet: keep up to 16 so the camera column can appear.
+  if (moving)
+  {
+    const int fly_cap =
+        missing_underfeet ? 16 : (last_frame_ms > 20.0 ? 12 : 16);
+    mesh_drain = std::min(mesh_drain, fly_cap);
+    mesh_schedule = std::min(mesh_schedule, fly_cap);
+  }
+
   // Already-meshed focus columns with sky=0 never remesh unless relight is
   // re-queued (stuck black after premature light=0 mesh). Also: pending+sky
   // (neighbor lit) and missing GreedyCache after gate clear.
   {
     int recover_n = moving ? 4 : 6;
-    if (underfeet_need)
+    if (missing_underfeet || pending_underfeet)
     {
-      recover_n = moving ? 8 : 12;
+      recover_n = moving ? 12 : 16;
     }
     else if (pending_near_light || missing_visible_mesh)
     {
@@ -383,10 +406,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
             break;
           }
           const glm::ivec3 coord(focus_ground.x + dx, cy, focus_ground.z + dz);
-          if (world.IsPendingLightBeforeMesh(glm::ivec2(coord.x, coord.z)))
-          {
-            continue;
-          }
+          // PendingLight no longer blocks underfeet immediate rebuild — same
+          // policy as DeferMeshUntilLit (horiz≤1). Light remesh follows.
           if (mesh_service.HasGreedyMesh(coord))
           {
             continue;
