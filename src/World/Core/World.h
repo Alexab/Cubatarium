@@ -847,6 +847,10 @@ public:
   bool IsPendingLightBeforeMesh(glm::ivec2 ground_xz) const;
   bool HasPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,
                                      int radius_chunks) const;
+  size_t GetPendingLightBeforeMeshCount() const
+  {
+    return PendingLightBeforeMesh.size();
+  }
   /// Re-queue priority relight for PendingLightBeforeMesh columns under focus.
   int PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,
                                       int radius_chunks);

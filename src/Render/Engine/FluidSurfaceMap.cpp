@@ -122,6 +122,26 @@ int ChunkUpdateBudget(int pending)
   return UFluidSurfaceMap::kMaxChunkUpdatesBurst;
 }
 
+int NearFluidDirtyCount(const std::unordered_set<glm::ivec3, IVec3Hash> &dirty,
+                        int cx, int cz)
+{
+  int near = 0;
+  for (const glm::ivec3 &ground : dirty)
+  {
+    if (ChebyshevChunkDist(ground, cx, cz) <= 1)
+    {
+      ++near;
+    }
+  }
+  return near;
+}
+
+int FluidDirtyBudget(int pending, int near_pending)
+{
+  // Always cover the underfeet water ring in one frame when possible (3x3).
+  return std::max(ChunkUpdateBudget(pending), std::min(near_pending, 9));
+}
+
 } // namespace
 
 void UFluidSurfaceMap::EnsureGpuResources()
@@ -252,15 +272,37 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
       }
     }
     SortGroundChunksNearFirst(dirtyInWindow, cx, cz);
+    // Underfeet/water ring (r<=1) before far columns so surface does not
+    // trail opaque terrain by many frames when dirty backlog is large.
     int processed = 0;
+    int left = budget;
     for (const glm::ivec3 &groundChunk : dirtyInWindow)
     {
-      if (processed >= budget)
+      if (left <= 0)
       {
         break;
       }
+      if (ChebyshevChunkDist(groundChunk, cx, cz) > 1)
+      {
+        continue;
+      }
       patch_one(groundChunk, scanHintY);
       ++processed;
+      --left;
+    }
+    for (const glm::ivec3 &groundChunk : dirtyInWindow)
+    {
+      if (left <= 0)
+      {
+        break;
+      }
+      if (ChebyshevChunkDist(groundChunk, cx, cz) <= 1)
+      {
+        continue;
+      }
+      patch_one(groundChunk, scanHintY);
+      ++processed;
+      --left;
     }
     return processed;
   };
@@ -271,7 +313,9 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
   {
     const int pending = static_cast<int>(PendingRebuildGroundChunks.size()) +
                         static_cast<int>(fluidSurfaceDirty.size());
-    const int budget = ChunkUpdateBudget(pending);
+    const int near_dirty =
+        NearFluidDirtyCount(fluidSurfaceDirty, cx, cz);
+    const int budget = FluidDirtyBudget(pending, near_dirty);
     int processed = drain_pending_rebuild(budget);
     // Near dirty must not wait for the entire window rebuild to finish.
     processed += drain_dirty_in_window(budget - processed);
@@ -295,8 +339,10 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
   {
     if (!fluidSurfaceDirty.empty())
     {
-      const int budget = ChunkUpdateBudget(
-          static_cast<int>(fluidSurfaceDirty.size()));
+      const int near_dirty =
+          NearFluidDirtyCount(fluidSurfaceDirty, cx, cz);
+      const int budget = FluidDirtyBudget(
+          static_cast<int>(fluidSurfaceDirty.size()), near_dirty);
       const int processed = drain_dirty_in_window(budget);
       LastFrameStats.DirtyChunksProcessed = processed;
       LastCameraBlockXZ = glm::ivec2(cameraBlockXZ.x, cameraBlockXZ.z);

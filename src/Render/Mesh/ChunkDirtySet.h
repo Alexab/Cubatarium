@@ -11,6 +11,7 @@ namespace cutum
 {
 
 /// Deduped queue of chunk coords pending mesh rebuild (used by UChunkMeshCache).
+/// Ordered each tick by distance key (horiz → missing → preferred cy).
 class UChunkDirtySet
 {
 public:
@@ -32,10 +33,14 @@ public:
 
   iterator RemoveAt(iterator it);
 
+  /// Full order: horiz Chebyshev, missing-mesh, then |cy−prefer| (or lower-cy).
+  void SortByDistanceKey(glm::ivec3 focus_ground_chunk, int preferred_cy,
+                         bool prefer_lower_cy, bool vertical_valid,
+                         const std::function<bool(glm::ivec3)> &missing_mesh);
+
   void PrioritizeChunksWithoutMesh(
       const std::function<bool(glm::ivec3)> &missing_mesh);
   void PrioritizeNearHorizontal(glm::ivec3 focus_ground_chunk, int radius_chunks);
-  /// After near/far split: reorder by cy (surface-first or bottom-first).
   void PrioritizeVerticalCy(glm::ivec3 focus_ground_chunk, int radius_chunks,
                             int preferred_cy, bool prefer_lower_cy);
 

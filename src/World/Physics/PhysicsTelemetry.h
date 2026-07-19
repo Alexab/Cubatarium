@@ -55,6 +55,16 @@ struct PhysicsTelemetry
   int KeepCols{0};
   int VisualCols{0};
   double IdlePrefetchMs{0.0};
+  /// Streaming gate diagnostics (filled each UpdateStreaming).
+  int StreamLoads{0};
+  int StreamRingBlocked{0};
+  int StreamNearSkipped{0};
+  int StreamLoadCandidates{0};
+  int PendingLightCount{0};
+  int FocusChunkX{0};
+  int FocusChunkZ{0};
+  int UnderfeetNeed{0};
+  int NearFocusHoles{0};
 };
 
 } // namespace cutum

@@ -905,28 +905,21 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastMeshSyncMs = 0.0;
   LastMeshSnapshotMs = 0.0;
   bool mesh_data_changed = false;
+
   if (!Dirty.empty())
   {
+    auto missing_mesh = [this](glm::ivec3 coord)
+    { return GreedyCache.find(coord) == GreedyCache.end(); };
     if (MeshFocusValid)
     {
-      // Missing-mesh first, then re-apply distance so underfeet is not buried
-      // under dist-2/3 holes (PrioritizeChunksWithoutMesh alone ignores XY).
-      Dirty.PrioritizeChunksWithoutMesh(
-          [this](glm::ivec3 coord)
-          { return GreedyCache.find(coord) == GreedyCache.end(); });
-      Dirty.PrioritizeNearHorizontal(MeshFocusGroundChunk, MeshFocusRadiusChunks);
-      Dirty.PrioritizeNearHorizontal(MeshFocusGroundChunk, 1);
-      if (MeshVerticalPriorityValid)
-      {
-        Dirty.PrioritizeVerticalCy(MeshFocusGroundChunk, MeshFocusRadiusChunks,
-                                   MeshVerticalPreferredCy, MeshPreferLowerCy);
-      }
+      // horiz dist → missing → preferred cy. Distance wins over "any hole".
+      Dirty.SortByDistanceKey(MeshFocusGroundChunk, MeshVerticalPreferredCy,
+                              MeshPreferLowerCy, MeshVerticalPriorityValid,
+                              missing_mesh);
     }
     else
     {
-      Dirty.PrioritizeChunksWithoutMesh(
-          [this](glm::ivec3 coord)
-          { return GreedyCache.find(coord) == GreedyCache.end(); });
+      Dirty.PrioritizeChunksWithoutMesh(missing_mesh);
     }
   }
   if (!force_sync && Render.AsyncMeshing && Render.GreedyMeshing)
@@ -989,7 +982,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         const int dz = std::abs(it->z - MeshFocusGroundChunk.z);
         const int horiz = std::max(dx, dz);
         // Soft underfeet prefer: fill dist<=cap first; allow a few farther so
-        // PendingLight underfeet does not idle the pipeline (Dirty→1400, FPS die).
+        // PendingLight underfeet does not idle the pipeline.
         if (MeshScheduleMaxHorizontalDist >= 0 &&
             horiz > MeshScheduleMaxHorizontalDist)
         {

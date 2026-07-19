@@ -178,9 +178,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
       world.HasPendingLightBeforeMeshNear(focus_ground_horiz, /*radius=*/1);
   const bool underfeet_need = missing_underfeet || pending_underfeet;
   mesh_service.SetStarveOutsideFocusMesh(near_focus_holes || underfeet_need);
-  // Soft prefer underfeet: strict only when feet are meshable (gate clear).
-  // Hard lock while PendingLight idled async → Dirty 1400+ and FPS collapse
-  // with the same fill rate as before.
+  // Prefer near mesh work whenever the focus ring has holes — not only
+  // underfeet. Otherwise standing in a lit-but-unmeshed / pending-light pocket
+  // leaves MaxHorizontalDist unlimited and far Dirty starves the fill.
   if (missing_underfeet && !pending_underfeet)
   {
     mesh_service.SetMeshScheduleMaxHorizontalDist(1);
@@ -189,8 +189,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   else if (underfeet_need)
   {
     mesh_service.SetMeshScheduleMaxHorizontalDist(1);
-    // Keep workers busy beyond feet while light catches up; still prefer r<=1.
     mesh_service.SetMeshScheduleOverflowPerFrame(moving ? 6 : 4);
+  }
+  else if (near_focus_holes)
+  {
+    mesh_service.SetMeshScheduleMaxHorizontalDist(focus_radius);
+    mesh_service.SetMeshScheduleOverflowPerFrame(moving ? 4 : 2);
   }
   else
   {

@@ -44,7 +44,18 @@ struct Session
   double AccumResidualMs{0.0};
   double AccumFluidCpuMs{0.0};
   double AccumFluidGpuMs{0.0};
+  double AccumStreamMs{0.0};
+  double AccumMeshEmergeMs{0.0};
+  double AccumSceneMs{0.0};
+  double AccumPhysMs{0.0};
   double MaxWallMs{0.0};
+  double MaxStreamMs{0.0};
+  double MaxMeshEmergeMs{0.0};
+  double MaxPhysMs{0.0};
+  int MaxDirty{0};
+  int MaxRingBlocked{0};
+  int MaxPendingLight{0};
+  int SpikesWrittenThisPeriod{0};
   int FrameCount{0};
   std::chrono::steady_clock::time_point LastEmit{
       std::chrono::steady_clock::now()};
@@ -133,6 +144,24 @@ struct FrameNumbers
   int gen_q{0};
   int mesh_async{0};
   int dirty{0};
+  int stream_loads{0};
+  int stream_ring_blocked{0};
+  int stream_near_skipped{0};
+  int stream_load_candidates{0};
+  int pending_light{0};
+  int focus_cx{0};
+  int focus_cz{0};
+  int underfeet_need{0};
+  int near_focus_holes{0};
+  double max_wall_ms{0.0};
+  double max_stream_ms{0.0};
+  double max_mesh_emerge_ms{0.0};
+  double max_phys_ms{0.0};
+  int max_dirty{0};
+  int max_ring_blocked{0};
+  int max_pending_light{0};
+  int frames{0};
+  int spikes{0};
 };
 
 FrameNumbers Compute(UWorld &world, double swap_wait_ms)
@@ -187,10 +216,20 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.gen_q = md.genQueuePending;
   n.mesh_async = md.asyncMeshInFlight;
   n.dirty = md.dirtyChunksPending;
+  n.stream_loads = phys.StreamLoads;
+  n.stream_ring_blocked = phys.StreamRingBlocked;
+  n.stream_near_skipped = phys.StreamNearSkipped;
+  n.stream_load_candidates = phys.StreamLoadCandidates;
+  n.pending_light = phys.PendingLightCount;
+  n.focus_cx = phys.FocusChunkX;
+  n.focus_cz = phys.FocusChunkZ;
+  n.underfeet_need = phys.UnderfeetNeed;
+  n.near_focus_holes = phys.NearFocusHoles;
   return n;
 }
 
-void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind)
+void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
+                bool flush)
 {
   if (!s.Jsonl.is_open())
   {
@@ -229,8 +268,27 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind)
           << ",\"scene_ms\":" << n.scene_ms
           << ",\"view_ms\":" << n.view_ms << ",\"flat_ms\":" << n.flat_ms
           << ",\"gen_q\":" << n.gen_q << ",\"mesh_async\":" << n.mesh_async
-          << ",\"dirty\":" << n.dirty << "}\n";
-  s.Jsonl.flush();
+          << ",\"dirty\":" << n.dirty
+          << ",\"stream_loads\":" << n.stream_loads
+          << ",\"stream_ring_blocked\":" << n.stream_ring_blocked
+          << ",\"stream_near_skipped\":" << n.stream_near_skipped
+          << ",\"stream_load_candidates\":" << n.stream_load_candidates
+          << ",\"pending_light\":" << n.pending_light
+          << ",\"focus_cx\":" << n.focus_cx << ",\"focus_cz\":" << n.focus_cz
+          << ",\"underfeet_need\":" << n.underfeet_need
+          << ",\"near_focus_holes\":" << n.near_focus_holes
+          << ",\"max_wall_ms\":" << n.max_wall_ms
+          << ",\"max_stream_ms\":" << n.max_stream_ms
+          << ",\"max_mesh_emerge_ms\":" << n.max_mesh_emerge_ms
+          << ",\"max_phys_ms\":" << n.max_phys_ms
+          << ",\"max_dirty\":" << n.max_dirty
+          << ",\"max_ring_blocked\":" << n.max_ring_blocked
+          << ",\"max_pending_light\":" << n.max_pending_light
+          << ",\"frames\":" << n.frames << ",\"spikes\":" << n.spikes << "}\n";
+  if (flush)
+  {
+    s.Jsonl.flush();
+  }
 }
 
 void LogLine(const FrameNumbers &n, const char *kind, int frames,
@@ -238,30 +296,19 @@ void LogLine(const FrameNumbers &n, const char *kind, int frames,
 {
   LOG(INFO) << "[Perf] kind=" << kind << " wall_ms=" << n.wall_ms
             << " sim_ms=" << n.sim_ms << " swap_wait_ms=" << n.swap_wait_ms
-            << " unaccounted_ms=" << n.unaccounted_ms
-            << " input_ms=" << n.input_ms
-            << " app_update_ms=" << n.app_update_ms
-            << " world_extra_ms=" << n.world_extra_ms
-            << " prepare_frame_ms=" << n.prepare_frame_ms
-            << " post_scene_ms=" << n.post_scene_ms
-            << " gui_overlay_ms=" << n.gui_overlay_ms
-            << " residual_ms=" << n.residual_ms
-            << " fluid_map_cpu_ms=" << n.fluid_map_cpu_ms
-            << " fluid_map_gpu_ms=" << n.fluid_map_gpu_ms
-            << " fluid_map_dirty=" << n.fluid_map_dirty
-            << " fluid_full=" << n.fluid_map_full_rebuild
-            << " commit_apply_ms=" << n.commit_apply_ms
-            << " commit_seal_ms=" << n.commit_seal_ms
-            << " streamer_update_ms=" << n.streamer_update_ms
-            << " async_io_ms=" << n.async_io_ms
-            << " relight_drain_ms=" << n.relight_drain_ms
-            << " mesh_sync_ms=" << n.mesh_sync_ms
-            << " mesh_snapshot_ms=" << n.mesh_snapshot_ms
-            << " phys_ms=" << n.phys_ms << " stream_ms=" << n.stream_ms
+            << " stream_ms=" << n.stream_ms << " phys_ms=" << n.phys_ms
             << " mesh_emerge_ms=" << n.mesh_emerge_ms
-            << " scene_ms=" << n.scene_ms << " GenQ=" << n.gen_q
-            << " MeshAsync=" << n.mesh_async << " Dirty=" << n.dirty
-            << " frames=" << frames << " max_wall_ms=" << max_wall;
+            << " scene_ms=" << n.scene_ms << " Dirty=" << n.dirty
+            << " GenQ=" << n.gen_q << " MeshAsync=" << n.mesh_async
+            << " ring_blocked=" << n.stream_ring_blocked
+            << " near_skip=" << n.stream_near_skipped
+            << " pending_light=" << n.pending_light
+            << " focus=(" << n.focus_cx << "," << n.focus_cz << ")"
+            << " underfeet=" << n.underfeet_need
+            << " holes=" << n.near_focus_holes
+            << " max_wall_ms=" << max_wall
+            << " max_stream_ms=" << n.max_stream_ms
+            << " max_ring=" << n.max_ring_blocked << " frames=" << frames;
 }
 
 void Accumulate(Session &s, const FrameNumbers &n)
@@ -279,7 +326,17 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumResidualMs += n.residual_ms;
   s.AccumFluidCpuMs += n.fluid_map_cpu_ms;
   s.AccumFluidGpuMs += n.fluid_map_gpu_ms;
+  s.AccumStreamMs += n.stream_ms;
+  s.AccumMeshEmergeMs += n.mesh_emerge_ms;
+  s.AccumSceneMs += n.scene_ms;
+  s.AccumPhysMs += n.phys_ms;
   s.MaxWallMs = (std::max)(s.MaxWallMs, n.wall_ms);
+  s.MaxStreamMs = (std::max)(s.MaxStreamMs, n.stream_ms);
+  s.MaxMeshEmergeMs = (std::max)(s.MaxMeshEmergeMs, n.mesh_emerge_ms);
+  s.MaxPhysMs = (std::max)(s.MaxPhysMs, n.phys_ms);
+  s.MaxDirty = (std::max)(s.MaxDirty, n.dirty);
+  s.MaxRingBlocked = (std::max)(s.MaxRingBlocked, n.stream_ring_blocked);
+  s.MaxPendingLight = (std::max)(s.MaxPendingLight, n.pending_light);
   ++s.FrameCount;
 }
 
@@ -300,6 +357,19 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
   avg.residual_ms = s.AccumResidualMs * inv;
   avg.fluid_map_cpu_ms = s.AccumFluidCpuMs * inv;
   avg.fluid_map_gpu_ms = s.AccumFluidGpuMs * inv;
+  avg.stream_ms = s.AccumStreamMs * inv;
+  avg.mesh_emerge_ms = s.AccumMeshEmergeMs * inv;
+  avg.scene_ms = s.AccumSceneMs * inv;
+  avg.phys_ms = s.AccumPhysMs * inv;
+  avg.max_wall_ms = s.MaxWallMs;
+  avg.max_stream_ms = s.MaxStreamMs;
+  avg.max_mesh_emerge_ms = s.MaxMeshEmergeMs;
+  avg.max_phys_ms = s.MaxPhysMs;
+  avg.max_dirty = s.MaxDirty;
+  avg.max_ring_blocked = s.MaxRingBlocked;
+  avg.max_pending_light = s.MaxPendingLight;
+  avg.frames = s.FrameCount;
+  avg.spikes = s.SpikesWrittenThisPeriod;
   return avg;
 }
 
@@ -318,7 +388,18 @@ void ResetAccum(Session &s)
   s.AccumResidualMs = 0.0;
   s.AccumFluidCpuMs = 0.0;
   s.AccumFluidGpuMs = 0.0;
+  s.AccumStreamMs = 0.0;
+  s.AccumMeshEmergeMs = 0.0;
+  s.AccumSceneMs = 0.0;
+  s.AccumPhysMs = 0.0;
   s.MaxWallMs = 0.0;
+  s.MaxStreamMs = 0.0;
+  s.MaxMeshEmergeMs = 0.0;
+  s.MaxPhysMs = 0.0;
+  s.MaxDirty = 0;
+  s.MaxRingBlocked = 0;
+  s.MaxPendingLight = 0;
+  s.SpikesWrittenThisPeriod = 0;
   s.FrameCount = 0;
 }
 
@@ -341,11 +422,17 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
   const FrameNumbers n = Compute(world, swap_wait_ms);
   Accumulate(s, n);
 
-  const bool spike = n.wall_ms > 100.0;
-  if (spike)
+  // Cap spike disk writes: cheap in-memory accumulate always; at most a few
+  // spike samples per period, without fflush (period flush covers durability).
+  constexpr int kMaxSpikesPerPeriod = 6;
+  if (n.wall_ms > 100.0 && s.SpikesWrittenThisPeriod < kMaxSpikesPerPeriod)
   {
-    WriteJsonl(s, n, "spike");
-    LogLine(n, "spike", 1, n.wall_ms);
+    WriteJsonl(s, n, "spike", /*flush=*/false);
+    ++s.SpikesWrittenThisPeriod;
+    if (n.wall_ms > 250.0)
+    {
+      LogLine(n, "spike", 1, n.wall_ms);
+    }
   }
 
   const double interval = interval_sec > 0.05 ? interval_sec : 2.0;
@@ -358,7 +445,7 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
   }
 
   const FrameNumbers avg = AverageFromSession(s, n);
-  WriteJsonl(s, avg, "period");
+  WriteJsonl(s, avg, "period", /*flush=*/true);
   LogLine(avg, "period", s.FrameCount, s.MaxWallMs);
   ResetAccum(s);
   s.LastEmit = now;
@@ -372,7 +459,7 @@ void UFramePerfMonitor::Shutdown()
   {
     FrameNumbers last{};
     const FrameNumbers avg = AverageFromSession(s, last);
-    WriteJsonl(s, avg, "shutdown");
+    WriteJsonl(s, avg, "shutdown", /*flush=*/true);
     LogLine(avg, "shutdown", s.FrameCount, s.MaxWallMs);
     ResetAccum(s);
   }

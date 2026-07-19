@@ -679,6 +679,15 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     bg_budget = std::max(bg_budget, pending_bg > 8 ? 8 : 4);
   }
+  // Standing in a dark focus pocket: pending_light stays ~30 while wall~14ms
+  // because far remesh kept workers busy and bg drain stayed tiny.
+  if (near_pending_light && frame_ms <= kBadFrameMs)
+  {
+    const int pending_light_n =
+        static_cast<int>(world.GetPendingLightBeforeMeshCount());
+    bg_budget =
+        std::max(bg_budget, std::min(24, std::max(8, pending_light_n / 2)));
+  }
   // Two-tier promote: underfeet first, then rest of focus — so far-in-focus
   // columns do not jump ahead of the camera column in the priority FIFO.
   if (pending_bg > 0 || underfeet_pending_light)
@@ -1210,11 +1219,19 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const bool near_focus_holes =
         near_mesh_backlog ||
         world.HasPendingLightBeforeMeshNear(focus_horiz, focus_radius);
+    const bool moving_fast =
+        lastMovementSpeed >= procedural.MovementSpeedBoostThreshold;
     if (Streamer)
     {
-      if (underfeet_need)
+      // Flying over holes used to clamp NearLoadRadius=2 and kill PrefetchAhead,
+      // which carved permanent empty corridors along the flight path.
+      if (underfeet_need && !moving_fast)
       {
         Streamer->SetNearLoadRadius(2);
+      }
+      else if (underfeet_need && moving_fast)
+      {
+        Streamer->SetNearLoadRadius(std::max(4, focus_radius));
       }
       else if (near_focus_holes)
       {
@@ -1227,19 +1244,25 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     }
     const auto prefetch_t0 = std::chrono::high_resolution_clock::now();
     int prefetch_visual_ops = 0;
-    // Stop ahead/far prefetch while underfeet or focus ring has holes.
-    if (!near_focus_holes && !underfeet_need)
-    {
-      Streamer->PrefetchAhead(feet_chunk, forward, lastMovementSpeed,
-                              procedural.MovementSpeedBoostThreshold,
-                              &prefetch_visual_ops);
-    }
+    // PrefetchAhead itself no-ops below MovementSpeedBoostThreshold; keep it
+    // enabled during holes so the forward corridor can unlock (inward ring gate).
+    Streamer->PrefetchAhead(feet_chunk, forward, lastMovementSpeed,
+                            procedural.MovementSpeedBoostThreshold,
+                            &prefetch_visual_ops);
     int prefetch_keep_ops = 0;
-    if (keep_gate.allow && !near_focus_holes && !underfeet_need)
+    // Idle in a hole pocket: keep-shell used to wait until holes cleared, so
+    // standing at 100 FPS never requested the missing ring.
+    if (keep_gate.allow &&
+        ((!near_focus_holes && !underfeet_need) ||
+         (!moving_fast && frame_ms <= 16.0 && near_focus_holes)))
     {
       const int keep_budget = std::min(
           keep_gate.max_ops, URuntimeTuning::Get().MaxKeepPrefetchOpsPerFrame);
-      Streamer->PrefetchKeepShell(feet_chunk, keep_budget, &prefetch_keep_ops);
+      const int idle_hole_budget =
+          (near_focus_holes && frame_ms <= 16.0) ? std::max(keep_budget, 2)
+                                                 : keep_budget;
+      Streamer->PrefetchKeepShell(feet_chunk, idle_hole_budget,
+                                  &prefetch_keep_ops);
     }
     world.PhysicsTelemetryData.IdlePrefetchMs =
         std::chrono::duration<double, std::milli>(
@@ -1254,6 +1277,19 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     world.PhysicsTelemetryData.KeepCols =
         (2 * Streamer->GetKeepRenderDistance() + 1) *
         (2 * Streamer->GetKeepRenderDistance() + 1);
+    if (const StreamingFrameStats *st = &Streamer->GetLastFrameStats())
+    {
+      world.PhysicsTelemetryData.StreamLoads = st->loadsThisFrame;
+      world.PhysicsTelemetryData.StreamRingBlocked = st->ringGateBlocked;
+      world.PhysicsTelemetryData.StreamNearSkipped = st->nearLoadSkipped;
+      world.PhysicsTelemetryData.StreamLoadCandidates = st->loadCandidates;
+    }
+    world.PhysicsTelemetryData.PendingLightCount =
+        static_cast<int>(world.GetPendingLightBeforeMeshCount());
+    world.PhysicsTelemetryData.FocusChunkX = focus_horiz.x;
+    world.PhysicsTelemetryData.FocusChunkZ = focus_horiz.z;
+    world.PhysicsTelemetryData.UnderfeetNeed = underfeet_need ? 1 : 0;
+    world.PhysicsTelemetryData.NearFocusHoles = near_focus_holes ? 1 : 0;
   }
 }
 

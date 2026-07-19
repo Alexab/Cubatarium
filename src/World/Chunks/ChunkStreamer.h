@@ -26,6 +26,9 @@ struct StreamingFrameStats
     loadsThisFrame = 0;
     unloadsThisFrame = 0;
     savesThisFrame = 0;
+    ringGateBlocked = 0;
+    nearLoadSkipped = 0;
+    loadCandidates = 0;
     loadedCoords.clear();
     unloadedCoords.clear();
   }
@@ -33,6 +36,11 @@ struct StreamingFrameStats
   int loadsThisFrame{0};
   int unloadsThisFrame{0};
   int savesThisFrame{0};
+  /// Candidates that failed RingPrerequisitesMet this frame.
+  int ringGateBlocked{0};
+  /// Candidates skipped by NearLoadRadius clamp.
+  int nearLoadSkipped{0};
+  int loadCandidates{0};
   std::vector<glm::ivec3> loadedCoords;
   std::vector<glm::ivec3> unloadedCoords;
 };

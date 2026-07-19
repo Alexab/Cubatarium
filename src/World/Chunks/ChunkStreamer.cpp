@@ -160,10 +160,9 @@ int UChunkStreamer::ChunkLoadPriorityFor(glm::ivec3 groundCoord) const
                                           PriorityParams);
   if (CollisionUrgent)
   {
-    const int dist = std::max(
-        {std::abs(groundCoord.x - CollisionUrgentCenter.x),
-         std::abs(groundCoord.y - CollisionUrgentCenter.y),
-         std::abs(groundCoord.z - CollisionUrgentCenter.z)});
+    // Horizontal only: load candidates are ground (y=0); comparing feet cy
+    // made the urgent ring dead whenever the player was above cy 0.
+    const int dist = ChunkChebyshevDistance(groundCoord, CollisionUrgentCenter);
     if (dist <= CollisionUrgentRadius)
     {
       priority = ApplyCollisionUrgentBias(priority, true);
@@ -176,7 +175,7 @@ void UChunkStreamer::SetCollisionUrgentRing(glm::ivec3 feet_chunk, int radius_ch
                                             bool urgent)
 {
   CollisionUrgent = urgent;
-  CollisionUrgentCenter = feet_chunk;
+  CollisionUrgentCenter = glm::ivec3(feet_chunk.x, 0, feet_chunk.z);
   CollisionUrgentRadius = radius_chunks;
 }
 
@@ -187,70 +186,52 @@ bool UChunkStreamer::RingPrerequisitesMet(glm::ivec3 coord)
   {
     return true;
   }
-  // Visual-ready gate for outer rings: do not unlock ring 2+ while an inner
-  // neighbor is still awaiting first light (hole under / near camera).
-  auto neighbor_pending_light = [&](glm::ivec3 neighbor) -> bool
+  // Only the inward Chebyshev step(s) toward LoadPriorityCenter.
+  // Requiring every shorter-ring neighbor in the 8-neighborhood blocked the
+  // forward corridor whenever a lateral inner column lagged ("empty roads").
+  const int dx = coord.x - LoadPriorityCenter.x;
+  const int dz = coord.z - LoadPriorityCenter.z;
+  const int adx = std::abs(dx);
+  const int adz = std::abs(dz);
+
+  auto inward_ready = [&](glm::ivec3 neighbor) -> bool
   {
-    return OnIsColumnPendingLight && OnIsColumnPendingLight(neighbor);
+    // Do NOT gate on PendingLight / !LitReady. That created idle empty
+    // pockets: pending_light stuck ~30, ring_blocked==candidates,
+    // stream_loads=0 while wall~14ms. Light is a mesh concern; ring only
+    // orders terrain gen/load.
+    if (ProcedurallyGenerated.count(neighbor) &&
+        IsTerrainChunkCompleteCached(neighbor))
+    {
+      return true;
+    }
+    if (OnIsChunkCommitted && OnIsChunkCommitted(neighbor))
+    {
+      return true;
+    }
+    if (!RingGateEnabled)
+    {
+      // Soft: also allow if inward disk load already queued.
+      return OnIsColumnPending && OnIsColumnPending(neighbor);
+    }
+    return false;
   };
-  if (!RingGateEnabled)
+
+  if (adx > adz)
   {
-    for (int dx = -1; dx <= 1; ++dx)
-    {
-      for (int dz = -1; dz <= 1; ++dz)
-      {
-        if (dx == 0 && dz == 0)
-        {
-          continue;
-        }
-        const glm::ivec3 neighbor(coord.x + dx, 0, coord.z + dz);
-        const int neighbor_ring = ChunkHorizontalDistance(neighbor);
-        if (neighbor_ring >= ring)
-        {
-          continue;
-        }
-        if (neighbor_pending_light(neighbor))
-        {
-          return false;
-        }
-      }
-    }
-    return true;
+    return inward_ready(
+        glm::ivec3(coord.x - (dx > 0 ? 1 : -1), 0, coord.z));
   }
-  for (int dx = -1; dx <= 1; ++dx)
+  if (adz > adx)
   {
-    for (int dz = -1; dz <= 1; ++dz)
-    {
-      if (dx == 0 && dz == 0)
-      {
-        continue;
-      }
-      const glm::ivec3 neighbor(coord.x + dx, 0, coord.z + dz);
-      const int neighbor_ring = ChunkHorizontalDistance(neighbor);
-      if (neighbor_ring >= ring)
-      {
-        continue;
-      }
-      if (neighbor_pending_light(neighbor))
-      {
-        return false;
-      }
-      if (!ProcedurallyGenerated.count(neighbor) ||
-          !IsTerrainChunkCompleteCached(neighbor))
-      {
-        if (OnIsChunkCommitted && !OnIsChunkCommitted(neighbor))
-        {
-          return false;
-        }
-        if (!ProcedurallyGenerated.count(neighbor) ||
-            !IsTerrainChunkCompleteCached(neighbor))
-        {
-          return false;
-        }
-      }
-    }
+    return inward_ready(
+        glm::ivec3(coord.x, 0, coord.z - (dz > 0 ? 1 : -1)));
   }
-  return true;
+  // Diagonal equal |dx|==|dz|: either axis step reduces Chebyshev — pass if
+  // any inward neighbor is ready (do not require both).
+  const glm::ivec3 nx(coord.x - (dx > 0 ? 1 : -1), 0, coord.z);
+  const glm::ivec3 nz(coord.x, 0, coord.z - (dz > 0 ? 1 : -1));
+  return inward_ready(nx) || inward_ready(nz);
 }
 
 void UChunkStreamer::MarkPersistedColumnsFromWorld()
@@ -675,6 +656,7 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
   int loadOps = 0;
   for (const glm::ivec3 &coord : toLoad)
   {
+    ++LastFrameStats.loadCandidates;
     if (loadOps >= MaxLoadOpsPerFrame)
     {
       break;
@@ -685,11 +667,13 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
                                 std::abs(coord.z - LoadPriorityCenter.z));
       if (dist > NearLoadRadius)
       {
+        ++LastFrameStats.nearLoadSkipped;
         continue;
       }
     }
     if (!RingPrerequisitesMet(coord))
     {
+      ++LastFrameStats.ringGateBlocked;
       continue;
     }
     if (EnsureChunkLoaded(coord))
