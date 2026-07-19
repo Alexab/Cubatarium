@@ -125,16 +125,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   const glm::ivec3 focus_ground_horiz(focus_ground.x, 0, focus_ground.z);
   const int focus_radius = world.GetStreamingFocusRadius();
   mesh_service.SetMeshRebuildFocus(focus_ground_horiz, focus_radius);
-  // Underfeet (horiz≤1): never defer on PendingLight — disk/RAM columns stayed
-  // invisible while Dirty~900 and pending_light~30 ate the schedule. Remesh
-  // after light via MarkRelit / RecoverUnlitFocusMeshes.
+  // Camera column only: mesh without waiting on PendingLight. Full r≤1 soft
+  // defer flooded MeshAsync/scene and collapsed FPS; neighbors still defer.
   mesh_service.SetDeferMeshUntilLitFn(
       [&world, focus_ground_horiz](glm::ivec3 chunk_coord)
       {
-        const int horiz =
-            std::max(std::abs(chunk_coord.x - focus_ground_horiz.x),
-                     std::abs(chunk_coord.z - focus_ground_horiz.z));
-        if (horiz <= 1)
+        if (chunk_coord.x == focus_ground_horiz.x &&
+            chunk_coord.z == focus_ground_horiz.z)
         {
           return false;
         }
@@ -310,11 +307,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
 
   // Flight FPS guard: later floors (underfeet/holes/Dirty) can push drain to
   // 20–24; clamp while moving so emerge+draw do not own the frame.
-  // Missing underfeet: keep up to 16 so the camera column can appear.
   if (moving)
   {
-    const int fly_cap =
-        missing_underfeet ? 16 : (last_frame_ms > 20.0 ? 12 : 16);
+    const int fly_cap = last_frame_ms > 20.0 ? 10 : 12;
     mesh_drain = std::min(mesh_drain, fly_cap);
     mesh_schedule = std::min(mesh_schedule, fly_cap);
   }
@@ -323,14 +318,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
   // re-queued (stuck black after premature light=0 mesh). Also: pending+sky
   // (neighbor lit) and missing GreedyCache after gate clear.
   {
-    int recover_n = moving ? 4 : 6;
+    int recover_n = moving ? 3 : 6;
     if (missing_underfeet || pending_underfeet)
     {
-      recover_n = moving ? 12 : 16;
+      recover_n = moving ? 6 : 10;
     }
     else if (pending_near_light || missing_visible_mesh)
     {
-      recover_n = moving ? 6 : 8;
+      recover_n = moving ? 4 : 6;
     }
     world.RecoverUnlitFocusMeshes(recover_n);
   }
@@ -384,19 +379,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
       push_cy(prefer_cy + d);
     }
     int immediate = 0;
-    // Hitch frames: at most 2 immediate rebuilds — logs showed emerge 270–414ms.
-    // Healthy / mild frames: fill underfeet aggressively (empty feet at 100 FPS).
+    // Sync underfeet is expensive (emerge p95~115ms with 4–6 rebuilds). Keep
+    // camera column responsive; neighbors stay on async.
     const int kMaxImmediateUnderfeet =
-        last_frame_ms > 24.0 ? 2 : (moving ? 4 : 6);
+        last_frame_ms > 20.0 ? 1 : (moving ? 2 : 4);
     for (int dz = -1; dz <= 1 && immediate < kMaxImmediateUnderfeet; ++dz)
     {
       for (int dx = -1; dx <= 1 && immediate < kMaxImmediateUnderfeet; ++dx)
       {
         // Camera column first (dx=dz=0), then ring.
         const int ring = std::max(std::abs(dx), std::abs(dz));
-        if (ring > 0 && immediate >= (last_frame_ms > 24.0 ? 1 : 3))
+        if (ring > 0 && (moving || immediate >= (last_frame_ms > 20.0 ? 1 : 2)))
         {
-          // Keep most of the budget for under-camera slices.
+          // While moving, only sync the camera column.
           continue;
         }
         for (int cy : cy_order)
@@ -406,8 +401,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(UWorld &world)
             break;
           }
           const glm::ivec3 coord(focus_ground.x + dx, cy, focus_ground.z + dz);
-          // PendingLight no longer blocks underfeet immediate rebuild — same
-          // policy as DeferMeshUntilLit (horiz≤1). Light remesh follows.
+          // Camera-column pending light: still rebuild (Defer softens only
+          // horiz==0). Neighbor pending stays deferred.
+          if (ring > 0 &&
+              world.IsPendingLightBeforeMesh(glm::ivec2(coord.x, coord.z)))
+          {
+            continue;
+          }
           if (mesh_service.HasGreedyMesh(coord))
           {
             continue;

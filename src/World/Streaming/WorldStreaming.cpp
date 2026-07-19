@@ -370,10 +370,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     }
     if (Streamer)
     {
-      // Underfeet first when standing: only load r<=1..2 so far focus does not
-      // steal gen/commit. While flying, never clamp — that carved stripe
-      // corridors (Update/Prefetch saw NearLoadRadius=2 from this tick).
-      if (moving_fast)
+      // Underfeet first when standing still. Any intentional travel (prefetch
+      // threshold) must not clamp — radius=2 + near_skip carved holes mid-flight
+      // when speed dipped below boost but player was still moving.
+      const bool moving_any =
+          world.LastMovementSpeed >= procedural.MovementPrefetchThreshold;
+      if (moving_fast || moving_any)
       {
         Streamer->SetNearLoadRadius(-1);
       }
@@ -1231,15 +1233,18 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         world.HasPendingLightBeforeMeshNear(focus_horiz, focus_radius);
     const bool moving_fast =
         lastMovementSpeed >= procedural.MovementSpeedBoostThreshold;
+    const bool moving_any =
+        lastMovementSpeed >= procedural.MovementPrefetchThreshold;
     if (Streamer)
     {
-      if (moving_fast)
+      if (moving_fast || moving_any)
       {
         Streamer->SetNearLoadRadius(-1);
         // Hitch: keep fill alive but drop boost so load+mesh do not stack.
         Streamer->SetMaxLoadOpsPerFrame(
             frame_ms > 20.0 ? world.MaxLoadOpsPerFrame
-                           : procedural.MaxLoadOpsPerFrameBoost);
+                           : (moving_fast ? procedural.MaxLoadOpsPerFrameBoost
+                                         : world.MaxLoadOpsPerFrame));
       }
       else if (underfeet_need)
       {
