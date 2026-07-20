@@ -89,6 +89,10 @@ public:
   uint64_t GetMeshDiscardedLateCount() const;
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
+  /// True only when cache entry has at least one drawable vertex.
+  /// Zero-vertex placeholders must not suppress missing-hole recovery.
+  bool HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const;
+  size_t GetGreedyVertexCount(glm::ivec3 chunk_coord) const;
   bool HasMissingGreedyMeshInHorizontalRadius(const UBlockWorld &world,
                                               glm::ivec3 center_ground_chunk,
                                               int radius_chunks) const;

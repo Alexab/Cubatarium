@@ -878,16 +878,11 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         const int horiz = std::max(std::abs(key.x - focus_chunk.x),
                                    std::abs(key.y - focus_chunk.z));
         // Cruise: only track underfeet sticky (full focus floods telemetry and
-        // ClearPending cannot keep up). Idle stop tracks full focus radius.
+        // ClearPending cannot keep up). Idle stop tracks full focus so MarkRelit
+        // remesh of trail neighbors is visible to SyncIdle / sticky drain.
         const bool idle =
             LastMovementSpeed <= ProceduralTemplate.MovementPrefetchThreshold;
-        // Idle: skip sticky insert when async not saturated — Dirty remesh is
-        // the recovery path; inserting every MarkRelit column made sticky
-        // climb 0→17 while SyncIdle was hitch-gated (iter20 stop).
-        const int async_n =
-            MeshService ? MeshService->GetAsyncInFlightCount() : 0;
-        const int sticky_r =
-            idle ? (async_n >= 28 ? GetStreamingFocusRadius() : 1) : 1;
+        const int sticky_r = idle ? GetStreamingFocusRadius() : 1;
         if (horiz <= sticky_r)
         {
           StickyRemeshAfterLight.insert(key);
@@ -1055,13 +1050,14 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
           {
             continue;
           }
-          if (MeshService->HasGreedyMesh(coord))
+          if (MeshService->HasDrawableGreedyMesh(coord))
           {
             has_mesh = true;
           }
           else
           {
             // Only count missing when the slice has something to draw.
+            // Includes 0-vertex placeholders that falsely satisfied HasGreedyMesh.
             bool slice_solid = false;
             for (int z = 0; z < CHUNK_SIZE && !slice_solid; z += 4)
             {
@@ -1216,7 +1212,7 @@ int UWorld::AdmitFocusMeshIngress(int max_columns)
     {
       const glm::ivec3 coord(ground.x, cy, ground.z);
       const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-      if (!chunk || MeshService->HasGreedyMesh(coord))
+      if (!chunk || MeshService->HasDrawableGreedyMesh(coord))
       {
         continue;
       }
@@ -1300,7 +1296,7 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz)
         {
           const glm::ivec3 coord(ground.x, cy, ground.z);
           const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-          if (!chunk || MeshService->HasGreedyMesh(coord) ||
+          if (!chunk || MeshService->HasDrawableGreedyMesh(coord) ||
               MeshService->HasInflightMeshBuild(coord))
           {
             continue;
@@ -2072,11 +2068,15 @@ int UWorld::PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,
     {
       continue;
     }
-    // Job already running for this column — do not requeue (Drain+re-Enqueue
-    // previously created Keys ghosts that blocked all further promotes).
+    // Job already running for this column — do not requeue while flying
+    // (Drain+re-Enqueue previously created Keys ghosts). On idle, always clear
+    // tracking and requeue: stale InFlight entries left trail Pending forever
+    // while underfeet drained (GetAsyncRelightInFlightCount()>0 from other jobs).
     if (AsyncRelightColumnsInFlight.count(entry.first) != 0)
     {
-      if (GetAsyncRelightInFlightCount() == 0)
+      const bool idle =
+          LastMovementSpeed <= ProceduralTemplate.MovementPrefetchThreshold;
+      if (idle || GetAsyncRelightInFlightCount() == 0)
       {
         AsyncRelightColumnsInFlight.erase(entry.first);
       }

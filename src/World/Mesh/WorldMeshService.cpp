@@ -399,6 +399,16 @@ bool UWorldMeshService::HasGreedyMesh(glm::ivec3 chunk_coord) const
   return Cache.HasGreedyMesh(chunk_coord);
 }
 
+bool UWorldMeshService::HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const
+{
+  return Cache.HasDrawableGreedyMesh(chunk_coord);
+}
+
+size_t UWorldMeshService::GetGreedyVertexCount(glm::ivec3 chunk_coord) const
+{
+  return Cache.GetGreedyVertexCount(chunk_coord);
+}
+
 bool UWorldMeshService::IsChunkMeshDirty(glm::ivec3 chunk_coord) const
 {
   return Cache.IsChunkMeshDirty(chunk_coord);
