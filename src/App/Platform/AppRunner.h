@@ -34,7 +34,7 @@ struct FlightSimOptions
   bool Sprint{false};
   /// Reset to a fixed ocean cruise start each run (matches World_164 manual).
   bool TeleportToCruiseStart{false};
-  float CruiseStartChunkX{-40.0f};
+  float CruiseStartChunkX{-47.0f};
   float CruiseStartChunkZ{5.0f};
   std::string PerfOutPath;   // optional copy of perf jsonl
   std::string ReportPath;    // JSON verdict path (default bin/flight_sim_report.json)

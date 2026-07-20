@@ -812,6 +812,8 @@ public:
   void SetLastMovementFrameMs(double ms) { LastMovementFrameMs = ms; }
   double GetLastMovementFrameMs() const { return LastMovementFrameMs; }
   float GetLastMovementSpeed() const { return LastMovementSpeed; }
+  /// Horizontal motion/view direction for mesh/relight forward bias (xz).
+  glm::vec2 GetLastMovementDirXz() const { return LastMovementDirXz; }
   void RelightTerrainColumn(int world_x, int world_z, int min_y, int max_y,
                             bool priority_mesh = false,
                             bool include_skylight = true,
@@ -843,6 +845,11 @@ public:
   void FlushPendingRelightMeshColumns(int max_columns_per_flush = 8);
   /// Re-enqueue skylight for focus columns that already have a mesh but no sky.
   int RecoverUnlitFocusMeshes(int max_columns = 4);
+  /// Focus ingress: Dirty + priority relight for Lighting columns without mesh.
+  int AdmitFocusMeshIngress(int max_columns = 8);
+  /// Ring-scan focus for solid slices missing GreedyCache; mark Dirty only.
+  int AdmitFocusVisibleMissing(int max_columns = 8,
+                               glm::vec2 forward_xz = glm::vec2(0.0f));
 
   /// Near-focus columns waiting for first light before first mesh (plan A).
   void NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y);
@@ -1070,6 +1077,7 @@ private:
   StreamingAltitudePolicyParams AltitudeParams;
   glm::vec3 LastCameraPosition{0.0f};
   float LastMovementSpeed{0.0f};
+  glm::vec2 LastMovementDirXz{0.0f};
   int MaxLoadOpsPerFrame{4};
   int MaxUnloadOpsPerFrame{2};
   std::unordered_set<glm::ivec3, IVec3Hash> ModifiedChunks;

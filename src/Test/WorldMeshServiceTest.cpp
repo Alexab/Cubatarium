@@ -30,25 +30,36 @@ int main()
   Expect(dirty.GetCount() == 1,
          "Erase should remove coord from dirty queue (RemoveChunk uses this)");
 
-  // Distance key: nearer horiz wins over farther missing holes.
+  // Missing-mesh class wins over nearer remesh (focus-band holes first).
   dirty.Clear();
   dirty.MarkDirty(glm::ivec3{3, 0, 0}); // far missing
   dirty.MarkDirty(glm::ivec3{0, 2, 0}); // near remesh
   dirty.MarkDirty(glm::ivec3{0, 0, 0}); // near missing
-  dirty.MarkDirty(glm::ivec3{1, 0, 0}); // dist 1
+  dirty.MarkDirty(glm::ivec3{1, 0, 0}); // dist 1 missing
   auto missing = [](glm::ivec3 c)
   { return c.y == 0; };
   dirty.SortByDistanceKey(glm::ivec3{0, 0, 0}, /*preferred_cy=*/0,
                           /*prefer_lower_cy=*/false, /*vertical_valid=*/true,
                           missing);
   Expect(dirty.begin()->x == 0 && dirty.begin()->y == 0,
-         "distance key: underfeet missing before far holes");
-  Expect((dirty.begin() + 1)->x == 0 && (dirty.begin() + 1)->y == 2,
-         "distance key: near remesh before dist-1");
-  Expect((dirty.begin() + 2)->x == 1, "distance key: dist-1 before dist-3");
-  Expect((dirty.begin() + 3)->x == 3, "distance key: farthest last");
+         "missing-first: underfeet missing before other missing");
+  Expect((dirty.begin() + 1)->x == 1 && (dirty.begin() + 1)->y == 0,
+         "missing-first: dist-1 missing before far missing");
+  Expect((dirty.begin() + 2)->x == 3 && (dirty.begin() + 2)->y == 0,
+         "missing-first: far missing before near remesh");
+  Expect((dirty.begin() + 3)->x == 0 && (dirty.begin() + 3)->y == 2,
+         "missing-first: near remesh last among this set");
 
-  // Vertical priority within same horiz ring.
+  // Forward bias: ahead missing drains before side missing at same Chebyshev.
+  dirty.Clear();
+  dirty.MarkDirty(glm::ivec3{-2, 0, 0}); // ahead (west) when facing -X
+  dirty.MarkDirty(glm::ivec3{0, 0, 2});  // side
+  dirty.SortByDistanceKey(glm::ivec3{0, 0, 0}, 0, false, true, missing,
+                          /*forward_bias_k=*/1.0f, glm::vec2(-1.0f, 0.0f));
+  Expect(dirty.begin()->x == -2,
+         "forward bias: ahead chunk before side at equal Chebyshev");
+
+  // Vertical priority within same class + same effective dist.
   dirty.Clear();
   dirty.MarkDirty(glm::ivec3{0, 0, 0});
   dirty.MarkDirty(glm::ivec3{0, 3, 0});

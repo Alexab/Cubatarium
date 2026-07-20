@@ -1,5 +1,7 @@
 #pragma once
 
+#include "World/Core/RuntimeTuning.h"
+
 #include <algorithm>
 
 namespace cutum
@@ -22,6 +24,8 @@ struct StreamingPressureInput
   /// Missing GreedyCache in focus only (not pending light).
   bool visual_holes{false};
   bool underfeet_need{false};
+  /// Near-focus columns awaiting first light (relight throughput signal).
+  int pending_light_focus{0};
 };
 
 struct StreamingPressureState
@@ -177,7 +181,7 @@ EvaluateStreamingPressure(const StreamingPressureInput &in,
     caps.max_load_ops_cap = -1;
     caps.max_commits_cap = -1;
     caps.recover_n_cap = (in.dirty > 800) ? 4 : 8;
-    caps.mesh_fly_cap = 10;
+    caps.mesh_fly_cap = URuntimeTuning::Get().MeshFlyCapYellow;
     caps.bg_budget_floor = std::min(16, std::max(4, in.pending_light / 2));
     break;
   case StreamingPressureLevel::Red:
@@ -186,7 +190,7 @@ EvaluateStreamingPressure(const StreamingPressureInput &in,
     caps.max_load_ops_cap = 2;
     caps.max_commits_cap = 1;
     caps.recover_n_cap = (in.dirty > 800) ? 2 : 4;
-    caps.mesh_fly_cap = 8;
+    caps.mesh_fly_cap = URuntimeTuning::Get().MeshFlyCapRed;
     caps.bg_budget_floor = std::min(32, std::max(12, in.pending_light / 2));
     // Visual holes under Red: feed focus hard — westbound cruise hit Red at
     // pending~27 and starved load (holes latched for the whole flight).

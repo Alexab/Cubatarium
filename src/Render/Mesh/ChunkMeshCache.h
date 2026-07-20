@@ -88,6 +88,10 @@ public:
   bool HasMissingGreedyMeshInHorizontalRadius(const UBlockWorld &world,
                                               glm::ivec3 center_ground_chunk,
                                               int radius_chunks) const;
+  bool FindNearestMissingGreedyMesh(const UBlockWorld &world,
+                                    glm::ivec3 center_ground_chunk,
+                                    int radius_chunks,
+                                    glm::ivec3 &out_coord) const;
   const MeshRebuildTickStats &GetLastRebuildTickStats() const
   {
     return LastRebuildTickStats;
@@ -118,6 +122,12 @@ public:
     MeshVerticalPriorityValid = true;
   }
   void ClearMeshVerticalPriority() { MeshVerticalPriorityValid = false; }
+  /// Soft motion/view bias for Dirty sort (Chebyshev units).
+  void SetMeshForwardBias(float bias_k, glm::vec2 forward_xz)
+  {
+    MeshForwardBiasK = bias_k;
+    MeshForwardXz = forward_xz;
+  }
   /// When true for a chunk coord, SyncRebuildVisibleMissing skips rebuild (await light).
   void SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn)
   {
@@ -125,6 +135,8 @@ public:
   }
   /// When true, skip outside-focus dirty trickle (near holes / pending light).
   void SetStarveOutsideFocusMesh(bool starve) { StarveOutsideFocusMesh = starve; }
+  /// When true, skip remesh (already has greedy) until holes clear.
+  void SetStarveRemeshForHoles(bool starve) { StarveRemeshForHoles = starve; }
   /// Cap outside-focus dirty schedules per frame (default 2; raise to flush keep).
   void SetMaxOutsideFocusMeshPerFrame(int count)
   {
@@ -271,7 +283,10 @@ private:
   int MeshVerticalPreferredCy{0};
   bool MeshPreferLowerCy{false};
   bool MeshVerticalPriorityValid{false};
+  float MeshForwardBiasK{0.0f};
+  glm::vec2 MeshForwardXz{0.0f};
   bool StarveOutsideFocusMesh{false};
+  bool StarveRemeshForHoles{false};
   int MaxOutsideFocusMeshPerFrame{2};
   /// -1 = no extra horizontal schedule cap (only focus starve applies).
   int MeshScheduleMaxHorizontalDist{-1};

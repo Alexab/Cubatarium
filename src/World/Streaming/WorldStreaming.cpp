@@ -254,7 +254,8 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
           world.NotePendingLightBeforeMesh(ground, dirty_min, dirty_max);
           // First mesh preview in entire focus (empty strips if we wait for
           // LitReady while pending climbs). Soft-defer blocks remesh@light=0;
-          // MarkRelit remeshes lit. Yellow/Red: no far Dirty (ingress).
+          // MarkRelit remeshes lit. Yellow/Red: no far Dirty (ingress via
+          // Recover / FindFirstMissing priority).
           const bool admit_far_dirty =
               LastPressureCaps.level == StreamingPressureLevel::Green;
           if (near_focus)
@@ -320,6 +321,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   // Pressure focus mode: visual holes only (pending light is light_debt).
   in.visual_holes = missing_near;
   in.underfeet_need = missing_underfeet || pending_underfeet;
+  in.pending_light_focus = pending_light_focus;
   LastPressureCaps = EvaluateStreamingPressure(in, PressureState);
 
   world.PhysicsTelemetryData.StreamPressure =
@@ -1217,12 +1219,14 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
                                       float &effectiveFogStartRatio,
                                       StreamingAltitudePolicyParams &altitudeParams,
                                       glm::vec3 &lastCameraPosition,
-                                      float &lastMovementSpeed)
+                                      float &lastMovementSpeed,
+                                      glm::vec2 &lastMovementDirXz)
 {
   if (!Streamer || !StreamingEnabled)
   {
     return;
   }
+  URuntimeTuning::LoadStreamingTuneFile("streaming_tune.json");
   if (auto camera = world.GetCurrentUserCamera())
   {
     const PlayerCapsule cap = camera->GetPlayerCapsule();
@@ -1317,6 +1321,23 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const float dt = std::max(0.0001f, camera->GetDeltaTime());
     const glm::vec3 delta = eye - lastCameraPosition;
     lastMovementSpeed = glm::length(glm::vec3(delta.x, 0.0f, delta.z)) / dt;
+    {
+      const ProceduralSettings &proc_for_dir = world.GetProceduralSettings();
+      glm::vec2 move_xz(delta.x, delta.z);
+      if (glm::length(move_xz) > 0.001f &&
+          lastMovementSpeed >= proc_for_dir.MovementPrefetchThreshold)
+      {
+        lastMovementDirXz = glm::normalize(move_xz);
+      }
+      else
+      {
+        glm::vec2 view_xz(forward.x, forward.z);
+        if (glm::length(view_xz) > 0.01f)
+        {
+          lastMovementDirXz = glm::normalize(view_xz);
+        }
+      }
+    }
     lastCameraPosition = eye;
 
     const ProceduralSettings &procedural = world.GetProceduralSettings();

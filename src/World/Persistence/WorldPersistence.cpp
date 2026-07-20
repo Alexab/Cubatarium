@@ -14,7 +14,9 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Core/RuntimeTuning.h"
 #include "World/Core/World.h"
+#include "World/Mesh/WorldMeshService.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Lighting/ChunkLighting.h"
@@ -27,6 +29,7 @@
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -257,14 +260,62 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       world.ProceduralTemplate.AsyncRelight && !world.IsLightingRelightDeferred();
   const glm::ivec3 focus_chunk =
       UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+  const glm::ivec3 focus_horiz(focus_chunk.x, 0, focus_chunk.z);
+  const int focus_radius = world.GetStreamingFocusRadius();
   const bool focus_pending_high =
-      world.CountPendingLightBeforeMeshNear(
-          glm::ivec3(focus_chunk.x, 0, focus_chunk.z),
-          world.GetStreamingFocusRadius()) > 15;
+      world.CountPendingLightBeforeMeshNear(focus_horiz, focus_radius) > 15;
+  const bool visual_holes =
+      world.MeshService &&
+      world.MeshService->HasMissingGreedyMeshInHorizontalRadius(
+          world.GetBlockWorld(), focus_horiz, focus_radius);
+  const URuntimeTuning &tune = URuntimeTuning::Get();
+  const int inflight_mult =
+      (focus_pending_high || visual_holes)
+          ? std::max(2, tune.RelightInflightMultHoles)
+          : 2;
   const int max_inflight =
       async_bg ? std::clamp(world.ProceduralTemplate.RelightThreadCount, 1, 8) *
-                     (focus_pending_high ? 4 : 2)
+                     inflight_mult
                : 0;
+
+  // Continuously re-order priority FIFO by effective distance + forward bias.
+  if (PendingTerrainColumnRelightsPriority.size() > 1)
+  {
+    const glm::vec2 fwd = world.GetLastMovementDirXz();
+    const float bias_k = tune.MeshForwardBiasK;
+    auto effective = [&](glm::ivec2 col) -> float
+    {
+      const int cx = FloorDiv(col.x, CHUNK_SIZE);
+      const int cz = FloorDiv(col.y, CHUNK_SIZE);
+      float d = static_cast<float>(
+          std::max(std::abs(cx - focus_horiz.x), std::abs(cz - focus_horiz.z)));
+      if (bias_k <= 0.0f)
+      {
+        return d;
+      }
+      const float flen = glm::length(fwd);
+      if (flen < 0.01f)
+      {
+        return d;
+      }
+      const float dx = static_cast<float>(cx - focus_horiz.x);
+      const float dz = static_cast<float>(cz - focus_horiz.z);
+      const float clen = std::sqrt(dx * dx + dz * dz);
+      if (clen < 0.01f)
+      {
+        return d;
+      }
+      const float bias =
+          std::max(0.0f, (dx / clen) * (fwd.x / flen) +
+                             (dz / clen) * (fwd.y / flen));
+      return d - bias_k * bias;
+    };
+    std::stable_sort(PendingTerrainColumnRelightsPriority.begin(),
+                     PendingTerrainColumnRelightsPriority.end(),
+                     [&](const glm::ivec2 &a, const glm::ivec2 &b)
+                     { return effective(a) < effective(b); });
+  }
+
   int drained_bg = 0;
   auto drain_one = [&]()
   {

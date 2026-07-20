@@ -51,7 +51,8 @@ public:
                        int &effectiveRenderDistance,
                        float &effectiveFogStartRatio,
                        StreamingAltitudePolicyParams &altitudeParams,
-                       glm::vec3 &lastCameraPosition, float &lastMovementSpeed);
+                       glm::vec3 &lastCameraPosition, float &lastMovementSpeed,
+                       glm::vec2 &lastMovementDirXz);
 
   void TickAsyncChunkSystems(UWorld &world);
   void TickMeshEmerge(UWorld &world);

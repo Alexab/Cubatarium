@@ -85,6 +85,24 @@ def analyze(path: Path, warmup_sec: float = 5.0) -> dict:
     def ok_med(val, limit):
         return val is not None and val <= limit
 
+    # Soft diagnostics (do not fail hard gates): rising pending while traveling,
+    # and black-proxy (mesh present / holes low while pending stays high).
+    pending_trend_rising = False
+    if len(pending_f) >= 4 and chunks_traveled >= 3:
+        mid = len(pending_f) // 2
+        first = median(pending_f[:mid]) or 0.0
+        second = median(pending_f[mid:]) or 0.0
+        pending_trend_rising = second > first + 8.0
+    black_proxy_periods = 0
+    for r in steady:
+        h = float(r.get(hole_key) or 0)
+        p = float(r.get("pending_light_focus") or 0)
+        if h <= 0 and p >= 20:
+            black_proxy_periods += 1
+    black_proxy_rate = (
+        black_proxy_periods / len(steady) if steady else 0.0
+    )
+
     gates = {
         "visual_holes_rate_le_0_10": holes_rate <= 0.10,
         "dirty_med_le_400": ok_med(median(dirty), 400),
@@ -96,6 +114,12 @@ def analyze(path: Path, warmup_sec: float = 5.0) -> dict:
         "chunks_traveled_ge_3": chunks_traveled >= 3,
     }
     passed = all(gates.values())
+
+    soft = {
+        "pending_trend_rising_while_traveling": pending_trend_rising,
+        "black_proxy_rate": black_proxy_rate,
+        "black_proxy_soft_fail": black_proxy_rate >= 0.25,
+    }
 
     return {
         "perf_jsonl": str(path),
@@ -118,6 +142,7 @@ def analyze(path: Path, warmup_sec: float = 5.0) -> dict:
             "focus_end": focus_pts[-1] if focus_pts else None,
         },
         "gates": gates,
+        "soft": soft,
         "pass": passed,
     }
 

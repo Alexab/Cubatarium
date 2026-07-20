@@ -37,8 +37,10 @@ public:
   void SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord, int radius_chunks);
   void SetMeshVerticalPriority(int preferred_cy, bool prefer_lower_cy);
   void ClearMeshVerticalPriority();
+  void SetMeshForwardBias(float bias_k, glm::vec2 forward_xz);
   void SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn);
   void SetStarveOutsideFocusMesh(bool starve);
+  void SetStarveRemeshForHoles(bool starve);
   void SetMaxOutsideFocusMeshPerFrame(int count);
   void SetMeshScheduleMaxHorizontalDist(int radius_chunks);
   void SetMeshScheduleOverflowPerFrame(int count);
@@ -102,6 +104,10 @@ public:
   bool HasMissingGreedyMeshInHorizontalRadius(const UBlockWorld &world,
                                               glm::ivec3 center_ground_chunk,
                                               int radius_chunks) const;
+  bool FindNearestMissingGreedyMesh(const UBlockWorld &world,
+                                    glm::ivec3 center_ground_chunk,
+                                    int radius_chunks,
+                                    glm::ivec3 &out_coord) const;
   const MeshRebuildTickStats &GetLastRebuildTickStats() const;
   uint64_t GetMeshRevision() const;
   uint64_t GetCullRevision() const;

@@ -119,6 +119,14 @@ int main(int argc, char *argv[])
         {
           opt.Sprint = true;
         }
+        else if (std::strcmp(argv[j], "--teleport-cruise") == 0)
+        {
+          opt.TeleportToCruiseStart = true;
+        }
+        else if (std::strcmp(argv[j], "--no-teleport-cruise") == 0)
+        {
+          opt.TeleportToCruiseStart = false;
+        }
         else if (std::strcmp(argv[j], "--perf-out") == 0 && j + 1 < argc)
         {
           opt.PerfOutPath = argv[++j];

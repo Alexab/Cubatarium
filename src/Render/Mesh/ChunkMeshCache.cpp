@@ -16,6 +16,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <glm/gtc/matrix_transform.hpp>
 #include <string>
 #include <unordered_map>
@@ -151,11 +152,15 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
     glm::ivec3 coord;
     int dist;
     int vert_dist;
+    float forward_score;
   };
   std::vector<Candidate> candidates;
   candidates.reserve(64);
   const int prefer_cy =
       MeshVerticalPriorityValid ? MeshVerticalPreferredCy : MeshFocusGroundChunk.y;
+  const glm::vec2 fwd_norm =
+      glm::length(MeshForwardXz) > 0.01f ? glm::normalize(MeshForwardXz)
+                                         : glm::vec2(0.0f);
   world.GetChunkManager().ForEachChunk(
       [&](const UChunk &chunk)
       {
@@ -202,6 +207,16 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
         {
           return;
         }
+        float forward_score = 0.0f;
+        if (fwd_norm.x != 0.0f || fwd_norm.y != 0.0f)
+        {
+          const glm::vec2 to_chunk(static_cast<float>(coord.x - MeshFocusGroundChunk.x),
+                                   static_cast<float>(coord.z - MeshFocusGroundChunk.z));
+          if (glm::length(to_chunk) > 0.01f)
+          {
+            forward_score = glm::dot(glm::normalize(to_chunk), fwd_norm);
+          }
+        }
         // Sync hole-fill: dist==0 (under camera) always; dist==1 when budget
         // allows. Farther only MarkDirtyPriority for async.
         if (dist > 1)
@@ -210,19 +225,23 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
           return;
         }
         candidates.push_back(
-            {coord, dist, std::abs(coord.y - prefer_cy)});
+            {coord, dist, std::abs(coord.y - prefer_cy), forward_score});
       });
   if (candidates.empty())
   {
     return 0;
   }
-  // Dist 0 first, then near player cy, then dist 1.
+  // Dist 0 first, ahead in movement direction, near player cy, then dist.
   std::sort(candidates.begin(), candidates.end(),
             [](const Candidate &a, const Candidate &b)
             {
               if (a.dist != b.dist)
               {
                 return a.dist < b.dist;
+              }
+              if (a.forward_score != b.forward_score)
+              {
+                return a.forward_score > b.forward_score;
               }
               if (a.vert_dist != b.vert_dist)
               {
@@ -452,6 +471,10 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
         {
           return;
         }
+        if (AsyncBuilder && AsyncBuilder->IsInFlight(coord))
+        {
+          return; // pipeline already building — not a stuck hole
+        }
         // Ignore empty air slices — they never get a mesh and must not keep
         // underfeet_need / near_focus_holes stuck true forever.
         for (int z = 0; z < CHUNK_SIZE; z += 4)
@@ -470,6 +493,68 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
         }
       });
   return missing;
+}
+
+bool UChunkMeshCache::FindNearestMissingGreedyMesh(
+    const UBlockWorld &world, glm::ivec3 center_ground_chunk, int radius_chunks,
+    glm::ivec3 &out_coord) const
+{
+  if (radius_chunks < 0)
+  {
+    return false;
+  }
+  bool found = false;
+  int best_dist = std::numeric_limits<int>::max();
+  int best_vdist = std::numeric_limits<int>::max();
+  glm::ivec3 best{0};
+  world.GetChunkManager().ForEachChunk(
+      [&](const UChunk &chunk)
+      {
+        const glm::ivec3 coord = chunk.GetCoord();
+        const int dx = std::abs(coord.x - center_ground_chunk.x);
+        const int dz = std::abs(coord.z - center_ground_chunk.z);
+        const int horiz = std::max(dx, dz);
+        if (horiz > radius_chunks)
+        {
+          return;
+        }
+        if (GreedyCache.find(coord) != GreedyCache.end())
+        {
+          return;
+        }
+        bool solid = false;
+        for (int z = 0; z < CHUNK_SIZE && !solid; z += 4)
+        {
+          for (int x = 0; x < CHUNK_SIZE && !solid; x += 4)
+          {
+            for (int y = 0; y < CHUNK_SIZE && !solid; y += 4)
+            {
+              if (chunk.GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+              {
+                solid = true;
+              }
+            }
+          }
+        }
+        if (!solid)
+        {
+          return;
+        }
+        const int vdist = std::abs(coord.y - center_ground_chunk.y);
+        if (!found || horiz < best_dist ||
+            (horiz == best_dist && vdist < best_vdist))
+        {
+          found = true;
+          best_dist = horiz;
+          best_vdist = vdist;
+          best = coord;
+        }
+      });
+  if (found)
+  {
+    out_coord = best;
+  }
+  return found;
 }
 
 void UChunkMeshCache::BumpChunkMeshRevision(glm::ivec3 chunk_coord)
@@ -916,14 +1001,25 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
 
   if (!Dirty.empty())
   {
-    auto missing_mesh = [this](glm::ivec3 coord)
-    { return GreedyCache.find(coord) == GreedyCache.end(); };
+    // Precompute missing-mesh set once — SortByDistanceKey compares O(n log n)
+    // times; per-compare GreedyCache.find was burning wall during flight.
+    std::unordered_set<glm::ivec3, IVec3Hash> missing_set;
+    missing_set.reserve(Dirty.GetCount());
+    for (const glm::ivec3 &coord : Dirty)
+    {
+      if (GreedyCache.find(coord) == GreedyCache.end())
+      {
+        missing_set.insert(coord);
+      }
+    }
+    auto missing_mesh = [&missing_set](glm::ivec3 coord)
+    { return missing_set.find(coord) != missing_set.end(); };
     if (MeshFocusValid)
     {
-      // horiz dist → missing → preferred cy. Distance wins over "any hole".
+      // missing → effective horiz (forward bias) → preferred cy.
       Dirty.SortByDistanceKey(MeshFocusGroundChunk, MeshVerticalPreferredCy,
                               MeshPreferLowerCy, MeshVerticalPriorityValid,
-                              missing_mesh);
+                              missing_mesh, MeshForwardBiasK, MeshForwardXz);
     }
     else
     {
@@ -984,6 +1080,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (AsyncBuilder->IsInFlight(*it))
       {
         return std::next(it);
+      }
+      if (StarveRemeshForHoles &&
+          GreedyCache.find(*it) != GreedyCache.end())
+      {
+        return Dirty.RemoveAt(it);
       }
       if (!world.GetChunkManager().HasChunk(*it))
       {
@@ -1122,10 +1223,19 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         ++it;
         continue;
       }
+      if (StarveRemeshForHoles &&
+          GreedyCache.find(*it) != GreedyCache.end())
+      {
+        // Drop remesh while holes exist so Dirty collapses to missing only.
+        it = Dirty.RemoveAt(it);
+        continue;
+      }
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
       {
-        // Remesh deferred while PendingLight: drop Dirty entry so pipeline
-        // serves missing first-mesh (holes). MarkRelit re-Dirties after light.
+        // Remesh deferred while PendingLight: drop Dirty — MarkRelit re-Dirties
+        // after light. Keeping remesh flooded Dirty and starved hole schedule.
+        // First-mesh (no GreedyCache) stays in queue (Defer returns false in
+        // focus for missing).
         if (GreedyCache.find(*it) != GreedyCache.end())
         {
           it = Dirty.RemoveAt(it);

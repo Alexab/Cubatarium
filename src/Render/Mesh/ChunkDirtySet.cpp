@@ -1,6 +1,7 @@
 #include "Render/Mesh/ChunkDirtySet.h"
 
 #include <algorithm>
+#include <cmath>
 #include <utility>
 
 namespace cutum
@@ -11,6 +12,34 @@ namespace
 int HorizDist(glm::ivec3 coord, glm::ivec3 focus)
 {
   return std::max(std::abs(coord.x - focus.x), std::abs(coord.z - focus.z));
+}
+
+float EffectiveHorizDist(glm::ivec3 coord, glm::ivec3 focus,
+                         float forward_bias_k, glm::vec2 forward_xz)
+{
+  const float base =
+      static_cast<float>(HorizDist(coord, focus));
+  if (forward_bias_k <= 0.0f)
+  {
+    return base;
+  }
+  const float flen =
+      std::sqrt(forward_xz.x * forward_xz.x + forward_xz.y * forward_xz.y);
+  if (flen < 0.01f)
+  {
+    return base;
+  }
+  const float fx = forward_xz.x / flen;
+  const float fz = forward_xz.y / flen;
+  const float dx = static_cast<float>(coord.x - focus.x);
+  const float dz = static_cast<float>(coord.z - focus.z);
+  const float clen = std::sqrt(dx * dx + dz * dz);
+  if (clen < 0.01f)
+  {
+    return base;
+  }
+  const float bias = std::max(0.0f, (dx / clen) * fx + (dz / clen) * fz);
+  return base - forward_bias_k * bias;
 }
 
 } // namespace
@@ -61,7 +90,8 @@ UChunkDirtySet::iterator UChunkDirtySet::RemoveAt(iterator it)
 void UChunkDirtySet::SortByDistanceKey(
     glm::ivec3 focus_ground_chunk, int preferred_cy, bool prefer_lower_cy,
     bool vertical_valid,
-    const std::function<bool(glm::ivec3)> &missing_mesh)
+    const std::function<bool(glm::ivec3)> &missing_mesh, float forward_bias_k,
+    glm::vec2 forward_xz)
 {
   if (Queue.size() < 2)
   {
@@ -71,12 +101,7 @@ void UChunkDirtySet::SortByDistanceKey(
       Queue.begin(), Queue.end(),
       [&](const glm::ivec3 &a, const glm::ivec3 &b)
       {
-        const int ha = HorizDist(a, focus_ground_chunk);
-        const int hb = HorizDist(b, focus_ground_chunk);
-        if (ha != hb)
-        {
-          return ha < hb;
-        }
+        // Class: missing mesh before remesh (even if farther in focus bubble).
         if (missing_mesh)
         {
           const bool ma = missing_mesh(a);
@@ -85,6 +110,14 @@ void UChunkDirtySet::SortByDistanceKey(
           {
             return ma;
           }
+        }
+        const float ea = EffectiveHorizDist(a, focus_ground_chunk,
+                                           forward_bias_k, forward_xz);
+        const float eb = EffectiveHorizDist(b, focus_ground_chunk,
+                                           forward_bias_k, forward_xz);
+        if (ea != eb)
+        {
+          return ea < eb;
         }
         if (vertical_valid)
         {

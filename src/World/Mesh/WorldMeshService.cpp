@@ -40,6 +40,11 @@ void UWorldMeshService::ClearMeshVerticalPriority()
   Cache.ClearMeshVerticalPriority();
 }
 
+void UWorldMeshService::SetMeshForwardBias(float bias_k, glm::vec2 forward_xz)
+{
+  Cache.SetMeshForwardBias(bias_k, forward_xz);
+}
+
 void UWorldMeshService::SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn)
 {
   Cache.SetDeferMeshUntilLitFn(std::move(fn));
@@ -48,6 +53,11 @@ void UWorldMeshService::SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> f
 void UWorldMeshService::SetStarveOutsideFocusMesh(bool starve)
 {
   Cache.SetStarveOutsideFocusMesh(starve);
+}
+
+void UWorldMeshService::SetStarveRemeshForHoles(bool starve)
+{
+  Cache.SetStarveRemeshForHoles(starve);
 }
 
 void UWorldMeshService::SetMaxOutsideFocusMeshPerFrame(int count)
@@ -253,6 +263,14 @@ bool UWorldMeshService::HasMissingGreedyMeshInHorizontalRadius(
 {
   return Cache.HasMissingGreedyMeshInHorizontalRadius(world, center_ground_chunk,
                                                       radius_chunks);
+}
+
+bool UWorldMeshService::FindNearestMissingGreedyMesh(
+    const UBlockWorld &world, glm::ivec3 center_ground_chunk, int radius_chunks,
+    glm::ivec3 &out_coord) const
+{
+  return Cache.FindNearestMissingGreedyMesh(world, center_ground_chunk,
+                                            radius_chunks, out_coord);
 }
 
 const MeshRebuildTickStats &UWorldMeshService::GetLastRebuildTickStats() const

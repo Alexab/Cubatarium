@@ -973,7 +973,17 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
   const int radius = GetStreamingFocusRadius();
   const int max_y = ProceduralTemplate.MaxHeight;
-  const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
+  const int sea = ProceduralTemplate.SeaLevel;
+  // Player∪sea band, plus deeper ocean floor (sea-4 chunks).
+  int band_min = std::max(0, focus.y * CHUNK_SIZE - CHUNK_SIZE);
+  int band_max = std::min(max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
+  if (ProceduralTemplate.FillWater)
+  {
+    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
+    band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE * 2));
+  }
+  const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
+  const int cy1 = FloorDiv(band_max, CHUNK_SIZE);
   int repaired = 0;
   for (int r = 0; r <= radius && repaired < max_columns; ++r)
   {
@@ -991,7 +1001,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
         bool missing_mesh = false;
         bool any_sky = false;
         bool any_solid = false;
-        for (int cy = 0; cy <= cy1; ++cy)
+        for (int cy = cy0; cy <= cy1; ++cy)
         {
           const glm::ivec3 coord(ground.x, cy, ground.z);
           const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
@@ -1050,10 +1060,8 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
           continue;
         }
         const bool pending = IsPendingLightBeforeMesh(key);
-        // Default remesh: sea band ∪ narrow pending — never 0..MaxHeight.
-        const int sea = ProceduralTemplate.SeaLevel;
-        int remesh_min = std::max(0, sea - CHUNK_SIZE);
-        int remesh_max = std::min(max_y, sea + CHUNK_SIZE * 2);
+        int remesh_min = band_min;
+        int remesh_max = band_max;
         if (const auto pit = PendingLightBeforeMesh.find(key);
             pit != PendingLightBeforeMesh.end())
         {
@@ -1065,25 +1073,6 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
           }
         }
         const bool underfeet = r <= 1;
-        // Missing mesh anywhere in focus: include player altitude (flight cy),
-        // not only sea — otherwise cruise leaves transverse GreedyCache holes
-        // while columns are already in RAM.
-        if (missing_mesh || underfeet)
-        {
-          const int player_min =
-              std::max(0, focus.y * CHUNK_SIZE - CHUNK_SIZE);
-          const int player_max = std::min(
-              max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
-          remesh_min = std::min(remesh_min, player_min);
-          remesh_max = std::max(remesh_max, player_max);
-          if (ProceduralTemplate.FillWater)
-          {
-            remesh_min =
-                std::min(remesh_min, std::max(0, sea - CHUNK_SIZE));
-            remesh_max = std::max(
-                remesh_max, std::min(max_y, sea + CHUNK_SIZE * 2));
-          }
-        }
         // Focus ring: enqueue relight and unlock ring via LitReady. Keep
         // PendingLight until MarkRelit so soft-defer blocks light=0 remesh of
         // an already-built mesh (ClearPending here caused frequent dark chunks).
@@ -1130,6 +1119,204 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
     }
   }
   return repaired;
+}
+
+int UWorld::AdmitFocusMeshIngress(int max_columns)
+{
+  if (!MeshService || !Persistence || LightingRelightDeferred ||
+      max_columns <= 0)
+  {
+    return 0;
+  }
+  const glm::ivec3 focus =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const int radius = GetStreamingFocusRadius();
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const int sea = ProceduralTemplate.SeaLevel;
+  int remesh_min = std::max(0, sea - CHUNK_SIZE);
+  int remesh_max = std::min(max_y, sea + CHUNK_SIZE * 2);
+  const int player_min = std::max(0, focus.y * CHUNK_SIZE - CHUNK_SIZE);
+  const int player_max =
+      std::min(max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
+  remesh_min = std::min(remesh_min, player_min);
+  remesh_max = std::max(remesh_max, player_max);
+  const int cy0 = FloorDiv(remesh_min, CHUNK_SIZE);
+  const int cy1 = FloorDiv(remesh_max, CHUNK_SIZE);
+  int admitted = 0;
+  // Cheap path: only columns already in PendingLightBeforeMesh near focus.
+  for (const auto &entry : PendingLightBeforeMesh)
+  {
+    if (admitted >= max_columns)
+    {
+      break;
+    }
+    const glm::ivec2 key = entry.first;
+    const int dist =
+        std::max(std::abs(key.x - focus.x), std::abs(key.y - focus.z));
+    if (dist > radius)
+    {
+      continue;
+    }
+    const glm::ivec3 ground(key.x, 0, key.y);
+    bool missing = false;
+    for (int cy = cy0; cy <= cy1 && !missing; ++cy)
+    {
+      const glm::ivec3 coord(ground.x, cy, ground.z);
+      const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+      if (!chunk || MeshService->HasGreedyMesh(coord))
+      {
+        continue;
+      }
+      for (int z = 0; z < CHUNK_SIZE && !missing; z += 4)
+      {
+        for (int x = 0; x < CHUNK_SIZE && !missing; x += 4)
+        {
+          for (int y = 0; y < CHUNK_SIZE && !missing; y += 4)
+          {
+            if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+            {
+              missing = true;
+            }
+          }
+        }
+      }
+    }
+    if (!missing)
+    {
+      continue;
+    }
+    Persistence->EnqueueTerrainColumnRelight(
+        ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
+        remesh_min, remesh_max);
+    MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+        ground, remesh_min, remesh_max,
+        /*include_horizontal_neighbors=*/false);
+    SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+    ++admitted;
+  }
+  return admitted;
+}
+
+int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz)
+{
+  if (!MeshService || max_columns <= 0)
+  {
+    return 0;
+  }
+  const glm::ivec3 focus =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const int radius = GetStreamingFocusRadius();
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const int sea = ProceduralTemplate.SeaLevel;
+  int remesh_min = std::max(0, sea - CHUNK_SIZE);
+  int remesh_max = std::min(max_y, sea + CHUNK_SIZE * 2);
+  const int player_min = std::max(0, focus.y * CHUNK_SIZE - CHUNK_SIZE);
+  const int player_max =
+      std::min(max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
+  remesh_min = std::min(remesh_min, player_min);
+  remesh_max = std::max(remesh_max, player_max);
+  const int cy0 = FloorDiv(remesh_min, CHUNK_SIZE);
+  const int cy1 = FloorDiv(remesh_max, CHUNK_SIZE);
+  const glm::vec2 fwd_norm =
+      glm::length(forward_xz) > 0.01f ? glm::normalize(forward_xz) : glm::vec2(0.0f);
+
+  struct Candidate
+  {
+    glm::ivec2 key;
+    int horiz;
+    float forward_score;
+  };
+  std::vector<Candidate> candidates;
+  candidates.reserve(static_cast<size_t>((radius + 1) * (radius + 1)));
+
+  for (int r = 0; r <= radius; ++r)
+  {
+    for (int dz = -r; dz <= r; ++dz)
+    {
+      for (int dx = -r; dx <= r; ++dx)
+      {
+        if (r > 0 && std::max(std::abs(dx), std::abs(dz)) != r)
+        {
+          continue;
+        }
+        const glm::ivec2 key(focus.x + dx, focus.z + dz);
+        const int horiz = std::max(std::abs(dx), std::abs(dz));
+        const glm::ivec3 ground(key.x, 0, key.y);
+        bool missing = false;
+        for (int cy = cy0; cy <= cy1 && !missing; ++cy)
+        {
+          const glm::ivec3 coord(ground.x, cy, ground.z);
+          const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+          if (!chunk || MeshService->HasGreedyMesh(coord) ||
+              MeshService->HasInflightMeshBuild(coord))
+          {
+            continue;
+          }
+          for (int z = 0; z < CHUNK_SIZE && !missing; z += 4)
+          {
+            for (int x = 0; x < CHUNK_SIZE && !missing; x += 4)
+            {
+              for (int y = 0; y < CHUNK_SIZE && !missing; y += 4)
+              {
+                if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+                {
+                  missing = true;
+                }
+              }
+            }
+          }
+        }
+        if (!missing)
+        {
+          continue;
+        }
+        float forward_score = 0.0f;
+        if (fwd_norm.x != 0.0f || fwd_norm.y != 0.0f)
+        {
+          const glm::vec2 to_col(static_cast<float>(dx), static_cast<float>(dz));
+          if (glm::length(to_col) > 0.01f)
+          {
+            forward_score = glm::dot(glm::normalize(to_col), fwd_norm);
+          }
+        }
+        candidates.push_back({key, horiz, forward_score});
+      }
+    }
+  }
+
+  std::sort(candidates.begin(), candidates.end(),
+            [](const Candidate &a, const Candidate &b)
+            {
+              if (a.horiz != b.horiz)
+              {
+                return a.horiz < b.horiz;
+              }
+              if (a.forward_score != b.forward_score)
+              {
+                return a.forward_score > b.forward_score;
+              }
+              return false;
+            });
+
+  int admitted = 0;
+  for (const Candidate &candidate : candidates)
+  {
+    if (admitted >= max_columns)
+    {
+      break;
+    }
+        const glm::ivec3 ground(candidate.key.x, 0, candidate.key.y);
+        if (IsPendingLightBeforeMesh(candidate.key))
+        {
+          continue; // relight path via AdmitFocusMeshIngress / commit
+        }
+        MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+        ground, remesh_min, remesh_max,
+        /*include_horizontal_neighbors=*/false);
+    SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+    ++admitted;
+  }
+  return admitted;
 }
 
 void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
@@ -3877,7 +4064,7 @@ void UWorld::UpdateStreaming()
   Streaming->UpdateStreaming(*this, *MeshService, Render, RenderDistanceChunks,
                              EffectiveRenderDistance, EffectiveFogStartRatio,
                              AltitudeParams, LastCameraPosition,
-                             LastMovementSpeed);
+                             LastMovementSpeed, LastMovementDirXz);
 }
 
 size_t UWorld::GetRenderInstanceCount() const
