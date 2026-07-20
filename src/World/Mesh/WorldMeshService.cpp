@@ -50,6 +50,11 @@ void UWorldMeshService::SetStarveOutsideFocusMesh(bool starve)
   Cache.SetStarveOutsideFocusMesh(starve);
 }
 
+void UWorldMeshService::SetMaxOutsideFocusMeshPerFrame(int count)
+{
+  Cache.SetMaxOutsideFocusMeshPerFrame(count);
+}
+
 void UWorldMeshService::SetMeshScheduleMaxHorizontalDist(int radius_chunks)
 {
   Cache.SetMeshScheduleMaxHorizontalDist(radius_chunks);

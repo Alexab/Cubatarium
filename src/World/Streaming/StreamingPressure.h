@@ -52,7 +52,7 @@ namespace streaming_pressure
 {
 // Enter thresholds (escalate immediately when exceeded).
 inline constexpr int kEnterPendingYellow = 10;
-inline constexpr int kEnterPendingRed = 25;
+inline constexpr int kEnterPendingRed = 45;
 inline constexpr int kEnterDirtyYellow = 400;
 inline constexpr int kEnterDirtyRed = 900;
 inline constexpr double kEnterWallYellowMs = 20.0;
@@ -76,8 +76,9 @@ inline StreamingPressureLevel
 RawStreamingPressureLevel(const StreamingPressureInput &in)
 {
   using namespace streaming_pressure;
-  if (in.pending_light > kEnterPendingRed || in.dirty > kEnterDirtyRed ||
-      in.frame_ms > kEnterWallRedMs)
+  // Wall hitch alone must NOT enter Red — manual flight sat at wall~50–60ms
+  // with Dirty~350 and locked Red forever (FPS death spiral).
+  if (in.pending_light > kEnterPendingRed || in.dirty > kEnterDirtyRed)
   {
     return StreamingPressureLevel::Red;
   }
@@ -186,7 +187,15 @@ EvaluateStreamingPressure(const StreamingPressureInput &in,
     caps.max_commits_cap = 1;
     caps.recover_n_cap = (in.dirty > 800) ? 2 : 4;
     caps.mesh_fly_cap = 8;
-    caps.bg_budget_floor = std::min(24, std::max(8, in.pending_light / 2));
+    caps.bg_budget_floor = std::min(32, std::max(12, in.pending_light / 2));
+    // Visual holes under Red: feed focus hard — westbound cruise hit Red at
+    // pending~27 and starved load (holes latched for the whole flight).
+    if (in.visual_holes || in.underfeet_need)
+    {
+      caps.max_load_ops_cap = 6;
+      caps.max_commits_cap = 4;
+      caps.bg_budget_floor = std::max(caps.bg_budget_floor, 24);
+    }
     break;
   }
   // Do NOT uncap mesh/recover on holes — that defeated Red admission during

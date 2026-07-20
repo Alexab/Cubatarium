@@ -48,6 +48,16 @@ def analyze(path: Path, warmup_sec: float = 5.0) -> dict:
     holes_rate = (sum(1 for h in holes if h > 0) / len(holes)) if holes else 1.0
     red_rate = (sum(1 for p in pressure if p >= 2) / len(pressure)) if pressure else 1.0
 
+    # Focus travel (manual World_164 ocean: ~11 chunks west). Stationary
+    # hold-forward used to false-pass all gates.
+    focus_pts = [
+        (int(r.get("focus_cx") or 0), int(r.get("focus_cz") or 0)) for r in steady
+    ]
+    chunks_traveled = 0
+    if focus_pts:
+        c0, c1 = focus_pts[0], focus_pts[-1]
+        chunks_traveled = max(abs(c1[0] - c0[0]), abs(c1[1] - c0[1]))
+
     # Stuck mesh_async~42 while holes: consecutive periods.
     stuck_async_holes = 0
     run = 0
@@ -83,6 +93,7 @@ def analyze(path: Path, warmup_sec: float = 5.0) -> dict:
         "stream_pressure_red_rate_le_0_30": red_rate <= 0.30,
         "mesh_async_not_stuck_with_holes_10s": stuck_async_holes_sec <= 10.0,
         "wall_ms_med_le_25": ok_med(median(wall), 25),
+        "chunks_traveled_ge_3": chunks_traveled >= 3,
     }
     passed = all(gates.values())
 
@@ -102,6 +113,9 @@ def analyze(path: Path, warmup_sec: float = 5.0) -> dict:
             "mesh_async_med": median(mesh_async),
             "stuck_async_holes_sec": stuck_async_holes_sec,
             "dirty_high_sec": dirty_high_sec,
+            "chunks_traveled": chunks_traveled,
+            "focus_start": focus_pts[0] if focus_pts else None,
+            "focus_end": focus_pts[-1] if focus_pts else None,
         },
         "gates": gates,
         "pass": passed,

@@ -103,6 +103,22 @@ int main(int argc, char *argv[])
         {
           opt.HoldForward = false;
         }
+        else if (std::strcmp(argv[j], "--idle") == 0 && j + 1 < argc)
+        {
+          opt.IdleBeforeFlySec = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--yaw") == 0 && j + 1 < argc)
+        {
+          opt.FaceYawDeg = static_cast<float>(std::atof(argv[++j]));
+        }
+        else if (std::strcmp(argv[j], "--pitch") == 0 && j + 1 < argc)
+        {
+          opt.FacePitchDeg = static_cast<float>(std::atof(argv[++j]));
+        }
+        else if (std::strcmp(argv[j], "--sprint") == 0)
+        {
+          opt.Sprint = true;
+        }
         else if (std::strcmp(argv[j], "--perf-out") == 0 && j + 1 < argc)
         {
           opt.PerfOutPath = argv[++j];

@@ -20,6 +20,16 @@ void UDesktopPlatformWindow::SetStopPredicate(std::function<bool()> predicate)
   WindowManager.SetStopPredicate(std::move(predicate));
 }
 
+void UDesktopPlatformWindow::SetAutopilotKey(KeyCode key, bool held)
+{
+  WindowManager.SetAutopilotKey(key, held);
+}
+
+void UDesktopPlatformWindow::ClearAutopilotKeys()
+{
+  WindowManager.ClearAutopilotKeys();
+}
+
 void UDesktopPlatformWindow::Run() { WindowManager.Run(); }
 
 void UDesktopPlatformWindow::Shutdown() { WindowManager.Shutdown(); }

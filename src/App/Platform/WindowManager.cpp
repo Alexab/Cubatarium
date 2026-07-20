@@ -395,6 +395,13 @@ void UWindowManager::SetStopPredicate(std::function<bool()> predicate)
   StopPredicate = std::move(predicate);
 }
 
+void UWindowManager::SetAutopilotKey(KeyCode key, bool held)
+{
+  AutopilotKeys[static_cast<int>(key)] = held;
+}
+
+void UWindowManager::ClearAutopilotKeys() { AutopilotKeys.clear(); }
+
 void UWindowManager::ProcessInput()
 {
   InputManager->Update();
@@ -423,7 +430,12 @@ void UWindowManager::ProcessInput()
         {
           return true;
         }
-        return Window && glfwGetKey(Window, static_cast<int>(key)) == GLFW_PRESS;
+        if (Window && glfwGetKey(Window, static_cast<int>(key)) == GLFW_PRESS)
+        {
+          return true;
+        }
+        const auto it = AutopilotKeys.find(static_cast<int>(key));
+        return it != AutopilotKeys.end() && it->second;
       };
       const bool shift_down =
           keyDown(KeyCode::Key_Shift) ||

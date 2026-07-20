@@ -830,6 +830,9 @@ public:
                                bool enqueue_background_frontier);
   bool HasPendingAsyncRelightWork() const;
   int GetAsyncRelightInFlightCount() const;
+  bool IsAsyncRelightColumnInFlight(glm::ivec2 ground_xz) const;
+  /// Drop column inflight marks when the async builder has no jobs (stale set).
+  void ReconcileAsyncRelightColumnInFlight();
   uint64_t GetRelightDiscardedLateCount() const;
   uint64_t GetMeshDiscardedLateCount() const;
   int GetPlayerRelightMeshBurstFrames() const
@@ -1053,6 +1056,8 @@ private:
   /// Near columns: light must apply before first mesh dirty.
   std::unordered_map<glm::ivec2, PendingRelightMeshColumnRange, GroundColumnHash>
       PendingLightBeforeMesh;
+  /// Columns with an async terrain-column relight job in flight (chunk xz).
+  std::unordered_set<glm::ivec2, GroundColumnHash> AsyncRelightColumnsInFlight;
   std::unordered_map<glm::ivec2, ColumnEmergeState, GroundColumnHash>
       ColumnEmergeStates;
   bool SpawnAreaPreparedByCooperativeLoad{false};

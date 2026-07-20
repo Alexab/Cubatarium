@@ -39,6 +39,7 @@ public:
   void ClearMeshVerticalPriority();
   void SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn);
   void SetStarveOutsideFocusMesh(bool starve);
+  void SetMaxOutsideFocusMeshPerFrame(int count);
   void SetMeshScheduleMaxHorizontalDist(int radius_chunks);
   void SetMeshScheduleOverflowPerFrame(int count);
   void SetAltitudeCullState(float altitude_above_terrain, int threshold_blocks);

@@ -251,11 +251,19 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   {
     return;
   }
+  world.ReconcileAsyncRelightColumnInFlight();
   const int max_y = world.ProceduralTemplate.MaxHeight;
   const bool async_bg =
       world.ProceduralTemplate.AsyncRelight && !world.IsLightingRelightDeferred();
+  const glm::ivec3 focus_chunk =
+      UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+  const bool focus_pending_high =
+      world.CountPendingLightBeforeMeshNear(
+          glm::ivec3(focus_chunk.x, 0, focus_chunk.z),
+          world.GetStreamingFocusRadius()) > 15;
   const int max_inflight =
-      async_bg ? std::clamp(world.ProceduralTemplate.RelightThreadCount, 1, 8) * 2
+      async_bg ? std::clamp(world.ProceduralTemplate.RelightThreadCount, 1, 8) *
+                     (focus_pending_high ? 4 : 2)
                : 0;
   int drained_bg = 0;
   auto drain_one = [&]()
@@ -284,6 +292,13 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       return false;
     }
     PendingTerrainColumnRelightKeys.erase(col);
+    const glm::ivec2 ground_xz(FloorDiv(col.x, CHUNK_SIZE),
+                               FloorDiv(col.y, CHUNK_SIZE));
+    if (async_bg && world.IsAsyncRelightColumnInFlight(ground_xz))
+    {
+      // Duplicate while job runs — drop queue entry; completion clears pending.
+      return true;
+    }
     int relight_min = 0;
     int relight_max = max_y;
     const auto band_it = PendingTerrainColumnRelightYBands.find(col);
@@ -432,9 +447,11 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     const bool near_focus =
         std::abs(ground_coord.x - focus_ground.x) <= focus_radius &&
         std::abs(ground_coord.z - focus_ground.z) <= focus_radius;
-    EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
-                                ground_coord.z * CHUNK_SIZE, near_focus);
     const ProceduralSettings &settings = world.GetProceduralSettings();
+    EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
+                                ground_coord.z * CHUNK_SIZE, near_focus,
+                                std::max(0, settings.SeaLevel - CHUNK_SIZE * 2),
+                                settings.MaxHeight);
     if (!world.IsLightingRelightDeferred() && !state.had_disk_light)
     {
       // Mesh gate band = sea±2 CHUNK ∪ player when near (same as commit).
@@ -452,13 +469,9 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
             std::min(settings.MaxHeight, focus_block.y + CHUNK_SIZE * 2));
       }
       world.NotePendingLightBeforeMesh(ground_coord, dirty_min, dirty_max);
-      // Underfeet preview only; other columns wait MarkRelit (FSM gate).
-      const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
-      const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
-      const int horiz =
-          std::max(std::abs(ground_coord.x - focus_chunk.x),
-                   std::abs(ground_coord.z - focus_chunk.z));
-      if (horiz <= 1)
+      // Focus: first-mesh Dirty immediately (preview). Far waits MarkRelit
+      // under Yellow/Red via commit path; disk-load always Dirty near.
+      if (near_focus)
       {
         world.MarkTerrainChunkMeshDirtySeamed(ground_coord, dirty_min, dirty_max,
                                               false);

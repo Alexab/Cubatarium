@@ -212,14 +212,6 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
           DeferredShoreSealQueue.push_back(coord);
         }
         world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
-        if (!world.IsLightingRelightDeferred())
-        {
-          // Full column height for skylight: narrow C2 Y-band is for mesh dirty
-          // only. Relight must see sky→surface or meshes stay black after emerge.
-          world.Persistence->EnqueueTerrainColumnRelight(
-              ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, near_focus,
-              /*min_y=*/0, settings.MaxHeight);
-        }
         // Mesh gate band = occupied ∪ sea (not 0..MaxHeight — that flooded Dirty
         // and remeshed unlit slices). MarkRelit remeshes lit ∪ pending ∪ sea.
         int dirty_min = std::max(0, min_y);
@@ -248,26 +240,29 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         }
         if (!world.IsLightingRelightDeferred())
         {
+          // Relight Y: sea∪occupied∪player up to sky (not 0..floor). Full
+          // 0..MaxHeight columns capped async throughput (~3/s) while flight
+          // ingress piled pending_light_focus to 60–80.
+          const int relight_min =
+              settings.FillWater
+                  ? std::max(0, std::min(dirty_min,
+                                         settings.SeaLevel - CHUNK_SIZE * 2))
+                  : dirty_min;
+          world.Persistence->EnqueueTerrainColumnRelight(
+              ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, near_focus,
+              relight_min, settings.MaxHeight);
           world.NotePendingLightBeforeMesh(ground, dirty_min, dirty_max);
-          // FSM: first mesh only after LitReady (MarkRelit). Underfeet r<=1
-          // may Dirty as unlit preview so the player is never in empty air.
-          // Yellow/Red: never Dirty far on commit (ingress admission).
-          const int horiz = std::max(std::abs(coord.x - focus_ground.x),
-                                     std::abs(coord.z - focus_ground.z));
-          const bool underfeet = horiz <= 1;
+          // First mesh preview in entire focus (empty strips if we wait for
+          // LitReady while pending climbs). Soft-defer blocks remesh@light=0;
+          // MarkRelit remeshes lit. Yellow/Red: no far Dirty (ingress).
           const bool admit_far_dirty =
               LastPressureCaps.level == StreamingPressureLevel::Green;
-          if (underfeet)
+          if (near_focus)
           {
             world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-                ground, dirty_min, dirty_max, /*include_horizontal_neighbors=*/
-                false);
+                ground, dirty_min, dirty_max,
+                /*include_horizontal_neighbors=*/false);
             world.SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
-          }
-          else if (near_focus)
-          {
-            // Wait MarkRelit — avoids light=0 black plains in focus.
-            world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
           }
           else if (admit_far_dirty)
           {
@@ -637,15 +632,15 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     // Holes / pending: drain ShoreAir faster — starving to 1 carved water strips.
     if (shore_focus_holes || underfeet_pending)
     {
-      near_shore_budget = frame_ms > kBadFrameMs ? 3 : 6;
+      near_shore_budget = frame_ms > kBadFrameMs ? 2 : 4;
     }
     else if (frame_ms > kBadFrameMs)
     {
-      near_shore_budget = 1;
+      near_shore_budget = 0;
     }
     else if (frame_ms > 16.0)
     {
-      near_shore_budget = std::min(near_shore_budget, 2);
+      near_shore_budget = std::min(near_shore_budget, 1);
     }
     const int far_shore_budget =
         (keep_prewarm_surplus && !underfeet_pending) ? 1 : 0;
@@ -819,13 +814,25 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   // (DrainRelightQueues is cheap; MarkRelit is what clears PendingLight).
   const int pending_light_focus_n =
       world.CountPendingLightBeforeMeshNear(focus_horiz, focus_radius);
-  if (pending_light_focus_n > 15 && frame_ms <= kBadFrameMs)
+  // Manual flight: pending_focus climbed while relight_drain≈0 on hitch —
+  // keep a floor even when wall>24 so light debt cannot balloon forever.
+  if (pending_light_focus_n > 40)
   {
-    bg_budget = std::max(bg_budget, 24);
+    bg_budget =
+        std::max(bg_budget, frame_ms > kBadFrameMs ? 20 : 48);
+  }
+  else if (pending_light_focus_n > 15)
+  {
+    bg_budget =
+        std::max(bg_budget, frame_ms > kBadFrameMs ? 12 : 32);
   }
   else if (pending_light_focus_n > 8)
   {
     bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 8 : 16);
+  }
+  else if (pending_light_focus_n > 0 && frame_ms > kBadFrameMs)
+  {
+    bg_budget = std::max(bg_budget, 4);
   }
   // Two-tier promote: underfeet first, then rest of focus — so far-in-focus
   // columns do not jump ahead of the camera column in the priority FIFO.

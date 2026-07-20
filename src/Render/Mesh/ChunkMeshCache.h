@@ -125,6 +125,11 @@ public:
   }
   /// When true, skip outside-focus dirty trickle (near holes / pending light).
   void SetStarveOutsideFocusMesh(bool starve) { StarveOutsideFocusMesh = starve; }
+  /// Cap outside-focus dirty schedules per frame (default 2; raise to flush keep).
+  void SetMaxOutsideFocusMeshPerFrame(int count)
+  {
+    MaxOutsideFocusMeshPerFrame = std::max(0, count);
+  }
   /// When >= 0, prefer scheduling within this Chebyshev distance. Chunks
   /// farther may still schedule up to MeshScheduleOverflowPerFrame (soft prefer).
   void SetMeshScheduleMaxHorizontalDist(int radius_chunks)
@@ -267,6 +272,7 @@ private:
   bool MeshPreferLowerCy{false};
   bool MeshVerticalPriorityValid{false};
   bool StarveOutsideFocusMesh{false};
+  int MaxOutsideFocusMeshPerFrame{2};
   /// -1 = no extra horizontal schedule cap (only focus starve applies).
   int MeshScheduleMaxHorizontalDist{-1};
   /// When MaxHorizontalDist >= 0, allow this many farther schedules/frame.

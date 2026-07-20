@@ -514,8 +514,17 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 }
 void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
 {
+  // Re-prioritizing an already-dirty, not-in-flight chunk must NOT bump:
+  // Flush/shore used to bump every call and invalidate in-flight builds →
+  // ApplyMeshResult stale → MarkDirtyPriority bump again → Dirty plateau.
+  const bool existed = Dirty.Contains(chunkCoord);
+  const bool inflight =
+      AsyncBuilder && AsyncBuilder->IsInFlight(chunkCoord);
   Dirty.MarkDirtyPriority(chunkCoord);
-  BumpChunkMeshRevision(chunkCoord);
+  if (!existed || inflight)
+  {
+    BumpChunkMeshRevision(chunkCoord);
+  }
   InstancesDirty = true;
   GreedyBatchesDirty = true;
   CrossBatchesDirty = true;
@@ -855,14 +864,13 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       result.sourceRevision != expected_revision)
   {
     ActiveMeshSourceRevision.erase(revisionIt);
-    if (GreedyCache.find(result.coord) == GreedyCache.end())
-    {
-      MarkDirtyPriority(result.coord);
-    }
-    else
-    {
-      MarkDirty(result.coord);
-    }
+    // Revision already reflects newer data (the bump that invalidated this
+    // result). Re-queue without bumping again — another bump caused a
+    // permanent Dirty+async thrash at pipeline depth.
+    Dirty.MarkDirtyPriority(result.coord);
+    InstancesDirty = true;
+    GreedyBatchesDirty = true;
+    CrossBatchesDirty = true;
     return;
   }
   ActiveMeshSourceRevision.erase(revisionIt);
@@ -958,8 +966,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     int outside_focus_scheduled = 0;
     int overflow_scheduled = 0;
     int reserved_focus_scheduled = 0;
-    constexpr int kMaxOutsideFocusPerFrame = 2;
-    constexpr int kReservedFocusMissingSlots = 6;
+    const int outside_focus_cap =
+        MaxOutsideFocusMeshPerFrame > 0 ? MaxOutsideFocusMeshPerFrame : 2;
+    constexpr int kReservedFocusMissingSlots = 10;
 
     auto try_schedule = [&](auto it, bool count_outside, bool count_overflow,
                             bool count_reserved) -> decltype(it)
@@ -1081,12 +1090,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         if (horiz > MeshFocusRadiusChunks)
         {
           outside_focus = true;
-          int outside_cap = kMaxOutsideFocusPerFrame;
+          int outside_cap = outside_focus_cap;
           if (StarveOutsideFocusMesh)
           {
             const bool missing =
                 GreedyCache.find(*it) == GreedyCache.end();
-            outside_cap = missing ? kMaxOutsideFocusPerFrame : 1;
+            outside_cap = missing ? outside_focus_cap : 1;
           }
           if (outside_focus_scheduled >= outside_cap)
           {
@@ -1115,6 +1124,13 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
       {
+        // Remesh deferred while PendingLight: drop Dirty entry so pipeline
+        // serves missing first-mesh (holes). MarkRelit re-Dirties after light.
+        if (GreedyCache.find(*it) != GreedyCache.end())
+        {
+          it = Dirty.RemoveAt(it);
+          continue;
+        }
         ++it;
         continue;
       }

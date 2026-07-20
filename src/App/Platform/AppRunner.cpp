@@ -17,13 +17,19 @@
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
+#include "Creatures/Player/User.h"
+#include "World/Chunks/ChunkManager.h"
 #include "World/Core/World.h"
+#include "World/Math/BlockTypes.h"
 #include "World/Core/WorldLoadDiagnostics.h"
 #include "World/Diagnostics/FramePerfMonitor.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Objects/ObjectLibrary.h"
+#include "WorldGen/Core/ProceduralSettings.h"
+#include "App/Platform/InputManager.h"
 
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -383,7 +389,11 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     bool ingame_clock_started = false;
     bool loading_seen = false;
     bool autopilot_armed = false;
+    bool autopilot_flying = false;
     int ingame_frames_seen = 0;
+    int start_focus_cx = 0;
+    int start_focus_cz = 0;
+    bool start_focus_captured = false;
 
     window.SetStopPredicate(
         [&]()
@@ -407,41 +417,87 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
               ingame_started = now;
               ingame_clock_started = true;
             }
-            if (!autopilot_armed && (options.Fly || options.HoldForward))
+            const double ingame_sec =
+                std::chrono::duration<double>(now - ingame_started).count();
+            if (auto camera = world->GetCurrentUserCamera())
             {
-              if (auto camera = world->GetCurrentUserCamera())
+              if (!autopilot_armed && (options.Fly || options.HoldForward))
               {
                 if (options.Fly)
                 {
                   camera->SetFreeMove(true);
                 }
-                if (options.HoldForward)
+                camera->SetOrientation(options.FaceYawDeg, options.FacePitchDeg);
+                const float sea =
+                    static_cast<float>(world->GetProceduralSettings().SeaLevel);
+                glm::vec3 pos = camera->GetPosition();
+                if (options.TeleportToCruiseStart)
                 {
-                  camera->UpdateKeyStatus(GLFW_KEY_W, true);
+                  pos.x = options.CruiseStartChunkX *
+                              static_cast<float>(CHUNK_SIZE) +
+                          8.0f;
+                  pos.z = options.CruiseStartChunkZ *
+                              static_cast<float>(CHUNK_SIZE) +
+                          8.0f;
+                }
+                const float min_y = sea + options.MinAltitudeAboveSea;
+                if (pos.y < min_y || options.TeleportToCruiseStart)
+                {
+                  pos.y = min_y;
+                }
+                camera->SetPosition(pos);
+                if (auto user = world->GetCurrentUser())
+                {
+                  user->SetPosition(pos);
                 }
                 autopilot_armed = true;
                 std::cout << "flight-sim: autopilot armed fly="
                           << (options.Fly ? 1 : 0)
                           << " hold_forward=" << (options.HoldForward ? 1 : 0)
+                          << " yaw=" << options.FaceYawDeg
+                          << " pitch=" << options.FacePitchDeg
+                          << " idle_s=" << options.IdleBeforeFlySec
                           << std::endl;
               }
-            }
-            else if (autopilot_armed && options.HoldForward)
-            {
-              // Re-assert W each frame (input router may clear keys).
-              if (auto camera = world->GetCurrentUserCamera())
+              if (autopilot_armed)
               {
-                camera->UpdateKeyStatus(GLFW_KEY_W, true);
+                if (options.Fly)
+                {
+                  camera->SetFreeMove(true);
+                }
+                camera->SetOrientation(options.FaceYawDeg, options.FacePitchDeg);
+                if (options.HoldForward &&
+                    ingame_sec >= options.IdleBeforeFlySec)
+                {
+                  if (!autopilot_flying)
+                  {
+                    autopilot_flying = true;
+                    window.SetAutopilotKey(KeyCode::Key_W, true);
+                    if (options.Sprint)
+                    {
+                      window.SetAutopilotKey(KeyCode::Key_Ctrl, true);
+                    }
+                    std::cout << "flight-sim: hold-forward engaged at t="
+                              << ingame_sec << "s" << std::endl;
+                  }
+                }
+              }
+              if (!start_focus_captured && ingame_sec >= 2.0)
+              {
+                const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(
+                    world->GetPreferredLoadFocusBlock());
+                start_focus_cx = focus_chunk.x;
+                start_focus_cz = focus_chunk.z;
+                start_focus_captured = true;
               }
             }
-            const double ingame_sec =
-                std::chrono::duration<double>(now - ingame_started).count();
             return ingame_sec >= in_game_seconds;
           }
           return false;
         });
 
     window.Run();
+    window.ClearAutopilotKeys();
 
     world->PrepareForShutdown();
     UFramePerfMonitor::Shutdown();
@@ -458,6 +514,25 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     {
       std::cerr << "flight-sim: FAIL insufficient in-game frames="
                 << ingame_frames_seen << std::endl;
+      exit_code = 1;
+    }
+
+    const glm::ivec3 end_focus_chunk =
+        UChunkManager::WorldToChunk(world->GetPreferredLoadFocusBlock());
+    const int end_focus_cx = end_focus_chunk.x;
+    const int end_focus_cz = end_focus_chunk.z;
+    const int focus_dx = end_focus_cx - start_focus_cx;
+    const int focus_dz = end_focus_cz - start_focus_cz;
+    const int chunks_traveled =
+        start_focus_captured
+            ? static_cast<int>(std::max(std::abs(focus_dx), std::abs(focus_dz)))
+            : 0;
+    if (options.HoldForward && chunks_traveled < 3)
+    {
+      std::cerr << "flight-sim: FAIL insufficient travel chunks="
+                << chunks_traveled << " start=(" << start_focus_cx << ","
+                << start_focus_cz << ") end=(" << end_focus_cx << ","
+                << end_focus_cz << ")" << std::endl;
       exit_code = 1;
     }
 
@@ -495,6 +570,16 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << "  \"world\": \"" << world_name << "\",\n"
                << "  \"autopilot_armed\": "
                << (autopilot_armed ? "true" : "false") << ",\n"
+               << "  \"autopilot_flying\": "
+               << (autopilot_flying ? "true" : "false") << ",\n"
+               << "  \"face_yaw_deg\": " << options.FaceYawDeg << ",\n"
+               << "  \"idle_before_fly_sec\": " << options.IdleBeforeFlySec
+               << ",\n"
+               << "  \"start_focus\": [" << start_focus_cx << ", "
+               << start_focus_cz << "],\n"
+               << "  \"end_focus\": [" << end_focus_cx << ", " << end_focus_cz
+               << "],\n"
+               << "  \"chunks_traveled_cheb\": " << chunks_traveled << ",\n"
                << "  \"perf_jsonl\": \"" << perf_path << "\",\n"
                << "  \"analyze\": \"run tools/flight_sim_analyze.py on perf\"\n"
                << "}\n";

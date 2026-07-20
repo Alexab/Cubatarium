@@ -126,28 +126,28 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const glm::ivec3 focus_ground_horiz(focus_ground.x, 0, focus_ground.z);
   const int focus_radius = world.GetStreamingFocusRadius();
   mesh_service.SetMeshRebuildFocus(focus_ground_horiz, focus_radius);
-  // Soft-defer via ColumnEmerge MayMesh: remesh while PendingLight deferred;
-  // first mesh only LitReady (underfeet r<=1 preview allowed).
+  // Soft-defer: remesh of existing while PendingLight waits MarkRelit.
+  // First missing mesh allowed anywhere in focus (prevents empty flight strips
+  // while light lags). Outside focus first mesh waits MayMesh/LitReady.
   mesh_service.SetDeferMeshUntilLitFn(
-      [&world, &mesh_service, focus_ground_horiz](glm::ivec3 chunk_coord)
+      [&world, &mesh_service, focus_ground_horiz,
+       focus_radius](glm::ivec3 chunk_coord)
       {
-        const glm::ivec3 ground(chunk_coord.x, 0, chunk_coord.z);
+        const bool pending = world.IsPendingLightBeforeMesh(
+            glm::ivec2(chunk_coord.x, chunk_coord.z));
+        if (mesh_service.HasGreedyMesh(chunk_coord))
+        {
+          return pending; // defer remesh while unlit
+        }
         const int horiz =
             std::max(std::abs(chunk_coord.x - focus_ground_horiz.x),
                      std::abs(chunk_coord.z - focus_ground_horiz.z));
-        const bool underfeet = horiz <= 1;
-        if (mesh_service.HasGreedyMesh(chunk_coord) &&
-            world.IsPendingLightBeforeMesh(
-                glm::ivec2(chunk_coord.x, chunk_coord.z)))
+        if (horiz <= focus_radius)
         {
-          // Never rebake existing mesh at light=0.
-          return true;
+          return false; // first mesh in focus always
         }
-        if (!mesh_service.HasGreedyMesh(chunk_coord))
-        {
-          return !world.MayMeshColumn(ground, underfeet);
-        }
-        return false;
+        const glm::ivec3 ground(chunk_coord.x, 0, chunk_coord.z);
+        return !world.MayMeshColumn(ground, /*underfeet_preview=*/false);
       });
 
   const bool missing_visible_mesh =
@@ -204,6 +204,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // flight (pending stays 30–60) and permanently blocked trail/sea Dirty →
   // transverse blank and black strips with water already in RAM.
   mesh_service.SetStarveOutsideFocusMesh(visual_holes || missing_underfeet);
+  // Healthy Dirty flush: raise outside-focus schedule so keep-shell remesh
+  // cannot plateau ~450 forever (kMaxOutsideFocusPerFrame=2 alone).
+  if (!visual_holes && !missing_underfeet && pending_dirty > 200 &&
+      last_frame_ms <= 28.0)
+  {
+    mesh_service.SetMaxOutsideFocusMeshPerFrame(pending_dirty > 400 ? 12 : 8);
+  }
+  else if (visual_holes || missing_underfeet)
+  {
+    mesh_service.SetMaxOutsideFocusMeshPerFrame(2);
+  }
+  else
+  {
+    mesh_service.SetMaxOutsideFocusMeshPerFrame(4);
+  }
   // Schedule ring: pending_underfeet alone must NOT clamp to r=1 — that latched
   // MaxHorizontalDist during flight while PendingLight stayed high and carved
   // transverse "roads" of missing GreedyCache (columns loaded, mesh starved).
@@ -339,15 +354,36 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     world.FlushPendingRelightMeshColumns(flush_n);
   }
 
-  // Flight FPS guard: later floors (underfeet/holes/Dirty) can push drain to
-  // 20–24; clamp while moving so emerge+draw do not own the frame.
+  // Hitch: cap *schedule* (snapshot cost). Keep drain higher when holes so
+  // completed async frees pipeline slots for reserved focus-missing work.
+  if (last_frame_ms > 24.0)
+  {
+    mesh_schedule = std::min(mesh_schedule, visual_holes || missing_underfeet ? 10 : 8);
+    mesh_drain =
+        std::min(mesh_drain, visual_holes || missing_underfeet ? 20 : 10);
+  }
+  else if (last_frame_ms > 16.0)
+  {
+    mesh_schedule = std::min(mesh_schedule, 12);
+    mesh_drain = std::min(mesh_drain, visual_holes || missing_underfeet ? 16 : 12);
+  }
+
+  // Flight FPS guard: clamp schedule while moving; drain may stay higher so
+  // MeshAsync does not sit at pipeline depth while focus is missing mesh.
   // Exception: Dirty flush with no visual holes may exceed fly_cap.
   if (moving && (visual_holes || missing_underfeet || pending_dirty <= 400))
   {
     int fly_cap = last_frame_ms > 20.0 ? 10 : 12;
     fly_cap = ApplyPressureCap(fly_cap, pressure.mesh_fly_cap);
-    mesh_drain = std::min(mesh_drain, fly_cap);
     mesh_schedule = std::min(mesh_schedule, fly_cap);
+    if (visual_holes || missing_underfeet)
+    {
+      mesh_drain = std::min(mesh_drain, std::max(fly_cap, 16));
+    }
+    else
+    {
+      mesh_drain = std::min(mesh_drain, fly_cap);
+    }
   }
   // Idle healthy holes: drain/schedule hard so focus Dirty can clear without
   // Recover flooding (CancelAsync+recover16 caused Dirty~1400 / emerge spikes).
@@ -409,6 +445,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
 
   // Sync-rebuild missing solid slices: underfeet always; idle focus holes too
   // (holes=1 + underfeet=0 used to wait forever on async while MeshAsync=42).
+  // Fly-wide sync was tried but hitch wall~100ms; keep async+Recover for cruise.
   const bool idle_focus_sync =
       !moving && missing_visible_mesh && last_frame_ms <= 20.0;
   if (underfeet_need || idle_focus_sync)
@@ -457,7 +494,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       push_cy(prefer_cy + d);
     }
     int immediate = 0;
-    // Underfeet: camera ±1. Idle focus holes: whole focus ring, small budget.
+    // Underfeet: camera ±1. Idle focus holes: whole focus ring.
     const int horiz_r = underfeet_need ? 1 : focus_radius;
     const int kMaxImmediate =
         underfeet_need
@@ -489,7 +526,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             const glm::ivec3 coord(focus_ground.x + dx, cy,
                                    focus_ground.z + dz);
             // Never sync-bake PendingLight — RebuildChunkImmediate bypasses
-            // soft-defer and ships light=0. First mesh goes through Dirty.
+            // soft-defer and ships light=0. First mesh goes through Dirty
+            // (Recover / commit preview).
             if (world.IsPendingLightBeforeMesh(glm::ivec2(coord.x, coord.z)))
             {
               continue;
