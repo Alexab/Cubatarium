@@ -271,10 +271,39 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               LastPressureCaps.level == StreamingPressureLevel::Green;
           if (near_focus)
           {
-            world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-                ground, dirty_min, dirty_max,
-                /*include_horizontal_neighbors=*/false);
-            world.SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+            const int horiz =
+                std::max(std::abs(coord.x - focus_ground.x),
+                         std::abs(coord.z - focus_ground.z));
+            glm::vec2 fwd = world.GetLastMovementDirXz();
+            const float flen =
+                std::sqrt(fwd.x * fwd.x + fwd.y * fwd.y);
+            bool admit_preview = horiz <= 1;
+            if (!admit_preview && flen > 0.05f)
+            {
+              fwd.x /= flen;
+              fwd.y /= flen;
+              const float ox =
+                  static_cast<float>(coord.x - focus_ground.x);
+              const float oz =
+                  static_cast<float>(coord.z - focus_ground.z);
+              // Forward wedge (+ side/trail soft): trail waits for MarkRelit.
+              admit_preview = (ox * fwd.x + oz * fwd.y) >= -0.75f;
+            }
+            else if (!admit_preview)
+            {
+              admit_preview = true; // idle / no dir: whole near_focus
+            }
+            if (admit_preview)
+            {
+              world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+                  ground, dirty_min, dirty_max,
+                  /*include_horizontal_neighbors=*/false);
+              world.SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+            }
+            else
+            {
+              world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
+            }
           }
           else if (admit_far_dirty)
           {

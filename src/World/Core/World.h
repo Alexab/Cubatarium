@@ -855,6 +855,8 @@ public:
   int SyncIdleFocusGreedyRemesh(int max_columns = 1);
   /// Clear PendingLight after mesh committed for lit focus columns.
   int ClearPendingLightAfterMeshCommitted(int max_columns = 8);
+  /// Drop StickyRemeshAfterLight columns outside radius (cruise prune).
+  int PruneStickyRemeshOutside(glm::ivec3 focus_ground_chunk, int radius_chunks);
   /// Focus ingress: Dirty + priority relight for Lighting columns without mesh.
   int AdmitFocusMeshIngress(int max_columns = 8);
   /// Ring-scan focus for solid slices missing GreedyCache; mark Dirty only.

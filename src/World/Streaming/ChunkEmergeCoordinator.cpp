@@ -236,6 +236,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     idle_cancel_cooldown = 0;
   }
+  // Cruise: keep sticky tracking to underfeet only so telemetry/effective_holes
+  // are not flooded by far MarkRelit remesh debt.
+  if (moving)
+  {
+    world.PruneStickyRemeshOutside(focus_ground_horiz, /*radius=*/1);
+  }
   // visual_holes = missing mesh only; near_focus_holes kept for legacy paths
   // that still want light-debt urgency for relight (not starve).
   const bool visual_holes = missing_visible_mesh;
@@ -529,12 +535,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Exception: Dirty flush with no visual holes may exceed fly_cap.
   if (moving && (visual_holes || missing_underfeet || pending_dirty <= 400))
   {
-    int fly_cap = last_frame_ms > 20.0 ? 10 : 12;
+    // Holes: allow slightly higher schedule so focus missing can drain; hitch
+    // still clamps via last_frame_ms.
+    int fly_cap = last_frame_ms > 22.0 ? 8 : (last_frame_ms > 16.0 ? 12 : 16);
+    if (visual_holes || missing_underfeet)
+    {
+      fly_cap = std::max(fly_cap, last_frame_ms > 22.0 ? 10 : 14);
+    }
     fly_cap = ApplyPressureCap(fly_cap, pressure.mesh_fly_cap);
     mesh_schedule = std::min(mesh_schedule, fly_cap);
     if (visual_holes || missing_underfeet)
     {
-      mesh_drain = std::min(mesh_drain, std::max(fly_cap, 16));
+      mesh_drain = std::min(mesh_drain, std::max(fly_cap, 18));
     }
     else
     {

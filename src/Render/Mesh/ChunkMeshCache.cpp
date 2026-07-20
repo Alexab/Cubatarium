@@ -1094,11 +1094,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   {
     EnsureAsyncBuilder();
     // Compact far remesh when backlog starves focus missing (Dirty~800 / async~42).
-    if (MeshFocusValid && Dirty.GetCount() > 400)
+    if (MeshFocusValid && Dirty.GetCount() > 350)
     {
       const int in_flight = AsyncBuilder->GetInFlightCount();
       const int compact_horiz =
-          (in_flight >= 32 || Dirty.GetCount() > 550) ? MeshFocusRadiusChunks
+          (in_flight >= 28 || Dirty.GetCount() > 450) ? MeshFocusRadiusChunks
                                                       : MeshFocusRadiusChunks + 1;
       if (StarveRemeshForHoles || in_flight >= 28 || Dirty.GetCount() > 500)
       {

@@ -864,7 +864,12 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
         const int horiz = std::max(std::abs(key.x - focus_chunk.x),
                                    std::abs(key.y - focus_chunk.z));
-        if (horiz <= GetStreamingFocusRadius())
+        // Cruise: only track underfeet sticky (full focus floods telemetry and
+        // ClearPending cannot keep up). Idle stop tracks full focus radius.
+        const bool idle =
+            LastMovementSpeed <= ProceduralTemplate.MovementPrefetchThreshold;
+        const int sticky_r = idle ? GetStreamingFocusRadius() : 1;
+        if (horiz <= sticky_r)
         {
           StickyRemeshAfterLight.insert(key);
         }
@@ -2000,6 +2005,32 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
     ++cleared;
   }
   return cleared;
+}
+
+int UWorld::PruneStickyRemeshOutside(glm::ivec3 focus_ground_chunk,
+                                     int radius_chunks)
+{
+  if (StickyRemeshAfterLight.empty() || radius_chunks < 0)
+  {
+    return 0;
+  }
+  int pruned = 0;
+  for (auto it = StickyRemeshAfterLight.begin();
+       it != StickyRemeshAfterLight.end();)
+  {
+    const int dist = std::max(std::abs(it->x - focus_ground_chunk.x),
+                              std::abs(it->y - focus_ground_chunk.z));
+    if (dist > radius_chunks)
+    {
+      it = StickyRemeshAfterLight.erase(it);
+      ++pruned;
+    }
+    else
+    {
+      ++it;
+    }
+  }
+  return pruned;
 }
 
 int UWorld::PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,

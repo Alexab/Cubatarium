@@ -204,9 +204,10 @@ def analyze(
         and ok_med(post_stop_pending_med, 15)
     )
     already_clean_stop = (
-        ok_med(post_stop_pending_med, 5)
+        ok_med(post_stop_pending_med, 15)
         and (post_stop_black_sticky_max or 0) <= 0.5
         and (post_stop_missing_max or 0) <= 0.5
+        and post_stop_effective_holes_rate <= 0.05
     )
     gates_stop = {
         "post_stop_pending_med_le_15": ok_med(post_stop_pending_med, 15),
