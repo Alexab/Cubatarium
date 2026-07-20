@@ -2055,13 +2055,18 @@ int UWorld::PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,
     {
       continue;
     }
+    // Job already running for this column — do not requeue (Drain+re-Enqueue
+    // previously created Keys ghosts that blocked all further promotes).
     if (AsyncRelightColumnsInFlight.count(entry.first) != 0)
     {
-      if (GetAsyncRelightInFlightCount() > 0)
+      if (GetAsyncRelightInFlightCount() == 0)
+      {
+        AsyncRelightColumnsInFlight.erase(entry.first);
+      }
+      else
       {
         continue;
       }
-      AsyncRelightColumnsInFlight.erase(entry.first);
     }
     Persistence->EnqueueTerrainColumnRelight(
         entry.first.x * CHUNK_SIZE, entry.first.y * CHUNK_SIZE,

@@ -896,6 +896,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     {
       bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 20 : 40);
     }
+    // Clean stop with light debt only: keep enqueue hot so MarkRelit can clear
+    // pending without sync RelightColumn (which caused 1–2s spikes).
+    if (pending_light_focus_n > 15 && black_sticky_focus == 0 &&
+        !missing_focus_mesh)
+    {
+      bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 24 : 48);
+    }
   }
   else if (pending_light_focus_n > 0 && frame_ms > kBadFrameMs)
   {

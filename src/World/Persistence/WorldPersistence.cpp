@@ -153,11 +153,10 @@ void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z,
   }
   if (!PendingTerrainColumnRelightKeys.insert(key).second)
   {
-    // Already queued: if caller now wants priority, promote out of the far FIFO.
-    if (priority)
-    {
-      PromoteTerrainColumnRelight(key);
-    }
+    // Already keyed: promote-from-far or repair Keys-without-deque ghosts.
+    // Always run Promote so non-priority requeues cannot leave ghosts stuck
+    // (those blocked MarkRelit forever with pending_light≈30, relight_drain≈0).
+    PromoteTerrainColumnRelight(key);
     return;
   }
   if (priority)
@@ -181,12 +180,18 @@ void UWorldPersistence::PromoteTerrainColumnRelight(glm::ivec2 key)
   }
   auto it = std::find(PendingTerrainColumnRelights.begin(),
                       PendingTerrainColumnRelights.end(), key);
-  if (it == PendingTerrainColumnRelights.end())
+  if (it != PendingTerrainColumnRelights.end())
   {
+    PendingTerrainColumnRelights.erase(it);
+    PendingTerrainColumnRelightsPriority.push_back(key);
     return;
   }
-  PendingTerrainColumnRelights.erase(it);
-  PendingTerrainColumnRelightsPriority.push_back(key);
+  // Keys-without-deque ghost: Drain used to re-Enqueue in-flight columns and
+  // leave Keys set with no FIFO entry — pending_light then stuck forever.
+  if (PendingTerrainColumnRelightKeys.count(key) != 0)
+  {
+    PendingTerrainColumnRelightsPriority.push_back(key);
+  }
 }
 
 int UWorldPersistence::PromoteNearTerrainColumnRelights(glm::ivec3 focus_ground,
@@ -262,17 +267,30 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
   const glm::ivec3 focus_horiz(focus_chunk.x, 0, focus_chunk.z);
   const int focus_radius = world.GetStreamingFocusRadius();
-  const bool focus_pending_high =
-      world.CountPendingLightBeforeMeshNear(focus_horiz, focus_radius) > 15;
+  const int pending_light_focus_n =
+      world.CountPendingLightBeforeMeshNear(focus_horiz, focus_radius);
+  const bool focus_pending_high = pending_light_focus_n > 15;
+  const bool focus_pending_mid = pending_light_focus_n > 8;
   const bool visual_holes =
       world.MeshService &&
       world.MeshService->HasMissingGreedyMeshInHorizontalRadius(
           world.GetBlockWorld(), focus_horiz, focus_radius);
+  const bool idle_recovery =
+      world.GetLastMovementSpeed() <=
+          world.ProceduralTemplate.MovementPrefetchThreshold &&
+      (focus_pending_mid || visual_holes);
   const URuntimeTuning &tune = URuntimeTuning::Get();
-  const int inflight_mult =
-      (focus_pending_high || visual_holes)
-          ? std::max(3, tune.RelightInflightMultHoles)
-          : 2;
+  // MultHigh was loaded from tune but unused — use it for idle/mid pending so
+  // stop can drain light debt without waiting for holes.
+  int inflight_mult = 2;
+  if (focus_pending_high || visual_holes)
+  {
+    inflight_mult = std::max(3, tune.RelightInflightMultHoles);
+  }
+  else if (idle_recovery || focus_pending_mid)
+  {
+    inflight_mult = std::max(2, tune.RelightInflightMultHigh);
+  }
   const int max_inflight =
       async_bg ? std::clamp(world.ProceduralTemplate.RelightThreadCount, 1, 8) *
                      inflight_mult
@@ -317,6 +335,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   }
 
   int drained_bg = 0;
+  int skipped_inflight = 0;
   auto drain_one = [&]()
   {
     if (drained_bg >= max_bg_columns)
@@ -360,10 +379,13 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                                FloorDiv(col.y, CHUNK_SIZE));
     if (async_bg && world.IsAsyncRelightColumnInFlight(ground_xz))
     {
-      // Duplicate while job runs — re-queue with merged band; do not erase key.
-      EnqueueTerrainColumnRelight(col.x, col.y, /*priority=*/true, relight_min,
-                                  relight_max);
-      return true;
+      // Already computing — drop FIFO membership only. Re-Enqueue here used to
+      // leave Keys set with no deque entry (Promote then no-ops forever).
+      PendingTerrainColumnRelightKeys.erase(col);
+      PendingTerrainColumnRelightYBands.erase(col);
+      ++skipped_inflight;
+      // Bound skip work so a long in-flight FIFO cannot spin the frame.
+      return skipped_inflight < std::max(8, max_bg_columns * 4);
     }
     PendingTerrainColumnRelightKeys.erase(col);
     if (async_bg)

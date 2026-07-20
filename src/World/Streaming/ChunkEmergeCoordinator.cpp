@@ -175,7 +175,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   static int idle_cancel_cooldown = 0;
   if (idle_recovery)
   {
-    if (idle_cancel_cooldown <= 0 || async_saturated_idle)
+    // Light debt with clean visuals (sticky=0, missing=0): promote often so
+    // PendingLight cannot sit at ~30+ while relight_drain≈0 after Keys ghosts.
+    const bool pending_debt_only =
+        pending_focus_count > 15 && black_sticky == 0 && !missing_visible_mesh;
+    if (idle_cancel_cooldown <= 0 || async_saturated_idle || pending_debt_only)
     {
       mesh_service.CancelInFlightOutsideHorizontalRadius(focus_ground_horiz,
                                                          focus_radius);
@@ -184,7 +188,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         mesh_service.CancelAsyncInFlightKeepDirty();
       }
       world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
-      idle_cancel_cooldown = async_saturated_idle ? 30 : 120;
+      idle_cancel_cooldown =
+          pending_debt_only ? 8 : (async_saturated_idle ? 30 : 120);
     }
     else
     {
