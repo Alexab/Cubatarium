@@ -250,15 +250,17 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                   ? std::max(0, std::min(dirty_min,
                                          settings.SeaLevel - CHUNK_SIZE * 2))
                   : dirty_min;
-          // Near focus: full column sky. Far: occupied band only — full
-          // MaxHeight doubled per-column relight and starved throughput.
+          // Near focus: mesh gate band + one slice pad for skylight ingress.
           const int relight_max =
-              near_focus ? settings.MaxHeight
-                         : std::min(settings.MaxHeight,
-                                    std::max(dirty_max,
-                                             settings.SeaLevel + CHUNK_SIZE * 2));
+              near_focus
+                  ? std::min(settings.MaxHeight, dirty_max + CHUNK_SIZE * 2)
+                  : std::min(settings.MaxHeight,
+                             std::max(dirty_max, settings.SeaLevel +
+                                                      CHUNK_SIZE * 2));
+          const bool relight_priority =
+              near_focus && LastPendingLightFocus <= 20;
           world.Persistence->EnqueueTerrainColumnRelight(
-              ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, near_focus,
+              ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, relight_priority,
               relight_min, relight_max);
           world.NotePendingLightBeforeMesh(ground, dirty_min, dirty_max);
           // First mesh preview in entire focus (empty strips if we wait for
@@ -331,6 +333,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   in.visual_holes = missing_near;
   in.underfeet_need = missing_underfeet || pending_underfeet;
   in.pending_light_focus = pending_light_focus;
+  LastPendingLightFocus = pending_light_focus;
   LastPressureCaps = EvaluateStreamingPressure(in, PressureState);
 
   world.PhysicsTelemetryData.StreamPressure =

@@ -1981,9 +1981,13 @@ void UWorld::TickAsyncChunkSystems()
   }
   const int pending_light_focus_n = CountPendingLightBeforeMeshNear(
       glm::ivec3(focus_ground.x, 0, focus_ground.z), focus_radius);
-  if (pending_light_focus_n > 15)
+  if (pending_light_focus_n > 30)
   {
-    drain_budget = std::max(drain_budget, 24);
+    drain_budget = std::max(drain_budget, 48);
+  }
+  else if (pending_light_focus_n > 15)
+  {
+    drain_budget = std::max(drain_budget, 32);
   }
   else if (pending_light_focus_n > 8)
   {

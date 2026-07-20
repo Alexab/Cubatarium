@@ -160,6 +160,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       missing_visible_mesh;
   const bool pending_near_light =
       world.HasPendingLightBeforeMeshNear(focus_ground_horiz, focus_radius);
+  const int pending_focus_count =
+      world.CountPendingLightBeforeMeshNear(focus_ground_horiz, focus_radius);
   // visual_holes = missing mesh only; near_focus_holes kept for legacy paths
   // that still want light-debt urgency for relight (not starve).
   const bool visual_holes = missing_visible_mesh;
@@ -226,7 +228,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       flushed_for_holes = false;
     }
-    else if (!flushed_for_holes && pending_async >= 24)
+    else if (!flushed_for_holes && pending_async >= 20)
     {
       mesh_service.CancelAsyncInFlightKeepDirty();
       flushed_for_holes = true;
@@ -651,7 +653,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   else if (missing_visible_mesh || pending_near_light)
   {
-    // Forward wedge sync (dist 2) without flooding schedule when async idle.
     sync_cap = std::max(sync_cap, moving ? 4 : 8);
     mesh_schedule = std::max(mesh_schedule, moving ? 12 : 20);
     mesh_drain = std::max(mesh_drain, moving ? 12 : 24);
@@ -664,6 +665,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   else if (!moving && pending_dirty > 64 && last_frame_ms <= 20.0)
   {
     sync_cap = 2;
+  }
+  // Relight debt without holes: ease mesh so sim_ms can breathe (manual flight
+  // sim_ms~120 when pending~30 and mesh_emerge~70).
+  if (!visual_holes && !underfeet_need && pending_focus_count > 28 && moving)
+  {
+    mesh_schedule = std::min(mesh_schedule, 10);
+    mesh_drain = std::min(mesh_drain, 14);
   }
   const double sync_budget_ms =
       (underfeet_need && last_frame_ms <= 16.0)             ? 10.0

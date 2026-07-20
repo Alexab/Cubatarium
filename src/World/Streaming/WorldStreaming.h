@@ -122,6 +122,8 @@ private:
   std::chrono::steady_clock::time_point AdaptiveRdLastAdjust{};
   StreamingPressureState PressureState{};
   StreamingPressureCaps LastPressureCaps{};
+  /// Cached once per RefreshStreamingPressure — safe for commit callback.
+  int LastPendingLightFocus{0};
 };
 
 } // namespace cutum
