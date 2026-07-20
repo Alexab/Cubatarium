@@ -331,6 +331,12 @@ void UWorldMeshService::CancelAsyncInFlightKeepDirty()
   Cache.CancelAsyncInFlightKeepDirty();
 }
 
+void UWorldMeshService::CancelInFlightOutsideHorizontalRadius(
+    glm::ivec3 focus_ground_chunk, int radius_chunks)
+{
+  Cache.CancelInFlightOutsideHorizontalRadius(focus_ground_chunk, radius_chunks);
+}
+
 bool UWorldMeshService::HasPendingDirty() const
 {
   return Cache.HasPendingDirty();

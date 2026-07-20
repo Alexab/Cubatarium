@@ -342,14 +342,6 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     {
       return false;
     }
-    PendingTerrainColumnRelightKeys.erase(col);
-    const glm::ivec2 ground_xz(FloorDiv(col.x, CHUNK_SIZE),
-                               FloorDiv(col.y, CHUNK_SIZE));
-    if (async_bg && world.IsAsyncRelightColumnInFlight(ground_xz))
-    {
-      // Duplicate while job runs — drop queue entry; completion clears pending.
-      return true;
-    }
     int relight_min = 0;
     int relight_max = max_y;
     const auto band_it = PendingTerrainColumnRelightYBands.find(col);
@@ -364,6 +356,16 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         relight_max = max_y;
       }
     }
+    const glm::ivec2 ground_xz(FloorDiv(col.x, CHUNK_SIZE),
+                               FloorDiv(col.y, CHUNK_SIZE));
+    if (async_bg && world.IsAsyncRelightColumnInFlight(ground_xz))
+    {
+      // Duplicate while job runs — re-queue with merged band; do not erase key.
+      EnqueueTerrainColumnRelight(col.x, col.y, /*priority=*/true, relight_min,
+                                  relight_max);
+      return true;
+    }
+    PendingTerrainColumnRelightKeys.erase(col);
     if (async_bg)
     {
       world.EnqueueAsyncTerrainColumnRelight(col.x, col.y, relight_min,

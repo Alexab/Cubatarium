@@ -39,7 +39,8 @@ public:
                          bool prefer_lower_cy, bool vertical_valid,
                          const std::function<bool(glm::ivec3)> &missing_mesh,
                          float forward_bias_k = 0.0f,
-                         glm::vec2 forward_xz = glm::vec2(0.0f));
+                         glm::vec2 forward_xz = glm::vec2(0.0f),
+                         int focus_radius_for_tail = -1);
 
   void PrioritizeChunksWithoutMesh(
       const std::function<bool(glm::ivec3)> &missing_mesh);

@@ -298,6 +298,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"light_debt\":" << n.light_debt
           << ",\"focus_missing_mesh\":" << n.focus_missing_mesh
           << ",\"focus_dark_mesh\":" << n.focus_dark_mesh
+          << ",\"black_sticky\":" << n.focus_dark_mesh
           << ",\"max_wall_ms\":" << n.max_wall_ms
           << ",\"max_stream_ms\":" << n.max_stream_ms
           << ",\"max_mesh_emerge_ms\":" << n.max_mesh_emerge_ms

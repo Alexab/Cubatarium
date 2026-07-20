@@ -854,7 +854,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         dirty_min = std::max(0, band.min_y - 1);
         dirty_max = std::min(column_max_y, band.max_y + 1);
       }
-      const bool seam_ok = MeshService->GetDirtyCount() < 350;
+      const bool seam_ok = true; // primary column must remesh after relight
       if (priority_mesh)
       {
         MeshService->MarkTerrainChunkMeshDirtySeamedPriority(ground, dirty_min,
@@ -1089,6 +1089,13 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
                 ground, remesh_min, remesh_max,
                 /*include_horizontal_neighbors=*/false);
             SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+          }
+          else if (has_mesh)
+          {
+            // Sticky black preview: GreedyCache present while PendingLight.
+            MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+                ground, remesh_min, remesh_max,
+                /*include_horizontal_neighbors=*/false);
           }
           ++repaired;
           continue;
@@ -1464,6 +1471,49 @@ int UWorld::CountPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,
     }
   }
   return count;
+}
+
+int UWorld::CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
+                                        int radius_chunks) const
+{
+  if (!MeshService || PendingLightBeforeMesh.empty() || radius_chunks < 0)
+  {
+    return 0;
+  }
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const int sea = ProceduralTemplate.SeaLevel;
+  int band_min =
+      std::max(0, focus_ground_chunk.y * CHUNK_SIZE - CHUNK_SIZE);
+  int band_max = std::min(max_y, focus_ground_chunk.y * CHUNK_SIZE +
+                                      CHUNK_SIZE * 3 - 1);
+  if (ProceduralTemplate.FillWater)
+  {
+    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
+    band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE * 2));
+  }
+  const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
+  const int cy1 = FloorDiv(band_max, CHUNK_SIZE);
+  int sticky = 0;
+  for (const auto &entry : PendingLightBeforeMesh)
+  {
+    const glm::ivec2 key = entry.first;
+    const int dist =
+        std::max(std::abs(key.x - focus_ground_chunk.x),
+                 std::abs(key.y - focus_ground_chunk.z));
+    if (dist > radius_chunks)
+    {
+      continue;
+    }
+    for (int cy = cy0; cy <= cy1; ++cy)
+    {
+      if (MeshService->HasGreedyMesh(glm::ivec3(key.x, cy, key.y)))
+      {
+        ++sticky;
+        break;
+      }
+    }
+  }
+  return sticky;
 }
 
 int UWorld::PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,

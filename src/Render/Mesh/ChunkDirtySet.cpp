@@ -91,7 +91,7 @@ void UChunkDirtySet::SortByDistanceKey(
     glm::ivec3 focus_ground_chunk, int preferred_cy, bool prefer_lower_cy,
     bool vertical_valid,
     const std::function<bool(glm::ivec3)> &missing_mesh, float forward_bias_k,
-    glm::vec2 forward_xz)
+    glm::vec2 forward_xz, int focus_radius_for_tail)
 {
   if (Queue.size() < 2)
   {
@@ -109,6 +109,17 @@ void UChunkDirtySet::SortByDistanceKey(
           if (ma != mb)
           {
             return ma;
+          }
+          if (!ma && !mb && focus_radius_for_tail >= 0)
+          {
+            const int ha = HorizDist(a, focus_ground_chunk);
+            const int hb = HorizDist(b, focus_ground_chunk);
+            const bool oa = ha > focus_radius_for_tail;
+            const bool ob = hb > focus_radius_for_tail;
+            if (oa != ob)
+            {
+              return ob; // in-focus remesh before outside-focus remesh
+            }
           }
         }
         const float ea = EffectiveHorizDist(a, focus_ground_chunk,

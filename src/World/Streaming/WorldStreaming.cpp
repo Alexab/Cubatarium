@@ -339,6 +339,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   world.PhysicsTelemetryData.StreamPressure =
       static_cast<int>(LastPressureCaps.level);
   world.PhysicsTelemetryData.PendingLightFocus = pending_light_focus;
+  world.PhysicsTelemetryData.FocusDarkMesh = world.CountBlackStickyFocusMeshes(
+      focus_ground, focus_radius);
   world.PhysicsTelemetryData.VisualHoles = missing_near ? 1 : 0;
   world.PhysicsTelemetryData.LightDebt = pending_light_focus > 0 ? 1 : 0;
   world.PhysicsTelemetryData.NearFocusHoles =
@@ -843,6 +845,14 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   else if (pending_light_focus_n > 8)
   {
     bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 8 : 16);
+  }
+  const bool idle_recovery =
+      world.GetLastMovementSpeed() <=
+          procedural.MovementPrefetchThreshold &&
+      pending_light_focus_n > 8;
+  if (idle_recovery)
+  {
+    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 12 : 24);
   }
   else if (pending_light_focus_n > 0 && frame_ms > kBadFrameMs)
   {

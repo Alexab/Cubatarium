@@ -407,6 +407,37 @@ void UChunkMeshCache::CancelAsyncInFlightKeepDirty()
   AsyncBuilder->CancelPending();
 }
 
+void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
+    glm::ivec3 focus_ground_chunk, int radius_chunks)
+{
+  if (!Render.AsyncMeshing || !Render.GreedyMeshing || !AsyncBuilder ||
+      radius_chunks < 0)
+  {
+    return;
+  }
+  std::vector<glm::ivec3> outside;
+  outside.reserve(ActiveMeshSourceRevision.size());
+  for (const auto &entry : ActiveMeshSourceRevision)
+  {
+    const glm::ivec3 &coord = entry.first;
+    const int horiz = std::max(std::abs(coord.x - focus_ground_chunk.x),
+                               std::abs(coord.z - focus_ground_chunk.z));
+    if (horiz > radius_chunks)
+    {
+      outside.push_back(coord);
+    }
+  }
+  for (const glm::ivec3 &coord : outside)
+  {
+    AsyncBuilder->ForgetInflight(coord);
+    ActiveMeshSourceRevision.erase(coord);
+    if (!Dirty.Contains(coord))
+    {
+      MarkDirty(coord);
+    }
+  }
+}
+
 bool UChunkMeshCache::HasPendingDirty() const
 {
   return !Dirty.empty() || HasPendingAsyncMeshWork();
@@ -1019,7 +1050,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       // missing → effective horiz (forward bias) → preferred cy.
       Dirty.SortByDistanceKey(MeshFocusGroundChunk, MeshVerticalPreferredCy,
                               MeshPreferLowerCy, MeshVerticalPriorityValid,
-                              missing_mesh, MeshForwardBiasK, MeshForwardXz);
+                              missing_mesh, MeshForwardBiasK, MeshForwardXz,
+                              MeshFocusRadiusChunks);
     }
     else
     {
@@ -1084,7 +1116,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (StarveRemeshForHoles &&
           GreedyCache.find(*it) != GreedyCache.end())
       {
-        return Dirty.RemoveAt(it);
+        // Skip remesh while holes exist — keep Dirty for MarkRelit (never drop).
+        return std::next(it);
       }
       if (!world.GetChunkManager().HasChunk(*it))
       {
@@ -1226,21 +1259,15 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (StarveRemeshForHoles &&
           GreedyCache.find(*it) != GreedyCache.end())
       {
-        // Drop remesh while holes exist so Dirty collapses to missing only.
-        it = Dirty.RemoveAt(it);
+        // Skip remesh while holes exist — keep Dirty for MarkRelit (never drop).
+        ++it;
         continue;
       }
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
       {
-        // Remesh deferred while PendingLight: drop Dirty — MarkRelit re-Dirties
-        // after light. Keeping remesh flooded Dirty and starved hole schedule.
+        // Remesh deferred while PendingLight: skip until MarkRelit clears gate.
         // First-mesh (no GreedyCache) stays in queue (Defer returns false in
         // focus for missing).
-        if (GreedyCache.find(*it) != GreedyCache.end())
-        {
-          it = Dirty.RemoveAt(it);
-          continue;
-        }
         ++it;
         continue;
       }

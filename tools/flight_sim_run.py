@@ -30,17 +30,60 @@ def newest_perf(after_ts: float) -> Path | None:
     return max(cands, key=lambda p: p.stat().st_mtime)
 
 
+def load_best(path: Path) -> dict | None:
+    if not path.is_file():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def is_better(result: dict, best: dict | None) -> bool:
+    if best is None:
+        return True
+    rm = result.get("metrics") or {}
+    bm = best.get("metrics") or {}
+    rc = int(rm.get("gates_pass_count") or 0)
+    bc = int(bm.get("gates_pass_count") or 0)
+    if rc > bc:
+        return True
+    if rc < bc:
+        return False
+    rp = rm.get("pending_light_focus_med")
+    bp = bm.get("pending_light_focus_med")
+    if rp is not None and bp is not None and rp < bp - 4.0:
+        return True
+    rw = rm.get("wall_ms_med")
+    bw = bm.get("wall_ms_med")
+    if rw is not None and bw is not None and rw < bw - 2.0:
+        return True
+    return False
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--world", default="World_164")
     ap.add_argument("--seconds", type=float, default=45.0)
     ap.add_argument("--build", action="store_true")
     ap.add_argument("--no-fly", action="store_true")
+    ap.add_argument(
+        "--fly-stop",
+        action="store_true",
+        help="fly phase then release W for stop-recovery (AppRunner --fly-stop)",
+    )
+    ap.add_argument("--fly-phase-sec", type=float, default=40.0)
+    ap.add_argument("--stop-phase-sec", type=float, default=15.0)
     ap.add_argument("--report", type=Path, default=BIN / "flight_sim_gate_report.json")
     ap.add_argument(
         "--build-dir",
         type=Path,
         default=ROOT / "build" / "desktop-linux",
+    )
+    ap.add_argument(
+        "--update-best",
+        action="store_true",
+        help="copy report to west_best / stop_best when improved",
     )
     args = ap.parse_args()
 
@@ -80,12 +123,15 @@ def main() -> int:
         sim_cmd.append("--no-hold-forward")
     else:
         sim_cmd.extend(["--fly", "--hold-forward"])
+    if args.fly_stop:
+        sim_cmd.append("--fly-stop")
+        sim_cmd.extend(["--fly-phase", str(args.fly_phase_sec)])
+        sim_cmd.extend(["--stop-phase", str(args.stop_phase_sec)])
 
     print("running:", " ".join(sim_cmd), flush=True)
     rc = subprocess.call(sim_cmd, cwd=str(BIN))
     perf = newest_perf(t0)
     if perf is None:
-        # fallback: path from report
         report_path = BIN / "flight_sim_report.json"
         if report_path.is_file():
             data = json.loads(report_path.read_text(encoding="utf-8"))
@@ -106,6 +152,18 @@ def main() -> int:
             str(args.report),
         ]
     )
+    if args.report.is_file() and args.update_best:
+        result = json.loads(args.report.read_text(encoding="utf-8"))
+        if args.fly_stop:
+            best_path = BIN / "flight_sim_gate_report_stop_best.json"
+        else:
+            best_path = BIN / "flight_sim_gate_report_west_best.json"
+        best = load_best(best_path)
+        if is_better(result, best):
+            best_path.write_text(
+                args.report.read_text(encoding="utf-8"), encoding="utf-8"
+            )
+            print(f"updated best: {best_path}", flush=True)
     if rc != 0:
         print(f"flight-sim process exit={rc}", file=sys.stderr)
         return rc

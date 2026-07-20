@@ -307,6 +307,11 @@ int RunEnterGameSmoke(IUPlatformPaths &paths, int in_game_frames)
 int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
 {
   double in_game_seconds = options.InGameSeconds;
+  if (options.FlyStopMode)
+  {
+    in_game_seconds = options.IdleBeforeFlySec + options.FlyPhaseSec +
+                      options.StopPhaseSec;
+  }
   if (in_game_seconds < 5.0)
   {
     in_game_seconds = 5.0;
@@ -390,6 +395,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     bool loading_seen = false;
     bool autopilot_armed = false;
     bool autopilot_flying = false;
+    bool fly_stop_released = false;
     int ingame_frames_seen = 0;
     int start_focus_cx = 0;
     int start_focus_cz = 0;
@@ -469,7 +475,25 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 if (options.HoldForward &&
                     ingame_sec >= options.IdleBeforeFlySec)
                 {
-                  if (!autopilot_flying)
+                  const double fly_end =
+                      options.IdleBeforeFlySec +
+                      (options.FlyStopMode ? options.FlyPhaseSec
+                                           : in_game_seconds);
+                  if (options.FlyStopMode && ingame_sec >= fly_end)
+                  {
+                    if (!fly_stop_released)
+                    {
+                      fly_stop_released = true;
+                      window.SetAutopilotKey(KeyCode::Key_W, false);
+                      if (options.Sprint)
+                      {
+                        window.SetAutopilotKey(KeyCode::Key_Ctrl, false);
+                      }
+                      std::cout << "flight-sim: fly-stop released W at t="
+                                << ingame_sec << "s" << std::endl;
+                    }
+                  }
+                  else if (!autopilot_flying)
                   {
                     autopilot_flying = true;
                     window.SetAutopilotKey(KeyCode::Key_W, true);

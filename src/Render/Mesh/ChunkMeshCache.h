@@ -76,6 +76,9 @@ public:
   bool WaitForAsyncMeshIdleFor(std::chrono::milliseconds timeout);
   void CancelAsyncMeshWork();
   void CancelAsyncInFlightKeepDirty();
+  /// Cancel in-flight async mesh outside focus; coords stay in Dirty.
+  void CancelInFlightOutsideHorizontalRadius(glm::ivec3 focus_ground_chunk,
+                                             int radius_chunks);
   void DrainAsyncMeshResults(UBlockWorld &world, UBlockRegistry &registry,
                              int max_per_frame);
   double GetLastFlatRebuildMs() const { return LastFlatRebuildMs; }

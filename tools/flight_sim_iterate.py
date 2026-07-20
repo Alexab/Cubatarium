@@ -74,8 +74,19 @@ def worse_wall_or_red(prev: dict | None, cur: dict) -> bool:
 
 def pick_knob_update(tune: dict, result: dict) -> tuple[str, float | int] | None:
     gates = result.get("gates") or {}
-    # Priority: pending, then holes, then wall/red, then dirty.
+    gates_stop = result.get("gates_stop") or {}
+    soft = result.get("soft") or {}
     order = []
+    if not gates_stop.get("post_stop_black_sticky_zero", True) or soft.get(
+        "black_proxy_soft_fail", False
+    ):
+        order.extend(
+            [
+                "relight_inflight_mult_holes",
+                "relight_inflight_mult_high",
+                "recover_n_boost",
+            ]
+        )
     if not gates.get("pending_light_focus_med_le_15", True):
         order.extend(
             [
@@ -126,6 +137,8 @@ def main() -> int:
     ap.add_argument("--seconds", type=float, default=60.0)
     ap.add_argument("--max-iters", type=int, default=6)
     ap.add_argument("--build-first", action="store_true")
+    ap.add_argument("--fly-stop", action="store_true")
+    ap.add_argument("--commit-on-pass", action="store_true")
     ap.add_argument(
         "--build-dir",
         type=Path,
@@ -154,6 +167,9 @@ def main() -> int:
         ]
         if args.build_first and i == 0:
             cmd.append("--build")
+        cmd.append("--update-best")
+        if args.fly_stop:
+            cmd.append("--fly-stop")
         print(f"=== iterate {i}: tune={tune}", flush=True)
         write_tune(tune)
         rc = subprocess.call(cmd)
@@ -174,9 +190,36 @@ def main() -> int:
         append_history(entry)
         print(json.dumps(entry, indent=2), flush=True)
 
+        best_path = BIN / "flight_sim_gate_report_west_best.json"
+        best = None
+        if best_path.is_file():
+            best = json.loads(best_path.read_text(encoding="utf-8"))
+        cur_pass = sum(1 for v in (result.get("gates") or {}).values() if v)
+        best_pass = (
+            sum(1 for v in (best.get("gates") or {}).values() if v) if best else 0
+        )
+        if cur_pass > best_pass:
+            print(
+                f"CHECKPOINT: gates {best_pass} -> {cur_pass} — "
+                "consider: python tools/flight_sim_checkpoint.py --label iterate",
+                flush=True,
+            )
+
         if result.get("pass"):
             print("PASS: gates satisfied", flush=True)
             shutil.copyfile(report, BIN / "flight_sim_gate_report_west_pass.json")
+            if args.commit_on_pass:
+                subprocess.call(
+                    [
+                        sys.executable,
+                        str(Path(__file__).with_name("flight_sim_checkpoint.py")),
+                        "--label",
+                        "iterate-pass",
+                        "--report",
+                        str(report),
+                        "--force",
+                    ]
+                )
             return 0
 
         if worse_wall_or_red(prev_result, result):

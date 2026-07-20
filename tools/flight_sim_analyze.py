@@ -16,7 +16,9 @@ def median(xs: list[float]) -> float | None:
     return float(statistics.median(xs))
 
 
-def analyze(path: Path, warmup_sec: float = 5.0) -> dict:
+def analyze(
+    path: Path, warmup_sec: float = 5.0, stop_tail_periods: int = 5
+) -> dict:
     rows = [
         json.loads(line)
         for line in path.read_text(encoding="utf-8").splitlines()
@@ -24,15 +26,12 @@ def analyze(path: Path, warmup_sec: float = 5.0) -> dict:
     ]
     periods = [r for r in rows if r.get("kind") == "period"]
     spikes = [r for r in rows if r.get("kind") == "spike"]
-    # Approximate warmup: skip first periods until cumulative ~warmup via frames*interval.
-    # Periods are ~2s each; skip first max(2, warmup/2) periods.
     skip = max(2, int(warmup_sec / 2.0))
     steady = periods[skip:] if len(periods) > skip else periods
 
     def col(rs, key):
         return [float(r.get(key) or 0) for r in rs if key in r]
 
-    # Prefer visual_holes if present (phase 1); else near_focus_holes.
     hole_key = (
         "visual_holes"
         if any("visual_holes" in r for r in steady)
@@ -48,8 +47,6 @@ def analyze(path: Path, warmup_sec: float = 5.0) -> dict:
     holes_rate = (sum(1 for h in holes if h > 0) / len(holes)) if holes else 1.0
     red_rate = (sum(1 for p in pressure if p >= 2) / len(pressure)) if pressure else 1.0
 
-    # Focus travel (manual World_164 ocean: ~11 chunks west). Stationary
-    # hold-forward used to false-pass all gates.
     focus_pts = [
         (int(r.get("focus_cx") or 0), int(r.get("focus_cz") or 0)) for r in steady
     ]
@@ -58,7 +55,6 @@ def analyze(path: Path, warmup_sec: float = 5.0) -> dict:
         c0, c1 = focus_pts[0], focus_pts[-1]
         chunks_traveled = max(abs(c1[0] - c0[0]), abs(c1[1] - c0[1]))
 
-    # Stuck mesh_async~42 while holes: consecutive periods.
     stuck_async_holes = 0
     run = 0
     for r in steady:
@@ -69,7 +65,6 @@ def analyze(path: Path, warmup_sec: float = 5.0) -> dict:
             stuck_async_holes = max(stuck_async_holes, run)
         else:
             run = 0
-    # Each period ~2s
     stuck_async_holes_sec = stuck_async_holes * 2.0
 
     dirty_high_run = 0
@@ -85,8 +80,6 @@ def analyze(path: Path, warmup_sec: float = 5.0) -> dict:
     def ok_med(val, limit):
         return val is not None and val <= limit
 
-    # Soft diagnostics (do not fail hard gates): rising pending while traveling,
-    # and black-proxy (mesh present / holes low while pending stays high).
     pending_trend_rising = False
     if len(pending_f) >= 4 and chunks_traveled >= 3:
         mid = len(pending_f) // 2
@@ -99,9 +92,7 @@ def analyze(path: Path, warmup_sec: float = 5.0) -> dict:
         p = float(r.get("pending_light_focus") or 0)
         if h <= 0 and p >= 20:
             black_proxy_periods += 1
-    black_proxy_rate = (
-        black_proxy_periods / len(steady) if steady else 0.0
-    )
+    black_proxy_rate = black_proxy_periods / len(steady) if steady else 0.0
 
     gates = {
         "visual_holes_rate_le_0_10": holes_rate <= 0.10,
@@ -113,12 +104,36 @@ def analyze(path: Path, warmup_sec: float = 5.0) -> dict:
         "wall_ms_med_le_25": ok_med(median(wall), 25),
         "chunks_traveled_ge_3": chunks_traveled >= 3,
     }
+    gates_pass_count = sum(1 for v in gates.values() if v)
     passed = all(gates.values())
+
+    stop_tail = (
+        steady[-stop_tail_periods:]
+        if len(steady) >= stop_tail_periods
+        else steady
+    )
+    sticky_key = (
+        "black_sticky"
+        if any("black_sticky" in r for r in stop_tail)
+        else "focus_dark_mesh"
+    )
+    black_sticky_tail = col(stop_tail, sticky_key)
+    pending_stop = col(stop_tail, "pending_light_focus")
+    post_stop_pending_med = median(pending_stop)
+    post_stop_black_sticky_max = (
+        max(black_sticky_tail) if black_sticky_tail else None
+    )
+    gates_stop = {
+        "post_stop_pending_med_le_15": ok_med(post_stop_pending_med, 15),
+        "post_stop_black_sticky_zero": post_stop_black_sticky_max is not None
+        and post_stop_black_sticky_max <= 0.5,
+    }
 
     soft = {
         "pending_trend_rising_while_traveling": pending_trend_rising,
         "black_proxy_rate": black_proxy_rate,
         "black_proxy_soft_fail": black_proxy_rate >= 0.25,
+        "gates_stop": gates_stop,
     }
 
     return {
@@ -140,8 +155,13 @@ def analyze(path: Path, warmup_sec: float = 5.0) -> dict:
             "chunks_traveled": chunks_traveled,
             "focus_start": focus_pts[0] if focus_pts else None,
             "focus_end": focus_pts[-1] if focus_pts else None,
+            "gates_pass_count": gates_pass_count,
+            "gates_total": len(gates),
+            "post_stop_pending_med": post_stop_pending_med,
+            "post_stop_black_sticky_max": post_stop_black_sticky_max,
         },
         "gates": gates,
+        "gates_stop": gates_stop,
         "soft": soft,
         "pass": passed,
     }
@@ -151,12 +171,13 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("perf_jsonl", type=Path)
     ap.add_argument("--warmup-sec", type=float, default=5.0)
+    ap.add_argument("--stop-tail-periods", type=int, default=5)
     ap.add_argument("--report", type=Path, default=None)
     args = ap.parse_args()
     if not args.perf_jsonl.is_file():
         print(f"FAIL: missing {args.perf_jsonl}", file=sys.stderr)
         return 2
-    result = analyze(args.perf_jsonl, args.warmup_sec)
+    result = analyze(args.perf_jsonl, args.warmup_sec, args.stop_tail_periods)
     text = json.dumps(result, indent=2)
     print(text)
     if args.report:

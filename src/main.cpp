@@ -135,6 +135,18 @@ int main(int argc, char *argv[])
         {
           opt.ReportPath = argv[++j];
         }
+        else if (std::strcmp(argv[j], "--fly-stop") == 0)
+        {
+          opt.FlyStopMode = true;
+        }
+        else if (std::strcmp(argv[j], "--fly-phase") == 0 && j + 1 < argc)
+        {
+          opt.FlyPhaseSec = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--stop-phase") == 0 && j + 1 < argc)
+        {
+          opt.StopPhaseSec = std::atof(argv[++j]);
+        }
       }
       return cutum::RunFlightSim(*paths, opt);
     }

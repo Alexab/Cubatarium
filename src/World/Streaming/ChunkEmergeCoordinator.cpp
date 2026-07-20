@@ -162,6 +162,29 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       world.HasPendingLightBeforeMeshNear(focus_ground_horiz, focus_radius);
   const int pending_focus_count =
       world.CountPendingLightBeforeMeshNear(focus_ground_horiz, focus_radius);
+  const int black_sticky = world.CountBlackStickyFocusMeshes(focus_ground,
+                                                             focus_radius);
+  const bool idle_recovery =
+      !moving && (pending_focus_count > 8 || black_sticky > 0);
+  static int idle_cancel_cooldown = 0;
+  if (idle_recovery)
+  {
+    if (idle_cancel_cooldown <= 0)
+    {
+      mesh_service.CancelInFlightOutsideHorizontalRadius(focus_ground_horiz,
+                                                         focus_radius);
+      world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
+      idle_cancel_cooldown = 120;
+    }
+    else
+    {
+      --idle_cancel_cooldown;
+    }
+  }
+  else
+  {
+    idle_cancel_cooldown = 0;
+  }
   // visual_holes = missing mesh only; near_focus_holes kept for legacy paths
   // that still want light-debt urgency for relight (not starve).
   const bool visual_holes = missing_visible_mesh;
@@ -277,6 +300,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Healthy flight with no visual holes: flush Dirty so pressure can leave Red
   // (Dirty plateaus ~700 trapped Red when exit required dirty<=500).
   // Skip while focus relight debt is high — flush starved MarkRelit (pending~50).
+  if (idle_recovery)
+  {
+    mesh_drain = std::max(mesh_drain, 24);
+    mesh_schedule = std::max(mesh_schedule, 20);
+  }
   if (!visual_holes && !missing_underfeet && !pending_near_light &&
       pending_dirty > 200 && last_frame_ms <= 28.0)
   {
@@ -469,6 +497,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       recover_n = std::min(recover_n, moving ? 2 : 3);
     }
     recover_n = ApplyPressureCap(recover_n, pressure.recover_n_cap);
+    if (idle_recovery)
+    {
+      recover_n = std::max(recover_n, 12);
+    }
     recover_n += URuntimeTuning::Get().RecoverNBoost;
     recover_n = std::max(0, recover_n);
     // Event-driven remesh is MarkRelit; Recover is a low-frequency watchdog.
@@ -480,7 +512,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         recover_watchdog_frames >= 8 ||
         ((visual_holes || missing_underfeet) && recover_watchdog_frames >= 4) ||
         (pending_near_light && pending_focus_n > 12 &&
-         recover_watchdog_frames >= 4);
+         recover_watchdog_frames >= 4) ||
+        (black_sticky > 0 && recover_watchdog_frames >= 4);
     if (recover_now && recover_n > 0)
     {
       world.RecoverUnlitFocusMeshes(recover_n);
@@ -496,7 +529,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // (holes=1 + underfeet=0 used to wait forever on async while MeshAsync=42).
   // Fly-wide sync was tried but hitch wall~100ms; keep async+Recover for cruise.
   const bool idle_focus_sync =
-      !moving && missing_visible_mesh && last_frame_ms <= 20.0;
+      !moving && last_frame_ms <= 20.0 &&
+      (missing_visible_mesh || pending_focus_count > 8 || black_sticky > 0);
   if (underfeet_need || idle_focus_sync)
   {
     const int max_y = procedural.MaxHeight;

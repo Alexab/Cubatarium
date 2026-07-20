@@ -39,6 +39,10 @@ struct FlightSimOptions
   std::string PerfOutPath;   // optional copy of perf jsonl
   std::string ReportPath;    // JSON verdict path (default bin/flight_sim_report.json)
   double SafetyTimeoutSec{180.0};
+  /// Fly west then release W and hold still (stop-recovery scenario).
+  bool FlyStopMode{false};
+  double FlyPhaseSec{40.0};
+  double StopPhaseSec{15.0};
 };
 
 int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options);
