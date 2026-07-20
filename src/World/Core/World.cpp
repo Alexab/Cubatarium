@@ -776,6 +776,19 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       PendingLightBeforeMesh.erase(g);
       AsyncRelightColumnsInFlight.erase(g);
       SetColumnEmergeState(glm::ivec3(g.x, 0, g.y), ColumnEmergeState::LitReady);
+      // Empty apply used to leave Lighting columns with no Dirty forever if
+      // commit skipped preview (trail wedge). Admit first mesh now.
+      if (MeshService)
+      {
+        const glm::ivec3 ground(g.x, 0, g.y);
+        const int sea = ProceduralTemplate.SeaLevel;
+        const int max_y = ProceduralTemplate.MaxHeight;
+        const int dirty_min = std::max(0, sea - CHUNK_SIZE);
+        const int dirty_max = std::min(max_y, sea + CHUNK_SIZE * 2);
+        MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+            ground, dirty_min, dirty_max,
+            /*include_horizontal_neighbors=*/false);
+      }
     }
     return;
   }
@@ -1345,12 +1358,16 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz)
     {
       break;
     }
-        const glm::ivec3 ground(candidate.key.x, 0, candidate.key.y);
-        if (IsPendingLightBeforeMesh(candidate.key))
-        {
-          continue; // relight path via AdmitFocusMeshIngress / commit
-        }
-        MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+    const glm::ivec3 ground(candidate.key.x, 0, candidate.key.y);
+    // Pending+missing: still Dirty. Soft-defer allows first mesh in focus;
+    // skipping here left trail columns empty forever after approach miss.
+    if (IsPendingLightBeforeMesh(candidate.key) && Persistence)
+    {
+      Persistence->EnqueueTerrainColumnRelight(
+          ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
+          remesh_min, remesh_max);
+    }
+    MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
         ground, remesh_min, remesh_max,
         /*include_horizontal_neighbors=*/false);
     SetColumnEmergeState(ground, ColumnEmergeState::Meshing);

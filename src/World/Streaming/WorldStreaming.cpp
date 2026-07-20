@@ -274,10 +274,15 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
             const int horiz =
                 std::max(std::abs(coord.x - focus_ground.x),
                          std::abs(coord.z - focus_ground.z));
+            // Standing: LastMovementDirXz follows camera look, so the wedge
+            // would permanently deny trail columns — admit whole near_focus.
+            const bool stopped =
+                world.GetLastMovementSpeed() <=
+                settings.MovementPrefetchThreshold;
             glm::vec2 fwd = world.GetLastMovementDirXz();
             const float flen =
                 std::sqrt(fwd.x * fwd.x + fwd.y * fwd.y);
-            bool admit_preview = horiz <= 1;
+            bool admit_preview = horiz <= 1 || stopped;
             if (!admit_preview && flen > 0.05f)
             {
               fwd.x /= flen;

@@ -203,8 +203,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     sticky_sync_cooldown = 0;
     static int idle_refresh_cooldown = 0;
     // Narrow-band SyncIdle: full sea band caused mesh_emerge 500–740ms.
-    // Always make forward progress on sticky even during hitch (1 col).
-    if (async_saturated_idle || black_sticky > 0 || missing_visible_mesh)
+    // Also drain focus columns missed on approach (pending Lighting without
+    // Dirty, or missing mesh) — previously only sticky/missing telemetrics
+    // opened this path, so trail neighbors never filled while standing.
+    const bool idle_mesh_debt =
+        pending_focus_count > 0 || missing_visible_mesh || black_sticky > 0;
+    if (async_saturated_idle || idle_mesh_debt)
     {
       if (idle_refresh_cooldown <= 0)
       {
@@ -225,9 +229,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         {
           world.SyncIdleFocusGreedyRemesh(sync_n);
         }
-        if (missing_visible_mesh)
+        if (missing_visible_mesh || pending_focus_count > 0)
         {
-          world.AdmitFocusVisibleMissing(last_frame_ms <= 16.0 ? 6 : 2);
+          const int admit_n = last_frame_ms <= 16.0 ? 6 : 2;
+          world.AdmitFocusMeshIngress(admit_n);
+          world.AdmitFocusVisibleMissing(admit_n);
         }
         idle_refresh_cooldown =
             last_frame_ms <= 14.0 ? 1 : (last_frame_ms <= 22.0 ? 2 : 3);
@@ -372,15 +378,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Schedule ring: pending_underfeet alone must NOT clamp to r=1 — that latched
   // MaxHorizontalDist during flight while PendingLight stayed high and carved
   // transverse "roads" of missing GreedyCache (columns loaded, mesh starved).
-  if (missing_underfeet && !moving)
-  {
-    // Standing: camera feet first, no far overflow.
-    mesh_service.SetMeshScheduleMaxHorizontalDist(1);
-    mesh_service.SetMeshScheduleOverflowPerFrame(0);
-  }
-  else if (idle_recovery)
+  // Idle recovery must win over underfeet r=1 — otherwise neighbors admitted
+  // after approach never get scheduled while any underfeet hole remains.
+  if (idle_recovery)
   {
     mesh_service.SetMeshScheduleMaxHorizontalDist(focus_radius);
+    mesh_service.SetMeshScheduleOverflowPerFrame(0);
+  }
+  else if (missing_underfeet && !moving)
+  {
+    // Standing without idle debt: camera feet first, no far overflow.
+    mesh_service.SetMeshScheduleMaxHorizontalDist(1);
     mesh_service.SetMeshScheduleOverflowPerFrame(0);
   }
   else if (missing_underfeet || visual_holes || pressure.focus_pressure_mode)
