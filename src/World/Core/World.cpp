@@ -868,7 +868,13 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         // ClearPending cannot keep up). Idle stop tracks full focus radius.
         const bool idle =
             LastMovementSpeed <= ProceduralTemplate.MovementPrefetchThreshold;
-        const int sticky_r = idle ? GetStreamingFocusRadius() : 1;
+        // Idle: skip sticky insert when async not saturated — Dirty remesh is
+        // the recovery path; inserting every MarkRelit column made sticky
+        // climb 0→17 while SyncIdle was hitch-gated (iter20 stop).
+        const int async_n =
+            MeshService ? MeshService->GetAsyncInFlightCount() : 0;
+        const int sticky_r =
+            idle ? (async_n >= 28 ? GetStreamingFocusRadius() : 1) : 1;
         if (horiz <= sticky_r)
         {
           StickyRemeshAfterLight.insert(key);
@@ -1760,16 +1766,13 @@ int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
   const int radius = GetStreamingFocusRadius();
   const int max_y = ProceduralTemplate.MaxHeight;
-  const int sea = ProceduralTemplate.SeaLevel;
-  int band_min =
+  // Narrow player band only — full sea±4*CHUNK caused mesh_emerge 500–740ms
+  // spikes on manual stop (perf_20260720-194911).
+  const int band_min =
       std::max(0, focus.y * CHUNK_SIZE - CHUNK_SIZE);
-  int band_max =
-      std::min(max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
-  if (ProceduralTemplate.FillWater)
-  {
-    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
-    band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE * 2));
-  }
+  const int band_max =
+      std::min(max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 2 - 1);
+  const int preferred_cy = focus.y;
   struct Candidate
   {
     int dist;
@@ -1793,15 +1796,18 @@ int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
         pit != PendingLightBeforeMesh.end())
     {
       const int span = pit->second.max_y - pit->second.min_y;
-      if (span >= 0 && span <= CHUNK_SIZE * 4)
+      if (span >= 0 && span <= CHUNK_SIZE * 3)
       {
         remesh_min = std::min(remesh_min, pit->second.min_y);
         remesh_max = std::max(remesh_max, pit->second.max_y);
       }
     }
+    // Clamp to ±1 cy around player — at most 3 sync rebuilds per column.
+    remesh_min = std::max(remesh_min, (preferred_cy - 1) * CHUNK_SIZE);
+    remesh_max = std::min(remesh_max, (preferred_cy + 1) * CHUNK_SIZE + CHUNK_SIZE - 1);
     bool has_mesh = false;
-    for (int cy = FloorDiv(band_min, CHUNK_SIZE);
-         cy <= FloorDiv(band_max, CHUNK_SIZE); ++cy)
+    for (int cy = FloorDiv(remesh_min, CHUNK_SIZE);
+         cy <= FloorDiv(remesh_max, CHUNK_SIZE); ++cy)
     {
       if (MeshService->HasGreedyMesh(glm::ivec3(key.x, cy, key.y)))
       {

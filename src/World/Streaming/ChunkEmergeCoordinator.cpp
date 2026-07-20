@@ -190,37 +190,42 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       --idle_cancel_cooldown;
     }
-    // Sync sticky black only while standing — never during cruise (2s spikes).
+    // Do NOT call RecoverStickyBlackFocusSync here — sync RelightColumnWithFrontier
+    // caused mesh_emerge/wall 1300–1980ms on stop (iter23). Light via Promote
+    // + bg_budget; remesh via narrow SyncIdleFocusGreedyRemesh.
     static int sticky_sync_cooldown = 0;
-    if (black_sticky > 0 && last_frame_ms <= 16.0)
-    {
-      if (sticky_sync_cooldown <= 0)
-      {
-        world.RecoverStickyBlackFocusSync(1);
-        sticky_sync_cooldown = 8;
-      }
-      else
-      {
-        --sticky_sync_cooldown;
-      }
-    }
-    else
-    {
-      sticky_sync_cooldown = 0;
-    }
+    (void)sticky_sync_cooldown;
+    sticky_sync_cooldown = 0;
     static int idle_refresh_cooldown = 0;
+    // Narrow-band SyncIdle: full sea band caused mesh_emerge 500–740ms.
+    // Always make forward progress on sticky even during hitch (1 col).
     if (async_saturated_idle || black_sticky > 0 || missing_visible_mesh)
     {
       if (idle_refresh_cooldown <= 0)
       {
-        const int sync_n =
-            black_sticky > 32 ? 6 : black_sticky > 16 ? 4 : black_sticky > 0 ? 3 : 2;
-        world.SyncIdleFocusGreedyRemesh(sync_n);
-        if (!missing_visible_mesh && black_sticky <= 0)
+        int sync_n = 0;
+        if (last_frame_ms <= 14.0)
         {
-          world.RefreshIdleFocusGreedyRemesh(2);
+          sync_n = black_sticky > 8 ? 3 : (black_sticky > 0 ? 2 : 1);
         }
-        idle_refresh_cooldown = black_sticky > 0 ? 1 : 4;
+        else if (last_frame_ms <= 22.0)
+        {
+          sync_n = black_sticky > 0 ? 2 : 1;
+        }
+        else if (black_sticky > 0 || missing_visible_mesh)
+        {
+          sync_n = 1; // hitch: still drain sticky/missing slowly
+        }
+        if (sync_n > 0 && (black_sticky > 0 || async_saturated_idle))
+        {
+          world.SyncIdleFocusGreedyRemesh(sync_n);
+        }
+        if (missing_visible_mesh)
+        {
+          world.AdmitFocusVisibleMissing(last_frame_ms <= 16.0 ? 6 : 2);
+        }
+        idle_refresh_cooldown =
+            last_frame_ms <= 14.0 ? 1 : (last_frame_ms <= 22.0 ? 2 : 3);
       }
       else
       {

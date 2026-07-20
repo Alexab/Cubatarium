@@ -42,7 +42,7 @@ struct FlightSimOptions
   /// Fly west then release W and hold still (stop-recovery scenario).
   bool FlyStopMode{false};
   double FlyPhaseSec{40.0};
-  double StopPhaseSec{30.0};
+  double StopPhaseSec{35.0};
 };
 
 int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options);

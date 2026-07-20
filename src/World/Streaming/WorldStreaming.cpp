@@ -880,17 +880,21 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 8 : 16);
   }
   const int mesh_async_n = world.GetMeshService().GetAsyncInFlightCount();
+  const bool missing_focus_mesh =
+      world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
+          world.GetBlockWorld(), focus_horiz, focus_radius);
   const bool idle_recovery =
       world.GetLastMovementSpeed() <=
           procedural.MovementPrefetchThreshold &&
       (pending_light_focus_n > 8 || black_sticky_focus > 0 ||
-       mesh_async_n >= 36);
+       mesh_async_n >= 36 || missing_focus_mesh);
   if (idle_recovery)
   {
-    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 12 : 24);
-    if (black_sticky_focus > 0 || mesh_async_n >= 40)
+    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 16 : 32);
+    if (black_sticky_focus > 0 || mesh_async_n >= 40 ||
+        pending_light_focus_n > 15 || missing_focus_mesh)
     {
-      bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 16 : 32);
+      bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 20 : 40);
     }
   }
   else if (pending_light_focus_n > 0 && frame_ms > kBadFrameMs)

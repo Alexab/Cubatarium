@@ -93,7 +93,7 @@ def main() -> int:
         help="fly phase then release W for stop-recovery (AppRunner --fly-stop)",
     )
     ap.add_argument("--fly-phase-sec", type=float, default=35.0)
-    ap.add_argument("--stop-phase-sec", type=float, default=30.0)
+    ap.add_argument("--stop-phase-sec", type=float, default=35.0)
     ap.add_argument("--idle-sec", type=float, default=8.0)
     ap.add_argument(
         "--resume",

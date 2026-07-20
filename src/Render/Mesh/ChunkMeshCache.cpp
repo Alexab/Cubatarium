@@ -1094,13 +1094,13 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   {
     EnsureAsyncBuilder();
     // Compact far remesh when backlog starves focus missing (Dirty~800 / async~42).
-    if (MeshFocusValid && Dirty.GetCount() > 350)
+    if (MeshFocusValid && Dirty.GetCount() > 300)
     {
       const int in_flight = AsyncBuilder->GetInFlightCount();
       const int compact_horiz =
-          (in_flight >= 28 || Dirty.GetCount() > 450) ? MeshFocusRadiusChunks
+          (in_flight >= 24 || Dirty.GetCount() > 400) ? MeshFocusRadiusChunks
                                                       : MeshFocusRadiusChunks + 1;
-      if (StarveRemeshForHoles || in_flight >= 28 || Dirty.GetCount() > 500)
+      if (StarveRemeshForHoles || in_flight >= 24 || Dirty.GetCount() > 420)
       {
         for (auto it = Dirty.begin(); it != Dirty.end();)
         {
@@ -1270,9 +1270,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           const int in_flight =
               AsyncBuilder ? AsyncBuilder->GetInFlightCount() : 0;
           const int drop_horiz =
-              (dirty_n > 450 || in_flight >= 36) ? MeshFocusRadiusChunks
-                                                 : MeshFocusRadiusChunks + 2;
-          if (dirty_n > 450 && GreedyCache.find(*it) != GreedyCache.end() &&
+              (dirty_n > 400 || in_flight >= 32) ? MeshFocusRadiusChunks
+                                                 : MeshFocusRadiusChunks + 1;
+          if (dirty_n > 400 && GreedyCache.find(*it) != GreedyCache.end() &&
               horiz > drop_horiz)
           {
             it = Dirty.RemoveAt(it);
