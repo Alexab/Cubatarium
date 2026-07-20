@@ -1213,12 +1213,16 @@ void UApplication::Update(double dt)
             {
               World->DrainEnterGameMeshWarmup(kGpuWarmupMeshBudget);
             }
-            World->TickEnterStreamingWarmup(kGpuWarmupStreamingBudget);
+            // Cooperative load already prepared spawn; streaming Tick here races
+            // mesh Dirty iterators and was crashing EnterGame (0x80000003).
+            if (!World->IsSpawnAreaPreparedByCooperativeLoad())
+            {
+              World->TickEnterStreamingWarmup(kGpuWarmupStreamingBudget);
+            }
           }
           const bool upload_ready =
               frame >= kGpuWarmupMinFrames - 1 &&
-              !World->NeedsEnterGameMeshWarmup() &&
-              World->IsEnterStreamingWarmupSettled();
+              !World->NeedsEnterGameMeshWarmup();
           if (upload_ready)
           {
             World->WarmupVisibleListAtCamera();

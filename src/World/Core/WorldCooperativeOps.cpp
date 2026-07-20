@@ -74,6 +74,11 @@ constexpr float kCreateWeightMeshWarmup = 0.48f;
 constexpr float kCreateWeightPrepare = 0.04f;
 
 constexpr int kMeshWarmupMaxTicks = 50000;
+/// Large saved worlds can sit in MeshWarmup at low FPS; tick-only timeout never
+/// fires before flight-sim safety wall. Cap wall time so EnterGame can proceed.
+constexpr int kMeshWarmupMaxWallMs = 75000;
+/// Hidden-window flight-sim: RelightColumns can stall >2min on World_164.
+constexpr int kRelightColumnsMaxWallMs = 60000;
 constexpr int kCreateSpawnWarmupMaxTicks = 48;
 constexpr int kStreamUnloadMarginChunks = 1;
 
@@ -338,6 +343,7 @@ void UWorldCooperativeSession::BeginColumnRelightQueue(UWorld &world)
     return;
   }
 
+  RelightColumnsStartedAt = std::chrono::steady_clock::now();
   CurrentPhase = Phase::RelightColumns;
 }
 
@@ -456,6 +462,7 @@ void UWorldCooperativeSession::BeginMeshWarmupInner(UWorld &world)
     }
   }
   MeshWarmupTicks = 0;
+  MeshWarmupStartedAt = {};
   MeshWarmupProcessedMax = 0;
   MeshWarmupCompletedTotal = 0;
   MeshWarmupStartPending =
@@ -1351,6 +1358,23 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     const size_t relight_done = ColumnRelightIndex;
     const size_t relight_total = ColumnRelightQueue.size();
 
+    bool force_done = columns_done;
+    if (!force_done && RelightColumnsStartedAt.time_since_epoch().count() != 0)
+    {
+      const auto wall_ms =
+          std::chrono::duration_cast<std::chrono::milliseconds>(
+              std::chrono::steady_clock::now() - RelightColumnsStartedAt)
+              .count();
+      if (wall_ms >= kRelightColumnsMaxWallMs)
+      {
+        std::cerr << "RelightColumns: wall timeout after " << wall_ms
+                  << "ms, done=" << relight_done << "/" << relight_total
+                  << " — continuing to mesh warmup" << std::endl;
+        ColumnRelightIndex = ColumnRelightQueue.size();
+        force_done = true;
+      }
+    }
+
     const float relight_base =
         Kind == WorldCoopKind::Create
             ? (kCreateWeightInit + kCreateWeightGenerate)
@@ -1360,17 +1384,17 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         Kind == WorldCoopKind::Create ? kCreateWeightRelight : kPhaseWeightRelight;
     const float relight_inner =
         relight_total > 0
-            ? std::min(1.0f, static_cast<float>(relight_done) /
+            ? std::min(1.0f, static_cast<float>(ColumnRelightIndex) /
                                  static_cast<float>(relight_total))
             : 1.0f;
     const float relight_frac = relight_base + relight_weight * relight_inner;
     Report(sink, "relight", relight_frac,
-           columns_done ? "Lighting ready."
-                       : "Computing lighting... " +
-                             std::to_string(relight_done) + "/" +
-                             std::to_string(relight_total));
+           force_done ? "Lighting ready."
+                      : "Computing lighting... " +
+                            std::to_string(ColumnRelightIndex) + "/" +
+                            std::to_string(relight_total));
 
-    if (columns_done)
+    if (force_done)
     {
       const auto tick_t1 = std::chrono::steady_clock::now();
       const double tick_ms =
@@ -1460,6 +1484,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     }
     if (MeshWarmupTicks == 0)
     {
+      MeshWarmupStartedAt = std::chrono::steady_clock::now();
       std::cout << "[WorldLoad] MeshWarmup start: pending="
                 << world.MeshService->GetDirtyCount() << " inflight="
                 << world.MeshService->GetAsyncInFlightCount()
@@ -1540,19 +1565,32 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         CurrentPhase = Phase::PostLoadAnalysis;
       }
     }
-    else if (MeshWarmupTicks >= kMeshWarmupMaxTicks)
+    else
     {
-      std::cerr << "MeshWarmup: timeout with pending dirty="
-                << world.MeshService->GetDirtyCount() << std::endl;
-      world.SetLightingRelightDeferred(false);
-      world.SetLightingSkylightBulkComplete(false);
-      if (Kind == WorldCoopKind::Create || MeshWarmupFinalizeOnly)
+      const auto warmup_elapsed_ms =
+          MeshWarmupStartedAt.time_since_epoch().count() == 0
+              ? 0
+              : std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - MeshWarmupStartedAt)
+                    .count();
+      const bool warmup_wall_timeout =
+          warmup_elapsed_ms >= kMeshWarmupMaxWallMs;
+      if (MeshWarmupTicks >= kMeshWarmupMaxTicks || warmup_wall_timeout)
       {
-        BeginPrepareEnter();
-      }
-      else
-      {
-        CurrentPhase = Phase::PostLoadAnalysis;
+        std::cerr << "MeshWarmup: timeout with pending dirty="
+                  << world.MeshService->GetDirtyCount()
+                  << " ticks=" << MeshWarmupTicks
+                  << " wall_ms=" << warmup_elapsed_ms << std::endl;
+        world.SetLightingRelightDeferred(false);
+        world.SetLightingSkylightBulkComplete(false);
+        if (Kind == WorldCoopKind::Create || MeshWarmupFinalizeOnly)
+        {
+          BeginPrepareEnter();
+        }
+        else
+        {
+          CurrentPhase = Phase::PostLoadAnalysis;
+        }
       }
     }
     break;

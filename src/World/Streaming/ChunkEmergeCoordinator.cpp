@@ -134,15 +134,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       [&world, &mesh_service, focus_ground_horiz,
        focus_radius](glm::ivec3 chunk_coord)
       {
+        const int horiz =
+            std::max(std::abs(chunk_coord.x - focus_ground_horiz.x),
+                     std::abs(chunk_coord.z - focus_ground_horiz.z));
+        // Underfeet: never soft-defer — unconditional mesh/remesh progress.
+        if (horiz <= 1)
+        {
+          return false;
+        }
         const bool pending = world.IsPendingLightBeforeMesh(
             glm::ivec2(chunk_coord.x, chunk_coord.z));
         if (mesh_service.HasGreedyMesh(chunk_coord))
         {
           return pending; // defer remesh while unlit
         }
-        const int horiz =
-            std::max(std::abs(chunk_coord.x - focus_ground_horiz.x),
-                     std::abs(chunk_coord.z - focus_ground_horiz.z));
         if (horiz <= focus_radius)
         {
           return false; // first mesh in focus always
@@ -233,6 +238,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         {
           const int admit_n = last_frame_ms <= 16.0 ? 6 : 2;
           world.AdmitFocusMeshIngress(admit_n);
+          world.AdmitFocusLightingWithoutDirty(admit_n);
           world.AdmitFocusVisibleMissing(admit_n);
         }
         idle_refresh_cooldown =

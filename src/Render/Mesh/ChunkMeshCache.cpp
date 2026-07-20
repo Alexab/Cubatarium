@@ -1213,19 +1213,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           continue;
         }
         auto next = try_schedule(it, false, false, true);
-        if (next == Dirty.end() && it != Dirty.end() &&
-            AsyncBuilder->GetInFlightCount() >= max_pipeline)
+        // try_schedule may RemoveAt(it); never compare/use it afterward.
+        if (next == Dirty.end())
         {
           break;
         }
-        if (next == it)
-        {
-          ++it;
-        }
-        else
-        {
-          it = next;
-        }
+        it = next;
       }
     }
 

@@ -16,6 +16,7 @@ public:
   void SetStopPredicate(std::function<bool()> predicate);
   void SetAutopilotKey(KeyCode key, bool held);
   void ClearAutopilotKeys();
+  void SetAutosaveEnabled(bool enabled);
   void Run() override;
   void Shutdown() override;
   void PollEvents() override;

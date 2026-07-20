@@ -38,6 +38,8 @@ public:
   /// Synthetic held keys for headless autopilot (OR'd with real keyboard).
   void SetAutopilotKey(KeyCode key, bool held);
   void ClearAutopilotKeys();
+  /// Flight-sim / harness: skip budgeted autosave (avoids multi-second hitch).
+  void SetAutosaveEnabled(bool enabled) { AutosaveEnabled = enabled; }
   void Shutdown();
 
   /// Initializes the window manager with the specified parameters.
@@ -125,8 +127,10 @@ private: // Window and rendering state
   std::chrono::steady_clock::time_point LastAutosaveTime;
   static constexpr double KAutosaveIntervalSec = 60.0;
   /// Budgeted cooperative autosave (avoids multi-second hitch in Update).
+  bool AutosaveEnabled{true};
   bool AutosaveRequested{false};
   bool AutosaveInProgress{false};
+  bool SeenInGameForAutosave{false};
   double DeltaTime;
 
   void TickBudgetedAutosave();

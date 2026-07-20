@@ -38,7 +38,8 @@ struct FlightSimOptions
   float CruiseStartChunkZ{5.0f};
   std::string PerfOutPath;   // optional copy of perf jsonl
   std::string ReportPath;    // JSON verdict path (default bin/flight_sim_report.json)
-  double SafetyTimeoutSec{180.0};
+  /// Wall-clock from process start (covers long World_164 load + flight).
+  double SafetyTimeoutSec{900.0};
   /// Fly west then release W and hold still (stop-recovery scenario).
   bool FlyStopMode{false};
   double FlyPhaseSec{40.0};

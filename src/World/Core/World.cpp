@@ -1250,6 +1250,89 @@ int UWorld::AdmitFocusMeshIngress(int max_columns)
   return admitted;
 }
 
+int UWorld::AdmitFocusLightingWithoutDirty(int max_columns)
+{
+  if (!MeshService || max_columns <= 0)
+  {
+    return 0;
+  }
+  const glm::ivec3 focus =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const int radius = GetStreamingFocusRadius();
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const int sea = ProceduralTemplate.SeaLevel;
+  int remesh_min = std::max(0, sea - CHUNK_SIZE);
+  int remesh_max = std::min(max_y, sea + CHUNK_SIZE * 2);
+  const int player_min = std::max(0, focus.y * CHUNK_SIZE - CHUNK_SIZE);
+  const int player_max =
+      std::min(max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
+  remesh_min = std::min(remesh_min, player_min);
+  remesh_max = std::max(remesh_max, player_max);
+  const int cy0 = FloorDiv(remesh_min, CHUNK_SIZE);
+  const int cy1 = FloorDiv(remesh_max, CHUNK_SIZE);
+  int admitted = 0;
+  for (int dz = -radius; dz <= radius && admitted < max_columns; ++dz)
+  {
+    for (int dx = -radius; dx <= radius && admitted < max_columns; ++dx)
+    {
+      const glm::ivec2 key(focus.x + dx, focus.z + dz);
+      const glm::ivec3 ground(key.x, 0, key.y);
+      const ColumnEmergeState state = GetColumnEmergeState(ground);
+      const bool pending = IsPendingLightBeforeMesh(key);
+      if (!pending && state != ColumnEmergeState::Lighting)
+      {
+        continue;
+      }
+      bool any_dirty = false;
+      bool needs_mesh = false;
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(ground.x, cy, ground.z);
+        if (MeshService->IsChunkMeshDirty(coord) ||
+            MeshService->HasInflightMeshBuild(coord))
+        {
+          any_dirty = true;
+          break;
+        }
+        const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+        if (!chunk || MeshService->HasGreedyMesh(coord))
+        {
+          continue;
+        }
+        for (int z = 0; z < CHUNK_SIZE && !needs_mesh; z += 4)
+        {
+          for (int x = 0; x < CHUNK_SIZE && !needs_mesh; x += 4)
+          {
+            for (int y = 0; y < CHUNK_SIZE && !needs_mesh; y += 4)
+            {
+              if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+              {
+                needs_mesh = true;
+              }
+            }
+          }
+        }
+      }
+      if (any_dirty || !needs_mesh)
+      {
+        continue;
+      }
+      if (pending && Persistence)
+      {
+        Persistence->EnqueueTerrainColumnRelight(
+            ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
+            remesh_min, remesh_max);
+      }
+      MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+          ground, remesh_min, remesh_max,
+          /*include_horizontal_neighbors=*/false);
+      SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+      ++admitted;
+    }
+  }
+  return admitted;
+}
+
 int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz)
 {
   if (!MeshService || max_columns <= 0)
@@ -2072,11 +2155,15 @@ int UWorld::PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,
     {
       continue;
     }
-    // Job already running for this column — do not requeue (Drain+re-Enqueue
-    // previously created Keys ghosts that blocked all further promotes).
+    // Job already running — do not requeue while flying (Keys-ghost risk).
+    // On idle, clear stale InFlight only for underfeet so feet always drain
+    // without churning the whole focus pending set.
     if (AsyncRelightColumnsInFlight.count(entry.first) != 0)
     {
-      if (GetAsyncRelightInFlightCount() == 0)
+      const int horiz = std::max(dx, dz);
+      const bool idle =
+          LastMovementSpeed <= ProceduralTemplate.MovementPrefetchThreshold;
+      if (GetAsyncRelightInFlightCount() == 0 || (idle && horiz <= 1))
       {
         AsyncRelightColumnsInFlight.erase(entry.first);
       }
@@ -3047,10 +3134,7 @@ int EnterGameMeshRadiusChunks(const UWorld &world)
 
 bool HasMissingGreedyMeshesNearFocus(const UWorld &world)
 {
-  if (world.GetBlockWorld().CountNonAir() == 0)
-  {
-    return false;
-  }
+  // Do not CountNonAir here: under streamer contention it can stall for minutes.
   const glm::ivec3 center =
       UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
   const int radius = EnterGameMeshRadiusChunks(world);
@@ -3077,7 +3161,8 @@ bool HasMissingGreedyMeshesNearFocus(const UWorld &world)
 
 bool UWorld::DrainEnterGameMeshWarmup(int budget)
 {
-  if (GetBlockWorld().CountNonAir() == 0)
+  if (!BlockWorldReady && CachedBlockCount == 0 &&
+      MeshService->GetGreedyCacheSize() == 0)
   {
     return true;
   }
@@ -3096,9 +3181,25 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
   {
     return mesh.GetGreedyCacheSize() > 0;
   }
-  if (mesh.GetDirtyCount() == 0 || HasMissingGreedyMeshesNearFocus(*this))
+  // Never MarkAllDirtyFromWorld here: ForEachChunk races with streamer workers
+  // and re-dirties the entire load radius every frame (hang / crash).
+  if (HasMissingGreedyMeshesNearFocus(*this))
   {
-    mesh.GetCache().MarkAllDirtyFromWorld(BlockWorld, false);
+    for (int dx = -radius; dx <= radius; ++dx)
+    {
+      for (int dz = -radius; dz <= radius; ++dz)
+      {
+        const glm::ivec3 coord(center.x + dx, 0, center.z + dz);
+        if (!BlockWorld.GetChunkManager().HasChunk(coord))
+        {
+          continue;
+        }
+        if (!mesh.HasGreedyMesh(coord))
+        {
+          mesh.MarkDirtyPriority(coord);
+        }
+      }
+    }
   }
   const UChunkEmergeCoordinator::FrameBudget mesh_budget =
       UChunkEmergeCoordinator::CooperativeWarmupBudget(std::max(budget, 16));
@@ -3106,13 +3207,15 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
                           mesh_budget.MaxMeshSchedule);
   mesh.DrainAsyncMeshResults(BlockWorld, *BlockRegistry,
                              mesh_budget.MaxMeshDrain);
-  return !HasMissingGreedyMeshesNearFocus(*this) && !mesh.HasPendingDirty() &&
+  return !HasMissingGreedyMeshesNearFocus(*this) &&
+         !mesh.HasDirtyWithinHorizontalRadius(center, radius) &&
          !mesh.HasPendingAsyncMeshWork();
 }
 
 bool UWorld::NeedsEnterGameMeshWarmup() const
 {
-  if (GetBlockWorld().CountNonAir() == 0)
+  if (!BlockWorldReady && CachedBlockCount == 0 &&
+      MeshService->GetGreedyCacheSize() == 0)
   {
     return false;
   }
@@ -3196,7 +3299,14 @@ void UWorld::ResumeAfterSessionSave()
 
 bool UWorld::IsEnterStreamingWarmupSettled() const
 {
-  if (!IsStreamingEnabled() || !Streaming->HasStreamer())
+  if (!IsStreamingEnabled() || !Streaming || !Streaming->HasStreamer())
+  {
+    return true;
+  }
+  // Cooperative load already filled the spawn patch; waiting for the live
+  // streamer to finish an expanding focus ring stalls EnterGame (and used to
+  // remesh the whole world each frame).
+  if (SpawnAreaPreparedByCooperativeLoad)
   {
     return true;
   }
@@ -3205,7 +3315,13 @@ bool UWorld::IsEnterStreamingWarmupSettled() const
   {
     return false;
   }
-  if (MeshService->HasPendingDirty() || MeshService->HasPendingAsyncMeshWork())
+  if (MeshService->HasPendingAsyncMeshWork())
+  {
+    return false;
+  }
+  const glm::ivec3 center = UChunkManager::WorldToChunk(feet);
+  const int radius = EnterGameMeshRadiusChunks(*this);
+  if (MeshService->HasDirtyWithinHorizontalRadius(center, radius))
   {
     return false;
   }
@@ -3215,21 +3331,15 @@ bool UWorld::IsEnterStreamingWarmupSettled() const
   {
     return false;
   }
-  if (IsStreamingEnabled() && Streaming && Streaming->HasStreamer())
+  const int max_y = GetProceduralSettings().MaxHeight;
+  for (int dx = -radius; dx <= radius; ++dx)
   {
-    const glm::ivec3 center =
-        UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
-    const int radius = EnterGameMeshRadiusChunks(*this);
-    const int max_y = GetProceduralSettings().MaxHeight;
-    for (int dx = -radius; dx <= radius; ++dx)
+    for (int dz = -radius; dz <= radius; ++dz)
     {
-      for (int dz = -radius; dz <= radius; ++dz)
+      const glm::ivec3 coord(center.x + dx, 0, center.z + dz);
+      if (!IsTerrainChunkComplete(BlockWorld, coord, max_y))
       {
-        const glm::ivec3 coord(center.x + dx, 0, center.z + dz);
-        if (!IsTerrainChunkComplete(BlockWorld, coord, max_y))
-        {
-          return false;
-        }
+        return false;
       }
     }
   }

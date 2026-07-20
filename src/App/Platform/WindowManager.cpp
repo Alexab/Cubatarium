@@ -487,19 +487,35 @@ void UWindowManager::Update()
       Application->GetState() == AppState::InGame)
   {
     const auto now = std::chrono::steady_clock::now();
-    const double elapsed =
-        std::chrono::duration<double>(now - LastAutosaveTime).count();
-    if (!AutosaveInProgress && !AutosaveRequested &&
-        elapsed >= KAutosaveIntervalSec)
+    // Loading can exceed the interval; do not fire autosave on the first
+    // InGame frame or the hitch starves streaming/flight for minutes.
+    if (!SeenInGameForAutosave)
+    {
+      SeenInGameForAutosave = true;
+      LastAutosaveTime = now;
+    }
+    else if (AutosaveEnabled && !AutosaveInProgress && !AutosaveRequested &&
+             std::chrono::duration<double>(now - LastAutosaveTime).count() >=
+                 KAutosaveIntervalSec)
     {
       AutosaveRequested = true;
       LastAutosaveTime = now;
     }
   }
+  else
+  {
+    SeenInGameForAutosave = false;
+  }
 }
 
 void UWindowManager::TickBudgetedAutosave()
 {
+  if (!AutosaveEnabled)
+  {
+    AutosaveRequested = false;
+    AutosaveInProgress = false;
+    return;
+  }
   if (!World || !Core || !Application ||
       Application->GetState() != AppState::InGame)
   {

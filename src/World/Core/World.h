@@ -859,6 +859,8 @@ public:
   int PruneStickyRemeshOutside(glm::ivec3 focus_ground_chunk, int radius_chunks);
   /// Focus ingress: Dirty + priority relight for Lighting columns without mesh.
   int AdmitFocusMeshIngress(int max_columns = 8);
+  /// Idle: Dirty for focus Lighting/Pending columns that never got a Dirty mark.
+  int AdmitFocusLightingWithoutDirty(int max_columns = 8);
   /// Ring-scan focus for solid slices missing GreedyCache; mark Dirty only.
   int AdmitFocusVisibleMissing(int max_columns = 8,
                                glm::vec2 forward_xz = glm::vec2(0.0f));

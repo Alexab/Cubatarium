@@ -192,9 +192,10 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink)
   const bool min_frames_done =
       frame_index + 1 >= kEnterGameGpuWarmupMinFrames;
   const bool mesh_ready = !World.NeedsEnterGameMeshWarmup();
-  const bool streaming_ready = World.IsEnterStreamingWarmupSettled();
+  // Do not block EnterGame on live streamer settle — cooperative load already
+  // prepared spawn; streaming continues in InGame.
   if (EnterGameGpuWarmupFramesLeft > 0 &&
-      (!min_frames_done || !mesh_ready || !streaming_ready))
+      (!min_frames_done || !mesh_ready))
   {
     return false;
   }

@@ -44,7 +44,9 @@ std::string FormatWorldLoadDiagLine(const std::string &phase, const UWorld &worl
   const bool skip_world_scan =
       phase == "drain_async_io" || phase == "scan_save_chunks" ||
       phase == "save_chunks" || phase == "save_metadata" || phase == "done" ||
-      phase == "init";
+      phase == "init" || phase == "prepare_enter" || phase == "prepare_view" ||
+      phase == "finalize_world" || phase == "mesh_warmup" ||
+      phase == "post_load_analysis";
   std::ostringstream out;
   out << "[WorldLoad] phase=" << phase
       << " chunks="
@@ -86,17 +88,19 @@ void LogWorldLoadDiag(const std::string &phase, const UWorld &world,
 
 void WarnIfTerrainMeshesMissing(const UWorld &world, const std::string &context)
 {
-  const size_t blocks = world.GetBlockWorld().CountNonAir();
   const UWorldMeshService &mesh = world.GetMeshService();
   const size_t cache_size = mesh.GetGreedyCacheSize();
   const size_t batch_count =
       mesh.GetCache().GetGreedyOpaqueCutoutRefs().size() +
       mesh.GetCache().GetGreedyTransparentRefs().size();
-  if (blocks == 0)
+  // Check meshes first: CountNonAir under streamer/mesh worker contention can
+  // stall for minutes and looks like a hang on PrepareView.
+  if (cache_size > 0 || batch_count > 0)
   {
     return;
   }
-  if (cache_size > 0 || batch_count > 0)
+  const size_t blocks = world.GetBlockWorld().CountNonAir();
+  if (blocks == 0)
   {
     return;
   }

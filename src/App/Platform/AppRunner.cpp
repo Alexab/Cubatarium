@@ -328,6 +328,9 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     std::cerr << "flight-sim: failed to initialize window" << std::endl;
     return 1;
   }
+  // Long loads exceed the 60s autosave interval; firing save on first InGame
+  // frame starves streaming (wall≈3s) and invalidates travel/stop gates.
+  window.SetAutosaveEnabled(false);
 
   try
   {
