@@ -216,9 +216,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Including pending_light / focus_pressure_mode latched starve for the whole
   // flight (pending stays 30–60) and permanently blocked trail/sea Dirty →
   // transverse blank and black strips with water already in RAM.
-  mesh_service.SetStarveOutsideFocusMesh(near_focus_holes || missing_underfeet);
-  mesh_service.SetStarveRemeshForHoles(visual_holes || missing_underfeet ||
-                                      pending_near_light);
+  mesh_service.SetStarveOutsideFocusMesh(visual_holes || missing_underfeet);
+  mesh_service.SetStarveRemeshForHoles(visual_holes || missing_underfeet);
   // One-shot pipeline flush when holes appear with saturated async — not every
   // frame (Cancel+reschedule thrash hung flight-sim wall time).
   {

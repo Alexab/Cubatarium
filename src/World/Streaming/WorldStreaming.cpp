@@ -243,14 +243,23 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
           // Relight Y: sea∪occupied∪player up to sky (not 0..floor). Full
           // 0..MaxHeight columns capped async throughput (~3/s) while flight
           // ingress piled pending_light_focus to 60–80.
+          // Far columns: occupied band only — full MaxHeight doubled per-column
+          // relight time and starved focus throughput.
           const int relight_min =
               settings.FillWater
                   ? std::max(0, std::min(dirty_min,
                                          settings.SeaLevel - CHUNK_SIZE * 2))
                   : dirty_min;
+          // Near focus: full column sky. Far: occupied band only — full
+          // MaxHeight doubled per-column relight and starved throughput.
+          const int relight_max =
+              near_focus ? settings.MaxHeight
+                         : std::min(settings.MaxHeight,
+                                    std::max(dirty_max,
+                                             settings.SeaLevel + CHUNK_SIZE * 2));
           world.Persistence->EnqueueTerrainColumnRelight(
               ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, near_focus,
-              relight_min, settings.MaxHeight);
+              relight_min, relight_max);
           world.NotePendingLightBeforeMesh(ground, dirty_min, dirty_max);
           // First mesh preview in entire focus (empty strips if we wait for
           // LitReady while pending climbs). Soft-defer blocks remesh@light=0;

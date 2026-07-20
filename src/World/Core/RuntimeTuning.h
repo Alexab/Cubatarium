@@ -21,7 +21,7 @@ struct URuntimeTuning
   float MeshForwardBiasK{0.75f};
   /// Async relight inflight = RelightThreadCount * mult.
   int RelightInflightMultHigh{4};
-  int RelightInflightMultHoles{6};
+  int RelightInflightMultHoles{8};
   int MeshFlyCapYellow{10};
   int MeshFlyCapRed{8};
   /// Added to recover_n after pressure caps (iterate knob).
