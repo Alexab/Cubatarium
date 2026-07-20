@@ -612,6 +612,22 @@ bool UChunkMeshCache::HasDirtyWithinHorizontalRadius(
   return false;
 }
 
+bool UChunkMeshCache::HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y,
+                                           int max_y) const
+{
+  const int cy0 = FloorDiv(min_y, CHUNK_SIZE);
+  const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
+  for (const glm::ivec3 &coord : Dirty)
+  {
+    if (coord.x == ground_xz.x && coord.z == ground_xz.y &&
+        coord.y >= cy0 && coord.y <= cy1)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 {
   const size_t before = Dirty.GetCount();
@@ -1077,6 +1093,31 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   if (!force_sync && Render.AsyncMeshing && Render.GreedyMeshing)
   {
     EnsureAsyncBuilder();
+    // Compact far remesh when backlog starves focus missing (Dirty~800 / async~42).
+    if (MeshFocusValid && Dirty.GetCount() > 400)
+    {
+      const int in_flight = AsyncBuilder->GetInFlightCount();
+      const int compact_horiz =
+          (in_flight >= 32 || Dirty.GetCount() > 550) ? MeshFocusRadiusChunks
+                                                      : MeshFocusRadiusChunks + 1;
+      if (StarveRemeshForHoles || in_flight >= 28 || Dirty.GetCount() > 500)
+      {
+        for (auto it = Dirty.begin(); it != Dirty.end();)
+        {
+          const int horiz = std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                                     std::abs(it->z - MeshFocusGroundChunk.z));
+          if (horiz > compact_horiz &&
+              GreedyCache.find(*it) != GreedyCache.end())
+          {
+            it = Dirty.RemoveAt(it);
+          }
+          else
+          {
+            ++it;
+          }
+        }
+      }
+    }
     for (MeshBuildResult &result :
          AsyncBuilder->DrainCompleted(max_drain_per_frame))
     {
@@ -1096,7 +1137,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     int reserved_focus_scheduled = 0;
     const int outside_focus_cap =
         MaxOutsideFocusMeshPerFrame > 0 ? MaxOutsideFocusMeshPerFrame : 2;
-    constexpr int kReservedFocusMissingSlots = 10;
+    constexpr int kReservedFocusMissingSlots = 16;
 
     auto try_schedule = [&](auto it, bool count_outside, bool count_overflow,
                             bool count_reserved) -> decltype(it)
@@ -1224,6 +1265,19 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         if (horiz > MeshFocusRadiusChunks)
         {
           outside_focus = true;
+          // Compaction: drop far remesh only (never missing) when Dirty flooded.
+          const size_t dirty_n = Dirty.GetCount();
+          const int in_flight =
+              AsyncBuilder ? AsyncBuilder->GetInFlightCount() : 0;
+          const int drop_horiz =
+              (dirty_n > 450 || in_flight >= 36) ? MeshFocusRadiusChunks
+                                                 : MeshFocusRadiusChunks + 2;
+          if (dirty_n > 450 && GreedyCache.find(*it) != GreedyCache.end() &&
+              horiz > drop_horiz)
+          {
+            it = Dirty.RemoveAt(it);
+            continue;
+          }
           int outside_cap = outside_focus_cap;
           if (StarveOutsideFocusMesh)
           {

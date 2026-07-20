@@ -39,17 +39,37 @@ def load_best(path: Path) -> dict | None:
         return None
 
 
+def gates_pass_count(result: dict) -> int:
+    g = result.get("gates") or {}
+    return sum(1 for v in g.values() if v)
+
+
+def gates_stop_pass_count(result: dict) -> int:
+    g = result.get("gates_stop") or {}
+    return sum(1 for v in g.values() if v)
+
+
 def is_better(result: dict, best: dict | None) -> bool:
+    """True only when cruise gates improve vs baseline (never on first 4/8 run)."""
+    rc = gates_pass_count(result)
+    rsc = gates_stop_pass_count(result)
+    if rc < 6 or rsc < 4:
+        return False
     if best is None:
-        return True
-    rm = result.get("metrics") or {}
-    bm = best.get("metrics") or {}
-    rc = int(rm.get("gates_pass_count") or 0)
-    bc = int(bm.get("gates_pass_count") or 0)
+        return result.get("pass", False)
+    bc = gates_pass_count(best)
     if rc > bc:
         return True
     if rc < bc:
         return False
+    rsc = gates_stop_pass_count(result)
+    bsc = gates_stop_pass_count(best)
+    if rsc > bsc:
+        return True
+    if rsc < bsc:
+        return False
+    rm = result.get("metrics") or {}
+    bm = best.get("metrics") or {}
     rp = rm.get("pending_light_focus_med")
     bp = bm.get("pending_light_focus_med")
     if rp is not None and bp is not None and rp < bp - 4.0:
@@ -72,13 +92,25 @@ def main() -> int:
         action="store_true",
         help="fly phase then release W for stop-recovery (AppRunner --fly-stop)",
     )
-    ap.add_argument("--fly-phase-sec", type=float, default=40.0)
-    ap.add_argument("--stop-phase-sec", type=float, default=15.0)
+    ap.add_argument("--fly-phase-sec", type=float, default=35.0)
+    ap.add_argument("--stop-phase-sec", type=float, default=30.0)
+    ap.add_argument("--idle-sec", type=float, default=8.0)
+    ap.add_argument(
+        "--resume",
+        action="store_true",
+        default=True,
+        help="resume from save position (default; manual flight)",
+    )
+    ap.add_argument(
+        "--teleport-cruise",
+        action="store_true",
+        help="teleport to fixed cruise start chunk (legacy auto west)",
+    )
     ap.add_argument("--report", type=Path, default=BIN / "flight_sim_gate_report.json")
     ap.add_argument(
         "--build-dir",
         type=Path,
-        default=ROOT / "build" / "desktop-linux",
+        default=ROOT / "build" / ("desktop-msvc" if sys.platform == "win32" else "desktop-linux"),
     )
     ap.add_argument(
         "--update-best",
@@ -107,6 +139,11 @@ def main() -> int:
         print(f"FAIL: missing {EXE}", file=sys.stderr)
         return 2
 
+    if args.fly_stop:
+        min_sec = args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0
+        if args.seconds < min_sec:
+            args.seconds = min_sec
+
     t0 = time.time()
     sim_cmd = [
         str(EXE),
@@ -127,6 +164,11 @@ def main() -> int:
         sim_cmd.append("--fly-stop")
         sim_cmd.extend(["--fly-phase", str(args.fly_phase_sec)])
         sim_cmd.extend(["--stop-phase", str(args.stop_phase_sec)])
+    sim_cmd.extend(["--idle", str(args.idle_sec)])
+    if args.teleport_cruise:
+        sim_cmd.append("--teleport-cruise")
+    else:
+        sim_cmd.append("--no-teleport-cruise")
 
     print("running:", " ".join(sim_cmd), flush=True)
     rc = subprocess.call(sim_cmd, cwd=str(BIN))

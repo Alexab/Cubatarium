@@ -16,6 +16,25 @@ def median(xs: list[float]) -> float | None:
     return float(statistics.median(xs))
 
 
+def detect_stop_segment(periods: list[dict], min_len: int = 3) -> list[dict]:
+    """Last contiguous run where focus chunk does not move (player stopped)."""
+    if len(periods) < min_len:
+        return periods[-min_len:] if periods else []
+    run_len = 1
+    for i in range(len(periods) - 1, 0, -1):
+        c0 = periods[i - 1]
+        c1 = periods[i]
+        dx = abs(int(c1.get("focus_cx") or 0) - int(c0.get("focus_cx") or 0))
+        dz = abs(int(c1.get("focus_cz") or 0) - int(c0.get("focus_cz") or 0))
+        if dx == 0 and dz == 0:
+            run_len += 1
+        else:
+            break
+    if run_len >= min_len:
+        return periods[-run_len:]
+    return periods[-min_len:] if len(periods) >= min_len else periods
+
+
 def analyze(
     path: Path, warmup_sec: float = 5.0, stop_tail_periods: int = 5
 ) -> dict:
@@ -38,6 +57,29 @@ def analyze(
         else "near_focus_holes"
     )
     holes = col(steady, hole_key)
+    dark_sticky = col(steady, "black_sticky")
+    if not dark_sticky and any("focus_dark_mesh" in r for r in steady):
+        dark_sticky = col(steady, "focus_dark_mesh")
+    effective_holes = [
+        1.0 if (h > 0 or d > 0) else 0.0 for h, d in zip(holes, dark_sticky)
+    ]
+    effective_holes_rate = (
+        sum(effective_holes) / len(effective_holes) if effective_holes else 1.0
+    )
+    mesh_async_stuck_idle = 0
+    run = 0
+    for r in steady:
+        async_n = float(r.get("mesh_async") or 0)
+        relight = float(r.get("relight_drain_ms") or 0)
+        cx = int(r.get("focus_cx") or 0)
+        cz = int(r.get("focus_cz") or 0)
+        if async_n >= 40 and relight < 0.05:
+            run += 1
+            mesh_async_stuck_idle = max(mesh_async_stuck_idle, run)
+        else:
+            run = 0
+    mesh_async_stuck_sec = mesh_async_stuck_idle * 2.0
+
     dirty = col(steady, "dirty")
     pending_f = col(steady, "pending_light_focus")
     pressure = col(steady, "stream_pressure")
@@ -94,46 +136,107 @@ def analyze(
             black_proxy_periods += 1
     black_proxy_rate = black_proxy_periods / len(steady) if steady else 0.0
 
+    stop_segment = detect_stop_segment(steady, min_len=max(3, stop_tail_periods // 2))
+    fly_segment = (
+        steady[: len(steady) - len(stop_segment)] if stop_segment else steady
+    )
+    wall_fly = col(fly_segment, "wall_ms") if fly_segment else wall
+
+    async_stuck_sec = max(stuck_async_holes_sec, mesh_async_stuck_sec)
+    wall_fly_med = median(wall_fly)
     gates = {
-        "visual_holes_rate_le_0_10": holes_rate <= 0.10,
+        "visual_holes_rate_le_0_10": effective_holes_rate <= 0.10,
         "dirty_med_le_400": ok_med(median(dirty), 400),
         "dirty_not_plateau_gt800_10s": dirty_high_sec <= 10.0,
         "pending_light_focus_med_le_15": ok_med(median(pending_f), 15),
         "stream_pressure_red_rate_le_0_30": red_rate <= 0.30,
-        "mesh_async_not_stuck_with_holes_10s": stuck_async_holes_sec <= 10.0,
-        "wall_ms_med_le_25": ok_med(median(wall), 25),
+        "mesh_async_not_stuck_10s": async_stuck_sec <= 10.0,
+        "wall_ms_med_le_25": ok_med(wall_fly_med, 25),
         "chunks_traveled_ge_3": chunks_traveled >= 3,
     }
     gates_pass_count = sum(1 for v in gates.values() if v)
-    passed = all(gates.values())
 
     stop_tail = (
-        steady[-stop_tail_periods:]
-        if len(steady) >= stop_tail_periods
-        else steady
+        stop_segment[-stop_tail_periods:]
+        if len(stop_segment) >= stop_tail_periods
+        else stop_segment
     )
     sticky_key = (
         "black_sticky"
         if any("black_sticky" in r for r in stop_tail)
         else "focus_dark_mesh"
     )
-    black_sticky_tail = col(stop_tail, sticky_key)
+    black_sticky_stop = col(stop_tail, sticky_key)
+    missing_stop = col(stop_tail, hole_key)
     pending_stop = col(stop_tail, "pending_light_focus")
+    relight_stop = col(stop_tail, "relight_drain_ms")
     post_stop_pending_med = median(pending_stop)
     post_stop_black_sticky_max = (
-        max(black_sticky_tail) if black_sticky_tail else None
+        max(black_sticky_stop) if black_sticky_stop else None
+    )
+    post_stop_missing_max = max(missing_stop) if missing_stop else None
+    stop_effective = [
+        1.0
+        if (float(h) > 0 or float(d) > 0)
+        else 0.0
+        for h, d in zip(
+            missing_stop if missing_stop else [0.0] * len(stop_tail),
+            black_sticky_stop
+            if black_sticky_stop
+            else [0.0] * len(stop_tail),
+        )
+    ]
+    post_stop_effective_holes_rate = (
+        sum(stop_effective) / len(stop_effective) if stop_effective else 1.0
+    )
+    post_stop_relight_med = median(relight_stop)
+    stop_pending_delta = None
+    if len(pending_stop) >= 2:
+        stop_pending_delta = pending_stop[-1] - pending_stop[0]
+    elif len(stop_segment) >= 2:
+        full_pending = col(stop_segment, "pending_light_focus")
+        if len(full_pending) >= 2:
+            stop_pending_delta = full_pending[-1] - full_pending[0]
+    stop_recovery_ok = (
+        (post_stop_black_sticky_max or 0) <= 0.5
+        and (post_stop_missing_max or 0) <= 0.5
+        and post_stop_effective_holes_rate <= 0.05
+        and ok_med(post_stop_pending_med, 15)
+    )
+    already_clean_stop = (
+        ok_med(post_stop_pending_med, 5)
+        and (post_stop_black_sticky_max or 0) <= 0.5
+        and (post_stop_missing_max or 0) <= 0.5
     )
     gates_stop = {
         "post_stop_pending_med_le_15": ok_med(post_stop_pending_med, 15),
         "post_stop_black_sticky_zero": post_stop_black_sticky_max is not None
         and post_stop_black_sticky_max <= 0.5,
+        "post_stop_missing_zero": post_stop_missing_max is not None
+        and post_stop_missing_max <= 0.5,
+        "post_stop_effective_holes_zero": post_stop_effective_holes_rate <= 0.05,
+        "post_stop_pending_falling": already_clean_stop
+        or (
+            stop_pending_delta is not None and stop_pending_delta <= -3.0
+        ),
+        "post_stop_relight_active": already_clean_stop
+        or (
+            post_stop_relight_med is not None and post_stop_relight_med > 0.5
+        ),
     }
+    gates_stop_pass_count = sum(1 for v in gates_stop.values() if v)
+    passed = all(gates.values()) and all(gates_stop.values())
 
     soft = {
         "pending_trend_rising_while_traveling": pending_trend_rising,
         "black_proxy_rate": black_proxy_rate,
         "black_proxy_soft_fail": black_proxy_rate >= 0.25,
+        "holes_rate_raw": holes_rate,
+        "mesh_async_stuck_sec": mesh_async_stuck_sec,
         "gates_stop": gates_stop,
+        "stop_segment_periods": len(stop_segment),
+        "stop_pending_delta": stop_pending_delta,
+        "stop_recovery_ok": stop_recovery_ok,
     }
 
     return {
@@ -144,11 +247,14 @@ def analyze(
         "hole_key": hole_key,
         "metrics": {
             "holes_rate": holes_rate,
+            "effective_holes_rate": effective_holes_rate,
+            "mesh_async_stuck_sec": mesh_async_stuck_sec,
             "dirty_med": median(dirty),
             "dirty_max": max(dirty) if dirty else None,
             "pending_light_focus_med": median(pending_f),
             "red_rate": red_rate,
             "wall_ms_med": median(wall),
+            "wall_ms_fly_med": wall_fly_med,
             "mesh_async_med": median(mesh_async),
             "stuck_async_holes_sec": stuck_async_holes_sec,
             "dirty_high_sec": dirty_high_sec,
@@ -159,6 +265,14 @@ def analyze(
             "gates_total": len(gates),
             "post_stop_pending_med": post_stop_pending_med,
             "post_stop_black_sticky_max": post_stop_black_sticky_max,
+            "post_stop_missing_max": post_stop_missing_max,
+            "post_stop_effective_holes_rate": post_stop_effective_holes_rate,
+            "gates_stop_pass_count": gates_stop_pass_count,
+            "gates_stop_total": len(gates_stop),
+            "post_stop_relight_med": post_stop_relight_med,
+            "stop_pending_delta": stop_pending_delta,
+            "stop_segment_periods": len(stop_segment),
+            "stop_tail_periods": len(stop_tail),
         },
         "gates": gates,
         "gates_stop": gates_stop,

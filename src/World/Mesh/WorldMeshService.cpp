@@ -348,6 +348,12 @@ bool UWorldMeshService::HasDirtyWithinHorizontalRadius(
   return Cache.HasDirtyWithinHorizontalRadius(center_chunk, radius_chunks);
 }
 
+bool UWorldMeshService::HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y,
+                                             int max_y) const
+{
+  return Cache.HasDirtyInColumnBand(ground_xz, min_y, max_y);
+}
+
 bool UWorldMeshService::HasPendingAsyncMeshWork() const
 {
   return Cache.HasPendingAsyncMeshWork();

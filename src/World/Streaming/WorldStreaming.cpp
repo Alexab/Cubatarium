@@ -341,7 +341,9 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   world.PhysicsTelemetryData.PendingLightFocus = pending_light_focus;
   world.PhysicsTelemetryData.FocusDarkMesh = world.CountBlackStickyFocusMeshes(
       focus_ground, focus_radius);
-  world.PhysicsTelemetryData.VisualHoles = missing_near ? 1 : 0;
+  const int dark_sticky = world.PhysicsTelemetryData.FocusDarkMesh;
+  world.PhysicsTelemetryData.VisualHoles =
+      (missing_near || dark_sticky > 0) ? 1 : 0;
   world.PhysicsTelemetryData.LightDebt = pending_light_focus > 0 ? 1 : 0;
   world.PhysicsTelemetryData.NearFocusHoles =
       (missing_near || pending_light_focus > 0) ? 1 : 0;
@@ -830,6 +832,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   // (DrainRelightQueues is cheap; MarkRelit is what clears PendingLight).
   const int pending_light_focus_n =
       world.CountPendingLightBeforeMeshNear(focus_horiz, focus_radius);
+  const int black_sticky_focus =
+      world.CountBlackStickyFocusMeshes(focus_horiz, focus_radius);
   // Manual flight: pending_focus climbed while relight_drain≈0 on hitch —
   // keep a floor even when wall>24 so light debt cannot balloon forever.
   if (pending_light_focus_n > 40)
@@ -846,17 +850,28 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 8 : 16);
   }
+  const int mesh_async_n = world.GetMeshService().GetAsyncInFlightCount();
   const bool idle_recovery =
       world.GetLastMovementSpeed() <=
           procedural.MovementPrefetchThreshold &&
-      pending_light_focus_n > 8;
+      (pending_light_focus_n > 8 || black_sticky_focus > 0 ||
+       mesh_async_n >= 36);
   if (idle_recovery)
   {
     bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 12 : 24);
+    if (black_sticky_focus > 0 || mesh_async_n >= 40)
+    {
+      bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 16 : 32);
+    }
   }
   else if (pending_light_focus_n > 0 && frame_ms > kBadFrameMs)
   {
     bg_budget = std::max(bg_budget, 4);
+  }
+  if (world.GetLastMovementSpeed() > procedural.MovementPrefetchThreshold &&
+      pending_light_focus_n > 8 && frame_ms <= kBadFrameMs)
+  {
+    bg_budget = std::max(bg_budget, pending_light_focus_n > 24 ? 32 : 20);
   }
   // Two-tier promote: underfeet first, then rest of focus — so far-in-focus
   // columns do not jump ahead of the camera column in the priority FIFO.

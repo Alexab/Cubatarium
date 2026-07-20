@@ -845,6 +845,16 @@ public:
   void FlushPendingRelightMeshColumns(int max_columns_per_flush = 8);
   /// Re-enqueue skylight for focus columns that already have a mesh but no sky.
   int RecoverUnlitFocusMeshes(int max_columns = 4);
+  /// Idle stop-recovery: sync relight+remesh for focus columns stuck with
+  /// GreedyMesh while PendingLight (async relight deadlock).
+  int RecoverStickyBlackFocusSync(int max_columns = 1);
+  /// Idle hover: re-dirty LitReady focus columns that already have GreedyMesh
+  /// (MarkRelit cleared PendingLight but async never remeshed — dark/stale).
+  int RefreshIdleFocusGreedyRemesh(int max_columns = 4);
+  /// Idle stop: sync rebuild nearest focus column when async pool saturated.
+  int SyncIdleFocusGreedyRemesh(int max_columns = 1);
+  /// Clear PendingLight after mesh committed for lit focus columns.
+  int ClearPendingLightAfterMeshCommitted(int max_columns = 8);
   /// Focus ingress: Dirty + priority relight for Lighting columns without mesh.
   int AdmitFocusMeshIngress(int max_columns = 8);
   /// Ring-scan focus for solid slices missing GreedyCache; mark Dirty only.
@@ -1066,6 +1076,8 @@ private:
   /// Near columns: light must apply before first mesh dirty.
   std::unordered_map<glm::ivec2, PendingRelightMeshColumnRange, GroundColumnHash>
       PendingLightBeforeMesh;
+  /// Lit columns awaiting remesh after MarkRelit (GreedyMesh present, stale).
+  std::unordered_set<glm::ivec2, GroundColumnHash> StickyRemeshAfterLight;
   /// Columns with an async terrain-column relight job in flight (chunk xz).
   std::unordered_set<glm::ivec2, GroundColumnHash> AsyncRelightColumnsInFlight;
   std::unordered_map<glm::ivec2, ColumnEmergeState, GroundColumnHash>

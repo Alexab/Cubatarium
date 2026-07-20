@@ -26,14 +26,27 @@ def gates_pass_count(result: dict) -> int:
 
 
 def is_improvement(cur: dict, best: dict | None) -> bool:
+    if gates_pass_count(cur) < 6:
+        return False
+    gs_cur = cur.get("gates_stop") or {}
+    if sum(1 for v in gs_cur.values() if v) < 4:
+        return False
     if best is None:
-        return True
-    cm = cur.get("metrics") or {}
-    bm = best.get("metrics") or {}
+        return cur.get("pass", False)
     if gates_pass_count(cur) > gates_pass_count(best):
         return True
     if gates_pass_count(cur) < gates_pass_count(best):
         return False
+    gs_cur = cur.get("gates_stop") or {}
+    gs_best = best.get("gates_stop") or {}
+    rsc = sum(1 for v in gs_cur.values() if v)
+    bsc = sum(1 for v in gs_best.values() if v)
+    if rsc > bsc:
+        return True
+    if rsc < bsc:
+        return False
+    cm = cur.get("metrics") or {}
+    bm = best.get("metrics") or {}
     cp = cm.get("pending_light_focus_med")
     bp = bm.get("pending_light_focus_med")
     if cp is not None and bp is not None and cp < bp - 4.0:

@@ -271,7 +271,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   const URuntimeTuning &tune = URuntimeTuning::Get();
   const int inflight_mult =
       (focus_pending_high || visual_holes)
-          ? std::max(2, tune.RelightInflightMultHoles)
+          ? std::max(3, tune.RelightInflightMultHoles)
           : 2;
   const int max_inflight =
       async_bg ? std::clamp(world.ProceduralTemplate.RelightThreadCount, 1, 8) *
