@@ -100,8 +100,6 @@ public:
   double GetLastMeshSnapshotMs() const;
   size_t GetGreedyCacheSize() const;
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
-  bool HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const;
-  size_t GetGreedyVertexCount(glm::ivec3 chunk_coord) const;
   bool IsChunkMeshDirty(glm::ivec3 chunk_coord) const;
   uint64_t GetChunkMeshRevision(glm::ivec3 chunk_coord) const;
   bool HasInflightMeshBuild(glm::ivec3 chunk_coord) const;

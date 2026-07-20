@@ -172,7 +172,7 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
         {
           return;
         }
-        if (HasDrawableGreedyMesh(coord))
+        if (GreedyCache.find(coord) != GreedyCache.end())
         {
           return;
         }
@@ -404,24 +404,7 @@ void UChunkMeshCache::CancelAsyncInFlightKeepDirty()
   {
     return;
   }
-  // CancelPending alone left ActiveMeshSourceRevision set — Admit then skipped
-  // those coords forever via HasInflightMeshBuild while Dirty never returned.
-  std::vector<glm::ivec3> inflight;
-  inflight.reserve(ActiveMeshSourceRevision.size());
-  for (const auto &entry : ActiveMeshSourceRevision)
-  {
-    inflight.push_back(entry.first);
-  }
   AsyncBuilder->CancelPending();
-  for (const glm::ivec3 &coord : inflight)
-  {
-    AsyncBuilder->ForgetInflight(coord);
-    ActiveMeshSourceRevision.erase(coord);
-    if (!Dirty.Contains(coord))
-    {
-      MarkDirty(coord);
-    }
-  }
 }
 
 void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
@@ -463,31 +446,6 @@ bool UChunkMeshCache::HasPendingDirty() const
 bool UChunkMeshCache::HasGreedyMesh(glm::ivec3 chunk_coord) const
 {
   return GreedyCache.find(chunk_coord) != GreedyCache.end();
-}
-
-bool UChunkMeshCache::HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const
-{
-  if (GreedyCache.find(chunk_coord) == GreedyCache.end())
-  {
-    return false;
-  }
-  const auto vIt = GreedyVertexCountByChunk.find(chunk_coord);
-  // Legacy entries without a count table row: treat as drawable.
-  if (vIt == GreedyVertexCountByChunk.end())
-  {
-    return true;
-  }
-  return vIt->second > 0;
-}
-
-size_t UChunkMeshCache::GetGreedyVertexCount(glm::ivec3 chunk_coord) const
-{
-  const auto vIt = GreedyVertexCountByChunk.find(chunk_coord);
-  if (vIt == GreedyVertexCountByChunk.end())
-  {
-    return 0;
-  }
-  return vIt->second;
 }
 
 bool UChunkMeshCache::IsChunkMeshDirty(glm::ivec3 chunk_coord) const
@@ -540,7 +498,7 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
         {
           return;
         }
-        if (HasDrawableGreedyMesh(coord))
+        if (GreedyCache.find(coord) != GreedyCache.end())
         {
           return;
         }
@@ -548,8 +506,8 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
         {
           return; // pipeline already building — not a stuck hole
         }
-        // No drawable mesh (missing or 0-vertex placeholder): solid voxels =
-        // visible hole. Ignore empty air slices.
+        // Ignore empty air slices — they never get a mesh and must not keep
+        // underfeet_need / near_focus_holes stuck true forever.
         for (int z = 0; z < CHUNK_SIZE; z += 4)
         {
           for (int x = 0; x < CHUNK_SIZE; x += 4)

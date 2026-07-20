@@ -136,18 +136,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       {
         const bool pending = world.IsPendingLightBeforeMesh(
             glm::ivec2(chunk_coord.x, chunk_coord.z));
-        if (mesh_service.HasDrawableGreedyMesh(chunk_coord))
+        if (mesh_service.HasGreedyMesh(chunk_coord))
         {
-          return pending; // defer lit remesh while unlit
+          return pending; // defer remesh while unlit
         }
-        // Missing or 0-vertex placeholder: allow first drawable mesh in focus
-        // even while PendingLight (soft-defer used to block remesh forever).
         const int horiz =
             std::max(std::abs(chunk_coord.x - focus_ground_horiz.x),
                      std::abs(chunk_coord.z - focus_ground_horiz.z));
         if (horiz <= focus_radius)
         {
-          return false;
+          return false; // first mesh in focus always
         }
         const glm::ivec3 ground(chunk_coord.x, 0, chunk_coord.z);
         return !world.MayMeshColumn(ground, /*underfeet_preview=*/false);
