@@ -127,6 +127,19 @@ stateDiagram-v2
 | 4 Unified flow | ⚠️ частично | helpers есть, recovery zoo не свёрнут |
 | 5 Harness | ⚠️ частично | `--manual-idle`, `analyze_manual_idle.py` |
 
+### Ручной пролёт `perf_20260721-171507` (после `675635a3`)
+
+| Метрика | Значение |
+|---------|----------|
+| stop `pending` | **0** (relight прошёл) |
+| `not_ready` | **76 застрял** (+22 vs начало idle) |
+| `dirty` | **650→760** (рост при «работе») |
+| `wall_ms` med | **132** (было 68) — хуже |
+| spikes | **620ms** emerge=601 (sync remesh) |
+| Диагноз | sync ±1cy не закрывает `IsColumnRenderReady`; Refresh раздувает Dirty |
+
+**Фикс:** full-band sync только dirty slices, без Refresh flood; убран sync-relight rescue.
+
 ### Ручной пролёт `perf_20260721-170357` (после `9c51dae2`)
 
 | Метрика | Значение |

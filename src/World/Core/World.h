@@ -852,7 +852,9 @@ public:
   /// (MarkRelit cleared PendingLight but async never remeshed — dark/stale).
   int RefreshIdleFocusGreedyRemesh(int max_columns = 4);
   /// Idle stop: sync rebuild nearest focus column when async pool saturated.
-  int SyncIdleFocusGreedyRemesh(int max_columns = 1);
+  /// full_column_band: rebuild entire sea/player band (required for IsColumnRenderReady).
+  int SyncIdleFocusGreedyRemesh(int max_columns = 1,
+                                bool full_column_band = false);
   /// Clear PendingLight after mesh committed for lit focus columns.
   int ClearPendingLightAfterMeshCommitted(int max_columns = 8);
   /// Drop StickyRemeshAfterLight columns outside radius (cruise prune).

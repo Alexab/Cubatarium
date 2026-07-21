@@ -2239,6 +2239,23 @@ int UWorld::RefreshIdleFocusGreedyRemesh(int max_columns)
       {
         continue;
       }
+      const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
+      const int cy1 = FloorDiv(band_max, CHUNK_SIZE);
+      bool already_queued = false;
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(key.x, cy, key.y);
+        if (MeshService->IsChunkMeshDirty(coord) ||
+            MeshService->HasInflightMeshBuild(coord))
+        {
+          already_queued = true;
+          break;
+        }
+      }
+      if (already_queued)
+      {
+        continue;
+      }
       const ColumnEmergeState state = GetColumnEmergeState(ground);
       if (state != ColumnEmergeState::Meshing &&
           state != ColumnEmergeState::LitReady)
@@ -2272,7 +2289,7 @@ int UWorld::RefreshIdleFocusGreedyRemesh(int max_columns)
   return refreshed;
 }
 
-int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
+int UWorld::SyncIdleFocusGreedyRemesh(int max_columns, bool full_column_band)
 {
   if (!MeshService || !BlockRegistry || max_columns <= 0)
   {
@@ -2282,12 +2299,16 @@ int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
   const int radius = GetStreamingFocusRadius();
   const int max_y = ProceduralTemplate.MaxHeight;
-  // Narrow player band only — full sea±4*CHUNK caused mesh_emerge 500–740ms
-  // spikes on manual stop (perf_20260720-194911).
-  const int band_min =
+  const int sea = ProceduralTemplate.SeaLevel;
+  int band_min =
       std::max(0, focus.y * CHUNK_SIZE - CHUNK_SIZE);
-  const int band_max =
-      std::min(max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 2 - 1);
+  int band_max =
+      std::min(max_y, focus.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
+  if (ProceduralTemplate.FillWater)
+  {
+    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
+    band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE * 2));
+  }
   const int preferred_cy = focus.y;
   struct Candidate
   {
@@ -2322,9 +2343,14 @@ int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
         remesh_max = std::max(remesh_max, pit->second.max_y);
       }
     }
-    // Clamp to ±1 cy around player — at most 3 sync rebuilds per column.
-    remesh_min = std::max(remesh_min, (preferred_cy - 1) * CHUNK_SIZE);
-    remesh_max = std::min(remesh_max, (preferred_cy + 1) * CHUNK_SIZE + CHUNK_SIZE - 1);
+    // Partial band only for sticky underfeet — stale columns need full band or
+    // IsColumnRenderReady stays false (perf_171507: not_ready=76 plateau).
+    if (!full_column_band)
+    {
+      remesh_min = std::max(remesh_min, (preferred_cy - 1) * CHUNK_SIZE);
+      remesh_max =
+          std::min(remesh_max, (preferred_cy + 1) * CHUNK_SIZE + CHUNK_SIZE - 1);
+    }
     bool has_mesh = false;
     for (int cy = FloorDiv(remesh_min, CHUNK_SIZE);
          cy <= FloorDiv(remesh_max, CHUNK_SIZE); ++cy)
@@ -2408,13 +2434,25 @@ int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
     const int cy1 = FloorDiv(found->max_y, CHUNK_SIZE);
     for (int cy = cy0; cy <= cy1; ++cy)
     {
-      MeshService->RebuildChunkImmediate(BlockWorld, *BlockRegistry,
-                                         glm::ivec3(key.x, cy, key.y));
+      const glm::ivec3 coord(key.x, cy, key.y);
+      if (!MeshService->IsChunkMeshDirty(coord) &&
+          MeshService->HasGreedyMesh(coord))
+      {
+        continue;
+      }
+      MeshService->RebuildChunkImmediate(BlockWorld, *BlockRegistry, coord);
     }
     StickyRemeshAfterLight.erase(key);
     PendingLightBeforeMesh.erase(key);
-    SetColumnEmergeState(glm::ivec3(key.x, 0, key.y),
-                         ColumnEmergeState::RenderReady);
+    const glm::ivec3 ground(key.x, 0, key.y);
+    if (IsColumnRenderReady(ground))
+    {
+      SetColumnEmergeState(ground, ColumnEmergeState::RenderReady);
+    }
+    else
+    {
+      SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+    }
   }
   return synced;
 }
