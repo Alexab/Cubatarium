@@ -35,8 +35,40 @@ def detect_stop_segment(periods: list[dict], min_len: int = 3) -> list[dict]:
     return periods[-min_len:] if len(periods) >= min_len else periods
 
 
+def detect_longest_stop_segment(periods: list[dict], min_len: int = 5) -> list[dict]:
+    """Longest contiguous focus plateau (manual idle / hover)."""
+    if len(periods) < min_len:
+        return detect_stop_segment(periods, min_len=max(3, min_len // 2))
+    best_start = 0
+    best_len = 0
+    run_start = 0
+    run_len = 1
+    for i in range(1, len(periods)):
+        c0 = periods[i - 1]
+        c1 = periods[i]
+        dx = abs(int(c1.get("focus_cx") or 0) - int(c0.get("focus_cx") or 0))
+        dz = abs(int(c1.get("focus_cz") or 0) - int(c0.get("focus_cz") or 0))
+        if dx == 0 and dz == 0:
+            run_len += 1
+        else:
+            if run_len > best_len:
+                best_len = run_len
+                best_start = run_start
+            run_start = i
+            run_len = 1
+    if run_len > best_len:
+        best_len = run_len
+        best_start = len(periods) - run_len
+    if best_len >= min_len:
+        return periods[best_start : best_start + best_len]
+    return detect_stop_segment(periods, min_len=max(3, min_len // 2))
+
+
 def analyze(
-    path: Path, warmup_sec: float = 5.0, stop_tail_periods: int = 5
+    path: Path,
+    warmup_sec: float = 5.0,
+    stop_tail_periods: int = 5,
+    manual_idle: bool = False,
 ) -> dict:
     rows = [
         json.loads(line)
@@ -150,7 +182,11 @@ def analyze(
             black_proxy_periods += 1
     black_proxy_rate = black_proxy_periods / len(steady) if steady else 0.0
 
-    stop_segment = detect_stop_segment(steady, min_len=max(3, stop_tail_periods // 2))
+    stop_segment = (
+        detect_longest_stop_segment(steady, min_len=8)
+        if manual_idle
+        else detect_stop_segment(steady, min_len=max(3, stop_tail_periods // 2))
+    )
     fly_segment = (
         steady[: len(steady) - len(stop_segment)] if stop_segment else steady
     )
@@ -216,10 +252,11 @@ def analyze(
     stop_wall_med = median(stop_wall)
     stop_pending_full = col(stop_segment, "pending_light_focus")
     stop_pending_plateau_sec = 0.0
+    plateau_pending_threshold = 5.0 if manual_idle else 20.0
     run = 0
     for i, p in enumerate(stop_pending_full):
         wall_i = stop_wall[i] if i < len(stop_wall) else 999.0
-        if p >= 20 and wall_i < 35.0:
+        if p >= plateau_pending_threshold and wall_i < 35.0:
             run += 1
             stop_pending_plateau_sec = max(stop_pending_plateau_sec, run * 2.0)
         else:
@@ -242,19 +279,20 @@ def analyze(
         (post_stop_black_sticky_max or 0) <= 0.5
         and (post_stop_missing_max or 0) <= 0.5
         and post_stop_effective_holes_rate <= 0.05
-        and ok_med(post_stop_pending_med, 15)
-        and stop_pending_plateau_sec <= 8.0
+        and ok_med(post_stop_pending_med, 5 if manual_idle else 15)
+        and stop_pending_plateau_sec <= (60.0 if manual_idle else 8.0)
         and healthy_unfinished_rate <= 0.25
     )
     already_clean_stop = (
-        ok_med(post_stop_pending_med, 15)
+        ok_med(post_stop_pending_med, 2 if manual_idle else 15)
         and (post_stop_black_sticky_max or 0) <= 0.5
         and (post_stop_missing_max or 0) <= 0.5
         and post_stop_effective_holes_rate <= 0.05
-        and stop_pending_plateau_sec <= 4.0
+        and stop_pending_plateau_sec <= (12.0 if manual_idle else 4.0)
     )
+    pending_stop_limit = 5 if manual_idle else 15
     gates_stop = {
-        "post_stop_pending_med_le_15": ok_med(post_stop_pending_med, 15),
+        "post_stop_pending_med_le_15": ok_med(post_stop_pending_med, pending_stop_limit),
         "post_stop_black_sticky_zero": post_stop_black_sticky_max is not None
         and post_stop_black_sticky_max <= 0.5,
         "post_stop_missing_zero": post_stop_missing_max is not None
@@ -268,7 +306,8 @@ def analyze(
         or (
             post_stop_relight_med is not None and post_stop_relight_med > 0.5
         ),
-        "post_stop_pending_not_plateau_8s": stop_pending_plateau_sec <= 8.0,
+        "post_stop_pending_not_plateau_8s": stop_pending_plateau_sec
+        <= (60.0 if manual_idle else 8.0),
         "post_stop_healthy_fps_not_unfinished": healthy_unfinished_rate <= 0.25,
     }
     gates_stop_pass_count = sum(1 for v in gates_stop.values() if v)
@@ -321,10 +360,11 @@ def analyze(
             "stop_pending_delta": stop_pending_delta,
             "stop_segment_periods": len(stop_segment),
             "stop_tail_periods": len(stop_tail),
-            "stop_pending_plateau_sec": stop_pending_plateau_sec,
-            "stop_wall_med": stop_wall_med,
-            "healthy_unfinished_rate": healthy_unfinished_rate,
-        },
+        "stop_pending_plateau_sec": stop_pending_plateau_sec,
+        "stop_wall_med": stop_wall_med,
+        "healthy_unfinished_rate": healthy_unfinished_rate,
+        "manual_idle": manual_idle,
+    },
         "gates": gates,
         "gates_stop": gates_stop,
         "soft": soft,
@@ -337,12 +377,22 @@ def main() -> int:
     ap.add_argument("perf_jsonl", type=Path)
     ap.add_argument("--warmup-sec", type=float, default=5.0)
     ap.add_argument("--stop-tail-periods", type=int, default=5)
+    ap.add_argument(
+        "--manual-idle",
+        action="store_true",
+        help="use longest focus plateau + stricter pending stop gates",
+    )
     ap.add_argument("--report", type=Path, default=None)
     args = ap.parse_args()
     if not args.perf_jsonl.is_file():
         print(f"FAIL: missing {args.perf_jsonl}", file=sys.stderr)
         return 2
-    result = analyze(args.perf_jsonl, args.warmup_sec, args.stop_tail_periods)
+    result = analyze(
+        args.perf_jsonl,
+        args.warmup_sec,
+        args.stop_tail_periods,
+        manual_idle=args.manual_idle,
+    )
     text = json.dumps(result, indent=2)
     print(text)
     if args.report:

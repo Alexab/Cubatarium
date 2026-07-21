@@ -270,7 +270,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   const int pending_light_focus_n =
       world.CountPendingLightBeforeMeshNear(focus_horiz, focus_radius);
   const bool focus_pending_high = pending_light_focus_n > 15;
-  const bool focus_pending_mid = pending_light_focus_n > 8;
+  const bool focus_pending_mid = pending_light_focus_n > 0;
   const bool visual_holes =
       world.MeshService &&
       world.MeshService->HasMissingGreedyMeshInHorizontalRadius(

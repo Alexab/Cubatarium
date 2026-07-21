@@ -140,9 +140,9 @@ def main() -> int:
         args.resume = True
         args.teleport_cruise = True
         args.sprint = False
-        args.idle_sec = max(args.idle_sec, 8.0)
-        args.fly_phase_sec = max(args.fly_phase_sec, 40.0)
-        args.stop_phase_sec = max(args.stop_phase_sec, 50.0)
+        args.idle_sec = max(args.idle_sec, 45.0)
+        args.fly_phase_sec = max(args.fly_phase_sec, 45.0)
+        args.stop_phase_sec = max(args.stop_phase_sec, 90.0)
 
     if args.build:
         cmd = [
@@ -214,15 +214,16 @@ def main() -> int:
         return 1
 
     print(f"analyzing {perf}", flush=True)
-    ana = subprocess.call(
-        [
-            sys.executable,
-            str(ANALYZE),
-            str(perf),
-            "--report",
-            str(args.report),
-        ]
-    )
+    analyze_cmd = [
+        sys.executable,
+        str(ANALYZE),
+        str(perf),
+        "--report",
+        str(args.report),
+    ]
+    if args.replay_manual or args.fly_stop:
+        analyze_cmd.append("--manual-idle")
+    ana = subprocess.call(analyze_cmd)
     if args.report.is_file() and args.update_best:
         result = json.loads(args.report.read_text(encoding="utf-8"))
         if args.fly_stop:

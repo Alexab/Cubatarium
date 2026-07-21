@@ -466,15 +466,50 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
 
   // Standing still with backlog: prioritize drain/complete over new commits so
   // FPS can recover (dirty outside focus used to never clear).
-  if (!moving && pending_dirty > 32)
+  const bool idle_light_debt_only =
+      !moving && pending_near_light && !visual_holes && black_sticky == 0;
+  if (!moving && pending_dirty > 32 && !idle_light_debt_only)
   {
     mesh_drain = std::max(mesh_drain, 20);
     mesh_schedule = std::max(mesh_schedule, 12);
   }
-  else if (!moving && pending_dirty > 8)
+  else if (!moving && pending_dirty > 8 && !idle_light_debt_only)
   {
     mesh_drain = std::max(mesh_drain, 16);
     mesh_schedule = std::max(mesh_schedule, 10);
+  }
+  if (idle_light_debt_only)
+  {
+    mesh_service.SetStarveOutsideFocusMesh(true);
+    mesh_service.SetStarveRemeshForHoles(false);
+    mesh_drain = std::min(mesh_drain, last_frame_ms <= 16.0 ? 10 : 6);
+    mesh_schedule = std::min(mesh_schedule, 8);
+    static int idle_pending_promote_cd = 0;
+    static int idle_pending_sync_cd = 0;
+    if (idle_pending_promote_cd <= 0 && last_frame_ms <= 20.0 &&
+        pending_focus_count > 0)
+    {
+      const int promoted = world.DrainIdleFocusPendingLight(
+          focus_ground_horiz, focus_radius, 2);
+      idle_pending_promote_cd = promoted > 0 ? 12 : 24;
+    }
+    else if (idle_pending_promote_cd > 0)
+    {
+      --idle_pending_promote_cd;
+    }
+    if (idle_pending_sync_cd <= 0 && pending_focus_count >= 3 &&
+        last_frame_ms <= 28.0)
+    {
+      const int sync_budget =
+          pending_focus_count >= 5 ? 2 : 1;
+      const int synced = world.DrainIdleFocusPendingLightSync(
+          focus_ground_horiz, focus_radius, sync_budget);
+      idle_pending_sync_cd = synced > 0 ? 20 : 30;
+    }
+    else if (idle_pending_sync_cd > 0)
+    {
+      --idle_pending_sync_cd;
+    }
   }
 
   if (world.GetPlayerRelightMeshBurstFrames() > 0)
@@ -844,10 +879,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   else if (pending_near_light)
   {
-    // Light debt without missing mesh: do not raise sync_cap (was causing
-    // mesh_emerge 1–2s with visual_holes=0).
-    mesh_schedule = std::max(mesh_schedule, moving ? 10 : 14);
-    mesh_drain = std::max(mesh_drain, moving ? 10 : 16);
+    if (!moving)
+    {
+      // Idle light debt: starve remesh so relight/MarkRelit can finish.
+      mesh_schedule = std::min(mesh_schedule, 8);
+      mesh_drain = std::min(mesh_drain, last_frame_ms <= 16.0 ? 10 : 6);
+    }
+    else
+    {
+      mesh_schedule = std::max(mesh_schedule, 10);
+      mesh_drain = std::max(mesh_drain, 10);
+    }
   }
   else if (idle_recovery && async_saturated_idle)
   {
@@ -911,10 +953,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       world.GetBlockWorld(), registry, mesh_drain, mesh_schedule,
       /*force_sync=*/false, sync_cap, sync_budget_ms);
   mesh_service.DrainAsyncMeshResults(world.GetBlockWorld(), registry, mesh_drain);
-  if (tick_stats.Completed > 0 || tick_stats.SyncRebuilt > 0)
+  if (tick_stats.Completed > 0 || tick_stats.SyncRebuilt > 0 ||
+      (!moving && pending_focus_count > 0))
   {
     world.DrainColumnWork(focus_ground_horiz, focus_radius,
-                          idle_recovery ? 24 : 16);
+                          idle_recovery ? 24 : 12);
   }
 
 #ifndef NDEBUG

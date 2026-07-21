@@ -261,6 +261,9 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               std::max(std::abs(coord.x - focus_ground.x),
                        std::abs(coord.z - focus_ground.z));
           const bool underfeet = horiz <= 1;
+          // Sync seed only underfeet — full-ring sync at commit spiked wall to
+          // multi-second during autofly ingress. Outer ring uses async relight
+          // with idle promote / partial CanSeedSkylight when neighbors allow.
           const bool seed_skylight_now =
               underfeet && world.CanSeedSkylightAtCommit(ground);
           const bool relight_priority =
@@ -879,6 +882,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 8 : 16);
   }
+  else if (pending_light_focus_n > 0 && frame_ms <= kBadFrameMs)
+  {
+    bg_budget = std::max(bg_budget, 8);
+  }
   const int mesh_async_n = world.GetMeshService().GetAsyncInFlightCount();
   const bool missing_focus_mesh =
       world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
@@ -886,7 +893,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   const bool idle_recovery =
       world.GetLastMovementSpeed() <=
           procedural.MovementPrefetchThreshold &&
-      (pending_light_focus_n > 8 || black_sticky_focus > 0 ||
+      (pending_light_focus_n > 0 || black_sticky_focus > 0 ||
        mesh_async_n >= 36 || missing_focus_mesh);
   if (idle_recovery)
   {
