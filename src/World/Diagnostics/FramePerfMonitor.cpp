@@ -161,6 +161,7 @@ struct FrameNumbers
   int light_debt{0};
   int focus_missing_mesh{0};
   int focus_dark_mesh{0};
+  std::string pending_cols;
   double max_wall_ms{0.0};
   double max_stream_ms{0.0};
   double max_mesh_emerge_ms{0.0};
@@ -241,6 +242,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.light_debt = phys.LightDebt;
   n.focus_missing_mesh = phys.FocusMissingMesh;
   n.focus_dark_mesh = phys.FocusDarkMesh;
+  n.pending_cols = phys.PendingFocusCols;
   return n;
 }
 
@@ -302,6 +304,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"focus_missing_mesh\":" << n.focus_missing_mesh
           << ",\"focus_dark_mesh\":" << n.focus_dark_mesh
           << ",\"black_sticky\":" << n.focus_dark_mesh
+          << ",\"pending_cols\":\"" << n.pending_cols << "\""
           << ",\"max_wall_ms\":" << n.max_wall_ms
           << ",\"max_stream_ms\":" << n.max_stream_ms
           << ",\"max_mesh_emerge_ms\":" << n.max_mesh_emerge_ms
@@ -319,23 +322,27 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
 void LogLine(const FrameNumbers &n, const char *kind, int frames,
              double max_wall)
 {
-  LOG(INFO) << "[Perf] kind=" << kind << " wall_ms=" << n.wall_ms
-            << " sim_ms=" << n.sim_ms << " swap_wait_ms=" << n.swap_wait_ms
-            << " stream_ms=" << n.stream_ms << " phys_ms=" << n.phys_ms
-            << " mesh_emerge_ms=" << n.mesh_emerge_ms
-            << " scene_ms=" << n.scene_ms << " Dirty=" << n.dirty
-            << " GenQ=" << n.gen_q << " MeshAsync=" << n.mesh_async
-            << " ring_blocked=" << n.stream_ring_blocked
-            << " near_skip=" << n.stream_near_skipped
-            << " pending_light=" << n.pending_light
-            << " stream_pressure=" << n.stream_pressure
-            << " pending_light_focus=" << n.pending_light_focus
-            << " focus=(" << n.focus_cx << "," << n.focus_cz << ")"
-            << " underfeet=" << n.underfeet_need
-            << " holes=" << n.near_focus_holes
-            << " max_wall_ms=" << max_wall
-            << " max_stream_ms=" << n.max_stream_ms
-            << " max_ring=" << n.max_ring_blocked << " frames=" << frames;
+  std::ostringstream oss;
+  oss << "[Perf] kind=" << kind << " wall_ms=" << n.wall_ms
+      << " sim_ms=" << n.sim_ms << " swap_wait_ms=" << n.swap_wait_ms
+      << " stream_ms=" << n.stream_ms << " phys_ms=" << n.phys_ms
+      << " mesh_emerge_ms=" << n.mesh_emerge_ms << " scene_ms=" << n.scene_ms
+      << " Dirty=" << n.dirty << " GenQ=" << n.gen_q
+      << " MeshAsync=" << n.mesh_async << " ring_blocked=" << n.stream_ring_blocked
+      << " near_skip=" << n.stream_near_skipped
+      << " pending_light=" << n.pending_light
+      << " stream_pressure=" << n.stream_pressure
+      << " pending_light_focus=" << n.pending_light_focus
+      << " focus=(" << n.focus_cx << "," << n.focus_cz << ")"
+      << " underfeet=" << n.underfeet_need << " visual_holes=" << n.visual_holes
+      << " holes=" << n.near_focus_holes;
+  if (!n.pending_cols.empty())
+  {
+    oss << " pending_cols=" << n.pending_cols;
+  }
+  oss << " max_wall_ms=" << max_wall << " max_stream_ms=" << n.max_stream_ms
+      << " max_ring=" << n.max_ring_blocked << " frames=" << frames;
+  LOG(INFO) << oss.str();
 }
 
 void Accumulate(Session &s, const FrameNumbers &n)

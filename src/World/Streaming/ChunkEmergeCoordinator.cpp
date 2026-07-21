@@ -497,14 +497,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       --idle_pending_promote_cd;
     }
-    if (idle_pending_sync_cd <= 0 && pending_focus_count >= 3 &&
-        last_frame_ms <= 28.0)
+    if (idle_pending_sync_cd <= 0 && pending_focus_count >= 2 &&
+        pending_focus_count <= 5 && black_sticky == 0 &&
+        last_frame_ms <= 16.0)
     {
-      const int sync_budget =
-          pending_focus_count >= 5 ? 2 : 1;
       const int synced = world.DrainIdleFocusPendingLightSync(
-          focus_ground_horiz, focus_radius, sync_budget);
-      idle_pending_sync_cd = synced > 0 ? 20 : 30;
+          focus_ground_horiz, focus_radius, 1);
+      idle_pending_sync_cd = synced > 0 ? 60 : 90;
     }
     else if (idle_pending_sync_cd > 0)
     {

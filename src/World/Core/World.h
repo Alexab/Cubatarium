@@ -877,6 +877,10 @@ public:
   }
   int CountPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,
                                       int radius_chunks) const;
+  /// "(cx,cz),..." for PendingLightBeforeMesh inside focus (max_cols cap).
+  std::string FormatPendingLightFocusColumns(glm::ivec3 focus_ground_horiz,
+                                             int radius_chunks,
+                                             int max_cols = 12) const;
   /// Focus columns with GreedyMesh and PendingLightBeforeMesh (sticky black).
   int CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
                                   int radius_chunks) const;

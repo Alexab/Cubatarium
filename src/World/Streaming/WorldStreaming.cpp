@@ -945,6 +945,16 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     bg_budget = 1;
   }
+  // Pending debt with empty relight FIFO and no inflight: re-promote + clear
+  // lit-ready columns (manual 155539: pend=2, relight_drain≈0 plateau).
+  if (idle_recovery && pending_light_focus_n > 0 && pending_light_focus_n <= 8 &&
+      pending_bg_after == 0 && world.GetAsyncRelightInFlightCount() == 0 &&
+      frame_ms <= kBadFrameMs)
+  {
+    world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
+    world.ClearPendingLightAfterMeshCommitted(8);
+    bg_budget = std::max(bg_budget, 16);
+  }
 
   {
     const auto relight_t0 = std::chrono::high_resolution_clock::now();
@@ -1569,6 +1579,8 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     world.PhysicsTelemetryData.LightDebt =
         world.HasPendingLightBeforeMeshNear(focus_horiz, focus_radius) ? 1 : 0;
     world.PhysicsTelemetryData.NearFocusHoles = near_focus_holes ? 1 : 0;
+    world.PhysicsTelemetryData.PendingFocusCols =
+        world.FormatPendingLightFocusColumns(focus_horiz, focus_radius, 12);
     // StreamPressure / PendingLightFocus already set in RefreshStreamingPressure.
   }
 }

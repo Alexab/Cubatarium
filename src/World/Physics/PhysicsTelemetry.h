@@ -2,6 +2,7 @@
 #define PHYSICSTELEMETRY_H
 
 #include <cstdint>
+#include <string>
 
 namespace cutum
 {
@@ -81,6 +82,8 @@ struct PhysicsTelemetry
   int StreamPressure{0};
   /// PendingLightBeforeMesh count inside focus radius (vs global PendingLightCount).
   int PendingLightFocus{0};
+  /// Comma-separated (cx,cz) for focus pending columns (telemetry only).
+  std::string PendingFocusCols;
 };
 
 } // namespace cutum

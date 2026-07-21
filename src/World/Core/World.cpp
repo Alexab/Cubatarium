@@ -1926,6 +1926,61 @@ int UWorld::CountPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,
   return count;
 }
 
+std::string UWorld::FormatPendingLightFocusColumns(
+    glm::ivec3 focus_ground_horiz, int radius_chunks, int max_cols) const
+{
+  if (PendingLightBeforeMesh.empty() || radius_chunks < 0 || max_cols <= 0)
+  {
+    return {};
+  }
+  struct Entry
+  {
+    int dist;
+    glm::ivec2 key;
+  };
+  std::vector<Entry> entries;
+  entries.reserve(PendingLightBeforeMesh.size());
+  for (const auto &entry : PendingLightBeforeMesh)
+  {
+    const int dist = std::max(std::abs(entry.first.x - focus_ground_horiz.x),
+                              std::abs(entry.first.y - focus_ground_horiz.z));
+    if (dist > radius_chunks)
+    {
+      continue;
+    }
+    entries.push_back({dist, entry.first});
+  }
+  if (entries.empty())
+  {
+    return {};
+  }
+  std::sort(entries.begin(), entries.end(),
+            [](const Entry &a, const Entry &b)
+            {
+              if (a.dist != b.dist)
+              {
+                return a.dist > b.dist;
+              }
+              if (a.key.x != b.key.x)
+              {
+                return a.key.x < b.key.x;
+              }
+              return a.key.y < b.key.y;
+            });
+  std::string out;
+  const int n = std::min(max_cols, static_cast<int>(entries.size()));
+  for (int i = 0; i < n; ++i)
+  {
+    if (!out.empty())
+    {
+      out += ',';
+    }
+    out += '(' + std::to_string(entries[static_cast<size_t>(i)].key.x) + ',' +
+           std::to_string(entries[static_cast<size_t>(i)].key.y) + ')';
+  }
+  return out;
+}
+
 int UWorld::CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
                                         int radius_chunks) const
 {

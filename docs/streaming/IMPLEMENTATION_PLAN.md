@@ -113,3 +113,54 @@ stateDiagram-v2
 - `MarkDirty` всего focus ring на каждом idle tick;
 - sync relight flood как универсальный recovery;
 - preview mesh до завершения света.
+
+## Статус (2026-07-21)
+
+### Сделано (коммит `ee54b86d` + follow-up)
+
+| Фаза | Статус | Примечание |
+|------|--------|------------|
+| 0 Документация | ✅ | `docs/streaming/*` |
+| 1 Visual contract | ⚠️ частично | `visual_holes`/`unfinished_visual` в perf; preview при PendingLight оставлен |
+| 2 Focus drain | ⚠️ частично | `DrainColumnWork`, idle при `pending>0`, promote/sync helpers |
+| 3 Skylight seed | ⚠️ частично | partial `CanSeedSkylightAtCommit` (3/4 cardinals); sync seed только underfeet |
+| 4 Unified flow | ⚠️ частично | helpers есть, recovery zoo не свёрнут |
+| 5 Harness | ⚠️ частично | `--manual-idle`, `analyze_manual_idle.py` |
+
+### Ручной пролёт `perf_20260721-155539` (~90 с)
+
+| Метрика | Было (до fix) | Стало |
+|---------|---------------|-------|
+| `visual_holes` | 0 | **0** ✅ |
+| `pending` stop tail | ~5 плато | **2** (лучше, не 0) |
+| `relight_drain_ms` stop | ~0 | **~0.02** ❌ stall |
+| `dirty_med` | ~560 | **~427** (лучше) |
+| sync spikes | — | **3–7 с** (DrainIdleFocusPendingLightSync) |
+
+Вывод: mesh-контракт держится; light debt снижается, но **последние 2–5 колонок** и **relight FIFO stall** остаются.
+
+### Осталось (приоритет)
+
+**P0 — Relight stall при малом pending**
+
+- [x] `pending_cols` в perf jsonl + glog `visual_holes` отдельно от `holes`
+- [x] Stall watchdog: empty FIFO + no inflight → re-promote + `ClearPendingLightAfterMeshCommitted`
+- [ ] Проверить на следующем manual: `pending→0`, `relight_drain>0` при stop
+
+**P0 — Sync relight без спайков**
+
+- [x] Sync только при `pending 2–5`, `wall≤16ms`, 1 col / 60 frames
+- [ ] Если спайки остаются — убрать sync path, только async + MarkRelit flush
+
+**P1 — Dirty idle cap**
+
+- [ ] При `visual_holes=0` starve far remesh сильнее → `dirty_med < 300` @ idle
+
+**P1 — Quit path**
+
+- [ ] Quiesce перед save, perf `kind=shutdown`, не генерировать frontier при exit
+
+**P2 — Harness**
+
+- [ ] Autofly resume в manual-зону с движением `chunks_traveled≥3`
+- [ ] Gate: `healthy_unfinished_rate` при `wall<30` и `pending≤5`
