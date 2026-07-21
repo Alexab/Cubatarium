@@ -254,6 +254,8 @@ public:
   void WaitForPendingRelightJobs();
   bool WaitForPendingRelightJobsFor(std::chrono::milliseconds timeout);
   void PrepareForShutdown();
+  /// Flight-sim / harness: short joins so exit cannot hang experiments.
+  void PrepareForShutdownFast();
   void QuiesceBackgroundWork(
       std::chrono::milliseconds async_timeout = std::chrono::milliseconds(2000));
   void BeginBackgroundQuiesce(UBackgroundQuiesceState &state);
@@ -1119,6 +1121,9 @@ private:
   bool SpawnAreaPreparedByCooperativeLoad{false};
   bool ShutdownPrepared{false};
   bool BackgroundQuiesceFinished{false};
+  void PrepareForShutdownWithBudgets(std::chrono::milliseconds quiesce_budget,
+                                     std::chrono::milliseconds abandon_budget,
+                                     std::chrono::milliseconds mesh_idle_budget);
   int RenderDistanceChunks{4};
   int EffectiveRenderDistance{4};
   float EffectiveFogStartRatio{0.85f};

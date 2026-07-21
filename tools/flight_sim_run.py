@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BIN = ROOT / "bin"
 EXE = BIN / "Cubatarium.exe"
 ANALYZE = Path(__file__).with_name("flight_sim_analyze.py")
+PHASE_HISTORY = BIN / "flight_sim_phase_history.jsonl"
 
 
 def newest_perf(after_ts: float) -> Path | None:
@@ -37,6 +38,86 @@ def load_best(path: Path) -> dict | None:
         return json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return None
+
+
+def kill_cubatarium_orphans() -> int:
+    """Force-kill any Cubatarium.exe trees. Returns number of taskkill attempts."""
+    if sys.platform != "win32":
+        return 0
+    r = subprocess.run(
+        ["taskkill", "/F", "/T", "/IM", "Cubatarium.exe"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    return 0 if r.returncode == 128 else 1
+
+
+def exe_writable(timeout_sec: float = 5.0) -> bool:
+    """True if bin/Cubatarium.exe can be replaced (not locked)."""
+    if not EXE.is_file():
+        return True
+    deadline = time.time() + timeout_sec
+    while time.time() < deadline:
+        try:
+            with open(EXE, "ab"):
+                return True
+        except OSError:
+            time.sleep(0.25)
+    return False
+
+
+def preflight_cleanup() -> None:
+    kill_cubatarium_orphans()
+    time.sleep(0.3)
+    kill_cubatarium_orphans()
+    if not exe_writable(5.0):
+        raise SystemExit(
+            "FAIL: Cubatarium.exe still locked after kill — abort before build/sim"
+        )
+
+
+def kill_process_tree(pid: int) -> None:
+    if sys.platform == "win32":
+        subprocess.run(
+            ["taskkill", "/F", "/T", "/PID", str(pid)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    else:
+        try:
+            import os
+            import signal
+
+            os.killpg(os.getpgid(pid), signal.SIGKILL)
+        except (ProcessLookupError, PermissionError, OSError):
+            pass
+
+
+def run_with_timeout(cmd: list[str], cwd: Path, timeout_sec: float) -> int:
+    proc = subprocess.Popen(cmd, cwd=str(cwd))
+    try:
+        return proc.wait(timeout=timeout_sec)
+    except subprocess.TimeoutExpired:
+        print(
+            f"WARN: flight-sim hung after {timeout_sec:.0f}s, killing pid={proc.pid}",
+            flush=True,
+        )
+        kill_process_tree(proc.pid)
+        kill_cubatarium_orphans()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+        return 124
+
+
+def append_phase_history(entry: dict) -> None:
+    BIN.mkdir(parents=True, exist_ok=True)
+    with PHASE_HISTORY.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
 def gates_pass_count(result: dict) -> int:
@@ -79,6 +160,20 @@ def is_better(result: dict, best: dict | None) -> bool:
     if rw is not None and bw is not None and rw < bw - 2.0:
         return True
     return False
+
+
+def annotate_report_hang(report: Path, hang_killed: bool, process_rc: int) -> None:
+    if not report.is_file():
+        return
+    try:
+        data = json.loads(report.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return
+    data["hang_killed"] = hang_killed
+    data["process_rc"] = process_rc
+    if hang_killed:
+        data["pass"] = False
+    report.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
 def main() -> int:
@@ -132,6 +227,22 @@ def main() -> int:
         action="store_true",
         help="replay the World_164 manual westbound stop-flight profile",
     )
+    ap.add_argument(
+        "--process-timeout",
+        type=float,
+        default=0.0,
+        help="max wall seconds for Cubatarium (0 = seconds + 120 grace)",
+    )
+    ap.add_argument(
+        "--phase-id",
+        default="",
+        help="optional label written to flight_sim_phase_history.jsonl",
+    )
+    ap.add_argument(
+        "--skip-preflight",
+        action="store_true",
+        help="do not kill orphan Cubatarium before run (debug only)",
+    )
     args = ap.parse_args()
 
     if args.replay_manual:
@@ -143,6 +254,10 @@ def main() -> int:
         args.idle_sec = max(args.idle_sec, 45.0)
         args.fly_phase_sec = max(args.fly_phase_sec, 45.0)
         args.stop_phase_sec = max(args.stop_phase_sec, 90.0)
+
+    if not args.skip_preflight:
+        print("preflight: killing orphan Cubatarium.exe (if any)", flush=True)
+        preflight_cleanup()
 
     if args.build:
         cmd = [
@@ -156,6 +271,8 @@ def main() -> int:
             "Cubatarium",
         ]
         print("building:", " ".join(cmd), flush=True)
+        if not args.skip_preflight:
+            preflight_cleanup()
         rc = subprocess.call(cmd)
         if rc != 0:
             return rc
@@ -199,8 +316,17 @@ def main() -> int:
     else:
         sim_cmd.append("--no-teleport-cruise")
 
+    process_timeout = args.process_timeout
+    if process_timeout <= 0.0:
+        process_timeout = args.seconds + 120.0
+    if args.fly_stop:
+        process_timeout = max(process_timeout, 300.0)
+
     print("running:", " ".join(sim_cmd), flush=True)
-    rc = subprocess.call(sim_cmd, cwd=str(BIN))
+    rc = run_with_timeout(sim_cmd, BIN, process_timeout)
+    hang_killed = rc == 124
+    kill_cubatarium_orphans()
+
     perf = newest_perf(t0)
     if perf is None:
         report_path = BIN / "flight_sim_report.json"
@@ -209,9 +335,20 @@ def main() -> int:
             p = data.get("perf_jsonl") or ""
             if p and Path(p).is_file():
                 perf = Path(p)
+
+    ana = 1
     if perf is None:
         print("FAIL: no perf jsonl produced", file=sys.stderr)
-        return 1
+        append_phase_history(
+            {
+                "phase": args.phase_id or "unspecified",
+                "rc": rc,
+                "hang_killed": hang_killed,
+                "perf": None,
+                "report": str(args.report),
+            }
+        )
+        return 3 if hang_killed else 1
 
     print(f"analyzing {perf}", flush=True)
     analyze_cmd = [
@@ -224,18 +361,59 @@ def main() -> int:
     if args.replay_manual or args.fly_stop:
         analyze_cmd.append("--manual-idle")
     ana = subprocess.call(analyze_cmd)
-    if args.report.is_file() and args.update_best:
-        result = json.loads(args.report.read_text(encoding="utf-8"))
-        if args.fly_stop:
-            best_path = BIN / "flight_sim_gate_report_stop_best.json"
-        else:
-            best_path = BIN / "flight_sim_gate_report_west_best.json"
-        best = load_best(best_path)
-        if is_better(result, best):
-            best_path.write_text(
-                args.report.read_text(encoding="utf-8"), encoding="utf-8"
-            )
-            print(f"updated best: {best_path}", flush=True)
+    annotate_report_hang(args.report, hang_killed, rc)
+
+    metrics_summary: dict = {}
+    if args.report.is_file():
+        try:
+            result = json.loads(args.report.read_text(encoding="utf-8"))
+            metrics_summary = {
+                "pass": result.get("pass"),
+                "hang_killed": result.get("hang_killed"),
+                "gates_pass_count": gates_pass_count(result),
+                "gates_stop_pass_count": gates_stop_pass_count(result),
+                "metrics": {
+                    k: (result.get("metrics") or {}).get(k)
+                    for k in (
+                        "pending_light_focus_med",
+                        "post_stop_pending_med",
+                        "post_stop_not_ready_end",
+                        "stop_not_ready_delta",
+                        "post_stop_black_sticky_max",
+                        "stop_wall_med",
+                        "chunks_traveled",
+                    )
+                },
+            }
+            if args.update_best and not hang_killed:
+                if args.fly_stop:
+                    best_path = BIN / "flight_sim_gate_report_stop_best.json"
+                else:
+                    best_path = BIN / "flight_sim_gate_report_west_best.json"
+                best = load_best(best_path)
+                if is_better(result, best):
+                    best_path.write_text(
+                        args.report.read_text(encoding="utf-8"), encoding="utf-8"
+                    )
+                    print(f"updated best: {best_path}", flush=True)
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    append_phase_history(
+        {
+            "phase": args.phase_id or "unspecified",
+            "rc": rc,
+            "ana": ana,
+            "hang_killed": hang_killed,
+            "perf": str(perf),
+            "report": str(args.report),
+            "summary": metrics_summary,
+        }
+    )
+
+    if hang_killed:
+        print("flight-sim process HANG-KILLED exit=124", file=sys.stderr)
+        return 3
     if rc != 0:
         print(f"flight-sim process exit={rc}", file=sys.stderr)
         return rc

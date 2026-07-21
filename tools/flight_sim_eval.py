@@ -41,6 +41,8 @@ def main() -> int:
         str(BIN / "flight_sim_gate_report_west_latest.json"),
         "--build-dir",
         str(args.build_dir),
+        "--process-timeout",
+        "180",
         *build_args,
     ]
     print("=== cruise ===", flush=True)
@@ -60,6 +62,8 @@ def main() -> int:
             str(BIN / "flight_sim_gate_report_stop_latest.json"),
             "--build-dir",
             str(args.build_dir),
+            "--process-timeout",
+            "300",
         ]
         print("=== fly-stop ===", flush=True)
         rc = subprocess.call(stop_cmd)

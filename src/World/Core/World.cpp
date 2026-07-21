@@ -3499,6 +3499,24 @@ void UWorld::QuiesceBackgroundWork(const std::chrono::milliseconds async_timeout
 
 void UWorld::PrepareForShutdown()
 {
+  PrepareForShutdownWithBudgets(std::chrono::milliseconds(2000),
+                                std::chrono::milliseconds(150),
+                                std::chrono::milliseconds(50));
+}
+
+void UWorld::PrepareForShutdownFast()
+{
+  // Harness / flight-sim: never block experiments on worker join.
+  PrepareForShutdownWithBudgets(std::chrono::milliseconds(400),
+                                std::chrono::milliseconds(50),
+                                std::chrono::milliseconds(0));
+}
+
+void UWorld::PrepareForShutdownWithBudgets(
+    std::chrono::milliseconds quiesce_budget,
+    std::chrono::milliseconds abandon_budget,
+    std::chrono::milliseconds mesh_idle_budget)
+{
   if (ShutdownPrepared)
   {
     return;
@@ -3523,7 +3541,7 @@ void UWorld::PrepareForShutdown()
   // latch and re-enter 10s WaitIdle (hangs after "World saved.").
   if (!BackgroundQuiesceFinished)
   {
-    QuiesceBackgroundWork(std::chrono::milliseconds(2000));
+    QuiesceBackgroundWork(quiesce_budget);
     phase_ms("quiesce");
   }
   else
@@ -3541,14 +3559,16 @@ void UWorld::PrepareForShutdown()
   if (Streaming)
   {
     // Abandon before mesh WaitIdle so long populate cannot hang shutdown.
-    Streaming->AbandonWorkersForProcessExit(std::chrono::milliseconds(150));
+    Streaming->AbandonWorkersForProcessExit(abandon_budget);
     phase_ms("abandon_workers");
   }
   if (MeshService)
   {
     MeshService->CancelAsyncMeshWork();
-    // After abandon do not wait long on Dirty backlog — cancel is enough.
-    (void)MeshService->WaitForAsyncMeshIdleFor(std::chrono::milliseconds(50));
+    if (mesh_idle_budget.count() > 0)
+    {
+      (void)MeshService->WaitForAsyncMeshIdleFor(mesh_idle_budget);
+    }
   }
   phase_ms("mesh_idle");
   const double total_ms =

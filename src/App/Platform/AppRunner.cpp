@@ -530,7 +530,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     window.Run();
     window.ClearAutopilotKeys();
 
-    world->PrepareForShutdown();
+    // Flush perf + write report BEFORE shutdown joins so hang still leaves
+    // artifacts for the harness (flight-sim exit hang is a known risk).
     UFramePerfMonitor::Shutdown();
 
     const std::string perf_path = UFramePerfMonitor::GetLastSessionPath();
@@ -616,6 +617,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << "}\n";
       }
     }
+
+    std::cout << "flight-sim: report written path=" << report_path.string()
+              << " — shutting down (fast)" << std::endl;
+    world->PrepareForShutdownFast();
 
     std::cout << "flight-sim: done exit=" << exit_code
               << " world=" << world_name << " frames=" << ingame_frames_seen

@@ -170,6 +170,9 @@ def main() -> int:
         cmd.append("--update-best")
         if args.fly_stop:
             cmd.append("--fly-stop")
+            cmd.extend(["--process-timeout", "300"])
+        else:
+            cmd.extend(["--process-timeout", "180"])
         print(f"=== iterate {i}: tune={tune}", flush=True)
         write_tune(tune)
         rc = subprocess.call(cmd)
