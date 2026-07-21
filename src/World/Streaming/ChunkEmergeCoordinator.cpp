@@ -185,31 +185,70 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         mesh_service.CancelAsyncInFlightKeepDirty();
       }
       world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
+      // Holes (V2a normal): still promote often — 120-frame gap left FIFO cold
+      // while pending sat with relight_drain≈0.
       idle_cancel_cooldown =
-          pending_debt_only ? 8 : (async_saturated_idle ? 30 : 120);
+          pending_debt_only
+              ? 4
+              : (pending_focus_count > 0
+                     ? 6
+                     : (async_saturated_idle ? 30 : 60));
     }
     else
     {
       --idle_cancel_cooldown;
     }
     // V2b: single bounded idle drain — no SyncIdle flood, no Admit×8, no Refresh.
+    // High pending: drain every frame so FIFO stays hot after V2a no-mesh enqueue;
+    // do not Admit more columns while light debt is heavy.
     static int idle_visual_drain_cd = 0;
+    static int idle_pending_plateau_frames = 0;
+    static int idle_pending_plateau_last = -1;
+    if (pending_focus_count > 0 &&
+        pending_focus_count == idle_pending_plateau_last)
+    {
+      ++idle_pending_plateau_frames;
+    }
+    else
+    {
+      idle_pending_plateau_frames = 0;
+      idle_pending_plateau_last = pending_focus_count;
+    }
     if (idle_visual_drain_cd <= 0 && last_frame_ms <= 28.0)
     {
-      const int budget = pending_focus_count > 20 ? 4 : 3;
+      const int budget =
+          pending_focus_count > 30
+              ? 8
+              : (pending_focus_count > 15 ? 6
+                                         : (pending_focus_count > 0 ? 4 : 3));
       world.DrainIdleFocusPendingLight(focus_ground_horiz, focus_radius, budget);
-      world.AdmitFocusVisibleMissing(std::min(2, budget));
-      if (pending_focus_count > 0)
+      // Break-glass: pending frozen while async applies 0 (relight_drain≈0) —
+      // sync underfeet only, never a focus flood.
+      // Break-glass: pending frozen (west-strip edge often) — sync 1 farthest
+      // focus column (underfeet-only never touched dist=4 ingress).
+      if (idle_pending_plateau_frames >= 45 && last_frame_ms <= 18.0 &&
+          pending_focus_count > 0)
       {
-        world.AdmitFocusMeshIngress(1);
+        world.DrainIdleFocusPendingLightSync(focus_ground_horiz, focus_radius,
+                                             1);
+        idle_pending_plateau_frames = 0;
       }
-      world.ClearPendingLightAfterMeshCommitted(8);
+      if (pending_focus_count <= 8)
+      {
+        world.AdmitFocusVisibleMissing(std::min(2, budget));
+        if (pending_focus_count > 0)
+        {
+          world.AdmitFocusMeshIngress(1);
+        }
+      }
+      world.ClearPendingLightAfterMeshCommitted(12);
       // Sync remesh only for sticky under hard wall budget (underfeet-class).
       if (black_sticky > 0 && last_frame_ms <= 16.0)
       {
         world.SyncIdleFocusGreedyRemesh(1);
       }
-      idle_visual_drain_cd = pending_focus_count > 15 ? 6 : 10;
+      idle_visual_drain_cd =
+          pending_focus_count > 8 ? 1 : (pending_focus_count > 0 ? 2 : 8);
     }
     else if (idle_visual_drain_cd > 0)
     {
@@ -453,9 +492,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     if (idle_pending_promote_cd <= 0 && last_frame_ms <= 20.0 &&
         pending_focus_count > 0)
     {
+      const int budget = pending_focus_count > 20 ? 6 : 4;
       const int promoted = world.DrainIdleFocusPendingLight(
-          focus_ground_horiz, focus_radius, 2);
-      idle_pending_promote_cd = promoted > 0 ? 12 : 24;
+          focus_ground_horiz, focus_radius, budget);
+      idle_pending_promote_cd = promoted > 0 ? 2 : 6;
     }
     else if (idle_pending_promote_cd > 0)
     {
@@ -482,8 +522,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     static int cruise_promote_cd = 0;
     if (cruise_promote_cd <= 0 && last_frame_ms <= 24.0)
     {
-      world.DrainIdleFocusPendingLight(focus_ground_horiz, focus_radius, 3);
-      cruise_promote_cd = 6;
+      world.DrainIdleFocusPendingLight(focus_ground_horiz, focus_radius, 5);
+      cruise_promote_cd = 3;
     }
     else if (cruise_promote_cd > 0)
     {
@@ -667,7 +707,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         ((visual_holes || missing_underfeet) && recover_watchdog_frames >= 4) ||
         (pending_near_light && pending_focus_n > 12 &&
          recover_watchdog_frames >= 4) ||
-        (black_sticky > 0 && !moving && recover_watchdog_frames >= 4);
+        (black_sticky > 0 && !moving && recover_watchdog_frames >= 4) ||
+        (!moving && pending_focus_n > 15 && recover_watchdog_frames >= 2);
     if (recover_now && recover_n > 0)
     {
       world.RecoverUnlitFocusMeshes(recover_n);

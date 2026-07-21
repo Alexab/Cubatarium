@@ -1127,6 +1127,21 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
         // an already-built mesh (ClearPending here caused frequent dark chunks).
         if (pending)
         {
+          // Already has sky in chunk data but gate never cleared (async MarkRelit
+          // starved / discarded). Clear gate + remesh — idle west-strip plateau
+          // at focus edge had pending=36 forever with relight_drain≈0.
+          if (any_sky)
+          {
+            PendingLightBeforeMesh.erase(key);
+            AsyncRelightColumnsInFlight.erase(key);
+            SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
+            MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+                ground, remesh_min, remesh_max,
+                /*include_horizontal_neighbors=*/false);
+            SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+            ++repaired;
+            continue;
+          }
           Persistence->EnqueueTerrainColumnRelight(
               key.x * CHUNK_SIZE, key.y * CHUNK_SIZE, /*priority=*/true,
               remesh_min, remesh_max);
@@ -1750,6 +1765,7 @@ int UWorld::DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
   struct Candidate
   {
     int dist;
+    bool has_mesh;
     glm::ivec2 key;
     int min_y;
     int max_y;
@@ -1774,10 +1790,8 @@ int UWorld::DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
         break;
       }
     }
-    if (!has_mesh)
-    {
-      continue;
-    }
+    // V2a: first light has no mesh yet — still must requeue (old filter
+    // skipped the whole idle debt → pending plateau / relight_drain≈0).
     int remesh_min = band_min;
     int remesh_max = band_max;
     const int span = entry.second.max_y - entry.second.min_y;
@@ -1786,16 +1800,27 @@ int UWorld::DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
       remesh_min = std::min(remesh_min, entry.second.min_y);
       remesh_max = std::max(remesh_max, entry.second.max_y);
     }
-    candidates.push_back({dist, key, remesh_min, remesh_max});
+    candidates.push_back({dist, has_mesh, key, remesh_min, remesh_max});
   }
   if (candidates.empty())
   {
     return 0;
   }
-  // Outer ring first — ingress wedge columns starve when async never completes.
+  // First-light (no mesh): inner/focus first so underfeet+view clear.
+  // Lit remesh (has mesh): outer ring first — ingress wedge used to starve.
   std::sort(candidates.begin(), candidates.end(),
             [](const Candidate &a, const Candidate &b)
-            { return a.dist > b.dist; });
+            {
+              if (a.has_mesh != b.has_mesh)
+              {
+                return !a.has_mesh && b.has_mesh;
+              }
+              if (!a.has_mesh)
+              {
+                return a.dist < b.dist;
+              }
+              return a.dist > b.dist;
+            });
   int drained = 0;
   for (const Candidate &c : candidates)
   {
@@ -1803,7 +1828,20 @@ int UWorld::DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
     {
       break;
     }
-    AsyncRelightColumnsInFlight.erase(c.key);
+    // Only clear ghost InFlight marks. Erasing a live mark let Drain start a
+    // duplicate while the first job still ran — and skipped_inflight thrash
+    // left pending frozen with relight_drain≈0 (autofly stop plateau).
+    if (AsyncRelightColumnsInFlight.count(c.key) != 0)
+    {
+      if (GetAsyncRelightInFlightCount() == 0)
+      {
+        AsyncRelightColumnsInFlight.erase(c.key);
+      }
+      else
+      {
+        continue;
+      }
+    }
     if (!Persistence)
     {
       continue;
@@ -1861,6 +1899,7 @@ int UWorld::DrainIdleFocusPendingLightSync(glm::ivec3 focus_ground_horiz,
     {
       continue;
     }
+    // V2a: underfeet may have no mesh yet — still sync-seed (was skipped).
     bool has_mesh = false;
     for (int cy = cy0; cy <= cy1; ++cy)
     {
@@ -1870,7 +1909,7 @@ int UWorld::DrainIdleFocusPendingLightSync(glm::ivec3 focus_ground_horiz,
         break;
       }
     }
-    if (!has_mesh)
+    if (!has_mesh && dist > 1)
     {
       continue;
     }
@@ -1888,6 +1927,8 @@ int UWorld::DrainIdleFocusPendingLightSync(glm::ivec3 focus_ground_horiz,
   {
     return 0;
   }
+  // Outer ring first on sync break-glass — underfeet usually already seeded;
+  // idle plateaus were west-strip ingress (dist≈focus_radius).
   std::sort(candidates.begin(), candidates.end(),
             [](const Candidate &a, const Candidate &b)
             { return a.dist > b.dist; });
@@ -1899,10 +1940,11 @@ int UWorld::DrainIdleFocusPendingLightSync(glm::ivec3 focus_ground_horiz,
       break;
     }
     AsyncRelightColumnsInFlight.erase(c.key);
-    const bool seed_skylight =
-        CanSeedSkylightAtCommit(glm::ivec3(c.key.x, 0, c.key.y));
+    // Always seed skylight on idle sync — CanSeed gate left edge columns dark
+    // and SoftDefer kept Pending forever when async never MarkRelit'd.
     RelightTerrainColumn(c.key.x * CHUNK_SIZE, c.key.y * CHUNK_SIZE, c.min_y,
-                         c.max_y, /*priority_mesh=*/true, seed_skylight,
+                         c.max_y, /*priority_mesh=*/true,
+                         /*include_skylight=*/true,
                          /*include_block_light=*/true);
     ++drained;
   }

@@ -262,7 +262,9 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                        std::abs(coord.z - focus_ground.z));
           const bool underfeet = horiz <= 1;
           // Sync seed only underfeet (near_focus sync spiked autofly wall).
-          // V3: neighborhood-ready outer columns get priority async enqueue.
+          // V3: neighborhood-ready near_focus columns get priority FIFO seed
+          // (DrainRelightQueues → async). Direct EnqueueAsync+FIFO duplicated
+          // jobs and left pending plateaus with relight_drain≈0.
           const bool neighborhood_ok = world.CanSeedSkylightAtCommit(ground);
           const bool seed_skylight_now = underfeet && neighborhood_ok;
           const bool relight_priority =
