@@ -881,10 +881,15 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         // ClearPending cannot keep up). Idle stop tracks full focus radius.
         const bool idle =
             LastMovementSpeed <= ProceduralTemplate.MovementPrefetchThreshold;
+        // Idle: skip sticky insert when async not saturated — Dirty remesh is
+        // the recovery path; inserting every MarkRelit column made sticky
+        // climb 0→17 while SyncIdle was hitch-gated (iter20 stop).
+        const int async_n =
+            MeshService ? MeshService->GetAsyncInFlightCount() : 0;
         const int pending_n =
             static_cast<int>(PendingLightBeforeMesh.size());
         const int sticky_r =
-            idle ? GetStreamingFocusRadius()
+            idle ? (async_n >= 28 ? GetStreamingFocusRadius() : 1)
                  : (pending_n > 10 ? GetStreamingFocusRadius() : 1);
         if (horiz <= sticky_r)
         {
@@ -2221,7 +2226,7 @@ int UWorld::RefreshIdleFocusGreedyRemesh(int max_columns)
         continue;
       }
       const glm::ivec3 ground(key.x, 0, key.y);
-      if (!IsColumnLitReady(ground) || IsColumnRenderReady(ground))
+      if (!IsColumnLitReady(ground))
       {
         continue;
       }
@@ -2301,10 +2306,6 @@ int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
   auto try_add = [&](const glm::ivec2 &key, int dist)
   {
     const glm::ivec3 ground(key.x, 0, key.y);
-    if (IsColumnRenderReady(ground))
-    {
-      return;
-    }
     if (!IsColumnLitReady(ground) &&
         GetColumnEmergeState(ground) != ColumnEmergeState::Meshing)
     {

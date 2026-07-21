@@ -168,17 +168,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       world.CountPendingLightBeforeMeshNear(focus_ground_horiz, focus_radius);
   const int black_sticky = world.CountBlackStickyFocusMeshes(focus_ground,
                                                              focus_radius);
-  const int focus_not_render_ready =
-      world.CountUnfinishedVisualNear(focus_ground_horiz, focus_radius);
   const size_t pending_dirty_early = mesh_service.GetDirtyCount();
   const int pending_async_early = mesh_service.GetAsyncInFlightCount();
-  const bool idle_stale_remesh =
-      !moving && focus_not_render_ready > 0 && pending_focus_count == 0 &&
-      black_sticky == 0;
   const bool idle_stop =
       !moving &&
       (pending_focus_count > 0 || black_sticky > 0 || missing_visible_mesh ||
-       focus_not_render_ready > 0 ||
        (pending_async_early >= 36 && pending_dirty_early > 200));
   const bool idle_recovery = idle_stop;
   const bool async_saturated_idle = pending_async_early >= 36;
@@ -217,8 +211,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     // Dirty, or missing mesh) — previously only sticky/missing telemetrics
     // opened this path, so trail neighbors never filled while standing.
     const bool idle_mesh_debt =
-        pending_focus_count > 0 || missing_visible_mesh || black_sticky > 0 ||
-        focus_not_render_ready > 0;
+        pending_focus_count > 0 || missing_visible_mesh || black_sticky > 0;
     if (async_saturated_idle || idle_mesh_debt)
     {
       if (idle_refresh_cooldown <= 0)
@@ -227,34 +220,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         if (last_frame_ms <= 14.0)
         {
           sync_n = black_sticky > 8 ? 3 : (black_sticky > 0 ? 2 : 1);
-          if (idle_stale_remesh)
-          {
-            sync_n = std::max(sync_n, focus_not_render_ready > 12 ? 2 : 1);
-          }
         }
         else if (last_frame_ms <= 22.0)
         {
           sync_n = black_sticky > 0 ? 2 : 1;
-          if (idle_stale_remesh && sync_n < 2)
-          {
-            sync_n = 2;
-          }
         }
-        else if (black_sticky > 0 || missing_visible_mesh || idle_stale_remesh)
+        else if (black_sticky > 0 || missing_visible_mesh)
         {
-          sync_n = 1; // hitch: still drain sticky/missing/stale slowly
+          sync_n = 1; // hitch: still drain sticky/missing slowly
         }
-        if (sync_n > 0 &&
-            (black_sticky > 0 || async_saturated_idle || idle_stale_remesh))
+        if (sync_n > 0 && (black_sticky > 0 || async_saturated_idle))
         {
           world.SyncIdleFocusGreedyRemesh(sync_n);
-        }
-        if (idle_stale_remesh && last_frame_ms <= 24.0)
-        {
-          const int refresh_n =
-              last_frame_ms <= 14.0 ? 8
-              : (last_frame_ms <= 20.0 ? 6 : 4);
-          world.RefreshIdleFocusGreedyRemesh(refresh_n);
         }
         if (missing_visible_mesh || pending_focus_count > 0)
         {
@@ -293,6 +270,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // visual_holes = missing mesh only; near_focus_holes kept for legacy paths
   // that still want light-debt urgency for relight (not starve).
   const bool visual_holes = missing_visible_mesh;
+  const int focus_not_render_ready =
+      world.CountUnfinishedVisualNear(focus_ground_horiz, focus_radius);
   const bool unfinished_visual =
       visual_holes || focus_not_render_ready > 0;
   const bool near_focus_holes = visual_holes || pending_near_light;
@@ -503,13 +482,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     mesh_drain = std::max(mesh_drain, 16);
     mesh_schedule = std::max(mesh_schedule, 10);
-  }
-  if (idle_stale_remesh)
-  {
-    mesh_service.SetStarveOutsideFocusMesh(true);
-    mesh_service.SetStarveRemeshForHoles(false);
-    mesh_drain = std::max(mesh_drain, last_frame_ms <= 20.0 ? 24 : 16);
-    mesh_schedule = std::max(mesh_schedule, last_frame_ms <= 20.0 ? 20 : 12);
   }
   if (idle_light_debt_only)
   {
@@ -736,8 +708,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         ((visual_holes || missing_underfeet) && recover_watchdog_frames >= 4) ||
         (pending_near_light && pending_focus_n > 12 &&
          recover_watchdog_frames >= 4) ||
-        (black_sticky > 0 && !moving && recover_watchdog_frames >= 4) ||
-        (idle_stale_remesh && recover_watchdog_frames >= 4);
+        (black_sticky > 0 && !moving && recover_watchdog_frames >= 4);
     if (recover_now && recover_n > 0)
     {
       world.RecoverUnlitFocusMeshes(recover_n);
