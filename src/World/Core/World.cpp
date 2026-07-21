@@ -1603,6 +1603,75 @@ bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
   return saw_loaded_meshable || state == ColumnEmergeState::Empty;
 }
 
+bool UWorld::IsColumnRenderReadyInVisualBand(glm::ivec3 ground) const
+{
+  if (!MeshService)
+  {
+    return false;
+  }
+  if (ground.y != 0)
+  {
+    ground.y = 0;
+  }
+  if (IsPendingLightBeforeMesh(glm::ivec2(ground.x, ground.z)))
+  {
+    return false;
+  }
+  const ColumnEmergeState state = GetColumnEmergeState(ground);
+  if (state != ColumnEmergeState::RenderReady &&
+      state != ColumnEmergeState::LitReady &&
+      state != ColumnEmergeState::Meshing &&
+      state != ColumnEmergeState::Empty)
+  {
+    return false;
+  }
+  const glm::ivec3 focus =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  int band_min =
+      std::max(0, focus.y * CHUNK_SIZE - CHUNK_SIZE);
+  int band_max = std::min(ProceduralTemplate.MaxHeight,
+                           focus.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
+  if (ProceduralTemplate.FillWater)
+  {
+    const int sea = ProceduralTemplate.SeaLevel;
+    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
+    band_max = std::max(band_max, std::min(ProceduralTemplate.MaxHeight,
+                                             sea + CHUNK_SIZE * 2));
+  }
+  const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
+  const int cy1 = FloorDiv(band_max, CHUNK_SIZE);
+  bool saw_loaded_meshable = false;
+  for (int cy = cy0; cy <= cy1; ++cy)
+  {
+    const glm::ivec3 coord(ground.x, cy, ground.z);
+    const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+    if (!chunk)
+    {
+      continue;
+    }
+    bool any_solid = false;
+    for (const BlockId block : chunk->GetData())
+    {
+      if (block != BLOCK_AIR)
+      {
+        any_solid = true;
+        break;
+      }
+    }
+    if (!any_solid)
+    {
+      continue;
+    }
+    saw_loaded_meshable = true;
+    if (!MeshService->HasGreedyMesh(coord) || MeshService->IsChunkMeshDirty(coord) ||
+        MeshService->HasInflightMeshBuild(coord))
+    {
+      return false;
+    }
+  }
+  return saw_loaded_meshable || state == ColumnEmergeState::Empty;
+}
+
 int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
                                       int radius_chunks) const
 {
@@ -1621,7 +1690,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
       {
         continue;
       }
-      if (!IsColumnRenderReady(ground))
+      if (!IsColumnRenderReadyInVisualBand(ground))
       {
         ++unfinished;
       }
@@ -1675,6 +1744,28 @@ int UWorld::DrainColumnWork(glm::ivec3 focus_ground_horiz, int radius_chunks,
   drained += PromotePendingLightRelightsNear(focus_ground_horiz, radius_chunks);
   drained += ClearPendingLightAfterMeshCommitted(clear_pending_budget);
   return drained;
+}
+
+int UWorld::DrainIdleFocusVisualWork(glm::ivec3 focus_ground_horiz,
+                                     int radius_chunks, int budget)
+{
+  if (budget <= 0 || radius_chunks < 0 ||
+      LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold)
+  {
+    return 0;
+  }
+  int work = 0;
+  work += PromotePendingLightRelightsNear(focus_ground_horiz, radius_chunks);
+  work += DrainIdleFocusPendingLight(focus_ground_horiz, radius_chunks,
+                                     std::min(4, budget));
+  work += AdmitFocusVisibleMissing(std::min(3, budget));
+  if (CountPendingLightBeforeMeshNear(focus_ground_horiz, radius_chunks) > 0)
+  {
+    work += AdmitFocusMeshIngress(2);
+  }
+  work += RefreshIdleFocusGreedyRemesh(std::min(3, budget));
+  work += ClearPendingLightAfterMeshCommitted(8);
+  return work;
 }
 
 bool UWorld::CanSeedSkylightAtCommit(glm::ivec3 ground) const

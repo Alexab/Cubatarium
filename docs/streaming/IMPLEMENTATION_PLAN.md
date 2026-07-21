@@ -127,6 +127,32 @@ stateDiagram-v2
 | 4 Unified flow | ⚠️ частично | helpers есть, recovery zoo не свёрнут |
 | 5 Harness | ⚠️ частично | `--manual-idle`, `analyze_manual_idle.py` |
 
+## Системное решение (2026-07-21 вечер)
+
+**Корневая ошибка последних итераций:** «recovery zoo» — десятки watchdog-веток (sync relight, sync remesh ±1cy, Refresh flood, admit×8/кадр) **конкурировали** друг с другом. Sync пути давали spike 500–620 ms, Refresh раздувал Dirty, а `IsColumnRenderReady` проверял **всю колонку до bedrock**, тогда как recovery чинил только узкую полосу.
+
+**Контракт:**
+
+| Слой | Метрика / API | Назначение |
+|------|----------------|------------|
+| Draw gate | `IsColumnRenderReady` | строгий (вся колонка) |
+| Recovery / perf | `IsColumnRenderReadyInVisualBand` | player ∪ sea band |
+| Idle drain | `DrainIdleFocusVisualWork` | **только async**: promote, admit×3, refresh-mark×3 |
+| Запрет | sync relight/remesh в idle | кроме underfeet holes |
+
+**Autofly `perf_174144` (промежуточная сборка):** pending=0 ✅, not_ready=63 ❌, stop wall~310 ❌ (near_focus sync seed откатан).
+
+### Ручной пролёт `perf_20260721-173123` (после `9f5de9eb`)
+
+| Метрика | Значение |
+|---------|----------|
+| stop `wall_ms` med | **172→420** (хуже) |
+| `pending` | 0, `not_ready` **74** |
+| spikes | **620 ms** emerge=601 |
+| Диагноз | sync full-column + admit flood; последняя правка ухудшила FPS |
+
+**Фикс:** `DrainIdleFocusVisualWork`, visual-band contract, без sync idle paths.
+
 ### Ручной пролёт `perf_20260721-171507` (после `675635a3`)
 
 | Метрика | Значение |
@@ -176,6 +202,13 @@ stateDiagram-v2
 Вывод: mesh-контракт держится; light debt снижается, но **последние 2–5 колонок** и **relight FIFO stall** остаются.
 
 ### Осталось (приоритет)
+
+**P0 — Системный idle drain (текущий)**
+
+- [x] `IsColumnRenderReadyInVisualBand` + `DrainIdleFocusVisualWork`
+- [x] Убран sync idle zoo (plateau, stale_full_sync, admit×8)
+- [ ] Autofly/manual: `not_ready` падает при stop, `wall_ms` stop &lt;50
+- [ ] Gate `post_stop_not_ready_falling` в analyzer
 
 **P0 — Чёрные чанки при stop (lit-but-dirty remesh)**
 
