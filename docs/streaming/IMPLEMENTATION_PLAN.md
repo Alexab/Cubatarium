@@ -127,6 +127,16 @@ stateDiagram-v2
 | 4 Unified flow | ⚠️ частично | helpers есть, recovery zoo не свёрнут |
 | 5 Harness | ⚠️ частично | `--manual-idle`, `analyze_manual_idle.py` |
 
+### Ручной пролёт `perf_20260721-165208` (после `2cb85f3c`)
+
+| Метрика | Значение |
+|---------|----------|
+| `focus_not_render_ready` stop | **25** (при `pending=0`, `sticky=0`) |
+| `unfinished_visual` | совпадает с `not_ready` ✅ |
+| `focus_pending_dark` stop | 0 (свет в данных готов) |
+| `dirty` stop | **95–541** (remesh backlog) |
+| Диагноз | **lit-but-dirty**: relight прошёл, GreedyMesh не обновлён |
+
 ### Ручной пролёт `perf_20260721-155539` (~90 с)
 
 | Метрика | Было (до fix) | Стало |
@@ -140,6 +150,14 @@ stateDiagram-v2
 Вывод: mesh-контракт держится; light debt снижается, но **последние 2–5 колонок** и **relight FIFO stall** остаются.
 
 ### Осталось (приоритет)
+
+**P0 — Чёрные чанки при stop (lit-but-dirty remesh)**
+
+- [x] `focus_not_render_ready` / render-contract `unfinished_visual` (коммит `2cb85f3c`)
+- [x] Ручной `perf_20260721-165208`: при `pending→0` остаётся `not_ready≈25`, `sticky=0`, `dirty≈95`
+- [x] `idle_stale_remesh`: idle_stop + `RefreshIdleFocusGreedyRemesh` + sync без sticky gate
+- [x] MarkRelit: full-focus sticky при idle
+- [ ] Проверить: stop tail `not_ready→0` за &lt;30 с при `wall&lt;30`
 
 **P0 — Relight stall при малом pending**
 
