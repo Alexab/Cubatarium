@@ -595,20 +595,27 @@ void UChunkMeshCache::BumpChunkMeshRevision(glm::ivec3 chunk_coord)
 bool UChunkMeshCache::HasDirtyWithinHorizontalRadius(
     glm::ivec3 center_chunk, int radius_chunks) const
 {
+  return CountDirtyWithinHorizontalRadius(center_chunk, radius_chunks) > 0;
+}
+
+int UChunkMeshCache::CountDirtyWithinHorizontalRadius(
+    glm::ivec3 center_chunk, int radius_chunks) const
+{
   if (radius_chunks < 0)
   {
-    return false;
+    return 0;
   }
+  int count = 0;
   for (const glm::ivec3 &coord : Dirty)
   {
     const int dx = std::abs(coord.x - center_chunk.x);
     const int dz = std::abs(coord.z - center_chunk.z);
     if (std::max(dx, dz) <= radius_chunks)
     {
-      return true;
+      ++count;
     }
   }
-  return false;
+  return count;
 }
 
 bool UChunkMeshCache::HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y,

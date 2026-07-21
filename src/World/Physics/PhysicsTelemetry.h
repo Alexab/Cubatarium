@@ -83,6 +83,8 @@ struct PhysicsTelemetry
   int FocusStickyRemesh{0};
   /// Focus columns failing IsColumnRenderReady (mesh dirty/missing/inflight).
   int FocusNotRenderReady{0};
+  /// Dirty mesh chunks inside focus radius (lit-but-dirty remesh debt).
+  int FocusDirtyChunks{0};
   /// 0=Green, 1=Yellow, 2=Red (StreamingPressureLevel).
   int StreamPressure{0};
   /// PendingLightBeforeMesh count inside focus radius (vs global PendingLightCount).

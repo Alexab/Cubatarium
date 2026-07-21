@@ -247,15 +247,27 @@ def analyze(
     post_stop_not_ready_end = (
         not_ready_stop[-1] if not_ready_stop else None
     )
+    # Full-segment deltas — tail-only hid real recovery (65→42) when the last
+    # 5 periods were already flat at ~40.
+    not_ready_full = col(stop_segment, "focus_not_render_ready")
+    pending_full = col(stop_segment, "pending_light_focus")
+    focus_dirty_full = col(stop_segment, "focus_dirty_chunks")
+    focus_dirty_tail = col(stop_tail, "focus_dirty_chunks")
     stop_not_ready_delta = None
-    if len(not_ready_stop) >= 2:
-        stop_not_ready_delta = not_ready_stop[-1] - not_ready_stop[0]
-    if len(pending_stop) >= 2:
-        stop_pending_delta = pending_stop[-1] - pending_stop[0]
-    elif len(stop_segment) >= 2:
-        full_pending = col(stop_segment, "pending_light_focus")
-        if len(full_pending) >= 2:
-            stop_pending_delta = full_pending[-1] - full_pending[0]
+    if len(not_ready_full) >= 2:
+        stop_not_ready_delta = not_ready_full[-1] - not_ready_full[0]
+    stop_pending_delta = None
+    if len(pending_full) >= 2:
+        stop_pending_delta = pending_full[-1] - pending_full[0]
+    post_stop_focus_dirty_med = (
+        median(focus_dirty_tail) if focus_dirty_tail else None
+    )
+    post_stop_focus_dirty_end = (
+        focus_dirty_tail[-1] if focus_dirty_tail else None
+    )
+    stop_focus_dirty_delta = None
+    if len(focus_dirty_full) >= 2:
+        stop_focus_dirty_delta = focus_dirty_full[-1] - focus_dirty_full[0]
 
     # Manual 083042: pendf stuck ~40 for ~30s while wall~22–30 and holes=0.
     stop_wall = col(stop_segment, "wall_ms")
@@ -319,8 +331,24 @@ def analyze(
         "post_stop_pending_not_plateau_8s": stop_pending_plateau_sec
         <= (60.0 if manual_idle else 8.0),
         "post_stop_healthy_fps_not_unfinished": healthy_unfinished_rate <= 0.25,
-        "post_stop_not_ready_falling": stop_not_ready_delta is not None
-        and stop_not_ready_delta <= -8.0,
+        "post_stop_not_ready_falling": (
+            (stop_not_ready_delta is not None and stop_not_ready_delta <= -8.0)
+            or (
+                post_stop_not_ready_end is not None
+                and post_stop_not_ready_end <= 28.0
+            )
+        ),
+        "post_stop_focus_dirty_falling": (
+            focus_dirty_tail == []
+            or (
+                stop_focus_dirty_delta is not None
+                and stop_focus_dirty_delta <= -8.0
+            )
+            or (
+                post_stop_focus_dirty_end is not None
+                and post_stop_focus_dirty_end <= 16.0
+            )
+        ),
     }
     gates_stop_pass_count = sum(1 for v in gates_stop.values() if v)
     passed = all(gates.values()) and all(gates_stop.values())
@@ -335,6 +363,7 @@ def analyze(
         "stop_segment_periods": len(stop_segment),
         "stop_pending_delta": stop_pending_delta,
         "stop_not_ready_delta": stop_not_ready_delta,
+        "stop_focus_dirty_delta": stop_focus_dirty_delta,
         "stop_recovery_ok": stop_recovery_ok,
     }
 
@@ -374,6 +403,9 @@ def analyze(
             "post_stop_not_ready_end": post_stop_not_ready_end,
             "stop_not_ready_delta": stop_not_ready_delta,
             "stop_pending_delta": stop_pending_delta,
+            "post_stop_focus_dirty_med": post_stop_focus_dirty_med,
+            "post_stop_focus_dirty_end": post_stop_focus_dirty_end,
+            "stop_focus_dirty_delta": stop_focus_dirty_delta,
             "stop_segment_periods": len(stop_segment),
             "stop_tail_periods": len(stop_tail),
         "stop_pending_plateau_sec": stop_pending_plateau_sec,

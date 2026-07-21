@@ -71,6 +71,9 @@ public:
   bool HasPendingDirty() const;
   bool HasDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
                                       int radius_chunks) const;
+  /// Dirty chunk count inside Chebyshev radius (lit-but-dirty debt metric).
+  int CountDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
+                                       int radius_chunks) const;
   bool HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y, int max_y) const;
   bool HasPendingAsyncMeshWork() const;
   void WaitForAsyncMeshIdle();

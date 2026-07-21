@@ -371,10 +371,14 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   const int dark_preview = sticky_remesh + pending_dark;
   const int not_render_ready =
       world.CountUnfinishedVisualNear(focus_horiz, focus_radius);
+  const int focus_dirty_chunks =
+      world.GetMeshService().CountDirtyWithinHorizontalRadius(focus_horiz,
+                                                              focus_radius);
   world.PhysicsTelemetryData.FocusStickyRemesh = sticky_remesh;
   world.PhysicsTelemetryData.FocusPendingDark = pending_dark;
   world.PhysicsTelemetryData.FocusDarkMesh = dark_preview;
   world.PhysicsTelemetryData.FocusNotRenderReady = not_render_ready;
+  world.PhysicsTelemetryData.FocusDirtyChunks = focus_dirty_chunks;
   world.PhysicsTelemetryData.FocusMissingMesh = missing_near ? 1 : 0;
   world.PhysicsTelemetryData.VisualHoles = missing_near ? 1 : 0;
   // Render contract: lit-but-dirty remesh counts even when pending=0.

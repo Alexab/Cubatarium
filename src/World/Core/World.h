@@ -798,6 +798,11 @@ public:
     LightingRelightDeferred = deferred;
   }
   bool IsLightingRelightDeferred() const { return LightingRelightDeferred; }
+  /// Idle lit-but-dirty catch-up: MarkRelit dirties primary only (no seam flood).
+  void SetSuppressRelightSeamDirty(bool suppress)
+  {
+    SuppressRelightSeamDirty = suppress;
+  }
   bool ShouldDeferStreamingMeshForRelight() const
   {
     return ProceduralTemplate.AsyncRelight && !LightingRelightDeferred;
@@ -1083,6 +1088,7 @@ private:
   EnvironmentConfig EnvironmentSettingsData;
   LightingSettings LightingSettingsData;
   bool LightingRelightDeferred{false};
+  bool SuppressRelightSeamDirty{false};
   bool LightingSkylightBulkComplete{false};
   bool CooperativeBulkGenerating{false};
   double LastMovementFrameMs{0.0};

@@ -43,7 +43,17 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
     ],
     "F": [
         ("post_stop_black_sticky_max", "le", 0.0),
-        ("post_stop_pending_med", "le", 35.0),
+        ("post_stop_pending_med", "le", 15.0),
+        ("post_stop_not_ready_end", "le", 45.0),
+        ("stop_wall_med", "le", 90.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    # Lit-but-dirty catch-up (next milestone after pending→0).
+    "F2": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("post_stop_pending_med", "le", 5.0),
+        ("post_stop_not_ready_end", "le", 36.0),
+        ("post_stop_focus_dirty_end", "le", 280.0),
         ("stop_wall_med", "le", 90.0),
         ("chunks_traveled", "ge", 3.0),
     ],

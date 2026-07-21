@@ -903,7 +903,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         dirty_min = std::max(0, band.min_y - 1);
         dirty_max = std::min(column_max_y, band.max_y + 1);
       }
-      const bool seam_ok = true; // primary column must remesh after relight
+      const bool seam_ok = !SuppressRelightSeamDirty;
       if (priority_mesh)
       {
         MeshService->MarkTerrainChunkMeshDirtySeamedPriority(ground, dirty_min,
@@ -918,6 +918,12 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       continue;
     }
     // Neighbor: skip Dirty while still awaiting own first light.
+    // Idle lit-but-dirty catch-up: skip all neighbor Dirty — seam cascade
+    // kept focus_dirty≈400 while async remeshed in place.
+    if (SuppressRelightSeamDirty)
+    {
+      continue;
+    }
     if (PendingLightBeforeMesh.count(key) != 0 ||
         !IsColumnLitReady(ground))
     {
@@ -1591,8 +1597,24 @@ bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
   }
   const int max_cy =
       std::max(0, FloorDiv(std::max(0, ProceduralTemplate.MaxHeight), CHUNK_SIZE));
+  // Visual band only — full 0..MaxHeight counted deep cave Dirty that vertical
+  // mesh priority never drained (idle nr plateau ~50 with holes=0).
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  int band_min = std::max(0, focus_block.y - CHUNK_SIZE);
+  int band_max =
+      std::min(ProceduralTemplate.MaxHeight, focus_block.y + CHUNK_SIZE * 2);
+  if (ProceduralTemplate.FillWater)
+  {
+    const int sea = ProceduralTemplate.SeaLevel;
+    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
+    band_max =
+        std::max(band_max, std::min(ProceduralTemplate.MaxHeight,
+                                    sea + CHUNK_SIZE * 2));
+  }
+  const int cy0 = std::max(0, FloorDiv(band_min, CHUNK_SIZE));
+  const int cy1 = std::min(max_cy, FloorDiv(band_max, CHUNK_SIZE));
   bool saw_loaded_meshable = false;
-  for (int cy = 0; cy <= max_cy; ++cy)
+  for (int cy = cy0; cy <= cy1; ++cy)
   {
     const glm::ivec3 coord(ground.x, cy, ground.z);
     const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
