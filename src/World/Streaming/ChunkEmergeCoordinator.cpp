@@ -205,6 +205,35 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       --idle_cancel_cooldown;
     }
+    // Pending plateau at ~25+: async FIFO starved — sync outer ingress strip.
+    static int pending_plateau_ticks = 0;
+    static int last_pending_focus_tick = -1;
+    if (pending_focus_count > 0 &&
+        pending_focus_count == last_pending_focus_tick)
+    {
+      ++pending_plateau_ticks;
+    }
+    else
+    {
+      pending_plateau_ticks = 0;
+      last_pending_focus_tick = pending_focus_count;
+    }
+    if (pending_debt_only && pending_plateau_ticks >= 30 &&
+        pending_focus_count >= 10 && last_frame_ms <= 24.0)
+    {
+      static int plateau_sync_cd = 0;
+      if (plateau_sync_cd <= 0)
+      {
+        world.DrainIdleFocusPendingLightSync(focus_ground_horiz, focus_radius,
+                                             pending_focus_count > 20 ? 2 : 1);
+        pending_plateau_ticks = 0;
+        plateau_sync_cd = 10;
+      }
+      else
+      {
+        --plateau_sync_cd;
+      }
+    }
     // Do NOT call RecoverStickyBlackFocusSync here — sync RelightColumnWithFrontier
     // caused mesh_emerge/wall 1300–1980ms on stop (iter23). Light via Promote
     // + bg_budget; remesh via narrow SyncIdleFocusGreedyRemesh.
@@ -217,7 +246,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     // Dirty, or missing mesh) — previously only sticky/missing telemetrics
     // opened this path, so trail neighbors never filled while standing.
     const bool idle_mesh_debt =
-        pending_focus_count > 0 || missing_visible_mesh || black_sticky > 0;
+        pending_focus_count > 0 || missing_visible_mesh || black_sticky > 0 ||
+        focus_not_render_ready > 0;
     if (async_saturated_idle || idle_mesh_debt)
     {
       if (idle_refresh_cooldown <= 0)
@@ -226,18 +256,34 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         if (last_frame_ms <= 14.0)
         {
           sync_n = black_sticky > 8 ? 3 : (black_sticky > 0 ? 2 : 1);
+          if (idle_stale_remesh)
+          {
+            sync_n = std::max(sync_n, focus_not_render_ready > 12 ? 2 : 1);
+          }
         }
         else if (last_frame_ms <= 22.0)
         {
           sync_n = black_sticky > 0 ? 2 : 1;
+          if (idle_stale_remesh && sync_n < 2)
+          {
+            sync_n = 2;
+          }
         }
-        else if (black_sticky > 0 || missing_visible_mesh)
+        else if (black_sticky > 0 || missing_visible_mesh || idle_stale_remesh)
         {
-          sync_n = 1; // hitch: still drain sticky/missing slowly
+          sync_n = 1; // hitch: still drain sticky/missing/stale slowly
         }
-        if (sync_n > 0 && (black_sticky > 0 || async_saturated_idle))
+        if (sync_n > 0 &&
+            (black_sticky > 0 || async_saturated_idle || idle_stale_remesh))
         {
-          world.SyncIdleFocusGreedyRemesh(sync_n, /*full_column_band=*/false);
+          world.SyncIdleFocusGreedyRemesh(sync_n);
+        }
+        if (idle_stale_remesh && last_frame_ms <= 24.0)
+        {
+          const int refresh_n =
+              last_frame_ms <= 14.0 ? 8
+              : (last_frame_ms <= 20.0 ? 6 : 4);
+          world.RefreshIdleFocusGreedyRemesh(refresh_n);
         }
         if (missing_visible_mesh || pending_focus_count > 0)
         {
@@ -492,46 +538,49 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_service.SetStarveOutsideFocusMesh(true);
     mesh_service.SetStarveRemeshForHoles(false);
     mesh_drain = std::max(mesh_drain, last_frame_ms <= 20.0 ? 24 : 16);
-    mesh_schedule = std::min(mesh_schedule, last_frame_ms <= 20.0 ? 12 : 8);
-    static int stale_full_sync_cd = 0;
-    if (stale_full_sync_cd <= 0 && last_frame_ms <= 18.0)
-    {
-      // One full-column sync per ~4 frames — completes render contract without
-      // Refresh flooding Dirty (perf_171507: dirty 650→760, not_ready stuck).
-      world.SyncIdleFocusGreedyRemesh(1, /*full_column_band=*/true);
-      stale_full_sync_cd = 4;
-    }
-    else if (stale_full_sync_cd > 0)
-    {
-      --stale_full_sync_cd;
-    }
+    mesh_schedule = std::max(mesh_schedule, last_frame_ms <= 20.0 ? 20 : 12);
   }
   if (idle_light_debt_only)
   {
     mesh_service.SetStarveOutsideFocusMesh(true);
     mesh_service.SetStarveRemeshForHoles(false);
-    mesh_drain = std::min(mesh_drain, last_frame_ms <= 16.0 ? 10 : 6);
-    mesh_schedule = std::min(mesh_schedule, 8);
+    // High pending: keep mesh draining — capping to 6–10 left FPS high but
+    // preview/remesh frozen (perf_170357: emerge~10ms, not_ready=73).
+    if (pending_focus_count > 15)
+    {
+      mesh_drain = std::max(mesh_drain, last_frame_ms <= 22.0 ? 18 : 12);
+      mesh_schedule = std::max(mesh_schedule, 12);
+    }
+    else
+    {
+      mesh_drain = std::min(mesh_drain, last_frame_ms <= 16.0 ? 10 : 6);
+      mesh_schedule = std::min(mesh_schedule, 8);
+    }
     static int idle_pending_promote_cd = 0;
     static int idle_pending_sync_cd = 0;
-    if (idle_pending_promote_cd <= 0 && last_frame_ms <= 20.0 &&
+    if (idle_pending_promote_cd <= 0 && last_frame_ms <= 24.0 &&
         pending_focus_count > 0)
     {
+      const int promote_n =
+          pending_focus_count > 20 ? 6
+          : (pending_focus_count > 10 ? 4 : 2);
       const int promoted = world.DrainIdleFocusPendingLight(
-          focus_ground_horiz, focus_radius, 2);
-      idle_pending_promote_cd = promoted > 0 ? 12 : 24;
+          focus_ground_horiz, focus_radius, promote_n);
+      idle_pending_promote_cd = promoted > 0 ? 6 : 12;
     }
     else if (idle_pending_promote_cd > 0)
     {
       --idle_pending_promote_cd;
     }
-    if (idle_pending_sync_cd <= 0 && pending_focus_count >= 2 &&
-        pending_focus_count <= 5 && black_sticky == 0 &&
-        last_frame_ms <= 16.0)
+    if (idle_pending_sync_cd <= 0 && black_sticky == 0 &&
+        last_frame_ms <= 22.0 &&
+        ((pending_focus_count >= 2 && pending_focus_count <= 5) ||
+         pending_focus_count >= 12))
     {
+      const int sync_n = pending_focus_count >= 12 ? 2 : 1;
       const int synced = world.DrainIdleFocusPendingLightSync(
-          focus_ground_horiz, focus_radius, 1);
-      idle_pending_sync_cd = synced > 0 ? 60 : 90;
+          focus_ground_horiz, focus_radius, sync_n);
+      idle_pending_sync_cd = synced > 0 ? 20 : 30;
     }
     else if (idle_pending_sync_cd > 0)
     {

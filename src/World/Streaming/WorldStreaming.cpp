@@ -956,9 +956,16 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     bg_budget = 1;
   }
-  // Pending debt with empty relight FIFO: re-promote + clear lit-ready columns.
-  if (pending_light_focus_n > 0 && pending_bg_after == 0 &&
-      frame_ms <= kBadFrameMs &&
+  // Pending debt with empty relight FIFO and no inflight: re-promote + clear
+  // lit-ready columns (manual 155539: pend=2, relight_drain≈0 plateau).
+  // Idle with high focus debt: do not gate on frame_ms — outer-ring z=21 strips
+  // stalled for 60s+ while wall looked fine locally (perf_170357).
+  const bool idle_pending_rescue =
+      idle_recovery && pending_light_focus_n >= 10 &&
+      (pending_bg_after == 0 || pending_light_focus_n >= 20);
+  if (pending_light_focus_n > 0 &&
+      (idle_pending_rescue ||
+       (pending_bg_after == 0 && frame_ms <= kBadFrameMs)) &&
       (idle_recovery || pending_light_focus_n > 8 ||
        world.GetAsyncRelightInFlightCount() == 0))
   {
@@ -966,11 +973,18 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     world.ClearPendingLightAfterMeshCommitted(12);
     bg_budget = std::max(bg_budget, std::min(48, pending_light_focus_n * 2));
   }
-  // Idle high pending: boost bg_budget even when FIFO non-empty (no sync relight —
-  // sync caused 600ms spikes without clearing not_ready, perf_171507).
-  if (idle_recovery && pending_light_focus_n >= 10)
+  if (idle_pending_rescue && frame_ms <= 32.0f)
   {
-    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 24 : 48);
+    static int idle_outer_sync_cd = 0;
+    if (idle_outer_sync_cd <= 0)
+    {
+      world.DrainIdleFocusPendingLightSync(focus_horiz, focus_radius, 2);
+      idle_outer_sync_cd = 12;
+    }
+    else
+    {
+      --idle_outer_sync_cd;
+    }
   }
 
   {
