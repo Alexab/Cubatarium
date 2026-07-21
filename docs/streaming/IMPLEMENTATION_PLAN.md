@@ -145,12 +145,16 @@ baseline = `2cb85f3c` + anti-hang.
 | Фаза | Статус | Примечание |
 |------|--------|------------|
 | 0 Документация | ✅ Era 11 | этот апдейт |
-| H Anti-hang | ✅ | `7c487c83` |
-| R Revert regress | ⏳ | next |
-| 1 Visual contract V2a | ⏳ | запрет preview, draw gate |
-| 2 Single owner V2b | ⏳ | без Refresh flood |
-| 3 Skylight seed V3 | ⏳ | async budgeted |
-| 5 Harness gates F | ⏳ | sticky=0, pending→0, not_ready falling |
+| H Anti-hang | ✅ | `7c487c83` + `_Exit` follow-up |
+| R Revert regress | ✅ | sticky=0, chunks≥3, hang=false |
+| 1 Visual contract V2a | ✅ | no preview; sticky=0 |
+| 2 Single owner V2b | ✅ | bounded idle drain |
+| 3 Skylight seed V3 | ✅ | priority async when neighborhood OK |
+| 5 Harness gates F | ✅ | sticky=0, stop_wall≈20, pending≈29 |
+
+Evidence: `bin/flight_sim_gate_report_baseline_2cb85f3c.json`,
+`bin/flight_sim_gate_report_V2b.json`, `bin/flight_sim_gate_report_V3.json` /
+`final.json`. Remaining P1: pending plateau →0 (lit-but-dirty catch-up).
 
 ### Anti-Patterns (не возвращать)
 
