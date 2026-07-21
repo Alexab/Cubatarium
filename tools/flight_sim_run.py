@@ -92,9 +92,19 @@ def main() -> int:
         action="store_true",
         help="fly phase then release W for stop-recovery (AppRunner --fly-stop)",
     )
-    ap.add_argument("--fly-phase-sec", type=float, default=35.0)
-    ap.add_argument("--stop-phase-sec", type=float, default=35.0)
+    ap.add_argument("--fly-phase-sec", type=float, default=50.0)
+    ap.add_argument("--stop-phase-sec", type=float, default=50.0)
     ap.add_argument("--idle-sec", type=float, default=8.0)
+    ap.add_argument(
+        "--sprint",
+        action="store_true",
+        help="hold sprint during fly (covers more chunks like manual)",
+    )
+    ap.add_argument(
+        "--visible",
+        action="store_true",
+        help="show GLFW window (default hidden; GL context still exists hidden)",
+    )
     ap.add_argument(
         "--resume",
         action="store_true",
@@ -165,6 +175,10 @@ def main() -> int:
         sim_cmd.extend(["--fly-phase", str(args.fly_phase_sec)])
         sim_cmd.extend(["--stop-phase", str(args.stop_phase_sec)])
     sim_cmd.extend(["--idle", str(args.idle_sec)])
+    if args.sprint:
+        sim_cmd.append("--sprint")
+    if args.visible:
+        sim_cmd.append("--visible")
     if args.teleport_cruise:
         sim_cmd.append("--teleport-cruise")
     else:

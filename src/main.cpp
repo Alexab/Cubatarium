@@ -147,6 +147,10 @@ int main(int argc, char *argv[])
         {
           opt.StopPhaseSec = std::atof(argv[++j]);
         }
+        else if (std::strcmp(argv[j], "--visible") == 0)
+        {
+          opt.VisibleWindow = true;
+        }
       }
       return cutum::RunFlightSim(*paths, opt);
     }

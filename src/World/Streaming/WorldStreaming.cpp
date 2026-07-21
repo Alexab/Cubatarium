@@ -374,8 +374,9 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   world.PhysicsTelemetryData.StreamPressure =
       static_cast<int>(LastPressureCaps.level);
   world.PhysicsTelemetryData.PendingLightFocus = pending_light_focus;
-  world.PhysicsTelemetryData.FocusDarkMesh = world.CountBlackStickyFocusMeshes(
-      focus_ground, focus_radius);
+  world.PhysicsTelemetryData.FocusDarkMesh =
+      world.CountBlackStickyFocusMeshes(focus_ground, focus_radius) +
+      world.CountPendingDarkFocusMeshes(focus_ground, focus_radius);
   const int dark_sticky = world.PhysicsTelemetryData.FocusDarkMesh;
   world.PhysicsTelemetryData.FocusMissingMesh = missing_near ? 1 : 0;
   world.PhysicsTelemetryData.VisualHoles =
@@ -844,6 +845,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   }
   // Standing in a dark focus pocket: pending_light stays ~30 while wall~14ms
   // because far remesh kept workers busy and bg drain stayed tiny.
+  world.ReconcileAsyncRelightColumnInFlight();
   const int pending_light_n =
       static_cast<int>(world.GetPendingLightBeforeMeshCount());
   if (near_pending_light && frame_ms <= kBadFrameMs)

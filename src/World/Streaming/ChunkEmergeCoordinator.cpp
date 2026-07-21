@@ -836,7 +836,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   else if (missing_visible_mesh)
   {
     // Cruise: tiny sync (async+Admit). Idle: enough to clear focus ring.
-    sync_cap = std::max(sync_cap, moving ? 2 : 6);
+    // Cap harder when light debt dominates — sync was starving MarkRelit.
+    const int sync_idle =
+        pending_focus_count > 8 ? 2 : 6;
+    sync_cap = std::max(sync_cap, moving ? 2 : sync_idle);
     mesh_schedule = std::max(mesh_schedule, moving ? 12 : 20);
     mesh_drain = std::max(mesh_drain, moving ? 12 : 24);
   }
@@ -870,7 +873,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   // Sticky single-column hole: force nearest missing sync regardless of
   // moving residual / Dirty flood (user hover never cleared otherwise).
-  if (missing_visible_mesh)
+  // Skip on heavy hitch — RebuildChunkImmediate was stacking mesh_emerge
+  // 1–3s/frame and starving MarkRelit (autofly 084736).
+  if (missing_visible_mesh && last_frame_ms <= 40.0)
   {
     static int force_hole_cd = 0;
     if (force_hole_cd <= 0)

@@ -60,9 +60,12 @@ def analyze(
     dark_sticky = col(steady, "black_sticky")
     if not dark_sticky and any("focus_dark_mesh" in r for r in steady):
         dark_sticky = col(steady, "focus_dark_mesh")
-    effective_holes = [
-        1.0 if (h > 0 or d > 0) else 0.0 for h, d in zip(holes, dark_sticky)
-    ]
+    # Treat light debt as unfinished even when visual_holes=0 (dark meshes).
+    effective_holes = []
+    for r, h, d in zip(steady, holes, dark_sticky):
+        pend = float(r.get("pending_light_focus") or 0)
+        unfinished = h > 0 or d > 0 or pend >= 20
+        effective_holes.append(1.0 if unfinished else 0.0)
     effective_holes_rate = (
         sum(effective_holes) / len(effective_holes) if effective_holes else 1.0
     )
@@ -175,17 +178,12 @@ def analyze(
         max(black_sticky_stop) if black_sticky_stop else None
     )
     post_stop_missing_max = max(missing_stop) if missing_stop else None
-    stop_effective = [
-        1.0
-        if (float(h) > 0 or float(d) > 0)
-        else 0.0
-        for h, d in zip(
-            missing_stop if missing_stop else [0.0] * len(stop_tail),
-            black_sticky_stop
-            if black_sticky_stop
-            else [0.0] * len(stop_tail),
-        )
-    ]
+    stop_effective = []
+    for r in stop_tail:
+        h = float(r.get(hole_key) or 0)
+        d = float(r.get(sticky_key) or 0)
+        pend = float(r.get("pending_light_focus") or 0)
+        stop_effective.append(1.0 if (h > 0 or d > 0 or pend >= 15) else 0.0)
     post_stop_effective_holes_rate = (
         sum(stop_effective) / len(stop_effective) if stop_effective else 1.0
     )
@@ -197,17 +195,47 @@ def analyze(
         full_pending = col(stop_segment, "pending_light_focus")
         if len(full_pending) >= 2:
             stop_pending_delta = full_pending[-1] - full_pending[0]
+
+    # Manual 083042: pendf stuck ~40 for ~30s while wall~22–30 and holes=0.
+    stop_wall = col(stop_segment, "wall_ms")
+    stop_wall_med = median(stop_wall)
+    stop_pending_full = col(stop_segment, "pending_light_focus")
+    stop_pending_plateau_sec = 0.0
+    run = 0
+    for i, p in enumerate(stop_pending_full):
+        wall_i = stop_wall[i] if i < len(stop_wall) else 999.0
+        if p >= 20 and wall_i < 35.0:
+            run += 1
+            stop_pending_plateau_sec = max(stop_pending_plateau_sec, run * 2.0)
+        else:
+            run = 0
+    # Healthy FPS with unfinished focus (holes=0 but light debt / dark mesh).
+    healthy_unfinished = 0
+    for r in stop_tail:
+        wall_r = float(r.get("wall_ms") or 999)
+        pend = float(r.get("pending_light_focus") or 0)
+        dark = float(r.get(sticky_key) or 0)
+        miss = float(r.get(hole_key) or 0)
+        if wall_r < 28.0 and (pend >= 15 or dark >= 1 or miss >= 1):
+            healthy_unfinished += 1
+    healthy_unfinished_rate = (
+        healthy_unfinished / len(stop_tail) if stop_tail else 1.0
+    )
+
     stop_recovery_ok = (
         (post_stop_black_sticky_max or 0) <= 0.5
         and (post_stop_missing_max or 0) <= 0.5
         and post_stop_effective_holes_rate <= 0.05
         and ok_med(post_stop_pending_med, 15)
+        and stop_pending_plateau_sec <= 8.0
+        and healthy_unfinished_rate <= 0.25
     )
     already_clean_stop = (
         ok_med(post_stop_pending_med, 15)
         and (post_stop_black_sticky_max or 0) <= 0.5
         and (post_stop_missing_max or 0) <= 0.5
         and post_stop_effective_holes_rate <= 0.05
+        and stop_pending_plateau_sec <= 4.0
     )
     gates_stop = {
         "post_stop_pending_med_le_15": ok_med(post_stop_pending_med, 15),
@@ -224,6 +252,8 @@ def analyze(
         or (
             post_stop_relight_med is not None and post_stop_relight_med > 0.5
         ),
+        "post_stop_pending_not_plateau_8s": stop_pending_plateau_sec <= 8.0,
+        "post_stop_healthy_fps_not_unfinished": healthy_unfinished_rate <= 0.25,
     }
     gates_stop_pass_count = sum(1 for v in gates_stop.values() if v)
     passed = all(gates.values()) and all(gates_stop.values())
@@ -274,6 +304,9 @@ def analyze(
             "stop_pending_delta": stop_pending_delta,
             "stop_segment_periods": len(stop_segment),
             "stop_tail_periods": len(stop_tail),
+            "stop_pending_plateau_sec": stop_pending_plateau_sec,
+            "stop_wall_med": stop_wall_med,
+            "healthy_unfinished_rate": healthy_unfinished_rate,
         },
         "gates": gates,
         "gates_stop": gates_stop,

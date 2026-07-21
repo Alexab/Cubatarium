@@ -323,7 +323,11 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
   }
 
   UDesktopPlatformWindow window;
-  if (!window.InitializeHidden(1280, 720, "flight-sim"))
+  const bool ok =
+      options.VisibleWindow
+          ? window.Initialize(1280, 720, "flight-sim")
+          : window.InitializeHidden(1280, 720, "flight-sim");
+  if (!ok)
   {
     std::cerr << "flight-sim: failed to initialize window" << std::endl;
     return 1;

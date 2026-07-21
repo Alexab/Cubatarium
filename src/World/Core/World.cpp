@@ -1610,8 +1610,7 @@ int UWorld::CountPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,
 int UWorld::CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
                                         int radius_chunks) const
 {
-  if (!MeshService || radius_chunks < 0 ||
-      (PendingLightBeforeMesh.empty() && StickyRemeshAfterLight.empty()))
+  if (!MeshService || radius_chunks < 0 || StickyRemeshAfterLight.empty())
   {
     return 0;
   }
@@ -1648,6 +1647,51 @@ int UWorld::CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
     }
   }
   return sticky;
+}
+
+int UWorld::CountPendingDarkFocusMeshes(glm::ivec3 focus_ground_chunk,
+                                        int radius_chunks) const
+{
+  // Soft-defer first mesh under PendingLight: terrain exists but is black.
+  // Separate from StickyRemeshAfterLight so SyncIdle is not spuriously opened.
+  if (!MeshService || radius_chunks < 0 || PendingLightBeforeMesh.empty())
+  {
+    return 0;
+  }
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const int sea = ProceduralTemplate.SeaLevel;
+  int band_min =
+      std::max(0, focus_ground_chunk.y * CHUNK_SIZE - CHUNK_SIZE);
+  int band_max = std::min(max_y, focus_ground_chunk.y * CHUNK_SIZE +
+                                      CHUNK_SIZE * 3 - 1);
+  if (ProceduralTemplate.FillWater)
+  {
+    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
+    band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE * 2));
+  }
+  const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
+  const int cy1 = FloorDiv(band_max, CHUNK_SIZE);
+  int dark = 0;
+  for (const auto &entry : PendingLightBeforeMesh)
+  {
+    const glm::ivec2 &key = entry.first;
+    const int dist =
+        std::max(std::abs(key.x - focus_ground_chunk.x),
+                 std::abs(key.y - focus_ground_chunk.z));
+    if (dist > radius_chunks)
+    {
+      continue;
+    }
+    for (int cy = cy0; cy <= cy1; ++cy)
+    {
+      if (MeshService->HasGreedyMesh(glm::ivec3(key.x, cy, key.y)))
+      {
+        ++dark;
+        break;
+      }
+    }
+  }
+  return dark;
 }
 
 int UWorld::RecoverStickyBlackFocusSync(int max_columns)
@@ -2156,14 +2200,14 @@ int UWorld::PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,
       continue;
     }
     // Job already running — do not requeue while flying (Keys-ghost risk).
-    // Idle: clear stale InFlight for underfeet always; for the rest of focus
-    // only when the async counter is already 0 (ghost keys).
+    // Idle: clear InFlight for the whole focus. Underfeet-only clear left
+    // pendf~40 stuck with relight_drain≈0 while wall~22ms (manual 083042):
+    // DrainRelightQueues drops FIFO entries that still look "in flight".
     if (AsyncRelightColumnsInFlight.count(entry.first) != 0)
     {
-      const int horiz = std::max(dx, dz);
       const bool idle =
           LastMovementSpeed <= ProceduralTemplate.MovementPrefetchThreshold;
-      if (GetAsyncRelightInFlightCount() == 0 || (idle && horiz <= 1))
+      if (GetAsyncRelightInFlightCount() == 0 || idle)
       {
         AsyncRelightColumnsInFlight.erase(entry.first);
       }

@@ -880,6 +880,9 @@ public:
   /// Focus columns with GreedyMesh and PendingLightBeforeMesh (sticky black).
   int CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
                                   int radius_chunks) const;
+  /// PendingLight columns that already have a greedy mesh (dark preview).
+  int CountPendingDarkFocusMeshes(glm::ivec3 focus_ground_chunk,
+                                  int radius_chunks) const;
   /// Re-queue priority relight for PendingLightBeforeMesh columns under focus.
   int PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,
                                       int radius_chunks);

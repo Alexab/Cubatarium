@@ -44,6 +44,9 @@ struct FlightSimOptions
   bool FlyStopMode{false};
   double FlyPhaseSec{40.0};
   double StopPhaseSec{35.0};
+  /// Show GLFW window (default hidden). Hidden still has a GL context; lighting
+  /// runs the same path — use visible only for human eyeballing.
+  bool VisibleWindow{false};
 };
 
 int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options);

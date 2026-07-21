@@ -379,13 +379,17 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                                FloorDiv(col.y, CHUNK_SIZE));
     if (async_bg && world.IsAsyncRelightColumnInFlight(ground_xz))
     {
-      // Already computing — drop FIFO membership only. Re-Enqueue here used to
-      // leave Keys set with no deque entry (Promote then no-ops forever).
-      PendingTerrainColumnRelightKeys.erase(col);
-      PendingTerrainColumnRelightYBands.erase(col);
-      ++skipped_inflight;
-      // Bound skip work so a long in-flight FIFO cannot spin the frame.
-      return skipped_inflight < std::max(8, max_bg_columns * 4);
+      // Ghost InFlight (worker count 0) — reconcile then fall through.
+      // Live in-flight: requeue at end; never erase Keys (Keys-without-deque
+      // ghosts blocked MarkRelit with pendf plateau / relight_drain≈0).
+      world.ReconcileAsyncRelightColumnInFlight();
+      if (world.IsAsyncRelightColumnInFlight(ground_xz) &&
+          world.GetAsyncRelightInFlightCount() > 0)
+      {
+        PendingTerrainColumnRelightsPriority.push_back(col);
+        ++skipped_inflight;
+        return skipped_inflight < std::max(8, max_bg_columns * 4);
+      }
     }
     PendingTerrainColumnRelightKeys.erase(col);
     if (async_bg)
