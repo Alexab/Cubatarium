@@ -886,8 +886,11 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         // climb 0→17 while SyncIdle was hitch-gated (iter20 stop).
         const int async_n =
             MeshService ? MeshService->GetAsyncInFlightCount() : 0;
+        const int pending_n =
+            static_cast<int>(PendingLightBeforeMesh.size());
         const int sticky_r =
-            idle ? (async_n >= 28 ? GetStreamingFocusRadius() : 1) : 1;
+            idle ? (async_n >= 28 ? GetStreamingFocusRadius() : 1)
+                 : (pending_n > 10 ? GetStreamingFocusRadius() : 1);
         if (horiz <= sticky_r)
         {
           StickyRemeshAfterLight.insert(key);
@@ -2581,7 +2584,11 @@ int UWorld::PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,
     {
       const bool idle =
           LastMovementSpeed <= ProceduralTemplate.MovementPrefetchThreshold;
-      if (GetAsyncRelightInFlightCount() == 0 || idle)
+      const int pending_focus =
+          CountPendingLightBeforeMeshNear(focus_ground_horiz, radius_chunks);
+      // Cruise with high focus debt: stale InFlight blocked re-enqueue and left
+      // outer-ring preview black (manual 161327: z=34 strip, pend~28).
+      if (GetAsyncRelightInFlightCount() == 0 || idle || pending_focus > 8)
       {
         AsyncRelightColumnsInFlight.erase(entry.first);
       }
@@ -2863,6 +2870,14 @@ void UWorld::ReconcileAsyncRelightColumnInFlight()
   if (GetAsyncRelightInFlightCount() == 0 && !AsyncRelightColumnsInFlight.empty())
   {
     AsyncRelightColumnsInFlight.clear();
+    return;
+  }
+  // More InFlight keys than workers can explain — stale keys from completed jobs.
+  if (GetAsyncRelightInFlightCount() > 0 &&
+      AsyncRelightColumnsInFlight.size() >
+          static_cast<size_t>(GetAsyncRelightInFlightCount()) + 4u)
+  {
+    AsyncRelightColumnsInFlight.clear();
   }
 }
 
@@ -3099,7 +3114,7 @@ void UWorld::TickAsyncChunkSystems()
   }
   else if (pending_light_focus_n > 8)
   {
-    drain_budget = std::max(drain_budget, 16);
+    drain_budget = std::max(drain_budget, 20);
   }
   else if (pending_light_focus_n > 0)
   {

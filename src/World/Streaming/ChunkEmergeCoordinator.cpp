@@ -342,11 +342,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     async_relief_cooldown = 0;
   }
 
-  // Starve keep-shell remesh only when focus/underfeet still MISSING mesh.
-  // Including pending_light / focus_pressure_mode latched starve for the whole
-  // flight (pending stays 30–60) and permanently blocked trail/sea Dirty →
-  // transverse blank and black strips with water already in RAM.
-  mesh_service.SetStarveOutsideFocusMesh(visual_holes || missing_underfeet);
+  // Starve keep-shell remesh when focus MISSING mesh, or light debt on outer ring
+  // (dark preview strip while dirty~500 starves async relight — manual 161327).
+  const bool cruise_light_debt =
+      moving && pending_near_light && !visual_holes &&
+      pending_focus_count > 4;
+  mesh_service.SetStarveOutsideFocusMesh(visual_holes || missing_underfeet ||
+                                         cruise_light_debt);
   mesh_service.SetStarveRemeshForHoles(visual_holes || missing_underfeet);
   // Always scan full focus for sync hole-fill when holes exist. Cap rebuild
   // count via sync_cap (cruise tiny, idle larger) — radius=2 while "moving"
@@ -374,7 +376,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
   }
   else if (moving &&
-           (visual_holes || missing_underfeet || pending_dirty > 450))
+           (visual_holes || missing_underfeet || pending_dirty > 450 ||
+            cruise_light_debt))
   {
     mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
   }
@@ -508,6 +511,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     else if (idle_pending_sync_cd > 0)
     {
       --idle_pending_sync_cd;
+    }
+  }
+  if (cruise_light_debt)
+  {
+    mesh_service.SetStarveOutsideFocusMesh(true);
+    mesh_drain = std::min(mesh_drain, last_frame_ms <= 16.0 ? 14 : 10);
+    mesh_schedule = std::min(mesh_schedule, 10);
+    static int cruise_promote_cd = 0;
+    if (cruise_promote_cd <= 0 && last_frame_ms <= 24.0)
+    {
+      world.DrainIdleFocusPendingLight(focus_ground_horiz, focus_radius, 3);
+      cruise_promote_cd = 6;
+    }
+    else if (cruise_promote_cd > 0)
+    {
+      --cruise_promote_cd;
     }
   }
 

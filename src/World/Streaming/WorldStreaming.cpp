@@ -882,6 +882,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 8 : 16);
   }
+  else if (pending_light_focus_n > 4)
+  {
+    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 6 : 12);
+  }
   else if (pending_light_focus_n > 0 && frame_ms <= kBadFrameMs)
   {
     bg_budget = std::max(bg_budget, 8);
@@ -947,13 +951,14 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   }
   // Pending debt with empty relight FIFO and no inflight: re-promote + clear
   // lit-ready columns (manual 155539: pend=2, relight_drain≈0 plateau).
-  if (idle_recovery && pending_light_focus_n > 0 && pending_light_focus_n <= 8 &&
-      pending_bg_after == 0 && world.GetAsyncRelightInFlightCount() == 0 &&
-      frame_ms <= kBadFrameMs)
+  if (pending_light_focus_n > 0 && pending_bg_after == 0 &&
+      frame_ms <= kBadFrameMs &&
+      (idle_recovery || pending_light_focus_n > 8 ||
+       world.GetAsyncRelightInFlightCount() == 0))
   {
     world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
-    world.ClearPendingLightAfterMeshCommitted(8);
-    bg_budget = std::max(bg_budget, 16);
+    world.ClearPendingLightAfterMeshCommitted(12);
+    bg_budget = std::max(bg_budget, std::min(48, pending_light_focus_n * 2));
   }
 
   {
