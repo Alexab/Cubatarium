@@ -276,6 +276,8 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                          std::abs(coord.z - focus_ground.z));
             // Standing: LastMovementDirXz follows camera look, so the wedge
             // would permanently deny trail columns — admit whole near_focus.
+            // Moving: forward wedge; trail gets Dirty later via idle Admit
+            // (LightingWithoutDirty / VisibleMissing) when the player stops.
             const bool stopped =
                 world.GetLastMovementSpeed() <=
                 settings.MovementPrefetchThreshold;
@@ -291,7 +293,6 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                   static_cast<float>(coord.x - focus_ground.x);
               const float oz =
                   static_cast<float>(coord.z - focus_ground.z);
-              // Forward wedge (+ side/trail soft): trail waits for MarkRelit.
               admit_preview = (ox * fwd.x + oz * fwd.y) >= -0.75f;
             }
             else if (!admit_preview)
@@ -376,6 +377,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   world.PhysicsTelemetryData.FocusDarkMesh = world.CountBlackStickyFocusMeshes(
       focus_ground, focus_radius);
   const int dark_sticky = world.PhysicsTelemetryData.FocusDarkMesh;
+  world.PhysicsTelemetryData.FocusMissingMesh = missing_near ? 1 : 0;
   world.PhysicsTelemetryData.VisualHoles =
       (missing_near || dark_sticky > 0) ? 1 : 0;
   world.PhysicsTelemetryData.LightDebt = pending_light_focus > 0 ? 1 : 0;

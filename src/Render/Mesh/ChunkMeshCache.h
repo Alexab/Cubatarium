@@ -141,6 +141,11 @@ public:
   void SetStarveOutsideFocusMesh(bool starve) { StarveOutsideFocusMesh = starve; }
   /// When true, skip remesh (already has greedy) until holes clear.
   void SetStarveRemeshForHoles(bool starve) { StarveRemeshForHoles = starve; }
+  /// Chebyshev radius for SyncRebuildVisibleMissing hole-fill (1=underfeet).
+  void SetSyncHoleFillRadius(int radius_chunks)
+  {
+    SyncHoleFillRadius = std::max(0, radius_chunks);
+  }
   /// Cap outside-focus dirty schedules per frame (default 2; raise to flush keep).
   void SetMaxOutsideFocusMeshPerFrame(int count)
   {
@@ -151,6 +156,10 @@ public:
   void SetMeshScheduleMaxHorizontalDist(int radius_chunks)
   {
     MeshScheduleMaxHorizontalDist = radius_chunks;
+  }
+  void SetMeshSnapshotBudgetMs(double ms)
+  {
+    MeshSnapshotBudgetMs = std::max(1.0, ms);
   }
   void SetMeshScheduleOverflowPerFrame(int count)
   {
@@ -291,9 +300,12 @@ private:
   glm::vec2 MeshForwardXz{0.0f};
   bool StarveOutsideFocusMesh{false};
   bool StarveRemeshForHoles{false};
+  /// SyncRebuildVisibleMissing: fill missing within this Chebyshev radius.
+  int SyncHoleFillRadius{1};
   int MaxOutsideFocusMeshPerFrame{2};
   /// -1 = no extra horizontal schedule cap (only focus starve applies).
   int MeshScheduleMaxHorizontalDist{-1};
+  double MeshSnapshotBudgetMs{6.0};
   /// When MaxHorizontalDist >= 0, allow this many farther schedules/frame.
   int MeshScheduleOverflowPerFrame{0};
   std::function<bool(glm::ivec3)> DeferMeshUntilLit;

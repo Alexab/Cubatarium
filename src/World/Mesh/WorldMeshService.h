@@ -41,9 +41,11 @@ public:
   void SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn);
   void SetStarveOutsideFocusMesh(bool starve);
   void SetStarveRemeshForHoles(bool starve);
+  void SetSyncHoleFillRadius(int radius_chunks);
   void SetMaxOutsideFocusMeshPerFrame(int count);
   void SetMeshScheduleMaxHorizontalDist(int radius_chunks);
   void SetMeshScheduleOverflowPerFrame(int count);
+  void SetMeshSnapshotBudgetMs(double ms);
   void SetAltitudeCullState(float altitude_above_terrain, int threshold_blocks);
 
   void MarkDirty(glm::ivec3 chunk_coord);

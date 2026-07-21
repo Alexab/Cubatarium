@@ -1136,13 +1136,9 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
                 /*include_horizontal_neighbors=*/false);
             SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
           }
-          else if (has_mesh)
-          {
-            // Sticky black preview: GreedyCache present while PendingLight.
-            MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-                ground, remesh_min, remesh_max,
-                /*include_horizontal_neighbors=*/false);
-          }
+          // Do NOT MarkDirty has_mesh+pending here — soft-defer leaves those
+          // Dirty forever and starves first-mesh schedule. Relight only; MarkRelit
+          // will Dirty after light lands.
           ++repaired;
           continue;
         }
@@ -1279,7 +1275,11 @@ int UWorld::AdmitFocusLightingWithoutDirty(int max_columns)
       const glm::ivec3 ground(key.x, 0, key.y);
       const ColumnEmergeState state = GetColumnEmergeState(ground);
       const bool pending = IsPendingLightBeforeMesh(key);
-      if (!pending && state != ColumnEmergeState::Lighting)
+      // Trail wedge leaves Lighting without Dirty; after MarkRelit empty-apply
+      // columns may sit LitReady/Meshing still without GreedyMesh.
+      if (!pending && state != ColumnEmergeState::Lighting &&
+          state != ColumnEmergeState::LitReady &&
+          state != ColumnEmergeState::Meshing)
       {
         continue;
       }
@@ -2156,8 +2156,8 @@ int UWorld::PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,
       continue;
     }
     // Job already running — do not requeue while flying (Keys-ghost risk).
-    // On idle, clear stale InFlight only for underfeet so feet always drain
-    // without churning the whole focus pending set.
+    // Idle: clear stale InFlight for underfeet always; for the rest of focus
+    // only when the async counter is already 0 (ghost keys).
     if (AsyncRelightColumnsInFlight.count(entry.first) != 0)
     {
       const int horiz = std::max(dx, dz);

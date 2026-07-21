@@ -60,6 +60,11 @@ void UWorldMeshService::SetStarveRemeshForHoles(bool starve)
   Cache.SetStarveRemeshForHoles(starve);
 }
 
+void UWorldMeshService::SetSyncHoleFillRadius(int radius_chunks)
+{
+  Cache.SetSyncHoleFillRadius(radius_chunks);
+}
+
 void UWorldMeshService::SetMaxOutsideFocusMeshPerFrame(int count)
 {
   Cache.SetMaxOutsideFocusMeshPerFrame(count);
@@ -73,6 +78,11 @@ void UWorldMeshService::SetMeshScheduleMaxHorizontalDist(int radius_chunks)
 void UWorldMeshService::SetMeshScheduleOverflowPerFrame(int count)
 {
   Cache.SetMeshScheduleOverflowPerFrame(count);
+}
+
+void UWorldMeshService::SetMeshSnapshotBudgetMs(double ms)
+{
+  Cache.SetMeshSnapshotBudgetMs(ms);
 }
 
 void UWorldMeshService::SetAltitudeCullState(float altitude_above_terrain,

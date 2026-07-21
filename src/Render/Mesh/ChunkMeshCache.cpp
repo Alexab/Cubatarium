@@ -182,9 +182,9 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
         }
         if (DeferMeshUntilLit && DeferMeshUntilLit(coord))
         {
-          // Await column light; MarkRelit dirty’ит lit cy after primary clear.
-          // Do not MarkDirtyPriority here — premature Dirty + neighbor pending
-          // clear baked light=0 into GreedyCache (black holes fixed by place).
+          // Still enqueue Dirty so Pass1/async can fill once MayMesh opens —
+          // silent skip left sticky holes when soft-defer was wrong/stale.
+          Dirty.MarkDirtyPriority(coord);
           return;
         }
         // Skip empty air slices — they would burn sync budget before solid
@@ -217,9 +217,8 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
             forward_score = glm::dot(glm::normalize(to_chunk), fwd_norm);
           }
         }
-        // Sync hole-fill: dist==0 (under camera) always; dist==1 when budget
-        // allows. Farther only MarkDirtyPriority for async.
-        if (dist > 1)
+        // Sync hole-fill radius set by emerge (idle=focus, cruise=2).
+        if (dist > SyncHoleFillRadius)
         {
           Dirty.MarkDirtyPriority(coord);
           return;
@@ -1128,9 +1127,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
 
     const int max_pipeline = std::max(
         max_schedule_per_frame, AsyncBuilder->GetMaxPipelineDepth());
-    // Cap main-thread snapshot capture so dirty backlog cannot spend >~6ms
-    // capturing meshes in a single frame (death spiral at dirty~200).
-    constexpr double kSnapshotBudgetMs = 6.0;
+    // Cap main-thread snapshot capture. Default 6ms; raise under visual holes /
+    // idle so Dirty~500 can schedule (async was stuck at 1–5).
+    const double kSnapshotBudgetMs = MeshSnapshotBudgetMs;
     int scheduled = 0;
     int outside_focus_scheduled = 0;
     int overflow_scheduled = 0;
@@ -1154,19 +1153,28 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         return std::next(it);
       }
-      if (StarveRemeshForHoles &&
-          GreedyCache.find(*it) != GreedyCache.end())
-      {
-        // Skip remesh while holes exist — keep Dirty for MarkRelit (never drop).
-        return std::next(it);
-      }
       if (!world.GetChunkManager().HasChunk(*it))
       {
         return std::next(it);
       }
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
       {
+        // Remesh of existing mesh while PendingLight: drop from Dirty until
+        // MarkRelit requeues. Leaving deferred remesh in Dirty (~500) starved
+        // first-mesh Pass1 (async stuck at 1–5, holes=1 entire stop).
+        // Must run before StarveRemeshForHoles.
+        if (GreedyCache.find(*it) != GreedyCache.end())
+        {
+          return Dirty.RemoveAt(it);
+        }
         return std::next(it);
+      }
+      if (StarveRemeshForHoles &&
+          GreedyCache.find(*it) != GreedyCache.end())
+      {
+        // While holes exist remesh cannot fill them — drop so Admit/Pass1 missing
+        // can enter Dirty. MarkRelit requeues remesh after light.
+        return Dirty.RemoveAt(it);
       }
       const uint64_t source_revision = MeshRevisions.Current(*it);
       const auto snap_t0 = std::chrono::high_resolution_clock::now();
@@ -1303,19 +1311,25 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         ++it;
         continue;
       }
-      if (StarveRemeshForHoles &&
-          GreedyCache.find(*it) != GreedyCache.end())
+      if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
       {
-        // Skip remesh while holes exist — keep Dirty for MarkRelit (never drop).
+        // Remesh deferred while PendingLight: drop until MarkRelit requeues.
+        // Must run before StarveRemeshForHoles — otherwise deferred remesh stays
+        // in Dirty forever while holes=1 and starves first-mesh Pass1.
+        if (GreedyCache.find(*it) != GreedyCache.end())
+        {
+          it = Dirty.RemoveAt(it);
+          continue;
+        }
         ++it;
         continue;
       }
-      if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
+      if (StarveRemeshForHoles &&
+          GreedyCache.find(*it) != GreedyCache.end())
       {
-        // Remesh deferred while PendingLight: skip until MarkRelit clears gate.
-        // First-mesh (no GreedyCache) stays in queue (Defer returns false in
-        // focus for missing).
-        ++it;
+        // While holes exist remesh cannot fill them — drop so Admit/Pass1 missing
+        // can enter Dirty. MarkRelit requeues remesh after light.
+        it = Dirty.RemoveAt(it);
         continue;
       }
       const uint64_t source_revision = MeshRevisions.Current(*it);
