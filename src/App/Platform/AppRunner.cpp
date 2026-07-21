@@ -30,6 +30,7 @@
 
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -626,12 +627,15 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
               << " world=" << world_name << " frames=" << ingame_frames_seen
               << " perf=" << perf_path << " report=" << report_path.string()
               << std::endl;
-    return exit_code;
+    std::cout.flush();
+    std::cerr.flush();
+    // Skip destructor joins (Persistence/mesh workers) — known hang after save.
+    std::_Exit(exit_code);
   }
   catch (const std::exception &e)
   {
     std::cerr << "flight-sim: exception: " << e.what() << std::endl;
-    return 1;
+    std::_Exit(1);
   }
 }
 

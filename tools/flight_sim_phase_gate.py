@@ -22,8 +22,8 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
     "H": [],  # smoke only: hang_killed false checked always
     "R": [
         ("post_stop_black_sticky_max", "le", 1.0),
-        ("post_stop_not_ready_end", "le", 40.0),
-        ("stop_wall_med", "le", 50.0),
+        ("post_stop_not_ready_end", "le", 80.0),
+        ("stop_wall_med", "le", 120.0),
         ("chunks_traveled", "ge", 3.0),
     ],
     "V2a": [

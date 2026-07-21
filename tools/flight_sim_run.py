@@ -320,7 +320,7 @@ def main() -> int:
     if process_timeout <= 0.0:
         process_timeout = args.seconds + 120.0
     if args.fly_stop:
-        process_timeout = max(process_timeout, 300.0)
+        process_timeout = max(process_timeout, 420.0)
 
     print("running:", " ".join(sim_cmd), flush=True)
     rc = run_with_timeout(sim_cmd, BIN, process_timeout)

@@ -219,6 +219,7 @@ def analyze(
     black_sticky_stop = col(stop_tail, sticky_key)
     missing_stop = col(stop_tail, hole_key)
     unfinished_stop = col(stop_tail, unfinished_key) if unfinished_key else []
+    not_ready_stop = col(stop_tail, "focus_not_render_ready")
     pending_stop = col(stop_tail, "pending_light_focus")
     relight_stop = col(stop_tail, "relight_drain_ms")
     post_stop_pending_med = median(pending_stop)
@@ -231,15 +232,24 @@ def analyze(
         h = float(r.get(hole_key) or 0)
         d = float(r.get(sticky_key) or 0)
         pend = float(r.get("pending_light_focus") or 0)
+        nr = float(r.get("focus_not_render_ready") or 0)
         unfinished = unfinished_stop[i] > 0 if i < len(unfinished_stop) else False
         stop_effective.append(
-            1.0 if (unfinished or h > 0 or d > 0 or pend >= 15) else 0.0
+            1.0
+            if (unfinished or h > 0 or d > 0 or pend >= 15 or nr >= 8)
+            else 0.0
         )
     post_stop_effective_holes_rate = (
         sum(stop_effective) / len(stop_effective) if stop_effective else 1.0
     )
     post_stop_relight_med = median(relight_stop)
-    stop_pending_delta = None
+    post_stop_not_ready_med = median(not_ready_stop) if not_ready_stop else None
+    post_stop_not_ready_end = (
+        not_ready_stop[-1] if not_ready_stop else None
+    )
+    stop_not_ready_delta = None
+    if len(not_ready_stop) >= 2:
+        stop_not_ready_delta = not_ready_stop[-1] - not_ready_stop[0]
     if len(pending_stop) >= 2:
         stop_pending_delta = pending_stop[-1] - pending_stop[0]
     elif len(stop_segment) >= 2:
@@ -309,6 +319,8 @@ def analyze(
         "post_stop_pending_not_plateau_8s": stop_pending_plateau_sec
         <= (60.0 if manual_idle else 8.0),
         "post_stop_healthy_fps_not_unfinished": healthy_unfinished_rate <= 0.25,
+        "post_stop_not_ready_falling": stop_not_ready_delta is not None
+        and stop_not_ready_delta <= -8.0,
     }
     gates_stop_pass_count = sum(1 for v in gates_stop.values() if v)
     passed = all(gates.values()) and all(gates_stop.values())
@@ -322,6 +334,7 @@ def analyze(
         "gates_stop": gates_stop,
         "stop_segment_periods": len(stop_segment),
         "stop_pending_delta": stop_pending_delta,
+        "stop_not_ready_delta": stop_not_ready_delta,
         "stop_recovery_ok": stop_recovery_ok,
     }
 
@@ -357,6 +370,9 @@ def analyze(
             "gates_stop_pass_count": gates_stop_pass_count,
             "gates_stop_total": len(gates_stop),
             "post_stop_relight_med": post_stop_relight_med,
+            "post_stop_not_ready_med": post_stop_not_ready_med,
+            "post_stop_not_ready_end": post_stop_not_ready_end,
+            "stop_not_ready_delta": stop_not_ready_delta,
             "stop_pending_delta": stop_pending_delta,
             "stop_segment_periods": len(stop_segment),
             "stop_tail_periods": len(stop_tail),

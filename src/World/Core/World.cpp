@@ -3378,10 +3378,33 @@ void UWorld::PrepareForShutdown()
 
 void UWorld::PrepareForShutdownFast()
 {
-  // Harness / flight-sim: never block experiments on worker join.
-  PrepareForShutdownWithBudgets(std::chrono::milliseconds(400),
-                                std::chrono::milliseconds(50),
-                                std::chrono::milliseconds(0));
+  // Harness / flight-sim: skip Quiesce waits entirely — cancel + abandon only.
+  if (ShutdownPrepared)
+  {
+    return;
+  }
+  ShutdownPrepared = true;
+  if (CoopSession && CoopSession->Active)
+  {
+    CoopSession->Cancel();
+  }
+  AllowProceduralFill = false;
+  if (Streaming && Streaming->HasStreamer())
+  {
+    Streaming->GetStreamer()->SetEnabled(false);
+  }
+  CancelAsyncRelightWork();
+  if (Streaming)
+  {
+    Streaming->AbandonWorkersForProcessExit(std::chrono::milliseconds(0));
+  }
+  if (MeshService)
+  {
+    MeshService->CancelAsyncMeshWork();
+  }
+  BackgroundQuiesceFinished = true;
+  std::cerr << "[Shutdown] PrepareForShutdownFast: done (no join waits)"
+            << std::endl;
 }
 
 void UWorld::PrepareForShutdownWithBudgets(
