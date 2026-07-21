@@ -150,10 +150,20 @@ public:
   {
     SyncHoleFillRadius = std::max(0, radius_chunks);
   }
-  /// Cap outside-focus dirty schedules per frame (default 2; raise to flush keep).
+  /// Cap outside-focus dirty schedules per frame (0 = hard deny).
   void SetMaxOutsideFocusMeshPerFrame(int count)
   {
     MaxOutsideFocusMeshPerFrame = std::max(0, count);
+  }
+  /// Reserved focus schedules behind movement forward (cruise rear catch-up).
+  void SetMaxRearFocusMeshPerFrame(int count)
+  {
+    MaxRearFocusMeshPerFrame = std::max(0, count);
+  }
+  /// Queue remesh after in-flight Apply (light changed mid-build).
+  void RequestRemeshAfterApply(glm::ivec3 chunk_coord)
+  {
+    RemeshAfterApply.insert(chunk_coord);
   }
   /// When >= 0, prefer scheduling within this Chebyshev distance. Chunks
   /// farther may still schedule up to MeshScheduleOverflowPerFrame (soft prefer).
@@ -308,6 +318,8 @@ private:
   /// SyncRebuildVisibleMissing: fill missing within this Chebyshev radius.
   int SyncHoleFillRadius{1};
   int MaxOutsideFocusMeshPerFrame{2};
+  int MaxRearFocusMeshPerFrame{0};
+  std::unordered_set<glm::ivec3, IVec3Hash> RemeshAfterApply;
   /// -1 = no extra horizontal schedule cap (only focus starve applies).
   int MeshScheduleMaxHorizontalDist{-1};
   double MeshSnapshotBudgetMs{6.0};

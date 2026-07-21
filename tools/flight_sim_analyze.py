@@ -420,6 +420,16 @@ def analyze(
             "stop_focus_dirty_delta": stop_focus_dirty_delta,
             "stop_mesh_apply_stale_delta": stop_mesh_apply_stale_delta,
             "stop_mesh_discarded_late_delta": stop_mesh_discarded_late_delta,
+            "post_stop_unfinished_ahead_med": (
+                median(col(stop_tail, "focus_unfinished_ahead"))
+                if stop_tail
+                else None
+            ),
+            "post_stop_unfinished_behind_med": (
+                median(col(stop_tail, "focus_unfinished_behind"))
+                if stop_tail
+                else None
+            ),
             "stop_segment_periods": len(stop_segment),
             "stop_tail_periods": len(stop_tail),
         "stop_pending_plateau_sec": stop_pending_plateau_sec,

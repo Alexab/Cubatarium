@@ -1038,6 +1038,12 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   InstancesDirty = true;
   CrossBatchesDirty = true;
   GreedyBatchesDirty = true;
+  // Light/content changed while this build was Active — remesh once with a
+  // fresh Capture (avoids MarkDirty mid-flight Dirty plateau).
+  if (RemeshAfterApply.erase(result.coord) > 0)
+  {
+    MarkDirtyPriority(result.coord);
+  }
 }
 
 void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
@@ -1148,9 +1154,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     int outside_focus_scheduled = 0;
     int overflow_scheduled = 0;
     int reserved_focus_scheduled = 0;
-    const int outside_focus_cap =
-        MaxOutsideFocusMeshPerFrame > 0 ? MaxOutsideFocusMeshPerFrame : 2;
+    const int outside_focus_cap = MaxOutsideFocusMeshPerFrame;
     constexpr int kReservedFocusMissingSlots = 16;
+    const int rear_focus_cap = std::max(0, MaxRearFocusMeshPerFrame);
+    int rear_focus_scheduled = 0;
 
     auto try_schedule = [&](auto it, bool count_outside, bool count_overflow,
                             bool count_reserved) -> decltype(it)
@@ -1244,6 +1251,54 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
     }
 
+    // Pass 1b: reserved rear-hemisphere focus slots so MeshForwardBias cannot
+    // leave unfinished columns behind the camera (manual 220707).
+    if (MeshFocusValid && rear_focus_cap > 0 && MeshForwardBiasK > 0.0f)
+    {
+      const float flen = std::sqrt(MeshForwardXz.x * MeshForwardXz.x +
+                                   MeshForwardXz.y * MeshForwardXz.y);
+      if (flen >= 0.01f)
+      {
+        const float fx = MeshForwardXz.x / flen;
+        const float fz = MeshForwardXz.y / flen;
+        for (auto it = Dirty.begin();
+             it != Dirty.end() && scheduled < max_schedule_per_frame &&
+             rear_focus_scheduled < rear_focus_cap;)
+        {
+          const int dx = std::abs(it->x - MeshFocusGroundChunk.x);
+          const int dz = std::abs(it->z - MeshFocusGroundChunk.z);
+          const int horiz = std::max(dx, dz);
+          if (horiz > MeshFocusRadiusChunks)
+          {
+            ++it;
+            continue;
+          }
+          const float tdx =
+              static_cast<float>(it->x - MeshFocusGroundChunk.x);
+          const float tdz =
+              static_cast<float>(it->z - MeshFocusGroundChunk.z);
+          const float tlen = std::sqrt(tdx * tdx + tdz * tdz);
+          if (tlen < 0.01f ||
+              (tdx / tlen) * fx + (tdz / tlen) * fz >= -0.05f)
+          {
+            ++it;
+            continue;
+          }
+          const int scheduled_before = scheduled;
+          auto next = try_schedule(it, false, false, false);
+          if (next == Dirty.end())
+          {
+            break;
+          }
+          if (scheduled > scheduled_before)
+          {
+            ++rear_focus_scheduled;
+          }
+          it = next;
+        }
+      }
+    }
+
     for (auto it = Dirty.begin();
          it != Dirty.end() && scheduled < max_schedule_per_frame;)
     {
@@ -1298,7 +1353,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           {
             const bool missing =
                 GreedyCache.find(*it) == GreedyCache.end();
-            outside_cap = missing ? outside_focus_cap : 1;
+            // MaxOutside==0 must stay hard zero (idle remesh). Old remesh
+            // fallback to 1 fed CancelOutside discard storms.
+            outside_cap =
+                missing ? outside_focus_cap
+                        : (outside_focus_cap > 0 ? 1 : 0);
           }
           if (outside_focus_scheduled >= outside_cap)
           {

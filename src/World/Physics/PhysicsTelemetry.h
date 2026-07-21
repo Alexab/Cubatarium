@@ -87,6 +87,10 @@ struct PhysicsTelemetry
   int FocusNotRenderReady{0};
   /// Dirty mesh chunks inside focus radius (lit-but-dirty remesh debt).
   int FocusDirtyChunks{0};
+  /// Unfinished focus columns ahead of movement/view forward (dot >= 0).
+  int FocusUnfinishedAhead{0};
+  /// Unfinished focus columns behind movement/view forward (dot < 0).
+  int FocusUnfinishedBehind{0};
   /// 0=Green, 1=Yellow, 2=Red (StreamingPressureLevel).
   int StreamPressure{0};
   /// PendingLightBeforeMesh count inside focus radius (vs global PendingLightCount).

@@ -900,7 +900,34 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         dirty_max = std::min(column_max_y, band.max_y + 1);
       }
       const bool seam_ok = !SuppressRelightSeamDirty;
-      if (priority_mesh)
+      if (SuppressRelightSeamDirty && had_mesh)
+      {
+        // Idle remesh: do not MarkDirty Inflight (re-Dirty after Apply froze
+        // focus_dirty). Request post-Apply remesh instead so Capture sees new
+        // light without mid-flight thrash.
+        for (int cy = cy0; cy <= cy1; ++cy)
+        {
+          const glm::ivec3 coord(key.x, cy, key.y);
+          if (MeshService->IsChunkMeshDirty(coord))
+          {
+            continue;
+          }
+          if (MeshService->HasInflightMeshBuild(coord))
+          {
+            MeshService->RequestRemeshAfterApply(coord);
+            continue;
+          }
+          if (priority_mesh)
+          {
+            MeshService->MarkDirtyPriority(coord);
+          }
+          else
+          {
+            MeshService->MarkDirty(coord);
+          }
+        }
+      }
+      else if (priority_mesh)
       {
         MeshService->MarkTerrainChunkMeshDirtySeamedPriority(ground, dirty_min,
                                                              dirty_max, seam_ok);
@@ -1666,6 +1693,59 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     }
   }
   return unfinished;
+}
+
+void UWorld::CountUnfinishedVisualByFacing(glm::ivec3 focus_ground_chunk,
+                                           int radius_chunks,
+                                           glm::vec2 forward_xz, int &out_ahead,
+                                           int &out_behind) const
+{
+  out_ahead = 0;
+  out_behind = 0;
+  if (radius_chunks < 0)
+  {
+    return;
+  }
+  const float flen =
+      std::sqrt(forward_xz.x * forward_xz.x + forward_xz.y * forward_xz.y);
+  const bool have_fwd = flen >= 0.01f;
+  const float fx = have_fwd ? forward_xz.x / flen : 0.0f;
+  const float fz = have_fwd ? forward_xz.y / flen : 0.0f;
+  for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
+  {
+    for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
+    {
+      const glm::ivec3 ground(focus_ground_chunk.x + dx, 0,
+                              focus_ground_chunk.z + dz);
+      if (!IsTerrainChunkComplete(BlockWorld, ground,
+                                  ProceduralTemplate.MaxHeight))
+      {
+        continue;
+      }
+      if (IsColumnRenderReady(ground))
+      {
+        continue;
+      }
+      if (!have_fwd || (dx == 0 && dz == 0))
+      {
+        ++out_ahead;
+        continue;
+      }
+      const float tlen =
+          std::sqrt(static_cast<float>(dx * dx + dz * dz));
+      const float dot =
+          (static_cast<float>(dx) / tlen) * fx +
+          (static_cast<float>(dz) / tlen) * fz;
+      if (dot >= 0.0f)
+      {
+        ++out_ahead;
+      }
+      else
+      {
+        ++out_behind;
+      }
+    }
+  }
 }
 
 bool UWorld::MayMeshColumn(glm::ivec3 ground, bool underfeet_preview) const

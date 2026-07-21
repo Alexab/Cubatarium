@@ -70,6 +70,11 @@ void UWorldMeshService::SetMaxOutsideFocusMeshPerFrame(int count)
   Cache.SetMaxOutsideFocusMeshPerFrame(count);
 }
 
+void UWorldMeshService::SetMaxRearFocusMeshPerFrame(int count)
+{
+  Cache.SetMaxRearFocusMeshPerFrame(count);
+}
+
 void UWorldMeshService::SetMeshScheduleMaxHorizontalDist(int radius_chunks)
 {
   Cache.SetMeshScheduleMaxHorizontalDist(radius_chunks);
@@ -117,6 +122,11 @@ void UWorldMeshService::MarkDirtyPriority(glm::ivec3 chunk_coord)
 {
   Cache.MarkDirtyPriority(chunk_coord);
   NotifyChunkBlocksChanged(chunk_coord);
+}
+
+void UWorldMeshService::RequestRemeshAfterApply(glm::ivec3 chunk_coord)
+{
+  Cache.RequestRemeshAfterApply(chunk_coord);
 }
 
 void UWorldMeshService::NotifyFluidSurfaceDirtyAtBlock(

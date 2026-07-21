@@ -191,8 +191,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         pending_focus_count > 0 && black_sticky == 0 && !missing_visible_mesh;
     if (idle_cancel_cooldown <= 0 || async_saturated_idle || pending_debt_only)
     {
-      mesh_service.CancelInFlightOutsideHorizontalRadius(focus_ground_horiz,
-                                                         focus_radius);
+      // Lit-but-dirty catch-up: CancelOutside → Forget → DiscardedLate +
+      // MarkDirty storm (manual 220707: disc+1393) while focus Dirty plateaued.
+      if (!idle_remesh_debt)
+      {
+        mesh_service.CancelInFlightOutsideHorizontalRadius(focus_ground_horiz,
+                                                           focus_radius);
+      }
       // Never CancelAsyncInFlightKeepDirty during lit-but-dirty catch-up —
       // that reset async every ~30f and froze focus_dirty≈420 / nr≈52.
       if (async_saturated_idle && pending_async_early >= 40 &&
@@ -340,6 +345,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     if (idle_remesh_debt)
     {
       mesh_service.SetMeshForwardBias(0.0f, glm::vec2(0.0f));
+      mesh_service.SetMaxRearFocusMeshPerFrame(0);
     }
     else
     {
@@ -353,6 +359,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         }
       }
       mesh_service.SetMeshForwardBias(tune.MeshForwardBiasK, fwd);
+      // Cruise: keep a few focus slots for behind-camera unfinished columns.
+      mesh_service.SetMaxRearFocusMeshPerFrame(moving ? 3 : 0);
     }
   }
   int mesh_drain = LastBudget.MaxMeshDrain;

@@ -165,6 +165,8 @@ struct FrameNumbers
   int focus_sticky_remesh{0};
   int focus_not_render_ready{0};
   int focus_dirty_chunks{0};
+  int focus_unfinished_ahead{0};
+  int focus_unfinished_behind{0};
   uint64_t mesh_discarded_late{0};
   uint64_t mesh_apply_stale{0};
   std::string pending_cols;
@@ -252,6 +254,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.focus_sticky_remesh = phys.FocusStickyRemesh;
   n.focus_not_render_ready = phys.FocusNotRenderReady;
   n.focus_dirty_chunks = phys.FocusDirtyChunks;
+  n.focus_unfinished_ahead = phys.FocusUnfinishedAhead;
+  n.focus_unfinished_behind = phys.FocusUnfinishedBehind;
   n.mesh_discarded_late = phys.MeshDiscardedLate;
   n.mesh_apply_stale = phys.MeshApplyStale;
   n.pending_cols = phys.PendingFocusCols;
@@ -319,6 +323,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"focus_sticky_remesh\":" << n.focus_sticky_remesh
           << ",\"focus_not_render_ready\":" << n.focus_not_render_ready
           << ",\"focus_dirty_chunks\":" << n.focus_dirty_chunks
+          << ",\"focus_unfinished_ahead\":" << n.focus_unfinished_ahead
+          << ",\"focus_unfinished_behind\":" << n.focus_unfinished_behind
           << ",\"mesh_discarded_late\":" << n.mesh_discarded_late
           << ",\"mesh_apply_stale\":" << n.mesh_apply_stale
           << ",\"black_sticky\":" << n.focus_sticky_remesh

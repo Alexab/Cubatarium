@@ -379,6 +379,23 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   world.PhysicsTelemetryData.FocusDarkMesh = dark_preview;
   world.PhysicsTelemetryData.FocusNotRenderReady = not_render_ready;
   world.PhysicsTelemetryData.FocusDirtyChunks = focus_dirty_chunks;
+  {
+    glm::vec2 fwd = world.GetLastMovementDirXz();
+    if (glm::length(fwd) < 0.01f)
+    {
+      if (const auto camera = world.GetCurrentUserCamera())
+      {
+        const glm::vec3 front = camera->GetFront();
+        fwd = glm::vec2(front.x, front.z);
+      }
+    }
+    int ahead = 0;
+    int behind = 0;
+    world.CountUnfinishedVisualByFacing(focus_horiz, focus_radius, fwd, ahead,
+                                        behind);
+    world.PhysicsTelemetryData.FocusUnfinishedAhead = ahead;
+    world.PhysicsTelemetryData.FocusUnfinishedBehind = behind;
+  }
   world.PhysicsTelemetryData.FocusMissingMesh = missing_near ? 1 : 0;
   world.PhysicsTelemetryData.VisualHoles = missing_near ? 1 : 0;
   // Render contract: lit-but-dirty remesh counts even when pending=0.

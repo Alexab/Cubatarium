@@ -803,6 +803,7 @@ public:
   {
     SuppressRelightSeamDirty = suppress;
   }
+  bool IsSuppressRelightSeamDirty() const { return SuppressRelightSeamDirty; }
   bool ShouldDeferStreamingMeshForRelight() const
   {
     return ProceduralTemplate.AsyncRelight && !LightingRelightDeferred;
@@ -912,6 +913,10 @@ public:
   /// Focus columns that are loaded but not yet safe to render.
   int CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
                                 int radius_chunks) const;
+  /// Split unfinished focus by movement/view forward (dot>=0 ahead, else behind).
+  void CountUnfinishedVisualByFacing(glm::ivec3 focus_ground_chunk,
+                                     int radius_chunks, glm::vec2 forward_xz,
+                                     int &out_ahead, int &out_behind) const;
   /// Authoritative mesh gate: LitReady+ or underfeet first-mesh preview.
   bool MayMeshColumn(glm::ivec3 ground, bool underfeet_preview) const;
   /// Centralized focus-ring drain used by streaming and mesh emerge.
