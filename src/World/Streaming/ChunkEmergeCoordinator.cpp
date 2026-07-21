@@ -172,17 +172,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       world.CountUnfinishedVisualNear(focus_ground_horiz, focus_radius);
   const size_t pending_dirty_early = mesh_service.GetDirtyCount();
   const int pending_async_early = mesh_service.GetAsyncInFlightCount();
-  const bool idle_visual_debt =
+  const bool idle_stale_remesh =
+      !moving && focus_not_render_ready > 0 && pending_focus_count == 0 &&
+      black_sticky == 0;
+  const bool idle_stop =
       !moving &&
-      (pending_focus_count > 0 || focus_not_render_ready > 0 ||
-       missing_visible_mesh || black_sticky > 0);
-  const bool idle_stop = idle_visual_debt ||
-                         (pending_async_early >= 36 && pending_dirty_early > 200);
+      (pending_focus_count > 0 || black_sticky > 0 || missing_visible_mesh ||
+       focus_not_render_ready > 0 ||
+       (pending_async_early >= 36 && pending_dirty_early > 200));
   const bool idle_recovery = idle_stop;
   const bool async_saturated_idle = pending_async_early >= 36;
   static int idle_cancel_cooldown = 0;
   if (idle_recovery)
   {
+    // Light debt with clean visuals (sticky=0, missing=0): promote often so
+    // PendingLight cannot sit at ~30+ while relight_drain≈0 after Keys ghosts.
     const bool pending_debt_only =
         pending_focus_count > 0 && black_sticky == 0 && !missing_visible_mesh;
     if (idle_cancel_cooldown <= 0 || async_saturated_idle || pending_debt_only)
@@ -193,24 +197,70 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       {
         mesh_service.CancelAsyncInFlightKeepDirty();
       }
+      world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
       idle_cancel_cooldown =
-          pending_debt_only ? 12 : (async_saturated_idle ? 30 : 120);
+          pending_debt_only ? 8 : (async_saturated_idle ? 30 : 120);
     }
     else
     {
       --idle_cancel_cooldown;
     }
-    // Single async-only idle drain — no sync relight/remesh (perf_173123: wall~420).
-    static int idle_visual_drain_cd = 0;
-    if (idle_visual_drain_cd <= 0 && last_frame_ms <= 28.0)
+    // Do NOT call RecoverStickyBlackFocusSync here — sync RelightColumnWithFrontier
+    // caused mesh_emerge/wall 1300–1980ms on stop (iter23). Light via Promote
+    // + bg_budget; remesh via narrow SyncIdleFocusGreedyRemesh.
+    static int sticky_sync_cooldown = 0;
+    (void)sticky_sync_cooldown;
+    sticky_sync_cooldown = 0;
+    static int idle_refresh_cooldown = 0;
+    // Narrow-band SyncIdle: full sea band caused mesh_emerge 500–740ms.
+    // Also drain focus columns missed on approach (pending Lighting without
+    // Dirty, or missing mesh) — previously only sticky/missing telemetrics
+    // opened this path, so trail neighbors never filled while standing.
+    const bool idle_mesh_debt =
+        pending_focus_count > 0 || missing_visible_mesh || black_sticky > 0;
+    if (async_saturated_idle || idle_mesh_debt)
     {
-      const int budget = pending_focus_count > 20 ? 6 : 4;
-      world.DrainIdleFocusVisualWork(focus_ground_horiz, focus_radius, budget);
-      idle_visual_drain_cd = pending_focus_count > 15 ? 6 : 10;
+      if (idle_refresh_cooldown <= 0)
+      {
+        int sync_n = 0;
+        if (last_frame_ms <= 14.0)
+        {
+          sync_n = black_sticky > 8 ? 3 : (black_sticky > 0 ? 2 : 1);
+        }
+        else if (last_frame_ms <= 22.0)
+        {
+          sync_n = black_sticky > 0 ? 2 : 1;
+        }
+        else if (black_sticky > 0 || missing_visible_mesh)
+        {
+          sync_n = 1; // hitch: still drain sticky/missing slowly
+        }
+        if (sync_n > 0 && (black_sticky > 0 || async_saturated_idle))
+        {
+          world.SyncIdleFocusGreedyRemesh(sync_n, /*full_column_band=*/false);
+        }
+        if (missing_visible_mesh || pending_focus_count > 0)
+        {
+          // Burst admit while standing — neighbors left by the flight wedge
+          // need more than 2/frame or a 10s hover never catches up.
+          const int admit_n =
+              last_frame_ms <= 16.0 ? 8
+              : (last_frame_ms <= 28.0 ? 5 : 3);
+          world.AdmitFocusMeshIngress(admit_n);
+          world.AdmitFocusLightingWithoutDirty(admit_n);
+          world.AdmitFocusVisibleMissing(admit_n);
+        }
+        idle_refresh_cooldown =
+            last_frame_ms <= 14.0 ? 1 : (last_frame_ms <= 22.0 ? 2 : 3);
+      }
+      else
+      {
+        --idle_refresh_cooldown;
+      }
     }
-    else if (idle_visual_drain_cd > 0)
+    else
     {
-      --idle_visual_drain_cd;
+      idle_refresh_cooldown = 0;
     }
   }
   else
@@ -425,26 +475,68 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
 
   // Standing still with backlog: prioritize drain/complete over new commits so
   // FPS can recover (dirty outside focus used to never clear).
-  if (!moving && pending_dirty > 32 && !idle_visual_debt)
+  const bool idle_light_debt_only =
+      !moving && pending_near_light && !visual_holes && black_sticky == 0;
+  if (!moving && pending_dirty > 32 && !idle_light_debt_only)
   {
     mesh_drain = std::max(mesh_drain, 20);
     mesh_schedule = std::max(mesh_schedule, 12);
   }
-  else if (!moving && pending_dirty > 8 && !idle_visual_debt)
+  else if (!moving && pending_dirty > 8 && !idle_light_debt_only)
   {
     mesh_drain = std::max(mesh_drain, 16);
     mesh_schedule = std::max(mesh_schedule, 10);
   }
-  if (idle_visual_debt)
+  if (idle_stale_remesh)
   {
     mesh_service.SetStarveOutsideFocusMesh(true);
-    mesh_service.SetStarveRemeshForHoles(pending_focus_count > 12 &&
-                                         focus_not_render_ready <= 4);
-    const int drain_floor = focus_not_render_ready > 30 ? 22 : 18;
-    const int sched_floor = focus_not_render_ready > 30 ? 18 : 14;
-    mesh_drain = std::max(mesh_drain, last_frame_ms <= 22.0 ? drain_floor : 12);
-    mesh_schedule =
-        std::max(mesh_schedule, last_frame_ms <= 22.0 ? sched_floor : 10);
+    mesh_service.SetStarveRemeshForHoles(false);
+    mesh_drain = std::max(mesh_drain, last_frame_ms <= 20.0 ? 24 : 16);
+    mesh_schedule = std::min(mesh_schedule, last_frame_ms <= 20.0 ? 12 : 8);
+    static int stale_full_sync_cd = 0;
+    if (stale_full_sync_cd <= 0 && last_frame_ms <= 18.0)
+    {
+      // One full-column sync per ~4 frames — completes render contract without
+      // Refresh flooding Dirty (perf_171507: dirty 650→760, not_ready stuck).
+      world.SyncIdleFocusGreedyRemesh(1, /*full_column_band=*/true);
+      stale_full_sync_cd = 4;
+    }
+    else if (stale_full_sync_cd > 0)
+    {
+      --stale_full_sync_cd;
+    }
+  }
+  if (idle_light_debt_only)
+  {
+    mesh_service.SetStarveOutsideFocusMesh(true);
+    mesh_service.SetStarveRemeshForHoles(false);
+    mesh_drain = std::min(mesh_drain, last_frame_ms <= 16.0 ? 10 : 6);
+    mesh_schedule = std::min(mesh_schedule, 8);
+    static int idle_pending_promote_cd = 0;
+    static int idle_pending_sync_cd = 0;
+    if (idle_pending_promote_cd <= 0 && last_frame_ms <= 20.0 &&
+        pending_focus_count > 0)
+    {
+      const int promoted = world.DrainIdleFocusPendingLight(
+          focus_ground_horiz, focus_radius, 2);
+      idle_pending_promote_cd = promoted > 0 ? 12 : 24;
+    }
+    else if (idle_pending_promote_cd > 0)
+    {
+      --idle_pending_promote_cd;
+    }
+    if (idle_pending_sync_cd <= 0 && pending_focus_count >= 2 &&
+        pending_focus_count <= 5 && black_sticky == 0 &&
+        last_frame_ms <= 16.0)
+    {
+      const int synced = world.DrainIdleFocusPendingLightSync(
+          focus_ground_horiz, focus_radius, 1);
+      idle_pending_sync_cd = synced > 0 ? 60 : 90;
+    }
+    else if (idle_pending_sync_cd > 0)
+    {
+      --idle_pending_sync_cd;
+    }
   }
   if (cruise_light_debt)
   {
@@ -640,8 +732,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         (pending_near_light && pending_focus_n > 12 &&
          recover_watchdog_frames >= 4) ||
         (black_sticky > 0 && !moving && recover_watchdog_frames >= 4) ||
-        (idle_visual_debt && pending_focus_count == 0 &&
-         recover_watchdog_frames >= 8);
+        (idle_stale_remesh && recover_watchdog_frames >= 4);
     if (recover_now && recover_n > 0)
     {
       world.RecoverUnlitFocusMeshes(recover_n);
@@ -822,22 +913,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   else if (missing_visible_mesh)
   {
-    const int sync_idle = pending_focus_count > 8 ? 1 : 2;
+    // Cruise: tiny sync (async+Admit). Idle: enough to clear focus ring.
+    // Cap harder when light debt dominates — sync was starving MarkRelit.
+    const int sync_idle =
+        pending_focus_count > 8 ? 2 : 6;
     sync_cap = std::max(sync_cap, moving ? 2 : sync_idle);
-    mesh_schedule = std::max(mesh_schedule, moving ? 12 : 16);
-    mesh_drain = std::max(mesh_drain, moving ? 12 : 18);
+    mesh_schedule = std::max(mesh_schedule, moving ? 12 : 20);
+    mesh_drain = std::max(mesh_drain, moving ? 12 : 24);
   }
   else if (pending_near_light)
   {
-    if (!moving && pending_focus_count > 0 && focus_not_render_ready <= 4)
+    if (!moving)
     {
+      // Idle light debt: starve remesh so relight/MarkRelit can finish.
       mesh_schedule = std::min(mesh_schedule, 8);
       mesh_drain = std::min(mesh_drain, last_frame_ms <= 16.0 ? 10 : 6);
-    }
-    else if (!moving)
-    {
-      mesh_drain = std::max(mesh_drain, 14);
-      mesh_schedule = std::max(mesh_schedule, 12);
     }
     else
     {
@@ -847,9 +937,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   else if (idle_recovery && async_saturated_idle)
   {
-    sync_cap = std::max(sync_cap, 1);
-    mesh_drain = std::max(mesh_drain, 18);
-    mesh_schedule = std::max(mesh_schedule, 14);
+    sync_cap = std::max(sync_cap, last_frame_ms > 20.0 ? 2 : 4);
+    mesh_drain = std::max(mesh_drain, 28);
+    mesh_schedule = std::max(mesh_schedule, 22);
   }
   else if (idle_recovery && black_sticky > 0 && last_frame_ms <= 16.0)
   {
@@ -907,9 +997,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       world.GetBlockWorld(), registry, mesh_drain, mesh_schedule,
       /*force_sync=*/false, sync_cap, sync_budget_ms);
   mesh_service.DrainAsyncMeshResults(world.GetBlockWorld(), registry, mesh_drain);
-  if (tick_stats.Completed > 0 || tick_stats.SyncRebuilt > 0)
+  if (tick_stats.Completed > 0 || tick_stats.SyncRebuilt > 0 ||
+      (!moving && pending_focus_count > 0))
   {
-    world.DrainColumnWork(focus_ground_horiz, focus_radius, 12);
+    world.DrainColumnWork(focus_ground_horiz, focus_radius,
+                          idle_recovery ? 24 : 12);
   }
 
 #ifndef NDEBUG

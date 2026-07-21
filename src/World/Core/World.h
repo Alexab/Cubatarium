@@ -906,8 +906,6 @@ public:
   bool IsColumnVisualReadyForRing(glm::ivec3 ground) const;
   /// Strict visible contract: no pending light, stable mesh, render-safe column.
   bool IsColumnRenderReady(glm::ivec3 ground) const;
-  /// Recovery/telemetry band: player altitude ∪ sea (matches mesh emerge band).
-  bool IsColumnRenderReadyInVisualBand(glm::ivec3 ground) const;
   /// Focus columns that are loaded but not yet safe to render.
   int CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
                                 int radius_chunks) const;
@@ -916,9 +914,6 @@ public:
   /// Centralized focus-ring drain used by streaming and mesh emerge.
   int DrainColumnWork(glm::ivec3 focus_ground_horiz, int radius_chunks,
                       int clear_pending_budget);
-  /// Idle stop: async-only promote/admit/remesh-mark (no sync relight/remesh).
-  int DrainIdleFocusVisualWork(glm::ivec3 focus_ground_horiz, int radius_chunks,
-                               int budget);
   /// Idle sync relight for focus pending columns that already have preview mesh.
   int DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
                                  int radius_chunks, int max_columns);

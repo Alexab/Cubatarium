@@ -261,8 +261,9 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               std::max(std::abs(coord.x - focus_ground.x),
                        std::abs(coord.z - focus_ground.z));
           const bool underfeet = horiz <= 1;
-          // Sync seed only underfeet at commit — near_focus sync relight spiked
-          // autofly wall to 1280ms+ (perf_174144). Ingress uses async + idle drain.
+          // Sync seed only underfeet — full-ring sync at commit spiked wall to
+          // multi-second during autofly ingress. Outer ring uses async relight
+          // with idle promote / partial CanSeedSkylight when neighbors allow.
           const bool seed_skylight_now =
               underfeet && world.CanSeedSkylightAtCommit(ground);
           const bool relight_priority =
