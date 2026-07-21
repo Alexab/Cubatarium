@@ -114,130 +114,48 @@ stateDiagram-v2
 - sync relight flood как универсальный recovery;
 - preview mesh до завершения света.
 
-## Статус (2026-07-21)
+## Статус (2026-07-21, после Era 11)
 
-### Сделано (коммит `ee54b86d` + follow-up)
+### Evidence regress
+
+`perf_181020` (HEAD `fba28746`): stop `not_ready_end=90`, `black_sticky=32`,
+`pending_med=53`, `dirty→705`, `relight≈0.027`, gates_stop **2/9**.
+
+Last-good: `2cb85f3c` / `perf_165208` — sticky=0, pending→0, not_ready≈25
+(только lit-but-dirty).
+
+### Системный план (исполнение)
+
+Порядок: **H** anti-hang harness → **D** docs → **R** revert×4 → **V2a**
+RenderReady → **V2b** single owner → **V3** async seed → **F** final gates.
+Каждая фаза: autofly + `flight_sim_phase_gate.py` → git commit.
+
+`DrainIdleFocusVisualWork` / R15–R18 — **не** целевое решение; после revert
+baseline = `2cb85f3c` + anti-hang.
+
+### Harness & hang
+
+- `tools/flight_sim_run.py`: preflight/postflight `taskkill`, process-timeout,
+  `hang_killed` в report, `flight_sim_phase_history.jsonl`.
+- Flight-sim: report **до** `PrepareForShutdownFast()` (короткие joins).
+- `tools/flight_sim_phase_gate.py`: go/no-go по phase-id.
+
+### Фазы (checklist сброшен к post-`2cb85f3c`)
 
 | Фаза | Статус | Примечание |
 |------|--------|------------|
-| 0 Документация | ✅ | `docs/streaming/*` |
-| 1 Visual contract | ⚠️ частично | `visual_holes`/`unfinished_visual` в perf; preview при PendingLight оставлен |
-| 2 Focus drain | ⚠️ частично | `DrainColumnWork`, idle при `pending>0`, promote/sync helpers |
-| 3 Skylight seed | ⚠️ частично | partial `CanSeedSkylightAtCommit` (3/4 cardinals); sync seed только underfeet |
-| 4 Unified flow | ⚠️ частично | helpers есть, recovery zoo не свёрнут |
-| 5 Harness | ⚠️ частично | `--manual-idle`, `analyze_manual_idle.py` |
+| 0 Документация | ✅ Era 11 | этот апдейт |
+| H Anti-hang | ✅ | `7c487c83` |
+| R Revert regress | ⏳ | next |
+| 1 Visual contract V2a | ⏳ | запрет preview, draw gate |
+| 2 Single owner V2b | ⏳ | без Refresh flood |
+| 3 Skylight seed V3 | ⏳ | async budgeted |
+| 5 Harness gates F | ⏳ | sticky=0, pending→0, not_ready falling |
 
-## Системное решение (2026-07-21 вечер)
+### Anti-Patterns (не возвращать)
 
-**Корневая ошибка последних итераций:** «recovery zoo» — десятки watchdog-веток (sync relight, sync remesh ±1cy, Refresh flood, admit×8/кадр) **конкурировали** друг с другом. Sync пути давали spike 500–620 ms, Refresh раздувал Dirty, а `IsColumnRenderReady` проверял **всю колонку до bedrock**, тогда как recovery чинил только узкую полосу.
-
-**Контракт:**
-
-| Слой | Метрика / API | Назначение |
-|------|----------------|------------|
-| Draw gate | `IsColumnRenderReady` | строгий (вся колонка) |
-| Recovery / perf | `IsColumnRenderReadyInVisualBand` | player ∪ sea band |
-| Idle drain | `DrainIdleFocusVisualWork` | **только async**: promote, admit×3, refresh-mark×3 |
-| Запрет | sync relight/remesh в idle | кроме underfeet holes |
-
-**Autofly `perf_174144` (промежуточная сборка):** pending=0 ✅, not_ready=63 ❌, stop wall~310 ❌ (near_focus sync seed откатан).
-
-### Ручной пролёт `perf_20260721-173123` (после `9f5de9eb`)
-
-| Метрика | Значение |
-|---------|----------|
-| stop `wall_ms` med | **172→420** (хуже) |
-| `pending` | 0, `not_ready` **74** |
-| spikes | **620 ms** emerge=601 |
-| Диагноз | sync full-column + admit flood; последняя правка ухудшила FPS |
-
-**Фикс:** `DrainIdleFocusVisualWork`, visual-band contract, без sync idle paths.
-
-### Ручной пролёт `perf_20260721-171507` (после `675635a3`)
-
-| Метрика | Значение |
-|---------|----------|
-| stop `pending` | **0** (relight прошёл) |
-| `not_ready` | **76 застрял** (+22 vs начало idle) |
-| `dirty` | **650→760** (рост при «работе») |
-| `wall_ms` med | **132** (было 68) — хуже |
-| spikes | **620ms** emerge=601 (sync remesh) |
-| Диагноз | sync ±1cy не закрывает `IsColumnRenderReady`; Refresh раздувает Dirty |
-
-**Фикс:** full-band sync только dirty slices, без Refresh flood; убран sync-relight rescue.
-
-### Ручной пролёт `perf_20260721-170357` (после `9c51dae2`)
-
-| Метрика | Значение |
-|---------|----------|
-| `pending_cols` | полоса **z=21** (x −532…−525), 4 чанка позади focus z=25 |
-| stop `pending_focus` | **застрял на 25** ~26+ с |
-| `focus_not_render_ready` | **73** (не падает) |
-| `relight_drain_ms` | **~0.024** (FIFO stall) |
-| `mesh_emerge_ms` @ idle | **7–14** при wall~22 (mesh намеренно задушен) |
-| Диагноз | ingress **pending light**, не lit-but-dirty; `idle_light_debt_only` cap + sync только при pending≤5 |
-
-**Фикс (`pending plateau`):** sync outer ring при pending≥12, plateau watchdog, rescue без gate frame_ms, mesh drain floor при pending>15.
-
-### Ручной пролёт `perf_20260721-165208` (после `2cb85f3c`)
-
-| Метрика | Значение |
-|---------|----------|
-| `focus_not_render_ready` stop | **25** (при `pending=0`, `sticky=0`) |
-| `unfinished_visual` | совпадает с `not_ready` ✅ |
-| `focus_pending_dark` stop | 0 (свет в данных готов) |
-| `dirty` stop | **95–541** (remesh backlog) |
-| Диагноз | **lit-but-dirty**: relight прошёл, GreedyMesh не обновлён |
-
-### Ручной пролёт `perf_20260721-155539` (~90 с)
-
-| Метрика | Было (до fix) | Стало |
-|---------|---------------|-------|
-| `visual_holes` | 0 | **0** ✅ |
-| `pending` stop tail | ~5 плато | **2** (лучше, не 0) |
-| `relight_drain_ms` stop | ~0 | **~0.02** ❌ stall |
-| `dirty_med` | ~560 | **~427** (лучше) |
-| sync spikes | — | **3–7 с** (DrainIdleFocusPendingLightSync) |
-
-Вывод: mesh-контракт держится; light debt снижается, но **последние 2–5 колонок** и **relight FIFO stall** остаются.
-
-### Осталось (приоритет)
-
-**P0 — Системный idle drain (текущий)**
-
-- [x] `IsColumnRenderReadyInVisualBand` + `DrainIdleFocusVisualWork`
-- [x] Убран sync idle zoo (plateau, stale_full_sync, admit×8)
-- [ ] Autofly/manual: `not_ready` падает при stop, `wall_ms` stop &lt;50
-- [ ] Gate `post_stop_not_ready_falling` в analyzer
-
-**P0 — Чёрные чанки при stop (lit-but-dirty remesh)**
-
-- [x] `focus_not_render_ready` / render-contract `unfinished_visual` (коммит `2cb85f3c`)
-- [x] Ручной `perf_20260721-165208`: при `pending→0` остаётся `not_ready≈25`, `sticky=0`, `dirty≈95`
-- [x] `idle_stale_remesh`: idle_stop + `RefreshIdleFocusGreedyRemesh` + sync без sticky gate
-- [x] MarkRelit: full-focus sticky при idle
-- [ ] Проверить: stop tail `not_ready→0` за &lt;30 с при `wall&lt;30`
-
-**P0 — Relight stall при малом pending**
-
-- [x] `pending_cols` в perf jsonl + glog `visual_holes` отдельно от `holes`
-- [x] Stall watchdog: empty FIFO + no inflight → re-promote + `ClearPendingLightAfterMeshCommitted`
-- [ ] Проверить на следующем manual: `pending→0`, `relight_drain>0` при stop
-
-**P0 — Sync relight без спайков**
-
-- [x] Sync только при `pending 2–5`, `wall≤16ms`, 1 col / 60 frames
-- [ ] Если спайки остаются — убрать sync path, только async + MarkRelit flush
-
-**P1 — Dirty idle cap**
-
-- [ ] При `visual_holes=0` starve far remesh сильнее → `dirty_med < 300` @ idle
-
-**P1 — Quit path**
-
-- [ ] Quiesce перед save, perf `kind=shutdown`, не генерировать frontier при exit
-
-**P2 — Harness**
-
-- [ ] Autofly resume в manual-зону с движением `chunks_traveled≥3`
-- [ ] Gate: `healthy_unfinished_rate` при `wall<30` и `pending≤5`
+- `empty mesh == hole` глобально
+- `MarkDirty` всего focus ring на idle tick (R15)
+- sync relight/remesh flood (R10, R16, R17)
+- preview mesh до завершения света (R5)
+- async-only drain без ownership/throughput (R18)

@@ -150,6 +150,11 @@ flowchart TD
 | `AdmitFocusLightingWithoutDirty` | recover trail columns | размазывает ownership |
 | `AdmitFocusVisibleMissing` | pure missing recovery | конкурирует с starve |
 | `ClearPendingLightAfterMeshCommitted` | pending->renderready cleanup | зависит от mesh drain cadence |
+| `RefreshIdleFocusGreedyRemesh` | focus scan MarkDirty | **не primary** — R15 dirty flood |
+| `DrainIdleFocusVisualWork` (fba28746) | async-only zoo collapse | **неудавшийся V1-patch** (R18) без throughput |
+
+**Primary path должен быть один:** MarkRelit → Dirty → AsyncMesh, плюс один
+bounded idle drain owner. Refresh/Admit×N не являются primary.
 
 Главный вывод: проблема не в том, что recovery paths существуют, а в том, что
 они распределяют ownership одной и той же колонки между несколькими

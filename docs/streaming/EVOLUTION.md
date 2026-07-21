@@ -220,7 +220,24 @@
 - На stop still возможна связка: `mesh есть`, `visual_holes=0`, `pending_light`
   не уходит к нулю, картинка тёмная.
 
-## Каталог Решений R1-R14
+## Эра 11. Июль 21 вечер: Regress Window И Откат К Last-Good
+
+Коммиты после `2cb85f3c` (align unfinished_visual) дали полный регресс:
+
+| Commit | Claimed | Evidence |
+|--------|---------|----------|
+| `2cb85f3c` | unfinished = render-ready | `perf_165208`: sticky=0, pending→0, not_ready≈25 (lit-but-dirty) |
+| `9c51dae2` | idle stale remesh | not_ready=73, pending stall |
+| `675635a3` | plateau sync-relight | wall↑, spike 620ms |
+| `9f5de9eb` | full-band sync remesh | wall 172→420 |
+| `fba28746` | unified async idle drain | `perf_181020`: not_ready=90, sticky=32, pending=53, dirty→705 |
+
+Урок: competing recovery (sync remesh, Refresh flood, async-only без throughput)
+чинит один симптом и раздувает соседний. Last-good для системного V2→V3 —
+`2cb85f3c`. Harness anti-hang (`7c487c83`): preflight kill, process-timeout,
+report-before-shutdown, `PrepareForShutdownFast`.
+
+## Каталог Решений R1-R18
 
 | ID | Решение | Когда | Почему не стало финалом |
 |----|---------|-------|--------------------------|
@@ -238,6 +255,10 @@
 | `R12` | watchdog zoo | июль | complexity / ghost state |
 | `R13` | pressure G/Y/R | июль | holes != light debt |
 | `R14` | ghost promote fix | 21.07 | partial fix only |
+| `R15` | idle Refresh / stale remesh flood | 21.07 | dirty↑, mesh thrash |
+| `R16` | plateau sync-relight | 21.07 | wall spikes, not_ready↑ |
+| `R17` | full-band sync remesh | 21.07 | wall 172→420 |
+| `R18` | unified async drain без ownership | 21.07 | sticky=32, not_ready=90 |
 
 ## Матрица Проблем И Уроков
 

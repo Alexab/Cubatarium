@@ -17,8 +17,14 @@
 | Skylight source seeding from top / neighbor context | Starlight, Minecraft lighting optimizations | relight обычно стартовал после commit как отдельный шаг | высокий |
 | Do not propagate into not-yet-ready chunks | Starlight | trail columns могли долго жить в backlog | высокий |
 | Dirty-only rebuild with bounded budget | common chunk managers | есть, но смешивался с starvation heuristics | средний |
-| Separate visibility contract from render contract | typical production engines | `visual_holes` и фактическая картинка расходились | критический |
-| Single owner for column lifecycle | explicit job graphs | ownership размазан между watcher paths | высокий |
+| Separate visibility contract from render contract | typical production engines | `visual_holes` vs unfinished/black sticky; gap закрывается V2a | критический |
+| Single owner for column lifecycle | explicit job graphs | ownership размазан (Admit/Recover/Refresh/Drain) — V2b | высокий |
+
+## Gap После Era 11
+
+- Preview mesh при `PendingLight` всё ещё возможен (R5).
+- Draw не гейтится `RenderReady`.
+- R15–R18 подтверждены логами `perf_165208…181020`; откат к `2cb85f3c` обязателен перед V2.
 
 ## Что Совпадает С Industry
 

@@ -5,8 +5,8 @@
 
 ## Документы
 
-- `EVOLUTION.md` — полная эволюция streaming/light/mesh, 10 эр, ключевые
-  коммиты и повторяющиеся регрессии.
+- `EVOLUTION.md` — полная эволюция streaming/light/mesh, 11 эр, ключевые
+  коммиты и повторяющиеся регрессии (включая Era 11 / R15–R18).
 - `ARCHITECTURE_OPTIONS.md` — принципиально разные варианты архитектуры и
   decision matrix.
 - `BEST_PRACTICES.md` — сравнение Cubatarium с индустриальными практиками
@@ -14,7 +14,7 @@
 - `IMPLEMENTATION_PLAN.md` — целевая архитектура, фазы реализации и критерии
   приёмки.
 
-## Текущий pipeline
+## Текущий pipeline (до V2)
 
 ```mermaid
 flowchart LR
@@ -26,12 +26,10 @@ flowchart LR
   Dirty --> Mesh[AsyncMeshBuilder]
   Mesh --> Draw[Greedy draw]
   Commit -.-> Pending[PendingLightBeforeMesh]
-  Pending -.-> Draw
 ```
 
-Проблема текущего пути: колонка может быть уже видима как mesh, но ещё не
-быть визуально готовой, потому что baked skylight/blocklight не дошёл до
-рендерного результата.
+Проблема: draw возможен при `PendingLight` (preview mesh), поэтому
+`visual_holes=0` не означает готовность картинки.
 
 ## Целевой pipeline
 
@@ -47,3 +45,4 @@ flowchart LR
 ```
 
 Целевой инвариант: `видимое = RenderReady`, а не просто `mesh существует`.
+PendingLight не должен вести в Draw.
