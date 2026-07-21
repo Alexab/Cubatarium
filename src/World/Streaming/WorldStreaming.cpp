@@ -367,14 +367,21 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   world.PhysicsTelemetryData.StreamPressure =
       static_cast<int>(LastPressureCaps.level);
   world.PhysicsTelemetryData.PendingLightFocus = pending_light_focus;
-  const int dark_preview =
-      world.CountBlackStickyFocusMeshes(focus_ground, focus_radius) +
+  const int sticky_remesh =
+      world.CountBlackStickyFocusMeshes(focus_ground, focus_radius);
+  const int pending_dark =
       world.CountPendingDarkFocusMeshes(focus_ground, focus_radius);
+  const int dark_preview = sticky_remesh + pending_dark;
+  const int not_render_ready =
+      world.CountUnfinishedVisualNear(focus_horiz, focus_radius);
+  world.PhysicsTelemetryData.FocusStickyRemesh = sticky_remesh;
+  world.PhysicsTelemetryData.FocusPendingDark = pending_dark;
   world.PhysicsTelemetryData.FocusDarkMesh = dark_preview;
+  world.PhysicsTelemetryData.FocusNotRenderReady = not_render_ready;
   world.PhysicsTelemetryData.FocusMissingMesh = missing_near ? 1 : 0;
   world.PhysicsTelemetryData.VisualHoles = missing_near ? 1 : 0;
-  world.PhysicsTelemetryData.UnfinishedVisual =
-      (missing_near ? 1 : 0) + dark_preview;
+  // Render contract: lit-but-dirty remesh counts even when pending=0.
+  world.PhysicsTelemetryData.UnfinishedVisual = not_render_ready;
   world.PhysicsTelemetryData.LightDebt = pending_light_focus > 0 ? 1 : 0;
   world.PhysicsTelemetryData.NearFocusHoles =
       (missing_near || pending_light_focus > 0 || dark_preview > 0) ? 1 : 0;

@@ -161,6 +161,9 @@ struct FrameNumbers
   int light_debt{0};
   int focus_missing_mesh{0};
   int focus_dark_mesh{0};
+  int focus_pending_dark{0};
+  int focus_sticky_remesh{0};
+  int focus_not_render_ready{0};
   std::string pending_cols;
   double max_wall_ms{0.0};
   double max_stream_ms{0.0};
@@ -242,6 +245,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.light_debt = phys.LightDebt;
   n.focus_missing_mesh = phys.FocusMissingMesh;
   n.focus_dark_mesh = phys.FocusDarkMesh;
+  n.focus_pending_dark = phys.FocusPendingDark;
+  n.focus_sticky_remesh = phys.FocusStickyRemesh;
+  n.focus_not_render_ready = phys.FocusNotRenderReady;
   n.pending_cols = phys.PendingFocusCols;
   return n;
 }
@@ -303,7 +309,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"light_debt\":" << n.light_debt
           << ",\"focus_missing_mesh\":" << n.focus_missing_mesh
           << ",\"focus_dark_mesh\":" << n.focus_dark_mesh
-          << ",\"black_sticky\":" << n.focus_dark_mesh
+          << ",\"focus_pending_dark\":" << n.focus_pending_dark
+          << ",\"focus_sticky_remesh\":" << n.focus_sticky_remesh
+          << ",\"focus_not_render_ready\":" << n.focus_not_render_ready
+          << ",\"black_sticky\":" << n.focus_sticky_remesh
           << ",\"pending_cols\":\"" << n.pending_cols << "\""
           << ",\"max_wall_ms\":" << n.max_wall_ms
           << ",\"max_stream_ms\":" << n.max_stream_ms
@@ -335,6 +344,10 @@ void LogLine(const FrameNumbers &n, const char *kind, int frames,
       << " pending_light_focus=" << n.pending_light_focus
       << " focus=(" << n.focus_cx << "," << n.focus_cz << ")"
       << " underfeet=" << n.underfeet_need << " visual_holes=" << n.visual_holes
+      << " unfinished=" << n.unfinished_visual
+      << " not_render_ready=" << n.focus_not_render_ready
+      << " pending_dark=" << n.focus_pending_dark
+      << " sticky=" << n.focus_sticky_remesh
       << " holes=" << n.near_focus_holes;
   if (!n.pending_cols.empty())
   {

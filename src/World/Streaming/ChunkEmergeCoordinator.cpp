@@ -270,8 +270,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // visual_holes = missing mesh only; near_focus_holes kept for legacy paths
   // that still want light-debt urgency for relight (not starve).
   const bool visual_holes = missing_visible_mesh;
+  const int focus_not_render_ready =
+      world.CountUnfinishedVisualNear(focus_ground_horiz, focus_radius);
   const bool unfinished_visual =
-      visual_holes || world.CountPendingDarkFocusMeshes(focus_ground, focus_radius) > 0;
+      visual_holes || focus_not_render_ready > 0;
   const bool near_focus_holes = visual_holes || pending_near_light;
   const bool missing_underfeet =
       mesh_service.HasMissingGreedyMeshInHorizontalRadius(
@@ -732,7 +734,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // whole ring while visual_holes=1 for the entire stop.
   const bool idle_focus_sync =
       !moving &&
-      (missing_visible_mesh || black_sticky > 0 ||
+      (missing_visible_mesh || black_sticky > 0 || focus_not_render_ready > 0 ||
        (last_frame_ms <= 20.0 && pending_focus_count > 8));
   if (underfeet_need || idle_focus_sync)
   {

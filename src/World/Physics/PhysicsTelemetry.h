@@ -78,6 +78,11 @@ struct PhysicsTelemetry
   int FocusMissingMesh{0};
   /// Count of focus columns with mesh but no sky light sample.
   int FocusDarkMesh{0};
+  /// Pending-light + sticky black preview columns in focus (subset of dark).
+  int FocusPendingDark{0};
+  int FocusStickyRemesh{0};
+  /// Focus columns failing IsColumnRenderReady (mesh dirty/missing/inflight).
+  int FocusNotRenderReady{0};
   /// 0=Green, 1=Yellow, 2=Red (StreamingPressureLevel).
   int StreamPressure{0};
   /// PendingLightBeforeMesh count inside focus radius (vs global PendingLightCount).
