@@ -283,6 +283,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     world.PruneStickyRemeshOutside(focus_ground_horiz, /*radius=*/1);
   }
+  else if (idle_remesh_debt || black_sticky > 4)
+  {
+    // Idle catch-up: sticky full-focus flood (manual 210341: 7→13) blocked
+    // ClearPending and inflated not_ready — keep underfeet only.
+    world.PruneStickyRemeshOutside(focus_ground_horiz, /*radius=*/1);
+  }
   // visual_holes = missing mesh only; near_focus_holes kept for legacy paths
   // that still want light-debt urgency for relight (not starve).
   const bool visual_holes = missing_visible_mesh;
@@ -329,16 +335,25 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
 
   {
     const URuntimeTuning &tune = URuntimeTuning::Get();
-    glm::vec2 fwd = world.GetLastMovementDirXz();
-    if (glm::length(fwd) < 0.01f)
+    // Idle lit-but-dirty: no view bias — camera turn must not gate remesh
+    // (manual 210341: progress only after yaw, then plateau again).
+    if (idle_remesh_debt)
     {
-      if (const auto camera = world.GetCurrentUserCamera())
-      {
-        const glm::vec3 front = camera->GetFront();
-        fwd = glm::vec2(front.x, front.z);
-      }
+      mesh_service.SetMeshForwardBias(0.0f, glm::vec2(0.0f));
     }
-    mesh_service.SetMeshForwardBias(tune.MeshForwardBiasK, fwd);
+    else
+    {
+      glm::vec2 fwd = world.GetLastMovementDirXz();
+      if (glm::length(fwd) < 0.01f)
+      {
+        if (const auto camera = world.GetCurrentUserCamera())
+        {
+          const glm::vec3 front = camera->GetFront();
+          fwd = glm::vec2(front.x, front.z);
+        }
+      }
+      mesh_service.SetMeshForwardBias(tune.MeshForwardBiasK, fwd);
+    }
   }
   int mesh_drain = LastBudget.MaxMeshDrain;
   int mesh_schedule = LastBudget.MaxMeshSchedule;

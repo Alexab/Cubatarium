@@ -38,6 +38,8 @@ struct PhysicsTelemetry
   uint64_t AsyncRelightInflight{0};
   uint64_t RelightDiscardedLate{0};
   uint64_t MeshDiscardedLate{0};
+  /// ApplyMeshResult rejected as stale (revision mismatch) — remesh thrash signal.
+  uint64_t MeshApplyStale{0};
   double RelightCompletedPerSec{0.0};
   double CommitPhysicsMs{0.0};
   double CommitRelightMs{0.0};

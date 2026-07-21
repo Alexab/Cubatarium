@@ -90,6 +90,7 @@ public:
   double GetLastMeshSnapshotMs() const { return LastMeshSnapshotMs; }
   int GetAsyncInFlightCount() const;
   uint64_t GetMeshDiscardedLateCount() const;
+  uint64_t GetMeshApplyStaleCount() const { return MeshApplyStaleCount; }
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
   bool HasMissingGreedyMeshInHorizontalRadius(const UBlockWorld &world,
@@ -271,6 +272,7 @@ private:
   double LastFlatRebuildMs{0.0};
   double LastMeshSyncMs{0.0};
   double LastMeshSnapshotMs{0.0};
+  uint64_t MeshApplyStaleCount{0};
   std::chrono::steady_clock::time_point LastFlatRebuildAt{};
   bool PendingMeshRevisionBump{false};
   UChunkMeshRevisionRegistry MeshRevisions;

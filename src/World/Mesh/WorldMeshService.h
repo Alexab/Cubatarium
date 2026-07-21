@@ -99,6 +99,7 @@ public:
   size_t GetDirtyCount() const;
   int GetAsyncInFlightCount() const;
   uint64_t GetMeshDiscardedLateCount() const;
+  uint64_t GetMeshApplyStaleCount() const;
   double GetLastFlatRebuildMs() const;
   double GetLastMeshSyncMs() const;
   double GetLastMeshSnapshotMs() const;

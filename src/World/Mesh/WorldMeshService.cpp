@@ -390,6 +390,11 @@ uint64_t UWorldMeshService::GetMeshDiscardedLateCount() const
   return Cache.GetMeshDiscardedLateCount();
 }
 
+uint64_t UWorldMeshService::GetMeshApplyStaleCount() const
+{
+  return Cache.GetMeshApplyStaleCount();
+}
+
 double UWorldMeshService::GetLastFlatRebuildMs() const
 {
   return Cache.GetLastFlatRebuildMs();

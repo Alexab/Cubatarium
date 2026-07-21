@@ -622,6 +622,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetRelightDiscardedLateCount();
     world.PhysicsTelemetryData.MeshDiscardedLate =
         world.GetMeshDiscardedLateCount();
+    world.PhysicsTelemetryData.MeshApplyStale =
+        world.GetMeshService().GetMeshApplyStaleCount();
     if (Streamer)
     {
       const int v = Streamer->GetVisualRenderDistance();

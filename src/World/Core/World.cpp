@@ -877,19 +877,15 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
         const int horiz = std::max(std::abs(key.x - focus_chunk.x),
                                    std::abs(key.y - focus_chunk.z));
-        // Cruise: only track underfeet sticky (full focus floods telemetry and
-        // ClearPending cannot keep up). Idle stop tracks full focus radius.
+        // Cruise: only track underfeet sticky. Idle: never expand sticky ring —
+        // async-saturated insert of full focus made sticky 7→13 while Dirty
+        // remesh thrash left not_ready climbing (manual 210341).
         const bool idle =
             LastMovementSpeed <= ProceduralTemplate.MovementPrefetchThreshold;
-        // Idle: skip sticky insert when async not saturated — Dirty remesh is
-        // the recovery path; inserting every MarkRelit column made sticky
-        // climb 0→17 while SyncIdle was hitch-gated (iter20 stop).
-        const int async_n =
-            MeshService ? MeshService->GetAsyncInFlightCount() : 0;
         const int pending_n =
             static_cast<int>(PendingLightBeforeMesh.size());
         const int sticky_r =
-            idle ? (async_n >= 28 ? GetStreamingFocusRadius() : 1)
+            idle ? 1
                  : (pending_n > 10 ? GetStreamingFocusRadius() : 1);
         if (horiz <= sticky_r)
         {

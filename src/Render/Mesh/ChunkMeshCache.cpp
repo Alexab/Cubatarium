@@ -642,7 +642,15 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
   {
     return;
   }
-  BumpChunkMeshRevision(chunkCoord);
+  // Never bump while a build is tracked in Active: Capture already froze
+  // world state; bumping each MarkDirty caused Apply stale storms
+  // (async≈42, dirty flat, Δstale thousands/stop). Re-Dirty alone requeues
+  // a fresh Capture after Apply succeeds.
+  if (ActiveMeshSourceRevision.find(chunkCoord) ==
+      ActiveMeshSourceRevision.end())
+  {
+    BumpChunkMeshRevision(chunkCoord);
+  }
   // Do not InvalidateFluidSurface here: full-column remesh calls MarkDirty for
   // every cy×seam and kept fluid_map_dirty permanently high (100+), burning
   // 100–500ms/frame. Fluid map is invalidated once per column on gen/light.
@@ -652,14 +660,12 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 }
 void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
 {
-  // Re-prioritizing an already-dirty, not-in-flight chunk must NOT bump:
-  // Flush/shore used to bump every call and invalidate in-flight builds →
-  // ApplyMeshResult stale → MarkDirtyPriority bump again → Dirty plateau.
+  // Re-prioritize / re-queue: bump only when not already building. Blind bump
+  // on !existed (Dirty cleared at schedule) invalidated every generation.
   const bool existed = Dirty.Contains(chunkCoord);
-  const bool inflight =
-      AsyncBuilder && AsyncBuilder->IsInFlight(chunkCoord);
   Dirty.MarkDirtyPriority(chunkCoord);
-  if (!existed || inflight)
+  if (!existed && ActiveMeshSourceRevision.find(chunkCoord) ==
+                      ActiveMeshSourceRevision.end())
   {
     BumpChunkMeshRevision(chunkCoord);
   }
@@ -1002,9 +1008,10 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       result.sourceRevision != expected_revision)
   {
     ActiveMeshSourceRevision.erase(revisionIt);
-    // Revision already reflects newer data (the bump that invalidated this
-    // result). Re-queue without bumping again — another bump caused a
-    // permanent Dirty+async thrash at pipeline depth.
+    // Stale result: re-queue WITHOUT bumping revision. MarkDirtyPriority used
+    // to bump when !existed and restart the invalidate→stale loop (idle
+    // async=42 + dirty flat, manual 210341).
+    ++MeshApplyStaleCount;
     Dirty.MarkDirtyPriority(result.coord);
     InstancesDirty = true;
     GreedyBatchesDirty = true;

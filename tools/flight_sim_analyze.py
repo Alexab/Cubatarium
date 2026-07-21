@@ -253,6 +253,8 @@ def analyze(
     pending_full = col(stop_segment, "pending_light_focus")
     focus_dirty_full = col(stop_segment, "focus_dirty_chunks")
     focus_dirty_tail = col(stop_tail, "focus_dirty_chunks")
+    mesh_stale_full = col(stop_segment, "mesh_apply_stale")
+    mesh_discard_full = col(stop_segment, "mesh_discarded_late")
     stop_not_ready_delta = None
     if len(not_ready_full) >= 2:
         stop_not_ready_delta = not_ready_full[-1] - not_ready_full[0]
@@ -268,6 +270,14 @@ def analyze(
     stop_focus_dirty_delta = None
     if len(focus_dirty_full) >= 2:
         stop_focus_dirty_delta = focus_dirty_full[-1] - focus_dirty_full[0]
+    stop_mesh_apply_stale_delta = None
+    if len(mesh_stale_full) >= 2:
+        stop_mesh_apply_stale_delta = mesh_stale_full[-1] - mesh_stale_full[0]
+    stop_mesh_discarded_late_delta = None
+    if len(mesh_discard_full) >= 2:
+        stop_mesh_discarded_late_delta = (
+            mesh_discard_full[-1] - mesh_discard_full[0]
+        )
 
     # Manual 083042: pendf stuck ~40 for ~30s while wall~22–30 and holes=0.
     stop_wall = col(stop_segment, "wall_ms")
@@ -364,6 +374,8 @@ def analyze(
         "stop_pending_delta": stop_pending_delta,
         "stop_not_ready_delta": stop_not_ready_delta,
         "stop_focus_dirty_delta": stop_focus_dirty_delta,
+        "stop_mesh_apply_stale_delta": stop_mesh_apply_stale_delta,
+        "stop_mesh_discarded_late_delta": stop_mesh_discarded_late_delta,
         "stop_recovery_ok": stop_recovery_ok,
     }
 
@@ -406,6 +418,8 @@ def analyze(
             "post_stop_focus_dirty_med": post_stop_focus_dirty_med,
             "post_stop_focus_dirty_end": post_stop_focus_dirty_end,
             "stop_focus_dirty_delta": stop_focus_dirty_delta,
+            "stop_mesh_apply_stale_delta": stop_mesh_apply_stale_delta,
+            "stop_mesh_discarded_late_delta": stop_mesh_discarded_late_delta,
             "stop_segment_periods": len(stop_segment),
             "stop_tail_periods": len(stop_tail),
         "stop_pending_plateau_sec": stop_pending_plateau_sec,
