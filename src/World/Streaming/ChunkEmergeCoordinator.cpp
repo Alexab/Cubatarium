@@ -1,4 +1,5 @@
 #include "World/Streaming/ChunkEmergeCoordinator.h"
+#include "World/Streaming/MeshLitGate.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Camera/Camera.h"
 #include "World/Chunks/ChunkManager.h"
@@ -127,9 +128,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const glm::ivec3 focus_ground_horiz(focus_ground.x, 0, focus_ground.z);
   const int focus_radius = world.GetStreamingFocusRadius();
   mesh_service.SetMeshRebuildFocus(focus_ground_horiz, focus_radius);
-  // Soft-defer: remesh of existing while PendingLight waits MarkRelit.
-  // First missing mesh allowed anywhere in focus (prevents empty flight strips
-  // while light lags). Outside focus first mesh waits MayMesh/LitReady.
+  // Soft-defer / V2a: no first-mesh or remesh while PendingLight except underfeet.
   mesh_service.SetDeferMeshUntilLitFn(
       [&world, &mesh_service, focus_ground_horiz,
        focus_radius](glm::ivec3 chunk_coord)
@@ -137,22 +136,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const int horiz =
             std::max(std::abs(chunk_coord.x - focus_ground_horiz.x),
                      std::abs(chunk_coord.z - focus_ground_horiz.z));
-        if (horiz <= 1)
-        {
-          return false;
-        }
+        const bool underfeet = horiz <= 1;
         const bool pending = world.IsPendingLightBeforeMesh(
             glm::ivec2(chunk_coord.x, chunk_coord.z));
-        if (mesh_service.HasGreedyMesh(chunk_coord))
-        {
-          return pending;
-        }
-        if (horiz <= focus_radius)
-        {
-          return false;
-        }
+        const bool has_mesh = mesh_service.HasGreedyMesh(chunk_coord);
+        const bool in_focus = horiz <= focus_radius;
         const glm::ivec3 ground(chunk_coord.x, 0, chunk_coord.z);
-        return !world.MayMeshColumn(ground, /*underfeet_preview=*/false);
+        const bool may_mesh =
+            world.MayMeshColumn(ground, /*underfeet_preview=*/false);
+        return SoftDeferMeshUntilLitPolicy(underfeet, has_mesh, pending,
+                                           in_focus, may_mesh);
       });
 
   const bool missing_visible_mesh =
@@ -199,62 +192,28 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       --idle_cancel_cooldown;
     }
-    // Do NOT call RecoverStickyBlackFocusSync here — sync RelightColumnWithFrontier
-    // caused mesh_emerge/wall 1300–1980ms on stop (iter23). Light via Promote
-    // + bg_budget; remesh via narrow SyncIdleFocusGreedyRemesh.
-    static int sticky_sync_cooldown = 0;
-    (void)sticky_sync_cooldown;
-    sticky_sync_cooldown = 0;
-    static int idle_refresh_cooldown = 0;
-    // Narrow-band SyncIdle: full sea band caused mesh_emerge 500–740ms.
-    // Also drain focus columns missed on approach (pending Lighting without
-    // Dirty, or missing mesh) — previously only sticky/missing telemetrics
-    // opened this path, so trail neighbors never filled while standing.
-    const bool idle_mesh_debt =
-        pending_focus_count > 0 || missing_visible_mesh || black_sticky > 0;
-    if (async_saturated_idle || idle_mesh_debt)
+    // V2b: single bounded idle drain — no SyncIdle flood, no Admit×8, no Refresh.
+    static int idle_visual_drain_cd = 0;
+    if (idle_visual_drain_cd <= 0 && last_frame_ms <= 28.0)
     {
-      if (idle_refresh_cooldown <= 0)
+      const int budget = pending_focus_count > 20 ? 4 : 3;
+      world.DrainIdleFocusPendingLight(focus_ground_horiz, focus_radius, budget);
+      world.AdmitFocusVisibleMissing(std::min(2, budget));
+      if (pending_focus_count > 0)
       {
-        int sync_n = 0;
-        if (last_frame_ms <= 14.0)
-        {
-          sync_n = black_sticky > 8 ? 3 : (black_sticky > 0 ? 2 : 1);
-        }
-        else if (last_frame_ms <= 22.0)
-        {
-          sync_n = black_sticky > 0 ? 2 : 1;
-        }
-        else if (black_sticky > 0 || missing_visible_mesh)
-        {
-          sync_n = 1; // hitch: still drain sticky/missing slowly
-        }
-        if (sync_n > 0 && (black_sticky > 0 || async_saturated_idle))
-        {
-          world.SyncIdleFocusGreedyRemesh(sync_n);
-        }
-        if (missing_visible_mesh || pending_focus_count > 0)
-        {
-          // Burst admit while standing — neighbors left by the flight wedge
-          // need more than 2/frame or a 10s hover never catches up.
-          const int admit_n =
-              last_frame_ms <= 16.0 ? 8
-              : (last_frame_ms <= 28.0 ? 5 : 3);
-          world.AdmitFocusMeshIngress(admit_n);
-          world.AdmitFocusLightingWithoutDirty(admit_n);
-          world.AdmitFocusVisibleMissing(admit_n);
-        }
-        idle_refresh_cooldown =
-            last_frame_ms <= 14.0 ? 1 : (last_frame_ms <= 22.0 ? 2 : 3);
+        world.AdmitFocusMeshIngress(1);
       }
-      else
+      world.ClearPendingLightAfterMeshCommitted(8);
+      // Sync remesh only for sticky under hard wall budget (underfeet-class).
+      if (black_sticky > 0 && last_frame_ms <= 16.0)
       {
-        --idle_refresh_cooldown;
+        world.SyncIdleFocusGreedyRemesh(1);
       }
+      idle_visual_drain_cd = pending_focus_count > 15 ? 6 : 10;
     }
-    else
+    else if (idle_visual_drain_cd > 0)
     {
-      idle_refresh_cooldown = 0;
+      --idle_visual_drain_cd;
     }
   }
   else
@@ -712,18 +671,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     if (recover_now && recover_n > 0)
     {
       world.RecoverUnlitFocusMeshes(recover_n);
-      // Cruise: only Ingress when visual holes (pending alone used to flood
-      // Dirty every 4 frames). Stop/hover: full Admit trio for trail columns.
-      if (!moving && (unfinished_visual || pending_near_light))
+      // V2b: one Admit path — missing only; no LightingWithoutDirty flood.
+      if (!moving && (missing_visible_mesh || pending_near_light))
       {
-        const int admit_n = std::max(2, recover_n);
-        world.AdmitFocusMeshIngress(admit_n);
-        world.AdmitFocusLightingWithoutDirty(admit_n);
-        world.AdmitFocusVisibleMissing(admit_n);
+        world.AdmitFocusVisibleMissing(std::min(2, recover_n));
+        if (pending_focus_n > 0)
+        {
+          world.AdmitFocusMeshIngress(1);
+        }
       }
       else if (moving && visual_holes)
       {
-        world.AdmitFocusMeshIngress(std::min(3, std::max(2, recover_n)));
+        world.AdmitFocusMeshIngress(std::min(2, recover_n));
       }
       recover_watchdog_frames = 0;
     }

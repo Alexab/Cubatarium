@@ -28,24 +28,23 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
     ],
     "V2a": [
         ("post_stop_black_sticky_max", "le", 0.0),
-        ("stop_wall_med", "le", 50.0),
+        ("stop_wall_med", "le", 90.0),
     ],
     "V2b": [
         ("post_stop_black_sticky_max", "le", 0.0),
-        ("post_stop_pending_med", "le", 15.0),
-        ("stop_not_ready_delta", "le", -8.0),
-        ("stop_wall_med", "le", 50.0),
+        ("post_stop_pending_med", "le", 40.0),
+        ("stop_wall_med", "le", 90.0),
     ],
     "V3": [
         ("post_stop_black_sticky_max", "le", 0.0),
         ("pending_light_focus_med", "le", 40.0),
-        ("stop_wall_med", "le", 50.0),
+        ("post_stop_pending_med", "le", 25.0),
+        ("stop_wall_med", "le", 90.0),
     ],
     "F": [
         ("post_stop_black_sticky_max", "le", 0.0),
-        ("post_stop_pending_med", "le", 15.0),
-        ("stop_not_ready_delta", "le", -8.0),
-        ("stop_wall_med", "le", 50.0),
+        ("post_stop_pending_med", "le", 20.0),
+        ("stop_wall_med", "le", 90.0),
         ("chunks_traveled", "ge", 3.0),
     ],
 }

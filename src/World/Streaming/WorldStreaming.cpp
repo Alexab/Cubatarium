@@ -261,13 +261,13 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               std::max(std::abs(coord.x - focus_ground.x),
                        std::abs(coord.z - focus_ground.z));
           const bool underfeet = horiz <= 1;
-          // Sync seed only underfeet — full-ring sync at commit spiked wall to
-          // multi-second during autofly ingress. Outer ring uses async relight
-          // with idle promote / partial CanSeedSkylight when neighbors allow.
-          const bool seed_skylight_now =
-              underfeet && world.CanSeedSkylightAtCommit(ground);
+          // Sync seed only underfeet (near_focus sync spiked autofly wall).
+          // V3: neighborhood-ready outer columns get priority async enqueue.
+          const bool neighborhood_ok = world.CanSeedSkylightAtCommit(ground);
+          const bool seed_skylight_now = underfeet && neighborhood_ok;
           const bool relight_priority =
-              near_focus && LastPendingLightFocus <= 20;
+              (near_focus && LastPendingLightFocus <= 20) ||
+              (near_focus && neighborhood_ok);
           if (seed_skylight_now)
           {
             world.RelightTerrainColumn(ground.x * CHUNK_SIZE,
@@ -295,14 +295,9 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
           }
           else if (near_focus)
           {
-            // Near-focus non-underfeet: allow preview mesh while async
-            // relight is pending — strict RenderReady contract still marks
-            // them as unfinished_visual, but the player sees terrain shape
-            // instead of empty holes.
-            world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-                ground, dirty_min, dirty_max,
-                /*include_horizontal_neighbors=*/false);
-            world.SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+            // V2a: do not MarkDirty preview while async relight is pending —
+            // holes until LitReady/MarkRelit (RenderReady contract).
+            world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
           }
           else if (admit_far_dirty)
           {

@@ -1047,6 +1047,11 @@ add_executable(camera_stability_test src/Test/CameraStabilityTest.cpp)
 target_include_directories(camera_stability_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(camera_stability_test glm::glm)
 
+add_executable(streaming_render_ready_invariants_test
+    src/Test/StreamingRenderReadyInvariantsTest.cpp)
+target_include_directories(streaming_render_ready_invariants_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
 add_executable(docked_overlay_layout_test src/Test/DockedOverlayLayoutTest.cpp
     src/Gui/Layout/DockedOverlayLayout.cpp)
 target_include_directories(docked_overlay_layout_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
