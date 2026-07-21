@@ -896,8 +896,18 @@ public:
   bool IsColumnLitReady(glm::ivec3 ground) const;
   /// True when column may unlock outer streaming rings (LitReady+).
   bool IsColumnVisualReadyForRing(glm::ivec3 ground) const;
+  /// Strict visible contract: no pending light, stable mesh, render-safe column.
+  bool IsColumnRenderReady(glm::ivec3 ground) const;
+  /// Focus columns that are loaded but not yet safe to render.
+  int CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
+                                int radius_chunks) const;
   /// Authoritative mesh gate: LitReady+ or underfeet first-mesh preview.
   bool MayMeshColumn(glm::ivec3 ground, bool underfeet_preview) const;
+  /// Centralized focus-ring drain used by streaming and mesh emerge.
+  int DrainColumnWork(glm::ivec3 focus_ground_horiz, int radius_chunks,
+                      int clear_pending_budget);
+  /// Commit-time skylight seed is only safe when the neighbor ring is loaded.
+  bool CanSeedSkylightAtCommit(glm::ivec3 ground) const;
 
   void SetStepUpEnabled(bool enabled) { StepUpEnabled = enabled; }
   bool IsStepUpEnabled() const { return StepUpEnabled; }

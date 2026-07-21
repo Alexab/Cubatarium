@@ -1549,6 +1549,89 @@ bool UWorld::IsColumnVisualReadyForRing(glm::ivec3 ground) const
   return IsColumnLitReady(ground);
 }
 
+bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
+{
+  if (!MeshService)
+  {
+    return false;
+  }
+  if (ground.y != 0)
+  {
+    ground.y = 0;
+  }
+  if (IsPendingLightBeforeMesh(glm::ivec2(ground.x, ground.z)))
+  {
+    return false;
+  }
+  const ColumnEmergeState state = GetColumnEmergeState(ground);
+  if (state != ColumnEmergeState::RenderReady &&
+      state != ColumnEmergeState::LitReady &&
+      state != ColumnEmergeState::Meshing &&
+      state != ColumnEmergeState::Empty)
+  {
+    return false;
+  }
+  const int max_cy =
+      std::max(0, FloorDiv(std::max(0, ProceduralTemplate.MaxHeight), CHUNK_SIZE));
+  bool saw_loaded_meshable = false;
+  for (int cy = 0; cy <= max_cy; ++cy)
+  {
+    const glm::ivec3 coord(ground.x, cy, ground.z);
+    const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+    if (!chunk)
+    {
+      continue;
+    }
+    bool any_solid = false;
+    for (const BlockId block : chunk->GetData())
+    {
+      if (block != BLOCK_AIR)
+      {
+        any_solid = true;
+        break;
+      }
+    }
+    if (!any_solid)
+    {
+      continue;
+    }
+    saw_loaded_meshable = true;
+    if (!MeshService->HasGreedyMesh(coord) || MeshService->IsChunkMeshDirty(coord) ||
+        MeshService->HasInflightMeshBuild(coord))
+    {
+      return false;
+    }
+  }
+  return saw_loaded_meshable || state == ColumnEmergeState::Empty;
+}
+
+int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
+                                      int radius_chunks) const
+{
+  if (radius_chunks < 0)
+  {
+    return 0;
+  }
+  int unfinished = 0;
+  for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
+  {
+    for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
+    {
+      const glm::ivec3 ground(focus_ground_chunk.x + dx, 0,
+                              focus_ground_chunk.z + dz);
+      if (!IsTerrainChunkComplete(BlockWorld, ground, ProceduralTemplate.MaxHeight))
+      {
+        continue;
+      }
+      if (!IsColumnRenderReady(ground))
+      {
+        ++unfinished;
+      }
+    }
+  }
+  return unfinished;
+}
+
 bool UWorld::MayMeshColumn(glm::ivec3 ground, bool underfeet_preview) const
 {
   if (ground.y != 0)
@@ -1585,6 +1668,35 @@ bool UWorld::HasPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,
                                            int radius_chunks) const
 {
   return CountPendingLightBeforeMeshNear(focus_ground_horiz, radius_chunks) > 0;
+}
+
+int UWorld::DrainColumnWork(glm::ivec3 focus_ground_horiz, int radius_chunks,
+                            int clear_pending_budget)
+{
+  int drained = 0;
+  drained += PromotePendingLightRelightsNear(focus_ground_horiz, radius_chunks);
+  drained += ClearPendingLightAfterMeshCommitted(clear_pending_budget);
+  return drained;
+}
+
+bool UWorld::CanSeedSkylightAtCommit(glm::ivec3 ground) const
+{
+  if (ground.y != 0)
+  {
+    ground.y = 0;
+  }
+  for (int dz = -1; dz <= 1; ++dz)
+  {
+    for (int dx = -1; dx <= 1; ++dx)
+    {
+      const glm::ivec3 neighbor(ground.x + dx, 0, ground.z + dz);
+      if (!IsTerrainChunkComplete(BlockWorld, neighbor, ProceduralTemplate.MaxHeight))
+      {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 int UWorld::CountPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,

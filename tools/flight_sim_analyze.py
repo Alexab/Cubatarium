@@ -51,6 +51,11 @@ def analyze(
     def col(rs, key):
         return [float(r.get(key) or 0) for r in rs if key in r]
 
+    unfinished_key = (
+        "unfinished_visual"
+        if any("unfinished_visual" in r for r in steady)
+        else None
+    )
     hole_key = (
         "visual_holes"
         if any("visual_holes" in r for r in steady)
@@ -60,11 +65,17 @@ def analyze(
     dark_sticky = col(steady, "black_sticky")
     if not dark_sticky and any("focus_dark_mesh" in r for r in steady):
         dark_sticky = col(steady, "focus_dark_mesh")
+    unfinished_visual = col(steady, unfinished_key) if unfinished_key else []
     # Treat light debt as unfinished even when visual_holes=0 (dark meshes).
     effective_holes = []
-    for r, h, d in zip(steady, holes, dark_sticky):
+    for i, (r, h, d) in enumerate(zip(steady, holes, dark_sticky)):
         pend = float(r.get("pending_light_focus") or 0)
-        unfinished = h > 0 or d > 0 or pend >= 20
+        unfinished = (
+            (unfinished_visual[i] > 0 if i < len(unfinished_visual) else False)
+            or h > 0
+            or d > 0
+            or pend >= 20
+        )
         effective_holes.append(1.0 if unfinished else 0.0)
     effective_holes_rate = (
         sum(effective_holes) / len(effective_holes) if effective_holes else 1.0
@@ -171,6 +182,7 @@ def analyze(
     )
     black_sticky_stop = col(stop_tail, sticky_key)
     missing_stop = col(stop_tail, hole_key)
+    unfinished_stop = col(stop_tail, unfinished_key) if unfinished_key else []
     pending_stop = col(stop_tail, "pending_light_focus")
     relight_stop = col(stop_tail, "relight_drain_ms")
     post_stop_pending_med = median(pending_stop)
@@ -179,11 +191,14 @@ def analyze(
     )
     post_stop_missing_max = max(missing_stop) if missing_stop else None
     stop_effective = []
-    for r in stop_tail:
+    for i, r in enumerate(stop_tail):
         h = float(r.get(hole_key) or 0)
         d = float(r.get(sticky_key) or 0)
         pend = float(r.get("pending_light_focus") or 0)
-        stop_effective.append(1.0 if (h > 0 or d > 0 or pend >= 15) else 0.0)
+        unfinished = unfinished_stop[i] > 0 if i < len(unfinished_stop) else False
+        stop_effective.append(
+            1.0 if (unfinished or h > 0 or d > 0 or pend >= 15) else 0.0
+        )
     post_stop_effective_holes_rate = (
         sum(stop_effective) / len(stop_effective) if stop_effective else 1.0
     )
@@ -211,12 +226,13 @@ def analyze(
             run = 0
     # Healthy FPS with unfinished focus (holes=0 but light debt / dark mesh).
     healthy_unfinished = 0
-    for r in stop_tail:
+    for i, r in enumerate(stop_tail):
         wall_r = float(r.get("wall_ms") or 999)
         pend = float(r.get("pending_light_focus") or 0)
         dark = float(r.get(sticky_key) or 0)
         miss = float(r.get(hole_key) or 0)
-        if wall_r < 28.0 and (pend >= 15 or dark >= 1 or miss >= 1):
+        unfinished = unfinished_stop[i] > 0 if i < len(unfinished_stop) else False
+        if wall_r < 28.0 and (unfinished or pend >= 15 or dark >= 1 or miss >= 1):
             healthy_unfinished += 1
     healthy_unfinished_rate = (
         healthy_unfinished / len(stop_tail) if stop_tail else 1.0
@@ -276,6 +292,7 @@ def analyze(
         "steady_periods": len(steady),
         "spikes": len(spikes),
         "hole_key": hole_key,
+        "unfinished_key": unfinished_key,
         "metrics": {
             "holes_rate": holes_rate,
             "effective_holes_rate": effective_holes_rate,

@@ -137,7 +137,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const int horiz =
             std::max(std::abs(chunk_coord.x - focus_ground_horiz.x),
                      std::abs(chunk_coord.z - focus_ground_horiz.z));
-        // Underfeet: never soft-defer — unconditional mesh/remesh progress.
         if (horiz <= 1)
         {
           return false;
@@ -146,11 +145,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             glm::ivec2(chunk_coord.x, chunk_coord.z));
         if (mesh_service.HasGreedyMesh(chunk_coord))
         {
-          return pending; // defer remesh while unlit
+          return pending;
         }
         if (horiz <= focus_radius)
         {
-          return false; // first mesh in focus always
+          return false;
         }
         const glm::ivec3 ground(chunk_coord.x, 0, chunk_coord.z);
         return !world.MayMeshColumn(ground, /*underfeet_preview=*/false);
@@ -271,6 +270,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // visual_holes = missing mesh only; near_focus_holes kept for legacy paths
   // that still want light-debt urgency for relight (not starve).
   const bool visual_holes = missing_visible_mesh;
+  const bool unfinished_visual =
+      visual_holes || world.CountPendingDarkFocusMeshes(focus_ground, focus_radius) > 0;
   const bool near_focus_holes = visual_holes || pending_near_light;
   const bool missing_underfeet =
       mesh_service.HasMissingGreedyMeshInHorizontalRadius(
@@ -658,7 +659,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       world.RecoverUnlitFocusMeshes(recover_n);
       // Cruise: only Ingress when visual holes (pending alone used to flood
       // Dirty every 4 frames). Stop/hover: full Admit trio for trail columns.
-      if (!moving && (visual_holes || pending_near_light))
+      if (!moving && (unfinished_visual || pending_near_light))
       {
         const int admit_n = std::max(2, recover_n);
         world.AdmitFocusMeshIngress(admit_n);
@@ -764,9 +765,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             {
               continue;
             }
-            // First mesh under PendingLight: allow (matches soft-defer). Skipping
-            // left trail holes forever when Dirty was flooded with remesh and
-            // async never reached the missing column.
+            // Strict visual contract: do not sync-build an unlit first mesh.
             const UChunk *chunk =
                 world.GetBlockWorld().GetChunkManager().GetChunk(coord);
             if (!chunk)
@@ -914,8 +913,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   mesh_service.DrainAsyncMeshResults(world.GetBlockWorld(), registry, mesh_drain);
   if (tick_stats.Completed > 0 || tick_stats.SyncRebuilt > 0)
   {
-    world.ClearPendingLightAfterMeshCommitted(
-        idle_recovery ? 24 : 16);
+    world.DrainColumnWork(focus_ground_horiz, focus_radius,
+                          idle_recovery ? 24 : 16);
   }
 
 #ifndef NDEBUG

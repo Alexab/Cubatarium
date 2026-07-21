@@ -257,59 +257,49 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                   : std::min(settings.MaxHeight,
                              std::max(dirty_max, settings.SeaLevel +
                                                       CHUNK_SIZE * 2));
+          const int horiz =
+              std::max(std::abs(coord.x - focus_ground.x),
+                       std::abs(coord.z - focus_ground.z));
+          const bool underfeet = horiz <= 1;
+          const bool seed_skylight_now =
+              underfeet && world.CanSeedSkylightAtCommit(ground);
           const bool relight_priority =
               near_focus && LastPendingLightFocus <= 20;
-          world.Persistence->EnqueueTerrainColumnRelight(
-              ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, relight_priority,
-              relight_min, relight_max);
-          world.NotePendingLightBeforeMesh(ground, dirty_min, dirty_max);
-          // First mesh preview in entire focus (empty strips if we wait for
-          // LitReady while pending climbs). Soft-defer blocks remesh@light=0;
-          // MarkRelit remeshes lit. Yellow/Red: no far Dirty (ingress via
-          // Recover / FindFirstMissing priority).
+          if (seed_skylight_now)
+          {
+            world.RelightTerrainColumn(ground.x * CHUNK_SIZE,
+                                       ground.z * CHUNK_SIZE, relight_min,
+                                       relight_max,
+                                       /*priority_mesh=*/true,
+                                       /*include_skylight=*/true,
+                                       /*include_block_light=*/false);
+          }
+          else
+          {
+            world.Persistence->EnqueueTerrainColumnRelight(
+                ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, relight_priority,
+                relight_min, relight_max);
+            world.NotePendingLightBeforeMesh(ground, dirty_min, dirty_max);
+          }
           const bool admit_far_dirty =
               LastPressureCaps.level == StreamingPressureLevel::Green;
-          if (near_focus)
+          if (seed_skylight_now)
           {
-            const int horiz =
-                std::max(std::abs(coord.x - focus_ground.x),
-                         std::abs(coord.z - focus_ground.z));
-            // Standing: LastMovementDirXz follows camera look, so the wedge
-            // would permanently deny trail columns — admit whole near_focus.
-            // Moving: forward wedge; trail gets Dirty later via idle Admit
-            // (LightingWithoutDirty / VisibleMissing) when the player stops.
-            const bool stopped =
-                world.GetLastMovementSpeed() <=
-                settings.MovementPrefetchThreshold;
-            glm::vec2 fwd = world.GetLastMovementDirXz();
-            const float flen =
-                std::sqrt(fwd.x * fwd.x + fwd.y * fwd.y);
-            bool admit_preview = horiz <= 1 || stopped;
-            if (!admit_preview && flen > 0.05f)
-            {
-              fwd.x /= flen;
-              fwd.y /= flen;
-              const float ox =
-                  static_cast<float>(coord.x - focus_ground.x);
-              const float oz =
-                  static_cast<float>(coord.z - focus_ground.z);
-              admit_preview = (ox * fwd.x + oz * fwd.y) >= -0.75f;
-            }
-            else if (!admit_preview)
-            {
-              admit_preview = true; // idle / no dir: whole near_focus
-            }
-            if (admit_preview)
-            {
-              world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-                  ground, dirty_min, dirty_max,
-                  /*include_horizontal_neighbors=*/false);
-              world.SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
-            }
-            else
-            {
-              world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
-            }
+            world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
+            world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+                ground, dirty_min, dirty_max,
+                /*include_horizontal_neighbors=*/true);
+          }
+          else if (near_focus)
+          {
+            // Near-focus non-underfeet: allow preview mesh while async
+            // relight is pending — strict RenderReady contract still marks
+            // them as unfinished_visual, but the player sees terrain shape
+            // instead of empty holes.
+            world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+                ground, dirty_min, dirty_max,
+                /*include_horizontal_neighbors=*/false);
+            world.SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
           }
           else if (admit_far_dirty)
           {
@@ -374,16 +364,17 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   world.PhysicsTelemetryData.StreamPressure =
       static_cast<int>(LastPressureCaps.level);
   world.PhysicsTelemetryData.PendingLightFocus = pending_light_focus;
-  world.PhysicsTelemetryData.FocusDarkMesh =
+  const int dark_preview =
       world.CountBlackStickyFocusMeshes(focus_ground, focus_radius) +
       world.CountPendingDarkFocusMeshes(focus_ground, focus_radius);
-  const int dark_sticky = world.PhysicsTelemetryData.FocusDarkMesh;
+  world.PhysicsTelemetryData.FocusDarkMesh = dark_preview;
   world.PhysicsTelemetryData.FocusMissingMesh = missing_near ? 1 : 0;
-  world.PhysicsTelemetryData.VisualHoles =
-      (missing_near || dark_sticky > 0) ? 1 : 0;
+  world.PhysicsTelemetryData.VisualHoles = missing_near ? 1 : 0;
+  world.PhysicsTelemetryData.UnfinishedVisual =
+      (missing_near ? 1 : 0) + dark_preview;
   world.PhysicsTelemetryData.LightDebt = pending_light_focus > 0 ? 1 : 0;
   world.PhysicsTelemetryData.NearFocusHoles =
-      (missing_near || pending_light_focus > 0) ? 1 : 0;
+      (missing_near || pending_light_focus > 0 || dark_preview > 0) ? 1 : 0;
 }
 
 void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)

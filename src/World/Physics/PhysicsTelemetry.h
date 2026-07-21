@@ -69,6 +69,8 @@ struct PhysicsTelemetry
   int NearFocusHoles{0};
   /// Missing GreedyCache in focus (visual holes only).
   int VisualHoles{0};
+  /// Missing mesh or dark/unlit preview in focus (render contract).
+  int UnfinishedVisual{0};
   /// PendingLightBeforeMesh in focus (light debt, not visual holes).
   int LightDebt{0};
   /// Count of focus columns with missing mesh (0..N).

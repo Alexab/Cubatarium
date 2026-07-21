@@ -185,6 +185,8 @@ Object assets load at startup via `Core::LoadSystem`. They are **not** stored in
 
 Default: `streaming_enabled: true` in `config.json`.
 
+Companion streaming docs: `docs/streaming/README.md`.
+
 Pipeline per frame:
 
 ```

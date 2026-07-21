@@ -157,6 +157,7 @@ struct FrameNumbers
   int underfeet_need{0};
   int near_focus_holes{0};
   int visual_holes{0};
+  int unfinished_visual{0};
   int light_debt{0};
   int focus_missing_mesh{0};
   int focus_dark_mesh{0};
@@ -236,6 +237,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.underfeet_need = phys.UnderfeetNeed;
   n.near_focus_holes = phys.NearFocusHoles;
   n.visual_holes = phys.VisualHoles;
+  n.unfinished_visual = phys.UnfinishedVisual;
   n.light_debt = phys.LightDebt;
   n.focus_missing_mesh = phys.FocusMissingMesh;
   n.focus_dark_mesh = phys.FocusDarkMesh;
@@ -295,6 +297,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"underfeet_need\":" << n.underfeet_need
           << ",\"near_focus_holes\":" << n.near_focus_holes
           << ",\"visual_holes\":" << n.visual_holes
+          << ",\"unfinished_visual\":" << n.unfinished_visual
           << ",\"light_debt\":" << n.light_debt
           << ",\"focus_missing_mesh\":" << n.focus_missing_mesh
           << ",\"focus_dark_mesh\":" << n.focus_dark_mesh

@@ -127,7 +127,22 @@ def main() -> int:
         action="store_true",
         help="copy report to west_best / stop_best when improved",
     )
+    ap.add_argument(
+        "--replay-manual",
+        action="store_true",
+        help="replay the World_164 manual westbound stop-flight profile",
+    )
     args = ap.parse_args()
+
+    if args.replay_manual:
+        args.world = "World_164"
+        args.fly_stop = True
+        args.resume = True
+        args.teleport_cruise = True
+        args.sprint = False
+        args.idle_sec = max(args.idle_sec, 8.0)
+        args.fly_phase_sec = max(args.fly_phase_sec, 40.0)
+        args.stop_phase_sec = max(args.stop_phase_sec, 50.0)
 
     if args.build:
         cmd = [
