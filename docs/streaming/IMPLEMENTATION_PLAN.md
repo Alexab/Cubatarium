@@ -127,6 +127,19 @@ stateDiagram-v2
 | 4 Unified flow | ⚠️ частично | helpers есть, recovery zoo не свёрнут |
 | 5 Harness | ⚠️ частично | `--manual-idle`, `analyze_manual_idle.py` |
 
+### Ручной пролёт `perf_20260721-170357` (после `9c51dae2`)
+
+| Метрика | Значение |
+|---------|----------|
+| `pending_cols` | полоса **z=21** (x −532…−525), 4 чанка позади focus z=25 |
+| stop `pending_focus` | **застрял на 25** ~26+ с |
+| `focus_not_render_ready` | **73** (не падает) |
+| `relight_drain_ms` | **~0.024** (FIFO stall) |
+| `mesh_emerge_ms` @ idle | **7–14** при wall~22 (mesh намеренно задушен) |
+| Диагноз | ingress **pending light**, не lit-but-dirty; `idle_light_debt_only` cap + sync только при pending≤5 |
+
+**Фикс (`pending plateau`):** sync outer ring при pending≥12, plateau watchdog, rescue без gate frame_ms, mesh drain floor при pending>15.
+
 ### Ручной пролёт `perf_20260721-165208` (после `2cb85f3c`)
 
 | Метрика | Значение |

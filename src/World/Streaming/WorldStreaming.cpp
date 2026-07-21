@@ -958,14 +958,33 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   }
   // Pending debt with empty relight FIFO and no inflight: re-promote + clear
   // lit-ready columns (manual 155539: pend=2, relight_drain≈0 plateau).
-  if (pending_light_focus_n > 0 && pending_bg_after == 0 &&
-      frame_ms <= kBadFrameMs &&
+  // Idle with high focus debt: do not gate on frame_ms — outer-ring z=21 strips
+  // stalled for 60s+ while wall looked fine locally (perf_170357).
+  const bool idle_pending_rescue =
+      idle_recovery && pending_light_focus_n >= 10 &&
+      (pending_bg_after == 0 || pending_light_focus_n >= 20);
+  if (pending_light_focus_n > 0 &&
+      (idle_pending_rescue ||
+       (pending_bg_after == 0 && frame_ms <= kBadFrameMs)) &&
       (idle_recovery || pending_light_focus_n > 8 ||
        world.GetAsyncRelightInFlightCount() == 0))
   {
     world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
     world.ClearPendingLightAfterMeshCommitted(12);
     bg_budget = std::max(bg_budget, std::min(48, pending_light_focus_n * 2));
+  }
+  if (idle_pending_rescue && frame_ms <= 32.0f)
+  {
+    static int idle_outer_sync_cd = 0;
+    if (idle_outer_sync_cd <= 0)
+    {
+      world.DrainIdleFocusPendingLightSync(focus_horiz, focus_radius, 2);
+      idle_outer_sync_cd = 12;
+    }
+    else
+    {
+      --idle_outer_sync_cd;
+    }
   }
 
   {
