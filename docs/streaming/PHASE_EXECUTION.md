@@ -12,7 +12,7 @@
 | sync_budget_r1 | RelWithDebInfo | 9 | 4 | **4401** | 90 | 698 | ban Immediate + full ring MarkDirty flood — regress |
 | sync_budget_r2 | RelWithDebInfo | 9 | 8 | **978** holes | 25 | 365 | no moving Immediate; nearest Dirty only |
 | replay_manual_r1 | RelWithDebInfo | 9 | **0** | holes **160** / wall 1373 | 12 | 198 | resume −473; SyncIdle→Dirty; hold-space; stream hitch |
-| manual_193627 | manual walk | **0** | 14 | **3042** | — | — | emerge_prep=relight_drain 0.9–3s (MeshEmerge cold drain 8–24) |
+| manual_194645 | manual walk existing | **0** | 10 | **4288** | 31 | 347 | prep=relight 3–4s (MeshEmerge drain+Capture); quiet wall~28 dirty~524 async=42 |
 
 ## Lessons (2026-07-22 evening)
 
@@ -25,18 +25,20 @@
 7. Telemetry: `mesh_immediate_ms` / `mesh_immediate_count` / `mesh_dirty_tick_ms` / `mesh_emerge_prep_ms` in perf jsonl.
 8. **`SyncIdleFocusGreedyRemesh` Immediate** was a hidden seconds hitch (manual 190126 emerge~3.7s, imm wiped by Reset). Now MarkDirty→async.
 9. **`--replay-manual` must resume save** (no teleport to −47). Teleport-cruise ≠ manual corridor (−473/−484).
-
+10. **manual 194645:** MeshEmerge cold `DrainRelightQueuesBudget` while moving → `relight_drain` 3–4s (`Capture`/sync column). Quiet: `idle_remesh_debt` + snapshot 48ms + async≈42 → wall~28 at rest.
+11. Smooth (no SoftDefer/greedy change): MeshEmerge promote-only while moving; Streaming move-cap ≤2 async, no sync drain; lower FocusIngress floors; raise idle_remesh thresholds; snapshot 48 only for holes/pending.
 ## Sync-budget + autofly parity (2026-07-22)
 
 - Moving: no Immediate/SyncRebuild hole-fill; nearest → Dirty/async.
 - Idle sticky: `SyncIdleFocusGreedyRemesh` → MarkDirty (not Immediate).
 - Autofly: `--replay-manual` resumes save, `--hold-space`, pitch 0, default pitch −2.
-- Cold hole: same-tick promote → `DrainRelightQueuesBudget`.
+- Cold hole while moving: **Promote only** (no MeshEmerge Drain — Capture/sync = seconds).
+- Streaming walk: async enqueue ≤2/frame + 4ms loop budget; never sync Relight while moving.
 - SoftDefer / greedy unchanged. GPU meshing postponed.
 
 ## Safe patch contents
 
-- `FocusIngressPolicy`: modest relight floor on hitch cold frames (8–12).
+- `FocusIngressPolicy`: paced walk floor (1–4), not 36–48.
 - `force_hole`: moving → Dirty only (no Immediate).
-- Moving no-hole: schedule≤6, drain≥24 when dirty>400.
+- `idle_remesh_debt`: nr>32 / fd>80; snapshot 48 only for holes/pending light.- Moving no-hole: schedule≤6, drain≥24 when dirty>400.
 - Gates: phase `C` / `CB` in `flight_sim_phase_gate.py`.

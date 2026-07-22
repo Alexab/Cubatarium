@@ -45,21 +45,24 @@ inline FocusIngressDecision EvaluateFocusIngress(const FocusIngressInput &in)
   out.active = true;
   out.promote_once = warm_enough || cold_pool;
 
+  // Capture() for a terrain column runs on the main thread inside Drain.
+  // Old floors 36–48 made walk hitches unbounded when MeshEmerge also drained
+  // (manual 194645: one Capture ≈ 3–4s). Pace: few enqueues/frame while moving;
+  // idle Streaming floors elsewhere still catch up SoftDefer debt.
   if (cold_pool)
   {
-    // Dedicated floor: full when healthy; modest on hitch (avoid amplify wall).
     if (in.frame_ms <= 28.0)
     {
-      out.relight_floor = in.pending_focus > 8 ? 48 : 36;
+      out.relight_floor = in.pending_focus > 8 ? 4 : 2;
     }
     else
     {
-      out.relight_floor = in.pending_focus > 8 ? 12 : 8;
+      out.relight_floor = 1;
     }
   }
   else if (in.mesh_async < 8 && in.frame_ms <= 24.0)
   {
-    out.relight_floor = in.pending_focus > 12 ? 40 : 32;
+    out.relight_floor = in.pending_focus > 12 ? 3 : 2;
   }
 
   // Spike guard: cold async + hole → no non-underfeet sync fill.

@@ -336,11 +336,28 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
 
   int drained_bg = 0;
   int skipped_inflight = 0;
+  const bool moving =
+      world.GetLastMovementSpeed() >
+      world.ProceduralTemplate.MovementPrefetchThreshold;
+  // Capture() is main-thread; bound wall while walking even if count cap is >1.
+  const double move_drain_budget_ms = moving ? 4.0 : 0.0;
+  const auto drain_loop_t0 = std::chrono::high_resolution_clock::now();
   auto drain_one = [&]()
   {
     if (drained_bg >= max_bg_columns)
     {
       return false;
+    }
+    if (move_drain_budget_ms > 0.0 && drained_bg > 0)
+    {
+      const double elapsed_ms =
+          std::chrono::duration<double, std::milli>(
+              std::chrono::high_resolution_clock::now() - drain_loop_t0)
+              .count();
+      if (elapsed_ms >= move_drain_budget_ms)
+      {
+        return false;
+      }
     }
     if (async_bg && world.GetAsyncRelightInFlightCount() >= max_inflight)
     {

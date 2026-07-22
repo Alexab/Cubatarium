@@ -947,15 +947,17 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     bg_budget = std::max(bg_budget, 4);
   }
-  if (world.GetLastMovementSpeed() > procedural.MovementPrefetchThreshold &&
-      pending_light_focus_n > 8 && frame_ms <= kBadFrameMs)
+  const bool moving_now =
+      world.GetLastMovementSpeed() > procedural.MovementPrefetchThreshold;
+  if (moving_now && pending_light_focus_n > 8 && frame_ms <= kBadFrameMs)
   {
-    bg_budget = std::max(bg_budget, pending_light_focus_n > 24 ? 32 : 20);
+    // Was 20–32: main-thread Capture per enqueue; keep walk drain paced.
+    bg_budget = std::max(bg_budget, pending_light_focus_n > 24 ? 4 : 3);
   }
   // P0 frontier ingress via FocusIngressPolicy (dedicated floor, not F2 caps).
   const FocusIngressDecision ingress = EvaluateFocusIngress(FocusIngressInput{
-      world.GetLastMovementSpeed() > procedural.MovementPrefetchThreshold,
-      missing_focus_mesh, pending_light_focus_n, mesh_async_n, frame_ms});
+      moving_now, missing_focus_mesh, pending_light_focus_n, mesh_async_n,
+      frame_ms});
   if (ingress.relight_floor > 0)
   {
     bg_budget = std::max(bg_budget, ingress.relight_floor);
@@ -999,12 +1001,32 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
     world.ClearPendingLightAfterMeshCommitted(12);
+    // Idle can burst enqueue; moving stays under the hard move_cap below.
     const int hole_cap =
-        (missing_focus_mesh && mesh_async_n < 8) ? 56 : 48;
+        moving_now ? 4
+                   : ((missing_focus_mesh && mesh_async_n < 8) ? 56 : 48);
     bg_budget = std::max(
         bg_budget,
         std::min(hole_cap, pending_light_focus_n * 2 +
                                 (missing_focus_mesh ? 16 : 0)));
+  }
+  // Re-apply move cap after late floors (hole_cap / underfeet) so Capture
+  // bursts cannot slip past the walk hitch guard.
+  if (moving_now)
+  {
+    // Sync RelightTerrainColumn is multi-second; never do it while walking.
+    if (!async_bg)
+    {
+      bg_budget = 0;
+    }
+    else
+    {
+      const int move_cap =
+          (missing_focus_mesh || underfeet_pending_light)
+              ? (frame_ms > kBadFrameMs ? 1 : 2)
+              : (frame_ms > kBadFrameMs ? 1 : 2);
+      bg_budget = std::min(bg_budget, move_cap);
+    }
   }
 
   {

@@ -35,7 +35,7 @@ int main()
     const auto d = EvaluateFocusIngress(in);
     Expect(d.active, "cold hole active");
     Expect(d.promote_once, "cold hole promote");
-    Expect(d.relight_floor >= 36, "cold hole relight floor");
+    Expect(d.relight_floor >= 2 && d.relight_floor <= 4, "cold hole paced floor");
     Expect(!d.allow_sync_hole_fill, "cold hole blocks sync fill");
     Expect(AllowSyncHoleFillForColumn(d, true), "underfeet still allowed");
     Expect(!AllowSyncHoleFillForColumn(d, false), "non-underfeet blocked");
@@ -50,7 +50,7 @@ int main()
     in.frame_ms = 120.0;
     const auto d = EvaluateFocusIngress(in);
     Expect(d.active, "cold hitch active");
-    Expect(d.relight_floor >= 8 && d.relight_floor <= 12, "modest hitch floor");
+    Expect(d.relight_floor == 1, "hitch floor single enqueue");
   }
 
   {

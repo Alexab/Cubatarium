@@ -196,14 +196,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const int focus_dirty_early =
       mesh_service.CountDirtyWithinHorizontalRadius(focus_ground_horiz,
                                                     focus_radius);
-  // After pending→0, keep idle remesh ownership so outside Dirty flush cannot
-  // starve lit-but-dirty focus (manual 202328: nr≈40, dirty↑, outside_cap=8–12).
-  // sticky==0 required: enabling remesh debt while sticky remesh ran raised
-  // post_stop sticky 0→9 and wall~128 (F2_sticky_remesh).
+  // Lit-but-dirty catch-up: last-good idle kept nr≈25 without perpetual remesh.
+  // nr>15 / fd>24 latched drain~28 + snapshot 48ms and pinned async≈42
+  // (manual 194645 quiet: wall~29, dirty~550, nr~35, fd~370).
   const bool idle_remesh_debt =
       !moving && pending_focus_count == 0 && black_sticky == 0 &&
       !missing_visible_mesh &&
-      (not_ready_early > 15 || focus_dirty_early > 24);
+      (not_ready_early > 32 || focus_dirty_early > 80);
   const bool idle_stop =
       !moving &&
       (pending_focus_count > 0 || black_sticky > 0 || missing_visible_mesh ||
@@ -530,10 +529,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_service.SetMeshScheduleMaxHorizontalDist(-1);
     mesh_service.SetMeshScheduleOverflowPerFrame(0);
   }
-  // Holes / idle: allow more snapshot captures so Dirty can drain (was stuck
-  // scheduling 1–5/frame with Dirty~500 and holes=1 the whole stop).
+  // Holes / underfeet / light-debt idle: allow more snapshot captures.
+  // Do NOT open 48ms for lit-but-dirty-only idle_recovery (idle FPS tax).
   mesh_service.SetMeshSnapshotBudgetMs(
-      (visual_holes || idle_recovery || missing_underfeet) ? 48.0 : 6.0);
+      (visual_holes || missing_underfeet ||
+       (idle_recovery && pending_focus_count > 0))
+          ? 48.0
+          : 6.0);
 
   // Healthy flight with no visual holes: flush Dirty so pressure can leave Red
   // (Dirty plateaus ~700 trapped Red when exit required dirty<=500).
@@ -549,14 +551,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     mesh_service.SetStarveOutsideFocusMesh(true);
     mesh_service.SetStarveRemeshForHoles(false);
-    const bool heavy_dirty = focus_dirty_early > 280;
-    mesh_drain = std::max(mesh_drain,
-                          last_frame_ms <= 16.0 ? (heavy_dirty ? 32 : 28)
-                                                : (heavy_dirty ? 26 : 22));
-    mesh_schedule = std::max(mesh_schedule,
-                             last_frame_ms <= 16.0 ? (heavy_dirty ? 28 : 24)
-                                                   : (heavy_dirty ? 22 : 18));
-    world.ClearPendingLightAfterMeshCommitted(16);
+    // Mild catch-up — old 22–32 kept async saturated and wall~25–35 at rest.
+    mesh_drain = std::max(mesh_drain, last_frame_ms <= 16.0 ? 16 : 12);
+    mesh_schedule = std::max(mesh_schedule, last_frame_ms <= 16.0 ? 12 : 8);
+    world.ClearPendingLightAfterMeshCommitted(8);
+  }
+  // Standing, no holes/pending/sticky: prefer drain over schedule so Dirty
+  // shrinks without feeding remesh thrash (async pinned at max pipeline).
+  if (!moving && !visual_holes && !pending_near_light && black_sticky == 0 &&
+      pending_dirty > 200 && last_frame_ms <= 24.0)
+  {
+    mesh_schedule = std::min(mesh_schedule, 8);
+    mesh_drain = std::max(mesh_drain, 14);
   }
   if (!visual_holes && !missing_underfeet && !pending_near_light &&
       pending_dirty > 200 && last_frame_ms <= 28.0)
@@ -951,10 +957,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   int underfeet_immediate_this_frame = 0;
   const int kMaxUnderfeetImmediate = last_frame_ms > 20.0 ? 1 : 2;
 
-  // Cold SoftDefer hole: promote into FIFO. Streaming already owns the heavy
-  // DrainRelightQueues; a second same-tick drain here with drain_n=8–24 caused
-  // walk spikes (manual 193627: relight_drain 0.9–3s inside mesh_emerge_prep).
-  // Spread: at most 1 bg job while moving, and only on a healthy previous frame.
+  // Cold SoftDefer hole: promote into FIFO only. Never DrainRelightQueues from
+  // MeshEmerge while moving — even 1× sync RelightTerrainColumn is 1–4s
+  // (manual 194645: prep≈relight_drain 3–4s with drain_n=1). Streaming owns
+  // paced DrainRelightQueues (async enqueue when AsyncRelight is on).
   {
     const FocusIngressDecision cold =
         EvaluateFocusIngress(FocusIngressInput{
@@ -963,17 +969,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     if (cold.active && cold.promote_once && pending_focus_count > 0)
     {
       world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
-      if (moving)
-      {
-        if (last_frame_ms <= 28.0)
-        {
-          world.DrainRelightQueuesBudget(0, 1);
-        }
-      }
-      else if (last_frame_ms <= 24.0)
-      {
-        world.DrainRelightQueuesBudget(0, 2);
-      }
+    }
+    else if (!moving && missing_visible_mesh && pending_focus_count > 0 &&
+             last_frame_ms <= 20.0)
+    {
+      world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
+      world.DrainRelightQueuesBudget(0, 1);
     }
   }
 
