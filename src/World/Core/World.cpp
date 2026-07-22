@@ -3568,6 +3568,10 @@ void UWorld::PrepareForShutdownFast()
   {
     Streaming->GetStreamer()->SetEnabled(false);
   }
+  if (BlockPhysicsService)
+  {
+    BlockPhysicsService->ClearFluidQueue();
+  }
   CancelAsyncRelightWork();
   if (Streaming)
   {
@@ -3628,6 +3632,11 @@ void UWorld::PrepareForShutdownWithBudgets(
 
   CancelAsyncRelightWork();
   phase_ms("cancel_relight");
+  if (BlockPhysicsService)
+  {
+    BlockPhysicsService->ClearFluidQueue();
+    phase_ms("clear_fluid_queue");
+  }
   if (Streaming)
   {
     // Abandon before mesh WaitIdle so long populate cannot hang shutdown.

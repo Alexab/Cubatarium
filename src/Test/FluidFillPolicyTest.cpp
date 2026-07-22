@@ -20,9 +20,15 @@ static void TestCanReceiveFluidAirAndFloodable()
   auto definitions = FluidTest::MakeTestFluidDecorDefinitions();
   cutum::UBlockWorld world;
   FluidTest::Expect(
+      !cutum::UFluidFillPolicy::CanReceiveFluid(world, *definitions,
+                                                glm::ivec3(0, 10, 0)),
+      kTestName, "missing chunk cannot receive fluid");
+  // Create the chunk (y=0 slice covers y=10).
+  world.SetBlock(glm::ivec3(0, 0, 0), kStone);
+  FluidTest::Expect(
       cutum::UFluidFillPolicy::CanReceiveFluid(world, *definitions,
                                                glm::ivec3(0, 10, 0)),
-      kTestName, "air can receive fluid");
+      kTestName, "air in loaded chunk can receive fluid");
   world.SetBlock(glm::ivec3(1, 10, 0), kTallGrass);
   FluidTest::Expect(
       cutum::UFluidFillPolicy::CanReceiveFluid(world, *definitions,
