@@ -26,6 +26,13 @@
 5. **Light BFS into missing chunks** (Write no-op, GetLight=0) → hang + RAM on place light (`221846` / `152cb5df`).
 6. Next: byte-budget + fill% — [`MEMORY_BUDGET.md`](MEMORY_BUDGET.md).
 
+## Memory budget implementation (2026-07-22)
+
+Landed: RuntimeTuning Soft/Budget knobs, Completed drop-oldest rings, Dirty/
+Pending/FIFO soft-caps, GPU Reserve/Max, `MemoryBudgetController`, UChunk free-list.
+Gates: see Validation notes in `MEMORY_BUDGET.md` (manual place-light + autofly
+private p95 / fill% / wall).
+
 ## Lessons (2026-07-22 evening)
 
 1. **Aggressive C (sync_cap=0, ban underfeet, StarveRemeshForHoles)** → sticky↑ and spike↑. Do not repeat.

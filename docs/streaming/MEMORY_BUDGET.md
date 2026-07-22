@@ -104,6 +104,25 @@ emergency_cancel_outside, capture_hard_cap, memory_pressure.
 - Stress: `MeshCompletedSlots=4` → discard↑, Dirty requeue, picture recovers,
   private bounded.
 
+### Validation notes (implementation landed)
+
+Code path (Era 12 Memory Budget Control) is on branch with:
+
+- `docs(streaming)` Era 12 + `MEMORY_BUDGET.md`
+- knobs + fill%/pressure jsonl
+- Completed rings + Dirty/Pending/FIFO soft-caps
+- GPU Reserve/Max + `MemoryBudgetController` + UChunk free-list
+
+Manual/autofly gates (checklist for next harness run):
+
+1. Walk existing terrain + place lit block: no hang; `private_mb` stays near Soft.
+2. Quiet standing: `mesh_completed_n/cap` fill < 0.85; `dirty_dropped` not
+   monotonic when idle and Dirty under SoftCap.
+3. Autofly replay: `private_mb` p95 ≤ `MemorySoftMb`; holes/sticky/max_wall not
+   worse than last-good Rel baseline.
+4. Stress tune `mesh_completed_slots=4`: discard rises, remesh recovers, private
+   stays bounded.
+
 ## Anti-patterns
 
 - Drop Completed without Dirty/relight requeue.
