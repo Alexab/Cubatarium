@@ -1,5 +1,6 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/GridMath.h"
+#include <vector>
 
 namespace cutum
 {

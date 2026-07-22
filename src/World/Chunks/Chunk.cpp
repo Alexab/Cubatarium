@@ -13,6 +13,15 @@ UChunk::UChunk(glm::ivec3 chunkCoord) : Coord(chunkCoord)
   LightData.fill(0);
 }
 
+void UChunk::ResetForReuse(glm::ivec3 chunkCoord)
+{
+  Coord = chunkCoord;
+  Data.fill(BLOCK_AIR);
+  FluidData.fill(0);
+  LightData.fill(0);
+  Dirty = true;
+}
+
 int UChunk::LocalIndex(glm::ivec3 local)
 {
   return local.x + CHUNK_SIZE * local.y + CHUNK_SIZE * CHUNK_SIZE * local.z;
