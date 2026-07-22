@@ -417,7 +417,8 @@ void UWorld::RunLegacyPhysicsFrame()
   {
     const glm::vec3 eyePos = camera->GetPosition();
     float feetY =
-        FeetYFromEye(eyePos, controlled ? controlled->GetEyeOffset().y : 1.62f);
+        FeetYFromEye(eyePos, controlled ? controlled->GetEyeOffset().y
+                                         : PlayerCapsule::Standing().eyeHeight);
     if (controlled)
     {
       feetY = BoundsFeetY(controlled->GetBodyOrigin());
