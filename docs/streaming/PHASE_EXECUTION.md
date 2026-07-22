@@ -8,4 +8,4 @@
 | P0-v1 | perf | 3589c59f | — | 0 | — | — | — | — | — | committed P0+F2 partial (session) |
 | P0-v2 | streaming/phase-p0 | TBD | TBD | | | | | | | cruise cold relight ingress |
 
-Формат дополнения: после каждого autofly запуска `python tools/phase_run_record.py`.
+Формат дополнения: после каждого autofly запуска `python tools/phase_run_record.py --phase <id> --report <json> --note "<text>"`.

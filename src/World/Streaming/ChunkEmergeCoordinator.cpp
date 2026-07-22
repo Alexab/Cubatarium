@@ -642,6 +642,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_drain = std::max(mesh_drain, moving ? 18 : 24);
     mesh_schedule = std::max(mesh_schedule, moving ? 16 : 24);
   }
+  // P0: moving frontier hole + pending + cold mesh pool — promote relight every
+  // tick so SoftDefer gate can clear without dark preview (manual 102559 phase A).
+  if (moving && missing_visible_mesh && pending_focus_count > 0 &&
+      pending_async < 8 && last_frame_ms <= 50.0)
+  {
+    world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
+  }
 
   // Floor drain by Dirty backlog so hitch frames do not starve MeshAsync.
   // Cap schedule aggressiveness when underfeet is already OK — flooding
