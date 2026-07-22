@@ -171,6 +171,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                                                     focus_radius);
   // After pending→0, keep idle remesh ownership so outside Dirty flush cannot
   // starve lit-but-dirty focus (manual 202328: nr≈40, dirty↑, outside_cap=8–12).
+  // sticky==0 required: enabling remesh debt while sticky remesh ran raised
+  // post_stop sticky 0→9 and wall~128 (F2_sticky_remesh).
   const bool idle_remesh_debt =
       !moving && pending_focus_count == 0 && black_sticky == 0 &&
       !missing_visible_mesh &&
@@ -193,7 +195,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       // Lit-but-dirty catch-up: CancelOutside → Forget → DiscardedLate +
       // MarkDirty storm (manual 220707: disc+1393) while focus Dirty plateaued.
-      if (!idle_remesh_debt)
+      // idle_remesh_debt still needs outside cancel when async pool is full —
+      // otherwise async≈42 pins and nr/fd climb while wall~23 (manual 102559).
+      if (!idle_remesh_debt || async_saturated_idle)
       {
         mesh_service.CancelInFlightOutsideHorizontalRadius(focus_ground_horiz,
                                                            focus_radius);
@@ -249,8 +253,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       // sync underfeet only, never a focus flood.
       // Break-glass: pending frozen (west-strip edge often) — sync 1 farthest
       // focus column (underfeet-only never touched dist=4 ingress).
-      if (idle_pending_plateau_frames >= 45 && last_frame_ms <= 18.0 &&
-          pending_focus_count > 0)
+      // Frontier hole while standing: wall often 40–120; old gate (45f @
+      // wall≤18) never fired (manual 102559: miss=1 ~10s @ wall 41–210).
+      const int plateau_frames =
+          missing_visible_mesh ? 12 : 45;
+      const double plateau_wall_ms = missing_visible_mesh ? 120.0 : 18.0;
+      if (idle_pending_plateau_frames >= plateau_frames &&
+          last_frame_ms <= plateau_wall_ms && pending_focus_count > 0)
       {
         world.DrainIdleFocusPendingLightSync(focus_ground_horiz, focus_radius,
                                              1);
@@ -397,7 +406,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   mesh_service.SetStarveOutsideFocusMesh(visual_holes || missing_underfeet ||
                                          cruise_light_debt || idle_remesh_debt);
   mesh_service.SetStarveRemeshForHoles(visual_holes || missing_underfeet);
-  world.SetSuppressRelightSeamDirty(idle_remesh_debt);
+  // While sticky remesh drains after pending→0, suppress seam MarkDirty even
+  // before sticky hits 0 — otherwise remesh thrash pins async≈42 and nr climbs
+  // (P0_hole_promote stop). Full idle_remesh_debt with sticky raised wall/sticky
+  // (F2_sticky_remesh); only suppress seam here.
+  const bool suppress_seam_for_sticky_catchup =
+      !moving && pending_focus_count == 0 && !missing_visible_mesh &&
+      black_sticky > 0 &&
+      (focus_not_render_ready > 15 || focus_dirty_early > 24);
+  world.SetSuppressRelightSeamDirty(idle_remesh_debt ||
+                                    suppress_seam_for_sticky_catchup);
   // Always scan full focus for sync hole-fill when holes exist. Cap rebuild
   // count via sync_cap (cruise tiny, idle larger) — radius=2 while "moving"
   // missed stop holes when residual speed kept moving=true.
@@ -1027,24 +1045,35 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     sync_cap = 2;
   }
-  // Sticky single-column hole: force nearest missing sync regardless of
-  // moving residual / Dirty flood (user hover never cleared otherwise).
-  // Skip on heavy hitch — RebuildChunkImmediate was stacking mesh_emerge
-  // 1–3s/frame and starving MarkRelit (autofly 084736).
-  if (missing_visible_mesh && last_frame_ms <= 40.0)
+  // SoftDefer frontier hole: never RebuildChunkImmediate while PendingLight —
+  // that builds dark preview and leaves sticky (manual 091143: holes+pending
+  // → sticky 2–5). Promote/async light must clear the gate; mesh fills after.
+  if (missing_visible_mesh && last_frame_ms <= 50.0)
   {
     static int force_hole_cd = 0;
     if (force_hole_cd <= 0)
     {
+      world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
       glm::ivec3 hole{};
       if (mesh_service.FindNearestMissingGreedyMesh(
               world.GetBlockWorld(), focus_ground_horiz, focus_radius, hole) &&
           !mesh_service.HasInflightMeshBuild(hole))
       {
-        mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
-                                           hole);
+        const bool hole_pending = world.IsPendingLightBeforeMesh(
+            glm::ivec2(hole.x, hole.z));
+        const int hole_horiz = std::max(std::abs(hole.x - focus_ground_horiz.x),
+                                        std::abs(hole.z - focus_ground_horiz.z));
+        const bool hole_underfeet = hole_horiz <= 1;
+        // V2a allows underfeet preview while PendingLight; force_hole must match
+        // (manual 103603: underfeet miss+pending, async=0, slow feet fill).
+        if ((!hole_pending || hole_underfeet) && last_frame_ms <= 40.0)
+        {
+          mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
+                                             hole);
+        }
       }
-      force_hole_cd = last_frame_ms > 28.0 ? 3 : (moving ? 2 : 1);
+      force_hole_cd =
+          last_frame_ms > 40.0 ? 4 : (moving ? 2 : 1);
     }
     else
     {

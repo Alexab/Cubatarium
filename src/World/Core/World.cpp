@@ -2707,6 +2707,11 @@ int UWorld::PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,
   {
     return 0;
   }
+  glm::ivec3 nearest_hole{};
+  const bool nearest_missing_hole =
+      MeshService &&
+      MeshService->FindNearestMissingGreedyMesh(
+          BlockWorld, focus_ground_horiz, radius_chunks, nearest_hole);
   int promoted = 0;
   for (const auto &entry : PendingLightBeforeMesh)
   {
@@ -2720,15 +2725,21 @@ int UWorld::PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,
     // Idle: clear InFlight for the whole focus. Underfeet-only clear left
     // pendf~40 stuck with relight_drain≈0 while wall~22ms (manual 083042):
     // DrainRelightQueues drops FIFO entries that still look "in flight".
+    // SoftDefer hole: clear InFlight only for the nearest missing column —
+    // clearing every missing pending column thrashed live jobs (P0_no_dark).
     if (AsyncRelightColumnsInFlight.count(entry.first) != 0)
     {
       const bool idle =
           LastMovementSpeed <= ProceduralTemplate.MovementPrefetchThreshold;
       const int pending_focus =
           CountPendingLightBeforeMeshNear(focus_ground_horiz, radius_chunks);
+      const bool nearest_hole_col =
+          nearest_missing_hole && entry.first.x == nearest_hole.x &&
+          entry.first.y == nearest_hole.z;
       // Cruise with high focus debt: stale InFlight blocked re-enqueue and left
       // outer-ring preview black (manual 161327: z=34 strip, pend~28).
-      if (GetAsyncRelightInFlightCount() == 0 || idle || pending_focus > 8)
+      if (GetAsyncRelightInFlightCount() == 0 || idle || pending_focus > 8 ||
+          nearest_hole_col)
       {
         AsyncRelightColumnsInFlight.erase(entry.first);
       }
