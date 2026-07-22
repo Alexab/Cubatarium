@@ -88,6 +88,7 @@ def main() -> int:
         "wall_fly": m.get("wall_ms_fly_med"),
         "pending_med": m.get("pending_light_focus_med"),
         "async_stuck": m.get("mesh_async_stuck_sec"),
+        "cold_relight_sec": m.get("cold_relight_holes_sec"),
         "ahead": m.get("post_stop_unfinished_ahead_med"),
         "note": args.note,
     }
