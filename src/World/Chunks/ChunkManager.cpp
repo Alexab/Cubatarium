@@ -64,7 +64,11 @@ void UChunkManager::ClearFluidState(glm::ivec3 worldPos)
   it->second->ClearFluidLocal(WorldToLocal(worldPos));
 }
 
-void UChunkManager::Clear() { Chunks.clear(); }
+void UChunkManager::Clear()
+{
+  Chunks.clear();
+  FreeList.clear();
+}
 
 void UChunkManager::ForEachBlock(
     const std::function<void(glm::ivec3, BlockId)> &fn) const
@@ -131,7 +135,17 @@ void UChunkManager::ForEachChunk(
 
 void UChunkManager::RemoveChunk(glm::ivec3 chunkCoord)
 {
-  Chunks.erase(chunkCoord);
+  auto it = Chunks.find(chunkCoord);
+  if (it == Chunks.end())
+  {
+    return;
+  }
+  std::unique_ptr<UChunk> chunk = std::move(it->second);
+  Chunks.erase(it);
+  if (chunk && FreeList.size() < MaxFreeListChunks)
+  {
+    FreeList.push_back(std::move(chunk));
+  }
 }
 
 void UChunkManager::EnsureChunk(glm::ivec3 chunkCoord)
@@ -146,7 +160,17 @@ UChunk &UChunkManager::GetOrCreateChunk(glm::ivec3 chunkCoord)
   {
     return *it->second;
   }
-  auto chunk = std::make_unique<UChunk>(chunkCoord);
+  std::unique_ptr<UChunk> chunk;
+  if (!FreeList.empty())
+  {
+    chunk = std::move(FreeList.back());
+    FreeList.pop_back();
+    chunk->ResetForReuse(chunkCoord);
+  }
+  else
+  {
+    chunk = std::make_unique<UChunk>(chunkCoord);
+  }
   UChunk &ref = *chunk;
   Chunks.emplace(chunkCoord, std::move(chunk));
   return ref;

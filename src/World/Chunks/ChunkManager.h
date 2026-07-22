@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 namespace cutum
 {
