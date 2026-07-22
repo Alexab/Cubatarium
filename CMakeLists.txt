@@ -1057,6 +1057,12 @@ add_executable(docked_overlay_layout_test src/Test/DockedOverlayLayoutTest.cpp
 target_include_directories(docked_overlay_layout_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(docked_overlay_layout_test glm::glm)
 
+add_executable(gui_scrollbar_controller_test
+    src/Test/GuiScrollbarControllerTest.cpp
+    src/Gui/Core/GuiScrollbarController.cpp)
+target_include_directories(gui_scrollbar_controller_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
 add_executable(touch_input_bridge_lifecycle_test
     src/App/Platform/TouchInputBridge.cpp
     src/Test/TouchInputBridgeLifecycleTest.cpp)
@@ -1819,6 +1825,15 @@ target_include_directories(movement_integration_test PRIVATE
 target_compile_definitions(movement_integration_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(movement_integration_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(player_clearance_test
+    ${PHYSICS_COLLISION_UNIT_SOURCES}
+    src/Test/PlayerClearanceTest.cpp)
+target_include_directories(player_clearance_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(player_clearance_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(player_clearance_test glm::glm nlohmann_json::nlohmann_json)
 
 if(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
