@@ -403,7 +403,18 @@ void UChunkMeshCache::CancelAsyncInFlightKeepDirty()
   {
     return;
   }
+  // Dirty is removed at schedule time — re-queue Active coords before drop so
+  // "KeepDirty" is real (otherwise cancel orphans remesh debt).
+  for (const auto &entry : ActiveMeshSourceRevision)
+  {
+    Dirty.MarkDirtyPriority(entry.first);
+  }
   AsyncBuilder->CancelPending();
+  // Builder InFlight was cleared; Active/RemeshAfterApply must follow or
+  // HasInflightMeshBuild stays true and RemeshAfterApply loops forever while
+  // async count (builder-only) looks drained.
+  ActiveMeshSourceRevision.clear();
+  RemeshAfterApply.clear();
 }
 
 void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
