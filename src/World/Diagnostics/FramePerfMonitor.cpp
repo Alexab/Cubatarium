@@ -16,6 +16,8 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
+#include <psapi.h>
+#pragma comment(lib, "psapi.lib")
 #else
 #include <unistd.h>
 #endif
@@ -173,6 +175,10 @@ struct FrameNumbers
   int focus_unfinished_behind{0};
   uint64_t mesh_discarded_late{0};
   uint64_t mesh_apply_stale{0};
+  double rss_mb{0.0};
+  double private_mb{0.0};
+  int chunk_count{0};
+  uint64_t greedy_vertices{0};
   std::string pending_cols;
   double max_wall_ms{0.0};
   double max_stream_ms{0.0};
@@ -267,6 +273,24 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.mesh_discarded_late = phys.MeshDiscardedLate;
   n.mesh_apply_stale = phys.MeshApplyStale;
   n.pending_cols = phys.PendingFocusCols;
+#ifdef _WIN32
+  PROCESS_MEMORY_COUNTERS_EX pmc{};
+  pmc.cb = sizeof(pmc);
+  if (GetProcessMemoryInfo(GetCurrentProcess(),
+                           reinterpret_cast<PROCESS_MEMORY_COUNTERS *>(&pmc),
+                           sizeof(pmc)))
+  {
+    n.rss_mb = static_cast<double>(pmc.WorkingSetSize) / (1024.0 * 1024.0);
+    n.private_mb = static_cast<double>(pmc.PrivateUsage) / (1024.0 * 1024.0);
+  }
+#endif
+  {
+    int chunks = 0;
+    world.GetBlockWorld().GetChunkManager().ForEachChunk(
+        [&](const auto &) { ++chunks; });
+    n.chunk_count = chunks;
+  }
+  n.greedy_vertices = world.GetRenderInstanceCount();
   return n;
 }
 
@@ -339,6 +363,9 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"focus_unfinished_behind\":" << n.focus_unfinished_behind
           << ",\"mesh_discarded_late\":" << n.mesh_discarded_late
           << ",\"mesh_apply_stale\":" << n.mesh_apply_stale
+          << ",\"rss_mb\":" << n.rss_mb << ",\"private_mb\":" << n.private_mb
+          << ",\"chunk_count\":" << n.chunk_count
+          << ",\"greedy_vertices\":" << n.greedy_vertices
           << ",\"black_sticky\":" << n.focus_sticky_remesh
           << ",\"pending_cols\":\"" << n.pending_cols << "\""
           << ",\"max_wall_ms\":" << n.max_wall_ms
