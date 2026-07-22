@@ -154,7 +154,37 @@ baseline = `2cb85f3c` + anti-hang.
 
 Evidence: `bin/flight_sim_gate_report_baseline_2cb85f3c.json`,
 `bin/flight_sim_gate_report_V2b.json`, `bin/flight_sim_gate_report_V3.json` /
-`final.json`. Remaining P1: pending plateau →0 (lit-but-dirty catch-up).
+`final.json`. Soft F closed pending→0 on autofly; F2 lit-but-dirty still open.
+
+### Manual evidence `perf_20260722-081734` (HEAD `38064157`)
+
+Фокус `-492,31`. В целом ок: sticky=0, wall med≈22, pending→0, missing→0 к концу.
+
+Два разных хвоста (не путать):
+
+| Фаза | Симптом | Телеметрия | Что видит игрок |
+|------|---------|------------|-----------------|
+| **A Ingress** | дыра на границе новой области | `holes=1 miss=1`, часто **`async=0` + `snap=0`**, `pending` 2–15, `relight_drain≈0` (сегменты ~26–30) | колонка **никогда не мешится**, пока PendingLight не снят (V2a soft-defer) |
+| **B Idle wait** | «долго жду — не чинится» | после pending→0: **`async=42` flat**, `nr` 42→59 ↑, `fd` 457→525 ↑, `ahead`≈35 | unfinished растёт при здоровом wall; remesh thrash, не hole |
+
+Вывод: P0 = **frontier missing + cold relight** (A), не F2 Dirty drain.
+F2 (B) остаётся P1: idle remesh plateau / RemeshAfterApply.
+
+### Следующие шаги (скорректировано 2026-07-22)
+
+1. **P0 — Frontier hole stall (A)**  
+   Пока `focus_missing_mesh>0` и `pending_light_focus>0`: держать hot async relight /
+   promote (нельзя `relight_drain≈0` при hole). Не возвращать dark preview (R5).  
+   Критерий: в manual/autofly нет сегментов `holes=1 ∧ async=0 ∧ relight≈0` >2–3 с;
+   stop/idle не оставляет miss>0.
+
+2. **P1 — Idle remesh plateau (B / F2)**  
+   После pending→0: не допускать роста `nr`/`fd` при wall<30; снять pin
+   `async=pipeline` без Cancel (sticky-риск).  
+   Gates F2: `nr_end≤36`, `fd_end≤280`.
+
+3. **Не делать:** MarkDirty focus flood, sync relight flood, preview до света,
+   CancelAsync как idle recovery, сужение MarkRelit Y-band (уже регрессировало).
 
 ### Anti-Patterns (не возвращать)
 

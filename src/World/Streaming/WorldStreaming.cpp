@@ -976,11 +976,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     bg_budget = 1;
   }
-  // Pending debt with empty relight FIFO and no inflight: re-promote + clear
-  // lit-ready columns (manual 155539: pend=2, relight_drain≈0 plateau).
+  // Pending debt with empty relight FIFO: re-promote + clear lit-ready columns
+  // (manual 155539: pend=2, relight_drain≈0). Frontier SoftDefer holes hitch
+  // (manual 081734 wall 66–228) — do not require healthy wall when focus is
+  // missing mesh, or FIFO stays empty and the hole never meshes.
   if (pending_light_focus_n > 0 && pending_bg_after == 0 &&
-      frame_ms <= kBadFrameMs &&
-      (idle_recovery || pending_light_focus_n > 8 ||
+      (frame_ms <= kBadFrameMs || missing_focus_mesh) &&
+      (idle_recovery || pending_light_focus_n > 8 || missing_focus_mesh ||
        world.GetAsyncRelightInFlightCount() == 0))
   {
     world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
