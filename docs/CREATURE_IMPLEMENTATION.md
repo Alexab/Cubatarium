@@ -189,7 +189,7 @@ CreatureBoundsState LerpBoundsStance(const CreatureBoundsState& s, float blend01
 | crouch height 1.5 | minSizeBlocks.y = 1.5 |
 | eyeHeight 1.62 | eyeOffset.y = 1.62 (от bodyOrigin) |
 
-`bodyOrigin.y` = feet level; `eye = bodyOrigin + (0, 1.62, 0)`.
+`bodyOrigin.y` = feet level (стопы на `BlockTopY` опоры). Коллизионный AABB: **верх = feet + height** (для human: 1.8), **не** `eye + height/2`. `eyeHeight` — только смещение камеры/луча: `eye = bodyOrigin + (0, eyeHeight, 0)`.
 
 ### 1.3 Checkpoint 1
 
