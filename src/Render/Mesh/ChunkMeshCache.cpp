@@ -439,7 +439,9 @@ void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
   }
   for (const glm::ivec3 &coord : outside)
   {
-    AsyncBuilder->ForgetInflight(coord);
+    // Do not ForgetInflight: that freed pipeline slots while workers still
+    // built full meshes into Completed (memory climb). Keep IsInFlight true
+    // until Drain; Active drop + Dirty requeue is enough for focus priority.
     ActiveMeshSourceRevision.erase(coord);
     if (!Dirty.Contains(coord))
     {
