@@ -49,6 +49,7 @@ def f2_gate(report: dict) -> bool:
         (m.get("post_stop_pending_med") or 99) <= 5,
         (m.get("post_stop_not_ready_end") or 99) <= 36,
         (m.get("post_stop_focus_dirty_end") or 999) <= 280,
+        (m.get("cold_relight_holes_sec") or 99) <= 3,
         (m.get("stop_wall_med") or 999) <= 90,
         (m.get("chunks_traveled") or 0) >= 3,
     ]
@@ -86,9 +87,14 @@ def main() -> int:
         "holes_rate": m.get("holes_rate"),
         "wall_med": m.get("wall_ms_med"),
         "wall_fly": m.get("wall_ms_fly_med"),
+        "wall_no_holes": m.get("wall_ms_no_holes_med"),
+        "dirty_no_holes": m.get("dirty_med_no_holes"),
         "pending_med": m.get("pending_light_focus_med"),
         "async_stuck": m.get("mesh_async_stuck_sec"),
         "cold_relight_sec": m.get("cold_relight_holes_sec"),
+        "spike_count": m.get("spike_count"),
+        "spike_max_wall": m.get("spike_max_wall"),
+        "spike_max_wall_holes": m.get("spike_max_wall_holes"),
         "ahead": m.get("post_stop_unfinished_ahead_med"),
         "note": args.note,
     }
