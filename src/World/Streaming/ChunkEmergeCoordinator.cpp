@@ -951,9 +951,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   int underfeet_immediate_this_frame = 0;
   const int kMaxUnderfeetImmediate = last_frame_ms > 20.0 ? 1 : 2;
 
-  // Cold SoftDefer hole: same-tick promote→async drain so MayMesh can open
-  // before schedule (Streaming drain already ran; FIFO may still be empty).
-  // No sync RelightTerrainColumn flood (R10/R16 anti-pattern).
+  // Cold SoftDefer hole: promote into FIFO. Streaming already owns the heavy
+  // DrainRelightQueues; a second same-tick drain here with drain_n=8–24 caused
+  // walk spikes (manual 193627: relight_drain 0.9–3s inside mesh_emerge_prep).
+  // Spread: at most 1 bg job while moving, and only on a healthy previous frame.
   {
     const FocusIngressDecision cold =
         EvaluateFocusIngress(FocusIngressInput{
@@ -962,11 +963,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     if (cold.active && cold.promote_once && pending_focus_count > 0)
     {
       world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
-      const int drain_n =
-          std::max(8, std::min(cold.relight_floor > 0 ? cold.relight_floor / 2
-                                                      : 16,
-                               24));
-      world.DrainRelightQueuesBudget(0, drain_n);
+      if (moving)
+      {
+        if (last_frame_ms <= 28.0)
+        {
+          world.DrainRelightQueuesBudget(0, 1);
+        }
+      }
+      else if (last_frame_ms <= 24.0)
+      {
+        world.DrainRelightQueuesBudget(0, 2);
+      }
     }
   }
 
