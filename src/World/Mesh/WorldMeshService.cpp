@@ -405,6 +405,14 @@ size_t UWorldMeshService::GetDirtyCount() const
   return Cache.GetDirtyCount();
 }
 
+int UWorldMeshService::MaybeDropFarthestDirty(glm::ivec3 focus_ground_chunk,
+                                              size_t soft_cap,
+                                              int min_keep_horiz)
+{
+  return Cache.MaybeDropFarthestDirty(focus_ground_chunk, soft_cap,
+                                      min_keep_horiz);
+}
+
 int UWorldMeshService::GetAsyncInFlightCount() const
 {
   return Cache.GetAsyncInFlightCount();

@@ -889,6 +889,8 @@ public:
   {
     return PendingLightBeforeMesh.size();
   }
+  /// Drop farthest PendingLight columns that already have mesh (not cold holes).
+  int TrimPendingLightBeforeMesh(glm::ivec3 focus_ground_horiz, int soft_cap);
   int CountPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,
                                       int radius_chunks) const;
   /// "(cx,cz),..." for PendingLightBeforeMesh inside focus (max_cols cap).

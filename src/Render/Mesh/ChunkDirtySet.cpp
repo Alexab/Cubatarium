@@ -189,4 +189,46 @@ void UChunkDirtySet::PrioritizeChunksWithoutMesh(
                    });
 }
 
+int UChunkDirtySet::MaybeDropFarthest(
+    glm::ivec3 focus_ground_chunk, size_t soft_cap, int min_keep_horiz,
+    const std::function<bool(glm::ivec3)> &missing_mesh)
+{
+  if (soft_cap == 0 || Queue.size() <= soft_cap)
+  {
+    return 0;
+  }
+  int dropped = 0;
+  while (Queue.size() > soft_cap)
+  {
+    int best_i = -1;
+    int best_dist = -1;
+    for (size_t i = 0; i < Queue.size(); ++i)
+    {
+      const glm::ivec3 &c = Queue[i];
+      const int d = HorizDist(c, focus_ground_chunk);
+      if (d <= min_keep_horiz)
+      {
+        continue;
+      }
+      if (missing_mesh && missing_mesh(c))
+      {
+        continue;
+      }
+      if (d > best_dist)
+      {
+        best_dist = d;
+        best_i = static_cast<int>(i);
+      }
+    }
+    if (best_i < 0)
+    {
+      break;
+    }
+    const glm::ivec3 victim = Queue[static_cast<size_t>(best_i)];
+    Erase(victim);
+    ++dropped;
+  }
+  return dropped;
+}
+
 } // namespace cutum

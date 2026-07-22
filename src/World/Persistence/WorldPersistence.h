@@ -71,6 +71,8 @@ public:
   void DrainTerrainColumnRelights(UWorld &world, int max_columns);
   int GetPendingTerrainColumnRelightCount() const;
   int GetPendingPlayerRelightCount() const;
+  /// Drop farthest far-FIFO columns until size <= soft_cap (priority untouched).
+  int TrimFarRelightFifoFarthest(glm::ivec3 focus_ground, int soft_cap);
   void ClearPendingRelights();
   void RequestAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord);
   void RequestAsyncTerrainColumnSave(UWorld &world, glm::ivec3 ground_coord);

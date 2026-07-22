@@ -411,6 +411,37 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const size_t pending_dirty = mesh_service.GetDirtyCount();
   const int pending_async = mesh_service.GetAsyncInFlightCount();
 
+  // Soft-cap Dirty under Yellow/Red pressure: drop farthest remesh (not holes).
+  {
+    const auto &mtune = URuntimeTuning::Get();
+    const int pressure = world.PhysicsTelemetryData.StreamPressure;
+    if (mtune.DirtySoftCap > 0 &&
+        pending_dirty > static_cast<size_t>(mtune.DirtySoftCap) &&
+        pressure >= 1)
+    {
+      const int dropped = mesh_service.MaybeDropFarthestDirty(
+          focus_ground_horiz, static_cast<size_t>(mtune.DirtySoftCap), 1);
+      world.PhysicsTelemetryData.DirtyDropped +=
+          static_cast<uint64_t>(std::max(0, dropped));
+    }
+    if (mtune.PendingLightSoftCap > 0 &&
+        world.GetPendingLightBeforeMeshCount() >
+            static_cast<size_t>(mtune.PendingLightSoftCap))
+    {
+      const int dropped = world.TrimPendingLightBeforeMesh(
+          focus_ground_horiz, mtune.PendingLightSoftCap);
+      world.PhysicsTelemetryData.PendingLightDropped +=
+          static_cast<uint64_t>(std::max(0, dropped));
+    }
+    if (mtune.RelightFifoSoftCap > 0 && world.Persistence)
+    {
+      const int dropped = world.Persistence->TrimFarRelightFifoFarthest(
+          focus_ground_horiz, mtune.RelightFifoSoftCap);
+      world.PhysicsTelemetryData.RelightFifoDropped +=
+          static_cast<uint64_t>(std::max(0, dropped));
+    }
+  }
+
   // Saturated async pool: drop far in-flight work so focus missing can schedule.
   static int async_relief_cooldown = 0;
   if ((visual_holes || missing_underfeet || pending_focus_count > 24) &&

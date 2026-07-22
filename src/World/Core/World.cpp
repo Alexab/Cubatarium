@@ -1531,6 +1531,64 @@ void UWorld::ClearPendingLightBeforeMesh(glm::ivec2 ground_xz)
   StickyRemeshAfterLight.erase(ground_xz);
 }
 
+int UWorld::TrimPendingLightBeforeMesh(glm::ivec3 focus_ground_horiz,
+                                       int soft_cap)
+{
+  if (soft_cap <= 0 ||
+      static_cast<int>(PendingLightBeforeMesh.size()) <= soft_cap ||
+      !MeshService)
+  {
+    return 0;
+  }
+  struct Cand
+  {
+    glm::ivec2 key{};
+    int dist{0};
+  };
+  std::vector<Cand> droppable;
+  droppable.reserve(PendingLightBeforeMesh.size());
+  for (const auto &entry : PendingLightBeforeMesh)
+  {
+    const glm::ivec2 &key = entry.first;
+    const int dist = std::max(std::abs(key.x - focus_ground_horiz.x),
+                              std::abs(key.y - focus_ground_horiz.z));
+    if (dist <= 1)
+    {
+      continue;
+    }
+    bool has_mesh = false;
+    const int max_cy =
+        std::max(0, (ProceduralTemplate.MaxHeight - 1) / CHUNK_SIZE);
+    for (int cy = 0; cy <= max_cy; ++cy)
+    {
+      if (MeshService->HasGreedyMesh(glm::ivec3(key.x, cy, key.y)))
+      {
+        has_mesh = true;
+        break;
+      }
+    }
+    // Never erase cold holes (no mesh) — would leave permanent darkness.
+    if (!has_mesh)
+    {
+      continue;
+    }
+    droppable.push_back(Cand{key, dist});
+  }
+  std::sort(droppable.begin(), droppable.end(),
+            [](const Cand &a, const Cand &b) { return a.dist > b.dist; });
+  int dropped = 0;
+  for (const Cand &c : droppable)
+  {
+    if (static_cast<int>(PendingLightBeforeMesh.size()) <= soft_cap)
+    {
+      break;
+    }
+    ClearPendingLightBeforeMesh(c.key);
+    ++dropped;
+  }
+  return dropped;
+}
+
 bool UWorld::IsPendingLightBeforeMesh(glm::ivec2 ground_xz) const
 {
   return PendingLightBeforeMesh.find(ground_xz) != PendingLightBeforeMesh.end();

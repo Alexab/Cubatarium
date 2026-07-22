@@ -167,6 +167,16 @@ void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z,
   {
     PendingTerrainColumnRelights.push_back(key);
   }
+  const int soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
+  // Bound far FIFO growth: drop oldest far entries (priority deque untouched).
+  while (soft_cap > 0 &&
+         static_cast<int>(PendingTerrainColumnRelights.size()) > soft_cap)
+  {
+    const glm::ivec2 victim = PendingTerrainColumnRelights.front();
+    PendingTerrainColumnRelights.pop_front();
+    PendingTerrainColumnRelightKeys.erase(victim);
+    PendingTerrainColumnRelightYBands.erase(victim);
+  }
 }
 
 void UWorldPersistence::PromoteTerrainColumnRelight(glm::ivec2 key)
@@ -437,6 +447,49 @@ int UWorldPersistence::GetPendingTerrainColumnRelightCount() const
 {
   return static_cast<int>(PendingTerrainColumnRelights.size() +
                           PendingTerrainColumnRelightsPriority.size());
+}
+
+int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
+                                                  int soft_cap)
+{
+  if (soft_cap <= 0 ||
+      static_cast<int>(PendingTerrainColumnRelights.size()) <= soft_cap)
+  {
+    return 0;
+  }
+  int dropped = 0;
+  while (static_cast<int>(PendingTerrainColumnRelights.size()) > soft_cap)
+  {
+    auto best = PendingTerrainColumnRelights.end();
+    int best_dist = -1;
+    for (auto it = PendingTerrainColumnRelights.begin();
+         it != PendingTerrainColumnRelights.end(); ++it)
+    {
+      const int cx = FloorDiv(it->x, CHUNK_SIZE);
+      const int cz = FloorDiv(it->y, CHUNK_SIZE);
+      const int dist =
+          std::max(std::abs(cx - focus_ground.x), std::abs(cz - focus_ground.z));
+      if (dist <= 1)
+      {
+        continue;
+      }
+      if (dist > best_dist)
+      {
+        best_dist = dist;
+        best = it;
+      }
+    }
+    if (best == PendingTerrainColumnRelights.end())
+    {
+      break;
+    }
+    const glm::ivec2 victim = *best;
+    PendingTerrainColumnRelights.erase(best);
+    PendingTerrainColumnRelightKeys.erase(victim);
+    PendingTerrainColumnRelightYBands.erase(victim);
+    ++dropped;
+  }
+  return dropped;
 }
 
 void UWorldPersistence::ClearPendingRelights()

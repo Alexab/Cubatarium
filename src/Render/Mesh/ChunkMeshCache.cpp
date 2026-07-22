@@ -464,6 +464,15 @@ bool UChunkMeshCache::IsChunkMeshDirty(glm::ivec3 chunk_coord) const
   return Dirty.Contains(chunk_coord);
 }
 
+int UChunkMeshCache::MaybeDropFarthestDirty(glm::ivec3 focus_ground_chunk,
+                                            size_t soft_cap,
+                                            int min_keep_horiz)
+{
+  return Dirty.MaybeDropFarthest(
+      focus_ground_chunk, soft_cap, min_keep_horiz,
+      [this](glm::ivec3 c) { return !HasGreedyMesh(c); });
+}
+
 uint64_t UChunkMeshCache::GetChunkMeshRevision(glm::ivec3 chunk_coord) const
 {
   return MeshRevisions.Current(chunk_coord);
