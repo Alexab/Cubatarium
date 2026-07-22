@@ -467,14 +467,53 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
       [&](UCreature &creature)
       {
         ++Stats.CreaturesConsidered;
-        if (creature.GetId() == controlledId)
+        const bool controlled_first_person =
+            creature.GetId() == controlledId &&
+            camera->GetPerspective() == CameraPerspective::FirstPerson;
+
+        auto draw_debug_bounds = [&]()
         {
-          if (camera->GetPerspective() == CameraPerspective::FirstPerson)
+          if (!render.CreatureDebugBounds)
           {
-            ++Stats.CreaturesCulled;
             return;
           }
+          const glm::vec3 bodyOrigin = creature.GetBodyOrigin();
+          const glm::vec3 sizeBlocks = creature.GetBounds().currentSizeBlocks;
+          const glm::vec3 center =
+              BoundsCollisionCenter(bodyOrigin, sizeBlocks);
+          glm::mat4 model = glm::translate(glm::mat4(1.0f), center);
+          model = glm::scale(model, sizeBlocks);
+          engine.DrawBoxWireframe(viewProj * model,
+                                  glm::vec4(0.2f, 0.85f, 1.0f, 1.0f));
+
+          const int gx = static_cast<int>(std::floor(bodyOrigin.x));
+          const int gz = static_cast<int>(std::floor(bodyOrigin.z));
+          const float feetY = BoundsFeetY(bodyOrigin);
+          float groundY = feetY;
+          float delta = 0.0f;
+          if (const std::optional<float> queryY =
+                  world.QueryGroundFeetYUnder(gx, gz, feetY))
+          {
+            groundY = *queryY;
+            delta = feetY - groundY;
+          }
+          const glm::vec3 groundCenter(static_cast<float>(gx) + 0.5f, groundY,
+                                       static_cast<float>(gz) + 0.5f);
+          glm::mat4 groundModel = glm::translate(glm::mat4(1.0f), groundCenter);
+          groundModel = glm::scale(groundModel, glm::vec3(1.02f, 0.02f, 1.02f));
+          const float groundColor = std::abs(delta) < 0.05f ? 0.2f : 1.0f;
+          engine.DrawBoxWireframe(
+              viewProj * groundModel,
+              glm::vec4(groundColor, 1.0f - groundColor * 0.5f, 0.15f, 1.0f));
+        };
+
+        if (controlled_first_person)
+        {
+          draw_debug_bounds();
+          ++Stats.CreaturesCulled;
+          return;
         }
+
         const glm::vec3 sizeBlocks = creature.GetBounds().profile.maxSizeBlocks;
         if (!CreatureBoundsIntersectsFrustum(
                 frustum, creature.GetBodyOrigin(), sizeBlocks, cameraPos,
@@ -514,51 +553,7 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
           visual->SubmitDraw(engine, viewProj);
         }
 
-        if (render.CreatureDebugBounds)
-        {
-          const glm::vec3 bodyOrigin = creature.GetBodyOrigin();
-          const glm::vec3 maxSize = creature.GetBounds().profile.maxSizeBlocks;
-          const glm::vec3 center = BoundsCollisionCenter(bodyOrigin, maxSize);
-          glm::mat4 model = glm::translate(glm::mat4(1.0f), center);
-          model = glm::scale(model, maxSize);
-          engine.DrawBoxWireframe(viewProj * model,
-                                  glm::vec4(0.2f, 0.85f, 1.0f, 1.0f));
-
-          const int gx = static_cast<int>(std::floor(bodyOrigin.x));
-          const int gz = static_cast<int>(std::floor(bodyOrigin.z));
-          const float feetY = BoundsFeetY(bodyOrigin);
-          float groundY = feetY;
-          float delta = 0.0f;
-          if (const std::optional<float> queryY =
-                  world.QueryGroundFeetYUnder(gx, gz, feetY))
-          {
-            groundY = *queryY;
-            delta = feetY - groundY;
-          }
-          const glm::vec3 groundCenter(static_cast<float>(gx) + 0.5f, groundY,
-                                       static_cast<float>(gz) + 0.5f);
-          glm::mat4 groundModel = glm::translate(glm::mat4(1.0f), groundCenter);
-          groundModel = glm::scale(groundModel, glm::vec3(1.02f, 0.02f, 1.02f));
-          const float groundColor = std::abs(delta) < 0.05f ? 0.2f : 1.0f;
-          engine.DrawBoxWireframe(
-              viewProj * groundModel,
-              glm::vec4(groundColor, 1.0f - groundColor * 0.5f, 0.15f, 1.0f));
-
-          static auto lastPoseLog = std::chrono::steady_clock::now();
-          const auto now = std::chrono::steady_clock::now();
-          if (now - lastPoseLog >= std::chrono::seconds(2))
-          {
-            lastPoseLog = now;
-            const float eyeY = creature.GetLocomotionEye().y;
-            const bool isControlled = creature.GetId() == controlledId;
-            if (isControlled || controlledId == 0)
-            {
-              std::cerr << "[creature_pose] Id=" << creature.GetId()
-                        << " feetY=" << feetY << " groundY=" << groundY
-                        << " delta=" << delta << " eyeY=" << eyeY << std::endl;
-            }
-          }
-        }
+        draw_debug_bounds();
       });
   Queue.Flush(engine);
 }
