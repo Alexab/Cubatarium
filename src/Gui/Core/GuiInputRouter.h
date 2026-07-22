@@ -9,12 +9,14 @@ namespace cutum
 
 class UGuiWidget;
 class UGuiScreenBase;
+class UGuiRenderer;
 
 class UGuiInputRouter
 {
 public:
   void SetRoot(UGuiWidget *root);
   void SetActiveScreen(UGuiScreenBase *screen);
+  void SetRenderer(UGuiRenderer *renderer) { Renderer = renderer; }
 
   bool OnMouseDown(const GuiMouseEvent &event);
   bool OnMouseUp(const GuiMouseEvent &event);
@@ -40,6 +42,7 @@ private:
 
   UGuiWidget *Root{nullptr};
   UGuiScreenBase *Screen{nullptr};
+  UGuiRenderer *Renderer{nullptr};
   UGuiWidget *KeyboardFocus{nullptr};
   UGuiWidget *MousePressedWidget{nullptr};
   UGuiWidget *HoveredWidget{nullptr};

@@ -39,6 +39,7 @@ public:
   void DrawTextCenteredInRect(const GuiRect &rect, const std::string &text,
                               const glm::vec3 &color);
   int MeasureTextWidth(const std::string &text) const;
+  int MeasureTextHeight(const std::string &text = "Ag") const;
 
   void PushClipRect(const GuiRect &rect);
   void PopClipRect();
