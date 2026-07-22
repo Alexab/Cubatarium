@@ -1659,8 +1659,10 @@ bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
       continue;
     }
     saw_loaded_meshable = true;
-    if (!MeshService->HasGreedyMesh(coord) || MeshService->IsChunkMeshDirty(coord) ||
-        MeshService->HasInflightMeshBuild(coord))
+    // Missing first mesh = unfinished. Dirty/Active remesh of an existing mesh
+    // must NOT count: that latched idle_remesh_debt (nr≈44, fd≈421, async=42)
+    // and churned snapshots/vertex RAM while standing (manual 202805).
+    if (!MeshService->HasGreedyMesh(coord))
     {
       return false;
     }
@@ -3574,6 +3576,8 @@ void UWorld::PrepareForShutdownFast()
   if (MeshService)
   {
     MeshService->CancelAsyncMeshWork();
+    (void)MeshService->WaitForAsyncMeshIdleFor(std::chrono::milliseconds(50));
+    MeshService->CancelAsyncMeshWork();
   }
   BackgroundQuiesceFinished = true;
   std::cerr << "[Shutdown] PrepareForShutdownFast: done (no join waits)"
@@ -3637,6 +3641,8 @@ void UWorld::PrepareForShutdownWithBudgets(
     {
       (void)MeshService->WaitForAsyncMeshIdleFor(mesh_idle_budget);
     }
+    // Workers may Push Completed after Cancel epoch bump — drop residual RAM.
+    MeshService->CancelAsyncMeshWork();
   }
   phase_ms("mesh_idle");
   const double total_ms =

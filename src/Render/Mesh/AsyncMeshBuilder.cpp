@@ -117,20 +117,16 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
 
 std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
 {
+  (void)maxPerFrame;
   // Always DrainAll: DrainUpTo left orphan/forgotten results (full vertex
   // buffers) sitting in Completed while ForgetInflight freed schedule slots
   // and new jobs piled on (RSS climb; discard counter only moved on peel).
   std::vector<MeshBuildResult> drained = Completed.DrainAll();
   const uint64_t current_epoch = Epoch.load(std::memory_order_acquire);
-  std::size_t accept_limit =
-      maxPerFrame > 0 ? static_cast<std::size_t>(maxPerFrame) : drained.size();
-  // Backlog of full vertex buffers: apply/drop this frame instead of requeueing.
-  if (drained.size() > 48)
-  {
-    accept_limit = drained.size();
-  }
+  // Always accept every live result this frame — requeue left Completed holding
+  // full vertex buffers while standing remesh kept producing (RSS climb).
   std::vector<MeshBuildResult> accepted;
-  accepted.reserve(std::min(accept_limit, drained.size()));
+  accepted.reserve(drained.size());
 
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
@@ -150,12 +146,6 @@ std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
       if (it == InFlight.end() || it->second != result.jobId)
       {
         DiscardedLate.fetch_add(1, std::memory_order_relaxed);
-        continue;
-      }
-      if (accepted.size() >= accept_limit)
-      {
-        // Keep valid overflow for a later frame; slot stays in InFlight.
-        Completed.Push(std::move(result));
         continue;
       }
       InFlight.erase(it);

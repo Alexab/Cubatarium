@@ -390,6 +390,8 @@ bool UChunkMeshCache::WaitForAsyncMeshIdleFor(
 void UChunkMeshCache::CancelAsyncMeshWork()
 {
   Dirty.Clear();
+  ActiveMeshSourceRevision.clear();
+  RemeshAfterApply.clear();
   if (!Render.AsyncMeshing || !Render.GreedyMeshing || !AsyncBuilder)
   {
     return;
@@ -439,14 +441,11 @@ void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
   }
   for (const glm::ivec3 &coord : outside)
   {
-    // Do not ForgetInflight: that freed pipeline slots while workers still
-    // built full meshes into Completed (memory climb). Keep IsInFlight true
-    // until Drain; Active drop + Dirty requeue is enough for focus priority.
+    // Drop Active tracking only. Do not MarkDirty — that re-fed the remesh
+    // storm while standing. InFlight stays until Drain; result applies or
+    // discards without another Capture cycle.
     ActiveMeshSourceRevision.erase(coord);
-    if (!Dirty.Contains(coord))
-    {
-      MarkDirty(coord);
-    }
+    RemeshAfterApply.erase(coord);
   }
 }
 
@@ -649,21 +648,22 @@ bool UChunkMeshCache::HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y,
 
 void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 {
+  // Mid-flight MarkDirty used to re-insert Dirty while Active stayed set —
+  // Apply then immediately rescheduled forever (standing Dirty≈535 async=42).
+  // Defer one remesh after Apply instead of stacking Dirty.
+  if (ActiveMeshSourceRevision.find(chunkCoord) !=
+      ActiveMeshSourceRevision.end())
+  {
+    RemeshAfterApply.insert(chunkCoord);
+    return;
+  }
   const size_t before = Dirty.GetCount();
   Dirty.MarkDirty(chunkCoord);
   if (Dirty.GetCount() == before)
   {
     return;
   }
-  // Never bump while a build is tracked in Active: Capture already froze
-  // world state; bumping each MarkDirty caused Apply stale storms
-  // (async≈42, dirty flat, Δstale thousands/stop). Re-Dirty alone requeues
-  // a fresh Capture after Apply succeeds.
-  if (ActiveMeshSourceRevision.find(chunkCoord) ==
-      ActiveMeshSourceRevision.end())
-  {
-    BumpChunkMeshRevision(chunkCoord);
-  }
+  BumpChunkMeshRevision(chunkCoord);
   // Do not InvalidateFluidSurface here: full-column remesh calls MarkDirty for
   // every cy×seam and kept fluid_map_dirty permanently high (100+), burning
   // 100–500ms/frame. Fluid map is invalidated once per column on gen/light.
@@ -673,12 +673,16 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 }
 void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
 {
-  // Re-prioritize / re-queue: bump only when not already building. Blind bump
-  // on !existed (Dirty cleared at schedule) invalidated every generation.
+  if (ActiveMeshSourceRevision.find(chunkCoord) !=
+      ActiveMeshSourceRevision.end())
+  {
+    RemeshAfterApply.insert(chunkCoord);
+    return;
+  }
+  // Re-prioritize / re-queue: bump only when newly entering Dirty.
   const bool existed = Dirty.Contains(chunkCoord);
   Dirty.MarkDirtyPriority(chunkCoord);
-  if (!existed && ActiveMeshSourceRevision.find(chunkCoord) ==
-                      ActiveMeshSourceRevision.end())
+  if (!existed)
   {
     BumpChunkMeshRevision(chunkCoord);
   }

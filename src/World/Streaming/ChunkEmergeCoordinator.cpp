@@ -196,13 +196,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const int focus_dirty_early =
       mesh_service.CountDirtyWithinHorizontalRadius(focus_ground_horiz,
                                                     focus_radius);
-  // Lit-but-dirty catch-up: last-good idle kept nr≈25 without perpetual remesh.
-  // nr>15 / fd>24 latched drain~28 + snapshot 48ms and pinned async≈42
-  // (manual 194645 quiet: wall~29, dirty~550, nr~35, fd~370).
+  // Lit-but-dirty catch-up: only when focus still has *missing* mesh pressure.
+  // Remesh-of-existing (fd high, nr from Dirty/Active) must not latch forever —
+  // IsColumnRenderReady no longer counts Dirty; keep debt off for remesh-only.
   const bool idle_remesh_debt =
       !moving && pending_focus_count == 0 && black_sticky == 0 &&
-      !missing_visible_mesh &&
-      (not_ready_early > 32 || focus_dirty_early > 80);
+      !missing_visible_mesh && not_ready_early > 32;
   const bool idle_stop =
       !moving &&
       (pending_focus_count > 0 || black_sticky > 0 || missing_visible_mesh ||
@@ -219,11 +218,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         pending_focus_count > 0 && black_sticky == 0 && !missing_visible_mesh;
     if (idle_cancel_cooldown <= 0 || async_saturated_idle || pending_debt_only)
     {
-      // Lit-but-dirty catch-up: CancelOutside → Forget → DiscardedLate +
-      // MarkDirty storm (manual 220707: disc+1393) while focus Dirty plateaued.
-      // idle_remesh_debt still needs outside cancel when async pool is full —
-      // otherwise async≈42 pins and nr/fd climb while wall~23 (manual 102559).
-      if (!idle_remesh_debt || async_saturated_idle)
+      // Never CancelOutside during lit-but-dirty remesh catch-up: Active drop +
+      // re-Dirty pinned async≈42 and Dirty≈535 while standing (manual 202805).
+      if (!idle_remesh_debt)
       {
         mesh_service.CancelInFlightOutsideHorizontalRadius(focus_ground_horiz,
                                                            focus_radius);
@@ -447,8 +444,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       !moving && pending_focus_count == 0 && !missing_visible_mesh &&
       black_sticky > 0 &&
       (focus_not_render_ready > 15 || focus_dirty_early > 24);
+  // Standing remesh storm (manual 202805: Dirty≈535 async=42 holes=0): seam
+  // MarkDirty kept re-feeding Dirty while existing meshes remeshed.
+  const bool suppress_seam_standing_churn =
+      !moving && pending_focus_count == 0 && !missing_visible_mesh &&
+      black_sticky == 0 && pending_dirty_early > 100;
   world.SetSuppressRelightSeamDirty(idle_remesh_debt ||
-                                    suppress_seam_for_sticky_catchup);
+                                    suppress_seam_for_sticky_catchup ||
+                                    suppress_seam_standing_churn);
   // Always scan full focus for sync hole-fill when holes exist. Cap rebuild
   // count via sync_cap (cruise tiny, idle larger) — radius=2 while "moving"
   // missed stop holes when residual speed kept moving=true.
@@ -574,10 +577,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       mesh_drain = std::max(mesh_drain, 20);
       mesh_schedule = std::min(mesh_schedule, 8);
     }
+    else if (moving)
+    {
+      mesh_drain = std::max(mesh_drain, 16);
+      mesh_schedule = std::max(mesh_schedule, 16);
+    }
     else
     {
-      mesh_drain = std::max(mesh_drain, moving ? 16 : 22);
-      mesh_schedule = std::max(mesh_schedule, moving ? 16 : 22);
+      // Standing: drain Completed only — schedule=22 latched async=42 forever.
+      mesh_drain = std::max(mesh_drain, 24);
+      mesh_schedule = std::min(mesh_schedule, 4);
     }
   }
   if (!moving && !visual_holes && !pending_near_light && pending_dirty > 400 &&
@@ -973,8 +982,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     else if (!moving && missing_visible_mesh && pending_focus_count > 0 &&
              last_frame_ms <= 20.0)
     {
+      // Promote only — DrainRelightQueuesBudget here still Captures on main
+      // (manual 202805: prep≈relight 1.8s). Streaming owns paced drain.
       world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
-      world.DrainRelightQueuesBudget(0, 1);
     }
   }
 
