@@ -176,7 +176,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool idle_remesh_debt =
       !moving && pending_focus_count == 0 && black_sticky == 0 &&
       !missing_visible_mesh &&
-      (not_ready_early > 15 || focus_dirty_early > 24);
+      (not_ready_early > 12 || focus_dirty_early > 20);
   const bool idle_stop =
       !moving &&
       (pending_focus_count > 0 || black_sticky > 0 || missing_visible_mesh ||
@@ -515,8 +515,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     mesh_service.SetStarveOutsideFocusMesh(true);
     mesh_service.SetStarveRemeshForHoles(false);
-    mesh_drain = std::max(mesh_drain, last_frame_ms <= 16.0 ? 28 : 22);
-    mesh_schedule = std::max(mesh_schedule, last_frame_ms <= 16.0 ? 24 : 18);
+    const bool heavy_dirty = focus_dirty_early > 280;
+    mesh_drain = std::max(mesh_drain,
+                          last_frame_ms <= 16.0 ? (heavy_dirty ? 32 : 28)
+                                                : (heavy_dirty ? 26 : 22));
+    mesh_schedule = std::max(mesh_schedule,
+                             last_frame_ms <= 16.0 ? (heavy_dirty ? 28 : 24)
+                                                   : (heavy_dirty ? 22 : 18));
     world.ClearPendingLightAfterMeshCommitted(16);
   }
   if (!visual_holes && !missing_underfeet && !pending_near_light &&
@@ -709,9 +714,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     if (idle_remesh_debt)
     {
+      const bool heavy_dirty = focus_dirty_early > 280;
       mesh_schedule =
-          std::min(mesh_schedule, last_frame_ms > 40.0 ? 14 : 20);
-      mesh_drain = std::min(mesh_drain, last_frame_ms > 40.0 ? 18 : 28);
+          std::min(mesh_schedule, last_frame_ms > 40.0 ? 14
+                                                         : (heavy_dirty ? 24 : 20));
+      mesh_drain = std::min(mesh_drain, last_frame_ms > 40.0 ? 18
+                                                               : (heavy_dirty ? 36 : 28));
     }
     else
     {
@@ -725,8 +733,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     if (idle_remesh_debt)
     {
-      mesh_schedule = std::min(mesh_schedule, 22);
-      mesh_drain = std::min(mesh_drain, 28);
+      const bool heavy_dirty = focus_dirty_early > 280;
+      mesh_schedule = std::min(mesh_schedule, heavy_dirty ? 26 : 22);
+      mesh_drain = std::min(mesh_drain, heavy_dirty ? 36 : 28);
     }
     else
     {
