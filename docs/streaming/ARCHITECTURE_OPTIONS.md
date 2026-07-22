@@ -165,7 +165,7 @@ bounded idle drain owner. Refresh/Admit×N не являются primary.
 | Concern | Owner | Entry point | Notes |
 |---------|-------|-------------|-------|
 | Relight budget / FIFO drain | `WorldStreaming` | `DrainRelightQueues` + `bg_budget` | P0 floor via `FocusIngressPolicy` |
-| Focus ingress promote (cruise) | Policy + Emerge | `EvaluateFocusIngress` → `PromoteFrontierHoleIngress` | one promote/frame when active |
+| Focus ingress promote (cruise) | `WorldStreaming` (pre-drain) | `PromotePendingLightRelightsNear` before `DrainRelightQueues` | Emerge `PromoteFrontierHoleIngress` no-ops when `promote_once` |
 | SoftDefer mesh gate | `MeshLitGate` | `SetDeferMeshUntilLitFn` | underfeet never defer |
 | Sync hole fill | Emerge force_hole | `RebuildChunkImmediate` | spike guard: cold async → underfeet only |
 | Mesh drain/schedule | `ChunkEmergeCoordinator` | `TickMeshEmerge` | F2: heavy_dirty caps; moving no-hole: drain↑ schedule↓ |

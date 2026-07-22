@@ -9,7 +9,7 @@
 | iter1_golden | iter1-harness | 9392ce5b | bin/phase_iter1_golden.json | 8 | 90 | 651 | 14 | 6637 | FAIL | flaky vs final_combined |
 | iter1_replay | iter1-harness | 9392ce5b | bin/phase_iter1_replay.json | 0 | 80 | 595 | 8 | 6263 | FAIL | --replay-manual parity |
 | iter23_combined | iter2-iter3 | 57221ea2 | bin/phase_iter23_combined.json | 5 | 39 | 432 | 12 | **1017** | FAIL | spike↓; sticky regress |
-| **iter23_r2** | iter2-iter3 | TBD | bin/phase_iter23_r2.json | **0** | 51 | 454 | **6** | **788** | FAIL | **cold↓ spike↓ sticky=0**; nr/fd open |
+| **iter23_r2** | iter2-iter3 | d50adfa9 | bin/phase_iter23_r2.json | **0** | 51 | 454 | **6** | **788** | FAIL | **best verified**; cold↓ spike↓ sticky=0 |
 
 Checklist: `PREMERGE_CHECKLIST.md`. Ownership: `ARCHITECTURE_OPTIONS.md` (Ownership Map).
 
@@ -33,8 +33,12 @@ Checklist: `PREMERGE_CHECKLIST.md`. Ownership: `ARCHITECTURE_OPTIONS.md` (Owners
 
 ### Что сделано в roadmap
 
-1. **Iter1:** analyzer FPS/spike metrics, PREMERGE_CHECKLIST, snapshot docs, gate cold≤3 (уже в perf).
-2. **Iter2:** `FocusIngressPolicy` + unit test; dedicated relight floor; spike guard (no non-underfeet sync fill when async&lt;4); promote dedupe.
-3. **Iter3:** moving no-hole schedule clamp; landing remesh boost; `DrainFocusVisualWork`; ownership map.
+1. **Iter1:** analyzer FPS/spike metrics, PREMERGE_CHECKLIST, snapshot docs, gate cold≤3 (в `perf`).
+2. **Iter2:** `FocusIngressPolicy` + unit test; dedicated relight floor; spike guard (no non-underfeet sync fill when async&lt;4); promote ownership = Streaming **before** `DrainRelightQueues`, Emerge no-op on `promote_once`.
+3. **Iter3:** moving no-hole schedule clamp (+ late re-assert); landing remesh boost; `DrainFocusVisualWork`; ownership map.
 
-F2 gate ещё FAIL (`nr_end`, `fd_end`, `cold_relight`). Рекомендация: merge `streaming/iter2-iter3-runtime` → `perf` для spike/cold wins; дальше точечно F2 dirty без ослабления spike guard.
+### Open after merge to `perf` (`42b93af6`+)
+
+- F2 gate ещё FAIL (`nr_end`, `fd_end`, `cold_relight≤3`).
+- Дальше точечно: cold→≤3 без ослабления spike guard / heavy_dirty; fd_end≤280.
+- Примечание: после серии hang-killed прогонов локальный boot (`enter-game-smoke` / flight-sim) может застревать после `[Log] initialized` до перезапуска сессии — не путать с runtime regress streaming.

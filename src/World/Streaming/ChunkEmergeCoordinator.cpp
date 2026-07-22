@@ -26,19 +26,24 @@ namespace
 int gMeshTelemetryTick{0};
 #endif
 
-// Phase 4/P0: promote via FocusIngressPolicy (single call / frame when active).
+// Phase 4/P0: Streaming owns pre-drain promote. This hook no-ops when
+// FocusIngressPolicy.promote_once so we do not enqueue a second promote
+// after DrainRelightQueues (too late for this frame's cold hole).
 void PromoteFrontierHoleIngress(UWorld &world, glm::ivec3 focus_ground_horiz,
                                 int focus_radius, bool moving,
                                 bool missing_visible_mesh,
                                 int pending_focus_count, int pending_async,
                                 double last_frame_ms)
 {
+  (void)world;
+  (void)focus_ground_horiz;
+  (void)focus_radius;
   const FocusIngressDecision d = EvaluateFocusIngress(FocusIngressInput{
       moving, missing_visible_mesh, pending_focus_count, pending_async,
       last_frame_ms});
   if (d.promote_once)
   {
-    world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
+    return;
   }
 }
 
@@ -1151,6 +1156,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     mesh_schedule = std::min(mesh_schedule, 10);
     mesh_drain = std::min(mesh_drain, 14);
+  }
+  // Re-assert moving no-hole dirty clamp after later schedule boosts (F2).
+  if (moving && !visual_holes && !missing_underfeet && !pending_near_light &&
+      pending_dirty > 400)
+  {
+    mesh_schedule = std::min(mesh_schedule, 8);
+    mesh_drain = std::max(mesh_drain, 22);
   }
   const double sync_budget_ms =
       (idle_recovery && black_sticky > 0 && last_frame_ms <= 16.0) ? 6.0

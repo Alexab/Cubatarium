@@ -962,27 +962,20 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   }
   // Two-tier promote: underfeet first, then rest of focus — so far-in-focus
   // columns do not jump ahead of the camera column in the priority FIFO.
-  // When cruise ingress is active, promote once at focus radius only (avoid
-  // duplicate Promote×N thrash with ChunkEmergeCoordinator).
+  // Ownership: Streaming promotes *before* DrainRelightQueues. When ingress
+  // is active, ChunkEmerge skips PromoteFrontierHoleIngress (promote-after-
+  // drain left cold_relight with relight_drain≈0).
   if (pending_bg > 0 || underfeet_pending_light)
   {
     world.Persistence->PromoteNearTerrainColumnRelights(focus_horiz, 1);
   }
-  if (!ingress.promote_once)
-  {
-    world.PromotePendingLightRelightsNear(focus_horiz, 1);
-  }
+  world.PromotePendingLightRelightsNear(focus_horiz, 1);
   if (pending_bg > 0 || near_pending_light)
   {
     world.Persistence->PromoteNearTerrainColumnRelights(focus_horiz,
                                                         focus_radius);
   }
-  // When ingress is active, ChunkEmerge PromoteFrontierHoleIngress owns the
-  // single pending-light promote for the frame (avoid duplicate enqueue).
-  if (!ingress.promote_once)
-  {
-    world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
-  }
+  world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
 
   // Re-read queue depth after promote — snapshot pending_bg may have been 0.
   const int pending_bg_after =
