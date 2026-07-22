@@ -1786,13 +1786,20 @@ bool UWorld::HasPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,
   return CountPendingLightBeforeMeshNear(focus_ground_horiz, radius_chunks) > 0;
 }
 
-int UWorld::DrainColumnWork(glm::ivec3 focus_ground_horiz, int radius_chunks,
-                            int clear_pending_budget)
+int UWorld::DrainFocusVisualWork(glm::ivec3 focus_ground_horiz, int radius_chunks,
+                                 int clear_pending_budget)
 {
   int drained = 0;
   drained += PromotePendingLightRelightsNear(focus_ground_horiz, radius_chunks);
   drained += ClearPendingLightAfterMeshCommitted(clear_pending_budget);
   return drained;
+}
+
+int UWorld::DrainColumnWork(glm::ivec3 focus_ground_horiz, int radius_chunks,
+                            int clear_pending_budget)
+{
+  return DrainFocusVisualWork(focus_ground_horiz, radius_chunks,
+                              clear_pending_budget);
 }
 
 bool UWorld::CanSeedSkylightAtCommit(glm::ivec3 ground) const

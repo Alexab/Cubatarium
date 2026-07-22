@@ -1,4 +1,5 @@
 #include "World/Streaming/WorldStreaming.h"
+#include "World/Streaming/FocusIngressPolicy.h"
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "World/Math/GridMath.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
@@ -951,27 +952,37 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     bg_budget = std::max(bg_budget, pending_light_focus_n > 24 ? 32 : 20);
   }
-  // P0 frontier ingress: missing mesh + pending light but mesh pool idle — relight
-  // must not stall (manual 102559: holes=1, pending, async=0, relight_drain≈0).
-  if (world.GetLastMovementSpeed() > procedural.MovementPrefetchThreshold &&
-      missing_focus_mesh && pending_light_focus_n > 0 && mesh_async_n < 8 &&
-      frame_ms <= kBadFrameMs)
+  // P0 frontier ingress via FocusIngressPolicy (dedicated floor, not F2 caps).
+  const FocusIngressDecision ingress = EvaluateFocusIngress(FocusIngressInput{
+      world.GetLastMovementSpeed() > procedural.MovementPrefetchThreshold,
+      missing_focus_mesh, pending_light_focus_n, mesh_async_n, frame_ms});
+  if (ingress.relight_floor > 0)
   {
-    bg_budget = std::max(bg_budget, pending_light_focus_n > 12 ? 40 : 32);
+    bg_budget = std::max(bg_budget, ingress.relight_floor);
   }
   // Two-tier promote: underfeet first, then rest of focus — so far-in-focus
   // columns do not jump ahead of the camera column in the priority FIFO.
+  // When cruise ingress is active, promote once at focus radius only (avoid
+  // duplicate Promote×N thrash with ChunkEmergeCoordinator).
   if (pending_bg > 0 || underfeet_pending_light)
   {
     world.Persistence->PromoteNearTerrainColumnRelights(focus_horiz, 1);
   }
-  world.PromotePendingLightRelightsNear(focus_horiz, 1);
+  if (!ingress.promote_once)
+  {
+    world.PromotePendingLightRelightsNear(focus_horiz, 1);
+  }
   if (pending_bg > 0 || near_pending_light)
   {
     world.Persistence->PromoteNearTerrainColumnRelights(focus_horiz,
                                                         focus_radius);
   }
-  world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
+  // When ingress is active, ChunkEmerge PromoteFrontierHoleIngress owns the
+  // single pending-light promote for the frame (avoid duplicate enqueue).
+  if (!ingress.promote_once)
+  {
+    world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
+  }
 
   // Re-read queue depth after promote — snapshot pending_bg may have been 0.
   const int pending_bg_after =

@@ -2,16 +2,39 @@
 
 Автоматический учёт прогонов фаз streaming (autofly `--teleport-cruise`).
 
-| Phase | Branch | Commit | Report | sticky | nr_end | fd_end | holes_rate | wall_med | F2 gate | Notes |
-|-------|--------|--------|--------|--------|--------|--------|------------|----------|---------|-------|
-| baseline_3589c59f | perf | 55c54a18 | bin/phase_baseline_3589c59f.json | 9 | 90 | 604 | 0.56 | 169 | FAIL | post P0-v1+GUI; nrΔ+54 регресс |
-| P0-v2 | streaming/phase-p0 | b119887d | bin/phase_P0_v2.json | 0 | 28 | 371 | 0.55 | 75 | FAIL | nrΔ−36; лучший P0 |
-| F2_v1 | streaming/phase-f2 | 82ae3279 | bin/phase_F2_v1.json | 0 | 37 | 403 | 0.54 | 83 | FAIL | ранний порог fd регресс |
-| final_combined | streaming/phase-4-unified | ba98cfb9 | bin/phase_final_combined.json | 0 | 25 | 358 | 0.54 | 76 | FAIL | **лучший** nrΔ−62 fdΔ−59 |
-| P0F2_next | streaming/perf-next-p0-f2-gate | ab496a06 | bin/phase_P0F2_next.json | 0 | 63 | 522 | 0.58 | 128 | FAIL | холодный relight лучше (8s), но F2 резкий регресс |
-| P0F2_next_r2 | streaming/perf-next-p0-f2-gate | ab496a06 | bin/phase_P0F2_next_r2.json | 0 | 90 | 660 | 0.56 | 147 | FAIL | `cold_relight=2s` (gate OK), но F2 ещё хуже |
-| P0F2_next_r3 | streaming/perf-next-p0-f2-gate | ab496a06 | bin/phase_P0F2_next_r3.json | 3 | 71 | 548 | 0.62 | 139 | FAIL | попытка баланса ухудшила sticky + cold_relight |
+| Phase | Branch | Commit | Report | sticky | nr_end | fd_end | cold | spike_max_h | F2 | Notes |
+|-------|--------|--------|--------|--------|--------|--------|------|-------------|-----|-------|
+| final_combined | phase-4-unified | ba98cfb9 | bin/phase_final_combined.json | 0 | 25 | 358 | 12 | — | FAIL | best pre-roadmap autofly |
+| manual_134418 | snapshot | 9392ce5b | bin/phase_manual_134418.json | 0 | 25 | 347 | **14** | **3309** | FAIL | current UX snapshot |
+| iter1_golden | iter1-harness | 9392ce5b | bin/phase_iter1_golden.json | 8 | 90 | 651 | 14 | 6637 | FAIL | flaky vs final_combined |
+| iter1_replay | iter1-harness | 9392ce5b | bin/phase_iter1_replay.json | 0 | 80 | 595 | 8 | 6263 | FAIL | --replay-manual parity |
+| iter23_combined | iter2-iter3 | 57221ea2 | bin/phase_iter23_combined.json | 5 | 39 | 432 | 12 | **1017** | FAIL | spike↓; sticky regress |
+| **iter23_r2** | iter2-iter3 | TBD | bin/phase_iter23_r2.json | **0** | 51 | 454 | **6** | **788** | FAIL | **cold↓ spike↓ sticky=0**; nr/fd open |
 
-Полный отчёт: `PHASE_EXECUTION_REPORT.md`.
+Checklist: `PREMERGE_CHECKLIST.md`. Ownership: `ARCHITECTURE_OPTIONS.md` (Ownership Map).
 
-Формат дополнения: после каждого autofly запуска `python tools/phase_run_record.py --phase <id> --report <json> --note "<text>"`.
+## Current Snapshot — manual `perf_20260722-134418`
+
+**Лог:** `bin/logs/perf_20260722-134418_25496.jsonl`  
+**Маршрут:** (−472,48) → (−483,48).
+
+### Плюсы (baseline UX)
+
+- sticky ≈ 0, pending → 0, missing = 0 на stop
+- SoftDefer работает; stop nr_end = 25, fd_end = 347
+
+### Минусы (открытый долг)
+
+| Хвост | Было (134418) | После iter23_r2 (autofly) |
+|-------|---------------|---------------------------|
+| A cold_relight | 14s | **6s** (цель ≤3) |
+| B fd_end / moving FPS | fd 347 / dirty~520 | fd 454 (ещё открыто) |
+| C spike_max holes | 3309ms | **788ms** |
+
+### Что сделано в roadmap
+
+1. **Iter1:** analyzer FPS/spike metrics, PREMERGE_CHECKLIST, snapshot docs, gate cold≤3 (уже в perf).
+2. **Iter2:** `FocusIngressPolicy` + unit test; dedicated relight floor; spike guard (no non-underfeet sync fill when async&lt;4); promote dedupe.
+3. **Iter3:** moving no-hole schedule clamp; landing remesh boost; `DrainFocusVisualWork`; ownership map.
+
+F2 gate ещё FAIL (`nr_end`, `fd_end`, `cold_relight`). Рекомендация: merge `streaming/iter2-iter3-runtime` → `perf` для spike/cold wins; дальше точечно F2 dirty без ослабления spike guard.

@@ -206,6 +206,33 @@ def analyze(
     )
     wall_fly = col(fly_segment, "wall_ms") if fly_segment else wall
 
+    # Moving / fly periods without visual holes: FPS thrash from lit-but-dirty.
+    no_hole_fly = [
+        r
+        for r in fly_segment
+        if float(r.get(hole_key) or 0) <= 0
+        and float(r.get("focus_missing_mesh") or 0) <= 0
+    ]
+    wall_no_holes = col(no_hole_fly, "wall_ms")
+    dirty_no_holes = col(no_hole_fly, "dirty")
+    async_no_holes = col(no_hole_fly, "mesh_async")
+    wall_ms_no_holes_med = median(wall_no_holes)
+    dirty_med_no_holes = median(dirty_no_holes)
+    mesh_async_med_no_holes = median(async_no_holes)
+
+    spike_count = len(spikes)
+    spike_walls = [
+        float(r.get("wall_ms") or r.get("max_wall_ms") or 0) for r in spikes
+    ]
+    spike_max_wall = max(spike_walls) if spike_walls else 0.0
+    hole_spike_walls = [
+        float(r.get("wall_ms") or 0)
+        for r in spikes
+        if float(r.get(hole_key) or r.get("visual_holes") or 0) > 0
+        or float(r.get("focus_missing_mesh") or 0) > 0
+    ]
+    spike_max_wall_holes = max(hole_spike_walls) if hole_spike_walls else 0.0
+
     async_stuck_sec = max(stuck_async_holes_sec, mesh_async_stuck_sec)
     wall_fly_med = median(wall_fly)
     gates = {
@@ -411,6 +438,12 @@ def analyze(
             "red_rate": red_rate,
             "wall_ms_med": median(wall),
             "wall_ms_fly_med": wall_fly_med,
+            "wall_ms_no_holes_med": wall_ms_no_holes_med,
+            "dirty_med_no_holes": dirty_med_no_holes,
+            "mesh_async_med_no_holes": mesh_async_med_no_holes,
+            "spike_count": spike_count,
+            "spike_max_wall": spike_max_wall,
+            "spike_max_wall_holes": spike_max_wall_holes,
             "mesh_async_med": median(mesh_async),
             "stuck_async_holes_sec": stuck_async_holes_sec,
             "cold_relight_holes_sec": cold_relight_holes_sec,

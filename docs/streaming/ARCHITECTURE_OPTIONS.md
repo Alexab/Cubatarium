@@ -159,3 +159,18 @@ bounded idle drain owner. Refresh/Admit×N не являются primary.
 Главный вывод: проблема не в том, что recovery paths существуют, а в том, что
 они распределяют ownership одной и той же колонки между несколькими
 механизмами.
+
+## Ownership Map (после iter 1–3 roadmap, 2026-07-22)
+
+| Concern | Owner | Entry point | Notes |
+|---------|-------|-------------|-------|
+| Relight budget / FIFO drain | `WorldStreaming` | `DrainRelightQueues` + `bg_budget` | P0 floor via `FocusIngressPolicy` |
+| Focus ingress promote (cruise) | Policy + Emerge | `EvaluateFocusIngress` → `PromoteFrontierHoleIngress` | one promote/frame when active |
+| SoftDefer mesh gate | `MeshLitGate` | `SetDeferMeshUntilLitFn` | underfeet never defer |
+| Sync hole fill | Emerge force_hole | `RebuildChunkImmediate` | spike guard: cold async → underfeet only |
+| Mesh drain/schedule | `ChunkEmergeCoordinator` | `TickMeshEmerge` | F2: heavy_dirty caps; moving no-hole: drain↑ schedule↓ |
+| Pending clear after mesh | `UWorld` | `DrainFocusVisualWork` | promote + clear; no Recover/Admit |
+| Idle lit-but-dirty | Emerge | `idle_remesh_debt` (nr>15 / fd>24) | keep threshold; landing one-shot boost |
+
+**Не смешивать:** P0 relight floor и F2 heavy_dirty caps — разные budget axes.
+

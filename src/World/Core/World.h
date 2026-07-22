@@ -920,7 +920,11 @@ public:
                                      int &out_ahead, int &out_behind) const;
   /// Authoritative mesh gate: LitReady+ or underfeet first-mesh preview.
   bool MayMeshColumn(glm::ivec3 ground, bool underfeet_preview) const;
-  /// Centralized focus-ring drain used by streaming and mesh emerge.
+  /// Centralized focus-ring drain: promote pending relight + clear lit-ready
+  /// pending after mesh. Does not Recover/Admit (those stay watchdogs).
+  int DrainFocusVisualWork(glm::ivec3 focus_ground_horiz, int radius_chunks,
+                           int clear_pending_budget);
+  /// Alias of DrainFocusVisualWork (legacy call sites).
   int DrainColumnWork(glm::ivec3 focus_ground_horiz, int radius_chunks,
                       int clear_pending_budget);
   /// Idle sync relight for focus pending columns that already have preview mesh.
