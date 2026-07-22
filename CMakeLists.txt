@@ -1053,6 +1053,11 @@ add_executable(streaming_render_ready_invariants_test
 target_include_directories(streaming_render_ready_invariants_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
+add_executable(focus_ingress_policy_test
+    src/Test/FocusIngressPolicyTest.cpp)
+target_include_directories(focus_ingress_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
 add_executable(docked_overlay_layout_test src/Test/DockedOverlayLayoutTest.cpp
     src/Gui/Layout/DockedOverlayLayout.cpp)
 target_include_directories(docked_overlay_layout_test PRIVATE ${CMAKE_SOURCE_DIR}/src)

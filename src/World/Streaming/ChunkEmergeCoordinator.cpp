@@ -1,4 +1,5 @@
 #include "World/Streaming/ChunkEmergeCoordinator.h"
+#include "World/Streaming/FocusIngressPolicy.h"
 #include "World/Streaming/MeshLitGate.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Camera/Camera.h"
@@ -25,15 +26,17 @@ namespace
 int gMeshTelemetryTick{0};
 #endif
 
-// Phase 4 unified ingress: moving frontier hole + pending + cold mesh pool.
+// Phase 4/P0: promote via FocusIngressPolicy (single call / frame when active).
 void PromoteFrontierHoleIngress(UWorld &world, glm::ivec3 focus_ground_horiz,
                                 int focus_radius, bool moving,
                                 bool missing_visible_mesh,
                                 int pending_focus_count, int pending_async,
                                 double last_frame_ms)
 {
-  if (moving && missing_visible_mesh && pending_focus_count > 0 &&
-      pending_async < 8 && last_frame_ms <= 50.0)
+  const FocusIngressDecision d = EvaluateFocusIngress(FocusIngressInput{
+      moving, missing_visible_mesh, pending_focus_count, pending_async,
+      last_frame_ms});
+  if (d.promote_once)
   {
     world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
   }
@@ -542,14 +545,39 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   if (!visual_holes && !missing_underfeet && !pending_near_light &&
       pending_dirty > 200 && last_frame_ms <= 28.0)
   {
-    mesh_drain = std::max(mesh_drain, moving ? 16 : 22);
-    mesh_schedule = std::max(mesh_schedule, moving ? 16 : 22);
+    // Moving + high Dirty without holes (manual 134418: dirty~520, async~41,
+    // wall~40): drain results, do not ramp schedule (feeds remesh thrash).
+    if (moving && pending_dirty > 400)
+    {
+      mesh_drain = std::max(mesh_drain, 20);
+      mesh_schedule = std::min(mesh_schedule, 8);
+    }
+    else
+    {
+      mesh_drain = std::max(mesh_drain, moving ? 16 : 22);
+      mesh_schedule = std::max(mesh_schedule, moving ? 16 : 22);
+    }
   }
-  if (!visual_holes && !pending_near_light && pending_dirty > 400 &&
+  if (!moving && !visual_holes && !pending_near_light && pending_dirty > 400 &&
       last_frame_ms <= 20.0)
   {
     mesh_drain = std::max(mesh_drain, 24);
     mesh_schedule = std::max(mesh_schedule, 24);
+  }
+
+  // Teleport / cruise landing: one-shot focus remesh boost when entering idle
+  // with lit-but-dirty debt (F2), without Recover MarkDirty flood.
+  {
+    static bool was_moving = false;
+    if (!moving && was_moving && focus_dirty_early > 200 &&
+        pending_focus_count == 0 && !missing_visible_mesh &&
+        last_frame_ms <= 28.0)
+    {
+      mesh_service.SetStarveOutsideFocusMesh(true);
+      mesh_drain = std::max(mesh_drain, 28);
+      mesh_schedule = std::max(mesh_schedule, 22);
+    }
+    was_moving = moving;
   }
 
   if (moving && near_mesh_backlog)
@@ -1077,9 +1105,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // SoftDefer frontier hole: never RebuildChunkImmediate while PendingLight —
   // that builds dark preview and leaves sticky (manual 091143: holes+pending
   // → sticky 2–5). Promote/async light must clear the gate; mesh fills after.
+  // Spike guard (manual 134418): cold async=0 + hole → no non-underfeet sync
+  // fill (mesh_emerge 0.7–3s hitch).
   if (missing_visible_mesh && last_frame_ms <= 50.0)
   {
     static int force_hole_cd = 0;
+    const FocusIngressDecision ingress = EvaluateFocusIngress(FocusIngressInput{
+        moving, missing_visible_mesh, pending_focus_count, pending_async,
+        last_frame_ms});
     if (force_hole_cd <= 0)
     {
       world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
@@ -1093,9 +1126,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const int hole_horiz = std::max(std::abs(hole.x - focus_ground_horiz.x),
                                         std::abs(hole.z - focus_ground_horiz.z));
         const bool hole_underfeet = hole_horiz <= 1;
+        const bool sync_ok =
+            AllowSyncHoleFillForColumn(ingress, hole_underfeet);
         // V2a allows underfeet preview while PendingLight; force_hole must match
         // (manual 103603: underfeet miss+pending, async=0, slow feet fill).
-        if ((!hole_pending || hole_underfeet) && last_frame_ms <= 40.0)
+        if (sync_ok && (!hole_pending || hole_underfeet) &&
+            last_frame_ms <= 40.0)
         {
           mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
                                              hole);
@@ -1129,8 +1165,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   if (tick_stats.Completed > 0 || tick_stats.SyncRebuilt > 0 ||
       (!moving && pending_focus_count > 0))
   {
-    world.DrainColumnWork(focus_ground_horiz, focus_radius,
-                          idle_recovery ? 24 : 12);
+    world.DrainFocusVisualWork(focus_ground_horiz, focus_radius,
+                               idle_recovery ? 24 : 12);
   }
 
 #ifndef NDEBUG
