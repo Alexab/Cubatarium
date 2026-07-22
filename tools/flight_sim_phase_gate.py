@@ -58,6 +58,21 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("stop_wall_med", "le", 90.0),
         ("chunks_traveled", "ge", 3.0),
     ],
+    # Moving hitch budget (manual 161304): spike + no-hole FPS.
+    "C": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("spike_max_wall_holes", "le", 200.0),
+        ("cold_relight_holes_sec", "le", 6.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "CB": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("spike_max_wall_holes", "le", 200.0),
+        ("cold_relight_holes_sec", "le", 3.0),
+        ("wall_ms_no_holes_med", "le", 35.0),
+        ("dirty_med_no_holes", "le", 450.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
 }
 
 

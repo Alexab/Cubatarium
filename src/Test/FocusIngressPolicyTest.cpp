@@ -45,6 +45,18 @@ int main()
     FocusIngressInput in;
     in.moving = true;
     in.missing_mesh = true;
+    in.pending_focus = 20;
+    in.mesh_async = 0;
+    in.frame_ms = 120.0;
+    const auto d = EvaluateFocusIngress(in);
+    Expect(d.active, "cold hitch active");
+    Expect(d.relight_floor >= 8 && d.relight_floor <= 12, "modest hitch floor");
+  }
+
+  {
+    FocusIngressInput in;
+    in.moving = true;
+    in.missing_mesh = true;
     in.pending_focus = 5;
     in.mesh_async = 20;
     in.frame_ms = 20.0;

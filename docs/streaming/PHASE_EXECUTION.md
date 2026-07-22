@@ -2,43 +2,24 @@
 
 Автоматический учёт прогонов фаз streaming (autofly `--teleport-cruise`).
 
-| Phase | Branch | Commit | Report | sticky | nr_end | fd_end | cold | spike_max_h | F2 | Notes |
-|-------|--------|--------|--------|--------|--------|--------|------|-------------|-----|-------|
-| final_combined | phase-4-unified | ba98cfb9 | bin/phase_final_combined.json | 0 | 25 | 358 | 12 | — | FAIL | best pre-roadmap autofly |
-| manual_134418 | snapshot | 9392ce5b | bin/phase_manual_134418.json | 0 | 25 | 347 | **14** | **3309** | FAIL | current UX snapshot |
-| iter1_golden | iter1-harness | 9392ce5b | bin/phase_iter1_golden.json | 8 | 90 | 651 | 14 | 6637 | FAIL | flaky vs final_combined |
-| iter1_replay | iter1-harness | 9392ce5b | bin/phase_iter1_replay.json | 0 | 80 | 595 | 8 | 6263 | FAIL | --replay-manual parity |
-| iter23_combined | iter2-iter3 | 57221ea2 | bin/phase_iter23_combined.json | 5 | 39 | 432 | 12 | **1017** | FAIL | spike↓; sticky regress |
-| **iter23_r2** | iter2-iter3 | d50adfa9 | bin/phase_iter23_r2.json | **0** | 51 | 454 | **6** | **788** | FAIL | **best verified**; cold↓ spike↓ sticky=0 |
+| Phase | Config | sticky | cold | spike_max | nr_end | fd_end | Notes |
+|-------|--------|--------|------|-----------|--------|--------|-------|
+| iter23_r2 | Debug | **0** | 6 | 788 | 51 | 454 | best verified Debug |
+| manual_161304 | manual | **0** | **16** | **4662** | 27 | 330 | UX: seconds-scale mesh_emerge |
+| stepCAB (aggressive) | RelWithDebInfo | 9 | 6 | 6589 | 90 | 616 | **anti-pattern**: sync_cap=0 + StarveRemesh → sticky |
+| baseline_rel (3d6b033c) | RelWithDebInfo | 9 | 4 | 3101 | 89 | 676 | same sticky noise on Rel build |
+| step_safe (this) | RelWithDebInfo | 9 | **2** | **1005** | 90 | 658 | vs Rel baseline: cold↓ spike↓ sticky same |
 
-Checklist: `PREMERGE_CHECKLIST.md`. Ownership: `ARCHITECTURE_OPTIONS.md` (Ownership Map).
+## Lessons (2026-07-22 evening)
 
-## Current Snapshot — manual `perf_20260722-134418`
+1. **Aggressive C (sync_cap=0, ban underfeet, StarveRemeshForHoles)** → sticky↑ and spike↑. Do not repeat.
+2. **RelWithDebInfo ≠ Debug** for sticky on current World_164 (Rel baseline sticky=9 while historical Debug r2 was 0). Prefer Debug for sticky gates when boot works; Rel for throughput.
+3. **Debug enter-game-smoke / flight-sim** intermittently hangs after `[Log] initialized` (0-byte perf). RelWithDebInfo boots reliably.
+4. Remaining tails vs manual 161304 still **A cold, B FPS, C spike**; safe path is incremental Rel/Debug A/B without touching SoftDefer/underfeet V2a.
 
-**Лог:** `bin/logs/perf_20260722-134418_25496.jsonl`  
-**Маршрут:** (−472,48) → (−483,48).
+## Safe patch contents
 
-### Плюсы (baseline UX)
-
-- sticky ≈ 0, pending → 0, missing = 0 на stop
-- SoftDefer работает; stop nr_end = 25, fd_end = 347
-
-### Минусы (открытый долг)
-
-| Хвост | Было (134418) | После iter23_r2 (autofly) |
-|-------|---------------|---------------------------|
-| A cold_relight | 14s | **6s** (цель ≤3) |
-| B fd_end / moving FPS | fd 347 / dirty~520 | fd 454 (ещё открыто) |
-| C spike_max holes | 3309ms | **788ms** |
-
-### Что сделано в roadmap
-
-1. **Iter1:** analyzer FPS/spike metrics, PREMERGE_CHECKLIST, snapshot docs, gate cold≤3 (в `perf`).
-2. **Iter2:** `FocusIngressPolicy` + unit test; dedicated relight floor; spike guard (no non-underfeet sync fill when async&lt;4); promote ownership = Streaming **before** `DrainRelightQueues`, Emerge no-op on `promote_once`.
-3. **Iter3:** moving no-hole schedule clamp (+ late re-assert); landing remesh boost; `DrainFocusVisualWork`; ownership map.
-
-### Open after merge to `perf` (`42b93af6`+)
-
-- F2 gate ещё FAIL (`nr_end`, `fd_end`, `cold_relight≤3`).
-- Дальше точечно: cold→≤3 без ослабления spike guard / heavy_dirty; fd_end≤280.
-- Примечание: после серии hang-killed прогонов локальный boot (`enter-game-smoke` / flight-sim) может застревать после `[Log] initialized` до перезапуска сессии — не путать с runtime regress streaming.
+- `FocusIngressPolicy`: modest relight floor on hitch cold frames (8–12).
+- `force_hole`: moving non-underfeet frame cap 22ms (underfeet stay 40).
+- Moving no-hole: schedule≤6, drain≥24 when dirty>400.
+- Gates: phase `C` / `CB` in `flight_sim_phase_gate.py`.

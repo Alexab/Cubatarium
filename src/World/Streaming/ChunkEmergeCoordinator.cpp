@@ -1134,9 +1134,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const bool sync_ok =
             AllowSyncHoleFillForColumn(ingress, hole_underfeet);
         // V2a allows underfeet preview while PendingLight; force_hole must match
-        // (manual 103603: underfeet miss+pending, async=0, slow feet fill).
+        // (manual 103603). Moving non-underfeet: tighter frame cap (manual 161304).
+        const double force_frame_cap =
+            (moving && !hole_underfeet) ? 22.0 : 40.0;
         if (sync_ok && (!hole_pending || hole_underfeet) &&
-            last_frame_ms <= 40.0)
+            last_frame_ms <= force_frame_cap)
         {
           mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
                                              hole);
@@ -1158,11 +1160,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_drain = std::min(mesh_drain, 14);
   }
   // Re-assert moving no-hole dirty clamp after later schedule boosts (F2).
+  // Manual 161304: dirty~566 / wall~49 — prefer drain over schedule thrash.
   if (moving && !visual_holes && !missing_underfeet && !pending_near_light &&
       pending_dirty > 400)
   {
-    mesh_schedule = std::min(mesh_schedule, 8);
-    mesh_drain = std::max(mesh_drain, 22);
+    mesh_schedule = std::min(mesh_schedule, 6);
+    mesh_drain = std::max(mesh_drain, 24);
   }
   const double sync_budget_ms =
       (idle_recovery && black_sticky > 0 && last_frame_ms <= 16.0) ? 6.0

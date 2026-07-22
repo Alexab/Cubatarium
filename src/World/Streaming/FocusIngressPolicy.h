@@ -45,10 +45,17 @@ inline FocusIngressDecision EvaluateFocusIngress(const FocusIngressInput &in)
   out.active = true;
   out.promote_once = warm_enough || cold_pool;
 
-  if (cold_pool && in.frame_ms <= 28.0)
+  if (cold_pool)
   {
-    // Dedicated floor — do not depend on global bg_budget ladder alone.
-    out.relight_floor = in.pending_focus > 8 ? 48 : 36;
+    // Dedicated floor: full when healthy; modest on hitch (avoid amplify wall).
+    if (in.frame_ms <= 28.0)
+    {
+      out.relight_floor = in.pending_focus > 8 ? 48 : 36;
+    }
+    else
+    {
+      out.relight_floor = in.pending_focus > 8 ? 12 : 8;
+    }
   }
   else if (in.mesh_async < 8 && in.frame_ms <= 24.0)
   {
