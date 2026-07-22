@@ -2,6 +2,7 @@
 #define GUI_LIST_VIEW_H
 
 #include "Gui/Widgets/GuiWidget.h"
+#include "Gui/Core/GuiScrollbarController.h"
 #include <functional>
 #include <string>
 #include <vector>
@@ -51,6 +52,7 @@ private:
   GuiRect ScrollbarThumbRect() const;
   GuiRect ListAreaRect() const;
   void DrawScrollbar(UGuiRenderer &renderer);
+  GuiScrollbarMetrics BuildScrollbarMetrics() const;
   void EnsureSelectedVisible();
   bool SelectIndex(int index);
   bool HandleKeyNavigation(const GuiKeyEvent &event);
@@ -70,6 +72,7 @@ private:
   int PendingSelectIndex{-1};
   bool HasLayoutBounds{false};
   GuiRect LayoutBounds{};
+  UGuiScrollbarController ScrollbarController;
   int ScrollbarWidthPx() const;
   int TouchSlopPx() const;
 };

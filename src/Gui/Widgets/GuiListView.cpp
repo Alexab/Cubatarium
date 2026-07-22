@@ -2,6 +2,7 @@
 #include "Gui/Core/GuiFocus.h"
 #include "Gui/Core/GuiListScrollMixin.h"
 #include "Gui/Core/GuiRenderer.h"
+#include "Gui/Core/GuiScrollbarController.h"
 #include "Gui/Core/GuiTheme.h"
 #include "Gui/Core/GuiTypes.h"
 
@@ -83,7 +84,11 @@ int UGuiListView::GetPreferredHeight() const { return MinHeight(); }
 
 bool UGuiListView::ConsumesScrollDragAt(int x, int y) const
 {
-  return Visible && MaxScrollY() > 0 && ListAreaRect().Contains(x, y);
+  if (!Visible || MaxScrollY() <= 0)
+  {
+    return false;
+  }
+  return ListAreaRect().Contains(x, y) || ScrollbarTrackRect().Contains(x, y);
 }
 
 void UGuiListView::SetItems(std::vector<std::string> items)
@@ -220,6 +225,17 @@ void UGuiListView::DrawScrollbar(UGuiRenderer &renderer)
   renderer.DrawBorderRect(track, Theme->PanelBorder, Theme->BorderThickness);
 }
 
+GuiScrollbarMetrics UGuiListView::BuildScrollbarMetrics() const
+{
+  GuiScrollbarMetrics metrics;
+  metrics.Track = ScrollbarTrackRect();
+  metrics.Thumb = ScrollbarThumbRect();
+  metrics.ViewportH = Bounds.H;
+  metrics.MaxScroll = MaxScrollY();
+  metrics.ScrollY = ScrollOffsetPx;
+  return metrics;
+}
+
 void UGuiListView::Draw(UGuiRenderer &renderer)
 {
   if (!Visible || !Theme)
@@ -253,7 +269,28 @@ void UGuiListView::Draw(UGuiRenderer &renderer)
 
 bool UGuiListView::OnMouseDown(const GuiMouseEvent &event)
 {
-  if (!Visible || !ListAreaRect().Contains(event.X, event.Y))
+  if (!Visible)
+  {
+    return false;
+  }
+
+  const GuiScrollbarMetrics metrics = BuildScrollbarMetrics();
+  const GuiScrollbarHit hit =
+      ScrollbarController.HitTest(metrics, event.X, event.Y);
+  if (hit == GuiScrollbarHit::Thumb)
+  {
+    ScrollbarController.BeginThumbDrag(metrics, event.Y);
+    return true;
+  }
+  if (hit == GuiScrollbarHit::TrackAbove || hit == GuiScrollbarHit::TrackBelow)
+  {
+    ScrollOffsetPx =
+        ScrollbarController.ScrollFromTrackClick(metrics, hit, event.Y);
+    ClampScroll();
+    return true;
+  }
+
+  if (!ListAreaRect().Contains(event.X, event.Y))
   {
     return false;
   }
@@ -273,6 +310,13 @@ bool UGuiListView::OnMouseDown(const GuiMouseEvent &event)
 
 bool UGuiListView::OnMouseMove(const GuiMouseEvent &event)
 {
+  if (ScrollbarController.IsDragging())
+  {
+    const GuiScrollbarMetrics metrics = BuildScrollbarMetrics();
+    ScrollOffsetPx = ScrollbarController.ScrollFromThumbDrag(metrics, event.Y);
+    ClampScroll();
+    return true;
+  }
   if (!DragActive)
   {
     return false;
@@ -293,6 +337,11 @@ bool UGuiListView::OnMouseMove(const GuiMouseEvent &event)
 
 bool UGuiListView::OnMouseUp(const GuiMouseEvent &event)
 {
+  if (ScrollbarController.IsDragging())
+  {
+    ScrollbarController.EndDrag();
+    return true;
+  }
   if (!DragActive)
   {
     return false;
@@ -390,7 +439,11 @@ bool UGuiListView::OnScroll(const GuiScrollEvent &event)
 
 bool UGuiListView::ScrollAtPoint(int x, int y, const GuiScrollEvent &event)
 {
-  if (!Visible || !ListAreaRect().Contains(x, y))
+  if (!Visible)
+  {
+    return false;
+  }
+  if (!ListAreaRect().Contains(x, y) && !ScrollbarTrackRect().Contains(x, y))
   {
     return false;
   }

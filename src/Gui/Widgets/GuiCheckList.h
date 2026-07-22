@@ -2,6 +2,7 @@
 #define GUI_CHECK_LIST_H
 
 #include "Gui/Widgets/GuiWidget.h"
+#include "Gui/Core/GuiScrollbarController.h"
 #include <functional>
 #include <string>
 #include <vector>
@@ -55,6 +56,7 @@ private:
   GuiRect ScrollbarThumbRect() const;
   GuiRect ListAreaRect() const;
   void DrawScrollbar(UGuiRenderer &renderer);
+  GuiScrollbarMetrics BuildScrollbarMetrics() const;
   void EnsureFocusedVisible();
   bool FocusIndex(int index);
   bool ToggleIndex(int index);
@@ -80,6 +82,7 @@ private:
   int PendingToggleIndex{-1};
   bool HasLayoutBounds{false};
   GuiRect LayoutBounds{};
+  UGuiScrollbarController ScrollbarController;
   int ScrollbarWidthPx() const;
   int TouchSlopPx() const;
 };

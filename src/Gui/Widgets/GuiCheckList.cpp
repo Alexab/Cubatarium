@@ -3,6 +3,7 @@
 #include "Gui/Core/GuiKeyCodes.h"
 #include "Gui/Core/GuiListScrollMixin.h"
 #include "Gui/Core/GuiRenderer.h"
+#include "Gui/Core/GuiScrollbarController.h"
 #include "Gui/Core/GuiTheme.h"
 #include "Gui/Core/GuiTypes.h"
 
@@ -147,7 +148,11 @@ void UGuiCheckList::ApplyCheckedScrollPolicy()
 
 bool UGuiCheckList::ConsumesScrollDragAt(int x, int y) const
 {
-  return Visible && MaxScrollY() > 0 && ListAreaRect().Contains(x, y);
+  if (!Visible || MaxScrollY() <= 0)
+  {
+    return false;
+  }
+  return ListAreaRect().Contains(x, y) || ScrollbarTrackRect().Contains(x, y);
 }
 
 std::vector<std::string> UGuiCheckList::GetCheckedIds() const
@@ -291,6 +296,17 @@ void UGuiCheckList::DrawScrollbar(UGuiRenderer &renderer)
   renderer.DrawBorderRect(track, Theme->PanelBorder, Theme->BorderThickness);
 }
 
+GuiScrollbarMetrics UGuiCheckList::BuildScrollbarMetrics() const
+{
+  GuiScrollbarMetrics metrics;
+  metrics.Track = ScrollbarTrackRect();
+  metrics.Thumb = ScrollbarThumbRect();
+  metrics.ViewportH = Bounds.H;
+  metrics.MaxScroll = MaxScrollY();
+  metrics.ScrollY = ScrollOffsetPx;
+  return metrics;
+}
+
 void UGuiCheckList::Draw(UGuiRenderer &renderer)
 {
   if (!Visible || !Theme)
@@ -335,11 +351,32 @@ void UGuiCheckList::Draw(UGuiRenderer &renderer)
 
 bool UGuiCheckList::OnMouseDown(const GuiMouseEvent &event)
 {
-  if (!Visible || !Enabled || !ListAreaRect().Contains(event.X, event.Y))
+  if (!Visible || !Enabled)
   {
     return false;
   }
   if (event.Button != GuiMouseButton::Left)
+  {
+    return false;
+  }
+
+  const GuiScrollbarMetrics metrics = BuildScrollbarMetrics();
+  const GuiScrollbarHit hit =
+      ScrollbarController.HitTest(metrics, event.X, event.Y);
+  if (hit == GuiScrollbarHit::Thumb)
+  {
+    ScrollbarController.BeginThumbDrag(metrics, event.Y);
+    return true;
+  }
+  if (hit == GuiScrollbarHit::TrackAbove || hit == GuiScrollbarHit::TrackBelow)
+  {
+    ScrollOffsetPx =
+        ScrollbarController.ScrollFromTrackClick(metrics, hit, event.Y);
+    ClampScroll();
+    return true;
+  }
+
+  if (!ListAreaRect().Contains(event.X, event.Y))
   {
     return false;
   }
@@ -360,6 +397,13 @@ bool UGuiCheckList::OnMouseDown(const GuiMouseEvent &event)
 
 bool UGuiCheckList::OnMouseMove(const GuiMouseEvent &event)
 {
+  if (ScrollbarController.IsDragging())
+  {
+    const GuiScrollbarMetrics metrics = BuildScrollbarMetrics();
+    ScrollOffsetPx = ScrollbarController.ScrollFromThumbDrag(metrics, event.Y);
+    ClampScroll();
+    return true;
+  }
   if (!DragActive)
   {
     return false;
@@ -401,6 +445,11 @@ bool UGuiCheckList::OnMouseMove(const GuiMouseEvent &event)
 
 bool UGuiCheckList::OnMouseUp(const GuiMouseEvent &event)
 {
+  if (ScrollbarController.IsDragging())
+  {
+    ScrollbarController.EndDrag();
+    return true;
+  }
   if (!DragActive)
   {
     return false;
@@ -521,7 +570,11 @@ bool UGuiCheckList::OnScroll(const GuiScrollEvent &event)
 
 bool UGuiCheckList::ScrollAtPoint(int x, int y, const GuiScrollEvent &event)
 {
-  if (!Visible || !ListAreaRect().Contains(x, y))
+  if (!Visible)
+  {
+    return false;
+  }
+  if (!ListAreaRect().Contains(x, y) && !ScrollbarTrackRect().Contains(x, y))
   {
     return false;
   }
