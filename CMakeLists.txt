@@ -201,6 +201,7 @@ set(SOURCES
     src/World/Lighting/AsyncRelightBuilder.cpp
     src/World/Persistence/WorldPersistence.cpp
     src/World/Streaming/WorldStreaming.cpp
+    src/World/Streaming/MemoryBudgetController.cpp
     src/World/Streaming/ChunkEmergeCoordinator.cpp
     src/World/Physics/WorldPhysicsScheduler.cpp
     src/World/Physics/WorldMovementPhysicsService.cpp
@@ -1787,6 +1788,7 @@ set(PHYSICS_UWORLD_TEST_SOURCES
     src/World/Environment/WorldEnvironment.cpp
     src/World/Mesh/WorldMeshService.cpp
     src/World/Streaming/WorldStreaming.cpp
+    src/World/Streaming/MemoryBudgetController.cpp
     src/World/Streaming/ChunkEmergeCoordinator.cpp
     src/World/Persistence/WorldPersistence.cpp
     src/World/Core/WorldCooperativeOps.cpp

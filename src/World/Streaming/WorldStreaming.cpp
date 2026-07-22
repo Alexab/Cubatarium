@@ -1,5 +1,6 @@
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Streaming/FocusIngressPolicy.h"
+#include "World/Streaming/MemoryBudgetController.h"
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "World/Math/GridMath.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
@@ -27,6 +28,13 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#include <psapi.h>
+#endif
 
 namespace cutum
 {
@@ -1064,6 +1072,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                    : (frame_ms > kBadFrameMs ? 1 : 2))
             : (frame_ms > kBadFrameMs ? 2 : 4);
     bg_budget = std::min(bg_budget, hard_cap);
+    if (LastMemoryDecision.capture_hard_cap >= 0)
+    {
+      bg_budget = std::min(bg_budget, LastMemoryDecision.capture_hard_cap);
+    }
   }
 
   {
@@ -1523,6 +1535,48 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         URuntimeTuning::Get().KeepPrefetchMargin);
     Streamer->SetMaxKeepPrefetchOpsPerFrame(
         URuntimeTuning::Get().MaxKeepPrefetchOpsPerFrame);
+    {
+      ++StreamingFrameCounter;
+      MemoryBudgetSample sample;
+      sample.stream_pressure = world.PhysicsTelemetryData.StreamPressure;
+      sample.last_wall_ms = world.GetWallFrameDelta() * 1000.0;
+      sample.visual_holes = world.PhysicsTelemetryData.VisualHoles;
+      sample.pending_light_focus = world.PhysicsTelemetryData.PendingLightFocus;
+      sample.baseline_keep_margin = URuntimeTuning::Get().KeepPrefetchMargin;
+      sample.visual_rd = effectiveRenderDistance;
+#ifdef _WIN32
+      PROCESS_MEMORY_COUNTERS_EX pmc{};
+      pmc.cb = sizeof(pmc);
+      if (GetProcessMemoryInfo(
+              GetCurrentProcess(),
+              reinterpret_cast<PROCESS_MEMORY_COUNTERS *>(&pmc), sizeof(pmc)))
+      {
+        sample.private_mb =
+            static_cast<double>(pmc.PrivateUsage) / (1024.0 * 1024.0);
+      }
+#endif
+      MemoryBudgetDecision decision;
+      MemoryBudget.MaybeEvaluate(StreamingFrameCounter, sample,
+                                 URuntimeTuning::Get(), decision);
+      LastMemoryDecision = decision;
+      world.PhysicsTelemetryData.MemoryPressure = decision.memory_pressure;
+      Streamer->SetKeepPrefetchMargin(decision.keep_margin);
+      if (!decision.allow_keep_prewarm)
+      {
+        Streamer->SetMaxKeepPrefetchOpsPerFrame(0);
+      }
+      if (decision.max_effective_rd < effectiveRenderDistance)
+      {
+        effectiveRenderDistance = decision.max_effective_rd;
+      }
+      if (decision.emergency_cancel_outside)
+      {
+        meshService.CancelInFlightOutsideHorizontalRadius(
+            glm::ivec3(world.PhysicsTelemetryData.FocusChunkX, 0,
+                       world.PhysicsTelemetryData.FocusChunkZ),
+            Streamer->GetVisualRenderDistance());
+      }
+    }
     Streamer->SetRenderDistance(effectiveRenderDistance);
     // Visual cull/mesh focus = visual RD; keep ring is Visual+margin.
     meshService.SetRenderDistanceChunks(
