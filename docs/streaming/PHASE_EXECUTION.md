@@ -13,6 +13,18 @@
 | sync_budget_r2 | RelWithDebInfo | 9 | 8 | **978** holes | 25 | 365 | no moving Immediate; nearest Dirty only |
 | replay_manual_r1 | RelWithDebInfo | 9 | **0** | holes **160** / wall 1373 | 12 | 198 | resume −473; SyncIdle→Dirty; hold-space; stream hitch |
 | manual_194645 | manual walk existing | **0** | 10 | **4288** | 31 | 347 | prep=relight 3–4s (MeshEmerge drain+Capture); quiet wall~28 dirty~524 async=42 |
+| mem_214430 | manual standing | — | — | — | — | — | remesh thrash `async≈42`; Private→20+ GB; telemetry rss/private |
+| mem_220018 | idle + place light | — | — | **15–52s** | — | — | idle Capture storm `hole_cap 48–56`; schedule≤4 too aggressive |
+| mem_221846 | place lit block | — | — | hang | — | — | unbounded light BFS outside HasChunk → fixed `152cb5df` |
+
+## Memory crisis (2026-07-22, Era 12)
+
+1. **Fluid `GetOrCreateChunk`** into missing → resident explosion (`02b9868d`: HasChunk).
+2. **ForgetInflight without DrainAll** → orphan Completed mesh RAM (`0cb92063`).
+3. **Standing remesh latch / async≈42** → Dirty thrash + Private 20+ GB (`214430`, latch `b1f8924c`).
+4. **Idle Capture without time budget** (`hole_cap 48–56`) → 15–52 s spikes (`220018`).
+5. **Light BFS into missing chunks** (Write no-op, GetLight=0) → hang + RAM on place light (`221846` / `152cb5df`).
+6. Next: byte-budget + fill% — [`MEMORY_BUDGET.md`](MEMORY_BUDGET.md).
 
 ## Lessons (2026-07-22 evening)
 
