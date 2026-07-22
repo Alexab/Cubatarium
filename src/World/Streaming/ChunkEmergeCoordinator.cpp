@@ -24,6 +24,21 @@ namespace
 #ifndef NDEBUG
 int gMeshTelemetryTick{0};
 #endif
+
+// Phase 4 unified ingress: moving frontier hole + pending + cold mesh pool.
+void PromoteFrontierHoleIngress(UWorld &world, glm::ivec3 focus_ground_horiz,
+                                int focus_radius, bool moving,
+                                bool missing_visible_mesh,
+                                int pending_focus_count, int pending_async,
+                                double last_frame_ms)
+{
+  if (moving && missing_visible_mesh && pending_focus_count > 0 &&
+      pending_async < 8 && last_frame_ms <= 50.0)
+  {
+    world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
+  }
+}
+
 } // namespace
 
 UChunkEmergeCoordinator::FrameBudget
@@ -176,7 +191,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool idle_remesh_debt =
       !moving && pending_focus_count == 0 && black_sticky == 0 &&
       !missing_visible_mesh &&
-      (not_ready_early > 12 || focus_dirty_early > 20);
+      (not_ready_early > 15 || focus_dirty_early > 24);
   const bool idle_stop =
       !moving &&
       (pending_focus_count > 0 || black_sticky > 0 || missing_visible_mesh ||
@@ -649,11 +664,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   // P0: moving frontier hole + pending + cold mesh pool — promote relight every
   // tick so SoftDefer gate can clear without dark preview (manual 102559 phase A).
-  if (moving && missing_visible_mesh && pending_focus_count > 0 &&
-      pending_async < 8 && last_frame_ms <= 50.0)
-  {
-    world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
-  }
+  PromoteFrontierHoleIngress(world, focus_ground_horiz, focus_radius, moving,
+                             missing_visible_mesh, pending_focus_count,
+                             pending_async, last_frame_ms);
 
   // Floor drain by Dirty backlog so hitch frames do not starve MeshAsync.
   // Cap schedule aggressiveness when underfeet is already OK — flooding
