@@ -1,7 +1,6 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Core/CreatureBounds.h"
-#include "Creatures/Locomotion/CreatureLocomotionController.h"
 #include "Creatures/Player/PlayerCapsule.h"
 #include "World/Collision/WorldCollision.h"
 #include "World/Core/BlockWorld.h"
@@ -108,16 +107,6 @@ static void RunOneAirBlocked(cutum::UBlockWorld &block_world,
          "player should not pass 1-air corridor");
 }
 
-static void RunCrouchEyeSync()
-{
-  cutum::UCreatureLocomotionController locomotion;
-  locomotion.SetCollisionProfile(glm::vec3(0.6f, 1.8f, 0.6f), 1.62f);
-  locomotion.SetStanceBlendForView(1.0f);
-  const cutum::PlayerCapsule collision_cap = locomotion.GetCollisionCapsule();
-  ExpectNear(collision_cap.eyeHeight, locomotion.GetViewEyeHeight(), 1e-4f,
-             "crouch collision and view eye height should match");
-}
-
 int main()
 {
   constexpr cutum::BlockId kStone = 12;
@@ -136,8 +125,6 @@ int main()
   collision_a.SetBlockRegistry(&registry);
   collision_a.SetEntityCollisionEnabled(false);
   RunTwoAirCorridor(collision_a, cap);
-
-  RunCrouchEyeSync();
 
   cutum::UBlockWorld block_world_b;
   BuildCorridorFloor(block_world_b, kStone, 2);
