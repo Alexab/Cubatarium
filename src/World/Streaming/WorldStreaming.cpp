@@ -977,7 +977,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     world.Persistence->PromoteNearTerrainColumnRelights(focus_horiz,
                                                         focus_radius);
   }
-  world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
+  // When ingress is active, ChunkEmerge PromoteFrontierHoleIngress owns the
+  // single pending-light promote for the frame (avoid duplicate enqueue).
+  if (!ingress.promote_once)
+  {
+    world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
+  }
 
   // Re-read queue depth after promote — snapshot pending_bg may have been 0.
   const int pending_bg_after =
