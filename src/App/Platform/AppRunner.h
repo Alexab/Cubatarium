@@ -28,9 +28,11 @@ struct FlightSimOptions
   double IdleBeforeFlySec{8.0};
   /// Look direction: 180° = −X (west), matching World_164 manual ocean flight.
   float FaceYawDeg{180.0f};
-  float FacePitchDeg{-10.0f};
+  float FacePitchDeg{-2.0f};
   /// Eye height above sea when too low (ocean cruise).
   float MinAltitudeAboveSea{28.0f};
+  /// Hold Space while flying to maintain altitude (manual FreeMove climb).
+  bool HoldSpace{false};
   bool Sprint{false};
   /// Reset to a fixed ocean cruise start each run (matches World_164 manual).
   bool TeleportToCruiseStart{false};

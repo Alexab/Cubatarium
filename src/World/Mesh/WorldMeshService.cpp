@@ -336,6 +336,21 @@ void UWorldMeshService::RebuildChunkImmediate(const UBlockWorld &world,
   Cache.RebuildChunkImmediate(world, registry, chunk_coord);
 }
 
+void UWorldMeshService::ResetImmediateMeshStats()
+{
+  Cache.ResetImmediateMeshStats();
+}
+
+double UWorldMeshService::GetLastMeshImmediateMs() const
+{
+  return Cache.GetLastMeshImmediateMs();
+}
+
+int UWorldMeshService::GetLastMeshImmediateCount() const
+{
+  return Cache.GetLastMeshImmediateCount();
+}
+
 void UWorldMeshService::WaitForAsyncMeshIdle() { Cache.WaitForAsyncMeshIdle(); }
 
 bool UWorldMeshService::WaitForAsyncMeshIdleFor(
@@ -418,6 +433,11 @@ double UWorldMeshService::GetLastMeshSyncMs() const
 double UWorldMeshService::GetLastMeshSnapshotMs() const
 {
   return Cache.GetLastMeshSnapshotMs();
+}
+
+double UWorldMeshService::GetLastMeshDirtyTickMs() const
+{
+  return Cache.GetLastMeshDirtyTickMs();
 }
 
 size_t UWorldMeshService::GetGreedyCacheSize() const

@@ -1108,6 +1108,12 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
       world.GetMeshService().GetLastMeshSyncMs();
   world.PhysicsTelemetryData.MeshSnapshotMs =
       world.GetMeshService().GetLastMeshSnapshotMs();
+  world.PhysicsTelemetryData.MeshImmediateMs =
+      world.GetMeshService().GetLastMeshImmediateMs();
+  world.PhysicsTelemetryData.MeshImmediateCount =
+      world.GetMeshService().GetLastMeshImmediateCount();
+  world.PhysicsTelemetryData.MeshDirtyTickMs =
+      world.GetMeshService().GetLastMeshDirtyTickMs();
 }
 
 void UWorldStreaming::InitStreamerCallbacks(UWorld &world)

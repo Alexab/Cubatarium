@@ -12,6 +12,7 @@
 #include "World/Mesh/WorldMeshService.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <iostream>
 #include <thread>
@@ -134,8 +135,11 @@ void UChunkEmergeCoordinator::BeginFrame(const ProceduralSettings &procedural,
 void UChunkEmergeCoordinator::TickMeshEmerge(
     UWorld &world, const StreamingPressureCaps &pressure)
 {
+  const auto emerge_t0 = std::chrono::high_resolution_clock::now();
   UBlockRegistry &registry = world.GetBlockRegistry();
   UWorldMeshService &mesh_service = world.GetMeshService();
+  // Count any Immediate this tick (including early idle paths).
+  mesh_service.ResetImmediateMeshStats();
   const ProceduralSettings &procedural = world.GetProceduralSettings();
   const float movement_speed = world.GetLastMovementSpeed();
   // Mesh-while-moving uses prefetch threshold so cruise flight drains Dirty.
@@ -282,10 +286,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           missing_visible_mesh ? 12 : 45;
       const double plateau_wall_ms = missing_visible_mesh ? 120.0 : 18.0;
       if (idle_pending_plateau_frames >= plateau_frames &&
-          last_frame_ms <= plateau_wall_ms && pending_focus_count > 0)
+          last_frame_ms <= plateau_wall_ms && pending_focus_count > 0 &&
+          last_frame_ms <= 40.0)
       {
+        const auto sync_relight_t0 =
+            std::chrono::high_resolution_clock::now();
         world.DrainIdleFocusPendingLightSync(focus_ground_horiz, focus_radius,
                                              1);
+        world.GetPhysicsTelemetryMutable().RelightDrainMs +=
+            std::chrono::duration<double, std::milli>(
+                std::chrono::high_resolution_clock::now() - sync_relight_t0)
+                .count();
         idle_pending_plateau_frames = 0;
       }
       if (pending_focus_count <= 8)
@@ -297,7 +308,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         }
       }
       world.ClearPendingLightAfterMeshCommitted(12);
-      // Sync remesh only for sticky under hard wall budget (underfeet-class).
+      // Sticky remesh: Dirty→async only (Immediate was mesh_emerge hitch).
       if (black_sticky > 0 && last_frame_ms <= 16.0)
       {
         world.SyncIdleFocusGreedyRemesh(1);
@@ -694,6 +705,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     // Holes with idle async (~2) means schedule was too timid — fill missing.
     mesh_drain = std::max(mesh_drain, moving ? 18 : 24);
     mesh_schedule = std::max(mesh_schedule, moving ? 16 : 24);
+    // Cold SoftDefer pool: push schedule so underfeet/first-mesh can enter
+    // Dirty after promote (manual 190126: async_med≈1, holes_rate≈0.68).
+    if (moving && pending_async < 4)
+    {
+      mesh_schedule = std::max(mesh_schedule, 20);
+      mesh_drain = std::max(mesh_drain, 22);
+    }
   }
   // P0: moving frontier hole + pending + cold mesh pool — promote relight every
   // tick so SoftDefer gate can clear without dark preview (manual 102559 phase A).
@@ -907,11 +925,69 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Sync-rebuild missing solid slices: underfeet always; idle focus holes too.
   // Hitch must NOT disable focus hole sync — last_frame_ms>20 used to skip the
   // whole ring while visual_holes=1 for the entire stop.
+  // Hard Immediate budget (manual spike: mesh_emerge≈RebuildChunkImmediate).
+  // One greedy column can still overrun the budget once started — while moving
+  // never call Immediate (Dirty→async only). Idle keeps bounded Immediate.
+  // Immediate stats already reset at TickMeshEmerge entry.
+  const auto immediate_budget_t0 = std::chrono::high_resolution_clock::now();
+  const double hard_immediate_ms =
+      last_frame_ms > 24.0 ? 4.0 : 6.0;
+  auto immediate_ms_used = [&]() -> double
+  {
+    return std::chrono::duration<double, std::milli>(
+               std::chrono::high_resolution_clock::now() - immediate_budget_t0)
+        .count();
+  };
+  auto immediate_budget_ok = [&]() -> bool
+  {
+    return !moving && immediate_ms_used() < hard_immediate_ms;
+  };
+  // Underfeet Immediate: idle only; ≤1–2/frame + cooldown.
+  static int underfeet_immediate_cd = 0;
+  if (underfeet_immediate_cd > 0)
+  {
+    --underfeet_immediate_cd;
+  }
+  int underfeet_immediate_this_frame = 0;
+  const int kMaxUnderfeetImmediate = last_frame_ms > 20.0 ? 1 : 2;
+
+  // Cold SoftDefer hole: same-tick promote→async drain so MayMesh can open
+  // before schedule (Streaming drain already ran; FIFO may still be empty).
+  // No sync RelightTerrainColumn flood (R10/R16 anti-pattern).
+  {
+    const FocusIngressDecision cold =
+        EvaluateFocusIngress(FocusIngressInput{
+            moving, missing_visible_mesh, pending_focus_count, pending_async,
+            last_frame_ms});
+    if (cold.active && cold.promote_once && pending_focus_count > 0)
+    {
+      world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
+      const int drain_n =
+          std::max(8, std::min(cold.relight_floor > 0 ? cold.relight_floor / 2
+                                                      : 16,
+                               24));
+      world.DrainRelightQueuesBudget(0, drain_n);
+    }
+  }
+
   const bool idle_focus_sync =
       !moving &&
       (missing_visible_mesh || black_sticky > 0 || focus_not_render_ready > 0 ||
        (last_frame_ms <= 20.0 && pending_focus_count > 8));
-  if (underfeet_need || idle_focus_sync)
+  // Moving: never walk the Immediate ring (MarkDirty flood + solid scans).
+  // Prefer nearest missing → Dirty/async only (Immediate banned while moving).
+  if (moving && (underfeet_need || missing_visible_mesh))
+  {
+    glm::ivec3 hole{};
+    const int mark_r = underfeet_need ? 1 : focus_radius;
+    if (mesh_service.FindNearestMissingGreedyMesh(
+            world.GetBlockWorld(), focus_ground_horiz, mark_r, hole) &&
+        !mesh_service.HasInflightMeshBuild(hole))
+    {
+      mesh_service.MarkDirtyPriority(hole);
+    }
+  }
+  else if (underfeet_need || idle_focus_sync)
   {
     const int max_y = procedural.MaxHeight;
     int band_min_y = std::max(0, focus_block.y - CHUNK_SIZE);
@@ -964,7 +1040,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                                                               : focus_radius;
     const int kMaxImmediate =
         underfeet_need && !visual_holes
-            ? (last_frame_ms > 20.0 ? 1 : (moving ? 2 : 4))
+            ? kMaxUnderfeetImmediate
             : (last_frame_ms > 16.0 ? 2 : 4);
     for (int r = 0; r <= horiz_r && immediate < kMaxImmediate; ++r)
     {
@@ -976,6 +1052,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           {
             continue;
           }
+          if (!immediate_budget_ok())
+          {
+            goto done_underfeet_immediate;
+          }
           const int ring = std::max(std::abs(dx), std::abs(dz));
           if (underfeet_need && ring > 0 &&
               (moving || immediate >= (last_frame_ms > 20.0 ? 1 : 2)))
@@ -985,7 +1065,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           }
           for (int cy : cy_order)
           {
-            if (immediate >= kMaxImmediate)
+            if (immediate >= kMaxImmediate || !immediate_budget_ok())
             {
               break;
             }
@@ -1020,13 +1100,26 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             {
               continue;
             }
+            // Moving: never Immediate (one greedy can be seconds). Prefer Dirty.
+            const bool allow_underfeet_immediate =
+                !moving && underfeet_immediate_cd <= 0 &&
+                underfeet_immediate_this_frame < kMaxUnderfeetImmediate &&
+                immediate_budget_ok();
+            if (!allow_underfeet_immediate)
+            {
+              mesh_service.MarkDirtyPriority(coord);
+              continue;
+            }
             mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
                                                coord);
             ++immediate;
+            ++underfeet_immediate_this_frame;
+            underfeet_immediate_cd = last_frame_ms > 20.0 ? 1 : 0;
           }
         }
       }
     }
+  done_underfeet_immediate:;
   }
 
   // After Recover may have just cleared PendingLight underfeet — force sync
@@ -1045,30 +1138,39 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   if (underfeet_need || underfeet_need_after)
   {
-    // Idle/healthy: fill underfeet fast. Hitch: small sync only.
-    if (last_frame_ms > 24.0)
+    // Idle: SyncRebuild fill. Moving: sync_cap=0 — SyncRebuild/Immediate both
+    // can burn seconds on one greedy column; fill via Dirty→async only.
+    if (moving)
+    {
+      sync_cap = 0;
+    }
+    else if (last_frame_ms > 24.0)
     {
       sync_cap = std::max(sync_cap, 2);
     }
     else if (last_frame_ms > 16.0)
     {
-      sync_cap = std::max(sync_cap, moving ? 4 : 6);
+      sync_cap = std::max(sync_cap, 4);
     }
     else
     {
-      const int missing_cap = moving ? 8 : 10;
-      sync_cap = std::max(sync_cap, missing_cap);
+      sync_cap = std::max(sync_cap, 8);
     }
-    mesh_schedule = std::max(mesh_schedule, moving ? 12 : 16);
-    mesh_drain = std::max(mesh_drain, moving ? 12 : 16);
+    mesh_schedule = std::max(mesh_schedule, moving ? 14 : 16);
+    mesh_drain = std::max(mesh_drain, moving ? 16 : 16);
   }
   else if (missing_visible_mesh)
   {
-    // Cruise: tiny sync (async+Admit). Idle: enough to clear focus ring.
-    // Cap harder when light debt dominates — sync was starving MarkRelit.
-    const int sync_idle =
-        pending_focus_count > 8 ? 2 : 6;
-    sync_cap = std::max(sync_cap, moving ? 2 : sync_idle);
+    // Cruise: prefer async (sync_cap 0–1). Idle: enough to clear focus ring.
+    if (moving)
+    {
+      sync_cap = 0;
+    }
+    else
+    {
+      const int sync_idle = pending_focus_count > 8 ? 2 : 6;
+      sync_cap = std::max(sync_cap, sync_idle);
+    }
     mesh_schedule = std::max(mesh_schedule, moving ? 12 : 20);
     mesh_drain = std::max(mesh_drain, moving ? 12 : 24);
   }
@@ -1111,7 +1213,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // that builds dark preview and leaves sticky (manual 091143: holes+pending
   // → sticky 2–5). Promote/async light must clear the gate; mesh fills after.
   // Spike guard (manual 134418): cold async=0 + hole → no non-underfeet sync
-  // fill (mesh_emerge 0.7–3s hitch).
+  // fill (mesh_emerge 0.7–3s hitch). Moving: non-underfeet always Dirty/async.
   if (missing_visible_mesh && last_frame_ms <= 50.0)
   {
     static int force_hole_cd = 0;
@@ -1133,15 +1235,28 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const bool hole_underfeet = hole_horiz <= 1;
         const bool sync_ok =
             AllowSyncHoleFillForColumn(ingress, hole_underfeet);
-        // V2a allows underfeet preview while PendingLight; force_hole must match
-        // (manual 103603). Moving non-underfeet: tighter frame cap (manual 161304).
-        const double force_frame_cap =
-            (moving && !hole_underfeet) ? 22.0 : 40.0;
-        if (sync_ok && (!hole_pending || hole_underfeet) &&
-            last_frame_ms <= force_frame_cap)
+        // Moving: never Immediate (async only). Idle underfeet may Immediate
+        // under hard budget + cooldown.
+        const double force_frame_cap = 40.0;
+        const bool want_immediate =
+            !moving && sync_ok && (!hole_pending || hole_underfeet) &&
+            last_frame_ms <= force_frame_cap && immediate_budget_ok() &&
+            (!hole_underfeet ||
+             (underfeet_immediate_cd <= 0 &&
+              underfeet_immediate_this_frame < kMaxUnderfeetImmediate));
+        if (want_immediate)
         {
           mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
                                              hole);
+          if (hole_underfeet)
+          {
+            ++underfeet_immediate_this_frame;
+            underfeet_immediate_cd = 1;
+          }
+        }
+        else if (!hole_pending || hole_underfeet)
+        {
+          mesh_service.MarkDirtyPriority(hole);
         }
       }
       force_hole_cd =
@@ -1167,12 +1282,27 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_schedule = std::min(mesh_schedule, 6);
     mesh_drain = std::max(mesh_drain, 24);
   }
+  // Remaining Immediate/SyncRebuild budget shares the hard Immediate ceiling.
+  // Moving underfeet: keep SyncRebuild ≤~3ms wall so one chunk cannot hitch.
+  const double immediate_spent = immediate_ms_used();
   const double sync_budget_ms =
-      (idle_recovery && black_sticky > 0 && last_frame_ms <= 16.0) ? 6.0
-      : (underfeet_need && last_frame_ms <= 16.0)                  ? 10.0
-      : (!moving && missing_visible_mesh && last_frame_ms <= 20.0)  ? 8.0
-      : (last_frame_ms > 24.0)                                     ? 4.0
-                                                                   : 6.0;
+      moving ? std::min(3.0, std::max(0.5, hard_immediate_ms - immediate_spent))
+             : std::max(0.5,
+                        std::min(hard_immediate_ms - immediate_spent,
+                                 (idle_recovery && black_sticky > 0 &&
+                                  last_frame_ms <= 16.0)
+                                     ? 6.0
+                                 : (underfeet_need && last_frame_ms <= 16.0)
+                                     ? 10.0
+                                 : (!moving && missing_visible_mesh &&
+                                    last_frame_ms <= 20.0)
+                                     ? 8.0
+                                 : (last_frame_ms > 24.0) ? 4.0
+                                                         : 6.0));
+  world.GetPhysicsTelemetryMutable().MeshEmergePrepMs =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - emerge_t0)
+          .count();
   const MeshRebuildTickStats tick_stats = mesh_service.RebuildDirtyChunksWithStats(
       world.GetBlockWorld(), registry, mesh_drain, mesh_schedule,
       /*force_sync=*/false, sync_cap, sync_budget_ms);
@@ -1192,7 +1322,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               << " inflight=" << mesh_service.GetAsyncInFlightCount()
               << " sync=" << tick_stats.SyncRebuilt
               << " completed=" << tick_stats.Completed
-              << " scheduled=" << tick_stats.Scheduled << std::endl;
+              << " scheduled=" << tick_stats.Scheduled
+              << " immediate_ms=" << mesh_service.GetLastMeshImmediateMs()
+              << " immediate_n=" << mesh_service.GetLastMeshImmediateCount()
+              << std::endl;
   }
 #endif
 }

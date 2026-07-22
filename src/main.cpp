@@ -119,6 +119,10 @@ int main(int argc, char *argv[])
         {
           opt.Sprint = true;
         }
+        else if (std::strcmp(argv[j], "--hold-space") == 0)
+        {
+          opt.HoldSpace = true;
+        }
         else if (std::strcmp(argv[j], "--teleport-cruise") == 0)
         {
           opt.TeleportToCruiseStart = true;

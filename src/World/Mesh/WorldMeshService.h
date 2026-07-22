@@ -84,6 +84,9 @@ public:
                              int max_per_frame);
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,
                              glm::ivec3 chunk_coord);
+  void ResetImmediateMeshStats();
+  double GetLastMeshImmediateMs() const;
+  int GetLastMeshImmediateCount() const;
   void WaitForAsyncMeshIdle();
   bool WaitForAsyncMeshIdleFor(std::chrono::milliseconds timeout);
   void CancelAsyncMeshWork();
@@ -105,6 +108,7 @@ public:
   double GetLastFlatRebuildMs() const;
   double GetLastMeshSyncMs() const;
   double GetLastMeshSnapshotMs() const;
+  double GetLastMeshDirtyTickMs() const;
   size_t GetGreedyCacheSize() const;
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
   bool IsChunkMeshDirty(glm::ivec3 chunk_coord) const;

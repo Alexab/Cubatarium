@@ -604,6 +604,7 @@ public:
   {
     return PhysicsTelemetryData;
   }
+  PhysicsTelemetry &GetPhysicsTelemetryMutable() { return PhysicsTelemetryData; }
   const PhysicsBudgets &GetPhysicsBudgets() const
   {
     return PhysicsBudgetConfig;
@@ -924,6 +925,9 @@ public:
   /// pending after mesh. Does not Recover/Admit (those stay watchdogs).
   int DrainFocusVisualWork(glm::ivec3 focus_ground_horiz, int radius_chunks,
                            int clear_pending_budget);
+  /// Supplemental async relight FIFO drain (adds to RelightDrainMs). Used by
+  /// MeshEmerge cold-hole same-tick promote→drain so SoftDefer can lift.
+  void DrainRelightQueuesBudget(int max_player_jobs, int max_bg_columns);
   /// Alias of DrainFocusVisualWork (legacy call sites).
   int DrainColumnWork(glm::ivec3 focus_ground_horiz, int radius_chunks,
                       int clear_pending_budget);

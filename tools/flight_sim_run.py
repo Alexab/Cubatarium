@@ -225,7 +225,19 @@ def main() -> int:
     ap.add_argument(
         "--replay-manual",
         action="store_true",
-        help="replay the World_164 manual westbound stop-flight profile",
+        help="replay World_164 manual profile: resume save pos (no teleport), "
+        "level pitch, hold-space altitude, fly-stop",
+    )
+    ap.add_argument(
+        "--hold-space",
+        action="store_true",
+        help="hold Space while flying (climb / maintain altitude)",
+    )
+    ap.add_argument(
+        "--pitch",
+        type=float,
+        default=None,
+        help="autopilot pitch degrees (default: exe -2, replay-manual 0)",
     )
     ap.add_argument(
         "--process-timeout",
@@ -249,8 +261,12 @@ def main() -> int:
         args.world = "World_164"
         args.fly_stop = True
         args.resume = True
-        args.teleport_cruise = True
+        # Resume save focus (manual 190126 ~-484) — do NOT teleport to (-47,5).
+        args.teleport_cruise = False
         args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
         args.idle_sec = max(args.idle_sec, 45.0)
         args.fly_phase_sec = max(args.fly_phase_sec, 45.0)
         args.stop_phase_sec = max(args.stop_phase_sec, 90.0)
@@ -309,6 +325,10 @@ def main() -> int:
     sim_cmd.extend(["--idle", str(args.idle_sec)])
     if args.sprint:
         sim_cmd.append("--sprint")
+    if args.hold_space:
+        sim_cmd.append("--hold-space")
+    if args.pitch is not None:
+        sim_cmd.extend(["--pitch", str(args.pitch)])
     if args.visible:
         sim_cmd.append("--visible")
     if args.teleport_cruise:

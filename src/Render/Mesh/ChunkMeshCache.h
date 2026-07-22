@@ -68,6 +68,10 @@ public:
   void RebuildAll(UBlockWorld &world, UBlockRegistry &registry);
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,
                              glm::ivec3 chunkCoord);
+  /// Reset per-frame Immediate counters (call at start of TickMeshEmerge).
+  void ResetImmediateMeshStats();
+  double GetLastMeshImmediateMs() const { return LastMeshImmediateMs; }
+  int GetLastMeshImmediateCount() const { return LastMeshImmediateCount; }
   bool HasPendingDirty() const;
   bool HasDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
                                       int radius_chunks) const;
@@ -88,6 +92,7 @@ public:
   double GetLastFlatRebuildMs() const { return LastFlatRebuildMs; }
   double GetLastMeshSyncMs() const { return LastMeshSyncMs; }
   double GetLastMeshSnapshotMs() const { return LastMeshSnapshotMs; }
+  double GetLastMeshDirtyTickMs() const { return LastMeshDirtyTickMs; }
   int GetAsyncInFlightCount() const;
   uint64_t GetMeshDiscardedLateCount() const;
   uint64_t GetMeshApplyStaleCount() const { return MeshApplyStaleCount; }
@@ -282,6 +287,9 @@ private:
   double LastFlatRebuildMs{0.0};
   double LastMeshSyncMs{0.0};
   double LastMeshSnapshotMs{0.0};
+  double LastMeshDirtyTickMs{0.0};
+  double LastMeshImmediateMs{0.0};
+  int LastMeshImmediateCount{0};
   uint64_t MeshApplyStaleCount{0};
   std::chrono::steady_clock::time_point LastFlatRebuildAt{};
   bool PendingMeshRevisionBump{false};

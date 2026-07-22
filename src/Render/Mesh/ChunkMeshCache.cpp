@@ -1071,9 +1071,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     int max_schedule_per_frame, bool force_sync, int max_sync_rebuild,
     double max_sync_ms)
 {
+  const auto dirty_tick_t0 = std::chrono::high_resolution_clock::now();
   MeshRebuildTickStats stats;
   LastMeshSyncMs = 0.0;
   LastMeshSnapshotMs = 0.0;
+  LastMeshDirtyTickMs = 0.0;
   bool mesh_data_changed = false;
 
   if (!Dirty.empty())
@@ -1449,6 +1451,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     }
     BumpMeshRevisionIfNeeded();
     LastRebuildTickStats = stats;
+    LastMeshDirtyTickMs = std::chrono::duration<double, std::milli>(
+                              std::chrono::high_resolution_clock::now() -
+                              dirty_tick_t0)
+                              .count();
     return stats;
   }
 
@@ -1473,6 +1479,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   }
   BumpMeshRevisionIfNeeded();
   LastRebuildTickStats = stats;
+  LastMeshDirtyTickMs = std::chrono::duration<double, std::milli>(
+                            std::chrono::high_resolution_clock::now() -
+                            dirty_tick_t0)
+                            .count();
   return stats;
 }
 
@@ -1508,13 +1518,24 @@ void UChunkMeshCache::DrainAsyncMeshResults(UBlockWorld &world,
   }
 }
 
+void UChunkMeshCache::ResetImmediateMeshStats()
+{
+  LastMeshImmediateMs = 0.0;
+  LastMeshImmediateCount = 0;
+}
+
 void UChunkMeshCache::RebuildChunkImmediate(const UBlockWorld &world,
                                             UBlockRegistry &registry,
                                             glm::ivec3 chunkCoord)
 {
+  const auto t0 = std::chrono::high_resolution_clock::now();
   RebuildChunk(world, registry, chunkCoord);
   Dirty.Erase(chunkCoord);
   InvalidateVisibleList();
+  LastMeshImmediateMs += std::chrono::duration<double, std::milli>(
+                             std::chrono::high_resolution_clock::now() - t0)
+                             .count();
+  ++LastMeshImmediateCount;
 }
 void UChunkMeshCache::RebuildChunkLegacy(
     const UBlockWorld &world, UBlockRegistry &registry, glm::ivec3 chunkCoord,

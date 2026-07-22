@@ -468,6 +468,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 std::cout << "flight-sim: autopilot armed fly="
                           << (options.Fly ? 1 : 0)
                           << " hold_forward=" << (options.HoldForward ? 1 : 0)
+                          << " hold_space=" << (options.HoldSpace ? 1 : 0)
+                          << " teleport=" << (options.TeleportToCruiseStart ? 1 : 0)
                           << " yaw=" << options.FaceYawDeg
                           << " pitch=" << options.FacePitchDeg
                           << " idle_s=" << options.IdleBeforeFlySec
@@ -480,6 +482,23 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                   camera->SetFreeMove(true);
                 }
                 camera->SetOrientation(options.FaceYawDeg, options.FacePitchDeg);
+                // Keep cruise altitude (manual holds Space / levels pitch).
+                if (options.HoldSpace || options.MinAltitudeAboveSea > 0.0f)
+                {
+                  const float sea = static_cast<float>(
+                      world->GetProceduralSettings().SeaLevel);
+                  const float min_y = sea + options.MinAltitudeAboveSea;
+                  glm::vec3 pos = camera->GetPosition();
+                  if (pos.y < min_y)
+                  {
+                    pos.y = min_y;
+                    camera->SetPosition(pos);
+                    if (auto user = world->GetCurrentUser())
+                    {
+                      user->SetPosition(pos);
+                    }
+                  }
+                }
                 if (options.HoldForward &&
                     ingame_sec >= options.IdleBeforeFlySec)
                 {
@@ -497,6 +516,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       {
                         window.SetAutopilotKey(KeyCode::Key_Ctrl, false);
                       }
+                      if (options.HoldSpace)
+                      {
+                        window.SetAutopilotKey(KeyCode::Key_Space, false);
+                      }
                       std::cout << "flight-sim: fly-stop released W at t="
                                 << ingame_sec << "s" << std::endl;
                     }
@@ -508,6 +531,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     if (options.Sprint)
                     {
                       window.SetAutopilotKey(KeyCode::Key_Ctrl, true);
+                    }
+                    if (options.HoldSpace)
+                    {
+                      window.SetAutopilotKey(KeyCode::Key_Space, true);
                     }
                     std::cout << "flight-sim: hold-forward engaged at t="
                               << ingame_sec << "s" << std::endl;

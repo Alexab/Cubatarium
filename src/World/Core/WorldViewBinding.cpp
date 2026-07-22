@@ -534,6 +534,7 @@ void UWorld::RunLegacyPhysicsFrame()
   PhysicsTelemetryData.AsyncIoMs = 0.0;
   PhysicsTelemetryData.RelightDrainMs = 0.0;
   PhysicsTelemetryData.MeshEmergeMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePrepMs = 0.0;
 
   if (camera)
   {
@@ -555,6 +556,12 @@ void UWorld::RunLegacyPhysicsFrame()
         GetMeshService().GetLastMeshSyncMs();
     PhysicsTelemetryData.MeshSnapshotMs =
         GetMeshService().GetLastMeshSnapshotMs();
+    PhysicsTelemetryData.MeshImmediateMs =
+        GetMeshService().GetLastMeshImmediateMs();
+    PhysicsTelemetryData.MeshImmediateCount =
+        GetMeshService().GetLastMeshImmediateCount();
+    PhysicsTelemetryData.MeshDirtyTickMs =
+        GetMeshService().GetLastMeshDirtyTickMs();
   }
 
   if (is_moved && camera)

@@ -1795,6 +1795,20 @@ int UWorld::DrainFocusVisualWork(glm::ivec3 focus_ground_horiz, int radius_chunk
   return drained;
 }
 
+void UWorld::DrainRelightQueuesBudget(int max_player_jobs, int max_bg_columns)
+{
+  if (!Persistence || (max_player_jobs <= 0 && max_bg_columns <= 0))
+  {
+    return;
+  }
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  Persistence->DrainRelightQueues(*this, max_player_jobs, max_bg_columns);
+  PhysicsTelemetryData.RelightDrainMs +=
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - t0)
+          .count();
+}
+
 int UWorld::DrainColumnWork(glm::ivec3 focus_ground_horiz, int radius_chunks,
                             int clear_pending_budget)
 {
@@ -2556,13 +2570,14 @@ int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
     const int cy1 = FloorDiv(found->max_y, CHUNK_SIZE);
     for (int cy = cy0; cy <= cy1; ++cy)
     {
-      MeshService->RebuildChunkImmediate(BlockWorld, *BlockRegistry,
-                                         glm::ivec3(key.x, cy, key.y));
+      // MarkDirty→async only. RebuildChunkImmediate here caused seconds-scale
+      // mesh_emerge (manual 190126: emerge~3.7s with imm wiped by later Reset).
+      MeshService->MarkDirtyPriority(glm::ivec3(key.x, cy, key.y));
     }
     StickyRemeshAfterLight.erase(key);
     PendingLightBeforeMesh.erase(key);
     SetColumnEmergeState(glm::ivec3(key.x, 0, key.y),
-                         ColumnEmergeState::RenderReady);
+                         ColumnEmergeState::Meshing);
   }
   return synced;
 }

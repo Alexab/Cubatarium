@@ -52,6 +52,13 @@ struct PhysicsTelemetry
   double RelightDrainMs{0.0};
   double MeshSyncMs{0.0};
   double MeshSnapshotMs{0.0};
+  /// Wall time spent in RebuildChunkImmediate this frame (inside MeshEmergeMs).
+  double MeshImmediateMs{0.0};
+  int MeshImmediateCount{0};
+  /// RebuildDirtyChunksWithStats wall (sync fill + schedule + apply drain).
+  double MeshDirtyTickMs{0.0};
+  /// TickMeshEmerge wall before RebuildDirtyChunksWithStats (prep/idle/cold).
+  double MeshEmergePrepMs{0.0};
   int PrefetchVisualOps{0};
   int PrefetchKeepOps{0};
   int GenBacklogTotal{0};
