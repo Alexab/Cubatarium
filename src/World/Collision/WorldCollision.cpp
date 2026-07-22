@@ -375,16 +375,12 @@ bool UWorldCollision::IsValidStandCell(const glm::ivec3 &cell,
   {
     return false;
   }
-  const int layers = static_cast<int>(std::ceil(cap.height));
-  for (int dy = 1; dy <= layers; ++dy)
-  {
-    const glm::ivec3 above(cell.x, cell.y + dy, cell.z);
-    if (BlockRegistry->BlocksMovement(BlockWorld.GetBlock(above)))
-    {
-      return false;
-    }
-  }
-  return true;
+  const float feetY = BlockTopY(cell.y);
+  const glm::vec3 sizeBlocks = SizeBlocksFromCapsule(cap);
+  const CollisionVolume vol =
+      CollisionVolumeAtFeet(feetY, static_cast<float>(cell.x),
+                            static_cast<float>(cell.z), sizeBlocks);
+  return !CheckBlockCollisionVolume(vol);
 }
 
 bool UWorldCollision::IsValidStandFootprint(const glm::vec3 &eyePos,
@@ -644,18 +640,24 @@ bool UWorldCollision::DepenetrateEye(glm::vec3 &eyePos,
 {
   constexpr int kMaxIterations = 32;
   constexpr float kStep = 0.05f;
-  if (!CheckCollision(eyePos, cap, skipCreatureId))
+  const glm::vec3 sizeBlocks = SizeBlocksFromCapsule(cap);
+  glm::vec3 body(eyePos.x, cap.feetY(eyePos), eyePos.z);
+  if (!CheckCollisionVolume(CollisionVolumeFromBody(body, sizeBlocks),
+                            skipCreatureId))
   {
     return true;
   }
   for (int i = 0; i < kMaxIterations; ++i)
   {
-    eyePos.y += kStep;
-    if (!CheckCollision(eyePos, cap, skipCreatureId))
+    body.y += kStep;
+    if (!CheckCollisionVolume(CollisionVolumeFromBody(body, sizeBlocks),
+                              skipCreatureId))
     {
+      eyePos.y = body.y + cap.eyeHeight;
       return true;
     }
   }
+  eyePos.y = body.y + cap.eyeHeight;
   return !CheckCollision(eyePos, cap, skipCreatureId);
 }
 
@@ -715,18 +717,22 @@ glm::vec3 UWorldCollision::ResolveMovement(const glm::vec3 &eyePos,
   {
     return eyePos;
   }
-  glm::vec3 resolvedEye = eyePos;
-  if (delta.y > 0.0f && CheckCollision(resolvedEye, cap, skipCreatureId))
+  const glm::vec3 sizeBlocks = SizeBlocksFromCapsule(cap);
+  const float feetY = cap.feetY(eyePos);
+  glm::vec3 body(eyePos.x, feetY, eyePos.z);
+
+  if (delta.y > 0.0f &&
+      CheckCollisionVolume(CollisionVolumeFromBody(body, sizeBlocks),
+                           skipCreatureId))
   {
+    glm::vec3 resolvedEye(eyePos.x, feetY + cap.eyeHeight, eyePos.z);
     DepenetrateEye(resolvedEye, cap, skipCreatureId);
+    body.y = cap.feetY(resolvedEye);
   }
-  const glm::vec3 eyeOffset(0.0f, cap.eyeHeight, 0.0f);
-  const glm::vec3 sizeBlocks(cap.halfWidth * 2.0f, cap.height,
-                             cap.halfWidth * 2.0f);
-  const glm::vec3 body = BodyOriginFromEye(resolvedEye, eyeOffset);
+
   const glm::vec3 newBody =
       ResolveMovementBody(body, delta, sizeBlocks, skipCreatureId);
-  return BoundsEyePosition(newBody, eyeOffset);
+  return glm::vec3(newBody.x, newBody.y + cap.eyeHeight, newBody.z);
 }
 
 UWorldCollision::StepUpProbe

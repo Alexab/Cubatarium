@@ -43,6 +43,10 @@ glm::vec3 BodyOriginFromEye(const glm::vec3 &eyePos,
 /// Feet Y from eye and species standing eye height (`eyeOffset.y`).
 float FeetYFromEye(const glm::vec3 &eyePos, float eyeHeight);
 
+glm::vec3 SizeBlocksFromCapsule(const PlayerCapsule &cap);
+CollisionVolume CollisionVolumeAtFeet(float feetY, float centerX, float centerZ,
+                                    const glm::vec3 &sizeBlocks);
+
 } // namespace cutum
 
 #endif
