@@ -2,6 +2,8 @@
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Engine/GreedyVertexPool.h"
 #include "Render/GlIncludes.h"
+#include "World/Core/RuntimeTuning.h"
+#include <algorithm>
 
 namespace cutum
 {
@@ -11,6 +13,25 @@ namespace
 
 constexpr unsigned int kArrayBuffer = GL_ARRAY_BUFFER;
 constexpr unsigned int kElementArrayBuffer = GL_ELEMENT_ARRAY_BUFFER;
+
+void ApplyPoolBudget(UGreedyVertexPool &pool)
+{
+  const auto &tune = URuntimeTuning::Get();
+  const size_t max_bytes =
+      static_cast<size_t>(std::max(0, tune.GpuVertexPoolMaxMb)) * 1024ull *
+      1024ull;
+  pool.SetMaxCapacityBytes(max_bytes);
+  const size_t reserve_bytes =
+      static_cast<size_t>(std::max(0, tune.GpuVertexPoolReserveMb)) * 1024ull *
+      1024ull;
+  if (reserve_bytes > 0)
+  {
+    // Split reserve ~3:1 vertex:index as a coarse heuristic.
+    const size_t v = (reserve_bytes * 3) / 4;
+    const size_t i = reserve_bytes - v;
+    pool.EnsureMinCapacity(v, i);
+  }
+}
 
 } // namespace
 
@@ -122,6 +143,7 @@ void UGreedyGpuBackend::RefreshPass(GreedyGpuPassCache &cache,
     total_vertex_bytes += batch.vertices.size() * sizeof(GreedyMeshVertex);
     total_index_bytes += batch.indices.size() * sizeof(uint32_t);
   }
+  ApplyPoolBudget(cache.VertexPool);
   cache.VertexPool.Reserve(total_vertex_bytes, total_index_bytes);
   cache.usesVertexPool = total_vertex_bytes > 0 && total_index_bytes > 0;
   cache.poolVbo = cache.VertexPool.VertexBuffer();
@@ -183,6 +205,7 @@ void UGreedyGpuBackend::RefreshPassRefs(
     total_vertex_bytes += batch->vertices.size() * sizeof(GreedyMeshVertex);
     total_index_bytes += batch->indices.size() * sizeof(uint32_t);
   }
+  ApplyPoolBudget(cache.VertexPool);
   cache.VertexPool.Reserve(total_vertex_bytes, total_index_bytes);
   cache.usesVertexPool = total_vertex_bytes > 0 && total_index_bytes > 0;
   cache.poolVbo = cache.VertexPool.VertexBuffer();

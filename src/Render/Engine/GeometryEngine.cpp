@@ -1209,6 +1209,18 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
       glEnable(GL_CULL_FACE);
     }
   }
+  if (WorldInstance)
+  {
+    const size_t used = GreedyGpuOpaque.VertexPool.UsedBytes() +
+                        GreedyGpuCutout.VertexPool.UsedBytes() +
+                        GreedyGpuTransparent.VertexPool.UsedBytes();
+    const size_t cap = GreedyGpuOpaque.VertexPool.CapacityBytes() +
+                       GreedyGpuCutout.VertexPool.CapacityBytes() +
+                       GreedyGpuTransparent.VertexPool.CapacityBytes();
+    auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+    phys.GpuPoolUsedMb = static_cast<double>(used) / (1024.0 * 1024.0);
+    phys.GpuPoolCapMb = static_cast<double>(cap) / (1024.0 * 1024.0);
+  }
 }
 
 void UGeometryEngine::PrepareTransparent(
