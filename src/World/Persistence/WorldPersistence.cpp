@@ -339,8 +339,10 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   const bool moving =
       world.GetLastMovementSpeed() >
       world.ProceduralTemplate.MovementPrefetchThreshold;
-  // Capture() is main-thread; bound wall while walking even if count cap is >1.
-  const double move_drain_budget_ms = moving ? 4.0 : 0.0;
+  // Capture() is main-thread and copies a 3x3 column band. Idle used to allow
+  // 48–56 Captures/frame with no wall budget → 15–52s spikes and multi-GB
+  // snapshot high-water (manual 220018). Always bound Capture wall time.
+  const double capture_drain_budget_ms = moving ? 4.0 : 8.0;
   const auto drain_loop_t0 = std::chrono::high_resolution_clock::now();
   auto drain_one = [&]()
   {
@@ -348,13 +350,13 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     {
       return false;
     }
-    if (move_drain_budget_ms > 0.0 && drained_bg > 0)
+    if (drained_bg > 0)
     {
       const double elapsed_ms =
           std::chrono::duration<double, std::milli>(
               std::chrono::high_resolution_clock::now() - drain_loop_t0)
               .count();
-      if (elapsed_ms >= move_drain_budget_ms)
+      if (elapsed_ms >= capture_drain_budget_ms)
       {
         return false;
       }

@@ -202,11 +202,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool idle_remesh_debt =
       !moving && pending_focus_count == 0 && black_sticky == 0 &&
       !missing_visible_mesh && not_ready_early > 32;
+  // Pipeline full with no visual light debt → remesh thrash (manual 214430 /
+  // 221846: async=42 with Dirty 58–224). Do not require Dirty>200.
+  const bool remesh_thrash_only =
+      pending_async_early >= 36 && pending_focus_count == 0 &&
+      black_sticky == 0 && !missing_visible_mesh && !idle_remesh_debt;
   const bool idle_stop =
       !moving &&
       (pending_focus_count > 0 || black_sticky > 0 || missing_visible_mesh ||
-       idle_remesh_debt ||
-       (pending_async_early >= 36 && pending_dirty_early > 200));
+       idle_remesh_debt);
   const bool idle_recovery = idle_stop;
   const bool async_saturated_idle = pending_async_early >= 36;
   static int idle_cancel_cooldown = 0;
@@ -1210,7 +1214,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     sync_cap = std::max(sync_cap, last_frame_ms > 20.0 ? 2 : 4);
     mesh_drain = std::max(mesh_drain, 28);
-    mesh_schedule = std::max(mesh_schedule, 22);
+    // Visual pressure still needs schedule; remesh-only saturation must drain.
+    if (pending_focus_count > 0 || black_sticky > 0 || missing_visible_mesh ||
+        visual_holes)
+    {
+      mesh_schedule = std::max(mesh_schedule, 22);
+    }
+    else
+    {
+      mesh_schedule = std::min(mesh_schedule, 4);
+    }
   }
   else if (idle_recovery && black_sticky > 0 && last_frame_ms <= 16.0)
   {
@@ -1298,6 +1311,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       pending_dirty > 400)
   {
     mesh_schedule = std::min(mesh_schedule, 6);
+    mesh_drain = std::max(mesh_drain, 24);
+  }
+  // Standing remesh thrash only when pipeline is saturated (manual 214430).
+  // Do NOT clamp schedule whenever Dirty>100 — that froze Dirty≈270 with
+  // async≈4 and left focus remesh starved (manual 220018).
+  if (!moving && remesh_thrash_only)
+  {
+    mesh_schedule = std::min(mesh_schedule, 4);
     mesh_drain = std::max(mesh_drain, 24);
   }
   // Remaining Immediate/SyncRebuild budget shares the hard Immediate ceiling.

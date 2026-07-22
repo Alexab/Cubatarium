@@ -859,11 +859,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   // relight_drain≈0 with empty feet at ~100 FPS).
   if (underfeet_pending_light)
   {
-    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 4 : 12);
+    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 1 : 2);
   }
   else if (pending_bg > 0 && (near_mesh_backlog || near_pending_light))
   {
-    bg_budget = std::max(bg_budget, pending_bg > 8 ? 8 : 4);
+    bg_budget = std::max(bg_budget, pending_bg > 8 ? 3 : 2);
   }
   // Standing in a dark focus pocket: pending_light stays ~30 while wall~14ms
   // because far remesh kept workers busy and bg drain stayed tiny.
@@ -872,20 +872,17 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       static_cast<int>(world.GetPendingLightBeforeMeshCount());
   if (near_pending_light && frame_ms <= kBadFrameMs)
   {
-    bg_budget =
-        std::max(bg_budget, std::min(24, std::max(8, pending_light_n / 2)));
+    bg_budget = std::max(bg_budget, 2);
   }
   // Pressure valve: pending_light>~15 kept focus holes permanently open.
-  // Drain hard even on hitch frames so the gate cannot grow unboundedly.
+  // Capture is main-thread — keep floors tiny; hard_cap below is authoritative.
   if (pending_light_n > 15)
   {
-    bg_budget =
-        std::max(bg_budget, frame_ms > kBadFrameMs ? 8 : 16);
+    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 2 : 3);
   }
   else if (pending_light_n > 10)
   {
-    bg_budget =
-        std::max(bg_budget, frame_ms > kBadFrameMs ? 4 : 10);
+    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 1 : 2);
   }
   bg_budget = std::max(bg_budget, pressure.bg_budget_floor);
   // Focus pending stuck while wall healthy: enqueue more async relight jobs
@@ -896,27 +893,30 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       world.CountBlackStickyFocusMeshes(focus_horiz, focus_radius);
   // Manual flight: pending_focus climbed while relight_drain≈0 on hitch —
   // keep a floor even when wall>24 so light debt cannot balloon forever.
+  // Count floors are Capture-enqueue caps (main-thread). Keep them small —
+  // wall time is enforced in DrainRelightQueues; large counts still burn
+  // Capture before the first elapsed check (manual 220018: 15–52s).
   if (pending_light_focus_n > 40)
   {
     bg_budget =
-        std::max(bg_budget, frame_ms > kBadFrameMs ? 20 : 48);
+        std::max(bg_budget, frame_ms > kBadFrameMs ? 2 : 4);
   }
   else if (pending_light_focus_n > 15)
   {
     bg_budget =
-        std::max(bg_budget, frame_ms > kBadFrameMs ? 12 : 32);
+        std::max(bg_budget, frame_ms > kBadFrameMs ? 2 : 4);
   }
   else if (pending_light_focus_n > 8)
   {
-    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 8 : 16);
+    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 1 : 3);
   }
   else if (pending_light_focus_n > 4)
   {
-    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 6 : 12);
+    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 1 : 2);
   }
   else if (pending_light_focus_n > 0 && frame_ms <= kBadFrameMs)
   {
-    bg_budget = std::max(bg_budget, 8);
+    bg_budget = std::max(bg_budget, 2);
   }
   const int mesh_async_n = world.GetMeshService().GetAsyncInFlightCount();
   const bool missing_focus_mesh =
@@ -984,7 +984,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       world.Persistence->GetPendingTerrainColumnRelightCount();
   if (pending_bg_after > 0 && underfeet_pending_light)
   {
-    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 4 : 12);
+    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 1 : 2);
   }
   else if (pending_bg_after > 0 && bg_budget <= 0)
   {
@@ -1001,32 +1001,37 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
     world.ClearPendingLightAfterMeshCommitted(12);
-    // Idle can burst enqueue; moving stays under the hard move_cap below.
+    // Capture is main-thread: never burst 48–56 idle (manual 220018).
     const int hole_cap =
-        moving_now ? 4
-                   : ((missing_focus_mesh && mesh_async_n < 8) ? 56 : 48);
+        moving_now ? 2
+                   : ((missing_focus_mesh && mesh_async_n < 8) ? 4 : 3);
     bg_budget = std::max(
         bg_budget,
-        std::min(hole_cap, pending_light_focus_n * 2 +
-                                (missing_focus_mesh ? 16 : 0)));
+        std::min(hole_cap, pending_light_focus_n +
+                                (missing_focus_mesh ? 1 : 0)));
   }
-  // Re-apply move cap after late floors (hole_cap / underfeet) so Capture
-  // bursts cannot slip past the walk hitch guard.
-  if (moving_now)
+  // Hard cap Capture enqueue every frame (move + idle). Sync path must stay 0
+  // while walking; async Capture still costs hundreds of ms per column.
+  if (!async_bg)
   {
-    // Sync RelightTerrainColumn is multi-second; never do it while walking.
-    if (!async_bg)
+    if (moving_now)
     {
       bg_budget = 0;
     }
     else
     {
-      const int move_cap =
-          (missing_focus_mesh || underfeet_pending_light)
-              ? (frame_ms > kBadFrameMs ? 1 : 2)
-              : (frame_ms > kBadFrameMs ? 1 : 2);
-      bg_budget = std::min(bg_budget, move_cap);
+      bg_budget = std::min(bg_budget, 1);
     }
+  }
+  else
+  {
+    const int hard_cap =
+        moving_now
+            ? ((missing_focus_mesh || underfeet_pending_light)
+                   ? (frame_ms > kBadFrameMs ? 1 : 2)
+                   : (frame_ms > kBadFrameMs ? 1 : 2))
+            : (frame_ms > kBadFrameMs ? 2 : 4);
+    bg_budget = std::min(bg_budget, hard_cap);
   }
 
   {

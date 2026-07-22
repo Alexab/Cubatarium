@@ -3271,29 +3271,31 @@ void UWorld::TickAsyncChunkSystems()
                                     /*radius=*/1);
   // Near awaiting first light: apply results faster so mesh gate clears.
   // Underfeet: even more aggressive — empty feet at high FPS was relight_drain≈0.
+  // Apply-result budget (cheap) — not Capture count. Keep moderate so MarkRelit
+  // cannot flood Dirty in one frame after a Capture hitch (manual 220018).
   int drain_budget =
       near_pending_light ? std::max(drain_budget_base, 8) : drain_budget_base;
   if (underfeet_pending_light)
   {
-    drain_budget = std::max(drain_budget, 16);
+    drain_budget = std::max(drain_budget, 12);
   }
   const int pending_light_focus_n = CountPendingLightBeforeMeshNear(
       glm::ivec3(focus_ground.x, 0, focus_ground.z), focus_radius);
   if (pending_light_focus_n > 30)
   {
-    drain_budget = std::max(drain_budget, 48);
+    drain_budget = std::max(drain_budget, 16);
   }
   else if (pending_light_focus_n > 15)
   {
-    drain_budget = std::max(drain_budget, 32);
+    drain_budget = std::max(drain_budget, 12);
   }
   else if (pending_light_focus_n > 8)
   {
-    drain_budget = std::max(drain_budget, 20);
+    drain_budget = std::max(drain_budget, 10);
   }
   else if (pending_light_focus_n > 0)
   {
-    drain_budget = std::max(drain_budget, 12);
+    drain_budget = std::max(drain_budget, 8);
   }
   // Player edits and near first-light columns remesh immediately.
   const bool priority_mesh =
