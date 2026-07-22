@@ -12,6 +12,7 @@
 | sync_budget_r1 | RelWithDebInfo | 9 | 4 | **4401** | 90 | 698 | ban Immediate + full ring MarkDirty flood — regress |
 | sync_budget_r2 | RelWithDebInfo | 9 | 8 | **978** holes | 25 | 365 | no moving Immediate; nearest Dirty only |
 | replay_manual_r1 | RelWithDebInfo | 9 | **0** | holes **160** / wall 1373 | 12 | 198 | resume −473; SyncIdle→Dirty; hold-space; stream hitch |
+| manual_193627 | manual walk | **0** | 14 | **3042** | — | — | emerge_prep=relight_drain 0.9–3s (MeshEmerge cold drain 8–24) |
 
 ## Lessons (2026-07-22 evening)
 
