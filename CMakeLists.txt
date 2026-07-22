@@ -384,6 +384,7 @@ set(SOURCES
     src/Gui/Core/GuiScreenBase.cpp
     src/Gui/Layout/GuiLayout.cpp
     src/Gui/Layout/GuiTooltipLayout.cpp
+    src/Gui/Core/GuiScrollbarController.cpp
     src/Gui/Widgets/GuiWidget.cpp
     src/Gui/Widgets/GuiPanel.cpp
     src/Gui/Widgets/GuiButton.cpp
