@@ -13,6 +13,11 @@ namespace cutum
 namespace
 {
 
+constexpr int kCardWDesign = 420;
+constexpr int kCardHMinDesign = 160;
+constexpr int kStackSpacingDesign = 10;
+constexpr int kStackPaddingDesign = 16;
+
 const char *TitleForKind(WorldOperationKind kind)
 {
   switch (kind)
@@ -40,7 +45,7 @@ void UWorldProgressScreen::Build(UGuiContext &ctx)
   backdrop->SetBounds(GuiRect{0, 0, ViewportW, ViewportH});
 
   auto card = std::make_unique<UGuiPanel>(&ctx.GetTheme());
-  card->SetStackLayout(10, 16);
+  card->SetStackLayout(kStackSpacingDesign, kStackPaddingDesign);
   card->SetDrawBackground(true);
 
   auto title = std::make_unique<UGuiLabel>(&ctx.GetTheme(), TitleForKind(
@@ -61,7 +66,6 @@ void UWorldProgressScreen::Build(UGuiContext &ctx)
   ProgressBar = bar.get();
   card->AddChild(std::move(bar));
 
-  card->SetBounds(GuiRect{0, 0, CardW, CardH});
   backdrop->AddChild(std::move(card));
   Root = std::move(backdrop);
   LayoutCentered();
@@ -81,9 +85,6 @@ void UWorldProgressScreen::LayoutCentered()
   }
   Root->SetBounds(GuiRect{0, 0, ViewportW, ViewportH});
   UGuiWidget *card = Root->GetChildren().front().get();
-  const int x = std::max(0, (ViewportW - CardW) / 2);
-  const int y = std::max(0, (ViewportH - CardH) / 2);
-  card->SetBounds(GuiRect{x, y, CardW, CardH});
 
   std::vector<UGuiWidget *> stackChildren;
   stackChildren.reserve(card->GetChildren().size());
@@ -94,7 +95,18 @@ void UWorldProgressScreen::LayoutCentered()
       stackChildren.push_back(child.get());
     }
   }
-  UGuiLayout::StackVertical(card->GetBounds(), 10, 16, stackChildren);
+
+  const int spacing = Scaled(kStackSpacingDesign);
+  const int padding = Scaled(kStackPaddingDesign);
+  const int cardW = std::min(Scaled(kCardWDesign), std::max(1, ViewportW));
+  const int contentH = UGuiLayout::StackVerticalMeasure(
+      {0, 0, cardW, 100000}, spacing, padding, stackChildren);
+  const int cardH =
+      std::min(std::max(Scaled(kCardHMinDesign), contentH), std::max(1, ViewportH));
+  const int x = std::max(0, (ViewportW - cardW) / 2);
+  const int y = std::max(0, (ViewportH - cardH) / 2);
+  card->SetBounds(GuiRect{x, y, cardW, cardH});
+  UGuiLayout::StackVertical(card->GetBounds(), spacing, padding, stackChildren);
 }
 
 void UWorldProgressScreen::ApplySnapshot(const ProgressSnapshot &snapshot)
@@ -118,6 +130,7 @@ void UWorldProgressScreen::ApplySnapshot(const ProgressSnapshot &snapshot)
       ProgressBar->SetValue(snapshot.fraction);
     }
   }
+  LayoutCentered();
 }
 
 } // namespace cutum

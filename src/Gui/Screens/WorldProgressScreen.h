@@ -25,8 +25,6 @@ private:
   UGuiLabel *TitleLabel{nullptr};
   UGuiLabel *PhaseLabel{nullptr};
   UGuiProgressBar *ProgressBar{nullptr};
-  int CardW{420};
-  int CardH{160};
 };
 
 } // namespace cutum

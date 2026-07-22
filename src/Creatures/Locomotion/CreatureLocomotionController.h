@@ -78,6 +78,7 @@ private:
   void syncGroundedPose(const UWorld *world, glm::vec3 &eyePos,
                         const CreatureInput &input, float dt,
                         CreatureId skipCreatureId);
+  float lerpEyeHeightForStance(float blend01) const;
 
   CreatureMovementMode Mode{CreatureMovementMode::Walking};
   LocomotionState LocomotionState{LocomotionState::Idle};

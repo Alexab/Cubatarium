@@ -173,10 +173,21 @@ PlayerCapsule UCreatureLocomotionController::GetCollisionCapsule() const
   const PlayerCapsule refCrouch = PlayerCapsule::Crouching();
   const float crouchHeight =
       stand.height * (refCrouch.height / refStand.height);
+  const float lerpedEye = lerpEyeHeightForStance(t);
+  return {stand.height + (crouchHeight - stand.height) * t, lerpedEye,
+          stand.halfWidth};
+}
+
+float UCreatureLocomotionController::lerpEyeHeightForStance(
+    float blend01) const
+{
+  const PlayerCapsule stand = GetCapsule();
+  const float t = std::clamp(blend01, 0.0f, 1.0f);
+  const PlayerCapsule refStand = PlayerCapsule::Standing();
+  const PlayerCapsule refCrouch = PlayerCapsule::Crouching();
   const float crouchEye =
       stand.eyeHeight * (refCrouch.eyeHeight / refStand.eyeHeight);
-  return {stand.height + (crouchHeight - stand.height) * t,
-          stand.eyeHeight + (crouchEye - stand.eyeHeight) * t, stand.halfWidth};
+  return stand.eyeHeight + (crouchEye - stand.eyeHeight) * t;
 }
 
 bool UCreatureLocomotionController::OnSpacePressed()
@@ -256,10 +267,7 @@ bool UCreatureLocomotionController::anchorFeetFromStandingEye(
 
 float UCreatureLocomotionController::GetViewEyeHeight() const
 {
-  const PlayerCapsule stand = GetCapsule();
-  const float crouchEye = EyeHeight * 0.85f;
-  const float t = std::clamp(StanceBlend, 0.0f, 1.0f);
-  return stand.eyeHeight + (crouchEye - stand.eyeHeight) * t;
+  return lerpEyeHeightForStance(StanceBlend);
 }
 
 void UCreatureLocomotionController::SetStanceBlendForView(float blend01)
@@ -306,8 +314,10 @@ void UCreatureLocomotionController::landStanding(const UWorld *world,
     FeetAnchored = false;
     return;
   }
-  eyePos.y = FeetY + cap.eyeHeight;
-  if (world->CheckCollision(eyePos, cap, skipCreatureId))
+  const glm::vec3 sizeBlocks = SizeBlocksFromCapsule(cap);
+  const CollisionVolume vol =
+      CollisionVolumeAtFeet(FeetY, eyePos.x, eyePos.z, sizeBlocks);
+  if (world->CheckCollisionVolume(vol, skipCreatureId))
   {
     OnGround = false;
     FeetAnchored = false;
@@ -430,6 +440,8 @@ void UCreatureLocomotionController::syncGroundedPose(const UWorld *world,
       VerticalVelocity = 0.0f;
       return;
     }
+    FeetY = cap.feetY(eyePos);
+    FeetAnchored = true;
   }
 
   OnGround = true;

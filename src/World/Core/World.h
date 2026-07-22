@@ -432,6 +432,7 @@ public:
   bool SetControlledCreature(CreatureId Id);
   void ApplyLocomotionDefinitionToCamera(UCamera &camera,
                                          const CreatureDefinition &def) const;
+  glm::vec3 ResolveControlledDefaultEyeOffset() const;
   void RegisterDefaultActivityAgents();
   void SnapCreatureFeetToGround(UCreature &creature) const;
 

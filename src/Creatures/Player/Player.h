@@ -12,7 +12,8 @@ class UUser;
 class UPlayer : public UCreature
 {
 public:
-  UPlayer(CreatureId Id, const std::string &speciesId, glm::vec3 bodyOrigin);
+  UPlayer(CreatureId Id, const std::string &speciesId, glm::vec3 bodyOrigin,
+          glm::vec3 eyeOffset);
 
   bool IsPlayer() const override { return true; }
 

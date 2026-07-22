@@ -159,6 +159,17 @@ int UGuiRenderer::MeasureTextWidth(const std::string &text) const
   return static_cast<int>(TextRenderer->GetTextSize(text, textScale).x);
 }
 
+int UGuiRenderer::MeasureTextHeight(const std::string &text) const
+{
+  if (!TextRenderer || text.empty())
+  {
+    return 0;
+  }
+  constexpr float kScale = 1.0f;
+  const float textScale = TextScale > 0.f ? TextScale : kScale;
+  return static_cast<int>(TextRenderer->GetTextSize(text, textScale).y);
+}
+
 void UGuiRenderer::DrawText(const std::string &text, int x, int yTop,
                             const glm::vec3 &color)
 {

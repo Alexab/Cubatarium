@@ -170,21 +170,14 @@ Evidence: `bin/flight_sim_gate_report_baseline_2cb85f3c.json`,
 Вывод: P0 = **frontier missing + cold relight** (A), не F2 Dirty drain.
 F2 (B) остаётся P1: idle remesh plateau / RemeshAfterApply.
 
-### Следующие шаги (скорректировано 2026-07-22)
+### Следующие шаги (скорректировано 2026-07-22, после phase execution)
 
-1. **P0 — Frontier hole stall (A)**  
-   Пока `focus_missing_mesh>0` и `pending_light_focus>0`: держать hot async relight /
-   promote (нельзя `relight_drain≈0` при hole). Не возвращать dark preview (R5).  
-   Критерий: в manual/autofly нет сегментов `holes=1 ∧ async=0 ∧ relight≈0` >2–3 с;
-   stop/idle не оставляет miss>0.
+См. **`PHASE_EXECUTION_REPORT.md`** — полный отчёт с метриками и ветками.
 
-2. **P1 — Idle remesh plateau (B / F2)**  
-   После pending→0: не допускать роста `nr`/`fd` при wall<30; снять pin
-   `async=pipeline` без Cancel (sticky-риск).  
-   Gates F2: `nr_end≤36`, `fd_end≤280`.
-
-3. **Не делать:** MarkDirty focus flood, sync relight flood, preview до света,
-   CancelAsync как idle recovery, сужение MarkRelit Y-band (уже регрессировало).
+1. **Merge `streaming/phase-4-unified` → `perf`** — лучший autofly (sticky=0, nr_end=25, fd_Δ=−59).
+2. **P0:** снизить `cold_relight_holes_sec` (сейчас ~12s) — доработка relight budget при cruise.
+3. **F2:** только heavy_dirty caps (без раннего порога 12/20); цель `fd_end≤280`.
+4. **Harness:** gate на `cold_relight_holes_sec≤3`; `--replay-manual` parity.
 
 ### Anti-Patterns (не возвращать)
 

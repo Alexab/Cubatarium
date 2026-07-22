@@ -178,6 +178,25 @@ void UWorld::ApplyLocomotionDefinitionToCamera(UCamera &camera,
   camera.ApplyCreatureLocomotion(def.locomotion, def.bounds, def.eyeHeight);
 }
 
+glm::vec3 UWorld::ResolveControlledDefaultEyeOffset() const
+{
+  const PlayerCapsule fallback = PlayerCapsule::Standing();
+  float eye_height = fallback.eyeHeight;
+  if (const auto &storage = GetCreatureDefinitionStorage())
+  {
+    std::string species_id = storage->GetControlledDefaultSpeciesId();
+    if (species_id.empty())
+    {
+      species_id = "human";
+    }
+    if (const CreatureDefinition *def = storage->Get(species_id))
+    {
+      eye_height = def->eyeHeight;
+    }
+  }
+  return glm::vec3(0.0f, eye_height, 0.0f);
+}
+
 void UWorld::SnapCreatureFeetToGround(UCreature &creature) const
 {
   Environment.SnapCreatureFeetToGround(creature);

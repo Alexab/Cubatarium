@@ -1,5 +1,6 @@
 #include "Gui/Core/GuiInputRouter.h"
 #include "Gui/Core/GuiFocus.h"
+#include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiScreenBase.h"
 #include "Gui/Widgets/GuiScrollView.h"
 #include "Gui/Widgets/GuiTextInput.h"
@@ -27,6 +28,42 @@ bool IsActivationKey(const GuiKeyEvent &event)
   return event.Action == GuiKeyAction::Press &&
          (event.KeyCode == GuiKey::Enter || event.KeyCode == GuiKey::KpEnter ||
           event.KeyCode == GuiKey::Space);
+}
+
+bool DispatchMouseDown(UGuiWidget *hit, const GuiMouseEvent &event,
+                       UGuiRenderer *renderer)
+{
+  if (!hit)
+  {
+    return false;
+  }
+  if (auto *input = dynamic_cast<UGuiTextInput *>(hit))
+  {
+    if (event.Pressed && event.Button == GuiMouseButton::Left && renderer)
+    {
+      return input->PointerDown(event, *renderer);
+    }
+    return input->OnMouseDown(event);
+  }
+  return hit->OnMouseDown(event);
+}
+
+bool DispatchMouseMove(UGuiWidget *widget, const GuiMouseEvent &event,
+                       UGuiRenderer *renderer)
+{
+  if (!widget)
+  {
+    return false;
+  }
+  if (auto *input = dynamic_cast<UGuiTextInput *>(widget))
+  {
+    if (renderer && input->PointerMove(event, *renderer))
+    {
+      return true;
+    }
+    return input->OnMouseMove(event);
+  }
+  return widget->OnMouseMove(event);
 }
 
 UGuiScrollView *FindDeepestScrollView(UGuiWidget *node, int x, int y)
@@ -203,7 +240,7 @@ bool UGuiInputRouter::OnMouseDown(const GuiMouseEvent &event)
   if (hit && scroll && hit != scroll &&
       dynamic_cast<UGuiScrollView *>(hit) == nullptr)
   {
-    if (hit->OnMouseDown(event))
+    if (DispatchMouseDown(hit, event, Renderer))
     {
       CaptureMouse = true;
       MousePressedWidget = hit;
@@ -224,7 +261,7 @@ bool UGuiInputRouter::OnMouseDown(const GuiMouseEvent &event)
 
   if (hit)
   {
-    if (hit->OnMouseDown(event))
+    if (DispatchMouseDown(hit, event, Renderer))
     {
       CaptureMouse = true;
       MousePressedWidget = hit;
@@ -262,7 +299,7 @@ bool UGuiInputRouter::OnMouseMove(const GuiMouseEvent &event)
   LastMouseY = event.Y;
   if (CaptureMouse && MousePressedWidget)
   {
-    return MousePressedWidget->OnMouseMove(event);
+    return DispatchMouseMove(MousePressedWidget, event, Renderer);
   }
   if (!Root)
   {
@@ -272,7 +309,7 @@ bool UGuiInputRouter::OnMouseMove(const GuiMouseEvent &event)
   HoveredWidget = hit;
   if (hit)
   {
-    return hit->OnMouseMove(event);
+    return DispatchMouseMove(hit, event, Renderer);
   }
   return false;
 }

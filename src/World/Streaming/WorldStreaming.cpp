@@ -951,6 +951,14 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     bg_budget = std::max(bg_budget, pending_light_focus_n > 24 ? 32 : 20);
   }
+  // P0 frontier ingress: missing mesh + pending light but mesh pool idle — relight
+  // must not stall (manual 102559: holes=1, pending, async=0, relight_drain≈0).
+  if (world.GetLastMovementSpeed() > procedural.MovementPrefetchThreshold &&
+      missing_focus_mesh && pending_light_focus_n > 0 && mesh_async_n < 8 &&
+      frame_ms <= kBadFrameMs)
+  {
+    bg_budget = std::max(bg_budget, pending_light_focus_n > 12 ? 40 : 32);
+  }
   // Two-tier promote: underfeet first, then rest of focus — so far-in-focus
   // columns do not jump ahead of the camera column in the priority FIFO.
   if (pending_bg > 0 || underfeet_pending_light)
@@ -987,7 +995,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
     world.ClearPendingLightAfterMeshCommitted(12);
-    bg_budget = std::max(bg_budget, std::min(48, pending_light_focus_n * 2));
+    const int hole_cap =
+        (missing_focus_mesh && mesh_async_n < 8) ? 56 : 48;
+    bg_budget = std::max(
+        bg_budget,
+        std::min(hole_cap, pending_light_focus_n * 2 +
+                                (missing_focus_mesh ? 16 : 0)));
   }
 
   {

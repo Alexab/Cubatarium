@@ -155,6 +155,20 @@ def analyze(
             run = 0
     stuck_async_holes_sec = stuck_async_holes * 2.0
 
+    cold_relight_holes = 0
+    run = 0
+    for r in steady:
+        h = float(r.get(hole_key) or 0)
+        a = float(r.get("mesh_async") or 0)
+        p = float(r.get("pending_light_focus") or 0)
+        rd = float(r.get("relight_drain_ms") or 0)
+        if h > 0 and p > 0 and a < 4 and rd < 0.5:
+            run += 1
+            cold_relight_holes = max(cold_relight_holes, run)
+        else:
+            run = 0
+    cold_relight_holes_sec = cold_relight_holes * 2.0
+
     dirty_high_run = 0
     run = 0
     for d in dirty:
@@ -369,6 +383,7 @@ def analyze(
         "black_proxy_soft_fail": black_proxy_rate >= 0.25,
         "holes_rate_raw": holes_rate,
         "mesh_async_stuck_sec": mesh_async_stuck_sec,
+        "cold_relight_holes_sec": cold_relight_holes_sec,
         "gates_stop": gates_stop,
         "stop_segment_periods": len(stop_segment),
         "stop_pending_delta": stop_pending_delta,
@@ -398,6 +413,7 @@ def analyze(
             "wall_ms_fly_med": wall_fly_med,
             "mesh_async_med": median(mesh_async),
             "stuck_async_holes_sec": stuck_async_holes_sec,
+            "cold_relight_holes_sec": cold_relight_holes_sec,
             "dirty_high_sec": dirty_high_sec,
             "chunks_traveled": chunks_traveled,
             "focus_start": focus_pts[0] if focus_pts else None,

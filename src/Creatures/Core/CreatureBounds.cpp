@@ -89,4 +89,15 @@ float FeetYFromEye(const glm::vec3 &eyePos, float eyeHeight)
   return eyePos.y - eyeHeight;
 }
 
+glm::vec3 SizeBlocksFromCapsule(const PlayerCapsule &cap)
+{
+  return glm::vec3(cap.halfWidth * 2.0f, cap.height, cap.halfWidth * 2.0f);
+}
+
+CollisionVolume CollisionVolumeAtFeet(float feetY, float centerX, float centerZ,
+                                    const glm::vec3 &sizeBlocks)
+{
+  return CollisionVolumeFromBody(glm::vec3(centerX, feetY, centerZ), sizeBlocks);
+}
+
 } // namespace cutum

@@ -24,6 +24,21 @@ namespace
 #ifndef NDEBUG
 int gMeshTelemetryTick{0};
 #endif
+
+// Phase 4 unified ingress: moving frontier hole + pending + cold mesh pool.
+void PromoteFrontierHoleIngress(UWorld &world, glm::ivec3 focus_ground_horiz,
+                                int focus_radius, bool moving,
+                                bool missing_visible_mesh,
+                                int pending_focus_count, int pending_async,
+                                double last_frame_ms)
+{
+  if (moving && missing_visible_mesh && pending_focus_count > 0 &&
+      pending_async < 8 && last_frame_ms <= 50.0)
+  {
+    world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
+  }
+}
+
 } // namespace
 
 UChunkEmergeCoordinator::FrameBudget
@@ -515,8 +530,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     mesh_service.SetStarveOutsideFocusMesh(true);
     mesh_service.SetStarveRemeshForHoles(false);
-    mesh_drain = std::max(mesh_drain, last_frame_ms <= 16.0 ? 28 : 22);
-    mesh_schedule = std::max(mesh_schedule, last_frame_ms <= 16.0 ? 24 : 18);
+    const bool heavy_dirty = focus_dirty_early > 280;
+    mesh_drain = std::max(mesh_drain,
+                          last_frame_ms <= 16.0 ? (heavy_dirty ? 32 : 28)
+                                                : (heavy_dirty ? 26 : 22));
+    mesh_schedule = std::max(mesh_schedule,
+                             last_frame_ms <= 16.0 ? (heavy_dirty ? 28 : 24)
+                                                   : (heavy_dirty ? 22 : 18));
     world.ClearPendingLightAfterMeshCommitted(16);
   }
   if (!visual_holes && !missing_underfeet && !pending_near_light &&
@@ -642,6 +662,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_drain = std::max(mesh_drain, moving ? 18 : 24);
     mesh_schedule = std::max(mesh_schedule, moving ? 16 : 24);
   }
+  // P0: moving frontier hole + pending + cold mesh pool — promote relight every
+  // tick so SoftDefer gate can clear without dark preview (manual 102559 phase A).
+  PromoteFrontierHoleIngress(world, focus_ground_horiz, focus_radius, moving,
+                             missing_visible_mesh, pending_focus_count,
+                             pending_async, last_frame_ms);
 
   // Floor drain by Dirty backlog so hitch frames do not starve MeshAsync.
   // Cap schedule aggressiveness when underfeet is already OK — flooding
@@ -702,9 +727,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     if (idle_remesh_debt)
     {
+      const bool heavy_dirty = focus_dirty_early > 280;
       mesh_schedule =
-          std::min(mesh_schedule, last_frame_ms > 40.0 ? 14 : 20);
-      mesh_drain = std::min(mesh_drain, last_frame_ms > 40.0 ? 18 : 28);
+          std::min(mesh_schedule, last_frame_ms > 40.0 ? 14
+                                                         : (heavy_dirty ? 24 : 20));
+      mesh_drain = std::min(mesh_drain, last_frame_ms > 40.0 ? 18
+                                                               : (heavy_dirty ? 36 : 28));
     }
     else
     {
@@ -718,8 +746,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     if (idle_remesh_debt)
     {
-      mesh_schedule = std::min(mesh_schedule, 22);
-      mesh_drain = std::min(mesh_drain, 28);
+      const bool heavy_dirty = focus_dirty_early > 280;
+      mesh_schedule = std::min(mesh_schedule, heavy_dirty ? 26 : 22);
+      mesh_drain = std::min(mesh_drain, heavy_dirty ? 36 : 28);
     }
     else
     {

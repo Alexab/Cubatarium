@@ -81,7 +81,9 @@ UWorldViewBinding::GetCurrentUserCamera(const UWorld &world) const
 void UWorldViewBinding::ApplySpawnToCamera(UWorld &world)
 {
   glm::vec3 spawn = world.SpawnPoint;
-  const PlayerCapsule cap = PlayerCapsule::Standing();
+  const auto camera = GetCurrentUserCamera(world);
+  const PlayerCapsule cap =
+      camera ? camera->GetPlayerCapsule() : PlayerCapsule::Standing();
   world.DepenetrateEye(spawn, cap, world.GetMovementCollisionSkipId());
   world.SpawnPoint = spawn;
 
@@ -90,10 +92,18 @@ void UWorldViewBinding::ApplySpawnToCamera(UWorld &world)
     user->SetPosition(world.SpawnPoint);
     user->SetCameraOrientation(-90.0f, 0.0f);
   }
-  if (auto camera = GetCurrentUserCamera(world))
+  if (camera)
   {
     camera->SetPosition(world.SpawnPoint);
     camera->SetOrientation(-90.0f, 0.0f);
+    if (const UCreature *controlled = world.GetControlledCreature())
+    {
+      if (const CreatureDefinition *def =
+              world.GetCreatureDefinition(controlled->GetTypeId()))
+      {
+        world.ApplyLocomotionDefinitionToCamera(*camera, *def);
+      }
+    }
     return;
   }
   if (Engine_ && Engine_->GetActiveCamera())
@@ -116,6 +126,14 @@ void UWorldViewBinding::ApplyUserToCamera(UWorld &world,
   {
     camera->SetPosition(user->GetPosition());
     camera->SetOrientation(user->GetCameraYaw(), user->GetCameraPitch());
+    if (const UCreature *controlled = world.GetControlledCreature())
+    {
+      if (const CreatureDefinition *def =
+              world.GetCreatureDefinition(controlled->GetTypeId()))
+      {
+        world.ApplyLocomotionDefinitionToCamera(*camera, *def);
+      }
+    }
   }
 }
 
@@ -147,7 +165,8 @@ void UWorldViewBinding::EnsurePlayerOnGround(UWorld &world)
     return;
   }
 
-  const PlayerCapsule cap = PlayerCapsule::Standing();
+  const PlayerCapsule cap =
+      camera ? camera->GetPlayerCapsule() : PlayerCapsule::Standing();
   glm::vec3 pos = user->GetPosition();
   const glm::ivec3 column = WorldPosToBlock(pos);
   int x = column.x;
@@ -398,7 +417,8 @@ void UWorld::RunLegacyPhysicsFrame()
   {
     const glm::vec3 eyePos = camera->GetPosition();
     float feetY =
-        FeetYFromEye(eyePos, controlled ? controlled->GetEyeOffset().y : 1.62f);
+        FeetYFromEye(eyePos, controlled ? controlled->GetEyeOffset().y
+                                         : PlayerCapsule::Standing().eyeHeight);
     if (controlled)
     {
       feetY = BoundsFeetY(controlled->GetBodyOrigin());
