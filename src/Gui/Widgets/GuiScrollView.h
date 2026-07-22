@@ -2,6 +2,7 @@
 #define GUI_SCROLL_VIEW_H
 
 #include "Gui/Widgets/GuiPanel.h"
+#include "Gui/Core/GuiScrollbarController.h"
 #include <functional>
 
 namespace cutum
@@ -66,6 +67,7 @@ private:
   GuiRect ScrollbarThumbRect() const;
   void ClampScroll();
   void DrawScrollbar(UGuiRenderer &renderer);
+  GuiScrollbarMetrics BuildScrollbarMetrics() const;
 
   int ScrollbarWidthPx() const;
   int TouchSlopPx() const;
@@ -83,6 +85,7 @@ private:
   GuiMouseEvent DeferredDown{};
   int DeferredDragStartY{0};
   int DeferredDragStartScroll{0};
+  UGuiScrollbarController ScrollbarController;
 };
 
 } // namespace cutum

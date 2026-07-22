@@ -242,11 +242,7 @@ bool UGuiInputRouter::OnMouseUp(const GuiMouseEvent &event)
   bool consumed = false;
   if (Root)
   {
-    if (auto *scroll = dynamic_cast<UGuiScrollView *>(MousePressedWidget))
-    {
-      consumed = scroll->OnDeferredUp(event);
-    }
-    else if (MousePressedWidget)
+    if (MousePressedWidget)
     {
       consumed = MousePressedWidget->OnMouseUp(event);
     }
@@ -266,10 +262,6 @@ bool UGuiInputRouter::OnMouseMove(const GuiMouseEvent &event)
   LastMouseY = event.Y;
   if (CaptureMouse && MousePressedWidget)
   {
-    if (auto *scroll = dynamic_cast<UGuiScrollView *>(MousePressedWidget))
-    {
-      return scroll->OnDeferredMove(event);
-    }
     return MousePressedWidget->OnMouseMove(event);
   }
   if (!Root)
