@@ -47,8 +47,12 @@ public:
     return Completed.DiscardedOverflow();
   }
   void SetCompletedCapacity(std::size_t cap) { Completed.SetCapacity(cap); }
+  /// Source block positions from Completed overflow drops (re-enqueue relight).
+  std::vector<glm::ivec3> TakeOverflowSourcePositions();
 
 private:
+  void NoteCompletedOverflow(RelightComputeResult &&dropped);
+
   static constexpr int kPipelineSlotsPerWorker = 8;
 
   int WorkerCount{1};
@@ -62,6 +66,8 @@ private:
   std::atomic<uint64_t> DiscardedLate{0};
   mutable std::mutex DiscardedSourcesMutex;
   std::vector<glm::ivec3> DiscardedSources;
+  mutable std::mutex OverflowMutex;
+  std::vector<glm::ivec3> OverflowSources;
 };
 
 } // namespace cutum

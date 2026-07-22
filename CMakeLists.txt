@@ -699,6 +699,11 @@ target_include_directories(chunk_load_priority_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(chunk_load_priority_test glm::glm)
 
+add_executable(completed_job_queue_test
+    src/Test/CompletedJobQueueTest.cpp)
+target_include_directories(completed_job_queue_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
 add_executable(terrain_column_util_test
     src/World/Chunks/Chunk.cpp
     src/World/Chunks/ChunkManager.cpp

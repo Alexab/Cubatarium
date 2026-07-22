@@ -2954,6 +2954,15 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   }
   const auto t0 = std::chrono::high_resolution_clock::now();
   int applied = 0;
+  if (Persistence)
+  {
+    for (const glm::ivec3 &pos : AsyncRelight->TakeOverflowSourcePositions())
+    {
+      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z);
+      const glm::ivec3 chunk = UChunkManager::WorldToChunk(pos);
+      AsyncRelightColumnsInFlight.erase(glm::ivec2(chunk.x, chunk.z));
+    }
+  }
   for (RelightComputeResult &result :
        AsyncRelight->DrainCompleted(max_per_frame))
   {

@@ -1542,6 +1542,10 @@ void UChunkMeshCache::DrainAsyncMeshResults(UBlockWorld &world,
   {
     return;
   }
+  for (const glm::ivec3 &coord : AsyncBuilder->TakeOverflowCoords())
+  {
+    Dirty.MarkDirtyPriority(coord);
+  }
   for (MeshBuildResult &result : AsyncBuilder->DrainCompleted(max_per_frame))
   {
     ApplyMeshResult(world, std::move(result));
