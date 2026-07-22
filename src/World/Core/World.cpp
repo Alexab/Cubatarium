@@ -4556,7 +4556,7 @@ bool UWorld::AddUser(const std::string &Name)
 
   Users[Name] = std::make_shared<UUser>();
   auto user = Users[Name];
-  const glm::vec3 eyeOffset(0.0f, 1.62f, 0.0f);
+  const glm::vec3 eyeOffset = ResolveControlledDefaultEyeOffset();
   const glm::vec3 bodyOrigin = BodyOriginFromEye(SpawnPoint, eyeOffset);
   std::string speciesId = "human";
   if (const auto &creature_definitions = GetCreatureDefinitionStorage())

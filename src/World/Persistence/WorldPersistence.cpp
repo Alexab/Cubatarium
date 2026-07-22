@@ -1094,7 +1094,7 @@ void UWorldPersistence::LoadUsers(UWorld &world, const std::string &file_name)
             species_id = controlled;
           }
         }
-        const glm::vec3 eye_offset(0.0f, 1.62f, 0.0f);
+        const glm::vec3 eye_offset = world.ResolveControlledDefaultEyeOffset();
         const glm::vec3 body_origin = BodyOriginFromEye(position, eye_offset);
         const CreatureId pid = world.SpawnCreature(species_id, body_origin);
         if (pid != 0)
