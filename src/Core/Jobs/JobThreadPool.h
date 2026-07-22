@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <deque>
@@ -48,10 +49,51 @@ private:
 template <typename T> class UCompletedJobQueue
 {
 public:
+  void SetCapacity(std::size_t cap)
+  {
+    std::lock_guard<std::mutex> lock(Mutex);
+    Cap = cap;
+    if (Cap > 0)
+    {
+      Items.reserve(Cap);
+    }
+  }
+
+  std::size_t Capacity() const
+  {
+    std::lock_guard<std::mutex> lock(Mutex);
+    return Cap;
+  }
+
+  uint64_t DiscardedOverflow() const
+  {
+    return Discarded.load(std::memory_order_relaxed);
+  }
+
   void Push(T value)
   {
     std::lock_guard<std::mutex> lock(Mutex);
     Items.push_back(std::move(value));
+  }
+
+  /// Push with drop-oldest when Cap > 0 and full. Returns true if an item was
+  /// discarded (copied into dropped_out when non-null).
+  bool PushDropOldest(T &&item, T *dropped_out = nullptr)
+  {
+    std::lock_guard<std::mutex> lock(Mutex);
+    if (Cap > 0 && Items.size() >= Cap)
+    {
+      if (dropped_out)
+      {
+        *dropped_out = std::move(Items.front());
+      }
+      Items.erase(Items.begin());
+      Discarded.fetch_add(1, std::memory_order_relaxed);
+      Items.push_back(std::move(item));
+      return true;
+    }
+    Items.push_back(std::move(item));
+    return false;
   }
 
   std::vector<T> DrainAll()
@@ -96,6 +138,8 @@ public:
 private:
   mutable std::mutex Mutex;
   std::vector<T> Items;
+  std::size_t Cap{0};
+  std::atomic<uint64_t> Discarded{0};
 };
 
 } // namespace cutum

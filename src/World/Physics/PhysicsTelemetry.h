@@ -104,6 +104,24 @@ struct PhysicsTelemetry
   int PendingLightFocus{0};
   /// Comma-separated (cx,cz) for focus pending columns (telemetry only).
   std::string PendingFocusCols;
+  /// Memory budget fill / pressure (Era 12).
+  int MeshCompletedN{0};
+  int MeshCompletedCap{0};
+  uint64_t MeshCompletedDiscarded{0};
+  int RelightCompletedN{0};
+  int RelightCompletedCap{0};
+  uint64_t RelightCompletedDiscarded{0};
+  int DirtyN{0};
+  int PendingLightN{0};
+  int RelightFifoN{0};
+  uint64_t DirtyDropped{0};
+  uint64_t PendingLightDropped{0};
+  uint64_t RelightFifoDropped{0};
+  double GpuPoolUsedMb{0.0};
+  double GpuPoolCapMb{0.0};
+  int MemoryPressure{0};
+  int KeepMarginEff{0};
+  uint64_t BufferExpandEvents{0};
 };
 
 } // namespace cutum

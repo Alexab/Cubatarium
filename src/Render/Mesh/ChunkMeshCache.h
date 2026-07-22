@@ -94,6 +94,10 @@ public:
   double GetLastMeshSnapshotMs() const { return LastMeshSnapshotMs; }
   double GetLastMeshDirtyTickMs() const { return LastMeshDirtyTickMs; }
   int GetAsyncInFlightCount() const;
+  size_t GetMeshCompletedSize() const;
+  size_t GetMeshCompletedCapacity() const;
+  uint64_t GetMeshCompletedDiscardedOverflow() const;
+  void SetMeshCompletedCapacity(size_t cap);
   uint64_t GetMeshDiscardedLateCount() const;
   uint64_t GetMeshApplyStaleCount() const { return MeshApplyStaleCount; }
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }

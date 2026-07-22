@@ -1501,6 +1501,30 @@ int UChunkMeshCache::GetAsyncInFlightCount() const
   return AsyncBuilder->GetInFlightCount();
 }
 
+size_t UChunkMeshCache::GetMeshCompletedSize() const
+{
+  return AsyncBuilder ? AsyncBuilder->GetCompletedSize() : 0;
+}
+
+size_t UChunkMeshCache::GetMeshCompletedCapacity() const
+{
+  return AsyncBuilder ? AsyncBuilder->GetCompletedCapacity() : 0;
+}
+
+uint64_t UChunkMeshCache::GetMeshCompletedDiscardedOverflow() const
+{
+  return AsyncBuilder ? AsyncBuilder->GetCompletedDiscardedOverflow() : 0;
+}
+
+void UChunkMeshCache::SetMeshCompletedCapacity(size_t cap)
+{
+  EnsureAsyncBuilder();
+  if (AsyncBuilder)
+  {
+    AsyncBuilder->SetCompletedCapacity(cap);
+  }
+}
+
 uint64_t UChunkMeshCache::GetMeshDiscardedLateCount() const
 {
   if (!AsyncBuilder)

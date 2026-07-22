@@ -642,6 +642,38 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetMeshDiscardedLateCount();
     world.PhysicsTelemetryData.MeshApplyStale =
         world.GetMeshService().GetMeshApplyStaleCount();
+    {
+      const auto &tune = URuntimeTuning::Get();
+      world.PhysicsTelemetryData.MeshCompletedN = static_cast<int>(
+          world.GetMeshService().GetMeshCompletedSize());
+      world.PhysicsTelemetryData.MeshCompletedCap = static_cast<int>(
+          world.GetMeshService().GetMeshCompletedCapacity());
+      world.PhysicsTelemetryData.MeshCompletedDiscarded =
+          world.GetMeshService().GetMeshCompletedDiscardedOverflow();
+      world.PhysicsTelemetryData.RelightCompletedN =
+          static_cast<int>(world.GetRelightCompletedSize());
+      world.PhysicsTelemetryData.RelightCompletedCap =
+          static_cast<int>(world.GetRelightCompletedCapacity());
+      world.PhysicsTelemetryData.RelightCompletedDiscarded =
+          world.GetRelightCompletedDiscardedOverflow();
+      world.PhysicsTelemetryData.DirtyN =
+          static_cast<int>(world.GetMeshService().GetDirtyCount());
+      world.PhysicsTelemetryData.PendingLightN =
+          static_cast<int>(world.GetPendingLightBeforeMeshCount());
+      world.PhysicsTelemetryData.RelightFifoN =
+          world.Persistence
+              ? world.Persistence->GetPendingTerrainColumnRelightCount()
+              : 0;
+      world.PhysicsTelemetryData.GpuPoolCapMb =
+          static_cast<double>(tune.GpuVertexPoolMaxMb);
+      world.PhysicsTelemetryData.BufferExpandEvents = tune.BufferExpandEvents;
+      if (Streamer)
+      {
+        world.PhysicsTelemetryData.KeepMarginEff =
+            Streamer->GetKeepRenderDistance() -
+            Streamer->GetVisualRenderDistance();
+      }
+    }
     if (Streamer)
     {
       const int v = Streamer->GetVisualRenderDistance();

@@ -3035,6 +3035,30 @@ int UWorld::GetAsyncRelightInFlightCount() const
   return AsyncRelight ? AsyncRelight->GetInFlightCount() : 0;
 }
 
+size_t UWorld::GetRelightCompletedSize() const
+{
+  return AsyncRelight ? AsyncRelight->GetCompletedSize() : 0;
+}
+
+size_t UWorld::GetRelightCompletedCapacity() const
+{
+  return AsyncRelight ? AsyncRelight->GetCompletedCapacity() : 0;
+}
+
+uint64_t UWorld::GetRelightCompletedDiscardedOverflow() const
+{
+  return AsyncRelight ? AsyncRelight->GetCompletedDiscardedOverflow() : 0;
+}
+
+void UWorld::SetRelightCompletedCapacity(size_t cap)
+{
+  EnsureAsyncRelightBuilder();
+  if (AsyncRelight)
+  {
+    AsyncRelight->SetCompletedCapacity(cap);
+  }
+}
+
 bool UWorld::IsAsyncRelightColumnInFlight(glm::ivec2 ground_xz) const
 {
   return AsyncRelightColumnsInFlight.count(ground_xz) != 0;

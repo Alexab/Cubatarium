@@ -458,8 +458,11 @@ void UCore::LoadConfig(const std::string &config_file_name)
           (d.contains("procedural") && d["procedural"].is_object())
               ? &d["procedural"]
               : nullptr;
+      const json *memory_tuning =
+          (d.contains("memory") && d["memory"].is_object()) ? &d["memory"]
+                                                            : nullptr;
       ApplyRuntimeTuningFromConfig(physics_tuning, render_tuning,
-                                   procedural_tuning);
+                                   procedural_tuning, memory_tuning);
     }
     else
     {

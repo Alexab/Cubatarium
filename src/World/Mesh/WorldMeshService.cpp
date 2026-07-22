@@ -410,6 +410,26 @@ int UWorldMeshService::GetAsyncInFlightCount() const
   return Cache.GetAsyncInFlightCount();
 }
 
+size_t UWorldMeshService::GetMeshCompletedSize() const
+{
+  return Cache.GetMeshCompletedSize();
+}
+
+size_t UWorldMeshService::GetMeshCompletedCapacity() const
+{
+  return Cache.GetMeshCompletedCapacity();
+}
+
+uint64_t UWorldMeshService::GetMeshCompletedDiscardedOverflow() const
+{
+  return Cache.GetMeshCompletedDiscardedOverflow();
+}
+
+void UWorldMeshService::SetMeshCompletedCapacity(size_t cap)
+{
+  Cache.SetMeshCompletedCapacity(cap);
+}
+
 uint64_t UWorldMeshService::GetMeshDiscardedLateCount() const
 {
   return Cache.GetMeshDiscardedLateCount();

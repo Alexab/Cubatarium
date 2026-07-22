@@ -51,6 +51,13 @@ public:
   {
     return DiscardedLate.load(std::memory_order_relaxed);
   }
+  std::size_t GetCompletedSize() const { return Completed.Size(); }
+  std::size_t GetCompletedCapacity() const { return Completed.Capacity(); }
+  uint64_t GetCompletedDiscardedOverflow() const
+  {
+    return Completed.DiscardedOverflow();
+  }
+  void SetCompletedCapacity(std::size_t cap) { Completed.SetCapacity(cap); }
 
 private:
   static constexpr int kPipelineSlotsPerWorker = 6;

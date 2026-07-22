@@ -103,6 +103,10 @@ public:
   bool HasPendingAsyncMeshWork() const;
   size_t GetDirtyCount() const;
   int GetAsyncInFlightCount() const;
+  size_t GetMeshCompletedSize() const;
+  size_t GetMeshCompletedCapacity() const;
+  uint64_t GetMeshCompletedDiscardedOverflow() const;
+  void SetMeshCompletedCapacity(size_t cap);
   uint64_t GetMeshDiscardedLateCount() const;
   uint64_t GetMeshApplyStaleCount() const;
   double GetLastFlatRebuildMs() const;
