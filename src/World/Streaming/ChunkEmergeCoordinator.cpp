@@ -414,15 +414,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Soft-cap Dirty under Yellow/Red pressure: drop farthest remesh (not holes).
   {
     const auto &mtune = URuntimeTuning::Get();
-    const int pressure = world.PhysicsTelemetryData.StreamPressure;
+    auto &phys = world.GetPhysicsTelemetryMutable();
+    const int pressure = phys.StreamPressure;
     if (mtune.DirtySoftCap > 0 &&
         pending_dirty > static_cast<size_t>(mtune.DirtySoftCap) &&
         pressure >= 1)
     {
       const int dropped = mesh_service.MaybeDropFarthestDirty(
           focus_ground_horiz, static_cast<size_t>(mtune.DirtySoftCap), 1);
-      world.PhysicsTelemetryData.DirtyDropped +=
-          static_cast<uint64_t>(std::max(0, dropped));
+      phys.DirtyDropped += static_cast<uint64_t>(std::max(0, dropped));
     }
     if (mtune.PendingLightSoftCap > 0 &&
         world.GetPendingLightBeforeMeshCount() >
@@ -430,15 +430,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       const int dropped = world.TrimPendingLightBeforeMesh(
           focus_ground_horiz, mtune.PendingLightSoftCap);
-      world.PhysicsTelemetryData.PendingLightDropped +=
-          static_cast<uint64_t>(std::max(0, dropped));
+      phys.PendingLightDropped += static_cast<uint64_t>(std::max(0, dropped));
     }
-    if (mtune.RelightFifoSoftCap > 0 && world.Persistence)
+    if (mtune.RelightFifoSoftCap > 0)
     {
-      const int dropped = world.Persistence->TrimFarRelightFifoFarthest(
+      const int dropped = world.TrimFarRelightFifoFarthest(
           focus_ground_horiz, mtune.RelightFifoSoftCap);
-      world.PhysicsTelemetryData.RelightFifoDropped +=
-          static_cast<uint64_t>(std::max(0, dropped));
+      phys.RelightFifoDropped += static_cast<uint64_t>(std::max(0, dropped));
     }
   }
 

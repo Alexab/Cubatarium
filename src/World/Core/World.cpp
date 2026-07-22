@@ -1589,6 +1589,16 @@ int UWorld::TrimPendingLightBeforeMesh(glm::ivec3 focus_ground_horiz,
   return dropped;
 }
 
+int UWorld::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground_horiz,
+                                       int soft_cap)
+{
+  if (!Persistence)
+  {
+    return 0;
+  }
+  return Persistence->TrimFarRelightFifoFarthest(focus_ground_horiz, soft_cap);
+}
+
 bool UWorld::IsPendingLightBeforeMesh(glm::ivec2 ground_xz) const
 {
   return PendingLightBeforeMesh.find(ground_xz) != PendingLightBeforeMesh.end();
