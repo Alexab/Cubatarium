@@ -15,6 +15,53 @@ bool InChunkLocal(glm::ivec3 local)
          local.y < CHUNK_SIZE && local.z >= 0 && local.z < CHUNK_SIZE;
 }
 
+/// Map local offset (relative to chunk origin) onto a single face cell.
+/// Returns false for interior cells, edges/corners, or farther shell.
+bool TryShellIndex(glm::ivec3 local, int &face, int &cell)
+{
+  int outside_axis = -1;
+  int outside_sign = 0;
+  for (int axis = 0; axis < 3; ++axis)
+  {
+    if (local[axis] >= 0 && local[axis] < CHUNK_SIZE)
+    {
+      continue;
+    }
+    if (outside_axis >= 0)
+    {
+      return false;
+    }
+    if (local[axis] == -1)
+    {
+      outside_axis = axis;
+      outside_sign = -1;
+    }
+    else if (local[axis] == CHUNK_SIZE)
+    {
+      outside_axis = axis;
+      outside_sign = 1;
+    }
+    else
+    {
+      return false;
+    }
+  }
+  if (outside_axis < 0)
+  {
+    return false;
+  }
+  const int u_axis = (outside_axis + 1) % 3;
+  const int v_axis = (outside_axis + 2) % 3;
+  face = outside_axis * 2 + (outside_sign > 0 ? 1 : 0);
+  cell = local[u_axis] + local[v_axis] * CHUNK_SIZE;
+  return true;
+}
+
+int ShellFlatIndex(int face, int cell)
+{
+  return face * ChunkMeshSnapshot::kShellFaceCells + cell;
+}
+
 } // namespace
 
 ChunkMeshSnapshot ChunkMeshSnapshot::Capture(const UBlockWorld &world,
@@ -38,33 +85,33 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(const UBlockWorld &world,
   {
     for (int sign = -1; sign <= 1; sign += 2)
     {
-      glm::ivec3 neighborOffset(0);
-      neighborOffset[axis] = sign;
+      const int face = axis * 2 + (sign > 0 ? 1 : 0);
       for (int u = 0; u < CHUNK_SIZE; ++u)
       {
         for (int v = 0; v < CHUNK_SIZE; ++v)
         {
           glm::ivec3 local(0);
-          const int uAxis = (axis + 1) % 3;
-          const int vAxis = (axis + 2) % 3;
+          const int u_axis = (axis + 1) % 3;
+          const int v_axis = (axis + 2) % 3;
           local[axis] = sign < 0 ? -1 : CHUNK_SIZE;
-          local[uAxis] = u;
-          local[vAxis] = v;
+          local[u_axis] = u;
+          local[v_axis] = v;
           const glm::ivec3 worldPos = origin + local;
-          snapshot.shellBlocks[worldPos] = world.GetBlock(worldPos);
-          const glm::ivec3 lightChunkCoord = UChunkManager::WorldToChunk(worldPos);
+          const int cell = u + v * CHUNK_SIZE;
+          const int flat = ShellFlatIndex(face, cell);
+          snapshot.shellBlocks[static_cast<size_t>(flat)] =
+              world.GetBlock(worldPos);
+          const glm::ivec3 lightChunkCoord =
+              UChunkManager::WorldToChunk(worldPos);
           if (const UChunk *lightChunk =
                   world.GetChunkManager().GetChunk(lightChunkCoord))
           {
-            snapshot.shellLight[worldPos] = lightChunk->GetLightPackedLocal(
-                UChunkManager::WorldToLocal(worldPos));
+            snapshot.shellLight[static_cast<size_t>(flat)] =
+                lightChunk->GetLightPackedLocal(
+                    UChunkManager::WorldToLocal(worldPos));
           }
-          const uint8_t packed =
+          snapshot.shellFluid[static_cast<size_t>(flat)] =
               PackFluidCellState(world.GetFluidState(worldPos));
-          if (packed != 0)
-          {
-            snapshot.shellFluid[worldPos] = packed;
-          }
         }
       }
     }
@@ -79,10 +126,11 @@ BlockId ChunkMeshSnapshot::GetBlock(glm::ivec3 worldPos) const
   {
     return GetBlockLocal(local);
   }
-  const auto it = shellBlocks.find(worldPos);
-  if (it != shellBlocks.end())
+  int face = 0;
+  int cell = 0;
+  if (TryShellIndex(local, face, cell))
   {
-    return it->second;
+    return shellBlocks[static_cast<size_t>(ShellFlatIndex(face, cell))];
   }
   return BLOCK_AIR;
 }
@@ -106,10 +154,11 @@ uint8_t ChunkMeshSnapshot::GetLightPacked(glm::ivec3 worldPos) const
   {
     return GetLightPackedLocal(local);
   }
-  const auto it = shellLight.find(worldPos);
-  if (it != shellLight.end())
+  int face = 0;
+  int cell = 0;
+  if (TryShellIndex(local, face, cell))
   {
-    return it->second;
+    return shellLight[static_cast<size_t>(ShellFlatIndex(face, cell))];
   }
   return 0;
 }
@@ -132,10 +181,11 @@ uint8_t ChunkMeshSnapshot::GetFluidPacked(glm::ivec3 worldPos) const
   {
     return GetFluidPackedLocal(local);
   }
-  const auto it = shellFluid.find(worldPos);
-  if (it != shellFluid.end())
+  int face = 0;
+  int cell = 0;
+  if (TryShellIndex(local, face, cell))
   {
-    return it->second;
+    return shellFluid[static_cast<size_t>(ShellFlatIndex(face, cell))];
   }
   return 0;
 }

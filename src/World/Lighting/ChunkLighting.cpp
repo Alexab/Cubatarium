@@ -266,6 +266,10 @@ void PropagateSkylightHorizontal(UBlockWorld &world, UBlockRegistry &registry,
   {
     const glm::ivec3 pos = queue.front();
     queue.pop_front();
+    if (!world.GetChunkManager().GetChunk(UChunkManager::WorldToChunk(pos)))
+    {
+      continue;
+    }
     const int light = GetSkyLightWorld(world, pos);
     if (light <= 1)
     {
@@ -274,6 +278,12 @@ void PropagateSkylightHorizontal(UBlockWorld &world, UBlockRegistry &registry,
     for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
     {
       const glm::ivec3 neighbor = pos + offset;
+      // Unloaded chunk is AIR and Write* no-ops → unbounded BFS / hang.
+      if (!world.GetChunkManager().GetChunk(
+              UChunkManager::WorldToChunk(neighbor)))
+      {
+        continue;
+      }
       const BlockId neighbor_id = world.GetBlock(neighbor);
       if (!IsLightTransparent(registry, neighbor_id))
       {
@@ -333,6 +343,10 @@ void PropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
   {
     const auto [pos, light] = queue.front();
     queue.pop_front();
+    if (!world.GetChunkManager().GetChunk(UChunkManager::WorldToChunk(pos)))
+    {
+      continue;
+    }
     if (light <= GetBlockLightWorld(world, pos))
     {
       continue;
@@ -345,6 +359,11 @@ void PropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
     for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
     {
       const glm::ivec3 neighbor = pos + offset;
+      if (!world.GetChunkManager().GetChunk(
+              UChunkManager::WorldToChunk(neighbor)))
+      {
+        continue;
+      }
       const BlockId neighbor_id = world.GetBlock(neighbor);
       if (!IsLightTransparent(registry, neighbor_id))
       {

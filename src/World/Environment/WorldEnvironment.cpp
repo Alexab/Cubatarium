@@ -319,7 +319,7 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
   std::unique_ptr<UCreature> creature;
   if (def->role == CreatureRole::ControlledDefault)
   {
-    creature = std::make_unique<UPlayer>(id, speciesId, resolvedSpawn);
+    creature = std::make_unique<UPlayer>(id, speciesId, resolvedSpawn, eyeOffset);
   }
   else
   {

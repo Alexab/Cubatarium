@@ -26,6 +26,27 @@ int UGuiTextInput::TextPadding() const { return Theme ? Theme->Padding : 8; }
 
 int UGuiTextInput::TextLeft() const { return Bounds.X + TextPadding(); }
 
+GuiRect UGuiTextInput::TextClipRect() const
+{
+  return Bounds.Inset(TextPadding());
+}
+
+int UGuiTextInput::TextLineHeight(UGuiRenderer &renderer) const
+{
+  const int measured = renderer.MeasureTextHeight("Ag");
+  if (measured > 0)
+  {
+    return measured;
+  }
+  return Theme ? Theme->FontSizeBody : 16;
+}
+
+int UGuiTextInput::TextTopY(UGuiRenderer &renderer) const
+{
+  const int lineH = TextLineHeight(renderer);
+  return Bounds.Y + std::max(0, (Bounds.H - lineH) / 2);
+}
+
 bool UGuiTextInput::CanFocus() const { return Enabled && Visible; }
 
 size_t UGuiTextInput::SelMin() const { return std::min(SelAnchor, SelEnd); }
@@ -54,6 +75,7 @@ void UGuiTextInput::SetText(const std::string &text)
   }
   CaretPos = Buffer.size();
   ClearSelection();
+  ScrollX = 0;
   ProgrammaticChange = false;
 }
 
@@ -87,7 +109,7 @@ void UGuiTextInput::InsertText(const std::string &text)
 
 size_t UGuiTextInput::CaretIndexFromX(int mouseX, UGuiRenderer &renderer) const
 {
-  const int left = TextLeft();
+  const int left = TextLeft() - ScrollX;
   const int relX = mouseX - left;
   if (relX <= 0)
   {
@@ -108,6 +130,42 @@ size_t UGuiTextInput::CaretIndexFromX(int mouseX, UGuiRenderer &renderer) const
     }
   }
   return std::min(lo, Buffer.size());
+}
+
+void UGuiTextInput::EnsureCaretVisible(UGuiRenderer &renderer)
+{
+  const GuiRect clip = TextClipRect();
+  if (clip.W <= 0)
+  {
+    return;
+  }
+  const int textWidth = renderer.MeasureTextWidth(Buffer);
+  if (textWidth <= clip.W)
+  {
+    ScrollX = 0;
+    return;
+  }
+  const int caretRel = renderer.MeasureTextWidth(Buffer.substr(0, CaretPos));
+  const int selStartRel =
+      HasSelection()
+          ? renderer.MeasureTextWidth(Buffer.substr(0, SelMin()))
+          : caretRel;
+  const int selEndRel =
+      HasSelection()
+          ? renderer.MeasureTextWidth(Buffer.substr(0, SelMax()))
+          : caretRel;
+  const int focusStart = std::min(selStartRel, caretRel);
+  const int focusEnd = std::max(selEndRel, caretRel);
+  if (focusStart < ScrollX)
+  {
+    ScrollX = focusStart;
+  }
+  if (focusEnd > ScrollX + clip.W - 4)
+  {
+    ScrollX = std::max(0, focusEnd - clip.W + 4);
+  }
+  const int maxScroll = std::max(0, textWidth - clip.W);
+  ScrollX = std::clamp(ScrollX, 0, maxScroll);
 }
 
 std::string UGuiTextInput::GetSelectedText() const
@@ -204,30 +262,31 @@ void UGuiTextInput::Draw(UGuiRenderer &renderer)
   {
     return;
   }
+  EnsureCaretVisible(renderer);
   renderer.DrawFilledRect(Bounds, Theme->ButtonNormal);
+  const GuiRect clip = TextClipRect();
+  const int top = TextTopY(renderer);
+  const int lineH = TextLineHeight(renderer);
+  const int textX = TextLeft() - ScrollX;
+  renderer.PushClipRect(clip);
   if (HasSelection())
   {
-    const int left = TextLeft();
-    const int top = Bounds.Y + TextPadding();
-    const int h = Theme->FontSizeBody + 2;
-    const int x0 = left + renderer.MeasureTextWidth(Buffer.substr(0, SelMin()));
-    const int x1 = left + renderer.MeasureTextWidth(Buffer.substr(0, SelMax()));
-    renderer.DrawFilledRect({x0, top, std::max(1, x1 - x0), h},
+    const int x0 = textX + renderer.MeasureTextWidth(Buffer.substr(0, SelMin()));
+    const int x1 = textX + renderer.MeasureTextWidth(Buffer.substr(0, SelMax()));
+    renderer.DrawFilledRect({x0, top, std::max(1, x1 - x0), lineH},
                             Theme->SlotSelectedFill);
   }
+  renderer.DrawText(Buffer, textX, top, Theme->TextPrimary);
+  if (Focused && !HasSelection())
+  {
+    const int cx = textX + renderer.MeasureTextWidth(Buffer.substr(0, CaretPos));
+    const glm::vec4 caretColor(Theme->TextPrimary, 1.0f);
+    renderer.DrawFilledRect({cx, top, 2, lineH}, caretColor);
+  }
+  renderer.PopClipRect();
   renderer.DrawBorderRect(Bounds,
                           Focused ? Theme->SlotSelected : Theme->PanelBorder,
                           Theme->BorderThickness);
-  renderer.DrawText(Buffer, TextLeft(), Bounds.Y + TextPadding(),
-                    Theme->TextPrimary);
-  if (Focused && !HasSelection())
-  {
-    const int cx =
-        TextLeft() + renderer.MeasureTextWidth(Buffer.substr(0, CaretPos));
-    const int top = Bounds.Y + TextPadding();
-    const glm::vec4 caretColor(Theme->TextPrimary, 1.0f);
-    renderer.DrawFilledRect({cx, top, 2, Theme->FontSizeBody + 2}, caretColor);
-  }
   if (HasFocusHighlight())
   {
     DrawWidgetFocusRing(renderer, *Theme, Bounds);
@@ -249,6 +308,7 @@ bool UGuiTextInput::PointerDown(const GuiMouseEvent &event,
 #endif
   CaretPos = CaretIndexFromX(event.X, renderer);
   SelAnchor = SelEnd = CaretPos;
+  EnsureCaretVisible(renderer);
   return true;
 }
 
@@ -261,6 +321,7 @@ bool UGuiTextInput::PointerMove(const GuiMouseEvent &event,
   }
   CaretPos = CaretIndexFromX(event.X, renderer);
   SelEnd = CaretPos;
+  EnsureCaretVisible(renderer);
   return true;
 }
 
@@ -274,14 +335,7 @@ bool UGuiTextInput::OnMouseDown(const GuiMouseEvent &event)
   {
     return Bounds.Contains(event.X, event.Y);
   }
-  if (event.Button == GuiMouseButton::Left && Bounds.Contains(event.X, event.Y))
-  {
-#ifdef __ANDROID__
-    AndroidSoftKeyboardSetTarget(this);
-#endif
-    return true;
-  }
-  return false;
+  return Bounds.Contains(event.X, event.Y);
 }
 
 bool UGuiTextInput::OnMouseUp(const GuiMouseEvent &event)
@@ -293,11 +347,8 @@ bool UGuiTextInput::OnMouseUp(const GuiMouseEvent &event)
 
 bool UGuiTextInput::OnMouseMove(const GuiMouseEvent &event)
 {
-  if (!DraggingSelection || !Focused)
-  {
-    return false;
-  }
-  return Bounds.Contains(event.X, event.Y) || DraggingSelection;
+  (void)event;
+  return DraggingSelection && Focused;
 }
 
 bool UGuiTextInput::OnChar(const GuiCharEvent &event)

@@ -190,6 +190,10 @@ void PropagateSkylightHorizontal(UChunkRelightSnapshot &grid,
   {
     const glm::ivec3 pos = queue.front();
     queue.pop_front();
+    if (!grid.HasChunk(UChunkManager::WorldToChunk(pos)))
+    {
+      continue;
+    }
     const int light = grid.GetSkyLight(pos);
     if (light <= 1)
     {
@@ -198,6 +202,12 @@ void PropagateSkylightHorizontal(UChunkRelightSnapshot &grid,
     for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
     {
       const glm::ivec3 neighbor = pos + offset;
+      // Missing chunk reads as AIR and Write* is a no-op — without this guard
+      // BFS expands forever (hang + RAM), e.g. placing a light near capture edge.
+      if (!grid.HasChunk(UChunkManager::WorldToChunk(neighbor)))
+      {
+        continue;
+      }
       const BlockId neighbor_id = grid.GetBlock(neighbor);
       if (!IsLightTransparent(registry, neighbor_id))
       {
@@ -253,6 +263,10 @@ void PropagateBlocklight(UChunkRelightSnapshot &grid,
   {
     const auto [pos, light] = queue.front();
     queue.pop_front();
+    if (!grid.HasChunk(UChunkManager::WorldToChunk(pos)))
+    {
+      continue;
+    }
     if (light <= grid.GetBlockLight(pos))
     {
       continue;
@@ -265,6 +279,10 @@ void PropagateBlocklight(UChunkRelightSnapshot &grid,
     for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
     {
       const glm::ivec3 neighbor = pos + offset;
+      if (!grid.HasChunk(UChunkManager::WorldToChunk(neighbor)))
+      {
+        continue;
+      }
       if (!IsLightTransparent(registry, grid.GetBlock(neighbor)))
       {
         continue;
@@ -532,7 +550,6 @@ UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
     }
     snapshot.Blocks[coord] = chunk->GetData();
     snapshot.Light[coord] = chunk->GetLightData();
-    const glm::ivec3 origin = coord * CHUNK_SIZE;
     for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
     {
       const glm::ivec3 neighbor_coord = coord + offset;
@@ -545,21 +562,33 @@ UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
       {
         continue;
       }
-      const glm::ivec3 neighbor_origin = neighbor_coord * CHUNK_SIZE;
-      for (int ly = 0; ly < CHUNK_SIZE; ++ly)
+      // Only the shared face (256 cells). Old loop scanned full VOLUME and
+      // tested SharesChunkFace(world_pos, center) — neighbor cells are never
+      // inside center, so ShellBlocks stayed empty while burning ~16× CPU
+      // (manual 220018 Capture storms).
+      int axis = 0;
+      if (offset.y != 0)
       {
-        for (int lz = 0; lz < CHUNK_SIZE; ++lz)
+        axis = 1;
+      }
+      else if (offset.z != 0)
+      {
+        axis = 2;
+      }
+      const int face_local = offset[axis] > 0 ? 0 : (CHUNK_SIZE - 1);
+      const int u_axis = (axis + 1) % 3;
+      const int v_axis = (axis + 2) % 3;
+      const glm::ivec3 neighbor_origin = neighbor_coord * CHUNK_SIZE;
+      for (int u = 0; u < CHUNK_SIZE; ++u)
+      {
+        for (int v = 0; v < CHUNK_SIZE; ++v)
         {
-          for (int lx = 0; lx < CHUNK_SIZE; ++lx)
-          {
-            const glm::ivec3 local(lx, ly, lz);
-            const glm::ivec3 world_pos = neighbor_origin + local;
-            if (!SharesChunkFace(world_pos, coord))
-            {
-              continue;
-            }
-            snapshot.ShellBlocks[world_pos] = neighbor->GetBlockLocal(local);
-          }
+          glm::ivec3 local(0);
+          local[axis] = face_local;
+          local[u_axis] = u;
+          local[v_axis] = v;
+          snapshot.ShellBlocks[neighbor_origin + local] =
+              neighbor->GetBlockLocal(local);
         }
       }
     }

@@ -17,6 +17,7 @@
 #include "ResourcePacks/ResourcePackSmoke.h"
 
 #include <cstring>
+#include <cstdlib>
 int main(int argc, char *argv[])
 {
 #ifdef _WIN32
@@ -66,6 +67,96 @@ int main(int argc, char *argv[])
         in_game_frames = std::atoi(argv[i + 1]);
       }
       return cutum::RunEnterGameSmoke(*paths, in_game_frames);
+    }
+    if (std::strcmp(argv[i], "--flight-sim") == 0)
+    {
+#ifdef _WIN32
+      cutum::CubatariumAttachParentConsole();
+#endif
+      auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+      cutum::IUPlatformPaths::SetGlobal(paths);
+      cutum::FlightSimOptions opt;
+      opt.WorldName = "World_164";
+      for (int j = i + 1; j < argc; ++j)
+      {
+        if (std::strcmp(argv[j], "--world") == 0 && j + 1 < argc)
+        {
+          opt.WorldName = argv[++j];
+        }
+        else if (std::strcmp(argv[j], "--seconds") == 0 && j + 1 < argc)
+        {
+          opt.InGameSeconds = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--fly") == 0)
+        {
+          opt.Fly = true;
+        }
+        else if (std::strcmp(argv[j], "--no-fly") == 0)
+        {
+          opt.Fly = false;
+        }
+        else if (std::strcmp(argv[j], "--hold-forward") == 0)
+        {
+          opt.HoldForward = true;
+        }
+        else if (std::strcmp(argv[j], "--no-hold-forward") == 0)
+        {
+          opt.HoldForward = false;
+        }
+        else if (std::strcmp(argv[j], "--idle") == 0 && j + 1 < argc)
+        {
+          opt.IdleBeforeFlySec = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--yaw") == 0 && j + 1 < argc)
+        {
+          opt.FaceYawDeg = static_cast<float>(std::atof(argv[++j]));
+        }
+        else if (std::strcmp(argv[j], "--pitch") == 0 && j + 1 < argc)
+        {
+          opt.FacePitchDeg = static_cast<float>(std::atof(argv[++j]));
+        }
+        else if (std::strcmp(argv[j], "--sprint") == 0)
+        {
+          opt.Sprint = true;
+        }
+        else if (std::strcmp(argv[j], "--hold-space") == 0)
+        {
+          opt.HoldSpace = true;
+        }
+        else if (std::strcmp(argv[j], "--teleport-cruise") == 0)
+        {
+          opt.TeleportToCruiseStart = true;
+        }
+        else if (std::strcmp(argv[j], "--no-teleport-cruise") == 0)
+        {
+          opt.TeleportToCruiseStart = false;
+        }
+        else if (std::strcmp(argv[j], "--perf-out") == 0 && j + 1 < argc)
+        {
+          opt.PerfOutPath = argv[++j];
+        }
+        else if (std::strcmp(argv[j], "--report") == 0 && j + 1 < argc)
+        {
+          opt.ReportPath = argv[++j];
+        }
+        else if (std::strcmp(argv[j], "--fly-stop") == 0)
+        {
+          opt.FlyStopMode = true;
+        }
+        else if (std::strcmp(argv[j], "--fly-phase") == 0 && j + 1 < argc)
+        {
+          opt.FlyPhaseSec = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--stop-phase") == 0 && j + 1 < argc)
+        {
+          opt.StopPhaseSec = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--visible") == 0)
+        {
+          opt.VisibleWindow = true;
+        }
+      }
+      return cutum::RunFlightSim(*paths, opt);
     }
     if (std::strcmp(argv[i], "--validate-load") == 0)
     {

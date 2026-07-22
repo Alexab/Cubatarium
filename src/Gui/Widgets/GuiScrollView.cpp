@@ -1,5 +1,6 @@
 #include "Gui/Widgets/GuiScrollView.h"
 #include "Gui/Core/GuiRenderer.h"
+#include "Gui/Core/GuiScrollbarController.h"
 #include "Gui/Core/GuiTheme.h"
 #include "Gui/Core/GuiTypes.h"
 #include "Gui/Layout/GuiLayout.h"
@@ -227,6 +228,17 @@ void UGuiScrollView::DrawScrollbar(UGuiRenderer &renderer)
   renderer.DrawBorderRect(track, Theme->PanelBorder, Theme->BorderThickness);
 }
 
+GuiScrollbarMetrics UGuiScrollView::BuildScrollbarMetrics() const
+{
+  GuiScrollbarMetrics metrics;
+  metrics.Track = ScrollbarTrackRect();
+  metrics.Thumb = ScrollbarThumbRect();
+  metrics.ViewportH = Bounds.H;
+  metrics.MaxScroll = MaxScrollY();
+  metrics.ScrollY = ScrollY;
+  return metrics;
+}
+
 void UGuiScrollView::Draw(UGuiRenderer &renderer)
 {
   if (!Visible || !Theme)
@@ -280,8 +292,7 @@ UGuiWidget *UGuiScrollView::HitTest(int x, int y)
 
 bool UGuiScrollView::BeginDeferredTouch(const GuiMouseEvent &event)
 {
-  if (!ViewportRect().Contains(event.X, event.Y) &&
-      !ScrollbarTrackRect().Contains(event.X, event.Y))
+  if (!ViewportRect().Contains(event.X, event.Y))
   {
     return false;
   }
@@ -342,6 +353,23 @@ bool UGuiScrollView::OnMouseDown(const GuiMouseEvent &event)
   {
     return true;
   }
+
+  const GuiScrollbarMetrics metrics = BuildScrollbarMetrics();
+  const GuiScrollbarHit hit =
+      ScrollbarController.HitTest(metrics, event.X, event.Y);
+  if (hit == GuiScrollbarHit::Thumb)
+  {
+    ScrollbarController.BeginThumbDrag(metrics, event.Y);
+    return true;
+  }
+  if (hit == GuiScrollbarHit::TrackAbove || hit == GuiScrollbarHit::TrackBelow)
+  {
+    ScrollY = ScrollbarController.ScrollFromTrackClick(metrics, hit, event.Y);
+    ClampScroll();
+    LayoutContent(LayoutSpacing, LayoutPadding);
+    return true;
+  }
+
   if (BeginDeferredTouch(event))
   {
     return true;
@@ -351,6 +379,11 @@ bool UGuiScrollView::OnMouseDown(const GuiMouseEvent &event)
 
 bool UGuiScrollView::OnMouseUp(const GuiMouseEvent &event)
 {
+  if (ScrollbarController.IsDragging())
+  {
+    ScrollbarController.EndDrag();
+    return true;
+  }
   if (DeferredTouchActive)
   {
     return OnDeferredUp(event);
@@ -360,6 +393,14 @@ bool UGuiScrollView::OnMouseUp(const GuiMouseEvent &event)
 
 bool UGuiScrollView::OnMouseMove(const GuiMouseEvent &event)
 {
+  if (ScrollbarController.IsDragging())
+  {
+    const GuiScrollbarMetrics metrics = BuildScrollbarMetrics();
+    ScrollY = ScrollbarController.ScrollFromThumbDrag(metrics, event.Y);
+    ClampScroll();
+    LayoutContent(LayoutSpacing, LayoutPadding);
+    return true;
+  }
   if (DeferredTouchActive)
   {
     return OnDeferredMove(event);

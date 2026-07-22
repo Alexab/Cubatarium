@@ -30,6 +30,13 @@ int main()
                                                          feet, forward, params);
   Expect(feet_chunk < ahead, "feet neighborhood should outrank distant chunks");
 
+  const int keep_shell =
+      cutum::ComputeChunkLoadPriority(glm::ivec3(4, 0, 0), feet, forward, params);
+  const int feet_urgent = cutum::ApplyCollisionUrgentBias(feet_chunk, true);
+  const int keep_plain = cutum::ApplyCollisionUrgentBias(keep_shell, false);
+  Expect(feet_urgent < keep_plain,
+         "CollisionUrgent feet must outrank keep-shell (bias subtracts)");
+
   std::cout << "chunk_load_priority_test: OK" << std::endl;
   return 0;
 }

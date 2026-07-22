@@ -286,9 +286,6 @@ bool UConsoleScreen::RouteMouseButton(const GuiMouseEvent &event,
     if (event.Pressed && event.Button == GuiMouseButton::Left)
     {
       Input->PointerDown(event, renderer);
-#ifdef __ANDROID__
-      AndroidSoftKeyboardSetTarget(Input);
-#endif
       return true;
     }
     if (!event.Pressed && event.Button == GuiMouseButton::Left)

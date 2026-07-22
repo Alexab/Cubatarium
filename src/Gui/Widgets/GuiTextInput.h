@@ -57,6 +57,10 @@ private:
   size_t CaretIndexFromX(int mouseX, UGuiRenderer &renderer) const;
   int TextLeft() const;
   int TextPadding() const;
+  int TextTopY(UGuiRenderer &renderer) const;
+  int TextLineHeight(UGuiRenderer &renderer) const;
+  GuiRect TextClipRect() const;
+  void EnsureCaretVisible(UGuiRenderer &renderer);
 
   const GuiTheme *Theme;
   IUGuiClipboard *Clipboard{nullptr};
@@ -69,6 +73,7 @@ private:
   bool DraggingSelection{false};
   bool ProgrammaticChange{false};
   unsigned int SuppressCharCodepoint{0};
+  int ScrollX{0};
 };
 
 } // namespace cutum

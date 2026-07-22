@@ -117,11 +117,14 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
 
 std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
 {
-  const std::size_t limit =
-      maxPerFrame > 0 ? static_cast<std::size_t>(maxPerFrame) : 0;
-  std::vector<MeshBuildResult> drained =
-      limit > 0 ? Completed.DrainUpTo(limit) : std::vector<MeshBuildResult>{};
+  (void)maxPerFrame;
+  // Always DrainAll: DrainUpTo left orphan/forgotten results (full vertex
+  // buffers) sitting in Completed while ForgetInflight freed schedule slots
+  // and new jobs piled on (RSS climb; discard counter only moved on peel).
+  std::vector<MeshBuildResult> drained = Completed.DrainAll();
   const uint64_t current_epoch = Epoch.load(std::memory_order_acquire);
+  // Always accept every live result this frame — requeue left Completed holding
+  // full vertex buffers while standing remesh kept producing (RSS climb).
   std::vector<MeshBuildResult> accepted;
   accepted.reserve(drained.size());
 
@@ -160,8 +163,16 @@ bool UAsyncMeshBuilder::IsInFlight(glm::ivec3 coord) const
 
 int UAsyncMeshBuilder::GetInFlightCount() const
 {
-  std::lock_guard<std::mutex> lock(InFlightMutex);
-  return static_cast<int>(InFlight.size());
+  int tracked = 0;
+  {
+    std::lock_guard<std::mutex> lock(InFlightMutex);
+    tracked = static_cast<int>(InFlight.size());
+  }
+  // ForgetInflight erases tracking while the worker is still Active/Pending —
+  // schedule must count real pool depth or Completed fills with vertex RAM.
+  const int pool = static_cast<int>(Pool.GetActiveJobCount() +
+                                    Pool.GetPendingJobCount());
+  return std::max(tracked, pool);
 }
 
 bool UAsyncMeshBuilder::HasPendingWork() const

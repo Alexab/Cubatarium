@@ -23,6 +23,7 @@ bool UGuiContext::Initialize(std::shared_ptr<UShaderManager> shaderManager,
   Metrics = MakeGuiMetrics(UiScale, Theme);
   Renderer = std::make_unique<UGuiRenderer>();
   InputRouter = std::make_unique<UGuiInputRouter>();
+  InputRouter->SetRenderer(Renderer.get());
   return Renderer->Initialize(std::move(shaderManager),
                               std::move(textRenderer));
 }

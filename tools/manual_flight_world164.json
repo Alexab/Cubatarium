@@ -1,0 +1,42 @@
+{
+  "source_perf": "bin/logs/perf_20260720-024756_27788.jsonl",
+  "world": "World_164",
+  "notes": "Manual ocean flight reconstructed from focus_cx/focus_cz period samples (~2s).",
+  "settle": {
+    "duration_sec_approx": 52,
+    "focus_chunk": [-35, 6],
+    "behavior": "mostly idle / look around before cruise"
+  },
+  "cruise": {
+    "duration_sec_approx": 42,
+    "direction": "west (-X / decreasing focus_cx)",
+    "yaw_deg_for_sim": 180,
+    "pitch_deg_for_sim": -10,
+    "path_focus_chunks": [
+      [-35, 6],
+      [-36, 6],
+      [-37, 6],
+      [-38, 6],
+      [-39, 5],
+      [-40, 5],
+      [-41, 5],
+      [-42, 5],
+      [-43, 5],
+      [-43, 6],
+      [-44, 6],
+      [-44, 5],
+      [-45, 5],
+      [-46, 5]
+    ],
+    "net_chunks": [-11, -1],
+    "symptoms_during_move": "visual_holes=1, wall_ms 50-300, dirty climb 350->570"
+  },
+  "flight_sim_defaults": {
+    "FaceYawDeg": 180,
+    "FacePitchDeg": -10,
+    "IdleBeforeFlySec": 8,
+    "MinAltitudeAboveSea": 28,
+    "HoldForward": true,
+    "Fly": true
+  }
+}

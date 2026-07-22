@@ -29,7 +29,8 @@ class UChunkLoadScheduler
 {
 public:
   using MarkChunkDirtyFn =
-      std::function<void(glm::ivec3 coord, int minY, int maxY)>;
+      std::function<void(glm::ivec3 coord, int minY, int maxY,
+                         bool fluidSealed)>;
   using ColumnMeshDirtyFn =
       std::function<void(glm::ivec3 groundCoord, int minY, int maxY)>;
 

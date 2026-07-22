@@ -2,6 +2,7 @@
 #define WINDOWMANAGER_H
 
 #define GLFW_INCLUDE_NONE
+#include "App/Platform/InputManager.h"
 #include "Render/Engine/TextRenderer.h"
 #include "Render/GlIncludes.h"
 #include <GLFW/glfw3.h>
@@ -11,6 +12,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <memory>
+#include <unordered_map>
 
 namespace cutum
 {
@@ -23,10 +25,6 @@ class UInputManager;
 class UApplication;
 class UBlockInputController;
 
-enum class KeyCode;
-enum class KeyState;
-enum class MouseButton;
-
 class UWindowManager
 {
 public:
@@ -37,6 +35,11 @@ public:
                   const char *title = "Cubatarium", bool visible = true);
   void Run();
   void SetStopPredicate(std::function<bool()> predicate);
+  /// Synthetic held keys for headless autopilot (OR'd with real keyboard).
+  void SetAutopilotKey(KeyCode key, bool held);
+  void ClearAutopilotKeys();
+  /// Flight-sim / harness: skip budgeted autosave (avoids multi-second hitch).
+  void SetAutosaveEnabled(bool enabled) { AutosaveEnabled = enabled; }
   void Shutdown();
 
   /// Initializes the window manager with the specified parameters.
@@ -124,8 +127,10 @@ private: // Window and rendering state
   std::chrono::steady_clock::time_point LastAutosaveTime;
   static constexpr double KAutosaveIntervalSec = 60.0;
   /// Budgeted cooperative autosave (avoids multi-second hitch in Update).
+  bool AutosaveEnabled{true};
   bool AutosaveRequested{false};
   bool AutosaveInProgress{false};
+  bool SeenInGameForAutosave{false};
   double DeltaTime;
 
   void TickBudgetedAutosave();
@@ -133,6 +138,7 @@ private: // Window and rendering state
   glm::vec4 SkyColor;
   bool UseGradientSky;
   std::function<bool()> StopPredicate;
+  std::unordered_map<int, bool> AutopilotKeys;
 };
 
 } // namespace cutum

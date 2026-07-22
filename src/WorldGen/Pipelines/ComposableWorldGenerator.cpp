@@ -1,4 +1,5 @@
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
+#include "World/Chunks/Chunk.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Core/WorldGenStageMask.h"
 #include "WorldGen/Pipelines/ColumnGenerationService.h"
@@ -42,15 +43,17 @@ UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
     BiomeSampler.emplace(ctx.Settings.Seed, ctx.Settings.Tuning);
     if (HeightSampler)
     {
-      BiomeSampler->SetCoarseHeightCallback(
-          [this](int hx, int hz)
-          { return HeightSampler->CoarseSurfaceYAt(hx, hz); });
+      DirectCoarseHeightFn = [this](int hx, int hz)
+      { return HeightSampler->CoarseSurfaceYAt(hx, hz); };
     }
     else if (DensitySampler)
     {
-      BiomeSampler->SetCoarseHeightCallback(
-          [this](int hx, int hz)
-          { return DensitySampler->CoarseSurfaceYAt(hx, hz); });
+      DirectCoarseHeightFn = [this](int hx, int hz)
+      { return DensitySampler->CoarseSurfaceYAt(hx, hz); };
+    }
+    if (DirectCoarseHeightFn)
+    {
+      BiomeSampler->SetCoarseHeightCallback(DirectCoarseHeightFn);
     }
   }
   if (HeightSampler || DensitySampler)
@@ -59,6 +62,46 @@ UComposableWorldGenerator::UComposableWorldGenerator(WorldGenContext ctx,
                           BiomeSampler.has_value() ? &*BiomeSampler : nullptr,
                           ctx.Settings);
   }
+}
+
+void UComposableWorldGenerator::BeginChunkCoarseCache(int base_x, int base_z,
+                                                      int pad)
+{
+  if (!BiomeSampler || !DirectCoarseHeightFn)
+  {
+    return;
+  }
+  const int origin_x = base_x - pad;
+  const int origin_z = base_z - pad;
+  const int size = CHUNK_SIZE + pad * 2;
+  ChunkCoarseCache.emplace(origin_x, origin_z, size, size);
+  UCoarseHeightCache *cache = &*ChunkCoarseCache;
+  CoarseHeightCallback direct = DirectCoarseHeightFn;
+  BiomeSampler->SetCoarseHeightCallback(
+      [cache, direct](int hx, int hz)
+      { return cache->GetOrCompute(hx, hz, direct); });
+}
+
+void UComposableWorldGenerator::PrimeChunkCoarseY(int x, int z, int y)
+{
+  if (ChunkCoarseCache)
+  {
+    ChunkCoarseCache->Put(x, z, y);
+  }
+}
+
+void UComposableWorldGenerator::EndChunkCoarseCache()
+{
+  if (!BiomeSampler)
+  {
+    ChunkCoarseCache.reset();
+    return;
+  }
+  if (DirectCoarseHeightFn)
+  {
+    BiomeSampler->SetCoarseHeightCallback(DirectCoarseHeightFn);
+  }
+  ChunkCoarseCache.reset();
 }
 
 ColumnSampleContext UComposableWorldGenerator::BuildColumnSample(

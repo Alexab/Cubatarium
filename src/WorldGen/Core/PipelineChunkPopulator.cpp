@@ -1,6 +1,5 @@
 #include "WorldGen/Core/IUChunkPopulator.h"
 #include "World/Core/BlockWorld.h"
-#include "World/Math/FluidCellState.h"
 #include "World/Objects/ObjectLibrary.h"
 #include "WorldGen/Core/BlockWorldColumnWriter.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
@@ -21,6 +20,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -130,6 +130,20 @@ double ElapsedMs(std::chrono::steady_clock::time_point start)
       .count();
 }
 
+/// RAII: mirror gen-scratch SetBlock/SetFluid into the transfer ChunkBuffer.
+struct CaptureBufferScope
+{
+  UBlockWorld &World;
+  explicit CaptureBufferScope(UBlockWorld &world, UChunkBuffer &buffer)
+      : World(world)
+  {
+    World.SetCaptureBuffer(&buffer);
+  }
+  ~CaptureBufferScope() { World.SetCaptureBuffer(nullptr); }
+  CaptureBufferScope(const CaptureBufferScope &) = delete;
+  CaptureBufferScope &operator=(const CaptureBufferScope &) = delete;
+};
+
 } // namespace
 
 void ChunkPopulateDiagnostics::Record(const ChunkPopulateTiming &timing)
@@ -188,6 +202,10 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
   UBlockWorld &genWorld = tls.world;
   ResetScatterChunkCounts();
 
+  // D1: write gen scratch + transfer buffer together (no final world→buffer scan).
+  result.buffer.Clear();
+  CaptureBufferScope capture_scope(genWorld, result.buffer);
+
   const int base_x = request.chunkCoord.x * CHUNK_SIZE;
   const int base_z = request.chunkCoord.z * CHUNK_SIZE;
   const int center_x = base_x + CHUNK_SIZE / 2;
@@ -227,7 +245,19 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 
   auto *composable = dynamic_cast<UComposableWorldGenerator *>(pipeline);
   bool cancelled = false;
+  if (composable)
+  {
+    const int blend_pad = std::clamp(
+        static_cast<int>(
+            std::lround(settings.Tuning.biomeBlendRadius)),
+        0, 16);
+    // blend + coast scan (4) + smoothing neighborhood margin
+    const int pad = blend_pad + 8;
+    composable->BeginChunkCoarseCache(base_x, base_z, pad);
+  }
   const auto terrain_start = std::chrono::steady_clock::now();
+  double sample_ms = 0.0;
+  double fill_ms = 0.0;
   for (size_t i = 0; i < column_count; ++i)
   {
     if (request.shouldCancel && (i % 4) == 0 && request.shouldCancel())
@@ -252,7 +282,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
       else
       {
         samples[lz][lx] = UColumnGenerationService::GenerateColumnTerrainOnly(
-            *composable, writer, world_x, world_z);
+            *composable, writer, world_x, world_z, &sample_ms, &fill_ms);
         sample_valid[lz][lx] = true;
       }
     }
@@ -262,12 +292,20 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     }
   }
   timing.terrainMs = ElapsedMs(terrain_start);
-  // Terrain includes BuildColumnSample; expose as sample+terrain together for HUD.
-  timing.sampleMs = timing.terrainMs;
+  timing.sampleMs = sample_ms > 0.0 ? sample_ms : timing.terrainMs;
+  if (fill_ms > 0.0)
+  {
+    timing.terrainMs = fill_ms;
+  }
 
   if (cancelled || (request.shouldCancel && request.shouldCancel()))
   {
+    if (composable)
+    {
+      composable->EndChunkCoarseCache();
+    }
     result.discarded = true;
+    result.buffer.Clear();
     timing.totalMs = ElapsedMs(populate_start);
     ChunkPopulateDiagnostics::Record(timing);
     return result;
@@ -355,41 +393,63 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 
     if (cancelled || (request.shouldCancel && request.shouldCancel()))
     {
+      if (composable)
+      {
+        composable->EndChunkCoarseCache();
+      }
       result.discarded = true;
+      result.buffer.Clear();
       timing.totalMs = ElapsedMs(populate_start);
       ChunkPopulateDiagnostics::Record(timing);
       return result;
     }
 
     const auto seal_start = std::chrono::steady_clock::now();
-    if (settings.Tuning.useMudflowErosion)
+    auto seal_cancelled = [&]() -> bool
+    {
+      return request.shouldCancel && request.shouldCancel();
+    };
+    if (settings.Tuning.useMudflowErosion && !seal_cancelled())
     {
       ApplyMudflowToChunk(composable->GetContext(), base_x, base_z, 2);
     }
-    if (settings.FillWater)
+    // Pocket seal on worker (with shouldCancel). Main only drains cheap ShoreAir.
+    if (settings.FillWater && !seal_cancelled())
     {
       SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z);
-      if (SealFluidPermeableDecorInChunk(composable->GetContext(), base_x,
+      if (!seal_cancelled() &&
+          SealFluidPermeableDecorInChunk(composable->GetContext(), base_x,
                                          base_z))
       {
-        SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z);
+        if (!seal_cancelled())
+        {
+          SealFluidPocketsInChunk(composable->GetContext(), base_x, base_z);
+        }
       }
+      result.fluidSealed = !seal_cancelled();
+    }
+    if (seal_cancelled())
+    {
+      if (composable)
+      {
+        composable->EndChunkCoarseCache();
+      }
+      result.discarded = true;
+      result.buffer.Clear();
+      timing.sealMs = ElapsedMs(seal_start);
+      timing.totalMs = ElapsedMs(populate_start);
+      ChunkPopulateDiagnostics::Record(timing);
+      return result;
     }
     PruneFloatingVegetationInChunk(composable->GetContext(), base_x, base_z);
     timing.sealMs = ElapsedMs(seal_start);
   }
 
-  genWorld.ForEachBlock(
-      [&](glm::ivec3 pos, BlockId id)
-      {
-        result.buffer.SetBlock(pos, id);
-        const uint8_t packed =
-            PackFluidCellState(genWorld.GetFluidState(pos));
-        if (packed != 0)
-        {
-          result.buffer.SetFluidPacked(pos, packed);
-        }
-      });
+  if (composable)
+  {
+    composable->EndChunkCoarseCache();
+  }
+  // result.buffer already mirrors genWorld via CaptureBufferScope (D1).
 
   timing.totalMs = ElapsedMs(populate_start);
   ChunkPopulateDiagnostics::Record(timing);

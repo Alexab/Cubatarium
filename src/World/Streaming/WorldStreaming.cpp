@@ -1,4 +1,7 @@
 #include "World/Streaming/WorldStreaming.h"
+#include "World/Streaming/FocusIngressPolicy.h"
+#include "WorldGen/Pipelines/ComposableWorldGenerator.h"
+#include "World/Math/GridMath.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Physics/ChunkPhysicsSeed.h"
 #include "App/Settings/RenderSettings.h"
@@ -17,10 +20,13 @@
 #include "World/Persistence/WorldPersistence.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
+#include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 #include "World/Core/RuntimeTuning.h"
 #include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <cstdint>
 
 namespace cutum
 {
@@ -173,7 +179,7 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
   ChunkScheduler =
       std::make_unique<UChunkLoadScheduler>(*ChunkPopulator, ChunkGenTokens);
   ChunkScheduler->SetMarkDirtyFn(
-      [this, &world](glm::ivec3 coord, int min_y, int max_y)
+      [this, &world](glm::ivec3 coord, int min_y, int max_y, bool fluid_sealed)
       {
         const glm::ivec3 ground(coord.x, 0, coord.z);
         if (Streamer)
@@ -183,31 +189,32 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         const ProceduralSettings &settings = world.GetProceduralSettings();
         const glm::ivec3 focus_ground =
             UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
-        const int focus_radius = world.GetRenderDistanceChunks() + 1;
+        const int focus_radius = world.GetStreamingFocusRadius();
         const bool near_focus =
             std::abs(coord.x - focus_ground.x) <= focus_radius &&
             std::abs(coord.z - focus_ground.z) <= focus_radius;
         DeferredPhysicsSeedQueue.push_back(coord);
         if (settings.FillWater)
         {
-          const auto seal_t0 = std::chrono::high_resolution_clock::now();
-          SealFluidShoreOnChunkCommitted(
-              world.BlockWorld, *world.BlockRegistry, settings,
-              world.WorldgenOwnerPackId, coord, /*include_shore_air=*/false);
-          world.PhysicsTelemetryData.CommitSealMs +=
-              std::chrono::duration<double, std::milli>(
-                  std::chrono::high_resolution_clock::now() - seal_t0)
-                  .count();
+          // V_fluid: IntraChunkSeal once (populate XOR commit); LiveShoreAir
+          // deferred (open ocean comes from FillFluidColumn, not ShoreAir —
+          // sync ShoreAir here only burned commit_seal_ms without fixing strips).
+          if (!fluid_sealed)
+          {
+            const auto seal_t0 = std::chrono::high_resolution_clock::now();
+            SealFluidShoreOnChunkCommitted(
+                world.BlockWorld, *world.BlockRegistry, settings,
+                world.WorldgenOwnerPackId, coord, /*include_shore_air=*/false);
+            world.PhysicsTelemetryData.CommitSealMs +=
+                std::chrono::duration<double, std::milli>(
+                    std::chrono::high_resolution_clock::now() - seal_t0)
+                    .count();
+          }
           DeferredShoreSealQueue.push_back(coord);
         }
-        if (!world.IsLightingRelightDeferred())
-        {
-          world.Persistence->EnqueueTerrainColumnRelight(ground.x * CHUNK_SIZE,
-                                                         ground.z * CHUNK_SIZE,
-                                                         near_focus);
-        }
-        // Single seamed dirty for occupied Y / sea band; full height remesh
-        // after async relight via FlushPendingRelightMeshColumns.
+        world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
+        // Mesh gate band = occupied ∪ sea (not 0..MaxHeight — that flooded Dirty
+        // and remeshed unlit slices). MarkRelit remeshes lit ∪ pending ∪ sea.
         int dirty_min = std::max(0, min_y);
         int dirty_max = std::min(settings.MaxHeight, max_y);
         if (settings.FillWater)
@@ -216,25 +223,187 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               std::min(dirty_min, std::max(0, settings.SeaLevel - CHUNK_SIZE));
           dirty_max = std::max(
               dirty_max,
-              std::min(settings.MaxHeight, settings.SeaLevel + CHUNK_SIZE));
+              std::min(settings.MaxHeight, settings.SeaLevel + CHUNK_SIZE * 2));
+        }
+        if (near_focus)
+        {
+          const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
+          dirty_min =
+              std::min(dirty_min, std::max(0, focus_block.y - CHUNK_SIZE));
+          dirty_max = std::max(
+              dirty_max,
+              std::min(settings.MaxHeight, focus_block.y + CHUNK_SIZE * 2));
         }
         if (dirty_max < dirty_min)
         {
           dirty_min = 0;
           dirty_max = settings.MaxHeight;
         }
-        if (near_focus)
+        if (!world.IsLightingRelightDeferred())
         {
+          // Relight Y: sea∪occupied∪player up to sky (not 0..floor). Full
+          // 0..MaxHeight columns capped async throughput (~3/s) while flight
+          // ingress piled pending_light_focus to 60–80.
+          // Far columns: occupied band only — full MaxHeight doubled per-column
+          // relight time and starved focus throughput.
+          const int relight_min =
+              settings.FillWater
+                  ? std::max(0, std::min(dirty_min,
+                                         settings.SeaLevel - CHUNK_SIZE * 2))
+                  : dirty_min;
+          // Near focus: mesh gate band + one slice pad for skylight ingress.
+          const int relight_max =
+              near_focus
+                  ? std::min(settings.MaxHeight, dirty_max + CHUNK_SIZE * 2)
+                  : std::min(settings.MaxHeight,
+                             std::max(dirty_max, settings.SeaLevel +
+                                                      CHUNK_SIZE * 2));
+          const int horiz =
+              std::max(std::abs(coord.x - focus_ground.x),
+                       std::abs(coord.z - focus_ground.z));
+          const bool underfeet = horiz <= 1;
+          // Sync seed only underfeet (near_focus sync spiked autofly wall).
+          // V3: neighborhood-ready near_focus columns get priority FIFO seed
+          // (DrainRelightQueues → async). Direct EnqueueAsync+FIFO duplicated
+          // jobs and left pending plateaus with relight_drain≈0.
+          const bool neighborhood_ok = world.CanSeedSkylightAtCommit(ground);
+          const bool seed_skylight_now = underfeet && neighborhood_ok;
+          const bool relight_priority =
+              (near_focus && LastPendingLightFocus <= 20) ||
+              (near_focus && neighborhood_ok);
+          if (seed_skylight_now)
+          {
+            world.RelightTerrainColumn(ground.x * CHUNK_SIZE,
+                                       ground.z * CHUNK_SIZE, relight_min,
+                                       relight_max,
+                                       /*priority_mesh=*/true,
+                                       /*include_skylight=*/true,
+                                       /*include_block_light=*/false);
+          }
+          else
+          {
+            world.Persistence->EnqueueTerrainColumnRelight(
+                ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, relight_priority,
+                relight_min, relight_max);
+            world.NotePendingLightBeforeMesh(ground, dirty_min, dirty_max);
+          }
+          const bool admit_far_dirty =
+              LastPressureCaps.level == StreamingPressureLevel::Green;
+          if (seed_skylight_now)
+          {
+            world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
+            world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+                ground, dirty_min, dirty_max,
+                /*include_horizontal_neighbors=*/true);
+          }
+          else if (near_focus)
+          {
+            // V2a: do not MarkDirty preview while async relight is pending —
+            // holes until LitReady/MarkRelit (RenderReady contract).
+            world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
+          }
+          else if (admit_far_dirty)
+          {
+            world.MeshService->MarkTerrainChunkMeshDirtySeamed(
+                ground, dirty_min, dirty_max, false);
+            world.SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+          }
+          else
+          {
+            world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
+          }
+        }
+        else if (near_focus)
+        {
+          world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
           world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
               ground, dirty_min, dirty_max, true);
         }
-        else
+        else if (LastPressureCaps.level == StreamingPressureLevel::Green)
         {
+          world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
           world.MeshService->MarkTerrainChunkMeshDirtySeamed(
               ground, dirty_min, dirty_max, false);
         }
+        else
+        {
+          world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
+        }
       });
   world.Persistence->EnsureChunkIoInitialized();
+}
+
+void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
+{
+  const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
+  const glm::ivec3 focus_ground = UChunkManager::WorldToChunk(focus_block);
+  const glm::ivec3 focus_horiz(focus_ground.x, 0, focus_ground.z);
+  const int focus_radius = world.GetStreamingFocusRadius();
+  const bool missing_near =
+      world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
+          world.GetBlockWorld(), focus_horiz, focus_radius);
+  const bool missing_underfeet =
+      world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
+          world.GetBlockWorld(), focus_horiz, /*radius=*/1);
+  const int pending_light_focus =
+      world.CountPendingLightBeforeMeshNear(focus_horiz, focus_radius);
+  const bool pending_underfeet =
+      world.HasPendingLightBeforeMeshNear(focus_horiz, /*radius=*/1);
+
+  StreamingPressureInput in;
+  in.pending_light =
+      static_cast<int>(world.GetPendingLightBeforeMeshCount());
+  in.dirty = static_cast<int>(world.GetMeshService().GetDirtyCount());
+  in.frame_ms = world.GetLastMovementFrameMs();
+  // Pressure focus mode: visual holes only (pending light is light_debt).
+  in.visual_holes = missing_near;
+  in.underfeet_need = missing_underfeet || pending_underfeet;
+  in.pending_light_focus = pending_light_focus;
+  LastPendingLightFocus = pending_light_focus;
+  LastPressureCaps = EvaluateStreamingPressure(in, PressureState);
+
+  world.PhysicsTelemetryData.StreamPressure =
+      static_cast<int>(LastPressureCaps.level);
+  world.PhysicsTelemetryData.PendingLightFocus = pending_light_focus;
+  const int sticky_remesh =
+      world.CountBlackStickyFocusMeshes(focus_ground, focus_radius);
+  const int pending_dark =
+      world.CountPendingDarkFocusMeshes(focus_ground, focus_radius);
+  const int dark_preview = sticky_remesh + pending_dark;
+  const int not_render_ready =
+      world.CountUnfinishedVisualNear(focus_horiz, focus_radius);
+  const int focus_dirty_chunks =
+      world.GetMeshService().CountDirtyWithinHorizontalRadius(focus_horiz,
+                                                              focus_radius);
+  world.PhysicsTelemetryData.FocusStickyRemesh = sticky_remesh;
+  world.PhysicsTelemetryData.FocusPendingDark = pending_dark;
+  world.PhysicsTelemetryData.FocusDarkMesh = dark_preview;
+  world.PhysicsTelemetryData.FocusNotRenderReady = not_render_ready;
+  world.PhysicsTelemetryData.FocusDirtyChunks = focus_dirty_chunks;
+  {
+    glm::vec2 fwd = world.GetLastMovementDirXz();
+    if (glm::length(fwd) < 0.01f)
+    {
+      if (const auto camera = world.GetCurrentUserCamera())
+      {
+        const glm::vec3 front = camera->GetFront();
+        fwd = glm::vec2(front.x, front.z);
+      }
+    }
+    int ahead = 0;
+    int behind = 0;
+    world.CountUnfinishedVisualByFacing(focus_horiz, focus_radius, fwd, ahead,
+                                        behind);
+    world.PhysicsTelemetryData.FocusUnfinishedAhead = ahead;
+    world.PhysicsTelemetryData.FocusUnfinishedBehind = behind;
+  }
+  world.PhysicsTelemetryData.FocusMissingMesh = missing_near ? 1 : 0;
+  world.PhysicsTelemetryData.VisualHoles = missing_near ? 1 : 0;
+  // Render contract: lit-but-dirty remesh counts even when pending=0.
+  world.PhysicsTelemetryData.UnfinishedVisual = not_render_ready;
+  world.PhysicsTelemetryData.LightDebt = pending_light_focus > 0 ? 1 : 0;
+  world.PhysicsTelemetryData.NearFocusHoles =
+      (missing_near || pending_light_focus > 0 || dark_preview > 0) ? 1 : 0;
 }
 
 void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
@@ -251,6 +420,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   world.PhysicsTelemetryData.CommitSealMs = 0.0;
   world.PhysicsTelemetryData.CommitPhysicsMs = 0.0;
   world.PhysicsTelemetryData.IdlePrefetchMs = 0.0;
+  // StreamerUpdate / AsyncIo / RelightDrain accumulate for this tick; do not
+  // clear RelightDrainMs here — DrainAsyncRelightResults already timed in World.
+
+  // Authoritative pressure for this frame (UpdateStreaming earlier used the
+  // previous frame's caps for Prefetch/MaxLoadOps — one-frame lag is fine).
+  RefreshStreamingPressure(world);
+  const StreamingPressureCaps &pressure = LastPressureCaps;
 
   const ProceduralSettings &procedural = world.GetProceduralSettings();
   EmergeCoordinator->BeginFrame(procedural, world.LastMovementSpeed,
@@ -267,10 +443,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
   const glm::ivec3 focus_ground = UChunkManager::WorldToChunk(focus_block);
   const glm::ivec3 focus_horiz(focus_ground.x, 0, focus_ground.z);
-  const int visual_rd =
-      Streamer ? Streamer->GetVisualRenderDistance()
-               : world.GetRenderDistanceChunks();
-  const int focus_radius = visual_rd + 1;
+  const int focus_radius = world.GetStreamingFocusRadius();
   const size_t mesh_dirty = world.GetMeshService().GetDirtyCount();
   const bool near_mesh_backlog =
       world.GetMeshService().HasDirtyWithinHorizontalRadius(focus_horiz,
@@ -280,10 +453,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   const int gen_backlog_total =
       ChunkScheduler ? ChunkScheduler->GetGenBacklogTotal() : 0;
   const int mesh_async = world.GetMeshService().GetAsyncInFlightCount();
-  const bool keep_prewarm_surplus =
+  const bool keep_prewarm_gate =
       EvaluateKeepPrewarmGate(frame_ms, gen_backlog_total, mesh_async, mesh_dirty,
                               near_mesh_backlog)
           .allow;
+  bool keep_prewarm_surplus = keep_prewarm_gate;
 
   auto is_near_column = [&](glm::ivec3 coord)
   {
@@ -316,11 +490,85 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           std::min(chunk_budget.MaxLoadOps, procedural.MaxLoadOpsPerFrame);
     }
     // Near-complete first: do not starve commits when focus Dirty is high.
-    if (near_mesh_backlog)
+    const bool missing_near_mesh =
+        world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
+            world.GetBlockWorld(), focus_horiz, focus_radius);
+    const bool missing_underfeet =
+        world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
+            world.GetBlockWorld(), focus_horiz, /*radius=*/1);
+    const bool pending_underfeet =
+        world.HasPendingLightBeforeMeshNear(focus_horiz, /*radius=*/1);
+    const bool underfeet_need = missing_underfeet || pending_underfeet;
+    bool incomplete_camera_column = false;
+    {
+      // Only the camera column completeness gates underfeet commit pressure.
+      // Scanning ±1 kept MaxChunkCommits=1 forever while any neighbor was
+      // still generating — empty underfeet at 100 FPS.
+      const int max_y = procedural.MaxHeight;
+      const glm::ivec3 camera_ground(focus_horiz.x, 0, focus_horiz.z);
+      if (!IsTerrainChunkComplete(world.BlockWorld, camera_ground, max_y))
+      {
+        incomplete_camera_column = true;
+      }
+    }
+    const bool near_focus_holes =
+        missing_near_mesh ||
+        world.HasPendingLightBeforeMeshNear(focus_horiz, focus_radius);
+    // Commit pressure: missing/pending mesh underfeet OR camera column not
+    // in RAM yet. Neighbor incompleteness must not starve commits.
+    const bool underfeet_pressure =
+        underfeet_need || incomplete_camera_column;
+    if (near_focus_holes || underfeet_pressure)
+    {
+      keep_prewarm_surplus = false;
+    }
+    if (Streamer)
+    {
+      // Underfeet first when standing still. Any intentional travel (prefetch
+      // threshold) must not clamp — radius=2 + near_skip carved holes mid-flight
+      // when speed dipped below boost but player was still moving.
+      const bool moving_any =
+          world.LastMovementSpeed >= procedural.MovementPrefetchThreshold;
+      if (moving_fast || moving_any)
+      {
+        Streamer->SetNearLoadRadius(-1);
+      }
+      else if (underfeet_pressure)
+      {
+        Streamer->SetNearLoadRadius(2);
+      }
+      else if (near_focus_holes || pressure.focus_pressure_mode)
+      {
+        // Hold focus NearLoad after holes clear (pressure hysteresis).
+        Streamer->SetNearLoadRadius(focus_radius);
+      }
+      else
+      {
+        Streamer->SetNearLoadRadius(-1);
+      }
+    }
+    if (underfeet_pressure)
+    {
+      // Healthy frames: feed the camera ring (commits 2–3). Hitch: 1 only.
+      // Previous always-1 left empty underfeet while FPS sat at ~100.
+      if (frame_ms > kBadFrameMs)
+      {
+        chunk_budget.MaxChunkCommits = 1;
+        chunk_budget.MaxLoadOps = std::max(1, std::min(chunk_budget.MaxLoadOps, 2));
+      }
+      else
+      {
+        chunk_budget.MaxChunkCommits =
+            std::max(chunk_budget.MaxChunkCommits, moving_fast ? 3 : 2);
+        chunk_budget.MaxLoadOps =
+            std::max(chunk_budget.MaxLoadOps, moving_fast ? 4 : 3);
+      }
+    }
+    else if (near_mesh_backlog || near_focus_holes)
     {
       chunk_budget.MaxChunkCommits =
-          std::max(chunk_budget.MaxChunkCommits, 2);
-      chunk_budget.MaxLoadOps = std::max(chunk_budget.MaxLoadOps, 2);
+          std::min(chunk_budget.MaxChunkCommits, 2);
+      chunk_budget.MaxLoadOps = std::max(1, std::min(chunk_budget.MaxLoadOps, 2));
     }
     else if (mesh_dirty > 32)
     {
@@ -328,8 +576,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           std::max(1, chunk_budget.MaxChunkCommits / 2);
       chunk_budget.MaxLoadOps = std::max(1, chunk_budget.MaxLoadOps / 2);
     }
-    // Standing with large dirty: stop feeding new load ops; still apply commits.
-    if (!moving_fast && mesh_dirty > 96)
+    // Standing with large dirty: stop feeding NEW far loads, but never starve
+    // the focus ring while columns/meshes under the camera are incomplete.
+    if (!moving_fast && mesh_dirty > 96 && !near_focus_holes &&
+        !underfeet_pressure)
     {
       chunk_budget.MaxLoadOps = 0;
       chunk_budget.MaxChunkCommits = std::max(1, chunk_budget.MaxChunkCommits);
@@ -338,10 +588,17 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     {
       chunk_budget.MaxChunkCommits = std::max(1, chunk_budget.MaxChunkCommits);
     }
-    if (frame_ms > kBadFrameMs && !near_mesh_backlog)
+    if (!moving_fast && near_focus_holes && !underfeet_pressure)
     {
-      chunk_budget.MaxChunkCommits = std::min(chunk_budget.MaxChunkCommits, 1);
-      chunk_budget.MaxLoadOps = std::max(1, chunk_budget.MaxLoadOps / 2);
+      chunk_budget.MaxLoadOps = std::max(chunk_budget.MaxLoadOps, 2);
+      chunk_budget.MaxChunkCommits =
+          std::min(std::max(chunk_budget.MaxChunkCommits, 1), 2);
+    }
+    // Hitch wins — except underfeet_pressure already capped above.
+    if (frame_ms > kBadFrameMs && !underfeet_pressure)
+    {
+      chunk_budget.MaxChunkCommits = 1;
+      chunk_budget.MaxLoadOps = std::max(1, std::min(chunk_budget.MaxLoadOps, 2));
     }
     const int completed_ready =
         ChunkScheduler ? ChunkScheduler->GetCompletedReadyCount() : 0;
@@ -349,6 +606,21 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     {
       chunk_budget.MaxChunkCommits = std::max(1, chunk_budget.MaxChunkCommits);
     }
+    // Flying floor: near-hole caps above can leave MaxLoadOps=2 and the
+    // player outruns the fill bubble. Keep boost while the frame is healthy
+    // and streaming pressure allows admission boost.
+    if (moving_fast && frame_ms <= kBadFrameMs && pressure.allow_fly_load_boost)
+    {
+      chunk_budget.MaxLoadOps =
+          std::max(chunk_budget.MaxLoadOps, procedural.MaxLoadOpsPerFrameBoost);
+      chunk_budget.MaxChunkCommits = std::max(
+          chunk_budget.MaxChunkCommits,
+          std::min(3, procedural.MaxChunkCommitsPerFrameBoost));
+    }
+    chunk_budget.MaxLoadOps =
+        ApplyPressureCap(chunk_budget.MaxLoadOps, pressure.max_load_ops_cap);
+    chunk_budget.MaxChunkCommits = ApplyPressureCap(
+        chunk_budget.MaxChunkCommits, pressure.max_commits_cap);
     ChunkScheduler->Tick(world.BlockWorld, chunk_budget.MaxChunkCommits,
                          chunk_budget.MaxLoadOps);
     world.PhysicsTelemetryData.CommitApplyMs =
@@ -368,6 +640,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetRelightDiscardedLateCount();
     world.PhysicsTelemetryData.MeshDiscardedLate =
         world.GetMeshDiscardedLateCount();
+    world.PhysicsTelemetryData.MeshApplyStale =
+        world.GetMeshService().GetMeshApplyStaleCount();
     if (Streamer)
     {
       const int v = Streamer->GetVisualRenderDistance();
@@ -421,10 +695,32 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             .count();
   }
 
-  // Shore seal: aggressive near drain, far only when idle.
+  // Shore seal: LiveShoreAir only (IntraChunk already on populate worker).
+  // Near-focus commits already seal sync; this drains far / late columns.
   {
-    const int near_shore_budget = near_mesh_backlog ? 4 : 3;
-    const int far_shore_budget = keep_prewarm_surplus ? 1 : 0;
+    const bool underfeet_pending =
+        world.HasPendingLightBeforeMeshNear(focus_horiz, /*radius=*/1) ||
+        world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
+            world.GetBlockWorld(), focus_horiz, /*radius=*/1);
+    const bool shore_focus_holes =
+        near_mesh_backlog ||
+        world.HasPendingLightBeforeMeshNear(focus_horiz, focus_radius);
+    int near_shore_budget = near_mesh_backlog ? 4 : 3;
+    // Holes / pending: drain ShoreAir faster — starving to 1 carved water strips.
+    if (shore_focus_holes || underfeet_pending)
+    {
+      near_shore_budget = frame_ms > kBadFrameMs ? 2 : 4;
+    }
+    else if (frame_ms > kBadFrameMs)
+    {
+      near_shore_budget = 0;
+    }
+    else if (frame_ms > 16.0)
+    {
+      near_shore_budget = std::min(near_shore_budget, 1);
+    }
+    const int far_shore_budget =
+        (keep_prewarm_surplus && !underfeet_pending) ? 1 : 0;
     int near_done = 0;
     int far_done = 0;
     auto seal_one = [&](glm::ivec3 coord, bool near_column)
@@ -438,22 +734,27 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           std::chrono::duration<double, std::milli>(
               std::chrono::high_resolution_clock::now() - seal_t0)
               .count();
-      if (changed)
+      if (!changed)
       {
-        const glm::ivec3 ground(coord.x, 0, coord.z);
-        const int mesh_min_y = std::max(0, settings.SeaLevel - 8);
-        const int mesh_max_y =
-            std::min(settings.MaxHeight - 1, settings.SeaLevel + 8);
-        if (near_column)
-        {
-          world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-              ground, mesh_min_y, mesh_max_y, true);
-        }
-        else
-        {
-          world.MeshService->MarkTerrainChunkMeshDirtySeamed(
-              ground, mesh_min_y, mesh_max_y, false);
-        }
+        return;
+      }
+      const glm::ivec3 ground(coord.x, 0, coord.z);
+      // Shore seal mutates fluid after the first mesh — Dirty sea band.
+      // Under Dirty backlog skip seamed fanout (ingress control).
+      const int mesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
+      const int mesh_max_y =
+          std::min(settings.MaxHeight - 1, settings.SeaLevel + CHUNK_SIZE * 2);
+      const bool seam =
+          near_column && world.GetMeshService().GetDirtyCount() < 350;
+      if (near_column)
+      {
+        world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+            ground, mesh_min_y, mesh_max_y, seam);
+      }
+      else if (world.GetMeshService().GetDirtyCount() < 350)
+      {
+        world.MeshService->MarkTerrainChunkMeshDirtySeamed(
+            ground, mesh_min_y, mesh_max_y, false);
       }
     };
     for (auto it = DeferredShoreSealQueue.begin();
@@ -488,7 +789,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
 
   if (!near_exhausted())
   {
+    const auto io_t0 = std::chrono::high_resolution_clock::now();
     world.Persistence->TickAsyncChunkIo(world);
+    world.PhysicsTelemetryData.AsyncIoMs +=
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - io_t0)
+            .count();
   }
   const int pending_player = world.Persistence->GetPendingPlayerRelightCount();
   const int player_budget = pending_player > 0 ? 2 : 0;
@@ -516,26 +822,226 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     gLastBgRelightBacklog = pending_bg;
     gLastBgRelightBacklogTs = now;
   }
-  if ((frame_ms > kBadFrameMs || flat_ms > 16.0) && !near_mesh_backlog)
+  if ((frame_ms > kBadFrameMs || flat_ms > 16.0) && !near_mesh_backlog &&
+      !world.HasPendingLightBeforeMeshNear(focus_horiz, focus_radius))
   {
     bg_budget = std::max(0, bg_budget / 2);
   }
-  if (now < gBgRelightClampUntil)
+  const bool near_pending_light =
+      world.HasPendingLightBeforeMeshNear(focus_horiz, focus_radius);
+  const bool underfeet_pending_light =
+      world.HasPendingLightBeforeMeshNear(focus_horiz, /*radius=*/1);
+  // Stuck clamp must not starve near first-light / visible holes / underfeet.
+  if (now < gBgRelightClampUntil && !near_mesh_backlog && !near_pending_light &&
+      !underfeet_pending_light)
   {
-    bg_budget = pending_bg > 0 ? std::min(bg_budget, 1) : 0;
+    bg_budget = pending_bg > 0 ? std::min(std::max(bg_budget, 1), 1) : 0;
   }
-  if (pending_bg > 0)
-  {
-    // Never fully starve background relight: otherwise streamed columns can
-    // stay black indefinitely while near work keeps the frame "busy".
-    bg_budget = std::max(bg_budget, 1);
-  }
-  if (far_exhausted() && pending_player == 0 && !near_mesh_backlog)
+  // Far-budget gate may throttle prewarm, but must not cancel lighting for
+  // already-committed columns: meshes built at light=0 stay black forever.
+  // Also never zero budget when underfeet still awaits first light — Promote
+  // below requeues work after pending_bg was snapshotted as 0.
+  if (far_exhausted() && pending_player == 0 && !near_mesh_backlog &&
+      pending_bg == 0 && !underfeet_pending_light)
   {
     bg_budget = 0;
   }
+  if (pending_bg > 0)
+  {
+    bg_budget = std::max(bg_budget, 1);
+    // Idle/FPS-recovered frames: catch up lighting instead of idling black.
+    if (!near_mesh_backlog && frame_ms <= kBadFrameMs)
+    {
+      bg_budget = std::max(bg_budget, pending_bg > 16 ? 4 : 2);
+    }
+  }
+  // Underfeet awaiting light: drain hard while FPS is healthy (logs showed
+  // relight_drain≈0 with empty feet at ~100 FPS).
+  if (underfeet_pending_light)
+  {
+    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 1 : 2);
+  }
+  else if (pending_bg > 0 && (near_mesh_backlog || near_pending_light))
+  {
+    bg_budget = std::max(bg_budget, pending_bg > 8 ? 3 : 2);
+  }
+  // Standing in a dark focus pocket: pending_light stays ~30 while wall~14ms
+  // because far remesh kept workers busy and bg drain stayed tiny.
+  world.ReconcileAsyncRelightColumnInFlight();
+  const int pending_light_n =
+      static_cast<int>(world.GetPendingLightBeforeMeshCount());
+  if (near_pending_light && frame_ms <= kBadFrameMs)
+  {
+    bg_budget = std::max(bg_budget, 2);
+  }
+  // Pressure valve: pending_light>~15 kept focus holes permanently open.
+  // Capture is main-thread — keep floors tiny; hard_cap below is authoritative.
+  if (pending_light_n > 15)
+  {
+    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 2 : 3);
+  }
+  else if (pending_light_n > 10)
+  {
+    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 1 : 2);
+  }
+  bg_budget = std::max(bg_budget, pressure.bg_budget_floor);
+  // Focus pending stuck while wall healthy: enqueue more async relight jobs
+  // (DrainRelightQueues is cheap; MarkRelit is what clears PendingLight).
+  const int pending_light_focus_n =
+      world.CountPendingLightBeforeMeshNear(focus_horiz, focus_radius);
+  const int black_sticky_focus =
+      world.CountBlackStickyFocusMeshes(focus_horiz, focus_radius);
+  // Manual flight: pending_focus climbed while relight_drain≈0 on hitch —
+  // keep a floor even when wall>24 so light debt cannot balloon forever.
+  // Count floors are Capture-enqueue caps (main-thread). Keep them small —
+  // wall time is enforced in DrainRelightQueues; large counts still burn
+  // Capture before the first elapsed check (manual 220018: 15–52s).
+  if (pending_light_focus_n > 40)
+  {
+    bg_budget =
+        std::max(bg_budget, frame_ms > kBadFrameMs ? 2 : 4);
+  }
+  else if (pending_light_focus_n > 15)
+  {
+    bg_budget =
+        std::max(bg_budget, frame_ms > kBadFrameMs ? 2 : 4);
+  }
+  else if (pending_light_focus_n > 8)
+  {
+    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 1 : 3);
+  }
+  else if (pending_light_focus_n > 4)
+  {
+    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 1 : 2);
+  }
+  else if (pending_light_focus_n > 0 && frame_ms <= kBadFrameMs)
+  {
+    bg_budget = std::max(bg_budget, 2);
+  }
+  const int mesh_async_n = world.GetMeshService().GetAsyncInFlightCount();
+  const bool missing_focus_mesh =
+      world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
+          world.GetBlockWorld(), focus_horiz, focus_radius);
+  const bool idle_recovery =
+      world.GetLastMovementSpeed() <=
+          procedural.MovementPrefetchThreshold &&
+      (pending_light_focus_n > 0 || black_sticky_focus > 0 ||
+       mesh_async_n >= 36 || missing_focus_mesh);
+  if (idle_recovery)
+  {
+    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 16 : 32);
+    if (black_sticky_focus > 0 || mesh_async_n >= 40 ||
+        pending_light_focus_n > 15 || missing_focus_mesh)
+    {
+      bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 20 : 40);
+    }
+    // Clean stop with light debt only: keep enqueue hot so MarkRelit can clear
+    // pending without sync RelightColumn (which caused 1–2s spikes).
+    if (pending_light_focus_n > 15 && black_sticky_focus == 0 &&
+        !missing_focus_mesh)
+    {
+      bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 24 : 48);
+    }
+  }
+  else if (pending_light_focus_n > 0 && frame_ms > kBadFrameMs)
+  {
+    bg_budget = std::max(bg_budget, 4);
+  }
+  const bool moving_now =
+      world.GetLastMovementSpeed() > procedural.MovementPrefetchThreshold;
+  if (moving_now && pending_light_focus_n > 8 && frame_ms <= kBadFrameMs)
+  {
+    // Was 20–32: main-thread Capture per enqueue; keep walk drain paced.
+    bg_budget = std::max(bg_budget, pending_light_focus_n > 24 ? 4 : 3);
+  }
+  // P0 frontier ingress via FocusIngressPolicy (dedicated floor, not F2 caps).
+  const FocusIngressDecision ingress = EvaluateFocusIngress(FocusIngressInput{
+      moving_now, missing_focus_mesh, pending_light_focus_n, mesh_async_n,
+      frame_ms});
+  if (ingress.relight_floor > 0)
+  {
+    bg_budget = std::max(bg_budget, ingress.relight_floor);
+  }
+  // Two-tier promote: underfeet first, then rest of focus — so far-in-focus
+  // columns do not jump ahead of the camera column in the priority FIFO.
+  // Ownership: Streaming promotes *before* DrainRelightQueues. When ingress
+  // is active, ChunkEmerge skips PromoteFrontierHoleIngress (promote-after-
+  // drain left cold_relight with relight_drain≈0).
+  if (pending_bg > 0 || underfeet_pending_light)
+  {
+    world.Persistence->PromoteNearTerrainColumnRelights(focus_horiz, 1);
+  }
+  world.PromotePendingLightRelightsNear(focus_horiz, 1);
+  if (pending_bg > 0 || near_pending_light)
+  {
+    world.Persistence->PromoteNearTerrainColumnRelights(focus_horiz,
+                                                        focus_radius);
+  }
+  world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
 
-  world.Persistence->DrainRelightQueues(world, player_budget, bg_budget);
+  // Re-read queue depth after promote — snapshot pending_bg may have been 0.
+  const int pending_bg_after =
+      world.Persistence->GetPendingTerrainColumnRelightCount();
+  if (pending_bg_after > 0 && underfeet_pending_light)
+  {
+    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 1 : 2);
+  }
+  else if (pending_bg_after > 0 && bg_budget <= 0)
+  {
+    bg_budget = 1;
+  }
+  // Pending debt with empty relight FIFO: re-promote + clear lit-ready columns
+  // (manual 155539: pend=2, relight_drain≈0). Frontier SoftDefer holes hitch
+  // (manual 081734 wall 66–228) — do not require healthy wall when focus is
+  // missing mesh, or FIFO stays empty and the hole never meshes.
+  if (pending_light_focus_n > 0 && pending_bg_after == 0 &&
+      (frame_ms <= kBadFrameMs || missing_focus_mesh) &&
+      (idle_recovery || pending_light_focus_n > 8 || missing_focus_mesh ||
+       world.GetAsyncRelightInFlightCount() == 0))
+  {
+    world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
+    world.ClearPendingLightAfterMeshCommitted(12);
+    // Capture is main-thread: never burst 48–56 idle (manual 220018).
+    const int hole_cap =
+        moving_now ? 2
+                   : ((missing_focus_mesh && mesh_async_n < 8) ? 4 : 3);
+    bg_budget = std::max(
+        bg_budget,
+        std::min(hole_cap, pending_light_focus_n +
+                                (missing_focus_mesh ? 1 : 0)));
+  }
+  // Hard cap Capture enqueue every frame (move + idle). Sync path must stay 0
+  // while walking; async Capture still costs hundreds of ms per column.
+  if (!async_bg)
+  {
+    if (moving_now)
+    {
+      bg_budget = 0;
+    }
+    else
+    {
+      bg_budget = std::min(bg_budget, 1);
+    }
+  }
+  else
+  {
+    const int hard_cap =
+        moving_now
+            ? ((missing_focus_mesh || underfeet_pending_light)
+                   ? (frame_ms > kBadFrameMs ? 1 : 2)
+                   : (frame_ms > kBadFrameMs ? 1 : 2))
+            : (frame_ms > kBadFrameMs ? 2 : 4);
+    bg_budget = std::min(bg_budget, hard_cap);
+  }
+
+  {
+    const auto relight_t0 = std::chrono::high_resolution_clock::now();
+    world.Persistence->DrainRelightQueues(world, player_budget, bg_budget);
+    world.PhysicsTelemetryData.RelightDrainMs +=
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - relight_t0)
+            .count();
+  }
   finish_telemetry();
 }
 
@@ -580,6 +1086,7 @@ void UWorldStreaming::AbandonWorkersForProcessExit(
   {
     Streamer->SetEnabled(false);
   }
+  SyncCoarseCacheGround = glm::ivec3(INT32_MAX, 0, INT32_MAX);
   CancelChunkGeneration();
   if (!ChunkScheduler)
   {
@@ -623,11 +1130,17 @@ void UWorldStreaming::ResumeStreamerAfterQuiesce()
 
 void UWorldStreaming::TickMeshEmerge(UWorld &world)
 {
-  EmergeCoordinator->TickMeshEmerge(world);
+  EmergeCoordinator->TickMeshEmerge(world, LastPressureCaps);
   world.PhysicsTelemetryData.MeshSyncMs =
       world.GetMeshService().GetLastMeshSyncMs();
   world.PhysicsTelemetryData.MeshSnapshotMs =
       world.GetMeshService().GetLastMeshSnapshotMs();
+  world.PhysicsTelemetryData.MeshImmediateMs =
+      world.GetMeshService().GetLastMeshImmediateMs();
+  world.PhysicsTelemetryData.MeshImmediateCount =
+      world.GetMeshService().GetLastMeshImmediateCount();
+  world.PhysicsTelemetryData.MeshDirtyTickMs =
+      world.GetMeshService().GetLastMeshDirtyTickMs();
 }
 
 void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
@@ -724,17 +1237,42 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
       },
       [&world](glm::ivec3 coord)
       {
+        const glm::ivec3 ground(coord.x, 0, coord.z);
+        // Sea-band neighbor remesh must run even under PendingLight — soft-defer
+        // now allows sea cy, and skipping left blank water seams along flight.
         const ProceduralSettings &settings = world.GetProceduralSettings();
         const int remesh_min_y = std::max(0, settings.SeaLevel - CHUNK_SIZE);
         const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
-        world.MarkTerrainChunkMeshDirtySeamed(glm::ivec3(coord.x, 0, coord.z),
-                                              remesh_min_y, remesh_max_y, true);
+        world.MarkTerrainChunkMeshDirtySeamed(ground, remesh_min_y, remesh_max_y,
+                                              true);
       },
       [this, &world](int x, int z)
       {
         if (!world.AllowProceduralFill || !world.WorldGen)
         {
           return;
+        }
+        // Same CoarseHeightCache as async Populate (D: unify sampling entry).
+        if (auto *composable =
+                dynamic_cast<UComposableWorldGenerator *>(world.WorldGen.get()))
+        {
+          const glm::ivec3 ground(FloorDiv(x, CHUNK_SIZE), 0,
+                                  FloorDiv(z, CHUNK_SIZE));
+          if (ground != SyncCoarseCacheGround)
+          {
+            if (SyncCoarseCacheGround.x != INT32_MAX)
+            {
+              composable->EndChunkCoarseCache();
+            }
+            const int blend_pad = std::clamp(
+                static_cast<int>(
+                    std::lround(world.GetProceduralSettings().Tuning.biomeBlendRadius)),
+                0, 16);
+            composable->BeginChunkCoarseCache(ground.x * CHUNK_SIZE,
+                                              ground.z * CHUNK_SIZE,
+                                              blend_pad + 8);
+            SyncCoarseCacheGround = ground;
+          }
         }
         const auto t0 = std::chrono::high_resolution_clock::now();
         world.WorldGen->GenerateColumn(x, z);
@@ -754,6 +1292,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
   Streamer->SetUnloadColumnCallback(
       [this, &world](glm::ivec3 ground, int max_cy)
       {
+        world.ClearPendingLightBeforeMesh(glm::ivec2(ground.x, ground.z));
+        world.ClearColumnEmergeState(glm::ivec2(ground.x, ground.z));
         world.GetMeshService().RemoveColumn(ground, max_cy);
         for (int cy = 0; cy <= max_cy; ++cy)
         {
@@ -803,6 +1343,12 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
   Streamer->SetColumnPendingCallback(
       [&world](glm::ivec3 coord)
       { return world.Persistence->IsTerrainColumnDiskLoadPending(coord); });
+  Streamer->SetColumnPendingLightCallback(
+      [&world](glm::ivec3 coord)
+      {
+        // Outer ring unlock requires LitReady+ (not awaiting first light).
+        return !world.IsColumnVisualReadyForRing(coord);
+      });
   Streamer->SetGenerationLightingHooks(
       [&world](bool deferred) { world.SetLightingRelightDeferred(deferred); },
       [this, &world](glm::ivec3 ground)
@@ -810,13 +1356,21 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         const ProceduralSettings &settings = world.GetProceduralSettings();
         if (settings.FillWater && world.BlockRegistry)
         {
+          // Sync gen path: IntraChunk once, ShoreAir deferred (cheap).
           SealFluidShoreOnChunkCommitted(
               world.BlockWorld, *world.BlockRegistry, settings,
               world.WorldgenOwnerPackId, ground, /*include_shore_air=*/false);
           DeferredShoreSealQueue.push_back(ground);
         }
-        world.Persistence->EnqueueTerrainColumnRelight(ground.x * CHUNK_SIZE,
-                                                       ground.z * CHUNK_SIZE);
+        world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
+        const glm::ivec3 focus_ground =
+            UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+        const int focus_radius = world.GetStreamingFocusRadius();
+        const bool near_focus =
+            std::max(std::abs(ground.x - focus_ground.x),
+                     std::abs(ground.z - focus_ground.z)) <= focus_radius;
+        world.Persistence->EnqueueTerrainColumnRelight(
+            ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, near_focus);
       });
 }
 
@@ -843,12 +1397,14 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
                                       float &effectiveFogStartRatio,
                                       StreamingAltitudePolicyParams &altitudeParams,
                                       glm::vec3 &lastCameraPosition,
-                                      float &lastMovementSpeed)
+                                      float &lastMovementSpeed,
+                                      glm::vec2 &lastMovementDirXz)
 {
   if (!Streamer || !StreamingEnabled)
   {
     return;
   }
+  URuntimeTuning::LoadStreamingTuneFile("streaming_tune.json");
   if (auto camera = world.GetCurrentUserCamera())
   {
     const PlayerCapsule cap = camera->GetPlayerCapsule();
@@ -943,6 +1499,23 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const float dt = std::max(0.0001f, camera->GetDeltaTime());
     const glm::vec3 delta = eye - lastCameraPosition;
     lastMovementSpeed = glm::length(glm::vec3(delta.x, 0.0f, delta.z)) / dt;
+    {
+      const ProceduralSettings &proc_for_dir = world.GetProceduralSettings();
+      glm::vec2 move_xz(delta.x, delta.z);
+      if (glm::length(move_xz) > 0.001f &&
+          lastMovementSpeed >= proc_for_dir.MovementPrefetchThreshold)
+      {
+        lastMovementDirXz = glm::normalize(move_xz);
+      }
+      else
+      {
+        glm::vec2 view_xz(forward.x, forward.z);
+        if (glm::length(view_xz) > 0.01f)
+        {
+          lastMovementDirXz = glm::normalize(view_xz);
+        }
+      }
+    }
     lastCameraPosition = eye;
 
     const ProceduralSettings &procedural = world.GetProceduralSettings();
@@ -957,12 +1530,14 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       unload_ops = std::min(unload_ops, 1);
     }
     Streamer->SetEffectiveUnloadOpsPerFrame(unload_ops);
-    Streamer->Update(WorldPosToBlock(eye), eye, cap);
 
+    // NearLoadRadius / MaxLoadOps must be set BEFORE Update — previously they
+    // were applied only for Prefetch, so the load loop always saw TickAsync's
+    // underfeet clamp (often 2) and stream_loads stayed ~0 while flying.
     const glm::ivec3 feet_chunk = UChunkManager::WorldToChunk(
         WorldPosToBlock(glm::vec3(eye.x, cap.feetY(eye) + 0.01f, eye.z)));
     const glm::ivec3 focus_horiz(feet_chunk.x, 0, feet_chunk.z);
-    const int focus_radius = Streamer->GetVisualRenderDistance() + 1;
+    const int focus_radius = world.GetStreamingFocusRadius();
     const size_t dirty = meshService.GetDirtyCount();
     const int gen_backlog_total =
         ChunkScheduler ? ChunkScheduler->GetGenBacklogTotal() : 0;
@@ -972,19 +1547,91 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         meshService.HasMissingGreedyMeshInHorizontalRadius(world.GetBlockWorld(),
                                                          focus_horiz,
                                                          focus_radius);
+    const bool underfeet_need =
+        meshService.HasMissingGreedyMeshInHorizontalRadius(
+            world.GetBlockWorld(), focus_horiz, /*radius=*/1) ||
+        world.HasPendingLightBeforeMeshNear(focus_horiz, /*radius=*/1);
     const KeepPrewarmGate keep_gate = EvaluateKeepPrewarmGate(
         frame_ms, gen_backlog_total, mesh_async, dirty, near_mesh_backlog);
+    const bool visual_holes =
+        meshService.HasMissingGreedyMeshInHorizontalRadius(
+            world.GetBlockWorld(), focus_horiz, focus_radius);
+    const bool near_focus_holes =
+        visual_holes ||
+        world.HasPendingLightBeforeMeshNear(focus_horiz, focus_radius);
+    const bool moving_fast =
+        lastMovementSpeed >= procedural.MovementSpeedBoostThreshold;
+    const bool moving_any =
+        lastMovementSpeed >= procedural.MovementPrefetchThreshold;
+    // Caps from previous TickAsync (hysteresis evaluated once per frame there).
+    const StreamingPressureCaps &pressure = LastPressureCaps;
+    if (Streamer)
+    {
+      if (moving_fast || moving_any)
+      {
+        Streamer->SetNearLoadRadius(-1);
+        // Hitch / Yellow+: keep fill alive but drop boost so load+mesh do not
+        // stack. Red also clamps MaxLoadOps via pressure caps below.
+        int load_ops = world.MaxLoadOpsPerFrame;
+        if (frame_ms <= 20.0 && moving_fast && pressure.allow_fly_load_boost)
+        {
+          load_ops = procedural.MaxLoadOpsPerFrameBoost;
+        }
+        load_ops = ApplyPressureCap(load_ops, pressure.max_load_ops_cap);
+        Streamer->SetMaxLoadOpsPerFrame(std::max(1, load_ops));
+      }
+      else if (underfeet_need)
+      {
+        Streamer->SetNearLoadRadius(2);
+        Streamer->SetMaxLoadOpsPerFrame(ApplyPressureCap(
+            world.MaxLoadOpsPerFrame, pressure.max_load_ops_cap));
+      }
+      else if (visual_holes || pressure.focus_pressure_mode)
+      {
+        Streamer->SetNearLoadRadius(focus_radius);
+        Streamer->SetMaxLoadOpsPerFrame(ApplyPressureCap(
+            world.MaxLoadOpsPerFrame, pressure.max_load_ops_cap));
+      }
+      else
+      {
+        Streamer->SetNearLoadRadius(-1);
+        Streamer->SetMaxLoadOpsPerFrame(ApplyPressureCap(
+            world.MaxLoadOpsPerFrame, pressure.max_load_ops_cap));
+      }
+    }
+    {
+      const auto update_t0 = std::chrono::high_resolution_clock::now();
+      Streamer->Update(WorldPosToBlock(eye), eye, cap);
+      world.PhysicsTelemetryData.StreamerUpdateMs +=
+          std::chrono::duration<double, std::milli>(
+              std::chrono::high_resolution_clock::now() - update_t0)
+              .count();
+    }
+
     const auto prefetch_t0 = std::chrono::high_resolution_clock::now();
     int prefetch_visual_ops = 0;
-    Streamer->PrefetchAhead(feet_chunk, forward, lastMovementSpeed,
-                            procedural.MovementSpeedBoostThreshold,
-                            &prefetch_visual_ops);
+    // Prefetch at cruise speed, but skip when hitch'd or pressure≠allow —
+    // Update still loads; deep ahead would only pile GenQ/Dirty.
+    if (frame_ms <= 20.0 && pressure.allow_prefetch)
+    {
+      Streamer->PrefetchAhead(feet_chunk, forward, lastMovementSpeed,
+                              procedural.MovementPrefetchThreshold,
+                              &prefetch_visual_ops);
+    }
     int prefetch_keep_ops = 0;
-    if (keep_gate.allow)
+    // Idle in a hole pocket: keep-shell used to wait until holes cleared, so
+    // standing at 100 FPS never requested the missing ring.
+    if (keep_gate.allow &&
+        ((!near_focus_holes && !underfeet_need) ||
+         (!moving_fast && frame_ms <= 16.0 && near_focus_holes)))
     {
       const int keep_budget = std::min(
           keep_gate.max_ops, URuntimeTuning::Get().MaxKeepPrefetchOpsPerFrame);
-      Streamer->PrefetchKeepShell(feet_chunk, keep_budget, &prefetch_keep_ops);
+      const int idle_hole_budget =
+          (near_focus_holes && frame_ms <= 16.0) ? std::max(keep_budget, 2)
+                                                 : keep_budget;
+      Streamer->PrefetchKeepShell(feet_chunk, idle_hole_budget,
+                                  &prefetch_keep_ops);
     }
     world.PhysicsTelemetryData.IdlePrefetchMs =
         std::chrono::duration<double, std::milli>(
@@ -999,6 +1646,26 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     world.PhysicsTelemetryData.KeepCols =
         (2 * Streamer->GetKeepRenderDistance() + 1) *
         (2 * Streamer->GetKeepRenderDistance() + 1);
+    if (const StreamingFrameStats *st = &Streamer->GetLastFrameStats())
+    {
+      world.PhysicsTelemetryData.StreamLoads = st->loadsThisFrame;
+      world.PhysicsTelemetryData.StreamAsyncQueued = st->asyncQueuedThisFrame;
+      world.PhysicsTelemetryData.StreamRingBlocked = st->ringGateBlocked;
+      world.PhysicsTelemetryData.StreamNearSkipped = st->nearLoadSkipped;
+      world.PhysicsTelemetryData.StreamLoadCandidates = st->loadCandidates;
+    }
+    world.PhysicsTelemetryData.PendingLightCount =
+        static_cast<int>(world.GetPendingLightBeforeMeshCount());
+    world.PhysicsTelemetryData.FocusChunkX = focus_horiz.x;
+    world.PhysicsTelemetryData.FocusChunkZ = focus_horiz.z;
+    world.PhysicsTelemetryData.UnderfeetNeed = underfeet_need ? 1 : 0;
+    world.PhysicsTelemetryData.VisualHoles = visual_holes ? 1 : 0;
+    world.PhysicsTelemetryData.LightDebt =
+        world.HasPendingLightBeforeMeshNear(focus_horiz, focus_radius) ? 1 : 0;
+    world.PhysicsTelemetryData.NearFocusHoles = near_focus_holes ? 1 : 0;
+    world.PhysicsTelemetryData.PendingFocusCols =
+        world.FormatPendingLightFocusColumns(focus_horiz, focus_radius, 12);
+    // StreamPressure / PendingLightFocus already set in RefreshStreamingPressure.
   }
 }
 

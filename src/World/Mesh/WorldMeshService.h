@@ -7,6 +7,7 @@
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include "World/Interfaces/IUWorldMeshSink.h"
 #include <chrono>
+#include <functional>
 #include <glm/glm.hpp>
 #include <memory>
 #include <unordered_set>
@@ -34,14 +35,29 @@ public:
   void SetRenderSettings(const RenderSettings &settings);
   void SetRenderDistanceChunks(int distance);
   void SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord, int radius_chunks);
+  void SetMeshVerticalPriority(int preferred_cy, bool prefer_lower_cy);
+  void ClearMeshVerticalPriority();
+  void SetMeshForwardBias(float bias_k, glm::vec2 forward_xz);
+  void SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn);
+  void SetStarveOutsideFocusMesh(bool starve);
+  void SetStarveRemeshForHoles(bool starve);
+  void SetSyncHoleFillRadius(int radius_chunks);
+  void SetMaxOutsideFocusMeshPerFrame(int count);
+  void SetMaxRearFocusMeshPerFrame(int count);
+  void SetMeshScheduleMaxHorizontalDist(int radius_chunks);
+  void SetMeshScheduleOverflowPerFrame(int count);
+  void SetMeshSnapshotBudgetMs(double ms);
   void SetAltitudeCullState(float altitude_above_terrain, int threshold_blocks);
 
   void MarkDirty(glm::ivec3 chunk_coord);
   void MarkDirtyPriority(glm::ivec3 chunk_coord);
+  void RequestRemeshAfterApply(glm::ivec3 chunk_coord);
   /// Invalidate fluid surface column cache when this block or a neighbor is liquid.
   void NotifyFluidSurfaceDirtyAtBlock(const UBlockWorld &world,
                                       UBlockRegistry *registry,
                                       glm::ivec3 block_pos);
+  void InvalidateFluidSurfaceForColumn(glm::ivec3 ground_chunk_coord,
+                                       bool include_neighbors = true);
   void MarkAllDirtyFromWorld(const UBlockWorld &world);
   void RemoveChunk(glm::ivec3 chunk_coord);
   void RemoveColumn(glm::ivec3 ground_coord, int max_cy);
@@ -68,21 +84,31 @@ public:
                              int max_per_frame);
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,
                              glm::ivec3 chunk_coord);
+  void ResetImmediateMeshStats();
+  double GetLastMeshImmediateMs() const;
+  int GetLastMeshImmediateCount() const;
   void WaitForAsyncMeshIdle();
   bool WaitForAsyncMeshIdleFor(std::chrono::milliseconds timeout);
   void CancelAsyncMeshWork();
   void CancelAsyncInFlightKeepDirty();
+  void CancelInFlightOutsideHorizontalRadius(glm::ivec3 focus_ground_chunk,
+                                             int radius_chunks);
 
   bool HasPendingDirty() const;
   bool HasDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
                                       int radius_chunks) const;
+  int CountDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
+                                       int radius_chunks) const;
+  bool HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y, int max_y) const;
   bool HasPendingAsyncMeshWork() const;
   size_t GetDirtyCount() const;
   int GetAsyncInFlightCount() const;
   uint64_t GetMeshDiscardedLateCount() const;
+  uint64_t GetMeshApplyStaleCount() const;
   double GetLastFlatRebuildMs() const;
   double GetLastMeshSyncMs() const;
   double GetLastMeshSnapshotMs() const;
+  double GetLastMeshDirtyTickMs() const;
   size_t GetGreedyCacheSize() const;
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
   bool IsChunkMeshDirty(glm::ivec3 chunk_coord) const;
@@ -92,6 +118,10 @@ public:
   bool HasMissingGreedyMeshInHorizontalRadius(const UBlockWorld &world,
                                               glm::ivec3 center_ground_chunk,
                                               int radius_chunks) const;
+  bool FindNearestMissingGreedyMesh(const UBlockWorld &world,
+                                    glm::ivec3 center_ground_chunk,
+                                    int radius_chunks,
+                                    glm::ivec3 &out_coord) const;
   const MeshRebuildTickStats &GetLastRebuildTickStats() const;
   uint64_t GetMeshRevision() const;
   uint64_t GetCullRevision() const;

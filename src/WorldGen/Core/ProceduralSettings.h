@@ -111,7 +111,12 @@ struct ProceduralSettings
   int MaxUnloadOpsPerFrame{2};
   int MaxChunkCommitsPerFrameBoost{6};
   int MaxLoadOpsPerFrameBoost{8};
-  float MovementSpeedBoostThreshold{6.0f};
+  /// Horizontal speed (blocks/s) for commit/load budget boost. Was 6 — cruise
+  /// flight (~2–4) never qualified; keep low enough that fly-fill engages.
+  float MovementSpeedBoostThreshold{2.0f};
+  /// PrefetchAhead / mesh-while-moving gate. Below boost so any intentional
+  /// travel queues ahead columns before the boost budgets kick in.
+  float MovementPrefetchThreshold{1.5f};
   int FlatSurfaceY{3};
   bool FillWater{false};
   bool FillLava{false};

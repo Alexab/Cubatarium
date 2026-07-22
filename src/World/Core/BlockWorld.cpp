@@ -1,5 +1,6 @@
 #include "World/Core/BlockWorld.h"
 #include "Blocks/BlockDefinitionStorage.h"
+#include "World/Chunks/ChunkBuffer.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Physics/FluidKindPresetUtil.h"
 
@@ -22,6 +23,10 @@ void UBlockWorld::SetBlock(glm::ivec3 pos, BlockId Id)
   {
     Chunks.SetBlock(pos, BLOCK_AIR);
     Chunks.ClearFluidState(pos);
+    if (CaptureBuffer)
+    {
+      CaptureBuffer->SetBlock(pos, BLOCK_AIR);
+    }
     return;
   }
   Chunks.SetBlock(pos, Id);
@@ -36,16 +41,30 @@ void UBlockWorld::SetBlock(glm::ivec3 pos, BlockId Id)
       }
     }
   }
+  if (CaptureBuffer)
+  {
+    CaptureBuffer->SetBlock(pos, Id);
+    CaptureBuffer->SetFluidPacked(pos,
+                                  PackFluidCellState(Chunks.GetFluidState(pos)));
+  }
 }
 
 void UBlockWorld::SetFluidState(glm::ivec3 pos, FluidCellState state)
 {
   Chunks.SetFluidState(pos, state);
+  if (CaptureBuffer)
+  {
+    CaptureBuffer->SetFluidPacked(pos, PackFluidCellState(state));
+  }
 }
 
 void UBlockWorld::ClearFluidState(glm::ivec3 pos)
 {
   Chunks.ClearFluidState(pos);
+  if (CaptureBuffer)
+  {
+    CaptureBuffer->SetFluidPacked(pos, 0);
+  }
 }
 
 bool UBlockWorld::IsAir(glm::ivec3 pos) const

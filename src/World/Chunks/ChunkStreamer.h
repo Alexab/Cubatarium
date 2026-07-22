@@ -26,6 +26,10 @@ struct StreamingFrameStats
     loadsThisFrame = 0;
     unloadsThisFrame = 0;
     savesThisFrame = 0;
+    asyncQueuedThisFrame = 0;
+    ringGateBlocked = 0;
+    nearLoadSkipped = 0;
+    loadCandidates = 0;
     loadedCoords.clear();
     unloadedCoords.clear();
   }
@@ -33,6 +37,13 @@ struct StreamingFrameStats
   int loadsThisFrame{0};
   int unloadsThisFrame{0};
   int savesThisFrame{0};
+  /// Async column requests issued this frame (EnsureChunkLoaded queued work).
+  int asyncQueuedThisFrame{0};
+  /// Candidates that failed RingPrerequisitesMet this frame.
+  int ringGateBlocked{0};
+  /// Candidates skipped by NearLoadRadius clamp.
+  int nearLoadSkipped{0};
+  int loadCandidates{0};
   std::vector<glm::ivec3> loadedCoords;
   std::vector<glm::ivec3> unloadedCoords;
 };
@@ -49,6 +60,8 @@ public:
   using RequestAsyncChunkFn = std::function<void(glm::ivec3, int priority)>;
   using IsChunkCommittedFn = std::function<bool(glm::ivec3)>;
   using IsColumnPendingFn = std::function<bool(glm::ivec3)>;
+  /// True while column awaits first light before mesh (visual hole).
+  using IsColumnPendingLightFn = std::function<bool(glm::ivec3)>;
 
   UChunkStreamer(UBlockWorld &world, UBlockRegistry &registry, uint32_t Seed,
                  int baseY, int MaxHeight);
@@ -61,8 +74,15 @@ public:
   void SetAsyncCallbacks(RequestAsyncChunkFn requestFn,
                          IsChunkCommittedFn isCommittedFn);
   void SetColumnPendingCallback(IsColumnPendingFn fn);
+  void SetColumnPendingLightCallback(IsColumnPendingLightFn fn);
   void SetGenerationLightingHooks(std::function<void(bool)> defer_relight,
                                   std::function<void(glm::ivec3)> relight_column);
+  /// When >= 0, Update/Prefetch only load within Chebyshev radius of load center.
+  /// Negative = unlimited (default). Collision-urgent feet loads ignore this.
+  void SetNearLoadRadius(int radius_chunks)
+  {
+    NearLoadRadius = radius_chunks;
+  }
   void NotifyChunkCommitted(glm::ivec3 chunkCoord);
   void MarkPersistedColumnsFromWorld();
   void SetRenderDistance(int chunks)
@@ -135,7 +155,8 @@ public:
   }
 
 private:
-  bool EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync = false);
+  bool EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync = false,
+                         bool *out_async_queued = nullptr);
   bool AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord, int max_sub_columns,
                                       bool only_empty_columns);
   bool IsTerrainChunkCompleteCached(glm::ivec3 groundCoord);
@@ -147,7 +168,11 @@ private:
                              const PlayerCapsule &cap) const;
   int ChunkHorizontalDistance(glm::ivec3 groundCoord) const;
   int ChunkLoadPriorityFor(glm::ivec3 groundCoord) const;
-  bool RingPrerequisitesMet(glm::ivec3 coord);
+  /// Inward ring gate. When allow_pending_inward, a queued/pending neighbor
+  /// counts as ready (used by PrefetchAhead so deep steps are not stuck
+  /// waiting for commit of the previous step).
+  bool RingPrerequisitesMet(glm::ivec3 coord,
+                            bool allow_pending_inward = false);
 
   UBlockWorld &World;
   UBlockRegistry &Registry;
@@ -174,10 +199,12 @@ private:
   RequestAsyncChunkFn OnRequestAsyncChunk;
   IsChunkCommittedFn OnIsChunkCommitted;
   IsColumnPendingFn OnIsColumnPending;
+  IsColumnPendingLightFn OnIsColumnPendingLight;
   std::function<void(bool)> OnSetLightingRelightDeferred;
   std::function<void(glm::ivec3)> OnRelightTerrainColumn;
   bool AsyncGeneration{false};
   bool RingGateEnabled{false};
+  int NearLoadRadius{-1};
   bool CollisionUrgent{false};
   glm::ivec3 CollisionUrgentCenter{0};
   int CollisionUrgentRadius{0};

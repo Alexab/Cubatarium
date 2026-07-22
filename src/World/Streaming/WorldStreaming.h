@@ -5,6 +5,7 @@
 #include "World/Chunks/ChunkLoadScheduler.h"
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Chunks/StreamingAltitudePolicy.h"
+#include "World/Streaming/StreamingPressure.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
 #include <chrono>
 #include <deque>
@@ -50,7 +51,8 @@ public:
                        int &effectiveRenderDistance,
                        float &effectiveFogStartRatio,
                        StreamingAltitudePolicyParams &altitudeParams,
-                       glm::vec3 &lastCameraPosition, float &lastMovementSpeed);
+                       glm::vec3 &lastCameraPosition, float &lastMovementSpeed,
+                       glm::vec2 &lastMovementDirXz);
 
   void TickAsyncChunkSystems(UWorld &world);
   void TickMeshEmerge(UWorld &world);
@@ -94,8 +96,14 @@ public:
 
   void MarkPersistedColumnsFromWorld();
 
+  const StreamingPressureCaps &GetLastPressureCaps() const
+  {
+    return LastPressureCaps;
+  }
+
 private:
   void InitChunkScheduler(UWorld &world);
+  void RefreshStreamingPressure(UWorld &world);
 
   std::unique_ptr<UChunkStreamer> Streamer;
   std::unique_ptr<UChunkEmergeCoordinator> EmergeCoordinator;
@@ -107,9 +115,15 @@ private:
   double FrameStreamingIoMs{0.0};
   std::deque<glm::ivec3> DeferredPhysicsSeedQueue;
   std::deque<glm::ivec3> DeferredShoreSealQueue;
+  /// Sync GenerateColumn path: one CoarseHeightCache per ground chunk.
+  glm::ivec3 SyncCoarseCacheGround{INT32_MAX, 0, INT32_MAX};
   int AdaptiveEffectiveRd{-1};
   double PhysMsEma{0.0};
   std::chrono::steady_clock::time_point AdaptiveRdLastAdjust{};
+  StreamingPressureState PressureState{};
+  StreamingPressureCaps LastPressureCaps{};
+  /// Cached once per RefreshStreamingPressure — safe for commit callback.
+  int LastPendingLightFocus{0};
 };
 
 } // namespace cutum

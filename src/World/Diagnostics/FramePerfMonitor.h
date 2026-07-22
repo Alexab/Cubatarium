@@ -1,6 +1,8 @@
 #ifndef FRAME_PERF_MONITOR_H
 #define FRAME_PERF_MONITOR_H
 
+#include <string>
+
 namespace cutum
 {
 
@@ -20,6 +22,9 @@ public:
                             double interval_sec);
 
   static void Shutdown();
+
+  /// Absolute path of the current/last perf_*.jsonl session (empty if none).
+  static std::string GetLastSessionPath();
 };
 
 } // namespace cutum

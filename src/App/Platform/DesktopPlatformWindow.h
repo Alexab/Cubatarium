@@ -14,6 +14,9 @@ public:
   bool Initialize(int width, int height, const char *title) override;
   bool InitializeHidden(int width, int height, const char *title);
   void SetStopPredicate(std::function<bool()> predicate);
+  void SetAutopilotKey(KeyCode key, bool held);
+  void ClearAutopilotKeys();
+  void SetAutosaveEnabled(bool enabled);
   void Run() override;
   void Shutdown() override;
   void PollEvents() override;

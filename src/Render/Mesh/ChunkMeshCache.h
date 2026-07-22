@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <chrono>
 #include <climits>
+#include <functional>
 #include <glm/glm.hpp>
 #include <memory>
 #include <unordered_map>
@@ -51,6 +52,9 @@ public:
   /// Fluid column cache invalidation — call on fluid voxel changes only, not
   /// on every mesh remesh.
   void InvalidateFluidSurfaceForChunk(glm::ivec3 chunkCoord);
+  /// Once per terrain column (gen/light), not on every cy MarkDirty.
+  void InvalidateFluidSurfaceForColumn(glm::ivec3 ground_chunk_coord,
+                                       bool include_neighbors = true);
   void RemoveChunk(glm::ivec3 chunkCoord);
   /// Removes all Y slices for a terrain column with one greedy-list invalidation.
   void RemoveColumn(glm::ivec3 ground_coord, int max_cy);
@@ -64,26 +68,43 @@ public:
   void RebuildAll(UBlockWorld &world, UBlockRegistry &registry);
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,
                              glm::ivec3 chunkCoord);
+  /// Reset per-frame Immediate counters (call at start of TickMeshEmerge).
+  void ResetImmediateMeshStats();
+  double GetLastMeshImmediateMs() const { return LastMeshImmediateMs; }
+  int GetLastMeshImmediateCount() const { return LastMeshImmediateCount; }
   bool HasPendingDirty() const;
   bool HasDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
                                       int radius_chunks) const;
+  /// Dirty chunk count inside Chebyshev radius (lit-but-dirty debt metric).
+  int CountDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
+                                       int radius_chunks) const;
+  bool HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y, int max_y) const;
   bool HasPendingAsyncMeshWork() const;
   void WaitForAsyncMeshIdle();
   bool WaitForAsyncMeshIdleFor(std::chrono::milliseconds timeout);
   void CancelAsyncMeshWork();
   void CancelAsyncInFlightKeepDirty();
+  /// Cancel in-flight async mesh outside focus; coords stay in Dirty.
+  void CancelInFlightOutsideHorizontalRadius(glm::ivec3 focus_ground_chunk,
+                                             int radius_chunks);
   void DrainAsyncMeshResults(UBlockWorld &world, UBlockRegistry &registry,
                              int max_per_frame);
   double GetLastFlatRebuildMs() const { return LastFlatRebuildMs; }
   double GetLastMeshSyncMs() const { return LastMeshSyncMs; }
   double GetLastMeshSnapshotMs() const { return LastMeshSnapshotMs; }
+  double GetLastMeshDirtyTickMs() const { return LastMeshDirtyTickMs; }
   int GetAsyncInFlightCount() const;
   uint64_t GetMeshDiscardedLateCount() const;
+  uint64_t GetMeshApplyStaleCount() const { return MeshApplyStaleCount; }
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
   bool HasMissingGreedyMeshInHorizontalRadius(const UBlockWorld &world,
                                               glm::ivec3 center_ground_chunk,
                                               int radius_chunks) const;
+  bool FindNearestMissingGreedyMesh(const UBlockWorld &world,
+                                    glm::ivec3 center_ground_chunk,
+                                    int radius_chunks,
+                                    glm::ivec3 &out_coord) const;
   const MeshRebuildTickStats &GetLastRebuildTickStats() const
   {
     return LastRebuildTickStats;
@@ -106,6 +127,63 @@ public:
     RenderDistanceChunks = distance;
   }
   void SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord, int radius_chunks);
+  /// preferred_cy: sea/surface slice; prefer_lower_cy=true when camera underwater.
+  void SetMeshVerticalPriority(int preferred_cy, bool prefer_lower_cy)
+  {
+    MeshVerticalPreferredCy = preferred_cy;
+    MeshPreferLowerCy = prefer_lower_cy;
+    MeshVerticalPriorityValid = true;
+  }
+  void ClearMeshVerticalPriority() { MeshVerticalPriorityValid = false; }
+  /// Soft motion/view bias for Dirty sort (Chebyshev units).
+  void SetMeshForwardBias(float bias_k, glm::vec2 forward_xz)
+  {
+    MeshForwardBiasK = bias_k;
+    MeshForwardXz = forward_xz;
+  }
+  /// When true for a chunk coord, SyncRebuildVisibleMissing skips rebuild (await light).
+  void SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn)
+  {
+    DeferMeshUntilLit = std::move(fn);
+  }
+  /// When true, skip outside-focus dirty trickle (near holes / pending light).
+  void SetStarveOutsideFocusMesh(bool starve) { StarveOutsideFocusMesh = starve; }
+  /// When true, skip remesh (already has greedy) until holes clear.
+  void SetStarveRemeshForHoles(bool starve) { StarveRemeshForHoles = starve; }
+  /// Chebyshev radius for SyncRebuildVisibleMissing hole-fill (1=underfeet).
+  void SetSyncHoleFillRadius(int radius_chunks)
+  {
+    SyncHoleFillRadius = std::max(0, radius_chunks);
+  }
+  /// Cap outside-focus dirty schedules per frame (0 = hard deny).
+  void SetMaxOutsideFocusMeshPerFrame(int count)
+  {
+    MaxOutsideFocusMeshPerFrame = std::max(0, count);
+  }
+  /// Reserved focus schedules behind movement forward (cruise rear catch-up).
+  void SetMaxRearFocusMeshPerFrame(int count)
+  {
+    MaxRearFocusMeshPerFrame = std::max(0, count);
+  }
+  /// Queue remesh after in-flight Apply (light changed mid-build).
+  void RequestRemeshAfterApply(glm::ivec3 chunk_coord)
+  {
+    RemeshAfterApply.insert(chunk_coord);
+  }
+  /// When >= 0, prefer scheduling within this Chebyshev distance. Chunks
+  /// farther may still schedule up to MeshScheduleOverflowPerFrame (soft prefer).
+  void SetMeshScheduleMaxHorizontalDist(int radius_chunks)
+  {
+    MeshScheduleMaxHorizontalDist = radius_chunks;
+  }
+  void SetMeshSnapshotBudgetMs(double ms)
+  {
+    MeshSnapshotBudgetMs = std::max(1.0, ms);
+  }
+  void SetMeshScheduleOverflowPerFrame(int count)
+  {
+    MeshScheduleOverflowPerFrame = std::max(0, count);
+  }
   void SetAltitudeCullState(float altitude_above_terrain, int threshold_blocks)
   {
     AltitudeAboveTerrain = altitude_above_terrain;
@@ -209,6 +287,10 @@ private:
   double LastFlatRebuildMs{0.0};
   double LastMeshSyncMs{0.0};
   double LastMeshSnapshotMs{0.0};
+  double LastMeshDirtyTickMs{0.0};
+  double LastMeshImmediateMs{0.0};
+  int LastMeshImmediateCount{0};
+  uint64_t MeshApplyStaleCount{0};
   std::chrono::steady_clock::time_point LastFlatRebuildAt{};
   bool PendingMeshRevisionBump{false};
   UChunkMeshRevisionRegistry MeshRevisions;
@@ -234,6 +316,24 @@ private:
   glm::ivec3 MeshFocusGroundChunk{0};
   int MeshFocusRadiusChunks{6};
   bool MeshFocusValid{false};
+  int MeshVerticalPreferredCy{0};
+  bool MeshPreferLowerCy{false};
+  bool MeshVerticalPriorityValid{false};
+  float MeshForwardBiasK{0.0f};
+  glm::vec2 MeshForwardXz{0.0f};
+  bool StarveOutsideFocusMesh{false};
+  bool StarveRemeshForHoles{false};
+  /// SyncRebuildVisibleMissing: fill missing within this Chebyshev radius.
+  int SyncHoleFillRadius{1};
+  int MaxOutsideFocusMeshPerFrame{2};
+  int MaxRearFocusMeshPerFrame{0};
+  std::unordered_set<glm::ivec3, IVec3Hash> RemeshAfterApply;
+  /// -1 = no extra horizontal schedule cap (only focus starve applies).
+  int MeshScheduleMaxHorizontalDist{-1};
+  double MeshSnapshotBudgetMs{6.0};
+  /// When MaxHorizontalDist >= 0, allow this many farther schedules/frame.
+  int MeshScheduleOverflowPerFrame{0};
+  std::function<bool(glm::ivec3)> DeferMeshUntilLit;
 };
 } // namespace cutum
 #endif

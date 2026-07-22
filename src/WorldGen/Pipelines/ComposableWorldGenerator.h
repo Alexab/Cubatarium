@@ -5,6 +5,7 @@
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include "WorldGen/Sampling/ColumnSample.h"
+#include "WorldGen/Sampling/CoarseHeightCache.h"
 #include "WorldGen/Sampling/DensityFieldSampler.h"
 #include "WorldGen/Sampling/OverworldHeightSampler.h"
 #include "WorldGen/Stages/WorldGenStages.h"
@@ -59,6 +60,15 @@ public:
   }
   WorldGenContext &GetContext() { return Ctx; }
 
+  /// Install chunk-local CoarseSurfaceY memo for blend/coast lookups.
+  void BeginChunkCoarseCache(int base_x, int base_z, int pad);
+  void PrimeChunkCoarseY(int x, int z, int y);
+  void EndChunkCoarseCache();
+  UCoarseHeightCache *GetChunkCoarseCache()
+  {
+    return ChunkCoarseCache ? &*ChunkCoarseCache : nullptr;
+  }
+
 private:
   int SampleSurfaceY(int worldX, int worldZ) const;
   int SampleCoarseSurfaceY(int worldX, int worldZ) const;
@@ -74,6 +84,8 @@ private:
   std::optional<UDensityFieldSampler> DensitySampler;
   std::optional<UBiomeSampler> BiomeSampler;
   std::optional<UColumnSampleBuilder> SampleBuilder;
+  std::optional<UCoarseHeightCache> ChunkCoarseCache;
+  CoarseHeightCallback DirectCoarseHeightFn;
 };
 
 } // namespace cutum

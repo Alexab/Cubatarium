@@ -185,6 +185,8 @@ Object assets load at startup via `Core::LoadSystem`. They are **not** stored in
 
 Default: `streaming_enabled: true` in `config.json`.
 
+Companion streaming docs: `docs/streaming/README.md`.
+
 Pipeline per frame:
 
 ```
@@ -287,7 +289,11 @@ Retained-mode 2D UI (OpenGL + FreeType via `GuiRenderer` / `TextRenderer`). Game
 
 Console is toggled via `ui.console_key` (default grave). Chat log lines are appended by `GameSession::AddChatLine`.
 
-**Layout on resize:** every screen implements `GuiScreenBase::OnViewportChanged`; `OnMetricsChanged` triggers relayout when UI scale changes. Sizes come from scaled `GuiTheme` fields (design px at 720p/160dpi baseline). Main menu title uses `TopCenter` + centered label text; in-game HUD places hotbar bottom-centered. Console and creative palette anchor to the window edges using framebuffer size from `Application::RenderFrame`.
+**Layout on resize:** every screen implements `GuiScreenBase::OnViewportChanged`; `OnMetricsChanged` triggers relayout when UI scale changes. Sizes come from scaled `GuiTheme` fields (design px at 720p/160dpi baseline) or `GuiScreenBase::Scaled()` for screen-local layout constants. Dialog/card heights should use `GuiLayout::StackVerticalMeasure` when content height grows with scaled fonts (see `WorldProgressScreen`). Main menu title uses `TopCenter` + centered label text; in-game HUD places hotbar bottom-centered. Console and creative palette anchor to the window edges using framebuffer size from `Application::RenderFrame`.
+
+**Scrollbar interaction:** list and scroll widgets share `GuiScrollbarController` for thumb drag and track page jumps; wheel and keyboard navigation remain on the widget.
+
+**Text input:** `GuiTextInput` vertically centers text within its bounds, clips long lines with horizontal scroll-to-caret, and routes mouse caret/selection through `GuiInputRouter` (console overlay keeps a thin routing shim because it bypasses the router while open).
 
 **UI scale:** `Application::UpdateUiScale` computes `EffectiveScale = AutoScale × ui_scale` (Android: DPI + short edge; desktop: GLFW content scale + resolution). User multiplier `ui_scale` (0.5–2.0, default 1.0) is editable in Settings with live preview.
 

@@ -1,6 +1,7 @@
 #include "Navigation/WorldNavigationQueries.h"
 #include "Blocks/BlockDefinition.h"
 #include "Blocks/BlockRegistry.h"
+#include "Creatures/Core/CreatureBounds.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
 #include "World/Math/CollisionVolume.h"
@@ -33,18 +34,12 @@ bool UWorldNavigationQueries::IsTerrestrialStandNode(
   {
     return false;
   }
-  const int clearance_cells =
-      static_cast<int>(std::ceil(body_height + 0.15f));
-  for (int dy = 1; dy <= clearance_cells; ++dy)
-  {
-    const BlockId above =
-        World.GetBlockWorld().GetBlock(ground + glm::ivec3(0, dy, 0));
-    if (registry.BlocksMovement(above))
-    {
-      return false;
-    }
-  }
-  return true;
+  const float feet_y = BlockTopY(node.ground_y);
+  const glm::vec3 size_blocks(0.6f, body_height, 0.6f);
+  const CollisionVolume vol = CollisionVolumeAtFeet(
+      feet_y, static_cast<float>(node.x), static_cast<float>(node.z),
+      size_blocks);
+  return !World.CheckBlockCollisionVolume(vol);
 }
 
 bool UWorldNavigationQueries::CanStepTerrestrial(

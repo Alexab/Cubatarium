@@ -1,6 +1,7 @@
 #include "World/Physics/FluidFillPolicy.h"
 
 #include "Blocks/BlockDefinitionStorage.h"
+#include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Physics/FluidKindPresetUtil.h"
@@ -60,6 +61,14 @@ bool UFluidFillPolicy::CanReceiveFluid(const UBlockWorld &blockWorld,
                                        const UBlockDefinitionStorage &definitions,
                                        glm::ivec3 pos)
 {
+  // Missing chunks read as AIR — without this guard fluid GetOrCreateChunk'd
+  // unbounded columns outside the streamer (manual 204426: 300MB→13GB after
+  // water+lava spread).
+  if (!blockWorld.GetChunkManager().HasChunk(
+          UChunkManager::WorldToChunk(pos)))
+  {
+    return false;
+  }
   if (blockWorld.IsAir(pos))
   {
     return true;
@@ -122,6 +131,11 @@ void UFluidFillPolicy::ApplyFluidFill(UBlockWorld &blockWorld,
                                       glm::ivec3 pos, BlockId fluid_id,
                                       FluidCellState state)
 {
+  if (!blockWorld.GetChunkManager().HasChunk(
+          UChunkManager::WorldToChunk(pos)))
+  {
+    return;
+  }
   const FluidCellState with_kind =
       NormalizeFluidKind(definitions, fluid_id, state);
   const FluidCellState stored =

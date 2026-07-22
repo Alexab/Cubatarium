@@ -42,30 +42,41 @@ UColumnSampleBuilder::UColumnSampleBuilder(
 ColumnSampleContext UColumnSampleBuilder::Build(int world_x, int world_z) const
 {
   ColumnSampleContext ctx;
-  ctx.Climate = SampleClimate(world_x, world_z, Settings.Seed);
-  ctx.MacroHeight01 =
-      std::clamp(OverworldMacroHeight01(world_x, world_z, Settings.Seed), 0.f,
-                 1.f);
 
   if (!HeightSampler || !BiomeSampler)
   {
+    ctx.Climate = SampleClimate(world_x, world_z, Settings.Seed);
+    ctx.MacroHeight01 =
+        std::clamp(OverworldMacroHeight01(world_x, world_z, Settings.Seed), 0.f,
+                   1.f);
     ctx.PreliminarySurfaceY = Settings.SeaLevel;
     ctx.SurfaceY = ctx.PreliminarySurfaceY;
     return ctx;
   }
 
-  ctx.PreliminarySurfaceY = HeightSampler->CoarseSurfaceYAt(world_x, world_z);
+  const CoarseHeightCallback coarse_fn = [this](int hx, int hz)
+  {
+    if (BiomeSampler->HasCoarseHeightCallback())
+    {
+      return BiomeSampler->CoarseYAt(hx, hz, Settings.SeaLevel);
+    }
+    return HeightSampler->CoarseSurfaceYAt(hx, hz);
+  };
+
+  // Center column: one SampleAt for macro/climate/surface; neighbors via cache.
+  const OverworldHeightSample height = HeightSampler->SampleAt(world_x, world_z);
+  ctx.MacroHeight01 = std::clamp(height.h01, 0.f, 1.f);
+  ctx.Climate = height.climate;
+  ctx.PreliminarySurfaceY = height.surfaceY;
+
   ctx.Biomes = BiomeSampler->WeightsAt(world_x, world_z, ctx.PreliminarySurfaceY,
                                        Settings.SeaLevel, Settings.MaxHeight);
   ctx.DominantBiome = DominantBiome(ctx.Biomes);
-  ctx.SurfaceY =
-      BiomeSampler->RefineSurfaceY(world_x, world_z, ctx.PreliminarySurfaceY,
-                                   Settings);
+  ctx.SurfaceY = BiomeSampler->RefineSurfaceY(
+      world_x, world_z, ctx.PreliminarySurfaceY, Settings, ctx.Biomes);
   ctx.HeightNorm =
       HeightNormFromY(ctx.SurfaceY, Settings.SeaLevel, Settings.MaxHeight);
 
-  const CoarseHeightCallback coarse_fn = [this](int hx, int hz)
-  { return HeightSampler->CoarseSurfaceYAt(hx, hz); };
   ctx.SurfaceGradient =
       SampleCoarseHeightGradient(world_x, world_z, coarse_fn);
   ctx.SurfaceBiome = PickSurfaceBiome(world_x, world_z, ctx.Biomes);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Progress/IUProgressSink.h"
+#include <chrono>
 #include <filesystem>
 #include <glm/glm.hpp>
 #include <string>
@@ -99,6 +100,8 @@ private:
   int SpatialDx{0};
   int SpatialDz{0};
   int MeshWarmupTicks{0};
+  std::chrono::steady_clock::time_point MeshWarmupStartedAt{};
+  std::chrono::steady_clock::time_point RelightColumnsStartedAt{};
   size_t MeshWarmupStartPending{0};
   bool MeshWarmupFinalizeOnly{false};
   bool ProceduralFillLoadPath{false};

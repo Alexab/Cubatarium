@@ -307,6 +307,7 @@ set(SOURCES
     src/WorldGen/Sampling/BiomeSampler.cpp
     src/WorldGen/Sampling/BiomeRegistry.cpp
     src/WorldGen/Sampling/ColumnSample.cpp
+    src/WorldGen/Sampling/CoarseHeightCache.cpp
     src/WorldGen/Features/CaveCarver.cpp
     src/WorldGen/Features/CaveDepthBand.cpp
     src/WorldGen/Features/RavineCarver.cpp
@@ -383,6 +384,7 @@ set(SOURCES
     src/Gui/Core/GuiScreenBase.cpp
     src/Gui/Layout/GuiLayout.cpp
     src/Gui/Layout/GuiTooltipLayout.cpp
+    src/Gui/Core/GuiScrollbarController.cpp
     src/Gui/Widgets/GuiWidget.cpp
     src/Gui/Widgets/GuiPanel.cpp
     src/Gui/Widgets/GuiButton.cpp
@@ -700,6 +702,7 @@ target_link_libraries(chunk_load_priority_test glm::glm)
 add_executable(terrain_column_util_test
     src/World/Chunks/Chunk.cpp
     src/World/Chunks/ChunkManager.cpp
+    src/World/Chunks/ChunkBuffer.cpp
     src/World/Chunks/TerrainColumnUtil.cpp
     src/World/Core/BlockWorld.cpp
     src/World/Core/IUBlockWriter.cpp
@@ -783,8 +786,10 @@ target_link_libraries(creature_gltf_loader_test glm::glm nlohmann_json::nlohmann
 
 set(PHYSICS_BLOCKWORLD_TEST_SOURCES
     src/World/Core/BlockWorld.cpp
+    src/World/Core/IUBlockWriter.cpp
     src/World/Chunks/ChunkManager.cpp
     src/World/Chunks/Chunk.cpp
+    src/World/Chunks/ChunkBuffer.cpp
     src/World/Math/GridMath.cpp
     src/World/Math/FluidCellState.cpp
     src/Blocks/BlockDefinitionStorage.cpp
@@ -974,14 +979,8 @@ target_link_libraries(block_light_emission_parse_test glm::glm nlohmann_json::nl
 
 add_executable(chunk_lighting_propagation_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/World/Chunks/Chunk.cpp
-    src/World/Chunks/ChunkManager.cpp
-    src/World/Core/BlockWorld.cpp
-    src/World/Core/IUBlockWriter.cpp
     src/World/Lighting/LightUtil.cpp
     src/World/Lighting/ChunkLighting.cpp
-    src/World/Math/FluidCellState.cpp
-    src/World/Math/GridMath.cpp
     src/Test/ChunkLightingPropagationTest.cpp)
 target_include_directories(chunk_lighting_propagation_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -991,14 +990,8 @@ target_link_libraries(chunk_lighting_propagation_test glm::glm nlohmann_json::nl
 
 add_executable(chunk_bulk_blocklight_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/World/Chunks/Chunk.cpp
-    src/World/Chunks/ChunkManager.cpp
-    src/World/Core/BlockWorld.cpp
-    src/World/Core/IUBlockWriter.cpp
     src/World/Lighting/LightUtil.cpp
     src/World/Lighting/ChunkLighting.cpp
-    src/World/Math/FluidCellState.cpp
-    src/World/Math/GridMath.cpp
     src/Test/ChunkBulkBlockLightTest.cpp)
 target_include_directories(chunk_bulk_blocklight_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -1008,8 +1001,6 @@ target_link_libraries(chunk_bulk_blocklight_test glm::glm nlohmann_json::nlohman
 
 add_executable(fluid_chunk_io_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
-    src/World/Chunks/ChunkBuffer.cpp
-    src/World/Core/IUBlockWriter.cpp
     src/World/IO/BinaryChunkSerializer.cpp
     src/Test/FluidChunkIoTest.cpp)
 target_include_directories(fluid_chunk_io_test PRIVATE
@@ -1057,10 +1048,26 @@ add_executable(camera_stability_test src/Test/CameraStabilityTest.cpp)
 target_include_directories(camera_stability_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(camera_stability_test glm::glm)
 
+add_executable(streaming_render_ready_invariants_test
+    src/Test/StreamingRenderReadyInvariantsTest.cpp)
+target_include_directories(streaming_render_ready_invariants_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(focus_ingress_policy_test
+    src/Test/FocusIngressPolicyTest.cpp)
+target_include_directories(focus_ingress_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
 add_executable(docked_overlay_layout_test src/Test/DockedOverlayLayoutTest.cpp
     src/Gui/Layout/DockedOverlayLayout.cpp)
 target_include_directories(docked_overlay_layout_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(docked_overlay_layout_test glm::glm)
+
+add_executable(gui_scrollbar_controller_test
+    src/Test/GuiScrollbarControllerTest.cpp
+    src/Gui/Core/GuiScrollbarController.cpp)
+target_include_directories(gui_scrollbar_controller_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
 
 add_executable(touch_input_bridge_lifecycle_test
     src/App/Platform/TouchInputBridge.cpp
@@ -1326,6 +1333,7 @@ add_executable(density_refine_parity_test
     src/WorldGen/Sampling/DensityRouter.cpp
     src/WorldGen/Sampling/DensityFieldSampler.cpp
     src/WorldGen/Sampling/ColumnSample.cpp
+    src/WorldGen/Sampling/CoarseHeightCache.cpp
     src/WorldGen/Features/CaveDepthBand.cpp
     src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/ThirdParty/stb_image.cpp
@@ -1333,6 +1341,19 @@ add_executable(density_refine_parity_test
 target_include_directories(density_refine_parity_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(density_refine_parity_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(noise_permutation_cache_test
+    src/WorldGen/Core/Noise.cpp
+    src/Test/NoisePermutationCacheTest.cpp)
+target_include_directories(noise_permutation_cache_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(chunk_buffer_capture_test
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/Test/ChunkBufferCaptureTest.cpp)
+target_include_directories(chunk_buffer_capture_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(chunk_buffer_capture_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(worldgen_smoothness_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
@@ -1351,6 +1372,7 @@ add_executable(worldgen_smoothness_test
     src/WorldGen/Sampling/TerrainClimateMapper.cpp
     src/WorldGen/Sampling/OverworldHeightSampler.cpp
     src/WorldGen/Sampling/ColumnSample.cpp
+    src/WorldGen/Sampling/CoarseHeightCache.cpp
     src/WorldGen/Features/ObjectFeatureConfig.cpp
     src/ThirdParty/stb_image.cpp
     src/Test/WorldGenSmoothnessTest.cpp)
@@ -1635,9 +1657,7 @@ set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     src/ResourcePacks/BlockNameUtil.cpp
     src/ResourcePacks/TextureOverrides.cpp
     src/ThirdParty/stb_image.cpp
-    src/World/Chunks/ChunkBuffer.cpp
     src/World/Chunks/ChunkGenerationToken.cpp
-    src/World/Core/IUBlockWriter.cpp
     src/World/Objects/ObjectLibrary.cpp
     src/World/Objects/ObjectUtil.cpp
     src/World/Physics/FluidSpreadSystem.cpp
@@ -1674,6 +1694,7 @@ set(WORLDGEN_FLUID_CHUNK_TEST_SOURCES
     src/WorldGen/Sampling/BiomeSampler.cpp
     src/WorldGen/Sampling/BiomeRegistry.cpp
     src/WorldGen/Sampling/ColumnSample.cpp
+    src/WorldGen/Sampling/CoarseHeightCache.cpp
     src/WorldGen/Features/CaveCarver.cpp
     src/WorldGen/Features/CaveDepthBand.cpp
     src/WorldGen/Features/RavineCarver.cpp
@@ -1810,6 +1831,15 @@ target_include_directories(movement_integration_test PRIVATE
 target_compile_definitions(movement_integration_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(movement_integration_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(player_clearance_test
+    ${PHYSICS_COLLISION_UNIT_SOURCES}
+    src/Test/PlayerClearanceTest.cpp)
+target_include_directories(player_clearance_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(player_clearance_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(player_clearance_test glm::glm nlohmann_json::nlohmann_json)
 
 if(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)

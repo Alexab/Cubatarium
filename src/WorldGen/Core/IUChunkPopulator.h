@@ -51,6 +51,9 @@ struct ChunkPopulateResult
   UChunkBuffer buffer;
   /// True when populate aborted mid-chunk (cancel); must not ApplyTo/seal.
   bool discarded{false};
+  /// IntraChunkSeal already applied in gen buffer (V_fluid: skip pocket seal on
+  /// commit). LiveShoreAir still deferred via DeferredShoreSealQueue.
+  bool fluidSealed{false};
 };
 
 class IUChunkPopulator

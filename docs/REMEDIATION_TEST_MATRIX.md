@@ -93,6 +93,7 @@ cmake --build build/desktop-linux-tsan --target chunk_generation_registry_test
 | `world_mesh_service_test` | Mesh service | 6 | smoke |
 | `block_placement_raycast_test` | Raycast placement | 1 | nightly |
 | `movement_integration_test` | Movement | 0 | smoke |
+| `player_clearance_test` | Player corridor clearance (1.8 in 2-air tunnel) | 0 | smoke |
 | `deterministic_replay_test` | Replay harness | 0 | smoke |
 
 ## Gate commands (remediation)

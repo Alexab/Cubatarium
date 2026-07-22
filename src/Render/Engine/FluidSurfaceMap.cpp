@@ -79,6 +79,69 @@ void ExtractChunkTexels(const std::vector<float> &surfaceStaging,
   }
 }
 
+int ChebyshevChunkDist(glm::ivec3 ground, int cx, int cz)
+{
+  return std::max(std::abs(ground.x - cx), std::abs(ground.z - cz));
+}
+
+void SortGroundChunksNearFirst(std::vector<glm::ivec3> &chunks, int cx, int cz)
+{
+  std::sort(chunks.begin(), chunks.end(),
+            [cx, cz](const glm::ivec3 &a, const glm::ivec3 &b)
+            {
+              const int da = ChebyshevChunkDist(a, cx, cz);
+              const int db = ChebyshevChunkDist(b, cx, cz);
+              if (da != db)
+              {
+                return da < db;
+              }
+              if (a.z != b.z)
+              {
+                return a.z < b.z;
+              }
+              return a.x < b.x;
+            });
+}
+
+int ChunkUpdateBudget(int pending)
+{
+  // Keep per-frame hitch bounded, but catch up when the window is large
+  // (otherwise transparent/fog surface trails terrain by many frames).
+  if (pending <= UFluidSurfaceMap::kMaxChunkUpdatesPerFrame)
+  {
+    return UFluidSurfaceMap::kMaxChunkUpdatesPerFrame;
+  }
+  if (pending <= 32)
+  {
+    return 16;
+  }
+  if (pending <= 96)
+  {
+    return 24;
+  }
+  return UFluidSurfaceMap::kMaxChunkUpdatesBurst;
+}
+
+int NearFluidDirtyCount(const std::unordered_set<glm::ivec3, IVec3Hash> &dirty,
+                        int cx, int cz)
+{
+  int near = 0;
+  for (const glm::ivec3 &ground : dirty)
+  {
+    if (ChebyshevChunkDist(ground, cx, cz) <= 1)
+    {
+      ++near;
+    }
+  }
+  return near;
+}
+
+int FluidDirtyBudget(int pending, int near_pending)
+{
+  // Always cover the underfeet water ring in one frame when possible (3x3).
+  return std::max(ChunkUpdateBudget(pending), std::min(near_pending, 9));
+}
+
 } // namespace
 
 void UFluidSurfaceMap::EnsureGpuResources()
@@ -119,6 +182,7 @@ void UFluidSurfaceMap::DestroyGpuResources()
   GpuSizeBlocks = 0;
   NeedFullGpuUpload = false;
   PendingGpuGroundChunks.clear();
+  PendingRebuildGroundChunks.clear();
   SurfaceStaging.clear();
   FluidIndexStaging.clear();
   FluidBottomStaging.clear();
@@ -157,39 +221,129 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
                                .count();
     LastFrameStats.DirtyChunksPending =
         static_cast<int>(fluidSurfaceDirty.size()) +
-        static_cast<int>(PendingGpuGroundChunks.size());
+        static_cast<int>(PendingGpuGroundChunks.size()) +
+        static_cast<int>(PendingRebuildGroundChunks.size());
   };
+
+  auto patch_one = [&](glm::ivec3 groundChunk, int hintY)
+  {
+    const FluidSurfaceColumnSlice *slice =
+        cache.GetFluidSurfaceSlice(world, registry, groundChunk, hintY);
+    PatchGroundChunkStaging(SurfaceStaging, FluidIndexStaging,
+                            FluidBottomStaging, SizeBlocks, WindowOriginBlock,
+                            groundChunk, slice, registry);
+    QueueGpuChunk(groundChunk);
+  };
+
+  auto drain_pending_rebuild = [&](int budget) -> int
+  {
+    if (PendingRebuildGroundChunks.empty() || budget <= 0)
+    {
+      return 0;
+    }
+    SortGroundChunksNearFirst(PendingRebuildGroundChunks, cx, cz);
+    const int take = std::min(
+        budget, static_cast<int>(PendingRebuildGroundChunks.size()));
+    for (int i = 0; i < take; ++i)
+    {
+      patch_one(PendingRebuildGroundChunks[static_cast<size_t>(i)],
+                PendingRebuildScanHintY);
+    }
+    PendingRebuildGroundChunks.erase(
+        PendingRebuildGroundChunks.begin(),
+        PendingRebuildGroundChunks.begin() + take);
+    return take;
+  };
+
+  auto drain_dirty_in_window = [&](int budget) -> int
+  {
+    if (budget <= 0 || fluidSurfaceDirty.empty())
+    {
+      return 0;
+    }
+    std::vector<glm::ivec3> dirtyInWindow;
+    dirtyInWindow.reserve(fluidSurfaceDirty.size());
+    for (const glm::ivec3 &groundChunk : fluidSurfaceDirty)
+    {
+      if (GroundChunkIntersectsWindow(groundChunk, WindowOriginBlock,
+                                      SizeBlocks))
+      {
+        dirtyInWindow.push_back(groundChunk);
+      }
+    }
+    SortGroundChunksNearFirst(dirtyInWindow, cx, cz);
+    // Underfeet/water ring (r<=1) before far columns so surface does not
+    // trail opaque terrain by many frames when dirty backlog is large.
+    int processed = 0;
+    int left = budget;
+    for (const glm::ivec3 &groundChunk : dirtyInWindow)
+    {
+      if (left <= 0)
+      {
+        break;
+      }
+      if (ChebyshevChunkDist(groundChunk, cx, cz) > 1)
+      {
+        continue;
+      }
+      patch_one(groundChunk, scanHintY);
+      ++processed;
+      --left;
+    }
+    for (const glm::ivec3 &groundChunk : dirtyInWindow)
+    {
+      if (left <= 0)
+      {
+        break;
+      }
+      if (ChebyshevChunkDist(groundChunk, cx, cz) <= 1)
+      {
+        continue;
+      }
+      patch_one(groundChunk, scanHintY);
+      ++processed;
+      --left;
+    }
+    return processed;
+  };
+
+  // Continue a budgeted full/scroll rebuild from a previous frame.
+  if (!PendingRebuildGroundChunks.empty() && !sizeChanged && !windowMoved &&
+      SizeBlocks == sizeBlocks)
+  {
+    const int pending = static_cast<int>(PendingRebuildGroundChunks.size()) +
+                        static_cast<int>(fluidSurfaceDirty.size());
+    const int near_dirty =
+        NearFluidDirtyCount(fluidSurfaceDirty, cx, cz);
+    const int budget = FluidDirtyBudget(pending, near_dirty);
+    int processed = drain_pending_rebuild(budget);
+    // Near dirty must not wait for the entire window rebuild to finish.
+    processed += drain_dirty_in_window(budget - processed);
+    LastFrameStats.DirtyChunksProcessed = processed;
+    LastFrameStats.FullRebuild = !PendingRebuildGroundChunks.empty();
+    if (PendingRebuildGroundChunks.empty())
+    {
+      NeedFullGpuUpload = true;
+    }
+    LastCameraBlockXZ = glm::ivec2(cameraBlockXZ.x, cameraBlockXZ.z);
+    LastMeshRevision = cache.GetMeshRevision();
+    finish_cpu();
+    return true;
+  }
+  if (sizeChanged || windowMoved)
+  {
+    PendingRebuildGroundChunks.clear();
+  }
 
   if (!sizeChanged && !windowMoved && Valid)
   {
     if (!fluidSurfaceDirty.empty())
     {
-      std::vector<glm::ivec3> dirtyInWindow;
-      dirtyInWindow.reserve(fluidSurfaceDirty.size());
-      for (const glm::ivec3 &groundChunk : fluidSurfaceDirty)
-      {
-        if (GroundChunkIntersectsWindow(groundChunk, WindowOriginBlock,
-                                        SizeBlocks))
-        {
-          dirtyInWindow.push_back(groundChunk);
-        }
-      }
-      int processed = 0;
-      for (const glm::ivec3 &groundChunk : dirtyInWindow)
-      {
-        if (processed >= kMaxChunkUpdatesPerFrame)
-        {
-          break;
-        }
-        const FluidSurfaceColumnSlice *slice = cache.GetFluidSurfaceSlice(
-            world, registry, groundChunk, scanHintY);
-        PatchGroundChunkStaging(SurfaceStaging, FluidIndexStaging,
-                                FluidBottomStaging, SizeBlocks,
-                                WindowOriginBlock, groundChunk, slice,
-                                registry);
-        QueueGpuChunk(groundChunk);
-        ++processed;
-      }
+      const int near_dirty =
+          NearFluidDirtyCount(fluidSurfaceDirty, cx, cz);
+      const int budget = FluidDirtyBudget(
+          static_cast<int>(fluidSurfaceDirty.size()), near_dirty);
+      const int processed = drain_dirty_in_window(budget);
       LastFrameStats.DirtyChunksProcessed = processed;
       LastCameraBlockXZ = glm::ivec2(cameraBlockXZ.x, cameraBlockXZ.z);
       LastMeshRevision = cache.GetMeshRevision();
@@ -220,8 +374,8 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
         glm::vec2(1.0f / static_cast<float>(std::max(SizeBlocks, 1)),
                   1.0f / static_cast<float>(std::max(SizeBlocks, 1)));
     PendingGpuGroundChunks.clear();
-
-    int processed = 0;
+    PendingRebuildGroundChunks.clear();
+    PendingRebuildScanHintY = scanHintY;
     for (int gz = cz - renderDistChunks; gz <= cz + renderDistChunks; ++gz)
     {
       for (int gx = cx - renderDistChunks; gx <= cx + renderDistChunks; ++gx)
@@ -232,17 +386,15 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
         {
           continue;
         }
-        const FluidSurfaceColumnSlice *slice =
-            cache.GetFluidSurfaceSlice(world, registry, groundChunk, scanHintY);
-        PatchGroundChunkStaging(SurfaceStaging, FluidIndexStaging,
-                                FluidBottomStaging, SizeBlocks, originBlock,
-                                groundChunk, slice, registry);
-        ++processed;
+        PendingRebuildGroundChunks.push_back(groundChunk);
       }
     }
+    const int budget =
+        ChunkUpdateBudget(static_cast<int>(PendingRebuildGroundChunks.size()));
+    const int processed = drain_pending_rebuild(budget);
     LastFrameStats.DirtyChunksProcessed = processed;
-    LastFrameStats.FullRebuild = false;
-    NeedFullGpuUpload = true;
+    LastFrameStats.FullRebuild = !PendingRebuildGroundChunks.empty();
+    NeedFullGpuUpload = PendingRebuildGroundChunks.empty();
     LastCameraBlockXZ = glm::ivec2(cameraBlockXZ.x, cameraBlockXZ.z);
     LastMeshRevision = cache.GetMeshRevision();
     finish_cpu();
@@ -264,23 +416,21 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
   FluidIndexStaging.assign(texelCount, 0);
   FluidBottomStaging.assign(texelCount, kNoSurfaceSentinel);
   PendingGpuGroundChunks.clear();
-
-  int processed = 0;
+  PendingRebuildGroundChunks.clear();
+  PendingRebuildScanHintY = scanHintY;
   for (int gz = cz - renderDistChunks; gz <= cz + renderDistChunks; ++gz)
   {
     for (int gx = cx - renderDistChunks; gx <= cx + renderDistChunks; ++gx)
     {
-      const glm::ivec3 groundChunk(gx, 0, gz);
-      const FluidSurfaceColumnSlice *slice =
-          cache.GetFluidSurfaceSlice(world, registry, groundChunk, scanHintY);
-      PatchGroundChunkStaging(SurfaceStaging, FluidIndexStaging,
-                              FluidBottomStaging, SizeBlocks, originBlock,
-                              groundChunk, slice, registry);
-      ++processed;
+      PendingRebuildGroundChunks.emplace_back(gx, 0, gz);
     }
   }
+  const int budget =
+      ChunkUpdateBudget(static_cast<int>(PendingRebuildGroundChunks.size()));
+  const int processed = drain_pending_rebuild(budget);
   LastFrameStats.DirtyChunksProcessed = processed;
-  NeedFullGpuUpload = true;
+  LastFrameStats.FullRebuild = !PendingRebuildGroundChunks.empty();
+  NeedFullGpuUpload = PendingRebuildGroundChunks.empty();
   LastCameraBlockXZ = glm::ivec2(cameraBlockXZ.x, cameraBlockXZ.z);
   LastMeshRevision = cache.GetMeshRevision();
   finish_cpu();
@@ -388,22 +538,27 @@ bool UFluidSurfaceMap::Update(UBlockWorld &world, UBlockRegistry &registry,
   }
   else if (!PendingGpuGroundChunks.empty())
   {
-    int uploaded = 0;
-    std::vector<glm::ivec3> uploadedChunks;
-    uploadedChunks.reserve(kMaxChunkUpdatesPerFrame);
+    const int cx = FloorDiv(cameraBlockXZ.x, CHUNK_SIZE);
+    const int cz = FloorDiv(cameraBlockXZ.z, CHUNK_SIZE);
+    std::vector<glm::ivec3> pending;
+    pending.reserve(PendingGpuGroundChunks.size());
     for (const glm::ivec3 &groundChunk : PendingGpuGroundChunks)
     {
-      if (uploaded >= kMaxChunkUpdatesPerFrame)
+      pending.push_back(groundChunk);
+    }
+    SortGroundChunksNearFirst(pending, cx, cz);
+    const int budget =
+        ChunkUpdateBudget(static_cast<int>(pending.size()));
+    int uploaded = 0;
+    for (const glm::ivec3 &groundChunk : pending)
+    {
+      if (uploaded >= budget)
       {
         break;
       }
       UploadDirtyChunkGpu(groundChunk);
-      uploadedChunks.push_back(groundChunk);
-      ++uploaded;
-    }
-    for (const glm::ivec3 &groundChunk : uploadedChunks)
-    {
       PendingGpuGroundChunks.erase(groundChunk);
+      ++uploaded;
     }
     Valid = true;
   }
@@ -414,7 +569,8 @@ bool UFluidSurfaceMap::Update(UBlockWorld &world, UBlockRegistry &registry,
                              .count();
   LastFrameStats.DirtyChunksPending =
       static_cast<int>(cache.GetFluidSurfaceDirtyGroundChunks().size()) +
-      static_cast<int>(PendingGpuGroundChunks.size());
+      static_cast<int>(PendingGpuGroundChunks.size()) +
+      static_cast<int>(PendingRebuildGroundChunks.size());
   return Valid;
 }
 

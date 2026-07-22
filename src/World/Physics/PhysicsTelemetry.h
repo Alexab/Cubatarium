@@ -2,6 +2,7 @@
 #define PHYSICSTELEMETRY_H
 
 #include <cstdint>
+#include <string>
 
 namespace cutum
 {
@@ -37,20 +38,72 @@ struct PhysicsTelemetry
   uint64_t AsyncRelightInflight{0};
   uint64_t RelightDiscardedLate{0};
   uint64_t MeshDiscardedLate{0};
+  /// ApplyMeshResult rejected as stale (revision mismatch) — remesh thrash signal.
+  uint64_t MeshApplyStale{0};
   double RelightCompletedPerSec{0.0};
   double CommitPhysicsMs{0.0};
   double CommitRelightMs{0.0};
   double CommitMeshMs{0.0};
   double CommitApplyMs{0.0};
   double CommitSealMs{0.0};
+  /// Breakdown inside StreamMs (UpdateStreaming + TickAsyncChunkSystems).
+  double StreamerUpdateMs{0.0};
+  double AsyncIoMs{0.0};
+  double RelightDrainMs{0.0};
   double MeshSyncMs{0.0};
   double MeshSnapshotMs{0.0};
+  /// Wall time spent in RebuildChunkImmediate this frame (inside MeshEmergeMs).
+  double MeshImmediateMs{0.0};
+  int MeshImmediateCount{0};
+  /// RebuildDirtyChunksWithStats wall (sync fill + schedule + apply drain).
+  double MeshDirtyTickMs{0.0};
+  /// TickMeshEmerge wall before RebuildDirtyChunksWithStats (prep/idle/cold).
+  double MeshEmergePrepMs{0.0};
   int PrefetchVisualOps{0};
   int PrefetchKeepOps{0};
   int GenBacklogTotal{0};
   int KeepCols{0};
   int VisualCols{0};
   double IdlePrefetchMs{0.0};
+  /// Streaming gate diagnostics (filled each UpdateStreaming).
+  int StreamLoads{0};
+  int StreamAsyncQueued{0};
+  int StreamRingBlocked{0};
+  int StreamNearSkipped{0};
+  int StreamLoadCandidates{0};
+  int PendingLightCount{0};
+  int FocusChunkX{0};
+  int FocusChunkZ{0};
+  int UnderfeetNeed{0};
+  /// Legacy OR latch (missing mesh OR pending light) — prefer VisualHoles.
+  int NearFocusHoles{0};
+  /// Missing GreedyCache in focus (visual holes only).
+  int VisualHoles{0};
+  /// Missing mesh or dark/unlit preview in focus (render contract).
+  int UnfinishedVisual{0};
+  /// PendingLightBeforeMesh in focus (light debt, not visual holes).
+  int LightDebt{0};
+  /// Count of focus columns with missing mesh (0..N).
+  int FocusMissingMesh{0};
+  /// Count of focus columns with mesh but no sky light sample.
+  int FocusDarkMesh{0};
+  /// Pending-light + sticky black preview columns in focus (subset of dark).
+  int FocusPendingDark{0};
+  int FocusStickyRemesh{0};
+  /// Focus columns failing IsColumnRenderReady (mesh dirty/missing/inflight).
+  int FocusNotRenderReady{0};
+  /// Dirty mesh chunks inside focus radius (lit-but-dirty remesh debt).
+  int FocusDirtyChunks{0};
+  /// Unfinished focus columns ahead of movement/view forward (dot >= 0).
+  int FocusUnfinishedAhead{0};
+  /// Unfinished focus columns behind movement/view forward (dot < 0).
+  int FocusUnfinishedBehind{0};
+  /// 0=Green, 1=Yellow, 2=Red (StreamingPressureLevel).
+  int StreamPressure{0};
+  /// PendingLightBeforeMesh count inside focus radius (vs global PendingLightCount).
+  int PendingLightFocus{0};
+  /// Comma-separated (cx,cz) for focus pending columns (telemetry only).
+  std::string PendingFocusCols;
 };
 
 } // namespace cutum

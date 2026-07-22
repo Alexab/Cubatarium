@@ -2,6 +2,7 @@
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Math/FluidCellState.h"
+#include <array>
 #include <cstring>
 #include <unordered_map>
 #include <vector>
@@ -155,6 +156,9 @@ UBinaryChunkSerializer::Serialize(glm::ivec3 chunkCoord, const UChunk &chunk,
   AppendU32(bytes, static_cast<uint32_t>(CHUNK_VOLUME));
   bytes.insert(bytes.end(), chunk.GetFluidData().begin(),
                chunk.GetFluidData().end());
+  AppendU32(bytes, static_cast<uint32_t>(CHUNK_VOLUME));
+  bytes.insert(bytes.end(), chunk.GetLightData().begin(),
+               chunk.GetLightData().end());
   return out;
 }
 
@@ -176,7 +180,8 @@ UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
 
   size_t offset = 4;
   const uint8_t version = bytes[offset++];
-  if (version != kVersion && version != kVersionLegacy)
+  if (version != kVersion && version != kVersionFluid &&
+      version != kVersionLegacy)
   {
     return buffer;
   }
@@ -280,7 +285,7 @@ UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
     return buffer;
   }
 
-  if (version >= kVersion)
+  if (version >= kVersionFluid)
   {
     uint32_t fluid_byte_count = 0;
     if (!ReadU32(bytes, offset, fluid_byte_count))
@@ -320,6 +325,28 @@ UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
           }
         }
       }
+    }
+  }
+
+  if (version >= kVersion)
+  {
+    uint32_t light_byte_count = 0;
+    if (!ReadU32(bytes, offset, light_byte_count))
+    {
+      buffer.Clear();
+      return buffer;
+    }
+    if (light_byte_count == CHUNK_VOLUME)
+    {
+      if (offset + CHUNK_VOLUME > bytes.size())
+      {
+        buffer.Clear();
+        return buffer;
+      }
+      std::array<uint8_t, CHUNK_VOLUME> light{};
+      std::memcpy(light.data(), bytes.data() + offset, CHUNK_VOLUME);
+      offset += CHUNK_VOLUME;
+      buffer.SetChunkLightData(chunkCoord, light);
     }
   }
 

@@ -15,6 +15,7 @@ enum class JobPoolKind
 };
 
 constexpr std::size_t kMaxWorkersPerPool = 4;
+constexpr std::size_t kMaxMeshBuildWorkers = 8;
 
 std::size_t ComputeWorkerThreadCount(JobPoolKind kind,
                                      std::size_t overrideCount = 0);

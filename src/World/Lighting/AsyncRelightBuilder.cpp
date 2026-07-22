@@ -3,6 +3,7 @@
 #include "Blocks/BlockRegistry.h"
 #include "Core/Jobs/JobThreadBudget.h"
 #include "World/Core/BlockWorld.h"
+#include <algorithm>
 #include <mutex>
 #include <thread>
 
@@ -89,10 +90,10 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
 std::vector<RelightComputeResult>
 UAsyncRelightBuilder::DrainCompleted(int max_per_frame)
 {
-  const std::size_t limit =
-      max_per_frame > 0 ? static_cast<std::size_t>(max_per_frame) : 0;
-  std::vector<RelightComputeResult> drained =
-      limit > 0 ? Completed.DrainUpTo(limit) : std::vector<RelightComputeResult>{};
+  (void)max_per_frame;
+  // DrainAll so stale epoch results free light arrays immediately instead of
+  // peeling DrainUpTo while new Captures keep enqueueing.
+  std::vector<RelightComputeResult> drained = Completed.DrainAll();
   const uint64_t current_epoch = Epoch.load(std::memory_order_acquire);
   std::vector<RelightComputeResult> accepted;
   accepted.reserve(drained.size());
