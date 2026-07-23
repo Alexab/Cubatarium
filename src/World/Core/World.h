@@ -721,6 +721,12 @@ public:
   {
     EffectiveFogEndMarginBlocks = std::max(0, margin);
   }
+  /// Unfinished/holes while near water — stronger fog + wider sky horizon.
+  bool GetNearWaterUnfinishedFog() const { return NearWaterUnfinishedFog; }
+  void SetNearWaterUnfinishedFog(bool enabled)
+  {
+    NearWaterUnfinishedFog = enabled;
+  }
   float GetAltitudeAboveTerrain() const { return AltitudeAboveTerrain; }
   void SetAltitudeAboveTerrain(float altitude) { AltitudeAboveTerrain = altitude; }
   void UpdateFrameHitchDiagnostics(double draw_scene_mks,
@@ -1174,6 +1180,8 @@ private:
   int EffectiveFogRenderDistance{0};
   /// Dynamic fog end margin (pull-in boost); 0 → RenderSettings default.
   int EffectiveFogEndMarginBlocks{0};
+  /// Hole/unfinished debt while near fluid / sea — fog A+B boost.
+  bool NearWaterUnfinishedFog{false};
   float EffectiveFogStartRatio{0.85f};
   float AltitudeAboveTerrain{0.0f};
   StreamingAltitudePolicyParams AltitudeParams;

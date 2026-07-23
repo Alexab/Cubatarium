@@ -68,6 +68,12 @@ not Y-band Capture. With `AsyncRelight`, Sync now priority-enqueues FIFO only;
 paced `DrainRelightQueues` keeps Capture. Expect: no multi-second `prep` spikes;
 holes may linger slightly longer under SoftDefer+fog.
 
+### Fog water unfinished A+B (2026-07-23)
+
+Plan: [`FOG_WATER_UNFINISHED.md`](FOG_WATER_UNFINISHED.md). Near fluid/sea +
+holes/unfinished → stronger fog pull-in (`fog_water_start_ratio_cap` 0.28) and
+wider sky horizon (`FogHorizonElevation` 0.22). No proxy quads.
+
 ## Lessons (2026-07-22 evening)
 
 1. **Aggressive C (sync_cap=0, ban underfeet, StarveRemeshForHoles)** → sticky↑ and spike↑. Do not repeat.

@@ -53,6 +53,10 @@ struct RenderSettings
   bool FogPullInEnabled{true};
   /// Floor for EffectiveFogRenderDistance when pull-in is active.
   int FogRdMin{3};
+  /// Extra fog pull-in + wider sky horizon when unfinished near water.
+  bool FogWaterUnfinishedBoost{true};
+  /// Cap EffectiveFogStartRatio under water unfinished boost (lower = closer).
+  float FogWaterStartRatioCap{0.28f};
   /// Use terrain surface height for altitude-adaptive fog (not feet Y).
   bool AltitudeUseTerrainSurface{true};
   /// glfwSwapInterval: false → 0 (uncapped present). Default off to avoid

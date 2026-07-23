@@ -127,6 +127,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   FogEnabled = 0.0f;
   FogHorizontal = 0.0f;
   FogHorizonBlend = 0.0f;
+  FogHorizonElevation = 0.35f;
   OverlayTintAlpha = 0.0f;
   OverlayBlockId = BLOCK_AIR;
 
@@ -212,6 +213,12 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
     FogHorizontal = render.DistanceFogHorizontal ? 1.0f : 0.0f;
     FogHorizonBlend = 1.0f;
     SmoothedFogColor = glm::mix(SmoothedFogColor, distance_fog.Color, 0.2f);
+    // B: blend already saturated at 1 — widen sky horizon band over unfinished
+    // water so empty columns read as fog, not clear skydome.
+    if (world.GetNearWaterUnfinishedFog())
+    {
+      FogHorizonElevation = 0.22f;
+    }
   }
 
   if (fluid.inFluid)
