@@ -2069,6 +2069,15 @@ int UWorld::DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
 int UWorld::DrainIdleFocusPendingLightSync(glm::ivec3 focus_ground_horiz,
                                            int radius_chunks, int max_columns)
 {
+  // Manual 164613: sync RelightTerrainColumn here was 1–3s wall
+  // (mesh_emerge_prep≈relight_drain, stream_ms small, holes=1). With
+  // AsyncRelight, break-glass only priority-enqueues into the FIFO; paced
+  // DrainRelightQueues owns Capture / Y-band (RelightCaptureBandCy).
+  if (ProceduralTemplate.AsyncRelight)
+  {
+    return DrainIdleFocusPendingLight(focus_ground_horiz, radius_chunks,
+                                      max_columns);
+  }
   if (LightingRelightDeferred || !MeshService || !BlockRegistry ||
       max_columns <= 0 || radius_chunks < 0 ||
       PendingLightBeforeMesh.empty())
@@ -2152,8 +2161,7 @@ int UWorld::DrainIdleFocusPendingLightSync(glm::ivec3 focus_ground_horiz,
       break;
     }
     AsyncRelightColumnsInFlight.erase(c.key);
-    // Always seed skylight on idle sync — CanSeed gate left edge columns dark
-    // and SoftDefer kept Pending forever when async never MarkRelit'd.
+    // Legacy path when AsyncRelight is off — full-column sync on main.
     RelightTerrainColumn(c.key.x * CHUNK_SIZE, c.key.y * CHUNK_SIZE, c.min_y,
                          c.max_y, /*priority_mesh=*/true,
                          /*include_skylight=*/true,

@@ -59,6 +59,15 @@ dynamic margin/start under debt, refresh local config defaults.
 Manual: walk/dive at visual edge; Yellow should shorten fog End without shrinking
 mesh RD; incomplete surface should stay fogged, not clear-then-fog.
 
+### Sync break-glass → async FIFO (2026-07-23)
+
+Manual `164613`: spikes ≥1 s had `stream_ms` small and
+`mesh_emerge_prep≈relight_drain` — root cause was
+`DrainIdleFocusPendingLightSync` → `RelightTerrainColumn` (full-column sync BFS),
+not Y-band Capture. With `AsyncRelight`, Sync now priority-enqueues FIFO only;
+paced `DrainRelightQueues` keeps Capture. Expect: no multi-second `prep` spikes;
+holes may linger slightly longer under SoftDefer+fog.
+
 ## Lessons (2026-07-22 evening)
 
 1. **Aggressive C (sync_cap=0, ban underfeet, StarveRemeshForHoles)** → sticky↑ and spike↑. Do not repeat.

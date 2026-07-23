@@ -962,7 +962,9 @@ public:
   /// Idle sync relight for focus pending columns that already have preview mesh.
   int DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
                                  int radius_chunks, int max_columns);
-  /// Same as above but sync RelightTerrainColumn (strict budget; outer ring first).
+  /// Break-glass for frozen pending focus light. With AsyncRelight: priority
+  /// FIFO enqueue only (no sync RelightTerrainColumn — manual 164613 hitch).
+  /// Without AsyncRelight: sync RelightTerrainColumn (outer ring first).
   int DrainIdleFocusPendingLightSync(glm::ivec3 focus_ground_horiz,
                                      int radius_chunks, int max_columns);
   /// Commit-time skylight seed is only safe when the neighbor ring is loaded.
