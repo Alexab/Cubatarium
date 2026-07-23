@@ -1579,6 +1579,68 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
                        world.PhysicsTelemetryData.FocusChunkZ),
             Streamer->GetVisualRenderDistance());
       }
+      // Stepped Completed-slot expand when overflow discard rises under RAM
+      // headroom (CompletedExpandEnabled). At most once per ~90 frames.
+      {
+        auto &tune = URuntimeTuning::Get();
+        const uint64_t mesh_disc =
+            meshService.GetMeshCompletedDiscardedOverflow();
+        const uint64_t relight_disc =
+            world.GetRelightCompletedDiscardedOverflow();
+        const uint64_t mesh_delta =
+            mesh_disc >= LastMeshCompletedDiscarded
+                ? mesh_disc - LastMeshCompletedDiscarded
+                : 0;
+        const uint64_t relight_delta =
+            relight_disc >= LastRelightCompletedDiscarded
+                ? relight_disc - LastRelightCompletedDiscarded
+                : 0;
+        constexpr int kExpandCooldownFrames = 90;
+        constexpr uint64_t kDiscardDeltaThreshold = 4;
+        constexpr size_t kHardMaxSlots = 128;
+        const bool expand_ok =
+            tune.CompletedExpandEnabled &&
+            sample.private_mb <
+                static_cast<double>(tune.MemoryExpandKeepMb) &&
+            decision.memory_pressure == 0 &&
+            sample.stream_pressure <= 1 &&
+            StreamingFrameCounter - LastCompletedExpandFrame >=
+                kExpandCooldownFrames;
+        if (expand_ok && mesh_delta >= kDiscardDeltaThreshold)
+        {
+          size_t cap = meshService.GetMeshCompletedCapacity();
+          if (cap == 0)
+          {
+            cap = 24;
+          }
+          const size_t next =
+              (std::min)(kHardMaxSlots, (std::max)(cap + 1, (cap * 3) / 2));
+          if (next > cap)
+          {
+            meshService.SetMeshCompletedCapacity(next);
+            ++tune.BufferExpandEvents;
+            LastCompletedExpandFrame = StreamingFrameCounter;
+          }
+        }
+        if (expand_ok && relight_delta >= kDiscardDeltaThreshold)
+        {
+          size_t cap = world.GetRelightCompletedCapacity();
+          if (cap == 0)
+          {
+            cap = 32;
+          }
+          const size_t next =
+              (std::min)(kHardMaxSlots, (std::max)(cap + 1, (cap * 3) / 2));
+          if (next > cap)
+          {
+            world.SetRelightCompletedCapacity(next);
+            ++tune.BufferExpandEvents;
+            LastCompletedExpandFrame = StreamingFrameCounter;
+          }
+        }
+        LastMeshCompletedDiscarded = mesh_disc;
+        LastRelightCompletedDiscarded = relight_disc;
+      }
     }
     Streamer->SetRenderDistance(effectiveRenderDistance);
     // Visual cull/mesh focus = visual RD; keep ring is Visual+margin.

@@ -128,6 +128,9 @@ private:
   UMemoryBudgetController MemoryBudget{};
   int StreamingFrameCounter{0};
   MemoryBudgetDecision LastMemoryDecision{};
+  uint64_t LastMeshCompletedDiscarded{0};
+  uint64_t LastRelightCompletedDiscarded{0};
+  int LastCompletedExpandFrame{-10000};
 };
 
 } // namespace cutum

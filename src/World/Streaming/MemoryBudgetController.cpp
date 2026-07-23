@@ -32,8 +32,9 @@ UMemoryBudgetController::Evaluate(const MemoryBudgetSample &sample,
   {
     d.memory_pressure = 0;
   }
-  d.memory_pressure =
-      std::max(d.memory_pressure, sample.stream_pressure);
+  // Soft/Hard is byte-budget only. Do NOT OR stream Yellow/Red into
+  // memory_pressure — that blocked Keep expand at ~0.5 GB private while
+  // StreamingPressure stayed Yellow (manual 20260723-081832).
 
   const bool green_expand =
       d.memory_pressure == 0 && sample.visual_holes == 0 &&

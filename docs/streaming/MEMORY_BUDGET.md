@@ -96,6 +96,13 @@ emergency_cancel_outside, capture_hard_cap, memory_pressure.
 - **Soft:** no expand, keep→baseline, capture_hard_cap≤2.
 - **Hard:** capture_hard_cap=1, cancel outside, no keep prewarm.
 
+- Soft/Hard (`memory_pressure`) is **byte-budget only** (`private_mb` vs SoftMb /
+  BudgetMb). Streaming Yellow/Red must not force Soft — that blocked Keep expand
+  while RAM was fine (manual `20260723-081832`).
+- Completed rings may **step-expand** (×1.5, hard max 128) when
+  `CompletedExpandEnabled` and discard delta ≥4 under `ExpandKeepMb`; logged via
+  `buffer_expand_events`.
+
 ## Validation gates
 
 - Manual: walk + place light block — `private_mb` bounded; no hang.
