@@ -10,10 +10,25 @@ namespace cutum
 
 void ApplyRuntimeTuningFromConfig(const nlohmann::json *physics,
                                   const nlohmann::json *render,
-                                  const nlohmann::json *procedural)
+                                  const nlohmann::json *procedural,
+                                  const nlohmann::json *memory)
 {
   URuntimeTuning &tuning = URuntimeTuning::Get();
   URuntimeTuning::ResetToDefaults();
+
+  if (memory && memory->is_object())
+  {
+    if (memory->contains("tier") && (*memory)["tier"].is_string())
+    {
+      URuntimeTuning::ApplyMemoryTier(
+          (*memory)["tier"].get_ref<const std::string &>().c_str());
+    }
+    tuning.MemoryBudgetMb =
+        memory->value("budget_mb", tuning.MemoryBudgetMb);
+    tuning.MemorySoftMb = memory->value("soft_mb", tuning.MemorySoftMb);
+    tuning.MemoryExpandKeepMb =
+        memory->value("expand_keep_mb", tuning.MemoryExpandKeepMb);
+  }
 
   if (physics && physics->contains("fluid_tuning") &&
       (*physics)["fluid_tuning"].is_object())

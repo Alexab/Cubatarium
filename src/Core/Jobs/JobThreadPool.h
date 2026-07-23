@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <deque>
@@ -48,17 +49,87 @@ private:
 template <typename T> class UCompletedJobQueue
 {
 public:
+  void SetCapacity(std::size_t cap)
+  {
+    std::lock_guard<std::mutex> lock(Mutex);
+    if (cap == Cap)
+    {
+      return;
+    }
+    // Drain to linear vector, then rebuild ring at new capacity.
+    std::vector<T> kept;
+    kept.reserve(Count);
+    for (std::size_t i = 0; i < Count; ++i)
+    {
+      kept.push_back(std::move(Items[(Head + i) % Items.size()]));
+    }
+    Cap = cap;
+    Head = 0;
+    Count = 0;
+    Items.clear();
+    if (Cap > 0)
+    {
+      Items.resize(Cap);
+      const std::size_t keep_n =
+          (kept.size() > Cap) ? Cap : kept.size();
+      const std::size_t drop_n = kept.size() - keep_n;
+      // Keep newest keep_n entries when shrinking.
+      for (std::size_t i = drop_n; i < kept.size(); ++i)
+      {
+        Items[Count++] = std::move(kept[i]);
+      }
+      if (drop_n > 0)
+      {
+        Discarded.fetch_add(drop_n, std::memory_order_relaxed);
+      }
+    }
+    else
+    {
+      Items = std::move(kept);
+      Count = Items.size();
+    }
+  }
+
+  std::size_t Capacity() const
+  {
+    std::lock_guard<std::mutex> lock(Mutex);
+    return Cap;
+  }
+
+  uint64_t DiscardedOverflow() const
+  {
+    return Discarded.load(std::memory_order_relaxed);
+  }
+
   void Push(T value)
   {
     std::lock_guard<std::mutex> lock(Mutex);
-    Items.push_back(std::move(value));
+    PushUnlocked(std::move(value), nullptr);
+  }
+
+  /// Push with drop-oldest when Cap > 0 and full. Returns true if an item was
+  /// discarded (moved into dropped_out when non-null).
+  bool PushDropOldest(T &&item, T *dropped_out = nullptr)
+  {
+    std::lock_guard<std::mutex> lock(Mutex);
+    return PushUnlocked(std::move(item), dropped_out);
   }
 
   std::vector<T> DrainAll()
   {
     std::lock_guard<std::mutex> lock(Mutex);
     std::vector<T> drained;
-    drained.swap(Items);
+    drained.reserve(Count);
+    for (std::size_t i = 0; i < Count; ++i)
+    {
+      drained.push_back(std::move(Items[(Head + i) % Items.size()]));
+    }
+    Head = 0;
+    Count = 0;
+    if (Cap == 0)
+    {
+      Items.clear();
+    }
     return drained;
   }
 
@@ -66,36 +137,91 @@ public:
   {
     std::lock_guard<std::mutex> lock(Mutex);
     std::vector<T> drained;
-    if (maxCount == 0 || Items.empty())
+    if (maxCount == 0 || Count == 0)
     {
       return drained;
     }
-    const std::size_t take = std::min(maxCount, Items.size());
+    const std::size_t take = std::min(maxCount, Count);
     drained.reserve(take);
     for (std::size_t i = 0; i < take; ++i)
     {
-      drained.push_back(std::move(Items[i]));
+      drained.push_back(std::move(Items[(Head + i) % Items.size()]));
     }
-    Items.erase(Items.begin(),
-                Items.begin() + static_cast<std::ptrdiff_t>(take));
+    Head = (Head + take) % Items.size();
+    Count -= take;
+    if (Cap == 0 && Count == 0)
+    {
+      Items.clear();
+      Head = 0;
+    }
     return drained;
   }
 
   bool Empty() const
   {
     std::lock_guard<std::mutex> lock(Mutex);
-    return Items.empty();
+    return Count == 0;
   }
 
   std::size_t Size() const
   {
     std::lock_guard<std::mutex> lock(Mutex);
-    return Items.size();
+    return Count;
   }
 
 private:
+  bool PushUnlocked(T &&item, T *dropped_out)
+  {
+    if (Cap > 0)
+    {
+      if (Items.size() != Cap)
+      {
+        Items.resize(Cap);
+        Head = 0;
+        Count = 0;
+      }
+      if (Count >= Cap)
+      {
+        if (dropped_out)
+        {
+          *dropped_out = std::move(Items[Head]);
+        }
+        Head = (Head + 1) % Cap;
+        --Count;
+        Discarded.fetch_add(1, std::memory_order_relaxed);
+        const std::size_t slot = (Head + Count) % Cap;
+        Items[slot] = std::move(item);
+        ++Count;
+        return true;
+      }
+      const std::size_t slot = (Head + Count) % Cap;
+      Items[slot] = std::move(item);
+      ++Count;
+      return false;
+    }
+    // Unbounded (Cap==0): grow vector from Head==0 layout.
+    if (Head != 0)
+    {
+      std::vector<T> linear;
+      linear.reserve(Count + 1);
+      for (std::size_t i = 0; i < Count; ++i)
+      {
+        linear.push_back(std::move(Items[(Head + i) % Items.size()]));
+      }
+      Items = std::move(linear);
+      Head = 0;
+    }
+    Items.push_back(std::move(item));
+    Count = Items.size();
+    return false;
+  }
+
   mutable std::mutex Mutex;
   std::vector<T> Items;
+  std::size_t Cap{0};
+  std::size_t Head{0};
+  std::size_t Count{0};
+  std::atomic<uint64_t> Discarded{0};
 };
 
 } // namespace cutum

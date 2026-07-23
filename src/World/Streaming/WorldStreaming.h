@@ -6,6 +6,7 @@
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Chunks/StreamingAltitudePolicy.h"
 #include "World/Streaming/StreamingPressure.h"
+#include "World/Streaming/MemoryBudgetController.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
 #include <chrono>
 #include <deque>
@@ -124,6 +125,12 @@ private:
   StreamingPressureCaps LastPressureCaps{};
   /// Cached once per RefreshStreamingPressure — safe for commit callback.
   int LastPendingLightFocus{0};
+  UMemoryBudgetController MemoryBudget{};
+  int StreamingFrameCounter{0};
+  MemoryBudgetDecision LastMemoryDecision{};
+  uint64_t LastMeshCompletedDiscarded{0};
+  uint64_t LastRelightCompletedDiscarded{0};
+  int LastCompletedExpandFrame{-10000};
 };
 
 } // namespace cutum

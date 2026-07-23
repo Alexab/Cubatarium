@@ -102,7 +102,14 @@ public:
   bool HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y, int max_y) const;
   bool HasPendingAsyncMeshWork() const;
   size_t GetDirtyCount() const;
+  void ReserveDirtyCapacity(size_t n);
+  int MaybeDropFarthestDirty(glm::ivec3 focus_ground_chunk, size_t soft_cap,
+                             int min_keep_horiz = 1);
   int GetAsyncInFlightCount() const;
+  size_t GetMeshCompletedSize() const;
+  size_t GetMeshCompletedCapacity() const;
+  uint64_t GetMeshCompletedDiscardedOverflow() const;
+  void SetMeshCompletedCapacity(size_t cap);
   uint64_t GetMeshDiscardedLateCount() const;
   uint64_t GetMeshApplyStaleCount() const;
   double GetLastFlatRebuildMs() const;

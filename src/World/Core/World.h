@@ -832,7 +832,8 @@ public:
                          int min_world_y);
   void EnqueueAsyncTerrainColumnRelight(int world_x, int world_z, int min_y,
                                         int max_y, bool include_skylight = true,
-                                        bool include_block_light = true);
+                                        bool include_block_light = true,
+                                        bool finalize_pending_gate = true);
   void EnqueueAsyncChunkSkylightRelight(glm::ivec3 chunk_coord,
                                         int frontier_iterations = 1);
   void EnqueueAsyncChunkRelight(glm::ivec3 chunk_coord, bool include_skylight,
@@ -842,6 +843,10 @@ public:
                                bool enqueue_background_frontier);
   bool HasPendingAsyncRelightWork() const;
   int GetAsyncRelightInFlightCount() const;
+  size_t GetRelightCompletedSize() const;
+  size_t GetRelightCompletedCapacity() const;
+  uint64_t GetRelightCompletedDiscardedOverflow() const;
+  void SetRelightCompletedCapacity(size_t cap);
   bool IsAsyncRelightColumnInFlight(glm::ivec2 ground_xz) const;
   /// Drop column inflight marks when the async builder has no jobs (stale set).
   void ReconcileAsyncRelightColumnInFlight();
@@ -885,6 +890,9 @@ public:
   {
     return PendingLightBeforeMesh.size();
   }
+  /// Drop farthest PendingLight columns that already have mesh (not cold holes).
+  int TrimPendingLightBeforeMesh(glm::ivec3 focus_ground_horiz, int soft_cap);
+  int TrimFarRelightFifoFarthest(glm::ivec3 focus_ground_horiz, int soft_cap);
   int CountPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,
                                       int radius_chunks) const;
   /// "(cx,cz),..." for PendingLightBeforeMesh inside focus (max_cols cap).
@@ -1018,10 +1026,11 @@ private:
   void EnsureAsyncRelightBuilder();
   void CancelAsyncRelightWork();
   /// primary_grounds: column XZ whose light job completed — only these clear
-  /// PendingLightBeforeMesh. Neighbors in relit_chunks remesh for seams only.
+  /// PendingLightBeforeMesh (when finalize_pending_gate). Neighbors remesh seams.
   void MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                               bool priority_mesh,
-                              const std::vector<glm::ivec2> &primary_grounds);
+                              const std::vector<glm::ivec2> &primary_grounds,
+                              bool finalize_pending_gate = true);
   void AccumulateRelightMeshColumns(
       const std::vector<glm::ivec3> &relit_chunks);
   void EnsurePlayerOnGround();

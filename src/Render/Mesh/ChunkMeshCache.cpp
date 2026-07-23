@@ -464,6 +464,15 @@ bool UChunkMeshCache::IsChunkMeshDirty(glm::ivec3 chunk_coord) const
   return Dirty.Contains(chunk_coord);
 }
 
+int UChunkMeshCache::MaybeDropFarthestDirty(glm::ivec3 focus_ground_chunk,
+                                            size_t soft_cap,
+                                            int min_keep_horiz)
+{
+  return Dirty.MaybeDropFarthest(
+      focus_ground_chunk, soft_cap, min_keep_horiz,
+      [this](glm::ivec3 c) { return !HasGreedyMesh(c); });
+}
+
 uint64_t UChunkMeshCache::GetChunkMeshRevision(glm::ivec3 chunk_coord) const
 {
   return MeshRevisions.Current(chunk_coord);
@@ -1501,6 +1510,30 @@ int UChunkMeshCache::GetAsyncInFlightCount() const
   return AsyncBuilder->GetInFlightCount();
 }
 
+size_t UChunkMeshCache::GetMeshCompletedSize() const
+{
+  return AsyncBuilder ? AsyncBuilder->GetCompletedSize() : 0;
+}
+
+size_t UChunkMeshCache::GetMeshCompletedCapacity() const
+{
+  return AsyncBuilder ? AsyncBuilder->GetCompletedCapacity() : 0;
+}
+
+uint64_t UChunkMeshCache::GetMeshCompletedDiscardedOverflow() const
+{
+  return AsyncBuilder ? AsyncBuilder->GetCompletedDiscardedOverflow() : 0;
+}
+
+void UChunkMeshCache::SetMeshCompletedCapacity(size_t cap)
+{
+  EnsureAsyncBuilder();
+  if (AsyncBuilder)
+  {
+    AsyncBuilder->SetCompletedCapacity(cap);
+  }
+}
+
 uint64_t UChunkMeshCache::GetMeshDiscardedLateCount() const
 {
   if (!AsyncBuilder)
@@ -1517,6 +1550,10 @@ void UChunkMeshCache::DrainAsyncMeshResults(UBlockWorld &world,
   if (!Render.AsyncMeshing || !Render.GreedyMeshing || !AsyncBuilder)
   {
     return;
+  }
+  for (const glm::ivec3 &coord : AsyncBuilder->TakeOverflowCoords())
+  {
+    Dirty.MarkDirtyPriority(coord);
   }
   for (MeshBuildResult &result : AsyncBuilder->DrainCompleted(max_per_frame))
   {

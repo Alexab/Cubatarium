@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 namespace cutum
 {
 
@@ -27,8 +29,36 @@ struct URuntimeTuning
   /// Added to recover_n after pressure caps (iterate knob).
   int RecoverNBoost{0};
 
+  /// Memory budget (med tier defaults). Soft < ExpandKeep < Budget.
+  int MemoryBudgetMb{1536};
+  int MemorySoftMb{1152};
+  int MemoryExpandKeepMb{768};
+  /// 0 → workers * pipeline slots (mesh×6 / relight×8).
+  int MeshCompletedSlots{0};
+  int RelightCompletedSlots{0};
+  int DirtySoftCap{1200};
+  /// When mesh_async >= DirtyThrashAsyncMin, use this lower SoftCap (thrash).
+  int DirtyThrashSoftCap{400};
+  int DirtyThrashAsyncMin{36};
+  int PendingLightSoftCap{80};
+  int RelightFifoSoftCap{96};
+  int GpuVertexPoolReserveMb{64};
+  int GpuVertexPoolMaxMb{256};
+  int MaxKeepPrefetchMargin{4};
+  int MemoryExpandMaxRd{6};
+  /// Cap recycled UChunk free-list (0 → auto from Keep footprint / 4).
+  int MaxResidentChunks{0};
+  /// Max vertical chunk layers per main-thread Capture (top-down bands).
+  /// 0 = full column. SoftDefer keeps PendingLight until final band.
+  int RelightCaptureBandCy{4};
+  bool CompletedExpandEnabled{true};
+  /// Cumulative buffer expand events (Completed rings / GPU Reserve).
+  uint64_t BufferExpandEvents{0};
+
   static URuntimeTuning &Get();
   static void ResetToDefaults();
+  /// Apply low|med|high preset (keeps other knobs unless tier sets them).
+  static void ApplyMemoryTier(const char *tier);
   /// Overlay knobs from bin/streaming_tune.json (flight_sim_iterate).
   static void LoadStreamingTuneFile(const char *path);
 };

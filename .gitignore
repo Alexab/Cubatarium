@@ -41,11 +41,30 @@
 /bin/Cubatarium
 /bin/*.txt
 /bin/*.json
+/bin/*.jsonl
 /bin/*_out*.txt
 /bin/*_err*.txt
 /bin/*report*.json
 /bin/logs/
 /bin/cubatarium.log
+/bin/bin/*.json
+/bin/bin/*.jsonl
+
+# CMake/MSBuild output wrongly written into runtime bin/
+/bin/*.vcxproj
+/bin/*.vcxproj.filters
+/bin/*.sln
+/bin/*.dir/
+/bin/x64/
+/bin/generated/
+/bin/vcpkg_installed/
+/bin/cmake_install.cmake
+/bin/CMakeCache.txt
+/bin/CMakeFiles/
+
+# Scratch analysis / dumps next to exe
+/bin/_*.py
+/bin/_*.cpp
 
 # Desktop CMake build trees
 /build/desktop-msvc/

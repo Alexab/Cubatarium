@@ -13,6 +13,37 @@
 | sync_budget_r2 | RelWithDebInfo | 9 | 8 | **978** holes | 25 | 365 | no moving Immediate; nearest Dirty only |
 | replay_manual_r1 | RelWithDebInfo | 9 | **0** | holes **160** / wall 1373 | 12 | 198 | resume −473; SyncIdle→Dirty; hold-space; stream hitch |
 | manual_194645 | manual walk existing | **0** | 10 | **4288** | 31 | 347 | prep=relight 3–4s (MeshEmerge drain+Capture); quiet wall~28 dirty~524 async=42 |
+| mem_214430 | manual standing | — | — | — | — | — | remesh thrash `async≈42`; Private→20+ GB; telemetry rss/private |
+| mem_220018 | idle + place light | — | — | **15–52s** | — | — | idle Capture storm `hole_cap 48–56`; schedule≤4 too aggressive |
+| mem_221846 | place lit block | — | — | hang | — | — | unbounded light BFS outside HasChunk → fixed `152cb5df` |
+
+## Memory crisis (2026-07-22, Era 12)
+
+1. **Fluid `GetOrCreateChunk`** into missing → resident explosion (`02b9868d`: HasChunk).
+2. **ForgetInflight without DrainAll** → orphan Completed mesh RAM (`0cb92063`).
+3. **Standing remesh latch / async≈42** → Dirty thrash + Private 20+ GB (`214430`, latch `b1f8924c`).
+4. **Idle Capture without time budget** (`hole_cap 48–56`) → 15–52 s spikes (`220018`).
+5. **Light BFS into missing chunks** (Write no-op, GetLight=0) → hang + RAM on place light (`221846` / `152cb5df`).
+6. Next: byte-budget + fill% — [`MEMORY_BUDGET.md`](MEMORY_BUDGET.md).
+
+## Memory budget implementation (2026-07-22)
+
+Landed: RuntimeTuning Soft/Budget knobs, Completed drop-oldest rings, Dirty/
+Pending/FIFO soft-caps, GPU Reserve/Max, `MemoryBudgetController`, UChunk free-list.
+Gates: see Validation notes in `MEMORY_BUDGET.md` (manual place-light + autofly
+private p95 / fill% / wall).
+
+### Manual follow-up (2026-07-23)
+
+| Run | Notes |
+|-----|-------|
+| `081832` | private≈0.5 GB; Soft stuck via stream Yellow → decouple Soft from stream |
+| `085228` | Soft=0 OK; keep_margin→3; Dirty~350–470 no drops; Capture hitch 2.9–4.5 s |
+| `091724` | Soft=0; keep→3; Dirty~400–590 async≤29 thrash miss; Capture~3.2 s holes=1 |
+| `102936` | Soft=0; Dirty SoftCap works (`dirty_dropped`); wall med 38 ms; Capture max~1.6 s |
+
+Tails after `102936`: SoftDefer-safe **Y-band Capture** (`RelightCaptureBandCy`,
+`finalize_pending_gate`) — PendingLight until final band.
 
 ## Lessons (2026-07-22 evening)
 

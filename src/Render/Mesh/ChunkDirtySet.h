@@ -48,6 +48,19 @@ public:
   void PrioritizeVerticalCy(glm::ivec3 focus_ground_chunk, int radius_chunks,
                             int preferred_cy, bool prefer_lower_cy);
 
+  /// Drop farthest remesh entries until Size <= soft_cap. Never drops underfeet
+  /// (horiz <= min_keep_horiz) or missing-mesh entries when missing_mesh is set.
+  /// Returns number of dropped coords.
+  int MaybeDropFarthest(glm::ivec3 focus_ground_chunk, size_t soft_cap,
+                        int min_keep_horiz = 1,
+                        const std::function<bool(glm::ivec3)> &missing_mesh = {});
+
+  void ReserveCapacity(size_t n)
+  {
+    Queue.reserve(n);
+    Set.reserve(n);
+  }
+
 private:
   std::vector<glm::ivec3> Queue;
   std::unordered_set<glm::ivec3, IVec3Hash> Set;

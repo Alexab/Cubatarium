@@ -26,6 +26,8 @@ public:
   bool IsDirty() const { return Dirty; }
   void ClearDirty() { Dirty = false; }
   void MarkDirty() { Dirty = true; }
+  /// Recycle for free-list: clear voxels/light/fluid and rebind coord.
+  void ResetForReuse(glm::ivec3 chunkCoord);
 
   const std::array<BlockId, CHUNK_VOLUME> &GetData() const { return Data; }
   const std::array<uint8_t, CHUNK_VOLUME> &GetFluidData() const

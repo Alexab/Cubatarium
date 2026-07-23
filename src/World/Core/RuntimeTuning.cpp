@@ -21,6 +21,58 @@ void URuntimeTuning::ResetToDefaults()
   Get() = URuntimeTuning{};
 }
 
+void URuntimeTuning::ApplyMemoryTier(const char *tier)
+{
+  if (!tier || !*tier)
+  {
+    return;
+  }
+  URuntimeTuning &t = Get();
+  // Compare case-insensitive first letter + known names.
+  const bool low = (tier[0] == 'l' || tier[0] == 'L');
+  const bool high = (tier[0] == 'h' || tier[0] == 'H');
+  if (low)
+  {
+    t.MemoryBudgetMb = 1024;
+    t.MemorySoftMb = 768;
+    t.MemoryExpandKeepMb = 512;
+    t.GpuVertexPoolReserveMb = 32;
+    t.GpuVertexPoolMaxMb = 128;
+    t.MaxKeepPrefetchMargin = 2;
+    t.MemoryExpandMaxRd = 5;
+    t.DirtySoftCap = 800;
+    t.DirtyThrashSoftCap = 280;
+    t.MaxResidentChunks = 1024;
+  }
+  else if (high)
+  {
+    t.MemoryBudgetMb = 3072;
+    t.MemorySoftMb = 2304;
+    t.MemoryExpandKeepMb = 1536;
+    t.GpuVertexPoolReserveMb = 128;
+    t.GpuVertexPoolMaxMb = 512;
+    t.MaxKeepPrefetchMargin = 6;
+    t.MemoryExpandMaxRd = 8;
+    t.DirtySoftCap = 2000;
+    t.DirtyThrashSoftCap = 600;
+    t.MaxResidentChunks = 4096;
+  }
+  else
+  {
+    // med (default)
+    t.MemoryBudgetMb = 1536;
+    t.MemorySoftMb = 1152;
+    t.MemoryExpandKeepMb = 768;
+    t.GpuVertexPoolReserveMb = 64;
+    t.GpuVertexPoolMaxMb = 256;
+    t.MaxKeepPrefetchMargin = 4;
+    t.MemoryExpandMaxRd = 6;
+    t.DirtySoftCap = 1200;
+    t.DirtyThrashSoftCap = 400;
+    t.MaxResidentChunks = 0; // auto Keep footprint
+  }
+}
+
 void URuntimeTuning::LoadStreamingTuneFile(const char *path)
 {
   if (!path || !*path)
@@ -80,6 +132,91 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   if (j.contains("recover_n_boost"))
   {
     t.RecoverNBoost = j.value("recover_n_boost", t.RecoverNBoost);
+  }
+  if (j.contains("memory_tier") && j["memory_tier"].is_string())
+  {
+    ApplyMemoryTier(j["memory_tier"].get_ref<const std::string &>().c_str());
+  }
+  if (j.contains("memory_budget_mb"))
+  {
+    t.MemoryBudgetMb = j.value("memory_budget_mb", t.MemoryBudgetMb);
+  }
+  if (j.contains("memory_soft_mb"))
+  {
+    t.MemorySoftMb = j.value("memory_soft_mb", t.MemorySoftMb);
+  }
+  if (j.contains("memory_expand_keep_mb"))
+  {
+    t.MemoryExpandKeepMb =
+        j.value("memory_expand_keep_mb", t.MemoryExpandKeepMb);
+  }
+  if (j.contains("mesh_completed_slots"))
+  {
+    t.MeshCompletedSlots =
+        j.value("mesh_completed_slots", t.MeshCompletedSlots);
+  }
+  if (j.contains("relight_completed_slots"))
+  {
+    t.RelightCompletedSlots =
+        j.value("relight_completed_slots", t.RelightCompletedSlots);
+  }
+  if (j.contains("dirty_soft_cap"))
+  {
+    t.DirtySoftCap = j.value("dirty_soft_cap", t.DirtySoftCap);
+  }
+  if (j.contains("dirty_thrash_soft_cap"))
+  {
+    t.DirtyThrashSoftCap =
+        j.value("dirty_thrash_soft_cap", t.DirtyThrashSoftCap);
+  }
+  if (j.contains("dirty_thrash_async_min"))
+  {
+    t.DirtyThrashAsyncMin =
+        j.value("dirty_thrash_async_min", t.DirtyThrashAsyncMin);
+  }
+  if (j.contains("max_resident_chunks"))
+  {
+    t.MaxResidentChunks = j.value("max_resident_chunks", t.MaxResidentChunks);
+  }
+  if (j.contains("relight_capture_band_cy"))
+  {
+    t.RelightCaptureBandCy =
+        j.value("relight_capture_band_cy", t.RelightCaptureBandCy);
+  }
+  if (j.contains("pending_light_soft_cap"))
+  {
+    t.PendingLightSoftCap =
+        j.value("pending_light_soft_cap", t.PendingLightSoftCap);
+  }
+  if (j.contains("relight_fifo_soft_cap"))
+  {
+    t.RelightFifoSoftCap =
+        j.value("relight_fifo_soft_cap", t.RelightFifoSoftCap);
+  }
+  if (j.contains("gpu_vertex_pool_reserve_mb"))
+  {
+    t.GpuVertexPoolReserveMb =
+        j.value("gpu_vertex_pool_reserve_mb", t.GpuVertexPoolReserveMb);
+  }
+  if (j.contains("gpu_vertex_pool_max_mb"))
+  {
+    t.GpuVertexPoolMaxMb =
+        j.value("gpu_vertex_pool_max_mb", t.GpuVertexPoolMaxMb);
+  }
+  if (j.contains("max_keep_prefetch_margin"))
+  {
+    t.MaxKeepPrefetchMargin =
+        j.value("max_keep_prefetch_margin", t.MaxKeepPrefetchMargin);
+  }
+  if (j.contains("memory_expand_max_rd"))
+  {
+    t.MemoryExpandMaxRd =
+        j.value("memory_expand_max_rd", t.MemoryExpandMaxRd);
+  }
+  if (j.contains("completed_expand_enabled"))
+  {
+    t.CompletedExpandEnabled =
+        j.value("completed_expand_enabled", t.CompletedExpandEnabled);
   }
   last_path = path;
   last_mtime = mtime;

@@ -411,6 +411,50 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const size_t pending_dirty = mesh_service.GetDirtyCount();
   const int pending_async = mesh_service.GetAsyncInFlightCount();
 
+  // Soft-cap Dirty under Yellow/Red: drop farthest remesh (not holes).
+  // Manual 091724: Dirty~400–590 with SoftCap 1200 and async≤29 — thrash never
+  // engaged. Use DirtyThrashSoftCap whenever stream Yellow/Red OR async thrash.
+  {
+    const auto &mtune = URuntimeTuning::Get();
+    auto &phys = world.GetPhysicsTelemetryMutable();
+    const int pressure = phys.StreamPressure;
+    int dirty_cap = mtune.DirtySoftCap;
+    const bool thrash_async =
+        mtune.DirtyThrashAsyncMin > 0 &&
+        pending_async >= mtune.DirtyThrashAsyncMin;
+    if (mtune.DirtyThrashSoftCap > 0 &&
+        (pressure >= 1 || thrash_async))
+    {
+      dirty_cap = std::min(dirty_cap, mtune.DirtyThrashSoftCap);
+    }
+    if (dirty_cap > 0)
+    {
+      mesh_service.ReserveDirtyCapacity(static_cast<size_t>(dirty_cap));
+    }
+    if (dirty_cap > 0 &&
+        pending_dirty > static_cast<size_t>(dirty_cap) &&
+        (pressure >= 1 || thrash_async))
+    {
+      const int dropped = mesh_service.MaybeDropFarthestDirty(
+          focus_ground_horiz, static_cast<size_t>(dirty_cap), 1);
+      phys.DirtyDropped += static_cast<uint64_t>(std::max(0, dropped));
+    }
+    if (mtune.PendingLightSoftCap > 0 &&
+        world.GetPendingLightBeforeMeshCount() >
+            static_cast<size_t>(mtune.PendingLightSoftCap))
+    {
+      const int dropped = world.TrimPendingLightBeforeMesh(
+          focus_ground_horiz, mtune.PendingLightSoftCap);
+      phys.PendingLightDropped += static_cast<uint64_t>(std::max(0, dropped));
+    }
+    if (mtune.RelightFifoSoftCap > 0)
+    {
+      const int dropped = world.TrimFarRelightFifoFarthest(
+          focus_ground_horiz, mtune.RelightFifoSoftCap);
+      phys.RelightFifoDropped += static_cast<uint64_t>(std::max(0, dropped));
+    }
+  }
+
   // Saturated async pool: drop far in-flight work so focus missing can schedule.
   static int async_relief_cooldown = 0;
   if ((visual_holes || missing_underfeet || pending_focus_count > 24) &&

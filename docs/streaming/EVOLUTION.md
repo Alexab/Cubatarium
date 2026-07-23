@@ -237,7 +237,32 @@
 `2cb85f3c`. Harness anti-hang (`7c487c83`): preflight kill, process-timeout,
 report-before-shutdown, `PrepareForShutdownFast`.
 
-## Каталог Решений R1-R18
+## Эра 12. Июль 22: Memory Crisis И Budget Control
+
+Ключевые коммиты:
+
+- `0cb92063` — mesh Completed `DrainAll`; нет orphan RAM после ForgetInflight.
+- `b1f8924c` — RemeshAfterApply / standing remesh latch.
+- `02b9868d` — fluid `HasChunk` (не `GetOrCreate` в missing).
+- `8bbc3139` — memory telemetry (`rss_mb` / `private_mb` / `chunk_count`).
+- `152cb5df` — bound light BFS к existing chunks; cap idle Capture; remesh thrash clamp.
+
+Что улучшили:
+
+- Place lit block больше не раздувает Private Bytes через unbounded skylight/blocklight BFS.
+- Fluid simulation не тянет missing chunks в resident set.
+- Completed drain не оставляет orphan mesh payloads в RAM.
+
+Что осталось / следующий шаг:
+
+- Нет byte-budget и fill%-телеметрии очередей; Completed/Dirty/FIFO grow-only.
+- См. [`MEMORY_BUDGET.md`](MEMORY_BUDGET.md): ring Completed, soft-caps Dirty/Pending,
+  GPU Reserve/Max, `MemoryBudgetController`, chunk free-list.
+
+Урок: throughput-caps (pipeline ×N, pressure G/Y/R) не заменяют byte-budget;
+unbounded BFS/queues дают 10–25 GB high-water при «нормальном» FPS.
+
+## Каталог Решений R1-R24
 
 | ID | Решение | Когда | Почему не стало финалом |
 |----|---------|-------|--------------------------|
@@ -259,6 +284,12 @@ report-before-shutdown, `PrepareForShutdownFast`.
 | `R16` | plateau sync-relight | 21.07 | wall spikes, not_ready↑ |
 | `R17` | full-band sync remesh | 21.07 | wall 172→420 |
 | `R18` | unified async drain без ownership | 21.07 | sticky=32, not_ready=90 |
+| `R19` | Completed DrainAll / no Forget orphan | 22.07 | нет byte-budget |
+| `R20` | RemeshAfterApply / remesh latch | 22.07 | standing thrash при async↑ |
+| `R21` | fluid HasChunk (no GetOrCreate) | 22.07 | только fluid path |
+| `R22` | rss/private/chunk telemetry | 22.07 | observe-only |
+| `R23` | bound light BFS + idle Capture cap | 22.07 | нет Soft/Budget controller |
+| `R24` | MemoryBudget (rings/caps/controller) | 22.07 | внедряется; gates TBD |
 
 ## Матрица Проблем И Уроков
 
@@ -284,3 +315,6 @@ report-before-shutdown, `PrepareForShutdownFast`.
 - `CancelAsyncInFlightKeepDirty` + `MarkDirty all focus`.
 - Sync relight flood на idle.
 - Render-поведение, которое зависит от эвристики, а не от `RenderReady`.
+- Drop Completed без Dirty/relight requeue; erase PendingLight у cold hole.
+- Unbounded light BFS вне `HasChunk`; fluid `GetOrCreate` в missing.
+- Expand буферов при Soft/Hard memory pressure; `glBufferData` orphan каждый кадр.

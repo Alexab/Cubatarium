@@ -405,9 +405,42 @@ size_t UWorldMeshService::GetDirtyCount() const
   return Cache.GetDirtyCount();
 }
 
+void UWorldMeshService::ReserveDirtyCapacity(size_t n)
+{
+  Cache.ReserveDirtyCapacity(n);
+}
+
+int UWorldMeshService::MaybeDropFarthestDirty(glm::ivec3 focus_ground_chunk,
+                                              size_t soft_cap,
+                                              int min_keep_horiz)
+{
+  return Cache.MaybeDropFarthestDirty(focus_ground_chunk, soft_cap,
+                                      min_keep_horiz);
+}
+
 int UWorldMeshService::GetAsyncInFlightCount() const
 {
   return Cache.GetAsyncInFlightCount();
+}
+
+size_t UWorldMeshService::GetMeshCompletedSize() const
+{
+  return Cache.GetMeshCompletedSize();
+}
+
+size_t UWorldMeshService::GetMeshCompletedCapacity() const
+{
+  return Cache.GetMeshCompletedCapacity();
+}
+
+uint64_t UWorldMeshService::GetMeshCompletedDiscardedOverflow() const
+{
+  return Cache.GetMeshCompletedDiscardedOverflow();
+}
+
+void UWorldMeshService::SetMeshCompletedCapacity(size_t cap)
+{
+  Cache.SetMeshCompletedCapacity(cap);
 }
 
 uint64_t UWorldMeshService::GetMeshDiscardedLateCount() const

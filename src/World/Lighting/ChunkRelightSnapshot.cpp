@@ -603,6 +603,7 @@ UChunkRelightSnapshot::Compute(const UBlockRegistry &registry) const
   RelightComputeResult result;
   result.job_id = Spec.job_id;
   result.source_block_positions = Spec.block_positions;
+  result.finalize_pending_gate = Spec.finalize_pending_gate;
   if (grid.Blocks.empty())
   {
     return result;

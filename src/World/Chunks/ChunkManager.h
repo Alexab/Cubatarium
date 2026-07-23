@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 namespace cutum
 {
@@ -39,6 +40,9 @@ public:
   void EnsureChunk(glm::ivec3 chunk_coord);
   void RemoveChunk(glm::ivec3 chunk_coord);
   void ForEachChunk(const std::function<void(const UChunk &)> &fn) const;
+  /// Cap recycled chunks retained after unload (0 = destroy immediately).
+  void SetMaxFreeListChunks(size_t cap) { MaxFreeListChunks = cap; }
+  size_t GetFreeListSize() const { return FreeList.size(); }
 
   static glm::ivec3 WorldToChunk(glm::ivec3 world_pos);
   static glm::ivec3 WorldToLocal(glm::ivec3 world_pos);
@@ -47,6 +51,8 @@ private:
   UChunk &GetOrCreateChunk(glm::ivec3 chunk_coord);
 
   std::unordered_map<glm::ivec3, std::unique_ptr<UChunk>, IVec3Hash> Chunks;
+  std::vector<std::unique_ptr<UChunk>> FreeList;
+  size_t MaxFreeListChunks{256};
 };
 
 } // namespace cutum

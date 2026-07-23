@@ -94,6 +94,10 @@ public:
   double GetLastMeshSnapshotMs() const { return LastMeshSnapshotMs; }
   double GetLastMeshDirtyTickMs() const { return LastMeshDirtyTickMs; }
   int GetAsyncInFlightCount() const;
+  size_t GetMeshCompletedSize() const;
+  size_t GetMeshCompletedCapacity() const;
+  uint64_t GetMeshCompletedDiscardedOverflow() const;
+  void SetMeshCompletedCapacity(size_t cap);
   uint64_t GetMeshDiscardedLateCount() const;
   uint64_t GetMeshApplyStaleCount() const { return MeshApplyStaleCount; }
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
@@ -110,6 +114,9 @@ public:
     return LastRebuildTickStats;
   }
   size_t GetDirtyCount() const { return Dirty.GetCount(); }
+  void ReserveDirtyCapacity(size_t n) { Dirty.ReserveCapacity(n); }
+  int MaybeDropFarthestDirty(glm::ivec3 focus_ground_chunk, size_t soft_cap,
+                             int min_keep_horiz = 1);
   bool IsChunkMeshDirty(glm::ivec3 chunk_coord) const;
   uint64_t GetChunkMeshRevision(glm::ivec3 chunk_coord) const;
   bool HasInflightMeshBuild(glm::ivec3 chunk_coord) const;

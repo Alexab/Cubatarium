@@ -201,6 +201,7 @@ set(SOURCES
     src/World/Lighting/AsyncRelightBuilder.cpp
     src/World/Persistence/WorldPersistence.cpp
     src/World/Streaming/WorldStreaming.cpp
+    src/World/Streaming/MemoryBudgetController.cpp
     src/World/Streaming/ChunkEmergeCoordinator.cpp
     src/World/Physics/WorldPhysicsScheduler.cpp
     src/World/Physics/WorldMovementPhysicsService.cpp
@@ -698,6 +699,11 @@ add_executable(chunk_load_priority_test
 target_include_directories(chunk_load_priority_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(chunk_load_priority_test glm::glm)
+
+add_executable(completed_job_queue_test
+    src/Test/CompletedJobQueueTest.cpp)
+target_include_directories(completed_job_queue_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
 
 add_executable(terrain_column_util_test
     src/World/Chunks/Chunk.cpp
@@ -1782,6 +1788,7 @@ set(PHYSICS_UWORLD_TEST_SOURCES
     src/World/Environment/WorldEnvironment.cpp
     src/World/Mesh/WorldMeshService.cpp
     src/World/Streaming/WorldStreaming.cpp
+    src/World/Streaming/MemoryBudgetController.cpp
     src/World/Streaming/ChunkEmergeCoordinator.cpp
     src/World/Persistence/WorldPersistence.cpp
     src/World/Core/WorldCooperativeOps.cpp

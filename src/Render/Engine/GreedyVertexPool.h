@@ -26,7 +26,10 @@ class UGreedyVertexPool
 public:
   GreedyGpuPoolAllocation Allocate(const GreedyMeshBatch &batch);
   /// Grow GPU buffers once per pass before batch uploads (avoids mid-pass orphan).
-  void Reserve(size_t vertex_bytes, size_t index_bytes);
+  /// Returns false if request was clamped by MaxCapacity (partial/no grow).
+  bool Reserve(size_t vertex_bytes, size_t index_bytes);
+  /// Grow to at least these sizes without resetting used counters.
+  bool EnsureMinCapacity(size_t vertex_bytes, size_t index_bytes);
   void Reset();
   void Destroy();
 
@@ -34,8 +37,20 @@ public:
   GLuint IndexBuffer() const { return IndexEbo; }
   bool IsActive() const { return VertexVbo != 0; }
 
+  size_t UsedBytes() const { return VertexUsedBytes + IndexUsedBytes; }
+  size_t CapacityBytes() const
+  {
+    return VertexCapacityBytes + IndexCapacityBytes;
+  }
+  size_t VertexUsedBytesValue() const { return VertexUsedBytes; }
+  size_t VertexCapacityBytesValue() const { return VertexCapacityBytes; }
+  /// Soft ceiling for vertex+index combined (0 = unbounded grow).
+  void SetMaxCapacityBytes(size_t max_bytes) { MaxCapacityBytes = max_bytes; }
+  size_t GetMaxCapacityBytes() const { return MaxCapacityBytes; }
+
 private:
-  void EnsureCapacity(size_t vertex_bytes, size_t index_bytes);
+  /// Returns false if growth was refused/clamped by MaxCapacityBytes.
+  bool EnsureCapacity(size_t vertex_bytes, size_t index_bytes);
 
   GLuint VertexVbo{0};
   GLuint IndexEbo{0};
@@ -43,6 +58,7 @@ private:
   size_t IndexCapacityBytes{0};
   size_t VertexUsedBytes{0};
   size_t IndexUsedBytes{0};
+  size_t MaxCapacityBytes{0};
 };
 
 } // namespace cutum

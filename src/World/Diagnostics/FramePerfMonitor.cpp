@@ -1,6 +1,7 @@
 #include "World/Diagnostics/FramePerfMonitor.h"
 
 #include "App/Core.h"
+#include "World/Core/RuntimeTuning.h"
 #include "World/Core/World.h"
 #include "World/Physics/PhysicsTelemetry.h"
 #include "glog/logging.h"
@@ -179,6 +180,23 @@ struct FrameNumbers
   double private_mb{0.0};
   int chunk_count{0};
   uint64_t greedy_vertices{0};
+  int mesh_completed_n{0};
+  int mesh_completed_cap{0};
+  uint64_t mesh_completed_discarded{0};
+  int relight_completed_n{0};
+  int relight_completed_cap{0};
+  uint64_t relight_completed_discarded{0};
+  int dirty_n{0};
+  int pending_light_n{0};
+  int relight_fifo_n{0};
+  uint64_t dirty_dropped{0};
+  uint64_t pending_light_dropped{0};
+  uint64_t relight_fifo_dropped{0};
+  double gpu_pool_used_mb{0.0};
+  double gpu_pool_cap_mb{0.0};
+  int memory_pressure{0};
+  int keep_margin_eff{0};
+  uint64_t buffer_expand_events{0};
   std::string pending_cols;
   double max_wall_ms{0.0};
   double max_stream_ms{0.0};
@@ -291,6 +309,42 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
     n.chunk_count = chunks;
   }
   n.greedy_vertices = world.GetRenderInstanceCount();
+  n.mesh_completed_n = phys.MeshCompletedN;
+  n.mesh_completed_cap = phys.MeshCompletedCap;
+  n.mesh_completed_discarded = phys.MeshCompletedDiscarded;
+  n.relight_completed_n = phys.RelightCompletedN;
+  n.relight_completed_cap = phys.RelightCompletedCap;
+  n.relight_completed_discarded = phys.RelightCompletedDiscarded;
+  n.dirty_n = phys.DirtyN;
+  n.pending_light_n = phys.PendingLightN;
+  n.relight_fifo_n = phys.RelightFifoN;
+  n.dirty_dropped = phys.DirtyDropped;
+  n.pending_light_dropped = phys.PendingLightDropped;
+  n.relight_fifo_dropped = phys.RelightFifoDropped;
+  n.gpu_pool_used_mb = phys.GpuPoolUsedMb;
+  n.gpu_pool_cap_mb = phys.GpuPoolCapMb;
+  n.keep_margin_eff = phys.KeepMarginEff;
+  n.buffer_expand_events = phys.BufferExpandEvents;
+  {
+    const auto &tune = URuntimeTuning::Get();
+    if (n.private_mb >= static_cast<double>(tune.MemoryBudgetMb))
+    {
+      n.memory_pressure = 2;
+    }
+    else if (n.private_mb >= static_cast<double>(tune.MemorySoftMb))
+    {
+      n.memory_pressure = 1;
+    }
+    else
+    {
+      n.memory_pressure = 0;
+    }
+    // Prefer controller-written pressure when present later.
+    if (phys.MemoryPressure > n.memory_pressure)
+    {
+      n.memory_pressure = phys.MemoryPressure;
+    }
+  }
   return n;
 }
 
@@ -366,6 +420,23 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"rss_mb\":" << n.rss_mb << ",\"private_mb\":" << n.private_mb
           << ",\"chunk_count\":" << n.chunk_count
           << ",\"greedy_vertices\":" << n.greedy_vertices
+          << ",\"mesh_completed_n\":" << n.mesh_completed_n
+          << ",\"mesh_completed_cap\":" << n.mesh_completed_cap
+          << ",\"mesh_completed_discarded\":" << n.mesh_completed_discarded
+          << ",\"relight_completed_n\":" << n.relight_completed_n
+          << ",\"relight_completed_cap\":" << n.relight_completed_cap
+          << ",\"relight_completed_discarded\":" << n.relight_completed_discarded
+          << ",\"dirty_n\":" << n.dirty_n
+          << ",\"pending_light_n\":" << n.pending_light_n
+          << ",\"relight_fifo_n\":" << n.relight_fifo_n
+          << ",\"dirty_dropped\":" << n.dirty_dropped
+          << ",\"pending_light_dropped\":" << n.pending_light_dropped
+          << ",\"relight_fifo_dropped\":" << n.relight_fifo_dropped
+          << ",\"gpu_pool_used_mb\":" << n.gpu_pool_used_mb
+          << ",\"gpu_pool_cap_mb\":" << n.gpu_pool_cap_mb
+          << ",\"memory_pressure\":" << n.memory_pressure
+          << ",\"keep_margin_eff\":" << n.keep_margin_eff
+          << ",\"buffer_expand_events\":" << n.buffer_expand_events
           << ",\"black_sticky\":" << n.focus_sticky_remesh
           << ",\"pending_cols\":\"" << n.pending_cols << "\""
           << ",\"max_wall_ms\":" << n.max_wall_ms

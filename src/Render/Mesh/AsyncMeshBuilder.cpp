@@ -5,6 +5,7 @@
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
 #include "Render/Mesh/MeshLightSampling.h"
+#include "World/Core/RuntimeTuning.h"
 #include "World/Math/GridMath.h"
 #include <algorithm>
 #include <mutex>
@@ -25,6 +26,11 @@ UAsyncMeshBuilder::UAsyncMeshBuilder(std::size_t thread_count)
     : Pool(ResolveMeshWorkerCount(thread_count), "MeshBuild"),
       WorkerCount(static_cast<int>(ResolveMeshWorkerCount(thread_count)))
 {
+  const int slots = URuntimeTuning::Get().MeshCompletedSlots;
+  const std::size_t cap =
+      slots > 0 ? static_cast<std::size_t>(slots)
+                : static_cast<std::size_t>(WorkerCount * kPipelineSlotsPerWorker);
+  Completed.SetCapacity(cap);
 }
 
 namespace
@@ -111,7 +117,20 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
           entry.second.blockId = entry.first;
           result.batches.push_back(std::move(entry.second));
         }
-        Completed.Push(std::move(result));
+        MeshBuildResult dropped;
+        if (Completed.PushDropOldest(std::move(result), &dropped))
+        {
+          {
+            std::lock_guard<std::mutex> lock(InFlightMutex);
+            const auto it = InFlight.find(dropped.coord);
+            if (it != InFlight.end() && it->second == dropped.jobId)
+            {
+              InFlight.erase(it);
+            }
+          }
+          std::lock_guard<std::mutex> olock(OverflowMutex);
+          OverflowCoords.push_back(dropped.coord);
+        }
       });
 }
 
@@ -214,6 +233,14 @@ void UAsyncMeshBuilder::ForgetInflight(const glm::ivec3 coord)
 {
   std::lock_guard<std::mutex> lock(InFlightMutex);
   InFlight.erase(coord);
+}
+
+std::vector<glm::ivec3> UAsyncMeshBuilder::TakeOverflowCoords()
+{
+  std::lock_guard<std::mutex> olock(OverflowMutex);
+  std::vector<glm::ivec3> out;
+  out.swap(OverflowCoords);
+  return out;
 }
 
 } // namespace cutum

@@ -1,5 +1,6 @@
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Streaming/FocusIngressPolicy.h"
+#include "World/Streaming/MemoryBudgetController.h"
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "World/Math/GridMath.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
@@ -27,6 +28,16 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#include <psapi.h>
+#endif
 
 namespace cutum
 {
@@ -642,6 +653,38 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetMeshDiscardedLateCount();
     world.PhysicsTelemetryData.MeshApplyStale =
         world.GetMeshService().GetMeshApplyStaleCount();
+    {
+      const auto &tune = URuntimeTuning::Get();
+      world.PhysicsTelemetryData.MeshCompletedN = static_cast<int>(
+          world.GetMeshService().GetMeshCompletedSize());
+      world.PhysicsTelemetryData.MeshCompletedCap = static_cast<int>(
+          world.GetMeshService().GetMeshCompletedCapacity());
+      world.PhysicsTelemetryData.MeshCompletedDiscarded =
+          world.GetMeshService().GetMeshCompletedDiscardedOverflow();
+      world.PhysicsTelemetryData.RelightCompletedN =
+          static_cast<int>(world.GetRelightCompletedSize());
+      world.PhysicsTelemetryData.RelightCompletedCap =
+          static_cast<int>(world.GetRelightCompletedCapacity());
+      world.PhysicsTelemetryData.RelightCompletedDiscarded =
+          world.GetRelightCompletedDiscardedOverflow();
+      world.PhysicsTelemetryData.DirtyN =
+          static_cast<int>(world.GetMeshService().GetDirtyCount());
+      world.PhysicsTelemetryData.PendingLightN =
+          static_cast<int>(world.GetPendingLightBeforeMeshCount());
+      world.PhysicsTelemetryData.RelightFifoN =
+          world.Persistence
+              ? world.Persistence->GetPendingTerrainColumnRelightCount()
+              : 0;
+      world.PhysicsTelemetryData.GpuPoolCapMb =
+          static_cast<double>(tune.GpuVertexPoolMaxMb);
+      world.PhysicsTelemetryData.BufferExpandEvents = tune.BufferExpandEvents;
+      if (Streamer)
+      {
+        world.PhysicsTelemetryData.KeepMarginEff =
+            Streamer->GetKeepRenderDistance() -
+            Streamer->GetVisualRenderDistance();
+      }
+    }
     if (Streamer)
     {
       const int v = Streamer->GetVisualRenderDistance();
@@ -1032,6 +1075,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                    : (frame_ms > kBadFrameMs ? 1 : 2))
             : (frame_ms > kBadFrameMs ? 2 : 4);
     bg_budget = std::min(bg_budget, hard_cap);
+    if (LastMemoryDecision.capture_hard_cap >= 0)
+    {
+      bg_budget = std::min(bg_budget, LastMemoryDecision.capture_hard_cap);
+    }
   }
 
   {
@@ -1452,6 +1499,13 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       {
         AdaptiveEffectiveRd = effectiveRenderDistance;
       }
+      // Memory Green may raise RD ceiling one step above altitude/base RD.
+      int rd_ceiling = effectiveRenderDistance;
+      if (LastMemoryDecision.memory_pressure == 0 &&
+          LastMemoryDecision.max_effective_rd > rd_ceiling)
+      {
+        rd_ceiling = LastMemoryDecision.max_effective_rd;
+      }
       const size_t dirty = meshService.GetDirtyCount();
       const int gen_backlog_total =
           ChunkScheduler ? ChunkScheduler->GetGenBacklogTotal() : 0;
@@ -1470,7 +1524,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         }
         else if (dirty < 24 && PhysMsEma < 20.0)
         {
-          next = std::min(effectiveRenderDistance, AdaptiveEffectiveRd + 1);
+          next = std::min(rd_ceiling, AdaptiveEffectiveRd + 1);
         }
         if (next != AdaptiveEffectiveRd)
         {
@@ -1479,7 +1533,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         }
       }
       AdaptiveEffectiveRd =
-          std::clamp(AdaptiveEffectiveRd, kAdaptiveRdMin, effectiveRenderDistance);
+          std::clamp(AdaptiveEffectiveRd, kAdaptiveRdMin, rd_ceiling);
       effectiveRenderDistance = AdaptiveEffectiveRd;
     }
     else
@@ -1491,6 +1545,145 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         URuntimeTuning::Get().KeepPrefetchMargin);
     Streamer->SetMaxKeepPrefetchOpsPerFrame(
         URuntimeTuning::Get().MaxKeepPrefetchOpsPerFrame);
+    {
+      ++StreamingFrameCounter;
+      MemoryBudgetSample sample;
+      sample.stream_pressure = world.PhysicsTelemetryData.StreamPressure;
+      sample.last_wall_ms = world.GetWallFrameDelta() * 1000.0;
+      sample.visual_holes = world.PhysicsTelemetryData.VisualHoles;
+      sample.pending_light_focus = world.PhysicsTelemetryData.PendingLightFocus;
+      sample.baseline_keep_margin = URuntimeTuning::Get().KeepPrefetchMargin;
+      sample.visual_rd = effectiveRenderDistance;
+#ifdef _WIN32
+      PROCESS_MEMORY_COUNTERS_EX pmc{};
+      pmc.cb = sizeof(pmc);
+      if (GetProcessMemoryInfo(
+              GetCurrentProcess(),
+              reinterpret_cast<PROCESS_MEMORY_COUNTERS *>(&pmc), sizeof(pmc)))
+      {
+        sample.private_mb =
+            static_cast<double>(pmc.PrivateUsage) / (1024.0 * 1024.0);
+      }
+#endif
+      MemoryBudgetDecision decision;
+      MemoryBudget.MaybeEvaluate(StreamingFrameCounter, sample,
+                                 URuntimeTuning::Get(), decision);
+      LastMemoryDecision = decision;
+      world.PhysicsTelemetryData.MemoryPressure = decision.memory_pressure;
+      Streamer->SetKeepPrefetchMargin(decision.keep_margin);
+      if (!decision.allow_keep_prewarm)
+      {
+        Streamer->SetMaxKeepPrefetchOpsPerFrame(0);
+      }
+      if (decision.max_effective_rd < effectiveRenderDistance)
+      {
+        effectiveRenderDistance = decision.max_effective_rd;
+        if (AdaptiveEffectiveRd >= 0)
+        {
+          AdaptiveEffectiveRd = effectiveRenderDistance;
+        }
+      }
+      else if (decision.max_effective_rd > effectiveRenderDistance &&
+               decision.memory_pressure == 0)
+      {
+        effectiveRenderDistance = decision.max_effective_rd;
+        if (AdaptiveEffectiveRd >= 0)
+        {
+          AdaptiveEffectiveRd = effectiveRenderDistance;
+        }
+      }
+      if (decision.emergency_cancel_outside)
+      {
+        meshService.CancelInFlightOutsideHorizontalRadius(
+            glm::ivec3(world.PhysicsTelemetryData.FocusChunkX, 0,
+                       world.PhysicsTelemetryData.FocusChunkZ),
+            Streamer->GetVisualRenderDistance());
+      }
+      // Free-list size tracks Keep footprint (MaxResidentChunks caps pool).
+      {
+        const auto &tune = URuntimeTuning::Get();
+        const int keep_r =
+            Streamer->GetVisualRenderDistance() + decision.keep_margin;
+        const int diam = 2 * std::max(0, keep_r) + 1;
+        const int max_h = world.GetProceduralSettings().MaxHeight;
+        const int height_cy =
+            std::max(1, (std::max(1, max_h) - 1) / CHUNK_SIZE + 1);
+        const int footprint = diam * diam * height_cy;
+        int free_cap = std::max(64, footprint / 4);
+        if (tune.MaxResidentChunks > 0)
+        {
+          free_cap = std::min(free_cap, tune.MaxResidentChunks);
+        }
+        else
+        {
+          free_cap = std::min(free_cap, 512);
+        }
+        world.GetBlockWorld().GetChunkManager().SetMaxFreeListChunks(
+            static_cast<size_t>(free_cap));
+      }
+      // Stepped Completed-slot expand when overflow discard rises under RAM
+      // headroom (CompletedExpandEnabled). At most once per ~90 frames.
+      {
+        auto &tune = URuntimeTuning::Get();
+        const uint64_t mesh_disc =
+            meshService.GetMeshCompletedDiscardedOverflow();
+        const uint64_t relight_disc =
+            world.GetRelightCompletedDiscardedOverflow();
+        const uint64_t mesh_delta =
+            mesh_disc >= LastMeshCompletedDiscarded
+                ? mesh_disc - LastMeshCompletedDiscarded
+                : 0;
+        const uint64_t relight_delta =
+            relight_disc >= LastRelightCompletedDiscarded
+                ? relight_disc - LastRelightCompletedDiscarded
+                : 0;
+        constexpr int kExpandCooldownFrames = 90;
+        constexpr uint64_t kDiscardDeltaThreshold = 4;
+        constexpr size_t kHardMaxSlots = 128;
+        const bool expand_ok =
+            tune.CompletedExpandEnabled &&
+            sample.private_mb <
+                static_cast<double>(tune.MemoryExpandKeepMb) &&
+            decision.memory_pressure == 0 &&
+            sample.stream_pressure <= 1 &&
+            StreamingFrameCounter - LastCompletedExpandFrame >=
+                kExpandCooldownFrames;
+        if (expand_ok && mesh_delta >= kDiscardDeltaThreshold)
+        {
+          size_t cap = meshService.GetMeshCompletedCapacity();
+          if (cap == 0)
+          {
+            cap = 24;
+          }
+          const size_t next =
+              (std::min)(kHardMaxSlots, (std::max)(cap + 1, (cap * 3) / 2));
+          if (next > cap)
+          {
+            meshService.SetMeshCompletedCapacity(next);
+            ++tune.BufferExpandEvents;
+            LastCompletedExpandFrame = StreamingFrameCounter;
+          }
+        }
+        if (expand_ok && relight_delta >= kDiscardDeltaThreshold)
+        {
+          size_t cap = world.GetRelightCompletedCapacity();
+          if (cap == 0)
+          {
+            cap = 32;
+          }
+          const size_t next =
+              (std::min)(kHardMaxSlots, (std::max)(cap + 1, (cap * 3) / 2));
+          if (next > cap)
+          {
+            world.SetRelightCompletedCapacity(next);
+            ++tune.BufferExpandEvents;
+            LastCompletedExpandFrame = StreamingFrameCounter;
+          }
+        }
+        LastMeshCompletedDiscarded = mesh_disc;
+        LastRelightCompletedDiscarded = relight_disc;
+      }
+    }
     Streamer->SetRenderDistance(effectiveRenderDistance);
     // Visual cull/mesh focus = visual RD; keep ring is Visual+margin.
     meshService.SetRenderDistanceChunks(
