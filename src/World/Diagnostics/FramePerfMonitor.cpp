@@ -123,6 +123,17 @@ struct FrameNumbers
   double input_ms{0.0};
   double app_update_ms{0.0};
   double world_extra_ms{0.0};
+  double views_ms{0.0};
+  double do_movement_ms{0.0};
+  double block_input_ms{0.0};
+  double tick_env_ms{0.0};
+  double physics_block_ms{0.0};
+  double physics_drain_ms{0.0};
+  double physics_movement_ms{0.0};
+  int break_complete_n{0};
+  int break_inflight_race_n{0};
+  int break_dark_face_n{0};
+  double edit_to_first_mesh_ms{0.0};
   double prepare_frame_ms{0.0};
   double post_scene_ms{0.0};
   double gui_overlay_ms{0.0};
@@ -228,11 +239,22 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   }
   n.input_ms = world.GetLastInputMs();
   n.app_update_ms = world.GetLastAppUpdateMs();
-  // World tick includes DoMovement (phys); only the overhead is "unaccounted".
+  // PhysicsStepMs already includes StreamMs + MeshEmergeMs; do not subtract
+  // them again. world_extra = Update wall outside the physics step timer.
   n.world_extra_ms =
-      (std::max)(0.0,
-                 world.GetLastWorldTickMs() - n.phys_ms - n.stream_ms -
-                     n.mesh_emerge_ms);
+      (std::max)(0.0, world.GetLastWorldTickMs() - n.phys_ms);
+  n.views_ms = phys.ViewsMs;
+  n.do_movement_ms = phys.DoMovementMs;
+  n.block_input_ms = phys.BlockInputMs;
+  n.tick_env_ms = phys.TickEnvMs;
+  n.physics_block_ms = phys.BlockStepMs;
+  n.physics_drain_ms = phys.DrainStepMs;
+  n.physics_movement_ms = phys.MovementStepMs;
+  n.break_complete_n = phys.BreakCompleteN;
+  n.break_inflight_race_n = phys.BreakInflightRaceN;
+  n.break_dark_face_n = phys.BreakDarkFaceN;
+  n.edit_to_first_mesh_ms =
+      phys.BreakCompleteN > 0 ? phys.EditToFirstMeshMs : 0.0;
   n.prepare_frame_ms = world.GetLastPrepareFrameMs();
   n.post_scene_ms = world.GetLastPostSceneMs();
   n.gui_overlay_ms = world.GetLastGuiOverlayMs();
@@ -362,6 +384,17 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"input_ms\":" << n.input_ms
           << ",\"app_update_ms\":" << n.app_update_ms
           << ",\"world_extra_ms\":" << n.world_extra_ms
+          << ",\"views_ms\":" << n.views_ms
+          << ",\"do_movement_ms\":" << n.do_movement_ms
+          << ",\"block_input_ms\":" << n.block_input_ms
+          << ",\"tick_env_ms\":" << n.tick_env_ms
+          << ",\"physics_block_ms\":" << n.physics_block_ms
+          << ",\"physics_drain_ms\":" << n.physics_drain_ms
+          << ",\"physics_movement_ms\":" << n.physics_movement_ms
+          << ",\"break_complete_n\":" << n.break_complete_n
+          << ",\"break_inflight_race_n\":" << n.break_inflight_race_n
+          << ",\"break_dark_face_n\":" << n.break_dark_face_n
+          << ",\"edit_to_first_mesh_ms\":" << n.edit_to_first_mesh_ms
           << ",\"prepare_frame_ms\":" << n.prepare_frame_ms
           << ",\"post_scene_ms\":" << n.post_scene_ms
           << ",\"gui_overlay_ms\":" << n.gui_overlay_ms

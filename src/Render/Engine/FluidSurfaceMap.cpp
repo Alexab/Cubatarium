@@ -107,7 +107,10 @@ int ChunkUpdateBudget(int pending, double last_wall_ms)
 {
   // Manual 201036/192304: burst=32 cold scans → 400–800ms fluid_map_cpu.
   // After a hitch frame, catch up slower so wall does not stack.
-  const bool hitching = last_wall_ms > UFluidSurfaceMap::kWallThrottleMs;
+  // Also throttle when pending is already above baseline (cold full_rebuild
+  // start) — do not wait for wall>40 before leaving the 16→24→32 ramp.
+  const bool hitching = last_wall_ms > UFluidSurfaceMap::kWallThrottleMs ||
+                        pending > UFluidSurfaceMap::kMaxChunkUpdatesPerFrame;
   const int baseline = hitching ? UFluidSurfaceMap::kMaxChunkUpdatesHitch
                                 : UFluidSurfaceMap::kMaxChunkUpdatesPerFrame;
   const int burst = hitching ? UFluidSurfaceMap::kMaxChunkUpdatesHitchBurst
@@ -147,9 +150,11 @@ int NearFluidDirtyCount(const std::unordered_set<glm::ivec3, IVec3Hash> &dirty,
 
 int FluidDirtyBudget(int pending, int near_pending, double last_wall_ms)
 {
-  // Always cover the underfeet water ring when possible; shrink on hitch.
-  const int near_cap =
-      last_wall_ms > UFluidSurfaceMap::kWallThrottleMs ? 4 : 9;
+  // Always cover the underfeet water ring when possible; shrink on hitch /
+  // cold pending backlog (same gate as ChunkUpdateBudget).
+  const bool hitching = last_wall_ms > UFluidSurfaceMap::kWallThrottleMs ||
+                        pending > UFluidSurfaceMap::kMaxChunkUpdatesPerFrame;
+  const int near_cap = hitching ? 4 : 9;
   return std::max(ChunkUpdateBudget(pending, last_wall_ms),
                   std::min(near_pending, near_cap));
 }

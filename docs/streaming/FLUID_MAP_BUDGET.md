@@ -29,6 +29,12 @@ Fewer scroll strip rebuilds when walking across chunk boundaries.
 
 Map radius < RD, async slices, dry-chunk skip, scan_up/down wire.
 
+## Cold pending throttle (research autofly)
+
+When `pending > kMaxChunkUpdatesPerFrame` (8), treat as hitching even if
+`last_wall_ms ≤ 40` — cold `full_rebuild` no longer ramps to burst=32 before the
+first hitch frame is observed.
+
 ## Validate
 
 Manual walk near water: spike max `fluid_map_cpu` ↓; `full_rebuild` less sticky;

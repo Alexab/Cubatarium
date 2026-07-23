@@ -80,6 +80,49 @@ Plan: [`FLUID_MAP_BUDGET.md`](FLUID_MAP_BUDGET.md). Manual `201036`: spikes
 `fluid_map_cpu` 400–800 ms. Wall-aware chunk budget (≤8 after wall>40 ms) and
 `surface_window_move_threshold` 16→32.
 
+### Perf research autofly (2026-07-23)
+
+Cheap metrics + formula fix: `world_extra_ms = max(0, LastWorldTick − PhysicsStep)`
+(was double-subtracting stream/mesh already inside phys). New scopes:
+`tick_env_ms` / `block_input_ms` / `views_ms`; break counters; soft spike buckets
+in `flight_sim_analyze`.
+
+| Run | Config | sticky | cold | spike_max | dominant (≥500) | Notes |
+|-----|--------|--------|------|-----------|-----------------|-------|
+| `research_r1` | Rel `--replay-manual` | 9 | 2 | 1945 / holes 782 | **stream** | `spike_max_world_extra≈0.02`; tick_env/block_input ~0; CB NO-GO sticky+holes+wall_no_holes 36 |
+| `research_r3` | Rel `--scenario break-stand` | 0 | 0 | 494 | — | `break_complete=22`, **`break_inflight_race=20`**, `break_dark_face=0` |
+
+Conclusion R1: former ~800 ms `world_extra` spikes were **telemetry residue**, not
+TickEnvironment/BlockInput. Heavy hitch class = `stream_ms`. Soft WE gate OK.
+
+Conclusion R3: inflight race strongly correlates with break edits (20/22). Immediate
+path now bumps mesh revision + clears `ActiveMeshSourceRevision` (flicker fix).
+Dark-face counter stayed 0 after local Relight+Immediate (blackness may need
+full ClearColumn path or later frames). Fluid cold pending throttle landed.
+
+### Edit black flash + FastRelight hitch (2026-07-23)
+
+Manual `213640`: OK→black→OK ~1s after dig; place lag ~100–300ms =
+`edit_to_first_mesh`. Fix: SoftDefer remesh of existing mesh while
+`PendingLight` even underfeet; `ApplyEditLighting` notes Pending until MarkRelit;
+FastRelight Clear only edit column ±1 cy (not 3×3); break Immediate center-only.
+
+Follow-up: dig OK alone, but dig→place nearby black/x-ray — second FastRelight
+Clear on pending (±1) column re-Immediate’d the dig mesh dark. Skip FastRelight
+while any edit/neighbor column still PendingLight.
+
+### Edit light systemic (2026-07-23 evening)
+
+Manual `222250`: after dig `black_sticky` ~48s / `focus_dark_mesh` ~54s; hitch
+`edit_to_first_mesh`~380ms; night torch dig showed stale/wrong brightness
+(`clear_first=false` + monotonic block light). SoftDefer-as-edit-lock froze the
+wrong Immediate until MarkRelit.
+
+Fix: `RelightBlocksAroundEdit` (sky/block remove+flood, radius ≤15, no chunk
+Clear) before Immediate; `ApplyEditLighting` only enqueues async player-relight
+for seams — no `NotePendingLight` / SoftDefer lock on dig/place. Streaming
+SoftDefer for cold Pending unchanged. Center Immediate only.
+
 ## Lessons (2026-07-22 evening)
 
 1. **Aggressive C (sync_cap=0, ban underfeet, StarveRemeshForHoles)** → sticky↑ and spike↑. Do not repeat.

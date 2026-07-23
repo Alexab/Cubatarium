@@ -378,27 +378,316 @@ void PropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
   }
 }
 
+constexpr int kEditLightRadius = 15;
+
+bool ChunkLoadedAt(const UBlockWorld &world, glm::ivec3 world_pos)
+{
+  return world.GetChunkManager().GetChunk(
+             UChunkManager::WorldToChunk(world_pos)) != nullptr;
+}
+
+void RemoveThenPropagateBlockLight(UBlockWorld &world, UBlockRegistry &registry,
+                                   glm::ivec3 origin)
+{
+  std::deque<std::pair<glm::ivec3, int>> remove_q;
+  std::deque<glm::ivec3> add_q;
+  std::unordered_set<glm::ivec3, IVec3Hash> add_seen;
+
+  const auto enqueue_add = [&](glm::ivec3 p)
+  {
+    if (add_seen.insert(p).second)
+    {
+      add_q.push_back(p);
+    }
+  };
+
+  const int old_at_origin = GetBlockLightWorld(world, origin);
+  if (old_at_origin > 0)
+  {
+    WriteBlockLightWorld(world, origin, 0);
+    remove_q.emplace_back(origin, old_at_origin);
+  }
+  for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+  {
+    const glm::ivec3 n = origin + offset;
+    if (!ChunkLoadedAt(world, n))
+    {
+      continue;
+    }
+    const int nl = GetBlockLightWorld(world, n);
+    if (nl > 0)
+    {
+      WriteBlockLightWorld(world, n, 0);
+      remove_q.emplace_back(n, nl);
+    }
+  }
+
+  while (!remove_q.empty())
+  {
+    const auto [pos, light] = remove_q.front();
+    remove_q.pop_front();
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      const glm::ivec3 neighbor = pos + offset;
+      if (!ChunkLoadedAt(world, neighbor))
+      {
+        continue;
+      }
+      const int nl = GetBlockLightWorld(world, neighbor);
+      if (nl > 0 && nl < light)
+      {
+        WriteBlockLightWorld(world, neighbor, 0);
+        remove_q.emplace_back(neighbor, nl);
+      }
+      else if (nl >= light)
+      {
+        enqueue_add(neighbor);
+      }
+    }
+  }
+
+  for (int dy = -kEditLightRadius; dy <= kEditLightRadius; ++dy)
+  {
+    for (int dx = -kEditLightRadius; dx <= kEditLightRadius; ++dx)
+    {
+      for (int dz = -kEditLightRadius; dz <= kEditLightRadius; ++dz)
+      {
+        if (std::max({std::abs(dx), std::abs(dy), std::abs(dz)}) >
+            kEditLightRadius)
+        {
+          continue;
+        }
+        const glm::ivec3 p = origin + glm::ivec3(dx, dy, dz);
+        if (!ChunkLoadedAt(world, p))
+        {
+          continue;
+        }
+        const int emission = registry.GetLightEmission(world.GetBlock(p));
+        if (emission <= 0)
+        {
+          continue;
+        }
+        if (emission > GetBlockLightWorld(world, p))
+        {
+          WriteBlockLightWorld(world, p, emission);
+        }
+        enqueue_add(p);
+      }
+    }
+  }
+
+  if (!IsLightTransparent(registry, world.GetBlock(origin)))
+  {
+    WriteBlockLightWorld(world, origin, 0);
+  }
+  else
+  {
+    const int emission = registry.GetLightEmission(world.GetBlock(origin));
+    if (emission > GetBlockLightWorld(world, origin))
+    {
+      WriteBlockLightWorld(world, origin, emission);
+    }
+    enqueue_add(origin);
+  }
+
+  while (!add_q.empty())
+  {
+    const glm::ivec3 pos = add_q.front();
+    add_q.pop_front();
+    if (!ChunkLoadedAt(world, pos))
+    {
+      continue;
+    }
+    const int light = GetBlockLightWorld(world, pos);
+    if (light <= 1)
+    {
+      continue;
+    }
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      const glm::ivec3 neighbor = pos + offset;
+      if (!ChunkLoadedAt(world, neighbor))
+      {
+        continue;
+      }
+      if (!IsLightTransparent(registry, world.GetBlock(neighbor)))
+      {
+        continue;
+      }
+      const int next = light - 1;
+      if (next > GetBlockLightWorld(world, neighbor))
+      {
+        WriteBlockLightWorld(world, neighbor, next);
+        enqueue_add(neighbor);
+      }
+    }
+  }
+}
+
+void RemoveThenPropagateSkyLight(UBlockWorld &world, UBlockRegistry &registry,
+                                 glm::ivec3 origin)
+{
+  std::deque<std::pair<glm::ivec3, int>> remove_q;
+  std::deque<glm::ivec3> add_q;
+  std::unordered_set<glm::ivec3, IVec3Hash> add_seen;
+
+  const auto enqueue_add = [&](glm::ivec3 p)
+  {
+    if (add_seen.insert(p).second)
+    {
+      add_q.push_back(p);
+    }
+  };
+
+  const int old_at_origin = GetSkyLightWorld(world, origin);
+  if (old_at_origin > 0)
+  {
+    WriteSkyLightWorld(world, origin, 0);
+    remove_q.emplace_back(origin, old_at_origin);
+  }
+  for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+  {
+    const glm::ivec3 n = origin + offset;
+    if (!ChunkLoadedAt(world, n))
+    {
+      continue;
+    }
+    const int nl = GetSkyLightWorld(world, n);
+    if (nl > 0)
+    {
+      WriteSkyLightWorld(world, n, 0);
+      remove_q.emplace_back(n, nl);
+    }
+  }
+
+  while (!remove_q.empty())
+  {
+    const auto [pos, light] = remove_q.front();
+    remove_q.pop_front();
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      const glm::ivec3 neighbor = pos + offset;
+      if (!ChunkLoadedAt(world, neighbor))
+      {
+        continue;
+      }
+      const int nl = GetSkyLightWorld(world, neighbor);
+      if (nl > 0 && nl < light)
+      {
+        WriteSkyLightWorld(world, neighbor, 0);
+        remove_q.emplace_back(neighbor, nl);
+      }
+      else if (nl >= light)
+      {
+        enqueue_add(neighbor);
+      }
+    }
+  }
+
+  for (int dx = -1; dx <= 1; ++dx)
+  {
+    for (int dz = -1; dz <= 1; ++dz)
+    {
+      const int wx = origin.x + dx;
+      const int wz = origin.z + dz;
+      const int cy0 = FloorDiv(origin.y - kEditLightRadius, CHUNK_SIZE);
+      const int cy1 = FloorDiv(origin.y + kEditLightRadius, CHUNK_SIZE);
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 chunk_coord(FloorDiv(wx, CHUNK_SIZE), cy,
+                                     FloorDiv(wz, CHUNK_SIZE));
+        UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord);
+        if (!chunk)
+        {
+          continue;
+        }
+        const glm::ivec3 local =
+            UChunkManager::WorldToLocal(glm::ivec3(wx, cy * CHUNK_SIZE, wz));
+        PropagateSkylightColumn(world, registry, *chunk, chunk_coord, local.x,
+                                local.z);
+        for (int ly = 0; ly < CHUNK_SIZE; ++ly)
+        {
+          const glm::ivec3 cell =
+              chunk_coord * CHUNK_SIZE + glm::ivec3(local.x, ly, local.z);
+          if (GetSkyLightWorld(world, cell) > 0)
+          {
+            enqueue_add(cell);
+          }
+        }
+      }
+    }
+  }
+
+  if (!IsLightTransparent(registry, world.GetBlock(origin)))
+  {
+    WriteSkyLightWorld(world, origin, 0);
+  }
+  else if (GetSkyLightWorld(world, origin) > 0)
+  {
+    enqueue_add(origin);
+  }
+
+  while (!add_q.empty())
+  {
+    const glm::ivec3 pos = add_q.front();
+    add_q.pop_front();
+    if (!ChunkLoadedAt(world, pos))
+    {
+      continue;
+    }
+    const int light = GetSkyLightWorld(world, pos);
+    if (light <= 1)
+    {
+      continue;
+    }
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      const glm::ivec3 neighbor = pos + offset;
+      if (!ChunkLoadedAt(world, neighbor))
+      {
+        continue;
+      }
+      const BlockId neighbor_id = world.GetBlock(neighbor);
+      if (!IsLightTransparent(registry, neighbor_id))
+      {
+        continue;
+      }
+      const int next =
+          std::max(0, light - SkylightStepCost(registry, neighbor_id));
+      if (next > GetSkyLightWorld(world, neighbor))
+      {
+        WriteSkyLightWorld(world, neighbor, next);
+        enqueue_add(neighbor);
+      }
+    }
+  }
+}
+
 } // namespace
 
 void RelightChunkCoords(UBlockWorld &world, UBlockRegistry &registry,
                         const std::vector<glm::ivec3> &coords,
-                        bool include_block_light, bool include_skylight)
+                        bool include_block_light, bool include_skylight,
+                        bool clear_first = true)
 {
-  for (const glm::ivec3 &coord : coords)
+  if (clear_first)
   {
-    if (UChunk *chunk = world.GetChunkManager().GetChunk(coord))
+    for (const glm::ivec3 &coord : coords)
     {
-      if (include_skylight && include_block_light)
+      if (UChunk *chunk = world.GetChunkManager().GetChunk(coord))
       {
-        ClearChunkLight(*chunk);
-      }
-      else if (include_skylight)
-      {
-        ClearChunkSkylight(*chunk);
-      }
-      else if (include_block_light)
-      {
-        ClearChunkBlockLight(*chunk);
+        if (include_skylight && include_block_light)
+        {
+          ClearChunkLight(*chunk);
+        }
+        else if (include_skylight)
+        {
+          ClearChunkSkylight(*chunk);
+        }
+        else if (include_block_light)
+        {
+          ClearChunkBlockLight(*chunk);
+        }
       }
     }
   }
@@ -607,24 +896,17 @@ void CollectEditNeighborhoodChunkCoords(
     const std::vector<glm::ivec3> &block_positions,
     std::unordered_set<glm::ivec3, IVec3Hash> &out)
 {
+  // Fast edit path only: edit column ±1 cy. Full 3×3 Clear was 100–500ms and
+  // still left seams to async player-relight; keep FastRelight cheap.
   for (const glm::ivec3 &block_pos : block_positions)
   {
     const glm::ivec3 center = UChunkManager::WorldToChunk(block_pos);
     for (int dy = -1; dy <= 1; ++dy)
     {
       const glm::ivec3 layer(center.x, center.y + dy, center.z);
-      if (!world.GetChunkManager().HasChunk(layer))
+      if (world.GetChunkManager().HasChunk(layer))
       {
-        continue;
-      }
-      out.insert(layer);
-      for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-      {
-        const glm::ivec3 neighbor = layer + offset;
-        if (world.GetChunkManager().HasChunk(neighbor))
-        {
-          out.insert(neighbor);
-        }
+        out.insert(layer);
       }
     }
   }
@@ -651,7 +933,8 @@ void RelightChunkBlockLight(UBlockWorld &world, UBlockRegistry &registry,
 }
 
 void RelightBlocksAroundLocal(UBlockWorld &world, UBlockRegistry &registry,
-                              const std::vector<glm::ivec3> &block_positions)
+                              const std::vector<glm::ivec3> &block_positions,
+                              bool clear_first)
 {
   std::unordered_set<glm::ivec3, IVec3Hash> coords;
   CollectEditNeighborhoodChunkCoords(world, block_positions, coords);
@@ -660,7 +943,21 @@ void RelightBlocksAroundLocal(UBlockWorld &world, UBlockRegistry &registry,
     return;
   }
   const std::vector<glm::ivec3> batch(coords.begin(), coords.end());
-  RelightChunkCoords(world, registry, batch, true, true);
+  RelightChunkCoords(world, registry, batch, true, true, clear_first);
+}
+
+void RelightBlocksAroundEdit(UBlockWorld &world, UBlockRegistry &registry,
+                             const std::vector<glm::ivec3> &block_positions)
+{
+  for (const glm::ivec3 &pos : block_positions)
+  {
+    if (!ChunkLoadedAt(world, pos))
+    {
+      continue;
+    }
+    RemoveThenPropagateBlockLight(world, registry, pos);
+    RemoveThenPropagateSkyLight(world, registry, pos);
+  }
 }
 
 void RelightChunksAround(UBlockWorld &world, UBlockRegistry &registry,

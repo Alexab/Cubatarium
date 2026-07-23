@@ -19,8 +19,10 @@
 #include "ThirdParty/stb_image.h"
 #include "World/Core/World.h"
 #include "World/Diagnostics/FramePerfMonitor.h"
+#include "World/Math/BlockTypes.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "Core/Progress/IUProgressSink.h"
+#include <cmath>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -463,16 +465,82 @@ void UWindowManager::ProcessInput()
 
 void UWindowManager::Update()
 {
+  using clock = std::chrono::steady_clock;
+  if (World)
+  {
+    PhysicsTelemetry &tele = World->GetPhysicsTelemetryMutable();
+    tele.ViewsMs = 0.0;
+    tele.DoMovementMs = 0.0;
+    tele.BlockInputMs = 0.0;
+    tele.TickEnvMs = 0.0;
+    tele.BreakCompleteN = 0;
+    tele.BreakInflightRaceN = 0;
+    tele.BreakDarkFaceN = 0;
+  }
+
   if (Views)
   {
+    const auto t0 = clock::now();
     Views->UpdateFrameTime();
+    if (World)
+    {
+      World->GetPhysicsTelemetryMutable().ViewsMs =
+          std::chrono::duration<double, std::milli>(clock::now() - t0).count();
+    }
   }
 
   if (World && Application && Application->GetState() == AppState::InGame)
   {
-    World->DoMovement();
+    {
+      const auto t0 = clock::now();
+      World->DoMovement();
+      World->GetPhysicsTelemetryMutable().DoMovementMs =
+          std::chrono::duration<double, std::milli>(clock::now() - t0).count();
+    }
+    if (World->ConsumeFlightSimBreakRequest())
+    {
+      if (auto camera = World->GetCurrentUserCamera())
+      {
+        World->UpdateIntersection(camera->GetPosition(), camera->GetFront());
+      }
+      glm::ivec3 target = World->GetBreakBlockPos();
+      bool have_target = World->GetIsBlockIntersectionExists() &&
+                         World->GetBlockWorld().GetBlock(target) != BLOCK_AIR;
+      if (!have_target)
+      {
+        // Standing ocean save may look at empty air/water; break underfeet solid.
+        if (auto camera = World->GetCurrentUserCamera())
+        {
+          const glm::vec3 eye = camera->GetPosition();
+          const int bx = static_cast<int>(std::floor(eye.x));
+          const int by = static_cast<int>(std::floor(eye.y));
+          const int bz = static_cast<int>(std::floor(eye.z));
+          for (int dy = 1; dy <= 12 && !have_target; ++dy)
+          {
+            const glm::ivec3 cand(bx, by - dy, bz);
+            const BlockId id = World->GetBlockWorld().GetBlock(cand);
+            if (id == BLOCK_AIR)
+            {
+              continue;
+            }
+            if (!World->GetBlockRegistry().IsSolid(id))
+            {
+              continue;
+            }
+            target = cand;
+            have_target = true;
+          }
+        }
+      }
+      if (have_target)
+      {
+        World->StartBreakSession(target);
+        World->CompleteBreakSession();
+      }
+    }
     if (BlockInput)
     {
+      const auto t0 = clock::now();
       BlockInputContext ctx;
       ctx.World = World;
       ctx.Geometries = Geometries.get();
@@ -480,6 +548,8 @@ void UWindowManager::Update()
       ctx.Window = Window;
       ctx.App = Application.get();
       BlockInput->Tick(static_cast<float>(DeltaTime), ctx);
+      World->GetPhysicsTelemetryMutable().BlockInputMs =
+          std::chrono::duration<double, std::milli>(clock::now() - t0).count();
     }
   }
 

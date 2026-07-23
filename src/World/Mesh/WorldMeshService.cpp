@@ -6,6 +6,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/GridMath.h"
+#include "World/Physics/PhysicsTelemetry.h"
 #include <unordered_set>
 
 namespace cutum
@@ -677,7 +678,8 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
     UBlockWorld &block_world, UBlockRegistry *registry,
     const std::vector<glm::ivec3> &block_positions,
     std::unordered_set<glm::ivec3, IVec3Hash> &modified_chunks,
-    bool sync_neighbor_chunks)
+    bool sync_neighbor_chunks, bool collect_break_diag,
+    PhysicsTelemetry *break_tele)
 {
   if (block_positions.empty())
   {
@@ -708,11 +710,30 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
       !render.AsyncMeshing || !render.GreedyMeshing;
   const bool hybrid_async_edit =
       registry != nullptr && render.AsyncMeshing && render.GreedyMeshing;
+
+  auto note_race_before_immediate = [&](glm::ivec3 chunk_coord)
+  {
+    if (collect_break_diag && break_tele && HasInflightMeshBuild(chunk_coord))
+    {
+      ++break_tele->BreakInflightRaceN;
+    }
+  };
+  auto note_dark_after_immediate = [&](glm::ivec3 chunk_coord)
+  {
+    if (collect_break_diag && break_tele &&
+        Cache.ChunkHasFullyDarkFace(chunk_coord))
+    {
+      ++break_tele->BreakDarkFaceN;
+    }
+  };
+
   if (full_sync_rebuild || (hybrid_async_edit && sync_neighbor_chunks))
   {
     for (const glm::ivec3 &chunk_coord : chunk_coords)
     {
+      note_race_before_immediate(chunk_coord);
       RebuildChunkImmediate(block_world, *registry, chunk_coord);
+      note_dark_after_immediate(chunk_coord);
     }
     return;
   }
@@ -721,7 +742,9 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
   {
     if (center_chunks.count(chunk_coord))
     {
+      note_race_before_immediate(chunk_coord);
       RebuildChunkImmediate(block_world, *registry, chunk_coord);
+      note_dark_after_immediate(chunk_coord);
     }
     else
     {

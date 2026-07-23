@@ -376,6 +376,14 @@ public:
   float GetBreakProgress() const;
   bool HasBreakSession() const { return BreakSession.has_value(); }
   std::optional<glm::ivec3> GetBreakSessionBlockPos() const;
+  /// Flight-sim break-stand: request one CompleteBreakSession on next Update.
+  void RequestFlightSimBreak() { FlightSimBreakRequested = true; }
+  bool ConsumeFlightSimBreakRequest()
+  {
+    const bool requested = FlightSimBreakRequested;
+    FlightSimBreakRequested = false;
+    return requested;
+  }
 
   bool AddObject(const std::string type_id, const glm::vec3 &position);
 
@@ -1065,7 +1073,8 @@ private:
   void MarkBlockChunkDirty(glm::ivec3 blockPos);
   void
   MarkBlocksChunkDirtyBatch(const std::vector<glm::ivec3> &block_positions,
-                            bool sync_neighbor_chunks = false);
+                            bool sync_neighbor_chunks = false,
+                            bool collect_break_diag = false);
   void MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos);
   void MarkFluidChangeDirty(glm::ivec3 blockPos);
   void MarkFluidFloodMeshDirty(glm::ivec3 blockPos,
@@ -1209,6 +1218,7 @@ private:
     float progress{0.f};
   };
   std::optional<BlockBreakSession> BreakSession;
+  bool FlightSimBreakRequested{false};
 
   uint64_t DurationDoMovementMks;
   uint64_t DurationDrawSceneMks{0};

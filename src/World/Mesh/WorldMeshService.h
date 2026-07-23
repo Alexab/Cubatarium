@@ -20,6 +20,7 @@ class UBlockRegistry;
 class UBlockWorld;
 class UCamera;
 struct Frustum;
+struct PhysicsTelemetry;
 
 /// Owns chunk mesh cache; bridge between World block data and Render meshing.
 class UWorldMeshService
@@ -172,7 +173,8 @@ public:
       UBlockWorld &block_world, UBlockRegistry *registry,
       const std::vector<glm::ivec3> &block_positions,
       std::unordered_set<glm::ivec3, IVec3Hash> &modified_chunks,
-      bool sync_neighbor_chunks = false);
+      bool sync_neighbor_chunks = false, bool collect_break_diag = false,
+      PhysicsTelemetry *break_tele = nullptr);
   void MarkChunksContainingBlockIds(const UBlockWorld &block_world,
                                     const std::vector<BlockId> &block_ids);
 

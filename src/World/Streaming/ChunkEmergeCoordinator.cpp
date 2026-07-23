@@ -155,7 +155,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const glm::ivec3 focus_ground_horiz(focus_ground.x, 0, focus_ground.z);
   const int focus_radius = world.GetStreamingFocusRadius();
   mesh_service.SetMeshRebuildFocus(focus_ground_horiz, focus_radius);
-  // Soft-defer / V2a: no first-mesh or remesh while PendingLight except underfeet.
+  // Soft-defer / V2a: no first-mesh while PendingLight except underfeet; remesh
+  // of existing mesh is deferred even underfeet (player dig dark overwrite).
   mesh_service.SetDeferMeshUntilLitFn(
       [&world, &mesh_service, focus_ground_horiz,
        focus_radius](glm::ivec3 chunk_coord)
