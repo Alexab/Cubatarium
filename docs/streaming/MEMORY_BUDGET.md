@@ -26,8 +26,8 @@ Knobs в `RuntimeTuning` / `bin/streaming_tune.json` (и опционально
 | `MeshCompletedSlots` | 0 → workers×6 | Completed mesh ring |
 | `RelightCompletedSlots` | 0 → workers×8 | Completed relight ring |
 | `DirtySoftCap` | 1200 | drop farthest remesh |
-| `DirtyThrashSoftCap` | 400 | lower SoftCap when async thrash |
-| `DirtyThrashAsyncMin` | 36 | async≥N → thrash SoftCap |
+| `DirtyThrashSoftCap` | 400 | SoftCap under Yellow/Red **or** async thrash |
+| `DirtyThrashAsyncMin` | 36 | async≥N → thrash SoftCap (also Yellow alone) |
 | `PendingLightSoftCap` | 80 | drop farthest only if mesh+LitReady |
 | `RelightFifoSoftCap` | 96 | drop farthest FIFO |
 | `GpuVertexPoolReserveMb` | 64 | pre-Reserve |
@@ -106,11 +106,15 @@ emergency_cancel_outside, capture_hard_cap, memory_pressure.
   `CompletedExpandEnabled` and discard delta ≥4 under `ExpandKeepMb`; logged via
   `buffer_expand_events`.
 - Green may **raise** `max_effective_rd` (Adaptive uses it as RD ceiling).
-- Dirty thrash SoftCap (`DirtyThrashSoftCap` when `mesh_async≥DirtyThrashAsyncMin`)
-  — SoftCap 1200 never engaged at Dirty~400 (manual `20260723-085228`).
+- Dirty thrash SoftCap (`DirtyThrashSoftCap` when stream Yellow/Red **or**
+  `mesh_async≥DirtyThrashAsyncMin`) — SoftCap 1200 never engaged at Dirty~400–590
+  with async≤29 (manual `20260723-091724`).
 - Capture hitch gate: `visual_holes>0` or `wall>500ms` → `capture_hard_cap=1`
-  even under byte-budget Green (same run: 2.9–4.5 s `relight_drain`).
+  even under byte-budget Green; controller re-evals immediately on holes/wall.
+  Drain checks wall budget **before** every Capture (was only after first).
+  Remaining: one full-column Capture can still be seconds (B2 snapshot/COW).
 - PendingLight trim requires **HasMesh + LitReady**; free-list sized from Keep.
+- Relight FIFO soft-cap trims **far + priority** deques.
 
 ## Validation gates
 

@@ -39,9 +39,10 @@ private p95 / fill% / wall).
 |-----|-------|
 | `081832` | private≈0.5 GB; Soft stuck via stream Yellow → decouple Soft from stream |
 | `085228` | Soft=0 OK; keep_margin→3; Dirty~350–470 no drops; Capture hitch 2.9–4.5 s |
+| `091724` | Soft=0; keep→3; Dirty~400–590 async≤29 thrash miss; Capture~3.2 s holes=1 |
 
-Tails closed after `085228`: LitReady Pending trim, RD expand up, Dirty thrash
-SoftCap, Keep-tied free-list, Capture hard_cap on holes/wall.
+Tails after `091724`: Yellow→DirtyThrashSoftCap; FIFO trim Priority; Capture
+elapsed gate before first enqueue; urgent MemoryBudget eval on holes/wall.
 
 ## Lessons (2026-07-22 evening)
 

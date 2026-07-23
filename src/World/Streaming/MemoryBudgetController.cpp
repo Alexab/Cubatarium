@@ -86,7 +86,11 @@ bool UMemoryBudgetController::MaybeEvaluate(int frame_counter,
                                             const URuntimeTuning &tuning,
                                             MemoryBudgetDecision &out)
 {
-  if (frame_counter - LastEvalFrame < kEvalIntervalFrames)
+  // Holes / hitch: re-evaluate immediately so capture_hard_cap applies this
+  // frame (manual 091724: 20-frame lag left Capture uncapped into a hole).
+  const bool urgent =
+      sample.visual_holes > 0 || sample.last_wall_ms > 100.0;
+  if (!urgent && frame_counter - LastEvalFrame < kEvalIntervalFrames)
   {
     out = LastDecision;
     return false;

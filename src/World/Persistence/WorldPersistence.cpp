@@ -352,7 +352,11 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   // Capture() is main-thread and copies a 3x3 column band. Idle used to allow
   // 48–56 Captures/frame with no wall budget → 15–52s spikes and multi-GB
   // snapshot high-water (manual 220018). Always bound Capture wall time.
+  // Manual 091724: first Capture alone was ~3s because elapsed was checked
+  // only after drained_bg>0 — gate before every Capture and stop after one
+  // expensive Capture. Full-column Y-band split deferred (SoftDefer risk).
   const double capture_drain_budget_ms = moving ? 4.0 : 8.0;
+  const double frame_ms_so_far = world.GetWallFrameDelta() * 1000.0;
   const auto drain_loop_t0 = std::chrono::high_resolution_clock::now();
   auto drain_one = [&]()
   {
@@ -360,16 +364,18 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     {
       return false;
     }
-    if (drained_bg > 0)
+    const double elapsed_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - drain_loop_t0)
+            .count();
+    if (elapsed_ms >= capture_drain_budget_ms)
     {
-      const double elapsed_ms =
-          std::chrono::duration<double, std::milli>(
-              std::chrono::high_resolution_clock::now() - drain_loop_t0)
-              .count();
-      if (elapsed_ms >= capture_drain_budget_ms)
-      {
-        return false;
-      }
+      return false;
+    }
+    // Frame already far over Capture budget (sticky hitch) — skip this frame.
+    if (drained_bg == 0 && frame_ms_so_far >= capture_drain_budget_ms * 4.0)
+    {
+      return false;
     }
     if (async_bg && world.GetAsyncRelightInFlightCount() >= max_inflight)
     {
@@ -421,6 +427,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       }
     }
     PendingTerrainColumnRelightKeys.erase(col);
+    const auto capture_t0 = std::chrono::high_resolution_clock::now();
     if (async_bg)
     {
       world.EnqueueAsyncTerrainColumnRelight(col.x, col.y, relight_min,
@@ -430,7 +437,16 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     {
       world.RelightTerrainColumn(col.x, col.y, relight_min, relight_max, false);
     }
+    const double capture_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - capture_t0)
+            .count();
     ++drained_bg;
+    // One expensive Capture consumes the frame budget — stop the loop.
+    if (capture_ms >= capture_drain_budget_ms)
+    {
+      return false;
+    }
     return true;
   };
   while (drain_one())
@@ -452,18 +468,23 @@ int UWorldPersistence::GetPendingTerrainColumnRelightCount() const
 int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
                                                   int soft_cap)
 {
-  if (soft_cap <= 0 ||
-      static_cast<int>(PendingTerrainColumnRelights.size()) <= soft_cap)
+  auto total_fifo = [this]()
+  {
+    return static_cast<int>(PendingTerrainColumnRelights.size() +
+                            PendingTerrainColumnRelightsPriority.size());
+  };
+  if (soft_cap <= 0 || total_fifo() <= soft_cap)
   {
     return 0;
   }
   int dropped = 0;
-  while (static_cast<int>(PendingTerrainColumnRelights.size()) > soft_cap)
+  // Prefer drop from far (non-priority) deque first; then farthest priority.
+  auto drop_farthest_from =
+      [&](std::deque<glm::ivec2> &q) -> bool
   {
-    auto best = PendingTerrainColumnRelights.end();
+    auto best = q.end();
     int best_dist = -1;
-    for (auto it = PendingTerrainColumnRelights.begin();
-         it != PendingTerrainColumnRelights.end(); ++it)
+    for (auto it = q.begin(); it != q.end(); ++it)
     {
       const int cx = FloorDiv(it->x, CHUNK_SIZE);
       const int cz = FloorDiv(it->y, CHUNK_SIZE);
@@ -479,15 +500,30 @@ int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
         best = it;
       }
     }
-    if (best == PendingTerrainColumnRelights.end())
+    if (best == q.end())
     {
-      break;
+      return false;
     }
     const glm::ivec2 victim = *best;
-    PendingTerrainColumnRelights.erase(best);
+    q.erase(best);
     PendingTerrainColumnRelightKeys.erase(victim);
     PendingTerrainColumnRelightYBands.erase(victim);
     ++dropped;
+    return true;
+  };
+  while (total_fifo() > soft_cap)
+  {
+    if (!PendingTerrainColumnRelights.empty() &&
+        drop_farthest_from(PendingTerrainColumnRelights))
+    {
+      continue;
+    }
+    if (!PendingTerrainColumnRelightsPriority.empty() &&
+        drop_farthest_from(PendingTerrainColumnRelightsPriority))
+    {
+      continue;
+    }
+    break;
   }
   return dropped;
 }
