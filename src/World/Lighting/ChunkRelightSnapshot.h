@@ -24,6 +24,8 @@ struct RelightJobSpec
   bool include_skylight{true};
   int frontier_iterations{2};
   uint64_t job_id{0};
+  /// False while more Y-bands remain for this column (SoftDefer keeps Pending).
+  bool finalize_pending_gate{true};
 };
 
 struct RelightChunkLightData
@@ -38,6 +40,7 @@ struct RelightComputeResult
   uint64_t submitEpoch{0};
   std::vector<RelightChunkLightData> chunks;
   bool frontier_unfinished{false};
+  bool finalize_pending_gate{true};
   std::vector<glm::ivec3> source_block_positions;
 };
 

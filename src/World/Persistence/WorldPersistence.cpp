@@ -352,11 +352,12 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   // Capture() is main-thread and copies a 3x3 column band. Idle used to allow
   // 48–56 Captures/frame with no wall budget → 15–52s spikes and multi-GB
   // snapshot high-water (manual 220018). Always bound Capture wall time.
-  // Manual 091724: first Capture alone was ~3s because elapsed was checked
-  // only after drained_bg>0 — gate before every Capture and stop after one
-  // expensive Capture. Full-column Y-band split deferred (SoftDefer risk).
+  // Manual 102936: full-column Capture still ~1.6s — split into top-down Y
+  // bands (RelightCaptureBandCy). SoftDefer keeps PendingLight until the
+  // final band (finalize_pending_gate=false on partial).
   const double capture_drain_budget_ms = moving ? 4.0 : 8.0;
   const double frame_ms_so_far = world.GetWallFrameDelta() * 1000.0;
+  const int band_cy = std::max(0, tune.RelightCaptureBandCy);
   const auto drain_loop_t0 = std::chrono::high_resolution_clock::now();
   auto drain_one = [&]()
   {
@@ -412,6 +413,30 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     }
     const glm::ivec2 ground_xz(FloorDiv(col.x, CHUNK_SIZE),
                                FloorDiv(col.y, CHUNK_SIZE));
+    const int horiz_dist =
+        std::max(std::abs(ground_xz.x - focus_horiz.x),
+                 std::abs(ground_xz.y - focus_horiz.z));
+    // Top-down Y-band: Capture sky first; requeue remainder after enqueue.
+    int remainder_min = -1;
+    int remainder_max = -1;
+    bool finalize_gate = true;
+    if (async_bg && band_cy > 0)
+    {
+      const int band_h = band_cy * CHUNK_SIZE;
+      const int span = relight_max - relight_min;
+      if (span > band_h)
+      {
+        const int band_min =
+            std::max(relight_min, relight_max - band_h + 1);
+        if (band_min > relight_min)
+        {
+          remainder_min = relight_min;
+          remainder_max = band_min - 1;
+          relight_min = band_min;
+          finalize_gate = false;
+        }
+      }
+    }
     if (async_bg && world.IsAsyncRelightColumnInFlight(ground_xz))
     {
       // Ghost InFlight (worker count 0) — reconcile then fall through.
@@ -421,7 +446,18 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       if (world.IsAsyncRelightColumnInFlight(ground_xz) &&
           world.GetAsyncRelightInFlightCount() > 0)
       {
+        if (remainder_min >= 0)
+        {
+          PendingTerrainColumnRelightYBands[col] =
+              glm::ivec2(remainder_min, relight_max);
+        }
+        else if (relight_min > 0 || relight_max < max_y)
+        {
+          PendingTerrainColumnRelightYBands[col] =
+              glm::ivec2(relight_min, relight_max);
+        }
         PendingTerrainColumnRelightsPriority.push_back(col);
+        PendingTerrainColumnRelightKeys.insert(col);
         ++skipped_inflight;
         return skipped_inflight < std::max(8, max_bg_columns * 4);
       }
@@ -431,11 +467,17 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     if (async_bg)
     {
       world.EnqueueAsyncTerrainColumnRelight(col.x, col.y, relight_min,
-                                             relight_max);
+                                             relight_max, true, true,
+                                             finalize_gate);
     }
     else
     {
       world.RelightTerrainColumn(col.x, col.y, relight_min, relight_max, false);
+    }
+    if (remainder_min >= 0)
+    {
+      EnqueueTerrainColumnRelight(col.x, col.y, horiz_dist <= 1, remainder_min,
+                                  remainder_max);
     }
     const double capture_ms =
         std::chrono::duration<double, std::milli>(

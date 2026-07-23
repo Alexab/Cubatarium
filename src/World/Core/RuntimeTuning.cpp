@@ -178,6 +178,11 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   {
     t.MaxResidentChunks = j.value("max_resident_chunks", t.MaxResidentChunks);
   }
+  if (j.contains("relight_capture_band_cy"))
+  {
+    t.RelightCaptureBandCy =
+        j.value("relight_capture_band_cy", t.RelightCaptureBandCy);
+  }
   if (j.contains("pending_light_soft_cap"))
   {
     t.PendingLightSoftCap =

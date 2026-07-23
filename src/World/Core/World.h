@@ -832,7 +832,8 @@ public:
                          int min_world_y);
   void EnqueueAsyncTerrainColumnRelight(int world_x, int world_z, int min_y,
                                         int max_y, bool include_skylight = true,
-                                        bool include_block_light = true);
+                                        bool include_block_light = true,
+                                        bool finalize_pending_gate = true);
   void EnqueueAsyncChunkSkylightRelight(glm::ivec3 chunk_coord,
                                         int frontier_iterations = 1);
   void EnqueueAsyncChunkRelight(glm::ivec3 chunk_coord, bool include_skylight,
@@ -1025,10 +1026,11 @@ private:
   void EnsureAsyncRelightBuilder();
   void CancelAsyncRelightWork();
   /// primary_grounds: column XZ whose light job completed — only these clear
-  /// PendingLightBeforeMesh. Neighbors in relit_chunks remesh for seams only.
+  /// PendingLightBeforeMesh (when finalize_pending_gate). Neighbors remesh seams.
   void MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                               bool priority_mesh,
-                              const std::vector<glm::ivec2> &primary_grounds);
+                              const std::vector<glm::ivec2> &primary_grounds,
+                              bool finalize_pending_gate = true);
   void AccumulateRelightMeshColumns(
       const std::vector<glm::ivec3> &relit_chunks);
   void EnsurePlayerOnGround();

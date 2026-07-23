@@ -40,9 +40,10 @@ private p95 / fill% / wall).
 | `081832` | private≈0.5 GB; Soft stuck via stream Yellow → decouple Soft from stream |
 | `085228` | Soft=0 OK; keep_margin→3; Dirty~350–470 no drops; Capture hitch 2.9–4.5 s |
 | `091724` | Soft=0; keep→3; Dirty~400–590 async≤29 thrash miss; Capture~3.2 s holes=1 |
+| `102936` | Soft=0; Dirty SoftCap works (`dirty_dropped`); wall med 38 ms; Capture max~1.6 s |
 
-Tails after `091724`: Yellow→DirtyThrashSoftCap; FIFO trim Priority; Capture
-elapsed gate before first enqueue; urgent MemoryBudget eval on holes/wall.
+Tails after `102936`: SoftDefer-safe **Y-band Capture** (`RelightCaptureBandCy`,
+`finalize_pending_gate`) — PendingLight until final band.
 
 ## Lessons (2026-07-22 evening)
 

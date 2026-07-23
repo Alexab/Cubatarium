@@ -35,6 +35,7 @@ Knobs в `RuntimeTuning` / `bin/streaming_tune.json` (и опционально
 | `MaxKeepPrefetchMargin` | 4 | expand Keep ceiling |
 | `MemoryExpandMaxRd` | 6 | expand RD ceiling |
 | `MaxResidentChunks` | 0 (auto) | free-list cap; 0→Keep footprint/4≤512 |
+| `RelightCaptureBandCy` | 4 | max cy layers per Capture; 0=full column |
 | `CompletedExpandEnabled` | true | stepped Completed slot expand |
 
 ## Overflow matrix
@@ -112,7 +113,9 @@ emergency_cancel_outside, capture_hard_cap, memory_pressure.
 - Capture hitch gate: `visual_holes>0` or `wall>500ms` → `capture_hard_cap=1`
   even under byte-budget Green; controller re-evals immediately on holes/wall.
   Drain checks wall budget **before** every Capture (was only after first).
-  Remaining: one full-column Capture can still be seconds (B2 snapshot/COW).
+  **Y-band Capture** (`RelightCaptureBandCy=4`, top-down): SoftDefer keeps
+  `PendingLight` until `finalize_pending_gate` on the last band (manual
+  `102936` full-column ~1.6 s).
 - PendingLight trim requires **HasMesh + LitReady**; free-list sized from Keep.
 - Relight FIFO soft-cap trims **far + priority** deques.
 

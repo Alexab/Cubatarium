@@ -48,6 +48,9 @@ struct URuntimeTuning
   int MemoryExpandMaxRd{6};
   /// Cap recycled UChunk free-list (0 → auto from Keep footprint / 4).
   int MaxResidentChunks{0};
+  /// Max vertical chunk layers per main-thread Capture (top-down bands).
+  /// 0 = full column. SoftDefer keeps PendingLight until final band.
+  int RelightCaptureBandCy{4};
   bool CompletedExpandEnabled{true};
   /// Cumulative buffer expand events (Completed rings / GPU Reserve).
   uint64_t BufferExpandEvents{0};
