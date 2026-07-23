@@ -1568,7 +1568,9 @@ int UWorld::TrimPendingLightBeforeMesh(glm::ivec3 focus_ground_horiz,
       }
     }
     // Never erase cold holes (no mesh) — would leave permanent darkness.
-    if (!has_mesh)
+    // Also require LitReady (or later): Pending on Lighting/VoxelsReady stays.
+    if (!has_mesh ||
+        !IsColumnLitReady(glm::ivec3(key.x, 0, key.y)))
     {
       continue;
     }

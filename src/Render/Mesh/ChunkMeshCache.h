@@ -114,6 +114,7 @@ public:
     return LastRebuildTickStats;
   }
   size_t GetDirtyCount() const { return Dirty.GetCount(); }
+  void ReserveDirtyCapacity(size_t n) { Dirty.ReserveCapacity(n); }
   int MaybeDropFarthestDirty(glm::ivec3 focus_ground_chunk, size_t soft_cap,
                              int min_keep_horiz = 1);
   bool IsChunkMeshDirty(glm::ivec3 chunk_coord) const;

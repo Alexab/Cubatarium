@@ -67,6 +67,17 @@ UMemoryBudgetController::Evaluate(const MemoryBudgetSample &sample,
     d.capture_hard_cap = 2;
   }
 
+  // Hitch gate (manual 085228): seconds-scale Capture while holes=1 and
+  // memory_pressure stayed 0 — tighten Capture even under byte-budget Green.
+  if (d.capture_hard_cap < 0 && sample.visual_holes > 0)
+  {
+    d.capture_hard_cap = 1;
+  }
+  else if (d.capture_hard_cap < 0 && sample.last_wall_ms > 500.0)
+  {
+    d.capture_hard_cap = 1;
+  }
+
   return d;
 }
 

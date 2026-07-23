@@ -41,6 +41,8 @@ void URuntimeTuning::ApplyMemoryTier(const char *tier)
     t.MaxKeepPrefetchMargin = 2;
     t.MemoryExpandMaxRd = 5;
     t.DirtySoftCap = 800;
+    t.DirtyThrashSoftCap = 280;
+    t.MaxResidentChunks = 1024;
   }
   else if (high)
   {
@@ -52,6 +54,8 @@ void URuntimeTuning::ApplyMemoryTier(const char *tier)
     t.MaxKeepPrefetchMargin = 6;
     t.MemoryExpandMaxRd = 8;
     t.DirtySoftCap = 2000;
+    t.DirtyThrashSoftCap = 600;
+    t.MaxResidentChunks = 4096;
   }
   else
   {
@@ -64,6 +68,8 @@ void URuntimeTuning::ApplyMemoryTier(const char *tier)
     t.MaxKeepPrefetchMargin = 4;
     t.MemoryExpandMaxRd = 6;
     t.DirtySoftCap = 1200;
+    t.DirtyThrashSoftCap = 400;
+    t.MaxResidentChunks = 0; // auto Keep footprint
   }
 }
 
@@ -157,6 +163,20 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   if (j.contains("dirty_soft_cap"))
   {
     t.DirtySoftCap = j.value("dirty_soft_cap", t.DirtySoftCap);
+  }
+  if (j.contains("dirty_thrash_soft_cap"))
+  {
+    t.DirtyThrashSoftCap =
+        j.value("dirty_thrash_soft_cap", t.DirtyThrashSoftCap);
+  }
+  if (j.contains("dirty_thrash_async_min"))
+  {
+    t.DirtyThrashAsyncMin =
+        j.value("dirty_thrash_async_min", t.DirtyThrashAsyncMin);
+  }
+  if (j.contains("max_resident_chunks"))
+  {
+    t.MaxResidentChunks = j.value("max_resident_chunks", t.MaxResidentChunks);
   }
   if (j.contains("pending_light_soft_cap"))
   {

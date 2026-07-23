@@ -33,6 +33,16 @@ Pending/FIFO soft-caps, GPU Reserve/Max, `MemoryBudgetController`, UChunk free-l
 Gates: see Validation notes in `MEMORY_BUDGET.md` (manual place-light + autofly
 private p95 / fill% / wall).
 
+### Manual follow-up (2026-07-23)
+
+| Run | Notes |
+|-----|-------|
+| `081832` | private≈0.5 GB; Soft stuck via stream Yellow → decouple Soft from stream |
+| `085228` | Soft=0 OK; keep_margin→3; Dirty~350–470 no drops; Capture hitch 2.9–4.5 s |
+
+Tails closed after `085228`: LitReady Pending trim, RD expand up, Dirty thrash
+SoftCap, Keep-tied free-list, Capture hard_cap on holes/wall.
+
 ## Lessons (2026-07-22 evening)
 
 1. **Aggressive C (sync_cap=0, ban underfeet, StarveRemeshForHoles)** → sticky↑ and spike↑. Do not repeat.

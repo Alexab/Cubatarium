@@ -412,16 +412,31 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const int pending_async = mesh_service.GetAsyncInFlightCount();
 
   // Soft-cap Dirty under Yellow/Red pressure: drop farthest remesh (not holes).
+  // Thrash path (manual 085228): SoftCap 1200 never fires at Dirty~350–470 while
+  // async saturates — use DirtyThrashSoftCap when async >= DirtyThrashAsyncMin.
   {
     const auto &mtune = URuntimeTuning::Get();
     auto &phys = world.GetPhysicsTelemetryMutable();
     const int pressure = phys.StreamPressure;
-    if (mtune.DirtySoftCap > 0 &&
-        pending_dirty > static_cast<size_t>(mtune.DirtySoftCap) &&
-        pressure >= 1)
+    int dirty_cap = mtune.DirtySoftCap;
+    if (mtune.DirtyThrashSoftCap > 0 && mtune.DirtyThrashAsyncMin > 0 &&
+        pending_async >= mtune.DirtyThrashAsyncMin)
+    {
+      dirty_cap = std::min(dirty_cap, mtune.DirtyThrashSoftCap);
+    }
+    if (dirty_cap > 0)
+    {
+      mesh_service.ReserveDirtyCapacity(static_cast<size_t>(dirty_cap));
+    }
+    const bool thrash =
+        mtune.DirtyThrashAsyncMin > 0 &&
+        pending_async >= mtune.DirtyThrashAsyncMin;
+    if (dirty_cap > 0 &&
+        pending_dirty > static_cast<size_t>(dirty_cap) &&
+        (pressure >= 1 || thrash))
     {
       const int dropped = mesh_service.MaybeDropFarthestDirty(
-          focus_ground_horiz, static_cast<size_t>(mtune.DirtySoftCap), 1);
+          focus_ground_horiz, static_cast<size_t>(dirty_cap), 1);
       phys.DirtyDropped += static_cast<uint64_t>(std::max(0, dropped));
     }
     if (mtune.PendingLightSoftCap > 0 &&

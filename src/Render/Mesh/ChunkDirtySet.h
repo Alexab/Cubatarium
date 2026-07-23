@@ -55,6 +55,12 @@ public:
                         int min_keep_horiz = 1,
                         const std::function<bool(glm::ivec3)> &missing_mesh = {});
 
+  void ReserveCapacity(size_t n)
+  {
+    Queue.reserve(n);
+    Set.reserve(n);
+  }
+
 private:
   std::vector<glm::ivec3> Queue;
   std::unordered_set<glm::ivec3, IVec3Hash> Set;

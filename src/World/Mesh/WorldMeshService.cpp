@@ -405,6 +405,11 @@ size_t UWorldMeshService::GetDirtyCount() const
   return Cache.GetDirtyCount();
 }
 
+void UWorldMeshService::ReserveDirtyCapacity(size_t n)
+{
+  Cache.ReserveDirtyCapacity(n);
+}
+
 int UWorldMeshService::MaybeDropFarthestDirty(glm::ivec3 focus_ground_chunk,
                                               size_t soft_cap,
                                               int min_keep_horiz)

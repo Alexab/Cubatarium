@@ -1499,6 +1499,13 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       {
         AdaptiveEffectiveRd = effectiveRenderDistance;
       }
+      // Memory Green may raise RD ceiling one step above altitude/base RD.
+      int rd_ceiling = effectiveRenderDistance;
+      if (LastMemoryDecision.memory_pressure == 0 &&
+          LastMemoryDecision.max_effective_rd > rd_ceiling)
+      {
+        rd_ceiling = LastMemoryDecision.max_effective_rd;
+      }
       const size_t dirty = meshService.GetDirtyCount();
       const int gen_backlog_total =
           ChunkScheduler ? ChunkScheduler->GetGenBacklogTotal() : 0;
@@ -1517,7 +1524,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         }
         else if (dirty < 24 && PhysMsEma < 20.0)
         {
-          next = std::min(effectiveRenderDistance, AdaptiveEffectiveRd + 1);
+          next = std::min(rd_ceiling, AdaptiveEffectiveRd + 1);
         }
         if (next != AdaptiveEffectiveRd)
         {
@@ -1526,7 +1533,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         }
       }
       AdaptiveEffectiveRd =
-          std::clamp(AdaptiveEffectiveRd, kAdaptiveRdMin, effectiveRenderDistance);
+          std::clamp(AdaptiveEffectiveRd, kAdaptiveRdMin, rd_ceiling);
       effectiveRenderDistance = AdaptiveEffectiveRd;
     }
     else
@@ -1571,6 +1578,19 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       if (decision.max_effective_rd < effectiveRenderDistance)
       {
         effectiveRenderDistance = decision.max_effective_rd;
+        if (AdaptiveEffectiveRd >= 0)
+        {
+          AdaptiveEffectiveRd = effectiveRenderDistance;
+        }
+      }
+      else if (decision.max_effective_rd > effectiveRenderDistance &&
+               decision.memory_pressure == 0)
+      {
+        effectiveRenderDistance = decision.max_effective_rd;
+        if (AdaptiveEffectiveRd >= 0)
+        {
+          AdaptiveEffectiveRd = effectiveRenderDistance;
+        }
       }
       if (decision.emergency_cancel_outside)
       {
@@ -1578,6 +1598,28 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
             glm::ivec3(world.PhysicsTelemetryData.FocusChunkX, 0,
                        world.PhysicsTelemetryData.FocusChunkZ),
             Streamer->GetVisualRenderDistance());
+      }
+      // Free-list size tracks Keep footprint (MaxResidentChunks caps pool).
+      {
+        const auto &tune = URuntimeTuning::Get();
+        const int keep_r =
+            Streamer->GetVisualRenderDistance() + decision.keep_margin;
+        const int diam = 2 * std::max(0, keep_r) + 1;
+        const int max_h = world.GetProceduralSettings().MaxHeight;
+        const int height_cy =
+            std::max(1, (std::max(1, max_h) - 1) / CHUNK_SIZE + 1);
+        const int footprint = diam * diam * height_cy;
+        int free_cap = std::max(64, footprint / 4);
+        if (tune.MaxResidentChunks > 0)
+        {
+          free_cap = std::min(free_cap, tune.MaxResidentChunks);
+        }
+        else
+        {
+          free_cap = std::min(free_cap, 512);
+        }
+        world.GetBlockWorld().GetChunkManager().SetMaxFreeListChunks(
+            static_cast<size_t>(free_cap));
       }
       // Stepped Completed-slot expand when overflow discard rises under RAM
       // headroom (CompletedExpandEnabled). At most once per ~90 frames.

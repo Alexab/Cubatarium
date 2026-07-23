@@ -37,12 +37,17 @@ struct URuntimeTuning
   int MeshCompletedSlots{0};
   int RelightCompletedSlots{0};
   int DirtySoftCap{1200};
+  /// When mesh_async >= DirtyThrashAsyncMin, use this lower SoftCap (thrash).
+  int DirtyThrashSoftCap{400};
+  int DirtyThrashAsyncMin{36};
   int PendingLightSoftCap{80};
   int RelightFifoSoftCap{96};
   int GpuVertexPoolReserveMb{64};
   int GpuVertexPoolMaxMb{256};
   int MaxKeepPrefetchMargin{4};
   int MemoryExpandMaxRd{6};
+  /// Cap recycled UChunk free-list (0 → auto from Keep footprint / 4).
+  int MaxResidentChunks{0};
   bool CompletedExpandEnabled{true};
   /// Cumulative buffer expand events (Completed rings / GPU Reserve).
   uint64_t BufferExpandEvents{0};
