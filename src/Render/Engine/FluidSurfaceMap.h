@@ -34,12 +34,17 @@ public:
   /// Baseline per-frame chunk patches; raised adaptively when backlog is large.
   static constexpr int kMaxChunkUpdatesPerFrame = 8;
   static constexpr int kMaxChunkUpdatesBurst = 32;
+  /// When last wall exceeded this, use hitch budget (fewer chunks/frame).
+  static constexpr double kWallThrottleMs = 40.0;
+  static constexpr int kMaxChunkUpdatesHitch = 4;
+  static constexpr int kMaxChunkUpdatesHitchBurst = 8;
 
   void EnsureGpuResources();
   void DestroyGpuResources();
 
   bool Update(UBlockWorld &world, UBlockRegistry &registry, UChunkMeshCache &cache,
-              glm::ivec3 cameraBlockXZ, int scanHintY, uint64_t meshRevision);
+              glm::ivec3 cameraBlockXZ, int scanHintY, uint64_t meshRevision,
+              double lastWallMs = 0.0);
 
   void Bind(int surfaceYUnit, int fluidIndexUnit, int fluidBottomUnit) const;
 
@@ -55,7 +60,7 @@ public:
 private:
   bool RefreshStaging(UBlockWorld &world, UBlockRegistry &registry,
                       UChunkMeshCache &cache, glm::ivec3 cameraBlockXZ,
-                      int scanHintY);
+                      int scanHintY, double lastWallMs);
   void UploadFullGpu();
   void UploadDirtyChunkGpu(glm::ivec3 groundChunk);
   void QueueGpuChunk(glm::ivec3 groundChunk);

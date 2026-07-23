@@ -49,9 +49,10 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   bool map_ready = surface_map.IsValid();
   if (nearby_fluid)
   {
-    map_ready = surface_map.Update(world.GetBlockWorld(), registry,
-                                   mesh_service.GetCache(), camera_block_xz,
-                                   eye_block_y, mesh_service.GetMeshRevision());
+    map_ready = surface_map.Update(
+        world.GetBlockWorld(), registry, mesh_service.GetCache(),
+        camera_block_xz, eye_block_y, mesh_service.GetMeshRevision(),
+        world.GetLastMovementFrameMs());
   }
 
   const bool partial_submerge =

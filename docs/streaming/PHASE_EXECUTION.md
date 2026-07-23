@@ -74,6 +74,12 @@ Plan: [`FOG_WATER_UNFINISHED.md`](FOG_WATER_UNFINISHED.md). Near fluid/sea +
 holes/unfinished → stronger fog pull-in (`fog_water_start_ratio_cap` 0.28) and
 wider sky horizon (`FogHorizonElevation` 0.22). No proxy quads.
 
+### Fluid map budget + scroll (2026-07-23)
+
+Plan: [`FLUID_MAP_BUDGET.md`](FLUID_MAP_BUDGET.md). Manual `201036`: spikes
+`fluid_map_cpu` 400–800 ms. Wall-aware chunk budget (≤8 after wall>40 ms) and
+`surface_window_move_threshold` 16→32.
+
 ## Lessons (2026-07-22 evening)
 
 1. **Aggressive C (sync_cap=0, ban underfeet, StarveRemeshForHoles)** → sticky↑ and spike↑. Do not repeat.
