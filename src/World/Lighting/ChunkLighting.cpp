@@ -401,25 +401,14 @@ void RemoveThenPropagateBlockLight(UBlockWorld &world, UBlockRegistry &registry,
     }
   };
 
+  // Classic remove from the edited cell only. Zeroing neighbors first wiped
+  // nearby torches and required a 31³ emitter rescan (night dig blackness +
+  // place-light dead until a second edit; manual 224642).
   const int old_at_origin = GetBlockLightWorld(world, origin);
+  WriteBlockLightWorld(world, origin, 0);
   if (old_at_origin > 0)
   {
-    WriteBlockLightWorld(world, origin, 0);
     remove_q.emplace_back(origin, old_at_origin);
-  }
-  for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-  {
-    const glm::ivec3 n = origin + offset;
-    if (!ChunkLoadedAt(world, n))
-    {
-      continue;
-    }
-    const int nl = GetBlockLightWorld(world, n);
-    if (nl > 0)
-    {
-      WriteBlockLightWorld(world, n, 0);
-      remove_q.emplace_back(n, nl);
-    }
   }
 
   while (!remove_q.empty())
@@ -446,48 +435,37 @@ void RemoveThenPropagateBlockLight(UBlockWorld &world, UBlockRegistry &registry,
     }
   }
 
-  for (int dy = -kEditLightRadius; dy <= kEditLightRadius; ++dy)
+  const BlockId origin_id = world.GetBlock(origin);
+  const int origin_emission = registry.GetLightEmission(origin_id);
+  if (origin_emission > 0)
   {
-    for (int dx = -kEditLightRadius; dx <= kEditLightRadius; ++dx)
-    {
-      for (int dz = -kEditLightRadius; dz <= kEditLightRadius; ++dz)
-      {
-        if (std::max({std::abs(dx), std::abs(dy), std::abs(dz)}) >
-            kEditLightRadius)
-        {
-          continue;
-        }
-        const glm::ivec3 p = origin + glm::ivec3(dx, dy, dz);
-        if (!ChunkLoadedAt(world, p))
-        {
-          continue;
-        }
-        const int emission = registry.GetLightEmission(world.GetBlock(p));
-        if (emission <= 0)
-        {
-          continue;
-        }
-        if (emission > GetBlockLightWorld(world, p))
-        {
-          WriteBlockLightWorld(world, p, emission);
-        }
-        enqueue_add(p);
-      }
-    }
+    // Opaque emitters must keep emission — wiping them left lamps dark until
+    // a later non-emitter edit re-seeded the flood.
+    WriteBlockLightWorld(world, origin, origin_emission);
+    enqueue_add(origin);
   }
-
-  if (!IsLightTransparent(registry, world.GetBlock(origin)))
+  else if (!IsLightTransparent(registry, origin_id))
   {
     WriteBlockLightWorld(world, origin, 0);
   }
-  else
+
+  // Seed surviving sources on the face of the edit (torch next to dig).
+  for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
   {
-    const int emission = registry.GetLightEmission(world.GetBlock(origin));
-    if (emission > GetBlockLightWorld(world, origin))
+    const glm::ivec3 n = origin + offset;
+    if (!ChunkLoadedAt(world, n))
     {
-      WriteBlockLightWorld(world, origin, emission);
+      continue;
     }
-    enqueue_add(origin);
+    const int emission = registry.GetLightEmission(world.GetBlock(n));
+    if (emission > GetBlockLightWorld(world, n))
+    {
+      WriteBlockLightWorld(world, n, emission);
+    }
+    if (GetBlockLightWorld(world, n) > 0)
+    {
+      enqueue_add(n);
+    }
   }
 
   while (!add_q.empty())
@@ -498,7 +476,8 @@ void RemoveThenPropagateBlockLight(UBlockWorld &world, UBlockRegistry &registry,
     {
       continue;
     }
-    const int light = GetBlockLightWorld(world, pos);
+    const int light = std::max(GetBlockLightWorld(world, pos),
+                               registry.GetLightEmission(world.GetBlock(pos)));
     if (light <= 1)
     {
       continue;
@@ -540,24 +519,10 @@ void RemoveThenPropagateSkyLight(UBlockWorld &world, UBlockRegistry &registry,
   };
 
   const int old_at_origin = GetSkyLightWorld(world, origin);
+  WriteSkyLightWorld(world, origin, 0);
   if (old_at_origin > 0)
   {
-    WriteSkyLightWorld(world, origin, 0);
     remove_q.emplace_back(origin, old_at_origin);
-  }
-  for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-  {
-    const glm::ivec3 n = origin + offset;
-    if (!ChunkLoadedAt(world, n))
-    {
-      continue;
-    }
-    const int nl = GetSkyLightWorld(world, n);
-    if (nl > 0)
-    {
-      WriteSkyLightWorld(world, n, 0);
-      remove_q.emplace_back(n, nl);
-    }
   }
 
   while (!remove_q.empty())
@@ -584,36 +549,29 @@ void RemoveThenPropagateSkyLight(UBlockWorld &world, UBlockRegistry &registry,
     }
   }
 
-  for (int dx = -1; dx <= 1; ++dx)
+  // Refresh sky column at edit xz only (neighbors come from horizontal flood).
+  const int cy0 = FloorDiv(origin.y - kEditLightRadius, CHUNK_SIZE);
+  const int cy1 = FloorDiv(origin.y + kEditLightRadius, CHUNK_SIZE);
+  for (int cy = cy0; cy <= cy1; ++cy)
   {
-    for (int dz = -1; dz <= 1; ++dz)
+    const glm::ivec3 chunk_coord(FloorDiv(origin.x, CHUNK_SIZE), cy,
+                                 FloorDiv(origin.z, CHUNK_SIZE));
+    UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord);
+    if (!chunk)
     {
-      const int wx = origin.x + dx;
-      const int wz = origin.z + dz;
-      const int cy0 = FloorDiv(origin.y - kEditLightRadius, CHUNK_SIZE);
-      const int cy1 = FloorDiv(origin.y + kEditLightRadius, CHUNK_SIZE);
-      for (int cy = cy0; cy <= cy1; ++cy)
+      continue;
+    }
+    const glm::ivec3 local = UChunkManager::WorldToLocal(
+        glm::ivec3(origin.x, cy * CHUNK_SIZE, origin.z));
+    PropagateSkylightColumn(world, registry, *chunk, chunk_coord, local.x,
+                            local.z);
+    for (int ly = 0; ly < CHUNK_SIZE; ++ly)
+    {
+      const glm::ivec3 cell =
+          chunk_coord * CHUNK_SIZE + glm::ivec3(local.x, ly, local.z);
+      if (GetSkyLightWorld(world, cell) > 0)
       {
-        const glm::ivec3 chunk_coord(FloorDiv(wx, CHUNK_SIZE), cy,
-                                     FloorDiv(wz, CHUNK_SIZE));
-        UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord);
-        if (!chunk)
-        {
-          continue;
-        }
-        const glm::ivec3 local =
-            UChunkManager::WorldToLocal(glm::ivec3(wx, cy * CHUNK_SIZE, wz));
-        PropagateSkylightColumn(world, registry, *chunk, chunk_coord, local.x,
-                                local.z);
-        for (int ly = 0; ly < CHUNK_SIZE; ++ly)
-        {
-          const glm::ivec3 cell =
-              chunk_coord * CHUNK_SIZE + glm::ivec3(local.x, ly, local.z);
-          if (GetSkyLightWorld(world, cell) > 0)
-          {
-            enqueue_add(cell);
-          }
-        }
+        enqueue_add(cell);
       }
     }
   }
@@ -625,6 +583,15 @@ void RemoveThenPropagateSkyLight(UBlockWorld &world, UBlockRegistry &registry,
   else if (GetSkyLightWorld(world, origin) > 0)
   {
     enqueue_add(origin);
+  }
+
+  for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+  {
+    const glm::ivec3 n = origin + offset;
+    if (ChunkLoadedAt(world, n) && GetSkyLightWorld(world, n) > 0)
+    {
+      enqueue_add(n);
+    }
   }
 
   while (!add_q.empty())

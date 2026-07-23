@@ -476,6 +476,11 @@ void UWindowManager::Update()
     tele.BreakCompleteN = 0;
     tele.BreakInflightRaceN = 0;
     tele.BreakDarkFaceN = 0;
+    tele.PlaceCompleteN = 0;
+    tele.PlaceEmissionN = 0;
+    tele.EditLightEmission = 0;
+    tele.FastRelightMs = 0.0;
+    tele.EditToFirstMeshMs = 0.0;
   }
 
   if (Views)

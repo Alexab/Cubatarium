@@ -133,7 +133,11 @@ struct FrameNumbers
   int break_complete_n{0};
   int break_inflight_race_n{0};
   int break_dark_face_n{0};
+  int place_complete_n{0};
+  int place_emission_n{0};
+  int edit_light_emission{0};
   double edit_to_first_mesh_ms{0.0};
+  double fast_relight_ms{0.0};
   double prepare_frame_ms{0.0};
   double post_scene_ms{0.0};
   double gui_overlay_ms{0.0};
@@ -253,8 +257,16 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.break_complete_n = phys.BreakCompleteN;
   n.break_inflight_race_n = phys.BreakInflightRaceN;
   n.break_dark_face_n = phys.BreakDarkFaceN;
+  n.place_complete_n = phys.PlaceCompleteN;
+  n.place_emission_n = phys.PlaceEmissionN;
+  n.edit_light_emission = phys.EditLightEmission;
   n.edit_to_first_mesh_ms =
-      phys.BreakCompleteN > 0 ? phys.EditToFirstMeshMs : 0.0;
+      (phys.BreakCompleteN > 0 || phys.PlaceCompleteN > 0)
+          ? phys.EditToFirstMeshMs
+          : 0.0;
+  n.fast_relight_ms =
+      (phys.BreakCompleteN > 0 || phys.PlaceCompleteN > 0) ? phys.FastRelightMs
+                                                            : 0.0;
   n.prepare_frame_ms = world.GetLastPrepareFrameMs();
   n.post_scene_ms = world.GetLastPostSceneMs();
   n.gui_overlay_ms = world.GetLastGuiOverlayMs();
@@ -394,7 +406,11 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"break_complete_n\":" << n.break_complete_n
           << ",\"break_inflight_race_n\":" << n.break_inflight_race_n
           << ",\"break_dark_face_n\":" << n.break_dark_face_n
+          << ",\"place_complete_n\":" << n.place_complete_n
+          << ",\"place_emission_n\":" << n.place_emission_n
+          << ",\"edit_light_emission\":" << n.edit_light_emission
           << ",\"edit_to_first_mesh_ms\":" << n.edit_to_first_mesh_ms
+          << ",\"fast_relight_ms\":" << n.fast_relight_ms
           << ",\"prepare_frame_ms\":" << n.prepare_frame_ms
           << ",\"post_scene_ms\":" << n.post_scene_ms
           << ",\"gui_overlay_ms\":" << n.gui_overlay_ms

@@ -4658,6 +4658,15 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
   }
   ++CachedBlockCount;
   BlockWorldReady = true;
+  ++PhysicsTelemetryData.PlaceCompleteN;
+  const int emission =
+      BlockRegistry ? BlockRegistry->GetLightEmission(Id) : 0;
+  if (emission > 0)
+  {
+    ++PhysicsTelemetryData.PlaceEmissionN;
+  }
+  PhysicsTelemetryData.EditLightEmission =
+      std::max(PhysicsTelemetryData.EditLightEmission, emission);
   const auto edit_t0 = std::chrono::high_resolution_clock::now();
   ApplyEditFastRelight({blockPos});
   MarkBlockChunkDirty(blockPos);
@@ -5008,6 +5017,10 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   {
     return false;
   }
+  const int removed_emission =
+      BlockRegistry->GetLightEmission(BlockWorld.GetBlock(blockPos));
+  PhysicsTelemetryData.EditLightEmission =
+      std::max(PhysicsTelemetryData.EditLightEmission, removed_emission);
   BlockWorld.SetBlock(blockPos, BLOCK_AIR);
   if (CachedBlockCount > 0)
   {
@@ -5023,8 +5036,7 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   ApplyBreakSiteFluidFlood(blockPos, mesh_touch_blocks);
   const auto edit_t0 = std::chrono::high_resolution_clock::now();
   ApplyEditFastRelight(mesh_touch_blocks);
-  // Immediate center only; neighbors MarkDirty + SoftDefer until player-relight
-  // (sync_neighbor Immediate was multi-chunk hitch + dark remesh surface).
+  // Immediate center only; neighbors MarkDirtyPriority (async).
   MarkBlocksChunkDirtyBatch(mesh_touch_blocks, /*sync_neighbor_chunks=*/false,
                             PhysicsTelemetryData.BreakCompleteN > 0);
   PhysicsTelemetryData.EditToFirstMeshMs =

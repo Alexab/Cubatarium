@@ -65,6 +65,11 @@ struct PhysicsTelemetry
   int BreakCompleteN{0};
   int BreakInflightRaceN{0};
   int BreakDarkFaceN{0};
+  /// Place UX diagnostics (per-frame; reset each Update).
+  int PlaceCompleteN{0};
+  int PlaceEmissionN{0};
+  /// Max light emission among blocks edited this frame (0 if none).
+  int EditLightEmission{0};
   /// RebuildDirtyChunksWithStats wall (sync fill + schedule + apply drain).
   double MeshDirtyTickMs{0.0};
   /// TickMeshEmerge wall before RebuildDirtyChunksWithStats (prep/idle/cold).

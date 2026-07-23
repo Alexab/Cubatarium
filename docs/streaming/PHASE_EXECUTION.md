@@ -123,6 +123,12 @@ Clear) before Immediate; `ApplyEditLighting` only enqueues async player-relight
 for seams — no `NotePendingLight` / SoftDefer lock on dig/place. Streaming
 SoftDefer for cold Pending unchanged. Center Immediate only.
 
+Follow-up manual `224642`: place lamp stayed dark until another edit (opaque
+emitter wiped after flood seed); night dig near light black; FastRelight 31³
+emitter scan hitch. Fix: classic remove from edit cell only; keep origin
+emission; seed face neighbors; drop radius emitter scan. Perf jsonl:
+`place_complete_n`, `place_emission_n`, `edit_light_emission`, `fast_relight_ms`.
+
 ## Lessons (2026-07-22 evening)
 
 1. **Aggressive C (sync_cap=0, ban underfeet, StarveRemeshForHoles)** → sticky↑ and spike↑. Do not repeat.
