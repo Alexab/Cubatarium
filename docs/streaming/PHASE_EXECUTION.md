@@ -51,8 +51,13 @@ Tails after `102936`: SoftDefer-safe **Y-band Capture** (`RelightCaptureBandCy`,
 
 Landed: stronger `distance_fog_end_margin_blocks` (28), earlier start ratio (0.48),
 air fog while submerged (non-fluid), fog-only `EffectiveFogRenderDistance` pull-in
-(`fog_pull_in_enabled` / `fog_rd_min`). Manual: walk/dive at visual edge; Yellow
-should shorten fog End without shrinking mesh RD.
+(`fog_pull_in_enabled` / `fog_rd_min`). Manual `161702`: unfinished max≈5 never
+hit old threshold `UnfinishedVisual>8`, and saved config still had start_ratio 0.85 /
+margin 12 → trees popped clear then fog lagged. Follow-up: pull-in on any unfinished,
+dynamic margin/start under debt, refresh local config defaults.
+
+Manual: walk/dive at visual edge; Yellow should shorten fog End without shrinking
+mesh RD; incomplete surface should stay fogged, not clear-then-fog.
 
 ## Lessons (2026-07-22 evening)
 

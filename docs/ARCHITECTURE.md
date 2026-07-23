@@ -238,7 +238,7 @@ Distance fog uses horizontal (XZ) distance from the camera. Fog color comes from
 | `UChunkStreamer` load square | Chebyshev `render_distance_chunks` + view-ahead prefetch |
 | Altitude policy | `ground_y` from terrain surface (`altitude_use_terrain_surface`); horizontal cull above threshold |
 
-`end_margin` (`distance_fog_end_margin_blocks`, default **28**) is the strip that hides the unfinished streaming ring inside the visual/cull horizon. Mesh cull stays at full Effective RD; fog may pull in tighter via **fog-only** `EffectiveFogRenderDistance` when `fog_pull_in_enabled` (holes, stream Yellow/Red, or wall hitch), floored by `fog_rd_min` (default 3). Mesh/gen RD is not changed by this lever.
+`end_margin` (`distance_fog_end_margin_blocks`, default **28**) is the strip that hides the unfinished streaming ring inside the visual/cull horizon. Mesh cull stays at full Effective RD; fog may pull in tighter via **fog-only** `EffectiveFogRenderDistance` when `fog_pull_in_enabled` (`VisualHoles>0`, any `UnfinishedVisual`, stream Yellow/Red, or wall hitch), floored by `fog_rd_min` (default 3). Under hole/unfinished debt the runtime also boosts end margin and lowers `EffectiveFogStartRatio` so incomplete mid-range decor (trees) is not left clear until fog “catches up”. Mesh/gen RD is not changed by this lever. Saved `config.json` must not keep stale `distance_fog_start_ratio≈0.85` / margin 12 or defaults never apply.
 
 At high altitude, mesh cull uses XZ distance (not 3D) to avoid a visible terrain disk under the camera. `horizon_boost` increases sky fog blend while flying.
 

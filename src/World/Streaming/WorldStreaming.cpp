@@ -1690,10 +1690,14 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         Streamer->GetVisualRenderDistance());
 
     // Fog-only RD pull-in: mask unfinished gen / thrash without shrinking mesh RD.
+    // Manual 161702: UnfinishedVisual max≈5 never hit threshold>8 — fog lagged
+    // behind popping trees; config start_ratio=0.85 also left mid-range clear.
     {
-      constexpr double kFogPullInHysteresisSec = 0.75;
+      constexpr double kFogPullInExpandSec = 1.0;
       constexpr double kFogPullInWallMs = 40.0;
       int fog_rd = effectiveRenderDistance;
+      int fog_margin = render.DistanceFogEndMarginBlocks;
+      float fog_start_ratio = effectiveFogStartRatio;
       if (render.FogPullInEnabled)
       {
         if (FogPullInRd < 0)
@@ -1702,21 +1706,31 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         }
         const auto &phys = world.PhysicsTelemetryData;
         const double wall_ms = world.GetWallFrameDelta() * 1000.0;
+        const int unfinished = phys.UnfinishedVisual;
+        const bool hole_debt = phys.VisualHoles > 0 || unfinished > 0;
         int target = effectiveRenderDistance;
-        if (phys.VisualHoles > 0 || phys.UnfinishedVisual > 8)
+        if (hole_debt)
         {
-          target = std::min(target, effectiveRenderDistance - 1);
+          // Shrink immediately so fog End covers the incomplete outer ring
+          // before decor/trees pop in clear mid-range.
+          const int pull =
+              1 + std::min(2, unfinished / 3) + (phys.VisualHoles > 0 ? 1 : 0);
+          target = std::min(target, effectiveRenderDistance - pull);
+          fog_margin += 16 + std::min(32, unfinished * 4);
+          fog_start_ratio = std::min(fog_start_ratio, 0.35f);
         }
         if (phys.StreamPressure >= 1 || wall_ms > kFogPullInWallMs)
         {
           target = std::min(target, target - 1);
+          fog_margin += 8;
+          fog_start_ratio = std::min(fog_start_ratio, 0.40f);
         }
         target = std::clamp(target, std::max(1, render.FogRdMin),
                             effectiveRenderDistance);
         const auto now = std::chrono::steady_clock::now();
         const double since =
             FogPullInLastAdjust.time_since_epoch().count() == 0
-                ? kFogPullInHysteresisSec
+                ? kFogPullInExpandSec
                 : std::chrono::duration<double>(now - FogPullInLastAdjust)
                       .count();
         if (target < FogPullInRd)
@@ -1724,7 +1738,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
           FogPullInRd = target;
           FogPullInLastAdjust = now;
         }
-        else if (target > FogPullInRd && since >= kFogPullInHysteresisSec)
+        else if (target > FogPullInRd && since >= kFogPullInExpandSec)
         {
           FogPullInRd = std::min(FogPullInRd + 1, target);
           FogPullInLastAdjust = now;
@@ -1736,6 +1750,8 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         FogPullInRd = -1;
       }
       world.SetEffectiveFogRenderDistance(fog_rd);
+      world.SetEffectiveFogEndMarginBlocks(fog_margin);
+      effectiveFogStartRatio = fog_start_ratio;
     }
 
     const float dt = std::max(0.0001f, camera->GetDeltaTime());

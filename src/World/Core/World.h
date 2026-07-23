@@ -711,6 +711,16 @@ public:
   {
     EffectiveFogRenderDistance = std::max(1, distance);
   }
+  /// Extra / pulled end margin for ComputeDistanceFog (0 → use RenderSettings).
+  int GetEffectiveFogEndMarginBlocks(int fallback_margin) const
+  {
+    return EffectiveFogEndMarginBlocks > 0 ? EffectiveFogEndMarginBlocks
+                                           : fallback_margin;
+  }
+  void SetEffectiveFogEndMarginBlocks(int margin)
+  {
+    EffectiveFogEndMarginBlocks = std::max(0, margin);
+  }
   float GetAltitudeAboveTerrain() const { return AltitudeAboveTerrain; }
   void SetAltitudeAboveTerrain(float altitude) { AltitudeAboveTerrain = altitude; }
   void UpdateFrameHitchDiagnostics(double draw_scene_mks,
@@ -1160,6 +1170,8 @@ private:
   int EffectiveRenderDistance{4};
   /// Fog-only RD (pull-in); 0 → use EffectiveRenderDistance via getter.
   int EffectiveFogRenderDistance{0};
+  /// Dynamic fog end margin (pull-in boost); 0 → RenderSettings default.
+  int EffectiveFogEndMarginBlocks{0};
   float EffectiveFogStartRatio{0.85f};
   float AltitudeAboveTerrain{0.0f};
   StreamingAltitudePolicyParams AltitudeParams;
