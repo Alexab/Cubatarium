@@ -1689,6 +1689,55 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     meshService.SetRenderDistanceChunks(
         Streamer->GetVisualRenderDistance());
 
+    // Fog-only RD pull-in: mask unfinished gen / thrash without shrinking mesh RD.
+    {
+      constexpr double kFogPullInHysteresisSec = 0.75;
+      constexpr double kFogPullInWallMs = 40.0;
+      int fog_rd = effectiveRenderDistance;
+      if (render.FogPullInEnabled)
+      {
+        if (FogPullInRd < 0)
+        {
+          FogPullInRd = fog_rd;
+        }
+        const auto &phys = world.PhysicsTelemetryData;
+        const double wall_ms = world.GetWallFrameDelta() * 1000.0;
+        int target = effectiveRenderDistance;
+        if (phys.VisualHoles > 0 || phys.UnfinishedVisual > 8)
+        {
+          target = std::min(target, effectiveRenderDistance - 1);
+        }
+        if (phys.StreamPressure >= 1 || wall_ms > kFogPullInWallMs)
+        {
+          target = std::min(target, target - 1);
+        }
+        target = std::clamp(target, std::max(1, render.FogRdMin),
+                            effectiveRenderDistance);
+        const auto now = std::chrono::steady_clock::now();
+        const double since =
+            FogPullInLastAdjust.time_since_epoch().count() == 0
+                ? kFogPullInHysteresisSec
+                : std::chrono::duration<double>(now - FogPullInLastAdjust)
+                      .count();
+        if (target < FogPullInRd)
+        {
+          FogPullInRd = target;
+          FogPullInLastAdjust = now;
+        }
+        else if (target > FogPullInRd && since >= kFogPullInHysteresisSec)
+        {
+          FogPullInRd = std::min(FogPullInRd + 1, target);
+          FogPullInLastAdjust = now;
+        }
+        fog_rd = FogPullInRd;
+      }
+      else
+      {
+        FogPullInRd = -1;
+      }
+      world.SetEffectiveFogRenderDistance(fog_rd);
+    }
+
     const float dt = std::max(0.0001f, camera->GetDeltaTime());
     const glm::vec3 delta = eye - lastCameraPosition;
     lastMovementSpeed = glm::length(glm::vec3(delta.x, 0.0f, delta.z)) / dt;

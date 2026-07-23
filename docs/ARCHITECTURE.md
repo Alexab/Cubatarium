@@ -233,14 +233,16 @@ Distance fog uses horizontal (XZ) distance from the camera. Fog color comes from
 
 | System | Horizon |
 |--------|---------|
-| `ComputeDistanceFog` | `FogHorizonBlocks(effective_render_distance, end_margin)` |
+| `ComputeDistanceFog` | `FogHorizonBlocks(fog_rd, end_margin)` — `fog_rd` = `EffectiveFogRenderDistance` |
 | `ChunkMeshCache::MaxCullDistance` | `RenderHorizonBlocks(effective_render_distance)` |
 | `UChunkStreamer` load square | Chebyshev `render_distance_chunks` + view-ahead prefetch |
 | Altitude policy | `ground_y` from terrain surface (`altitude_use_terrain_surface`); horizontal cull above threshold |
 
+`end_margin` (`distance_fog_end_margin_blocks`, default **28**) is the strip that hides the unfinished streaming ring inside the visual/cull horizon. Mesh cull stays at full Effective RD; fog may pull in tighter via **fog-only** `EffectiveFogRenderDistance` when `fog_pull_in_enabled` (holes, stream Yellow/Red, or wall hitch), floored by `fog_rd_min` (default 3). Mesh/gen RD is not changed by this lever.
+
 At high altitude, mesh cull uses XZ distance (not 3D) to avoid a visible terrain disk under the camera. `horizon_boost` increases sky fog blend while flying.
 
-**Underwater / fluid fog (v3):** per-fragment underwater fog in `fshader_greedy` when `vWorldPos.y < surfaceYAt(vWorldPos.xz)` using `UFluidSurfaceMap` (`GL_R16F` surface Y + `GL_R8UI` fluid index). Global underwater fog is a fallback only when the surface map is unavailable. Sky pass suppresses celestial bodies when fully submerged; partial submerge uses a screen waterline split (`FluidUnderwaterFogLogic.h`).
+**Underwater / fluid fog (v3):** per-fragment underwater fog in `fshader_greedy` when `vWorldPos.y < surfaceYAt(vWorldPos.xz)` using `UFluidSurfaceMap` (`GL_R16F` surface Y + `GL_R8UI` fluid index). Global underwater fog is a fallback only when the surface map is unavailable. **Air distance fog stays enabled while submerged** for non-fluid fragments (shore / streaming edge); fluid span still uses underwater uniforms. Sky pass suppresses celestial bodies when fully submerged; partial submerge uses a screen waterline split (`FluidUnderwaterFogLogic.h`).
 
 Mesh commit marks dirty once via `ColumnMeshDirty` (Y bounds); `NotifyChunkCommitted` updates streamer state only.
 

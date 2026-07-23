@@ -134,17 +134,12 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   const float underwater_fog_mix = entering_underwater ? 1.0f : 0.15f;
   if (camera_submerged)
   {
+    const bool use_global_fluid_fog =
+        cutum::ShouldUseGlobalUnderwaterFog(camera_submerged, map_ready);
     if (const FluidViewProfile *fv = registry.GetFluidView(eye_fluid))
     {
       if (registry.GetRenderStyle(eye_fluid) == BlockRenderStyle::Fluid)
       {
-        if (cutum::ShouldUseGlobalUnderwaterFog(camera_submerged, map_ready))
-        {
-          FogEnabled = 1.0f;
-          FogStart = fv->FogStart;
-          FogEnd = fv->FogEnd;
-          FogMinBlend = fv->FogMinBlend;
-        }
         target_sky = fv->FogColor;
         if (entering_underwater)
         {
@@ -158,11 +153,51 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
         }
       }
     }
+    // Air distance fog masks shore / unfinished streaming edge. Per-column
+    // underwater fog still covers fluid span (uUnderwaterFog*). When the
+    // surface map is missing, global uFog* uses the air distance range so the
+    // world edge stays hidden (near fluid is thicker than the 9-block preset).
+    if (render.DistanceFog)
+    {
+      const DistanceFogParams distance_fog = ComputeDistanceFog(
+          world.GetEffectiveFogRenderDistance(), atmospheric.fog_color,
+          render.DistanceFogStartRatio, world.GetEffectiveFogStartRatio(),
+          render.DistanceFogDensity, render.DistanceFogEndMarginBlocks);
+      FogStart = distance_fog.Start;
+      FogEnd = distance_fog.End;
+      FogDensity = distance_fog.Density;
+      FogMinBlend = 0.0f;
+      FogHorizontal = render.DistanceFogHorizontal ? 1.0f : 0.0f;
+      FogHorizonBlend = 1.0f;
+      if (use_global_fluid_fog)
+      {
+        FogEnabled = 1.0f;
+        AirFogEnabled = 0.0f;
+      }
+      else
+      {
+        FogEnabled = 0.0f;
+        AirFogEnabled = 1.0f;
+      }
+    }
+    else if (use_global_fluid_fog)
+    {
+      if (const FluidViewProfile *fv = registry.GetFluidView(eye_fluid))
+      {
+        if (registry.GetRenderStyle(eye_fluid) == BlockRenderStyle::Fluid)
+        {
+          FogEnabled = 1.0f;
+          FogStart = fv->FogStart;
+          FogEnd = fv->FogEnd;
+          FogMinBlend = fv->FogMinBlend;
+        }
+      }
+    }
   }
   else if (render.DistanceFog)
   {
     const DistanceFogParams distance_fog = ComputeDistanceFog(
-        world.GetEffectiveRenderDistance(), atmospheric.fog_color,
+        world.GetEffectiveFogRenderDistance(), atmospheric.fog_color,
         render.DistanceFogStartRatio, world.GetEffectiveFogStartRatio(),
         render.DistanceFogDensity, render.DistanceFogEndMarginBlocks);
     AirFogEnabled = 1.0f;

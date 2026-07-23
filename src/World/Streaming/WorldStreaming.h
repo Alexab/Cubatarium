@@ -121,6 +121,8 @@ private:
   int AdaptiveEffectiveRd{-1};
   double PhysMsEma{0.0};
   std::chrono::steady_clock::time_point AdaptiveRdLastAdjust{};
+  int FogPullInRd{-1};
+  std::chrono::steady_clock::time_point FogPullInLastAdjust{};
   StreamingPressureState PressureState{};
   StreamingPressureCaps LastPressureCaps{};
   /// Cached once per RefreshStreamingPressure — safe for commit callback.

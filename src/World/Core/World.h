@@ -701,6 +701,16 @@ public:
     return std::max(1, EffectiveRenderDistance) + 1;
   }
   float GetEffectiveFogStartRatio() const { return EffectiveFogStartRatio; }
+  /// Fog horizon RD (may be tighter than mesh/visual EffectiveRenderDistance).
+  int GetEffectiveFogRenderDistance() const
+  {
+    return EffectiveFogRenderDistance > 0 ? EffectiveFogRenderDistance
+                                          : EffectiveRenderDistance;
+  }
+  void SetEffectiveFogRenderDistance(int distance)
+  {
+    EffectiveFogRenderDistance = std::max(1, distance);
+  }
   float GetAltitudeAboveTerrain() const { return AltitudeAboveTerrain; }
   void SetAltitudeAboveTerrain(float altitude) { AltitudeAboveTerrain = altitude; }
   void UpdateFrameHitchDiagnostics(double draw_scene_mks,
@@ -1148,6 +1158,8 @@ private:
                                      std::chrono::milliseconds mesh_idle_budget);
   int RenderDistanceChunks{4};
   int EffectiveRenderDistance{4};
+  /// Fog-only RD (pull-in); 0 → use EffectiveRenderDistance via getter.
+  int EffectiveFogRenderDistance{0};
   float EffectiveFogStartRatio{0.85f};
   float AltitudeAboveTerrain{0.0f};
   StreamingAltitudePolicyParams AltitudeParams;

@@ -41,9 +41,18 @@ private p95 / fill% / wall).
 | `085228` | Soft=0 OK; keep_margin→3; Dirty~350–470 no drops; Capture hitch 2.9–4.5 s |
 | `091724` | Soft=0; keep→3; Dirty~400–590 async≤29 thrash miss; Capture~3.2 s holes=1 |
 | `102936` | Soft=0; Dirty SoftCap works (`dirty_dropped`); wall med 38 ms; Capture max~1.6 s |
+| `105049` | Y-band: period drain max~1.5 ms; spike wall max~1 s (was 1.6 s) |
+| `152216` | Soft=0; private~480; sticky=0; rare Capture hitch~2.2 s holes=1 |
 
 Tails after `102936`: SoftDefer-safe **Y-band Capture** (`RelightCaptureBandCy`,
 `finalize_pending_gate`) — PendingLight until final band.
+
+### Fog edge masking (2026-07-23)
+
+Landed: stronger `distance_fog_end_margin_blocks` (28), earlier start ratio (0.48),
+air fog while submerged (non-fluid), fog-only `EffectiveFogRenderDistance` pull-in
+(`fog_pull_in_enabled` / `fog_rd_min`). Manual: walk/dive at visual edge; Yellow
+should shorten fog End without shrinking mesh RD.
 
 ## Lessons (2026-07-22 evening)
 
