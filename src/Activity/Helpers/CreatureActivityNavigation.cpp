@@ -31,6 +31,7 @@ CreatureNavigationSteerResult SteerCreatureAlongPath(
       rec.body = body_origin;
       rec.pathValid = state.path.valid;
       rec.waypointCount = static_cast<int>(state.path.waypoints.size());
+      rec.goalSource = "body";
       rec.reason = state.path.valid ? "recalc_ok" : "recalc_fail";
       rec.activityTick = true;
       UCreatureMovementDiagnostics::Record(rec);

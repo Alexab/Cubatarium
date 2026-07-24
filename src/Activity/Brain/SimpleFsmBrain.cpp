@@ -86,8 +86,10 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
                         "flee_no_controlled");
       return;
     }
-    const glm::vec3 delta = view->bodyOrigin - controlled->eyePosition;
-    const float dist = std::sqrt(delta.x * delta.x + delta.z * delta.z);
+    const glm::vec3 controlled_body =
+        NavigationGoalBodyFromControlled(*controlled);
+    const float dist =
+        HorizontalDistanceXZ(view->bodyOrigin, controlled_body);
     if (dist > snapshot->behavior.safeDistance)
     {
       blackboard.state = CreatureFsmState::Idle;
@@ -100,7 +102,7 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
     if (dist <= snapshot->behavior.fleeRadius)
     {
       blackboard.state = CreatureFsmState::Flee;
-      blackboard.lastSeenPos = controlled->eyePosition;
+      blackboard.lastSeenPos = controlled_body;
     }
     if (blackboard.state != CreatureFsmState::Flee)
     {
@@ -111,8 +113,14 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
       return;
     }
 
-    glm::vec3 flee_goal =
-        view->bodyOrigin + glm::normalize(delta) * snapshot->behavior.safeDistance;
+    const glm::vec3 flee_dir =
+        XzDirectionFromTo(controlled_body, view->bodyOrigin);
+    glm::vec3 flee_goal = view->bodyOrigin;
+    if (glm::length(flee_dir) > 1e-4f)
+    {
+      flee_goal = view->bodyOrigin + flee_dir * snapshot->behavior.safeDistance;
+      flee_goal.y = view->bodyOrigin.y;
+    }
     NavigationQuery query;
     query.search_distance = 32;
     query.body_height = snapshot->boundsSize.y;
@@ -123,9 +131,9 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
     glm::vec3 move_dir = steer.move_dir;
     if (!steer.has_path || glm::length(move_dir) < 1e-4f)
     {
-      if (glm::length(delta) > 1e-4f)
+      if (glm::length(flee_dir) > 1e-4f)
       {
-        move_dir = glm::normalize(delta);
+        move_dir = flee_dir;
       }
       else if (!PickLocomotionDirection(perception, *view, snapshot->habitat,
                                         snapshot->boundsSize, move_dir))
@@ -163,8 +171,10 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
     return;
   }
 
-  const glm::vec3 delta = controlled->eyePosition - view->bodyOrigin;
-  const float dist = std::sqrt(delta.x * delta.x + delta.z * delta.z);
+  const glm::vec3 controlled_body =
+      NavigationGoalBodyFromControlled(*controlled);
+  const float dist =
+      HorizontalDistanceXZ(view->bodyOrigin, controlled_body);
   blackboard.actionTimer -= dt;
 
   if (dist > snapshot->behavior.aggroRadius)
@@ -179,7 +189,7 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
   }
 
   blackboard.targetId = controlled->Id;
-  blackboard.lastSeenPos = controlled->eyePosition;
+  blackboard.lastSeenPos = controlled_body;
 
   if (dist <= snapshot->behavior.attackRange)
   {
@@ -204,13 +214,12 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
   query.body_height = snapshot->boundsSize.y;
   query.max_jump = snapshot->locomotion.jumpHeightBlocks;
   const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
-      blackboard.navigation, sink.GetWorld(), view->bodyOrigin,
-      controlled->eyePosition, query, dt);
+      blackboard.navigation, sink.GetWorld(), view->bodyOrigin, controlled_body,
+      query, dt);
   glm::vec3 move_dir = steer.move_dir;
   if (!steer.has_path || glm::length(move_dir) < 1e-4f)
   {
-    move_dir = glm::length(delta) > 1e-4f ? glm::normalize(delta)
-                                          : glm::vec3(0.0f);
+    move_dir = XzDirectionFromTo(view->bodyOrigin, controlled_body);
   }
   intent.moveDirWorld = move_dir;
   intent.moveSpeed = snapshot->behavior.moveSpeed;

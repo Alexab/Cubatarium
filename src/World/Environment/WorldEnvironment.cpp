@@ -99,6 +99,7 @@ UWorldEnvironment::QueryControlledCreatureInfo() const
   ControlledCreatureInfo info;
   info.Id = ControlledCreatureId;
   info.eyePosition = controlled->GetEyePosition();
+  info.bodyOrigin = controlled->GetBodyOrigin();
   return info;
 }
 

@@ -69,6 +69,21 @@ int main()
   Expect(path.valid, "path on flat plane should succeed");
   Expect(path.waypoints.size() >= 2, "path should contain start and goal");
 
+  // Eye-height goal (~1.62 above feet) must not be treated as a stand node.
+  const glm::vec3 feet_body(0.0f, 64.5f, 0.0f);
+  const glm::vec3 eye_goal(3.0f, 64.5f + 1.62f, 0.0f);
+  const cutum::NavigationPath eye_path =
+      cutum::UNavigationPathfinder::FindTerrestrialPath(
+          navigation, feet_body, eye_goal, query);
+  Expect(!eye_path.valid,
+         "path to eye-height goal should fail on feet-anchored stand nodes");
+
+  const glm::vec3 body_goal(3.0f, 64.5f, 0.0f);
+  const cutum::NavigationPath body_path =
+      cutum::UNavigationPathfinder::FindTerrestrialPath(
+          navigation, feet_body, body_goal, query);
+  Expect(body_path.valid, "path to body/feet goal should succeed");
+
   int waypoint_index = 0;
   const cutum::WaypointFollowResult follow = cutum::UWaypointFollower::Update(
       glm::vec3(0.0f, 64.5f, 0.0f), path, 0.45f, waypoint_index);
