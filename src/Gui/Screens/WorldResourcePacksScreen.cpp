@@ -92,7 +92,7 @@ void UWorldResourcePacksScreen::Build(UGuiContext &ctx)
 
   auto warn = std::make_unique<UGuiLabel>(
       &theme,
-      "Changing packs may alter block textures. Save the world after applying.");
+      "View / Projection is at the top. Changing packs may alter block textures.");
   WarningLabel = warn.get();
   body->AddChild(std::move(warn));
 
