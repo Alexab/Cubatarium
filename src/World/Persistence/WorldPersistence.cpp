@@ -272,7 +272,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   world.ReconcileAsyncRelightColumnInFlight();
   const int max_y = world.ProceduralTemplate.MaxHeight;
   const bool async_bg =
-      world.ProceduralTemplate.AsyncRelight && !world.IsLightingRelightDeferred();
+      world.ProceduralTemplate.AsyncRelight &&
+      !world.IsLightingRelightDeferred() && world.AllowsAsyncLighting();
   const glm::ivec3 focus_chunk =
       UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
   const glm::ivec3 focus_horiz(focus_chunk.x, 0, focus_chunk.z);

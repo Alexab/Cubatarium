@@ -68,6 +68,7 @@ struct CreatureDefinition;
 
 class UWorldViewBinding;
 class UAsyncRelightBuilder;
+class IULightingPipeline;
 class UViewEngine;
 class UTextureCubeStorage;
 class UObjectLibrary;
@@ -751,6 +752,11 @@ public:
 
   void SetRenderSettings(const RenderSettings &settings);
   const RenderSettings &GetRenderSettings() const { return Render; }
+  /// CPU lighting backend (Full propagation vs Flat constant lightmap).
+  IULightingPipeline &GetLightingPipeline();
+  const IULightingPipeline &GetLightingPipeline() const;
+  bool RequiresLightingLitGate() const;
+  bool AllowsAsyncLighting() const;
   void RefreshStreamerSettings();
   void TickEnvironment(float dtSeconds);
   const EnvironmentState &GetEnvironmentState() const
@@ -842,7 +848,8 @@ public:
   bool IsSuppressRelightSeamDirty() const { return SuppressRelightSeamDirty; }
   bool ShouldDeferStreamingMeshForRelight() const
   {
-    return ProceduralTemplate.AsyncRelight && !LightingRelightDeferred;
+    return ProceduralTemplate.AsyncRelight && !LightingRelightDeferred &&
+           RequiresLightingLitGate();
   }
   void SetLightingSkylightBulkComplete(bool complete)
   {
@@ -1143,6 +1150,7 @@ private:
   std::unique_ptr<UWorldStreaming> Streaming;
   std::unique_ptr<UWorldPersistence> Persistence;
   std::unique_ptr<UAsyncRelightBuilder> AsyncRelight;
+  std::unique_ptr<IULightingPipeline> LightingPipeline;
   uint64_t NextAsyncRelightJobId{1};
   bool StepUpEnabled{true};
   bool FoliageClimbEnabled{true};

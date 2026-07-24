@@ -171,6 +171,7 @@ set(SOURCES
     src/App/ResourcePackSelectionUtil.cpp
     src/App/LegacyConfigAdapter.cpp
     src/App/Settings/RenderSettings.cpp
+    src/App/Settings/GraphicsQualityProfile.cpp
     src/App/Settings/UiSettings.cpp
     src/Blocks/Input/BlockInputController.cpp
     src/Render/Primitives/Cube.cpp
@@ -199,6 +200,9 @@ set(SOURCES
     src/World/Lighting/ChunkLighting.cpp
     src/World/Lighting/ChunkRelightSnapshot.cpp
     src/World/Lighting/AsyncRelightBuilder.cpp
+    src/World/Lighting/FullLightingPipeline.cpp
+    src/World/Lighting/FlatLightingPipeline.cpp
+    src/World/Lighting/LightingPipelineFactory.cpp
     src/World/Persistence/WorldPersistence.cpp
     src/World/Streaming/WorldStreaming.cpp
     src/World/Streaming/MemoryBudgetController.cpp
@@ -452,6 +456,11 @@ set(HEADERS
     src/World/Lighting/ChunkLighting.h
     src/World/Lighting/ChunkRelightSnapshot.h
     src/World/Lighting/AsyncRelightBuilder.h
+    src/World/Lighting/IULightingPipeline.h
+    src/World/Lighting/FullLightingPipeline.h
+    src/World/Lighting/FlatLightingPipeline.h
+    src/World/Lighting/LightingPipelineFactory.h
+    src/App/Settings/GraphicsQualityProfile.h
     src/World/Persistence/WorldPersistence.h
     src/World/Streaming/WorldStreaming.h
     src/World/Streaming/ChunkEmergeCoordinator.h

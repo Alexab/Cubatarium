@@ -172,8 +172,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const glm::ivec3 ground(chunk_coord.x, 0, chunk_coord.z);
         const bool may_mesh =
             world.MayMeshColumn(ground, /*underfeet_preview=*/false);
-        return SoftDeferMeshUntilLitPolicy(underfeet, has_mesh, pending,
-                                           in_focus, may_mesh);
+        return SoftDeferMeshUntilLitPolicy(
+            underfeet, has_mesh,
+            world.RequiresLightingLitGate() && pending, in_focus, may_mesh);
       });
 
   const bool missing_visible_mesh =

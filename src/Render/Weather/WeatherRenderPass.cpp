@@ -123,6 +123,7 @@ float UWeatherRenderPass::QualityForPreset(PerformancePreset preset) const
 {
   switch (preset)
   {
+  case PerformancePreset::Performance:
   case PerformancePreset::Fast:
     return 0.55f;
   case PerformancePreset::Quality:
@@ -138,6 +139,7 @@ int UWeatherRenderPass::ParticleBudget(PerformancePreset preset,
 {
   switch (preset)
   {
+  case PerformancePreset::Performance:
   case PerformancePreset::Fast:
     return weather_kind == 2 ? 220 : 320;
   case PerformancePreset::Quality:

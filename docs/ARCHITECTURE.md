@@ -16,7 +16,7 @@ World geometry lives only in `BlockWorld`. `ChunkMeshCache` rebuilds mesh per ch
 | `face_quads` | `true` (default). **Requires `greedy_meshing: true`** (auto-enabled if missing). Greedy mesh as world-space triangles with baked UV. |
 | `frustum_culling` | `true` (default): skip chunks outside view frustum. Chunk AABB expanded by 2 blocks. |
 | `batch_cache` | `true` (default): reuse prepared draw batches when mesh revision unchanged (legacy instanced path). |
-| `performance_preset` | `fast` / `balanced` (default) / `quality` — seeds `async_meshing`, `distance_fog`, `gradient_sky`; individual `render.*` keys override the preset. |
+| `performance_preset` | `performance` / `fast` / `balanced` (default) / `quality` — seeds fog/sky/async and selects CPU lighting backend (`Flat` for `performance`, `Full` otherwise). `fast` enables boundary `distance_fog` but disables fog pull-in / water-unfinished near fog. Individual `render.*` keys override the preset. Selectable in Settings as **Graphics quality**. |
 | `async_meshing` | Background mesh rebuild; see `RenderSettings.AsyncMeshing`. |
 | `distance_fog` | Distance fog using `FogHorizonBlocks` / `RenderHorizonBlocks`. |
 
@@ -304,7 +304,7 @@ Console is toggled via `ui.console_key` (default grave). Chat log lines are appe
 
 **Main menu:** `Load Last World` (or `Resume` after Esc), `Load World`, `New World`, `Settings`, `Quit`.
 
-**Settings (`SettingsScreen`):** tab **Application** — `default_user`, `default_world`, streaming, render distance, `render.*`, `gameplay.step_up`, `ui.*` (written to `config.json` via `Core::SaveConfigFile`). Tab **World defaults** — `procedural.*` template for the next new worlds only (does not change an already loaded world's `world_data.json`).
+**Settings (`SettingsScreen`):** tab **Application** — `default_user`, `default_world`, streaming, render distance, **Graphics quality** (`render.performance_preset`), meshing `render.*` toggles, `gameplay.step_up`, `ui.*` (written to `config.json` via `Core::SaveConfigFile`). Tab **World defaults** — `procedural.*` template for the next new worlds only (does not change an already loaded world's `world_data.json`).
 
 **Config (`ui` section):** `legacy_hud` (GeometryEngine text HUD), `console_key` (default `` ` ``), `palette_key` (default `b`, opens Blocks), `inventory_key` (default `e`, toggles palette on last main tab; default Blocks), `ui_scale` (interface scale multiplier, default `1.0`). Saved from Settings together with other app keys.
 

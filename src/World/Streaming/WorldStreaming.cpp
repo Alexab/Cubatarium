@@ -278,7 +278,9 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
           // (DrainRelightQueues → async). Direct EnqueueAsync+FIFO duplicated
           // jobs and left pending plateaus with relight_drain≈0.
           const bool neighborhood_ok = world.CanSeedSkylightAtCommit(ground);
-          const bool seed_skylight_now = underfeet && neighborhood_ok;
+          const bool seed_skylight_now =
+              !world.RequiresLightingLitGate() ||
+              (underfeet && neighborhood_ok);
           const bool relight_priority =
               (near_focus && LastPendingLightFocus <= 20) ||
               (near_focus && neighborhood_ok);
@@ -842,7 +844,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   const int pending_player = world.Persistence->GetPendingPlayerRelightCount();
   const int player_budget = pending_player > 0 ? 2 : 0;
   const bool async_bg =
-      procedural.AsyncRelight && !world.IsLightingRelightDeferred();
+      procedural.AsyncRelight && !world.IsLightingRelightDeferred() &&
+      world.AllowsAsyncLighting();
   int bg_budget =
       async_bg ? (pending_bg > 24 ? 3 : (pending_bg > 8 ? 2 : 1))
                : (pending_bg > 12 ? 2 : (pending_bg > 0 ? 1 : 0));

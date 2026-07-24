@@ -73,6 +73,7 @@
         "falling_scan_radius_chunks": 2
     },
     "render": {
+        "performance_preset": "balanced",
         "greedy_meshing": true,
         "async_meshing": true,
         "face_quads": true,

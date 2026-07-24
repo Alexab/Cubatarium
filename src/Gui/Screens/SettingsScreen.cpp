@@ -1,5 +1,6 @@
 #include "Gui/Screens/SettingsScreen.h"
 #include "App/Settings/AppSettingsSnapshot.h"
+#include "App/Settings/GraphicsQualityProfile.h"
 #include "App/Settings/UiSettings.h"
 #include "ResourcePacks/ResourcePackResolver.h"
 #include "Gui/Core/GuiContext.h"
@@ -103,6 +104,18 @@ void USettingsScreen::OnSave()
   {
     app.Render.BatchCache = BatchCacheBox->IsChecked();
   }
+  // Reseed fog/sky/async from quality preset, then re-apply meshing toggles.
+  {
+    const bool greedy = app.Render.GreedyMeshing;
+    const bool face = app.Render.FaceQuads;
+    const bool frustum = app.Render.FrustumCulling;
+    const bool batch = app.Render.BatchCache;
+    app.Render = RenderSettings::FromPreset(SelectedGraphicsQuality);
+    app.Render.GreedyMeshing = greedy;
+    app.Render.FaceQuads = face;
+    app.Render.FrustumCulling = frustum;
+    app.Render.BatchCache = batch;
+  }
   if (LegacyHudBox)
   {
     app.Ui.LegacyHud = LegacyHudBox->IsChecked();
@@ -173,6 +186,7 @@ void USettingsScreen::Build(UGuiContext &ctx)
   UiScaleUser =
       std::clamp(appSnap.Ui.UiScaleUser, kGuiMinUserScale, kGuiMaxUserScale);
   SelectedControlScheme = appSnap.Ui.ControlScheme;
+  SelectedGraphicsQuality = appSnap.Render.Preset;
 
   auto backdrop = std::make_unique<UGuiPanel>(&theme);
   backdrop->SetBounds({0, 0, ViewportW, ViewportH});
@@ -364,6 +378,26 @@ void USettingsScreen::Build(UGuiContext &ctx)
   ControlSchemeButton = profileBtn.get();
   app.AddChild(std::move(profileBtn));
 
+  auto graphicsQualityLbl =
+      std::make_unique<UGuiLabel>(&theme, "Graphics quality:");
+  GraphicsQualityLabel = graphicsQualityLbl.get();
+  app.AddChild(std::move(graphicsQualityLbl));
+  auto graphicsQualityBtn = std::make_unique<UGuiButton>(
+      &theme, GraphicsQualityProfile::DisplayName(SelectedGraphicsQuality));
+  graphicsQualityBtn->SetOnClick(
+      [this]()
+      {
+        SelectedGraphicsQuality =
+            GraphicsQualityProfile::NextPreset(SelectedGraphicsQuality);
+        if (GraphicsQualityButton)
+        {
+          GraphicsQualityButton->SetLabel(
+              GraphicsQualityProfile::DisplayName(SelectedGraphicsQuality));
+        }
+      });
+  GraphicsQualityButton = graphicsQualityBtn.get();
+  app.AddChild(std::move(graphicsQualityBtn));
+
   UGuiPanel &world = frame->AddScrollPage();
   WorldPanel = &world;
   WorldForm = std::make_unique<UWorldGenSettingsForm>(&theme);
@@ -445,6 +479,7 @@ USettingsScreen::BuildAppGridItems(const GuiGridSpec &spec) const
   const int hotbarValueRow = spec.columns > 1 ? 13 : 15;
   const int hotbarValueCol = spec.columns > 1 ? 1 : 0;
   const int controlSchemeRow = spec.columns > 1 ? 14 : 18;
+  const int graphicsQualityRow = spec.columns > 1 ? 15 : 19;
   const int uiScaleSliderRow = spec.columns > 1 ? 1 : 2;
   const int uiScaleValueRow = spec.columns > 1 ? 0 : 1;
   const int uiScaleValueCol = spec.columns > 1 ? 1 : 0;
@@ -479,6 +514,8 @@ USettingsScreen::BuildAppGridItems(const GuiGridSpec &spec) const
       {HotbarCountValueLabel, hotbarValueRow, hotbarValueCol, 1, 1, fieldH},
       {ControlSchemeLabel, controlSchemeRow, 0, 1, 1, labelH},
       {ControlSchemeButton, controlSchemeRow, 1, 1, 1, fieldH},
+      {GraphicsQualityLabel, graphicsQualityRow, 0, 1, 1, labelH},
+      {GraphicsQualityButton, graphicsQualityRow, 1, 1, 1, fieldH},
   };
 }
 
