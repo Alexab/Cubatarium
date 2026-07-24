@@ -5874,6 +5874,13 @@ void UWorld::MarkBlocksChunkDirtyBatch(
       BlockWorld, BlockRegistry.get(), block_positions, ModifiedChunks,
       sync_neighbor_chunks, sync_light_ring, collect_break_diag,
       &PhysicsTelemetryData);
+  if (ChunkDirtyService)
+  {
+    for (const glm::ivec3 &pos : block_positions)
+    {
+      ChunkDirtyService->MarkCollisionRebuild(*this, pos);
+    }
+  }
 }
 
 void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos, bool sync_neighbor_chunks,
@@ -5884,6 +5891,12 @@ void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos, bool sync_neighbor_chunks,
       sync_neighbor_chunks, sync_light_ring);
   MeshService->NotifyFluidSurfaceDirtyAtBlock(BlockWorld, BlockRegistry.get(),
                                               blockPos);
+  // Player/world edits remesh immediately but used to leave ChunkOccupancyMask
+  // stale — visible stone with walk-through collision (prefab buildings).
+  if (ChunkDirtyService)
+  {
+    ChunkDirtyService->MarkCollisionRebuild(*this, blockPos);
+  }
 }
 
 void UWorld::MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos)
