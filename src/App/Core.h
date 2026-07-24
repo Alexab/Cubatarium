@@ -155,8 +155,10 @@ public:
   PeekWorldResourcePacks(const std::string &world_name) const;
   ResourcePackSelection GetCurrentWorldResourcePackSelection() const;
   bool ApplyResourcePacksToCurrentWorld(const ResourcePackSelection &selection);
+  bool ApplyResourcePacksInMemory(const ResourcePackSelection &selection);
   WorldViewSettings GetCurrentWorldViewSettings() const;
   bool ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view);
+  bool ApplyViewSettingsInMemory(const WorldViewSettings &view);
 
   void ApplyRuntimeStreamingToWorld();
 

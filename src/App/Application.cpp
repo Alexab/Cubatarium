@@ -402,7 +402,28 @@ void UApplication::BeginWorldOperation(WorldRunnerRequest request,
   }
   State = AppState::Loading;
   ShowWorldProgressScreen();
-  ProgressSink.Begin(WorldOperationKind::Load);
+  const WorldOperationKind kind = [&]()
+  {
+    switch (request.op)
+    {
+    case WorldRunnerOp::Save:
+    case WorldRunnerOp::SaveThenLoad:
+    case WorldRunnerOp::SaveThenCreate:
+      return WorldOperationKind::Save;
+    case WorldRunnerOp::Create:
+      return WorldOperationKind::Create;
+    case WorldRunnerOp::EnterGame:
+      return WorldOperationKind::EnterGame;
+    case WorldRunnerOp::Shutdown:
+      return WorldOperationKind::Shutdown;
+    case WorldRunnerOp::ApplyWorldSettings:
+      return WorldOperationKind::ApplySettings;
+    case WorldRunnerOp::Load:
+    default:
+      return WorldOperationKind::Load;
+    }
+  }();
+  ProgressSink.Begin(kind);
   ProgressSink.Report("init", 0.f, "Starting...");
   if (ProgressScreen)
   {
@@ -751,6 +772,29 @@ bool UApplication::ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view
     SyncCursorVisibility();
   }
   return ok;
+}
+
+void UApplication::ApplyWorldSettingsWithProgress(
+    const ResourcePackSelection &selection, const WorldViewSettings &view)
+{
+  if (!Core || !World || State == AppState::Loading)
+  {
+    return;
+  }
+  WorldRunnerRequest request;
+  request.op = WorldRunnerOp::ApplyWorldSettings;
+  request.packs = selection;
+  request.view = view;
+  request.enterGameAfter = false;
+  request.saveConfigAfter = false;
+  BeginWorldOperation(std::move(request),
+                      [this]()
+                      {
+                        RefreshBlockCatalog();
+                        SyncCursorVisibility();
+                        ShowMainMenu();
+                        State = AppState::MainMenu;
+                      });
 }
 
 void UApplication::LoadSelectedWorld(const std::string &worldName)

@@ -11,7 +11,8 @@ enum class WorldOperationKind
   Create,
   Save,
   EnterGame,
-  Shutdown
+  Shutdown,
+  ApplySettings
 };
 
 struct ProgressSnapshot

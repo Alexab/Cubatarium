@@ -44,15 +44,9 @@ void UWorldResourcePacksScreen::OnApply()
   {
     selection.WorldgenOwner = selection.Primary.front();
   }
-  Host->ApplyResourcePacksToCurrentWorld(selection);
-  if (ViewForm)
-  {
-    Host->ApplyViewSettingsToCurrentWorld(ViewForm->ReadSettings());
-  }
-  if (OnClose)
-  {
-    OnClose();
-  }
+  const WorldViewSettings view =
+      ViewForm ? ViewForm->ReadSettings() : WorldViewSettings{};
+  Host->ApplyWorldSettingsWithProgress(selection, view);
 }
 
 void UWorldResourcePacksScreen::Build(UGuiContext &ctx)

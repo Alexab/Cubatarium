@@ -53,6 +53,10 @@ public:
   ApplyResourcePacksToCurrentWorld(const ResourcePackSelection &selection) = 0;
   virtual WorldViewSettings GetCurrentWorldViewSettings() const = 0;
   virtual bool ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view) = 0;
+  /// Apply packs + view with world-load-style progress, then save.
+  virtual void
+  ApplyWorldSettingsWithProgress(const ResourcePackSelection &selection,
+                                 const WorldViewSettings &view) = 0;
   virtual void ApplyLiveUiScale(float user_scale) = 0;
 };
 

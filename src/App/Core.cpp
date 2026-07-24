@@ -1089,7 +1089,7 @@ WorldViewSettings UCore::GetCurrentWorldViewSettings() const
   return WorldInstance->GetViewSettings();
 }
 
-bool UCore::ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view)
+bool UCore::ApplyViewSettingsInMemory(const WorldViewSettings &view)
 {
   if (!WorldInstance || WorldInstance->GetWorldName().empty())
   {
@@ -1101,6 +1101,15 @@ bool UCore::ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view)
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
     camera->ApplyWorldViewSettings(validated);
+  }
+  return true;
+}
+
+bool UCore::ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view)
+{
+  if (!ApplyViewSettingsInMemory(view))
+  {
+    return false;
   }
   SaveWorld(WorldInstance->GetWorldName());
   return true;
@@ -1150,8 +1159,7 @@ ResourcePackSelection UCore::GetCurrentWorldResourcePackSelection() const
   return selection;
 }
 
-bool UCore::ApplyResourcePacksToCurrentWorld(
-    const ResourcePackSelection &selectionIn)
+bool UCore::ApplyResourcePacksInMemory(const ResourcePackSelection &selectionIn)
 {
   if (!WorldInstance || WorldInstance->GetWorldName().empty())
   {
@@ -1168,6 +1176,16 @@ bool UCore::ApplyResourcePacksToCurrentWorld(
   }
   WorldInstance->SetResourcePackSelection(
       selection.Primary, selection.Secondary, selection.WorldgenOwner);
+  return true;
+}
+
+bool UCore::ApplyResourcePacksToCurrentWorld(
+    const ResourcePackSelection &selectionIn)
+{
+  if (!ApplyResourcePacksInMemory(selectionIn))
+  {
+    return false;
+  }
   SaveWorld(WorldInstance->GetWorldName());
   return true;
 }

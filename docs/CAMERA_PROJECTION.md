@@ -41,7 +41,7 @@ Stored in `worlds/World_NNN/world_data.json`:
 ## UI
 
 - **New World** — View section: Perspective (FPS) / Isometric (+ ortho size).
-- **World settings** (paused session) — same View form; Apply hot-reloads the camera and saves `world_data.json`.
+- **World settings** (paused session) — same View form; Apply shows a world-load-style progress bar while packs/view are applied and the world is saved.
 
 Not configured via global `config.json` `render.*`.
 

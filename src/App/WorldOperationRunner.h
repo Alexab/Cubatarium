@@ -22,7 +22,8 @@ enum class WorldRunnerOp
   SaveThenLoad,
   SaveThenCreate,
   EnterGame,
-  Shutdown
+  Shutdown,
+  ApplyWorldSettings
 };
 
 struct WorldRunnerRequest
@@ -84,6 +85,7 @@ private:
     ShutdownQuiesce,
     ShutdownSave,
     ShutdownFinalize,
+    ApplySettings,
     Done,
     Failed
   };
@@ -103,6 +105,7 @@ private:
   bool SaveBeforeOp{false};
   WorldRunnerOp PendingWorldOp{WorldRunnerOp::Load};
   int EnterGameGpuWarmupFramesLeft{0};
+  int ApplySettingsStep{0};
   UBackgroundQuiesceState ShutdownQuiesceState{};
 };
 
