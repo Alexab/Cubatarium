@@ -561,6 +561,25 @@ bool UInputRouter::RouteScroll(UApplication &app, double xoffset, double yoffset
     {
       return true;
     }
+    // Perspective: Minecraft-style hotbar cycle. Isometric keeps camera zoom.
+    if (app.GameSession && app.World)
+    {
+      if (auto camera = app.World->GetCurrentUserCamera())
+      {
+        if (!camera->IsIsometricProjection() && yoffset != 0.0)
+        {
+          constexpr size_t kSlots = 10;
+          const size_t current = app.GameSession->GetSelectedSlot(0);
+          const int delta = yoffset > 0.0 ? -1 : 1;
+          const size_t next =
+              static_cast<size_t>((static_cast<int>(current) + delta +
+                                   static_cast<int>(kSlots)) %
+                                  static_cast<int>(kSlots));
+          app.GameSession->SelectSlot(0, next);
+          return true;
+        }
+      }
+    }
     return false;
   }
   return app.GuiContext->RouteScroll(GuiScrollEvent{xoffset, yoffset}, mouse_x,

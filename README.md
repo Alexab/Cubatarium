@@ -76,6 +76,7 @@ Two **control schemes** (Settings → Application → Control scheme; `config.js
 | Space | Jump |
 | Q/E | Up/down (creative-style vertical nudge) |
 | 0–9 | Hotbar (slot 9 = `tree_small` prefab) |
+| Mouse wheel | Cycle primary hotbar (FPS/perspective); zoom in isometric |
 | F7 | Place test tree prefab at crosshair |
 | F12 | Show new-world hint |
 | Shift+F12 | Create new procedural world (saves current) |
