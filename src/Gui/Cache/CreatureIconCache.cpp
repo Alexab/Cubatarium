@@ -312,9 +312,10 @@ std::string UCreatureIconCache::BuildSpeciesFingerprint(
       if (std::filesystem::exists(binPath, ec))
       {
         out << '|' << std::filesystem::file_size(binPath, ec) << '|'
-            << std::filesystem::last_write_time(binPath, ec)
-                   .time_since_epoch()
-                   .count();
+            << static_cast<long long>(
+                   std::filesystem::last_write_time(binPath, ec)
+                       .time_since_epoch()
+                       .count());
       }
     }
   }
