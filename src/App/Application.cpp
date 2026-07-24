@@ -745,7 +745,12 @@ bool UApplication::ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view
   {
     return false;
   }
-  return Core->ApplyViewSettingsToCurrentWorld(view);
+  const bool ok = Core->ApplyViewSettingsToCurrentWorld(view);
+  if (ok)
+  {
+    SyncCursorVisibility();
+  }
+  return ok;
 }
 
 void UApplication::LoadSelectedWorld(const std::string &worldName)
@@ -946,6 +951,16 @@ AppCursorPolicy UApplication::GetCursorPolicy() const
   }
   if (State == AppState::InGame)
   {
+    if (World)
+    {
+      if (auto cam = World->GetCurrentUserCamera())
+      {
+        if (cam->IsIsometricProjection())
+        {
+          return AppCursorPolicy::ConfinedVisible;
+        }
+      }
+    }
     if (Ui.ControlScheme == ControlScheme::Classic)
     {
       return AppCursorPolicy::CapturedHidden;

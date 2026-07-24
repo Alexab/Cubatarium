@@ -196,6 +196,11 @@ void UCamera::SetViewportSize(int width, int height)
 bool UCamera::TryGetCenterViewRay(glm::vec3 &out_origin,
                                   glm::vec3 &out_dir) const
 {
+  if (IsIsometricProjection() && PointerScreenValid)
+  {
+    return TryGetViewRayAtScreen(PointerScreenX, PointerScreenY, out_origin,
+                                 out_dir);
+  }
   if (ViewportWidth <= 0 || ViewportHeight <= 0)
   {
     if (IsIsometricProjection())
@@ -214,10 +219,39 @@ bool UCamera::TryGetCenterViewRay(glm::vec3 &out_origin,
     out_dir = Front;
     return true;
   }
-  const glm::ivec4 viewport(0, 0, ViewportWidth, ViewportHeight);
   const float mouse_x = static_cast<float>(ViewportWidth) * 0.5f;
   const float mouse_y = static_cast<float>(ViewportHeight) * 0.5f;
-  if (!ScreenPointToWorldRay(Pose, Projection, viewport, mouse_x, mouse_y,
+  return TryGetViewRayAtScreen(mouse_x, mouse_y, out_origin, out_dir);
+}
+
+bool UCamera::TryGetViewRayAtScreen(float screen_x, float screen_y,
+                                    glm::vec3 &out_origin,
+                                    glm::vec3 &out_dir) const
+{
+  if (ViewportWidth <= 0 || ViewportHeight <= 0)
+  {
+    if (IsIsometricProjection())
+    {
+      out_origin = GetViewController().ComputeCameraWorldPosition(*this);
+      const glm::vec3 target = GetViewController().ComputeLookTarget(*this);
+      out_dir = target - out_origin;
+      const float len = glm::length(out_dir);
+      if (len > 1.0e-6f)
+      {
+        out_dir /= len;
+        return true;
+      }
+    }
+    out_origin = Position;
+    out_dir = Front;
+    return true;
+  }
+
+  // GLFW/cursor Y is top-left; glm::unProject expects bottom-left.
+  const float gl_y =
+      static_cast<float>(ViewportHeight) - screen_y;
+  const glm::ivec4 viewport(0, 0, ViewportWidth, ViewportHeight);
+  if (!ScreenPointToWorldRay(Pose, Projection, viewport, screen_x, gl_y,
                              out_origin, out_dir))
   {
     if (IsIsometricProjection())
@@ -236,6 +270,13 @@ bool UCamera::TryGetCenterViewRay(glm::vec3 &out_origin,
     out_dir = Front;
   }
   return true;
+}
+
+void UCamera::SetPointerScreenPos(float screen_x, float screen_y)
+{
+  PointerScreenX = screen_x;
+  PointerScreenY = screen_y;
+  PointerScreenValid = true;
 }
 
 void UCamera::RotateIsoYaw(int delta_steps)
@@ -843,6 +884,23 @@ void UCamera::UpdateMouseMove(std::shared_ptr<UWorld> world, double xpos,
                          static_cast<float>(Yoffset));
   glm::vec3 ray_origin;
   glm::vec3 ray_dir;
+  if (IsIsometricProjection())
+  {
+    SetPointerScreenPos(static_cast<float>(xpos), static_cast<float>(ypos));
+  }
+  TryGetCenterViewRay(ray_origin, ray_dir);
+  world->UpdateIntersection(ray_origin, ray_dir);
+}
+
+void UCamera::UpdatePointerAim(std::shared_ptr<UWorld> world, double xpos,
+                               double ypos)
+{
+  SetPointerScreenPos(static_cast<float>(xpos), static_cast<float>(ypos));
+  LastMouseX = xpos;
+  LastMouseY = ypos;
+  FirstMouseCoords = false;
+  glm::vec3 ray_origin;
+  glm::vec3 ray_dir;
   TryGetCenterViewRay(ray_origin, ray_dir);
   world->UpdateIntersection(ray_origin, ray_dir);
 }
@@ -852,6 +910,10 @@ void UCamera::ResetMouseMove(double xpos, double ypos)
   LastMouseX = xpos;
   LastMouseY = ypos;
   FirstMouseCoords = true;
+  if (IsIsometricProjection())
+  {
+    SetPointerScreenPos(static_cast<float>(xpos), static_cast<float>(ypos));
+  }
 }
 
 void UCamera::ApplyRelativeMouseMove(float Xoffset, float Yoffset)

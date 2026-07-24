@@ -7,20 +7,20 @@ Gameplay input and camera pose are selected by `IUGameplayViewController`:
 | Controller | When | Look | Move | F5 |
 |------------|------|------|------|-----|
 | `UFpsGameplayViewController` | perspective | free look | yaw-relative XZ | 1st / 3rd back / 3rd front |
-| `UIsoGameplayViewController` | orthographic isometric | **orbits camera yaw** | screen-relative XZ; body faces move | Close / Standard / Far boom |
+| `UIsoGameplayViewController` | orthographic isometric | **RMB-drag orbits yaw** | screen-relative XZ; body faces move; cursor aim | Close / Standard / Far boom |
 
 ## Modes
 
 | Mode | JSON `view.projection` | Matrix | Controls |
 |------|------------------------|--------|----------|
 | Perspective (FPS) | `perspective` | `glm::perspective` | Mouse look, F5 person mode |
-| Isometric | `orthographic_isometric` (alias `isometric`) | `glm::ortho` half-height = `ortho_size` | Elevated `lookAt` boom, mouse orbits yaw, WASD screen-relative, Q/E snap 90°, scroll zoom |
+| Isometric | `orthographic_isometric` (alias `isometric`) | `glm::ortho` half-height = `ortho_size` | Elevated boom; free cursor; RMB orbit; LMB place/break at cursor; WASD; Q/E snap; scroll zoom |
 
 `CameraPerspective` / F5 in perspective is **person mode** (1st/3rd). In isometric, F5 cycles **iso boom presets** (Close / Standard / Far). The body is always drawn in isometric.
 
 ## Isometric rig
 
-Camera sits above-side of the player (`focus - lookDir * boomDistance`), looking at a point slightly below the eye. Orientation uses continuous `IsoOrbitYawDeg` + `iso_pitch_deg` (classic ~35.264°). Mouse orbits the camera yaw; WASD moves relative to the camera; the body faces the move direction (or camera-forward when idle). Block picking uses the center-screen view ray from the elevated camera (not the eye `Front` vector).
+Camera sits above-side of the player (`focus - lookDir * boomDistance`), looking at a point slightly below the eye. Orientation uses continuous `IsoOrbitYawDeg` + `iso_pitch_deg` (classic ~35.264°). **RMB-drag** orbits the camera; with the button released the cursor is free and block place/break aims at the cursor (view ray). WASD moves relative to the camera; the body faces the move direction (or camera-forward when idle). LMB: short tap place, hold break (same as Cubatarium scheme).
 
 ## Persistence
 

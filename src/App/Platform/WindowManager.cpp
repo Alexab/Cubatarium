@@ -883,7 +883,10 @@ void UWindowManager::HandleMouseButtonEvent(MouseButton Button, bool Pressed,
   ctx.Ui = Core ? &Core->GetUiSettings() : nullptr;
   ctx.Window = Window;
   ctx.App = Application.get();
-  BlockInput->OnMouseButton(Button, Pressed, pos, ctx);
+  BlockInput->OnMouseButton(Button, Pressed,
+                            glm::vec2(static_cast<float>(fbPos.x),
+                                      static_cast<float>(fbPos.y)),
+                            ctx);
 }
 
 void UWindowManager::HandleMouseMoveEvent(glm::vec2 pos, glm::vec2 delta)
@@ -914,7 +917,9 @@ void UWindowManager::HandleMouseMoveEvent(glm::vec2 pos, glm::vec2 delta)
   ctx.Ui = Core ? &Core->GetUiSettings() : nullptr;
   ctx.Window = Window;
   ctx.App = Application.get();
-  BlockInput->OnMouseMove(pos, delta, ctx);
+  BlockInput->OnMouseMove(glm::vec2(static_cast<float>(fbPos.x),
+                                    static_cast<float>(fbPos.y)),
+                          delta, ctx);
 }
 
 void UWindowManager::HandleWindowResizeEvent(int width, int height)
@@ -1046,7 +1051,7 @@ void UWindowManager::RenderHelpText()
   // Main control hints in English
   std::vector<std::string> help_lines = {
       "WASD - Move, Space - Jump, dbl Space - Fly, F5 - Cycle view, "
-      "Q/E - Iso camera snap (isometric), "
+      "Q/E - Iso camera snap, RMB - Iso orbit, LMB - Place/break at cursor, "
       "RMB hold - Look, ` - Console",
       "Classic: mouse look, LMB break, RMB place; Cubatarium: RMB "
       "look",

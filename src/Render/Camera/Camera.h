@@ -85,6 +85,12 @@ public:
   int GetViewportWidth() const { return ViewportWidth; }
   int GetViewportHeight() const { return ViewportHeight; }
   bool TryGetCenterViewRay(glm::vec3 &out_origin, glm::vec3 &out_dir) const;
+  bool TryGetViewRayAtScreen(float screen_x, float screen_y, glm::vec3 &out_origin,
+                             glm::vec3 &out_dir) const;
+  void SetPointerScreenPos(float screen_x, float screen_y);
+  bool HasPointerScreenPos() const { return PointerScreenValid; }
+  float GetPointerScreenX() const { return PointerScreenX; }
+  float GetPointerScreenY() const { return PointerScreenY; }
   void RotateIsoYaw(int delta_steps);
 
   bool DoMovement(const UWorld *world);
@@ -144,6 +150,7 @@ public:
   void ResetAllKeyStatus();
   void UpdateFrameTime();
   void UpdateMouseMove(std::shared_ptr<UWorld> world, double xpos, double ypos);
+  void UpdatePointerAim(std::shared_ptr<UWorld> world, double xpos, double ypos);
   void ResetMouseMove(double xpos, double ypos);
   void ApplyRelativeMouseMove(float Xoffset, float Yoffset);
   void UpdateMouseScroll(double Xoffset, double Yoffset);
@@ -212,6 +219,9 @@ private:
   double LastMouseX{0.0};
   double LastMouseY{0.0};
   bool FirstMouseCoords;
+  float PointerScreenX{0.0f};
+  float PointerScreenY{0.0f};
+  bool PointerScreenValid{false};
 
   glm::vec3 LastMoveIntentDir{0.0f, 0.0f, -1.0f};
   bool LastMoveIntentValid{false};
