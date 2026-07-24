@@ -163,9 +163,8 @@ bool IsLocomotionStuck(const glm::vec3 &prev_origin,
     return false;
   }
   const glm::vec3 delta = cur_origin - prev_origin;
-  const float xz_speed =
-      std::sqrt(delta.x * delta.x + delta.z * delta.z) / dt;
-  return xz_speed < min_speed;
+  const float speed = glm::length(delta) / dt;
+  return speed < min_speed;
 }
 
 float SeparationQueryRadius(const glm::vec3 &bounds_size)

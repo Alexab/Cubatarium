@@ -24,6 +24,9 @@ int main()
          "zero movement should be stuck");
   Expect(!cutum::IsLocomotionStuck(prev, moved, 0.1f, 0.05f),
          "fast movement should not be stuck");
+  const glm::vec3 vertical(0.0f, 64.2f, 0.0f);
+  Expect(!cutum::IsLocomotionStuck(prev, vertical, 0.1f, 0.05f),
+         "vertical travel should not count as stuck");
 
   const glm::vec3 base(1.0f, 0.0f, 0.0f);
   const glm::vec3 sep(0.0f, 0.0f, 1.0f);

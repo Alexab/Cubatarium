@@ -12,6 +12,7 @@ constexpr float kStuckTimeout = 0.6f;
 constexpr float kStuckMinSpeed = 0.05f;
 constexpr float kSeparationWeight = 0.5f;
 constexpr float kIdleBlockDuration = 0.2f;
+constexpr float kForwardProbeSeconds = 0.35f;
 
 void NormalizeWanderIntervalRange(float rawMin, float rawMax, float &outMin,
                                   float &outMax)
@@ -188,7 +189,9 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
       move_speed = snapshot->locomotion.walkSpeed;
     }
 
-    const glm::vec3 probe = view->bodyOrigin + move_dir * 1.25f;
+    const float probe_dist =
+        std::max(1.25f, move_speed * kForwardProbeSeconds);
+    const glm::vec3 probe = view->bodyOrigin + move_dir * probe_dist;
     const bool forward_clear =
         glm::length(move_dir) < 1e-4f ||
         (perception.CreatureVolumeClearAt(probe, snapshot->boundsSize,
@@ -215,6 +218,7 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
         st.lastBodyOrigin = view->bodyOrigin;
         continue;
       }
+      st.stuckTimer = 0.0f;
       st.idleTimer += dt;
       if (st.idleTimer >= kIdleBlockDuration)
       {
