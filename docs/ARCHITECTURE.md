@@ -306,7 +306,7 @@ Console is toggled via `ui.console_key` (default grave). Chat log lines are appe
 
 **Settings (`SettingsScreen`):** tab **Application** — `default_user`, `default_world`, streaming, render distance, `render.*`, `gameplay.step_up`, `ui.*` (written to `config.json` via `Core::SaveConfigFile`). Tab **World defaults** — `procedural.*` template for the next new worlds only (does not change an already loaded world's `world_data.json`).
 
-**Config (`ui` section):** `legacy_hud` (GeometryEngine text HUD), `console_key` (default `` ` ``), `palette_key` (default `b`), `ui_scale` (interface scale multiplier, default `1.0`). Saved from Settings together with other app keys.
+**Config (`ui` section):** `legacy_hud` (GeometryEngine text HUD), `console_key` (default `` ` ``), `palette_key` (default `b`, opens Blocks), `inventory_key` (default `e`, toggles palette on last main tab; default Blocks), `ui_scale` (interface scale multiplier, default `1.0`). Saved from Settings together with other app keys.
 
 **Input:** UI capture blocks world mouse/keyboard when the main menu, console, or palette is active. Hotbar keys `0–9` in `Application::RouteKey`. Left Alt toggles free cursor for HUD.
 

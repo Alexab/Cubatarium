@@ -11,7 +11,7 @@ namespace cutum
 void ReadLegacyUiSettings(const nlohmann::json &ui, UiSettings &out)
 {
   out.LegacyHud = ui.value("legacy_hud", false);
-  out.ShowPerformance = ui.value("show_performance", true);
+  out.ShowPerformance = ui.value("show_performance", false);
   out.PerfLogIntervalSec =
       std::clamp(ui.value("perf_log_interval_sec", 2.0f), 0.25f, 60.0f);
   out.ConsoleKey = ui.value("console_key", "grave");

@@ -2,8 +2,11 @@
 
 #include "App/Application.h"
 #include "App/Core.h"
+#if !defined(__ANDROID__)
 #include "App/Platform/DesktopPlatformWindow.h"
 #include "App/Platform/GlfwKeyCompat.h"
+#include "App/Platform/InputManager.h"
+#endif
 #include "App/Platform/IUPlatformPaths.h"
 #include "App/Platform/IUPlatformWindow.h"
 #include "App/Platform/Log.h"
@@ -26,7 +29,6 @@
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Objects/ObjectLibrary.h"
 #include "WorldGen/Core/ProceduralSettings.h"
-#include "App/Platform/InputManager.h"
 
 #include <chrono>
 #include <cmath>
@@ -152,6 +154,19 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
   }
 }
 
+#if defined(__ANDROID__)
+int RunEnterGameSmoke(IUPlatformPaths &, int)
+{
+  CubatariumLogError("App", "enter-game-smoke is desktop-only");
+  return 1;
+}
+
+int RunFlightSim(IUPlatformPaths &, const FlightSimOptions &)
+{
+  CubatariumLogError("App", "flight-sim is desktop-only");
+  return 1;
+}
+#else
 int RunEnterGameSmoke(IUPlatformPaths &paths, int in_game_frames)
 {
   if (in_game_frames < 1)
@@ -701,5 +716,6 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     std::_Exit(1);
   }
 }
+#endif // !__ANDROID__
 
 } // namespace cutum

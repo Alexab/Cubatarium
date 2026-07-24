@@ -46,6 +46,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
+#include <iterator>
+#include <string>
 #include <vector>
 
 namespace cutum
@@ -1595,11 +1597,53 @@ void UGeometryEngine::SetGradientSky(bool useGradient)
 
 bool UGeometryEngine::IsGradientSky() const { return useGradientSky; }
 
-void UGeometryEngine::SetOverlayMargins(int right, int top)
+void UGeometryEngine::SetOverlayMargins(int left, int right, int top)
 {
+  OverlayMarginLeft = std::max(10, left);
   OverlayMarginRight = std::max(10, right);
   OverlayMarginTop = std::max(30, top);
 }
+
+namespace
+{
+
+struct OverlaySection
+{
+  const char *Title{nullptr};
+  std::vector<std::string> Lines;
+};
+
+size_t OverlaySectionLineCount(const OverlaySection &section)
+{
+  if (section.Lines.empty())
+  {
+    return 0;
+  }
+  return 1 + section.Lines.size();
+}
+
+void AppendOverlaySection(std::vector<std::string> &out,
+                          const OverlaySection &section)
+{
+  if (section.Lines.empty())
+  {
+    return;
+  }
+  out.emplace_back(section.Title);
+  out.insert(out.end(), section.Lines.begin(), section.Lines.end());
+}
+
+size_t CountOverlayLines(const std::vector<OverlaySection> &sections)
+{
+  size_t total = 0;
+  for (const OverlaySection &section : sections)
+  {
+    total += OverlaySectionLineCount(section);
+  }
+  return total;
+}
+
+} // namespace
 
 void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
                                             double view_duration)
@@ -1609,13 +1653,12 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
     return;
   }
 
-  // Обновляем размеры окна в TextRenderer
   textRenderer->SetWindowSize(width_size, height_size);
 
-  float scale = 0.7f;
-  glm::vec3 textColor(1.0f, 1.0f, 0.0f); // Yellow color for performance
+  constexpr float kScale = 0.7f;
+  constexpr float kLineHeight = 18.0f;
+  const glm::vec3 textColor(1.0f, 1.0f, 0.0f);
 
-  // Calculate FPS (sim = movement + view + draw; wall = full frame interval)
   const PhysicsTelemetry &phys = WorldInstance->GetPhysicsTelemetry();
   const double sim_ms = phys.PhysicsStepMs + (view_duration / 1000.0) +
                         (DurationDrawSceneMks / 1000.0);
@@ -1623,121 +1666,85 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
   const double sim_fps = sim_ms > 0.0 ? 1000.0 / sim_ms : 0.0;
   const double wall_fps = wall_ms > 0.0 ? 1000.0 / wall_ms : sim_fps;
 
-  size_t blockCount = WorldInstance->GetCachedBlockCount();
-  size_t drawCount = WorldInstance->GetRenderInstanceCount();
+  const size_t blockCount = WorldInstance->GetCachedBlockCount();
+  const size_t drawCount = WorldInstance->GetRenderInstanceCount();
   const auto &md = WorldInstance->GetMovementDiagnostics();
 
-  // Form performance information strings
-  std::vector<std::string> performanceLines = {
-      "Performance:",
-      "Weather: " + WorldInstance->GetWeatherName(),
-      "Wall FPS: " + std::to_string(wall_fps).substr(0, 6),
-      "Sim FPS: " + std::to_string(sim_fps).substr(0, 6),
-      "Swap: " + std::to_string(WorldInstance->GetLastSwapWaitMs()).substr(0, 6) +
-          " ms",
-      "Blocks: " + std::to_string(blockCount) +
-          " draw: " + std::to_string(drawCount),
-      "Phys: " + std::to_string(phys.PhysicsStepMs).substr(0, 6) + " ms" +
-          " steps: " + std::to_string(phys.SimulationStepsThisFrame),
-      "Move: " + std::to_string(phys.MovementStepMs).substr(0, 6) + " ms" +
-          " Block: " + std::to_string(phys.BlockStepMs).substr(0, 6) + " ms" +
-          " Drain: " + std::to_string(phys.DrainStepMs).substr(0, 6) + " ms",
-      "Scene: " + std::to_string(DurationDrawSceneMks / 1000.0).substr(0, 6) +
-          " ms" + " View: " +
-          std::to_string(view_duration / 1000.0).substr(0, 6) + " ms",
-      "Weather: streak " +
-          std::to_string(DurationWeatherStreakMks).substr(0, 5) + " ms" +
-          " particle " +
-          std::to_string(DurationWeatherParticleMks).substr(0, 5) + " ms" +
-          " sky " + std::to_string(DurationSkyGradientMks).substr(0, 5) +
-          " ms" + " n=" + std::to_string(WeatherPass.GetActiveParticleCount()),
-      "Flat: " + std::to_string(md.flatRebuildMs).substr(0, 5) + " ms" +
-          " Greedy: " + std::to_string(md.greedyCacheEntries) +
-          " Dirty: " + std::to_string(md.dirtyChunksPending) +
-          " MeshAsync: " + std::to_string(md.asyncMeshInFlight) +
-          " GenQ: " + std::to_string(md.genQueuePending) +
-          "/" + std::to_string(md.genInFlight),
-      "Populate: " + std::to_string(md.populateMsLast).substr(0, 5) + " ms" +
-          " ema " + std::to_string(md.populateMsEma).substr(0, 5) +
-          " (t " + std::to_string(md.populateTerrainMs).substr(0, 4) +
-          " c " + std::to_string(md.populateCarveMs).substr(0, 4) +
-          " p " + std::to_string(md.populatePostMs).substr(0, 4) + ")",
-      "Relight: p=" + std::to_string(md.pendingPlayerRelights) +
-          " bg=" + std::to_string(md.pendingBgRelights) +
-          " inflight=" + std::to_string(md.asyncRelightInflight) +
-          " late=" + std::to_string(md.relightDiscardedLate)};
-  performanceLines.push_back(
-      "Creatures: " + std::to_string(CreatureDraw_.GetStats().CreaturesDrawn) +
-      "/" + std::to_string(CreatureDraw_.GetStats().CreaturesConsidered) +
-      " culled: " + std::to_string(CreatureDraw_.GetStats().CreaturesCulled) +
-      " draws: " + std::to_string(CreatureDraw_.GetStats().CreatureDrawCalls) +
-      " bone uploads: " +
-      std::to_string(CreatureDraw_.GetStats().CreatureBoneMatrixUploads));
+  OverlaySection frame{"Frame:",
+                       {"Wall FPS: " + std::to_string(wall_fps).substr(0, 6),
+                        "Sim FPS: " + std::to_string(sim_fps).substr(0, 6),
+                        "Swap: " +
+                            std::to_string(WorldInstance->GetLastSwapWaitMs())
+                                .substr(0, 6) +
+                            " ms",
+                        "Blocks: " + std::to_string(blockCount) +
+                            " draw: " + std::to_string(drawCount)}};
 
-  performanceLines.push_back(
+  OverlaySection timing{
+      "Timing:",
+      {"Phys: " + std::to_string(phys.PhysicsStepMs).substr(0, 6) + " ms" +
+           " steps: " + std::to_string(phys.SimulationStepsThisFrame),
+       "Move: " + std::to_string(phys.MovementStepMs).substr(0, 6) + " ms" +
+           " Block: " + std::to_string(phys.BlockStepMs).substr(0, 6) + " ms" +
+           " Drain: " + std::to_string(phys.DrainStepMs).substr(0, 6) + " ms",
+       "Scene: " + std::to_string(DurationDrawSceneMks / 1000.0).substr(0, 6) +
+           " ms" + " View: " +
+           std::to_string(view_duration / 1000.0).substr(0, 6) + " ms",
+       "Weather: streak " +
+           std::to_string(DurationWeatherStreakMks).substr(0, 5) + " ms" +
+           " particle " +
+           std::to_string(DurationWeatherParticleMks).substr(0, 5) + " ms" +
+           " sky " + std::to_string(DurationSkyGradientMks).substr(0, 5) +
+           " ms" + " n=" +
+           std::to_string(WeatherPass.GetActiveParticleCount())}};
+
+  OverlaySection streaming{"Streaming:", {}};
+  streaming.Lines.push_back(
+      "Flat: " + std::to_string(md.flatRebuildMs).substr(0, 5) + " ms" +
+      " Greedy: " + std::to_string(md.greedyCacheEntries) +
+      " Dirty: " + std::to_string(md.dirtyChunksPending) +
+      " MeshAsync: " + std::to_string(md.asyncMeshInFlight) +
+      " GenQ: " + std::to_string(md.genQueuePending) + "/" +
+      std::to_string(md.genInFlight));
+  streaming.Lines.push_back(
+      "Populate: " + std::to_string(md.populateMsLast).substr(0, 5) + " ms" +
+      " ema " + std::to_string(md.populateMsEma).substr(0, 5) + " (t " +
+      std::to_string(md.populateTerrainMs).substr(0, 4) + " c " +
+      std::to_string(md.populateCarveMs).substr(0, 4) + " p " +
+      std::to_string(md.populatePostMs).substr(0, 4) + ")");
+  streaming.Lines.push_back(
+      "Relight: p=" + std::to_string(md.pendingPlayerRelights) +
+      " bg=" + std::to_string(md.pendingBgRelights) +
+      " inflight=" + std::to_string(md.asyncRelightInflight) +
+      " late=" + std::to_string(md.relightDiscardedLate));
+  streaming.Lines.push_back(
       "rebuilt: " + std::to_string(md.meshRebuildsThisFrame) +
       " hitch: " + (md.hitchDetected ? "yes" : "no"));
   if (md.streamingGenMs > 0.01 || md.meshRebuildMs > 0.01 ||
       md.streamingIoMs > 0.01)
   {
-    performanceLines.push_back(
+    streaming.Lines.push_back(
         "Gen: " + std::to_string(md.streamingGenMs).substr(0, 5) + " ms" +
         " Mesh: " + std::to_string(md.meshRebuildMs).substr(0, 5) + " ms" +
         " IO: " + std::to_string(md.streamingIoMs).substr(0, 5) + " ms");
-    performanceLines.push_back(
-        "Dirty: " + std::to_string(md.dirtyChunksPending) +
-        " rebuilt: " + std::to_string(md.meshRebuildsThisFrame));
-    performanceLines.push_back(
-        "Flat: " + std::to_string(md.flatRebuildMs).substr(0, 5) + "ms" +
-        " Cache: " + std::to_string(md.greedyCacheEntries) +
-        " Dirty: " + std::to_string(md.dirtyChunksPending));
   }
-  {
-    float temperature = 0.0f;
-    float moisture = 0.0f;
-    const ProceduralSettings settings = WorldInstance->GetProceduralSettings();
-    ComputeBiomeClimate(md.feetBlock.x, md.feetBlock.z, settings.Seed,
-                        temperature, moisture);
-    const float localHeightNorm =
-        std::clamp(static_cast<float>(md.feetBlock.y - settings.SeaLevel) /
-                       static_cast<float>(
-                           std::max(1, settings.MaxHeight - settings.SeaLevel)),
-                   0.0f, 1.0f);
-    const BiomeId biome = ClassifyBiome(temperature, moisture, localHeightNorm);
-    performanceLines.push_back(
-        std::string("Biome: ") + BiomeIdToString(biome) +
-        " T:" + std::to_string(temperature).substr(0, 4) +
-        " M:" + std::to_string(moisture).substr(0, 4));
-  }
-  if (md.fallThroughSuspected || md.feetInUnloadList)
-  {
-    performanceLines.push_back(
-        "Dt: " + std::to_string(md.deltaTime).substr(0, 5) +
-        " yDrop: " + std::to_string(md.playerYDrop).substr(0, 5));
-    performanceLines.push_back(
-        std::string("Feet chunk: ") + (md.feetChunkLoaded ? "OK" : "MISSING") +
-        (md.feetIsAir ? " AIR" : " SOLID") +
-        " unloads: " + std::to_string(md.streamingUnloads));
-    if (md.fallThroughSuspected)
-    {
-      performanceLines.emplace_back("!! fall-through suspected !!");
-    }
-  }
+
+  OverlaySection physics{"Physics:", {}};
   {
     const bool collision_ready =
         md.feetChunkLoaded && !md.feetInUnloadList && !md.fallThroughSuspected;
-    performanceLines.push_back(
+    physics.Lines.push_back(
         std::string("Phys: ") +
         cutum::ToString(WorldInstance->GetPhysicsProfile()) +
         " CollReady: " + (collision_ready ? "yes" : "no"));
-    performanceLines.push_back(
+    physics.Lines.push_back(
         "BlockQ: " + std::to_string(md.physicsBlockQueueDepth) +
         " LiqQ: " + std::to_string(md.physicsLiquidQueueDepth) +
         " Purged: " + std::to_string(md.physicsPurgedUpdates));
-    performanceLines.push_back(
+    physics.Lines.push_back(
         "RemeshQ: " + std::to_string(md.physicsVisualRemeshBacklog) +
         " CollQ: " + std::to_string(md.physicsCollisionRebuildBacklog));
-    performanceLines.push_back(
+    physics.Lines.push_back(
         "BP rej: " + std::to_string(md.physicsCollisionBroadphaseRejects) +
         " fb: " + std::to_string(md.physicsCollisionBroadphaseFallbacks) +
         " wait: " +
@@ -1751,7 +1758,7 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
       for (size_t i = start; i < liquid_trace.size(); ++i)
       {
         const cutum::LiquidDebugEntry &entry = liquid_trace[i];
-        performanceLines.push_back(
+        physics.Lines.push_back(
             "Liq " + std::string(entry.Reason) + " (" +
             std::to_string(entry.From.x) + "," + std::to_string(entry.From.y) +
             "," + std::to_string(entry.From.z) + ")->(" +
@@ -1761,19 +1768,118 @@ void UGeometryEngine::RenderPerformanceText(int width_size, int height_size,
     }
   }
 
-  // Display text in top right corner
-  float y =
-      static_cast<float>(height_size) - static_cast<float>(OverlayMarginTop);
-  for (const auto &line : performanceLines)
+  OverlaySection world{"World:", {}};
+  world.Lines.push_back("Weather: " + WorldInstance->GetWeatherName());
   {
-    // Calculate position for right alignment
-    glm::vec2 textSize = textRenderer->GetTextSize(line, scale);
-    float x = static_cast<float>(width_size) - textSize.x -
-              static_cast<float>(OverlayMarginRight);
-
-    textRenderer->RenderText(line, x, y, scale, textColor);
-    y -= 18.0f; // Margin between lines
+    float temperature = 0.0f;
+    float moisture = 0.0f;
+    const ProceduralSettings settings = WorldInstance->GetProceduralSettings();
+    ComputeBiomeClimate(md.feetBlock.x, md.feetBlock.z, settings.Seed,
+                        temperature, moisture);
+    const float localHeightNorm =
+        std::clamp(static_cast<float>(md.feetBlock.y - settings.SeaLevel) /
+                       static_cast<float>(
+                           std::max(1, settings.MaxHeight - settings.SeaLevel)),
+                   0.0f, 1.0f);
+    const BiomeId biome = ClassifyBiome(temperature, moisture, localHeightNorm);
+    world.Lines.push_back(std::string("Biome: ") + BiomeIdToString(biome) +
+                          " T:" + std::to_string(temperature).substr(0, 4) +
+                          " M:" + std::to_string(moisture).substr(0, 4));
   }
+
+  OverlaySection creatures{
+      "Creatures:",
+      {"Creatures: " + std::to_string(CreatureDraw_.GetStats().CreaturesDrawn) +
+       "/" + std::to_string(CreatureDraw_.GetStats().CreaturesConsidered) +
+       " culled: " + std::to_string(CreatureDraw_.GetStats().CreaturesCulled) +
+       " draws: " + std::to_string(CreatureDraw_.GetStats().CreatureDrawCalls) +
+       " bone uploads: " +
+       std::to_string(CreatureDraw_.GetStats().CreatureBoneMatrixUploads)}};
+
+  OverlaySection safety{"Safety:", {}};
+  if (md.fallThroughSuspected || md.feetInUnloadList)
+  {
+    safety.Lines.push_back("Dt: " + std::to_string(md.deltaTime).substr(0, 5) +
+                           " yDrop: " +
+                           std::to_string(md.playerYDrop).substr(0, 5));
+    safety.Lines.push_back(
+        std::string("Feet chunk: ") + (md.feetChunkLoaded ? "OK" : "MISSING") +
+        (md.feetIsAir ? " AIR" : " SOLID") +
+        " unloads: " + std::to_string(md.streamingUnloads));
+    if (md.fallThroughSuspected)
+    {
+      safety.Lines.emplace_back("!! fall-through suspected !!");
+    }
+  }
+
+  std::vector<OverlaySection> rightSections = {std::move(frame),
+                                               std::move(timing),
+                                               std::move(streaming)};
+  std::vector<OverlaySection> leftSections = {
+      std::move(physics), std::move(world), std::move(creatures),
+      std::move(safety)};
+
+  const float availH = static_cast<float>(height_size) -
+                       static_cast<float>(OverlayMarginTop) -
+                       static_cast<float>(OverlayMarginBottom);
+  const size_t maxLines =
+      availH > 0.0f ? static_cast<size_t>(availH / kLineHeight) : 0;
+  const size_t totalLines =
+      CountOverlayLines(rightSections) + CountOverlayLines(leftSections);
+  const bool useDualColumn = totalLines > maxLines && maxLines > 0;
+
+  if (!useDualColumn)
+  {
+    leftSections.insert(leftSections.begin(),
+                        std::make_move_iterator(rightSections.begin()),
+                        std::make_move_iterator(rightSections.end()));
+    rightSections.clear();
+    rightSections.swap(leftSections);
+  }
+  else
+  {
+    while (CountOverlayLines(rightSections) > maxLines &&
+           rightSections.size() > 1)
+    {
+      leftSections.insert(leftSections.begin(),
+                          std::move(rightSections.back()));
+      rightSections.pop_back();
+    }
+  }
+
+  auto renderColumn = [&](const std::vector<OverlaySection> &sections,
+                          bool rightAlign)
+  {
+    std::vector<std::string> lines;
+    for (const OverlaySection &section : sections)
+    {
+      AppendOverlaySection(lines, section);
+    }
+    if (maxLines > 0 && lines.size() > maxLines)
+    {
+      lines.resize(maxLines);
+    }
+
+    float y =
+        static_cast<float>(height_size) - static_cast<float>(OverlayMarginTop);
+    for (const std::string &line : lines)
+    {
+      const glm::vec2 textSize = textRenderer->GetTextSize(line, kScale);
+      const float x =
+          rightAlign
+              ? static_cast<float>(width_size) - textSize.x -
+                    static_cast<float>(OverlayMarginRight)
+              : static_cast<float>(OverlayMarginLeft);
+      textRenderer->RenderText(line, x, y, kScale, textColor);
+      y -= kLineHeight;
+    }
+  };
+
+  if (useDualColumn)
+  {
+    renderColumn(leftSections, false);
+  }
+  renderColumn(rightSections, true);
 }
 
 void UGeometryEngine::RenderCrosshair(int width_size, int height_size)

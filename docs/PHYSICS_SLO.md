@@ -16,10 +16,10 @@ Diagnostics are exported via:
 
 - `movement_diagnostics.json` (`physics_*` fields)
 - `PhysicsTelemetry` counters on `UWorld`
-- In-game HUD (`ui.show_performance: true`): **Wall FPS** (full frame interval), **Sim FPS** (physics + view + draw), **Swap** ms, **Phys/Move/Block/Drain** ms breakdown
+- In-game HUD (`ui.show_performance: true`, default off; Settings / F10): **Wall FPS** (full frame interval), **Sim FPS** (physics + view + draw), **Swap** ms, **Phys/Move/Block/Drain** ms breakdown
 - Automatic InGame perf log: glog `[Perf]` lines + `bin/logs/perf_<timestamp>_<pid>.jsonl` (no world save required; interval `ui.perf_log_interval_sec`, default 2s)
 
-## HUD metrics (F3 performance overlay)
+## HUD metrics (F10 debug overlay)
 
 | Line | Meaning |
 |------|---------|

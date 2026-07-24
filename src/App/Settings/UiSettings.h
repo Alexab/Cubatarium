@@ -15,13 +15,13 @@ enum class ControlScheme
 struct UiSettings
 {
   bool LegacyHud{false};
-  bool ShowPerformance{true};
+  bool ShowPerformance{false};
   /// Seconds between periodic [Perf] / perf_*.jsonl aggregates (InGame).
   float PerfLogIntervalSec{2.0f};
   std::string ConsoleKey{"grave"};
   std::string PaletteKey{"b"};      // creative palette, Blocks tab
   std::string WorldGenKey{"g"};     // world generation sets
-  std::string InventoryKey{"e"};    // creative palette, Objects tab
+  std::string InventoryKey{"e"};    // creative palette toggle (last main tab; default Blocks)
   int HotbarCount{1};
 
   ControlScheme ControlScheme{ControlScheme::Classic};

@@ -80,7 +80,7 @@ Two **control schemes** (Settings → Application → Control scheme; `config.js
 | F12 | Show new-world hint |
 | Shift+F12 | Create new procedural world (saves current) |
 | Delete | Remove targeted block (instant) |
-| ` / B / E | Console / palette / inventory |
+| ` / B / E | Console / palette (Blocks) / inventory (last tab) |
 | F9 | Toggle HUD |
 | F10 | Performance overlay |
 | F11 | Crosshair |

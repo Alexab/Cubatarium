@@ -96,7 +96,8 @@ Removed: `spawn_test_mob`.
 
 ## Palette and hotbar
 
-- **E** → Creative palette: Blocks, Objects, **Creatures**, **Skins**
+- **E** → Creative palette toggle (last main tab; default **Blocks**): Blocks, Objects, **Creatures**, **Skins**
+- **B** → Creative palette on **Blocks** tab
 - Use active slot (ПКМ Classic / tap ЛКМ Cubatarium): spawn species ahead of view
 - **Creatures** icons are **dimmed** when spawn is impossible in the current view zone (wrong habitat)
 - Tooltip on dimmed entry: habitat hint in Russian (`Нужна вода`, `Нужно открытое небо`, …)

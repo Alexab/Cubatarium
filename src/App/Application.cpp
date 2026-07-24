@@ -1305,7 +1305,8 @@ void UApplication::SetViewportInsets(int left, int top, int right, int bottom)
   ViewportInsetBottom = newBottom;
   if (Geometry)
   {
-    Geometry->SetOverlayMargins(ViewportInsetRight + 16, ViewportInsetTop + 30);
+    Geometry->SetOverlayMargins(ViewportInsetLeft + 16, ViewportInsetRight + 16,
+                                ViewportInsetTop + 30);
   }
 }
 
