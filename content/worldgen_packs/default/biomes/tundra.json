@@ -1,0 +1,22 @@
+{
+  "id": "tundra",
+  "height": {
+    "base_offset": 1,
+    "amplitude_mul": 0.7,
+    "volatility_mul": 0.5
+  },
+  "palette": {
+    "surface": "snow",
+    "subsurface": "dirt"
+  },
+  "features": {
+    "vegetation": {
+      "tree_pine": 0.75,
+      "tree_pine_snowy": 1.1,
+      "tree_pine_small": 1.0
+    },
+    "ground_cover": {
+      "bush_pine": 0.65
+    }
+  }
+}

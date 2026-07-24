@@ -1,0 +1,107 @@
+{
+  "id": "kitten",
+  "display_name": "Kitten",
+  "catalog": {
+    "tags": [
+      "mobs",
+      "passive"
+    ],
+    "spawnable": true,
+    "sort_order": 22
+  },
+  "role": "mob",
+  "bounds": {
+    "rest": [
+      0.3,
+      0.2,
+      0.3
+    ],
+    "max": [
+      0.3,
+      0.2,
+      0.3
+    ],
+    "min": [
+      0.3,
+      0.15,
+      0.3
+    ]
+  },
+  "eye_height": 0.15,
+  "habitat": "terrestrial",
+  "locomotion_archetype": "terrestrial_quadruped",
+  "locomotion": {
+    "can_fly": false,
+    "can_crouch": false,
+    "can_jump": true,
+    "jump_height": 1.0,
+    "walk_speed": 2.0
+  },
+  "behavior": "wander",
+  "behavior_params": {
+    "move_speed": 2.0,
+    "wander_interval_min": 2.0,
+    "wander_interval_max": 4.0
+  },
+  "visual": {
+    "backend": "gltf_skeleton",
+    "texture_layout": "rigid_crop",
+    "default_texture": "body",
+    "icon": {
+      "mode": "species_texture",
+      "color": [
+        0.7843137254901961,
+        0.6666666666666666,
+        0.5098039215686274,
+        1.0
+      ]
+    },
+    "gltf": {
+      "model": "model.gltf",
+      "textures": [
+        "body"
+      ],
+      "model_scale": 1.0,
+      "model_yaw_offset_deg": 0
+    },
+    "animation": {
+      "walk_cycle_hz": 2.0,
+      "clips": {
+        "idle": {
+          "start": 97,
+          "end": 192,
+          "loop": true,
+          "speed": 2.8
+        },
+        "walk": {
+          "start": 0,
+          "end": 96,
+          "loop": true,
+          "speed": 2.8
+        },
+        "run": {
+          "start": 0,
+          "end": 96,
+          "loop": true,
+          "speed": 3.3333333333333335
+        }
+      },
+      "state_map": {
+        "Idle": "idle",
+        "Walk": "walk",
+        "Run": "run",
+        "Jump": "run",
+        "Fall": "idle",
+        "Crouch": "idle",
+        "Slither": "walk",
+        "Coil": "idle",
+        "Action": "walk",
+        "Hover": "idle",
+        "Glide": "idle",
+        "Swim": "walk",
+        "Tread": "idle",
+        "Fly": "idle"
+      }
+    }
+  }
+}

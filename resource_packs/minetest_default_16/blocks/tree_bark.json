@@ -1,0 +1,20 @@
+{
+    "name":  "tree_bark",
+    "id":  597,
+    "types":  [
+                  "natural",
+                  "plants"
+              ],
+    "textures":  [
+                     "tree_side",
+                     "tree_side",
+                     "tree_side",
+                     "tree_side",
+                     "tree_side",
+                     "tree_side"
+                 ],
+    "displayName":  "Tree Bark",
+    "render":  {
+
+               }
+}

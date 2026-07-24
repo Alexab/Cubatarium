@@ -1,0 +1,16 @@
+{
+  "name": "sapling_spruce",
+  "id": 943,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "sapling_spruce",
+    "sapling_spruce",
+    "sapling_spruce",
+    "sapling_spruce",
+    "sapling_spruce",
+    "sapling_spruce"
+  ],
+  "render": {}
+}

@@ -1,0 +1,13 @@
+/.gradle/
+/app/build/
+/build/
+/local.properties
+/.cxx/
+*.iml
+.idea/caches/
+.idea/libraries/
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/shelf/
+.idea/usage.statistics.xml
+.idea/deploymentTargetDropDown.xml

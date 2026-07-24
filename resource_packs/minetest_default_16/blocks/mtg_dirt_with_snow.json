@@ -1,0 +1,16 @@
+{
+  "name": "mtg_dirt_with_snow",
+  "id": 448,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_dirt_with_snow_composite_0",
+    "mtg_dirt_with_snow_composite_0",
+    "mtg_dirt_with_snow_composite_0",
+    "mtg_dirt_with_snow_composite_0",
+    "mtg_dirt_with_snow_default_snow",
+    "mtg_dirt_with_snow_default_dirt"
+  ],
+  "render": {}
+}

@@ -1,0 +1,116 @@
+{
+  "id": "sand_monster",
+  "display_name": "Sand Monster",
+  "catalog": {
+    "tags": [
+      "mobs",
+      "hostile"
+    ],
+    "spawnable": true,
+    "sort_order": 32
+  },
+  "role": "mob",
+  "bounds": {
+    "rest": [
+      0.75,
+      1.9,
+      0.75
+    ],
+    "max": [
+      0.75,
+      1.9,
+      0.75
+    ],
+    "min": [
+      0.75,
+      1.4,
+      0.75
+    ]
+  },
+  "eye_height": 1.65,
+  "habitat": "terrestrial",
+  "locomotion_archetype": "terrestrial_biped",
+  "locomotion": {
+    "can_fly": false,
+    "can_crouch": false,
+    "can_jump": true,
+    "jump_height": 1.0,
+    "walk_speed": 2.2
+  },
+  "behavior": "wander",
+  "behavior_params": {
+    "move_speed": 2.2,
+    "wander_interval_min": 2.0,
+    "wander_interval_max": 4.0
+  },
+  "visual": {
+    "backend": "gltf_skeleton",
+    "texture_layout": "rigid_crop",
+    "default_texture": "body",
+    "icon": {
+      "mode": "species_texture",
+      "color": [
+        0.8,
+        0.65,
+        0.3,
+        1.0
+      ]
+    },
+    "gltf": {
+      "model": "model.gltf",
+      "textures": [
+        "arm",
+        "body",
+        "face",
+        "leg"
+      ],
+      "model_scale": 1.0,
+      "model_yaw_offset_deg": 0
+    },
+    "animation": {
+      "walk_cycle_hz": 2.0,
+      "clips": {
+        "idle": {
+          "start": 0,
+          "end": 39,
+          "loop": true,
+          "speed": 1.0
+        },
+        "walk": {
+          "start": 41,
+          "end": 72,
+          "loop": true,
+          "speed": 1.0
+        },
+        "run": {
+          "start": 74,
+          "end": 105,
+          "loop": true,
+          "speed": 3.0
+        },
+        "punch": {
+          "start": 74,
+          "end": 105,
+          "loop": false,
+          "speed": 1.0
+        }
+      },
+      "state_map": {
+        "Idle": "idle",
+        "Walk": "walk",
+        "Run": "run",
+        "Jump": "run",
+        "Fall": "idle",
+        "Crouch": "idle",
+        "Slither": "walk",
+        "Coil": "idle",
+        "Action": "punch",
+        "Hover": "idle",
+        "Glide": "idle",
+        "Swim": "walk",
+        "Tread": "idle",
+        "Fly": "idle"
+      }
+    }
+  }
+}

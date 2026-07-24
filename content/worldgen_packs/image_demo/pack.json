@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "id": "image_demo",
+  "description": "Image-based biome map demo pack",
+  "biome_mode": "image",
+  "biome_map_image": "biome_map.png",
+  "biome_map_block_scale": 4
+}

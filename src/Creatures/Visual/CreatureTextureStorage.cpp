@@ -1,0 +1,173 @@
+#include "Creatures/Visual/CreatureTextureStorage.h"
+
+#include <filesystem>
+#include <iostream>
+
+#include "ThirdParty/stb_image.h"
+
+namespace cutum
+{
+
+namespace
+{
+
+GLuint LoadPngFile(const std::string &imagePath)
+{
+  GLuint textureId = 0;
+  glGenTextures(1, &textureId);
+  glBindTexture(GL_TEXTURE_2D, textureId);
+
+  int width = 0;
+  int height = 0;
+  int channels = 0;
+  unsigned char *data =
+      stbi_load(imagePath.c_str(), &width, &height, &channels, 4);
+  if (!data)
+  {
+    std::cerr << "UCreatureTextureStorage: failed to load " << imagePath
+              << std::endl;
+    glDeleteTextures(1, &textureId);
+    return 0;
+  }
+
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
+               GL_UNSIGNED_BYTE, data);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  stbi_image_free(data);
+  return textureId;
+}
+
+void IndexPngTextures(const std::filesystem::path &texturesDir,
+                      const std::string &keyPrefix,
+                      std::unordered_map<std::string, GLuint> &out)
+{
+  if (!std::filesystem::exists(texturesDir))
+  {
+    return;
+  }
+  for (const auto &entry : std::filesystem::directory_iterator(texturesDir))
+  {
+    if (!entry.is_regular_file() || entry.path().extension() != ".png")
+    {
+      continue;
+    }
+    const std::string stem = entry.path().stem().string();
+    const std::string key = keyPrefix + "/" + stem;
+    const GLuint tex = LoadPngFile(entry.path().string());
+    if (tex != 0)
+    {
+      out[key] = tex;
+    }
+  }
+}
+
+} // namespace
+
+void UCreatureTextureStorage::LoadFromCreatureAndSkinRoots(
+    const std::string &creaturesRoot, const std::string &skinsRoot)
+{
+  Textures.clear();
+  if (!std::filesystem::exists(creaturesRoot))
+  {
+    return;
+  }
+  for (const auto &entry : std::filesystem::directory_iterator(creaturesRoot))
+  {
+    if (!entry.is_directory())
+    {
+      continue;
+    }
+    const std::string speciesId = entry.path().filename().string();
+    IndexPngTextures(entry.path() / "textures", speciesId, Textures);
+  }
+
+  if (std::filesystem::exists(skinsRoot))
+  {
+    for (const auto &entry : std::filesystem::directory_iterator(skinsRoot))
+    {
+      if (!entry.is_directory())
+      {
+        continue;
+      }
+      const std::string skinId = entry.path().filename().string();
+      IndexPngTextures(entry.path() / "textures", "skin/" + skinId, Textures);
+    }
+  }
+
+  std::cout << "UCreatureTextureStorage: loaded " << Textures.size()
+            << " textures" << std::endl;
+}
+
+void UCreatureTextureStorage::MergeCreatureRoot(
+    const std::string &creaturesRoot)
+{
+  if (!std::filesystem::exists(creaturesRoot))
+  {
+    return;
+  }
+  size_t merged = 0;
+  for (const auto &entry : std::filesystem::directory_iterator(creaturesRoot))
+  {
+    if (!entry.is_directory())
+    {
+      continue;
+    }
+    const std::string speciesId = entry.path().filename().string();
+    const size_t before = Textures.size();
+    IndexPngTextures(entry.path() / "textures", speciesId, Textures);
+    if (Textures.size() > before)
+    {
+      ++merged;
+    }
+  }
+  if (merged > 0)
+  {
+    std::cout << "UCreatureTextureStorage: merged textures from "
+              << creaturesRoot << " (" << merged << " species)" << std::endl;
+  }
+}
+
+void UCreatureTextureStorage::MergeSkinRoot(const std::string &skinsRoot)
+{
+  if (!std::filesystem::exists(skinsRoot))
+  {
+    return;
+  }
+  size_t merged = 0;
+  for (const auto &entry : std::filesystem::directory_iterator(skinsRoot))
+  {
+    if (!entry.is_directory())
+    {
+      continue;
+    }
+    const std::string skinId = entry.path().filename().string();
+    const size_t before = Textures.size();
+    IndexPngTextures(entry.path() / "textures", "skin/" + skinId, Textures);
+    if (Textures.size() > before)
+    {
+      ++merged;
+    }
+  }
+  if (merged > 0)
+  {
+    std::cout << "UCreatureTextureStorage: merged skin textures from "
+              << skinsRoot << " (" << merged << " skins)" << std::endl;
+  }
+}
+
+GLuint UCreatureTextureStorage::GetTexture(const std::string &assetKey) const
+{
+  const auto it = Textures.find(assetKey);
+  if (it == Textures.end())
+  {
+    return 0;
+  }
+  return it->second;
+}
+
+} // namespace cutum

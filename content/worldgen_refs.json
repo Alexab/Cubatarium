@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "slots": {
+    "bedrock": {
+      "block_names": [
+        "bedrock"
+      ]
+    },
+    "stone": {
+      "block_names": [
+        "stone"
+      ]
+    },
+    "dirt": {
+      "block_names": [
+        "dirt"
+      ],
+      "fallback_slot": "stone"
+    },
+    "grass": {
+      "block_names": [
+        "grass"
+      ]
+    },
+    "sand": {
+      "block_names": [
+        "sand"
+      ],
+      "fallback_slot": "sandstone"
+    },
+    "sandstone": {
+      "block_names": [
+        "sandstone"
+      ]
+    },
+    "gravel": {
+      "block_names": [
+        "gravel"
+      ],
+      "fallback_slot": "stone"
+    },
+    "snow": {
+      "block_names": [
+        "snow"
+      ],
+      "fallback_slot": "stone"
+    },
+    "clay": {
+      "block_names": [
+        "clay"
+      ]
+    },
+    "ice": {
+      "block_names": [
+        "ice"
+      ]
+    },
+    "hellrock": {
+      "block_names": [
+        "hellrock"
+      ]
+    },
+    "water": {
+      "block_names": [
+        "water"
+      ]
+    },
+    "lava": {
+      "block_names": [
+        "lava"
+      ]
+    },
+    "fire": {
+      "block_names": [
+        "fire"
+      ]
+    },
+    "wood": {
+      "block_names": [
+        "wood"
+      ]
+    },
+    "tree_log": {
+      "block_names": [
+        "tree_log"
+      ]
+    },
+    "tree_bark": {
+      "block_names": [
+        "tree_bark"
+      ]
+    },
+    "tree_branch": {
+      "block_names": [
+        "tree_branch"
+      ]
+    },
+    "tree_leaves": {
+      "block_names": [
+        "tree_leaves"
+      ]
+    }
+  }
+}

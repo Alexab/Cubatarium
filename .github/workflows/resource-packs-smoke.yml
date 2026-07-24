@@ -1,0 +1,49 @@
+name: Resource packs smoke
+
+on:
+  push:
+    branches: [main, master, resource_packs]
+    paths:
+      - "resource_packs/**"
+      - "tools/**"
+      - "content/**"
+      - "prefabs/**"
+      - "docs/RESOURCE_PACKS.md"
+      - "docs/PREFAB_CATALOG.md"
+  pull_request:
+    branches: [main, master, resource_packs]
+    paths:
+      - "resource_packs/**"
+      - "tools/**"
+      - "content/**"
+      - "prefabs/**"
+      - "docs/RESOURCE_PACKS.md"
+      - "docs/PREFAB_CATALOG.md"
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python deps
+        run: pip install pyyaml
+
+      - name: Block id assignment check
+        shell: pwsh
+        run: ./tools/assign_pack_block_ids.ps1 -Check
+
+      - name: Resource pack smoke checks
+        run: python tools/smoke_resource_packs.py
+
+      - name: Worldgen runtime metrics smoke
+        run: python tools/smoke_worldgen_metrics.py --preset overworld --render-distance 4
+
+      - name: Chunk storage format smoke
+        run: python tools/test_chunk_storage.py

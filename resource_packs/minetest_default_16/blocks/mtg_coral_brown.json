@@ -1,0 +1,16 @@
+{
+  "name": "mtg_coral_brown",
+  "id": 427,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_coral_brown_default_coral_brown",
+    "mtg_coral_brown_default_coral_brown",
+    "mtg_coral_brown_default_coral_brown",
+    "mtg_coral_brown_default_coral_brown",
+    "mtg_coral_brown_default_coral_brown",
+    "mtg_coral_brown_default_coral_brown"
+  ],
+  "render": {}
+}

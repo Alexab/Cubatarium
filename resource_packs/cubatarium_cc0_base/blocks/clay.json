@@ -1,0 +1,17 @@
+{
+  "name": "clay",
+  "id": 2,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "clay",
+    "clay",
+    "clay",
+    "clay",
+    "clay",
+    "clay"
+  ],
+  "displayName": "Clay",
+  "render": {}
+}

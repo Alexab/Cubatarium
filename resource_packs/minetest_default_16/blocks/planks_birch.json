@@ -1,0 +1,16 @@
+{
+  "name": "planks_birch",
+  "id": 530,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "wood_birch",
+    "wood_birch",
+    "wood_birch",
+    "wood_birch",
+    "wood_birch",
+    "wood_birch"
+  ],
+  "render": {}
+}

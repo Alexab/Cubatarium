@@ -1,0 +1,16 @@
+{
+  "name": "hopper",
+  "id": 640,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "hopper",
+    "hopper",
+    "hopper",
+    "hopper",
+    "hopper_top",
+    "hopper_inside"
+  ],
+  "render": {}
+}

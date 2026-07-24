@@ -1,0 +1,280 @@
+name: Windows release smoke
+
+on:
+  push:
+    branches: [main, master, thread_chunks]
+    paths:
+      - "CMakeLists.txt"
+      - "vcpkg.json"
+      - "src/**"
+      - "scripts/build/**"
+      - "scripts/doctor-windows.ps1"
+      - "resource_packs/**"
+      - "tools/**"
+      - "content/**"
+  pull_request:
+    branches: [main, master, thread_chunks]
+    paths:
+      - "CMakeLists.txt"
+      - "vcpkg.json"
+      - "src/**"
+      - "scripts/build/**"
+      - "scripts/doctor-windows.ps1"
+      - "resource_packs/**"
+      - "tools/**"
+      - "content/**"
+  workflow_dispatch:
+    inputs:
+      full_test:
+        description: Run all reference seeds with determinism check
+        type: boolean
+        default: false
+
+jobs:
+  windows-desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Block id assignment check
+        shell: pwsh
+        run: ./tools/assign_pack_block_ids.ps1 -Check
+
+      - name: Bootstrap vcpkg
+        shell: pwsh
+        run: |
+          if (-not (Test-Path C:\vcpkg\vcpkg.exe)) {
+            git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+            C:\vcpkg\bootstrap-vcpkg.bat
+          }
+          echo "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
+
+      - name: Configure (Release, static)
+        shell: pwsh
+        run: ./scripts/build/windows-configure.ps1 -Config Release
+
+      - name: Build Release
+        shell: pwsh
+        run: cmake --build build/desktop-msvc --config Release --parallel 4
+
+      - name: Verify static exe dependencies
+        shell: pwsh
+        run: ./scripts/build/verify-windows-exe.ps1
+
+      - name: Doctor smoke (assets, no GUI)
+        shell: pwsh
+        run: ./scripts/doctor-windows.ps1
+
+      - name: Style audit
+        shell: pwsh
+        run: python tools/audit_style.py
+
+      - name: Module include rules
+        shell: pwsh
+        run: python tools/audit/check_include_rules.py
+
+      - name: clang-format (changed src files)
+        shell: pwsh
+        run: python tools/audit_clang_format.py
+
+      - name: Creature catalog audit
+        shell: pwsh
+        run: python tools/audit_creature_catalog.py
+
+      - name: Creature backend audit
+        shell: pwsh
+        run: python tools/audit_creature_backends.py
+
+      - name: C++ unit test (chunk load priority)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/chunk_load_priority_test.exe
+
+      - name: C++ unit test (creature activity steering)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/creature_activity_steering_test.exe
+
+      - name: C++ unit test (wander interval)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/wander_interval_test.exe
+
+      - name: C++ unit test (creature skinned draw)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/creature_skinned_draw_test.exe
+
+      - name: C++ unit test (navigation pathfinder)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/navigation_pathfinder_test.exe
+
+      - name: C++ unit test (world mesh service)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/world_mesh_service_test.exe
+
+      - name: C++ unit test (physics deterministic replay)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/deterministic_replay_test.exe
+
+      - name: C++ unit test (physics budget guard)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/physics_budget_guard_test.exe
+
+      - name: C++ unit test (liquid queue backpressure)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/liquid_queue_backpressure_test.exe
+
+      - name: C++ unit test (collision readiness gate)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/collision_readiness_gate_test.exe
+
+      - name: C++ unit test (movement chunk boundary)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/movement_chunk_boundary_test.exe
+
+      - name: C++ unit test (falling blocks stability)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/falling_blocks_stability_test.exe
+
+      - name: C++ unit test (block update queue order)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/block_update_queue_order_test.exe
+
+      - name: C++ unit test (voxel dda traversal)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/voxel_dda_traversal_test.exe
+
+      - name: C++ unit test (chunk rebuild queue)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/chunk_rebuild_queue_test.exe
+
+      - name: C++ unit test (physics profile parse)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/physics_profile_parse_test.exe
+
+      - name: C++ unit test (block update queue purge)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/block_update_queue_purge_test.exe
+
+      - name: C++ unit test (liquid queue priority)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/liquid_queue_priority_test.exe
+
+      - name: C++ unit test (physics integration)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/physics_integration_test.exe
+
+      - name: C++ unit test (physics profile hash)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/physics_profile_hash_test.exe
+
+      - name: C++ unit test (collision broadphase subchunk)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/collision_broadphase_subchunk_test.exe
+
+      - name: C++ unit test (material reaction rules)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/material_reaction_rules_test.exe
+
+      - name: C++ unit test (movement integration)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/movement_integration_test.exe
+
+      - name: C++ unit test (fluid sim mesh integration)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_sim_mesh_integration_test.exe
+
+      - name: C++ unit test (decor mesh integration)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/decor_mesh_integration_test.exe
+
+      - name: C++ unit test (fluid worldgen seal)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_worldgen_seal_test.exe
+
+      - name: C++ unit test (fluid permeable decor)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_permeable_decor_test.exe
+
+      - name: C++ unit test (fluid permeable block flag)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_permeable_block_flag_test.exe
+
+      - name: C++ unit test (fluid kind preset)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_kind_preset_test.exe
+
+      - name: C++ unit test (worldgen vegetation placement)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/worldgen_vegetation_placement_test.exe
+
+      - name: C++ unit test (worldgen fluid vegetation pipeline)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/worldgen_fluid_vegetation_pipeline_test.exe
+
+      - name: C++ unit test (worldgen hills vegetation gate)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/worldgen_hills_vegetation_gate_test.exe
+
+      - name: C++ unit test (worldgen scatter placement)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/worldgen_scatter_test.exe
+
+      - name: C++ unit test (fluid surface map logic)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_surface_map_logic_test.exe
+
+      - name: C++ unit test (underwater waterline)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/underwater_waterline_test.exe
+
+      - name: C++ unit test (fluid tuning defaults)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_tuning_defaults_test.exe
+
+      - name: C++ unit test (fluid block resolver)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_block_resolver_test.exe
+
+      - name: C++ unit test (fluid flood service)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_flood_service_test.exe
+
+      - name: C++ unit test (fluid fill policy)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_fill_policy_test.exe
+
+      - name: C++ unit test (fluid kind resolver)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/fluid_kind_resolver_test.exe
+
+      - name: C++ unit test (object placement mode)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/object_placement_mode_test.exe
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: C++ unit test (worldgen cave depth)
+        shell: pwsh
+        run: ./build/desktop-msvc/Release/worldgen_cave_depth_test.exe
+
+      - name: Worldgen integration test
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch" -and "${{ inputs.full_test }}" -eq "true") {
+            python tools/integration_test_worldgen.py --exe bin/Cubatarium.exe --cwd bin --radius-chunks 4 --both-backends --seeds 42,12354,20240625
+          } else {
+            python tools/integration_test_worldgen.py --exe bin/Cubatarium.exe --cwd bin --radius-chunks 4 --seeds 42,12354,20240625 --skip-determinism
+          }
+
+      - name: Upload desktop runtime artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cubatarium-windows-bin
+          path: |
+            bin/Cubatarium.exe
+            bin/shaders/**
+            bin/resource_packs/**
+            bin/prefabs/**
+            bin/content/**
+          if-no-files-found: error

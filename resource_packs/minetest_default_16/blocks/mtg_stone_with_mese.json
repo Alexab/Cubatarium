@@ -1,0 +1,16 @@
+{
+  "name": "mtg_stone_with_mese",
+  "id": 510,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_stone_with_mese_composite_0",
+    "mtg_stone_with_mese_composite_0",
+    "mtg_stone_with_mese_composite_0",
+    "mtg_stone_with_mese_composite_0",
+    "mtg_stone_with_mese_composite_0",
+    "mtg_stone_with_mese_composite_0"
+  ],
+  "render": {}
+}

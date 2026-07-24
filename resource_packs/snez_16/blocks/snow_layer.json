@@ -1,0 +1,16 @@
+{
+  "name": "snow_layer",
+  "id": 945,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "snow_side",
+    "snow_side",
+    "snow_side",
+    "snow_side",
+    "snow_side",
+    "snow_side"
+  ],
+  "render": {}
+}

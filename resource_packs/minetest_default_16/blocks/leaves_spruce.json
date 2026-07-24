@@ -1,0 +1,25 @@
+{
+  "name": "leaves_spruce",
+  "id": 391,
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "leaves_spruce_opaque",
+    "leaves_spruce_opaque",
+    "leaves_spruce_opaque",
+    "leaves_spruce_opaque",
+    "leaves_spruce_opaque",
+    "leaves_spruce_opaque"
+  ],
+  "render": {
+    "style": "cutout"
+  },
+  "displayName": "Spruce Leaves",
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  }
+}

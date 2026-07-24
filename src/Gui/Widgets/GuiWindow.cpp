@@ -1,34 +1,50 @@
-#include "GuiWindow.h"
-#include "Gui/GuiRenderer.h"
-#include "Gui/GuiTheme.h"
+#include "Gui/Widgets/GuiWindow.h"
+#include "Gui/Core/GuiRenderer.h"
+#include "Gui/Core/GuiTheme.h"
 
-namespace cutum {
+namespace cutum
+{
 
-GuiWindow::GuiWindow(const GuiTheme* theme, std::string title)
-    : GuiPanel(theme)
-    , title_(std::move(title))
+UGuiWindow::UGuiWindow(const GuiTheme *theme, std::string title)
+    : UGuiPanel(theme), Title(std::move(title))
 {
 }
 
-GuiRect GuiWindow::GetClientArea() const
+GuiRect UGuiWindow::GetClientArea() const
 {
-    return {bounds_.x, bounds_.y + kTitleBarHeight, bounds_.w,
-            std::max(0, bounds_.h - kTitleBarHeight)};
+  const int title_h = Theme ? Theme->TitleBarHeight : 24;
+  return {Bounds.X, Bounds.Y + title_h, Bounds.W,
+          std::max(0, Bounds.H - title_h)};
 }
 
-void GuiWindow::Draw(GuiRenderer& renderer)
+void UGuiWindow::Draw(UGuiRenderer &renderer)
 {
-    if (!visible_) {
-        return;
-    }
-    GuiPanel::Draw(renderer);
-    if (!theme_) {
-        return;
-    }
-    GuiRect titleBar{bounds_.x, bounds_.y, bounds_.w, kTitleBarHeight};
-    renderer.DrawFilledRect(titleBar, theme_->buttonPressed);
-    renderer.DrawText(title_, titleBar.x + theme_->padding, titleBar.y + 4, theme_->textPrimary);
-    GuiWidget::Draw(renderer);
+  if (!Visible || !Theme)
+  {
+    return;
+  }
+  if (DrawBackground)
+  {
+    renderer.DrawFilledRect(Bounds, Theme->PanelBackground);
+    renderer.DrawBorderRect(Bounds, Theme->PanelBorder, Theme->BorderThickness);
+  }
+  const int title_h = Theme->TitleBarHeight;
+  const GuiRect titleBar{Bounds.X, Bounds.Y, Bounds.W, title_h};
+  renderer.DrawFilledRect(titleBar, Theme->ButtonPressed);
+  renderer.DrawText(Title, titleBar.X + Theme->Padding,
+                    titleBar.Y + Theme->Padding / 2, Theme->TextPrimary);
+
+  const GuiRect client = GetClientArea();
+  const bool clipClient = client.W > 0 && client.H > 0;
+  if (clipClient)
+  {
+    renderer.PushClipRect(client);
+  }
+  UGuiWidget::Draw(renderer);
+  if (clipClient)
+  {
+    renderer.PopClipRect();
+  }
 }
 
 } // namespace cutum

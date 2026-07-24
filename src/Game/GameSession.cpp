@@ -1,349 +1,597 @@
-#include "GameSession.h"
-#include "Application.h"
-#include "BlockDefinitionStorage.h"
-#include "Camera.h"
-#include "Prefab.h"
-#include "User.h"
-#include "World.h"
+#include "Game/GameSession.h"
+#include "Game/Interfaces/IUGameContent.h"
+#include "App/Application.h"
+#include "Blocks/BlockDefinitionStorage.h"
+#include "Commands/WorldCommands.h"
+#include "Content/ContentType.h"
+#include "Creatures/Core/Creature.h"
+#include "Creatures/Core/CreatureBounds.h"
+#include "Creatures/Core/CreatureInventory.h"
+#include "Creatures/Definition/CreatureDefinition.h"
+#include "Creatures/Definition/SkinDefinitionStorage.h"
+#include "Creatures/Player/Player.h"
+#include "Creatures/Player/User.h"
+#include "Creatures/Visual/CreaturePartMeshData.h"
+#include "Render/Camera/Camera.h"
+#include "ResourcePacks/BlockNameUtil.h"
+#include "World/Core/World.h"
+#include "World/Objects/ObjectLibrary.h"
+#include "WorldGen/Core/WorldGenContentReload.h"
 
-#include <GLFW/glfw3.h>
 #include <algorithm>
 #include <iostream>
 #include <sstream>
 
-namespace cutum {
+namespace cutum
+{
 
-GameSession::GameSession(Application* application, std::shared_ptr<World> world)
-    : application_(application)
-    , world_(std::move(world))
+namespace
+{
+
+UCreatureInventory *GetControlledInventory(UWorld *world)
+{
+  if (!world)
+  {
+    return nullptr;
+  }
+  if (UCreature *creature = world->GetControlledCreature())
+  {
+    return &creature->GetInventory();
+  }
+  return nullptr;
+}
+
+const UCreatureInventory *GetControlledInventory(const UWorld *world)
+{
+  if (!world)
+  {
+    return nullptr;
+  }
+  if (const UCreature *creature = world->GetControlledCreature())
+  {
+    return &creature->GetInventory();
+  }
+  return nullptr;
+}
+
+} // namespace
+
+UGameSession::UGameSession(UApplication *application,
+                           std::shared_ptr<UWorld> world)
+    : Application(application), World(std::move(world))
 {
 }
 
-void GameSession::InitializeCatalog(const std::string& typesJsonPath,
-                                    const BlockDefinitionStorage& blocks,
-                                    const PrefabLibrary& prefabs)
+void UGameSession::InitializeCatalog(const std::string &typesJsonPath,
+                                     const IUGameContent &content)
 {
-    contentCatalog_.LoadTypes(typesJsonPath);
-    contentCatalog_.IndexBlocks(blocks);
-    contentCatalog_.IndexPrefabs(prefabs);
+  ContentCatalog.LoadTypes(typesJsonPath);
+  ReindexBlockCatalog(content);
 }
 
-void GameSession::RegisterCommands()
+void UGameSession::ReindexBlockCatalog(const IUGameContent &content)
 {
-    commandRegistry_.Register("help", [](const std::vector<std::string>&) {
-        return CommandResult{true, "Commands: help, give, tp, fly, time"};
-    });
-
-    commandRegistry_.Register("time", [](const std::vector<std::string>&) {
-        return CommandResult{true, "Time of day is not implemented yet."};
-    });
-
-    commandRegistry_.Register("give", [this](const std::vector<std::string>& args) {
-        if (args.size() < 2) {
-            return CommandResult{false, "Usage: give <block>"};
-        }
-        auto user = world_->GetCurrentUser();
-        if (!user) {
-            return CommandResult{false, "No user"};
-        }
-        user->AddToInventory(args[1]);
-        return CommandResult{true, "Added " + args[1]};
-    });
-
-    commandRegistry_.Register("tp", [this](const std::vector<std::string>& args) {
-        if (args.size() < 4) {
-            return CommandResult{false, "Usage: tp <x> <y> <z>"};
-        }
-        auto user = world_->GetCurrentUser();
-        auto camera = world_->GetCurrentUserCamera();
-        if (!user || !camera) {
-            return CommandResult{false, "No user/camera"};
-        }
-        try {
-            const float x = std::stof(args[1]);
-            const float y = std::stof(args[2]);
-            const float z = std::stof(args[3]);
-            const glm::vec3 pos{x, y, z};
-            user->SetPosition(pos);
-            camera->SetPosition(pos);
-            return CommandResult{true, "Teleported"};
-        } catch (...) {
-            return CommandResult{false, "Invalid coordinates"};
-        }
-    });
-
-    commandRegistry_.Register("fly", [this](const std::vector<std::string>& args) {
-        auto camera = world_->GetCurrentUserCamera();
-        if (!camera) {
-            return CommandResult{false, "No camera"};
-        }
-        bool enable = true;
-        if (args.size() >= 2) {
-            enable = args[1] == "on" || args[1] == "1" || args[1] == "true";
-        }
-        camera->SetFreeMove(enable);
-        return CommandResult{true, enable ? "Flight on" : "Flight off"};
-    });
-}
-
-void GameSession::LoadLastWorld()
-{
-    if (application_) {
-        application_->ScheduleEnterGame();
+  ContentCatalog.IndexBlocks(content.Blocks());
+  ContentCatalog.IndexObjects(content.Objects());
+  if (World)
+  {
+    ContentCatalog.IndexCreatures(content.Creatures());
+    if (const auto &skinDefs = World->GetSkinDefinitionStorage())
+    {
+      ContentCatalog.IndexSkins(*skinDefs);
     }
+  }
 }
 
-void GameSession::ResumeGame()
+void UGameSession::RegisterCommands()
 {
-    if (application_) {
-        application_->RequestEnterGame();
-    }
+  RegisterWorldCommands(*this, UCommandRegistry);
 }
 
-void GameSession::OpenLoadWorld()
+void UGameSession::LoadLastWorld()
 {
-    if (application_) {
-        application_->ShowLoadWorld();
-    }
+  if (Application)
+  {
+    Application->ScheduleEnterGame();
+  }
 }
 
-void GameSession::OpenNewWorld()
+void UGameSession::ResumeGame()
 {
-    if (application_) {
-        application_->ShowNewWorld();
-    }
+  if (Application)
+  {
+    Application->RequestEnterGame();
+  }
 }
 
-void GameSession::QuitApplication()
+void UGameSession::OpenLoadWorld()
 {
-    if (application_) {
-        application_->ScheduleQuit();
-    }
+  if (Application)
+  {
+    Application->ShowLoadWorld();
+  }
 }
 
-void GameSession::OpenSettings()
+void UGameSession::OpenNewWorld()
 {
-    if (application_) {
-        application_->ShowSettings();
-    }
+  if (Application)
+  {
+    Application->ShowNewWorld();
+  }
 }
 
-bool GameSession::HasPausedSession() const
+void UGameSession::QuitApplication()
 {
-    return application_ && application_->HasWorldSession();
+  if (Application)
+  {
+    Application->ScheduleQuit();
+  }
 }
 
-int GameSession::GetHotbarCountSetting() const
+void UGameSession::OpenSettings()
 {
-    return application_ ? application_->GetHotbarCountSetting() : 1;
+  if (Application)
+  {
+    Application->ShowSettings();
+  }
 }
 
-void GameSession::SetHotbarCountSetting(int count)
+void UGameSession::OpenWorldSettings()
 {
-    if (application_) {
-        application_->SetHotbarCountSetting(count);
-    }
+  if (Application)
+  {
+    Application->ShowWorldSettings();
+  }
 }
 
-size_t GameSession::GetBarCount() const
+bool UGameSession::HasPausedSession() const
 {
-    auto user = world_ ? world_->GetCurrentUser() : nullptr;
-    return user ? user->GetHotbarCount() : 0;
+  return Application && Application->HasWorldSession();
 }
 
-std::array<HotbarSlotView, 10> GameSession::GetBarSlots(size_t barIndex) const
+int UGameSession::GetHotbarCountSetting() const
 {
-    std::array<HotbarSlotView, 10> slots{};
-    auto user = world_ ? world_->GetCurrentUser() : nullptr;
-    if (!user) {
-        return slots;
-    }
-    const HotbarBar& bar = user->GetHotbar(barIndex);
-    const size_t activeBar = user->GetActiveBarIndex();
-    const size_t activeIndex = user->GetActiveSlotIndex(barIndex);
-    for (size_t i = 0; i < slots.size(); ++i) {
-        const HotbarSlot& slot = bar.slots[i];
-        if (!slot.empty && !slot.entry.empty) {
-            slots[i].id = slot.entry.id;
-            slots[i].label = slot.entry.id;
-            slots[i].isBlock = (slot.entry.kind == InventoryEntryKind::Block);
-        }
-        slots[i].selected = (barIndex == activeBar) && (i == activeIndex);
-        if (barIndex == 0) {
-            slots[i].hotkey = static_cast<int>(i);
-        }
-    }
+  return Application ? Application->GetHotbarCountSetting() : 1;
+}
+
+void UGameSession::SetHotbarCountSetting(int count)
+{
+  if (Application)
+  {
+    Application->SetHotbarCountSetting(count);
+  }
+}
+
+size_t UGameSession::GetBarCount() const
+{
+  UCreatureInventory *inv = GetControlledInventory(World.get());
+  if (!inv)
+  {
+    return 0;
+  }
+  inv->EnsureHotbarCount(static_cast<size_t>(GetHotbarCountSetting()));
+  return inv->GetHotbarCount();
+}
+
+std::array<HotbarSlotView, 10> UGameSession::GetBarSlots(size_t barIndex) const
+{
+  std::array<HotbarSlotView, 10> slots{};
+  UCreatureInventory *inv = GetControlledInventory(World.get());
+  if (!inv || barIndex >= inv->GetHotbarCount())
+  {
     return slots;
-}
-
-size_t GameSession::GetSelectedSlot(size_t barIndex) const
-{
-    auto user = world_->GetCurrentUser();
-    return user ? user->GetActiveSlotIndex(barIndex) : 10;
-}
-
-void GameSession::SelectSlot(size_t barIndex, size_t slotIndex)
-{
-    if (auto user = world_->GetCurrentUser()) {
-        user->SetActiveSlot(barIndex, slotIndex);
+  }
+  const HotbarBar &bar = inv->GetHotbar(barIndex);
+  const size_t activeBar = inv->GetActiveBarIndex();
+  const size_t activeIndex = inv->GetActiveSlotIndex(barIndex);
+  for (size_t i = 0; i < slots.size(); ++i)
+  {
+    const HotbarSlot &slot = bar.slots[i];
+    if (!slot.entry.Id.empty())
+    {
+      slots[i].Id = slot.entry.Id;
+      slots[i].label = HumanizeBlockName(slot.entry.Id);
+      slots[i].entryKind = slot.entry.kind;
+      slots[i].isBlock = (slot.entry.kind == InventoryEntryKind::Block);
     }
+    slots[i].selected = (barIndex == activeBar) && (i == activeIndex);
+    if (barIndex == 0)
+    {
+      slots[i].hotkey = static_cast<int>(i);
+    }
+  }
+  return slots;
 }
 
-bool GameSession::AssignSlot(size_t barIndex, size_t slotIndex, const InventoryEntryRef& entry)
+size_t UGameSession::GetSelectedSlot(size_t barIndex) const
 {
-    if (auto user = world_->GetCurrentUser()) {
-        return user->AssignToHotbar(barIndex, slotIndex, entry);
-    }
+  const UCreatureInventory *inv = GetControlledInventory(World.get());
+  if (!inv)
+  {
+    return 0;
+  }
+  const size_t slot = inv->GetActiveSlotIndex(barIndex);
+  return slot < 10 ? slot : 0;
+}
+
+void UGameSession::SelectSlot(size_t barIndex, size_t slotIndex)
+{
+  if (UCreatureInventory *inv = GetControlledInventory(World.get()))
+  {
+    inv->SetActiveSlot(barIndex, slotIndex);
+  }
+}
+
+bool UGameSession::AssignSlot(size_t barIndex, size_t slotIndex,
+                              const InventoryEntryRef &entry)
+{
+  UCreatureInventory *inv = GetControlledInventory(World.get());
+  if (!inv)
+  {
     return false;
+  }
+  inv->EnsureHotbarCount(static_cast<size_t>(GetHotbarCountSetting()));
+  return inv->AssignToHotbar(barIndex, slotIndex, entry);
 }
 
-void GameSession::BeginPendingAssignment(const InventoryEntryRef& entry)
+void UGameSession::BeginPendingAssignment(const InventoryEntryRef &entry)
 {
-    pendingAssignment_ = entry;
+  PendingAssignment = entry;
 }
 
-bool GameSession::HasPendingAssignment() const
+bool UGameSession::HasPendingAssignment() const
 {
-    return pendingAssignment_.has_value() && !pendingAssignment_->empty;
+  return PendingAssignment.has_value() && !PendingAssignment->empty;
 }
 
-bool GameSession::ApplyPendingAssignment(size_t barIndex, size_t slotIndex)
+bool UGameSession::ApplyPendingAssignment(size_t barIndex, size_t slotIndex)
 {
-    if (!pendingAssignment_.has_value()) {
+  if (!PendingAssignment.has_value())
+  {
+    return false;
+  }
+  if (!CanAssignToHotbar(*PendingAssignment, barIndex, slotIndex))
+  {
+    return false;
+  }
+  const bool ok = AssignSlot(barIndex, slotIndex, *PendingAssignment);
+  if (ok)
+  {
+    SelectSlot(barIndex, slotIndex);
+    PendingAssignment.reset();
+  }
+  return ok;
+}
+
+void UGameSession::ClearPendingAssignment() { PendingAssignment.reset(); }
+
+namespace
+{
+
+bool SameSlotAddress(const SlotAddress &a, const SlotAddress &b)
+{
+  if (a.surface != b.surface)
+  {
+    return false;
+  }
+  if (a.surface == SlotSurface::Hotbar)
+  {
+    return a.bar == b.bar && a.slot == b.slot;
+  }
+  if (a.surface == SlotSurface::PaletteGrid)
+  {
+    return a.paletteKind == b.paletteKind && a.entryId == b.entryId;
+  }
+  return true;
+}
+
+} // namespace
+
+bool UGameSession::OnPrimaryHotbarKey(int slotIndex)
+{
+  if (slotIndex < 0 || slotIndex >= 10)
+  {
+    return false;
+  }
+  if (HasPendingAssignment())
+  {
+    return ApplyPendingAssignment(0, static_cast<size_t>(slotIndex));
+  }
+  SelectSlot(0, static_cast<size_t>(slotIndex));
+  return true;
+}
+
+InventoryEntryRef UGameSession::GetHotbarEntryRef(size_t barIndex,
+                                                  size_t slotIndex) const
+{
+  InventoryEntryRef entry;
+  const UCreatureInventory *inv = GetControlledInventory(World.get());
+  if (!inv || barIndex >= inv->GetHotbarCount() || slotIndex >= 10)
+  {
+    return entry;
+  }
+  const HotbarSlot &slot = inv->GetHotbar(barIndex).slots[slotIndex];
+  if (slot.empty || slot.entry.empty)
+  {
+    return entry;
+  }
+  return slot.entry;
+}
+
+void UGameSession::BeginDragFromSlot(const SlotAddress &source,
+                                     const InventoryEntryRef &entry)
+{
+  if (entry.empty)
+  {
+    return;
+  }
+  Drag.Active = true;
+  Drag.entry = entry;
+  Drag.source = source;
+}
+
+bool UGameSession::IsDragging() const { return Drag.Active; }
+
+void UGameSession::CancelDrag() { Drag = DragState{}; }
+
+bool UGameSession::DropOnSlot(const SlotAddress &target)
+{
+  if (!Drag.Active || target.surface == SlotSurface::None)
+  {
+    return false;
+  }
+  if (SameSlotAddress(target, Drag.source))
+  {
+    CancelDrag();
+    return true;
+  }
+
+  const SlotAddress source = Drag.source;
+  const InventoryEntryRef entry = Drag.entry;
+
+  if (target.surface == SlotSurface::Hotbar)
+  {
+    if (!CanAssignToHotbar(entry, target.bar, target.slot))
+    {
+      return false;
+    }
+    if (!AssignSlot(target.bar, target.slot, entry))
+    {
+      return false;
+    }
+    if (source.surface == SlotSurface::Hotbar &&
+        (source.bar != target.bar || source.slot != target.slot))
+    {
+      if (UCreatureInventory *inv = GetControlledInventory(World.get()))
+      {
+        inv->ClearHotbarSlot(source.bar, source.slot);
+      }
+    }
+    SelectSlot(target.bar, target.slot);
+    CancelDrag();
+    return true;
+  }
+
+  if (target.surface == SlotSurface::PaletteGrid &&
+      source.surface == SlotSurface::Hotbar)
+  {
+    if (UCreatureInventory *inv = GetControlledInventory(World.get()))
+    {
+      inv->ClearHotbarSlot(source.bar, source.slot);
+    }
+    CancelDrag();
+    return true;
+  }
+
+  return false;
+}
+
+std::vector<InventoryGroupView>
+UGameSession::GetGroups(ContentKind tab, InventoryMode mode) const
+{
+  std::vector<InventoryGroupView> groups;
+  const auto ids = ContentCatalog.GetTypeIds(tab);
+  for (const std::string &Id : ids)
+  {
+    const auto entries = ContentCatalog.GetEntries(tab, Id);
+    if (mode == InventoryMode::Owned && entries.empty())
+    {
+      continue;
+    }
+    groups.push_back({Id, ContentCatalog.GetTypeDisplayName(Id), 0});
+  }
+  std::stable_sort(groups.begin(), groups.end(),
+                   [](const InventoryGroupView &a, const InventoryGroupView &b)
+                   {
+                     if (a.Id == "misc")
+                       return false;
+                     if (b.Id == "misc")
+                       return true;
+                     return a.label < b.label;
+                   });
+  return groups;
+}
+
+std::vector<InventoryEntryView>
+UGameSession::GetEntries(ContentKind tab, const std::string &groupId,
+                         InventoryMode mode) const
+{
+  std::vector<InventoryEntryView> result;
+  auto entries = ContentCatalog.GetEntries(tab, groupId);
+  const UCreatureInventory *creatureInv = GetControlledInventory(World.get());
+  const std::map<std::string, int> *inv =
+      creatureInv ? &creatureInv->GetStorage() : nullptr;
+  for (const auto &e : entries)
+  {
+    InventoryEntryRef ref;
+    switch (tab)
+    {
+    case ContentKind::Block:
+      ref.kind = InventoryEntryKind::Block;
+      break;
+    case ContentKind::Object:
+      ref.kind = InventoryEntryKind::Object;
+      break;
+    case ContentKind::UCreature:
+      ref.kind = InventoryEntryKind::UCreature;
+      break;
+    case ContentKind::Skin:
+      ref.kind = InventoryEntryKind::Skin;
+      break;
+    }
+    ref.Id = e.Id;
+    ref.empty = false;
+    if (tab == ContentKind::UCreature || tab == ContentKind::Skin)
+    {
+      ref.count = 1;
+      result.push_back({ref, e.displayName});
+      continue;
+    }
+    ref.count = 0;
+    if (inv)
+    {
+      const auto it = inv->find(e.Id);
+      if (it != inv->end())
+      {
+        ref.count = it->second;
+      }
+    }
+    if (mode == InventoryMode::Owned && ref.count <= 0)
+    {
+      continue;
+    }
+    result.push_back({ref, e.displayName});
+  }
+  std::sort(result.begin(), result.end(),
+            [](const InventoryEntryView &a, const InventoryEntryView &b)
+            {
+              if (a.label == b.label)
+                return a.ref.Id < b.ref.Id;
+              return a.label < b.label;
+            });
+  return result;
+}
+
+bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
+                                     size_t barIndex, size_t slotIndex) const
+{
+  if (entry.empty || slotIndex >= 10)
+  {
+    return false;
+  }
+  if (World)
+  {
+    if (entry.kind == InventoryEntryKind::Block)
+    {
+      if (World->GetBlockRegistry().GetIdByTypeName(entry.Id) == BLOCK_AIR)
+      {
+        std::cerr
+            << "GameSession: block not in registry, hotbar assign rejected: "
+            << entry.Id << std::endl;
         return false;
+      }
     }
-    std::cerr << "[hotbar] apply pending kind="
-              << (pendingAssignment_->kind == InventoryEntryKind::Block ? "block" : "object")
-              << " id=" << pendingAssignment_->id
-              << " bar=" << barIndex
-              << " slot=" << slotIndex << std::endl;
-    if (!CanAssignToHotbar(*pendingAssignment_, barIndex, slotIndex)) {
+    else if (entry.kind == InventoryEntryKind::Object)
+    {
+      const auto entries =
+          ContentCatalog.GetEntries(ContentKind::Object, entry.Id);
+      if (entries.empty())
+      {
+        std::cerr
+            << "GameSession: prefab not in catalog, hotbar assign rejected: "
+            << entry.Id << std::endl;
         return false;
+      }
     }
-    const bool ok = AssignSlot(barIndex, slotIndex, *pendingAssignment_);
-    if (ok) {
-        SelectSlot(barIndex, slotIndex);
-        pendingAssignment_.reset();
-    }
-    return ok;
+  }
+  const UCreatureInventory *creatureInv = GetControlledInventory(World.get());
+  if (!creatureInv)
+  {
+    return false;
+  }
+  const_cast<UCreatureInventory *>(creatureInv)
+      ->EnsureHotbarCount(static_cast<size_t>(GetHotbarCountSetting()));
+  if (barIndex >= creatureInv->GetHotbarCount())
+  {
+    return false;
+  }
+  if (ActiveInventoryMode == InventoryMode::Creative)
+  {
+    return true;
+  }
+  const auto &inv = creatureInv->GetStorage();
+  const auto it = inv.find(entry.Id);
+  return it != inv.end() && it->second > 0;
 }
 
-void GameSession::ClearPendingAssignment()
+bool UGameSession::AssignToHotbar(const InventoryEntryRef &entry,
+                                  size_t barIndex, size_t slotIndex)
 {
-    pendingAssignment_.reset();
+  if (!CanAssignToHotbar(entry, barIndex, slotIndex))
+  {
+    return false;
+  }
+  return AssignSlot(barIndex, slotIndex, entry);
 }
 
-std::vector<InventoryGroupView> GameSession::GetGroups(ContentKind tab, InventoryMode mode) const
+bool UGameSession::CanSpawnCreatureByView(const std::string &speciesId) const
 {
-    std::vector<InventoryGroupView> groups;
-    const auto ids = contentCatalog_.GetTypeIds(tab);
-    for (const std::string& id : ids) {
-        const auto entries = contentCatalog_.GetEntries(tab, id);
-        if (mode == InventoryMode::Owned && entries.empty()) {
-            continue;
-        }
-        groups.push_back({id, contentCatalog_.GetTypeDisplayName(id), 0});
-    }
-    std::stable_sort(groups.begin(), groups.end(), [](const InventoryGroupView& a, const InventoryGroupView& b) {
-        if (a.id == "misc") return false;
-        if (b.id == "misc") return true;
-        return a.label < b.label;
-    });
-    return groups;
+  return World && World->CanSpawnCreatureByView(speciesId);
 }
 
-std::vector<InventoryEntryView> GameSession::GetEntries(ContentKind tab,
-                                                        const std::string& groupId,
-                                                        InventoryMode mode) const
+std::string
+UGameSession::GetCreatureSpawnBlockedHint(const std::string &speciesId) const
 {
-    std::vector<InventoryEntryView> result;
-    auto entries = contentCatalog_.GetEntries(tab, groupId);
-    auto user = world_ ? world_->GetCurrentUser() : nullptr;
-    const auto* inv = user ? &user->GetInventory() : nullptr;
-    for (const auto& e : entries) {
-        InventoryEntryRef ref;
-        ref.kind = (tab == ContentKind::Block) ? InventoryEntryKind::Block : InventoryEntryKind::Object;
-        ref.id = e.id;
-        ref.empty = false;
-        ref.count = 0;
-        if (inv) {
-            const auto it = inv->find(e.id);
-            if (it != inv->end()) {
-                ref.count = it->second;
-            }
-        }
-        if (mode == InventoryMode::Owned && ref.count <= 0) {
-            continue;
-        }
-        result.push_back({ref, e.displayName});
-    }
-    std::sort(result.begin(), result.end(), [](const InventoryEntryView& a, const InventoryEntryView& b) {
-        if (a.label == b.label) return a.ref.id < b.ref.id;
-        return a.label < b.label;
-    });
-    return result;
+  if (!World)
+  {
+    return {};
+  }
+  return World->GetCreatureSpawnBlockedHint(speciesId);
 }
 
-bool GameSession::CanAssignToHotbar(const InventoryEntryRef& entry,
-                                    size_t barIndex,
-                                    size_t slotIndex) const
+InventoryMode UGameSession::GetInventoryMode() const
 {
-    if (entry.empty || slotIndex >= 10) {
-        return false;
-    }
-    auto user = world_ ? world_->GetCurrentUser() : nullptr;
-    if (!user || barIndex >= user->GetHotbarCount()) {
-        return false;
-    }
-    if (inventoryMode_ == InventoryMode::Creative) {
-        return true;
-    }
-    const auto& inv = user->GetInventory();
-    const auto it = inv.find(entry.id);
-    return it != inv.end() && it->second > 0;
+  return ActiveInventoryMode;
 }
 
-bool GameSession::AssignToHotbar(const InventoryEntryRef& entry,
-                                 size_t barIndex,
-                                 size_t slotIndex)
+void UGameSession::SetInventoryMode(InventoryMode mode)
 {
-    if (!CanAssignToHotbar(entry, barIndex, slotIndex)) {
-        return false;
-    }
-    return AssignSlot(barIndex, slotIndex, entry);
+  ActiveInventoryMode = mode;
 }
 
-InventoryMode GameSession::GetInventoryMode() const
+CommandResult UGameSession::Execute(const std::vector<std::string> &args)
 {
-    return inventoryMode_;
+  if (args.empty())
+  {
+    return {false, "Empty"};
+  }
+  std::string line;
+  for (size_t i = 0; i < args.size(); ++i)
+  {
+    if (i > 0)
+    {
+      line += ' ';
+    }
+    line += args[i];
+  }
+  return UCommandRegistry.ExecuteLine(line);
 }
 
-void GameSession::SetInventoryMode(InventoryMode mode)
+void UGameSession::AddChatLine(const std::string &line)
 {
-    inventoryMode_ = mode;
+  ChatLog.push_back(line);
+  if (ChatLog.size() > 200)
+  {
+    ChatLog.erase(ChatLog.begin());
+  }
 }
 
-CommandResult GameSession::Execute(const std::vector<std::string>& args)
+void UGameSession::InitCommandHistory(const std::filesystem::path &filePath)
 {
-    if (args.empty()) {
-        return {false, "Empty"};
-    }
-    std::string line;
-    for (size_t i = 0; i < args.size(); ++i) {
-        if (i > 0) {
-            line += ' ';
-        }
-        line += args[i];
-    }
-    return commandRegistry_.ExecuteLine(line);
+  CommandHistory.SetFilePath(filePath);
+  CommandHistory.Load();
 }
 
-void GameSession::AddChatLine(const std::string& line)
-{
-    chatLog_.push_back(line);
-    if (chatLog_.size() > 200) {
-        chatLog_.erase(chatLog_.begin());
-    }
-}
+void UGameSession::SaveCommandHistory() { CommandHistory.Save(); }
 
 } // namespace cutum

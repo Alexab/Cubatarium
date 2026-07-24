@@ -1,0 +1,20 @@
+{
+  "name": "mtg_meselamp",
+  "id": 472,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_meselamp_default_meselamp",
+    "mtg_meselamp_default_meselamp",
+    "mtg_meselamp_default_meselamp",
+    "mtg_meselamp_default_meselamp",
+    "mtg_meselamp_default_meselamp",
+    "mtg_meselamp_default_meselamp"
+  ],
+  "render": {},
+  "displayName": "Meselamp",
+  "lighting": {
+    "emission": 15
+  }
+}

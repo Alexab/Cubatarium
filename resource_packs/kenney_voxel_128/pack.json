@@ -1,0 +1,13 @@
+{
+  "id": "kenney_voxel_128",
+  "name": "Kenney Voxel 128",
+  "version": 1,
+  "license": "CC0-1.0",
+  "resolution": 128,
+  "priority": 5,
+  "depends": [],
+  "conflicts": [],
+  "worldgen_role": "primary",
+  "min_game_version": "0.1.0",
+  "pack_format": 1
+}

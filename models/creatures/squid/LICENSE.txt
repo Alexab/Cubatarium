@@ -1,0 +1,4 @@
+Source file: texturesquid.png
+Upstream: animalworld/textures/texturesquid.png
+License: MIT
+Attribution: animalworld — Skandarella

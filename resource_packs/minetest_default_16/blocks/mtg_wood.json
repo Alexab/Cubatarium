@@ -1,0 +1,16 @@
+{
+  "name": "mtg_wood",
+  "id": 516,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_wood_default_wood",
+    "mtg_wood_default_wood",
+    "mtg_wood_default_wood",
+    "mtg_wood_default_wood",
+    "mtg_wood_default_wood",
+    "mtg_wood_default_wood"
+  ],
+  "render": {}
+}

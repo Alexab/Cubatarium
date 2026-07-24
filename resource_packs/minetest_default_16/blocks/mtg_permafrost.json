@@ -1,0 +1,16 @@
+{
+  "name": "mtg_permafrost",
+  "id": 479,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_permafrost_default_permafrost",
+    "mtg_permafrost_default_permafrost",
+    "mtg_permafrost_default_permafrost",
+    "mtg_permafrost_default_permafrost",
+    "mtg_permafrost_default_permafrost",
+    "mtg_permafrost_default_permafrost"
+  ],
+  "render": {}
+}

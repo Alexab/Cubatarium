@@ -1,35 +1,48 @@
 #pragma once
 
-#include "Gui/GuiScreenBase.h"
-#include "Gui/GuiTypes.h"
+#include "Gui/Core/GuiScreenBase.h"
+#include "Gui/Core/GuiTypes.h"
 #include <memory>
 
-namespace cutum {
+namespace cutum
+{
 
-class IGuiMenuHost;
-class GuiWindow;
-class GuiDialogFrame;
-class WorldGenSettingsForm;
-class GuiPanel;
+class IUGuiMenuHost;
+class UGuiWindow;
+class UGuiDialogFrame;
+class UWorldGenSettingsForm;
+class UResourcePackPickerForm;
+class UGuiPanel;
+class UGuiLabel;
+class UGuiScrollView;
 
-class NewWorldScreen : public GuiScreenBase {
+class UNewWorldScreen : public UGuiScreenBase
+{
 public:
-    explicit NewWorldScreen(IGuiMenuHost* host);
+  explicit UNewWorldScreen(IUGuiMenuHost *host);
+  ~UNewWorldScreen();
 
-    void Build(GuiContext& ctx) override;
-    void OnViewportChanged(int width, int height) override;
+  void Build(UGuiContext &ctx) override;
+  void Update(double dt) override;
+  void OnViewportChanged(int width, int height) override;
 
 private:
-    void Relayout();
-    void OnCreate();
-    int MeasureWorldPageHeight(const GuiRect& area) const;
-    void LayoutWorldPage(const GuiRect& area) const;
+  void Relayout();
+  void RequestBodyRelayout();
+  void OnCreate();
+  int MeasureWorldPageContentHeight(int width) const;
+  void LayoutWorldPageInScroll(UGuiScrollView &scroll) const;
+  void LayoutWorldPage(const GuiRect &area) const;
 
-    IGuiMenuHost* host_{nullptr};
-    GuiWindow* window_{nullptr};
-    GuiDialogFrame* dialogFrame_{nullptr};
-    GuiPanel* worldPage_{nullptr};
-    std::unique_ptr<WorldGenSettingsForm> worldForm_;
+  IUGuiMenuHost *Host{nullptr};
+  UGuiWindow *Window{nullptr};
+  UGuiDialogFrame *DialogFrame{nullptr};
+  UGuiScrollView *BodyScroll{nullptr};
+  UGuiPanel *WorldPage{nullptr};
+  std::unique_ptr<UWorldGenSettingsForm> WorldForm;
+  UGuiLabel *PackSectionLabel{nullptr};
+  std::unique_ptr<UResourcePackPickerForm> PackForm;
+  bool NeedsBodyRelayout{false};
 };
 
 } // namespace cutum

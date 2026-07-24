@@ -1,0 +1,29 @@
+license: CC0-1.0
+license_text: |
+  Kenney Pattern Pack 2 / Lines (CC0). https://kenney-assets.itch.io/pattern-pack-2
+  256px patterns downscaled to 16px for decorative blocks.
+blocks:
+  dirt: dirt
+  stone: stone
+  brick: brick
+  wood:
+    faces: [tree_side, tree_side, tree_side, tree_side, tree_top, tree_top]
+  grass:
+    faces: [grass_side, grass_side, grass_side, grass_side, grass_top, dirt]
+    types: [natural]
+  sand: sand
+  wool_0: cloth_0
+  wool_1: cloth_1
+  wool_2: cloth_2
+textures:
+  dirt: PNG/Thin/Default (256px)/pattern_0000.png
+  stone: PNG/Thin/Default (256px)/pattern_0001.png
+  brick: PNG/Thin/Default (256px)/pattern_0002.png
+  tree_side: PNG/Thin/Default (256px)/pattern_0003.png
+  tree_top: PNG/Thin/Default (256px)/pattern_0004.png
+  grass_side: PNG/Thin/Default (256px)/pattern_0005.png
+  grass_top: PNG/Thin/Default (256px)/pattern_0006.png
+  sand: PNG/Thin/Default (256px)/pattern_0007.png
+  cloth_0: PNG/Thin/Default (256px)/pattern_0008.png
+  cloth_1: PNG/Thin/Default (256px)/pattern_0009.png
+  cloth_2: PNG/Thin/Default (256px)/pattern_0010.png

@@ -1,0 +1,30 @@
+{
+  "name": "torch",
+  "id": 570,
+  "types": [
+    "natural",
+    "decorative"
+  ],
+  "textures": [
+    "torch",
+    "torch",
+    "torch",
+    "torch",
+    "torch",
+    "torch"
+  ],
+  "render": {
+    "transparent": true,
+    "style": "cross"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    },
+    "fluid_permeable": true
+  },
+  "displayName": "Torch",
+  "lighting": {
+    "emission": 14
+  }
+}

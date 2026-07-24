@@ -1,183 +1,247 @@
-#include "GuiWidget.h"
-#include "Gui/GuiRenderer.h"
+#include "Gui/Widgets/GuiWidget.h"
+#include "Gui/Core/GuiRenderer.h"
 
 #include <algorithm>
 
-namespace cutum {
-
-void GuiWidget::UpdateLayout(const GuiRect& parentClientArea)
+namespace cutum
 {
-    if (bounds_.w <= 0 || bounds_.h <= 0) {
-        bounds_ = parentClientArea;
+
+void UGuiWidget::UpdateLayout(const GuiRect &parentClientArea)
+{
+  if (Bounds.W <= 0 && Bounds.H <= 0)
+  {
+    Bounds = parentClientArea;
+  }
+  else
+  {
+    if (Bounds.W <= 0)
+    {
+      Bounds.W = std::max(1, parentClientArea.W);
     }
-    const GuiRect childClient = bounds_.Inset(0);
-    for (auto& child : children_) {
-        child->UpdateLayout(childClient);
+    if (Bounds.H <= 0)
+    {
+      Bounds.H = std::max(1, parentClientArea.H);
     }
+  }
+  const GuiRect childClient = Bounds.Inset(0);
+  for (auto &child : Children)
+  {
+    child->UpdateLayout(childClient);
+  }
 }
 
-void GuiWidget::Update(double /*dt*/)
+void UGuiWidget::Update(double /*dt*/)
 {
-    for (auto& child : children_) {
-        child->Update(0.0);
-    }
+  for (auto &child : Children)
+  {
+    child->Update(0.0);
+  }
 }
 
-void GuiWidget::Draw(GuiRenderer& renderer)
+void UGuiWidget::Draw(UGuiRenderer &renderer)
 {
-    if (!visible_) {
-        return;
-    }
-    std::vector<GuiWidget*> sorted;
-    sorted.reserve(children_.size());
-    for (auto& child : children_) {
-        sorted.push_back(child.get());
-    }
-    std::sort(sorted.begin(), sorted.end(),
-              [](const GuiWidget* a, const GuiWidget* b) { return a->GetZOrder() < b->GetZOrder(); });
-    for (GuiWidget* child : sorted) {
-        child->Draw(renderer);
-    }
+  if (!Visible)
+  {
+    return;
+  }
+  std::vector<UGuiWidget *> sorted;
+  sorted.reserve(Children.size());
+  for (auto &child : Children)
+  {
+    sorted.push_back(child.get());
+  }
+  std::sort(sorted.begin(), sorted.end(),
+            [](const UGuiWidget *a, const UGuiWidget *b)
+            { return a->GetZOrder() < b->GetZOrder(); });
+  const bool clip = ClipChildren && Bounds.W > 0 && Bounds.H > 0;
+  if (clip)
+  {
+    renderer.PushClipRect(Bounds);
+  }
+  for (UGuiWidget *child : sorted)
+  {
+    child->Draw(renderer);
+  }
+  if (clip)
+  {
+    renderer.PopClipRect();
+  }
 }
 
-GuiWidget* GuiWidget::AddChild(std::unique_ptr<GuiWidget> child)
+UGuiWidget *UGuiWidget::AddChild(std::unique_ptr<UGuiWidget> child)
 {
-    child->UpdateLayout(bounds_);
-    children_.push_back(std::move(child));
-    return children_.back().get();
+  child->UpdateLayout(Bounds);
+  Children.push_back(std::move(child));
+  return Children.back().get();
 }
 
-void GuiWidget::ClearChildren()
+void UGuiWidget::ClearChildren() { Children.clear(); }
+
+bool UGuiWidget::Activate() { return false; }
+
+void UGuiWidget::CollectFocusables(std::vector<UGuiWidget *> &out)
 {
-    children_.clear();
+  if (!Visible || !Enabled)
+  {
+    return;
+  }
+  if (CanFocus())
+  {
+    out.push_back(this);
+    return;
+  }
+  for (auto &child : Children)
+  {
+    child->CollectFocusables(out);
+  }
 }
 
-bool GuiWidget::Activate()
+UGuiWidget *UGuiWidget::HitTest(int x, int y)
 {
+  if (!Visible || !Bounds.Contains(x, y))
+  {
+    return nullptr;
+  }
+  std::vector<UGuiWidget *> sorted;
+  for (auto &child : Children)
+  {
+    sorted.push_back(child.get());
+  }
+  std::sort(sorted.begin(), sorted.end(),
+            [](const UGuiWidget *a, const UGuiWidget *b)
+            { return a->GetZOrder() > b->GetZOrder(); });
+  for (UGuiWidget *child : sorted)
+  {
+    if (UGuiWidget *hit = child->HitTest(x, y))
+    {
+      return hit;
+    }
+  }
+  return this;
+}
+
+UGuiWidget *UGuiWidget::HitTestFocusable(int x, int y)
+{
+  if (!Visible || !Enabled || !Bounds.Contains(x, y))
+  {
+    return nullptr;
+  }
+  std::vector<UGuiWidget *> sorted;
+  for (auto &child : Children)
+  {
+    sorted.push_back(child.get());
+  }
+  std::sort(sorted.begin(), sorted.end(),
+            [](const UGuiWidget *a, const UGuiWidget *b)
+            { return a->GetZOrder() > b->GetZOrder(); });
+  for (UGuiWidget *child : sorted)
+  {
+    if (UGuiWidget *hit = child->HitTestFocusable(x, y))
+    {
+      return hit;
+    }
+  }
+  return CanFocus() ? this : nullptr;
+}
+
+bool UGuiWidget::OnMouseDown(const GuiMouseEvent &event)
+{
+  for (auto it = Children.rbegin(); it != Children.rend(); ++it)
+  {
+    if (!(*it)->IsVisible())
+    {
+      continue;
+    }
+    if ((*it)->OnMouseDown(event))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool UGuiWidget::OnMouseUp(const GuiMouseEvent &event)
+{
+  for (auto it = Children.rbegin(); it != Children.rend(); ++it)
+  {
+    if (!(*it)->IsVisible())
+    {
+      continue;
+    }
+    if ((*it)->OnMouseUp(event))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool UGuiWidget::OnMouseMove(const GuiMouseEvent &event)
+{
+  for (auto it = Children.rbegin(); it != Children.rend(); ++it)
+  {
+    if (!(*it)->IsVisible())
+    {
+      continue;
+    }
+    if ((*it)->OnMouseMove(event))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool UGuiWidget::OnKey(const GuiKeyEvent &event)
+{
+  for (auto it = Children.rbegin(); it != Children.rend(); ++it)
+  {
+    if ((*it)->OnKey(event))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool UGuiWidget::OnChar(const GuiCharEvent &event)
+{
+  for (auto it = Children.rbegin(); it != Children.rend(); ++it)
+  {
+    if ((*it)->OnChar(event))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool UGuiWidget::OnScroll(const GuiScrollEvent &event)
+{
+  for (auto it = Children.rbegin(); it != Children.rend(); ++it)
+  {
+    if ((*it)->OnScroll(event))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool UGuiWidget::ScrollAtPoint(int x, int y, const GuiScrollEvent &event)
+{
+  if (!Visible || !Bounds.Contains(x, y))
+  {
     return false;
-}
-
-void GuiWidget::CollectFocusables(std::vector<GuiWidget*>& out)
-{
-    if (!visible_ || !enabled_) {
-        return;
+  }
+  for (auto it = Children.rbegin(); it != Children.rend(); ++it)
+  {
+    if ((*it)->ScrollAtPoint(x, y, event))
+    {
+      return true;
     }
-    if (CanFocus()) {
-        out.push_back(this);
-        return;
-    }
-    for (auto& child : children_) {
-        child->CollectFocusables(out);
-    }
-}
-
-GuiWidget* GuiWidget::HitTest(int x, int y)
-{
-    if (!visible_ || !bounds_.Contains(x, y)) {
-        return nullptr;
-    }
-    std::vector<GuiWidget*> sorted;
-    for (auto& child : children_) {
-        sorted.push_back(child.get());
-    }
-    std::sort(sorted.begin(), sorted.end(),
-              [](const GuiWidget* a, const GuiWidget* b) { return a->GetZOrder() > b->GetZOrder(); });
-    for (GuiWidget* child : sorted) {
-        if (GuiWidget* hit = child->HitTest(x, y)) {
-            return hit;
-        }
-    }
-    return this;
-}
-
-GuiWidget* GuiWidget::HitTestFocusable(int x, int y)
-{
-    if (!visible_ || !enabled_ || !bounds_.Contains(x, y)) {
-        return nullptr;
-    }
-    GuiWidget* found = nullptr;
-    for (auto& child : children_) {
-        if (GuiWidget* hit = child->HitTestFocusable(x, y)) {
-            found = hit;
-        }
-    }
-    if (found) {
-        return found;
-    }
-    return CanFocus() ? this : nullptr;
-}
-
-bool GuiWidget::OnMouseDown(const GuiMouseEvent& event)
-{
-    for (auto it = children_.rbegin(); it != children_.rend(); ++it) {
-        if ((*it)->OnMouseDown(event)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool GuiWidget::OnMouseUp(const GuiMouseEvent& event)
-{
-    for (auto it = children_.rbegin(); it != children_.rend(); ++it) {
-        if ((*it)->OnMouseUp(event)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool GuiWidget::OnMouseMove(const GuiMouseEvent& event)
-{
-    for (auto it = children_.rbegin(); it != children_.rend(); ++it) {
-        if ((*it)->OnMouseMove(event)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool GuiWidget::OnKey(const GuiKeyEvent& event)
-{
-    for (auto it = children_.rbegin(); it != children_.rend(); ++it) {
-        if ((*it)->OnKey(event)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool GuiWidget::OnChar(const GuiCharEvent& event)
-{
-    for (auto it = children_.rbegin(); it != children_.rend(); ++it) {
-        if ((*it)->OnChar(event)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool GuiWidget::OnScroll(const GuiScrollEvent& event)
-{
-    for (auto it = children_.rbegin(); it != children_.rend(); ++it) {
-        if ((*it)->OnScroll(event)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool GuiWidget::ScrollAtPoint(int x, int y, const GuiScrollEvent& event)
-{
-    if (!visible_ || !bounds_.Contains(x, y)) {
-        return false;
-    }
-    for (auto it = children_.rbegin(); it != children_.rend(); ++it) {
-        if ((*it)->ScrollAtPoint(x, y, event)) {
-            return true;
-        }
-    }
-    return OnScroll(event);
+  }
+  return false;
 }
 
 } // namespace cutum

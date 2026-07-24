@@ -1,0 +1,16 @@
+{
+  "name": "mtg_diamondblock",
+  "id": 441,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_diamondblock_default_diamond_block",
+    "mtg_diamondblock_default_diamond_block",
+    "mtg_diamondblock_default_diamond_block",
+    "mtg_diamondblock_default_diamond_block",
+    "mtg_diamondblock_default_diamond_block",
+    "mtg_diamondblock_default_diamond_block"
+  ],
+  "render": {}
+}

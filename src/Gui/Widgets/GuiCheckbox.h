@@ -1,35 +1,53 @@
 #ifndef GUI_CHECKBOX_H
 #define GUI_CHECKBOX_H
 
-#include "GuiWidget.h"
+#include "Gui/Widgets/GuiWidget.h"
 #include <functional>
 #include <string>
 
-namespace cutum {
+namespace cutum
+{
 
 struct GuiTheme;
 
-class GuiCheckbox : public GuiWidget {
+class UGuiCheckbox : public UGuiWidget
+{
 public:
-    GuiCheckbox(const GuiTheme* theme, std::string label);
+  UGuiCheckbox(const GuiTheme *theme, std::string label);
 
-    void SetChecked(bool checked) { checked_ = checked; }
-    bool IsChecked() const { return checked_; }
-    void SetOnChanged(std::function<void(bool)> handler) { onChanged_ = std::move(handler); }
+  void SetChecked(bool checked) { Checked = checked; }
+  bool IsChecked() const { return Checked; }
+  void SetOnChanged(std::function<void(bool)> handler)
+  {
+    OnChanged = std::move(handler);
+  }
+  void SetDescription(std::string description)
+  {
+    Description = std::move(description);
+  }
+  const std::string &GetDescription() const { return Description; }
+  void SetOnDescriptionHover(std::function<void(const std::string &)> handler)
+  {
+    OnDescriptionHover = std::move(handler);
+  }
 
-    bool CanFocus() const override;
-    bool Activate() override;
+  bool CanFocus() const override;
+  bool Activate() override;
 
-    void Draw(GuiRenderer& renderer) override;
-    bool OnMouseDown(const GuiMouseEvent& event) override;
+  void Draw(UGuiRenderer &renderer) override;
+  bool OnMouseDown(const GuiMouseEvent &event) override;
+  bool OnMouseMove(const GuiMouseEvent &event) override;
 
-    int GetPreferredHeight() const override;
+  int GetPreferredHeight() const override;
 
 private:
-    const GuiTheme* theme_;
-    std::string label_;
-    bool checked_{false};
-    std::function<void(bool)> onChanged_;
+  const GuiTheme *Theme;
+  std::string Label;
+  bool Checked{false};
+  bool Hovered{false};
+  std::string Description;
+  std::function<void(bool)> OnChanged;
+  std::function<void(const std::string &)> OnDescriptionHover;
 };
 
 } // namespace cutum

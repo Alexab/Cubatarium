@@ -1,0 +1,16 @@
+{
+  "name": "note_block",
+  "id": 661,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "musicBlock",
+    "musicBlock",
+    "musicBlock",
+    "musicBlock",
+    "musicBlock",
+    "musicBlock"
+  ],
+  "render": {}
+}

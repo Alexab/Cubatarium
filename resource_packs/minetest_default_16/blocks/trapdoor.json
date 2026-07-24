@@ -1,0 +1,16 @@
+{
+  "name": "trapdoor",
+  "id": 571,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "trapdoor",
+    "trapdoor",
+    "trapdoor",
+    "trapdoor",
+    "trapdoor",
+    "trapdoor"
+  ],
+  "render": {}
+}

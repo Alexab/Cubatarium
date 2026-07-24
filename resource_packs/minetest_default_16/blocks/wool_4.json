@@ -1,0 +1,17 @@
+{
+  "name": "wool_4",
+  "id": 591,
+  "types": [
+    "decorative"
+  ],
+  "textures": [
+    "cloth_4",
+    "cloth_4",
+    "cloth_4",
+    "cloth_4",
+    "cloth_4",
+    "cloth_4"
+  ],
+  "displayName": "Yellow Wool",
+  "render": {}
+}

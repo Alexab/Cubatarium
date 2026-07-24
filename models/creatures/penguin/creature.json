@@ -1,0 +1,109 @@
+{
+  "id": "penguin",
+  "display_name": "Penguin",
+  "catalog": {
+    "tags": [
+      "mobs",
+      "passive"
+    ],
+    "spawnable": true,
+    "sort_order": 23
+  },
+  "role": "mob",
+  "bounds": {
+    "rest": [
+      0.45,
+      0.65,
+      0.45
+    ],
+    "max": [
+      0.45,
+      0.65,
+      0.45
+    ],
+    "min": [
+      0.45,
+      0.5,
+      0.45
+    ]
+  },
+  "eye_height": 0.45,
+  "habitat": "amphibious",
+  "locomotion_archetype": "aquatic",
+  "locomotion": {
+    "can_fly": true,
+    "can_crouch": false,
+    "can_jump": true,
+    "jump_height": 1.0,
+    "walk_speed": 2.0
+  },
+  "behavior": "wander",
+  "behavior_params": {
+    "move_speed": 2.0,
+    "wander_interval_min": 2.0,
+    "wander_interval_max": 4.0
+  },
+  "visual": {
+    "backend": "gltf_skeleton",
+    "texture_layout": "rigid_crop",
+    "default_texture": "body",
+    "icon": {
+      "mode": "species_texture",
+      "color": [
+        0.11764705882352941,
+        0.11764705882352941,
+        0.13725490196078433,
+        1.0
+      ]
+    },
+    "gltf": {
+      "model": "model.gltf",
+      "textures": [
+        "body",
+        "face",
+        "leg"
+      ],
+      "model_scale": 1.0,
+      "model_yaw_offset_deg": 0
+    },
+    "animation": {
+      "walk_cycle_hz": 2.0,
+      "clips": {
+        "idle": {
+          "start": 1,
+          "end": 20,
+          "loop": true,
+          "speed": 1.0
+        },
+        "walk": {
+          "start": 25,
+          "end": 45,
+          "loop": true,
+          "speed": 1.0
+        },
+        "fly": {
+          "start": 75,
+          "end": 95,
+          "loop": true,
+          "speed": 1.0
+        }
+      },
+      "state_map": {
+        "Idle": "idle",
+        "Walk": "walk",
+        "Run": "walk",
+        "Jump": "walk",
+        "Fall": "idle",
+        "Crouch": "idle",
+        "Slither": "walk",
+        "Coil": "idle",
+        "Action": "walk",
+        "Hover": "fly",
+        "Glide": "fly",
+        "Swim": "fly",
+        "Tread": "idle",
+        "Fly": "fly"
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "oreDiamond",
+  "id": 132,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "oreDiamond",
+    "oreDiamond",
+    "oreDiamond",
+    "oreDiamond",
+    "oreDiamond",
+    "oreDiamond"
+  ],
+  "displayName": "Diamond Ore",
+  "render": {}
+}

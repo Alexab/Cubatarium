@@ -1,0 +1,17 @@
+{
+  "name": "gravel",
+  "id": 637,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "gravel",
+    "gravel",
+    "gravel",
+    "gravel",
+    "gravel",
+    "gravel"
+  ],
+  "displayName": "Gravel",
+  "render": {}
+}

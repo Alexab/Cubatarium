@@ -1,70 +1,88 @@
 #ifndef GUI_WIDGET_H
 #define GUI_WIDGET_H
 
-#include "Gui/GuiTypes.h"
+#include "Gui/Core/GuiTypes.h"
 #include <memory>
 #include <vector>
 
-namespace cutum {
+namespace cutum
+{
 
-class GuiRenderer;
+class UGuiRenderer;
 
-class GuiWidget {
+class UGuiWidget
+{
 public:
-    virtual ~GuiWidget() = default;
+  virtual ~UGuiWidget() = default;
 
-    void SetBounds(const GuiRect& bounds) { bounds_ = bounds; }
-    const GuiRect& GetBounds() const { return bounds_; }
+  virtual void SetBounds(const GuiRect &bounds) { Bounds = bounds; }
+  const GuiRect &GetBounds() const { return Bounds; }
 
-    void SetVisible(bool visible) { visible_ = visible; }
-    bool IsVisible() const { return visible_; }
+  void SetVisible(bool visible) { Visible = visible; }
+  bool IsVisible() const { return Visible; }
 
-    void SetEnabled(bool enabled) { enabled_ = enabled; }
-    bool IsEnabled() const { return enabled_; }
+  void SetEnabled(bool enabled) { Enabled = enabled; }
+  bool IsEnabled() const { return Enabled; }
 
-    void SetZOrder(int z) { zOrder_ = z; }
-    int GetZOrder() const { return zOrder_; }
+  void SetZOrder(int z) { ZOrder = z; }
+  int GetZOrder() const { return ZOrder; }
 
-    virtual int GetPreferredWidth() const { return bounds_.w > 0 ? bounds_.w : 100; }
-    virtual int GetPreferredHeight() const { return bounds_.h > 0 ? bounds_.h : 32; }
+  void SetClipChildren(bool clip) { ClipChildren = clip; }
+  bool GetClipChildren() const { return ClipChildren; }
 
-    virtual void UpdateLayout(const GuiRect& parentClientArea);
-    virtual void Update(double dt);
-    virtual void Draw(GuiRenderer& renderer);
+  virtual int GetPreferredWidth() const
+  {
+    return Bounds.W > 0 ? Bounds.W : 100;
+  }
+  virtual int GetPreferredHeight() const
+  {
+    return Bounds.H > 0 ? Bounds.H : 32;
+  }
 
-    /// Tab-stop widget (buttons, inputs, checkboxes, lists, …).
-    virtual bool CanFocus() const { return false; }
-    /// Enter / Space on focused widget.
-    virtual bool Activate();
-    void SetFocusHighlight(bool on) { focusHighlight_ = on; }
-    bool HasFocusHighlight() const { return focusHighlight_; }
-    virtual void CollectFocusables(std::vector<GuiWidget*>& out);
+  virtual void UpdateLayout(const GuiRect &parentClientArea);
+  virtual void Update(double dt);
+  virtual void Draw(UGuiRenderer &renderer);
 
-    virtual GuiWidget* HitTest(int x, int y);
-    /// Deepest focusable widget at point (for mouse focus).
-    virtual GuiWidget* HitTestFocusable(int x, int y);
-    const std::vector<std::unique_ptr<GuiWidget>>& GetChildren() const { return children_; }
+  /// Tab-stop widget (buttons, inputs, checkboxes, lists, …).
+  virtual bool CanFocus() const { return false; }
+  /// Enter / Space on focused widget.
+  virtual bool Activate();
+  void SetFocusHighlight(bool on) { FocusHighlight = on; }
+  bool HasFocusHighlight() const { return FocusHighlight; }
+  virtual void CollectFocusables(std::vector<UGuiWidget *> &out);
 
-    /// Route mouse wheel to widget under cursor (depth-first).
-    virtual bool ScrollAtPoint(int x, int y, const GuiScrollEvent& event);
+  virtual UGuiWidget *HitTest(int x, int y);
+  /// Deepest focusable widget at point (for mouse focus).
+  virtual UGuiWidget *HitTestFocusable(int x, int y);
+  const std::vector<std::unique_ptr<UGuiWidget>> &GetChildren() const
+  {
+    return Children;
+  }
 
-    GuiWidget* AddChild(std::unique_ptr<GuiWidget> child);
-    void ClearChildren();
+  /// Route mouse wheel to widget under cursor (depth-first).
+  virtual bool ScrollAtPoint(int x, int y, const GuiScrollEvent &event);
 
-    virtual bool OnMouseDown(const GuiMouseEvent& event);
-    virtual bool OnMouseUp(const GuiMouseEvent& event);
-    virtual bool OnMouseMove(const GuiMouseEvent& event);
-    virtual bool OnKey(const GuiKeyEvent& event);
-    virtual bool OnChar(const GuiCharEvent& event);
-    virtual bool OnScroll(const GuiScrollEvent& event);
+  /// Inner scrollable lists: skip outer deferred drag when pointer is here.
+  virtual bool ConsumesScrollDragAt(int x, int y) const { return false; }
+
+  UGuiWidget *AddChild(std::unique_ptr<UGuiWidget> child);
+  void ClearChildren();
+
+  virtual bool OnMouseDown(const GuiMouseEvent &event);
+  virtual bool OnMouseUp(const GuiMouseEvent &event);
+  virtual bool OnMouseMove(const GuiMouseEvent &event);
+  virtual bool OnKey(const GuiKeyEvent &event);
+  virtual bool OnChar(const GuiCharEvent &event);
+  virtual bool OnScroll(const GuiScrollEvent &event);
 
 protected:
-    GuiRect bounds_{0, 0, 100, 32};
-    bool visible_{true};
-    bool enabled_{true};
-    bool focusHighlight_{false};
-    int zOrder_{0};
-    std::vector<std::unique_ptr<GuiWidget>> children_;
+  GuiRect Bounds{0, 0, 100, 32};
+  bool Visible{true};
+  bool Enabled{true};
+  bool FocusHighlight{false};
+  bool ClipChildren{false};
+  int ZOrder{0};
+  std::vector<std::unique_ptr<UGuiWidget>> Children;
 };
 
 } // namespace cutum

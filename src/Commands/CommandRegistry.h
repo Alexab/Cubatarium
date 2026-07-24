@@ -1,25 +1,30 @@
 #ifndef COMMAND_REGISTRY_H
 #define COMMAND_REGISTRY_H
 
-#include "Gui/Interfaces/IGameCommandContext.h"
+#include "Gui/Interfaces/IUGameCommandContext.h"
 #include <functional>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-namespace cutum {
+namespace cutum
+{
 
-class CommandRegistry {
+class UCommandRegistry
+{
 public:
-    using CommandHandler = std::function<CommandResult(const std::vector<std::string>&)>;
+  using CommandHandler =
+      std::function<CommandResult(const std::vector<std::string> &)>;
 
-    void Register(const std::string& name, CommandHandler handler);
-    CommandResult ExecuteLine(const std::string& line) const;
+  void Register(const std::string &Name, CommandHandler handler);
+  CommandResult ExecuteLine(const std::string &line) const;
+  std::vector<std::string> GetCommandNames() const;
+  std::string FormatHelpText() const;
 
 private:
-    static std::vector<std::string> Tokenize(const std::string& line);
+  static std::vector<std::string> Tokenize(const std::string &line);
 
-    std::unordered_map<std::string, CommandHandler> handlers_;
+  std::unordered_map<std::string, CommandHandler> Handlers;
 };
 
 } // namespace cutum

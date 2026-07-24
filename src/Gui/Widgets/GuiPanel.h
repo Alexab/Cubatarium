@@ -1,30 +1,36 @@
 #ifndef GUI_PANEL_H
 #define GUI_PANEL_H
 
-#include "GuiWidget.h"
+#include "Gui/Widgets/GuiWidget.h"
 #include <glm/glm.hpp>
 
-namespace cutum {
+namespace cutum
+{
 
 struct GuiTheme;
 
-class GuiPanel : public GuiWidget {
+class UGuiPanel : public UGuiWidget
+{
 public:
-    explicit GuiPanel(const GuiTheme* theme);
+  explicit UGuiPanel(const GuiTheme *theme);
 
-    void Draw(GuiRenderer& renderer) override;
+  void Draw(UGuiRenderer &renderer) override;
 
-    void SetDrawBackground(bool draw) { drawBackground_ = draw; }
-    bool GetDrawBackground() const { return drawBackground_; }
+  void SetDrawBackground(bool draw)
+  {
+    DrawBackground = draw;
+    SetClipChildren(draw);
+  }
+  bool GetDrawBackground() const { return DrawBackground; }
 
-    void SetStackLayout(int spacing, int padding);
-    int GetPreferredHeight() const override;
+  void SetStackLayout(int spacing, int Padding);
+  int GetPreferredHeight() const override;
 
 protected:
-    const GuiTheme* theme_;
-    bool drawBackground_{true};
-    int stackSpacing_{6};
-    int stackPadding_{0};
+  const GuiTheme *Theme;
+  bool DrawBackground{true};
+  int StackSpacing{6};
+  int StackPadding{0};
 };
 
 } // namespace cutum

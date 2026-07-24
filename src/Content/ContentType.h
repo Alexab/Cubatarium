@@ -3,12 +3,14 @@
 
 #include <string>
 
-namespace cutum {
+namespace cutum
+{
 
-struct ContentType {
-    std::string id;
-    std::string displayName;
-    int sortOrder{0};
+struct ContentType
+{
+  std::string Id;
+  std::string displayName;
+  int sortOrder{0};
 };
 
 } // namespace cutum

@@ -1,0 +1,18 @@
+{
+  "name": "wood",
+  "id": 712,
+  "types": [
+    "natural",
+    "building"
+  ],
+  "textures": [
+    "wood",
+    "wood",
+    "wood",
+    "wood",
+    "wood",
+    "wood"
+  ],
+  "displayName": "Wood",
+  "render": {}
+}

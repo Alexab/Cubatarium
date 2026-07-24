@@ -1,0 +1,16 @@
+{
+  "name": "mtg_grass_1",
+  "id": 457,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_grass_1_default_grass_1",
+    "mtg_grass_1_default_grass_1",
+    "mtg_grass_1_default_grass_1",
+    "mtg_grass_1_default_grass_1",
+    "mtg_grass_1_default_grass_1",
+    "mtg_grass_1_default_grass_1"
+  ],
+  "render": {}
+}

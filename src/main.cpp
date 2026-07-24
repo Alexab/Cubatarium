@@ -1,161 +1,232 @@
-#include <cstring>
-#include <iostream>
-#include <memory>
-
 #ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #endif
 
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+#include "App/Platform/AppRunner.h"
+#include "App/Platform/DesktopPlatformPaths.h"
+#include "App/Platform/DesktopPlatformWindow.h"
+#include "App/Platform/IUPlatformPaths.h"
+#include "App/Platform/Log.h"
+#include "App/Utils.h"
+#include "ResourcePacks/ResourcePackSmoke.h"
 
-#include "Application.h"
-#include "WindowManager.h"
-#include "TextureBase.h"
-#include "TextureCube.h"
-#include "Object.h"
-#include "World.h"
-#include "Core.h"
-#include "GeometryEngine.h"
-#include "ViewEngine.h"
-#include "ObjectStorage.h"
-#include "Prefab.h"
-#include "TextRenderer.h"
-#include "BlockDefinitionStorage.h"
-
-namespace cutum {
-
-static int RunValidateLoad()
-{
-    if (!glfwInit()) {
-        std::cerr << "validate-load: glfwInit failed" << std::endl;
-        return 1;
-    }
-    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    GLFWwindow* ctx = glfwCreateWindow(64, 64, "validate", nullptr, nullptr);
-    if (!ctx) {
-        std::cerr << "validate-load: failed to create GL context" << std::endl;
-        glfwTerminate();
-        return 1;
-    }
-    glfwMakeContextCurrent(ctx);
-    if (glewInit() != GLEW_OK) {
-        std::cerr << "validate-load: glewInit failed" << std::endl;
-        glfwDestroyWindow(ctx);
-        glfwTerminate();
-        return 1;
-    }
-
-    auto texture_base_instance = std::make_shared<TextureBaseStorage>();
-    auto texture_cube_instance = std::make_shared<TextureCubeStorage>(texture_base_instance);
-    auto block_definitions = std::make_shared<BlockDefinitionStorage>();
-    auto object_storage = std::make_shared<ObjectStorage>(texture_cube_instance);
-    auto prefab_library = std::make_shared<PrefabLibrary>();
-    auto view_engine = std::make_shared<ViewEngine>();
-    auto world = std::make_shared<World>(object_storage, view_engine);
-    auto core = std::make_shared<Core>(texture_base_instance, texture_cube_instance,
-                                         object_storage, prefab_library, world, nullptr, view_engine);
-
-    block_definitions->Load("models/blocks");
-    texture_cube_instance->SetBlockDefinitions(block_definitions);
-    world->SetBlockDefinitionStorage(block_definitions);
-    core->LoadSystem("config.json");
-    std::cout << "validate-load: blocks=" << world->GetCachedBlockCount()
-              << " instances=" << world->GetRenderInstanceCount() << std::endl;
-
-    glfwDestroyWindow(ctx);
-    glfwTerminate();
-    return 0;
-}
-
-} // namespace cutum
-
+#include <cstring>
+#include <cstdlib>
 int main(int argc, char *argv[])
 {
-    using namespace cutum;
+#ifdef _WIN32
+  cutum::CubatariumInstallWindowsDiagnostics();
+#endif
+  const bool also_stderr =
+      argc > 1; // CLI / console modes also get ERROR+ on stderr via wrappers
+  cutum::CubatariumInitLogging(argc > 0 ? argv[0] : "Cubatarium", also_stderr);
 
-    try {
-        for (int i = 1; i < argc; ++i) {
-            if (std::strcmp(argv[i], "--validate-load") == 0) {
-                return RunValidateLoad();
-            }
-        }
-
-        auto windowManager = std::make_unique<WindowManager>();
-        
-        if (!windowManager->Initialize(1280, 720, "Cubatarium")) {
-            std::cerr << "Failed to initialize window manager" << std::endl;
-            return -1;
-        }
-
-        auto texture_base_instance = std::make_shared<TextureBaseStorage>();
-        auto texture_cube_instance = std::make_shared<TextureCubeStorage>(texture_base_instance);
-        auto block_definitions = std::make_shared<BlockDefinitionStorage>();
-
-        auto object_storage = std::make_shared<ObjectStorage>(texture_cube_instance);
-        auto prefab_library = std::make_shared<PrefabLibrary>();
-        auto view_engine = std::make_shared<ViewEngine>();
-
-        auto world = std::make_shared<World>(object_storage, view_engine);
-
-        auto text_renderer = std::make_shared<TextRenderer>();
-        
-        if (!text_renderer->Initialize(16)) {
-            std::cerr << "Failed to initialize text renderer" << std::endl;
-            return -1;
-        }
-        
-        text_renderer->SetWindowSize(1280, 720);
-
-        auto geometry_engine = std::make_shared<GeometryEngine>(object_storage, world, texture_base_instance, texture_cube_instance, text_renderer);
-        
-        if (!geometry_engine->InitEngine()) {
-            std::cerr << "Failed to initialize geometry engine" << std::endl;
-            return -1;
-        }
-        
-        auto core = std::make_shared<Core>(texture_base_instance, texture_cube_instance,
-                                          object_storage, prefab_library, world, geometry_engine, view_engine);
-
-        block_definitions->Load("models/blocks");
-        texture_cube_instance->SetBlockDefinitions(block_definitions);
-        world->SetBlockDefinitionStorage(block_definitions);
-
-        windowManager->Init(core, world, geometry_engine, view_engine);
-        
-        windowManager->SetTextRenderer(text_renderer);
-
-        auto application = std::make_shared<Application>(
-            core, world, geometry_engine, view_engine, text_renderer,
-            geometry_engine->GetShaderManager(), block_definitions);
-        windowManager->SetApplication(application);
-        application->SetWindow(windowManager->GetWindow());
-
-        application->Startup("config.json");
-
-        windowManager->Run();
-
-        core->SaveSystem("config.json");
-
-        return 0;
+  for (int i = 1; i < argc; ++i)
+  {
+    if (std::strcmp(argv[i], "--console") == 0)
+    {
+#ifdef _WIN32
+      cutum::CubatariumAttachWindowsConsole();
+#endif
+      continue;
     }
-    catch (const std::exception& e) {
-        std::cerr << "Exception: " << e.what() << std::endl;
-        return -1;
+    if (std::strcmp(argv[i], "--smoke-packs") == 0)
+    {
+#ifdef _WIN32
+      cutum::CubatariumAttachParentConsole();
+#endif
+      auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+      cutum::IUPlatformPaths::SetGlobal(paths);
+      return cutum::RunResourcePackSmoke(*paths);
     }
-    catch (...) {
-        std::cerr << "Unknown exception occurred" << std::endl;
-        return -1;
+    if (std::strcmp(argv[i], "--load-world") == 0)
+    {
+#ifdef _WIN32
+      cutum::CubatariumAttachParentConsole();
+#endif
+      auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+      cutum::IUPlatformPaths::SetGlobal(paths);
+      return cutum::RunLoadWorld(argc, argv, i + 1);
     }
+    if (std::strcmp(argv[i], "--enter-game-smoke") == 0)
+    {
+#ifdef _WIN32
+      cutum::CubatariumAttachParentConsole();
+#endif
+      auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+      cutum::IUPlatformPaths::SetGlobal(paths);
+      int in_game_frames = 5;
+      if (i + 1 < argc && argv[i + 1][0] != '-')
+      {
+        in_game_frames = std::atoi(argv[i + 1]);
+      }
+      return cutum::RunEnterGameSmoke(*paths, in_game_frames);
+    }
+    if (std::strcmp(argv[i], "--flight-sim") == 0)
+    {
+#ifdef _WIN32
+      cutum::CubatariumAttachParentConsole();
+#endif
+      auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+      cutum::IUPlatformPaths::SetGlobal(paths);
+      cutum::FlightSimOptions opt;
+      opt.WorldName = "World_164";
+      for (int j = i + 1; j < argc; ++j)
+      {
+        if (std::strcmp(argv[j], "--world") == 0 && j + 1 < argc)
+        {
+          opt.WorldName = argv[++j];
+        }
+        else if (std::strcmp(argv[j], "--seconds") == 0 && j + 1 < argc)
+        {
+          opt.InGameSeconds = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--fly") == 0)
+        {
+          opt.Fly = true;
+        }
+        else if (std::strcmp(argv[j], "--no-fly") == 0)
+        {
+          opt.Fly = false;
+        }
+        else if (std::strcmp(argv[j], "--hold-forward") == 0)
+        {
+          opt.HoldForward = true;
+        }
+        else if (std::strcmp(argv[j], "--no-hold-forward") == 0)
+        {
+          opt.HoldForward = false;
+        }
+        else if (std::strcmp(argv[j], "--idle") == 0 && j + 1 < argc)
+        {
+          opt.IdleBeforeFlySec = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--yaw") == 0 && j + 1 < argc)
+        {
+          opt.FaceYawDeg = static_cast<float>(std::atof(argv[++j]));
+        }
+        else if (std::strcmp(argv[j], "--pitch") == 0 && j + 1 < argc)
+        {
+          opt.FacePitchDeg = static_cast<float>(std::atof(argv[++j]));
+        }
+        else if (std::strcmp(argv[j], "--sprint") == 0)
+        {
+          opt.Sprint = true;
+        }
+        else if (std::strcmp(argv[j], "--hold-space") == 0)
+        {
+          opt.HoldSpace = true;
+        }
+        else if (std::strcmp(argv[j], "--teleport-cruise") == 0)
+        {
+          opt.TeleportToCruiseStart = true;
+        }
+        else if (std::strcmp(argv[j], "--no-teleport-cruise") == 0)
+        {
+          opt.TeleportToCruiseStart = false;
+        }
+        else if (std::strcmp(argv[j], "--perf-out") == 0 && j + 1 < argc)
+        {
+          opt.PerfOutPath = argv[++j];
+        }
+        else if (std::strcmp(argv[j], "--report") == 0 && j + 1 < argc)
+        {
+          opt.ReportPath = argv[++j];
+        }
+        else if (std::strcmp(argv[j], "--fly-stop") == 0)
+        {
+          opt.FlyStopMode = true;
+        }
+        else if (std::strcmp(argv[j], "--fly-phase") == 0 && j + 1 < argc)
+        {
+          opt.FlyPhaseSec = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--stop-phase") == 0 && j + 1 < argc)
+        {
+          opt.StopPhaseSec = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--visible") == 0)
+        {
+          opt.VisibleWindow = true;
+        }
+        else if (std::strcmp(argv[j], "--break-stand") == 0)
+        {
+          opt.BreakStandMode = true;
+          opt.Fly = false;
+          opt.HoldForward = false;
+          opt.HoldSpace = false;
+          opt.TeleportToCruiseStart = false;
+          opt.FacePitchDeg = 55.0f;
+          opt.MinAltitudeAboveSea = 0.0f;
+          if (opt.IdleBeforeFlySec < 8.0)
+          {
+            opt.IdleBeforeFlySec = 8.0;
+          }
+          if (opt.BreakPhaseSec < 10.0)
+          {
+            opt.BreakPhaseSec = 20.0;
+          }
+        }
+        else if (std::strcmp(argv[j], "--break-phase") == 0 && j + 1 < argc)
+        {
+          opt.BreakPhaseSec = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--break-interval") == 0 && j + 1 < argc)
+        {
+          opt.BreakIntervalSec = std::atof(argv[++j]);
+        }
+      }
+      return cutum::RunFlightSim(*paths, opt);
+    }
+    if (std::strcmp(argv[i], "--validate-load") == 0)
+    {
+#ifdef _WIN32
+      cutum::CubatariumAttachParentConsole();
+#endif
+      auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+      cutum::IUPlatformPaths::SetGlobal(paths);
+      return cutum::RunValidateLoad();
+    }
+    if (std::strcmp(argv[i], "--bench-io") == 0)
+    {
+#ifdef _WIN32
+      cutum::CubatariumAttachParentConsole();
+#endif
+      auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+      cutum::IUPlatformPaths::SetGlobal(paths);
+      return cutum::RunBenchChunkIo();
+    }
+    if (std::strcmp(argv[i], "--create-world") == 0)
+    {
+#ifdef _WIN32
+      cutum::CubatariumAttachParentConsole();
+#endif
+      auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+      cutum::IUPlatformPaths::SetGlobal(paths);
+      return cutum::RunCreateWorld(argc, argv, i + 1);
+    }
+  }
+
+  auto paths = std::make_shared<cutum::UDesktopPlatformPaths>();
+  cutum::IUPlatformPaths::SetGlobal(paths);
+  cutum::UDesktopPlatformWindow window;
+  return cutum::RunCubatarium(window, *paths);
 }
 
 #ifdef _WIN32
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                   LPSTR lpCmdLine, int nCmdShow)
 {
-    return main(__argc, __argv);
+  (void)hInstance;
+  (void)hPrevInstance;
+  (void)lpCmdLine;
+  (void)nCmdShow;
+  return main(__argc, __argv);
 }
 #endif

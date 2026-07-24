@@ -1,0 +1,16 @@
+{
+  "name": "mtg_desert_sandstone",
+  "id": 435,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_desert_sandstone_default_desert_sandstone",
+    "mtg_desert_sandstone_default_desert_sandstone",
+    "mtg_desert_sandstone_default_desert_sandstone",
+    "mtg_desert_sandstone_default_desert_sandstone",
+    "mtg_desert_sandstone_default_desert_sandstone",
+    "mtg_desert_sandstone_default_desert_sandstone"
+  ],
+  "render": {}
+}

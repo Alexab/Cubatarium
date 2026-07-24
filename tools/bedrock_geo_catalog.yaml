@@ -1,0 +1,95 @@
+# Bedrock geo creature catalog — maps Cubatarium species to Bedrock assets.
+# geometry_source: filename under models/creatures/_sources/bedrock_geo/
+# texture_url: Java entity texture (personal study; same UV layout as Bedrock classic mobs)
+
+version: 1
+
+defaults:
+  texture_size: [64, 32]
+  texture_stem: diffuse
+  geometry_file: geometry.geo.json
+
+species:
+  cow:
+    geometry: geometry.cow.v1.8
+    geometry_source: cow.geo.json
+    animation_profile: quadruped
+    texture_url: https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.2/assets/minecraft/textures/entity/cow/cow.png
+  pig:
+    geometry: geometry.pig.v1.8
+    geometry_source: pig.geo.json
+    animation_profile: quadruped
+    texture_url: https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.2/assets/minecraft/textures/entity/pig/pig.png
+  sheep:
+    geometry: geometry.sheep.v1.8
+    geometry_source: sheep.geo.json
+    animation_profile: quadruped
+    texture_url: https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.2/assets/minecraft/textures/entity/sheep/sheep.png
+  wolf:
+    geometry: geometry.wolf
+    geometry_source: wolf.geo.json
+    animation_profile: quadruped
+    texture_url: https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.2/assets/minecraft/textures/entity/wolf/wolf.png
+  chicken:
+    geometry: geometry.chicken.v1.12
+    geometry_source: chicken.geo.json
+    animation_profile: chicken
+    texture_url: https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.2/assets/minecraft/textures/entity/chicken.png
+  skeleton:
+    geometry: geometry.skeleton.v1.8
+    geometry_source: skeleton.geo.json
+    animation_profile: humanoid
+    texture_size: [64, 64]
+    texture_url: https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.2/assets/minecraft/textures/entity/skeleton/skeleton.png
+  human:
+    geometry: geometry.skeleton.v1.8
+    geometry_source: skeleton.geo.json
+    animation_profile: humanoid
+    texture_size: [64, 32]
+    texture_url: https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.2/assets/minecraft/textures/entity/steve.png
+  zombie:
+    geometry: geometry.zombie.v1.8
+    geometry_source: zombie.geo.json
+    animation_profile: humanoid
+    texture_size: [64, 32]
+    texture_url: https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.2/assets/minecraft/textures/entity/zombie/zombie.png
+  bee:
+    geometry: geometry.bee
+    geometry_source: bee.geo.json
+    animation_profile: aerial
+    texture_url: https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.2/assets/minecraft/textures/entity/bee/bee.png
+  fox:
+    geometry: geometry.fox
+    geometry_source: fox.geo.json
+    animation_profile: quadruped
+    texture_url: https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.2/assets/minecraft/textures/entity/fox/fox.png
+  spider:
+    geometry: geometry.spider.v1.8
+    geometry_source: spider.geo.json
+    animation_profile: quadruped
+    texture_url: https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.2/assets/minecraft/textures/entity/spider/spider.png
+  dolphin:
+    geometry: geometry.dolphin
+    geometry_source: dolphin.geo.json
+    animation_profile: aquatic
+    texture_url: https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.2/assets/minecraft/textures/entity/dolphin.png
+  squid:
+    geometry: geometry.squid
+    geometry_source: squid.geo.json
+    animation_profile: aquatic
+    texture_url: https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.2/assets/minecraft/textures/entity/squid/squid.png
+  bunny:
+    geometry: geometry.rabbit
+    geometry_source: rabbit.geo.json
+    animation_profile: quadruped
+    texture_url: https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.2/assets/minecraft/textures/entity/rabbit/brown.png
+  trout:
+    geometry: geometry.salmon
+    geometry_source: salmon.geo.json
+    animation_profile: aquatic
+    texture_url: https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.2/assets/minecraft/textures/entity/fish/salmon.png
+  tortoise:
+    geometry: geometry.turtle
+    geometry_source: turtle.geo.json
+    animation_profile: serpentine
+    texture_url: https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.19.2/assets/minecraft/textures/entity/turtle/big_sea_turtle.png

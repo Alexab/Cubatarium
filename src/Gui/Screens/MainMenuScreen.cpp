@@ -1,7 +1,7 @@
-#include "MainMenuScreen.h"
-#include "Gui/GuiContext.h"
-#include "Gui/GuiRenderer.h"
-#include "Gui/Interfaces/IGuiGameActions.h"
+#include "Gui/Screens/MainMenuScreen.h"
+#include "Gui/Core/GuiContext.h"
+#include "Gui/Core/GuiRenderer.h"
+#include "Gui/Interfaces/IUGuiGameActions.h"
 #include "Gui/Layout/GuiLayout.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiLabel.h"
@@ -9,216 +9,318 @@
 #include "Gui/Widgets/GuiWidget.h"
 #include "Version.h"
 
-namespace cutum {
-
-MainMenuScreen::MainMenuScreen(IGuiGameActions* actions)
-    : actions_(actions)
+namespace cutum
 {
+
+namespace
+{
+constexpr int kQuitModalZOrder = 100;
 }
 
-void MainMenuScreen::ShowQuitConfirmation(bool visible)
+UMainMenuScreen::UMainMenuScreen(IUGuiGameActions *actions) : Actions(actions) {}
+
+void UMainMenuScreen::ShowQuitConfirmation(bool visible)
 {
-    quitDialogVisible_ = visible;
-    if (quitBackdrop_) {
-        quitBackdrop_->SetVisible(visible);
+  QuitDialogVisible = visible;
+  if (QuitBackdrop)
+  {
+    QuitBackdrop->SetVisible(visible);
+  }
+  if (QuitDialog)
+  {
+    QuitDialog->SetVisible(visible);
+  }
+  if (QuitMessage)
+  {
+    QuitMessage->SetVisible(visible);
+  }
+  if (QuitYesButton)
+  {
+    QuitYesButton->SetVisible(visible);
+  }
+  if (QuitNoButton)
+  {
+    QuitNoButton->SetVisible(visible);
+  }
+  if (visible)
+  {
+    if (QuitBackdrop)
+    {
+      QuitBackdrop->SetZOrder(kQuitModalZOrder);
     }
-    if (quitDialog_) {
-        quitDialog_->SetVisible(visible);
+    for (UGuiButton *btn : Buttons)
+    {
+      if (btn)
+      {
+        btn->SetEnabled(false);
+      }
     }
-    if (quitMessage_) {
-        quitMessage_->SetVisible(visible);
+    RelayoutQuitDialog();
+  }
+  else
+  {
+    if (QuitBackdrop)
+    {
+      QuitBackdrop->SetZOrder(0);
     }
-    if (quitYesButton_) {
-        quitYesButton_->SetVisible(visible);
+    for (UGuiButton *btn : Buttons)
+    {
+      if (btn)
+      {
+        btn->SetEnabled(true);
+      }
     }
-    if (quitNoButton_) {
-        quitNoButton_->SetVisible(visible);
-    }
-    if (visible) {
-        RelayoutQuitDialog();
-    }
+  }
 }
 
-void MainMenuScreen::Build(GuiContext& ctx)
+void UMainMenuScreen::Build(UGuiContext &ctx)
 {
-    int w = ctx.GetRenderer().GetWindowWidth();
-    int h = ctx.GetRenderer().GetWindowHeight();
-    if (w > 0 && h > 0) {
-        viewportW_ = w;
-        viewportH_ = h;
-    }
-    const GuiTheme& theme = ctx.GetTheme();
-    auto panel = std::make_unique<GuiPanel>(&theme);
-    panel->SetBounds({0, 0, viewportW_, viewportH_});
+  int w = ctx.GetRenderer().GetWindowWidth();
+  int h = ctx.GetRenderer().GetWindowHeight();
+  if (w > 0 && h > 0)
+  {
+    ViewportW = w;
+    ViewportH = h;
+  }
+  const GuiTheme &theme = ctx.GetTheme();
+  auto panel = std::make_unique<UGuiPanel>(&theme);
+  panel->SetBounds({0, 0, ViewportW, ViewportH});
 
-    auto title = std::make_unique<GuiLabel>(&theme, "Cubatarium");
-    title->SetTextAlign(GuiTextAlign::Center);
-    title->SetBounds({0, 0, 400, 56});
-    title_ = title.get();
+  auto title = std::make_unique<UGuiLabel>(&theme, "Cubatarium");
+  title->SetTextAlign(GuiTextAlign::Center);
+  title->SetBounds({0, 0, 400, 56});
+  Title = title.get();
 
-    const bool resume = actions_ && actions_->HasPausedSession();
-    auto primary = std::make_unique<GuiButton>(&theme, resume ? "Resume" : "Load Last World");
-    primary->SetOnClick([this, resume]() {
-        if (!actions_) {
-            return;
+  const bool resume = Actions && Actions->HasPausedSession();
+  auto primary = std::make_unique<UGuiButton>(
+      &theme, resume ? "Resume" : "Load Last World");
+  primary->SetOnClick(
+      [this, resume]()
+      {
+        if (!Actions)
+        {
+          return;
         }
-        if (resume) {
-            actions_->ResumeGame();
-        } else {
-            actions_->LoadLastWorld();
+        if (resume)
+        {
+          Actions->ResumeGame();
         }
-    });
-
-    auto loadWorld = std::make_unique<GuiButton>(&theme, "Load World");
-    loadWorld->SetOnClick([this]() {
-        if (actions_) {
-            actions_->OpenLoadWorld();
+        else
+        {
+          Actions->LoadLastWorld();
         }
-    });
+      });
 
-    auto newWorld = std::make_unique<GuiButton>(&theme, "New World");
-    newWorld->SetOnClick([this]() {
-        if (actions_) {
-            actions_->OpenNewWorld();
+  auto loadWorld = std::make_unique<UGuiButton>(&theme, "Load World");
+  loadWorld->SetOnClick(
+      [this]()
+      {
+        if (Actions)
+        {
+          Actions->OpenLoadWorld();
         }
-    });
+      });
 
-    auto settings = std::make_unique<GuiButton>(&theme, "Settings");
-    settings->SetOnClick([this]() {
-        if (actions_) {
-            actions_->OpenSettings();
+  std::unique_ptr<UGuiButton> worldSettings;
+  if (resume)
+  {
+    worldSettings = std::make_unique<UGuiButton>(&theme, "World settings");
+    worldSettings->SetOnClick(
+        [this]()
+        {
+          if (Actions)
+          {
+            Actions->OpenWorldSettings();
+          }
+        });
+  }
+
+  auto newWorld = std::make_unique<UGuiButton>(&theme, "New World");
+  newWorld->SetOnClick(
+      [this]()
+      {
+        if (Actions)
+        {
+          Actions->OpenNewWorld();
         }
-    });
+      });
 
-    auto quit = std::make_unique<GuiButton>(&theme, "Quit");
-    quit->SetOnClick([this]() {
-        ShowQuitConfirmation(true);
-    });
-
-    buttons_.clear();
-    buttons_.push_back(primary.get());
-    buttons_.push_back(loadWorld.get());
-    buttons_.push_back(newWorld.get());
-    buttons_.push_back(settings.get());
-    buttons_.push_back(quit.get());
-
-    auto version = std::make_unique<GuiLabel>(&theme, kCubatariumVersion);
-    version->SetTextAlign(GuiTextAlign::Left);
-    version->SetUseSecondaryColor(true);
-    versionLabel_ = version.get();
-
-    auto quitBackdrop = std::make_unique<GuiPanel>(&theme);
-    quitBackdrop->SetVisible(false);
-    quitBackdrop_ = quitBackdrop.get();
-
-    auto quitDialog = std::make_unique<GuiPanel>(&theme);
-    quitDialog->SetVisible(false);
-    quitDialog_ = quitDialog.get();
-
-    auto quitMessage = std::make_unique<GuiLabel>(&theme, "Exit the application?");
-    quitMessage->SetTextAlign(GuiTextAlign::Center);
-    quitMessage->SetVisible(false);
-    quitMessage_ = quitMessage.get();
-
-    auto quitYes = std::make_unique<GuiButton>(&theme, "Yes");
-    quitYes->SetVisible(false);
-    quitYes->SetOnClick([this]() {
-        if (actions_) {
-            actions_->QuitApplication();
+  auto settings = std::make_unique<UGuiButton>(&theme, "Settings");
+  settings->SetOnClick(
+      [this]()
+      {
+        if (Actions)
+        {
+          Actions->OpenSettings();
         }
-    });
-    quitYesButton_ = quitYes.get();
+      });
 
-    auto quitNo = std::make_unique<GuiButton>(&theme, "No");
-    quitNo->SetVisible(false);
-    quitNo->SetOnClick([this]() { ShowQuitConfirmation(false); });
-    quitNoButton_ = quitNo.get();
+  auto quit = std::make_unique<UGuiButton>(&theme, "Quit");
+  quit->SetOnClick([this]() { ShowQuitConfirmation(true); });
 
-    quitDialog->AddChild(std::move(quitMessage));
-    quitDialog->AddChild(std::move(quitYes));
-    quitDialog->AddChild(std::move(quitNo));
-    quitBackdrop->AddChild(std::move(quitDialog));
+  Buttons.clear();
+  Buttons.push_back(primary.get());
+  if (worldSettings)
+  {
+    Buttons.push_back(worldSettings.get());
+  }
+  Buttons.push_back(loadWorld.get());
+  Buttons.push_back(newWorld.get());
+  Buttons.push_back(settings.get());
+  Buttons.push_back(quit.get());
 
-    panel->AddChild(std::move(title));
-    panel->AddChild(std::move(version));
-    panel->AddChild(std::move(primary));
-    panel->AddChild(std::move(loadWorld));
-    panel->AddChild(std::move(newWorld));
-    panel->AddChild(std::move(settings));
-    panel->AddChild(std::move(quit));
-    panel->AddChild(std::move(quitBackdrop));
-    root_ = std::move(panel);
-    Relayout();
+  auto version = std::make_unique<UGuiLabel>(&theme, kCubatariumVersion);
+  version->SetTextAlign(GuiTextAlign::Left);
+  version->SetUseSecondaryColor(true);
+  VersionLabel = version.get();
+
+  auto quitBackdrop = std::make_unique<UGuiPanel>(&theme);
+  quitBackdrop->SetVisible(false);
+  QuitBackdrop = quitBackdrop.get();
+
+  auto quitDialog = std::make_unique<UGuiPanel>(&theme);
+  quitDialog->SetVisible(false);
+  QuitDialog = quitDialog.get();
+
+  auto quitMessage =
+      std::make_unique<UGuiLabel>(&theme, "Exit the application?");
+  quitMessage->SetTextAlign(GuiTextAlign::Center);
+  quitMessage->SetVisible(false);
+  QuitMessage = quitMessage.get();
+
+  auto quitYes = std::make_unique<UGuiButton>(&theme, "Yes");
+  quitYes->SetVisible(false);
+  quitYes->SetOnClick(
+      [this]()
+      {
+        if (Actions)
+        {
+          Actions->QuitApplication();
+        }
+      });
+  QuitYesButton = quitYes.get();
+
+  auto quitNo = std::make_unique<UGuiButton>(&theme, "No");
+  quitNo->SetVisible(false);
+  quitNo->SetOnClick([this]() { ShowQuitConfirmation(false); });
+  QuitNoButton = quitNo.get();
+
+  quitDialog->AddChild(std::move(quitMessage));
+  quitDialog->AddChild(std::move(quitYes));
+  quitDialog->AddChild(std::move(quitNo));
+  quitBackdrop->AddChild(std::move(quitDialog));
+
+  panel->AddChild(std::move(title));
+  panel->AddChild(std::move(version));
+  panel->AddChild(std::move(primary));
+  if (worldSettings)
+  {
+    panel->AddChild(std::move(worldSettings));
+  }
+  panel->AddChild(std::move(loadWorld));
+  panel->AddChild(std::move(newWorld));
+  panel->AddChild(std::move(settings));
+  panel->AddChild(std::move(quit));
+  panel->AddChild(std::move(quitBackdrop));
+  Root = std::move(panel);
+  Relayout();
 }
 
-void MainMenuScreen::OnViewportChanged(int width, int height)
+void UMainMenuScreen::OnViewportChanged(int width, int height)
 {
-    GuiScreenBase::OnViewportChanged(width, height);
-    Relayout();
+  UGuiScreenBase::OnViewportChanged(width, height);
+  Relayout();
 }
 
-void MainMenuScreen::RelayoutQuitDialog()
+void UMainMenuScreen::RelayoutQuitDialog()
 {
-    if (!quitBackdrop_ || !quitDialog_ || !quitMessage_ || !quitYesButton_ || !quitNoButton_) {
-        return;
-    }
-    quitBackdrop_->SetBounds({0, 0, viewportW_, viewportH_});
+  if (!QuitBackdrop || !QuitDialog || !QuitMessage || !QuitYesButton ||
+      !QuitNoButton)
+  {
+    return;
+  }
+  const GuiTheme *theme = GetMetrics().Theme;
+  if (!theme)
+  {
+    return;
+  }
+  QuitBackdrop->SetBounds({0, 0, ViewportW, ViewportH});
 
-    constexpr int dialogW = 360;
-    constexpr int dialogH = 160;
-    const int dialogX = (viewportW_ - dialogW) / 2;
-    const int dialogY = (viewportH_ - dialogH) / 2;
-    quitDialog_->SetBounds({dialogX, dialogY, dialogW, dialogH});
+  const int dialogW = Scaled(360);
+  const int dialogH = Scaled(160);
+  const int dialogX = (ViewportW - dialogW) / 2;
+  const int dialogY = (ViewportH - dialogH) / 2;
+  QuitDialog->SetBounds({dialogX, dialogY, dialogW, dialogH});
 
-    quitMessage_->SetBounds({dialogX + 16, dialogY + 16, dialogW - 32, 40});
+  QuitMessage->SetBounds(
+      {dialogX + theme->Padding * 2, dialogY + theme->Padding * 2,
+       dialogW - theme->Padding * 4, Scaled(40)});
 
-    constexpr int btnW = 120;
-    constexpr int btnH = 40;
-    constexpr int btnGap = 16;
-    const int btnY = dialogY + dialogH - btnH - 20;
-    const int totalBtnW = btnW * 2 + btnGap;
-    const int btnStartX = dialogX + (dialogW - totalBtnW) / 2;
-    quitYesButton_->SetBounds({btnStartX, btnY, btnW, btnH});
-    quitNoButton_->SetBounds({btnStartX + btnW + btnGap, btnY, btnW, btnH});
+  const int btnW = Scaled(120);
+  const int btnH = Scaled(40);
+  const int btnGap = Scaled(16);
+  const int btnY = dialogY + dialogH - btnH - Scaled(20);
+  const int totalBtnW = btnW * 2 + btnGap;
+  const int btnStartX = dialogX + (dialogW - totalBtnW) / 2;
+  QuitYesButton->SetBounds({btnStartX, btnY, btnW, btnH});
+  QuitNoButton->SetBounds({btnStartX + btnW + btnGap, btnY, btnW, btnH});
 }
 
-void MainMenuScreen::Relayout()
+void UMainMenuScreen::Relayout()
 {
-    if (!root_) {
-        return;
-    }
-    const GuiRect full{0, 0, viewportW_, viewportH_};
-    root_->SetBounds(full);
+  if (!Root)
+  {
+    return;
+  }
+  const GuiTheme *theme = GetMetrics().Theme;
+  if (!theme)
+  {
+    return;
+  }
+  const GuiRect full{0, 0, ViewportW, ViewportH};
+  Root->SetBounds(full);
 
-    if (title_) {
-        GuiLayout::AnchorChild(full, GuiAnchorKind::TopCenter, 20, title_);
-    }
+  if (Title)
+  {
+    UGuiLayout::AnchorChild(full, GuiAnchorKind::TopCenter, Scaled(20), Title);
+  }
 
-    if (versionLabel_) {
-        constexpr int margin = 8;
-        constexpr int labelH = 24;
-        constexpr int labelW = 360;
-        versionLabel_->SetBounds(
-            {margin, viewportH_ - labelH - margin, labelW, labelH});
-    }
+  if (VersionLabel)
+  {
+    const int margin = theme->Padding;
+    const int labelH = theme->TitleBarHeight;
+    const int labelW = Scaled(360);
+    VersionLabel->SetBounds(
+        {margin, ViewportH - labelH - margin, labelW, labelH});
+  }
 
-    if (!buttons_.empty()) {
-        const int btnW = 300;
-        const int btnH = 44;
-        const int spacing = 12;
-        const int stackH = static_cast<int>(buttons_.size()) * btnH +
-                           static_cast<int>(buttons_.size() - 1) * spacing;
-        GuiRect stackArea{(viewportW_ - btnW) / 2, (viewportH_ - stackH) / 2, btnW, stackH};
-        std::vector<GuiWidget*> children;
-        for (GuiButton* btn : buttons_) {
-            children.push_back(btn);
-        }
-        GuiLayout::StackVertical(stackArea, spacing, 0, children);
+  if (!Buttons.empty())
+  {
+    const int btnW = theme->MenuButtonWidth;
+    const int spacing = theme->MenuButtonSpacing;
+    int stackH = 0;
+    for (UGuiButton *btn : Buttons)
+    {
+      if (btn)
+      {
+        stackH += btn->GetPreferredHeight();
+      }
     }
+    stackH += static_cast<int>(Buttons.size() - 1) * spacing;
+    GuiRect stackArea{(ViewportW - btnW) / 2, (ViewportH - stackH) / 2, btnW,
+                      stackH};
+    std::vector<UGuiWidget *> children;
+    for (UGuiButton *btn : Buttons)
+    {
+      children.push_back(btn);
+    }
+    UGuiLayout::StackVertical(stackArea, spacing, 0, children);
+  }
 
-    if (quitDialogVisible_) {
-        RelayoutQuitDialog();
-    }
+  if (QuitDialogVisible)
+  {
+    RelayoutQuitDialog();
+  }
 }
 
 } // namespace cutum

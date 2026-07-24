@@ -1,4 +1,5 @@
 {
+  "_deprecated": "Use resource packs; see docs/RESOURCE_PACKS.md and tools/migrate_to_resource_pack.ps1",
   "source_dir_default": "E:/Work/Home/CubatariumTextures/blocks",
   "textures_out": "textures/blocks",
   "models_out": "models/blocks",

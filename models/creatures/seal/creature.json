@@ -1,0 +1,115 @@
+{
+  "id": "seal",
+  "display_name": "Seal",
+  "catalog": {
+    "tags": [
+      "mobs",
+      "passive"
+    ],
+    "spawnable": true,
+    "sort_order": 78
+  },
+  "role": "mob",
+  "bounds": {
+    "rest": [
+      0.9,
+      0.55,
+      1.4
+    ],
+    "max": [
+      0.9,
+      0.55,
+      1.4
+    ],
+    "min": [
+      0.9,
+      0.55,
+      1.4
+    ]
+  },
+  "eye_height": 0.4,
+  "habitat": "amphibious",
+  "locomotion_archetype": "aquatic",
+  "locomotion": {
+    "can_fly": true,
+    "can_crouch": false,
+    "can_jump": true,
+    "jump_height": 1.0,
+    "walk_speed": 2.0
+  },
+  "behavior": "wander",
+  "behavior_params": {
+    "move_speed": 2.0,
+    "wander_interval_min": 2.0,
+    "wander_interval_max": 4.0
+  },
+  "visual": {
+    "backend": "gltf_skeleton",
+    "texture_layout": "rigid_crop",
+    "default_texture": "body",
+    "icon": {
+      "mode": "species_texture",
+      "color": [
+        0.43137254901960786,
+        0.43137254901960786,
+        0.45098039215686275,
+        1.0
+      ]
+    },
+    "gltf": {
+      "model": "model.gltf",
+      "textures": [
+        "body",
+        "face",
+        "leg"
+      ],
+      "model_scale": 1.0,
+      "model_yaw_offset_deg": 0
+    },
+    "animation": {
+      "walk_cycle_hz": 2.0,
+      "clips": {
+        "idle": {
+          "start": 0,
+          "end": 400,
+          "loop": true,
+          "speed": 8.333333333333334
+        },
+        "walk": {
+          "start": 400,
+          "end": 600,
+          "loop": true,
+          "speed": 8.333333333333334
+        },
+        "fly": {
+          "start": 650,
+          "end": 850,
+          "loop": true,
+          "speed": 8.333333333333334
+        },
+        "die": {
+          "start": 650,
+          "end": 850,
+          "loop": false,
+          "speed": 3.3333333333333335
+        }
+      },
+      "state_map": {
+        "Idle": "idle",
+        "Walk": "walk",
+        "Run": "walk",
+        "Jump": "walk",
+        "Fall": "idle",
+        "Crouch": "idle",
+        "Slither": "walk",
+        "Coil": "idle",
+        "Action": "walk",
+        "Hover": "fly",
+        "Glide": "fly",
+        "Swim": "fly",
+        "Tread": "idle",
+        "Fly": "fly"
+      }
+    }
+  }
+}

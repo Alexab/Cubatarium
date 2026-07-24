@@ -1,6 +1,0 @@
-{
- "name" : "stone",
- "id" : 3,
- "types": ["building"],
- "textures" : ["stone", "stone", "stone", "stone", "stone", "stone"]
-}

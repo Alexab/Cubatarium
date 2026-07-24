@@ -1,0 +1,16 @@
+{
+  "name": "mtg_clay",
+  "id": 422,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_clay_default_clay",
+    "mtg_clay_default_clay",
+    "mtg_clay_default_clay",
+    "mtg_clay_default_clay",
+    "mtg_clay_default_clay",
+    "mtg_clay_default_clay"
+  ],
+  "render": {}
+}

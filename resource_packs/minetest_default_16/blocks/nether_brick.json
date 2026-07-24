@@ -1,0 +1,16 @@
+{
+  "name": "nether_brick",
+  "id": 519,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "netherBrick",
+    "netherBrick",
+    "netherBrick",
+    "netherBrick",
+    "netherBrick",
+    "netherBrick"
+  ],
+  "render": {}
+}

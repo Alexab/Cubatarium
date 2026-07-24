@@ -1,0 +1,27 @@
+{
+  "id": "plains",
+  "height": {
+    "base_offset": 0,
+    "amplitude_mul": 0.85,
+    "volatility_mul": 0.65
+  },
+  "palette": {
+    "surface": "grass",
+    "subsurface": "dirt"
+  },
+  "features": {
+    "vegetation": {
+      "tree_apple": 0.7,
+      "tree_aspen": 0.65,
+      "tree_acacia": 0.55
+    },
+    "ground_cover": {
+      "bush_common": 0.85,
+      "bush_blueberry": 0.6
+    },
+    "decoration": {
+      "deco_log_apple": 0.15,
+      "deco_log_aspen": 0.12
+    }
+  }
+}

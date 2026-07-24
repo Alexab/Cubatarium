@@ -1,0 +1,107 @@
+{
+  "id": "fire_spirit",
+  "display_name": "Fire Spirit",
+  "catalog": {
+    "tags": [
+      "mobs",
+      "hostile"
+    ],
+    "spawnable": true,
+    "sort_order": 46
+  },
+  "role": "mob",
+  "bounds": {
+    "rest": [
+      0.65,
+      1.75,
+      0.65
+    ],
+    "max": [
+      0.65,
+      1.75,
+      0.65
+    ],
+    "min": [
+      0.65,
+      1.3,
+      0.65
+    ]
+  },
+  "eye_height": 1.2,
+  "habitat": "aerial",
+  "locomotion_archetype": "terrestrial_biped",
+  "locomotion": {
+    "can_fly": true,
+    "can_crouch": false,
+    "can_jump": false,
+    "jump_height": 1.0,
+    "walk_speed": 2.5
+  },
+  "behavior": "wander",
+  "behavior_params": {
+    "move_speed": 2.5,
+    "wander_interval_min": 2.0,
+    "wander_interval_max": 4.0
+  },
+  "visual": {
+    "backend": "gltf_skeleton",
+    "texture_layout": "rigid_crop",
+    "default_texture": "body",
+    "icon": {
+      "mode": "species_texture",
+      "color": [
+        1.0,
+        0.47058823529411764,
+        0.1568627450980392,
+        1.0
+      ]
+    },
+    "gltf": {
+      "model": "model.gltf",
+      "textures": [
+        "body"
+      ],
+      "model_scale": 1.0,
+      "model_yaw_offset_deg": 0
+    },
+    "rig": {
+      "template": "aerial"
+    },
+    "sprite": {
+      "billboard": true,
+      "emissive_tint": [1.2, 0.55, 0.15, 1.0]
+    },
+    "animation": {
+      "walk_cycle_hz": 2.0,
+      "clips": {
+        "idle": {
+          "start": 0,
+          "end": 1,
+          "loop": true
+        },
+        "walk": {
+          "start": 0,
+          "end": 1,
+          "loop": true,
+          "speed": 1.0
+        }
+      },
+      "state_map": {
+        "Idle": "idle",
+        "Walk": "walk",
+        "Run": "walk",
+        "Jump": "walk",
+        "Fall": "idle",
+        "Swim": "walk",
+        "Tread": "idle",
+        "Fly": "idle",
+        "Hover": "idle",
+        "Glide": "idle",
+        "Slither": "walk",
+        "Coil": "idle",
+        "Crouch": "idle",
+        "Action": "walk"
+      }
+    }
+  }
+}

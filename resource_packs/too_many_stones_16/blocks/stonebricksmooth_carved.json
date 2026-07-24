@@ -1,0 +1,17 @@
+{
+  "name": "stonebricksmooth_carved",
+  "id": 1001,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "stonebricksmooth_carved",
+    "stonebricksmooth_carved",
+    "stonebricksmooth_carved",
+    "stonebricksmooth_carved",
+    "stonebricksmooth_carved",
+    "stonebricksmooth_carved"
+  ],
+  "displayName": "Chiseled Stone Bricks",
+  "render": {}
+}

@@ -1,46 +1,53 @@
-#include "GuiPanel.h"
-#include "Gui/GuiRenderer.h"
-#include "Gui/GuiTheme.h"
+#include "Gui/Widgets/GuiPanel.h"
+#include "Gui/Core/GuiRenderer.h"
+#include "Gui/Core/GuiTheme.h"
 #include "Gui/Layout/GuiLayout.h"
 
-namespace cutum {
-
-GuiPanel::GuiPanel(const GuiTheme* theme)
-    : theme_(theme)
+namespace cutum
 {
+
+UGuiPanel::UGuiPanel(const GuiTheme *theme) : Theme(theme)
+{
+  SetClipChildren(true);
 }
 
-void GuiPanel::SetStackLayout(int spacing, int padding)
+void UGuiPanel::SetStackLayout(int spacing, int Padding)
 {
-    stackSpacing_ = spacing;
-    stackPadding_ = padding;
+  StackSpacing = spacing;
+  StackPadding = Padding;
 }
 
-int GuiPanel::GetPreferredHeight() const
+int UGuiPanel::GetPreferredHeight() const
 {
-    std::vector<GuiWidget*> kids;
-    for (const auto& child : children_) {
-        if (child->IsVisible()) {
-            kids.push_back(child.get());
-        }
+  std::vector<UGuiWidget *> kids;
+  for (const auto &child : Children)
+  {
+    if (child->IsVisible())
+    {
+      kids.push_back(child.get());
     }
-    if (kids.empty()) {
-        return GuiWidget::GetPreferredHeight();
-    }
-    const int w = bounds_.w > 0 ? bounds_.w : 400;
-    return GuiLayout::StackVerticalMeasure({0, 0, w, 100000}, stackSpacing_, stackPadding_, kids);
+  }
+  if (kids.empty())
+  {
+    return UGuiWidget::GetPreferredHeight();
+  }
+  const int w = Bounds.W > 0 ? Bounds.W : 400;
+  return UGuiLayout::StackVerticalMeasure({0, 0, w, 100000}, StackSpacing,
+                                          StackPadding, kids);
 }
 
-void GuiPanel::Draw(GuiRenderer& renderer)
+void UGuiPanel::Draw(UGuiRenderer &renderer)
 {
-    if (!visible_ || !theme_) {
-        return;
-    }
-    if (drawBackground_) {
-        renderer.DrawFilledRect(bounds_, theme_->panelBackground);
-        renderer.DrawBorderRect(bounds_, theme_->panelBorder, theme_->borderThickness);
-    }
-    GuiWidget::Draw(renderer);
+  if (!Visible || !Theme)
+  {
+    return;
+  }
+  if (DrawBackground)
+  {
+    renderer.DrawFilledRect(Bounds, Theme->PanelBackground);
+    renderer.DrawBorderRect(Bounds, Theme->PanelBorder, Theme->BorderThickness);
+  }
+  UGuiWidget::Draw(renderer);
 }
 
 } // namespace cutum

@@ -1,0 +1,4 @@
+Source file: character.png
+Upstream: minetest_game/mods/player_api/models/character.png
+License: CC BY-SA 3.0
+Attribution: Minetest / Luanti player_api (celeron55, Perttu Ahola et al.)

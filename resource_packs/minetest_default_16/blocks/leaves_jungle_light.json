@@ -1,0 +1,25 @@
+{
+  "name": "leaves_jungle_light",
+  "id": 390,
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "leaves_jungle",
+    "leaves_jungle",
+    "leaves_jungle",
+    "leaves_jungle",
+    "leaves_jungle",
+    "leaves_jungle"
+  ],
+  "render": {
+    "style": "cutout"
+  },
+  "displayName": "Jungle Leaves",
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  }
+}

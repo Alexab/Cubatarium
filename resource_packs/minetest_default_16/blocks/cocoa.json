@@ -1,0 +1,16 @@
+{
+  "name": "cocoa",
+  "id": 358,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "cocoa_2",
+    "cocoa_2",
+    "cocoa_2",
+    "cocoa_2",
+    "cocoa_2",
+    "cocoa_2"
+  ],
+  "render": {}
+}

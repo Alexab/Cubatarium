@@ -1,0 +1,74 @@
+# Creature resolution log
+
+Source: `tools/creature_resolution_log.yaml` (updated 2026-07-07)
+
+## Summary (spawnable only)
+
+- Species: **54**
+- spawn: pass=54
+- wander: pass=54
+- silhouette: pass=49, pending=5
+- icon: pass=49, pending=5
+
+## Open issues
+
+None.
+
+## Per species
+
+| id | spawn | wander | silhouette | icon | open |
+|----|-------|--------|------------|------|------|
+| badger | pass | pass | pass | pass | 0 |
+| bee | pass | pass | pass | pass | 0 |
+| bunny | pass | pass | pass | pass | 0 |
+| butterfly | pass | pass | pass | pass | 0 |
+| chicken | pass | pass | pass | pass | 0 |
+| cow | pass | pass | pass | pass | 0 |
+| crab | pass | pass | pass | pass | 0 |
+| dirt_monster | pass | pass | pass | pass | 0 |
+| dolphin | pass | pass | pass | pass | 0 |
+| dungeon_master | pass | pass | pass | pass | 0 |
+| fire_spirit | pass | pass | pending | pending | 0 |
+| fox | pass | pass | pass | pass | 0 |
+| golem | pass | pass | pass | pass | 0 |
+| hedgehog | pass | pass | pass | pass | 0 |
+| hermitcrab | pass | pass | pass | pass | 0 |
+| kitten | pass | pass | pass | pass | 0 |
+| land_guard | pass | pass | pass | pass | 0 |
+| lava_flan | pass | pass | pass | pass | 0 |
+| lobster | pass | pass | pass | pass | 0 |
+| manatee | pass | pass | pass | pass | 0 |
+| mese_monster | pass | pass | pass | pass | 0 |
+| octopus | pass | pass | pass | pass | 0 |
+| oerkki | pass | pass | pass | pass | 0 |
+| ogre | pass | pass | pass | pass | 0 |
+| orc | pass | pass | pass | pass | 0 |
+| owl | pass | pass | pass | pass | 0 |
+| panda | pass | pass | pass | pass | 0 |
+| penguin | pass | pass | pass | pass | 0 |
+| pig | pass | pass | pass | pass | 0 |
+| puffin | pass | pass | pass | pass | 0 |
+| rat | pass | pass | pass | pass | 0 |
+| rigid_demo_flyer | pass | pass | pending | pending | 0 |
+| rigid_demo_swimmer | pass | pass | pending | pending | 0 |
+| rigid_demo_walker | pass | pass | pending | pending | 0 |
+| sand_monster | pass | pass | pass | pass | 0 |
+| seahorse | pass | pass | pass | pass | 0 |
+| seal | pass | pass | pass | pass | 0 |
+| shark | pass | pass | pass | pass | 0 |
+| sheep | pass | pass | pass | pass | 0 |
+| skeleton | pass | pass | pass | pass | 0 |
+| spider | pass | pass | pass | pass | 0 |
+| squid | pass | pass | pass | pass | 0 |
+| stingray | pass | pass | pass | pass | 0 |
+| stone_monster | pass | pass | pass | pass | 0 |
+| tortoise | pass | pass | pass | pass | 0 |
+| tree_monster | pass | pass | pass | pass | 0 |
+| treeman | pass | pass | pass | pass | 0 |
+| trout | pass | pass | pass | pass | 0 |
+| warthog | pass | pass | pass | pass | 0 |
+| wasp | pass | pass | pass | pass | 0 |
+| water_dragon | pass | pass | pass | pass | 0 |
+| whale | pass | pass | pass | pass | 0 |
+| wolf | pass | pass | pass | pass | 0 |
+| zombie | pass | pass | pending | pending | 0 |

@@ -2,83 +2,112 @@
 #define GAME_SESSION_H
 
 #include "Commands/CommandRegistry.h"
+#include "Console/ConsoleCommandHistory.h"
 #include "Content/ContentTypeRegistry.h"
-#include "Gui/Interfaces/IContentCatalog.h"
-#include "Gui/Interfaces/IGameCommandContext.h"
-#include "Gui/Interfaces/IGuiGameActions.h"
-#include "Gui/Interfaces/IHotbarViewModel.h"
-#include "Gui/Interfaces/IInventoryViewModel.h"
+#include "Game/Inventory/SlotInteraction.h"
+#include "Gui/Interfaces/IUContentCatalog.h"
+#include "Gui/Interfaces/IUGameCommandContext.h"
+#include "Gui/Interfaces/IUGuiGameActions.h"
+#include "Gui/Interfaces/IUHotbarViewModel.h"
+#include "Gui/Interfaces/IUInventoryViewModel.h"
+#include <filesystem>
 #include <functional>
 #include <memory>
 #include <optional>
 #include <vector>
 
-namespace cutum {
+namespace cutum
+{
 
-class Application;
-class World;
+class UApplication;
+class UWorld;
+class IUGameContent;
 
-class GameSession : public IGuiGameActions,
-                    public IHotbarViewModel,
-                    public IInventoryViewModel,
-                    public IGameCommandContext {
+class UGameSession : public IUGuiGameActions,
+                     public IUHotbarViewModel,
+                     public IUInventoryViewModel,
+                     public IUGameCommandContext
+{
 public:
-    GameSession(Application* application, std::shared_ptr<World> world);
+  UGameSession(UApplication *application, std::shared_ptr<UWorld> world);
 
-    void InitializeCatalog(const std::string& typesJsonPath,
-                           const BlockDefinitionStorage& blocks,
-                           const PrefabLibrary& prefabs);
-    void RegisterCommands();
+  void InitializeCatalog(const std::string &typesJsonPath,
+                         const IUGameContent &content);
+  void ReindexBlockCatalog(const IUGameContent &content);
+  void RegisterCommands();
 
-    CommandRegistry& GetCommandRegistry() { return commandRegistry_; }
-    ContentTypeRegistry& GetContentCatalog() { return contentCatalog_; }
-    IContentCatalog& AsContentCatalog() { return contentCatalog_; }
+  UCommandRegistry &GetCommandRegistry() { return UCommandRegistry; }
+  std::shared_ptr<UWorld> GetWorld() const { return World; }
+  UContentTypeRegistry &GetContentCatalog() { return ContentCatalog; }
+  IUContentCatalog &AsContentCatalog() { return ContentCatalog; }
 
-    void LoadLastWorld() override;
-    void ResumeGame() override;
-    void OpenLoadWorld() override;
-    void OpenNewWorld() override;
-    void QuitApplication() override;
-    void OpenSettings() override;
-    bool HasPausedSession() const override;
-    int GetHotbarCountSetting() const override;
-    void SetHotbarCountSetting(int count) override;
+  void LoadLastWorld() override;
+  void ResumeGame() override;
+  void OpenLoadWorld() override;
+  void OpenNewWorld() override;
+  void QuitApplication() override;
+  void OpenSettings() override;
+  void OpenWorldSettings() override;
+  bool HasPausedSession() const override;
+  int GetHotbarCountSetting() const override;
+  void SetHotbarCountSetting(int count) override;
 
-    size_t GetBarCount() const override;
-    std::array<HotbarSlotView, 10> GetBarSlots(size_t barIndex) const override;
-    size_t GetSelectedSlot(size_t barIndex) const override;
-    void SelectSlot(size_t barIndex, size_t slotIndex) override;
-    bool AssignSlot(size_t barIndex, size_t slotIndex, const InventoryEntryRef& entry) override;
-    void BeginPendingAssignment(const InventoryEntryRef& entry) override;
-    bool HasPendingAssignment() const override;
-    bool ApplyPendingAssignment(size_t barIndex, size_t slotIndex) override;
-    void ClearPendingAssignment() override;
+  size_t GetBarCount() const override;
+  std::array<HotbarSlotView, 10> GetBarSlots(size_t barIndex) const override;
+  size_t GetSelectedSlot(size_t barIndex) const override;
+  void SelectSlot(size_t barIndex, size_t slotIndex) override;
+  bool AssignSlot(size_t barIndex, size_t slotIndex,
+                  const InventoryEntryRef &entry) override;
+  void BeginPendingAssignment(const InventoryEntryRef &entry) override;
+  bool HasPendingAssignment() const override;
+  bool ApplyPendingAssignment(size_t barIndex, size_t slotIndex) override;
+  void ClearPendingAssignment() override;
 
-    std::vector<InventoryGroupView> GetGroups(ContentKind tab, InventoryMode mode) const override;
-    std::vector<InventoryEntryView> GetEntries(ContentKind tab,
-                                               const std::string& groupId,
-                                               InventoryMode mode) const override;
-    bool CanAssignToHotbar(const InventoryEntryRef& entry,
-                           size_t barIndex,
-                           size_t slotIndex) const override;
-    bool AssignToHotbar(const InventoryEntryRef& entry,
-                        size_t barIndex,
-                        size_t slotIndex) override;
-    InventoryMode GetInventoryMode() const override;
-    void SetInventoryMode(InventoryMode mode) override;
+  bool OnPrimaryHotbarKey(int slotIndex);
+  void BeginDragFromSlot(const SlotAddress &source,
+                         const InventoryEntryRef &entry);
+  bool IsDragging() const;
+  const DragState &GetDrag() const { return Drag; }
+  bool DropOnSlot(const SlotAddress &target);
+  void CancelDrag();
+  InventoryEntryRef GetHotbarEntryRef(size_t barIndex, size_t slotIndex) const;
 
-    CommandResult Execute(const std::vector<std::string>& args) override;
-    void AddChatLine(const std::string& line) override;
-    const std::vector<std::string>& GetChatLog() const { return chatLog_; }
+  std::vector<InventoryGroupView> GetGroups(ContentKind tab,
+                                            InventoryMode mode) const override;
+  std::vector<InventoryEntryView> GetEntries(ContentKind tab,
+                                             const std::string &groupId,
+                                             InventoryMode mode) const override;
+  bool CanAssignToHotbar(const InventoryEntryRef &entry, size_t barIndex,
+                         size_t slotIndex) const override;
+  bool AssignToHotbar(const InventoryEntryRef &entry, size_t barIndex,
+                      size_t slotIndex) override;
+  bool CanSpawnCreatureByView(const std::string &speciesId) const;
+  std::string GetCreatureSpawnBlockedHint(const std::string &speciesId) const;
+  InventoryMode GetInventoryMode() const override;
+  void SetInventoryMode(InventoryMode mode) override;
+
+  CommandResult Execute(const std::vector<std::string> &args) override;
+  void AddChatLine(const std::string &line) override;
+  const std::vector<std::string> &GetChatLog() const { return ChatLog; }
+
+  UConsoleCommandHistory &GetCommandHistory() { return CommandHistory; }
+  const UConsoleCommandHistory &GetCommandHistory() const
+  {
+    return CommandHistory;
+  }
+  void InitCommandHistory(const std::filesystem::path &filePath);
+  void SaveCommandHistory();
 
 private:
-    Application* application_;
-    std::shared_ptr<World> world_;
-    CommandRegistry commandRegistry_;
-    ContentTypeRegistry contentCatalog_;
-    std::vector<std::string> chatLog_;
-    InventoryMode inventoryMode_{InventoryMode::Creative};
-    std::optional<InventoryEntryRef> pendingAssignment_;
+  UApplication *Application;
+  std::shared_ptr<UWorld> World;
+  UCommandRegistry UCommandRegistry;
+  UContentTypeRegistry ContentCatalog;
+  std::vector<std::string> ChatLog;
+  UConsoleCommandHistory CommandHistory;
+  InventoryMode ActiveInventoryMode{InventoryMode::Creative};
+  std::optional<InventoryEntryRef> PendingAssignment;
+  DragState Drag;
 };
 
 } // namespace cutum

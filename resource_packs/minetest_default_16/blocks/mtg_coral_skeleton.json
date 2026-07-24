@@ -1,0 +1,16 @@
+{
+  "name": "mtg_coral_skeleton",
+  "id": 432,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_coral_skeleton_default_coral_skeleton",
+    "mtg_coral_skeleton_default_coral_skeleton",
+    "mtg_coral_skeleton_default_coral_skeleton",
+    "mtg_coral_skeleton_default_coral_skeleton",
+    "mtg_coral_skeleton_default_coral_skeleton",
+    "mtg_coral_skeleton_default_coral_skeleton"
+  ],
+  "render": {}
+}

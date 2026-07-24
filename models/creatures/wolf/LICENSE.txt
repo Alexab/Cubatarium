@@ -1,0 +1,4 @@
+Source file: awolf.png
+Upstream: animalworld/textures/awolf.png
+License: MIT
+Attribution: animalworld — Skandarella / Liil

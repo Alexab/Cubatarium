@@ -1,0 +1,16 @@
+{
+  "name": "golden_rail_powered",
+  "id": 906,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "goldenRail_powered",
+    "goldenRail_powered",
+    "goldenRail_powered",
+    "goldenRail_powered",
+    "goldenRail_powered",
+    "goldenRail_powered"
+  ],
+  "render": {}
+}

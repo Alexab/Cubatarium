@@ -1,0 +1,966 @@
+#include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Core/WorldGenContentPin.h"
+#include "WorldGen/Core/WorldGenContentPinTls.h"
+#include <atomic>
+#include <memory>
+#include "WorldGen/Core/ProceduralSettings.h"
+#include "WorldGen/Core/WorldGenStageMask.h"
+#include "WorldGen/Sampling/BiomeRegistry.h"
+#include "ThirdParty/stb_image.h"
+#include <algorithm>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <nlohmann/json.hpp>
+
+namespace cutum
+{
+
+std::shared_ptr<const WorldGenPack> UWorldGenPack::Active = std::make_shared<WorldGenPack>();
+std::string UWorldGenPack::ActivePackDir;
+
+namespace
+{
+
+std::vector<uint8_t> gBiomeMapPixels;
+int gBiomeMapW = 0;
+int gBiomeMapH = 0;
+
+RavineFeatherMode ParseRavineFeatherMode(const std::string &mode)
+{
+  if (mode == "linear")
+  {
+    return RavineFeatherMode::Linear;
+  }
+  return RavineFeatherMode::Smoothstep;
+}
+
+BiomeId BiomeFromMapColor(uint8_t r, uint8_t g, uint8_t b)
+{
+  if (r == 0x2d && g == 0x8a && b == 0x3f)
+  {
+    return BiomeId::Forest;
+  }
+  if (r == 0xe8 && g == 0xd4 && b == 0x6a)
+  {
+    return BiomeId::Desert;
+  }
+  if (r == 0x7a && g == 0x7a && b == 0x7a)
+  {
+    return BiomeId::Hills;
+  }
+  if (r == 0xd8 && g == 0xe8 && b == 0xf0)
+  {
+    return BiomeId::Tundra;
+  }
+  return BiomeId::Plains;
+}
+
+bool LoadBiomeMapImage(const std::string &path)
+{
+  gBiomeMapPixels.clear();
+  gBiomeMapW = 0;
+  gBiomeMapH = 0;
+  int comp = 0;
+  unsigned char *data =
+      stbi_load(path.c_str(), &gBiomeMapW, &gBiomeMapH, &comp, 3);
+  if (!data || gBiomeMapW <= 0 || gBiomeMapH <= 0)
+  {
+    if (data)
+    {
+      stbi_image_free(data);
+    }
+    return false;
+  }
+  gBiomeMapPixels.assign(data, data + static_cast<size_t>(gBiomeMapW) *
+                                       static_cast<size_t>(gBiomeMapH) * 3);
+  stbi_image_free(data);
+  return true;
+}
+
+void ParseBiomeHeight(const nlohmann::json &height, BiomeHeightProfile &out)
+{
+  if (!height.is_object())
+  {
+    return;
+  }
+  if (height.contains("base_offset"))
+  {
+    out.baseOffsetBlocks = height["base_offset"].get<float>();
+  }
+  if (height.contains("amplitude_mul"))
+  {
+    out.amplitudeMultiplier = height["amplitude_mul"].get<float>();
+  }
+  if (height.contains("volatility_mul"))
+  {
+    out.volatilityMultiplier = height["volatility_mul"].get<float>();
+  }
+}
+
+void ParseBiomeFeatures(const nlohmann::json &features,
+                        BiomePackDefinition &biomeDef)
+{
+  if (!features.is_object())
+  {
+    return;
+  }
+  for (const auto &[poolName, poolJson] : features.items())
+  {
+    (void)poolName;
+    if (!poolJson.is_object())
+    {
+      continue;
+    }
+    for (const auto &[prefabName, weightJson] : poolJson.items())
+    {
+      if (!weightJson.is_number())
+      {
+        continue;
+      }
+      biomeDef.FeatureWeights[prefabName] = weightJson.get<float>();
+    }
+  }
+}
+
+void ParseSubBiomes(const nlohmann::json &subBiomes, BiomePackDefinition &biomeDef)
+{
+  if (!subBiomes.is_object())
+  {
+    return;
+  }
+  for (const auto &[subId, subJson] : subBiomes.items())
+  {
+    if (!subJson.is_object())
+    {
+      continue;
+    }
+    BiomeSubBiomePackRule rule;
+    if (subJson.contains("subsurface") && subJson["subsurface"].is_string())
+    {
+      rule.SubsurfaceSlot = subJson["subsurface"].get<std::string>();
+    }
+    if (subJson.contains("vegetation_weight_mul"))
+    {
+      rule.VegetationWeightMul = subJson["vegetation_weight_mul"].get<float>();
+    }
+    if (subJson.contains("decoration_weight_mul"))
+    {
+      rule.DecorationWeightMul = subJson["decoration_weight_mul"].get<float>();
+    }
+    if (subJson.contains("noise_threshold"))
+    {
+      rule.NoiseThreshold = subJson["noise_threshold"].get<float>();
+    }
+    biomeDef.SubBiomes[subId] = rule;
+  }
+}
+
+void ParsePalette(const nlohmann::json &palette, BiomePackDefinition &biomeDef)
+{
+  if (!palette.is_object())
+  {
+    return;
+  }
+  if (palette.contains("surface") && palette["surface"].is_string())
+  {
+    biomeDef.SurfaceSlot = palette["surface"].get<std::string>();
+  }
+  if (palette.contains("subsurface") && palette["subsurface"].is_string())
+  {
+    biomeDef.SubsurfaceSlot = palette["subsurface"].get<std::string>();
+  }
+}
+
+bool ParsePipelineStage(const std::string &stage, WorldGenPackPipeline &pipeline)
+{
+  if (stage == "terrain")
+  {
+    return true;
+  }
+  if (stage == "fluids")
+  {
+    pipeline.Fluids = true;
+    return true;
+  }
+  if (stage == "ravines")
+  {
+    pipeline.Ravines = true;
+    return true;
+  }
+  if (stage == "valleys")
+  {
+    pipeline.Valleys = true;
+    return true;
+  }
+  if (stage == "ores")
+  {
+    pipeline.Ores = true;
+    return true;
+  }
+  if (stage == "caves")
+  {
+    pipeline.Caves = true;
+    return true;
+  }
+  if (stage == "vegetation")
+  {
+    pipeline.Vegetation = true;
+    return true;
+  }
+  if (stage == "ground_cover")
+  {
+    pipeline.GroundCover = true;
+    return true;
+  }
+  if (stage == "decoration")
+  {
+    pipeline.Decoration = true;
+    return true;
+  }
+  if (stage == "structures")
+  {
+    pipeline.Structures = true;
+    return true;
+  }
+  if (stage == "lava_pools")
+  {
+    pipeline.LavaPools = true;
+    return true;
+  }
+  if (stage == "fire_patch")
+  {
+    pipeline.FirePatch = true;
+    return true;
+  }
+  return false;
+}
+
+void LoadPipelineJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path pipelineJson = root / "pipeline.json";
+  if (!std::filesystem::exists(pipelineJson))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(pipelineJson);
+    const nlohmann::json json = nlohmann::json::parse(file);
+    if (!json.contains("stages") || !json["stages"].is_array())
+    {
+      return;
+    }
+    pack.Pipeline = WorldGenPackPipeline{};
+    pack.Pipeline.Loaded = true;
+    for (const auto &stage : json["stages"])
+    {
+      if (stage.is_string())
+      {
+        const std::string stage_name = stage.get<std::string>();
+        ParsePipelineStage(stage_name, pack.Pipeline);
+        if (const std::optional<WorldGenStageId> stage_id =
+                WorldGenStageIdFromPipelineString(stage_name))
+        {
+          pack.Pipeline.StageOrder.push_back(*stage_id);
+        }
+      }
+    }
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: pipeline.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
+void ParseHeightLayer(const nlohmann::json &layer, HeightLayerPackConfig &out)
+{
+  if (!layer.is_object())
+  {
+    return;
+  }
+  if (layer.contains("scale"))
+  {
+    out.Scale = layer["scale"].get<float>();
+  }
+  if (layer.contains("octaves"))
+  {
+    out.Octaves = layer["octaves"].get<int>();
+  }
+  if (layer.contains("weight"))
+  {
+    out.Weight = layer["weight"].get<float>();
+  }
+}
+
+void ParseClimateAxis(const nlohmann::json &axis, ClimateAxisPackConfig &out)
+{
+  if (!axis.is_object())
+  {
+    return;
+  }
+  if (axis.contains("scale"))
+  {
+    out.Scale = axis["scale"].get<float>();
+  }
+  if (axis.contains("octaves"))
+  {
+    out.Octaves = axis["octaves"].get<int>();
+  }
+  if (axis.contains("seed_offset"))
+  {
+    out.SeedOffset = axis["seed_offset"].get<int>();
+  }
+}
+
+void LoadHeightJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path heightJson = root / "height.json";
+  if (!std::filesystem::exists(heightJson))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(heightJson);
+    const nlohmann::json json = nlohmann::json::parse(file);
+    if (json.contains("layers") && json["layers"].is_object())
+    {
+      const auto &layers = json["layers"];
+      if (layers.contains("continental"))
+      {
+        ParseHeightLayer(layers["continental"], pack.Height.Continental);
+      }
+      if (layers.contains("regional"))
+      {
+        ParseHeightLayer(layers["regional"], pack.Height.Regional);
+      }
+      if (layers.contains("detail"))
+      {
+        ParseHeightLayer(layers["detail"], pack.Height.Detail);
+      }
+      if (layers.contains("rolling"))
+      {
+        ParseHeightLayer(layers["rolling"], pack.Height.Rolling);
+      }
+    }
+    if (json.contains("overworld") && json["overworld"].is_object())
+    {
+      const auto &ow = json["overworld"];
+      if (ow.contains("sea_bias"))
+      {
+        pack.Height.SeaBias = ow["sea_bias"].get<float>();
+      }
+      if (ow.contains("curve_exponent"))
+      {
+        pack.Height.CurveExponent = ow["curve_exponent"].get<float>();
+      }
+    }
+    if (json.contains("jitter") && json["jitter"].is_object())
+    {
+      const auto &j = json["jitter"];
+      if (j.contains("scale"))
+      {
+        pack.Height.JitterScale = j["scale"].get<float>();
+      }
+      if (j.contains("amplitude"))
+      {
+        pack.Height.JitterAmplitude = j["amplitude"].get<float>();
+      }
+      if (j.contains("erosion_damp"))
+      {
+        pack.Height.JitterErosionDamp = j["erosion_damp"].get<float>();
+      }
+    }
+    pack.Height.Loaded = true;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: height.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
+void LoadClimateJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path climateJson = root / "climate.json";
+  if (!std::filesystem::exists(climateJson))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(climateJson);
+    const nlohmann::json json = nlohmann::json::parse(file);
+    if (json.contains("temperature"))
+    {
+      ParseClimateAxis(json["temperature"], pack.Climate.Temperature);
+    }
+    if (json.contains("moisture"))
+    {
+      ParseClimateAxis(json["moisture"], pack.Climate.Moisture);
+    }
+    if (json.contains("continentalness"))
+    {
+      ParseClimateAxis(json["continentalness"], pack.Climate.Continentalness);
+    }
+    if (json.contains("erosion"))
+    {
+      ParseClimateAxis(json["erosion"], pack.Climate.Erosion);
+    }
+    if (json.contains("weirdness"))
+    {
+      ParseClimateAxis(json["weirdness"], pack.Climate.Weirdness);
+    }
+    if (json.contains("ridge"))
+    {
+      ParseClimateAxis(json["ridge"], pack.Climate.Ridge);
+    }
+    pack.Climate.Loaded = true;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: climate.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
+void LoadOresJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path oresJson = root / "ores.json";
+  if (!std::filesystem::exists(oresJson))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(oresJson);
+    const nlohmann::json json = nlohmann::json::parse(file);
+    if (!json.contains("ores") || !json["ores"].is_array())
+    {
+      return;
+    }
+    for (const auto &entry : json["ores"])
+    {
+      if (!entry.is_object() || !entry.contains("slot"))
+      {
+        continue;
+      }
+      PackOreRule rule;
+      rule.Slot = entry["slot"].get<std::string>();
+      rule.YPeak = entry.value("y_peak", rule.YPeak);
+      rule.YSpread = entry.value("y_spread", rule.YSpread);
+      rule.VeinSize = entry.value("vein_size", rule.VeinSize);
+      rule.Rarity = entry.value("rarity", rule.Rarity);
+      rule.MaxSurfaceOffset = entry.value("max_surface_offset", rule.MaxSurfaceOffset);
+      rule.BelowSeaLevel = entry.value("below_sea_level", rule.BelowSeaLevel);
+      rule.SeedModulo = entry.value("seed_modulo", rule.SeedModulo);
+      pack.Ores.Rules.push_back(rule);
+    }
+    pack.Ores.Loaded = !pack.Ores.Rules.empty();
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: ores.json parse error: " << e.what() << std::endl;
+  }
+}
+
+void LoadValleysJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path valleys_json = root / "valleys.json";
+  if (!std::filesystem::exists(valleys_json))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(valleys_json);
+    const nlohmann::json json = nlohmann::json::parse(file);
+    pack.Valleys.Enabled = json.value("enabled", pack.Valleys.Enabled);
+    pack.Valleys.MaxDepth = json.value("max_depth", pack.Valleys.MaxDepth);
+    pack.Valleys.WidthSigma = json.value("width_sigma", pack.Valleys.WidthSigma);
+    pack.Valleys.AquaticDepthScale =
+        json.value("aquatic_depth_scale", pack.Valleys.AquaticDepthScale);
+    pack.Valleys.RiverNoiseScale =
+        json.value("river_noise_scale", pack.Valleys.RiverNoiseScale);
+    pack.Valleys.Loaded = true;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: valleys.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
+void LoadRavinesJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path ravines_json = root / "ravines.json";
+  if (!std::filesystem::exists(ravines_json))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(ravines_json);
+    const nlohmann::json json = nlohmann::json::parse(file);
+    pack.Ravines.Enabled = json.value("enabled", pack.Ravines.Enabled);
+    pack.Ravines.Rarity = json.value("rarity", pack.Ravines.Rarity);
+    pack.Ravines.MinDepth = json.value("min_depth", pack.Ravines.MinDepth);
+    pack.Ravines.MaxDepth = json.value("max_depth", pack.Ravines.MaxDepth);
+    pack.Ravines.AquaticMaxDepth =
+        json.value("aquatic_max_depth", pack.Ravines.AquaticMaxDepth);
+    pack.Ravines.FillWater = json.value("fill_water", pack.Ravines.FillWater);
+    pack.Ravines.FeatherMode =
+        json.value("feather_mode", pack.Ravines.FeatherMode);
+    pack.Ravines.Loaded = true;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: ravines.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
+void LoadCavesJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path cavesJson = root / "caves.json";
+  if (!std::filesystem::exists(cavesJson))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(cavesJson);
+    const nlohmann::json json = nlohmann::json::parse(file);
+    pack.Caves.MaxDepthBelowSurface =
+        json.value("max_depth_below_surface", pack.Caves.MaxDepthBelowSurface);
+    pack.Caves.MinDepthBelowSurface =
+        json.value("min_depth_below_surface", pack.Caves.MinDepthBelowSurface);
+    pack.Caves.ChunkGateThreshold =
+        json.value("chunk_gate_threshold", pack.Caves.ChunkGateThreshold);
+    pack.Caves.UseDensityField =
+        json.value("use_density_field", pack.Caves.UseDensityField);
+    pack.Caves.DensityCaveAmplitude = json.value(
+        "density_cave_amplitude", pack.Caves.DensityCaveAmplitude);
+    if (json.contains("layers") && json["layers"].is_object())
+    {
+      const auto &layers = json["layers"];
+      if (layers.contains("cheese"))
+      {
+        pack.Caves.CheeseScale =
+            layers["cheese"].value("scale", pack.Caves.CheeseScale);
+        pack.Caves.CheeseWeight =
+            layers["cheese"].value("weight", pack.Caves.CheeseWeight);
+      }
+      if (layers.contains("spaghetti"))
+      {
+        pack.Caves.SpaghettiScale =
+            layers["spaghetti"].value("scale", pack.Caves.SpaghettiScale);
+        pack.Caves.SpaghettiWeight =
+            layers["spaghetti"].value("weight", pack.Caves.SpaghettiWeight);
+      }
+      if (layers.contains("noodle"))
+      {
+        pack.Caves.NoodleScale =
+            layers["noodle"].value("scale", pack.Caves.NoodleScale);
+        pack.Caves.NoodleWeight =
+            layers["noodle"].value("weight", pack.Caves.NoodleWeight);
+      }
+    }
+    pack.Caves.Loaded = true;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: caves.json parse error: " << e.what() << std::endl;
+  }
+}
+
+BiomePackDefinition ParseBiomeJson(const nlohmann::json &biomeJson,
+                                     const std::string &biomeId)
+{
+  BiomePackDefinition biomeDef;
+  if (biomeJson.contains("height"))
+  {
+    ParseBiomeHeight(biomeJson["height"], biomeDef.Height);
+  }
+  if (biomeJson.contains("palette"))
+  {
+    ParsePalette(biomeJson["palette"], biomeDef);
+  }
+  if (biomeJson.contains("features"))
+  {
+    ParseBiomeFeatures(biomeJson["features"], biomeDef);
+  }
+  if (biomeJson.contains("sub_biomes"))
+  {
+    ParseSubBiomes(biomeJson["sub_biomes"], biomeDef);
+  }
+  (void)biomeId;
+  return biomeDef;
+}
+
+} // namespace
+
+bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
+{
+  WorldGenPack pack{};
+  ActivePackDir = packDir;
+  const std::filesystem::path root(packDir);
+  const std::filesystem::path packJson = root / "pack.json";
+  if (!std::filesystem::exists(packJson))
+  {
+    std::cerr << "WorldGenPack: missing " << packJson.string() << std::endl;
+    return false;
+  }
+
+  try
+  {
+    std::ifstream file(packJson);
+    const nlohmann::json rootJson = nlohmann::json::parse(file);
+    pack.Id = rootJson.value("id", "default");
+    const std::string mode = rootJson.value("biome_mode", "procedural");
+    pack.BiomeMode =
+        mode == "image" ? WorldGenBiomeMode::Image : WorldGenBiomeMode::Procedural;
+    pack.BiomeMapBlockScale =
+        std::max(1, rootJson.value("biome_map_block_scale", 4));
+    if (rootJson.contains("biome_blend_radius"))
+    {
+      pack.BiomeBlendRadius = rootJson["biome_blend_radius"].get<float>();
+    }
+    if (rootJson.contains("biome_map_image") &&
+        rootJson["biome_map_image"].is_string())
+    {
+      pack.BiomeMapImagePath = rootJson["biome_map_image"].get<std::string>();
+    }
+    if (rootJson.contains("pipeline") && rootJson["pipeline"].is_array())
+    {
+      pack.Pipeline = WorldGenPackPipeline{};
+      pack.Pipeline.Loaded = true;
+      for (const auto &stage : rootJson["pipeline"])
+      {
+        if (stage.is_string())
+        {
+          const std::string stage_name = stage.get<std::string>();
+          ParsePipelineStage(stage_name, pack.Pipeline);
+          if (const std::optional<WorldGenStageId> stage_id =
+                  WorldGenStageIdFromPipelineString(stage_name))
+          {
+            pack.Pipeline.StageOrder.push_back(*stage_id);
+          }
+        }
+      }
+    }
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: parse error: " << e.what() << std::endl;
+    return false;
+  }
+
+  LoadPipelineJson(root, pack);
+  LoadHeightJson(root, pack);
+  LoadClimateJson(root, pack);
+  LoadOresJson(root, pack);
+  LoadCavesJson(root, pack);
+  LoadRavinesJson(root, pack);
+  LoadValleysJson(root, pack);
+
+  const std::filesystem::path biomesDir = root / "biomes";
+  if (std::filesystem::exists(biomesDir))
+  {
+    for (const auto &entry : std::filesystem::directory_iterator(biomesDir))
+    {
+      if (!entry.is_regular_file() || entry.path().extension() != ".json")
+      {
+        continue;
+      }
+      try
+      {
+        std::ifstream biomeFile(entry.path());
+        const nlohmann::json biomeJson = nlohmann::json::parse(biomeFile);
+        const std::string biomeId =
+            biomeJson.value("id", entry.path().stem().string());
+        pack.Biomes[biomeId] = ParseBiomeJson(biomeJson, biomeId);
+      }
+      catch (const std::exception &e)
+      {
+        std::cerr << "WorldGenPack: biome parse error in "
+                  << entry.path().string() << ": " << e.what() << std::endl;
+      }
+    }
+  }
+
+  if (pack.BiomeMode == WorldGenBiomeMode::Image &&
+      !pack.BiomeMapImagePath.empty())
+  {
+    const std::filesystem::path imagePath = root / pack.BiomeMapImagePath;
+    if (!LoadBiomeMapImage(imagePath.string()))
+    {
+      std::cerr << "WorldGenPack: failed to load biome map image "
+                << imagePath.string() << std::endl;
+      pack.BiomeMode = WorldGenBiomeMode::Procedural;
+    }
+  }
+
+  std::cout << "WorldGenPack: loaded '" << pack.Id << "' with "
+            << pack.Biomes.size() << " biome profile(s)"
+            << (pack.Pipeline.Loaded ? " + pipeline" : "") << std::endl;
+  GetActiveBiomeRegistry().LoadFromPack(pack);
+  Publish(std::make_shared<const WorldGenPack>(std::move(pack)));
+  return true;
+}
+
+bool UWorldGenPack::LoadPackId(const std::string &packId)
+{
+  const std::string id = packId.empty() ? "default" : packId;
+  const std::string dir = "content/worldgen_packs/" + id;
+  if (ActivePackDir == dir && Get().Id == id && !Get().Biomes.empty())
+  {
+    return true;
+  }
+  return LoadFromDirectory(dir);
+}
+
+bool UWorldGenPack::ReloadActive()
+{
+  if (ActivePackDir.empty())
+  {
+    return LoadPackId("default");
+  }
+  return LoadFromDirectory(ActivePackDir);
+}
+
+std::vector<std::string> UWorldGenPack::ListPackIds()
+{
+  std::vector<std::string> ids;
+  const std::filesystem::path root("content/worldgen_packs");
+  if (!std::filesystem::exists(root))
+  {
+    return ids;
+  }
+  for (const auto &entry : std::filesystem::directory_iterator(root))
+  {
+    if (!entry.is_directory())
+    {
+      continue;
+    }
+    if (std::filesystem::exists(entry.path() / "pack.json"))
+    {
+      ids.push_back(entry.path().filename().string());
+    }
+  }
+  std::sort(ids.begin(), ids.end());
+  return ids;
+}
+
+std::vector<WorldGenPackInfo> UWorldGenPack::ListPackInfos()
+{
+  std::vector<WorldGenPackInfo> infos;
+  const std::filesystem::path root("content/worldgen_packs");
+  if (!std::filesystem::exists(root))
+  {
+    return infos;
+  }
+  for (const auto &entry : std::filesystem::directory_iterator(root))
+  {
+    if (!entry.is_directory())
+    {
+      continue;
+    }
+    const std::filesystem::path packJson = entry.path() / "pack.json";
+    if (!std::filesystem::exists(packJson))
+    {
+      continue;
+    }
+    try
+    {
+      std::ifstream file(packJson);
+      const nlohmann::json rootJson = nlohmann::json::parse(file);
+      WorldGenPackInfo info;
+      info.Id = rootJson.value("id", entry.path().filename().string());
+      info.Description = rootJson.value("description", std::string{});
+      infos.push_back(std::move(info));
+    }
+    catch (const std::exception &ex)
+    {
+      std::cerr << "WorldGenPack: failed to read " << packJson.string() << ": "
+                << ex.what() << std::endl;
+    }
+  }
+  std::sort(infos.begin(), infos.end(),
+            [](const WorldGenPackInfo &a, const WorldGenPackInfo &b)
+            { return a.Id < b.Id; });
+  return infos;
+}
+
+void UWorldGenPack::Publish(std::shared_ptr<const WorldGenPack> pack)
+{
+  std::atomic_store_explicit(&Active, std::move(pack), std::memory_order_release);
+}
+
+std::shared_ptr<const WorldGenPack> UWorldGenPack::GetSnapshot()
+{
+  return std::atomic_load_explicit(&Active, std::memory_order_acquire);
+}
+
+const WorldGenPack &UWorldGenPack::Get()
+{
+  if (const WorldGenContentSnapshot *pin = GetPinnedWorldGenContent())
+  {
+    if (pin->Pack)
+    {
+      return *pin->Pack;
+    }
+  }
+  thread_local std::shared_ptr<const WorldGenPack> keep;
+  keep = GetSnapshot();
+  return *keep;
+}
+
+const PackHeightConfig &UWorldGenPack::HeightConfig() { return Get().Height; }
+
+const PackClimateConfig &UWorldGenPack::ClimateConfig() { return Get().Climate; }
+
+const PackOresConfig &UWorldGenPack::OresConfig() { return Get().Ores; }
+
+const PackCavesConfig &UWorldGenPack::CavesConfig() { return Get().Caves; }
+
+const PackRavinesConfig &UWorldGenPack::RavinesConfig()
+{
+  return Get().Ravines;
+}
+
+const PackValleysConfig &UWorldGenPack::ValleysConfig()
+{
+  return Get().Valleys;
+}
+
+void UWorldGenPack::ApplyPackCaveDefaults(ProceduralSettings &settings)
+{
+  const PackCavesConfig &caves = Get().Caves;
+  if (!caves.Loaded)
+  {
+    return;
+  }
+  settings.Caves.maxDepthBelowSurface = caves.MaxDepthBelowSurface;
+  settings.Caves.minDepthBelowSurface = caves.MinDepthBelowSurface;
+  settings.Caves.chunkGateThreshold = caves.ChunkGateThreshold;
+  settings.Caves.useDensityField = caves.UseDensityField;
+  settings.Caves.densityCaveAmplitude = caves.DensityCaveAmplitude;
+  settings.Caves.cheeseScale = caves.CheeseScale;
+  settings.Caves.cheeseWeight = caves.CheeseWeight;
+  settings.Caves.spaghettiScale = caves.SpaghettiScale;
+  settings.Caves.spaghettiWeight = caves.SpaghettiWeight;
+  settings.Caves.noodleScale = caves.NoodleScale;
+  settings.Caves.noodleWeight = caves.NoodleWeight;
+}
+
+void UWorldGenPack::ApplyPackRavineDefaults(ProceduralSettings &settings)
+{
+  const PackRavinesConfig &ravines = Get().Ravines;
+  if (!ravines.Loaded)
+  {
+    return;
+  }
+  settings.Ravines.enabled = ravines.Enabled;
+  settings.Ravines.rarity = ravines.Rarity;
+  settings.Ravines.minDepth = ravines.MinDepth;
+  settings.Ravines.maxDepth = ravines.MaxDepth;
+  settings.Ravines.aquaticMaxDepth = ravines.AquaticMaxDepth;
+  settings.Ravines.fillWater = ravines.FillWater;
+  settings.Ravines.featherMode = ParseRavineFeatherMode(ravines.FeatherMode);
+}
+
+const BiomeHeightProfile *UWorldGenPack::HeightProfileFor(
+    const std::string &biomeId)
+{
+  const BiomePackDefinition *def = BiomeDefinitionFor(biomeId);
+  if (!def)
+  {
+    return nullptr;
+  }
+  return &def->Height;
+}
+
+const BiomePackDefinition *UWorldGenPack::BiomeDefinitionFor(
+    const std::string &biomeId)
+{
+  const WorldGenPack &pack = Get();
+  const auto it = pack.Biomes.find(biomeId);
+  if (it == pack.Biomes.end())
+  {
+    return nullptr;
+  }
+  return &it->second;
+}
+
+float UWorldGenPack::FeatureWeightMultiplier(const std::string &biomeId,
+                                             const std::string &prefabName)
+{
+  const BiomePackDefinition *def = BiomeDefinitionFor(biomeId);
+  if (!def)
+  {
+    return 1.0f;
+  }
+  const auto prefabIt = def->FeatureWeights.find(prefabName);
+  if (prefabIt != def->FeatureWeights.end())
+  {
+    return std::max(0.1f, prefabIt->second);
+  }
+  const std::string mapgenKey = prefabName + "_mapgen";
+  const auto mapgenIt = def->FeatureWeights.find(mapgenKey);
+  if (mapgenIt != def->FeatureWeights.end())
+  {
+    return std::max(0.1f, mapgenIt->second);
+  }
+  return 1.0f;
+}
+
+float UWorldGenPack::SubBiomePoolWeightMultiplier(const std::string &biomeId,
+                                                  SubBiomeId subBiome,
+                                                  ObjectFeaturePool pool)
+{
+  const BiomePackDefinition *def = BiomeDefinitionFor(biomeId);
+  if (!def)
+  {
+    return 1.0f;
+  }
+  const auto subIt = def->SubBiomes.find(SubBiomeIdToString(subBiome));
+  if (subIt == def->SubBiomes.end())
+  {
+    return 1.0f;
+  }
+  if (pool == ObjectFeaturePool::Vegetation)
+  {
+    return std::max(0.1f, subIt->second.VegetationWeightMul);
+  }
+  if (pool == ObjectFeaturePool::Decoration)
+  {
+    return std::max(0.1f, subIt->second.DecorationWeightMul);
+  }
+  return 1.0f;
+}
+
+BiomeId UWorldGenPack::BiomeAtImage(int worldX, int worldZ)
+{
+  if (gBiomeMapPixels.empty() || gBiomeMapW <= 0 || gBiomeMapH <= 0)
+  {
+    return BiomeId::Plains;
+  }
+  const int scale = std::max(1, Get().BiomeMapBlockScale);
+  const int px = ((worldX / scale) % gBiomeMapW + gBiomeMapW) % gBiomeMapW;
+  const int pz = ((worldZ / scale) % gBiomeMapH + gBiomeMapH) % gBiomeMapH;
+  const size_t idx =
+      (static_cast<size_t>(pz) * static_cast<size_t>(gBiomeMapW) +
+       static_cast<size_t>(px)) *
+      3;
+  if (idx + 2 >= gBiomeMapPixels.size())
+  {
+    return BiomeId::Plains;
+  }
+  return BiomeFromMapColor(gBiomeMapPixels[idx], gBiomeMapPixels[idx + 1],
+                           gBiomeMapPixels[idx + 2]);
+}
+
+} // namespace cutum

@@ -1,0 +1,16 @@
+{
+  "name": "mtg_cobble",
+  "id": 425,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_cobble_default_cobble",
+    "mtg_cobble_default_cobble",
+    "mtg_cobble_default_cobble",
+    "mtg_cobble_default_cobble",
+    "mtg_cobble_default_cobble",
+    "mtg_cobble_default_cobble"
+  ],
+  "render": {}
+}

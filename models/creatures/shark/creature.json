@@ -1,0 +1,121 @@
+{
+  "id": "shark",
+  "display_name": "Shark",
+  "catalog": {
+    "tags": [
+      "mobs",
+      "passive"
+    ],
+    "spawnable": true,
+    "sort_order": 71
+  },
+  "role": "mob",
+  "bounds": {
+    "rest": [
+      1.2,
+      0.6,
+      2.0
+    ],
+    "max": [
+      1.2,
+      0.6,
+      2.0
+    ],
+    "min": [
+      1.2,
+      0.6,
+      2.0
+    ]
+  },
+  "eye_height": 0.45,
+  "habitat": "aquatic",
+  "locomotion_archetype": "aquatic",
+  "locomotion": {
+    "can_fly": true,
+    "can_crouch": false,
+    "can_jump": false,
+    "jump_height": 1.0,
+    "walk_speed": 3.5
+  },
+  "behavior": "wander",
+  "behavior_params": {
+    "move_speed": 3.5,
+    "wander_interval_min": 2.0,
+    "wander_interval_max": 4.0
+  },
+  "visual": {
+    "backend": "gltf_skeleton",
+    "texture_layout": "rigid_crop",
+    "default_texture": "body",
+    "icon": {
+      "mode": "species_texture",
+      "color": [
+        0.47058823529411764,
+        0.49019607843137253,
+        0.5098039215686274,
+        1.0
+      ]
+    },
+    "gltf": {
+      "model": "model.gltf",
+      "textures": [
+        "body",
+        "face",
+        "leg"
+      ],
+      "model_scale": 1.0,
+      "model_yaw_offset_deg": 0
+    },
+    "animation": {
+      "walk_cycle_hz": 2.0,
+      "clips": {
+        "walk": {
+          "start": 0,
+          "end": 100,
+          "loop": true,
+          "speed": 6.666666666666667
+        },
+        "fly": {
+          "start": 0,
+          "end": 100,
+          "loop": true,
+          "speed": 6.666666666666667
+        },
+        "punch": {
+          "start": 100,
+          "end": 200,
+          "loop": false,
+          "speed": 6.666666666666667
+        },
+        "die": {
+          "start": 100,
+          "end": 200,
+          "loop": false,
+          "speed": 3.3333333333333335
+        },
+        "idle": {
+          "start": 0,
+          "end": 100,
+          "loop": true,
+          "speed": 6.666666666666667
+        }
+      },
+      "state_map": {
+        "Idle": "idle",
+        "Walk": "walk",
+        "Run": "walk",
+        "Jump": "walk",
+        "Fall": "idle",
+        "Crouch": "idle",
+        "Slither": "walk",
+        "Coil": "idle",
+        "Action": "punch",
+        "Hover": "fly",
+        "Glide": "fly",
+        "Swim": "fly",
+        "Tread": "idle",
+        "Fly": "fly"
+      }
+    }
+  }
+}

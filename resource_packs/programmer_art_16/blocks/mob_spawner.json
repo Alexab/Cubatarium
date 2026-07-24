@@ -1,0 +1,16 @@
+{
+  "name": "mob_spawner",
+  "id": 658,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mobSpawner",
+    "mobSpawner",
+    "mobSpawner",
+    "mobSpawner",
+    "mobSpawner",
+    "mobSpawner"
+  ],
+  "render": {}
+}

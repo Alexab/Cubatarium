@@ -1,0 +1,109 @@
+{
+  "id": "whale",
+  "display_name": "Whale",
+  "catalog": {
+    "tags": [
+      "mobs",
+      "passive"
+    ],
+    "spawnable": true,
+    "sort_order": 80
+  },
+  "role": "mob",
+  "bounds": {
+    "rest": [
+      2.5,
+      1.2,
+      4.0
+    ],
+    "max": [
+      2.5,
+      1.2,
+      4.0
+    ],
+    "min": [
+      2.5,
+      1.2,
+      4.0
+    ]
+  },
+  "eye_height": 0.8,
+  "habitat": "aquatic",
+  "locomotion_archetype": "aquatic",
+  "locomotion": {
+    "can_fly": true,
+    "can_crouch": false,
+    "can_jump": false,
+    "jump_height": 1.0,
+    "walk_speed": 2.0
+  },
+  "behavior": "wander",
+  "behavior_params": {
+    "move_speed": 2.0,
+    "wander_interval_min": 2.0,
+    "wander_interval_max": 4.0
+  },
+  "visual": {
+    "backend": "gltf_skeleton",
+    "texture_layout": "rigid_crop",
+    "default_texture": "body",
+    "icon": {
+      "mode": "species_texture",
+      "color": [
+        0.27450980392156865,
+        0.3333333333333333,
+        0.43137254901960786,
+        1.0
+      ]
+    },
+    "gltf": {
+      "model": "model.gltf",
+      "textures": [
+        "body",
+        "face",
+        "leg"
+      ],
+      "model_scale": 1.0,
+      "model_yaw_offset_deg": 0
+    },
+    "animation": {
+      "walk_cycle_hz": 2.0,
+      "clips": {
+        "idle": {
+          "start": 2,
+          "end": 39,
+          "loop": true,
+          "speed": 0.3333333333333333
+        },
+        "walk": {
+          "start": 2,
+          "end": 39,
+          "loop": true,
+          "speed": 0.3333333333333333
+        },
+        "run": {
+          "start": 2,
+          "end": 39,
+          "loop": true,
+          "speed": 0.3333333333333333
+        }
+      },
+      "state_map": {
+        "Idle": "idle",
+        "Walk": "walk",
+        "Run": "run",
+        "Jump": "run",
+        "Fall": "idle",
+        "Crouch": "idle",
+        "Slither": "walk",
+        "Coil": "idle",
+        "Action": "walk",
+        "Hover": "idle",
+        "Glide": "idle",
+        "Swim": "walk",
+        "Tread": "idle",
+        "Fly": "idle"
+      }
+    }
+  }
+}

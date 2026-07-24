@@ -1,0 +1,19 @@
+{
+  "name": "mtg_obsidian_glass",
+  "id": 476,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_obsidian_glass_default_obsidian_glass_detail",
+    "mtg_obsidian_glass_default_obsidian_glass_detail",
+    "mtg_obsidian_glass_default_obsidian_glass_detail",
+    "mtg_obsidian_glass_default_obsidian_glass_detail",
+    "mtg_obsidian_glass_default_obsidian_glass",
+    "mtg_obsidian_glass_default_obsidian_glass_detail"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "displayName": "Obsidian Glass"
+}

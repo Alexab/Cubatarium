@@ -13,19 +13,31 @@
 
 ### Вариант 1: vcpkg (рекомендуется)
 
+На Windows проект линкуется **статически** (triplet `x64-windows-static`, CRT `/MT` для Release).
+Зависимости перечислены в [`vcpkg.json`](../vcpkg.json); configure включает manifest mode.
+VC++ Redistributable и DLL от vcpkg рядом с exe не нужны.
+
 ```bash
 # Установка vcpkg (если не установлен)
 git clone https://github.com/Microsoft/vcpkg.git
 cd vcpkg
 ./bootstrap-vcpkg.bat
 
-# Установка зависимостей
-vcpkg install glfw3:x64-windows
-vcpkg install glm:x64-windows
-vcpkg install glew:x64-windows
+# Зависимости подтягиваются из vcpkg.json при configure (x64-windows-static)
+# Либо вручную:
+vcpkg install glfw3 glew glm freetype nlohmann-json --triplet x64-windows-static
 
 # Интеграция с CMake
 vcpkg integrate install
+```
+
+После смены triplet удалите `build/desktop-msvc/` или запустите `.\configure.ps1 -Fresh` и пересоберите.
+
+Перед установщиком проверьте static exe:
+
+```powershell
+.\scripts\build\verify-windows-exe.ps1
+.\scripts\doctor-windows.ps1
 ```
 
 ### Вариант 2: Ручная установка
@@ -148,18 +160,19 @@ int main() {
 
 ## Сборка проекта
 
+Desktop: CMake build tree в `build/desktop-*`, запуск из `bin/`. Подробнее: [platforms/desktop/README.md](platforms/desktop/README.md).
+
 ```bash
-# Создание директории сборки
-mkdir build
-cd build
+# Linux
+./scripts/build/linux-configure.sh Release
+cmake --build build/desktop-linux
+./bin/Cubatarium
+```
 
-# Конфигурация CMake
-cmake ..
-
-# Сборка
-make -j$(nproc)  # Linux/macOS
-# или
-cmake --build . --config Release  # Windows
+```powershell
+# Windows
+.\configure.ps1 -Config Release
+cmake --build build\desktop-msvc --config Release
 ```
 
 ## Устранение проблем

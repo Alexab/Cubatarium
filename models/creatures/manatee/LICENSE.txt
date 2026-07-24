@@ -1,0 +1,4 @@
+Source file: texturemanatee.png
+Upstream: animalworld/textures/texturemanatee.png
+License: MIT
+Attribution: animalworld — Skandarella

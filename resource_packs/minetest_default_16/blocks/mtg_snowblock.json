@@ -1,0 +1,16 @@
+{
+  "name": "mtg_snowblock",
+  "id": 501,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_snowblock_default_snow",
+    "mtg_snowblock_default_snow",
+    "mtg_snowblock_default_snow",
+    "mtg_snowblock_default_snow",
+    "mtg_snowblock_default_snow",
+    "mtg_snowblock_default_snow"
+  ],
+  "render": {}
+}

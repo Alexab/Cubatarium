@@ -1,0 +1,109 @@
+{
+  "id": "hermitcrab",
+  "display_name": "Hermit Crab",
+  "catalog": {
+    "tags": [
+      "mobs",
+      "passive"
+    ],
+    "spawnable": true,
+    "sort_order": 77
+  },
+  "role": "mob",
+  "bounds": {
+    "rest": [
+      0.5,
+      0.35,
+      0.5
+    ],
+    "max": [
+      0.5,
+      0.35,
+      0.5
+    ],
+    "min": [
+      0.5,
+      0.35,
+      0.5
+    ]
+  },
+  "eye_height": 0.2,
+  "habitat": "aquatic",
+  "locomotion_archetype": "aquatic",
+  "locomotion": {
+    "can_fly": true,
+    "can_crouch": false,
+    "can_jump": false,
+    "jump_height": 1.0,
+    "walk_speed": 1.5
+  },
+  "behavior": "wander",
+  "behavior_params": {
+    "move_speed": 1.5,
+    "wander_interval_min": 2.0,
+    "wander_interval_max": 4.0
+  },
+  "visual": {
+    "backend": "gltf_skeleton",
+    "texture_layout": "rigid_crop",
+    "default_texture": "body",
+    "icon": {
+      "mode": "species_texture",
+      "color": [
+        0.7058823529411765,
+        0.39215686274509803,
+        0.27450980392156865,
+        1.0
+      ]
+    },
+    "gltf": {
+      "model": "model.gltf",
+      "textures": [
+        "body",
+        "face",
+        "leg"
+      ],
+      "model_scale": 1.0,
+      "model_yaw_offset_deg": 0
+    },
+    "animation": {
+      "walk_cycle_hz": 2.0,
+      "clips": {
+        "idle": {
+          "start": 0,
+          "end": 100,
+          "loop": true,
+          "speed": 3.3333333333333335
+        },
+        "walk": {
+          "start": 200,
+          "end": 300,
+          "loop": true,
+          "speed": 3.3333333333333335
+        },
+        "die": {
+          "start": 200,
+          "end": 300,
+          "loop": false,
+          "speed": 3.3333333333333335
+        }
+      },
+      "state_map": {
+        "Idle": "idle",
+        "Walk": "walk",
+        "Run": "walk",
+        "Jump": "walk",
+        "Fall": "idle",
+        "Crouch": "idle",
+        "Slither": "walk",
+        "Coil": "idle",
+        "Action": "walk",
+        "Hover": "idle",
+        "Glide": "idle",
+        "Swim": "walk",
+        "Tread": "idle",
+        "Fly": "idle"
+      }
+    }
+  }
+}

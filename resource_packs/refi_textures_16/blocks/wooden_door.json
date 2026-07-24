@@ -1,0 +1,16 @@
+{
+  "name": "wooden_door",
+  "id": 836,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "doorWood_lower",
+    "doorWood_lower",
+    "doorWood_lower",
+    "doorWood_lower",
+    "doorWood_lower",
+    "doorWood_lower"
+  ],
+  "render": {}
+}

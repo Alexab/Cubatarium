@@ -1,44 +1,46 @@
 #ifndef MAIN_MENU_SCREEN_H
 #define MAIN_MENU_SCREEN_H
 
-#include "Gui/GuiScreenBase.h"
+#include "Gui/Core/GuiScreenBase.h"
 #include <memory>
 #include <vector>
 
-namespace cutum {
+namespace cutum
+{
 
-class IGuiGameActions;
-class GuiButton;
-class GuiLabel;
-class GuiPanel;
+class IUGuiGameActions;
+class UGuiButton;
+class UGuiLabel;
+class UGuiPanel;
 struct GuiTheme;
 
-class MainMenuScreen : public GuiScreenBase {
+class UMainMenuScreen : public UGuiScreenBase
+{
 public:
-    explicit MainMenuScreen(IGuiGameActions* actions);
+  explicit UMainMenuScreen(IUGuiGameActions *actions);
 
-    void Build(GuiContext& ctx) override;
-    void OnViewportChanged(int width, int height) override;
-    bool BlocksGameInput() const override { return true; }
+  void Build(UGuiContext &ctx) override;
+  void OnViewportChanged(int width, int height) override;
+  bool BlocksGameInput() const override { return true; }
 
-    bool IsQuitConfirmationVisible() const { return quitDialogVisible_; }
-    void ShowQuitConfirmation(bool visible);
+  bool IsQuitConfirmationVisible() const { return QuitDialogVisible; }
+  void ShowQuitConfirmation(bool visible);
 
 private:
-    void Relayout();
-    void RelayoutQuitDialog();
+  void Relayout();
+  void RelayoutQuitDialog();
 
-    IGuiGameActions* actions_{nullptr};
-    GuiLabel* title_{nullptr};
-    GuiLabel* versionLabel_{nullptr};
-    std::vector<GuiButton*> buttons_;
+  IUGuiGameActions *Actions{nullptr};
+  UGuiLabel *Title{nullptr};
+  UGuiLabel *VersionLabel{nullptr};
+  std::vector<UGuiButton *> Buttons;
 
-    GuiPanel* quitBackdrop_{nullptr};
-    GuiPanel* quitDialog_{nullptr};
-    GuiLabel* quitMessage_{nullptr};
-    GuiButton* quitYesButton_{nullptr};
-    GuiButton* quitNoButton_{nullptr};
-    bool quitDialogVisible_{false};
+  UGuiPanel *QuitBackdrop{nullptr};
+  UGuiPanel *QuitDialog{nullptr};
+  UGuiLabel *QuitMessage{nullptr};
+  UGuiButton *QuitYesButton{nullptr};
+  UGuiButton *QuitNoButton{nullptr};
+  bool QuitDialogVisible{false};
 };
 
 } // namespace cutum

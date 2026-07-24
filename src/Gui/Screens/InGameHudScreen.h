@@ -1,46 +1,76 @@
 #ifndef IN_GAME_HUD_SCREEN_H
 #define IN_GAME_HUD_SCREEN_H
 
-#include "Gui/GuiScreenBase.h"
+#include "Game/Inventory/SlotInteraction.h"
+#include "Gui/Core/GuiScreenBase.h"
 #include <memory>
 #include <vector>
+#if defined(__ANDROID__)
+#include <functional>
+#endif
 
-namespace cutum {
+namespace cutum
+{
 
-class IHotbarViewModel;
-class IGuiIconSource;
-class GuiSlot;
-class GuiPanel;
-class GuiLabel;
+class UGameSession;
+class IUGuiIconSource;
+class UGuiSlot;
+class UGuiPanel;
+class UGuiLabel;
+class UGuiRenderer;
 struct GuiTheme;
+class UGuiContext;
 
-class InGameHudScreen : public GuiScreenBase {
+class UInGameHudScreen : public UGuiScreenBase
+{
 public:
-    InGameHudScreen(IHotbarViewModel* hotbar, const GuiTheme* theme, IGuiIconSource* icons);
+  UInGameHudScreen(UGameSession *session, const GuiTheme *theme,
+                   IUGuiIconSource *icons);
+  ~UInGameHudScreen();
 
-    void Update(double dt) override;
-    void Build(GuiContext& ctx) override;
-    void OnViewportChanged(int width, int height) override;
-    void SetPointerPosition(int x, int y);
-    /// Обновить текстуры слотов; вызывать после отрисовки мира (FBO-иконки prefab).
-    void SyncSlotIcons();
+  bool PickSlot(int x, int y, SlotAddress &out);
+
+  void Update(double dt) override;
+  void Build(UGuiContext &ctx) override;
+  void OnViewportChanged(int width, int height) override;
+  void SetPointerPosition(int x, int y);
+#if defined(__ANDROID__)
+  void ConfigureTouchControls(class UTouchInputBridge *bridge,
+                              std::function<void()> onMenu,
+                              std::function<void()> onInventory,
+                              std::function<void()> onConsole,
+                              std::function<void()> onJumpPress);
+  bool RouteTouchMove(int PointerId, int x, int y);
+  void ReleaseJoystickCapture();
+  void ReleaseJoystickCaptureForPointer(int pointer_id);
+  void ReleaseTouchCaptures();
+  bool HitTestTouchControls(int x, int y) const;
+  void RenderTouchControlsOverlay(class UGuiContext &ctx, int width, int height);
+#endif
+  /// Обновить текстуры слотов; вызывать после отрисовки мира (FBO-иконки
+  /// prefab).
+  void SyncSlotIcons();
 
 private:
-    void EnsureHotbarWidgets();
-    void LayoutHotbar();
-    void UpdateSlotData();
-    void UpdateTooltips();
+  void EnsureHotbarWidgets();
+  void LayoutHotbar();
+  void UpdateSlotData();
+  void UpdateTooltips();
 
-    IHotbarViewModel* hotbar_{nullptr};
-    IGuiIconSource* icons_{nullptr};
-    const GuiTheme* theme_;
-    GuiPanel* rootPanel_{nullptr};
-    std::vector<GuiSlot*> primarySlots_;
-    std::vector<GuiSlot*> secondarySlots_;
-    GuiLabel* tooltip_{nullptr};
-    int pointerX_{-1};
-    int pointerY_{-1};
-    bool hotbarBuilt_{false};
+  UGameSession *Session{nullptr};
+  IUGuiIconSource *Icons{nullptr};
+  const GuiTheme *Theme;
+  UGuiPanel *RootPanel{nullptr};
+  std::vector<UGuiSlot *> PrimarySlots;
+  std::vector<UGuiSlot *> SecondarySlots;
+  UGuiLabel *Tooltip{nullptr};
+  UGuiRenderer *Renderer{nullptr};
+  int PointerX{-1};
+  int PointerY{-1};
+  bool HotbarBuilt{false};
+#if defined(__ANDROID__)
+  std::unique_ptr<class UGuiTouchControls> TouchControls;
+#endif
 };
 
 } // namespace cutum

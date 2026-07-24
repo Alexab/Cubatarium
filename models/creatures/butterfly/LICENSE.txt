@@ -1,0 +1,4 @@
+Source file: dmobs_butterfly1.png
+Upstream: dmobs/textures/dmobs_butterfly1.png
+License: CC BY-SA 3.0
+Attribution: dmobs — D00Med

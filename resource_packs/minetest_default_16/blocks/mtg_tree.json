@@ -1,0 +1,16 @@
+{
+  "name": "mtg_tree",
+  "id": 514,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_tree_default_tree",
+    "mtg_tree_default_tree",
+    "mtg_tree_default_tree",
+    "mtg_tree_default_tree",
+    "mtg_tree_default_tree_top",
+    "mtg_tree_default_tree_top"
+  ],
+  "render": {}
+}

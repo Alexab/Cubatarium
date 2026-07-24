@@ -1,0 +1,17 @@
+{
+  "name": "wool_8",
+  "id": 729,
+  "types": [
+    "decorative"
+  ],
+  "textures": [
+    "cloth_8",
+    "cloth_8",
+    "cloth_8",
+    "cloth_8",
+    "cloth_8",
+    "cloth_8"
+  ],
+  "displayName": "Light Gray Wool",
+  "render": {}
+}

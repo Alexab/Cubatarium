@@ -1,0 +1,160 @@
+plugins {
+    id 'com.android.application'
+}
+
+configurations.configureEach {
+    exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk7"
+    exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk8"
+}
+
+def repoRoot = file("../../..").absolutePath
+apply from: "../version.gradle"
+def appVersion = resolveCubatariumVersion(file("../../.."))
+def appVersionCode = resolveCubatariumVersionCode(file("../../.."))
+
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def hasReleaseKeystore = keystorePropertiesFile.exists()
+
+android {
+    namespace 'com.cubatarium'
+    compileSdk 35
+    ndkVersion "30.0.14904198"
+
+    defaultConfig {
+        applicationId "com.cubatarium"
+        minSdk 24
+        targetSdk 35
+        versionCode appVersionCode
+        versionName appVersion
+        externalNativeBuild {
+            cmake {
+                cppFlags "-std=c++17 -frtti -fexceptions"
+                arguments "-DANDROID_STL=c++_shared"
+                abiFilters "armeabi-v7a", "arm64-v8a"
+            }
+        }
+    }
+
+    signingConfigs {
+        release {
+            if (hasReleaseKeystore) {
+                def props = new Properties()
+                keystorePropertiesFile.withInputStream { props.load(it) }
+                def keystoreProp = { String key ->
+                    def value = props.getProperty(key)
+                    if (value == null) {
+                        throw new GradleException("keystore.properties missing '${key}'")
+                    }
+                    return value.trim()
+                }
+                storeFile rootProject.file(keystoreProp('storeFile'))
+                storePassword keystoreProp('storePassword')
+                keyAlias keystoreProp('keyAlias')
+                keyPassword keystoreProp('keyPassword')
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            externalNativeBuild {
+                cmake {
+                    abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"
+                }
+            }
+            debuggable true
+            jniDebuggable true
+            ndk {
+                debugSymbolLevel 'FULL'
+                abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"
+            }
+        }
+        release {
+            minifyEnabled false
+            debuggable false
+            jniDebuggable false
+            if (hasReleaseKeystore) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        prefab true
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "${repoRoot}/CMakeLists.txt"
+            version "3.22.1"
+        }
+    }
+
+    packagingOptions {
+        jniLibs {
+            keepDebugSymbols += "**/*.so"
+        }
+    }
+
+    sourceSets {
+        main {
+            assets.srcDir "src/main/assets"
+        }
+    }
+}
+
+tasks.register("syncAssets", Copy) {
+    from("${repoRoot}/textures") { into "textures" }
+    from("${repoRoot}/models") { into "models" }
+    from("${repoRoot}/objects") { into "objects" }
+    from("${repoRoot}/content") { into "content" }
+    from("${repoRoot}/resource_packs") {
+        into "resource_packs"
+        exclude "minecraft_legacy_16/**"
+    }
+    from("${repoRoot}/shaders/gles") { into "shaders/gles" }
+    from("${repoRoot}/fonts") { into "fonts" }
+    from("${repoRoot}/config.json.example") { into "." }
+    into("${projectDir}/src/main/assets")
+}
+
+preBuild.dependsOn syncAssets
+
+dependencies {
+    implementation "androidx.games:games-activity:3.0.5"
+    implementation "androidx.appcompat:appcompat:1.7.0"
+    implementation "androidx.core:core:1.15.0"
+}
+
+android.applicationVariants.configureEach { variant ->
+    variant.outputs.configureEach { output ->
+        output.outputFileName = "cubatarium-${variant.versionName}.apk"
+    }
+}
+
+tasks.register("printVersionCode") {
+    doLast {
+        println android.defaultConfig.versionCode.get()
+    }
+}
+
+tasks.configureEach { task ->
+    if (task.name == "bundleRelease") {
+        task.doLast {
+            def bundleDir = file("${buildDir}/outputs/bundle/release")
+            def defaultBundle = new File(bundleDir, "app-release.aab")
+            if (defaultBundle.exists()) {
+                def renamed = new File(bundleDir, "cubatarium-${appVersion}.aab")
+                if (renamed.exists()) {
+                    renamed.delete()
+                }
+                defaultBundle.renameTo(renamed)
+            }
+        }
+    }
+}

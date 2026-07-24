@@ -1,0 +1,149 @@
+{
+  "fetched_at": "2026-06-20T11:39:28.273301+00:00",
+  "files": {
+    "mtg/acacia_bush.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/acacia_log.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/acacia_tree.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/acacia_tree_from_sapling.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/apple_log.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/apple_tree.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/apple_tree_from_sapling.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/aspen_log.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/aspen_tree.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/aspen_tree_from_sapling.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/blueberry_bush.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/bush.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/emergent_jungle_tree.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/emergent_jungle_tree_from_sapling.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/jungle_log.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/jungle_tree.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/jungle_tree_from_sapling.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/large_cactus.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/papyrus_on_dirt.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/papyrus_on_dry_dirt.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/pine_bush.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/pine_log.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/pine_tree.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/pine_tree_from_sapling.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/small_pine_tree.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/small_pine_tree_from_sapling.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/snowy_pine_tree_from_sapling.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "mtg/snowy_small_pine_tree_from_sapling.mts": {
+      "license": "CC-BY-SA-3.0",
+      "upstream": "minetest-game/default"
+    },
+    "ruined_structures/desert.mts": {
+      "license": "CC-BY-SA-4.0",
+      "upstream": "X-DE1/ruined_structures"
+    },
+    "ruined_structures/egypt.mts": {
+      "license": "CC-BY-SA-4.0",
+      "upstream": "X-DE1/ruined_structures"
+    },
+    "ruined_structures/egypt2.mts": {
+      "license": "CC-BY-SA-4.0",
+      "upstream": "X-DE1/ruined_structures"
+    },
+    "ruined_structures/ruined_house.mts": {
+      "license": "CC-BY-SA-4.0",
+      "upstream": "X-DE1/ruined_structures"
+    },
+    "ruined_structures/ruined_house2.mts": {
+      "license": "CC-BY-SA-4.0",
+      "upstream": "X-DE1/ruined_structures"
+    },
+    "ruined_structures/sandstone.mts": {
+      "license": "CC-BY-SA-4.0",
+      "upstream": "X-DE1/ruined_structures"
+    },
+    "ruined_structures/stonehenge.mts": {
+      "license": "CC-BY-SA-4.0",
+      "upstream": "X-DE1/ruined_structures"
+    },
+    "ruined_structures/temple.mts": {
+      "license": "CC-BY-SA-4.0",
+      "upstream": "X-DE1/ruined_structures"
+    }
+  }
+}

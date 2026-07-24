@@ -1,0 +1,17 @@
+{
+  "name": "blockRedstone",
+  "id": 116,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "blockRedstone",
+    "blockRedstone",
+    "blockRedstone",
+    "blockRedstone",
+    "blockRedstone",
+    "blockRedstone"
+  ],
+  "displayName": "Redstone Block",
+  "render": {}
+}

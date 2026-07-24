@@ -1,66 +1,87 @@
-#include "GuiCheckbox.h"
-#include "Gui/GuiFocus.h"
-#include "Gui/GuiRenderer.h"
-#include "Gui/GuiTheme.h"
+#include "Gui/Widgets/GuiCheckbox.h"
+#include "Gui/Core/GuiFocus.h"
+#include "Gui/Core/GuiRenderer.h"
+#include "Gui/Core/GuiTheme.h"
 
-namespace cutum {
+namespace cutum
+{
 
-GuiCheckbox::GuiCheckbox(const GuiTheme* theme, std::string label)
-    : theme_(theme)
-    , label_(std::move(label))
+UGuiCheckbox::UGuiCheckbox(const GuiTheme *theme, std::string label)
+    : Theme(theme), Label(std::move(label))
 {
 }
 
-int GuiCheckbox::GetPreferredHeight() const
+int UGuiCheckbox::GetPreferredHeight() const
 {
-    return theme_ ? theme_->fontSizeBody + theme_->padding : 24;
+  return Theme ? Theme->FontSizeBody + Theme->Padding : 24;
 }
 
-bool GuiCheckbox::CanFocus() const
+bool UGuiCheckbox::CanFocus() const { return Enabled && Visible; }
+
+bool UGuiCheckbox::Activate()
 {
-    return enabled_ && visible_;
+  if (!CanFocus())
+  {
+    return false;
+  }
+  Checked = !Checked;
+  if (OnChanged)
+  {
+    OnChanged(Checked);
+  }
+  return true;
 }
 
-bool GuiCheckbox::Activate()
+void UGuiCheckbox::Draw(UGuiRenderer &renderer)
 {
-    if (!CanFocus()) {
-        return false;
-    }
-    checked_ = !checked_;
-    if (onChanged_) {
-        onChanged_(checked_);
-    }
-    return true;
+  if (!Visible || !Theme)
+  {
+    return;
+  }
+  const int box = Theme->FontSizeBody;
+  GuiRect boxRect{Bounds.X, Bounds.Y + (Bounds.H - box) / 2, box, box};
+  renderer.DrawFilledRect(boxRect,
+                          Checked ? Theme->ButtonHover : Theme->ButtonNormal);
+  renderer.DrawBorderRect(boxRect, Theme->PanelBorder, Theme->BorderThickness);
+  if (Checked)
+  {
+    renderer.DrawTextCenteredInRect(boxRect, "x", Theme->TextPrimary);
+  }
+  renderer.DrawText(Label, Bounds.X + box + Theme->Padding,
+                    Bounds.Y + Theme->Padding / 2, Theme->TextPrimary);
+  if (HasFocusHighlight())
+  {
+    DrawWidgetFocusRing(renderer, *Theme, Bounds);
+  }
 }
 
-void GuiCheckbox::Draw(GuiRenderer& renderer)
+bool UGuiCheckbox::OnMouseDown(const GuiMouseEvent &event)
 {
-    if (!visible_ || !theme_) {
-        return;
-    }
-    const int box = theme_->fontSizeBody;
-    GuiRect boxRect{bounds_.x, bounds_.y + (bounds_.h - box) / 2, box, box};
-    renderer.DrawFilledRect(boxRect, checked_ ? theme_->buttonHover : theme_->buttonNormal);
-    renderer.DrawBorderRect(boxRect, theme_->panelBorder, theme_->borderThickness);
-    if (checked_) {
-        renderer.DrawTextCenteredInRect(boxRect, "x", theme_->textPrimary);
-    }
-    renderer.DrawText(label_, bounds_.x + box + theme_->padding, bounds_.y + theme_->padding / 2,
-                      theme_->textPrimary);
-    if (HasFocusHighlight()) {
-        DrawWidgetFocusRing(renderer, *theme_, bounds_);
-    }
+  if (!Enabled || !Visible || !Bounds.Contains(event.X, event.Y))
+  {
+    return false;
+  }
+  if (event.Button != GuiMouseButton::Left)
+  {
+    return false;
+  }
+  return Activate();
 }
 
-bool GuiCheckbox::OnMouseDown(const GuiMouseEvent& event)
+bool UGuiCheckbox::OnMouseMove(const GuiMouseEvent &event)
 {
-    if (!enabled_ || !visible_ || !bounds_.Contains(event.x, event.y)) {
-        return false;
-    }
-    if (event.button != GuiMouseButton::Left) {
-        return false;
-    }
-    return Activate();
+  if (!Visible || Description.empty() || !OnDescriptionHover)
+  {
+    return false;
+  }
+  const bool inside = Bounds.Contains(event.X, event.Y);
+  if (inside == Hovered)
+  {
+    return inside;
+  }
+  Hovered = inside;
+  OnDescriptionHover(inside ? Description : std::string{});
+  return inside;
 }
 
 } // namespace cutum

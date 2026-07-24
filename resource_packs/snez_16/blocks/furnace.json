@@ -1,0 +1,16 @@
+{
+  "name": "furnace",
+  "id": 902,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "furnace_front",
+    "furnace_side",
+    "furnace_side",
+    "furnace_side",
+    "furnace_top",
+    "furnace_top"
+  ],
+  "render": {}
+}

@@ -1,0 +1,16 @@
+{
+  "name": "potatoes",
+  "id": 533,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "potatoes_3",
+    "potatoes_3",
+    "potatoes_3",
+    "potatoes_3",
+    "potatoes_3",
+    "potatoes_3"
+  ],
+  "render": {}
+}

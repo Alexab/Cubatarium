@@ -1,0 +1,16 @@
+{
+  "name": "mtg_junglesapling",
+  "id": 462,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_junglesapling_default_junglesapling",
+    "mtg_junglesapling_default_junglesapling",
+    "mtg_junglesapling_default_junglesapling",
+    "mtg_junglesapling_default_junglesapling",
+    "mtg_junglesapling_default_junglesapling",
+    "mtg_junglesapling_default_junglesapling"
+  ],
+  "render": {}
+}

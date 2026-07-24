@@ -1,0 +1,16 @@
+{
+  "name": "brick",
+  "id": 614,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "brick",
+    "brick",
+    "brick",
+    "brick",
+    "brick",
+    "brick"
+  ],
+  "render": {}
+}

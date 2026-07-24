@@ -1,0 +1,16 @@
+{
+  "name": "redstone_dust_line",
+  "id": 798,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "redstoneDust_line",
+    "redstoneDust_line",
+    "redstoneDust_line",
+    "redstoneDust_line",
+    "redstoneDust_line",
+    "redstoneDust_line"
+  ],
+  "render": {}
+}

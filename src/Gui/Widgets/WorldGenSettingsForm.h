@@ -1,60 +1,133 @@
 #pragma once
 
-#include "ProceduralSettings.h"
-#include "Gui/GuiTypes.h"
+#include "Gui/Core/GuiTypes.h"
 #include "Gui/Layout/GuiLayout.h"
+#include "WorldGen/Core/ProceduralSettings.h"
+#include "WorldGen/Core/WorldGenPack.h"
+#include <functional>
 #include <memory>
 #include <vector>
 
-namespace cutum {
+namespace cutum
+{
 
 struct GuiTheme;
-class GuiPanel;
-class GuiLabel;
-class GuiTextInput;
-class GuiButton;
-class GuiCheckbox;
+class UGuiPanel;
+class UGuiLabel;
+class UGuiTextInput;
+class UGuiCheckbox;
+class UGuiListView;
 
-class WorldGenSettingsForm {
+class UWorldGenSettingsForm
+{
 public:
-    explicit WorldGenSettingsForm(const GuiTheme* theme);
+  explicit UWorldGenSettingsForm(const GuiTheme *theme);
 
-    void SetSettings(const ProceduralSettings& settings);
-    ProceduralSettings ReadSettings() const;
+  void SetSettings(const ProceduralSettings &settings);
+  void SetHintText(const std::string &text);
+  void SetForNewWorldDefaults();
+  void SetOnLayoutChanged(std::function<void()> handler);
+  ProceduralSettings ReadSettings() const;
 
-    void BuildInto(GuiPanel& panel);
-    int MeasureGridHeight(const GuiRect& area, const GuiGridSpec& spec) const;
-    void LayoutGrid(const GuiRect& area, const GuiGridSpec& spec) const;
+  void BuildInto(UGuiPanel &panel);
+  int MeasureGridHeight(const GuiRect &area, const GuiGridSpec &spec) const;
+  void LayoutGrid(const GuiRect &area, const GuiGridSpec &spec) const;
 
 private:
-    void AddWidgetsTo(GuiPanel& panel);
-    void CycleGenerator();
-    void CycleVertical();
+  void AddWidgetsTo(UGuiPanel &panel);
+  void OnGeneratorSelected(int index);
+  void OnTerrainBackendSelected(int index);
+  void OnWorldGenPackSelected(int index);
+  void RefreshGeneratorDescription();
+  void RefreshWorldGenPackDescription();
+  void UpdateFieldVisibility();
 
-    const GuiTheme* theme_;
-    ProceduralSettings settings_;
-    bool built_{false};
+  const GuiTheme *Theme;
+  ProceduralSettings FormSettings;
+  bool Built{false};
+  bool ForNewWorldScreen{false};
+  std::function<void()> OnLayoutChanged;
 
-    GuiLabel* hintLabel_{nullptr};
-    GuiLabel* generatorLabel_{nullptr};
-    GuiLabel* verticalLabel_{nullptr};
-    GuiLabel* seedLabel_{nullptr};
-    GuiLabel* seaLevelLabel_{nullptr};
-    GuiLabel* maxHeightLabel_{nullptr};
-    GuiLabel* flatYLabel_{nullptr};
-    GuiButton* generatorBtn_{nullptr};
-    GuiButton* verticalBtn_{nullptr};
-    GuiTextInput* seedInput_{nullptr};
-    GuiTextInput* seaLevelInput_{nullptr};
-    GuiTextInput* maxHeightInput_{nullptr};
-    GuiTextInput* flatYInput_{nullptr};
-    GuiCheckbox* cavesBox_{nullptr};
-    GuiCheckbox* treesBox_{nullptr};
-    GuiCheckbox* waterBox_{nullptr};
-    GuiCheckbox* lavaBox_{nullptr};
-    GuiCheckbox* fireBox_{nullptr};
+  UGuiLabel *HintLabel{nullptr};
+  UGuiLabel *GeneratorCaption{nullptr};
+  UGuiLabel *GeneratorDescLabel{nullptr};
+  UGuiLabel *PresetLabel{nullptr};
+  UGuiListView *GeneratorList{nullptr};
+  UGuiListView *PresetList{nullptr};
+  UGuiLabel *WorldGenPackIdLabel{nullptr};
+  UGuiLabel *WorldGenPackDescLabel{nullptr};
+  UGuiListView *WorldGenPackList{nullptr};
+  std::vector<WorldGenPackInfo> PackInfos;
+  UGuiLabel *SeedLabel{nullptr};
+  UGuiLabel *SeaLevelLabel{nullptr};
+  UGuiLabel *MaxHeightLabel{nullptr};
+  UGuiLabel *FlatYLabel{nullptr};
+  UGuiLabel *VegetationDensityLabel{nullptr};
+  UGuiLabel *DecorationDensityLabel{nullptr};
+  UGuiLabel *StructureDensityLabel{nullptr};
+  UGuiLabel *TerrainRoughnessLabel{nullptr};
+  UGuiLabel *TerrainBackendLabel{nullptr};
+  UGuiListView *TerrainBackendList{nullptr};
+  UGuiLabel *BiomeForestLabel{nullptr};
+  UGuiLabel *BiomeDesertLabel{nullptr};
+  UGuiLabel *BiomePlainsLabel{nullptr};
+  UGuiLabel *BiomeHillsLabel{nullptr};
+  UGuiLabel *BiomeTundraLabel{nullptr};
+  UGuiLabel *BiomeBlendLabel{nullptr};
+  UGuiLabel *OreDensityLabel{nullptr};
+  UGuiLabel *TerrainErosionLabel{nullptr};
+  UGuiLabel *CaveThresholdLabel{nullptr};
+  UGuiLabel *CaveMinYLabel{nullptr};
+  UGuiLabel *CaveScaleLabel{nullptr};
+  UGuiLabel *CaveMaxDepthLabel{nullptr};
+  UGuiLabel *CaveStyleLabel{nullptr};
+  UGuiLabel *RavineRarityLabel{nullptr};
+  UGuiLabel *RavineAquaticMaxDepthLabel{nullptr};
+  UGuiLabel *BedrockTopYLabel{nullptr};
+  UGuiTextInput *SeedInput{nullptr};
+  UGuiTextInput *SeaLevelInput{nullptr};
+  UGuiTextInput *MaxHeightInput{nullptr};
+  UGuiTextInput *BedrockTopYInput{nullptr};
+  UGuiTextInput *FlatYInput{nullptr};
+  UGuiTextInput *VegetationDensityInput{nullptr};
+  UGuiTextInput *DecorationDensityInput{nullptr};
+  UGuiTextInput *StructureDensityInput{nullptr};
+  UGuiTextInput *TerrainRoughnessInput{nullptr};
+  UGuiTextInput *BiomeForestInput{nullptr};
+  UGuiTextInput *BiomeDesertInput{nullptr};
+  UGuiTextInput *BiomePlainsInput{nullptr};
+  UGuiTextInput *BiomeHillsInput{nullptr};
+  UGuiTextInput *BiomeTundraInput{nullptr};
+  UGuiTextInput *BiomeBlendInput{nullptr};
+  UGuiTextInput *OreDensityInput{nullptr};
+  UGuiTextInput *TerrainErosionInput{nullptr};
+  UGuiTextInput *CaveThresholdInput{nullptr};
+  UGuiTextInput *CaveMinYInput{nullptr};
+  UGuiTextInput *CaveScaleInput{nullptr};
+  UGuiTextInput *CaveMaxDepthInput{nullptr};
+  UGuiTextInput *CaveStyleInput{nullptr};
+  UGuiTextInput *RavineRarityInput{nullptr};
+  UGuiTextInput *RavineAquaticMaxDepthInput{nullptr};
+  UGuiCheckbox *CavesBox{nullptr};
+  UGuiCheckbox *RavinesBox{nullptr};
+  UGuiCheckbox *RavineFillWaterBox{nullptr};
+  UGuiCheckbox *OresBox{nullptr};
+  UGuiCheckbox *TreesBox{nullptr};
+  UGuiCheckbox *GroundCoverBox{nullptr};
+  UGuiCheckbox *DecorationBox{nullptr};
+  UGuiCheckbox *StructuresBox{nullptr};
+  UGuiCheckbox *WaterBox{nullptr};
+  UGuiCheckbox *LavaBox{nullptr};
+  UGuiCheckbox *FireBox{nullptr};
+  UGuiLabel *TerrainQualityLabel{nullptr};
+  UGuiCheckbox *UnifiedHeightFieldBox{nullptr};
+  UGuiCheckbox *AnalyticValleysBox{nullptr};
+  UGuiCheckbox *MudflowErosionBox{nullptr};
+  UGuiCheckbox *DensityRefineParityBox{nullptr};
+  UGuiLabel *TerrainQualityHintLabel{nullptr};
 
-    std::vector<GuiGridItem> BuildGridItems() const;
+  std::vector<GuiGridItem> BuildGridItems() const;
+  void WireTerrainQualityHint(UGuiCheckbox &box, const char *description);
 };
 
 } // namespace cutum

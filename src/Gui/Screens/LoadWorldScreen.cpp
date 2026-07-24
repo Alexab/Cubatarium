@@ -1,10 +1,10 @@
-#include "LoadWorldScreen.h"
+#include "Gui/Screens/LoadWorldScreen.h"
 
-#include "Gui/GuiContext.h"
+#include "Gui/Core/GuiContext.h"
 
-#include "Gui/GuiRenderer.h"
+#include "Gui/Core/GuiRenderer.h"
 
-#include "Gui/Interfaces/IGuiMenuHost.h"
+#include "Gui/Interfaces/IUGuiMenuHost.h"
 
 #include "Gui/Widgets/GuiButton.h"
 
@@ -19,217 +19,248 @@
 #include "Gui/Widgets/GuiWindow.h"
 
 #include <algorithm>
+#include <sstream>
 
-
-
-namespace cutum {
-
-
-
-LoadWorldScreen::LoadWorldScreen(IGuiMenuHost* host)
-
-    : host_(host)
-
+namespace cutum
 {
 
+namespace
+{
+
+std::string FormatPackList(const std::vector<std::string> &packs)
+{
+  if (packs.empty())
+  {
+    return "Resource packs: (defaults)";
+  }
+  std::ostringstream oss;
+  oss << "Resource packs: ";
+  for (size_t i = 0; i < packs.size(); ++i)
+  {
+    if (i > 0)
+    {
+      oss << ", ";
+    }
+    oss << packs[i];
+  }
+  return oss.str();
 }
 
-
-
-void LoadWorldScreen::OnLoad()
-
+void UpdatePackSubtitle(IUGuiMenuHost *host, UGuiLabel *label, int index)
 {
-
-    if (!host_ || !list_) {
-
-        return;
-
-    }
-
-    const int idx = list_->GetSelectedIndex();
-
-    if (idx < 0) {
-
-        return;
-
-    }
-
-    const auto& names = host_->GetWorldNames();
-
-    if (idx >= static_cast<int>(names.size())) {
-
-        return;
-
-    }
-
-    const std::string worldName = names[static_cast<size_t>(idx)];
-
-    host_->SaveIfNeededAndProceed(
-        [this, worldName]() { host_->LoadSelectedWorld(worldName); });
-
+  if (!host || !label || index < 0)
+  {
+    return;
+  }
+  const auto &names = host->GetWorldNames();
+  if (index >= static_cast<int>(names.size()))
+  {
+    return;
+  }
+  label->SetText(FormatPackList(host->PeekWorldResourcePacks(names[index])));
 }
 
+} // namespace
 
+ULoadWorldScreen::ULoadWorldScreen(IUGuiMenuHost *host)
 
-void LoadWorldScreen::Build(GuiContext& ctx)
+    : Host(host)
+
+{
+}
+
+void ULoadWorldScreen::OnLoad()
 
 {
 
-    int w = ctx.GetRenderer().GetWindowWidth();
+  if (!Host || !List)
+  {
 
-    int h = ctx.GetRenderer().GetWindowHeight();
+    return;
+  }
 
-    if (w > 0 && h > 0) {
+  const int idx = List->GetSelectedIndex();
 
-        viewportW_ = w;
+  if (idx < 0)
+  {
 
-        viewportH_ = h;
+    return;
+  }
 
-    }
+  const auto &names = Host->GetWorldNames();
 
+  if (idx >= static_cast<int>(names.size()))
+  {
 
+    return;
+  }
 
-    if (host_) {
+  const std::string worldName = names[static_cast<size_t>(idx)];
 
-        host_->RefreshWorldList();
+  Host->SaveIfNeededAndProceed([this, worldName]()
+                               { Host->LoadSelectedWorld(worldName); });
+}
 
-    }
+void ULoadWorldScreen::Build(UGuiContext &ctx)
 
+{
 
+  int w = ctx.GetRenderer().GetWindowWidth();
 
-    const GuiTheme& theme = ctx.GetTheme();
+  int h = ctx.GetRenderer().GetWindowHeight();
 
-    const auto& worlds = host_ ? host_->GetWorldNames() : std::vector<std::string>{};
+  if (w > 0 && h > 0)
+  {
 
+    ViewportW = w;
 
+    ViewportH = h;
+  }
 
-    auto backdrop = std::make_unique<GuiPanel>(&theme);
+  if (Host)
+  {
 
-    backdrop->SetBounds({0, 0, viewportW_, viewportH_});
+    Host->RefreshWorldList();
+  }
 
+  const GuiTheme &theme = ctx.GetTheme();
 
+  const auto &worlds =
+      Host ? Host->GetWorldNames() : std::vector<std::string>{};
 
-    const int winW = std::min(480, viewportW_ - 40);
+  auto backdrop = std::make_unique<UGuiPanel>(&theme);
 
-    const int winH = std::min(400, viewportH_ - 40);
+  backdrop->SetBounds({0, 0, ViewportW, ViewportH});
 
-    auto window = std::make_unique<GuiWindow>(&theme, "Load World");
+  const int winW = std::min(480, ViewportW - 40);
 
-    window_ = window.get();
+  const int winH = std::min(400, ViewportH - 40);
 
-    window->SetBounds({(viewportW_ - winW) / 2, (viewportH_ - winH) / 2, winW, winH});
+  auto window = std::make_unique<UGuiWindow>(&theme, "Load World");
 
+  Window = window.get();
 
+  window->SetBounds(
+      {(ViewportW - winW) / 2, (ViewportH - winH) / 2, winW, winH});
 
-    auto frame = std::make_unique<GuiDialogFrame>(&theme);
+  auto frame = std::make_unique<UGuiDialogFrame>(&theme);
 
-    dialogFrame_ = frame.get();
+  DialogFrame = frame.get();
 
+  auto bodyPanel = std::make_unique<UGuiPanel>(&theme);
+  BodyPanel = bodyPanel.get();
 
+  auto list = std::make_unique<UGuiListView>(&theme);
 
-    auto list = std::make_unique<GuiListView>(&theme);
+  List = list.get();
 
-    list_ = list.get();
+  list->SetItems(worlds);
 
-    list->SetItems(worlds);
+  if (!worlds.empty())
+  {
 
-    if (!worlds.empty()) {
+    list->SetSelectedIndex(0);
+  }
 
-        list->SetSelectedIndex(0);
+  bodyPanel->AddChild(std::move(list));
 
-    }
+  auto packSubtitle = std::make_unique<UGuiLabel>(&theme, "");
+  PackSubtitle = packSubtitle.get();
+  packSubtitle->SetTextAlign(GuiTextAlign::Left);
+  bodyPanel->AddChild(std::move(packSubtitle));
+  if (Host && !worlds.empty())
+  {
+    UpdatePackSubtitle(Host, PackSubtitle, 0);
+  }
+  List->SetOnSelectionChanged(
+      [this](int index) { UpdatePackSubtitle(Host, PackSubtitle, index); });
 
-    frame->SetFixedBody(std::move(list));
+  frame->SetFixedBody(std::move(bodyPanel));
 
+  auto empty = std::make_unique<UGuiLabel>(&theme, "No saved worlds.");
 
+  EmptyLabel = empty.get();
 
-    auto empty = std::make_unique<GuiLabel>(&theme, "No saved worlds.");
+  empty->SetVisible(worlds.empty());
 
-    emptyLabel_ = empty.get();
+  window->AddChild(std::move(empty));
 
-    empty->SetVisible(worlds.empty());
+  auto loadBtn = std::make_unique<UGuiButton>(&theme, "Load");
 
-    window->AddChild(std::move(empty));
+  LoadBtn = loadBtn.get();
 
+  loadBtn->SetEnabled(!worlds.empty());
+  loadBtn->SetOnClick([this]() { OnLoad(); });
+  frame->AddFooterButton(std::move(loadBtn));
 
+  frame
+      ->AddFooterButton(std::make_unique<UGuiButton>(&theme, "Cancel"))
 
-    auto loadBtn = std::make_unique<GuiButton>(&theme, "Load");
+      .SetOnClick(
+          [this]()
+          {
+            if (Host)
+            {
 
-    loadBtn_ = loadBtn.get();
-
-    loadBtn->SetEnabled(!worlds.empty());
-    loadBtn->SetOnClick([this]() { OnLoad(); });
-    frame->AddFooterButton(std::move(loadBtn));
-
-    frame->AddFooterButton(std::make_unique<GuiButton>(&theme, "Cancel"))
-
-        .SetOnClick([this]() {
-
-            if (host_) {
-
-                host_->ReturnToMainMenu();
-
+              Host->ReturnToMainMenu();
             }
+          });
 
-        });
+  window->AddChild(std::move(frame));
 
+  backdrop->AddChild(std::move(window));
 
+  Root = std::move(backdrop);
 
-    window->AddChild(std::move(frame));
-
-    backdrop->AddChild(std::move(window));
-
-    root_ = std::move(backdrop);
-
-    Relayout();
-
+  Relayout();
 }
 
-
-
-void LoadWorldScreen::OnViewportChanged(int width, int height)
+void ULoadWorldScreen::OnViewportChanged(int width, int height)
 
 {
 
-    GuiScreenBase::OnViewportChanged(width, height);
+  UGuiScreenBase::OnViewportChanged(width, height);
 
-    Relayout();
-
+  Relayout();
 }
 
-
-
-void LoadWorldScreen::Relayout()
+void ULoadWorldScreen::Relayout()
 
 {
 
-    if (!window_ || !dialogFrame_) {
+  if (!Window || !DialogFrame)
+  {
 
-        return;
+    return;
+  }
 
-    }
+  const int winW = std::min(480, ViewportW - 40);
 
-    const int winW = std::min(480, viewportW_ - 40);
+  const int winH = std::min(400, ViewportH - 40);
 
-    const int winH = std::min(400, viewportH_ - 40);
+  Window->SetBounds(
+      {(ViewportW - winW) / 2, (ViewportH - winH) / 2, winW, winH});
 
-    window_->SetBounds({(viewportW_ - winW) / 2, (viewportH_ - winH) / 2, winW, winH});
+  DialogFrame->SetBounds(Window->GetClientArea());
 
-    dialogFrame_->SetBounds(window_->GetClientArea());
+  DialogFrame->LayoutFrame();
 
-    dialogFrame_->LayoutFrame();
+  if (BodyPanel && List && PackSubtitle)
+  {
+    const GuiRect area = BodyPanel->GetBounds();
+    constexpr int subH = 22;
+    List->SetBounds({area.X, area.Y, area.W, std::max(0, area.H - subH - 4)});
+    PackSubtitle->SetBounds(
+        {area.X, area.Y + area.H - subH, area.W, subH});
+  }
 
-    if (emptyLabel_) {
+  if (EmptyLabel)
+  {
 
-        const GuiRect client = window_->GetClientArea();
+    const GuiRect client = Window->GetClientArea();
 
-        emptyLabel_->SetBounds({client.x + 16, client.y + 24, client.w - 32, 24});
-
-    }
-
+    EmptyLabel->SetBounds({client.X + 16, client.Y + 24, client.W - 32, 24});
+  }
 }
-
-
 
 } // namespace cutum
-

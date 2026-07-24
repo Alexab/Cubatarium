@@ -1,116 +1,146 @@
-#include "GuiButton.h"
-#include "Gui/GuiFocus.h"
-#include "Gui/GuiRenderer.h"
-#include "Gui/GuiTheme.h"
+#include "Gui/Widgets/GuiButton.h"
+#include "Gui/Core/GuiFocus.h"
+#include "Gui/Core/GuiRenderer.h"
+#include "Gui/Core/GuiTheme.h"
+#include "Gui/Core/GuiTypes.h"
 
-namespace cutum {
+namespace cutum
+{
 
-GuiButton::GuiButton(const GuiTheme* theme, std::string label)
-    : theme_(theme)
-    , label_(std::move(label))
+UGuiButton::UGuiButton(const GuiTheme *theme, std::string label)
+    : Theme(theme), Label(std::move(label))
 {
 }
 
-int GuiButton::GetPreferredHeight() const
+int UGuiButton::GetPreferredHeight() const
 {
-    return theme_ ? theme_->fontSizeBody + theme_->padding * 2 : 32;
+  return Theme ? Theme->FontSizeBody + Theme->Padding * 2 : 32;
 }
 
-bool GuiButton::CanFocus() const
+bool UGuiButton::CanFocus() const { return Enabled && Visible; }
+
+bool UGuiButton::Activate()
 {
-    return enabled_ && visible_;
+  if (!CanFocus() || !OnClick)
+  {
+    return false;
+  }
+  OnClick();
+  return true;
 }
 
-bool GuiButton::Activate()
+glm::vec4 UGuiButton::StateColor() const
 {
-    if (!CanFocus() || !onClick_) {
-        return false;
-    }
-    onClick_();
-    return true;
+  if (!Theme)
+  {
+    return glm::vec4(0.3f);
+  }
+  if (!Enabled)
+  {
+    return Theme->ButtonDisabled;
+  }
+  switch (State)
+  {
+  case GuiButtonState::Hovered:
+    return Theme->ButtonHover;
+  case GuiButtonState::Pressed:
+    return Theme->ButtonPressed;
+  default:
+    return Theme->ButtonNormal;
+  }
 }
 
-glm::vec4 GuiButton::StateColor() const
+void UGuiButton::Draw(UGuiRenderer &renderer)
 {
-    if (!theme_) {
-        return glm::vec4(0.3f);
+  if (!Visible || !Theme)
+  {
+    return;
+  }
+  renderer.DrawFilledRect(Bounds, StateColor());
+  renderer.DrawBorderRect(Bounds, Theme->PanelBorder, Theme->BorderThickness);
+  GuiRect textRect = Bounds;
+  if (Label.size() == 1)
+  {
+    if (Label[0] == '+')
+    {
+      textRect.Y += 2;
     }
-    if (!enabled_) {
-        return theme_->buttonDisabled;
+    else if (Label[0] == '-')
+    {
+      textRect.Y += 3;
     }
-    switch (state_) {
-    case GuiButtonState::Hovered:
-        return theme_->buttonHover;
-    case GuiButtonState::Pressed:
-        return theme_->buttonPressed;
-    default:
-        return theme_->buttonNormal;
-    }
+  }
+  renderer.DrawTextCenteredInRect(textRect, Label, Theme->TextPrimary);
+  if (HasFocusHighlight())
+  {
+    DrawWidgetFocusRing(renderer, *Theme, Bounds);
+  }
 }
 
-void GuiButton::Draw(GuiRenderer& renderer)
+bool UGuiButton::OnMouseDown(const GuiMouseEvent &event)
 {
-    if (!visible_ || !theme_) {
-        return;
-    }
-    renderer.DrawFilledRect(bounds_, StateColor());
-    renderer.DrawBorderRect(bounds_, theme_->panelBorder, theme_->borderThickness);
-    GuiRect textRect = bounds_;
-    if (label_.size() == 1) {
-        if (label_[0] == '+') {
-            textRect.y += 2;
-        } else if (label_[0] == '-') {
-            textRect.y += 3;
-        }
-    }
-    renderer.DrawTextCenteredInRect(textRect, label_, theme_->textPrimary);
-    if (HasFocusHighlight()) {
-        DrawWidgetFocusRing(renderer, *theme_, bounds_);
-    }
+  if (!Enabled || !Visible || !Bounds.Contains(event.X, event.Y))
+  {
+    return false;
+  }
+  if (event.Button != GuiMouseButton::Left)
+  {
+    return false;
+  }
+  State = GuiButtonState::Pressed;
+  PressedInside = true;
+  DownX = event.X;
+  DownY = event.Y;
+  Dragged = false;
+  return true;
 }
 
-bool GuiButton::OnMouseDown(const GuiMouseEvent& event)
+bool UGuiButton::OnMouseUp(const GuiMouseEvent &event)
 {
-    if (!enabled_ || !visible_ || !bounds_.Contains(event.x, event.y)) {
-        return false;
-    }
-    if (event.button != GuiMouseButton::Left) {
-        return false;
-    }
-    state_ = GuiButtonState::Pressed;
-    pressedInside_ = true;
-    return true;
+  if (!Enabled || !Visible)
+  {
+    return false;
+  }
+  const bool inside = Bounds.Contains(event.X, event.Y);
+  const bool wasPressed = PressedInside;
+  if (wasPressed && event.Button == GuiMouseButton::Left && OnClick && !Dragged)
+  {
+    OnClick();
+  }
+  PressedInside = false;
+  Dragged = false;
+  State = inside ? GuiButtonState::Hovered : GuiButtonState::Normal;
+  return wasPressed || inside;
 }
 
-bool GuiButton::OnMouseUp(const GuiMouseEvent& event)
+bool UGuiButton::OnMouseMove(const GuiMouseEvent &event)
 {
-    if (!enabled_ || !visible_) {
-        return false;
-    }
-    const bool inside = bounds_.Contains(event.x, event.y);
-    const bool wasPressed = pressedInside_;
-    if (wasPressed && inside && event.button == GuiMouseButton::Left && onClick_) {
-        onClick_();
-    }
-    pressedInside_ = false;
-    state_ = inside ? GuiButtonState::Hovered : GuiButtonState::Normal;
-    return wasPressed || inside;
-}
-
-bool GuiButton::OnMouseMove(const GuiMouseEvent& event)
-{
-    if (!visible_) {
-        return false;
-    }
-    const bool inside = bounds_.Contains(event.x, event.y);
-    if (!enabled_) {
-        state_ = GuiButtonState::Disabled;
-        return inside;
-    }
-    if (state_ != GuiButtonState::Pressed) {
-        state_ = inside ? GuiButtonState::Hovered : GuiButtonState::Normal;
-    }
+  if (!Visible)
+  {
+    return false;
+  }
+  const bool inside = Bounds.Contains(event.X, event.Y);
+  if (!Enabled)
+  {
+    State = GuiButtonState::Disabled;
     return inside;
+  }
+  if (State != GuiButtonState::Pressed)
+  {
+    State = inside ? GuiButtonState::Hovered : GuiButtonState::Normal;
+  }
+  else if (PressedInside && !Dragged)
+  {
+    const int dx = event.X - DownX;
+    const int dy = event.Y - DownY;
+    if (dx * dx + dy * dy >
+        static_cast<int>(Theme->TouchDragSlopPx) *
+            static_cast<int>(Theme->TouchDragSlopPx))
+    {
+      Dragged = true;
+    }
+  }
+  return inside;
 }
 
 } // namespace cutum

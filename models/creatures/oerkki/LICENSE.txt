@@ -1,0 +1,4 @@
+Source file: mobs_oerkki.png
+Upstream: mobs_monster/textures/mobs_oerkki.png
+License: MIT
+Attribution: mobs_monster — TenPlus1

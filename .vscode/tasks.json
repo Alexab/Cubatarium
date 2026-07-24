@@ -2,12 +2,46 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "configure",
+            "type": "shell",
+            "command": "C:/Program Files/CMake/bin/cmake.exe",
+            "args": [
+                "-S",
+                "${workspaceFolder}",
+                "-B",
+                "${workspaceFolder}/build/desktop-msvc",
+                "-G",
+                "Visual Studio 17 2022",
+                "-A",
+                "x64",
+                "-DCMAKE_TOOLCHAIN_FILE=E:/vcpkg/scripts/buildsystems/vcpkg.cmake",
+                "-DVCPKG_MANIFEST_MODE=ON",
+                "-DVCPKG_TARGET_TRIPLET=x64-windows-static"
+            ],
+            "group": "build",
+            "options": {
+                "env": {
+                    "VCPKG_ROOT": "E:/vcpkg",
+                    "VCToolsVersion": ""
+                }
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": []
+        },
+        {
             "label": "build-debug",
             "type": "shell",
             "command": "C:/Program Files/CMake/bin/cmake.exe",
             "args": [
                 "--build",
-                "${workspaceFolder}/bin",
+                "${workspaceFolder}/build/desktop-msvc",
                 "--config",
                 "Debug",
                 "--parallel",
@@ -17,52 +51,11 @@
                 "kind": "build",
                 "isDefault": true
             },
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
+            "options": {
+                "env": {
+                    "VCToolsVersion": ""
+                }
             },
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "build-debug-full-path",
-            "type": "shell",
-            "command": "C:/Program Files/CMake/bin/cmake.exe",
-            "args": [
-                "--build",
-                "${workspaceFolder}/bin",
-                "--config",
-                "Debug",
-                "--parallel",
-                "8"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "build-debug-vs",
-            "type": "shell",
-            "command": "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe",
-            "args": [
-                "--build",
-                "${workspaceFolder}/bin",
-                "--config",
-                "Debug",
-                "--parallel",
-                "8"
-            ],
-            "group": "build",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
@@ -79,13 +72,18 @@
             "command": "C:/Program Files/CMake/bin/cmake.exe",
             "args": [
                 "--build",
-                "${workspaceFolder}/bin",
+                "${workspaceFolder}/build/desktop-msvc",
                 "--config",
                 "Release",
                 "--parallel",
                 "8"
             ],
             "group": "build",
+            "options": {
+                "env": {
+                    "VCToolsVersion": ""
+                }
+            },
             "presentation": {
                 "echo": true,
                 "reveal": "always",
@@ -97,127 +95,15 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "configure-debug",
-            "type": "shell",
-            "command": "cmake",
-            "args": [
-                "-B",
-                "${workspaceFolder}/bin",
-                "-S",
-                "${workspaceFolder}",
-                "-DCMAKE_BUILD_TYPE=Debug",
-                "-DCMAKE_TOOLCHAIN_FILE=E:/vcpkg/scripts/buildsystems/vcpkg.cmake",
-                "-DCMAKE_GENERATOR_PLATFORM=x64"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "configure-debug-full-path",
+            "label": "clean",
             "type": "shell",
             "command": "C:/Program Files/CMake/bin/cmake.exe",
             "args": [
-                "-B",
-                "${workspaceFolder}/bin",
-                "-S",
-                "${workspaceFolder}",
-                "-DCMAKE_BUILD_TYPE=Debug",
-                "-DCMAKE_TOOLCHAIN_FILE=E:/vcpkg/scripts/buildsystems/vcpkg.cmake",
-                "-DCMAKE_GENERATOR_PLATFORM=x64"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "configure-debug-vs",
-            "type": "shell",
-            "command": "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe",
-            "args": [
-                "-B",
-                "${workspaceFolder}/bin",
-                "-S",
-                "${workspaceFolder}",
-                "-DCMAKE_BUILD_TYPE=Debug",
-                "-DCMAKE_TOOLCHAIN_FILE=E:/vcpkg/scripts/buildsystems/vcpkg.cmake",
-                "-DCMAKE_GENERATOR_PLATFORM=x64"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "configure-release",
-            "type": "shell",
-            "command": "cmake",
-            "args": [
-                "-B",
-                "${workspaceFolder}/bin",
-                "-S",
-                "${workspaceFolder}",
-                "-DCMAKE_BUILD_TYPE=Release",
-                "-DCMAKE_TOOLCHAIN_FILE=E:/vcpkg/scripts/buildsystems/vcpkg.cmake",
-                "-DCMAKE_GENERATOR_PLATFORM=x64"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "clean",
-            "type": "shell",
-            "command": "cmake",
-            "args": [
                 "--build",
-                "${workspaceFolder}/bin",
+                "${workspaceFolder}/build/desktop-msvc",
                 "--target",
                 "clean"
             ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "check-cmake",
-            "type": "shell",
-            "command": "where",
-            "args": ["cmake"],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -236,7 +122,7 @@
             "args": [
                 "-Recurse",
                 "-Force",
-                "${workspaceFolder}/bin",
+                "${workspaceFolder}/build/desktop-msvc",
                 "-ErrorAction",
                 "SilentlyContinue"
             ],
@@ -256,42 +142,29 @@
             "type": "shell",
             "command": "C:/Program Files/CMake/bin/cmake.exe",
             "args": [
-                "-B",
-                "${workspaceFolder}/bin",
                 "-S",
                 "${workspaceFolder}",
-                "-DCMAKE_BUILD_TYPE=Debug",
+                "-B",
+                "${workspaceFolder}/build/desktop-msvc",
+                "-G",
+                "Visual Studio 17 2022",
+                "-A",
+                "x64",
                 "-DCMAKE_TOOLCHAIN_FILE=E:/vcpkg/scripts/buildsystems/vcpkg.cmake",
-                "-DCMAKE_GENERATOR_PLATFORM=x64"
+                "-DVCPKG_MANIFEST_MODE=ON",
+                "-DVCPKG_TARGET_TRIPLET=x64-windows-static"
             ],
             "group": "build",
             "dependsOrder": "sequence",
-            "dependsOn": ["clean-cache"],
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "force-reconfigure",
-            "type": "shell",
-            "command": "C:/Program Files/CMake/bin/cmake.exe",
-            "args": [
-                "-B",
-                "${workspaceFolder}/bin",
-                "-S",
-                "${workspaceFolder}",
-                "-DCMAKE_BUILD_TYPE=Debug",
-                "-DCMAKE_TOOLCHAIN_FILE=E:/vcpkg/scripts/buildsystems/vcpkg.cmake",
-                "-DCMAKE_GENERATOR_PLATFORM=x64",
-                "--fresh"
+            "dependsOn": [
+                "clean-cache"
             ],
-            "group": "build",
+            "options": {
+                "env": {
+                    "VCPKG_ROOT": "E:/vcpkg",
+                    "VCToolsVersion": ""
+                }
+            },
             "presentation": {
                 "echo": true,
                 "reveal": "always",

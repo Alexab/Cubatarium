@@ -1,0 +1,17 @@
+{
+  "name": "wool_0",
+  "id": 715,
+  "types": [
+    "decorative"
+  ],
+  "textures": [
+    "cloth_0",
+    "cloth_0",
+    "cloth_0",
+    "cloth_0",
+    "cloth_0",
+    "cloth_0"
+  ],
+  "displayName": "White Wool",
+  "render": {}
+}

@@ -1,36 +1,79 @@
 #ifndef GUI_TEXT_INPUT_H
 #define GUI_TEXT_INPUT_H
 
-#include "GuiWidget.h"
+#include "Gui/Interfaces/IUGuiClipboard.h"
+#include "Gui/Widgets/GuiWidget.h"
+#include <functional>
 #include <string>
 
-namespace cutum {
+namespace cutum
+{
 
 struct GuiTheme;
 
-class GuiTextInput : public GuiWidget {
+class UGuiTextInput : public UGuiWidget
+{
 public:
-    GuiTextInput(const GuiTheme* theme);
+  static constexpr size_t kMaxLength = 256;
 
-    const std::string& GetText() const { return buffer_; }
-    void SetText(const std::string& text);
-    void SetFocused(bool focused) { focused_ = focused; }
-    bool IsFocused() const { return focused_; }
+  explicit UGuiTextInput(const GuiTheme *theme);
 
-    bool CanFocus() const override;
+  const std::string &GetText() const { return Buffer; }
+  void SetText(const std::string &text);
+  void SetFocused(bool focused) { Focused = focused; }
+  bool IsFocused() const { return Focused; }
 
-    void Draw(GuiRenderer& renderer) override;
-    bool OnMouseDown(const GuiMouseEvent& event) override;
-    bool OnKey(const GuiKeyEvent& event) override;
-    bool OnChar(const GuiCharEvent& event) override;
+  void SetClipboard(IUGuiClipboard *clipboard) { Clipboard = clipboard; }
+  void SetOnEdited(std::function<void()> fn) { OnEdited = std::move(fn); }
 
-    int GetPreferredHeight() const override;
+  void ClearSelection();
+  bool HasSelection() const;
+  std::string GetSelectedText() const;
+  void SelectAll();
+  void CopySelectionToClipboard();
+  void CutSelectionToClipboard();
+  void PasteFromClipboard();
+  bool HandleEditShortcut(const GuiKeyEvent &event);
+
+  bool CanFocus() const override;
+
+  void Draw(UGuiRenderer &renderer) override;
+  bool OnMouseDown(const GuiMouseEvent &event) override;
+  bool OnMouseUp(const GuiMouseEvent &event) override;
+  bool OnMouseMove(const GuiMouseEvent &event) override;
+  bool PointerDown(const GuiMouseEvent &event, UGuiRenderer &renderer);
+  bool PointerMove(const GuiMouseEvent &event, UGuiRenderer &renderer);
+  bool OnKey(const GuiKeyEvent &event) override;
+  bool OnChar(const GuiCharEvent &event) override;
+
+  int GetPreferredHeight() const override;
 
 private:
-    const GuiTheme* theme_;
-    std::string buffer_;
-    size_t caretPos_{0};
-    bool focused_{false};
+  size_t SelMin() const;
+  size_t SelMax() const;
+  void DeleteSelection();
+  void InsertText(const std::string &text);
+  void NotifyEdited();
+  size_t CaretIndexFromX(int mouseX, UGuiRenderer &renderer) const;
+  int TextLeft() const;
+  int TextPadding() const;
+  int TextTopY(UGuiRenderer &renderer) const;
+  int TextLineHeight(UGuiRenderer &renderer) const;
+  GuiRect TextClipRect() const;
+  void EnsureCaretVisible(UGuiRenderer &renderer);
+
+  const GuiTheme *Theme;
+  IUGuiClipboard *Clipboard{nullptr};
+  std::function<void()> OnEdited;
+  std::string Buffer;
+  size_t CaretPos{0};
+  size_t SelAnchor{0};
+  size_t SelEnd{0};
+  bool Focused{false};
+  bool DraggingSelection{false};
+  bool ProgrammaticChange{false};
+  unsigned int SuppressCharCodepoint{0};
+  int ScrollX{0};
 };
 
 } // namespace cutum

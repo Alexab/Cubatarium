@@ -1,0 +1,76 @@
+{
+  "id": "zombie",
+  "display_name": "Zombie",
+  "catalog": {
+    "tags": [
+      "mobs",
+      "hostile"
+    ],
+    "spawnable": true,
+    "sort_order": 32
+  },
+  "role": "mob",
+  "bounds": {
+    "rest": [
+      0.6,
+      1.85,
+      0.6
+    ],
+    "max": [
+      0.6,
+      1.85,
+      0.6
+    ],
+    "min": [
+      0.6,
+      1.4,
+      0.6
+    ]
+  },
+  "eye_height": 1.6,
+  "habitat": "terrestrial",
+  "locomotion_archetype": "terrestrial_biped",
+  "locomotion": {
+    "can_fly": false,
+    "can_crouch": false,
+    "can_jump": true,
+    "jump_height": 1.0,
+    "walk_speed": 2.2
+  },
+  "behavior": "melee_attack",
+  "behavior_params": {
+    "move_speed": 2.2,
+    "aggro_radius": 12.0,
+    "attack_range": 2.0,
+    "attack_cooldown": 1.5
+  },
+  "visual": {
+    "backend": "bone_skeleton",
+    "texture_layout": "rigid_crop",
+    "animation": {
+      "walk_cycle_hz": 2.0,
+      "leg_swing_deg": 45,
+      "arm_swing_deg": 40,
+      "body_bob_blocks": 0.03,
+      "look_at_deg": 30
+    },
+    "default_texture": "body",
+    "icon": {
+      "mode": "parts_preview",
+      "color": [
+        0.2,
+        0.55,
+        0.2,
+        1.0
+      ]
+    },
+    "geometry": "geometry.zombie.v1.8",
+    "geometry_file": "geometry.geo.json",
+    "texture": "diffuse",
+    "texture_size": [
+      64,
+      32
+    ],
+    "animation_profile": "humanoid"
+  }
+}

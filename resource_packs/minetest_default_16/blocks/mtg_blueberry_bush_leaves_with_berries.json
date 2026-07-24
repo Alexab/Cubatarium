@@ -1,0 +1,24 @@
+{
+  "name": "mtg_blueberry_bush_leaves_with_berries",
+  "id": 414,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_blueberry_bush_leaves_with_berries_composite_0",
+    "mtg_blueberry_bush_leaves_with_berries_composite_0",
+    "mtg_blueberry_bush_leaves_with_berries_composite_0",
+    "mtg_blueberry_bush_leaves_with_berries_composite_0",
+    "mtg_blueberry_bush_leaves_with_berries_composite_0",
+    "mtg_blueberry_bush_leaves_with_berries_composite_0"
+  ],
+  "render": {
+    "style": "cutout"
+  },
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    },
+    "fluid_permeable": true
+  }
+}

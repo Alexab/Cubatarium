@@ -1,0 +1,16 @@
+{
+  "name": "dispenser",
+  "id": 624,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "dispenser_front",
+    "furnace_side",
+    "furnace_side",
+    "furnace_side",
+    "furnace_top",
+    "furnace_top"
+  ],
+  "render": {}
+}

@@ -1,0 +1,4 @@
+Source file: mobs_sheep_wool.png
+Upstream: mobs_animal/textures/mobs_sheep_wool.png
+License: MIT
+Attribution: mobs_animal — Krupnov Pavel, TenPlus1 (black dye)

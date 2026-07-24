@@ -1,0 +1,104 @@
+{
+  "id": "owl",
+  "display_name": "Owl",
+  "catalog": {
+    "tags": [
+      "mobs",
+      "passive"
+    ],
+    "spawnable": true,
+    "sort_order": 59
+  },
+  "role": "mob",
+  "bounds": {
+    "rest": [
+      0.55,
+      0.65,
+      0.55
+    ],
+    "max": [
+      0.55,
+      0.65,
+      0.55
+    ],
+    "min": [
+      0.55,
+      0.5,
+      0.55
+    ]
+  },
+  "eye_height": 0.5,
+  "habitat": "aerial",
+  "locomotion_archetype": "aerial",
+  "locomotion": {
+    "can_fly": true,
+    "can_crouch": false,
+    "can_jump": false,
+    "jump_height": 1.0,
+    "walk_speed": 2.2
+  },
+  "behavior": "wander",
+  "behavior_params": {
+    "move_speed": 2.2,
+    "wander_interval_min": 2.0,
+    "wander_interval_max": 4.0
+  },
+  "visual": {
+    "backend": "gltf_skeleton",
+    "texture_layout": "rigid_crop",
+    "default_texture": "body",
+    "icon": {
+      "mode": "species_texture",
+      "color": [
+        0.5,
+        0.4,
+        0.25,
+        1.0
+      ]
+    },
+    "gltf": {
+      "model": "model.gltf",
+      "textures": [
+        "body",
+        "face",
+        "leg",
+        "wing"
+      ],
+      "model_scale": 1.0,
+      "model_yaw_offset_deg": 0
+    },
+    "animation": {
+      "walk_cycle_hz": 2.0,
+      "clips": {
+        "walk": {
+          "start": 1,
+          "end": 50,
+          "loop": true,
+          "speed": 0.06666666666666667
+        },
+        "idle": {
+          "start": 1,
+          "end": 50,
+          "loop": true,
+          "speed": 0.06666666666666667
+        }
+      },
+      "state_map": {
+        "Idle": "idle",
+        "Walk": "walk",
+        "Run": "walk",
+        "Jump": "walk",
+        "Fall": "idle",
+        "Crouch": "idle",
+        "Slither": "walk",
+        "Coil": "idle",
+        "Action": "walk",
+        "Hover": "idle",
+        "Glide": "idle",
+        "Swim": "walk",
+        "Tread": "idle",
+        "Fly": "idle"
+      }
+    }
+  }
+}

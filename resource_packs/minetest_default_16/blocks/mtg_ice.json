@@ -1,0 +1,19 @@
+{
+  "name": "mtg_ice",
+  "id": 459,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "mtg_ice_default_ice",
+    "mtg_ice_default_ice",
+    "mtg_ice_default_ice",
+    "mtg_ice_default_ice",
+    "mtg_ice_default_ice",
+    "mtg_ice_default_ice"
+  ],
+  "render": {
+    "transparent": true
+  },
+  "displayName": "Ice"
+}

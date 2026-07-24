@@ -1,0 +1,17 @@
+{
+  "name": "sand",
+  "id": 138,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "sand",
+    "sand",
+    "sand",
+    "sand",
+    "sand",
+    "sand"
+  ],
+  "displayName": "Sand",
+  "render": {}
+}

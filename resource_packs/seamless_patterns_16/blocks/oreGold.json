@@ -1,0 +1,17 @@
+{
+  "name": "oreGold",
+  "id": 864,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "oreGold",
+    "oreGold",
+    "oreGold",
+    "oreGold",
+    "oreGold",
+    "oreGold"
+  ],
+  "displayName": "Gold Ore",
+  "render": {}
+}

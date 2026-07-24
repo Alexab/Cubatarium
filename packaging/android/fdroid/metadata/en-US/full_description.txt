@@ -1,0 +1,5 @@
+Cubatarium is an offline voxel sandbox game.
+
+Explore procedural worlds, place blocks, spawn creatures, and customize visuals with resource packs. No account or internet connection required.
+
+Code licensed under MIT. See THIRD_PARTY_NOTICES.md for asset attribution.

@@ -1,0 +1,48 @@
+license: CC0-1.0
+license_text: |
+  Kenney Pattern Pack Pixel (CC0). https://kenney.nl/assets/pattern-pack-pixel
+  Decorative pattern tiles mapped to Cubatarium block stems.
+blocks:
+  dirt: dirt
+  stone: stone
+  grass:
+    faces: [grass_side, grass_side, grass_side, grass_side, grass_top, dirt]
+    types: [natural]
+  sand: sand
+  gravel: gravel
+  brick: brick
+  wood:
+    faces: [tree_side, tree_side, tree_side, tree_side, tree_top, tree_top]
+  obsidian: obsidian
+  glass:
+    faces: [glass, glass, glass, glass, glass, glass]
+    types: [building]
+    render: { transparent: true }
+  wool_0: cloth_0
+  wool_1: cloth_1
+  wool_2: cloth_2
+  wool_3: cloth_3
+  wool_4: cloth_4
+  wool_5: cloth_5
+  wool_6: cloth_6
+  wool_7: cloth_7
+textures:
+  dirt: Tiles (Color)/tile_0000.png
+  stone: Tiles (Color)/tile_0001.png
+  grass_side: Tiles (Color)/tile_0002.png
+  grass_top: Tiles (Color)/tile_0003.png
+  sand: Tiles (Color)/tile_0004.png
+  gravel: Tiles (Color)/tile_0005.png
+  brick: Tiles (Color)/tile_0006.png
+  tree_side: Tiles (Color)/tile_0007.png
+  tree_top: Tiles (Color)/tile_0008.png
+  obsidian: Tiles (Color)/tile_0009.png
+  glass: Tiles (Color)/tile_0010.png
+  cloth_0: Tiles (Color)/tile_0011.png
+  cloth_1: Tiles (Color)/tile_0012.png
+  cloth_2: Tiles (Color)/tile_0013.png
+  cloth_3: Tiles (Color)/tile_0014.png
+  cloth_4: Tiles (Color)/tile_0015.png
+  cloth_5: Tiles (Color)/tile_0016.png
+  cloth_6: Tiles (Color)/tile_0017.png
+  cloth_7: Tiles (Color)/tile_0018.png

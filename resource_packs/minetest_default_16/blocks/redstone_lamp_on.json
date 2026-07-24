@@ -1,0 +1,20 @@
+{
+  "name": "redstone_lamp_on",
+  "id": 544,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "redstoneLight_lit",
+    "redstoneLight_lit",
+    "redstoneLight_lit",
+    "redstoneLight_lit",
+    "redstoneLight_lit",
+    "redstoneLight_lit"
+  ],
+  "render": {},
+  "displayName": "Redstone Lamp",
+  "lighting": {
+    "emission": 15
+  }
+}

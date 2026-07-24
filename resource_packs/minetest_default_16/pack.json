@@ -1,0 +1,15 @@
+{
+  "id": "minetest_default_16",
+  "name": "Minetest Default 16",
+  "version": 2,
+  "license": "CC-BY-SA-3.0",
+  "resolution": 16,
+  "priority": 4,
+  "depends": [],
+  "conflicts": [
+    "minecraft_legacy_16"
+  ],
+  "worldgen_role": "primary",
+  "min_game_version": "0.1.0",
+  "pack_format": 1
+}

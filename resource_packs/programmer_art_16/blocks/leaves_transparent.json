@@ -1,0 +1,25 @@
+{
+  "name": "leaves_transparent",
+  "id": 651,
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "leaves",
+    "leaves",
+    "leaves",
+    "leaves",
+    "leaves",
+    "leaves"
+  ],
+  "render": {
+    "style": "cutout"
+  },
+  "displayName": "Leaves",
+  "physics": {
+    "movement": {
+      "occupancy": 0
+    }
+  }
+}

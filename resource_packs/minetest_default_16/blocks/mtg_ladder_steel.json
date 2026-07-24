@@ -1,0 +1,16 @@
+{
+  "name": "mtg_ladder_steel",
+  "id": 465,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_ladder_steel_default_ladder_steel",
+    "mtg_ladder_steel_default_ladder_steel",
+    "mtg_ladder_steel_default_ladder_steel",
+    "mtg_ladder_steel_default_ladder_steel",
+    "mtg_ladder_steel_default_ladder_steel",
+    "mtg_ladder_steel_default_ladder_steel"
+  ],
+  "render": {}
+}

@@ -1,0 +1,16 @@
+{
+  "name": "mtg_pine_needles",
+  "id": 485,
+  "types": [
+    "building"
+  ],
+  "textures": [
+    "mtg_pine_needles_default_pine_needles",
+    "mtg_pine_needles_default_pine_needles",
+    "mtg_pine_needles_default_pine_needles",
+    "mtg_pine_needles_default_pine_needles",
+    "mtg_pine_needles_default_pine_needles",
+    "mtg_pine_needles_default_pine_needles"
+  ],
+  "render": {}
+}

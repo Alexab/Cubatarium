@@ -1,0 +1,17 @@
+{
+  "name": "oreRedstone",
+  "id": 669,
+  "types": [
+    "natural"
+  ],
+  "textures": [
+    "oreRedstone",
+    "oreRedstone",
+    "oreRedstone",
+    "oreRedstone",
+    "oreRedstone",
+    "oreRedstone"
+  ],
+  "displayName": "Redstone Ore",
+  "render": {}
+}

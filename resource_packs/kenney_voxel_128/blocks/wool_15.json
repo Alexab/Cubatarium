@@ -1,0 +1,17 @@
+{
+  "name": "wool_15",
+  "id": 101,
+  "types": [
+    "decorative"
+  ],
+  "textures": [
+    "cloth_15",
+    "cloth_15",
+    "cloth_15",
+    "cloth_15",
+    "cloth_15",
+    "cloth_15"
+  ],
+  "displayName": "Black Wool",
+  "render": {}
+}

@@ -1,36 +1,40 @@
 #ifndef GUI_LABEL_H
 #define GUI_LABEL_H
 
-#include "GuiWidget.h"
+#include "Gui/Widgets/GuiWidget.h"
 #include <string>
 
-namespace cutum {
+namespace cutum
+{
 
 struct GuiTheme;
 
-enum class GuiTextAlign {
-    Left,
-    Center
+enum class GuiTextAlign
+{
+  Left,
+  Center
 };
 
-class GuiLabel : public GuiWidget {
+class UGuiLabel : public UGuiWidget
+{
 public:
-    GuiLabel(const GuiTheme* theme, std::string text);
+  UGuiLabel(const GuiTheme *theme, std::string text);
 
-    void SetText(const std::string& text) { text_ = text; }
-    const std::string& GetText() const { return text_; }
-    void SetTextAlign(GuiTextAlign align) { textAlign_ = align; }
-    void SetDrawBackground(bool draw) { drawBackground_ = draw; }
-    void SetUseSecondaryColor(bool use) { useSecondaryColor_ = use; }
+  void SetText(const std::string &text) { Text = text; }
+  const std::string &GetText() const { return Text; }
+  void SetTextAlign(GuiTextAlign align) { TextAlign = align; }
+  void SetDrawBackground(bool draw) { DrawBackground = draw; }
+  void SetUseSecondaryColor(bool use) { UseSecondaryColor = use; }
 
-    void Draw(GuiRenderer& renderer) override;
+  void Draw(UGuiRenderer &renderer) override;
+  int GetPreferredHeight() const override;
 
 private:
-    const GuiTheme* theme_;
-    std::string text_;
-    GuiTextAlign textAlign_{GuiTextAlign::Left};
-    bool drawBackground_{false};
-    bool useSecondaryColor_{false};
+  const GuiTheme *Theme;
+  std::string Text;
+  GuiTextAlign TextAlign{GuiTextAlign::Left};
+  bool DrawBackground{false};
+  bool UseSecondaryColor{false};
 };
 
 } // namespace cutum

@@ -1,0 +1,115 @@
+{
+  "id": "manatee",
+  "display_name": "Manatee",
+  "catalog": {
+    "tags": [
+      "mobs",
+      "passive"
+    ],
+    "spawnable": true,
+    "sort_order": 75
+  },
+  "role": "mob",
+  "bounds": {
+    "rest": [
+      0.7,
+      0.45,
+      1.35
+    ],
+    "max": [
+      0.7,
+      0.45,
+      1.35
+    ],
+    "min": [
+      0.7,
+      0.45,
+      1.35
+    ]
+  },
+  "eye_height": 0.45,
+  "habitat": "aquatic",
+  "locomotion_archetype": "aquatic",
+  "locomotion": {
+    "can_fly": true,
+    "can_crouch": false,
+    "can_jump": false,
+    "jump_height": 1.0,
+    "walk_speed": 1.8
+  },
+  "behavior": "wander",
+  "behavior_params": {
+    "move_speed": 1.8,
+    "wander_interval_min": 2.0,
+    "wander_interval_max": 4.0
+  },
+  "visual": {
+    "backend": "gltf_skeleton",
+    "texture_layout": "rigid_crop",
+    "default_texture": "body",
+    "icon": {
+      "mode": "species_texture",
+      "color": [
+        0.5098039215686274,
+        0.5098039215686274,
+        0.5490196078431373,
+        1.0
+      ]
+    },
+    "gltf": {
+      "model": "model.gltf",
+      "textures": [
+        "body",
+        "face",
+        "leg"
+      ],
+      "model_scale": 1.0,
+      "model_yaw_offset_deg": 0
+    },
+    "animation": {
+      "walk_cycle_hz": 2.0,
+      "clips": {
+        "idle": {
+          "start": 0,
+          "end": 100,
+          "loop": true,
+          "speed": 2.6666666666666665
+        },
+        "fly": {
+          "start": 100,
+          "end": 250,
+          "loop": true,
+          "speed": 5.0
+        },
+        "punch": {
+          "start": 100,
+          "end": 200,
+          "loop": false,
+          "speed": 5.0
+        },
+        "die": {
+          "start": 100,
+          "end": 200,
+          "loop": false,
+          "speed": 3.3333333333333335
+        }
+      },
+      "state_map": {
+        "Idle": "idle",
+        "Walk": "walk",
+        "Run": "walk",
+        "Jump": "walk",
+        "Fall": "idle",
+        "Crouch": "idle",
+        "Slither": "walk",
+        "Coil": "idle",
+        "Action": "punch",
+        "Hover": "idle",
+        "Glide": "idle",
+        "Swim": "idle",
+        "Tread": "idle",
+        "Fly": "idle"
+      }
+    }
+  }
+}

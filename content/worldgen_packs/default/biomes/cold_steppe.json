@@ -1,0 +1,21 @@
+{
+  "id": "cold_steppe",
+  "height": {
+    "base_offset": 0,
+    "amplitude_mul": 0.8,
+    "volatility_mul": 0.45
+  },
+  "palette": {
+    "surface": "dirt",
+    "subsurface": "gravel"
+  },
+  "features": {
+    "vegetation": {
+      "tree_pine": 0.85,
+      "tree_pine_small": 0.7
+    },
+    "ground_cover": {
+      "bush_common": 0.55
+    }
+  }
+}
