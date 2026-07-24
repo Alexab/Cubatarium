@@ -28,17 +28,8 @@ WorldOperationKind KindForRunnerOp(WorldRunnerOp op)
     return WorldOperationKind::EnterGame;
   case WorldRunnerOp::Shutdown:
     return WorldOperationKind::Shutdown;
-  case WorldRunnerOp::ApplyWorldSettings:
-    return WorldOperationKind::ApplySettings;
   }
   return WorldOperationKind::Load;
-}
-
-bool ResourcePackSelectionEqual(const ResourcePackSelection &a,
-                                const ResourcePackSelection &b)
-{
-  return a.Primary == b.Primary && a.Secondary == b.Secondary &&
-         a.WorldgenOwner == b.WorldgenOwner;
 }
 
 constexpr int kChunkBudgetPerFrame = 16;
@@ -61,7 +52,6 @@ void UWorldOperationRunner::Start(WorldRunnerRequest request)
   PendingWorldName.clear();
   SaveBeforeOp = false;
   PendingWorldOp = WorldRunnerOp::Load;
-  ApplySettingsStep = 0;
 
   switch (Request.op)
   {
@@ -102,9 +92,6 @@ void UWorldOperationRunner::Start(WorldRunnerRequest request)
       World.CancelCooperativeOperation();
     }
     World.BeginBackgroundQuiesce(ShutdownQuiesceState);
-    break;
-  case WorldRunnerOp::ApplyWorldSettings:
-    CurrentStage = Stage::ApplySettings;
     break;
   }
 }
@@ -281,8 +268,7 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
       CurrentStage = Stage::PostCreateUsers;
       return false;
     }
-    if (Request.op == WorldRunnerOp::Save ||
-        Request.op == WorldRunnerOp::ApplyWorldSettings)
+    if (Request.op == WorldRunnerOp::Save)
     {
       Success = true;
       Active = false;
@@ -291,55 +277,6 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
       return true;
     }
     break;
-  }
-
-  case Stage::ApplySettings:
-  {
-    sink.Begin(WorldOperationKind::ApplySettings);
-    if (ApplySettingsStep == 0)
-    {
-      sink.Report("packs", 0.05f, "Preparing resource packs...");
-      ++ApplySettingsStep;
-      return false;
-    }
-    if (ApplySettingsStep == 1)
-    {
-      sink.Report("packs", 0.15f, "Applying resource packs...");
-      ResourcePackSelection packs = Request.packs;
-      if (packs.WorldgenOwner.empty() && !packs.Primary.empty())
-      {
-        packs.WorldgenOwner = packs.Primary.front();
-      }
-      const ResourcePackSelection current =
-          Core.GetCurrentWorldResourcePackSelection();
-      if (!ResourcePackSelectionEqual(packs, current))
-      {
-        if (!Core.ApplyResourcePacksInMemory(packs))
-        {
-          Fail("Failed to apply resource packs.", sink);
-          return true;
-        }
-      }
-      ++ApplySettingsStep;
-      sink.Report("view", 0.4f, "Applying view / projection...");
-      return false;
-    }
-    if (ApplySettingsStep == 2)
-    {
-      if (!Core.ApplyViewSettingsInMemory(Request.view))
-      {
-        Fail("Failed to apply view settings.", sink);
-        return true;
-      }
-      ++ApplySettingsStep;
-      sink.Report("save", 0.5f, "Saving world...");
-      CurrentStage = Stage::WorldOperation;
-      PendingWorldOp = WorldRunnerOp::Save;
-      return false;
-    }
-    CurrentStage = Stage::WorldOperation;
-    PendingWorldOp = WorldRunnerOp::Save;
-    return false;
   }
 
   case Stage::PostLoadUsers:

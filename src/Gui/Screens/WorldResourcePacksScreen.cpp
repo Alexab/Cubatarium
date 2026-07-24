@@ -46,7 +46,14 @@ void UWorldResourcePacksScreen::OnApply()
   }
   const WorldViewSettings view =
       ViewForm ? ViewForm->ReadSettings() : WorldViewSettings{};
-  Host->ApplyWorldSettingsWithProgress(selection, view);
+  if (!Host->ApplyWorldSettings(selection, view))
+  {
+    return;
+  }
+  if (OnClose)
+  {
+    OnClose();
+  }
 }
 
 void UWorldResourcePacksScreen::Build(UGuiContext &ctx)

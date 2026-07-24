@@ -32,8 +32,6 @@ const char *TitleForKind(WorldOperationKind kind)
     return "Starting game...";
   case WorldOperationKind::Shutdown:
     return "Shutting down...";
-  case WorldOperationKind::ApplySettings:
-    return "Applying world settings...";
   }
   return "Please wait...";
 }

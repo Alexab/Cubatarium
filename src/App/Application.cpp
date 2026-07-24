@@ -416,8 +416,6 @@ void UApplication::BeginWorldOperation(WorldRunnerRequest request,
       return WorldOperationKind::EnterGame;
     case WorldRunnerOp::Shutdown:
       return WorldOperationKind::Shutdown;
-    case WorldRunnerOp::ApplyWorldSettings:
-      return WorldOperationKind::ApplySettings;
     case WorldRunnerOp::Load:
     default:
       return WorldOperationKind::Load;
@@ -774,27 +772,46 @@ bool UApplication::ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view
   return ok;
 }
 
-void UApplication::ApplyWorldSettingsWithProgress(
-    const ResourcePackSelection &selection, const WorldViewSettings &view)
+bool UApplication::ApplyWorldSettings(const ResourcePackSelection &selection,
+                                      const WorldViewSettings &view)
 {
-  if (!Core || !World || State == AppState::Loading)
+  if (!Core || !World)
   {
-    return;
+    return false;
   }
-  WorldRunnerRequest request;
-  request.op = WorldRunnerOp::ApplyWorldSettings;
-  request.packs = selection;
-  request.view = view;
-  request.enterGameAfter = false;
-  request.saveConfigAfter = false;
-  BeginWorldOperation(std::move(request),
-                      [this]()
-                      {
-                        RefreshBlockCatalog();
-                        SyncCursorVisibility();
-                        ShowMainMenu();
-                        State = AppState::MainMenu;
-                      });
+
+  ResourcePackSelection packs = selection;
+  if (packs.WorldgenOwner.empty() && !packs.Primary.empty())
+  {
+    packs.WorldgenOwner = packs.Primary.front();
+  }
+
+  const ResourcePackSelection current =
+      Core->GetCurrentWorldResourcePackSelection();
+  const bool packs_changed =
+      packs.Primary != current.Primary ||
+      packs.Secondary != current.Secondary ||
+      packs.WorldgenOwner != current.WorldgenOwner;
+
+  if (packs_changed)
+  {
+    if (!Core->ApplyResourcePacksInMemory(packs))
+    {
+      return false;
+    }
+    RefreshBlockCatalog();
+  }
+
+  if (!Core->ApplyViewSettingsInMemory(view))
+  {
+    return false;
+  }
+  if (!Core->PersistWorldMetadata())
+  {
+    return false;
+  }
+  SyncCursorVisibility();
+  return true;
 }
 
 void UApplication::LoadSelectedWorld(const std::string &worldName)

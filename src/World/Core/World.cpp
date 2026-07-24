@@ -4483,6 +4483,16 @@ void UWorld::SaveSessionSnapshot(const std::string &world_folder_path,
   }
 }
 
+void UWorld::PersistWorldMetadata()
+{
+  const std::string &folder = GetWorldFolderPath();
+  if (folder.empty())
+  {
+    return;
+  }
+  SaveWorldData(folder + "/world_data.json");
+}
+
 void UWorld::BeginCooperativeLoad(const std::string &world_folder_path)
 {
   if (!CoopSession)

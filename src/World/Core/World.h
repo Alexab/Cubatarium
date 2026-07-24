@@ -213,6 +213,8 @@ public:
   /// Fast save for exit/autosave: metadata plus modified terrain only.
   void SaveSessionSnapshot(const std::string &world_folder_path,
                            bool skip_quiesce = false);
+  /// Write world_data.json only (view, packs, seed metadata) — no terrain dump.
+  void PersistWorldMetadata();
 
   void BeginCooperativeLoad(const std::string &world_folder_path);
   bool TickCooperativeLoad(class IUProgressSink &sink, int chunkBudget);

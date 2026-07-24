@@ -41,7 +41,7 @@ Stored in `worlds/World_NNN/world_data.json`:
 ## UI
 
 - **New World** — View section: Perspective (FPS) / Isometric (+ ortho size).
-- **World settings** (paused session) — same View form; Apply shows a world-load-style progress bar while packs/view are applied and the world is saved.
+- **World settings** (paused session) — same View form; Apply updates the live camera and writes `view` into `world_data.json` (no full terrain save).
 
 Not configured via global `config.json` `render.*`.
 

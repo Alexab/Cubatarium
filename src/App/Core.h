@@ -159,6 +159,8 @@ public:
   WorldViewSettings GetCurrentWorldViewSettings() const;
   bool ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view);
   bool ApplyViewSettingsInMemory(const WorldViewSettings &view);
+  /// Persist world_data.json only (view, packs metadata) — no terrain snapshot.
+  bool PersistWorldMetadata();
 
   void ApplyRuntimeStreamingToWorld();
 

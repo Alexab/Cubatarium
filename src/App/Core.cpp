@@ -1111,7 +1111,16 @@ bool UCore::ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view)
   {
     return false;
   }
-  SaveWorld(WorldInstance->GetWorldName());
+  return PersistWorldMetadata();
+}
+
+bool UCore::PersistWorldMetadata()
+{
+  if (!WorldInstance || WorldInstance->GetWorldName().empty())
+  {
+    return false;
+  }
+  WorldInstance->PersistWorldMetadata();
   return true;
 }
 
@@ -1186,8 +1195,7 @@ bool UCore::ApplyResourcePacksToCurrentWorld(
   {
     return false;
   }
-  SaveWorld(WorldInstance->GetWorldName());
-  return true;
+  return PersistWorldMetadata();
 }
 
 bool UCore::CreateWorldHeadless(const CreateWorldCliArgs &args,

@@ -157,8 +157,8 @@ public:
       const ResourcePackSelection &selection) override;
   WorldViewSettings GetCurrentWorldViewSettings() const override;
   bool ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view) override;
-  void ApplyWorldSettingsWithProgress(const ResourcePackSelection &selection,
-                                      const WorldViewSettings &view) override;
+  bool ApplyWorldSettings(const ResourcePackSelection &selection,
+                          const WorldViewSettings &view) override;
 
   void ShowSettings();
   void ShowWorldSettings();
