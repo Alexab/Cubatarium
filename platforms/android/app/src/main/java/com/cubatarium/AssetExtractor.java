@@ -121,7 +121,10 @@ public final class AssetExtractor {
                 }
                 final String actual = sha256Hex(extracted);
                 if (!expected.equalsIgnoreCase(actual)) {
-                    throw new IOException("Checksum mismatch for " + relative);
+                    throw new IOException(
+                            "Checksum mismatch for " + relative
+                                    + " expected=" + expected
+                                    + " actual=" + actual);
                 }
             }
             Log.i(TAG, "Asset manifest verification passed");

@@ -97,11 +97,22 @@ bool WaitForEglSurface(android_app *app, UAndroidPlatformWindow &window)
   }
 
   CubatariumLogInfo("Android", "Waiting for native window / EGL...");
+  auto lastLog = std::chrono::steady_clock::now();
+  auto lastAttempt = lastLog - std::chrono::milliseconds(200);
   while (app->destroyRequested == 0)
   {
-    if (app->window != nullptr && !window.HasSurface())
+    const auto now = std::chrono::steady_clock::now();
+    if (app->window != nullptr && !window.HasSurface() &&
+        now - lastAttempt >= std::chrono::milliseconds(200))
     {
       window.InitEgl(app);
+      lastAttempt = now;
+      if (!window.HasSurface() && now - lastLog >= std::chrono::seconds(2))
+      {
+        CubatariumLogError("Android",
+                           "EGL init still failing (GLES 3 context required)");
+        lastLog = now;
+      }
     }
     if (window.HasSurface())
     {
@@ -109,7 +120,8 @@ bool WaitForEglSurface(android_app *app, UAndroidPlatformWindow &window)
     }
     int events = 0;
     android_poll_source *source = nullptr;
-    while (ALooper_pollOnce(0, nullptr, &events,
+    // Block briefly so a failed EGL init cannot spin at 100% CPU.
+    while (ALooper_pollOnce(50, nullptr, &events,
                             reinterpret_cast<void **>(&source)) >= 0)
     {
       if (source)

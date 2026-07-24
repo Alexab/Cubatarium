@@ -11,11 +11,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_ASSETS = ROOT / "platforms" / "android" / "app" / "src" / "main" / "assets"
 
-CRITICAL_RELATIVE_PATHS = (
+# Must stay in sync with AssetExtractor.hasCriticalAssets + optional config seed.
+REQUIRED_RELATIVE_PATHS = (
     "fonts/Roboto-Regular.ttf",
     "shaders/gles/vshader_2d.glsl",
     "content/types.json",
+)
+OPTIONAL_RELATIVE_PATHS = (
     "config.json",
+    "config.json.example",
 )
 
 
@@ -47,23 +51,29 @@ def main() -> int:
 
     files: dict[str, str] = {}
     missing: list[str] = []
-    for relative in CRITICAL_RELATIVE_PATHS:
+    for relative in REQUIRED_RELATIVE_PATHS:
         path = assets_dir / relative
         if not path.is_file():
             missing.append(relative)
             continue
         files[relative.replace("\\", "/")] = sha256_hex(path)
 
+    for relative in OPTIONAL_RELATIVE_PATHS:
+        path = assets_dir / relative
+        if path.is_file():
+            files[relative.replace("\\", "/")] = sha256_hex(path)
+
     if missing:
-        print("WARN missing critical assets:")
+        print("ERROR missing critical assets:")
         for item in missing:
             print(f"  - {item}")
+        return 1
 
-    manifest = {"files": files}
+    manifest = {"version": 1, "files": files}
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(f"OK wrote {len(files)} entries -> {output}")
-    return 0 if not missing else 1
+    return 0
 
 
 if __name__ == "__main__":
