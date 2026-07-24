@@ -22,6 +22,7 @@
 #include "World/Lighting/ChunkLighting.h"
 #include "World/Environment/EnvironmentConfig.h"
 #include "World/Math/GridMath.h"
+#include "World/View/WorldViewSettings.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
 #include "WorldGen/Core/ProceduralSettings.h"
@@ -1526,6 +1527,15 @@ void UWorldPersistence::LoadWorldData(UWorld &world,
       std::cerr << "LoadWorldData: missing required worldgen_sets" << std::endl;
     }
 
+    if (d.contains("view") && d["view"].is_object())
+    {
+      world.SetViewSettings(WorldViewSettings::FromJson(d["view"]));
+    }
+    else
+    {
+      world.SetViewSettings(WorldViewSettings{});
+    }
+
     if (d.contains("environment") && d["environment"].is_object())
     {
       const json &env = d["environment"];
@@ -1657,6 +1667,7 @@ void UWorldPersistence::SaveWorldData(UWorld &world,
   env["cloud_coverage_override"] =
       world.GetEnvironmentState().CloudCoverageOverride;
   world_data["environment"] = env;
+  world_data["view"] = world.GetViewSettings().ToJson();
 
   std::ofstream file(file_name);
   if (file.is_open())

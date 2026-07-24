@@ -194,6 +194,7 @@ set(SOURCES
     src/World/Core/WorldLoadDiagnostics.cpp
     src/World/Environment/WorldEnvironment.cpp
     src/World/Environment/EnvironmentConfig.cpp
+    src/World/View/WorldViewSettings.cpp
     src/World/Environment/WeatherBiomeUtil.cpp
     src/World/Environment/WeatherAutoController.cpp
     src/World/Lighting/LightUtil.cpp
@@ -450,6 +451,7 @@ set(HEADERS
     src/World/Core/WorldLoadDiagnostics.h
     src/World/Environment/WorldEnvironment.h
     src/World/Environment/EnvironmentConfig.h
+    src/World/View/WorldViewSettings.h
     src/World/Environment/WeatherBiomeUtil.h
     src/World/Environment/WeatherAutoController.h
     src/World/Lighting/LightUtil.h
@@ -983,6 +985,13 @@ add_executable(fluid_state_pack_test
 target_include_directories(fluid_state_pack_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(fluid_state_pack_test glm::glm)
+
+add_executable(world_view_settings_test
+    src/Test/WorldViewSettingsTest.cpp
+    src/World/View/WorldViewSettings.cpp)
+target_include_directories(world_view_settings_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(world_view_settings_test nlohmann_json::nlohmann_json)
 
 add_executable(chunk_light_pack_test
     src/Test/ChunkLightPackTest.cpp)
