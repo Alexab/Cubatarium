@@ -123,7 +123,22 @@ tasks.register("syncAssets", Copy) {
     into("${projectDir}/src/main/assets")
 }
 
-preBuild.dependsOn syncAssets
+// Keep asset_manifest.json hashes in sync with files copied by syncAssets.
+// Stale hashes crash clean installs (AssetExtractor.verifyExtractedManifest).
+tasks.register("generateAssetManifest", Exec) {
+    dependsOn syncAssets
+    workingDir repoRoot
+    def assetsDir = file("${projectDir}/src/main/assets")
+    def script = file("${repoRoot}/tools/generate_android_asset_manifest.py")
+    inputs.files(fileTree(assetsDir) {
+        exclude "asset_manifest.json"
+    })
+    inputs.file(script)
+    outputs.file("${assetsDir}/asset_manifest.json")
+    commandLine "python", script.absolutePath, "--assets-dir", assetsDir.absolutePath
+}
+
+preBuild.dependsOn generateAssetManifest
 
 dependencies {
     implementation "androidx.games:games-activity:3.0.5"
