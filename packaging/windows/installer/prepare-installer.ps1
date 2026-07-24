@@ -23,6 +23,10 @@ if (-not $SkipVerify) {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
+# Fresh staging avoids stale logs/cache from prior doctor runs.
+if (Test-Path $out) {
+    Remove-Item $out -Recurse -Force
+}
 New-Item -ItemType Directory -Force -Path $outBin | Out-Null
 
 Write-Host "Staging installer files into $out ..."
@@ -33,9 +37,6 @@ $iconPng = Join-Path $srcBin "icon.png"
 if (Test-Path $iconPng) {
     Copy-Item $iconPng $outBin -Force
 }
-
-# Remove stale DLLs from a previous dynamic staging
-Get-ChildItem $outBin -Filter "*.dll" -ErrorAction SilentlyContinue | Remove-Item -Force
 
 $configSrc = Join-Path $srcBin "config.json"
 if (Test-Path $configSrc) {
@@ -72,6 +73,7 @@ function Assert-StagedRuntimeFiles {
         "shaders\vshader_greedy.glsl",
         "shaders\vshader_cross_instanced.glsl",
         "prefabs",
+        "objects",
         "resource_packs",
         "fonts"
     )
@@ -83,7 +85,7 @@ function Assert-StagedRuntimeFiles {
     }
 }
 
-foreach ($tree in @("shaders", "prefabs", "models", "content", "fonts")) {
+foreach ($tree in @("shaders", "prefabs", "models", "content", "fonts", "objects")) {
     CopyGameTree $tree
 }
 
@@ -106,10 +108,12 @@ Assert-StagedRuntimeFiles
 
 & $doctorScript -BinDir $outBin
 
-# Smoke tests create a writable runtime cache next to the exe; do not ship it.
-$placeholderCache = Join-Path $outBin ".placeholder_cache"
-if (Test-Path $placeholderCache) {
-    Remove-Item $placeholderCache -Recurse -Force
+# Smoke tests create writable runtime junk next to the exe; do not ship it.
+foreach ($junkName in @(".placeholder_cache", "logs", "cache", "worlds")) {
+    $junkPath = Join-Path $outBin $junkName
+    if (Test-Path $junkPath) {
+        Remove-Item $junkPath -Recurse -Force
+    }
 }
 
 if ($StageOnly) {

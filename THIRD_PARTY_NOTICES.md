@@ -98,7 +98,7 @@ Native code: `libcubatarium.so` (armeabi-v7a + arm64-v8a), C++ shared runtime `l
 
 ### Windows installer
 
-Staging via [`packaging/windows/installer/prepare-installer.ps1`](packaging/windows/installer/prepare-installer.ps1): `Cubatarium.exe` plus `shaders/`, `prefabs/`, `models/`, `content/`, `resource_packs/`, `fonts/`, `config.json`. Same asset licensing as Android; no separate third-party DLLs (static build).
+Staging via [`packaging/windows/installer/prepare-installer.ps1`](packaging/windows/installer/prepare-installer.ps1): `Cubatarium.exe` plus `shaders/`, `prefabs/`, `models/`, `content/`, `objects/`, `resource_packs/`, `fonts/`, `config.json`. Same asset licensing as Android; no separate third-party DLLs (static build).
 
 ### Fonts
 

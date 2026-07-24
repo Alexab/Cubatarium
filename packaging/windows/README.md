@@ -62,7 +62,7 @@ cmake --build build\desktop-msvc --config Release --parallel 8
 Copied from `bin/` (CMake POST_BUILD) with fallback to repo root:
 
 - `Cubatarium.exe`, `config.json`
-- `shaders/`, `prefabs/`, `models/`, `content/`, `fonts/`
+- `shaders/`, `prefabs/`, `models/`, `content/`, `fonts/`, `objects/`
 - `resource_packs/` (excludes `minecraft_legacy_16`)
 
 Default install path: `C:\Cubatarium`, executable at `<InstallDir>\bin\Cubatarium.exe`.
