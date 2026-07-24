@@ -20,6 +20,7 @@
 #include <array>
 #include "World/Environment/EnvironmentConfig.h"
 #include "World/Physics/PhysicsProfile.h"
+#include "World/View/WorldViewSettings.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "ResourcePacks/ResourcePackResolver.h"
 #include <functional>
@@ -154,6 +155,8 @@ public:
   PeekWorldResourcePacks(const std::string &world_name) const;
   ResourcePackSelection GetCurrentWorldResourcePackSelection() const;
   bool ApplyResourcePacksToCurrentWorld(const ResourcePackSelection &selection);
+  WorldViewSettings GetCurrentWorldViewSettings() const;
+  bool ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view);
 
   void ApplyRuntimeStreamingToWorld();
 
@@ -165,7 +168,8 @@ public:
   void FinalizeEnterGameSession();
   std::string SetupNewWorldForCreation();
   void ApplyNewWorldCreationRequest(const ProceduralSettings &settings,
-                                    const ResourcePackSelection &selection);
+                                    const ResourcePackSelection &selection,
+                                    const WorldViewSettings &view = {});
   bool NeedsCreateWorldOnStartup() const;
   const std::filesystem::path &GetActiveWorldFolder() const
   {
@@ -214,6 +218,7 @@ private:
   std::vector<std::string> PendingNewWorldResourcePacks;
   ResourcePackSelection PendingNewWorldPackSelection;
   std::optional<ProceduralSettings> PendingNewWorldSettings;
+  WorldViewSettings PendingNewWorldViewSettings;
   ResourcePackSelection ActivePackSelection;
   bool ResourcePacksReady{false};
 

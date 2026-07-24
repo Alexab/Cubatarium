@@ -663,6 +663,13 @@ void UApplication::CreateNewWorldWithSettings(
 void UApplication::CreateNewWorldWithSettings(
     const ProceduralSettings &settings, const ResourcePackSelection &selection)
 {
+  CreateNewWorldWithSettings(settings, selection, WorldViewSettings{});
+}
+
+void UApplication::CreateNewWorldWithSettings(
+    const ProceduralSettings &settings, const ResourcePackSelection &selection,
+    const WorldViewSettings &view)
+{
   if (!Core)
   {
     return;
@@ -673,6 +680,7 @@ void UApplication::CreateNewWorldWithSettings(
                    : WorldRunnerOp::Create;
   request.settings = settings;
   request.packs = selection;
+  request.view = view;
   request.enterGameAfter = true;
   request.saveConfigAfter = true;
   BeginWorldOperation(std::move(request));
@@ -723,6 +731,20 @@ bool UApplication::ApplyResourcePacksToCurrentWorld(
   }
   RefreshBlockCatalog();
   return true;
+}
+
+WorldViewSettings UApplication::GetCurrentWorldViewSettings() const
+{
+  return Core ? Core->GetCurrentWorldViewSettings() : WorldViewSettings{};
+}
+
+bool UApplication::ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view)
+{
+  if (!Core)
+  {
+    return false;
+  }
+  return Core->ApplyViewSettingsToCurrentWorld(view);
 }
 
 void UApplication::LoadSelectedWorld(const std::string &worldName)
@@ -1428,9 +1450,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     glDepthMask(GL_TRUE);
     if (auto camera = World->GetCurrentUserCamera())
     {
-      const float aspect = static_cast<float>(width) /
-                           static_cast<float>(height > 0 ? height : 1);
-      camera->SetAspectRatio(aspect);
+      camera->SetViewportSize(width, height);
     }
     const auto prepare_begin = std::chrono::high_resolution_clock::now();
     Geometry->PrepareFrameRendering();

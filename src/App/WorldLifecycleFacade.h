@@ -3,6 +3,7 @@
 
 #include "App/CreateWorldCli.h"
 #include "ResourcePacks/ResourcePackResolver.h"
+#include "World/View/WorldViewSettings.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include <string>
 #include <vector>
@@ -49,7 +50,8 @@ public:
   std::string SetupNewWorldForCreation(UCore &core);
   void ApplyNewWorldCreationRequest(UCore &core,
                                     const ProceduralSettings &settings,
-                                    const ResourcePackSelection &selection);
+                                    const ResourcePackSelection &selection,
+                                    const WorldViewSettings &view = {});
   void RefreshWorldListAfterSave(UCore &core);
 };
 

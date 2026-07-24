@@ -37,6 +37,7 @@
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
 #include "Creatures/Visual/Gltf/CreatureGltfCache.h"
+#include "Render/Camera/Camera.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Textures/TextureBase.h"
@@ -1073,9 +1074,36 @@ void UCore::CreateNewWorldWithSettings(
 
 void UCore::ApplyNewWorldCreationRequest(
     const ProceduralSettings &settings,
-    const ResourcePackSelection &resourcePacks)
+    const ResourcePackSelection &resourcePacks, const WorldViewSettings &view)
 {
-  WorldLifecycle.ApplyNewWorldCreationRequest(*this, settings, resourcePacks);
+  WorldLifecycle.ApplyNewWorldCreationRequest(*this, settings, resourcePacks,
+                                              view);
+}
+
+WorldViewSettings UCore::GetCurrentWorldViewSettings() const
+{
+  if (!WorldInstance || WorldInstance->GetWorldName().empty())
+  {
+    return WorldViewSettings{};
+  }
+  return WorldInstance->GetViewSettings();
+}
+
+bool UCore::ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view)
+{
+  if (!WorldInstance || WorldInstance->GetWorldName().empty())
+  {
+    return false;
+  }
+  WorldViewSettings validated = view;
+  validated.Validate();
+  WorldInstance->SetViewSettings(validated);
+  if (auto camera = WorldInstance->GetCurrentUserCamera())
+  {
+    camera->ApplyWorldViewSettings(validated);
+  }
+  SaveWorld(WorldInstance->GetWorldName());
+  return true;
 }
 
 std::vector<std::string>

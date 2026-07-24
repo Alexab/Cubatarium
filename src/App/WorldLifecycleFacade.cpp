@@ -407,7 +407,7 @@ void UWorldLifecycleFacade::CreateNewWorldWithSettings(
 
 void UWorldLifecycleFacade::ApplyNewWorldCreationRequest(
     UCore &core, const ProceduralSettings &settings,
-    const ResourcePackSelection &resourcePacks)
+    const ResourcePackSelection &resourcePacks, const WorldViewSettings &view)
 {
   core.PendingNewWorldSettings = settings;
   core.PendingNewWorldSettings->Seed = settings.Seed;
@@ -421,6 +421,8 @@ void UWorldLifecycleFacade::ApplyNewWorldCreationRequest(
       ProceduralGeneratorToString(core.ProceduralTemplate.Generator);
 
   core.PendingNewWorldPackSelection = resourcePacks;
+  core.PendingNewWorldViewSettings = view;
+  core.PendingNewWorldViewSettings.Validate();
 }
 
 std::string UWorldLifecycleFacade::AllocateNextWorldName(const UCore &core) const
@@ -519,6 +521,8 @@ std::string UWorldLifecycleFacade::SetupNewWorldForCreation(UCore &core)
 
   core.WorldInstance->SetProceduralSettings(worldSettings);
   core.WorldInstance->SetRenderSettings(core.Render);
+  core.WorldInstance->SetViewSettings(core.PendingNewWorldViewSettings);
+  core.PendingNewWorldViewSettings = WorldViewSettings{};
   return new_world_name;
 }
 

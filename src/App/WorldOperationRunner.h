@@ -2,6 +2,7 @@
 
 #include "Core/Progress/IUProgressSink.h"
 #include "ResourcePacks/ResourcePackResolver.h"
+#include "World/View/WorldViewSettings.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "World/Core/World.h"
 #include <functional>
@@ -30,6 +31,7 @@ struct WorldRunnerRequest
   std::string worldName;
   ProceduralSettings settings;
   ResourcePackSelection packs;
+  WorldViewSettings view;
   bool enterGameAfter{false};
   bool saveConfigAfter{true};
   bool shutdownSaveSession{false};
