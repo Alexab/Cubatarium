@@ -1985,6 +1985,9 @@ void UGeometryEngine::RenderSimpleText(int width_size, int height_size)
     return;
   }
 
+  UGlStateScope glGuard(kGlMaskOverlay2D);
+  glDisable(GL_DEPTH_TEST);
+
   textRenderer->SetWindowSize(width_size, height_size);
 
   const float scale = 0.8f;
@@ -2055,6 +2058,9 @@ void UGeometryEngine::RenderHotbarLabels(int width_size, int height_size)
   {
     return;
   }
+
+  UGlStateScope glGuard(kGlMaskOverlay2D);
+  glDisable(GL_DEPTH_TEST);
 
   textRenderer->SetWindowSize(width_size, height_size);
   auto user = WorldInstance->GetCurrentUser();
@@ -2275,6 +2281,7 @@ void UGeometryEngine::RenderActiveObjectPreview(int width_size, int height_size)
   // Restore viewport
   glViewport(prevViewport[0], prevViewport[1], prevViewport[2],
              prevViewport[3]);
+  glDisable(GL_DEPTH_TEST);
 
   defaultShader->Unuse();
 }
