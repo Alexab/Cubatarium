@@ -110,6 +110,9 @@ set(SOURCES
     src/App/Utils.cpp
     src/App/CreateWorldCli.cpp
     src/Render/Camera/Camera.cpp
+    src/Render/Camera/CameraLens.cpp
+    src/Render/Camera/Control/FpsLookControl.cpp
+    src/Render/Camera/Control/IsoOrbitControl.cpp
     src/Creatures/Core/CreatureBounds.cpp
     src/Creatures/Core/CreatureCatalogTypes.cpp
     src/Creatures/Locomotion/CreatureLocomotionController.cpp
@@ -195,6 +198,7 @@ set(SOURCES
     src/World/Environment/WorldEnvironment.cpp
     src/World/Environment/EnvironmentConfig.cpp
     src/World/View/WorldViewSettings.cpp
+    src/World/View/ViewRayMath.cpp
     src/World/Environment/WeatherBiomeUtil.cpp
     src/World/Environment/WeatherAutoController.cpp
     src/World/Lighting/LightUtil.cpp
@@ -409,6 +413,7 @@ set(SOURCES
     src/Gui/Widgets/GuiPreviewViewport.cpp
     src/Gui/Widgets/GuiCheckbox.cpp
     src/Gui/Widgets/WorldGenSettingsForm.cpp
+    src/Gui/Widgets/WorldViewSettingsForm.cpp
     src/Gui/Widgets/ResourcePackPickerForm.cpp
     src/Gui/Screens/MainMenuScreen.cpp
     src/Gui/Screens/SettingsScreen.cpp
@@ -431,6 +436,11 @@ set(SOURCES
 
 set(HEADERS
     src/Render/Camera/Camera.h
+    src/Render/Camera/CameraLens.h
+    src/Render/Camera/ProjectionMode.h
+    src/Render/Camera/Control/IUCameraOrientationControl.h
+    src/Render/Camera/Control/FpsLookControl.h
+    src/Render/Camera/Control/IsoOrbitControl.h
     src/App/Settings/AppSettingsSnapshot.h
     src/App/Core.h
     src/App/WorldLifecycleFacade.h
@@ -452,6 +462,7 @@ set(HEADERS
     src/World/Environment/WorldEnvironment.h
     src/World/Environment/EnvironmentConfig.h
     src/World/View/WorldViewSettings.h
+    src/World/View/ViewRayMath.h
     src/World/Environment/WeatherBiomeUtil.h
     src/World/Environment/WeatherAutoController.h
     src/World/Lighting/LightUtil.h
@@ -574,6 +585,7 @@ set(HEADERS
     src/Gui/Widgets/GuiPreviewViewport.h
     src/Gui/Widgets/GuiCheckbox.h
     src/Gui/Widgets/WorldGenSettingsForm.h
+    src/Gui/Widgets/WorldViewSettingsForm.h
     src/Gui/Widgets/ResourcePackPickerForm.h
     src/Gui/Interfaces/IUGuiMenuHost.h
     src/Gui/Interfaces/IUGuiGameActions.h
@@ -992,6 +1004,13 @@ add_executable(world_view_settings_test
 target_include_directories(world_view_settings_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(world_view_settings_test nlohmann_json::nlohmann_json)
+
+add_executable(view_ray_math_test
+    src/Test/ViewRayMathTest.cpp
+    src/World/View/ViewRayMath.cpp)
+target_include_directories(view_ray_math_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(view_ray_math_test glm::glm)
 
 add_executable(chunk_light_pack_test
     src/Test/ChunkLightPackTest.cpp)

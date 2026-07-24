@@ -96,6 +96,7 @@ void UWorldViewBinding::ApplySpawnToCamera(UWorld &world)
   {
     camera->SetPosition(world.SpawnPoint);
     camera->SetOrientation(-90.0f, 0.0f);
+    camera->ApplyWorldViewSettings(world.GetViewSettings());
     if (const UCreature *controlled = world.GetControlledCreature())
     {
       if (const CreatureDefinition *def =
@@ -110,6 +111,7 @@ void UWorldViewBinding::ApplySpawnToCamera(UWorld &world)
   {
     Engine_->GetActiveCamera()->SetPosition(world.SpawnPoint);
     Engine_->GetActiveCamera()->SetOrientation(-90.0f, 0.0f);
+    Engine_->GetActiveCamera()->ApplyWorldViewSettings(world.GetViewSettings());
   }
 }
 
@@ -126,6 +128,7 @@ void UWorldViewBinding::ApplyUserToCamera(UWorld &world,
   {
     camera->SetPosition(user->GetPosition());
     camera->SetOrientation(user->GetCameraYaw(), user->GetCameraPitch());
+    camera->ApplyWorldViewSettings(world.GetViewSettings());
     if (const UCreature *controlled = world.GetControlledCreature())
     {
       if (const CreatureDefinition *def =
@@ -246,9 +249,7 @@ bool UWorldViewBinding::TryGetCurrentViewRay(const UWorld &world,
   {
     return false;
   }
-  position = camera->GetPosition();
-  front = camera->GetFront();
-  return true;
+  return camera->TryGetCenterViewRay(position, front);
 }
 
 void UWorldViewBinding::RefreshIntersectionFromCurrentView(UWorld &world)

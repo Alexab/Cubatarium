@@ -1,6 +1,9 @@
 #include "Render/Camera/Camera.h"
 #include "Render/Camera/CameraBasisLogic.h"
+#include "Render/Camera/CameraLens.h"
+#include "Render/Camera/Control/IsoOrbitControl.h"
 #include "Render/Engine/ViewEngine.h"
+#include "World/View/ViewRayMath.h"
 #include "Render/GlIncludes.h"
 #include "World/Core/World.h"
 #include <algorithm>
@@ -161,6 +164,48 @@ void UCamera::SetAspectRatio(float value)
   UpdatePose();
 }
 
+void UCamera::SetViewportSize(int width, int height)
+{
+  ViewportWidth = std::max(width, 0);
+  ViewportHeight = std::max(height, 0);
+  if (ViewportHeight > 0)
+  {
+    AspectRatio =
+        static_cast<float>(ViewportWidth) / static_cast<float>(ViewportHeight);
+  }
+  UpdatePose();
+}
+
+bool UCamera::TryGetCenterViewRay(glm::vec3 &out_origin,
+                                  glm::vec3 &out_dir) const
+{
+  if (ViewportWidth <= 0 || ViewportHeight <= 0)
+  {
+    out_origin = Position;
+    out_dir = Front;
+    return true;
+  }
+  const glm::ivec4 viewport(0, 0, ViewportWidth, ViewportHeight);
+  const float mouse_x = static_cast<float>(ViewportWidth) * 0.5f;
+  const float mouse_y = static_cast<float>(ViewportHeight) * 0.5f;
+  if (!ScreenPointToWorldRay(Pose, Projection, viewport, mouse_x, mouse_y,
+                             out_origin, out_dir))
+  {
+    out_origin = Position;
+    out_dir = Front;
+  }
+  return true;
+}
+
+void UCamera::RotateIsoYaw(int delta_steps)
+{
+  if (!IsIsometricProjection())
+  {
+    return;
+  }
+  SetIsoYawIndex(IsoYawIndex + delta_steps);
+}
+
 bool UCamera::GetFreeMove() const
 {
   return Locomotion.GetMode() == PlayerMovementMode::Flying;
@@ -255,26 +300,12 @@ glm::vec3 UCamera::ComputeHorizontalShift(float deltaTime)
 {
   const PlayerInput input = BuildPlayerInput(false);
   const float velocity = Locomotion.ResolveHorizontalSpeed(input) * deltaTime;
-  glm::vec3 shift(0.0f);
-  if (KeysStatus[GLFW_KEY_W])
+  const glm::vec3 intent = GetMoveIntentDir();
+  if (glm::dot(intent, intent) < 1e-10f)
   {
-    shift += glm::vec3(std::cos(radians(Yaw)), 0.0f, std::sin(radians(Yaw))) *
-             velocity;
+    return glm::vec3(0.0f);
   }
-  if (KeysStatus[GLFW_KEY_S])
-  {
-    shift -= glm::vec3(std::cos(radians(Yaw)), 0.0f, std::sin(radians(Yaw))) *
-             velocity;
-  }
-  if (KeysStatus[GLFW_KEY_A])
-  {
-    shift -= Right * velocity;
-  }
-  if (KeysStatus[GLFW_KEY_D])
-  {
-    shift += Right * velocity;
-  }
-  return shift;
+  return intent * velocity;
 }
 
 void UCamera::UpdateMoveIntentFromKeys()
@@ -297,27 +328,52 @@ glm::vec3 UCamera::GetMoveIntentDir() const
     const auto it = KeysStatus.find(key);
     return it != KeysStatus.end() && it->second;
   };
-  glm::vec3 shift = glm::vec3(0.0f);
+  float forward = 0.0f;
+  float rightward = 0.0f;
   if (keyDown(GLFW_KEY_W))
   {
-    shift += glm::vec3(std::cos(radians(Yaw)), 0.0f, std::sin(radians(Yaw)));
+    forward += 1.0f;
   }
   if (keyDown(GLFW_KEY_S))
   {
-    shift -= glm::vec3(std::cos(radians(Yaw)), 0.0f, std::sin(radians(Yaw)));
+    forward -= 1.0f;
   }
   if (keyDown(GLFW_KEY_A))
   {
-    shift -= Right;
+    rightward -= 1.0f;
   }
   if (keyDown(GLFW_KEY_D))
   {
-    shift += Right;
+    rightward += 1.0f;
   }
-  shift.y = 0.0f;
+
+  glm::vec3 shift = glm::vec3(0.0f);
+  if (IsIsometricProjection())
+  {
+    shift = IsoScreenMoveIntent(*this, forward, rightward);
+  }
+  else
+  {
+    if (forward != 0.0f)
+    {
+      shift +=
+          glm::vec3(std::cos(radians(Yaw)), 0.0f, std::sin(radians(Yaw))) *
+          forward;
+    }
+    if (rightward != 0.0f)
+    {
+      shift += Right * rightward;
+    }
+    shift.y = 0.0f;
+    if (glm::dot(shift, shift) > 1e-10f)
+    {
+      shift /= std::sqrt(glm::dot(shift, shift));
+    }
+  }
+
   if (glm::dot(shift, shift) > 1e-10f)
   {
-    return shift / std::sqrt(glm::dot(shift, shift));
+    return shift;
   }
   if (LastMoveIntentValid)
   {
@@ -499,6 +555,10 @@ void UCamera::ProcessKeyboard(const UWorld *world, Camera_Movement direction,
 void UCamera::ProcessMouseMovement(float Xoffset, float Yoffset,
                                    bool constrainPitch)
 {
+  if (IsIsometricProjection())
+  {
+    return;
+  }
   Xoffset *= this->MouseSensitivity;
   Yoffset *= this->MouseSensitivity;
 
@@ -522,6 +582,11 @@ void UCamera::ProcessMouseMovement(float Xoffset, float Yoffset,
 // on the Vertical wheel-axis
 void UCamera::ProcessMouseScroll(float Yoffset)
 {
+  if (IsIsometricProjection())
+  {
+    SetOrthoSize(OrthoSize - Yoffset * 1.5f);
+    return;
+  }
   if (this->Zoom >= 1.0f && this->Zoom <= 45.0f)
     this->Zoom -= Yoffset;
   if (this->Zoom <= 1.0f)
@@ -553,8 +618,89 @@ glm::vec3 UCamera::ComputeCameraWorldPosition() const
 
 void UCamera::CyclePerspective()
 {
+  if (IsIsometricProjection())
+  {
+    Perspective = CameraPerspective::FirstPerson;
+    UpdatePose();
+    return;
+  }
   Perspective = CycleCameraPerspective(Perspective);
   UpdatePose();
+}
+
+void UCamera::SetProjectionMode(ProjectionMode mode)
+{
+  Mode = mode;
+  if (IsIsometricProjection())
+  {
+    Perspective = CameraPerspective::FirstPerson;
+    ApplyIsometricOrientation();
+  }
+  UpdatePose();
+}
+
+void UCamera::SetOrthoSize(float value)
+{
+  OrthoSize = std::clamp(value, 4.0f, 256.0f);
+  UpdatePose();
+}
+
+void UCamera::SetIsoYawIndex(int index)
+{
+  IsoYawIndex = ((index % 4) + 4) % 4;
+  if (IsIsometricProjection())
+  {
+    ApplyIsometricOrientation();
+  }
+  UpdatePose();
+}
+
+void UCamera::SetIsoPitchDeg(float degrees)
+{
+  IsoPitchDeg = std::clamp(degrees, 15.0f, 60.0f);
+  if (IsIsometricProjection())
+  {
+    ApplyIsometricOrientation();
+  }
+  UpdatePose();
+}
+
+void UCamera::ApplyIsometricOrientation()
+{
+  // Base yaw -90 looks down -Z; +45 gives classic isometric corner.
+  Yaw = -90.0f + 45.0f + static_cast<float>(IsoYawIndex) * 90.0f;
+  Pitch = IsoPitchDeg;
+  UpdateCameraVectors();
+}
+
+void UCamera::ApplyWorldViewSettings(const WorldViewSettings &settings)
+{
+  WorldViewSettings validated = settings;
+  validated.Validate();
+  Mode = ProjectionModeFromWorld(validated.Projection);
+  OrthoSize = validated.OrthoSize;
+  IsoYawIndex = validated.IsoYawIndex;
+  IsoPitchDeg = validated.IsoPitchDeg;
+  if (IsIsometricProjection())
+  {
+    Perspective = CameraPerspective::FirstPerson;
+    ApplyIsometricOrientation();
+  }
+  else
+  {
+    UpdatePose();
+  }
+}
+
+WorldViewSettings UCamera::CaptureWorldViewSettings() const
+{
+  WorldViewSettings settings;
+  settings.Projection = WorldProjectionModeFromProjection(Mode);
+  settings.OrthoSize = OrthoSize;
+  settings.IsoYawIndex = IsoYawIndex;
+  settings.IsoPitchDeg = IsoPitchDeg;
+  settings.Validate();
+  return settings;
 }
 
 void UCamera::UpdatePose()
@@ -564,15 +710,36 @@ void UCamera::UpdatePose()
   const glm::vec3 target = eye + Front;
   Pose = glm::lookAt(camWorld, target, Up);
 
-  Projection =
-      glm::perspective(glm::radians(Fov), AspectRatio, NearPlane, FarPlane);
+  if (Mode == ProjectionMode::OrthographicIsometric)
+  {
+    Projection = CameraLens::BuildIsometricOrtho(OrthoSize, AspectRatio,
+                                                 NearPlane, FarPlane);
+  }
+  else
+  {
+    Projection = CameraLens::BuildPerspective(Fov, AspectRatio, NearPlane,
+                                              FarPlane);
+  }
 
   MvpMatrix = Projection * Pose;
 }
 
 void UCamera::UpdateKeyStatus(size_t key_index, bool is_pressed)
 {
+  const auto it = KeysStatus.find(key_index);
+  const bool was_pressed = it != KeysStatus.end() && it->second;
   KeysStatus[key_index] = is_pressed;
+  if (IsIsometricProjection() && is_pressed && !was_pressed)
+  {
+    if (key_index == static_cast<size_t>(GLFW_KEY_Q))
+    {
+      RotateIsoYaw(-1);
+    }
+    else if (key_index == static_cast<size_t>(GLFW_KEY_E))
+    {
+      RotateIsoYaw(1);
+    }
+  }
 }
 
 void UCamera::ResetAllKeyStatus()
@@ -601,7 +768,10 @@ void UCamera::UpdateMouseMove(std::shared_ptr<UWorld> world, double xpos,
 
   ProcessMouseMovement(static_cast<float>(Xoffset),
                        static_cast<float>(Yoffset));
-  world->UpdateIntersection(GetPosition(), GetFront());
+  glm::vec3 ray_origin;
+  glm::vec3 ray_dir;
+  TryGetCenterViewRay(ray_origin, ray_dir);
+  world->UpdateIntersection(ray_origin, ray_dir);
 }
 
 void UCamera::ResetMouseMove(double xpos, double ypos)

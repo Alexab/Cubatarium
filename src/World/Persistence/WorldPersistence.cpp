@@ -1641,6 +1641,10 @@ void UWorldPersistence::SaveWorldData(UWorld &world,
     world_data["catalog_fingerprint"] = world.CatalogFingerprint;
   }
   WriteWorldGenSets(world_data, world.WorldGenSetsData);
+  if (auto camera = world.GetCurrentUserCamera())
+  {
+    world.SetViewSettings(camera->CaptureWorldViewSettings());
+  }
   world.SyncDefaultCelestialBodiesToConfig();
   EnvironmentConfig config = world.GetEnvironmentConfig();
   config.TimeOfDay = world.GetEnvironmentState().TimeOfDayNormalized;

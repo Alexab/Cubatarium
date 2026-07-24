@@ -922,14 +922,14 @@ void UWindowManager::HandleWindowResizeEvent(int width, int height)
   {
     if (auto camera = Views->GetActiveCamera())
     {
-      camera->SetAspectRatio(aspect);
+      camera->SetViewportSize(width, height);
     }
   }
   if (World)
   {
     if (auto camera = World->GetCurrentUserCamera())
     {
-      camera->SetAspectRatio(aspect);
+      camera->SetViewportSize(width, height);
     }
   }
 

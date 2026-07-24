@@ -11,6 +11,8 @@
 #include "Creatures/Player/PlayerCapsule.h"
 #include "Creatures/Player/PlayerController.h"
 #include "Render/Camera/CameraPerspective.h"
+#include "Render/Camera/ProjectionMode.h"
+#include "World/View/WorldViewSettings.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -68,6 +70,11 @@ public:
 
   void SetViewEngine(UViewEngine *view_engine);
   void SetAspectRatio(float value);
+  void SetViewportSize(int width, int height);
+  int GetViewportWidth() const { return ViewportWidth; }
+  int GetViewportHeight() const { return ViewportHeight; }
+  bool TryGetCenterViewRay(glm::vec3 &out_origin, glm::vec3 &out_dir) const;
+  void RotateIsoYaw(int delta_steps);
 
   bool DoMovement(const UWorld *world);
   void ResetVerticalPhysics();
@@ -93,6 +100,21 @@ public:
 
   CameraPerspective GetPerspective() const { return Perspective; }
   void CyclePerspective();
+
+  ProjectionMode GetProjectionMode() const { return Mode; }
+  void SetProjectionMode(ProjectionMode mode);
+  float GetOrthoSize() const { return OrthoSize; }
+  void SetOrthoSize(float value);
+  int GetIsoYawIndex() const { return IsoYawIndex; }
+  void SetIsoYawIndex(int index);
+  float GetIsoPitchDeg() const { return IsoPitchDeg; }
+  void SetIsoPitchDeg(float degrees);
+  void ApplyWorldViewSettings(const WorldViewSettings &settings);
+  WorldViewSettings CaptureWorldViewSettings() const;
+  bool IsIsometricProjection() const
+  {
+    return Mode == ProjectionMode::OrthographicIsometric;
+  }
 
   void UpdateKeyStatus(size_t key_index, bool is_pressed);
   void ResetAllKeyStatus();
@@ -121,6 +143,7 @@ private:
                             bool constrainPitch = true);
   void ProcessMouseScroll(float Yoffset);
   void UpdatePose();
+  void ApplyIsometricOrientation();
   glm::vec3 ComputeCameraWorldPosition() const;
   void UpdateCameraVectors();
   void SyncFreeMoveFromController();
@@ -130,6 +153,12 @@ private:
   float AspectRatio;
   float NearPlane;
   float FarPlane;
+  ProjectionMode Mode{ProjectionMode::Perspective};
+  float OrthoSize{24.0f};
+  int IsoYawIndex{0};
+  float IsoPitchDeg{35.264f};
+  int ViewportWidth{0};
+  int ViewportHeight{0};
 
   glm::vec3 Position;
   glm::vec3 Front;
