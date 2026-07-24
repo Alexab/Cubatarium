@@ -290,7 +290,7 @@ void USettingsScreen::Build(UGuiContext &ctx)
   hud->SetChecked(appSnap.Ui.LegacyHud);
   app.AddChild(std::move(hud));
   auto perf =
-      std::make_unique<UGuiCheckbox>(&theme, "Show performance overlay");
+      std::make_unique<UGuiCheckbox>(&theme, "Show debug overlay");
   ShowPerformanceBox = perf.get();
   perf->SetChecked(appSnap.Ui.ShowPerformance);
   app.AddChild(std::move(perf));

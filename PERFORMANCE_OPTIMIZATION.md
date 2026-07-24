@@ -40,7 +40,7 @@ Interval: `ui.perf_log_interval_sec` (default 2). Spikes (`wall_ms > 100`) log i
 
 ## Profiling bisect
 
-1. HUD: `ui.show_performance: true` — compare Wall / Sim / Swap.
+1. HUD: `ui.show_performance: true` (default off; Settings «Show debug overlay» or F10) — compare Wall / Sim / Swap.
 2. Read latest `bin/logs/perf_*.jsonl` after play (or glog `[Perf]` lines).
 3. If Wall ≪ Sim: toggle `render.vsync`, keep `msaa_samples: 0`, check GPU load (weather drops to Fast when swap_wait high).
 4. If Wall ≈ Sim: toggle `render.async_meshing` / procedural budgets; export `worlds/World_NNN/movement_diagnostics.json`.

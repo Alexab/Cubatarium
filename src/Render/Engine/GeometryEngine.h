@@ -94,7 +94,7 @@ public:
   bool GetShowHud() const { return ShowHud; }
   bool GetShowCrosshair() const { return ShowCrosshair; }
   bool GetShowPerformance() const { return ShowPerformance; }
-  void SetOverlayMargins(int right, int top);
+  void SetOverlayMargins(int left, int right, int top);
 
   void ShowTransientMessage(const std::string &msg, double seconds);
 
@@ -281,9 +281,11 @@ private:
   // HUD toggles
   bool ShowHud = true;
   bool ShowCrosshair = true;
-  bool ShowPerformance = true;
+  bool ShowPerformance = false;
+  int OverlayMarginLeft{10};
   int OverlayMarginRight{10};
   int OverlayMarginTop{30};
+  int OverlayMarginBottom{20};
 
   // Rendering optimization
   std::vector<RenderBatch> renderBatches;

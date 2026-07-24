@@ -15,7 +15,7 @@ enum class ControlScheme
 struct UiSettings
 {
   bool LegacyHud{false};
-  bool ShowPerformance{true};
+  bool ShowPerformance{false};
   /// Seconds between periodic [Perf] / perf_*.jsonl aggregates (InGame).
   float PerfLogIntervalSec{2.0f};
   std::string ConsoleKey{"grave"};
