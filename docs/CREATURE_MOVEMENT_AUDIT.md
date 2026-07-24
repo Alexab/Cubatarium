@@ -15,15 +15,15 @@ Enable telemetry: `gameplay.creature_movement_diag` or console `creature_diag on
 
 | ID | Severity | Finding | Evidence | Status |
 |----|----------|---------|----------|--------|
-| CMA-001 | high | Chase/flee A* goal uses `controlled->eyePosition`; stand-node at eye Y fails after feet-anchored collision (`0b261e7f`, `82436ab4`) → persistent `path_fail` / direct fallback | [`SimpleFsmBrain.cpp`](../src/Activity/Brain/SimpleFsmBrain.cpp); `ControlledCreatureInfo` only has `eyePosition` | open → P0 |
-| CMA-002 | high | Dual motor: player = Camera `ResolveMovement`+step-up + locomotion vertical; NPC = `ResolveTerrestrialMobMovement` / all-or-nothing aerial | [`Creature.cpp`](../src/Creatures/Core/Creature.cpp), [`Camera.cpp`](../src/Render/Camera/Camera.cpp) | open → P1 |
-| CMA-003 | medium | Wander uses random probe 1.25 only (no A*); stuck/idle oscillation at walls/terrain | [`WanderActivityAgent.cpp`](../src/Activity/Agents/WanderActivityAgent.cpp) | open → P2 |
-| CMA-004 | medium | Habitat climb/drop hardcode 1.25 vs `jumpHeightBlocks` in terrestrial step | [`CreatureEnvironment.cpp`](../src/Creatures/Environment/CreatureEnvironment.cpp) | open (partially addressed by P1) |
-| CMA-005 | medium | Aerial NPC move: accept candidate only if no block collision (no axis slide) | `ExecuteIntent` airMobility branch | open → P1 |
-| CMA-006 | low | Stuck detector is XZ-only; false stuck possible for vertical aerial/aquatic | [`CreatureActivitySteering.cpp`](../src/Activity/Helpers/CreatureActivitySteering.cpp) | open → P2 |
-| CMA-007 | low | Intent sticky between `activity_tick_hz` ticks (`clearOnApply=false`) | agents + ExecuteIntent | note (by design); diag marks `activityTick` |
-| CMA-008 | info | Docs stale: AUDIT/DEBT still say flee/melee missing; TD-CRE-008 closed | docs | open → docs-sync |
-| CMA-009 | info | No prior per-mob locomotion telemetry | fixed by diagnostics commit | closed |
+| CMA-001 | high | Chase/flee A* goal uses eye | SimpleFsmBrain + ControlledCreatureInfo | **closed** (body/feet goals) |
+| CMA-002 | high | Dual motor player vs NPC | Creature / Camera | **closed** (shared CreatureMotor) |
+| CMA-003 | medium | Wander probe/stuck | WanderActivityAgent | **closed** (3D stuck + probe ~ speed) |
+| CMA-004 | medium | Habitat climb/drop 1.25 vs jumpHeight | CreatureEnvironment | open (mitigated by shared step-up) |
+| CMA-005 | medium | Aerial all-or-nothing | ExecuteIntent | **closed** (shared ResolveMovement slide) |
+| CMA-006 | low | Stuck XZ-only | CreatureActivitySteering | **closed** (3D speed) |
+| CMA-007 | low | Intent sticky between activity ticks | agents | note (by design) |
+| CMA-008 | info | Docs stale on flee/melee | docs | **closed** (docs sync) |
+| CMA-009 | info | No per-mob telemetry | — | **closed** (diagnostics) |
 
 ## Habitat / behavior smoke checklist
 
