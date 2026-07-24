@@ -2954,6 +2954,12 @@ void UWorld::ApplyEditFastRelight(
   {
     return;
   }
+  // Drop dig-era inflight meshes before light mutate — otherwise a late Apply
+  // can paint dig faces dark after place Immediate (manual 092611).
+  if (MeshService)
+  {
+    MeshService->InvalidateEditMeshNeighborhood(block_positions);
+  }
   const auto t0 = std::chrono::high_resolution_clock::now();
   // Incremental remove+flood (no chunk Clear). Immediate after this samples
   // correct sky/block light day/night/torch; SoftDefer must not freeze a
@@ -2966,17 +2972,22 @@ void UWorld::ApplyEditFastRelight(
 
 void UWorld::ApplyEditLighting(const std::vector<glm::ivec3> &block_positions)
 {
-  if (block_positions.empty() || !Persistence)
+  if (block_positions.empty())
   {
     return;
   }
-  // Async player-relight refines seams/neighborhood. Do NOT NotePending /
-  // SoftDefer-lock edit columns — incremental light already correct for mesh.
-  Persistence->EnqueuePlayerRelight(block_positions);
-  PhysicsTelemetryData.PendingPlayerRelights =
-      static_cast<uint64_t>(Persistence->GetPendingPlayerRelightCount());
-  PhysicsTelemetryData.PendingBackgroundRelights = static_cast<uint64_t>(
-      Persistence->GetPendingTerrainColumnRelightCount());
+  // Incremental RelightBlocksAroundEdit already updated local light. Async
+  // player-relight Clears the neighborhood and MarkRelit remeshed dig sites
+  // dark until later bands finished — dig→place temporary blackness
+  // (manual 092611). Do not enqueue Clear refinement after edit.
+  (void)block_positions;
+  if (Persistence)
+  {
+    PhysicsTelemetryData.PendingPlayerRelights =
+        static_cast<uint64_t>(Persistence->GetPendingPlayerRelightCount());
+    PhysicsTelemetryData.PendingBackgroundRelights = static_cast<uint64_t>(
+        Persistence->GetPendingTerrainColumnRelightCount());
+  }
 }
 
 void UWorld::TickPlayerRelightMeshBurst()

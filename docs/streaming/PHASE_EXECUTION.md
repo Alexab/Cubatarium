@@ -134,6 +134,12 @@ with `mesh_async=42` — neighbor faces stayed dark / lamp glow dripped in via
 async Dirty. Fix: dig/place Immediate face neighbors; emission edits also sync
 a capped light-ring remesh (≤9 chunks) + remesh burst.
 
+Manual `092611`: dig OK, place in hole / on rim → temporary blackness on dig
+faces that self-clears. Cause: `EnqueuePlayerRelight` Cleared neighborhood and
+MarkRelit remeshed dark until later bands; also dig inflight Apply racing place.
+Fix: skip async Clear player-relight after incremental edit; invalidate edit
+neighborhood inflight before Relight.
+
 ## Lessons (2026-07-22 evening)
 
 1. **Aggressive C (sync_cap=0, ban underfeet, StarveRemeshForHoles)** → sticky↑ and spike↑. Do not repeat.

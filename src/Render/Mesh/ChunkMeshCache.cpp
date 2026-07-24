@@ -633,6 +633,13 @@ void UChunkMeshCache::BumpChunkMeshRevision(glm::ivec3 chunk_coord)
   MeshRevisions.Bump(chunk_coord);
 }
 
+void UChunkMeshCache::InvalidateInFlightMeshBuild(glm::ivec3 chunk_coord)
+{
+  ActiveMeshSourceRevision.erase(chunk_coord);
+  RemeshAfterApply.erase(chunk_coord);
+  BumpChunkMeshRevision(chunk_coord);
+}
+
 bool UChunkMeshCache::HasDirtyWithinHorizontalRadius(
     glm::ivec3 center_chunk, int radius_chunks) const
 {
@@ -1594,9 +1601,7 @@ void UChunkMeshCache::RebuildChunkImmediate(const UBlockWorld &world,
   const auto t0 = std::chrono::high_resolution_clock::now();
   // Break flicker: late ApplyMeshResult of a pre-edit async snapshot must not
   // overwrite this Immediate mesh. Same revision invalidate as MarkDirtyPriority.
-  ActiveMeshSourceRevision.erase(chunkCoord);
-  RemeshAfterApply.erase(chunkCoord);
-  BumpChunkMeshRevision(chunkCoord);
+  InvalidateInFlightMeshBuild(chunkCoord);
   RebuildChunk(world, registry, chunkCoord);
   Dirty.Erase(chunkCoord);
   InvalidateVisibleList();

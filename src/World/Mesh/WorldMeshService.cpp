@@ -339,6 +339,24 @@ void UWorldMeshService::RebuildChunkImmediate(const UBlockWorld &world,
   Cache.RebuildChunkImmediate(world, registry, chunk_coord);
 }
 
+void UWorldMeshService::InvalidateEditMeshNeighborhood(
+    const std::vector<glm::ivec3> &block_positions)
+{
+  std::unordered_set<glm::ivec3, IVec3Hash> chunks;
+  for (const glm::ivec3 &block_pos : block_positions)
+  {
+    chunks.insert(UChunkManager::WorldToChunk(block_pos));
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      chunks.insert(UChunkManager::WorldToChunk(block_pos + offset));
+    }
+  }
+  for (const glm::ivec3 &chunk_coord : chunks)
+  {
+    Cache.InvalidateInFlightMeshBuild(chunk_coord);
+  }
+}
+
 void UWorldMeshService::ResetImmediateMeshStats()
 {
   Cache.ResetImmediateMeshStats();

@@ -122,6 +122,8 @@ public:
   bool IsChunkMeshDirty(glm::ivec3 chunk_coord) const;
   uint64_t GetChunkMeshRevision(glm::ivec3 chunk_coord) const;
   bool HasInflightMeshBuild(glm::ivec3 chunk_coord) const;
+  /// Drop stale async apply for this chunk (revision bump + clear RemeshAfterApply).
+  void InvalidateInFlightMeshBuild(glm::ivec3 chunk_coord);
   uint64_t GetInflightSourceRevision(glm::ivec3 chunk_coord) const;
   size_t GetInstanceCount() const { return Instances.size(); }
   size_t GetGreedyVertexCount() const;

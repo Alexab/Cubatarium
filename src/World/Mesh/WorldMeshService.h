@@ -85,6 +85,9 @@ public:
                              int max_per_frame);
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,
                              glm::ivec3 chunk_coord);
+  /// Invalidate inflight/async apply for edit neighborhood (face neighbors).
+  void InvalidateEditMeshNeighborhood(
+      const std::vector<glm::ivec3> &block_positions);
   void ResetImmediateMeshStats();
   double GetLastMeshImmediateMs() const;
   int GetLastMeshImmediateCount() const;
