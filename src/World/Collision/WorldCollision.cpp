@@ -252,8 +252,23 @@ bool FindSteppableLedge(const UWorldCollision &collision,
                         const glm::vec3 &dir, const PlayerCapsule &cap,
                         CreatureId skipCreatureId, glm::ivec3 &outStepCell)
 {
-  const int dx = dir.x > 0.25f ? 1 : (dir.x < -0.25f ? -1 : 0);
-  const int dz = dir.z > 0.25f ? 1 : (dir.z < -0.25f ? -1 : 0);
+  // Axis-aligned step only: pick the dominant horizontal axis so corner
+  // approaches do not diagonal-jump onto the adjacent block.
+  int dx = 0;
+  int dz = 0;
+  const float ax = std::abs(dir.x);
+  const float az = std::abs(dir.z);
+  if (ax >= az)
+  {
+    if (ax > 0.25f)
+    {
+      dx = dir.x > 0.0f ? 1 : -1;
+    }
+  }
+  else if (az > 0.25f)
+  {
+    dz = dir.z > 0.0f ? 1 : -1;
+  }
   if (dx == 0 && dz == 0)
   {
     return false;
@@ -804,8 +819,7 @@ bool UWorldCollision::GetStepUpLanding(const glm::vec3 &eyePos,
     return false;
   }
 
-  outLanding = probe.TargetPos - glm::vec3(probe.MoveDir.x * 0.18f, 0.0f,
-                                           probe.MoveDir.z * 0.18f);
+  outLanding = probe.TargetPos;
   return !CheckCollision(outLanding, cap,
                          Environment ? Environment->GetControlledCreatureId()
                                      : 0);

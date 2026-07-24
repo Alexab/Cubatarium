@@ -562,14 +562,16 @@ bool UCamera::ApplyHorizontalMovement(const UWorld *world, float deltaTime)
       if (!world->GetStepUpLanding(newPos, intent, cap, kStepUpTriggerDistance,
                                    landing))
       {
-        landing = probe.TargetPos - glm::vec3(probe.MoveDir.x * 0.18f, 0.0f,
-                                              probe.MoveDir.z * 0.18f);
+        // Landing unsafe — do not force a step-up animation.
       }
-      StepUpAnim.Active = true;
-      StepUpAnim.StartPos = newPos;
-      StepUpAnim.TargetPos = landing;
-      StepUpAnim.Elapsed = 0.0f;
-      stepped = true;
+      else
+      {
+        StepUpAnim.Active = true;
+        StepUpAnim.StartPos = newPos;
+        StepUpAnim.TargetPos = landing;
+        StepUpAnim.Elapsed = 0.0f;
+        stepped = true;
+      }
     }
   }
 
