@@ -210,9 +210,7 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
     }
     if (!app.ConsoleOpen && KeyNameIs(app.Ui.InventoryKey, key))
     {
-      const bool sameTabOpen = app.PaletteOpen && app.PaletteScreen &&
-                               app.PaletteScreen->GetActiveMainTab() == 1;
-      if (sameTabOpen)
+      if (app.PaletteOpen)
       {
         app.PaletteOpen = false;
         if (app.PaletteScreen)
@@ -231,7 +229,8 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
         }
         if (app.PaletteScreen)
         {
-          app.PaletteScreen->OpenWithMainTab(1);
+          // Restore last main tab (default Blocks on first open).
+          app.PaletteScreen->SetVisible(true);
         }
       }
 #if defined(__ANDROID__)
