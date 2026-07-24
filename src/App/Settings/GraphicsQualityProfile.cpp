@@ -101,9 +101,13 @@ RenderSettings GraphicsQualityProfile::MakeRenderSettings() const
   case PerformancePreset::Fast:
     s.AsyncMeshing = false;
     s.FrustumCulling = true;
-    s.DistanceFog = false;
+    // Boundary fog only (cheap shader uniforms). Skip pull-in / water-unfinished
+    // near fog so unfinished ring masking does not add streaming CPU cost.
+    s.DistanceFog = true;
     s.GradientSky = false;
     s.BatchCache = true;
+    s.FogPullInEnabled = false;
+    s.FogWaterUnfinishedBoost = false;
     break;
   case PerformancePreset::Quality:
     s.AsyncMeshing = true;
