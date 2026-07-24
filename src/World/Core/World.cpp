@@ -89,6 +89,8 @@ constexpr float kMaxReasonablePlayerY = 512.0f;
 constexpr float kMinReasonablePlayerY = -32.0f;
 constexpr float kSecondsPerMinute = 60.0f;
 constexpr float kMinDayLengthMinutes = 1.0f;
+constexpr float kStarOrbitPeriodDays = 0.997f;
+constexpr float kStarOrbitPhase = 0.25f;
 
 float Clamp01(float value) { return std::clamp(value, 0.0f, 1.0f); }
 
@@ -129,23 +131,41 @@ UWorld::CelestialBodyType CelestialTypeFromId(const std::string &id)
   return UWorld::CelestialBodyType::Sun;
 }
 
+glm::mat3 BuildCelestialFrameRotation(float period_days, float phase,
+                                      float inclination_deg, float longitude_deg,
+                                      float time_norm)
+{
+  const float period = std::max(0.01f, period_days);
+  const float theta = (time_norm / period + phase) * 6.28318530718f;
+  const float c = std::cos(theta);
+  const float s = std::sin(theta);
+  // R_z(theta): XY phase (column-major)
+  const glm::mat3 R_phase(glm::vec3(c, s, 0.0f), glm::vec3(-s, c, 0.0f),
+                          glm::vec3(0.0f, 0.0f, 1.0f));
+  const float inc = glm::radians(inclination_deg);
+  const float cos_i = std::cos(inc);
+  const float sin_i = std::sin(inc);
+  // R_x(inclination)
+  const glm::mat3 R_inc(glm::vec3(1.0f, 0.0f, 0.0f),
+                        glm::vec3(0.0f, cos_i, sin_i),
+                        glm::vec3(0.0f, -sin_i, cos_i));
+  const float lon = glm::radians(longitude_deg);
+  const float cos_l = std::cos(lon);
+  const float sin_l = std::sin(lon);
+  // R_y(longitude)
+  const glm::mat3 R_lon(glm::vec3(cos_l, 0.0f, -sin_l),
+                        glm::vec3(0.0f, 1.0f, 0.0f),
+                        glm::vec3(sin_l, 0.0f, cos_l));
+  return R_lon * R_inc * R_phase;
+}
+
 glm::vec3 ComputeCelestialDirection(const UWorld::UCelestialBodyVisual &body,
                                     float time_norm)
 {
-  const float period_days = std::max(0.01f, body.OrbitPeriodDays);
-  const float orbit_phase =
-      (time_norm / period_days + body.OrbitPhase) * 6.28318530718f;
-  glm::vec3 dir(std::cos(orbit_phase), std::sin(orbit_phase), 0.0f);
-  const float inc = glm::radians(body.OrbitInclinationDeg);
-  const float cos_i = std::cos(inc);
-  const float sin_i = std::sin(inc);
-  const glm::vec3 tilted(dir.x, dir.y * cos_i - dir.z * sin_i,
-                         dir.y * sin_i + dir.z * cos_i);
-  const float lon = glm::radians(body.OrbitLongitudeDeg);
-  const float cos_l = std::cos(lon);
-  const float sin_l = std::sin(lon);
-  glm::vec3 out(tilted.x * cos_l + tilted.z * sin_l, tilted.y,
-                -tilted.x * sin_l + tilted.z * cos_l);
+  const glm::mat3 R = BuildCelestialFrameRotation(
+      body.OrbitPeriodDays, body.OrbitPhase, body.OrbitInclinationDeg,
+      body.OrbitLongitudeDeg, time_norm);
+  glm::vec3 out = R * glm::vec3(1.0f, 0.0f, 0.0f);
   if (!std::isfinite(out.x) || !std::isfinite(out.y) || !std::isfinite(out.z))
   {
     out = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -275,6 +295,32 @@ void UWorld::UpdateCelestialLightingFactors()
       EnvironmentStateData.StarVisibilityOverride >= 0.0f
           ? Clamp01(EnvironmentStateData.StarVisibilityOverride)
           : auto_star_visibility;
+
+  const UCelestialBodyVisual *primary_sun = nullptr;
+  for (const UCelestialBodyVisual &body : EnvironmentStateData.CelestialBodies)
+  {
+    if (body.Type == CelestialBodyType::Sun)
+    {
+      primary_sun = &body;
+      break;
+    }
+  }
+  if (primary_sun != nullptr)
+  {
+    EnvironmentStateData.StarOrbitInclinationDeg =
+        primary_sun->OrbitInclinationDeg;
+    EnvironmentStateData.StarOrbitLongitudeDeg =
+        primary_sun->OrbitLongitudeDeg;
+  }
+  EnvironmentStateData.StarOrbitPeriodDays = kStarOrbitPeriodDays;
+  EnvironmentStateData.StarOrbitPhase = kStarOrbitPhase;
+  const glm::mat3 star_frame = BuildCelestialFrameRotation(
+      EnvironmentStateData.StarOrbitPeriodDays,
+      EnvironmentStateData.StarOrbitPhase,
+      EnvironmentStateData.StarOrbitInclinationDeg,
+      EnvironmentStateData.StarOrbitLongitudeDeg,
+      EnvironmentStateData.TimeOfDayNormalized);
+  EnvironmentStateData.StarCelestialInv = glm::transpose(star_frame);
 }
 
 void UWorld::AddTimeOfDayNormalized(float delta)

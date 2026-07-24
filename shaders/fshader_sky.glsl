@@ -22,6 +22,7 @@ uniform float uCelestialIntensity[4];
 uniform float uCelestialAngularSizeDeg[4];
 uniform int uCelestialType[4];
 uniform mat3 uInvViewRot;
+uniform mat3 uStarCelestialInv;
 uniform vec3 uCameraPos;
 uniform float uUnderwaterSkyAmount;
 uniform float uScreenWaterlineNdc;
@@ -46,16 +47,48 @@ float valueNoise(vec2 p)
     return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
 }
 
-float starField(vec2 uv, float twinkle)
+// Octahedral encode: unit direction → [-1,1]^2 (no equirect polar seam).
+vec2 octahedralEncode(vec3 n)
 {
-    vec2 st = uv * 320.0;
+    n /= (abs(n.x) + abs(n.y) + abs(n.z));
+    if (n.y >= 0.0)
+    {
+        return n.xz;
+    }
+    // Avoid GLSL sign(0)==0 collapsing the octahedral unwrap.
+    vec2 s = vec2(n.x < 0.0 ? -1.0 : 1.0, n.z < 0.0 ? -1.0 : 1.0);
+    return (vec2(1.0) - abs(n.zx)) * s;
+}
+
+vec3 starLayer(vec2 uv, float cell_scale, float threshold, float size,
+               float mag_boost)
+{
+    vec2 st = uv * cell_scale + vec2(19.17, 78.3);
     vec2 cell = floor(st);
     vec2 f = fract(st) - 0.5;
     float rnd = hash12(cell);
-    float star = smoothstep(0.06, 0.0, length(f));
-    float mask = step(0.992, rnd);
-    float tw = 0.75 + 0.25 * sin(twinkle + rnd * 17.0);
-    return star * mask * tw;
+    float rnd2 = hash12(cell + vec2(31.7, 7.1));
+    float rnd3 = hash12(cell + vec2(4.2, 53.9));
+    float mask = step(threshold, rnd);
+    // Soft core + wider glow reduces temporal aliasing of sub-pixel dots.
+    float d = length(f);
+    float core = smoothstep(size, size * 0.25, d);
+    float glow = smoothstep(size * 2.4, size * 0.85, d) * 0.40;
+    float star = core + glow;
+    float mag = pow(rnd2, 7.0) * mag_boost;
+    vec3 cool = vec3(0.75, 0.82, 1.0);
+    vec3 warm = vec3(1.0, 0.92, 0.78);
+    vec3 col = mix(cool, warm, rnd3);
+    return col * (star * mask * mag);
+}
+
+vec3 starFieldColor(vec3 dir_star)
+{
+    vec2 uv = octahedralEncode(dir_star);
+    // Fewer, larger stars stay stable under camera / sidereal motion.
+    vec3 dense = starLayer(uv, 160.0, 0.991, 0.085, 1.05);
+    vec3 bright = starLayer(uv, 72.0, 0.9975, 0.12, 2.2);
+    return dense + bright;
 }
 
 float cloudDensity(vec2 uv, float time_shift)
@@ -137,20 +170,26 @@ void main()
         return;
     }
 
-    vec3 skyTop = skyColor.rgb;
-    vec3 skyBottom = skyColor.rgb * 1.3;
-    vec3 finalColor = mix(skyBottom, skyTop, TexCoord.y);
     vec2 sky_uv = TexCoord * 2.0 - 1.0;
     vec3 dir_view = normalize(vec3(sky_uv.x, sky_uv.y, -1.0));
     vec3 view_dir = normalize(uInvViewRot * dir_view);
+
+    vec3 skyTop = skyColor.rgb;
+    vec3 skyBottom = skyColor.rgb * 1.3;
+    float sky_t = clamp(view_dir.y * 0.5 + 0.5, 0.0, 1.0);
+    vec3 finalColor = mix(skyBottom, skyTop, sky_t);
 
     float below_waterline = 0.0;
     if (uScreenWaterlineNdc > -1.5) {
         below_waterline = step(TexCoord.y, uScreenWaterlineNdc);
     }
 
-    float stars = starField(TexCoord + vec2(0.0, uTimeOfDay * 0.12), uElapsedSec * 0.3);
-    finalColor += vec3(stars) * uStarVisibility * (1.0 - below_waterline);
+    vec3 dir_star = normalize(uStarCelestialInv * view_dir);
+    float horizon_mask = smoothstep(-0.02, 0.10, view_dir.y);
+    float elev_fade = smoothstep(0.00, 0.22, view_dir.y);
+    float star_vis = pow(clamp(uStarVisibility, 0.0, 1.0), 1.2);
+    vec3 stars = starFieldColor(dir_star);
+    finalColor += stars * star_vis * horizon_mask * elev_fade * (1.0 - below_waterline);
 
     for (int i = 0; i < 4; ++i)
     {
@@ -210,8 +249,9 @@ void main()
         vec3 low_col = mix(vec3(0.66, 0.69, 0.74), vec3(0.94, 0.95, 0.98), clamp(view_dir.y * 0.5 + 0.5, 0.0, 1.0));
         vec3 high_col = mix(vec3(0.78, 0.81, 0.87), vec3(0.97, 0.98, 1.0), clamp(view_dir.y * 0.5 + 0.5, 0.0, 1.0));
         float cloud_mask = (1.0 - below_waterline);
-        finalColor = mix(finalColor, high_col, cloud_high * 0.28 * cloud_mask);
-        finalColor = mix(finalColor, low_col, cloud_low * 0.30 * cloud_mask);
+        // Slightly stronger mix so night stars do not punch through dense clouds.
+        finalColor = mix(finalColor, high_col, cloud_high * 0.40 * cloud_mask);
+        finalColor = mix(finalColor, low_col, cloud_low * 0.45 * cloud_mask);
     }
 
     if (below_waterline > 0.5) {

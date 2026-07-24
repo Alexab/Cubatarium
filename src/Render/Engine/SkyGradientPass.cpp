@@ -107,6 +107,7 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
                        std::clamp(env.CloudCoverage, 0.0f, 1.0f));
   sky_shader->SetFloat("uElapsedSec", std::max(0.0f, elapsed_sec));
   sky_shader->SetMat3("uInvViewRot", inv_view_rot);
+  sky_shader->SetMat3("uStarCelestialInv", env.StarCelestialInv);
   sky_shader->SetVec3("uCameraPos", camera_pos);
   int cloud_steps = 12;
   if (preset == PerformancePreset::Fast ||

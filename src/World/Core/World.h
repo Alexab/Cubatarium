@@ -164,6 +164,12 @@ public:
     float CloudCoverage{0.2f};
     float StarVisibilityOverride{-1.0f};
     float CloudCoverageOverride{-1.0f};
+    // Rigid star sphere orbit (same frame laws as celestial bodies).
+    float StarOrbitInclinationDeg{23.0f};
+    float StarOrbitPeriodDays{0.997f};
+    float StarOrbitPhase{0.25f};
+    float StarOrbitLongitudeDeg{0.0f};
+    glm::mat3 StarCelestialInv{1.0f}; // world → star rest-frame
     std::vector<UCelestialBodyVisual> CelestialBodies;
   };
 
