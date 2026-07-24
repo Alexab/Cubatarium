@@ -360,8 +360,15 @@ void UWorld::UpdateIntersection(const glm::vec3 &position,
   const PlayerCapsule cap = ViewBinding
                                 ? ViewBinding->ResolvePlacementCapsule(*this)
                                 : PlayerCapsule::Standing();
-  const BlockPlacementResolve resolved =
-      Collision.ResolveBlockPlacement(position, front, cap, 8.0f);
+  float max_distance = 8.0f;
+  glm::vec3 player_eye = position;
+  if (auto camera = GetCurrentUserCamera())
+  {
+    max_distance = camera->GetBlockInteractMaxDistance();
+    player_eye = camera->GetPosition();
+  }
+  const BlockPlacementResolve resolved = Collision.ResolveBlockPlacement(
+      position, front, cap, max_distance, player_eye);
 
   HasIntersectionBlock = resolved.break_hit.has_value();
   PlaceTargetActive = resolved.place_block_pos.has_value();

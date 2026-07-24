@@ -752,6 +752,16 @@ float UCamera::GetIsoBoomDistance() const
   return IsoBoomDistanceForPreset(IsoBoomPreset);
 }
 
+float UCamera::GetBlockInteractMaxDistance() const
+{
+  if (IsIsometricProjection())
+  {
+    // View ray starts at the elevated camera near plane, not at the player eye.
+    return GetIsoBoomDistance() + GetOrthoSize() + 16.0f;
+  }
+  return 8.0f;
+}
+
 void UCamera::SetAimYawDeg(float yaw_deg)
 {
   AimYawDeg = yaw_deg;

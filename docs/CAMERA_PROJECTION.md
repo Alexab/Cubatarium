@@ -20,7 +20,7 @@ Gameplay input and camera pose are selected by `IUGameplayViewController`:
 
 ## Isometric rig
 
-Camera sits above-side of the player (`focus - lookDir * boomDistance`), looking at a point slightly below the eye. Orientation uses continuous `IsoOrbitYawDeg` + `iso_pitch_deg` (classic ~35.264°). **RMB-drag** orbits the camera; with the button released the cursor is free and block place/break aims at the cursor (view ray). WASD moves relative to the camera; the body faces the move direction (or camera-forward when idle). LMB: short tap place, hold break (same as Cubatarium scheme).
+Camera sits above-side of the player (`focus - lookDir * boomDistance`), looking at a point slightly below the eye. Orientation uses continuous `IsoOrbitYawDeg` + `iso_pitch_deg` (classic ~35.264°). **RMB-drag** orbits the camera; with the button released the cursor is free and block place/break aims at the cursor (view ray). Interact reach scales with boom distance (`Close`/`Standard`/`Far` via F5) so picking still hits the ground from the elevated camera. WASD moves relative to the camera; the body faces the move direction (or camera-forward when idle). LMB: short tap place, hold break (same as Cubatarium scheme).
 
 ## Persistence
 

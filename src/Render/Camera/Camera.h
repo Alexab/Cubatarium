@@ -133,6 +133,8 @@ public:
   IsoViewPreset GetIsoViewPreset() const { return IsoBoomPreset; }
   void SetIsoViewPreset(IsoViewPreset preset);
   float GetIsoBoomDistance() const;
+  /// Max solid-block interact distance along the view ray (FPS eye vs iso boom).
+  float GetBlockInteractMaxDistance() const;
   float GetAimYawDeg() const { return AimYawDeg; }
   void SetAimYawDeg(float yaw_deg);
   void AddAimYawDeg(float delta_deg);

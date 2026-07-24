@@ -895,6 +895,13 @@ BlockPlacementResolve UWorldCollision::ResolveBlockPlacement(
     const glm::vec3 &eye, const glm::vec3 &front, const PlayerCapsule &cap,
     float max_distance) const
 {
+  return ResolveBlockPlacement(eye, front, cap, max_distance, eye);
+}
+
+BlockPlacementResolve UWorldCollision::ResolveBlockPlacement(
+    const glm::vec3 &ray_origin, const glm::vec3 &front, const PlayerCapsule &cap,
+    float max_distance, const glm::vec3 &player_eye) const
+{
   BlockPlacementResolve result;
   if (!BlockRegistry)
   {
@@ -903,16 +910,17 @@ BlockPlacementResolve UWorldCollision::ResolveBlockPlacement(
 
   constexpr float kRaycastDistance = 128.0f;
 
-  const auto hit = RaycastSolidBlocks(BlockWorld, *BlockRegistry, eye, front,
-                                      kRaycastDistance);
+  const auto hit = RaycastSolidBlocks(BlockWorld, *BlockRegistry, ray_origin,
+                                      front, kRaycastDistance);
   if (!hit)
   {
     return result;
   }
 
-  const glm::ivec3 place_pos = hit->blockPos + InferPlacementNormal(*hit, eye);
-  const glm::ivec3 feet_block =
-      WorldPosToBlock(glm::vec3(eye.x, cap.feetY(eye) + 0.01f, eye.z));
+  const glm::ivec3 place_pos =
+      hit->blockPos + InferPlacementNormal(*hit, ray_origin);
+  const glm::ivec3 feet_block = WorldPosToBlock(
+      glm::vec3(player_eye.x, cap.feetY(player_eye) + 0.01f, player_eye.z));
   const int pit_xz_radius = std::max(4, static_cast<int>(max_distance));
   const bool pit_placement =
       place_pos.y <= feet_block.y &&
@@ -924,7 +932,7 @@ BlockPlacementResolve UWorldCollision::ResolveBlockPlacement(
   }
 
   result.break_hit = hit;
-  if (CanPlaceClassic(place_pos, eye, front, cap, max_distance))
+  if (CanPlaceClassic(place_pos, player_eye, front, cap, max_distance))
   {
     result.place_block_pos = place_pos;
   }

@@ -18,6 +18,7 @@
 #include "Creatures/Player/User.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureVisualFactory.h"
+#include "Render/Camera/Camera.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "ResourcePacks/BlockNameUtil.h"
 #include "World/Chunks/Chunk.h"
@@ -5080,8 +5081,15 @@ bool UWorld::AddObjectByView(const glm::vec3 &position, const glm::vec3 &front)
   PlayerCapsule cap = ViewBinding ? ViewBinding->ResolvePlacementCapsule(*this)
                                   : PlayerCapsule::Standing();
 
-  const BlockPlacementResolve resolved =
-      Collision.ResolveBlockPlacement(position, front, cap, 8.0f);
+  float max_distance = 8.0f;
+  glm::vec3 player_eye = position;
+  if (auto camera = GetCurrentUserCamera())
+  {
+    max_distance = camera->GetBlockInteractMaxDistance();
+    player_eye = camera->GetPosition();
+  }
+  const BlockPlacementResolve resolved = Collision.ResolveBlockPlacement(
+      position, front, cap, max_distance, player_eye);
   if (!resolved.place_block_pos)
   {
     return false;

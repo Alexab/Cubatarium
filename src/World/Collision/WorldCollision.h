@@ -109,6 +109,12 @@ public:
                                               const glm::vec3 &front,
                                               const PlayerCapsule &cap,
                                               float max_distance = 8.0f) const;
+  /// Ray from `ray_origin`; self/pit checks use `player_eye` (iso elevated cam).
+  BlockPlacementResolve ResolveBlockPlacement(const glm::vec3 &ray_origin,
+                                              const glm::vec3 &front,
+                                              const PlayerCapsule &cap,
+                                              float max_distance,
+                                              const glm::vec3 &player_eye) const;
   std::optional<glm::vec3>
   FindNearestFreeCubePosition(const glm::vec3 &position, const glm::vec3 &front,
                               const PlayerCapsule &cap) const;
