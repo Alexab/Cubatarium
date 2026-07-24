@@ -1,7 +1,7 @@
 #include "Render/Camera/Camera.h"
 #include "Render/Camera/CameraBasisLogic.h"
 #include "Render/Camera/CameraLens.h"
-#include "Render/Camera/Control/IsoOrbitControl.h"
+#include "Render/Camera/Control/IUGameplayViewController.h"
 #include "Render/Engine/ViewEngine.h"
 #include "World/View/ViewRayMath.h"
 #include "Render/GlIncludes.h"
@@ -157,6 +157,23 @@ void UCamera::SetOrientation(float yaw, float pitch)
 }
 
 glm::vec3 UCamera::GetFront() const { return Front; }
+
+glm::vec3 UCamera::GetRight() const { return Right; }
+
+glm::vec3 UCamera::GetUp() const { return Up; }
+
+glm::vec3 UCamera::GetWorldUp() const { return WorldUp; }
+
+const IUGameplayViewController &UCamera::GetViewController() const
+{
+  return GameplayViewControllerFor(IsIsometricProjection());
+}
+
+CreatureViewOrientation UCamera::ResolveCreatureViewOrientation() const
+{
+  return GetViewController().ResolveCreatureOrientation(*this,
+                                                        GetMoveIntentDir());
+}
 
 void UCamera::SetAspectRatio(float value)
 {
@@ -348,27 +365,9 @@ glm::vec3 UCamera::GetMoveIntentDir() const
   }
 
   glm::vec3 shift = glm::vec3(0.0f);
-  if (IsIsometricProjection())
+  if (forward != 0.0f || rightward != 0.0f)
   {
-    shift = IsoScreenMoveIntent(*this, forward, rightward);
-  }
-  else
-  {
-    if (forward != 0.0f)
-    {
-      shift +=
-          glm::vec3(std::cos(radians(Yaw)), 0.0f, std::sin(radians(Yaw))) *
-          forward;
-    }
-    if (rightward != 0.0f)
-    {
-      shift += Right * rightward;
-    }
-    shift.y = 0.0f;
-    if (glm::dot(shift, shift) > 1e-10f)
-    {
-      shift /= std::sqrt(glm::dot(shift, shift));
-    }
+    shift = GetViewController().ProjectMoveIntent(*this, forward, rightward);
   }
 
   if (glm::dot(shift, shift) > 1e-10f)
@@ -552,8 +551,8 @@ void UCamera::ProcessKeyboard(const UWorld *world, Camera_Movement direction,
 
 // Processes input received from a mouse input system. Expects the offset value
 // in both the x and y direction.
-void UCamera::ProcessMouseMovement(float Xoffset, float Yoffset,
-                                   bool constrainPitch)
+void UCamera::ApplyFpsLookDelta(float Xoffset, float Yoffset,
+                                bool constrainPitch)
 {
   Xoffset *= this->MouseSensitivity;
   Yoffset *= this->MouseSensitivity;
@@ -574,15 +573,8 @@ void UCamera::ProcessMouseMovement(float Xoffset, float Yoffset,
   UpdateCameraVectors();
 }
 
-// Processes input received from a mouse scroll-wheel event. Only requires input
-// on the Vertical wheel-axis
-void UCamera::ProcessMouseScroll(float Yoffset)
+void UCamera::ApplyFpsZoomScroll(float Yoffset)
 {
-  if (IsIsometricProjection())
-  {
-    SetOrthoSize(OrthoSize - Yoffset * 1.5f);
-    return;
-  }
   if (this->Zoom >= 1.0f && this->Zoom <= 45.0f)
     this->Zoom -= Yoffset;
   if (this->Zoom <= 1.0f)
@@ -599,29 +591,15 @@ void UCamera::UpdateCameraVectors()
   UpdatePose();
 }
 
-glm::vec3 UCamera::ComputeCameraWorldPosition() const
+void UCamera::CycleFpsPerspective()
 {
-  if (Perspective == CameraPerspective::FirstPerson)
-  {
-    return Position;
-  }
-  if (Perspective == CameraPerspective::ThirdPersonBack)
-  {
-    return Position - Front * ThirdPersonDistance + Up * ThirdPersonHeight;
-  }
-  return Position + Front * ThirdPersonDistance;
+  Perspective = CycleCameraPerspective(Perspective);
+  UpdatePose();
 }
 
 void UCamera::CyclePerspective()
 {
-  if (IsIsometricProjection())
-  {
-    Perspective = CameraPerspective::FirstPerson;
-    UpdatePose();
-    return;
-  }
-  Perspective = CycleCameraPerspective(Perspective);
-  UpdatePose();
+  GetViewController().CycleView(*this);
 }
 
 void UCamera::SetProjectionMode(ProjectionMode mode)
@@ -629,7 +607,8 @@ void UCamera::SetProjectionMode(ProjectionMode mode)
   Mode = mode;
   if (IsIsometricProjection())
   {
-    Perspective = CameraPerspective::FirstPerson;
+    Perspective = CameraPerspective::ThirdPersonBack;
+    AimYawDeg = Yaw;
     ApplyIsometricOrientation();
   }
   UpdatePose();
@@ -661,6 +640,32 @@ void UCamera::SetIsoPitchDeg(float degrees)
   UpdatePose();
 }
 
+void UCamera::SetIsoViewPreset(IsoViewPreset preset)
+{
+  IsoBoomPreset = preset;
+  UpdatePose();
+}
+
+float UCamera::GetIsoBoomDistance() const
+{
+  return IsoBoomDistanceForPreset(IsoBoomPreset);
+}
+
+void UCamera::SetAimYawDeg(float yaw_deg)
+{
+  AimYawDeg = yaw_deg;
+}
+
+void UCamera::AddAimYawDeg(float delta_deg)
+{
+  AimYawDeg += delta_deg;
+}
+
+void UCamera::SnapIsoCameraYaw(int delta_steps)
+{
+  GetViewController().SnapCameraYaw(*this, delta_steps);
+}
+
 void UCamera::ApplyIsometricOrientation()
 {
   // Base yaw -90 looks down -Z; +45 gives classic isometric corner.
@@ -679,9 +684,11 @@ void UCamera::ApplyWorldViewSettings(const WorldViewSettings &settings)
   OrthoSize = validated.OrthoSize;
   IsoYawIndex = validated.IsoYawIndex;
   IsoPitchDeg = validated.IsoPitchDeg;
+  IsoBoomPreset = validated.IsoBoomPreset;
   if (IsIsometricProjection())
   {
-    Perspective = CameraPerspective::FirstPerson;
+    Perspective = CameraPerspective::ThirdPersonBack;
+    AimYawDeg = Yaw;
     ApplyIsometricOrientation();
   }
   else
@@ -697,16 +704,19 @@ WorldViewSettings UCamera::CaptureWorldViewSettings() const
   settings.OrthoSize = OrthoSize;
   settings.IsoYawIndex = IsoYawIndex;
   settings.IsoPitchDeg = IsoPitchDeg;
+  settings.IsoBoomPreset = IsoBoomPreset;
   settings.Validate();
   return settings;
 }
 
 void UCamera::UpdatePose()
 {
-  const glm::vec3 eye = Position;
-  const glm::vec3 camWorld = ComputeCameraWorldPosition();
-  const glm::vec3 target = eye + Front;
-  Pose = glm::lookAt(camWorld, target, Up);
+  const IUGameplayViewController &controller = GetViewController();
+  const glm::vec3 camWorld = controller.ComputeCameraWorldPosition(*this);
+  const glm::vec3 target = controller.ComputeLookTarget(*this);
+  const glm::vec3 up =
+      IsIsometricProjection() ? WorldUp : Up;
+  Pose = glm::lookAt(camWorld, target, up);
 
   if (Mode == ProjectionMode::OrthographicIsometric)
   {
@@ -724,20 +734,7 @@ void UCamera::UpdatePose()
 
 void UCamera::UpdateKeyStatus(size_t key_index, bool is_pressed)
 {
-  const auto it = KeysStatus.find(key_index);
-  const bool was_pressed = it != KeysStatus.end() && it->second;
   KeysStatus[key_index] = is_pressed;
-  if (IsIsometricProjection() && is_pressed && !was_pressed)
-  {
-    if (key_index == static_cast<size_t>(GLFW_KEY_Q))
-    {
-      RotateIsoYaw(-1);
-    }
-    else if (key_index == static_cast<size_t>(GLFW_KEY_E))
-    {
-      RotateIsoYaw(1);
-    }
-  }
 }
 
 void UCamera::ResetAllKeyStatus()
@@ -764,8 +761,8 @@ void UCamera::UpdateMouseMove(std::shared_ptr<UWorld> world, double xpos,
   LastMouseX = xpos;
   LastMouseY = ypos;
 
-  ProcessMouseMovement(static_cast<float>(Xoffset),
-                       static_cast<float>(Yoffset));
+  ApplyRelativeMouseMove(static_cast<float>(Xoffset),
+                         static_cast<float>(Yoffset));
   glm::vec3 ray_origin;
   glm::vec3 ray_dir;
   TryGetCenterViewRay(ray_origin, ray_dir);
@@ -781,12 +778,13 @@ void UCamera::ResetMouseMove(double xpos, double ypos)
 
 void UCamera::ApplyRelativeMouseMove(float Xoffset, float Yoffset)
 {
-  ProcessMouseMovement(Xoffset, Yoffset);
+  GetViewController().ApplyLookDelta(*this, Xoffset, Yoffset);
 }
 
 void UCamera::UpdateMouseScroll(double Xoffset, double Yoffset)
 {
-  ProcessMouseScroll(static_cast<float>(Yoffset));
+  (void)Xoffset;
+  GetViewController().ApplyScroll(*this, static_cast<float>(Yoffset));
 }
 
 void UCamera::UpdateFrameTime()

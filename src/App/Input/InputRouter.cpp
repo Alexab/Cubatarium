@@ -11,7 +11,6 @@
 #include "Gui/Screens/MainMenuScreen.h"
 #include "Gui/Widgets/GuiWidget.h"
 #include "Render/Camera/Camera.h"
-#include "Render/Camera/CameraPerspective.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "World/Core/World.h"
 #ifndef __ANDROID__
@@ -168,10 +167,22 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
         if (app.Geometry)
         {
           app.Geometry->ShowTransientMessage(
-              CameraPerspectiveLabel(cam->GetPerspective()), 1.5);
+              cam->GetViewController().ViewLabel(*cam), 1.5);
         }
       }
       return true;
+    }
+    if (!app.ConsoleOpen && app.World &&
+        (key == GLFW_KEY_Q || key == GLFW_KEY_E))
+    {
+      if (auto cam = app.World->GetCurrentUserCamera())
+      {
+        if (cam->IsIsometricProjection())
+        {
+          cam->SnapIsoCameraYaw(key == GLFW_KEY_Q ? -1 : 1);
+          return true;
+        }
+      }
     }
     if (!app.ConsoleOpen && KeyNameIs(app.Ui.PaletteKey, key))
     {

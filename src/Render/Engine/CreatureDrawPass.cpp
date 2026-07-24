@@ -469,7 +469,8 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
         ++Stats.CreaturesConsidered;
         const bool controlled_first_person =
             creature.GetId() == controlledId &&
-            camera->GetPerspective() == CameraPerspective::FirstPerson;
+            camera->GetPerspective() == CameraPerspective::FirstPerson &&
+            !camera->IsIsometricProjection();
 
         auto draw_debug_bounds = [&]()
         {

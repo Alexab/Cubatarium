@@ -501,8 +501,9 @@ void UWorld::RunLegacyPhysicsFrame()
     controlled->GetLocomotion().SetStanceBlendForView(camera->GetStanceBlend());
     controlled->GetLocomotion().SyncFeetAnchorFromView(
         feetY, camera->HasAnchoredFeet());
-    controlled->SetOrientation(ModelYawFromCameraYaw(camera->GetYaw()),
-                               camera->GetPitch());
+    const CreatureViewOrientation view_orient =
+        camera->ResolveCreatureViewOrientation();
+    controlled->SetOrientation(view_orient.YawDeg, view_orient.PitchDeg);
     controlled->SyncBoundsFromStance();
     controlled->GetLocomotion().SetMode(camera->GetFreeMove()
                                             ? CreatureMovementMode::Flying

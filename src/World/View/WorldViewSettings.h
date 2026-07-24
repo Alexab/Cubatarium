@@ -1,6 +1,7 @@
 #ifndef WORLDVIEWSETTINGS_H
 #define WORLDVIEWSETTINGS_H
 
+#include "Render/Camera/IsoViewPreset.h"
 #include <cstdint>
 #include <nlohmann/json_fwd.hpp>
 #include <string>
@@ -21,6 +22,7 @@ struct WorldViewSettings
   float OrthoSize{24.0f};
   int IsoYawIndex{0};
   float IsoPitchDeg{35.264f};
+  IsoViewPreset IsoBoomPreset{IsoViewPreset::Standard};
 
   void Validate();
   static WorldViewSettings FromJson(const nlohmann::json &root);

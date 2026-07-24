@@ -111,8 +111,9 @@ set(SOURCES
     src/App/CreateWorldCli.cpp
     src/Render/Camera/Camera.cpp
     src/Render/Camera/CameraLens.cpp
-    src/Render/Camera/Control/FpsLookControl.cpp
-    src/Render/Camera/Control/IsoOrbitControl.cpp
+    src/Render/Camera/Control/FpsGameplayViewController.cpp
+    src/Render/Camera/Control/IsoGameplayViewController.cpp
+    src/Render/Camera/Control/GameplayViewControllerSelect.cpp
     src/Creatures/Core/CreatureBounds.cpp
     src/Creatures/Core/CreatureCatalogTypes.cpp
     src/Creatures/Locomotion/CreatureLocomotionController.cpp
@@ -438,9 +439,10 @@ set(HEADERS
     src/Render/Camera/Camera.h
     src/Render/Camera/CameraLens.h
     src/Render/Camera/ProjectionMode.h
-    src/Render/Camera/Control/IUCameraOrientationControl.h
-    src/Render/Camera/Control/FpsLookControl.h
-    src/Render/Camera/Control/IsoOrbitControl.h
+    src/Render/Camera/Control/IUGameplayViewController.h
+    src/Render/Camera/Control/FpsGameplayViewController.h
+    src/Render/Camera/Control/IsoGameplayViewController.h
+    src/Render/Camera/IsoViewPreset.h
     src/App/Settings/AppSettingsSnapshot.h
     src/App/Core.h
     src/App/WorldLifecycleFacade.h

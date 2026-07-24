@@ -11,6 +11,8 @@
 #include "Creatures/Player/PlayerCapsule.h"
 #include "Creatures/Player/PlayerController.h"
 #include "Render/Camera/CameraPerspective.h"
+#include "Render/Camera/Control/IUGameplayViewController.h"
+#include "Render/Camera/IsoViewPreset.h"
 #include "Render/Camera/ProjectionMode.h"
 #include "World/View/WorldViewSettings.h"
 #include <glm/glm.hpp>
@@ -56,11 +58,20 @@ public:
   float GetPitch() const;
   void SetOrientation(float yaw, float pitch);
   glm::vec3 GetFront() const;
+  glm::vec3 GetRight() const;
+  glm::vec3 GetUp() const;
+  glm::vec3 GetWorldUp() const;
+  float GetMouseSensitivity() const { return MouseSensitivity; }
+  float GetThirdPersonDistance() const { return ThirdPersonDistance; }
+  float GetThirdPersonHeight() const { return ThirdPersonHeight; }
 
   glm::mat4 GetPose() const;
   glm::mat4 GetProjection() const;
   glm::mat4 GetViewMatrix() const;
   glm::mat4 GetMvpMatrix() const;
+
+  const IUGameplayViewController &GetViewController() const;
+  CreatureViewOrientation ResolveCreatureViewOrientation() const;
 
   bool GetFreeMove() const;
   void SetFreeMove(bool value);
@@ -100,6 +111,10 @@ public:
 
   CameraPerspective GetPerspective() const { return Perspective; }
   void CyclePerspective();
+  void CycleFpsPerspective();
+  void ApplyFpsLookDelta(float x_offset, float y_offset,
+                         bool constrain_pitch = true);
+  void ApplyFpsZoomScroll(float y_offset);
 
   ProjectionMode GetProjectionMode() const { return Mode; }
   void SetProjectionMode(ProjectionMode mode);
@@ -109,6 +124,12 @@ public:
   void SetIsoYawIndex(int index);
   float GetIsoPitchDeg() const { return IsoPitchDeg; }
   void SetIsoPitchDeg(float degrees);
+  IsoViewPreset GetIsoViewPreset() const { return IsoBoomPreset; }
+  void SetIsoViewPreset(IsoViewPreset preset);
+  float GetIsoBoomDistance() const;
+  float GetAimYawDeg() const { return AimYawDeg; }
+  void SetAimYawDeg(float yaw_deg);
+  void AddAimYawDeg(float delta_deg);
   void ApplyWorldViewSettings(const WorldViewSettings &settings);
   WorldViewSettings CaptureWorldViewSettings() const;
   bool IsIsometricProjection() const
@@ -123,6 +144,7 @@ public:
   void ResetMouseMove(double xpos, double ypos);
   void ApplyRelativeMouseMove(float Xoffset, float Yoffset);
   void UpdateMouseScroll(double Xoffset, double Yoffset);
+  void SnapIsoCameraYaw(int delta_steps);
 
   void ClearShiftKeyState();
   void SetSprintActive(bool active) { SprintActive = active; }
@@ -139,12 +161,8 @@ private:
   PlayerInput BuildPlayerInput(bool spaceJustPressed) const;
   bool IsShiftDown() const;
 
-  void ProcessMouseMovement(float Xoffset, float Yoffset,
-                            bool constrainPitch = true);
-  void ProcessMouseScroll(float Yoffset);
   void UpdatePose();
   void ApplyIsometricOrientation();
-  glm::vec3 ComputeCameraWorldPosition() const;
   void UpdateCameraVectors();
   void SyncFreeMoveFromController();
   void InitLocomotionCollisionProfile();
@@ -157,6 +175,8 @@ private:
   float OrthoSize{24.0f};
   int IsoYawIndex{0};
   float IsoPitchDeg{35.264f};
+  IsoViewPreset IsoBoomPreset{IsoViewPreset::Standard};
+  float AimYawDeg{YAW};
   int ViewportWidth{0};
   int ViewportHeight{0};
 

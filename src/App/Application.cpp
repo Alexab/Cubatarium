@@ -10,6 +10,7 @@
 #include "Render/Camera/CameraPerspective.h"
 #ifdef __ANDROID__
 #include "App/Platform/TouchInputBridge.h"
+#include "Gui/Widgets/GuiTouchControls.h"
 #endif
 #ifndef __ANDROID__
 #include "App/Platform/WindowManager.h"
@@ -840,7 +841,62 @@ void UApplication::ShowInGameHud()
           }
           SyncCursorVisibility();
         },
-        [this]() { TryToggleFlightOnJumpPress(); });
+        [this]() { TryToggleFlightOnJumpPress(); },
+        TouchIsoControlCallbacks{
+            [this]() -> bool
+            {
+              if (!World)
+              {
+                return false;
+              }
+              if (auto cam = World->GetCurrentUserCamera())
+              {
+                return cam->IsIsometricProjection();
+              }
+              return false;
+            },
+            [this](int steps)
+            {
+              if (!World)
+              {
+                return;
+              }
+              if (auto cam = World->GetCurrentUserCamera())
+              {
+                cam->SnapIsoCameraYaw(steps);
+              }
+            },
+            [this](float scroll)
+            {
+              if (!World)
+              {
+                return;
+              }
+              if (auto cam = World->GetCurrentUserCamera())
+              {
+                cam->UpdateMouseScroll(0.0, static_cast<double>(scroll));
+              }
+            },
+            [this]()
+            {
+              if (!World)
+              {
+                return;
+              }
+              if (auto cam = World->GetCurrentUserCamera())
+              {
+                cam->CyclePerspective();
+                if (Geometry)
+                {
+                  Geometry->ShowTransientMessage(
+                      cam->GetViewController().ViewLabel(*cam), 1.5);
+                }
+                if (HudScreen)
+                {
+                  HudScreen->InvalidateTouchControlsLayout();
+                }
+              }
+            }});
   }
 #endif
   hud->OnAttach(*GuiContext);

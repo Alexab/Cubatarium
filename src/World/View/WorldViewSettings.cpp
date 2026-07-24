@@ -1,5 +1,6 @@
 #include "World/View/WorldViewSettings.h"
 
+#include "Render/Camera/IsoViewPreset.h"
 #include <algorithm>
 #include <cmath>
 #include <nlohmann/json.hpp>
@@ -80,6 +81,12 @@ WorldViewSettings WorldViewSettings::FromJson(const nlohmann::json &root)
   settings.OrthoSize = root.value("ortho_size", settings.OrthoSize);
   settings.IsoYawIndex = root.value("iso_yaw_index", settings.IsoYawIndex);
   settings.IsoPitchDeg = root.value("iso_pitch_deg", settings.IsoPitchDeg);
+  if (root.contains("iso_view_preset"))
+  {
+    const int preset = root.value("iso_view_preset", 1);
+    settings.IsoBoomPreset =
+        static_cast<IsoViewPreset>(std::clamp(preset, 0, 2));
+  }
   settings.Validate();
   return settings;
 }
@@ -93,6 +100,7 @@ nlohmann::json WorldViewSettings::ToJson() const
       {"ortho_size", copy.OrthoSize},
       {"iso_yaw_index", copy.IsoYawIndex},
       {"iso_pitch_deg", copy.IsoPitchDeg},
+      {"iso_view_preset", static_cast<int>(copy.IsoBoomPreset)},
   };
 }
 

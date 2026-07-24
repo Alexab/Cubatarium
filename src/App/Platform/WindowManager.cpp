@@ -264,6 +264,13 @@ void UWindowManager::SetupCallbacks()
         {
           return;
         }
+        if (World)
+        {
+          if (auto camera = World->GetCurrentUserCamera())
+          {
+            camera->UpdateMouseScroll(Xoffset, Yoffset);
+          }
+        }
       });
 
   glfwSetCharCallback(Window,
@@ -1038,7 +1045,8 @@ void UWindowManager::RenderHelpText()
 
   // Main control hints in English
   std::vector<std::string> help_lines = {
-      "WASD - Move, Space - Jump, dbl Space - Fly, F5 - Toggle perspective, "
+      "WASD - Move, Space - Jump, dbl Space - Fly, F5 - Cycle view, "
+      "Q/E - Iso camera snap (isometric), "
       "RMB hold - Look, ` - Console",
       "Classic: mouse look, LMB break, RMB place; Cubatarium: RMB "
       "look",
