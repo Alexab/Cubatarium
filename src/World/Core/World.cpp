@@ -4669,12 +4669,16 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
       std::max(PhysicsTelemetryData.EditLightEmission, emission);
   const auto edit_t0 = std::chrono::high_resolution_clock::now();
   ApplyEditFastRelight({blockPos});
-  MarkBlockChunkDirty(blockPos);
+  // Face-neighbor Immediate: dig/place seams. Light ring when placing emitters
+  // so glow is not delayed behind mesh_async backlog (manual 230913).
+  MarkBlockChunkDirty(blockPos, /*sync_neighbor_chunks=*/true,
+                      /*sync_light_ring=*/emission > 0);
   PhysicsTelemetryData.EditToFirstMeshMs =
       std::chrono::duration<double, std::milli>(
           std::chrono::high_resolution_clock::now() - edit_t0)
           .count();
   ApplyEditLighting({blockPos});
+  PlayerRelightMeshBurstFrames = 5;
   PublishBlockPhysicsEvent(blockPos);
   PublishNeighborPhysicsEvents(blockPos);
   if (BlockRegistry && BlockRegistry->IsLiquid(Id) && PhysicsFlags.EnableFluids)
@@ -5036,14 +5040,17 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   ApplyBreakSiteFluidFlood(blockPos, mesh_touch_blocks);
   const auto edit_t0 = std::chrono::high_resolution_clock::now();
   ApplyEditFastRelight(mesh_touch_blocks);
-  // Immediate center only; neighbors MarkDirtyPriority (async).
-  MarkBlocksChunkDirtyBatch(mesh_touch_blocks, /*sync_neighbor_chunks=*/false,
+  // Face-neighbor Immediate so newly exposed sides are not left dark while
+  // Dirty neighbors wait behind mesh_async≈42 (manual 230913).
+  MarkBlocksChunkDirtyBatch(mesh_touch_blocks, /*sync_neighbor_chunks=*/true,
+                            /*sync_light_ring=*/removed_emission > 0,
                             PhysicsTelemetryData.BreakCompleteN > 0);
   PhysicsTelemetryData.EditToFirstMeshMs =
       std::chrono::duration<double, std::milli>(
           std::chrono::high_resolution_clock::now() - edit_t0)
           .count();
   ApplyEditLighting(mesh_touch_blocks);
+  PlayerRelightMeshBurstFrames = 5;
   PublishBlockPhysicsEvent(blockPos);
   PublishNeighborPhysicsEvents(blockPos);
   for (const glm::ivec3 &above_pos : broken_above)
@@ -5714,17 +5721,20 @@ void UWorld::MarkTerrainChunkMeshDirtySeamed(glm::ivec3 groundChunkCoord,
 
 void UWorld::MarkBlocksChunkDirtyBatch(
     const std::vector<glm::ivec3> &block_positions, bool sync_neighbor_chunks,
-    bool collect_break_diag)
+    bool sync_light_ring, bool collect_break_diag)
 {
   MeshService->MarkBlocksChunkDirtyBatchFromEdit(
       BlockWorld, BlockRegistry.get(), block_positions, ModifiedChunks,
-      sync_neighbor_chunks, collect_break_diag, &PhysicsTelemetryData);
+      sync_neighbor_chunks, sync_light_ring, collect_break_diag,
+      &PhysicsTelemetryData);
 }
 
-void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos)
+void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos, bool sync_neighbor_chunks,
+                                 bool sync_light_ring)
 {
-  MeshService->MarkBlockChunkDirtyFromEdit(BlockWorld, BlockRegistry.get(),
-                                           blockPos, ModifiedChunks);
+  MeshService->MarkBlockChunkDirtyFromEdit(
+      BlockWorld, BlockRegistry.get(), blockPos, ModifiedChunks,
+      sync_neighbor_chunks, sync_light_ring);
   MeshService->NotifyFluidSurfaceDirtyAtBlock(BlockWorld, BlockRegistry.get(),
                                               blockPos);
 }

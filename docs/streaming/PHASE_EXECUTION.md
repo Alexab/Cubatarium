@@ -129,6 +129,11 @@ emitter scan hitch. Fix: classic remove from edit cell only; keep origin
 emission; seed face neighbors; drop radius emitter scan. Perf jsonl:
 `place_complete_n`, `place_emission_n`, `edit_light_emission`, `fast_relight_ms`.
 
+Manual `230913`: fast_relight cheap (~0.2–2ms) but dig `edit_to_first_mesh`~110ms
+with `mesh_async=42` — neighbor faces stayed dark / lamp glow dripped in via
+async Dirty. Fix: dig/place Immediate face neighbors; emission edits also sync
+a capped light-ring remesh (≤9 chunks) + remesh burst.
+
 ## Lessons (2026-07-22 evening)
 
 1. **Aggressive C (sync_cap=0, ban underfeet, StarveRemeshForHoles)** → sticky↑ and spike↑. Do not repeat.

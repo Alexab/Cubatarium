@@ -1070,10 +1070,13 @@ private:
   void AccumulateRelightMeshColumns(
       const std::vector<glm::ivec3> &relit_chunks);
   void EnsurePlayerOnGround();
-  void MarkBlockChunkDirty(glm::ivec3 blockPos);
+  void MarkBlockChunkDirty(glm::ivec3 blockPos,
+                           bool sync_neighbor_chunks = false,
+                           bool sync_light_ring = false);
   void
   MarkBlocksChunkDirtyBatch(const std::vector<glm::ivec3> &block_positions,
                             bool sync_neighbor_chunks = false,
+                            bool sync_light_ring = false,
                             bool collect_break_diag = false);
   void MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos);
   void MarkFluidChangeDirty(glm::ivec3 blockPos);

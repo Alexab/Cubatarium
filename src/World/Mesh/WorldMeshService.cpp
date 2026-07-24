@@ -7,7 +7,9 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Math/GridMath.h"
 #include "World/Physics/PhysicsTelemetry.h"
+#include <algorithm>
 #include <unordered_set>
+#include <vector>
 
 namespace cutum
 {
@@ -635,65 +637,54 @@ void UWorldMeshService::MarkChunksContainingBlockIds(
 void UWorldMeshService::MarkBlockChunkDirtyFromEdit(
     UBlockWorld &block_world, UBlockRegistry *registry, glm::ivec3 block_pos,
     std::unordered_set<glm::ivec3, IVec3Hash> &modified_chunks,
-    bool sync_neighbor_chunks)
+    bool sync_neighbor_chunks, bool sync_light_ring)
 {
-  const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(block_pos);
-  modified_chunks.insert(chunk_coord);
-
-  const RenderSettings &render = Cache.GetRenderSettings();
-  const bool full_sync_rebuild =
-      registry != nullptr && (!render.AsyncMeshing || !render.GreedyMeshing);
-  const bool hybrid_async_edit =
-      registry != nullptr && render.AsyncMeshing && render.GreedyMeshing;
-
-  if (full_sync_rebuild || (hybrid_async_edit && sync_neighbor_chunks))
-  {
-    RebuildChunkImmediate(block_world, *registry, chunk_coord);
-    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-    {
-      RebuildChunkImmediate(block_world, *registry,
-                            UChunkManager::WorldToChunk(block_pos + offset));
-    }
-    return;
-  }
-
-  if (hybrid_async_edit)
-  {
-    RebuildChunkImmediate(block_world, *registry, chunk_coord);
-    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-    {
-      MarkDirtyPriority(UChunkManager::WorldToChunk(block_pos + offset));
-    }
-    return;
-  }
-
-  MarkDirtyPriority(chunk_coord);
-  for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-  {
-    MarkDirtyPriority(UChunkManager::WorldToChunk(block_pos + offset));
-  }
+  MarkBlocksChunkDirtyBatchFromEdit(block_world, registry, {block_pos},
+                                    modified_chunks, sync_neighbor_chunks,
+                                    sync_light_ring, false, nullptr);
 }
 
 void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
     UBlockWorld &block_world, UBlockRegistry *registry,
     const std::vector<glm::ivec3> &block_positions,
     std::unordered_set<glm::ivec3, IVec3Hash> &modified_chunks,
-    bool sync_neighbor_chunks, bool collect_break_diag,
+    bool sync_neighbor_chunks, bool sync_light_ring, bool collect_break_diag,
     PhysicsTelemetry *break_tele)
 {
   if (block_positions.empty())
   {
     return;
   }
+  // Cap sync remesh so dig/place light ring does not hitch on 3×3×3 Immediate.
+  constexpr int kEditImmediateChunkCap = 9;
   std::unordered_set<glm::ivec3, IVec3Hash> chunk_coords;
   std::unordered_set<glm::ivec3, IVec3Hash> center_chunks;
   for (const glm::ivec3 &block_pos : block_positions)
   {
-    center_chunks.insert(UChunkManager::WorldToChunk(block_pos));
-    chunk_coords.insert(UChunkManager::WorldToChunk(block_pos));
-    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    const glm::ivec3 center = UChunkManager::WorldToChunk(block_pos);
+    center_chunks.insert(center);
+    chunk_coords.insert(center);
+    if (sync_neighbor_chunks || sync_light_ring)
     {
-      chunk_coords.insert(UChunkManager::WorldToChunk(block_pos + offset));
+      for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+      {
+        chunk_coords.insert(UChunkManager::WorldToChunk(block_pos + offset));
+      }
+    }
+    if (sync_light_ring)
+    {
+      // Light spill reaches neighboring chunks; remesh the ring so lamp glow
+      // is not drip-fed by async Dirty while mesh_async is saturated.
+      for (int dx = -1; dx <= 1; ++dx)
+      {
+        for (int dy = -1; dy <= 1; ++dy)
+        {
+          for (int dz = -1; dz <= 1; ++dz)
+          {
+            chunk_coords.insert(center + glm::ivec3(dx, dy, dz));
+          }
+        }
+      }
     }
   }
   modified_chunks.insert(chunk_coords.begin(), chunk_coords.end());
@@ -727,24 +718,41 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
     }
   };
 
-  if (full_sync_rebuild || (hybrid_async_edit && sync_neighbor_chunks))
-  {
-    for (const glm::ivec3 &chunk_coord : chunk_coords)
-    {
-      note_race_before_immediate(chunk_coord);
-      RebuildChunkImmediate(block_world, *registry, chunk_coord);
-      note_dark_after_immediate(chunk_coord);
-    }
-    return;
-  }
+  const glm::ivec3 focus = UChunkManager::WorldToChunk(block_positions.front());
+  std::vector<glm::ivec3> ordered(chunk_coords.begin(), chunk_coords.end());
+  std::sort(ordered.begin(), ordered.end(),
+            [&](const glm::ivec3 &a, const glm::ivec3 &b)
+            {
+              const int da = std::max({std::abs(a.x - focus.x),
+                                       std::abs(a.y - focus.y),
+                                       std::abs(a.z - focus.z)});
+              const int db = std::max({std::abs(b.x - focus.x),
+                                       std::abs(b.y - focus.y),
+                                       std::abs(b.z - focus.z)});
+              if (da != db)
+              {
+                return da < db;
+              }
+              const bool ac = center_chunks.count(a) != 0;
+              const bool bc = center_chunks.count(b) != 0;
+              return ac && !bc;
+            });
 
-  for (const glm::ivec3 &chunk_coord : chunk_coords)
+  const bool sync_any = sync_neighbor_chunks || sync_light_ring;
+  int immediate_n = 0;
+  for (const glm::ivec3 &chunk_coord : ordered)
   {
-    if (center_chunks.count(chunk_coord))
+    const bool want_immediate =
+        full_sync_rebuild ||
+        (hybrid_async_edit &&
+         (center_chunks.count(chunk_coord) != 0 ||
+          (sync_any && immediate_n < kEditImmediateChunkCap)));
+    if (want_immediate)
     {
       note_race_before_immediate(chunk_coord);
       RebuildChunkImmediate(block_world, *registry, chunk_coord);
       note_dark_after_immediate(chunk_coord);
+      ++immediate_n;
     }
     else
     {
