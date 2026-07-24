@@ -260,6 +260,15 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
     ScreenWaterlineNdc = -2.0f;
   }
 
+  if (camera->IsIsometricProjection())
+  {
+    // Parallel projection: Minecraft-style XZ horizon fog and NDC waterline
+    // splits read poorly; keep underwater local fog only.
+    FogHorizontal = 0.0f;
+    AirFogEnabled = 0.0f;
+    ScreenWaterlineNdc = -2.0f;
+  }
+
   WasUnderwaterFog = camera_submerged;
 }
 

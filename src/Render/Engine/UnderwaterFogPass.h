@@ -12,6 +12,7 @@
 namespace cutum
 {
 
+class UCamera;
 class UWorld;
 
 class UUnderwaterFogPass
