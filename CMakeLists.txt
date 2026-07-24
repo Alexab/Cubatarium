@@ -117,6 +117,7 @@ set(SOURCES
     src/Creatures/Core/CreatureBounds.cpp
     src/Creatures/Core/CreatureCatalogTypes.cpp
     src/Creatures/Locomotion/CreatureLocomotionController.cpp
+    src/Creatures/Locomotion/CreatureMotor.cpp
     src/Creatures/Locomotion/CreatureLocomotionFacts.cpp
     src/Creatures/Core/Creature.cpp
     src/Creatures/Core/CreatureInventory.cpp
