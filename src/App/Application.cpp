@@ -10,6 +10,7 @@
 #include "Render/Camera/CameraPerspective.h"
 #ifdef __ANDROID__
 #include "App/Platform/TouchInputBridge.h"
+#include "Gui/Widgets/GuiTouchControls.h"
 #endif
 #ifndef __ANDROID__
 #include "App/Platform/WindowManager.h"
@@ -52,6 +53,7 @@
 #include "World/Core/World.h"
 #include "World/Core/WorldLoadDiagnostics.h"
 #include "World/Objects/ObjectLibrary.h"
+#include "World/View/WorldViewSettings.h"
 
 #ifndef __ANDROID__
 #include <GLFW/glfw3.h>
@@ -401,7 +403,26 @@ void UApplication::BeginWorldOperation(WorldRunnerRequest request,
   }
   State = AppState::Loading;
   ShowWorldProgressScreen();
-  ProgressSink.Begin(WorldOperationKind::Load);
+  const WorldOperationKind kind = [&]()
+  {
+    switch (request.op)
+    {
+    case WorldRunnerOp::Save:
+    case WorldRunnerOp::SaveThenLoad:
+    case WorldRunnerOp::SaveThenCreate:
+      return WorldOperationKind::Save;
+    case WorldRunnerOp::Create:
+      return WorldOperationKind::Create;
+    case WorldRunnerOp::EnterGame:
+      return WorldOperationKind::EnterGame;
+    case WorldRunnerOp::Shutdown:
+      return WorldOperationKind::Shutdown;
+    case WorldRunnerOp::Load:
+    default:
+      return WorldOperationKind::Load;
+    }
+  }();
+  ProgressSink.Begin(kind);
   ProgressSink.Report("init", 0.f, "Starting...");
   if (ProgressScreen)
   {
@@ -663,6 +684,13 @@ void UApplication::CreateNewWorldWithSettings(
 void UApplication::CreateNewWorldWithSettings(
     const ProceduralSettings &settings, const ResourcePackSelection &selection)
 {
+  CreateNewWorldWithSettings(settings, selection, WorldViewSettings{});
+}
+
+void UApplication::CreateNewWorldWithSettings(
+    const ProceduralSettings &settings, const ResourcePackSelection &selection,
+    const WorldViewSettings &view)
+{
   if (!Core)
   {
     return;
@@ -673,6 +701,7 @@ void UApplication::CreateNewWorldWithSettings(
                    : WorldRunnerOp::Create;
   request.settings = settings;
   request.packs = selection;
+  request.view = view;
   request.enterGameAfter = true;
   request.saveConfigAfter = true;
   BeginWorldOperation(std::move(request));
@@ -722,6 +751,67 @@ bool UApplication::ApplyResourcePacksToCurrentWorld(
     return false;
   }
   RefreshBlockCatalog();
+  return true;
+}
+
+WorldViewSettings UApplication::GetCurrentWorldViewSettings() const
+{
+  return Core ? Core->GetCurrentWorldViewSettings() : WorldViewSettings{};
+}
+
+bool UApplication::ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view)
+{
+  if (!Core)
+  {
+    return false;
+  }
+  const bool ok = Core->ApplyViewSettingsToCurrentWorld(view);
+  if (ok)
+  {
+    OnGameplayViewProjectionChanged();
+  }
+  return ok;
+}
+
+bool UApplication::ApplyWorldSettings(const ResourcePackSelection &selection,
+                                      const WorldViewSettings &view)
+{
+  if (!Core || !World)
+  {
+    return false;
+  }
+
+  ResourcePackSelection packs = selection;
+  if (packs.WorldgenOwner.empty() && !packs.Primary.empty())
+  {
+    packs.WorldgenOwner = packs.Primary.front();
+  }
+
+  const ResourcePackSelection current =
+      Core->GetCurrentWorldResourcePackSelection();
+  const bool packs_changed =
+      packs.Primary != current.Primary ||
+      packs.Secondary != current.Secondary ||
+      packs.WorldgenOwner != current.WorldgenOwner;
+
+  if (packs_changed)
+  {
+    if (!Core->ApplyResourcePacksInMemory(packs))
+    {
+      return false;
+    }
+    RefreshBlockCatalog();
+  }
+
+  if (!Core->ApplyViewSettingsInMemory(view))
+  {
+    return false;
+  }
+  if (!Core->PersistWorldMetadata())
+  {
+    return false;
+  }
+  OnGameplayViewProjectionChanged();
   return true;
 }
 
@@ -818,7 +908,62 @@ void UApplication::ShowInGameHud()
           }
           SyncCursorVisibility();
         },
-        [this]() { TryToggleFlightOnJumpPress(); });
+        [this]() { TryToggleFlightOnJumpPress(); },
+        TouchIsoControlCallbacks{
+            [this]() -> bool
+            {
+              if (!World)
+              {
+                return false;
+              }
+              if (auto cam = World->GetCurrentUserCamera())
+              {
+                return cam->IsIsometricProjection();
+              }
+              return false;
+            },
+            [this](int steps)
+            {
+              if (!World)
+              {
+                return;
+              }
+              if (auto cam = World->GetCurrentUserCamera())
+              {
+                cam->SnapIsoCameraYaw(steps);
+              }
+            },
+            [this](float scroll)
+            {
+              if (!World)
+              {
+                return;
+              }
+              if (auto cam = World->GetCurrentUserCamera())
+              {
+                cam->UpdateMouseScroll(0.0, static_cast<double>(scroll));
+              }
+            },
+            [this]()
+            {
+              if (!World)
+              {
+                return;
+              }
+              if (auto cam = World->GetCurrentUserCamera())
+              {
+                cam->CyclePerspective();
+                if (Geometry)
+                {
+                  Geometry->ShowTransientMessage(
+                      cam->GetViewController().ViewLabel(*cam), 1.5);
+                }
+                if (HudScreen)
+                {
+                  HudScreen->InvalidateTouchControlsLayout();
+                }
+              }
+            }});
   }
 #endif
   hud->OnAttach(*GuiContext);
@@ -868,6 +1013,21 @@ AppCursorPolicy UApplication::GetCursorPolicy() const
   }
   if (State == AppState::InGame)
   {
+    if (World)
+    {
+      if (World->GetViewSettings().Projection ==
+          WorldProjectionMode::OrthographicIsometric)
+      {
+        return AppCursorPolicy::ConfinedVisible;
+      }
+      if (auto cam = World->GetCurrentUserCamera())
+      {
+        if (cam->IsIsometricProjection())
+        {
+          return AppCursorPolicy::ConfinedVisible;
+        }
+      }
+    }
     if (Ui.ControlScheme == ControlScheme::Classic)
     {
       return AppCursorPolicy::CapturedHidden;
@@ -894,9 +1054,12 @@ void UApplication::SyncGameplayLookCapture()
     double x = 0.0;
     double y = 0.0;
     glfwGetCursorPos(Window, &x, &y);
+    double fb_x = x;
+    double fb_y = y;
+    CursorWindowToFramebuffer(Window, x, y, fb_x, fb_y);
     if (auto camera = World->GetCurrentUserCamera())
     {
-      camera->ResetMouseMove(x, y);
+      camera->ResetMouseMove(fb_x, fb_y);
     }
   }
 #else
@@ -913,12 +1076,95 @@ void UApplication::SyncGameplayLookCapture()
 #endif
 }
 
+void UApplication::OnGameplayViewProjectionChanged()
+{
+  if (!World)
+  {
+    return;
+  }
+
+#ifndef __ANDROID__
+  if (Window)
+  {
+    if (auto *wm = GetWindowManager(Window))
+    {
+      wm->CancelGameplayPointerInteraction();
+    }
+  }
+#endif
+
+  // Force ApplyCursorPolicy on the next Sync (Classic DISABLED must drop for
+  // isometric free-cursor aim).
+  LastCursorPolicy = AppCursorPolicy::CapturedHidden;
+
+  const bool iso =
+      World->GetViewSettings().Projection ==
+          WorldProjectionMode::OrthographicIsometric ||
+      (World->GetCurrentUserCamera() &&
+       World->GetCurrentUserCamera()->IsIsometricProjection());
+
+#ifndef __ANDROID__
+  if (Window && iso && State == AppState::InGame && !UsesUiPointer())
+  {
+    CenterWindowCursor(Window);
+  }
+#endif
+
+  SyncCursorVisibility();
+  if (State == AppState::InGame && !UsesUiPointer())
+  {
+    SyncGameplayLookCapture();
+  }
+
+  auto camera = World->GetCurrentUserCamera();
+  if (!camera)
+  {
+    return;
+  }
+
+  if (iso)
+  {
+#ifndef __ANDROID__
+    if (Window)
+    {
+      double x = 0.0;
+      double y = 0.0;
+      glfwGetCursorPos(Window, &x, &y);
+      double fb_x = x;
+      double fb_y = y;
+      CursorWindowToFramebuffer(Window, x, y, fb_x, fb_y);
+      camera->UpdatePointerAim(World, fb_x, fb_y);
+    }
+#else
+    if (TouchBridge)
+    {
+      const glm::vec2 pos = TouchBridge->GetMousePosition();
+      camera->UpdatePointerAim(World, pos.x, pos.y);
+    }
+#endif
+  }
+  else
+  {
+    glm::vec3 origin;
+    glm::vec3 dir;
+    if (camera->TryGetCenterViewRay(origin, dir))
+    {
+      World->UpdateIntersection(origin, dir);
+    }
+  }
+}
+
 void UApplication::SyncCursorVisibility()
 {
   const AppCursorPolicy policy = GetCursorPolicy();
+  const bool policyChanged = policy != LastCursorPolicy;
   const bool leavingUiPointer = LastCursorPolicy == AppCursorPolicy::Free &&
                                 policy != AppCursorPolicy::Free &&
                                 State == AppState::InGame;
+  const bool captureModeChanged =
+      policyChanged && State == AppState::InGame &&
+      (LastCursorPolicy == AppCursorPolicy::CapturedHidden ||
+       policy == AppCursorPolicy::CapturedHidden);
 
 #ifndef __ANDROID__
   if (Window)
@@ -927,7 +1173,7 @@ void UApplication::SyncCursorVisibility()
   }
 #endif
 
-  if (leavingUiPointer)
+  if (leavingUiPointer || captureModeChanged)
   {
     SyncGameplayLookCapture();
   }
@@ -990,7 +1236,7 @@ void UApplication::EnterInGameInputState()
   Ui.ControlScheme = ControlScheme::Cubatarium;
 #endif
   GuiContext->ClearInputState();
-  SyncCursorVisibility();
+  OnGameplayViewProjectionChanged();
 }
 
 void UApplication::RecaptureMouseForLook()
@@ -1428,9 +1674,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     glDepthMask(GL_TRUE);
     if (auto camera = World->GetCurrentUserCamera())
     {
-      const float aspect = static_cast<float>(width) /
-                           static_cast<float>(height > 0 ? height : 1);
-      camera->SetAspectRatio(aspect);
+      camera->SetViewportSize(width, height);
     }
     const auto prepare_begin = std::chrono::high_resolution_clock::now();
     Geometry->PrepareFrameRendering();

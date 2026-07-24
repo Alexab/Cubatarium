@@ -81,15 +81,22 @@ void UInGameHudScreen::Build(UGuiContext &ctx)
 }
 
 #if defined(__ANDROID__)
-void UInGameHudScreen::ConfigureTouchControls(UTouchInputBridge *bridge,
-                                              std::function<void()> onMenu,
-                                              std::function<void()> onInventory,
-                                              std::function<void()> onConsole,
-                                              std::function<void()> onJumpPress)
+void UInGameHudScreen::ConfigureTouchControls(
+    UTouchInputBridge *bridge, std::function<void()> onMenu,
+    std::function<void()> onInventory, std::function<void()> onConsole,
+    std::function<void()> onJumpPress, TouchIsoControlCallbacks isoCallbacks)
 {
   TouchControls = std::make_unique<UGuiTouchControls>(
       Theme, bridge, std::move(onMenu), std::move(onInventory),
-      std::move(onConsole), std::move(onJumpPress));
+      std::move(onConsole), std::move(onJumpPress), std::move(isoCallbacks));
+}
+
+void UInGameHudScreen::InvalidateTouchControlsLayout()
+{
+  if (TouchControls)
+  {
+    TouchControls->InvalidateLayout();
+  }
 }
 
 bool UInGameHudScreen::RouteTouchMove(int PointerId, int x, int y)
@@ -453,6 +460,13 @@ void UInGameHudScreen::Update(double /*dt*/)
   LayoutHotbar();
   UpdateSlotData();
   UpdateTooltips();
+#if defined(__ANDROID__)
+  if (TouchControls)
+  {
+    TouchControls->Layout(ViewportW, ViewportH, GetContentOffsetX(),
+                          GetContentOffsetY());
+  }
+#endif
 }
 
 } // namespace cutum

@@ -6,6 +6,7 @@
 #include <memory>
 #include <vector>
 #if defined(__ANDROID__)
+#include "Gui/Widgets/GuiTouchControls.h"
 #include <functional>
 #endif
 
@@ -39,7 +40,9 @@ public:
                               std::function<void()> onMenu,
                               std::function<void()> onInventory,
                               std::function<void()> onConsole,
-                              std::function<void()> onJumpPress);
+                              std::function<void()> onJumpPress,
+                              TouchIsoControlCallbacks isoCallbacks = {});
+  void InvalidateTouchControlsLayout();
   bool RouteTouchMove(int PointerId, int x, int y);
   void ReleaseJoystickCapture();
   void ReleaseJoystickCaptureForPointer(int pointer_id);

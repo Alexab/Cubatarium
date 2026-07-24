@@ -2,6 +2,7 @@
 #include "App/Application.h"
 #include "App/Core.h"
 #include "App/Settings/AppState.h"
+#include "App/Platform/CursorCapture.h"
 #include "App/Platform/InputManager.h"
 #include "App/Platform/Log.h"
 #include "Blocks/Input/BlockInputController.h"
@@ -263,6 +264,13 @@ void UWindowManager::SetupCallbacks()
         if (Application->RouteScroll(Xoffset, Yoffset, fbPos.x, fbPos.y))
         {
           return;
+        }
+        if (World)
+        {
+          if (auto camera = World->GetCurrentUserCamera())
+          {
+            camera->UpdateMouseScroll(Xoffset, Yoffset);
+          }
         }
       });
 
@@ -829,11 +837,29 @@ void UWindowManager::ResetGameplayMouseCapture()
     double x = 0.0;
     double y = 0.0;
     glfwGetCursorPos(Window, &x, &y);
+    double fb_x = x;
+    double fb_y = y;
+    CursorWindowToFramebuffer(Window, x, y, fb_x, fb_y);
     if (auto camera = World->GetCurrentUserCamera())
     {
-      camera->ResetMouseMove(x, y);
+      camera->ResetMouseMove(fb_x, fb_y);
     }
   }
+}
+
+void UWindowManager::CancelGameplayPointerInteraction()
+{
+  if (!BlockInput || !World)
+  {
+    return;
+  }
+  BlockInputContext ctx;
+  ctx.World = World;
+  ctx.Geometries = Geometries.get();
+  ctx.Ui = Core ? &Core->GetUiSettings() : nullptr;
+  ctx.Window = Window;
+  ctx.App = Application.get();
+  BlockInput->CancelPointerInteraction(ctx);
 }
 
 void UWindowManager::HandleMouseButtonEvent(MouseButton Button, bool Pressed,
@@ -876,7 +902,10 @@ void UWindowManager::HandleMouseButtonEvent(MouseButton Button, bool Pressed,
   ctx.Ui = Core ? &Core->GetUiSettings() : nullptr;
   ctx.Window = Window;
   ctx.App = Application.get();
-  BlockInput->OnMouseButton(Button, Pressed, pos, ctx);
+  BlockInput->OnMouseButton(Button, Pressed,
+                            glm::vec2(static_cast<float>(fbPos.x),
+                                      static_cast<float>(fbPos.y)),
+                            ctx);
 }
 
 void UWindowManager::HandleMouseMoveEvent(glm::vec2 pos, glm::vec2 delta)
@@ -907,7 +936,9 @@ void UWindowManager::HandleMouseMoveEvent(glm::vec2 pos, glm::vec2 delta)
   ctx.Ui = Core ? &Core->GetUiSettings() : nullptr;
   ctx.Window = Window;
   ctx.App = Application.get();
-  BlockInput->OnMouseMove(pos, delta, ctx);
+  BlockInput->OnMouseMove(glm::vec2(static_cast<float>(fbPos.x),
+                                    static_cast<float>(fbPos.y)),
+                          delta, ctx);
 }
 
 void UWindowManager::HandleWindowResizeEvent(int width, int height)
@@ -922,14 +953,14 @@ void UWindowManager::HandleWindowResizeEvent(int width, int height)
   {
     if (auto camera = Views->GetActiveCamera())
     {
-      camera->SetAspectRatio(aspect);
+      camera->SetViewportSize(width, height);
     }
   }
   if (World)
   {
     if (auto camera = World->GetCurrentUserCamera())
     {
-      camera->SetAspectRatio(aspect);
+      camera->SetViewportSize(width, height);
     }
   }
 
@@ -1038,7 +1069,8 @@ void UWindowManager::RenderHelpText()
 
   // Main control hints in English
   std::vector<std::string> help_lines = {
-      "WASD - Move, Space - Jump, dbl Space - Fly, F5 - Toggle perspective, "
+      "WASD - Move, Space - Jump, dbl Space - Fly, F5 - Cycle view, "
+      "Q/E - Iso camera snap, RMB - Iso orbit, LMB - Place/break at cursor, "
       "RMB hold - Look, ` - Console",
       "Classic: mouse look, LMB break, RMB place; Cubatarium: RMB "
       "look",

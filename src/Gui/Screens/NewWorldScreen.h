@@ -11,6 +11,7 @@ class IUGuiMenuHost;
 class UGuiWindow;
 class UGuiDialogFrame;
 class UWorldGenSettingsForm;
+class UWorldViewSettingsForm;
 class UResourcePackPickerForm;
 class UGuiPanel;
 class UGuiLabel;
@@ -40,6 +41,8 @@ private:
   UGuiScrollView *BodyScroll{nullptr};
   UGuiPanel *WorldPage{nullptr};
   std::unique_ptr<UWorldGenSettingsForm> WorldForm;
+  UGuiLabel *ViewSectionLabel{nullptr};
+  std::unique_ptr<UWorldViewSettingsForm> ViewForm;
   UGuiLabel *PackSectionLabel{nullptr};
   std::unique_ptr<UResourcePackPickerForm> PackForm;
   bool NeedsBodyRelayout{false};

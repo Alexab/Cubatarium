@@ -193,7 +193,8 @@ void USettingsScreen::Build(UGuiContext &ctx)
 
   const int winW =
       std::min(theme.DialogDefaultWidth, ViewportW - theme.DialogMargin);
-  const int winH = std::min(Scaled(540), ViewportH - theme.DialogMargin);
+  const int winH =
+      std::min(theme.DialogDefaultHeight, ViewportH - theme.DialogMargin);
   auto window = std::make_unique<UGuiWindow>(&theme, "Settings");
   Window = window.get();
   window->SetBounds(
@@ -466,7 +467,8 @@ void USettingsScreen::Relayout()
   }
   const int winW =
       std::min(theme->DialogDefaultWidth, ViewportW - theme->DialogMargin);
-  const int winH = std::min(Scaled(540), ViewportH - theme->DialogMargin);
+  const int winH =
+      std::min(theme->DialogDefaultHeight, ViewportH - theme->DialogMargin);
   Window->SetBounds(
       {(ViewportW - winW) / 2, (ViewportH - winH) / 2, winW, winH});
   DialogFrame->SetBounds(Window->GetClientArea());
@@ -476,47 +478,89 @@ void USettingsScreen::Relayout()
 std::vector<GuiGridItem>
 USettingsScreen::BuildAppGridItems(const GuiGridSpec &spec) const
 {
-  const int hotbarValueRow = spec.columns > 1 ? 13 : 15;
-  const int hotbarValueCol = spec.columns > 1 ? 1 : 0;
-  const int controlSchemeRow = spec.columns > 1 ? 14 : 18;
-  const int graphicsQualityRow = spec.columns > 1 ? 15 : 19;
-  const int uiScaleSliderRow = spec.columns > 1 ? 1 : 2;
-  const int uiScaleValueRow = spec.columns > 1 ? 0 : 1;
-  const int uiScaleValueCol = spec.columns > 1 ? 1 : 0;
+  const int cols = std::max(1, spec.columns);
   const int labelH = Scaled(28);
   const int fieldH = Scaled(32);
   const int checkH = Scaled(30);
   const int sliderH = Scaled(28);
-  return {
-      {UiScaleLabel, 0, 0, 1, 1, labelH},
-      {UiScaleValueLabel, uiScaleValueRow, uiScaleValueCol, 1, 1, fieldH},
-      {UiScaleSlider, uiScaleSliderRow, 0, 1, spec.columns, sliderH},
-      {DefaultUserLabel, 2, 0, 1, 1, labelH},
-      {DefaultUserInput, 2, 1, 1, 1, fieldH},
-      {DefaultWorldLabel, 3, 0, 1, 1, labelH},
-      {DefaultWorldInput, 3, 1, 1, 1, fieldH},
-      {RenderDistLabel, 4, 0, 1, 1, labelH},
-      {RenderDistInput, 4, 1, 1, 1, fieldH},
-      {StreamingBox, 5, 0, 1, 1, checkH},
-      {StepUpBox, 5, 1, 1, 1, checkH},
-      {FoliageClimbBox, 6, 0, 1, 2, checkH},
-      {GreedyBox, 7, 0, 1, 1, checkH},
-      {FaceQuadsBox, 7, 1, 1, 1, checkH},
-      {FrustumBox, 8, 0, 1, 1, checkH},
-      {BatchCacheBox, 8, 1, 1, 1, checkH},
-      {LegacyHudBox, 9, 0, 1, 2, checkH},
-      {ShowPerformanceBox, 10, 0, 1, 2, checkH},
-      {ConsoleKeyLabel, 11, 0, 1, 1, labelH},
-      {ConsoleKeyInput, 11, 1, 1, 1, fieldH},
-      {PaletteKeyLabel, 12, 0, 1, 1, labelH},
-      {PaletteKeyInput, 12, 1, 1, 1, fieldH},
-      {HotbarCountLabel, 13, 0, 1, 1, labelH},
-      {HotbarCountValueLabel, hotbarValueRow, hotbarValueCol, 1, 1, fieldH},
-      {ControlSchemeLabel, controlSchemeRow, 0, 1, 1, labelH},
-      {ControlSchemeButton, controlSchemeRow, 1, 1, 1, fieldH},
-      {GraphicsQualityLabel, graphicsQualityRow, 0, 1, 1, labelH},
-      {GraphicsQualityButton, graphicsQualityRow, 1, 1, 1, fieldH},
+  std::vector<GuiGridItem> items;
+  int row = 0;
+
+  auto addLabeledField = [&](UGuiWidget *label, UGuiWidget *field)
+  {
+    if (cols > 1)
+    {
+      items.push_back({label, row, 0, 1, 1, labelH});
+      items.push_back({field, row, 1, 1, 1, fieldH});
+      ++row;
+      return;
+    }
+    items.push_back({label, row, 0, 1, 1, labelH});
+    ++row;
+    items.push_back({field, row, 0, 1, 1, fieldH});
+    ++row;
   };
+
+  auto addCheckPair = [&](UGuiWidget *left, UGuiWidget *right)
+  {
+    if (cols > 1)
+    {
+      items.push_back({left, row, 0, 1, 1, checkH});
+      items.push_back({right, row, 1, 1, 1, checkH});
+      ++row;
+      return;
+    }
+    items.push_back({left, row++, 0, 1, 1, checkH});
+    items.push_back({right, row++, 0, 1, 1, checkH});
+  };
+
+  items.push_back({UiScaleLabel, row, 0, 1, 1, labelH});
+  if (cols > 1)
+  {
+    items.push_back({UiScaleValueLabel, row, 1, 1, 1, fieldH});
+    ++row;
+    items.push_back({UiScaleSlider, row, 0, 1, cols, sliderH});
+    ++row;
+  }
+  else
+  {
+    ++row;
+    items.push_back({UiScaleValueLabel, row, 0, 1, 1, fieldH});
+    ++row;
+    items.push_back({UiScaleSlider, row, 0, 1, 1, sliderH});
+    ++row;
+  }
+
+  addLabeledField(DefaultUserLabel, DefaultUserInput);
+  addLabeledField(DefaultWorldLabel, DefaultWorldInput);
+  addLabeledField(RenderDistLabel, RenderDistInput);
+  addCheckPair(StreamingBox, StepUpBox);
+  items.push_back({FoliageClimbBox, row, 0, 1, cols, checkH});
+  ++row;
+  addCheckPair(GreedyBox, FaceQuadsBox);
+  addCheckPair(FrustumBox, BatchCacheBox);
+  items.push_back({LegacyHudBox, row, 0, 1, cols, checkH});
+  ++row;
+  items.push_back({ShowPerformanceBox, row, 0, 1, cols, checkH});
+  ++row;
+  addLabeledField(ConsoleKeyLabel, ConsoleKeyInput);
+  addLabeledField(PaletteKeyLabel, PaletteKeyInput);
+
+  items.push_back({HotbarCountLabel, row, 0, 1, 1, labelH});
+  if (cols > 1)
+  {
+    items.push_back({HotbarCountValueLabel, row, 1, 1, 1, fieldH});
+    ++row;
+  }
+  else
+  {
+    ++row;
+    items.push_back({HotbarCountValueLabel, row, 0, 1, 1, fieldH});
+    ++row;
+  }
+  addLabeledField(ControlSchemeLabel, ControlSchemeButton);
+  addLabeledField(GraphicsQualityLabel, GraphicsQualityButton);
+  return items;
 }
 
 void USettingsScreen::LayoutHotbarCountControls(const GuiGridSpec &spec) const

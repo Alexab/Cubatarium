@@ -37,6 +37,7 @@
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
 #include "Creatures/Visual/Gltf/CreatureGltfCache.h"
+#include "Render/Camera/Camera.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Textures/TextureBase.h"
@@ -1073,9 +1074,54 @@ void UCore::CreateNewWorldWithSettings(
 
 void UCore::ApplyNewWorldCreationRequest(
     const ProceduralSettings &settings,
-    const ResourcePackSelection &resourcePacks)
+    const ResourcePackSelection &resourcePacks, const WorldViewSettings &view)
 {
-  WorldLifecycle.ApplyNewWorldCreationRequest(*this, settings, resourcePacks);
+  WorldLifecycle.ApplyNewWorldCreationRequest(*this, settings, resourcePacks,
+                                              view);
+}
+
+WorldViewSettings UCore::GetCurrentWorldViewSettings() const
+{
+  if (!WorldInstance || WorldInstance->GetWorldName().empty())
+  {
+    return WorldViewSettings{};
+  }
+  return WorldInstance->GetViewSettings();
+}
+
+bool UCore::ApplyViewSettingsInMemory(const WorldViewSettings &view)
+{
+  if (!WorldInstance || WorldInstance->GetWorldName().empty())
+  {
+    return false;
+  }
+  WorldViewSettings validated = view;
+  validated.Validate();
+  WorldInstance->SetViewSettings(validated);
+  if (auto camera = WorldInstance->GetCurrentUserCamera())
+  {
+    camera->ApplyWorldViewSettings(validated);
+  }
+  return true;
+}
+
+bool UCore::ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view)
+{
+  if (!ApplyViewSettingsInMemory(view))
+  {
+    return false;
+  }
+  return PersistWorldMetadata();
+}
+
+bool UCore::PersistWorldMetadata()
+{
+  if (!WorldInstance || WorldInstance->GetWorldName().empty())
+  {
+    return false;
+  }
+  WorldInstance->PersistWorldMetadata();
+  return true;
 }
 
 std::vector<std::string>
@@ -1122,8 +1168,7 @@ ResourcePackSelection UCore::GetCurrentWorldResourcePackSelection() const
   return selection;
 }
 
-bool UCore::ApplyResourcePacksToCurrentWorld(
-    const ResourcePackSelection &selectionIn)
+bool UCore::ApplyResourcePacksInMemory(const ResourcePackSelection &selectionIn)
 {
   if (!WorldInstance || WorldInstance->GetWorldName().empty())
   {
@@ -1140,8 +1185,17 @@ bool UCore::ApplyResourcePacksToCurrentWorld(
   }
   WorldInstance->SetResourcePackSelection(
       selection.Primary, selection.Secondary, selection.WorldgenOwner);
-  SaveWorld(WorldInstance->GetWorldName());
   return true;
+}
+
+bool UCore::ApplyResourcePacksToCurrentWorld(
+    const ResourcePackSelection &selectionIn)
+{
+  if (!ApplyResourcePacksInMemory(selectionIn))
+  {
+    return false;
+  }
+  return PersistWorldMetadata();
 }
 
 bool UCore::CreateWorldHeadless(const CreateWorldCliArgs &args,

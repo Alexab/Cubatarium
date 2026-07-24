@@ -445,10 +445,12 @@ UGuiTouchControls::UGuiTouchControls(const GuiTheme *theme,
                                      std::function<void()> onMenu,
                                      std::function<void()> onInventory,
                                      std::function<void()> onConsole,
-                                     std::function<void()> onJumpPress)
+                                     std::function<void()> onJumpPress,
+                                     TouchIsoControlCallbacks isoCallbacks)
     : Theme(theme), Bridge(bridge), OnMenu(std::move(onMenu)),
       OnInventory(std::move(onInventory)), OnConsole(std::move(onConsole)),
-      OnJumpPress(std::move(onJumpPress))
+      OnJumpPress(std::move(onJumpPress)),
+      IsoCallbacks(std::move(isoCallbacks))
 {
 }
 
@@ -538,6 +540,52 @@ void UGuiTouchControls::Build(UGuiPanel *parent)
   lookPad->SetZOrder(kTouchControlsZOrder + 1);
   LookPad = lookPad.get();
   Root->AddChild(std::move(lookPad));
+
+  auto makeIsoButton = [this](const char *label, std::function<void()> onClick)
+  {
+    auto button = std::make_unique<UGuiButton>(Theme, label);
+    button->SetOnClick(std::move(onClick));
+    button->SetZOrder(kTouchControlsZOrder + 2);
+    button->SetVisible(false);
+    UGuiWidget *raw = button.get();
+    Root->AddChild(std::move(button));
+    return raw;
+  };
+  IsoSnapLeftButton = makeIsoButton("Q", [this]()
+                                    {
+                                      if (IsoCallbacks.SnapYaw)
+                                      {
+                                        IsoCallbacks.SnapYaw(-1);
+                                      }
+                                    });
+  IsoSnapRightButton = makeIsoButton("E", [this]()
+                                     {
+                                       if (IsoCallbacks.SnapYaw)
+                                       {
+                                         IsoCallbacks.SnapYaw(1);
+                                       }
+                                     });
+  IsoZoomInButton = makeIsoButton("+", [this]()
+                                  {
+                                    if (IsoCallbacks.Zoom)
+                                    {
+                                      IsoCallbacks.Zoom(1.0f);
+                                    }
+                                  });
+  IsoZoomOutButton = makeIsoButton("-", [this]()
+                                   {
+                                     if (IsoCallbacks.Zoom)
+                                     {
+                                       IsoCallbacks.Zoom(-1.0f);
+                                     }
+                                   });
+  IsoCycleViewButton = makeIsoButton("Cam", [this]()
+                                     {
+                                       if (IsoCallbacks.CycleView)
+                                       {
+                                         IsoCallbacks.CycleView();
+                                       }
+                                     });
 
   OnRouteCapturedMove =
       [joystickWidget, lookPad = LookPad](int PointerId, int x, int y)
@@ -646,6 +694,16 @@ void UGuiTouchControls::RenderOverlay(UGuiRenderer &renderer)
   }
 }
 
+void UGuiTouchControls::InvalidateLayout()
+{
+  LastLayoutWidth = -1;
+}
+
+bool UGuiTouchControls::IsoControlsEnabled() const
+{
+  return IsoCallbacks.IsActive && IsoCallbacks.IsActive();
+}
+
 void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY)
 {
   if (!Root || !Theme)
@@ -653,9 +711,11 @@ void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY)
     return;
   }
   const float ui_scale = static_cast<float>(Theme->TouchButtonSize) / 64.f;
+  const bool iso_enabled = IsoControlsEnabled();
   if (width == LastLayoutWidth && height == LastLayoutHeight &&
       offsetX == LastLayoutOffsetX && offsetY == LastLayoutOffsetY &&
-      std::fabs(ui_scale - LastLayoutUiScale) < 0.01f)
+      std::fabs(ui_scale - LastLayoutUiScale) < 0.01f &&
+      iso_enabled == LastIsoEnabled)
   {
     return;
   }
@@ -665,6 +725,7 @@ void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY)
   LastLayoutOffsetX = offsetX;
   LastLayoutOffsetY = offsetY;
   LastLayoutUiScale = ui_scale;
+  LastIsoEnabled = iso_enabled;
   if (hadLayout && OnReleaseHoldButtons)
   {
     OnReleaseHoldButtons();
@@ -730,6 +791,27 @@ void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY)
                               buttonSize, buttonSize});
   }
 
+  auto placeIso = [&](UGuiWidget *widget, int x, int y)
+  {
+    if (!widget)
+    {
+      return;
+    }
+    widget->SetVisible(iso_enabled);
+    if (iso_enabled)
+    {
+      widget->SetBounds({x, y, buttonSize, buttonSize});
+    }
+  };
+  const int isoRowY = std::max(margin, joystickY - buttonSize - buttonGap);
+  placeIso(IsoSnapLeftButton, leftMargin, isoRowY);
+  placeIso(IsoSnapRightButton, leftMargin + buttonSize + buttonGap, isoRowY);
+  placeIso(IsoZoomOutButton, leftMargin + (buttonSize + buttonGap) * 2,
+           isoRowY);
+  placeIso(IsoZoomInButton, leftMargin + (buttonSize + buttonGap) * 3, isoRowY);
+  placeIso(IsoCycleViewButton, leftMargin + (buttonSize + buttonGap) * 4,
+           isoRowY);
+
   TopRightScreenOffsetX = offsetX;
   TopRightScreenOffsetY = offsetY;
   TopRightReservedRect = {width - buttonSize - margin - margin / 2,
@@ -763,6 +845,12 @@ void UGuiTouchControls::Layout(int width, int height, int offsetX, int offsetY)
         2, {offsetX + std::max(0, sprintX - actionPad),
             offsetY + std::max(0, bottomRowY - actionPad),
             actionRowW + actionPad * 2, buttonSize + actionPad * 2});
+    if (iso_enabled)
+    {
+      const int isoRowW = buttonSize * 5 + buttonGap * 4;
+      Bridge->SetBlockedGameRegion(
+          3, {offsetX + leftMargin, offsetY + isoRowY, isoRowW, buttonSize});
+    }
   }
 
   if (JoystickWidget && Bridge)

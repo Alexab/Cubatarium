@@ -141,6 +141,9 @@ public:
   void
   CreateNewWorldWithSettings(const ProceduralSettings &settings,
                              const ResourcePackSelection &selection) override;
+  void CreateNewWorldWithSettings(const ProceduralSettings &settings,
+                                  const ResourcePackSelection &selection,
+                                  const WorldViewSettings &view) override;
   void LoadSelectedWorld(const std::string &worldName) override;
   void RefreshWorldList() override;
   const std::vector<std::string> &GetWorldNames() const override;
@@ -152,6 +155,10 @@ public:
   ResourcePackSelection GetCurrentWorldResourcePackSelection() const override;
   bool ApplyResourcePacksToCurrentWorld(
       const ResourcePackSelection &selection) override;
+  WorldViewSettings GetCurrentWorldViewSettings() const override;
+  bool ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view) override;
+  bool ApplyWorldSettings(const ResourcePackSelection &selection,
+                          const WorldViewSettings &view) override;
 
   void ShowSettings();
   void ShowWorldSettings();
@@ -172,6 +179,8 @@ private:
   void ShowInGameHud();
   void SyncCursorVisibility();
   void SyncGameplayLookCapture();
+  /// After projection change: visible cursor for iso, refresh aim ray.
+  void OnGameplayViewProjectionChanged();
   AppCursorPolicy GetCursorPolicy() const;
   void EnterInGameInputState();
   /// Выход из UI-only (Left Alt): временно свободный курсор для HUD.

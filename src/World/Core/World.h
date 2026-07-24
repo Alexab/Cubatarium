@@ -19,6 +19,7 @@
 #include "World/Core/WorldCooperativeOps.h"
 #include "World/Environment/EnvironmentConfig.h"
 #include "World/Environment/WorldEnvironment.h"
+#include "World/View/WorldViewSettings.h"
 #include "World/IO/ChunkStorageTypes.h"
 #include "World/Math/CollisionVolume.h"
 #include "World/Physics/PhysicsProfile.h"
@@ -212,6 +213,8 @@ public:
   /// Fast save for exit/autosave: metadata plus modified terrain only.
   void SaveSessionSnapshot(const std::string &world_folder_path,
                            bool skip_quiesce = false);
+  /// Write world_data.json only (view, packs, seed metadata) — no terrain dump.
+  void PersistWorldMetadata();
 
   void BeginCooperativeLoad(const std::string &world_folder_path);
   bool TickCooperativeLoad(class IUProgressSink &sink, int chunkBudget);
@@ -792,6 +795,12 @@ public:
   {
     return EnvironmentSettingsData;
   }
+  const WorldViewSettings &GetViewSettings() const { return ViewSettings; }
+  void SetViewSettings(const WorldViewSettings &settings)
+  {
+    ViewSettings = settings;
+    ViewSettings.Validate();
+  }
   float GetCelestialHorizonFade() const;
   void SetWeatherAutoEnabled(bool enabled);
   bool IsWeatherAutoEnabled() const;
@@ -1163,6 +1172,7 @@ private:
   RenderSettings Render;
   EnvironmentState EnvironmentStateData;
   EnvironmentConfig EnvironmentSettingsData;
+  WorldViewSettings ViewSettings;
   LightingSettings LightingSettingsData;
   bool LightingRelightDeferred{false};
   bool SuppressRelightSeamDirty{false};

@@ -1,4 +1,7 @@
 #include "Blocks/Input/BlockInputController.h"
+#include "Render/Camera/Camera.h"
+#include "Render/Engine/GeometryEngine.h"
+#include "World/Core/World.h"
 
 #include "World/Diagnostics/BlockInspectDiagnostics.h"
 
@@ -31,6 +34,28 @@ float CursorDragDistancePx(glm::vec2 a, glm::vec2 b)
   const float dx = a.x - b.x;
   const float dy = a.y - b.y;
   return std::sqrt(dx * dx + dy * dy);
+}
+
+bool IsIsoCamera(const BlockInputContext &ctx)
+{
+  if (!ctx.World)
+  {
+    return false;
+  }
+  if (auto camera = ctx.World->GetCurrentUserCamera())
+  {
+    return camera->IsIsometricProjection();
+  }
+  return false;
+}
+
+bool UsesRmbLook(const BlockInputContext &ctx)
+{
+  if (!ctx.Ui)
+  {
+    return false;
+  }
+  return ctx.Ui->ControlScheme == ControlScheme::Cubatarium || IsIsoCamera(ctx);
 }
 
 bool ShouldBlockBreakByMovement(const BlockInputContext &ctx)
@@ -197,8 +222,9 @@ void UBlockInputController::HandleLeftPress(const BlockInputContext &ctx)
   LeftDownTime = std::chrono::steady_clock::now();
   LeftHeld = true;
 
-  // Classic: LMB down starts break immediately (independent of hotbar slot).
-  if (ctx.Ui->ControlScheme == ControlScheme::Classic &&
+  // Classic perspective: LMB down starts break immediately.
+  // Isometric always uses Cubatarium-style hold-to-break (cursor aim).
+  if (ctx.Ui->ControlScheme == ControlScheme::Classic && !IsIsoCamera(ctx) &&
       ctx.World->GetIsBlockIntersectionExists())
   {
     ctx.World->StartBreakSession(ctx.World->GetBreakBlockPos());
@@ -220,7 +246,7 @@ void UBlockInputController::HandleLeftRelease(float holdSeconds,
     return;
   }
 
-  if (ctx.Ui->ControlScheme == ControlScheme::Cubatarium)
+  if (ctx.Ui->ControlScheme == ControlScheme::Cubatarium || IsIsoCamera(ctx))
   {
     const float placeMax = ctx.Ui->PlaceClickMaxSeconds;
     const float breakMin = ctx.Ui->BreakHoldMinSeconds;
@@ -263,7 +289,7 @@ void UBlockInputController::HandleRightPress(glm::vec2 pos,
   RightDragExceeded = false;
   RightLookActive = false;
 
-  if (!ctx.Ui || ctx.Ui->ControlScheme != ControlScheme::Cubatarium)
+  if (!UsesRmbLook(ctx))
   {
     return;
   }
@@ -289,13 +315,13 @@ void UBlockInputController::HandleRightRelease(const BlockInputContext &ctx)
   RightPressed = false;
   RightLookActive = false;
 
-  // Cubatarium: RMB is look only.
-  if (ctx.Ui->ControlScheme == ControlScheme::Cubatarium)
+  // RMB is look-only for Cubatarium and isometric.
+  if (UsesRmbLook(ctx))
   {
     return;
   }
 
-  // Classic: RMB click places/uses active slot (independent of LMB break).
+  // Classic perspective: RMB click places/uses active slot.
   TryUseActiveSlot(ctx);
 }
 
@@ -308,7 +334,7 @@ void UBlockInputController::OnMouseButton(MouseButton Button, bool Pressed,
     if (Pressed)
     {
       HandleRightPress(pos, ctx);
-      if (ctx.Ui && ctx.Ui->ControlScheme == ControlScheme::Cubatarium)
+      if (UsesRmbLook(ctx))
       {
         RightLookActive = true;
       }
@@ -345,6 +371,22 @@ void UBlockInputController::OnMouseMove(glm::vec2 pos, glm::vec2 delta,
   (void)delta;
   if (!ctx.World || !ctx.Ui)
   {
+    return;
+  }
+
+  if (IsIsoCamera(ctx))
+  {
+    if (auto camera = ctx.World->GetCurrentUserCamera())
+    {
+      if (RightLookActive && RightPressed)
+      {
+        camera->UpdateMouseMove(ctx.World, pos.x, pos.y);
+      }
+      else
+      {
+        camera->UpdatePointerAim(ctx.World, pos.x, pos.y);
+      }
+    }
     return;
   }
 
@@ -408,8 +450,8 @@ void UBlockInputController::Tick(float dt, const BlockInputContext &ctx)
     return;
   }
 
-  // Cubatarium: hold LMB past breakMin to start break (any hotbar slot).
-  if (ctx.Ui->ControlScheme == ControlScheme::Cubatarium)
+  // Iso / Cubatarium: hold LMB past breakMin to start break (any hotbar slot).
+  if (ctx.Ui->ControlScheme == ControlScheme::Cubatarium || IsIsoCamera(ctx))
   {
     if (ShouldBlockBreakByMovement(ctx))
     {

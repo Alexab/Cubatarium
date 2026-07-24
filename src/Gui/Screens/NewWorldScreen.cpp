@@ -11,6 +11,7 @@
 #include "Gui/Widgets/GuiWindow.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/WorldGenSettingsForm.h"
+#include "Gui/Widgets/WorldViewSettingsForm.h"
 #include "Gui/Widgets/ResourcePackPickerForm.h"
 #include <algorithm>
 #include <iostream>
@@ -52,6 +53,8 @@ void UNewWorldScreen::OnCreate()
     return;
   }
   const ProceduralSettings settings = WorldForm->ReadSettings();
+  const WorldViewSettings view =
+      ViewForm ? ViewForm->ReadSettings() : WorldViewSettings{};
   ResourcePackSelection packs =
       PackForm ? PackForm->ReadSelection() : ResourcePackSelection{};
   if (packs.Primary.empty())
@@ -70,8 +73,8 @@ void UNewWorldScreen::OnCreate()
   {
     packs.WorldgenOwner = packs.Primary.front();
   }
-  auto create = [this, settings, packs]()
-  { Host->CreateNewWorldWithSettings(settings, packs); };
+  auto create = [this, settings, packs, view]()
+  { Host->CreateNewWorldWithSettings(settings, packs, view); };
   Host->SaveIfNeededAndProceed(create);
 }
 
@@ -110,6 +113,14 @@ void UNewWorldScreen::Build(UGuiContext &ctx)
   auto body = std::make_unique<UGuiPanel>(&theme);
   body->SetDrawBackground(false);
   WorldPage = body.get();
+
+  auto viewSection = std::make_unique<UGuiLabel>(&theme, "View:");
+  ViewSectionLabel = viewSection.get();
+  body->AddChild(std::move(viewSection));
+  ViewForm = std::make_unique<UWorldViewSettingsForm>(&theme);
+  ViewForm->SetSettings(WorldViewSettings{});
+  ViewForm->SetOnLayoutChanged([this]() { RequestBodyRelayout(); });
+  ViewForm->BuildInto(*body);
 
   WorldForm = std::make_unique<UWorldGenSettingsForm>(&theme);
   WorldForm->SetSettings(procSnap);
@@ -200,18 +211,26 @@ void UNewWorldScreen::Relayout()
 
 int UNewWorldScreen::MeasureWorldPageContentHeight(int width) const
 {
-  if (!WorldForm || width <= 0)
+  if (width <= 0)
   {
     return 0;
   }
   const GuiRect area{0, 0, width, 100000};
   const GuiGridSpec spec = BuildWorldGridSpec(GetMetrics(), width);
   const GuiTheme *theme = GetMetrics().Theme;
-  int height = WorldForm->MeasureGridHeight(area, spec);
+  const int section_gap = Scaled(12);
+  const int label_h = theme ? theme->TabBarHeight : 28;
+  int height = 0;
+  if (ViewForm && theme)
+  {
+    height += label_h + ViewForm->MeasureHeight(area) + section_gap;
+  }
+  if (WorldForm)
+  {
+    height += WorldForm->MeasureGridHeight(area, spec);
+  }
   if (PackForm && theme)
   {
-    const int section_gap = Scaled(12);
-    const int label_h = theme->TabBarHeight;
     height += section_gap + label_h + PackForm->MeasureHeight(area);
   }
   return height;
@@ -238,21 +257,39 @@ void UNewWorldScreen::LayoutWorldPageInScroll(UGuiScrollView &scroll) const
 
 void UNewWorldScreen::LayoutWorldPage(const GuiRect &area) const
 {
-  if (!WorldForm || area.W <= 0)
-  {
-    return;
-  }
-  const GuiGridSpec spec = BuildWorldGridSpec(GetMetrics(), area.W);
-  const int gridH = WorldForm->MeasureGridHeight(area, spec);
-  WorldForm->LayoutGrid({area.X, area.Y, area.W, gridH}, spec);
-  if (!PackForm)
+  if (area.W <= 0)
   {
     return;
   }
   const GuiTheme *theme = GetMetrics().Theme;
   const int section_gap = Scaled(12);
   const int label_h = theme ? theme->TabBarHeight : 28;
-  int y = area.Y + gridH + section_gap;
+  int y = area.Y;
+
+  if (ViewForm)
+  {
+    if (ViewSectionLabel)
+    {
+      ViewSectionLabel->SetBounds({area.X, y, area.W, label_h});
+      y += label_h;
+    }
+    const int viewH = ViewForm->MeasureHeight(area);
+    ViewForm->Layout({area.X, y, area.W, viewH});
+    y += viewH + section_gap;
+  }
+
+  if (WorldForm)
+  {
+    const GuiGridSpec spec = BuildWorldGridSpec(GetMetrics(), area.W);
+    const int gridH = WorldForm->MeasureGridHeight(area, spec);
+    WorldForm->LayoutGrid({area.X, y, area.W, gridH}, spec);
+    y += gridH + section_gap;
+  }
+
+  if (!PackForm)
+  {
+    return;
+  }
   if (PackSectionLabel)
   {
     PackSectionLabel->SetBounds({area.X, y, area.W, label_h});

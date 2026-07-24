@@ -172,7 +172,8 @@ bool UWorldOperationRunner::TickWorldOp(IUProgressSink &sink, int chunkBudget)
 
 void UWorldOperationRunner::PrepareCreateWorld()
 {
-  Core.ApplyNewWorldCreationRequest(Request.settings, Request.packs);
+  Core.ApplyNewWorldCreationRequest(Request.settings, Request.packs,
+                                    Request.view);
   PendingWorldName = Core.SetupNewWorldForCreation();
 }
 
