@@ -10,10 +10,12 @@ namespace cutum
 void UIsoOrbitControl::ApplyMouseDelta(UCamera &camera, float x_offset,
                                        float y_offset, bool constrain_pitch)
 {
-  (void)x_offset;
-  (void)y_offset;
+  if (!camera.IsIsometricProjection())
+  {
+    return;
+  }
+  camera.ApplyRelativeMouseMove(x_offset, y_offset);
   (void)constrain_pitch;
-  SyncOrientation(camera);
 }
 
 void UIsoOrbitControl::ApplyScroll(UCamera &camera, float y_offset)

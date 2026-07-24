@@ -555,10 +555,6 @@ void UCamera::ProcessKeyboard(const UWorld *world, Camera_Movement direction,
 void UCamera::ProcessMouseMovement(float Xoffset, float Yoffset,
                                    bool constrainPitch)
 {
-  if (IsIsometricProjection())
-  {
-    return;
-  }
   Xoffset *= this->MouseSensitivity;
   Yoffset *= this->MouseSensitivity;
 
@@ -668,8 +664,10 @@ void UCamera::SetIsoPitchDeg(float degrees)
 void UCamera::ApplyIsometricOrientation()
 {
   // Base yaw -90 looks down -Z; +45 gives classic isometric corner.
+  // Pitch is negative: look down at the world (positive pitch looks at sky and
+  // reads as an inside-out / underside view).
   Yaw = -90.0f + 45.0f + static_cast<float>(IsoYawIndex) * 90.0f;
-  Pitch = IsoPitchDeg;
+  Pitch = -IsoPitchDeg;
   UpdateCameraVectors();
 }
 

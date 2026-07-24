@@ -7,7 +7,7 @@ Cubatarium renders a single 3D voxel world. **Projection is a per-world camera l
 | Mode | JSON `view.projection` | Matrix | Controls |
 |------|------------------------|--------|----------|
 | Perspective (FPS) | `perspective` | `glm::perspective` | Mouse look, F5 1st/3rd person |
-| Isometric | `orthographic_isometric` (alias `isometric`) | `glm::ortho` half-height = `ortho_size` | Fixed pitch, Q/E rotate 90°, scroll zoom, WASD in screen XZ |
+| Isometric | `orthographic_isometric` (alias `isometric`) | `glm::ortho` half-height = `ortho_size` | Look-down preset (pitch = −`iso_pitch_deg`), mouse look enabled, Q/E snap 90°, scroll zoom, WASD in screen XZ |
 
 `CameraPerspective` / F5 is **person mode** (1st/3rd), not projection type. In isometric, F5 is a no-op (follow-only).
 
