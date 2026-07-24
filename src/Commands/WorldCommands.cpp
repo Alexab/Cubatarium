@@ -11,6 +11,7 @@
 #include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
 #include "World/Diagnostics/BlockInspectDiagnostics.h"
+#include "World/Diagnostics/CreatureMovementDiagnostics.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenContentReload.h"
 #include <algorithm>
@@ -728,6 +729,118 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
             true,
             "Block inspect logged (#" + std::to_string(sample) + ") -> " +
                 UBlockInspectDiagnostics::DefaultLogPath().string()};
+      });
+
+  registry.Register(
+      "creature_diag",
+      [world](const std::vector<std::string> &args) -> CommandResult
+      {
+        if (args.size() < 2)
+        {
+          return CommandResult{
+              false,
+              "Usage: creature_diag on|off|clear|path|dump|focus "
+              "<id|nearest|clear>"};
+        }
+        const std::string sub = Lower(args[1]);
+        if (sub == "on")
+        {
+          UCreatureMovementDiagnostics::SetEnabled(true);
+          return CommandResult{true, "creature_movement_diag on"};
+        }
+        if (sub == "off")
+        {
+          UCreatureMovementDiagnostics::SetEnabled(false);
+          return CommandResult{true, "creature_movement_diag off"};
+        }
+        if (sub == "clear")
+        {
+          UCreatureMovementDiagnostics::ClearLog();
+          return CommandResult{true, "creature_movement_diag.jsonl cleared"};
+        }
+        if (sub == "path")
+        {
+          return CommandResult{
+              true, UCreatureMovementDiagnostics::DefaultLogPath().string()};
+        }
+        if (sub == "dump")
+        {
+          if (!UCreatureMovementDiagnostics::DumpRing())
+          {
+            return CommandResult{false, "dump failed"};
+          }
+          return CommandResult{
+              true, "dumped ring (" +
+                        std::to_string(UCreatureMovementDiagnostics::GetRingSize()) +
+                        " samples)"};
+        }
+        if (sub == "focus")
+        {
+          if (args.size() < 3)
+          {
+            return CommandResult{
+                false, "Usage: creature_diag focus <id|nearest|clear>"};
+          }
+          const std::string target = Lower(args[2]);
+          if (target == "clear" || target == "0" || target == "all")
+          {
+            UCreatureMovementDiagnostics::SetFocusId(0);
+            return CommandResult{true, "creature_diag focus cleared (all)"};
+          }
+          if (target == "nearest")
+          {
+            if (!world)
+            {
+              return CommandResult{false, "No world"};
+            }
+            const UCreature *controlled = world->GetControlledCreature();
+            if (!controlled)
+            {
+              return CommandResult{false, "No controlled creature"};
+            }
+            const glm::vec3 origin = controlled->GetBodyOrigin();
+            CreatureId best_id = 0;
+            float best_dist_sq = 1.0e30f;
+            world->ForEachCreature(
+                [&](const UCreature &creature)
+                {
+                  if (creature.GetId() == controlled->GetId() ||
+                      creature.IsPlayerCharacter())
+                  {
+                    return;
+                  }
+                  const glm::vec3 d = creature.GetBodyOrigin() - origin;
+                  const float dist_sq = glm::dot(d, d);
+                  if (dist_sq < best_dist_sq)
+                  {
+                    best_dist_sq = dist_sq;
+                    best_id = creature.GetId();
+                  }
+                });
+            if (best_id == 0)
+            {
+              return CommandResult{false, "No nearby creatures"};
+            }
+            UCreatureMovementDiagnostics::SetFocusId(best_id);
+            return CommandResult{
+                true, "creature_diag focus=" + std::to_string(best_id)};
+          }
+          try
+          {
+            const uint64_t id = static_cast<uint64_t>(std::stoull(args[2]));
+            UCreatureMovementDiagnostics::SetFocusId(id);
+            return CommandResult{
+                true, "creature_diag focus=" + std::to_string(id)};
+          }
+          catch (...)
+          {
+            return CommandResult{false, "Invalid creature id"};
+          }
+        }
+        return CommandResult{
+            false,
+            "Usage: creature_diag on|off|clear|path|dump|focus "
+            "<id|nearest|clear>"};
       });
 }
 

@@ -3,12 +3,61 @@
 #include "Activity/Helpers/CreatureActivitySteering.h"
 #include "Creatures/Core/CreatureIntent.h"
 #include "Navigation/NavigationTypes.h"
+#include "World/Diagnostics/CreatureMovementDiagnostics.h"
 #include <cmath>
 
 namespace cutum
 {
 
 USimpleFsmBrain::USimpleFsmBrain(SimpleFsmMode mode) : Mode(mode) {}
+
+namespace
+{
+
+const char *FsmStateName(CreatureFsmState state)
+{
+  switch (state)
+  {
+  case CreatureFsmState::Idle:
+    return "Idle";
+  case CreatureFsmState::Flee:
+    return "Flee";
+  case CreatureFsmState::Chase:
+    return "Chase";
+  case CreatureFsmState::Attack:
+    return "Attack";
+  }
+  return "Unknown";
+}
+
+void RecordBrainIntent(CreatureId self_id, const CreatureActivityView &view,
+                       const CreatureBehaviorSnapshot &snapshot,
+                       CreatureFsmState state, const CreatureIntent &intent,
+                       const char *reason = nullptr)
+{
+  if (!UCreatureMovementDiagnostics::IsEnabled())
+  {
+    return;
+  }
+  CreatureMovementDiagRecord rec;
+  rec.event = "intent";
+  rec.creatureId = self_id;
+  rec.typeId = view.typeId;
+  rec.habitat = ToString(snapshot.habitat);
+  rec.behavior = view.behaviorId;
+  rec.fsmState = FsmStateName(state);
+  rec.body = view.bodyOrigin;
+  rec.intentDir = intent.moveDirWorld;
+  rec.intentSpeed = intent.moveSpeed;
+  rec.activityTick = true;
+  if (reason)
+  {
+    rec.reason = reason;
+  }
+  UCreatureMovementDiagnostics::Record(rec);
+}
+
+} // namespace
 
 void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
                            CreatureId self_id, IUWorldPerception &perception,
@@ -33,6 +82,8 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
     {
       intent.suggestedAnim = LocomotionState::Idle;
       sink.SetIntent(self_id, intent);
+      RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, intent,
+                        "flee_no_controlled");
       return;
     }
     const glm::vec3 delta = view->bodyOrigin - controlled->eyePosition;
@@ -42,6 +93,8 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
       blackboard.state = CreatureFsmState::Idle;
       intent.suggestedAnim = LocomotionState::Idle;
       sink.SetIntent(self_id, intent);
+      RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, intent,
+                        "flee_safe");
       return;
     }
     if (dist <= snapshot->behavior.fleeRadius)
@@ -53,6 +106,8 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
     {
       intent.suggestedAnim = LocomotionState::Idle;
       sink.SetIntent(self_id, intent);
+      RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, intent,
+                        "flee_idle");
       return;
     }
 
@@ -93,6 +148,8 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
                        snapshot->behavior.fleeSpeedMultiplier;
     intent.suggestedAnim = LocomotionState::Run;
     sink.SetIntent(self_id, intent);
+    RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, intent,
+                      steer.has_path ? "flee_path" : "flee_fallback");
     return;
   }
 
@@ -101,6 +158,8 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
     blackboard.state = CreatureFsmState::Idle;
     intent.suggestedAnim = LocomotionState::Idle;
     sink.SetIntent(self_id, intent);
+    RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, intent,
+                      "melee_no_controlled");
     return;
   }
 
@@ -114,6 +173,8 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
     blackboard.targetId = 0;
     intent.suggestedAnim = LocomotionState::Idle;
     sink.SetIntent(self_id, intent);
+    RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, intent,
+                      "melee_out_of_aggro");
     return;
   }
 
@@ -132,6 +193,8 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
       blackboard.actionTimer = snapshot->behavior.attackCooldown;
     }
     sink.SetIntent(self_id, intent);
+    RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, intent,
+                      "melee_attack");
     return;
   }
 
@@ -153,6 +216,8 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
   intent.moveSpeed = snapshot->behavior.moveSpeed;
   intent.suggestedAnim = LocomotionState::Run;
   sink.SetIntent(self_id, intent);
+  RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, intent,
+                    steer.has_path ? "chase_path" : "chase_fallback");
 }
 
 } // namespace cutum

@@ -2,6 +2,7 @@
 #include "Navigation/UNavigationPathfinder.h"
 #include "Navigation/UWaypointFollower.h"
 #include "Navigation/WorldNavigationQueries.h"
+#include "World/Diagnostics/CreatureMovementDiagnostics.h"
 
 namespace cutum
 {
@@ -23,6 +24,17 @@ CreatureNavigationSteerResult SteerCreatureAlongPath(
         navigation, body_origin, goal_body, query);
     state.waypoint_index = 0;
     state.path_recalc_timer = kDefaultPathRecalcInterval;
+    if (UCreatureMovementDiagnostics::IsEnabled())
+    {
+      CreatureMovementDiagRecord rec;
+      rec.event = state.path.valid ? "path_ok" : "path_fail";
+      rec.body = body_origin;
+      rec.pathValid = state.path.valid;
+      rec.waypointCount = static_cast<int>(state.path.waypoints.size());
+      rec.reason = state.path.valid ? "recalc_ok" : "recalc_fail";
+      rec.activityTick = true;
+      UCreatureMovementDiagnostics::Record(rec);
+    }
   }
   if (!state.path.valid)
   {

@@ -1,6 +1,7 @@
 #include "Activity/Agents/WanderActivityAgent.h"
 #include "Activity/Helpers/CreatureActivitySteering.h"
 #include "Creatures/Core/CreatureIntent.h"
+#include "World/Diagnostics/CreatureMovementDiagnostics.h"
 #include <algorithm>
 #include <cmath>
 
@@ -85,6 +86,18 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
     }
     if (!perception.IsWithinActivityRange(view->bodyOrigin))
     {
+      if (UCreatureMovementDiagnostics::IsEnabled())
+      {
+        CreatureMovementDiagRecord rec;
+        rec.event = "activity_skip";
+        rec.creatureId = Id;
+        rec.typeId = view->typeId;
+        rec.behavior = view->behaviorId;
+        rec.body = view->bodyOrigin;
+        rec.reason = "outside_activity_range";
+        rec.activityTick = true;
+        UCreatureMovementDiagnostics::Record(rec);
+      }
       continue;
     }
     const std::optional<CreatureBehaviorSnapshot> snapshot =
@@ -119,6 +132,21 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
     }
     if (st.stuckTimer >= kStuckTimeout)
     {
+      if (UCreatureMovementDiagnostics::IsEnabled())
+      {
+        CreatureMovementDiagRecord rec;
+        rec.event = "stuck";
+        rec.creatureId = Id;
+        rec.typeId = view->typeId;
+        rec.habitat = ToString(snapshot->habitat);
+        rec.behavior = view->behaviorId;
+        rec.body = view->bodyOrigin;
+        rec.intentDir = st.direction;
+        rec.intentSpeed = snapshot->behavior.moveSpeed;
+        rec.reason = "stuck_timeout";
+        rec.activityTick = true;
+        UCreatureMovementDiagnostics::Record(rec);
+      }
       st.stuckTimer = 0.0f;
       st.timer = 0.0f;
     }
@@ -198,6 +226,20 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
       intent.suggestedAnim = LocomotionState::Idle;
       intent.clearOnApply = false;
       sink.SetIntent(Id, intent);
+      if (UCreatureMovementDiagnostics::IsEnabled())
+      {
+        CreatureMovementDiagRecord rec;
+        rec.event = "blocked";
+        rec.creatureId = Id;
+        rec.typeId = view->typeId;
+        rec.habitat = ToString(snapshot->habitat);
+        rec.behavior = view->behaviorId;
+        rec.body = view->bodyOrigin;
+        rec.intentDir = move_dir;
+        rec.reason = "forward_probe_fail";
+        rec.activityTick = true;
+        UCreatureMovementDiagnostics::Record(rec);
+      }
       st.lastBodyOrigin = view->bodyOrigin;
       continue;
     }
@@ -220,6 +262,20 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
     }
     intent.clearOnApply = false;
     sink.SetIntent(Id, intent);
+    if (UCreatureMovementDiagnostics::IsEnabled())
+    {
+      CreatureMovementDiagRecord rec;
+      rec.event = "intent";
+      rec.creatureId = Id;
+      rec.typeId = view->typeId;
+      rec.habitat = ToString(snapshot->habitat);
+      rec.behavior = view->behaviorId;
+      rec.body = view->bodyOrigin;
+      rec.intentDir = intent.moveDirWorld;
+      rec.intentSpeed = intent.moveSpeed;
+      rec.activityTick = true;
+      UCreatureMovementDiagnostics::Record(rec);
+    }
     st.lastBodyOrigin = view->bodyOrigin;
   }
 }

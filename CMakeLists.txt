@@ -246,6 +246,7 @@ set(SOURCES
     src/World/Diagnostics/MovementDiagnosticsRecorder.cpp
     src/World/Diagnostics/FramePerfMonitor.cpp
     src/World/Diagnostics/BlockInspectDiagnostics.cpp
+    src/World/Diagnostics/CreatureMovementDiagnostics.cpp
     src/World/Mesh/WorldMeshService.cpp
     src/World/Mesh/WorldMeshDirtyPolicy.cpp
     src/App/Platform/WindowManager.cpp
@@ -791,13 +792,22 @@ target_include_directories(creature_activity_steering_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(creature_activity_steering_test glm::glm)
 
+add_executable(creature_movement_diag_test
+    src/World/Diagnostics/CreatureMovementDiagnostics.cpp
+    src/Test/CreatureMovementDiagTest.cpp)
+target_include_directories(creature_movement_diag_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(creature_movement_diag_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(wander_interval_test
     src/Activity/Agents/WanderActivityAgent.cpp
     src/Activity/Helpers/CreatureActivitySteering.cpp
+    src/Creatures/Locomotion/LocomotionTypes.cpp
+    src/World/Diagnostics/CreatureMovementDiagnostics.cpp
     src/Test/WanderIntervalTest.cpp)
 target_include_directories(wander_interval_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(wander_interval_test glm::glm)
+target_link_libraries(wander_interval_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(creature_skinned_draw_test
     src/Creatures/Visual/CreatureBonePaletteGpu.cpp

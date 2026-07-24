@@ -6,6 +6,7 @@
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureVisual.h"
 #include "World/Core/World.h"
+#include "World/Diagnostics/CreatureMovementDiagnostics.h"
 #include "World/Math/GridMath.h"
 #include <cmath>
 #include <cstdlib>
@@ -245,6 +246,21 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
       {
         BodyOrigin = candidate;
       }
+      else if (UCreatureMovementDiagnostics::IsEnabled() &&
+               glm::length(Intent.moveDirWorld) > 1e-4f)
+      {
+        CreatureMovementDiagRecord rec;
+        rec.event = "habitat_reject";
+        rec.creatureId = Id;
+        rec.typeId = TypeId;
+        rec.habitat = ToString(habitat);
+        rec.body = BodyOrigin;
+        rec.intentDir = Intent.moveDirWorld;
+        rec.intentSpeed = Intent.moveSpeed;
+        rec.travel = candidate - BodyOrigin;
+        rec.reason = "habitat_allows_false";
+        UCreatureMovementDiagnostics::Record(rec);
+      }
     }
   }
 
@@ -293,6 +309,9 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
     }
   }
 
+  const glm::vec3 diagIntentDir = Intent.moveDirWorld;
+  const float diagIntentSpeed = Intent.moveSpeed;
+
   if (Intent.clearOnApply)
   {
     ClearIntent();
@@ -304,6 +323,25 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
   rawInput.bodyOriginAfter = BodyOrigin;
   rawInput.dt = dt;
   RebuildLocomotionFacts(rawInput, Locomotion.GetCapabilities(), &world);
+  if (UCreatureMovementDiagnostics::IsEnabled() &&
+      glm::length(diagIntentDir) > 1e-4f)
+  {
+    CreatureMovementDiagRecord rec;
+    rec.event =
+        glm::length(rawInput.bodyOriginAfter - rawInput.bodyOriginBefore) < 1e-5f
+            ? "blocked"
+            : "intent";
+    rec.creatureId = Id;
+    rec.typeId = TypeId;
+    rec.body = BodyOrigin;
+    rec.intentDir = diagIntentDir;
+    rec.intentSpeed = diagIntentSpeed;
+    rec.travel = BodyOrigin - bodyOriginBefore;
+    rec.onGround = LocomotionFacts.onGround;
+    rec.inFluid = LocomotionFacts.inFluid;
+    rec.reason = rec.event == "blocked" ? "zero_travel" : "exec_frame";
+    UCreatureMovementDiagnostics::Record(rec);
+  }
   LastBodyOrigin = BodyOrigin;
 }
 
