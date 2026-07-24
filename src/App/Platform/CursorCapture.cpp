@@ -79,6 +79,46 @@ void ReleasePlatformCursorClip()
 #endif
 }
 
+void CursorWindowToFramebuffer(GLFWwindow *window, double window_x,
+                               double window_y, double &out_fb_x,
+                               double &out_fb_y)
+{
+  out_fb_x = window_x;
+  out_fb_y = window_y;
+  if (!window)
+  {
+    return;
+  }
+  int fb_w = 0;
+  int fb_h = 0;
+  int win_w = 0;
+  int win_h = 0;
+  glfwGetFramebufferSize(window, &fb_w, &fb_h);
+  glfwGetWindowSize(window, &win_w, &win_h);
+  if (win_w <= 0 || win_h <= 0 || fb_w <= 0 || fb_h <= 0)
+  {
+    return;
+  }
+  out_fb_x = window_x * (static_cast<double>(fb_w) / static_cast<double>(win_w));
+  out_fb_y = window_y * (static_cast<double>(fb_h) / static_cast<double>(win_h));
+}
+
+void CenterWindowCursor(GLFWwindow *window)
+{
+  if (!window)
+  {
+    return;
+  }
+  int win_w = 0;
+  int win_h = 0;
+  glfwGetWindowSize(window, &win_w, &win_h);
+  if (win_w <= 0 || win_h <= 0)
+  {
+    return;
+  }
+  glfwSetCursorPos(window, win_w * 0.5, win_h * 0.5);
+}
+
 void ApplyCursorPolicy(GLFWwindow *window, AppCursorPolicy policy)
 {
   if (!window)
@@ -86,11 +126,23 @@ void ApplyCursorPolicy(GLFWwindow *window, AppCursorPolicy policy)
     return;
   }
 
+  const int previous = glfwGetInputMode(window, GLFW_CURSOR);
+  const bool leavingCapture =
+      previous == GLFW_CURSOR_DISABLED
+#ifdef GLFW_CURSOR_CAPTURED
+      || previous == GLFW_CURSOR_CAPTURED
+#endif
+      ;
+
   if (policy == AppCursorPolicy::Free)
   {
-    if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_NORMAL)
+    if (previous != GLFW_CURSOR_NORMAL)
     {
       glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    }
+    if (leavingCapture)
+    {
+      CenterWindowCursor(window);
     }
     ReleasePlatformCursorClip();
     return;
@@ -98,7 +150,7 @@ void ApplyCursorPolicy(GLFWwindow *window, AppCursorPolicy policy)
 
   if (policy == AppCursorPolicy::CapturedHidden)
   {
-    if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED)
+    if (previous != GLFW_CURSOR_DISABLED)
     {
       glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     }
@@ -110,10 +162,14 @@ void ApplyCursorPolicy(GLFWwindow *window, AppCursorPolicy policy)
     return;
   }
 
-  // ConfinedVisible
-  if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_NORMAL)
+  // ConfinedVisible — visible OS cursor for Cubatarium / isometric aim.
+  if (previous != GLFW_CURSOR_NORMAL)
   {
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+  }
+  if (leavingCapture)
+  {
+    CenterWindowCursor(window);
   }
 #ifdef _WIN32
   ConfineCursorWin32(window);

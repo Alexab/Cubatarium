@@ -2,6 +2,7 @@
 #include "App/Application.h"
 #include "App/Core.h"
 #include "App/Settings/AppState.h"
+#include "App/Platform/CursorCapture.h"
 #include "App/Platform/InputManager.h"
 #include "App/Platform/Log.h"
 #include "Blocks/Input/BlockInputController.h"
@@ -836,11 +837,29 @@ void UWindowManager::ResetGameplayMouseCapture()
     double x = 0.0;
     double y = 0.0;
     glfwGetCursorPos(Window, &x, &y);
+    double fb_x = x;
+    double fb_y = y;
+    CursorWindowToFramebuffer(Window, x, y, fb_x, fb_y);
     if (auto camera = World->GetCurrentUserCamera())
     {
-      camera->ResetMouseMove(x, y);
+      camera->ResetMouseMove(fb_x, fb_y);
     }
   }
+}
+
+void UWindowManager::CancelGameplayPointerInteraction()
+{
+  if (!BlockInput || !World)
+  {
+    return;
+  }
+  BlockInputContext ctx;
+  ctx.World = World;
+  ctx.Geometries = Geometries.get();
+  ctx.Ui = Core ? &Core->GetUiSettings() : nullptr;
+  ctx.Window = Window;
+  ctx.App = Application.get();
+  BlockInput->CancelPointerInteraction(ctx);
 }
 
 void UWindowManager::HandleMouseButtonEvent(MouseButton Button, bool Pressed,

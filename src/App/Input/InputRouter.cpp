@@ -14,6 +14,7 @@
 #include "Render/Engine/GeometryEngine.h"
 #include "World/Core/World.h"
 #ifndef __ANDROID__
+#include "App/Platform/CursorCapture.h"
 #include "App/Platform/WindowManager.h"
 #include <GLFW/glfw3.h>
 #else
@@ -119,9 +120,12 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
           double x = 0.0;
           double y = 0.0;
           glfwGetCursorPos(app.Window, &x, &y);
+          double fb_x = x;
+          double fb_y = y;
+          CursorWindowToFramebuffer(app.Window, x, y, fb_x, fb_y);
           if (auto camera = app.World->GetCurrentUserCamera())
           {
-            camera->ResetMouseMove(x, y);
+            camera->ResetMouseMove(fb_x, fb_y);
           }
         }
       }

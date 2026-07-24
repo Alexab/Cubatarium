@@ -41,7 +41,7 @@ Stored in `worlds/World_NNN/world_data.json`:
 ## UI
 
 - **New World** — View section: Perspective (FPS) / Isometric (+ ortho size).
-- **World settings** (paused session) — same View form; Apply updates the live camera and writes `view` into `world_data.json` (no full terrain save).
+- **World settings** (paused session) — same View form; Apply updates the live camera and writes `view` into `world_data.json` (no full terrain save). Switching to isometric releases Classic mouse-capture so the OS cursor is visible for block aim.
 
 Not configured via global `config.json` `render.*`.
 

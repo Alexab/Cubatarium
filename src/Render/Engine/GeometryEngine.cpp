@@ -416,7 +416,19 @@ void UGeometryEngine::Paint(int width_size, int height_size,
   RenderWeatherOverlay(width_size, height_size);
   if (ShowCrosshair)
   {
-    RenderCrosshair(width_size, height_size);
+    bool drawCrosshair = true;
+    if (WorldInstance)
+    {
+      if (auto camera = WorldInstance->GetCurrentUserCamera())
+      {
+        // Isometric aims with the OS cursor; center crosshair is misleading.
+        drawCrosshair = !camera->IsIsometricProjection();
+      }
+    }
+    if (drawCrosshair)
+    {
+      RenderCrosshair(width_size, height_size);
+    }
   }
 
   // Render simple text

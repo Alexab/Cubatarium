@@ -179,6 +179,8 @@ private:
   void ShowInGameHud();
   void SyncCursorVisibility();
   void SyncGameplayLookCapture();
+  /// After projection change: visible cursor for iso, refresh aim ray.
+  void OnGameplayViewProjectionChanged();
   AppCursorPolicy GetCursorPolicy() const;
   void EnterInGameInputState();
   /// Выход из UI-only (Left Alt): временно свободный курсор для HUD.

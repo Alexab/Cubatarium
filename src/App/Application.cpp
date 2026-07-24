@@ -53,6 +53,7 @@
 #include "World/Core/World.h"
 #include "World/Core/WorldLoadDiagnostics.h"
 #include "World/Objects/ObjectLibrary.h"
+#include "World/View/WorldViewSettings.h"
 
 #ifndef __ANDROID__
 #include <GLFW/glfw3.h>
@@ -767,7 +768,7 @@ bool UApplication::ApplyViewSettingsToCurrentWorld(const WorldViewSettings &view
   const bool ok = Core->ApplyViewSettingsToCurrentWorld(view);
   if (ok)
   {
-    SyncCursorVisibility();
+    OnGameplayViewProjectionChanged();
   }
   return ok;
 }
@@ -810,7 +811,7 @@ bool UApplication::ApplyWorldSettings(const ResourcePackSelection &selection,
   {
     return false;
   }
-  SyncCursorVisibility();
+  OnGameplayViewProjectionChanged();
   return true;
 }
 
@@ -1014,6 +1015,11 @@ AppCursorPolicy UApplication::GetCursorPolicy() const
   {
     if (World)
     {
+      if (World->GetViewSettings().Projection ==
+          WorldProjectionMode::OrthographicIsometric)
+      {
+        return AppCursorPolicy::ConfinedVisible;
+      }
       if (auto cam = World->GetCurrentUserCamera())
       {
         if (cam->IsIsometricProjection())
@@ -1048,9 +1054,12 @@ void UApplication::SyncGameplayLookCapture()
     double x = 0.0;
     double y = 0.0;
     glfwGetCursorPos(Window, &x, &y);
+    double fb_x = x;
+    double fb_y = y;
+    CursorWindowToFramebuffer(Window, x, y, fb_x, fb_y);
     if (auto camera = World->GetCurrentUserCamera())
     {
-      camera->ResetMouseMove(x, y);
+      camera->ResetMouseMove(fb_x, fb_y);
     }
   }
 #else
@@ -1067,12 +1076,95 @@ void UApplication::SyncGameplayLookCapture()
 #endif
 }
 
+void UApplication::OnGameplayViewProjectionChanged()
+{
+  if (!World)
+  {
+    return;
+  }
+
+#ifndef __ANDROID__
+  if (Window)
+  {
+    if (auto *wm = GetWindowManager(Window))
+    {
+      wm->CancelGameplayPointerInteraction();
+    }
+  }
+#endif
+
+  // Force ApplyCursorPolicy on the next Sync (Classic DISABLED must drop for
+  // isometric free-cursor aim).
+  LastCursorPolicy = AppCursorPolicy::CapturedHidden;
+
+  const bool iso =
+      World->GetViewSettings().Projection ==
+          WorldProjectionMode::OrthographicIsometric ||
+      (World->GetCurrentUserCamera() &&
+       World->GetCurrentUserCamera()->IsIsometricProjection());
+
+#ifndef __ANDROID__
+  if (Window && iso && State == AppState::InGame && !UsesUiPointer())
+  {
+    CenterWindowCursor(Window);
+  }
+#endif
+
+  SyncCursorVisibility();
+  if (State == AppState::InGame && !UsesUiPointer())
+  {
+    SyncGameplayLookCapture();
+  }
+
+  auto camera = World->GetCurrentUserCamera();
+  if (!camera)
+  {
+    return;
+  }
+
+  if (iso)
+  {
+#ifndef __ANDROID__
+    if (Window)
+    {
+      double x = 0.0;
+      double y = 0.0;
+      glfwGetCursorPos(Window, &x, &y);
+      double fb_x = x;
+      double fb_y = y;
+      CursorWindowToFramebuffer(Window, x, y, fb_x, fb_y);
+      camera->UpdatePointerAim(World, fb_x, fb_y);
+    }
+#else
+    if (TouchBridge)
+    {
+      const glm::vec2 pos = TouchBridge->GetMousePosition();
+      camera->UpdatePointerAim(World, pos.x, pos.y);
+    }
+#endif
+  }
+  else
+  {
+    glm::vec3 origin;
+    glm::vec3 dir;
+    if (camera->TryGetCenterViewRay(origin, dir))
+    {
+      World->UpdateIntersection(origin, dir);
+    }
+  }
+}
+
 void UApplication::SyncCursorVisibility()
 {
   const AppCursorPolicy policy = GetCursorPolicy();
+  const bool policyChanged = policy != LastCursorPolicy;
   const bool leavingUiPointer = LastCursorPolicy == AppCursorPolicy::Free &&
                                 policy != AppCursorPolicy::Free &&
                                 State == AppState::InGame;
+  const bool captureModeChanged =
+      policyChanged && State == AppState::InGame &&
+      (LastCursorPolicy == AppCursorPolicy::CapturedHidden ||
+       policy == AppCursorPolicy::CapturedHidden);
 
 #ifndef __ANDROID__
   if (Window)
@@ -1081,7 +1173,7 @@ void UApplication::SyncCursorVisibility()
   }
 #endif
 
-  if (leavingUiPointer)
+  if (leavingUiPointer || captureModeChanged)
   {
     SyncGameplayLookCapture();
   }
@@ -1144,7 +1236,7 @@ void UApplication::EnterInGameInputState()
   Ui.ControlScheme = ControlScheme::Cubatarium;
 #endif
   GuiContext->ClearInputState();
-  SyncCursorVisibility();
+  OnGameplayViewProjectionChanged();
 }
 
 void UApplication::RecaptureMouseForLook()
