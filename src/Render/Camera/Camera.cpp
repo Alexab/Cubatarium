@@ -198,6 +198,18 @@ bool UCamera::TryGetCenterViewRay(glm::vec3 &out_origin,
 {
   if (ViewportWidth <= 0 || ViewportHeight <= 0)
   {
+    if (IsIsometricProjection())
+    {
+      out_origin = GetViewController().ComputeCameraWorldPosition(*this);
+      const glm::vec3 target = GetViewController().ComputeLookTarget(*this);
+      out_dir = target - out_origin;
+      const float len = glm::length(out_dir);
+      if (len > 1.0e-6f)
+      {
+        out_dir /= len;
+        return true;
+      }
+    }
     out_origin = Position;
     out_dir = Front;
     return true;
@@ -208,6 +220,18 @@ bool UCamera::TryGetCenterViewRay(glm::vec3 &out_origin,
   if (!ScreenPointToWorldRay(Pose, Projection, viewport, mouse_x, mouse_y,
                              out_origin, out_dir))
   {
+    if (IsIsometricProjection())
+    {
+      out_origin = GetViewController().ComputeCameraWorldPosition(*this);
+      const glm::vec3 target = GetViewController().ComputeLookTarget(*this);
+      out_dir = target - out_origin;
+      const float len = glm::length(out_dir);
+      if (len > 1.0e-6f)
+      {
+        out_dir /= len;
+        return true;
+      }
+    }
     out_origin = Position;
     out_dir = Front;
   }
@@ -316,6 +340,12 @@ void UCamera::SetViewEngine(UViewEngine *view_engine)
 glm::vec3 UCamera::ComputeHorizontalShift(float deltaTime)
 {
   const PlayerInput input = BuildPlayerInput(false);
+  const bool moving = input.MoveForward || input.MoveBack || input.MoveLeft ||
+                      input.MoveRight;
+  if (!moving)
+  {
+    return glm::vec3(0.0f);
+  }
   const float velocity = Locomotion.ResolveHorizontalSpeed(input) * deltaTime;
   const glm::vec3 intent = GetMoveIntentDir();
   if (glm::dot(intent, intent) < 1e-10f)
@@ -327,7 +357,33 @@ glm::vec3 UCamera::ComputeHorizontalShift(float deltaTime)
 
 void UCamera::UpdateMoveIntentFromKeys()
 {
-  glm::vec3 shift = ComputeHorizontalShift(1.0f);
+  const PlayerInput input = BuildPlayerInput(false);
+  const bool moving = input.MoveForward || input.MoveBack || input.MoveLeft ||
+                      input.MoveRight;
+  if (!moving)
+  {
+    return;
+  }
+  float forward = 0.0f;
+  float rightward = 0.0f;
+  if (input.MoveForward)
+  {
+    forward += 1.0f;
+  }
+  if (input.MoveBack)
+  {
+    forward -= 1.0f;
+  }
+  if (input.MoveLeft)
+  {
+    rightward -= 1.0f;
+  }
+  if (input.MoveRight)
+  {
+    rightward += 1.0f;
+  }
+  glm::vec3 shift =
+      GetViewController().ProjectMoveIntent(*this, forward, rightward);
   shift.y = 0.0f;
   if (glm::dot(shift, shift) < 1e-10f)
   {
@@ -609,6 +665,8 @@ void UCamera::SetProjectionMode(ProjectionMode mode)
   {
     Perspective = CameraPerspective::ThirdPersonBack;
     AimYawDeg = Yaw;
+    IsoOrbitYawDeg =
+        -90.0f + 45.0f + static_cast<float>(IsoYawIndex) * 90.0f;
     ApplyIsometricOrientation();
   }
   UpdatePose();
@@ -623,6 +681,8 @@ void UCamera::SetOrthoSize(float value)
 void UCamera::SetIsoYawIndex(int index)
 {
   IsoYawIndex = ((index % 4) + 4) % 4;
+  IsoOrbitYawDeg =
+      -90.0f + 45.0f + static_cast<float>(IsoYawIndex) * 90.0f;
   if (IsIsometricProjection())
   {
     ApplyIsometricOrientation();
@@ -661,6 +721,24 @@ void UCamera::AddAimYawDeg(float delta_deg)
   AimYawDeg += delta_deg;
 }
 
+void UCamera::SetIsoOrbitYawDeg(float yaw_deg)
+{
+  IsoOrbitYawDeg = yaw_deg;
+  if (IsIsometricProjection())
+  {
+    ApplyIsometricOrientation();
+  }
+  else
+  {
+    UpdatePose();
+  }
+}
+
+void UCamera::AddIsoOrbitYawDeg(float delta_deg)
+{
+  SetIsoOrbitYawDeg(IsoOrbitYawDeg + delta_deg);
+}
+
 void UCamera::SnapIsoCameraYaw(int delta_steps)
 {
   GetViewController().SnapCameraYaw(*this, delta_steps);
@@ -668,10 +746,8 @@ void UCamera::SnapIsoCameraYaw(int delta_steps)
 
 void UCamera::ApplyIsometricOrientation()
 {
-  // Base yaw -90 looks down -Z; +45 gives classic isometric corner.
-  // Pitch is negative: look down at the world (positive pitch looks at sky and
-  // reads as an inside-out / underside view).
-  Yaw = -90.0f + 45.0f + static_cast<float>(IsoYawIndex) * 90.0f;
+  // Continuous orbit yaw; pitch looks down at the world.
+  Yaw = IsoOrbitYawDeg;
   Pitch = -IsoPitchDeg;
   UpdateCameraVectors();
 }
@@ -689,6 +765,8 @@ void UCamera::ApplyWorldViewSettings(const WorldViewSettings &settings)
   {
     Perspective = CameraPerspective::ThirdPersonBack;
     AimYawDeg = Yaw;
+    IsoOrbitYawDeg =
+        -90.0f + 45.0f + static_cast<float>(IsoYawIndex) * 90.0f;
     ApplyIsometricOrientation();
   }
   else

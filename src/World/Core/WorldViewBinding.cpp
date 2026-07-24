@@ -573,7 +573,10 @@ void UWorld::RunLegacyPhysicsFrame()
       user->SetPosition(camera->GetPosition());
       user->SetCameraOrientation(camera->GetYaw(), camera->GetPitch());
     }
-    UpdateIntersection(camera->GetPosition(), camera->GetFront());
+    if (ViewBinding)
+    {
+      ViewBinding->RefreshIntersectionFromCurrentView(*this);
+    }
   }
 
   auto t_end = std::chrono::high_resolution_clock::now();

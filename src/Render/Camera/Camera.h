@@ -130,6 +130,9 @@ public:
   float GetAimYawDeg() const { return AimYawDeg; }
   void SetAimYawDeg(float yaw_deg);
   void AddAimYawDeg(float delta_deg);
+  float GetIsoOrbitYawDeg() const { return IsoOrbitYawDeg; }
+  void SetIsoOrbitYawDeg(float yaw_deg);
+  void AddIsoOrbitYawDeg(float delta_deg);
   void ApplyWorldViewSettings(const WorldViewSettings &settings);
   WorldViewSettings CaptureWorldViewSettings() const;
   bool IsIsometricProjection() const
@@ -177,6 +180,7 @@ private:
   float IsoPitchDeg{35.264f};
   IsoViewPreset IsoBoomPreset{IsoViewPreset::Standard};
   float AimYawDeg{YAW};
+  float IsoOrbitYawDeg{-45.0f};
   int ViewportWidth{0};
   int ViewportHeight{0};
 

@@ -343,7 +343,12 @@ void UAndroidPlatformWindow::ProcessInput()
     {
       if (auto camera = World->GetCurrentUserCamera())
       {
-        World->UpdateIntersection(camera->GetPosition(), camera->GetFront());
+        glm::vec3 ray_origin;
+        glm::vec3 ray_dir;
+        if (camera->TryGetCenterViewRay(ray_origin, ray_dir))
+        {
+          World->UpdateIntersection(ray_origin, ray_dir);
+        }
       }
       BlockInput->OnQuickTap(ctx);
     }

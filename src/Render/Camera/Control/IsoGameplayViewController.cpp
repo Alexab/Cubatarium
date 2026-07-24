@@ -14,8 +14,7 @@ namespace
 
 glm::vec3 IsoLookDirection(const UCamera &camera)
 {
-  const float yaw =
-      -90.0f + 45.0f + static_cast<float>(camera.GetIsoYawIndex()) * 90.0f;
+  const float yaw = camera.GetIsoOrbitYawDeg();
   const float pitch = -camera.GetIsoPitchDeg();
   glm::vec3 front;
   glm::vec3 right;
@@ -57,7 +56,8 @@ void UIsoGameplayViewController::ApplyLookDelta(UCamera &camera, float x_offset,
                                                 float y_offset) const
 {
   (void)y_offset;
-  camera.AddAimYawDeg(x_offset * camera.GetMouseSensitivity());
+  // Orbit the elevated camera; WASD stays screen-relative to the new yaw.
+  camera.AddIsoOrbitYawDeg(x_offset * camera.GetMouseSensitivity());
 }
 
 void UIsoGameplayViewController::ApplyScroll(UCamera &camera,
@@ -102,10 +102,29 @@ UIsoGameplayViewController::ComputeLookTarget(const UCamera &camera) const
 CreatureViewOrientation UIsoGameplayViewController::ResolveCreatureOrientation(
     const UCamera &camera, const glm::vec3 &move_intent) const
 {
-  (void)move_intent;
   CreatureViewOrientation orient;
-  orient.YawDeg = ModelYawFromCameraYaw(camera.GetAimYawDeg());
   orient.PitchDeg = 0.0f;
+  const float move_len_sq = glm::dot(move_intent, move_intent);
+  if (move_len_sq > 1.0e-6f)
+  {
+    orient.YawDeg = ModelYawFromDirection(move_intent.x, move_intent.z);
+  }
+  else
+  {
+    // Idle: face camera-forward on XZ so orbiting the view also turns the body.
+    glm::vec3 forward = IsoLookDirection(camera);
+    forward.y = 0.0f;
+    const float len = glm::length(forward);
+    if (len > 1.0e-6f)
+    {
+      forward /= len;
+      orient.YawDeg = ModelYawFromDirection(forward.x, forward.z);
+    }
+    else
+    {
+      orient.YawDeg = ModelYawFromCameraYaw(camera.GetIsoOrbitYawDeg());
+    }
+  }
   return orient;
 }
 
