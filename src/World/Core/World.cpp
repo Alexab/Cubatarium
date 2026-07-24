@@ -32,9 +32,12 @@
 #include "World/Environment/WeatherAutoController.h"
 #include "World/Environment/WeatherBiomeUtil.h"
 #include "World/IO/ChunkStorageService.h"
+#include "App/Settings/GraphicsQualityProfile.h"
 #include "World/Lighting/AsyncRelightBuilder.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/ChunkLighting.h"
+#include "World/Lighting/IULightingPipeline.h"
+#include "World/Lighting/LightingPipelineFactory.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshDirtyPolicy.h"
@@ -164,7 +167,8 @@ UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
       MeshService(std::make_unique<UWorldMeshService>()),
       Streaming(std::make_unique<UWorldStreaming>()),
       Persistence(std::make_unique<UWorldPersistence>()), Environment(*this),
-      Collision(BlockWorld, &Environment)
+      Collision(BlockWorld, &Environment),
+      LightingPipeline(ULightingPipelineFactory::Create(LightingMode::Full))
 {
   if (TextureCubeInstance)
   {
@@ -697,9 +701,34 @@ void UWorld::RebuildAllLightingDirtyMeshes()
 {
   if (BlockRegistry)
   {
-    RelightAllLoadedChunks(BlockWorld, *BlockRegistry);
+    GetLightingPipeline().RelightAllLoadedChunks(BlockWorld, *BlockRegistry);
   }
   InvalidateBlockMesh();
+}
+
+IULightingPipeline &UWorld::GetLightingPipeline()
+{
+  if (!LightingPipeline)
+  {
+    LightingPipeline = ULightingPipelineFactory::Create(
+        GraphicsQualityProfile::FromPreset(Render.Preset).GetLightingMode());
+  }
+  return *LightingPipeline;
+}
+
+const IULightingPipeline &UWorld::GetLightingPipeline() const
+{
+  return const_cast<UWorld *>(this)->GetLightingPipeline();
+}
+
+bool UWorld::RequiresLightingLitGate() const
+{
+  return GetLightingPipeline().RequiresLitGate();
+}
+
+bool UWorld::AllowsAsyncLighting() const
+{
+  return GetLightingPipeline().AllowsAsyncRelight();
 }
 
 void UWorld::RelightTerrainColumn(int world_x, int world_z, int min_y,
@@ -712,9 +741,9 @@ void UWorld::RelightTerrainColumn(int world_x, int world_z, int min_y,
   }
   const auto t0 = std::chrono::high_resolution_clock::now();
   std::vector<glm::ivec3> relit_chunks;
-  RelightColumnWithFrontier(BlockWorld, *BlockRegistry, world_x, world_z, min_y,
-                            max_y, include_block_light, include_skylight,
-                            &relit_chunks);
+  GetLightingPipeline().RelightColumnWithFrontier(
+      BlockWorld, *BlockRegistry, world_x, world_z, min_y, max_y,
+      include_block_light, include_skylight, &relit_chunks);
   const glm::ivec3 primary_chunk =
       UChunkManager::WorldToChunk(glm::ivec3(world_x, 0, world_z));
   MarkRelitChunksForMesh(relit_chunks, priority_mesh,
@@ -731,6 +760,22 @@ void UWorld::RelightPlayerEdit(const std::vector<glm::ivec3> &block_positions,
   {
     return;
   }
+  IULightingPipeline &lighting = GetLightingPipeline();
+  if (!lighting.AllowsAsyncRelight())
+  {
+    const RelightFrontierOutcome outcome = lighting.RelightBlocksAroundAllEx(
+        BlockWorld, *BlockRegistry, block_positions, min_world_y,
+        ProceduralTemplate.MaxHeight, true, kRelightFrontierIterationsEdit);
+    std::vector<glm::ivec2> primary_grounds;
+    primary_grounds.reserve(block_positions.size());
+    for (const glm::ivec3 &pos : block_positions)
+    {
+      const glm::ivec3 chunk = UChunkManager::WorldToChunk(pos);
+      primary_grounds.push_back(glm::ivec2(chunk.x, chunk.z));
+    }
+    MarkRelitChunksForMesh(outcome.relit_chunks, true, primary_grounds);
+    return;
+  }
   if (ProceduralTemplate.AsyncRelight)
   {
     EnqueueAsyncPlayerRelight(block_positions, min_world_y);
@@ -738,7 +783,7 @@ void UWorld::RelightPlayerEdit(const std::vector<glm::ivec3> &block_positions,
   }
   const auto t0 = std::chrono::high_resolution_clock::now();
   const int max_y = ProceduralTemplate.MaxHeight;
-  const RelightFrontierOutcome outcome = RelightBlocksAroundAllEx(
+  const RelightFrontierOutcome outcome = lighting.RelightBlocksAroundAllEx(
       BlockWorld, *BlockRegistry, block_positions, min_world_y, max_y, true,
       kRelightFrontierIterationsEdit);
   std::vector<glm::ivec2> primary_grounds;
@@ -1562,6 +1607,10 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz)
 
 void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
 {
+  if (!RequiresLightingLitGate())
+  {
+    return;
+  }
   if (ground.y != 0)
   {
     ground.y = 0;
@@ -2474,9 +2523,9 @@ int UWorld::RecoverStickyBlackFocusSync(int max_columns)
     }
     AsyncRelightColumnsInFlight.erase(c.key);
     std::vector<glm::ivec3> relit_chunks;
-    RelightColumnWithFrontier(BlockWorld, *BlockRegistry, c.key.x * CHUNK_SIZE,
-                              c.key.y * CHUNK_SIZE, c.min_y, c.max_y, true,
-                              true, &relit_chunks);
+    GetLightingPipeline().RelightColumnWithFrontier(
+        BlockWorld, *BlockRegistry, c.key.x * CHUNK_SIZE, c.key.y * CHUNK_SIZE,
+        c.min_y, c.max_y, true, true, &relit_chunks);
     MarkRelitChunksForMesh(relit_chunks, /*priority_mesh=*/true, {c.key});
     StickyRemeshAfterLight.erase(c.key);
     ++repaired;
@@ -2964,7 +3013,8 @@ void UWorld::ApplyEditFastRelight(
   // Incremental remove+flood (no chunk Clear). Immediate after this samples
   // correct sky/block light day/night/torch; SoftDefer must not freeze a
   // wrong bake until MarkRelit (manual 222250 sticky ~48s; night torch stale).
-  RelightBlocksAroundEdit(BlockWorld, *BlockRegistry, block_positions);
+  GetLightingPipeline().RelightBlocksAroundEdit(BlockWorld, *BlockRegistry,
+                                                block_positions);
   const auto t1 = std::chrono::high_resolution_clock::now();
   PhysicsTelemetryData.FastRelightMs =
       std::chrono::duration<double, std::milli>(t1 - t0).count();
@@ -5703,8 +5753,30 @@ void UWorld::InvalidateBlockMesh()
 
 void UWorld::SetRenderSettings(const RenderSettings &settings)
 {
+  const LightingMode new_mode =
+      GraphicsQualityProfile::FromPreset(settings.Preset).GetLightingMode();
+  const LightingMode old_mode = LightingPipeline
+                                    ? LightingPipeline->GetMode()
+                                    : LightingMode::Full;
   Render = settings;
   MeshService->SetRenderSettings(settings);
+  if (!LightingPipeline || old_mode != new_mode)
+  {
+    LightingPipeline = ULightingPipelineFactory::Create(new_mode);
+    if (old_mode != new_mode)
+    {
+      if (!LightingPipeline->RequiresLitGate())
+      {
+        LightingPipeline->FillAllLoadedChunks(BlockWorld);
+        PendingLightBeforeMesh.clear();
+      }
+      else if (BlockRegistry)
+      {
+        LightingPipeline->RelightAllLoadedChunks(BlockWorld, *BlockRegistry);
+      }
+      InvalidateBlockMesh();
+    }
+  }
 }
 
 UWorldMeshService &UWorld::GetMeshService() { return *MeshService; }

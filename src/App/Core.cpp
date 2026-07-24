@@ -24,6 +24,7 @@
 #include "App/LegacyConfigAdapter.h"
 #include "App/Platform/Log.h"
 #include "App/RuntimeTuningConfig.h"
+#include "App/Settings/GraphicsQualityProfile.h"
 #ifndef __ANDROID__
 #include "App/Platform/GameDataRoot.h"
 #endif
@@ -374,18 +375,8 @@ void UCore::LoadConfig(const std::string &config_file_name)
             r["performance_preset"].is_string())
         {
           const std::string preset = r["performance_preset"].get<std::string>();
-          if (preset == "fast")
-          {
-            Render = RenderSettings::FromPreset(PerformancePreset::Fast);
-          }
-          else if (preset == "quality")
-          {
-            Render = RenderSettings::FromPreset(PerformancePreset::Quality);
-          }
-          else
-          {
-            Render = RenderSettings::FromPreset(PerformancePreset::Balanced);
-          }
+          Render = RenderSettings::FromPreset(
+              GraphicsQualityProfile::ParseConfigString(preset));
         }
         else
         {
@@ -719,21 +710,8 @@ void UCore::SaveConfigFile()
       PhysicsBudgetsConfig.FallingScanRadiusChunks;
   system_data["physics"] = physics;
   json render_json;
-  const char *preset_name = "balanced";
-  switch (Render.Preset)
-  {
-  case PerformancePreset::Fast:
-    preset_name = "fast";
-    break;
-  case PerformancePreset::Quality:
-    preset_name = "quality";
-    break;
-  case PerformancePreset::Balanced:
-  default:
-    preset_name = "balanced";
-    break;
-  }
-  render_json["performance_preset"] = preset_name;
+  render_json["performance_preset"] =
+      GraphicsQualityProfile::ToConfigString(Render.Preset);
   render_json["greedy_meshing"] = Render.GreedyMeshing;
   render_json["async_meshing"] = Render.AsyncMeshing;
   render_json["face_quads"] = Render.FaceQuads;

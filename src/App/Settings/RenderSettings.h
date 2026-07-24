@@ -6,8 +6,9 @@ namespace cutum
 
 enum class PerformancePreset
 {
-  Balanced,
+  Performance,
   Fast,
+  Balanced,
   Quality
 };
 

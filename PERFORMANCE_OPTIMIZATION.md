@@ -6,6 +6,8 @@ This document describes **implemented** runtime optimizations in the current cod
 
 | Feature | Config flag | Module |
 |---------|-------------|--------|
+| Graphics quality preset | `render.performance_preset` (`performance`/`fast`/`balanced`/`quality`) | `GraphicsQualityProfile`, `IULightingPipeline` |
+| Flat lighting (no CPU relight) | preset `performance` | `UFlatLightingPipeline` |
 | Greedy meshing (merged quads) | `render.greedy_meshing` | `GreedyMesher`, `ChunkMeshCache` |
 | Face quads (world-space UV) | `render.face_quads` | `GreedyMeshBatch` |
 | Frustum culling | `render.frustum_culling` | `GeometryEngine`, `Frustum` |

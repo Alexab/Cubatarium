@@ -14,6 +14,7 @@
 #include "World/Core/World.h"
 #include "World/Objects/ObjectLibrary.h"
 #include "World/Lighting/ChunkLighting.h"
+#include "World/Lighting/IULightingPipeline.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/Math/GridMath.h"
@@ -1256,8 +1257,9 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       while (RelightQueueIndex < RelightQueue.size() &&
              relit < relight_budget)
       {
-        RelightChunk(world.BlockWorld, *world.BlockRegistry,
-                     RelightQueue[RelightQueueIndex++], false, true);
+        world.GetLightingPipeline().RelightChunk(
+            world.BlockWorld, *world.BlockRegistry,
+            RelightQueue[RelightQueueIndex++], false, true);
         ++relit;
       }
     }
@@ -1288,9 +1290,10 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       while (BulkRelightChunkScheduledIndex < BulkRelightChunkQueue.size() &&
              relit < chunk_budget)
       {
-        RelightChunk(world.BlockWorld, *world.BlockRegistry,
-                     BulkRelightChunkQueue[BulkRelightChunkScheduledIndex++],
-                     false, true);
+        world.GetLightingPipeline().RelightChunk(
+            world.BlockWorld, *world.BlockRegistry,
+            BulkRelightChunkQueue[BulkRelightChunkScheduledIndex++], false,
+            true);
         ++relit;
       }
     }
@@ -1347,8 +1350,9 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
              relit < column_budget)
       {
         const glm::ivec2 &col = ColumnRelightQueue[ColumnRelightIndex++];
-        RelightColumn(world.BlockWorld, *world.BlockRegistry, col.x, col.y, 0,
-                      max_y, false, true);
+        world.GetLightingPipeline().RelightColumn(
+            world.BlockWorld, *world.BlockRegistry, col.x, col.y, 0, max_y,
+            false, true);
         ++relit;
       }
     }
@@ -1418,8 +1422,9 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       while (EmissiveChunkRelightIndex < EmissiveChunkRelightQueue.size() &&
              relit < relight_budget)
       {
-        RelightChunkBlockLight(world.BlockWorld, *world.BlockRegistry,
-                               EmissiveChunkRelightQueue[EmissiveChunkRelightIndex++]);
+        world.GetLightingPipeline().RelightChunkBlockLight(
+            world.BlockWorld, *world.BlockRegistry,
+            EmissiveChunkRelightQueue[EmissiveChunkRelightIndex++]);
         ++relit;
       }
     }

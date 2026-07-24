@@ -109,7 +109,8 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
   sky_shader->SetMat3("uInvViewRot", inv_view_rot);
   sky_shader->SetVec3("uCameraPos", camera_pos);
   int cloud_steps = 12;
-  if (preset == PerformancePreset::Fast)
+  if (preset == PerformancePreset::Fast ||
+      preset == PerformancePreset::Performance)
   {
     cloud_steps = 6;
   }
@@ -120,7 +121,8 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
   sky_shader->SetInt("uCloudSteps", cloud_steps);
   sky_shader->SetFloat(
       "uCloudJitter",
-      preset == PerformancePreset::Fast
+      (preset == PerformancePreset::Fast ||
+       preset == PerformancePreset::Performance)
           ? 0.35f
           : (preset == PerformancePreset::Quality ? 0.8f : 0.6f));
   constexpr int kMaxBodies = 4;
