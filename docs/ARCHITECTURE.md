@@ -24,6 +24,10 @@ World geometry lives only in `BlockWorld`. `ChunkMeshCache` rebuilds mesh per ch
 
 Bisect: start with all `false`, enable one flag at a time, restart game. Console prints `Render: greedy=...` on startup.
 
+## Camera projection
+
+World mesh is always 3D (world-space vertices + MVP). **Perspective vs orthographic isometric** is a per-world camera lens in `world_data.json` → `view` (New World / World settings). See [CAMERA_PROJECTION.md](CAMERA_PROJECTION.md). Do not confuse with F5 `CameraPerspective` (1st/3rd person).
+
 ## Runtime paths (next to executable)
 
 | Path | Role |

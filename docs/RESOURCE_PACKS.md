@@ -142,7 +142,7 @@ Unknown block names in saves/prefabs/worldgen get a synthetic solid block with l
 
 Edit defaults in **Settings → Resource packs** (saved to `config.json`). This does **not** change packs for the currently loaded world.
 
-To change packs for the **loaded world** (after Escape to main menu): **Main menu → World settings → Apply** (persists to `world_data.json`, hot-reloads packs).
+To change packs for the **loaded world** (after Escape to main menu): **Main menu → World settings → Apply** (persists to `world_data.json`, hot-reloads packs). The same screen also edits **view / projection** (perspective vs isometric); see [CAMERA_PROJECTION.md](CAMERA_PROJECTION.md).
 
 ### Per-world — `worlds/World_NNN/world_data.json`
 
@@ -162,7 +162,7 @@ Legacy `"enabled": [...]` is read as `primary`. `worldgen_owner` defaults to `pr
 |--------|---------|
 | **Settings → Resource packs** | Default primary/secondary pack lists → `config.json` |
 | **New World** | Primary (required) + secondary pack lists → `world_data.json` |
-| **Main menu → World settings** | Change packs for the paused/loaded world → hot-reload + save |
+| **Main menu → World settings** | Change packs and view/projection for the paused/loaded world → hot-reload + save |
 | **Load World** | Subtitle shows saved pack ids (debug) |
 
 ## Creatures and skins overlay
