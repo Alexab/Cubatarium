@@ -89,5 +89,7 @@ This file tracks implementation compromises for the environment and lighting rol
 | Daytime (`time set 0.5`) | Stars almost invisible, sun disc visible |
 | `sky stars 0` | Stars disabled regardless of time |
 | `sky clouds 1` | Dense cloud layer with preset-dependent quality |
-| `sky reset_celestials` | Default sun/moon pair restored |
+| `sky reset_celestials` | Default sun/moon pair restored; star sphere inclination follows primary sun |
 | Fast vs Quality presets | Cloud detail and stability increase with preset |
+| Camera yaw/pitch at night | Stars locked to celestial sphere (`view_dir` + `uStarCelestialInv`), not screen UV |
+| `time add` through a night | Whole star field sweeps on inclined daily arcs (same orbit-frame laws as celestial bodies) |
