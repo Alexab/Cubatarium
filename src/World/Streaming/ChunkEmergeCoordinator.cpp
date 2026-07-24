@@ -155,7 +155,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const glm::ivec3 focus_ground_horiz(focus_ground.x, 0, focus_ground.z);
   const int focus_radius = world.GetStreamingFocusRadius();
   mesh_service.SetMeshRebuildFocus(focus_ground_horiz, focus_radius);
-  // Soft-defer / V2a: no first-mesh or remesh while PendingLight except underfeet.
+  // Soft-defer / V2a: no first-mesh while PendingLight except underfeet; remesh
+  // of existing mesh is deferred even underfeet (player dig dark overwrite).
   mesh_service.SetDeferMeshUntilLitFn(
       [&world, &mesh_service, focus_ground_horiz,
        focus_radius](glm::ivec3 chunk_coord)
@@ -276,10 +277,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               : (pending_focus_count > 15 ? 6
                                          : (pending_focus_count > 0 ? 4 : 3));
       world.DrainIdleFocusPendingLight(focus_ground_horiz, focus_radius, budget);
-      // Break-glass: pending frozen while async applies 0 (relight_drain≈0) —
-      // sync underfeet only, never a focus flood.
-      // Break-glass: pending frozen (west-strip edge often) — sync 1 farthest
-      // focus column (underfeet-only never touched dist=4 ingress).
+      // Break-glass: pending plateau (west-strip / SoftDefer hole). With
+      // AsyncRelight this only priority-enqueues FIFO — sync RelightTerrainColumn
+      // was 1–3s mesh_emerge_prep (manual 164613). Streaming Drain owns Capture.
       // Frontier hole while standing: wall often 40–120; old gate (45f @
       // wall≤18) never fired (manual 102559: miss=1 ~10s @ wall 41–210).
       const int plateau_frames =
@@ -289,14 +289,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           last_frame_ms <= plateau_wall_ms && pending_focus_count > 0 &&
           last_frame_ms <= 40.0)
       {
-        const auto sync_relight_t0 =
-            std::chrono::high_resolution_clock::now();
         world.DrainIdleFocusPendingLightSync(focus_ground_horiz, focus_radius,
                                              1);
-        world.GetPhysicsTelemetryMutable().RelightDrainMs +=
-            std::chrono::duration<double, std::milli>(
-                std::chrono::high_resolution_clock::now() - sync_relight_t0)
-                .count();
         idle_pending_plateau_frames = 0;
       }
       if (pending_focus_count <= 8)
@@ -713,6 +707,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         pending_focus_count <= 5 && black_sticky == 0 &&
         last_frame_ms <= 16.0)
     {
+      // Formerly sync RelightTerrainColumn; with AsyncRelight → FIFO only.
       const int synced = world.DrainIdleFocusPendingLightSync(
           focus_ground_horiz, focus_radius, 1);
       idle_pending_sync_cd = synced > 0 ? 60 : 90;

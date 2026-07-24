@@ -313,6 +313,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     in_game_seconds = options.IdleBeforeFlySec + options.FlyPhaseSec +
                       options.StopPhaseSec;
   }
+  if (options.BreakStandMode)
+  {
+    in_game_seconds = options.IdleBeforeFlySec + options.BreakPhaseSec;
+  }
   if (in_game_seconds < 5.0)
   {
     in_game_seconds = 5.0;
@@ -404,6 +408,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     bool autopilot_armed = false;
     bool autopilot_flying = false;
     bool fly_stop_released = false;
+    double last_break_request_sec = -1.0e9;
+    int break_requests = 0;
     int ingame_frames_seen = 0;
     int start_focus_cx = 0;
     int start_focus_cz = 0;
@@ -435,9 +441,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 std::chrono::duration<double>(now - ingame_started).count();
             if (auto camera = world->GetCurrentUserCamera())
             {
-              if (!autopilot_armed && (options.Fly || options.HoldForward))
+              if (!autopilot_armed &&
+                  (options.Fly || options.HoldForward || options.BreakStandMode))
               {
-                if (options.Fly)
+                if (options.Fly && !options.BreakStandMode)
                 {
                   camera->SetFreeMove(true);
                 }
@@ -454,10 +461,13 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                               static_cast<float>(CHUNK_SIZE) +
                           8.0f;
                 }
-                const float min_y = sea + options.MinAltitudeAboveSea;
-                if (pos.y < min_y || options.TeleportToCruiseStart)
+                if (!options.BreakStandMode)
                 {
-                  pos.y = min_y;
+                  const float min_y = sea + options.MinAltitudeAboveSea;
+                  if (pos.y < min_y || options.TeleportToCruiseStart)
+                  {
+                    pos.y = min_y;
+                  }
                 }
                 camera->SetPosition(pos);
                 if (auto user = world->GetCurrentUser())
@@ -469,6 +479,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                           << (options.Fly ? 1 : 0)
                           << " hold_forward=" << (options.HoldForward ? 1 : 0)
                           << " hold_space=" << (options.HoldSpace ? 1 : 0)
+                          << " break_stand=" << (options.BreakStandMode ? 1 : 0)
                           << " teleport=" << (options.TeleportToCruiseStart ? 1 : 0)
                           << " yaw=" << options.FaceYawDeg
                           << " pitch=" << options.FacePitchDeg
@@ -477,13 +488,14 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
               }
               if (autopilot_armed)
               {
-                if (options.Fly)
+                if (options.Fly && !options.BreakStandMode)
                 {
                   camera->SetFreeMove(true);
                 }
                 camera->SetOrientation(options.FaceYawDeg, options.FacePitchDeg);
                 // Keep cruise altitude (manual holds Space / levels pitch).
-                if (options.HoldSpace || options.MinAltitudeAboveSea > 0.0f)
+                if (!options.BreakStandMode &&
+                    (options.HoldSpace || options.MinAltitudeAboveSea > 0.0f))
                 {
                   const float sea = static_cast<float>(
                       world->GetProceduralSettings().SeaLevel);
@@ -499,8 +511,25 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     }
                   }
                 }
-                if (options.HoldForward &&
+                if (options.BreakStandMode &&
                     ingame_sec >= options.IdleBeforeFlySec)
+                {
+                  if (ingame_sec - last_break_request_sec >=
+                      options.BreakIntervalSec)
+                  {
+                    last_break_request_sec = ingame_sec;
+                    world->RequestFlightSimBreak();
+                    ++break_requests;
+                    if (break_requests == 1 || (break_requests % 5) == 0)
+                    {
+                      std::cout << "flight-sim: break-stand request #"
+                                << break_requests << " at t=" << ingame_sec
+                                << "s" << std::endl;
+                    }
+                  }
+                }
+                else if (options.HoldForward &&
+                         ingame_sec >= options.IdleBeforeFlySec)
                 {
                   const double fly_end =
                       options.IdleBeforeFlySec +
@@ -587,12 +616,19 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         start_focus_captured
             ? static_cast<int>(std::max(std::abs(focus_dx), std::abs(focus_dz)))
             : 0;
-    if (options.HoldForward && chunks_traveled < 3)
+    if (options.HoldForward && !options.BreakStandMode &&
+        chunks_traveled < 3)
     {
       std::cerr << "flight-sim: FAIL insufficient travel chunks="
                 << chunks_traveled << " start=(" << start_focus_cx << ","
                 << start_focus_cz << ") end=(" << end_focus_cx << ","
                 << end_focus_cz << ")" << std::endl;
+      exit_code = 1;
+    }
+    if (options.BreakStandMode && break_requests < 1)
+    {
+      std::cerr << "flight-sim: FAIL break-stand issued 0 break requests"
+                << std::endl;
       exit_code = 1;
     }
 

@@ -55,6 +55,21 @@ struct PhysicsTelemetry
   /// Wall time spent in RebuildChunkImmediate this frame (inside MeshEmergeMs).
   double MeshImmediateMs{0.0};
   int MeshImmediateCount{0};
+  /// WindowManager::Update split (outside PhysicsStepMs).
+  double ViewsMs{0.0};
+  double DoMovementMs{0.0};
+  double BlockInputMs{0.0};
+  /// TickEnvironment wall inside DoMovement (before PhysicsStep timer).
+  double TickEnvMs{0.0};
+  /// Break UX diagnostics (per-frame event counts; reset each Update).
+  int BreakCompleteN{0};
+  int BreakInflightRaceN{0};
+  int BreakDarkFaceN{0};
+  /// Place UX diagnostics (per-frame; reset each Update).
+  int PlaceCompleteN{0};
+  int PlaceEmissionN{0};
+  /// Max light emission among blocks edited this frame (0 if none).
+  int EditLightEmission{0};
   /// RebuildDirtyChunksWithStats wall (sync fill + schedule + apply drain).
   double MeshDirtyTickMs{0.0};
   /// TickMeshEmerge wall before RebuildDirtyChunksWithStats (prep/idle/cold).

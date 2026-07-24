@@ -459,6 +459,26 @@ bool UChunkMeshCache::HasGreedyMesh(glm::ivec3 chunk_coord) const
   return GreedyCache.find(chunk_coord) != GreedyCache.end();
 }
 
+bool UChunkMeshCache::ChunkHasFullyDarkFace(glm::ivec3 chunk_coord) const
+{
+  const auto it = GreedyCache.find(chunk_coord);
+  if (it == GreedyCache.end())
+  {
+    return false;
+  }
+  for (const GreedyMeshBatch &batch : it->second.batches)
+  {
+    for (const GreedyMeshVertex &v : batch.vertices)
+    {
+      if (v.skyLight <= 0.0f && v.blockLight <= 0.0f)
+      {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 bool UChunkMeshCache::IsChunkMeshDirty(glm::ivec3 chunk_coord) const
 {
   return Dirty.Contains(chunk_coord);
@@ -611,6 +631,13 @@ bool UChunkMeshCache::FindNearestMissingGreedyMesh(
 void UChunkMeshCache::BumpChunkMeshRevision(glm::ivec3 chunk_coord)
 {
   MeshRevisions.Bump(chunk_coord);
+}
+
+void UChunkMeshCache::InvalidateInFlightMeshBuild(glm::ivec3 chunk_coord)
+{
+  ActiveMeshSourceRevision.erase(chunk_coord);
+  RemeshAfterApply.erase(chunk_coord);
+  BumpChunkMeshRevision(chunk_coord);
 }
 
 bool UChunkMeshCache::HasDirtyWithinHorizontalRadius(
@@ -1572,6 +1599,9 @@ void UChunkMeshCache::RebuildChunkImmediate(const UBlockWorld &world,
                                             glm::ivec3 chunkCoord)
 {
   const auto t0 = std::chrono::high_resolution_clock::now();
+  // Break flicker: late ApplyMeshResult of a pre-edit async snapshot must not
+  // overwrite this Immediate mesh. Same revision invalidate as MarkDirtyPriority.
+  InvalidateInFlightMeshBuild(chunkCoord);
   RebuildChunk(world, registry, chunkCoord);
   Dirty.Erase(chunkCoord);
   InvalidateVisibleList();

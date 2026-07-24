@@ -994,6 +994,39 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                                                    true);
     }
   }
+  // Primary may be absent from relit_chunks (chunk unload / empty apply slice).
+  // Still drop SoftDefer gate — otherwise PendingLight waits forever
+  // (manual 220951: pf/fdm stuck at 1 while other columns drained).
+  if (!finalize_pending_gate || !MeshService)
+  {
+    return;
+  }
+  for (const glm::ivec2 &g : primary_grounds)
+  {
+    if (bands.count(g) != 0)
+    {
+      continue;
+    }
+    AsyncRelightColumnsInFlight.erase(g);
+    PendingLightBeforeMesh.erase(g);
+    const glm::ivec3 ground(g.x, 0, g.y);
+    SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
+    const int dirty_min = std::max(0, sea - CHUNK_SIZE);
+    const int dirty_max = std::min(column_max_y, sea + CHUNK_SIZE * 2);
+    if (priority_mesh)
+    {
+      MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+          ground, dirty_min, dirty_max,
+          /*include_horizontal_neighbors=*/false);
+    }
+    else
+    {
+      MeshService->MarkTerrainChunkMeshDirtySeamed(
+          ground, dirty_min, dirty_max,
+          /*include_horizontal_neighbors=*/false);
+    }
+    SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+  }
 }
 
 void UWorld::AccumulateRelightMeshColumns(
@@ -2069,6 +2102,15 @@ int UWorld::DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
 int UWorld::DrainIdleFocusPendingLightSync(glm::ivec3 focus_ground_horiz,
                                            int radius_chunks, int max_columns)
 {
+  // Manual 164613: sync RelightTerrainColumn here was 1–3s wall
+  // (mesh_emerge_prep≈relight_drain, stream_ms small, holes=1). With
+  // AsyncRelight, break-glass only priority-enqueues into the FIFO; paced
+  // DrainRelightQueues owns Capture / Y-band (RelightCaptureBandCy).
+  if (ProceduralTemplate.AsyncRelight)
+  {
+    return DrainIdleFocusPendingLight(focus_ground_horiz, radius_chunks,
+                                      max_columns);
+  }
   if (LightingRelightDeferred || !MeshService || !BlockRegistry ||
       max_columns <= 0 || radius_chunks < 0 ||
       PendingLightBeforeMesh.empty())
@@ -2152,8 +2194,7 @@ int UWorld::DrainIdleFocusPendingLightSync(glm::ivec3 focus_ground_horiz,
       break;
     }
     AsyncRelightColumnsInFlight.erase(c.key);
-    // Always seed skylight on idle sync — CanSeed gate left edge columns dark
-    // and SoftDefer kept Pending forever when async never MarkRelit'd.
+    // Legacy path when AsyncRelight is off — full-column sync on main.
     RelightTerrainColumn(c.key.x * CHUNK_SIZE, c.key.y * CHUNK_SIZE, c.min_y,
                          c.max_y, /*priority_mesh=*/true,
                          /*include_skylight=*/true,
@@ -2913,8 +2954,17 @@ void UWorld::ApplyEditFastRelight(
   {
     return;
   }
+  // Drop dig-era inflight meshes before light mutate — otherwise a late Apply
+  // can paint dig faces dark after place Immediate (manual 092611).
+  if (MeshService)
+  {
+    MeshService->InvalidateEditMeshNeighborhood(block_positions);
+  }
   const auto t0 = std::chrono::high_resolution_clock::now();
-  RelightBlocksAroundLocal(BlockWorld, *BlockRegistry, block_positions);
+  // Incremental remove+flood (no chunk Clear). Immediate after this samples
+  // correct sky/block light day/night/torch; SoftDefer must not freeze a
+  // wrong bake until MarkRelit (manual 222250 sticky ~48s; night torch stale).
+  RelightBlocksAroundEdit(BlockWorld, *BlockRegistry, block_positions);
   const auto t1 = std::chrono::high_resolution_clock::now();
   PhysicsTelemetryData.FastRelightMs =
       std::chrono::duration<double, std::milli>(t1 - t0).count();
@@ -2922,15 +2972,22 @@ void UWorld::ApplyEditFastRelight(
 
 void UWorld::ApplyEditLighting(const std::vector<glm::ivec3> &block_positions)
 {
-  if (block_positions.empty() || !Persistence)
+  if (block_positions.empty())
   {
     return;
   }
-  Persistence->EnqueuePlayerRelight(block_positions);
-  PhysicsTelemetryData.PendingPlayerRelights =
-      static_cast<uint64_t>(Persistence->GetPendingPlayerRelightCount());
-  PhysicsTelemetryData.PendingBackgroundRelights = static_cast<uint64_t>(
-      Persistence->GetPendingTerrainColumnRelightCount());
+  // Incremental RelightBlocksAroundEdit already updated local light. Async
+  // player-relight Clears the neighborhood and MarkRelit remeshed dig sites
+  // dark until later bands finished — dig→place temporary blackness
+  // (manual 092611). Do not enqueue Clear refinement after edit.
+  (void)block_positions;
+  if (Persistence)
+  {
+    PhysicsTelemetryData.PendingPlayerRelights =
+        static_cast<uint64_t>(Persistence->GetPendingPlayerRelightCount());
+    PhysicsTelemetryData.PendingBackgroundRelights = static_cast<uint64_t>(
+        Persistence->GetPendingTerrainColumnRelightCount());
+  }
 }
 
 void UWorld::TickPlayerRelightMeshBurst()
@@ -4612,14 +4669,27 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
   }
   ++CachedBlockCount;
   BlockWorldReady = true;
+  ++PhysicsTelemetryData.PlaceCompleteN;
+  const int emission =
+      BlockRegistry ? BlockRegistry->GetLightEmission(Id) : 0;
+  if (emission > 0)
+  {
+    ++PhysicsTelemetryData.PlaceEmissionN;
+  }
+  PhysicsTelemetryData.EditLightEmission =
+      std::max(PhysicsTelemetryData.EditLightEmission, emission);
   const auto edit_t0 = std::chrono::high_resolution_clock::now();
   ApplyEditFastRelight({blockPos});
-  MarkBlockChunkDirty(blockPos);
+  // Face-neighbor Immediate: dig/place seams. Light ring when placing emitters
+  // so glow is not delayed behind mesh_async backlog (manual 230913).
+  MarkBlockChunkDirty(blockPos, /*sync_neighbor_chunks=*/true,
+                      /*sync_light_ring=*/emission > 0);
   PhysicsTelemetryData.EditToFirstMeshMs =
       std::chrono::duration<double, std::milli>(
           std::chrono::high_resolution_clock::now() - edit_t0)
           .count();
   ApplyEditLighting({blockPos});
+  PlayerRelightMeshBurstFrames = 5;
   PublishBlockPhysicsEvent(blockPos);
   PublishNeighborPhysicsEvents(blockPos);
   if (BlockRegistry && BlockRegistry->IsLiquid(Id) && PhysicsFlags.EnableFluids)
@@ -4962,6 +5032,10 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   {
     return false;
   }
+  const int removed_emission =
+      BlockRegistry->GetLightEmission(BlockWorld.GetBlock(blockPos));
+  PhysicsTelemetryData.EditLightEmission =
+      std::max(PhysicsTelemetryData.EditLightEmission, removed_emission);
   BlockWorld.SetBlock(blockPos, BLOCK_AIR);
   if (CachedBlockCount > 0)
   {
@@ -4977,12 +5051,17 @@ bool UWorld::DelBlockAt(glm::ivec3 blockPos)
   ApplyBreakSiteFluidFlood(blockPos, mesh_touch_blocks);
   const auto edit_t0 = std::chrono::high_resolution_clock::now();
   ApplyEditFastRelight(mesh_touch_blocks);
-  MarkBlocksChunkDirtyBatch(mesh_touch_blocks, true);
+  // Face-neighbor Immediate so newly exposed sides are not left dark while
+  // Dirty neighbors wait behind mesh_async≈42 (manual 230913).
+  MarkBlocksChunkDirtyBatch(mesh_touch_blocks, /*sync_neighbor_chunks=*/true,
+                            /*sync_light_ring=*/removed_emission > 0,
+                            PhysicsTelemetryData.BreakCompleteN > 0);
   PhysicsTelemetryData.EditToFirstMeshMs =
       std::chrono::duration<double, std::milli>(
           std::chrono::high_resolution_clock::now() - edit_t0)
           .count();
   ApplyEditLighting(mesh_touch_blocks);
+  PlayerRelightMeshBurstFrames = 5;
   PublishBlockPhysicsEvent(blockPos);
   PublishNeighborPhysicsEvents(blockPos);
   for (const glm::ivec3 &above_pos : broken_above)
@@ -5040,6 +5119,7 @@ bool UWorld::CompleteBreakSession()
   }
   const glm::ivec3 pos = BreakSession->blockPos;
   BreakSession.reset();
+  ++PhysicsTelemetryData.BreakCompleteN;
   return DelBlockAt(pos);
 }
 
@@ -5472,7 +5552,13 @@ bool UWorld::IsCollisionReadyAtFeet(const glm::ivec3 &feetBlock) const
 
 void UWorld::DoMovement()
 {
-  TickEnvironment(static_cast<float>(WallFrameDeltaSec));
+  {
+    using clock = std::chrono::high_resolution_clock;
+    const auto t0 = clock::now();
+    TickEnvironment(static_cast<float>(WallFrameDeltaSec));
+    PhysicsTelemetryData.TickEnvMs =
+        std::chrono::duration<double, std::milli>(clock::now() - t0).count();
+  }
   ++PhysicsTickCounter;
   if (PhysicsScheduler)
   {
@@ -5645,17 +5731,21 @@ void UWorld::MarkTerrainChunkMeshDirtySeamed(glm::ivec3 groundChunkCoord,
 }
 
 void UWorld::MarkBlocksChunkDirtyBatch(
-    const std::vector<glm::ivec3> &block_positions, bool sync_neighbor_chunks)
+    const std::vector<glm::ivec3> &block_positions, bool sync_neighbor_chunks,
+    bool sync_light_ring, bool collect_break_diag)
 {
   MeshService->MarkBlocksChunkDirtyBatchFromEdit(
       BlockWorld, BlockRegistry.get(), block_positions, ModifiedChunks,
-      sync_neighbor_chunks);
+      sync_neighbor_chunks, sync_light_ring, collect_break_diag,
+      &PhysicsTelemetryData);
 }
 
-void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos)
+void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos, bool sync_neighbor_chunks,
+                                 bool sync_light_ring)
 {
-  MeshService->MarkBlockChunkDirtyFromEdit(BlockWorld, BlockRegistry.get(),
-                                           blockPos, ModifiedChunks);
+  MeshService->MarkBlockChunkDirtyFromEdit(
+      BlockWorld, BlockRegistry.get(), blockPos, ModifiedChunks,
+      sync_neighbor_chunks, sync_light_ring);
   MeshService->NotifyFluidSurfaceDirtyAtBlock(BlockWorld, BlockRegistry.get(),
                                               blockPos);
 }

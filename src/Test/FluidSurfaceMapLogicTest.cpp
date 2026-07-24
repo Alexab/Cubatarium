@@ -120,8 +120,7 @@ static void TestSentinelAndTuningDefaults()
 
   cutum::URuntimeTuning::ResetToDefaults();
 
-  Expect(cutum::URuntimeTuning::Get().FluidSurfaceWindowMoveThreshold == 16,
-
+  Expect(cutum::URuntimeTuning::Get().FluidSurfaceWindowMoveThreshold == 32,
          "window move threshold default");
 
   Expect(cutum::URuntimeTuning::Get().FluidSurfaceScanUp == 32, "scan up default");
@@ -146,15 +145,15 @@ static void TestWindowMoveThreshold()
 
          "small window shift does not refresh");
 
-  Expect(!cutum::ShouldRefreshFluidSurfaceWindow(0, 0, 8, 0),
+  Expect(!cutum::ShouldRefreshFluidSurfaceWindow(0, 0, 16, 0),
 
          "sub-threshold x shift does not refresh");
 
-  Expect(cutum::ShouldRefreshFluidSurfaceWindow(0, 0, 16, 0),
+  Expect(cutum::ShouldRefreshFluidSurfaceWindow(0, 0, 32, 0),
 
          "x shift at threshold refreshes");
 
-  Expect(cutum::ShouldRefreshFluidSurfaceWindow(0, 0, 0, 16),
+  Expect(cutum::ShouldRefreshFluidSurfaceWindow(0, 0, 0, 32),
 
          "z shift at threshold refreshes");
 

@@ -20,6 +20,7 @@ class UBlockRegistry;
 class UBlockWorld;
 class UCamera;
 struct Frustum;
+struct PhysicsTelemetry;
 
 /// Owns chunk mesh cache; bridge between World block data and Render meshing.
 class UWorldMeshService
@@ -84,6 +85,9 @@ public:
                              int max_per_frame);
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,
                              glm::ivec3 chunk_coord);
+  /// Invalidate inflight/async apply for edit neighborhood (face neighbors).
+  void InvalidateEditMeshNeighborhood(
+      const std::vector<glm::ivec3> &block_positions);
   void ResetImmediateMeshStats();
   double GetLastMeshImmediateMs() const;
   int GetLastMeshImmediateCount() const;
@@ -167,12 +171,13 @@ public:
   void MarkBlockChunkDirtyFromEdit(
       UBlockWorld &block_world, UBlockRegistry *registry, glm::ivec3 block_pos,
       std::unordered_set<glm::ivec3, IVec3Hash> &modified_chunks,
-      bool sync_neighbor_chunks = false);
+      bool sync_neighbor_chunks = false, bool sync_light_ring = false);
   void MarkBlocksChunkDirtyBatchFromEdit(
       UBlockWorld &block_world, UBlockRegistry *registry,
       const std::vector<glm::ivec3> &block_positions,
       std::unordered_set<glm::ivec3, IVec3Hash> &modified_chunks,
-      bool sync_neighbor_chunks = false);
+      bool sync_neighbor_chunks = false, bool sync_light_ring = false,
+      bool collect_break_diag = false, PhysicsTelemetry *break_tele = nullptr);
   void MarkChunksContainingBlockIds(const UBlockWorld &block_world,
                                     const std::vector<BlockId> &block_ids);
 

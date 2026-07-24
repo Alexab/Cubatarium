@@ -1689,6 +1689,91 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     meshService.SetRenderDistanceChunks(
         Streamer->GetVisualRenderDistance());
 
+    // Fog-only RD pull-in: mask unfinished gen / thrash without shrinking mesh RD.
+    // Manual 161702: UnfinishedVisual max≈5 never hit threshold>8 — fog lagged
+    // behind popping trees; config start_ratio=0.85 also left mid-range clear.
+    // A+B water: unfinished near fluid/sea → stronger pull-in + wider sky horizon.
+    {
+      constexpr double kFogPullInExpandSec = 1.0;
+      constexpr double kFogPullInWallMs = 40.0;
+      int fog_rd = effectiveRenderDistance;
+      int fog_margin = render.DistanceFogEndMarginBlocks;
+      float fog_start_ratio = effectiveFogStartRatio;
+      bool near_water_unfinished = false;
+      if (render.FogPullInEnabled)
+      {
+        if (FogPullInRd < 0)
+        {
+          FogPullInRd = fog_rd;
+        }
+        const auto &phys = world.PhysicsTelemetryData;
+        const double wall_ms = world.GetWallFrameDelta() * 1000.0;
+        const int unfinished = phys.UnfinishedVisual;
+        const bool hole_debt = phys.VisualHoles > 0 || unfinished > 0;
+        const int sea = world.GetProceduralSettings().SeaLevel;
+        const glm::ivec3 camera_block = glm::ivec3(glm::floor(eye));
+        const bool near_water_ctx =
+            eye.y < static_cast<float>(sea) + 12.0f ||
+            world.HasNearbyFluidSurface(camera_block, 24);
+        near_water_unfinished = render.FogWaterUnfinishedBoost && hole_debt &&
+                                near_water_ctx;
+        int target = effectiveRenderDistance;
+        if (hole_debt)
+        {
+          // Shrink immediately so fog End covers the incomplete outer ring
+          // before decor/trees pop in clear mid-range.
+          int pull =
+              1 + std::min(2, unfinished / 3) + (phys.VisualHoles > 0 ? 1 : 0);
+          if (near_water_unfinished)
+          {
+            pull += 1;
+            fog_margin += 24;
+            fog_start_ratio =
+                std::min(fog_start_ratio, render.FogWaterStartRatioCap);
+          }
+          else
+          {
+            fog_start_ratio = std::min(fog_start_ratio, 0.35f);
+          }
+          target = std::min(target, effectiveRenderDistance - pull);
+          fog_margin += 16 + std::min(32, unfinished * 4);
+        }
+        if (phys.StreamPressure >= 1 || wall_ms > kFogPullInWallMs)
+        {
+          target = std::min(target, target - 1);
+          fog_margin += 8;
+          fog_start_ratio = std::min(fog_start_ratio, 0.40f);
+        }
+        target = std::clamp(target, std::max(1, render.FogRdMin),
+                            effectiveRenderDistance);
+        const auto now = std::chrono::steady_clock::now();
+        const double since =
+            FogPullInLastAdjust.time_since_epoch().count() == 0
+                ? kFogPullInExpandSec
+                : std::chrono::duration<double>(now - FogPullInLastAdjust)
+                      .count();
+        if (target < FogPullInRd)
+        {
+          FogPullInRd = target;
+          FogPullInLastAdjust = now;
+        }
+        else if (target > FogPullInRd && since >= kFogPullInExpandSec)
+        {
+          FogPullInRd = std::min(FogPullInRd + 1, target);
+          FogPullInLastAdjust = now;
+        }
+        fog_rd = FogPullInRd;
+      }
+      else
+      {
+        FogPullInRd = -1;
+      }
+      world.SetEffectiveFogRenderDistance(fog_rd);
+      world.SetEffectiveFogEndMarginBlocks(fog_margin);
+      world.SetNearWaterUnfinishedFog(near_water_unfinished);
+      effectiveFogStartRatio = fog_start_ratio;
+    }
+
     const float dt = std::max(0.0001f, camera->GetDeltaTime());
     const glm::vec3 delta = eye - lastCameraPosition;
     lastMovementSpeed = glm::length(glm::vec3(delta.x, 0.0f, delta.z)) / dt;

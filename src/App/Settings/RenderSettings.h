@@ -31,7 +31,7 @@ struct RenderSettings
   /// Linear fog at chunk render-distance boundary (greedy shader path).
   bool DistanceFog{true};
   /// Fraction of render distance (blocks) where distance fog begins.
-  float DistanceFogStartRatio{0.55f};
+  float DistanceFogStartRatio{0.48f};
   /// Exponent for fog blend; values below 1.0 thicken fog nearer the start.
   float DistanceFogDensity{0.85f};
   /// Use horizontal (XZ) distance for distance fog (classic render fog).
@@ -47,8 +47,16 @@ struct RenderSettings
   bool HorizonFogRadial{true};
   /// Tint sky horizon fog toward sun/moon direction.
   bool HorizonFogCelestialTint{true};
-  /// Blocks subtracted from render horizon for fog end.
-  int DistanceFogEndMarginBlocks{12};
+  /// Blocks subtracted from render horizon for fog end (mask unfinished ring).
+  int DistanceFogEndMarginBlocks{28};
+  /// Fog-only RD pull-in on holes / stream pressure / wall hitch (not mesh RD).
+  bool FogPullInEnabled{true};
+  /// Floor for EffectiveFogRenderDistance when pull-in is active.
+  int FogRdMin{3};
+  /// Extra fog pull-in + wider sky horizon when unfinished near water.
+  bool FogWaterUnfinishedBoost{true};
+  /// Cap EffectiveFogStartRatio under water unfinished boost (lower = closer).
+  float FogWaterStartRatioCap{0.28f};
   /// Use terrain surface height for altitude-adaptive fog (not feet Y).
   bool AltitudeUseTerrainSurface{true};
   /// glfwSwapInterval: false → 0 (uncapped present). Default off to avoid

@@ -155,6 +155,32 @@ int main(int argc, char *argv[])
         {
           opt.VisibleWindow = true;
         }
+        else if (std::strcmp(argv[j], "--break-stand") == 0)
+        {
+          opt.BreakStandMode = true;
+          opt.Fly = false;
+          opt.HoldForward = false;
+          opt.HoldSpace = false;
+          opt.TeleportToCruiseStart = false;
+          opt.FacePitchDeg = 55.0f;
+          opt.MinAltitudeAboveSea = 0.0f;
+          if (opt.IdleBeforeFlySec < 8.0)
+          {
+            opt.IdleBeforeFlySec = 8.0;
+          }
+          if (opt.BreakPhaseSec < 10.0)
+          {
+            opt.BreakPhaseSec = 20.0;
+          }
+        }
+        else if (std::strcmp(argv[j], "--break-phase") == 0 && j + 1 < argc)
+        {
+          opt.BreakPhaseSec = std::atof(argv[++j]);
+        }
+        else if (std::strcmp(argv[j], "--break-interval") == 0 && j + 1 < argc)
+        {
+          opt.BreakIntervalSec = std::atof(argv[++j]);
+        }
       }
       return cutum::RunFlightSim(*paths, opt);
     }

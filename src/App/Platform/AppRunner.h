@@ -46,6 +46,10 @@ struct FlightSimOptions
   bool FlyStopMode{false};
   double FlyPhaseSec{40.0};
   double StopPhaseSec{35.0};
+  /// Standing break scenario: idle then break solid under look every ~1s.
+  bool BreakStandMode{false};
+  double BreakPhaseSec{20.0};
+  double BreakIntervalSec{1.0};
   /// Show GLFW window (default hidden). Hidden still has a GL context; lighting
   /// runs the same path — use visible only for human eyeballing.
   bool VisibleWindow{false};

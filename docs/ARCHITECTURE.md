@@ -233,14 +233,16 @@ Distance fog uses horizontal (XZ) distance from the camera. Fog color comes from
 
 | System | Horizon |
 |--------|---------|
-| `ComputeDistanceFog` | `FogHorizonBlocks(effective_render_distance, end_margin)` |
+| `ComputeDistanceFog` | `FogHorizonBlocks(fog_rd, end_margin)` — `fog_rd` = `EffectiveFogRenderDistance` |
 | `ChunkMeshCache::MaxCullDistance` | `RenderHorizonBlocks(effective_render_distance)` |
 | `UChunkStreamer` load square | Chebyshev `render_distance_chunks` + view-ahead prefetch |
 | Altitude policy | `ground_y` from terrain surface (`altitude_use_terrain_surface`); horizontal cull above threshold |
 
+`end_margin` (`distance_fog_end_margin_blocks`, default **28**) is the strip that hides the unfinished streaming ring inside the visual/cull horizon. Mesh cull stays at full Effective RD; fog may pull in tighter via **fog-only** `EffectiveFogRenderDistance` when `fog_pull_in_enabled` (`VisualHoles>0`, any `UnfinishedVisual`, stream Yellow/Red, or wall hitch), floored by `fog_rd_min` (default 3). Under hole/unfinished debt the runtime also boosts end margin and lowers `EffectiveFogStartRatio` so incomplete mid-range decor (trees) is not left clear until fog “catches up”. **Water unfinished (A+B):** when debt coincides with near-fluid / low-over-sea (`fog_water_unfinished_boost`), pull-in is stronger (`FogWaterStartRatioCap` default 0.28, extra RD−1 / margin) and sky horizon elevation widens (`FogHorizonElevation` 0.35→0.22) so empty ocean columns read as fog rather than clear skydome. Mesh/gen RD is not changed by this lever. Saved `config.json` must not keep stale `distance_fog_start_ratio≈0.85` / margin 12 or defaults never apply.
+
 At high altitude, mesh cull uses XZ distance (not 3D) to avoid a visible terrain disk under the camera. `horizon_boost` increases sky fog blend while flying.
 
-**Underwater / fluid fog (v3):** per-fragment underwater fog in `fshader_greedy` when `vWorldPos.y < surfaceYAt(vWorldPos.xz)` using `UFluidSurfaceMap` (`GL_R16F` surface Y + `GL_R8UI` fluid index). Global underwater fog is a fallback only when the surface map is unavailable. Sky pass suppresses celestial bodies when fully submerged; partial submerge uses a screen waterline split (`FluidUnderwaterFogLogic.h`).
+**Underwater / fluid fog (v3):** per-fragment underwater fog in `fshader_greedy` when `vWorldPos.y < surfaceYAt(vWorldPos.xz)` using `UFluidSurfaceMap` (`GL_R16F` surface Y + `GL_R8UI` fluid index). Global underwater fog is a fallback only when the surface map is unavailable. **Air distance fog stays enabled while submerged** for non-fluid fragments (shore / streaming edge); fluid span still uses underwater uniforms. Sky pass suppresses celestial bodies when fully submerged; partial submerge uses a screen waterline split (`FluidUnderwaterFogLogic.h`).
 
 Mesh commit marks dirty once via `ColumnMeshDirty` (Y bounds); `NotifyChunkCommitted` updates streamer state only.
 

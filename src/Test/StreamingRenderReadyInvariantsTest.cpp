@@ -18,11 +18,14 @@ static void Expect(bool cond, const char *msg)
 
 int main()
 {
-  // Underfeet never defers.
+  // Streaming SoftDefer: remesh of existing mesh while PendingLight is deferred
+  // (including underfeet). Player dig/place no longer sets PendingLight.
   Expect(!SoftDeferMeshUntilLitPolicy(true, false, true, true, false),
-         "underfeet missing+pending");
-  Expect(!SoftDeferMeshUntilLitPolicy(true, true, true, true, false),
-         "underfeet has_mesh+pending");
+         "underfeet missing+pending allow first mesh");
+  Expect(SoftDeferMeshUntilLitPolicy(true, true, true, true, false),
+         "underfeet has_mesh+pending defer remesh");
+  Expect(!SoftDeferMeshUntilLitPolicy(true, true, false, true, false),
+         "underfeet has_mesh+lit allow remesh");
 
   // Focus missing + pending => defer (no dark preview).
   Expect(SoftDeferMeshUntilLitPolicy(false, false, true, true, true),

@@ -376,6 +376,14 @@ public:
   float GetBreakProgress() const;
   bool HasBreakSession() const { return BreakSession.has_value(); }
   std::optional<glm::ivec3> GetBreakSessionBlockPos() const;
+  /// Flight-sim break-stand: request one CompleteBreakSession on next Update.
+  void RequestFlightSimBreak() { FlightSimBreakRequested = true; }
+  bool ConsumeFlightSimBreakRequest()
+  {
+    const bool requested = FlightSimBreakRequested;
+    FlightSimBreakRequested = false;
+    return requested;
+  }
 
   bool AddObject(const std::string type_id, const glm::vec3 &position);
 
@@ -701,6 +709,32 @@ public:
     return std::max(1, EffectiveRenderDistance) + 1;
   }
   float GetEffectiveFogStartRatio() const { return EffectiveFogStartRatio; }
+  /// Fog horizon RD (may be tighter than mesh/visual EffectiveRenderDistance).
+  int GetEffectiveFogRenderDistance() const
+  {
+    return EffectiveFogRenderDistance > 0 ? EffectiveFogRenderDistance
+                                          : EffectiveRenderDistance;
+  }
+  void SetEffectiveFogRenderDistance(int distance)
+  {
+    EffectiveFogRenderDistance = std::max(1, distance);
+  }
+  /// Extra / pulled end margin for ComputeDistanceFog (0 → use RenderSettings).
+  int GetEffectiveFogEndMarginBlocks(int fallback_margin) const
+  {
+    return EffectiveFogEndMarginBlocks > 0 ? EffectiveFogEndMarginBlocks
+                                           : fallback_margin;
+  }
+  void SetEffectiveFogEndMarginBlocks(int margin)
+  {
+    EffectiveFogEndMarginBlocks = std::max(0, margin);
+  }
+  /// Unfinished/holes while near water — stronger fog + wider sky horizon.
+  bool GetNearWaterUnfinishedFog() const { return NearWaterUnfinishedFog; }
+  void SetNearWaterUnfinishedFog(bool enabled)
+  {
+    NearWaterUnfinishedFog = enabled;
+  }
   float GetAltitudeAboveTerrain() const { return AltitudeAboveTerrain; }
   void SetAltitudeAboveTerrain(float altitude) { AltitudeAboveTerrain = altitude; }
   void UpdateFrameHitchDiagnostics(double draw_scene_mks,
@@ -942,7 +976,9 @@ public:
   /// Idle sync relight for focus pending columns that already have preview mesh.
   int DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
                                  int radius_chunks, int max_columns);
-  /// Same as above but sync RelightTerrainColumn (strict budget; outer ring first).
+  /// Break-glass for frozen pending focus light. With AsyncRelight: priority
+  /// FIFO enqueue only (no sync RelightTerrainColumn — manual 164613 hitch).
+  /// Without AsyncRelight: sync RelightTerrainColumn (outer ring first).
   int DrainIdleFocusPendingLightSync(glm::ivec3 focus_ground_horiz,
                                      int radius_chunks, int max_columns);
   /// Commit-time skylight seed is only safe when the neighbor ring is loaded.
@@ -1034,10 +1070,14 @@ private:
   void AccumulateRelightMeshColumns(
       const std::vector<glm::ivec3> &relit_chunks);
   void EnsurePlayerOnGround();
-  void MarkBlockChunkDirty(glm::ivec3 blockPos);
+  void MarkBlockChunkDirty(glm::ivec3 blockPos,
+                           bool sync_neighbor_chunks = false,
+                           bool sync_light_ring = false);
   void
   MarkBlocksChunkDirtyBatch(const std::vector<glm::ivec3> &block_positions,
-                            bool sync_neighbor_chunks = false);
+                            bool sync_neighbor_chunks = false,
+                            bool sync_light_ring = false,
+                            bool collect_break_diag = false);
   void MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos);
   void MarkFluidChangeDirty(glm::ivec3 blockPos);
   void MarkFluidFloodMeshDirty(glm::ivec3 blockPos,
@@ -1148,6 +1188,12 @@ private:
                                      std::chrono::milliseconds mesh_idle_budget);
   int RenderDistanceChunks{4};
   int EffectiveRenderDistance{4};
+  /// Fog-only RD (pull-in); 0 → use EffectiveRenderDistance via getter.
+  int EffectiveFogRenderDistance{0};
+  /// Dynamic fog end margin (pull-in boost); 0 → RenderSettings default.
+  int EffectiveFogEndMarginBlocks{0};
+  /// Hole/unfinished debt while near fluid / sea — fog A+B boost.
+  bool NearWaterUnfinishedFog{false};
   float EffectiveFogStartRatio{0.85f};
   float AltitudeAboveTerrain{0.0f};
   StreamingAltitudePolicyParams AltitudeParams;
@@ -1175,6 +1221,7 @@ private:
     float progress{0.f};
   };
   std::optional<BlockBreakSession> BreakSession;
+  bool FlightSimBreakRequested{false};
 
   uint64_t DurationDoMovementMks;
   uint64_t DurationDrawSceneMks{0};

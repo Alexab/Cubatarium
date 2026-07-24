@@ -157,7 +157,7 @@ void USkyGradientPass::Draw(const std::shared_ptr<UShaderProgram> &sky_shader,
   sky_shader->SetFloat("uHorizonFogRadial", render.HorizonFogRadial ? 1.0f : 0.0f);
   sky_shader->SetFloat("uHorizonFogCelestialTint",
                        render.HorizonFogCelestialTint ? 1.0f : 0.0f);
-  sky_shader->SetFloat("uFogHorizonElevation", 0.35f);
+  sky_shader->SetFloat("uFogHorizonElevation", fog_pass.GetFogHorizonElevation());
 
   glBindVertexArray(SkyVao);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);

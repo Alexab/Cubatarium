@@ -1017,9 +1017,11 @@ void UGeometryEngine::ResetWorldRenderState()
     if (Render.DistanceFog)
     {
       const DistanceFogParams distance_fog = ComputeDistanceFog(
-          WorldInstance->GetEffectiveRenderDistance(), atmospheric.fog_color,
+          WorldInstance->GetEffectiveFogRenderDistance(), atmospheric.fog_color,
           Render.DistanceFogStartRatio, WorldInstance->GetEffectiveFogStartRatio(),
-          Render.DistanceFogDensity, Render.DistanceFogEndMarginBlocks);
+          Render.DistanceFogDensity,
+          WorldInstance->GetEffectiveFogEndMarginBlocks(
+              Render.DistanceFogEndMarginBlocks));
       fog_color = distance_fog.Color;
     }
   }

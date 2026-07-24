@@ -103,13 +103,25 @@ void SortGroundChunksNearFirst(std::vector<glm::ivec3> &chunks, int cx, int cz)
             });
 }
 
-int ChunkUpdateBudget(int pending)
+int ChunkUpdateBudget(int pending, double last_wall_ms)
 {
-  // Keep per-frame hitch bounded, but catch up when the window is large
-  // (otherwise transparent/fog surface trails terrain by many frames).
-  if (pending <= UFluidSurfaceMap::kMaxChunkUpdatesPerFrame)
+  // Manual 201036/192304: burst=32 cold scans → 400–800ms fluid_map_cpu.
+  // After a hitch frame, catch up slower so wall does not stack.
+  // Also throttle when pending is already above baseline (cold full_rebuild
+  // start) — do not wait for wall>40 before leaving the 16→24→32 ramp.
+  const bool hitching = last_wall_ms > UFluidSurfaceMap::kWallThrottleMs ||
+                        pending > UFluidSurfaceMap::kMaxChunkUpdatesPerFrame;
+  const int baseline = hitching ? UFluidSurfaceMap::kMaxChunkUpdatesHitch
+                                : UFluidSurfaceMap::kMaxChunkUpdatesPerFrame;
+  const int burst = hitching ? UFluidSurfaceMap::kMaxChunkUpdatesHitchBurst
+                             : UFluidSurfaceMap::kMaxChunkUpdatesBurst;
+  if (pending <= baseline)
   {
-    return UFluidSurfaceMap::kMaxChunkUpdatesPerFrame;
+    return baseline;
+  }
+  if (hitching)
+  {
+    return burst;
   }
   if (pending <= 32)
   {
@@ -119,7 +131,7 @@ int ChunkUpdateBudget(int pending)
   {
     return 24;
   }
-  return UFluidSurfaceMap::kMaxChunkUpdatesBurst;
+  return burst;
 }
 
 int NearFluidDirtyCount(const std::unordered_set<glm::ivec3, IVec3Hash> &dirty,
@@ -136,10 +148,15 @@ int NearFluidDirtyCount(const std::unordered_set<glm::ivec3, IVec3Hash> &dirty,
   return near;
 }
 
-int FluidDirtyBudget(int pending, int near_pending)
+int FluidDirtyBudget(int pending, int near_pending, double last_wall_ms)
 {
-  // Always cover the underfeet water ring in one frame when possible (3x3).
-  return std::max(ChunkUpdateBudget(pending), std::min(near_pending, 9));
+  // Always cover the underfeet water ring when possible; shrink on hitch /
+  // cold pending backlog (same gate as ChunkUpdateBudget).
+  const bool hitching = last_wall_ms > UFluidSurfaceMap::kWallThrottleMs ||
+                        pending > UFluidSurfaceMap::kMaxChunkUpdatesPerFrame;
+  const int near_cap = hitching ? 4 : 9;
+  return std::max(ChunkUpdateBudget(pending, last_wall_ms),
+                  std::min(near_pending, near_cap));
 }
 
 } // namespace
@@ -195,7 +212,8 @@ void UFluidSurfaceMap::QueueGpuChunk(glm::ivec3 groundChunk)
 
 bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &registry,
                                       UChunkMeshCache &cache,
-                                      glm::ivec3 cameraBlockXZ, int scanHintY)
+                                      glm::ivec3 cameraBlockXZ, int scanHintY,
+                                      double lastWallMs)
 {
   LastFrameStats = FluidSurfaceMapFrameStats{};
   const auto cpu_begin = std::chrono::high_resolution_clock::now();
@@ -315,7 +333,7 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
                         static_cast<int>(fluidSurfaceDirty.size());
     const int near_dirty =
         NearFluidDirtyCount(fluidSurfaceDirty, cx, cz);
-    const int budget = FluidDirtyBudget(pending, near_dirty);
+    const int budget = FluidDirtyBudget(pending, near_dirty, lastWallMs);
     int processed = drain_pending_rebuild(budget);
     // Near dirty must not wait for the entire window rebuild to finish.
     processed += drain_dirty_in_window(budget - processed);
@@ -342,7 +360,7 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
       const int near_dirty =
           NearFluidDirtyCount(fluidSurfaceDirty, cx, cz);
       const int budget = FluidDirtyBudget(
-          static_cast<int>(fluidSurfaceDirty.size()), near_dirty);
+          static_cast<int>(fluidSurfaceDirty.size()), near_dirty, lastWallMs);
       const int processed = drain_dirty_in_window(budget);
       LastFrameStats.DirtyChunksProcessed = processed;
       LastCameraBlockXZ = glm::ivec2(cameraBlockXZ.x, cameraBlockXZ.z);
@@ -389,8 +407,8 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
         PendingRebuildGroundChunks.push_back(groundChunk);
       }
     }
-    const int budget =
-        ChunkUpdateBudget(static_cast<int>(PendingRebuildGroundChunks.size()));
+    const int budget = ChunkUpdateBudget(
+        static_cast<int>(PendingRebuildGroundChunks.size()), lastWallMs);
     const int processed = drain_pending_rebuild(budget);
     LastFrameStats.DirtyChunksProcessed = processed;
     LastFrameStats.FullRebuild = !PendingRebuildGroundChunks.empty();
@@ -425,8 +443,8 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
       PendingRebuildGroundChunks.emplace_back(gx, 0, gz);
     }
   }
-  const int budget =
-      ChunkUpdateBudget(static_cast<int>(PendingRebuildGroundChunks.size()));
+  const int budget = ChunkUpdateBudget(
+      static_cast<int>(PendingRebuildGroundChunks.size()), lastWallMs);
   const int processed = drain_pending_rebuild(budget);
   LastFrameStats.DirtyChunksProcessed = processed;
   LastFrameStats.FullRebuild = !PendingRebuildGroundChunks.empty();
@@ -522,10 +540,12 @@ void UFluidSurfaceMap::UploadDirtyChunkGpu(glm::ivec3 groundChunk)
 
 bool UFluidSurfaceMap::Update(UBlockWorld &world, UBlockRegistry &registry,
                               UChunkMeshCache &cache, glm::ivec3 cameraBlockXZ,
-                              int scanHintY, uint64_t meshRevision)
+                              int scanHintY, uint64_t meshRevision,
+                              double lastWallMs)
 {
   (void)meshRevision;
-  if (!RefreshStaging(world, registry, cache, cameraBlockXZ, scanHintY))
+  if (!RefreshStaging(world, registry, cache, cameraBlockXZ, scanHintY,
+                      lastWallMs))
   {
     Valid = false;
     return false;
@@ -548,7 +568,7 @@ bool UFluidSurfaceMap::Update(UBlockWorld &world, UBlockRegistry &registry,
     }
     SortGroundChunksNearFirst(pending, cx, cz);
     const int budget =
-        ChunkUpdateBudget(static_cast<int>(pending.size()));
+        ChunkUpdateBudget(static_cast<int>(pending.size()), lastWallMs);
     int uploaded = 0;
     for (const glm::ivec3 &groundChunk : pending)
     {

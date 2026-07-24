@@ -31,6 +31,8 @@ public:
   const glm::vec3 &GetSkyTint() const { return SmoothedSkyTint; }
   const glm::vec3 &GetFogColor() const { return SmoothedFogColor; }
   float GetFogHorizonBlend() const { return FogHorizonBlend; }
+  /// Sky horizon band elevation (lower = thicker fog band near horizon).
+  float GetFogHorizonElevation() const { return FogHorizonElevation; }
   float GetUnderwaterSkyAmount() const { return UnderwaterSkyAmount; }
   float GetScreenWaterlineNdc() const { return ScreenWaterlineNdc; }
   const glm::vec3 &GetUnderwaterFogColor() const { return UnderwaterFogColor; }
@@ -49,6 +51,7 @@ private:
   float FogHorizontal{0.0f};
   float FogDensity{1.0f};
   float FogHorizonBlend{0.0f};
+  float FogHorizonElevation{0.35f};
   bool WasUnderwaterFog{false};
   bool CameraInFluid{false};
   float UnderwaterSkyAmount{0.0f};

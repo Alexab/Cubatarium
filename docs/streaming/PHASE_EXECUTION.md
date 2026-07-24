@@ -41,9 +41,104 @@ private p95 / fill% / wall).
 | `085228` | Soft=0 OK; keep_margin→3; Dirty~350–470 no drops; Capture hitch 2.9–4.5 s |
 | `091724` | Soft=0; keep→3; Dirty~400–590 async≤29 thrash miss; Capture~3.2 s holes=1 |
 | `102936` | Soft=0; Dirty SoftCap works (`dirty_dropped`); wall med 38 ms; Capture max~1.6 s |
+| `105049` | Y-band: period drain max~1.5 ms; spike wall max~1 s (was 1.6 s) |
+| `152216` | Soft=0; private~480; sticky=0; rare Capture hitch~2.2 s holes=1 |
 
 Tails after `102936`: SoftDefer-safe **Y-band Capture** (`RelightCaptureBandCy`,
 `finalize_pending_gate`) — PendingLight until final band.
+
+### Fog edge masking (2026-07-23)
+
+Landed: stronger `distance_fog_end_margin_blocks` (28), earlier start ratio (0.48),
+air fog while submerged (non-fluid), fog-only `EffectiveFogRenderDistance` pull-in
+(`fog_pull_in_enabled` / `fog_rd_min`). Manual `161702`: unfinished max≈5 never
+hit old threshold `UnfinishedVisual>8`, and saved config still had start_ratio 0.85 /
+margin 12 → trees popped clear then fog lagged. Follow-up: pull-in on any unfinished,
+dynamic margin/start under debt, refresh local config defaults.
+
+Manual: walk/dive at visual edge; Yellow should shorten fog End without shrinking
+mesh RD; incomplete surface should stay fogged, not clear-then-fog.
+
+### Sync break-glass → async FIFO (2026-07-23)
+
+Manual `164613`: spikes ≥1 s had `stream_ms` small and
+`mesh_emerge_prep≈relight_drain` — root cause was
+`DrainIdleFocusPendingLightSync` → `RelightTerrainColumn` (full-column sync BFS),
+not Y-band Capture. With `AsyncRelight`, Sync now priority-enqueues FIFO only;
+paced `DrainRelightQueues` keeps Capture. Expect: no multi-second `prep` spikes;
+holes may linger slightly longer under SoftDefer+fog.
+
+### Fog water unfinished A+B (2026-07-23)
+
+Plan: [`FOG_WATER_UNFINISHED.md`](FOG_WATER_UNFINISHED.md). Near fluid/sea +
+holes/unfinished → stronger fog pull-in (`fog_water_start_ratio_cap` 0.28) and
+wider sky horizon (`FogHorizonElevation` 0.22). No proxy quads.
+
+### Fluid map budget + scroll (2026-07-23)
+
+Plan: [`FLUID_MAP_BUDGET.md`](FLUID_MAP_BUDGET.md). Manual `201036`: spikes
+`fluid_map_cpu` 400–800 ms. Wall-aware chunk budget (≤8 after wall>40 ms) and
+`surface_window_move_threshold` 16→32.
+
+### Perf research autofly (2026-07-23)
+
+Cheap metrics + formula fix: `world_extra_ms = max(0, LastWorldTick − PhysicsStep)`
+(was double-subtracting stream/mesh already inside phys). New scopes:
+`tick_env_ms` / `block_input_ms` / `views_ms`; break counters; soft spike buckets
+in `flight_sim_analyze`.
+
+| Run | Config | sticky | cold | spike_max | dominant (≥500) | Notes |
+|-----|--------|--------|------|-----------|-----------------|-------|
+| `research_r1` | Rel `--replay-manual` | 9 | 2 | 1945 / holes 782 | **stream** | `spike_max_world_extra≈0.02`; tick_env/block_input ~0; CB NO-GO sticky+holes+wall_no_holes 36 |
+| `research_r3` | Rel `--scenario break-stand` | 0 | 0 | 494 | — | `break_complete=22`, **`break_inflight_race=20`**, `break_dark_face=0` |
+
+Conclusion R1: former ~800 ms `world_extra` spikes were **telemetry residue**, not
+TickEnvironment/BlockInput. Heavy hitch class = `stream_ms`. Soft WE gate OK.
+
+Conclusion R3: inflight race strongly correlates with break edits (20/22). Immediate
+path now bumps mesh revision + clears `ActiveMeshSourceRevision` (flicker fix).
+Dark-face counter stayed 0 after local Relight+Immediate (blackness may need
+full ClearColumn path or later frames). Fluid cold pending throttle landed.
+
+### Edit black flash + FastRelight hitch (2026-07-23)
+
+Manual `213640`: OK→black→OK ~1s after dig; place lag ~100–300ms =
+`edit_to_first_mesh`. Fix: SoftDefer remesh of existing mesh while
+`PendingLight` even underfeet; `ApplyEditLighting` notes Pending until MarkRelit;
+FastRelight Clear only edit column ±1 cy (not 3×3); break Immediate center-only.
+
+Follow-up: dig OK alone, but dig→place nearby black/x-ray — second FastRelight
+Clear on pending (±1) column re-Immediate’d the dig mesh dark. Skip FastRelight
+while any edit/neighbor column still PendingLight.
+
+### Edit light systemic (2026-07-23 evening)
+
+Manual `222250`: after dig `black_sticky` ~48s / `focus_dark_mesh` ~54s; hitch
+`edit_to_first_mesh`~380ms; night torch dig showed stale/wrong brightness
+(`clear_first=false` + monotonic block light). SoftDefer-as-edit-lock froze the
+wrong Immediate until MarkRelit.
+
+Fix: `RelightBlocksAroundEdit` (sky/block remove+flood, radius ≤15, no chunk
+Clear) before Immediate; `ApplyEditLighting` only enqueues async player-relight
+for seams — no `NotePendingLight` / SoftDefer lock on dig/place. Streaming
+SoftDefer for cold Pending unchanged. Center Immediate only.
+
+Follow-up manual `224642`: place lamp stayed dark until another edit (opaque
+emitter wiped after flood seed); night dig near light black; FastRelight 31³
+emitter scan hitch. Fix: classic remove from edit cell only; keep origin
+emission; seed face neighbors; drop radius emitter scan. Perf jsonl:
+`place_complete_n`, `place_emission_n`, `edit_light_emission`, `fast_relight_ms`.
+
+Manual `230913`: fast_relight cheap (~0.2–2ms) but dig `edit_to_first_mesh`~110ms
+with `mesh_async=42` — neighbor faces stayed dark / lamp glow dripped in via
+async Dirty. Fix: dig/place Immediate face neighbors; emission edits also sync
+a capped light-ring remesh (≤9 chunks) + remesh burst.
+
+Manual `092611`: dig OK, place in hole / on rim → temporary blackness on dig
+faces that self-clears. Cause: `EnqueuePlayerRelight` Cleared neighborhood and
+MarkRelit remeshed dark until later bands; also dig inflight Apply racing place.
+Fix: skip async Clear player-relight after incremental edit; invalidate edit
+neighborhood inflight before Relight.
 
 ## Lessons (2026-07-22 evening)
 

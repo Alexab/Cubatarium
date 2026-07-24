@@ -255,7 +255,30 @@ def main() -> int:
         action="store_true",
         help="do not kill orphan Cubatarium before run (debug only)",
     )
+    ap.add_argument(
+        "--scenario",
+        default="",
+        choices=["", "break-stand"],
+        help="named scenario (break-stand: standing CompletesBreak every ~1s)",
+    )
+    ap.add_argument("--break-phase-sec", type=float, default=20.0)
+    ap.add_argument("--break-interval-sec", type=float, default=1.0)
     args = ap.parse_args()
+
+    if args.scenario == "break-stand":
+        args.world = args.world or "World_164"
+        args.no_fly = True
+        args.fly_stop = False
+        args.resume = True
+        args.teleport_cruise = False
+        args.hold_space = False
+        args.sprint = False
+        if args.pitch is None:
+            args.pitch = 55.0
+        args.idle_sec = max(args.idle_sec, 8.0)
+        min_break = args.idle_sec + args.break_phase_sec + 5.0
+        if args.seconds < min_break:
+            args.seconds = min_break
 
     if args.replay_manual:
         args.world = "World_164"
@@ -313,12 +336,18 @@ def main() -> int:
         "--report",
         str(BIN / "flight_sim_report.json"),
     ]
-    if args.no_fly:
+    if args.scenario == "break-stand":
+        sim_cmd.append("--break-stand")
+        sim_cmd.extend(["--break-phase", str(args.break_phase_sec)])
+        sim_cmd.extend(["--break-interval", str(args.break_interval_sec)])
+        sim_cmd.append("--no-fly")
+        sim_cmd.append("--no-hold-forward")
+    elif args.no_fly:
         sim_cmd.append("--no-fly")
         sim_cmd.append("--no-hold-forward")
     else:
         sim_cmd.extend(["--fly", "--hold-forward"])
-    if args.fly_stop:
+    if args.fly_stop and args.scenario != "break-stand":
         sim_cmd.append("--fly-stop")
         sim_cmd.extend(["--fly-phase", str(args.fly_phase_sec)])
         sim_cmd.extend(["--stop-phase", str(args.stop_phase_sec)])
@@ -341,6 +370,8 @@ def main() -> int:
         process_timeout = args.seconds + 120.0
     if args.fly_stop:
         process_timeout = max(process_timeout, 420.0)
+    if args.scenario == "break-stand":
+        process_timeout = max(process_timeout, args.seconds + 180.0)
 
     print("running:", " ".join(sim_cmd), flush=True)
     rc = run_with_timeout(sim_cmd, BIN, process_timeout)
@@ -402,6 +433,25 @@ def main() -> int:
                         "post_stop_black_sticky_max",
                         "stop_wall_med",
                         "chunks_traveled",
+                        "dominant_spike_class",
+                        "dominant_heavy_spike_class",
+                        "spike_max_world_extra",
+                        "spike_world_extra_dominant_rate",
+                        "break_complete_sum",
+                        "break_inflight_race_sum",
+                        "break_dark_face_sum",
+                        "wall_ms_med",
+                        "tick_env_fly_max",
+                        "world_extra_fly_max",
+                    )
+                },
+                "soft": {
+                    k: (result.get("soft") or {}).get(k)
+                    for k in (
+                        "dominant_spike_class",
+                        "dominant_heavy_spike_class",
+                        "soft_world_extra_ok",
+                        "spike_bucket_counts",
                     )
                 },
             }

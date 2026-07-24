@@ -16,6 +16,40 @@ def median(xs: list[float]) -> float | None:
     return float(statistics.median(xs))
 
 
+def p95(xs: list[float]) -> float | None:
+    if not xs:
+        return None
+    s = sorted(xs)
+    if len(s) == 1:
+        return float(s[0])
+    idx = int(round(0.95 * (len(s) - 1)))
+    return float(s[idx])
+
+
+def spike_dominant_bucket(row: dict) -> str:
+    """Pick the largest known contributor on a spike row."""
+    candidates = {
+        "fluid_map": float(row.get("fluid_map_cpu_ms") or 0),
+        "world_extra": float(row.get("world_extra_ms") or 0),
+        "stream": float(row.get("stream_ms") or 0),
+        "relight": float(row.get("relight_drain_ms") or 0),
+        "emerge": float(row.get("mesh_emerge_ms") or 0),
+        "tick_env": float(row.get("tick_env_ms") or 0),
+        "block_input": float(row.get("block_input_ms") or 0),
+    }
+    # Prefer explicit scopes when they dominate world_extra residue.
+    best_name = "other"
+    best_val = 0.0
+    for name, val in candidates.items():
+        if val > best_val:
+            best_val = val
+            best_name = name
+    wall = float(row.get("wall_ms") or row.get("max_wall_ms") or 0)
+    if best_val <= 0.0 or (wall > 0 and best_val < 0.15 * wall):
+        return "other"
+    return best_name
+
+
 def detect_stop_segment(periods: list[dict], min_len: int = 3) -> list[dict]:
     """Last contiguous run where focus chunk does not move (player stopped)."""
     if len(periods) < min_len:
@@ -233,6 +267,58 @@ def analyze(
     ]
     spike_max_wall_holes = max(hole_spike_walls) if hole_spike_walls else 0.0
 
+    def series(rows: list[dict], key: str) -> list[float]:
+        return [float(r.get(key) or 0) for r in rows]
+
+    world_extra_fly = series(fly_segment, "world_extra_ms")
+    tick_env_fly = series(fly_segment, "tick_env_ms")
+    block_input_fly = series(fly_segment, "block_input_ms")
+    world_extra_stop = series(stop_segment, "world_extra_ms")
+    tick_env_stop = series(stop_segment, "tick_env_ms")
+    block_input_stop = series(stop_segment, "block_input_ms")
+
+    spike_buckets: dict[str, int] = {}
+    spike_world_extra_vals: list[float] = []
+    heavy_spikes = []
+    for r in spikes:
+        spike_wall = float(r.get("wall_ms") or r.get("max_wall_ms") or 0)
+        bucket = spike_dominant_bucket(r)
+        spike_buckets[bucket] = spike_buckets.get(bucket, 0) + 1
+        we = float(r.get("world_extra_ms") or 0)
+        spike_world_extra_vals.append(we)
+        if spike_wall >= 500.0:
+            heavy_spikes.append(r)
+    heavy_bucket_counts: dict[str, int] = {}
+    for r in heavy_spikes:
+        b = spike_dominant_bucket(r)
+        heavy_bucket_counts[b] = heavy_bucket_counts.get(b, 0) + 1
+    dominant_spike_class = (
+        max(spike_buckets.items(), key=lambda kv: kv[1])[0]
+        if spike_buckets
+        else "other"
+    )
+    dominant_heavy_spike_class = (
+        max(heavy_bucket_counts.items(), key=lambda kv: kv[1])[0]
+        if heavy_bucket_counts
+        else dominant_spike_class
+    )
+    spike_max_world_extra = (
+        max(spike_world_extra_vals) if spike_world_extra_vals else 0.0
+    )
+    spikes_world_extra_dominant = 0
+    for r in spikes:
+        spike_wall = float(r.get("wall_ms") or r.get("max_wall_ms") or 0)
+        we = float(r.get("world_extra_ms") or 0)
+        if spike_wall > 0 and we > 0.5 * spike_wall:
+            spikes_world_extra_dominant += 1
+    spike_world_extra_dominant_rate = (
+        spikes_world_extra_dominant / len(spikes) if spikes else 0.0
+    )
+
+    break_complete_sum = sum(int(r.get("break_complete_n") or 0) for r in rows)
+    break_race_sum = sum(int(r.get("break_inflight_race_n") or 0) for r in rows)
+    break_dark_sum = sum(int(r.get("break_dark_face_n") or 0) for r in rows)
+
     async_stuck_sec = max(stuck_async_holes_sec, mesh_async_stuck_sec)
     wall_fly_med = median(wall_fly)
     gates = {
@@ -419,6 +505,14 @@ def analyze(
         "stop_mesh_apply_stale_delta": stop_mesh_apply_stale_delta,
         "stop_mesh_discarded_late_delta": stop_mesh_discarded_late_delta,
         "stop_recovery_ok": stop_recovery_ok,
+        "dominant_spike_class": dominant_spike_class,
+        "dominant_heavy_spike_class": dominant_heavy_spike_class,
+        "spike_bucket_counts": spike_buckets,
+        "heavy_spike_bucket_counts": heavy_bucket_counts,
+        "spike_max_world_extra": spike_max_world_extra,
+        "spike_world_extra_dominant_rate": spike_world_extra_dominant_rate,
+        "soft_world_extra_ok": spike_max_world_extra <= 600.0
+        and spike_world_extra_dominant_rate <= 0.35,
     }
 
     return {
@@ -444,6 +538,25 @@ def analyze(
             "spike_count": spike_count,
             "spike_max_wall": spike_max_wall,
             "spike_max_wall_holes": spike_max_wall_holes,
+            "spike_max_world_extra": spike_max_world_extra,
+            "spike_world_extra_dominant_rate": spike_world_extra_dominant_rate,
+            "dominant_spike_class": dominant_spike_class,
+            "dominant_heavy_spike_class": dominant_heavy_spike_class,
+            "world_extra_fly_med": median(world_extra_fly),
+            "world_extra_fly_p95": p95(world_extra_fly),
+            "world_extra_fly_max": max(world_extra_fly) if world_extra_fly else None,
+            "tick_env_fly_med": median(tick_env_fly),
+            "tick_env_fly_p95": p95(tick_env_fly),
+            "tick_env_fly_max": max(tick_env_fly) if tick_env_fly else None,
+            "block_input_fly_med": median(block_input_fly),
+            "block_input_fly_p95": p95(block_input_fly),
+            "block_input_fly_max": max(block_input_fly) if block_input_fly else None,
+            "world_extra_stop_med": median(world_extra_stop),
+            "tick_env_stop_med": median(tick_env_stop),
+            "block_input_stop_med": median(block_input_stop),
+            "break_complete_sum": break_complete_sum,
+            "break_inflight_race_sum": break_race_sum,
+            "break_dark_face_sum": break_dark_sum,
             "mesh_async_med": median(mesh_async),
             "stuck_async_holes_sec": stuck_async_holes_sec,
             "cold_relight_holes_sec": cold_relight_holes_sec,

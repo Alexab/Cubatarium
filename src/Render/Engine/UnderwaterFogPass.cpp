@@ -49,9 +49,10 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   bool map_ready = surface_map.IsValid();
   if (nearby_fluid)
   {
-    map_ready = surface_map.Update(world.GetBlockWorld(), registry,
-                                   mesh_service.GetCache(), camera_block_xz,
-                                   eye_block_y, mesh_service.GetMeshRevision());
+    map_ready = surface_map.Update(
+        world.GetBlockWorld(), registry, mesh_service.GetCache(),
+        camera_block_xz, eye_block_y, mesh_service.GetMeshRevision(),
+        world.GetLastMovementFrameMs());
   }
 
   const bool partial_submerge =
@@ -127,6 +128,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   FogEnabled = 0.0f;
   FogHorizontal = 0.0f;
   FogHorizonBlend = 0.0f;
+  FogHorizonElevation = 0.35f;
   OverlayTintAlpha = 0.0f;
   OverlayBlockId = BLOCK_AIR;
 
@@ -134,17 +136,12 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   const float underwater_fog_mix = entering_underwater ? 1.0f : 0.15f;
   if (camera_submerged)
   {
+    const bool use_global_fluid_fog =
+        cutum::ShouldUseGlobalUnderwaterFog(camera_submerged, map_ready);
     if (const FluidViewProfile *fv = registry.GetFluidView(eye_fluid))
     {
       if (registry.GetRenderStyle(eye_fluid) == BlockRenderStyle::Fluid)
       {
-        if (cutum::ShouldUseGlobalUnderwaterFog(camera_submerged, map_ready))
-        {
-          FogEnabled = 1.0f;
-          FogStart = fv->FogStart;
-          FogEnd = fv->FogEnd;
-          FogMinBlend = fv->FogMinBlend;
-        }
         target_sky = fv->FogColor;
         if (entering_underwater)
         {
@@ -158,13 +155,57 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
         }
       }
     }
+    // Air distance fog masks shore / unfinished streaming edge. Per-column
+    // underwater fog still covers fluid span (uUnderwaterFog*). When the
+    // surface map is missing, global uFog* uses the air distance range so the
+    // world edge stays hidden (near fluid is thicker than the 9-block preset).
+    if (render.DistanceFog)
+    {
+      const DistanceFogParams distance_fog = ComputeDistanceFog(
+          world.GetEffectiveFogRenderDistance(), atmospheric.fog_color,
+          render.DistanceFogStartRatio, world.GetEffectiveFogStartRatio(),
+          render.DistanceFogDensity,
+          world.GetEffectiveFogEndMarginBlocks(
+              render.DistanceFogEndMarginBlocks));
+      FogStart = distance_fog.Start;
+      FogEnd = distance_fog.End;
+      FogDensity = distance_fog.Density;
+      FogMinBlend = 0.0f;
+      FogHorizontal = render.DistanceFogHorizontal ? 1.0f : 0.0f;
+      FogHorizonBlend = 1.0f;
+      if (use_global_fluid_fog)
+      {
+        FogEnabled = 1.0f;
+        AirFogEnabled = 0.0f;
+      }
+      else
+      {
+        FogEnabled = 0.0f;
+        AirFogEnabled = 1.0f;
+      }
+    }
+    else if (use_global_fluid_fog)
+    {
+      if (const FluidViewProfile *fv = registry.GetFluidView(eye_fluid))
+      {
+        if (registry.GetRenderStyle(eye_fluid) == BlockRenderStyle::Fluid)
+        {
+          FogEnabled = 1.0f;
+          FogStart = fv->FogStart;
+          FogEnd = fv->FogEnd;
+          FogMinBlend = fv->FogMinBlend;
+        }
+      }
+    }
   }
   else if (render.DistanceFog)
   {
     const DistanceFogParams distance_fog = ComputeDistanceFog(
-        world.GetEffectiveRenderDistance(), atmospheric.fog_color,
+        world.GetEffectiveFogRenderDistance(), atmospheric.fog_color,
         render.DistanceFogStartRatio, world.GetEffectiveFogStartRatio(),
-        render.DistanceFogDensity, render.DistanceFogEndMarginBlocks);
+        render.DistanceFogDensity,
+        world.GetEffectiveFogEndMarginBlocks(
+            render.DistanceFogEndMarginBlocks));
     AirFogEnabled = 1.0f;
     FogStart = distance_fog.Start;
     FogEnd = distance_fog.End;
@@ -173,6 +214,12 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
     FogHorizontal = render.DistanceFogHorizontal ? 1.0f : 0.0f;
     FogHorizonBlend = 1.0f;
     SmoothedFogColor = glm::mix(SmoothedFogColor, distance_fog.Color, 0.2f);
+    // B: blend already saturated at 1 — widen sky horizon band over unfinished
+    // water so empty columns read as fog, not clear skydome.
+    if (world.GetNearWaterUnfinishedFog())
+    {
+      FogHorizonElevation = 0.22f;
+    }
   }
 
   if (fluid.inFluid)

@@ -426,6 +426,14 @@ void UCore::LoadConfig(const std::string &config_file_name)
             "horizon_fog_celestial_tint", Render.HorizonFogCelestialTint);
         Render.DistanceFogEndMarginBlocks = r.value(
             "distance_fog_end_margin_blocks", Render.DistanceFogEndMarginBlocks);
+        Render.FogPullInEnabled =
+            r.value("fog_pull_in_enabled", Render.FogPullInEnabled);
+        Render.FogRdMin = std::max(1, r.value("fog_rd_min", Render.FogRdMin));
+        Render.FogWaterUnfinishedBoost = r.value(
+            "fog_water_unfinished_boost", Render.FogWaterUnfinishedBoost);
+        Render.FogWaterStartRatioCap = std::clamp(
+            r.value("fog_water_start_ratio_cap", Render.FogWaterStartRatioCap),
+            0.05f, 0.9f);
         Render.AltitudeUseTerrainSurface = r.value(
             "altitude_use_terrain_surface", Render.AltitudeUseTerrainSurface);
         Render.VSync = r.value("vsync", Render.VSync);
@@ -749,6 +757,10 @@ void UCore::SaveConfigFile()
   render_json["horizon_fog_celestial_tint"] = Render.HorizonFogCelestialTint;
   render_json["distance_fog_end_margin_blocks"] =
       Render.DistanceFogEndMarginBlocks;
+  render_json["fog_pull_in_enabled"] = Render.FogPullInEnabled;
+  render_json["fog_rd_min"] = Render.FogRdMin;
+  render_json["fog_water_unfinished_boost"] = Render.FogWaterUnfinishedBoost;
+  render_json["fog_water_start_ratio_cap"] = Render.FogWaterStartRatioCap;
   render_json["altitude_use_terrain_surface"] =
       Render.AltitudeUseTerrainSurface;
   render_json["vsync"] = Render.VSync;

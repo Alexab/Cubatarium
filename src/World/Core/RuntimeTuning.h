@@ -9,7 +9,7 @@ struct URuntimeTuning
 {
   int FluidSurfaceScanUp{32};
   int FluidSurfaceScanDown{64};
-  int FluidSurfaceWindowMoveThreshold{16};
+  int FluidSurfaceWindowMoveThreshold{32};
   float HillsVegetationHeightNormMax{0.82f};
   int WaterDropBoost{4};
   int FloodMaxPasses{8};
