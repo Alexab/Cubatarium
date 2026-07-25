@@ -61,6 +61,15 @@ wall often 40–55 ms). Short autofly: **sticky 9→0**. Remaining F2 fails:
 `idle_focus_dirty_debt` (fd>280, nr≈0) starves outside + drain/schedule bias —
 fd falls on short stop (`fd_delta≈-100`) but golden stop still ends ~400.
 
+### F2 cold Capture bypass (2026-07-26)
+
+Root cause: moving Capture skip at `wall≥16ms` (`4×` of 4ms budget) left
+`relight_fifo~96` / `rd≈0.02` while SoftDefer held `miss=1` for 16s+.
+Fix in `DrainRelightQueues`: pin nearest missing column + allow **one** Y-band
+Capture when SoftDefer hole and `wall<80ms` (unbounded bypass spiked wall~150).
+Golden `f2_cold_golden`: **cold 16→4**, sticky=0, wall_med≈37; F2 still needs
+cold≤3 and fd_end≤280.
+
 ### Manual follow-up (2026-07-23)
 
 | Run | Notes |
