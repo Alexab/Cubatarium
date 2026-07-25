@@ -64,6 +64,43 @@ void ApplyQuadruped(BoneSkeletonPose &pose,
   pose.bones["tail"] = tail;
 }
 
+void ApplyArachnid(BoneSkeletonPose &pose,
+                   const CreatureLocomotionFacts &facts,
+                   const CreatureDefinition &def)
+{
+  // Spider legs are long cubes along +X/−X; X-roll is nearly invisible.
+  // Z lifts the leg in the vertical plane; light Y adds stride.
+  const float legSwing = def.visual.Animation.legSwingDeg;
+  const float bodyBob = def.visual.Animation.bodyBobBlocks;
+  const float swingScale = WalkSwingScale(facts, def);
+  const float amp = legSwing * swingScale;
+
+  static constexpr const char *kLegNames[8] = {
+      "leg0", "leg1", "leg2", "leg3", "leg4", "leg5", "leg6", "leg7"};
+  for (int i = 0; i < 8; ++i)
+  {
+    // Alternating pairs: even vs odd, with mild front-to-back stagger.
+    const float phase =
+        facts.animPhase + (i % 2 == 0 ? 0.0f : kPi) +
+        static_cast<float>(i / 2) * 0.28f;
+    const float lift = std::sin(phase) * amp;
+    const float stride = std::sin(phase + kPi * 0.5f) * amp * 0.4f;
+    BoneSkeletonBonePose leg;
+    leg.rotationDeg.z = lift;
+    leg.rotationDeg.y = stride;
+    pose.bones[kLegNames[i]] = leg;
+  }
+
+  BoneSkeletonBonePose body0;
+  body0.offsetBlocks.y =
+      std::sin(facts.animPhase * 2.f) * bodyBob * swingScale;
+  pose.bones["body0"] = body0;
+
+  BoneSkeletonBonePose head;
+  head.rotationDeg.x = std::sin(facts.animPhase * 0.5f) * 4.f;
+  pose.bones["head"] = head;
+}
+
 void ApplyFox(BoneSkeletonPose &pose, const CreatureLocomotionFacts &facts,
               const CreatureDefinition &def)
 {
@@ -216,6 +253,10 @@ BoneSkeletonPoseEngine::Compute(const CreatureLocomotionFacts &facts,
     {
       ApplyFox(pose, facts, def);
     }
+    else if (profile == "arachnid")
+    {
+      ApplyArachnid(pose, facts, def);
+    }
     else if (profile == "humanoid")
     {
       ApplyHumanoid(pose, facts, def);
@@ -249,6 +290,10 @@ BoneSkeletonPoseEngine::Compute(const CreatureLocomotionFacts &facts,
     if (profile == "fox")
     {
       ApplyFox(pose, facts, def);
+    }
+    else if (profile == "arachnid")
+    {
+      ApplyArachnid(pose, facts, def);
     }
     else if (profile == "chicken")
     {
