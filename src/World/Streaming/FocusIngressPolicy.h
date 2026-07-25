@@ -51,13 +51,15 @@ inline FocusIngressDecision EvaluateFocusIngress(const FocusIngressInput &in)
   // idle Streaming floors elsewhere still catch up SoftDefer debt.
   if (cold_pool)
   {
+    // SoftDefer cruise: pending↑ with mesh_async≈0 needs a slightly higher
+    // Capture floor so cold_relight_holes_sec does not plateaus for 16s+.
     if (in.frame_ms <= 28.0)
     {
-      out.relight_floor = in.pending_focus > 8 ? 4 : 2;
+      out.relight_floor = in.pending_focus > 8 ? 6 : 3;
     }
     else
     {
-      out.relight_floor = 1;
+      out.relight_floor = 2;
     }
   }
   else if (in.mesh_async < 8 && in.frame_ms <= 24.0)

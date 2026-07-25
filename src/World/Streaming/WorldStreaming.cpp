@@ -1075,8 +1075,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     const int hard_cap =
         moving_now
-            ? ((missing_focus_mesh || underfeet_pending_light)
-                   ? (frame_ms > kBadFrameMs ? 1 : 2)
+            ? ((missing_focus_mesh && pending_light_focus_n > 0 &&
+                mesh_async_n < 4 && frame_ms <= kBadFrameMs)
+                   ? 3
                    : (frame_ms > kBadFrameMs ? 1 : 2))
             : (frame_ms > kBadFrameMs ? 2 : 4);
     bg_budget = std::min(bg_budget, hard_cap);

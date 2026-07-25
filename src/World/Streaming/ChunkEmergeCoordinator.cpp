@@ -303,17 +303,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         }
       }
       world.ClearPendingLightAfterMeshCommitted(12);
-      // Sticky remesh: Dirty→async only (Immediate was mesh_emerge hitch).
-      if (black_sticky > 0 && last_frame_ms <= 16.0)
-      {
-        world.SyncIdleFocusGreedyRemesh(1);
-      }
       idle_visual_drain_cd =
           pending_focus_count > 8 ? 1 : (pending_focus_count > 0 ? 2 : 8);
     }
     else if (idle_visual_drain_cd > 0)
     {
       --idle_visual_drain_cd;
+    }
+    // Sticky remesh outside the wall≤28 visual-drain gate: stop-tail wall is
+    // often 40–55ms (F2 sticky grew while SyncIdle never ran). MarkDirty only.
+    if (black_sticky > 0 && last_frame_ms <= 55.0)
+    {
+      const int sticky_n =
+          black_sticky > 4 ? 3 : (black_sticky > 1 ? 2 : 1);
+      world.SyncIdleFocusGreedyRemesh(sticky_n);
     }
   }
   else
@@ -1265,11 +1268,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       mesh_schedule = std::min(mesh_schedule, 4);
     }
   }
-  else if (idle_recovery && black_sticky > 0 && last_frame_ms <= 16.0)
+  else if (idle_recovery && black_sticky > 0 && last_frame_ms <= 40.0)
   {
-    sync_cap = std::max(sync_cap, 1);
-    mesh_drain = std::max(mesh_drain, 12);
-    mesh_schedule = std::max(mesh_schedule, 10);
+    sync_cap = std::max(sync_cap, black_sticky > 4 ? 2 : 1);
+    mesh_drain = std::max(mesh_drain, black_sticky > 4 ? 18 : 12);
+    mesh_schedule = std::max(mesh_schedule, black_sticky > 4 ? 14 : 10);
   }
   else if (near_mesh_backlog)
   {
