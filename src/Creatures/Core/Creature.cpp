@@ -271,6 +271,7 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
 
   glm::vec3 eye = GetLocomotionEye();
   CreatureInput verticalInput;
+  verticalInput.jumpHeld = Intent.wantJump;
   ApplyCreatureMotorStep(world, eye, Locomotion, verticalInput, wish, speed, dt,
                          Id, world.IsStepUpEnabled());
   SyncFeetFromLocomotion(world, eye);
@@ -281,7 +282,8 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
     if (world.DepenetrateBlockBodyXZ(BodyOrigin, size))
     {
       eye = GetLocomotionEye();
-      Locomotion.SyncFeetAnchorFromView(BodyOrigin.y, Locomotion.IsOnGround());
+      // Keep feet anchored after XZ nudge so next-frame step-up stays eligible.
+      Locomotion.SyncFeetAnchorFromView(BodyOrigin.y, true);
     }
   }
 
@@ -344,7 +346,7 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
         BodyOrigin = bodyOriginBefore;
       }
       eye = GetLocomotionEye();
-      Locomotion.SyncFeetAnchorFromView(BodyOrigin.y, Locomotion.IsOnGround());
+      Locomotion.SyncFeetAnchorFromView(BodyOrigin.y, true);
       SyncBoundsFromStance();
     }
   }

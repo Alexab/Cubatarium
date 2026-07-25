@@ -142,16 +142,21 @@ bool CanCreatureStep(const UWorld &world, const glm::vec3 &from_body,
   {
     return false;
   }
+  // Climb-through only — do not treat the destination ground cell as headroom.
   if (dy > 0.01f)
   {
     const int to_gx = WorldCoordToBlockIndex(to_body.x);
     const int to_gz = WorldCoordToBlockIndex(to_body.z);
     const int from_ground = WorldCoordToBlockIndex(from_body.y - 0.05f);
-    const glm::ivec3 head_cell(to_gx, from_ground + 1, to_gz);
-    if (world.GetBlockRegistry().BlocksMovement(
-            world.GetBlockWorld().GetBlock(head_cell)))
+    const int to_ground = WorldCoordToBlockIndex(to_body.y - 0.05f);
+    for (int y = from_ground + 1; y < to_ground; ++y)
     {
-      return false;
+      const glm::ivec3 climb_cell(to_gx, y, to_gz);
+      if (world.GetBlockRegistry().BlocksMovement(
+              world.GetBlockWorld().GetBlock(climb_cell)))
+      {
+        return false;
+      }
     }
   }
   return true;

@@ -14,14 +14,14 @@ float WalkSwingScale(const CreatureLocomotionFacts &facts,
                      const CreatureDefinition &def)
 {
   const float walkSpeed = std::max(def.locomotion.walkSpeed, 0.01f);
-  float speed = facts.horizontalSpeed;
-  if (speed < 0.05f && (facts.state == LocomotionState::Walk ||
-                         facts.state == LocomotionState::Run))
+  if (facts.horizontalSpeed < 0.05f)
   {
-    speed = walkSpeed * 0.4f;
+    return 0.0f;
   }
-  float swingScale = std::clamp(speed / walkSpeed, 0.5f, 1.5f);
-  if (facts.state == LocomotionState::Run && speed > walkSpeed * 1.2f)
+  float swingScale =
+      std::clamp(facts.horizontalSpeed / walkSpeed, 0.5f, 1.5f);
+  if (facts.state == LocomotionState::Run &&
+      facts.horizontalSpeed > walkSpeed * 1.2f)
   {
     swingScale *= def.visual.Animation.runSpeedMultiplier;
   }

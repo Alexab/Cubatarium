@@ -171,6 +171,55 @@ int main()
   Expect(partial.waypoints.size() >= 2, "partial path needs usable waypoints");
   Expect(partial.failReason == "partial", "partial reason tag");
 
+  // 1-block climb out of a pit: climb-through must not treat landing solid as
+  // headroom (regression for zombie/skeleton stuck in 1-deep holes).
+  class USteppedNavigationMock : public cutum::IUWorldNavigation
+  {
+  public:
+    bool IsTerrestrialStandNode(const cutum::NavigationStandNode &node,
+                                float /*body_height*/) const override
+    {
+      // Pit floor at y=63 for x<=0; plateau at y=64 for x>=1.
+      if (node.x <= 0)
+      {
+        return node.ground_y == 63;
+      }
+      return node.ground_y == 64;
+    }
+    bool CanStepTerrestrial(const cutum::NavigationStandNode &from,
+                            const cutum::NavigationStandNode &to,
+                            float max_jump, float max_drop,
+                            float body_height) const override
+    {
+      const int dx = std::abs(to.x - from.x);
+      const int dz = std::abs(to.z - from.z);
+      if (dx + dz != 1 || !IsTerrestrialStandNode(to, body_height))
+      {
+        return false;
+      }
+      const float dy = static_cast<float>(to.ground_y - from.ground_y);
+      if (dy > max_jump + 0.01f || dy < -max_drop - 0.01f)
+      {
+        return false;
+      }
+      // Correct climb-through: open cells strictly below landing ground_y.
+      for (int y = from.ground_y + 1; y < to.ground_y; ++y)
+      {
+        (void)y;
+        return false; // no mid-air solids in this mock
+      }
+      return true;
+    }
+  };
+  cutum::UNavigationPathBudget::BeginActivityTick();
+  USteppedNavigationMock stepped;
+  const cutum::NavigationPath climb_path =
+      cutum::UNavigationPathfinder::FindTerrestrialPath(
+          stepped, glm::vec3(0.0f, 63.5f, 0.0f), glm::vec3(2.0f, 64.5f, 0.0f),
+          query);
+  Expect(climb_path.valid, "path should climb one block out of a pit");
+  Expect(!climb_path.partial, "reachable plateau should not be partial");
+
   // Global expand budget: N parallel searches stay within cap.
   cutum::UNavigationPathBudget::SetExpandsPerTick(12);
   cutum::UNavigationPathBudget::BeginActivityTick();

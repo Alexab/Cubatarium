@@ -62,11 +62,12 @@ CreatureMotorHorizontalResult ApplyCreatureMotorHorizontal(
     newPos = world.ResolveMovement(startEye, shift, cap, skipCreatureId);
   }
 
+  // NPCs often lose FeetAnchored/OnGround briefly after habitat scrape; still
+  // allow 1-block step-up when column support exists under the capsule.
   const bool grounded =
       world.HasGroundSupport(startEye, cap) || locomotion.IsOnGround();
   bool stepped = false;
-  if (stepUpEnabled && !fluid.inFluid && grounded && locomotion.IsOnGround() &&
-      locomotion.IsFeetAnchored() && !jumpHeld &&
+  if (stepUpEnabled && !fluid.inFluid && grounded && !jumpHeld &&
       locomotion.GetVerticalVelocity() <= 0.05f &&
       glm::dot(wish, wish) > 1e-10f)
   {

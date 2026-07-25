@@ -231,7 +231,10 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
   blackboard.targetId = controlled->Id;
   blackboard.lastSeenPos = controlled_body;
 
-  if (dist <= snapshot->behavior.attackRange)
+  const float dy = controlled_body.y - view->bodyOrigin.y;
+  // Attack only when close in XZ AND within ~1 block vertically; otherwise keep
+  // chasing so mobs climb out of pits / up stairs toward the player.
+  if (dist <= snapshot->behavior.attackRange && std::abs(dy) <= 1.15f)
   {
     blackboard.state = CreatureFsmState::Attack;
     intent.moveDirWorld = glm::vec3(0.0f);

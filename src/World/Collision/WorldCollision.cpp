@@ -253,24 +253,56 @@ bool FindSteppableLedge(const UWorldCollision &collision,
                         const glm::vec3 &dir, const PlayerCapsule &cap,
                         CreatureId skipCreatureId, glm::ivec3 &outStepCell)
 {
-  // Axis-aligned step only: pick the dominant horizontal axis so corner
-  // approaches do not diagonal-jump onto the adjacent block.
-  int dx = 0;
-  int dz = 0;
+  (void)skipCreatureId;
+  // Axis-aligned step: try dominant horizontal axis first, then secondary so
+  // near-corner approaches still climb without diagonal jumps.
   const float ax = std::abs(dir.x);
   const float az = std::abs(dir.z);
+  int tryDx[2] = {0, 0};
+  int tryDz[2] = {0, 0};
+  int tryCount = 0;
+  auto pushAxis = [&](int dx, int dz) {
+    if (dx == 0 && dz == 0)
+    {
+      return;
+    }
+    for (int i = 0; i < tryCount; ++i)
+    {
+      if (tryDx[i] == dx && tryDz[i] == dz)
+      {
+        return;
+      }
+    }
+    if (tryCount < 2)
+    {
+      tryDx[tryCount] = dx;
+      tryDz[tryCount] = dz;
+      ++tryCount;
+    }
+  };
   if (ax >= az)
   {
     if (ax > 0.25f)
     {
-      dx = dir.x > 0.0f ? 1 : -1;
+      pushAxis(dir.x > 0.0f ? 1 : -1, 0);
+    }
+    if (az > 0.25f)
+    {
+      pushAxis(0, dir.z > 0.0f ? 1 : -1);
     }
   }
-  else if (az > 0.25f)
+  else
   {
-    dz = dir.z > 0.0f ? 1 : -1;
+    if (az > 0.25f)
+    {
+      pushAxis(0, dir.z > 0.0f ? 1 : -1);
+    }
+    if (ax > 0.25f)
+    {
+      pushAxis(dir.x > 0.0f ? 1 : -1, 0);
+    }
   }
-  if (dx == 0 && dz == 0)
+  if (tryCount == 0)
   {
     return false;
   }
@@ -282,27 +314,30 @@ bool FindSteppableLedge(const UWorldCollision &collision,
   {
     return false;
   }
-  const glm::ivec3 riserCell(standCell.x + dx, supportY, standCell.z + dz);
-  if (!registry.BlocksMovement(blockWorld.GetBlock(riserCell)))
+  for (int i = 0; i < tryCount; ++i)
   {
-    return false;
+    const int dx = tryDx[i];
+    const int dz = tryDz[i];
+    const glm::ivec3 riserCell(standCell.x + dx, supportY, standCell.z + dz);
+    if (!registry.BlocksMovement(blockWorld.GetBlock(riserCell)))
+    {
+      continue;
+    }
+    const glm::ivec3 stepCell(standCell.x + dx, supportY + 1, standCell.z + dz);
+    if (!collision.IsValidStandCell(stepCell, cap))
+    {
+      continue;
+    }
+    const float stepFeetY = BlockTopY(stepCell.y);
+    const float rise = stepFeetY - feetY;
+    if (rise < 0.45f || rise > 1.05f)
+    {
+      continue;
+    }
+    outStepCell = stepCell;
+    return true;
   }
-  const glm::ivec3 stepCell(standCell.x + dx, supportY + 1, standCell.z + dz);
-  if (!collision.IsValidStandCell(stepCell, cap))
-  {
-    return false;
-  }
-  const float stepFeetY = BlockTopY(stepCell.y);
-  const float rise = stepFeetY - feetY;
-  if (rise < 0.45f || rise > 1.05f)
-  {
-    return false;
-  }
-  // IsValidStandCell already verified the stand volume via CollisionVolumeAtFeet.
-  // Do not re-check through eye→feet (BlockTopY+eyeHeight-eyeHeight): float
-  // round-trip can sit slightly inside the floor and false-reject the ledge.
-  outStepCell = stepCell;
-  return true;
+  return false;
 }
 
 float DistanceToStepRiser(const glm::vec3 &eyePos, const glm::ivec3 &stepCell,
