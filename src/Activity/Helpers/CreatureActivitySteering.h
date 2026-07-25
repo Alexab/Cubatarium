@@ -18,6 +18,15 @@ bool PickLocomotionDirection(IUWorldPerception &perception,
                              const glm::vec3 &bounds_size,
                              glm::vec3 &out_direction);
 
+/// True when a short forward probe along `dir` is volume+habitat clear.
+bool ProbeLocomotionDirectionClear(IUWorldPerception &perception,
+                                   CreatureHabitat habitat,
+                                   const glm::vec3 &body_origin,
+                                   const glm::vec3 &dir,
+                                   const glm::vec3 &bounds_size,
+                                   CreatureId skip_id,
+                                   float probe_distance = 1.25f);
+
 glm::vec3 ComputeSeparationDirection(
     const glm::vec3 &self_origin, const glm::vec3 &bounds_size,
     const std::vector<CreatureNeighborView> &neighbors, float min_distance);

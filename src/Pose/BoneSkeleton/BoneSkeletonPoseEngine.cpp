@@ -69,25 +69,38 @@ void ApplyArachnid(BoneSkeletonPose &pose,
                    const CreatureDefinition &def)
 {
   // Spider legs are long cubes along +X/−X; X-roll is nearly invisible.
-  // Z lifts the leg in the vertical plane; light Y adds stride.
+  // Z lifts in the vertical plane; Y adds stride. Right-side bones are mirrored,
+  // so Z/Y signs flip for odd indices or same-phase groups look synchronized.
   const float legSwing = def.visual.Animation.legSwingDeg;
   const float bodyBob = def.visual.Animation.bodyBobBlocks;
-  const float swingScale = WalkSwingScale(facts, def);
+  const float speed = std::max(facts.horizontalSpeed, 0.0f);
+  if (speed < 0.05f)
+  {
+    BoneSkeletonBonePose head;
+    head.rotationDeg.x = std::sin(facts.animPhase * 0.35f) * 3.f;
+    pose.bones["head"] = head;
+    return;
+  }
+
+  const float swingScale =
+      std::clamp(speed / std::max(def.locomotion.walkSpeed, 0.01f), 0.35f, 1.5f);
   const float amp = legSwing * swingScale;
 
   static constexpr const char *kLegNames[8] = {
       "leg0", "leg1", "leg2", "leg3", "leg4", "leg5", "leg6", "leg7"};
+  // Tetrapod alternating gait (Minecraft-style): A={0,3,4,7} vs B={1,2,5,6}.
+  static constexpr int kPhaseGroup[8] = {0, 1, 1, 0, 0, 1, 1, 0};
   for (int i = 0; i < 8; ++i)
   {
-    // Alternating pairs: even vs odd, with mild front-to-back stagger.
     const float phase =
-        facts.animPhase + (i % 2 == 0 ? 0.0f : kPi) +
-        static_cast<float>(i / 2) * 0.28f;
+        facts.animPhase + (kPhaseGroup[i] != 0 ? kPi : 0.0f);
     const float lift = std::sin(phase) * amp;
-    const float stride = std::sin(phase + kPi * 0.5f) * amp * 0.4f;
+    const float stride = std::cos(phase) * amp * 0.55f;
+    // even = left (−X), odd = right (+X, mirrored): flip so lift reads as up.
+    const float side = (i % 2 == 0) ? 1.0f : -1.0f;
     BoneSkeletonBonePose leg;
-    leg.rotationDeg.z = lift;
-    leg.rotationDeg.y = stride;
+    leg.rotationDeg.z = lift * side;
+    leg.rotationDeg.y = stride * side;
     pose.bones[kLegNames[i]] = leg;
   }
 

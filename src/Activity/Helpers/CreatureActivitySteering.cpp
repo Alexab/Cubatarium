@@ -29,6 +29,22 @@ bool ProbeLocomotionClear(IUWorldPerception &perception, CreatureHabitat habitat
 
 } // namespace
 
+bool ProbeLocomotionDirectionClear(IUWorldPerception &perception,
+                                   CreatureHabitat habitat,
+                                   const glm::vec3 &body_origin,
+                                   const glm::vec3 &dir,
+                                   const glm::vec3 &bounds_size,
+                                   CreatureId skip_id, float probe_distance)
+{
+  if (glm::length(dir) < 1e-4f)
+  {
+    return false;
+  }
+  const glm::vec3 normalized = glm::normalize(dir);
+  const glm::vec3 probe = body_origin + normalized * probe_distance;
+  return ProbeLocomotionClear(perception, habitat, probe, bounds_size, skip_id);
+}
+
 glm::vec3 RandomLocomotionDirection(CreatureHabitat habitat)
 {
   const float angle = static_cast<float>(std::rand() % 628) / 100.0f;

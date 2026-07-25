@@ -220,10 +220,29 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
   const char *goal_source = "chase_path";
   if (!steer.has_path || glm::length(move_dir) < 1e-4f)
   {
-    // Soft path_fail: lateral/repick instead of wall-bashing direct XZ.
-    goal_source = "chase_path_fail";
-    if (!PickLocomotionDirection(perception, *view, snapshot->habitat,
-                                 snapshot->boundsSize, move_dir))
+    // Pathfinding currently often fails (0 path_ok in 2026-07-25 logs). Prefer
+    // probed approach to player; never freeze in idle when a chase target exists.
+    const glm::vec3 to_player =
+        XzDirectionFromTo(view->bodyOrigin, controlled_body);
+    if (glm::length(to_player) > 1e-4f &&
+        ProbeLocomotionDirectionClear(perception, snapshot->habitat,
+                                      view->bodyOrigin, to_player,
+                                      snapshot->boundsSize, self_id))
+    {
+      move_dir = to_player;
+      goal_source = "chase_direct";
+    }
+    else if (PickLocomotionDirection(perception, *view, snapshot->habitat,
+                                     snapshot->boundsSize, move_dir))
+    {
+      goal_source = "chase_path_fail_slide";
+    }
+    else if (glm::length(to_player) > 1e-4f)
+    {
+      move_dir = to_player;
+      goal_source = "chase_direct_soft";
+    }
+    else
     {
       intent.moveDirWorld = glm::vec3(0.0f);
       intent.moveSpeed = 0.0f;
@@ -233,7 +252,6 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
                         "chase_path_fail_idle");
       return;
     }
-    goal_source = "chase_path_fail_slide";
   }
   intent.moveDirWorld = move_dir;
   intent.moveSpeed = snapshot->behavior.moveSpeed;
