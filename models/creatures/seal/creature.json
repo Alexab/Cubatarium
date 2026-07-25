@@ -29,9 +29,9 @@
   },
   "eye_height": 0.4,
   "habitat": "amphibious",
-  "locomotion_archetype": "aquatic",
+  "locomotion_archetype": "terrestrial_quadruped",
   "locomotion": {
-    "can_fly": true,
+    "can_fly": false,
     "can_crouch": false,
     "can_jump": true,
     "jump_height": 1.0,

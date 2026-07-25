@@ -35,11 +35,11 @@
     "can_crouch": false,
     "can_jump": true,
     "jump_height": 1.0,
-    "walk_speed": 2.0
+    "walk_speed": 1.5
   },
   "behavior": "wander",
   "behavior_params": {
-    "move_speed": 2.0,
+    "move_speed": 1.5,
     "wander_interval_min": 2.0,
     "wander_interval_max": 4.0
   },

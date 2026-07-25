@@ -116,6 +116,23 @@ void UCreature::RebuildLocomotionFacts(
   {
     ApplyEnvironmentLocomotionFacts(*world, BodyOrigin,
                                     Bounds.profile.restSizeBlocks, raw);
+    // Amphibious: land uses terrestrial archetype; in fluid present as aquatic.
+    if (raw.inFluid)
+    {
+      if (const CreatureDefinition *def = world->GetCreatureDefinition(TypeId))
+      {
+        if (def->habitat == CreatureHabitat::Amphibious)
+        {
+          raw.archetype = LocomotionArchetype::Aquatic;
+          if (input.dt > 1e-6f)
+          {
+            const glm::vec3 delta =
+                input.bodyOriginAfter - input.bodyOriginBefore;
+            raw.horizontalSpeed = glm::length(delta) / input.dt;
+          }
+        }
+      }
+    }
   }
   LocomotionFacts = raw;
   CreatureLocomotionRawInput deriveInput = input;
