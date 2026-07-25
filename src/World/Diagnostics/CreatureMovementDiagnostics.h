@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <filesystem>
-#include <optional>
 #include <string>
 
 #include <glm/glm.hpp>
@@ -38,7 +37,11 @@ public:
   static void SetEnabled(bool enabled);
   static bool IsEnabled();
 
-  /// 0 = record all creatures when enabled.
+  /// Verbose: record intent/exec_frame streams (still focus-filtered when set).
+  static void SetVerbose(bool verbose);
+  static bool IsVerbose();
+
+  /// 0 = important events for all; intent samples only when focus set (or verbose).
   static void SetFocusId(uint64_t creature_id);
   static uint64_t GetFocusId();
 
@@ -50,10 +53,13 @@ public:
   static int GetSampleCount();
   static int GetRingSize();
 
-  /// Appends JSONL when enabled and focus matches. Returns sample index or -1.
+  /// Records when enabled and policy allows. Returns sample index or -1.
   static int Record(const CreatureMovementDiagRecord &record);
 
-  /// Writes in-memory ring to a dump file (default: creature_movement_diag.dump.jsonl).
+  /// Flush pending JSONL batch to disk.
+  static void Flush();
+
+  /// Writes in-memory ring to a dump file.
   static bool DumpRing(const std::filesystem::path &path = {});
 };
 

@@ -38,6 +38,7 @@ int main()
   UCreatureMovementDiagnostics::SetLogPathOverride(log_path);
   UCreatureMovementDiagnostics::ClearLog();
   UCreatureMovementDiagnostics::SetEnabled(false);
+  UCreatureMovementDiagnostics::SetVerbose(false);
   UCreatureMovementDiagnostics::SetFocusId(0);
 
   CreatureMovementDiagRecord sample;
@@ -55,6 +56,9 @@ int main()
          "disabled should not record");
 
   UCreatureMovementDiagnostics::SetEnabled(true);
+  Expect(UCreatureMovementDiagnostics::Record(sample) < 0,
+         "intent without focus should not record by default");
+
   UCreatureMovementDiagnostics::SetFocusId(99);
   Expect(UCreatureMovementDiagnostics::Record(sample) < 0,
          "focus mismatch should not record");
@@ -66,6 +70,7 @@ int main()
          "sample count should be 1");
   Expect(UCreatureMovementDiagnostics::GetRingSize() == 1, "ring size should be 1");
 
+  UCreatureMovementDiagnostics::Flush();
   std::ifstream in(log_path);
   Expect(in.is_open(), "log file should exist");
   std::string line;
@@ -81,6 +86,15 @@ int main()
   Expect(parsed.value("activityTick", false), "activityTick key");
   in.close();
 
+  // Important events record without focus and flush immediately.
+  UCreatureMovementDiagnostics::SetFocusId(0);
+  CreatureMovementDiagRecord fail;
+  fail.event = "path_fail";
+  fail.creatureId = 7;
+  fail.reason = "no_path";
+  Expect(UCreatureMovementDiagnostics::Record(fail) > 0,
+         "path_fail should record without focus");
+
   const auto dump_path =
       std::filesystem::temp_directory_path() / "creature_movement_diag_test.dump.jsonl";
   Expect(UCreatureMovementDiagnostics::DumpRing(dump_path), "dump should succeed");
@@ -90,6 +104,7 @@ int main()
   Expect(!std::filesystem::exists(log_path), "log file removed");
 
   UCreatureMovementDiagnostics::SetEnabled(false);
+  UCreatureMovementDiagnostics::SetVerbose(false);
   UCreatureMovementDiagnostics::ClearLogPathOverride();
   std::filesystem::remove(dump_path, ec);
 

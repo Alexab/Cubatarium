@@ -739,8 +739,8 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
         {
           return CommandResult{
               false,
-              "Usage: creature_diag on|off|clear|path|dump|focus "
-              "<id|nearest|clear>"};
+              "Usage: creature_diag on|off|clear|path|dump|flush|verbose "
+              "on|off|focus <id|nearest|clear>"};
         }
         const std::string sub = Lower(args[1]);
         if (sub == "on")
@@ -753,10 +753,35 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
           UCreatureMovementDiagnostics::SetEnabled(false);
           return CommandResult{true, "creature_movement_diag off"};
         }
+        if (sub == "verbose")
+        {
+          if (args.size() < 3)
+          {
+            return CommandResult{
+                false, "Usage: creature_diag verbose on|off"};
+          }
+          const std::string mode = Lower(args[2]);
+          if (mode == "on" || mode == "1" || mode == "true")
+          {
+            UCreatureMovementDiagnostics::SetVerbose(true);
+            return CommandResult{true, "creature_diag verbose on"};
+          }
+          if (mode == "off" || mode == "0" || mode == "false")
+          {
+            UCreatureMovementDiagnostics::SetVerbose(false);
+            return CommandResult{true, "creature_diag verbose off"};
+          }
+          return CommandResult{false, "Usage: creature_diag verbose on|off"};
+        }
         if (sub == "clear")
         {
           UCreatureMovementDiagnostics::ClearLog();
           return CommandResult{true, "creature_movement_diag.jsonl cleared"};
+        }
+        if (sub == "flush")
+        {
+          UCreatureMovementDiagnostics::Flush();
+          return CommandResult{true, "creature_movement_diag flushed"};
         }
         if (sub == "path")
         {
@@ -839,8 +864,8 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
         }
         return CommandResult{
             false,
-            "Usage: creature_diag on|off|clear|path|dump|focus "
-            "<id|nearest|clear>"};
+            "Usage: creature_diag on|off|clear|path|dump|flush|verbose "
+            "on|off|focus <id|nearest|clear>"};
       });
 }
 
