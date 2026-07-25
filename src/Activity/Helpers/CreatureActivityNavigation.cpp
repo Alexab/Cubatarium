@@ -10,7 +10,8 @@ namespace cutum
 CreatureNavigationSteerResult SteerCreatureAlongPath(
     CreatureNavigationState &state, const UWorld &world,
     const glm::vec3 &body_origin, const glm::vec3 &goal_body,
-    const NavigationQuery &query, float dt, float arrive_radius)
+    const NavigationQuery &query, float dt, float arrive_radius,
+    uint64_t creature_id, const std::string &type_id)
 {
   CreatureNavigationSteerResult result;
   state.path_recalc_timer -= dt;
@@ -28,11 +29,24 @@ CreatureNavigationSteerResult SteerCreatureAlongPath(
     {
       CreatureMovementDiagRecord rec;
       rec.event = state.path.valid ? "path_ok" : "path_fail";
+      rec.creatureId = creature_id;
+      rec.typeId = type_id;
       rec.body = body_origin;
       rec.pathValid = state.path.valid;
       rec.waypointCount = static_cast<int>(state.path.waypoints.size());
       rec.goalSource = "body";
-      rec.reason = state.path.valid ? "recalc_ok" : "recalc_fail";
+      if (state.path.valid)
+      {
+        rec.reason = "recalc_ok";
+      }
+      else if (!state.path.failReason.empty())
+      {
+        rec.reason = state.path.failReason;
+      }
+      else
+      {
+        rec.reason = "recalc_fail";
+      }
       rec.activityTick = true;
       UCreatureMovementDiagnostics::Record(rec);
     }

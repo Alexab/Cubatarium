@@ -127,7 +127,7 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
     query.max_jump = snapshot->locomotion.jumpHeightBlocks;
     const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
         blackboard.navigation, sink.GetWorld(), view->bodyOrigin, flee_goal,
-        query, dt);
+        query, dt, 0.45f, self_id, view->typeId);
     glm::vec3 move_dir = steer.move_dir;
     if (!steer.has_path || glm::length(move_dir) < 1e-4f)
     {
@@ -215,7 +215,7 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
   query.max_jump = snapshot->locomotion.jumpHeightBlocks;
   const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
       blackboard.navigation, sink.GetWorld(), view->bodyOrigin, controlled_body,
-      query, dt);
+      query, dt, 0.45f, self_id, view->typeId);
   glm::vec3 move_dir = steer.move_dir;
   const char *goal_source = "chase_path";
   if (!steer.has_path || glm::length(move_dir) < 1e-4f)

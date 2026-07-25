@@ -5,7 +5,9 @@
 #include "Navigation/NavigationTypes.h"
 #include "World/Core/World.h"
 #include <cmath>
+#include <cstdint>
 #include <glm/glm.hpp>
+#include <string>
 
 namespace cutum
 {
@@ -54,7 +56,8 @@ inline glm::vec3 XzDirectionFromTo(const glm::vec3 &from, const glm::vec3 &to)
 CreatureNavigationSteerResult SteerCreatureAlongPath(
     CreatureNavigationState &state, const UWorld &world,
     const glm::vec3 &body_origin, const glm::vec3 &goal_body,
-    const NavigationQuery &query, float dt, float arrive_radius = 0.45f);
+    const NavigationQuery &query, float dt, float arrive_radius = 0.45f,
+    uint64_t creature_id = 0, const std::string &type_id = {});
 
 } // namespace cutum
 

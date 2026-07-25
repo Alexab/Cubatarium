@@ -582,16 +582,22 @@ bool HabitatAllowsMovementAt(const UWorld &world, CreatureHabitat habitat,
       }
       feet_origin.y = *feet_y;
     }
-    const UWorldNavigationQueries navigation(world);
-    const NavigationStandNode node =
-        NavigationStandNodeFromBody(feet_origin);
-    if (!navigation.IsTerrestrialStandNode(node, sizeBlocks.y))
+    // Post-motor / wander gate: actual body AABB + ground support.
+    // Do NOT use IsTerrestrialStandNode here (cell-center A* veto) — that
+    // rejected valid motor steps (zombie habitat_reject+zero_travel storm).
+    const CollisionVolume vol =
+        CollisionVolumeFromBody(feet_origin, sizeBlocks);
+    if (world.CheckBlockCollisionVolume(vol))
+    {
+      return false;
+    }
+    if (!world.HasGroundSupportVolume(vol, BoundsFeetY(feet_origin)))
     {
       return false;
     }
     const EnvironmentSample env =
         ProbeEnvironmentAt(world, feet_origin, sizeBlocks);
-    return env.onSolidGround && !env.inFluid;
+    return !env.inFluid;
   }
   if (habitat == CreatureHabitat::Amphibious)
   {

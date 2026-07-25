@@ -70,6 +70,29 @@ glm::vec3 BodyOriginFromNode(const NavigationStandNode &node)
                    static_cast<float>(node.z));
 }
 
+NavigationStandNode SnapStandNode(const IUWorldNavigation &navigation,
+                                  NavigationStandNode node, float body_height)
+{
+  if (navigation.IsTerrestrialStandNode(node, body_height))
+  {
+    return node;
+  }
+  const int base_y = node.ground_y;
+  for (int dy = 1; dy <= 2; ++dy)
+  {
+    for (const int sign : {-1, 1})
+    {
+      NavigationStandNode trial = node;
+      trial.ground_y = base_y + sign * dy;
+      if (navigation.IsTerrestrialStandNode(trial, body_height))
+      {
+        return trial;
+      }
+    }
+  }
+  return node;
+}
+
 float Heuristic(const NodeKey &a, const NodeKey &b)
 {
   const float dx = static_cast<float>(a.x - b.x);
@@ -85,11 +108,20 @@ NavigationPath UNavigationPathfinder::FindTerrestrialPath(
     const glm::vec3 &goal_body, const NavigationQuery &query)
 {
   NavigationPath result;
-  const NavigationStandNode start = StandNodeFromBody(start_body);
-  const NavigationStandNode goal = StandNodeFromBody(goal_body);
-  if (!navigation.IsTerrestrialStandNode(start, query.body_height) ||
-      !navigation.IsTerrestrialStandNode(goal, query.body_height))
+  NavigationStandNode start =
+      SnapStandNode(navigation, StandNodeFromBody(start_body),
+                    query.body_height);
+  NavigationStandNode goal =
+      SnapStandNode(navigation, StandNodeFromBody(goal_body),
+                    query.body_height);
+  if (!navigation.IsTerrestrialStandNode(start, query.body_height))
   {
+    result.failReason = "start_invalid";
+    return result;
+  }
+  if (!navigation.IsTerrestrialStandNode(goal, query.body_height))
+  {
+    result.failReason = "goal_invalid";
     return result;
   }
 
@@ -209,6 +241,7 @@ NavigationPath UNavigationPathfinder::FindTerrestrialPath(
     }
   }
 
+  result.failReason = "search_exhausted";
   return result;
 }
 
