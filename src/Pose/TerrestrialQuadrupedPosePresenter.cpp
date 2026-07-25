@@ -23,8 +23,12 @@ float WalkSwingScale(const CreatureLocomotionFacts &facts,
                      const CreatureDefinition &def)
 {
   const float walkSpeed = std::max(def.locomotion.walkSpeed, 0.01f);
+  if (facts.horizontalSpeed < 0.05f)
+  {
+    return 0.0f;
+  }
   float swingScale =
-      std::clamp(facts.horizontalSpeed / walkSpeed, 0.5f, 1.5f);
+      std::clamp(facts.horizontalSpeed / walkSpeed, 0.35f, 1.5f);
   if (facts.state == LocomotionState::Run &&
       facts.horizontalSpeed > walkSpeed * 1.2f)
   {
