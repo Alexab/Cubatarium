@@ -13,6 +13,7 @@
 #include "Creatures/Visual/Gltf/CreatureGltfCache.h"
 #include "Creatures/Visual/Gltf/CreatureGltfModelSpace.h"
 #include "Render/Engine/GeometryEngine.h"
+#include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include <memory>
@@ -84,7 +85,28 @@ void UCreatureVisualGltf::UpdatePose(const UCreature &creature,
       ActiveClipName = animName;
       AnimTimeSec = 0.f;
     }
-    AnimTimeSec += dt * speed;
+    float playback = speed;
+    if (facts.state == LocomotionState::Walk ||
+        facts.state == LocomotionState::Run ||
+        facts.state == LocomotionState::Slither ||
+        facts.state == LocomotionState::Swim)
+    {
+      // Full-rate walk while scraping looks like L/R rocking around the body
+      // (treeman/dmobs). Gate clip speed by actual travel vs walk_speed.
+      const float walkRef = std::max(animDef.locomotion.walkSpeed, 0.05f);
+      float travelScale =
+          std::clamp(facts.horizontalSpeed / walkRef, 0.0f, 1.5f);
+      if (travelScale < 0.04f)
+      {
+        travelScale = 0.0f;
+      }
+      else
+      {
+        travelScale = std::max(0.22f, travelScale);
+      }
+      playback *= travelScale;
+    }
+    AnimTimeSec += dt * playback;
     const auto animIt = MeshAsset->animationIndexByName.find(animName);
     if (animIt != MeshAsset->animationIndexByName.end())
     {

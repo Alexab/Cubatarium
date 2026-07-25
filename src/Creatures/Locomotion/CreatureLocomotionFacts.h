@@ -17,6 +17,7 @@ struct CreatureLocomotionRawInput
   float dt{0.0f};
   LocomotionState suggestedAnim{LocomotionState::Idle};
   bool hasSuggestedAnim{false};
+  float intentMoveSpeed{0.0f};
 };
 
 struct CreatureLocomotionFacts

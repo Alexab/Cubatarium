@@ -150,6 +150,7 @@ void UCreature::RebuildLocomotionFacts(
   {
     deriveInput.suggestedAnim = Intent.suggestedAnim;
     deriveInput.hasSuggestedAnim = true;
+    deriveInput.intentMoveSpeed = Intent.moveSpeed;
   }
   FinalizeLocomotionFacts(LocomotionFacts, caps, deriveInput, WalkCycleHz,
                           input.dt);
@@ -274,6 +275,15 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
                          Id, world.IsStepUpEnabled());
   SyncFeetFromLocomotion(world, eye);
   SyncBoundsFromStance();
+  // Corner / lip traps: motor axis resolve can leave AABB intersecting solids.
+  {
+    const glm::vec3 size = Bounds.profile.restSizeBlocks;
+    if (world.DepenetrateBlockBodyXZ(BodyOrigin, size))
+    {
+      eye = GetLocomotionEye();
+      Locomotion.SyncFeetAnchorFromView(BodyOrigin.y, Locomotion.IsOnGround());
+    }
+  }
 
   if (glm::length(wish) > 1e-4f)
   {

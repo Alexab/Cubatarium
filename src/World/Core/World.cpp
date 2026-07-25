@@ -5353,6 +5353,12 @@ bool UWorld::DepenetrateCreatureBodyXZ(glm::vec3 &bodyOrigin,
                                              skipCreatureId);
 }
 
+bool UWorld::DepenetrateBlockBodyXZ(glm::vec3 &bodyOrigin,
+                                    const glm::vec3 &sizeBlocks) const
+{
+  return Collision.DepenetrateBlockBodyXZ(bodyOrigin, sizeBlocks);
+}
+
 bool UWorld::HasGroundSupportVolume(const CollisionVolume &vol,
                                     float feetY) const
 {

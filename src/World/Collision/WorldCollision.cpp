@@ -815,6 +815,37 @@ bool UWorldCollision::DepenetrateCreatureBodyXZ(glm::vec3 &bodyOrigin,
       CollisionVolumeFromBody(bodyOrigin, sizeBlocks), skipCreatureId);
 }
 
+bool UWorldCollision::DepenetrateBlockBodyXZ(glm::vec3 &bodyOrigin,
+                                             const glm::vec3 &sizeBlocks) const
+{
+  if (!CheckBlockCollisionVolume(
+          CollisionVolumeFromBody(bodyOrigin, sizeBlocks)))
+  {
+    return true;
+  }
+  constexpr float kOffsets[] = {0.35f, 0.2f, 0.12f, 0.06f};
+  constexpr float kDirs[][2] = {{1.f, 0.f},  {-1.f, 0.f}, {0.f, 1.f},
+                                {0.f, -1.f}, {0.707f, 0.707f},
+                                {-0.707f, 0.707f}, {0.707f, -0.707f},
+                                {-0.707f, -0.707f}};
+  for (float dist : kOffsets)
+  {
+    for (const auto &dir : kDirs)
+    {
+      glm::vec3 candidate =
+          bodyOrigin + glm::vec3(dir[0] * dist, 0.0f, dir[1] * dist);
+      if (!CheckBlockCollisionVolume(
+              CollisionVolumeFromBody(candidate, sizeBlocks)))
+      {
+        bodyOrigin.x = candidate.x;
+        bodyOrigin.z = candidate.z;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 glm::vec3 UWorldCollision::ResolveMovementBody(
     const glm::vec3 &bodyOrigin, const glm::vec3 &delta,
     const glm::vec3 &currentSizeBlocks, CreatureId skipCreatureId) const

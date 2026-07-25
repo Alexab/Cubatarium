@@ -43,7 +43,9 @@ struct PlayerCapsule
   static PlayerCapsule FromCreatureBlocks(const glm::vec3 &sizeBlocks,
                                           float eyeHeight)
   {
-    const float halfW = std::max(0.15f, sizeBlocks.x * 0.5f);
+    // Slightly tighter than visual width so tall bipeds slide past block
+    // lips/corners instead of permanently scraping (MC-style feel).
+    const float halfW = std::max(0.15f, sizeBlocks.x * 0.5f * 0.92f);
     const float height = std::max(0.5f, sizeBlocks.y);
     return {height, eyeHeight, halfW};
   }

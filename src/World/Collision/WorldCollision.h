@@ -85,6 +85,9 @@ public:
   bool DepenetrateCreatureBodyXZ(glm::vec3 &bodyOrigin,
                                  const glm::vec3 &sizeBlocks,
                                  CreatureId skipCreatureId) const;
+  /// Nudge body on XZ out of solid blocks (corner / overhang traps).
+  bool DepenetrateBlockBodyXZ(glm::vec3 &bodyOrigin,
+                              const glm::vec3 &sizeBlocks) const;
 
   glm::vec3 ResolveMovementBody(const glm::vec3 &bodyOrigin,
                                 const glm::vec3 &delta,

@@ -1,6 +1,7 @@
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
 #include "Creatures/Locomotion/CreatureLocomotionController.h"
 #include "Creatures/Locomotion/LocomotionStateDerive.h"
+#include <algorithm>
 #include <cmath>
 #include <glm/glm.hpp>
 
@@ -62,15 +63,24 @@ void FinalizeLocomotionFacts(CreatureLocomotionFacts &facts,
 {
   facts.state = DeriveLocomotionState(facts.archetype, facts, caps, &input);
   constexpr float kTwoPi = 6.283185307f;
-  if (facts.horizontalSpeed < 0.05f && dt > 0.0f)
+  float phaseSpeed = facts.horizontalSpeed;
+  // Chase/wander wish with scraped travel: keep a readable gait instead of
+  // freezing at ~0 while intent still pushes (tall bipeds vs terrain lips).
+  if (input.hasSuggestedAnim && input.suggestedAnim != LocomotionState::Idle &&
+      input.suggestedAnim != LocomotionState::Action &&
+      input.intentMoveSpeed > 0.35f && phaseSpeed < input.intentMoveSpeed * 0.4f)
+  {
+    phaseSpeed = std::max(phaseSpeed, input.intentMoveSpeed * 0.4f);
+  }
+  if (phaseSpeed < 0.05f && dt > 0.0f)
   {
     // Idle/blocked: slow phase drift only — do not fake walk from agent hints.
     facts.animPhase += kTwoPi * 0.35f * dt;
   }
   else
   {
-    facts.animPhase = AdvanceAnimPhase(facts.animPhase, facts.horizontalSpeed,
-                                       walkCycleHz, caps.walkSpeed, dt);
+    facts.animPhase = AdvanceAnimPhase(facts.animPhase, phaseSpeed, walkCycleHz,
+                                       caps.walkSpeed, dt);
   }
 }
 

@@ -551,6 +551,8 @@ public:
   bool DepenetrateCreatureBodyXZ(glm::vec3 &bodyOrigin,
                                  const glm::vec3 &sizeBlocks,
                                  CreatureId skipCreatureId) const;
+  bool DepenetrateBlockBodyXZ(glm::vec3 &bodyOrigin,
+                              const glm::vec3 &sizeBlocks) const;
   /// Solid block directly under the player feet (for step-up / grounded
   /// checks).
   bool HasGroundSupport(const glm::vec3 &eyePos,
