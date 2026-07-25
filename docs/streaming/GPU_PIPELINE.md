@@ -38,8 +38,11 @@ so desktop MDI bind automatically enables the lighter edit remesh policy.
 `UGreedyVertexPool`: grow-only GL buffers + free-list `Free`/`Allocate` reuse.
 
 Desktop MDI draw (`UMdiVertexPoolStore`): local indices stay 0-based per batch;
-`baseVertex` = `vboByteOffset / sizeof(GreedyMeshVertex)`. Attribs bind at pool
-origin once; `glMultiDrawElementsIndirect` per same-`blockId` texture group.
+`baseVertex` = `vboByteOffset / sizeof(GreedyMeshVertex)`. Opaque/cutout refs
+are sorted by `blockId` before pool refresh so same-texture batches are
+contiguous. Attribs bind at pool origin once; one
+`glMultiDrawElementsIndirect` per texture group. Telemetry `gpu_draw_cmds`
+counts API submits (MultiDraw or DrawElements), not per-batch indirect cmds.
 
 ## Telemetry
 

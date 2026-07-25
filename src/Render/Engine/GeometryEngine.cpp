@@ -1034,7 +1034,8 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       if (store.BuildIndirectCommandsRange(cache, i, j, cmds) > 0 &&
           store.SubmitIndirectCommands(cmds))
       {
-        draw_cmds += cmds.size();
+        // One MultiDrawIndirect API submit per texture group.
+        ++draw_cmds;
       }
       else
       {
@@ -1383,31 +1384,35 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
       solid.push_back(ref);
     }
   }
+  // Sort by blockId so MDI can MultiDraw contiguous same-texture runs.
+  // sort_revision=1 invalidates pre-sort pool layouts (was always 0).
+  constexpr uint64_t kBlockIdSortRev = 1;
+  auto by_block_id = [&](const GreedyBatchRef &ra, const GreedyBatchRef &rb)
+  {
+    const GreedyMeshBatch *a = cache.TryGetGreedyBatch(ra);
+    const GreedyMeshBatch *b = cache.TryGetGreedyBatch(rb);
+    if (!a || !b)
+    {
+      return a != nullptr;
+    }
+    return a->blockId < b->blockId;
+  };
   if (!solid.empty())
   {
+    std::sort(solid.begin(), solid.end(), by_block_id);
     MeshStore().RefreshPassRefs(GreedyGpuOpaque, cache, solid, meshRevision,
-                                     cullRevision, 0);
+                                cullRevision, kBlockIdSortRev);
     DrawGreedyGpuBatches(GreedyGpuOpaque, vp, textures, false, false,
                          GreedyShaderMode::TransparentColor, 0.0f);
   }
   if (!cutout.empty())
   {
-    std::sort(cutout.begin(), cutout.end(),
-              [&](const GreedyBatchRef &ra, const GreedyBatchRef &rb)
-              {
-                const GreedyMeshBatch *a = cache.TryGetGreedyBatch(ra);
-                const GreedyMeshBatch *b = cache.TryGetGreedyBatch(rb);
-                if (!a || !b)
-                {
-                  return a != nullptr;
-                }
-                return a->blockId < b->blockId;
-              });
+    std::sort(cutout.begin(), cutout.end(), by_block_id);
     GLboolean cullWasEnabled;
     glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
     glDisable(GL_CULL_FACE);
     MeshStore().RefreshPassRefs(GreedyGpuCutout, cache, cutout, meshRevision,
-                                     cullRevision, 0);
+                                cullRevision, kBlockIdSortRev);
     DrawGreedyGpuBatches(GreedyGpuCutout, vp, textures, true, false,
                          GreedyShaderMode::TransparentColor, 0.0f);
     if (cullWasEnabled)
