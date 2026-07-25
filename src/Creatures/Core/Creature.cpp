@@ -180,6 +180,29 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
       def ? def->habitat : CreatureHabitat::Terrestrial;
   const bool airMobility = habitat == CreatureHabitat::Aerial ||
                            Locomotion.GetMode() == CreatureMovementMode::Flying;
+
+  // Cheap idle path: skip motor/habitat when grounded with zero wish.
+  // Fluid sink / flight still need the full motor each frame.
+  const bool idle_intent = glm::length(Intent.moveDirWorld) < 1e-4f &&
+                           Intent.moveSpeed < 1e-4f && !Intent.wantJump;
+  if (idle_intent && Locomotion.IsOnGround() && !airMobility &&
+      habitat != CreatureHabitat::Aquatic &&
+      habitat != CreatureHabitat::Lava && !LocomotionFacts.inFluid)
+  {
+    if (Intent.clearOnApply)
+    {
+      ClearIntent();
+    }
+    CreatureLocomotionRawInput rawInput;
+    rawInput.locomotion = &Locomotion;
+    rawInput.bodyOriginBefore = bodyOriginBefore;
+    rawInput.bodyOriginAfter = BodyOrigin;
+    rawInput.dt = dt;
+    RebuildLocomotionFacts(rawInput, Locomotion.GetCapabilities(), &world);
+    LastBodyOrigin = BodyOrigin;
+    return;
+  }
+
   if (habitat == CreatureHabitat::Aerial ||
       (Locomotion.GetCapabilities().canFly && airMobility))
   {
