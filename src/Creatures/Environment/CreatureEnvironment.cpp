@@ -562,10 +562,12 @@ bool HabitatAllowsAt(const UWorld &world, CreatureHabitat habitat,
 
 bool HabitatAllowsMovementAt(const UWorld &world, CreatureHabitat habitat,
                              const glm::vec3 &bodyOrigin,
-                             const glm::vec3 &sizeBlocks)
+                             const glm::vec3 &sizeBlocks,
+                             float maxClimbDropBlocks)
 {
   if (habitat == CreatureHabitat::Terrestrial)
   {
+    const float max_step = std::max(0.25f, maxClimbDropBlocks);
     glm::vec3 feet_origin = bodyOrigin;
     const int gx = WorldCoordToBlockIndex(bodyOrigin.x);
     const int gz = WorldCoordToBlockIndex(bodyOrigin.z);
@@ -574,7 +576,7 @@ bool HabitatAllowsMovementAt(const UWorld &world, CreatureHabitat habitat,
     {
       const float climb = *feet_y - bodyOrigin.y;
       const float drop = bodyOrigin.y - *feet_y;
-      if (climb > 1.25f || drop > 1.25f)
+      if (climb > max_step || drop > max_step)
       {
         return false;
       }

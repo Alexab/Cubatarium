@@ -793,6 +793,14 @@ target_include_directories(creature_activity_steering_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(creature_activity_steering_test glm::glm)
 
+add_executable(locomotion_state_derive_test
+    src/Creatures/Locomotion/LocomotionStateDerive.cpp
+    src/Creatures/Locomotion/CreatureLocomotionFacts.cpp
+    src/Test/LocomotionStateDeriveTest.cpp)
+target_include_directories(locomotion_state_derive_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(locomotion_state_derive_test glm::glm)
+
 add_executable(creature_movement_diag_test
     src/World/Diagnostics/CreatureMovementDiagnostics.cpp
     src/Test/CreatureMovementDiagTest.cpp)

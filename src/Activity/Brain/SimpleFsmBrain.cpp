@@ -217,16 +217,30 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
       blackboard.navigation, sink.GetWorld(), view->bodyOrigin, controlled_body,
       query, dt);
   glm::vec3 move_dir = steer.move_dir;
+  const char *goal_source = "chase_path";
   if (!steer.has_path || glm::length(move_dir) < 1e-4f)
   {
-    move_dir = XzDirectionFromTo(view->bodyOrigin, controlled_body);
+    // Soft path_fail: lateral/repick instead of wall-bashing direct XZ.
+    goal_source = "chase_path_fail";
+    if (!PickLocomotionDirection(perception, *view, snapshot->habitat,
+                                 snapshot->boundsSize, move_dir))
+    {
+      intent.moveDirWorld = glm::vec3(0.0f);
+      intent.moveSpeed = 0.0f;
+      intent.suggestedAnim = LocomotionState::Idle;
+      sink.SetIntent(self_id, intent);
+      RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, intent,
+                        "chase_path_fail_idle");
+      return;
+    }
+    goal_source = "chase_path_fail_slide";
   }
   intent.moveDirWorld = move_dir;
   intent.moveSpeed = snapshot->behavior.moveSpeed;
   intent.suggestedAnim = LocomotionState::Run;
   sink.SetIntent(self_id, intent);
   RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, intent,
-                    steer.has_path ? "chase_path" : "chase_fallback");
+                    goal_source);
 }
 
 } // namespace cutum

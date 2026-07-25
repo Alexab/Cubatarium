@@ -228,25 +228,64 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
   if (glm::length(wish) > 1e-4f)
   {
     const glm::vec3 size = Bounds.profile.restSizeBlocks;
-    if (!world.HabitatAllowsMovementAt(habitat, BodyOrigin, size))
+    const float maxClimbDrop =
+        Locomotion.GetCapabilities().jumpHeightBlocks;
+    if (!HabitatAllowsMovementAt(world, habitat, BodyOrigin, size,
+                                 maxClimbDrop))
     {
-      if (UCreatureMovementDiagnostics::IsEnabled())
+      const glm::vec3 attempted = BodyOrigin;
+      const glm::vec2 xzTravel(attempted.x - bodyOriginBefore.x,
+                              attempted.z - bodyOriginBefore.z);
+      bool accepted = false;
+      if (habitat == CreatureHabitat::Terrestrial &&
+          glm::dot(xzTravel, xzTravel) > 1e-10f)
       {
-        CreatureMovementDiagRecord rec;
-        rec.event = "habitat_reject";
-        rec.creatureId = Id;
-        rec.typeId = TypeId;
-        rec.habitat = ToString(habitat);
-        rec.body = BodyOrigin;
-        rec.intentDir = diagIntentDir;
-        rec.intentSpeed = diagIntentSpeed;
-        rec.travel = BodyOrigin - bodyOriginBefore;
-        rec.reason = "habitat_allows_false";
-        UCreatureMovementDiagnostics::Record(rec);
+        // Keep XZ travel; re-snap feet within jumpHeight instead of full revert.
+        const glm::vec3 recovered = ResolveTerrestrialMobMovement(
+            world, bodyOriginBefore,
+            glm::vec3(xzTravel.x, 0.0f, xzTravel.y), size, Id, maxClimbDrop,
+            maxClimbDrop);
+        if (HabitatAllowsMovementAt(world, habitat, recovered, size,
+                                    maxClimbDrop) &&
+            glm::dot(glm::vec2(recovered.x - bodyOriginBefore.x,
+                               recovered.z - bodyOriginBefore.z),
+                     glm::vec2(recovered.x - bodyOriginBefore.x,
+                               recovered.z - bodyOriginBefore.z)) > 1e-10f)
+        {
+          BodyOrigin = recovered;
+          accepted = true;
+        }
+        else
+        {
+          glm::vec3 kept(attempted.x, bodyOriginBefore.y, attempted.z);
+          if (HabitatAllowsMovementAt(world, habitat, kept, size, maxClimbDrop))
+          {
+            BodyOrigin = kept;
+            accepted = true;
+          }
+        }
       }
-      BodyOrigin = bodyOriginBefore;
+      if (!accepted)
+      {
+        if (UCreatureMovementDiagnostics::IsEnabled())
+        {
+          CreatureMovementDiagRecord rec;
+          rec.event = "habitat_reject";
+          rec.creatureId = Id;
+          rec.typeId = TypeId;
+          rec.habitat = ToString(habitat);
+          rec.body = attempted;
+          rec.intentDir = diagIntentDir;
+          rec.intentSpeed = diagIntentSpeed;
+          rec.travel = attempted - bodyOriginBefore;
+          rec.reason = "habitat_allows_false";
+          UCreatureMovementDiagnostics::Record(rec);
+        }
+        BodyOrigin = bodyOriginBefore;
+      }
       eye = GetLocomotionEye();
       Locomotion.SyncFeetAnchorFromView(BodyOrigin.y, Locomotion.IsOnGround());
+      SyncBoundsFromStance();
     }
   }
 
@@ -270,13 +309,9 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
 
   if (!Possessed)
   {
-    glm::vec2 faceDir(diagIntentDir.x, diagIntentDir.z);
+    // Face travel only — intent yaw with zero travel looks like spinning in place.
     const glm::vec3 xzDelta = BodyOrigin - bodyOriginBefore;
-    const glm::vec2 xzActual(xzDelta.x, xzDelta.z);
-    if (glm::length(xzActual) > 1e-5f)
-    {
-      faceDir = xzActual;
-    }
+    const glm::vec2 faceDir(xzDelta.x, xzDelta.z);
     if (glm::length(faceDir) > 1e-4f)
     {
       Yaw = ModelYawFromDirection(faceDir.x, faceDir.y) + ModelYawOffsetDeg;

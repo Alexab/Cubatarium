@@ -62,21 +62,10 @@ void FinalizeLocomotionFacts(CreatureLocomotionFacts &facts,
 {
   facts.state = DeriveLocomotionState(facts.archetype, facts, caps, &input);
   constexpr float kTwoPi = 6.283185307f;
-  const bool agent_walk_hint =
-      input.hasSuggestedAnim &&
-      (input.suggestedAnim == LocomotionState::Walk ||
-       input.suggestedAnim == LocomotionState::Run);
   if (facts.horizontalSpeed < 0.05f && dt > 0.0f)
   {
-    if (agent_walk_hint)
-    {
-      facts.animPhase = AdvanceAnimPhase(facts.animPhase, caps.walkSpeed * 0.5f,
-                                         walkCycleHz, caps.walkSpeed, dt);
-    }
-    else
-    {
-      facts.animPhase += kTwoPi * 0.35f * dt;
-    }
+    // Idle/blocked: slow phase drift only — do not fake walk from agent hints.
+    facts.animPhase += kTwoPi * 0.35f * dt;
   }
   else
   {
