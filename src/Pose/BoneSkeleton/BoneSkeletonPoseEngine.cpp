@@ -16,8 +16,12 @@ float WalkSwingScale(const CreatureLocomotionFacts &facts,
                      const CreatureDefinition &def)
 {
   const float walkSpeed = std::max(def.locomotion.walkSpeed, 0.01f);
+  if (facts.horizontalSpeed < 0.05f)
+  {
+    return 0.0f;
+  }
   float swingScale =
-      std::clamp(facts.horizontalSpeed / walkSpeed, 0.5f, 1.5f);
+      std::clamp(facts.horizontalSpeed / walkSpeed, 0.35f, 1.5f);
   if (facts.state == LocomotionState::Run &&
       facts.horizontalSpeed > walkSpeed * 1.2f)
   {
@@ -98,9 +102,13 @@ void ApplyArachnid(BoneSkeletonPose &pose,
     const float stride = std::cos(phase) * amp * 0.55f;
     // even = left (−X), odd = right (+X, mirrored): flip so lift reads as up.
     const float side = (i % 2 == 0) ? 1.0f : -1.0f;
+    // Rest fan: legs splay outward from body (MC/Luanti look), then gait on top.
+    // Pair index 0..3 along body; base yaw ~±35° plus small per-pair spread.
+    const float pair = static_cast<float>(i / 2);
+    const float restYaw = side * (32.0f + pair * 8.0f);
     BoneSkeletonBonePose leg;
+    leg.rotationDeg.y = restYaw + stride * side;
     leg.rotationDeg.z = lift * side;
-    leg.rotationDeg.y = stride * side;
     pose.bones[kLegNames[i]] = leg;
   }
 
