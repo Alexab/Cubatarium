@@ -1,6 +1,6 @@
 # Creature movement audit (baseline)
 
-Date: 2026-07-24 (code + instrumentation). Manual follow-ups: **2026-07-25** (09:40, 10:17, 12:40).
+Date: 2026-07-24 (code + instrumentation). Manual follow-ups: **2026-07-25** (09:40, 10:17, 12:40, 13:08).
 
 ## Pipeline
 
@@ -16,6 +16,7 @@ Date: 2026-07-24 (code + instrumentation). Manual follow-ups: **2026-07-25** (09
 | 09:40 | `do_movement` p50 ~34 ms; diag off |
 | 10:17 | diag on; `path_ok=0`; march/idle chase |
 | 12:40 | zombie **1878× habitat_reject + zero_travel** (chase intent + motor, A* stand-node veto) |
+| 13:08 | after soft-gate-v1: zombie still habitat_reject; `onGround=false`; path `start_invalid`; dirt_monster/dungeon_master travel OK |
 
 ## Findings
 
@@ -40,6 +41,7 @@ Date: 2026-07-24 (code + instrumentation). Manual follow-ups: **2026-07-25** (09
 | CMA-017 | medium | Cross-backend gait confusion risk | **closed** (docs + separate packets) |
 | CMA-018 | low | Chicken archetype aerial | **closed** (terrestrial_biped + profile chicken) |
 | CMA-019 | low | Amphibious can_fly / aquatic arch on land | **closed** (land arch + inFluid→aquatic facts) |
+| CMA-020 | high | Soft gate footprint + exact BlockTopY float AABB false collide; feet heal; start_invalid | **closed** (column ground + 0.01 skin; SyncFeet heal; path XZ snap; tests) |
 
 ## Backend × archetype matrix (fix packets)
 
@@ -56,8 +58,8 @@ Date: 2026-07-24 (code + instrumentation). Manual follow-ups: **2026-07-25** (09
 
 | Case | Species | Backend | Expect | Notes |
 |------|---------|---------|--------|-------|
-| Chase | zombie | bone | travel>0 flat; less habitat_reject | re-test after CMA-015 |
-| Chase path | zombie | bone | path_ok or soft direct + travel | CMA-016 |
+| Chase | zombie | bone | travel>0 flat; less habitat_reject | re-test after CMA-020 |
+| Chase path | zombie | bone | path_ok or soft direct + travel | CMA-016/020 |
 | Spider gait | spider | bone | A/B legs + rest fan | |
 | Wander | dirt_monster | glTF | walk clip while moving | |
 | Demo | rigid_demo_walker | rigid | presenter swing iff speed>0 | |
@@ -68,7 +70,7 @@ Date: 2026-07-24 (code + instrumentation). Manual follow-ups: **2026-07-25** (09
 
 ## Regression guards
 
-Do **not** weaken `IsTerrestrialStandNode` continuous clearance for **player** pathfinding. Soft habitat gate is for NPC post-motor / wander probe only. Nav goals remain feet/body.
+Do **not** weaken `IsTerrestrialStandNode` continuous clearance for **player** pathfinding. Soft habitat gate is for NPC post-motor / wander probe only (column ground + `!CheckBlockCollisionVolume`, **not** footprint multi-sample). Nav goals remain feet/body. Tests: `creature_terrestrial_gate_test`, `navigation_pathfinder_test`.
 
 ## Next
 

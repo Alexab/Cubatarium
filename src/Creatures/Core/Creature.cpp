@@ -9,6 +9,7 @@
 #include "World/Core/World.h"
 #include "World/Diagnostics/CreatureMovementDiagnostics.h"
 #include "World/Math/GridMath.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <optional>
@@ -67,23 +68,32 @@ void UCreature::SyncFeetFromLocomotion(const UWorld &world,
   BodyOrigin.x = eyeAfterLocomotion.x;
   BodyOrigin.z = eyeAfterLocomotion.z;
 
-  const bool useGround =
-      Locomotion.GetMode() == CreatureMovementMode::Walking &&
-      Locomotion.IsFeetAnchored() && Locomotion.IsOnGround();
-  if (useGround)
+  const bool walking =
+      Locomotion.GetMode() == CreatureMovementMode::Walking;
+  if (walking)
   {
     const float refFeetY = FeetYFromEye(eyeAfterLocomotion, EyeOffset.y);
     const int gx = WorldCoordToBlockIndex(BodyOrigin.x);
     const int gz = WorldCoordToBlockIndex(BodyOrigin.z);
-    const PlayerCapsule cap = PlayerCapsule::FromCreatureBlocks(
-        Bounds.currentSizeBlocks, EyeOffset.y);
+    const float maxSnap =
+        std::max(0.25f, Locomotion.GetCapabilities().jumpHeightBlocks);
     if (const std::optional<float> groundY =
             world.QueryGroundFeetYUnder(gx, gz, refFeetY))
     {
-      BodyOrigin.y = *groundY;
-      eyeAfterLocomotion.y = BodyOrigin.y + Locomotion.GetViewEyeHeight();
-      Locomotion.SyncFeetAnchorFromView(*groundY, true);
-      return;
+      const float drop = refFeetY - *groundY;
+      const float climb = *groundY - refFeetY;
+      // Snap when grounded, or heal brief unsupported / float states within
+      // jumpHeight so habitat reject cannot trap a mob above air forever.
+      const bool anchoredGround =
+          Locomotion.IsFeetAnchored() && Locomotion.IsOnGround();
+      if (anchoredGround || (drop >= 0.0f && drop <= maxSnap) ||
+          (climb >= 0.0f && climb <= maxSnap))
+      {
+        BodyOrigin.y = *groundY;
+        eyeAfterLocomotion.y = BodyOrigin.y + Locomotion.GetViewEyeHeight();
+        Locomotion.SyncFeetAnchorFromView(*groundY, true);
+        return;
+      }
     }
   }
 

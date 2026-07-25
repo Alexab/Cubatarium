@@ -568,30 +568,35 @@ bool HabitatAllowsMovementAt(const UWorld &world, CreatureHabitat habitat,
   if (habitat == CreatureHabitat::Terrestrial)
   {
     const float max_step = std::max(0.25f, maxClimbDropBlocks);
-    glm::vec3 feet_origin = bodyOrigin;
     const int gx = WorldCoordToBlockIndex(bodyOrigin.x);
     const int gz = WorldCoordToBlockIndex(bodyOrigin.z);
-    if (const std::optional<float> feet_y =
-            ResolveTerrestrialGroundFeetY(world, gx, gz, bodyOrigin.y))
-    {
-      const float climb = *feet_y - bodyOrigin.y;
-      const float drop = bodyOrigin.y - *feet_y;
-      if (climb > max_step || drop > max_step)
-      {
-        return false;
-      }
-      feet_origin.y = *feet_y;
-    }
-    // Post-motor / wander gate: actual body AABB + ground support.
-    // Do NOT use IsTerrestrialStandNode here (cell-center A* veto) — that
-    // rejected valid motor steps (zombie habitat_reject+zero_travel storm).
-    const CollisionVolume vol =
-        CollisionVolumeFromBody(feet_origin, sizeBlocks);
-    if (world.CheckBlockCollisionVolume(vol))
+    const std::optional<float> feet_y =
+        ResolveTerrestrialGroundFeetY(world, gx, gz, bodyOrigin.y);
+    if (!feet_y)
     {
       return false;
     }
-    if (!world.HasGroundSupportVolume(vol, BoundsFeetY(feet_origin)))
+    const float climb = *feet_y - bodyOrigin.y;
+    const float drop = bodyOrigin.y - *feet_y;
+    if (climb > max_step || drop > max_step)
+    {
+      return false;
+    }
+    glm::vec3 feet_origin = bodyOrigin;
+    feet_origin.y = *feet_y;
+    // Post-motor / wander gate: actual body AABB + ground under feet.
+    // Do NOT use IsTerrestrialStandNode (cell-center A* veto) or multi-sample
+    // HasGroundSupportVolume here — both rejected motor-accepted chase steps
+    // (zombie habitat_reject+zero_travel). Ground presence is the snap above;
+    // footprint support remains for player OnGround / stand checks only.
+    // Lift by collision epsilon so exact BlockTopY + float halfExtents does not
+    // false-positive against the ground slab (strict AABB < sum).
+    constexpr float kStandCollisionSkin = 0.01f;
+    glm::vec3 collide_origin = feet_origin;
+    collide_origin.y += kStandCollisionSkin;
+    const CollisionVolume vol =
+        CollisionVolumeFromBody(collide_origin, sizeBlocks);
+    if (world.CheckBlockCollisionVolume(vol))
     {
       return false;
     }

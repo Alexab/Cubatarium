@@ -1915,6 +1915,15 @@ target_compile_definitions(player_clearance_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(player_clearance_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(creature_terrestrial_gate_test
+    ${PHYSICS_COLLISION_UNIT_SOURCES}
+    src/Test/CreatureTerrestrialGateTest.cpp)
+target_include_directories(creature_terrestrial_gate_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(creature_terrestrial_gate_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(creature_terrestrial_gate_test glm::glm nlohmann_json::nlohmann_json)
+
 if(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()

@@ -36,9 +36,12 @@ bool UWorldNavigationQueries::IsTerrestrialStandNode(
   }
   const float feet_y = BlockTopY(node.ground_y);
   const glm::vec3 size_blocks(0.6f, body_height, 0.6f);
+  // Match motor contact skin: exact BlockTopY + float halfExtents can touch the
+  // ground slab under strict AABB (<), falsely invalidating stand nodes.
+  constexpr float kStandCollisionSkin = 0.01f;
   const CollisionVolume vol = CollisionVolumeAtFeet(
-      feet_y, static_cast<float>(node.x), static_cast<float>(node.z),
-      size_blocks);
+      feet_y + kStandCollisionSkin, static_cast<float>(node.x),
+      static_cast<float>(node.z), size_blocks);
   return !World.CheckBlockCollisionVolume(vol);
 }
 

@@ -75,28 +75,57 @@ NavigationStandNode SnapStandNode(const IUWorldNavigation &navigation,
                                   const glm::vec3 &body_origin,
                                   float max_snap_blocks)
 {
-  if (navigation.IsTerrestrialStandNode(node, body_height))
+  const float max_delta = std::max(0.5f, max_snap_blocks) + 0.05f;
+  auto accept = [&](const NavigationStandNode &trial) -> bool
+  {
+    if (!navigation.IsTerrestrialStandNode(trial, body_height))
+    {
+      return false;
+    }
+    // Reject snaps that would "fix" an eye-height goal down to feet.
+    return std::abs(BlockTopY(trial.ground_y) - body_origin.y) <= max_delta;
+  };
+
+  if (accept(node))
   {
     return node;
   }
   const int base_y = node.ground_y;
-  const float max_delta = std::max(0.5f, max_snap_blocks) + 0.05f;
+  const int base_x = node.x;
+  const int base_z = node.z;
+  // Vertical first (common float / half-block mismatch).
   for (int dy = 1; dy <= 2; ++dy)
   {
     for (const int sign : {-1, 1})
     {
       NavigationStandNode trial = node;
       trial.ground_y = base_y + sign * dy;
-      if (!navigation.IsTerrestrialStandNode(trial, body_height))
+      if (accept(trial))
+      {
+        return trial;
+      }
+    }
+  }
+  // XZ neighbors: bodies near cell edges where integer-center clearance fails.
+  for (int dx = -1; dx <= 1; ++dx)
+  {
+    for (int dz = -1; dz <= 1; ++dz)
+    {
+      if (dx == 0 && dz == 0)
       {
         continue;
       }
-      // Reject snaps that would "fix" an eye-height goal down to feet.
-      if (std::abs(BlockTopY(trial.ground_y) - body_origin.y) > max_delta)
+      for (int dy = -2; dy <= 2; ++dy)
       {
-        continue;
+        NavigationStandNode trial;
+        trial.x = base_x + dx;
+        trial.z = base_z + dz;
+        trial.ground_y = base_y + dy;
+        if (accept(trial))
+        {
+          return trial;
+        }
       }
-      return trial;
     }
   }
   return node;
