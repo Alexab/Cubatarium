@@ -38,9 +38,9 @@ void InstallSolid(cutum::UBlockDefinitionStorage &storage, cutum::BlockId id,
   storage.ReplaceAll(std::move(by_id), std::move(name_to_id));
 }
 
-/// Soft post-motor terrestrial criteria (mirrors HabitatAllowsMovementAt):
-/// ground under feet within step + no block collision. Does NOT require
-/// HasGroundSupportVolume multi-sample footprint.
+/// Soft post-motor terrestrial criteria (mirrors CanCreatureStandAt /
+/// HabitatAllowsMovementAt): ground under feet within step + no block
+/// collision. Does NOT require HasGroundSupportVolume multi-sample footprint.
 bool SoftTerrestrialOk(const cutum::UWorldCollision &collision, float feet_x,
                        float feet_z, float feet_y_ref,
                        const glm::vec3 &size_blocks, float max_step)

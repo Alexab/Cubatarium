@@ -4,6 +4,7 @@
 #include "Creatures/Core/CreatureIntent.h"
 #include "Navigation/NavigationTypes.h"
 #include "World/Diagnostics/CreatureMovementDiagnostics.h"
+#include <algorithm>
 #include <cmath>
 
 namespace cutum
@@ -55,6 +56,51 @@ void RecordBrainIntent(CreatureId self_id, const CreatureActivityView &view,
     rec.reason = reason;
   }
   UCreatureMovementDiagnostics::Record(rec);
+}
+
+glm::vec3 SteerWithFeelersAndSeparation(
+    IUWorldPerception &perception, const CreatureActivityView &view,
+    const CreatureBehaviorSnapshot &snapshot, const glm::vec3 &raw_dir,
+    float separation_weight)
+{
+  const bool overlapped = !perception.CreaturesClearAt(
+      view.bodyOrigin, snapshot.boundsSize, view.Id);
+  float sep_weight = separation_weight;
+  if (overlapped)
+  {
+    sep_weight = std::max(sep_weight, 0.85f);
+  }
+  glm::vec3 move_dir = raw_dir;
+  if (!overlapped)
+  {
+    move_dir = ApplyWallFeelers(perception, snapshot.habitat, view.bodyOrigin,
+                                raw_dir, snapshot.boundsSize, view.Id);
+  }
+  const float sep_radius = SeparationQueryRadius(snapshot.boundsSize);
+  const std::vector<CreatureNeighborView> neighbors =
+      perception.QueryCreatureNeighborsInRadius(view.bodyOrigin, sep_radius,
+                                                view.Id);
+  const float min_sep =
+      std::max(snapshot.boundsSize.x, snapshot.boundsSize.z) *
+      (overlapped ? 1.15f : 0.85f);
+  const glm::vec3 separation = ComputeSeparationDirection(
+      view.bodyOrigin, snapshot.boundsSize, neighbors, min_sep);
+  if (overlapped && glm::length(separation) > 1e-4f)
+  {
+    // Escape first; chase wish resumes once clear.
+    return BlendLocomotionDirection(separation, move_dir, 0.25f);
+  }
+  return BlendLocomotionDirection(move_dir, separation, sep_weight);
+}
+
+float ResolveIntentMoveSpeed(const CreatureBehaviorSnapshot &snapshot)
+{
+  float speed = snapshot.behavior.moveSpeed;
+  if (snapshot.locomotion.walkSpeed > speed)
+  {
+    speed = snapshot.locomotion.walkSpeed;
+  }
+  return speed;
 }
 
 } // namespace
@@ -122,7 +168,7 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
       flee_goal.y = view->bodyOrigin.y;
     }
     NavigationQuery query;
-    query.search_distance = 48;
+    query.search_distance = 32;
     query.body_height = NavigationBodyHeightForBounds(snapshot->boundsSize.y);
     query.max_jump = snapshot->locomotion.jumpHeightBlocks;
     const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
@@ -143,18 +189,10 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
         move_dir = RandomLocomotionDirection(snapshot->habitat);
       }
     }
-    constexpr float kFleeSeparationWeight = 0.5f;
-    const float sep_radius = SeparationQueryRadius(snapshot->boundsSize);
-    const std::vector<CreatureNeighborView> neighbors =
-        perception.QueryCreatureNeighborsInRadius(view->bodyOrigin, sep_radius,
-                                                  self_id);
-    const float min_sep = std::max(snapshot->boundsSize.x, snapshot->boundsSize.z) *
-                          0.85f;
-    const glm::vec3 separation = ComputeSeparationDirection(
-        view->bodyOrigin, snapshot->boundsSize, neighbors, min_sep);
-    move_dir = BlendLocomotionDirection(move_dir, separation, kFleeSeparationWeight);
+    move_dir = SteerWithFeelersAndSeparation(perception, *view, *snapshot,
+                                             move_dir, 0.5f);
     intent.moveDirWorld = move_dir;
-    intent.moveSpeed = snapshot->behavior.moveSpeed *
+    intent.moveSpeed = ResolveIntentMoveSpeed(*snapshot) *
                        snapshot->behavior.fleeSpeedMultiplier;
     intent.suggestedAnim = LocomotionState::Run;
     sink.SetIntent(self_id, intent);
@@ -212,7 +250,7 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
 
   blackboard.state = CreatureFsmState::Chase;
   NavigationQuery query;
-  query.search_distance = 48;
+  query.search_distance = 32;
   query.body_height = NavigationBodyHeightForBounds(snapshot->boundsSize.y);
   query.max_jump = snapshot->locomotion.jumpHeightBlocks;
   const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
@@ -222,15 +260,15 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
   const char *goal_source = "chase_path";
   if (!steer.has_path || glm::length(move_dir) < 1e-4f)
   {
-    // Prefer approach toward player (with side steps). Do NOT random-slide
-    // first — that caused zombie back-forth jitter when A* exhausted.
+    // Path follow or approach → feelers (not raw soft seek into walls).
     const glm::vec3 to_player =
         XzDirectionFromTo(view->bodyOrigin, controlled_body);
     if (PickApproachDirection(perception, snapshot->habitat, view->bodyOrigin,
                               to_player, snapshot->boundsSize, self_id,
                               move_dir))
     {
-      goal_source = steer.has_path ? "chase_path_steer_fallback" : "chase_approach";
+      goal_source =
+          steer.has_path ? "chase_path_steer_fallback" : "chase_approach";
     }
     else
     {
@@ -243,8 +281,14 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
       return;
     }
   }
+  else if (steer.partial_path)
+  {
+    goal_source = "chase_partial";
+  }
+  move_dir = SteerWithFeelersAndSeparation(perception, *view, *snapshot,
+                                           move_dir, 0.45f);
   intent.moveDirWorld = move_dir;
-  intent.moveSpeed = snapshot->behavior.moveSpeed;
+  intent.moveSpeed = ResolveIntentMoveSpeed(*snapshot);
   intent.suggestedAnim = LocomotionState::Run;
   sink.SetIntent(self_id, intent);
   RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, intent,

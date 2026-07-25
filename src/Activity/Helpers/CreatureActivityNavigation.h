@@ -17,6 +17,12 @@ struct CreatureNavigationState
   NavigationPath path;
   int waypoint_index{0};
   float path_recalc_timer{0.0f};
+  /// After search_exhausted: exponential 0.5→2→4s before next A*.
+  float exhaust_backoff_sec{0.5f};
+  bool use_steering_only{false};
+  glm::vec3 stuck_anchor{0.0f};
+  float stuck_timer{0.0f};
+  bool stuck_anchor_valid{false};
 };
 
 struct CreatureNavigationSteerResult
@@ -24,9 +30,15 @@ struct CreatureNavigationSteerResult
   glm::vec3 move_dir{0.0f};
   bool has_path{false};
   bool path_finished{false};
+  bool partial_path{false};
 };
 
-constexpr float kDefaultPathRecalcInterval = 0.5f;
+constexpr float kDefaultPathRecalcInterval = 1.0f;
+constexpr float kPathExhaustBackoffMin = 0.75f;
+constexpr float kPathExhaustBackoffMax = 6.0f;
+constexpr float kPathLodDistanceBlocks = 48.0f;
+constexpr float kStuckRepathSeconds = 2.5f;
+constexpr float kStuckTravelEpsilon = 0.25f;
 
 /// A* goals must use feet/body, never eye (stand-node at eye Y fails clearance).
 inline glm::vec3 NavigationGoalBodyFromControlled(

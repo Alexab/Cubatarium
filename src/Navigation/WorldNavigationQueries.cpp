@@ -2,9 +2,9 @@
 #include "Blocks/BlockDefinition.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Core/CreatureBounds.h"
+#include "Creatures/Environment/CreatureTraverseQueries.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
-#include "World/Math/CollisionVolume.h"
 #include "World/Math/GridMath.h"
 
 namespace cutum
@@ -36,13 +36,10 @@ bool UWorldNavigationQueries::IsTerrestrialStandNode(
   }
   const float feet_y = BlockTopY(node.ground_y);
   const glm::vec3 size_blocks(0.6f, body_height, 0.6f);
-  // Match motor contact skin: exact BlockTopY + float halfExtents can touch the
-  // ground slab under strict AABB (<), falsely invalidating stand nodes.
-  constexpr float kStandCollisionSkin = 0.01f;
-  const CollisionVolume vol = CollisionVolumeAtFeet(
-      feet_y + kStandCollisionSkin, static_cast<float>(node.x),
-      static_cast<float>(node.z), size_blocks);
-  return !World.CheckBlockCollisionVolume(vol);
+  const glm::vec3 body_origin(static_cast<float>(node.x), feet_y,
+                              static_cast<float>(node.z));
+  // Nav-hot path: ground + block clearance only (no fluid volume probe).
+  return CanCreatureStandAtNav(World, body_origin, size_blocks, 1.25f);
 }
 
 bool UWorldNavigationQueries::CanStepTerrestrial(

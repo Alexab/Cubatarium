@@ -461,9 +461,18 @@ public:
   std::vector<CreatureNeighborView>
   QueryCreatureNeighborsInRadius(const glm::vec3 &center, float radius,
                                  CreatureId skip_id) const override;
+  /// Entity AABB clear of other creatures (not blocks). Prefer this name over
+  /// the legacy alias.
+  bool CreaturesClearAt(const glm::vec3 &body_origin,
+                        const glm::vec3 &size_blocks,
+                        CreatureId skip_id) const override;
+  [[deprecated("Use CreaturesClearAt — checks entities only, not blocks")]]
   bool CreatureVolumeClearAt(const glm::vec3 &body_origin,
                              const glm::vec3 &size_blocks,
-                             CreatureId skip_id) const override;
+                             CreatureId skip_id) const
+  {
+    return CreaturesClearAt(body_origin, size_blocks, skip_id);
+  }
   std::optional<glm::vec3> GetCreatureBodyOrigin(CreatureId id) const override;
   /// Top face under feet: highest solid in column at or below referenceFeetY
   /// (runtime pose).
@@ -538,6 +547,10 @@ public:
   /// Lifts eye position until the capsule no longer intersects solids.
   bool DepenetrateEye(glm::vec3 &eyePos, const PlayerCapsule &cap,
                       CreatureId skipCreatureId = 0) const;
+  /// Horizontal unstick from overlapping creature AABBs.
+  bool DepenetrateCreatureBodyXZ(glm::vec3 &bodyOrigin,
+                                 const glm::vec3 &sizeBlocks,
+                                 CreatureId skipCreatureId) const;
   /// Solid block directly under the player feet (for step-up / grounded
   /// checks).
   bool HasGroundSupport(const glm::vec3 &eyePos,

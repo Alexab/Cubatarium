@@ -43,6 +43,7 @@ Date: 2026-07-24 (code + instrumentation). Manual follow-ups: **2026-07-25** (09
 | CMA-019 | low | Amphibious can_fly / aquatic arch on land | **closed** (land arch + inFluid→aquatic facts) |
 | CMA-020 | high | Soft gate footprint + exact BlockTopY float AABB false collide; feet heal; start_invalid | **closed** (column ground + 0.01 skin; SyncFeet heal; path XZ snap; tests) |
 | CMA-021 | high | Chase random-slide jitter; wander `forward_probe_fail` idle; tall A* exhaust | **closed** (PickApproachDirection; soft wander probe; nav height trim) |
+| CMA-022 | high | A*/motor/habitat desync; no partial path; no local avoidance; `do_movement` ~192 ms | **closed** (shared traverse; partial+stuck+backoff+budget+LOD; wall feelers; diag default off) |
 
 ## Backend × archetype matrix (fix packets)
 
@@ -71,10 +72,10 @@ Date: 2026-07-24 (code + instrumentation). Manual follow-ups: **2026-07-25** (09
 
 ## Regression guards
 
-Do **not** weaken `IsTerrestrialStandNode` continuous clearance for **player** pathfinding. Soft habitat gate is for NPC post-motor / wander probe only (column ground + `!CheckBlockCollisionVolume`, **not** footprint multi-sample). Nav goals remain feet/body. Tests: `creature_terrestrial_gate_test`, `navigation_pathfinder_test`.
+Do **not** weaken `IsTerrestrialStandNode` continuous clearance for **player** pathfinding. NPC post-motor / A* node / probes share `CanCreatureStandAt` (column ground + `!CheckBlockCollisionVolume` + skin, **not** footprint multi-sample). Nav goals remain feet/body. Tests: `creature_terrestrial_gate_test`, `navigation_pathfinder_test` (partial + budget), `creature_activity_steering_test` (feelers).
 
 ## Next
 
-1. Manual re-run: zombie chase + spider + dirt_monster + rigid_demo_walker
-2. If `do_movement` still high → LOD motor packet
+1. Manual re-run: zombie chase travel + wander + `do_movement` p50 on comparable scene
+2. Full RVO2 only if feelers+separation fail in crowds
 3. Spider wall-climb (MC) — separate bone-only follow-up

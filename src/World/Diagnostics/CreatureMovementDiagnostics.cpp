@@ -29,7 +29,7 @@ constexpr double kFocusSampleIntervalSec = 0.5;
 
 std::atomic<bool> &EnabledFlag()
 {
-  static std::atomic<bool> enabled{true};
+  static std::atomic<bool> enabled{false};
   return enabled;
 }
 

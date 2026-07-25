@@ -211,7 +211,7 @@ private:
   bool FoliageClimbEnabled{true};
   bool EntityCollisionEnabled{true};
   float ActivityTickHz{20.0f};
-  bool CreatureMovementDiagEnabled{true};
+  bool CreatureMovementDiagEnabled{false};
   float DefaultTimeOfDay{0.35f};
   float DefaultDayLengthMinutes{10.0f};
   std::string DefaultWeather{"clear"};

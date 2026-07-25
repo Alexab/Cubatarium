@@ -1,4 +1,5 @@
 #include "Navigation/UNavigationPathfinder.h"
+#include "Navigation/NavigationPathBudget.h"
 #include "World/Math/GridMath.h"
 #include <cmath>
 #include <limits>
@@ -139,6 +140,42 @@ float Heuristic(const NodeKey &a, const NodeKey &b)
   return std::abs(dx) + std::abs(dz) + std::abs(dy) * 1.5f;
 }
 
+NavigationPath ReconstructPath(
+    const NodeKey &start_key, const NodeKey &end_key,
+    const std::unordered_map<NodeKey, NodeKey, NodeKeyHash> &came_from,
+    int max_waypoints, bool partial)
+{
+  NavigationPath result;
+  std::vector<NodeKey> reversed;
+  NodeKey walk = end_key;
+  reversed.push_back(walk);
+  while (walk != start_key)
+  {
+    const auto it = came_from.find(walk);
+    if (it == came_from.end())
+    {
+      return result;
+    }
+    walk = it->second;
+    reversed.push_back(walk);
+  }
+  result.valid = true;
+  result.partial = partial;
+  if (partial)
+  {
+    result.failReason = "partial";
+  }
+  for (auto it = reversed.rbegin(); it != reversed.rend(); ++it)
+  {
+    if (result.waypoints.size() >= static_cast<size_t>(max_waypoints))
+    {
+      break;
+    }
+    result.waypoints.push_back({BodyOriginFromNode(ToNode(*it))});
+  }
+  return result;
+}
+
 } // namespace
 
 NavigationPath UNavigationPathfinder::FindTerrestrialPath(
@@ -146,6 +183,12 @@ NavigationPath UNavigationPathfinder::FindTerrestrialPath(
     const glm::vec3 &goal_body, const NavigationQuery &query)
 {
   NavigationPath result;
+  if (!UNavigationPathBudget::HasRemainingBudget())
+  {
+    result.failReason = "budget_exhausted";
+    return result;
+  }
+
   NavigationStandNode start =
       SnapStandNode(navigation, StandNodeFromBody(start_body),
                     query.body_height, start_body, query.max_jump);
@@ -200,9 +243,16 @@ NavigationPath UNavigationPathfinder::FindTerrestrialPath(
   push_open(start_key);
 
   constexpr int kMaxWaypoints = 256;
+  constexpr int kDefaultMaxExpands = kMaxWaypoints * 32;
+  const int local_max =
+      query.max_expands > 0 ? query.max_expands : kDefaultMaxExpands;
   int expanded = 0;
+  bool budget_cut = false;
 
-  while (!open.empty() && expanded < kMaxWaypoints * 32)
+  NodeKey best_key = start_key;
+  float best_h = Heuristic(start_key, goal_key);
+
+  while (!open.empty() && expanded < local_max)
   {
     const NodeKey current = open.top().key;
     open.pop();
@@ -210,29 +260,27 @@ NavigationPath UNavigationPathfinder::FindTerrestrialPath(
     {
       continue;
     }
+    if (!UNavigationPathBudget::TryConsumeExpand())
+    {
+      budget_cut = true;
+      break;
+    }
     closed.insert(current);
     ++expanded;
 
+    const float h = Heuristic(current, goal_key);
+    if (h < best_h - 1e-4f ||
+        (std::abs(h - best_h) <= 1e-4f &&
+         g_score[current] < g_score[best_key]))
+    {
+      best_h = h;
+      best_key = current;
+    }
+
     if (current == goal_key)
     {
-      std::vector<NodeKey> reversed;
-      NodeKey walk = current;
-      reversed.push_back(walk);
-      while (walk != start_key)
-      {
-        walk = came_from[walk];
-        reversed.push_back(walk);
-      }
-      result.valid = true;
-      for (auto it = reversed.rbegin(); it != reversed.rend(); ++it)
-      {
-        if (result.waypoints.size() >= static_cast<size_t>(kMaxWaypoints))
-        {
-          break;
-        }
-        result.waypoints.push_back({BodyOriginFromNode(ToNode(*it))});
-      }
-      return result;
+      return ReconstructPath(start_key, current, came_from, kMaxWaypoints,
+                             false);
     }
 
     const NavigationStandNode from = ToNode(current);
@@ -279,7 +327,18 @@ NavigationPath UNavigationPathfinder::FindTerrestrialPath(
     }
   }
 
-  result.failReason = "search_exhausted";
+  // Partial / closest path (MC-style): usable corridor toward goal.
+  if (best_key != start_key)
+  {
+    NavigationPath partial =
+        ReconstructPath(start_key, best_key, came_from, kMaxWaypoints, true);
+    if (partial.valid && partial.waypoints.size() >= 2)
+    {
+      return partial;
+    }
+  }
+
+  result.failReason = budget_cut ? "budget_exhausted" : "search_exhausted";
   return result;
 }
 

@@ -297,7 +297,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
         EntityCollisionEnabled = gameplay.value("entity_collision", true);
         ActivityTickHz = gameplay.value("activity_tick_hz", 20.0f);
         CreatureMovementDiagEnabled =
-            gameplay.value("creature_movement_diag", true);
+            gameplay.value("creature_movement_diag", false);
       }
       UCreatureMovementDiagnostics::SetEnabled(CreatureMovementDiagEnabled);
       if (d.contains("physics") && d["physics"].is_object())

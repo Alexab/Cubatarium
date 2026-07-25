@@ -5345,6 +5345,14 @@ bool UWorld::DepenetrateEye(glm::vec3 &eyePos, const PlayerCapsule &cap,
   return Collision.DepenetrateEye(eyePos, cap, skipCreatureId);
 }
 
+bool UWorld::DepenetrateCreatureBodyXZ(glm::vec3 &bodyOrigin,
+                                       const glm::vec3 &sizeBlocks,
+                                       CreatureId skipCreatureId) const
+{
+  return Collision.DepenetrateCreatureBodyXZ(bodyOrigin, sizeBlocks,
+                                             skipCreatureId);
+}
+
 bool UWorld::HasGroundSupportVolume(const CollisionVolume &vol,
                                     float feetY) const
 {

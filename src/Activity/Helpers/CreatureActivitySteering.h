@@ -35,6 +35,14 @@ bool PickApproachDirection(IUWorldPerception &perception,
                            const glm::vec3 &bounds_size, CreatureId skip_id,
                            glm::vec3 &out_direction);
 
+/// Local wall feelers (±30/60°) along desiredDir; returns bent free dir.
+glm::vec3 ApplyWallFeelers(IUWorldPerception &perception,
+                           CreatureHabitat habitat,
+                           const glm::vec3 &body_origin,
+                           const glm::vec3 &desired_dir,
+                           const glm::vec3 &bounds_size, CreatureId skip_id,
+                           float feeler_length = 0.85f);
+
 /// A* clearance height: slightly shorter than visual AABB so 2-block gaps and
 /// light foliage do not exhaust search for tall bipeds (zombie 1.85).
 float NavigationBodyHeightForBounds(float bounds_height_blocks);

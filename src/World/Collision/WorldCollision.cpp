@@ -1,5 +1,6 @@
 #include "World/Collision/WorldCollision.h"
 #include "Blocks/BlockRegistry.h"
+#include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Render/Primitives/Cube.h"
 #include "World/Chunks/Chunk.h"
@@ -703,15 +704,130 @@ bool UWorldCollision::HasGroundSupport(const glm::vec3 &eyePos,
                                 cap.feetY(eyePos));
 }
 
+bool UWorldCollision::DepenetrateCreatureBodyXZ(glm::vec3 &bodyOrigin,
+                                                const glm::vec3 &sizeBlocks,
+                                                CreatureId skipCreatureId) const
+{
+  if (!EntityCollisionEnabled || !Environment)
+  {
+    return true;
+  }
+  CollisionVolume self = CollisionVolumeFromBody(bodyOrigin, sizeBlocks);
+  if (!CheckCreatureCollisionVolume(self, skipCreatureId))
+  {
+    return true;
+  }
+
+  const float query_radius =
+      std::max(sizeBlocks.x, sizeBlocks.z) + 1.25f;
+  const std::vector<CreatureNeighborView> neighbors =
+      Environment->QueryCreatureNeighborsInRadius(bodyOrigin, query_radius,
+                                                  skipCreatureId);
+  glm::vec3 push_sum(0.0f);
+  int hits = 0;
+  for (const CreatureNeighborView &neighbor : neighbors)
+  {
+    const UCreature *other = Environment->GetCreature(neighbor.Id);
+    if (!other || other->IsPlayerCharacter())
+    {
+      continue;
+    }
+    const CollisionVolume other_vol = other->GetCollisionVolume();
+    if (!UCube::CheckAabbCollision(self.center, self.halfExtents,
+                                   other_vol.center, other_vol.halfExtents))
+    {
+      continue;
+    }
+    const float overlap_x = self.halfExtents.x + other_vol.halfExtents.x -
+                            std::abs(self.center.x - other_vol.center.x);
+    const float overlap_z = self.halfExtents.z + other_vol.halfExtents.z -
+                            std::abs(self.center.z - other_vol.center.z);
+    if (overlap_x <= 0.0f || overlap_z <= 0.0f)
+    {
+      continue;
+    }
+    glm::vec3 delta = self.center - other_vol.center;
+    delta.y = 0.0f;
+    float dist = glm::length(delta);
+    if (dist < 1e-4f)
+    {
+      const float ang =
+          static_cast<float>((skipCreatureId * 17 + neighbor.Id * 31) % 628) /
+          100.0f;
+      delta = glm::vec3(std::cos(ang), 0.0f, std::sin(ang));
+      dist = 1.0f;
+    }
+    else
+    {
+      delta /= dist;
+    }
+    const float push_amt = std::min(overlap_x, overlap_z) + 0.04f;
+    push_sum += delta * push_amt;
+    ++hits;
+  }
+  if (hits == 0)
+  {
+    return false;
+  }
+
+  float push_len = glm::length(push_sum);
+  if (push_len < 1e-4f)
+  {
+    return false;
+  }
+  // Cap per call so we don't teleport through walls.
+  constexpr float kMaxPush = 0.45f;
+  if (push_len > kMaxPush)
+  {
+    push_sum *= kMaxPush / push_len;
+    push_len = kMaxPush;
+  }
+
+  const glm::vec3 dir = push_sum / push_len;
+  constexpr float kDirs[] = {1.0f, 0.7f, 0.4f, 0.2f};
+  for (float scale : kDirs)
+  {
+    glm::vec3 candidate = bodyOrigin + dir * (push_len * scale);
+    const CollisionVolume cand =
+        CollisionVolumeFromBody(candidate, sizeBlocks);
+    if (CheckBlockCollisionVolume(cand))
+    {
+      continue;
+    }
+    bodyOrigin.x = candidate.x;
+    bodyOrigin.z = candidate.z;
+    self = CollisionVolumeFromBody(bodyOrigin, sizeBlocks);
+    if (!CheckCreatureCollisionVolume(self, skipCreatureId))
+    {
+      return true;
+    }
+  }
+
+  // Still overlapping: keep best block-clear push for next frame.
+  glm::vec3 candidate = bodyOrigin + dir * std::min(push_len, 0.2f);
+  if (!CheckBlockCollisionVolume(
+          CollisionVolumeFromBody(candidate, sizeBlocks)))
+  {
+    bodyOrigin.x = candidate.x;
+    bodyOrigin.z = candidate.z;
+  }
+  return !CheckCreatureCollisionVolume(
+      CollisionVolumeFromBody(bodyOrigin, sizeBlocks), skipCreatureId);
+}
+
 glm::vec3 UWorldCollision::ResolveMovementBody(
     const glm::vec3 &bodyOrigin, const glm::vec3 &delta,
     const glm::vec3 &currentSizeBlocks, CreatureId skipCreatureId) const
 {
+  glm::vec3 body = bodyOrigin;
+  if (EntityCollisionEnabled)
+  {
+    DepenetrateCreatureBodyXZ(body, currentSizeBlocks, skipCreatureId);
+  }
   if (glm::dot(delta, delta) < 1e-10f)
   {
-    return bodyOrigin;
+    return body;
   }
-  glm::vec3 body = bodyOrigin;
   body = ResolveMovementAxisBody(*this, body, delta.y, 1, currentSizeBlocks,
                                  skipCreatureId);
   body = ResolveMovementAxisBody(*this, body, delta.x, 0, currentSizeBlocks,
@@ -726,21 +842,29 @@ glm::vec3 UWorldCollision::ResolveMovement(const glm::vec3 &eyePos,
                                            const PlayerCapsule &cap,
                                            CreatureId skipCreatureId) const
 {
-  if (glm::dot(delta, delta) < 1e-10f)
-  {
-    return eyePos;
-  }
   const glm::vec3 sizeBlocks = SizeBlocksFromCapsule(cap);
   const float feetY = cap.feetY(eyePos);
   glm::vec3 body(eyePos.x, feetY, eyePos.z);
+
+  if (EntityCollisionEnabled)
+  {
+    DepenetrateCreatureBodyXZ(body, sizeBlocks, skipCreatureId);
+  }
+
+  if (glm::dot(delta, delta) < 1e-10f)
+  {
+    return glm::vec3(body.x, body.y + cap.eyeHeight, body.z);
+  }
 
   if (delta.y > 0.0f &&
       CheckCollisionVolume(CollisionVolumeFromBody(body, sizeBlocks),
                            skipCreatureId))
   {
-    glm::vec3 resolvedEye(eyePos.x, feetY + cap.eyeHeight, eyePos.z);
+    glm::vec3 resolvedEye(body.x, body.y + cap.eyeHeight, body.z);
     DepenetrateEye(resolvedEye, cap, skipCreatureId);
     body.y = cap.feetY(resolvedEye);
+    body.x = resolvedEye.x;
+    body.z = resolvedEye.z;
   }
 
   const glm::vec3 newBody =

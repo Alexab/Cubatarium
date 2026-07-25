@@ -134,9 +134,11 @@ set(SOURCES
     src/Navigation/WorldNavigationQueries.cpp
     src/Navigation/UNavigationPathfinder.cpp
     src/Navigation/UWaypointFollower.cpp
+    src/Navigation/NavigationPathBudget.cpp
     src/World/Environment/CreatureSpatialIndex.cpp
     src/Creatures/Core/WorldCreatures.cpp
     src/Creatures/Environment/CreatureEnvironment.cpp
+    src/Creatures/Environment/CreatureTraverseQueries.cpp
     src/Creatures/Definition/CreatureDefinitionStorage.cpp
     src/Creatures/Visual/CreatureTextureStorage.cpp
     src/Creatures/Definition/SkinDefinitionStorage.cpp
@@ -781,6 +783,7 @@ target_link_libraries(terrain_mesh_dirty_seam_test glm::glm)
 add_executable(navigation_pathfinder_test
     src/Navigation/UNavigationPathfinder.cpp
     src/Navigation/UWaypointFollower.cpp
+    src/Navigation/NavigationPathBudget.cpp
     src/Test/NavigationPathfinderTest.cpp)
 target_include_directories(navigation_pathfinder_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)

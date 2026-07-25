@@ -165,7 +165,7 @@ src/Activity/
 
 | API perception | Назначение |
 |----------------|------------|
-| `CreatureVolumeClearAt` | Probe без пересечения AABB других существ |
+| `CreaturesClearAt` | Probe без пересечения AABB других существ (не blocks) |
 | `QueryCreatureNeighborsInRadius` | Соседи с `bodyOrigin` для separation |
 | `GetCreatureBodyOrigin` | Позиция по `CreatureId` |
 

@@ -39,7 +39,15 @@ CreatureMotorHorizontalResult ApplyCreatureMotorHorizontal(
   const PlayerCapsule cap = locomotion.GetStanceBlend() > 0.05f
                                 ? locomotion.GetCollisionCapsule()
                                 : locomotion.GetCapsule();
-  const SampledFluidState fluid = world.SampleFluidPhysics(eyePos, cap);
+  // Unstick overlapping mobs even when wish is zero this frame.
+  {
+    glm::vec3 body(eyePos.x, cap.feetY(eyePos), eyePos.z);
+    const glm::vec3 size = SizeBlocksFromCapsule(cap);
+    world.DepenetrateCreatureBodyXZ(body, size, skipCreatureId);
+    result.eyePos = glm::vec3(body.x, body.y + cap.eyeHeight, body.z);
+  }
+  glm::vec3 startEye = result.eyePos;
+  const SampledFluidState fluid = world.SampleFluidPhysics(startEye, cap);
   if (hasShift && fluid.inFluid)
   {
     const float drag =
@@ -48,14 +56,14 @@ CreatureMotorHorizontalResult ApplyCreatureMotorHorizontal(
     shift.z *= drag;
   }
 
-  glm::vec3 newPos = eyePos;
+  glm::vec3 newPos = startEye;
   if (hasShift)
   {
-    newPos = world.ResolveMovement(eyePos, shift, cap, skipCreatureId);
+    newPos = world.ResolveMovement(startEye, shift, cap, skipCreatureId);
   }
 
   const bool grounded =
-      world.HasGroundSupport(eyePos, cap) || locomotion.IsOnGround();
+      world.HasGroundSupport(startEye, cap) || locomotion.IsOnGround();
   bool stepped = false;
   if (stepUpEnabled && !fluid.inFluid && grounded && locomotion.IsOnGround() &&
       locomotion.IsFeetAnchored() && !jumpHeld &&
@@ -97,7 +105,9 @@ CreatureMotorHorizontalResult ApplyCreatureMotorHorizontal(
   {
     result.eyePos = newPos;
   }
-  result.moved = hasShift || stepped;
+  result.moved = hasShift || stepped ||
+                 glm::length(glm::vec2(result.eyePos.x - eyePos.x,
+                                       result.eyePos.z - eyePos.z)) > 1e-4f;
   return result;
 }
 

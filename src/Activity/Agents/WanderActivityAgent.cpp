@@ -112,7 +112,7 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
                                  snapshot->behavior.wanderIntervalMax,
                                  st.intervalMin, st.intervalMax);
 
-    const bool volume_blocked = !perception.CreatureVolumeClearAt(
+    const bool volume_blocked = !perception.CreaturesClearAt(
         view->bodyOrigin, snapshot->boundsSize, view->Id);
     if (st.forceRepick || volume_blocked)
     {
@@ -168,6 +168,8 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
         view->bodyOrigin, snapshot->boundsSize, neighbors, min_sep);
     glm::vec3 move_dir =
         BlendLocomotionDirection(st.direction, separation, kSeparationWeight);
+    move_dir = ApplyWallFeelers(perception, snapshot->habitat, view->bodyOrigin,
+                                move_dir, snapshot->boundsSize, view->Id);
 
     CreatureIntent intent;
     intent.moveDirWorld = move_dir;
@@ -192,8 +194,7 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
     const glm::vec3 probe = view->bodyOrigin + move_dir * probe_dist;
     bool forward_clear =
         glm::length(move_dir) < 1e-4f ||
-        (perception.CreatureVolumeClearAt(probe, snapshot->boundsSize,
-                                          view->Id) &&
+        (perception.CreaturesClearAt(probe, snapshot->boundsSize, view->Id) &&
          (snapshot->habitat == CreatureHabitat::Aerial ||
           perception.HabitatAllowsMovementAt(snapshot->habitat, probe,
                                              snapshot->boundsSize)));
@@ -205,12 +206,15 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
       RepickWanderDirection(perception, *view, *snapshot, st);
       move_dir =
           BlendLocomotionDirection(st.direction, separation, kSeparationWeight);
+      move_dir =
+          ApplyWallFeelers(perception, snapshot->habitat, view->bodyOrigin,
+                           move_dir, snapshot->boundsSize, view->Id);
       intent.moveDirWorld = move_dir;
       const glm::vec3 retry_probe = view->bodyOrigin + move_dir * probe_dist;
       forward_clear =
           glm::length(move_dir) < 1e-4f ||
-          (perception.CreatureVolumeClearAt(retry_probe, snapshot->boundsSize,
-                                            view->Id) &&
+          (perception.CreaturesClearAt(retry_probe, snapshot->boundsSize,
+                                       view->Id) &&
            (snapshot->habitat == CreatureHabitat::Aerial ||
             perception.HabitatAllowsMovementAt(snapshot->habitat, retry_probe,
                                                snapshot->boundsSize)));

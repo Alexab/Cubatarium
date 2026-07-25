@@ -22,7 +22,7 @@ bool ProbeLocomotionClear(IUWorldPerception &perception, CreatureHabitat habitat
                           const glm::vec3 &probe_origin,
                           const glm::vec3 &bounds_size, CreatureId skip_id)
 {
-  if (!perception.CreatureVolumeClearAt(probe_origin, bounds_size, skip_id))
+  if (!perception.CreaturesClearAt(probe_origin, bounds_size, skip_id))
   {
     return false;
   }
@@ -37,13 +37,10 @@ bool ProbeLocomotionClear(IUWorldPerception &perception, CreatureHabitat habitat
 
 float NavigationBodyHeightForBounds(float bounds_height_blocks)
 {
-  // Tall bipeds (zombie 1.85): trim so A* fits 2-block gaps / light foliage.
-  // Short mobs keep full height — do not inflate clearance above their AABB.
-  if (bounds_height_blocks <= 1.25f)
-  {
-    return std::max(0.5f, bounds_height_blocks);
-  }
-  return bounds_height_blocks - 0.25f;
+  // Keep A* clearance aligned with motor AABB. Trimming tall bipeds (-0.25)
+  // produced corridors through foliage that habitat/motor then rejected
+  // (zombie/skeleton "crawl" / zero_travel).
+  return std::max(0.5f, bounds_height_blocks);
 }
 
 bool ProbeLocomotionDirectionClear(IUWorldPerception &perception,
@@ -90,6 +87,34 @@ bool PickApproachDirection(IUWorldPerception &perception,
   // Soft: always advance toward preferred; motor + habitat gate arbitrate.
   out_direction = preferred;
   return true;
+}
+
+glm::vec3 ApplyWallFeelers(IUWorldPerception &perception,
+                           CreatureHabitat habitat,
+                           const glm::vec3 &body_origin,
+                           const glm::vec3 &desired_dir,
+                           const glm::vec3 &bounds_size, CreatureId skip_id,
+                           float feeler_length)
+{
+  if (glm::length(desired_dir) < 1e-4f)
+  {
+    return desired_dir;
+  }
+  const glm::vec3 preferred = glm::normalize(desired_dir);
+  const float length = std::max(0.45f, feeler_length);
+  // Prefer smaller yaw bends first (±30°, ±60°).
+  constexpr float kOffsetsRad[] = {0.0f, 0.5236f, -0.5236f, 1.0472f, -1.0472f};
+  for (float yaw : kOffsetsRad)
+  {
+    const glm::vec3 dir =
+        yaw == 0.0f ? preferred : RotateYawXZ(preferred, yaw);
+    if (ProbeLocomotionDirectionClear(perception, habitat, body_origin, dir,
+                                      bounds_size, skip_id, length))
+    {
+      return dir;
+    }
+  }
+  return preferred;
 }
 
 glm::vec3 RandomLocomotionDirection(CreatureHabitat habitat)
