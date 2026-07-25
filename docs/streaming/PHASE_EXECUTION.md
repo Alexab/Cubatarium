@@ -53,6 +53,14 @@ F2 still NO-GO (`sticky=9`, `cold_relight_holes_sec=18`, stream class) — draw 
 `gpu_mdi_sort`: opaque/cutout sorted by `blockId` before pool refresh;
 `gpu_draw_cmds` now counts API submits — med **8** (max 14). F2 still stream NO-GO.
 
+### F2 sticky drain (2026-07-25)
+
+`SyncIdleFocusGreedyRemesh` moved outside `wall≤28` visual-drain gate (stop-tail
+wall often 40–55 ms). Short autofly: **sticky 9→0**. Remaining F2 fails:
+`cold_relight_holes_sec` (6–16) and `post_stop_focus_dirty_end` (~400 vs ≤280).
+`idle_focus_dirty_debt` (fd>280, nr≈0) starves outside + drain/schedule bias —
+fd falls on short stop (`fd_delta≈-100`) but golden stop still ends ~400.
+
 ### Manual follow-up (2026-07-23)
 
 | Run | Notes |
