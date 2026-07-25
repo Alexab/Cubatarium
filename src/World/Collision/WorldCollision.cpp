@@ -297,11 +297,9 @@ bool FindSteppableLedge(const UWorldCollision &collision,
   {
     return false;
   }
-  const glm::vec3 landingEye = StepStandPosition(stepCell, cap);
-  if (collision.CheckCollision(landingEye, cap, skipCreatureId))
-  {
-    return false;
-  }
+  // IsValidStandCell already verified the stand volume via CollisionVolumeAtFeet.
+  // Do not re-check through eye→feet (BlockTopY+eyeHeight-eyeHeight): float
+  // round-trip can sit slightly inside the floor and false-reject the ledge.
   outStepCell = stepCell;
   return true;
 }
@@ -820,9 +818,7 @@ bool UWorldCollision::GetStepUpLanding(const glm::vec3 &eyePos,
   }
 
   outLanding = probe.TargetPos;
-  return !CheckCollision(outLanding, cap,
-                         Environment ? Environment->GetControlledCreatureId()
-                                     : 0);
+  return true;
 }
 
 bool UWorldCollision::TryStepUp(glm::vec3 &eyePos, const glm::vec3 &horiz,
