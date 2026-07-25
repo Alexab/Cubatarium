@@ -41,6 +41,11 @@ free-list, GPU mesher/light/fluid wrappers (parity). See [`GPU_PIPELINE.md`](GPU
 Unit gates: `edit_mesh_remesh_policy_test`, `render_backend_factory_test`,
 `mesh_gpu_store_mdi_test`.
 
+`gpu_p1` autofly (`551a7766`, PreferGpuStorePatch wired): backends
+`cpu_greedy` / `mdi_vertex_pool` / `gpu_frustum` confirmed in jsonl. F2 NO-GO on
+pre-existing `sticky=9`, `cold_relight_holes_sec=16`, `focus_dirty_end=403`
+(stream class) — not a draw-path regression from init-bind.
+
 ### Manual follow-up (2026-07-23)
 
 | Run | Notes |
