@@ -30,20 +30,16 @@ bool UGreedyVertexPool::EnsureCapacity(size_t vertex_bytes, size_t index_bytes)
   bool clamped = false;
   if (MaxCapacityBytes > 0)
   {
-    const size_t current =
-        (std::max)(VertexCapacityBytes, want_v) +
-        (std::max)(IndexCapacityBytes, want_i);
+    const size_t current = (std::max)(VertexCapacityBytes, want_v) +
+                           (std::max)(IndexCapacityBytes, want_i);
     if (current > MaxCapacityBytes)
     {
-      // Prefer keeping existing capacity; refuse growth past max.
-      const size_t room_v =
-          MaxCapacityBytes > IndexCapacityBytes
-              ? MaxCapacityBytes - IndexCapacityBytes
-              : 0;
-      const size_t room_i =
-          MaxCapacityBytes > VertexCapacityBytes
-              ? MaxCapacityBytes - VertexCapacityBytes
-              : 0;
+      const size_t room_v = MaxCapacityBytes > IndexCapacityBytes
+                                ? MaxCapacityBytes - IndexCapacityBytes
+                                : 0;
+      const size_t room_i = MaxCapacityBytes > VertexCapacityBytes
+                                ? MaxCapacityBytes - VertexCapacityBytes
+                                : 0;
       if (want_v > room_v)
       {
         want_v = (std::max)(VertexCapacityBytes, room_v);
@@ -88,6 +84,7 @@ bool UGreedyVertexPool::Reserve(size_t vertex_bytes, size_t index_bytes)
   const bool ok = EnsureCapacity(vertex_bytes, index_bytes);
   VertexUsedBytes = 0;
   IndexUsedBytes = 0;
+  FreeList.clear();
   return ok;
 }
 
@@ -96,6 +93,38 @@ bool UGreedyVertexPool::EnsureMinCapacity(size_t vertex_bytes,
 {
   return EnsureCapacity((std::max)(vertex_bytes, VertexCapacityBytes),
                         (std::max)(index_bytes, IndexCapacityBytes));
+}
+
+bool UGreedyVertexPool::TryAllocateFromFreeList(size_t vertex_bytes,
+                                                size_t index_bytes,
+                                                GreedyGpuPoolAllocation &out)
+{
+  for (size_t i = 0; i < FreeList.size(); ++i)
+  {
+    GreedyGpuPoolFreeSlot &slot = FreeList[i];
+    if (slot.vertexBytes >= vertex_bytes && slot.indexBytes >= index_bytes)
+    {
+      out.vertexByteOffset = slot.vertexByteOffset;
+      out.indexByteOffset = slot.indexByteOffset;
+      FreeList.erase(FreeList.begin() + static_cast<std::ptrdiff_t>(i));
+      return true;
+    }
+  }
+  return false;
+}
+
+void UGreedyVertexPool::Free(const GreedyGpuPoolAllocation &alloc)
+{
+  if (alloc.vertexCount == 0 || alloc.indexCount == 0)
+  {
+    return;
+  }
+  GreedyGpuPoolFreeSlot slot;
+  slot.vertexByteOffset = alloc.vertexByteOffset;
+  slot.indexByteOffset = alloc.indexByteOffset;
+  slot.vertexBytes = alloc.vertexCount * sizeof(GreedyMeshVertex);
+  slot.indexBytes = alloc.indexCount * sizeof(uint32_t);
+  FreeList.push_back(slot);
 }
 
 GreedyGpuPoolAllocation
@@ -112,19 +141,24 @@ UGreedyVertexPool::Allocate(const GreedyMeshBatch &batch)
 
   const size_t vertex_bytes = alloc.vertexCount * sizeof(GreedyMeshVertex);
   const size_t index_bytes = alloc.indexCount * sizeof(uint32_t);
-  const size_t needed_vertex = VertexUsedBytes + vertex_bytes;
-  const size_t needed_index = IndexUsedBytes + index_bytes;
-  if (needed_vertex > VertexCapacityBytes || needed_index > IndexCapacityBytes)
-  {
-    if (!EnsureCapacity(needed_vertex, needed_index))
-    {
-      // Skip orphan grow past Max — leave empty alloc (caller skips draw).
-      return GreedyGpuPoolAllocation{};
-    }
-  }
 
-  alloc.vertexByteOffset = VertexUsedBytes;
-  alloc.indexByteOffset = IndexUsedBytes;
+  if (!TryAllocateFromFreeList(vertex_bytes, index_bytes, alloc))
+  {
+    const size_t needed_vertex = VertexUsedBytes + vertex_bytes;
+    const size_t needed_index = IndexUsedBytes + index_bytes;
+    if (needed_vertex > VertexCapacityBytes ||
+        needed_index > IndexCapacityBytes)
+    {
+      if (!EnsureCapacity(needed_vertex, needed_index))
+      {
+        return GreedyGpuPoolAllocation{};
+      }
+    }
+    alloc.vertexByteOffset = VertexUsedBytes;
+    alloc.indexByteOffset = IndexUsedBytes;
+    VertexUsedBytes += vertex_bytes;
+    IndexUsedBytes += index_bytes;
+  }
 
   glBindBuffer(kArrayBuffer, VertexVbo);
   glBufferSubData(kArrayBuffer, static_cast<GLintptr>(alloc.vertexByteOffset),
@@ -135,9 +169,6 @@ UGreedyVertexPool::Allocate(const GreedyMeshBatch &batch)
                   static_cast<GLsizeiptr>(index_bytes), batch.indices.data());
   glBindBuffer(kArrayBuffer, 0);
   glBindBuffer(kElementArrayBuffer, 0);
-
-  VertexUsedBytes += vertex_bytes;
-  IndexUsedBytes += index_bytes;
   return alloc;
 }
 
@@ -145,6 +176,7 @@ void UGreedyVertexPool::Reset()
 {
   VertexUsedBytes = 0;
   IndexUsedBytes = 0;
+  FreeList.clear();
 }
 
 void UGreedyVertexPool::Destroy()
@@ -163,6 +195,7 @@ void UGreedyVertexPool::Destroy()
   IndexCapacityBytes = 0;
   VertexUsedBytes = 0;
   IndexUsedBytes = 0;
+  FreeList.clear();
 }
 
 } // namespace cutum

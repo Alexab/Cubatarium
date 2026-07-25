@@ -33,6 +33,14 @@ Pending/FIFO soft-caps, GPU Reserve/Max, `MemoryBudgetController`, UChunk free-l
 Gates: see Validation notes in `MEMORY_BUDGET.md` (manual place-light + autofly
 private p95 / fill% / wall).
 
+## GPU pipeline init-bind (2026-07-25)
+
+Phase 0–5 scaffolding: `URenderBackendFactory::BindOnce`, `IUChunkMesher` /
+`IUMeshGpuStore` / `IUChunkCull`, `EditMeshRemeshPolicy`, MDI store + vertex-pool
+free-list, GPU mesher/light/fluid wrappers (parity). See [`GPU_PIPELINE.md`](GPU_PIPELINE.md).
+Unit gates: `edit_mesh_remesh_policy_test`, `render_backend_factory_test`,
+`mesh_gpu_store_mdi_test`.
+
 ### Manual follow-up (2026-07-23)
 
 | Run | Notes |

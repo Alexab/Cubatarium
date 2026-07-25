@@ -209,6 +209,12 @@ struct FrameNumbers
   uint64_t relight_fifo_dropped{0};
   double gpu_pool_used_mb{0.0};
   double gpu_pool_cap_mb{0.0};
+  uint64_t gpu_draw_cmds{0};
+  double gpu_cull_ms{0.0};
+  double vertex_pool_fill{0.0};
+  std::string backend_mesher;
+  std::string backend_store;
+  std::string backend_cull;
   int memory_pressure{0};
   int keep_margin_eff{0};
   uint64_t buffer_expand_events{0};
@@ -357,6 +363,12 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.relight_fifo_dropped = phys.RelightFifoDropped;
   n.gpu_pool_used_mb = phys.GpuPoolUsedMb;
   n.gpu_pool_cap_mb = phys.GpuPoolCapMb;
+  n.gpu_draw_cmds = phys.GpuDrawCmds;
+  n.gpu_cull_ms = phys.GpuCullMs;
+  n.vertex_pool_fill = phys.VertexPoolFill;
+  n.backend_mesher = phys.BackendMesher;
+  n.backend_store = phys.BackendStore;
+  n.backend_cull = phys.BackendCull;
   n.keep_margin_eff = phys.KeepMarginEff;
   n.buffer_expand_events = phys.BufferExpandEvents;
   {
@@ -483,6 +495,12 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"relight_fifo_dropped\":" << n.relight_fifo_dropped
           << ",\"gpu_pool_used_mb\":" << n.gpu_pool_used_mb
           << ",\"gpu_pool_cap_mb\":" << n.gpu_pool_cap_mb
+          << ",\"gpu_draw_cmds\":" << n.gpu_draw_cmds
+          << ",\"gpu_cull_ms\":" << n.gpu_cull_ms
+          << ",\"vertex_pool_fill\":" << n.vertex_pool_fill
+          << ",\"backend_mesher\":\"" << n.backend_mesher << "\""
+          << ",\"backend_store\":\"" << n.backend_store << "\""
+          << ",\"backend_cull\":\"" << n.backend_cull << "\""
           << ",\"memory_pressure\":" << n.memory_pressure
           << ",\"keep_margin_eff\":" << n.keep_margin_eff
           << ",\"buffer_expand_events\":" << n.buffer_expand_events

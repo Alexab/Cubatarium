@@ -131,6 +131,10 @@ public:
   uint64_t GetCullRevision() const { return CullRevision; }
   void UpdateVisibleInstances(const Frustum &frustum, const glm::mat4 &viewProj,
                               const glm::vec3 &cameraPos);
+  /// Public cull entry for IUChunkCull backends (rebuilds flat greedy refs).
+  void RebuildGreedyVisibleForCull(const Frustum *frustum,
+                                   const glm::vec3 *camera_pos,
+                                   float max_cull_distance);
   void SetRenderSettings(const RenderSettings &settings);
   const RenderSettings &GetRenderSettings() const { return Render; }
   void SetRenderDistanceChunks(int distance)

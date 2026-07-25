@@ -252,6 +252,7 @@ set(SOURCES
     src/World/Diagnostics/CreatureMovementDiagnostics.cpp
     src/World/Mesh/WorldMeshService.cpp
     src/World/Mesh/WorldMeshDirtyPolicy.cpp
+    src/World/Mesh/EditMeshRemeshPolicy.cpp
     src/App/Platform/WindowManager.cpp
     src/Render/Engine/GeometryEngine.cpp
     src/Render/Engine/FluidSurfaceMap.cpp
@@ -262,6 +263,10 @@ set(SOURCES
     src/Render/Engine/GreedyGpuBackend.cpp
     src/Render/Engine/GreedyVertexPool.cpp
     src/Render/Engine/CrossGpuBackend.cpp
+    src/Render/Backend/RenderBackendFactory.cpp
+    src/Render/Backend/RenderBackendSelect.cpp
+    src/Render/Mesh/CpuFrustumCull.cpp
+    src/Render/Engine/MdiVertexPoolStore.cpp
     src/Render/Engine/DistanceFog.cpp
     src/Render/Engine/HorizonFogColor.cpp
     src/Render/Pipeline/GlStateScope.cpp
@@ -1132,6 +1137,25 @@ target_include_directories(streaming_render_ready_invariants_test PRIVATE
 add_executable(focus_ingress_policy_test
     src/Test/FocusIngressPolicyTest.cpp)
 target_include_directories(focus_ingress_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(edit_mesh_remesh_policy_test
+    src/Test/EditMeshRemeshPolicyTest.cpp
+    src/World/Mesh/EditMeshRemeshPolicy.cpp
+    src/World/Math/GridMath.cpp)
+target_include_directories(edit_mesh_remesh_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(edit_mesh_remesh_policy_test glm::glm)
+
+add_executable(render_backend_factory_test
+    src/Test/RenderBackendFactoryTest.cpp
+    src/Render/Backend/RenderBackendSelect.cpp)
+target_include_directories(render_backend_factory_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(mesh_gpu_store_mdi_test
+    src/Test/MeshGpuStoreMdiTest.cpp)
+target_include_directories(mesh_gpu_store_mdi_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
 add_executable(docked_overlay_layout_test src/Test/DockedOverlayLayoutTest.cpp

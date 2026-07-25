@@ -6,6 +6,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/GridMath.h"
+#include "World/Mesh/EditMeshRemeshPolicy.h"
 #include "World/Physics/PhysicsTelemetry.h"
 #include <algorithm>
 #include <unordered_set>
@@ -673,52 +674,32 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
   {
     return;
   }
-  // Cap sync remesh so dig/place light ring does not hitch on 3×3×3 Immediate.
-  constexpr int kEditImmediateChunkCap = 9;
-  std::unordered_set<glm::ivec3, IVec3Hash> chunk_coords;
-  std::unordered_set<glm::ivec3, IVec3Hash> center_chunks;
-  for (const glm::ivec3 &block_pos : block_positions)
-  {
-    const glm::ivec3 center = UChunkManager::WorldToChunk(block_pos);
-    center_chunks.insert(center);
-    chunk_coords.insert(center);
-    if (sync_neighbor_chunks || sync_light_ring)
-    {
-      for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-      {
-        chunk_coords.insert(UChunkManager::WorldToChunk(block_pos + offset));
-      }
-    }
-    if (sync_light_ring)
-    {
-      // Light spill reaches neighboring chunks; remesh the ring so lamp glow
-      // is not drip-fed by async Dirty while mesh_async is saturated.
-      for (int dx = -1; dx <= 1; ++dx)
-      {
-        for (int dy = -1; dy <= 1; ++dy)
-        {
-          for (int dz = -1; dz <= 1; ++dz)
-          {
-            chunk_coords.insert(center + glm::ivec3(dx, dy, dz));
-          }
-        }
-      }
-    }
-  }
-  modified_chunks.insert(chunk_coords.begin(), chunk_coords.end());
+
+  EditMeshRemeshInput policy_in;
+  policy_in.BlockPositions = block_positions;
+  policy_in.SyncNeighborChunks = sync_neighbor_chunks;
+  policy_in.SyncLightRing = sync_light_ring;
+  policy_in.HasRegistry = registry != nullptr;
+  const RenderSettings &render = Cache.GetRenderSettings();
+  policy_in.AsyncMeshing = render.AsyncMeshing;
+  policy_in.GreedyMeshing = render.GreedyMeshing;
+  policy_in.ImmediateChunkCap = 9;
+  policy_in.PreferGpuStorePatch = false;
+
+  const EditMeshRemeshDecision decision = EvaluateEditMeshRemesh(policy_in);
+  modified_chunks.insert(decision.ImmediateChunks.begin(),
+                         decision.ImmediateChunks.end());
+  modified_chunks.insert(decision.DirtyChunks.begin(),
+                         decision.DirtyChunks.end());
+
   if (!registry)
   {
-    for (const glm::ivec3 &chunk_coord : chunk_coords)
+    for (const glm::ivec3 &chunk_coord : decision.DirtyChunks)
     {
       MarkDirtyPriority(chunk_coord);
     }
     return;
   }
-  const RenderSettings &render = Cache.GetRenderSettings();
-  const bool full_sync_rebuild =
-      !render.AsyncMeshing || !render.GreedyMeshing;
-  const bool hybrid_async_edit =
-      registry != nullptr && render.AsyncMeshing && render.GreedyMeshing;
 
   auto note_race_before_immediate = [&](glm::ivec3 chunk_coord)
   {
@@ -736,46 +717,15 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
     }
   };
 
-  const glm::ivec3 focus = UChunkManager::WorldToChunk(block_positions.front());
-  std::vector<glm::ivec3> ordered(chunk_coords.begin(), chunk_coords.end());
-  std::sort(ordered.begin(), ordered.end(),
-            [&](const glm::ivec3 &a, const glm::ivec3 &b)
-            {
-              const int da = std::max({std::abs(a.x - focus.x),
-                                       std::abs(a.y - focus.y),
-                                       std::abs(a.z - focus.z)});
-              const int db = std::max({std::abs(b.x - focus.x),
-                                       std::abs(b.y - focus.y),
-                                       std::abs(b.z - focus.z)});
-              if (da != db)
-              {
-                return da < db;
-              }
-              const bool ac = center_chunks.count(a) != 0;
-              const bool bc = center_chunks.count(b) != 0;
-              return ac && !bc;
-            });
-
-  const bool sync_any = sync_neighbor_chunks || sync_light_ring;
-  int immediate_n = 0;
-  for (const glm::ivec3 &chunk_coord : ordered)
+  for (const glm::ivec3 &chunk_coord : decision.ImmediateChunks)
   {
-    const bool want_immediate =
-        full_sync_rebuild ||
-        (hybrid_async_edit &&
-         (center_chunks.count(chunk_coord) != 0 ||
-          (sync_any && immediate_n < kEditImmediateChunkCap)));
-    if (want_immediate)
-    {
-      note_race_before_immediate(chunk_coord);
-      RebuildChunkImmediate(block_world, *registry, chunk_coord);
-      note_dark_after_immediate(chunk_coord);
-      ++immediate_n;
-    }
-    else
-    {
-      MarkDirtyPriority(chunk_coord);
-    }
+    note_race_before_immediate(chunk_coord);
+    RebuildChunkImmediate(block_world, *registry, chunk_coord);
+    note_dark_after_immediate(chunk_coord);
+  }
+  for (const glm::ivec3 &chunk_coord : decision.DirtyChunks)
+  {
+    MarkDirtyPriority(chunk_coord);
   }
 }
 

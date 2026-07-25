@@ -21,7 +21,10 @@
 #include "Render/Engine/HorizonFogColor.h"
 #include "Render/Engine/FluidSurfaceMap.h"
 #include "Render/Engine/FluidUnderwaterFogLogic.h"
-#include "Render/Engine/GreedyGpuBackend.h"
+#include "Render/Engine/IUMeshGpuStore.h"
+#include "Render/Backend/RenderBackendFactory.h"
+#include "Render/Mesh/IUChunkCull.h"
+#include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
 #include "Render/Pipeline/GlStateMask.h"
@@ -148,8 +151,36 @@ void UGeometryEngine::SetCreatureTextureStorage(
   CreatureTextureStorage = std::move(storage);
 }
 
+void UGeometryEngine::EnsureRenderBackendsBound()
+{
+  if (URenderBackendFactory::IsBound(RenderBackends))
+  {
+    return;
+  }
+  RenderBackendCaps caps;
+  caps.Platform = RenderPlatformKind::Desktop;
+  caps.ForceCpuBackends = false;
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  caps.Platform = RenderPlatformKind::Android;
+  caps.HasCompute = false;
+  caps.HasMultiDrawIndirect = false;
+#else
+  caps.HasCompute = true;
+  caps.HasMultiDrawIndirect = true;
+#endif
+  URenderBackendFactory::BindOnce(RenderBackends, caps);
+}
+
+IUMeshGpuStore &UGeometryEngine::MeshStore()
+{
+  EnsureRenderBackendsBound();
+  return *RenderBackends.Store;
+}
+
 bool UGeometryEngine::InitEngine()
 {
+  EnsureRenderBackendsBound();
+
   // Initialize UShaderManager
   shaderManager = std::make_shared<UShaderManager>();
   if (!shaderManager->Initialize())
@@ -397,6 +428,10 @@ float insetMix(float a, float b, float t, float inset) {
 void UGeometryEngine::Paint(int width_size, int height_size,
                             double view_duration)
 {
+  if (WorldInstance)
+  {
+    WorldInstance->GetPhysicsTelemetryMutable().GpuDrawCmds = 0;
+  }
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
     AnimationClock.Tick(static_cast<float>(camera->GetDeltaTime()));
@@ -630,8 +665,8 @@ void UGeometryEngine::SetRenderSettings(const RenderSettings &settings)
   Render = settings;
   SetGradientSky(Render.GradientSky);
   BlockBatchesValid = false;
-  GreedyGpuBackend.DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
-                              GreedyGpuTransparent);
+  MeshStore().DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
+                         GreedyGpuTransparent);
   DestroyFaceQuadBuffers();
 }
 
@@ -931,6 +966,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
 
   glBindVertexArray(greedyMeshVAO);
   const GLsizei kStride = static_cast<GLsizei>(sizeof(GreedyMeshVertex));
+  uint64_t draw_cmds = 0;
   for (const GreedyGpuBatch &gpu : cache.batches)
   {
     SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
@@ -989,6 +1025,25 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     glDrawElements(
         GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
         reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
+    ++draw_cmds;
+  }
+
+  if (WorldInstance)
+  {
+    auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+    phys.GpuDrawCmds += draw_cmds;
+    if (RenderBackends.Mesher)
+    {
+      phys.BackendMesher = RenderBackends.Mesher->BackendName();
+    }
+    if (RenderBackends.Store)
+    {
+      phys.BackendStore = RenderBackends.Store->BackendName();
+    }
+    if (RenderBackends.Cull)
+    {
+      phys.BackendCull = RenderBackends.Cull->BackendName();
+    }
   }
 
   glBindVertexArray(0);
@@ -1004,8 +1059,8 @@ void UGeometryEngine::DrawGreedyGpuBatches(
 void UGeometryEngine::ResetWorldRenderState()
 {
   FluidSurfaceMap.DestroyGpuResources();
-  GreedyGpuBackend.DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
-                              GreedyGpuTransparent);
+  MeshStore().DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
+                         GreedyGpuTransparent);
   BlockBatchesValid = false;
   CachedMeshRevision = 0;
   CachedInstanceCount = 0;
@@ -1195,7 +1250,7 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
   }
   if (!solid.empty())
   {
-    GreedyGpuBackend.RefreshPassRefs(GreedyGpuOpaque, cache, solid, meshRevision,
+    MeshStore().RefreshPassRefs(GreedyGpuOpaque, cache, solid, meshRevision,
                                      cullRevision, 0);
     DrawGreedyGpuBatches(GreedyGpuOpaque, vp, textures, false, false,
                          GreedyShaderMode::TransparentColor, 0.0f);
@@ -1216,7 +1271,7 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     GLboolean cullWasEnabled;
     glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
     glDisable(GL_CULL_FACE);
-    GreedyGpuBackend.RefreshPassRefs(GreedyGpuCutout, cache, cutout, meshRevision,
+    MeshStore().RefreshPassRefs(GreedyGpuCutout, cache, cutout, meshRevision,
                                      cullRevision, 0);
     DrawGreedyGpuBatches(GreedyGpuCutout, vp, textures, true, false,
                          GreedyShaderMode::TransparentColor, 0.0f);
@@ -1236,6 +1291,8 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
     phys.GpuPoolUsedMb = static_cast<double>(used) / (1024.0 * 1024.0);
     phys.GpuPoolCapMb = static_cast<double>(cap) / (1024.0 * 1024.0);
+    phys.VertexPoolFill =
+        cap > 0 ? static_cast<double>(used) / static_cast<double>(cap) : 0.0;
   }
 }
 
@@ -1260,14 +1317,14 @@ void UGeometryEngine::PrepareTransparent(
   }
   if (filtered.empty())
   {
-    GreedyGpuBackend.DestroyPass(GreedyGpuTransparent);
+    MeshStore().DestroyPass(GreedyGpuTransparent);
     PreparedTransparentTextures = nullptr;
     return;
   }
   SortTransparentGreedyBatches(filtered, ctx.cache, ctx.cameraPos,
                                ctx.blockRegistry);
   const uint64_t sortRevision = GreedyTransparentSortRevision(ctx.cameraPos);
-  GreedyGpuBackend.RefreshPassRefs(GreedyGpuTransparent, ctx.cache, filtered,
+  MeshStore().RefreshPassRefs(GreedyGpuTransparent, ctx.cache, filtered,
                                    ctx.meshRevision, ctx.cullRevision,
                                    sortRevision);
   PreparedTransparentVp = ctx.viewProjection;
@@ -1330,8 +1387,8 @@ bool UGeometryEngine::InitGreedyMeshBuffers()
 
 void UGeometryEngine::DestroyGreedyMeshBuffers()
 {
-  GreedyGpuBackend.DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
-                              GreedyGpuTransparent);
+  MeshStore().DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
+                         GreedyGpuTransparent);
   CrossGpuBackend.DestroyAll(CrossGpuPass);
   if (greedyMeshEBO)
   {

@@ -134,6 +134,13 @@ struct PhysicsTelemetry
   uint64_t RelightFifoDropped{0};
   double GpuPoolUsedMb{0.0};
   double GpuPoolCapMb{0.0};
+  /// Init-bound backend names (mesher/store/cull).
+  std::string BackendMesher{"cpu_greedy"};
+  std::string BackendStore{"cpu_staging"};
+  std::string BackendCull{"cpu_frustum"};
+  uint64_t GpuDrawCmds{0};
+  double GpuCullMs{0.0};
+  double VertexPoolFill{0.0};
   int MemoryPressure{0};
   int KeepMarginEff{0};
   uint64_t BufferExpandEvents{0};

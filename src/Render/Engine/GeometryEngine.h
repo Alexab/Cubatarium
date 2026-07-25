@@ -18,6 +18,8 @@ typedef int GLint;
 #include "Render/Engine/CrossGpuBackend.h"
 #include "Render/Engine/FluidSurfaceMap.h"
 #include "Render/Engine/GreedyGpuBackend.h"
+#include "Render/Engine/IUMeshGpuStore.h"
+#include "Render/Backend/RenderBackendFactory.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/SkyGradientPass.h"
 #include "Render/Engine/TextRenderer.h"
@@ -296,7 +298,7 @@ private:
   UAnimationClock AnimationClock;
 
   UCreatureDrawPass CreatureDraw_;
-  UGreedyGpuBackend GreedyGpuBackend;
+  URenderBackendBundle RenderBackends;
   UCrossGpuBackend CrossGpuBackend;
   GreedyGpuPassCache GreedyGpuOpaque;
   GreedyGpuPassCache GreedyGpuCutout;
@@ -304,6 +306,8 @@ private:
   CrossGpuPassCache CrossGpuPass;
   glm::mat4 PreparedTransparentVp{};
   const std::map<size_t, UTextureCube> *PreparedTransparentTextures{nullptr};
+  IUMeshGpuStore &MeshStore();
+  void EnsureRenderBackendsBound();
   void DrawGreedyOpaqueBatches(
       const UChunkMeshCache &cache,
       const std::vector<GreedyBatchRef> &opaqueCutoutRefs,

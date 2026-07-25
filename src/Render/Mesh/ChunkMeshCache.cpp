@@ -974,6 +974,13 @@ void UChunkMeshCache::RebuildFlatCrossInstances(const Frustum *frustum,
   }
   CrossBatchesDirty = false;
 }
+void UChunkMeshCache::RebuildGreedyVisibleForCull(
+    const Frustum *frustum, const glm::vec3 *camera_pos,
+    float max_cull_distance)
+{
+  RebuildFlatGreedyBatches(frustum, camera_pos, max_cull_distance);
+}
+
 void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
                                              const glm::mat4 &viewProj,
                                              const glm::vec3 &cameraPos)
