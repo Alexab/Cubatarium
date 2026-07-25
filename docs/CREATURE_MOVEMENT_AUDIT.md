@@ -1,74 +1,77 @@
 # Creature movement audit (baseline)
 
-Date: 2026-07-24 (code + instrumentation). Manual session follow-up: **2026-07-25**.
+Date: 2026-07-24 (code + instrumentation). Manual follow-ups: **2026-07-25** (09:40, 10:17, 12:40).
 
-## Pipeline (reference)
+## Pipeline
 
-1. `TickAgents` → intent (`Wander` / `Flee` / `Melee` + `USimpleFsmBrain`)
-2. `Creature::ExecuteIntent` (NPC) or Camera + `CreatureLocomotionController` (player)
-3. Habitat / collision resolve
-4. `RebuildLocomotionFacts` → pose
+1. `TickAgents` → intent
+2. `Creature::ExecuteIntent` (NPC) or Camera + controller (player)
+3. Soft habitat gate (actual body) / collision resolve
+4. `RebuildLocomotionFacts` → **one** of bone / glTF / rigid pose paths
 
-Enable telemetry: default-on `gameplay.creature_movement_diag` (event/throttle/batch); console `creature_diag focus nearest|verbose on|dump`.
+## Manual runs 2026-07-25
 
-## Manual run 2026-07-25 (`bin/logs`)
-
-Session `perf_20260725-094046_512.jsonl` (~121 periods):
-
-| Metric | p50 (approx) | Notes |
-|--------|--------------|-------|
-| `do_movement_ms` / `physics_movement_ms` | ~34 ms | Dominant frame cost after mob spawn |
-| `scene_ms` | ~7 ms | Render not primary culprit |
-| `dirty` | ~269–287 | Streaming rebuild backlog |
-| `pending_light` | ~28–33 | Relight backlog |
-
-- **`creature_movement_diag.jsonl` missing** — config had `creature_movement_diag: false`; no AI movement evidence that session.
-- Symptoms observed: zombies “march in place”; spider legs static; FPS drop after spawn.
-- Root causes addressed in follow-up commits:
-  - Habitat full-step revert + Walk/Run hint at zero travel → march
-  - Spider `quadruped` X-roll on horizontal `leg0`–`leg7` → no visible gait
-  - Per-frame NPC motor × N (+ dirty/light) → `do_movement` cost; naive every-frame JSONL would worsen FPS
+| Session | Finding |
+|---------|---------|
+| 09:40 | `do_movement` p50 ~34 ms; diag off |
+| 10:17 | diag on; `path_ok=0`; march/idle chase |
+| 12:40 | zombie **1878× habitat_reject + zero_travel** (chase intent + motor, A* stand-node veto) |
 
 ## Findings
 
-| ID | Severity | Finding | Evidence | Status |
-|----|----------|---------|----------|--------|
-| CMA-001 | high | Chase/flee A* goal uses eye | SimpleFsmBrain + ControlledCreatureInfo | **closed** (body/feet goals) |
-| CMA-002 | high | Dual motor player vs NPC | Creature / Camera | **closed** (shared CreatureMotor) |
-| CMA-003 | medium | Wander probe/stuck | WanderActivityAgent | **closed** (3D stuck + probe ~ speed) |
-| CMA-004 | medium | Habitat climb/drop 1.25 vs jumpHeight | CreatureEnvironment + 2026-07-25 march | **closed** (jumpHeight gate + partial XZ accept) |
-| CMA-005 | medium | Aerial all-or-nothing | ExecuteIntent | **closed** (shared ResolveMovement slide) |
-| CMA-006 | low | Stuck XZ-only | CreatureActivitySteering | **closed** (3D speed) |
-| CMA-007 | low | Intent sticky between activity ticks | agents | note (by design) |
-| CMA-008 | info | Docs stale on flee/melee | docs | **closed** (docs sync) |
-| CMA-009 | info | No per-mob telemetry | — | **closed** (diagnostics) |
-| CMA-010 | high | Walk/Run suggestedAnim at zero speed | FinalizeLocomotionFacts / derive; 2026-07-25 | **closed** (no fake walk phase / state) |
-| CMA-011 | medium | Chase `path_fail` → direct XZ wall bash | SimpleFsmBrain | **closed** (idle / lateral slide) |
-| CMA-012 | medium | Spider bone gait invisible | BoneSkeletonPoseEngine quadruped | **closed** (`arachnid` Z/Y on leg0–7) |
-| CMA-013 | medium | Idle NPC full motor every frame | ExecuteIntent; perf p50 ~34 ms | **closed** (grounded zero-wish early-out) |
-| CMA-014 | medium | Default diag off / every-frame JSONL risk | config 2026-07-25; Record mutex+disk | **closed** (default-on event/throttle/batch) |
+| ID | Severity | Finding | Status |
+|----|----------|---------|--------|
+| CMA-001 | high | Chase/flee A* goal uses eye | **closed** |
+| CMA-002 | high | Dual motor player vs NPC | **closed** |
+| CMA-003 | medium | Wander probe/stuck | **closed** |
+| CMA-004 | medium | Habitat climb vs jumpHeight | **closed** (jumpHeight + soft gate) |
+| CMA-005 | medium | Aerial all-or-nothing | **closed** |
+| CMA-006 | low | Stuck XZ-only | **closed** |
+| CMA-007 | low | Intent sticky | note |
+| CMA-008 | info | Docs stale | **closed** |
+| CMA-009 | info | No per-mob telemetry | **closed** |
+| CMA-010 | high | Walk/Run at zero speed | **closed** |
+| CMA-011 | medium | Chase path_fail wall bash / idle | **closed** (direct/slide/soft) |
+| CMA-012 | medium | Spider bone gait invisible | **closed** (arachnid Z/Y + fan) |
+| CMA-013 | medium | Idle full motor | **closed** (early-out) |
+| CMA-014 | medium | Diag every-frame storm | **closed** (event/throttle/batch) |
+| CMA-015 | high | Post-motor `IsTerrestrialStandNode` veto | **closed** (soft actual-body gate) |
+| CMA-016 | medium | Path 0 ok; no typeId on path_fail | **closed** (snap + fail reasons + ids) |
+| CMA-017 | medium | Cross-backend gait confusion risk | **closed** (docs + separate packets) |
+| CMA-018 | low | Chicken archetype aerial | **closed** (terrestrial_biped + profile chicken) |
+| CMA-019 | low | Amphibious can_fly / aquatic arch on land | **closed** (land arch + inFluid→aquatic facts) |
 
-## Habitat / behavior smoke checklist
+## Backend × archetype matrix (fix packets)
 
-| Case | Species | Expect | Result |
-|------|---------|--------|--------|
-| Terrestrial wander slope/wall | pig | move or stuck→repick; no habitat leave | pending in-game |
-| Flee | sheep | flee away; prefer `path_ok` on flat | pending |
-| Chase | zombie | approach; `path_ok` / travel>0 on flat; no march-in-place | re-test after CMA-010/011/004 |
-| Aquatic | trout/shark | stay in water | pending |
-| Amphibious | seal/penguin | land or water OK | pending |
-| Aerial | wasp/owl | air move; no embed in blocks | pending |
-| Lava | lava_flan | stay in lava | pending |
-| Spider gait | spider | alternating legs while wander travels | re-test after CMA-012 |
-| Possess vs NPC step | pig | travel/step-up match | pending |
-| Perf after spawn | mixed | `do_movement_ms` p50 below ~34 ms baseline at similar mob count | re-test after CMA-013 |
+| Backend | Species examples | Shared travel | Visual packet |
+|---------|------------------|---------------|---------------|
+| bone_skeleton | zombie, skeleton, spider, pig, sheep, cow, wolf, bunny, fox, chicken, bee, dolphin, squid, trout, tortoise, human | P0/P2 | BoneSkeletonPoseEngine profiles |
+| gltf_skeleton | dirt/sand/stone/mese_monster, dungeon_master, warthog, rat, owl, shark, lava_flan, … | P0/P2 | clips/`state_map`/speeds vs Luanti |
+| rigid_voxels | rigid_demo_walker/flyer/swimmer | P0/P2 | PosePresenter only |
+| sprite override | fire_spirit | P0 aerial | no gait |
 
-## Regression guards (player passability)
+**Rule:** never apply bone profiles to glTF, presenters to bone, or glTF clips to bone spider.
 
-Do **not** weaken `IsTerrestrialStandNode` continuous clearance or feet-anchored `ResolveMovement` to “fix” chase. Nav goals must use body/feet; player motor path unchanged except shared helper extraction.
+## Habitat / behavior smoke
+
+| Case | Species | Backend | Expect | Notes |
+|------|---------|---------|--------|-------|
+| Chase | zombie | bone | travel>0 flat; less habitat_reject | re-test after CMA-015 |
+| Chase path | zombie | bone | path_ok or soft direct + travel | CMA-016 |
+| Spider gait | spider | bone | A/B legs + rest fan | |
+| Wander | dirt_monster | glTF | walk clip while moving | |
+| Demo | rigid_demo_walker | rigid | presenter swing iff speed>0 | |
+| Amphibious | seal/penguin | glTF | land walk; swim facts in fluid | |
+| Aerial | bee / wasp | bone/glTF | fly without mass reject | |
+| Lava | lava_flan | glTF | stay in lava | |
+| Sprite | fire_spirit | sprite | billboard; aerial arch | |
+
+## Regression guards
+
+Do **not** weaken `IsTerrestrialStandNode` continuous clearance for **player** pathfinding. Soft habitat gate is for NPC post-motor / wander probe only. Nav goals remain feet/body.
 
 ## Next
 
-1. Re-run checklist with JSONL (`creature_diag focus nearest`) and compare `do_movement_ms` to 2026-07-25 baseline
-2. If `do_movement` still >15 ms at 20+ mobs → separate LOD motor packet
-3. Streaming Dirty/pending_light remains a secondary FPS track (out of this movement packet)
+1. Manual re-run: zombie chase + spider + dirt_monster + rigid_demo_walker
+2. If `do_movement` still high → LOD motor packet
+3. Spider wall-climb (MC) — separate bone-only follow-up

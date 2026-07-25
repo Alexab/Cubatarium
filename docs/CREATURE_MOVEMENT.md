@@ -7,30 +7,36 @@ Runtime locomotion for player and NPC after the 2026 movement audit.
 1. **Strategy** — `CreatureActivityDirector` / agents write `CreatureIntent`
 2. **Tactics** — steering + terrestrial A* (`SteerCreatureAlongPath`)
 3. **Motor** — shared [`CreatureMotor`](../src/Creatures/Locomotion/CreatureMotor.h) (`ApplyCreatureMotorHorizontal` / `ApplyCreatureMotorStep`)
-4. **Habitat** — NPC post-move `HabitatAllowsMovementAt` (climb/drop ≤ `jumpHeightBlocks`); partial XZ accept + feet snap when possible (full revert only if stand invalid)
-5. **Presentation** — `CreatureLocomotionFacts` → pose / glTF clips (Walk/Run hints ignored at ~zero horizontal speed)
+4. **Habitat** — post-motor soft gate: actual-body ground support + block collision (not A* `IsTerrestrialStandNode` veto). Climb/drop ≤ `jumpHeightBlocks`; partial XZ recover when needed
+5. **Presentation** — `CreatureLocomotionFacts` → **exactly one** visual backend (see below)
 
-Player Camera and NPC `ExecuteIntent` both use the shared motor (resolve + fluid drag + step-up). Camera keeps step-up **animation**; NPC applies step-up **instantly**. Grounded NPCs with zero wish skip the full motor (idle early-out).
+Player Camera and NPC `ExecuteIntent` both use the shared motor. Grounded NPCs with zero wish skip the full motor (idle early-out). Walk/Run suggestedAnim ignored at ~zero horizontal speed.
+
+## Three visual backends (no cross-talk)
+
+| `visual.backend` | Pose path | Do not |
+|------------------|-----------|--------|
+| `bone_skeleton` | `BoneSkeletonPoseEngine` + `animation_profile` | PosePresenter / glTF clips |
+| `gltf_skeleton` | baked clips + `state_map` | BoneSkeletonPoseEngine |
+| `rigid_voxels` | `PosePresenterRegistry` by `locomotion_archetype` | bone profiles |
+
+Sprite override: `fire_spirit` (`sprite.billboard`) — billboard, no gait.
+
+Locomotion **archetype** ≠ visual **backend**. Facts are shared; gait implementation is backend-exclusive.
 
 ## Navigation goals
 
-A* stand-nodes are **feet/body**, never eye. `ControlledCreatureInfo.bodyOrigin` feeds chase/flee goals. Do not weaken `IsTerrestrialStandNode` clearance to make eye goals work. Chase `path_fail` idles or lateral-slides instead of wall-bashing direct XZ.
+A* stand-nodes are **feet/body**, never eye. Start/goal snap only within `jumpHeight` of body Y (eye goals stay invalid). Chase on `path_fail`: probed direct → slide → soft direct (not permanent idle).
 
 ## Diagnostics
 
-- Schema: `creature_movement_diag.v1` → `creature_movement_diag.jsonl` (next to executable)
-- Config default: `gameplay.creature_movement_diag` = **true**
-- Policy (safe default-on):
-  - Always (focus-filtered when set): `blocked`, `habitat_reject`, `stuck`, `path_fail`, `path_ok`
-  - Stream `intent` / `activity_skip`: **focus only**, throttled ~2 Hz (or all with verbose)
-  - JSONL: batch flush (32 lines / 0.5 s); important events flush immediately
-- Console:
-  - `creature_diag on|off|clear|path|dump|flush`
-  - `creature_diag focus <id|nearest|clear>`
-  - `creature_diag verbose on|off` — full intent stream (still focus-filtered when set)
+- Schema: `creature_movement_diag.v1` → `creature_movement_diag.jsonl`
+- Default on: important events always; `intent` stream focus-throttled; batch flush
+- Console: `creature_diag on|off|clear|path|dump|flush|verbose on|off|focus <id|nearest|clear>`
+- Path events include `creatureId`/`typeId` and `reason` = `start_invalid|goal_invalid|search_exhausted|recalc_ok`
 
 ## Related
 
-- [`CREATURE_AGENTS.md`](CREATURE_AGENTS.md) — activity orchestration
-- [`CREATURE_MOVEMENT_AUDIT.md`](CREATURE_MOVEMENT_AUDIT.md) — findings CMA-*
-- [`CREATURE_POST_B.md`](CREATURE_POST_B.md) — entity collision
+- [`CREATURE_AGENTS.md`](CREATURE_AGENTS.md)
+- [`CREATURE_MOVEMENT_AUDIT.md`](CREATURE_MOVEMENT_AUDIT.md)
+- [`CREATURE_POST_B.md`](CREATURE_POST_B.md)
