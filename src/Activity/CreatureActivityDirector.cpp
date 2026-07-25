@@ -1,4 +1,5 @@
 #include "Activity/CreatureActivityDirector.h"
+#include "Navigation/NavigationPathBudget.h"
 #include <algorithm>
 
 namespace cutum
@@ -74,6 +75,7 @@ void UCreatureActivityDirector::TickAgents(IUWorldPerception &perception,
   }
   const float cognitive_dt = AccumulatedTickDt;
   AccumulatedTickDt = 0.0f;
+  UNavigationPathBudget::BeginActivityTick();
   for (const auto &agent : Agents)
   {
     agent->Tick(perception, sink, cognitive_dt);

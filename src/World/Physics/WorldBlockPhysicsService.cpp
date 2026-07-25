@@ -169,6 +169,20 @@ void UWorldBlockPhysicsService::ProcessFluidChange(
     world.PublishBlockPhysicsEvent(change.BlockPos);
   }
 
+  {
+    const UBlockRegistry &registry = world.GetBlockRegistry();
+    const int emission = std::max(
+        {registry.GetLightEmission(change.FluidId),
+         registry.GetLightEmission(
+             world.GetBlockWorld().GetBlock(change.BlockPos)),
+         registry.GetLightEmission(
+             world.GetBlockWorld().GetBlock(change.NeighborPos))});
+    if (emission > 0)
+    {
+      world.ApplyEditFastRelight({change.BlockPos, change.NeighborPos});
+    }
+  }
+
   if (Flags.EnableMaterialRules)
   {
     auto apply_reactions =

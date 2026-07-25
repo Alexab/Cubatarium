@@ -41,7 +41,7 @@
   "behavior_params": {
     "move_speed": 2.4,
     "aggro_radius": 14.0,
-    "attack_range": 2.0,
+    "attack_range": 1.25,
     "attack_cooldown": 1.2
   },
   "visual": {

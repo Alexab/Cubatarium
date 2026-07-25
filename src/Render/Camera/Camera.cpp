@@ -3,6 +3,7 @@
 #include "Render/Camera/CameraLens.h"
 #include "Render/Camera/Control/IUGameplayViewController.h"
 #include "Render/Engine/ViewEngine.h"
+#include "Creatures/Locomotion/CreatureMotor.h"
 #include "World/View/ViewRayMath.h"
 #include "Render/GlIncludes.h"
 #include "World/Core/World.h"
@@ -523,66 +524,38 @@ bool UCamera::ApplyHorizontalMovement(const UWorld *world, float deltaTime)
 
   UpdateMoveIntentFromKeys();
 
-  glm::vec3 shift = ComputeHorizontalShift(deltaTime);
-  const bool hasShift = glm::dot(shift, shift) > 1e-10f;
-
-  const PlayerCapsule cap = GetPlayerCapsule();
-  const SampledFluidState fluid = world->SampleFluidPhysics(Position, cap);
-  if (hasShift && fluid.inFluid)
-  {
-    const float drag =
-        1.0f - std::min(0.95f, fluid.DragHorizontal * deltaTime * 8.0f);
-    shift.x *= drag;
-    shift.z *= drag;
-  }
-
-  glm::vec3 newPos = Position;
-  if (hasShift)
-  {
-    newPos = world->ResolveMovement(Position, shift, cap,
-                                    world->GetMovementCollisionSkipId());
-  }
-
-  const bool grounded =
-      world->HasGroundSupport(Position, cap) || Locomotion.IsOnGround();
-  const glm::vec3 intent = GetMoveIntentDir();
   const PlayerInput stepInput = BuildPlayerInput(false);
+  const bool moving = stepInput.MoveForward || stepInput.MoveBack ||
+                      stepInput.MoveLeft || stepInput.MoveRight;
+  glm::vec3 wish(0.0f);
+  float speed = 0.0f;
+  if (moving)
+  {
+    wish = GetMoveIntentDir();
+    speed = Locomotion.ResolveHorizontalSpeed(stepInput);
+  }
+
+  const CreatureMotorHorizontalResult motor = ApplyCreatureMotorHorizontal(
+      *world, Position, Locomotion, wish, speed, deltaTime,
+      world->GetMovementCollisionSkipId(), world->IsStepUpEnabled(),
+      stepInput.jumpHeld, false);
 
   bool stepped = false;
-  if (world->IsStepUpEnabled() && !fluid.inFluid && grounded &&
-      Locomotion.IsOnGround() && Locomotion.IsFeetAnchored() &&
-      !stepInput.jumpHeld && Locomotion.GetVerticalVelocity() <= 0.05f &&
-      glm::dot(intent, intent) > 1e-10f)
+  if (motor.wantsStepUpAnim)
   {
-    const UWorld::StepUpProbe probe =
-        world->ProbeStepUp(newPos, intent, cap, kStepUpTriggerDistance);
-    if (probe.Valid)
-    {
-      glm::vec3 landing = newPos;
-      if (!world->GetStepUpLanding(newPos, intent, cap, kStepUpTriggerDistance,
-                                   landing))
-      {
-        landing = probe.TargetPos - glm::vec3(probe.MoveDir.x * 0.18f, 0.0f,
-                                              probe.MoveDir.z * 0.18f);
-      }
-      StepUpAnim.Active = true;
-      StepUpAnim.StartPos = newPos;
-      StepUpAnim.TargetPos = landing;
-      StepUpAnim.Elapsed = 0.0f;
-      stepped = true;
-    }
-  }
-
-  if (!stepped)
-  {
-    Position = newPos;
+    StepUpAnim.Active = true;
+    StepUpAnim.StartPos = motor.stepUpStart;
+    StepUpAnim.TargetPos = motor.stepUpTarget;
+    StepUpAnim.Elapsed = 0.0f;
+    stepped = true;
+    TickStepUpAnimation(world, deltaTime);
   }
   else
   {
-    TickStepUpAnimation(world, deltaTime);
+    Position = motor.eyePos;
   }
   UpdatePose();
-  return hasShift || stepped;
+  return motor.moved || stepped;
 }
 
 // Processes input received from any keyboard-like input system. Accepts input

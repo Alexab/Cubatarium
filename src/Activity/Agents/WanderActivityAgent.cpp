@@ -1,6 +1,7 @@
 #include "Activity/Agents/WanderActivityAgent.h"
 #include "Activity/Helpers/CreatureActivitySteering.h"
 #include "Creatures/Core/CreatureIntent.h"
+#include "World/Diagnostics/CreatureMovementDiagnostics.h"
 #include <algorithm>
 #include <cmath>
 
@@ -85,6 +86,18 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
     }
     if (!perception.IsWithinActivityRange(view->bodyOrigin))
     {
+      if (UCreatureMovementDiagnostics::IsEnabled())
+      {
+        CreatureMovementDiagRecord rec;
+        rec.event = "activity_skip";
+        rec.creatureId = Id;
+        rec.typeId = view->typeId;
+        rec.behavior = view->behaviorId;
+        rec.body = view->bodyOrigin;
+        rec.reason = "outside_activity_range";
+        rec.activityTick = true;
+        UCreatureMovementDiagnostics::Record(rec);
+      }
       continue;
     }
     const std::optional<CreatureBehaviorSnapshot> snapshot =
@@ -99,7 +112,7 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
                                  snapshot->behavior.wanderIntervalMax,
                                  st.intervalMin, st.intervalMax);
 
-    const bool volume_blocked = !perception.CreatureVolumeClearAt(
+    const bool volume_blocked = !perception.CreaturesClearAt(
         view->bodyOrigin, snapshot->boundsSize, view->Id);
     if (st.forceRepick || volume_blocked)
     {
@@ -119,6 +132,21 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
     }
     if (st.stuckTimer >= kStuckTimeout)
     {
+      if (UCreatureMovementDiagnostics::IsEnabled())
+      {
+        CreatureMovementDiagRecord rec;
+        rec.event = "stuck";
+        rec.creatureId = Id;
+        rec.typeId = view->typeId;
+        rec.habitat = ToString(snapshot->habitat);
+        rec.behavior = view->behaviorId;
+        rec.body = view->bodyOrigin;
+        rec.intentDir = st.direction;
+        rec.intentSpeed = snapshot->behavior.moveSpeed;
+        rec.reason = "stuck_timeout";
+        rec.activityTick = true;
+        UCreatureMovementDiagnostics::Record(rec);
+      }
       st.stuckTimer = 0.0f;
       st.timer = 0.0f;
     }
@@ -140,6 +168,8 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
         view->bodyOrigin, snapshot->boundsSize, neighbors, min_sep);
     glm::vec3 move_dir =
         BlendLocomotionDirection(st.direction, separation, kSeparationWeight);
+    move_dir = ApplyWallFeelers(perception, snapshot->habitat, view->bodyOrigin,
+                                move_dir, snapshot->boundsSize, view->Id);
 
     CreatureIntent intent;
     intent.moveDirWorld = move_dir;
@@ -160,33 +190,69 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
       move_speed = snapshot->locomotion.walkSpeed;
     }
 
-    const glm::vec3 probe = view->bodyOrigin + move_dir * 1.25f;
-    const bool forward_clear =
+    const float probe_dist = 0.65f;
+    const glm::vec3 probe = view->bodyOrigin + move_dir * probe_dist;
+    bool forward_clear =
         glm::length(move_dir) < 1e-4f ||
-        (perception.CreatureVolumeClearAt(probe, snapshot->boundsSize,
-                                          view->Id) &&
+        (perception.CreaturesClearAt(probe, snapshot->boundsSize, view->Id) &&
          (snapshot->habitat == CreatureHabitat::Aerial ||
           perception.HabitatAllowsMovementAt(snapshot->habitat, probe,
                                              snapshot->boundsSize)));
 
-    if (!forward_clear && glm::length(separation) > 1e-4f)
+    if (!forward_clear)
     {
-      move_dir = separation;
+      // Far/blocked probe: repick instead of idling every tick (mass
+      // forward_probe_fail). Still apply motion so motor can step-up.
+      RepickWanderDirection(perception, *view, *snapshot, st);
+      move_dir =
+          BlendLocomotionDirection(st.direction, separation, kSeparationWeight);
+      move_dir =
+          ApplyWallFeelers(perception, snapshot->habitat, view->bodyOrigin,
+                           move_dir, snapshot->boundsSize, view->Id);
       intent.moveDirWorld = move_dir;
-    }
-    else if (!forward_clear)
-    {
-      if (glm::length(separation) > 1e-4f)
+      const glm::vec3 retry_probe = view->bodyOrigin + move_dir * probe_dist;
+      forward_clear =
+          glm::length(move_dir) < 1e-4f ||
+          (perception.CreaturesClearAt(retry_probe, snapshot->boundsSize,
+                                       view->Id) &&
+           (snapshot->habitat == CreatureHabitat::Aerial ||
+            perception.HabitatAllowsMovementAt(snapshot->habitat, retry_probe,
+                                               snapshot->boundsSize)));
+      if (!forward_clear && glm::length(separation) > 1e-4f)
       {
-        st.idleTimer = 0.0f;
-        intent.moveDirWorld = separation;
-        intent.moveSpeed = move_speed * 0.5f;
-        intent.suggestedAnim = LocomotionState::Walk;
-        intent.clearOnApply = false;
-        sink.SetIntent(Id, intent);
-        st.lastBodyOrigin = view->bodyOrigin;
-        continue;
+        move_dir = separation;
+        intent.moveDirWorld = move_dir;
+        forward_clear = true;
       }
+      else if (!forward_clear)
+      {
+        // Soft: keep walking in chosen dir; post-motor habitat/collision gate.
+        if (glm::length(st.direction) > 1e-4f)
+        {
+          move_dir = st.direction;
+          intent.moveDirWorld = move_dir;
+          forward_clear = true;
+        }
+        if (UCreatureMovementDiagnostics::IsEnabled())
+        {
+          CreatureMovementDiagRecord rec;
+          rec.event = "blocked";
+          rec.creatureId = Id;
+          rec.typeId = view->typeId;
+          rec.habitat = ToString(snapshot->habitat);
+          rec.behavior = view->behaviorId;
+          rec.body = view->bodyOrigin;
+          rec.intentDir = move_dir;
+          rec.reason = "forward_probe_soft";
+          rec.activityTick = true;
+          UCreatureMovementDiagnostics::Record(rec);
+        }
+      }
+    }
+
+    if (!forward_clear)
+    {
+      st.stuckTimer = 0.0f;
       st.idleTimer += dt;
       if (st.idleTimer >= kIdleBlockDuration)
       {
@@ -220,6 +286,20 @@ void UWanderActivityAgent::Tick(IUWorldPerception &perception,
     }
     intent.clearOnApply = false;
     sink.SetIntent(Id, intent);
+    if (UCreatureMovementDiagnostics::IsEnabled())
+    {
+      CreatureMovementDiagRecord rec;
+      rec.event = "intent";
+      rec.creatureId = Id;
+      rec.typeId = view->typeId;
+      rec.habitat = ToString(snapshot->habitat);
+      rec.behavior = view->behaviorId;
+      rec.body = view->bodyOrigin;
+      rec.intentDir = intent.moveDirWorld;
+      rec.intentSpeed = intent.moveSpeed;
+      rec.activityTick = true;
+      UCreatureMovementDiagnostics::Record(rec);
+    }
     st.lastBodyOrigin = view->bodyOrigin;
   }
 }

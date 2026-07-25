@@ -4,6 +4,7 @@
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Definition/CreatureDefinition.h"
+#include "Creatures/Environment/CreatureTraverseQueries.h"
 #include "Navigation/NavigationTypes.h"
 #include "Navigation/WorldNavigationQueries.h"
 #include "Render/Camera/Camera.h"
@@ -562,34 +563,13 @@ bool HabitatAllowsAt(const UWorld &world, CreatureHabitat habitat,
 
 bool HabitatAllowsMovementAt(const UWorld &world, CreatureHabitat habitat,
                              const glm::vec3 &bodyOrigin,
-                             const glm::vec3 &sizeBlocks)
+                             const glm::vec3 &sizeBlocks,
+                             float maxClimbDropBlocks)
 {
   if (habitat == CreatureHabitat::Terrestrial)
   {
-    glm::vec3 feet_origin = bodyOrigin;
-    const int gx = WorldCoordToBlockIndex(bodyOrigin.x);
-    const int gz = WorldCoordToBlockIndex(bodyOrigin.z);
-    if (const std::optional<float> feet_y =
-            ResolveTerrestrialGroundFeetY(world, gx, gz, bodyOrigin.y))
-    {
-      const float climb = *feet_y - bodyOrigin.y;
-      const float drop = bodyOrigin.y - *feet_y;
-      if (climb > 1.25f || drop > 1.25f)
-      {
-        return false;
-      }
-      feet_origin.y = *feet_y;
-    }
-    const UWorldNavigationQueries navigation(world);
-    const NavigationStandNode node =
-        NavigationStandNodeFromBody(feet_origin);
-    if (!navigation.IsTerrestrialStandNode(node, sizeBlocks.y))
-    {
-      return false;
-    }
-    const EnvironmentSample env =
-        ProbeEnvironmentAt(world, feet_origin, sizeBlocks);
-    return env.onSolidGround && !env.inFluid;
+    // Shared stand predicate with A* node / probes (actual body, not footprint).
+    return CanCreatureStandAt(world, bodyOrigin, sizeBlocks, maxClimbDropBlocks);
   }
   if (habitat == CreatureHabitat::Amphibious)
   {

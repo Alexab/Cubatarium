@@ -16,8 +16,12 @@ float WalkSwingScale(const CreatureLocomotionFacts &facts,
                      const CreatureDefinition &def)
 {
   const float walkSpeed = std::max(def.locomotion.walkSpeed, 0.01f);
+  if (facts.horizontalSpeed < 0.05f)
+  {
+    return 0.0f;
+  }
   float swingScale =
-      std::clamp(facts.horizontalSpeed / walkSpeed, 0.5f, 1.5f);
+      std::clamp(facts.horizontalSpeed / walkSpeed, 0.35f, 1.5f);
   if (facts.state == LocomotionState::Run &&
       facts.horizontalSpeed > walkSpeed * 1.2f)
   {
@@ -62,6 +66,60 @@ void ApplyQuadruped(BoneSkeletonPose &pose,
   BoneSkeletonBonePose tail;
   tail.rotationDeg.x = std::sin(facts.animPhase + kPi * 0.5f) * tailSwing;
   pose.bones["tail"] = tail;
+}
+
+void ApplyArachnid(BoneSkeletonPose &pose,
+                   const CreatureLocomotionFacts &facts,
+                   const CreatureDefinition &def)
+{
+  // Spider legs are long cubes along +X/−X; X-roll is nearly invisible.
+  // Z lifts in the vertical plane; Y adds stride. Right-side bones are mirrored,
+  // so Z/Y signs flip for odd indices or same-phase groups look synchronized.
+  const float legSwing = def.visual.Animation.legSwingDeg;
+  const float bodyBob = def.visual.Animation.bodyBobBlocks;
+  const float speed = std::max(facts.horizontalSpeed, 0.0f);
+  if (speed < 0.05f)
+  {
+    BoneSkeletonBonePose head;
+    head.rotationDeg.x = std::sin(facts.animPhase * 0.35f) * 3.f;
+    pose.bones["head"] = head;
+    return;
+  }
+
+  const float swingScale =
+      std::clamp(speed / std::max(def.locomotion.walkSpeed, 0.01f), 0.35f, 1.5f);
+  const float amp = legSwing * swingScale;
+
+  static constexpr const char *kLegNames[8] = {
+      "leg0", "leg1", "leg2", "leg3", "leg4", "leg5", "leg6", "leg7"};
+  // Tetrapod alternating gait (Minecraft-style): A={0,3,4,7} vs B={1,2,5,6}.
+  static constexpr int kPhaseGroup[8] = {0, 1, 1, 0, 0, 1, 1, 0};
+  for (int i = 0; i < 8; ++i)
+  {
+    const float phase =
+        facts.animPhase + (kPhaseGroup[i] != 0 ? kPi : 0.0f);
+    const float lift = std::sin(phase) * amp;
+    const float stride = std::cos(phase) * amp * 0.55f;
+    // even = left (−X), odd = right (+X, mirrored): flip so lift reads as up.
+    const float side = (i % 2 == 0) ? 1.0f : -1.0f;
+    // Rest fan: legs splay outward from body (MC/Luanti look), then gait on top.
+    // Pair index 0..3 along body; base yaw ~±35° plus small per-pair spread.
+    const float pair = static_cast<float>(i / 2);
+    const float restYaw = side * (32.0f + pair * 8.0f);
+    BoneSkeletonBonePose leg;
+    leg.rotationDeg.y = restYaw + stride * side;
+    leg.rotationDeg.z = lift * side;
+    pose.bones[kLegNames[i]] = leg;
+  }
+
+  BoneSkeletonBonePose body0;
+  body0.offsetBlocks.y =
+      std::sin(facts.animPhase * 2.f) * bodyBob * swingScale;
+  pose.bones["body0"] = body0;
+
+  BoneSkeletonBonePose head;
+  head.rotationDeg.x = std::sin(facts.animPhase * 0.5f) * 4.f;
+  pose.bones["head"] = head;
 }
 
 void ApplyFox(BoneSkeletonPose &pose, const CreatureLocomotionFacts &facts,
@@ -216,6 +274,10 @@ BoneSkeletonPoseEngine::Compute(const CreatureLocomotionFacts &facts,
     {
       ApplyFox(pose, facts, def);
     }
+    else if (profile == "arachnid")
+    {
+      ApplyArachnid(pose, facts, def);
+    }
     else if (profile == "humanoid")
     {
       ApplyHumanoid(pose, facts, def);
@@ -249,6 +311,10 @@ BoneSkeletonPoseEngine::Compute(const CreatureLocomotionFacts &facts,
     if (profile == "fox")
     {
       ApplyFox(pose, facts, def);
+    }
+    else if (profile == "arachnid")
+    {
+      ApplyArachnid(pose, facts, def);
     }
     else if (profile == "chicken")
     {

@@ -2,11 +2,14 @@
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Environment/CreatureEnvironment.h"
+#include "Creatures/Locomotion/CreatureMotor.h"
 #include "Creatures/Player/PlayerCapsule.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureVisual.h"
 #include "World/Core/World.h"
+#include "World/Diagnostics/CreatureMovementDiagnostics.h"
 #include "World/Math/GridMath.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <optional>
@@ -65,23 +68,32 @@ void UCreature::SyncFeetFromLocomotion(const UWorld &world,
   BodyOrigin.x = eyeAfterLocomotion.x;
   BodyOrigin.z = eyeAfterLocomotion.z;
 
-  const bool useGround =
-      Locomotion.GetMode() == CreatureMovementMode::Walking &&
-      Locomotion.IsFeetAnchored() && Locomotion.IsOnGround();
-  if (useGround)
+  const bool walking =
+      Locomotion.GetMode() == CreatureMovementMode::Walking;
+  if (walking)
   {
     const float refFeetY = FeetYFromEye(eyeAfterLocomotion, EyeOffset.y);
     const int gx = WorldCoordToBlockIndex(BodyOrigin.x);
     const int gz = WorldCoordToBlockIndex(BodyOrigin.z);
-    const PlayerCapsule cap = PlayerCapsule::FromCreatureBlocks(
-        Bounds.currentSizeBlocks, EyeOffset.y);
+    const float maxSnap =
+        std::max(0.25f, Locomotion.GetCapabilities().jumpHeightBlocks);
     if (const std::optional<float> groundY =
             world.QueryGroundFeetYUnder(gx, gz, refFeetY))
     {
-      BodyOrigin.y = *groundY;
-      eyeAfterLocomotion.y = BodyOrigin.y + Locomotion.GetViewEyeHeight();
-      Locomotion.SyncFeetAnchorFromView(*groundY, true);
-      return;
+      const float drop = refFeetY - *groundY;
+      const float climb = *groundY - refFeetY;
+      // Snap when grounded, or heal brief unsupported / float states within
+      // jumpHeight so habitat reject cannot trap a mob above air forever.
+      const bool anchoredGround =
+          Locomotion.IsFeetAnchored() && Locomotion.IsOnGround();
+      if (anchoredGround || (drop >= 0.0f && drop <= maxSnap) ||
+          (climb >= 0.0f && climb <= maxSnap))
+      {
+        BodyOrigin.y = *groundY;
+        eyeAfterLocomotion.y = BodyOrigin.y + Locomotion.GetViewEyeHeight();
+        Locomotion.SyncFeetAnchorFromView(*groundY, true);
+        return;
+      }
     }
   }
 
@@ -114,6 +126,23 @@ void UCreature::RebuildLocomotionFacts(
   {
     ApplyEnvironmentLocomotionFacts(*world, BodyOrigin,
                                     Bounds.profile.restSizeBlocks, raw);
+    // Amphibious: land uses terrestrial archetype; in fluid present as aquatic.
+    if (raw.inFluid)
+    {
+      if (const CreatureDefinition *def = world->GetCreatureDefinition(TypeId))
+      {
+        if (def->habitat == CreatureHabitat::Amphibious)
+        {
+          raw.archetype = LocomotionArchetype::Aquatic;
+          if (input.dt > 1e-6f)
+          {
+            const glm::vec3 delta =
+                input.bodyOriginAfter - input.bodyOriginBefore;
+            raw.horizontalSpeed = glm::length(delta) / input.dt;
+          }
+        }
+      }
+    }
   }
   LocomotionFacts = raw;
   CreatureLocomotionRawInput deriveInput = input;
@@ -121,6 +150,7 @@ void UCreature::RebuildLocomotionFacts(
   {
     deriveInput.suggestedAnim = Intent.suggestedAnim;
     deriveInput.hasSuggestedAnim = true;
+    deriveInput.intentMoveSpeed = Intent.moveSpeed;
   }
   FinalizeLocomotionFacts(LocomotionFacts, caps, deriveInput, WalkCycleHz,
                           input.dt);
@@ -161,15 +191,8 @@ void UCreature::RebuildLocomotionFactsFromController(
 void UCreature::ExecuteIntent(UWorld &world, float dt)
 {
   const glm::vec3 bodyOriginBefore = BodyOrigin;
-
-  if (!Possessed && Locomotion.GetMode() == CreatureMovementMode::Walking)
-  {
-    glm::vec3 eye = GetLocomotionEye();
-    CreatureInput emptyInput;
-    Locomotion.UpdateLocomotion(&world, eye, emptyInput, dt, Id);
-    SyncFeetFromLocomotion(world, eye);
-    SyncBoundsFromStance();
-  }
+  const glm::vec3 diagIntentDir = Intent.moveDirWorld;
+  const float diagIntentSpeed = Intent.moveSpeed;
 
   if (Possessed)
   {
@@ -180,104 +203,177 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
     return;
   }
 
-  if (Intent.moveDirWorld != glm::vec3(0.0f))
+  const CreatureDefinition *def = world.GetCreatureDefinition(TypeId);
+  const CreatureHabitat habitat =
+      def ? def->habitat : CreatureHabitat::Terrestrial;
+  const bool airMobility = habitat == CreatureHabitat::Aerial ||
+                           Locomotion.GetMode() == CreatureMovementMode::Flying;
+
+  // Cheap idle path: skip motor/habitat when grounded with zero wish.
+  // Fluid sink / flight still need the full motor each frame.
+  const bool idle_intent = glm::length(Intent.moveDirWorld) < 1e-4f &&
+                           Intent.moveSpeed < 1e-4f && !Intent.wantJump;
+  if (idle_intent && Locomotion.IsOnGround() && !airMobility &&
+      habitat != CreatureHabitat::Aquatic &&
+      habitat != CreatureHabitat::Lava && !LocomotionFacts.inFluid)
   {
-    const CreatureDefinition *def = world.GetCreatureDefinition(TypeId);
-    const CreatureHabitat habitat =
-        def ? def->habitat : CreatureHabitat::Terrestrial;
-    const bool airMobility =
-        Locomotion.GetMode() == CreatureMovementMode::Flying ||
-        habitat == CreatureHabitat::Aerial;
-    glm::vec3 delta = Intent.moveDirWorld * Intent.moveSpeed * dt;
-    if (habitat == CreatureHabitat::Terrestrial && !airMobility)
+    if (Intent.clearOnApply)
     {
-      delta.y = 0.0f;
+      ClearIntent();
     }
-    else if (habitat == CreatureHabitat::Amphibious)
+    CreatureLocomotionRawInput rawInput;
+    rawInput.locomotion = &Locomotion;
+    rawInput.bodyOriginBefore = bodyOriginBefore;
+    rawInput.bodyOriginAfter = BodyOrigin;
+    rawInput.dt = dt;
+    RebuildLocomotionFacts(rawInput, Locomotion.GetCapabilities(), &world);
+    LastBodyOrigin = BodyOrigin;
+    return;
+  }
+
+  if (habitat == CreatureHabitat::Aerial ||
+      (Locomotion.GetCapabilities().canFly && airMobility))
+  {
+    Locomotion.SetMode(CreatureMovementMode::Flying);
+  }
+  else if (Locomotion.GetMode() == CreatureMovementMode::Flying &&
+           habitat != CreatureHabitat::Aerial)
+  {
+    Locomotion.SetMode(CreatureMovementMode::Walking);
+  }
+
+  glm::vec3 wish = Intent.moveDirWorld;
+  float speed = Intent.moveSpeed;
+  if (habitat == CreatureHabitat::Terrestrial && !airMobility)
+  {
+    wish.y = 0.0f;
+  }
+  else if (habitat == CreatureHabitat::Amphibious && !airMobility)
+  {
+    const EnvironmentSample env =
+        ProbeEnvironmentAt(world, BodyOrigin, Bounds.profile.restSizeBlocks);
+    if (!env.inWater)
     {
-      const EnvironmentSample env =
-          ProbeEnvironmentAt(world, BodyOrigin, Bounds.profile.restSizeBlocks);
-      if (!env.inWater)
-      {
-        delta.y = 0.0f;
-      }
+      wish.y = 0.0f;
     }
+  }
+
+  const float wishLen = glm::length(wish);
+  if (wishLen > 1e-4f)
+  {
+    wish /= wishLen;
+  }
+  else
+  {
+    wish = glm::vec3(0.0f);
+    speed = 0.0f;
+  }
+
+  glm::vec3 eye = GetLocomotionEye();
+  CreatureInput verticalInput;
+  verticalInput.jumpHeld = Intent.wantJump;
+  ApplyCreatureMotorStep(world, eye, Locomotion, verticalInput, wish, speed, dt,
+                         Id, world.IsStepUpEnabled());
+  SyncFeetFromLocomotion(world, eye);
+  SyncBoundsFromStance();
+  // Corner / lip traps: motor axis resolve can leave AABB intersecting solids.
+  {
     const glm::vec3 size = Bounds.profile.restSizeBlocks;
-    glm::vec3 candidate = BodyOrigin;
-    const bool use_terrestrial_steps =
-        !airMobility &&
-        (habitat == CreatureHabitat::Terrestrial ||
-         (habitat == CreatureHabitat::Amphibious &&
-          !ProbeEnvironmentAt(world, BodyOrigin, size).inWater));
-    if (use_terrestrial_steps)
+    if (world.DepenetrateBlockBodyXZ(BodyOrigin, size))
     {
-      const float max_step_up = def && def->locomotion.jumpHeightBlocks > 0.01f
-                                    ? def->locomotion.jumpHeightBlocks
-                                    : 1.0f;
-      const float max_step_down = std::max(max_step_up, 1.0f);
-      candidate = ResolveTerrestrialMobMovement(world, BodyOrigin, delta, size,
-                                                Id, max_step_up, max_step_down);
+      eye = GetLocomotionEye();
+      // Keep feet anchored after XZ nudge so next-frame step-up stays eligible.
+      Locomotion.SyncFeetAnchorFromView(BodyOrigin.y, true);
     }
-    else
+  }
+
+  if (glm::length(wish) > 1e-4f)
+  {
+    const glm::vec3 size = Bounds.profile.restSizeBlocks;
+    const float maxClimbDrop =
+        Locomotion.GetCapabilities().jumpHeightBlocks;
+    if (!HabitatAllowsMovementAt(world, habitat, BodyOrigin, size,
+                                 maxClimbDrop))
     {
-      candidate = world.ResolveMovementBody(BodyOrigin, delta, size, Id);
-    }
-    if (airMobility)
-    {
-      const CollisionVolume vol = CollisionVolumeFromBody(candidate, size);
-      if (!world.CheckBlockCollisionVolume(vol))
+      const glm::vec3 attempted = BodyOrigin;
+      const glm::vec2 xzTravel(attempted.x - bodyOriginBefore.x,
+                              attempted.z - bodyOriginBefore.z);
+      bool accepted = false;
+      if (habitat == CreatureHabitat::Terrestrial &&
+          glm::dot(xzTravel, xzTravel) > 1e-10f)
       {
-        BodyOrigin = candidate;
+        // Keep XZ travel; re-snap feet within jumpHeight instead of full revert.
+        const glm::vec3 recovered = ResolveTerrestrialMobMovement(
+            world, bodyOriginBefore,
+            glm::vec3(xzTravel.x, 0.0f, xzTravel.y), size, Id, maxClimbDrop,
+            maxClimbDrop);
+        if (HabitatAllowsMovementAt(world, habitat, recovered, size,
+                                    maxClimbDrop) &&
+            glm::dot(glm::vec2(recovered.x - bodyOriginBefore.x,
+                               recovered.z - bodyOriginBefore.z),
+                     glm::vec2(recovered.x - bodyOriginBefore.x,
+                               recovered.z - bodyOriginBefore.z)) > 1e-10f)
+        {
+          BodyOrigin = recovered;
+          accepted = true;
+        }
+        else
+        {
+          glm::vec3 kept(attempted.x, bodyOriginBefore.y, attempted.z);
+          if (HabitatAllowsMovementAt(world, habitat, kept, size, maxClimbDrop))
+          {
+            BodyOrigin = kept;
+            accepted = true;
+          }
+        }
       }
-    }
-    else if (use_terrestrial_steps)
-    {
-      if (glm::length(candidate - BodyOrigin) > 1e-5f)
+      if (!accepted)
       {
-        BodyOrigin = candidate;
+        if (UCreatureMovementDiagnostics::IsEnabled())
+        {
+          CreatureMovementDiagRecord rec;
+          rec.event = "habitat_reject";
+          rec.creatureId = Id;
+          rec.typeId = TypeId;
+          rec.habitat = ToString(habitat);
+          rec.body = attempted;
+          rec.intentDir = diagIntentDir;
+          rec.intentSpeed = diagIntentSpeed;
+          rec.travel = attempted - bodyOriginBefore;
+          rec.reason = "habitat_allows_false";
+          UCreatureMovementDiagnostics::Record(rec);
+        }
+        BodyOrigin = bodyOriginBefore;
       }
-    }
-    else
-    {
-      const bool habitatOk =
-          world.HabitatAllowsMovementAt(habitat, candidate, size);
-      if (habitatOk)
-      {
-        BodyOrigin = candidate;
-      }
+      eye = GetLocomotionEye();
+      Locomotion.SyncFeetAnchorFromView(BodyOrigin.y, true);
+      SyncBoundsFromStance();
     }
   }
 
   if (!Possessed)
   {
-    const CreatureDefinition *def = world.GetCreatureDefinition(TypeId);
-    const CreatureHabitat habitat =
-        def ? def->habitat : CreatureHabitat::Terrestrial;
-    if (habitat == CreatureHabitat::Aquatic ||
-        habitat == CreatureHabitat::Amphibious ||
-        habitat == CreatureHabitat::Lava)
+    const CollisionVolume vol = GetCollisionVolume();
+    const SampledFluidState fluid = world.SampleFluidPhysicsVolume(vol);
+    if ((habitat == CreatureHabitat::Aquatic ||
+         habitat == CreatureHabitat::Amphibious ||
+         habitat == CreatureHabitat::Lava) &&
+        fluid.inFluid && glm::length(wish) < 1e-4f)
     {
-      const CollisionVolume vol = GetCollisionVolume();
-      const SampledFluidState fluid = world.SampleFluidPhysicsVolume(vol);
-      if (fluid.inFluid && glm::length(Intent.moveDirWorld) < 1e-4f)
-      {
-        const float sink = fluid.SinkSpeed * dt * 0.2f;
-        const glm::vec3 buoyancyDelta(0.0f, -sink, 0.0f);
-        BodyOrigin = world.ResolveMovementBody(
-            BodyOrigin, buoyancyDelta, Bounds.profile.restSizeBlocks, Id);
-      }
+      const float sink = fluid.SinkSpeed * dt * 0.2f;
+      glm::vec3 sinkEye = GetLocomotionEye();
+      ApplyCreatureMotorStep(world, sinkEye, Locomotion, verticalInput,
+                             glm::vec3(0.0f, -1.0f, 0.0f), sink / dt, dt, Id,
+                             false);
+      SyncFeetFromLocomotion(world, sinkEye);
     }
   }
 
   if (!Possessed)
   {
-    glm::vec2 faceDir(Intent.moveDirWorld.x, Intent.moveDirWorld.z);
+    // Face travel only — intent yaw with zero travel looks like spinning in place.
     const glm::vec3 xzDelta = BodyOrigin - bodyOriginBefore;
-    const glm::vec2 xzActual(xzDelta.x, xzDelta.z);
-    if (glm::length(xzActual) > 1e-5f)
-    {
-      faceDir = xzActual;
-    }
+    const glm::vec2 faceDir(xzDelta.x, xzDelta.z);
     if (glm::length(faceDir) > 1e-4f)
     {
       Yaw = ModelYawFromDirection(faceDir.x, faceDir.y) + ModelYawOffsetDeg;
@@ -304,6 +400,25 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
   rawInput.bodyOriginAfter = BodyOrigin;
   rawInput.dt = dt;
   RebuildLocomotionFacts(rawInput, Locomotion.GetCapabilities(), &world);
+  if (UCreatureMovementDiagnostics::IsEnabled() &&
+      glm::length(diagIntentDir) > 1e-4f)
+  {
+    CreatureMovementDiagRecord rec;
+    rec.event =
+        glm::length(rawInput.bodyOriginAfter - rawInput.bodyOriginBefore) < 1e-5f
+            ? "blocked"
+            : "intent";
+    rec.creatureId = Id;
+    rec.typeId = TypeId;
+    rec.body = BodyOrigin;
+    rec.intentDir = diagIntentDir;
+    rec.intentSpeed = diagIntentSpeed;
+    rec.travel = BodyOrigin - bodyOriginBefore;
+    rec.onGround = LocomotionFacts.onGround;
+    rec.inFluid = LocomotionFacts.inFluid;
+    rec.reason = rec.event == "blocked" ? "zero_travel" : "exec_frame";
+    UCreatureMovementDiagnostics::Record(rec);
+  }
   LastBodyOrigin = BodyOrigin;
 }
 

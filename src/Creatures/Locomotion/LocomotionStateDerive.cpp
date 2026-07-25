@@ -81,6 +81,11 @@ LocomotionState DeriveTerrestrial(const CreatureLocomotionFacts &raw,
     {
     case LocomotionState::Walk:
     case LocomotionState::Run:
+      if (raw.horizontalSpeed > locomotion::kMoveSpeedEpsilon)
+      {
+        return hintInput->suggestedAnim;
+      }
+      break;
     case LocomotionState::Crouch:
     case LocomotionState::Fly:
       return hintInput->suggestedAnim;

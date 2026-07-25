@@ -38,6 +38,7 @@
 #include "Creatures/Visual/CreatureTextureStorage.h"
 #include "Creatures/Visual/Gltf/CreatureGltfCache.h"
 #include "Render/Camera/Camera.h"
+#include "World/Diagnostics/CreatureMovementDiagnostics.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Textures/TextureBase.h"
@@ -295,7 +296,10 @@ void UCore::LoadConfig(const std::string &config_file_name)
         FoliageClimbEnabled = gameplay.value("foliage_climb", true);
         EntityCollisionEnabled = gameplay.value("entity_collision", true);
         ActivityTickHz = gameplay.value("activity_tick_hz", 20.0f);
+        CreatureMovementDiagEnabled =
+            gameplay.value("creature_movement_diag", false);
       }
+      UCreatureMovementDiagnostics::SetEnabled(CreatureMovementDiagEnabled);
       if (d.contains("physics") && d["physics"].is_object())
       {
         const json &physics = d["physics"];
@@ -564,6 +568,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
     WorldInstance->SetFoliageClimbEnabled(FoliageClimbEnabled);
     WorldInstance->SetEntityCollisionEnabled(EntityCollisionEnabled);
     WorldInstance->SetActivityTickHz(ActivityTickHz);
+    UCreatureMovementDiagnostics::SetEnabled(CreatureMovementDiagEnabled);
     WorldInstance->SetPhysicsProfile(ActivePhysicsProfile);
     WorldInstance->SetPhysicsFeatureFlags(PhysicsFlags);
     WorldInstance->SetPhysicsBudgets(PhysicsBudgetsConfig);
@@ -663,6 +668,7 @@ void UCore::SaveConfigFile()
   gameplay["foliage_climb"] = FoliageClimbEnabled;
   gameplay["entity_collision"] = EntityCollisionEnabled;
   gameplay["activity_tick_hz"] = ActivityTickHz;
+  gameplay["creature_movement_diag"] = CreatureMovementDiagEnabled;
   system_data["gameplay"] = gameplay;
   json physics;
   physics["profile"] = ToString(ActivePhysicsProfile);

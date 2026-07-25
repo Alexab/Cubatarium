@@ -45,7 +45,8 @@ bool HabitatAllowsAt(const UWorld &world, CreatureHabitat habitat,
 
 bool HabitatAllowsMovementAt(const UWorld &world, CreatureHabitat habitat,
                              const glm::vec3 &bodyOrigin,
-                             const glm::vec3 &sizeBlocks);
+                             const glm::vec3 &sizeBlocks,
+                             float maxClimbDropBlocks = 1.25f);
 
 bool HabitatAllowsAtForSpawn(const UWorld &world, CreatureHabitat habitat,
                              const glm::vec3 &bodyOrigin,

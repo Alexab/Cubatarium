@@ -42,9 +42,9 @@ std::vector<CreatureNeighborView> UWorld::QueryCreatureNeighborsInRadius(
   return Environment.QueryCreatureNeighborsInRadius(center, radius, skip_id);
 }
 
-bool UWorld::CreatureVolumeClearAt(const glm::vec3 &body_origin,
-                                   const glm::vec3 &size_blocks,
-                                   CreatureId skip_id) const
+bool UWorld::CreaturesClearAt(const glm::vec3 &body_origin,
+                              const glm::vec3 &size_blocks,
+                              CreatureId skip_id) const
 {
   const CollisionVolume vol = CollisionVolumeFromBody(body_origin, size_blocks);
   return !CheckCreatureCollisionVolume(vol, skip_id);

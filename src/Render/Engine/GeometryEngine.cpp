@@ -1985,6 +1985,9 @@ void UGeometryEngine::RenderSimpleText(int width_size, int height_size)
     return;
   }
 
+  UGlStateScope glGuard(kGlMaskOverlay2D);
+  glDisable(GL_DEPTH_TEST);
+
   textRenderer->SetWindowSize(width_size, height_size);
 
   const float scale = 0.8f;
@@ -2003,7 +2006,7 @@ void UGeometryEngine::RenderSimpleText(int width_size, int height_size)
       "Space - Jump / Fly up",
       "Shift - Crouch / Fly down",
       "2xSpace - Toggle flight",
-      "0-9 - Primary hotbar; objects via HUD / palette",
+      "0-9 / mouse wheel - Primary hotbar; objects via HUD / palette",
       "Classic: mouse look, hold LMB break, RMB place/use slot",
       "Cubatarium: RMB drag look, LMB tap place/use slot / hold break",
       "Delete - Instant break, F8 weather",
@@ -2055,6 +2058,9 @@ void UGeometryEngine::RenderHotbarLabels(int width_size, int height_size)
   {
     return;
   }
+
+  UGlStateScope glGuard(kGlMaskOverlay2D);
+  glDisable(GL_DEPTH_TEST);
 
   textRenderer->SetWindowSize(width_size, height_size);
   auto user = WorldInstance->GetCurrentUser();
@@ -2275,6 +2281,7 @@ void UGeometryEngine::RenderActiveObjectPreview(int width_size, int height_size)
   // Restore viewport
   glViewport(prevViewport[0], prevViewport[1], prevViewport[2],
              prevViewport[3]);
+  glDisable(GL_DEPTH_TEST);
 
   defaultShader->Unuse();
 }

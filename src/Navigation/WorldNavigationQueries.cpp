@@ -2,9 +2,9 @@
 #include "Blocks/BlockDefinition.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Core/CreatureBounds.h"
+#include "Creatures/Environment/CreatureTraverseQueries.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/World.h"
-#include "World/Math/CollisionVolume.h"
 #include "World/Math/GridMath.h"
 
 namespace cutum
@@ -36,10 +36,10 @@ bool UWorldNavigationQueries::IsTerrestrialStandNode(
   }
   const float feet_y = BlockTopY(node.ground_y);
   const glm::vec3 size_blocks(0.6f, body_height, 0.6f);
-  const CollisionVolume vol = CollisionVolumeAtFeet(
-      feet_y, static_cast<float>(node.x), static_cast<float>(node.z),
-      size_blocks);
-  return !World.CheckBlockCollisionVolume(vol);
+  const glm::vec3 body_origin(static_cast<float>(node.x), feet_y,
+                              static_cast<float>(node.z));
+  // Nav-hot path: ground + block clearance only (no fluid volume probe).
+  return CanCreatureStandAtNav(World, body_origin, size_blocks, 1.25f);
 }
 
 bool UWorldNavigationQueries::CanStepTerrestrial(
@@ -61,13 +61,19 @@ bool UWorldNavigationQueries::CanStepTerrestrial(
   {
     return false;
   }
+  // Climb-through cells only (not the landing solid at to.ground_y).
+  // Old check used from.ground_y+1 at destination — for dy==1 that IS the
+  // landing block, so every 1-block step-up was rejected (pits/stairs).
   if (dy > 0.01f)
   {
-    const glm::ivec3 head_cell(to.x, from.ground_y + 1, to.z);
-    if (World.GetBlockRegistry().BlocksMovement(
-            World.GetBlockWorld().GetBlock(head_cell)))
+    for (int y = from.ground_y + 1; y < to.ground_y; ++y)
     {
-      return false;
+      const glm::ivec3 climb_cell(to.x, y, to.z);
+      if (World.GetBlockRegistry().BlocksMovement(
+              World.GetBlockWorld().GetBlock(climb_cell)))
+      {
+        return false;
+      }
     }
   }
   return true;

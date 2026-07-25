@@ -27,7 +27,9 @@ void UFpsGameplayViewController::ApplyLookDelta(UCamera &camera, float x_offset,
 void UFpsGameplayViewController::ApplyScroll(UCamera &camera,
                                              float y_offset) const
 {
-  camera.ApplyFpsZoomScroll(y_offset);
+  (void)camera;
+  (void)y_offset;
+  // Hotbar cycling is handled by InputRouter in perspective mode.
 }
 
 void UFpsGameplayViewController::CycleView(UCamera &camera) const

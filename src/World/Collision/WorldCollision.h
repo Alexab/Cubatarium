@@ -80,6 +80,15 @@ public:
                             CreatureId skipCreatureId = 0) const;
   bool HasGroundSupportVolume(const CollisionVolume &vol, float feetY) const;
 
+  /// Push body on XZ out of overlapping creature AABBs (blocks still respected).
+  /// Needed because axis resolve cannot escape an already-overlapping start.
+  bool DepenetrateCreatureBodyXZ(glm::vec3 &bodyOrigin,
+                                 const glm::vec3 &sizeBlocks,
+                                 CreatureId skipCreatureId) const;
+  /// Nudge body on XZ out of solid blocks (corner / overhang traps).
+  bool DepenetrateBlockBodyXZ(glm::vec3 &bodyOrigin,
+                              const glm::vec3 &sizeBlocks) const;
+
   glm::vec3 ResolveMovementBody(const glm::vec3 &bodyOrigin,
                                 const glm::vec3 &delta,
                                 const glm::vec3 &currentSizeBlocks,

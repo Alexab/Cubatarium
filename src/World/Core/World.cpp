@@ -5345,6 +5345,20 @@ bool UWorld::DepenetrateEye(glm::vec3 &eyePos, const PlayerCapsule &cap,
   return Collision.DepenetrateEye(eyePos, cap, skipCreatureId);
 }
 
+bool UWorld::DepenetrateCreatureBodyXZ(glm::vec3 &bodyOrigin,
+                                       const glm::vec3 &sizeBlocks,
+                                       CreatureId skipCreatureId) const
+{
+  return Collision.DepenetrateCreatureBodyXZ(bodyOrigin, sizeBlocks,
+                                             skipCreatureId);
+}
+
+bool UWorld::DepenetrateBlockBodyXZ(glm::vec3 &bodyOrigin,
+                                    const glm::vec3 &sizeBlocks) const
+{
+  return Collision.DepenetrateBlockBodyXZ(bodyOrigin, sizeBlocks);
+}
+
 bool UWorld::HasGroundSupportVolume(const CollisionVolume &vol,
                                     float feetY) const
 {
@@ -5874,6 +5888,13 @@ void UWorld::MarkBlocksChunkDirtyBatch(
       BlockWorld, BlockRegistry.get(), block_positions, ModifiedChunks,
       sync_neighbor_chunks, sync_light_ring, collect_break_diag,
       &PhysicsTelemetryData);
+  if (ChunkDirtyService)
+  {
+    for (const glm::ivec3 &pos : block_positions)
+    {
+      ChunkDirtyService->MarkCollisionRebuild(*this, pos);
+    }
+  }
 }
 
 void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos, bool sync_neighbor_chunks,
@@ -5884,6 +5905,12 @@ void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos, bool sync_neighbor_chunks,
       sync_neighbor_chunks, sync_light_ring);
   MeshService->NotifyFluidSurfaceDirtyAtBlock(BlockWorld, BlockRegistry.get(),
                                               blockPos);
+  // Player/world edits remesh immediately but used to leave ChunkOccupancyMask
+  // stale — visible stone with walk-through collision (prefab buildings).
+  if (ChunkDirtyService)
+  {
+    ChunkDirtyService->MarkCollisionRebuild(*this, blockPos);
+  }
 }
 
 void UWorld::MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos)

@@ -117,6 +117,7 @@ set(SOURCES
     src/Creatures/Core/CreatureBounds.cpp
     src/Creatures/Core/CreatureCatalogTypes.cpp
     src/Creatures/Locomotion/CreatureLocomotionController.cpp
+    src/Creatures/Locomotion/CreatureMotor.cpp
     src/Creatures/Locomotion/CreatureLocomotionFacts.cpp
     src/Creatures/Core/Creature.cpp
     src/Creatures/Core/CreatureInventory.cpp
@@ -133,9 +134,11 @@ set(SOURCES
     src/Navigation/WorldNavigationQueries.cpp
     src/Navigation/UNavigationPathfinder.cpp
     src/Navigation/UWaypointFollower.cpp
+    src/Navigation/NavigationPathBudget.cpp
     src/World/Environment/CreatureSpatialIndex.cpp
     src/Creatures/Core/WorldCreatures.cpp
     src/Creatures/Environment/CreatureEnvironment.cpp
+    src/Creatures/Environment/CreatureTraverseQueries.cpp
     src/Creatures/Definition/CreatureDefinitionStorage.cpp
     src/Creatures/Visual/CreatureTextureStorage.cpp
     src/Creatures/Definition/SkinDefinitionStorage.cpp
@@ -246,6 +249,7 @@ set(SOURCES
     src/World/Diagnostics/MovementDiagnosticsRecorder.cpp
     src/World/Diagnostics/FramePerfMonitor.cpp
     src/World/Diagnostics/BlockInspectDiagnostics.cpp
+    src/World/Diagnostics/CreatureMovementDiagnostics.cpp
     src/World/Mesh/WorldMeshService.cpp
     src/World/Mesh/WorldMeshDirtyPolicy.cpp
     src/App/Platform/WindowManager.cpp
@@ -779,6 +783,7 @@ target_link_libraries(terrain_mesh_dirty_seam_test glm::glm)
 add_executable(navigation_pathfinder_test
     src/Navigation/UNavigationPathfinder.cpp
     src/Navigation/UWaypointFollower.cpp
+    src/Navigation/NavigationPathBudget.cpp
     src/Test/NavigationPathfinderTest.cpp)
 target_include_directories(navigation_pathfinder_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -791,13 +796,30 @@ target_include_directories(creature_activity_steering_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(creature_activity_steering_test glm::glm)
 
+add_executable(locomotion_state_derive_test
+    src/Creatures/Locomotion/LocomotionStateDerive.cpp
+    src/Creatures/Locomotion/CreatureLocomotionFacts.cpp
+    src/Test/LocomotionStateDeriveTest.cpp)
+target_include_directories(locomotion_state_derive_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(locomotion_state_derive_test glm::glm)
+
+add_executable(creature_movement_diag_test
+    src/World/Diagnostics/CreatureMovementDiagnostics.cpp
+    src/Test/CreatureMovementDiagTest.cpp)
+target_include_directories(creature_movement_diag_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(creature_movement_diag_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(wander_interval_test
     src/Activity/Agents/WanderActivityAgent.cpp
     src/Activity/Helpers/CreatureActivitySteering.cpp
+    src/Creatures/Locomotion/LocomotionTypes.cpp
+    src/World/Diagnostics/CreatureMovementDiagnostics.cpp
     src/Test/WanderIntervalTest.cpp)
 target_include_directories(wander_interval_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(wander_interval_test glm::glm)
+target_link_libraries(wander_interval_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(creature_skinned_draw_test
     src/Creatures/Visual/CreatureBonePaletteGpu.cpp
@@ -1895,6 +1917,15 @@ target_include_directories(player_clearance_test PRIVATE
 target_compile_definitions(player_clearance_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(player_clearance_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(creature_terrestrial_gate_test
+    ${PHYSICS_COLLISION_UNIT_SOURCES}
+    src/Test/CreatureTerrestrialGateTest.cpp)
+target_include_directories(creature_terrestrial_gate_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(creature_terrestrial_gate_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(creature_terrestrial_gate_test glm::glm nlohmann_json::nlohmann_json)
 
 if(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)

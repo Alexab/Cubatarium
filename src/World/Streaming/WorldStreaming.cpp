@@ -286,12 +286,14 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               (near_focus && neighborhood_ok);
           if (seed_skylight_now)
           {
+            // Include blocklight here: skylight-only seed + immediate mesh left
+            // emissives (lava/torches) dark until a later FIFO pass (often dropped).
             world.RelightTerrainColumn(ground.x * CHUNK_SIZE,
                                        ground.z * CHUNK_SIZE, relight_min,
                                        relight_max,
                                        /*priority_mesh=*/true,
                                        /*include_skylight=*/true,
-                                       /*include_block_light=*/false);
+                                       /*include_block_light=*/true);
           }
           else
           {
