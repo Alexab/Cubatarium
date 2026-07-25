@@ -50,6 +50,9 @@ pre-existing `sticky=9`, `cold_relight_holes_sec=16`, `focus_dirty_end=403`
 backends same; `gpu_draw_cmds` med≈360 (per-indirect-cmd count), pool fill med≈0.06.
 F2 still NO-GO (`sticky=9`, `cold_relight_holes_sec=18`, stream class) — draw path OK.
 
+`gpu_mdi_sort`: opaque/cutout sorted by `blockId` before pool refresh;
+`gpu_draw_cmds` now counts API submits — med **8** (max 14). F2 still stream NO-GO.
+
 ### Manual follow-up (2026-07-23)
 
 | Run | Notes |
