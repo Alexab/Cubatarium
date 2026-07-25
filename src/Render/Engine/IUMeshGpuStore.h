@@ -17,6 +17,16 @@ struct MeshGpuBucketHandle
   bool valid{false};
 };
 
+/// DrawElementsIndirectCommand layout (OpenGL).
+struct DrawElementsIndirectCommand
+{
+  uint32_t count{0};
+  uint32_t instanceCount{1};
+  uint32_t firstIndex{0};
+  int32_t baseVertex{0};
+  uint32_t baseInstance{0};
+};
+
 /// GPU mesh storage + opaque submit. Bound once at init.
 class IUMeshGpuStore
 {
@@ -40,7 +50,6 @@ public:
   virtual void DestroyAll(GreedyGpuPassCache &opaque, GreedyGpuPassCache &cutout,
                           GreedyGpuPassCache &transparent) = 0;
 
-  /// Optional staging map for worker→GPU upload (Phase 2). Default: unsupported.
   virtual void *MapBucket(MeshGpuBucketHandle /*handle*/, size_t /*bytes*/)
   {
     return nullptr;
@@ -48,13 +57,26 @@ public:
   virtual void UnmapBucket(MeshGpuBucketHandle /*handle*/) {}
   virtual void FlipBucketOwnership(MeshGpuBucketHandle /*handle*/) {}
 
-  /// True when store can submit via MultiDrawIndirect.
   virtual bool SupportsMultiDrawIndirect() const { return false; }
 
-  /// Submit pooled pass via DrawIndirect when supported. Returns false → caller
-  /// falls back to per-batch glDrawElements. Caller must bind shader/VAO;
-  /// implementation binds pool buffers and issues draws (texture bind still
-  /// per-batch unless grouped).
+  /// Build indirect cmds for pooled batches in [begin, end). Local indices +
+  /// baseVertex (vertex byte offset / stride).
+  virtual size_t BuildIndirectCommandsRange(
+      const GreedyGpuPassCache & /*cache*/, size_t /*begin*/, size_t /*end*/,
+      std::vector<DrawElementsIndirectCommand> &out)
+  {
+    out.clear();
+    return 0;
+  }
+
+  /// Upload cmds and MultiDrawIndirect. Caller binds VAO + attribs at origin +
+  /// texture.
+  virtual bool SubmitIndirectCommands(
+      const std::vector<DrawElementsIndirectCommand> & /*cmds*/)
+  {
+    return false;
+  }
+
   virtual bool TrySubmitMultiDraw(const GreedyGpuPassCache & /*cache*/)
   {
     return false;

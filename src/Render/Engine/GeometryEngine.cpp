@@ -971,65 +971,196 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   glBindVertexArray(greedyMeshVAO);
   const GLsizei kStride = static_cast<GLsizei>(sizeof(GreedyMeshVertex));
   uint64_t draw_cmds = 0;
-  for (const GreedyGpuBatch &gpu : cache.batches)
+
+  IUMeshGpuStore &store = MeshStore();
+  const bool use_mdi = store.SupportsMultiDrawIndirect() &&
+                       cache.usesVertexPool && cache.poolVbo != 0 &&
+                       cache.poolEbo != 0;
+  if (use_mdi)
   {
-    SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
-    if (gpu.indexCountGl <= 0)
-    {
-      continue;
-    }
-    const GLuint vbo = gpu.pooled ? cache.poolVbo : gpu.vbo;
-    const GLuint ebo = gpu.pooled ? cache.poolEbo : gpu.ebo;
-    if (vbo == 0 || ebo == 0)
-    {
-      continue;
-    }
-    const auto texIt = textures.find(static_cast<size_t>(gpu.blockId));
-    if (texIt == textures.end())
-    {
-      continue;
-    }
-    const GLuint textureId = texIt->second.GetTextureId();
-    if (textureId == 0)
-    {
-      continue;
-    }
-    glBindTexture(GL_TEXTURE_2D, textureId);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glVertexAttribPointer(
-        0, 3, GL_FLOAT, GL_FALSE, kStride,
-        reinterpret_cast<void *>(gpu.pooled ? gpu.vboByteOffset : 0));
+    // Local indices + baseVertex: attribs at buffer origin once.
+    glBindBuffer(GL_ARRAY_BUFFER, cache.poolVbo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cache.poolEbo);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, kStride, nullptr);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(
         1, 1, GL_FLOAT, GL_FALSE, kStride,
-        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
-                                 offsetof(GreedyMeshVertex, faceIndex)));
+        reinterpret_cast<void *>(offsetof(GreedyMeshVertex, faceIndex)));
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(
         2, 2, GL_FLOAT, GL_FALSE, kStride,
-        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
-                                 offsetof(GreedyMeshVertex, u)));
+        reinterpret_cast<void *>(offsetof(GreedyMeshVertex, u)));
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(
         3, 1, GL_FLOAT, GL_FALSE, kStride,
-        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
-                                 offsetof(GreedyMeshVertex, skyLight)));
+        reinterpret_cast<void *>(offsetof(GreedyMeshVertex, skyLight)));
     glEnableVertexAttribArray(3);
     glVertexAttribPointer(
         4, 1, GL_FLOAT, GL_FALSE, kStride,
-        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
-                                 offsetof(GreedyMeshVertex, blockLight)));
+        reinterpret_cast<void *>(offsetof(GreedyMeshVertex, blockLight)));
     glEnableVertexAttribArray(4);
     glVertexAttribPointer(
         5, 1, GL_FLOAT, GL_FALSE, kStride,
-        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
-                                 offsetof(GreedyMeshVertex, wetness)));
+        reinterpret_cast<void *>(offsetof(GreedyMeshVertex, wetness)));
     glEnableVertexAttribArray(5);
-    glDrawElements(
-        GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
-        reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
-    ++draw_cmds;
+
+    std::vector<DrawElementsIndirectCommand> cmds;
+    size_t i = 0;
+    while (i < cache.batches.size())
+    {
+      const GreedyGpuBatch &head = cache.batches[i];
+      if (!head.pooled || head.indexCountGl <= 0)
+      {
+        ++i;
+        continue;
+      }
+      const auto texIt = textures.find(static_cast<size_t>(head.blockId));
+      if (texIt == textures.end() || texIt->second.GetTextureId() == 0)
+      {
+        ++i;
+        continue;
+      }
+
+      size_t j = i + 1;
+      while (j < cache.batches.size() && cache.batches[j].pooled &&
+             cache.batches[j].indexCountGl > 0 &&
+             cache.batches[j].blockId == head.blockId)
+      {
+        ++j;
+      }
+
+      SetBlockAnimUniforms(greedyShader, head.blockId, textures);
+      glBindTexture(GL_TEXTURE_2D, texIt->second.GetTextureId());
+      if (store.BuildIndirectCommandsRange(cache, i, j, cmds) > 0 &&
+          store.SubmitIndirectCommands(cmds))
+      {
+        draw_cmds += cmds.size();
+      }
+      else
+      {
+        // Fallback for this texture run: DrawElementsBaseVertex.
+        for (size_t k = i; k < j; ++k)
+        {
+          const GreedyGpuBatch &gpu = cache.batches[k];
+          const GLint base_vertex = static_cast<GLint>(
+              gpu.vboByteOffset / sizeof(GreedyMeshVertex));
+          glDrawElementsBaseVertex(
+              GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
+              reinterpret_cast<void *>(gpu.eboByteOffset), base_vertex);
+          ++draw_cmds;
+        }
+      }
+      i = j;
+    }
+
+    // Non-pooled leftovers (should be rare when usesVertexPool).
+    for (const GreedyGpuBatch &gpu : cache.batches)
+    {
+      if (gpu.pooled || gpu.indexCountGl <= 0)
+      {
+        continue;
+      }
+      if (gpu.vbo == 0 || gpu.ebo == 0)
+      {
+        continue;
+      }
+      const auto texIt = textures.find(static_cast<size_t>(gpu.blockId));
+      if (texIt == textures.end() || texIt->second.GetTextureId() == 0)
+      {
+        continue;
+      }
+      SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
+      glBindTexture(GL_TEXTURE_2D, texIt->second.GetTextureId());
+      glBindBuffer(GL_ARRAY_BUFFER, gpu.vbo);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpu.ebo);
+      glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, kStride, nullptr);
+      glEnableVertexAttribArray(0);
+      glVertexAttribPointer(
+          1, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>(offsetof(GreedyMeshVertex, faceIndex)));
+      glEnableVertexAttribArray(1);
+      glVertexAttribPointer(
+          2, 2, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>(offsetof(GreedyMeshVertex, u)));
+      glEnableVertexAttribArray(2);
+      glVertexAttribPointer(
+          3, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>(offsetof(GreedyMeshVertex, skyLight)));
+      glEnableVertexAttribArray(3);
+      glVertexAttribPointer(
+          4, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>(offsetof(GreedyMeshVertex, blockLight)));
+      glEnableVertexAttribArray(4);
+      glVertexAttribPointer(
+          5, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>(offsetof(GreedyMeshVertex, wetness)));
+      glEnableVertexAttribArray(5);
+      glDrawElements(GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT, nullptr);
+      ++draw_cmds;
+    }
+  }
+  else
+  {
+    for (const GreedyGpuBatch &gpu : cache.batches)
+    {
+      SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
+      if (gpu.indexCountGl <= 0)
+      {
+        continue;
+      }
+      const GLuint vbo = gpu.pooled ? cache.poolVbo : gpu.vbo;
+      const GLuint ebo = gpu.pooled ? cache.poolEbo : gpu.ebo;
+      if (vbo == 0 || ebo == 0)
+      {
+        continue;
+      }
+      const auto texIt = textures.find(static_cast<size_t>(gpu.blockId));
+      if (texIt == textures.end())
+      {
+        continue;
+      }
+      const GLuint textureId = texIt->second.GetTextureId();
+      if (textureId == 0)
+      {
+        continue;
+      }
+      glBindTexture(GL_TEXTURE_2D, textureId);
+      glBindBuffer(GL_ARRAY_BUFFER, vbo);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+      glVertexAttribPointer(
+          0, 3, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>(gpu.pooled ? gpu.vboByteOffset : 0));
+      glEnableVertexAttribArray(0);
+      glVertexAttribPointer(
+          1, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                   offsetof(GreedyMeshVertex, faceIndex)));
+      glEnableVertexAttribArray(1);
+      glVertexAttribPointer(
+          2, 2, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                   offsetof(GreedyMeshVertex, u)));
+      glEnableVertexAttribArray(2);
+      glVertexAttribPointer(
+          3, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                   offsetof(GreedyMeshVertex, skyLight)));
+      glEnableVertexAttribArray(3);
+      glVertexAttribPointer(
+          4, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                   offsetof(GreedyMeshVertex, blockLight)));
+      glEnableVertexAttribArray(4);
+      glVertexAttribPointer(
+          5, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                   offsetof(GreedyMeshVertex, wetness)));
+      glEnableVertexAttribArray(5);
+      glDrawElements(
+          GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
+          reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
+      ++draw_cmds;
+    }
   }
 
   if (WorldInstance)

@@ -46,6 +46,10 @@ Unit gates: `edit_mesh_remesh_policy_test`, `render_backend_factory_test`,
 pre-existing `sticky=9`, `cold_relight_holes_sec=16`, `focus_dirty_end=403`
 (stream class) — not a draw-path regression from init-bind.
 
+`gpu_mdi` smoke (`baseVertex` + texture-grouped `glMultiDrawElementsIndirect`):
+backends same; `gpu_draw_cmds` med≈360 (per-indirect-cmd count), pool fill med≈0.06.
+F2 still NO-GO (`sticky=9`, `cold_relight_holes_sec=18`, stream class) — draw path OK.
+
 ### Manual follow-up (2026-07-23)
 
 | Run | Notes |

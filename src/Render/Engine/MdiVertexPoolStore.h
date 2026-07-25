@@ -9,16 +9,6 @@ typedef unsigned int GLuint;
 namespace cutum
 {
 
-/// DrawElementsIndirectCommand layout (OpenGL).
-struct DrawElementsIndirectCommand
-{
-  uint32_t count{0};
-  uint32_t instanceCount{1};
-  uint32_t firstIndex{0};
-  int32_t baseVertex{0};
-  uint32_t baseInstance{0};
-};
-
 /// MDI-capable store: same upload as staging, DrawIndirect submit helper.
 class UMdiVertexPoolStore final : public UCpuStagingGpuStore
 {
@@ -34,7 +24,13 @@ public:
   size_t BuildIndirectCommands(const GreedyGpuPassCache &cache,
                                std::vector<DrawElementsIndirectCommand> &out);
 
-  /// Upload command buffer. Caller binds VAO/attrs; returns false if unavailable.
+  size_t BuildIndirectCommandsRange(
+      const GreedyGpuPassCache &cache, size_t begin, size_t end,
+      std::vector<DrawElementsIndirectCommand> &out) override;
+
+  bool SubmitIndirectCommands(
+      const std::vector<DrawElementsIndirectCommand> &cmds) override;
+
   bool TrySubmitMultiDraw(const GreedyGpuPassCache &cache) override;
 
   void *MapBucket(MeshGpuBucketHandle handle, size_t bytes) override;
@@ -46,7 +42,6 @@ private:
   size_t IndirectCapacityBytes{0};
   uint64_t LastDrawCmds{0};
 
-  // Phase 2 staging map stubs (worker→GPU ownership flip).
   std::vector<uint8_t> StagingScratch;
   MeshGpuBucketHandle MappedHandle{};
 };

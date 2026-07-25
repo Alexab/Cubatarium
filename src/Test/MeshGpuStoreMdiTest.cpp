@@ -21,6 +21,7 @@ struct FakeBatch
   bool pooled{false};
   int indexCountGl{0};
   size_t eboByteOffset{0};
+  size_t vboByteOffset{0};
 };
 
 struct FakeCache
@@ -42,16 +43,18 @@ void Expect(bool cond, const char *msg)
   }
 }
 
-size_t BuildCmds(const FakeCache &cache,
-                 std::vector<DrawElementsIndirectCommand> &out)
+size_t BuildRange(const FakeCache &cache, size_t begin, size_t end,
+                  std::vector<DrawElementsIndirectCommand> &out)
 {
   out.clear();
   if (!cache.usesVertexPool || cache.poolVbo == 0 || cache.poolEbo == 0)
   {
     return 0;
   }
-  for (const FakeBatch &gpu : cache.batches)
+  constexpr size_t kVert = 32; // fake sizeof vertex
+  for (size_t i = begin; i < end && i < cache.batches.size(); ++i)
   {
+    const FakeBatch &gpu = cache.batches[i];
     if (!gpu.pooled || gpu.indexCountGl <= 0)
     {
       continue;
@@ -60,6 +63,7 @@ size_t BuildCmds(const FakeCache &cache,
     cmd.count = static_cast<uint32_t>(gpu.indexCountGl);
     cmd.firstIndex =
         static_cast<uint32_t>(gpu.eboByteOffset / sizeof(uint32_t));
+    cmd.baseVertex = static_cast<int32_t>(gpu.vboByteOffset / kVert);
     out.push_back(cmd);
   }
   return out.size();
@@ -77,15 +81,18 @@ int main()
   b.pooled = true;
   b.indexCountGl = 6;
   b.eboByteOffset = 0;
+  b.vboByteOffset = 0;
   cache.batches.push_back(b);
   b.eboByteOffset = 24;
+  b.vboByteOffset = 64; // 2 verts * 32
   cache.batches.push_back(b);
 
   std::vector<DrawElementsIndirectCommand> cmds;
-  Expect(BuildCmds(cache, cmds) == 2, "two cmds");
-  Expect(cmds[0].count == 6, "count0");
-  Expect(cmds[1].firstIndex == 6, "firstIndex1");
-  Expect(std::string("mdi_vertex_pool") == "mdi_vertex_pool", "backend name");
+  Expect(BuildRange(cache, 0, 2, cmds) == 2, "two cmds");
+  Expect(cmds[0].count == 6 && cmds[0].baseVertex == 0, "cmd0");
+  Expect(cmds[1].firstIndex == 6 && cmds[1].baseVertex == 2, "cmd1 baseVertex");
+  Expect(BuildRange(cache, 1, 2, cmds) == 1, "range single");
+  Expect(cmds[0].baseVertex == 2, "range baseVertex");
 
   if (gFails != 0)
   {

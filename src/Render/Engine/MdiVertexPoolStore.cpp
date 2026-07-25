@@ -15,8 +15,8 @@ UMdiVertexPoolStore::~UMdiVertexPoolStore()
   }
 }
 
-size_t UMdiVertexPoolStore::BuildIndirectCommands(
-    const GreedyGpuPassCache &cache,
+size_t UMdiVertexPoolStore::BuildIndirectCommandsRange(
+    const GreedyGpuPassCache &cache, size_t begin, size_t end,
     std::vector<DrawElementsIndirectCommand> &out)
 {
   out.clear();
@@ -24,9 +24,14 @@ size_t UMdiVertexPoolStore::BuildIndirectCommands(
   {
     return 0;
   }
-  out.reserve(cache.batches.size());
-  for (const GreedyGpuBatch &gpu : cache.batches)
+  if (begin >= end || end > cache.batches.size())
   {
+    return 0;
+  }
+  out.reserve(end - begin);
+  for (size_t i = begin; i < end; ++i)
+  {
+    const GreedyGpuBatch &gpu = cache.batches[i];
     if (!gpu.pooled || gpu.indexCountGl <= 0)
     {
       continue;
@@ -44,16 +49,23 @@ size_t UMdiVertexPoolStore::BuildIndirectCommands(
   return out.size();
 }
 
-bool UMdiVertexPoolStore::TrySubmitMultiDraw(const GreedyGpuPassCache &cache)
+size_t UMdiVertexPoolStore::BuildIndirectCommands(
+    const GreedyGpuPassCache &cache,
+    std::vector<DrawElementsIndirectCommand> &out)
+{
+  return BuildIndirectCommandsRange(cache, 0, cache.batches.size(), out);
+}
+
+bool UMdiVertexPoolStore::SubmitIndirectCommands(
+    const std::vector<DrawElementsIndirectCommand> &cmds)
 {
   LastDrawCmds = 0;
-  std::vector<DrawElementsIndirectCommand> cmds;
-  if (BuildIndirectCommands(cache, cmds) == 0)
+  if (cmds.empty())
   {
     return false;
   }
 
-#if defined(GL_DRAW_INDIRECT_BUFFER) && defined(GL_ARB_multi_draw_indirect)
+#if defined(GL_DRAW_INDIRECT_BUFFER)
   const size_t bytes = cmds.size() * sizeof(DrawElementsIndirectCommand);
   if (IndirectBuffer == 0)
   {
@@ -72,25 +84,36 @@ bool UMdiVertexPoolStore::TrySubmitMultiDraw(const GreedyGpuPassCache &cache)
                     cmds.data());
   }
 
-  // MultiDraw requires same VAO attribs for all — caller must bind VAO/VBO/EBO.
-  // Grouping by texture is caller's responsibility; here one MDI only when
-  // all batches already share pool buffers (textures still per-draw without atlas).
-  // Practical Phase 1: issue one DrawElementsIndirect per command (params from GPU).
+#if defined(GL_ARB_multi_draw_indirect) || defined(glMultiDrawElementsIndirect)
+  glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr,
+                              static_cast<GLsizei>(cmds.size()), 0);
+#else
   for (size_t i = 0; i < cmds.size(); ++i)
   {
     glDrawElementsIndirect(
         GL_TRIANGLES, GL_UNSIGNED_INT,
         reinterpret_cast<void *>(i * sizeof(DrawElementsIndirectCommand)));
   }
+#endif
   LastDrawCmds = cmds.size();
   glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
   return true;
 #else
-  (void)cache;
+  (void)cmds;
   LOG_FIRST_N(WARNING, 1)
       << "[MdiStore] DrawIndirect unavailable — use per-batch draws";
   return false;
 #endif
+}
+
+bool UMdiVertexPoolStore::TrySubmitMultiDraw(const GreedyGpuPassCache &cache)
+{
+  std::vector<DrawElementsIndirectCommand> cmds;
+  if (BuildIndirectCommands(cache, cmds) == 0)
+  {
+    return false;
+  }
+  return SubmitIndirectCommands(cmds);
 }
 
 void *UMdiVertexPoolStore::MapBucket(MeshGpuBucketHandle handle, size_t bytes)

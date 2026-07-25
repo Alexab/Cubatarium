@@ -37,6 +37,10 @@ so desktop MDI bind automatically enables the lighter edit remesh policy.
 
 `UGreedyVertexPool`: grow-only GL buffers + free-list `Free`/`Allocate` reuse.
 
+Desktop MDI draw (`UMdiVertexPoolStore`): local indices stay 0-based per batch;
+`baseVertex` = `vboByteOffset / sizeof(GreedyMeshVertex)`. Attribs bind at pool
+origin once; `glMultiDrawElementsIndirect` per same-`blockId` texture group.
+
 ## Telemetry
 
 `backend_mesher`, `backend_store`, `backend_cull`, `gpu_draw_cmds`,
