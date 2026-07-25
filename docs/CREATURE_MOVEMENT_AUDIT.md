@@ -42,6 +42,7 @@ Date: 2026-07-24 (code + instrumentation). Manual follow-ups: **2026-07-25** (09
 | CMA-018 | low | Chicken archetype aerial | **closed** (terrestrial_biped + profile chicken) |
 | CMA-019 | low | Amphibious can_fly / aquatic arch on land | **closed** (land arch + inFluid→aquatic facts) |
 | CMA-020 | high | Soft gate footprint + exact BlockTopY float AABB false collide; feet heal; start_invalid | **closed** (column ground + 0.01 skin; SyncFeet heal; path XZ snap; tests) |
+| CMA-021 | high | Chase random-slide jitter; wander `forward_probe_fail` idle; tall A* exhaust | **closed** (PickApproachDirection; soft wander probe; nav height trim) |
 
 ## Backend × archetype matrix (fix packets)
 

@@ -47,6 +47,11 @@ int main()
   const float radius = cutum::SeparationQueryRadius(glm::vec3(0.6f, 1.8f, 0.6f));
   Expect(radius > 1.0f, "separation radius should exceed body footprint");
 
+  Expect(std::abs(cutum::NavigationBodyHeightForBounds(1.85f) - 1.6f) < 1e-4f,
+         "zombie-height nav clearance should trim 0.25");
+  Expect(std::abs(cutum::NavigationBodyHeightForBounds(0.5f) - 0.5f) < 1e-4f,
+         "short mobs keep full nav height");
+
   std::cout << "creature_activity_steering_test: OK" << std::endl;
   return 0;
 }

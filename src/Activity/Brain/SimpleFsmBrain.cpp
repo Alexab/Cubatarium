@@ -122,8 +122,8 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
       flee_goal.y = view->bodyOrigin.y;
     }
     NavigationQuery query;
-    query.search_distance = 32;
-    query.body_height = snapshot->boundsSize.y;
+    query.search_distance = 48;
+    query.body_height = NavigationBodyHeightForBounds(snapshot->boundsSize.y);
     query.max_jump = snapshot->locomotion.jumpHeightBlocks;
     const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
         blackboard.navigation, sink.GetWorld(), view->bodyOrigin, flee_goal,
@@ -133,7 +133,9 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
     {
       if (glm::length(flee_dir) > 1e-4f)
       {
-        move_dir = flee_dir;
+        PickApproachDirection(perception, snapshot->habitat, view->bodyOrigin,
+                              flee_dir, snapshot->boundsSize, self_id,
+                              move_dir);
       }
       else if (!PickLocomotionDirection(perception, *view, snapshot->habitat,
                                         snapshot->boundsSize, move_dir))
@@ -210,8 +212,8 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
 
   blackboard.state = CreatureFsmState::Chase;
   NavigationQuery query;
-  query.search_distance = 32;
-  query.body_height = snapshot->boundsSize.y;
+  query.search_distance = 48;
+  query.body_height = NavigationBodyHeightForBounds(snapshot->boundsSize.y);
   query.max_jump = snapshot->locomotion.jumpHeightBlocks;
   const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
       blackboard.navigation, sink.GetWorld(), view->bodyOrigin, controlled_body,
@@ -220,27 +222,15 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
   const char *goal_source = "chase_path";
   if (!steer.has_path || glm::length(move_dir) < 1e-4f)
   {
-    // Pathfinding currently often fails (0 path_ok in 2026-07-25 logs). Prefer
-    // probed approach to player; never freeze in idle when a chase target exists.
+    // Prefer approach toward player (with side steps). Do NOT random-slide
+    // first — that caused zombie back-forth jitter when A* exhausted.
     const glm::vec3 to_player =
         XzDirectionFromTo(view->bodyOrigin, controlled_body);
-    if (glm::length(to_player) > 1e-4f &&
-        ProbeLocomotionDirectionClear(perception, snapshot->habitat,
-                                      view->bodyOrigin, to_player,
-                                      snapshot->boundsSize, self_id))
+    if (PickApproachDirection(perception, snapshot->habitat, view->bodyOrigin,
+                              to_player, snapshot->boundsSize, self_id,
+                              move_dir))
     {
-      move_dir = to_player;
-      goal_source = "chase_direct";
-    }
-    else if (PickLocomotionDirection(perception, *view, snapshot->habitat,
-                                     snapshot->boundsSize, move_dir))
-    {
-      goal_source = "chase_path_fail_slide";
-    }
-    else if (glm::length(to_player) > 1e-4f)
-    {
-      move_dir = to_player;
-      goal_source = "chase_direct_soft";
+      goal_source = steer.has_path ? "chase_path_steer_fallback" : "chase_approach";
     }
     else
     {

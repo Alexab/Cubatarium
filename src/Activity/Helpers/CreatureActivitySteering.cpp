@@ -1,6 +1,6 @@
 #include "Activity/Helpers/CreatureActivitySteering.h"
-#include <glm/gtc/constants.hpp>
 #include <algorithm>
+#include <cmath>
 
 namespace cutum
 {
@@ -9,8 +9,14 @@ namespace
 {
 
 constexpr int kMaxDirectionAttempts = 12;
-constexpr float kProbeDistance = 1.25f;
-constexpr float kStuckMoveEpsilon = 0.002f;
+constexpr float kProbeDistance = 0.65f;
+
+glm::vec3 RotateYawXZ(const glm::vec3 &dir, float yaw_rad)
+{
+  const float c = std::cos(yaw_rad);
+  const float s = std::sin(yaw_rad);
+  return glm::vec3(dir.x * c - dir.z * s, dir.y, dir.x * s + dir.z * c);
+}
 
 bool ProbeLocomotionClear(IUWorldPerception &perception, CreatureHabitat habitat,
                           const glm::vec3 &probe_origin,
@@ -29,6 +35,17 @@ bool ProbeLocomotionClear(IUWorldPerception &perception, CreatureHabitat habitat
 
 } // namespace
 
+float NavigationBodyHeightForBounds(float bounds_height_blocks)
+{
+  // Tall bipeds (zombie 1.85): trim so A* fits 2-block gaps / light foliage.
+  // Short mobs keep full height — do not inflate clearance above their AABB.
+  if (bounds_height_blocks <= 1.25f)
+  {
+    return std::max(0.5f, bounds_height_blocks);
+  }
+  return bounds_height_blocks - 0.25f;
+}
+
 bool ProbeLocomotionDirectionClear(IUWorldPerception &perception,
                                    CreatureHabitat habitat,
                                    const glm::vec3 &body_origin,
@@ -41,8 +58,38 @@ bool ProbeLocomotionDirectionClear(IUWorldPerception &perception,
     return false;
   }
   const glm::vec3 normalized = glm::normalize(dir);
-  const glm::vec3 probe = body_origin + normalized * probe_distance;
+  const float dist = std::max(0.35f, probe_distance);
+  const glm::vec3 probe = body_origin + normalized * dist;
   return ProbeLocomotionClear(perception, habitat, probe, bounds_size, skip_id);
+}
+
+bool PickApproachDirection(IUWorldPerception &perception,
+                           CreatureHabitat habitat,
+                           const glm::vec3 &body_origin,
+                           const glm::vec3 &preferred_dir,
+                           const glm::vec3 &bounds_size, CreatureId skip_id,
+                           glm::vec3 &out_direction)
+{
+  if (glm::length(preferred_dir) < 1e-4f)
+  {
+    return false;
+  }
+  const glm::vec3 preferred = glm::normalize(preferred_dir);
+  constexpr float kOffsetsRad[] = {0.0f,  0.45f, -0.45f, 0.9f,
+                                   -0.9f, 1.4f,  -1.4f};
+  for (float yaw : kOffsetsRad)
+  {
+    const glm::vec3 dir = yaw == 0.0f ? preferred : RotateYawXZ(preferred, yaw);
+    if (ProbeLocomotionDirectionClear(perception, habitat, body_origin, dir,
+                                      bounds_size, skip_id, kProbeDistance))
+    {
+      out_direction = dir;
+      return true;
+    }
+  }
+  // Soft: always advance toward preferred; motor + habitat gate arbitrate.
+  out_direction = preferred;
+  return true;
 }
 
 glm::vec3 RandomLocomotionDirection(CreatureHabitat habitat)
