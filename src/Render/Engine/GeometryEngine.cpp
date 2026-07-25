@@ -153,22 +153,26 @@ void UGeometryEngine::SetCreatureTextureStorage(
 
 void UGeometryEngine::EnsureRenderBackendsBound()
 {
-  if (URenderBackendFactory::IsBound(RenderBackends))
+  if (!URenderBackendFactory::IsBound(RenderBackends))
   {
-    return;
-  }
-  RenderBackendCaps caps;
-  caps.Platform = RenderPlatformKind::Desktop;
-  caps.ForceCpuBackends = false;
+    RenderBackendCaps caps;
+    caps.Platform = RenderPlatformKind::Desktop;
+    caps.ForceCpuBackends = false;
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
-  caps.Platform = RenderPlatformKind::Android;
-  caps.HasCompute = false;
-  caps.HasMultiDrawIndirect = false;
+    caps.Platform = RenderPlatformKind::Android;
+    caps.HasCompute = false;
+    caps.HasMultiDrawIndirect = false;
 #else
-  caps.HasCompute = true;
-  caps.HasMultiDrawIndirect = true;
+    caps.HasCompute = true;
+    caps.HasMultiDrawIndirect = true;
 #endif
-  URenderBackendFactory::BindOnce(RenderBackends, caps);
+    URenderBackendFactory::BindOnce(RenderBackends, caps);
+  }
+  if (WorldInstance && RenderBackends.Store)
+  {
+    WorldInstance->GetMeshService().SetPreferGpuStorePatch(
+        RenderBackends.Store->SupportsMultiDrawIndirect());
+  }
 }
 
 IUMeshGpuStore &UGeometryEngine::MeshStore()

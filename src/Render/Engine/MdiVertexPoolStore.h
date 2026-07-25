@@ -35,7 +35,7 @@ public:
                                std::vector<DrawElementsIndirectCommand> &out);
 
   /// Upload command buffer. Caller binds VAO/attrs; returns false if unavailable.
-  bool TrySubmitMultiDraw(const GreedyGpuPassCache &cache);
+  bool TrySubmitMultiDraw(const GreedyGpuPassCache &cache) override;
 
   void *MapBucket(MeshGpuBucketHandle handle, size_t bytes) override;
   void UnmapBucket(MeshGpuBucketHandle handle) override;

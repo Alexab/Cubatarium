@@ -33,6 +33,10 @@ public:
 
   void SetMeshSink(IUWorldMeshSink *sink) { MeshSink = sink; }
 
+  /// When true, edit remesh prefers center Immediate + Dirty ring (GPU store).
+  void SetPreferGpuStorePatch(bool enabled) { PreferGpuStorePatch = enabled; }
+  bool GetPreferGpuStorePatch() const { return PreferGpuStorePatch; }
+
   void SetRenderSettings(const RenderSettings &settings);
   void SetRenderDistanceChunks(int distance);
   void SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord, int radius_chunks);
@@ -191,6 +195,7 @@ private:
 
   UChunkMeshCache Cache;
   IUWorldMeshSink *MeshSink{nullptr};
+  bool PreferGpuStorePatch{false};
 };
 
 } // namespace cutum

@@ -684,7 +684,7 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
   policy_in.AsyncMeshing = render.AsyncMeshing;
   policy_in.GreedyMeshing = render.GreedyMeshing;
   policy_in.ImmediateChunkCap = 9;
-  policy_in.PreferGpuStorePatch = false;
+  policy_in.PreferGpuStorePatch = PreferGpuStorePatch;
 
   const EditMeshRemeshDecision decision = EvaluateEditMeshRemesh(policy_in);
   modified_chunks.insert(decision.ImmediateChunks.begin(),

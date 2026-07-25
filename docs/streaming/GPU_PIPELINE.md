@@ -29,6 +29,10 @@ Factory: `URenderBackendFactory::BindOnce` / `Select` — second BindOnce reject
 - Default: Immediate cap 9 for face/light ring hybrid async.
 - `PreferGpuStorePatch`: only center Immediate; ring → Dirty (upload/MDI path).
 
+`UGeometryEngine::EnsureRenderBackendsBound` sets
+`WorldMeshService::SetPreferGpuStorePatch(store->SupportsMultiDrawIndirect())`
+so desktop MDI bind automatically enables the lighter edit remesh policy.
+
 ## Vertex pool (TD-CS-016)
 
 `UGreedyVertexPool`: grow-only GL buffers + free-list `Free`/`Allocate` reuse.

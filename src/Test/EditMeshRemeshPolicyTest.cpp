@@ -81,6 +81,23 @@ int main()
     Expect(!d.DirtyChunks.empty(), "gpu patch: ring dirty");
   }
 
+  {
+    // Face neighbors without light ring still Immediate under default policy;
+    // with PreferGpuStorePatch only center.
+    EditMeshRemeshInput in;
+    in.BlockPositions = {{8, 64, 8}};
+    in.SyncNeighborChunks = true;
+    in.SyncLightRing = false;
+    in.AsyncMeshing = true;
+    in.GreedyMeshing = true;
+    in.HasRegistry = true;
+    in.ImmediateChunkCap = 9;
+    in.PreferGpuStorePatch = true;
+    const auto d = EvaluateEditMeshRemesh(in);
+    Expect(d.ImmediateChunks.size() == 1,
+           "gpu patch without light ring: center only");
+  }
+
   if (gFails != 0)
   {
     std::cerr << "edit_mesh_remesh_policy_test: " << gFails << " failures\n";

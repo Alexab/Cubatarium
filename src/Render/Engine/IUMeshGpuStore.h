@@ -51,6 +51,15 @@ public:
   /// True when store can submit via MultiDrawIndirect.
   virtual bool SupportsMultiDrawIndirect() const { return false; }
 
+  /// Submit pooled pass via DrawIndirect when supported. Returns false → caller
+  /// falls back to per-batch glDrawElements. Caller must bind shader/VAO;
+  /// implementation binds pool buffers and issues draws (texture bind still
+  /// per-batch unless grouped).
+  virtual bool TrySubmitMultiDraw(const GreedyGpuPassCache & /*cache*/)
+  {
+    return false;
+  }
+
   virtual uint64_t LastSubmitDrawCmds() const { return 0; }
 };
 
