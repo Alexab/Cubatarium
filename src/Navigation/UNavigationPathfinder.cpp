@@ -71,23 +71,32 @@ glm::vec3 BodyOriginFromNode(const NavigationStandNode &node)
 }
 
 NavigationStandNode SnapStandNode(const IUWorldNavigation &navigation,
-                                  NavigationStandNode node, float body_height)
+                                  NavigationStandNode node, float body_height,
+                                  const glm::vec3 &body_origin,
+                                  float max_snap_blocks)
 {
   if (navigation.IsTerrestrialStandNode(node, body_height))
   {
     return node;
   }
   const int base_y = node.ground_y;
+  const float max_delta = std::max(0.5f, max_snap_blocks) + 0.05f;
   for (int dy = 1; dy <= 2; ++dy)
   {
     for (const int sign : {-1, 1})
     {
       NavigationStandNode trial = node;
       trial.ground_y = base_y + sign * dy;
-      if (navigation.IsTerrestrialStandNode(trial, body_height))
+      if (!navigation.IsTerrestrialStandNode(trial, body_height))
       {
-        return trial;
+        continue;
       }
+      // Reject snaps that would "fix" an eye-height goal down to feet.
+      if (std::abs(BlockTopY(trial.ground_y) - body_origin.y) > max_delta)
+      {
+        continue;
+      }
+      return trial;
     }
   }
   return node;
@@ -110,10 +119,10 @@ NavigationPath UNavigationPathfinder::FindTerrestrialPath(
   NavigationPath result;
   NavigationStandNode start =
       SnapStandNode(navigation, StandNodeFromBody(start_body),
-                    query.body_height);
+                    query.body_height, start_body, query.max_jump);
   NavigationStandNode goal =
       SnapStandNode(navigation, StandNodeFromBody(goal_body),
-                    query.body_height);
+                    query.body_height, goal_body, query.max_jump);
   if (!navigation.IsTerrestrialStandNode(start, query.body_height))
   {
     result.failReason = "start_invalid";
