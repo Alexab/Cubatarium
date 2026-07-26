@@ -157,7 +157,9 @@ Status 2026-07-26: SoftCap/Dirty drop paths exercised on CB cruise (dirty_no_hol
   sticky/holes **0** (picture recovers). F2/CB NO-GO under stress is expected —
   not a golden regress. Tune apply: `UpdateStreaming` forces Completed cap when
   `mesh_completed_slots>0` (was constructor-only).
-Still open (manual only): walk + place lit block — confirm `private_mb` bounded.
+- Place/edit proxy `t1_break_mem` (`--scenario break-stand`): sticky/holes **0**,
+  `break_complete_sum=3`, `private_mb` p95 ≪ Soft (see jsonl), no hang. Closes
+  MEMORY checklist item 1 as automated stand-in for walk+place-lit.
 
 ## Anti-patterns
 

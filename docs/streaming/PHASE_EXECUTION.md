@@ -202,6 +202,14 @@ Memory autofly (`cb_pack` / `premerge_cb2` jsonl): `private_mb` p95 **≈447–4
   Teleport-cruise remains CB gate of record; replay corridor is softer on wall and
   may show sticky≤2 — re-run / accept vs cruise golden, do not treat as CB reopen.
 
+### T0 pre-merge close (2026-07-26)
+
+Checklist pass: `cb_pack` re-gate **F2/C/CB GO** (reference of record). Fresh
+`t0_premerge`: **F2 GO**, spike_holes **210** (variance); `t0_premerge2`: **F2 GO**,
+spike **256** / wall **37.8** (noise). Policy unchanged — do not land on a single
+red spike run; merge may proceed against `cb_pack` class. Merge `opt_3d` → target
+remains a human step.
+
 ### Manual follow-up (2026-07-23)
 
 | Run | Notes |

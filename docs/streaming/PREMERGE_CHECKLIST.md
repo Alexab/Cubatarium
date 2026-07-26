@@ -31,6 +31,8 @@ python tools/flight_sim_phase_gate.py --phase-id CB --report bin/phase_<id>.json
 - Reference: `bin/phase_cb_pack.json` (wall **36.3**, spike **164.6**)
 - Spike variance: if a single golden fails only `spike_max_wall_holes` (~200–260)
   with F2 still GO, re-run once before treating as regress.
+- T0 (2026-07-26): `cb_pack` GO; `t0_premerge`/`t0_premerge2` F2 GO with spike
+  variance only — accept `cb_pack` as merge reference.
 
 ## 3. Manual replay parity
 
