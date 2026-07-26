@@ -49,6 +49,10 @@ python tools/flight_sim_analyze.py bin/logs/perf_YYYYMMDD-HHMMSS_*.jsonl `
 Проверить: `cold_relight_holes_sec`, `wall_ms_no_holes_med`, `spike_max_wall_holes`,
 `dirty_med_no_holes`.
 
+Reference `premerge_replay` (2026-07-26): holes/cold/spike_holes **0**, dirty **200**;
+sticky_max **2**, wall **~45** on save corridor (−478). CB gate of record remains
+teleport-cruise golden — do not fail merge solely on replay wall/sticky noise.
+
 ## 4. Metrics to record
 
 | Metric | Why |

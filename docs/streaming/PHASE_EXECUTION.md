@@ -193,6 +193,15 @@ Gate `wall_ms_no_holes≤37` landed in `flight_sim_phase_gate.py`.
 Memory autofly (`cb_pack` / `premerge_cb2` jsonl): `private_mb` p95 **≈447–482**
 ≪ Soft **1152**; mesh_completed fill med **≈0.12** ≪ 0.85; `memory_pressure=0`.
 
+### Memory stress + replay-manual (2026-07-26)
+
+- `mem_slots4` (`streaming_tune.json` `mesh_completed_slots=4`): discard **~329**,
+  cap=4, private p95≈442, stop sticky/holes 0. F2/CB NO-GO expected under stress.
+- `premerge_replay` (`--replay-manual`, focus −478→−497): holes **0**, cold **0**,
+  spike_holes **0**, dirty_no_holes **200**; sticky_max **2**, wall_no_holes **~45**.
+  Teleport-cruise remains CB gate of record; replay corridor is softer on wall and
+  may show sticky≤2 — re-run / accept vs cruise golden, do not treat as CB reopen.
+
 ### Manual follow-up (2026-07-23)
 
 | Run | Notes |

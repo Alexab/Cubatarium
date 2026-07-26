@@ -151,7 +151,13 @@ Status 2026-07-26: SoftCap/Dirty drop paths exercised on CB cruise (dirty_no_hol
 - `cb_pack`: `private_mb` med≈479 / p95≈482 / max≈522 (≪ Soft 1152);
   mesh_completed fill med≈2/42; `memory_pressure=0`.
 - `premerge_cb2`: `private_mb` p95≈447; completed fill med≈0.12.
-Still open: manual place-lit walk + stress `mesh_completed_slots=4`.
+- Stress `mesh_completed_slots=4` (`mem_slots4`): cap held at **4**,
+  `mesh_completed_discarded` → **~329**, Dirty requeue/thrash (dirty_no_holes
+  **637**), `private_mb` p95 **≈442** ≪ Soft, `memory_pressure=0`; stop ended
+  sticky/holes **0** (picture recovers). F2/CB NO-GO under stress is expected —
+  not a golden regress. Tune apply: `UpdateStreaming` forces Completed cap when
+  `mesh_completed_slots>0` (was constructor-only).
+Still open (manual only): walk + place lit block — confirm `private_mb` bounded.
 
 ## Anti-patterns
 

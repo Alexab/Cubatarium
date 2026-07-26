@@ -170,15 +170,15 @@ Evidence: `bin/flight_sim_gate_report_baseline_2cb85f3c.json`,
 Вывод: P0 = **frontier missing + cold relight** (A), не F2 Dirty drain.
 F2 (B) остаётся P1: idle remesh plateau / RemeshAfterApply.
 
-### Следующие шаги (скорректировано 2026-07-26)
+### Следующие шаги (скорректировано 2026-07-26, хвосты)
 
 Streaming ladder **H→CB закрыт** на `opt_3d` (`cb_pack`, wall gate ≤37). См.
-`PHASE_EXECUTION.md` § CB accepted.
+`PHASE_EXECUTION.md` § CB accepted. Autofly memory + `mesh_completed_slots=4`
+stress closed; `--replay-manual` recorded (sticky≤2 / wall~45 corridor).
 
-1. **Pre-merge:** `PREMERGE_CHECKLIST.md` — Release/RelWithDebInfo golden F2+C+CB,
-   optional `--replay-manual` parity, merge `opt_3d` → целевая ветка.
-2. **Memory budget validation:** checklist в `MEMORY_BUDGET.md` (private p95 /
-   completed fill% / SoftCap) — код landed, harness evidence ещё тонкий.
+1. **Pre-merge merge:** `PREMERGE_CHECKLIST.md` — Release golden F2+C+CB
+   (`cb_pack` class); merge `opt_3d` → целевая ветка when ready.
+2. **Manual memory:** place-lit walk — last MEMORY checklist item (human).
 3. **GPU pipeline:** дальше perf/parity MDI (`GPU_PIPELINE.md`), не stream-дыры.
 4. Soft: редкие `spike_max_wall` без holes (~1–4 s) — только при UX-регрессе.
 

@@ -1503,6 +1503,29 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     return;
   }
   URuntimeTuning::LoadStreamingTuneFile("streaming_tune.json");
+  // Explicit Completed caps from tune (stress / low-mem). slots=0 keeps
+  // constructor default and allows CompletedExpandEnabled growth.
+  {
+    const auto &tune = URuntimeTuning::Get();
+    if (tune.MeshCompletedSlots > 0)
+    {
+      const size_t want =
+          static_cast<size_t>(tune.MeshCompletedSlots);
+      if (meshService.GetMeshCompletedCapacity() != want)
+      {
+        meshService.SetMeshCompletedCapacity(want);
+      }
+    }
+    if (tune.RelightCompletedSlots > 0)
+    {
+      const size_t want =
+          static_cast<size_t>(tune.RelightCompletedSlots);
+      if (world.GetRelightCompletedCapacity() != want)
+      {
+        world.SetRelightCompletedCapacity(want);
+      }
+    }
+  }
   if (auto camera = world.GetCurrentUserCamera())
   {
     const PlayerCapsule cap = camera->GetPlayerCapsule();
