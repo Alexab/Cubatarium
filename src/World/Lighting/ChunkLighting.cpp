@@ -893,6 +893,22 @@ void RelightChunk(UBlockWorld &world, UBlockRegistry &registry,
                      include_skylight);
 }
 
+void RelightChunkAfterGpuSkySeed(UBlockWorld &world, UBlockRegistry &registry,
+                                 glm::ivec3 chunk_coord,
+                                 bool include_block_light)
+{
+  if (!world.GetChunkManager().HasChunk(chunk_coord))
+  {
+    return;
+  }
+  // Sky columns already written by ApplyGpuSkylightSeedToChunk.
+  PropagateSkylightHorizontal(world, registry, chunk_coord);
+  if (include_block_light)
+  {
+    PropagateBlocklight(world, registry, chunk_coord);
+  }
+}
+
 void RelightChunkBlockLight(UBlockWorld &world, UBlockRegistry &registry,
                             glm::ivec3 chunk_coord)
 {

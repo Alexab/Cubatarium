@@ -52,6 +52,12 @@ void RelightColumnWithFrontier(UBlockWorld &world, UBlockRegistry &registry,
                                std::vector<glm::ivec3> *out_relit_chunks);
 void RelightAllLoadedChunks(UBlockWorld &world, UBlockRegistry &registry);
 
+/// After ApplyGpuSkylightSeedToChunk: clear was done by caller; run horizontal
+/// sky BFS + optional blocklight without re-running PropagateSkylightColumn.
+void RelightChunkAfterGpuSkySeed(UBlockWorld &world, UBlockRegistry &registry,
+                                 glm::ivec3 chunk_coord,
+                                 bool include_block_light);
+
 } // namespace cutum
 
 #endif // CHUNKLIGHTING_H

@@ -2,11 +2,11 @@
 
 #include "World/Lighting/FullLightingPipeline.h"
 #include "World/Lighting/GpuSkylightColumnSeed.h"
+#include "World/Lighting/ChunkLighting.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "Blocks/BlockRegistry.h"
-#include <array>
 
 namespace cutum
 {
@@ -14,7 +14,7 @@ namespace cutum
 using UCpuFullLightingPipeline = UFullLightingPipeline;
 
 /// Desktop GPU lighting: column skylight seed via compute when GL is available;
-/// full BFS/flood still runs on CPU (Inner) to preserve LitReady semantics.
+/// horizontal BFS / blocklight flood stay on CPU to preserve LitReady semantics.
 /// Android never binds this class.
 class UGpuFullLightingPipeline final : public IULightingPipeline
 {
@@ -39,10 +39,33 @@ public:
                     glm::ivec3 chunk_coord, bool include_block_light = true,
                     bool include_skylight = true) override
   {
-    // Authoritative lightmap: Full CPU. Skylight column-seed compute is warmed
-    // once (not per Relight) so LitReady / autofly wall are not tanked by
-    // sync SSBO readback on the streaming hot path.
-    WarmSkylightSeedOnce(world, registry, chunk_coord);
+    if (include_skylight)
+    {
+      UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord);
+      if (chunk && ApplyGpuSkylightSeedToChunk(*chunk, registry))
+      {
+        // Clear blocklight if needed, then horizontal sky + blocklight.
+        // Sky columns already applied — skip PropagateSkylightColumn.
+        if (include_block_light)
+        {
+          for (int ly = 0; ly < CHUNK_SIZE; ++ly)
+          {
+            for (int lz = 0; lz < CHUNK_SIZE; ++lz)
+            {
+              for (int lx = 0; lx < CHUNK_SIZE; ++lx)
+              {
+                const glm::ivec3 local(lx, ly, lz);
+                const int sky = chunk->GetSkyLightLocal(local);
+                chunk->SetLightLocal(local, sky, 0);
+              }
+            }
+          }
+        }
+        RelightChunkAfterGpuSkySeed(world, registry, chunk_coord,
+                                    include_block_light);
+        return;
+      }
+    }
     Inner.RelightChunk(world, registry, chunk_coord, include_block_light,
                        include_skylight);
   }
@@ -103,48 +126,7 @@ public:
   }
 
 private:
-  void WarmSkylightSeedOnce(UBlockWorld &world, UBlockRegistry &registry,
-                            glm::ivec3 chunk_coord)
-  {
-#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
-    (void)world;
-    (void)registry;
-    (void)chunk_coord;
-#else
-    if (SeedWarmed)
-    {
-      return;
-    }
-    SeedWarmed = true;
-    UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord);
-    if (!chunk)
-    {
-      return;
-    }
-    std::array<uint8_t, CHUNK_VOLUME> occ{};
-    for (int y = 0; y < CHUNK_SIZE; ++y)
-    {
-      for (int z = 0; z < CHUNK_SIZE; ++z)
-      {
-        for (int x = 0; x < CHUNK_SIZE; ++x)
-        {
-          const glm::ivec3 local(x, y, z);
-          const BlockId id = chunk->GetBlockLocal(local);
-          const int li = (y * CHUNK_SIZE + z) * CHUNK_SIZE + x;
-          occ[static_cast<size_t>(li)] =
-              (id != 0 && !registry.IsTransparent(id) && registry.IsSolid(id))
-                  ? 1u
-                  : 0u;
-        }
-      }
-    }
-    std::array<uint8_t, CHUNK_VOLUME> sky{};
-    (void)TryGpuSeedSkylightColumns(occ, sky);
-#endif
-  }
-
   UFullLightingPipeline Inner;
-  bool SeedWarmed{false};
 };
 
 } // namespace cutum

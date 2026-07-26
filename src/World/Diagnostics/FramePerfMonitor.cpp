@@ -3,6 +3,8 @@
 #include "App/Core.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Core/World.h"
+#include "World/Lighting/GpuSkylightColumnSeed.h"
+#include "Render/Mesh/GpuGreedyMesher.h"
 #include "World/Physics/PhysicsTelemetry.h"
 #include "glog/logging.h"
 #include <chrono>
@@ -374,8 +376,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.gpu_cull_ms = phys.GpuCullMs;
   n.vertex_pool_fill = phys.VertexPoolFill;
   n.gpu_cull_indirect = phys.GpuCullIndirect;
-  n.gpu_mesh_vbo_dispatch = phys.GpuMeshVboDispatch;
-  n.gpu_light_seed_apply = phys.GpuLightSeedApply;
+  n.gpu_mesh_vbo_dispatch = UGpuGreedyMesher::ConsumeMeshVboDispatchCount();
+  n.gpu_light_seed_apply = ConsumeGpuSkylightSeedApplyCount();
   n.gpu_fluid_scan_on = phys.GpuFluidScanOn;
   n.backend_mesher = phys.BackendMesher;
   n.backend_store = phys.BackendStore;

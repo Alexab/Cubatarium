@@ -1,7 +1,12 @@
 #include "World/Lighting/GpuSkylightColumnSeed.h"
+#include "Blocks/BlockRegistry.h"
 #include "Render/GlIncludes.h"
 #include "glog/logging.h"
 #include <vector>
+
+#if defined(_WIN32) && !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+#include <windows.h>
+#endif
 
 namespace cutum
 {
@@ -146,6 +151,72 @@ bool TryGpuSeedSkylightColumns(const std::array<uint8_t, CHUNK_VOLUME> &occ,
         static_cast<uint8_t>(sky[static_cast<size_t>(i)] & 0xffu);
   }
   ++gSkylightDispatches;
+  return true;
+#endif
+}
+
+namespace
+{
+uint64_t gSkylightApplies = 0;
+}
+
+uint64_t ConsumeGpuSkylightSeedApplyCount()
+{
+  const uint64_t v = gSkylightApplies;
+  gSkylightApplies = 0;
+  return v;
+}
+
+bool ApplyGpuSkylightSeedToChunk(UChunk &chunk, UBlockRegistry &registry)
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  (void)chunk;
+  (void)registry;
+  return false;
+#else
+#if defined(_WIN32)
+  if (wglGetCurrentContext() == nullptr)
+  {
+    return false;
+  }
+#endif
+  std::array<uint8_t, CHUNK_VOLUME> occ{};
+  for (int y = 0; y < CHUNK_SIZE; ++y)
+  {
+    for (int z = 0; z < CHUNK_SIZE; ++z)
+    {
+      for (int x = 0; x < CHUNK_SIZE; ++x)
+      {
+        const glm::ivec3 local(x, y, z);
+        const BlockId id = chunk.GetBlockLocal(local);
+        const int li = (y * CHUNK_SIZE + z) * CHUNK_SIZE + x;
+        occ[static_cast<size_t>(li)] =
+            (id != 0 && !registry.IsTransparent(id) && registry.IsSolid(id))
+                ? 1u
+                : 0u;
+      }
+    }
+  }
+  std::array<uint8_t, CHUNK_VOLUME> sky{};
+  if (!TryGpuSeedSkylightColumns(occ, sky))
+  {
+    return false;
+  }
+  for (int y = 0; y < CHUNK_SIZE; ++y)
+  {
+    for (int z = 0; z < CHUNK_SIZE; ++z)
+    {
+      for (int x = 0; x < CHUNK_SIZE; ++x)
+      {
+        const glm::ivec3 local(x, y, z);
+        const int li = (y * CHUNK_SIZE + z) * CHUNK_SIZE + x;
+        const int block_level = chunk.GetBlockLightLocal(local);
+        chunk.SetLightLocal(local, static_cast<int>(sky[static_cast<size_t>(li)]),
+                            block_level);
+      }
+    }
+  }
+  ++gSkylightApplies;
   return true;
 #endif
 }
