@@ -166,6 +166,45 @@ def analyze(
     wall = col(steady, "wall_ms")
     mesh_async = col(steady, "mesh_async")
 
+    # GPU pipeline telemetry (G0+ gates).
+    from collections import Counter
+
+    gpu_draw_cmds = col(steady, "gpu_draw_cmds")
+    gpu_cull_ms = col(steady, "gpu_cull_ms")
+    vertex_pool_fill = col(steady, "vertex_pool_fill")
+    store_names = [
+        str(r.get("backend_store") or "")
+        for r in steady
+        if r.get("backend_store")
+    ]
+    mesher_names = [
+        str(r.get("backend_mesher") or "")
+        for r in steady
+        if r.get("backend_mesher")
+    ]
+    cull_names = [
+        str(r.get("backend_cull") or "")
+        for r in steady
+        if r.get("backend_cull")
+    ]
+    backend_store_mode = (
+        Counter(store_names).most_common(1)[0][0] if store_names else ""
+    )
+    backend_mesher_mode = (
+        Counter(mesher_names).most_common(1)[0][0] if mesher_names else ""
+    )
+    backend_cull_mode = (
+        Counter(cull_names).most_common(1)[0][0] if cull_names else ""
+    )
+    backend_store_mdi = 1.0 if backend_store_mode == "mdi_vertex_pool" else 0.0
+    backend_mesher_gpu = (
+        1.0 if backend_mesher_mode.startswith("gpu_") else 0.0
+    )
+    backend_cull_gpu = 1.0 if backend_cull_mode.startswith("gpu_") else 0.0
+    gpu_draw_cmds_med = median(gpu_draw_cmds)
+    gpu_cull_ms_med = median(gpu_cull_ms)
+    vertex_pool_fill_med = median(vertex_pool_fill)
+
     holes_rate = (sum(1 for h in holes if h > 0) / len(holes)) if holes else 1.0
     red_rate = (sum(1 for p in pressure if p >= 2) / len(pressure)) if pressure else 1.0
 
@@ -594,11 +633,20 @@ def analyze(
             ),
             "stop_segment_periods": len(stop_segment),
             "stop_tail_periods": len(stop_tail),
-        "stop_pending_plateau_sec": stop_pending_plateau_sec,
-        "stop_wall_med": stop_wall_med,
-        "healthy_unfinished_rate": healthy_unfinished_rate,
-        "manual_idle": manual_idle,
-    },
+            "stop_pending_plateau_sec": stop_pending_plateau_sec,
+            "stop_wall_med": stop_wall_med,
+            "healthy_unfinished_rate": healthy_unfinished_rate,
+            "manual_idle": manual_idle,
+            "backend_store_mode": backend_store_mode,
+            "backend_mesher_mode": backend_mesher_mode,
+            "backend_cull_mode": backend_cull_mode,
+            "backend_store_mdi": backend_store_mdi,
+            "backend_mesher_gpu": backend_mesher_gpu,
+            "backend_cull_gpu": backend_cull_gpu,
+            "gpu_draw_cmds_med": gpu_draw_cmds_med,
+            "gpu_cull_ms_med": gpu_cull_ms_med,
+            "vertex_pool_fill_med": vertex_pool_fill_med,
+        },
         "gates": gates,
         "gates_stop": gates_stop,
         "soft": soft,

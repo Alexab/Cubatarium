@@ -54,3 +54,10 @@ counts API submits (MultiDraw or DrawElements), not per-batch indirect cmds.
 - `edit_mesh_remesh_policy_test`
 - `render_backend_factory_test`
 - `mesh_gpu_store_mdi_test`
+
+## Phase ladder
+
+Execution, autofly gates, and dual-stack Android rules:
+[`GPU_PHASE_EXECUTION.md`](GPU_PHASE_EXECUTION.md). Analyze emits
+`backend_*_mode`, `backend_store_mdi`, `gpu_draw_cmds_med`, `gpu_cull_ms_med`,
+`vertex_pool_fill_med` for G0–GA gates in `flight_sim_phase_gate.py`.

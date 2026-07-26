@@ -85,6 +85,65 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("spike_max_world_extra", "le", 600.0),
         ("spike_world_extra_dominant_rate", "le", 0.35),
     ],
+    # GPU ladder (Desktop). Always also run F2/C/CB separately.
+    "G0": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("backend_store_mdi", "ge", 1.0),
+        ("gpu_draw_cmds_med", "le", 50.0),
+    ],
+    "G1": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("backend_store_mdi", "ge", 1.0),
+        ("backend_cull_gpu", "ge", 1.0),
+        ("gpu_cull_ms_med", "ge", 0.0),
+    ],
+    "G2": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("backend_cull_gpu", "ge", 1.0),
+        ("gpu_cull_ms_med", "gt", 0.0),
+        ("wall_ms_no_holes_med", "le", 40.0),
+    ],
+    "G3": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("backend_store_mdi", "ge", 1.0),
+        ("gpu_draw_cmds_med", "le", 15.0),
+        ("vertex_pool_fill_med", "le", 0.85),
+    ],
+    "G4": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("backend_mesher_gpu", "ge", 1.0),
+        ("backend_store_mdi", "ge", 1.0),
+    ],
+    "G5": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("backend_mesher_gpu", "ge", 1.0),
+        ("cold_relight_holes_sec", "le", 3.0),
+    ],
+    "G6": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("cold_relight_holes_sec", "le", 3.0),
+        ("post_stop_pending_med", "le", 5.0),
+    ],
+    "G7": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("wall_ms_no_holes_med", "le", 40.0),
+    ],
+    "GA": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("backend_store_mdi", "ge", 1.0),
+        ("backend_mesher_gpu", "ge", 1.0),
+        ("backend_cull_gpu", "ge", 1.0),
+        ("gpu_draw_cmds_med", "le", 15.0),
+    ],
 }
 
 
