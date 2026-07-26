@@ -405,6 +405,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
       std::cerr << "flight-sim: startup failed" << std::endl;
       return 1;
     }
+    application->SetMinimalOverlayForBench(true);
 
     if (!options.WorldName.empty())
     {

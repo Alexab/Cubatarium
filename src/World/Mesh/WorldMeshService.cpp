@@ -65,9 +65,11 @@ void UWorldMeshService::SetStarveRemeshForHoles(bool starve)
 }
 
 int UWorldMeshService::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
-                                                   int keep_radius, int keep_cy)
+                                                   int keep_radius, int keep_cy,
+                                                   bool remesh_only)
 {
-  return Cache.DropRemeshDirtyBeyondRadius(center_chunk, keep_radius, keep_cy);
+  return Cache.DropRemeshDirtyBeyondRadius(center_chunk, keep_radius, keep_cy,
+                                           remesh_only);
 }
 
 void UWorldMeshService::SetSyncHoleFillRadius(int radius_chunks)

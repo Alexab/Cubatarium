@@ -440,6 +440,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Soft-cap Dirty under Yellow/Red: drop farthest remesh (not holes).
   // Manual 091724: Dirty~400–590 with SoftCap 1200 and async≤29 — thrash never
   // engaged. Use DirtyThrashSoftCap whenever stream Yellow/Red OR async thrash.
+  // Anti-pattern: cruise keep_h=0 / eye-shell all-Dirty / remesh-only keep_h=1
+  // beyond focus → wall_no_holes↑ dirty↑ / F2 pending (cb_nogui).
   {
     const auto &mtune = URuntimeTuning::Get();
     auto &phys = world.GetPhysicsTelemetryMutable();
@@ -511,6 +513,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                                          cruise_light_debt || idle_remesh_debt ||
                                          idle_focus_dirty_debt);
   mesh_service.SetStarveRemeshForHoles(visual_holes || missing_underfeet);
+  // Cruise Dirty flood: drop remesh beyond focus (keep first-mesh) so
+  // dirty_med_no_holes clears CB (cb_starve: 652→369). Do not StarveRemesh
+  // cruise-wide — that raised spike_holes (269).
+  if (moving && !visual_holes && !missing_underfeet &&
+      pending_dirty > static_cast<size_t>(
+                          std::max(280, URuntimeTuning::Get().DirtyThrashSoftCap)))
+  {
+    world.GetPhysicsTelemetryMutable().DirtyDropped += static_cast<uint64_t>(
+        std::max(0, mesh_service.DropRemeshDirtyBeyondRadius(
+                        focus_ground_horiz, focus_radius, /*keep_cy=*/-1,
+                        /*remesh_only=*/true)));
+  }
   // While sticky remesh drains after pending→0, suppress seam MarkDirty even
   // before sticky hits 0 — otherwise remesh thrash pins async≈42 and nr climbs
   // (P0_hole_promote stop). Full idle_remesh_debt with sticky raised wall/sticky

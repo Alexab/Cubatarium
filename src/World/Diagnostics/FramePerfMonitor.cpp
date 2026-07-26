@@ -148,6 +148,7 @@ struct FrameNumbers
   int fluid_map_full_rebuild{0};
   double commit_apply_ms{0.0};
   double commit_seal_ms{0.0};
+  double commit_physics_ms{0.0};
   double streamer_update_ms{0.0};
   double async_io_ms{0.0};
   double relight_drain_ms{0.0};
@@ -282,6 +283,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.fluid_map_full_rebuild = world.GetLastFluidMapFullRebuild() ? 1 : 0;
   n.commit_apply_ms = phys.CommitApplyMs;
   n.commit_seal_ms = phys.CommitSealMs;
+  n.commit_physics_ms = phys.CommitPhysicsMs;
   n.streamer_update_ms = phys.StreamerUpdateMs;
   n.async_io_ms = phys.AsyncIoMs;
   n.relight_drain_ms = phys.RelightDrainMs;
@@ -433,6 +435,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"fluid_map_full_rebuild\":" << n.fluid_map_full_rebuild
           << ",\"commit_apply_ms\":" << n.commit_apply_ms
           << ",\"commit_seal_ms\":" << n.commit_seal_ms
+          << ",\"commit_physics_ms\":" << n.commit_physics_ms
           << ",\"streamer_update_ms\":" << n.streamer_update_ms
           << ",\"async_io_ms\":" << n.async_io_ms
           << ",\"relight_drain_ms\":" << n.relight_drain_ms

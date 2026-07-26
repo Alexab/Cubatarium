@@ -667,7 +667,8 @@ int UChunkMeshCache::CountDirtyWithinHorizontalRadius(
 }
 
 int UChunkMeshCache::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
-                                                int keep_radius, int keep_cy)
+                                                int keep_radius, int keep_cy,
+                                                bool remesh_only)
 {
   if (keep_radius < 0)
   {
@@ -689,16 +690,21 @@ int UChunkMeshCache::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
   int dropped = 0;
   for (auto it = Dirty.begin(); it != Dirty.end();)
   {
-    if (beyond_keep(*it))
-    {
-      RemeshAfterApply.erase(*it);
-      it = Dirty.RemoveAt(it);
-      ++dropped;
-    }
-    else
+    if (!beyond_keep(*it))
     {
       ++it;
+      continue;
     }
+    // Cruise: never drop first-mesh Dirty (creates holes in the focus ring).
+    if (remesh_only && !HasGreedyMesh(*it) &&
+        RemeshAfterApply.find(*it) == RemeshAfterApply.end())
+    {
+      ++it;
+      continue;
+    }
+    RemeshAfterApply.erase(*it);
+    it = Dirty.RemoveAt(it);
+    ++dropped;
   }
   for (auto it = RemeshAfterApply.begin(); it != RemeshAfterApply.end();)
   {

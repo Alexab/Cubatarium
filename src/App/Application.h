@@ -86,6 +86,11 @@ public:
   void BeginShutdownOperation(bool saveSession, bool closeAfter);
   void PrepareForShutdown();
   void SetWindow(GLFWwindow *window) { Window = window; }
+  /// Flight-sim / benches: skip HUD + icon warmup so wall gates measure stream/mesh.
+  void SetMinimalOverlayForBench(bool enabled)
+  {
+    MinimalOverlayForBench = enabled;
+  }
   void SetTouchInputBridge(UTouchInputBridge *bridge) { TouchBridge = bridge; }
   UTouchInputBridge *GetTouchInputBridge() const { return TouchBridge; }
   bool IsQuitRequested() const { return QuitRequested; }
@@ -237,6 +242,7 @@ private:
   bool PendingShutdownSave{false};
   bool ShutdownCloseAfter{false};
   bool StartupOk{false};
+  bool MinimalOverlayForBench{false};
   std::function<void()> PendingMenuAction;
   std::function<void()> WorldOpOnComplete;
   bool QuitRequested{false};

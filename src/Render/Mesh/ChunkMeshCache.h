@@ -165,13 +165,12 @@ public:
   void SetStarveOutsideFocusMesh(bool starve) { StarveOutsideFocusMesh = starve; }
   /// When true, skip remesh (already has greedy) until holes clear.
   void SetStarveRemeshForHoles(bool starve) { StarveRemeshForHoles = starve; }
-  /// Drop Dirty beyond keep shell (Chebyshev horiz + optional |cy|). Remesh and
-  /// first-mesh alike — air/first-mesh Dirty without GreedyCache used to bypass
-  /// remesh-only drop and pin focus_dirty≈400 (F2 fd_end). Missing near keep
-  /// still schedules; far work re-enters via Recover/Admit when needed.
-  /// If keep_cy >= 0, also drop with |cy - center.y| > keep_cy.
+  /// Drop Dirty beyond keep shell (Chebyshev horiz + optional |cy|).
+  /// remesh_only: only drop entries that already have greedy mesh (or are in
+  /// RemeshAfterApply) — safe on cruise; idle F2 fd_end uses remesh_only=false
+  /// to also clear first-mesh/air Dirty outside the eye shell.
   int DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk, int keep_radius,
-                                  int keep_cy = -1);
+                                  int keep_cy = -1, bool remesh_only = false);
   /// Chebyshev radius for SyncRebuildVisibleMissing hole-fill (1=underfeet).
   void SetSyncHoleFillRadius(int radius_chunks)
   {

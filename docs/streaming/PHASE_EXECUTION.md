@@ -113,8 +113,28 @@ MaxChunkCommits on holes) traded metrics: dirty can pass (~309–329) but then
 `spike_holes`/`wall_no_holes` rise and/or **F2 cold→4**. Eye-shell
 `DropRemeshDirtyBeyondRadius` while moving drops first-mesh Dirty inside the
 focus ring → holes. Best F2-safe CB baseline remains `cb_tighten` /
-`2dacdb75`. Next: remesh-only drop (HasGreedyMesh) beyond focus_radius, and
-cut residual `stream_ms` beyond streamer (~130 ms unaccounted on 254 ms spike).
+`2dacdb75`.
+
+### CB stream residual + dirty (2026-07-26, `cb_land`)
+
+Root causes beyond seal/ShoreAir:
+1. **Sync `RelightTerrainColumn` on underfeet commit** → `commit_apply_ms` 200–300 ms
+   (gap inside `stream_ms`). Cruise now FIFO-only; idle healthy underfeet may sync.
+2. **Streamer load budget required `loadOps>0`** → failed `EnsureChunkLoaded` scans
+   ran unbounded (~100 ms). Hard stop at 2.5× budget.
+3. **Unload `ForEachChunk` even when `unload_ops=0`** → skip entirely; also skip when
+   `dirty>350` or `frame_ms>16`.
+4. **Flight-sim HUD + icon warmup** → `gui_overlay_ms` ~180 on hole spikes. Bench
+   sets `MinimalOverlayForBench` (skip HUD/warmup); hitch skips icon warmup in play.
+5. **Cruise remesh Dirty** beyond `focus_radius`: remesh-only drop when dirty >
+   SoftCap (keeps first-mesh). `dirty_med_no_holes` **577→~380** (CB dirty PASS).
+
+Autofly `cb_land` (F2 GO): spike_holes **≈202** (≤200 miss by ~2), wall_no_holes
+**≈72** (still >35; no-HUD frames no longer hitch-throttle stream), dirty **≈383**,
+cold **2**, fd_end **148**. C still NO-GO on spike; CB dirty gate green.
+
+Anti-patterns this loop: cruise `keep_h=0`, remesh-only `keep_h=1` eye-shell,
+StarveRemesh cruise-wide (spike↑), absolute load budget without 2.5× soft (cold↑).
 
 ### Manual follow-up (2026-07-23)
 

@@ -1693,13 +1693,16 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   }
 
   const auto gui_begin = std::chrono::high_resolution_clock::now();
-  if (State == AppState::InGame && IconSource)
+  const bool hitch_gui =
+      World && (World->GetWallFrameDelta() * 1000.0) > 24.0;
+  if (State == AppState::InGame && IconSource && !MinimalOverlayForBench &&
+      !hitch_gui)
   {
     IconSource->WarmupObjectIcons(2);
     IconSource->WarmupCreatureIcons(2);
   }
 
-  if (HudScreen && HudScreen->GetRoot())
+  if (HudScreen && HudScreen->GetRoot() && !MinimalOverlayForBench)
   {
     HudScreen->SyncSlotIcons();
     notifyViewport(HudScreen.get());

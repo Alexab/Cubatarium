@@ -543,6 +543,12 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
                                          const glm::vec3 &eyePos,
                                          const PlayerCapsule &cap)
 {
+  // ForEachChunk over resident set is O(chunks) — skip entirely when budget is 0
+  // (was still scanning then breaking; CB wall_no_holes streamer≈100ms+).
+  if (EffectiveUnloadOpsPerFrame <= 0)
+  {
+    return;
+  }
   const glm::ivec3 feetChunk = UChunkManager::WorldToChunk(feetBlockPos);
   const int limit = KeepRenderDistance + UnloadMargin;
   const int maxCy = (MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
@@ -682,7 +688,11 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
             });
 
   const auto update_t0 = std::chrono::steady_clock::now();
+  // Absolute wall: previously required loadOps>0, so failed EnsureChunkLoaded
+  // scans ran unbounded (~100ms streamer_update on hole frames, CB). Soft stop
+  // at budget; hard stop at 2.5× when still loadOps==0 (keeps F2 cold fill).
   const double load_budget_ms = MaxLoadOpsPerFrame <= 2 ? 4.0 : 10.0;
+  const double load_hard_ms = load_budget_ms * 2.5;
   int loadOps = 0;
   for (const glm::ivec3 &coord : toLoad)
   {
@@ -696,6 +706,10 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
             std::chrono::steady_clock::now() - update_t0)
             .count();
     if (elapsed_ms >= load_budget_ms && loadOps > 0)
+    {
+      break;
+    }
+    if (elapsed_ms >= load_hard_ms)
     {
       break;
     }
@@ -732,7 +746,8 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
   }
 
   // Skip unload on hitch budgets — ForEachChunk+save stacks with load scan.
-  if (MaxLoadOpsPerFrame > 2)
+  // Also skip when EffectiveUnloadOpsPerFrame==0 (UnloadDistantChunks early-out).
+  if (MaxLoadOpsPerFrame > 2 && EffectiveUnloadOpsPerFrame > 0)
   {
     UnloadDistantChunks(loadCenter, feetBlockPos, eyePos, cap);
   }

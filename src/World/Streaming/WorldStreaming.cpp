@@ -266,59 +266,77 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               std::max(std::abs(coord.x - focus_ground.x),
                        std::abs(coord.z - focus_ground.z));
           const bool underfeet = horiz <= 1;
-          // Sync seed only underfeet (near_focus sync spiked autofly wall).
-          // V3: neighborhood-ready near_focus columns get priority FIFO seed
-          // (DrainRelightQueues → async). Direct EnqueueAsync+FIFO duplicated
-          // jobs and left pending plateaus with relight_drain≈0.
-          const bool neighborhood_ok = world.CanSeedSkylightAtCommit(ground);
-          const bool seed_skylight_now =
-              !world.RequiresLightingLitGate() ||
-              (underfeet && neighborhood_ok);
-          const bool relight_priority =
-              (near_focus && LastPendingLightFocus <= 20) ||
-              (near_focus && neighborhood_ok);
-          if (seed_skylight_now)
-          {
-            // Include blocklight here: skylight-only seed + immediate mesh left
-            // emissives (lava/torches) dark until a later FIFO pass (often dropped).
-            world.RelightTerrainColumn(ground.x * CHUNK_SIZE,
-                                       ground.z * CHUNK_SIZE, relight_min,
-                                       relight_max,
-                                       /*priority_mesh=*/true,
-                                       /*include_skylight=*/true,
-                                       /*include_block_light=*/true);
-          }
-          else
-          {
-            world.Persistence->EnqueueTerrainColumnRelight(
-                ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, relight_priority,
-                relight_min, relight_max);
-            world.NotePendingLightBeforeMesh(ground, dirty_min, dirty_max);
-          }
           const bool admit_far_dirty =
               LastPressureCaps.level == StreamingPressureLevel::Green;
-          if (seed_skylight_now)
+          // Flat / no lit-gate: mesh immediately (no PendingLight contract).
+          if (!world.RequiresLightingLitGate())
           {
             world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
-            world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-                ground, dirty_min, dirty_max,
-                /*include_horizontal_neighbors=*/true);
-          }
-          else if (near_focus)
-          {
-            // V2a: do not MarkDirty preview while async relight is pending —
-            // holes until LitReady/MarkRelit (RenderReady contract).
-            world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
-          }
-          else if (admit_far_dirty)
-          {
-            world.MeshService->MarkTerrainChunkMeshDirtySeamed(
-                ground, dirty_min, dirty_max, false);
-            world.SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+            if (near_focus)
+            {
+              world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+                  ground, dirty_min, dirty_max,
+                  /*include_horizontal_neighbors=*/true);
+            }
+            else if (admit_far_dirty)
+            {
+              world.MeshService->MarkTerrainChunkMeshDirtySeamed(
+                  ground, dirty_min, dirty_max, false);
+            }
           }
           else
           {
-            world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
+            // Full lighting: sync Relight only for healthy underfeet (F2 cold).
+            // Cruise / hitch / holes → priority FIFO only (CB commit_apply was
+            // 200–300ms from sync RelightTerrainColumn on underfeet commit).
+            const bool neighborhood_ok = world.CanSeedSkylightAtCommit(ground);
+            const double commit_frame_ms = world.GetLastMovementFrameMs();
+            const bool moving_cruise =
+                world.LastMovementSpeed >=
+                settings.MovementPrefetchThreshold;
+            // Sync Relight only idle healthy underfeet (F2 stop). Cruise / holes
+            // → FIFO (CB: sync was 200–300ms commit_apply on underfeet commit).
+            const bool seed_skylight_now =
+                underfeet && neighborhood_ok && !moving_cruise &&
+                commit_frame_ms <= 16.0 &&
+                world.PhysicsTelemetryData.VisualHoles == 0;
+            const bool relight_priority =
+                underfeet || (near_focus && LastPendingLightFocus <= 20) ||
+                (near_focus && neighborhood_ok);
+            if (seed_skylight_now)
+            {
+              world.RelightTerrainColumn(ground.x * CHUNK_SIZE,
+                                         ground.z * CHUNK_SIZE, relight_min,
+                                         relight_max,
+                                         /*priority_mesh=*/true,
+                                         /*include_skylight=*/true,
+                                         /*include_block_light=*/true);
+              world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
+              world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+                  ground, dirty_min, dirty_max,
+                  /*include_horizontal_neighbors=*/true);
+            }
+            else
+            {
+              world.Persistence->EnqueueTerrainColumnRelight(
+                  ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, relight_priority,
+                  relight_min, relight_max);
+              world.NotePendingLightBeforeMesh(ground, dirty_min, dirty_max);
+              if (near_focus)
+              {
+                world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
+              }
+              else if (admit_far_dirty)
+              {
+                world.MeshService->MarkTerrainChunkMeshDirtySeamed(
+                    ground, dirty_min, dirty_max, false);
+                world.SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+              }
+              else
+              {
+                world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
+              }
+            }
           }
         }
         else if (near_focus)
@@ -697,8 +715,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     int near_done = 0;
     int far_done = 0;
-    const int near_physics_budget = near_mesh_backlog ? 4 : 2;
-    const int far_physics_budget = keep_prewarm_surplus ? 1 : 0;
+    // Holes/backlog: skip physics seed (was 4) — ScanChunkFluidFrontier stacks
+    // on hole frames; commits already enqueue light via FIFO.
+    const int near_physics_budget = near_mesh_backlog ? 0 : 2;
+    const int far_physics_budget =
+        (keep_prewarm_surplus && !near_mesh_backlog) ? 1 : 0;
     const auto physics_t0 = std::chrono::high_resolution_clock::now();
     for (auto it = DeferredPhysicsSeedQueue.begin();
          it != DeferredPhysicsSeedQueue.end() &&
@@ -1813,14 +1834,12 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
 
     const ProceduralSettings &procedural = world.GetProceduralSettings();
     const double frame_ms = world.GetLastMovementFrameMs();
+    const size_t dirty_for_unload = meshService.GetDirtyCount();
     int unload_ops = world.MaxUnloadOpsPerFrame;
-    if (frame_ms > 24.0)
+    // Dirty/hitch: skip unload ForEach entirely (CB wall_no_holes streamer spikes).
+    if (frame_ms > 16.0 || dirty_for_unload > 350)
     {
       unload_ops = 0;
-    }
-    else if (frame_ms > 16.0)
-    {
-      unload_ops = std::min(unload_ops, 1);
     }
     Streamer->SetEffectiveUnloadOpsPerFrame(unload_ops);
 
@@ -1921,9 +1940,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
 
     const auto prefetch_t0 = std::chrono::high_resolution_clock::now();
     int prefetch_visual_ops = 0;
-    // Prefetch at cruise speed, but skip when hitch'd or pressure≠allow —
-    // Update still loads; deep ahead would only pile GenQ/Dirty.
-    if (frame_ms <= 20.0 && pressure.allow_prefetch)
+    // Prefetch at cruise speed, but skip when hitch'd, holes, or pressure≠allow —
+    // Update still loads; deep ahead would only pile GenQ/Dirty (CB stream spikes).
+    if (frame_ms <= 20.0 && pressure.allow_prefetch && !visual_holes &&
+        !underfeet_need)
     {
       Streamer->PrefetchAhead(feet_chunk, forward, lastMovementSpeed,
                               procedural.MovementPrefetchThreshold,
