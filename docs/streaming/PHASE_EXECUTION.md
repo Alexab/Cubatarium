@@ -151,6 +151,28 @@ Verified `cb_snap3`: spike_holes **180**, dirty **384**, cold **0**, wall_no_hol
 **41**, **C GO**, **F2 GO**. CB only fails `wall_ms_no_holes` (≤35). Variance can
 push spike to ~260 on some runs — keep ring/NearLoad fixes.
 
+### CB unfinished-scan + FindNearest (2026-07-26)
+
+Root cause of residual `wall_ms_no_holes≈41`: cruise called
+`CountUnfinishedVisualNear` / `ByFacing` every frame (O(focus²) complete+ready)
+plus `FindNearestMissingGreedyMesh` via full `ForEachChunk` even with no hole —
+`mesh_emerge_prep≈5ms` and a large share of `stream_ms`.
+
+Fixes:
+- Skip unfinished counts while moving (idle/stop still full — F2 fd/nr).
+- `FindNearest` only after `HasMissing`; ring-order + early exit.
+- Per-DoMovement memo for `HasMissing` / `FindNearest`.
+- Underfeet `HasMissing(r=1)` skipped when focus has no missing.
+
+Verified tradeoff (do not combine blindly):
+- `cb_scan` / `cb_wall2`: wall_no_holes **≈34 PASS**, spike **≈240–260** (miss).
+- `cb_memo` / `cb_pack`: spike **≈165–174 PASS**, wall **≈36–42** (miss by 1–7ms),
+  **C GO**, **F2 GO**. Best pack: wall **36.3**, spike **164.6**, dirty **185**.
+- Anti-patterns: cruise `snap≤1.75` (cold↑ / wall↑), throttle `DropRemesh`
+  (spike_max ~4s).
+
+CB still open on ~1ms wall residual after `cb_pack`; F2/C stay green on that pack.
+
 ### Manual follow-up (2026-07-23)
 
 | Run | Notes |

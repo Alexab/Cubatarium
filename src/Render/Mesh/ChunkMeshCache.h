@@ -111,6 +111,8 @@ public:
                                     glm::ivec3 center_ground_chunk,
                                     int radius_chunks,
                                     glm::ivec3 &out_coord) const;
+  /// Invalidate per-frame hole-query memo (call once before streaming/mesh).
+  void BeginHoleQueryFrame();
   const MeshRebuildTickStats &GetLastRebuildTickStats() const
   {
     return LastRebuildTickStats;
@@ -355,6 +357,25 @@ private:
   /// When MaxHorizontalDist >= 0, allow this many farther schedules/frame.
   int MeshScheduleOverflowPerFrame{0};
   std::function<bool(glm::ivec3)> DeferMeshUntilLit;
+  // Per-DoMovement memo: HasMissing/FindNearest are called many times/frame.
+  mutable uint64_t HoleQueryEpoch{0};
+  struct MissingQueryMemo
+  {
+    uint64_t epoch{0};
+    glm::ivec3 center{0};
+    int radius{-1};
+    bool result{false};
+  };
+  mutable MissingQueryMemo MissingMemo{};
+  struct NearestQueryMemo
+  {
+    uint64_t epoch{0};
+    glm::ivec3 center{0};
+    int radius{-1};
+    bool found{false};
+    glm::ivec3 coord{0};
+  };
+  mutable NearestQueryMemo NearestMemo{};
 };
 } // namespace cutum
 #endif

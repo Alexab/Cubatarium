@@ -523,6 +523,12 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
   {
     return false;
   }
+  if (MissingMemo.epoch == HoleQueryEpoch &&
+      MissingMemo.center == center_ground_chunk &&
+      MissingMemo.radius == radius_chunks)
+  {
+    return MissingMemo.result;
+  }
   bool missing = false;
   world.GetChunkManager().ForEachChunk(
       [&](const UChunk &chunk)
@@ -563,7 +569,16 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
           }
         }
       });
+  MissingMemo.epoch = HoleQueryEpoch;
+  MissingMemo.center = center_ground_chunk;
+  MissingMemo.radius = radius_chunks;
+  MissingMemo.result = missing;
   return missing;
+}
+
+void UChunkMeshCache::BeginHoleQueryFrame()
+{
+  ++HoleQueryEpoch;
 }
 
 bool UChunkMeshCache::FindNearestMissingGreedyMesh(
@@ -574,53 +589,94 @@ bool UChunkMeshCache::FindNearestMissingGreedyMesh(
   {
     return false;
   }
-  bool found = false;
-  int best_dist = std::numeric_limits<int>::max();
-  int best_vdist = std::numeric_limits<int>::max();
-  glm::ivec3 best{0};
-  world.GetChunkManager().ForEachChunk(
-      [&](const UChunk &chunk)
+  if (NearestMemo.epoch == HoleQueryEpoch &&
+      NearestMemo.center == center_ground_chunk &&
+      NearestMemo.radius == radius_chunks)
+  {
+    if (NearestMemo.found)
+    {
+      out_coord = NearestMemo.coord;
+    }
+    return NearestMemo.found;
+  }
+  // Ring-order + early exit. ForEachChunk over the whole resident set used to
+  // cost 70–120ms mesh_emerge_prep on hole frames (CB spike_holes) while
+  // searching for a nearest xz that is usually underfeet (r≤1).
+  // Callers pass focus_ground_horiz with y=0 — scan a tall cy band so altitude
+  // slices stay visible without walking every keep-shell chunk.
+  constexpr int kMissingScanMaxCy = 48;
+  const UChunkManager &chunks = world.GetChunkManager();
+  auto chunk_is_solid_missing = [&](glm::ivec3 coord) -> bool
+  {
+    if (GreedyCache.find(coord) != GreedyCache.end())
+    {
+      return false;
+    }
+    const UChunk *chunk = chunks.GetChunk(coord);
+    if (!chunk)
+    {
+      return false;
+    }
+    for (int z = 0; z < CHUNK_SIZE; z += 4)
+    {
+      for (int x = 0; x < CHUNK_SIZE; x += 4)
       {
-        const glm::ivec3 coord = chunk.GetCoord();
-        const int dx = std::abs(coord.x - center_ground_chunk.x);
-        const int dz = std::abs(coord.z - center_ground_chunk.z);
-        const int horiz = std::max(dx, dz);
-        if (horiz > radius_chunks)
+        for (int y = 0; y < CHUNK_SIZE; y += 4)
         {
-          return;
-        }
-        if (GreedyCache.find(coord) != GreedyCache.end())
-        {
-          return;
-        }
-        bool solid = false;
-        for (int z = 0; z < CHUNK_SIZE && !solid; z += 4)
-        {
-          for (int x = 0; x < CHUNK_SIZE && !solid; x += 4)
+          if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
           {
-            for (int y = 0; y < CHUNK_SIZE && !solid; y += 4)
-            {
-              if (chunk.GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
-              {
-                solid = true;
-              }
-            }
+            return true;
           }
         }
-        if (!solid)
+      }
+    }
+    return false;
+  };
+  bool found = false;
+  glm::ivec3 best{0};
+  for (int r = 0; r <= radius_chunks; ++r)
+  {
+    glm::ivec3 best_ring{0};
+    int best_vdist = std::numeric_limits<int>::max();
+    bool found_ring = false;
+    for (int dz = -r; dz <= r; ++dz)
+    {
+      for (int dx = -r; dx <= r; ++dx)
+      {
+        if (r > 0 && std::max(std::abs(dx), std::abs(dz)) != r)
         {
-          return;
+          continue;
         }
-        const int vdist = std::abs(coord.y - center_ground_chunk.y);
-        if (!found || horiz < best_dist ||
-            (horiz == best_dist && vdist < best_vdist))
+        for (int cy = 0; cy <= kMissingScanMaxCy; ++cy)
         {
-          found = true;
-          best_dist = horiz;
-          best_vdist = vdist;
-          best = coord;
+          const glm::ivec3 coord(center_ground_chunk.x + dx, cy,
+                                 center_ground_chunk.z + dz);
+          if (!chunk_is_solid_missing(coord))
+          {
+            continue;
+          }
+          const int vdist = std::abs(cy - center_ground_chunk.y);
+          if (!found_ring || vdist < best_vdist)
+          {
+            found_ring = true;
+            best_vdist = vdist;
+            best_ring = coord;
+          }
         }
-      });
+      }
+    }
+    if (found_ring)
+    {
+      found = true;
+      best = best_ring;
+      break;
+    }
+  }
+  NearestMemo.epoch = HoleQueryEpoch;
+  NearestMemo.center = center_ground_chunk;
+  NearestMemo.radius = radius_chunks;
+  NearestMemo.found = found;
+  NearestMemo.coord = best;
   if (found)
   {
     out_coord = best;

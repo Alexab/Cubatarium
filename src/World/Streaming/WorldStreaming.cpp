@@ -368,7 +368,10 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   const bool missing_near =
       world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
           world.GetBlockWorld(), focus_horiz, focus_radius);
+  // Underfeet is a subset of focus — skip second full resident scan when focus
+  // already reports no missing mesh (CB stream_ms on no-hole fly).
   const bool missing_underfeet =
+      missing_near &&
       world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
           world.GetBlockWorld(), focus_horiz, /*radius=*/1);
   const int pending_light_focus =
@@ -396,8 +399,17 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   const int pending_dark =
       world.CountPendingDarkFocusMeshes(focus_ground, focus_radius);
   const int dark_preview = sticky_remesh + pending_dark;
+  // Cruise: CountUnfinishedVisualNear/ByFacing walk the whole focus ring with
+  // IsTerrainChunkComplete + IsColumnRenderReady — ~5–9ms of stream_ms on
+  // no-hole fly (CB wall_ms_no_holes). Idle/stop still needs the full count
+  // for F2 fd_end / not_ready. Holes still use HasMissing above.
+  const bool moving_for_telemetry =
+      world.GetLastMovementSpeed() >
+      world.GetProceduralSettings().MovementPrefetchThreshold;
   const int not_render_ready =
-      world.CountUnfinishedVisualNear(focus_horiz, focus_radius);
+      moving_for_telemetry
+          ? 0
+          : world.CountUnfinishedVisualNear(focus_horiz, focus_radius);
   const int focus_dirty_chunks =
       world.GetMeshService().CountDirtyWithinHorizontalRadius(focus_horiz,
                                                               focus_radius);
@@ -407,19 +419,22 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   world.PhysicsTelemetryData.FocusNotRenderReady = not_render_ready;
   world.PhysicsTelemetryData.FocusDirtyChunks = focus_dirty_chunks;
   {
-    glm::vec2 fwd = world.GetLastMovementDirXz();
-    if (glm::length(fwd) < 0.01f)
-    {
-      if (const auto camera = world.GetCurrentUserCamera())
-      {
-        const glm::vec3 front = camera->GetFront();
-        fwd = glm::vec2(front.x, front.z);
-      }
-    }
     int ahead = 0;
     int behind = 0;
-    world.CountUnfinishedVisualByFacing(focus_horiz, focus_radius, fwd, ahead,
-                                        behind);
+    if (!moving_for_telemetry)
+    {
+      glm::vec2 fwd = world.GetLastMovementDirXz();
+      if (glm::length(fwd) < 0.01f)
+      {
+        if (const auto camera = world.GetCurrentUserCamera())
+        {
+          const glm::vec3 front = camera->GetFront();
+          fwd = glm::vec2(front.x, front.z);
+        }
+      }
+      world.CountUnfinishedVisualByFacing(focus_horiz, focus_radius, fwd, ahead,
+                                          behind);
+    }
     world.PhysicsTelemetryData.FocusUnfinishedAhead = ahead;
     world.PhysicsTelemetryData.FocusUnfinishedBehind = behind;
   }
@@ -1861,15 +1876,17 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         meshService.HasMissingGreedyMeshInHorizontalRadius(world.GetBlockWorld(),
                                                          focus_horiz,
                                                          focus_radius);
-    const bool underfeet_need =
-        meshService.HasMissingGreedyMeshInHorizontalRadius(
-            world.GetBlockWorld(), focus_horiz, /*radius=*/1) ||
-        world.HasPendingLightBeforeMeshNear(focus_horiz, /*radius=*/1);
-    const KeepPrewarmGate keep_gate = EvaluateKeepPrewarmGate(
-        frame_ms, gen_backlog_total, mesh_async, dirty, near_mesh_backlog);
     const bool visual_holes =
         meshService.HasMissingGreedyMeshInHorizontalRadius(
             world.GetBlockWorld(), focus_horiz, focus_radius);
+    // Cached via HoleQuery memo when args match; underfeet subset of focus.
+    const bool underfeet_need =
+        (visual_holes &&
+         meshService.HasMissingGreedyMeshInHorizontalRadius(
+             world.GetBlockWorld(), focus_horiz, /*radius=*/1)) ||
+        world.HasPendingLightBeforeMeshNear(focus_horiz, /*radius=*/1);
+    const KeepPrewarmGate keep_gate = EvaluateKeepPrewarmGate(
+        frame_ms, gen_backlog_total, mesh_async, dirty, near_mesh_backlog);
     const bool near_focus_holes =
         visual_holes ||
         world.HasPendingLightBeforeMeshNear(focus_horiz, focus_radius);

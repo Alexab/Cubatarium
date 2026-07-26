@@ -548,6 +548,7 @@ void UWorld::RunLegacyPhysicsFrame()
   if (camera)
   {
     const auto t_before_stream = std::chrono::high_resolution_clock::now();
+    GetMeshService().BeginHoleQueryFrame();
     UpdateStreaming();
     TickAsyncChunkSystems();
     const auto t_after_stream = std::chrono::high_resolution_clock::now();

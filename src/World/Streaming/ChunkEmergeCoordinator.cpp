@@ -160,8 +160,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Cold SoftDefer hole: also allow first-mesh for the single nearest missing
   // chunk (dark preview) so visual_holes cannot plate cold_relight 4–6s while
   // Y-band Capture keeps finalize_gate=false (f2_cold_finalize).
+  // HasMissing first — FindNearest walks all loaded chunks with solid probes
+  // even when there is no hole (CB mesh_emerge_prep ~5ms on no-hole fly).
+  const bool missing_visible_mesh =
+      mesh_service.HasMissingGreedyMeshInHorizontalRadius(
+          world.GetBlockWorld(), focus_ground_horiz, focus_radius);
   glm::ivec3 nearest_missing_hole{};
   const bool have_nearest_missing =
+      missing_visible_mesh &&
       mesh_service.FindNearestMissingGreedyMesh(
           world.GetBlockWorld(), focus_ground_horiz, focus_radius,
           nearest_missing_hole);
@@ -196,9 +202,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             world.RequiresLightingLitGate() && pending, in_focus, may_mesh);
       });
 
-  const bool missing_visible_mesh =
-      mesh_service.HasMissingGreedyMeshInHorizontalRadius(
-          world.GetBlockWorld(), focus_ground_horiz, focus_radius);
   const bool near_mesh_backlog =
       mesh_service.HasDirtyWithinHorizontalRadius(focus_ground_horiz,
                                                  focus_radius) ||
@@ -211,9 +214,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                                                              focus_radius);
   const size_t pending_dirty_early = mesh_service.GetDirtyCount();
   const int pending_async_early = mesh_service.GetAsyncInFlightCount();
-  // Early not_ready for idle catch-up (full count filled later; cheap enough).
+  // Idle-only: CountUnfinishedVisualNear is O(focus²) complete+ready scans.
+  // Moving paths never use not_ready_early (idle_remesh_debt requires !moving).
   const int not_ready_early =
-      world.CountUnfinishedVisualNear(focus_ground_horiz, focus_radius);
+      moving ? 0
+             : world.CountUnfinishedVisualNear(focus_ground_horiz, focus_radius);
   const int focus_dirty_early =
       mesh_service.CountDirtyWithinHorizontalRadius(focus_ground_horiz,
                                                     focus_radius);
@@ -366,12 +371,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // visual_holes = missing mesh only; near_focus_holes kept for legacy paths
   // that still want light-debt urgency for relight (not starve).
   const bool visual_holes = missing_visible_mesh;
+  // Same cruise skip as not_ready_early — idle catch-up still counts fully.
   const int focus_not_render_ready =
-      world.CountUnfinishedVisualNear(focus_ground_horiz, focus_radius);
+      moving ? 0
+             : world.CountUnfinishedVisualNear(focus_ground_horiz, focus_radius);
   const bool unfinished_visual =
       visual_holes || focus_not_render_ready > 0;
   const bool near_focus_holes = visual_holes || pending_near_light;
   const bool missing_underfeet =
+      visual_holes &&
       mesh_service.HasMissingGreedyMeshInHorizontalRadius(
           world.GetBlockWorld(), focus_ground_horiz, /*radius=*/1);
   const bool pending_underfeet =
@@ -516,6 +524,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Cruise Dirty flood: drop remesh beyond focus (keep first-mesh) so
   // dirty_med_no_holes clears CB (cb_starve: 652→369). Do not StarveRemesh
   // cruise-wide — that raised spike_holes (269).
+  // Anti-pattern: throttle DropRemesh (cb_mid) → spike_max_wall ~4s.
   if (moving && !visual_holes && !missing_underfeet &&
       pending_dirty > static_cast<size_t>(
                           std::max(280, URuntimeTuning::Get().DirtyThrashSoftCap)))
@@ -1115,9 +1124,24 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     glm::ivec3 hole{};
     const int mark_r = underfeet_need ? 1 : focus_radius;
-    if (mesh_service.FindNearestMissingGreedyMesh(
-            world.GetBlockWorld(), focus_ground_horiz, mark_r, hole) &&
-        !mesh_service.HasInflightMeshBuild(hole))
+    bool have_hole = false;
+    if (have_nearest_missing)
+    {
+      const int nh =
+          std::max(std::abs(nearest_missing_hole.x - focus_ground_horiz.x),
+                   std::abs(nearest_missing_hole.z - focus_ground_horiz.z));
+      if (nh <= mark_r)
+      {
+        hole = nearest_missing_hole;
+        have_hole = true;
+      }
+    }
+    if (!have_hole)
+    {
+      have_hole = mesh_service.FindNearestMissingGreedyMesh(
+          world.GetBlockWorld(), focus_ground_horiz, mark_r, hole);
+    }
+    if (have_hole && !mesh_service.HasInflightMeshBuild(hole))
     {
       mesh_service.MarkDirtyPriority(hole);
     }
@@ -1444,12 +1468,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_drain = std::min(mesh_drain, 14);
   }
   // Re-assert moving no-hole dirty clamp after later schedule boosts (CB
-  // wall_ms_no_holes). Prefer small snapshot budget over schedule thrash.
+  // wall_ms_no_holes). snap≤1 raised spike_holes (cb_wall2); keep snap2.
   if (moving && !visual_holes && !missing_underfeet && pending_dirty > 280)
   {
     mesh_schedule = std::min(mesh_schedule, 3);
     mesh_drain = std::min(mesh_drain, 10);
     mesh_service.SetMeshSnapshotBudgetMs(2.0);
+  }
+  // Saturated async on lit cruise: ease snapshot so phys catch-up stays down.
+  if (moving && !visual_holes && !missing_underfeet && pending_async >= 28)
+  {
+    mesh_schedule = std::min(mesh_schedule, 2);
+    mesh_drain = std::min(mesh_drain, 12);
+    mesh_service.SetMeshSnapshotBudgetMs(1.5);
   }
   // Standing remesh thrash only when pipeline is saturated (manual 214430).
   // Do NOT clamp schedule whenever Dirty>100 — that froze Dirty≈270 with

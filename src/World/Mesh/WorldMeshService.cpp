@@ -371,6 +371,11 @@ void UWorldMeshService::ResetImmediateMeshStats()
   Cache.ResetImmediateMeshStats();
 }
 
+void UWorldMeshService::BeginHoleQueryFrame()
+{
+  Cache.BeginHoleQueryFrame();
+}
+
 double UWorldMeshService::GetLastMeshImmediateMs() const
 {
   return Cache.GetLastMeshImmediateMs();
