@@ -1207,6 +1207,7 @@ add_executable(fluid_surface_slice_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Core/FluidColumnSurfaceQuery.cpp
     src/Render/Mesh/FluidSurfaceColumnSlice.cpp
+    src/Test/GpuFluidColumnScanHostStub.cpp
     src/Test/FluidSurfaceSliceTest.cpp)
 target_include_directories(fluid_surface_slice_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -1219,6 +1220,7 @@ add_executable(fluid_surface_map_logic_test
     src/World/Core/FluidColumnSurfaceQuery.cpp
     src/World/Core/RuntimeTuning.cpp
     src/Render/Mesh/FluidSurfaceColumnSlice.cpp
+    src/Test/GpuFluidColumnScanHostStub.cpp
     src/Test/FluidSurfaceMapLogicTest.cpp)
 target_include_directories(fluid_surface_map_logic_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -1332,6 +1334,7 @@ add_executable(decor_mesh_integration_test
     src/Render/Mesh/ChunkMeshRevisionRegistry.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/FluidSurfaceColumnSlice.cpp
+    src/Test/GpuFluidColumnScanHostStub.cpp
     src/Render/Mesh/GreedyMesher.cpp
     src/World/Core/FluidColumnSurfaceQuery.cpp
     src/World/Physics/FluidSpreadSystem.cpp
