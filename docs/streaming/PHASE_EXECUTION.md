@@ -106,6 +106,16 @@ Fixes (autofly `cb_tighten`, F2 still GO):
 Result vs golden7: spike_holes **809→254**, wall_no_holes **66→39**, dirty_no_holes
 **792→577**, cold **2**, fd_end **63**. CB still short of ≤200 / ≤35 / ≤450.
 
+### CB follow-up attempts (2026-07-26)
+
+Further loops (eye-shell cruise prune, thrash `keep_h=0`, Immediate cap,
+MaxChunkCommits on holes) traded metrics: dirty can pass (~309–329) but then
+`spike_holes`/`wall_no_holes` rise and/or **F2 cold→4**. Eye-shell
+`DropRemeshDirtyBeyondRadius` while moving drops first-mesh Dirty inside the
+focus ring → holes. Best F2-safe CB baseline remains `cb_tighten` /
+`2dacdb75`. Next: remesh-only drop (HasGreedyMesh) beyond focus_radius, and
+cut residual `stream_ms` beyond streamer (~130 ms unaccounted on 254 ms spike).
+
 ### Manual follow-up (2026-07-23)
 
 | Run | Notes |
