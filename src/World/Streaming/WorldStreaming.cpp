@@ -1836,8 +1836,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const double frame_ms = world.GetLastMovementFrameMs();
     const size_t dirty_for_unload = meshService.GetDirtyCount();
     int unload_ops = world.MaxUnloadOpsPerFrame;
-    // Dirty/hitch: skip unload ForEach entirely (CB wall_no_holes streamer spikes).
-    if (frame_ms > 16.0 || dirty_for_unload > 350)
+    // Moving / dirty / hitch: skip unload ForEach (CB wall_no_holes streamer).
+    const bool moving_for_unload =
+        lastMovementSpeed >= procedural.MovementPrefetchThreshold;
+    if (moving_for_unload || frame_ms > 16.0 || dirty_for_unload > 280)
     {
       unload_ops = 0;
     }

@@ -136,6 +136,21 @@ cold **2**, fd_end **148**. C still NO-GO on spike; CB dirty gate green.
 Anti-patterns this loop: cruise `keep_h=0`, remesh-only `keep_h=1` eye-shell,
 StarveRemesh cruise-wide (spike↑), absolute load budget without 2.5× soft (cold↑).
 
+### CB ring/streamer + cruise snap (2026-07-26, `cb_snap3` / `cb_ringtrust`)
+
+Root cause of residual hole spikes: `RingPrerequisitesMet` called
+`IsTerrainChunkCompleteCached` (and NearLoad `EnsureChunkLoaded` full scans) —
+`streamer_update≈130ms` with `stream_loads=0`. Fixes:
+- Trust `ProcedurallyGenerated` in ring gate (no complete re-scan).
+- NearLoad (`NearLoadRadius≥0`): async enqueue only outside underfeet; skip ring
+  gate; underfeet keeps full Ensure (F2 cold).
+- Cruise no-hole: snapshot budget **2ms**, schedule≤3 when dirty>280.
+- Unload skipped while moving / dirty>280.
+
+Verified `cb_snap3`: spike_holes **180**, dirty **384**, cold **0**, wall_no_holes
+**41**, **C GO**, **F2 GO**. CB only fails `wall_ms_no_holes` (≤35). Variance can
+push spike to ~260 on some runs — keep ring/NearLoad fixes.
+
 ### Manual follow-up (2026-07-23)
 
 | Run | Notes |

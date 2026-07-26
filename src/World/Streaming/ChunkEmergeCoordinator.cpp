@@ -1390,17 +1390,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         // Moving SoftDefer hole: MarkDirty so cold_hole_preview SoftDefer
         // exception can schedule; allow one Immediate when mesh pool is cold.
         const double force_frame_cap = 40.0;
-        // Moving cold Immediate: do not gate on last_frame_ms — startup hitch
-        // periods (wall 280–450) blocked Immediate@70 and Capture@110 and left
-        // cold=6 (f2_cold_golden5). Rely on 8ms used-budget + force_hole_cd.
+        // Moving: Immediate underfeet always; nearest-hole only when async is
+        // cold (F2). Broader nearest Immediate raised spike_holes (cb_coldfix).
         const bool want_immediate =
             sync_ok && (!hole_pending || hole_underfeet || is_nearest_hole) &&
             (!hole_underfeet ||
              (underfeet_immediate_cd <= 0 &&
               underfeet_immediate_this_frame < kMaxUnderfeetImmediate)) &&
             (moving
-                 ? (is_nearest_hole && pending_async < 4 &&
-                    immediate_ms_used() < 8.0)
+                 ? ((hole_underfeet ||
+                     (is_nearest_hole && pending_async < 2)) &&
+                    pending_async < 4 && immediate_ms_used() < 8.0)
                  : (last_frame_ms <= force_frame_cap && immediate_budget_ok()));
         if (want_immediate)
         {
@@ -1443,13 +1443,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_schedule = std::min(mesh_schedule, 10);
     mesh_drain = std::min(mesh_drain, 14);
   }
-  // Re-assert moving no-hole dirty clamp after later schedule boosts (F2).
-  // Manual 161304: dirty~566 / wall~49 — prefer drain over schedule thrash.
-  if (moving && !visual_holes && !missing_underfeet && !pending_near_light &&
-      pending_dirty > 400)
+  // Re-assert moving no-hole dirty clamp after later schedule boosts (CB
+  // wall_ms_no_holes). Prefer small snapshot budget over schedule thrash.
+  if (moving && !visual_holes && !missing_underfeet && pending_dirty > 280)
   {
-    mesh_schedule = std::min(mesh_schedule, 6);
-    mesh_drain = std::max(mesh_drain, 24);
+    mesh_schedule = std::min(mesh_schedule, 3);
+    mesh_drain = std::min(mesh_drain, 10);
+    mesh_service.SetMeshSnapshotBudgetMs(2.0);
   }
   // Standing remesh thrash only when pipeline is saturated (manual 214430).
   // Do NOT clamp schedule whenever Dirty>100 — that froze Dirty≈270 with
