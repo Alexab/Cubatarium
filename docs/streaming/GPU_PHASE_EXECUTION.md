@@ -59,6 +59,8 @@ Order: `P0 → P2 → P3 → P7 → P6 → P5 → PA`.
 
 - G0–GA ladder landed (`g_ladder_land` / `gpu_compute_tails2`): Desktop
   `gpu_greedy` / `mdi_vertex_pool` / `gpu_frustum`; F2+G* GO.
-- P* completion in progress (see commits `gpu(P*)` / `docs(gpu): P0`).
+- P0 docs/gates/telemetry landed; P2 instanceCount cull (no CullRevision
+  geometry refresh); P3 single pool upload (no MapBucket double-copy) verified.
+- P* remaining: P7 → P6 → P5 → PA.
 - D1 backlog: full GPU-driven (no CPU flat refs), transparent GPU sort,
   greedy merge, blocklight flood.
