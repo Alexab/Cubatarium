@@ -79,6 +79,16 @@ Fix: while `idle_focus_dirty_debt`, drop **any** Dirty outside eye shell
 Short `f2_fd_alldrop`: **fd_end 410→217**, sticky=0, nr_end=1, wall≈38; F2 fails
 only `cold_relight_holes_sec=4` (≤3).
 
+### F2 cold SoftDefer preview (2026-07-26)
+
+Root: SoftDefer blocked focus first-mesh while Y-band kept `finalize_gate=false`;
+`immediate_budget_ok` was idle-only so cruise never Immediate'd the hole; Capture
+skip at wall≥80–110 left cold streaks of 2–3 periods (4–6s).
+Fix: allow focus first-mesh SoftDefer preview while `mesh_async<4`; MarkDirty +
+moving Immediate (8ms budget) for nearest hole; async SoftDefer Capture always
+one enqueue. Golden `f2_cold_golden7`: **cold 4→2**, fd_end=156, sticky=0 —
+**F2 GO**.
+
 ### Manual follow-up (2026-07-23)
 
 | Run | Notes |

@@ -157,9 +157,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   mesh_service.SetMeshRebuildFocus(focus_ground_horiz, focus_radius);
   // Soft-defer / V2a: no first-mesh while PendingLight except underfeet; remesh
   // of existing mesh is deferred even underfeet (player dig dark overwrite).
+  // Cold SoftDefer hole: also allow first-mesh for the single nearest missing
+  // chunk (dark preview) so visual_holes cannot plate cold_relight 4–6s while
+  // Y-band Capture keeps finalize_gate=false (f2_cold_finalize).
+  glm::ivec3 nearest_missing_hole{};
+  const bool have_nearest_missing =
+      mesh_service.FindNearestMissingGreedyMesh(
+          world.GetBlockWorld(), focus_ground_horiz, focus_radius,
+          nearest_missing_hole);
   mesh_service.SetDeferMeshUntilLitFn(
-      [&world, &mesh_service, focus_ground_horiz,
-       focus_radius](glm::ivec3 chunk_coord)
+      [&world, &mesh_service, focus_ground_horiz, focus_radius,
+       have_nearest_missing, nearest_missing_hole](glm::ivec3 chunk_coord)
       {
         const int horiz =
             std::max(std::abs(chunk_coord.x - focus_ground_horiz.x),
@@ -172,8 +180,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const glm::ivec3 ground(chunk_coord.x, 0, chunk_coord.z);
         const bool may_mesh =
             world.MayMeshColumn(ground, /*underfeet_preview=*/false);
+        // Cold SoftDefer: allow first-mesh anywhere in focus while mesh pool
+        // is cold — single nearest xz still left 4s streaks (golden6). Remesh
+        // of existing mesh stays deferred.
+        const bool cold_focus_preview =
+            have_nearest_missing && !has_mesh && in_focus &&
+            mesh_service.GetAsyncInFlightCount() < 4;
+        const bool cold_hole_preview =
+            cold_focus_preview ||
+            (have_nearest_missing && !has_mesh &&
+             chunk_coord.x == nearest_missing_hole.x &&
+             chunk_coord.z == nearest_missing_hole.z);
         return SoftDeferMeshUntilLitPolicy(
-            underfeet, has_mesh,
+            underfeet || cold_hole_preview, has_mesh,
             world.RequiresLightingLitGate() && pending, in_focus, may_mesh);
       });
 
@@ -700,6 +719,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       mesh_drain = std::max(mesh_drain, 12);
       mesh_schedule = std::max(mesh_schedule, 12);
     }
+  }
+  // SoftDefer cold hole: raise schedule so async climbs past 4 within one
+  // 2s period (golden3 cold still 4s = two periods with async≤3).
+  if (moving && visual_holes && pending_focus_count > 0 &&
+      pending_async_early < 4)
+  {
+    mesh_schedule = std::max(mesh_schedule, 18);
+    mesh_drain = std::max(mesh_drain, 20);
   }
 
   // Standing still with backlog: prioritize drain/complete over new commits so
@@ -1336,17 +1363,31 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const int hole_horiz = std::max(std::abs(hole.x - focus_ground_horiz.x),
                                         std::abs(hole.z - focus_ground_horiz.z));
         const bool hole_underfeet = hole_horiz <= 1;
+        const bool is_nearest_hole =
+            have_nearest_missing && hole.x == nearest_missing_hole.x &&
+            hole.z == nearest_missing_hole.z;
+        // Cold SoftDefer hole: FocusIngress blocks non-underfeet sync while
+        // async<4 — that left visual_holes=1 for 10s on golden (periods 9–13).
+        // Allow sync/Dirty for the nearest missing column so dark preview can
+        // clear the hole; MarkRelit remeshes when lit.
         const bool sync_ok =
-            AllowSyncHoleFillForColumn(ingress, hole_underfeet);
-        // Moving: never Immediate (async only). Idle underfeet may Immediate
-        // under hard budget + cooldown.
+            AllowSyncHoleFillForColumn(ingress, hole_underfeet) ||
+            (is_nearest_hole && pending_async < 4);
+        // Moving SoftDefer hole: MarkDirty so cold_hole_preview SoftDefer
+        // exception can schedule; allow one Immediate when mesh pool is cold.
         const double force_frame_cap = 40.0;
+        // Moving cold Immediate: do not gate on last_frame_ms — startup hitch
+        // periods (wall 280–450) blocked Immediate@70 and Capture@110 and left
+        // cold=6 (f2_cold_golden5). Rely on 8ms used-budget + force_hole_cd.
         const bool want_immediate =
-            !moving && sync_ok && (!hole_pending || hole_underfeet) &&
-            last_frame_ms <= force_frame_cap && immediate_budget_ok() &&
+            sync_ok && (!hole_pending || hole_underfeet || is_nearest_hole) &&
             (!hole_underfeet ||
              (underfeet_immediate_cd <= 0 &&
-              underfeet_immediate_this_frame < kMaxUnderfeetImmediate));
+              underfeet_immediate_this_frame < kMaxUnderfeetImmediate)) &&
+            (moving
+                 ? (is_nearest_hole && pending_async < 4 &&
+                    immediate_ms_used() < 8.0)
+                 : (last_frame_ms <= force_frame_cap && immediate_budget_ok()));
         if (want_immediate)
         {
           mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
@@ -1356,14 +1397,25 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             ++underfeet_immediate_this_frame;
             underfeet_immediate_cd = 1;
           }
+          // One Immediate per ~2 frames while moving — enough to break cold
+          // 2s periods without mesh_emerge hitch storms.
+          if (moving)
+          {
+            force_hole_cd = 1;
+          }
         }
-        else if (!hole_pending || hole_underfeet)
+        else if (!hole_pending || hole_underfeet || is_nearest_hole)
         {
           mesh_service.MarkDirtyPriority(hole);
         }
       }
-      force_hole_cd =
-          last_frame_ms > 40.0 ? 4 : (moving ? 2 : 1);
+      if (force_hole_cd <= 0)
+      {
+        force_hole_cd =
+            (pending_async < 4 && pending_focus_count > 0)
+                ? 0
+                : (last_frame_ms > 40.0 ? 4 : (moving ? 2 : 1));
+      }
     }
     else
     {
