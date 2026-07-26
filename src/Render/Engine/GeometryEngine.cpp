@@ -453,6 +453,7 @@ void UGeometryEngine::Paint(int width_size, int height_size,
   {
     WorldInstance->GetPhysicsTelemetryMutable().GpuDrawCmds = 0;
     WorldInstance->GetPhysicsTelemetryMutable().GpuCullIndirect = 0.0;
+    WorldInstance->GetPhysicsTelemetryMutable().GpuMeshVboDispatch = 0;
   }
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {

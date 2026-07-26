@@ -41,6 +41,7 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
   const glm::ivec3 origin(groundChunkCoord.x * CHUNK_SIZE, 0,
                           groundChunkCoord.z * CHUNK_SIZE);
   std::vector<uint8_t> flags(static_cast<size_t>(height * n * n), 0);
+  bool any_fluid = false;
   for (int ly = 0; ly < height; ++ly)
   {
     const int wy = y_min + ly;
@@ -53,9 +54,14 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
         if (IsFluidSurfaceBlock(id, registry))
         {
           flags[static_cast<size_t>((ly * n + lz) * n + lx)] = 1;
+          any_fluid = true;
         }
       }
     }
+  }
+  if (!any_fluid)
+  {
+    return true; // empty slice already initialized by caller
   }
   std::vector<int16_t> tops;
   if (!TryGpuScanFluidColumns(flags.data(), height, tops))
@@ -76,14 +82,14 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
       const int bz = origin.z + lz;
       const BlockId top_id = world.GetBlock(glm::ivec3(bx, surface_y, bz));
       int bottom_y = surface_y;
-      for (int y = surface_y - 1; y >= y_min; --y)
+      // Walk packed flags instead of a second GetBlock column scan.
+      for (int ly = local_top - 1; ly >= 0; --ly)
       {
-        const BlockId id = world.GetBlock(glm::ivec3(bx, y, bz));
-        if (!IsFluidSurfaceBlock(id, registry))
+        if (!flags[static_cast<size_t>((ly * n + lz) * n + lx)])
         {
           break;
         }
-        bottom_y = y;
+        bottom_y = y_min + ly;
       }
       slice.SurfaceBlockY[lz][lx] = static_cast<int16_t>(surface_y);
       slice.BottomBlockY[lz][lx] = static_cast<int16_t>(bottom_y);

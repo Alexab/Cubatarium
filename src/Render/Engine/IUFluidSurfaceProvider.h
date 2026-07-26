@@ -32,9 +32,8 @@ class UGpuFluidSurfaceMap final : public IUFluidSurfaceProvider
 public:
   UGpuFluidSurfaceMap()
   {
-    // Compute column scan is available (unit + PreferGpu flag) but off by
-    // default on the fluid map hot path — packing+sync readback regresses wall.
-    SetPreferGpuFluidColumnScan(false);
+    // P7: PreferGpu on; pack early-out + flags bottom-walk keep wall sane.
+    SetPreferGpuFluidColumnScan(true);
   }
   const char *BackendName() const override { return "gpu_fluid_surface"; }
   UFluidSurfaceMap &Map() override { return Surface; }
