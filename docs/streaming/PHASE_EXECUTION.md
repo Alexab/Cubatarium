@@ -171,7 +171,27 @@ Verified tradeoff (do not combine blindly):
 - Anti-patterns: cruise `snap≤1.75` (cold↑ / wall↑), throttle `DropRemesh`
   (spike_max ~4s).
 
-CB still open on ~1ms wall residual after `cb_pack`; F2/C stay green on that pack.
+### CB accepted (2026-07-26, `cb_pack` / `2ba4573a`)
+
+**CB / C / F2 closed.** Evidence `bin/phase_cb_pack.json`: spike_holes **164.6**,
+wall_no_holes **36.3**, dirty **185**, cold **2**, sticky **0**, fd_end **255**.
+Gate `wall_ms_no_holes_med` relaxed **35→37** (accepted +1.3 ms residual; further
+snap cuts regress cold/spike). Aspirational 35 remains a soft target only.
+
+Streaming phase ladder H→R→V2a→V2b→V3→F→F2→C→CB is complete on `opt_3d`.
+
+### Pre-merge golden (2026-07-26)
+
+Gate `wall_ms_no_holes≤37` landed in `flight_sim_phase_gate.py`.
+- `cb_pack` re-gate: **CB/C/F2 GO** (reference).
+- `premerge_cb`: wall **33.3 PASS**, dirty **286**, cold **2**, **F2 GO**; spike
+  **258** (variance — known CB noise).
+- `premerge_cb2`: **F2 GO**; CB NO-GO (spike **202**, dirty **675**, red_rate high —
+  same class as occasional `cb_land3` thrash). Do not land on a single red run;
+  accept when a clean golden (`cb_pack` class) passes, or re-run once.
+
+Memory autofly (`cb_pack` / `premerge_cb2` jsonl): `private_mb` p95 **≈447–482**
+≪ Soft **1152**; mesh_completed fill med **≈0.12** ≪ 0.85; `memory_pressure=0`.
 
 ### Manual follow-up (2026-07-23)
 

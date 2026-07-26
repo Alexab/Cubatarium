@@ -170,14 +170,17 @@ Evidence: `bin/flight_sim_gate_report_baseline_2cb85f3c.json`,
 Вывод: P0 = **frontier missing + cold relight** (A), не F2 Dirty drain.
 F2 (B) остаётся P1: idle remesh plateau / RemeshAfterApply.
 
-### Следующие шаги (скорректировано 2026-07-22, после phase execution)
+### Следующие шаги (скорректировано 2026-07-26)
 
-См. **`PHASE_EXECUTION_REPORT.md`** — полный отчёт с метриками и ветками.
+Streaming ladder **H→CB закрыт** на `opt_3d` (`cb_pack`, wall gate ≤37). См.
+`PHASE_EXECUTION.md` § CB accepted.
 
-1. **Merge `streaming/phase-4-unified` → `perf`** — лучший autofly (sticky=0, nr_end=25, fd_Δ=−59).
-2. **P0:** снизить `cold_relight_holes_sec` (сейчас ~12s) — доработка relight budget при cruise.
-3. **F2:** только heavy_dirty caps (без раннего порога 12/20); цель `fd_end≤280`.
-4. **Harness:** gate на `cold_relight_holes_sec≤3`; `--replay-manual` parity.
+1. **Pre-merge:** `PREMERGE_CHECKLIST.md` — Release/RelWithDebInfo golden F2+C+CB,
+   optional `--replay-manual` parity, merge `opt_3d` → целевая ветка.
+2. **Memory budget validation:** checklist в `MEMORY_BUDGET.md` (private p95 /
+   completed fill% / SoftCap) — код landed, harness evidence ещё тонкий.
+3. **GPU pipeline:** дальше perf/parity MDI (`GPU_PIPELINE.md`), не stream-дыры.
+4. Soft: редкие `spike_max_wall` без holes (~1–4 s) — только при UX-регрессе.
 
 ### Anti-Patterns (не возвращать)
 

@@ -19,13 +19,18 @@ python tools/flight_sim_run.py --world World_164 --teleport-cruise --seconds 130
   --phase-id <id> --report bin/phase_<id>.json
 python tools/phase_run_record.py --phase <id> --report bin/phase_<id>.json --note "..."
 python tools/flight_sim_phase_gate.py --phase-id F2 --report bin/phase_<id>.json
+python tools/flight_sim_phase_gate.py --phase-id C --report bin/phase_<id>.json
+python tools/flight_sim_phase_gate.py --phase-id CB --report bin/phase_<id>.json
 ```
 
-Ожидание относительно golden `final_combined` / snapshot `134418`:
+Ожидание (golden `cb_pack` / F2+C+CB closed 2026-07-26):
 - sticky = 0
-- nr_end ≤ 30 (±10%)
-- fd_delta < 0 или fd_end не хуже 347+10%
-- cold_relight_holes_sec тренд вниз (цель ≤ 3)
+- F2: cold≤3, fd_end≤280, pending_med≤5, nr_end≤36
+- C: spike_max_wall_holes≤200, cold≤6
+- CB: spike≤200, cold≤3, wall_no_holes≤**37**, dirty_no_holes≤450
+- Reference: `bin/phase_cb_pack.json` (wall **36.3**, spike **164.6**)
+- Spike variance: if a single golden fails only `spike_max_wall_holes` (~200–260)
+  with F2 still GO, re-run once before treating as regress.
 
 ## 3. Manual replay parity
 

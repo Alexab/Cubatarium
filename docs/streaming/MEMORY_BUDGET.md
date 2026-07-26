@@ -136,15 +136,22 @@ Code path (Era 12 Memory Budget Control) is on branch with:
 - Completed rings + Dirty/Pending/FIFO soft-caps
 - GPU Reserve/Max + `MemoryBudgetController` + UChunk free-list
 
-Manual/autofly gates (checklist for next harness run):
+Manual/autofly gates (checklist — code landed; evidence still open after CB):
 
 1. Walk existing terrain + place lit block: no hang; `private_mb` stays near Soft.
 2. Quiet standing: `mesh_completed_n/cap` fill < 0.85; `dirty_dropped` not
    monotonic when idle and Dirty under SoftCap.
-3. Autofly replay: `private_mb` p95 ≤ `MemorySoftMb`; holes/sticky/max_wall not
-   worse than last-good Rel baseline.
+3. Autofly golden (`cb_pack` class): sticky=0 / cold≤3; record `private_mb` p95
+   vs `MemorySoftMb` from perf jsonl if present.
 4. Stress tune `mesh_completed_slots=4`: discard rises, remesh recovers, private
    stays bounded.
+
+Status 2026-07-26: SoftCap/Dirty drop paths exercised on CB cruise (dirty_no_holes
+~185–380 with drops). Autofly evidence:
+- `cb_pack`: `private_mb` med≈479 / p95≈482 / max≈522 (≪ Soft 1152);
+  mesh_completed fill med≈2/42; `memory_pressure=0`.
+- `premerge_cb2`: `private_mb` p95≈447; completed fill med≈0.12.
+Still open: manual place-lit walk + stress `mesh_completed_slots=4`.
 
 ## Anti-patterns
 
