@@ -188,6 +188,22 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("wall_ms_no_holes_med", "le", 45.0),
         ("gpu_fluid_scan_on_med", "ge", 0.5),
     ],
+    # PA sign-off: union of F2 proxies + P* completion + GA backends.
+    "PA": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("post_stop_pending_med", "le", 5.0),
+        ("cold_relight_holes_sec", "le", 3.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("backend_store_mdi", "ge", 1.0),
+        ("backend_mesher_gpu", "ge", 1.0),
+        ("backend_cull_gpu", "ge", 1.0),
+        ("gpu_cull_indirect_med", "ge", 0.5),
+        ("gpu_draw_cmds_med", "le", 15.0),
+        ("wall_ms_no_holes_med", "le", 45.0),
+        ("gpu_fluid_scan_on_med", "ge", 0.5),
+        ("gpu_mesh_vbo_dispatch_med", "ge", 0.0),
+        ("gpu_light_seed_apply_med", "ge", 0.0),
+    ],
 }
 
 

@@ -72,16 +72,24 @@ teleport-cruise golden — do not fail merge solely on replay wall/sticky noise.
 - снятие heavy_dirty caps ради cold_relight
 - `CancelAsyncInFlightKeepDirty` на idle remesh
 
-## 6. GPU dual-stack (after G0–GA)
+## 6. GPU dual-stack (after G0–GA + P* completion)
 
 Desktop expect jsonl: `backend_mesher=gpu_greedy`, `backend_store=mdi_vertex_pool`,
-`backend_cull=gpu_frustum`, `gpu_draw_cmds` med ≤15.
+`backend_cull=gpu_frustum`, `backend_fluid=gpu_fluid_surface`,
+`gpu_draw_cmds` med ≤15, `gpu_cull_indirect` ≈1, `gpu_fluid_scan_on` ≈1.
 
 ```powershell
-python tools/flight_sim_phase_gate.py --phase-id G0 --report bin/phase_<id>.json
-# … G1–G7 / GA as needed; always also F2 (+ C/CB vs cb_pack reference)
+python tools/flight_sim_phase_gate.py --phase-id F2 --report bin/phase_PA.json
+python tools/flight_sim_phase_gate.py --phase-id PA --report bin/phase_PA.json
+python tools/flight_sim_phase_gate.py --phase-id GA --report bin/phase_PA.json
+# Optional: P0 P2 P3 P5 P6 P7 individually; C/CB vs cb_pack (variance re-run OK)
 ```
+
+P* completion (landed): cull→instanceCount MDI (P2), single pool upload (P3),
+PreferGpu fluid (P7), skylight seed apply (P6), GPU extract telem/hooks (P5).
 
 Android/GLES: Select keeps `cpu_greedy` + `cpu_staging` + `cpu_frustum` (no MDI/
 compute required). Device smoke: [`QA_ANDROID_2026.md`](../QA_ANDROID_2026.md)
 greedy + fluids. Factory unit: `render_backend_factory_test`.
+
+D1 backlog: no CPU flat refs, transparent GPU sort, greedy merge, blocklight flood.
