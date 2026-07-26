@@ -145,6 +145,49 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("backend_cull_gpu", "ge", 1.0),
         ("gpu_draw_cmds_med", "le", 15.0),
     ],
+    # Best-practice completion (P*): Desktop compute without sync-readback traps.
+    "P0": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("backend_store_mdi", "ge", 1.0),
+        ("backend_mesher_gpu", "ge", 1.0),
+        ("backend_cull_gpu", "ge", 1.0),
+    ],
+    "P2": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("backend_cull_gpu", "ge", 1.0),
+        ("gpu_cull_indirect_med", "ge", 0.5),
+        ("wall_ms_no_holes_med", "le", 45.0),
+        ("gpu_cull_ms_med", "le", 5.0),
+    ],
+    "P3": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("backend_store_mdi", "ge", 1.0),
+        ("gpu_draw_cmds_med", "le", 15.0),
+        ("vertex_pool_fill_med", "le", 0.85),
+    ],
+    "P5": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("backend_mesher_gpu", "ge", 1.0),
+        ("cold_relight_holes_sec", "le", 3.0),
+        ("gpu_mesh_vbo_dispatch_med", "ge", 0.0),
+    ],
+    "P6": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("cold_relight_holes_sec", "le", 3.0),
+        ("post_stop_pending_med", "le", 5.0),
+        ("gpu_light_seed_apply_med", "ge", 0.0),
+    ],
+    "P7": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("wall_ms_no_holes_med", "le", 45.0),
+        ("gpu_fluid_scan_on_med", "ge", 0.5),
+    ],
 }
 
 

@@ -213,9 +213,14 @@ struct FrameNumbers
   uint64_t gpu_draw_cmds{0};
   double gpu_cull_ms{0.0};
   double vertex_pool_fill{0.0};
+  double gpu_cull_indirect{0.0};
+  uint64_t gpu_mesh_vbo_dispatch{0};
+  uint64_t gpu_light_seed_apply{0};
+  double gpu_fluid_scan_on{0.0};
   std::string backend_mesher;
   std::string backend_store;
   std::string backend_cull;
+  std::string backend_fluid;
   int memory_pressure{0};
   int keep_margin_eff{0};
   uint64_t buffer_expand_events{0};
@@ -368,9 +373,14 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.gpu_draw_cmds = phys.GpuDrawCmds;
   n.gpu_cull_ms = phys.GpuCullMs;
   n.vertex_pool_fill = phys.VertexPoolFill;
+  n.gpu_cull_indirect = phys.GpuCullIndirect;
+  n.gpu_mesh_vbo_dispatch = phys.GpuMeshVboDispatch;
+  n.gpu_light_seed_apply = phys.GpuLightSeedApply;
+  n.gpu_fluid_scan_on = phys.GpuFluidScanOn;
   n.backend_mesher = phys.BackendMesher;
   n.backend_store = phys.BackendStore;
   n.backend_cull = phys.BackendCull;
+  n.backend_fluid = phys.BackendFluid;
   n.keep_margin_eff = phys.KeepMarginEff;
   n.buffer_expand_events = phys.BufferExpandEvents;
   {
@@ -501,9 +511,14 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"gpu_draw_cmds\":" << n.gpu_draw_cmds
           << ",\"gpu_cull_ms\":" << n.gpu_cull_ms
           << ",\"vertex_pool_fill\":" << n.vertex_pool_fill
+          << ",\"gpu_cull_indirect\":" << n.gpu_cull_indirect
+          << ",\"gpu_mesh_vbo_dispatch\":" << n.gpu_mesh_vbo_dispatch
+          << ",\"gpu_light_seed_apply\":" << n.gpu_light_seed_apply
+          << ",\"gpu_fluid_scan_on\":" << n.gpu_fluid_scan_on
           << ",\"backend_mesher\":\"" << n.backend_mesher << "\""
           << ",\"backend_store\":\"" << n.backend_store << "\""
           << ",\"backend_cull\":\"" << n.backend_cull << "\""
+          << ",\"backend_fluid\":\"" << n.backend_fluid << "\""
           << ",\"memory_pressure\":" << n.memory_pressure
           << ",\"keep_margin_eff\":" << n.keep_margin_eff
           << ",\"buffer_expand_events\":" << n.buffer_expand_events

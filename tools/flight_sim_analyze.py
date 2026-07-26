@@ -204,6 +204,18 @@ def analyze(
     gpu_draw_cmds_med = median(gpu_draw_cmds)
     gpu_cull_ms_med = median(gpu_cull_ms)
     vertex_pool_fill_med = median(vertex_pool_fill)
+    gpu_cull_indirect_med = median(col(steady, "gpu_cull_indirect"))
+    gpu_mesh_vbo_dispatch_med = median(col(steady, "gpu_mesh_vbo_dispatch"))
+    gpu_light_seed_apply_med = median(col(steady, "gpu_light_seed_apply"))
+    gpu_fluid_scan_on_med = median(col(steady, "gpu_fluid_scan_on"))
+    fluid_names = [
+        str(r.get("backend_fluid") or "")
+        for r in steady
+        if r.get("backend_fluid")
+    ]
+    backend_fluid_mode = (
+        Counter(fluid_names).most_common(1)[0][0] if fluid_names else ""
+    )
 
     holes_rate = (sum(1 for h in holes if h > 0) / len(holes)) if holes else 1.0
     red_rate = (sum(1 for p in pressure if p >= 2) / len(pressure)) if pressure else 1.0
@@ -646,6 +658,11 @@ def analyze(
             "gpu_draw_cmds_med": gpu_draw_cmds_med,
             "gpu_cull_ms_med": gpu_cull_ms_med,
             "vertex_pool_fill_med": vertex_pool_fill_med,
+            "gpu_cull_indirect_med": gpu_cull_indirect_med,
+            "gpu_mesh_vbo_dispatch_med": gpu_mesh_vbo_dispatch_med,
+            "gpu_light_seed_apply_med": gpu_light_seed_apply_med,
+            "gpu_fluid_scan_on_med": gpu_fluid_scan_on_med,
+            "backend_fluid_mode": backend_fluid_mode,
         },
         "gates": gates,
         "gates_stop": gates_stop,
