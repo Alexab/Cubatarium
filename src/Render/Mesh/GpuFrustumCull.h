@@ -6,9 +6,9 @@
 namespace cutum
 {
 
-/// Desktop GPU frustum cull backend. Opaque MDI path uses instanceCount cull
-/// (P2); flat greedy refs for transparent/Cross rebuild via CPU Delegate —
-/// no sync SSBO GetBufferSubData on the cruise hot path.
+/// Desktop GPU frustum cull backend. Opaque MDI path uses GPU compact→indirect
+/// instanceCount (P2 via MdiVertexPoolStore); flat greedy refs for
+/// transparent/Cross rebuild via CPU Delegate.
 class UGpuFrustumCull final : public IUChunkCull
 {
 public:

@@ -9,6 +9,7 @@
 #include "Render/Mesh/CrossMeshEmitter.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
+#include "Render/Mesh/GpuGreedyMesher.h"
 #include "Render/Mesh/IUChunkCull.h"
 #include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Mesh/MeshLightSampling.h"
@@ -1298,14 +1299,21 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   }
   ActiveMeshSourceRevision.erase(revisionIt);
 
-  // P5: optional main-thread GPU extract replace for eligible pending snapshots.
+  // P5: optional main-thread GPU extract → pool batches for deferred snapshots.
   if (result.GpuExtractPending && result.PendingSnapshot && MesherBackend)
   {
-    std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
-    const auto quads =
-        MesherBackend->BuildChunkMesh(*result.PendingSnapshot, registry);
-    if (!quads.empty())
+    auto *gpu = dynamic_cast<UGpuGreedyMesher *>(MesherBackend);
+    bool extracted = false;
+    if (gpu)
     {
+      extracted = gpu->TryExtractOpaqueToBatches(
+          *result.PendingSnapshot, registry, result.coord, result.batches);
+    }
+    if (!extracted)
+    {
+      std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
+      const auto quads =
+          MesherBackend->BuildChunkMesh(*result.PendingSnapshot, registry);
       for (const GreedyQuad &q : quads)
       {
         GreedyMeshBatch &batch = byBlockId[q.Id];

@@ -156,10 +156,9 @@ void UGpuFrustumCull::RebuildVisible(UChunkMeshCache &cache,
                                      const glm::vec3 *camera_pos,
                                      float max_cull_distance)
 {
-  // P2: opaque draw uses pool instanceCount cull (no sync vis readback).
-  // Flat greedy refs still feed transparent + Cross; keep CPU Delegate for
-  // that rebuild so cruise hot path never blocks on GetBufferSubData.
-  (void)EnsureGpu(); // warm compute program for GA / future compact
+  // P2 opaque compact lives in MdiVertexPoolStore::ApplyGpuCompactCull.
+  // Flat greedy refs still feed transparent + Cross via CPU Delegate.
+  (void)EnsureGpu();
   Delegate.RebuildVisible(cache, frustum, camera_pos, max_cull_distance);
 }
 

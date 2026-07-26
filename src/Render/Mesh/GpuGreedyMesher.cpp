@@ -1,9 +1,12 @@
 #include "Render/Mesh/GpuGreedyMesher.h"
 #include "Render/Mesh/GpuGreedyFaceExtract.h"
+#include "Render/Mesh/GreedyMeshEmitter.h"
+#include "Render/Mesh/MeshLightSampling.h"
 #include "Render/GlIncludes.h"
 #include "glog/logging.h"
 #include <array>
 #include <cstring>
+#include <unordered_map>
 #include <vector>
 #if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -255,6 +258,52 @@ UGpuGreedyMesher::TryComputeExtract(const ChunkMeshSnapshot &snapshot,
   ++gMeshVboDispatches;
   return DecodeFaceMasks(snapshot, registry, masks);
 #endif
+}
+
+bool UGpuGreedyMesher::CanDeferGpuExtract(const ChunkMeshSnapshot &snapshot,
+                                          UBlockRegistry &registry) const
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  (void)snapshot;
+  (void)registry;
+  return false;
+#else
+  return SnapshotIsGpuExtractEligible(snapshot, registry);
+#endif
+}
+
+bool UGpuGreedyMesher::TryExtractOpaqueToBatches(
+    const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry,
+    glm::ivec3 coord, std::vector<GreedyMeshBatch> &out_batches)
+{
+  out_batches.clear();
+  auto quads = TryComputeExtract(snapshot, registry);
+  if (quads.empty())
+  {
+    return false;
+  }
+  std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
+  for (const GreedyQuad &q : quads)
+  {
+    GreedyMeshBatch &batch = byBlockId[q.Id];
+    batch.blockId = q.Id;
+    batch.Transparent = registry.IsTransparent(q.Id);
+    batch.AlphaCutout =
+        registry.GetRenderStyle(q.Id) == BlockRenderStyle::Cutout;
+    const size_t base_vertex = batch.vertices.size();
+    AppendGreedyQuad(q, coord, batch.vertices, batch.indices);
+    for (size_t i = base_vertex; i < batch.vertices.size(); ++i)
+    {
+      ApplyVertexLight(batch.vertices[i], q.LightPacked);
+    }
+  }
+  out_batches.reserve(byBlockId.size());
+  for (auto &entry : byBlockId)
+  {
+    entry.second.blockId = entry.first;
+    out_batches.push_back(std::move(entry.second));
+  }
+  return !out_batches.empty();
 }
 
 uint64_t UGpuGreedyMesher::ConsumeMeshVboDispatchCount()

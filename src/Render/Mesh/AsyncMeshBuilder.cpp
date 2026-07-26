@@ -4,6 +4,7 @@
 #include "Render/Mesh/CrossInstanceCollector.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
+#include "Render/Mesh/GpuGreedyMesher.h"
 #include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Mesh/MeshLightSampling.h"
 #include "World/Core/RuntimeTuning.h"
@@ -11,6 +12,7 @@
 #include <algorithm>
 #include <mutex>
 #include <thread>
+#include <unordered_map>
 
 namespace cutum
 {
@@ -91,31 +93,47 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
         result.jobId = jobId;
         result.submitEpoch = submitEpoch;
 
-        std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
-        const auto quads =
-            Mesher ? Mesher->BuildChunkMesh(snapshot, *registryPtr)
-                   : UGreedyMesher::BuildChunkMesh(snapshot, *registryPtr);
-        for (const GreedyQuad &q : quads)
+        auto *gpu_mesher = dynamic_cast<UGpuGreedyMesher *>(Mesher);
+        const bool defer_gpu =
+            gpu_mesher &&
+            gpu_mesher->CanDeferGpuExtract(snapshot, *registryPtr);
+        if (defer_gpu)
         {
-          GreedyMeshBatch &batch = byBlockId[q.Id];
-          batch.blockId = q.Id;
-          batch.Transparent = registryPtr->IsTransparent(q.Id);
-          batch.AlphaCutout =
-              registryPtr->GetRenderStyle(q.Id) == BlockRenderStyle::Cutout;
-          const size_t base_vertex = batch.vertices.size();
-          AppendGreedyQuad(q, snapshot.coord, batch.vertices, batch.indices);
-          for (size_t i = base_vertex; i < batch.vertices.size(); ++i)
-          {
-            ApplyVertexLight(batch.vertices[i], q.LightPacked);
-          }
+          // P5: defer opaque extract to main GL thread; worker only does Cross.
+          result.GpuExtractPending = true;
+          result.PendingSnapshot =
+              std::make_unique<ChunkMeshSnapshot>(snapshot);
+          CollectCrossInstancesFromSnapshot(snapshot, *registryPtr,
+                                            result.crossCenters);
         }
-        CollectCrossInstancesFromSnapshot(snapshot, *registryPtr,
-                                          result.crossCenters);
-        result.batches.reserve(byBlockId.size());
-        for (auto &entry : byBlockId)
+        else
         {
-          entry.second.blockId = entry.first;
-          result.batches.push_back(std::move(entry.second));
+          std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
+          const auto quads =
+              Mesher ? Mesher->BuildChunkMesh(snapshot, *registryPtr)
+                     : UGreedyMesher::BuildChunkMesh(snapshot, *registryPtr);
+          for (const GreedyQuad &q : quads)
+          {
+            GreedyMeshBatch &batch = byBlockId[q.Id];
+            batch.blockId = q.Id;
+            batch.Transparent = registryPtr->IsTransparent(q.Id);
+            batch.AlphaCutout =
+                registryPtr->GetRenderStyle(q.Id) == BlockRenderStyle::Cutout;
+            const size_t base_vertex = batch.vertices.size();
+            AppendGreedyQuad(q, snapshot.coord, batch.vertices, batch.indices);
+            for (size_t i = base_vertex; i < batch.vertices.size(); ++i)
+            {
+              ApplyVertexLight(batch.vertices[i], q.LightPacked);
+            }
+          }
+          CollectCrossInstancesFromSnapshot(snapshot, *registryPtr,
+                                            result.crossCenters);
+          result.batches.reserve(byBlockId.size());
+          for (auto &entry : byBlockId)
+          {
+            entry.second.blockId = entry.first;
+            result.batches.push_back(std::move(entry.second));
+          }
         }
         MeshBuildResult dropped;
         if (Completed.PushDropOldest(std::move(result), &dropped))

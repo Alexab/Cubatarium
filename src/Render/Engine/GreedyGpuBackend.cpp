@@ -275,6 +275,26 @@ void UGreedyGpuBackend::DestroyPass(GreedyGpuPassCache &cache)
   cache.poolVbo = 0;
   cache.poolEbo = 0;
   cache.VertexPool.Destroy();
+  if (cache.IndirectCmdsBuffer)
+  {
+    glDeleteBuffers(1, &cache.IndirectCmdsBuffer);
+    cache.IndirectCmdsBuffer = 0;
+    cache.IndirectCmdCapacity = 0;
+  }
+  if (cache.BatchSphereSsbo)
+  {
+    glDeleteBuffers(1, &cache.BatchSphereSsbo);
+    cache.BatchSphereSsbo = 0;
+    cache.BatchSphereCapacity = 0;
+  }
+  if (cache.CullVisSsbo)
+  {
+    glDeleteBuffers(1, &cache.CullVisSsbo);
+    cache.CullVisSsbo = 0;
+    cache.CullVisCapacity = 0;
+  }
+  cache.IndirectCullReady = false;
+  cache.GpuCompactActive = false;
 }
 
 void UGreedyGpuBackend::DestroyAll(GreedyGpuPassCache &opaque,

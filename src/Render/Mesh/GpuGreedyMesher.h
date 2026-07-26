@@ -2,6 +2,7 @@
 
 #include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Mesh/CpuGreedyMesher.h"
+#include "Render/Mesh/GreedyMeshBatch.h"
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -34,6 +35,16 @@ public:
 
   /// Successful GPU extract→CPU-quad decode that will upload via pool (P5).
   static uint64_t ConsumeMeshVboDispatchCount();
+
+  /// Main-thread: compute face masks → emit batches (no intermediate quads
+  /// vector as the Apply product). Returns false → caller falls back to CPU.
+  bool TryExtractOpaqueToBatches(const ChunkMeshSnapshot &snapshot,
+                                 UBlockRegistry &registry, glm::ivec3 coord,
+                                 std::vector<GreedyMeshBatch> &out_batches);
+
+  /// True when snapshot is opaque-solid-only and GL can dispatch extract.
+  bool CanDeferGpuExtract(const ChunkMeshSnapshot &snapshot,
+                          UBlockRegistry &registry) const;
 
 private:
   bool EnsureCompute();

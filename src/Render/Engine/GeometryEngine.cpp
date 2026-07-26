@@ -1051,8 +1051,13 @@ void UGeometryEngine::DrawGreedyGpuBatches(
 
       SetBlockAnimUniforms(greedyShader, head.blockId, textures);
       glBindTexture(GL_TEXTURE_2D, texIt->second.GetTextureId());
-      if (store.BuildIndirectCommandsRange(cache, i, j, cmds) > 0 &&
-          store.SubmitIndirectCommands(cmds))
+      // P2: prefer GPU-resident 1:1 cmd table (instanceCount from compact).
+      if (store.SubmitIndirectCommandsGpuRange(cache, i, j))
+      {
+        ++draw_cmds;
+      }
+      else if (store.BuildIndirectCommandsRange(cache, i, j, cmds) > 0 &&
+               store.SubmitIndirectCommands(cmds))
       {
         // One MultiDrawIndirect API submit per texture group.
         ++draw_cmds;
@@ -1456,8 +1461,12 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
                           cullRevision, kBlockIdSortRev);
     if (mdi)
     {
-      mdi->ApplyFrustumInstanceCull(GreedyGpuOpaque, frustum, cameraPos,
-                                    kMaxCullDistance);
+      if (!mdi->ApplyGpuCompactCull(GreedyGpuOpaque, frustum, cameraPos,
+                                    kMaxCullDistance))
+      {
+        mdi->ApplyFrustumInstanceCull(GreedyGpuOpaque, frustum, cameraPos,
+                                      kMaxCullDistance);
+      }
     }
     DrawGreedyGpuBatches(GreedyGpuOpaque, vp, textures, false, false,
                          GreedyShaderMode::TransparentColor, 0.0f);
@@ -1472,8 +1481,12 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
                           cullRevision, kBlockIdSortRev);
     if (mdi)
     {
-      mdi->ApplyFrustumInstanceCull(GreedyGpuCutout, frustum, cameraPos,
-                                    kMaxCullDistance);
+      if (!mdi->ApplyGpuCompactCull(GreedyGpuCutout, frustum, cameraPos,
+                                    kMaxCullDistance))
+      {
+        mdi->ApplyFrustumInstanceCull(GreedyGpuCutout, frustum, cameraPos,
+                                      kMaxCullDistance);
+      }
     }
     DrawGreedyGpuBatches(GreedyGpuCutout, vp, textures, true, false,
                          GreedyShaderMode::TransparentColor, 0.0f);

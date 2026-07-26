@@ -45,12 +45,16 @@ struct GreedyGpuPassCache
   GLuint poolVbo{0};
   GLuint poolEbo{0};
   UGreedyVertexPool VertexPool;
-  /// Full-pass indirect cmds (instanceCount updated by cull; no geometry rebuild).
+  /// Full-pass 1:1 BatchDrawRecord table (instanceCount from GPU compact).
   GLuint IndirectCmdsBuffer{0};
   size_t IndirectCmdCapacity{0};
   GLuint BatchSphereSsbo{0};
   size_t BatchSphereCapacity{0};
+  GLuint CullVisSsbo{0};
+  size_t CullVisCapacity{0};
   bool IndirectCullReady{false};
+  /// True when IndirectCmdsBuffer is authoritative for MultiDraw ranges.
+  bool GpuCompactActive{false};
 };
 
 /// Retained GPU buffers for greedy mesh draws (orphan + subData reuse).

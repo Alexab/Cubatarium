@@ -77,6 +77,13 @@ public:
     return false;
   }
 
+  /// MultiDraw from cache.IndirectCmdsBuffer for batches [begin, end).
+  virtual bool SubmitIndirectCommandsGpuRange(const GreedyGpuPassCache & /*cache*/,
+                                              size_t /*begin*/, size_t /*end*/)
+  {
+    return false;
+  }
+
   virtual bool TrySubmitMultiDraw(const GreedyGpuPassCache & /*cache*/)
   {
     return false;

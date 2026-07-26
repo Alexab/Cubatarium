@@ -2,11 +2,14 @@
 
 #include "Blocks/BlockRegistry.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
+#include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/FluidColumnSurfaceQuery.h"
 #include "World/Core/FluidSurfaceScanTuning.h"
 #include "World/Math/GridMath.h"
 
+#include <cstdint>
+#include <unordered_map>
 #include <vector>
 
 namespace cutum
@@ -18,6 +21,32 @@ bool IsFluidSurfaceBlock(BlockId id, const UBlockRegistry &registry)
 {
   return registry.IsLiquid(id) &&
          registry.GetRenderStyle(id) == BlockRenderStyle::Fluid;
+}
+
+struct FluidPackCacheEntry
+{
+  uint64_t hash{0};
+  int height{0};
+  int y_min{0};
+  std::vector<int16_t> tops;
+};
+
+std::unordered_map<glm::ivec3, FluidPackCacheEntry, IVec3Hash> &
+FluidPackReuseCache()
+{
+  static std::unordered_map<glm::ivec3, FluidPackCacheEntry, IVec3Hash> cache;
+  return cache;
+}
+
+uint64_t HashFluidFlags(const std::vector<uint8_t> &flags)
+{
+  uint64_t h = 14695981039346656037ull;
+  for (uint8_t b : flags)
+  {
+    h ^= static_cast<uint64_t>(b);
+    h *= 1099511628211ull;
+  }
+  return h;
 }
 
 bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
@@ -61,13 +90,34 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
   }
   if (!any_fluid)
   {
+    FluidPackReuseCache().erase(groundChunkCoord);
     return true; // empty slice already initialized by caller
   }
+
+  const uint64_t pack_hash = HashFluidFlags(flags);
+  auto &cache = FluidPackReuseCache();
   std::vector<int16_t> tops;
-  if (!TryGpuScanFluidColumns(flags.data(), height, tops))
+  const auto cit = cache.find(groundChunkCoord);
+  if (cit != cache.end() && cit->second.hash == pack_hash &&
+      cit->second.height == height && cit->second.y_min == y_min)
   {
-    return false;
+    // P7: dirty remesh with identical packed flags — reuse tops, skip GPU.
+    tops = cit->second.tops;
   }
+  else
+  {
+    if (!TryGpuScanFluidColumns(flags.data(), height, tops))
+    {
+      return false;
+    }
+    FluidPackCacheEntry entry;
+    entry.hash = pack_hash;
+    entry.height = height;
+    entry.y_min = y_min;
+    entry.tops = tops;
+    cache[groundChunkCoord] = std::move(entry);
+  }
+
   for (int lz = 0; lz < n; ++lz)
   {
     for (int lx = 0; lx < n; ++lx)

@@ -4,6 +4,7 @@
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Lighting/GpuSkylightColumnSeed.h"
 #include "World/Lighting/LightUtil.h"
 #include "World/Math/GridMath.h"
 
@@ -661,11 +662,19 @@ void RelightChunkCoords(UBlockWorld &world, UBlockRegistry &registry,
 
   if (include_skylight)
   {
+    // Cap GPU seeds per batch: sync readback is costly; one apply still
+    // moves cruise telemetry and replaces one CPU column walk.
+    int gpu_seeds_left = 1;
     for (const glm::ivec3 &coord : coords)
     {
       UChunk *chunk = world.GetChunkManager().GetChunk(coord);
       if (!chunk)
       {
+        continue;
+      }
+      if (gpu_seeds_left > 0 && ApplyGpuSkylightSeedToChunk(*chunk, registry))
+      {
+        --gpu_seeds_left;
         continue;
       }
       for (int lx = 0; lx < CHUNK_SIZE; ++lx)

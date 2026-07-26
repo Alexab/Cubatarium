@@ -33,6 +33,9 @@ public:
   bool SubmitIndirectCommands(
       const std::vector<DrawElementsIndirectCommand> &cmds) override;
 
+  bool SubmitIndirectCommandsGpuRange(const GreedyGpuPassCache &cache,
+                                      size_t begin, size_t end) override;
+
   bool TrySubmitMultiDraw(const GreedyGpuPassCache &cache) override;
 
   void RefreshPassRefs(GreedyGpuPassCache &cache,
@@ -41,11 +44,16 @@ public:
                        uint64_t mesh_revision, uint64_t cull_revision,
                        uint64_t sort_revision) override;
 
-  /// P2: set drawInstanceCount from frustum without geometry re-upload.
+  /// CPU frustum → drawInstanceCount (fallback).
   void ApplyFrustumInstanceCull(GreedyGpuPassCache &cache,
                                 const Frustum &frustum,
                                 const glm::vec3 &camera_pos,
                                 float max_cull_distance);
+
+  /// P2: GPU compact writes instanceCount into 1:1 IndirectCmdsBuffer.
+  bool ApplyGpuCompactCull(GreedyGpuPassCache &cache, const Frustum &frustum,
+                           const glm::vec3 &camera_pos,
+                           float max_cull_distance);
 
   void *MapBucket(MeshGpuBucketHandle handle, size_t bytes) override;
   void UnmapBucket(MeshGpuBucketHandle handle) override;
@@ -54,10 +62,17 @@ public:
   uint64_t GetMappedUploadFrames() const { return MappedUploadFrames; }
 
 private:
+  bool EnsureCullProgram();
+  void RebuildIndirectCmdTable(GreedyGpuPassCache &cache);
+
   GLuint IndirectBuffer{0};
   size_t IndirectCapacityBytes{0};
   uint64_t LastDrawCmds{0};
   uint64_t MappedUploadFrames{0};
+
+  GLuint CullProgram{0};
+  GLuint CullFrustumUbo{0};
+  bool CullInitAttempted{false};
 
   std::vector<uint8_t> StagingScratch;
   MeshGpuBucketHandle MappedHandle{};

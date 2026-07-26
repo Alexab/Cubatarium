@@ -55,10 +55,20 @@ Order: `P0 → P2 → P3 → P7 → P6 → P5 → PA`.
 - Commit on NO-GO / skip autofly on P2–P7
 - MDI/compute required on Android
 
-## Status
+## Status (honest)
 
-- G0–GA ladder landed; P* completion closed (`P0→P2→P3→P7→P6→P5→PA`).
-- Desktop: `gpu_greedy` / `mdi_vertex_pool` / `gpu_frustum` + PreferGpu fluid;
-  opaque cull via instanceCount (no CullRevision geometry refresh).
-- D1 backlog: full GPU-driven (no CPU flat refs), transparent GPU sort,
-  greedy merge, blocklight flood, SSBO→VBO without mask readback.
+Sign-off report: `bin/phase_P2f2.json` — **F2 + P2 + P3 + P5 + P6 + P7 + PA = GO**
+(wall_no_holes≈33, sticky=0, pending≈1, fd_end≈214, cull_indirect=1).
+
+| Phase | Landed | Notes |
+|-------|--------|-------|
+| P0 | Yes | Docs / gates / telemetry |
+| P2 | Yes | 1:1 `IndirectCmdsBuffer` + compute compact → `instanceCount`; MultiDraw from GPU table; **no** vis readback |
+| P3 | Yes | Single pool `Allocate` upload |
+| P7 | Yes | PreferGpu + pack early-out + **pack-hash reuse** (skip GPU when flags unchanged) |
+| P6 | Yes | Sync `RelightChunkCoords` prefers GPU seed (cap 1/batch); async workers stay CPU. Apply is **bursty** (median often 0, nz periods >0) |
+| P5 | Yes | Worker defers eligible opaque → main `TryExtractOpaqueToBatches`; dispatch **bursty** (median often 0). Mask readback→decode still interim (full SSBO→VBO = D1) |
+| PA | Yes | Formal F2+P*+GA on `phase_P2f2` |
+| D1 | Backlog | No CPU flat refs / transparent GPU sort / greedy merge / blocklight flood / SSBO→VBO without mask readback |
+
+Desktop: `gpu_greedy` / `mdi_vertex_pool` / `gpu_frustum` + PreferGpu fluid.
