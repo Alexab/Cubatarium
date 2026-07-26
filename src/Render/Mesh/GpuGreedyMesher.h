@@ -32,6 +32,9 @@ public:
 
   uint64_t GetComputeDispatchCount() const { return ComputeDispatches; }
 
+  /// Successful GPU extract→CPU-quad decode that will upload via pool (P5).
+  static uint64_t ConsumeMeshVboDispatchCount();
+
 private:
   bool EnsureCompute();
   std::vector<GreedyQuad> TryComputeExtract(const ChunkMeshSnapshot &snapshot,

@@ -16,6 +16,9 @@ namespace cutum
 {
 namespace
 {
+
+uint64_t gMeshVboDispatches = 0;
+
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
 // Padded occupancy → FaceMask[CHUNK_VOLUME] (6 bits: -X+X-Y+Y-Z+Z).
 // occ layout: side=CHUNK_SIZE+2; interior voxel (x,y,z) at
@@ -249,8 +252,16 @@ UGpuGreedyMesher::TryComputeExtract(const ChunkMeshSnapshot &snapshot,
                      masks.data());
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
   ++ComputeDispatches;
+  ++gMeshVboDispatches;
   return DecodeFaceMasks(snapshot, registry, masks);
 #endif
+}
+
+uint64_t UGpuGreedyMesher::ConsumeMeshVboDispatchCount()
+{
+  const uint64_t v = gMeshVboDispatches;
+  gMeshVboDispatches = 0;
+  return v;
 }
 
 std::vector<GreedyQuad>

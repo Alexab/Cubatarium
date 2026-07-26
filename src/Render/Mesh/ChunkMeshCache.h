@@ -293,7 +293,8 @@ private:
   };
   void RebuildChunk(const UBlockWorld &world, UBlockRegistry &registry,
                     glm::ivec3 chunkCoord);
-  void ApplyMeshResult(const UBlockWorld &world, MeshBuildResult &&result);
+  void ApplyMeshResult(const UBlockWorld &world, UBlockRegistry &registry,
+                       MeshBuildResult &&result);
   void EnsureAsyncBuilder();
   void RebuildChunkLegacy(const UBlockWorld &world, UBlockRegistry &registry,
                           glm::ivec3 chunkCoord,

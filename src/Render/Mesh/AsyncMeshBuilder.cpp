@@ -109,8 +109,6 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
             ApplyVertexLight(batch.vertices[i], q.LightPacked);
           }
         }
-        const int max_local_y = MaxSolidLocalYSnapshot(snapshot, *registryPtr);
-        (void)max_local_y;
         CollectCrossInstancesFromSnapshot(snapshot, *registryPtr,
                                           result.crossCenters);
         result.batches.reserve(byBlockId.size());

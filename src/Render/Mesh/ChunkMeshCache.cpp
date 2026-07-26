@@ -1269,6 +1269,7 @@ void UChunkMeshCache::EnsureAsyncBuilder()
 }
 
 void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
+                                      UBlockRegistry &registry,
                                       MeshBuildResult &&result)
 {
   if (!world.GetChunkManager().HasChunk(result.coord))
@@ -1296,6 +1297,41 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     return;
   }
   ActiveMeshSourceRevision.erase(revisionIt);
+
+  // P5: optional main-thread GPU extract replace for eligible pending snapshots.
+  if (result.GpuExtractPending && result.PendingSnapshot && MesherBackend)
+  {
+    std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
+    const auto quads =
+        MesherBackend->BuildChunkMesh(*result.PendingSnapshot, registry);
+    if (!quads.empty())
+    {
+      for (const GreedyQuad &q : quads)
+      {
+        GreedyMeshBatch &batch = byBlockId[q.Id];
+        batch.blockId = q.Id;
+        batch.Transparent = registry.IsTransparent(q.Id);
+        batch.AlphaCutout =
+            registry.GetRenderStyle(q.Id) == BlockRenderStyle::Cutout;
+        const size_t base_vertex = batch.vertices.size();
+        AppendGreedyQuad(q, result.coord, batch.vertices, batch.indices);
+        for (size_t i = base_vertex; i < batch.vertices.size(); ++i)
+        {
+          ApplyVertexLight(batch.vertices[i], q.LightPacked);
+        }
+      }
+      result.batches.clear();
+      result.batches.reserve(byBlockId.size());
+      for (auto &entry : byBlockId)
+      {
+        entry.second.blockId = entry.first;
+        result.batches.push_back(std::move(entry.second));
+      }
+    }
+    result.PendingSnapshot.reset();
+    result.GpuExtractPending = false;
+  }
+
   ChunkGreedyMesh &chunkMesh = GreedyCache[result.coord];
   size_t new_vertex_count = 0;
   for (const GreedyMeshBatch &b : result.batches)
@@ -1419,7 +1455,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     for (MeshBuildResult &result :
          AsyncBuilder->DrainCompleted(max_drain_per_frame))
     {
-      ApplyMeshResult(world, std::move(result));
+      ApplyMeshResult(world, registry, std::move(result));
       mesh_data_changed = true;
       ++stats.Completed;
     }
@@ -1808,7 +1844,7 @@ void UChunkMeshCache::DrainAsyncMeshResults(UBlockWorld &world,
   }
   for (MeshBuildResult &result : AsyncBuilder->DrainCompleted(max_per_frame))
   {
-    ApplyMeshResult(world, std::move(result));
+    ApplyMeshResult(world, registry, std::move(result));
   }
 }
 
