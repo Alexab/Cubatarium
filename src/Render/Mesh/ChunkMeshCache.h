@@ -23,6 +23,8 @@ namespace cutum
 {
 struct Frustum;
 struct MeshBuildResult;
+class IUChunkCull;
+class IUChunkMesher;
 
 struct MeshRebuildTickStats
 {
@@ -137,6 +139,13 @@ public:
   void RebuildGreedyVisibleForCull(const Frustum *frustum,
                                    const glm::vec3 *camera_pos,
                                    float max_cull_distance);
+
+  /// Bound once from RenderBackendFactory (non-owning).
+  void SetCullBackend(IUChunkCull *cull) { CullBackend = cull; }
+  void SetMesherBackend(IUChunkMesher *mesher) { MesherBackend = mesher; }
+  IUChunkCull *GetCullBackend() const { return CullBackend; }
+  IUChunkMesher *GetMesherBackend() const { return MesherBackend; }
+  double GetLastGpuCullMs() const { return LastGpuCullMs; }
   void SetRenderSettings(const RenderSettings &settings);
   const RenderSettings &GetRenderSettings() const { return Render; }
   void SetRenderDistanceChunks(int distance)
@@ -308,12 +317,15 @@ private:
   RenderSettings Render;
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
   double LastFlatRebuildMs{0.0};
+  double LastGpuCullMs{0.0};
   double LastMeshSyncMs{0.0};
   double LastMeshSnapshotMs{0.0};
   double LastMeshDirtyTickMs{0.0};
   double LastMeshImmediateMs{0.0};
   int LastMeshImmediateCount{0};
   uint64_t MeshApplyStaleCount{0};
+  IUChunkCull *CullBackend{nullptr};
+  IUChunkMesher *MesherBackend{nullptr};
   std::chrono::steady_clock::time_point LastFlatRebuildAt{};
   bool PendingMeshRevisionBump{false};
   UChunkMeshRevisionRegistry MeshRevisions;

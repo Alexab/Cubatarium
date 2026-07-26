@@ -17,6 +17,7 @@ typedef int GLint;
 #include "Render/Engine/AnimationClock.h"
 #include "Render/Engine/CrossGpuBackend.h"
 #include "Render/Engine/FluidSurfaceMap.h"
+#include "Render/Engine/IUFluidSurfaceProvider.h"
 #include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/Engine/IUMeshGpuStore.h"
 #include "Render/Backend/RenderBackendFactory.h"
@@ -267,7 +268,19 @@ private:
   // Sky color
   glm::vec4 skyColor; // Replace QVector4D with glm::vec4
   glm::vec3 BaseSkyColor{0.5f, 0.7f, 1.0f};
-  UFluidSurfaceMap FluidSurfaceMap;
+  std::unique_ptr<IUFluidSurfaceProvider> FluidSurfaceProvider;
+  UFluidSurfaceMap &FluidMap()
+  {
+    if (!FluidSurfaceProvider)
+    {
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+      FluidSurfaceProvider = std::make_unique<UCpuFluidSurfaceMap>();
+#else
+      FluidSurfaceProvider = std::make_unique<UGpuFluidSurfaceMap>();
+#endif
+    }
+    return FluidSurfaceProvider->Map();
+  }
   UUnderwaterFogPass UnderwaterFogPass_;
   USkyGradientPass SkyGradientPass_;
   UOpaqueDepthCapture OpaqueDepthCapture;

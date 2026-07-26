@@ -266,6 +266,8 @@ set(SOURCES
     src/Render/Backend/RenderBackendFactory.cpp
     src/Render/Backend/RenderBackendSelect.cpp
     src/Render/Mesh/CpuFrustumCull.cpp
+    src/Render/Mesh/GpuFrustumCull.cpp
+    src/Render/Mesh/GpuGreedyMesher.cpp
     src/Render/Engine/MdiVertexPoolStore.cpp
     src/Render/Engine/DistanceFog.cpp
     src/Render/Engine/HorizonFogColor.cpp

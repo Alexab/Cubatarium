@@ -13,8 +13,8 @@ URenderBackendFactory::Select(const RenderBackendCaps &caps)
   if (!caps.ForceCpuBackends && caps.Platform == RenderPlatformKind::Desktop &&
       caps.HasCompute)
   {
-    // Phase 3+: GPU mesher selectable; keep CPU until compute kernels land.
-    // Cull may use GpuFrustum wrapper (delegates CPU rebuild today).
+    // Desktop: GPU mesher + GPU cull (compute / parity wrappers).
+    sel.Mesher = MesherBackendKind::GpuGreedy;
     sel.Cull = CullBackendKind::GpuFrustum;
   }
 

@@ -9,6 +9,8 @@
 #include "Render/Mesh/CrossMeshEmitter.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
+#include "Render/Mesh/IUChunkCull.h"
+#include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Mesh/MeshLightSampling.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/GridMath.h"
@@ -1121,7 +1123,19 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
     {
       if (needs_greedy_rebuild)
       {
-        RebuildFlatGreedyBatches(&frustum, &cameraPos, maxCullDistance);
+        const auto t0 = std::chrono::steady_clock::now();
+        if (CullBackend)
+        {
+          CullBackend->RebuildVisible(*this, &frustum, &cameraPos,
+                                      maxCullDistance);
+        }
+        else
+        {
+          RebuildFlatGreedyBatches(&frustum, &cameraPos, maxCullDistance);
+        }
+        LastGpuCullMs = std::chrono::duration<double, std::milli>(
+                            std::chrono::steady_clock::now() - t0)
+                            .count();
       }
       if (needs_cross_rebuild)
       {
@@ -1133,6 +1147,7 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
       if (needs_greedy_rebuild)
       {
         RebuildFlatGreedyBatches(nullptr, nullptr, 0.0f);
+        LastGpuCullMs = 0.0;
       }
       if (needs_cross_rebuild)
       {
@@ -1159,6 +1174,10 @@ void UChunkMeshCache::EnsureAsyncBuilder()
   if (!AsyncBuilder)
   {
     AsyncBuilder = std::make_unique<UAsyncMeshBuilder>();
+  }
+  if (AsyncBuilder && MesherBackend)
+  {
+    AsyncBuilder->SetMesher(MesherBackend);
   }
 }
 
@@ -1784,7 +1803,9 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     Cache.erase(chunkCoord);
     std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
     const auto quads =
-        UGreedyMesher::BuildChunkMesh(world, chunkCoord, registry);
+        MesherBackend
+            ? MesherBackend->BuildChunkMesh(world, chunkCoord, registry)
+            : UGreedyMesher::BuildChunkMesh(world, chunkCoord, registry);
     for (const GreedyQuad &q : quads)
     {
       GreedyMeshBatch &batch = byBlockId[q.Id];

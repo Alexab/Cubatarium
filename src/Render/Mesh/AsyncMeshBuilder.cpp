@@ -4,6 +4,7 @@
 #include "Render/Mesh/CrossInstanceCollector.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
+#include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Mesh/MeshLightSampling.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Math/GridMath.h"
@@ -92,7 +93,8 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
 
         std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
         const auto quads =
-            UGreedyMesher::BuildChunkMesh(snapshot, *registryPtr);
+            Mesher ? Mesher->BuildChunkMesh(snapshot, *registryPtr)
+                   : UGreedyMesher::BuildChunkMesh(snapshot, *registryPtr);
         for (const GreedyQuad &q : quads)
         {
           GreedyMeshBatch &batch = byBlockId[q.Id];

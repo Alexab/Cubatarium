@@ -20,6 +20,7 @@
 #include "Render/Engine/DistanceFog.h"
 #include "Render/Engine/HorizonFogColor.h"
 #include "Render/Engine/FluidSurfaceMap.h"
+#include "Render/Engine/IUFluidSurfaceProvider.h"
 #include "Render/Engine/FluidUnderwaterFogLogic.h"
 #include "Render/Engine/IUMeshGpuStore.h"
 #include "Render/Backend/RenderBackendFactory.h"
@@ -134,7 +135,7 @@ UGeometryEngine::~UGeometryEngine()
   DestroyCubeBuffers();
   DestroyFaceQuadBuffers();
   DestroyGreedyMeshBuffers();
-  FluidSurfaceMap.DestroyGpuResources();
+  FluidMap().DestroyGpuResources();
   OpaqueDepthCapture.DestroyGpuResources();
   WeatherPass.DestroyGpuResources();
   DestroyPreviewBuffers();
@@ -168,10 +169,24 @@ void UGeometryEngine::EnsureRenderBackendsBound()
 #endif
     URenderBackendFactory::BindOnce(RenderBackends, caps);
   }
+  if (!FluidSurfaceProvider)
+  {
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+    FluidSurfaceProvider = std::make_unique<UCpuFluidSurfaceMap>();
+#else
+    FluidSurfaceProvider = std::make_unique<UGpuFluidSurfaceMap>();
+#endif
+  }
   if (WorldInstance && RenderBackends.Store)
   {
     WorldInstance->GetMeshService().SetPreferGpuStorePatch(
         RenderBackends.Store->SupportsMultiDrawIndirect());
+  }
+  if (WorldInstance)
+  {
+    auto &mesh = WorldInstance->GetMeshService();
+    mesh.SetCullBackend(RenderBackends.Cull.get());
+    mesh.SetMesherBackend(RenderBackends.Mesher.get());
   }
 }
 
@@ -874,15 +889,15 @@ void UGeometryEngine::PrepareFrameRendering()
   {
     inv_view_rot = glm::transpose(glm::mat3(camera->GetViewMatrix()));
   }
-  FluidSurfaceMap.ClearLastFrameStats();
-  UnderwaterFogPass_.Update(*WorldInstance, Render, FluidSurfaceMap,
-                            BaseSkyColor, inv_view_rot);
+  FluidMap().ClearLastFrameStats();
+  UnderwaterFogPass_.Update(*WorldInstance, Render, FluidMap(), BaseSkyColor,
+                            inv_view_rot);
   skyColor = glm::vec4(UnderwaterFogPass_.GetSkyTint(), 1.0f);
   OverlayTintColor = UnderwaterFogPass_.GetOverlayTintColor();
   OverlayTintAlpha = UnderwaterFogPass_.GetOverlayTintAlpha();
   OverlayBlockId = UnderwaterFogPass_.GetOverlayBlockId();
   const FluidSurfaceMapFrameStats &fluid_stats =
-      FluidSurfaceMap.GetLastFrameStats();
+      FluidMap().GetLastFrameStats();
   WorldInstance->SetLastFluidMapCpuMs(fluid_stats.CpuMs);
   WorldInstance->SetLastFluidMapGpuMs(fluid_stats.GpuMs);
   WorldInstance->SetLastFluidMapDirtyChunks(fluid_stats.DirtyChunksPending);
@@ -908,7 +923,7 @@ void UGeometryEngine::ApplyFogUniforms(
     const std::shared_ptr<UShaderProgram> &shader, const glm::vec3 &cameraPos,
     bool applyBelowSurfaceFog)
 {
-  UnderwaterFogPass_.ApplyUniforms(shader, cameraPos, FluidSurfaceMap,
+  UnderwaterFogPass_.ApplyUniforms(shader, cameraPos, FluidMap(),
                                    applyBelowSurfaceFog);
 }
 
@@ -1168,6 +1183,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   {
     auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
     phys.GpuDrawCmds += draw_cmds;
+    phys.GpuCullMs = WorldInstance->GetMeshService().GetLastGpuCullMs();
     if (RenderBackends.Mesher)
     {
       phys.BackendMesher = RenderBackends.Mesher->BackendName();
@@ -1194,7 +1210,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
 
 void UGeometryEngine::ResetWorldRenderState()
 {
-  FluidSurfaceMap.DestroyGpuResources();
+  FluidMap().DestroyGpuResources();
   MeshStore().DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
                          GreedyGpuTransparent);
   BlockBatchesValid = false;

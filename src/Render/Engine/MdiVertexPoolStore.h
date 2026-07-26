@@ -44,6 +44,9 @@ private:
 
   std::vector<uint8_t> StagingScratch;
   MeshGpuBucketHandle MappedHandle{};
+  GLuint MappedVbo{0};
+  size_t MappedVboCapacity{0};
+  void *MappedPtr{nullptr};
 };
 
 } // namespace cutum

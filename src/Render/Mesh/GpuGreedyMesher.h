@@ -2,34 +2,38 @@
 
 #include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Mesh/CpuGreedyMesher.h"
+#include <cstdint>
+#include <memory>
 
 namespace cutum
 {
 
-/// GPU greedy mesher backend. Compute kernels land in a follow-up; until then
-/// this wraps the same greedy algorithm as CPU for interface/parity tests.
-/// Factory binds this only when HasCompute && desktop (init-time).
+/// GPU greedy mesher. Runs a Desktop compute warm/dispatch then produces
+/// quads via the CPU greedy algorithm (full GPU surface extract is G5+).
 class UGpuGreedyMesher final : public IUChunkMesher
 {
 public:
+  UGpuGreedyMesher();
+  ~UGpuGreedyMesher() override;
+
   const char *BackendName() const override { return "gpu_greedy"; }
 
   std::vector<GreedyQuad>
   BuildChunkMesh(const UBlockWorld &world, glm::ivec3 chunk_coord,
-                 UBlockRegistry &registry) override
-  {
-    return Cpu.BuildChunkMesh(world, chunk_coord, registry);
-  }
+                 UBlockRegistry &registry) override;
 
   std::vector<GreedyQuad>
   BuildChunkMesh(const ChunkMeshSnapshot &snapshot,
-                 UBlockRegistry &registry) override
-  {
-    return Cpu.BuildChunkMesh(snapshot, registry);
-  }
+                 UBlockRegistry &registry) override;
+
+  uint64_t GetComputeDispatchCount() const { return ComputeDispatches; }
 
 private:
+  void WarmCompute();
+  struct GpuState;
   UCpuGreedyMesher Cpu;
+  std::unique_ptr<GpuState> State;
+  uint64_t ComputeDispatches{0};
 };
 
 } // namespace cutum

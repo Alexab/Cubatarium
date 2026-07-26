@@ -48,4 +48,9 @@ re-run once; do not reopen SoftDefer/snap anti-patterns.
 ## Status
 
 - T0/T1 streaming tails closed 2026-07-26 (`cb_pack` reference; break-stand memory).
-- G0+: see commits / `phase_runs.jsonl`.
+- G0: gates + analyze GPU metrics (2026-07-26).
+- G1–GA landed on `opt_3d` (`g_ladder_land`): Desktop backends
+  `gpu_greedy` / `mdi_vertex_pool` / `gpu_frustum`; `gpu_cull_ms` med≈0.09;
+  `gpu_draw_cmds` med≈8; **F2 GO**; G1–G7+GA **GO**. CB spike/wall may still
+  show variance vs `cb_pack` — streaming reference unchanged; do not reopen
+  SoftDefer. Android: factory keeps CPU mesher/cull + staging (tested).

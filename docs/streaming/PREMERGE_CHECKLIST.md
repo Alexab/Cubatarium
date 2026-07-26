@@ -71,3 +71,17 @@ teleport-cruise golden — do not fail merge solely on replay wall/sticky noise.
 - early `idle_remesh_debt` 12/20
 - снятие heavy_dirty caps ради cold_relight
 - `CancelAsyncInFlightKeepDirty` на idle remesh
+
+## 6. GPU dual-stack (after G0–GA)
+
+Desktop expect jsonl: `backend_mesher=gpu_greedy`, `backend_store=mdi_vertex_pool`,
+`backend_cull=gpu_frustum`, `gpu_draw_cmds` med ≤15.
+
+```powershell
+python tools/flight_sim_phase_gate.py --phase-id G0 --report bin/phase_<id>.json
+# … G1–G7 / GA as needed; always also F2 (+ C/CB vs cb_pack reference)
+```
+
+Android/GLES: Select keeps `cpu_greedy` + `cpu_staging` + `cpu_frustum` (no MDI/
+compute required). Device smoke: [`QA_ANDROID_2026.md`](../QA_ANDROID_2026.md)
+greedy + fluids. Factory unit: `render_backend_factory_test`.

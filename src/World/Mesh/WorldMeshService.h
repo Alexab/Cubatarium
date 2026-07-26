@@ -19,6 +19,8 @@ namespace cutum
 class UBlockRegistry;
 class UBlockWorld;
 class UCamera;
+class IUChunkCull;
+class IUChunkMesher;
 struct Frustum;
 struct PhysicsTelemetry;
 
@@ -36,6 +38,13 @@ public:
   /// When true, edit remesh prefers center Immediate + Dirty ring (GPU store).
   void SetPreferGpuStorePatch(bool enabled) { PreferGpuStorePatch = enabled; }
   bool GetPreferGpuStorePatch() const { return PreferGpuStorePatch; }
+
+  void SetCullBackend(IUChunkCull *cull) { Cache.SetCullBackend(cull); }
+  void SetMesherBackend(IUChunkMesher *mesher)
+  {
+    Cache.SetMesherBackend(mesher);
+  }
+  double GetLastGpuCullMs() const { return Cache.GetLastGpuCullMs(); }
 
   void SetRenderSettings(const RenderSettings &settings);
   void SetRenderDistanceChunks(int distance);

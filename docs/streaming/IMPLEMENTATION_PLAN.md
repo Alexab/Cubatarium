@@ -170,17 +170,16 @@ Evidence: `bin/flight_sim_gate_report_baseline_2cb85f3c.json`,
 Вывод: P0 = **frontier missing + cold relight** (A), не F2 Dirty drain.
 F2 (B) остаётся P1: idle remesh plateau / RemeshAfterApply.
 
-### Следующие шаги (скорректировано 2026-07-26, хвосты)
+### Следующие шаги (после GPU ladder G0–GA, 2026-07-26)
 
-Streaming ladder **H→CB закрыт** на `opt_3d` (`cb_pack`, wall gate ≤37). См.
-`PHASE_EXECUTION.md` § CB accepted. Autofly memory + `mesh_completed_slots=4`
-stress closed; `--replay-manual` recorded (sticky≤2 / wall~45 corridor).
+Streaming H→CB + GPU G0–GA закрыты на `opt_3d` (`g_ladder_land`: F2+G* GO;
+backends `gpu_greedy`/`mdi_vertex_pool`/`gpu_frustum`). CB spike/wall vs
+`cb_pack` — variance/slop; reference golden unchanged.
 
-1. **Pre-merge merge:** `PREMERGE_CHECKLIST.md` — Release golden F2+C+CB
-   (`cb_pack` class); merge `opt_3d` → целевая ветка when ready.
-2. **Manual memory:** place-lit walk — last MEMORY checklist item (human).
-3. **GPU pipeline:** дальше perf/parity MDI (`GPU_PIPELINE.md`), не stream-дыры.
-4. Soft: редкие `spike_max_wall` без holes (~1–4 s) — только при UX-регрессе.
+1. **Merge** `opt_3d` → целевая ветка (PREMERGE + GPU §6).
+2. **Android device smoke** greedy+fluids ([`QA_ANDROID_2026.md`](../QA_ANDROID_2026.md)).
+3. Soft: deeper compute (full greedy extract, cull compaction, light flood) —
+   follow-ups inside GPU backends; do not reopen SoftDefer.
 
 ### Anti-Patterns (не возвращать)
 

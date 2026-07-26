@@ -16,6 +16,7 @@ namespace cutum
 {
 
 class UBlockRegistry;
+class IUChunkMesher;
 
 struct MeshBuildResult
 {
@@ -31,6 +32,9 @@ class UAsyncMeshBuilder
 {
 public:
   explicit UAsyncMeshBuilder(std::size_t thread_count = 0);
+
+  void SetMesher(IUChunkMesher *mesher) { Mesher = mesher; }
+  IUChunkMesher *GetMesher() const { return Mesher; }
 
   void Enqueue(ChunkMeshSnapshot snapshot, UBlockRegistry &registry);
   std::vector<MeshBuildResult> DrainCompleted(int maxPerFrame);
@@ -65,6 +69,7 @@ private:
   static constexpr int kPipelineSlotsPerWorker = 6;
 
   int WorkerCount{1};
+  IUChunkMesher *Mesher{nullptr};
   UJobThreadPool Pool;
   UCompletedJobQueue<MeshBuildResult> Completed;
   mutable std::mutex InFlightMutex;

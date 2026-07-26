@@ -19,7 +19,7 @@ Factory: `URenderBackendFactory::BindOnce` / `Select` — second BindOnce reject
 
 | Platform | Caps | Bound stack |
 |----------|------|-------------|
-| Desktop | MDI | CPU mesher + `mdi_vertex_pool` + GPU cull wrapper |
+| Desktop | MDI | GPU mesher (compute warm + CPU quads MVP) + `mdi_vertex_pool` + GPU cull (compute warm + CPU lists) |
 | Desktop | force-cpu | CPU mesher + staging + CPU cull |
 | Android / GLES | | CPU mesher + staging + CPU cull |
 

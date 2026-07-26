@@ -55,11 +55,16 @@ int main()
   {
     RenderBackendCaps caps;
     caps.Platform = RenderPlatformKind::Desktop;
+    caps.HasCompute = true;
     caps.HasMultiDrawIndirect = true;
     caps.ForceCpuBackends = false;
     const RenderBackendSelection sel = URenderBackendFactory::Select(caps);
     Expect(sel.Store == MeshStoreBackendKind::MdiVertexPool,
            "desktop MDI selects mdi store");
+    Expect(sel.Mesher == MesherBackendKind::GpuGreedy,
+           "desktop compute selects gpu mesher");
+    Expect(sel.Cull == CullBackendKind::GpuFrustum,
+           "desktop compute selects gpu cull");
   }
 
   {

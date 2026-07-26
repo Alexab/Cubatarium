@@ -13,6 +13,11 @@ UMdiVertexPoolStore::~UMdiVertexPoolStore()
     glDeleteBuffers(1, &IndirectBuffer);
     IndirectBuffer = 0;
   }
+  if (MappedVbo != 0)
+  {
+    glDeleteBuffers(1, &MappedVbo);
+    MappedVbo = 0;
+  }
 }
 
 size_t UMdiVertexPoolStore::BuildIndirectCommandsRange(
@@ -119,13 +124,57 @@ bool UMdiVertexPoolStore::TrySubmitMultiDraw(const GreedyGpuPassCache &cache)
 void *UMdiVertexPoolStore::MapBucket(MeshGpuBucketHandle handle, size_t bytes)
 {
   MappedHandle = handle;
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  if (bytes == 0)
+  {
+    StagingScratch.clear();
+    MappedPtr = nullptr;
+    return nullptr;
+  }
+  if (MappedVbo == 0)
+  {
+    glGenBuffers(1, &MappedVbo);
+  }
+  glBindBuffer(GL_ARRAY_BUFFER, MappedVbo);
+  if (bytes > MappedVboCapacity)
+  {
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(bytes), nullptr,
+                 GL_DYNAMIC_DRAW);
+    MappedVboCapacity = bytes;
+  }
+  MappedPtr = glMapBufferRange(
+      GL_ARRAY_BUFFER, 0, static_cast<GLsizeiptr>(bytes),
+      GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
+  if (MappedPtr)
+  {
+    return MappedPtr;
+  }
+  // Fallback CPU scratch if map fails.
+#endif
   StagingScratch.resize(bytes);
-  return StagingScratch.empty() ? nullptr : StagingScratch.data();
+  MappedPtr = StagingScratch.empty() ? nullptr : StagingScratch.data();
+  return MappedPtr;
 }
 
 void UMdiVertexPoolStore::UnmapBucket(MeshGpuBucketHandle handle)
 {
   (void)handle;
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  if (MappedVbo != 0 && MappedPtr && StagingScratch.empty())
+  {
+    glBindBuffer(GL_ARRAY_BUFFER, MappedVbo);
+    glUnmapBuffer(GL_ARRAY_BUFFER);
+  }
+  else if (MappedVbo != 0 && !StagingScratch.empty())
+  {
+    // Mapped failed earlier — upload scratch.
+    glBindBuffer(GL_ARRAY_BUFFER, MappedVbo);
+    glBufferSubData(GL_ARRAY_BUFFER, 0,
+                    static_cast<GLsizeiptr>(StagingScratch.size()),
+                    StagingScratch.data());
+  }
+#endif
+  MappedPtr = nullptr;
 }
 
 void UMdiVertexPoolStore::FlipBucketOwnership(MeshGpuBucketHandle handle)
@@ -133,6 +182,7 @@ void UMdiVertexPoolStore::FlipBucketOwnership(MeshGpuBucketHandle handle)
   (void)handle;
   MappedHandle = {};
   StagingScratch.clear();
+  MappedPtr = nullptr;
 }
 
 } // namespace cutum
