@@ -46,6 +46,8 @@ public:
   void SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn);
   void SetStarveOutsideFocusMesh(bool starve);
   void SetStarveRemeshForHoles(bool starve);
+  int DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk, int keep_radius,
+                                  int keep_cy = -1);
   void SetSyncHoleFillRadius(int radius_chunks);
   void SetMaxOutsideFocusMeshPerFrame(int count);
   void SetMaxRearFocusMeshPerFrame(int count);

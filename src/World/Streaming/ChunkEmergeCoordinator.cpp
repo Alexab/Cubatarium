@@ -205,10 +205,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       !moving && pending_focus_count == 0 && black_sticky == 0 &&
       !missing_visible_mesh && not_ready_early > 32;
   // Focus lit-but-dirty backlog with nr≈0 still fails F2 fd_end≤280 — treat as
-  // catch-up debt so StarveOutside + drain run without waiting for not_ready.
+  // catch-up debt so StarveOutside + SuppressSeam + drain run. Allow a few
+  // PendingLight (stop often sits at pend=1). Allow prune while a SoftDefer
+  // hole flickers — otherwise Drop never runs and fd climbs (f2_fd_yband +147).
   const bool idle_focus_dirty_debt =
-      !moving && pending_focus_count == 0 && black_sticky == 0 &&
-      !missing_visible_mesh && focus_dirty_early > 280;
+      !moving && pending_focus_count <= 16 && black_sticky == 0 &&
+      focus_dirty_early > 280 &&
+      (!missing_visible_mesh || focus_dirty_early > 320);
   // Pipeline full with no visual light debt → remesh thrash (manual 214430 /
   // 221846: async=42 with Dirty 58–224). Do not require Dirty>200.
   const bool remesh_thrash_only =
@@ -586,12 +589,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_service.SetMeshScheduleOverflowPerFrame(0);
   }
   // Holes / underfeet / light-debt idle: allow more snapshot captures.
-  // Do NOT open 48ms for lit-but-dirty-only idle_recovery (idle FPS tax).
+  // Focus lit-but-dirty catch-up also needs budget — 6ms left async≈4 and
+  // fd flat ~415 for the whole stop (f2_fd_golden). Cap below hole 48ms.
   mesh_service.SetMeshSnapshotBudgetMs(
       (visual_holes || missing_underfeet ||
        (idle_recovery && pending_focus_count > 0))
           ? 48.0
-          : 6.0);
+          : (idle_focus_dirty_debt ? 28.0 : 6.0));
 
   // Healthy flight with no visual holes: flush Dirty so pressure can leave Red
   // (Dirty plateaus ~700 trapped Red when exit required dirty<=500).
@@ -603,22 +607,32 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   // Lit-but-dirty catch-up: after light gate clears, flush focus remesh hard
   // (outside flush previously ate the budget — dirty↑ while nr plateau ~40).
-  if ((idle_remesh_debt || idle_focus_dirty_debt) && last_frame_ms <= 40.0)
+  // Drop Dirty outside eye shell even when wall is hot (stop wall 80–200).
+  // keep_h=1 + keep_cy=2 ≈ 45 max; also drops first-mesh/air Dirty that remesh-
+  // only prune left behind (fd_end plateau ~410).
+  const glm::ivec3 focus_dirty_keep(focus_ground.x, preferred_cy,
+                                    focus_ground.z);
+  if (idle_focus_dirty_debt)
+  {
+    mesh_service.DropRemeshDirtyBeyondRadius(focus_dirty_keep, /*keep_h=*/1,
+                                            /*keep_cy=*/2);
+  }
+  if ((idle_remesh_debt || idle_focus_dirty_debt) && last_frame_ms <= 55.0)
   {
     mesh_service.SetStarveOutsideFocusMesh(true);
     mesh_service.SetStarveRemeshForHoles(false);
-    // Focus-dirty-only: prefer drain over schedule so fd falls without thrash.
+    mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
     if (idle_focus_dirty_debt)
     {
-      mesh_drain = std::max(mesh_drain, last_frame_ms <= 28.0 ? 20 : 14);
-      mesh_schedule = std::min(mesh_schedule, 6);
+      mesh_drain = std::max(mesh_drain, last_frame_ms <= 36.0 ? 28 : 18);
+      mesh_schedule = std::max(mesh_schedule, last_frame_ms <= 36.0 ? 18 : 12);
     }
     else
     {
       mesh_drain = std::max(mesh_drain, last_frame_ms <= 16.0 ? 16 : 12);
       mesh_schedule = std::max(mesh_schedule, last_frame_ms <= 16.0 ? 12 : 8);
     }
-    world.ClearPendingLightAfterMeshCommitted(8);
+    world.ClearPendingLightAfterMeshCommitted(16);
   }
   // Standing, no holes/pending/sticky: prefer drain over schedule so Dirty
   // shrinks without feeding remesh thrash (async pinned at max pipeline).
@@ -841,7 +855,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     // Idle remesh catch-up: FlushPendingRelight re-MarksDirty and bumps
     // revisions under saturated async → stale Apply → Dirty plateau.
-    if (!idle_remesh_debt)
+    if (!idle_remesh_debt && !idle_focus_dirty_debt)
     {
       world.FlushPendingRelightMeshColumns(flush_n);
     }
@@ -853,7 +867,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // mesh itself) — that left async≈4 and focus_dirty flat at ~420.
   if (last_frame_ms > 24.0)
   {
-    if (idle_remesh_debt)
+    if (idle_remesh_debt || idle_focus_dirty_debt)
     {
       const bool heavy_dirty = focus_dirty_early > 280;
       mesh_schedule =
@@ -872,7 +886,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   else if (last_frame_ms > 16.0)
   {
-    if (idle_remesh_debt)
+    if (idle_remesh_debt || idle_focus_dirty_debt)
     {
       const bool heavy_dirty = focus_dirty_early > 280;
       mesh_schedule = std::min(mesh_schedule, heavy_dirty ? 26 : 22);
@@ -977,7 +991,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       // Lit-but-dirty catch-up: Recover MarkDirty floods focus_dirty while
       // async is already full — skip Recover, only drain/schedule remesh.
-      if (!idle_remesh_debt)
+      if (!idle_remesh_debt && !idle_focus_dirty_debt)
       {
         world.RecoverUnlitFocusMeshes(recover_n);
       }
@@ -1409,6 +1423,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     world.DrainFocusVisualWork(focus_ground_horiz, focus_radius,
                                idle_recovery ? 24 : 12);
+  }
+  // After Apply/RemeshAfterApply: prune again so next frame's FocusDirtyChunks
+  // (counted at UpdateStreaming start) sees the eye-shell residual, not the
+  // full-focus remesh stack.
+  if (idle_focus_dirty_debt)
+  {
+    mesh_service.DropRemeshDirtyBeyondRadius(focus_dirty_keep, /*keep_h=*/1,
+                                            /*keep_cy=*/2);
   }
 
 #ifndef NDEBUG

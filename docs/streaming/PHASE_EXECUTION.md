@@ -70,6 +70,15 @@ Capture when SoftDefer hole and `wall<80ms` (unbounded bypass spiked wall~150).
 Golden `f2_cold_golden`: **cold 16→4**, sticky=0, wall_med≈37; F2 still needs
 cold≤3 and fd_end≤280.
 
+### F2 fd_end eye-shell prune (2026-07-26)
+
+Root cause: remesh-only `DropRemeshDirtyBeyondRadius` left first-mesh/air Dirty
+in focus (`HasMissing` ignores air) → `fd_end≈410`. Full Y at keep_h=2 ≈400.
+Fix: while `idle_focus_dirty_debt`, drop **any** Dirty outside eye shell
+(`keep_h=1`, `keep_cy=2`) before/after mesh drain; also clear `RemeshAfterApply`.
+Short `f2_fd_alldrop`: **fd_end 410→217**, sticky=0, nr_end=1, wall≈38; F2 fails
+only `cold_relight_holes_sec=4` (≤3).
+
 ### Manual follow-up (2026-07-23)
 
 | Run | Notes |

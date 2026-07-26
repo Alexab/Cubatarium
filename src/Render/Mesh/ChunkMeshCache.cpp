@@ -666,6 +666,55 @@ int UChunkMeshCache::CountDirtyWithinHorizontalRadius(
   return count;
 }
 
+int UChunkMeshCache::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
+                                                int keep_radius, int keep_cy)
+{
+  if (keep_radius < 0)
+  {
+    return 0;
+  }
+  auto beyond_keep = [&](const glm::ivec3 &coord) {
+    const int horiz = std::max(std::abs(coord.x - center_chunk.x),
+                               std::abs(coord.z - center_chunk.z));
+    if (horiz > keep_radius)
+    {
+      return true;
+    }
+    if (keep_cy >= 0 && std::abs(coord.y - center_chunk.y) > keep_cy)
+    {
+      return true;
+    }
+    return false;
+  };
+  int dropped = 0;
+  for (auto it = Dirty.begin(); it != Dirty.end();)
+  {
+    if (beyond_keep(*it))
+    {
+      RemeshAfterApply.erase(*it);
+      it = Dirty.RemoveAt(it);
+      ++dropped;
+    }
+    else
+    {
+      ++it;
+    }
+  }
+  for (auto it = RemeshAfterApply.begin(); it != RemeshAfterApply.end();)
+  {
+    if (beyond_keep(*it))
+    {
+      it = RemeshAfterApply.erase(it);
+      ++dropped;
+    }
+    else
+    {
+      ++it;
+    }
+  }
+  return dropped;
+}
+
 bool UChunkMeshCache::HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y,
                                            int max_y) const
 {
