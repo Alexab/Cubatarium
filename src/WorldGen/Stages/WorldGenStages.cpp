@@ -147,7 +147,9 @@ bool SealShoreAirAdjacencyInChunk(WorldGenContext &ctx, int base_x, int base_z)
   const int max_z = base_z + CHUNK_SIZE;
   const BlockId water = ctx.Blocks.Water;
   bool any = false;
-  for (int pass = 0; pass < 8; ++pass)
+  // 8 full-volume passes were 200–470ms on main (CB hole spikes). Two passes
+  // close the common shore strip; remaining edges catch up on later frames.
+  for (int pass = 0; pass < 2; ++pass)
   {
     bool changed = false;
     for (int y = 1; y <= sea; ++y)

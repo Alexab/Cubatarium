@@ -7,6 +7,7 @@
 #include "World/Math/GridMath.h"
 #include "World/Physics/CollisionReadiness.h"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 
 namespace cutum
@@ -648,17 +649,26 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
   const glm::ivec3 loadCenter = LoadPriorityCenter;
 
   std::vector<glm::ivec3> toLoad;
-  toLoad.reserve(static_cast<size_t>((2 * VisualRenderDistance + 1) *
-                                     (2 * VisualRenderDistance + 1)));
-  for (int cx = loadCenter.x - VisualRenderDistance;
-       cx <= loadCenter.x + VisualRenderDistance; ++cx)
+  // When NearLoadRadius is set (holes / underfeet), only scan that ring —
+  // building+sorting full VisualRD² still cost ~150ms on hole frames (CB).
+  const int scan_radius =
+      NearLoadRadius >= 0
+          ? std::min(VisualRenderDistance, NearLoadRadius)
+          : (MaxLoadOpsPerFrame <= 2
+                 ? std::min(VisualRenderDistance, 4)
+                 : VisualRenderDistance);
+  toLoad.reserve(static_cast<size_t>((2 * scan_radius + 1) *
+                                     (2 * scan_radius + 1)));
+  for (int cx = loadCenter.x - scan_radius; cx <= loadCenter.x + scan_radius;
+       ++cx)
   {
-    for (int cz = loadCenter.z - VisualRenderDistance;
-         cz <= loadCenter.z + VisualRenderDistance; ++cz)
+    for (int cz = loadCenter.z - scan_radius; cz <= loadCenter.z + scan_radius;
+         ++cz)
     {
       const glm::ivec3 coord(cx, 0, cz);
-      if (ProcedurallyGenerated.count(coord) &&
-          IsTerrainChunkCompleteCached(coord))
+      // Trust ProcedurallyGenerated — IsTerrainChunkCompleteCached here caused
+      // full-column scans on cache misses across the whole RD (CB streamer spikes).
+      if (ProcedurallyGenerated.count(coord))
       {
         continue;
       }
@@ -671,11 +681,21 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
               return ChunkLoadPriorityFor(a) < ChunkLoadPriorityFor(b);
             });
 
+  const auto update_t0 = std::chrono::steady_clock::now();
+  const double load_budget_ms = MaxLoadOpsPerFrame <= 2 ? 4.0 : 10.0;
   int loadOps = 0;
   for (const glm::ivec3 &coord : toLoad)
   {
     ++LastFrameStats.loadCandidates;
     if (loadOps >= MaxLoadOpsPerFrame)
+    {
+      break;
+    }
+    const double elapsed_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - update_t0)
+            .count();
+    if (elapsed_ms >= load_budget_ms && loadOps > 0)
     {
       break;
     }
@@ -711,7 +731,11 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
     }
   }
 
-  UnloadDistantChunks(loadCenter, feetBlockPos, eyePos, cap);
+  // Skip unload on hitch budgets — ForEachChunk+save stacks with load scan.
+  if (MaxLoadOpsPerFrame > 2)
+  {
+    UnloadDistantChunks(loadCenter, feetBlockPos, eyePos, cap);
+  }
 }
 
 void UChunkStreamer::PrefetchAhead(glm::ivec3 feet_chunk,

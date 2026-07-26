@@ -8,10 +8,12 @@
 #include "World/Streaming/StreamingPressure.h"
 #include "World/Streaming/MemoryBudgetController.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
+#include "World/Chunks/ChunkManager.h"
 #include <chrono>
 #include <deque>
 #include <glm/glm.hpp>
 #include <memory>
+#include <unordered_set>
 
 namespace cutum
 {
@@ -116,6 +118,8 @@ private:
   double FrameStreamingIoMs{0.0};
   std::deque<glm::ivec3> DeferredPhysicsSeedQueue;
   std::deque<glm::ivec3> DeferredShoreSealQueue;
+  /// Columns that still need IntraChunk seal (never sync on commit — CB hitch).
+  std::unordered_set<glm::ivec3, IVec3Hash> DeferredIntraChunkSealNeeded;
   /// Sync GenerateColumn path: one CoarseHeightCache per ground chunk.
   glm::ivec3 SyncCoarseCacheGround{INT32_MAX, 0, INT32_MAX};
   int AdaptiveEffectiveRd{-1};

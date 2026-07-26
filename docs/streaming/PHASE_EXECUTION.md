@@ -89,6 +89,23 @@ moving Immediate (8ms budget) for nearest hole; async SoftDefer Capture always
 one enqueue. Golden `f2_cold_golden7`: **cold 4→2**, fd_end=156, sticky=0 —
 **F2 GO**.
 
+### CB stream hitch (2026-07-26)
+
+Baseline golden7 CB NO-GO: `spike_max_wall_holes≈809`, `wall_ms_no_holes≈66`,
+`dirty_med_no_holes≈792`. Dominant class **stream**: sync IntraChunk seal on
+commit (100–780 ms) + ShoreAir 8-pass flood + full VisualRD streamer scan.
+
+Fixes (autofly `cb_tighten`, F2 still GO):
+- Defer IntraChunk to shore queue; **no ShoreAir drain on hole frames**; ShoreAir
+  passes **8→2**.
+- Streamer: scan only `NearLoadRadius` / hitch cap; trust `ProcedurallyGenerated`
+  without complete re-scan; load loop time-box 4–10 ms; skip unload on hitch.
+- Moving holes: `NearLoadRadius≤3`, `MaxLoadOps≤2`; TickAsync near budget 6 ms.
+- `DirtyThrashAsyncMin` 36→12.
+
+Result vs golden7: spike_holes **809→254**, wall_no_holes **66→39**, dirty_no_holes
+**792→577**, cold **2**, fd_end **63**. CB still short of ≤200 / ≤35 / ≤450.
+
 ### Manual follow-up (2026-07-23)
 
 | Run | Notes |

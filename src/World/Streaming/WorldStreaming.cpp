@@ -207,19 +207,12 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         DeferredPhysicsSeedQueue.push_back(coord);
         if (settings.FillWater)
         {
-          // V_fluid: IntraChunkSeal once (populate XOR commit); LiveShoreAir
-          // deferred (open ocean comes from FillFluidColumn, not ShoreAir —
-          // sync ShoreAir here only burned commit_seal_ms without fixing strips).
+          // V_fluid: IntraChunkSeal once (populate XOR deferred drain). Never
+          // sync IntraChunk on commit — single seal was 100–780ms of
+          // commit_seal_ms and dominated hole-frame stream spikes (CB).
           if (!fluid_sealed)
           {
-            const auto seal_t0 = std::chrono::high_resolution_clock::now();
-            SealFluidShoreOnChunkCommitted(
-                world.BlockWorld, *world.BlockRegistry, settings,
-                world.WorldgenOwnerPackId, coord, /*include_shore_air=*/false);
-            world.PhysicsTelemetryData.CommitSealMs +=
-                std::chrono::duration<double, std::milli>(
-                    std::chrono::high_resolution_clock::now() - seal_t0)
-                    .count();
+            DeferredIntraChunkSealNeeded.insert(coord);
           }
           DeferredShoreSealQueue.push_back(coord);
         }
@@ -479,16 +472,17 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     return std::max(std::abs(coord.x - focus_horiz.x),
                     std::abs(coord.z - focus_horiz.z)) <= focus_radius;
   };
+  const double near_budget_ms =
+      near_mesh_backlog ? 6.0 : kNearCompleteBudgetMs;
   auto near_exhausted = [&]()
-  { return elapsed_main_ms() >= kNearCompleteBudgetMs; };
+  { return elapsed_main_ms() >= near_budget_ms; };
   auto far_exhausted = [&]()
   {
     if (!keep_prewarm_surplus)
     {
       return true;
     }
-    return elapsed_main_ms() >=
-           (kNearCompleteBudgetMs + kFarStreamingBudgetMs);
+    return elapsed_main_ms() >= (near_budget_ms + kFarStreamingBudgetMs);
   };
 
   if (ChunkScheduler && procedural.AsyncChunkGeneration)
@@ -742,8 +736,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             .count();
   }
 
-  // Shore seal: LiveShoreAir only (IntraChunk already on populate worker).
-  // Near-focus commits already seal sync; this drains far / late columns.
+  // Shore seal: deferred IntraChunk (if populate skipped) + LiveShoreAir.
+  // Cap count+wall time — multi×100–400ms seals/frame were CB hole spikes.
+  // Never zero the budget on hot frames: that starved the queue entirely
+  // (commit_seal_ms≡0) and deferred work into worse bursts.
   {
     const bool underfeet_pending =
         world.HasPendingLightBeforeMeshNear(focus_horiz, /*radius=*/1) ||
@@ -752,31 +748,43 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     const bool shore_focus_holes =
         near_mesh_backlog ||
         world.HasPendingLightBeforeMeshNear(focus_horiz, focus_radius);
-    int near_shore_budget = near_mesh_backlog ? 4 : 3;
-    // Holes / pending: drain ShoreAir faster — starving to 1 carved water strips.
-    if (shore_focus_holes || underfeet_pending)
-    {
-      near_shore_budget = frame_ms > kBadFrameMs ? 2 : 4;
-    }
-    else if (frame_ms > kBadFrameMs)
-    {
-      near_shore_budget = 0;
-    }
-    else if (frame_ms > 16.0)
-    {
-      near_shore_budget = std::min(near_shore_budget, 1);
-    }
+    const bool hole_pressure = shore_focus_holes || underfeet_pending;
+    // Holes: do not start ShoreAir/IntraChunk on main — a single seal was
+    // 200–470ms (CB spike_holes). Drain only on healthy frames; ShoreAir is
+    // now 2-pass (was 8) so healthy drains stay cheaper.
+    int near_shore_budget =
+        hole_pressure ? 0 : (frame_ms > 16.0 ? 1 : 2);
+    const double shore_wall_budget_ms = 10.0;
+    const double seal_ms_before = world.PhysicsTelemetryData.CommitSealMs;
     const int far_shore_budget =
-        (keep_prewarm_surplus && !underfeet_pending) ? 1 : 0;
+        (keep_prewarm_surplus && !underfeet_pending && !hole_pressure &&
+         frame_ms <= 16.0)
+            ? 1
+            : 0;
     int near_done = 0;
     int far_done = 0;
+    auto shore_exhausted = [&]()
+    {
+      return near_exhausted() ||
+             (world.PhysicsTelemetryData.CommitSealMs - seal_ms_before) >=
+                 shore_wall_budget_ms;
+    };
     auto seal_one = [&](glm::ivec3 coord, bool near_column)
     {
       const ProceduralSettings &settings = world.GetProceduralSettings();
+      bool changed = false;
       const auto seal_t0 = std::chrono::high_resolution_clock::now();
-      const bool changed = SealFluidShoreAirOnChunkCommitted(
-          world.BlockWorld, *world.BlockRegistry, settings,
-          world.WorldgenOwnerPackId, coord);
+      if (DeferredIntraChunkSealNeeded.erase(coord) > 0)
+      {
+        changed = SealFluidIntraChunkOnCommitted(
+                      world.BlockWorld, *world.BlockRegistry, settings,
+                      world.WorldgenOwnerPackId, coord) ||
+                  changed;
+      }
+      changed = SealFluidShoreAirOnChunkCommitted(
+                    world.BlockWorld, *world.BlockRegistry, settings,
+                    world.WorldgenOwnerPackId, coord) ||
+                changed;
       world.PhysicsTelemetryData.CommitSealMs +=
           std::chrono::duration<double, std::milli>(
               std::chrono::high_resolution_clock::now() - seal_t0)
@@ -806,7 +814,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     };
     for (auto it = DeferredShoreSealQueue.begin();
          it != DeferredShoreSealQueue.end() &&
-         near_done < near_shore_budget && !near_exhausted();)
+         near_done < near_shore_budget && !shore_exhausted();)
     {
       if (!is_near_column(*it))
       {
@@ -820,7 +828,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     }
     for (auto it = DeferredShoreSealQueue.begin();
          it != DeferredShoreSealQueue.end() &&
-         far_done < far_shore_budget && !far_exhausted();)
+         far_done < far_shore_budget && !shore_exhausted();)
     {
       if (is_near_column(*it))
       {
@@ -1107,6 +1115,7 @@ void UWorldStreaming::QuiesceBackgroundWork(
   }
   DeferredPhysicsSeedQueue.clear();
   DeferredShoreSealQueue.clear();
+  DeferredIntraChunkSealNeeded.clear();
   PauseChunkGeneration(async_io_timeout);
   if (world.Persistence)
   {
@@ -1853,13 +1862,31 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     {
       if (moving_fast || moving_any)
       {
-        Streamer->SetNearLoadRadius(-1);
+        // Moving used to force NearLoadRadius=-1 (full VisualRD scan). On hole
+        // frames that alone was ~150ms streamer_update (CB spike_holes).
+        if (underfeet_need)
+        {
+          Streamer->SetNearLoadRadius(2);
+        }
+        else if (visual_holes || frame_ms > kBadFrameMs)
+        {
+          Streamer->SetNearLoadRadius(std::min(focus_radius, 3));
+        }
+        else
+        {
+          Streamer->SetNearLoadRadius(-1);
+        }
         // Hitch / Yellow+: keep fill alive but drop boost so load+mesh do not
         // stack. Red also clamps MaxLoadOps via pressure caps below.
         int load_ops = world.MaxLoadOpsPerFrame;
-        if (frame_ms <= 20.0 && moving_fast && pressure.allow_fly_load_boost)
+        if (frame_ms <= 20.0 && moving_fast && pressure.allow_fly_load_boost &&
+            !visual_holes && !underfeet_need)
         {
           load_ops = procedural.MaxLoadOpsPerFrameBoost;
+        }
+        if (visual_holes || underfeet_need || frame_ms > kBadFrameMs)
+        {
+          load_ops = std::min(load_ops, 2);
         }
         load_ops = ApplyPressureCap(load_ops, pressure.max_load_ops_cap);
         Streamer->SetMaxLoadOpsPerFrame(std::max(1, load_ops));
