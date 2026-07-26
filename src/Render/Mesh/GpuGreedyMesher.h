@@ -4,12 +4,16 @@
 #include "Render/Mesh/CpuGreedyMesher.h"
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 namespace cutum
 {
 
-/// GPU greedy mesher. Runs a Desktop compute warm/dispatch then produces
-/// quads via the CPU greedy algorithm (full GPU surface extract is G5+).
+class UBlockRegistry;
+struct ChunkMeshSnapshot;
+
+/// Desktop GPU greedy: compute opaque face-mask extract when the chunk is
+/// opaque-solid-only; otherwise CPU greedy. Android never binds this class.
 class UGpuGreedyMesher final : public IUChunkMesher
 {
 public:
@@ -29,7 +33,9 @@ public:
   uint64_t GetComputeDispatchCount() const { return ComputeDispatches; }
 
 private:
-  void WarmCompute();
+  bool EnsureCompute();
+  std::vector<GreedyQuad> TryComputeExtract(const ChunkMeshSnapshot &snapshot,
+                                            UBlockRegistry &registry);
   struct GpuState;
   UCpuGreedyMesher Cpu;
   std::unique_ptr<GpuState> State;

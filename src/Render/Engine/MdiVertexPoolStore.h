@@ -33,14 +33,23 @@ public:
 
   bool TrySubmitMultiDraw(const GreedyGpuPassCache &cache) override;
 
+  void RefreshPassRefs(GreedyGpuPassCache &cache,
+                       const UChunkMeshCache &meshCache,
+                       const std::vector<GreedyBatchRef> &refs,
+                       uint64_t mesh_revision, uint64_t cull_revision,
+                       uint64_t sort_revision) override;
+
   void *MapBucket(MeshGpuBucketHandle handle, size_t bytes) override;
   void UnmapBucket(MeshGpuBucketHandle handle) override;
   void FlipBucketOwnership(MeshGpuBucketHandle handle) override;
+
+  uint64_t GetMappedUploadFrames() const { return MappedUploadFrames; }
 
 private:
   GLuint IndirectBuffer{0};
   size_t IndirectCapacityBytes{0};
   uint64_t LastDrawCmds{0};
+  uint64_t MappedUploadFrames{0};
 
   std::vector<uint8_t> StagingScratch;
   MeshGpuBucketHandle MappedHandle{};

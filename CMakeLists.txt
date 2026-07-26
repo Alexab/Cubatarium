@@ -268,6 +268,8 @@ set(SOURCES
     src/Render/Mesh/CpuFrustumCull.cpp
     src/Render/Mesh/GpuFrustumCull.cpp
     src/Render/Mesh/GpuGreedyMesher.cpp
+    src/Render/Mesh/GpuFluidColumnScan.cpp
+    src/World/Lighting/GpuSkylightColumnSeed.cpp
     src/Render/Engine/MdiVertexPoolStore.cpp
     src/Render/Engine/DistanceFog.cpp
     src/Render/Engine/HorizonFogColor.cpp
@@ -1159,6 +1161,29 @@ add_executable(mesh_gpu_store_mdi_test
     src/Test/MeshGpuStoreMdiTest.cpp)
 target_include_directories(mesh_gpu_store_mdi_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(gpu_greedy_face_extract_test
+    src/Test/GpuGreedyFaceExtractTest.cpp
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/World/Math/GridMath.cpp
+    src/Render/Mesh/ChunkMeshSnapshot.cpp)
+target_include_directories(gpu_greedy_face_extract_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(gpu_greedy_face_extract_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(gpu_greedy_face_extract_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(gpu_skylight_column_seed_test
+    src/Test/GpuSkylightColumnSeedTest.cpp)
+target_include_directories(gpu_skylight_column_seed_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(gpu_skylight_column_seed_test glm::glm)
+
+add_executable(gpu_fluid_column_scan_test
+    src/Test/GpuFluidColumnScanTest.cpp)
+target_include_directories(gpu_fluid_column_scan_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(gpu_fluid_column_scan_test glm::glm)
 
 add_executable(docked_overlay_layout_test src/Test/DockedOverlayLayoutTest.cpp
     src/Gui/Layout/DockedOverlayLayout.cpp)

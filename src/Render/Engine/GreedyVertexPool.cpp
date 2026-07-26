@@ -2,6 +2,7 @@
 #include "Render/GlIncludes.h"
 #include "glog/logging.h"
 #include <algorithm>
+#include <cstring>
 
 namespace cutum
 {
@@ -161,12 +162,56 @@ UGreedyVertexPool::Allocate(const GreedyMeshBatch &batch)
   }
 
   glBindBuffer(kArrayBuffer, VertexVbo);
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  {
+    void *mapped = glMapBufferRange(
+        kArrayBuffer, static_cast<GLintptr>(alloc.vertexByteOffset),
+        static_cast<GLsizeiptr>(vertex_bytes),
+        GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT |
+            GL_MAP_UNSYNCHRONIZED_BIT);
+    if (mapped)
+    {
+      std::memcpy(mapped, batch.vertices.data(), vertex_bytes);
+      glUnmapBuffer(kArrayBuffer);
+    }
+    else
+    {
+      glBufferSubData(kArrayBuffer,
+                      static_cast<GLintptr>(alloc.vertexByteOffset),
+                      static_cast<GLsizeiptr>(vertex_bytes),
+                      batch.vertices.data());
+    }
+  }
+#else
   glBufferSubData(kArrayBuffer, static_cast<GLintptr>(alloc.vertexByteOffset),
                   static_cast<GLsizeiptr>(vertex_bytes), batch.vertices.data());
+#endif
   glBindBuffer(kElementArrayBuffer, IndexEbo);
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  {
+    void *mapped = glMapBufferRange(
+        kElementArrayBuffer, static_cast<GLintptr>(alloc.indexByteOffset),
+        static_cast<GLsizeiptr>(index_bytes),
+        GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT |
+            GL_MAP_UNSYNCHRONIZED_BIT);
+    if (mapped)
+    {
+      std::memcpy(mapped, batch.indices.data(), index_bytes);
+      glUnmapBuffer(kElementArrayBuffer);
+    }
+    else
+    {
+      glBufferSubData(kElementArrayBuffer,
+                      static_cast<GLintptr>(alloc.indexByteOffset),
+                      static_cast<GLsizeiptr>(index_bytes),
+                      batch.indices.data());
+    }
+  }
+#else
   glBufferSubData(kElementArrayBuffer,
                   static_cast<GLintptr>(alloc.indexByteOffset),
                   static_cast<GLsizeiptr>(index_bytes), batch.indices.data());
+#endif
   glBindBuffer(kArrayBuffer, 0);
   glBindBuffer(kElementArrayBuffer, 0);
   return alloc;

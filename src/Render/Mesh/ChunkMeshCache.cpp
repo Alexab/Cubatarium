@@ -1094,6 +1094,72 @@ void UChunkMeshCache::RebuildGreedyVisibleForCull(
   RebuildFlatGreedyBatches(frustum, camera_pos, max_cull_distance);
 }
 
+void UChunkMeshCache::CollectGreedyCullSpheres(
+    std::vector<CullSphereEntry> &out) const
+{
+  out.clear();
+  out.reserve(GreedyCache.size());
+  for (const auto &entry : GreedyCache)
+  {
+    const glm::vec3 bmin = ChunkAABBMin(entry.first);
+    const glm::vec3 bmax = ChunkAABBMax(entry.first);
+    const glm::vec3 center = (bmin + bmax) * 0.5f;
+    const float radius = glm::length(bmax - center);
+    CullSphereEntry e;
+    e.sphere = glm::vec4(center, radius);
+    e.coord = entry.first;
+    out.push_back(e);
+  }
+}
+
+void UChunkMeshCache::RebuildFlatGreedyFromVisibilityMask(
+    const uint32_t *vis, size_t vis_count,
+    const std::vector<CullSphereEntry> &entries)
+{
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  GreedyOpaqueCutoutRefs.clear();
+  GreedyTransparentRefs.clear();
+  GreedyOpaqueCutoutRefs.reserve(GreedyCache.size() * 4);
+  GreedyTransparentRefs.reserve(GreedyCache.size());
+  const size_t n = (std::min)(vis_count, entries.size());
+  for (size_t i = 0; i < n; ++i)
+  {
+    if (!vis[i])
+    {
+      continue;
+    }
+    const auto it = GreedyCache.find(entries[i].coord);
+    if (it == GreedyCache.end())
+    {
+      continue;
+    }
+    const std::vector<GreedyMeshBatch> &batches = it->second.batches;
+    for (size_t bi = 0; bi < batches.size(); ++bi)
+    {
+      const GreedyMeshBatch &chunk_batch = batches[bi];
+      if (chunk_batch.vertices.empty() || chunk_batch.indices.empty())
+      {
+        continue;
+      }
+      const GreedyBatchRef ref{entries[i].coord, static_cast<uint16_t>(bi)};
+      if (chunk_batch.Transparent)
+      {
+        GreedyTransparentRefs.push_back(ref);
+      }
+      else
+      {
+        GreedyOpaqueCutoutRefs.push_back(ref);
+      }
+    }
+  }
+  GreedyBatchesDirty = false;
+  ++CullRevision;
+  LastFlatRebuildAt = std::chrono::steady_clock::now();
+  LastFlatRebuildMs = std::chrono::duration<double, std::milli>(
+                          std::chrono::high_resolution_clock::now() - t0)
+                          .count();
+}
+
 void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
                                              const glm::mat4 &viewProj,
                                              const glm::vec3 &cameraPos)

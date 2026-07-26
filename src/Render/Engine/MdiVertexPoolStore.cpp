@@ -1,7 +1,9 @@
 #include "Render/Engine/MdiVertexPoolStore.h"
 #include "Render/GlIncludes.h"
+#include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "glog/logging.h"
+#include <cstring>
 
 namespace cutum
 {
@@ -121,6 +123,50 @@ bool UMdiVertexPoolStore::TrySubmitMultiDraw(const GreedyGpuPassCache &cache)
   return SubmitIndirectCommands(cmds);
 }
 
+void UMdiVertexPoolStore::RefreshPassRefs(
+    GreedyGpuPassCache &cache, const UChunkMeshCache &meshCache,
+    const std::vector<GreedyBatchRef> &refs, uint64_t mesh_revision,
+    uint64_t cull_revision, uint64_t sort_revision)
+{
+  // Live MapBucket path: stage concatenated vertex bytes then Unmap (mapped
+  // VBO). Pool upload still goes through GreedyVertexPool mapped SubData.
+  size_t stage_bytes = 0;
+  for (const GreedyBatchRef &ref : refs)
+  {
+    if (const GreedyMeshBatch *b = meshCache.TryGetGreedyBatch(ref))
+    {
+      stage_bytes += b->vertices.size() * sizeof(GreedyMeshVertex);
+    }
+  }
+  if (stage_bytes > 0)
+  {
+    MeshGpuBucketHandle handle{};
+    handle.index = 0;
+    handle.valid = true;
+    void *mapped = MapBucket(handle, stage_bytes);
+    if (mapped)
+    {
+      size_t offset = 0;
+      for (const GreedyBatchRef &ref : refs)
+      {
+        const GreedyMeshBatch *b = meshCache.TryGetGreedyBatch(ref);
+        if (!b || b->vertices.empty())
+        {
+          continue;
+        }
+        const size_t n = b->vertices.size() * sizeof(GreedyMeshVertex);
+        std::memcpy(static_cast<uint8_t *>(mapped) + offset, b->vertices.data(),
+                    n);
+        offset += n;
+      }
+      UnmapBucket(handle);
+      ++MappedUploadFrames;
+    }
+  }
+  UCpuStagingGpuStore::RefreshPassRefs(cache, meshCache, refs, mesh_revision,
+                                       cull_revision, sort_revision);
+}
+
 void *UMdiVertexPoolStore::MapBucket(MeshGpuBucketHandle handle, size_t bytes)
 {
   MappedHandle = handle;
@@ -147,6 +193,7 @@ void *UMdiVertexPoolStore::MapBucket(MeshGpuBucketHandle handle, size_t bytes)
       GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
   if (MappedPtr)
   {
+    StagingScratch.clear();
     return MappedPtr;
   }
   // Fallback CPU scratch if map fails.

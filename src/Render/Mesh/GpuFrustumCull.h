@@ -6,8 +6,8 @@
 namespace cutum
 {
 
-/// GPU frustum cull backend. Desktop runs a compute AABB pass then delegates
-/// visible-list rebuild to CPU (full compaction of flat refs is follow-up).
+/// Desktop GPU frustum cull: SSBO spheres + compute visibility mask, then
+/// rebuild flat greedy refs from the mask. Falls back to CPU on init failure.
 class UGpuFrustumCull final : public IUChunkCull
 {
 public:
@@ -26,7 +26,6 @@ private:
   bool EnsureGpu();
   UCpuFrustumCull Delegate;
   std::unique_ptr<GpuState> State;
-  bool Warmed{false};
 };
 
 } // namespace cutum

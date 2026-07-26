@@ -140,6 +140,18 @@ public:
                                    const glm::vec3 *camera_pos,
                                    float max_cull_distance);
 
+  struct CullSphereEntry
+  {
+    glm::vec4 sphere{0.0f}; // xyz center, w radius
+    glm::ivec3 coord{0};
+  };
+  /// Fill one sphere per greedy chunk for GPU frustum compaction.
+  void CollectGreedyCullSpheres(std::vector<CullSphereEntry> &out) const;
+  /// Rebuild flat greedy refs for chunks marked visible (parallel to Collect).
+  void RebuildFlatGreedyFromVisibilityMask(const uint32_t *vis,
+                                           size_t vis_count,
+                                           const std::vector<CullSphereEntry> &entries);
+
   /// Bound once from RenderBackendFactory (non-owning).
   void SetCullBackend(IUChunkCull *cull) { CullBackend = cull; }
   void SetMesherBackend(IUChunkMesher *mesher) { MesherBackend = mesher; }
@@ -220,6 +232,11 @@ public:
   {
     AltitudeAboveTerrain = altitude_above_terrain;
     AltitudeFogThresholdBlocks = threshold_blocks;
+  }
+  float GetAltitudeAboveTerrain() const { return AltitudeAboveTerrain; }
+  int GetAltitudeFogThresholdBlocks() const
+  {
+    return AltitudeFogThresholdBlocks;
   }
   void SetSurfaceWetness(float value)
   {
