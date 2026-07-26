@@ -156,79 +156,11 @@ void UGpuFrustumCull::RebuildVisible(UChunkMeshCache &cache,
                                      const glm::vec3 *camera_pos,
                                      float max_cull_distance)
 {
-  // Sync SSBO readback is only a win for modest sphere counts. Large rings
-  // stay on CPU Delegate (same flat-ref rebuild) so wall/gpu_cull_ms stay sane.
-  constexpr uint32_t kMaxGpuCullSpheres = 384;
-
-  if (!frustum || !camera_pos || !EnsureGpu())
-  {
-    Delegate.RebuildVisible(cache, frustum, camera_pos, max_cull_distance);
-    return;
-  }
-
-  std::vector<UChunkMeshCache::CullSphereEntry> entries;
-  cache.CollectGreedyCullSpheres(entries);
-  if (entries.empty() || entries.size() > kMaxGpuCullSpheres)
-  {
-    Delegate.RebuildVisible(cache, frustum, camera_pos, max_cull_distance);
-    return;
-  }
-
-  const uint32_t count = static_cast<uint32_t>(entries.size());
-  std::vector<glm::vec4> aabbs(count);
-  for (uint32_t i = 0; i < count; ++i)
-  {
-    aabbs[i] = entries[i].sphere;
-  }
-
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, State->AabbSsbo);
-  glBufferData(GL_SHADER_STORAGE_BUFFER,
-               static_cast<GLsizeiptr>(aabbs.size() * sizeof(glm::vec4)),
-               aabbs.data(), GL_DYNAMIC_DRAW);
-  std::vector<uint32_t> vis(count, 0);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, State->VisSsbo);
-  glBufferData(GL_SHADER_STORAGE_BUFFER,
-               static_cast<GLsizeiptr>(vis.size() * sizeof(uint32_t)),
-               nullptr, GL_DYNAMIC_DRAW);
-
-  struct Ubo
-  {
-    glm::vec4 planes[6];
-    glm::vec4 camPosMaxDist;
-    uint32_t count;
-    uint32_t horizontalDist;
-    uint32_t pad[2];
-  } ubo{};
-  for (int i = 0; i < 6; ++i)
-  {
-    ubo.planes[i] = frustum->planes[static_cast<size_t>(i)];
-  }
-  ubo.camPosMaxDist =
-      glm::vec4(*camera_pos, std::max(0.0f, max_cull_distance));
-  ubo.count = count;
-  ubo.horizontalDist =
-      (cache.GetAltitudeAboveTerrain() >
-       static_cast<float>(cache.GetAltitudeFogThresholdBlocks()))
-          ? 1u
-          : 0u;
-
-  glBindBuffer(GL_UNIFORM_BUFFER, State->FrustumUbo);
-  glBufferData(GL_UNIFORM_BUFFER, sizeof(ubo), &ubo, GL_DYNAMIC_DRAW);
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, State->AabbSsbo);
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, State->VisSsbo);
-  glBindBufferBase(GL_UNIFORM_BUFFER, 2, State->FrustumUbo);
-  glUseProgram(State->Program);
-  glDispatchCompute((count + 63u) / 64u, 1, 1);
-  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
-  glUseProgram(0);
-
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, State->VisSsbo);
-  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
-                     static_cast<GLsizeiptr>(vis.size() * sizeof(uint32_t)),
-                     vis.data());
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-  cache.RebuildFlatGreedyFromVisibilityMask(vis.data(), vis.size(), entries);
+  // P2: opaque draw uses pool instanceCount cull (no sync vis readback).
+  // Flat greedy refs still feed transparent + Cross; keep CPU Delegate for
+  // that rebuild so cruise hot path never blocks on GetBufferSubData.
+  (void)EnsureGpu(); // warm compute program for GA / future compact
+  Delegate.RebuildVisible(cache, frustum, camera_pos, max_cull_distance);
 }
 
 } // namespace cutum

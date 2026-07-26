@@ -21,8 +21,10 @@
 #include "Render/Engine/HorizonFogColor.h"
 #include "Render/Engine/FluidSurfaceMap.h"
 #include "Render/Engine/IUFluidSurfaceProvider.h"
+#include "Render/Mesh/GpuFluidColumnScan.h"
 #include "Render/Engine/FluidUnderwaterFogLogic.h"
 #include "Render/Engine/IUMeshGpuStore.h"
+#include "Render/Engine/MdiVertexPoolStore.h"
 #include "Render/Backend/RenderBackendFactory.h"
 #include "Render/Mesh/IUChunkCull.h"
 #include "Render/Mesh/IUChunkMesher.h"
@@ -450,6 +452,7 @@ void UGeometryEngine::Paint(int width_size, int height_size,
   if (WorldInstance)
   {
     WorldInstance->GetPhysicsTelemetryMutable().GpuDrawCmds = 0;
+    WorldInstance->GetPhysicsTelemetryMutable().GpuCullIndirect = 0.0;
   }
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
@@ -576,7 +579,8 @@ void UGeometryEngine::DrawCubeGeometry()
       BlockBatchesValid = true;
     }
     const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
-    DrawGreedyOpaqueBatches(draw.cache, opaqueCutoutRefs, vp, textures,
+    DrawGreedyOpaqueBatches(draw.cache, opaqueCutoutRefs, vp,
+                            camera->GetPosition(), textures,
                             draw.meshRevision, draw.cullRevision);
     DrawCrossInstancedBatches(draw.crossBatches, vp, textures,
                               draw.meshRevision, draw.cullRevision);
@@ -1058,6 +1062,10 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         for (size_t k = i; k < j; ++k)
         {
           const GreedyGpuBatch &gpu = cache.batches[k];
+          if (gpu.drawInstanceCount == 0)
+          {
+            continue;
+          }
           const GLint base_vertex = static_cast<GLint>(
               gpu.vboByteOffset / sizeof(GreedyMeshVertex));
           glDrawElementsBaseVertex(
@@ -1196,6 +1204,11 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     {
       phys.BackendCull = RenderBackends.Cull->BackendName();
     }
+    if (FluidSurfaceProvider)
+    {
+      phys.BackendFluid = FluidSurfaceProvider->BackendName();
+      phys.GpuFluidScanOn = PreferGpuFluidColumnScan() ? 1.0 : 0.0;
+    }
   }
 
   glBindVertexArray(0);
@@ -1280,8 +1293,9 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
   const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
   const auto textures = TextureCubeStorageInstance->GetTextures();
 
-  DrawGreedyOpaqueBatches(draw.cache, draw.opaqueCutoutRefs, vp, textures,
-                          draw.meshRevision, draw.cullRevision);
+  DrawGreedyOpaqueBatches(draw.cache, draw.opaqueCutoutRefs, vp,
+                          camera->GetPosition(), textures, draw.meshRevision,
+                          draw.cullRevision);
   DrawCrossInstancedBatches(draw.crossBatches, vp, textures, draw.meshRevision,
                             draw.cullRevision);
 
@@ -1375,16 +1389,29 @@ void UGeometryEngine::DrawCrossInstancedBatches(
 
 void UGeometryEngine::DrawGreedyOpaqueBatches(
     const UChunkMeshCache &cache,
-    const std::vector<GreedyBatchRef> &opaqueCutoutRefs,
-    const glm::mat4 &vp,
-    const std::map<size_t, UTextureCube> &textures, uint64_t meshRevision,
-    uint64_t cullRevision)
+    const std::vector<GreedyBatchRef> &opaqueCutoutRefs, const glm::mat4 &vp,
+    const glm::vec3 &cameraPos, const std::map<size_t, UTextureCube> &textures,
+    uint64_t meshRevision, uint64_t cullRevision)
 {
+  IUMeshGpuStore &store = MeshStore();
+  const bool mdi_indirect_cull = store.SupportsMultiDrawIndirect();
+
+  std::vector<GreedyBatchRef> upload_refs;
+  if (mdi_indirect_cull)
+  {
+    // P2: keep full opaque geometry in the pool; cull via instanceCount.
+    cache.CollectAllOpaqueCutoutRefs(upload_refs);
+  }
+  else
+  {
+    upload_refs = opaqueCutoutRefs;
+  }
+
   std::vector<GreedyBatchRef> solid;
   std::vector<GreedyBatchRef> cutout;
-  solid.reserve(opaqueCutoutRefs.size());
-  cutout.reserve(opaqueCutoutRefs.size());
-  for (const GreedyBatchRef &ref : opaqueCutoutRefs)
+  solid.reserve(upload_refs.size());
+  cutout.reserve(upload_refs.size());
+  for (const GreedyBatchRef &ref : upload_refs)
   {
     const GreedyMeshBatch *batch = cache.TryGetGreedyBatch(ref);
     if (!batch)
@@ -1413,11 +1440,24 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     }
     return a->blockId < b->blockId;
   };
+
+  auto *mdi = mdi_indirect_cull
+                  ? dynamic_cast<UMdiVertexPoolStore *>(&store)
+                  : nullptr;
+  const Frustum frustum = Frustum::FromViewProjection(vp);
+  // Distance admit matches mesh-cache cull; 0 disables distance override.
+  constexpr float kMaxCullDistance = 0.0f;
+
   if (!solid.empty())
   {
     std::sort(solid.begin(), solid.end(), by_block_id);
-    MeshStore().RefreshPassRefs(GreedyGpuOpaque, cache, solid, meshRevision,
-                                cullRevision, kBlockIdSortRev);
+    store.RefreshPassRefs(GreedyGpuOpaque, cache, solid, meshRevision,
+                          cullRevision, kBlockIdSortRev);
+    if (mdi)
+    {
+      mdi->ApplyFrustumInstanceCull(GreedyGpuOpaque, frustum, cameraPos,
+                                    kMaxCullDistance);
+    }
     DrawGreedyGpuBatches(GreedyGpuOpaque, vp, textures, false, false,
                          GreedyShaderMode::TransparentColor, 0.0f);
   }
@@ -1427,8 +1467,13 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     GLboolean cullWasEnabled;
     glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
     glDisable(GL_CULL_FACE);
-    MeshStore().RefreshPassRefs(GreedyGpuCutout, cache, cutout, meshRevision,
-                                cullRevision, kBlockIdSortRev);
+    store.RefreshPassRefs(GreedyGpuCutout, cache, cutout, meshRevision,
+                          cullRevision, kBlockIdSortRev);
+    if (mdi)
+    {
+      mdi->ApplyFrustumInstanceCull(GreedyGpuCutout, frustum, cameraPos,
+                                    kMaxCullDistance);
+    }
     DrawGreedyGpuBatches(GreedyGpuCutout, vp, textures, true, false,
                          GreedyShaderMode::TransparentColor, 0.0f);
     if (cullWasEnabled)
@@ -1449,6 +1494,10 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     phys.GpuPoolCapMb = static_cast<double>(cap) / (1024.0 * 1024.0);
     phys.VertexPoolFill =
         cap > 0 ? static_cast<double>(used) / static_cast<double>(cap) : 0.0;
+    if (mdi)
+    {
+      phys.GpuCullIndirect = 1.0;
+    }
   }
 }
 

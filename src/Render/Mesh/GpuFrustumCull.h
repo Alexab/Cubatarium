@@ -6,8 +6,9 @@
 namespace cutum
 {
 
-/// Desktop GPU frustum cull: SSBO spheres + compute visibility mask, then
-/// rebuild flat greedy refs from the mask. Falls back to CPU on init failure.
+/// Desktop GPU frustum cull backend. Opaque MDI path uses instanceCount cull
+/// (P2); flat greedy refs for transparent/Cross rebuild via CPU Delegate —
+/// no sync SSBO GetBufferSubData on the cruise hot path.
 class UGpuFrustumCull final : public IUChunkCull
 {
 public:

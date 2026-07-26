@@ -45,7 +45,11 @@ size_t UMdiVertexPoolStore::BuildIndirectCommandsRange(
     }
     DrawElementsIndirectCommand cmd;
     cmd.count = static_cast<uint32_t>(gpu.indexCountGl);
-    cmd.instanceCount = 1;
+    cmd.instanceCount = gpu.drawInstanceCount > 0 ? gpu.drawInstanceCount : 0;
+    if (cmd.instanceCount == 0)
+    {
+      continue;
+    }
     cmd.firstIndex =
         static_cast<uint32_t>(gpu.eboByteOffset / sizeof(uint32_t));
     cmd.baseVertex =
@@ -128,43 +132,39 @@ void UMdiVertexPoolStore::RefreshPassRefs(
     const std::vector<GreedyBatchRef> &refs, uint64_t mesh_revision,
     uint64_t cull_revision, uint64_t sort_revision)
 {
-  // Live MapBucket path: stage concatenated vertex bytes then Unmap (mapped
-  // VBO). Pool upload still goes through GreedyVertexPool mapped SubData.
-  size_t stage_bytes = 0;
-  for (const GreedyBatchRef &ref : refs)
-  {
-    if (const GreedyMeshBatch *b = meshCache.TryGetGreedyBatch(ref))
-    {
-      stage_bytes += b->vertices.size() * sizeof(GreedyMeshVertex);
-    }
-  }
-  if (stage_bytes > 0)
-  {
-    MeshGpuBucketHandle handle{};
-    handle.index = 0;
-    handle.valid = true;
-    void *mapped = MapBucket(handle, stage_bytes);
-    if (mapped)
-    {
-      size_t offset = 0;
-      for (const GreedyBatchRef &ref : refs)
-      {
-        const GreedyMeshBatch *b = meshCache.TryGetGreedyBatch(ref);
-        if (!b || b->vertices.empty())
-        {
-          continue;
-        }
-        const size_t n = b->vertices.size() * sizeof(GreedyMeshVertex);
-        std::memcpy(static_cast<uint8_t *>(mapped) + offset, b->vertices.data(),
-                    n);
-        offset += n;
-      }
-      UnmapBucket(handle);
-      ++MappedUploadFrames;
-    }
-  }
+  const bool geometry_refresh = !(cache.meshRevision == mesh_revision &&
+                                  cache.sortRevision == sort_revision);
+  // Single write path: parent RefreshPassRefs → GreedyVertexPool::Allocate
+  // (glMapBufferRange). Do not stage a second MappedVbo copy (draw uses pool).
   UCpuStagingGpuStore::RefreshPassRefs(cache, meshCache, refs, mesh_revision,
                                        cull_revision, sort_revision);
+  if (geometry_refresh && cache.usesVertexPool && !refs.empty())
+  {
+    ++MappedUploadFrames;
+  }
+}
+
+void UMdiVertexPoolStore::ApplyFrustumInstanceCull(
+    GreedyGpuPassCache &cache, const Frustum &frustum,
+    const glm::vec3 &camera_pos, float max_cull_distance)
+{
+  for (GreedyGpuBatch &b : cache.batches)
+  {
+    if (!b.pooled || b.indexCountGl <= 0)
+    {
+      b.drawInstanceCount = 0;
+      continue;
+    }
+    const glm::vec3 center(b.cullSphere[0], b.cullSphere[1], b.cullSphere[2]);
+    const float r = b.cullSphere[3];
+    const glm::vec3 bmin = center - glm::vec3(r);
+    const glm::vec3 bmax = center + glm::vec3(r);
+    const bool vis =
+        frustum.IntersectsChunkAABB(bmin, bmax, camera_pos, max_cull_distance,
+                                    false);
+    b.drawInstanceCount = vis ? 1u : 0u;
+  }
+  cache.IndirectCullReady = true;
 }
 
 void *UMdiVertexPoolStore::MapBucket(MeshGpuBucketHandle handle, size_t bytes)

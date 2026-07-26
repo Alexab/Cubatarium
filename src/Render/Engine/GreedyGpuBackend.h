@@ -30,6 +30,9 @@ struct GreedyGpuBatch
   bool pooled{false};
   size_t vboByteOffset{0};
   size_t eboByteOffset{0};
+  /// Frustum sphere for instance-count cull (xyz center, w radius).
+  float cullSphere[4]{0, 0, 0, 0};
+  uint32_t drawInstanceCount{1};
 };
 
 struct GreedyGpuPassCache
@@ -42,6 +45,12 @@ struct GreedyGpuPassCache
   GLuint poolVbo{0};
   GLuint poolEbo{0};
   UGreedyVertexPool VertexPool;
+  /// Full-pass indirect cmds (instanceCount updated by cull; no geometry rebuild).
+  GLuint IndirectCmdsBuffer{0};
+  size_t IndirectCmdCapacity{0};
+  GLuint BatchSphereSsbo{0};
+  size_t BatchSphereCapacity{0};
+  bool IndirectCullReady{false};
 };
 
 /// Retained GPU buffers for greedy mesh draws (orphan + subData reuse).

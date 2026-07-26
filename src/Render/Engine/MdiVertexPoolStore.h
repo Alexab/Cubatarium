@@ -1,7 +1,9 @@
 #pragma once
 
+#include "Render/Camera/Frustum.h"
 #include "Render/Engine/CpuStagingGpuStore.h"
 #include <cstdint>
+#include <glm/glm.hpp>
 #include <vector>
 
 typedef unsigned int GLuint;
@@ -38,6 +40,12 @@ public:
                        const std::vector<GreedyBatchRef> &refs,
                        uint64_t mesh_revision, uint64_t cull_revision,
                        uint64_t sort_revision) override;
+
+  /// P2: set drawInstanceCount from frustum without geometry re-upload.
+  void ApplyFrustumInstanceCull(GreedyGpuPassCache &cache,
+                                const Frustum &frustum,
+                                const glm::vec3 &camera_pos,
+                                float max_cull_distance);
 
   void *MapBucket(MeshGpuBucketHandle handle, size_t bytes) override;
   void UnmapBucket(MeshGpuBucketHandle handle) override;

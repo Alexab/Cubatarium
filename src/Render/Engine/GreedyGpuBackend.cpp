@@ -1,6 +1,7 @@
 #include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Engine/GreedyVertexPool.h"
+#include "Render/Camera/Frustum.h"
 #include "Render/GlIncludes.h"
 #include "World/Core/RuntimeTuning.h"
 #include <algorithm>
@@ -92,6 +93,7 @@ void UGreedyGpuBackend::UploadBatch(GreedyGpuBatch &gpu,
   gpu.pooled = false;
   gpu.vboByteOffset = 0;
   gpu.eboByteOffset = 0;
+  gpu.drawInstanceCount = 1;
   if (!batch.vertices.empty() && !batch.indices.empty())
   {
     const GreedyGpuPoolAllocation alloc = pool.Allocate(batch);
@@ -186,10 +188,11 @@ void UGreedyGpuBackend::RefreshPassRefs(
     const std::vector<GreedyBatchRef> &refs,
     uint64_t mesh_revision, uint64_t cull_revision, uint64_t sort_revision)
 {
+  // P2: CullRevision only invalidates draw instance counts, not geometry.
   if (mesh_revision == cache.meshRevision &&
-      cull_revision == cache.cullRevision &&
       sort_revision == cache.sortRevision)
   {
+    cache.cullRevision = cull_revision;
     return;
   }
 
@@ -219,15 +222,28 @@ void UGreedyGpuBackend::RefreshPassRefs(
     {
       continue;
     }
+    GreedyGpuBatch *dst = nullptr;
     if (write_index < cache.batches.size())
     {
-      UploadBatch(cache.batches[write_index], *batch, cache.VertexPool);
-      ++write_index;
-      continue;
+      dst = &cache.batches[write_index];
+      UploadBatch(*dst, *batch, cache.VertexPool);
     }
-    GreedyGpuBatch gpu;
-    UploadBatch(gpu, *batch, cache.VertexPool);
-    cache.batches.push_back(gpu);
+    else
+    {
+      GreedyGpuBatch gpu;
+      UploadBatch(gpu, *batch, cache.VertexPool);
+      cache.batches.push_back(gpu);
+      dst = &cache.batches.back();
+    }
+    const glm::vec3 bmin = ChunkAABBMin(ref.chunkCoord);
+    const glm::vec3 bmax = ChunkAABBMax(ref.chunkCoord);
+    const glm::vec3 center = (bmin + bmax) * 0.5f;
+    const float radius = glm::length(bmax - center);
+    dst->cullSphere[0] = center.x;
+    dst->cullSphere[1] = center.y;
+    dst->cullSphere[2] = center.z;
+    dst->cullSphere[3] = radius > 0.0f ? radius : 0.5f;
+    dst->drawInstanceCount = 1;
     ++write_index;
   }
 
@@ -242,6 +258,7 @@ void UGreedyGpuBackend::RefreshPassRefs(
   cache.meshRevision = mesh_revision;
   cache.cullRevision = cull_revision;
   cache.sortRevision = sort_revision;
+  cache.IndirectCullReady = false;
 }
 
 void UGreedyGpuBackend::DestroyPass(GreedyGpuPassCache &cache)

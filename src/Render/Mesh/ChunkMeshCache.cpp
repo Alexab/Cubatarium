@@ -1112,6 +1112,27 @@ void UChunkMeshCache::CollectGreedyCullSpheres(
   }
 }
 
+void UChunkMeshCache::CollectAllOpaqueCutoutRefs(
+    std::vector<GreedyBatchRef> &out) const
+{
+  out.clear();
+  out.reserve(GreedyCache.size() * 4);
+  for (const auto &entry : GreedyCache)
+  {
+    const std::vector<GreedyMeshBatch> &batches = entry.second.batches;
+    for (size_t bi = 0; bi < batches.size(); ++bi)
+    {
+      const GreedyMeshBatch &batch = batches[bi];
+      if (batch.Transparent || batch.vertices.empty() || batch.indices.empty())
+      {
+        continue;
+      }
+      out.push_back(
+          GreedyBatchRef{entry.first, static_cast<uint16_t>(bi)});
+    }
+  }
+}
+
 void UChunkMeshCache::RebuildFlatGreedyFromVisibilityMask(
     const uint32_t *vis, size_t vis_count,
     const std::vector<CullSphereEntry> &entries)

@@ -323,10 +323,10 @@ private:
   void EnsureRenderBackendsBound();
   void DrawGreedyOpaqueBatches(
       const UChunkMeshCache &cache,
-      const std::vector<GreedyBatchRef> &opaqueCutoutRefs,
-      const glm::mat4 &vp,
-                               const std::map<size_t, UTextureCube> &textures,
-                               uint64_t meshRevision, uint64_t cullRevision);
+      const std::vector<GreedyBatchRef> &opaqueCutoutRefs, const glm::mat4 &vp,
+      const glm::vec3 &cameraPos,
+      const std::map<size_t, UTextureCube> &textures, uint64_t meshRevision,
+      uint64_t cullRevision);
   void DrawCrossInstancedBatches(const std::vector<CrossInstanceBatch> &batches,
                                  const glm::mat4 &vp,
                                  const std::map<size_t, UTextureCube> &textures,
