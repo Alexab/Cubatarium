@@ -81,7 +81,7 @@ Prior baseline: `bin/phase_P2f2.json` (wall_no_holes≈33).
 | P6 | Yes+ | Sync `RelightChunkCoords` GPU seed (cap 1/batch); **async apply** merges block light via `MergeBlockLightKeepingGpuSky`; `gpu_skylight_merge_test` |
 | P5 | Yes+ | Worker defers eligible opaque → main `TryExtractOpaqueToBatches`; deferred + hot path use CPU extract + `MergeOpaqueQuadsStrict` (no mask readback; legacy behind `CUBATARIUM_GPU_MASK_READBACK=1`) |
 | PA | Yes | Formal F2+P*+GA on `phase_P_tails` |
-| D1 | In progress | Caps/factory split; opaque greedy without readback; transparent cullSphere keys; sky seed CPU parity; force Full lighting on Desktop GPU |
+| D1 | Yes | Caps/factory split; opaque no mask readback; transparent keys; sky seed CPU parity; force Full on Desktop GPU; `bin/phase_D1.json` F2/D1a–D1d/PA GO |
 
 ## D1 ladder
 
