@@ -98,10 +98,16 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
             gpu_mesher->CanDeferGpuExtract(snapshot, *registryPtr);
         if (defer_gpu)
         {
-          // P5: defer opaque extract to main GL thread; worker only does Cross.
-          result.GpuExtractPending = true;
-          result.PendingSnapshot =
-              std::make_unique<ChunkMeshSnapshot>(snapshot);
+          // Variant B (D1.1): for GPU-eligible opaque-only chunks, do opaque
+          // greedy rectangle merge on the worker (CPU-only, no GL). The main
+          // thread only uploads resulting batches into the pool.
+          const bool extracted = gpu_mesher->TryExtractOpaqueToBatches(
+              snapshot, *registryPtr, snapshot.coord, result.batches,
+              /*deferred_no_gpu_readback=*/true,
+              /*greedy_merge_rects=*/true);
+          (void)extracted; // empty batches are fine
+          result.GpuExtractPending = false;
+          result.PendingSnapshot.reset();
           CollectCrossInstancesFromSnapshot(snapshot, *registryPtr,
                                             result.crossCenters);
         }

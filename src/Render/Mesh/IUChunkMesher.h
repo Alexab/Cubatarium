@@ -40,7 +40,8 @@ public:
   virtual bool TryExtractOpaqueToBatches(
       const ChunkMeshSnapshot & /*snapshot*/, UBlockRegistry & /*registry*/,
       glm::ivec3 /*coord*/, std::vector<GreedyMeshBatch> & /*out_batches*/,
-      bool /*deferred_no_gpu_readback*/ = false)
+      bool /*deferred_no_gpu_readback*/ = false,
+      bool /*greedy_merge_rects*/ = false)
   {
     return false;
   }

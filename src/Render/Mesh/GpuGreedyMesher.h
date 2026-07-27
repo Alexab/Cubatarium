@@ -41,7 +41,8 @@ public:
   bool TryExtractOpaqueToBatches(const ChunkMeshSnapshot &snapshot,
                                  UBlockRegistry &registry, glm::ivec3 coord,
                                  std::vector<GreedyMeshBatch> &out_batches,
-                                 bool deferred_no_gpu_readback) override;
+                                 bool deferred_no_gpu_readback,
+                                 bool greedy_merge_rects = false) override;
 
   bool CanDeferGpuExtract(const ChunkMeshSnapshot &snapshot,
                           UBlockRegistry &registry) const override;

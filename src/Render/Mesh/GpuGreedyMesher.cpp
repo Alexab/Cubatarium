@@ -289,7 +289,7 @@ bool UGpuGreedyMesher::CanDeferGpuExtract(const ChunkMeshSnapshot &snapshot,
 bool UGpuGreedyMesher::TryExtractOpaqueToBatches(
     const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry,
     glm::ivec3 coord, std::vector<GreedyMeshBatch> &out_batches,
-    bool deferred_no_gpu_readback)
+    bool deferred_no_gpu_readback, bool greedy_merge_rects)
 {
   out_batches.clear();
   std::vector<GreedyQuad> quads;
@@ -301,6 +301,12 @@ bool UGpuGreedyMesher::TryExtractOpaqueToBatches(
     }
     // Same as TryComputeExtract default: CPU face extract, no mask readback.
     quads = ExtractOpaqueFacesCpu(snapshot, registry);
+    // Variant B: do greedy rectangle merge on the worker (no GL), so main
+    // thread only uploads into the pool.
+    if (greedy_merge_rects)
+    {
+      quads = MergeOpaqueQuadsStrict(quads);
+    }
   }
   else
   {

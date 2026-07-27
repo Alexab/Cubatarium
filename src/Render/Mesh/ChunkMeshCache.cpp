@@ -1303,7 +1303,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   {
     bool extracted = MesherBackend->TryExtractOpaqueToBatches(
         *result.PendingSnapshot, registry, result.coord, result.batches,
-        /*deferred_no_gpu_readback=*/true);
+        /*deferred_no_gpu_readback=*/true,
+        /*greedy_merge_rects=*/false);
     if (!extracted)
     {
       std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
