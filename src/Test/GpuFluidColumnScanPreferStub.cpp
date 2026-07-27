@@ -20,5 +20,6 @@ bool TryGpuScanFluidColumns(const uint8_t *fluid_flags, int height,
 }
 
 uint64_t GpuFluidColumnScanDispatchCount() { return 0; }
+uint64_t ConsumeGpuFluidReadbackCount() { return 0; }
 
 } // namespace cutum

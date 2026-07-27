@@ -9,6 +9,7 @@ namespace
 {
 
 uint64_t gFluidScanDispatches = 0;
+uint64_t gFluidReadbacks = 0;
 bool gPreferGpuFluidColumnScan = false;
 
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
@@ -104,6 +105,13 @@ bool PreferGpuFluidColumnScan() { return gPreferGpuFluidColumnScan; }
 
 uint64_t GpuFluidColumnScanDispatchCount() { return gFluidScanDispatches; }
 
+uint64_t ConsumeGpuFluidReadbackCount()
+{
+  const uint64_t v = gFluidReadbacks;
+  gFluidReadbacks = 0;
+  return v;
+}
+
 bool TryGpuScanFluidColumns(const uint8_t *fluid_flags, int height,
                             std::vector<int16_t> &out_top_y)
 {
@@ -149,6 +157,7 @@ bool TryGpuScanFluidColumns(const uint8_t *fluid_flags, int height,
   glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
                      static_cast<GLsizeiptr>(tops.size() * sizeof(int32_t)),
                      tops.data());
+  ++gFluidReadbacks;
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
   out_top_y.resize(tops.size());
   for (size_t i = 0; i < tops.size(); ++i)

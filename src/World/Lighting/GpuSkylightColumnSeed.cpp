@@ -14,6 +14,7 @@ namespace
 {
 
 uint64_t gSkylightDispatches = 0;
+uint64_t gSkylightReadbacks = 0;
 
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
 const char *kSkylightSeedCompute = R"(#version 430
@@ -103,6 +104,13 @@ bool EnsureSeedCompute()
 
 uint64_t GpuSkylightSeedDispatchCount() { return gSkylightDispatches; }
 
+uint64_t ConsumeGpuSkylightSeedReadbackCount()
+{
+  const uint64_t v = gSkylightReadbacks;
+  gSkylightReadbacks = 0;
+  return v;
+}
+
 bool TryGpuSeedSkylightColumns(const std::array<uint8_t, CHUNK_VOLUME> &occ,
                                std::array<uint8_t, CHUNK_VOLUME> &sky_out)
 {
@@ -144,6 +152,7 @@ bool TryGpuSeedSkylightColumns(const std::array<uint8_t, CHUNK_VOLUME> &occ,
   glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
                      static_cast<GLsizeiptr>(sky.size() * sizeof(uint32_t)),
                      sky.data());
+  ++gSkylightReadbacks;
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
   for (int i = 0; i < CHUNK_VOLUME; ++i)
   {

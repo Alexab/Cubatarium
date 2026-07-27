@@ -126,3 +126,5 @@ python tools/flight_sim_phase_gate.py --phase-id PA --report bin/phase_D1.json
 
 Desktop: `gpu_greedy` / `mdi_vertex_pool` / `gpu_frustum` + PreferGpu fluid;
 `backend_lighting_mode` is `gpu_full`/`full` (never `flat` on GPU stack).
+
+Full-branch execution backlog: [`GPU_FULL_BRANCH_BACKLOG.md`](GPU_FULL_BRANCH_BACKLOG.md).

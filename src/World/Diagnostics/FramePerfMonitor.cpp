@@ -1,6 +1,7 @@
 #include "World/Diagnostics/FramePerfMonitor.h"
 
 #include "App/Core.h"
+#include "Render/Mesh/GpuFluidColumnScan.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Core/World.h"
 #include "World/Lighting/GpuBlocklightFlood.h"
@@ -221,6 +222,10 @@ struct FrameNumbers
   uint64_t gpu_light_seed_apply{0};
   uint64_t gpu_mask_readback{0};
   uint64_t gpu_blocklight_flood{0};
+  uint64_t gpu_fluid_readback{0};
+  uint64_t gpu_light_readback{0};
+  uint64_t gpu_opaque_emit_gpu{0};
+  uint64_t gpu_transparent_sort_gpu{0};
   double gpu_fluid_scan_on{0.0};
   std::string backend_mesher;
   std::string backend_store;
@@ -384,6 +389,11 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.gpu_light_seed_apply = ConsumeGpuSkylightSeedApplyCount();
   n.gpu_mask_readback = UGpuGreedyMesher::ConsumeMaskReadbackCount();
   n.gpu_blocklight_flood = ConsumeGpuBlocklightFloodCount();
+  n.gpu_fluid_readback = ConsumeGpuFluidReadbackCount();
+  n.gpu_light_readback = ConsumeGpuSkylightSeedReadbackCount();
+  // GPF0 probe wiring: full GPU emit/sort counters will be hooked in GPF1/GPF2.
+  n.gpu_opaque_emit_gpu = 0;
+  n.gpu_transparent_sort_gpu = 0;
   n.gpu_fluid_scan_on = phys.GpuFluidScanOn;
   n.backend_mesher = phys.BackendMesher;
   n.backend_store = phys.BackendStore;
@@ -525,6 +535,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"gpu_light_seed_apply\":" << n.gpu_light_seed_apply
           << ",\"gpu_mask_readback\":" << n.gpu_mask_readback
           << ",\"gpu_blocklight_flood\":" << n.gpu_blocklight_flood
+          << ",\"gpu_fluid_readback\":" << n.gpu_fluid_readback
+          << ",\"gpu_light_readback\":" << n.gpu_light_readback
+          << ",\"gpu_opaque_emit_gpu\":" << n.gpu_opaque_emit_gpu
+          << ",\"gpu_transparent_sort_gpu\":" << n.gpu_transparent_sort_gpu
           << ",\"gpu_fluid_scan_on\":" << n.gpu_fluid_scan_on
           << ",\"backend_mesher\":\"" << n.backend_mesher << "\""
           << ",\"backend_store\":\"" << n.backend_store << "\""

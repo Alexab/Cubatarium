@@ -209,6 +209,10 @@ def analyze(
     gpu_light_seed_apply_med = median(col(steady, "gpu_light_seed_apply"))
     gpu_mask_readback_med = median(col(steady, "gpu_mask_readback"))
     gpu_blocklight_flood_med = median(col(steady, "gpu_blocklight_flood"))
+    gpu_fluid_readback_med = median(col(steady, "gpu_fluid_readback"))
+    gpu_light_readback_med = median(col(steady, "gpu_light_readback"))
+    gpu_opaque_emit_gpu_med = median(col(steady, "gpu_opaque_emit_gpu"))
+    gpu_transparent_sort_gpu_med = median(col(steady, "gpu_transparent_sort_gpu"))
     gpu_fluid_scan_on_med = median(col(steady, "gpu_fluid_scan_on"))
     fluid_names = [
         str(r.get("backend_fluid") or "")
@@ -679,6 +683,10 @@ def analyze(
             "gpu_light_seed_apply_med": gpu_light_seed_apply_med,
             "gpu_mask_readback_med": gpu_mask_readback_med,
             "gpu_blocklight_flood_med": gpu_blocklight_flood_med,
+            "gpu_fluid_readback_med": gpu_fluid_readback_med,
+            "gpu_light_readback_med": gpu_light_readback_med,
+            "gpu_opaque_emit_gpu_med": gpu_opaque_emit_gpu_med,
+            "gpu_transparent_sort_gpu_med": gpu_transparent_sort_gpu_med,
             "gpu_fluid_scan_on_med": gpu_fluid_scan_on_med,
             "backend_fluid_mode": backend_fluid_mode,
             "backend_lighting_mode": backend_lighting_mode,

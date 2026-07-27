@@ -237,6 +237,47 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("gpu_mask_readback_med", "le", 0.0),
         ("wall_ms_no_holes_med", "le", 45.0),
     ],
+    # Full-branch ladder (D2): move from D1 interim to full GPU hot path.
+    "D2a": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("gpu_mask_readback_med", "le", 0.0),
+        ("gpu_opaque_emit_gpu_med", "ge", 0.0),
+        ("wall_ms_no_holes_med", "le", 45.0),
+        ("vertex_pool_fill_med", "le", 0.85),
+    ],
+    "D2b": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("gpu_transparent_sort_gpu_med", "ge", 0.0),
+        ("wall_ms_no_holes_med", "le", 45.0),
+    ],
+    "D2c": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("gpu_fluid_scan_on_med", "ge", 0.5),
+        ("gpu_fluid_readback_med", "le", 0.0),
+        ("wall_ms_no_holes_med", "le", 45.0),
+    ],
+    "D2d": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("cold_relight_holes_sec", "le", 3.0),
+        ("post_stop_pending_med", "le", 5.0),
+        ("gpu_light_readback_med", "le", 0.0),
+        ("backend_lighting_full", "ge", 1.0),
+        ("backend_lighting_flat", "le", 0.0),
+    ],
+    "D2e": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("backend_store_mdi", "ge", 1.0),
+        ("backend_mesher_gpu", "ge", 1.0),
+        ("backend_cull_gpu", "ge", 1.0),
+        ("gpu_cull_indirect_med", "ge", 0.5),
+        ("gpu_draw_cmds_med", "le", 15.0),
+        ("wall_ms_no_holes_med", "le", 45.0),
+    ],
     # Android GPU backlog stubs (informational; not Desktop CB thresholds).
     "AG0": [
         ("chunks_traveled", "ge", 0.0),

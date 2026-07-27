@@ -60,6 +60,7 @@ Analyze emits `*_med` / `backend_*_mode` / `backend_lighting_full|flat` for gate
 autofly → analyze → fix → GO → auto-commit per phase.
 
 Android backlog: [`ANDROID_GPU_BACKLOG.md`](ANDROID_GPU_BACKLOG.md).
+Execution backlog: [`GPU_FULL_BRANCH_BACKLOG.md`](GPU_FULL_BRANCH_BACKLOG.md).
 
 ## Tests
 

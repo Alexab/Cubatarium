@@ -18,6 +18,7 @@ bool ApplyGpuSkylightSeedToChunk(UChunk & /*chunk*/, UBlockRegistry & /*registry
 }
 
 uint64_t GpuSkylightSeedDispatchCount() { return 0; }
+uint64_t ConsumeGpuSkylightSeedReadbackCount() { return 0; }
 
 uint64_t ConsumeGpuSkylightSeedApplyCount() { return 0; }
 

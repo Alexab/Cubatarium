@@ -41,5 +41,6 @@ bool TryGpuScanFluidColumns(const uint8_t *fluid_flags, int height,
                             std::vector<int16_t> &out_top_y);
 
 uint64_t GpuFluidColumnScanDispatchCount();
+uint64_t ConsumeGpuFluidReadbackCount();
 
 } // namespace cutum

@@ -69,6 +69,7 @@ inline void MergeBlockLightKeepingGpuSky(
 }
 
 uint64_t GpuSkylightSeedDispatchCount();
+uint64_t ConsumeGpuSkylightSeedReadbackCount();
 /// Successful apply count since last consume (FramePerf telemetry).
 uint64_t ConsumeGpuSkylightSeedApplyCount();
 
