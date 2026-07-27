@@ -275,7 +275,11 @@ static void TestUnderwaterFogPolicyV3()
 
   Expect(!cutum::ShouldApplyBelowSurfaceFogToPass(false, true),
 
-         "cutout pass skips underwater fog");
+         "dedicated cutout-only pass skips underwater fog");
+
+  Expect(cutum::ShouldApplyBelowSurfaceFogToPass(false, false),
+
+         "merged opaque (alpha-discard mode) still gets underwater fog");
 
   Expect(cutum::ShouldTintBlockBelowFluidColumn(9, 10, 10),
 

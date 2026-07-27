@@ -54,7 +54,9 @@ inline bool ShouldApplyUnderwaterFogToColumn(bool camera_submerged,
   return true;
 }
 
-/// Per-column tint targets opaque solids only; fluid/cutout/cross keep their own look.
+/// Per-column tint targets opaque solids only; fluid/cross keep their own look.
+/// `alpha_cutout` means a dedicated cutout-only pass — not "alpha discard"
+/// shader mode on a merged solid+cutout draw (GPF5).
 inline bool ShouldApplyBelowSurfaceFogToPass(bool transparent_pass,
                                              bool alpha_cutout = false)
 {

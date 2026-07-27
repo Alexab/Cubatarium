@@ -1005,9 +1005,12 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   OpaqueDepthCapture.ApplyShaderUniforms(greedyShader, opaqueDepthGuard);
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
+    // alphaCutout here is shader discard mode (GPF5 merges solid+cutout), not
+    // a dedicated cutout-only pass — still apply underwater fog to opaque.
     ApplyFogUniforms(
         greedyShader, camera->GetPosition(),
-        cutum::ShouldApplyBelowSurfaceFogToPass(transparentPass, alphaCutout));
+        cutum::ShouldApplyBelowSurfaceFogToPass(transparentPass,
+                                                /*alpha_cutout=*/false));
   }
   ApplyGreedyEnvironmentUniforms(greedyShader);
   glActiveTexture(GL_TEXTURE0);
