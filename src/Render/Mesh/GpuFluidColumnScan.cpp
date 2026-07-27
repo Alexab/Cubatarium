@@ -121,49 +121,13 @@ bool TryGpuScanFluidColumns(const uint8_t *fluid_flags, int height,
   (void)out_top_y;
   return false;
 #else
-  if (!fluid_flags || height <= 0 || !EnsureFluidScan())
+  if (!fluid_flags || height <= 0)
   {
     return false;
   }
-  auto &s = ScanState();
-  const int n = CHUNK_SIZE;
-  const size_t cells = static_cast<size_t>(height) * static_cast<size_t>(n * n);
-  std::vector<uint32_t> words((cells + 3) / 4, 0);
-  for (size_t i = 0; i < cells; ++i)
-  {
-    words[i >> 2] |= static_cast<uint32_t>(fluid_flags[i]) << ((i & 3u) * 8u);
-  }
-  const uint32_t side = static_cast<uint32_t>(n);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, s.FlagsSsbo);
-  glBufferData(GL_SHADER_STORAGE_BUFFER,
-               static_cast<GLsizeiptr>(words.size() * sizeof(uint32_t)),
-               words.data(), GL_DYNAMIC_DRAW);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, s.TopsSsbo);
-  glBufferData(GL_SHADER_STORAGE_BUFFER,
-               static_cast<GLsizeiptr>(n * n * sizeof(int32_t)), nullptr,
-               GL_DYNAMIC_DRAW);
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, s.FlagsSsbo);
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, s.TopsSsbo);
-  glUseProgram(s.Program);
-  glUniform1ui(glGetUniformLocation(s.Program, "side"), side);
-  glUniform1ui(glGetUniformLocation(s.Program, "height"),
-               static_cast<uint32_t>(height));
-  const uint32_t cols = side * side;
-  glDispatchCompute((cols + 63u) / 64u, 1, 1);
-  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
-  glUseProgram(0);
-  std::vector<int32_t> tops(static_cast<size_t>(n * n), -1);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, s.TopsSsbo);
-  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
-                     static_cast<GLsizeiptr>(tops.size() * sizeof(int32_t)),
-                     tops.data());
-  ++gFluidReadbacks;
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-  out_top_y.resize(tops.size());
-  for (size_t i = 0; i < tops.size(); ++i)
-  {
-    out_top_y[i] = static_cast<int16_t>(tops[i]);
-  }
+  // GPF3: drop sync GL readback on hot path; scan prebuilt flags on CPU.
+  // This keeps the P7 reuse/cache flow intact without GL stalls.
+  ScanFluidColumnsCpu(fluid_flags, height, out_top_y);
   ++gFluidScanDispatches;
   return true;
 #endif
