@@ -7,6 +7,7 @@
 #include "World/Core/RuntimeTuning.h"
 #include "World/Core/World.h"
 #include "World/Lighting/GpuBlocklightFlood.h"
+#include "Render/Backend/GpuHotPathFallback.h"
 #include "World/Lighting/GpuSkylightColumnSeed.h"
 #include "Render/Mesh/GpuGreedyMesher.h"
 #include "World/Physics/PhysicsTelemetry.h"
@@ -228,6 +229,7 @@ struct FrameNumbers
   uint64_t gpu_light_readback{0};
   uint64_t gpu_opaque_emit_gpu{0};
   uint64_t gpu_transparent_sort_gpu{0};
+  uint64_t gpu_fallback{0};
   double gpu_fluid_scan_on{0.0};
   std::string backend_mesher;
   std::string backend_store;
@@ -395,6 +397,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.gpu_light_readback = ConsumeGpuSkylightSeedReadbackCount();
   n.gpu_opaque_emit_gpu = ConsumeGpuOpaqueEmitCount();
   n.gpu_transparent_sort_gpu = ConsumeGpuTransparentSortCount();
+  n.gpu_fallback = ConsumeGpuHotPathFallbackCount();
   n.gpu_fluid_scan_on = phys.GpuFluidScanOn;
   n.backend_mesher = phys.BackendMesher;
   n.backend_store = phys.BackendStore;
@@ -540,6 +543,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"gpu_light_readback\":" << n.gpu_light_readback
           << ",\"gpu_opaque_emit_gpu\":" << n.gpu_opaque_emit_gpu
           << ",\"gpu_transparent_sort_gpu\":" << n.gpu_transparent_sort_gpu
+          << ",\"gpu_fallback\":" << n.gpu_fallback
           << ",\"gpu_fluid_scan_on\":" << n.gpu_fluid_scan_on
           << ",\"backend_mesher\":\"" << n.backend_mesher << "\""
           << ",\"backend_store\":\"" << n.backend_store << "\""

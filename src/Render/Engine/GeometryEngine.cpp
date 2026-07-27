@@ -27,6 +27,7 @@
 #include "Render/Engine/IUMeshGpuStore.h"
 #include "Render/Engine/MdiVertexPoolStore.h"
 #include "Render/Backend/RenderBackendFactory.h"
+#include "Render/Backend/GpuHotPathFallback.h"
 #include "Render/Mesh/IUChunkCull.h"
 #include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Engine/ShaderManager.h"
@@ -1048,19 +1049,12 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       else if (store.BuildIndirectCommandsRange(cache, i, j, cmds) > 0 &&
                store.SubmitIndirectCommands(cmds))
       {
-        // One MultiDrawIndirect API submit per texture group.
+        NoteGpuHotPathFallback();
         ++draw_cmds;
       }
       else
       {
-        // Fallback for this texture run: DrawElementsBaseVertex.
-        if (cache.GpuCompactActive)
-        {
-          if (auto *mdi = dynamic_cast<UMdiVertexPoolStore *>(&store))
-          {
-            mdi->SyncCompactVisToCpu(const_cast<GreedyGpuPassCache &>(cache));
-          }
-        }
+        NoteGpuHotPathFallback();
         for (size_t k = i; k < j; ++k)
         {
           const GreedyGpuBatch &gpu = cache.batches[k];
@@ -1122,6 +1116,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
           reinterpret_cast<void *>(offsetof(GreedyMeshVertex, wetness)));
       glEnableVertexAttribArray(5);
       glDrawElements(GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT, nullptr);
+      NoteGpuHotPathFallback();
       ++draw_cmds;
     }
   }
@@ -1185,6 +1180,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       glDrawElements(
           GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
           reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
+      NoteGpuHotPathFallback();
       ++draw_cmds;
     }
   }
@@ -1436,6 +1432,11 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
       solid.push_back(ref);
     }
   }
+  // GPF5: one opaque MDI pass for solid+cutout (alphaCutout shader path).
+  std::vector<GreedyBatchRef> opaque_draw;
+  opaque_draw.reserve(solid.size() + cutout.size());
+  opaque_draw.insert(opaque_draw.end(), solid.begin(), solid.end());
+  opaque_draw.insert(opaque_draw.end(), cutout.begin(), cutout.end());
   // Sort by blockId so MDI can MultiDraw contiguous same-texture runs.
   // sort_revision=1 invalidates pre-sort pool layouts (was always 0).
   constexpr uint64_t kBlockIdSortRev = 1;
@@ -1457,46 +1458,32 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
   // Distance admit matches mesh-cache cull; 0 disables distance override.
   constexpr float kMaxCullDistance = 0.0f;
 
-  if (!solid.empty())
+  if (!opaque_draw.empty())
   {
-    std::sort(solid.begin(), solid.end(), by_block_id);
-    store.RefreshPassRefs(GreedyGpuOpaque, cache, solid, meshRevision,
+    std::sort(opaque_draw.begin(), opaque_draw.end(), by_block_id);
+    GLboolean cullWasEnabled = GL_TRUE;
+    if (!cutout.empty())
+    {
+      glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
+      glDisable(GL_CULL_FACE);
+    }
+    store.RefreshPassRefs(GreedyGpuOpaque, cache, opaque_draw, meshRevision,
                           cullRevision, kBlockIdSortRev);
     if (mdi)
     {
-      if (!mdi->ApplyGpuCompactCull(GreedyGpuOpaque, frustum, cameraPos,
-                                    kMaxCullDistance))
-      {
-        mdi->ApplyFrustumInstanceCull(GreedyGpuOpaque, frustum, cameraPos,
-                                      kMaxCullDistance);
-      }
+      mdi->ApplyGpuCompactCull(GreedyGpuOpaque, frustum, cameraPos,
+                               kMaxCullDistance);
     }
-    DrawGreedyGpuBatches(GreedyGpuOpaque, vp, textures, false, false,
+    DrawGreedyGpuBatches(GreedyGpuOpaque, vp, textures, true, false,
                          GreedyShaderMode::TransparentColor, 0.0f);
-  }
-  if (!cutout.empty())
-  {
-    std::sort(cutout.begin(), cutout.end(), by_block_id);
-    GLboolean cullWasEnabled;
-    glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
-    glDisable(GL_CULL_FACE);
-    store.RefreshPassRefs(GreedyGpuCutout, cache, cutout, meshRevision,
-                          cullRevision, kBlockIdSortRev);
-    if (mdi)
-    {
-      if (!mdi->ApplyGpuCompactCull(GreedyGpuCutout, frustum, cameraPos,
-                                    kMaxCullDistance))
-      {
-        mdi->ApplyFrustumInstanceCull(GreedyGpuCutout, frustum, cameraPos,
-                                      kMaxCullDistance);
-      }
-    }
-    DrawGreedyGpuBatches(GreedyGpuCutout, vp, textures, true, false,
-                         GreedyShaderMode::TransparentColor, 0.0f);
-    if (cullWasEnabled)
+    if (!cutout.empty() && cullWasEnabled)
     {
       glEnable(GL_CULL_FACE);
     }
+  }
+  if (!cutout.empty())
+  {
+    MeshStore().DestroyPass(GreedyGpuCutout);
   }
   if (WorldInstance)
   {
@@ -1588,6 +1575,13 @@ void UGeometryEngine::PrepareTransparent(
   MeshStore().RefreshPassRefs(GreedyGpuTransparent, ctx.cache, filtered,
                                    ctx.meshRevision, ctx.cullRevision,
                                    sortRevision);
+  if (auto *mdi = dynamic_cast<UMdiVertexPoolStore *>(&MeshStore()))
+  {
+    const Frustum frustum = Frustum::FromViewProjection(ctx.viewProjection);
+    constexpr float kMaxCullDistance = 0.0f;
+    mdi->ApplyGpuCompactCull(GreedyGpuTransparent, frustum, ctx.cameraPos,
+                             kMaxCullDistance);
+  }
   PreparedTransparentVp = ctx.viewProjection;
   PreparedTransparentTextures = &ctx.textures;
 }

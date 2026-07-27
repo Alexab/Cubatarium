@@ -1,4 +1,5 @@
 #include "Render/Engine/MdiVertexPoolStore.h"
+#include "Render/Backend/GpuHotPathFallback.h"
 #include "Render/GlIncludes.h"
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
@@ -424,6 +425,7 @@ bool UMdiVertexPoolStore::SyncCompactVisToCpu(GreedyGpuPassCache &cache)
   (void)cache;
   return false;
 #else
+  NoteGpuHotPathFallback();
   if (!cache.GpuCompactActive || cache.CompactVisCpuSynced ||
       cache.CullVisSsbo == 0 || cache.batches.empty())
   {
@@ -455,8 +457,11 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
 #else
   if (!EnsureCullProgram() || cache.batches.empty())
   {
-    ApplyFrustumInstanceCull(cache, frustum, camera_pos, max_cull_distance);
-    return false;
+    if (!cache.batches.empty() && !cache.GpuCompactActive)
+    {
+      RebuildIndirectCmdTable(cache);
+    }
+    return cache.GpuCompactActive;
   }
   if (!cache.GpuCompactActive || cache.IndirectCmdsBuffer == 0 ||
       cache.BatchSphereSsbo == 0 || cache.CullVisSsbo == 0)
@@ -465,7 +470,6 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   }
   if (!cache.GpuCompactActive)
   {
-    ApplyFrustumInstanceCull(cache, frustum, camera_pos, max_cull_distance);
     return false;
   }
 

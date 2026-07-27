@@ -275,6 +275,7 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("backend_mesher_gpu", "ge", 1.0),
         ("backend_cull_gpu", "ge", 1.0),
         ("gpu_cull_indirect_med", "ge", 0.5),
+        ("gpu_fallback_rate", "le", 0.0),
         ("gpu_draw_cmds_med", "le", 15.0),
         ("wall_ms_no_holes_med", "le", 45.0),
     ],

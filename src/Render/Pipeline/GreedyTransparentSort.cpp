@@ -2,6 +2,7 @@
 
 #include "Blocks/BlockRegistry.h"
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+#include "Render/Backend/GpuHotPathFallback.h"
 #include "Render/Pipeline/GpuTransparentSort.h"
 #endif
 
@@ -111,6 +112,7 @@ void SortTransparentGreedyBatches(
   {
     return;
   }
+  NoteGpuHotPathFallback();
 #endif
   std::vector<SortKey> keys;
   keys.reserve(refs.size());

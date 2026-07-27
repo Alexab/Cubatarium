@@ -86,6 +86,12 @@ void UGreedyTransparentPipeline::Draw(IUGreedyTransparentBackend &backend,
 
   for (const TransparentPassDesc &pass : GetGreedyTransparentPasses())
   {
+    // GPF5: skip fuzzy-only pass on desktop GPU MDI path (edges covered by
+    // ShellSurface); saves one MDI submit band per steady frame.
+    if (pass.shaderMode == GreedyShaderMode::FuzzyOnly)
+    {
+      continue;
+    }
     if (settings.logPassNames)
     {
       std::cout << "[Transparent] " << pass.debugName << std::endl;

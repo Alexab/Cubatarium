@@ -221,6 +221,12 @@ def analyze(
     gpu_opaque_emit_gpu_max = max_val(col(periods, "gpu_opaque_emit_gpu"))
     gpu_transparent_sort_gpu_med = median(col(steady, "gpu_transparent_sort_gpu"))
     gpu_transparent_sort_gpu_max = max_val(col(periods, "gpu_transparent_sort_gpu"))
+    gpu_fallback = col(steady, "gpu_fallback")
+    gpu_fallback_rate = (
+        sum(1 for v in gpu_fallback if v > 0) / len(gpu_fallback)
+        if gpu_fallback
+        else 1.0
+    )
     gpu_fluid_scan_on_med = median(col(steady, "gpu_fluid_scan_on"))
     fluid_names = [
         str(r.get("backend_fluid") or "")
@@ -697,6 +703,7 @@ def analyze(
             "gpu_opaque_emit_gpu_max": gpu_opaque_emit_gpu_max,
             "gpu_transparent_sort_gpu_med": gpu_transparent_sort_gpu_med,
             "gpu_transparent_sort_gpu_max": gpu_transparent_sort_gpu_max,
+            "gpu_fallback_rate": gpu_fallback_rate,
             "gpu_fluid_scan_on_med": gpu_fluid_scan_on_med,
             "backend_fluid_mode": backend_fluid_mode,
             "backend_lighting_mode": backend_lighting_mode,
