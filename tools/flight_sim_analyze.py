@@ -217,6 +217,30 @@ def analyze(
     caps_probe_completed_med = median(col(steady, "caps_probe_completed"))
     android_gpu_user_pref_med = median(col(steady, "android_gpu_user_pref"))
     android_gpu_effective_med = median(col(steady, "android_gpu_effective"))
+    deny_names = [
+        str(r.get("android_gpu_deny_reason") or "")
+        for r in steady
+        if r.get("android_gpu_deny_reason")
+    ]
+    gl_version_names = [
+        str(r.get("gl_version") or "") for r in steady if r.get("gl_version")
+    ]
+    gl_renderer_names = [
+        str(r.get("gl_renderer") or "") for r in steady if r.get("gl_renderer")
+    ]
+    android_gpu_deny_reason = (
+        Counter(deny_names).most_common(1)[0][0] if deny_names else ""
+    )
+    gl_version = (
+        Counter(gl_version_names).most_common(1)[0][0]
+        if gl_version_names
+        else ""
+    )
+    gl_renderer = (
+        Counter(gl_renderer_names).most_common(1)[0][0]
+        if gl_renderer_names
+        else ""
+    )
     # Alias without _med for AG gates that use exact keys from plan.
     caps_probe_completed = caps_probe_completed_med
     caps_has_compute = caps_has_compute_med
@@ -729,6 +753,9 @@ def analyze(
             "caps_probe_completed": caps_probe_completed,
             "android_gpu_user_pref": android_gpu_user_pref,
             "android_gpu_effective": android_gpu_effective,
+            "android_gpu_deny_reason": android_gpu_deny_reason,
+            "gl_version": gl_version,
+            "gl_renderer": gl_renderer,
         },
         "gates": gates,
         "gates_stop": gates_stop,

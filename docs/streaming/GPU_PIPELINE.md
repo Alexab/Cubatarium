@@ -54,7 +54,8 @@ set `render.android_gpu_enabled=false` to opt out (restart world).
 `vertex_pool_fill`, `gpu_cull_indirect`, `gpu_mesh_vbo_dispatch`,
 `gpu_light_seed_apply`, `gpu_mask_readback`, `gpu_blocklight_flood`,
 `gpu_fluid_scan_on`, `caps_probe_completed`, `caps_has_compute`,
-`android_gpu_user_pref`, `android_gpu_effective`, `android_gpu_deny_reason`
+`android_gpu_user_pref`, `android_gpu_effective`, `android_gpu_deny_reason`,
+`gl_version`, `gl_renderer`
 in `perf_*.jsonl`.
 
 Analyze emits `*_med` / `backend_*_mode` for gates in

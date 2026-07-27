@@ -283,4 +283,66 @@ MergeOpaqueQuadsStrict(const std::vector<GreedyQuad> &input)
   return out;
 }
 
+/// Decode GPU face-mask SSBO (6 bits per voxel) into 1x1 quads.
+inline std::vector<GreedyQuad>
+DecodeFaceMasks(const ChunkMeshSnapshot &snap, UBlockRegistry &registry,
+                const std::vector<uint32_t> &masks)
+{
+  (void)registry;
+  std::vector<GreedyQuad> quads;
+  const int n = CHUNK_SIZE;
+  const size_t vol = static_cast<size_t>(CHUNK_VOLUME);
+  for (size_t i = 0; i < vol && i < masks.size(); ++i)
+  {
+    const uint32_t m = masks[i];
+    if (m == 0)
+    {
+      continue;
+    }
+    const int x = static_cast<int>(i % n);
+    const int y = static_cast<int>(i / (n * n));
+    const int z = static_cast<int>((i / n) % n);
+    const BlockId id = snap.blocks[i];
+    auto emit = [&](int axis, int sign, uint32_t bit)
+    {
+      if ((m & bit) == 0)
+      {
+        return;
+      }
+      GreedyQuad q;
+      q.axis = axis;
+      q.slice = (axis == 0 ? x : (axis == 1 ? y : z)) + (sign > 0 ? 1 : 0);
+      if (axis == 0)
+      {
+        q.u = z;
+        q.v = y;
+      }
+      else if (axis == 1)
+      {
+        q.u = x;
+        q.v = z;
+      }
+      else
+      {
+        q.u = x;
+        q.v = y;
+      }
+      q.width = 1;
+      q.height = 1;
+      q.Id = id;
+      q.faceSign = sign;
+      q.LightPacked = snap.GetLightPackedLocal(glm::ivec3(x, y, z));
+      q.FluidPacked = 0;
+      quads.push_back(q);
+    };
+    emit(0, -1, 1u);
+    emit(0, 1, 2u);
+    emit(1, -1, 4u);
+    emit(1, 1, 8u);
+    emit(2, -1, 16u);
+    emit(2, 1, 32u);
+  }
+  return quads;
+}
+
 } // namespace cutum

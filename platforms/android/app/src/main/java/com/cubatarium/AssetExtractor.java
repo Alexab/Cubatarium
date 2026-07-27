@@ -36,6 +36,7 @@ public final class AssetExtractor {
     private static final Set<String> GAME_ASSET_WHITELIST = new HashSet<>(Arrays.asList(
             "config.json",
             "config.json.example",
+            "config",
             "content",
             "fonts",
             "models",

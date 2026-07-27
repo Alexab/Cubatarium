@@ -19,4 +19,13 @@ Runner: `python tools/android_gpu_phase_run.py --phase-id AGx --report bin/phase
 Factory: without `AllowAndroidGpu`, Android selects CPU mesher/cull/staging —
 covered by `render_backend_factory_test` + `android_gpu_policy_test`.
 
-Allowlist: `assets/config/android_gpu.json` (also under Android APK assets).
+Allowlist: `assets/config/android_gpu.json` (synced into APK as `config/` via
+`syncAssets` + AssetExtractor whitelist).
+
+A2 hybrid path: GLES face-mask SSBO (`shaders/gles/compute/face_mask_extract.comp`)
+→ decode → `MergeOpaqueQuadsStrict` on pack/main thread; CPU extract fallback.
+Desktop `UGpuGreedyMesher` stays desktop-only (caps Platform check).
+
+Device runner: without `--skip-device`, `android_gpu_phase_run.py` does
+`adb install` + launch smoke (+ logcat). Full AG1–AG4 cruise still needs an
+on-device flight_sim harness (desktop cruise covers F2/AG0 probe metrics).
