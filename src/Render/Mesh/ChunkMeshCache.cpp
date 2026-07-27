@@ -7,6 +7,7 @@
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "Render/Mesh/CrossInstanceCollector.h"
 #include "Render/Mesh/CrossMeshEmitter.h"
+#include "World/Streaming/MeshLitGate.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
 #include "Render/Mesh/IUChunkCull.h"
@@ -461,14 +462,22 @@ bool UChunkMeshCache::HasGreedyMesh(glm::ivec3 chunk_coord) const
   return GreedyCache.find(chunk_coord) != GreedyCache.end();
 }
 
-bool UChunkMeshCache::ChunkHasFullyDarkFace(glm::ivec3 chunk_coord) const
+void UChunkMeshCache::NoteGeometryDirty(glm::ivec3 chunk_coord)
 {
-  const auto it = GreedyCache.find(chunk_coord);
-  if (it == GreedyCache.end())
-  {
-    return false;
-  }
-  for (const GreedyMeshBatch &batch : it->second.batches)
+  GeometryDirtyChunks.insert(chunk_coord);
+}
+
+void UChunkMeshCache::ConsumeGeometryDirtyChunks(
+    std::unordered_set<glm::ivec3, IVec3Hash> &out) const
+{
+  out.swap(GeometryDirtyChunks);
+  GeometryDirtyChunks.clear();
+}
+
+bool UChunkMeshCache::BatchesHaveFullyDarkFace(
+    const std::vector<GreedyMeshBatch> &batches)
+{
+  for (const GreedyMeshBatch &batch : batches)
   {
     for (const GreedyMeshVertex &v : batch.vertices)
     {
@@ -479,6 +488,16 @@ bool UChunkMeshCache::ChunkHasFullyDarkFace(glm::ivec3 chunk_coord) const
     }
   }
   return false;
+}
+
+bool UChunkMeshCache::ChunkHasFullyDarkFace(glm::ivec3 chunk_coord) const
+{
+  const auto it = GreedyCache.find(chunk_coord);
+  if (it == GreedyCache.end())
+  {
+    return false;
+  }
+  return BatchesHaveFullyDarkFace(it->second.batches);
 }
 
 bool UChunkMeshCache::IsChunkMeshDirty(glm::ivec3 chunk_coord) const
@@ -843,6 +862,7 @@ void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
 {
   Cache.erase(chunkCoord);
   GreedyCache.erase(chunkCoord);
+  NoteGeometryDirty(chunkCoord);
   const auto vIt = GreedyVertexCountByChunk.find(chunkCoord);
   if (vIt != GreedyVertexCountByChunk.end())
   {
@@ -877,6 +897,7 @@ void UChunkMeshCache::RemoveColumn(glm::ivec3 ground_coord, int max_cy)
     const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
     Cache.erase(slice);
     GreedyCache.erase(slice);
+    NoteGeometryDirty(slice);
     const auto vIt = GreedyVertexCountByChunk.find(slice);
     if (vIt != GreedyVertexCountByChunk.end())
     {
@@ -1336,6 +1357,22 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     result.GpuExtractPending = false;
   }
 
+  const bool defer_until_lit =
+      DeferMeshUntilLit && DeferMeshUntilLit(result.coord);
+  const bool had_mesh = GreedyCache.find(result.coord) != GreedyCache.end();
+  const bool had_lit_mesh = had_mesh && !ChunkHasFullyDarkFace(result.coord);
+  const bool new_dark = BatchesHaveFullyDarkFace(result.batches);
+  if (ShouldRejectDarkMeshCommit(new_dark, defer_until_lit, had_lit_mesh))
+  {
+    // Keep prior lit mesh (or hole). SoftDefer/MarkRelit requeues deferred.
+    if (RemeshAfterApply.erase(result.coord) > 0 || defer_until_lit ||
+        !had_mesh)
+    {
+      MarkDirtyPriority(result.coord);
+    }
+    return;
+  }
+
   ChunkGreedyMesh &chunkMesh = GreedyCache[result.coord];
   size_t new_vertex_count = 0;
   for (const GreedyMeshBatch &b : result.batches)
@@ -1351,6 +1388,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   GreedyVertexCountTotal += new_vertex_count;
   chunkMesh.batches = std::move(result.batches);
   chunkMesh.crossCenters = std::move(result.crossCenters);
+  NoteGeometryDirty(result.coord);
   PendingMeshRevisionBump = true;
   InstancesDirty = true;
   CrossBatchesDirty = true;
@@ -1950,15 +1988,31 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
         vertex.wetness = SurfaceWetness * (top_face ? 0.15f : 0.05f);
       }
     }
-    const int max_local_y = MaxSolidLocalY(*chunk, registry);
-    ChunkGreedyMesh &chunkMesh = GreedyCache[chunkCoord];
-    chunkMesh.batches.clear();
-    chunkMesh.batches.reserve(byBlockId.size());
+    std::vector<GreedyMeshBatch> new_batches;
+    new_batches.reserve(byBlockId.size());
     for (auto &pair : byBlockId)
     {
       pair.second.blockId = pair.first;
-      chunkMesh.batches.push_back(std::move(pair.second));
+      new_batches.push_back(std::move(pair.second));
     }
+    const bool defer_until_lit =
+        DeferMeshUntilLit && DeferMeshUntilLit(chunkCoord);
+    const bool had_mesh = GreedyCache.find(chunkCoord) != GreedyCache.end();
+    const bool had_lit_mesh = had_mesh && !ChunkHasFullyDarkFace(chunkCoord);
+    const bool new_dark = BatchesHaveFullyDarkFace(new_batches);
+    if (ShouldRejectDarkMeshCommit(new_dark, defer_until_lit, had_lit_mesh))
+    {
+      // Keep prior lit mesh. Requeue only while SoftDefer owns the column —
+      // otherwise MarkDirty thrash rebuilds the same unlit result every tick.
+      if (defer_until_lit || !had_mesh)
+      {
+        MarkDirtyPriority(chunkCoord);
+      }
+      return;
+    }
+    const int max_local_y = MaxSolidLocalY(*chunk, registry);
+    ChunkGreedyMesh &chunkMesh = GreedyCache[chunkCoord];
+    chunkMesh.batches = std::move(new_batches);
     size_t new_vertex_count = 0;
     for (const GreedyMeshBatch &b : chunkMesh.batches)
     {
@@ -1974,6 +2028,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     chunkMesh.crossCenters.clear();
     CollectCrossInstancesInBand(*chunk, chunkCoord, registry, max_local_y,
                                 chunkMesh.crossCenters);
+    NoteGeometryDirty(chunkCoord);
   }
   else
   {

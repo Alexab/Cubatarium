@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <iostream>
 
+using cutum::ShouldRejectDarkMeshCommit;
 using cutum::SoftDeferMeshUntilLitPolicy;
 
 static int failures = 0;
@@ -45,6 +46,15 @@ int main()
          "outside missing !may_mesh defer");
   Expect(!SoftDeferMeshUntilLitPolicy(false, false, false, false, true),
          "outside missing may_mesh allow");
+
+  Expect(!ShouldRejectDarkMeshCommit(false, true, true),
+         "lit new mesh always commits");
+  Expect(ShouldRejectDarkMeshCommit(true, true, false),
+         "pending-light dark first mesh rejected");
+  Expect(ShouldRejectDarkMeshCommit(true, false, true),
+         "dark remesh must not replace lit mesh");
+  Expect(!ShouldRejectDarkMeshCommit(true, false, false),
+         "cave/unlit first mesh allowed when not deferred");
 
   if (failures != 0)
   {

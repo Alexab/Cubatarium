@@ -106,6 +106,11 @@ public:
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
   /// True if any greedy vertex in chunk has sky+block light == 0.
   bool ChunkHasFullyDarkFace(glm::ivec3 chunk_coord) const;
+  static bool BatchesHaveFullyDarkFace(
+      const std::vector<GreedyMeshBatch> &batches);
+  /// Chunks whose greedy geometry changed since last GPU pool consume.
+  void ConsumeGeometryDirtyChunks(
+      std::unordered_set<glm::ivec3, IVec3Hash> &out) const;
   bool HasMissingGreedyMeshInHorizontalRadius(const UBlockWorld &world,
                                               glm::ivec3 center_ground_chunk,
                                               int radius_chunks) const;
@@ -384,6 +389,9 @@ private:
   int MaxOutsideFocusMeshPerFrame{2};
   int MaxRearFocusMeshPerFrame{0};
   std::unordered_set<glm::ivec3, IVec3Hash> RemeshAfterApply;
+  /// GPU pool incremental upload: chunks mutated since last Consume.
+  mutable std::unordered_set<glm::ivec3, IVec3Hash> GeometryDirtyChunks;
+  void NoteGeometryDirty(glm::ivec3 chunk_coord);
   /// -1 = no extra horizontal schedule cap (only focus starve applies).
   int MeshScheduleMaxHorizontalDist{-1};
   double MeshSnapshotBudgetMs{6.0};

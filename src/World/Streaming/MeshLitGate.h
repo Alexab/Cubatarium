@@ -29,4 +29,23 @@ inline bool SoftDeferMeshUntilLitPolicy(bool underfeet, bool has_mesh,
   return !may_mesh_outside_focus;
 }
 
+/// Reject committing a mesh that has fully-dark faces when light is still
+/// pending, or when it would replace an already-lit mesh (dig/async race).
+/// Cave first-mesh with legitimate light=0 is allowed (no lit predecessor,
+/// not deferred).
+inline bool ShouldRejectDarkMeshCommit(bool new_has_dark_face,
+                                       bool defer_until_lit,
+                                       bool had_lit_mesh)
+{
+  if (!new_has_dark_face)
+  {
+    return false;
+  }
+  if (defer_until_lit)
+  {
+    return true;
+  }
+  return had_lit_mesh;
+}
+
 } // namespace cutum
