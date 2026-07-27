@@ -317,6 +317,10 @@ private:
   GreedyGpuPassCache GreedyGpuCutout;
   GreedyGpuPassCache GreedyGpuTransparent;
   CrossGpuPassCache CrossGpuPass;
+  std::vector<GreedyBatchRef> CachedTransparentSortedRefs;
+  uint64_t CachedTransparentSortRevision{0};
+  uint64_t CachedTransparentMeshRevision{0};
+  uint64_t CachedTransparentRefFingerprint{0};
   glm::mat4 PreparedTransparentVp{};
   const std::map<size_t, UTextureCube> *PreparedTransparentTextures{nullptr};
   IUMeshGpuStore &MeshStore();

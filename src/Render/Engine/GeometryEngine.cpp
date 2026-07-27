@@ -1518,6 +1518,24 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
   }
 }
 
+namespace
+{
+
+uint64_t TransparentRefListFingerprint(const std::vector<GreedyBatchRef> &refs)
+{
+  uint64_t h = refs.size();
+  for (const GreedyBatchRef &r : refs)
+  {
+    h ^= (static_cast<uint64_t>(static_cast<uint32_t>(r.chunkCoord.x)) << 42) ^
+         (static_cast<uint64_t>(static_cast<uint32_t>(r.chunkCoord.y)) << 21) ^
+         static_cast<uint64_t>(static_cast<uint32_t>(r.chunkCoord.z));
+    h ^= static_cast<uint64_t>(r.batchIndex) * 0x9e3779b97f4a7c15ull;
+  }
+  return h;
+}
+
+} // namespace
+
 void UGeometryEngine::PrepareTransparent(
     const GreedyTransparentDrawContext &ctx)
 {
@@ -1541,11 +1559,32 @@ void UGeometryEngine::PrepareTransparent(
   {
     MeshStore().DestroyPass(GreedyGpuTransparent);
     PreparedTransparentTextures = nullptr;
+    CachedTransparentSortedRefs.clear();
+    CachedTransparentSortRevision = 0;
+    CachedTransparentMeshRevision = 0;
+    CachedTransparentRefFingerprint = 0;
     return;
   }
-  SortTransparentGreedyBatches(filtered, ctx.cache, ctx.cameraPos,
-                               ctx.blockRegistry);
   const uint64_t sortRevision = GreedyTransparentSortRevision(ctx.cameraPos);
+  const uint64_t refFingerprint = TransparentRefListFingerprint(filtered);
+  const bool sort_inputs_unchanged =
+      sortRevision == CachedTransparentSortRevision &&
+      ctx.meshRevision == CachedTransparentMeshRevision &&
+      refFingerprint == CachedTransparentRefFingerprint &&
+      !CachedTransparentSortedRefs.empty();
+  if (sort_inputs_unchanged && !CachedTransparentSortedRefs.empty())
+  {
+    filtered = CachedTransparentSortedRefs;
+  }
+  else
+  {
+    SortTransparentGreedyBatches(filtered, ctx.cache, ctx.cameraPos,
+                                 ctx.blockRegistry);
+    CachedTransparentSortedRefs = filtered;
+    CachedTransparentSortRevision = sortRevision;
+    CachedTransparentMeshRevision = ctx.meshRevision;
+    CachedTransparentRefFingerprint = refFingerprint;
+  }
   MeshStore().RefreshPassRefs(GreedyGpuTransparent, ctx.cache, filtered,
                                    ctx.meshRevision, ctx.cullRevision,
                                    sortRevision);

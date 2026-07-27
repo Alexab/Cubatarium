@@ -1,6 +1,9 @@
 #include "Render/Pipeline/GreedyTransparentSort.h"
 
 #include "Blocks/BlockRegistry.h"
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+#include "Render/Pipeline/GpuTransparentSort.h"
+#endif
 
 #include <algorithm>
 #include <cmath>
@@ -103,6 +106,12 @@ void SortTransparentGreedyBatches(
     const UChunkMeshCache &cache, const glm::vec3 &cameraPos,
     const UBlockRegistry &registry)
 {
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  if (TryGpuSortTransparentGreedyBatches(refs, cache, cameraPos, registry))
+  {
+    return;
+  }
+#endif
   std::vector<SortKey> keys;
   keys.reserve(refs.size());
   for (size_t i = 0; i < refs.size(); ++i)

@@ -249,7 +249,7 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
     "D2b": [
         ("post_stop_black_sticky_max", "le", 0.0),
         ("chunks_traveled", "ge", 3.0),
-        ("gpu_transparent_sort_gpu_med", "ge", 0.0),
+        ("gpu_transparent_sort_gpu_max", "ge", 0.5),
         ("wall_ms_no_holes_med", "le", 45.0),
     ],
     "D2c": [

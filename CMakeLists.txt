@@ -270,6 +270,7 @@ set(SOURCES
     src/Render/Mesh/GpuFrustumCull.cpp
     src/Render/Mesh/GpuGreedyMesher.cpp
     src/Render/Mesh/GpuGreedyOpaqueEmit.cpp
+    src/Render/Pipeline/GpuTransparentSort.cpp
     src/Render/Mesh/GpuFluidColumnScan.cpp
     src/World/Lighting/GpuSkylightColumnSeed.cpp
     src/World/Lighting/GpuBlocklightFlood.cpp
@@ -1180,6 +1181,17 @@ target_include_directories(gpu_greedy_face_extract_test PRIVATE
 target_compile_definitions(gpu_greedy_face_extract_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(gpu_greedy_face_extract_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(greedy_transparent_sort_test
+    src/Test/GreedyTransparentSortTest.cpp
+    src/Render/Pipeline/GreedyTransparentSort.cpp
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/World/Math/GridMath.cpp)
+target_include_directories(greedy_transparent_sort_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(greedy_transparent_sort_test PRIVATE
+    CUBATARIUM_GLES ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(greedy_transparent_sort_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(gpu_skylight_column_seed_test
     src/Test/GpuSkylightColumnSeedTest.cpp)
