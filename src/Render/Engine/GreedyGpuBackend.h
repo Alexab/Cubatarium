@@ -7,6 +7,7 @@
 #include "World/Math/BlockTypes.h"
 #include <cstddef>
 #include <cstdint>
+#include <glm/glm.hpp>
 #include <vector>
 
 typedef unsigned int GLuint;
@@ -20,6 +21,7 @@ class UChunkMeshCache;
 struct GreedyGpuBatch
 {
   BlockId blockId{BLOCK_AIR};
+  glm::ivec3 chunkCoord{0};
   size_t vertexCount{0};
   size_t indexCount{0};
   GLuint vbo{0};
@@ -85,6 +87,8 @@ private:
   void UploadBuffer(GLuint &buffer, size_t &capacity_bytes, unsigned int target,
                     const void *data, size_t byte_size);
   void DestroyBatchBuffers(GreedyGpuBatch &batch);
+  void ReleasePooledBatch(GreedyGpuBatch &batch, UGreedyVertexPool &pool);
+  void FillBatchCull(GreedyGpuBatch &dst, const GreedyBatchRef &ref);
 };
 
 } // namespace cutum
