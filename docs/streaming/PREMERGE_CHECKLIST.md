@@ -72,24 +72,27 @@ teleport-cruise golden — do not fail merge solely on replay wall/sticky noise.
 - снятие heavy_dirty caps ради cold_relight
 - `CancelAsyncInFlightKeepDirty` на idle remesh
 
-## 6. GPU dual-stack (after G0–GA + P* completion)
+## 6. GPU dual-stack (after G0–GA + P* + D1)
 
 Desktop expect jsonl: `backend_mesher=gpu_greedy`, `backend_store=mdi_vertex_pool`,
 `backend_cull=gpu_frustum`, `backend_fluid=gpu_fluid_surface`,
-`gpu_draw_cmds` med ≤15, `gpu_cull_indirect` ≈1, `gpu_fluid_scan_on` ≈1.
+`backend_lighting_mode` in (`full`,`gpu_full`) — never `flat` on GPU stack,
+`gpu_draw_cmds` med ≤15, `gpu_cull_indirect` ≈1, `gpu_fluid_scan_on` ≈1,
+`gpu_mask_readback` med = 0.
 
 ```powershell
-python tools/flight_sim_phase_gate.py --phase-id F2 --report bin/phase_PA.json
-python tools/flight_sim_phase_gate.py --phase-id PA --report bin/phase_PA.json
-python tools/flight_sim_phase_gate.py --phase-id GA --report bin/phase_PA.json
-# Optional: P0 P2 P3 P5 P6 P7 individually; C/CB vs cb_pack (variance re-run OK)
+python tools/flight_sim_phase_gate.py --phase-id F2 --report bin/phase_D1.json
+python tools/flight_sim_phase_gate.py --phase-id D1a --report bin/phase_D1.json
+python tools/flight_sim_phase_gate.py --phase-id D1d --report bin/phase_D1.json
+python tools/flight_sim_phase_gate.py --phase-id PA --report bin/phase_D1.json
+python tools/flight_sim_phase_gate.py --phase-id GA --report bin/phase_D1.json
 ```
 
-P* completion (landed): cull→instanceCount MDI (P2), single pool upload (P3),
-PreferGpu fluid (P7), skylight seed apply (P6), GPU extract telem/hooks (P5).
+P* + D1 (Desktop): cull→MDI (P2), single pool upload (P3), PreferGpu fluid (P7),
+skylight without sky GetBufferSubData (D1.3), opaque greedy without mask readback
+(D1.1), force Full lighting (D1.4).
 
-Android/GLES: Select keeps `cpu_greedy` + `cpu_staging` + `cpu_frustum` (no MDI/
-compute required). Device smoke: [`QA_ANDROID_2026.md`](../QA_ANDROID_2026.md)
-greedy + fluids. Factory unit: `render_backend_factory_test`.
-
-D1 backlog: no CPU flat refs, transparent GPU sort, greedy merge, blocklight flood.
+Android/GLES: CPU stack unless `AllowAndroidGpu` (default false). See
+[`ANDROID_GPU_BACKLOG.md`](ANDROID_GPU_BACKLOG.md). Device smoke:
+[`QA_ANDROID_2026.md`](../QA_ANDROID_2026.md). Factory:
+`render_backend_factory_test`.

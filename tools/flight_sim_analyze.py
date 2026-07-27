@@ -207,6 +207,8 @@ def analyze(
     gpu_cull_indirect_med = median(col(steady, "gpu_cull_indirect"))
     gpu_mesh_vbo_dispatch_med = median(col(steady, "gpu_mesh_vbo_dispatch"))
     gpu_light_seed_apply_med = median(col(steady, "gpu_light_seed_apply"))
+    gpu_mask_readback_med = median(col(steady, "gpu_mask_readback"))
+    gpu_blocklight_flood_med = median(col(steady, "gpu_blocklight_flood"))
     gpu_fluid_scan_on_med = median(col(steady, "gpu_fluid_scan_on"))
     fluid_names = [
         str(r.get("backend_fluid") or "")
@@ -215,6 +217,20 @@ def analyze(
     ]
     backend_fluid_mode = (
         Counter(fluid_names).most_common(1)[0][0] if fluid_names else ""
+    )
+    lighting_names = [
+        str(r.get("backend_lighting_mode") or "")
+        for r in steady
+        if r.get("backend_lighting_mode")
+    ]
+    backend_lighting_mode = (
+        Counter(lighting_names).most_common(1)[0][0] if lighting_names else ""
+    )
+    backend_lighting_flat = 1.0 if backend_lighting_mode == "flat" else 0.0
+    backend_lighting_full = (
+        1.0
+        if backend_lighting_mode in ("full", "gpu_full")
+        else 0.0
     )
 
     holes_rate = (sum(1 for h in holes if h > 0) / len(holes)) if holes else 1.0
@@ -661,8 +677,13 @@ def analyze(
             "gpu_cull_indirect_med": gpu_cull_indirect_med,
             "gpu_mesh_vbo_dispatch_med": gpu_mesh_vbo_dispatch_med,
             "gpu_light_seed_apply_med": gpu_light_seed_apply_med,
+            "gpu_mask_readback_med": gpu_mask_readback_med,
+            "gpu_blocklight_flood_med": gpu_blocklight_flood_med,
             "gpu_fluid_scan_on_med": gpu_fluid_scan_on_med,
             "backend_fluid_mode": backend_fluid_mode,
+            "backend_lighting_mode": backend_lighting_mode,
+            "backend_lighting_flat": backend_lighting_flat,
+            "backend_lighting_full": backend_lighting_full,
         },
         "gates": gates,
         "gates_stop": gates_stop,

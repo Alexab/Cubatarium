@@ -9,7 +9,8 @@ $targets = @(
     "fluid_surface_pack_reuse_test",
     "gpu_skylight_column_seed_test",
     "gpu_greedy_face_extract_test",
-    "gpu_fluid_column_scan_test"
+    "gpu_fluid_column_scan_test",
+    "render_backend_factory_test"
 )
 
 cmake --build $Build --config $Cfg --parallel 8 @($targets | ForEach-Object { "--target"; $_ })

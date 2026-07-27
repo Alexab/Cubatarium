@@ -79,17 +79,50 @@ Prior baseline: `bin/phase_P2f2.json` (wall_no_holes≈33).
 | P3 | Yes | Single pool `Allocate` upload |
 | P7 | Yes+ | PreferGpu + pack-hash reuse (full slice skip + tops reuse); `fluid_surface_pack_reuse_test` |
 | P6 | Yes+ | Sync `RelightChunkCoords` GPU seed (cap 1/batch); **async apply** merges block light via `MergeBlockLightKeepingGpuSky`; `gpu_skylight_merge_test` |
-| P5 | Yes+ | Worker defers eligible opaque → main `TryExtractOpaqueToBatches`; deferred path uses **CPU extract** (no mask readback). Hot path mask readback interim (D1) |
-| PA | Yes | Formal F2+P*+GA on `phase_P2f2` — re-run after tail land |
-| D1 | Backlog | No CPU flat refs / transparent GPU sort / greedy merge / blocklight flood / SSBO→VBO without mask readback |
+| P5 | Yes+ | Worker defers eligible opaque → main `TryExtractOpaqueToBatches`; deferred + hot path use CPU extract + `MergeOpaqueQuadsStrict` (no mask readback; legacy behind `CUBATARIUM_GPU_MASK_READBACK=1`) |
+| PA | Yes | Formal F2+P*+GA on `phase_P_tails` |
+| D1 | In progress | Caps/factory split; opaque greedy without readback; transparent cullSphere keys; sky seed CPU parity; force Full lighting on Desktop GPU |
+
+## D1 ladder
+
+| Phase | Goal | Gate id |
+|-------|------|---------|
+| D1.0 | Caps probe + mask_readback telemetry | F2+PA |
+| D1.5a | Factory-driven fluid bind; `AllowAndroidGpu=false` | factory test + PA |
+| D1.1 | Opaque greedy merge, `gpu_mask_readback_med==0` | D1a |
+| D1.2 | Transparent sort via AABB/cullSphere keys | D1b |
+| D1.3 | Sky seed no readback + blocklight flood hook | D1c |
+| D1.4 | Force Full lighting on Desktop GPU stack | D1d |
+| D1.6 | Android GPU A0–A4 backlog (opt-in) | AG0…AG4 stubs |
+| D1.7 | Docs + PA sign-off | PA |
+
+Order: `D1.0 → D1.5a → D1.1 → D1.2 → D1.3 → D1.4 → D1.7` (+ Android backlog).
+
+```powershell
+# D1 units
+pwsh tools/run_gpu_tail_unit_tests.ps1
+cmake --build build/desktop-msvc --config Release --target render_backend_factory_test
+./build/desktop-msvc/Release/render_backend_factory_test.exe
+
+python tools/flight_sim_run.py --world World_164 --teleport-cruise --seconds 130 `
+  --fly-stop --fly-phase-sec 45 --stop-phase-sec 60 --idle-sec 8 `
+  --phase-id D1d --report bin/phase_D1.json
+python tools/flight_sim_phase_gate.py --phase-id F2 --report bin/phase_D1.json
+python tools/flight_sim_phase_gate.py --phase-id D1a --report bin/phase_D1.json
+python tools/flight_sim_phase_gate.py --phase-id D1b --report bin/phase_D1.json
+python tools/flight_sim_phase_gate.py --phase-id D1c --report bin/phase_D1.json
+python tools/flight_sim_phase_gate.py --phase-id D1d --report bin/phase_D1.json
+python tools/flight_sim_phase_gate.py --phase-id PA --report bin/phase_D1.json
+```
 
 ### Remaining tails (post-P2f2)
 
 | Tail | Fix | Test / gate |
 |------|-----|-------------|
 | P2 vis sync on hot path | Lazy `SyncCompactVisToCpu` only in fallback draw | F2 wall/sticky; no unit (needs GL) |
-| P5 mask readback on non-deferred extract | `deferred_no_gpu_readback` → `ExtractOpaqueFacesCpu` | `gpu_greedy_face_extract_test` (CPU ref) |
-| P6 async skylight + block merge | `include_skylight` + `MergeBlockLightKeepingGpuSky` in `DrainAsyncRelightResults` | `gpu_skylight_merge_test` |
+| D1.1 mask readback | Hot path CPU extract+merge; env legacy readback | `gpu_mask_readback_med==0` / D1a |
+| P6 async skylight + block merge | `include_skylight` + `MergeBlockLightKeepingGpuSky` | `gpu_skylight_merge_test` |
 | P7 full slice cache | `has_slice` + pack-hash hit returns cached slice | `fluid_surface_pack_reuse_test` |
 
-Desktop: `gpu_greedy` / `mdi_vertex_pool` / `gpu_frustum` + PreferGpu fluid.
+Desktop: `gpu_greedy` / `mdi_vertex_pool` / `gpu_frustum` + PreferGpu fluid;
+`backend_lighting_mode` is `gpu_full`/`full` (never `flat` on GPU stack).

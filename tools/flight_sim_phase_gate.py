@@ -204,6 +204,55 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("gpu_mesh_vbo_dispatch_med", "ge", 0.0),
         ("gpu_light_seed_apply_med", "ge", 0.0),
     ],
+    # D1 Desktop completion ladder.
+    "D1a": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("backend_mesher_gpu", "ge", 1.0),
+        ("gpu_mask_readback_med", "le", 0.0),
+        ("wall_ms_no_holes_med", "le", 45.0),
+        ("cold_relight_holes_sec", "le", 3.0),
+    ],
+    "D1b": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("backend_mesher_gpu", "ge", 1.0),
+        ("wall_ms_no_holes_med", "le", 45.0),
+        ("gpu_mask_readback_med", "le", 0.0),
+    ],
+    "D1c": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("cold_relight_holes_sec", "le", 3.0),
+        ("post_stop_pending_med", "le", 5.0),
+        ("gpu_light_seed_apply_med", "ge", 0.0),
+        ("gpu_mask_readback_med", "le", 0.0),
+    ],
+    "D1d": [
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+        ("backend_mesher_gpu", "ge", 1.0),
+        ("backend_lighting_full", "ge", 1.0),
+        ("backend_lighting_flat", "le", 0.0),
+        ("gpu_mask_readback_med", "le", 0.0),
+        ("wall_ms_no_holes_med", "le", 45.0),
+    ],
+    # Android GPU backlog stubs (informational; not Desktop CB thresholds).
+    "AG0": [
+        ("chunks_traveled", "ge", 0.0),
+    ],
+    "AG1": [
+        ("chunks_traveled", "ge", 0.0),
+    ],
+    "AG2": [
+        ("chunks_traveled", "ge", 0.0),
+    ],
+    "AG3": [
+        ("chunks_traveled", "ge", 0.0),
+    ],
+    "AG4": [
+        ("chunks_traveled", "ge", 0.0),
+    ],
 }
 
 
