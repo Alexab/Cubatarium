@@ -148,6 +148,10 @@ struct PhysicsTelemetry
   /// 1 when PreferGpu fluid column scan is active this frame.
   double GpuFluidScanOn{0.0};
   std::string BackendFluid{"cpu_fluid_surface"};
+  /// "flat" | "full" | "gpu_full" — active lighting pipeline mode.
+  std::string BackendLightingMode{"full"};
+  uint64_t GpuMaskReadback{0};
+  uint64_t GpuBlocklightFlood{0};
   int MemoryPressure{0};
   int KeepMarginEff{0};
   uint64_t BufferExpandEvents{0};

@@ -265,11 +265,13 @@ set(SOURCES
     src/Render/Engine/CrossGpuBackend.cpp
     src/Render/Backend/RenderBackendFactory.cpp
     src/Render/Backend/RenderBackendSelect.cpp
+    src/Render/Backend/RenderBackendCaps.cpp
     src/Render/Mesh/CpuFrustumCull.cpp
     src/Render/Mesh/GpuFrustumCull.cpp
     src/Render/Mesh/GpuGreedyMesher.cpp
     src/Render/Mesh/GpuFluidColumnScan.cpp
     src/World/Lighting/GpuSkylightColumnSeed.cpp
+    src/World/Lighting/GpuBlocklightFlood.cpp
     src/Render/Engine/MdiVertexPoolStore.cpp
     src/Render/Engine/DistanceFog.cpp
     src/Render/Engine/HorizonFogColor.cpp
@@ -1155,7 +1157,8 @@ target_link_libraries(edit_mesh_remesh_policy_test glm::glm)
 
 add_executable(render_backend_factory_test
     src/Test/RenderBackendFactoryTest.cpp
-    src/Render/Backend/RenderBackendSelect.cpp)
+    src/Render/Backend/RenderBackendSelect.cpp
+    src/Render/Backend/RenderBackendCaps.cpp)
 target_include_directories(render_backend_factory_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 

@@ -10,15 +10,18 @@ URenderBackendFactory::Select(const RenderBackendCaps &caps)
   sel.Mesher = MesherBackendKind::CpuGreedy;
   sel.Cull = CullBackendKind::CpuFrustum;
 
-  if (!caps.ForceCpuBackends && caps.Platform == RenderPlatformKind::Desktop &&
-      caps.HasCompute)
+  const bool want_gpu =
+      !caps.ForceCpuBackends && caps.HasCompute && caps.HasSsbo &&
+      (caps.Platform == RenderPlatformKind::Desktop || caps.AllowAndroidGpu);
+
+  if (want_gpu)
   {
-    // Desktop: GPU mesher + GPU cull (compute / parity wrappers).
     sel.Mesher = MesherBackendKind::GpuGreedy;
     sel.Cull = CullBackendKind::GpuFrustum;
   }
 
-  if (caps.HasMultiDrawIndirect && !caps.ForceCpuBackends)
+  if (caps.HasMultiDrawIndirect && !caps.ForceCpuBackends &&
+      (caps.Platform == RenderPlatformKind::Desktop || caps.AllowAndroidGpu))
   {
     sel.Store = MeshStoreBackendKind::MdiVertexPool;
   }

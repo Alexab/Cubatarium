@@ -45,17 +45,38 @@ int main()
     RenderBackendCaps caps;
     caps.Platform = RenderPlatformKind::Android;
     caps.HasCompute = true;
+    caps.HasSsbo = true;
     caps.HasMultiDrawIndirect = true;
+    caps.AllowAndroidGpu = false;
     const RenderBackendSelection sel = URenderBackendFactory::Select(caps);
     Expect(sel.Mesher == MesherBackendKind::CpuGreedy,
-           "android keeps cpu mesher");
+           "android keeps cpu mesher without AllowAndroidGpu");
     Expect(sel.Cull == CullBackendKind::CpuFrustum, "android keeps cpu cull");
+    Expect(sel.Store == MeshStoreBackendKind::CpuStaging,
+           "android keeps staging without AllowAndroidGpu");
+  }
+
+  {
+    RenderBackendCaps caps;
+    caps.Platform = RenderPlatformKind::Android;
+    caps.HasCompute = true;
+    caps.HasSsbo = true;
+    caps.HasMultiDrawIndirect = false;
+    caps.AllowAndroidGpu = true;
+    const RenderBackendSelection sel = URenderBackendFactory::Select(caps);
+    Expect(sel.Mesher == MesherBackendKind::GpuGreedy,
+           "android opt-in AllowAndroidGpu selects gpu mesher");
+    Expect(sel.Cull == CullBackendKind::GpuFrustum,
+           "android opt-in AllowAndroidGpu selects gpu cull");
+    Expect(sel.Store == MeshStoreBackendKind::CpuStaging,
+           "android opt-in without MDI keeps staging");
   }
 
   {
     RenderBackendCaps caps;
     caps.Platform = RenderPlatformKind::Desktop;
     caps.HasCompute = true;
+    caps.HasSsbo = true;
     caps.HasMultiDrawIndirect = true;
     caps.ForceCpuBackends = false;
     const RenderBackendSelection sel = URenderBackendFactory::Select(caps);
@@ -65,6 +86,17 @@ int main()
            "desktop compute selects gpu mesher");
     Expect(sel.Cull == CullBackendKind::GpuFrustum,
            "desktop compute selects gpu cull");
+  }
+
+  {
+    RenderBackendCaps caps;
+    caps.Platform = RenderPlatformKind::Desktop;
+    caps.HasCompute = true;
+    caps.HasSsbo = false;
+    caps.HasMultiDrawIndirect = true;
+    const RenderBackendSelection sel = URenderBackendFactory::Select(caps);
+    Expect(sel.Mesher == MesherBackendKind::CpuGreedy,
+           "desktop without SSBO keeps cpu mesher");
   }
 
   {

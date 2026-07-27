@@ -2,6 +2,8 @@
 
 #include "Render/Engine/FluidSurfaceMap.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
+#include "Render/Backend/RenderBackendCaps.h"
+#include <memory>
 
 namespace cutum
 {
@@ -47,5 +49,19 @@ private:
   // Column scan compute (Desktop); CPU FindFluidColumnSurface remains fallback.
   UFluidSurfaceMap Surface;
 };
+
+/// Capability-driven fluid provider (no caller #ifdef).
+inline std::unique_ptr<IUFluidSurfaceProvider>
+CreateFluidSurfaceProvider(const RenderBackendCaps &caps)
+{
+  const bool want_gpu =
+      !caps.ForceCpuBackends && caps.HasCompute && caps.HasSsbo &&
+      (caps.Platform == RenderPlatformKind::Desktop || caps.AllowAndroidGpu);
+  if (want_gpu)
+  {
+    return std::make_unique<UGpuFluidSurfaceMap>();
+  }
+  return std::make_unique<UCpuFluidSurfaceMap>();
+}
 
 } // namespace cutum

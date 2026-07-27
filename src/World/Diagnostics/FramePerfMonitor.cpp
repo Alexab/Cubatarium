@@ -3,6 +3,7 @@
 #include "App/Core.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Core/World.h"
+#include "World/Lighting/GpuBlocklightFlood.h"
 #include "World/Lighting/GpuSkylightColumnSeed.h"
 #include "Render/Mesh/GpuGreedyMesher.h"
 #include "World/Physics/PhysicsTelemetry.h"
@@ -218,11 +219,14 @@ struct FrameNumbers
   double gpu_cull_indirect{0.0};
   uint64_t gpu_mesh_vbo_dispatch{0};
   uint64_t gpu_light_seed_apply{0};
+  uint64_t gpu_mask_readback{0};
+  uint64_t gpu_blocklight_flood{0};
   double gpu_fluid_scan_on{0.0};
   std::string backend_mesher;
   std::string backend_store;
   std::string backend_cull;
   std::string backend_fluid;
+  std::string backend_lighting_mode;
   int memory_pressure{0};
   int keep_margin_eff{0};
   uint64_t buffer_expand_events{0};
@@ -378,11 +382,14 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.gpu_cull_indirect = phys.GpuCullIndirect;
   n.gpu_mesh_vbo_dispatch = UGpuGreedyMesher::ConsumeMeshVboDispatchCount();
   n.gpu_light_seed_apply = ConsumeGpuSkylightSeedApplyCount();
+  n.gpu_mask_readback = UGpuGreedyMesher::ConsumeMaskReadbackCount();
+  n.gpu_blocklight_flood = ConsumeGpuBlocklightFloodCount();
   n.gpu_fluid_scan_on = phys.GpuFluidScanOn;
   n.backend_mesher = phys.BackendMesher;
   n.backend_store = phys.BackendStore;
   n.backend_cull = phys.BackendCull;
   n.backend_fluid = phys.BackendFluid;
+  n.backend_lighting_mode = phys.BackendLightingMode;
   n.keep_margin_eff = phys.KeepMarginEff;
   n.buffer_expand_events = phys.BufferExpandEvents;
   {
@@ -516,11 +523,14 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"gpu_cull_indirect\":" << n.gpu_cull_indirect
           << ",\"gpu_mesh_vbo_dispatch\":" << n.gpu_mesh_vbo_dispatch
           << ",\"gpu_light_seed_apply\":" << n.gpu_light_seed_apply
+          << ",\"gpu_mask_readback\":" << n.gpu_mask_readback
+          << ",\"gpu_blocklight_flood\":" << n.gpu_blocklight_flood
           << ",\"gpu_fluid_scan_on\":" << n.gpu_fluid_scan_on
           << ",\"backend_mesher\":\"" << n.backend_mesher << "\""
           << ",\"backend_store\":\"" << n.backend_store << "\""
           << ",\"backend_cull\":\"" << n.backend_cull << "\""
           << ",\"backend_fluid\":\"" << n.backend_fluid << "\""
+          << ",\"backend_lighting_mode\":\"" << n.backend_lighting_mode << "\""
           << ",\"memory_pressure\":" << n.memory_pressure
           << ",\"keep_margin_eff\":" << n.keep_margin_eff
           << ",\"buffer_expand_events\":" << n.buffer_expand_events

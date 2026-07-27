@@ -32,7 +32,7 @@ bool URenderBackendFactory::BindOnce(URenderBackendBundle &bundle,
   bundle.Selection = Select(caps);
 
   if (caps.HasCompute && !caps.ForceCpuBackends &&
-      caps.Platform == RenderPlatformKind::Desktop &&
+      (caps.Platform == RenderPlatformKind::Desktop || caps.AllowAndroidGpu) &&
       bundle.Selection.Mesher == MesherBackendKind::GpuGreedy)
   {
     bundle.Mesher = std::make_unique<UGpuGreedyMesher>();
