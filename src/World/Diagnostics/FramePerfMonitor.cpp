@@ -2,6 +2,7 @@
 
 #include "App/Core.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
+#include "Render/Mesh/GpuGreedyOpaqueEmit.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Core/World.h"
 #include "World/Lighting/GpuBlocklightFlood.h"
@@ -391,8 +392,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.gpu_blocklight_flood = ConsumeGpuBlocklightFloodCount();
   n.gpu_fluid_readback = ConsumeGpuFluidReadbackCount();
   n.gpu_light_readback = ConsumeGpuSkylightSeedReadbackCount();
-  // GPF0 probe wiring: full GPU emit/sort counters will be hooked in GPF1/GPF2.
-  n.gpu_opaque_emit_gpu = 0;
+  n.gpu_opaque_emit_gpu = ConsumeGpuOpaqueEmitCount();
   n.gpu_transparent_sort_gpu = 0;
   n.gpu_fluid_scan_on = phys.GpuFluidScanOn;
   n.backend_mesher = phys.BackendMesher;

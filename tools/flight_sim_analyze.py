@@ -16,6 +16,12 @@ def median(xs: list[float]) -> float | None:
     return float(statistics.median(xs))
 
 
+def max_val(xs: list[float]) -> float | None:
+    if not xs:
+        return None
+    return float(max(xs))
+
+
 def p95(xs: list[float]) -> float | None:
     if not xs:
         return None
@@ -212,6 +218,7 @@ def analyze(
     gpu_fluid_readback_med = median(col(steady, "gpu_fluid_readback"))
     gpu_light_readback_med = median(col(steady, "gpu_light_readback"))
     gpu_opaque_emit_gpu_med = median(col(steady, "gpu_opaque_emit_gpu"))
+    gpu_opaque_emit_gpu_max = max_val(col(periods, "gpu_opaque_emit_gpu"))
     gpu_transparent_sort_gpu_med = median(col(steady, "gpu_transparent_sort_gpu"))
     gpu_fluid_scan_on_med = median(col(steady, "gpu_fluid_scan_on"))
     fluid_names = [
@@ -686,6 +693,7 @@ def analyze(
             "gpu_fluid_readback_med": gpu_fluid_readback_med,
             "gpu_light_readback_med": gpu_light_readback_med,
             "gpu_opaque_emit_gpu_med": gpu_opaque_emit_gpu_med,
+            "gpu_opaque_emit_gpu_max": gpu_opaque_emit_gpu_max,
             "gpu_transparent_sort_gpu_med": gpu_transparent_sort_gpu_med,
             "gpu_fluid_scan_on_med": gpu_fluid_scan_on_med,
             "backend_fluid_mode": backend_fluid_mode,

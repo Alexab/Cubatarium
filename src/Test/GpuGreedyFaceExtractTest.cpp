@@ -139,6 +139,9 @@ int main()
   }
   Expect(merged_area == faces.size(), "merged area covers all 1x1 faces");
 
+  // Parity: merged quad count is stable for uniform 2x2x2 stone.
+  Expect(merged.size() <= faces.size(), "merge does not grow quad count");
+
   if (gFails != 0)
   {
     std::cerr << "gpu_greedy_face_extract_test: " << gFails << " failures\n";

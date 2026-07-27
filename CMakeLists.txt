@@ -269,6 +269,7 @@ set(SOURCES
     src/Render/Mesh/CpuFrustumCull.cpp
     src/Render/Mesh/GpuFrustumCull.cpp
     src/Render/Mesh/GpuGreedyMesher.cpp
+    src/Render/Mesh/GpuGreedyOpaqueEmit.cpp
     src/Render/Mesh/GpuFluidColumnScan.cpp
     src/World/Lighting/GpuSkylightColumnSeed.cpp
     src/World/Lighting/GpuBlocklightFlood.cpp

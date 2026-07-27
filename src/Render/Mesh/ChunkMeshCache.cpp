@@ -1298,12 +1298,12 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   }
   ActiveMeshSourceRevision.erase(revisionIt);
 
-  // P5: optional main-thread GPU extract → pool batches for deferred snapshots.
+  // GPF1: main-thread GPU opaque emit for deferred snapshots.
   if (result.GpuExtractPending && result.PendingSnapshot && MesherBackend)
   {
     bool extracted = MesherBackend->TryExtractOpaqueToBatches(
         *result.PendingSnapshot, registry, result.coord, result.batches,
-        /*deferred_no_gpu_readback=*/true,
+        /*deferred_no_gpu_readback=*/false,
         /*greedy_merge_rects=*/false);
     if (!extracted)
     {

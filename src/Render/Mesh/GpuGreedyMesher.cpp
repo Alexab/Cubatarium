@@ -1,5 +1,6 @@
 #include "Render/Mesh/GpuGreedyMesher.h"
 #include "Render/Mesh/GpuGreedyFaceExtract.h"
+#include "Render/Mesh/GpuGreedyOpaqueEmit.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/MeshLightSampling.h"
 #include "Render/GlIncludes.h"
@@ -135,6 +136,7 @@ struct UGpuGreedyMesher::GpuState
   GLuint Program{0};
   GLuint OccSsbo{0};
   GLuint MaskSsbo{0};
+  GpuGreedyEmitState Emit;
   bool InitAttempted{false};
 };
 
@@ -158,6 +160,51 @@ UGpuGreedyMesher::~UGpuGreedyMesher()
   if (State->MaskSsbo)
   {
     glDeleteBuffers(1, &State->MaskSsbo);
+  }
+  GpuGreedyEmitState &e = State->Emit;
+  if (e.MaskProgram)
+  {
+    glDeleteProgram(e.MaskProgram);
+  }
+  if (e.GreedyProgram)
+  {
+    glDeleteProgram(e.GreedyProgram);
+  }
+  if (e.EmitProgram)
+  {
+    glDeleteProgram(e.EmitProgram);
+  }
+  if (e.OccSsbo)
+  {
+    glDeleteBuffers(1, &e.OccSsbo);
+  }
+  if (e.MaskSsbo)
+  {
+    glDeleteBuffers(1, &e.MaskSsbo);
+  }
+  if (e.BlocksSsbo)
+  {
+    glDeleteBuffers(1, &e.BlocksSsbo);
+  }
+  if (e.LightsSsbo)
+  {
+    glDeleteBuffers(1, &e.LightsSsbo);
+  }
+  if (e.RectsSsbo)
+  {
+    glDeleteBuffers(1, &e.RectsSsbo);
+  }
+  if (e.CountersSsbo)
+  {
+    glDeleteBuffers(1, &e.CountersSsbo);
+  }
+  if (e.VertSsbo)
+  {
+    glDeleteBuffers(1, &e.VertSsbo);
+  }
+  if (e.IndexSsbo)
+  {
+    glDeleteBuffers(1, &e.IndexSsbo);
   }
 #endif
 }
@@ -292,25 +339,27 @@ bool UGpuGreedyMesher::TryExtractOpaqueToBatches(
     bool deferred_no_gpu_readback, bool greedy_merge_rects)
 {
   out_batches.clear();
-  std::vector<GreedyQuad> quads;
-  if (deferred_no_gpu_readback)
+  if (!SnapshotIsGpuExtractEligible(snapshot, registry))
   {
-    if (!SnapshotIsGpuExtractEligible(snapshot, registry))
-    {
-      return false;
-    }
-    // Same as TryComputeExtract default: CPU face extract, no mask readback.
-    quads = ExtractOpaqueFacesCpu(snapshot, registry);
-    // Variant B: do greedy rectangle merge on the worker (no GL), so main
-    // thread only uploads into the pool.
-    if (greedy_merge_rects)
-    {
-      quads = MergeOpaqueQuadsStrict(quads);
-    }
+    return false;
   }
-  else
+  // GPF1: main-thread GPU mask → greedy → emit (no mask readback).
+  if (!deferred_no_gpu_readback)
   {
-    quads = TryComputeExtract(snapshot, registry);
+    if (TryGpuOpaqueEmitToBatches(State->Emit, snapshot, registry, coord,
+                                   out_batches))
+    {
+      ++ComputeDispatches;
+      ++gMeshVboDispatches;
+      return true;
+    }
+    return false;
+  }
+  // Worker/debug CPU path (no GL).
+  std::vector<GreedyQuad> quads = ExtractOpaqueFacesCpu(snapshot, registry);
+  if (greedy_merge_rects)
+  {
+    quads = MergeOpaqueQuadsStrict(quads);
   }
   if (quads.empty())
   {

@@ -242,7 +242,7 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("post_stop_black_sticky_max", "le", 0.0),
         ("chunks_traveled", "ge", 3.0),
         ("gpu_mask_readback_med", "le", 0.0),
-        ("gpu_opaque_emit_gpu_med", "ge", 0.0),
+        ("gpu_opaque_emit_gpu_max", "ge", 0.5),
         ("wall_ms_no_holes_med", "le", 45.0),
         ("vertex_pool_fill_med", "le", 0.85),
     ],
