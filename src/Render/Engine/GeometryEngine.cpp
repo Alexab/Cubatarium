@@ -2,6 +2,7 @@
 #include "Render/Engine/GeometryEngine.h"
 #include "World/Core/WorldLoadDiagnostics.h"
 #include "Blocks/BlockRegistry.h"
+#include "App/Settings/GraphicsQualityProfile.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
@@ -37,6 +38,7 @@
 #include "World/Adapters/WorldRenderReadAdapter.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Core/World.h"
+#include "World/Lighting/IULightingPipeline.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Physics/LiquidDebugTrace.h"
@@ -158,26 +160,13 @@ void UGeometryEngine::EnsureRenderBackendsBound()
 {
   if (!URenderBackendFactory::IsBound(RenderBackends))
   {
-    RenderBackendCaps caps;
-    caps.Platform = RenderPlatformKind::Desktop;
-    caps.ForceCpuBackends = false;
-#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
-    caps.Platform = RenderPlatformKind::Android;
-    caps.HasCompute = false;
-    caps.HasMultiDrawIndirect = false;
-#else
-    caps.HasCompute = true;
-    caps.HasMultiDrawIndirect = true;
-#endif
+    const RenderBackendCaps caps = DetectRenderBackendCaps();
     URenderBackendFactory::BindOnce(RenderBackends, caps);
   }
   if (!FluidSurfaceProvider)
   {
-#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
-    FluidSurfaceProvider = std::make_unique<UCpuFluidSurfaceMap>();
-#else
-    FluidSurfaceProvider = std::make_unique<UGpuFluidSurfaceMap>();
-#endif
+    FluidSurfaceProvider =
+        CreateFluidSurfaceProvider(DetectRenderBackendCaps());
   }
   if (WorldInstance && RenderBackends.Store)
   {
@@ -1221,6 +1210,13 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     {
       phys.BackendFluid = FluidSurfaceProvider->BackendName();
       phys.GpuFluidScanOn = PreferGpuFluidColumnScan() ? 1.0 : 0.0;
+    }
+    {
+      const LightingMode mode = WorldInstance->GetLightingPipeline().GetMode();
+      phys.BackendLightingMode =
+          mode == LightingMode::Flat
+              ? "flat"
+              : (phys.BackendMesher.find("gpu_") == 0 ? "gpu_full" : "full");
     }
   }
 

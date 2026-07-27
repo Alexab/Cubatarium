@@ -198,10 +198,9 @@ bool ApplyGpuSkylightSeedToChunk(UChunk &chunk, UBlockRegistry &registry)
     }
   }
   std::array<uint8_t, CHUNK_VOLUME> sky{};
-  if (!TryGpuSeedSkylightColumns(occ, sky))
-  {
-    return false;
-  }
+  // D1.3: CPU parity of column seed (same algorithm as compute) — no
+  // GetBufferSubData on apply path.
+  SeedSkylightColumnsCpu(occ, sky);
   for (int y = 0; y < CHUNK_SIZE; ++y)
   {
     for (int z = 0; z < CHUNK_SIZE; ++z)

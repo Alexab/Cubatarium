@@ -5,6 +5,7 @@
 #include "Render/GlIncludes.h"
 #include "glog/logging.h"
 #include <array>
+#include <cstdlib>
 #include <cstring>
 #include <unordered_map>
 #include <vector>
@@ -21,6 +22,7 @@ namespace
 {
 
 uint64_t gMeshVboDispatches = 0;
+uint64_t gMaskReadbacks = 0;
 
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
 // Padded occupancy → FaceMask[CHUNK_VOLUME] (6 bits: -X+X-Y+Y-Z+Z).
@@ -217,46 +219,58 @@ UGpuGreedyMesher::TryComputeExtract(const ChunkMeshSnapshot &snapshot,
     return {};
   }
 #endif
-  if (!SnapshotIsGpuExtractEligible(snapshot, registry) || !EnsureCompute())
+  if (!SnapshotIsGpuExtractEligible(snapshot, registry))
   {
     return {};
   }
-  std::vector<uint8_t> occ;
-  BuildPaddedOccupancy(snapshot, registry, occ);
-  std::vector<uint32_t> occ_words((occ.size() + 3) / 4, 0);
-  for (size_t i = 0; i < occ.size(); ++i)
+  // D1.1: no mask GetBufferSubData on hot path. Face extract on CPU (1x1);
+  // MergeOpaqueQuadsStrict available for parity tests / legacy decode. Full
+  // greedy rectangles stay on Cpu.BuildChunkMesh fallback for mixed chunks.
+  const char *legacy = std::getenv("CUBATARIUM_GPU_MASK_READBACK");
+  if (legacy && legacy[0] == '1' && EnsureCompute())
   {
-    occ_words[i >> 2] |= static_cast<uint32_t>(occ[i]) << ((i & 3u) * 8u);
+    std::vector<uint8_t> occ;
+    BuildPaddedOccupancy(snapshot, registry, occ);
+    std::vector<uint32_t> occ_words((occ.size() + 3) / 4, 0);
+    for (size_t i = 0; i < occ.size(); ++i)
+    {
+      occ_words[i >> 2] |= static_cast<uint32_t>(occ[i]) << ((i & 3u) * 8u);
+    }
+    const uint32_t volume = static_cast<uint32_t>(CHUNK_VOLUME);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, State->OccSsbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER,
+                 static_cast<GLsizeiptr>(occ_words.size() * sizeof(uint32_t)),
+                 occ_words.data(), GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, State->MaskSsbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER,
+                 static_cast<GLsizeiptr>(volume * sizeof(uint32_t)), nullptr,
+                 GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, State->OccSsbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, State->MaskSsbo);
+    glUseProgram(State->Program);
+    glUniform1ui(glGetUniformLocation(State->Program, "volume"), volume);
+    glUniform1ui(glGetUniformLocation(State->Program, "side"),
+                 static_cast<uint32_t>(CHUNK_SIZE));
+    glUniform1ui(glGetUniformLocation(State->Program, "pad"),
+                 static_cast<uint32_t>(kGpuOccPad));
+    glDispatchCompute((volume + 63u) / 64u, 1, 1);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    glUseProgram(0);
+    std::vector<uint32_t> masks(volume, 0);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, State->MaskSsbo);
+    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
+                       static_cast<GLsizeiptr>(masks.size() * sizeof(uint32_t)),
+                       masks.data());
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    ++ComputeDispatches;
+    ++gMeshVboDispatches;
+    ++gMaskReadbacks;
+    return MergeOpaqueQuadsStrict(DecodeFaceMasks(snapshot, registry, masks));
   }
-  const uint32_t volume = static_cast<uint32_t>(CHUNK_VOLUME);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, State->OccSsbo);
-  glBufferData(GL_SHADER_STORAGE_BUFFER,
-               static_cast<GLsizeiptr>(occ_words.size() * sizeof(uint32_t)),
-               occ_words.data(), GL_DYNAMIC_DRAW);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, State->MaskSsbo);
-  glBufferData(GL_SHADER_STORAGE_BUFFER,
-               static_cast<GLsizeiptr>(volume * sizeof(uint32_t)), nullptr,
-               GL_DYNAMIC_DRAW);
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, State->OccSsbo);
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, State->MaskSsbo);
-  glUseProgram(State->Program);
-  glUniform1ui(glGetUniformLocation(State->Program, "volume"), volume);
-  glUniform1ui(glGetUniformLocation(State->Program, "side"),
-               static_cast<uint32_t>(CHUNK_SIZE));
-  glUniform1ui(glGetUniformLocation(State->Program, "pad"),
-               static_cast<uint32_t>(kGpuOccPad));
-  glDispatchCompute((volume + 63u) / 64u, 1, 1);
-  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
-  glUseProgram(0);
-  std::vector<uint32_t> masks(volume, 0);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, State->MaskSsbo);
-  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
-                     static_cast<GLsizeiptr>(masks.size() * sizeof(uint32_t)),
-                     masks.data());
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
   ++ComputeDispatches;
   ++gMeshVboDispatches;
-  return DecodeFaceMasks(snapshot, registry, masks);
+  return ExtractOpaqueFacesCpu(snapshot, registry);
 #endif
 }
 
@@ -285,6 +299,7 @@ bool UGpuGreedyMesher::TryExtractOpaqueToBatches(
     {
       return false;
     }
+    // Same as TryComputeExtract default: CPU face extract, no mask readback.
     quads = ExtractOpaqueFacesCpu(snapshot, registry);
   }
   else
@@ -323,6 +338,13 @@ uint64_t UGpuGreedyMesher::ConsumeMeshVboDispatchCount()
 {
   const uint64_t v = gMeshVboDispatches;
   gMeshVboDispatches = 0;
+  return v;
+}
+
+uint64_t UGpuGreedyMesher::ConsumeMaskReadbackCount()
+{
+  const uint64_t v = gMaskReadbacks;
+  gMaskReadbacks = 0;
   return v;
 }
 

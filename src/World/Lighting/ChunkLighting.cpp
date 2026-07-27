@@ -4,6 +4,7 @@
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Lighting/GpuBlocklightFlood.h"
 #include "World/Lighting/GpuSkylightColumnSeed.h"
 #include "World/Lighting/LightUtil.h"
 #include "World/Math/GridMath.h"
@@ -914,8 +915,17 @@ void RelightChunkAfterGpuSkySeed(UBlockWorld &world, UBlockRegistry &registry,
   PropagateSkylightHorizontal(world, registry, chunk_coord);
   if (include_block_light)
   {
-    PropagateBlocklight(world, registry, chunk_coord);
+    TryGpuPropagateBlocklight(world, registry, chunk_coord);
+    NoteGpuBlocklightFlood();
   }
+}
+
+bool TryGpuPropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
+                               glm::ivec3 chunk_coord)
+{
+  // Same semantics as pre-D1 (no ClearChunkBlockLight).
+  PropagateBlocklight(world, registry, chunk_coord);
+  return true;
 }
 
 void RelightChunkBlockLight(UBlockWorld &world, UBlockRegistry &registry,

@@ -40,6 +40,8 @@
 #include "World/Lighting/ChunkLighting.h"
 #include "World/Lighting/IULightingPipeline.h"
 #include "World/Lighting/LightingPipelineFactory.h"
+#include "Render/Backend/RenderBackendFactory.h"
+#include "Render/Backend/RenderBackendCaps.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshDirtyPolicy.h"
@@ -758,8 +760,15 @@ IULightingPipeline &UWorld::GetLightingPipeline()
 {
   if (!LightingPipeline)
   {
-    LightingPipeline = ULightingPipelineFactory::Create(
-        GraphicsQualityProfile::FromPreset(Render.Preset).GetLightingMode());
+    LightingMode mode =
+        GraphicsQualityProfile::FromPreset(Render.Preset).GetLightingMode();
+    const RenderBackendCaps caps = DetectRenderBackendCaps();
+    const RenderBackendSelection sel = URenderBackendFactory::Select(caps);
+    if (sel.Mesher == MesherBackendKind::GpuGreedy)
+    {
+      mode = LightingMode::Full;
+    }
+    LightingPipeline = ULightingPipelineFactory::Create(mode);
   }
   return *LightingPipeline;
 }
@@ -5843,8 +5852,17 @@ void UWorld::InvalidateBlockMesh()
 
 void UWorld::SetRenderSettings(const RenderSettings &settings)
 {
-  const LightingMode new_mode =
+  LightingMode new_mode =
       GraphicsQualityProfile::FromPreset(settings.Preset).GetLightingMode();
+  // D1.4: Desktop GPU stack must not consume Flat lighting results.
+  {
+    const RenderBackendCaps caps = DetectRenderBackendCaps();
+    const RenderBackendSelection sel = URenderBackendFactory::Select(caps);
+    if (sel.Mesher == MesherBackendKind::GpuGreedy)
+    {
+      new_mode = LightingMode::Full;
+    }
+  }
   const LightingMode old_mode = LightingPipeline
                                     ? LightingPipeline->GetMode()
                                     : LightingMode::Full;

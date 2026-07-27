@@ -129,12 +129,22 @@ int main()
   }
   Expect(mask_faces == faces.size(), "mask popcount == extract faces");
 
+  const auto merged = MergeOpaqueQuadsStrict(faces);
+  Expect(merged.size() < faces.size(), "strict merge reduces quad count");
+  size_t merged_area = 0;
+  for (const GreedyQuad &q : merged)
+  {
+    Expect(q.width >= 1 && q.height >= 1, "merged dims valid");
+    merged_area += static_cast<size_t>(q.width * q.height);
+  }
+  Expect(merged_area == faces.size(), "merged area covers all 1x1 faces");
+
   if (gFails != 0)
   {
     std::cerr << "gpu_greedy_face_extract_test: " << gFails << " failures\n";
     return 1;
   }
   std::cout << "gpu_greedy_face_extract_test: ok faces=" << faces.size()
-            << "\n";
+            << " merged=" << merged.size() << "\n";
   return 0;
 }

@@ -35,6 +35,8 @@ public:
 
   /// Successful GPU extract→CPU-quad decode that will upload via pool (P5).
   static uint64_t ConsumeMeshVboDispatchCount();
+  /// Mask SSBO GetBufferSubData count (D1: should stay 0 on hot path).
+  static uint64_t ConsumeMaskReadbackCount();
 
   bool TryExtractOpaqueToBatches(const ChunkMeshSnapshot &snapshot,
                                  UBlockRegistry &registry, glm::ivec3 coord,

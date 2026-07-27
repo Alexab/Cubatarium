@@ -157,7 +157,8 @@ void UGpuFrustumCull::RebuildVisible(UChunkMeshCache &cache,
                                      float max_cull_distance)
 {
   // P2 opaque compact lives in MdiVertexPoolStore::ApplyGpuCompactCull.
-  // Flat greedy refs still feed transparent + Cross via CPU Delegate.
+  // Transparent/Cross still use CPU Delegate for visibility refs (not Flat
+  // lighting). D1.4 separates this CPU-assist cull from LightingMode::Flat.
   (void)EnsureGpu();
   Delegate.RebuildVisible(cache, frustum, camera_pos, max_cull_distance);
 }

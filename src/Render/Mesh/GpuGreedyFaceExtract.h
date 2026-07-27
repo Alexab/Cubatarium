@@ -5,6 +5,7 @@
 #include "Blocks/BlockRegistry.h"
 #include <array>
 #include <cstdint>
+#include <unordered_map>
 #include <vector>
 
 // BuildPaddedOccupancy uses std::vector.
@@ -160,6 +161,126 @@ ExtractOpaqueFacesCpu(const ChunkMeshSnapshot &snap, UBlockRegistry &registry)
     }
   }
   return quads;
+}
+
+/// Strict greedy merge of 1x1 opaque quads (same axis/sign/slice/id/light).
+inline std::vector<GreedyQuad>
+MergeOpaqueQuadsStrict(const std::vector<GreedyQuad> &input)
+{
+  struct PlaneKey
+  {
+    int axis;
+    int faceSign;
+    int slice;
+    BlockId id;
+    uint8_t light;
+    bool operator==(const PlaneKey &o) const
+    {
+      return axis == o.axis && faceSign == o.faceSign && slice == o.slice &&
+             id == o.id && light == o.light;
+    }
+  };
+  struct PlaneKeyHash
+  {
+    size_t operator()(const PlaneKey &k) const
+    {
+      size_t h = static_cast<size_t>(k.axis);
+      h = h * 131u + static_cast<size_t>(k.faceSign + 2);
+      h = h * 131u + static_cast<size_t>(k.slice + 64);
+      h = h * 131u + static_cast<size_t>(k.id);
+      h = h * 131u + static_cast<size_t>(k.light);
+      return h;
+    }
+  };
+
+  std::unordered_map<PlaneKey, std::array<uint8_t, CHUNK_SIZE * CHUNK_SIZE>,
+                     PlaneKeyHash>
+      planes;
+  for (const GreedyQuad &q : input)
+  {
+    if (q.width != 1 || q.height != 1)
+    {
+      continue;
+    }
+    if (q.u < 0 || q.u >= CHUNK_SIZE || q.v < 0 || q.v >= CHUNK_SIZE)
+    {
+      continue;
+    }
+    PlaneKey key{q.axis, q.faceSign, q.slice, q.Id, q.LightPacked};
+    auto it = planes.find(key);
+    if (it == planes.end())
+    {
+      std::array<uint8_t, CHUNK_SIZE * CHUNK_SIZE> grid{};
+      grid[static_cast<size_t>(q.v * CHUNK_SIZE + q.u)] = 1;
+      planes.emplace(key, grid);
+    }
+    else
+    {
+      it->second[static_cast<size_t>(q.v * CHUNK_SIZE + q.u)] = 1;
+    }
+  }
+
+  std::vector<GreedyQuad> out;
+  out.reserve(input.size());
+  for (auto &entry : planes)
+  {
+    const PlaneKey &key = entry.first;
+    auto &grid = entry.second;
+    for (int v = 0; v < CHUNK_SIZE; ++v)
+    {
+      for (int u = 0; u < CHUNK_SIZE; ++u)
+      {
+        const size_t i = static_cast<size_t>(v * CHUNK_SIZE + u);
+        if (!grid[i])
+        {
+          continue;
+        }
+        int width = 1;
+        while (u + width < CHUNK_SIZE &&
+               grid[static_cast<size_t>(v * CHUNK_SIZE + u + width)])
+        {
+          ++width;
+        }
+        int height = 1;
+        bool grow = true;
+        while (grow && v + height < CHUNK_SIZE)
+        {
+          for (int du = 0; du < width; ++du)
+          {
+            if (!grid[static_cast<size_t>((v + height) * CHUNK_SIZE + u + du)])
+            {
+              grow = false;
+              break;
+            }
+          }
+          if (grow)
+          {
+            ++height;
+          }
+        }
+        for (int dv = 0; dv < height; ++dv)
+        {
+          for (int du = 0; du < width; ++du)
+          {
+            grid[static_cast<size_t>((v + dv) * CHUNK_SIZE + u + du)] = 0;
+          }
+        }
+        GreedyQuad q;
+        q.axis = key.axis;
+        q.faceSign = key.faceSign;
+        q.slice = key.slice;
+        q.u = u;
+        q.v = v;
+        q.width = width;
+        q.height = height;
+        q.Id = key.id;
+        q.LightPacked = key.light;
+        q.FluidPacked = 0;
+        out.push_back(q);
+      }
+    }
+  }
+  return out;
 }
 
 } // namespace cutum
