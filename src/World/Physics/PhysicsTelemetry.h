@@ -155,6 +155,15 @@ struct PhysicsTelemetry
   int MemoryPressure{0};
   int KeepMarginEff{0};
   uint64_t BufferExpandEvents{0};
+  /// GPF6 Android GPU policy telemetry (0/1 doubles for analyze medians).
+  double CapsHasCompute{0.0};
+  double CapsHasSsbo{0.0};
+  double CapsProbeCompleted{0.0};
+  double AndroidGpuUserPref{1.0};
+  double AndroidGpuEffective{0.0};
+  std::string AndroidGpuDenyReason{"n/a"};
+  std::string GlVersion;
+  std::string GlRenderer;
 };
 
 } // namespace cutum

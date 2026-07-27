@@ -435,6 +435,9 @@ void UCore::LoadConfig(const std::string &config_file_name)
         Render.VSync = r.value("vsync", Render.VSync);
         Render.MsaaSamples =
             std::clamp(r.value("msaa_samples", Render.MsaaSamples), 0, 16);
+        // Missing key → default true (GPU-by-default).
+        Render.AndroidGpuEnabled =
+            r.value("android_gpu_enabled", Render.AndroidGpuEnabled);
         if (Render.GreedyMeshing && !Render.FaceQuads)
         {
           std::cout
@@ -750,6 +753,7 @@ void UCore::SaveConfigFile()
       Render.AltitudeUseTerrainSurface;
   render_json["vsync"] = Render.VSync;
   render_json["msaa_samples"] = Render.MsaaSamples;
+  render_json["android_gpu_enabled"] = Render.AndroidGpuEnabled;
   system_data["render"] = render_json;
   json environment_json = DefaultEnvironmentConfig.ToJson();
   system_data["environment"] = environment_json;

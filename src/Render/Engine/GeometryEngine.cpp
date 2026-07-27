@@ -27,6 +27,8 @@
 #include "Render/Engine/IUMeshGpuStore.h"
 #include "Render/Engine/MdiVertexPoolStore.h"
 #include "Render/Backend/RenderBackendFactory.h"
+#include "Render/Backend/RenderBackendCaps.h"
+#include "Render/Backend/AndroidGpuPolicy.h"
 #include "Render/Backend/GpuHotPathFallback.h"
 #include "Render/Mesh/IUChunkCull.h"
 #include "Render/Mesh/IUChunkMesher.h"
@@ -161,13 +163,33 @@ void UGeometryEngine::EnsureRenderBackendsBound()
 {
   if (!URenderBackendFactory::IsBound(RenderBackends))
   {
-    const RenderBackendCaps caps = DetectRenderBackendCaps();
+    RenderBackendCaps caps = GetActiveRenderBackendCaps();
+    if (!caps.ProbeCompleted)
+    {
+      // Bind before GL probe (tests / early init): keep platform defaults.
+      caps = DetectRenderBackendCaps();
+    }
+    AndroidGpuAllowlistConfig allowlist =
+        LoadAndroidGpuAllowlist("assets/config/android_gpu.json");
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+    // Prefer APK-extracted assets root when present.
+    {
+      const AndroidGpuAllowlistConfig from_assets =
+          LoadAndroidGpuAllowlist("config/android_gpu.json");
+      if (!from_assets.AllowRenderers.empty())
+      {
+        allowlist = from_assets;
+      }
+    }
+#endif
+    ApplyAndroidGpuPolicy(caps, Render.AndroidGpuEnabled, &allowlist);
+    SetActiveRenderBackendCaps(caps);
     URenderBackendFactory::BindOnce(RenderBackends, caps);
   }
   if (!FluidSurfaceProvider)
   {
     FluidSurfaceProvider =
-        CreateFluidSurfaceProvider(DetectRenderBackendCaps());
+        CreateFluidSurfaceProvider(GetActiveRenderBackendCaps());
   }
   if (WorldInstance && RenderBackends.Store)
   {
@@ -1064,10 +1086,17 @@ void UGeometryEngine::DrawGreedyGpuBatches(
           }
           const GLint base_vertex = static_cast<GLint>(
               gpu.vboByteOffset / sizeof(GreedyMeshVertex));
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+          // GLES 3.1 core has no glDrawElementsBaseVertex (desktop MDI
+          // fallback only). Staging store avoids this path at runtime.
+          (void)base_vertex;
+          continue;
+#else
           glDrawElementsBaseVertex(
               GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
               reinterpret_cast<void *>(gpu.eboByteOffset), base_vertex);
           ++draw_cmds;
+#endif
         }
       }
       i = j;
@@ -1212,7 +1241,21 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       phys.BackendLightingMode =
           mode == LightingMode::Flat
               ? "flat"
-              : (phys.BackendMesher.find("gpu_") == 0 ? "gpu_full" : "full");
+              : ((phys.BackendMesher.find("gpu_") != std::string::npos ||
+                  phys.BackendMesher.find("android_gpu") == 0)
+                     ? "gpu_full"
+                     : "full");
+    }
+    {
+      const RenderBackendCaps &caps = GetActiveRenderBackendCaps();
+      phys.CapsHasCompute = caps.HasCompute ? 1.0 : 0.0;
+      phys.CapsHasSsbo = caps.HasSsbo ? 1.0 : 0.0;
+      phys.CapsProbeCompleted = caps.ProbeCompleted ? 1.0 : 0.0;
+      phys.AndroidGpuUserPref = Render.AndroidGpuEnabled ? 1.0 : 0.0;
+      phys.AndroidGpuEffective = caps.AllowAndroidGpu ? 1.0 : 0.0;
+      phys.AndroidGpuDenyReason = caps.AndroidGpuDenyReason;
+      phys.GlVersion = caps.GlVersion;
+      phys.GlRenderer = caps.GlRenderer;
     }
   }
 
@@ -1593,11 +1636,8 @@ void UGeometryEngine::DrawPreparedTransparent(GreedyShaderMode mode,
   {
     return;
   }
-#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
-  constexpr bool kAlphaCutout = false;
-#else
-  constexpr bool kAlphaCutout = true;
-#endif
+  const bool kAlphaCutout =
+      !GetActiveRenderBackendCaps().PreferSinglePassTransparent;
   DrawGreedyGpuBatches(GreedyGpuTransparent, PreparedTransparentVp,
                        *PreparedTransparentTextures, kAlphaCutout, true, mode,
                        shellAlpha);

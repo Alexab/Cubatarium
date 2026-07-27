@@ -204,9 +204,24 @@ def analyze(
     )
     backend_store_mdi = 1.0 if backend_store_mode == "mdi_vertex_pool" else 0.0
     backend_mesher_gpu = (
-        1.0 if backend_mesher_mode.startswith("gpu_") else 0.0
+        1.0
+        if (
+            backend_mesher_mode.startswith("gpu_")
+            or backend_mesher_mode.startswith("android_gpu")
+        )
+        else 0.0
     )
     backend_cull_gpu = 1.0 if backend_cull_mode.startswith("gpu_") else 0.0
+    caps_has_compute_med = median(col(steady, "caps_has_compute"))
+    caps_has_ssbo_med = median(col(steady, "caps_has_ssbo"))
+    caps_probe_completed_med = median(col(steady, "caps_probe_completed"))
+    android_gpu_user_pref_med = median(col(steady, "android_gpu_user_pref"))
+    android_gpu_effective_med = median(col(steady, "android_gpu_effective"))
+    # Alias without _med for AG gates that use exact keys from plan.
+    caps_probe_completed = caps_probe_completed_med
+    caps_has_compute = caps_has_compute_med
+    android_gpu_effective = android_gpu_effective_med
+    android_gpu_user_pref = android_gpu_user_pref_med
     gpu_draw_cmds_med = median(gpu_draw_cmds)
     gpu_cull_ms_med = median(gpu_cull_ms)
     vertex_pool_fill_med = median(vertex_pool_fill)
@@ -709,6 +724,11 @@ def analyze(
             "backend_lighting_mode": backend_lighting_mode,
             "backend_lighting_flat": backend_lighting_flat,
             "backend_lighting_full": backend_lighting_full,
+            "caps_has_compute": caps_has_compute,
+            "caps_has_ssbo": caps_has_ssbo_med,
+            "caps_probe_completed": caps_probe_completed,
+            "android_gpu_user_pref": android_gpu_user_pref,
+            "android_gpu_effective": android_gpu_effective,
         },
         "gates": gates,
         "gates_stop": gates_stop,

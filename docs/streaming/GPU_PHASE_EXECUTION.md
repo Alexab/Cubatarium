@@ -93,10 +93,23 @@ Prior baseline: `bin/phase_P2f2.json` (wall_no_holes≈33).
 | D1.2 | Transparent sort via AABB/cullSphere keys | D1b |
 | D1.3 | Sky seed no readback + blocklight flood hook | D1c |
 | D1.4 | Force Full lighting on Desktop GPU stack | D1d |
-| D1.6 | Android GPU A0–A4 backlog (opt-in) | AG0…AG4 stubs |
+| D1.6 | Android GPU A0–A4 (GPF6: GPU-by-default + opt-out) | AG0…AG4 |
 | D1.7 | Docs + PA sign-off | PA |
 
 Order: `D1.0 → D1.5a → D1.1 → D1.2 → D1.3 → D1.4 → D1.7` (+ Android backlog).
+
+## GPF6 Android workflow (mandatory)
+
+```powershell
+# Each A-phase: desktop build + unit + android assembleDebug + gates → commit on GO
+python tools/android_gpu_phase_run.py --phase-id AG0 --report bin/phase_AG0.json --skip-device --commit
+# With device:
+python tools/android_gpu_phase_run.py --phase-id AG4 --report bin/phase_AG4.json --commit
+# Android-only build check:
+powershell -ExecutionPolicy Bypass -File scripts/build/android-debug.ps1
+```
+
+Anti-patterns: commit on NO-GO; skip Android `assembleDebug`; mid-session backend swap.
 
 ```powershell
 # D1 units

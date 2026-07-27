@@ -169,26 +169,23 @@ python tools/flight_sim_phase_gate.py --phase-id <PHASE_ID> --report bin/phase_<
 
 ---
 
-### GPF6 — Android GPU A0-A4 (opt-in)
+### GPF6 — Android GPU A0-A4 (opt-in / GPU-by-default)
+
+**Status:** Landed (GPU-by-default when probe+allowlist; user opt-out).
 
 **Задачи**
-- A0 capability audit.
-- A1 fluid compute GLES path.
-- A2 hybrid mesher (GPU extract + CPU batched submit).
-- A3 transparent keys + GLES single-pass integration.
-- A4 opt-in rollout (`AllowAndroidGpu` + allowlist).
+- A0 capability audit + `ApplyAndroidGpuPolicy`.
+- A1 fluid compute GLES path (`ComputeProgram` + `#version 310 es`).
+- A2 hybrid mesher (`UAndroidGpuGreedyMesher` + staging, CPU cull).
+- A3 transparent keys + caps-driven GLES single-pass.
+- A4 production rollout (`android_gpu_enabled` default true + allowlist + UI).
 
 **GO**
-- `AG0..AG4` с отдельными Android порогами (не копировать desktop CB 1:1).
-- стабильность + отсутствие регрессий fallback CPU path.
+- `AG0` on desktop (probe telemetry); `AG1..AG4` on capable device.
+- стабильность + отсутствие регрессий fallback CPU path (opt-out).
 
 **Коммиты**
-- по одному на каждую A-фазу:
-  - `gpu(android A0): ...`
-  - `gpu(android A1): ...`
-  - `gpu(android A2): ...`
-  - `gpu(android A3): ...`
-  - `gpu(android A4): ...`
+- `gpu(android A0)..A4` (or combined `gpu(android A0-A4)` when landed together).
 
 ## Шаблон авто-коммита после GO
 

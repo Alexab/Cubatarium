@@ -16,12 +16,21 @@ URenderBackendFactory::Select(const RenderBackendCaps &caps)
 
   if (want_gpu)
   {
-    sel.Mesher = MesherBackendKind::GpuGreedy;
-    sel.Cull = CullBackendKind::GpuFrustum;
+    if (caps.Platform == RenderPlatformKind::Android)
+    {
+      sel.Mesher = MesherBackendKind::AndroidHybridGpu;
+      // Honest CPU cull until a dedicated GLES frustum path lands.
+      sel.Cull = CullBackendKind::CpuFrustum;
+    }
+    else
+    {
+      sel.Mesher = MesherBackendKind::GpuGreedy;
+      sel.Cull = CullBackendKind::GpuFrustum;
+    }
   }
 
   if (caps.HasMultiDrawIndirect && !caps.ForceCpuBackends &&
-      (caps.Platform == RenderPlatformKind::Desktop || caps.AllowAndroidGpu))
+      caps.Platform == RenderPlatformKind::Desktop)
   {
     sel.Store = MeshStoreBackendKind::MdiVertexPool;
   }

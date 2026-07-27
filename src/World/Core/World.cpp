@@ -762,9 +762,10 @@ IULightingPipeline &UWorld::GetLightingPipeline()
   {
     LightingMode mode =
         GraphicsQualityProfile::FromPreset(Render.Preset).GetLightingMode();
-    const RenderBackendCaps caps = DetectRenderBackendCaps();
+    const RenderBackendCaps caps = GetActiveRenderBackendCaps();
     const RenderBackendSelection sel = URenderBackendFactory::Select(caps);
-    if (sel.Mesher == MesherBackendKind::GpuGreedy)
+    if (sel.Mesher == MesherBackendKind::GpuGreedy ||
+        sel.Mesher == MesherBackendKind::AndroidHybridGpu)
     {
       mode = LightingMode::Full;
     }
@@ -5856,9 +5857,10 @@ void UWorld::SetRenderSettings(const RenderSettings &settings)
       GraphicsQualityProfile::FromPreset(settings.Preset).GetLightingMode();
   // D1.4: Desktop GPU stack must not consume Flat lighting results.
   {
-    const RenderBackendCaps caps = DetectRenderBackendCaps();
+    const RenderBackendCaps caps = GetActiveRenderBackendCaps();
     const RenderBackendSelection sel = URenderBackendFactory::Select(caps);
-    if (sel.Mesher == MesherBackendKind::GpuGreedy)
+    if (sel.Mesher == MesherBackendKind::GpuGreedy ||
+        sel.Mesher == MesherBackendKind::AndroidHybridGpu)
     {
       new_mode = LightingMode::Full;
     }

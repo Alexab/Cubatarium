@@ -1,10 +1,9 @@
 #include "Render/Pipeline/GreedyTransparentSort.h"
 
 #include "Blocks/BlockRegistry.h"
-#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
 #include "Render/Backend/GpuHotPathFallback.h"
+#include "Render/Backend/RenderBackendCaps.h"
 #include "Render/Pipeline/GpuTransparentSort.h"
-#endif
 
 #include <algorithm>
 #include <cmath>
@@ -107,13 +106,15 @@ void SortTransparentGreedyBatches(
     const UChunkMeshCache &cache, const glm::vec3 &cameraPos,
     const UBlockRegistry &registry)
 {
-#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
-  if (TryGpuSortTransparentGreedyBatches(refs, cache, cameraPos, registry))
+  const RenderBackendCaps &caps = GetActiveRenderBackendCaps();
+  if (caps.Platform == RenderPlatformKind::Desktop && caps.HasCompute)
   {
-    return;
+    if (TryGpuSortTransparentGreedyBatches(refs, cache, cameraPos, registry))
+    {
+      return;
+    }
+    NoteGpuHotPathFallback();
   }
-  NoteGpuHotPathFallback();
-#endif
   std::vector<SortKey> keys;
   keys.reserve(refs.size());
   for (size_t i = 0; i < refs.size(); ++i)

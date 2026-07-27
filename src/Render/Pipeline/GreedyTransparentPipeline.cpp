@@ -1,5 +1,6 @@
-#include "Render/Pipeline/GreedyTransparentPipeline.h"
+﻿#include "Render/Pipeline/GreedyTransparentPipeline.h"
 
+#include "Render/Backend/RenderBackendCaps.h"
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
 #include "Render/Pipeline/TransparentPass.h"
@@ -36,26 +37,20 @@ void ApplyPassGlState(const TransparentPassDesc &pass)
   }
 }
 
-#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
-
-void DrawGlesTransparentSinglePass(IUGreedyTransparentBackend &backend,
-                                   const GreedyTransparentSettings &settings)
+void DrawTransparentSinglePass(IUGreedyTransparentBackend &backend,
+                               const GreedyTransparentSettings &settings)
 {
-  // GLES: skip desktop 4-pass stencil shell — drivers/marked texels often yield
-  // zero visible fluid (AND-17: no water/lava at all on Android).
   glDisable(GL_STENCIL_TEST);
   glDepthMask(GL_FALSE);
   glDepthFunc(GL_LESS);
   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
   if (settings.logPassNames)
   {
-    std::cout << "[Transparent] GLES single-pass color (no stencil)" << std::endl;
+    std::cout << "[Transparent] single-pass color (no stencil)" << std::endl;
   }
   backend.DrawPreparedTransparent(GreedyShaderMode::TransparentColor,
                                   settings.shellAlpha);
 }
-
-#endif
 
 } // namespace
 
@@ -70,10 +65,11 @@ void UGreedyTransparentPipeline::Draw(IUGreedyTransparentBackend &backend,
 
   backend.PrepareTransparent(ctx);
 
-#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
-  DrawGlesTransparentSinglePass(backend, settings);
-  return;
-#endif
+  if (GetActiveRenderBackendCaps().PreferSinglePassTransparent)
+  {
+    DrawTransparentSinglePass(backend, settings);
+    return;
+  }
 
   static int stencil_bits = -1;
   if (stencil_bits < 0)
@@ -86,8 +82,6 @@ void UGreedyTransparentPipeline::Draw(IUGreedyTransparentBackend &backend,
 
   for (const TransparentPassDesc &pass : GetGreedyTransparentPasses())
   {
-    // GPF5: skip fuzzy-only pass on desktop GPU MDI path (edges covered by
-    // ShellSurface); saves one MDI submit band per steady frame.
     if (pass.shaderMode == GreedyShaderMode::FuzzyOnly)
     {
       continue;

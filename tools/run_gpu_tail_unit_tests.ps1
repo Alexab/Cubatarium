@@ -11,7 +11,8 @@ $targets = @(
     "gpu_greedy_face_extract_test",
     "greedy_transparent_sort_test",
     "gpu_fluid_column_scan_test",
-    "render_backend_factory_test"
+    "render_backend_factory_test",
+    "android_gpu_policy_test"
 )
 
 cmake --build $Build --config $Cfg --parallel 8 @($targets | ForEach-Object { "--target"; $_ })

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 namespace cutum
 {
 
@@ -12,7 +14,8 @@ enum class RenderPlatformKind
 enum class MesherBackendKind
 {
   CpuGreedy,
-  GpuGreedy
+  GpuGreedy,
+  AndroidHybridGpu
 };
 
 enum class MeshStoreBackendKind
@@ -36,8 +39,13 @@ struct RenderBackendCaps
   bool HasGlMapBufferRange{false};
   bool PreferSinglePassTransparent{false};
   bool ForceCpuBackends{false};
-  /// Opt-in for Android/GLES GPU backends (default off until A1+).
+  /// Effective Android GPU after probe + policy (GPU-by-default when capable).
   bool AllowAndroidGpu{false};
+  bool ProbeCompleted{false};
+  std::string GlVersion;
+  std::string GlRenderer;
+  /// Telemetry: user_off | probe_fail | allowlist | force_cpu | ok | n/a
+  std::string AndroidGpuDenyReason{"n/a"};
 };
 
 struct RenderBackendSelection
@@ -48,7 +56,18 @@ struct RenderBackendSelection
   bool Bound{false};
 };
 
-/// Probe platform defaults (same behavior as former GeometryEngine hardcode).
+/// Platform compile-time defaults (no GL context required).
 RenderBackendCaps DetectRenderBackendCaps();
+
+/// Mutate caps from the current GL context (call after glewInit / eglMakeCurrent).
+void ProbeOpenGLRenderBackendCaps(RenderBackendCaps &caps);
+
+/// Session cache: Detect → Probe → Policy → BindOnce.
+void SetActiveRenderBackendCaps(const RenderBackendCaps &caps);
+const RenderBackendCaps &GetActiveRenderBackendCaps();
+void InvalidateRenderBackendCapsCache();
+
+/// Detect + Probe + store (policy applied separately with RenderSettings).
+void RefreshRenderBackendCapsFromGl();
 
 } // namespace cutum

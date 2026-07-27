@@ -1,6 +1,7 @@
 #include "Render/Backend/RenderBackendFactory.h"
 #include "Render/Engine/CpuStagingGpuStore.h"
 #include "Render/Engine/MdiVertexPoolStore.h"
+#include "Render/Mesh/AndroidGpuGreedyMesher.h"
 #include "Render/Mesh/CpuFrustumCull.h"
 #include "Render/Mesh/CpuGreedyMesher.h"
 #include "Render/Mesh/GpuFrustumCull.h"
@@ -31,9 +32,14 @@ bool URenderBackendFactory::BindOnce(URenderBackendBundle &bundle,
 
   bundle.Selection = Select(caps);
 
-  if (caps.HasCompute && !caps.ForceCpuBackends &&
-      (caps.Platform == RenderPlatformKind::Desktop || caps.AllowAndroidGpu) &&
-      bundle.Selection.Mesher == MesherBackendKind::GpuGreedy)
+  if (bundle.Selection.Mesher == MesherBackendKind::AndroidHybridGpu &&
+      caps.AllowAndroidGpu && !caps.ForceCpuBackends)
+  {
+    bundle.Mesher = std::make_unique<UAndroidGpuGreedyMesher>();
+  }
+  else if (caps.HasCompute && !caps.ForceCpuBackends &&
+           caps.Platform == RenderPlatformKind::Desktop &&
+           bundle.Selection.Mesher == MesherBackendKind::GpuGreedy)
   {
     bundle.Mesher = std::make_unique<UGpuGreedyMesher>();
   }

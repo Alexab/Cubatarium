@@ -236,6 +236,14 @@ struct FrameNumbers
   std::string backend_cull;
   std::string backend_fluid;
   std::string backend_lighting_mode;
+  double caps_has_compute{0.0};
+  double caps_has_ssbo{0.0};
+  double caps_probe_completed{0.0};
+  double android_gpu_user_pref{0.0};
+  double android_gpu_effective{0.0};
+  std::string android_gpu_deny_reason;
+  std::string gl_version;
+  std::string gl_renderer;
   int memory_pressure{0};
   int keep_margin_eff{0};
   uint64_t buffer_expand_events{0};
@@ -404,6 +412,14 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.backend_cull = phys.BackendCull;
   n.backend_fluid = phys.BackendFluid;
   n.backend_lighting_mode = phys.BackendLightingMode;
+  n.caps_has_compute = phys.CapsHasCompute;
+  n.caps_has_ssbo = phys.CapsHasSsbo;
+  n.caps_probe_completed = phys.CapsProbeCompleted;
+  n.android_gpu_user_pref = phys.AndroidGpuUserPref;
+  n.android_gpu_effective = phys.AndroidGpuEffective;
+  n.android_gpu_deny_reason = phys.AndroidGpuDenyReason;
+  n.gl_version = phys.GlVersion;
+  n.gl_renderer = phys.GlRenderer;
   n.keep_margin_eff = phys.KeepMarginEff;
   n.buffer_expand_events = phys.BufferExpandEvents;
   {
@@ -550,6 +566,15 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"backend_cull\":\"" << n.backend_cull << "\""
           << ",\"backend_fluid\":\"" << n.backend_fluid << "\""
           << ",\"backend_lighting_mode\":\"" << n.backend_lighting_mode << "\""
+          << ",\"caps_has_compute\":" << n.caps_has_compute
+          << ",\"caps_has_ssbo\":" << n.caps_has_ssbo
+          << ",\"caps_probe_completed\":" << n.caps_probe_completed
+          << ",\"android_gpu_user_pref\":" << n.android_gpu_user_pref
+          << ",\"android_gpu_effective\":" << n.android_gpu_effective
+          << ",\"android_gpu_deny_reason\":\"" << n.android_gpu_deny_reason
+          << "\""
+          << ",\"gl_version\":\"" << n.gl_version << "\""
+          << ",\"gl_renderer\":\"" << n.gl_renderer << "\""
           << ",\"memory_pressure\":" << n.memory_pressure
           << ",\"keep_margin_eff\":" << n.keep_margin_eff
           << ",\"buffer_expand_events\":" << n.buffer_expand_events

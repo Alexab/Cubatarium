@@ -266,10 +266,14 @@ set(SOURCES
     src/Render/Backend/RenderBackendFactory.cpp
     src/Render/Backend/RenderBackendSelect.cpp
     src/Render/Backend/RenderBackendCaps.cpp
+    src/Render/Backend/RenderBackendCapsProbe.cpp
+    src/Render/Backend/AndroidGpuPolicy.cpp
     src/Render/Backend/GpuHotPathFallback.cpp
+    src/Render/Gl/ComputeProgram.cpp
     src/Render/Mesh/CpuFrustumCull.cpp
     src/Render/Mesh/GpuFrustumCull.cpp
     src/Render/Mesh/GpuGreedyMesher.cpp
+    src/Render/Mesh/AndroidGpuGreedyMesher.cpp
     src/Render/Mesh/GpuGreedyOpaqueEmit.cpp
     src/Render/Pipeline/GpuTransparentSort.cpp
     src/Render/Mesh/GpuFluidColumnScan.cpp
@@ -1167,6 +1171,14 @@ add_executable(render_backend_factory_test
 target_include_directories(render_backend_factory_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
+add_executable(android_gpu_policy_test
+    src/Test/AndroidGpuPolicyTest.cpp
+    src/Render/Backend/AndroidGpuPolicy.cpp
+    src/Render/Backend/RenderBackendCaps.cpp)
+target_include_directories(android_gpu_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(android_gpu_policy_test PRIVATE glog::glog)
+
 add_executable(mesh_gpu_store_mdi_test
     src/Test/MeshGpuStoreMdiTest.cpp)
 target_include_directories(mesh_gpu_store_mdi_test PRIVATE
@@ -1186,6 +1198,9 @@ target_link_libraries(gpu_greedy_face_extract_test glm::glm nlohmann_json::nlohm
 add_executable(greedy_transparent_sort_test
     src/Test/GreedyTransparentSortTest.cpp
     src/Render/Pipeline/GreedyTransparentSort.cpp
+    src/Render/Backend/RenderBackendCaps.cpp
+    src/Render/Backend/GpuHotPathFallback.cpp
+    src/Test/GpuTransparentSortHostStub.cpp
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Math/GridMath.cpp)
 target_include_directories(greedy_transparent_sort_test PRIVATE

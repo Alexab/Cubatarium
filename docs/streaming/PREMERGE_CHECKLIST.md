@@ -92,7 +92,9 @@ P* + D1 (Desktop): cull→MDI (P2), single pool upload (P3), PreferGpu fluid (P7
 skylight without sky GetBufferSubData (D1.3), opaque greedy without mask readback
 (D1.1), force Full lighting (D1.4).
 
-Android/GLES: CPU stack unless `AllowAndroidGpu` (default false). See
+Android/GLES: GPU-by-default when probe+allowlist pass; opt-out via
+`render.android_gpu_enabled=false`. See
 [`ANDROID_GPU_BACKLOG.md`](ANDROID_GPU_BACKLOG.md). Device smoke:
 [`QA_ANDROID_2026.md`](../QA_ANDROID_2026.md). Factory:
-`render_backend_factory_test`.
+`render_backend_factory_test`, `android_gpu_policy_test`.
+Phase runner: `tools/android_gpu_phase_run.py` (desktop + android assemble + gates).

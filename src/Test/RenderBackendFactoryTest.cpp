@@ -64,12 +64,23 @@ int main()
     caps.HasMultiDrawIndirect = false;
     caps.AllowAndroidGpu = true;
     const RenderBackendSelection sel = URenderBackendFactory::Select(caps);
-    Expect(sel.Mesher == MesherBackendKind::GpuGreedy,
-           "android opt-in AllowAndroidGpu selects gpu mesher");
-    Expect(sel.Cull == CullBackendKind::GpuFrustum,
-           "android opt-in AllowAndroidGpu selects gpu cull");
+    Expect(sel.Mesher == MesherBackendKind::AndroidHybridGpu,
+           "android AllowAndroidGpu selects android hybrid mesher");
+    Expect(sel.Cull == CullBackendKind::CpuFrustum,
+           "android hybrid keeps cpu cull");
     Expect(sel.Store == MeshStoreBackendKind::CpuStaging,
-           "android opt-in without MDI keeps staging");
+           "android without MDI keeps staging");
+  }
+
+  {
+    RenderBackendCaps caps;
+    caps.Platform = RenderPlatformKind::Android;
+    caps.HasCompute = true;
+    caps.HasSsbo = true;
+    caps.AllowAndroidGpu = false;
+    const RenderBackendSelection sel = URenderBackendFactory::Select(caps);
+    Expect(sel.Mesher == MesherBackendKind::CpuGreedy,
+           "android opt-out keeps cpu mesher");
   }
 
   {

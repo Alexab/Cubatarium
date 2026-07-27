@@ -15,6 +15,7 @@
 #include "Gui/Interfaces/IUInventoryViewModel.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ViewEngine.h"
+#include "Render/Backend/RenderBackendCaps.h"
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
 #include "ThirdParty/stb_image.h"
@@ -172,6 +173,7 @@ bool UWindowManager::Initialize(int width, int height, const char *title,
     glfwTerminate();
     return false;
   }
+  RefreshRenderBackendCapsFromGl();
 #endif
 
   // Настройка OpenGL
