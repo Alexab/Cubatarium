@@ -258,11 +258,12 @@ def main() -> int:
     ap.add_argument(
         "--scenario",
         default="",
-        choices=["", "break-stand"],
-        help="named scenario (break-stand: standing CompletesBreak every ~1s)",
+        choices=["", "break-stand", "visual-blue", "visual-dig", "visual-flicker", "visual-edge"],
+        help="named scenario (break-stand / visual-* GPU regression repros)",
     )
     ap.add_argument("--break-phase-sec", type=float, default=20.0)
     ap.add_argument("--break-interval-sec", type=float, default=1.0)
+    ap.add_argument("--yaw-sweep-sec", type=float, default=3.0)
     args = ap.parse_args()
 
     if args.scenario == "break-stand":
@@ -279,6 +280,56 @@ def main() -> int:
         min_break = args.idle_sec + args.break_phase_sec + 5.0
         if args.seconds < min_break:
             args.seconds = min_break
+
+    if args.scenario == "visual-blue":
+        # Resume near-sea World_164 focus; yaw sweep 0/90/180/270.
+        args.world = args.world or "World_164"
+        args.no_fly = True
+        args.fly_stop = False
+        args.resume = True
+        args.teleport_cruise = False
+        args.hold_space = False
+        args.sprint = False
+        if args.pitch is None:
+            args.pitch = 0.0
+        args.idle_sec = max(args.idle_sec, 5.0)
+        min_blue = args.idle_sec + args.yaw_sweep_sec * 4.0 + 5.0
+        if args.seconds < min_blue:
+            args.seconds = min_blue
+
+    if args.scenario == "visual-dig":
+        args.world = args.world or "World_164"
+        args.no_fly = True
+        args.fly_stop = False
+        args.resume = True
+        args.teleport_cruise = False
+        args.hold_space = False
+        args.sprint = False
+        if args.pitch is None:
+            args.pitch = 55.0
+        args.idle_sec = max(args.idle_sec, 8.0)
+        args.break_phase_sec = max(args.break_phase_sec, 20.0)
+        min_dig = args.idle_sec + args.break_phase_sec + 5.0
+        if args.seconds < min_dig:
+            args.seconds = min_dig
+
+    if args.scenario == "visual-flicker":
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.teleport_cruise = True
+        args.resume = False
+        args.idle_sec = max(args.idle_sec, 8.0)
+        args.fly_phase_sec = max(args.fly_phase_sec, 30.0)
+        args.stop_phase_sec = max(args.stop_phase_sec, 20.0)
+
+    if args.scenario == "visual-edge":
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.teleport_cruise = True
+        args.resume = False
+        args.idle_sec = max(args.idle_sec, 8.0)
+        args.fly_phase_sec = max(args.fly_phase_sec, 45.0)
+        args.stop_phase_sec = max(args.stop_phase_sec, 30.0)
 
     if args.replay_manual:
         args.world = "World_164"
@@ -336,10 +387,15 @@ def main() -> int:
         "--report",
         str(BIN / "flight_sim_report.json"),
     ]
-    if args.scenario == "break-stand":
+    if args.scenario == "break-stand" or args.scenario == "visual-dig":
         sim_cmd.append("--break-stand")
         sim_cmd.extend(["--break-phase", str(args.break_phase_sec)])
         sim_cmd.extend(["--break-interval", str(args.break_interval_sec)])
+        sim_cmd.append("--no-fly")
+        sim_cmd.append("--no-hold-forward")
+    elif args.scenario == "visual-blue":
+        sim_cmd.append("--yaw-sweep")
+        sim_cmd.extend(["--yaw-sweep-sec", str(args.yaw_sweep_sec)])
         sim_cmd.append("--no-fly")
         sim_cmd.append("--no-hold-forward")
     elif args.no_fly:
@@ -347,7 +403,11 @@ def main() -> int:
         sim_cmd.append("--no-hold-forward")
     else:
         sim_cmd.extend(["--fly", "--hold-forward"])
-    if args.fly_stop and args.scenario != "break-stand":
+    if args.fly_stop and args.scenario not in (
+        "break-stand",
+        "visual-dig",
+        "visual-blue",
+    ):
         sim_cmd.append("--fly-stop")
         sim_cmd.extend(["--fly-phase", str(args.fly_phase_sec)])
         sim_cmd.extend(["--stop-phase", str(args.stop_phase_sec)])
@@ -370,7 +430,7 @@ def main() -> int:
         process_timeout = args.seconds + 120.0
     if args.fly_stop:
         process_timeout = max(process_timeout, 420.0)
-    if args.scenario == "break-stand":
+    if args.scenario in ("break-stand", "visual-dig", "visual-blue"):
         process_timeout = max(process_timeout, args.seconds + 180.0)
 
     print("running:", " ".join(sim_cmd), flush=True)

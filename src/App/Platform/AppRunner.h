@@ -50,6 +50,9 @@ struct FlightSimOptions
   bool BreakStandMode{false};
   double BreakPhaseSec{20.0};
   double BreakIntervalSec{1.0};
+  /// Standing yaw sweep: cycle 0/90/180/270 every YawSweepSec (visual blue repro).
+  bool YawSweepMode{false};
+  double YawSweepSec{3.0};
   /// Show GLFW window (default hidden). Hidden still has a GL context; lighting
   /// runs the same path — use visible only for human eyeballing.
   bool VisibleWindow{false};

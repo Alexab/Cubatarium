@@ -38,6 +38,8 @@ public:
   /// When true, edit remesh prefers center Immediate + Dirty ring (GPU store).
   void SetPreferGpuStorePatch(bool enabled) { PreferGpuStorePatch = enabled; }
   bool GetPreferGpuStorePatch() const { return PreferGpuStorePatch; }
+  uint64_t GetLastEditImmediateN() const { return LastEditImmediateN; }
+  uint64_t GetLastEditDirtyN() const { return LastEditDirtyN; }
 
   void SetCullBackend(IUChunkCull *cull) { Cache.SetCullBackend(cull); }
   void SetMesherBackend(IUChunkMesher *mesher)
@@ -208,6 +210,8 @@ private:
   UChunkMeshCache Cache;
   IUWorldMeshSink *MeshSink{nullptr};
   bool PreferGpuStorePatch{false};
+  uint64_t LastEditImmediateN{0};
+  uint64_t LastEditDirtyN{0};
 };
 
 } // namespace cutum

@@ -25,8 +25,7 @@ struct EditMeshRemeshInput
   bool HasRegistry{true};
   /// Max sync Immediate remeshes for hybrid async edit (desktop default 9).
   int ImmediateChunkCap{9};
-  /// When true (GPU store bind): only center chunks Immediate; ring is Dirty
-  /// priority for upload/MDI patch instead of sync greedy storm.
+  /// When true (GPU store bind): center + face-adjacent Immediate; light ring Dirty.
   bool PreferGpuStorePatch{false};
 };
 

@@ -1237,6 +1237,19 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
       world.GetMeshService().GetLastMeshImmediateMs();
   world.PhysicsTelemetryData.MeshImmediateCount =
       world.GetMeshService().GetLastMeshImmediateCount();
+  world.PhysicsTelemetryData.EditImmediateN =
+      world.GetMeshService().GetLastEditImmediateN();
+  world.PhysicsTelemetryData.EditDirtyN =
+      world.GetMeshService().GetLastEditDirtyN();
+  world.PhysicsTelemetryData.EditNeighborPendingFrames =
+      static_cast<uint64_t>(
+          (std::max)(0, world.GetMeshService().GetAsyncInFlightCount()));
+  world.PhysicsTelemetryData.ChunkNotReady =
+      static_cast<uint64_t>(
+          (std::max)(0, world.PhysicsTelemetryData.FocusNotRenderReady));
+  world.PhysicsTelemetryData.ChunkMeshedUnlit =
+      static_cast<uint64_t>(
+          (std::max)(0, world.PhysicsTelemetryData.FocusDarkMesh));
   world.PhysicsTelemetryData.MeshDirtyTickMs =
       world.GetMeshService().GetLastMeshDirtyTickMs();
 }

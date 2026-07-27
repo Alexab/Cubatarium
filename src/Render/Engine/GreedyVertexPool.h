@@ -60,6 +60,18 @@ public:
   /// Soft ceiling for vertex+index combined (0 = unbounded grow).
   void SetMaxCapacityBytes(size_t max_bytes) { MaxCapacityBytes = max_bytes; }
   size_t GetMaxCapacityBytes() const { return MaxCapacityBytes; }
+  uint64_t ConsumeUnsyncUploads()
+  {
+    const uint64_t v = UnsyncUploads;
+    UnsyncUploads = 0;
+    return v;
+  }
+  double ConsumeFenceWaitMs()
+  {
+    const double v = FenceWaitMs;
+    FenceWaitMs = 0.0;
+    return v;
+  }
 
 private:
   /// Returns false if growth was refused/clamped by MaxCapacityBytes.
@@ -75,6 +87,9 @@ private:
   size_t IndexUsedBytes{0};
   size_t MaxCapacityBytes{0};
   std::vector<GreedyGpuPoolFreeSlot> FreeList;
+  void *UploadFence{nullptr};
+  uint64_t UnsyncUploads{0};
+  double FenceWaitMs{0.0};
 };
 
 } // namespace cutum

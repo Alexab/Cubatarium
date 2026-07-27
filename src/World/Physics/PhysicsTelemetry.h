@@ -143,6 +143,20 @@ struct PhysicsTelemetry
   double VertexPoolFill{0.0};
   /// 1 when opaque cull used GPU compact→indirect (no flat-ref rebuild).
   double GpuCullIndirect{0.0};
+  /// Visual-debug: opaque MDI cmds after compact cull.
+  uint64_t OpaqueCmdTotal{0};
+  uint64_t OpaqueCmdOn{0};
+  uint64_t CrossBatchCount{0};
+  uint64_t CpuAabbWouldOn{0};
+  uint64_t EditImmediateN{0};
+  uint64_t EditDirtyN{0};
+  uint64_t EditNeighborPendingFrames{0};
+  uint64_t PoolUnsyncUploads{0};
+  double PoolFenceWaitMs{0.0};
+  /// Focus column split: meshed-but-culled vs not ready / unlit preview.
+  uint64_t ChunkMeshedCulled0{0};
+  uint64_t ChunkMeshedUnlit{0};
+  uint64_t ChunkNotReady{0};
   uint64_t GpuMeshVboDispatch{0};
   uint64_t GpuLightSeedApply{0};
   /// 1 when PreferGpu fluid column scan is active this frame.

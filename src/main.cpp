@@ -173,6 +173,24 @@ int main(int argc, char *argv[])
             opt.BreakPhaseSec = 20.0;
           }
         }
+        else if (std::strcmp(argv[j], "--yaw-sweep") == 0)
+        {
+          opt.YawSweepMode = true;
+          opt.Fly = false;
+          opt.HoldForward = false;
+          opt.HoldSpace = false;
+          opt.BreakStandMode = false;
+          opt.FlyStopMode = false;
+          opt.MinAltitudeAboveSea = 0.0f;
+          if (opt.IdleBeforeFlySec < 5.0)
+          {
+            opt.IdleBeforeFlySec = 5.0;
+          }
+        }
+        else if (std::strcmp(argv[j], "--yaw-sweep-sec") == 0 && j + 1 < argc)
+        {
+          opt.YawSweepSec = std::atof(argv[++j]);
+        }
         else if (std::strcmp(argv[j], "--break-phase") == 0 && j + 1 < argc)
         {
           opt.BreakPhaseSec = std::atof(argv[++j]);

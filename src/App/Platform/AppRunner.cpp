@@ -18,6 +18,7 @@
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/TextRenderer.h"
 #include "Render/Engine/ViewEngine.h"
+#include <algorithm>
 #include "Render/Textures/TextureBase.h"
 #include "Render/Textures/TextureCube.h"
 #include "Creatures/Player/User.h"
@@ -332,6 +333,11 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
   {
     in_game_seconds = options.IdleBeforeFlySec + options.BreakPhaseSec;
   }
+  if (options.YawSweepMode)
+  {
+    in_game_seconds =
+        options.IdleBeforeFlySec + options.YawSweepSec * 4.0 + 2.0;
+  }
   if (in_game_seconds < 5.0)
   {
     in_game_seconds = 5.0;
@@ -458,9 +464,11 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
             if (auto camera = world->GetCurrentUserCamera())
             {
               if (!autopilot_armed &&
-                  (options.Fly || options.HoldForward || options.BreakStandMode))
+                  (options.Fly || options.HoldForward ||
+                   options.BreakStandMode || options.YawSweepMode))
               {
-                if (options.Fly && !options.BreakStandMode)
+                if (options.Fly && !options.BreakStandMode &&
+                    !options.YawSweepMode)
                 {
                   camera->SetFreeMove(true);
                 }
@@ -496,6 +504,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                           << " hold_forward=" << (options.HoldForward ? 1 : 0)
                           << " hold_space=" << (options.HoldSpace ? 1 : 0)
                           << " break_stand=" << (options.BreakStandMode ? 1 : 0)
+                          << " yaw_sweep=" << (options.YawSweepMode ? 1 : 0)
                           << " teleport=" << (options.TeleportToCruiseStart ? 1 : 0)
                           << " yaw=" << options.FaceYawDeg
                           << " pitch=" << options.FacePitchDeg
@@ -504,13 +513,25 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
               }
               if (autopilot_armed)
               {
-                if (options.Fly && !options.BreakStandMode)
+                if (options.Fly && !options.BreakStandMode &&
+                    !options.YawSweepMode)
                 {
                   camera->SetFreeMove(true);
                 }
-                camera->SetOrientation(options.FaceYawDeg, options.FacePitchDeg);
+                float yaw = options.FaceYawDeg;
+                if (options.YawSweepMode &&
+                    ingame_sec >= options.IdleBeforeFlySec)
+                {
+                  const double sweep_t =
+                      ingame_sec - options.IdleBeforeFlySec;
+                  const int step = static_cast<int>(
+                      sweep_t / (std::max)(0.1, options.YawSweepSec));
+                  static const float kYaws[4] = {0.f, 90.f, 180.f, 270.f};
+                  yaw = kYaws[step & 3];
+                }
+                camera->SetOrientation(yaw, options.FacePitchDeg);
                 // Keep cruise altitude (manual holds Space / levels pitch).
-                if (!options.BreakStandMode &&
+                if (!options.BreakStandMode && !options.YawSweepMode &&
                     (options.HoldSpace || options.MinAltitudeAboveSea > 0.0f))
                 {
                   const float sea = static_cast<float>(

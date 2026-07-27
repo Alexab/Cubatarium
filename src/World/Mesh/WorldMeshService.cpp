@@ -700,10 +700,17 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
   policy_in.PreferGpuStorePatch = PreferGpuStorePatch;
 
   const EditMeshRemeshDecision decision = EvaluateEditMeshRemesh(policy_in);
+  LastEditImmediateN = decision.ImmediateChunks.size();
+  LastEditDirtyN = decision.DirtyChunks.size();
   modified_chunks.insert(decision.ImmediateChunks.begin(),
                          decision.ImmediateChunks.end());
   modified_chunks.insert(decision.DirtyChunks.begin(),
                          decision.DirtyChunks.end());
+  if (break_tele)
+  {
+    break_tele->EditImmediateN = LastEditImmediateN;
+    break_tele->EditDirtyN = LastEditDirtyN;
+  }
 
   if (!registry)
   {

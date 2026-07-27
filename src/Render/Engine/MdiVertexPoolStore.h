@@ -63,6 +63,9 @@ public:
   void FlipBucketOwnership(MeshGpuBucketHandle handle) override;
 
   uint64_t GetMappedUploadFrames() const { return MappedUploadFrames; }
+  uint64_t LastCullOpaqueTotal() const { return LastCullOpaqueTotal_; }
+  uint64_t LastCullOpaqueOn() const { return LastCullOpaqueOn_; }
+  uint64_t LastCpuAabbWouldOn() const { return LastCpuAabbWouldOn_; }
 
 private:
   bool EnsureCullProgram();
@@ -72,10 +75,17 @@ private:
   size_t IndirectCapacityBytes{0};
   uint64_t LastDrawCmds{0};
   uint64_t MappedUploadFrames{0};
+  uint64_t LastCullOpaqueTotal_{0};
+  uint64_t LastCullOpaqueOn_{0};
+  uint64_t LastCpuAabbWouldOn_{0};
 
   GLuint CullProgram{0};
   GLuint CullFrustumUbo{0};
+  GLuint CullAabbMaxSsbo{0};
+  size_t CullAabbMaxCapacity{0};
+  GLuint CullStatsSsbo{0};
   bool CullInitAttempted{false};
+  bool CullProgramIsSphere{false};
 
   std::vector<uint8_t> StagingScratch;
   MeshGpuBucketHandle MappedHandle{};

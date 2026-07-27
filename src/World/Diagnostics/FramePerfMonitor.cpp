@@ -221,6 +221,18 @@ struct FrameNumbers
   double gpu_cull_ms{0.0};
   double vertex_pool_fill{0.0};
   double gpu_cull_indirect{0.0};
+  uint64_t opaque_cmd_total{0};
+  uint64_t opaque_cmd_on{0};
+  uint64_t cross_batch_count{0};
+  uint64_t cpu_aabb_would_on{0};
+  uint64_t edit_immediate_n{0};
+  uint64_t edit_dirty_n{0};
+  uint64_t edit_neighbor_pending_frames{0};
+  uint64_t pool_unsync_uploads{0};
+  double pool_fence_wait_ms{0.0};
+  uint64_t chunk_meshed_culled0{0};
+  uint64_t chunk_meshed_unlit{0};
+  uint64_t chunk_not_ready{0};
   uint64_t gpu_mesh_vbo_dispatch{0};
   uint64_t gpu_light_seed_apply{0};
   uint64_t gpu_mask_readback{0};
@@ -397,6 +409,18 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.gpu_cull_ms = phys.GpuCullMs;
   n.vertex_pool_fill = phys.VertexPoolFill;
   n.gpu_cull_indirect = phys.GpuCullIndirect;
+  n.opaque_cmd_total = phys.OpaqueCmdTotal;
+  n.opaque_cmd_on = phys.OpaqueCmdOn;
+  n.cross_batch_count = phys.CrossBatchCount;
+  n.cpu_aabb_would_on = phys.CpuAabbWouldOn;
+  n.edit_immediate_n = phys.EditImmediateN;
+  n.edit_dirty_n = phys.EditDirtyN;
+  n.edit_neighbor_pending_frames = phys.EditNeighborPendingFrames;
+  n.pool_unsync_uploads = phys.PoolUnsyncUploads;
+  n.pool_fence_wait_ms = phys.PoolFenceWaitMs;
+  n.chunk_meshed_culled0 = phys.ChunkMeshedCulled0;
+  n.chunk_meshed_unlit = phys.ChunkMeshedUnlit;
+  n.chunk_not_ready = phys.ChunkNotReady;
   n.gpu_mesh_vbo_dispatch = UGpuGreedyMesher::ConsumeMeshVboDispatchCount();
   n.gpu_light_seed_apply = ConsumeGpuSkylightSeedApplyCount();
   n.gpu_mask_readback = UGpuGreedyMesher::ConsumeMaskReadbackCount();
@@ -551,6 +575,19 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"gpu_cull_ms\":" << n.gpu_cull_ms
           << ",\"vertex_pool_fill\":" << n.vertex_pool_fill
           << ",\"gpu_cull_indirect\":" << n.gpu_cull_indirect
+          << ",\"opaque_cmd_total\":" << n.opaque_cmd_total
+          << ",\"opaque_cmd_on\":" << n.opaque_cmd_on
+          << ",\"cross_batch_count\":" << n.cross_batch_count
+          << ",\"cpu_aabb_would_on\":" << n.cpu_aabb_would_on
+          << ",\"edit_immediate_n\":" << n.edit_immediate_n
+          << ",\"edit_dirty_n\":" << n.edit_dirty_n
+          << ",\"edit_neighbor_pending_frames\":"
+          << n.edit_neighbor_pending_frames
+          << ",\"pool_unsync_uploads\":" << n.pool_unsync_uploads
+          << ",\"pool_fence_wait_ms\":" << n.pool_fence_wait_ms
+          << ",\"chunk_meshed_culled0\":" << n.chunk_meshed_culled0
+          << ",\"chunk_meshed_unlit\":" << n.chunk_meshed_unlit
+          << ",\"chunk_not_ready\":" << n.chunk_not_ready
           << ",\"gpu_mesh_vbo_dispatch\":" << n.gpu_mesh_vbo_dispatch
           << ",\"gpu_light_seed_apply\":" << n.gpu_light_seed_apply
           << ",\"gpu_mask_readback\":" << n.gpu_mask_readback

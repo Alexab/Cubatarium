@@ -111,6 +111,24 @@ powershell -ExecutionPolicy Bypass -File scripts/build/android-debug.ps1
 
 Anti-patterns: commit on NO-GO; skip Android `assembleDebug`; mid-session backend swap.
 
+## Visual GPU regression autofly (desktop)
+
+Phases `V_BLUE` / `V_DIG` / `V_FLICKER` / `V_EDGE` in
+`tools/flight_sim_phase_gate.py`. Runner:
+
+```powershell
+python tools/visual_gpu_phase_run.py --phase-id V_BLUE --report bin/phase_V_BLUE.json
+```
+
+Env A/B:
+- `CUBATARIUM_GPU_CULL_MODE=aabb|sphere|cpu` (default `aabb`)
+- `CUBATARIUM_PREFER_GPU_STORE_PATCH=0|1`
+- `CUBATARIUM_POOL_SYNC=0` to restore legacy unsync pool maps (default sync+fence)
+
+`V_EDGE` gate uses `chunk_not_ready_med` (streaming) separately from
+`chunk_meshed_culled0` (GPU cull). Failures on `not_ready` are a streaming
+backlog, not a GPU-path bug.
+
 ```powershell
 # D1 units
 pwsh tools/run_gpu_tail_unit_tests.ps1

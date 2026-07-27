@@ -4,7 +4,9 @@
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "glog/logging.h"
+#include <cstdlib>
 #include <cstring>
+#include <string>
 #include <vector>
 
 namespace cutum
@@ -12,9 +14,102 @@ namespace cutum
 namespace
 {
 
+enum class GpuCullMode
+{
+  Aabb,
+  Sphere,
+  Cpu
+};
+
+GpuCullMode ResolveGpuCullMode()
+{
+  const char *env = std::getenv("CUBATARIUM_GPU_CULL_MODE");
+  if (!env || !*env)
+  {
+    return GpuCullMode::Aabb;
+  }
+  const std::string v(env);
+  if (v == "sphere")
+  {
+    return GpuCullMode::Sphere;
+  }
+  if (v == "cpu")
+  {
+    return GpuCullMode::Cpu;
+  }
+  return GpuCullMode::Aabb;
+}
+
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
 // Matches Frustum::IntersectsChunkAABB plane skips (near/top/bottom = 2,3,4).
-const char *kCompactCullCompute = R"(#version 430
+const char *kCompactCullAabbCompute = R"(#version 430
+layout(local_size_x = 64) in;
+struct DrawCmd {
+  uint count;
+  uint instanceCount;
+  uint firstIndex;
+  int baseVertex;
+  uint baseInstance;
+};
+layout(std430, binding = 0) readonly buffer AabbMinBuf { vec4 aabbMin[]; };
+layout(std430, binding = 4) readonly buffer AabbMaxBuf { vec4 aabbMax[]; };
+layout(std430, binding = 1) buffer Cmds { DrawCmd cmds[]; };
+layout(std430, binding = 2) writeonly buffer Vis { uint vis[]; };
+layout(std430, binding = 5) buffer Stats { uint visibleCount; };
+layout(std140, binding = 3) uniform FrustumUBO {
+  vec4 planes[6];
+  vec4 camPosMaxDist;
+  uint batchCount;
+  uint _pad0;
+  uint _pad1;
+  uint _pad2;
+};
+
+bool aabbInFrustum(vec3 bmin, vec3 bmax, vec3 cam, float maxDist) {
+  if (cam.x >= bmin.x && cam.x <= bmax.x &&
+      cam.y >= bmin.y && cam.y <= bmax.y &&
+      cam.z >= bmin.z && cam.z <= bmax.z) {
+    return true;
+  }
+  if (maxDist > 0.0) {
+    vec3 c = (bmin + bmax) * 0.5;
+    if (length(c - cam) <= maxDist) {
+      return true;
+    }
+  }
+  for (int i = 0; i < 6; ++i) {
+    if (i == 2 || i == 3 || i == 4) continue;
+    vec3 n = planes[i].xyz;
+    vec3 p = bmin;
+    if (n.x >= 0.0) p.x = bmax.x;
+    if (n.y >= 0.0) p.y = bmax.y;
+    if (n.z >= 0.0) p.z = bmax.z;
+    if (dot(n, p) + planes[i].w < 0.0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void main() {
+  uint i = gl_GlobalInvocationID.x;
+  if (i >= batchCount) {
+    return;
+  }
+  vec3 bmin = aabbMin[i].xyz;
+  vec3 bmax = aabbMax[i].xyz;
+  const bool ok =
+      aabbInFrustum(bmin, bmax, camPosMaxDist.xyz, camPosMaxDist.w) &&
+      cmds[i].count > 0u;
+  cmds[i].instanceCount = ok ? 1u : 0u;
+  vis[i] = ok ? 1u : 0u;
+  if (ok) {
+    atomicAdd(visibleCount, 1u);
+  }
+}
+)";
+
+const char *kCompactCullSphereCompute = R"(#version 430
 layout(local_size_x = 64) in;
 struct DrawCmd {
   uint count;
@@ -26,9 +121,10 @@ struct DrawCmd {
 layout(std430, binding = 0) readonly buffer Spheres { vec4 spheres[]; };
 layout(std430, binding = 1) buffer Cmds { DrawCmd cmds[]; };
 layout(std430, binding = 2) writeonly buffer Vis { uint vis[]; };
+layout(std430, binding = 5) buffer Stats { uint visibleCount; };
 layout(std140, binding = 3) uniform FrustumUBO {
   vec4 planes[6];
-  vec4 camPosMaxDist; // xyz = camera, w = maxDist (0 = unlimited)
+  vec4 camPosMaxDist;
   uint batchCount;
   uint _pad0;
   uint _pad1;
@@ -63,6 +159,9 @@ void main() {
   const bool ok = sphereInFrustum(c, r) && inDist && cmds[i].count > 0u;
   cmds[i].instanceCount = ok ? 1u : 0u;
   vis[i] = ok ? 1u : 0u;
+  if (ok) {
+    atomicAdd(visibleCount, 1u);
+  }
 }
 )";
 #endif
@@ -90,6 +189,16 @@ UMdiVertexPoolStore::~UMdiVertexPoolStore()
   {
     glDeleteBuffers(1, &CullFrustumUbo);
     CullFrustumUbo = 0;
+  }
+  if (CullAabbMaxSsbo)
+  {
+    glDeleteBuffers(1, &CullAabbMaxSsbo);
+    CullAabbMaxSsbo = 0;
+  }
+  if (CullStatsSsbo)
+  {
+    glDeleteBuffers(1, &CullStatsSsbo);
+    CullStatsSsbo = 0;
   }
 }
 
@@ -245,13 +354,28 @@ bool UMdiVertexPoolStore::EnsureCullProgram()
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
   return false;
 #else
+  const GpuCullMode mode = ResolveGpuCullMode();
+  const bool want_sphere = mode == GpuCullMode::Sphere;
+  if (CullInitAttempted && CullProgram != 0 &&
+      CullProgramIsSphere == want_sphere)
+  {
+    return true;
+  }
+  if (CullProgram != 0 && CullProgramIsSphere != want_sphere)
+  {
+    glDeleteProgram(CullProgram);
+    CullProgram = 0;
+    CullInitAttempted = false;
+  }
   if (CullInitAttempted)
   {
     return CullProgram != 0;
   }
   CullInitAttempted = true;
+  const char *src =
+      want_sphere ? kCompactCullSphereCompute : kCompactCullAabbCompute;
   const GLuint sh = glCreateShader(GL_COMPUTE_SHADER);
-  glShaderSource(sh, 1, &kCompactCullCompute, nullptr);
+  glShaderSource(sh, 1, &src, nullptr);
   glCompileShader(sh);
   GLint ok = 0;
   glGetShaderiv(sh, GL_COMPILE_STATUS, &ok);
@@ -275,7 +399,19 @@ bool UMdiVertexPoolStore::EnsureCullProgram()
     CullProgram = 0;
     return false;
   }
-  glGenBuffers(1, &CullFrustumUbo);
+  if (CullFrustumUbo == 0)
+  {
+    glGenBuffers(1, &CullFrustumUbo);
+  }
+  if (CullStatsSsbo == 0)
+  {
+    glGenBuffers(1, &CullStatsSsbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, CullStatsSsbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(uint32_t), nullptr,
+                 GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  }
+  CullProgramIsSphere = want_sphere;
   return true;
 #endif
 }
@@ -286,6 +422,8 @@ void UMdiVertexPoolStore::RebuildIndirectCmdTable(GreedyGpuPassCache &cache)
   (void)cache;
   return;
 #else
+  // Resolve shader mode before packing aabb vs sphere primary buffer.
+  (void)EnsureCullProgram();
   const size_t n = cache.batches.size();
   if (n == 0 || !cache.usesVertexPool)
   {
@@ -295,6 +433,8 @@ void UMdiVertexPoolStore::RebuildIndirectCmdTable(GreedyGpuPassCache &cache)
   }
   std::vector<DrawElementsIndirectCommand> cmds(n);
   std::vector<float> spheres(n * 4);
+  std::vector<float> aabb_min(n * 4, 0.f);
+  std::vector<float> aabb_max(n * 4, 0.f);
   for (size_t i = 0; i < n; ++i)
   {
     const GreedyGpuBatch &b = cache.batches[i];
@@ -317,6 +457,12 @@ void UMdiVertexPoolStore::RebuildIndirectCmdTable(GreedyGpuPassCache &cache)
     spheres[i * 4 + 1] = b.cullSphere[1];
     spheres[i * 4 + 2] = b.cullSphere[2];
     spheres[i * 4 + 3] = b.cullSphere[3];
+    aabb_min[i * 4 + 0] = b.cullAabbMin[0];
+    aabb_min[i * 4 + 1] = b.cullAabbMin[1];
+    aabb_min[i * 4 + 2] = b.cullAabbMin[2];
+    aabb_max[i * 4 + 0] = b.cullAabbMax[0];
+    aabb_max[i * 4 + 1] = b.cullAabbMax[1];
+    aabb_max[i * 4 + 2] = b.cullAabbMax[2];
   }
 
   const size_t cmd_bytes = n * sizeof(DrawElementsIndirectCommand);
@@ -340,22 +486,47 @@ void UMdiVertexPoolStore::RebuildIndirectCmdTable(GreedyGpuPassCache &cache)
                     static_cast<GLsizeiptr>(cmd_bytes), cmds.data());
   }
 
+  // BatchSphereSsbo: spheres (legacy) or aabbMin (default AABB mode).
   if (cache.BatchSphereSsbo == 0)
   {
     glGenBuffers(1, &cache.BatchSphereSsbo);
   }
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, cache.BatchSphereSsbo);
+  const void *primary =
+      CullProgramIsSphere ? static_cast<const void *>(spheres.data())
+                          : static_cast<const void *>(aabb_min.data());
   if (sphere_bytes > cache.BatchSphereCapacity)
   {
     glBufferData(GL_SHADER_STORAGE_BUFFER,
-                 static_cast<GLsizeiptr>(sphere_bytes), spheres.data(),
+                 static_cast<GLsizeiptr>(sphere_bytes), primary,
                  GL_DYNAMIC_DRAW);
     cache.BatchSphereCapacity = sphere_bytes;
   }
   else
   {
     glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
-                    static_cast<GLsizeiptr>(sphere_bytes), spheres.data());
+                    static_cast<GLsizeiptr>(sphere_bytes), primary);
+  }
+
+  if (!CullProgramIsSphere)
+  {
+    if (CullAabbMaxSsbo == 0)
+    {
+      glGenBuffers(1, &CullAabbMaxSsbo);
+    }
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, CullAabbMaxSsbo);
+    if (sphere_bytes > CullAabbMaxCapacity)
+    {
+      glBufferData(GL_SHADER_STORAGE_BUFFER,
+                   static_cast<GLsizeiptr>(sphere_bytes), aabb_max.data(),
+                   GL_DYNAMIC_DRAW);
+      CullAabbMaxCapacity = sphere_bytes;
+    }
+    else
+    {
+      glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
+                      static_cast<GLsizeiptr>(sphere_bytes), aabb_max.data());
+    }
   }
 
   if (cache.CullVisSsbo == 0)
@@ -398,6 +569,8 @@ void UMdiVertexPoolStore::ApplyFrustumInstanceCull(
     GreedyGpuPassCache &cache, const Frustum &frustum,
     const glm::vec3 &camera_pos, float max_cull_distance)
 {
+  uint64_t on = 0;
+  uint64_t total = 0;
   for (GreedyGpuBatch &b : cache.batches)
   {
     if (!b.pooled || b.indexCountGl <= 0)
@@ -405,15 +578,21 @@ void UMdiVertexPoolStore::ApplyFrustumInstanceCull(
       b.drawInstanceCount = 0;
       continue;
     }
-    const glm::vec3 center(b.cullSphere[0], b.cullSphere[1], b.cullSphere[2]);
-    const float r = b.cullSphere[3];
-    const glm::vec3 bmin = center - glm::vec3(r);
-    const glm::vec3 bmax = center + glm::vec3(r);
+    ++total;
+    const glm::vec3 bmin(b.cullAabbMin[0], b.cullAabbMin[1], b.cullAabbMin[2]);
+    const glm::vec3 bmax(b.cullAabbMax[0], b.cullAabbMax[1], b.cullAabbMax[2]);
     const bool vis =
         frustum.IntersectsChunkAABB(bmin, bmax, camera_pos, max_cull_distance,
                                     false);
     b.drawInstanceCount = vis ? 1u : 0u;
+    if (vis)
+    {
+      ++on;
+    }
   }
+  LastCullOpaqueTotal_ = total;
+  LastCullOpaqueOn_ = on;
+  LastCpuAabbWouldOn_ = on;
   cache.IndirectCullReady = true;
   cache.GpuCompactActive = false;
   cache.CompactVisCpuSynced = true;
@@ -451,6 +630,36 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
                                               const glm::vec3 &camera_pos,
                                               float max_cull_distance)
 {
+  LastCullOpaqueTotal_ = 0;
+  LastCullOpaqueOn_ = 0;
+  LastCpuAabbWouldOn_ = 0;
+
+  uint64_t aabb_on = 0;
+  uint64_t eligible = 0;
+  for (const GreedyGpuBatch &b : cache.batches)
+  {
+    if (!b.pooled || b.indexCountGl <= 0)
+    {
+      continue;
+    }
+    ++eligible;
+    const glm::vec3 bmin(b.cullAabbMin[0], b.cullAabbMin[1], b.cullAabbMin[2]);
+    const glm::vec3 bmax(b.cullAabbMax[0], b.cullAabbMax[1], b.cullAabbMax[2]);
+    if (frustum.IntersectsChunkAABB(bmin, bmax, camera_pos, max_cull_distance,
+                                    false))
+    {
+      ++aabb_on;
+    }
+  }
+  LastCpuAabbWouldOn_ = aabb_on;
+  LastCullOpaqueTotal_ = eligible;
+
+  if (ResolveGpuCullMode() == GpuCullMode::Cpu)
+  {
+    ApplyFrustumInstanceCull(cache, frustum, camera_pos, max_cull_distance);
+    return false;
+  }
+
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
   ApplyFrustumInstanceCull(cache, frustum, camera_pos, max_cull_distance);
   return false;
@@ -461,6 +670,10 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
     {
       RebuildIndirectCmdTable(cache);
     }
+    if (!cache.GpuCompactActive)
+    {
+      ApplyFrustumInstanceCull(cache, frustum, camera_pos, max_cull_distance);
+    }
     return cache.GpuCompactActive;
   }
   if (!cache.GpuCompactActive || cache.IndirectCmdsBuffer == 0 ||
@@ -470,6 +683,7 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   }
   if (!cache.GpuCompactActive)
   {
+    ApplyFrustumInstanceCull(cache, frustum, camera_pos, max_cull_distance);
     return false;
   }
 
@@ -493,20 +707,43 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   ubo.camPosMaxDist[3] = max_cull_distance;
   ubo.batchCount = static_cast<uint32_t>(cache.batches.size());
 
+  const uint32_t zero = 0;
+  if (CullStatsSsbo != 0)
+  {
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, CullStatsSsbo);
+    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(uint32_t), &zero);
+  }
+
   glBindBuffer(GL_UNIFORM_BUFFER, CullFrustumUbo);
   glBufferData(GL_UNIFORM_BUFFER, sizeof(ubo), &ubo, GL_DYNAMIC_DRAW);
   glBindBufferBase(GL_UNIFORM_BUFFER, 3, CullFrustumUbo);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, cache.BatchSphereSsbo);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, cache.IndirectCmdsBuffer);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, cache.CullVisSsbo);
+  if (CullStatsSsbo != 0)
+  {
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, CullStatsSsbo);
+  }
+  if (!CullProgramIsSphere && CullAabbMaxSsbo != 0)
+  {
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, CullAabbMaxSsbo);
+  }
   glUseProgram(CullProgram);
   const uint32_t n = ubo.batchCount;
   glDispatchCompute((n + 63u) / 64u, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
   glUseProgram(0);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-  // No vis readback: IndirectCmdsBuffer is authoritative for MultiDraw.
+  uint32_t visible = 0;
+  if (CullStatsSsbo != 0)
+  {
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, CullStatsSsbo);
+    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(uint32_t), &visible);
+  }
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  LastCullOpaqueOn_ = visible;
+
+  // No full vis readback: IndirectCmdsBuffer is authoritative for MultiDraw.
   // Keep CPU drawInstanceCount=1 so rare DrawElementsBaseVertex fallback still
   // draws (overdraw-only if compact culled); avoids N-uint GetBufferSubData.
   for (GreedyGpuBatch &b : cache.batches)

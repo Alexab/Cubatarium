@@ -53,6 +53,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -193,8 +194,19 @@ void UGeometryEngine::EnsureRenderBackendsBound()
   }
   if (WorldInstance && RenderBackends.Store)
   {
-    WorldInstance->GetMeshService().SetPreferGpuStorePatch(
-        RenderBackends.Store->SupportsMultiDrawIndirect());
+    bool prefer_patch = RenderBackends.Store->SupportsMultiDrawIndirect();
+    if (const char *env = std::getenv("CUBATARIUM_PREFER_GPU_STORE_PATCH"))
+    {
+      if (env[0] == '0')
+      {
+        prefer_patch = false;
+      }
+      else if (env[0] == '1')
+      {
+        prefer_patch = true;
+      }
+    }
+    WorldInstance->GetMeshService().SetPreferGpuStorePatch(prefer_patch);
   }
   if (WorldInstance)
   {
@@ -1382,6 +1394,11 @@ void UGeometryEngine::DrawCrossInstancedBatches(
 
   CrossGpuBackend.RefreshPass(CrossGpuPass, batches, meshRevision,
                               cullRevision);
+  if (WorldInstance)
+  {
+    WorldInstance->GetPhysicsTelemetryMutable().CrossBatchCount =
+        CrossGpuPass.batches.size();
+  }
   if (CrossGpuPass.batches.empty())
   {
     return;
@@ -1541,8 +1558,23 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     phys.GpuPoolCapMb = static_cast<double>(cap) / (1024.0 * 1024.0);
     phys.VertexPoolFill =
         cap > 0 ? static_cast<double>(used) / static_cast<double>(cap) : 0.0;
+    phys.PoolUnsyncUploads =
+        GreedyGpuOpaque.VertexPool.ConsumeUnsyncUploads() +
+        GreedyGpuCutout.VertexPool.ConsumeUnsyncUploads() +
+        GreedyGpuTransparent.VertexPool.ConsumeUnsyncUploads();
+    phys.PoolFenceWaitMs =
+        GreedyGpuOpaque.VertexPool.ConsumeFenceWaitMs() +
+        GreedyGpuCutout.VertexPool.ConsumeFenceWaitMs() +
+        GreedyGpuTransparent.VertexPool.ConsumeFenceWaitMs();
     if (mdi)
     {
+      phys.OpaqueCmdTotal = mdi->LastCullOpaqueTotal();
+      phys.OpaqueCmdOn = mdi->LastCullOpaqueOn();
+      phys.CpuAabbWouldOn = mdi->LastCpuAabbWouldOn();
+      phys.ChunkMeshedCulled0 =
+          phys.OpaqueCmdTotal > phys.OpaqueCmdOn
+              ? phys.OpaqueCmdTotal - phys.OpaqueCmdOn
+              : 0;
       phys.GpuCullIndirect = 1.0;
     }
   }

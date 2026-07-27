@@ -1,6 +1,7 @@
 #include "World/Mesh/EditMeshRemeshPolicy.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 
 namespace cutum
 {
@@ -57,6 +58,22 @@ EvaluateEditMeshRemesh(const EditMeshRemeshInput &input)
   auto chunk_coords = CollectEditRemeshChunkCoords(
       input.BlockPositions, input.SyncNeighborChunks, input.SyncLightRing);
 
+  // PreferGpuStorePatch: always consider face-adjacent chunk coords for
+  // Immediate (seam faces), even when the edit block is interior to a chunk.
+  if (input.PreferGpuStorePatch && input.SyncNeighborChunks)
+  {
+    static const glm::ivec3 kFaceChunkOffsets[] = {
+        {1, 0, 0}, {-1, 0, 0}, {0, 1, 0},
+        {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+    for (const glm::ivec3 &c : center_chunks)
+    {
+      for (const glm::ivec3 &o : kFaceChunkOffsets)
+      {
+        chunk_coords.insert(c + o);
+      }
+    }
+  }
+
   if (!input.HasRegistry)
   {
     out.DirtyChunks.assign(chunk_coords.begin(), chunk_coords.end());
@@ -103,9 +120,25 @@ EvaluateEditMeshRemesh(const EditMeshRemeshInput &input)
     {
       if (input.PreferGpuStorePatch)
       {
-        // Centers only Immediate; light/face ring → Dirty for GPU upload path.
-        want_immediate = center_chunks.count(chunk_coord) != 0 &&
-                         immediate_n < cap;
+        // Center + face-adjacent Immediate (seam faces); light-ring → Dirty.
+        const bool center = center_chunks.count(chunk_coord) != 0;
+        const bool face_adj =
+            input.SyncNeighborChunks && !center &&
+            [&]()
+            {
+              for (const glm::ivec3 &c : center_chunks)
+              {
+                const int dx = std::abs(chunk_coord.x - c.x);
+                const int dy = std::abs(chunk_coord.y - c.y);
+                const int dz = std::abs(chunk_coord.z - c.z);
+                if (dx + dy + dz == 1)
+                {
+                  return true;
+                }
+              }
+              return false;
+            }();
+        want_immediate = (center || face_adj) && immediate_n < cap;
       }
       else
       {

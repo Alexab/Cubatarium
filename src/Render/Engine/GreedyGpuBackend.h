@@ -32,6 +32,9 @@ struct GreedyGpuBatch
   size_t eboByteOffset{0};
   /// Frustum sphere for instance-count cull (xyz center, w radius).
   float cullSphere[4]{0, 0, 0, 0};
+  /// Exact chunk AABB for compact cull (matches Frustum::IntersectsChunkAABB).
+  float cullAabbMin[3]{0, 0, 0};
+  float cullAabbMax[3]{0, 0, 0};
   uint32_t drawInstanceCount{1};
 };
 

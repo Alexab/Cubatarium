@@ -243,6 +243,12 @@ void UGreedyGpuBackend::RefreshPassRefs(
     dst->cullSphere[1] = center.y;
     dst->cullSphere[2] = center.z;
     dst->cullSphere[3] = radius > 0.0f ? radius : 0.5f;
+    dst->cullAabbMin[0] = bmin.x;
+    dst->cullAabbMin[1] = bmin.y;
+    dst->cullAabbMin[2] = bmin.z;
+    dst->cullAabbMax[0] = bmax.x;
+    dst->cullAabbMax[1] = bmax.y;
+    dst->cullAabbMax[2] = bmax.z;
     dst->drawInstanceCount = 1;
     ++write_index;
   }

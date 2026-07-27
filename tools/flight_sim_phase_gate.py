@@ -312,6 +312,26 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("post_stop_black_sticky_max", "le", 0.0),
         ("chunks_traveled", "ge", 3.0),
     ],
+    # Visual regression gates (GPU desktop).
+    "V_BLUE": [
+        ("blue_screen_suspect", "le", 0.0),
+        ("opaque_on_min", "ge", 1.0),
+        ("post_stop_black_sticky_max", "le", 0.0),
+    ],
+    "V_DIG": [
+        ("edit_immediate_n_med", "ge", 2.0),
+        ("post_stop_black_sticky_max", "le", 0.0),
+    ],
+    "V_FLICKER": [
+        ("pool_unsync_uploads_med", "le", 0.0),
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "V_EDGE": [
+        ("chunk_not_ready_med", "le", 40.0),
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
 }
 
 

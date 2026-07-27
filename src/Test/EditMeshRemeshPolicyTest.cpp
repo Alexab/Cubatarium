@@ -77,13 +77,13 @@ int main()
     in.ImmediateChunkCap = 9;
     in.PreferGpuStorePatch = true;
     const auto d = EvaluateEditMeshRemesh(in);
-    Expect(d.ImmediateChunks.size() == 1, "gpu patch: only center immediate");
-    Expect(!d.DirtyChunks.empty(), "gpu patch: ring dirty");
+    Expect(d.ImmediateChunks.size() == 7,
+           "gpu patch: center + 6 face neighbors immediate");
+    Expect(!d.DirtyChunks.empty(), "gpu patch: light ring dirty");
   }
 
   {
-    // Face neighbors without light ring still Immediate under default policy;
-    // with PreferGpuStorePatch only center.
+    // Face neighbors Immediate under PreferGpuStorePatch (seam fix).
     EditMeshRemeshInput in;
     in.BlockPositions = {{8, 64, 8}};
     in.SyncNeighborChunks = true;
@@ -94,8 +94,8 @@ int main()
     in.ImmediateChunkCap = 9;
     in.PreferGpuStorePatch = true;
     const auto d = EvaluateEditMeshRemesh(in);
-    Expect(d.ImmediateChunks.size() == 1,
-           "gpu patch without light ring: center only");
+    Expect(d.ImmediateChunks.size() == 7,
+           "gpu patch without light ring: center + 6 face neighbors");
   }
 
   if (gFails != 0)

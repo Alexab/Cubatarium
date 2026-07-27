@@ -2,6 +2,8 @@
 #include "Render/GlIncludes.h"
 #include "glog/logging.h"
 #include <algorithm>
+#include <chrono>
+#include <cstdlib>
 #include <cstring>
 
 namespace cutum
@@ -12,6 +14,35 @@ namespace
 
 constexpr unsigned int kArrayBuffer = GL_ARRAY_BUFFER;
 constexpr unsigned int kElementArrayBuffer = GL_ELEMENT_ARRAY_BUFFER;
+
+bool PoolSyncRequested()
+{
+  // Default ON (fixes rewrite-while-draw flicker); set =0 for legacy unsync.
+  const char *env = std::getenv("CUBATARIUM_POOL_SYNC");
+  if (env && env[0] == '0')
+  {
+    return false;
+  }
+  return true;
+}
+
+void WaitUploadFence(void *&fence_void, double &wait_ms_acc)
+{
+  if (!fence_void)
+  {
+    return;
+  }
+  auto *fence = static_cast<GLsync>(fence_void);
+  const auto t0 = std::chrono::steady_clock::now();
+  const GLenum r =
+      glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 16'000'000);
+  (void)r;
+  wait_ms_acc += std::chrono::duration<double, std::milli>(
+                     std::chrono::steady_clock::now() - t0)
+                     .count();
+  glDeleteSync(fence);
+  fence_void = nullptr;
+}
 
 } // namespace
 
@@ -164,11 +195,20 @@ UGreedyVertexPool::Allocate(const GreedyMeshBatch &batch)
   glBindBuffer(kArrayBuffer, VertexVbo);
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
   {
+    const bool sync = PoolSyncRequested();
+    if (sync)
+    {
+      WaitUploadFence(UploadFence, FenceWaitMs);
+    }
+    GLbitfield flags = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT;
+    if (!sync)
+    {
+      flags |= GL_MAP_UNSYNCHRONIZED_BIT;
+      ++UnsyncUploads;
+    }
     void *mapped = glMapBufferRange(
         kArrayBuffer, static_cast<GLintptr>(alloc.vertexByteOffset),
-        static_cast<GLsizeiptr>(vertex_bytes),
-        GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT |
-            GL_MAP_UNSYNCHRONIZED_BIT);
+        static_cast<GLsizeiptr>(vertex_bytes), flags);
     if (mapped)
     {
       std::memcpy(mapped, batch.vertices.data(), vertex_bytes);
@@ -189,11 +229,20 @@ UGreedyVertexPool::Allocate(const GreedyMeshBatch &batch)
   glBindBuffer(kElementArrayBuffer, IndexEbo);
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
   {
+    const bool sync = PoolSyncRequested();
+    if (sync)
+    {
+      WaitUploadFence(UploadFence, FenceWaitMs);
+    }
+    GLbitfield flags = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT;
+    if (!sync)
+    {
+      flags |= GL_MAP_UNSYNCHRONIZED_BIT;
+      ++UnsyncUploads;
+    }
     void *mapped = glMapBufferRange(
         kElementArrayBuffer, static_cast<GLintptr>(alloc.indexByteOffset),
-        static_cast<GLsizeiptr>(index_bytes),
-        GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT |
-            GL_MAP_UNSYNCHRONIZED_BIT);
+        static_cast<GLsizeiptr>(index_bytes), flags);
     if (mapped)
     {
       std::memcpy(mapped, batch.indices.data(), index_bytes);
@@ -205,6 +254,14 @@ UGreedyVertexPool::Allocate(const GreedyMeshBatch &batch)
                       static_cast<GLintptr>(alloc.indexByteOffset),
                       static_cast<GLsizeiptr>(index_bytes),
                       batch.indices.data());
+    }
+    if (sync)
+    {
+      if (UploadFence)
+      {
+        glDeleteSync(static_cast<GLsync>(UploadFence));
+      }
+      UploadFence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
     }
   }
 #else
@@ -226,6 +283,13 @@ void UGreedyVertexPool::Reset()
 
 void UGreedyVertexPool::Destroy()
 {
+  if (UploadFence)
+  {
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+    glDeleteSync(static_cast<GLsync>(UploadFence));
+#endif
+    UploadFence = nullptr;
+  }
   if (IndexEbo != 0)
   {
     glDeleteBuffers(1, &IndexEbo);

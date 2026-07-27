@@ -246,6 +246,38 @@ def analyze(
     caps_has_compute = caps_has_compute_med
     android_gpu_effective = android_gpu_effective_med
     android_gpu_user_pref = android_gpu_user_pref_med
+    opaque_cmd_total_med = median(col(steady, "opaque_cmd_total"))
+    opaque_cmd_on_med = median(col(steady, "opaque_cmd_on"))
+    cross_batch_count_med = median(col(steady, "cross_batch_count"))
+    cpu_aabb_would_on_med = median(col(steady, "cpu_aabb_would_on"))
+    edit_immediate_n_med = median(col(steady, "edit_immediate_n"))
+    edit_dirty_n_med = median(col(steady, "edit_dirty_n"))
+    edit_neighbor_pending_frames_med = median(
+        col(steady, "edit_neighbor_pending_frames")
+    )
+    pool_unsync_uploads_med = median(col(steady, "pool_unsync_uploads"))
+    pool_fence_wait_ms_med = median(col(steady, "pool_fence_wait_ms"))
+    chunk_meshed_culled0_med = median(col(steady, "chunk_meshed_culled0"))
+    chunk_meshed_unlit_med = median(col(steady, "chunk_meshed_unlit"))
+    chunk_not_ready_med = median(col(steady, "chunk_not_ready"))
+    opaque_on_vals = col(steady, "opaque_cmd_on")
+    opaque_on_min = min(opaque_on_vals) if opaque_on_vals else None
+    if (
+        opaque_cmd_total_med is not None
+        and opaque_cmd_on_med is not None
+        and opaque_cmd_total_med > 0
+    ):
+        opaque_culled_frac_med = max(
+            0.0, (opaque_cmd_total_med - opaque_cmd_on_med) / opaque_cmd_total_med
+        )
+    else:
+        opaque_culled_frac_med = None
+    cross_med = cross_batch_count_med or 0.0
+    blue_screen_suspect = (
+        1.0
+        if cross_med > 0 and opaque_on_min is not None and opaque_on_min <= 0
+        else 0.0
+    )
     gpu_draw_cmds_med = median(gpu_draw_cmds)
     gpu_cull_ms_med = median(gpu_cull_ms)
     vertex_pool_fill_med = median(vertex_pool_fill)
@@ -756,6 +788,21 @@ def analyze(
             "android_gpu_deny_reason": android_gpu_deny_reason,
             "gl_version": gl_version,
             "gl_renderer": gl_renderer,
+            "opaque_cmd_total_med": opaque_cmd_total_med,
+            "opaque_cmd_on_med": opaque_cmd_on_med,
+            "opaque_culled_frac_med": opaque_culled_frac_med,
+            "cross_batch_count_med": cross_batch_count_med,
+            "cpu_aabb_would_on_med": cpu_aabb_would_on_med,
+            "edit_immediate_n_med": edit_immediate_n_med,
+            "edit_dirty_n_med": edit_dirty_n_med,
+            "edit_neighbor_pending_frames_med": edit_neighbor_pending_frames_med,
+            "pool_unsync_uploads_med": pool_unsync_uploads_med,
+            "pool_fence_wait_ms_med": pool_fence_wait_ms_med,
+            "chunk_meshed_culled0_med": chunk_meshed_culled0_med,
+            "chunk_meshed_unlit_med": chunk_meshed_unlit_med,
+            "chunk_not_ready_med": chunk_not_ready_med,
+            "opaque_on_min": opaque_on_min,
+            "blue_screen_suspect": blue_screen_suspect,
         },
         "gates": gates,
         "gates_stop": gates_stop,
