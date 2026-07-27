@@ -8,8 +8,8 @@
 namespace cutum
 {
 
-/// D1.3: blocklight flood entry used by GPU lighting pipeline.
-/// Implementation lives in ChunkLighting.cpp (calls internal PropagateBlocklight).
+/// D1.3 / GPF4: blocklight flood for GPU lighting pipeline (CPU authoritative;
+/// optional compute dispatch without readback under env flag).
 bool TryGpuPropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
                                glm::ivec3 chunk_coord);
 

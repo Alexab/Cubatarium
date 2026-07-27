@@ -303,8 +303,8 @@ void PropagateSkylightHorizontal(UBlockWorld &world, UBlockRegistry &registry,
   }
 }
 
-void PropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
-                         glm::ivec3 chunk_coord)
+void PropagateBlocklightImpl(UBlockWorld &world, UBlockRegistry &registry,
+                             glm::ivec3 chunk_coord)
 {
   std::deque<std::pair<glm::ivec3, int>> queue;
 
@@ -634,6 +634,12 @@ void RemoveThenPropagateSkyLight(UBlockWorld &world, UBlockRegistry &registry,
 
 } // namespace
 
+void PropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
+                         glm::ivec3 chunk_coord)
+{
+  PropagateBlocklightImpl(world, registry, chunk_coord);
+}
+
 void RelightChunkCoords(UBlockWorld &world, UBlockRegistry &registry,
                         const std::vector<glm::ivec3> &coords,
                         bool include_block_light, bool include_skylight,
@@ -663,8 +669,7 @@ void RelightChunkCoords(UBlockWorld &world, UBlockRegistry &registry,
 
   if (include_skylight)
   {
-    // Cap GPU seeds per batch: sync readback is costly; one apply still
-    // moves cruise telemetry and replaces one CPU column walk.
+    // GPU skylight seed apply (CPU parity); cap one per batch on sync relight.
     int gpu_seeds_left = 1;
     for (const glm::ivec3 &coord : coords)
     {
@@ -700,7 +705,14 @@ void RelightChunkCoords(UBlockWorld &world, UBlockRegistry &registry,
 
   for (const glm::ivec3 &coord : coords)
   {
-    PropagateBlocklight(world, registry, coord);
+    if (TryGpuPropagateBlocklight(world, registry, coord))
+    {
+      NoteGpuBlocklightFlood();
+    }
+    else
+    {
+      PropagateBlocklight(world, registry, coord);
+    }
   }
 }
 
@@ -915,17 +927,15 @@ void RelightChunkAfterGpuSkySeed(UBlockWorld &world, UBlockRegistry &registry,
   PropagateSkylightHorizontal(world, registry, chunk_coord);
   if (include_block_light)
   {
-    TryGpuPropagateBlocklight(world, registry, chunk_coord);
-    NoteGpuBlocklightFlood();
+    if (TryGpuPropagateBlocklight(world, registry, chunk_coord))
+    {
+      NoteGpuBlocklightFlood();
+    }
+    else
+    {
+      PropagateBlocklight(world, registry, chunk_coord);
+    }
   }
-}
-
-bool TryGpuPropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
-                               glm::ivec3 chunk_coord)
-{
-  // Same semantics as pre-D1 (no ClearChunkBlockLight).
-  PropagateBlocklight(world, registry, chunk_coord);
-  return true;
 }
 
 void RelightChunkBlockLight(UBlockWorld &world, UBlockRegistry &registry,

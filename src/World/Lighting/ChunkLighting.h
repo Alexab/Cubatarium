@@ -58,6 +58,10 @@ void RelightChunkAfterGpuSkySeed(UBlockWorld &world, UBlockRegistry &registry,
                                  glm::ivec3 chunk_coord,
                                  bool include_block_light);
 
+/// BFS blocklight from emissive voxels in chunk + face neighbors.
+void PropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
+                         glm::ivec3 chunk_coord);
+
 } // namespace cutum
 
 #endif // CHUNKLIGHTING_H

@@ -119,46 +119,8 @@ bool TryGpuSeedSkylightColumns(const std::array<uint8_t, CHUNK_VOLUME> &occ,
   (void)sky_out;
   return false;
 #else
-  if (!EnsureSeedCompute())
-  {
-    return false;
-  }
-  auto &s = SeedState();
-  std::vector<uint32_t> occ_words((CHUNK_VOLUME + 3) / 4, 0);
-  for (int i = 0; i < CHUNK_VOLUME; ++i)
-  {
-    occ_words[static_cast<size_t>(i >> 2)] |=
-        static_cast<uint32_t>(occ[static_cast<size_t>(i)]) << ((i & 3) * 8);
-  }
-  const uint32_t side = static_cast<uint32_t>(CHUNK_SIZE);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, s.OccSsbo);
-  glBufferData(GL_SHADER_STORAGE_BUFFER,
-               static_cast<GLsizeiptr>(occ_words.size() * sizeof(uint32_t)),
-               occ_words.data(), GL_DYNAMIC_DRAW);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, s.SkySsbo);
-  glBufferData(GL_SHADER_STORAGE_BUFFER,
-               static_cast<GLsizeiptr>(CHUNK_VOLUME * sizeof(uint32_t)), nullptr,
-               GL_DYNAMIC_DRAW);
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, s.OccSsbo);
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, s.SkySsbo);
-  glUseProgram(s.Program);
-  glUniform1ui(glGetUniformLocation(s.Program, "side"), side);
-  const uint32_t cols = side * side;
-  glDispatchCompute((cols + 63u) / 64u, 1, 1);
-  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
-  glUseProgram(0);
-  std::vector<uint32_t> sky(CHUNK_VOLUME, 0);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, s.SkySsbo);
-  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
-                     static_cast<GLsizeiptr>(sky.size() * sizeof(uint32_t)),
-                     sky.data());
-  ++gSkylightReadbacks;
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-  for (int i = 0; i < CHUNK_VOLUME; ++i)
-  {
-    sky_out[static_cast<size_t>(i)] =
-        static_cast<uint8_t>(sky[static_cast<size_t>(i)] & 0xffu);
-  }
+  // GPF4: CPU parity of column seed — no sync full-volume readback.
+  SeedSkylightColumnsCpu(occ, sky_out);
   ++gSkylightDispatches;
   return true;
 #endif

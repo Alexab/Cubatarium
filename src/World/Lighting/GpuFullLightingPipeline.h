@@ -13,9 +13,8 @@ namespace cutum
 
 using UCpuFullLightingPipeline = UFullLightingPipeline;
 
-/// Desktop GPU lighting: column skylight seed via compute when GL is available;
-/// horizontal BFS / blocklight flood stay on CPU to preserve LitReady semantics.
-/// Android never binds this class.
+/// Desktop GPU lighting: column skylight seed + blocklight flood on main thread;
+/// no sync full-volume readback on hot path. Android never binds this class.
 class UGpuFullLightingPipeline final : public IULightingPipeline
 {
 public:

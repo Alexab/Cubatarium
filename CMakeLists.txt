@@ -1070,7 +1070,7 @@ add_executable(chunk_lighting_propagation_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Lighting/LightUtil.cpp
     src/World/Lighting/ChunkLighting.cpp
-    src/World/Lighting/GpuBlocklightFlood.cpp
+    src/Test/GpuBlocklightFloodHostStub.cpp
     src/Test/GpuSkylightSeedHostStub.cpp
     src/Test/ChunkLightingPropagationTest.cpp)
 target_include_directories(chunk_lighting_propagation_test PRIVATE
@@ -1083,7 +1083,7 @@ add_executable(chunk_bulk_blocklight_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Lighting/LightUtil.cpp
     src/World/Lighting/ChunkLighting.cpp
-    src/World/Lighting/GpuBlocklightFlood.cpp
+    src/Test/GpuBlocklightFloodHostStub.cpp
     src/Test/GpuSkylightSeedHostStub.cpp
     src/Test/ChunkBulkBlockLightTest.cpp)
 target_include_directories(chunk_bulk_blocklight_test PRIVATE
