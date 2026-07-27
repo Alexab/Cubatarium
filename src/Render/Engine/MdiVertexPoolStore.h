@@ -48,12 +48,14 @@ public:
   void ApplyFrustumInstanceCull(GreedyGpuPassCache &cache,
                                 const Frustum &frustum,
                                 const glm::vec3 &camera_pos,
-                                float max_cull_distance);
+                                float max_cull_distance,
+                                bool horizontal_distance = false);
 
   /// P2: GPU compact writes instanceCount into 1:1 IndirectCmdsBuffer.
   bool ApplyGpuCompactCull(GreedyGpuPassCache &cache, const Frustum &frustum,
                            const glm::vec3 &camera_pos,
-                           float max_cull_distance);
+                           float max_cull_distance,
+                           bool horizontal_distance = false);
 
   /// Lazy readback of compact vis for DrawElementsBaseVertex fallback.
   bool SyncCompactVisToCpu(GreedyGpuPassCache &cache);

@@ -284,6 +284,13 @@ public:
   {
     return CrossBatches;
   }
+  bool UseHorizontalCullDistance() const
+  {
+    return AltitudeAboveTerrain >
+           static_cast<float>(AltitudeFogThresholdBlocks);
+  }
+  /// Render-horizon distance admit for frustum cull (same as RebuildVisible).
+  float MaxCullDistance() const;
 
 private:
   struct ChunkGreedyMesh
@@ -309,11 +316,6 @@ private:
                                  const glm::vec3 *cameraPos,
                                  float maxCullDistance);
   void InvalidateVisibleList();
-  bool UseHorizontalCullDistance() const
-  {
-    return AltitudeAboveTerrain >
-           static_cast<float>(AltitudeFogThresholdBlocks);
-  }
   std::unordered_map<glm::ivec3, std::vector<FaceInstance>, IVec3Hash> Cache;
   std::unordered_map<glm::ivec3, ChunkGreedyMesh, IVec3Hash> GreedyCache;
   UChunkDirtySet Dirty;
@@ -367,7 +369,6 @@ private:
                                           float maxCullDistance);
   int SyncRebuildVisibleMissing(UBlockWorld &world, UBlockRegistry &registry,
                                 int max_sync, double max_ms = 0.0);
-  float MaxCullDistance() const;
   glm::ivec3 MeshFocusGroundChunk{0};
   int MeshFocusRadiusChunks{6};
   bool MeshFocusValid{false};

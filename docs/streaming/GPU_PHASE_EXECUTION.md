@@ -123,7 +123,8 @@ python tools/visual_gpu_phase_run.py --phase-id V_BLUE --report bin/phase_V_BLUE
 Env A/B:
 - `CUBATARIUM_GPU_CULL_MODE=aabb|sphere|cpu` (default `aabb`)
 - `CUBATARIUM_PREFER_GPU_STORE_PATCH=0|1`
-- `CUBATARIUM_POOL_SYNC=0` to restore legacy unsync pool maps (default sync+fence)
+- `CUBATARIUM_POOL_SYNC=1` enables one fence wait in `Reserve` (default off;
+  per-batch waits caused wall≈2s / <1 FPS)
 
 `V_EDGE` gate uses `chunk_not_ready_med` (streaming) separately from
 `chunk_meshed_culled0` (GPU cull). Failures on `not_ready` are a streaming

@@ -60,12 +60,13 @@ layout(std140, binding = 3) uniform FrustumUBO {
   vec4 planes[6];
   vec4 camPosMaxDist;
   uint batchCount;
-  uint _pad0;
+  uint horizontalDist;
   uint _pad1;
   uint _pad2;
 };
 
-bool aabbInFrustum(vec3 bmin, vec3 bmax, vec3 cam, float maxDist) {
+bool aabbInFrustum(vec3 bmin, vec3 bmax, vec3 cam, float maxDist,
+                   bool horiz) {
   if (cam.x >= bmin.x && cam.x <= bmax.x &&
       cam.y >= bmin.y && cam.y <= bmax.y &&
       cam.z >= bmin.z && cam.z <= bmax.z) {
@@ -73,7 +74,9 @@ bool aabbInFrustum(vec3 bmin, vec3 bmax, vec3 cam, float maxDist) {
   }
   if (maxDist > 0.0) {
     vec3 c = (bmin + bmax) * 0.5;
-    if (length(c - cam) <= maxDist) {
+    float d = horiz ? length(vec2(c.x - cam.x, c.z - cam.z))
+                    : length(c - cam);
+    if (d <= maxDist) {
       return true;
     }
   }
@@ -99,7 +102,8 @@ void main() {
   vec3 bmin = aabbMin[i].xyz;
   vec3 bmax = aabbMax[i].xyz;
   const bool ok =
-      aabbInFrustum(bmin, bmax, camPosMaxDist.xyz, camPosMaxDist.w) &&
+      aabbInFrustum(bmin, bmax, camPosMaxDist.xyz, camPosMaxDist.w,
+                    horizontalDist != 0u) &&
       cmds[i].count > 0u;
   cmds[i].instanceCount = ok ? 1u : 0u;
   vis[i] = ok ? 1u : 0u;
@@ -126,7 +130,7 @@ layout(std140, binding = 3) uniform FrustumUBO {
   vec4 planes[6];
   vec4 camPosMaxDist;
   uint batchCount;
-  uint _pad0;
+  uint horizontalDist;
   uint _pad1;
   uint _pad2;
 };
@@ -153,7 +157,9 @@ void main() {
   bool inDist = true;
   if (maxDist > 0.0) {
     vec3 cam = camPosMaxDist.xyz;
-    float d = length(c - cam);
+    float d = horizontalDist != 0u
+                  ? length(vec2(c.x - cam.x, c.z - cam.z))
+                  : length(c - cam);
     inDist = d <= maxDist + r;
   }
   const bool ok = sphereInFrustum(c, r) && inDist && cmds[i].count > 0u;
@@ -567,7 +573,8 @@ void UMdiVertexPoolStore::RefreshPassRefs(
 
 void UMdiVertexPoolStore::ApplyFrustumInstanceCull(
     GreedyGpuPassCache &cache, const Frustum &frustum,
-    const glm::vec3 &camera_pos, float max_cull_distance)
+    const glm::vec3 &camera_pos, float max_cull_distance,
+    bool horizontal_distance)
 {
   uint64_t on = 0;
   uint64_t total = 0;
@@ -583,7 +590,7 @@ void UMdiVertexPoolStore::ApplyFrustumInstanceCull(
     const glm::vec3 bmax(b.cullAabbMax[0], b.cullAabbMax[1], b.cullAabbMax[2]);
     const bool vis =
         frustum.IntersectsChunkAABB(bmin, bmax, camera_pos, max_cull_distance,
-                                    false);
+                                    horizontal_distance);
     b.drawInstanceCount = vis ? 1u : 0u;
     if (vis)
     {
@@ -628,7 +635,8 @@ bool UMdiVertexPoolStore::SyncCompactVisToCpu(GreedyGpuPassCache &cache)
 bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
                                               const Frustum &frustum,
                                               const glm::vec3 &camera_pos,
-                                              float max_cull_distance)
+                                              float max_cull_distance,
+                                              bool horizontal_distance)
 {
   LastCullOpaqueTotal_ = 0;
   LastCullOpaqueOn_ = 0;
@@ -646,7 +654,7 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
     const glm::vec3 bmin(b.cullAabbMin[0], b.cullAabbMin[1], b.cullAabbMin[2]);
     const glm::vec3 bmax(b.cullAabbMax[0], b.cullAabbMax[1], b.cullAabbMax[2]);
     if (frustum.IntersectsChunkAABB(bmin, bmax, camera_pos, max_cull_distance,
-                                    false))
+                                    horizontal_distance))
     {
       ++aabb_on;
     }
@@ -656,12 +664,14 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
 
   if (ResolveGpuCullMode() == GpuCullMode::Cpu)
   {
-    ApplyFrustumInstanceCull(cache, frustum, camera_pos, max_cull_distance);
+    ApplyFrustumInstanceCull(cache, frustum, camera_pos, max_cull_distance,
+                             horizontal_distance);
     return false;
   }
 
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
-  ApplyFrustumInstanceCull(cache, frustum, camera_pos, max_cull_distance);
+  ApplyFrustumInstanceCull(cache, frustum, camera_pos, max_cull_distance,
+                           horizontal_distance);
   return false;
 #else
   if (!EnsureCullProgram() || cache.batches.empty())
@@ -672,7 +682,8 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
     }
     if (!cache.GpuCompactActive)
     {
-      ApplyFrustumInstanceCull(cache, frustum, camera_pos, max_cull_distance);
+      ApplyFrustumInstanceCull(cache, frustum, camera_pos, max_cull_distance,
+                               horizontal_distance);
     }
     return cache.GpuCompactActive;
   }
@@ -683,7 +694,8 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   }
   if (!cache.GpuCompactActive)
   {
-    ApplyFrustumInstanceCull(cache, frustum, camera_pos, max_cull_distance);
+    ApplyFrustumInstanceCull(cache, frustum, camera_pos, max_cull_distance,
+                             horizontal_distance);
     return false;
   }
 
@@ -692,7 +704,8 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
     float planes[6][4];
     float camPosMaxDist[4];
     uint32_t batchCount;
-    uint32_t pad[3];
+    uint32_t horizontalDist;
+    uint32_t pad[2];
   } ubo{};
   for (int i = 0; i < 6; ++i)
   {
@@ -706,6 +719,7 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   ubo.camPosMaxDist[2] = camera_pos.z;
   ubo.camPosMaxDist[3] = max_cull_distance;
   ubo.batchCount = static_cast<uint32_t>(cache.batches.size());
+  ubo.horizontalDist = horizontal_distance ? 1u : 0u;
 
   const uint32_t zero = 0;
   if (CullStatsSsbo != 0)

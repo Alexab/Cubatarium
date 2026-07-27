@@ -1515,8 +1515,10 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
                   ? dynamic_cast<UMdiVertexPoolStore *>(&store)
                   : nullptr;
   const Frustum frustum = Frustum::FromViewProjection(vp);
-  // Distance admit matches mesh-cache cull; 0 disables distance override.
-  constexpr float kMaxCullDistance = 0.0f;
+  // Must match ChunkMeshCache::RebuildVisible (distance admit). 0 = plane-only
+  // and false-negatives hide terrain while cross (built with MaxCullDistance) remains.
+  const float max_cull_distance = cache.MaxCullDistance();
+  const bool horizontal_cull = cache.UseHorizontalCullDistance();
 
   if (!opaque_draw.empty())
   {
@@ -1532,7 +1534,7 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     if (mdi)
     {
       mdi->ApplyGpuCompactCull(GreedyGpuOpaque, frustum, cameraPos,
-                               kMaxCullDistance);
+                               max_cull_distance, horizontal_cull);
     }
     DrawGreedyGpuBatches(GreedyGpuOpaque, vp, textures, true, false,
                          GreedyShaderMode::TransparentColor, 0.0f);
@@ -1653,9 +1655,9 @@ void UGeometryEngine::PrepareTransparent(
   if (auto *mdi = dynamic_cast<UMdiVertexPoolStore *>(&MeshStore()))
   {
     const Frustum frustum = Frustum::FromViewProjection(ctx.viewProjection);
-    constexpr float kMaxCullDistance = 0.0f;
     mdi->ApplyGpuCompactCull(GreedyGpuTransparent, frustum, ctx.cameraPos,
-                             kMaxCullDistance);
+                             ctx.cache.MaxCullDistance(),
+                             ctx.cache.UseHorizontalCullDistance());
   }
   PreparedTransparentVp = ctx.viewProjection;
   PreparedTransparentTextures = &ctx.textures;

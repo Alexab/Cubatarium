@@ -323,7 +323,7 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("post_stop_black_sticky_max", "le", 0.0),
     ],
     "V_FLICKER": [
-        ("pool_unsync_uploads_med", "le", 0.0),
+        ("pool_fence_wait_ms_med", "le", 5.0),
         ("post_stop_black_sticky_max", "le", 0.0),
         ("chunks_traveled", "ge", 3.0),
     ],

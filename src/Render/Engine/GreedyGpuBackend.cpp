@@ -178,6 +178,7 @@ void UGreedyGpuBackend::RefreshPass(GreedyGpuPassCache &cache,
 
   glBindBuffer(kArrayBuffer, 0);
   glBindBuffer(kElementArrayBuffer, 0);
+  cache.VertexPool.SignalUploadComplete();
   cache.meshRevision = mesh_revision;
   cache.cullRevision = cull_revision;
   cache.sortRevision = sort_revision;
@@ -261,6 +262,7 @@ void UGreedyGpuBackend::RefreshPassRefs(
 
   glBindBuffer(kArrayBuffer, 0);
   glBindBuffer(kElementArrayBuffer, 0);
+  cache.VertexPool.SignalUploadComplete();
   cache.meshRevision = mesh_revision;
   cache.cullRevision = cull_revision;
   cache.sortRevision = sort_revision;

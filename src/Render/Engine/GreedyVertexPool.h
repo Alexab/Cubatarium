@@ -60,6 +60,8 @@ public:
   /// Soft ceiling for vertex+index combined (0 = unbounded grow).
   void SetMaxCapacityBytes(size_t max_bytes) { MaxCapacityBytes = max_bytes; }
   size_t GetMaxCapacityBytes() const { return MaxCapacityBytes; }
+  /// Opt-in (CUBATARIUM_POOL_SYNC=1): fence after a full upload pass.
+  void SignalUploadComplete();
   uint64_t ConsumeUnsyncUploads()
   {
     const uint64_t v = UnsyncUploads;
