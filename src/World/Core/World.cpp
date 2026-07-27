@@ -36,6 +36,7 @@
 #include "App/Settings/GraphicsQualityProfile.h"
 #include "World/Lighting/AsyncRelightBuilder.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
+#include "World/Lighting/GpuSkylightColumnSeed.h"
 #include "World/Lighting/ChunkLighting.h"
 #include "World/Lighting/IULightingPipeline.h"
 #include "World/Lighting/LightingPipelineFactory.h"
@@ -3221,7 +3222,18 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       if (UChunk *chunk =
               BlockWorld.GetChunkManager().GetChunk(chunk_data.coord))
       {
-        chunk->GetLightDataMutable() = chunk_data.light_packed;
+        if (result.include_skylight &&
+            ApplyGpuSkylightSeedToChunk(*chunk, *BlockRegistry))
+        {
+          if (result.include_block_light)
+          {
+            MergeBlockLightKeepingGpuSky(*chunk, chunk_data.light_packed);
+          }
+        }
+        else
+        {
+          chunk->GetLightDataMutable() = chunk_data.light_packed;
+        }
         relit_coords.push_back(chunk_data.coord);
       }
     }

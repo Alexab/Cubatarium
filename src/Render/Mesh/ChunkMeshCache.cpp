@@ -9,7 +9,6 @@
 #include "Render/Mesh/CrossMeshEmitter.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
-#include "Render/Mesh/GpuGreedyMesher.h"
 #include "Render/Mesh/IUChunkCull.h"
 #include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Mesh/MeshLightSampling.h"
@@ -1302,13 +1301,9 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   // P5: optional main-thread GPU extract → pool batches for deferred snapshots.
   if (result.GpuExtractPending && result.PendingSnapshot && MesherBackend)
   {
-    auto *gpu = dynamic_cast<UGpuGreedyMesher *>(MesherBackend);
-    bool extracted = false;
-    if (gpu)
-    {
-      extracted = gpu->TryExtractOpaqueToBatches(
-          *result.PendingSnapshot, registry, result.coord, result.batches);
-    }
+    bool extracted = MesherBackend->TryExtractOpaqueToBatches(
+        *result.PendingSnapshot, registry, result.coord, result.batches,
+        /*deferred_no_gpu_readback=*/true);
     if (!extracted)
     {
       std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;

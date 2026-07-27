@@ -14,6 +14,9 @@
 
 namespace cutum
 {
+
+uint64_t gFluidPackCacheHits = 0;
+
 namespace
 {
 
@@ -29,6 +32,8 @@ struct FluidPackCacheEntry
   int height{0};
   int y_min{0};
   std::vector<int16_t> tops;
+  FluidSurfaceColumnSlice slice;
+  bool has_slice{false};
 };
 
 std::unordered_map<glm::ivec3, FluidPackCacheEntry, IVec3Hash> &
@@ -96,12 +101,21 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
 
   const uint64_t pack_hash = HashFluidFlags(flags);
   auto &cache = FluidPackReuseCache();
-  std::vector<int16_t> tops;
   const auto cit = cache.find(groundChunkCoord);
+  if (cit != cache.end() && cit->second.hash == pack_hash &&
+      cit->second.height == height && cit->second.y_min == y_min &&
+      cit->second.has_slice)
+  {
+    slice = cit->second.slice;
+    ++gFluidPackCacheHits;
+    return true;
+  }
+
+  std::vector<int16_t> tops;
   if (cit != cache.end() && cit->second.hash == pack_hash &&
       cit->second.height == height && cit->second.y_min == y_min)
   {
-    // P7: dirty remesh with identical packed flags — reuse tops, skip GPU.
+    // P7: identical pack — reuse tops, skip GPU scan.
     tops = cit->second.tops;
   }
   else
@@ -146,6 +160,13 @@ bool TryBuildSliceGpu(const UBlockWorld &world, UBlockRegistry &registry,
       slice.FluidId[lz][lx] = top_id;
     }
   }
+  FluidPackCacheEntry &stored = cache[groundChunkCoord];
+  stored.hash = pack_hash;
+  stored.height = height;
+  stored.y_min = y_min;
+  stored.tops = tops;
+  stored.slice = slice;
+  stored.has_slice = true;
   return true;
 }
 
@@ -215,5 +236,11 @@ BuildFluidSurfaceColumnSlice(const UBlockWorld &world, UBlockRegistry &registry,
   }
   return slice;
 }
+
+uint64_t FluidSurfacePackCacheHits() { return gFluidPackCacheHits; }
+
+void ResetFluidSurfacePackCacheHits() { gFluidPackCacheHits = 0; }
+
+void ResetFluidSurfacePackReuseCache() { FluidPackReuseCache().clear(); }
 
 } // namespace cutum

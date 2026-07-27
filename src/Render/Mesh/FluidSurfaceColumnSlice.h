@@ -42,6 +42,12 @@ FluidSurfaceColumnSlice
 BuildFluidSurfaceColumnSlice(const UBlockWorld &world, UBlockRegistry &registry,
                              glm::ivec3 groundChunkCoord, int scanHintY);
 
+/// Pack-hash cache hits (skip GPU scan and full rebuild when slice unchanged).
+uint64_t FluidSurfacePackCacheHits();
+void ResetFluidSurfacePackCacheHits();
+/// Test / session reset for per-chunk pack reuse map.
+void ResetFluidSurfacePackReuseCache();
+
 } // namespace cutum
 
 #endif

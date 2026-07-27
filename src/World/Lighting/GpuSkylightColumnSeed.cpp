@@ -1,5 +1,5 @@
 #include "World/Lighting/GpuSkylightColumnSeed.h"
-#include "Blocks/BlockRegistry.h"
+#include "World/Lighting/LightUtil.h"
 #include "Render/GlIncludes.h"
 #include "glog/logging.h"
 #include <vector>

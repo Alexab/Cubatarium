@@ -1,6 +1,7 @@
 #pragma once
 
 #include "World/Chunks/Chunk.h"
+#include "World/Lighting/LightUtil.h"
 #include <array>
 #include <cstdint>
 #include <vector>
@@ -45,6 +46,27 @@ bool TryGpuSeedSkylightColumns(const std::array<uint8_t, CHUNK_VOLUME> &occ,
 
 /// Pack occupancy, GPU seed, WriteSkyLight into chunk. Main thread + GL only.
 bool ApplyGpuSkylightSeedToChunk(UChunk &chunk, UBlockRegistry &registry);
+
+/// Keep GPU-written sky columns; copy block light from async/sync packed source.
+inline void MergeBlockLightKeepingGpuSky(
+    UChunk &chunk, const std::array<uint8_t, CHUNK_VOLUME> &source_packed)
+{
+  for (int ly = 0; ly < CHUNK_SIZE; ++ly)
+  {
+    for (int lz = 0; lz < CHUNK_SIZE; ++lz)
+    {
+      for (int lx = 0; lx < CHUNK_SIZE; ++lx)
+      {
+        const glm::ivec3 local(lx, ly, lz);
+        const int li = (ly * CHUNK_SIZE + lz) * CHUNK_SIZE + lx;
+        const uint8_t packed = source_packed[static_cast<size_t>(li)];
+        const int sky = chunk.GetSkyLightLocal(local);
+        const int block_level = UnpackBlock(packed);
+        chunk.SetLightLocal(local, sky, block_level);
+      }
+    }
+  }
+}
 
 uint64_t GpuSkylightSeedDispatchCount();
 /// Successful apply count since last consume (FramePerf telemetry).

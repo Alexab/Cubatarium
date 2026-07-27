@@ -274,10 +274,23 @@ bool UGpuGreedyMesher::CanDeferGpuExtract(const ChunkMeshSnapshot &snapshot,
 
 bool UGpuGreedyMesher::TryExtractOpaqueToBatches(
     const ChunkMeshSnapshot &snapshot, UBlockRegistry &registry,
-    glm::ivec3 coord, std::vector<GreedyMeshBatch> &out_batches)
+    glm::ivec3 coord, std::vector<GreedyMeshBatch> &out_batches,
+    bool deferred_no_gpu_readback)
 {
   out_batches.clear();
-  auto quads = TryComputeExtract(snapshot, registry);
+  std::vector<GreedyQuad> quads;
+  if (deferred_no_gpu_readback)
+  {
+    if (!SnapshotIsGpuExtractEligible(snapshot, registry))
+    {
+      return false;
+    }
+    quads = ExtractOpaqueFacesCpu(snapshot, registry);
+  }
+  else
+  {
+    quads = TryComputeExtract(snapshot, registry);
+  }
   if (quads.empty())
   {
     return false;

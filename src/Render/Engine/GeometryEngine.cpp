@@ -1065,6 +1065,13 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       else
       {
         // Fallback for this texture run: DrawElementsBaseVertex.
+        if (cache.GpuCompactActive)
+        {
+          if (auto *mdi = dynamic_cast<UMdiVertexPoolStore *>(&store))
+          {
+            mdi->SyncCompactVisToCpu(const_cast<GreedyGpuPassCache &>(cache));
+          }
+        }
         for (size_t k = i; k < j; ++k)
         {
           const GreedyGpuBatch &gpu = cache.batches[k];

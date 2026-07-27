@@ -371,6 +371,7 @@ void UMdiVertexPoolStore::RebuildIndirectCmdTable(GreedyGpuPassCache &cache)
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
   cache.GpuCompactActive = true;
   cache.IndirectCullReady = false;
+  cache.CompactVisCpuSynced = false;
 #endif
 }
 
@@ -414,6 +415,33 @@ void UMdiVertexPoolStore::ApplyFrustumInstanceCull(
   }
   cache.IndirectCullReady = true;
   cache.GpuCompactActive = false;
+  cache.CompactVisCpuSynced = true;
+}
+
+bool UMdiVertexPoolStore::SyncCompactVisToCpu(GreedyGpuPassCache &cache)
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  (void)cache;
+  return false;
+#else
+  if (!cache.GpuCompactActive || cache.CompactVisCpuSynced ||
+      cache.CullVisSsbo == 0 || cache.batches.empty())
+  {
+    return cache.CompactVisCpuSynced;
+  }
+  const size_t n = cache.batches.size();
+  std::vector<uint32_t> vis(n, 0);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, cache.CullVisSsbo);
+  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
+                     static_cast<GLsizeiptr>(n * sizeof(uint32_t)), vis.data());
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  for (size_t i = 0; i < n; ++i)
+  {
+    cache.batches[i].drawInstanceCount = vis[i] ? 1u : 0u;
+  }
+  cache.CompactVisCpuSynced = true;
+  return true;
+#endif
 }
 
 bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
@@ -484,6 +512,7 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   }
   cache.IndirectCullReady = true;
   cache.GpuCompactActive = true;
+  cache.CompactVisCpuSynced = false;
   return true;
 #endif
 }

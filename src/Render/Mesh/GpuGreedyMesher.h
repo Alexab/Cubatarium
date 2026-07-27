@@ -36,15 +36,13 @@ public:
   /// Successful GPU extract→CPU-quad decode that will upload via pool (P5).
   static uint64_t ConsumeMeshVboDispatchCount();
 
-  /// Main-thread: compute face masks → emit batches (no intermediate quads
-  /// vector as the Apply product). Returns false → caller falls back to CPU.
   bool TryExtractOpaqueToBatches(const ChunkMeshSnapshot &snapshot,
                                  UBlockRegistry &registry, glm::ivec3 coord,
-                                 std::vector<GreedyMeshBatch> &out_batches);
+                                 std::vector<GreedyMeshBatch> &out_batches,
+                                 bool deferred_no_gpu_readback) override;
 
-  /// True when snapshot is opaque-solid-only and GL can dispatch extract.
   bool CanDeferGpuExtract(const ChunkMeshSnapshot &snapshot,
-                          UBlockRegistry &registry) const;
+                          UBlockRegistry &registry) const override;
 
 private:
   bool EnsureCompute();

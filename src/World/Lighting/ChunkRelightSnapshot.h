@@ -41,6 +41,8 @@ struct RelightComputeResult
   std::vector<RelightChunkLightData> chunks;
   bool frontier_unfinished{false};
   bool finalize_pending_gate{true};
+  bool include_skylight{true};
+  bool include_block_light{true};
   std::vector<glm::ivec3> source_block_positions;
 };
 

@@ -4,7 +4,6 @@
 #include "Render/Mesh/CrossInstanceCollector.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
-#include "Render/Mesh/GpuGreedyMesher.h"
 #include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Mesh/MeshLightSampling.h"
 #include "World/Core/RuntimeTuning.h"
@@ -93,7 +92,7 @@ void UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
         result.jobId = jobId;
         result.submitEpoch = submitEpoch;
 
-        auto *gpu_mesher = dynamic_cast<UGpuGreedyMesher *>(Mesher);
+        auto *gpu_mesher = Mesher;
         const bool defer_gpu =
             gpu_mesher &&
             gpu_mesher->CanDeferGpuExtract(snapshot, *registryPtr);

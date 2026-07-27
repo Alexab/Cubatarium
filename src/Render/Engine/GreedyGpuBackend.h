@@ -55,6 +55,8 @@ struct GreedyGpuPassCache
   bool IndirectCullReady{false};
   /// True when IndirectCmdsBuffer is authoritative for MultiDraw ranges.
   bool GpuCompactActive{false};
+  /// CPU drawInstanceCount synced from CullVisSsbo (lazy, fallback draws).
+  bool CompactVisCpuSynced{false};
 };
 
 /// Retained GPU buffers for greedy mesh draws (orphan + subData reuse).

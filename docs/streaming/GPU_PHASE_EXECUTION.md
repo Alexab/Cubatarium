@@ -18,7 +18,17 @@ python tools/flight_sim_phase_gate.py --phase-id <P*|G*> --report bin/phase_<id>
 # GO → git commit (no commit on NO-GO)
 ```
 
-Loop: **code → build → autofly → analyze → fix → gates → auto-commit**.
+Unit tests for P* tails (no GL):
+
+```powershell
+cmake --build build/desktop-msvc --config Release --parallel 8 `
+  --target gpu_skylight_merge_test fluid_surface_pack_reuse_test
+./build/desktop-msvc/Release/gpu_skylight_merge_test.exe
+./build/desktop-msvc/Release/fluid_surface_pack_reuse_test.exe
+# or: pwsh tools/run_gpu_tail_unit_tests.ps1
+```
+
+Loop: **code → build → unit tests → autofly → analyze → fix → gates → auto-commit**.
 Spike-only C/CB variance with F2 GO → one re-run; do not reopen SoftDefer.
 
 Streaming regress baseline: `bin/phase_cb_pack.json` (spike≤200, wall≤37,
@@ -57,18 +67,29 @@ Order: `P0 → P2 → P3 → P7 → P6 → P5 → PA`.
 
 ## Status (honest)
 
-Sign-off report: `bin/phase_P2f2.json` — **F2 + P2 + P3 + P5 + P6 + P7 + PA = GO**
-(wall_no_holes≈33, sticky=0, pending≈1, fd_end≈214, cull_indirect=1).
+Sign-off report: `bin/phase_P_tails.json` — **F2 + P2 + P3 + P5 + P6 + P7 + PA = GO**
+(wall_no_holes≈35.7, sticky=0, pending≈5, fd_end≈209, cull_indirect=1).
+
+Prior baseline: `bin/phase_P2f2.json` (wall_no_holes≈33).
 
 | Phase | Landed | Notes |
 |-------|--------|-------|
 | P0 | Yes | Docs / gates / telemetry |
-| P2 | Yes | 1:1 `IndirectCmdsBuffer` + compute compact → `instanceCount`; MultiDraw from GPU table; **no** vis readback |
+| P2 | Yes+ | 1:1 `IndirectCmdsBuffer` + compute compact → `instanceCount`; MultiDraw from GPU table; vis readback **only** on `DrawElementsBaseVertex` fallback (`SyncCompactVisToCpu`) |
 | P3 | Yes | Single pool `Allocate` upload |
-| P7 | Yes | PreferGpu + pack early-out + **pack-hash reuse** (skip GPU when flags unchanged) |
-| P6 | Yes | Sync `RelightChunkCoords` prefers GPU seed (cap 1/batch); async workers stay CPU. Apply is **bursty** (median often 0, nz periods >0) |
-| P5 | Yes | Worker defers eligible opaque → main `TryExtractOpaqueToBatches`; dispatch **bursty** (median often 0). Mask readback→decode still interim (full SSBO→VBO = D1) |
-| PA | Yes | Formal F2+P*+GA on `phase_P2f2` |
+| P7 | Yes+ | PreferGpu + pack-hash reuse (full slice skip + tops reuse); `fluid_surface_pack_reuse_test` |
+| P6 | Yes+ | Sync `RelightChunkCoords` GPU seed (cap 1/batch); **async apply** merges block light via `MergeBlockLightKeepingGpuSky`; `gpu_skylight_merge_test` |
+| P5 | Yes+ | Worker defers eligible opaque → main `TryExtractOpaqueToBatches`; deferred path uses **CPU extract** (no mask readback). Hot path mask readback interim (D1) |
+| PA | Yes | Formal F2+P*+GA on `phase_P2f2` — re-run after tail land |
 | D1 | Backlog | No CPU flat refs / transparent GPU sort / greedy merge / blocklight flood / SSBO→VBO without mask readback |
+
+### Remaining tails (post-P2f2)
+
+| Tail | Fix | Test / gate |
+|------|-----|-------------|
+| P2 vis sync on hot path | Lazy `SyncCompactVisToCpu` only in fallback draw | F2 wall/sticky; no unit (needs GL) |
+| P5 mask readback on non-deferred extract | `deferred_no_gpu_readback` → `ExtractOpaqueFacesCpu` | `gpu_greedy_face_extract_test` (CPU ref) |
+| P6 async skylight + block merge | `include_skylight` + `MergeBlockLightKeepingGpuSky` in `DrainAsyncRelightResults` | `gpu_skylight_merge_test` |
+| P7 full slice cache | `has_slice` + pack-hash hit returns cached slice | `fluid_surface_pack_reuse_test` |
 
 Desktop: `gpu_greedy` / `mdi_vertex_pool` / `gpu_frustum` + PreferGpu fluid.

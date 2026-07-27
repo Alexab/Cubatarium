@@ -1066,6 +1066,7 @@ add_executable(chunk_lighting_propagation_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Lighting/LightUtil.cpp
     src/World/Lighting/ChunkLighting.cpp
+    src/Test/GpuSkylightSeedHostStub.cpp
     src/Test/ChunkLightingPropagationTest.cpp)
 target_include_directories(chunk_lighting_propagation_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -1077,6 +1078,7 @@ add_executable(chunk_bulk_blocklight_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Lighting/LightUtil.cpp
     src/World/Lighting/ChunkLighting.cpp
+    src/Test/GpuSkylightSeedHostStub.cpp
     src/Test/ChunkBulkBlockLightTest.cpp)
 target_include_directories(chunk_bulk_blocklight_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -1179,6 +1181,14 @@ target_include_directories(gpu_skylight_column_seed_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(gpu_skylight_column_seed_test glm::glm)
 
+add_executable(gpu_skylight_merge_test
+    src/World/Chunks/Chunk.cpp
+    src/World/Math/FluidCellState.cpp
+    src/Test/GpuSkylightMergeTest.cpp)
+target_include_directories(gpu_skylight_merge_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(gpu_skylight_merge_test glm::glm)
+
 add_executable(gpu_fluid_column_scan_test
     src/Test/GpuFluidColumnScanTest.cpp)
 target_include_directories(gpu_fluid_column_scan_test PRIVATE
@@ -1214,6 +1224,18 @@ target_include_directories(fluid_surface_slice_test PRIVATE
 target_compile_definitions(fluid_surface_slice_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_surface_slice_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(fluid_surface_pack_reuse_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/World/Core/FluidColumnSurfaceQuery.cpp
+    src/Render/Mesh/FluidSurfaceColumnSlice.cpp
+    src/Test/GpuFluidColumnScanPreferStub.cpp
+    src/Test/FluidSurfacePackReuseTest.cpp)
+target_include_directories(fluid_surface_pack_reuse_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(fluid_surface_pack_reuse_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(fluid_surface_pack_reuse_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(fluid_surface_map_logic_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}

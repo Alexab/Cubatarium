@@ -55,6 +55,9 @@ public:
                            const glm::vec3 &camera_pos,
                            float max_cull_distance);
 
+  /// Lazy readback of compact vis for DrawElementsBaseVertex fallback.
+  bool SyncCompactVisToCpu(GreedyGpuPassCache &cache);
+
   void *MapBucket(MeshGpuBucketHandle handle, size_t bytes) override;
   void UnmapBucket(MeshGpuBucketHandle handle) override;
   void FlipBucketOwnership(MeshGpuBucketHandle handle) override;
