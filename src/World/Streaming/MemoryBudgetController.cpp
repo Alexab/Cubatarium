@@ -77,6 +77,11 @@ UMemoryBudgetController::Evaluate(const MemoryBudgetSample &sample,
   {
     d.capture_hard_cap = 1;
   }
+  // V5 ring SLA: focus relight debt — cap capture when pending trail high.
+  if (d.capture_hard_cap < 0 && sample.pending_light_focus > 15)
+  {
+    d.capture_hard_cap = 2;
+  }
 
   return d;
 }

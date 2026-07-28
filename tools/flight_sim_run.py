@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BIN = ROOT / "bin"
 EXE = BIN / "Cubatarium.exe"
 ANALYZE = Path(__file__).with_name("flight_sim_analyze.py")
+DIAG = Path(__file__).with_name("flight_sim_diag.py")
 PHASE_HISTORY = BIN / "flight_sim_phase_history.jsonl"
 
 
@@ -163,6 +164,34 @@ def is_better(result: dict, best: dict | None) -> bool:
 
 
 def annotate_report_hang(report: Path, hang_killed: bool, process_rc: int) -> None:
+    """Backward-compatible wrapper; prefer annotate_report_run."""
+    annotate_report_run(report, hang_killed, process_rc, perf_jsonl=None)
+
+
+def annotate_report_run(
+    report: Path,
+    hang_killed: bool,
+    process_rc: int,
+    perf_jsonl: Path | None,
+    info_log: Path | None = None,
+) -> None:
+    if not report.is_file():
+        return
+    if DIAG.is_file():
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("flight_sim_diag", DIAG)
+        if spec and spec.loader:
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            mod.annotate_report_run(
+                report, process_rc, hang_killed, perf_jsonl, info_log
+            )
+            return
+    annotate_report_hang_legacy(report, hang_killed, process_rc)
+
+
+def annotate_report_hang_legacy(report: Path, hang_killed: bool, process_rc: int) -> None:
     if not report.is_file():
         return
     try:
@@ -227,6 +256,11 @@ def main() -> int:
         action="store_true",
         help="replay World_164 manual profile: resume save pos (no teleport), "
         "level pitch, hold-space altitude, fly-stop",
+    )
+    ap.add_argument(
+        "--replay-edge",
+        action="store_true",
+        help="replay World_164 edge autofly route (-47,5): teleport-cruise + fly-stop",
     )
     ap.add_argument(
         "--hold-space",
@@ -344,6 +378,23 @@ def main() -> int:
         args.idle_sec = max(args.idle_sec, 45.0)
         args.fly_phase_sec = max(args.fly_phase_sec, 45.0)
         args.stop_phase_sec = max(args.stop_phase_sec, 90.0)
+
+    if args.replay_edge:
+        args.world = "World_164"
+        args.fly_stop = True
+        args.teleport_cruise = True
+        args.resume = False
+        args.sprint = False
+        args.hold_space = False
+        if args.pitch is None:
+            args.pitch = -2.0
+        args.idle_sec = max(args.idle_sec, 8.0)
+        args.fly_phase_sec = max(args.fly_phase_sec, 45.0)
+        args.stop_phase_sec = max(args.stop_phase_sec, 60.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
 
     if not args.skip_preflight:
         print("preflight: killing orphan Cubatarium.exe (if any)", flush=True)
@@ -472,7 +523,16 @@ def main() -> int:
     if args.replay_manual or args.fly_stop:
         analyze_cmd.append("--manual-idle")
     ana = subprocess.call(analyze_cmd)
-    annotate_report_hang(args.report, hang_killed, rc)
+    info_log = None
+    if DIAG.is_file():
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("flight_sim_diag", DIAG)
+        if spec and spec.loader:
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            info_log = mod.newest_info_log(t0)
+    annotate_report_run(args.report, hang_killed, rc, perf, info_log)
 
     metrics_summary: dict = {}
     if args.report.is_file():

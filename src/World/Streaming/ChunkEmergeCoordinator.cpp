@@ -1,4 +1,5 @@
 #include "World/Streaming/ChunkEmergeCoordinator.h"
+#include "World/Streaming/ColumnFlowScheduler.h"
 #include "World/Streaming/FocusIngressPolicy.h"
 #include "World/Streaming/MeshLitGate.h"
 #include "Blocks/BlockRegistry.h"
@@ -26,6 +27,8 @@ namespace
 #ifndef NDEBUG
 int gMeshTelemetryTick{0};
 #endif
+
+UColumnFlowScheduler gColumnFlowScheduler;
 
 // Phase 4/P0: Streaming owns pre-drain promote. This hook no-ops when
 // FocusIngressPolicy.promote_once so we do not enqueue a second promote
@@ -66,6 +69,15 @@ UChunkEmergeCoordinator::ComputeBudget(const ProceduralSettings &procedural,
                             : default_load_ops;
   budget.MaxMeshDrain = kDefaultMeshDrain;
   budget.MaxMeshSchedule = kDefaultMeshSchedule;
+  const bool moving =
+      movement_speed > procedural.MovementPrefetchThreshold;
+  if (moving)
+  {
+    // Phase C: 8ms emerge contract — cap mesh work while cruising.
+    budget.MaxMeshDrain = std::min(budget.MaxMeshDrain, 6);
+    budget.MaxMeshSchedule = std::min(budget.MaxMeshSchedule, 6);
+    budget.MaxChunkCommits = std::min(budget.MaxChunkCommits, 1);
+  }
   if (last_frame_ms > 24.0)
   {
     // Hitch: cut commits/load, keep mesh drain so Dirty does not spiral.
@@ -1045,11 +1057,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
          recover_watchdog_frames >= 2);
     if (recover_now && recover_n > 0)
     {
-      // Lit-but-dirty catch-up: Recover MarkDirty floods focus_dirty while
-      // async is already full — skip Recover, only drain/schedule remesh.
       if (!idle_remesh_debt && !idle_focus_dirty_debt)
       {
-        world.RecoverUnlitFocusMeshes(recover_n);
+        gColumnFlowScheduler.Enqueue(
+            glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+            ColumnWorkKind::RelightThenMesh, recover_n);
         const int pending_dark_preview =
             world.CountPendingDarkFocusMeshes(focus_ground, focus_radius);
         const bool urgent_dark_pending =
@@ -1057,23 +1069,47 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             world.GetPhysicsTelemetry().DarkFaceNearN > 500;
         if (pending_dark_preview > 0 || urgent_dark_pending)
         {
-          const int sync_cap = moving ? 1 : 2;
-          world.RecoverStickyBlackFocusSync(std::min(sync_cap, recover_n));
+          gColumnFlowScheduler.Enqueue(
+              glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+              ColumnWorkKind::RelightThenMesh, recover_n + 100);
         }
       }
-      // V2b: one Admit path — missing only; no LightingWithoutDirty flood.
       if (!moving && (missing_visible_mesh || pending_near_light) &&
           !idle_remesh_debt)
       {
-        world.AdmitFocusVisibleMissing(std::min(2, recover_n));
-        if (pending_focus_n > 0)
-        {
-          world.AdmitFocusMeshIngress(1);
-        }
+        gColumnFlowScheduler.Enqueue(
+            glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+            ColumnWorkKind::FirstMesh, recover_n + 50);
       }
       else if (moving && visual_holes)
       {
-        world.AdmitFocusMeshIngress(std::min(2, recover_n));
+        gColumnFlowScheduler.Enqueue(
+            glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+            ColumnWorkKind::FirstMesh, recover_n + 75);
+      }
+      ColumnWorkItem work{};
+      int drained = 0;
+      while (drained < recover_n &&
+             gColumnFlowScheduler.DrainOne(work))
+      {
+        switch (work.kind)
+        {
+        case ColumnWorkKind::RelightThenMesh:
+          world.RecoverUnlitFocusMeshes(1);
+          break;
+        case ColumnWorkKind::FirstMesh:
+          world.AdmitFocusVisibleMissing(1);
+          world.AdmitFocusMeshIngress(1);
+          break;
+        case ColumnWorkKind::RemeshSeam:
+          world.SyncIdleFocusGreedyRemesh(1);
+          break;
+        case ColumnWorkKind::PromoteRelight:
+          world.PromotePendingLightRelightsNear(focus_ground_horiz,
+                                                focus_radius);
+          break;
+        }
+        ++drained;
       }
       recover_watchdog_frames = 0;
     }

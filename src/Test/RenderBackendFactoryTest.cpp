@@ -119,6 +119,17 @@ int main()
            "force-cpu keeps staging");
   }
 
+  {
+    RenderBackendCaps caps;
+    caps.ForceCpuBackends = true;
+    caps.HasMultiDrawIndirect = true;
+    const RenderBackendSelection a = URenderBackendFactory::Select(caps);
+    const RenderBackendSelection b = URenderBackendFactory::Select(caps);
+    Expect(a.Mesher == b.Mesher && a.Store == b.Store && a.Cull == b.Cull,
+           "Select stable for same caps (BindOnce matrix parity)");
+    Expect(a.Bound && b.Bound, "Select marks bound");
+  }
+
   if (gFails != 0)
   {
     std::cerr << "render_backend_factory_test: " << gFails << " failures\n";

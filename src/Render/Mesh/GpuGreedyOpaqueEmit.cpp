@@ -55,6 +55,12 @@ void main() {
   if (occAtPad(px, py + 1, pz) == 0u) m |= 8u;
   if (occAtPad(px, py, pz - 1) == 0u) m |= 16u;
   if (occAtPad(px, py, pz + 1) == 0u) m |= 32u;
+  if (occAtPad(px - 1, py, pz) == 2u) m &= ~1u;
+  if (occAtPad(px + 1, py, pz) == 2u) m &= ~2u;
+  if (occAtPad(px, py - 1, pz) == 2u) m &= ~4u;
+  if (occAtPad(px, py + 1, pz) == 2u) m &= ~8u;
+  if (occAtPad(px, py, pz - 1) == 2u) m &= ~16u;
+  if (occAtPad(px, py, pz + 1) == 2u) m &= ~32u;
   mask[i] = m;
 }
 )";

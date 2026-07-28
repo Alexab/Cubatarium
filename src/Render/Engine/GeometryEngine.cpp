@@ -22,6 +22,7 @@
 #include "Render/Engine/HorizonFogColor.h"
 #include "Render/Engine/FluidSurfaceMap.h"
 #include "Render/Engine/IUFluidSurfaceProvider.h"
+#include "Render/Mesh/GreedyMeshBatch.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
 #include "Render/Engine/FluidUnderwaterFogLogic.h"
 #include "Render/Engine/IUMeshGpuStore.h"
@@ -594,7 +595,17 @@ void UGeometryEngine::DrawCubeGeometry()
         mesh_service->PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
                                         WorldInstance->GetBlockRegistry(),
                                         camera);
-    const auto &opaqueCutoutRefs = draw.opaqueCutoutRefs;
+    std::vector<GreedyBatchRef> filtered_opaque;
+    filtered_opaque.reserve(draw.opaqueCutoutRefs.size());
+    for (const GreedyBatchRef &ref : draw.opaqueCutoutRefs)
+    {
+      const glm::ivec3 ground(ref.chunkCoord.x, 0, ref.chunkCoord.z);
+      if (WorldInstance->IsColumnRenderReady(ground))
+      {
+        filtered_opaque.push_back(ref);
+      }
+    }
+    const std::vector<GreedyBatchRef> &opaqueCutoutRefs = filtered_opaque;
     if (!useBatchCache || !BlockBatchesValid ||
         opaqueCutoutRefs.size() != CachedInstanceCount ||
         draw.meshRevision != CachedMeshRevision)

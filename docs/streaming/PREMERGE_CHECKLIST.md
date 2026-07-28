@@ -35,6 +35,27 @@ python tools/flight_sim_phase_gate.py --phase-id CB --report bin/phase_<id>.json
 - T0 (2026-07-26): `cb_pack` GO; `t0_premerge`/`t0_premerge2` F2 GO with spike
   variance only — accept `cb_pack` as merge reference.
 
+## 2a. Timeline + run_outcome (P0 harness)
+
+После каждой фазы A0–D / E1–E5:
+
+```powershell
+python tools/flight_sim_run.py --world World_164 --teleport-cruise --seconds 130 `
+  --fly-stop --fly-phase-sec 45 --stop-phase-sec 60 --idle-sec 8 `
+  --process-timeout 420 `
+  --phase-id <PHASE_ID> --report bin/iter_reports/timeline/<PHASE_ID>.json
+```
+
+Verify in report: `run_outcome=success`, `info_tail` present. Commit фазы **только** при `run_outcome=success`.
+
+Edge replay (World_164 boundary):
+
+```powershell
+python tools/flight_sim_run.py --replay-edge --report bin/iter_reports/edge_replay.json
+```
+
+Rolling summary: `bin/iter_reports/timeline_summary.json` via `flight_sim_iterate.py --timeline-summary`.
+
 ## 3. Manual replay parity
 
 ```powershell

@@ -374,6 +374,10 @@ def main() -> int:
         return 3
 
     data = json.loads(args.report.read_text(encoding="utf-8"))
+    run_outcome = data.get("run_outcome", "")
+    if run_outcome and run_outcome != "success":
+        print(f"NO-GO: run_outcome={run_outcome}", file=sys.stderr)
+        return 3
     if data.get("hang_killed"):
         print("NO-GO: hang_killed=true", file=sys.stderr)
         return 3

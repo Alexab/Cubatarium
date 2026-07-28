@@ -114,6 +114,25 @@ stateDiagram-v2
 - sync relight flood как универсальный recovery;
 - preview mesh до завершения света.
 
+## Статус (2026-07-28, V2–V5 migration arch/streaming-v2-v4)
+
+| Уровень | Статус | Evidence |
+|---|---|---|
+| A0 CONTENT_IGNORE face skip | ✅ | `MeshNeighborPolicy.h`, snapshot shell state |
+| A ingress seed | ✅ | `WorldStreaming.cpp` near-focus seed while moving |
+| B ColumnFlowScheduler MVP | ✅ | `ColumnFlowScheduler.{h,cpp}`, Emerge drain |
+| C spike / ingress budget | ✅ | moving mesh cap, FocusIngressBudget |
+| D harness | ✅ | `flight_sim_diag.py`, `--replay-edge`, timeline |
+| E1 draw = RenderReady | ✅ | `GeometryEngine.cpp` filter |
+| E2 watchdog cleanup | ✅ | removed dead Admit/Refresh/DrainColumnWork |
+| E3 ring SLA | ✅ partial | MemoryBudget pending_light cap |
+| E4 backend parity | ✅ partial | `ILightingSeedBackend.h` |
+| E5 docs | ✅ | PREMERGE §2a, this table |
+
+Harness timeline: `bin/iter_reports/timeline_summary.json`, `tools/flight_sim_timeline_analyze.py`.
+
+---
+
 ## Статус (2026-07-21, после Era 11)
 
 ### Evidence regress

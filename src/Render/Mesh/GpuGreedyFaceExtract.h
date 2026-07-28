@@ -2,6 +2,7 @@
 
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "Render/Mesh/GreedyMesher.h"
+#include "Render/Mesh/MeshNeighborPolicy.h"
 #include "Blocks/BlockRegistry.h"
 #include <array>
 #include <cstdint>
@@ -82,8 +83,13 @@ inline void BuildPaddedOccupancy(const ChunkMeshSnapshot &snap,
       for (int x = -1; x <= CHUNK_SIZE; ++x)
       {
         const glm::ivec3 world = snap.ChunkOrigin() + glm::ivec3(x, y, z);
-        const BlockId id = snap.GetBlock(world);
         const int pi = ((y + 1) * pad + (z + 1)) * pad + (x + 1);
+        if (ShouldSkipFaceForNeighbor(snap.GetNeighborLoadState(world)))
+        {
+          occ[static_cast<size_t>(pi)] = 2u;
+          continue;
+        }
+        const BlockId id = snap.GetBlock(world);
         occ[static_cast<size_t>(pi)] =
             IsOpaqueSolidForGpuExtract(registry, id) ? 1u : 0u;
       }
@@ -132,7 +138,20 @@ inline BlockId NeighborBlock(const ChunkMeshSnapshot &snap, int lx, int ly,
   glm::ivec3 local(lx, ly, lz);
   local[axis] += sign;
   const glm::ivec3 world = snap.ChunkOrigin() + local;
+  if (ShouldSkipFaceForNeighbor(snap.GetNeighborLoadState(world)))
+  {
+    return BLOCK_AIR;
+  }
   return snap.GetBlock(world);
+}
+
+inline bool NeighborFaceSkipped(const ChunkMeshSnapshot &snap, int lx, int ly,
+                                int lz, int axis, int sign)
+{
+  glm::ivec3 local(lx, ly, lz);
+  local[axis] += sign;
+  return ShouldSkipFaceForNeighbor(
+      snap.GetNeighborLoadState(snap.ChunkOrigin() + local));
 }
 
 /// Emit 1x1 greedy quads for exposed opaque faces (CPU reference / decode).
@@ -159,6 +178,10 @@ ExtractOpaqueFacesCpu(const ChunkMeshSnapshot &snap, UBlockRegistry &registry)
           for (int sign : {-1, 1})
           {
             const BlockId nb = NeighborBlock(snap, x, y, z, axis, sign);
+            if (NeighborFaceSkipped(snap, x, y, z, axis, sign))
+            {
+              continue;
+            }
             if (IsOpaqueSolidForGpuExtract(registry, nb))
             {
               continue;

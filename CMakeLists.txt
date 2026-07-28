@@ -216,6 +216,7 @@ set(SOURCES
     src/World/Streaming/WorldStreaming.cpp
     src/World/Streaming/MemoryBudgetController.cpp
     src/World/Streaming/ChunkEmergeCoordinator.cpp
+    src/World/Streaming/ColumnFlowScheduler.cpp
     src/World/Physics/WorldPhysicsScheduler.cpp
     src/World/Physics/WorldMovementPhysicsService.cpp
     src/World/Physics/WorldBlockPhysicsService.cpp
@@ -1151,6 +1152,11 @@ add_executable(streaming_render_ready_invariants_test
 target_include_directories(streaming_render_ready_invariants_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
+add_executable(mesh_neighbor_policy_test
+    src/Test/MeshNeighborPolicyTest.cpp)
+target_include_directories(mesh_neighbor_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
 add_executable(focus_ingress_policy_test
     src/Test/FocusIngressPolicyTest.cpp)
 target_include_directories(focus_ingress_policy_test PRIVATE
@@ -1970,6 +1976,7 @@ set(PHYSICS_UWORLD_TEST_SOURCES
     src/World/Streaming/WorldStreaming.cpp
     src/World/Streaming/MemoryBudgetController.cpp
     src/World/Streaming/ChunkEmergeCoordinator.cpp
+    src/World/Streaming/ColumnFlowScheduler.cpp
     src/World/Persistence/WorldPersistence.cpp
     src/World/Core/WorldCooperativeOps.cpp
     src/World/Diagnostics/MovementDiagnosticsRecorder.cpp)

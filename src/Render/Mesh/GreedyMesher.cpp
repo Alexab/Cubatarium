@@ -4,6 +4,7 @@
 #include "Blocks/BlockRegistry.h"
 
 #include "Render/Mesh/ChunkMeshSnapshot.h"
+#include "Render/Mesh/MeshNeighborPolicy.h"
 
 #include "World/Mesh/IUChunkMeshReader.h"
 
@@ -86,6 +87,16 @@ public:
     return World.GetFluidState(world_pos);
   }
 
+  NeighborLoadState GetNeighborLoadState(glm::ivec3 world_pos) const override
+  {
+    const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(world_pos);
+    if (!World.GetChunkManager().GetChunk(chunk_coord))
+    {
+      return NeighborLoadState::Unknown;
+    }
+    return NeighborLoadState::Loaded;
+  }
+
 private:
   const UBlockWorld &World;
 
@@ -146,6 +157,11 @@ public:
     return Snapshot.GetFluid(world_pos);
   }
 
+  NeighborLoadState GetNeighborLoadState(glm::ivec3 world_pos) const override
+  {
+    return Snapshot.GetNeighborLoadState(world_pos);
+  }
+
 private:
   const ChunkMeshSnapshot &Snapshot;
 };
@@ -175,6 +191,12 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
 {
 
   const glm::ivec3 neighbor_pos = block_pos + neighbor_offset;
+
+  if (ShouldSkipFaceForNeighbor(
+          reader.GetNeighborLoadState(neighbor_pos)))
+  {
+    return true;
+  }
 
   const BlockId neighbor = reader.GetBlock(neighbor_pos);
 

@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BIN = ROOT / "bin"
 LOGS = BIN / "logs"
 RUNNER = ROOT / "tools" / "flight_sim_run.py"
+DIAG = ROOT / "tools" / "flight_sim_diag.py"
 
 
 def utc_now() -> str:
@@ -117,7 +118,10 @@ def classify(metrics: dict[str, Any], info_tail: list[str]) -> list[str]:
     if "hang" in tail_blob or "timeout" in tail_blob:
         reasons.append("runtime_hang_or_timeout")
     if "error" in tail_blob or "fatal" in tail_blob:
-        reasons.append("runtime_error")
+        if "runtime_hang_or_timeout" not in reasons:
+            reasons.append("runtime_crash")
+        else:
+            reasons.append("runtime_error")
 
     if not reasons:
         reasons.append("no_major_regression_detected")
@@ -172,6 +176,37 @@ def stop_ok(metrics: dict[str, Any], c: StopCriteria) -> bool:
     )
 
 
+def build_timeline_summary(runs: list[dict[str, Any]], out: Path) -> None:
+    rows = []
+    for r in runs:
+        rows.append(
+            {
+                "phase": r.get("phase"),
+                "run_outcome": r.get("run_outcome", ""),
+                "rc": r.get("rc"),
+                "pass": r.get("pass"),
+                "holes_rate": (r.get("metrics") or {}).get("holes_rate"),
+                "wall_ms_med": (r.get("metrics") or {}).get("wall_ms_med"),
+                "pending_light_focus_med": (r.get("metrics") or {}).get(
+                    "pending_light_focus_med"
+                ),
+                "spike_max_wall": (r.get("metrics") or {}).get("spike_max_wall"),
+            }
+        )
+    payload = {"updated_at_utc": utc_now(), "phases": rows}
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
+def resolve_report_path(report: Path) -> Path:
+    if report.is_file():
+        return report
+    alt = BIN / "bin" / report.relative_to(BIN) if report.is_relative_to(BIN) else report
+    if alt.is_file():
+        return alt
+    return report
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--world", default="World_164")
@@ -184,6 +219,18 @@ def main() -> int:
     ap.add_argument("--max-wall-med", type=float, default=45.0)
     ap.add_argument("--max-pending-focus-med", type=float, default=8.0)
     ap.add_argument("--max-focus-dark-mesh", type=float, default=0.0)
+    ap.add_argument("--process-timeout", type=float, default=420.0)
+    ap.add_argument(
+        "--backend",
+        choices=["gpu", "cpu"],
+        default="gpu",
+        help="force CPU mesher via CUBATARIUM_FORCE_CPU=1 when cpu",
+    )
+    ap.add_argument(
+        "--timeline-summary",
+        type=Path,
+        default=BIN / "iter_reports" / "timeline_summary.json",
+    )
     args = ap.parse_args()
 
     if not RUNNER.is_file():
@@ -233,6 +280,8 @@ def main() -> int:
             "60",
             "--idle-sec",
             "8",
+            "--process-timeout",
+            str(args.process_timeout),
             "--phase-id",
             phase,
             "--report",
@@ -240,14 +289,41 @@ def main() -> int:
         ]
         if i == 1 and args.build_first:
             cmd.append("--build")
+        if args.backend == "cpu":
+            import os
 
-        rc = run_cmd(cmd, BIN)
-        data = load_json(report) or {}
+            env = os.environ.copy()
+            env["CUBATARIUM_FORCE_CPU"] = "1"
+            print(">", " ".join(cmd), flush=True)
+            rc = subprocess.call(cmd, cwd=str(BIN), env=env)
+        else:
+            rc = run_cmd(cmd, BIN)
+        report_resolved = resolve_report_path(report)
+        data = load_json(report_resolved) or {}
         metrics = (data.get("metrics") or {}) if isinstance(data, dict) else {}
         perf_path = read_perf_from_phase_history(phase)
         info_path = newest_info_log(t0)
         info_tail = tail_lines(info_path, n=50) if info_path else []
+        run_outcome = data.get("run_outcome", "")
+        if not run_outcome and DIAG.is_file():
+            import importlib.util
+
+            spec = importlib.util.spec_from_file_location("flight_sim_diag", DIAG)
+            if spec and spec.loader:
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                hang = bool(data.get("hang_killed"))
+                perf_raw = data.get("perf_jsonl") or ""
+                perf_p = Path(perf_raw) if perf_raw else None
+                run_outcome = mod.classify_run_outcome(
+                    rc, hang, perf_p if perf_p and perf_p.is_file() else None, info_tail
+                )
         reasons = classify(metrics, info_tail)
+        if run_outcome == "no_perf":
+            reasons.append("no_perf")
+        elif run_outcome == "crash":
+            if "runtime_crash" not in reasons:
+                reasons.append("runtime_crash")
         actions = suggest_actions(reasons)
         passed = bool(data.get("pass")) if isinstance(data, dict) else False
         criteria_ok = stop_ok(metrics, stop_cfg)
@@ -256,7 +332,8 @@ def main() -> int:
             "phase": phase,
             "started_at_utc": started,
             "rc": rc,
-            "report_path": str(report),
+            "run_outcome": run_outcome,
+            "report_path": str(report_resolved),
             "perf_jsonl": str(perf_path) if perf_path else "",
             "info_log": str(info_path) if info_path else "",
             "pass": passed,
@@ -295,7 +372,9 @@ def main() -> int:
         json.dumps(out, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
+    build_timeline_summary(out["runs"], args.timeline_summary)
     print(f"summary: {args.summary}")
+    print(f"timeline: {args.timeline_summary}")
     return 0
 
 

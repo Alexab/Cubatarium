@@ -934,9 +934,6 @@ public:
   /// Idle stop-recovery: sync relight+remesh for focus columns stuck with
   /// GreedyMesh while PendingLight (async relight deadlock).
   int RecoverStickyBlackFocusSync(int max_columns = 1);
-  /// Idle hover: re-dirty LitReady focus columns that already have GreedyMesh
-  /// (MarkRelit cleared PendingLight but async never remeshed — dark/stale).
-  int RefreshIdleFocusGreedyRemesh(int max_columns = 4);
   /// Idle stop: sync rebuild nearest focus column when async pool saturated.
   int SyncIdleFocusGreedyRemesh(int max_columns = 1);
   /// Clear PendingLight after mesh committed for lit focus columns.
@@ -945,8 +942,6 @@ public:
   int PruneStickyRemeshOutside(glm::ivec3 focus_ground_chunk, int radius_chunks);
   /// Focus ingress: Dirty + priority relight for Lighting columns without mesh.
   int AdmitFocusMeshIngress(int max_columns = 8);
-  /// Idle: Dirty for focus Lighting/Pending columns that never got a Dirty mark.
-  int AdmitFocusLightingWithoutDirty(int max_columns = 8);
   /// Ring-scan focus for solid slices missing GreedyCache; mark Dirty only.
   int AdmitFocusVisibleMissing(int max_columns = 8,
                                glm::vec2 forward_xz = glm::vec2(0.0f));
@@ -1007,9 +1002,6 @@ public:
   /// Supplemental async relight FIFO drain (adds to RelightDrainMs). Used by
   /// MeshEmerge cold-hole same-tick promote→drain so SoftDefer can lift.
   void DrainRelightQueuesBudget(int max_player_jobs, int max_bg_columns);
-  /// Alias of DrainFocusVisualWork (legacy call sites).
-  int DrainColumnWork(glm::ivec3 focus_ground_horiz, int radius_chunks,
-                      int clear_pending_budget);
   /// Idle sync relight for focus pending columns that already have preview mesh.
   int DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
                                  int radius_chunks, int max_columns);
