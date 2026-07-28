@@ -48,6 +48,11 @@ python tools/flight_sim_run.py --world World_164 --teleport-cruise --seconds 130
 
 Verify in report: `run_outcome=success`, `info_tail` present. Commit фазы **только** при `run_outcome=success`.
 
+**V2–V5 architecture freeze (2026-07-28, `arch/streaming-v2-v4`):** E1–E5 code
+contracts landed (SeedDecision, ColumnFlowExecutor, visual SLA, seed factory,
+Capture progress). Gate DoD F2/C/CB may still be NO-GO — do not treat docs ✅ as
+gate GO; see `TECH_DEBT_CHUNK_STREAMING.md` TD-ARCH-011/015 backlog.
+
 Edge replay (World_164 boundary):
 
 ```powershell

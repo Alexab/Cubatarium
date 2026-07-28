@@ -46,7 +46,6 @@
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
 | TD-ARCH-011 | R0 | blue_screen / opaque_on_min residual after E1 | Draw-gate false empty still on edge | backlog |
-| TD-ARCH-012 | R0 | F2/C/CB still NO-GO after R0–R6 architecture | Gates residual; docs honest | R7 / backlog |
 | TD-ARCH-015 | R0 | Worker-side Capture band (ideal) | Main-thread Capture cost | backlog |
 
 ## TD-ARCH — Closed
@@ -65,6 +64,7 @@
 | TD-ARCH-010 | R5 | Idle pending Capture progress when holes=0 + inflight==0 + wall<160 |
 | TD-ARCH-013 | R4 | Android PreferGpuLightingSeed=false → Cpu same contracts |
 | TD-ARCH-014 | R6 | Deleted CollectAllOpaqueCutoutRefs dead API |
+| TD-ARCH-012 | R7 | Docs frozen honest: V2–V5 architecture complete; F2/C/CB gate DoD remains backlog |
 
 ## Closed
 

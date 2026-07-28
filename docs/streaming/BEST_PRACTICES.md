@@ -23,7 +23,23 @@
 | Bounded result queues (drop-oldest + requeue) | job graphs with backpressure | Completed mesh/relight grow-only → rings | высокий |
 | Grow-only GPU buffers with Reserve/Max | common GPU upload pools | `GreedyVertexPool` grow-only; Reserve/Max — Era 12 | средний |
 
-## Gap После Era 11
+## Gap После V2–V5 migration (arch/streaming-v2-v4, 2026-07-28)
+
+Architecture landed (R0–R7): SeedDecision fail→PendingLight, ColumnFlowExecutor,
+FOV/keep visual SLA (not terrain PendingLight gate), lighting seed factory
+Cpu≠Gpu, idle Capture progress, CollectAll removed. Evidence: `edge_R1`/`R2`/`R3`
+`run_outcome=success`.
+
+Still open for gate DoD (not architecture):
+
+- F2/C/CB NO-GO on edge (`holes_rate`/`dirty`/`wall`/`blue_screen` residuals).
+- TD-ARCH-011 blue_screen; TD-ARCH-015 worker Capture backlog.
+
+Research alignment: Luanti/Minetest chunk job ownership, UE streaming memory
+budgets, Qt RHI capability backends, 0fps-style lighting-before-mesh — mapped to
+V3 seed, V4 executor, V5 visual SLA, E4 factory (see TD-ARCH closed table).
+
+## Gap После Era 11 (historical)
 
 - Preview mesh при `PendingLight` всё ещё возможен (R5).
 - Draw не гейтится `RenderReady`.

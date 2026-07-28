@@ -131,7 +131,7 @@ Honest status vs DoD (see `docs/TECH_DEBT_CHUNK_STREAMING.md` TD-ARCH). Baseline
 | E2 V4 single owner | DONE (R2) | `ColumnFlowExecutor`; emerge Admit/Recover/Promote via DrainBudget |
 | E3 ring SLA | DONE (R3) | Visual FOV stall + unfinished cruise sample + MemoryBudget dirty soft-cap |
 | E4 backend parity | DONE (R4) | `SelectLightingSeedBackend` + Gpu=`ApplyGpuSkylightSeedToChunk`; Android→Cpu |
-| E5 docs freeze | OPEN | This table was false-closed; freeze only after F2/C/CB GO (TD-ARCH-012) |
+| E5 docs freeze | DONE (R7) | Architecture V2–V5 landed; F2/C/CB still NO-GO (TD-ARCH-011/012 backlog) |
 
 Harness timeline: `bin/iter_reports/timeline_summary.json`, `tools/flight_sim_timeline_analyze.py`.
 Migration execution: plan Streaming Arch E Complete (R0–R7).
