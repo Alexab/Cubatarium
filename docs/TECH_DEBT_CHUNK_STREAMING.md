@@ -41,6 +41,32 @@
 | TD-CS-016 | 2026-06 | Persistent GPU VBO / vertex pooling | Nick McDonald-style pool; large refactor | backlog |
 | TD-CS-018 | 2026-06 | Incremental frustum-only greedy cull without full flat merge | camera-chunk skip + `LastVisibleChunks` cache; full incremental cull deferred | partial |
 
+## TD-ARCH (V2–V5 completion) — Open
+
+| ID | Added in | Item | Why deferred | Target |
+|----|----------|------|--------------|--------|
+| TD-ARCH-001 | R0 | Cruise seed blocked (`!moving_cruise`) | Ingress deadlock on edge | R1 |
+| TD-ARCH-002 | R0 | `(void)seed` + LitReady on fail | SoftDefer bypass | R1 |
+| TD-ARCH-003 | R0 | GpuLightingSeedBackend ≡ Cpu RelightTerrainColumn | No real capability split | R4 |
+| TD-ARCH-004 | R0 | Admit/Recover public + focus-scan ignores `ColumnWorkItem.column` | V4 wrapper only | R2 |
+| TD-ARCH-005 | R0 | PromoteFrontierHoleIngress + DrainIdle* outside scheduler | Multi-owner | R2 |
+| TD-ARCH-006 | R0 | RecoverStickyBlackFocusSync dead | Dead code | R2 |
+| TD-ARCH-007 | R0 | `OnIsColumnPendingLight` unused; RingPrerequisitesMet intentionally skips PendingLight | Visual SLA vs load ring | R3 |
+| TD-ARCH-008 | R0 | `UnfinishedVisual=0` while moving | Blind F2 telemetry | R3 |
+| TD-ARCH-009 | R0 | MemoryBudget no Dirty/Pending soft-cap as SLA | F2 dirty plateau | R3 |
+| TD-ARCH-010 | R0 | Relight FIFO stall when holes=0 + hot wall | Capture skip death spiral | R5 |
+| TD-ARCH-011 | R0 | blue_screen / opaque_on_min=0 after E1 | Draw-gate residual | R6 |
+| TD-ARCH-012 | R0 | Docs claimed E1–E5 ✅ while DoD fail | False closed — honesty in R0, freeze in R7 | R7 |
+| TD-ARCH-013 | R0 | Android seed/harness not in DoD matrix | Platform parity | R4 |
+| TD-ARCH-014 | R0 | CollectAllOpaqueCutoutRefs dead API risk | Regress if rewired | R6 |
+| TD-ARCH-015 | R0 | Worker-side Capture band (ideal) | Main-thread Capture cost | R5 / backlog |
+
+## TD-ARCH — Closed
+
+| ID | Closed in | Resolution |
+|----|-----------|------------|
+| *(none yet)* | | |
+
 ## Closed
 
 | ID | Closed in | Resolution |

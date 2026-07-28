@@ -116,20 +116,25 @@ stateDiagram-v2
 
 ## Статус (2026-07-28, V2–V5 migration arch/streaming-v2-v4)
 
-| Уровень | Статус | Evidence |
+Honest status vs DoD (see `docs/TECH_DEBT_CHUNK_STREAMING.md` TD-ARCH). Baseline after
+`dc77df3b`: `bin/iter_reports/timeline/manual_dirty_sort.json`,
+`edge_dirty_sort.json` — F2/C/CB still NO-GO on edge.
+
+| Уровень | Статус | Evidence / gap |
 |---|---|---|
-| A0 CONTENT_IGNORE face skip | ✅ | `MeshNeighborPolicy.h`, snapshot shell state |
-| A ingress seed | ✅ | `WorldStreaming.cpp` near-focus seed while moving |
-| B ColumnFlowScheduler MVP | ✅ | `ColumnFlowScheduler.{h,cpp}`, Emerge drain |
-| C spike / ingress budget | ✅ | moving mesh cap, FocusIngressBudget |
-| D harness | ✅ | `flight_sim_diag.py`, `--replay-edge`, timeline |
-| E1 draw = RenderReady | ✅ | `GeometryEngine.cpp` filter |
-| E2 watchdog cleanup | ✅ | removed dead Admit/Refresh/DrainColumnWork |
-| E3 ring SLA | ✅ partial | MemoryBudget pending_light cap |
-| E4 backend parity | ✅ partial | `ILightingSeedBackend.h` |
-| E5 docs | ✅ | PREMERGE §2a, this table |
+| A0 CONTENT_IGNORE face skip | DONE | `MeshNeighborPolicy.h`, snapshot shell state |
+| A / V3 ingress seed | PARTIAL | Seed still blocked on `!moving_cruise`; `(void)seed` + LitReady on fail (TD-ARCH-001/002) |
+| B ColumnFlowScheduler MVP | DONE | `ColumnFlowScheduler.{h,cpp}`, Emerge DrainOne |
+| C spike / ingress budget | PARTIAL | FocusIngressBudget + caps; wall/spike targets unmet |
+| D harness | DONE | `flight_sim_diag.py`, `--replay-edge`, timeline |
+| E1 draw = RenderReady | DONE | GeometryEngine filter + MDI no CollectAll; residual blue_screen (TD-ARCH-011) |
+| E2 V4 single owner | PARTIAL | Admit/Recover only via DrainOne; public APIs + focus-scan; Promote/idle outside (TD-ARCH-004/005) |
+| E3 ring SLA | PARTIAL | `IsColumnVisualReadyForRing` exists; streamer callback unused; unfinished=0 while moving (TD-ARCH-007/008) |
+| E4 backend parity | STUB | Cpu/Gpu backends both RelightTerrainColumn; no factory (TD-ARCH-003/013) |
+| E5 docs freeze | OPEN | This table was false-closed; freeze only after F2/C/CB GO (TD-ARCH-012) |
 
 Harness timeline: `bin/iter_reports/timeline_summary.json`, `tools/flight_sim_timeline_analyze.py`.
+Migration execution: plan Streaming Arch E Complete (R0–R7).
 
 ---
 
