@@ -1,5 +1,6 @@
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Streaming/FocusIngressPolicy.h"
+#include "World/Streaming/SeedDecisionPolicy.h"
 #include "World/Streaming/MemoryBudgetController.h"
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "World/Math/GridMath.h"
@@ -288,53 +289,20 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
           }
           else
           {
-            // Full lighting: sync Relight only for healthy underfeet (F2 cold).
-            // Cruise / hitch / holes → priority FIFO only (CB commit_apply was
-            // 200–300ms from sync RelightTerrainColumn on underfeet commit).
+            // Full lighting: SeedDecision (V3) — cruise near-focus may try
+            // budgeted sync seed; fail → PendingLight (never silent LitReady).
             const bool neighborhood_ok = world.CanSeedSkylightAtCommit(ground);
             const double commit_frame_ms = world.GetLastMovementFrameMs();
             const bool moving_cruise =
                 world.LastMovementSpeed >=
                 settings.MovementPrefetchThreshold;
-            // Sync Relight: idle underfeet (F2) or idle near-focus after stop.
-            // Never sync-seed while cruising — that caused stream spikes 1–17s
-            // (edge hang_killed, spike_max_wall_holes >> 200).
-            const bool seed_underfeet_idle =
-                underfeet && neighborhood_ok && !moving_cruise &&
-                commit_frame_ms <= 16.0 &&
-                world.PhysicsTelemetryData.VisualHoles == 0;
-            const bool seed_near_focus_idle =
-                near_focus && neighborhood_ok && !underfeet && !moving_cruise &&
-                commit_frame_ms <= 20.0;
-            const bool seed_skylight_now =
-                seed_underfeet_idle || seed_near_focus_idle;
-            const bool relight_priority =
-                underfeet || (near_focus && LastPendingLightFocus <= 20) ||
-                (near_focus && neighborhood_ok);
-            if (seed_skylight_now)
-            {
-              const bool prefer_gpu_seed =
-                  world.PhysicsTelemetryData.BackendLightingMode == "gpu_full";
-              const double seed_budget_ms = underfeet ? 3.0 : 2.0;
-              LightingSeedResult seed{};
-              if (prefer_gpu_seed)
-              {
-                GpuLightingSeedBackend backend(world, relight_min, relight_max);
-                seed = backend.TrySeedColumnAtCommit(ground, seed_budget_ms);
-              }
-              else
-              {
-                CpuLightingSeedBackend backend(world, relight_min, relight_max);
-                seed = backend.TrySeedColumnAtCommit(ground, seed_budget_ms);
-              }
-              (void)seed;
-              world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
-              world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-                  ground, dirty_min, dirty_max,
-                  /*include_horizontal_neighbors=*/true);
-            }
-            else
-            {
+            const SeedDecision seed_decision =
+                EvaluateSeedDecision(SeedDecisionInput{
+                    underfeet, near_focus, neighborhood_ok, moving_cruise,
+                    commit_frame_ms, world.PhysicsTelemetryData.VisualHoles,
+                    LastPendingLightFocus});
+            const bool relight_priority = seed_decision.priority_fifo;
+            auto enqueue_pending_light = [&]() {
               // PendingLightBeforeMesh gate must match the async relight range.
               // If relight_min/max is wider than dirty_min/max, SoftDefer can
               // keep finalize_pending_gate=false for too long → pending stuck.
@@ -360,6 +328,39 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               {
                 world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
               }
+            };
+            if (seed_decision.try_sync_seed)
+            {
+              const bool prefer_gpu_seed =
+                  world.PhysicsTelemetryData.BackendLightingMode == "gpu_full";
+              LightingSeedResult seed{};
+              if (prefer_gpu_seed)
+              {
+                GpuLightingSeedBackend backend(world, relight_min, relight_max);
+                seed = backend.TrySeedColumnAtCommit(ground,
+                                                    seed_decision.budget_ms);
+              }
+              else
+              {
+                CpuLightingSeedBackend backend(world, relight_min, relight_max);
+                seed = backend.TrySeedColumnAtCommit(ground,
+                                                    seed_decision.budget_ms);
+              }
+              if (seed.applied)
+              {
+                world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
+                world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+                    ground, dirty_min, dirty_max,
+                    /*include_horizontal_neighbors=*/true);
+              }
+              else
+              {
+                enqueue_pending_light();
+              }
+            }
+            else
+            {
+              enqueue_pending_light();
             }
           }
         }
@@ -430,13 +431,32 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   const bool moving_for_telemetry =
       world.GetLastMovementSpeed() >
       world.GetProceduralSettings().MovementPrefetchThreshold;
-  const int not_render_ready =
-      moving_for_telemetry
-          ? 0
-          : world.CountUnfinishedVisualNear(focus_horiz, focus_radius);
+  // Cruise: sample unfinished every N frames (cheap proxy otherwise) so F2
+  // telemetry is not blind while moving (TD-ARCH-008). Full count on idle/stop.
   const int focus_dirty_chunks =
       world.GetMeshService().CountDirtyWithinHorizontalRadius(focus_horiz,
                                                               focus_radius);
+  static int unfinished_sample_cd = 0;
+  int not_render_ready = 0;
+  if (!moving_for_telemetry)
+  {
+    not_render_ready =
+        world.CountUnfinishedVisualNear(focus_horiz, focus_radius);
+    unfinished_sample_cd = 0;
+  }
+  else if (--unfinished_sample_cd <= 0)
+  {
+    not_render_ready =
+        world.CountUnfinishedVisualNear(focus_horiz, focus_radius);
+    unfinished_sample_cd = 8;
+  }
+  else
+  {
+    // Proxy between samples: pending + dirty (not full RenderReady walk).
+    not_render_ready =
+        pending_light_focus +
+        (focus_dirty_chunks > 0 ? std::min(focus_dirty_chunks, 8) : 0);
+  }
   world.PhysicsTelemetryData.FocusStickyRemesh = sticky_remesh;
   world.PhysicsTelemetryData.FocusPendingDark = pending_dark;
   world.PhysicsTelemetryData.FocusDarkMesh = dark_preview;
@@ -1751,6 +1771,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       sample.last_wall_ms = world.GetWallFrameDelta() * 1000.0;
       sample.visual_holes = world.PhysicsTelemetryData.VisualHoles;
       sample.pending_light_focus = world.PhysicsTelemetryData.PendingLightFocus;
+      sample.dirty_chunks = world.PhysicsTelemetryData.FocusDirtyChunks;
       sample.baseline_keep_margin = URuntimeTuning::Get().KeepPrefetchMargin;
       sample.visual_rd = effectiveRenderDistance;
 #ifdef _WIN32

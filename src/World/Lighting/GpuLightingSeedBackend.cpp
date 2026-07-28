@@ -15,8 +15,13 @@ GpuLightingSeedBackend::GpuLightingSeedBackend(UWorld &world, int relight_min,
 LightingSeedResult
 GpuLightingSeedBackend::TrySeedColumnAtCommit(glm::ivec3 ground, double budget_ms)
 {
+  if (budget_ms <= 0.0)
+  {
+    return LightingSeedResult{false, 0.0};
+  }
   const auto t0 = std::chrono::high_resolution_clock::now();
   // GPU full-light path is selected internally by world/lighting pipeline.
+  // Real Gpu vs Cpu split lands in R4; stub still writes via RelightTerrainColumn.
   World.RelightTerrainColumn(ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE,
                              RelightMin, RelightMax,
                              /*priority_mesh=*/true,
@@ -26,7 +31,7 @@ GpuLightingSeedBackend::TrySeedColumnAtCommit(glm::ivec3 ground, double budget_m
       std::chrono::duration<double, std::milli>(
           std::chrono::high_resolution_clock::now() - t0)
           .count();
-  return LightingSeedResult{elapsed <= budget_ms, elapsed};
+  return LightingSeedResult{true, elapsed};
 }
 
 } // namespace cutum

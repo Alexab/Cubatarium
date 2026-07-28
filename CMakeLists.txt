@@ -1164,6 +1164,18 @@ add_executable(focus_ingress_policy_test
 target_include_directories(focus_ingress_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
+add_executable(seed_decision_policy_test
+    src/Test/SeedDecisionPolicyTest.cpp)
+target_include_directories(seed_decision_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(column_flow_scheduler_test
+    src/Test/ColumnFlowSchedulerTest.cpp
+    src/World/Streaming/ColumnFlowScheduler.cpp)
+target_include_directories(column_flow_scheduler_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(column_flow_scheduler_test glm::glm)
+
 add_executable(edit_mesh_remesh_policy_test
     src/Test/EditMeshRemeshPolicyTest.cpp
     src/World/Mesh/EditMeshRemeshPolicy.cpp

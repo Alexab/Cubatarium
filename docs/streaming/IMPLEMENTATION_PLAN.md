@@ -123,7 +123,7 @@ Honest status vs DoD (see `docs/TECH_DEBT_CHUNK_STREAMING.md` TD-ARCH). Baseline
 | Уровень | Статус | Evidence / gap |
 |---|---|---|
 | A0 CONTENT_IGNORE face skip | DONE | `MeshNeighborPolicy.h`, snapshot shell state |
-| A / V3 ingress seed | PARTIAL | Seed still blocked on `!moving_cruise`; `(void)seed` + LitReady on fail (TD-ARCH-001/002) |
+| A / V3 ingress seed | DONE (R1) | `SeedDecisionPolicy.h`; cruise healthy-frame sync; fail→PendingLight |
 | B ColumnFlowScheduler MVP | DONE | `ColumnFlowScheduler.{h,cpp}`, Emerge DrainOne |
 | C spike / ingress budget | PARTIAL | FocusIngressBudget + caps; wall/spike targets unmet |
 | D harness | DONE | `flight_sim_diag.py`, `--replay-edge`, timeline |

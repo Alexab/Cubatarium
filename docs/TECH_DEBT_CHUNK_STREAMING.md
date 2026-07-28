@@ -45,8 +45,6 @@
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-ARCH-001 | R0 | Cruise seed blocked (`!moving_cruise`) | Ingress deadlock on edge | R1 |
-| TD-ARCH-002 | R0 | `(void)seed` + LitReady on fail | SoftDefer bypass | R1 |
 | TD-ARCH-003 | R0 | GpuLightingSeedBackend ≡ Cpu RelightTerrainColumn | No real capability split | R4 |
 | TD-ARCH-004 | R0 | Admit/Recover public + focus-scan ignores `ColumnWorkItem.column` | V4 wrapper only | R2 |
 | TD-ARCH-005 | R0 | PromoteFrontierHoleIngress + DrainIdle* outside scheduler | Multi-owner | R2 |
@@ -65,7 +63,8 @@
 
 | ID | Closed in | Resolution |
 |----|-----------|------------|
-| *(none yet)* | | |
+| TD-ARCH-001 | R1 (`fix(streaming): cruise near-focus seed…`) | Cruise near-focus uses priority FIFO enqueue (sync Relight forbidden under load — edge_R1 spikes); SeedDecisionPolicy owns policy |
+| TD-ARCH-002 | R1 | Removed `(void)seed`; `seed.applied` → LitReady else PendingLight; backends return applied only when Relight ran (budget≤0 early-out) |
 
 ## Closed
 
