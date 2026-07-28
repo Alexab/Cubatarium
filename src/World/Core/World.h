@@ -932,10 +932,9 @@ public:
   void TickPlayerRelightMeshBurst();
   void FlushPendingRelightMeshColumns(int max_columns_per_flush = 8);
   /// Re-enqueue skylight for focus columns that already have a mesh but no sky.
-  int RecoverUnlitFocusMeshes(int max_columns = 4);
-  /// Idle stop-recovery: sync relight+remesh for focus columns stuck with
-  /// GreedyMesh while PendingLight (async relight deadlock).
-  int RecoverStickyBlackFocusSync(int max_columns = 1);
+  /// If only_column is set, prefer that column (V4 ColumnFlowExecutor).
+  int RecoverUnlitFocusMeshes(int max_columns = 4,
+                              const glm::ivec2 *only_column = nullptr);
   /// Idle stop: sync rebuild nearest focus column when async pool saturated.
   int SyncIdleFocusGreedyRemesh(int max_columns = 1);
   /// Clear PendingLight after mesh committed for lit focus columns.
@@ -945,8 +944,11 @@ public:
   /// Focus ingress: Dirty + priority relight for Lighting columns without mesh.
   int AdmitFocusMeshIngress(int max_columns = 8);
   /// Ring-scan focus for solid slices missing GreedyCache; mark Dirty only.
+  /// If only_column is set, prefer that column first (V4 ColumnFlowExecutor).
   int AdmitFocusVisibleMissing(int max_columns = 8,
-                               glm::vec2 forward_xz = glm::vec2(0.0f));
+                               glm::vec2 forward_xz = glm::vec2(0.0f),
+                               const glm::ivec2 *only_column = nullptr);
+  bool IsColumnStickyRemesh(glm::ivec2 ground_xz) const;
 
   /// Near-focus columns waiting for first light before first mesh (plan A).
   void NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y);

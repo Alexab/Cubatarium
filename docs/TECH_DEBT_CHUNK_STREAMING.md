@@ -46,9 +46,6 @@
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
 | TD-ARCH-003 | R0 | GpuLightingSeedBackend ≡ Cpu RelightTerrainColumn | No real capability split | R4 |
-| TD-ARCH-004 | R0 | Admit/Recover public + focus-scan ignores `ColumnWorkItem.column` | V4 wrapper only | R2 |
-| TD-ARCH-005 | R0 | PromoteFrontierHoleIngress + DrainIdle* outside scheduler | Multi-owner | R2 |
-| TD-ARCH-006 | R0 | RecoverStickyBlackFocusSync dead | Dead code | R2 |
 | TD-ARCH-007 | R0 | `OnIsColumnPendingLight` unused; RingPrerequisitesMet intentionally skips PendingLight | Visual SLA vs load ring | R3 |
 | TD-ARCH-008 | R0 | `UnfinishedVisual=0` while moving | Blind F2 telemetry | R3 |
 | TD-ARCH-009 | R0 | MemoryBudget no Dirty/Pending soft-cap as SLA | F2 dirty plateau | R3 |
@@ -65,6 +62,9 @@
 |----|-----------|------------|
 | TD-ARCH-001 | R1 (`fix(streaming): cruise near-focus seed…`) | Cruise near-focus uses priority FIFO enqueue (sync Relight forbidden under load — edge_R1 spikes); SeedDecisionPolicy owns policy |
 | TD-ARCH-002 | R1 | Removed `(void)seed`; `seed.applied` → LitReady else PendingLight; backends return applied only when Relight ran (budget≤0 early-out) |
+| TD-ARCH-004 | R2 | `ColumnFlowExecutor` DrainBudget uses `item.column` filter on Admit/Recover |
+| TD-ARCH-005 | R2 | Emerge Admit/Recover/Promote/DrainIdle routed through executor only |
+| TD-ARCH-006 | R2 | Deleted `RecoverStickyBlackFocusSync`; added `IsColumnStickyRemesh` |
 
 ## Closed
 

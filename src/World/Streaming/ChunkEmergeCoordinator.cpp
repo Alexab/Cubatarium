@@ -1,5 +1,6 @@
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Streaming/ColumnFlowScheduler.h"
+#include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/FocusIngressPolicy.h"
 #include "World/Streaming/MeshLitGate.h"
 #include "Blocks/BlockRegistry.h"
@@ -28,11 +29,9 @@ namespace
 int gMeshTelemetryTick{0};
 #endif
 
-UColumnFlowScheduler gColumnFlowScheduler;
-
-// Phase 4/P0: Streaming owns pre-drain promote. This hook no-ops when
-// FocusIngressPolicy.promote_once so we do not enqueue a second promote
-// after DrainRelightQueues (too late for this frame's cold hole).
+// Phase 4/P0: promote is owned by WorldStreaming FocusIngress + executor
+// DrainBudget of PromoteRelight items. This hook stays a no-op to avoid
+// double-promote / DrainBudget hang (edge_R1 after R2).
 void PromoteFrontierHoleIngress(UWorld &world, glm::ivec3 focus_ground_horiz,
                                 int focus_radius, bool moving,
                                 bool missing_visible_mesh,
@@ -42,13 +41,11 @@ void PromoteFrontierHoleIngress(UWorld &world, glm::ivec3 focus_ground_horiz,
   (void)world;
   (void)focus_ground_horiz;
   (void)focus_radius;
-  const FocusIngressDecision d = EvaluateFocusIngress(FocusIngressInput{
-      moving, missing_visible_mesh, pending_focus_count, pending_async,
-      last_frame_ms});
-  if (d.promote_once)
-  {
-    return;
-  }
+  (void)moving;
+  (void)missing_visible_mesh;
+  (void)pending_focus_count;
+  (void)pending_async;
+  (void)last_frame_ms;
 }
 
 } // namespace
@@ -280,7 +277,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       {
         mesh_service.CancelAsyncInFlightKeepDirty();
       }
-      world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
+      {
+        auto &exec = GetColumnFlowExecutor();
+        exec.RequestPromoteRelight(
+            glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 40);
+        exec.DrainBudget(world, 1, focus_ground_horiz, focus_radius, 1);
+      }
       // Holes (V2a normal): still promote often — 120-frame gap left FIFO cold
       // while pending sat with relight_drain≈0.
       idle_cancel_cooldown =
@@ -319,21 +321,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               ? 8
               : (pending_focus_count > 15 ? 6
                                          : (pending_focus_count > 0 ? 4 : 3));
-      world.DrainIdleFocusPendingLight(focus_ground_horiz, focus_radius, budget);
-      // Break-glass: pending plateau (west-strip / SoftDefer hole). With
-      // AsyncRelight this only priority-enqueues FIFO — sync RelightTerrainColumn
-      // was 1–3s mesh_emerge_prep (manual 164613). Streaming Drain owns Capture.
-      // Frontier hole while standing: wall often 40–120; old gate (45f @
-      // wall≤18) never fired (manual 102559: miss=1 ~10s @ wall 41–210).
       const int plateau_frames =
           missing_visible_mesh ? 12 : 45;
       const double plateau_wall_ms = missing_visible_mesh ? 120.0 : 18.0;
-      if (idle_pending_plateau_frames >= plateau_frames &&
+      const bool allow_sync =
+          idle_pending_plateau_frames >= plateau_frames &&
           last_frame_ms <= plateau_wall_ms && pending_focus_count > 0 &&
-          last_frame_ms <= 40.0)
+          last_frame_ms <= 40.0;
+      GetColumnFlowExecutor().DrainIdlePendingLight(
+          world, focus_ground_horiz, focus_radius, budget, allow_sync,
+          last_frame_ms, pending_focus_count, missing_visible_mesh);
+      if (allow_sync)
       {
-        world.DrainIdleFocusPendingLightSync(focus_ground_horiz, focus_radius,
-                                             1);
         idle_pending_plateau_frames = 0;
       }
       if (pending_focus_count <= 8)
@@ -342,44 +341,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         // starved Admit until recover_watchdog and left holes/pending high.
         // Scheduler dedupes same column+kind, so one FirstMesh carries admit_n.
         const int admit_n = std::min(2, budget);
-        gColumnFlowScheduler.Enqueue(
-            glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
-            ColumnWorkKind::FirstMesh, 40 + admit_n);
-        ColumnWorkItem idle_work{};
-        int drained_total = 0;
-        bool did_admit = false;
-        while (drained_total < 4 && gColumnFlowScheduler.DrainOne(idle_work))
-        {
-          switch (idle_work.kind)
-          {
-          case ColumnWorkKind::FirstMesh:
-            if (!did_admit)
-            {
-              world.AdmitFocusVisibleMissing(admit_n);
-              if (pending_focus_count > 0)
-              {
-                world.AdmitFocusMeshIngress(1);
-              }
-              did_admit = true;
-            }
-            break;
-          case ColumnWorkKind::RelightThenMesh:
-            world.RecoverUnlitFocusMeshes(1);
-            break;
-          case ColumnWorkKind::RemeshSeam:
-            world.SyncIdleFocusGreedyRemesh(1);
-            break;
-          case ColumnWorkKind::PromoteRelight:
-            world.PromotePendingLightRelightsNear(focus_ground_horiz,
-                                                  focus_radius);
-            break;
-          }
-          ++drained_total;
-          if (did_admit)
-          {
-            break;
-          }
-        }
+        auto &exec = GetColumnFlowExecutor();
+        exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+                     ColumnWorkKind::FirstMesh, 40 + admit_n);
+        exec.DrainBudget(world, 4, focus_ground_horiz, focus_radius, admit_n);
       }
       // F2: after stop, clear committed pending more aggressively.
       const int clear_n =
@@ -846,8 +811,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const int budget =
           stop_window ? (pending_focus_count > 8 ? 10 : 8)
                       : (pending_focus_count > 20 ? 6 : 4);
-      const int promoted = world.DrainIdleFocusPendingLight(
-          focus_ground_horiz, focus_radius, budget);
+      GetColumnFlowExecutor().DrainIdlePendingLight(
+          world, focus_ground_horiz, focus_radius, budget, false,
+          last_frame_ms, pending_focus_count, missing_visible_mesh);
+      const int promoted = budget;
       idle_pending_promote_cd = promoted > 0 ? (stop_window ? 1 : 2) : 6;
     }
     else if (idle_pending_promote_cd > 0)
@@ -859,8 +826,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         last_frame_ms <= 16.0)
     {
       // Formerly sync RelightTerrainColumn; with AsyncRelight → FIFO only.
-      const int synced = world.DrainIdleFocusPendingLightSync(
-          focus_ground_horiz, focus_radius, 1);
+      GetColumnFlowExecutor().DrainIdlePendingLight(
+          world, focus_ground_horiz, focus_radius, 1, true, last_frame_ms,
+          pending_focus_count, missing_visible_mesh);
+      const int synced = 1;
       idle_pending_sync_cd = synced > 0 ? 60 : 90;
     }
     else if (idle_pending_sync_cd > 0)
@@ -876,7 +845,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     static int cruise_promote_cd = 0;
     if (cruise_promote_cd <= 0 && last_frame_ms <= 24.0)
     {
-      world.DrainIdleFocusPendingLight(focus_ground_horiz, focus_radius, 5);
+      GetColumnFlowExecutor().DrainIdlePendingLight(
+          world, focus_ground_horiz, focus_radius, 5, false, last_frame_ms,
+          pending_focus_count, missing_visible_mesh);
       cruise_promote_cd = 3;
     }
     else if (cruise_promote_cd > 0)
@@ -1109,11 +1080,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
          recover_watchdog_frames >= 2);
     if (recover_now && recover_n > 0)
     {
+      auto &exec = GetColumnFlowExecutor();
       if (!idle_remesh_debt && !idle_focus_dirty_debt)
       {
-        gColumnFlowScheduler.Enqueue(
-            glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
-            ColumnWorkKind::RelightThenMesh, recover_n);
+        exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+                     ColumnWorkKind::RelightThenMesh, recover_n);
         const int pending_dark_preview =
             world.CountPendingDarkFocusMeshes(focus_ground, focus_radius);
         const bool urgent_dark_pending =
@@ -1121,48 +1092,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             world.GetPhysicsTelemetry().DarkFaceNearN > 500;
         if (pending_dark_preview > 0 || urgent_dark_pending)
         {
-          gColumnFlowScheduler.Enqueue(
-              glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
-              ColumnWorkKind::RelightThenMesh, recover_n + 100);
+          exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+                       ColumnWorkKind::RelightThenMesh, recover_n + 100);
         }
       }
       if (!moving && (missing_visible_mesh || pending_near_light) &&
           !idle_remesh_debt)
       {
-        gColumnFlowScheduler.Enqueue(
-            glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
-            ColumnWorkKind::FirstMesh, recover_n + 50);
+        exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+                     ColumnWorkKind::FirstMesh, recover_n + 50);
       }
       else if (moving && visual_holes)
       {
-        gColumnFlowScheduler.Enqueue(
-            glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
-            ColumnWorkKind::FirstMesh, recover_n + 75);
+        exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+                     ColumnWorkKind::FirstMesh, recover_n + 75);
       }
-      ColumnWorkItem work{};
-      int drained = 0;
-      while (drained < recover_n &&
-             gColumnFlowScheduler.DrainOne(work))
-      {
-        switch (work.kind)
-        {
-        case ColumnWorkKind::RelightThenMesh:
-          world.RecoverUnlitFocusMeshes(1);
-          break;
-        case ColumnWorkKind::FirstMesh:
-          world.AdmitFocusVisibleMissing(1);
-          world.AdmitFocusMeshIngress(1);
-          break;
-        case ColumnWorkKind::RemeshSeam:
-          world.SyncIdleFocusGreedyRemesh(1);
-          break;
-        case ColumnWorkKind::PromoteRelight:
-          world.PromotePendingLightRelightsNear(focus_ground_horiz,
-                                                focus_radius);
-          break;
-        }
-        ++drained;
-      }
+      exec.DrainBudget(world, recover_n, focus_ground_horiz, focus_radius, 1);
       recover_watchdog_frames = 0;
     }
   }
@@ -1207,14 +1152,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             last_frame_ms});
     if (cold.active && cold.promote_once && pending_focus_count > 0)
     {
-      world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
+      auto &exec = GetColumnFlowExecutor();
+      exec.RequestPromoteRelight(
+          glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 80);
+      exec.DrainBudget(world, 1, focus_ground_horiz, focus_radius, 1);
     }
     else if (!moving && missing_visible_mesh && pending_focus_count > 0 &&
              last_frame_ms <= 20.0)
     {
-      // Promote only — DrainRelightQueuesBudget here still Captures on main
-      // (manual 202805: prep≈relight 1.8s). Streaming owns paced drain.
-      world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
+      auto &exec = GetColumnFlowExecutor();
+      exec.RequestPromoteRelight(
+          glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 60);
+      exec.DrainBudget(world, 1, focus_ground_horiz, focus_radius, 1);
     }
   }
 
@@ -1499,7 +1448,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         last_frame_ms});
     if (force_hole_cd <= 0)
     {
-      world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
+      {
+        auto &exec = GetColumnFlowExecutor();
+        exec.RequestPromoteRelight(
+            glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 40);
+        exec.DrainBudget(world, 1, focus_ground_horiz, focus_radius, 1);
+      }
       glm::ivec3 hole{};
       if (mesh_service.FindNearestMissingGreedyMesh(
               world.GetBlockWorld(), focus_ground_horiz, focus_radius, hole) &&
