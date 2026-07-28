@@ -29,25 +29,6 @@ namespace
 int gMeshTelemetryTick{0};
 #endif
 
-// Phase 4/P0: promote is owned by WorldStreaming FocusIngress + executor
-// DrainBudget of PromoteRelight items. This hook stays a no-op to avoid
-// double-promote / DrainBudget hang (edge_R1 after R2).
-void PromoteFrontierHoleIngress(UWorld &world, glm::ivec3 focus_ground_horiz,
-                                int focus_radius, bool moving,
-                                bool missing_visible_mesh,
-                                int pending_focus_count, int pending_async,
-                                double last_frame_ms)
-{
-  (void)world;
-  (void)focus_ground_horiz;
-  (void)focus_radius;
-  (void)moving;
-  (void)missing_visible_mesh;
-  (void)pending_focus_count;
-  (void)pending_async;
-  (void)last_frame_ms;
-}
-
 } // namespace
 
 UChunkEmergeCoordinator::FrameBudget
@@ -893,11 +874,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       mesh_drain = std::max(mesh_drain, 22);
     }
   }
-  // P0: moving frontier hole + pending + cold mesh pool — promote relight every
-  // tick so SoftDefer gate can clear without dark preview (manual 102559 phase A).
-  PromoteFrontierHoleIngress(world, focus_ground_horiz, focus_radius, moving,
-                             missing_visible_mesh, pending_focus_count,
-                             pending_async, last_frame_ms);
+  // Frontier promote: WorldStreaming FocusIngress + ColumnFlowExecutor
+  // PromoteRelight (not a second promote hook here — double-promote hung edge).
 
   // Floor drain by Dirty backlog so hitch frames do not starve MeshAsync.
   // Cap schedule aggressiveness when underfeet is already OK — flooding
@@ -1081,10 +1059,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     if (recover_now && recover_n > 0)
     {
       auto &exec = GetColumnFlowExecutor();
+      const int admit_n =
+          (!moving && (missing_visible_mesh || pending_near_light) &&
+           !idle_remesh_debt)
+              ? 1
+              : ((moving && visual_holes) ? 1 : 0);
+      exec.TickDerived(world, focus_ground_horiz, focus_radius, moving,
+                       missing_visible_mesh, visual_holes, idle_remesh_debt,
+                       idle_focus_dirty_debt, pending_focus_n, recover_n,
+                       admit_n);
       if (!idle_remesh_debt && !idle_focus_dirty_debt)
       {
-        exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
-                     ColumnWorkKind::RelightThenMesh, recover_n);
         const int pending_dark_preview =
             world.CountPendingDarkFocusMeshes(focus_ground, focus_radius);
         const bool urgent_dark_pending =
@@ -1095,17 +1080,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
                        ColumnWorkKind::RelightThenMesh, recover_n + 100);
         }
-      }
-      if (!moving && (missing_visible_mesh || pending_near_light) &&
-          !idle_remesh_debt)
-      {
-        exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
-                     ColumnWorkKind::FirstMesh, recover_n + 50);
-      }
-      else if (moving && visual_holes)
-      {
-        exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
-                     ColumnWorkKind::FirstMesh, recover_n + 75);
       }
       exec.DrainBudget(world, recover_n, focus_ground_horiz, focus_radius, 1);
       recover_watchdog_frames = 0;

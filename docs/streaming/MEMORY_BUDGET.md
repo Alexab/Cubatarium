@@ -38,6 +38,18 @@ Knobs в `RuntimeTuning` / `bin/streaming_tune.json` (и опционально
 | `RelightCaptureBandCy` | 4 | max cy layers per Capture; 0=full column |
 | `CompletedExpandEnabled` | true | stepped Completed slot expand |
 
+### V5 MemoryBudgetController soft-caps (R3 / TD-ARCH-009)
+
+`UMemoryBudgetController::Evaluate` also reacts to runtime sample fields
+`dirty_chunks` + `pending_light_focus` (not only private_mb):
+
+- `dirty>400 && pending_focus>8` → disable keep prewarm, capture_hard_cap≤2
+- `dirty>600` → capture_hard_cap≤1
+- WorldStreaming applies `TrimPendingLightBeforeMesh` under the dirty+pending
+  pressure path so PendingLight soft-cap stays aligned with emerge DropRemesh.
+
+See `docs/TECH_DEBT_CHUNK_STREAMING.md` TD-ARCH-009 (closed).
+
 ## Overflow matrix
 
 Правило: **drop только воспроизводимую работу**; **нельзя drop единственную

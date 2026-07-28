@@ -956,6 +956,12 @@ void UChunkStreamer::PrefetchKeepShell(glm::ivec3 feet_chunk, int max_ops,
       {
         continue;
       }
+      // V5 visual SLA: do not expand keep shell onto unfinished FOV columns
+      // (OnIsColumnPendingLight = !IsColumnVisualReadyForRing).
+      if (OnIsColumnPendingLight && OnIsColumnPendingLight(coord))
+      {
+        continue;
+      }
       candidates.push_back(coord);
     }
   }

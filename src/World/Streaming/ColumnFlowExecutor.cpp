@@ -2,6 +2,8 @@
 
 #include "World/Core/World.h"
 
+#include <vector>
+
 namespace cutum
 {
 
@@ -26,6 +28,7 @@ void UColumnFlowExecutor::Dispatch(UWorld &world, const ColumnWorkItem &work,
                                    int focus_radius, int admit_batch)
 {
   const glm::ivec2 focus_xz(focus_ground_horiz.x, focus_ground_horiz.z);
+  // Sentinel focus enqueue → full ring scan (nullptr). Per-column → filter.
   const glm::ivec2 *only =
       (work.column.x == focus_xz.x && work.column.y == focus_xz.y) ? nullptr
                                                                   : &work.column;
@@ -63,19 +66,48 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
 
 void UColumnFlowExecutor::TickDerived(UWorld &world,
                                       glm::ivec3 focus_ground_horiz,
-                                      int /*focus_radius*/, bool moving,
+                                      int focus_radius, bool moving,
                                       bool missing_visible_mesh,
                                       bool visual_holes, bool idle_remesh_debt,
                                       bool idle_focus_dirty_debt,
                                       int pending_focus_n, int recover_n,
                                       int admit_n)
 {
-  (void)world;
   const glm::ivec2 focus(focus_ground_horiz.x, focus_ground_horiz.z);
-  if (recover_n > 0 && !idle_remesh_debt && !idle_focus_dirty_debt)
+  std::vector<glm::ivec2> pending_cols;
+  std::vector<glm::ivec2> sticky_cols;
+  world.CollectPendingLightFocusColumns(focus_ground_horiz, focus_radius,
+                                        pending_cols, std::max(4, recover_n));
+  world.CollectStickyRemeshFocusColumns(focus_ground_horiz, focus_radius,
+                                        sticky_cols, std::max(2, recover_n / 2));
+
+  // should_relight_then_mesh / should_promote_relight: real pending columns.
+  if (!idle_remesh_debt && !idle_focus_dirty_debt && recover_n > 0)
   {
-    Enqueue(focus, ColumnWorkKind::RelightThenMesh, recover_n);
+    int enq = 0;
+    for (const glm::ivec2 &col : pending_cols)
+    {
+      if (enq >= recover_n)
+      {
+        break;
+      }
+      Enqueue(col, ColumnWorkKind::RelightThenMesh, recover_n + 50 - enq);
+      Enqueue(col, ColumnWorkKind::PromoteRelight, recover_n + 20 - enq);
+      ++enq;
+    }
+    if (enq == 0)
+    {
+      Enqueue(focus, ColumnWorkKind::RelightThenMesh, recover_n);
+    }
   }
+
+  // should_remesh_seam: sticky remesh debt.
+  for (const glm::ivec2 &col : sticky_cols)
+  {
+    Enqueue(col, ColumnWorkKind::RemeshSeam, 30);
+  }
+
+  // should_first_mesh: focus sentinel when holes / missing (Admit filters).
   if (admit_n > 0 &&
       ((!moving && (missing_visible_mesh || pending_focus_n > 0) &&
         !idle_remesh_debt) ||

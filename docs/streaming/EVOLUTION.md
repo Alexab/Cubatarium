@@ -303,10 +303,9 @@ unbounded BFS/queues дают 10–25 GB high-water при «нормальн�
 
 ## Legacy / Мёртвые Пути
 
-- `IsColumnVisualReadyForRing` callback зарегистрирован, но фактически не
-  определяет поведение streamer.
-- `RecoverStickyBlackFocusSync` и `RefreshIdleFocusGreedyRemesh` остались в
-  коде как альтернативные recovery paths.
+- `OnIsColumnPendingLight` (= `!IsColumnVisualReadyForRing`) влияет на
+  PrefetchKeepShell / MemoryBudget SLA; **не** на terrain `RingPrerequisitesMet`.
+- `RecoverStickyBlackFocusSync` удалён (R2); sticky → `ColumnFlowExecutor` RemeshSeam.
 - `RebuildChunkLegacy` остаётся sync fallback path.
 
 ## Anti-Patterns

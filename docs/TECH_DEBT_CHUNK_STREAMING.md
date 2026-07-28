@@ -46,20 +46,21 @@
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
 | TD-ARCH-011 | R0 | blue_screen / opaque_on_min residual after E1 | Draw-gate false empty still on edge | backlog |
+| TD-ARCH-013b | R4/tail | Android GLES compute skylight seed | CPU seed contracts green; GPU seed deferred | backlog |
 | TD-ARCH-015 | R0 | Worker-side Capture band (ideal) | Main-thread Capture cost | backlog |
 
 ## TD-ARCH — Closed
 
 | ID | Closed in | Resolution |
 |----|-----------|------------|
-| TD-ARCH-001 | R1 (`fix(streaming): cruise near-focus seed…`) | Cruise near-focus uses priority FIFO enqueue (sync Relight forbidden under load — edge_R1 spikes); SeedDecisionPolicy owns policy |
+| TD-ARCH-001 | R1 (+tails) | Cruise+CanSeed+healthy → cheap sync seed (budget≤2ms / ApplyGpuSkylightSeed); hot cruise → FIFO; SeedDecisionPolicy owns policy |
 | TD-ARCH-002 | R1 | Removed `(void)seed`; `seed.applied` → LitReady else PendingLight; backends return applied only when Relight ran (budget≤0 early-out) |
 | TD-ARCH-004 | R2 | `ColumnFlowExecutor` DrainBudget uses `item.column` filter on Admit/Recover |
 | TD-ARCH-005 | R2 | Emerge Admit/Recover/Promote/DrainIdle routed through executor only |
 | TD-ARCH-006 | R2 | Deleted `RecoverStickyBlackFocusSync`; added `IsColumnStickyRemesh` |
-| TD-ARCH-007 | R3 | Visual SLA via FocusIngressBudget unfinished stall + MemoryBudget; RingPrerequisitesMet stays voxels-only |
+| TD-ARCH-007 | R3 (+tails) | Visual SLA: FocusIngress unfinished + PrefetchKeepShell skips !VisualReady; RingPrerequisitesMet voxels-only |
 | TD-ARCH-008 | R3 | Cruise unfinished sampled every 8f + dirty/pending proxy |
-| TD-ARCH-009 | R3 | MemoryBudget soft-cap on dirty_chunks + pending_light_focus |
+| TD-ARCH-009 | R3 (+tails) | MemoryBudget soft-cap dirty/pending; WorldStreaming TrimPendingLight under dirty>400+pending>8 |
 | TD-ARCH-003 | R4 | Gpu seed uses ApplyGpuSkylightSeedToChunk; factory SelectLightingSeedBackend |
 | TD-ARCH-010 | R5 | Idle pending Capture progress when holes=0 + inflight==0 + wall<160 |
 | TD-ARCH-013 | R4 | Android PreferGpuLightingSeed=false → Cpu same contracts |

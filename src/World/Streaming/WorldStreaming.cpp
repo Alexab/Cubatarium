@@ -1181,9 +1181,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   }
   // Two-tier promote: underfeet first, then rest of focus — so far-in-focus
   // columns do not jump ahead of the camera column in the priority FIFO.
-  // Ownership: Streaming promotes *before* DrainRelightQueues. When ingress
-  // is active, ChunkEmerge skips PromoteFrontierHoleIngress (promote-after-
-  // drain left cold_relight with relight_drain≈0).
+  // Ownership: Streaming promotes *before* DrainRelightQueues. ChunkEmerge
+  // routes PromoteRelight only via ColumnFlowExecutor (no second promote hook).
   if (pending_bg > 0 || underfeet_pending_light)
   {
     world.Persistence->PromoteNearTerrainColumnRelights(focus_horiz, 1);
@@ -1819,6 +1818,16 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
             glm::ivec3(world.PhysicsTelemetryData.FocusChunkX, 0,
                        world.PhysicsTelemetryData.FocusChunkZ),
             Streamer->GetVisualRenderDistance());
+      }
+      // TD-ARCH-009: soft-cap Dirty/Pending under MemoryBudget pressure.
+      if (sample.dirty_chunks > 400 && sample.pending_light_focus > 8)
+      {
+        const int soft =
+            std::max(16, URuntimeTuning::Get().PendingLightSoftCap);
+        world.TrimPendingLightBeforeMesh(
+            glm::ivec3(world.PhysicsTelemetryData.FocusChunkX, 0,
+                       world.PhysicsTelemetryData.FocusChunkZ),
+            soft);
       }
       // Free-list size tracks Keep footprint (MaxResidentChunks caps pool).
       {

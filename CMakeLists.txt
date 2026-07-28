@@ -1171,6 +1171,11 @@ add_executable(seed_decision_policy_test
 target_include_directories(seed_decision_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
+add_executable(visual_ready_for_ring_policy_test
+    src/Test/VisualReadyForRingPolicyTest.cpp)
+target_include_directories(visual_ready_for_ring_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
 add_executable(column_flow_scheduler_test
     src/Test/ColumnFlowSchedulerTest.cpp
     src/World/Streaming/ColumnFlowScheduler.cpp)

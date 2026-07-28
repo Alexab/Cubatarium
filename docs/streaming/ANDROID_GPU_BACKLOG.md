@@ -19,6 +19,16 @@ Runner: `python tools/android_gpu_phase_run.py --phase-id AGx --report bin/phase
 Factory: without `AllowAndroidGpu`, Android selects CPU mesher/cull/staging —
 covered by `render_backend_factory_test` + `android_gpu_policy_test`.
 
+### Lighting seed (E4 / TD-ARCH-013)
+
+`PreferGpuLightingSeed` is **false** on Android/GLES → commit seed uses
+`CpuLightingSeedBackend` with the same streaming contracts as desktop CPU.
+Desktop Gpu seed = `ApplyGpuSkylightSeedToChunk` (not full Relight).
+
+**TD-ARCH-013b (backlog):** real GLES compute skylight seed when
+`AllowAndroidGpu && HasCompute` — until then Android stays on CPU seed.
+Smoke (device optional): `python tools/android_gpu_phase_run.py --phase-id AG0 --skip-device`
+
 Allowlist: `assets/config/android_gpu.json` (synced into APK as `config/` via
 `syncAssets` + AssetExtractor whitelist).
 

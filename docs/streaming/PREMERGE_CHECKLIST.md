@@ -53,6 +53,15 @@ contracts landed (SeedDecision, ColumnFlowExecutor, visual SLA, seed factory,
 Capture progress). Gate DoD F2/C/CB may still be NO-GO — do not treat docs ✅ as
 gate GO; see `TECH_DEBT_CHUNK_STREAMING.md` TD-ARCH-011/015 backlog.
 
+**Backend matrix (R4):** desktop
+
+```powershell
+python tools/flight_sim_iterate.py --backend cpu --replay-edge ...
+python tools/flight_sim_iterate.py --backend gpu --replay-edge ...
+```
+
+Android seed stays CPU until TD-ARCH-013b (`ANDROID_GPU_BACKLOG.md`).
+
 Edge replay (World_164 boundary):
 
 ```powershell

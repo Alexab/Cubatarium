@@ -965,6 +965,16 @@ public:
   int TrimFarRelightFifoFarthest(glm::ivec3 focus_ground_horiz, int soft_cap);
   int CountPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,
                                       int radius_chunks) const;
+  /// Fill out with PendingLight focus columns (nearest first, capped).
+  int CollectPendingLightFocusColumns(glm::ivec3 focus_ground_horiz,
+                                      int radius_chunks,
+                                      std::vector<glm::ivec2> &out,
+                                      int max_cols) const;
+  /// Fill out with StickyRemeshAfterLight columns under focus.
+  int CollectStickyRemeshFocusColumns(glm::ivec3 focus_ground_horiz,
+                                      int radius_chunks,
+                                      std::vector<glm::ivec2> &out,
+                                      int max_cols) const;
   /// "(cx,cz),..." for PendingLightBeforeMesh inside focus (max_cols cap).
   std::string FormatPendingLightFocusColumns(glm::ivec3 focus_ground_horiz,
                                              int radius_chunks,

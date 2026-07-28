@@ -4,9 +4,10 @@ namespace cutum
 {
 
 /// Pure commit-time skylight seed policy (V3): decide sync seed vs PendingLight
-/// FIFO without SoftDefer bypass. Cruise never sync-Relights (1–7s hitches);
-/// near-focus cruise uses priority FIFO. Idle underfeet/near-focus may try
-/// budgeted sync; fail → PendingLight (never silent LitReady).
+/// FIFO without SoftDefer bypass. Cruise near-focus may try cheap budgeted
+/// sync (ApplyGpuSkylightSeed / tight budget — never full RelightTerrainColumn
+/// under load). Idle underfeet/near-focus may try budgeted sync; fail →
+/// PendingLight (never silent LitReady).
 struct SeedDecisionInput
 {
   bool underfeet{false};
@@ -24,6 +25,8 @@ struct SeedDecision
   bool enqueue_pending{false};
   double budget_ms{0.0};
   bool priority_fifo{false};
+  /// When true, backends must use cheap column seed (not RelightTerrainColumn).
+  bool cheap_seed{false};
 };
 
 inline SeedDecision EvaluateSeedDecision(const SeedDecisionInput &in)
@@ -33,19 +36,19 @@ inline SeedDecision EvaluateSeedDecision(const SeedDecisionInput &in)
       in.underfeet || (in.near_focus && in.pending_light_focus <= 20) ||
       (in.near_focus && in.can_seed);
 
-  // Cruise: priority FIFO only. Sync RelightTerrainColumn under load was
-  // 1–7s stream spikes (edge_R1). Ingress progress is enqueue + Capture (R5).
+  // Cruise near-focus: cheap budgeted seed when frame has headroom (plan R1).
+  // Hot cruise → priority FIFO only (RelightTerrainColumn is 1–7s under load).
   if (in.moving_cruise)
   {
-    if (in.near_focus || in.underfeet)
+    if (in.near_focus && in.can_seed && in.frame_ms <= 20.0)
     {
-      out.enqueue_pending = true;
-      out.priority_fifo = true;
+      out.try_sync_seed = true;
+      out.cheap_seed = true;
+      out.budget_ms = in.underfeet ? 1.5 : 2.0;
+      return out;
     }
-    else
-    {
-      out.enqueue_pending = true;
-    }
+    out.enqueue_pending = true;
+    out.priority_fifo = in.near_focus || in.underfeet;
     return out;
   }
 
@@ -59,8 +62,7 @@ inline SeedDecision EvaluateSeedDecision(const SeedDecisionInput &in)
   }
 
   // Idle near-focus with neighborhood: budgeted sync only when frame has
-  // headroom (match pre-R1 gate). Unbounded near-focus Relight during load
-  // hung edge (5+ min WorldLoad / hang_killed).
+  // headroom. Unbounded near-focus Relight during load hung edge.
   if (in.near_focus && in.can_seed && in.frame_ms <= 20.0)
   {
     out.try_sync_seed = true;
@@ -68,7 +70,6 @@ inline SeedDecision EvaluateSeedDecision(const SeedDecisionInput &in)
     return out;
   }
 
-  // Cannot sync-seed: near-focus / underfeet → priority FIFO + PendingLight.
   if (in.near_focus || in.underfeet)
   {
     out.enqueue_pending = true;
