@@ -338,11 +338,56 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       }
       if (pending_focus_count <= 8)
       {
+        // E2 ownership: enqueue then drain (dispatch all kinds). Enqueue-only
+        // starved Admit until recover_watchdog and left holes/pending high.
+        // Scheduler dedupes same column+kind, so one FirstMesh carries admit_n.
+        const int admit_n = std::min(2, budget);
         gColumnFlowScheduler.Enqueue(
             glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
-            ColumnWorkKind::FirstMesh, std::min(2, budget) + 20);
+            ColumnWorkKind::FirstMesh, 40 + admit_n);
+        ColumnWorkItem idle_work{};
+        int drained_total = 0;
+        bool did_admit = false;
+        while (drained_total < 4 && gColumnFlowScheduler.DrainOne(idle_work))
+        {
+          switch (idle_work.kind)
+          {
+          case ColumnWorkKind::FirstMesh:
+            if (!did_admit)
+            {
+              world.AdmitFocusVisibleMissing(admit_n);
+              if (pending_focus_count > 0)
+              {
+                world.AdmitFocusMeshIngress(1);
+              }
+              did_admit = true;
+            }
+            break;
+          case ColumnWorkKind::RelightThenMesh:
+            world.RecoverUnlitFocusMeshes(1);
+            break;
+          case ColumnWorkKind::RemeshSeam:
+            world.SyncIdleFocusGreedyRemesh(1);
+            break;
+          case ColumnWorkKind::PromoteRelight:
+            world.PromotePendingLightRelightsNear(focus_ground_horiz,
+                                                  focus_radius);
+            break;
+          }
+          ++drained_total;
+          if (did_admit)
+          {
+            break;
+          }
+        }
       }
-      world.ClearPendingLightAfterMeshCommitted(12);
+      // F2: after stop, clear committed pending more aggressively.
+      const int clear_n =
+          world.GetTimeSinceMotionSec() > 0.0 &&
+                  world.GetTimeSinceMotionSec() <= 8.0
+              ? 24
+              : 12;
+      world.ClearPendingLightAfterMeshCommitted(clear_n);
       idle_visual_drain_cd =
           pending_focus_count > 8 ? 1 : (pending_focus_count > 0 ? 2 : 8);
     }
@@ -791,10 +836,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     if (idle_pending_promote_cd <= 0 && last_frame_ms <= 20.0 &&
         pending_focus_count > 0)
     {
-      const int budget = pending_focus_count > 20 ? 6 : 4;
+      const bool stop_window =
+          world.GetTimeSinceMotionSec() > 0.0 &&
+          world.GetTimeSinceMotionSec() <= 8.0;
+      const int budget =
+          stop_window ? (pending_focus_count > 8 ? 10 : 8)
+                      : (pending_focus_count > 20 ? 6 : 4);
       const int promoted = world.DrainIdleFocusPendingLight(
           focus_ground_horiz, focus_radius, budget);
-      idle_pending_promote_cd = promoted > 0 ? 2 : 6;
+      idle_pending_promote_cd = promoted > 0 ? (stop_window ? 1 : 2) : 6;
     }
     else if (idle_pending_promote_cd > 0)
     {
@@ -1560,6 +1610,23 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       std::chrono::duration<double, std::milli>(
           std::chrono::high_resolution_clock::now() - emerge_t0)
           .count();
+  // Targeted C/CB: mesh_dirty_tick_ms was ~1.0–1.2s median on edge — hard-cap
+  // drain/schedule so emerge cannot burn the whole frame while holes stuck.
+  if (last_frame_ms > 100.0)
+  {
+    mesh_drain = 1;
+    mesh_schedule = 1;
+    sync_cap = 0;
+  }
+  else if (last_frame_ms > 40.0 || (moving && visual_holes))
+  {
+    mesh_drain = std::min(mesh_drain, 2);
+    mesh_schedule = std::min(mesh_schedule, 2);
+    if (moving)
+    {
+      sync_cap = 0;
+    }
+  }
   const MeshRebuildTickStats tick_stats = mesh_service.RebuildDirtyChunksWithStats(
       world.GetBlockWorld(), registry, mesh_drain, mesh_schedule,
       /*force_sync=*/false, sync_cap, sync_budget_ms);

@@ -593,12 +593,27 @@ void UGeometryEngine::DrawCubeGeometry()
   {
     auto filter_render_ready_refs = [&](const std::vector<GreedyBatchRef> &in)
     {
+      std::unordered_map<int64_t, bool> ready_cache;
       std::vector<GreedyBatchRef> out;
       out.reserve(in.size());
       for (const GreedyBatchRef &ref : in)
       {
-        const glm::ivec3 ground(ref.chunkCoord.x, 0, ref.chunkCoord.z);
-        if (WorldInstance->IsColumnRenderReady(ground))
+        const int64_t key =
+            (static_cast<int64_t>(ref.chunkCoord.x) << 32) ^
+            (static_cast<int64_t>(ref.chunkCoord.z) & 0xffffffffll);
+        auto it = ready_cache.find(key);
+        bool ready = false;
+        if (it != ready_cache.end())
+        {
+          ready = it->second;
+        }
+        else
+        {
+          ready = WorldInstance->IsColumnRenderReady(
+              glm::ivec3(ref.chunkCoord.x, 0, ref.chunkCoord.z));
+          ready_cache.emplace(key, ready);
+        }
+        if (ready)
         {
           out.push_back(ref);
         }
@@ -671,7 +686,7 @@ void UGeometryEngine::DrawCubeGeometry()
                              static_cast<int>(std::floor(world_pos.y)),
                              static_cast<int>(std::floor(world_pos.z))));
               const glm::ivec3 ground(chunk.x, 0, chunk.z);
-              return !WorldInstance->IsColumnRenderReady(ground);
+              return !WorldInstance->IsColumnLitReady(ground);
             }),
         blockInstances.end());
     if (!useBatchCache || !BlockBatchesValid ||
@@ -1388,12 +1403,27 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
                                       camera);
   auto filter_render_ready_refs = [&](const std::vector<GreedyBatchRef> &in)
   {
+    std::unordered_map<int64_t, bool> ready_cache;
     std::vector<GreedyBatchRef> out;
     out.reserve(in.size());
     for (const GreedyBatchRef &ref : in)
     {
-      const glm::ivec3 ground(ref.chunkCoord.x, 0, ref.chunkCoord.z);
-      if (WorldInstance->IsColumnRenderReady(ground))
+      const int64_t key =
+          (static_cast<int64_t>(ref.chunkCoord.x) << 32) ^
+          (static_cast<int64_t>(ref.chunkCoord.z) & 0xffffffffll);
+      auto it = ready_cache.find(key);
+      bool ready = false;
+      if (it != ready_cache.end())
+      {
+        ready = it->second;
+      }
+      else
+      {
+        ready = WorldInstance->IsColumnRenderReady(
+            glm::ivec3(ref.chunkCoord.x, 0, ref.chunkCoord.z));
+        ready_cache.emplace(key, ready);
+      }
+      if (ready)
       {
         out.push_back(ref);
       }
@@ -1457,7 +1487,7 @@ void UGeometryEngine::DrawCrossInstancedBatches(
     {
       return it->second;
     }
-    const bool ready = WorldInstance->IsColumnRenderReady(
+    const bool ready = WorldInstance->IsColumnLitReady(
         glm::ivec3(chunk.x, 0, chunk.z));
     render_ready_cache.emplace(key, ready);
     return ready;

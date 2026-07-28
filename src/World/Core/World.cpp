@@ -1838,14 +1838,16 @@ bool UWorld::IsColumnVisualReadyForRing(glm::ivec3 ground) const
   {
     return false;
   }
-  // Strict ring: first 8s after stopping, require full RenderReady in focus
-  // radius to avoid post-stop visual debt spikes.
+  // Strict ring: only while stopped (TimeSinceMotionSec>0) for first 8s.
+  // Moving keeps TimeSinceMotionSec==0 — must NOT treat that as strict
+  // (was forcing RenderReady scans on every ring-gate column → hang).
   const glm::ivec3 focus_ground = UChunkManager::WorldToChunk(
       GetPreferredLoadFocusBlock());
   const int cheb = std::max(std::abs(ground.x - focus_ground.x),
                             std::abs(ground.z - focus_ground.z));
   const bool in_strict_focus_ring = cheb <= GetStreamingFocusRadius();
-  const bool strict_window = GetTimeSinceMotionSec() <= 8.0;
+  const double since_stop = GetTimeSinceMotionSec();
+  const bool strict_window = since_stop > 0.0 && since_stop <= 8.0;
   if (in_strict_focus_ring && strict_window)
   {
     return IsColumnRenderReady(ground);
@@ -1918,6 +1920,13 @@ bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
     {
       continue;
     }
+    // Prefer mesh presence — avoid full voxel scan on already-meshed slices
+    // (draw-gate/cross called this thousands of times → multi-second frames).
+    if (MeshService->HasGreedyMesh(coord))
+    {
+      saw_loaded_meshable = true;
+      continue;
+    }
     bool any_solid = false;
     for (const BlockId block : chunk->GetData())
     {
@@ -1932,13 +1941,8 @@ bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
       continue;
     }
     saw_loaded_meshable = true;
-    // Missing first mesh = unfinished. Dirty/Active remesh of an existing mesh
-    // must NOT count: that latched idle_remesh_debt (nr≈44, fd≈421, async=42)
-    // and churned snapshots/vertex RAM while standing (manual 202805).
-    if (!MeshService->HasGreedyMesh(coord))
-    {
-      return false;
-    }
+    // Missing first mesh = unfinished.
+    return false;
   }
   return saw_loaded_meshable || state == ColumnEmergeState::Empty;
 }

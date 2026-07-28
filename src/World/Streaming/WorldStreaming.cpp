@@ -296,16 +296,18 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
             const bool moving_cruise =
                 world.LastMovementSpeed >=
                 settings.MovementPrefetchThreshold;
-            // Sync Relight: strict idle underfeet (F2 stop). Near-focus ingress
-            // may seed while moving / with holes when cardinals allow (Phase A).
+            // Sync Relight: idle underfeet (F2) or idle near-focus after stop.
+            // Never sync-seed while cruising — that caused stream spikes 1–17s
+            // (edge hang_killed, spike_max_wall_holes >> 200).
             const bool seed_underfeet_idle =
                 underfeet && neighborhood_ok && !moving_cruise &&
                 commit_frame_ms <= 16.0 &&
                 world.PhysicsTelemetryData.VisualHoles == 0;
-            const bool seed_near_focus_ingress =
-                near_focus && neighborhood_ok && !underfeet;
+            const bool seed_near_focus_idle =
+                near_focus && neighborhood_ok && !underfeet && !moving_cruise &&
+                commit_frame_ms <= 20.0;
             const bool seed_skylight_now =
-                seed_underfeet_idle || seed_near_focus_ingress;
+                seed_underfeet_idle || seed_near_focus_idle;
             const bool relight_priority =
                 underfeet || (near_focus && LastPendingLightFocus <= 20) ||
                 (near_focus && neighborhood_ok);
@@ -1226,8 +1228,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     const int hard_cap =
         moving_now
             ? ((missing_focus_mesh && pending_light_focus_n > 0 &&
-                mesh_async_n < 4 && frame_ms <= kBadFrameMs)
-                   ? (pending_light_focus_n > 16 ? 5 : 4)
+                mesh_async_n < 4)
+                   // Targeted: do not require healthy wall — hitch+holes left
+                   // hard_cap=1 forever while FIFO stuck (~34) and completed=0.
+                   ? (frame_ms > kBadFrameMs
+                          ? 2
+                          : (pending_light_focus_n > 16 ? 5 : 4))
                    : (frame_ms > kBadFrameMs ? 1 : 2))
             : (frame_ms > kBadFrameMs ? 2 : 4);
     bg_budget = std::min(bg_budget, hard_cap);
