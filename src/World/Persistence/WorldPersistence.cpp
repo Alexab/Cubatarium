@@ -452,11 +452,17 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     if (drained_bg == 0 && frame_ms_so_far >= capture_drain_budget_ms * 4.0)
     {
       const bool soft_defer_hole = visual_holes && focus_pending_mid;
-      if (!soft_defer_hole)
+      // Idle PendingLight progress (TD-ARCH-010): when holes=0 the SoftDefer
+      // exception never fired and FIFO stalled. Allow one Capture/enqueue if
+      // inflight is empty and wall is not catastrophic.
+      const bool idle_pending_progress =
+          !moving && focus_pending_mid &&
+          world.GetAsyncRelightInFlightCount() == 0 && frame_ms_so_far < 160.0;
+      if (!soft_defer_hole && !idle_pending_progress)
       {
         return false;
       }
-      if (!async_bg && frame_ms_so_far >= 110.0)
+      if (!async_bg && frame_ms_so_far >= 110.0 && !idle_pending_progress)
       {
         return false;
       }
