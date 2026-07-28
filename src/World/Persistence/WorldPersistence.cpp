@@ -406,7 +406,18 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   // Manual 102936: full-column Capture still ~1.6s — split into top-down Y
   // bands (RelightCaptureBandCy). SoftDefer keeps PendingLight until the
   // final band (finalize_pending_gate=false on partial).
-  const double capture_drain_budget_ms = moving ? 4.0 : 8.0;
+  double capture_drain_budget_ms = moving ? 4.0 : 8.0;
+  // Narrow PendingLight bands are cheaper now; when focus still has missing
+  // mesh plus light debt, allow a bit more Capture time so relight can clear
+  // the gate instead of holding mesh_async at 0 for many seconds.
+  if (async_bg && visual_holes && focus_pending_mid)
+  {
+    capture_drain_budget_ms = moving ? 6.0 : 10.0;
+    if (focus_pending_high)
+    {
+      capture_drain_budget_ms = moving ? 8.0 : 12.0;
+    }
+  }
   const double frame_ms_so_far = world.GetWallFrameDelta() * 1000.0;
   // Hot SoftDefer bypass: at most one Capture so cruise hitch stays bounded.
   // Async SoftDefer hole may enqueue even when wall is high (see drain_one).
@@ -550,8 +561,12 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     }
     if (remainder_min >= 0)
     {
-      EnqueueTerrainColumnRelight(col.x, col.y, horiz_dist <= 1, remainder_min,
-                                  remainder_max);
+      // SoftDefer: remainder band must stay hot within focus, otherwise
+      // finalize_pending_gate=true can be starved and PendingLight keeps
+      // rising while mesh_async stays at 0.
+      const bool remainder_priority = horiz_dist <= focus_radius;
+      EnqueueTerrainColumnRelight(col.x, col.y, remainder_priority,
+                                  remainder_min, remainder_max);
     }
     const double capture_ms =
         std::chrono::duration<double, std::milli>(
@@ -751,10 +766,11 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
         std::abs(ground_coord.x - focus_ground.x) <= focus_radius &&
         std::abs(ground_coord.z - focus_ground.z) <= focus_radius;
     const ProceduralSettings &settings = world.GetProceduralSettings();
-    EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
-                                ground_coord.z * CHUNK_SIZE, near_focus,
-                                std::max(0, settings.SeaLevel - CHUNK_SIZE * 2),
-                                settings.MaxHeight);
+
+    // Default relight range (used when the mesh gate isn't blocking yet).
+    const int relight_min_full = std::max(0, settings.SeaLevel - CHUNK_SIZE * 2);
+    const int relight_max_full = settings.MaxHeight;
+
     if (!world.IsLightingRelightDeferred() && !state.had_disk_light)
     {
       // Mesh gate band = sea±2 CHUNK ∪ player when near (same as commit).
@@ -771,6 +787,12 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
             dirty_max,
             std::min(settings.MaxHeight, focus_block.y + CHUNK_SIZE * 2));
       }
+
+      // SoftDefer: finalize_pending_gate must line up with the mesh-gate
+      // band, otherwise PendingLightBeforeMesh can stay "pending forever".
+      EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
+                                  ground_coord.z * CHUNK_SIZE, near_focus,
+                                  dirty_min, dirty_max);
       world.NotePendingLightBeforeMesh(ground_coord, dirty_min, dirty_max);
       // Focus: first-mesh Dirty immediately (preview). Far waits MarkRelit
       // under Yellow/Red via commit path; disk-load always Dirty near.
@@ -782,6 +804,11 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     }
     else
     {
+      // Disk already lit or relight deferred: keep previous wide relight range.
+      EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
+                                  ground_coord.z * CHUNK_SIZE, near_focus,
+                                  relight_min_full, relight_max_full);
+
       // Disk already lit: remesh visible band only (player ∪ sea), not full
       // 0..MaxHeight (that flooded Dirty on every column load).
       const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();

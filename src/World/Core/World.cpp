@@ -967,11 +967,13 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
               std::min(column_max_y, focus_block.y + CHUNK_SIZE * 2));
         }
       }
-      // Partial Y-band: remesh only the lit slice; SoftDefer stays until final.
+      // Partial relight results must not feed Dirty while the first-light gate
+      // is still closed. Those remeshes are soft-deferred anyway and were a big
+      // source of dirty backlog during flight.
       if (!finalize_pending_gate)
       {
-        dirty_min = std::max(0, band.min_y - 1);
-        dirty_max = std::min(column_max_y, band.max_y + 1);
+        AsyncRelightColumnsInFlight.erase(key);
+        continue;
       }
       bool had_mesh = false;
       const int cy0 = FloorDiv(dirty_min, CHUNK_SIZE);
@@ -1376,21 +1378,22 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
             ++repaired;
             continue;
           }
+          int enqueue_min = remesh_min;
+          int enqueue_max = remesh_max;
+          if (const auto pit = PendingLightBeforeMesh.find(key);
+              pit != PendingLightBeforeMesh.end())
+          {
+            enqueue_min = pit->second.min_y;
+            enqueue_max = pit->second.max_y;
+          }
           Persistence->EnqueueTerrainColumnRelight(
               key.x * CHUNK_SIZE, key.y * CHUNK_SIZE, /*priority=*/true,
-              remesh_min, remesh_max);
+              enqueue_min, enqueue_max);
           SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
-          if (missing_mesh)
-          {
-            // First mesh may be dark briefly; MarkRelit remeshes when lit.
-            MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-                ground, remesh_min, remesh_max,
-                /*include_horizontal_neighbors=*/false);
-            SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
-          }
-          // Do NOT MarkDirty has_mesh+pending here — soft-defer leaves those
-          // Dirty forever and starves first-mesh schedule. Relight only; MarkRelit
-          // will Dirty after light lands.
+          (void)missing_mesh;
+          // Do NOT MarkDirty pending columns here. Re-admitting missing slices
+          // before light lands only floods Dirty with work that the soft-defer
+          // gate will reject again.
           ++repaired;
           continue;
         }
@@ -1508,13 +1511,24 @@ int UWorld::AdmitFocusMeshIngress(int max_columns)
     {
       continue;
     }
+    int enqueue_min = remesh_min;
+    int enqueue_max = remesh_max;
+    if (const auto pit = PendingLightBeforeMesh.find(glm::ivec2(ground.x, ground.z));
+        pit != PendingLightBeforeMesh.end())
+    {
+      enqueue_min = pit->second.min_y;
+      enqueue_max = pit->second.max_y;
+    }
     Persistence->EnqueueTerrainColumnRelight(
         ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
-        remesh_min, remesh_max);
-    MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-        ground, remesh_min, remesh_max,
-        /*include_horizontal_neighbors=*/false);
-    SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+        enqueue_min, enqueue_max);
+    if (IsColumnLitReady(ground))
+    {
+      MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+          ground, remesh_min, remesh_max,
+          /*include_horizontal_neighbors=*/false);
+      SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+    }
     ++admitted;
   }
   return admitted;
@@ -1593,9 +1607,17 @@ int UWorld::AdmitFocusLightingWithoutDirty(int max_columns)
       }
       if (pending && Persistence)
       {
+        int enqueue_min = remesh_min;
+        int enqueue_max = remesh_max;
+        if (const auto pit = PendingLightBeforeMesh.find(key);
+            pit != PendingLightBeforeMesh.end())
+        {
+          enqueue_min = pit->second.min_y;
+          enqueue_max = pit->second.max_y;
+        }
         Persistence->EnqueueTerrainColumnRelight(
             ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
-            remesh_min, remesh_max);
+            enqueue_min, enqueue_max);
       }
       MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
           ground, remesh_min, remesh_max,
@@ -1716,13 +1738,26 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz)
       break;
     }
     const glm::ivec3 ground(candidate.key.x, 0, candidate.key.y);
-    // Pending+missing: still Dirty. Soft-defer allows first mesh in focus;
-    // skipping here left trail columns empty forever after approach miss.
-    if (IsPendingLightBeforeMesh(candidate.key) && Persistence)
+    const bool pending = IsPendingLightBeforeMesh(candidate.key);
+    // Pending-light focus holes must accelerate relight, not repeatedly refill
+    // Dirty while the gate is still closed.
+    if (pending && Persistence)
     {
+      int enqueue_min = remesh_min;
+      int enqueue_max = remesh_max;
+      if (const auto pit = PendingLightBeforeMesh.find(candidate.key);
+          pit != PendingLightBeforeMesh.end())
+      {
+        enqueue_min = pit->second.min_y;
+        enqueue_max = pit->second.max_y;
+      }
       Persistence->EnqueueTerrainColumnRelight(
           ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
-          remesh_min, remesh_max);
+          enqueue_min, enqueue_max);
+    }
+    if (pending && !IsColumnLitReady(ground))
+    {
+      continue;
     }
     MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
         ground, remesh_min, remesh_max,
@@ -2545,7 +2580,10 @@ int UWorld::CountPendingDarkFocusMeshes(glm::ivec3 focus_ground_chunk,
 
 int UWorld::RecoverStickyBlackFocusSync(int max_columns)
 {
-  if (!MeshService || !BlockRegistry || max_columns <= 0 ||
+  // Despite legacy "Sync" naming, this path now only accelerates async relight
+  // admission for sticky-dark focus columns. Running full relight synchronously
+  // here produced multi-hundred-ms to multi-second hitches in MeshEmerge prep.
+  if (!MeshService || !Persistence || max_columns <= 0 ||
       (PendingLightBeforeMesh.empty() && StickyRemeshAfterLight.empty()))
   {
     return 0;
@@ -2649,12 +2687,9 @@ int UWorld::RecoverStickyBlackFocusSync(int max_columns)
     {
       break;
     }
-    AsyncRelightColumnsInFlight.erase(c.key);
-    std::vector<glm::ivec3> relit_chunks;
-    GetLightingPipeline().RelightColumnWithFrontier(
-        BlockWorld, *BlockRegistry, c.key.x * CHUNK_SIZE, c.key.y * CHUNK_SIZE,
-        c.min_y, c.max_y, true, true, &relit_chunks);
-    MarkRelitChunksForMesh(relit_chunks, /*priority_mesh=*/true, {c.key});
+    Persistence->EnqueueTerrainColumnRelight(
+        c.key.x * CHUNK_SIZE, c.key.y * CHUNK_SIZE,
+        /*priority=*/true, c.min_y, c.max_y);
     StickyRemeshAfterLight.erase(c.key);
     ++repaired;
   }

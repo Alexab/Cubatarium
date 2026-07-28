@@ -1,249 +1,302 @@
 #!/usr/bin/env python3
-"""Iterate westbound flight-sim with streaming_tune.json knob descent."""
+"""Run iterative flight-sim loops with diagnostics and log analysis.
+
+This tool automates:
+1) reproducible flythrough runs;
+2) collection of perf_*.jsonl + INFO logs;
+3) per-iteration root-cause classification;
+4) stop criteria checks for FPS / sticky-dark recovery trends.
+"""
 
 from __future__ import annotations
 
 import argparse
 import json
-import shutil
 import subprocess
 import sys
-from copy import deepcopy
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 BIN = ROOT / "bin"
-RUN = Path(__file__).with_name("flight_sim_run.py")
-TUNE_PATH = BIN / "streaming_tune.json"
-HISTORY_PATH = BIN / "flight_sim_iterate_history.jsonl"
-
-DEFAULT_TUNE = {
-    "mesh_forward_bias_k": 0.75,
-    "relight_inflight_mult_high": 4,
-    "relight_inflight_mult_holes": 6,
-    "mesh_fly_cap_yellow": 10,
-    "mesh_fly_cap_red": 8,
-    "recover_n_boost": 0,
-}
-
-# Coordinate descent steps when gates fail (pending → holes → wall).
-KNOB_STEPS = [
-    ("relight_inflight_mult_holes", +2, 12),
-    ("relight_inflight_mult_high", +2, 10),
-    ("recover_n_boost", +2, 8),
-    ("mesh_fly_cap_yellow", +4, 24),
-    ("mesh_fly_cap_red", +4, 20),
-    ("mesh_forward_bias_k", +0.25, 1.5),
-]
+LOGS = BIN / "logs"
+RUNNER = ROOT / "tools" / "flight_sim_run.py"
 
 
-def write_tune(tune: dict) -> None:
-    BIN.mkdir(parents=True, exist_ok=True)
-    TUNE_PATH.write_text(json.dumps(tune, indent=2) + "\n", encoding="utf-8")
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
-def load_tune() -> dict:
-    if TUNE_PATH.is_file():
-        data = json.loads(TUNE_PATH.read_text(encoding="utf-8"))
-        out = dict(DEFAULT_TUNE)
-        out.update({k: data[k] for k in DEFAULT_TUNE if k in data})
-        return out
-    return dict(DEFAULT_TUNE)
+def newest_info_log(after_ts: float) -> Path | None:
+    if not LOGS.is_dir():
+        return None
+    cands = [
+        p
+        for p in LOGS.glob("Cubatarium.exe*.INFO.*")
+        if p.is_file() and p.stat().st_mtime >= after_ts - 2.0
+    ]
+    if not cands:
+        return None
+    return max(cands, key=lambda p: p.stat().st_mtime)
 
 
-def append_history(entry: dict) -> None:
-    with HISTORY_PATH.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+def run_cmd(cmd: list[str], cwd: Path) -> int:
+    print(">", " ".join(cmd), flush=True)
+    return subprocess.call(cmd, cwd=str(cwd))
 
 
-def worse_wall_or_red(prev: dict | None, cur: dict) -> bool:
-    if prev is None:
-        return False
-    pm = prev.get("metrics") or {}
-    cm = cur.get("metrics") or {}
-    wall_p = pm.get("wall_ms_med")
-    wall_c = cm.get("wall_ms_med")
-    red_p = pm.get("red_rate")
-    red_c = cm.get("red_rate")
-    if wall_p is not None and wall_c is not None and wall_c > wall_p + 8.0:
-        return True
-    if red_p is not None and red_c is not None and red_c > red_p + 0.15:
-        return True
-    return False
+def tail_lines(path: Path, n: int = 40) -> list[str]:
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+    if n <= 0:
+        return lines
+    return lines[-n:]
 
 
-def pick_knob_update(tune: dict, result: dict) -> tuple[str, float | int] | None:
-    gates = result.get("gates") or {}
-    gates_stop = result.get("gates_stop") or {}
-    soft = result.get("soft") or {}
-    order = []
-    if not gates_stop.get("post_stop_black_sticky_zero", True) or soft.get(
-        "black_proxy_soft_fail", False
-    ):
-        order.extend(
-            [
-                "relight_inflight_mult_holes",
-                "relight_inflight_mult_high",
-                "recover_n_boost",
-            ]
-        )
-    if not gates.get("pending_light_focus_med_le_15", True):
-        order.extend(
-            [
-                "relight_inflight_mult_holes",
-                "relight_inflight_mult_high",
-                "recover_n_boost",
-            ]
-        )
-    if not gates.get("visual_holes_rate_le_0_10", True):
-        order.extend(
-            [
-                "recover_n_boost",
-                "mesh_fly_cap_yellow",
-                "mesh_fly_cap_red",
-                "mesh_forward_bias_k",
-            ]
-        )
-    if not gates.get("wall_ms_med_le_25", True) or not gates.get(
-        "stream_pressure_red_rate_le_0_30", True
-    ):
-        # On wall/red fail, do not raise mesh fly further — prefer relight.
-        order.extend(["relight_inflight_mult_holes", "recover_n_boost"])
-    if not gates.get("dirty_med_le_400", True):
-        order.append("recover_n_boost")
+def load_json(path: Path) -> dict[str, Any] | None:
+    if not path.is_file():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
 
-    seen = set()
-    for name in order:
-        if name in seen:
+
+def read_perf_from_phase_history(phase_id: str) -> Path | None:
+    hist = BIN / "flight_sim_phase_history.jsonl"
+    if not hist.is_file():
+        return None
+    try:
+        rows = [
+            json.loads(line)
+            for line in hist.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+    except (json.JSONDecodeError, OSError):
+        return None
+    for row in reversed(rows):
+        if str(row.get("phase") or "") != phase_id:
             continue
-        seen.add(name)
-        for kn, step, cap in KNOB_STEPS:
-            if kn != name:
-                continue
-            cur = tune[kn]
-            nxt = cur + step
-            if isinstance(cap, float):
-                if nxt > cap + 1e-6:
-                    continue
-            elif nxt > cap:
-                continue
-            return kn, nxt
+        perf = row.get("perf")
+        if isinstance(perf, str) and perf:
+            p = Path(perf)
+            if p.is_file():
+                return p
     return None
+
+
+def classify(metrics: dict[str, Any], info_tail: list[str]) -> list[str]:
+    reasons: list[str] = []
+    wall = float(metrics.get("wall_ms_med") or 0.0)
+    spike_max = float(metrics.get("spike_max_wall") or 0.0)
+    prep_max = float(metrics.get("mesh_emerge_prep_ms_max") or 0.0)
+    move_max = float(metrics.get("do_movement_ms_max") or 0.0)
+    pending_med = float(metrics.get("pending_light_focus_med") or 0.0)
+    dark_med = float(metrics.get("dark_face_near_n_med") or 0.0)
+    focus_dark_max = float(metrics.get("focus_dark_mesh_max") or 0.0)
+    relight_done = float(metrics.get("relight_completed_n_med") or 0.0)
+    dirty_med = float(metrics.get("dirty_med") or 0.0)
+    mesh_async_med = float(metrics.get("mesh_async_med") or 0.0)
+
+    if prep_max >= 250.0 or move_max >= 250.0:
+        reasons.append("main_thread_hitch_mesh_or_movement")
+    if pending_med >= 10.0 and relight_done <= 0.5:
+        reasons.append("light_debt_plateau")
+    if dirty_med >= 250.0 and mesh_async_med <= 2.0:
+        reasons.append("dirty_backlog_without_drain")
+    if dark_med >= 500.0 or focus_dark_max > 0.0:
+        reasons.append("sticky_dark_faces")
+    if wall >= 45.0 or spike_max >= 200.0:
+        reasons.append("fps_regression")
+
+    tail_blob = "\n".join(info_tail).lower()
+    if "hang" in tail_blob or "timeout" in tail_blob:
+        reasons.append("runtime_hang_or_timeout")
+    if "error" in tail_blob or "fatal" in tail_blob:
+        reasons.append("runtime_error")
+
+    if not reasons:
+        reasons.append("no_major_regression_detected")
+    return reasons
+
+
+def suggest_actions(reasons: list[str]) -> list[str]:
+    actions: list[str] = []
+    if "main_thread_hitch_mesh_or_movement" in reasons:
+        actions.append(
+            "Cap synchronous work in MeshEmerge; keep relight/remesh admission async-only."
+        )
+    if "light_debt_plateau" in reasons:
+        actions.append(
+            "Increase near-focus relight promotion/drain floor and verify async results drain each frame."
+        )
+    if "dirty_backlog_without_drain" in reasons:
+        actions.append(
+            "Reduce new dirty fanout while async backlog is high; prioritize completion over enqueue."
+        )
+    if "sticky_dark_faces" in reasons:
+        actions.append(
+            "Prioritize stale-dark column relight/remesh and confirm PendingLight gate clears on completion."
+        )
+    if "fps_regression" in reasons:
+        actions.append(
+            "Re-check spike classes from report and tighten budgets for the dominant path."
+        )
+    if not actions:
+        actions.append("No follow-up action required for this iteration.")
+    return actions
+
+
+@dataclass
+class StopCriteria:
+    max_spike_wall: float
+    max_wall_med: float
+    max_pending_focus_med: float
+    max_focus_dark_mesh: float
+
+
+def stop_ok(metrics: dict[str, Any], c: StopCriteria) -> bool:
+    spike_max = float(metrics.get("spike_max_wall") or 0.0)
+    wall_med = float(metrics.get("wall_ms_med") or 0.0)
+    pending_med = float(metrics.get("pending_light_focus_med") or 0.0)
+    focus_dark_max = float(metrics.get("focus_dark_mesh_max") or 0.0)
+    return (
+        spike_max <= c.max_spike_wall
+        and wall_med <= c.max_wall_med
+        and pending_med <= c.max_pending_focus_med
+        and focus_dark_max <= c.max_focus_dark_mesh
+    )
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--world", default="World_164")
-    ap.add_argument("--seconds", type=float, default=60.0)
-    ap.add_argument("--max-iters", type=int, default=6)
+    ap.add_argument("--iterations", type=int, default=3)
+    ap.add_argument("--phase-prefix", default="iter")
+    ap.add_argument("--report-dir", type=Path, default=BIN / "iter_reports")
+    ap.add_argument("--summary", type=Path, default=BIN / "flight_sim_iterate_summary.json")
     ap.add_argument("--build-first", action="store_true")
-    ap.add_argument("--fly-stop", action="store_true")
-    ap.add_argument("--commit-on-pass", action="store_true")
-    ap.add_argument(
-        "--build-dir",
-        type=Path,
-        default=ROOT / "build" / "desktop-linux",
-    )
+    ap.add_argument("--max-spike-wall", type=float, default=200.0)
+    ap.add_argument("--max-wall-med", type=float, default=45.0)
+    ap.add_argument("--max-pending-focus-med", type=float, default=8.0)
+    ap.add_argument("--max-focus-dark-mesh", type=float, default=0.0)
     args = ap.parse_args()
 
-    tune = load_tune()
-    write_tune(tune)
-    prev_result: dict | None = None
-    prev_tune = deepcopy(tune)
+    if not RUNNER.is_file():
+        print(f"FAIL: missing {RUNNER}", file=sys.stderr)
+        return 2
 
-    for i in range(args.max_iters):
-        report = BIN / f"flight_sim_gate_report_iter{i}.json"
+    args.report_dir.mkdir(parents=True, exist_ok=True)
+    stop_cfg = StopCriteria(
+        max_spike_wall=args.max_spike_wall,
+        max_wall_med=args.max_wall_med,
+        max_pending_focus_med=args.max_pending_focus_med,
+        max_focus_dark_mesh=args.max_focus_dark_mesh,
+    )
+
+    out: dict[str, Any] = {
+        "created_at_utc": utc_now(),
+        "world": args.world,
+        "iterations_requested": args.iterations,
+        "stop_criteria": {
+            "max_spike_wall": stop_cfg.max_spike_wall,
+            "max_wall_med": stop_cfg.max_wall_med,
+            "max_pending_focus_med": stop_cfg.max_pending_focus_med,
+            "max_focus_dark_mesh": stop_cfg.max_focus_dark_mesh,
+        },
+        "runs": [],
+        "stopped_early": False,
+    }
+
+    for i in range(1, max(1, args.iterations) + 1):
+        phase = f"{args.phase_prefix}_{i:02d}"
+        report = args.report_dir / f"{phase}.json"
+        t0 = report.stat().st_mtime if report.exists() else 0.0
+        started = utc_now()
+
         cmd = [
             sys.executable,
-            str(RUN),
+            str(RUNNER),
             "--world",
             args.world,
+            "--teleport-cruise",
             "--seconds",
-            str(args.seconds),
+            "130",
+            "--fly-stop",
+            "--fly-phase-sec",
+            "45",
+            "--stop-phase-sec",
+            "60",
+            "--idle-sec",
+            "8",
+            "--phase-id",
+            phase,
             "--report",
             str(report),
-            "--build-dir",
-            str(args.build_dir),
         ]
-        if args.build_first and i == 0:
+        if i == 1 and args.build_first:
             cmd.append("--build")
-        cmd.append("--update-best")
-        if args.fly_stop:
-            cmd.append("--fly-stop")
-            cmd.extend(["--process-timeout", "300"])
-        else:
-            cmd.extend(["--process-timeout", "180"])
-        print(f"=== iterate {i}: tune={tune}", flush=True)
-        write_tune(tune)
-        rc = subprocess.call(cmd)
-        if not report.is_file():
-            print(f"FAIL: missing report {report}", file=sys.stderr)
-            return 1
-        result = json.loads(report.read_text(encoding="utf-8"))
-        entry = {
-            "iter": i,
-            "tune": deepcopy(tune),
-            "pass": result.get("pass"),
-            "metrics": result.get("metrics"),
-            "gates": result.get("gates"),
-            "soft": result.get("soft"),
-            "run_rc": rc,
-            "report": str(report),
+
+        rc = run_cmd(cmd, BIN)
+        data = load_json(report) or {}
+        metrics = (data.get("metrics") or {}) if isinstance(data, dict) else {}
+        perf_path = read_perf_from_phase_history(phase)
+        info_path = newest_info_log(t0)
+        info_tail = tail_lines(info_path, n=50) if info_path else []
+        reasons = classify(metrics, info_tail)
+        actions = suggest_actions(reasons)
+        passed = bool(data.get("pass")) if isinstance(data, dict) else False
+        criteria_ok = stop_ok(metrics, stop_cfg)
+
+        run_row = {
+            "phase": phase,
+            "started_at_utc": started,
+            "rc": rc,
+            "report_path": str(report),
+            "perf_jsonl": str(perf_path) if perf_path else "",
+            "info_log": str(info_path) if info_path else "",
+            "pass": passed,
+            "criteria_ok": criteria_ok,
+            "metrics": {
+                "wall_ms_med": metrics.get("wall_ms_med"),
+                "spike_max_wall": metrics.get("spike_max_wall"),
+                "spike_count": metrics.get("spike_count"),
+                "mesh_emerge_prep_ms_max": metrics.get("mesh_emerge_prep_ms_max"),
+                "do_movement_ms_max": metrics.get("do_movement_ms_max"),
+                "pending_light_focus_med": metrics.get("pending_light_focus_med"),
+                "dark_face_near_n_med": metrics.get("dark_face_near_n_med"),
+                "focus_dark_mesh_max": metrics.get("focus_dark_mesh_max"),
+                "relight_completed_n_med": metrics.get("relight_completed_n_med"),
+                "dirty_med": metrics.get("dirty_med"),
+                "mesh_async_med": metrics.get("mesh_async_med"),
+            },
+            "diagnosis": reasons,
+            "recommended_actions": actions,
         }
-        append_history(entry)
-        print(json.dumps(entry, indent=2), flush=True)
+        out["runs"].append(run_row)
+        print(json.dumps(run_row, indent=2, ensure_ascii=False), flush=True)
 
-        best_path = BIN / "flight_sim_gate_report_west_best.json"
-        best = None
-        if best_path.is_file():
-            best = json.loads(best_path.read_text(encoding="utf-8"))
-        cur_pass = sum(1 for v in (result.get("gates") or {}).values() if v)
-        best_pass = (
-            sum(1 for v in (best.get("gates") or {}).values() if v) if best else 0
-        )
-        if cur_pass > best_pass:
-            print(
-                f"CHECKPOINT: gates {best_pass} -> {cur_pass} — "
-                "consider: python tools/flight_sim_checkpoint.py --label iterate",
-                flush=True,
-            )
+        if rc != 0:
+            out["stopped_early"] = True
+            out["stop_reason"] = f"run_failed_rc_{rc}"
+            break
+        if criteria_ok:
+            out["stopped_early"] = True
+            out["stop_reason"] = "criteria_satisfied"
+            break
 
-        if result.get("pass"):
-            print("PASS: gates satisfied", flush=True)
-            shutil.copyfile(report, BIN / "flight_sim_gate_report_west_pass.json")
-            if args.commit_on_pass:
-                subprocess.call(
-                    [
-                        sys.executable,
-                        str(Path(__file__).with_name("flight_sim_checkpoint.py")),
-                        "--label",
-                        "iterate-pass",
-                        "--report",
-                        str(report),
-                        "--force",
-                    ]
-                )
-            return 0
-
-        if worse_wall_or_red(prev_result, result):
-            print("rollback tune: wall/red worsened", flush=True)
-            tune = deepcopy(prev_tune)
-            write_tune(tune)
-            # Still try a different knob next
-        else:
-            prev_tune = deepcopy(tune)
-            prev_result = result
-
-        upd = pick_knob_update(tune, result)
-        if upd is None:
-            print("STOP: no more knob headroom", flush=True)
-            return 1
-        kn, nxt = upd
-        print(f"adjust {kn}: {tune[kn]} -> {nxt}", flush=True)
-        tune[kn] = nxt
-
-    print("STOP: max iters without PASS", flush=True)
-    return 1
+    out["finished_at_utc"] = utc_now()
+    args.summary.parent.mkdir(parents=True, exist_ok=True)
+    args.summary.write_text(
+        json.dumps(out, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    print(f"summary: {args.summary}")
+    return 0
 
 
 if __name__ == "__main__":

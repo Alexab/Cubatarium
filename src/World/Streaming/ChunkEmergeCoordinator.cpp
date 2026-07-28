@@ -173,7 +173,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           nearest_missing_hole);
   mesh_service.SetDeferMeshUntilLitFn(
       [&world, &mesh_service, focus_ground_horiz,
-       focus_radius](glm::ivec3 chunk_coord)
+       focus_radius, have_nearest_missing, nearest_missing_hole](
+          glm::ivec3 chunk_coord)
       {
         const int horiz =
             std::max(std::abs(chunk_coord.x - focus_ground_horiz.x),
@@ -181,6 +182,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const bool underfeet = horiz <= 1;
         const bool pending = world.IsPendingLightBeforeMesh(
             glm::ivec2(chunk_coord.x, chunk_coord.z));
+        const bool is_nearest_hole =
+            have_nearest_missing &&
+            chunk_coord.x == nearest_missing_hole.x &&
+            chunk_coord.z == nearest_missing_hole.z;
         const bool has_mesh = mesh_service.HasGreedyMesh(chunk_coord);
         const bool in_focus = horiz <= focus_radius;
         const glm::ivec3 ground(chunk_coord.x, 0, chunk_coord.z);
@@ -190,7 +195,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         // (including underfeet) — holes preferred over dark bake.
         return SoftDeferMeshUntilLitPolicy(
             underfeet, has_mesh,
-            world.RequiresLightingLitGate() && pending, in_focus, may_mesh);
+            world.RequiresLightingLitGate() && pending && !is_nearest_hole,
+            in_focus, may_mesh);
       });
 
   const bool near_mesh_backlog =
@@ -511,7 +517,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   mesh_service.SetStarveOutsideFocusMesh(visual_holes || missing_underfeet ||
                                          cruise_light_debt || idle_remesh_debt ||
                                          idle_focus_dirty_debt);
-  mesh_service.SetStarveRemeshForHoles(visual_holes || missing_underfeet);
+  // If hole pressure is high but async mesh is still near-zero, fully starving
+  // remesh can deadlock focus in pending-light + missing-mesh state. Only relax
+  // while moving — stop/idle must keep remesh starved to avoid post_stop_pending
+  // and wall_ms spikes from aggressive hole-fill remesh.
+  const bool relax_hole_starve =
+      moving && (pending_focus_count > 16) && (pending_async <= 4);
+  mesh_service.SetStarveRemeshForHoles((visual_holes || missing_underfeet) &&
+                                       !relax_hole_starve);
   // Cruise Dirty flood: drop remesh beyond focus (keep first-mesh) so
   // dirty_med_no_holes clears CB (cb_starve: 652→369). Do not StarveRemesh
   // cruise-wide — that raised spike_holes (269).
@@ -1039,9 +1052,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         world.RecoverUnlitFocusMeshes(recover_n);
         const int pending_dark_preview =
             world.CountPendingDarkFocusMeshes(focus_ground, focus_radius);
-        if (pending_dark_preview > 0 && !moving)
+        const bool urgent_dark_pending =
+            pending_focus_n > 0 &&
+            world.GetPhysicsTelemetry().DarkFaceNearN > 500;
+        if (pending_dark_preview > 0 || urgent_dark_pending)
         {
-          world.RecoverStickyBlackFocusSync(std::min(2, recover_n));
+          const int sync_cap = moving ? 1 : 2;
+          world.RecoverStickyBlackFocusSync(std::min(sync_cap, recover_n));
         }
       }
       // V2b: one Admit path — missing only; no LightingWithoutDirty flood.

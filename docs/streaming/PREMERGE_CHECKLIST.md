@@ -24,6 +24,7 @@ python tools/flight_sim_phase_gate.py --phase-id CB --report bin/phase_<id>.json
 ```
 
 Ожидание (golden `cb_pack` / F2+C+CB closed 2026-07-26):
+
 - sticky = 0
 - F2: cold≤3, fd_end≤280, pending_med≤5, nr_end≤36
 - C: spike_max_wall_holes≤200, cold≤6
@@ -58,12 +59,31 @@ teleport-cruise golden — do not fail merge solely on replay wall/sticky noise.
 ## 4. Metrics to record
 
 | Metric | Why |
-|--------|-----|
+| -------- | -------- |
 | cold_relight_holes_sec | P0 frontier stall |
 | wall_ms_no_holes_med | moving FPS without holes |
 | dirty_med_no_holes | F2 remesh thrash |
 | spike_count / spike_max_wall / spike_max_wall_holes | flight hitch |
 | sticky / nr_end / fd_end | stop contract |
+
+## 4b. Auto-iteration loop (optional, recommended)
+
+Для системной отладки регрессий (spike + sticky-dark + light debt) используйте
+итерационный раннер:
+
+```powershell
+python tools/flight_sim_iterate.py --world World_164 --iterations 3 --build-first `
+  --phase-prefix perf_iter `
+  --summary bin/flight_sim_iterate_summary.json
+```
+
+Что делает раннер:
+
+- запускает воспроизводимые автопролёты по фиксированному сценарию;
+- собирает `perf_*.jsonl` и ближайший `Cubatarium.exe*.INFO.*`;
+- классифицирует причины (main-thread hitch, light debt plateau, dirty backlog, sticky-dark);
+- формирует рекомендации для следующей доработки;
+- останавливается раньше, если выполнены критерии по spike/wall/pending/dark.
 
 ## 5. Anti-patterns (reject merge)
 

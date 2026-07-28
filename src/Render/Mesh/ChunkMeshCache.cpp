@@ -1566,6 +1566,43 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
 
   if (!Dirty.empty())
   {
+    // When focus holes/pending-light debt are active, huge Dirty sets were being
+    // fully sorted on the main thread only to drop most remesh entries later in
+    // try_schedule(). Prune obviously unschedulable remesh work before the sort
+    // so mesh_dirty_tick_ms cannot dominate the frame at Dirty~400-900.
+    if (MeshFocusValid && Dirty.GetCount() > 256)
+    {
+      for (auto it = Dirty.begin(); it != Dirty.end();)
+      {
+        const bool has_mesh = GreedyCache.find(*it) != GreedyCache.end();
+        if (!has_mesh)
+        {
+          ++it;
+          continue;
+        }
+        if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
+        {
+          it = Dirty.RemoveAt(it);
+          continue;
+        }
+        if (StarveRemeshForHoles)
+        {
+          it = Dirty.RemoveAt(it);
+          continue;
+        }
+        if (StarveOutsideFocusMesh)
+        {
+          const int horiz = std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                                     std::abs(it->z - MeshFocusGroundChunk.z));
+          if (horiz > MeshFocusRadiusChunks)
+          {
+            it = Dirty.RemoveAt(it);
+            continue;
+          }
+        }
+        ++it;
+      }
+    }
     // Precompute missing-mesh set once — SortByDistanceKey compares O(n log n)
     // times; per-compare GreedyCache.find was burning wall during flight.
     std::unordered_set<glm::ivec3, IVec3Hash> missing_set;

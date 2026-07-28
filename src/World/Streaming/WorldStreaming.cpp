@@ -318,9 +318,16 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
             }
             else
             {
+              // PendingLightBeforeMesh gate must match the async relight range.
+              // If relight_min/max is wider than dirty_min/max, SoftDefer can
+              // keep finalize_pending_gate=false for too long → pending stuck.
+              const int enqueue_relight_min =
+                  std::max(0, dirty_min - 1 /* air-neighbor pad */);
+              const int enqueue_relight_max =
+                  std::min(settings.MaxHeight, dirty_max + 1 /* air-neighbor pad */);
               world.Persistence->EnqueueTerrainColumnRelight(
                   ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, relight_priority,
-                  relight_min, relight_max);
+                  enqueue_relight_min, enqueue_relight_max);
               world.NotePendingLightBeforeMesh(ground, dirty_min, dirty_max);
               if (near_focus)
               {
@@ -761,6 +768,30 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     const int near_physics_budget = near_mesh_backlog ? 0 : 2;
     const int far_physics_budget =
         (keep_prewarm_surplus && !near_mesh_backlog) ? 1 : 0;
+    const int pending_seed =
+        static_cast<int>(DeferredPhysicsSeedQueue.size());
+    auto make_seed_budgets = [&](bool near_column)
+    {
+      ChunkPhysicsSeedBudgets budgets;
+      // Terrain commits can enqueue a large cold fluid frontier burst.
+      // When the queue is long or the frame is already hot, seed only a tiny
+      // subset and let later frames continue the scan instead of spiking phys_ms.
+      const bool hot_frame = frame_ms > 16.0 || pending_seed > 32;
+      const bool cold_backlog = pending_seed > 96 || gen_backlog_total > 0;
+      if (hot_frame)
+      {
+        budgets.MaxColumnsPerCommit = near_column ? 2 : 1;
+        budgets.MaxLiquidEnqueuePerCommit = near_column ? 24 : 8;
+      }
+      if (cold_backlog)
+      {
+        budgets.MaxColumnsPerCommit =
+            std::min(budgets.MaxColumnsPerCommit, near_column ? 1 : 0);
+        budgets.MaxLiquidEnqueuePerCommit =
+            std::min(budgets.MaxLiquidEnqueuePerCommit, near_column ? 8 : 0);
+      }
+      return budgets;
+    };
     const auto physics_t0 = std::chrono::high_resolution_clock::now();
     for (auto it = DeferredPhysicsSeedQueue.begin();
          it != DeferredPhysicsSeedQueue.end() &&
@@ -773,7 +804,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       }
       const glm::ivec3 coord = *it;
       it = DeferredPhysicsSeedQueue.erase(it);
-      ChunkPhysicsSeedBudgets seed_budgets;
+      ChunkPhysicsSeedBudgets seed_budgets = make_seed_budgets(true);
       SeedPhysicsOnChunkCommitted(world, coord, seed_budgets);
       ++near_done;
     }
@@ -788,7 +819,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       }
       const glm::ivec3 coord = *it;
       it = DeferredPhysicsSeedQueue.erase(it);
-      ChunkPhysicsSeedBudgets seed_budgets;
+      ChunkPhysicsSeedBudgets seed_budgets = make_seed_budgets(false);
+      if (seed_budgets.MaxColumnsPerCommit <= 0 &&
+          seed_budgets.MaxLiquidEnqueuePerCommit <= 0)
+      {
+        it = DeferredPhysicsSeedQueue.insert(it, coord);
+        break;
+      }
       SeedPhysicsOnChunkCommitted(world, coord, seed_budgets);
       ++far_done;
     }
@@ -1007,6 +1044,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   // (DrainRelightQueues is cheap; MarkRelit is what clears PendingLight).
   const int pending_light_focus_n =
       world.CountPendingLightBeforeMeshNear(focus_horiz, focus_radius);
+  const int dark_face_near_n = world.GetPhysicsTelemetry().DarkFaceNearN;
   const int black_sticky_focus =
       world.CountBlackStickyFocusMeshes(focus_horiz, focus_radius);
   // Manual flight: pending_focus climbed while relight_drain≈0 on hitch —
@@ -1035,6 +1073,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   else if (pending_light_focus_n > 0 && frame_ms <= kBadFrameMs)
   {
     bg_budget = std::max(bg_budget, 2);
+  }
+  if (pending_light_focus_n > 0 && dark_face_near_n > 500)
+  {
+    // Standing by black faces while focus pending exists: accelerate relight
+    // capture so PendingLight columns do not keep dark meshes for many periods.
+    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 3 : 4);
   }
   const int mesh_async_n = world.GetMeshService().GetAsyncInFlightCount();
   const bool missing_focus_mesh =
@@ -1096,6 +1140,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                                                         focus_radius);
   }
   world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
+  if (pending_light_focus_n > 0 && dark_face_near_n > 500)
+  {
+    world.PromotePendingLightRelightsNear(focus_horiz, focus_radius + 1);
+  }
 
   // Re-read queue depth after promote — snapshot pending_bg may have been 0.
   const int pending_bg_after =
@@ -1147,7 +1195,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         moving_now
             ? ((missing_focus_mesh && pending_light_focus_n > 0 &&
                 mesh_async_n < 4 && frame_ms <= kBadFrameMs)
-                   ? 3
+                   ? (pending_light_focus_n > 16 ? 5 : 4)
                    : (frame_ms > kBadFrameMs ? 1 : 2))
             : (frame_ms > kBadFrameMs ? 2 : 4);
     bg_budget = std::min(bg_budget, hard_cap);
@@ -1857,8 +1905,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
           fog_margin += 8;
           fog_start_ratio = std::min(fog_start_ratio, 0.40f);
         }
-        target = std::clamp(target, std::max(1, render.FogRdMin),
-                            effectiveRenderDistance);
+        const int fog_rd_max = std::max(1, effectiveRenderDistance);
+        const int fog_rd_min =
+            std::min(fog_rd_max, std::max(1, render.FogRdMin));
+        target = std::clamp(target, fog_rd_min, fog_rd_max);
         const auto now = std::chrono::steady_clock::now();
         const double since =
             FogPullInLastAdjust.time_since_epoch().count() == 0
