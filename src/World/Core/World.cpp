@@ -1843,6 +1843,7 @@ bool UWorld::IsColumnLitReady(glm::ivec3 ground) const
 
 bool UWorld::IsColumnVisualReadyForRing(glm::ivec3 ground) const
 {
+  // V5 visual/keep SLA — NOT terrain RingPrerequisitesMet (voxels-only).
   // Keep ring: best-effort once first-light gate is passed.
   if (!IsColumnLitReady(ground))
   {

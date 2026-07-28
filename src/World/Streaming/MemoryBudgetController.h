@@ -12,6 +12,7 @@ struct MemoryBudgetSample
   double last_wall_ms{0.0};
   int visual_holes{0};
   int pending_light_focus{0};
+  int dirty_chunks{0};
   int baseline_keep_margin{2};
   int visual_rd{4};
 };

@@ -45,16 +45,9 @@
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-ARCH-003 | R0 | GpuLightingSeedBackend ≡ Cpu RelightTerrainColumn | No real capability split | R4 |
-| TD-ARCH-007 | R0 | `OnIsColumnPendingLight` unused; RingPrerequisitesMet intentionally skips PendingLight | Visual SLA vs load ring | R3 |
-| TD-ARCH-008 | R0 | `UnfinishedVisual=0` while moving | Blind F2 telemetry | R3 |
-| TD-ARCH-009 | R0 | MemoryBudget no Dirty/Pending soft-cap as SLA | F2 dirty plateau | R3 |
-| TD-ARCH-010 | R0 | Relight FIFO stall when holes=0 + hot wall | Capture skip death spiral | R5 |
-| TD-ARCH-011 | R0 | blue_screen / opaque_on_min=0 after E1 | Draw-gate residual | R6 |
-| TD-ARCH-012 | R0 | Docs claimed E1–E5 ✅ while DoD fail | False closed — honesty in R0, freeze in R7 | R7 |
-| TD-ARCH-013 | R0 | Android seed/harness not in DoD matrix | Platform parity | R4 |
-| TD-ARCH-014 | R0 | CollectAllOpaqueCutoutRefs dead API risk | Regress if rewired | R6 |
-| TD-ARCH-015 | R0 | Worker-side Capture band (ideal) | Main-thread Capture cost | R5 / backlog |
+| TD-ARCH-011 | R0 | blue_screen / opaque_on_min residual after E1 | Draw-gate false empty still on edge | backlog |
+| TD-ARCH-012 | R0 | F2/C/CB still NO-GO after R0–R6 architecture | Gates residual; docs honest | R7 / backlog |
+| TD-ARCH-015 | R0 | Worker-side Capture band (ideal) | Main-thread Capture cost | backlog |
 
 ## TD-ARCH — Closed
 
@@ -65,6 +58,13 @@
 | TD-ARCH-004 | R2 | `ColumnFlowExecutor` DrainBudget uses `item.column` filter on Admit/Recover |
 | TD-ARCH-005 | R2 | Emerge Admit/Recover/Promote/DrainIdle routed through executor only |
 | TD-ARCH-006 | R2 | Deleted `RecoverStickyBlackFocusSync`; added `IsColumnStickyRemesh` |
+| TD-ARCH-007 | R3 | Visual SLA via FocusIngressBudget unfinished stall + MemoryBudget; RingPrerequisitesMet stays voxels-only |
+| TD-ARCH-008 | R3 | Cruise unfinished sampled every 8f + dirty/pending proxy |
+| TD-ARCH-009 | R3 | MemoryBudget soft-cap on dirty_chunks + pending_light_focus |
+| TD-ARCH-003 | R4 | Gpu seed uses ApplyGpuSkylightSeedToChunk; factory SelectLightingSeedBackend |
+| TD-ARCH-010 | R5 | Idle pending Capture progress when holes=0 + inflight==0 + wall<160 |
+| TD-ARCH-013 | R4 | Android PreferGpuLightingSeed=false → Cpu same contracts |
+| TD-ARCH-014 | R6 | Deleted CollectAllOpaqueCutoutRefs dead API |
 
 ## Closed
 

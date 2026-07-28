@@ -6,8 +6,8 @@
 #include "World/Math/GridMath.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Physics/ChunkPhysicsSeed.h"
-#include "World/Lighting/CpuLightingSeedBackend.h"
-#include "World/Lighting/GpuLightingSeedBackend.h"
+#include "World/Lighting/LightingSeedBackendFactory.h"
+#include "Render/Backend/RenderBackendCaps.h"
 #include "App/Settings/RenderSettings.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Player/PlayerCapsule.h"
@@ -331,21 +331,12 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
             };
             if (seed_decision.try_sync_seed)
             {
-              const bool prefer_gpu_seed =
-                  world.PhysicsTelemetryData.BackendLightingMode == "gpu_full";
-              LightingSeedResult seed{};
-              if (prefer_gpu_seed)
-              {
-                GpuLightingSeedBackend backend(world, relight_min, relight_max);
-                seed = backend.TrySeedColumnAtCommit(ground,
-                                                    seed_decision.budget_ms);
-              }
-              else
-              {
-                CpuLightingSeedBackend backend(world, relight_min, relight_max);
-                seed = backend.TrySeedColumnAtCommit(ground,
-                                                    seed_decision.budget_ms);
-              }
+              const RenderBackendCaps &caps = GetActiveRenderBackendCaps();
+              auto backend = SelectLightingSeedBackend(world, relight_min,
+                                                       relight_max, caps);
+              LightingSeedResult seed =
+                  backend->TrySeedColumnAtCommit(ground,
+                                                 seed_decision.budget_ms);
               if (seed.applied)
               {
                 world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
@@ -744,6 +735,16 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       if (ingress_stall_frames > 8 && near_focus_holes && moving_fast)
       {
         chunk_budget.MaxChunkCommits = 0;
+      }
+      // V5 FOV visual SLA (TD-ARCH-007): after stop, do not expand shell while
+      // focus unfinished — PendingLight is a mesh concern, not terrain ring.
+      const double since_stop = world.GetTimeSinceMotionSec();
+      if (since_stop > 0.0 && since_stop <= 8.0 &&
+          world.PhysicsTelemetryData.UnfinishedVisual > 0)
+      {
+        chunk_budget.MaxChunkCommits =
+            std::min(chunk_budget.MaxChunkCommits, 1);
+        chunk_budget.MaxLoadOps = std::min(chunk_budget.MaxLoadOps, 2);
       }
     }
     chunk_budget.MaxLoadOps =

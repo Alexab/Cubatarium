@@ -94,6 +94,25 @@ UMemoryBudgetController::Evaluate(const MemoryBudgetSample &sample,
   {
     d.max_effective_rd = std::max(3, sample.visual_rd - 1);
   }
+  // Soft-cap: dirty plateau under focus pending — shrink keep/prewarm so
+  // remesh DropRemesh/TrimPending can catch up (TD-ARCH-009).
+  if (sample.dirty_chunks > 400 && sample.pending_light_focus > 8)
+  {
+    d.allow_keep_prewarm = false;
+    d.keep_margin = sample.baseline_keep_margin;
+    if (d.capture_hard_cap < 0)
+    {
+      d.capture_hard_cap = 2;
+    }
+  }
+  else if (sample.dirty_chunks > 600)
+  {
+    d.allow_keep_prewarm = false;
+    if (d.capture_hard_cap < 0)
+    {
+      d.capture_hard_cap = 1;
+    }
+  }
 
   return d;
 }

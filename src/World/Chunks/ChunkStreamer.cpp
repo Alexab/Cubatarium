@@ -207,7 +207,8 @@ bool UChunkStreamer::RingPrerequisitesMet(glm::ivec3 coord,
     // Do NOT gate on PendingLight / !LitReady. That created idle empty
     // pockets: pending_light stuck ~30, ring_blocked==candidates,
     // stream_loads=0 while wall~14ms. Light is a mesh concern; ring only
-    // orders terrain gen/load.
+    // orders terrain gen/load. Visual SLA uses OnIsColumnPendingLight via
+    // WorldStreaming FocusIngressBudget / MemoryBudget (not this gate).
     // Trust ProcedurallyGenerated alone — IsTerrainChunkCompleteCached after
     // invalidate re-scanned whole columns (CB streamer≈130ms).
     if (ProcedurallyGenerated.count(neighbor))

@@ -129,8 +129,8 @@ Honest status vs DoD (see `docs/TECH_DEBT_CHUNK_STREAMING.md` TD-ARCH). Baseline
 | D harness | DONE | `flight_sim_diag.py`, `--replay-edge`, timeline |
 | E1 draw = RenderReady | DONE | GeometryEngine filter + MDI no CollectAll; residual blue_screen (TD-ARCH-011) |
 | E2 V4 single owner | DONE (R2) | `ColumnFlowExecutor`; emerge Admit/Recover/Promote via DrainBudget |
-| E3 ring SLA | PARTIAL | `IsColumnVisualReadyForRing` exists; streamer callback unused; unfinished=0 while moving (TD-ARCH-007/008) |
-| E4 backend parity | STUB | Cpu/Gpu backends both RelightTerrainColumn; no factory (TD-ARCH-003/013) |
+| E3 ring SLA | DONE (R3) | Visual FOV stall + unfinished cruise sample + MemoryBudget dirty soft-cap |
+| E4 backend parity | DONE (R4) | `SelectLightingSeedBackend` + Gpu=`ApplyGpuSkylightSeedToChunk`; Android→Cpu |
 | E5 docs freeze | OPEN | This table was false-closed; freeze only after F2/C/CB GO (TD-ARCH-012) |
 
 Harness timeline: `bin/iter_reports/timeline_summary.json`, `tools/flight_sim_timeline_analyze.py`.
