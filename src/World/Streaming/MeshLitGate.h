@@ -3,28 +3,21 @@
 namespace cutum
 {
 
-/// Soft-defer / first-mesh gate (V2 RenderReady): no visible mesh while
-/// PendingLight except underfeet first-mesh (horiz <= 1).
-/// Remesh of an *existing* mesh while streaming PendingLight is deferred
-/// (including underfeet) so cold Clear→0 remesh does not overwrite a lit mesh.
-/// Player dig/place does not set PendingLight — incremental edit relight runs
-/// before Immediate, so SoftDefer is not an edit-lock.
+/// Soft-defer / first-mesh gate (V2 RenderReady).
+/// While PendingLight: never mesh or remesh (holes > dark bake everywhere,
+/// including outside focus). Player dig/place does not set PendingLight.
 inline bool SoftDeferMeshUntilLitPolicy(bool underfeet, bool has_mesh,
                                         bool pending_light, bool in_focus,
                                         bool may_mesh_outside_focus)
 {
-  if (has_mesh)
+  (void)has_mesh;
+  if (pending_light)
   {
-    return pending_light;
+    return true;
   }
-  if (underfeet)
+  if (underfeet || in_focus)
   {
     return false;
-  }
-  if (in_focus)
-  {
-    // V2a: holes preferred over dark preview in focus ring.
-    return pending_light;
   }
   return !may_mesh_outside_focus;
 }

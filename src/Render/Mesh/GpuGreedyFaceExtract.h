@@ -91,6 +91,41 @@ inline void BuildPaddedOccupancy(const ChunkMeshSnapshot &snap,
   }
 }
 
+/// Padded light: center + one-block shell (parity with FaceLightPacked air sample).
+inline void BuildPaddedLight(const ChunkMeshSnapshot &snap,
+                             std::vector<uint8_t> &lights)
+{
+  lights.assign(static_cast<size_t>(kGpuOccPadVolume), 0);
+  const int pad = kGpuOccPad;
+  for (int y = -1; y <= CHUNK_SIZE; ++y)
+  {
+    for (int z = -1; z <= CHUNK_SIZE; ++z)
+    {
+      for (int x = -1; x <= CHUNK_SIZE; ++x)
+      {
+        const glm::ivec3 world = snap.ChunkOrigin() + glm::ivec3(x, y, z);
+        const int pi = ((y + 1) * pad + (z + 1)) * pad + (x + 1);
+        lights[static_cast<size_t>(pi)] = snap.GetLightPacked(world);
+      }
+    }
+  }
+}
+
+/// Same rule as GreedyMesher::FaceLightPacked: prefer air-neighbor light.
+inline uint8_t FaceLightPackedSnap(const ChunkMeshSnapshot &snap,
+                                   glm::ivec3 local_solid, int axis, int sign)
+{
+  glm::ivec3 air = local_solid;
+  air[axis] += sign;
+  const uint8_t face =
+      snap.GetLightPacked(snap.ChunkOrigin() + air);
+  if (face != 0)
+  {
+    return face;
+  }
+  return snap.GetLightPacked(snap.ChunkOrigin() + local_solid);
+}
+
 inline BlockId NeighborBlock(const ChunkMeshSnapshot &snap, int lx, int ly,
                              int lz, int axis, int sign)
 {
@@ -152,7 +187,8 @@ ExtractOpaqueFacesCpu(const ChunkMeshSnapshot &snap, UBlockRegistry &registry)
             q.height = 1;
             q.Id = id;
             q.faceSign = sign;
-            q.LightPacked = snap.GetLightPackedLocal(glm::ivec3(x, y, z));
+            q.LightPacked =
+                FaceLightPackedSnap(snap, glm::ivec3(x, y, z), axis, sign);
             q.FluidPacked = 0;
             quads.push_back(q);
           }
@@ -331,7 +367,8 @@ DecodeFaceMasks(const ChunkMeshSnapshot &snap, UBlockRegistry &registry,
       q.height = 1;
       q.Id = id;
       q.faceSign = sign;
-      q.LightPacked = snap.GetLightPackedLocal(glm::ivec3(x, y, z));
+      q.LightPacked =
+          FaceLightPackedSnap(snap, glm::ivec3(x, y, z), axis, sign);
       q.FluidPacked = 0;
       quads.push_back(q);
     };

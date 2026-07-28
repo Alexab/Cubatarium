@@ -1021,7 +1021,20 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       }
       const bool seam_ok =
           finalize_pending_gate && !SuppressRelightSeamDirty;
-      if (SuppressRelightSeamDirty && had_mesh)
+      // Standing Dirty churn suppresses global seam fanout, but empty-shell
+      // border faces in the focus ring stick forever without a remesh. Keep
+      // underfeet (±1) seam remesh even while SuppressRelightSeamDirty.
+      bool focus_ring_seam = false;
+      if (finalize_pending_gate && SuppressRelightSeamDirty)
+      {
+        const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+        const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
+        const int focus_horiz =
+            std::max(std::abs(key.x - focus_chunk.x),
+                     std::abs(key.y - focus_chunk.z));
+        focus_ring_seam = focus_horiz <= 1;
+      }
+      if (SuppressRelightSeamDirty && had_mesh && !focus_ring_seam)
       {
         // Idle remesh: do not MarkDirty Inflight (re-Dirty after Apply froze
         // focus_dirty). Request post-Apply remesh instead so Capture sees new
@@ -1050,13 +1063,13 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       }
       else if (priority_mesh)
       {
-        MeshService->MarkTerrainChunkMeshDirtySeamedPriority(ground, dirty_min,
-                                                             dirty_max, seam_ok);
+        MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+            ground, dirty_min, dirty_max, seam_ok || focus_ring_seam);
       }
       else
       {
-        MeshService->MarkTerrainChunkMeshDirtySeamed(ground, dirty_min,
-                                                     dirty_max, seam_ok);
+        MeshService->MarkTerrainChunkMeshDirtySeamed(
+            ground, dirty_min, dirty_max, seam_ok || focus_ring_seam);
       }
       if (finalize_pending_gate)
       {
@@ -1065,11 +1078,20 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       continue;
     }
     // Neighbor: skip Dirty while still awaiting own first light.
-    // Idle lit-but-dirty catch-up: skip all neighbor Dirty — seam cascade
-    // kept focus_dirty≈400 while async remeshed in place.
+    // Idle lit-but-dirty catch-up: skip far neighbor Dirty — seam cascade
+    // kept focus_dirty≈400 while async remeshed in place. Focus-ring (±1)
+    // neighbors that actually received light still remesh (no further seam).
     if (SuppressRelightSeamDirty)
     {
-      continue;
+      const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+      const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
+      const int focus_horiz =
+          std::max(std::abs(key.x - focus_chunk.x),
+                   std::abs(key.y - focus_chunk.z));
+      if (focus_horiz > 1)
+      {
+        continue;
+      }
     }
     if (PendingLightBeforeMesh.count(key) != 0 ||
         !IsColumnLitReady(ground))
@@ -1086,15 +1108,17 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     {
       continue;
     }
+    // Under standing suppress: remesh this lit neighbor only (no seam fanout).
+    const bool neighbor_seam = !SuppressRelightSeamDirty;
     if (priority_mesh)
     {
-      MeshService->MarkTerrainChunkMeshDirtySeamedPriority(ground, dirty_min,
-                                                           dirty_max, true);
+      MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+          ground, dirty_min, dirty_max, neighbor_seam);
     }
     else
     {
       MeshService->MarkTerrainChunkMeshDirtySeamed(ground, dirty_min, dirty_max,
-                                                   true);
+                                                   neighbor_seam);
     }
   }
   // Primary may be absent from relit_chunks (chunk unload / empty apply slice).
@@ -1308,6 +1332,30 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
           }
         }
         const bool underfeet = r <= 1;
+        // Pending + dark greedy preview: hole beats black squares (async race /
+        // pre-pending bake). Drop slices; MarkRelit rebuilds when lit.
+        if (pending && has_mesh)
+        {
+          bool dropped = false;
+          for (int cy = cy0; cy <= cy1; ++cy)
+          {
+            const glm::ivec3 coord(ground.x, cy, ground.z);
+            if (!MeshService->HasGreedyMesh(coord))
+            {
+              continue;
+            }
+            if (MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+            {
+              MeshService->RemoveChunk(coord);
+              dropped = true;
+            }
+          }
+          if (dropped)
+          {
+            ++repaired;
+            continue;
+          }
+        }
         // Focus ring: enqueue relight and unlock ring via LitReady. Keep
         // PendingLight until MarkRelit so soft-defer blocks light=0 remesh of
         // an already-built mesh (ClearPending here caused frequent dark chunks).
@@ -1356,16 +1404,38 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns)
           ++repaired;
           continue;
         }
-        // Stuck black mesh: solid + no sky in chunk light, OR lit chunk data
-        // with stale dark GreedyCache (MarkRelit Dirty lost to starve remesh=0).
-        if (has_mesh && !any_sky)
+        // Stuck black mesh on lit-ready columns: remesh when baked side/top
+        // faces are dark or world light outran the mesh (stale bake).
+        bool bad_mesh = false;
+        if (has_mesh)
         {
-          Persistence->EnqueueTerrainColumnRelight(
-              ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
-              remesh_min, remesh_max);
+          for (int cy = cy0; cy <= cy1; ++cy)
+          {
+            const glm::ivec3 coord(ground.x, cy, ground.z);
+            if (!MeshService->HasGreedyMesh(coord))
+            {
+              continue;
+            }
+            if (MeshService->GetCache().ChunkHasFullyDarkFace(coord) ||
+                MeshService->GetCache().ChunkHasStaleDarkFaces(coord,
+                                                              BlockWorld))
+            {
+              bad_mesh = true;
+              break;
+            }
+          }
+        }
+        if (has_mesh && bad_mesh)
+        {
+          if (!any_sky)
+          {
+            Persistence->EnqueueTerrainColumnRelight(
+                ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
+                remesh_min, remesh_max);
+          }
           MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
               ground, remesh_min, remesh_max,
-              /*include_horizontal_neighbors=*/false);
+              /*include_horizontal_neighbors=*/true);
           ++repaired;
         }
       }

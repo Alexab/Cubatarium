@@ -172,8 +172,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           world.GetBlockWorld(), focus_ground_horiz, focus_radius,
           nearest_missing_hole);
   mesh_service.SetDeferMeshUntilLitFn(
-      [&world, &mesh_service, focus_ground_horiz, focus_radius,
-       have_nearest_missing, nearest_missing_hole](glm::ivec3 chunk_coord)
+      [&world, &mesh_service, focus_ground_horiz,
+       focus_radius](glm::ivec3 chunk_coord)
       {
         const int horiz =
             std::max(std::abs(chunk_coord.x - focus_ground_horiz.x),
@@ -186,19 +186,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const glm::ivec3 ground(chunk_coord.x, 0, chunk_coord.z);
         const bool may_mesh =
             world.MayMeshColumn(ground, /*underfeet_preview=*/false);
-        // Cold SoftDefer: allow first-mesh anywhere in focus while mesh pool
-        // is cold — single nearest xz still left 4s streaks (golden6). Remesh
-        // of existing mesh stays deferred.
-        const bool cold_focus_preview =
-            have_nearest_missing && !has_mesh && in_focus &&
-            mesh_service.GetAsyncInFlightCount() < 4;
-        const bool cold_hole_preview =
-            cold_focus_preview ||
-            (have_nearest_missing && !has_mesh &&
-             chunk_coord.x == nearest_missing_hole.x &&
-             chunk_coord.z == nearest_missing_hole.z);
+        // SoftDeferMeshUntilLitPolicy defers first mesh while pending in focus
+        // (including underfeet) — holes preferred over dark bake.
         return SoftDeferMeshUntilLitPolicy(
-            underfeet || cold_hole_preview, has_mesh,
+            underfeet, has_mesh,
             world.RequiresLightingLitGate() && pending, in_focus, may_mesh);
       });
 
@@ -1036,7 +1027,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         (pending_near_light && pending_focus_n > 12 &&
          recover_watchdog_frames >= 4) ||
         (black_sticky > 0 && !moving && recover_watchdog_frames >= 4) ||
-        (!moving && pending_focus_n > 15 && recover_watchdog_frames >= 2);
+        (!moving && pending_focus_n > 15 && recover_watchdog_frames >= 2) ||
+        (world.GetPhysicsTelemetry().DarkFaceNearN > 500 &&
+         recover_watchdog_frames >= 2);
     if (recover_now && recover_n > 0)
     {
       // Lit-but-dirty catch-up: Recover MarkDirty floods focus_dirty while
@@ -1044,6 +1037,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       if (!idle_remesh_debt && !idle_focus_dirty_debt)
       {
         world.RecoverUnlitFocusMeshes(recover_n);
+        const int pending_dark_preview =
+            world.CountPendingDarkFocusMeshes(focus_ground, focus_radius);
+        if (pending_dark_preview > 0 && !moving)
+        {
+          world.RecoverStickyBlackFocusSync(std::min(2, recover_n));
+        }
       }
       // V2b: one Admit path — missing only; no LightingWithoutDirty flood.
       if (!moving && (missing_visible_mesh || pending_near_light) &&
@@ -1259,6 +1258,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             {
               continue;
             }
+            if (world.IsPendingLightBeforeMesh(glm::ivec2(coord.x, coord.z)))
+            {
+              mesh_service.MarkDirtyPriority(coord);
+              continue;
+            }
             // Moving: never Immediate (one greedy can be seconds). Prefer Dirty.
             const bool allow_underfeet_immediate =
                 !moving && underfeet_immediate_cd <= 0 &&
@@ -1404,20 +1408,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const bool is_nearest_hole =
             have_nearest_missing && hole.x == nearest_missing_hole.x &&
             hole.z == nearest_missing_hole.z;
-        // Cold SoftDefer hole: FocusIngress blocks non-underfeet sync while
-        // async<4 — that left visual_holes=1 for 10s on golden (periods 9–13).
-        // Allow sync/Dirty for the nearest missing column so dark preview can
-        // clear the hole; MarkRelit remeshes when lit.
+        // Never Immediate while PendingLight — dark bake sticks until finalize.
+        // Allow sync/Dirty for the nearest missing column after light clears.
         const bool sync_ok =
             AllowSyncHoleFillForColumn(ingress, hole_underfeet) ||
             (is_nearest_hole && pending_async < 4);
-        // Moving SoftDefer hole: MarkDirty so cold_hole_preview SoftDefer
-        // exception can schedule; allow one Immediate when mesh pool is cold.
         const double force_frame_cap = 40.0;
-        // Moving: Immediate underfeet always; nearest-hole only when async is
-        // cold (F2). Broader nearest Immediate raised spike_holes (cb_coldfix).
         const bool want_immediate =
-            sync_ok && (!hole_pending || hole_underfeet || is_nearest_hole) &&
+            sync_ok && !hole_pending &&
             (!hole_underfeet ||
              (underfeet_immediate_cd <= 0 &&
               underfeet_immediate_this_frame < kMaxUnderfeetImmediate)) &&

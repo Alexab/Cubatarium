@@ -70,13 +70,15 @@ struct GpuRect {
 layout(std430, binding = 3) buffer Rects { GpuRect rects[]; };
 layout(std430, binding = 4) buffer Counters { uint rectCount; };
 uniform uint side;
+uniform uint pad;
 uint readBlock(uint index) {
   uint word = blocks[index >> 2];
   return (word >> ((index & 3u) * 8u)) & 0xffu;
 }
-uint readLight(uint index) {
-  uint word = lights[index >> 2];
-  return (word >> ((index & 3u) * 8u)) & 0xffu;
+uint readLightPad(ivec3 local) {
+  int pi = ((local.y + 1) * int(pad) + (local.z + 1)) * int(pad) + (local.x + 1);
+  uint word = lights[uint(pi) >> 2];
+  return (word >> ((uint(pi) & 3u) * 8u)) & 0xffu;
 }
 uint cellValue(int axis, int faceSign, int slice, int u, int v) {
   ivec3 local;
@@ -89,7 +91,13 @@ uint cellValue(int axis, int faceSign, int slice, int u, int v) {
   if ((mask[li] & (1u << bit)) == 0u) return 0u;
   uint blockId = readBlock(uint(li));
   if (blockId == 0u) return 0u;
-  return blockId | (readLight(uint(li)) << 8u);
+  // FaceLightPacked: sample air neighbor, fall back to solid cell.
+  ivec3 air = local;
+  air[axis] += faceSign;
+  uint faceLight = readLightPad(air);
+  uint solidLight = readLightPad(local);
+  uint light = faceLight != 0u ? faceLight : solidLight;
+  return blockId | (light << 8u);
 }
 void main() {
   uint plane = gl_WorkGroupID.x;
@@ -301,19 +309,17 @@ bool TryGpuOpaqueEmitToBatches(GpuGreedyEmitState &state,
   PackBytes(occ.data(), occ.size(), occ_words);
 
   std::array<uint8_t, CHUNK_VOLUME> blocks{};
-  std::array<uint8_t, CHUNK_VOLUME> lights{};
   for (int i = 0; i < CHUNK_VOLUME; ++i)
   {
     blocks[static_cast<size_t>(i)] =
         static_cast<uint8_t>(snapshot.blocks[static_cast<size_t>(i)]);
-    lights[static_cast<size_t>(i)] = snapshot.GetLightPackedLocal(
-        glm::ivec3(i % CHUNK_SIZE, (i / CHUNK_SIZE) % CHUNK_SIZE,
-                   i / (CHUNK_SIZE * CHUNK_SIZE)));
   }
+  std::vector<uint8_t> padded_lights;
+  BuildPaddedLight(snapshot, padded_lights);
   std::vector<uint32_t> block_words;
   std::vector<uint32_t> light_words;
   PackBytes(blocks.data(), blocks.size(), block_words);
-  PackBytes(lights.data(), lights.size(), light_words);
+  PackBytes(padded_lights.data(), padded_lights.size(), light_words);
 
   const uint32_t volume = static_cast<uint32_t>(CHUNK_VOLUME);
   const uint32_t side = static_cast<uint32_t>(CHUNK_SIZE);
@@ -356,6 +362,8 @@ bool TryGpuOpaqueEmitToBatches(GpuGreedyEmitState &state,
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, state.CountersSsbo);
   glUseProgram(state.GreedyProgram);
   glUniform1ui(glGetUniformLocation(state.GreedyProgram, "side"), side);
+  glUniform1ui(glGetUniformLocation(state.GreedyProgram, "pad"),
+               static_cast<uint32_t>(kGpuOccPad));
   glDispatchCompute(kGpuPlaneWorkgroups, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 

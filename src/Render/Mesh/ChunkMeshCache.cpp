@@ -477,10 +477,17 @@ void UChunkMeshCache::ConsumeGeometryDirtyChunks(
 bool UChunkMeshCache::BatchesHaveFullyDarkFace(
     const std::vector<GreedyMeshBatch> &batches)
 {
+  // Bottom faces (−Y, faceIndex 5) are normally light=0 (air/solid below has
+  // no skylight). Counting them made SoftDefer/reject/sticky treat every
+  // outdoor mesh as "dark" and drowned sticky side/top bake in diagnostics.
   for (const GreedyMeshBatch &batch : batches)
   {
     for (const GreedyMeshVertex &v : batch.vertices)
     {
+      if (v.faceIndex >= 4.5f && v.faceIndex < 5.5f)
+      {
+        continue;
+      }
       if (v.skyLight <= 0.0f && v.blockLight <= 0.0f)
       {
         return true;
@@ -498,6 +505,141 @@ bool UChunkMeshCache::ChunkHasFullyDarkFace(glm::ivec3 chunk_coord) const
     return false;
   }
   return BatchesHaveFullyDarkFace(it->second.batches);
+}
+
+bool UChunkMeshCache::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
+                                             const UBlockWorld &world) const
+{
+  const auto it = GreedyCache.find(chunk_coord);
+  if (it == GreedyCache.end())
+  {
+    return false;
+  }
+  auto face_air_offset = [](int fi) -> glm::ivec3
+  {
+    switch (fi)
+    {
+    case 0:
+      return {0, 0, 1};
+    case 1:
+      return {1, 0, 0};
+    case 2:
+      return {0, 0, -1};
+    case 3:
+      return {-1, 0, 0};
+    case 4:
+      return {0, 1, 0};
+    default:
+      return {0, -1, 0};
+    }
+  };
+  for (const GreedyMeshBatch &batch : it->second.batches)
+  {
+    for (const GreedyMeshVertex &v : batch.vertices)
+    {
+      if (v.skyLight > 0.0f || v.blockLight > 0.0f)
+      {
+        continue;
+      }
+      const int fi = static_cast<int>(v.faceIndex + 0.5f);
+      if (fi == 5)
+      {
+        continue; // −Y bottoms often legitimately unlit
+      }
+      const glm::ivec3 off = face_air_offset(fi);
+      const glm::ivec3 solid(
+          WorldCoordToBlockIndex(v.px - 0.5f * static_cast<float>(off.x)),
+          WorldCoordToBlockIndex(v.py - 0.5f * static_cast<float>(off.y)),
+          WorldCoordToBlockIndex(v.pz - 0.5f * static_cast<float>(off.z)));
+      const glm::ivec3 air = solid + off;
+      if (SampleLightPacked(world, air) != 0 ||
+          SampleLightPacked(world, solid) != 0)
+      {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool UChunkMeshCache::FindNearestDarkFaceNear(const glm::vec3 &camera_pos,
+                                              float max_dist, int chunk_radius,
+                                              DarkFaceHit &out,
+                                              int *out_count_near) const
+{
+  if (out_count_near)
+  {
+    *out_count_near = 0;
+  }
+  if (max_dist <= 0.0f || chunk_radius < 0 || GreedyCache.empty())
+  {
+    return false;
+  }
+  const float max_dist2 = max_dist * max_dist;
+  const glm::ivec3 cam_chunk = UChunkManager::WorldToChunk(
+      glm::ivec3(WorldCoordToBlockIndex(camera_pos.x),
+                 WorldCoordToBlockIndex(camera_pos.y),
+                 WorldCoordToBlockIndex(camera_pos.z)));
+  bool found = false;
+  float best_d2 = max_dist2;
+  DarkFaceHit best{};
+  int count = 0;
+  for (const auto &entry : GreedyCache)
+  {
+    const glm::ivec3 &cc = entry.first;
+    const int dx = std::abs(cc.x - cam_chunk.x);
+    const int dy = std::abs(cc.y - cam_chunk.y);
+    const int dz = std::abs(cc.z - cam_chunk.z);
+    if ((std::max)(dx, (std::max)(dy, dz)) > chunk_radius)
+    {
+      continue;
+    }
+    for (const GreedyMeshBatch &batch : entry.second.batches)
+    {
+      for (const GreedyMeshVertex &v : batch.vertices)
+      {
+        // Skip −Y bottoms — same as BatchesHaveFullyDarkFace.
+        if (v.faceIndex >= 4.5f && v.faceIndex < 5.5f)
+        {
+          continue;
+        }
+        if (v.skyLight > 0.0f || v.blockLight > 0.0f)
+        {
+          continue;
+        }
+        const float ddx = v.px - camera_pos.x;
+        const float ddy = v.py - camera_pos.y;
+        const float ddz = v.pz - camera_pos.z;
+        const float d2 = ddx * ddx + ddy * ddy + ddz * ddz;
+        if (d2 > max_dist2)
+        {
+          continue;
+        }
+        ++count;
+        if (d2 < best_d2)
+        {
+          best_d2 = d2;
+          best.block = glm::ivec3(WorldCoordToBlockIndex(v.px),
+                                  WorldCoordToBlockIndex(v.py),
+                                  WorldCoordToBlockIndex(v.pz));
+          best.chunk = cc;
+          best.blockId = batch.blockId;
+          best.faceIndex = static_cast<int>(v.faceIndex);
+          best.dist = std::sqrt(d2);
+          found = true;
+        }
+      }
+    }
+  }
+  if (out_count_near)
+  {
+    *out_count_near = count;
+  }
+  if (found)
+  {
+    out = best;
+  }
+  return found;
 }
 
 bool UChunkMeshCache::IsChunkMeshDirty(glm::ivec3 chunk_coord) const

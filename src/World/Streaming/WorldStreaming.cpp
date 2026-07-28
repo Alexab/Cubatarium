@@ -418,6 +418,32 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   world.PhysicsTelemetryData.FocusDarkMesh = dark_preview;
   world.PhysicsTelemetryData.FocusNotRenderReady = not_render_ready;
   world.PhysicsTelemetryData.FocusDirtyChunks = focus_dirty_chunks;
+  // Actual baked-dark vertices near camera (not PendingLight proxy).
+  {
+    world.PhysicsTelemetryData.DarkFaceNearN = 0;
+    world.PhysicsTelemetryData.DarkFaceDist = 0.0;
+    if (const auto camera = world.GetCurrentUserCamera())
+    {
+      UChunkMeshCache::DarkFaceHit hit{};
+      int near_n = 0;
+      if (world.GetMeshService().GetCache().FindNearestDarkFaceNear(
+              camera->GetPosition(), /*max_dist=*/24.0f, /*chunk_radius=*/2,
+              hit, &near_n))
+      {
+        world.PhysicsTelemetryData.DarkFaceNearN = near_n;
+        world.PhysicsTelemetryData.DarkFaceBlockX = hit.block.x;
+        world.PhysicsTelemetryData.DarkFaceBlockY = hit.block.y;
+        world.PhysicsTelemetryData.DarkFaceBlockZ = hit.block.z;
+        world.PhysicsTelemetryData.DarkFaceChunkX = hit.chunk.x;
+        world.PhysicsTelemetryData.DarkFaceChunkY = hit.chunk.y;
+        world.PhysicsTelemetryData.DarkFaceChunkZ = hit.chunk.z;
+        world.PhysicsTelemetryData.DarkFaceBlockId =
+            static_cast<int>(hit.blockId);
+        world.PhysicsTelemetryData.DarkFaceIndex = hit.faceIndex;
+        world.PhysicsTelemetryData.DarkFaceDist = hit.dist;
+      }
+    }
+  }
   {
     int ahead = 0;
     int behind = 0;

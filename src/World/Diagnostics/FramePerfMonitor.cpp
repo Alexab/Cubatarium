@@ -233,6 +233,16 @@ struct FrameNumbers
   uint64_t chunk_meshed_culled0{0};
   uint64_t chunk_meshed_unlit{0};
   uint64_t chunk_not_ready{0};
+  int dark_face_near_n{0};
+  int dark_face_bx{0};
+  int dark_face_by{0};
+  int dark_face_bz{0};
+  int dark_face_cx{0};
+  int dark_face_cy{0};
+  int dark_face_cz{0};
+  int dark_face_block_id{0};
+  int dark_face_index{0};
+  double dark_face_dist{0.0};
   uint64_t gpu_mesh_vbo_dispatch{0};
   uint64_t gpu_light_seed_apply{0};
   uint64_t gpu_mask_readback{0};
@@ -421,6 +431,16 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.chunk_meshed_culled0 = phys.ChunkMeshedCulled0;
   n.chunk_meshed_unlit = phys.ChunkMeshedUnlit;
   n.chunk_not_ready = phys.ChunkNotReady;
+  n.dark_face_near_n = phys.DarkFaceNearN;
+  n.dark_face_bx = phys.DarkFaceBlockX;
+  n.dark_face_by = phys.DarkFaceBlockY;
+  n.dark_face_bz = phys.DarkFaceBlockZ;
+  n.dark_face_cx = phys.DarkFaceChunkX;
+  n.dark_face_cy = phys.DarkFaceChunkY;
+  n.dark_face_cz = phys.DarkFaceChunkZ;
+  n.dark_face_block_id = phys.DarkFaceBlockId;
+  n.dark_face_index = phys.DarkFaceIndex;
+  n.dark_face_dist = phys.DarkFaceDist;
   n.gpu_mesh_vbo_dispatch = UGpuGreedyMesher::ConsumeMeshVboDispatchCount();
   n.gpu_light_seed_apply = ConsumeGpuSkylightSeedApplyCount();
   n.gpu_mask_readback = UGpuGreedyMesher::ConsumeMaskReadbackCount();
@@ -588,6 +608,16 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"chunk_meshed_culled0\":" << n.chunk_meshed_culled0
           << ",\"chunk_meshed_unlit\":" << n.chunk_meshed_unlit
           << ",\"chunk_not_ready\":" << n.chunk_not_ready
+          << ",\"dark_face_near_n\":" << n.dark_face_near_n
+          << ",\"dark_face_bx\":" << n.dark_face_bx
+          << ",\"dark_face_by\":" << n.dark_face_by
+          << ",\"dark_face_bz\":" << n.dark_face_bz
+          << ",\"dark_face_cx\":" << n.dark_face_cx
+          << ",\"dark_face_cy\":" << n.dark_face_cy
+          << ",\"dark_face_cz\":" << n.dark_face_cz
+          << ",\"dark_face_block_id\":" << n.dark_face_block_id
+          << ",\"dark_face_index\":" << n.dark_face_index
+          << ",\"dark_face_dist\":" << n.dark_face_dist
           << ",\"gpu_mesh_vbo_dispatch\":" << n.gpu_mesh_vbo_dispatch
           << ",\"gpu_light_seed_apply\":" << n.gpu_light_seed_apply
           << ",\"gpu_mask_readback\":" << n.gpu_mask_readback
@@ -652,6 +682,15 @@ void LogLine(const FrameNumbers &n, const char *kind, int frames,
       << " pending_dark=" << n.focus_pending_dark
       << " sticky=" << n.focus_sticky_remesh
       << " holes=" << n.near_focus_holes;
+  if (n.dark_face_near_n > 0)
+  {
+    oss << " dark_face_n=" << n.dark_face_near_n << " dark_block=("
+        << n.dark_face_bx << "," << n.dark_face_by << "," << n.dark_face_bz
+        << ") dark_chunk=(" << n.dark_face_cx << "," << n.dark_face_cy << ","
+        << n.dark_face_cz << ") dark_id=" << n.dark_face_block_id
+        << " dark_face=" << n.dark_face_index
+        << " dark_dist=" << n.dark_face_dist;
+  }
   if (!n.pending_cols.empty())
   {
     oss << " pending_cols=" << n.pending_cols;

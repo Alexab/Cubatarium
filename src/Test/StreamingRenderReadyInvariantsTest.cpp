@@ -19,14 +19,16 @@ static void Expect(bool cond, const char *msg)
 
 int main()
 {
-  // Streaming SoftDefer: remesh of existing mesh while PendingLight is deferred
-  // (including underfeet). Player dig/place no longer sets PendingLight.
-  Expect(!SoftDeferMeshUntilLitPolicy(true, false, true, true, false),
-         "underfeet missing+pending allow first mesh");
+  // SoftDefer: first mesh while PendingLight is deferred (holes > dark bake),
+  // including underfeet and outside focus. Remesh while pending stays deferred.
+  Expect(SoftDeferMeshUntilLitPolicy(true, false, true, true, false),
+         "underfeet missing+pending must defer (no dark preview)");
   Expect(SoftDeferMeshUntilLitPolicy(true, true, true, true, false),
          "underfeet has_mesh+pending defer remesh");
   Expect(!SoftDeferMeshUntilLitPolicy(true, true, false, true, false),
          "underfeet has_mesh+lit allow remesh");
+  Expect(!SoftDeferMeshUntilLitPolicy(true, false, false, true, false),
+         "underfeet missing+lit allow first mesh");
 
   // Focus missing + pending => defer (no dark preview).
   Expect(SoftDeferMeshUntilLitPolicy(false, false, true, true, true),
@@ -41,7 +43,9 @@ int main()
   Expect(!SoftDeferMeshUntilLitPolicy(false, true, false, true, true),
          "focus has_mesh+lit allow remesh");
 
-  // Outside focus: MayMesh gate.
+  // Outside focus: pending always defers; else MayMesh gate.
+  Expect(SoftDeferMeshUntilLitPolicy(false, false, true, false, true),
+         "outside missing+pending must defer");
   Expect(SoftDeferMeshUntilLitPolicy(false, false, false, false, false),
          "outside missing !may_mesh defer");
   Expect(!SoftDeferMeshUntilLitPolicy(false, false, false, false, true),

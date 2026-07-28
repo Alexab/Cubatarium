@@ -157,6 +157,17 @@ struct PhysicsTelemetry
   uint64_t ChunkMeshedCulled0{0};
   uint64_t ChunkMeshedUnlit{0};
   uint64_t ChunkNotReady{0};
+  /// Nearest non-bottom greedy vertex with sky+block light==0 near camera (diag).
+  int DarkFaceNearN{0};
+  int DarkFaceBlockX{0};
+  int DarkFaceBlockY{0};
+  int DarkFaceBlockZ{0};
+  int DarkFaceChunkX{0};
+  int DarkFaceChunkY{0};
+  int DarkFaceChunkZ{0};
+  int DarkFaceBlockId{0};
+  int DarkFaceIndex{0};
+  double DarkFaceDist{0.0};
   uint64_t GpuMeshVboDispatch{0};
   uint64_t GpuLightSeedApply{0};
   /// 1 when PreferGpu fluid column scan is active this frame.

@@ -104,10 +104,30 @@ public:
   uint64_t GetMeshApplyStaleCount() const { return MeshApplyStaleCount; }
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
-  /// True if any greedy vertex in chunk has sky+block light == 0.
+  /// True if any non-bottom greedy vertex has sky+block light == 0.
+  /// −Y bottoms are ignored (normally unlit).
   bool ChunkHasFullyDarkFace(glm::ivec3 chunk_coord) const;
   static bool BatchesHaveFullyDarkFace(
       const std::vector<GreedyMeshBatch> &batches);
+  /// Mesh vertex light=0 but current world light at the face air neighbor
+  /// is non-zero — stale bake (empty lightmap / missed MarkRelit remesh).
+  bool ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
+                              const UBlockWorld &world) const;
+
+  struct DarkFaceHit
+  {
+    glm::ivec3 block{0};
+    glm::ivec3 chunk{0};
+    BlockId blockId{BLOCK_AIR};
+    int faceIndex{0};
+    float dist{0.0f};
+  };
+  /// Nearest non-bottom mesh vertex with sky+block light == 0 (diag).
+  /// Scans greedy chunks in Chebyshev radius `chunk_radius` around camera.
+  bool FindNearestDarkFaceNear(const glm::vec3 &camera_pos, float max_dist,
+                               int chunk_radius, DarkFaceHit &out,
+                               int *out_count_near = nullptr) const;
+
   /// Chunks whose greedy geometry changed since last GPU pool consume.
   void ConsumeGeometryDirtyChunks(
       std::unordered_set<glm::ivec3, IVec3Hash> &out) const;
