@@ -212,6 +212,8 @@ set(SOURCES
     src/World/Lighting/FullLightingPipeline.cpp
     src/World/Lighting/FlatLightingPipeline.cpp
     src/World/Lighting/LightingPipelineFactory.cpp
+    src/World/Lighting/CpuLightingSeedBackend.cpp
+    src/World/Lighting/GpuLightingSeedBackend.cpp
     src/World/Persistence/WorldPersistence.cpp
     src/World/Streaming/WorldStreaming.cpp
     src/World/Streaming/MemoryBudgetController.cpp
@@ -1977,6 +1979,8 @@ set(PHYSICS_UWORLD_TEST_SOURCES
     src/World/Streaming/MemoryBudgetController.cpp
     src/World/Streaming/ChunkEmergeCoordinator.cpp
     src/World/Streaming/ColumnFlowScheduler.cpp
+    src/World/Lighting/CpuLightingSeedBackend.cpp
+    src/World/Lighting/GpuLightingSeedBackend.cpp
     src/World/Persistence/WorldPersistence.cpp
     src/World/Core/WorldCooperativeOps.cpp
     src/World/Diagnostics/MovementDiagnosticsRecorder.cpp)

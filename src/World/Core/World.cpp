@@ -1833,8 +1833,40 @@ bool UWorld::IsColumnLitReady(glm::ivec3 ground) const
 
 bool UWorld::IsColumnVisualReadyForRing(glm::ivec3 ground) const
 {
-  // Outer rings unlock once the column has left the first-light gate.
-  return IsColumnLitReady(ground);
+  // Keep ring: best-effort once first-light gate is passed.
+  if (!IsColumnLitReady(ground))
+  {
+    return false;
+  }
+  // Strict ring: first 8s after stopping, require full RenderReady in focus
+  // radius to avoid post-stop visual debt spikes.
+  const glm::ivec3 focus_ground = UChunkManager::WorldToChunk(
+      GetPreferredLoadFocusBlock());
+  const int cheb = std::max(std::abs(ground.x - focus_ground.x),
+                            std::abs(ground.z - focus_ground.z));
+  const bool in_strict_focus_ring = cheb <= GetStreamingFocusRadius();
+  const bool strict_window = GetTimeSinceMotionSec() <= 8.0;
+  if (in_strict_focus_ring && strict_window)
+  {
+    return IsColumnRenderReady(ground);
+  }
+  return true;
+}
+
+void UWorld::UpdateMotionState(float speed, float dt_sec)
+{
+  LastMovementSpeed = speed;
+  const float stop_threshold =
+      std::max(0.01f, ProceduralTemplate.MovementPrefetchThreshold * 0.5f);
+  if (speed <= stop_threshold)
+  {
+    TimeSinceMotionSec =
+        std::min(30.0, TimeSinceMotionSec + std::max(0.0f, dt_sec));
+  }
+  else
+  {
+    TimeSinceMotionSec = 0.0;
+  }
 }
 
 bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const

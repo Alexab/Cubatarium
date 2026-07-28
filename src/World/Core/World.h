@@ -893,6 +893,8 @@ public:
   void SetLastMovementFrameMs(double ms) { LastMovementFrameMs = ms; }
   double GetLastMovementFrameMs() const { return LastMovementFrameMs; }
   float GetLastMovementSpeed() const { return LastMovementSpeed; }
+  void UpdateMotionState(float speed, float dt_sec);
+  double GetTimeSinceMotionSec() const { return TimeSinceMotionSec; }
   /// Horizontal motion/view direction for mesh/relight forward bias (xz).
   glm::vec2 GetLastMovementDirXz() const { return LastMovementDirXz; }
   void RelightTerrainColumn(int world_x, int world_z, int min_y, int max_y,
@@ -1230,6 +1232,7 @@ private:
   StreamingAltitudePolicyParams AltitudeParams;
   glm::vec3 LastCameraPosition{0.0f};
   float LastMovementSpeed{0.0f};
+  double TimeSinceMotionSec{0.0};
   glm::vec2 LastMovementDirXz{0.0f};
   int MaxLoadOpsPerFrame{4};
   int MaxUnloadOpsPerFrame{2};

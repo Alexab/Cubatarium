@@ -591,20 +591,28 @@ void UGeometryEngine::DrawCubeGeometry()
 
   if (useGreedyMesh)
   {
+    auto filter_render_ready_refs = [&](const std::vector<GreedyBatchRef> &in)
+    {
+      std::vector<GreedyBatchRef> out;
+      out.reserve(in.size());
+      for (const GreedyBatchRef &ref : in)
+      {
+        const glm::ivec3 ground(ref.chunkCoord.x, 0, ref.chunkCoord.z);
+        if (WorldInstance->IsColumnRenderReady(ground))
+        {
+          out.push_back(ref);
+        }
+      }
+      return out;
+    };
     const UWorldMeshService::GreedyDrawSnapshot draw =
         mesh_service->PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
                                         WorldInstance->GetBlockRegistry(),
                                         camera);
-    std::vector<GreedyBatchRef> filtered_opaque;
-    filtered_opaque.reserve(draw.opaqueCutoutRefs.size());
-    for (const GreedyBatchRef &ref : draw.opaqueCutoutRefs)
-    {
-      const glm::ivec3 ground(ref.chunkCoord.x, 0, ref.chunkCoord.z);
-      if (WorldInstance->IsColumnRenderReady(ground))
-      {
-        filtered_opaque.push_back(ref);
-      }
-    }
+    std::vector<GreedyBatchRef> filtered_opaque =
+        filter_render_ready_refs(draw.opaqueCutoutRefs);
+    std::vector<GreedyBatchRef> filtered_transparent =
+        filter_render_ready_refs(draw.transparentRefs);
     const std::vector<GreedyBatchRef> &opaqueCutoutRefs = filtered_opaque;
     if (!useBatchCache || !BlockBatchesValid ||
         opaqueCutoutRefs.size() != CachedInstanceCount ||
@@ -626,7 +634,7 @@ void UGeometryEngine::DrawCubeGeometry()
     GLboolean cullWasEnabled;
     glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
     GreedyTransparentDrawContext tctx{draw.cache,
-                                      draw.transparentRefs,
+                                      filtered_transparent,
                                       vp,
                                       draw.meshRevision,
                                       draw.cullRevision,
@@ -649,9 +657,23 @@ void UGeometryEngine::DrawCubeGeometry()
   }
   else
   {
-    const auto &blockInstances = mesh_service->PrepareFaceInstances(
+    auto blockInstances = mesh_service->PrepareFaceInstances(
         WorldInstance->GetBlockWorld(), WorldInstance->GetBlockRegistry(),
         camera);
+    blockInstances.erase(
+        std::remove_if(
+            blockInstances.begin(), blockInstances.end(),
+            [&](const BlockInstance &inst)
+            {
+              const glm::vec3 world_pos(inst.model[3]);
+              const glm::ivec3 chunk = UChunkManager::WorldToChunk(
+                  glm::ivec3(static_cast<int>(std::floor(world_pos.x)),
+                             static_cast<int>(std::floor(world_pos.y)),
+                             static_cast<int>(std::floor(world_pos.z))));
+              const glm::ivec3 ground(chunk.x, 0, chunk.z);
+              return !WorldInstance->IsColumnRenderReady(ground);
+            }),
+        blockInstances.end());
     if (!useBatchCache || !BlockBatchesValid ||
         renderCount != CachedInstanceCount ||
         meshRevision != CachedMeshRevision)
@@ -1364,17 +1386,35 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
       mesh_service->PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
                                       WorldInstance->GetBlockRegistry(),
                                       camera);
+  auto filter_render_ready_refs = [&](const std::vector<GreedyBatchRef> &in)
+  {
+    std::vector<GreedyBatchRef> out;
+    out.reserve(in.size());
+    for (const GreedyBatchRef &ref : in)
+    {
+      const glm::ivec3 ground(ref.chunkCoord.x, 0, ref.chunkCoord.z);
+      if (WorldInstance->IsColumnRenderReady(ground))
+      {
+        out.push_back(ref);
+      }
+    }
+    return out;
+  };
+  const std::vector<GreedyBatchRef> filtered_opaque =
+      filter_render_ready_refs(draw.opaqueCutoutRefs);
+  const std::vector<GreedyBatchRef> filtered_transparent =
+      filter_render_ready_refs(draw.transparentRefs);
   const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
   const auto textures = TextureCubeStorageInstance->GetTextures();
 
-  DrawGreedyOpaqueBatches(draw.cache, draw.opaqueCutoutRefs, vp,
+  DrawGreedyOpaqueBatches(draw.cache, filtered_opaque, vp,
                           camera->GetPosition(), textures, draw.meshRevision,
                           draw.cullRevision);
   DrawCrossInstancedBatches(draw.crossBatches, vp, textures, draw.meshRevision,
                             draw.cullRevision);
 
   GreedyTransparentDrawContext tctx{draw.cache,
-                                    draw.transparentRefs,
+                                    filtered_transparent,
                                     vp,
                                     draw.meshRevision,
                                     draw.cullRevision,
@@ -1383,7 +1423,7 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
                                     textures};
   PrepareTransparent(tctx);
 
-  CachedInstanceCount = draw.opaqueCutoutRefs.size();
+  CachedInstanceCount = filtered_opaque.size();
   CachedMeshRevision = draw.meshRevision;
   BlockBatchesValid = true;
 }
@@ -1406,7 +1446,49 @@ void UGeometryEngine::DrawCrossInstancedBatches(
     return;
   }
 
-  CrossGpuBackend.RefreshPass(CrossGpuPass, batches, meshRevision,
+  std::unordered_map<int64_t, bool> render_ready_cache;
+  auto is_column_render_ready = [&](glm::ivec3 chunk) -> bool
+  {
+    const int64_t key =
+        (static_cast<int64_t>(chunk.x) << 32) ^
+        (static_cast<int64_t>(chunk.z) & 0xffffffffll);
+    const auto it = render_ready_cache.find(key);
+    if (it != render_ready_cache.end())
+    {
+      return it->second;
+    }
+    const bool ready = WorldInstance->IsColumnRenderReady(
+        glm::ivec3(chunk.x, 0, chunk.z));
+    render_ready_cache.emplace(key, ready);
+    return ready;
+  };
+  std::vector<CrossInstanceBatch> filtered_batches;
+  filtered_batches.reserve(batches.size());
+  for (const CrossInstanceBatch &batch : batches)
+  {
+    CrossInstanceBatch fb;
+    fb.blockId = batch.blockId;
+    for (const CrossInstanceGpu &inst : batch.instances)
+    {
+      const glm::ivec3 chunk = UChunkManager::WorldToChunk(
+          glm::ivec3(static_cast<int>(std::floor(inst.center.x)),
+                     static_cast<int>(std::floor(inst.center.y)),
+                     static_cast<int>(std::floor(inst.center.z))));
+      if (is_column_render_ready(chunk))
+      {
+        fb.instances.push_back(inst);
+      }
+    }
+    if (!fb.instances.empty())
+    {
+      filtered_batches.push_back(std::move(fb));
+    }
+  }
+  if (filtered_batches.empty())
+  {
+    return;
+  }
+  CrossGpuBackend.RefreshPass(CrossGpuPass, filtered_batches, meshRevision,
                               cullRevision);
   if (WorldInstance)
   {

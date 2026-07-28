@@ -82,6 +82,13 @@ UMemoryBudgetController::Evaluate(const MemoryBudgetSample &sample,
   {
     d.capture_hard_cap = 2;
   }
+  // Ring SLA guard: when focus debt is present, don't expand keep ring and
+  // gently shrink effective RD so FOV ring recovers first.
+  if (sample.visual_holes > 0 || sample.pending_light_focus > 8)
+  {
+    d.allow_keep_prewarm = false;
+    d.max_effective_rd = std::max(3, sample.visual_rd - 1);
+  }
 
   return d;
 }

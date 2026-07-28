@@ -5,6 +5,8 @@
 #include "World/Math/GridMath.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Physics/ChunkPhysicsSeed.h"
+#include "World/Lighting/CpuLightingSeedBackend.h"
+#include "World/Lighting/GpuLightingSeedBackend.h"
 #include "App/Settings/RenderSettings.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Player/PlayerCapsule.h"
@@ -309,12 +311,21 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                 (near_focus && neighborhood_ok);
             if (seed_skylight_now)
             {
-              world.RelightTerrainColumn(ground.x * CHUNK_SIZE,
-                                         ground.z * CHUNK_SIZE, relight_min,
-                                         relight_max,
-                                         /*priority_mesh=*/true,
-                                         /*include_skylight=*/true,
-                                         /*include_block_light=*/true);
+              const bool prefer_gpu_seed =
+                  world.PhysicsTelemetryData.BackendLightingMode == "gpu_full";
+              const double seed_budget_ms = underfeet ? 3.0 : 2.0;
+              LightingSeedResult seed{};
+              if (prefer_gpu_seed)
+              {
+                GpuLightingSeedBackend backend(world, relight_min, relight_max);
+                seed = backend.TrySeedColumnAtCommit(ground, seed_budget_ms);
+              }
+              else
+              {
+                CpuLightingSeedBackend backend(world, relight_min, relight_max);
+                seed = backend.TrySeedColumnAtCommit(ground, seed_budget_ms);
+              }
+              (void)seed;
               world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
               world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
                   ground, dirty_min, dirty_max,
@@ -1961,6 +1972,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const float dt = std::max(0.0001f, camera->GetDeltaTime());
     const glm::vec3 delta = eye - lastCameraPosition;
     lastMovementSpeed = glm::length(glm::vec3(delta.x, 0.0f, delta.z)) / dt;
+    world.UpdateMotionState(lastMovementSpeed, dt);
     {
       const ProceduralSettings &proc_for_dir = world.GetProceduralSettings();
       glm::vec2 move_xz(delta.x, delta.z);

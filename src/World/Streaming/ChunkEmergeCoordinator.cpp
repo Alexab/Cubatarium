@@ -338,11 +338,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       }
       if (pending_focus_count <= 8)
       {
-        world.AdmitFocusVisibleMissing(std::min(2, budget));
-        if (pending_focus_count > 0)
-        {
-          world.AdmitFocusMeshIngress(1);
-        }
+        gColumnFlowScheduler.Enqueue(
+            glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+            ColumnWorkKind::FirstMesh, std::min(2, budget) + 20);
       }
       world.ClearPendingLightAfterMeshCommitted(12);
       idle_visual_drain_cd =
