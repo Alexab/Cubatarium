@@ -130,6 +130,20 @@ int main()
     Expect(a.Bound && b.Bound, "Select marks bound");
   }
 
+  {
+    using cutum::PreferGpuLightingSeed;
+    RenderBackendCaps caps;
+    caps.Platform = RenderPlatformKind::Desktop;
+    caps.HasCompute = true;
+    caps.HasSsbo = true;
+    Expect(PreferGpuLightingSeed(caps), "desktop compute+ssbo prefers gpu seed");
+    caps.ForceCpuBackends = true;
+    Expect(!PreferGpuLightingSeed(caps), "force-cpu seed");
+    caps.ForceCpuBackends = false;
+    caps.HasSsbo = false;
+    Expect(!PreferGpuLightingSeed(caps), "no ssbo → cpu seed");
+  }
+
   if (gFails != 0)
   {
     std::cerr << "render_backend_factory_test: " << gFails << " failures\n";

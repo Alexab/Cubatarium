@@ -56,6 +56,22 @@ struct RenderBackendSelection
   bool Bound{false};
 };
 
+/// Prefer Gpu skylight seed when desktop compute caps allow.
+inline bool PreferGpuLightingSeed(const RenderBackendCaps &caps)
+{
+  if (caps.ForceCpuBackends)
+  {
+    return false;
+  }
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  (void)caps;
+  return false;
+#else
+  return caps.HasCompute && caps.HasSsbo &&
+         caps.Platform == RenderPlatformKind::Desktop;
+#endif
+}
+
 /// Platform compile-time defaults (no GL context required).
 RenderBackendCaps DetectRenderBackendCaps();
 
