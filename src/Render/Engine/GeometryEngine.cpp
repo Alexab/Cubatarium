@@ -686,7 +686,7 @@ void UGeometryEngine::DrawCubeGeometry()
                              static_cast<int>(std::floor(world_pos.y)),
                              static_cast<int>(std::floor(world_pos.z))));
               const glm::ivec3 ground(chunk.x, 0, chunk.z);
-              return !WorldInstance->IsColumnLitReady(ground);
+              return !WorldInstance->IsColumnRenderReady(ground);
             }),
         blockInstances.end());
     if (!useBatchCache || !BlockBatchesValid ||
@@ -1487,7 +1487,7 @@ void UGeometryEngine::DrawCrossInstancedBatches(
     {
       return it->second;
     }
-    const bool ready = WorldInstance->IsColumnLitReady(
+    const bool ready = WorldInstance->IsColumnRenderReady(
         glm::ivec3(chunk.x, 0, chunk.z));
     render_ready_cache.emplace(key, ready);
     return ready;
@@ -1587,16 +1587,11 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
   IUMeshGpuStore &store = MeshStore();
   const bool mdi_indirect_cull = store.SupportsMultiDrawIndirect();
 
-  std::vector<GreedyBatchRef> upload_refs;
-  if (mdi_indirect_cull)
-  {
-    // P2: keep full opaque geometry in the pool; cull via instanceCount.
-    cache.CollectAllOpaqueCutoutRefs(upload_refs);
-  }
-  else
-  {
-    upload_refs = opaqueCutoutRefs;
-  }
+  // V2 draw gate: always use caller-filtered RenderReady refs. CollectAll
+  // bypassed IsColumnRenderReady (E1 hole) and drew lit-but-not-ready columns.
+  // Empty refs means nothing ready — do not re-expand from the pool.
+  // Frustum cull still runs via ApplyGpuCompactCull on this gated set.
+  std::vector<GreedyBatchRef> upload_refs = opaqueCutoutRefs;
 
   std::vector<GreedyBatchRef> solid;
   std::vector<GreedyBatchRef> cutout;

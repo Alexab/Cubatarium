@@ -42,6 +42,16 @@ public:
                          glm::vec2 forward_xz = glm::vec2(0.0f),
                          int focus_radius_for_tail = -1);
 
+  /// Same key as SortByDistanceKey, but only the first `keep_front` entries are
+  /// ordered. Use when Dirty ≫ schedule budget so mesh_dirty_tick cannot pay
+  /// full O(n log n) every frame (manual: Dirty~650 → dirty_tick~100ms).
+  void PartialSortByDistanceKey(
+      glm::ivec3 focus_ground_chunk, int preferred_cy, bool prefer_lower_cy,
+      bool vertical_valid,
+      const std::function<bool(glm::ivec3)> &missing_mesh, size_t keep_front,
+      float forward_bias_k = 0.0f, glm::vec2 forward_xz = glm::vec2(0.0f),
+      int focus_radius_for_tail = -1);
+
   void PrioritizeChunksWithoutMesh(
       const std::function<bool(glm::ivec3)> &missing_mesh);
   void PrioritizeNearHorizontal(glm::ivec3 focus_ground_chunk, int radius_chunks);

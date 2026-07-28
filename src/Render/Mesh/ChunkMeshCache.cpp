@@ -1619,10 +1619,26 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     if (MeshFocusValid)
     {
       // missing → effective horiz (forward bias) → preferred cy.
-      Dirty.SortByDistanceKey(MeshFocusGroundChunk, MeshVerticalPreferredCy,
-                              MeshPreferLowerCy, MeshVerticalPriorityValid,
-                              missing_mesh, MeshForwardBiasK, MeshForwardXz,
-                              MeshFocusRadiusChunks);
+      // Full stable_sort on Dirty~650 dominated mesh_dirty_tick (~100ms) while
+      // schedule budget is only a handful — partial_sort the front window.
+      constexpr size_t kMinSortFront = 64;
+      const size_t sort_front = std::max(
+          kMinSortFront,
+          static_cast<size_t>(std::max(8, max_schedule_per_frame) * 8 + 32));
+      if (Dirty.GetCount() > sort_front * 2)
+      {
+        Dirty.PartialSortByDistanceKey(
+            MeshFocusGroundChunk, MeshVerticalPreferredCy, MeshPreferLowerCy,
+            MeshVerticalPriorityValid, missing_mesh, sort_front,
+            MeshForwardBiasK, MeshForwardXz, MeshFocusRadiusChunks);
+      }
+      else
+      {
+        Dirty.SortByDistanceKey(MeshFocusGroundChunk, MeshVerticalPreferredCy,
+                                MeshPreferLowerCy, MeshVerticalPriorityValid,
+                                missing_mesh, MeshForwardBiasK, MeshForwardXz,
+                                MeshFocusRadiusChunks);
+      }
     }
     else
     {

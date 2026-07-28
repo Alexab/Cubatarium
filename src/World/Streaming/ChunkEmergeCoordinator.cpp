@@ -584,9 +584,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // dirty_med_no_holes clears CB (cb_starve: 652→369). Do not StarveRemesh
   // cruise-wide — that raised spike_holes (269).
   // Anti-pattern: throttle DropRemesh (cb_mid) → spike_max_wall ~4s.
-  if (moving && !visual_holes && !missing_underfeet &&
+  // Idle extension: stop often sits Dirty~650 / focus_dirty~170 with holes=0
+  // (manual_post) — full Dirty sort then burns ~100ms/frame. Same remesh-only
+  // prune as cruise; keep first-mesh so SoftDefer holes stay schedulable.
+  if (!visual_holes && !missing_underfeet &&
       pending_dirty > static_cast<size_t>(
-                          std::max(280, URuntimeTuning::Get().DirtyThrashSoftCap)))
+                          std::max(280, URuntimeTuning::Get().DirtyThrashSoftCap)) &&
+      (moving || (!moving && pending_focus_count <= 16)))
   {
     world.GetPhysicsTelemetryMutable().DirtyDropped += static_cast<uint64_t>(
         std::max(0, mesh_service.DropRemeshDirtyBeyondRadius(
