@@ -129,9 +129,13 @@ def analyze(
         else None
     )
     hole_key = (
-        "visual_holes"
-        if any("visual_holes" in r for r in steady)
-        else "near_focus_holes"
+        "unfinished_visual"
+        if unfinished_key
+        else (
+            "visual_holes"
+            if any("visual_holes" in r for r in steady)
+            else "near_focus_holes"
+        )
     )
     holes = col(steady, hole_key)
     dark_sticky = col(steady, "black_sticky")

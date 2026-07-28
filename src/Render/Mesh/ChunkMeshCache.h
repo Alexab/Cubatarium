@@ -289,8 +289,6 @@ public:
   {
     return GreedyTransparentRefs;
   }
-  /// All opaque/cutout batches in GreedyCache (mesh upload; cull via instanceCount).
-  void CollectAllOpaqueCutoutRefs(std::vector<GreedyBatchRef> &out) const;
   const GreedyMeshBatch *TryGetGreedyBatch(const GreedyBatchRef &ref) const
   {
     const auto it = GreedyCache.find(ref.chunkCoord);
