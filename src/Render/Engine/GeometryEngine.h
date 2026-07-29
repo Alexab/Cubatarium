@@ -244,6 +244,8 @@ private:
   std::shared_ptr<UShaderProgram>
       greedyShader; // Greedy world mesh (UV in fragment shader)
   std::shared_ptr<UShaderProgram>
+      packedGreedyShader; // GPU packed-quad vertex pulling path
+  std::shared_ptr<UShaderProgram>
       crossInstancedShader; // Instanced cross vegetation sprites
   std::shared_ptr<UShaderProgram> overlayShader;
   std::shared_ptr<UShaderProgram>
@@ -343,6 +345,14 @@ private:
                             const std::map<size_t, UTextureCube> &textures,
                             bool alphaCutout, bool transparentPass,
                             GreedyShaderMode mode, float shellAlphaThreshold);
+  void DrawPackedGpuMeshes(const UChunkMeshCache &cache,
+                           const std::vector<GpuPackedChunkRef> &chunk_refs,
+                           const glm::mat4 &vp,
+                           const std::map<size_t, UTextureCube> &textures,
+                           bool transparent_pass, GreedyShaderMode mode,
+                           float shell_alpha);
+
+  const UChunkMeshCache *PreparedTransparentCache{nullptr};
 
   std::string TransientMessage;
   double TransientMessageUntil{0.0};

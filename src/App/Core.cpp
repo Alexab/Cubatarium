@@ -389,6 +389,8 @@ void UCore::LoadConfig(const std::string &config_file_name)
         }
         Render.GreedyMeshing = r.value("greedy_meshing", Render.GreedyMeshing);
         Render.AsyncMeshing = r.value("async_meshing", Render.AsyncMeshing);
+        Render.GpuPackedMeshing =
+            r.value("gpu_packed_meshing", Render.GpuPackedMeshing);
         Render.FaceQuads = r.value("face_quads", Render.FaceQuads);
         Render.FrustumCulling =
             r.value("frustum_culling", Render.FrustumCulling);
@@ -724,6 +726,7 @@ void UCore::SaveConfigFile()
       GraphicsQualityProfile::ToConfigString(Render.Preset);
   render_json["greedy_meshing"] = Render.GreedyMeshing;
   render_json["async_meshing"] = Render.AsyncMeshing;
+  render_json["gpu_packed_meshing"] = Render.GpuPackedMeshing;
   render_json["face_quads"] = Render.FaceQuads;
   render_json["frustum_culling"] = Render.FrustumCulling;
   render_json["batch_cache"] = Render.BatchCache;

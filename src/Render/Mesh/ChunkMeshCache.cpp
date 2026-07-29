@@ -10,6 +10,8 @@
 #include "World/Streaming/MeshLitGate.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
+#include "Render/Mesh/GpuGreedyFaceExtract.h"
+#include "Render/Mesh/GpuMeshPipeline.h"
 #include "Render/Mesh/IUChunkCull.h"
 #include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Mesh/MeshLightSampling.h"
@@ -1000,8 +1002,41 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
   GreedyBatchesDirty = true;
   CrossBatchesDirty = true;
 }
+void UChunkMeshCache::EnsureGpuPipeline()
+{
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  if (!GpuPipelineInitAttempted)
+  {
+    GpuPipelineInitAttempted = true;
+    if (Render.GpuPackedMeshing)
+    {
+      GpuPipeline = std::make_unique<UGpuMeshPipeline>();
+      if (!GpuPipeline->Init())
+      {
+        GpuPipeline.reset();
+      }
+    }
+  }
+#endif
+}
+
+UGpuMeshPipeline *UChunkMeshCache::GetGpuMeshPipeline()
+{
+  EnsureGpuPipeline();
+  return GpuPipeline.get();
+}
+
+const UGpuMeshPipeline *UChunkMeshCache::GetGpuMeshPipeline() const
+{
+  return GpuPipeline.get();
+}
+
 void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
 {
+  if (GpuPipeline)
+  {
+    GpuPipeline->FreeChunk(chunkCoord);
+  }
   Cache.erase(chunkCoord);
   GreedyCache.erase(chunkCoord);
   NoteGeometryDirty(chunkCoord);
@@ -1037,6 +1072,10 @@ void UChunkMeshCache::RemoveColumn(glm::ivec3 ground_coord, int max_cy)
   for (int cy = 0; cy <= max_cy; ++cy)
   {
     const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
+    if (GpuPipeline)
+    {
+      GpuPipeline->FreeChunk(slice);
+    }
     Cache.erase(slice);
     GreedyCache.erase(slice);
     NoteGeometryDirty(slice);
@@ -1164,14 +1203,34 @@ void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
   }
   GreedyOpaqueCutoutRefs.clear();
   GreedyTransparentRefs.clear();
+  GpuPackedOpaqueRefs.clear();
+  GpuPackedTransparentRefs.clear();
   GreedyOpaqueCutoutRefs.reserve(GreedyCache.size() * 4);
   GreedyTransparentRefs.reserve(GreedyCache.size());
+  GpuPackedOpaqueRefs.reserve(GreedyCache.size());
+  GpuPackedTransparentRefs.reserve(GreedyCache.size());
 
   for (const auto &entry : GreedyCache)
   {
     if (!ChunkPassesFrustum(frustum, cameraPos, maxCullDistance, entry.first,
                             horizontal_cull))
     {
+      continue;
+    }
+    if (entry.second.GpuResident && entry.second.GpuQuadCount > 0)
+    {
+      GpuPackedChunkRef pref;
+      pref.chunkCoord = entry.first;
+      pref.slotIndex = entry.second.GpuSlotIndex;
+      pref.blockRanges = entry.second.GpuBlockRanges;
+      if (entry.second.GpuTransparent)
+      {
+        GpuPackedTransparentRefs.push_back(std::move(pref));
+      }
+      else
+      {
+        GpuPackedOpaqueRefs.push_back(std::move(pref));
+      }
       continue;
     }
     const std::vector<GreedyMeshBatch> &batches = entry.second.batches;
@@ -1440,7 +1499,56 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   }
   ActiveMeshSourceRevision.erase(revisionIt);
 
-  // GPF1: main-thread GPU opaque emit for deferred snapshots.
+  // GPU packed-quad path (no 36-byte vertex readback).
+  if (result.GpuExtractPending && result.PendingSnapshot)
+  {
+    EnsureGpuPipeline();
+    UGpuMeshPipeline *pipeline = GpuPipeline.get();
+    if (pipeline && pipeline->IsReady() && Render.GpuPackedMeshing)
+    {
+      GpuMeshProcessResult gpu_result;
+      if (pipeline->ProcessSnapshot(*result.PendingSnapshot, registry,
+                                    gpu_result) &&
+          gpu_result.success)
+      {
+        ChunkGreedyMesh &chunkMesh = GreedyCache[result.coord];
+        if (chunkMesh.GpuResident && chunkMesh.GpuSlotIndex >= 0 && GpuPipeline)
+        {
+          GpuPipeline->FreeChunk(result.coord);
+        }
+        chunkMesh.GpuResident = true;
+        chunkMesh.GpuSlotIndex = gpu_result.slotIndex;
+        chunkMesh.GpuQuadCount = gpu_result.quadCount;
+        chunkMesh.GpuTransparent = gpu_result.transparent;
+        chunkMesh.GpuBlockRanges = std::move(gpu_result.blockRanges);
+        chunkMesh.batches.clear();
+        chunkMesh.crossCenters = std::move(result.crossCenters);
+        GreedyVertexCountByChunk[result.coord] = 0;
+        result.PendingSnapshot.reset();
+        result.GpuExtractPending = false;
+        if (gpu_result.quadCount == 0 && chunkMesh.crossCenters.empty())
+        {
+          GreedyCache.erase(result.coord);
+          GreedyVertexCountByChunk.erase(result.coord);
+        }
+        else
+        {
+          NoteGeometryDirty(result.coord);
+          PendingMeshRevisionBump = true;
+          InstancesDirty = true;
+          CrossBatchesDirty = true;
+          GreedyBatchesDirty = true;
+          if (RemeshAfterApply.erase(result.coord) > 0)
+          {
+            MarkDirtyPriority(result.coord);
+          }
+        }
+        return;
+      }
+    }
+  }
+
+  // Legacy GPF1 readback path (fallback).
   if (result.GpuExtractPending && result.PendingSnapshot && MesherBackend)
   {
     bool extracted = MesherBackend->TryExtractOpaqueToBatches(
@@ -1495,6 +1603,10 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   }
 
   ChunkGreedyMesh &chunkMesh = GreedyCache[result.coord];
+  chunkMesh.GpuResident = false;
+  chunkMesh.GpuSlotIndex = -1;
+  chunkMesh.GpuQuadCount = 0;
+  chunkMesh.GpuBlockRanges.clear();
   size_t new_vertex_count = 0;
   for (const GreedyMeshBatch &b : result.batches)
   {

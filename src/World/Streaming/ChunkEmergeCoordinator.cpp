@@ -1571,7 +1571,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // drain/schedule so emerge cannot burn the whole frame while holes stuck.
   if (last_frame_ms > 100.0)
   {
-    mesh_drain = 1;
+    mesh_drain = (pending_dirty > 200) ? std::max(mesh_drain, 6) : 1;
     mesh_schedule = 1;
     sync_cap = 0;
   }

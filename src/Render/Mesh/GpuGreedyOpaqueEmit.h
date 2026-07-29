@@ -31,6 +31,9 @@ struct GpuGreedyEmitState
   bool InitAttempted{false};
 };
 
+struct GpuGreedyEmitState;
+bool EnsureGpuOpaqueEmit(GpuGreedyEmitState &state);
+
 /// GPF1: mask → greedy-rect → vertex/index emit on GPU (desktop GL only).
 bool TryGpuOpaqueEmitToBatches(GpuGreedyEmitState &state,
                                const ChunkMeshSnapshot &snapshot,

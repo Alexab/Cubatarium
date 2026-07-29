@@ -69,6 +69,9 @@ struct RenderSettings
   /// Android only: use GPU mesh/fluid when probe+allowlist pass. Default ON;
   /// set false to opt out to the CPU stack (takes effect after world restart).
   bool AndroidGpuEnabled{true};
+  /// GPU-resident packed quad meshing (mask→greedy→SSBO, no vertex readback).
+  /// Desktop default ON; Android uses GLES per-chunk indirect fallback.
+  bool GpuPackedMeshing{true};
 
   static RenderSettings Legacy()
   {

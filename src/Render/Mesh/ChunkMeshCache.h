@@ -6,6 +6,8 @@
 #include "Render/Mesh/ChunkMeshRevisionRegistry.h"
 #include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/FluidSurfaceColumnSlice.h"
+#include "Render/Mesh/GpuPackedMeshTypes.h"
+#include "Render/Mesh/GpuMeshPipeline.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "World/Chunks/ChunkManager.h"
@@ -293,6 +295,16 @@ public:
   {
     return GreedyTransparentRefs;
   }
+  const std::vector<GpuPackedChunkRef> &GetGpuPackedOpaqueRefs() const
+  {
+    return GpuPackedOpaqueRefs;
+  }
+  const std::vector<GpuPackedChunkRef> &GetGpuPackedTransparentRefs() const
+  {
+    return GpuPackedTransparentRefs;
+  }
+  UGpuMeshPipeline *GetGpuMeshPipeline();
+  const UGpuMeshPipeline *GetGpuMeshPipeline() const;
   const GreedyMeshBatch *TryGetGreedyBatch(const GreedyBatchRef &ref) const
   {
     const auto it = GreedyCache.find(ref.chunkCoord);
@@ -324,7 +336,13 @@ private:
   {
     std::vector<GreedyMeshBatch> batches;
     std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> crossCenters;
+    bool GpuResident{false};
+    int GpuSlotIndex{-1};
+    uint32_t GpuQuadCount{0};
+    bool GpuTransparent{false};
+    std::vector<GpuBlockDrawRange> GpuBlockRanges;
   };
+  void EnsureGpuPipeline();
   void RebuildChunk(const UBlockWorld &world, UBlockRegistry &registry,
                     glm::ivec3 chunkCoord);
   void ApplyMeshResult(const UBlockWorld &world, UBlockRegistry &registry,
@@ -349,6 +367,8 @@ private:
   std::vector<FaceInstance> Instances;
   std::vector<GreedyBatchRef> GreedyOpaqueCutoutRefs;
   std::vector<GreedyBatchRef> GreedyTransparentRefs;
+  std::vector<GpuPackedChunkRef> GpuPackedOpaqueRefs;
+  std::vector<GpuPackedChunkRef> GpuPackedTransparentRefs;
   std::vector<CrossInstanceBatch> CrossBatches;
   bool InstancesDirty{true};
   bool GreedyBatchesDirty{true};
@@ -365,6 +385,8 @@ private:
   float SurfaceWetness{0.0f};
   RenderSettings Render;
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
+  std::unique_ptr<UGpuMeshPipeline> GpuPipeline;
+  bool GpuPipelineInitAttempted{false};
   double LastFlatRebuildMs{0.0};
   double LastGpuCullMs{0.0};
   double LastMeshSyncMs{0.0};

@@ -1,5 +1,7 @@
 
 #include "Render/Engine/GeometryEngine.h"
+#include "Render/Mesh/GpuMeshPipeline.h"
+#include "Render/Mesh/GpuMeshSlotAllocator.h"
 #include "World/Core/WorldLoadDiagnostics.h"
 #include "Blocks/BlockRegistry.h"
 #include "App/Settings/GraphicsQualityProfile.h"
@@ -434,6 +436,15 @@ float insetMix(float a, float b, float t, float inset) {
   if (!greedyShader || !greedyShader->IsValid())
   {
     std::cerr << "Failed to create greedy mesh shader" << std::endl;
+    return false;
+  }
+
+  packedGreedyShader = shaderManager->CreateShader(
+      "packed_greedy", "shaders/vshader_packed_greedy.glsl",
+      "shaders/fshader_greedy.glsl");
+  if (!packedGreedyShader || !packedGreedyShader->IsValid())
+  {
+    std::cerr << "Failed to create packed greedy mesh shader" << std::endl;
     return false;
   }
 
@@ -1701,6 +1712,100 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
       phys.GpuCullIndirect = 1.0;
     }
   }
+
+  DrawPackedGpuMeshes(cache, cache.GetGpuPackedOpaqueRefs(), vp, textures, false,
+                      GreedyShaderMode::TransparentColor, 0.0f);
+}
+
+void UGeometryEngine::DrawPackedGpuMeshes(
+    const UChunkMeshCache &cache,
+    const std::vector<GpuPackedChunkRef> &chunk_refs, const glm::mat4 &vp,
+    const std::map<size_t, UTextureCube> &textures, bool transparent_pass,
+    GreedyShaderMode mode, float shell_alpha)
+{
+  const UGpuMeshPipeline *pipeline = cache.GetGpuMeshPipeline();
+  if (!pipeline || !pipeline->IsReady() || chunk_refs.empty())
+  {
+    return;
+  }
+  if (!packedGreedyShader || !packedGreedyShader->IsValid())
+  {
+    return;
+  }
+  if (greedyMeshVAO == 0 && !InitGreedyMeshBuffers())
+  {
+    return;
+  }
+
+  packedGreedyShader->Use();
+  packedGreedyShader->SetMat4("mvp_matrix", vp);
+  packedGreedyShader->SetInt("texture0", 0);
+  SetGreedyShaderMode(packedGreedyShader, false, transparent_pass, mode,
+                      shell_alpha);
+  const bool opaque_depth_guard =
+      transparent_pass && mode != GreedyShaderMode::ShellDepthPrepass;
+  if (opaque_depth_guard)
+  {
+    OpaqueDepthCapture.Bind();
+  }
+  OpaqueDepthCapture.ApplyShaderUniforms(packedGreedyShader, opaque_depth_guard);
+  if (WorldInstance)
+  {
+    if (auto camera = WorldInstance->GetCurrentUserCamera())
+    {
+      ApplyFogUniforms(
+          packedGreedyShader, camera->GetPosition(),
+          cutum::ShouldApplyBelowSurfaceFogToPass(transparent_pass, false));
+    }
+    ApplyGreedyEnvironmentUniforms(packedGreedyShader);
+  }
+  glActiveTexture(GL_TEXTURE0);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0,
+                   pipeline->GetAllocator().GetQuadSsbo());
+  glBindVertexArray(greedyMeshVAO);
+
+  for (const GpuPackedChunkRef &chunk : chunk_refs)
+  {
+    const GpuMeshSlot *slot =
+        pipeline->GetAllocator().GetSlot(chunk.chunkCoord);
+    if (!slot || slot->QuadCount == 0)
+    {
+      continue;
+    }
+    const glm::vec3 origin =
+        glm::vec3(chunk.chunkCoord * CHUNK_SIZE);
+    packedGreedyShader->SetVec3("chunkOrigin", origin);
+    for (const GpuBlockDrawRange &range : chunk.blockRanges)
+    {
+      if (range.Transparent != transparent_pass)
+      {
+        continue;
+      }
+      const auto texIt = textures.find(static_cast<size_t>(range.blockId));
+      if (texIt == textures.end())
+      {
+        continue;
+      }
+      const GLuint texture_id = texIt->second.GetTextureId();
+      if (texture_id == 0)
+      {
+        continue;
+      }
+      SetBlockAnimUniforms(packedGreedyShader, range.blockId, textures);
+      glBindTexture(GL_TEXTURE_2D, texture_id);
+      const GLint first =
+          static_cast<GLint>((slot->OffsetQuads + range.quadOffset) * 6u);
+      const GLsizei count = static_cast<GLsizei>(range.quadCount * 6u);
+      if (count <= 0)
+      {
+        continue;
+      }
+      glDrawArrays(GL_TRIANGLES, first, count);
+    }
+  }
+
+  glBindVertexArray(0);
+  packedGreedyShader->Unuse();
 }
 
 namespace
@@ -1724,6 +1829,7 @@ uint64_t TransparentRefListFingerprint(const std::vector<GreedyBatchRef> &refs)
 void UGeometryEngine::PrepareTransparent(
     const GreedyTransparentDrawContext &ctx)
 {
+  PreparedTransparentCache = &ctx.cache;
   std::vector<GreedyBatchRef> filtered;
   filtered.reserve(ctx.transparentRefs.size());
   for (const GreedyBatchRef &ref : ctx.transparentRefs)
@@ -1796,6 +1902,13 @@ void UGeometryEngine::DrawPreparedTransparent(GreedyShaderMode mode,
   DrawGreedyGpuBatches(GreedyGpuTransparent, PreparedTransparentVp,
                        *PreparedTransparentTextures, kAlphaCutout, true, mode,
                        shellAlpha);
+  if (PreparedTransparentCache)
+  {
+    DrawPackedGpuMeshes(*PreparedTransparentCache,
+                        PreparedTransparentCache->GetGpuPackedTransparentRefs(),
+                        PreparedTransparentVp, *PreparedTransparentTextures,
+                        true, mode, shellAlpha);
+  }
 }
 
 bool UGeometryEngine::InitGreedyMeshBuffers()

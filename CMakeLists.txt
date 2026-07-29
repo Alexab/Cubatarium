@@ -280,6 +280,8 @@ set(SOURCES
     src/Render/Mesh/GpuGreedyMesher.cpp
     src/Render/Mesh/AndroidGpuGreedyMesher.cpp
     src/Render/Mesh/GpuGreedyOpaqueEmit.cpp
+    src/Render/Mesh/GpuMeshPipeline.cpp
+    src/Render/Mesh/GpuMeshSlotAllocator.cpp
     src/Render/Pipeline/GpuTransparentSort.cpp
     src/Render/Mesh/GpuFluidColumnScan.cpp
     src/World/Lighting/GpuSkylightColumnSeed.cpp
