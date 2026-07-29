@@ -2,6 +2,8 @@
 
 #include "World/Core/World.h"
 
+#include <algorithm>
+#include <cmath>
 #include <vector>
 
 namespace cutum
@@ -111,20 +113,33 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     }
   }
 
-  // should_remesh_seam: sticky remesh debt + stale-dark hide (TD-ARCH-026).
+  // should_remesh_seam: sticky remesh debt + stale-dark (TD-ARCH-026).
+  // Near ring (horiz≤2): always RelightThenMesh + RemeshSeam — edge black faces
+  // (manual_1940 dark_face_near≈1000+) need light progress, not remesh alone.
+  auto near_dist = [&](glm::ivec2 col) {
+    return std::max(std::abs(col.x - focus.x), std::abs(col.y - focus.y));
+  };
   for (const glm::ivec2 &col : sticky_cols)
   {
     Enqueue(col, ColumnWorkKind::RemeshSeam, 30);
+    if (near_dist(col) <= 2)
+    {
+      Enqueue(col, ColumnWorkKind::RelightThenMesh, 45);
+      Enqueue(col, ColumnWorkKind::PromoteRelight, 40);
+    }
   }
   std::vector<glm::ivec2> stale_dark_cols;
+  const int stale_cap =
+      std::max(4, recover_n); // prefer draining near stale over tiny batches
   world.CollectStaleDarkFocusColumns(focus_ground_horiz, focus_radius,
-                                     stale_dark_cols,
-                                     std::max(2, recover_n / 2));
+                                     stale_dark_cols, stale_cap);
   for (const glm::ivec2 &col : stale_dark_cols)
   {
-    Enqueue(col, ColumnWorkKind::RemeshSeam, 28);
-    Enqueue(col, ColumnWorkKind::RelightThenMesh, 32);
-    // Ensure sticky set tracks hide so SyncIdle remesh can clear the column.
+    const int d = near_dist(col);
+    const int prio_boost = d <= 2 ? 20 : 0;
+    Enqueue(col, ColumnWorkKind::RelightThenMesh, 40 + prio_boost);
+    Enqueue(col, ColumnWorkKind::PromoteRelight, 35 + prio_boost);
+    Enqueue(col, ColumnWorkKind::RemeshSeam, 28 + prio_boost);
     world.NoteColumnRepairNeeded(col);
   }
 

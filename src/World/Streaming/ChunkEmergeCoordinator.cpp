@@ -1119,6 +1119,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       {
         admit_n = std::max(admit_n, 4);
       }
+      // FOV unfinished: always admit FirstMesh (manual_1940 underfeet lag).
+      if (visual_holes || missing_underfeet || focus_not_render_ready > 0)
+      {
+        admit_n = std::max(admit_n, moving ? 3 : 2);
+      }
       exec.TickDerived(world, focus_ground_horiz, focus_radius, moving,
                        missing_visible_mesh, visual_holes, idle_remesh_debt,
                        idle_focus_dirty_debt, pending_focus_n, recover_n,
@@ -1137,6 +1142,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         }
       }
       exec.DrainBudget(world, recover_n, focus_ground_horiz, focus_radius, 1);
+      // Edge stale-dark: SyncIdle budget for near sticky after Relight tickets.
+      const int dark_n = world.GetPhysicsTelemetry().DarkFaceNearN;
+      if (dark_n > 200 || black_sticky > 0)
+      {
+        const int seam_n =
+            std::clamp(2 + (dark_n > 800 ? 4 : 0) + black_sticky, 2, 8);
+        exec.DrainRemeshSeamBudget(world, seam_n);
+      }
       recover_watchdog_frames = 0;
     }
   }
@@ -1623,28 +1636,48 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Targeted C/CB: mesh_dirty_tick_ms was ~1.0–1.2s median on edge — hard-cap
   // drain so emerge cannot burn the whole frame while holes stuck. Do NOT clamp
   // mesh_schedule here when holes (manual_1752 / arch_d2: async≈0 under Dirty).
+  const bool fov_unfinished =
+      visual_holes || missing_underfeet || near_focus_holes ||
+      focus_not_render_ready > 0 || missing_visible_mesh;
   if (last_frame_ms > 100.0)
   {
     mesh_drain = (pending_dirty > 200) ? std::max(mesh_drain, 6) : 1;
-    // Keep a tiny schedule so workers are not starved even under hitch.
-    mesh_schedule = std::max(1, std::min(mesh_schedule, 4));
+    // Hitch: keep FirstMesh feed if FOV unfinished (manual_1940 async=0+holes).
+    mesh_schedule =
+        fov_unfinished ? std::max(mesh_schedule, 8)
+                       : std::max(1, std::min(mesh_schedule, 4));
     sync_cap = 0;
   }
   else if (last_frame_ms > 40.0)
   {
-    mesh_drain = std::min(mesh_drain, 2);
-    mesh_schedule = std::min(mesh_schedule, moving ? 6 : 4);
-    if (moving)
+    mesh_drain = std::min(mesh_drain, fov_unfinished ? 4 : 2);
+    mesh_schedule =
+        std::min(mesh_schedule, fov_unfinished ? (moving ? 10 : 8)
+                                               : (moving ? 6 : 4));
+    if (moving && !fov_unfinished)
     {
       sync_cap = 0;
     }
   }
-  // TD-ARCH-027 final floor AFTER wall clamps (replaces former holes→schedule≤2).
-  if ((visual_holes || focus_not_render_ready > 0 || pending_dirty > 100) &&
-      pending_async < 8 && last_frame_ms <= 100.0)
+  // TD-ARCH-027 final floor AFTER wall clamps — FOV unfinished never async-starve.
+  if (fov_unfinished && pending_async < 8)
+  {
+    mesh_schedule = std::max(mesh_schedule, moving ? 12 : 16);
+    mesh_drain = std::max(mesh_drain, moving ? 10 : 14);
+  }
+  else if (pending_dirty > 100 && pending_async < 8 && last_frame_ms <= 100.0)
   {
     mesh_schedule = std::max(mesh_schedule, moving ? 10 : 14);
     mesh_drain = std::max(mesh_drain, moving ? 8 : 12);
+  }
+  // FirstMesh ticket every frame while FOV unfinished (Admit filters missing).
+  if (fov_unfinished)
+  {
+    auto &exec = GetColumnFlowExecutor();
+    exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+                 ColumnWorkKind::FirstMesh, 90);
+    exec.DrainBudget(world, moving ? 2 : 3, focus_ground_horiz, focus_radius,
+                     /*admit_batch=*/moving ? 2 : 3);
   }
   const MeshRebuildTickStats tick_stats = mesh_service.RebuildDirtyChunksWithStats(
       world.GetBlockWorld(), registry, mesh_drain, mesh_schedule,

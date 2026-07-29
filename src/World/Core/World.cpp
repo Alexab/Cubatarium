@@ -2562,9 +2562,11 @@ int UWorld::CollectStaleDarkFocusColumns(glm::ivec3 focus_ground_horiz,
     for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
     {
       const int dist = std::max(std::abs(dx), std::abs(dz));
-      if (dist <= 1)
+      // Include horiz 1–2 (edge/near ring). Only skip camera column (dist 0)
+      // so underfeet dark preview is not force-ticketed every frame.
+      if (dist < 1)
       {
-        continue; // underfeet may show dark preview
+        continue;
       }
       const glm::ivec2 key(focus_ground_horiz.x + dx, focus_ground_horiz.z + dz);
       if (IsColumnStickyRemesh(key))
