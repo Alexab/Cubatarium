@@ -1653,9 +1653,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Targeted C/CB: mesh_dirty_tick_ms was ~1.0–1.2s median on edge — hard-cap
   // drain so emerge cannot burn the whole frame while holes stuck. Do NOT clamp
   // mesh_schedule here when holes (manual_1752 / arch_d2: async≈0 under Dirty).
+  // FOV unfinished for schedule floors: SoT missing / UnfinishedVisual only.
+  // Do NOT use FocusNotRenderReady (pending+dirty pressure) or pending-as-holes —
+  // that kept mesh_schedule≥12 all cruise and pinned wall_med>30 (idlecap).
   const bool fov_unfinished =
-      visual_holes || missing_underfeet || near_focus_holes ||
-      focus_not_render_ready > 0 || missing_visible_mesh;
+      visual_holes || missing_underfeet || missing_visible_mesh ||
+      world.PhysicsTelemetryData.UnfinishedVisual > 0;
   if (last_frame_ms > 100.0)
   {
     mesh_drain = (pending_dirty > 200) ? std::max(mesh_drain, 6) : 1;
