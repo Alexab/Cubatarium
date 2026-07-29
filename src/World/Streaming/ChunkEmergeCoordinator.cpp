@@ -1,6 +1,7 @@
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Streaming/ColumnFlowScheduler.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
+#include "World/Streaming/ColumnRenderablePolicy.h"
 #include "World/Streaming/FocusIngressPolicy.h"
 #include "World/Streaming/MeshLitGate.h"
 #include "Blocks/BlockRegistry.h"
@@ -186,16 +187,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const glm::ivec3 ground(chunk_coord.x, 0, chunk_coord.z);
         const bool may_mesh =
             world.MayMeshColumn(ground, /*underfeet_preview=*/false);
-        // SoftDefer still blocks dark *remesh*. FOV missing may first-mesh while
-        // pending (dark preview) — intentional tradeoff vs plan B2 wording;
-        // pure SoftDeferMeshUntilLitPolicy unchanged (TD-ARCH-032).
-        // r≤3 OR nearest FOV hole (async-starve full-FOV bake pushed wall>35).
-        const bool fov_dark_preview =
-            !has_mesh && (horiz <= 3 || is_nearest_hole);
+        // SoftDefer: remesh while pending always deferred. UnlitFirstMesh is an
+        // explicit SoT allow (AllowUnlitFirstMesh), not a pending-mask bypass.
+        const bool allow_unlit = AllowUnlitFirstMesh(
+            has_mesh, horiz, is_nearest_hole, in_focus);
         return SoftDeferMeshUntilLitPolicy(
             underfeet, has_mesh,
-            world.RequiresLightingLitGate() && pending && !fov_dark_preview,
-            in_focus, may_mesh);
+            world.RequiresLightingLitGate() && pending, in_focus, may_mesh,
+            allow_unlit);
       });
 
   const bool near_mesh_backlog =

@@ -4,15 +4,21 @@ namespace cutum
 {
 
 /// Soft-defer / first-mesh gate (V2 RenderReady).
-/// While PendingLight: never mesh or remesh (holes > dark bake everywhere,
-/// including outside focus). Player dig/place does not set PendingLight.
+/// While PendingLight: defer remesh always. First-mesh only when SoT
+/// `allow_unlit_first_mesh` (AllowUnlitFirstMesh) — never by masking pending.
+/// Player dig/place does not set PendingLight.
 inline bool SoftDeferMeshUntilLitPolicy(bool underfeet, bool has_mesh,
                                         bool pending_light, bool in_focus,
-                                        bool may_mesh_outside_focus)
+                                        bool may_mesh_outside_focus,
+                                        bool allow_unlit_first_mesh = false)
 {
-  (void)has_mesh;
   if (pending_light)
   {
+    // UnlitFirstMesh: missing only; remesh of existing stays deferred.
+    if (allow_unlit_first_mesh && !has_mesh)
+    {
+      return false;
+    }
     return true;
   }
   if (underfeet || in_focus)
