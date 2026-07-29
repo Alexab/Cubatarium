@@ -49,7 +49,8 @@
 | TD-ARCH-013b | R4/tail | Android GLES compute skylight seed | Desktop F2/C/CB not GO; CPU seed remains | backlog |
 | TD-ARCH-015 | R0/S2 | Worker-side Capture band | Worker Capture hung edge_S1 (world races); step A cruise ≤1 Capture kept | backlog |
 | TD-ARCH-017 | Phase0 | sim_ms double-counted stream+emerge inside phys_ms | Fixed: sim_ms now uses do_movement_ms (includes stream+emerge); old formula was phys_ms+stream+emerge+view+scene causing negative unacc | done 2026-07-29 |
-| TD-ARCH-018 | Phase0 | unacc=240ms in tail frames (emerge=0, scene=8ms) | autosave_ms timer added; residual_ms simplified; needs runtime verification | backlog |
+| TD-ARCH-018 | Phase0 | unacc=240ms in tail frames (emerge=0, scene=8ms) | render_total_ms added; sim_ms uses it; residual now = wall-sim-swap-world_extra; needs runtime verification | in-progress |
+| TD-ARCH-019 | Phase3a | GPF1 pipeline reads back rects+verts via glGetBufferSubData | Full GPU-resident draw needs SSBO slot allocator + MDI; readback eliminated in Phase 3e | backlog |
 
 ### Approach FPS plan — S0 baseline (2026-07-29)
 
