@@ -908,6 +908,26 @@ int UChunkMeshCache::CountDirtyWithinHorizontalRadius(
   return count;
 }
 
+int UChunkMeshCache::CountPendingGpuAppliesInHorizontalRadius(
+    glm::ivec3 center_ground_chunk, int radius_chunks) const
+{
+  if (radius_chunks < 0)
+  {
+    return 0;
+  }
+  int count = 0;
+  for (const PendingGpuApply &pending : PendingGpuApplies)
+  {
+    const int dx = std::abs(pending.coord.x - center_ground_chunk.x);
+    const int dz = std::abs(pending.coord.z - center_ground_chunk.z);
+    if (std::max(dx, dz) <= radius_chunks)
+    {
+      ++count;
+    }
+  }
+  return count;
+}
+
 int UChunkMeshCache::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
                                                 int keep_radius, int keep_cy,
                                                 bool remesh_only)
@@ -1561,6 +1581,14 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   return true;
 }
 
+int UChunkMeshCache::DrainPendingGpuMeshes(UBlockWorld &world,
+                                           UBlockRegistry &registry,
+                                           int max_count, double budget_ms)
+{
+  MeshRebuildTickStats stats{};
+  return ProcessPendingGpuMeshes(world, registry, max_count, budget_ms, stats);
+}
+
 int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                                            UBlockRegistry &registry,
                                            int max_count, double budget_ms,
@@ -1649,11 +1677,11 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   {
     ActiveMeshSourceRevision.erase(revisionIt);
     GpuExtractInFlight.erase(result.coord);
-    // Stale result: re-queue WITHOUT bumping revision. MarkDirtyPriority used
-    // to bump when !existed and restart the invalidate→stale loop (idle
-    // async=42 + dirty flat, manual 210341).
+    // Stale result: re-queue WITHOUT bumping revision. Remesh class only —
+    // MarkDirtyPriority (FirstMesh) flooded the ring and starved real holes
+    // (idle async=42 + dirty flat, manual 210341). TD-ARCH-029.
     ++MeshApplyStaleCount;
-    Dirty.MarkDirtyPriority(result.coord);
+    Dirty.MarkDirty(result.coord);
     InstancesDirty = true;
     GreedyBatchesDirty = true;
     CrossBatchesDirty = true;
@@ -1944,8 +1972,13 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
 
     if (Render.GpuPackedMeshing && !PendingGpuApplies.empty())
     {
+      const bool focus_missing =
+          HasMissingGreedyMeshInHorizontalRadius(world, MeshFocusGroundChunk,
+                                                 RenderDistanceChunks);
       const double gpu_budget =
-          std::max(6.0, MeshEmergeTotalBudgetMs * 0.5);
+          focus_missing
+              ? std::max(8.0, MeshEmergeTotalBudgetMs * 0.6)
+              : std::max(6.0, MeshEmergeTotalBudgetMs * 0.5);
       const int gpu_max =
           std::max(3, std::max(max_drain_per_frame, max_schedule_per_frame));
       const int gpu_done = ProcessPendingGpuMeshes(world, registry, gpu_max,

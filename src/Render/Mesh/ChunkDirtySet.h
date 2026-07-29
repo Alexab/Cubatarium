@@ -19,6 +19,10 @@ public:
   void MarkDirtyPriority(glm::ivec3 coord);
   void Erase(glm::ivec3 coord);
   void Clear();
+  bool IsFirstMesh(glm::ivec3 coord) const
+  {
+    return FirstMeshSet.find(coord) != FirstMeshSet.end();
+  }
 
   size_t GetCount() const { return Queue.size(); }
   bool empty() const { return Queue.empty(); }
@@ -74,6 +78,8 @@ public:
 private:
   std::vector<glm::ivec3> Queue;
   std::unordered_set<glm::ivec3, IVec3Hash> Set;
+  /// TD-ARCH-029: first-mesh debt (MarkDirtyPriority); remesh uses MarkDirty.
+  std::unordered_set<glm::ivec3, IVec3Hash> FirstMeshSet;
 };
 
 } // namespace cutum

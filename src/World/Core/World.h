@@ -63,6 +63,27 @@ enum class ColumnEmergeState : uint8_t
   RenderReady,
 };
 
+/// Draw readiness SoT (TD-ARCH-028). Telemetry unfinished/holes derive from this.
+struct ColumnRenderableState
+{
+  enum class BlockReason : uint8_t
+  {
+    None = 0,
+    PendingLight,
+    StickyRemesh,
+    StaleDark,
+    MissingMesh,
+    GpuInFlight,
+    NotLoaded,
+    NotReadyState,
+  };
+
+  ColumnEmergeState stage{ColumnEmergeState::Empty};
+  bool draw_ok{false};
+  BlockReason reason{BlockReason::None};
+  bool has_repair_ticket{false};
+};
+
 class UCreatureDefinitionStorage;
 class USkinDefinitionStorage;
 struct CreatureDefinition;
@@ -1024,6 +1045,8 @@ public:
   bool IsColumnVisualReadyForRing(glm::ivec3 ground) const;
   /// Strict visible contract: no pending light, stable mesh, render-safe column.
   bool IsColumnRenderReady(glm::ivec3 ground) const;
+  /// Full draw-gate state including repair-ticket flag (TD-ARCH-028).
+  ColumnRenderableState GetColumnRenderableState(glm::ivec2 ground_xz) const;
   /// Focus columns that are loaded but not yet safe to render.
   int CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
                                 int radius_chunks) const;

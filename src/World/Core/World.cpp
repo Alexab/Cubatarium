@@ -1884,18 +1884,27 @@ void UWorld::UpdateMotionState(float speed, float dt_sec)
 
 bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
 {
-  if (!MeshService)
-  {
-    return false;
-  }
   if (ground.y != 0)
   {
     ground.y = 0;
   }
+  return GetColumnRenderableState(glm::ivec2(ground.x, ground.z)).draw_ok;
+}
+
+ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) const
+{
+  ColumnRenderableState out;
+  if (!MeshService)
+  {
+    out.reason = ColumnRenderableState::BlockReason::NotLoaded;
+    return out;
+  }
+  const glm::ivec3 ground(ground_xz.x, 0, ground_xz.y);
+  out.stage = GetColumnEmergeState(ground);
+  out.has_repair_ticket = IsColumnStickyRemesh(ground_xz);
+
   const int max_cy =
       std::max(0, FloorDiv(std::max(0, ProceduralTemplate.MaxHeight), CHUNK_SIZE));
-  // Visual band only — full 0..MaxHeight counted deep cave Dirty that vertical
-  // mesh priority never drained (idle nr plateau ~50 with holes=0).
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
   const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
   const int horiz_from_focus =
@@ -1915,27 +1924,35 @@ bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
   const int cy0 = std::max(0, FloorDiv(band_min, CHUNK_SIZE));
   const int cy1 = std::min(max_cy, FloorDiv(band_max, CHUNK_SIZE));
 
-  // TD-ARCH-016: PendingLight + existing mesh must not blank draw (remesh-after-
-  // light). Hide only SoftDefer first-mesh (no greedy yet).
-  if (IsPendingLightBeforeMesh(glm::ivec2(ground.x, ground.z)))
+  if (IsPendingLightBeforeMesh(ground_xz))
   {
     for (int cy = cy0; cy <= cy1; ++cy)
     {
-      if (MeshService->HasGreedyMesh(glm::ivec3(ground.x, cy, ground.z)) ||
-          MeshService->IsGpuExtractInFlight(glm::ivec3(ground.x, cy, ground.z)))
+      const glm::ivec3 coord(ground.x, cy, ground.z);
+      if (MeshService->HasGreedyMesh(coord))
       {
-        return true;
+        out.draw_ok = true;
+        out.reason = ColumnRenderableState::BlockReason::None;
+        return out;
+      }
+      if (MeshService->IsGpuExtractInFlight(coord))
+      {
+        out.draw_ok = true;
+        out.reason = ColumnRenderableState::BlockReason::GpuInFlight;
+        return out;
       }
     }
-    return false;
+    out.reason = ColumnRenderableState::BlockReason::PendingLight;
+    return out;
   }
 
-  const glm::ivec2 ground_xz(ground.x, ground.z);
   if (horiz_from_focus > 1)
   {
     if (IsColumnStickyRemesh(ground_xz))
     {
-      return false;
+      out.reason = ColumnRenderableState::BlockReason::StickyRemesh;
+      out.has_repair_ticket = true;
+      return out;
     }
     for (int cy = cy0; cy <= cy1; ++cy)
     {
@@ -1943,20 +1960,23 @@ bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
       if (MeshService->HasGreedyMesh(coord) &&
           MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
       {
-        return false;
+        out.reason = ColumnRenderableState::BlockReason::StaleDark;
+        out.has_repair_ticket = true; // TickDerived CollectStaleDark tickets
+        return out;
       }
     }
   }
 
-  const ColumnEmergeState state = GetColumnEmergeState(ground);
-  if (state != ColumnEmergeState::RenderReady &&
-      state != ColumnEmergeState::LitReady &&
-      state != ColumnEmergeState::Meshing &&
-      state != ColumnEmergeState::Empty)
+  if (out.stage != ColumnEmergeState::RenderReady &&
+      out.stage != ColumnEmergeState::LitReady &&
+      out.stage != ColumnEmergeState::Meshing &&
+      out.stage != ColumnEmergeState::Empty)
   {
-    return false;
+    out.reason = ColumnRenderableState::BlockReason::NotReadyState;
+    return out;
   }
   bool saw_loaded_meshable = false;
+  bool saw_gpu_inflight = false;
   for (int cy = cy0; cy <= cy1; ++cy)
   {
     const glm::ivec3 coord(ground.x, cy, ground.z);
@@ -1965,8 +1985,6 @@ bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
     {
       continue;
     }
-    // Prefer mesh presence — avoid full voxel scan on already-meshed slices
-    // (draw-gate/cross called this thousands of times → multi-second frames).
     if (MeshService->HasGreedyMesh(coord))
     {
       saw_loaded_meshable = true;
@@ -1975,6 +1993,7 @@ bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
     if (MeshService->IsGpuExtractInFlight(coord))
     {
       saw_loaded_meshable = true;
+      saw_gpu_inflight = true;
       continue;
     }
     bool any_solid = false;
@@ -1990,11 +2009,19 @@ bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
     {
       continue;
     }
-    saw_loaded_meshable = true;
-    // Missing first mesh = unfinished.
-    return false;
+    out.reason = ColumnRenderableState::BlockReason::MissingMesh;
+    return out;
   }
-  return saw_loaded_meshable || state == ColumnEmergeState::Empty;
+  if (saw_loaded_meshable || out.stage == ColumnEmergeState::Empty)
+  {
+    out.draw_ok = true;
+    out.reason = saw_gpu_inflight
+                     ? ColumnRenderableState::BlockReason::GpuInFlight
+                     : ColumnRenderableState::BlockReason::None;
+    return out;
+  }
+  out.reason = ColumnRenderableState::BlockReason::NotLoaded;
+  return out;
 }
 
 int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,

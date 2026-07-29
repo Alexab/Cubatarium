@@ -59,9 +59,9 @@
 | TD-ARCH-025 | qual_fix3 | Cruise holes_rate regressed vs qual_fix2 | Hide without repair ticket | backlog → **superseded by 026** |
 | TD-ARCH-026 | Era13 | Hide⇒RepairTicket via ColumnFlow | Hide sticky/stale-dark must Enqueue RemeshSeam/RelightThenMesh | in-progress D1 |
 | TD-ARCH-027 | Era13 | Async throughput floor for FOV unfinished | Replace schedule cap≤6; raise async when holes/not_ready | in-progress D1 |
-| TD-ARCH-028 | Era13 | ColumnRenderable single SoT | Draw/telemetry from one state API | backlog D2 |
-| TD-ARCH-029 | Era13 | FirstMesh vs Remesh dirty classes | FirstMesh must not starve behind remesh thrash | backlog D2 |
-| TD-ARCH-030 | Era13 | SoftDefer Capture/relight floor | FOV blocked by PendingLight must still progress Capture | backlog D2 |
+| TD-ARCH-028 | Era13 | ColumnRenderable single SoT | Draw/telemetry from one state API | in-progress D2 |
+| TD-ARCH-029 | Era13 | FirstMesh vs Remesh dirty classes | FirstMesh must not starve behind remesh thrash | in-progress D2 |
+| TD-ARCH-030 | Era13 | SoftDefer Capture/relight floor | FOV blocked by PendingLight must still progress Capture | in-progress D2 |
 
 ### qual_fix3 verification — visible flight fixes (2026-07-29)
 

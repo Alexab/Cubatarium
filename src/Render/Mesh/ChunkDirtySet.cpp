@@ -51,6 +51,7 @@ void UChunkDirtySet::MarkDirty(glm::ivec3 coord)
     return;
   }
   Queue.push_back(coord);
+  // Remesh-only: do not promote to FirstMesh class.
 }
 
 void UChunkDirtySet::MarkDirtyPriority(glm::ivec3 coord)
@@ -63,6 +64,7 @@ void UChunkDirtySet::MarkDirtyPriority(glm::ivec3 coord)
   {
     Set.insert(coord);
   }
+  FirstMeshSet.insert(coord);
   Queue.insert(Queue.begin(), coord);
 }
 
@@ -72,6 +74,7 @@ void UChunkDirtySet::Erase(glm::ivec3 coord)
   {
     return;
   }
+  FirstMeshSet.erase(coord);
   Queue.erase(std::remove(Queue.begin(), Queue.end(), coord), Queue.end());
 }
 
@@ -79,10 +82,12 @@ void UChunkDirtySet::Clear()
 {
   Queue.clear();
   Set.clear();
+  FirstMeshSet.clear();
 }
 
 UChunkDirtySet::iterator UChunkDirtySet::RemoveAt(iterator it)
 {
+  FirstMeshSet.erase(*it);
   Set.erase(*it);
   return Queue.erase(it);
 }
@@ -93,12 +98,22 @@ namespace
 auto MakeDistanceKeyLess(glm::ivec3 focus_ground_chunk, int preferred_cy,
                          bool prefer_lower_cy, bool vertical_valid,
                          const std::function<bool(glm::ivec3)> &missing_mesh,
+                         const std::function<bool(glm::ivec3)> &first_mesh_class,
                          float forward_bias_k, glm::vec2 forward_xz,
                          int focus_radius_for_tail)
 {
   return [=](const glm::ivec3 &a, const glm::ivec3 &b)
   {
-    // Class: missing mesh before remesh (even if farther in focus bubble).
+    // TD-ARCH-029: FirstMesh class before remesh; missing before remesh.
+    if (first_mesh_class)
+    {
+      const bool fa = first_mesh_class(a);
+      const bool fb = first_mesh_class(b);
+      if (fa != fb)
+      {
+        return fa;
+      }
+    }
     if (missing_mesh)
     {
       const bool ma = missing_mesh(a);
@@ -162,11 +177,12 @@ void UChunkDirtySet::SortByDistanceKey(
   {
     return;
   }
+  auto first_mesh = [this](glm::ivec3 c) { return IsFirstMesh(c); };
   std::stable_sort(Queue.begin(), Queue.end(),
                    MakeDistanceKeyLess(focus_ground_chunk, preferred_cy,
                                        prefer_lower_cy, vertical_valid,
-                                       missing_mesh, forward_bias_k, forward_xz,
-                                       focus_radius_for_tail));
+                                       missing_mesh, first_mesh, forward_bias_k,
+                                       forward_xz, focus_radius_for_tail));
 }
 
 void UChunkDirtySet::PartialSortByDistanceKey(
@@ -186,9 +202,10 @@ void UChunkDirtySet::PartialSortByDistanceKey(
                       focus_radius_for_tail);
     return;
   }
+  auto first_mesh = [this](glm::ivec3 c) { return IsFirstMesh(c); };
   auto less = MakeDistanceKeyLess(focus_ground_chunk, preferred_cy,
                                   prefer_lower_cy, vertical_valid, missing_mesh,
-                                  forward_bias_k, forward_xz,
+                                  first_mesh, forward_bias_k, forward_xz,
                                   focus_radius_for_tail);
   std::partial_sort(Queue.begin(),
                     Queue.begin() + static_cast<std::ptrdiff_t>(keep_front),
@@ -255,6 +272,10 @@ int UChunkDirtySet::MaybeDropFarthest(
       if (missing_mesh && missing_mesh(c))
       {
         continue;
+      }
+      if (IsFirstMesh(c))
+      {
+        continue; // TD-ARCH-029: never drop first-mesh debt
       }
       if (d > best_dist)
       {
