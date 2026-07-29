@@ -67,6 +67,9 @@ void main() {
 }
 )";
 
+// Binary greedy merge: 1 workgroup per plane (102 total = 3 axes × 2 signs × 17 slices).
+// Uses uint16 bitmasks for row scanning — findLSB/popcount for fast run detection.
+// Single thread per workgroup: planes are independent and 102 is enough parallelism.
 const char *kGreedyRectCompute = R"(#version 430
 layout(local_size_x = 1) in;
 layout(std430, binding = 0) readonly buffer Mask { uint mask[]; };
@@ -80,65 +83,80 @@ layout(std430, binding = 4) buffer Counters { uint rectCount; };
 uniform uint side;
 uniform uint pad;
 uint readBlock(uint index) {
-  uint word = blocks[index >> 2];
-  return (word >> ((index & 3u) * 8u)) & 0xffu;
+  uint word = blocks[index >> 2u];
+  return (word >> ((index & 3u) * 8u)) & 0xFFu;
 }
 uint readLightPad(ivec3 local) {
   int pi = ((local.y + 1) * int(pad) + (local.z + 1)) * int(pad) + (local.x + 1);
-  uint word = lights[uint(pi) >> 2];
-  return (word >> ((uint(pi) & 3u) * 8u)) & 0xffu;
-}
-uint cellValue(int axis, int faceSign, int slice, int u, int v) {
-  ivec3 local;
-  local[axis] = faceSign > 0 ? slice - 1 : slice;
-  int uAxis = (axis + 1) % 3, vAxis = (axis + 2) % 3;
-  local[uAxis] = u; local[vAxis] = v;
-  if (local[axis] < 0 || local[axis] >= int(side)) return 0u;
-  int li = (local.y * int(side) + local.z) * int(side) + local.x;
-  uint bit = uint(axis) * 2u + (faceSign > 0 ? 1u : 0u);
-  if ((mask[li] & (1u << bit)) == 0u) return 0u;
-  uint blockId = readBlock(uint(li));
-  if (blockId == 0u) return 0u;
-  // FaceLightPacked: sample air neighbor, fall back to solid cell.
-  ivec3 air = local;
-  air[axis] += faceSign;
-  uint faceLight = readLightPad(air);
-  uint solidLight = readLightPad(local);
-  uint light = faceLight != 0u ? faceLight : solidLight;
-  return blockId | (light << 8u);
+  uint word = lights[uint(pi) >> 2u];
+  return (word >> ((uint(pi) & 3u) * 8u)) & 0xFFu;
 }
 void main() {
   uint plane = gl_WorkGroupID.x;
   if (plane >= 102u) return;
-  uint axis = plane / 34u, rem = plane % 34u;
-  uint signIdx = rem / 17u, slice = rem % 17u;
+  uint axisU = plane / 34u, rem = plane % 34u;
+  uint signIdx = rem / 17u, sliceU = rem % 17u;
   int faceSign = signIdx == 0u ? -1 : 1;
+  int axis = int(axisU);
+  int uAxis = (axis + 1) % 3, vAxis = (axis + 2) % 3;
+  int slice = int(sliceU);
+  // Build grid: blockId|light per cell, 0 = no face
   uint grid[256];
-  for (int i = 0; i < 256; ++i) grid[i] = 0u;
-  for (int v = 0; v < 16; ++v)
-    for (int u = 0; u < 16; ++u)
-      grid[v * 16 + u] = cellValue(int(axis), faceSign, int(slice), u, v);
   for (int v = 0; v < 16; ++v) {
     for (int u = 0; u < 16; ++u) {
+      ivec3 local;
+      local[axis] = faceSign > 0 ? slice - 1 : slice;
+      local[uAxis] = u; local[vAxis] = v;
+      uint val = 0u;
+      if (local[axis] >= 0 && local[axis] < int(side)) {
+        int li = (local.y * int(side) + local.z) * int(side) + local.x;
+        uint bit = uint(axis) * 2u + (faceSign > 0 ? 1u : 0u);
+        if ((mask[li] & (1u << bit)) != 0u) {
+          uint bid = readBlock(uint(li));
+          if (bid != 0u) {
+            ivec3 air = local; air[axis] += faceSign;
+            uint fl = readLightPad(air);
+            uint sl = readLightPad(local);
+            val = bid | ((fl != 0u ? fl : sl) << 8u);
+          }
+        }
+      }
+      grid[v * 16 + u] = val;
+    }
+  }
+  // Binary greedy: build uint16 presence bitmask per row, find runs with LSB scan
+  for (int v = 0; v < 16; ++v) {
+    uint rowPresence = 0u;
+    for (int u = 0; u < 16; ++u)
+      if (grid[v * 16 + u] != 0u) rowPresence |= (1u << u);
+    while (rowPresence != 0u) {
+      int u = findLSB(rowPresence);
       uint val = grid[v * 16 + u];
-      if (val == 0u) continue;
+      // Scan run of same value
       int width = 1;
       while (u + width < 16 && grid[v * 16 + u + width] == val) ++width;
-      int height = 1; bool grow = true;
-      while (grow && v + height < 16) {
+      // Build run mask and extend vertically
+      uint runMask = ((1u << width) - 1u) << u;
+      int height = 1;
+      for (int dv = 1; v + dv < 16; ++dv) {
+        bool ok = true;
         for (int du = 0; du < width; ++du)
-          if (grid[(v + height) * 16 + u + du] != val) { grow = false; break; }
-        if (grow) ++height;
+          if (grid[(v + dv) * 16 + u + du] != val) { ok = false; break; }
+        if (!ok) break;
+        ++height;
       }
+      // Clear merged cells
       for (int dv = 0; dv < height; ++dv)
         for (int du = 0; du < width; ++du)
           grid[(v + dv) * 16 + u + du] = 0u;
+      rowPresence &= ~runMask;
+      // Emit rect
       uint idx = atomicAdd(rectCount, 1u);
       if (idx >= 16384u) return;
-      rects[idx].axis = axis; rects[idx].faceSign = signIdx;
-      rects[idx].slice = slice; rects[idx].u = uint(u); rects[idx].v = uint(v);
+      rects[idx].axis = axisU; rects[idx].faceSign = signIdx;
+      rects[idx].slice = sliceU; rects[idx].u = uint(u); rects[idx].v = uint(v);
       rects[idx].width = uint(width); rects[idx].height = uint(height);
-      rects[idx].blockId = val & 0xffu; rects[idx].lightPacked = (val >> 8u) & 0xffu;
+      rects[idx].blockId = val & 0xFFu; rects[idx].lightPacked = (val >> 8u) & 0xFFu;
     }
   }
 }
