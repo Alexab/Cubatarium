@@ -576,18 +576,14 @@ def analyze(
     if unfinished_key and idle_head:
         uf = col(idle_head, unfinished_key)
         unfinished_idle_max = max(uf) if uf else 0.0
-    # When dirty>100 AND FOV unfinished, mesh_async should stay fed
-    # (manual_1752 underfed ≈2). Remesh-thrash Dirty with nr=0 is excluded.
+    # When dirty>100 AND unfinished_visual, mesh_async should stay fed.
+    # visual_holes alone can latch without unfinished (legacy) and SoftDefer
+    # not_render_ready must not demand mesh workers.
     async_when_dirty = [
         float(r.get("mesh_async") or 0)
         for r in steady
         if float(r.get("dirty") or 0) > 100
-        and (
-            float(r.get("unfinished_visual") or 0) > 0
-            or float(r.get("focus_not_render_ready") or 0) > 0
-            or float(r.get("visual_holes") or 0) > 0
-            or float(r.get("near_focus_holes") or 0) > 0
-        )
+        and float(r.get("unfinished_visual") or 0) > 0
     ]
     mesh_async_med_when_dirty = (
         median(async_when_dirty) if async_when_dirty else 99.0

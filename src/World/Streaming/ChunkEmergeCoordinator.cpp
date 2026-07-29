@@ -788,10 +788,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   // TD-ARCH-027: FOV unfinished → async throughput floor (not schedule cap).
   // Cap Immediate/sync elsewhere; workers need schedule headroom when Dirty high.
-  if ((visual_holes || focus_not_render_ready > 0) && pending_async_early < 8)
+  if ((visual_holes || focus_not_render_ready > 0 ||
+       world.GetPhysicsTelemetry().UnfinishedVisual > 0) &&
+      pending_async_early < 8)
   {
-    mesh_schedule = std::max(mesh_schedule, moving ? 10 : 14);
-    mesh_drain = std::max(mesh_drain, moving ? 12 : 16);
+    mesh_schedule = std::max(mesh_schedule, moving ? 12 : 16);
+    mesh_drain = std::max(mesh_drain, moving ? 14 : 18);
   }
 
   // Standing still with backlog: prioritize drain/complete over new commits so

@@ -81,8 +81,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
                                       glm::ivec3 focus_ground_horiz,
                                       int focus_radius, bool moving,
                                       bool missing_visible_mesh,
-                                      bool /*visual_holes*/,
-                                      bool idle_remesh_debt,
+                                      bool visual_holes, bool idle_remesh_debt,
                                       bool idle_focus_dirty_debt,
                                       int /*pending_focus_n*/, int recover_n,
                                       int admit_n)
@@ -130,10 +129,9 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     world.NoteColumnRepairNeeded(col);
   }
 
-  // should_first_mesh: only when real missing mesh (not pending-only sentinel).
-  // PendingLight without missing is RelightThenMesh / SoftDefer Capture — FirstMesh
-  // flood starved remesh and inflated dirty plateaus (TD-ARCH-027/025).
-  if (admit_n > 0 && missing_visible_mesh &&
+  // should_first_mesh: real missing OR FOV visual holes (not pending-only).
+  // PendingLight without missing → RelightThenMesh / SoftDefer Capture.
+  if (admit_n > 0 && (missing_visible_mesh || visual_holes) &&
       ((!moving && !idle_remesh_debt) || moving))
   {
     Enqueue(focus, ColumnWorkKind::FirstMesh, admit_n + 50);
