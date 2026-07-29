@@ -105,6 +105,11 @@ public:
   void SetMeshCompletedCapacity(size_t cap);
   uint64_t GetMeshDiscardedLateCount() const;
   uint64_t GetMeshApplyStaleCount() const { return MeshApplyStaleCount; }
+  /// Older apply discarded while Active tracks a newer revision (not remesh).
+  uint64_t GetMeshApplySupersededCount() const
+  {
+    return MeshApplySupersededCount;
+  }
   size_t GetPendingGpuAppliesCount() const { return PendingGpuApplies.size(); }
   int CountPendingGpuAppliesInHorizontalRadius(glm::ivec3 center_ground_chunk,
                                                int radius_chunks) const;
@@ -419,6 +424,7 @@ private:
   double LastMeshImmediateMs{0.0};
   int LastMeshImmediateCount{0};
   uint64_t MeshApplyStaleCount{0};
+  uint64_t MeshApplySupersededCount{0};
   IUChunkCull *CullBackend{nullptr};
   IUChunkMesher *MesherBackend{nullptr};
   std::chrono::steady_clock::time_point LastFlatRebuildAt{};

@@ -1,22 +1,29 @@
 #include "Render/Mesh/ChunkMeshRevisionRegistry.h"
+#include "Render/Mesh/MeshApplyPolicy.h"
 
 #include <glm/glm.hpp>
 #include <cstdlib>
 #include <iostream>
 
+static int failures = 0;
+
 static void Expect(bool cond, const char *message)
 {
   if (!cond)
   {
-    std::cerr << "chunk_mesh_revision_test: " << message << std::endl;
-    std::exit(1);
+    std::cerr << "FAIL: " << message << std::endl;
+    ++failures;
   }
 }
 
 int main()
 {
-  cutum::UChunkMeshRevisionRegistry revisions;
+  using cutum::ClassifyMeshApplyRevision;
+  using cutum::MeshApplyRevDecision;
+  using cutum::UChunkMeshRevisionRegistry;
 
+  // --- Registry ---
+  UChunkMeshRevisionRegistry revisions;
   const glm::ivec3 chunk_a{1, 0, 2};
   const glm::ivec3 chunk_b{4, 1, 5};
 
@@ -28,7 +35,7 @@ int main()
   const uint64_t b1 = revisions.Bump(chunk_b);
   Expect(b1 == 1, "neighbor bump should be independent");
   Expect(revisions.Current(chunk_a) == 1,
-          "bumping neighbor must not change chunk_a revision");
+         "bumping neighbor must not change chunk_a revision");
 
   revisions.Bump(chunk_a);
   Expect(revisions.Current(chunk_a) == 2, "second bump on chunk_a");
@@ -37,6 +44,33 @@ int main()
   revisions.Erase(chunk_a);
   Expect(revisions.Current(chunk_a) == 0, "erased chunk revision resets to 0");
 
+  // --- Apply policy (manual_1957 thrash) ---
+  // Active=R2, apply R1 → discard keep Active (no remesh).
+  Expect(ClassifyMeshApplyRevision(true, /*active=*/2, /*result=*/1,
+                                   /*current=*/2) ==
+             MeshApplyRevDecision::DiscardOlderKeepActive,
+         "older apply must not orphan Active R2");
+
+  // Active=R1, Current=R2, apply R1 → remesh obsolete.
+  Expect(ClassifyMeshApplyRevision(true, 1, 1, 2) ==
+             MeshApplyRevDecision::RemeshObsoleteTracked,
+         "obsolete tracked rev remeshes without bump");
+
+  // No Active (CancelOutside) → drop, no Dirty.
+  Expect(ClassifyMeshApplyRevision(false, 0, 1, 1) ==
+             MeshApplyRevDecision::DropNoActive,
+         "GPU pending without Active must DropNoActive");
+
+  // Happy path.
+  Expect(ClassifyMeshApplyRevision(true, 3, 3, 3) ==
+             MeshApplyRevDecision::Commit,
+         "matching Active+Current commits");
+
+  if (failures != 0)
+  {
+    std::cerr << failures << " failure(s)" << std::endl;
+    return 1;
+  }
   std::cout << "chunk_mesh_revision_test: OK" << std::endl;
   return 0;
 }

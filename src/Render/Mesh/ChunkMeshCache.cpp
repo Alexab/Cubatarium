@@ -7,6 +7,7 @@
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "Render/Mesh/CrossInstanceCollector.h"
 #include "Render/Mesh/CrossMeshEmitter.h"
+#include "Render/Mesh/MeshApplyPolicy.h"
 #include "World/Streaming/MeshLitGate.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
@@ -1623,13 +1624,26 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
 
     const uint64_t expected_revision = MeshRevisions.Current(pending.coord);
     const auto revisionIt = ActiveMeshSourceRevision.find(pending.coord);
-    if (revisionIt == ActiveMeshSourceRevision.end() ||
-        revisionIt->second != pending.sourceRevision ||
-        pending.sourceRevision != expected_revision)
+    const bool has_active = revisionIt != ActiveMeshSourceRevision.end();
+    const uint64_t active_rev = has_active ? revisionIt->second : 0;
+    const MeshApplyRevDecision decision = ClassifyMeshApplyRevision(
+        has_active, active_rev, pending.sourceRevision, expected_revision);
+    if (decision == MeshApplyRevDecision::DropNoActive)
+    {
+      // CancelOutside / Invalidate cleared Active — do not re-Dirty (thrash).
+      // Do not FreeChunk: committed mesh may still be in the GPU slot.
+      continue;
+    }
+    if (decision == MeshApplyRevDecision::DiscardOlderKeepActive)
+    {
+      ++MeshApplySupersededCount;
+      continue;
+    }
+    if (decision == MeshApplyRevDecision::RemeshObsoleteTracked)
     {
       ActiveMeshSourceRevision.erase(pending.coord);
       ++MeshApplyStaleCount;
-      Dirty.MarkDirtyPriority(pending.coord);
+      Dirty.MarkDirty(pending.coord); // Remesh class, not FirstMesh
       continue;
     }
 
@@ -1672,14 +1686,20 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   {
     return;
   }
-  if (revisionIt->second != result.sourceRevision ||
-      result.sourceRevision != expected_revision)
+  const MeshApplyRevDecision decision = ClassifyMeshApplyRevision(
+      true, revisionIt->second, result.sourceRevision, expected_revision);
+  if (decision == MeshApplyRevDecision::DiscardOlderKeepActive)
+  {
+    // Older async result — keep Active tracking for the newer in-flight rev.
+    ++MeshApplySupersededCount;
+    return;
+  }
+  if (decision == MeshApplyRevDecision::RemeshObsoleteTracked)
   {
     ActiveMeshSourceRevision.erase(revisionIt);
     GpuExtractInFlight.erase(result.coord);
-    // Stale result: re-queue WITHOUT bumping revision. Remesh class only —
-    // MarkDirtyPriority (FirstMesh) flooded the ring and starved real holes
-    // (idle async=42 + dirty flat, manual 210341). TD-ARCH-029.
+    // Tracked rev is obsolete vs Current — remesh WITHOUT bumping revision.
+    // Remesh class only (TD-ARCH-029); MarkDirtyPriority flooded FirstMesh.
     ++MeshApplyStaleCount;
     Dirty.MarkDirty(result.coord);
     InstancesDirty = true;

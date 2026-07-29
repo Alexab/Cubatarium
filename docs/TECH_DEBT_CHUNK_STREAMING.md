@@ -61,6 +61,7 @@
 | TD-ARCH-027 | Era13 | Async throughput floor for FOV unfinished | FOV holes never async-starve (final floor+FirstMesh) | in-progress manual_1940 |
 | TD-ARCH-028 | Era13 | ColumnRenderable single SoT | Draw/telemetry from one state API | done 2026-07-29 (D2a) |
 | TD-ARCH-029 | Era13 | FirstMesh vs Remesh dirty classes | FirstMesh must not starve behind remesh thrash | done 2026-07-29 (D2a) |
+| TD-ARCH-031 | manual_1957 | Older mesh apply orphaned Active → remesh thrash | Discard-older keep-Active; GPU pending without Active drops without Dirty | done 2026-07-29 |
 | TD-ARCH-030 | Era13 | SoftDefer Capture/relight floor | FOV blocked by PendingLight must still progress Capture | partial — code landed; spawn plr still sticky |
 
 Evidence: `bin/iter_reports/timeline/arch_d2_manual.json`, `arch_d2b_manual.json` (stop clean; idle plr=28; holes≈0.45).
