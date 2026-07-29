@@ -149,6 +149,7 @@ struct FrameNumbers
   double post_scene_ms{0.0};
   double gui_overlay_ms{0.0};
   double autosave_ms{0.0};
+  double render_total_ms{0.0};
   double residual_ms{0.0};
   double fluid_map_cpu_ms{0.0};
   double fluid_map_gpu_ms{0.0};
@@ -322,11 +323,13 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.post_scene_ms = world.GetLastPostSceneMs();
   n.gui_overlay_ms = world.GetLastGuiOverlayMs();
   n.autosave_ms = world.GetLastAutosaveMs();
+  n.render_total_ms = world.GetLastRenderTotalMs();
   // sim_ms = all measured main-loop work excluding swap. do_movement_ms already
   // contains stream_ms + mesh_emerge_ms so they are NOT added separately.
+  // render_total_ms captures the entire Render() call including GL driver
+  // stalls, so prepare/scene/post/gui are its subcomponents (not added twice).
   n.sim_ms = n.input_ms + n.app_update_ms + n.views_ms + n.do_movement_ms +
-             n.block_input_ms + n.autosave_ms + n.prepare_frame_ms +
-             n.scene_ms + n.post_scene_ms + n.gui_overlay_ms;
+             n.block_input_ms + n.autosave_ms + n.render_total_ms;
   n.unaccounted_ms = n.wall_ms - n.sim_ms - n.swap_wait_ms;
   if (n.unaccounted_ms < 0.0 && n.unaccounted_ms > -1.0)
   {
@@ -527,6 +530,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"post_scene_ms\":" << n.post_scene_ms
           << ",\"gui_overlay_ms\":" << n.gui_overlay_ms
           << ",\"autosave_ms\":" << n.autosave_ms
+          << ",\"render_total_ms\":" << n.render_total_ms
           << ",\"residual_ms\":" << n.residual_ms
           << ",\"fluid_map_cpu_ms\":" << n.fluid_map_cpu_ms
           << ",\"fluid_map_gpu_ms\":" << n.fluid_map_gpu_ms

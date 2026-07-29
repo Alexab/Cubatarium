@@ -374,7 +374,15 @@ void UWindowManager::Run()
     }
 
     // Rendering
+    const auto render_begin = std::chrono::high_resolution_clock::now();
     Render();
+    if (World)
+    {
+      World->SetLastRenderTotalMs(
+          std::chrono::duration<double, std::milli>(
+              std::chrono::high_resolution_clock::now() - render_begin)
+              .count());
+    }
 
     const auto swap_begin = std::chrono::high_resolution_clock::now();
     glfwSwapBuffers(Window);
