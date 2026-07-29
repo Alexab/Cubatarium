@@ -1212,9 +1212,14 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   if (ingress.active && ingress.promote_once)
   {
     auto &exec = GetColumnFlowExecutor();
-    exec.RequestPromoteRelight(glm::ivec2(focus_horiz.x, focus_horiz.z), 70);
-    exec.DrainBudget(world, 1, focus_horiz, focus_radius,
-                     std::max(1, ingress.first_mesh_admit));
+    exec.RunPromoteRelightNow(world, focus_horiz, focus_radius);
+    if (ingress.first_mesh_admit > 0)
+    {
+      exec.Enqueue(glm::ivec2(focus_horiz.x, focus_horiz.z),
+                   ColumnWorkKind::FirstMesh, 80);
+      exec.DrainBudget(world, 1, focus_horiz, focus_radius,
+                       ingress.first_mesh_admit);
+    }
   }
   // TD-ARCH-030: SoftDefer FOV unfinished + pending light → Capture floor.
   // Use SoT UnfinishedVisual / missing — NOT FocusNotRenderReady pressure
@@ -1240,14 +1245,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     }
   }
   // Two-tier promote via ColumnFlow only (underfeet then focus). Streaming
-  // must not call Promote* directly (Era13 anti-zoo).
+  // must not call Promote* directly (Era13 anti-zoo). RunPromoteRelightNow
+  // Dispatches immediately so DrainBudget cannot steal FirstMesh/Remesh tickets.
   {
     auto &exec = GetColumnFlowExecutor();
-    const glm::ivec2 focus_xz(focus_horiz.x, focus_horiz.z);
     if (pending_bg > 0 || underfeet_pending_light)
     {
-      exec.RequestPromoteRelight(focus_xz, 55);
-      exec.DrainBudget(world, 1, focus_horiz, /*focus_radius=*/1, 1);
+      exec.RunPromoteRelightNow(world, focus_horiz, /*focus_radius=*/1);
     }
     if (pending_bg > 0 || near_pending_light || pending_light_focus_n > 0)
     {
@@ -1255,8 +1259,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           (pending_light_focus_n > 0 && dark_face_near_n > 500)
               ? focus_radius + 1
               : focus_radius;
-      exec.RequestPromoteRelight(focus_xz, 45);
-      exec.DrainBudget(world, 2, focus_horiz, promo_r, 1);
+      exec.RunPromoteRelightNow(world, focus_horiz, promo_r);
     }
   }
 
@@ -1281,8 +1284,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
        world.GetAsyncRelightInFlightCount() == 0))
   {
     auto &exec = GetColumnFlowExecutor();
-    exec.RequestPromoteRelight(glm::ivec2(focus_horiz.x, focus_horiz.z), 60);
-    exec.DrainBudget(world, 1, focus_horiz, focus_radius, 1);
+    exec.RunPromoteRelightNow(world, focus_horiz, focus_radius);
     world.ClearPendingLightAfterMeshCommitted(12);
     // Capture is main-thread: never burst 48–56 idle (manual 220018).
     const int hole_cap =

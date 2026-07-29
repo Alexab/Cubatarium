@@ -45,6 +45,11 @@ public:
   /// from emerge except via Dispatch).
   void RequestPromoteRelight(glm::ivec2 near_column, int priority);
 
+  /// Synchronous ColumnFlow promote (Dispatch only — does not steal DrainBudget
+  /// from FirstMesh/Remesh tickets already queued).
+  void RunPromoteRelightNow(UWorld &world, glm::ivec3 focus_ground_horiz,
+                            int focus_radius);
+
   /// True if column has a live ColumnFlow repair/admit/promote ticket queued.
   bool HasRepairTicket(glm::ivec2 column) const;
 

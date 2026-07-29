@@ -268,9 +268,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       }
       {
         auto &exec = GetColumnFlowExecutor();
-        exec.RequestPromoteRelight(
-            glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 40);
-        exec.DrainBudget(world, 1, focus_ground_horiz, focus_radius, 1);
+        exec.RunPromoteRelightNow(world, focus_ground_horiz, focus_radius);
       }
       // Holes (V2a normal): still promote often — 120-frame gap left FIFO cold
       // while pending sat with relight_drain≈0.
@@ -1201,18 +1199,23 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         (pending_focus_count > 0 || missing_visible_mesh))
     {
       auto &exec = GetColumnFlowExecutor();
-      exec.RequestPromoteRelight(
-          glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 80);
-      exec.DrainBudget(world, 1, focus_ground_horiz, focus_radius,
-                       std::max(1, cold.first_mesh_admit));
+      exec.RunPromoteRelightNow(world, focus_ground_horiz, focus_radius);
+      if (cold.first_mesh_admit > 0)
+      {
+        exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+                     ColumnWorkKind::FirstMesh, 80);
+        exec.DrainBudget(world, 1, focus_ground_horiz, focus_radius,
+                         cold.first_mesh_admit);
+      }
     }
     else if (!moving && missing_visible_mesh && pending_focus_count > 0 &&
              last_frame_ms <= 20.0)
     {
       auto &exec = GetColumnFlowExecutor();
-      exec.RequestPromoteRelight(
-          glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 60);
-      exec.DrainBudget(world, 3, focus_ground_horiz, focus_radius, 2);
+      exec.RunPromoteRelightNow(world, focus_ground_horiz, focus_radius);
+      exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+                   ColumnWorkKind::FirstMesh, 60);
+      exec.DrainBudget(world, 2, focus_ground_horiz, focus_radius, 2);
     }
     else if (!moving &&
              (missing_visible_mesh || black_sticky > 0 ||
@@ -1220,8 +1223,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
              last_frame_ms <= 28.0)
     {
       auto &exec = GetColumnFlowExecutor();
-      exec.RequestPromoteRelight(
-          glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 40);
+      exec.RunPromoteRelightNow(world, focus_ground_horiz, focus_radius);
       exec.DrainBudget(world, 2, focus_ground_horiz, focus_radius, 2);
       // TD-ARCH-026/027: scale sticky remesh via ColumnFlow (no direct SyncIdle).
       const int sticky_sync =
@@ -1515,9 +1517,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       {
         auto &exec = GetColumnFlowExecutor();
-        exec.RequestPromoteRelight(
-            glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 40);
-        exec.DrainBudget(world, 1, focus_ground_horiz, focus_radius, 1);
+        exec.RunPromoteRelightNow(world, focus_ground_horiz, focus_radius);
       }
       glm::ivec3 hole{};
       if (mesh_service.FindNearestMissingGreedyMesh(
@@ -1693,13 +1693,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_drain = std::max(mesh_drain, moving ? 8 : 12);
   }
   // Lit remesh wall clamp AFTER SoT floors (ARCH_D3): dirty≫0 && no missing/UV.
+  // Soft enough to keep mesh_async_med_when_dirty≥4 — schedule=2 starved async
+  // (era13_01 wall≈48 / async=2). Prefer snapshot clamp + mild schedule cap.
   if (!fov_unfinished && !missing_visible_mesh &&
       world.GetPhysicsTelemetry().UnfinishedVisual == 0 &&
-      pending_dirty > 200)
+      pending_dirty > 280 && last_frame_ms > 28.0)
   {
-    mesh_schedule = std::min(mesh_schedule, moving ? 2 : 4);
-    mesh_drain = std::min(mesh_drain, moving ? 8 : 12);
-    mesh_service.SetMeshSnapshotBudgetMs(moving ? 1.2 : 2.0);
+    mesh_schedule = std::min(mesh_schedule, moving ? 5 : 7);
+    mesh_drain = std::min(mesh_drain, moving ? 10 : 14);
+    mesh_service.SetMeshSnapshotBudgetMs(moving ? 1.5 : 2.0);
   }
   // FirstMesh ticket every frame while FOV unfinished (Admit filters missing).
   if (fov_unfinished)

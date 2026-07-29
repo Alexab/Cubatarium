@@ -27,6 +27,17 @@ void UColumnFlowExecutor::RequestPromoteRelight(glm::ivec2 near_column,
   Enqueue(near_column, ColumnWorkKind::PromoteRelight, priority);
 }
 
+void UColumnFlowExecutor::RunPromoteRelightNow(UWorld &world,
+                                               glm::ivec3 focus_ground_horiz,
+                                               int focus_radius)
+{
+  ColumnWorkItem work{};
+  work.column = glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z);
+  work.kind = ColumnWorkKind::PromoteRelight;
+  work.priority = 100;
+  Dispatch(world, work, focus_ground_horiz, focus_radius, /*admit_batch=*/1);
+}
+
 bool UColumnFlowExecutor::HasRepairTicket(glm::ivec2 column) const
 {
   return scheduler_.Contains(column, ColumnWorkKind::RemeshSeam) ||
