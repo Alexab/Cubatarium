@@ -601,6 +601,15 @@ def analyze(
     stop_dark_face_near_max = (
         max(dark_face_stop) if dark_face_stop else None
     )
+    # Prefer stale-dark proxy for ARCH_D3 (void-edge at World_164 rim is expected).
+    dark_stale_stop = col(stop_tail, "dark_face_stale_near_n")
+    stop_dark_face_stale_near_end = (
+        dark_stale_stop[-1] if dark_stale_stop else None
+    )
+    dark_void_stop = col(stop_tail, "dark_face_void_near_n")
+    stop_dark_face_void_near_end = (
+        dark_void_stop[-1] if dark_void_stop else None
+    )
     gates["post_load_ring_not_ready_eq_0"] = (
         post_load_ring_idle_max is None or post_load_ring_idle_max <= 0.0
     )
@@ -630,7 +639,16 @@ def analyze(
         mesh_async_med_when_dirty is None or mesh_async_med_when_dirty >= 4.0
     )
     gates["stop_dark_face_near_lt_100"] = (
-        stop_dark_face_near_end is None or stop_dark_face_near_end < 100.0
+        (
+            stop_dark_face_stale_near_end is not None
+            and stop_dark_face_stale_near_end < 100.0
+        )
+        or (
+            stop_dark_face_stale_near_end is None
+            and (
+                stop_dark_face_near_end is None or stop_dark_face_near_end < 100.0
+            )
+        )
     )
     gates_pass_count = sum(1 for v in gates.values() if v)
 
@@ -794,6 +812,8 @@ def analyze(
             "pending_light_idle_end": pending_light_idle_end,
             "stop_dark_face_near_end": stop_dark_face_near_end,
             "stop_dark_face_near_max": stop_dark_face_near_max,
+            "stop_dark_face_stale_near_end": stop_dark_face_stale_near_end,
+            "stop_dark_face_void_near_end": stop_dark_face_void_near_end,
             "stuck_async_holes_sec": stuck_async_holes_sec,
             "cold_relight_holes_sec": cold_relight_holes_sec,
             "dirty_high_sec": dirty_high_sec,

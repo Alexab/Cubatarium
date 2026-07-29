@@ -455,18 +455,25 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   world.PhysicsTelemetryData.FocusNotRenderReady = not_render_ready;
   world.PhysicsTelemetryData.FocusDirtyChunks = focus_dirty_chunks;
   // Actual baked-dark vertices near camera (not PendingLight proxy).
+  // Split stale (mesh dark, field lit) vs void-edge (both 0) for ARCH_D3.
   {
     world.PhysicsTelemetryData.DarkFaceNearN = 0;
+    world.PhysicsTelemetryData.DarkFaceStaleNearN = 0;
+    world.PhysicsTelemetryData.DarkFaceVoidNearN = 0;
     world.PhysicsTelemetryData.DarkFaceDist = 0.0;
     if (const auto camera = world.GetCurrentUserCamera())
     {
       UChunkMeshCache::DarkFaceHit hit{};
       int near_n = 0;
+      int stale_n = 0;
+      int void_n = 0;
       if (world.GetMeshService().GetCache().FindNearestDarkFaceNear(
               camera->GetPosition(), /*max_dist=*/24.0f, /*chunk_radius=*/2,
-              hit, &near_n))
+              hit, &near_n, &world.GetBlockWorld(), &stale_n, &void_n))
       {
         world.PhysicsTelemetryData.DarkFaceNearN = near_n;
+        world.PhysicsTelemetryData.DarkFaceStaleNearN = stale_n;
+        world.PhysicsTelemetryData.DarkFaceVoidNearN = void_n;
         world.PhysicsTelemetryData.DarkFaceBlockX = hit.block.x;
         world.PhysicsTelemetryData.DarkFaceBlockY = hit.block.y;
         world.PhysicsTelemetryData.DarkFaceBlockZ = hit.block.z;

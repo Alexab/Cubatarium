@@ -169,6 +169,10 @@ struct PhysicsTelemetry
   uint64_t ChunkNotReady{0};
   /// Nearest non-bottom greedy vertex with sky+block light==0 near camera (diag).
   int DarkFaceNearN{0};
+  /// Subset of DarkFaceNearN: mesh dark but light-field currently lit (repairable).
+  int DarkFaceStaleNearN{0};
+  /// Subset: mesh dark and light-field also 0 (world edge / cave / unloaded).
+  int DarkFaceVoidNearN{0};
   int DarkFaceBlockX{0};
   int DarkFaceBlockY{0};
   int DarkFaceBlockZ{0};

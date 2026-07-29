@@ -245,6 +245,8 @@ struct FrameNumbers
   uint64_t chunk_meshed_unlit{0};
   uint64_t chunk_not_ready{0};
   int dark_face_near_n{0};
+  int dark_face_stale_near_n{0};
+  int dark_face_void_near_n{0};
   int dark_face_bx{0};
   int dark_face_by{0};
   int dark_face_bz{0};
@@ -454,6 +456,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.chunk_meshed_unlit = phys.ChunkMeshedUnlit;
   n.chunk_not_ready = phys.ChunkNotReady;
   n.dark_face_near_n = phys.DarkFaceNearN;
+  n.dark_face_stale_near_n = phys.DarkFaceStaleNearN;
+  n.dark_face_void_near_n = phys.DarkFaceVoidNearN;
   n.dark_face_bx = phys.DarkFaceBlockX;
   n.dark_face_by = phys.DarkFaceBlockY;
   n.dark_face_bz = phys.DarkFaceBlockZ;
@@ -643,6 +647,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"chunk_meshed_unlit\":" << n.chunk_meshed_unlit
           << ",\"chunk_not_ready\":" << n.chunk_not_ready
           << ",\"dark_face_near_n\":" << n.dark_face_near_n
+          << ",\"dark_face_stale_near_n\":" << n.dark_face_stale_near_n
+          << ",\"dark_face_void_near_n\":" << n.dark_face_void_near_n
           << ",\"dark_face_bx\":" << n.dark_face_bx
           << ",\"dark_face_by\":" << n.dark_face_by
           << ",\"dark_face_bz\":" << n.dark_face_bz

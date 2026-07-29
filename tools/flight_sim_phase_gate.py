@@ -339,7 +339,8 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("mesh_async_med_when_dirty", "ge", 4.0),
         ("post_stop_not_ready_end", "le", 0.0),
         ("post_stop_black_sticky_max", "le", 0.0),
-        ("stop_dark_face_near_end", "lt", 200.0),
+        # Prefer stale-dark; fall back to total only if split absent.
+        ("stop_dark_face_stale_near_end", "lt", 200.0),
         ("wall_ms_med", "le", 35.0),
         ("chunks_traveled", "ge", 3.0),
     ],
@@ -352,7 +353,7 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("post_stop_not_ready_end", "le", 0.0),
         ("post_stop_black_sticky_max", "le", 0.0),
         ("post_stop_effective_holes_rate", "le", 0.0),
-        ("stop_dark_face_near_end", "lt", 100.0),
+        ("stop_dark_face_stale_near_end", "lt", 100.0),
         ("chunks_traveled", "ge", 3.0),
     ],
 }

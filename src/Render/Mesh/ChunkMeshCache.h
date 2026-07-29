@@ -137,10 +137,14 @@ public:
     float dist{0.0f};
   };
   /// Nearest non-bottom mesh vertex with sky+block light == 0 (diag).
-  /// Scans greedy chunks in Chebyshev radius `chunk_radius` around camera.
+  /// When `world` is set, also splits count into stale-dark (light-field lit)
+  /// vs void-edge (both mesh and field dark) for ARCH_D3 edge gates.
   bool FindNearestDarkFaceNear(const glm::vec3 &camera_pos, float max_dist,
                                int chunk_radius, DarkFaceHit &out,
-                               int *out_count_near = nullptr) const;
+                               int *out_count_near = nullptr,
+                               const UBlockWorld *world = nullptr,
+                               int *out_stale_dark = nullptr,
+                               int *out_void_edge = nullptr) const;
 
   /// Chunks whose greedy geometry changed since last GPU pool consume.
   void ConsumeGeometryDirtyChunks(
