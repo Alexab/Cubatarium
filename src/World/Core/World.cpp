@@ -1892,18 +1892,6 @@ bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
   {
     ground.y = 0;
   }
-  if (IsPendingLightBeforeMesh(glm::ivec2(ground.x, ground.z)))
-  {
-    return false;
-  }
-  const ColumnEmergeState state = GetColumnEmergeState(ground);
-  if (state != ColumnEmergeState::RenderReady &&
-      state != ColumnEmergeState::LitReady &&
-      state != ColumnEmergeState::Meshing &&
-      state != ColumnEmergeState::Empty)
-  {
-    return false;
-  }
   const int max_cy =
       std::max(0, FloorDiv(std::max(0, ProceduralTemplate.MaxHeight), CHUNK_SIZE));
   // Visual band only — full 0..MaxHeight counted deep cave Dirty that vertical
@@ -1922,6 +1910,29 @@ bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
   }
   const int cy0 = std::max(0, FloorDiv(band_min, CHUNK_SIZE));
   const int cy1 = std::min(max_cy, FloorDiv(band_max, CHUNK_SIZE));
+
+  // TD-ARCH-016: PendingLight + existing mesh must not blank draw (remesh-after-
+  // light). Hide only SoftDefer first-mesh (no greedy yet).
+  if (IsPendingLightBeforeMesh(glm::ivec2(ground.x, ground.z)))
+  {
+    for (int cy = cy0; cy <= cy1; ++cy)
+    {
+      if (MeshService->HasGreedyMesh(glm::ivec3(ground.x, cy, ground.z)))
+      {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  const ColumnEmergeState state = GetColumnEmergeState(ground);
+  if (state != ColumnEmergeState::RenderReady &&
+      state != ColumnEmergeState::LitReady &&
+      state != ColumnEmergeState::Meshing &&
+      state != ColumnEmergeState::Empty)
+  {
+    return false;
+  }
   bool saw_loaded_meshable = false;
   for (int cy = cy0; cy <= cy1; ++cy)
   {

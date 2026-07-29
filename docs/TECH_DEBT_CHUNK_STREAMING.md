@@ -45,10 +45,9 @@
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-ARCH-011 | R0 | blue_screen / opaque_on_min residual after E1 | Draw-gate false empty still on edge; S1 in progress | S1 |
-| TD-ARCH-013b | R4/tail | Android GLES compute skylight seed | CPU seed contracts green; GPU seed deferred | S4 after desktop DoD |
-| TD-ARCH-015 | R0 | Worker-side Capture band (ideal) | Main-thread Capture cost | S2 |
-| TD-ARCH-016 | S0 | holes=0 && unfinished>0 mismatch | PendingLight blanks draw even when mesh exists; SoftDefer remesh | S1 |
+| TD-ARCH-011 | R0 | blue_screen / opaque_on_min residual after E1 | Edge still sees opaque_on_min=0 under load; draw blank fixed for meshed+Pending (016) | backlog |
+| TD-ARCH-013b | R4/tail | Android GLES compute skylight seed | Desktop F2/C/CB not GO; CPU seed remains | backlog |
+| TD-ARCH-015 | R0/S2 | Worker-side Capture band | Worker Capture hung edge_S1 (world races); step A cruise ≤1 Capture kept | backlog |
 
 ### Approach FPS plan — S0 baseline (2026-07-29)
 
@@ -64,10 +63,25 @@ Dirty 200–300 starves first-mesh. Capture on main drives emerge spikes.
 
 Debt pass S0: closed none; opened TD-ARCH-016; baseline autofly recorded.
 
+### S1–S3 code (2026-07-29)
+
+- **S1:** `IsColumnRenderReady` — PendingLight + any greedy in visual band → draw
+  (closes TD-ARCH-016 blank FOV). FirstMesh admit also on `missing_visible_mesh`
+  while cruise.
+- **S2:** Cruise Capture hard-cap ≤1 + tighter budgets (3–6ms). Worker Capture
+  attempted → hang; reverted; TD-ARCH-015 stays backlog.
+- **S3:** Stop DropRemesh keep_h=2 when `focus_dirty>280` and holes/pending clear.
+- **S4:** TD-ARCH-013b remains backlog (desktop F2/C/CB not GO).
+
+Autofly note: after S0, machine load made World_164 load+flight wall multi-second
+(`hang_killed` on control revert too). Re-run edge/manual when host is cool;
+gates still expected NO-GO until cold_relight/spike drop.
+
 ## TD-ARCH — Closed
 
 | ID | Closed in | Resolution |
 |----|-----------|------------|
+| TD-ARCH-016 | S1 | PendingLight no longer blanks meshed columns in IsColumnRenderReady |
 | TD-ARCH-001 | R1 (+tails) | Cruise+CanSeed+healthy → cheap sync seed (budget≤2ms / ApplyGpuSkylightSeed); hot cruise → FIFO; SeedDecisionPolicy owns policy |
 | TD-ARCH-002 | R1 | Removed `(void)seed`; `seed.applied` → LitReady else PendingLight; backends return applied only when Relight ran (budget≤0 early-out) |
 | TD-ARCH-004 | R2 | `ColumnFlowExecutor` DrainBudget uses `item.column` filter on Admit/Recover |

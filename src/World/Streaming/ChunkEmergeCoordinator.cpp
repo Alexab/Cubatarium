@@ -668,6 +668,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_service.DropRemeshDirtyBeyondRadius(focus_dirty_keep, /*keep_h=*/1,
                                             /*keep_cy=*/2);
   }
+  // S3: stop Dirty plateau — drop remesh outside wider FOV shell.
+  if (!moving && !visual_holes && !pending_near_light &&
+      focus_dirty_early > 280)
+  {
+    mesh_service.DropRemeshDirtyBeyondRadius(focus_dirty_keep, /*keep_h=*/2,
+                                            /*keep_cy=*/2);
+  }
   if ((idle_remesh_debt || idle_focus_dirty_debt) && last_frame_ms <= 55.0)
   {
     mesh_service.SetStarveOutsideFocusMesh(true);
@@ -1063,7 +1070,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           (!moving && (missing_visible_mesh || pending_near_light) &&
            !idle_remesh_debt)
               ? 1
-              : ((moving && visual_holes) ? 1 : 0);
+              : ((moving && (visual_holes || missing_visible_mesh)) ? 1 : 0);
       exec.TickDerived(world, focus_ground_horiz, focus_radius, moving,
                        missing_visible_mesh, visual_holes, idle_remesh_debt,
                        idle_focus_dirty_debt, pending_focus_n, recover_n,

@@ -406,22 +406,27 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   // Manual 102936: full-column Capture still ~1.6s — split into top-down Y
   // bands (RelightCaptureBandCy). SoftDefer keeps PendingLight until the
   // final band (finalize_pending_gate=false on partial).
-  double capture_drain_budget_ms = moving ? 4.0 : 8.0;
+  double capture_drain_budget_ms = moving ? 3.0 : 8.0;
   // Narrow PendingLight bands are cheaper now; when focus still has missing
   // mesh plus light debt, allow a bit more Capture time so relight can clear
   // the gate instead of holding mesh_async at 0 for many seconds.
   if (async_bg && visual_holes && focus_pending_mid)
   {
-    capture_drain_budget_ms = moving ? 6.0 : 10.0;
+    capture_drain_budget_ms = moving ? 5.0 : 10.0;
     if (focus_pending_high)
     {
-      capture_drain_budget_ms = moving ? 8.0 : 12.0;
+      capture_drain_budget_ms = moving ? 6.0 : 12.0;
     }
   }
   const double frame_ms_so_far = world.GetWallFrameDelta() * 1000.0;
   // Hot SoftDefer bypass: at most one Capture so cruise hitch stays bounded.
   // Async SoftDefer hole may enqueue even when wall is high (see drain_one).
   int bg_cap = max_bg_columns;
+  // S2 step A: cruise ≤1 Capture/frame (worker Capture hung — TD-ARCH-015 open).
+  if (moving)
+  {
+    bg_cap = std::min(bg_cap, 1);
+  }
   if (frame_ms_so_far >= capture_drain_budget_ms * 4.0 && visual_holes &&
       focus_pending_mid)
   {

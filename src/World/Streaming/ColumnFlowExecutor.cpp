@@ -111,7 +111,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   if (admit_n > 0 &&
       ((!moving && (missing_visible_mesh || pending_focus_n > 0) &&
         !idle_remesh_debt) ||
-       (moving && visual_holes)))
+       (moving && (visual_holes || missing_visible_mesh))))
   {
     Enqueue(focus, ColumnWorkKind::FirstMesh, admit_n + 50);
   }
