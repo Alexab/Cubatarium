@@ -1195,11 +1195,14 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     const int not_ready = world.PhysicsTelemetryData.FocusNotRenderReady;
     world.PhysicsTelemetryData.SoftDeferCaptureBudget = 0;
-    if (not_ready > 0 && pending_light_focus_n > 0)
+    if ((not_ready > 0 || missing_focus_mesh) && pending_light_focus_n > 0)
     {
       const int floor_budget =
-          frame_ms > kBadFrameMs ? std::min(4, 1 + not_ready / 8)
-                                 : std::min(6, 2 + not_ready / 6);
+          missing_focus_mesh
+              ? (moving_now ? (frame_ms > kBadFrameMs ? 3 : 5)
+                            : (frame_ms > kBadFrameMs ? 4 : 6))
+              : (frame_ms > kBadFrameMs ? std::min(4, 1 + not_ready / 8)
+                                        : std::min(6, 2 + not_ready / 6));
       world.PhysicsTelemetryData.SoftDeferCaptureBudget = floor_budget;
       if (floor_budget > 0)
       {
@@ -1276,13 +1279,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     const int hard_cap =
         moving_now
-            ? ((missing_focus_mesh && pending_light_focus_n > 0 &&
-                mesh_async_n < 4)
-                   // Targeted: do not require healthy wall — hitch+holes left
-                   // hard_cap=1 forever while FIFO stuck (~34) and completed=0.
+            ? ((missing_focus_mesh && pending_light_focus_n > 0)
+                   // SoftDefer FOV holes: keep Capture hot even if async already
+                   // fed (pending plateaus at ~12 while holes stick).
                    ? (frame_ms > kBadFrameMs
-                          ? 2
-                          : (pending_light_focus_n > 16 ? 5 : 4))
+                          ? 3
+                          : (pending_light_focus_n > 8 ? 6 : 4))
                    : (frame_ms > kBadFrameMs ? 1 : 2))
             : (frame_ms > kBadFrameMs ? 2 : 4);
     bg_budget = std::min(bg_budget, hard_cap);

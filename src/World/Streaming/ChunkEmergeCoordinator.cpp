@@ -168,9 +168,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           world.GetBlockWorld(), focus_ground_horiz, focus_radius,
           nearest_missing_hole);
   mesh_service.SetDeferMeshUntilLitFn(
-      [&world, &mesh_service, focus_ground_horiz,
-       focus_radius, have_nearest_missing, nearest_missing_hole](
-          glm::ivec3 chunk_coord)
+      [&world, &mesh_service, focus_ground_horiz, focus_radius,
+       have_nearest_missing, nearest_missing_hole](glm::ivec3 chunk_coord)
       {
         const int horiz =
             std::max(std::abs(chunk_coord.x - focus_ground_horiz.x),
@@ -187,11 +186,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const glm::ivec3 ground(chunk_coord.x, 0, chunk_coord.z);
         const bool may_mesh =
             world.MayMeshColumn(ground, /*underfeet_preview=*/false);
-        // SoftDeferMeshUntilLitPolicy defers first mesh while pending in focus
-        // (including underfeet) — holes preferred over dark bake.
+        // SoftDefer still blocks dark remesh and far first-mesh. FOV holes while
+        // async underfed: allow missing r≤2 dark preview so Pass1 can schedule
+        // (manual_arch_d3: pending≈12 + SoftDefer → async≈0–2, holes≈0.26).
+        const int async_n = mesh_service.GetAsyncInFlightCount();
+        const bool fov_dark_preview =
+            !has_mesh && horiz <= 2 &&
+            (is_nearest_hole || underfeet || async_n < 6);
         return SoftDeferMeshUntilLitPolicy(
             underfeet, has_mesh,
-            world.RequiresLightingLitGate() && pending && !is_nearest_hole,
+            world.RequiresLightingLitGate() && pending && !fov_dark_preview,
             in_focus, may_mesh);
       });
 
