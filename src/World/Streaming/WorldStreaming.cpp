@@ -1187,12 +1187,18 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   // TD-ARCH-030: SoftDefer FOV unfinished + pending light → Capture floor.
   {
     const int not_ready = world.PhysicsTelemetryData.FocusNotRenderReady;
+    world.PhysicsTelemetryData.SoftDeferCaptureBudget = 0;
     if (not_ready > 0 && pending_light_focus_n > 0)
     {
-      bg_budget =
-          std::max(bg_budget, frame_ms > kBadFrameMs
-                                  ? std::min(4, 1 + not_ready / 8)
-                                  : std::min(6, 2 + not_ready / 6));
+      const int floor_budget =
+          frame_ms > kBadFrameMs ? std::min(4, 1 + not_ready / 8)
+                                 : std::min(6, 2 + not_ready / 6);
+      world.PhysicsTelemetryData.SoftDeferCaptureBudget = floor_budget;
+      if (floor_budget > 0)
+      {
+        ++world.PhysicsTelemetryData.SoftDeferCaptureFloorHits;
+      }
+      bg_budget = std::max(bg_budget, floor_budget);
     }
   }
   // Two-tier promote: underfeet first, then rest of focus — so far-in-focus

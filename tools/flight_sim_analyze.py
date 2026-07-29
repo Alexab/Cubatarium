@@ -604,6 +604,28 @@ def analyze(
     gates["post_load_ring_not_ready_eq_0"] = (
         post_load_ring_idle_max is None or post_load_ring_idle_max <= 0.0
     )
+    # SoftDefer Capture SLA (TD-ARCH-030): idle-head pending must fall or stay 0
+    # while SoftDefer floor ticks (spawn plr sticky → measurable stall).
+    softdefer_hits_idle = col(idle_head, "softdefer_capture_floor_hits_delta")
+    softdefer_capture_ticks_idle = (
+        sum(softdefer_hits_idle) if softdefer_hits_idle else 0.0
+    )
+    pending_idle = col(idle_head, "pending_light_focus")
+    pending_light_idle_delta = None
+    pending_light_idle_end = None
+    if pending_idle:
+        pending_light_idle_end = pending_idle[-1]
+        pending_light_idle_delta = pending_idle[-1] - pending_idle[0]
+    gates["spawn_soft_defer_progress"] = (
+        pending_light_idle_end is None
+        or pending_light_idle_end <= 0.0
+        or (
+            softdefer_capture_ticks_idle > 0
+            and pending_light_idle_delta is not None
+            and pending_light_idle_delta < 0
+        )
+        or softdefer_capture_ticks_idle <= 0
+    )
     gates["mesh_async_floor_when_dirty"] = (
         mesh_async_med_when_dirty is None or mesh_async_med_when_dirty >= 4.0
     )
@@ -767,6 +789,9 @@ def analyze(
             "mesh_async_med_when_dirty": mesh_async_med_when_dirty,
             "post_load_ring_idle_max": post_load_ring_idle_max,
             "unfinished_idle_max": unfinished_idle_max,
+            "softdefer_capture_ticks_idle": softdefer_capture_ticks_idle,
+            "pending_light_idle_delta": pending_light_idle_delta,
+            "pending_light_idle_end": pending_light_idle_end,
             "stop_dark_face_near_end": stop_dark_face_near_end,
             "stop_dark_face_near_max": stop_dark_face_near_max,
             "stuck_async_holes_sec": stuck_async_holes_sec,

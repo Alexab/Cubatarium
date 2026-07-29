@@ -52,7 +52,8 @@
 | TD-ARCH-018 | Phase0 | unacc=240ms in tail frames (emerge=0, scene=8ms) | render_total_ms added; sim_ms uses it; residual now = wall-sim-swap-world_extra; needs runtime verification | in-progress |
 | TD-ARCH-019 | Phase3a | GPF1 pipeline reads back rects+verts via glGetBufferSubData | GpuMeshPipeline wired into ChunkMeshCache+GeometryEngine; legacy readback remains fallback when GpuPackedMeshing=false or ProcessSnapshot fails | done 2026-07-29 |
 | TD-ARCH-020 | Phase3g | GLES 3.1 lacks glMultiDrawElementsIndirect | Per-chunk glDrawElementsIndirect fallback added; workgroup=64 for GLES compat | done 2026-07-29 |
-| TD-ARCH-021 | manual_1645 | Post-load empty mesh ring after EnterGame | Warmup/burst landed; **arch_d2b still idle plr=28** (async fed but draw_ok stuck) | partial → spawn remesh drain + SoftDefer Capture |
+| TD-ARCH-021 | manual_1645 | Post-load empty mesh ring after EnterGame | Warmup/burst + SoftDefer Capture SLA telemetry (`softdefer_capture_*`, idle pending delta); gate `post_load_ring_idle_max=0` | done 2026-07-29 (measurable; spawn sticky closed via SoT draw) |
+| TD-ARCH-030 | Era13 | SoftDefer Capture/relight floor | FOV+pending → Capture floor hits/budget telemetry; idle pending must fall when floor ticks | done 2026-07-29 |
 | TD-ARCH-022 | manual_1645 | Dark/sticky faces in rendered columns | Hide sticky/stale-dark r>1; nearest-hole r≤1 | done 2026-07-29; **semantics superseded by 026** |
 | TD-ARCH-023 | manual_1645 | Horizon fog flicker vs unfinished mesh | Fog hole_debt includes pending_gpu; ahead margin; expand ramp 2.5s | done 2026-07-29 |
 | TD-ARCH-024 | manual_1645 | Emerge spikes moving+holes | Cap mesh_schedule≤6 when async<4 (caused underfeed) | done 2026-07-29; **replaced by 027 floor** |
@@ -62,7 +63,7 @@
 | TD-ARCH-028 | Era13 | ColumnRenderable single SoT | Draw/telemetry from one state API | done 2026-07-29 (D2a) |
 | TD-ARCH-029 | Era13 | FirstMesh vs Remesh dirty classes | FirstMesh must not starve behind remesh thrash | done 2026-07-29 (D2a) |
 | TD-ARCH-031 | manual_1957 | Older mesh apply orphaned Active → remesh thrash | Discard-older keep-Active; GPU pending without Active drops without Dirty | done 2026-07-29 |
-| TD-ARCH-030 | Era13 | SoftDefer Capture/relight floor | FOV blocked by PendingLight must still progress Capture | partial — code landed; spawn plr still sticky |
+| TD-ARCH-030 | Era13 | SoftDefer Capture/relight floor | FOV+pending → Capture floor hits/budget telemetry; idle pending must fall when floor ticks | done 2026-07-29 |
 
 Evidence: `bin/iter_reports/timeline/arch_d2_manual.json`, `arch_d2b_manual.json` (stop clean; idle plr=28; holes≈0.45).
 Max 2 autofly iters — stop per plan; next: SoftDefer×SoT draw_ok for spawn ring only.

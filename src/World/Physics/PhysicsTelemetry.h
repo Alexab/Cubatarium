@@ -46,6 +46,10 @@ struct PhysicsTelemetry
   int PostLoadRingNotReady{0};
   /// Missing greedy count when exiting EnterGame GPU warmup (diag snapshot).
   int EnterGameWarmupMissingGreedy{0};
+  /// Frames where SoftDefer FOV+pending applied a Capture budget floor (cumulative).
+  uint64_t SoftDeferCaptureFloorHits{0};
+  /// Capture/relight bg budget requested by SoftDefer floor this frame (0 if idle).
+  int SoftDeferCaptureBudget{0};
   double RelightCompletedPerSec{0.0};
   double CommitPhysicsMs{0.0};
   double CommitRelightMs{0.0};
