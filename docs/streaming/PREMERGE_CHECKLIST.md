@@ -53,6 +53,24 @@ contracts landed (SeedDecision, ColumnFlowExecutor, visual SLA, seed factory,
 Capture progress). Gate DoD F2/C/CB may still be NO-GO — do not treat docs ✅ as
 gate GO; see `TECH_DEBT_CHUNK_STREAMING.md` TD-ARCH-011/015 backlog.
 
+**Era13 readiness DoD (2026-07-29):** architecture contract gates (not GPU ladder):
+
+```powershell
+python tools/flight_sim_phase_gate.py --phase-id ARCH_D1 --report bin/iter_reports/timeline/<id>.json
+python tools/flight_sim_phase_gate.py --phase-id ARCH_D3 --report bin/iter_reports/timeline/<id>.json
+```
+
+| Gate | ARCH_D1 | ARCH_D3 |
+|------|---------|---------|
+| `post_load_ring_idle_max` | =0 | =0 |
+| `effective_holes_rate` | ≤0.24 | ≤0.10 |
+| `mesh_async_med_when_dirty` | ≥4 (FOV unfinished) | ≥4 |
+| stop not_ready / sticky / holes | 0 | 0 |
+| `stop_dark_face_near_end` | &lt;200 | &lt;100 |
+| `wall_ms_med` | ≤35 | ≤30 |
+
+Do **not** merge to `develop` until ARCH_D3 GO (+ F2/C/CB as before).
+
 **Backend matrix (R4):** desktop
 
 ```powershell

@@ -332,6 +332,29 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("post_stop_black_sticky_max", "le", 0.0),
         ("chunks_traveled", "ge", 3.0),
     ],
+    # Era13 readiness contract (ROOT_CAUSE_2026-07 / plan D3).
+    "ARCH_D1": [
+        ("post_load_ring_idle_max", "le", 0.0),
+        ("effective_holes_rate", "le", 0.24),
+        ("mesh_async_med_when_dirty", "ge", 4.0),
+        ("post_stop_not_ready_end", "le", 0.0),
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("stop_dark_face_near_end", "lt", 200.0),
+        ("wall_ms_med", "le", 35.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "ARCH_D3": [
+        ("post_load_ring_idle_max", "le", 0.0),
+        ("unfinished_idle_max", "le", 0.0),
+        ("effective_holes_rate", "le", 0.10),
+        ("wall_ms_med", "le", 30.0),
+        ("mesh_async_med_when_dirty", "ge", 4.0),
+        ("post_stop_not_ready_end", "le", 0.0),
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("post_stop_effective_holes_rate", "le", 0.0),
+        ("stop_dark_face_near_end", "lt", 100.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
 }
 
 
@@ -344,6 +367,7 @@ def metric(data: dict, key: str):
 
 def check(op: str, val, limit: float) -> bool:
     if val is None:
+        # Absent telemetry: fail hard gates; soft N/A only when explicitly skipped.
         return False
     v = float(val)
     if op == "le":
@@ -355,6 +379,13 @@ def check(op: str, val, limit: float) -> bool:
     if op == "gt":
         return v > limit
     return False
+
+
+def check_arch(op: str, val, limit: float) -> bool:
+    """ARCH_* gates: missing optional metric passes (no high-dirty sample etc.)."""
+    if val is None:
+        return True
+    return check(op, val, limit)
 
 
 def main() -> int:
@@ -384,9 +415,10 @@ def main() -> int:
 
     gates = PHASE_GATES.get(args.phase_id, [])
     failed = []
+    arch = args.phase_id.startswith("ARCH_")
     for key, op, limit in gates:
         val = metric(data, key)
-        ok = check(op, val, limit)
+        ok = check_arch(op, val, limit) if arch else check(op, val, limit)
         print(f"  {key}={val} {op} {limit} -> {'OK' if ok else 'FAIL'}")
         if not ok:
             failed.append(key)

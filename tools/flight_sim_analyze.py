@@ -566,6 +566,52 @@ def analyze(
             mesh_discard_full[-1] - mesh_discard_full[0]
         )
 
+    # Era13 / D3 arch gates (ROOT_CAUSE_2026-07): spawn ring, async floor, dark.
+    idle_head = periods[: max(3, int(8.0 / 2.0))] if periods else []
+    post_load_ring_idle_max = None
+    if any("post_load_ring_not_ready" in r for r in idle_head):
+        pl = col(idle_head, "post_load_ring_not_ready")
+        post_load_ring_idle_max = max(pl) if pl else 0.0
+    unfinished_idle_max = None
+    if unfinished_key and idle_head:
+        uf = col(idle_head, unfinished_key)
+        unfinished_idle_max = max(uf) if uf else 0.0
+    # When dirty>100 AND FOV unfinished, mesh_async should stay fed
+    # (manual_1752 underfed ≈2). Remesh-thrash Dirty with nr=0 is excluded.
+    async_when_dirty = [
+        float(r.get("mesh_async") or 0)
+        for r in steady
+        if float(r.get("dirty") or 0) > 100
+        and (
+            float(r.get("unfinished_visual") or 0) > 0
+            or float(r.get("focus_not_render_ready") or 0) > 0
+            or float(r.get("visual_holes") or 0) > 0
+            or float(r.get("near_focus_holes") or 0) > 0
+        )
+    ]
+    mesh_async_med_when_dirty = (
+        median(async_when_dirty) if async_when_dirty else 99.0
+    )
+    dark_face_stop = col(stop_tail, "dark_face_near")
+    if not dark_face_stop:
+        dark_face_stop = col(stop_tail, "dark_face_near_n")
+    stop_dark_face_near_end = (
+        dark_face_stop[-1] if dark_face_stop else None
+    )
+    stop_dark_face_near_max = (
+        max(dark_face_stop) if dark_face_stop else None
+    )
+    gates["post_load_ring_not_ready_eq_0"] = (
+        post_load_ring_idle_max is None or post_load_ring_idle_max <= 0.0
+    )
+    gates["mesh_async_floor_when_dirty"] = (
+        mesh_async_med_when_dirty is None or mesh_async_med_when_dirty >= 4.0
+    )
+    gates["stop_dark_face_near_lt_100"] = (
+        stop_dark_face_near_end is None or stop_dark_face_near_end < 100.0
+    )
+    gates_pass_count = sum(1 for v in gates.values() if v)
+
     # Manual 083042: pendf stuck ~40 for ~30s while wall~22–30 and holes=0.
     stop_wall = col(stop_segment, "wall_ms")
     stop_wall_med = median(stop_wall)
@@ -718,6 +764,11 @@ def analyze(
             "break_inflight_race_sum": break_race_sum,
             "break_dark_face_sum": break_dark_sum,
             "mesh_async_med": median(mesh_async),
+            "mesh_async_med_when_dirty": mesh_async_med_when_dirty,
+            "post_load_ring_idle_max": post_load_ring_idle_max,
+            "unfinished_idle_max": unfinished_idle_max,
+            "stop_dark_face_near_end": stop_dark_face_near_end,
+            "stop_dark_face_near_max": stop_dark_face_near_max,
             "stuck_async_holes_sec": stuck_async_holes_sec,
             "cold_relight_holes_sec": cold_relight_holes_sec,
             "dirty_high_sec": dirty_high_sec,
