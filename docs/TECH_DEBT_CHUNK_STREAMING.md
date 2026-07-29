@@ -77,6 +77,10 @@ Autofly note: after S0, machine load made World_164 load+flight wall multi-secon
 (`hang_killed` on control revert too). Re-run edge/manual when host is cool;
 gates still expected NO-GO until cold_relight/spike drop.
 
+`edge_S1.json` (post-fix, run_outcome=success, host overloaded): wall_med=1034,
+holes=1.0, opaque_on_min=0, blue=1, cold=10, spike_holes=3859, chunks=3;
+F2/C NO-GO. Compare to healthy `edge_S0` wall=78 — re-validate on cool host.
+
 ## TD-ARCH — Closed
 
 | ID | Closed in | Resolution |
