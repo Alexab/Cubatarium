@@ -60,6 +60,7 @@
 #include "World/Physics/WorldPhysicsScheduler.h"
 #include "World/Raycast/BlockRaycast.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
+#include "World/Streaming/ColumnRenderablePolicy.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
@@ -1948,37 +1949,38 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
 
   if (horiz_from_focus > 1)
   {
-    if (IsColumnStickyRemesh(ground_xz))
-    {
-      // Ticket stays; draw existing mesh (hide-without-mesh was spawning
-      // empty rings while async remeshed forever — manual_1920 plr=28).
-      out.reason = ColumnRenderableState::BlockReason::StickyRemesh;
-      out.has_repair_ticket = true;
-      for (int cy = cy0; cy <= cy1; ++cy)
-      {
-        const glm::ivec3 coord(ground.x, cy, ground.z);
-        if (MeshService->HasGreedyMesh(coord) ||
-            MeshService->IsGpuExtractInFlight(coord))
-        {
-          out.draw_ok = true;
-          return out;
-        }
-      }
-      return out;
-    }
+    bool has_mesh_or_gpu = false;
+    bool stale_dark_with_mesh = false;
     for (int cy = cy0; cy <= cy1; ++cy)
     {
       const glm::ivec3 coord(ground.x, cy, ground.z);
+      if (MeshService->HasGreedyMesh(coord) ||
+          MeshService->IsGpuExtractInFlight(coord))
+      {
+        has_mesh_or_gpu = true;
+      }
       if (MeshService->HasGreedyMesh(coord) &&
           MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
       {
-        // TD-ARCH-026: repair ticket without hide-when-meshed (SoT). SoftDefer
-        // still blocks dark *first-mesh commit*; draw keeps prior greedy.
-        out.reason = ColumnRenderableState::BlockReason::StaleDark;
-        out.has_repair_ticket = true;
-        out.draw_ok = true;
-        return out;
+        stale_dark_with_mesh = true;
       }
+    }
+    const bool sticky = IsColumnStickyRemesh(ground_xz);
+    const ColumnSoTDecision sot = ClassifyStickyStaleDarkSoT(
+        has_mesh_or_gpu, sticky, stale_dark_with_mesh, horiz_from_focus);
+    if (sot.kind == ColumnSoTKind::StickyRemesh)
+    {
+      out.reason = ColumnRenderableState::BlockReason::StickyRemesh;
+      out.has_repair_ticket = sot.has_repair_ticket;
+      out.draw_ok = sot.draw_ok;
+      return out;
+    }
+    if (sot.kind == ColumnSoTKind::StaleDark)
+    {
+      out.reason = ColumnRenderableState::BlockReason::StaleDark;
+      out.has_repair_ticket = sot.has_repair_ticket;
+      out.draw_ok = sot.draw_ok;
+      return out;
     }
   }
 

@@ -1154,9 +1154,11 @@ target_include_directories(camera_stability_test PRIVATE ${CMAKE_SOURCE_DIR}/src
 target_link_libraries(camera_stability_test glm::glm)
 
 add_executable(streaming_render_ready_invariants_test
-    src/Test/StreamingRenderReadyInvariantsTest.cpp)
+    src/Test/StreamingRenderReadyInvariantsTest.cpp
+    src/World/Streaming/ColumnFlowScheduler.cpp)
 target_include_directories(streaming_render_ready_invariants_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(streaming_render_ready_invariants_test glm::glm)
 
 add_executable(mesh_neighbor_policy_test
     src/Test/MeshNeighborPolicyTest.cpp)

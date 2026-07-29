@@ -31,6 +31,7 @@ public:
   bool DrainOne(ColumnWorkItem &out);
   void Clear();
   size_t Size() const { return static_cast<size_t>(queue_.size()); }
+  bool Contains(glm::ivec2 column, ColumnWorkKind kind) const;
 
 private:
   struct Compare

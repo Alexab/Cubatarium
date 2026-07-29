@@ -1,4 +1,5 @@
 #include "World/Streaming/ColumnFlowScheduler.h"
+#include "World/Streaming/ColumnRenderablePolicy.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -45,10 +46,27 @@ int main()
   s.Enqueue({3, 4}, ColumnWorkKind::RemeshSeam, 30);
   s.Enqueue({3, 4}, ColumnWorkKind::RemeshSeam, 99);
   Expect(s.Size() == 1, "RemeshSeam ticket deduped");
+  Expect(s.Contains({3, 4}, ColumnWorkKind::RemeshSeam),
+         "Contains RemeshSeam while queued");
   ColumnWorkItem c{};
   Expect(s.DrainOne(c), "drain RemeshSeam");
   Expect(c.kind == ColumnWorkKind::RemeshSeam, "repair ticket kind");
   Expect(c.column.x == 3 && c.column.y == 4, "repair ticket column");
+  Expect(!s.Contains({3, 4}, ColumnWorkKind::RemeshSeam),
+         "Contains false after drain");
+
+  // Sticky without mesh + far stale ⇒ RemeshSeam|RelightThenMesh in scheduler.
+  {
+    using cutum::EnqueueStickyStaleRepairTickets;
+    UColumnFlowScheduler t;
+    EnqueueStickyStaleRepairTickets(t, {0, 0}, {{1, 0}}, {{5, 0}});
+    Expect(t.Contains({1, 0}, ColumnWorkKind::RemeshSeam), "sticky RemeshSeam");
+    Expect(t.Contains({1, 0}, ColumnWorkKind::RelightThenMesh),
+           "near sticky RelightThenMesh");
+    Expect(t.Contains({5, 0}, ColumnWorkKind::RemeshSeam), "stale RemeshSeam");
+    Expect(t.Contains({5, 0}, ColumnWorkKind::RelightThenMesh),
+           "stale RelightThenMesh");
+  }
 
   if (gFails != 0)
   {

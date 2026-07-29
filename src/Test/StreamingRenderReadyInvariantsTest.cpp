@@ -1,10 +1,18 @@
 #include "World/Streaming/MeshLitGate.h"
+#include "World/Streaming/ColumnRenderablePolicy.h"
+#include "World/Streaming/ColumnFlowScheduler.h"
 
 #include <cstdlib>
 #include <iostream>
+#include <vector>
 
 using cutum::ShouldRejectDarkMeshCommit;
 using cutum::SoftDeferMeshUntilLitPolicy;
+using cutum::ClassifyStickyStaleDarkSoT;
+using cutum::ColumnSoTKind;
+using cutum::EnqueueStickyStaleRepairTickets;
+using cutum::UColumnFlowScheduler;
+using cutum::ColumnWorkKind;
 
 static int failures = 0;
 
@@ -62,9 +70,50 @@ int main()
   // Nearest-hole dark preview policy: only r≤1 (enforced in ChunkEmergeCoordinator).
   Expect(SoftDeferMeshUntilLitPolicy(false, false, true, true, true),
          "focus missing+pending must defer (nearest-hole bypass is r≤1 only)");
-  // TD-ARCH-026: sticky/stale-dark with mesh → draw_ok + repair ticket (SoT).
-  // SoftDefer still blocks dark first-mesh commit; hide only when no mesh.
-  Expect(true, "SoT: meshed sticky/stale-dark draw_ok + RemeshSeam/Relight ticket");
+
+  // TD-ARCH-026: SoT sticky/stale-dark (real invariants, not Expect(true)).
+  {
+    const auto no_mesh_sticky =
+        ClassifyStickyStaleDarkSoT(/*has_mesh=*/false, /*sticky=*/true,
+                                   /*stale=*/false, /*horiz=*/3);
+    Expect(no_mesh_sticky.kind == ColumnSoTKind::StickyRemesh,
+           "sticky without mesh → StickyRemesh");
+    Expect(!no_mesh_sticky.draw_ok, "sticky without mesh → hide (no draw_ok)");
+    Expect(no_mesh_sticky.has_repair_ticket,
+           "sticky without mesh → has_repair_ticket");
+
+    const auto meshed_sticky =
+        ClassifyStickyStaleDarkSoT(true, true, false, 3);
+    Expect(meshed_sticky.draw_ok && meshed_sticky.has_repair_ticket,
+           "meshed sticky → draw_ok + repair ticket");
+
+    const auto stale =
+        ClassifyStickyStaleDarkSoT(true, false, true, 3);
+    Expect(stale.kind == ColumnSoTKind::StaleDark, "stale-dark kind");
+    Expect(stale.draw_ok && stale.has_repair_ticket,
+           "meshed stale-dark → draw_ok + repair ticket");
+
+    const auto near = ClassifyStickyStaleDarkSoT(false, true, false, 1);
+    Expect(near.kind == ColumnSoTKind::None,
+           "near ring uses other path (SoT sticky classifier idle)");
+  }
+
+  // Hide/sticky/stale without mesh ⇒ scheduler contains RemeshSeam|RelightThenMesh.
+  {
+    UColumnFlowScheduler sched;
+    const glm::ivec2 focus{10, 20};
+    std::vector<glm::ivec2> sticky{{12, 20}};      // horiz=2 → near Relight
+    std::vector<glm::ivec2> stale{{15, 20}};       // horiz=5 → far Remesh+Relight
+    EnqueueStickyStaleRepairTickets(sched, focus, sticky, stale);
+    Expect(sched.Contains(sticky[0], ColumnWorkKind::RemeshSeam),
+           "sticky → RemeshSeam ticket");
+    Expect(sched.Contains(sticky[0], ColumnWorkKind::RelightThenMesh),
+           "near sticky → RelightThenMesh");
+    Expect(sched.Contains(stale[0], ColumnWorkKind::RemeshSeam),
+           "stale-dark → RemeshSeam");
+    Expect(sched.Contains(stale[0], ColumnWorkKind::RelightThenMesh),
+           "stale-dark → RelightThenMesh");
+  }
 
   if (failures != 0)
   {

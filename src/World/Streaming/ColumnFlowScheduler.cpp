@@ -48,4 +48,9 @@ void UColumnFlowScheduler::Clear()
   inflight_.clear();
 }
 
+bool UColumnFlowScheduler::Contains(glm::ivec2 column, ColumnWorkKind kind) const
+{
+  return inflight_.count(ColumnKey(column, kind)) != 0;
+}
+
 } // namespace cutum
