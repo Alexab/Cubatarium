@@ -137,7 +137,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       movement_speed > procedural.MovementPrefetchThreshold;
   const bool moving_fast =
       movement_speed > procedural.MovementSpeedBoostThreshold;
-  const double last_frame_ms = world.GetLastMovementFrameMs();
+  const double last_frame_wall_ms = world.GetLastMovementFrameMs();
+  const double last_do_movement_ms =
+      world.GetPhysicsTelemetry().DoMovementMs;
+  // Use DoMovement time (actual CPU work) for emerge budgeting so GL swap
+  // stalls do not starve the meshing pipeline.
+  const double last_frame_ms =
+      last_do_movement_ms > 0.5 ? last_do_movement_ms : last_frame_wall_ms;
 
   const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
   const glm::ivec3 focus_ground =
@@ -1066,11 +1072,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     if (recover_now && recover_n > 0)
     {
       auto &exec = GetColumnFlowExecutor();
-      const int admit_n =
+      int admit_n =
           (!moving && (missing_visible_mesh || pending_near_light) &&
            !idle_remesh_debt)
               ? 1
               : ((moving && (visual_holes || missing_visible_mesh)) ? 1 : 0);
+      if (moving && pending_dirty > 100 && pending_async < 6)
+      {
+        admit_n = std::max(admit_n, 4);
+      }
       exec.TickDerived(world, focus_ground_horiz, focus_radius, moving,
                        missing_visible_mesh, visual_holes, idle_remesh_debt,
                        idle_focus_dirty_debt, pending_focus_n, recover_n,
@@ -1549,6 +1559,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       std::chrono::duration<double, std::milli>(
           std::chrono::high_resolution_clock::now() - emerge_t0)
           .count();
+  // Moving + dirty backlog: ensure minimum async feed rate so dirty queue
+  // drains steadily instead of starving.
+  if (moving && pending_dirty > 100 && pending_async < 8)
+  {
+    mesh_schedule = std::max(mesh_schedule, 6);
+    mesh_drain = std::max(mesh_drain, 8);
+  }
   // Targeted C/CB: mesh_dirty_tick_ms was ~1.0–1.2s median on edge — hard-cap
   // drain/schedule so emerge cannot burn the whole frame while holes stuck.
   if (last_frame_ms > 100.0)
