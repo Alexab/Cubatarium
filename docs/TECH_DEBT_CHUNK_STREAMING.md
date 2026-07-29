@@ -64,7 +64,7 @@
 | TD-ARCH-029 | Era13 | FirstMesh vs Remesh dirty classes | FirstMesh must not starve behind remesh thrash | done 2026-07-29 (D2a) |
 | TD-ARCH-030 | Era13 | SoftDefer Capture/relight floor | FOV+pending → Capture floor hits/budget telemetry; idle pending must fall when floor ticks | done 2026-07-29 |
 | TD-ARCH-031 | manual_1957 | Older mesh apply orphaned Active → remesh thrash | Discard-older keep-Active; GPU pending without Active drops without Dirty | done 2026-07-29 |
-| TD-ARCH-032 | Era13 | ARCH_D1/D3 harness GO | **ARCH_D1 GO** (`manual_arch_td32b`: holes≈0.19, async≈7). ARCH_D3 NO-GO: holes≤0.10, wall≤30 (got 0.19 / 30.4) | partial — D3 backlog |
+| TD-ARCH-032 | Era13 | ARCH_D1/D3 harness GO | ARCH_D1 GO. SoftDefer FOV r≤2 dark-preview = intentional call-site tradeoff (policy untouched). D3: SoT draw-when-meshed for NotReadyState | in-progress |
 
 Evidence (stale-apply + Era13 tails, 2026-07-29):
 - `manual_stale_apply_A.json` — `mesh_apply_stale`=0 (was ~392).

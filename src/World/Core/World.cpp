@@ -1984,11 +1984,37 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     }
   }
 
+  // SoT: draw-when-meshed even if ColumnEmerge FSM is mid-transition
+  // (Generating/etc). Counting meshed columns as unfinished inflated cruise
+  // holes while SoftDefer+Capture still owed light (ARCH_D3 / manual_td32b).
+  bool has_mesh_or_gpu = false;
+  bool saw_gpu_inflight_early = false;
+  for (int cy = cy0; cy <= cy1; ++cy)
+  {
+    const glm::ivec3 coord(ground.x, cy, ground.z);
+    if (MeshService->HasGreedyMesh(coord))
+    {
+      has_mesh_or_gpu = true;
+    }
+    if (MeshService->IsGpuExtractInFlight(coord))
+    {
+      has_mesh_or_gpu = true;
+      saw_gpu_inflight_early = true;
+    }
+  }
   if (out.stage != ColumnEmergeState::RenderReady &&
       out.stage != ColumnEmergeState::LitReady &&
       out.stage != ColumnEmergeState::Meshing &&
       out.stage != ColumnEmergeState::Empty)
   {
+    if (has_mesh_or_gpu)
+    {
+      out.draw_ok = true;
+      out.reason = saw_gpu_inflight_early
+                       ? ColumnRenderableState::BlockReason::GpuInFlight
+                       : ColumnRenderableState::BlockReason::None;
+      return out;
+    }
     out.reason = ColumnRenderableState::BlockReason::NotReadyState;
     return out;
   }

@@ -187,8 +187,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const bool may_mesh =
             world.MayMeshColumn(ground, /*underfeet_preview=*/false);
         // SoftDefer still blocks dark *remesh*. FOV missing r≤2 may first-mesh
-        // while pending (dark preview) so SoftDefer cannot plate holes+async=0
-        // (TD-ARCH-032 / manual_arch_d3).
+        // while pending (dark preview) — intentional tradeoff vs plan B2 wording;
+        // pure SoftDeferMeshUntilLitPolicy unchanged (TD-ARCH-032).
+        (void)have_nearest_missing;
+        (void)nearest_missing_hole;
+        (void)is_nearest_hole;
         const bool fov_dark_preview = !has_mesh && horiz <= 2;
         return SoftDeferMeshUntilLitPolicy(
             underfeet, has_mesh,

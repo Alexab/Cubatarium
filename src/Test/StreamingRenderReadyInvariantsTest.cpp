@@ -67,9 +67,11 @@ int main()
          "dark remesh must not replace lit mesh");
   Expect(!ShouldRejectDarkMeshCommit(true, false, false),
          "cave/unlit first mesh allowed when not deferred");
-  // Nearest-hole dark preview policy: only r≤1 (enforced in ChunkEmergeCoordinator).
+  // Nearest-hole dark preview policy: FOV missing r≤2 may first-mesh while
+  // PendingLight (coordinator bypass); SoftDeferMeshUntilLitPolicy itself still
+  // defers pending. Remesh while pending stays deferred.
   Expect(SoftDeferMeshUntilLitPolicy(false, false, true, true, true),
-         "focus missing+pending must defer (nearest-hole bypass is r≤1 only)");
+         "policy: focus missing+pending still defers (bypass is call-site r≤2)");
 
   // TD-ARCH-026: SoT sticky/stale-dark (real invariants, not Expect(true)).
   {
