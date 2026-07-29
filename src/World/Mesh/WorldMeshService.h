@@ -65,6 +65,7 @@ public:
   void SetMeshScheduleMaxHorizontalDist(int radius_chunks);
   void SetMeshScheduleOverflowPerFrame(int count);
   void SetMeshSnapshotBudgetMs(double ms);
+  void SetMeshEmergeTotalBudgetMs(double ms);
   void SetAltitudeCullState(float altitude_above_terrain, int threshold_blocks);
 
   void MarkDirty(glm::ivec3 chunk_coord);

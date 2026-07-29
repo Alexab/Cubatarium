@@ -102,6 +102,11 @@ void UWorldMeshService::SetMeshSnapshotBudgetMs(double ms)
   Cache.SetMeshSnapshotBudgetMs(ms);
 }
 
+void UWorldMeshService::SetMeshEmergeTotalBudgetMs(double ms)
+{
+  Cache.SetMeshEmergeTotalBudgetMs(ms);
+}
+
 void UWorldMeshService::SetAltitudeCullState(float altitude_above_terrain,
                                              int threshold_blocks)
 {

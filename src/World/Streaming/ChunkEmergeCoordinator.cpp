@@ -653,6 +653,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
        (idle_recovery && pending_focus_count > 0))
           ? 48.0
           : (idle_focus_dirty_debt ? 28.0 : 6.0));
+  mesh_service.SetMeshEmergeTotalBudgetMs(moving ? 25.0 : 60.0);
 
   // Healthy flight with no visual holes: flush Dirty so pressure can leave Red
   // (Dirty plateaus ~700 trapped Red when exit required dirty<=500).

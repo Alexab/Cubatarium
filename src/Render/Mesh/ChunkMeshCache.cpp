@@ -1701,6 +1701,16 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         return Dirty.end();
       }
+      {
+        const double total_elapsed =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::high_resolution_clock::now() - dirty_tick_t0)
+                .count();
+        if (total_elapsed > MeshEmergeTotalBudgetMs)
+        {
+          return Dirty.end();
+        }
+      }
       if (AsyncBuilder->IsInFlight(*it))
       {
         return std::next(it);

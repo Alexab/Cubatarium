@@ -249,6 +249,10 @@ public:
   {
     MeshSnapshotBudgetMs = std::max(1.0, ms);
   }
+  void SetMeshEmergeTotalBudgetMs(double ms)
+  {
+    MeshEmergeTotalBudgetMs = std::max(5.0, ms);
+  }
   void SetMeshScheduleOverflowPerFrame(int count)
   {
     MeshScheduleOverflowPerFrame = std::max(0, count);
@@ -413,6 +417,7 @@ private:
   /// -1 = no extra horizontal schedule cap (only focus starve applies).
   int MeshScheduleMaxHorizontalDist{-1};
   double MeshSnapshotBudgetMs{6.0};
+  double MeshEmergeTotalBudgetMs{25.0};
   /// When MaxHorizontalDist >= 0, allow this many farther schedules/frame.
   int MeshScheduleOverflowPerFrame{0};
   std::function<bool(glm::ivec3)> DeferMeshUntilLit;
