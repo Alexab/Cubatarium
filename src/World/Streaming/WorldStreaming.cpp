@@ -1208,17 +1208,20 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     bg_budget = std::max(bg_budget, ingress.relight_floor);
   }
   // TD-ARCH-030: SoftDefer FOV unfinished + pending light → Capture floor.
+  // Use SoT UnfinishedVisual / missing — NOT FocusNotRenderReady pressure
+  // proxy (pending+dirty) — that Capture'd every cruise period with uv=0 and
+  // inflated wall_med past ARCH_D3 ≤30.
   {
-    const int not_ready = world.PhysicsTelemetryData.FocusNotRenderReady;
+    const int unfinished = world.PhysicsTelemetryData.UnfinishedVisual;
     world.PhysicsTelemetryData.SoftDeferCaptureBudget = 0;
-    if ((not_ready > 0 || missing_focus_mesh) && pending_light_focus_n > 0)
+    if ((unfinished > 0 || missing_focus_mesh) && pending_light_focus_n > 0)
     {
       const int floor_budget =
           missing_focus_mesh
               ? (moving_now ? (frame_ms > kBadFrameMs ? 3 : 5)
                             : (frame_ms > kBadFrameMs ? 4 : 6))
-              : (frame_ms > kBadFrameMs ? std::min(4, 1 + not_ready / 8)
-                                        : std::min(6, 2 + not_ready / 6));
+              : (frame_ms > kBadFrameMs ? std::min(4, 1 + unfinished / 8)
+                                        : std::min(6, 2 + unfinished / 6));
       world.PhysicsTelemetryData.SoftDeferCaptureBudget = floor_budget;
       if (floor_budget > 0)
       {
