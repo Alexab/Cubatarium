@@ -186,13 +186,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const glm::ivec3 ground(chunk_coord.x, 0, chunk_coord.z);
         const bool may_mesh =
             world.MayMeshColumn(ground, /*underfeet_preview=*/false);
-        // SoftDefer still blocks dark remesh and far first-mesh. FOV holes while
-        // async underfed: allow missing r≤2 dark preview so Pass1 can schedule
-        // (manual_arch_d3: pending≈12 + SoftDefer → async≈0–2, holes≈0.26).
-        const int async_n = mesh_service.GetAsyncInFlightCount();
-        const bool fov_dark_preview =
-            !has_mesh && horiz <= 2 &&
-            (is_nearest_hole || underfeet || async_n < 6);
+        // SoftDefer still blocks dark *remesh*. FOV missing r≤2 may first-mesh
+        // while pending (dark preview) so SoftDefer cannot plate holes+async=0
+        // (TD-ARCH-032 / manual_arch_d3).
+        const bool fov_dark_preview = !has_mesh && horiz <= 2;
         return SoftDeferMeshUntilLitPolicy(
             underfeet, has_mesh,
             world.RequiresLightingLitGate() && pending && !fov_dark_preview,
