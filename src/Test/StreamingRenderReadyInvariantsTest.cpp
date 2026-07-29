@@ -125,6 +125,9 @@ int main()
            "stale-dark → RemeshSeam");
     Expect(sched.Contains(stale[0], ColumnWorkKind::RelightThenMesh),
            "stale-dark → RelightThenMesh");
+    Expect(sched.Contains(sticky[0], ColumnWorkKind::PromoteRelight) ||
+               sched.Contains(sticky[0], ColumnWorkKind::RemeshSeam),
+           "sticky near → live repair ticket kinds");
   }
 
   if (failures != 0)

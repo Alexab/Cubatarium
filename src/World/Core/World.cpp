@@ -44,6 +44,7 @@
 #include "Render/Backend/RenderBackendCaps.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Math/GridMath.h"
+#include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Mesh/WorldMeshDirtyPolicy.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Objects/ObjectLibrary.h"
@@ -1902,7 +1903,10 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
   }
   const glm::ivec3 ground(ground_xz.x, 0, ground_xz.y);
   out.stage = GetColumnEmergeState(ground);
-  out.has_repair_ticket = IsColumnStickyRemesh(ground_xz);
+  // Live ColumnFlow ticket OR sticky set (NoteColumnRepairNeeded).
+  out.has_repair_ticket =
+      GetColumnFlowExecutor().HasRepairTicket(ground_xz) ||
+      IsColumnStickyRemesh(ground_xz);
 
   const int max_cy =
       std::max(0, FloorDiv(std::max(0, ProceduralTemplate.MaxHeight), CHUNK_SIZE));
@@ -1971,14 +1975,18 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     if (sot.kind == ColumnSoTKind::StickyRemesh)
     {
       out.reason = ColumnRenderableState::BlockReason::StickyRemesh;
-      out.has_repair_ticket = sot.has_repair_ticket;
+      out.has_repair_ticket =
+          GetColumnFlowExecutor().HasRepairTicket(ground_xz) ||
+          IsColumnStickyRemesh(ground_xz) || sot.has_repair_ticket;
       out.draw_ok = sot.draw_ok;
       return out;
     }
     if (sot.kind == ColumnSoTKind::StaleDark)
     {
       out.reason = ColumnRenderableState::BlockReason::StaleDark;
-      out.has_repair_ticket = sot.has_repair_ticket;
+      out.has_repair_ticket =
+          GetColumnFlowExecutor().HasRepairTicket(ground_xz) ||
+          sot.has_repair_ticket;
       out.draw_ok = sot.draw_ok;
       return out;
     }
@@ -3068,6 +3076,17 @@ int UWorld::PruneStickyRemeshOutside(glm::ivec3 focus_ground_chunk,
     }
   }
   return pruned;
+}
+
+int UWorld::PromoteNearTerrainColumnRelights(glm::ivec3 focus_ground_horiz,
+                                             int radius_chunks)
+{
+  if (!Persistence || radius_chunks < 0)
+  {
+    return 0;
+  }
+  return Persistence->PromoteNearTerrainColumnRelights(focus_ground_horiz,
+                                                       radius_chunks);
 }
 
 int UWorld::PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,

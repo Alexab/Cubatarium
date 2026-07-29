@@ -1,6 +1,7 @@
 #include "World/Streaming/ColumnFlowExecutor.h"
 
 #include "World/Core/World.h"
+#include "World/Persistence/WorldPersistence.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
 
 #include <algorithm>
@@ -24,6 +25,14 @@ void UColumnFlowExecutor::RequestPromoteRelight(glm::ivec2 near_column,
                                                 int priority)
 {
   Enqueue(near_column, ColumnWorkKind::PromoteRelight, priority);
+}
+
+bool UColumnFlowExecutor::HasRepairTicket(glm::ivec2 column) const
+{
+  return scheduler_.Contains(column, ColumnWorkKind::RemeshSeam) ||
+         scheduler_.Contains(column, ColumnWorkKind::RelightThenMesh) ||
+         scheduler_.Contains(column, ColumnWorkKind::PromoteRelight) ||
+         scheduler_.Contains(column, ColumnWorkKind::FirstMesh);
 }
 
 void UColumnFlowExecutor::DrainRemeshSeamBudget(UWorld &world, int max_columns)
@@ -58,6 +67,9 @@ void UColumnFlowExecutor::Dispatch(UWorld &world, const ColumnWorkItem &work,
     world.SyncIdleFocusGreedyRemesh(1);
     break;
   case ColumnWorkKind::PromoteRelight:
+    // Sole promote owner: terrain FIFO + PendingLight (no direct Streaming
+    // Promote* calls outside ColumnFlow).
+    world.PromoteNearTerrainColumnRelights(focus_ground_horiz, focus_radius);
     world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
     break;
   }

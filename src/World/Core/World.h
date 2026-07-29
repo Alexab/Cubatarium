@@ -1033,6 +1033,9 @@ public:
   /// Re-queue priority relight for PendingLightBeforeMesh columns under focus.
   int PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,
                                       int radius_chunks);
+  /// Promote terrain-column FIFO near focus (ColumnFlow PromoteRelight only).
+  int PromoteNearTerrainColumnRelights(glm::ivec3 focus_ground_horiz,
+                                       int radius_chunks);
   void PromotePendingLightBeforeMesh(const std::vector<glm::ivec3> &relit_chunks,
                                      bool priority_mesh);
 

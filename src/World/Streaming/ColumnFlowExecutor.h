@@ -45,6 +45,9 @@ public:
   /// from emerge except via Dispatch).
   void RequestPromoteRelight(glm::ivec2 near_column, int priority);
 
+  /// True if column has a live ColumnFlow repair/admit/promote ticket queued.
+  bool HasRepairTicket(glm::ivec2 column) const;
+
   /// Sticky/seam remesh budget (ColumnFlow-only; SyncIdle lives in Dispatch).
   void DrainRemeshSeamBudget(UWorld &world, int max_columns);
 
