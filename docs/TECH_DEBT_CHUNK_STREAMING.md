@@ -57,16 +57,24 @@
 | TD-ARCH-022 | manual_1645 | Dark/sticky faces in rendered columns | Hide sticky/stale-dark r>1; nearest-hole r≤1 | done 2026-07-29; **semantics superseded by 026** |
 | TD-ARCH-023 | manual_1645 | Horizon fog flicker vs unfinished mesh | Fog hole_debt includes pending_gpu; ahead margin; expand ramp 2.5s | done 2026-07-29 |
 | TD-ARCH-024 | manual_1645 | Emerge spikes moving+holes | Cap mesh_schedule≤6 when async<4 (caused underfeed) | done 2026-07-29; **replaced by 027 floor** |
-| TD-ARCH-025 | qual_fix3 | Cruise holes_rate regressed vs qual_fix2 | Hide without repair → SoT; FirstMesh only on real missing; remesh compact outside underfeet | done 2026-07-29 (partial→ARCH_D1 gate) |
-| TD-ARCH-027 | Era13 | Async throughput floor for FOV unfinished | FOV FirstMesh floor + remesh compact when dirty plateau | done 2026-07-29 |
+| TD-ARCH-025 | qual_fix3 | Cruise holes_rate regressed vs qual_fix2 | SoT + remesh compact landed; cruise holes still ~0.26 (ARCH_D1 NO-GO) | partial — evidence manual_arch_d3 |
 | TD-ARCH-026 | Era13 | Hide⇒RepairTicket via ColumnFlow | draw-when-meshed + near≤2 RelightThenMesh/Remesh; unit SoT+Contains | done 2026-07-29 |
-| TD-ARCH-027 | Era13 | Async throughput floor for FOV unfinished | FOV FirstMesh floor + remesh compact when dirty plateau | done 2026-07-29 |
+| TD-ARCH-027 | Era13 | Async throughput floor for FOV unfinished | Floor + FirstMesh landed; `mesh_async_med_when_dirty≈2` <4 on World_164 | partial — evidence manual_arch_d3 |
 | TD-ARCH-028 | Era13 | ColumnRenderable single SoT | Draw/telemetry from one state API | done 2026-07-29 (D2a) |
 | TD-ARCH-029 | Era13 | FirstMesh vs Remesh dirty classes | FirstMesh must not starve behind remesh thrash | done 2026-07-29 (D2a) |
-| TD-ARCH-031 | manual_1957 | Older mesh apply orphaned Active → remesh thrash | Discard-older keep-Active; GPU pending without Active drops without Dirty | done 2026-07-29 |
 | TD-ARCH-030 | Era13 | SoftDefer Capture/relight floor | FOV+pending → Capture floor hits/budget telemetry; idle pending must fall when floor ticks | done 2026-07-29 |
+| TD-ARCH-031 | manual_1957 | Older mesh apply orphaned Active → remesh thrash | Discard-older keep-Active; GPU pending without Active drops without Dirty | done 2026-07-29 |
+| TD-ARCH-032 | Era13 | ARCH_D1/D3 harness GO | 2× autofly NO-GO: holes≈0.26 (need ≤0.24/0.10), async_when_dirty≈2 (need ≥4); stop/spawn/plr/dark-stale OK | backlog — no develop merge |
 
-Evidence: `bin/iter_reports/timeline/arch_d2_manual.json`, `arch_d2b_manual.json` (stop clean; idle plr=28; holes≈0.45).
+Evidence (stale-apply + Era13 tails, 2026-07-29):
+- `manual_stale_apply_A.json` — `mesh_apply_stale`=0 (was ~392).
+- `manual_arch_d3.json` — wall_med≈24, plr=0, stale_dark=0, post_stop holes=0;
+  ARCH_D1/D3 **NO-GO** on cruise holes + async floor. Max 2 autofly iters — stop.
+- Remaining open: TD-032, 011, 015, 013b, 018; Android GLES.
+
+**Do not merge `arch/streaming-v2-v4` → develop until ARCH_D3 PASS + explicit request.**
+
+Evidence (prior): `bin/iter_reports/timeline/arch_d2_manual.json`, `arch_d2b_manual.json`.
 Max 2 autofly iters — stop per plan; next: SoftDefer×SoT draw_ok for spawn ring only.
 
 ### qual_fix3 verification — visible flight fixes (2026-07-29)
