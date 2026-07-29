@@ -1413,12 +1413,16 @@ add_executable(decor_mesh_integration_test
     src/Core/Jobs/JobThreadBudget.cpp
     src/Render/Engine/DistanceFog.cpp
     src/Render/Engine/HorizonFogColor.cpp
+    src/Render/Gl/ComputeProgram.cpp
     src/Render/Mesh/AsyncMeshBuilder.cpp
     src/Render/Mesh/ChunkDirtySet.cpp
     src/Render/Mesh/ChunkMeshCache.cpp
     src/Render/Mesh/ChunkMeshRevisionRegistry.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/FluidSurfaceColumnSlice.cpp
+    src/Render/Mesh/GpuGreedyOpaqueEmit.cpp
+    src/Render/Mesh/GpuMeshPipeline.cpp
+    src/Render/Mesh/GpuMeshSlotAllocator.cpp
     src/Test/GpuFluidColumnScanHostStub.cpp
     src/Render/Mesh/GreedyMesher.cpp
     src/World/Core/FluidColumnSurfaceQuery.cpp
@@ -1433,7 +1437,8 @@ target_include_directories(decor_mesh_integration_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_compile_definitions(decor_mesh_integration_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(decor_mesh_integration_test glm::glm nlohmann_json::nlohmann_json)
+target_link_libraries(decor_mesh_integration_test glm::glm nlohmann_json::nlohmann_json
+    glog::glog OpenGL::GL GLEW::GLEW)
 
 add_executable(fluid_worldgen_seal_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
