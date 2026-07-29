@@ -577,11 +577,22 @@ bool UChunkMeshCache::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
 bool UChunkMeshCache::FindNearestDarkFaceNear(const glm::vec3 &camera_pos,
                                               float max_dist, int chunk_radius,
                                               DarkFaceHit &out,
-                                              int *out_count_near) const
+                                              int *out_count_near,
+                                              const UBlockWorld *world,
+                                              int *out_stale_dark,
+                                              int *out_void_edge) const
 {
   if (out_count_near)
   {
     *out_count_near = 0;
+  }
+  if (out_stale_dark)
+  {
+    *out_stale_dark = 0;
+  }
+  if (out_void_edge)
+  {
+    *out_void_edge = 0;
   }
   if (max_dist <= 0.0f || chunk_radius < 0 || GreedyCache.empty())
   {
@@ -596,6 +607,26 @@ bool UChunkMeshCache::FindNearestDarkFaceNear(const glm::vec3 &camera_pos,
   float best_d2 = max_dist2;
   DarkFaceHit best{};
   int count = 0;
+  int stale_n = 0;
+  int void_n = 0;
+  auto face_air_offset = [](int fi) -> glm::ivec3
+  {
+    switch (fi)
+    {
+    case 0:
+      return {0, 0, 1};
+    case 1:
+      return {1, 0, 0};
+    case 2:
+      return {0, 0, -1};
+    case 3:
+      return {-1, 0, 0};
+    case 4:
+      return {0, 1, 0};
+    default:
+      return {0, -1, 0};
+    }
+  };
   for (const auto &entry : GreedyCache)
   {
     const glm::ivec3 &cc = entry.first;
@@ -628,6 +659,25 @@ bool UChunkMeshCache::FindNearestDarkFaceNear(const glm::vec3 &camera_pos,
           continue;
         }
         ++count;
+        if (world)
+        {
+          const int fi = static_cast<int>(v.faceIndex + 0.5f);
+          const glm::ivec3 off = face_air_offset(fi);
+          const glm::ivec3 solid(
+              WorldCoordToBlockIndex(v.px - 0.5f * static_cast<float>(off.x)),
+              WorldCoordToBlockIndex(v.py - 0.5f * static_cast<float>(off.y)),
+              WorldCoordToBlockIndex(v.pz - 0.5f * static_cast<float>(off.z)));
+          const glm::ivec3 air = solid + off;
+          if (SampleLightPacked(*world, air) != 0 ||
+              SampleLightPacked(*world, solid) != 0)
+          {
+            ++stale_n;
+          }
+          else
+          {
+            ++void_n;
+          }
+        }
         if (d2 < best_d2)
         {
           best_d2 = d2;
@@ -646,6 +696,14 @@ bool UChunkMeshCache::FindNearestDarkFaceNear(const glm::vec3 &camera_pos,
   if (out_count_near)
   {
     *out_count_near = count;
+  }
+  if (out_stale_dark)
+  {
+    *out_stale_dark = stale_n;
+  }
+  if (out_void_edge)
+  {
+    *out_void_edge = void_n;
   }
   if (found)
   {
@@ -1958,20 +2016,23 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   {
     EnsureAsyncBuilder();
     // Compact far remesh when backlog starves focus missing (Dirty~800 / async~42).
-    if (MeshFocusValid && Dirty.GetCount() > 300)
+    // After stale-apply fix: also compact when remesh plateau (dirty≫0, no holes).
+    if (MeshFocusValid && Dirty.GetCount() > 200)
     {
       const int in_flight = AsyncBuilder->GetInFlightCount();
       const int compact_horiz =
-          (in_flight >= 24 || Dirty.GetCount() > 400) ? MeshFocusRadiusChunks
+          (in_flight >= 16 || Dirty.GetCount() > 280) ? MeshFocusRadiusChunks
                                                       : MeshFocusRadiusChunks + 1;
-      if (StarveRemeshForHoles || in_flight >= 24 || Dirty.GetCount() > 420)
+      // Never compact underfeet (horiz==0); keep remesh only outside.
+      if (StarveRemeshForHoles || in_flight >= 16 || Dirty.GetCount() > 280)
       {
         for (auto it = Dirty.begin(); it != Dirty.end();)
         {
           const int horiz = std::max(std::abs(it->x - MeshFocusGroundChunk.x),
                                      std::abs(it->z - MeshFocusGroundChunk.z));
-          if (horiz > compact_horiz &&
-              GreedyCache.find(*it) != GreedyCache.end())
+          if (horiz > 0 && horiz > compact_horiz &&
+              GreedyCache.find(*it) != GreedyCache.end() &&
+              !Dirty.IsFirstMesh(*it))
           {
             it = Dirty.RemoveAt(it);
           }

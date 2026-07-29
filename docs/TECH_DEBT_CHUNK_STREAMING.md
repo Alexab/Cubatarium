@@ -57,9 +57,10 @@
 | TD-ARCH-022 | manual_1645 | Dark/sticky faces in rendered columns | Hide sticky/stale-dark r>1; nearest-hole r≤1 | done 2026-07-29; **semantics superseded by 026** |
 | TD-ARCH-023 | manual_1645 | Horizon fog flicker vs unfinished mesh | Fog hole_debt includes pending_gpu; ahead margin; expand ramp 2.5s | done 2026-07-29 |
 | TD-ARCH-024 | manual_1645 | Emerge spikes moving+holes | Cap mesh_schedule≤6 when async<4 (caused underfeed) | done 2026-07-29; **replaced by 027 floor** |
-| TD-ARCH-025 | qual_fix3 | Cruise holes_rate regressed vs qual_fix2 | Hide without repair ticket | backlog → **superseded by 026**; cruise holes still ~0.45 in arch_d2b |
+| TD-ARCH-025 | qual_fix3 | Cruise holes_rate regressed vs qual_fix2 | Hide without repair → SoT; FirstMesh only on real missing; remesh compact outside underfeet | done 2026-07-29 (partial→ARCH_D1 gate) |
+| TD-ARCH-027 | Era13 | Async throughput floor for FOV unfinished | FOV FirstMesh floor + remesh compact when dirty plateau | done 2026-07-29 |
 | TD-ARCH-026 | Era13 | Hide⇒RepairTicket via ColumnFlow | draw-when-meshed + near≤2 RelightThenMesh/Remesh; unit SoT+Contains | done 2026-07-29 |
-| TD-ARCH-027 | Era13 | Async throughput floor for FOV unfinished | FOV holes never async-starve (final floor+FirstMesh) | in-progress manual_1940 |
+| TD-ARCH-027 | Era13 | Async throughput floor for FOV unfinished | FOV FirstMesh floor + remesh compact when dirty plateau | done 2026-07-29 |
 | TD-ARCH-028 | Era13 | ColumnRenderable single SoT | Draw/telemetry from one state API | done 2026-07-29 (D2a) |
 | TD-ARCH-029 | Era13 | FirstMesh vs Remesh dirty classes | FirstMesh must not starve behind remesh thrash | done 2026-07-29 (D2a) |
 | TD-ARCH-031 | manual_1957 | Older mesh apply orphaned Active → remesh thrash | Discard-older keep-Active; GPU pending without Active drops without Dirty | done 2026-07-29 |
