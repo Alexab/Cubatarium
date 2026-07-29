@@ -361,6 +361,21 @@ public:
   /// Build pending terrain meshes before GPU upload (returns true when ready).
   bool DrainEnterGameMeshWarmup(int budget);
   bool NeedsEnterGameMeshWarmup() const;
+  /// Spawn ring has greedy mesh committed (no missing, no pending GPU apply).
+  bool IsSpawnMeshRingReady() const;
+  int CountPostLoadRingNotReady() const;
+  int GetEnterGameMeshBurstFrames() const { return EnterGameMeshBurstFrames; }
+  void TickEnterGameMeshBurst();
+  void BeginEnterGameMeshBurst(int frames = 5);
+  /// Idle catch-up until Visual RD columns are draw-ready (TD-ARCH-021/026).
+  bool NeedsSpawnRingCatchUp() const;
+  /// Hide⇒Ticket: mark column for ColumnFlow RemeshSeam (StickyRemesh set).
+  void NoteColumnRepairNeeded(glm::ivec2 ground_xz);
+  void SetEnterGameWarmupMissingGreedy(int n);
+  int GetEnterGameWarmupMissingGreedy() const
+  {
+    return EnterGameWarmupMissingGreedy;
+  }
   bool IsCreateSpawnWarmupSettled() const;
   void DrainSpawnRadiusMeshWarmup(int budget);
   void RefreshPersistedTerrainAfterSave();
@@ -979,6 +994,11 @@ public:
                                       int radius_chunks,
                                       std::vector<glm::ivec2> &out,
                                       int max_cols) const;
+  /// Focus columns with greedy mesh that still have stale dark faces.
+  int CollectStaleDarkFocusColumns(glm::ivec3 focus_ground_horiz,
+                                   int radius_chunks,
+                                   std::vector<glm::ivec2> &out,
+                                   int max_cols) const;
   /// "(cx,cz),..." for PendingLightBeforeMesh inside focus (max_cols cap).
   std::string FormatPendingLightFocusColumns(glm::ivec3 focus_ground_horiz,
                                              int radius_chunks,
@@ -1205,6 +1225,8 @@ private:
   bool CooperativeBulkGenerating{false};
   double LastMovementFrameMs{0.0};
   int PlayerRelightMeshBurstFrames{0};
+  int EnterGameMeshBurstFrames{0};
+  int EnterGameWarmupMissingGreedy{0};
   struct PendingRelightMeshColumnRange
   {
     int min_y{0};

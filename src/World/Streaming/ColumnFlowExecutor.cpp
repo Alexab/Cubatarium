@@ -101,10 +101,20 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     }
   }
 
-  // should_remesh_seam: sticky remesh debt.
+  // should_remesh_seam: sticky remesh debt + stale-dark hide (TD-ARCH-026).
   for (const glm::ivec2 &col : sticky_cols)
   {
     Enqueue(col, ColumnWorkKind::RemeshSeam, 30);
+  }
+  std::vector<glm::ivec2> stale_dark_cols;
+  world.CollectStaleDarkFocusColumns(focus_ground_horiz, focus_radius,
+                                     stale_dark_cols,
+                                     std::max(2, recover_n / 2));
+  for (const glm::ivec2 &col : stale_dark_cols)
+  {
+    Enqueue(col, ColumnWorkKind::RemeshSeam, 28);
+    // Ensure sticky set tracks hide so SyncIdle remesh can clear the column.
+    world.NoteColumnRepairNeeded(col);
   }
 
   // should_first_mesh: focus sentinel when holes / missing (Admit filters).

@@ -179,7 +179,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const bool pending = world.IsPendingLightBeforeMesh(
             glm::ivec2(chunk_coord.x, chunk_coord.z));
         const bool is_nearest_hole =
-            have_nearest_missing &&
+            have_nearest_missing && horiz <= 1 &&
             chunk_coord.x == nearest_missing_hole.x &&
             chunk_coord.z == nearest_missing_hole.z;
         const bool has_mesh = mesh_service.HasGreedyMesh(chunk_coord);
@@ -479,6 +479,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           focus_ground_horiz, static_cast<size_t>(dirty_cap), 1);
       phys.DirtyDropped += static_cast<uint64_t>(std::max(0, dropped));
     }
+    if (pressure >= 1 && pending_dirty > 360 && !visual_holes &&
+        !missing_underfeet)
+    {
+      const int dropped = mesh_service.MaybeDropFarthestDirty(
+          focus_ground_horiz, 360, 1);
+      phys.DirtyDropped += static_cast<uint64_t>(std::max(0, dropped));
+    }
     if (mtune.PendingLightSoftCap > 0 &&
         world.GetPendingLightBeforeMeshCount() >
             static_cast<size_t>(mtune.PendingLightSoftCap))
@@ -766,25 +773,25 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       mesh_schedule = std::max(mesh_schedule, 12);
     }
   }
-  // SoftDefer cold hole: raise schedule so async climbs past 4 within one
-  // 2s period (golden3 cold still 4s = two periods with async≤3).
-  if (moving && visual_holes && pending_focus_count > 0 &&
-      pending_async_early < 4)
-  {
-    mesh_schedule = std::max(mesh_schedule, 18);
-    mesh_drain = std::max(mesh_drain, 20);
-  }
   // Gpu packed defer: async telemetry stays low while GPU extract queues build.
   // Feed async harder so unfinished_visual / not_render_ready can clear.
   if ((visual_holes || missing_visible_mesh) && pending_async_early < 8)
   {
-    mesh_schedule = std::max(mesh_schedule, 16);
-    mesh_drain = std::max(mesh_drain, 16);
+    const int gpu_cap = moving ? 12 : 16;
+    mesh_schedule = std::max(mesh_schedule, gpu_cap);
+    mesh_drain = std::max(mesh_drain, gpu_cap);
   }
   if (focus_not_render_ready > 12 && pending_async_early < 10)
   {
     mesh_schedule = std::max(mesh_schedule, 14);
     mesh_drain = std::max(mesh_drain, 14);
+  }
+  // TD-ARCH-027: FOV unfinished → async throughput floor (not schedule cap).
+  // Cap Immediate/sync elsewhere; workers need schedule headroom when Dirty high.
+  if ((visual_holes || focus_not_render_ready > 0) && pending_async_early < 8)
+  {
+    mesh_schedule = std::max(mesh_schedule, moving ? 10 : 14);
+    mesh_drain = std::max(mesh_drain, moving ? 12 : 16);
   }
 
   // Standing still with backlog: prioritize drain/complete over new commits so
@@ -867,6 +874,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     mesh_drain = std::max(mesh_drain, 24);
     mesh_schedule = std::max(mesh_schedule, 24);
+  }
+  if (world.GetEnterGameMeshBurstFrames() > 0)
+  {
+    mesh_drain = std::max(mesh_drain, 20);
+    mesh_schedule = std::max(mesh_schedule, 16);
+  }
+  // TD-ARCH-021: keep catch-up while Visual ring unfinished (not only 5 frames).
+  if (!moving && world.NeedsSpawnRingCatchUp())
+  {
+    mesh_drain = std::max(mesh_drain, 24);
+    mesh_schedule = std::max(mesh_schedule, 20);
   }
 
   // Near dirty must keep MeshAsync draining even under hitch frames.
@@ -1167,7 +1185,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       auto &exec = GetColumnFlowExecutor();
       exec.RequestPromoteRelight(
           glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 60);
-      exec.DrainBudget(world, 1, focus_ground_horiz, focus_radius, 1);
+      exec.DrainBudget(world, 3, focus_ground_horiz, focus_radius, 2);
+    }
+    else if (!moving &&
+             (missing_visible_mesh || black_sticky > 0 ||
+              focus_not_render_ready > 0) &&
+             last_frame_ms <= 28.0)
+    {
+      auto &exec = GetColumnFlowExecutor();
+      exec.RequestPromoteRelight(
+          glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 40);
+      exec.DrainBudget(world, 2, focus_ground_horiz, focus_radius, 2);
+      // TD-ARCH-026/027: scale sticky remesh with debt (no full-band sync).
+      const int sticky_sync =
+          std::clamp(4 + black_sticky * 2 + (focus_not_render_ready > 16 ? 4 : 0),
+                     4, 12);
+      world.SyncIdleFocusGreedyRemesh(sticky_sync);
     }
   }
 

@@ -41,6 +41,15 @@ int main()
   Expect(b.column.x == 1 && b.column.y == 2, "column on second item");
   Expect(!s.DrainOne(a), "empty");
 
+  // TD-ARCH-026: RemeshSeam is the hide=>repair ticket kind.
+  s.Enqueue({3, 4}, ColumnWorkKind::RemeshSeam, 30);
+  s.Enqueue({3, 4}, ColumnWorkKind::RemeshSeam, 99);
+  Expect(s.Size() == 1, "RemeshSeam ticket deduped");
+  ColumnWorkItem c{};
+  Expect(s.DrainOne(c), "drain RemeshSeam");
+  Expect(c.kind == ColumnWorkKind::RemeshSeam, "repair ticket kind");
+  Expect(c.column.x == 3 && c.column.y == 4, "repair ticket column");
+
   if (gFails != 0)
   {
     std::cerr << gFails << " failures\n";

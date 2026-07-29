@@ -164,6 +164,7 @@ void UWorldStreaming::PrepareEnterGameSession(UWorld &world)
     world.ApplySpawnToCamera();
   }
   world.ConsumeSpawnAreaPreparedByCooperativeLoad();
+  world.BeginEnterGameMeshBurst(5);
 }
 
 void UWorldStreaming::WarmupSpawnAreaForEnterGame(UWorld &world)
@@ -772,6 +773,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetMeshDiscardedLateCount();
     world.PhysicsTelemetryData.MeshApplyStale =
         world.GetMeshService().GetMeshApplyStaleCount();
+    world.PhysicsTelemetryData.PendingGpuAppliesN = static_cast<int>(
+        world.GetMeshService().GetPendingGpuAppliesCount());
+    world.PhysicsTelemetryData.PostLoadRingNotReady =
+        world.CountPostLoadRingNotReady();
     {
       const auto &tune = URuntimeTuning::Get();
       world.PhysicsTelemetryData.MeshCompletedN = static_cast<int>(
@@ -1924,7 +1929,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     // behind popping trees; config start_ratio=0.85 also left mid-range clear.
     // A+B water: unfinished near fluid/sea → stronger pull-in + wider sky horizon.
     {
-      constexpr double kFogPullInExpandSec = 1.0;
+      constexpr double kFogPullInExpandSec = 2.5;
       constexpr double kFogPullInWallMs = 40.0;
       int fog_rd = effectiveRenderDistance;
       int fog_margin = render.DistanceFogEndMarginBlocks;
@@ -1939,7 +1944,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         const auto &phys = world.PhysicsTelemetryData;
         const double wall_ms = world.GetWallFrameDelta() * 1000.0;
         const int unfinished = phys.UnfinishedVisual;
-        const bool hole_debt = phys.VisualHoles > 0 || unfinished > 0;
+        const int unfinished_ahead = phys.FocusUnfinishedAhead;
+        const int gpu_pending = phys.PendingGpuAppliesN;
+        const bool hole_debt =
+            phys.VisualHoles > 0 || unfinished > 0 || gpu_pending > 0;
         const int sea = world.GetProceduralSettings().SeaLevel;
         const glm::ivec3 camera_block = glm::ivec3(glm::floor(eye));
         const bool near_water_ctx =
@@ -1967,6 +1975,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
           }
           target = std::min(target, effectiveRenderDistance - pull);
           fog_margin += 16 + std::min(32, unfinished * 4);
+          if (unfinished_ahead > 0)
+          {
+            fog_margin += 8 + std::min(24, unfinished_ahead * 3);
+          }
         }
         if (phys.StreamPressure >= 1 || wall_ms > kFogPullInWallMs)
         {
@@ -1991,7 +2003,8 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         }
         else if (target > FogPullInRd && since >= kFogPullInExpandSec)
         {
-          FogPullInRd = std::min(FogPullInRd + 1, target);
+          const int step = (since >= kFogPullInExpandSec * 2.0) ? 2 : 1;
+          FogPullInRd = std::min(FogPullInRd + step, target);
           FogPullInLastAdjust = now;
         }
         fog_rd = FogPullInRd;
@@ -2164,6 +2177,19 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
                                                  : keep_budget;
       Streamer->PrefetchKeepShell(feet_chunk, idle_hole_budget,
                                   &prefetch_keep_ops);
+    }
+    if ((world.GetEnterGameMeshBurstFrames() > 0 ||
+         world.NeedsSpawnRingCatchUp()) &&
+        !moving_fast)
+    {
+      glm::ivec3 missing{};
+      const int keep_rd = Streamer ? Streamer->GetKeepRenderDistance() : 0;
+      if (keep_rd > 0 &&
+          meshService.FindNearestMissingGreedyMesh(
+              world.GetBlockWorld(), focus_horiz, keep_rd, missing))
+      {
+        meshService.MarkDirtyPriority(missing);
+      }
     }
     world.PhysicsTelemetryData.IdlePrefetchMs =
         std::chrono::duration<double, std::milli>(

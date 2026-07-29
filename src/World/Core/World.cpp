@@ -1897,6 +1897,10 @@ bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
   // Visual band only — full 0..MaxHeight counted deep cave Dirty that vertical
   // mesh priority never drained (idle nr plateau ~50 with holes=0).
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
+  const int horiz_from_focus =
+      std::max(std::abs(ground.x - focus_chunk.x),
+               std::abs(ground.z - focus_chunk.z));
   int band_min = std::max(0, focus_block.y - CHUNK_SIZE);
   int band_max =
       std::min(ProceduralTemplate.MaxHeight, focus_block.y + CHUNK_SIZE * 2);
@@ -1924,6 +1928,24 @@ bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
       }
     }
     return false;
+  }
+
+  const glm::ivec2 ground_xz(ground.x, ground.z);
+  if (horiz_from_focus > 1)
+  {
+    if (IsColumnStickyRemesh(ground_xz))
+    {
+      return false;
+    }
+    for (int cy = cy0; cy <= cy1; ++cy)
+    {
+      const glm::ivec3 coord(ground.x, cy, ground.z);
+      if (MeshService->HasGreedyMesh(coord) &&
+          MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
+      {
+        return false;
+      }
+    }
   }
 
   const ColumnEmergeState state = GetColumnEmergeState(ground);
@@ -2472,6 +2494,77 @@ int UWorld::CollectStickyRemeshFocusColumns(glm::ivec3 focus_ground_horiz,
     out.push_back(entries[static_cast<size_t>(i)].key);
   }
   return static_cast<int>(out.size());
+}
+
+int UWorld::CollectStaleDarkFocusColumns(glm::ivec3 focus_ground_horiz,
+                                         int radius_chunks,
+                                         std::vector<glm::ivec2> &out,
+                                         int max_cols) const
+{
+  out.clear();
+  if (!MeshService || radius_chunks < 0 || max_cols <= 0)
+  {
+    return 0;
+  }
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  struct Entry
+  {
+    int dist;
+    glm::ivec2 key;
+  };
+  std::vector<Entry> entries;
+  entries.reserve(64);
+  for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
+  {
+    for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
+    {
+      const int dist = std::max(std::abs(dx), std::abs(dz));
+      if (dist <= 1)
+      {
+        continue; // underfeet may show dark preview
+      }
+      const glm::ivec2 key(focus_ground_horiz.x + dx, focus_ground_horiz.z + dz);
+      if (IsColumnStickyRemesh(key))
+      {
+        continue; // sticky path already tickets RemeshSeam
+      }
+      bool stale = false;
+      for (int cy = 0; cy <= max_cy; ++cy)
+      {
+        const glm::ivec3 coord(key.x, cy, key.y);
+        if (MeshService->HasGreedyMesh(coord) &&
+            MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
+        {
+          stale = true;
+          break;
+        }
+      }
+      if (stale)
+      {
+        entries.push_back({dist, key});
+      }
+    }
+  }
+  std::sort(entries.begin(), entries.end(),
+            [](const Entry &a, const Entry &b) { return a.dist < b.dist; });
+  const int n = std::min(max_cols, static_cast<int>(entries.size()));
+  out.reserve(static_cast<size_t>(n));
+  for (int i = 0; i < n; ++i)
+  {
+    out.push_back(entries[static_cast<size_t>(i)].key);
+  }
+  return static_cast<int>(out.size());
+}
+
+void UWorld::NoteColumnRepairNeeded(glm::ivec2 ground_xz)
+{
+  StickyRemeshAfterLight.insert(ground_xz);
+}
+
+bool UWorld::NeedsSpawnRingCatchUp() const
+{
+  return CountPostLoadRingNotReady() > 0;
 }
 
 std::string UWorld::FormatPendingLightFocusColumns(
@@ -4122,9 +4215,68 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
                           mesh_budget.MaxMeshSchedule);
   mesh.DrainAsyncMeshResults(BlockWorld, *BlockRegistry,
                              mesh_budget.MaxMeshDrain);
+  if (BlockRegistry && mesh.GetPendingGpuAppliesCount() > 0)
+  {
+    mesh.DrainPendingGpuMeshes(BlockWorld, *BlockRegistry,
+                               mesh_budget.MaxMeshDrain,
+                               std::max(8.0, static_cast<double>(budget)));
+  }
   return !HasMissingGreedyMeshesNearFocus(*this) &&
          !mesh.HasDirtyWithinHorizontalRadius(center, radius) &&
-         !mesh.HasPendingAsyncMeshWork();
+         !mesh.HasPendingAsyncMeshWork() &&
+         mesh.CountPendingGpuAppliesInHorizontalRadius(center, radius) == 0;
+}
+
+bool UWorld::IsSpawnMeshRingReady() const
+{
+  if (!MeshService || !BlockRegistry)
+  {
+    return false;
+  }
+  const glm::ivec3 center =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const int radius = EnterGameMeshRadiusChunks(*this);
+  if (HasMissingGreedyMeshesNearFocus(*this))
+  {
+    return false;
+  }
+  if (MeshService->HasDirtyWithinHorizontalRadius(center, radius))
+  {
+    return false;
+  }
+  if (MeshService->HasPendingAsyncMeshWork())
+  {
+    return false;
+  }
+  return MeshService->CountPendingGpuAppliesInHorizontalRadius(center,
+                                                               radius) == 0;
+}
+
+int UWorld::CountPostLoadRingNotReady() const
+{
+  const glm::ivec3 focus =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const glm::ivec3 focus_ground(focus.x, 0, focus.z);
+  return CountUnfinishedVisualNear(focus_ground, GetRenderDistanceChunks() + 1);
+}
+
+void UWorld::TickEnterGameMeshBurst()
+{
+  if (EnterGameMeshBurstFrames > 0)
+  {
+    --EnterGameMeshBurstFrames;
+  }
+}
+
+void UWorld::BeginEnterGameMeshBurst(int frames)
+{
+  EnterGameMeshBurstFrames = std::max(EnterGameMeshBurstFrames, std::max(0, frames));
+}
+
+void UWorld::SetEnterGameWarmupMissingGreedy(int n)
+{
+  EnterGameWarmupMissingGreedy = std::max(0, n);
+  PhysicsTelemetryData.EnterGameWarmupMissingGreedy = EnterGameWarmupMissingGreedy;
 }
 
 bool UWorld::NeedsEnterGameMeshWarmup() const
@@ -4146,7 +4298,11 @@ bool UWorld::NeedsEnterGameMeshWarmup() const
   {
     return true;
   }
-  return HasMissingGreedyMeshesNearFocus(*this);
+  if (HasMissingGreedyMeshesNearFocus(*this))
+  {
+    return true;
+  }
+  return mesh.CountPendingGpuAppliesInHorizontalRadius(center, radius) > 0;
 }
 
 bool UWorld::IsCreateSpawnWarmupSettled() const
