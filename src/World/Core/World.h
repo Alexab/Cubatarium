@@ -613,6 +613,8 @@ public:
   void SetLastPrepareFrameMs(double ms) { LastPrepareFrameMs = ms; }
   void SetLastPostSceneMs(double ms) { LastPostSceneMs = ms; }
   void SetLastGuiOverlayMs(double ms) { LastGuiOverlayMs = ms; }
+  void SetLastAutosaveMs(double ms) { LastAutosaveMs = ms; }
+  double GetLastAutosaveMs() const { return LastAutosaveMs; }
   double GetLastInputMs() const { return LastInputMs; }
   double GetLastAppUpdateMs() const { return LastAppUpdateMs; }
   double GetLastWorldTickMs() const { return LastWorldTickMs; }
@@ -1279,6 +1281,7 @@ private:
   double LastPrepareFrameMs{0.0};
   double LastPostSceneMs{0.0};
   double LastGuiOverlayMs{0.0};
+  double LastAutosaveMs{0.0};
   double LastFluidMapCpuMs{0.0};
   double LastFluidMapGpuMs{0.0};
   int LastFluidMapDirtyChunks{0};

@@ -148,6 +148,7 @@ struct FrameNumbers
   double prepare_frame_ms{0.0};
   double post_scene_ms{0.0};
   double gui_overlay_ms{0.0};
+  double autosave_ms{0.0};
   double residual_ms{0.0};
   double fluid_map_cpu_ms{0.0};
   double fluid_map_gpu_ms{0.0};
@@ -291,21 +292,14 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.mesh_emerge_ms = phys.MeshEmergeMs;
   n.scene_ms = world.GetDurationDrawSceneMks() / 1000.0;
   n.view_ms = world.GetDurationViewUpdateMks() / 1000.0;
-  n.sim_ms = n.phys_ms + n.stream_ms + n.mesh_emerge_ms + n.view_ms + n.scene_ms;
-  n.swap_wait_ms = swap_wait_ms;
-  n.unaccounted_ms = n.wall_ms - n.sim_ms - n.swap_wait_ms;
-  if (n.unaccounted_ms < 0.0 && n.unaccounted_ms > -1.0)
-  {
-    n.unaccounted_ms = 0.0;
-  }
+  // do_movement_ms captures the entire DoMovement() call from WindowManager,
+  // which already includes stream_ms + mesh_emerge_ms + tick_env_ms + phys_ms.
+  // Using it as the authoritative "logic" timer avoids double-counting.
+  n.do_movement_ms = phys.DoMovementMs;
   n.input_ms = world.GetLastInputMs();
   n.app_update_ms = world.GetLastAppUpdateMs();
-  // PhysicsStepMs already includes StreamMs + MeshEmergeMs; do not subtract
-  // them again. world_extra = Update wall outside the physics step timer.
-  n.world_extra_ms =
-      (std::max)(0.0, world.GetLastWorldTickMs() - n.phys_ms);
   n.views_ms = phys.ViewsMs;
-  n.do_movement_ms = phys.DoMovementMs;
+  n.swap_wait_ms = swap_wait_ms;
   n.block_input_ms = phys.BlockInputMs;
   n.tick_env_ms = phys.TickEnvMs;
   n.physics_block_ms = phys.BlockStepMs;
@@ -327,6 +321,20 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.prepare_frame_ms = world.GetLastPrepareFrameMs();
   n.post_scene_ms = world.GetLastPostSceneMs();
   n.gui_overlay_ms = world.GetLastGuiOverlayMs();
+  n.autosave_ms = world.GetLastAutosaveMs();
+  // sim_ms = all measured main-loop work excluding swap. do_movement_ms already
+  // contains stream_ms + mesh_emerge_ms so they are NOT added separately.
+  n.sim_ms = n.input_ms + n.app_update_ms + n.views_ms + n.do_movement_ms +
+             n.block_input_ms + n.autosave_ms + n.prepare_frame_ms +
+             n.scene_ms + n.post_scene_ms + n.gui_overlay_ms;
+  n.unaccounted_ms = n.wall_ms - n.sim_ms - n.swap_wait_ms;
+  if (n.unaccounted_ms < 0.0 && n.unaccounted_ms > -1.0)
+  {
+    n.unaccounted_ms = 0.0;
+  }
+  n.world_extra_ms =
+      (std::max)(0.0, world.GetLastWorldTickMs() - n.do_movement_ms);
+  n.residual_ms = n.unaccounted_ms - n.world_extra_ms;
   n.fluid_map_cpu_ms = world.GetLastFluidMapCpuMs();
   n.fluid_map_gpu_ms = world.GetLastFluidMapGpuMs();
   n.fluid_map_dirty = world.GetLastFluidMapDirtyChunks();
@@ -349,9 +357,6 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.prefetch_visual_ops = phys.PrefetchVisualOps;
   n.prefetch_keep_ops = phys.PrefetchKeepOps;
   n.gen_backlog_total = phys.GenBacklogTotal;
-  n.residual_ms = n.unaccounted_ms - n.input_ms - n.app_update_ms -
-                  n.world_extra_ms - n.prepare_frame_ms - n.post_scene_ms -
-                  n.gui_overlay_ms;
   const auto &md = world.GetMovementDiagnostics();
   n.flat_ms = md.flatRebuildMs;
   n.gen_q = md.genQueuePending;
@@ -521,6 +526,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"prepare_frame_ms\":" << n.prepare_frame_ms
           << ",\"post_scene_ms\":" << n.post_scene_ms
           << ",\"gui_overlay_ms\":" << n.gui_overlay_ms
+          << ",\"autosave_ms\":" << n.autosave_ms
           << ",\"residual_ms\":" << n.residual_ms
           << ",\"fluid_map_cpu_ms\":" << n.fluid_map_cpu_ms
           << ",\"fluid_map_gpu_ms\":" << n.fluid_map_gpu_ms

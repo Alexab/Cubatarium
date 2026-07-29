@@ -361,7 +361,17 @@ void UWindowManager::Run()
     }
 
     // Outside world_ms so autosave Init/Ticks do not inflate world_extra.
-    TickBudgetedAutosave();
+    {
+      const auto t_autosave = std::chrono::high_resolution_clock::now();
+      TickBudgetedAutosave();
+      if (World)
+      {
+        World->SetLastAutosaveMs(
+            std::chrono::duration<double, std::milli>(
+                std::chrono::high_resolution_clock::now() - t_autosave)
+                .count());
+      }
+    }
 
     // Rendering
     Render();
