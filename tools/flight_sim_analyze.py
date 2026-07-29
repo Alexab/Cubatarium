@@ -142,16 +142,12 @@ def analyze(
     if not dark_sticky and any("focus_dark_mesh" in r for r in steady):
         dark_sticky = col(steady, "focus_dark_mesh")
     unfinished_visual = col(steady, unfinished_key) if unfinished_key else []
-    # Treat heavy pending-light debt as unfinished. Do NOT count black_sticky
-    # alone: after SoT draw-when-meshed, sticky remesh is repair debt not a hole.
+    # SoT unfinished / missing only. Heavy pending is soft light debt, not a hole.
     effective_holes = []
     for i, (r, h, d) in enumerate(zip(steady, holes, dark_sticky)):
-        pend = float(r.get("pending_light_focus") or 0)
         unfinished = (
-            (unfinished_visual[i] > 0 if i < len(unfinished_visual) else False)
-            or h > 0
-            or pend >= 20
-        )
+            unfinished_visual[i] > 0 if i < len(unfinished_visual) else False
+        ) or h > 0
         effective_holes.append(1.0 if unfinished else 0.0)
     effective_holes_rate = (
         sum(effective_holes) / len(effective_holes) if effective_holes else 1.0

@@ -115,8 +115,11 @@ struct PhysicsTelemetry
   /// Pending-light + sticky black preview columns in focus (subset of dark).
   int FocusPendingDark{0};
   int FocusStickyRemesh{0};
-  /// Focus columns failing IsColumnRenderReady (mesh dirty/missing/inflight).
+  /// Focus columns failing SoT unfinished visual (alias of UnfinishedVisual sample).
+  /// Not pending+dirty pressure — see FocusPressure.
   int FocusNotRenderReady{0};
+  /// Pending+dirty scheduler pressure (SoftDefer Capture / ingress only).
+  int FocusPressure{0};
   /// Dirty mesh chunks inside focus radius (lit-but-dirty remesh debt).
   int FocusDirtyChunks{0};
   /// Unfinished focus columns ahead of movement/view forward (dot >= 0).
