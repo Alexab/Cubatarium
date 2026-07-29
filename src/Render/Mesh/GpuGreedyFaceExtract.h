@@ -15,24 +15,28 @@ namespace cutum
 {
 
 /// CPU reference for G5 compute face extract: one unmerged quad per exposed
-/// face of solid opaque voxels (no fluids/cutout). Used for parity tests and
-/// as decode target for GPU face-mask SSBO.
-inline bool IsOpaqueSolidForGpuExtract(UBlockRegistry &registry, BlockId id)
+/// Returns true for blocks that can be face-extracted on GPU. Solid opaque,
+/// transparent (glass), and cutout (leaves) are all eligible. Fluids and
+/// cross-instance blocks (flowers/grass) remain CPU-only.
+inline bool IsGpuFaceExtractEligible(UBlockRegistry &registry, BlockId id)
 {
   if (id == 0)
   {
     return false;
   }
-  if (registry.IsTransparent(id))
-  {
-    return false;
-  }
-  if (registry.GetRenderStyle(id) == BlockRenderStyle::Cutout ||
-      registry.GetRenderStyle(id) == BlockRenderStyle::Fluid)
+  const BlockRenderStyle style = registry.GetRenderStyle(id);
+  if (style == BlockRenderStyle::Fluid || style == BlockRenderStyle::Cross)
   {
     return false;
   }
   return registry.IsSolid(id);
+}
+
+/// Legacy alias kept for callers that need the strict opaque-only check.
+inline bool IsOpaqueSolidForGpuExtract(UBlockRegistry &registry, BlockId id)
+{
+  return IsGpuFaceExtractEligible(registry, id) &&
+         !registry.IsTransparent(id);
 }
 
 inline bool SnapshotIsGpuExtractEligible(const ChunkMeshSnapshot &snap,
@@ -44,7 +48,7 @@ inline bool SnapshotIsGpuExtractEligible(const ChunkMeshSnapshot &snap,
     {
       continue;
     }
-    if (!IsOpaqueSolidForGpuExtract(registry, id))
+    if (!IsGpuFaceExtractEligible(registry, id))
     {
       return false;
     }
@@ -59,10 +63,16 @@ inline void BuildOccupancy(const ChunkMeshSnapshot &snap,
 {
   for (int i = 0; i < CHUNK_VOLUME; ++i)
   {
-    occ[static_cast<size_t>(i)] =
-        IsOpaqueSolidForGpuExtract(registry, snap.blocks[static_cast<size_t>(i)])
-            ? 1u
-            : 0u;
+    {
+      const BlockId id = snap.blocks[static_cast<size_t>(i)];
+      if (!IsGpuFaceExtractEligible(registry, id))
+        occ[static_cast<size_t>(i)] = 0u;
+      else if (registry.IsTransparent(id) ||
+               registry.GetRenderStyle(id) == BlockRenderStyle::Cutout)
+        occ[static_cast<size_t>(i)] = 3u;
+      else
+        occ[static_cast<size_t>(i)] = 1u;
+    }
   }
 }
 
@@ -90,8 +100,19 @@ inline void BuildPaddedOccupancy(const ChunkMeshSnapshot &snap,
           continue;
         }
         const BlockId id = snap.GetBlock(world);
-        occ[static_cast<size_t>(pi)] =
-            IsOpaqueSolidForGpuExtract(registry, id) ? 1u : 0u;
+        if (!IsGpuFaceExtractEligible(registry, id))
+        {
+          occ[static_cast<size_t>(pi)] = 0u;
+        }
+        else if (registry.IsTransparent(id) ||
+                 registry.GetRenderStyle(id) == BlockRenderStyle::Cutout)
+        {
+          occ[static_cast<size_t>(pi)] = 3u;
+        }
+        else
+        {
+          occ[static_cast<size_t>(pi)] = 1u;
+        }
       }
     }
   }

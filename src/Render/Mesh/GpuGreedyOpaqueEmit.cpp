@@ -47,20 +47,22 @@ void main() {
   int y = int(i / uint(side_i * side_i));
   int z = int((i / uint(side_i)) % uint(side_i));
   int px = x + 1, py = y + 1, pz = z + 1;
-  if (occAtPad(px, py, pz) == 0u) { mask[i] = 0u; return; }
+  uint self = occAtPad(px, py, pz);
+  if (self == 0u) { mask[i] = 0u; return; }
+  // self: 1=opaque, 3=transparent/cutout
+  // neighbor: 0=air, 1=opaque, 2=unloaded(skip), 3=transparent
+  // Emit face when neighbor is air(0) or different transparency class.
+  // Opaque(1) emits vs air(0) and transparent(3).
+  // Transparent(3) emits vs air(0) and opaque(1).
+  // Never emit vs unloaded(2).
   uint m = 0u;
-  if (occAtPad(px - 1, py, pz) == 0u) m |= 1u;
-  if (occAtPad(px + 1, py, pz) == 0u) m |= 2u;
-  if (occAtPad(px, py - 1, pz) == 0u) m |= 4u;
-  if (occAtPad(px, py + 1, pz) == 0u) m |= 8u;
-  if (occAtPad(px, py, pz - 1) == 0u) m |= 16u;
-  if (occAtPad(px, py, pz + 1) == 0u) m |= 32u;
-  if (occAtPad(px - 1, py, pz) == 2u) m &= ~1u;
-  if (occAtPad(px + 1, py, pz) == 2u) m &= ~2u;
-  if (occAtPad(px, py - 1, pz) == 2u) m &= ~4u;
-  if (occAtPad(px, py + 1, pz) == 2u) m &= ~8u;
-  if (occAtPad(px, py, pz - 1) == 2u) m &= ~16u;
-  if (occAtPad(px, py, pz + 1) == 2u) m &= ~32u;
+  uint n;
+  n = occAtPad(px-1,py,pz); if (n != 2u && n != self) m |= 1u;
+  n = occAtPad(px+1,py,pz); if (n != 2u && n != self) m |= 2u;
+  n = occAtPad(px,py-1,pz); if (n != 2u && n != self) m |= 4u;
+  n = occAtPad(px,py+1,pz); if (n != 2u && n != self) m |= 8u;
+  n = occAtPad(px,py,pz-1); if (n != 2u && n != self) m |= 16u;
+  n = occAtPad(px,py,pz+1); if (n != 2u && n != self) m |= 32u;
   mask[i] = m;
 }
 )";
