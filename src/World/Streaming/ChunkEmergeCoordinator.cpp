@@ -189,12 +189,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         // SoftDefer still blocks dark *remesh*. FOV missing may first-mesh while
         // pending (dark preview) — intentional tradeoff vs plan B2 wording;
         // pure SoftDeferMeshUntilLitPolicy unchanged (TD-ARCH-032).
-        // Default: r≤2 OR nearest FOV hole. If async starved (<4), open all
-        // in_focus missing so ARCH mesh_async_when_dirty cannot sit at 0–3.
-        const int async_n = mesh_service.GetAsyncInFlightCount();
+        // r≤3 OR nearest FOV hole (async-starve full-FOV bake pushed wall>35).
         const bool fov_dark_preview =
-            !has_mesh &&
-            (horiz <= 2 || is_nearest_hole || (in_focus && async_n < 4));
+            !has_mesh && (horiz <= 3 || is_nearest_hole);
         return SoftDeferMeshUntilLitPolicy(
             underfeet, has_mesh,
             world.RequiresLightingLitGate() && pending && !fov_dark_preview,
@@ -1614,6 +1611,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     mesh_schedule = std::min(mesh_schedule, 4);
     mesh_drain = std::max(mesh_drain, 24);
+  }
+  // Lit remesh-only idle (SoT unfinished=0, no holes): cap schedule so spawn
+  // Dirty≈250 remesh does not pin wall≈85 for ~40s and dominate ARCH wall_med.
+  if (!moving && pending_focus_count == 0 && !missing_visible_mesh &&
+      black_sticky == 0 && not_ready_early == 0 && pending_dirty > 128 &&
+      !world.NeedsSpawnRingCatchUp())
+  {
+    mesh_schedule = std::min(mesh_schedule, 6);
+    mesh_drain = std::min(mesh_drain, 14);
+    mesh_service.SetMeshSnapshotBudgetMs(2.0);
   }
   // Remaining Immediate/SyncRebuild budget shares the hard Immediate ceiling.
   // Moving underfeet: keep SyncRebuild ≤~3ms wall so one chunk cannot hitch.
