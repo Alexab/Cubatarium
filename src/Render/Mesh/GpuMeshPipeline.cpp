@@ -1,4 +1,5 @@
 #include "Render/Mesh/GpuMeshPipeline.h"
+#include "Render/Mesh/PackedQuad.h"
 #include "Render/Mesh/GpuGreedyFaceExtract.h"
 #include "Render/Mesh/GpuGreedyOpaqueEmit.h"
 #include "Render/GlIncludes.h"
@@ -311,6 +312,7 @@ bool UGpuMeshPipeline::ProcessSnapshot(const ChunkMeshSnapshot &snapshot,
       static_cast<GLsizeiptr>(quads.size() * sizeof(PackedQuad)), quads.data());
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
   BuildBlockRangesFromQuads(quads, registry, out_result.blockRanges);
+  out_result.hasFullyDarkFace = PackedQuadsHaveFullyDarkFace(quads);
 
   out_result.success = true;
   out_result.slotIndex = slot_idx;

@@ -30,6 +30,7 @@ struct GpuMeshProcessResult
   int slotIndex{-1};
   uint32_t quadCount{0};
   bool transparent{false};
+  bool hasFullyDarkFace{false};
   std::vector<GpuBlockDrawRange> blockRanges;
 };
 

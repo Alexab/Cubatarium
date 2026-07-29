@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 namespace cutum
 {
@@ -48,6 +49,22 @@ struct PackedQuad
   int SkyLight() const { return static_cast<int>((word1 >> 10) & 0xF); }
   int BlockLight() const { return static_cast<int>((word1 >> 14) & 0xF); }
 };
+
+inline bool PackedQuadsHaveFullyDarkFace(const std::vector<PackedQuad> &quads)
+{
+  for (const PackedQuad &q : quads)
+  {
+    if (q.Face() == 5)
+    {
+      continue;
+    }
+    if (q.SkyLight() <= 0 && q.BlockLight() <= 0)
+    {
+      return true;
+    }
+  }
+  return false;
+}
 
 /// GLSL source for the vertex pulling shader that unpacks PackedQuad from an
 /// SSBO and emits world-space position + face/light attributes.

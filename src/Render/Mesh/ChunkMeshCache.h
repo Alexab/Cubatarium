@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <chrono>
 #include <climits>
+#include <deque>
 #include <functional>
 #include <glm/glm.hpp>
 #include <memory>
@@ -106,6 +107,7 @@ public:
   uint64_t GetMeshApplyStaleCount() const { return MeshApplyStaleCount; }
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
+  bool IsGpuExtractInFlight(glm::ivec3 chunk_coord) const;
   /// True if any non-bottom greedy vertex has sky+block light == 0.
   /// −Y bottoms are ignored (normally unlit).
   bool ChunkHasFullyDarkFace(glm::ivec3 chunk_coord) const;
@@ -340,9 +342,24 @@ private:
     int GpuSlotIndex{-1};
     uint32_t GpuQuadCount{0};
     bool GpuTransparent{false};
+    bool GpuHasDarkFace{false};
     std::vector<GpuBlockDrawRange> GpuBlockRanges;
   };
+  struct PendingGpuApply
+  {
+    glm::ivec3 coord{0};
+    uint64_t sourceRevision{0};
+    ChunkMeshSnapshot snapshot;
+    std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> crossCenters;
+  };
   void EnsureGpuPipeline();
+  bool CommitGpuMeshResult(
+      const UBlockWorld &world, UBlockRegistry &registry, glm::ivec3 coord,
+      uint64_t source_revision, GpuMeshProcessResult &&gpu_result,
+      std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> cross_centers);
+  int ProcessPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
+                              int max_count, double budget_ms,
+                              MeshRebuildTickStats &stats);
   void RebuildChunk(const UBlockWorld &world, UBlockRegistry &registry,
                     glm::ivec3 chunkCoord);
   void ApplyMeshResult(const UBlockWorld &world, UBlockRegistry &registry,
@@ -387,6 +404,8 @@ private:
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
   std::unique_ptr<UGpuMeshPipeline> GpuPipeline;
   bool GpuPipelineInitAttempted{false};
+  std::deque<PendingGpuApply> PendingGpuApplies;
+  std::unordered_set<glm::ivec3, IVec3Hash> GpuExtractInFlight;
   double LastFlatRebuildMs{0.0};
   double LastGpuCullMs{0.0};
   double LastMeshSyncMs{0.0};

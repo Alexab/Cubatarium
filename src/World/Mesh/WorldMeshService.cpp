@@ -523,6 +523,11 @@ bool UWorldMeshService::HasGreedyMesh(glm::ivec3 chunk_coord) const
   return Cache.HasGreedyMesh(chunk_coord);
 }
 
+bool UWorldMeshService::IsGpuExtractInFlight(glm::ivec3 chunk_coord) const
+{
+  return Cache.IsGpuExtractInFlight(chunk_coord);
+}
+
 bool UWorldMeshService::IsChunkMeshDirty(glm::ivec3 chunk_coord) const
 {
   return Cache.IsChunkMeshDirty(chunk_coord);

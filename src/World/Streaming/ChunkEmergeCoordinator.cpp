@@ -774,6 +774,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_schedule = std::max(mesh_schedule, 18);
     mesh_drain = std::max(mesh_drain, 20);
   }
+  // Gpu packed defer: async telemetry stays low while GPU extract queues build.
+  // Feed async harder so unfinished_visual / not_render_ready can clear.
+  if ((visual_holes || missing_visible_mesh) && pending_async_early < 8)
+  {
+    mesh_schedule = std::max(mesh_schedule, 16);
+    mesh_drain = std::max(mesh_drain, 16);
+  }
+  if (focus_not_render_ready > 12 && pending_async_early < 10)
+  {
+    mesh_schedule = std::max(mesh_schedule, 14);
+    mesh_drain = std::max(mesh_drain, 14);
+  }
 
   // Standing still with backlog: prioritize drain/complete over new commits so
   // FPS can recover (dirty outside focus used to never clear).

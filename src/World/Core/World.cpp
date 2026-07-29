@@ -1917,7 +1917,8 @@ bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
   {
     for (int cy = cy0; cy <= cy1; ++cy)
     {
-      if (MeshService->HasGreedyMesh(glm::ivec3(ground.x, cy, ground.z)))
+      if (MeshService->HasGreedyMesh(glm::ivec3(ground.x, cy, ground.z)) ||
+          MeshService->IsGpuExtractInFlight(glm::ivec3(ground.x, cy, ground.z)))
       {
         return true;
       }
@@ -1945,6 +1946,11 @@ bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
     // Prefer mesh presence — avoid full voxel scan on already-meshed slices
     // (draw-gate/cross called this thousands of times → multi-second frames).
     if (MeshService->HasGreedyMesh(coord))
+    {
+      saw_loaded_meshable = true;
+      continue;
+    }
+    if (MeshService->IsGpuExtractInFlight(coord))
     {
       saw_loaded_meshable = true;
       continue;
