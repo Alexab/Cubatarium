@@ -423,36 +423,52 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   const bool moving_for_telemetry =
       world.GetLastMovementSpeed() >
       world.GetProceduralSettings().MovementPrefetchThreshold;
-  // Cruise: sample unfinished every N frames (cheap proxy otherwise) so F2
-  // telemetry is not blind while moving (TD-ARCH-008). Full count on idle/stop.
+  // Cruise: sample unfinished every N frames. Hold last SoT count between
+  // samples for UnfinishedVisual (ARCH gates). Do NOT proxy unfinished as
+  // pending_light — that made cruise holes≈pending>0 forever (manual_d3_go).
+  // FocusNotRenderReady may still use a pending+dirty pressure proxy for Capture.
   const int focus_dirty_chunks =
       world.GetMeshService().CountDirtyWithinHorizontalRadius(focus_horiz,
                                                               focus_radius);
   static int unfinished_sample_cd = 0;
-  int not_render_ready = 0;
+  static int last_unfinished_visual = 0;
+  int unfinished_visual = 0;
+  int pressure_not_ready = 0;
   if (!moving_for_telemetry)
   {
-    not_render_ready =
+    last_unfinished_visual =
         world.CountUnfinishedVisualNear(focus_horiz, focus_radius);
+    unfinished_visual = last_unfinished_visual;
+    pressure_not_ready = unfinished_visual;
     unfinished_sample_cd = 0;
   }
   else if (--unfinished_sample_cd <= 0)
   {
-    not_render_ready =
+    last_unfinished_visual =
         world.CountUnfinishedVisualNear(focus_horiz, focus_radius);
+    unfinished_visual = last_unfinished_visual;
+    pressure_not_ready = unfinished_visual;
     unfinished_sample_cd = 8;
   }
   else
   {
-    // Proxy between samples: pending + dirty (not full RenderReady walk).
-    not_render_ready =
+    unfinished_visual = last_unfinished_visual;
+    if (missing_near && unfinished_visual == 0)
+    {
+      unfinished_visual = 1;
+    }
+    pressure_not_ready =
         pending_light_focus +
         (focus_dirty_chunks > 0 ? std::min(focus_dirty_chunks, 8) : 0);
+    if (pressure_not_ready < unfinished_visual)
+    {
+      pressure_not_ready = unfinished_visual;
+    }
   }
   world.PhysicsTelemetryData.FocusStickyRemesh = sticky_remesh;
   world.PhysicsTelemetryData.FocusPendingDark = pending_dark;
   world.PhysicsTelemetryData.FocusDarkMesh = dark_preview;
-  world.PhysicsTelemetryData.FocusNotRenderReady = not_render_ready;
+  world.PhysicsTelemetryData.FocusNotRenderReady = pressure_not_ready;
   world.PhysicsTelemetryData.FocusDirtyChunks = focus_dirty_chunks;
   // Actual baked-dark vertices near camera (not PendingLight proxy).
   // Split stale (mesh dark, field lit) vs void-edge (both 0) for ARCH_D3.
@@ -509,8 +525,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   }
   world.PhysicsTelemetryData.FocusMissingMesh = missing_near ? 1 : 0;
   world.PhysicsTelemetryData.VisualHoles = missing_near ? 1 : 0;
-  // Render contract: lit-but-dirty remesh counts even when pending=0.
-  world.PhysicsTelemetryData.UnfinishedVisual = not_render_ready;
+  // SoT unfinished (held sample while cruise); not pending-proxy.
+  world.PhysicsTelemetryData.UnfinishedVisual = unfinished_visual;
   world.PhysicsTelemetryData.LightDebt = pending_light_focus > 0 ? 1 : 0;
   world.PhysicsTelemetryData.NearFocusHoles =
       (missing_near || pending_light_focus > 0 || dark_preview > 0) ? 1 : 0;
