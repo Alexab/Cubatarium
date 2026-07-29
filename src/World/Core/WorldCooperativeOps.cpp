@@ -246,8 +246,7 @@ void MarkSpawnAreaPreparedAfterCooperativeLoad(UWorld &world,
   {
     return;
   }
-  if (!world.GetMeshService().HasPendingDirty() &&
-      !world.GetMeshService().HasPendingAsyncMeshWork())
+  if (world.IsSpawnMeshRingReady())
   {
     world.MarkSpawnAreaPreparedByCooperativeLoad();
   }

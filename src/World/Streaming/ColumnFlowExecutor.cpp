@@ -23,6 +23,16 @@ void UColumnFlowExecutor::RequestPromoteRelight(glm::ivec2 near_column,
   Enqueue(near_column, ColumnWorkKind::PromoteRelight, priority);
 }
 
+void UColumnFlowExecutor::DrainRemeshSeamBudget(UWorld &world, int max_columns)
+{
+  // One Dispatch(RemeshSeam) == SyncIdle(1); budget N needs a single SyncIdle(N)
+  // because Enqueue dedupes (column,kind) and cannot queue N identical seams.
+  if (max_columns > 0)
+  {
+    world.SyncIdleFocusGreedyRemesh(max_columns);
+  }
+}
+
 void UColumnFlowExecutor::Dispatch(UWorld &world, const ColumnWorkItem &work,
                                    glm::ivec3 focus_ground_horiz,
                                    int focus_radius, int admit_batch)

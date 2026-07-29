@@ -552,6 +552,7 @@ void UWorld::RunLegacyPhysicsFrame()
     UpdateStreaming();
     TickAsyncChunkSystems();
     const auto t_after_stream = std::chrono::high_resolution_clock::now();
+    TickEnterGameMeshBurst();
     TickMeshEmerge();
     const auto t_after_mesh = std::chrono::high_resolution_clock::now();
     BlockWorldReady = true;

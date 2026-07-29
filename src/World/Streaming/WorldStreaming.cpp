@@ -1184,6 +1184,17 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     bg_budget = std::max(bg_budget, ingress.relight_floor);
   }
+  // TD-ARCH-030: SoftDefer FOV unfinished + pending light → Capture floor.
+  {
+    const int not_ready = world.PhysicsTelemetryData.FocusNotRenderReady;
+    if (not_ready > 0 && pending_light_focus_n > 0)
+    {
+      bg_budget =
+          std::max(bg_budget, frame_ms > kBadFrameMs
+                                  ? std::min(4, 1 + not_ready / 8)
+                                  : std::min(6, 2 + not_ready / 6));
+    }
+  }
   // Two-tier promote: underfeet first, then rest of focus — so far-in-focus
   // columns do not jump ahead of the camera column in the priority FIFO.
   // Ownership: Streaming promotes *before* DrainRelightQueues. ChunkEmerge

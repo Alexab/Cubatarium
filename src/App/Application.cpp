@@ -1440,7 +1440,7 @@ void UApplication::Update(double dt)
     {
       if (WorldOpRunner->IsEnterGameGpuWarmupStage())
       {
-        constexpr int kGpuWarmupMaxFrames = 8;
+        constexpr int kGpuWarmupMaxFrames = 16;
         constexpr int kGpuWarmupMinFrames = 3;
         constexpr int kGpuWarmupMeshBudget = 16;
         constexpr int kGpuWarmupStreamingBudget = 8;

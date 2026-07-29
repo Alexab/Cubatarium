@@ -348,12 +348,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       --idle_visual_drain_cd;
     }
     // Sticky remesh outside the wall≤28 visual-drain gate: stop-tail wall is
-    // often 40–55ms (F2 sticky grew while SyncIdle never ran). MarkDirty only.
+    // often 40–55ms (F2 sticky grew while SyncIdle never ran). ColumnFlow only.
     if (black_sticky > 0 && last_frame_ms <= 55.0)
     {
       const int sticky_n =
           black_sticky > 4 ? 3 : (black_sticky > 1 ? 2 : 1);
-      world.SyncIdleFocusGreedyRemesh(sticky_n);
+      GetColumnFlowExecutor().DrainRemeshSeamBudget(world, sticky_n);
     }
   }
   else
@@ -885,6 +885,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     mesh_drain = std::max(mesh_drain, 24);
     mesh_schedule = std::max(mesh_schedule, 20);
+    // Hide⇒Ticket drain: sticky/stale-dark unfinished needs SyncIdle, not only
+    // Dirty schedule (async can sit on remesh while draw_ok stays false).
+    auto &exec = GetColumnFlowExecutor();
+    exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+                 ColumnWorkKind::FirstMesh, 80);
+    exec.DrainBudget(world, 4, focus_ground_horiz, focus_radius, 4);
+    exec.DrainRemeshSeamBudget(world, 8);
   }
 
   // Near dirty must keep MeshAsync draining even under hitch frames.
@@ -1196,11 +1203,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       exec.RequestPromoteRelight(
           glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 40);
       exec.DrainBudget(world, 2, focus_ground_horiz, focus_radius, 2);
-      // TD-ARCH-026/027: scale sticky remesh with debt (no full-band sync).
+      // TD-ARCH-026/027: scale sticky remesh via ColumnFlow (no direct SyncIdle).
       const int sticky_sync =
           std::clamp(4 + black_sticky * 2 + (focus_not_render_ready > 16 ? 4 : 0),
                      4, 12);
-      world.SyncIdleFocusGreedyRemesh(sticky_sync);
+      exec.DrainRemeshSeamBudget(world, sticky_sync);
     }
   }
 
@@ -1579,7 +1586,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Standing remesh thrash only when pipeline is saturated (manual 214430).
   // Do NOT clamp schedule whenever Dirty>100 — that froze Dirty≈270 with
   // async≈4 and left focus remesh starved (manual 220018).
-  if (!moving && remesh_thrash_only)
+  if (!moving && remesh_thrash_only && !world.NeedsSpawnRingCatchUp() &&
+      focus_not_render_ready == 0)
   {
     mesh_schedule = std::min(mesh_schedule, 4);
     mesh_drain = std::max(mesh_drain, 24);
@@ -1613,21 +1621,30 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_drain = std::max(mesh_drain, 8);
   }
   // Targeted C/CB: mesh_dirty_tick_ms was ~1.0–1.2s median on edge — hard-cap
-  // drain/schedule so emerge cannot burn the whole frame while holes stuck.
+  // drain so emerge cannot burn the whole frame while holes stuck. Do NOT clamp
+  // mesh_schedule here when holes (manual_1752 / arch_d2: async≈0 under Dirty).
   if (last_frame_ms > 100.0)
   {
     mesh_drain = (pending_dirty > 200) ? std::max(mesh_drain, 6) : 1;
-    mesh_schedule = 1;
+    // Keep a tiny schedule so workers are not starved even under hitch.
+    mesh_schedule = std::max(1, std::min(mesh_schedule, 4));
     sync_cap = 0;
   }
-  else if (last_frame_ms > 40.0 || (moving && visual_holes))
+  else if (last_frame_ms > 40.0)
   {
     mesh_drain = std::min(mesh_drain, 2);
-    mesh_schedule = std::min(mesh_schedule, 2);
+    mesh_schedule = std::min(mesh_schedule, moving ? 6 : 4);
     if (moving)
     {
       sync_cap = 0;
     }
+  }
+  // TD-ARCH-027 final floor AFTER wall clamps (replaces former holes→schedule≤2).
+  if ((visual_holes || focus_not_render_ready > 0 || pending_dirty > 100) &&
+      pending_async < 8 && last_frame_ms <= 100.0)
+  {
+    mesh_schedule = std::max(mesh_schedule, moving ? 10 : 14);
+    mesh_drain = std::max(mesh_drain, moving ? 8 : 12);
   }
   const MeshRebuildTickStats tick_stats = mesh_service.RebuildDirtyChunksWithStats(
       world.GetBlockWorld(), registry, mesh_drain, mesh_schedule,

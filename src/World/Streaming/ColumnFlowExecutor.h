@@ -45,6 +45,9 @@ public:
   /// from emerge except via Dispatch).
   void RequestPromoteRelight(glm::ivec2 near_column, int priority);
 
+  /// Sticky/seam remesh budget (ColumnFlow-only; SyncIdle lives in Dispatch).
+  void DrainRemeshSeamBudget(UWorld &world, int max_columns);
+
 private:
   void Dispatch(UWorld &world, const ColumnWorkItem &work,
                 glm::ivec3 focus_ground_horiz, int focus_radius, int admit_batch);

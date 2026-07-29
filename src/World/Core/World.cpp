@@ -4329,6 +4329,11 @@ bool UWorld::NeedsEnterGameMeshWarmup() const
   {
     return true;
   }
+  // TD-ARCH-021/D2b: Visual RD spawn barrier — post-load ring must be draw-ready.
+  if (CountPostLoadRingNotReady() > 0)
+  {
+    return true;
+  }
   return mesh.CountPendingGpuAppliesInHorizontalRadius(center, radius) > 0;
 }
 

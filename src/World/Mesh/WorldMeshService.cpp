@@ -493,6 +493,25 @@ uint64_t UWorldMeshService::GetMeshApplyStaleCount() const
   return Cache.GetMeshApplyStaleCount();
 }
 
+size_t UWorldMeshService::GetPendingGpuAppliesCount() const
+{
+  return Cache.GetPendingGpuAppliesCount();
+}
+
+int UWorldMeshService::CountPendingGpuAppliesInHorizontalRadius(
+    glm::ivec3 center_ground_chunk, int radius_chunks) const
+{
+  return Cache.CountPendingGpuAppliesInHorizontalRadius(center_ground_chunk,
+                                                      radius_chunks);
+}
+
+int UWorldMeshService::DrainPendingGpuMeshes(UBlockWorld &world,
+                                             UBlockRegistry &registry,
+                                             int max_count, double budget_ms)
+{
+  return Cache.DrainPendingGpuMeshes(world, registry, max_count, budget_ms);
+}
+
 double UWorldMeshService::GetLastFlatRebuildMs() const
 {
   return Cache.GetLastFlatRebuildMs();
@@ -526,6 +545,12 @@ bool UWorldMeshService::HasGreedyMesh(glm::ivec3 chunk_coord) const
 bool UWorldMeshService::IsGpuExtractInFlight(glm::ivec3 chunk_coord) const
 {
   return Cache.IsGpuExtractInFlight(chunk_coord);
+}
+
+bool UWorldMeshService::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
+                                              const UBlockWorld &world) const
+{
+  return Cache.ChunkHasStaleDarkFaces(chunk_coord, world);
 }
 
 bool UWorldMeshService::IsChunkMeshDirty(glm::ivec3 chunk_coord) const

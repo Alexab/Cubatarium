@@ -135,6 +135,11 @@ public:
   void SetMeshCompletedCapacity(size_t cap);
   uint64_t GetMeshDiscardedLateCount() const;
   uint64_t GetMeshApplyStaleCount() const;
+  size_t GetPendingGpuAppliesCount() const;
+  int CountPendingGpuAppliesInHorizontalRadius(glm::ivec3 center_ground_chunk,
+                                               int radius_chunks) const;
+  int DrainPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
+                            int max_count, double budget_ms);
   double GetLastFlatRebuildMs() const;
   double GetLastMeshSyncMs() const;
   double GetLastMeshSnapshotMs() const;
@@ -142,6 +147,8 @@ public:
   size_t GetGreedyCacheSize() const;
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
   bool IsGpuExtractInFlight(glm::ivec3 chunk_coord) const;
+  bool ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
+                             const UBlockWorld &world) const;
   bool IsChunkMeshDirty(glm::ivec3 chunk_coord) const;
   uint64_t GetChunkMeshRevision(glm::ivec3 chunk_coord) const;
   bool HasInflightMeshBuild(glm::ivec3 chunk_coord) const;

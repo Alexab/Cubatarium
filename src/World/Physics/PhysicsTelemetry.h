@@ -40,6 +40,12 @@ struct PhysicsTelemetry
   uint64_t MeshDiscardedLate{0};
   /// ApplyMeshResult rejected as stale (revision mismatch) — remesh thrash signal.
   uint64_t MeshApplyStale{0};
+  /// Deferred GPU mesh applies waiting for ProcessPendingGpuMeshes.
+  int PendingGpuAppliesN{0};
+  /// Ground columns in render ring without greedy mesh (excl. GpuExtractInFlight).
+  int PostLoadRingNotReady{0};
+  /// Missing greedy count when exiting EnterGame GPU warmup (diag snapshot).
+  int EnterGameWarmupMissingGreedy{0};
   double RelightCompletedPerSec{0.0};
   double CommitPhysicsMs{0.0};
   double CommitRelightMs{0.0};

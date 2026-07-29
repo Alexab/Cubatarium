@@ -67,6 +67,7 @@ struct Session
   int MaxPendingLight{0};
   int SpikesWrittenThisPeriod{0};
   int FrameCount{0};
+  uint64_t MeshApplyStaleAtPeriodStart{0};
   std::chrono::steady_clock::time_point LastEmit{
       std::chrono::steady_clock::now()};
 };
@@ -201,6 +202,10 @@ struct FrameNumbers
   int focus_unfinished_behind{0};
   uint64_t mesh_discarded_late{0};
   uint64_t mesh_apply_stale{0};
+  uint64_t mesh_apply_stale_delta{0};
+  int pending_gpu_applies_n{0};
+  int post_load_ring_not_ready{0};
+  int enter_game_warmup_missing_greedy{0};
   double rss_mb{0.0};
   double private_mb{0.0};
   int chunk_count{0};
@@ -390,6 +395,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.focus_unfinished_behind = phys.FocusUnfinishedBehind;
   n.mesh_discarded_late = phys.MeshDiscardedLate;
   n.mesh_apply_stale = phys.MeshApplyStale;
+  n.pending_gpu_applies_n = phys.PendingGpuAppliesN;
+  n.post_load_ring_not_ready = phys.PostLoadRingNotReady;
+  n.enter_game_warmup_missing_greedy = phys.EnterGameWarmupMissingGreedy;
   n.pending_cols = phys.PendingFocusCols;
 #ifdef _WIN32
   PROCESS_MEMORY_COUNTERS_EX pmc{};
@@ -584,6 +592,11 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"focus_unfinished_behind\":" << n.focus_unfinished_behind
           << ",\"mesh_discarded_late\":" << n.mesh_discarded_late
           << ",\"mesh_apply_stale\":" << n.mesh_apply_stale
+          << ",\"mesh_apply_stale_delta\":" << n.mesh_apply_stale_delta
+          << ",\"pending_gpu_applies_n\":" << n.pending_gpu_applies_n
+          << ",\"post_load_ring_not_ready\":" << n.post_load_ring_not_ready
+          << ",\"enter_game_warmup_missing_greedy\":"
+          << n.enter_game_warmup_missing_greedy
           << ",\"rss_mb\":" << n.rss_mb << ",\"private_mb\":" << n.private_mb
           << ",\"chunk_count\":" << n.chunk_count
           << ",\"greedy_vertices\":" << n.greedy_vertices
@@ -844,8 +857,14 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
   }
 
   const FrameNumbers avg = AverageFromSession(s, n);
-  WriteJsonl(s, avg, "period", /*flush=*/true);
-  LogLine(avg, "period", s.FrameCount, s.MaxWallMs);
+  FrameNumbers period = avg;
+  period.mesh_apply_stale_delta =
+      n.mesh_apply_stale >= s.MeshApplyStaleAtPeriodStart
+          ? n.mesh_apply_stale - s.MeshApplyStaleAtPeriodStart
+          : 0;
+  WriteJsonl(s, period, "period", /*flush=*/true);
+  LogLine(period, "period", s.FrameCount, s.MaxWallMs);
+  s.MeshApplyStaleAtPeriodStart = n.mesh_apply_stale;
   ResetAccum(s);
   s.LastEmit = now;
 }

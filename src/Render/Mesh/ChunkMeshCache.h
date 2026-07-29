@@ -105,6 +105,11 @@ public:
   void SetMeshCompletedCapacity(size_t cap);
   uint64_t GetMeshDiscardedLateCount() const;
   uint64_t GetMeshApplyStaleCount() const { return MeshApplyStaleCount; }
+  size_t GetPendingGpuAppliesCount() const { return PendingGpuApplies.size(); }
+  int CountPendingGpuAppliesInHorizontalRadius(glm::ivec3 center_ground_chunk,
+                                               int radius_chunks) const;
+  int DrainPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
+                            int max_count, double budget_ms);
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
   bool IsGpuExtractInFlight(glm::ivec3 chunk_coord) const;
