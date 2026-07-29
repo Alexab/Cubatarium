@@ -17,6 +17,7 @@ struct GpuGreedyEmitState
   GLuint MaskProgram{0};
   GLuint GreedyProgram{0};
   GLuint EmitProgram{0};
+  GLuint PackedEmitProgram{0};
   GLuint OccSsbo{0};
   GLuint MaskSsbo{0};
   GLuint BlocksSsbo{0};
@@ -25,6 +26,7 @@ struct GpuGreedyEmitState
   GLuint CountersSsbo{0};
   GLuint VertSsbo{0};
   GLuint IndexSsbo{0};
+  GLuint PackedQuadSsbo{0};
 #endif
   bool InitAttempted{false};
 };

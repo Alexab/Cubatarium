@@ -198,6 +198,45 @@ void main() {
 }
 )";
 
+const char *kPackedEmitCompute = R"(#version 430
+layout(local_size_x = 64) in;
+struct GpuRect {
+  uint axis, faceSign, slice, u, v, width, height, blockId, lightPacked;
+};
+layout(std430, binding = 0) readonly buffer Rects { GpuRect rects[]; };
+layout(std430, binding = 1) writeonly buffer PackedQuads { uvec2 quads[]; };
+uniform uint numRects;
+void main() {
+  uint rid = gl_GlobalInvocationID.x;
+  if (rid >= numRects) return;
+  GpuRect r = rects[rid];
+  // Face mapping: axis0 sign- =2(back), sign+ =0(front)
+  //               axis1 sign- =3(left), sign+ =1(right)
+  //               axis2 sign- =5(bot),  sign+ =4(top)
+  int face;
+  if (r.axis == 2u) face = r.faceSign == 1u ? 0 : 2;
+  else if (r.axis == 0u) face = r.faceSign == 1u ? 1 : 3;
+  else face = r.faceSign == 1u ? 4 : 5;
+  // Local position within chunk
+  int x, y, z;
+  int uAxis = (int(r.axis) + 1) % 3, vAxis = (int(r.axis) + 2) % 3;
+  int pos3[3]; pos3[int(r.axis)] = int(r.slice); pos3[uAxis] = int(r.u); pos3[vAxis] = int(r.v);
+  x = pos3[0]; y = pos3[1]; z = pos3[2];
+  uint w0 = (uint(x) & 0x1Fu)
+          | ((uint(y) & 0x1Fu) << 5u)
+          | ((uint(z) & 0x1Fu) << 10u)
+          | ((uint(r.width) & 0x1Fu) << 15u)
+          | ((uint(r.height) & 0x1Fu) << 20u)
+          | ((uint(face) & 0x7u) << 25u);
+  uint sky = r.lightPacked & 0x0Fu;
+  uint blk = (r.lightPacked >> 4u) & 0x0Fu;
+  uint w1 = (r.blockId & 0x3FFu)
+          | (sky << 10u)
+          | (blk << 14u);
+  quads[rid] = uvec2(w0, w1);
+}
+)";
+
 GLuint CompileCompute(const char *src, const char *label)
 {
   const GLuint sh = glCreateShader(GL_COMPUTE_SHADER);
@@ -256,6 +295,7 @@ bool EnsureGpuOpaqueEmit(GpuGreedyEmitState &state)
   state.MaskProgram = CompileCompute(kMaskCompute, "mask");
   state.GreedyProgram = CompileCompute(kGreedyRectCompute, "greedy");
   state.EmitProgram = CompileCompute(kVertexEmitCompute, "emit");
+  state.PackedEmitProgram = CompileCompute(kPackedEmitCompute, "packed_emit");
   if (!state.MaskProgram || !state.GreedyProgram || !state.EmitProgram)
   {
     return false;
@@ -268,6 +308,7 @@ bool EnsureGpuOpaqueEmit(GpuGreedyEmitState &state)
   glGenBuffers(1, &state.CountersSsbo);
   glGenBuffers(1, &state.VertSsbo);
   glGenBuffers(1, &state.IndexSsbo);
+  glGenBuffers(1, &state.PackedQuadSsbo);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, state.RectsSsbo);
   glBufferData(GL_SHADER_STORAGE_BUFFER,
                static_cast<GLsizeiptr>(kMaxGpuRects * 9 * sizeof(uint32_t)),
@@ -280,6 +321,10 @@ bool EnsureGpuOpaqueEmit(GpuGreedyEmitState &state)
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, state.IndexSsbo);
   glBufferData(GL_SHADER_STORAGE_BUFFER,
                static_cast<GLsizeiptr>(kMaxGpuRects * 6 * sizeof(uint32_t)),
+               nullptr, GL_DYNAMIC_DRAW);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, state.PackedQuadSsbo);
+  glBufferData(GL_SHADER_STORAGE_BUFFER,
+               static_cast<GLsizeiptr>(kMaxGpuRects * 2 * sizeof(uint32_t)),
                nullptr, GL_DYNAMIC_DRAW);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
   return true;
