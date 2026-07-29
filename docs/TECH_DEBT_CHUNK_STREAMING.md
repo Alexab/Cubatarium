@@ -52,6 +52,33 @@
 | TD-ARCH-018 | Phase0 | unacc=240ms in tail frames (emerge=0, scene=8ms) | render_total_ms added; sim_ms uses it; residual now = wall-sim-swap-world_extra; needs runtime verification | in-progress |
 | TD-ARCH-019 | Phase3a | GPF1 pipeline reads back rects+verts via glGetBufferSubData | GpuMeshPipeline wired into ChunkMeshCache+GeometryEngine; legacy readback remains fallback when GpuPackedMeshing=false or ProcessSnapshot fails | done 2026-07-29 |
 | TD-ARCH-020 | Phase3g | GLES 3.1 lacks glMultiDrawElementsIndirect | Per-chunk glDrawElementsIndirect fallback added; workgroup=64 for GLES compat | done 2026-07-29 |
+| TD-ARCH-021 | manual_1645 | Post-load empty mesh ring after EnterGame | Warmup/burst landed; **manual_1752 still post_load_ring=37** — reopen | partial → D1 spawn catch-up |
+| TD-ARCH-022 | manual_1645 | Dark/sticky faces in rendered columns | Hide sticky/stale-dark r>1; nearest-hole r≤1 | done 2026-07-29; **semantics superseded by 026** |
+| TD-ARCH-023 | manual_1645 | Horizon fog flicker vs unfinished mesh | Fog hole_debt includes pending_gpu; ahead margin; expand ramp 2.5s | done 2026-07-29 |
+| TD-ARCH-024 | manual_1645 | Emerge spikes moving+holes | Cap mesh_schedule≤6 when async<4 (caused underfeed) | done 2026-07-29; **replaced by 027 floor** |
+| TD-ARCH-025 | qual_fix3 | Cruise holes_rate regressed vs qual_fix2 | Hide without repair ticket | backlog → **superseded by 026** |
+| TD-ARCH-026 | Era13 | Hide⇒RepairTicket via ColumnFlow | Hide sticky/stale-dark must Enqueue RemeshSeam/RelightThenMesh | in-progress D1 |
+| TD-ARCH-027 | Era13 | Async throughput floor for FOV unfinished | Replace schedule cap≤6; raise async when holes/not_ready | in-progress D1 |
+| TD-ARCH-028 | Era13 | ColumnRenderable single SoT | Draw/telemetry from one state API | backlog D2 |
+| TD-ARCH-029 | Era13 | FirstMesh vs Remesh dirty classes | FirstMesh must not starve behind remesh thrash | backlog D2 |
+| TD-ARCH-030 | Era13 | SoftDefer Capture/relight floor | FOV blocked by PendingLight must still progress Capture | backlog D2 |
+
+### qual_fix3 verification — visible flight fixes (2026-07-29)
+
+Autofly after TD-ARCH-021..024 vs baselines:
+
+| Report | holes | wall_med | spikes | post_stop_holes | opaque_on_min | blue | chunks |
+|--------|-------|----------|--------|-----------------|---------------|------|--------|
+| `manual_latest_1645` (user) | 0.29 | 43 | 168 | 1.0 | — | — | — |
+| `manual_qual_fix2` | 0.24 | 27 | 22 | 0.0 | — | — | — |
+| `manual_qual_fix3` | 0.41 | 26 | 54 | 0.0 | 0 | 1 | 18 |
+| `edge_qual_fix3` | 1.0 | 48 | 65 | 1.0 | 1 | 0 | 19 |
+
+**Improved:** wall_ms (−40%), spike_count (−68% vs 1645), post_stop_effective_holes 0%, stop_not_ready_end 0, black_sticky 0.
+
+**Regressed / open:** cruise holes_rate (dark/sticky draw gate trade-off, TD-ARCH-025); edge scenario Red pressure + dirty≈693; cold_relight_holes 10–16 s; manual post-load ring needs user confirm @10 s idle.
+
+Phase 0 telemetry live: `pending_gpu_applies_n`, `mesh_apply_stale_delta`, `post_load_ring_not_ready`, `enter_game_warmup_missing_greedy`.
 
 ### Approach FPS plan — S0 baseline (2026-07-29)
 

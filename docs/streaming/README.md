@@ -5,13 +5,11 @@
 
 ## Документы
 
-- `EVOLUTION.md` — полная эволюция streaming/light/mesh, 12 эр, ключевые
-  коммиты и повторяющиеся регрессии (Era 11 / R15–R18; Era 12 / R19–R24).
+- `ROOT_CAUSE_2026-07.md` — почему фиксы не кончаются (Era 13 / manual_1752).
+- `EVOLUTION.md` — эволюция streaming/light/mesh (Era 1–13, R1–R24).
 - `MEMORY_BUDGET.md` — byte-budget, overflow/expand policies, knobs, gates.
-- `ARCHITECTURE_OPTIONS.md` — принципиально разные варианты архитектуры и
-  decision matrix.
-- `BEST_PRACTICES.md` — сравнение Cubatarium с индустриальными практиками
-  voxel-движков (включая Memory / Era 12).
+- `ARCHITECTURE_OPTIONS.md` — варианты архитектуры, Era 13 decisions, anti-zoo.
+- `BEST_PRACTICES.md` — industry gap (Hide⇒Ticket, async floor, SoT).
 - `IMPLEMENTATION_PLAN.md` — целевая архитектура, фазы реализации и критерии
   приёмки.
 - `PHASE_EXECUTION.md` — лог прогонов и memory-crisis notes (`214430` / `220018` / `221846`).

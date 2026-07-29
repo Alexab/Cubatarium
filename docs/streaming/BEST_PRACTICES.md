@@ -94,11 +94,25 @@ Cubatarium recover/admit/promote paths постепенно эволюциони
 - [Let's Make a Voxel Engine: Chunk Management](https://sites.google.com/site/letsmakeavoxelengine/home/chunk-management)
 - [Gamedev StackExchange: voxel lighting with occlusion](https://gamedev.stackexchange.com/questions/19207/how-can-i-implement-voxel-based-lighting-with-occlusion-in-a-minecraft-style-gam)
 
+## Gap После manual_1752 / Era 13 (2026-07-29)
+
+| Практика | Industry | Cubatarium после V2–V5 + GPU | Gap |
+|----------|----------|------------------------------|-----|
+| Hide ⇒ guaranteed repair ticket | Job graph + TTL/requeue | Hide sticky/dark без ticket → unfinished plateau | **критический** → TD-ARCH-026 |
+| Throughput floor when FOV unfinished | Raise async/apply floor | Cap schedule≤6 при holes → async≈2 | **критический** → TD-ARCH-027 |
+| Single ColumnRenderable SoT | One stage flag | FSM + SoftDefer + IsColumnRenderReady + GPU inflight | высокий → TD-ARCH-028 |
+| FirstMesh queue ≠ Remesh thrash | Separate priorities | Одна Dirty + missing predicate | высокий → TD-ARCH-029 |
+| SoftDefer with Capture floor | Light debt must progress | SoftDefer без floor → cold holes | высокий → TD-ARCH-030 |
+| GPU mesher end-to-end | Resident GPU mesh | Hybrid extract + packed path; cost ≠ readiness | средний (cost track) |
+
 ## Практический Вывод Для Cubatarium
 
 Наиболее полезные заимствования:
 
-1. Строгий `RenderReady` контракт.
+1. Строгий `RenderReady` / `ColumnRenderable` контракт.
 2. Commit-time skylight seed для загруженного соседнего ring.
 3. Отдельная метрика `unfinished_visual` как источник правды для gates.
 4. Постепенное схлопывание watchdog zoo в единый column scheduler.
+5. **Hide⇒RepairTicket** — никогда не прятать геометрию без job в ColumnFlow.
+6. **Async throughput floor** при unfinished FOV; cap только Immediate/sync.
+7. **FirstMesh ≠ Remesh** в dirty admission.

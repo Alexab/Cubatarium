@@ -174,3 +174,32 @@ bounded idle drain owner. Refresh/Admit×N не являются primary.
 
 **Не смешивать:** P0 relight floor и F2 heavy_dirty caps — разные budget axes.
 
+## Era 13 — Root Cause 2026-07-29 (manual_1752)
+
+См. [`ROOT_CAUSE_2026-07.md`](ROOT_CAUSE_2026-07.md).
+
+### Branch topology
+
+| Branch | Role |
+|--------|------|
+| `develop` | Pre-GPU baseline (SoftDefer/FSM/MemoryBudget) |
+| `opt_3d` | GPU dual-stack draw/store/cull; hybrid mesher |
+| `arch/streaming-v2-v4` | V2–V5 + packed GPU; current work branch |
+
+### Failed tactical patterns (do not repeat)
+
+| Pattern | Outcome | Replacement |
+|---------|---------|-------------|
+| Hide sticky/stale-dark without remesh ticket | Cruise holes↑ (TD-ARCH-025) | **Hide⇒RepairTicket** via ColumnFlow |
+| `mesh_schedule = min(..., 6)` on holes | `mesh_async≈2` while Dirty 300+ | **Async throughput floor** |
+| Fog pull-in / draw-hide as throughput fix | Masks unfinished | Cosmetics only |
+| Expect GPU packed to close SoftDefer holes | Cost path only | Stage SLA + Capture floor |
+
+### Target decisions (locked)
+
+1. **Hide⇒Ticket** — any `IsColumnRenderReady=false` for loaded voxels enqueues `RemeshSeam` / `RelightThenMesh` on `ColumnFlowExecutor`.
+2. **Throughput floor** — when `unfinished_fov>0` / visual holes, raise async schedule floor; cap only Immediate/sync.
+3. **ColumnRenderable SoT** — single draw truth; telemetry derived from it.
+4. **FirstMesh vs Remesh** dirty classes — FirstMesh never starves behind remesh thrash.
+5. **No new Admit/Recover/hide** outside ColumnFlow (anti-zoo).
+
