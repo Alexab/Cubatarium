@@ -57,7 +57,7 @@
 | TD-ARCH-023 | manual_1645 | Horizon fog flicker vs unfinished mesh | Fog hole_debt includes pending_gpu; ahead margin; expand ramp 2.5s | done 2026-07-29 |
 | TD-ARCH-024 | manual_1645 | Emerge spikes moving+holes | Cap mesh_schedule≤6 when async<4 (caused underfeed) | done 2026-07-29; **replaced by 027 floor** |
 | TD-ARCH-025 | qual_fix3 | Cruise holes_rate regressed vs qual_fix2 | Hide without repair ticket | backlog → **superseded by 026**; cruise holes still ~0.45 in arch_d2b |
-| TD-ARCH-026 | Era13 | Hide⇒RepairTicket via ColumnFlow | Hide sticky/stale-dark must Enqueue RemeshSeam/RelightThenMesh | partial — stop GO; spawn draw_ok lag |
+| TD-ARCH-026 | Era13 | Hide⇒RepairTicket via ColumnFlow | SoT: meshed sticky/stale-dark draw_ok + RelightThenMesh/RemeshSeam | in-progress — draw-when-meshed (manual_1920) |
 | TD-ARCH-027 | Era13 | Async throughput floor for FOV unfinished | Final floor after wall clamps; removed holes→schedule≤2 | partial — cruise async feeds; median gate needs FOV filter |
 | TD-ARCH-028 | Era13 | ColumnRenderable single SoT | Draw/telemetry from one state API | done 2026-07-29 (D2a) |
 | TD-ARCH-029 | Era13 | FirstMesh vs Remesh dirty classes | FirstMesh must not starve behind remesh thrash | done 2026-07-29 (D2a) |

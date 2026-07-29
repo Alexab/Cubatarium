@@ -1950,8 +1950,20 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
   {
     if (IsColumnStickyRemesh(ground_xz))
     {
+      // Ticket stays; draw existing mesh (hide-without-mesh was spawning
+      // empty rings while async remeshed forever — manual_1920 plr=28).
       out.reason = ColumnRenderableState::BlockReason::StickyRemesh;
       out.has_repair_ticket = true;
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(ground.x, cy, ground.z);
+        if (MeshService->HasGreedyMesh(coord) ||
+            MeshService->IsGpuExtractInFlight(coord))
+        {
+          out.draw_ok = true;
+          return out;
+        }
+      }
       return out;
     }
     for (int cy = cy0; cy <= cy1; ++cy)
@@ -1960,8 +1972,11 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
       if (MeshService->HasGreedyMesh(coord) &&
           MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
       {
+        // TD-ARCH-026: repair ticket without hide-when-meshed (SoT). SoftDefer
+        // still blocks dark *first-mesh commit*; draw keeps prior greedy.
         out.reason = ColumnRenderableState::BlockReason::StaleDark;
-        out.has_repair_ticket = true; // TickDerived CollectStaleDark tickets
+        out.has_repair_ticket = true;
+        out.draw_ok = true;
         return out;
       }
     }

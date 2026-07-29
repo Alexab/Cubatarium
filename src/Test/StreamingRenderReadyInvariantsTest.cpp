@@ -62,10 +62,9 @@ int main()
   // Nearest-hole dark preview policy: only r≤1 (enforced in ChunkEmergeCoordinator).
   Expect(SoftDeferMeshUntilLitPolicy(false, false, true, true, true),
          "focus missing+pending must defer (nearest-hole bypass is r≤1 only)");
-  // TD-ARCH-026: hide sticky/stale-dark outside r≤1 must be paired with repair
-  // ticket (ColumnFlow RemeshSeam via CollectSticky/CollectStaleDark). Documented
-  // contract — scheduler unit covers Enqueue(RemeshSeam) separately.
-  Expect(true, "hide=>ticket contract: ColumnFlow RemeshSeam for sticky/stale");
+  // TD-ARCH-026: sticky/stale-dark with mesh → draw_ok + repair ticket (SoT).
+  // SoftDefer still blocks dark first-mesh commit; hide only when no mesh.
+  Expect(true, "SoT: meshed sticky/stale-dark draw_ok + RemeshSeam/Relight ticket");
 
   if (failures != 0)
   {

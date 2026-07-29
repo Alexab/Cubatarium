@@ -123,6 +123,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   for (const glm::ivec2 &col : stale_dark_cols)
   {
     Enqueue(col, ColumnWorkKind::RemeshSeam, 28);
+    Enqueue(col, ColumnWorkKind::RelightThenMesh, 32);
     // Ensure sticky set tracks hide so SyncIdle remesh can clear the column.
     world.NoteColumnRepairNeeded(col);
   }
