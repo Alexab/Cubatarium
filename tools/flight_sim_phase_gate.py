@@ -354,6 +354,7 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("post_stop_black_sticky_max", "le", 0.0),
         ("post_stop_effective_holes_rate", "le", 0.0),
         ("stop_dark_face_stale_near_end", "lt", 100.0),
+        ("cold_relight_holes_sec", "le", 3.0),
         ("chunks_traveled", "ge", 3.0),
     ],
 }

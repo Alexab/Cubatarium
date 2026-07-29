@@ -6,8 +6,7 @@ namespace cutum
 {
 
 /// Pure focus-frontier ingress policy (P0): decide relight floor / promote /
-/// whether sync hole-fill is allowed. No worldgen or SoftDefer rule changes —
-/// only ownership wiring for cold holes (manual 134418: async=0 + pending).
+/// whether sync hole-fill is allowed. Stage SLA for rim latency (Era13 D).
 struct FocusIngressInput
 {
   bool moving{false};
@@ -15,6 +14,10 @@ struct FocusIngressInput
   int pending_focus{0};
   int mesh_async{0};
   double frame_ms{0.0};
+  /// SoT unfinished visual count (held sample OK).
+  int unfinished_visual{0};
+  /// Stale-dark faces near camera (mesh dark, field lit) — remesh/light debt.
+  int stale_dark_near{0};
 };
 
 struct FocusIngressDecision
@@ -25,34 +28,44 @@ struct FocusIngressDecision
   /// Sync RebuildChunkImmediate outside underfeet — false when cold pool so
   /// mesh_emerge cannot hitch 0.7–3s (prefer promote + async schedule).
   bool allow_sync_hole_fill{true};
+  /// FirstMesh admit boost while frontier Stage SLA is active.
+  int first_mesh_admit{0};
 };
 
 inline FocusIngressDecision EvaluateFocusIngress(const FocusIngressInput &in)
 {
   FocusIngressDecision out;
-  if (!in.moving || !in.missing_mesh || in.pending_focus <= 0)
+  // Frontier active: classic missing+pending, OR SoT unfinished, OR stale-dark
+  // remesh debt near camera (manual 225337 rim wait with uv≈0 / dark high).
+  const bool classic =
+      in.moving && in.missing_mesh && in.pending_focus > 0;
+  const bool sot_frontier =
+      in.moving && (in.unfinished_visual > 0 || in.missing_mesh);
+  const bool stale_frontier =
+      in.moving && in.stale_dark_near > 8 &&
+      (in.pending_focus > 0 || in.unfinished_visual > 0 || in.missing_mesh);
+  if (!classic && !sot_frontier && !stale_frontier)
   {
     return out;
   }
 
   const bool cold_pool = in.mesh_async < 4;
   const bool warm_enough = in.frame_ms <= 50.0;
-  if (!warm_enough && !cold_pool)
+  if (!warm_enough && !cold_pool && !in.missing_mesh)
   {
     return out;
   }
 
   out.active = true;
-  out.promote_once = warm_enough || cold_pool;
+  out.promote_once = warm_enough || cold_pool || in.missing_mesh;
+  out.first_mesh_admit =
+      in.missing_mesh ? (cold_pool ? 4 : 2)
+                      : (in.unfinished_visual > 0 ? 2 : 0);
 
   // Capture() for a terrain column runs on the main thread inside Drain.
-  // Old floors 36–48 made walk hitches unbounded when MeshEmerge also drained
-  // (manual 194645: one Capture ≈ 3–4s). Pace: few enqueues/frame while moving;
-  // idle Streaming floors elsewhere still catch up SoftDefer debt.
+  // Pace: few enqueues/frame while moving; SoftDefer Capture floor elsewhere.
   if (cold_pool)
   {
-    // SoftDefer cruise: pending↑ with mesh_async≈0 needs a slightly higher
-    // Capture floor so cold_relight_holes_sec does not plateaus for 16s+.
     if (in.frame_ms <= 28.0)
     {
       out.relight_floor = in.pending_focus > 8 ? 6 : 3;
@@ -65,6 +78,10 @@ inline FocusIngressDecision EvaluateFocusIngress(const FocusIngressInput &in)
   else if (in.mesh_async < 8 && in.frame_ms <= 24.0)
   {
     out.relight_floor = in.pending_focus > 12 ? 3 : 2;
+  }
+  else if (stale_frontier && in.pending_focus > 0)
+  {
+    out.relight_floor = std::max(out.relight_floor, 2);
   }
 
   // Spike guard: cold async + hole → no non-underfeet sync fill.

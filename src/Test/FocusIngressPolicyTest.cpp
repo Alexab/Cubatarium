@@ -85,7 +85,34 @@ int main()
     in.mesh_async = 0;
     in.frame_ms = 16.0;
     const auto d = EvaluateFocusIngress(in);
-    Expect(!d.active, "no pending → inactive");
+    Expect(d.active, "missing without pending → SoT frontier active");
+    Expect(d.first_mesh_admit >= 2, "missing → first_mesh admit boost");
+  }
+
+  {
+    FocusIngressInput in;
+    in.moving = true;
+    in.missing_mesh = false;
+    in.pending_focus = 0;
+    in.unfinished_visual = 0;
+    in.stale_dark_near = 0;
+    in.mesh_async = 0;
+    in.frame_ms = 16.0;
+    const auto d = EvaluateFocusIngress(in);
+    Expect(!d.active, "no frontier signal → inactive");
+  }
+
+  {
+    FocusIngressInput in;
+    in.moving = true;
+    in.missing_mesh = false;
+    in.pending_focus = 2;
+    in.unfinished_visual = 1;
+    in.stale_dark_near = 20;
+    in.mesh_async = 2;
+    in.frame_ms = 20.0;
+    const auto d = EvaluateFocusIngress(in);
+    Expect(d.active, "stale-dark + unfinished → frontier active");
   }
 
   if (gFails != 0)

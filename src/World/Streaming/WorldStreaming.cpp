@@ -1,4 +1,5 @@
 #include "World/Streaming/WorldStreaming.h"
+#include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/FocusIngressPolicy.h"
 #include "World/Streaming/SeedDecisionPolicy.h"
 #include "World/Streaming/MemoryBudgetController.h"
@@ -424,22 +425,21 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       world.GetLastMovementSpeed() >
       world.GetProceduralSettings().MovementPrefetchThreshold;
   // Cruise: sample unfinished every N frames. Hold last SoT count between
-  // samples for UnfinishedVisual (ARCH gates). Do NOT proxy unfinished as
-  // pending_light — that made cruise holes≈pending>0 forever (manual_d3_go).
-  // FocusNotRenderReady may still use a pending+dirty pressure proxy for Capture.
+  // samples for UnfinishedVisual / FocusNotRenderReady (ARCH gates).
+  // FocusPressure = pending+dirty proxy for scheduler pressure only.
   const int focus_dirty_chunks =
       world.GetMeshService().CountDirtyWithinHorizontalRadius(focus_horiz,
                                                               focus_radius);
   static int unfinished_sample_cd = 0;
   static int last_unfinished_visual = 0;
   int unfinished_visual = 0;
-  int pressure_not_ready = 0;
+  int focus_pressure = 0;
   if (!moving_for_telemetry)
   {
     last_unfinished_visual =
         world.CountUnfinishedVisualNear(focus_horiz, focus_radius);
     unfinished_visual = last_unfinished_visual;
-    pressure_not_ready = unfinished_visual;
+    focus_pressure = unfinished_visual;
     unfinished_sample_cd = 0;
   }
   else if (--unfinished_sample_cd <= 0)
@@ -447,7 +447,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     last_unfinished_visual =
         world.CountUnfinishedVisualNear(focus_horiz, focus_radius);
     unfinished_visual = last_unfinished_visual;
-    pressure_not_ready = unfinished_visual;
+    focus_pressure = unfinished_visual;
     unfinished_sample_cd = 8;
   }
   else
@@ -457,18 +457,19 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     {
       unfinished_visual = 1;
     }
-    pressure_not_ready =
+    focus_pressure =
         pending_light_focus +
         (focus_dirty_chunks > 0 ? std::min(focus_dirty_chunks, 8) : 0);
-    if (pressure_not_ready < unfinished_visual)
+    if (focus_pressure < unfinished_visual)
     {
-      pressure_not_ready = unfinished_visual;
+      focus_pressure = unfinished_visual;
     }
   }
   world.PhysicsTelemetryData.FocusStickyRemesh = sticky_remesh;
   world.PhysicsTelemetryData.FocusPendingDark = pending_dark;
   world.PhysicsTelemetryData.FocusDarkMesh = dark_preview;
-  world.PhysicsTelemetryData.FocusNotRenderReady = pressure_not_ready;
+  world.PhysicsTelemetryData.FocusNotRenderReady = unfinished_visual;
+  world.PhysicsTelemetryData.FocusPressure = focus_pressure;
   world.PhysicsTelemetryData.FocusDirtyChunks = focus_dirty_chunks;
   // Actual baked-dark vertices near camera (not PendingLight proxy).
   // Split stale (mesh dark, field lit) vs void-edge (both 0) for ARCH_D3.
@@ -1202,10 +1203,18 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   // P0 frontier ingress via FocusIngressPolicy (dedicated floor, not F2 caps).
   const FocusIngressDecision ingress = EvaluateFocusIngress(FocusIngressInput{
       moving_now, missing_focus_mesh, pending_light_focus_n, mesh_async_n,
-      frame_ms});
+      frame_ms, world.PhysicsTelemetryData.UnfinishedVisual,
+      world.PhysicsTelemetryData.DarkFaceStaleNearN});
   if (ingress.relight_floor > 0)
   {
     bg_budget = std::max(bg_budget, ingress.relight_floor);
+  }
+  if (ingress.active && ingress.promote_once)
+  {
+    auto &exec = GetColumnFlowExecutor();
+    exec.RequestPromoteRelight(glm::ivec2(focus_horiz.x, focus_horiz.z), 70);
+    exec.DrainBudget(world, 1, focus_horiz, focus_radius,
+                     std::max(1, ingress.first_mesh_admit));
   }
   // TD-ARCH-030: SoftDefer FOV unfinished + pending light → Capture floor.
   // Use SoT UnfinishedVisual / missing — NOT FocusNotRenderReady pressure
@@ -1230,24 +1239,25 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       bg_budget = std::max(bg_budget, floor_budget);
     }
   }
-  // Two-tier promote: underfeet first, then rest of focus — so far-in-focus
-  // columns do not jump ahead of the camera column in the priority FIFO.
-  // Ownership: Streaming promotes *before* DrainRelightQueues. ChunkEmerge
-  // routes PromoteRelight only via ColumnFlowExecutor (no second promote hook).
-  if (pending_bg > 0 || underfeet_pending_light)
+  // Two-tier promote via ColumnFlow only (underfeet then focus). Streaming
+  // must not call Promote* directly (Era13 anti-zoo).
   {
-    world.Persistence->PromoteNearTerrainColumnRelights(focus_horiz, 1);
-  }
-  world.PromotePendingLightRelightsNear(focus_horiz, 1);
-  if (pending_bg > 0 || near_pending_light)
-  {
-    world.Persistence->PromoteNearTerrainColumnRelights(focus_horiz,
-                                                        focus_radius);
-  }
-  world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
-  if (pending_light_focus_n > 0 && dark_face_near_n > 500)
-  {
-    world.PromotePendingLightRelightsNear(focus_horiz, focus_radius + 1);
+    auto &exec = GetColumnFlowExecutor();
+    const glm::ivec2 focus_xz(focus_horiz.x, focus_horiz.z);
+    if (pending_bg > 0 || underfeet_pending_light)
+    {
+      exec.RequestPromoteRelight(focus_xz, 55);
+      exec.DrainBudget(world, 1, focus_horiz, /*focus_radius=*/1, 1);
+    }
+    if (pending_bg > 0 || near_pending_light || pending_light_focus_n > 0)
+    {
+      const int promo_r =
+          (pending_light_focus_n > 0 && dark_face_near_n > 500)
+              ? focus_radius + 1
+              : focus_radius;
+      exec.RequestPromoteRelight(focus_xz, 45);
+      exec.DrainBudget(world, 2, focus_horiz, promo_r, 1);
+    }
   }
 
   // Re-read queue depth after promote — snapshot pending_bg may have been 0.
@@ -1270,7 +1280,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       (idle_recovery || pending_light_focus_n > 8 || missing_focus_mesh ||
        world.GetAsyncRelightInFlightCount() == 0))
   {
-    world.PromotePendingLightRelightsNear(focus_horiz, focus_radius);
+    auto &exec = GetColumnFlowExecutor();
+    exec.RequestPromoteRelight(glm::ivec2(focus_horiz.x, focus_horiz.z), 60);
+    exec.DrainBudget(world, 1, focus_horiz, focus_radius, 1);
     world.ClearPendingLightAfterMeshCommitted(12);
     // Capture is main-thread: never burst 48–56 idle (manual 220018).
     const int hole_cap =
@@ -1428,7 +1440,7 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
           (std::max)(0, world.GetMeshService().GetAsyncInFlightCount()));
   world.PhysicsTelemetryData.ChunkNotReady =
       static_cast<uint64_t>(
-          (std::max)(0, world.PhysicsTelemetryData.FocusNotRenderReady));
+          (std::max)(0, world.PhysicsTelemetryData.UnfinishedVisual));
   world.PhysicsTelemetryData.ChunkMeshedUnlit =
       static_cast<uint64_t>(
           (std::max)(0, world.PhysicsTelemetryData.FocusDarkMesh));

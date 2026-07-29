@@ -1195,13 +1195,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const FocusIngressDecision cold =
         EvaluateFocusIngress(FocusIngressInput{
             moving, missing_visible_mesh, pending_focus_count, pending_async,
-            last_frame_ms});
-    if (cold.active && cold.promote_once && pending_focus_count > 0)
+            last_frame_ms, world.GetPhysicsTelemetry().UnfinishedVisual,
+            world.GetPhysicsTelemetry().DarkFaceStaleNearN});
+    if (cold.active && cold.promote_once &&
+        (pending_focus_count > 0 || missing_visible_mesh))
     {
       auto &exec = GetColumnFlowExecutor();
       exec.RequestPromoteRelight(
           glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 80);
-      exec.DrainBudget(world, 1, focus_ground_horiz, focus_radius, 1);
+      exec.DrainBudget(world, 1, focus_ground_horiz, focus_radius,
+                       std::max(1, cold.first_mesh_admit));
     }
     else if (!moving && missing_visible_mesh && pending_focus_count > 0 &&
              last_frame_ms <= 20.0)
@@ -1506,7 +1509,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     static int force_hole_cd = 0;
     const FocusIngressDecision ingress = EvaluateFocusIngress(FocusIngressInput{
         moving, missing_visible_mesh, pending_focus_count, pending_async,
-        last_frame_ms});
+        last_frame_ms, world.GetPhysicsTelemetry().UnfinishedVisual,
+        world.GetPhysicsTelemetry().DarkFaceStaleNearN});
     if (force_hole_cd <= 0)
     {
       {
