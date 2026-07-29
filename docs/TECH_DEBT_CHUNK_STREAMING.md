@@ -45,9 +45,24 @@
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-ARCH-011 | R0 | blue_screen / opaque_on_min residual after E1 | Draw-gate false empty still on edge | backlog |
-| TD-ARCH-013b | R4/tail | Android GLES compute skylight seed | CPU seed contracts green; GPU seed deferred | backlog |
-| TD-ARCH-015 | R0 | Worker-side Capture band (ideal) | Main-thread Capture cost | backlog |
+| TD-ARCH-011 | R0 | blue_screen / opaque_on_min residual after E1 | Draw-gate false empty still on edge; S1 in progress | S1 |
+| TD-ARCH-013b | R4/tail | Android GLES compute skylight seed | CPU seed contracts green; GPU seed deferred | S4 after desktop DoD |
+| TD-ARCH-015 | R0 | Worker-side Capture band (ideal) | Main-thread Capture cost | S2 |
+| TD-ARCH-016 | S0 | holes=0 && unfinished>0 mismatch | PendingLight blanks draw even when mesh exists; SoftDefer remesh | S1 |
+
+### Approach FPS plan — S0 baseline (2026-07-29)
+
+Hypothesis: `IsColumnRenderReady` early-outs on `PendingLight` → blank FOV while
+`HasMissingGreedyMesh` stays false (mesh already present). MeshAsync≈1–2 under
+Dirty 200–300 starves first-mesh. Capture on main drives emerge spikes.
+
+| Report | run_outcome | wall_med | dirty | holes | opaque_on_min | blue_screen | F2 | C | CB |
+|--------|-------------|----------|-------|-------|---------------|-------------|----|----|-----|
+| `manual_approach_0852.json` (raw play) | n/a | 94 | 196 | 0.73 | 126 | 0 | — | — | — |
+| `edge_S0.json` | success | 78 | 389 | 0.71 | 2 | 0 | NO-GO cold=8 | NO-GO spike=562 cold=8 | NO-GO |
+| `manual_S0.json` | success | 52 | 647 | 0.81 | 0 | 1 | NO-GO sticky=5 cold=14 | NO-GO | — |
+
+Debt pass S0: closed none; opened TD-ARCH-016; baseline autofly recorded.
 
 ## TD-ARCH — Closed
 
