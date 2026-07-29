@@ -1692,6 +1692,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_schedule = std::max(mesh_schedule, moving ? 10 : 14);
     mesh_drain = std::max(mesh_drain, moving ? 8 : 12);
   }
+  // Lit remesh wall clamp AFTER SoT floors (ARCH_D3): dirty≫0 && no missing/UV.
+  if (!fov_unfinished && !missing_visible_mesh &&
+      world.GetPhysicsTelemetry().UnfinishedVisual == 0 &&
+      pending_dirty > 200)
+  {
+    mesh_schedule = std::min(mesh_schedule, moving ? 2 : 4);
+    mesh_drain = std::min(mesh_drain, moving ? 8 : 12);
+    mesh_service.SetMeshSnapshotBudgetMs(moving ? 1.2 : 2.0);
+  }
   // FirstMesh ticket every frame while FOV unfinished (Admit filters missing).
   if (fov_unfinished)
   {
