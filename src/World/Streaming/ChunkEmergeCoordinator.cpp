@@ -178,7 +178,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const bool pending = world.IsPendingLightBeforeMesh(
             glm::ivec2(chunk_coord.x, chunk_coord.z));
         const bool is_nearest_hole =
-            have_nearest_missing && horiz <= 1 &&
+            have_nearest_missing &&
             chunk_coord.x == nearest_missing_hole.x &&
             chunk_coord.z == nearest_missing_hole.z;
         const bool has_mesh = mesh_service.HasGreedyMesh(chunk_coord);
@@ -189,13 +189,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         // SoftDefer still blocks dark *remesh*. FOV missing may first-mesh while
         // pending (dark preview) — intentional tradeoff vs plan B2 wording;
         // pure SoftDeferMeshUntilLitPolicy unchanged (TD-ARCH-032).
-        // Full focus (not only r≤2): cold cruise miss@r>2 left SoftDefer skip in
-        // Dirty→async Pass1 (async=0 while uv>0 → ARCH mesh_async_when_dirty=1).
+        // Scope: r≤2 OR nearest FOV hole (not all in_focus — full FOV dark bake
+        // pushed mid-cruise wall≈45 vs ≈34 and failed ARCH wall≤30).
         (void)have_nearest_missing;
         (void)nearest_missing_hole;
-        (void)is_nearest_hole;
-        (void)horiz;
-        const bool fov_dark_preview = !has_mesh && in_focus;
+        const bool fov_dark_preview =
+            !has_mesh && (horiz <= 2 || is_nearest_hole);
         return SoftDeferMeshUntilLitPolicy(
             underfeet, has_mesh,
             world.RequiresLightingLitGate() && pending && !fov_dark_preview,
