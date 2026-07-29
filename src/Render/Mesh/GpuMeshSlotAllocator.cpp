@@ -220,4 +220,45 @@ void UGpuMeshSlotAllocator::DrawTransparent() const
 #endif
 }
 
+void UGpuMeshSlotAllocator::DrawOpaqueGles() const
+{
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  DrawOpaque();
+#else
+  if (OpaqueCommands.empty())
+  {
+    return;
+  }
+  glBindBuffer(GL_DRAW_INDIRECT_BUFFER, IndirectBuffer);
+  for (size_t i = 0; i < OpaqueCommands.size(); ++i)
+  {
+    glDrawElementsIndirect(
+        GL_TRIANGLES, GL_UNSIGNED_INT,
+        reinterpret_cast<const void *>(i * sizeof(DrawIndirectCmd)));
+  }
+  glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
+#endif
+}
+
+void UGpuMeshSlotAllocator::DrawTransparentGles() const
+{
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  DrawTransparent();
+#else
+  if (TransparentCommands.empty())
+  {
+    return;
+  }
+  glBindBuffer(GL_DRAW_INDIRECT_BUFFER, IndirectBuffer);
+  for (size_t i = 0; i < TransparentCommands.size(); ++i)
+  {
+    const size_t offset = (OpaqueCommands.size() + i) * sizeof(DrawIndirectCmd);
+    glDrawElementsIndirect(
+        GL_TRIANGLES, GL_UNSIGNED_INT,
+        reinterpret_cast<const void *>(offset));
+  }
+  glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
+#endif
+}
+
 } // namespace cutum

@@ -66,11 +66,15 @@ public:
   /// Build indirect draw commands for all allocated transparent slots.
   int BuildTransparentDrawCommands();
 
-  /// Issue the MDI draw call for opaque geometry.
+  /// Issue the MDI draw call for opaque geometry (desktop GL 4.3).
   void DrawOpaque() const;
 
-  /// Issue the MDI draw call for transparent geometry.
+  /// Issue the MDI draw call for transparent geometry (desktop GL 4.3).
   void DrawTransparent() const;
+
+  /// GLES 3.1 fallback: per-chunk glDrawElementsIndirect in a loop.
+  void DrawOpaqueGles() const;
+  void DrawTransparentGles() const;
 
   GLuint GetQuadSsbo() const { return QuadSsbo; }
   GLuint GetIndirectBuffer() const { return IndirectBuffer; }
