@@ -64,13 +64,13 @@
 | TD-ARCH-029 | Era13 | FirstMesh vs Remesh dirty classes | FirstMesh must not starve behind remesh thrash | done 2026-07-29 (D2a) |
 | TD-ARCH-030 | Era13 | SoftDefer Capture/relight floor | FOV+pending → Capture floor hits/budget telemetry; idle pending must fall when floor ticks | done 2026-07-29 |
 | TD-ARCH-031 | manual_1957 | Older mesh apply orphaned Active → remesh thrash | Discard-older keep-Active; GPU pending without Active drops without Dirty | done 2026-07-29 |
-| TD-ARCH-032 | Era13 | ARCH_D1/D3 harness GO | 2× autofly NO-GO: holes≈0.26 (need ≤0.24/0.10), async_when_dirty≈2 (need ≥4); stop/spawn/plr/dark-stale OK | backlog — no develop merge |
+| TD-ARCH-032 | Era13 | ARCH_D1/D3 harness GO | **ARCH_D1 GO** (`manual_arch_td32b`: holes≈0.19, async≈7). ARCH_D3 NO-GO: holes≤0.10, wall≤30 (got 0.19 / 30.4) | partial — D3 backlog |
 
 Evidence (stale-apply + Era13 tails, 2026-07-29):
 - `manual_stale_apply_A.json` — `mesh_apply_stale`=0 (was ~392).
-- `manual_arch_d3.json` — wall_med≈24, plr=0, stale_dark=0, post_stop holes=0;
-  ARCH_D1/D3 **NO-GO** on cruise holes + async floor. Max 2 autofly iters — stop.
-- Remaining open: TD-032, 011, 015, 013b, 018; Android GLES.
+- `manual_arch_td32b.json` — **ARCH_D1 GO**; async floor fixed via FOV r≤2 SoftDefer dark-preview + Capture floor.
+- ARCH_D3 still needs cruise holes ≤0.10 and wall_med ≤30.
+- Remaining open: TD-032 (D3), 011, 015, 013b, 018; Android GLES.
 
 **Do not merge `arch/streaming-v2-v4` → develop until ARCH_D3 PASS + explicit request.**
 
