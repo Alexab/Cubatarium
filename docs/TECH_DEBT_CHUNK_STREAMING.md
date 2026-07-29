@@ -53,29 +53,28 @@
 | TD-ARCH-019 | Phase3a | GPF1 pipeline reads back rects+verts via glGetBufferSubData | GpuMeshPipeline wired into ChunkMeshCache+GeometryEngine; legacy readback remains fallback when GpuPackedMeshing=false or ProcessSnapshot fails | done 2026-07-29 |
 | TD-ARCH-020 | Phase3g | GLES 3.1 lacks glMultiDrawElementsIndirect | Per-chunk glDrawElementsIndirect fallback added; workgroup=64 for GLES compat | done 2026-07-29 |
 | TD-ARCH-021 | manual_1645 | Post-load empty mesh ring after EnterGame | Warmup/burst + SoftDefer Capture SLA telemetry (`softdefer_capture_*`, idle pending delta); gate `post_load_ring_idle_max=0` | done 2026-07-29 (measurable; spawn sticky closed via SoT draw) |
-| TD-ARCH-030 | Era13 | SoftDefer Capture/relight floor | FOV+pending → Capture floor hits/budget telemetry; idle pending must fall when floor ticks | done 2026-07-29 |
 | TD-ARCH-022 | manual_1645 | Dark/sticky faces in rendered columns | Hide sticky/stale-dark r>1; nearest-hole r≤1 | done 2026-07-29; **semantics superseded by 026** |
 | TD-ARCH-023 | manual_1645 | Horizon fog flicker vs unfinished mesh | Fog hole_debt includes pending_gpu; ahead margin; expand ramp 2.5s | done 2026-07-29 |
 | TD-ARCH-024 | manual_1645 | Emerge spikes moving+holes | Cap mesh_schedule≤6 when async<4 (caused underfeed) | done 2026-07-29; **replaced by 027 floor** |
 | TD-ARCH-025 | qual_fix3 | Cruise holes_rate regressed vs qual_fix2 | SoT UnfinishedVisual (no pending-proxy); holes≈0.05–0.09 | done 2026-07-29 — evidence `manual_arch_d3_live.json` |
 | TD-ARCH-026 | Era13 | Hide⇒RepairTicket via ColumnFlow | draw-when-meshed + near≤2 RelightThenMesh/Remesh; unit SoT+Contains | done 2026-07-29 |
-| TD-ARCH-027 | Era13 | Async throughput floor for FOV unfinished | SoftDefer first-mesh r≤3\|\|nearest; `mesh_async_med_when_dirty≥5` | done 2026-07-29 — evidence `manual_arch_d3_live.json` |
+| TD-ARCH-027 | Era13 | Async throughput floor for FOV unfinished | SoftDefer **AllowUnlitFirstMesh** SoT predicate (r≤3\|\|nearest); `mesh_async_med_when_dirty≥4` | done 2026-07-29 — evidence `manual_arch_d3_live.json` |
 | TD-ARCH-028 | Era13 | ColumnRenderable single SoT | Draw/telemetry from one state API | done 2026-07-29 (D2a) |
 | TD-ARCH-029 | Era13 | FirstMesh vs Remesh dirty classes | FirstMesh must not starve behind remesh thrash | done 2026-07-29 (D2a) |
-| TD-ARCH-030 | Era13 | SoftDefer Capture/relight floor | Capture floor on SoT UnfinishedVisual/missing (not FocusNotRenderReady proxy) | done 2026-07-29 |
+| TD-ARCH-030 | Era13 | SoftDefer Capture/relight floor | Capture floor on SoT UnfinishedVisual/missing; **FocusPressure** = pending+dirty scheduler proxy only (not hole) | done 2026-07-29 |
 | TD-ARCH-031 | manual_1957 | Older mesh apply orphaned Active → remesh thrash | Discard-older keep-Active; GPU pending without Active drops without Dirty | done 2026-07-29 |
-| TD-ARCH-032 | Era13 | ARCH_D1/D3 harness GO | **ARCH_D1 GO**. SoftDefer FOV first-mesh = call-site tradeoff (r≤3\|\|nearest). **D3 NO-GO:** only `wall_ms_med≈32–34` (need ≤30); holes/async/stop OK | in-progress |
+| TD-ARCH-032 | Era13 | ARCH_D1/D3 harness GO | Architecture A–E landed. Autofly×2 `--replay-manual`: `manual_arch_era13_01/02.json`. **cold_relight=2≤3 OK**; holes/async OK on 02. **D3 NO-GO:** `wall_ms_med≈44` (need ≤30), `post_stop_black_sticky_max≈9`. Stop SoftDefer zoo after 2 iters. | in-progress |
+| TD-ARCH-033 | Era13/rim | Frontier first-mesh latency (manual 225337) | Stage SLA + UnlitFirstMesh + sync promote | partial — confirm on World_164 edge smoke |
 
 Evidence (stale-apply + Era13 tails, 2026-07-29):
 - `manual_stale_apply_A.json` — `mesh_apply_stale`=0 (was ~392).
-- `manual_arch_td32b.json` / `manual_arch_d3_live.json` — **ARCH_D1 GO**; holes≤0.10, async≥4.
-- ARCH_D3 blocker: `wall_ms_med` (idle remesh head + mid-cruise ~37–40 vs stop ~28). Next: cruise wall only — stop autofly zoo.
-- Remaining open: TD-032 (D3 wall), 011, 015, 013b, 018; Android GLES.
+- `manual_arch_td32b.json` / prior D3 live — **ARCH_D1** was GO before Era13 promote rewrite.
+- Era13 A–E on `arch/streaming-v2-v4`: AllowUnlitFirstMesh, FocusPressure, ColumnFlow `RunPromoteRelightNow`, FocusIngress Stage SLA, lit remesh clamp (softened). Units PASS. Autofly×2 NO-GO on wall/sticky — do not merge develop.
+- Remaining open: TD-032 (D3 wall+sticky), TD-033 (rim confirm), 011, 015, 013b, 018; Android GLES.
 
 **Do not merge `arch/streaming-v2-v4` → develop until ARCH_D3 PASS + explicit request.**
 
 Evidence (prior): `bin/iter_reports/timeline/arch_d2_manual.json`, `arch_d2b_manual.json`.
-Stop autofly loop until a single cruise-wall hypothesis (no SoftDefer zoo).
 
 ### qual_fix3 verification — visible flight fixes (2026-07-29)
 

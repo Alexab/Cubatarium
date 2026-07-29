@@ -30,10 +30,12 @@ FOV/keep visual SLA (not terrain PendingLight gate), lighting seed factory
 Cpu≠Gpu, idle Capture progress, CollectAll removed. Evidence: `edge_R1`/`R2`/`R3`
 `run_outcome=success`.
 
-Still open for gate DoD (not architecture):
+Era13 architecture DoD (026–030): **done** — Hide⇒Ticket via ColumnFlow
+Contains, AllowUnlitFirstMesh SoT SoftDefer, FocusPressure≠hole, Capture floor
+on UnfinishedVisual, FocusIngress Stage SLA. Remaining gate DoD (not architecture):
 
-- F2/C/CB NO-GO on edge (`holes_rate`/`dirty`/`wall`/`blue_screen` residuals).
-- TD-ARCH-011 blue_screen; TD-ARCH-015 worker Capture backlog.
+- ARCH_D3 `wall_ms_med≤30` (lit remesh clamp; evidence autofly).
+- F2/C/CB residuals on edge; TD-ARCH-011 blue_screen; TD-ARCH-015 worker Capture backlog.
 
 Research alignment: Luanti/Minetest chunk job ownership, UE streaming memory
 budgets, Qt RHI capability backends, 0fps-style lighting-before-mesh — mapped to
@@ -96,13 +98,14 @@ Cubatarium recover/admit/promote paths постепенно эволюциони
 
 ## Gap После manual_1752 / Era 13 (2026-07-29)
 
-| Практика | Industry | Cubatarium после V2–V5 + GPU | Gap |
-|----------|----------|------------------------------|-----|
-| Hide ⇒ guaranteed repair ticket | Job graph + TTL/requeue | Hide sticky/dark без ticket → unfinished plateau | **критический** → TD-ARCH-026 |
-| Throughput floor when FOV unfinished | Raise async/apply floor | Cap schedule≤6 при holes → async≈2 | **критический** → TD-ARCH-027 |
-| Single ColumnRenderable SoT | One stage flag | FSM + SoftDefer + IsColumnRenderReady + GPU inflight | высокий → TD-ARCH-028 |
-| FirstMesh queue ≠ Remesh thrash | Separate priorities | Одна Dirty + missing predicate | высокий → TD-ARCH-029 |
-| SoftDefer with Capture floor | Light debt must progress | SoftDefer без floor → cold holes | высокий → TD-ARCH-030 |
+| Практика | Industry | Cubatarium после Era13 closeout | Gap |
+|----------|----------|--------------------------------|-----|
+| Hide ⇒ guaranteed repair ticket | Job graph + TTL/requeue | ColumnFlow Contains + sticky enqueue TickDerived | **closed** TD-ARCH-026 |
+| Throughput floor when FOV unfinished | Raise async/apply floor | AllowUnlitFirstMesh + schedule floors | **closed** TD-ARCH-027 |
+| Single ColumnRenderable SoT | One stage flag | GetColumnRenderableState + FocusPressure split | **closed** TD-ARCH-028/030 |
+| FirstMesh queue ≠ Remesh thrash | Separate priorities | FirstMesh tickets + lit remesh clamp | **closed** TD-ARCH-029 |
+| SoftDefer with Capture floor | Light debt must progress | Capture on UV\|missing; FocusIngress Stage SLA | **closed** TD-ARCH-030 |
+| Frontier rim first-mesh latency | Stage SLA | FocusIngress unfinished/stale-dark | **partial** TD-ARCH-033 |
 | GPU mesher end-to-end | Resident GPU mesh | Hybrid extract + packed path; cost ≠ readiness | средний (cost track) |
 
 ## Практический Вывод Для Cubatarium
