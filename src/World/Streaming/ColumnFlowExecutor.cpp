@@ -162,8 +162,10 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   // Threshold 80 (was 200): manual 190350 idle start stale≈100 + void≈610
   // never crossed 200, so residual blacks sat for ~16s with miss=nh=0.
   std::vector<glm::ivec2> stale_dark_cols;
+  std::vector<glm::ivec2> void_dark_cols;
   const int stale_n = world.GetPhysicsTelemetry().DarkFaceStaleNearN;
   const int dark_n = world.GetPhysicsTelemetry().DarkFaceNearN;
+  const int void_n = world.GetPhysicsTelemetry().DarkFaceVoidNearN;
   constexpr double kStaleRepairCooldownSec = 2.0;
   const auto now = std::chrono::steady_clock::now();
   const bool cooldown_ok =
@@ -173,6 +175,11 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   const bool allow_stale_wave =
       !missing_visible_mesh && cooldown_ok &&
       (stale_n > 80 || (dark_n > 500 && stale_n > 0));
+  // Void-edge: light field 0 — Relight near-ring (manual 190350 void≫stale).
+  // Idle/stop only: while moving Relight competed with FirstMesh
+  // (land_south_void_cruise miss_stuck 14).
+  const bool allow_void_wave =
+      !missing_visible_mesh && !moving && cooldown_ok && void_n > 200;
   if (allow_stale_wave)
   {
     const int stale_radius = focus_radius;
@@ -180,11 +187,23 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     world.CollectStaleDarkFocusColumns(focus_ground_horiz, stale_radius,
                                        stale_dark_cols, stale_cap);
   }
+  if (allow_void_wave)
+  {
+    const int void_cap = std::min(4, std::max(2, recover_n / 2));
+    world.CollectFullyDarkFocusColumns(focus_ground_horiz, /*radius=*/2,
+                                       void_dark_cols, void_cap);
+  }
   EnqueueStickyStaleRepairTickets(scheduler_, focus, sticky_cols,
                                   stale_dark_cols);
-  if (allow_stale_wave && !stale_dark_cols.empty())
+  EnqueueVoidDarkRelightTickets(scheduler_, focus, void_dark_cols);
+  if ((allow_stale_wave && !stale_dark_cols.empty()) ||
+      (allow_void_wave && !void_dark_cols.empty()))
   {
     for (const glm::ivec2 &col : stale_dark_cols)
+    {
+      world.NoteColumnRepairNeeded(col);
+    }
+    for (const glm::ivec2 &col : void_dark_cols)
     {
       world.NoteColumnRepairNeeded(col);
     }

@@ -95,4 +95,22 @@ inline void EnqueueStickyStaleRepairTickets(
   }
 }
 
+/// Void-edge debt: Relight-first (mesh dark + light field 0). No RemeshSeam —
+/// remesh alone cannot invent light (manual 190350 void≈610).
+inline void EnqueueVoidDarkRelightTickets(
+    UColumnFlowScheduler &scheduler, glm::ivec2 focus,
+    const std::vector<glm::ivec2> &void_dark_cols)
+{
+  auto near_dist = [&](glm::ivec2 col) {
+    return std::max(std::abs(col.x - focus.x), std::abs(col.y - focus.y));
+  };
+  for (const glm::ivec2 &col : void_dark_cols)
+  {
+    const int d = near_dist(col);
+    const int prio_boost = d <= 2 ? 25 : 0;
+    scheduler.Enqueue(col, ColumnWorkKind::RelightThenMesh, 50 + prio_boost);
+    scheduler.Enqueue(col, ColumnWorkKind::PromoteRelight, 45 + prio_boost);
+  }
+}
+
 } // namespace cutum

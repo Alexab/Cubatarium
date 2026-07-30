@@ -2634,6 +2634,67 @@ int UWorld::CollectStaleDarkFocusColumns(glm::ivec3 focus_ground_horiz,
   return static_cast<int>(out.size());
 }
 
+int UWorld::CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
+                                         int radius_chunks,
+                                         std::vector<glm::ivec2> &out,
+                                         int max_cols) const
+{
+  out.clear();
+  if (!MeshService || radius_chunks < 0 || max_cols <= 0)
+  {
+    return 0;
+  }
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  struct Entry
+  {
+    int dist;
+    glm::ivec2 key;
+  };
+  std::vector<Entry> entries;
+  entries.reserve(64);
+  for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
+  {
+    for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
+    {
+      const int dist = std::max(std::abs(dx), std::abs(dz));
+      if (dist < 1 || dist > 2)
+      {
+        continue; // near-ring only (void Relight thrash guard)
+      }
+      const glm::ivec2 key(focus_ground_horiz.x + dx, focus_ground_horiz.z + dz);
+      if (IsColumnStickyRemesh(key))
+      {
+        continue;
+      }
+      bool fully_dark = false;
+      for (int cy = 0; cy <= max_cy; ++cy)
+      {
+        const glm::ivec3 coord(key.x, cy, key.y);
+        if (MeshService->HasGreedyMesh(coord) &&
+            MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+        {
+          fully_dark = true;
+          break;
+        }
+      }
+      if (fully_dark)
+      {
+        entries.push_back({dist, key});
+      }
+    }
+  }
+  std::sort(entries.begin(), entries.end(),
+            [](const Entry &a, const Entry &b) { return a.dist < b.dist; });
+  const int n = std::min(max_cols, static_cast<int>(entries.size()));
+  out.reserve(static_cast<size_t>(n));
+  for (int i = 0; i < n; ++i)
+  {
+    out.push_back(entries[static_cast<size_t>(i)].key);
+  }
+  return static_cast<int>(out.size());
+}
+
 void UWorld::NoteColumnRepairNeeded(glm::ivec2 ground_xz)
 {
   StickyRemeshAfterLight.insert(ground_xz);

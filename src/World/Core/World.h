@@ -1020,6 +1020,12 @@ public:
                                    int radius_chunks,
                                    std::vector<glm::ivec2> &out,
                                    int max_cols) const;
+  /// Focus columns with greedy mesh that still have fully-dark faces (void-edge
+  /// debt: mesh dark and light field 0 — needs Relight, not remesh alone).
+  int CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
+                                   int radius_chunks,
+                                   std::vector<glm::ivec2> &out,
+                                   int max_cols) const;
   /// "(cx,cz),..." for PendingLightBeforeMesh inside focus (max_cols cap).
   std::string FormatPendingLightFocusColumns(glm::ivec3 focus_ground_horiz,
                                              int radius_chunks,
