@@ -2055,7 +2055,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         // Stale-dark alone is remesh debt (manual 182125: nh=0, stale=401).
         const bool hole_debt_now =
             phys.VisualHoles > 0 || unfinished > 0 || gpu_pending > 0 ||
-            phys.DarkFaceStaleNearN > 200;
+            phys.DarkFaceStaleNearN > 80;
         if (hole_debt_now)
         {
           FogPullInHoleHoldFrames = kFogHoleHoldFrames;

@@ -158,9 +158,12 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   // should_remesh_seam: sticky always; stale-dark as gated waves.
   // Cooldown + cap avoid 092627 thrash. Do NOT require NearFocusHoles —
   // after Pending clears nh→0 while DarkFaceStaleNear stays high
-  // (manual 182125: stale=401 plateau). Skip while missing so FirstMesh wins.
+  // (manual 182125/190350). Skip while missing so FirstMesh wins.
+  // Threshold 80 (was 200): manual 190350 idle start stale≈100 + void≈610
+  // never crossed 200, so residual blacks sat for ~16s with miss=nh=0.
   std::vector<glm::ivec2> stale_dark_cols;
   const int stale_n = world.GetPhysicsTelemetry().DarkFaceStaleNearN;
+  const int dark_n = world.GetPhysicsTelemetry().DarkFaceNearN;
   constexpr double kStaleRepairCooldownSec = 2.0;
   const auto now = std::chrono::steady_clock::now();
   const bool cooldown_ok =
@@ -168,7 +171,8 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       std::chrono::duration<double>(now - LastStaleRepairWave).count() >=
           kStaleRepairCooldownSec;
   const bool allow_stale_wave =
-      stale_n > 200 && cooldown_ok && !missing_visible_mesh;
+      !missing_visible_mesh && cooldown_ok &&
+      (stale_n > 80 || (dark_n > 500 && stale_n > 0));
   if (allow_stale_wave)
   {
     const int stale_radius = focus_radius;
