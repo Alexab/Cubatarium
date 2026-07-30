@@ -131,6 +131,23 @@ int main(int argc, char *argv[])
         {
           opt.TeleportToCruiseStart = false;
         }
+        else if (std::strcmp(argv[j], "--cruise-cx") == 0 && j + 1 < argc)
+        {
+          opt.CruiseStartChunkX = static_cast<float>(std::atof(argv[++j]));
+        }
+        else if (std::strcmp(argv[j], "--cruise-cz") == 0 && j + 1 < argc)
+        {
+          opt.CruiseStartChunkZ = static_cast<float>(std::atof(argv[++j]));
+        }
+        else if (std::strcmp(argv[j], "--min-alt-above-sea") == 0 &&
+                 j + 1 < argc)
+        {
+          opt.MinAltitudeAboveSea = static_cast<float>(std::atof(argv[++j]));
+        }
+        else if (std::strcmp(argv[j], "--cruise-eye-y") == 0 && j + 1 < argc)
+        {
+          opt.CruiseEyeY = static_cast<float>(std::atof(argv[++j]));
+        }
         else if (std::strcmp(argv[j], "--perf-out") == 0 && j + 1 < argc)
         {
           opt.PerfOutPath = argv[++j];

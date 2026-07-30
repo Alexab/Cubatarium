@@ -436,6 +436,31 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     int start_focus_cx = 0;
     int start_focus_cz = 0;
     bool start_focus_captured = false;
+    // Land cruise: resolve eye from terrain once column is loaded
+    // (FindHighestSolidY + 12 for dark_stale stress; was +20 with stale=0).
+    // Fallback CruiseEyeY until solid ready.
+    float land_eye_y = options.CruiseEyeY;
+    bool land_eye_from_terrain = false;
+
+    auto resolve_land_eye_y = [&](UWorld &w, const glm::vec3 &pos) -> float {
+      if (options.CruiseEyeY <= 0.0f)
+      {
+        return 0.0f;
+      }
+      if (land_eye_from_terrain)
+      {
+        return land_eye_y;
+      }
+      const int wx = static_cast<int>(std::floor(pos.x));
+      const int wz = static_cast<int>(std::floor(pos.z));
+      if (const auto top = w.FindHighestSolidY(wx, wz))
+      {
+        land_eye_y = static_cast<float>(*top) + 12.0f;
+        land_eye_from_terrain = true;
+        return land_eye_y;
+      }
+      return options.CruiseEyeY;
+    };
 
     window.SetStopPredicate(
         [&]()
@@ -487,7 +512,12 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 }
                 if (!options.BreakStandMode)
                 {
-                  const float min_y = sea + options.MinAltitudeAboveSea;
+                  // Land: terrain+20 when solid ready, else CruiseEyeY.
+                  // Ocean: sea + MinAltitudeAboveSea.
+                  const float land_y = resolve_land_eye_y(*world, pos);
+                  const float min_y = land_y > 0.0f
+                                          ? land_y
+                                          : (sea + options.MinAltitudeAboveSea);
                   if (pos.y < min_y || options.TeleportToCruiseStart)
                   {
                     pos.y = min_y;
@@ -532,12 +562,16 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 camera->SetOrientation(yaw, options.FacePitchDeg);
                 // Keep cruise altitude (manual holds Space / levels pitch).
                 if (!options.BreakStandMode && !options.YawSweepMode &&
-                    (options.HoldSpace || options.MinAltitudeAboveSea > 0.0f))
+                    (options.HoldSpace || options.MinAltitudeAboveSea > 0.0f ||
+                     options.CruiseEyeY > 0.0f))
                 {
                   const float sea = static_cast<float>(
                       world->GetProceduralSettings().SeaLevel);
-                  const float min_y = sea + options.MinAltitudeAboveSea;
                   glm::vec3 pos = camera->GetPosition();
+                  const float land_y = resolve_land_eye_y(*world, pos);
+                  const float min_y = land_y > 0.0f
+                                          ? land_y
+                                          : (sea + options.MinAltitudeAboveSea);
                   if (pos.y < min_y)
                   {
                     pos.y = min_y;

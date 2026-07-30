@@ -31,6 +31,9 @@ struct FlightSimOptions
   float FacePitchDeg{-2.0f};
   /// Eye height above sea when too low (ocean cruise).
   float MinAltitudeAboveSea{28.0f};
+  /// Absolute eye Y for land cruise. When > 0, overrides sea+MinAltitude clamp
+  /// (inland hills sit above sea+28; manual land corridor ~y=96).
+  float CruiseEyeY{0.0f};
   /// Hold Space while flying to maintain altitude (manual FreeMove climb).
   bool HoldSpace{false};
   bool Sprint{false};

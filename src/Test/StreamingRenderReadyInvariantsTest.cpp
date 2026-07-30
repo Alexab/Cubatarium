@@ -28,10 +28,10 @@ static void Expect(bool cond, const char *msg)
 
 int main()
 {
-  // SoftDefer: first mesh while PendingLight is deferred unless SoT
-  // allow_unlit_first_mesh. Remesh while pending stays deferred.
-  Expect(SoftDeferMeshUntilLitPolicy(true, false, true, true, false, false),
-         "underfeet missing+pending must defer (no unlit allow)");
+  // SoftDefer: first-mesh in focus/underfeet never deferred (UnlitFirstMesh).
+  // Remesh while pending stays deferred.
+  Expect(!SoftDeferMeshUntilLitPolicy(true, false, true, true, false, false),
+         "underfeet missing+pending allows first mesh");
   Expect(SoftDeferMeshUntilLitPolicy(true, true, true, true, false, false),
          "underfeet has_mesh+pending defer remesh");
   Expect(!SoftDeferMeshUntilLitPolicy(true, true, false, true, false, false),
@@ -39,9 +39,9 @@ int main()
   Expect(!SoftDeferMeshUntilLitPolicy(true, false, false, true, false, false),
          "underfeet missing+lit allow first mesh");
 
-  // Focus missing + pending => defer without UnlitFirstMesh allow.
-  Expect(SoftDeferMeshUntilLitPolicy(false, false, true, true, true, false),
-         "focus missing+pending must defer");
+  // Focus missing + pending => allow first mesh (SoftDefer remesh-only).
+  Expect(!SoftDeferMeshUntilLitPolicy(false, false, true, true, true, false),
+         "focus missing+pending allows first mesh");
   // Focus missing + lit => allow.
   Expect(!SoftDeferMeshUntilLitPolicy(false, false, false, true, true, false),
          "focus missing+lit allow");
@@ -52,9 +52,11 @@ int main()
   Expect(!SoftDeferMeshUntilLitPolicy(false, true, false, true, true, false),
          "focus has_mesh+lit allow remesh");
 
-  // Outside focus: pending always defers; else MayMesh gate.
+  // Outside focus: pending always defers missing unless allow_unlit; else MayMesh.
   Expect(SoftDeferMeshUntilLitPolicy(false, false, true, false, true, false),
          "outside missing+pending must defer");
+  Expect(!SoftDeferMeshUntilLitPolicy(false, false, true, false, true, true),
+         "outside missing+pending+allow_unlit allows first mesh");
   Expect(SoftDeferMeshUntilLitPolicy(false, false, false, false, false, false),
          "outside missing !may_mesh defer");
   Expect(!SoftDeferMeshUntilLitPolicy(false, false, false, false, true, false),
@@ -63,7 +65,7 @@ int main()
   Expect(!ShouldRejectDarkMeshCommit(false, true, true),
          "lit new mesh always commits");
   Expect(ShouldRejectDarkMeshCommit(true, true, false),
-         "pending-light dark first mesh rejected");
+         "pending-light dark first mesh rejected when defer_until_lit");
   Expect(ShouldRejectDarkMeshCommit(true, false, true),
          "dark remesh must not replace lit mesh");
   Expect(!ShouldRejectDarkMeshCommit(true, false, false),
@@ -71,17 +73,19 @@ int main()
 
   // SoT AllowUnlitFirstMesh + SoftDefer allow_unlit_first_mesh.
   Expect(AllowUnlitFirstMesh(false, 2, false, true),
-         "missing r<=3 in focus → AllowUnlitFirstMesh");
+         "missing in focus → AllowUnlitFirstMesh");
   Expect(AllowUnlitFirstMesh(false, 5, true, true),
-         "nearest missing beyond r3 → AllowUnlitFirstMesh");
+         "far missing in focus → AllowUnlitFirstMesh");
   Expect(!AllowUnlitFirstMesh(true, 1, true, true),
          "has_mesh never AllowUnlitFirstMesh");
-  Expect(!AllowUnlitFirstMesh(false, 5, false, true),
-         "far non-nearest missing → no AllowUnlitFirstMesh");
+  Expect(AllowUnlitFirstMesh(false, 5, false, true),
+         "any FOV missing → AllowUnlitFirstMesh (land rim)");
+  Expect(!AllowUnlitFirstMesh(false, 5, false, false),
+         "outside focus → no AllowUnlitFirstMesh");
   Expect(!SoftDeferMeshUntilLitPolicy(false, false, true, true, true, true),
-         "policy: pending+allow_unlit_first_mesh allows first mesh");
-  Expect(SoftDeferMeshUntilLitPolicy(false, false, true, true, true, false),
-         "policy: pending without allow still defers");
+         "policy: pending+focus allows first mesh");
+  Expect(!SoftDeferMeshUntilLitPolicy(false, false, true, true, true, false),
+         "policy: focus missing never SoftDefer-skips first mesh");
 
   // TD-ARCH-026: SoT sticky/stale-dark (real invariants, not Expect(true)).
   {

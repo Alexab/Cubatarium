@@ -1201,6 +1201,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     bg_budget = std::max(bg_budget, pending_light_focus_n > 24 ? 4 : 3);
   }
   // P0 frontier ingress via FocusIngressPolicy (dedicated floor, not F2 caps).
+  // Rim FirstMesh SLA: missing mesh (pending optional) → prefer admit over
+  // Capture/promote thrash (manual 131234 / land_fix miss_stuck).
+  const bool rim_first_mesh_sla = missing_focus_mesh;
   const FocusIngressDecision ingress = EvaluateFocusIngress(FocusIngressInput{
       moving_now, missing_focus_mesh, pending_light_focus_n, mesh_async_n,
       frame_ms, world.PhysicsTelemetryData.UnfinishedVisual,
@@ -1209,16 +1212,32 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     bg_budget = std::max(bg_budget, ingress.relight_floor);
   }
+  // Do not hard-cap Capture here while missing: SoftDefer floor below needs
+  // room (floor=0 / bg≤2 → miss_stuck 24s on land_fix_P1). Promote order +
+  // Relight prio≤FirstMesh are the rim SLA levers.
   if (ingress.active && ingress.promote_once)
   {
     auto &exec = GetColumnFlowExecutor();
-    exec.RunPromoteRelightNow(world, focus_horiz, focus_radius);
-    if (ingress.first_mesh_admit > 0)
+    // Rim SLA: FirstMesh Drain before any promote Capture.
+    if (rim_first_mesh_sla && ingress.first_mesh_admit > 0)
     {
       exec.Enqueue(glm::ivec2(focus_horiz.x, focus_horiz.z),
-                   ColumnWorkKind::FirstMesh, 80);
-      exec.DrainBudget(world, 1, focus_horiz, focus_radius,
+                   ColumnWorkKind::FirstMesh, 100);
+      exec.DrainBudget(world, moving_now ? 2 : 3, focus_horiz, focus_radius,
                        ingress.first_mesh_admit);
+      // Underfeet promote only (r=1) — no full-focus promote while missing.
+      exec.RunPromoteRelightNow(world, focus_horiz, /*focus_radius=*/1);
+    }
+    else
+    {
+      exec.RunPromoteRelightNow(world, focus_horiz, focus_radius);
+      if (ingress.first_mesh_admit > 0)
+      {
+        exec.Enqueue(glm::ivec2(focus_horiz.x, focus_horiz.z),
+                     ColumnWorkKind::FirstMesh, 80);
+        exec.DrainBudget(world, 1, focus_horiz, focus_radius,
+                         ingress.first_mesh_admit);
+      }
     }
   }
   // TD-ARCH-030: SoftDefer FOV unfinished + pending light → Capture floor.
@@ -1232,12 +1251,14 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     world.PhysicsTelemetryData.SoftDeferCaptureBudget = 0;
     if ((unfinished > 0 || missing_focus_mesh) && pending_light_focus_n > 0)
     {
-      const int floor_budget =
+      int floor_budget =
           missing_focus_mesh
               ? (moving_now ? (frame_ms > kBadFrameMs ? 3 : 5)
                             : (frame_ms > kBadFrameMs ? 4 : 6))
               : (frame_ms > kBadFrameMs ? std::min(4, 1 + unfinished / 8)
                                         : std::min(6, 2 + unfinished / 6));
+      // Keep SoftDefer Capture floor while missing — do not zero/downclamp for
+      // rim SLA (land_fix_P1/P1b: floor≤2 → SoftDefer stuck, miss_stuck 24s).
       world.PhysicsTelemetryData.SoftDeferCaptureBudget = floor_budget;
       if (floor_budget > 0)
       {
@@ -1257,8 +1278,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     }
     if (pending_bg > 0 || near_pending_light || pending_light_focus_n > 0)
     {
+      // No ring expand while missing; still promote focus radius so SoftDefer
+      // PendingLight can clear (skip-all → miss_stuck 24s on land_fix_P1).
       const int promo_r =
-          (pending_light_focus_n > 0 && dark_face_near_n > 500)
+          (pending_light_focus_n > 0 && dark_face_near_n > 500 &&
+           !rim_first_mesh_sla)
               ? focus_radius + 1
               : focus_radius;
       exec.RunPromoteRelightNow(world, focus_horiz, promo_r);
@@ -1286,7 +1310,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
        world.GetAsyncRelightInFlightCount() == 0))
   {
     auto &exec = GetColumnFlowExecutor();
-    exec.RunPromoteRelightNow(world, focus_horiz, focus_radius);
+    exec.RunPromoteRelightNow(world, focus_horiz,
+                              rim_first_mesh_sla ? 1 : focus_radius);
     world.ClearPendingLightAfterMeshCommitted(12);
     // Capture is main-thread: never burst 48–56 idle (manual 220018).
     const int hole_cap =
@@ -2019,8 +2044,11 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         const int unfinished = phys.UnfinishedVisual;
         const int unfinished_ahead = phys.FocusUnfinishedAhead;
         const int gpu_pending = phys.PendingGpuAppliesN;
+        // Also latch on near-ring dark remesh debt so fog End does not expand
+        // while opaque land remesh is still thrashing (manual 131234 p23).
         const bool hole_debt_now =
-            phys.VisualHoles > 0 || unfinished > 0 || gpu_pending > 0;
+            phys.VisualHoles > 0 || unfinished > 0 || gpu_pending > 0 ||
+            (phys.DarkFaceStaleNearN > 200 && phys.NearFocusHoles > 0);
         if (hole_debt_now)
         {
           FogPullInHoleHoldFrames = kFogHoleHoldFrames;

@@ -5,6 +5,7 @@
 #include "World/Streaming/ColumnRenderablePolicy.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <vector>
 
@@ -117,9 +118,25 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   world.CollectStickyRemeshFocusColumns(focus_ground_horiz, focus_radius,
                                         sticky_cols, std::max(2, recover_n / 2));
 
+  // should_first_mesh FIRST: priority must beat RelightThenMesh (recover+50)
+  // or DrainBudget spends the frame on Capture while the rim hole stays empty
+  // (manual 131234 p09–12).
+  const bool hole_first_mesh =
+      admit_n > 0 && (missing_visible_mesh || visual_holes) &&
+      ((!moving && !idle_remesh_debt) || moving);
+  if (hole_first_mesh)
+  {
+    Enqueue(focus, ColumnWorkKind::FirstMesh, 100 + admit_n);
+  }
+
   // should_relight_then_mesh / should_promote_relight: real pending columns.
+  // While missing FirstMesh, keep Relight priority below FirstMesh (≤99).
   if (!idle_remesh_debt && !idle_focus_dirty_debt && recover_n > 0)
   {
+    const int relight_hi =
+        missing_visible_mesh ? 55 : (recover_n + 50);
+    const int promote_hi =
+        missing_visible_mesh ? 45 : (recover_n + 20);
     int enq = 0;
     for (const glm::ivec2 &col : pending_cols)
     {
@@ -127,37 +144,49 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       {
         break;
       }
-      Enqueue(col, ColumnWorkKind::RelightThenMesh, recover_n + 50 - enq);
-      Enqueue(col, ColumnWorkKind::PromoteRelight, recover_n + 20 - enq);
+      Enqueue(col, ColumnWorkKind::RelightThenMesh, relight_hi - enq);
+      Enqueue(col, ColumnWorkKind::PromoteRelight, promote_hi - enq);
       ++enq;
     }
     if (enq == 0)
     {
-      Enqueue(focus, ColumnWorkKind::RelightThenMesh, recover_n);
+      Enqueue(focus, ColumnWorkKind::RelightThenMesh,
+              missing_visible_mesh ? 40 : recover_n);
     }
   }
 
-  // should_remesh_seam: sticky remesh debt + stale-dark (TD-ARCH-026).
-  // Near ring (horiz≤2): always RelightThenMesh + RemeshSeam — edge black faces
-  // (manual_1940 dark_face_near≈1000+) need light progress, not remesh alone.
+  // should_remesh_seam: sticky always; stale-dark only as gated waves.
+  // Every-frame NoteColumnRepair + SoftDefer dark floor → sticky=17 / pending
+  // plateau (manual 092627). Wave only when nh + stale>200, cooldown 2s.
   std::vector<glm::ivec2> stale_dark_cols;
-  const int stale_cap =
-      std::max(4, recover_n); // prefer draining near stale over tiny batches
-  world.CollectStaleDarkFocusColumns(focus_ground_horiz, focus_radius,
-                                     stale_dark_cols, stale_cap);
+  const int stale_n = world.GetPhysicsTelemetry().DarkFaceStaleNearN;
+  const bool near_holes =
+      missing_visible_mesh || visual_holes ||
+      world.GetPhysicsTelemetry().NearFocusHoles > 0;
+  constexpr double kStaleRepairCooldownSec = 2.0;
+  const auto now = std::chrono::steady_clock::now();
+  const bool cooldown_ok =
+      LastStaleRepairWave.time_since_epoch().count() == 0 ||
+      std::chrono::duration<double>(now - LastStaleRepairWave).count() >=
+          kStaleRepairCooldownSec;
+  // Skip while FirstMesh missing — rim admit must win; repair after miss clears.
+  const bool allow_stale_wave =
+      !missing_visible_mesh && near_holes && stale_n > 200 && cooldown_ok;
+  if (allow_stale_wave)
+  {
+    const int stale_cap = std::min(4, std::max(2, recover_n / 2));
+    world.CollectStaleDarkFocusColumns(focus_ground_horiz, focus_radius,
+                                       stale_dark_cols, stale_cap);
+  }
   EnqueueStickyStaleRepairTickets(scheduler_, focus, sticky_cols,
                                   stale_dark_cols);
-  for (const glm::ivec2 &col : stale_dark_cols)
+  if (allow_stale_wave && !stale_dark_cols.empty())
   {
-    world.NoteColumnRepairNeeded(col);
-  }
-
-  // should_first_mesh: real missing OR FOV visual holes (not pending-only).
-  // PendingLight without missing → RelightThenMesh / SoftDefer Capture.
-  if (admit_n > 0 && (missing_visible_mesh || visual_holes) &&
-      ((!moving && !idle_remesh_debt) || moving))
-  {
-    Enqueue(focus, ColumnWorkKind::FirstMesh, admit_n + 50);
+    for (const glm::ivec2 &col : stale_dark_cols)
+    {
+      world.NoteColumnRepairNeeded(col);
+    }
+    LastStaleRepairWave = now;
   }
 }
 

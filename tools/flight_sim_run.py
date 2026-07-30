@@ -220,6 +220,12 @@ def main() -> int:
     ap.add_argument("--stop-phase-sec", type=float, default=50.0)
     ap.add_argument("--idle-sec", type=float, default=8.0)
     ap.add_argument(
+        "--warmup-sec",
+        type=float,
+        default=5.0,
+        help="analyze skip of early periods (land-cruise raises to ≥20)",
+    )
+    ap.add_argument(
         "--sprint",
         action="store_true",
         help="hold sprint during fly (covers more chunks like manual)",
@@ -263,6 +269,36 @@ def main() -> int:
         help="replay World_164 edge autofly route (-47,5): teleport-cruise + fly-stop",
     )
     ap.add_argument(
+        "--land-cruise",
+        action="store_true",
+        help="inland land cruise (manual corridor ~-485,50): teleport + hold-space "
+        "+ cruise-eye-y + fly-stop; analyze --manual-idle",
+    )
+    ap.add_argument(
+        "--cruise-cx",
+        type=float,
+        default=None,
+        help="teleport cruise start chunk X (default: ocean -47 or land -485)",
+    )
+    ap.add_argument(
+        "--cruise-cz",
+        type=float,
+        default=None,
+        help="teleport cruise start chunk Z (default: ocean 5 or land 50)",
+    )
+    ap.add_argument(
+        "--cruise-eye-y",
+        type=float,
+        default=None,
+        help="absolute eye Y for land cruise (overrides sea+alt when set)",
+    )
+    ap.add_argument(
+        "--yaw",
+        type=float,
+        default=None,
+        help="autopilot yaw degrees (default: exe 180 west)",
+    )
+    ap.add_argument(
         "--hold-space",
         action="store_true",
         help="hold Space while flying (climb / maintain altitude)",
@@ -271,7 +307,7 @@ def main() -> int:
         "--pitch",
         type=float,
         default=None,
-        help="autopilot pitch degrees (default: exe -2, replay-manual 0)",
+        help="autopilot pitch degrees (default: exe -2, replay-manual/land 0)",
     )
     ap.add_argument(
         "--process-timeout",
@@ -292,8 +328,16 @@ def main() -> int:
     ap.add_argument(
         "--scenario",
         default="",
-        choices=["", "break-stand", "visual-blue", "visual-dig", "visual-flicker", "visual-edge"],
-        help="named scenario (break-stand / visual-* GPU regression repros)",
+        choices=[
+            "",
+            "break-stand",
+            "visual-blue",
+            "visual-dig",
+            "visual-flicker",
+            "visual-edge",
+            "land-cruise",
+        ],
+        help="named scenario (break-stand / visual-* / land-cruise)",
     )
     ap.add_argument("--break-phase-sec", type=float, default=20.0)
     ap.add_argument("--break-interval-sec", type=float, default=1.0)
@@ -365,6 +409,9 @@ def main() -> int:
         args.fly_phase_sec = max(args.fly_phase_sec, 45.0)
         args.stop_phase_sec = max(args.stop_phase_sec, 30.0)
 
+    if args.scenario == "land-cruise":
+        args.land_cruise = True
+
     if args.replay_manual:
         args.world = "World_164"
         args.fly_stop = True
@@ -378,6 +425,37 @@ def main() -> int:
         args.idle_sec = max(args.idle_sec, 45.0)
         args.fly_phase_sec = max(args.fly_phase_sec, 45.0)
         args.stop_phase_sec = max(args.stop_phase_sec, 90.0)
+
+    if args.land_cruise:
+        # Inland corridor matching manual 084551…142306 (not ocean -47,5).
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.resume = False
+        args.teleport_cruise = True
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            # South over land (L2): opaque_med~700. West (180) at eye-y 96
+            # often sparse/blue_screen (L1/L3/L4 opaque_med~2–4).
+            args.yaw = 90.0
+        if args.cruise_cx is None:
+            args.cruise_cx = -485.0
+        if args.cruise_cz is None:
+            args.cruise_cz = 50.0
+        if args.cruise_eye_y is None:
+            args.cruise_eye_y = 96.0
+        args.idle_sec = max(args.idle_sec, 8.0)
+        args.fly_phase_sec = max(args.fly_phase_sec, 45.0)
+        args.stop_phase_sec = max(args.stop_phase_sec, 45.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        # Skip cold-spawn miss in analyze (land_fix_P1e: miss=1 for ~12s at
+        # teleport). Do not raise idle — longer idle raised wall/dirty (P1f).
+        args.warmup_sec = max(args.warmup_sec, 16.0)
 
     if args.replay_edge:
         args.world = "World_164"
@@ -469,12 +547,20 @@ def main() -> int:
         sim_cmd.append("--hold-space")
     if args.pitch is not None:
         sim_cmd.extend(["--pitch", str(args.pitch)])
+    if args.yaw is not None:
+        sim_cmd.extend(["--yaw", str(args.yaw)])
     if args.visible:
         sim_cmd.append("--visible")
     if args.teleport_cruise:
         sim_cmd.append("--teleport-cruise")
     else:
         sim_cmd.append("--no-teleport-cruise")
+    if args.cruise_cx is not None:
+        sim_cmd.extend(["--cruise-cx", str(args.cruise_cx)])
+    if args.cruise_cz is not None:
+        sim_cmd.extend(["--cruise-cz", str(args.cruise_cz)])
+    if args.cruise_eye_y is not None:
+        sim_cmd.extend(["--cruise-eye-y", str(args.cruise_eye_y)])
 
     process_timeout = args.process_timeout
     if process_timeout <= 0.0:
@@ -520,8 +606,10 @@ def main() -> int:
         "--report",
         str(args.report),
     ]
-    if args.replay_manual or args.fly_stop:
+    if args.replay_manual or args.fly_stop or args.land_cruise:
         analyze_cmd.append("--manual-idle")
+    if getattr(args, "warmup_sec", None) is not None:
+        analyze_cmd.extend(["--warmup-sec", str(args.warmup_sec)])
     ana = subprocess.call(analyze_cmd)
     info_log = None
     if DIAG.is_file():

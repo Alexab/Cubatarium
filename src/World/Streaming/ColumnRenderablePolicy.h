@@ -54,15 +54,16 @@ inline ColumnSoTDecision ClassifyStickyStaleDarkSoT(bool has_mesh_or_gpu,
 
 /// Explicit SoT contract: FOV missing may first-mesh while PendingLight
 /// (UnlitFirstMesh / dark preview). Remesh while pending stays deferred.
-/// Rule: !has_mesh && in_focus && (horiz<=3 || nearest missing).
-inline bool AllowUnlitFirstMesh(bool has_mesh, int horiz_from_focus,
-                                bool is_nearest_missing, bool in_focus)
+/// Full focus missing (not only nearest): SoftDefer rim waits on Capture
+/// otherwise leave miss=1 for many periods (land_fix_P1c timeline).
+inline bool AllowUnlitFirstMesh(bool has_mesh, int /*horiz_from_focus*/,
+                                bool /*is_nearest_missing*/, bool in_focus)
 {
   if (has_mesh || !in_focus)
   {
     return false;
   }
-  return horiz_from_focus <= 3 || is_nearest_missing;
+  return true;
 }
 
 /// Enqueue RemeshSeam / RelightThenMesh tickets for sticky + stale-dark columns

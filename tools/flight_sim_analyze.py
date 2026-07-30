@@ -359,6 +359,52 @@ def analyze(
             run = 0
     cold_relight_holes_sec = cold_relight_holes * 2.0
 
+    # Land-cruise symptoms (manual 131234 / 142306): miss stuck, miss at end,
+    # opaque draw-list churn while hovering on one focus chunk.
+    miss_key = (
+        "focus_missing_mesh"
+        if any("focus_missing_mesh" in r for r in steady)
+        else hole_key
+    )
+    miss_stuck_run = 0
+    miss_stuck_max = 0
+    for r in steady:
+        if float(r.get(miss_key) or 0) > 0:
+            miss_stuck_run += 1
+            miss_stuck_max = max(miss_stuck_max, miss_stuck_run)
+        else:
+            miss_stuck_run = 0
+    miss_stuck_max_run_sec = miss_stuck_max * 2.0
+    miss_end = 0.0
+    if periods:
+        miss_end = float(periods[-1].get(miss_key) or 0)
+    nh_no_miss_n = 0
+    for r in steady:
+        nh = float(r.get("near_focus_holes") or 0)
+        miss = float(r.get(miss_key) or 0)
+        if nh > 0 and miss <= 0:
+            nh_no_miss_n += 1
+    nh_no_miss_rate = (nh_no_miss_n / len(steady)) if steady else 0.0
+    opaque_idle_churn_max = 0.0
+    i = 0
+    while i < len(periods):
+        j = i + 1
+        while (
+            j < len(periods)
+            and int(periods[j].get("focus_cx") or 0)
+            == int(periods[i].get("focus_cx") or 0)
+            and int(periods[j].get("focus_cz") or 0)
+            == int(periods[i].get("focus_cz") or 0)
+        ):
+            j += 1
+        if j - i >= 2:
+            ops = [float(r.get("opaque_cmd_on") or 0) for r in periods[i:j]]
+            if ops:
+                opaque_idle_churn_max = max(
+                    opaque_idle_churn_max, max(ops) - min(ops)
+                )
+        i = j if j > i else i + 1
+
     dirty_high_run = 0
     run = 0
     for d in dirty:
@@ -642,6 +688,12 @@ def analyze(
             )
         )
     )
+    # Land rim symptoms (manual 142306): stuck miss, miss at end, idle opaque churn.
+    gates["miss_stuck_max_run_sec_le_4"] = miss_stuck_max_run_sec <= 4.0
+    gates["miss_end_eq_0"] = miss_end <= 0.0
+    gates["opaque_idle_churn_max_le_120"] = opaque_idle_churn_max <= 120.0
+    # Light-debt holes with miss=0 (land-cruise L1–L4 nh_no_miss 0.39–0.65).
+    gates["nh_no_miss_rate_le_025"] = nh_no_miss_rate <= 0.25
     gates_pass_count = sum(1 for v in gates.values() if v)
 
     # Manual 083042: pendf stuck ~40 for ~30s while wall~22–30 and holes=0.
@@ -809,6 +861,10 @@ def analyze(
             "stuck_async_holes_sec": stuck_async_holes_sec,
             "cold_relight_holes_sec": cold_relight_holes_sec,
             "dirty_high_sec": dirty_high_sec,
+            "miss_stuck_max_run_sec": miss_stuck_max_run_sec,
+            "miss_end": miss_end,
+            "opaque_idle_churn_max": opaque_idle_churn_max,
+            "nh_no_miss_rate": nh_no_miss_rate,
             "chunks_traveled": chunks_traveled,
             "focus_start": focus_pts[0] if focus_pts else None,
             "focus_end": focus_pts[-1] if focus_pts else None,

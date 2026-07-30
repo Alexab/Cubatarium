@@ -357,6 +357,19 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("cold_relight_holes_sec", "le", 3.0),
         ("chunks_traveled", "ge", 3.0),
     ],
+    "ARCH_D3_LAND": [
+        ("miss_stuck_max_run_sec", "le", 4.0),
+        ("miss_end", "le", 0.0),
+        ("effective_holes_rate", "le", 0.10),
+        ("nh_no_miss_rate", "le", 0.25),
+        ("stop_dark_face_stale_near_end", "lt", 100.0),
+        ("opaque_idle_churn_max", "le", 120.0),
+        ("post_stop_black_sticky_max", "le", 0.0),
+        # Keep soft 55: rim FirstMesh / SoftDefer-firstmesh did not bring wall
+        # med under 40 on land terrain eye (P4_L2 wall≈58). Revisit after miss≤4.
+        ("wall_ms_med", "le", 55.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
 }
 
 

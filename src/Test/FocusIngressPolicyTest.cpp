@@ -36,9 +36,9 @@ int main()
     Expect(d.active, "cold hole active");
     Expect(d.promote_once, "cold hole promote");
     Expect(d.relight_floor >= 3 && d.relight_floor <= 6, "cold hole paced floor");
-    Expect(!d.allow_sync_hole_fill, "cold hole blocks sync fill");
+    Expect(d.allow_sync_hole_fill, "cold hole + missing allows sync fill");
     Expect(AllowSyncHoleFillForColumn(d, true), "underfeet still allowed");
-    Expect(!AllowSyncHoleFillForColumn(d, false), "non-underfeet blocked");
+    Expect(AllowSyncHoleFillForColumn(d, false), "missing allows non-underfeet");
   }
 
   {
@@ -113,6 +113,19 @@ int main()
     in.frame_ms = 20.0;
     const auto d = EvaluateFocusIngress(in);
     Expect(d.active, "stale-dark + unfinished → frontier active");
+  }
+
+  {
+    FocusIngressInput in;
+    in.moving = true;
+    in.missing_mesh = true;
+    in.pending_focus = 19;
+    in.mesh_async = 0;
+    in.frame_ms = 22.0;
+    const auto d = EvaluateFocusIngress(in);
+    Expect(d.active, "rim SLA cold hole active");
+    Expect(d.first_mesh_admit >= 5, "rim SLA boosts first_mesh admit");
+    Expect(d.relight_floor <= 3, "rim SLA caps Capture floor");
   }
 
   if (gFails != 0)

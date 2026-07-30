@@ -62,6 +62,16 @@ inline FocusIngressDecision EvaluateFocusIngress(const FocusIngressInput &in)
       in.missing_mesh ? (cold_pool ? 4 : 2)
                       : (in.unfinished_visual > 0 ? 2 : 0);
 
+  // Rim FirstMesh SLA: missing + pending backlog → prefer admit over Capture
+  // (manual 131234 p09–12: pend=19 / emerge=102 while miss stuck).
+  const bool rim_first_mesh_sla =
+      in.missing_mesh && in.pending_focus > 4;
+  if (rim_first_mesh_sla)
+  {
+    out.first_mesh_admit =
+        std::max(out.first_mesh_admit, cold_pool ? 5 : 3);
+  }
+
   // Capture() for a terrain column runs on the main thread inside Drain.
   // Pace: few enqueues/frame while moving; SoftDefer Capture floor elsewhere.
   if (cold_pool)
@@ -83,9 +93,15 @@ inline FocusIngressDecision EvaluateFocusIngress(const FocusIngressInput &in)
   {
     out.relight_floor = std::max(out.relight_floor, 2);
   }
+  // Cap Capture floor while FirstMesh is starving on the rim.
+  if (rim_first_mesh_sla && out.relight_floor > 0)
+  {
+    out.relight_floor = std::min(out.relight_floor, cold_pool ? 3 : 2);
+  }
 
-  // Spike guard: cold async + hole → no non-underfeet sync fill.
-  out.allow_sync_hole_fill = !cold_pool;
+  // Spike guard: cold async + hole → no non-underfeet sync fill — except when
+  // missing mesh (land rim: cold_pool alone left miss_stuck 16–24s).
+  out.allow_sync_hole_fill = !cold_pool || in.missing_mesh;
   return out;
 }
 

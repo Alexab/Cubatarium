@@ -2,6 +2,7 @@
 
 #include "World/Streaming/ColumnFlowScheduler.h"
 
+#include <chrono>
 #include <glm/glm.hpp>
 
 namespace cutum
@@ -61,6 +62,8 @@ private:
                 glm::ivec3 focus_ground_horiz, int focus_radius, int admit_batch);
 
   UColumnFlowScheduler scheduler_;
+  /// Rate-limit stale-dark NoteColumnRepair waves (manual 092627 thrash).
+  std::chrono::steady_clock::time_point LastStaleRepairWave{};
 };
 
 UColumnFlowExecutor &GetColumnFlowExecutor();

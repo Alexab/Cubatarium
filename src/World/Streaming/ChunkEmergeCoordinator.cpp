@@ -703,6 +703,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_service.DropRemeshDirtyBeyondRadius(focus_dirty_keep, /*keep_h=*/2,
                                             /*keep_cy=*/2);
   }
+  // Idle opaque stability (manual 131234 p23: opaque_cmd_on 209→1021 while
+  // nh/miss=0). Far unlit↔lit remesh churns the opaque draw list; fluid is a
+  // separate pass so sea stays steady. keep_h=1 (was 2) — land_fix_P2 churn
+  // 326 with focus+2 still too wide.
+  if (!moving && !visual_holes && !missing_visible_mesh)
+  {
+    mesh_service.DropRemeshDirtyBeyondRadius(focus_dirty_keep, /*keep_h=*/1,
+                                            /*keep_cy=*/2);
+  }
   if ((idle_remesh_debt || idle_focus_dirty_debt) && last_frame_ms <= 55.0)
   {
     mesh_service.SetStarveOutsideFocusMesh(true);
@@ -1153,17 +1162,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             world.GetPhysicsTelemetry().DarkFaceNearN > 500;
         if (pending_dark_preview > 0 || urgent_dark_pending)
         {
+          // Must stay below FirstMesh (100+admit). recover_n+100 starved rim
+          // admit (land-cruise miss_stuck 6–12s).
+          const int relight_prio =
+              missing_visible_mesh ? 55 : (recover_n + 100);
           exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
-                       ColumnWorkKind::RelightThenMesh, recover_n + 100);
+                       ColumnWorkKind::RelightThenMesh, relight_prio);
         }
       }
       exec.DrainBudget(world, recover_n, focus_ground_horiz, focus_radius, 1);
-      // Edge stale-dark: SyncIdle budget for near sticky after Relight tickets.
+      // Edge stale-dark / post-miss sticky: raise seam drain near sticky
+      // (land_fix P3 — keep_h already 2–3 via StarveRemeshKeepHoriz).
       const int dark_n = world.GetPhysicsTelemetry().DarkFaceNearN;
       if (dark_n > 200 || black_sticky > 0)
       {
-        const int seam_n =
-            std::clamp(2 + (dark_n > 800 ? 4 : 0) + black_sticky, 2, 8);
+        const int seam_n = std::clamp(
+            3 + (dark_n > 800 ? 4 : 0) + black_sticky * 2, 3, 10);
         exec.DrainRemeshSeamBudget(world, seam_n);
       }
       recover_watchdog_frames = 0;
@@ -1535,8 +1549,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       }
       glm::ivec3 hole{};
       if (mesh_service.FindNearestMissingGreedyMesh(
-              world.GetBlockWorld(), focus_ground_horiz, focus_radius, hole) &&
-          !mesh_service.HasInflightMeshBuild(hole))
+              world.GetBlockWorld(), focus_ground_horiz, focus_radius, hole))
+      {
+        // Orphan Active (HasInflight) without builder flight: still MarkDirty —
+        // skipping left miss=1 sticky while FindNearest kept returning the hole.
+        if (mesh_service.HasInflightMeshBuild(hole))
+        {
+          mesh_service.MarkDirtyPriority(hole);
+        }
+        else
       {
         const bool hole_pending = world.IsPendingLightBeforeMesh(
             glm::ivec2(hole.x, hole.z));
@@ -1548,6 +1569,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             hole.z == nearest_missing_hole.z;
         // Never Immediate while PendingLight — dark bake sticks until finalize.
         // Allow sync/Dirty for the nearest missing column after light clears.
+        // (Tried Unlit Immediate while pending — land_fix_P1d miss_stuck 48s /
+        // wall_med 162; keep MarkDirty + SoftDefer AllowUnlit instead.)
         const bool sync_ok =
             AllowSyncHoleFillForColumn(ingress, hole_underfeet) ||
             (is_nearest_hole && pending_async < 4);
@@ -1583,7 +1606,25 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           // Always Dirty-queue the nearest FOV hole — SoftDefer FOV first-mesh
           // bypass covers pending; skipping MarkDirty left async=0 for periods.
           mesh_service.MarkDirtyPriority(hole);
+          // Nudge underfeet ring so SoftDefer AllowUnlit fills more than the
+          // single nearest hole while Capture lags (land miss=1 sticky runs).
+          if (missing_visible_mesh)
+          {
+            for (int dz = -1; dz <= 1; ++dz)
+            {
+              for (int dx = -1; dx <= 1; ++dx)
+              {
+                if (dx == 0 && dz == 0)
+                {
+                  continue;
+                }
+                mesh_service.MarkDirtyPriority(
+                    glm::ivec3(hole.x + dx, hole.y, hole.z + dz));
+              }
+            }
+          }
         }
+      }
       }
       if (force_hole_cd <= 0)
       {
@@ -1730,19 +1771,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     if (pending_dirty > 200)
     {
-      mesh_schedule = std::min(mesh_schedule, moving ? 6 : 8);
       mesh_service.DropRemeshDirtyBeyondRadius(
           focus_ground_horiz, /*keep_h=*/2, /*keep_cy=*/-1,
           /*remesh_only=*/true);
     }
+    // Plan P1-C: never leave schedule below admit floor before remesh.
+    mesh_schedule = std::max(mesh_schedule, moving ? 12 : 16);
     auto &exec = GetColumnFlowExecutor();
     const glm::ivec2 hole_xz =
         found_nearest_missing
             ? glm::ivec2(isolated_hole.x, isolated_hole.z)
             : glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z);
-    exec.Enqueue(hole_xz, ColumnWorkKind::FirstMesh, 95);
+    exec.Enqueue(hole_xz, ColumnWorkKind::FirstMesh, 100);
     exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
-                 ColumnWorkKind::FirstMesh, 90);
+                 ColumnWorkKind::FirstMesh, 95);
     exec.DrainBudget(world, moving ? 3 : 4, focus_ground_horiz, focus_radius,
                      /*admit_batch=*/moving ? 3 : 4);
   }
