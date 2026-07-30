@@ -231,6 +231,12 @@ public:
   void SetStarveOutsideFocusMesh(bool starve) { StarveOutsideFocusMesh = starve; }
   /// When true, skip remesh (already has greedy) until holes clear.
   void SetStarveRemeshForHoles(bool starve) { StarveRemeshForHoles = starve; }
+  /// Keep remesh within this Chebyshev radius while StarveRemeshForHoles
+  /// (neighbor black-face repair beside holes; manual 090713).
+  void SetStarveRemeshKeepHoriz(int keep_h)
+  {
+    StarveRemeshKeepHoriz = std::max(0, keep_h);
+  }
   /// Drop Dirty beyond keep shell (Chebyshev horiz + optional |cy|).
   /// remesh_only: only drop entries that already have greedy mesh (or are in
   /// RemeshAfterApply) — safe on cruise; idle F2 fd_end uses remesh_only=false
@@ -462,6 +468,7 @@ private:
   glm::vec2 MeshForwardXz{0.0f};
   bool StarveOutsideFocusMesh{false};
   bool StarveRemeshForHoles{false};
+  int StarveRemeshKeepHoriz{2};
   /// SyncRebuildVisibleMissing: fill missing within this Chebyshev radius.
   int SyncHoleFillRadius{1};
   int MaxOutsideFocusMeshPerFrame{2};

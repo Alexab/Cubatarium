@@ -64,6 +64,11 @@ void UWorldMeshService::SetStarveRemeshForHoles(bool starve)
   Cache.SetStarveRemeshForHoles(starve);
 }
 
+void UWorldMeshService::SetStarveRemeshKeepHoriz(int keep_h)
+{
+  Cache.SetStarveRemeshKeepHoriz(keep_h);
+}
+
 int UWorldMeshService::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
                                                    int keep_radius, int keep_cy,
                                                    bool remesh_only)

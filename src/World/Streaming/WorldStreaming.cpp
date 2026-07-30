@@ -1225,6 +1225,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   // Use SoT UnfinishedVisual / missing — NOT FocusNotRenderReady pressure
   // proxy (pending+dirty) — that Capture'd every cruise period with uv=0 and
   // inflated wall_med past ARCH_D3 ≤30.
+  // (Reverted dark_debt Capture floor — manual 092627 stuck softdefer=6,
+  // sticky=17, pending plateau while rim FirstMesh starved.)
   {
     const int unfinished = world.PhysicsTelemetryData.UnfinishedVisual;
     world.PhysicsTelemetryData.SoftDeferCaptureBudget = 0;
@@ -1987,9 +1989,13 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     // Manual 161702: UnfinishedVisual max≈5 never hit threshold>8 — fog lagged
     // behind popping trees; config start_ratio=0.85 also left mid-range clear.
     // A+B water: unfinished near fluid/sea → stronger pull-in + wider sky horizon.
+    // Manual 084551: do NOT pull from wall≈40 alone (cruise wall often >40 →
+    // fog/trees flicker); latch hole_debt + rate-limit shrink/expand.
     {
       constexpr double kFogPullInExpandSec = 2.5;
-      constexpr double kFogPullInWallMs = 40.0;
+      constexpr double kFogPullInShrinkSec = 0.45;
+      constexpr double kFogPullInSevereWallMs = 100.0;
+      constexpr int kFogHoleHoldFrames = 90; // ~1.5s latch after holes clear
       int fog_rd = effectiveRenderDistance;
       int fog_margin = render.DistanceFogEndMarginBlocks;
       float fog_start_ratio = effectiveFogStartRatio;
@@ -2000,13 +2006,30 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         {
           FogPullInRd = fog_rd;
         }
+        if (FogPullInMarginHeld < 0)
+        {
+          FogPullInMarginHeld = fog_margin;
+        }
+        if (FogPullInStartRatioHeld < 0.0f)
+        {
+          FogPullInStartRatioHeld = fog_start_ratio;
+        }
         const auto &phys = world.PhysicsTelemetryData;
         const double wall_ms = world.GetWallFrameDelta() * 1000.0;
         const int unfinished = phys.UnfinishedVisual;
         const int unfinished_ahead = phys.FocusUnfinishedAhead;
         const int gpu_pending = phys.PendingGpuAppliesN;
-        const bool hole_debt =
+        const bool hole_debt_now =
             phys.VisualHoles > 0 || unfinished > 0 || gpu_pending > 0;
+        if (hole_debt_now)
+        {
+          FogPullInHoleHoldFrames = kFogHoleHoldFrames;
+        }
+        else if (FogPullInHoleHoldFrames > 0)
+        {
+          --FogPullInHoleHoldFrames;
+        }
+        const bool hole_debt = FogPullInHoleHoldFrames > 0;
         const int sea = world.GetProceduralSettings().SeaLevel;
         const glm::ivec3 camera_block = glm::ivec3(glm::floor(eye));
         const bool near_water_ctx =
@@ -2015,35 +2038,40 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         near_water_unfinished = render.FogWaterUnfinishedBoost && hole_debt &&
                                 near_water_ctx;
         int target = effectiveRenderDistance;
+        int target_margin = render.DistanceFogEndMarginBlocks;
+        float target_start = effectiveFogStartRatio;
         if (hole_debt)
         {
-          // Shrink immediately so fog End covers the incomplete outer ring
-          // before decor/trees pop in clear mid-range.
+          // Cover incomplete outer ring before decor/trees pop in clear mid-range.
+          const int unfinished_eff = std::max(unfinished, hole_debt_now ? unfinished : 1);
           int pull =
-              1 + std::min(2, unfinished / 3) + (phys.VisualHoles > 0 ? 1 : 0);
+              1 + std::min(2, unfinished_eff / 3) +
+              (phys.VisualHoles > 0 ? 1 : 0);
           if (near_water_unfinished)
           {
             pull += 1;
-            fog_margin += 24;
-            fog_start_ratio =
-                std::min(fog_start_ratio, render.FogWaterStartRatioCap);
+            target_margin += 24;
+            target_start =
+                std::min(target_start, render.FogWaterStartRatioCap);
           }
           else
           {
-            fog_start_ratio = std::min(fog_start_ratio, 0.35f);
+            target_start = std::min(target_start, 0.35f);
           }
           target = std::min(target, effectiveRenderDistance - pull);
-          fog_margin += 16 + std::min(32, unfinished * 4);
+          target_margin += 16 + std::min(32, unfinished_eff * 4);
           if (unfinished_ahead > 0)
           {
-            fog_margin += 8 + std::min(24, unfinished_ahead * 3);
+            target_margin += 8 + std::min(24, unfinished_ahead * 3);
           }
         }
-        if (phys.StreamPressure >= 1 || wall_ms > kFogPullInWallMs)
+        // Wall alone must NOT shrink fog (cruise wall med≈80 → flicker). Only
+        // reinforce while already in hole latch, or on severe hitch.
+        if (hole_debt && (phys.StreamPressure >= 2 || wall_ms > kFogPullInSevereWallMs))
         {
           target = std::min(target, target - 1);
-          fog_margin += 8;
-          fog_start_ratio = std::min(fog_start_ratio, 0.40f);
+          target_margin += 8;
+          target_start = std::min(target_start, 0.40f);
         }
         const int fog_rd_max = std::max(1, effectiveRenderDistance);
         const int fog_rd_min =
@@ -2055,22 +2083,63 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
                 ? kFogPullInExpandSec
                 : std::chrono::duration<double>(now - FogPullInLastAdjust)
                       .count();
+        const double since_shrink =
+            FogPullInLastShrink.time_since_epoch().count() == 0
+                ? kFogPullInShrinkSec
+                : std::chrono::duration<double>(now - FogPullInLastShrink)
+                      .count();
         if (target < FogPullInRd)
         {
-          FogPullInRd = target;
-          FogPullInLastAdjust = now;
+          // Rate-limit shrink; severe missing/unfinished may step immediately.
+          const bool urgent =
+              phys.VisualHoles > 0 || unfinished >= 3 || gpu_pending >= 4;
+          if (urgent || since_shrink >= kFogPullInShrinkSec)
+          {
+            FogPullInRd = urgent ? target : std::max(target, FogPullInRd - 1);
+            FogPullInLastAdjust = now;
+            FogPullInLastShrink = now;
+          }
         }
-        else if (target > FogPullInRd && since >= kFogPullInExpandSec)
+        else if (target > FogPullInRd && since >= kFogPullInExpandSec &&
+                 !hole_debt)
         {
           const int step = (since >= kFogPullInExpandSec * 2.0) ? 2 : 1;
           FogPullInRd = std::min(FogPullInRd + step, target);
           FogPullInLastAdjust = now;
         }
         fog_rd = FogPullInRd;
+        // Margin / start_ratio: snap tighter immediately, release only when
+        // hole latch expired (matches RD expand gate).
+        if (target_margin > FogPullInMarginHeld)
+        {
+          FogPullInMarginHeld = target_margin;
+        }
+        else if (!hole_debt && since >= kFogPullInExpandSec)
+        {
+          FogPullInMarginHeld =
+              FogPullInMarginHeld -
+              std::max(1, (FogPullInMarginHeld - target_margin + 1) / 2);
+          FogPullInMarginHeld = std::max(target_margin, FogPullInMarginHeld);
+        }
+        if (target_start < FogPullInStartRatioHeld)
+        {
+          FogPullInStartRatioHeld = target_start;
+        }
+        else if (!hole_debt && since >= kFogPullInExpandSec)
+        {
+          FogPullInStartRatioHeld =
+              FogPullInStartRatioHeld +
+              0.5f * (target_start - FogPullInStartRatioHeld);
+        }
+        fog_margin = FogPullInMarginHeld;
+        fog_start_ratio = FogPullInStartRatioHeld;
       }
       else
       {
         FogPullInRd = -1;
+        FogPullInHoleHoldFrames = 0;
+        FogPullInMarginHeld = -1;
+        FogPullInStartRatioHeld = -1.0f;
       }
       world.SetEffectiveFogRenderDistance(fog_rd);
       world.SetEffectiveFogEndMarginBlocks(fog_margin);

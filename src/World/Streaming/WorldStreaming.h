@@ -127,6 +127,12 @@ private:
   std::chrono::steady_clock::time_point AdaptiveRdLastAdjust{};
   int FogPullInRd{-1};
   std::chrono::steady_clock::time_point FogPullInLastAdjust{};
+  std::chrono::steady_clock::time_point FogPullInLastShrink{};
+  /// Hole-debt latch: hold pull-in after holes clear so fog End / start_ratio
+  /// do not thrash every period (manual 084551 opaque 1037↔223).
+  int FogPullInHoleHoldFrames{0};
+  int FogPullInMarginHeld{-1};
+  float FogPullInStartRatioHeld{-1.0f};
   StreamingPressureState PressureState{};
   StreamingPressureCaps LastPressureCaps{};
   /// Cached once per RefreshStreamingPressure — safe for commit callback.

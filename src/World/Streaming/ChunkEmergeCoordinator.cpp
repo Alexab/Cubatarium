@@ -539,6 +539,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       moving && (pending_focus_count > 16) && (pending_async <= 4);
   mesh_service.SetStarveRemeshForHoles((visual_holes || missing_underfeet) &&
                                        !relax_hole_starve);
+  // Keep remesh within 2 (or 3 when stale-dark debt) so neighbor black faces
+  // repair while FirstMesh fills the hole.
+  {
+    const int stale_n = world.GetPhysicsTelemetry().DarkFaceStaleNearN;
+    mesh_service.SetStarveRemeshKeepHoriz(stale_n > 200 ? 3 : 2);
+  }
   // Cruise Dirty flood: drop remesh beyond focus (keep first-mesh) so
   // dirty_med_no_holes clears CB (cb_starve: 652→369). Do not StarveRemesh
   // cruise-wide — that raised spike_holes (269).
@@ -546,14 +552,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Idle extension: stop often sits Dirty~650 / focus_dirty~170 with holes=0
   // (manual_post) — full Dirty sort then burns ~100ms/frame. Same remesh-only
   // prune as cruise; keep first-mesh so SoftDefer holes stay schedulable.
-  if (!visual_holes && !missing_underfeet &&
-      pending_dirty > static_cast<size_t>(
+  // Isolated hole (manual 084551 near_h sticky): also prune remesh while
+  // missing so Dirty≈300 does not starve the single FirstMesh column.
+  // Keep remesh within 3 when stale-dark is high so neighbor black faces stay.
+  if (pending_dirty > static_cast<size_t>(
                           std::max(280, URuntimeTuning::Get().DirtyThrashSoftCap)) &&
-      (moving || (!moving && pending_focus_count <= 16)))
+      (moving || (!moving && pending_focus_count <= 16) || visual_holes ||
+       missing_underfeet))
   {
+    const int stale_n = world.GetPhysicsTelemetry().DarkFaceStaleNearN;
+    const int drop_keep_h =
+        (visual_holes || missing_underfeet)
+            ? std::min(focus_radius, stale_n > 200 ? 3 : 2)
+            : focus_radius;
     world.GetPhysicsTelemetryMutable().DirtyDropped += static_cast<uint64_t>(
         std::max(0, mesh_service.DropRemeshDirtyBeyondRadius(
-                        focus_ground_horiz, focus_radius, /*keep_cy=*/-1,
+                        focus_ground_horiz, drop_keep_h, /*keep_cy=*/-1,
                         /*remesh_only=*/true)));
   }
   // While sticky remesh drains after pending→0, suppress seam MarkDirty even
@@ -1703,8 +1717,36 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_drain = std::min(mesh_drain, moving ? 10 : 14);
     mesh_service.SetMeshSnapshotBudgetMs(moving ? 1.5 : 2.0);
   }
-  // FirstMesh ticket every frame while FOV unfinished (Admit filters missing).
-  if (fov_unfinished)
+  // Isolated missing column (manual 084551): FirstMesh every frame while any
+  // focus missing — not only held UnfinishedVisual — and prefer admit over
+  // remesh when Dirty is high on the rim.
+  glm::ivec3 isolated_hole{};
+  const bool found_nearest_missing = mesh_service.FindNearestMissingGreedyMesh(
+      world.GetBlockWorld(), focus_ground_horiz, focus_radius, isolated_hole);
+  const bool isolated_missing =
+      visual_holes || missing_visible_mesh || missing_underfeet ||
+      found_nearest_missing;
+  if (isolated_missing)
+  {
+    if (pending_dirty > 200)
+    {
+      mesh_schedule = std::min(mesh_schedule, moving ? 6 : 8);
+      mesh_service.DropRemeshDirtyBeyondRadius(
+          focus_ground_horiz, /*keep_h=*/2, /*keep_cy=*/-1,
+          /*remesh_only=*/true);
+    }
+    auto &exec = GetColumnFlowExecutor();
+    const glm::ivec2 hole_xz =
+        found_nearest_missing
+            ? glm::ivec2(isolated_hole.x, isolated_hole.z)
+            : glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z);
+    exec.Enqueue(hole_xz, ColumnWorkKind::FirstMesh, 95);
+    exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+                 ColumnWorkKind::FirstMesh, 90);
+    exec.DrainBudget(world, moving ? 3 : 4, focus_ground_horiz, focus_radius,
+                     /*admit_batch=*/moving ? 3 : 4);
+  }
+  else if (fov_unfinished)
   {
     auto &exec = GetColumnFlowExecutor();
     exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),

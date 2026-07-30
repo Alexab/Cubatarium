@@ -1938,6 +1938,19 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         }
         if (StarveRemeshForHoles)
         {
+          // Keep near-ring remesh so black faces on neighbors of a hole repair
+          // while FirstMesh runs (manual 090713: miss=1 + dark_stale≈2700).
+          if (MeshFocusValid)
+          {
+            const int horiz =
+                std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                         std::abs(it->z - MeshFocusGroundChunk.z));
+            if (horiz <= StarveRemeshKeepHoriz)
+            {
+              ++it;
+              continue;
+            }
+          }
           it = Dirty.RemoveAt(it);
           continue;
         }
@@ -2130,9 +2143,25 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (StarveRemeshForHoles &&
           GreedyCache.find(*it) != GreedyCache.end())
       {
-        // While holes exist remesh cannot fill them — drop so Admit/Pass1 missing
-        // can enter Dirty. MarkRelit requeues remesh after light.
-        return Dirty.RemoveAt(it);
+        // Keep near-ring remesh for neighbor black-face repair beside holes.
+        if (MeshFocusValid)
+        {
+          const int horiz =
+              std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                       std::abs(it->z - MeshFocusGroundChunk.z));
+          if (horiz <= StarveRemeshKeepHoriz)
+          {
+            // fall through to schedule
+          }
+          else
+          {
+            return Dirty.RemoveAt(it);
+          }
+        }
+        else
+        {
+          return Dirty.RemoveAt(it);
+        }
       }
       const uint64_t source_revision = MeshRevisions.Current(*it);
       const auto snap_t0 = std::chrono::high_resolution_clock::now();
@@ -2337,10 +2366,23 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (StarveRemeshForHoles &&
           GreedyCache.find(*it) != GreedyCache.end())
       {
-        // While holes exist remesh cannot fill them — drop so Admit/Pass1 missing
-        // can enter Dirty. MarkRelit requeues remesh after light.
-        it = Dirty.RemoveAt(it);
-        continue;
+        // Keep near-ring remesh for neighbor black-face repair beside holes.
+        if (MeshFocusValid)
+        {
+          const int horiz =
+              std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                       std::abs(it->z - MeshFocusGroundChunk.z));
+          if (horiz > StarveRemeshKeepHoriz)
+          {
+            it = Dirty.RemoveAt(it);
+            continue;
+          }
+        }
+        else
+        {
+          it = Dirty.RemoveAt(it);
+          continue;
+        }
       }
       const uint64_t source_revision = MeshRevisions.Current(*it);
       const auto snap_t0 = std::chrono::high_resolution_clock::now();
