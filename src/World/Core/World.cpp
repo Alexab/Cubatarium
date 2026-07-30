@@ -1656,8 +1656,9 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
     }
     const glm::ivec3 ground(candidate.key.x, 0, candidate.key.y);
     const bool pending = IsPendingLightBeforeMesh(candidate.key);
-    // Pending-light focus holes must accelerate relight, not repeatedly refill
-    // Dirty while the gate is still closed.
+    // Accelerate Capture for PendingLight, but do NOT skip Dirty — that left
+    // forever-holes (manual 170154 miss_end=1): SoftDefer already allows
+    // UnlitFirstMesh while Admit refused MarkDirty (SoTA should_mesh).
     if (pending && Persistence)
     {
       int enqueue_min = remesh_min;
@@ -1671,10 +1672,6 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
       Persistence->EnqueueTerrainColumnRelight(
           ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
           enqueue_min, enqueue_max);
-    }
-    if (pending && !IsColumnLitReady(ground))
-    {
-      continue;
     }
     MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
         ground, remesh_min, remesh_max,

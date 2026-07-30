@@ -275,6 +275,12 @@ def main() -> int:
         "+ cruise-eye-y + fly-stop; analyze --manual-idle",
     )
     ap.add_argument(
+        "--land-stand",
+        action="store_true",
+        help="inland land stand (manual 170154 forever-hole): short east fly then "
+        "stop≥60s on one chunk; ARCH_D3_LAND miss_end/stale",
+    )
+    ap.add_argument(
         "--cruise-cx",
         type=float,
         default=None,
@@ -336,8 +342,9 @@ def main() -> int:
             "visual-flicker",
             "visual-edge",
             "land-cruise",
+            "land-stand",
         ],
-        help="named scenario (break-stand / visual-* / land-cruise)",
+        help="named scenario (break-stand / visual-* / land-cruise / land-stand)",
     )
     ap.add_argument("--break-phase-sec", type=float, default=20.0)
     ap.add_argument("--break-interval-sec", type=float, default=1.0)
@@ -411,6 +418,8 @@ def main() -> int:
 
     if args.scenario == "land-cruise":
         args.land_cruise = True
+    if args.scenario == "land-stand":
+        args.land_stand = True
 
     if args.replay_manual:
         args.world = "World_164"
@@ -455,6 +464,34 @@ def main() -> int:
         )
         # Skip cold-spawn miss in analyze (land_fix_P1e: miss=1 for ~12s at
         # teleport). Do not raise idle — longer idle raised wall/dirty (P1f).
+        args.warmup_sec = max(args.warmup_sec, 16.0)
+
+    if args.land_stand:
+        # Forever-hole repro (manual 170154): short east fly then stand ≥60s.
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.resume = False
+        args.teleport_cruise = True
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            # East (−491→−484 in manual 170154).
+            args.yaw = 0.0
+        if args.cruise_cx is None:
+            args.cruise_cx = -485.0
+        if args.cruise_cz is None:
+            args.cruise_cz = 50.0
+        if args.cruise_eye_y is None:
+            args.cruise_eye_y = 96.0
+        args.idle_sec = max(args.idle_sec, 8.0)
+        args.fly_phase_sec = max(args.fly_phase_sec, 20.0)
+        args.stop_phase_sec = max(args.stop_phase_sec, 60.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
         args.warmup_sec = max(args.warmup_sec, 16.0)
 
     if args.replay_edge:
@@ -606,7 +643,7 @@ def main() -> int:
         "--report",
         str(args.report),
     ]
-    if args.replay_manual or args.fly_stop or args.land_cruise:
+    if args.replay_manual or args.fly_stop or args.land_cruise or args.land_stand:
         analyze_cmd.append("--manual-idle")
     if getattr(args, "warmup_sec", None) is not None:
         analyze_cmd.extend(["--warmup-sec", str(args.warmup_sec)])

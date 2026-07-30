@@ -155,27 +155,25 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     }
   }
 
-  // should_remesh_seam: sticky always; stale-dark only as gated waves.
-  // Every-frame NoteColumnRepair + SoftDefer dark floor → sticky=17 / pending
-  // plateau (manual 092627). Wave only when nh + stale>200, cooldown 2s.
+  // should_remesh_seam: sticky always; stale-dark as gated waves.
+  // Cooldown + cap avoid 092627 thrash. Do NOT require NearFocusHoles —
+  // after Pending clears nh→0 while DarkFaceStaleNear stays high
+  // (manual 182125: stale=401 plateau). Skip while missing so FirstMesh wins.
   std::vector<glm::ivec2> stale_dark_cols;
   const int stale_n = world.GetPhysicsTelemetry().DarkFaceStaleNearN;
-  const bool near_holes =
-      missing_visible_mesh || visual_holes ||
-      world.GetPhysicsTelemetry().NearFocusHoles > 0;
   constexpr double kStaleRepairCooldownSec = 2.0;
   const auto now = std::chrono::steady_clock::now();
   const bool cooldown_ok =
       LastStaleRepairWave.time_since_epoch().count() == 0 ||
       std::chrono::duration<double>(now - LastStaleRepairWave).count() >=
           kStaleRepairCooldownSec;
-  // Skip while FirstMesh missing — rim admit must win; repair after miss clears.
   const bool allow_stale_wave =
-      !missing_visible_mesh && near_holes && stale_n > 200 && cooldown_ok;
+      stale_n > 200 && cooldown_ok && !missing_visible_mesh;
   if (allow_stale_wave)
   {
+    const int stale_radius = focus_radius;
     const int stale_cap = std::min(4, std::max(2, recover_n / 2));
-    world.CollectStaleDarkFocusColumns(focus_ground_horiz, focus_radius,
+    world.CollectStaleDarkFocusColumns(focus_ground_horiz, stale_radius,
                                        stale_dark_cols, stale_cap);
   }
   EnqueueStickyStaleRepairTickets(scheduler_, focus, sticky_cols,

@@ -30,6 +30,8 @@ int main()
 {
   // SoftDefer: first-mesh in focus/underfeet never deferred (UnlitFirstMesh).
   // Remesh while pending stays deferred.
+  // Contract: AdmitFocusVisibleMissing must MarkDirty while PendingLight
+  // (manual 170154 forever-hole when Admit skipped Dirty).
   Expect(!SoftDeferMeshUntilLitPolicy(true, false, true, true, false, false),
          "underfeet missing+pending allows first mesh");
   Expect(SoftDeferMeshUntilLitPolicy(true, true, true, true, false, false),

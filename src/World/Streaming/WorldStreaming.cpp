@@ -1212,9 +1212,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     bg_budget = std::max(bg_budget, ingress.relight_floor);
   }
-  // Do not hard-cap Capture here while missing: SoftDefer floor below needs
-  // room (floor=0 / bg≤2 → miss_stuck 24s on land_fix_P1). Promote order +
-  // Relight prio≤FirstMesh are the rim SLA levers.
+  // Priority SLA (Cubyz-style): while missing, do not let Capture steal FirstMesh.
+  // Paced 1–2 (not 0 — land_fix_P1; not 4–6 — manual 170154 softd=4 thrash).
+  if (rim_first_mesh_sla)
+  {
+    bg_budget = std::min(bg_budget, moving_now ? 1 : 2);
+  }
   if (ingress.active && ingress.promote_once)
   {
     auto &exec = GetColumnFlowExecutor();
@@ -1253,18 +1256,19 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     {
       int floor_budget =
           missing_focus_mesh
-              ? (moving_now ? (frame_ms > kBadFrameMs ? 3 : 5)
-                            : (frame_ms > kBadFrameMs ? 4 : 6))
+              ? (moving_now ? 1 : 2)
               : (frame_ms > kBadFrameMs ? std::min(4, 1 + unfinished / 8)
                                         : std::min(6, 2 + unfinished / 6));
-      // Keep SoftDefer Capture floor while missing — do not zero/downclamp for
-      // rim SLA (land_fix_P1/P1b: floor≤2 → SoftDefer stuck, miss_stuck 24s).
       world.PhysicsTelemetryData.SoftDeferCaptureBudget = floor_budget;
       if (floor_budget > 0)
       {
         ++world.PhysicsTelemetryData.SoftDeferCaptureFloorHits;
       }
       bg_budget = std::max(bg_budget, floor_budget);
+      if (rim_first_mesh_sla)
+      {
+        bg_budget = std::min(bg_budget, moving_now ? 1 : 2);
+      }
     }
   }
   // Two-tier promote via ColumnFlow only (underfeet then focus). Streaming
@@ -1276,13 +1280,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     {
       exec.RunPromoteRelightNow(world, focus_horiz, /*focus_radius=*/1);
     }
-    if (pending_bg > 0 || near_pending_light || pending_light_focus_n > 0)
+    // While missing: underfeet-only promote (r=1). Full focus after miss clears.
+    if (!rim_first_mesh_sla &&
+        (pending_bg > 0 || near_pending_light || pending_light_focus_n > 0))
     {
-      // No ring expand while missing; still promote focus radius so SoftDefer
-      // PendingLight can clear (skip-all → miss_stuck 24s on land_fix_P1).
       const int promo_r =
-          (pending_light_focus_n > 0 && dark_face_near_n > 500 &&
-           !rim_first_mesh_sla)
+          (pending_light_focus_n > 0 && dark_face_near_n > 500)
               ? focus_radius + 1
               : focus_radius;
       exec.RunPromoteRelightNow(world, focus_horiz, promo_r);
@@ -1314,9 +1317,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                               rim_first_mesh_sla ? 1 : focus_radius);
     world.ClearPendingLightAfterMeshCommitted(12);
     // Capture is main-thread: never burst 48–56 idle (manual 220018).
+    // While missing: paced 1–2 (priority SLA / manual 170154 softd=4 thrash).
     const int hole_cap =
-        moving_now ? 2
-                   : ((missing_focus_mesh && mesh_async_n < 8) ? 4 : 3);
+        rim_first_mesh_sla
+            ? (moving_now ? 1 : 2)
+            : (moving_now ? 2
+                          : ((missing_focus_mesh && mesh_async_n < 8) ? 4 : 3));
     bg_budget = std::max(
         bg_budget,
         std::min(hole_cap, pending_light_focus_n +
@@ -2046,9 +2052,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         const int gpu_pending = phys.PendingGpuAppliesN;
         // Also latch on near-ring dark remesh debt so fog End does not expand
         // while opaque land remesh is still thrashing (manual 131234 p23).
+        // Stale-dark alone is remesh debt (manual 182125: nh=0, stale=401).
         const bool hole_debt_now =
             phys.VisualHoles > 0 || unfinished > 0 || gpu_pending > 0 ||
-            (phys.DarkFaceStaleNearN > 200 && phys.NearFocusHoles > 0);
+            phys.DarkFaceStaleNearN > 200;
         if (hole_debt_now)
         {
           FogPullInHoleHoldFrames = kFogHoleHoldFrames;
