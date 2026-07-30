@@ -465,9 +465,42 @@ bool UChunkMeshCache::HasGreedyMesh(glm::ivec3 chunk_coord) const
   return GreedyCache.find(chunk_coord) != GreedyCache.end();
 }
 
+bool UChunkMeshCache::HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const
+{
+  const auto it = GreedyCache.find(chunk_coord);
+  if (it == GreedyCache.end())
+  {
+    return false;
+  }
+  if (it->second.GpuResident && it->second.GpuQuadCount > 0)
+  {
+    return true;
+  }
+  for (const GreedyMeshBatch &batch : it->second.batches)
+  {
+    if (!batch.vertices.empty() && !batch.indices.empty())
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool UChunkMeshCache::IsGpuExtractInFlight(glm::ivec3 chunk_coord) const
 {
   return GpuExtractInFlight.count(chunk_coord) > 0;
+}
+
+bool UChunkMeshCache::IsPendingGpuApply(glm::ivec3 chunk_coord) const
+{
+  for (const PendingGpuApply &pending : PendingGpuApplies)
+  {
+    if (pending.coord == chunk_coord)
+    {
+      return true;
+    }
+  }
+  return false;
 }
 
 void UChunkMeshCache::NoteGeometryDirty(glm::ivec3 chunk_coord)
@@ -777,11 +810,19 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
         {
           return;
         }
-        if (GreedyCache.find(coord) != GreedyCache.end())
+        if (HasDrawableGreedyMesh(coord))
         {
           return;
         }
-        if (GpuExtractInFlight.count(coord) > 0)
+        // Committed cache entry (incl. intentional 0-quad occluded) is not a
+        // hole. SoftDefer uses HasDrawable separately so empty remesh is not
+        // deferred as "already meshed". Orphaned GpuExtract (no pending apply)
+        // falls through.
+        if (HasGreedyMesh(coord))
+        {
+          return;
+        }
+        if (IsPendingGpuApply(coord))
         {
           return;
         }
@@ -845,11 +886,15 @@ bool UChunkMeshCache::FindNearestMissingGreedyMesh(
   const UChunkManager &chunks = world.GetChunkManager();
   auto chunk_is_solid_missing = [&](glm::ivec3 coord) -> bool
   {
-    if (GreedyCache.find(coord) != GreedyCache.end())
+    if (HasDrawableGreedyMesh(coord))
     {
       return false;
     }
-    if (GpuExtractInFlight.count(coord) > 0)
+    if (HasGreedyMesh(coord))
+    {
+      return false;
+    }
+    if (IsPendingGpuApply(coord))
     {
       return false;
     }
@@ -1597,7 +1642,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     return false;
   }
   const bool defer_until_lit = DeferMeshUntilLit && DeferMeshUntilLit(coord);
-  const bool had_mesh = GreedyCache.find(coord) != GreedyCache.end();
+  const bool had_mesh = HasDrawableGreedyMesh(coord);
   const bool had_lit_mesh = had_mesh && !ChunkHasFullyDarkFace(coord);
   if (ShouldRejectDarkMeshCommit(gpu_result.hasFullyDarkFace, defer_until_lit,
                                  had_lit_mesh))
@@ -1688,8 +1733,14 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         has_active, active_rev, pending.sourceRevision, expected_revision);
     if (decision == MeshApplyRevDecision::DropNoActive)
     {
-      // CancelOutside / Invalidate cleared Active — do not re-Dirty (thrash).
-      // Do not FreeChunk: committed mesh may still be in the GPU slot.
+      // CancelOutside / Invalidate cleared Active. If nothing drawable remains,
+      // re-queue FirstMesh — silent drop left forever-holes that place-block
+      // instantly healed (manual 215919). Guard dirty to avoid apply thrash.
+      if (!HasDrawableGreedyMesh(pending.coord) &&
+          !Dirty.Contains(pending.coord))
+      {
+        Dirty.MarkDirtyPriority(pending.coord);
+      }
       continue;
     }
     if (decision == MeshApplyRevDecision::DiscardOlderKeepActive)

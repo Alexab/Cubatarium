@@ -182,7 +182,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             have_nearest_missing &&
             chunk_coord.x == nearest_missing_hole.x &&
             chunk_coord.z == nearest_missing_hole.z;
-        const bool has_mesh = mesh_service.HasGreedyMesh(chunk_coord);
+        const bool has_mesh = mesh_service.HasDrawableGreedyMesh(chunk_coord);
         const bool in_focus = horiz <= focus_radius;
         const glm::ivec3 ground(chunk_coord.x, 0, chunk_coord.z);
         const bool may_mesh =
@@ -388,7 +388,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           world.GetBlockWorld(), focus_ground_horiz, /*radius=*/1);
   const bool pending_underfeet =
       world.HasPendingLightBeforeMeshNear(focus_ground_horiz, /*radius=*/1);
-  const bool underfeet_need = missing_underfeet || pending_underfeet;
 
   int preferred_cy = focus_ground.y;
   bool prefer_lower_cy = false;
@@ -411,6 +410,79 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       preferred_cy = sea_cy;
     }
   }
+
+  // Empty SoftDefer placeholders: HasGreedyMesh hides HasMissing, SoftDefer now
+  // keys off HasDrawable. MarkDirty camera-column only (not full r=1) so
+  // intentional 0-quad buried slices do not remesh-storm (manual 222446).
+  bool underfeet_undrawn = false;
+  {
+    static int undrawn_force_cd = 0;
+    if (undrawn_force_cd > 0)
+    {
+      --undrawn_force_cd;
+    }
+    const int max_cy = std::max(
+        0, FloorDiv(procedural.MaxHeight, CHUNK_SIZE));
+    const int cy0 = std::max(0, preferred_cy - 1);
+    const int cy1 = std::min(max_cy, preferred_cy + 2);
+    if (undrawn_force_cd <= 0)
+    {
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(focus_ground_horiz.x, cy, focus_ground_horiz.z);
+        if (mesh_service.HasDrawableGreedyMesh(coord) ||
+            mesh_service.IsPendingGpuApply(coord) ||
+            mesh_service.HasInflightMeshBuild(coord) ||
+            mesh_service.IsChunkMeshDirty(coord))
+        {
+          continue;
+        }
+        // Only wrong-empty SoftDefer placeholders (cache entry, no quads).
+        // True missing (!HasGreedyMesh) is handled by HasMissing / Immediate.
+        if (!mesh_service.HasGreedyMesh(coord))
+        {
+          continue;
+        }
+        const UChunk *chunk =
+            world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+        if (!chunk)
+        {
+          continue;
+        }
+        bool any_solid = false;
+        for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+        {
+          for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+          {
+            for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+            {
+              if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+              {
+                any_solid = true;
+              }
+            }
+          }
+        }
+        if (!any_solid)
+        {
+          continue;
+        }
+        mesh_service.MarkDirtyPriority(coord);
+        underfeet_undrawn = true;
+        undrawn_force_cd = 20;
+        break;
+      }
+    }
+  }
+  const bool underfeet_need =
+      missing_underfeet || pending_underfeet || underfeet_undrawn;
+  if (underfeet_undrawn)
+  {
+    auto &exec = GetColumnFlowExecutor();
+    exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+                 ColumnWorkKind::FirstMesh, 110);
+  }
+
   mesh_service.SetMeshVerticalPriority(preferred_cy, prefer_lower_cy);
   // Lit-but-dirty catch-up: vertical priority left deep Dirty cy forever, so
   // IsColumnRenderReady (full 0..MaxHeight) never cleared (nr≈50 plateau).
@@ -1377,7 +1449,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             }
             const glm::ivec3 coord(focus_ground.x + dx, cy,
                                    focus_ground.z + dz);
-            if (mesh_service.HasGreedyMesh(coord))
+            if (mesh_service.HasGreedyMesh(coord) ||
+                mesh_service.IsPendingGpuApply(coord))
             {
               continue;
             }
@@ -1606,8 +1679,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           // Always Dirty-queue the nearest FOV hole — SoftDefer FOV first-mesh
           // bypass covers pending; skipping MarkDirty left async=0 for periods.
           mesh_service.MarkDirtyPriority(hole);
-          // Nudge underfeet ring so SoftDefer AllowUnlit fills more than the
-          // single nearest hole while Capture lags (land miss=1 sticky runs).
+          // Nudge only *missing* underfeet-ring slices. Remesh-dirtying already
+          // meshed neighbors caused RemeshAfterApply storms + discarded_late
+          // (manual 213546 discards 0→111, opaque churn 925).
           if (missing_visible_mesh)
           {
             for (int dz = -1; dz <= 1; ++dz)
@@ -1618,8 +1692,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 {
                   continue;
                 }
-                mesh_service.MarkDirtyPriority(
-                    glm::ivec3(hole.x + dx, hole.y, hole.z + dz));
+                const glm::ivec3 neighbor(hole.x + dx, hole.y, hole.z + dz);
+                if (!mesh_service.HasDrawableGreedyMesh(neighbor) &&
+                    !mesh_service.IsPendingGpuApply(neighbor))
+                {
+                  mesh_service.MarkDirtyPriority(neighbor);
+                }
               }
             }
           }

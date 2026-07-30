@@ -547,9 +547,19 @@ bool UWorldMeshService::HasGreedyMesh(glm::ivec3 chunk_coord) const
   return Cache.HasGreedyMesh(chunk_coord);
 }
 
+bool UWorldMeshService::HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const
+{
+  return Cache.HasDrawableGreedyMesh(chunk_coord);
+}
+
 bool UWorldMeshService::IsGpuExtractInFlight(glm::ivec3 chunk_coord) const
 {
   return Cache.IsGpuExtractInFlight(chunk_coord);
+}
+
+bool UWorldMeshService::IsPendingGpuApply(glm::ivec3 chunk_coord) const
+{
+  return Cache.IsPendingGpuApply(chunk_coord);
 }
 
 bool UWorldMeshService::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,

@@ -147,7 +147,12 @@ public:
   double GetLastMeshDirtyTickMs() const;
   size_t GetGreedyCacheSize() const;
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
+  /// True only when cache has GPU quads or non-empty CPU batches (not empty
+  /// placeholder entries that SoftDefer treated as "has mesh").
+  bool HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const;
   bool IsGpuExtractInFlight(glm::ivec3 chunk_coord) const;
+  /// Queued in PendingGpuApplies — orphaned GpuExtractInFlight alone is not.
+  bool IsPendingGpuApply(glm::ivec3 chunk_coord) const;
   bool ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
                              const UBlockWorld &world) const;
   bool IsChunkMeshDirty(glm::ivec3 chunk_coord) const;

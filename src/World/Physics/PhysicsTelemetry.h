@@ -100,6 +100,20 @@ struct PhysicsTelemetry
   int FocusChunkX{0};
   int FocusChunkZ{0};
   int UnderfeetNeed{0};
+  /// Underfeet column SoT vs draw (invisible-ready blind spot).
+  int UnderfeetDrawOk{0};
+  int UnderfeetHasMesh{0};
+  int UnderfeetSticky{0};
+  int UnderfeetPendingLight{0};
+  /// ColumnRenderableState::BlockReason as int.
+  int UnderfeetReason{0};
+  /// 1 when underfeet xz appears in filtered opaque draw refs this frame.
+  int UnderfeetOpaquePresent{0};
+  /// FogPullIn effective state (0 = disabled / unset).
+  int FogPullInRd{0};
+  int FogPullInMargin{0};
+  float FogPullInStartRatio{0.0f};
+  int FogHoleDebt{0};
   /// Legacy OR latch (missing mesh OR pending light) — prefer VisualHoles.
   int NearFocusHoles{0};
   /// Missing GreedyCache in focus (visual holes only).

@@ -531,6 +531,33 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   world.PhysicsTelemetryData.LightDebt = pending_light_focus > 0 ? 1 : 0;
   world.PhysicsTelemetryData.NearFocusHoles =
       (missing_near || pending_light_focus > 0 || dark_preview > 0) ? 1 : 0;
+
+  // Underfeet column: catch draw_ok-but-invisible blind spot (manual 201621).
+  {
+    const glm::ivec2 under_xz(focus_horiz.x, focus_horiz.z);
+    const ColumnRenderableState uf =
+        world.GetColumnRenderableState(under_xz);
+    bool has_mesh = false;
+    const int max_cy = std::max(
+        0, FloorDiv(world.GetProceduralSettings().MaxHeight, CHUNK_SIZE));
+    for (int cy = 0; cy <= max_cy; ++cy)
+    {
+      if (world.GetMeshService().HasDrawableGreedyMesh(
+              glm::ivec3(under_xz.x, cy, under_xz.y)))
+      {
+        has_mesh = true;
+        break;
+      }
+    }
+    world.PhysicsTelemetryData.UnderfeetDrawOk = uf.draw_ok ? 1 : 0;
+    world.PhysicsTelemetryData.UnderfeetHasMesh = has_mesh ? 1 : 0;
+    world.PhysicsTelemetryData.UnderfeetSticky =
+        world.IsColumnStickyRemesh(under_xz) ? 1 : 0;
+    world.PhysicsTelemetryData.UnderfeetPendingLight =
+        world.IsPendingLightBeforeMesh(under_xz) ? 1 : 0;
+    world.PhysicsTelemetryData.UnderfeetReason =
+        static_cast<int>(uf.reason);
+  }
 }
 
 void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
@@ -1243,22 +1270,26 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       }
     }
   }
-  // TD-ARCH-030: SoftDefer FOV unfinished + pending light → Capture floor.
+  // TD-ARCH-030: SoftDefer FOV unfinished / missing → Capture floor.
+  // Missing mesh alone must Capture even when pending_light_focus==0 —
+  // otherwise UnlitFirstMesh Dirty sits while Capture never runs
+  // (manual 213546 miss_stuck 18s with softd only when pend>0).
   // Use SoT UnfinishedVisual / missing — NOT FocusNotRenderReady pressure
   // proxy (pending+dirty) — that Capture'd every cruise period with uv=0 and
   // inflated wall_med past ARCH_D3 ≤30.
-  // (Reverted dark_debt Capture floor — manual 092627 stuck softdefer=6,
-  // sticky=17, pending plateau while rim FirstMesh starved.)
   {
     const int unfinished = world.PhysicsTelemetryData.UnfinishedVisual;
     world.PhysicsTelemetryData.SoftDeferCaptureBudget = 0;
-    if ((unfinished > 0 || missing_focus_mesh) && pending_light_focus_n > 0)
+    if (unfinished > 0 || missing_focus_mesh)
     {
       int floor_budget =
           missing_focus_mesh
               ? (moving_now ? 1 : 2)
-              : (frame_ms > kBadFrameMs ? std::min(4, 1 + unfinished / 8)
-                                        : std::min(6, 2 + unfinished / 6));
+              : (pending_light_focus_n > 0
+                     ? (frame_ms > kBadFrameMs
+                            ? std::min(4, 1 + unfinished / 8)
+                            : std::min(6, 2 + unfinished / 6))
+                     : 0);
       world.PhysicsTelemetryData.SoftDeferCaptureBudget = floor_budget;
       if (floor_budget > 0)
       {
@@ -2050,12 +2081,11 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         const int unfinished = phys.UnfinishedVisual;
         const int unfinished_ahead = phys.FocusUnfinishedAhead;
         const int gpu_pending = phys.PendingGpuAppliesN;
-        // Also latch on near-ring dark remesh debt so fog End does not expand
-        // while opaque land remesh is still thrashing (manual 131234 p23).
-        // Stale-dark alone is remesh debt (manual 182125: nh=0, stale=401).
+        // Latch only on visual holes / unfinished. gpu_pending alone kept
+        // FogRdMin+margin140 for the whole cruise while miss=uv=0
+        // (manual 213546: fog strip around drawn underfeet).
         const bool hole_debt_now =
-            phys.VisualHoles > 0 || unfinished > 0 || gpu_pending > 0 ||
-            phys.DarkFaceStaleNearN > 80;
+            phys.VisualHoles > 0 || unfinished > 0;
         if (hole_debt_now)
         {
           FogPullInHoleHoldFrames = kFogHoleHoldFrames;
@@ -2065,6 +2095,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
           --FogPullInHoleHoldFrames;
         }
         const bool hole_debt = FogPullInHoleHoldFrames > 0;
+        world.PhysicsTelemetryData.FogHoleDebt = hole_debt ? 1 : 0;
         const int sea = world.GetProceduralSettings().SeaLevel;
         const glm::ivec3 camera_block = glm::ivec3(glm::floor(eye));
         const bool near_water_ctx =
@@ -2126,8 +2157,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         if (target < FogPullInRd)
         {
           // Rate-limit shrink; severe missing/unfinished may step immediately.
+          // gpu_pending alone is not urgent (213546: apply queue ≠ fog hole).
           const bool urgent =
-              phys.VisualHoles > 0 || unfinished >= 3 || gpu_pending >= 4;
+              phys.VisualHoles > 0 || unfinished >= 3 ||
+              (hole_debt_now && gpu_pending >= 8);
           if (urgent || since_shrink >= kFogPullInShrinkSec)
           {
             FogPullInRd = urgent ? target : std::max(target, FogPullInRd - 1);
@@ -2175,11 +2208,18 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         FogPullInHoleHoldFrames = 0;
         FogPullInMarginHeld = -1;
         FogPullInStartRatioHeld = -1.0f;
+        world.PhysicsTelemetryData.FogHoleDebt = 0;
+        world.PhysicsTelemetryData.FogPullInRd = 0;
+        world.PhysicsTelemetryData.FogPullInMargin = 0;
+        world.PhysicsTelemetryData.FogPullInStartRatio = 0.0f;
       }
       world.SetEffectiveFogRenderDistance(fog_rd);
       world.SetEffectiveFogEndMarginBlocks(fog_margin);
       world.SetNearWaterUnfinishedFog(near_water_unfinished);
       effectiveFogStartRatio = fog_start_ratio;
+      world.PhysicsTelemetryData.FogPullInRd = fog_rd;
+      world.PhysicsTelemetryData.FogPullInMargin = fog_margin;
+      world.PhysicsTelemetryData.FogPullInStartRatio = fog_start_ratio;
     }
 
     const float dt = std::max(0.0001f, camera->GetDeltaTime());

@@ -43,6 +43,7 @@
 #include "Render/Pipeline/GreedyTransparentSort.h"
 #include "World/Adapters/WorldRenderReadAdapter.h"
 #include "World/Chunks/Chunk.h"
+#include "World/Chunks/ChunkManager.h"
 #include "World/Core/World.h"
 #include "World/Lighting/IULightingPipeline.h"
 #include "World/Math/GridMath.h"
@@ -1603,6 +1604,24 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
   // Empty refs means nothing ready — do not re-expand from the pool.
   // Frustum cull still runs via ApplyGpuCompactCull on this gated set.
   std::vector<GreedyBatchRef> upload_refs = opaqueCutoutRefs;
+
+  if (WorldInstance)
+  {
+    const glm::ivec3 focus_block = WorldInstance->GetPreferredLoadFocusBlock();
+    const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
+    bool underfeet_in_draw = false;
+    for (const GreedyBatchRef &ref : upload_refs)
+    {
+      if (ref.chunkCoord.x == focus_chunk.x &&
+          ref.chunkCoord.z == focus_chunk.z)
+      {
+        underfeet_in_draw = true;
+        break;
+      }
+    }
+    WorldInstance->GetPhysicsTelemetryMutable().UnderfeetOpaquePresent =
+        underfeet_in_draw ? 1 : 0;
+  }
 
   std::vector<GreedyBatchRef> solid;
   std::vector<GreedyBatchRef> cutout;

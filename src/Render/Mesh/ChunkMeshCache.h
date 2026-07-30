@@ -117,7 +117,12 @@ public:
                             int max_count, double budget_ms);
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
+  /// True only when the cache entry has GPU quads or non-empty CPU batches.
+  /// Empty placeholders must NOT clear missing-mesh / SoftDefer holes
+  /// (manual 215919: place-block remesh instantly fills "invisible" chunk).
+  bool HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const;
   bool IsGpuExtractInFlight(glm::ivec3 chunk_coord) const;
+  bool IsPendingGpuApply(glm::ivec3 chunk_coord) const;
   /// True if any non-bottom greedy vertex has sky+block light == 0.
   /// −Y bottoms are ignored (normally unlit).
   bool ChunkHasFullyDarkFace(glm::ivec3 chunk_coord) const;

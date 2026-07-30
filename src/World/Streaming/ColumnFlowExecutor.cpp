@@ -196,17 +196,19 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   EnqueueStickyStaleRepairTickets(scheduler_, focus, sticky_cols,
                                   stale_dark_cols);
   EnqueueVoidDarkRelightTickets(scheduler_, focus, void_dark_cols);
-  if ((allow_stale_wave && !stale_dark_cols.empty()) ||
-      (allow_void_wave && !void_dark_cols.empty()))
+  // Stale: sticky so SyncIdleFocusGreedyRemesh targets the column.
+  // Void: Relight-only — NoteColumnRepairNeeded → RemeshSeam thrash that
+  // cannot invent light and left sticky=1 plateau (manual 201621 stop).
+  if (allow_stale_wave && !stale_dark_cols.empty())
   {
     for (const glm::ivec2 &col : stale_dark_cols)
     {
       world.NoteColumnRepairNeeded(col);
     }
-    for (const glm::ivec2 &col : void_dark_cols)
-    {
-      world.NoteColumnRepairNeeded(col);
-    }
+    LastStaleRepairWave = now;
+  }
+  else if (allow_void_wave && !void_dark_cols.empty())
+  {
     LastStaleRepairWave = now;
   }
 }

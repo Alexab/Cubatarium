@@ -189,6 +189,16 @@ struct FrameNumbers
   int focus_cx{0};
   int focus_cz{0};
   int underfeet_need{0};
+  int underfeet_draw_ok{0};
+  int underfeet_has_mesh{0};
+  int underfeet_sticky{0};
+  int underfeet_pending_light{0};
+  int underfeet_reason{0};
+  int underfeet_opaque_present{0};
+  int fog_pull_in_rd{0};
+  int fog_pull_in_margin{0};
+  float fog_pull_in_start_ratio{0.0f};
+  int fog_hole_debt{0};
   int near_focus_holes{0};
   int visual_holes{0};
   int unfinished_visual{0};
@@ -388,6 +398,16 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.focus_cx = phys.FocusChunkX;
   n.focus_cz = phys.FocusChunkZ;
   n.underfeet_need = phys.UnderfeetNeed;
+  n.underfeet_draw_ok = phys.UnderfeetDrawOk;
+  n.underfeet_has_mesh = phys.UnderfeetHasMesh;
+  n.underfeet_sticky = phys.UnderfeetSticky;
+  n.underfeet_pending_light = phys.UnderfeetPendingLight;
+  n.underfeet_reason = phys.UnderfeetReason;
+  n.underfeet_opaque_present = phys.UnderfeetOpaquePresent;
+  n.fog_pull_in_rd = phys.FogPullInRd;
+  n.fog_pull_in_margin = phys.FogPullInMargin;
+  n.fog_pull_in_start_ratio = phys.FogPullInStartRatio;
+  n.fog_hole_debt = phys.FogHoleDebt;
   n.near_focus_holes = phys.NearFocusHoles;
   n.visual_holes = phys.VisualHoles;
   n.unfinished_visual = phys.UnfinishedVisual;
@@ -590,6 +610,16 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"pending_light_focus\":" << n.pending_light_focus
           << ",\"focus_cx\":" << n.focus_cx << ",\"focus_cz\":" << n.focus_cz
           << ",\"underfeet_need\":" << n.underfeet_need
+          << ",\"underfeet_draw_ok\":" << n.underfeet_draw_ok
+          << ",\"underfeet_has_mesh\":" << n.underfeet_has_mesh
+          << ",\"underfeet_sticky\":" << n.underfeet_sticky
+          << ",\"underfeet_pending_light\":" << n.underfeet_pending_light
+          << ",\"underfeet_reason\":" << n.underfeet_reason
+          << ",\"underfeet_opaque_present\":" << n.underfeet_opaque_present
+          << ",\"fog_pull_in_rd\":" << n.fog_pull_in_rd
+          << ",\"fog_pull_in_margin\":" << n.fog_pull_in_margin
+          << ",\"fog_pull_in_start_ratio\":" << n.fog_pull_in_start_ratio
+          << ",\"fog_hole_debt\":" << n.fog_hole_debt
           << ",\"near_focus_holes\":" << n.near_focus_holes
           << ",\"visual_holes\":" << n.visual_holes
           << ",\"unfinished_visual\":" << n.unfinished_visual

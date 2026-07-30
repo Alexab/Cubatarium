@@ -1277,7 +1277,8 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
           {
             continue;
           }
-          if (MeshService->HasGreedyMesh(coord))
+          if (MeshService->HasGreedyMesh(coord) ||
+              MeshService->IsPendingGpuApply(coord))
           {
             has_mesh = true;
           }
@@ -1496,7 +1497,8 @@ int UWorld::AdmitFocusMeshIngress(int max_columns)
     {
       const glm::ivec3 coord(ground.x, cy, ground.z);
       const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-      if (!chunk || MeshService->HasGreedyMesh(coord))
+      if (!chunk || MeshService->HasGreedyMesh(coord) ||
+          MeshService->IsPendingGpuApply(coord))
       {
         continue;
       }
@@ -1597,6 +1599,7 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
           const glm::ivec3 coord(ground.x, cy, ground.z);
           const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
           if (!chunk || MeshService->HasGreedyMesh(coord) ||
+              MeshService->IsPendingGpuApply(coord) ||
               MeshService->HasInflightMeshBuild(coord))
           {
             continue;
@@ -1931,13 +1934,16 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     for (int cy = cy0; cy <= cy1; ++cy)
     {
       const glm::ivec3 coord(ground.x, cy, ground.z);
+      // SoT draw_ok: committed cache (incl. intentional 0-quad) OR queued GPU
+      // apply. SoftDefer uses HasDrawable separately for empty SoftDefer holes.
       if (MeshService->HasGreedyMesh(coord))
       {
         out.draw_ok = true;
         out.reason = ColumnRenderableState::BlockReason::None;
         return out;
       }
-      if (MeshService->IsGpuExtractInFlight(coord))
+      if (MeshService->IsPendingGpuApply(coord) ||
+          MeshService->IsGpuExtractInFlight(coord))
       {
         out.draw_ok = true;
         out.reason = ColumnRenderableState::BlockReason::GpuInFlight;
@@ -1956,6 +1962,7 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     {
       const glm::ivec3 coord(ground.x, cy, ground.z);
       if (MeshService->HasGreedyMesh(coord) ||
+          MeshService->IsPendingGpuApply(coord) ||
           MeshService->IsGpuExtractInFlight(coord))
       {
         has_mesh_or_gpu = true;
@@ -1992,6 +1999,8 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
   // SoT: draw-when-meshed even if ColumnEmerge FSM is mid-transition
   // (Generating/etc). Counting meshed columns as unfinished inflated cruise
   // holes while SoftDefer+Capture still owed light (ARCH_D3 / manual_td32b).
+  // HasGreedyMesh (not HasDrawable): intentional 0-quad occluded solids must
+  // not latch unfinished≈80 + FogPullIn (manual 222446 regression).
   bool has_mesh_or_gpu = false;
   bool saw_gpu_inflight_early = false;
   for (int cy = cy0; cy <= cy1; ++cy)
@@ -2001,7 +2010,8 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     {
       has_mesh_or_gpu = true;
     }
-    if (MeshService->IsGpuExtractInFlight(coord))
+    if (MeshService->IsPendingGpuApply(coord) ||
+        MeshService->IsGpuExtractInFlight(coord))
     {
       has_mesh_or_gpu = true;
       saw_gpu_inflight_early = true;
@@ -2038,7 +2048,8 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
       saw_loaded_meshable = true;
       continue;
     }
-    if (MeshService->IsGpuExtractInFlight(coord))
+    if (MeshService->IsPendingGpuApply(coord) ||
+        MeshService->IsGpuExtractInFlight(coord))
     {
       saw_loaded_meshable = true;
       saw_gpu_inflight = true;
@@ -3099,6 +3110,24 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
       continue;
     }
     if (MeshService->HasDirtyInColumnBand(key, band_min, band_max))
+    {
+      ++it;
+      continue;
+    }
+    // Keep sticky only while stale-dark remesh debt remains. Void-edge faces
+    // are Relight-owned — holding sticky forced RemeshSeam thrash (201621).
+    bool still_stale = false;
+    for (int cy = cy0; cy <= cy1; ++cy)
+    {
+      const glm::ivec3 coord(key.x, cy, key.y);
+      if (MeshService->HasGreedyMesh(coord) &&
+          MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
+      {
+        still_stale = true;
+        break;
+      }
+    }
+    if (still_stale)
     {
       ++it;
       continue;
