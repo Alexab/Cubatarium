@@ -80,6 +80,47 @@ int UGpuMeshSlotAllocator::AllocateSlot(glm::ivec3 chunk_coord,
   return slot_idx;
 }
 
+int UGpuMeshSlotAllocator::AllocateStagingSlot(bool transparent)
+{
+  if (FreeList.empty())
+  {
+    return -1;
+  }
+  const int slot_idx = FreeList.back();
+  FreeList.pop_back();
+  GpuMeshSlot &slot = Slots[static_cast<size_t>(slot_idx)];
+  slot.OffsetQuads = static_cast<uint32_t>(slot_idx) * kMaxQuadsPerSlot;
+  slot.QuadCount = 0;
+  slot.ChunkCoord = glm::ivec3(0);
+  slot.Transparent = transparent;
+  return slot_idx;
+}
+
+void UGpuMeshSlotAllocator::BindCommittedSlot(glm::ivec3 chunk_coord,
+                                              int slot_index)
+{
+  if (slot_index < 0 || slot_index >= static_cast<int>(MaxSlots))
+  {
+    return;
+  }
+  auto it = ChunkToSlot.find(chunk_coord);
+  if (it != ChunkToSlot.end())
+  {
+    if (it->second == slot_index)
+    {
+      Slots[static_cast<size_t>(slot_index)].ChunkCoord = chunk_coord;
+      return;
+    }
+    const int old_idx = it->second;
+    Slots[static_cast<size_t>(old_idx)].QuadCount = 0;
+    FreeList.push_back(old_idx);
+    ChunkToSlot.erase(it);
+  }
+  ChunkToSlot[chunk_coord] = slot_index;
+  GpuMeshSlot &slot = Slots[static_cast<size_t>(slot_index)];
+  slot.ChunkCoord = chunk_coord;
+}
+
 void UGpuMeshSlotAllocator::FreeSlot(glm::ivec3 chunk_coord)
 {
   auto it = ChunkToSlot.find(chunk_coord);
@@ -91,6 +132,25 @@ void UGpuMeshSlotAllocator::FreeSlot(glm::ivec3 chunk_coord)
   Slots[static_cast<size_t>(slot_idx)].QuadCount = 0;
   FreeList.push_back(slot_idx);
   ChunkToSlot.erase(it);
+}
+
+void UGpuMeshSlotAllocator::FreeSlotByIndex(int slot_index)
+{
+  if (slot_index < 0 || slot_index >= static_cast<int>(MaxSlots))
+  {
+    return;
+  }
+  // If this index is the live binding for its chunk, drop the map entry.
+  for (auto it = ChunkToSlot.begin(); it != ChunkToSlot.end(); ++it)
+  {
+    if (it->second == slot_index)
+    {
+      ChunkToSlot.erase(it);
+      break;
+    }
+  }
+  Slots[static_cast<size_t>(slot_index)].QuadCount = 0;
+  FreeList.push_back(slot_index);
 }
 
 bool UGpuMeshSlotAllocator::HasSlot(glm::ivec3 chunk_coord) const
@@ -107,6 +167,16 @@ UGpuMeshSlotAllocator::GetSlot(glm::ivec3 chunk_coord) const
     return nullptr;
   }
   return &Slots[static_cast<size_t>(it->second)];
+}
+
+const GpuMeshSlot *
+UGpuMeshSlotAllocator::GetSlotByIndex(int slot_index) const
+{
+  if (slot_index < 0 || slot_index >= static_cast<int>(MaxSlots))
+  {
+    return nullptr;
+  }
+  return &Slots[static_cast<size_t>(slot_index)];
 }
 
 void UGpuMeshSlotAllocator::SetSlotQuadCount(int slot_index,

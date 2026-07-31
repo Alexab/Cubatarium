@@ -497,7 +497,7 @@ bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
     return false;
   }
 
-  const GpuMeshSlot *slot = Allocator.GetSlot(coord);
+  const GpuMeshSlot *slot = Allocator.GetSlotByIndex(slot_idx);
   if (!slot)
   {
     return false;
@@ -573,7 +573,9 @@ bool UGpuMeshPipeline::ProcessSnapshot(const ChunkMeshSnapshot &snapshot,
 
   const glm::ivec3 coord = snapshot.coord;
   const bool has_transparent = ChunkHasTransparentOrCutout(snapshot, registry);
-  const int slot_idx = Allocator.AllocateSlot(coord, has_transparent);
+  // Staging: never overwrite a live ChunkToSlot mesh during compute. Dark /
+  // failed commit frees only the staging index (manual 213543 opaque collapse).
+  const int slot_idx = Allocator.AllocateStagingSlot(has_transparent);
   if (slot_idx < 0)
   {
     return false;
@@ -583,7 +585,7 @@ bool UGpuMeshPipeline::ProcessSnapshot(const ChunkMeshSnapshot &snapshot,
   if (!RunComputePasses(snapshot, registry, coord, slot_idx, quad_count,
                         &out_result.blockRanges, &out_result.hasFullyDarkFace))
   {
-    Allocator.FreeSlot(coord);
+    Allocator.FreeSlotByIndex(slot_idx);
     return false;
   }
 

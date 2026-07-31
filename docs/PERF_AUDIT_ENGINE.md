@@ -420,3 +420,10 @@ Validate with autofly + manual land-exit vs `155432` / this `213543` exit, not o
 FirstMesh sync / reserved Pass1: `!HasDrawable` (not `GreedyCache` presence).
 CPU Apply `DropNoActive` + async `DiscardedLate` coords → requeue Dirty.
 
+### Phase 2 (opaque collapse) — landed
+
+GPU apply uses **staging** slots (`AllocateStagingSlot` → compute → `BindCommittedSlot`).
+Dark / failed commit frees staging only — live `ChunkToSlot` mesh stays until bind.
+`MarkDirtyPriority` hole-invalidate skips coords still InFlight / GpuExtract pending
+(avoids DiscardedLate storm from SoftDefer re-Mark).
+

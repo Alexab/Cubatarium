@@ -1136,16 +1136,25 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
       ActiveMeshSourceRevision.end())
   {
     // Hole (!Drawable): Active+RemeshAfterApply-only left miss sticky after
-    // CancelOutside / epoch DiscardedLate (manual 213543). Invalidate so
-    // FirstMesh can re-enter Dirty while a drawable mesh keeps Remesh deferral.
+    // CancelOutside / epoch DiscardedLate (manual 213543). Invalidate only
+    // orphan Active (no builder / GPU pending) — invalidating live flight
+    // every SoftDefer tick caused DiscardedLate storms (phase2 autofly).
     if (!HasDrawableGreedyMesh(chunkCoord))
     {
+      const bool inflight =
+          AsyncBuilder && AsyncBuilder->IsInFlight(chunkCoord);
+      const bool gpu_pending =
+          GpuExtractInFlight.find(chunkCoord) != GpuExtractInFlight.end();
+      if (inflight || gpu_pending)
+      {
+        RemeshAfterApply.insert(chunkCoord);
+        return;
+      }
       InvalidateInFlightMeshBuild(chunkCoord);
       if (AsyncBuilder)
       {
         AsyncBuilder->ForgetInflight(chunkCoord);
       }
-      GpuExtractInFlight.erase(chunkCoord);
     }
     else
     {
@@ -1652,9 +1661,9 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   (void)registry;
   if (!world.GetChunkManager().HasChunk(coord))
   {
-    if (GpuPipeline)
+    if (GpuPipeline && gpu_result.slotIndex >= 0)
     {
-      GpuPipeline->FreeChunk(coord);
+      GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
     }
     return false;
   }
@@ -1664,9 +1673,11 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   if (ShouldRejectDarkMeshCommit(gpu_result.hasFullyDarkFace, defer_until_lit,
                                  had_lit_mesh))
   {
-    if (GpuPipeline)
+    // Free staging only — FreeChunk(coord) would drop the live lit mesh that
+    // ProcessSnapshot used to overwrite in-place (opaque collapse 213543).
+    if (GpuPipeline && gpu_result.slotIndex >= 0)
     {
-      GpuPipeline->FreeChunk(coord);
+      GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
     }
     if (RemeshAfterApply.erase(coord) > 0 || defer_until_lit || !had_mesh)
     {
@@ -1676,9 +1687,10 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   }
 
   ChunkGreedyMesh &chunkMesh = GreedyCache[coord];
-  if (chunkMesh.GpuResident && chunkMesh.GpuSlotIndex >= 0 && GpuPipeline)
+  if (GpuPipeline)
   {
-    GpuPipeline->FreeChunk(coord);
+    // Publish staging over any prior live slot (Bind frees the old index).
+    GpuPipeline->GetAllocator().BindCommittedSlot(coord, gpu_result.slotIndex);
   }
   chunkMesh.GpuResident = true;
   chunkMesh.GpuSlotIndex = gpu_result.slotIndex;
@@ -1778,10 +1790,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         !gpu_result.success)
     {
       ActiveMeshSourceRevision.erase(pending.coord);
-      if (GpuPipeline)
-      {
-        GpuPipeline->FreeChunk(pending.coord);
-      }
+      // ProcessSnapshot frees its staging slot on failure; do not FreeChunk —
+      // that would drop a still-live committed mesh.
       Dirty.MarkDirtyPriority(pending.coord);
       continue;
     }
