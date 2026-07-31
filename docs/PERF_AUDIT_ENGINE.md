@@ -433,3 +433,8 @@ CPU Apply frees committed GPU slot when replacing GpuResident mesh (stale SSBO d
 `had_mesh` / pending priority use `HasDrawable`. Stale repair threshold 40; void wave
 also when void>40 && stale>40 at idle.
 
+### Phase 4 (emerge/dirty_tick idle) — landed
+
+Healed idle (`miss=0`, no sticky/pending): `MeshEmergeTotalBudgetMs` 60→28
+(36 with lit focus-dirty debt). Hole/sticky recovery keeps 60.
+

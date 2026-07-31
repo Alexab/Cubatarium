@@ -755,7 +755,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
        (idle_recovery && pending_focus_count > 0))
           ? 48.0
           : (idle_focus_dirty_debt ? 28.0 : 6.0));
-  mesh_service.SetMeshEmergeTotalBudgetMs(moving ? 25.0 : 60.0);
+  // Healed idle (miss=0, no sticky/pending): default idle emerge 60ms ate
+  // wall on land-exit stand (manual 213543 emerge~55%). Keep 60 only while
+  // recovering holes/light/sticky; lit remesh catch-up gets mid band.
+  const bool healed_idle_emerge =
+      !moving && !visual_holes && !missing_underfeet &&
+      !missing_visible_mesh && black_sticky == 0 &&
+      pending_focus_count == 0;
+  mesh_service.SetMeshEmergeTotalBudgetMs(
+      moving ? 25.0
+             : (healed_idle_emerge
+                    ? (idle_focus_dirty_debt ? 36.0 : 28.0)
+                    : 60.0));
 
   // Healthy flight with no visual holes: flush Dirty so pressure can leave Red
   // (Dirty plateaus ~700 trapped Red when exit required dirty<=500).
