@@ -19,13 +19,74 @@ python tools/flight_sim_run.py --world World_164 --teleport-cruise --seconds 130
   --phase-id <id> --report bin/phase_<id>.json
 python tools/phase_run_record.py --phase <id> --report bin/phase_<id>.json --note "..."
 python tools/flight_sim_phase_gate.py --phase-id F2 --report bin/phase_<id>.json
+python tools/flight_sim_phase_gate.py --phase-id C --report bin/phase_<id>.json
+python tools/flight_sim_phase_gate.py --phase-id CB --report bin/phase_<id>.json
 ```
 
-Ожидание относительно golden `final_combined` / snapshot `134418`:
+Ожидание (golden `cb_pack` / F2+C+CB closed 2026-07-26):
+
 - sticky = 0
-- nr_end ≤ 30 (±10%)
-- fd_delta < 0 или fd_end не хуже 347+10%
-- cold_relight_holes_sec тренд вниз (цель ≤ 3)
+- F2: cold≤3, fd_end≤280, pending_med≤5, nr_end≤36
+- C: spike_max_wall_holes≤200, cold≤6
+- CB: spike≤200, cold≤3, wall_no_holes≤**37**, dirty_no_holes≤450
+- Reference: `bin/phase_cb_pack.json` (wall **36.3**, spike **164.6**)
+- Spike variance: if a single golden fails only `spike_max_wall_holes` (~200–260)
+  with F2 still GO, re-run once before treating as regress.
+- T0 (2026-07-26): `cb_pack` GO; `t0_premerge`/`t0_premerge2` F2 GO with spike
+  variance only — accept `cb_pack` as merge reference.
+
+## 2a. Timeline + run_outcome (P0 harness)
+
+После каждой фазы A0–D / E1–E5:
+
+```powershell
+python tools/flight_sim_run.py --world World_164 --teleport-cruise --seconds 130 `
+  --fly-stop --fly-phase-sec 45 --stop-phase-sec 60 --idle-sec 8 `
+  --process-timeout 420 `
+  --phase-id <PHASE_ID> --report bin/iter_reports/timeline/<PHASE_ID>.json
+```
+
+Verify in report: `run_outcome=success`, `info_tail` present. Commit фазы **только** при `run_outcome=success`.
+
+**V2–V5 architecture freeze (2026-07-28, `arch/streaming-v2-v4`):** E1–E5 code
+contracts landed (SeedDecision, ColumnFlowExecutor, visual SLA, seed factory,
+Capture progress). Gate DoD F2/C/CB may still be NO-GO — do not treat docs ✅ as
+gate GO; see `TECH_DEBT_CHUNK_STREAMING.md` TD-ARCH-011/015 backlog.
+
+**Era13 readiness DoD (2026-07-29):** architecture contract gates (not GPU ladder):
+
+```powershell
+python tools/flight_sim_phase_gate.py --phase-id ARCH_D1 --report bin/iter_reports/timeline/<id>.json
+python tools/flight_sim_phase_gate.py --phase-id ARCH_D3 --report bin/iter_reports/timeline/<id>.json
+```
+
+| Gate | ARCH_D1 | ARCH_D3 |
+|------|---------|---------|
+| `post_load_ring_idle_max` | =0 | =0 |
+| `effective_holes_rate` | ≤0.24 | ≤0.10 |
+| `mesh_async_med_when_dirty` | ≥4 (FOV unfinished) | ≥4 |
+| stop not_ready / sticky / holes | 0 | 0 |
+| `stop_dark_face_near_end` | &lt;200 | &lt;100 |
+| `wall_ms_med` | ≤35 | ≤30 |
+
+Do **not** merge to `develop` until ARCH_D3 GO (+ F2/C/CB as before).
+
+**Backend matrix (R4):** desktop
+
+```powershell
+python tools/flight_sim_iterate.py --backend cpu --replay-edge ...
+python tools/flight_sim_iterate.py --backend gpu --replay-edge ...
+```
+
+Android seed stays CPU until TD-ARCH-013b (`ANDROID_GPU_BACKLOG.md`).
+
+Edge replay (World_164 boundary):
+
+```powershell
+python tools/flight_sim_run.py --replay-edge --report bin/iter_reports/edge_replay.json
+```
+
+Rolling summary: `bin/iter_reports/timeline_summary.json` via `flight_sim_iterate.py --timeline-summary`.
 
 ## 3. Manual replay parity
 
@@ -44,15 +105,38 @@ python tools/flight_sim_analyze.py bin/logs/perf_YYYYMMDD-HHMMSS_*.jsonl `
 Проверить: `cold_relight_holes_sec`, `wall_ms_no_holes_med`, `spike_max_wall_holes`,
 `dirty_med_no_holes`.
 
+Reference `premerge_replay` (2026-07-26): holes/cold/spike_holes **0**, dirty **200**;
+sticky_max **2**, wall **~45** on save corridor (−478). CB gate of record remains
+teleport-cruise golden — do not fail merge solely on replay wall/sticky noise.
+
 ## 4. Metrics to record
 
 | Metric | Why |
-|--------|-----|
+| -------- | -------- |
 | cold_relight_holes_sec | P0 frontier stall |
 | wall_ms_no_holes_med | moving FPS without holes |
 | dirty_med_no_holes | F2 remesh thrash |
 | spike_count / spike_max_wall / spike_max_wall_holes | flight hitch |
 | sticky / nr_end / fd_end | stop contract |
+
+## 4b. Auto-iteration loop (optional, recommended)
+
+Для системной отладки регрессий (spike + sticky-dark + light debt) используйте
+итерационный раннер:
+
+```powershell
+python tools/flight_sim_iterate.py --world World_164 --iterations 3 --build-first `
+  --phase-prefix perf_iter `
+  --summary bin/flight_sim_iterate_summary.json
+```
+
+Что делает раннер:
+
+- запускает воспроизводимые автопролёты по фиксированному сценарию;
+- собирает `perf_*.jsonl` и ближайший `Cubatarium.exe*.INFO.*`;
+- классифицирует причины (main-thread hitch, light debt plateau, dirty backlog, sticky-dark);
+- формирует рекомендации для следующей доработки;
+- останавливается раньше, если выполнены критерии по spike/wall/pending/dark.
 
 ## 5. Anti-patterns (reject merge)
 
@@ -60,3 +144,30 @@ python tools/flight_sim_analyze.py bin/logs/perf_YYYYMMDD-HHMMSS_*.jsonl `
 - early `idle_remesh_debt` 12/20
 - снятие heavy_dirty caps ради cold_relight
 - `CancelAsyncInFlightKeepDirty` на idle remesh
+
+## 6. GPU dual-stack (after G0–GA + P* + D1)
+
+Desktop expect jsonl: `backend_mesher=gpu_greedy`, `backend_store=mdi_vertex_pool`,
+`backend_cull=gpu_frustum`, `backend_fluid=gpu_fluid_surface`,
+`backend_lighting_mode` in (`full`,`gpu_full`) — never `flat` on GPU stack,
+`gpu_draw_cmds` med ≤15, `gpu_cull_indirect` ≈1, `gpu_fluid_scan_on` ≈1,
+`gpu_mask_readback` med = 0.
+
+```powershell
+python tools/flight_sim_phase_gate.py --phase-id F2 --report bin/phase_D1.json
+python tools/flight_sim_phase_gate.py --phase-id D1a --report bin/phase_D1.json
+python tools/flight_sim_phase_gate.py --phase-id D1d --report bin/phase_D1.json
+python tools/flight_sim_phase_gate.py --phase-id PA --report bin/phase_D1.json
+python tools/flight_sim_phase_gate.py --phase-id GA --report bin/phase_D1.json
+```
+
+P* + D1 (Desktop): cull→MDI (P2), single pool upload (P3), PreferGpu fluid (P7),
+skylight without sky GetBufferSubData (D1.3), opaque greedy without mask readback
+(D1.1), force Full lighting (D1.4).
+
+Android/GLES: GPU-by-default when probe+allowlist pass; opt-out via
+`render.android_gpu_enabled=false`. See
+[`ANDROID_GPU_BACKLOG.md`](ANDROID_GPU_BACKLOG.md). Device smoke:
+[`QA_ANDROID_2026.md`](../QA_ANDROID_2026.md). Factory:
+`render_backend_factory_test`, `android_gpu_policy_test`.
+Phase runner: `tools/android_gpu_phase_run.py` (desktop + android assemble + gates).

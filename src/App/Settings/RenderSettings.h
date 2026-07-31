@@ -66,6 +66,12 @@ struct RenderSettings
   /// Request MSAA sample count at window create (0 = off). Applied only when
   /// the window is created before config; prefer 0 for GPU-bound present.
   int MsaaSamples{0};
+  /// Android only: use GPU mesh/fluid when probe+allowlist pass. Default ON;
+  /// set false to opt out to the CPU stack (takes effect after world restart).
+  bool AndroidGpuEnabled{true};
+  /// GPU-resident packed quad meshing (mask→greedy→SSBO, no vertex readback).
+  /// Desktop default ON; Android uses GLES per-chunk indirect fallback.
+  bool GpuPackedMeshing{true};
 
   static RenderSettings Legacy()
   {

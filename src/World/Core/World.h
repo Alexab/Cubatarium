@@ -63,6 +63,27 @@ enum class ColumnEmergeState : uint8_t
   RenderReady,
 };
 
+/// Draw readiness SoT (TD-ARCH-028). Telemetry unfinished/holes derive from this.
+struct ColumnRenderableState
+{
+  enum class BlockReason : uint8_t
+  {
+    None = 0,
+    PendingLight,
+    StickyRemesh,
+    StaleDark,
+    MissingMesh,
+    GpuInFlight,
+    NotLoaded,
+    NotReadyState,
+  };
+
+  ColumnEmergeState stage{ColumnEmergeState::Empty};
+  bool draw_ok{false};
+  BlockReason reason{BlockReason::None};
+  bool has_repair_ticket{false};
+};
+
 class UCreatureDefinitionStorage;
 class USkinDefinitionStorage;
 struct CreatureDefinition;
@@ -361,6 +382,21 @@ public:
   /// Build pending terrain meshes before GPU upload (returns true when ready).
   bool DrainEnterGameMeshWarmup(int budget);
   bool NeedsEnterGameMeshWarmup() const;
+  /// Spawn ring has greedy mesh committed (no missing, no pending GPU apply).
+  bool IsSpawnMeshRingReady() const;
+  int CountPostLoadRingNotReady() const;
+  int GetEnterGameMeshBurstFrames() const { return EnterGameMeshBurstFrames; }
+  void TickEnterGameMeshBurst();
+  void BeginEnterGameMeshBurst(int frames = 5);
+  /// Idle catch-up until Visual RD columns are draw-ready (TD-ARCH-021/026).
+  bool NeedsSpawnRingCatchUp() const;
+  /// Hide⇒Ticket: mark column for ColumnFlow RemeshSeam (StickyRemesh set).
+  void NoteColumnRepairNeeded(glm::ivec2 ground_xz);
+  void SetEnterGameWarmupMissingGreedy(int n);
+  int GetEnterGameWarmupMissingGreedy() const
+  {
+    return EnterGameWarmupMissingGreedy;
+  }
   bool IsCreateSpawnWarmupSettled() const;
   void DrainSpawnRadiusMeshWarmup(int budget);
   void RefreshPersistedTerrainAfterSave();
@@ -613,6 +649,10 @@ public:
   void SetLastPrepareFrameMs(double ms) { LastPrepareFrameMs = ms; }
   void SetLastPostSceneMs(double ms) { LastPostSceneMs = ms; }
   void SetLastGuiOverlayMs(double ms) { LastGuiOverlayMs = ms; }
+  void SetLastAutosaveMs(double ms) { LastAutosaveMs = ms; }
+  double GetLastAutosaveMs() const { return LastAutosaveMs; }
+  void SetLastRenderTotalMs(double ms) { LastRenderTotalMs = ms; }
+  double GetLastRenderTotalMs() const { return LastRenderTotalMs; }
   double GetLastInputMs() const { return LastInputMs; }
   double GetLastAppUpdateMs() const { return LastAppUpdateMs; }
   double GetLastWorldTickMs() const { return LastWorldTickMs; }
@@ -893,6 +933,8 @@ public:
   void SetLastMovementFrameMs(double ms) { LastMovementFrameMs = ms; }
   double GetLastMovementFrameMs() const { return LastMovementFrameMs; }
   float GetLastMovementSpeed() const { return LastMovementSpeed; }
+  void UpdateMotionState(float speed, float dt_sec);
+  double GetTimeSinceMotionSec() const { return TimeSinceMotionSec; }
   /// Horizontal motion/view direction for mesh/relight forward bias (xz).
   glm::vec2 GetLastMovementDirXz() const { return LastMovementDirXz; }
   void RelightTerrainColumn(int world_x, int world_z, int min_y, int max_y,
@@ -930,13 +972,9 @@ public:
   void TickPlayerRelightMeshBurst();
   void FlushPendingRelightMeshColumns(int max_columns_per_flush = 8);
   /// Re-enqueue skylight for focus columns that already have a mesh but no sky.
-  int RecoverUnlitFocusMeshes(int max_columns = 4);
-  /// Idle stop-recovery: sync relight+remesh for focus columns stuck with
-  /// GreedyMesh while PendingLight (async relight deadlock).
-  int RecoverStickyBlackFocusSync(int max_columns = 1);
-  /// Idle hover: re-dirty LitReady focus columns that already have GreedyMesh
-  /// (MarkRelit cleared PendingLight but async never remeshed — dark/stale).
-  int RefreshIdleFocusGreedyRemesh(int max_columns = 4);
+  /// If only_column is set, prefer that column (V4 ColumnFlowExecutor).
+  int RecoverUnlitFocusMeshes(int max_columns = 4,
+                              const glm::ivec2 *only_column = nullptr);
   /// Idle stop: sync rebuild nearest focus column when async pool saturated.
   int SyncIdleFocusGreedyRemesh(int max_columns = 1);
   /// Clear PendingLight after mesh committed for lit focus columns.
@@ -945,11 +983,12 @@ public:
   int PruneStickyRemeshOutside(glm::ivec3 focus_ground_chunk, int radius_chunks);
   /// Focus ingress: Dirty + priority relight for Lighting columns without mesh.
   int AdmitFocusMeshIngress(int max_columns = 8);
-  /// Idle: Dirty for focus Lighting/Pending columns that never got a Dirty mark.
-  int AdmitFocusLightingWithoutDirty(int max_columns = 8);
   /// Ring-scan focus for solid slices missing GreedyCache; mark Dirty only.
+  /// If only_column is set, prefer that column first (V4 ColumnFlowExecutor).
   int AdmitFocusVisibleMissing(int max_columns = 8,
-                               glm::vec2 forward_xz = glm::vec2(0.0f));
+                               glm::vec2 forward_xz = glm::vec2(0.0f),
+                               const glm::ivec2 *only_column = nullptr);
+  bool IsColumnStickyRemesh(glm::ivec2 ground_xz) const;
 
   /// Near-focus columns waiting for first light before first mesh (plan A).
   void NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y);
@@ -966,6 +1005,27 @@ public:
   int TrimFarRelightFifoFarthest(glm::ivec3 focus_ground_horiz, int soft_cap);
   int CountPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,
                                       int radius_chunks) const;
+  /// Fill out with PendingLight focus columns (nearest first, capped).
+  int CollectPendingLightFocusColumns(glm::ivec3 focus_ground_horiz,
+                                      int radius_chunks,
+                                      std::vector<glm::ivec2> &out,
+                                      int max_cols) const;
+  /// Fill out with StickyRemeshAfterLight columns under focus.
+  int CollectStickyRemeshFocusColumns(glm::ivec3 focus_ground_horiz,
+                                      int radius_chunks,
+                                      std::vector<glm::ivec2> &out,
+                                      int max_cols) const;
+  /// Focus columns with greedy mesh that still have stale dark faces.
+  int CollectStaleDarkFocusColumns(glm::ivec3 focus_ground_horiz,
+                                   int radius_chunks,
+                                   std::vector<glm::ivec2> &out,
+                                   int max_cols) const;
+  /// Focus columns with greedy mesh that still have fully-dark faces (void-edge
+  /// debt: mesh dark and light field 0 — needs Relight, not remesh alone).
+  int CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
+                                   int radius_chunks,
+                                   std::vector<glm::ivec2> &out,
+                                   int max_cols) const;
   /// "(cx,cz),..." for PendingLightBeforeMesh inside focus (max_cols cap).
   std::string FormatPendingLightFocusColumns(glm::ivec3 focus_ground_horiz,
                                              int radius_chunks,
@@ -979,6 +1039,9 @@ public:
   /// Re-queue priority relight for PendingLightBeforeMesh columns under focus.
   int PromotePendingLightRelightsNear(glm::ivec3 focus_ground_horiz,
                                       int radius_chunks);
+  /// Promote terrain-column FIFO near focus (ColumnFlow PromoteRelight only).
+  int PromoteNearTerrainColumnRelights(glm::ivec3 focus_ground_horiz,
+                                       int radius_chunks);
   void PromotePendingLightBeforeMesh(const std::vector<glm::ivec3> &relit_chunks,
                                      bool priority_mesh);
 
@@ -991,6 +1054,8 @@ public:
   bool IsColumnVisualReadyForRing(glm::ivec3 ground) const;
   /// Strict visible contract: no pending light, stable mesh, render-safe column.
   bool IsColumnRenderReady(glm::ivec3 ground) const;
+  /// Full draw-gate state including repair-ticket flag (TD-ARCH-028).
+  ColumnRenderableState GetColumnRenderableState(glm::ivec2 ground_xz) const;
   /// Focus columns that are loaded but not yet safe to render.
   int CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
                                 int radius_chunks) const;
@@ -1007,9 +1072,6 @@ public:
   /// Supplemental async relight FIFO drain (adds to RelightDrainMs). Used by
   /// MeshEmerge cold-hole same-tick promote→drain so SoftDefer can lift.
   void DrainRelightQueuesBudget(int max_player_jobs, int max_bg_columns);
-  /// Alias of DrainFocusVisualWork (legacy call sites).
-  int DrainColumnWork(glm::ivec3 focus_ground_horiz, int radius_chunks,
-                      int clear_pending_budget);
   /// Idle sync relight for focus pending columns that already have preview mesh.
   int DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
                                  int radius_chunks, int max_columns);
@@ -1195,6 +1257,8 @@ private:
   bool CooperativeBulkGenerating{false};
   double LastMovementFrameMs{0.0};
   int PlayerRelightMeshBurstFrames{0};
+  int EnterGameMeshBurstFrames{0};
+  int EnterGameWarmupMissingGreedy{0};
   struct PendingRelightMeshColumnRange
   {
     int min_y{0};
@@ -1238,6 +1302,7 @@ private:
   StreamingAltitudePolicyParams AltitudeParams;
   glm::vec3 LastCameraPosition{0.0f};
   float LastMovementSpeed{0.0f};
+  double TimeSinceMotionSec{0.0};
   glm::vec2 LastMovementDirXz{0.0f};
   int MaxLoadOpsPerFrame{4};
   int MaxUnloadOpsPerFrame{2};
@@ -1272,6 +1337,8 @@ private:
   double LastPrepareFrameMs{0.0};
   double LastPostSceneMs{0.0};
   double LastGuiOverlayMs{0.0};
+  double LastAutosaveMs{0.0};
+  double LastRenderTotalMs{0.0};
   double LastFluidMapCpuMs{0.0};
   double LastFluidMapGpuMs{0.0};
   int LastFluidMapDirtyChunks{0};

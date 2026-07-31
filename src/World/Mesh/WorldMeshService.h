@@ -19,6 +19,8 @@ namespace cutum
 class UBlockRegistry;
 class UBlockWorld;
 class UCamera;
+class IUChunkCull;
+class IUChunkMesher;
 struct Frustum;
 struct PhysicsTelemetry;
 
@@ -33,6 +35,19 @@ public:
 
   void SetMeshSink(IUWorldMeshSink *sink) { MeshSink = sink; }
 
+  /// When true, edit remesh prefers center Immediate + Dirty ring (GPU store).
+  void SetPreferGpuStorePatch(bool enabled) { PreferGpuStorePatch = enabled; }
+  bool GetPreferGpuStorePatch() const { return PreferGpuStorePatch; }
+  uint64_t GetLastEditImmediateN() const { return LastEditImmediateN; }
+  uint64_t GetLastEditDirtyN() const { return LastEditDirtyN; }
+
+  void SetCullBackend(IUChunkCull *cull) { Cache.SetCullBackend(cull); }
+  void SetMesherBackend(IUChunkMesher *mesher)
+  {
+    Cache.SetMesherBackend(mesher);
+  }
+  double GetLastGpuCullMs() const { return Cache.GetLastGpuCullMs(); }
+
   void SetRenderSettings(const RenderSettings &settings);
   void SetRenderDistanceChunks(int distance);
   void SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord, int radius_chunks);
@@ -42,12 +57,16 @@ public:
   void SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn);
   void SetStarveOutsideFocusMesh(bool starve);
   void SetStarveRemeshForHoles(bool starve);
+  void SetStarveRemeshKeepHoriz(int keep_h);
+  int DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk, int keep_radius,
+                                  int keep_cy = -1, bool remesh_only = false);
   void SetSyncHoleFillRadius(int radius_chunks);
   void SetMaxOutsideFocusMeshPerFrame(int count);
   void SetMaxRearFocusMeshPerFrame(int count);
   void SetMeshScheduleMaxHorizontalDist(int radius_chunks);
   void SetMeshScheduleOverflowPerFrame(int count);
   void SetMeshSnapshotBudgetMs(double ms);
+  void SetMeshEmergeTotalBudgetMs(double ms);
   void SetAltitudeCullState(float altitude_above_terrain, int threshold_blocks);
 
   void MarkDirty(glm::ivec3 chunk_coord);
@@ -89,6 +108,7 @@ public:
   void InvalidateEditMeshNeighborhood(
       const std::vector<glm::ivec3> &block_positions);
   void ResetImmediateMeshStats();
+  void BeginHoleQueryFrame();
   double GetLastMeshImmediateMs() const;
   int GetLastMeshImmediateCount() const;
   void WaitForAsyncMeshIdle();
@@ -116,12 +136,25 @@ public:
   void SetMeshCompletedCapacity(size_t cap);
   uint64_t GetMeshDiscardedLateCount() const;
   uint64_t GetMeshApplyStaleCount() const;
+  size_t GetPendingGpuAppliesCount() const;
+  int CountPendingGpuAppliesInHorizontalRadius(glm::ivec3 center_ground_chunk,
+                                               int radius_chunks) const;
+  int DrainPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
+                            int max_count, double budget_ms);
   double GetLastFlatRebuildMs() const;
   double GetLastMeshSyncMs() const;
   double GetLastMeshSnapshotMs() const;
   double GetLastMeshDirtyTickMs() const;
   size_t GetGreedyCacheSize() const;
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
+  /// True only when cache has GPU quads or non-empty CPU batches (not empty
+  /// placeholder entries that SoftDefer treated as "has mesh").
+  bool HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const;
+  bool IsGpuExtractInFlight(glm::ivec3 chunk_coord) const;
+  /// Queued in PendingGpuApplies — orphaned GpuExtractInFlight alone is not.
+  bool IsPendingGpuApply(glm::ivec3 chunk_coord) const;
+  bool ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
+                             const UBlockWorld &world) const;
   bool IsChunkMeshDirty(glm::ivec3 chunk_coord) const;
   uint64_t GetChunkMeshRevision(glm::ivec3 chunk_coord) const;
   bool HasInflightMeshBuild(glm::ivec3 chunk_coord) const;
@@ -191,6 +224,9 @@ private:
 
   UChunkMeshCache Cache;
   IUWorldMeshSink *MeshSink{nullptr};
+  bool PreferGpuStorePatch{false};
+  uint64_t LastEditImmediateN{0};
+  uint64_t LastEditDirtyN{0};
 };
 
 } // namespace cutum

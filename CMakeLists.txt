@@ -212,10 +212,15 @@ set(SOURCES
     src/World/Lighting/FullLightingPipeline.cpp
     src/World/Lighting/FlatLightingPipeline.cpp
     src/World/Lighting/LightingPipelineFactory.cpp
+    src/World/Lighting/CpuLightingSeedBackend.cpp
+    src/World/Lighting/GpuLightingSeedBackend.cpp
+    src/World/Lighting/LightingSeedBackendFactory.cpp
     src/World/Persistence/WorldPersistence.cpp
     src/World/Streaming/WorldStreaming.cpp
     src/World/Streaming/MemoryBudgetController.cpp
     src/World/Streaming/ChunkEmergeCoordinator.cpp
+    src/World/Streaming/ColumnFlowScheduler.cpp
+    src/World/Streaming/ColumnFlowExecutor.cpp
     src/World/Physics/WorldPhysicsScheduler.cpp
     src/World/Physics/WorldMovementPhysicsService.cpp
     src/World/Physics/WorldBlockPhysicsService.cpp
@@ -252,6 +257,7 @@ set(SOURCES
     src/World/Diagnostics/CreatureMovementDiagnostics.cpp
     src/World/Mesh/WorldMeshService.cpp
     src/World/Mesh/WorldMeshDirtyPolicy.cpp
+    src/World/Mesh/EditMeshRemeshPolicy.cpp
     src/App/Platform/WindowManager.cpp
     src/Render/Engine/GeometryEngine.cpp
     src/Render/Engine/FluidSurfaceMap.cpp
@@ -262,6 +268,25 @@ set(SOURCES
     src/Render/Engine/GreedyGpuBackend.cpp
     src/Render/Engine/GreedyVertexPool.cpp
     src/Render/Engine/CrossGpuBackend.cpp
+    src/Render/Backend/RenderBackendFactory.cpp
+    src/Render/Backend/RenderBackendSelect.cpp
+    src/Render/Backend/RenderBackendCaps.cpp
+    src/Render/Backend/RenderBackendCapsProbe.cpp
+    src/Render/Backend/AndroidGpuPolicy.cpp
+    src/Render/Backend/GpuHotPathFallback.cpp
+    src/Render/Gl/ComputeProgram.cpp
+    src/Render/Mesh/CpuFrustumCull.cpp
+    src/Render/Mesh/GpuFrustumCull.cpp
+    src/Render/Mesh/GpuGreedyMesher.cpp
+    src/Render/Mesh/AndroidGpuGreedyMesher.cpp
+    src/Render/Mesh/GpuGreedyOpaqueEmit.cpp
+    src/Render/Mesh/GpuMeshPipeline.cpp
+    src/Render/Mesh/GpuMeshSlotAllocator.cpp
+    src/Render/Pipeline/GpuTransparentSort.cpp
+    src/Render/Mesh/GpuFluidColumnScan.cpp
+    src/World/Lighting/GpuSkylightColumnSeed.cpp
+    src/World/Lighting/GpuBlocklightFlood.cpp
+    src/Render/Engine/MdiVertexPoolStore.cpp
     src/Render/Engine/DistanceFog.cpp
     src/Render/Engine/HorizonFogColor.cpp
     src/Render/Pipeline/GlStateScope.cpp
@@ -1057,6 +1082,8 @@ add_executable(chunk_lighting_propagation_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Lighting/LightUtil.cpp
     src/World/Lighting/ChunkLighting.cpp
+    src/Test/GpuBlocklightFloodHostStub.cpp
+    src/Test/GpuSkylightSeedHostStub.cpp
     src/Test/ChunkLightingPropagationTest.cpp)
 target_include_directories(chunk_lighting_propagation_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -1068,6 +1095,8 @@ add_executable(chunk_bulk_blocklight_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Lighting/LightUtil.cpp
     src/World/Lighting/ChunkLighting.cpp
+    src/Test/GpuBlocklightFloodHostStub.cpp
+    src/Test/GpuSkylightSeedHostStub.cpp
     src/Test/ChunkBulkBlockLightTest.cpp)
 target_include_directories(chunk_bulk_blocklight_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -1125,14 +1154,111 @@ target_include_directories(camera_stability_test PRIVATE ${CMAKE_SOURCE_DIR}/src
 target_link_libraries(camera_stability_test glm::glm)
 
 add_executable(streaming_render_ready_invariants_test
-    src/Test/StreamingRenderReadyInvariantsTest.cpp)
+    src/Test/StreamingRenderReadyInvariantsTest.cpp
+    src/World/Streaming/ColumnFlowScheduler.cpp)
 target_include_directories(streaming_render_ready_invariants_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(streaming_render_ready_invariants_test glm::glm)
+
+add_executable(mesh_neighbor_policy_test
+    src/Test/MeshNeighborPolicyTest.cpp)
+target_include_directories(mesh_neighbor_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
 add_executable(focus_ingress_policy_test
     src/Test/FocusIngressPolicyTest.cpp)
 target_include_directories(focus_ingress_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(seed_decision_policy_test
+    src/Test/SeedDecisionPolicyTest.cpp)
+target_include_directories(seed_decision_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(visual_ready_for_ring_policy_test
+    src/Test/VisualReadyForRingPolicyTest.cpp)
+target_include_directories(visual_ready_for_ring_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(column_flow_scheduler_test
+    src/Test/ColumnFlowSchedulerTest.cpp
+    src/World/Streaming/ColumnFlowScheduler.cpp)
+target_include_directories(column_flow_scheduler_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(column_flow_scheduler_test glm::glm)
+
+add_executable(edit_mesh_remesh_policy_test
+    src/Test/EditMeshRemeshPolicyTest.cpp
+    src/World/Mesh/EditMeshRemeshPolicy.cpp
+    src/World/Math/GridMath.cpp)
+target_include_directories(edit_mesh_remesh_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(edit_mesh_remesh_policy_test glm::glm)
+
+add_executable(render_backend_factory_test
+    src/Test/RenderBackendFactoryTest.cpp
+    src/Render/Backend/RenderBackendSelect.cpp
+    src/Render/Backend/RenderBackendCaps.cpp)
+target_include_directories(render_backend_factory_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(android_gpu_policy_test
+    src/Test/AndroidGpuPolicyTest.cpp
+    src/Render/Backend/AndroidGpuPolicy.cpp
+    src/Render/Backend/RenderBackendCaps.cpp)
+target_include_directories(android_gpu_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(android_gpu_policy_test PRIVATE glog::glog)
+
+add_executable(mesh_gpu_store_mdi_test
+    src/Test/MeshGpuStoreMdiTest.cpp)
+target_include_directories(mesh_gpu_store_mdi_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(gpu_greedy_face_extract_test
+    src/Test/GpuGreedyFaceExtractTest.cpp
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/World/Math/GridMath.cpp
+    src/Render/Mesh/ChunkMeshSnapshot.cpp)
+target_include_directories(gpu_greedy_face_extract_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(gpu_greedy_face_extract_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(gpu_greedy_face_extract_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(greedy_transparent_sort_test
+    src/Test/GreedyTransparentSortTest.cpp
+    src/Render/Pipeline/GreedyTransparentSort.cpp
+    src/Render/Backend/RenderBackendCaps.cpp
+    src/Render/Backend/GpuHotPathFallback.cpp
+    src/Test/GpuTransparentSortHostStub.cpp
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/World/Math/GridMath.cpp)
+target_include_directories(greedy_transparent_sort_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(greedy_transparent_sort_test PRIVATE
+    CUBATARIUM_GLES ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(greedy_transparent_sort_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(gpu_skylight_column_seed_test
+    src/Test/GpuSkylightColumnSeedTest.cpp)
+target_include_directories(gpu_skylight_column_seed_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(gpu_skylight_column_seed_test glm::glm)
+
+add_executable(gpu_skylight_merge_test
+    src/World/Chunks/Chunk.cpp
+    src/World/Math/FluidCellState.cpp
+    src/Test/GpuSkylightMergeTest.cpp)
+target_include_directories(gpu_skylight_merge_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(gpu_skylight_merge_test glm::glm)
+
+add_executable(gpu_fluid_column_scan_test
+    src/Test/GpuFluidColumnScanTest.cpp)
+target_include_directories(gpu_fluid_column_scan_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(gpu_fluid_column_scan_test glm::glm)
 
 add_executable(docked_overlay_layout_test src/Test/DockedOverlayLayoutTest.cpp
     src/Gui/Layout/DockedOverlayLayout.cpp)
@@ -1156,6 +1282,7 @@ add_executable(fluid_surface_slice_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Core/FluidColumnSurfaceQuery.cpp
     src/Render/Mesh/FluidSurfaceColumnSlice.cpp
+    src/Test/GpuFluidColumnScanHostStub.cpp
     src/Test/FluidSurfaceSliceTest.cpp)
 target_include_directories(fluid_surface_slice_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -1163,11 +1290,24 @@ target_compile_definitions(fluid_surface_slice_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(fluid_surface_slice_test glm::glm nlohmann_json::nlohmann_json)
 
+add_executable(fluid_surface_pack_reuse_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/World/Core/FluidColumnSurfaceQuery.cpp
+    src/Render/Mesh/FluidSurfaceColumnSlice.cpp
+    src/Test/GpuFluidColumnScanPreferStub.cpp
+    src/Test/FluidSurfacePackReuseTest.cpp)
+target_include_directories(fluid_surface_pack_reuse_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(fluid_surface_pack_reuse_test PRIVATE
+    ${PHYSICS_LIGHT_REGISTRY_DEF})
+target_link_libraries(fluid_surface_pack_reuse_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(fluid_surface_map_logic_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/World/Core/FluidColumnSurfaceQuery.cpp
     src/World/Core/RuntimeTuning.cpp
     src/Render/Mesh/FluidSurfaceColumnSlice.cpp
+    src/Test/GpuFluidColumnScanHostStub.cpp
     src/Test/FluidSurfaceMapLogicTest.cpp)
 target_include_directories(fluid_surface_map_logic_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
@@ -1275,12 +1415,17 @@ add_executable(decor_mesh_integration_test
     src/Core/Jobs/JobThreadBudget.cpp
     src/Render/Engine/DistanceFog.cpp
     src/Render/Engine/HorizonFogColor.cpp
+    src/Render/Gl/ComputeProgram.cpp
     src/Render/Mesh/AsyncMeshBuilder.cpp
     src/Render/Mesh/ChunkDirtySet.cpp
     src/Render/Mesh/ChunkMeshCache.cpp
     src/Render/Mesh/ChunkMeshRevisionRegistry.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/FluidSurfaceColumnSlice.cpp
+    src/Render/Mesh/GpuGreedyOpaqueEmit.cpp
+    src/Render/Mesh/GpuMeshPipeline.cpp
+    src/Render/Mesh/GpuMeshSlotAllocator.cpp
+    src/Test/GpuFluidColumnScanHostStub.cpp
     src/Render/Mesh/GreedyMesher.cpp
     src/World/Core/FluidColumnSurfaceQuery.cpp
     src/World/Physics/FluidSpreadSystem.cpp
@@ -1294,7 +1439,8 @@ target_include_directories(decor_mesh_integration_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_compile_definitions(decor_mesh_integration_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
-target_link_libraries(decor_mesh_integration_test glm::glm nlohmann_json::nlohmann_json)
+target_link_libraries(decor_mesh_integration_test glm::glm nlohmann_json::nlohmann_json
+    glog::glog OpenGL::GL GLEW::GLEW)
 
 add_executable(fluid_worldgen_seal_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
@@ -1860,6 +2006,11 @@ set(PHYSICS_UWORLD_TEST_SOURCES
     src/World/Streaming/WorldStreaming.cpp
     src/World/Streaming/MemoryBudgetController.cpp
     src/World/Streaming/ChunkEmergeCoordinator.cpp
+    src/World/Streaming/ColumnFlowScheduler.cpp
+    src/World/Streaming/ColumnFlowExecutor.cpp
+    src/World/Lighting/CpuLightingSeedBackend.cpp
+    src/World/Lighting/GpuLightingSeedBackend.cpp
+    src/World/Lighting/LightingSeedBackendFactory.cpp
     src/World/Persistence/WorldPersistence.cpp
     src/World/Core/WorldCooperativeOps.cpp
     src/World/Diagnostics/MovementDiagnosticsRecorder.cpp)

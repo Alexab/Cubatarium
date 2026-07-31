@@ -346,6 +346,55 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                      { return effective(a) < effective(b); });
   }
 
+  // SoftDefer hole: pin nearest missing column to front so the hot-frame
+  // Capture bypass clears the lit gate for the visible hole first. If the hole
+  // is PendingLight but missing from FIFO (Keys ghost / far-only), enqueue it.
+  glm::ivec3 soft_defer_hole{};
+  bool soft_defer_hole_valid = false;
+  if (visual_holes && world.MeshService)
+  {
+    soft_defer_hole_valid = world.MeshService->FindNearestMissingGreedyMesh(
+        world.GetBlockWorld(), focus_horiz, focus_radius, soft_defer_hole);
+  }
+  if (soft_defer_hole_valid)
+  {
+    const glm::ivec2 hole_key(soft_defer_hole.x * CHUNK_SIZE,
+                              soft_defer_hole.z * CHUNK_SIZE);
+    const glm::ivec2 hole_xz(soft_defer_hole.x, soft_defer_hole.z);
+    auto &prio = PendingTerrainColumnRelightsPriority;
+    auto &far = PendingTerrainColumnRelights;
+    const auto prio_it = std::find(prio.begin(), prio.end(), hole_key);
+    if (prio_it != prio.end())
+    {
+      if (prio_it != prio.begin())
+      {
+        prio.erase(prio_it);
+        prio.push_front(hole_key);
+      }
+    }
+    else
+    {
+      const auto far_it = std::find(far.begin(), far.end(), hole_key);
+      if (far_it != far.end())
+      {
+        far.erase(far_it);
+        prio.push_front(hole_key);
+      }
+      else if (world.IsPendingLightBeforeMesh(hole_xz))
+      {
+        // PendingLight SoftDefer hole with empty FIFO entry — force Capture.
+        EnqueueTerrainColumnRelight(hole_key.x, hole_key.y, /*priority=*/true,
+                                    0, max_y);
+        const auto again = std::find(prio.begin(), prio.end(), hole_key);
+        if (again != prio.end() && again != prio.begin())
+        {
+          prio.erase(again);
+          prio.push_front(hole_key);
+        }
+      }
+    }
+  }
+
   int drained_bg = 0;
   int skipped_inflight = 0;
   const bool moving =
@@ -357,13 +406,37 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   // Manual 102936: full-column Capture still ~1.6s — split into top-down Y
   // bands (RelightCaptureBandCy). SoftDefer keeps PendingLight until the
   // final band (finalize_pending_gate=false on partial).
-  const double capture_drain_budget_ms = moving ? 4.0 : 8.0;
+  double capture_drain_budget_ms = moving ? 3.0 : 8.0;
+  // Narrow PendingLight bands are cheaper now; when focus still has missing
+  // mesh plus light debt, allow a bit more Capture time so relight can clear
+  // the gate instead of holding mesh_async at 0 for many seconds.
+  if (async_bg && visual_holes && focus_pending_mid)
+  {
+    capture_drain_budget_ms = moving ? 5.0 : 10.0;
+    if (focus_pending_high)
+    {
+      capture_drain_budget_ms = moving ? 6.0 : 12.0;
+    }
+  }
   const double frame_ms_so_far = world.GetWallFrameDelta() * 1000.0;
+  // Hot SoftDefer bypass: at most one Capture so cruise hitch stays bounded.
+  // Async SoftDefer hole may enqueue even when wall is high (see drain_one).
+  int bg_cap = max_bg_columns;
+  // S2 step A: cruise ≤1 Capture/frame (worker Capture hung — TD-ARCH-015 open).
+  if (moving)
+  {
+    bg_cap = std::min(bg_cap, 1);
+  }
+  if (frame_ms_so_far >= capture_drain_budget_ms * 4.0 && visual_holes &&
+      focus_pending_mid)
+  {
+    bg_cap = std::min(bg_cap, 1);
+  }
   const int band_cy = std::max(0, tune.RelightCaptureBandCy);
   const auto drain_loop_t0 = std::chrono::high_resolution_clock::now();
   auto drain_one = [&]()
   {
-    if (drained_bg >= max_bg_columns)
+    if (drained_bg >= bg_cap)
     {
       return false;
     }
@@ -376,9 +449,28 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       return false;
     }
     // Frame already far over Capture budget (sticky hitch) — skip this frame.
+    // SoftDefer hole exception: cruise wall often 40–200ms from stream, so the
+    // 4× skip (moving: wall≥16) starved Capture (fifo~96, rd≈0, miss=1 16s+).
+    // SoftDefer hole: async enqueue is cheap — always allow one even on hot
+    // frames (startup wall 280–450 blocked @110 and plated cold=6). Sync
+    // Capture still skips when wall ≥110.
     if (drained_bg == 0 && frame_ms_so_far >= capture_drain_budget_ms * 4.0)
     {
-      return false;
+      const bool soft_defer_hole = visual_holes && focus_pending_mid;
+      // Idle PendingLight progress (TD-ARCH-010): when holes=0 the SoftDefer
+      // exception never fired and FIFO stalled. Allow one Capture/enqueue if
+      // inflight is empty and wall is not catastrophic.
+      const bool idle_pending_progress =
+          !moving && focus_pending_mid &&
+          world.GetAsyncRelightInFlightCount() == 0 && frame_ms_so_far < 160.0;
+      if (!soft_defer_hole && !idle_pending_progress)
+      {
+        return false;
+      }
+      if (!async_bg && frame_ms_so_far >= 110.0 && !idle_pending_progress)
+      {
+        return false;
+      }
     }
     if (async_bg && world.GetAsyncRelightInFlightCount() >= max_inflight)
     {
@@ -419,6 +511,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         std::max(std::abs(ground_xz.x - focus_horiz.x),
                  std::abs(ground_xz.y - focus_horiz.z));
     // Top-down Y-band: Capture sky first; requeue remainder after enqueue.
+    // SoftDefer keeps PendingLight until the final band — cold hole first-mesh
+    // is unblocked via MeshLitGate hole-preview in TickMeshEmerge (not here).
     int remainder_min = -1;
     int remainder_max = -1;
     bool finalize_gate = true;
@@ -478,8 +572,12 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     }
     if (remainder_min >= 0)
     {
-      EnqueueTerrainColumnRelight(col.x, col.y, horiz_dist <= 1, remainder_min,
-                                  remainder_max);
+      // SoftDefer: remainder band must stay hot within focus, otherwise
+      // finalize_pending_gate=true can be starved and PendingLight keeps
+      // rising while mesh_async stays at 0.
+      const bool remainder_priority = horiz_dist <= focus_radius;
+      EnqueueTerrainColumnRelight(col.x, col.y, remainder_priority,
+                                  remainder_min, remainder_max);
     }
     const double capture_ms =
         std::chrono::duration<double, std::milli>(
@@ -679,10 +777,11 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
         std::abs(ground_coord.x - focus_ground.x) <= focus_radius &&
         std::abs(ground_coord.z - focus_ground.z) <= focus_radius;
     const ProceduralSettings &settings = world.GetProceduralSettings();
-    EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
-                                ground_coord.z * CHUNK_SIZE, near_focus,
-                                std::max(0, settings.SeaLevel - CHUNK_SIZE * 2),
-                                settings.MaxHeight);
+
+    // Default relight range (used when the mesh gate isn't blocking yet).
+    const int relight_min_full = std::max(0, settings.SeaLevel - CHUNK_SIZE * 2);
+    const int relight_max_full = settings.MaxHeight;
+
     if (!world.IsLightingRelightDeferred() && !state.had_disk_light)
     {
       // Mesh gate band = sea±2 CHUNK ∪ player when near (same as commit).
@@ -699,6 +798,12 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
             dirty_max,
             std::min(settings.MaxHeight, focus_block.y + CHUNK_SIZE * 2));
       }
+
+      // SoftDefer: finalize_pending_gate must line up with the mesh-gate
+      // band, otherwise PendingLightBeforeMesh can stay "pending forever".
+      EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
+                                  ground_coord.z * CHUNK_SIZE, near_focus,
+                                  dirty_min, dirty_max);
       world.NotePendingLightBeforeMesh(ground_coord, dirty_min, dirty_max);
       // Focus: first-mesh Dirty immediately (preview). Far waits MarkRelit
       // under Yellow/Red via commit path; disk-load always Dirty near.
@@ -710,6 +815,11 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     }
     else
     {
+      // Disk already lit or relight deferred: keep previous wide relight range.
+      EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
+                                  ground_coord.z * CHUNK_SIZE, near_focus,
+                                  relight_min_full, relight_max_full);
+
       // Disk already lit: remesh visible band only (player ∪ sea), not full
       // 0..MaxHeight (that flooded Dirty on every column load).
       const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();

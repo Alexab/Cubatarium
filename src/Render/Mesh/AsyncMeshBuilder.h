@@ -9,6 +9,7 @@
 #include <atomic>
 #include <chrono>
 #include <glm/glm.hpp>
+#include <memory>
 #include <unordered_map>
 #include <vector>
 
@@ -16,6 +17,7 @@ namespace cutum
 {
 
 class UBlockRegistry;
+class IUChunkMesher;
 
 struct MeshBuildResult
 {
@@ -25,12 +27,18 @@ struct MeshBuildResult
   uint64_t sourceRevision{0};
   uint64_t jobId{0};
   uint64_t submitEpoch{0};
+  /// P5: worker deferred eligible opaque extract to main (GL) thread.
+  bool GpuExtractPending{false};
+  std::unique_ptr<ChunkMeshSnapshot> PendingSnapshot;
 };
 
 class UAsyncMeshBuilder
 {
 public:
   explicit UAsyncMeshBuilder(std::size_t thread_count = 0);
+
+  void SetMesher(IUChunkMesher *mesher) { Mesher = mesher; }
+  IUChunkMesher *GetMesher() const { return Mesher; }
 
   void Enqueue(ChunkMeshSnapshot snapshot, UBlockRegistry &registry);
   std::vector<MeshBuildResult> DrainCompleted(int maxPerFrame);
@@ -65,6 +73,7 @@ private:
   static constexpr int kPipelineSlotsPerWorker = 6;
 
   int WorkerCount{1};
+  IUChunkMesher *Mesher{nullptr};
   UJobThreadPool Pool;
   UCompletedJobQueue<MeshBuildResult> Completed;
   mutable std::mutex InFlightMutex;

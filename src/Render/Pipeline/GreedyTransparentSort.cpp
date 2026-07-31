@@ -1,9 +1,14 @@
 #include "Render/Pipeline/GreedyTransparentSort.h"
 
 #include "Blocks/BlockRegistry.h"
+#include "Render/Backend/GpuHotPathFallback.h"
+#include "Render/Backend/RenderBackendCaps.h"
+#include "Render/Pipeline/GpuTransparentSort.h"
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
+#include <vector>
 
 namespace cutum
 {
@@ -18,6 +23,7 @@ uint64_t GreedyTransparentSortRevision(const glm::vec3 &cameraPos)
          static_cast<uint64_t>(static_cast<uint32_t>(qz));
 }
 
+/// View distance via AABB center (cullSphere-compatible key for GPU sort).
 float GreedyBatchViewDistance(const GreedyMeshBatch &batch,
                               const glm::vec3 &cameraPos)
 {
@@ -25,13 +31,13 @@ float GreedyBatchViewDistance(const GreedyMeshBatch &batch,
   {
     return 0.0f;
   }
-  glm::vec3 centroid(0.0f);
-  for (const GreedyMeshVertex &v : batch.vertices)
-  {
-    centroid += glm::vec3(v.px, v.py, v.pz);
-  }
-  centroid /= static_cast<float>(batch.vertices.size());
-  return glm::length(centroid - cameraPos);
+  // Fast path: average of first/last vertex approximates AABB center well
+  // enough for back-to-front order (±0.25 hysteresis in sort).
+  const GreedyMeshVertex &a = batch.vertices.front();
+  const GreedyMeshVertex &b = batch.vertices.back();
+  const glm::vec3 center(0.5f * (a.px + b.px), 0.5f * (a.py + b.py),
+                         0.5f * (a.pz + b.pz));
+  return glm::length(center - cameraPos);
 }
 
 int TransparentBatchLayer(BlockRenderStyle Style)
@@ -47,29 +53,52 @@ int TransparentBatchLayer(BlockRenderStyle Style)
   }
 }
 
+namespace
+{
+struct SortKey
+{
+  float dist;
+  int layer;
+  BlockId id;
+  size_t index;
+};
+
+bool SortKeyLess(const SortKey &a, const SortKey &b)
+{
+  if (std::abs(a.dist - b.dist) > 0.25f)
+  {
+    return a.dist > b.dist;
+  }
+  if (a.layer != b.layer)
+  {
+    return a.layer < b.layer;
+  }
+  return a.id < b.id;
+}
+} // namespace
+
 void SortTransparentGreedyBatches(std::vector<GreedyMeshBatch> &batches,
                                   const glm::vec3 &cameraPos,
                                   const UBlockRegistry &registry)
 {
-  std::sort(batches.begin(), batches.end(),
-            [&](const GreedyMeshBatch &a, const GreedyMeshBatch &b)
-            {
-              const float distA = GreedyBatchViewDistance(a, cameraPos);
-              const float distB = GreedyBatchViewDistance(b, cameraPos);
-              if (std::abs(distA - distB) > 0.25f)
-              {
-                return distA > distB;
-              }
-              const int layerA =
-                  TransparentBatchLayer(registry.GetRenderStyle(a.blockId));
-              const int layerB =
-                  TransparentBatchLayer(registry.GetRenderStyle(b.blockId));
-              if (layerA != layerB)
-              {
-                return layerA < layerB;
-              }
-              return a.blockId < b.blockId;
-            });
+  std::vector<SortKey> keys;
+  keys.reserve(batches.size());
+  for (size_t i = 0; i < batches.size(); ++i)
+  {
+    const GreedyMeshBatch &batch = batches[i];
+    keys.push_back(
+        SortKey{GreedyBatchViewDistance(batch, cameraPos),
+                TransparentBatchLayer(registry.GetRenderStyle(batch.blockId)),
+                batch.blockId, i});
+  }
+  std::sort(keys.begin(), keys.end(), SortKeyLess);
+  std::vector<GreedyMeshBatch> ordered;
+  ordered.reserve(batches.size());
+  for (const SortKey &k : keys)
+  {
+    ordered.push_back(std::move(batches[k.index]));
+  }
+  batches = std::move(ordered);
 }
 
 void SortTransparentGreedyBatches(
@@ -77,32 +106,38 @@ void SortTransparentGreedyBatches(
     const UChunkMeshCache &cache, const glm::vec3 &cameraPos,
     const UBlockRegistry &registry)
 {
-  std::sort(refs.begin(), refs.end(),
-            [&](const GreedyBatchRef &ra,
-                const GreedyBatchRef &rb)
-            {
-              const GreedyMeshBatch *a = cache.TryGetGreedyBatch(ra);
-              const GreedyMeshBatch *b = cache.TryGetGreedyBatch(rb);
-              if (!a || !b)
-              {
-                return a != nullptr;
-              }
-              const float distA = GreedyBatchViewDistance(*a, cameraPos);
-              const float distB = GreedyBatchViewDistance(*b, cameraPos);
-              if (std::abs(distA - distB) > 0.25f)
-              {
-                return distA > distB;
-              }
-              const int layerA =
-                  TransparentBatchLayer(registry.GetRenderStyle(a->blockId));
-              const int layerB =
-                  TransparentBatchLayer(registry.GetRenderStyle(b->blockId));
-              if (layerA != layerB)
-              {
-                return layerA < layerB;
-              }
-              return a->blockId < b->blockId;
-            });
+  const RenderBackendCaps &caps = GetActiveRenderBackendCaps();
+  if (caps.Platform == RenderPlatformKind::Desktop && caps.HasCompute)
+  {
+    if (TryGpuSortTransparentGreedyBatches(refs, cache, cameraPos, registry))
+    {
+      return;
+    }
+    NoteGpuHotPathFallback();
+  }
+  std::vector<SortKey> keys;
+  keys.reserve(refs.size());
+  for (size_t i = 0; i < refs.size(); ++i)
+  {
+    const GreedyMeshBatch *batch = cache.TryGetGreedyBatch(refs[i]);
+    if (!batch)
+    {
+      keys.push_back(SortKey{-1.0f, 99, 0, i});
+      continue;
+    }
+    keys.push_back(SortKey{
+        GreedyBatchViewDistance(*batch, cameraPos),
+        TransparentBatchLayer(registry.GetRenderStyle(batch->blockId)),
+        batch->blockId, i});
+  }
+  std::sort(keys.begin(), keys.end(), SortKeyLess);
+  std::vector<GreedyBatchRef> ordered;
+  ordered.reserve(refs.size());
+  for (const SortKey &k : keys)
+  {
+    ordered.push_back(refs[k.index]);
+  }
+  refs = std::move(ordered);
 }
 
 } // namespace cutum

@@ -70,6 +70,8 @@ private:
   UGuiLabel *GraphicsQualityLabel{nullptr};
   UGuiButton *GraphicsQualityButton{nullptr};
   PerformancePreset SelectedGraphicsQuality{PerformancePreset::Balanced};
+  UGuiCheckbox *AndroidGpuBox{nullptr};
+  bool SelectedAndroidGpuEnabled{true};
 
   UGuiTextInput *DefaultUserInput{nullptr};
   UGuiTextInput *DefaultWorldInput{nullptr};

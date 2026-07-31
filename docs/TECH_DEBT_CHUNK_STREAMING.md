@@ -41,6 +41,109 @@
 | TD-CS-016 | 2026-06 | Persistent GPU VBO / vertex pooling | Nick McDonald-style pool; large refactor | backlog |
 | TD-CS-018 | 2026-06 | Incremental frustum-only greedy cull without full flat merge | camera-chunk skip + `LastVisibleChunks` cache; full incremental cull deferred | partial |
 
+## TD-ARCH (V2–V5 completion) — Open
+
+| ID | Added in | Item | Why deferred | Target |
+|----|----------|------|--------------|--------|
+| TD-ARCH-011 | R0 | blue_screen / opaque_on_min residual after E1 | Edge still sees opaque_on_min=0 under load; draw blank fixed for meshed+Pending (016) | backlog |
+| TD-ARCH-013b | R4/tail | Android GLES compute skylight seed | Desktop F2/C/CB not GO; CPU seed remains | backlog |
+| TD-ARCH-015 | R0/S2 | Worker-side Capture band | Worker Capture hung edge_S1 (world races); step A cruise ≤1 Capture kept | backlog |
+| TD-ARCH-017 | Phase0 | sim_ms double-counted stream+emerge inside phys_ms | Fixed: sim_ms now uses do_movement_ms (includes stream+emerge); old formula was phys_ms+stream+emerge+view+scene causing negative unacc | done 2026-07-29 |
+| TD-ARCH-018 | Phase0 | unacc=240ms in tail frames (emerge=0, scene=8ms) | render_total_ms added; sim_ms uses it; residual now = wall-sim-swap-world_extra; needs runtime verification | in-progress |
+| TD-ARCH-019 | Phase3a | GPF1 pipeline reads back rects+verts via glGetBufferSubData | GpuMeshPipeline wired into ChunkMeshCache+GeometryEngine; legacy readback remains fallback when GpuPackedMeshing=false or ProcessSnapshot fails | done 2026-07-29 |
+| TD-ARCH-020 | Phase3g | GLES 3.1 lacks glMultiDrawElementsIndirect | Per-chunk glDrawElementsIndirect fallback added; workgroup=64 for GLES compat | done 2026-07-29 |
+| TD-ARCH-021 | manual_1645 | Post-load empty mesh ring after EnterGame | Warmup/burst + SoftDefer Capture SLA telemetry (`softdefer_capture_*`, idle pending delta); gate `post_load_ring_idle_max=0` | done 2026-07-29 (measurable; spawn sticky closed via SoT draw) |
+| TD-ARCH-022 | manual_1645 | Dark/sticky faces in rendered columns | Hide sticky/stale-dark r>1; nearest-hole r≤1 | done 2026-07-29; **semantics superseded by 026** |
+| TD-ARCH-023 | manual_1645 | Horizon fog flicker vs unfinished mesh | Fog hole_debt includes pending_gpu; ahead margin; expand ramp 2.5s | done 2026-07-29 |
+| TD-ARCH-024 | manual_1645 | Emerge spikes moving+holes | Cap mesh_schedule≤6 when async<4 (caused underfeed) | done 2026-07-29; **replaced by 027 floor** |
+| TD-ARCH-025 | qual_fix3 | Cruise holes_rate regressed vs qual_fix2 | SoT UnfinishedVisual (no pending-proxy); holes≈0.05–0.09 | done 2026-07-29 — evidence `manual_arch_d3_live.json` |
+| TD-ARCH-026 | Era13 | Hide⇒RepairTicket via ColumnFlow | draw-when-meshed + near≤2 RelightThenMesh/Remesh; unit SoT+Contains | done 2026-07-29 |
+| TD-ARCH-027 | Era13 | Async throughput floor for FOV unfinished | SoftDefer **AllowUnlitFirstMesh** SoT predicate (r≤3\|\|nearest); `mesh_async_med_when_dirty≥4` | done 2026-07-29 — evidence `manual_arch_d3_live.json` |
+| TD-ARCH-028 | Era13 | ColumnRenderable single SoT | Draw/telemetry from one state API | done 2026-07-29 (D2a) |
+| TD-ARCH-029 | Era13 | FirstMesh vs Remesh dirty classes | FirstMesh must not starve behind remesh thrash | done 2026-07-29 (D2a) |
+| TD-ARCH-030 | Era13 | SoftDefer Capture/relight floor | Capture floor on SoT UnfinishedVisual/missing; **FocusPressure** = pending+dirty scheduler proxy only (not hole) | done 2026-07-29 |
+| TD-ARCH-031 | manual_1957 | Older mesh apply orphaned Active → remesh thrash | Discard-older keep-Active; GPU pending without Active drops without Dirty | done 2026-07-29 |
+| TD-ARCH-032 | Era13 | ARCH_D1/D3 harness GO | Architecture A–E landed. Autofly×2 `--replay-manual`: `manual_arch_era13_01/02.json`. **cold_relight=2≤3 OK**; holes/async OK on 02. **D3 NO-GO:** `wall_ms_med≈44` (need ≤30), `post_stop_black_sticky_max≈9`. Stop SoftDefer zoo after 2 iters. | in-progress |
+| TD-ARCH-033 | Era13/rim | Frontier first-mesh latency (manual 225337) | Stage SLA + UnlitFirstMesh + sync promote | partial — confirm on World_164 edge smoke |
+
+Evidence (stale-apply + Era13 tails, 2026-07-29):
+- `manual_stale_apply_A.json` — `mesh_apply_stale`=0 (was ~392).
+- `manual_arch_td32b.json` / prior D3 live — **ARCH_D1** was GO before Era13 promote rewrite.
+- Era13 A–E on `arch/streaming-v2-v4`: AllowUnlitFirstMesh, FocusPressure, ColumnFlow `RunPromoteRelightNow`, FocusIngress Stage SLA, lit remesh clamp (softened). Units PASS. Autofly×2 NO-GO on wall/sticky — do not merge develop.
+- Remaining open: TD-032 (D3 wall+sticky), TD-033 (rim confirm), 011, 015, 013b, 018; Android GLES.
+
+**Do not merge `arch/streaming-v2-v4` → develop until ARCH_D3 PASS + explicit request.**
+
+Evidence (prior): `bin/iter_reports/timeline/arch_d2_manual.json`, `arch_d2b_manual.json`.
+
+### qual_fix3 verification — visible flight fixes (2026-07-29)
+
+Autofly after TD-ARCH-021..024 vs baselines:
+
+| Report | holes | wall_med | spikes | post_stop_holes | opaque_on_min | blue | chunks |
+|--------|-------|----------|--------|-----------------|---------------|------|--------|
+| `manual_latest_1645` (user) | 0.29 | 43 | 168 | 1.0 | — | — | — |
+| `manual_qual_fix2` | 0.24 | 27 | 22 | 0.0 | — | — | — |
+| `manual_qual_fix3` | 0.41 | 26 | 54 | 0.0 | 0 | 1 | 18 |
+| `edge_qual_fix3` | 1.0 | 48 | 65 | 1.0 | 1 | 0 | 19 |
+
+**Improved:** wall_ms (−40%), spike_count (−68% vs 1645), post_stop_effective_holes 0%, stop_not_ready_end 0, black_sticky 0.
+
+**Regressed / open:** cruise holes_rate (dark/sticky draw gate trade-off, TD-ARCH-025); edge scenario Red pressure + dirty≈693; cold_relight_holes 10–16 s; manual post-load ring needs user confirm @10 s idle.
+
+Phase 0 telemetry live: `pending_gpu_applies_n`, `mesh_apply_stale_delta`, `post_load_ring_not_ready`, `enter_game_warmup_missing_greedy`.
+
+### Approach FPS plan — S0 baseline (2026-07-29)
+
+Hypothesis: `IsColumnRenderReady` early-outs on `PendingLight` → blank FOV while
+`HasMissingGreedyMesh` stays false (mesh already present). MeshAsync≈1–2 under
+Dirty 200–300 starves first-mesh. Capture on main drives emerge spikes.
+
+| Report | run_outcome | wall_med | dirty | holes | opaque_on_min | blue_screen | F2 | C | CB |
+|--------|-------------|----------|-------|-------|---------------|-------------|----|----|-----|
+| `manual_approach_0852.json` (raw play) | n/a | 94 | 196 | 0.73 | 126 | 0 | — | — | — |
+| `edge_S0.json` | success | 78 | 389 | 0.71 | 2 | 0 | NO-GO cold=8 | NO-GO spike=562 cold=8 | NO-GO |
+| `manual_S0.json` | success | 52 | 647 | 0.81 | 0 | 1 | NO-GO sticky=5 cold=14 | NO-GO | — |
+
+Debt pass S0: closed none; opened TD-ARCH-016; baseline autofly recorded.
+
+### S1–S3 code (2026-07-29)
+
+- **S1:** `IsColumnRenderReady` — PendingLight + any greedy in visual band → draw
+  (closes TD-ARCH-016 blank FOV). FirstMesh admit also on `missing_visible_mesh`
+  while cruise.
+- **S2:** Cruise Capture hard-cap ≤1 + tighter budgets (3–6ms). Worker Capture
+  attempted → hang; reverted; TD-ARCH-015 stays backlog.
+- **S3:** Stop DropRemesh keep_h=2 when `focus_dirty>280` and holes/pending clear.
+- **S4:** TD-ARCH-013b remains backlog (desktop F2/C/CB not GO).
+
+Autofly note: after S0, machine load made World_164 load+flight wall multi-second
+(`hang_killed` on control revert too). Re-run edge/manual when host is cool;
+gates still expected NO-GO until cold_relight/spike drop.
+
+`edge_S1.json` (post-fix, run_outcome=success, host overloaded): wall_med=1034,
+holes=1.0, opaque_on_min=0, blue=1, cold=10, spike_holes=3859, chunks=3;
+F2/C NO-GO. Compare to healthy `edge_S0` wall=78 — re-validate on cool host.
+
+## TD-ARCH — Closed
+
+| ID | Closed in | Resolution |
+|----|-----------|------------|
+| TD-ARCH-016 | S1 | PendingLight no longer blanks meshed columns in IsColumnRenderReady |
+| TD-ARCH-001 | R1 (+tails) | Cruise+CanSeed+healthy → cheap sync seed (budget≤2ms / ApplyGpuSkylightSeed); hot cruise → FIFO; SeedDecisionPolicy owns policy |
+| TD-ARCH-002 | R1 | Removed `(void)seed`; `seed.applied` → LitReady else PendingLight; backends return applied only when Relight ran (budget≤0 early-out) |
+| TD-ARCH-004 | R2 | `ColumnFlowExecutor` DrainBudget uses `item.column` filter on Admit/Recover |
+| TD-ARCH-005 | R2 | Emerge Admit/Recover/Promote/DrainIdle routed through executor only |
+| TD-ARCH-006 | R2 | Deleted `RecoverStickyBlackFocusSync`; added `IsColumnStickyRemesh` |
+| TD-ARCH-007 | R3 (+tails) | Visual SLA: FocusIngress unfinished + PrefetchKeepShell skips !VisualReady; RingPrerequisitesMet voxels-only |
+| TD-ARCH-008 | R3 | Cruise unfinished sampled every 8f + dirty/pending proxy |
+| TD-ARCH-009 | R3 (+tails) | MemoryBudget soft-cap dirty/pending; WorldStreaming TrimPendingLight under dirty>400+pending>8 |
+| TD-ARCH-003 | R4 | Gpu seed uses ApplyGpuSkylightSeedToChunk; factory SelectLightingSeedBackend |
+| TD-ARCH-010 | R5 | Idle pending Capture progress when holes=0 + inflight==0 + wall<160 |
+| TD-ARCH-013 | R4 | Android PreferGpuLightingSeed=false → Cpu same contracts |
+| TD-ARCH-014 | R6 | Deleted CollectAllOpaqueCutoutRefs dead API |
+| TD-ARCH-012 | R7 | Docs frozen honest: V2–V5 architecture complete; F2/C/CB gate DoD remains backlog |
+
 ## Closed
 
 | ID | Closed in | Resolution |

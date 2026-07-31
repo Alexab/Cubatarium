@@ -3,6 +3,7 @@
 
 #include "World/Math/BlockTypes.h"
 #include "World/Math/FluidCellState.h"
+#include "Render/Mesh/MeshNeighborPolicy.h"
 #include <glm/glm.hpp>
 
 namespace cutum
@@ -36,6 +37,11 @@ public:
   {
     (void)world_pos;
     return {};
+  }
+  virtual NeighborLoadState GetNeighborLoadState(glm::ivec3 world_pos) const
+  {
+    (void)world_pos;
+    return NeighborLoadState::Loaded;
   }
 };
 

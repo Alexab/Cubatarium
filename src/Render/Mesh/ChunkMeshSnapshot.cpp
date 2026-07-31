@@ -99,15 +99,20 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(const UBlockWorld &world,
           const glm::ivec3 worldPos = origin + local;
           const int cell = u + v * CHUNK_SIZE;
           const int flat = ShellFlatIndex(face, cell);
-          snapshot.shellBlocks[static_cast<size_t>(flat)] =
-              world.GetBlock(worldPos);
           const glm::ivec3 lightChunkCoord =
               UChunkManager::WorldToChunk(worldPos);
-          if (const UChunk *lightChunk =
-                  world.GetChunkManager().GetChunk(lightChunkCoord))
+          const UChunk *neighbor_chunk =
+              world.GetChunkManager().GetChunk(lightChunkCoord);
+          const bool neighbor_loaded = neighbor_chunk != nullptr;
+          snapshot.shellBlocks[static_cast<size_t>(flat)] =
+              world.GetBlock(worldPos);
+          snapshot.shellNeighborState[static_cast<size_t>(flat)] =
+              static_cast<uint8_t>(ClassifyShellCell(
+                  neighbor_loaded, snapshot.shellBlocks[static_cast<size_t>(flat)]));
+          if (neighbor_chunk)
           {
             snapshot.shellLight[static_cast<size_t>(flat)] =
-                lightChunk->GetLightPackedLocal(
+                neighbor_chunk->GetLightPackedLocal(
                     UChunkManager::WorldToLocal(worldPos));
           }
           snapshot.shellFluid[static_cast<size_t>(flat)] =
@@ -196,5 +201,23 @@ FluidCellState ChunkMeshSnapshot::GetFluid(glm::ivec3 worldPos) const
 }
 
 glm::ivec3 ChunkMeshSnapshot::ChunkOrigin() const { return coord * CHUNK_SIZE; }
+
+NeighborLoadState ChunkMeshSnapshot::GetNeighborLoadState(
+    glm::ivec3 worldPos) const
+{
+  const glm::ivec3 local = worldPos - ChunkOrigin();
+  if (InChunkLocal(local))
+  {
+    return NeighborLoadState::Loaded;
+  }
+  int face = 0;
+  int cell = 0;
+  if (TryShellIndex(local, face, cell))
+  {
+    return static_cast<NeighborLoadState>(
+        shellNeighborState[static_cast<size_t>(ShellFlatIndex(face, cell))]);
+  }
+  return NeighborLoadState::Unknown;
+}
 
 } // namespace cutum

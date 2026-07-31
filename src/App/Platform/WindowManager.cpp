@@ -15,6 +15,7 @@
 #include "Gui/Interfaces/IUInventoryViewModel.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ViewEngine.h"
+#include "Render/Backend/RenderBackendCaps.h"
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
 #include "ThirdParty/stb_image.h"
@@ -172,6 +173,7 @@ bool UWindowManager::Initialize(int width, int height, const char *title,
     glfwTerminate();
     return false;
   }
+  RefreshRenderBackendCapsFromGl();
 #endif
 
   // Настройка OpenGL
@@ -359,10 +361,28 @@ void UWindowManager::Run()
     }
 
     // Outside world_ms so autosave Init/Ticks do not inflate world_extra.
-    TickBudgetedAutosave();
+    {
+      const auto t_autosave = std::chrono::high_resolution_clock::now();
+      TickBudgetedAutosave();
+      if (World)
+      {
+        World->SetLastAutosaveMs(
+            std::chrono::duration<double, std::milli>(
+                std::chrono::high_resolution_clock::now() - t_autosave)
+                .count());
+      }
+    }
 
     // Rendering
+    const auto render_begin = std::chrono::high_resolution_clock::now();
     Render();
+    if (World)
+    {
+      World->SetLastRenderTotalMs(
+          std::chrono::duration<double, std::milli>(
+              std::chrono::high_resolution_clock::now() - render_begin)
+              .count());
+    }
 
     const auto swap_begin = std::chrono::high_resolution_clock::now();
     glfwSwapBuffers(Window);

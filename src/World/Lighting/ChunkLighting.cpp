@@ -4,6 +4,8 @@
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Lighting/GpuBlocklightFlood.h"
+#include "World/Lighting/GpuSkylightColumnSeed.h"
 #include "World/Lighting/LightUtil.h"
 #include "World/Math/GridMath.h"
 
@@ -301,8 +303,8 @@ void PropagateSkylightHorizontal(UBlockWorld &world, UBlockRegistry &registry,
   }
 }
 
-void PropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
-                         glm::ivec3 chunk_coord)
+void PropagateBlocklightImpl(UBlockWorld &world, UBlockRegistry &registry,
+                             glm::ivec3 chunk_coord)
 {
   std::deque<std::pair<glm::ivec3, int>> queue;
 
@@ -632,6 +634,12 @@ void RemoveThenPropagateSkyLight(UBlockWorld &world, UBlockRegistry &registry,
 
 } // namespace
 
+void PropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
+                         glm::ivec3 chunk_coord)
+{
+  PropagateBlocklightImpl(world, registry, chunk_coord);
+}
+
 void RelightChunkCoords(UBlockWorld &world, UBlockRegistry &registry,
                         const std::vector<glm::ivec3> &coords,
                         bool include_block_light, bool include_skylight,
@@ -661,11 +669,18 @@ void RelightChunkCoords(UBlockWorld &world, UBlockRegistry &registry,
 
   if (include_skylight)
   {
+    // GPU skylight seed apply (CPU parity); cap one per batch on sync relight.
+    int gpu_seeds_left = 1;
     for (const glm::ivec3 &coord : coords)
     {
       UChunk *chunk = world.GetChunkManager().GetChunk(coord);
       if (!chunk)
       {
+        continue;
+      }
+      if (gpu_seeds_left > 0 && ApplyGpuSkylightSeedToChunk(*chunk, registry))
+      {
+        --gpu_seeds_left;
         continue;
       }
       for (int lx = 0; lx < CHUNK_SIZE; ++lx)
@@ -690,7 +705,14 @@ void RelightChunkCoords(UBlockWorld &world, UBlockRegistry &registry,
 
   for (const glm::ivec3 &coord : coords)
   {
-    PropagateBlocklight(world, registry, coord);
+    if (TryGpuPropagateBlocklight(world, registry, coord))
+    {
+      NoteGpuBlocklightFlood();
+    }
+    else
+    {
+      PropagateBlocklight(world, registry, coord);
+    }
   }
 }
 
@@ -891,6 +913,29 @@ void RelightChunk(UBlockWorld &world, UBlockRegistry &registry,
   }
   RelightChunkCoords(world, registry, {chunk_coord}, include_block_light,
                      include_skylight);
+}
+
+void RelightChunkAfterGpuSkySeed(UBlockWorld &world, UBlockRegistry &registry,
+                                 glm::ivec3 chunk_coord,
+                                 bool include_block_light)
+{
+  if (!world.GetChunkManager().HasChunk(chunk_coord))
+  {
+    return;
+  }
+  // Sky columns already written by ApplyGpuSkylightSeedToChunk.
+  PropagateSkylightHorizontal(world, registry, chunk_coord);
+  if (include_block_light)
+  {
+    if (TryGpuPropagateBlocklight(world, registry, chunk_coord))
+    {
+      NoteGpuBlocklightFlood();
+    }
+    else
+    {
+      PropagateBlocklight(world, registry, chunk_coord);
+    }
+  }
 }
 
 void RelightChunkBlockLight(UBlockWorld &world, UBlockRegistry &registry,

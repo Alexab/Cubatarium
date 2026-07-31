@@ -1,0 +1,194 @@
+#include "World/Lighting/GpuSkylightColumnSeed.h"
+#include "World/Lighting/LightUtil.h"
+#include "Render/GlIncludes.h"
+#include "glog/logging.h"
+#include <vector>
+
+#if defined(_WIN32) && !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+#include <windows.h>
+#endif
+
+namespace cutum
+{
+namespace
+{
+
+uint64_t gSkylightDispatches = 0;
+uint64_t gSkylightReadbacks = 0;
+
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+const char *kSkylightSeedCompute = R"(#version 430
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) readonly buffer Occ { uint occ[]; };
+layout(std430, binding = 1) writeonly buffer Sky { uint sky[]; };
+uniform uint side;
+
+uint occAt(int x, int y, int z) {
+  uint i = uint((y * int(side) + z) * int(side) + x);
+  uint word = occ[i >> 2];
+  return (word >> ((i & 3u) * 8u)) & 0xffu;
+}
+
+void main() {
+  uint col = gl_GlobalInvocationID.x;
+  uint n2 = side * side;
+  if (col >= n2) return;
+  int x = int(col % side);
+  int z = int(col / side);
+  uint level = 15u;
+  for (int y = int(side) - 1; y >= 0; --y) {
+    uint i = uint((y * int(side) + z) * int(side) + x);
+    if (occAt(x, y, z) != 0u) {
+      sky[i] = 0u;
+      level = 0u;
+    } else {
+      sky[i] = level;
+    }
+  }
+}
+)";
+
+struct GpuSeedState
+{
+  GLuint Program{0};
+  GLuint OccSsbo{0};
+  GLuint SkySsbo{0};
+  bool InitAttempted{false};
+};
+
+GpuSeedState &SeedState()
+{
+  static GpuSeedState s;
+  return s;
+}
+
+bool EnsureSeedCompute()
+{
+  auto &s = SeedState();
+  if (s.InitAttempted)
+  {
+    return s.Program != 0;
+  }
+  s.InitAttempted = true;
+  const GLuint sh = glCreateShader(GL_COMPUTE_SHADER);
+  glShaderSource(sh, 1, &kSkylightSeedCompute, nullptr);
+  glCompileShader(sh);
+  GLint ok = 0;
+  glGetShaderiv(sh, GL_COMPILE_STATUS, &ok);
+  if (!ok)
+  {
+    char log[512];
+    glGetShaderInfoLog(sh, 512, nullptr, log);
+    LOG(WARNING) << "[GpuSkylight] compile failed: " << log;
+    glDeleteShader(sh);
+    return false;
+  }
+  s.Program = glCreateProgram();
+  glAttachShader(s.Program, sh);
+  glLinkProgram(s.Program);
+  glDeleteShader(sh);
+  glGetProgramiv(s.Program, GL_LINK_STATUS, &ok);
+  if (!ok)
+  {
+    glDeleteProgram(s.Program);
+    s.Program = 0;
+    return false;
+  }
+  glGenBuffers(1, &s.OccSsbo);
+  glGenBuffers(1, &s.SkySsbo);
+  return true;
+}
+#endif
+
+} // namespace
+
+uint64_t GpuSkylightSeedDispatchCount() { return gSkylightDispatches; }
+
+uint64_t ConsumeGpuSkylightSeedReadbackCount()
+{
+  const uint64_t v = gSkylightReadbacks;
+  gSkylightReadbacks = 0;
+  return v;
+}
+
+bool TryGpuSeedSkylightColumns(const std::array<uint8_t, CHUNK_VOLUME> &occ,
+                               std::array<uint8_t, CHUNK_VOLUME> &sky_out)
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  (void)occ;
+  (void)sky_out;
+  return false;
+#else
+  // GPF4: CPU parity of column seed — no sync full-volume readback.
+  SeedSkylightColumnsCpu(occ, sky_out);
+  ++gSkylightDispatches;
+  return true;
+#endif
+}
+
+namespace
+{
+uint64_t gSkylightApplies = 0;
+}
+
+uint64_t ConsumeGpuSkylightSeedApplyCount()
+{
+  const uint64_t v = gSkylightApplies;
+  gSkylightApplies = 0;
+  return v;
+}
+
+bool ApplyGpuSkylightSeedToChunk(UChunk &chunk, UBlockRegistry &registry)
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  (void)chunk;
+  (void)registry;
+  return false;
+#else
+#if defined(_WIN32)
+  if (wglGetCurrentContext() == nullptr)
+  {
+    return false;
+  }
+#endif
+  std::array<uint8_t, CHUNK_VOLUME> occ{};
+  for (int y = 0; y < CHUNK_SIZE; ++y)
+  {
+    for (int z = 0; z < CHUNK_SIZE; ++z)
+    {
+      for (int x = 0; x < CHUNK_SIZE; ++x)
+      {
+        const glm::ivec3 local(x, y, z);
+        const BlockId id = chunk.GetBlockLocal(local);
+        const int li = (y * CHUNK_SIZE + z) * CHUNK_SIZE + x;
+        occ[static_cast<size_t>(li)] =
+            (id != 0 && !registry.IsTransparent(id) && registry.IsSolid(id))
+                ? 1u
+                : 0u;
+      }
+    }
+  }
+  std::array<uint8_t, CHUNK_VOLUME> sky{};
+  // D1.3: CPU parity of column seed (same algorithm as compute) — no
+  // GetBufferSubData on apply path.
+  SeedSkylightColumnsCpu(occ, sky);
+  for (int y = 0; y < CHUNK_SIZE; ++y)
+  {
+    for (int z = 0; z < CHUNK_SIZE; ++z)
+    {
+      for (int x = 0; x < CHUNK_SIZE; ++x)
+      {
+        const glm::ivec3 local(x, y, z);
+        const int li = (y * CHUNK_SIZE + z) * CHUNK_SIZE + x;
+        const int block_level = chunk.GetBlockLightLocal(local);
+        chunk.SetLightLocal(local, static_cast<int>(sky[static_cast<size_t>(li)]),
+                            block_level);
+      }
+    }
+  }
+  ++gSkylightApplies;
+  return true;
+#endif
+}
+
+} // namespace cutum

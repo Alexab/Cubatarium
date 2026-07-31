@@ -16,6 +16,12 @@ def median(xs: list[float]) -> float | None:
     return float(statistics.median(xs))
 
 
+def max_val(xs: list[float]) -> float | None:
+    if not xs:
+        return None
+    return float(max(xs))
+
+
 def p95(xs: list[float]) -> float | None:
     if not xs:
         return None
@@ -123,25 +129,25 @@ def analyze(
         else None
     )
     hole_key = (
-        "visual_holes"
-        if any("visual_holes" in r for r in steady)
-        else "near_focus_holes"
+        "unfinished_visual"
+        if unfinished_key
+        else (
+            "visual_holes"
+            if any("visual_holes" in r for r in steady)
+            else "near_focus_holes"
+        )
     )
     holes = col(steady, hole_key)
     dark_sticky = col(steady, "black_sticky")
     if not dark_sticky and any("focus_dark_mesh" in r for r in steady):
         dark_sticky = col(steady, "focus_dark_mesh")
     unfinished_visual = col(steady, unfinished_key) if unfinished_key else []
-    # Treat light debt as unfinished even when visual_holes=0 (dark meshes).
+    # SoT unfinished / missing only. Heavy pending is soft light debt, not a hole.
     effective_holes = []
     for i, (r, h, d) in enumerate(zip(steady, holes, dark_sticky)):
-        pend = float(r.get("pending_light_focus") or 0)
         unfinished = (
-            (unfinished_visual[i] > 0 if i < len(unfinished_visual) else False)
-            or h > 0
-            or d > 0
-            or pend >= 20
-        )
+            unfinished_visual[i] > 0 if i < len(unfinished_visual) else False
+        ) or h > 0
         effective_holes.append(1.0 if unfinished else 0.0)
     effective_holes_rate = (
         sum(effective_holes) / len(effective_holes) if effective_holes else 1.0
@@ -165,6 +171,156 @@ def analyze(
     pressure = col(steady, "stream_pressure")
     wall = col(steady, "wall_ms")
     mesh_async = col(steady, "mesh_async")
+
+    # GPU pipeline telemetry (G0+ gates).
+    from collections import Counter
+
+    gpu_draw_cmds = col(steady, "gpu_draw_cmds")
+    gpu_cull_ms = col(steady, "gpu_cull_ms")
+    vertex_pool_fill = col(steady, "vertex_pool_fill")
+    store_names = [
+        str(r.get("backend_store") or "")
+        for r in steady
+        if r.get("backend_store")
+    ]
+    mesher_names = [
+        str(r.get("backend_mesher") or "")
+        for r in steady
+        if r.get("backend_mesher")
+    ]
+    cull_names = [
+        str(r.get("backend_cull") or "")
+        for r in steady
+        if r.get("backend_cull")
+    ]
+    backend_store_mode = (
+        Counter(store_names).most_common(1)[0][0] if store_names else ""
+    )
+    backend_mesher_mode = (
+        Counter(mesher_names).most_common(1)[0][0] if mesher_names else ""
+    )
+    backend_cull_mode = (
+        Counter(cull_names).most_common(1)[0][0] if cull_names else ""
+    )
+    backend_store_mdi = 1.0 if backend_store_mode == "mdi_vertex_pool" else 0.0
+    backend_mesher_gpu = (
+        1.0
+        if (
+            backend_mesher_mode.startswith("gpu_")
+            or backend_mesher_mode.startswith("android_gpu")
+        )
+        else 0.0
+    )
+    backend_cull_gpu = 1.0 if backend_cull_mode.startswith("gpu_") else 0.0
+    caps_has_compute_med = median(col(steady, "caps_has_compute"))
+    caps_has_ssbo_med = median(col(steady, "caps_has_ssbo"))
+    caps_probe_completed_med = median(col(steady, "caps_probe_completed"))
+    android_gpu_user_pref_med = median(col(steady, "android_gpu_user_pref"))
+    android_gpu_effective_med = median(col(steady, "android_gpu_effective"))
+    deny_names = [
+        str(r.get("android_gpu_deny_reason") or "")
+        for r in steady
+        if r.get("android_gpu_deny_reason")
+    ]
+    gl_version_names = [
+        str(r.get("gl_version") or "") for r in steady if r.get("gl_version")
+    ]
+    gl_renderer_names = [
+        str(r.get("gl_renderer") or "") for r in steady if r.get("gl_renderer")
+    ]
+    android_gpu_deny_reason = (
+        Counter(deny_names).most_common(1)[0][0] if deny_names else ""
+    )
+    gl_version = (
+        Counter(gl_version_names).most_common(1)[0][0]
+        if gl_version_names
+        else ""
+    )
+    gl_renderer = (
+        Counter(gl_renderer_names).most_common(1)[0][0]
+        if gl_renderer_names
+        else ""
+    )
+    # Alias without _med for AG gates that use exact keys from plan.
+    caps_probe_completed = caps_probe_completed_med
+    caps_has_compute = caps_has_compute_med
+    android_gpu_effective = android_gpu_effective_med
+    android_gpu_user_pref = android_gpu_user_pref_med
+    opaque_cmd_total_med = median(col(steady, "opaque_cmd_total"))
+    opaque_cmd_on_med = median(col(steady, "opaque_cmd_on"))
+    cross_batch_count_med = median(col(steady, "cross_batch_count"))
+    cpu_aabb_would_on_med = median(col(steady, "cpu_aabb_would_on"))
+    edit_immediate_n_med = median(col(steady, "edit_immediate_n"))
+    edit_dirty_n_med = median(col(steady, "edit_dirty_n"))
+    edit_neighbor_pending_frames_med = median(
+        col(steady, "edit_neighbor_pending_frames")
+    )
+    pool_unsync_uploads_med = median(col(steady, "pool_unsync_uploads"))
+    pool_fence_wait_ms_med = median(col(steady, "pool_fence_wait_ms"))
+    chunk_meshed_culled0_med = median(col(steady, "chunk_meshed_culled0"))
+    chunk_meshed_unlit_med = median(col(steady, "chunk_meshed_unlit"))
+    chunk_not_ready_med = median(col(steady, "chunk_not_ready"))
+    opaque_on_vals = col(steady, "opaque_cmd_on")
+    opaque_on_min = min(opaque_on_vals) if opaque_on_vals else None
+    if (
+        opaque_cmd_total_med is not None
+        and opaque_cmd_on_med is not None
+        and opaque_cmd_total_med > 0
+    ):
+        opaque_culled_frac_med = max(
+            0.0, (opaque_cmd_total_med - opaque_cmd_on_med) / opaque_cmd_total_med
+        )
+    else:
+        opaque_culled_frac_med = None
+    cross_med = cross_batch_count_med or 0.0
+    blue_screen_suspect = (
+        1.0
+        if cross_med > 0 and opaque_on_min is not None and opaque_on_min <= 0
+        else 0.0
+    )
+    gpu_draw_cmds_med = median(gpu_draw_cmds)
+    gpu_cull_ms_med = median(gpu_cull_ms)
+    vertex_pool_fill_med = median(vertex_pool_fill)
+    gpu_cull_indirect_med = median(col(steady, "gpu_cull_indirect"))
+    gpu_mesh_vbo_dispatch_med = median(col(steady, "gpu_mesh_vbo_dispatch"))
+    gpu_light_seed_apply_med = median(col(steady, "gpu_light_seed_apply"))
+    gpu_mask_readback_med = median(col(steady, "gpu_mask_readback"))
+    gpu_blocklight_flood_med = median(col(steady, "gpu_blocklight_flood"))
+    gpu_fluid_readback_med = median(col(steady, "gpu_fluid_readback"))
+    gpu_light_readback_med = median(col(steady, "gpu_light_readback"))
+    gpu_opaque_emit_gpu_med = median(col(steady, "gpu_opaque_emit_gpu"))
+    gpu_opaque_emit_gpu_max = max_val(col(periods, "gpu_opaque_emit_gpu"))
+    gpu_transparent_sort_gpu_med = median(col(steady, "gpu_transparent_sort_gpu"))
+    gpu_transparent_sort_gpu_max = max_val(col(periods, "gpu_transparent_sort_gpu"))
+    gpu_fallback = col(steady, "gpu_fallback")
+    gpu_fallback_rate = (
+        sum(1 for v in gpu_fallback if v > 0) / len(gpu_fallback)
+        if gpu_fallback
+        else 1.0
+    )
+    gpu_fluid_scan_on_med = median(col(steady, "gpu_fluid_scan_on"))
+    fluid_names = [
+        str(r.get("backend_fluid") or "")
+        for r in steady
+        if r.get("backend_fluid")
+    ]
+    backend_fluid_mode = (
+        Counter(fluid_names).most_common(1)[0][0] if fluid_names else ""
+    )
+    lighting_names = [
+        str(r.get("backend_lighting_mode") or "")
+        for r in steady
+        if r.get("backend_lighting_mode")
+    ]
+    backend_lighting_mode = (
+        Counter(lighting_names).most_common(1)[0][0] if lighting_names else ""
+    )
+    backend_lighting_flat = 1.0 if backend_lighting_mode == "flat" else 0.0
+    backend_lighting_full = (
+        1.0
+        if backend_lighting_mode in ("full", "gpu_full")
+        else 0.0
+    )
 
     holes_rate = (sum(1 for h in holes if h > 0) / len(holes)) if holes else 1.0
     red_rate = (sum(1 for p in pressure if p >= 2) / len(pressure)) if pressure else 1.0
@@ -202,6 +358,52 @@ def analyze(
         else:
             run = 0
     cold_relight_holes_sec = cold_relight_holes * 2.0
+
+    # Land-cruise symptoms (manual 131234 / 142306): miss stuck, miss at end,
+    # opaque draw-list churn while hovering on one focus chunk.
+    miss_key = (
+        "focus_missing_mesh"
+        if any("focus_missing_mesh" in r for r in steady)
+        else hole_key
+    )
+    miss_stuck_run = 0
+    miss_stuck_max = 0
+    for r in steady:
+        if float(r.get(miss_key) or 0) > 0:
+            miss_stuck_run += 1
+            miss_stuck_max = max(miss_stuck_max, miss_stuck_run)
+        else:
+            miss_stuck_run = 0
+    miss_stuck_max_run_sec = miss_stuck_max * 2.0
+    miss_end = 0.0
+    if periods:
+        miss_end = float(periods[-1].get(miss_key) or 0)
+    nh_no_miss_n = 0
+    for r in steady:
+        nh = float(r.get("near_focus_holes") or 0)
+        miss = float(r.get(miss_key) or 0)
+        if nh > 0 and miss <= 0:
+            nh_no_miss_n += 1
+    nh_no_miss_rate = (nh_no_miss_n / len(steady)) if steady else 0.0
+    opaque_idle_churn_max = 0.0
+    i = 0
+    while i < len(periods):
+        j = i + 1
+        while (
+            j < len(periods)
+            and int(periods[j].get("focus_cx") or 0)
+            == int(periods[i].get("focus_cx") or 0)
+            and int(periods[j].get("focus_cz") or 0)
+            == int(periods[i].get("focus_cz") or 0)
+        ):
+            j += 1
+        if j - i >= 2:
+            ops = [float(r.get("opaque_cmd_on") or 0) for r in periods[i:j]]
+            if ops:
+                opaque_idle_churn_max = max(
+                    opaque_idle_churn_max, max(ops) - min(ops)
+                )
+        i = j if j > i else i + 1
 
     dirty_high_run = 0
     run = 0
@@ -406,6 +608,94 @@ def analyze(
             mesh_discard_full[-1] - mesh_discard_full[0]
         )
 
+    # Era13 / D3 arch gates (ROOT_CAUSE_2026-07): spawn ring, async floor, dark.
+    idle_head = periods[: max(3, int(8.0 / 2.0))] if periods else []
+    post_load_ring_idle_max = None
+    if any("post_load_ring_not_ready" in r for r in idle_head):
+        pl = col(idle_head, "post_load_ring_not_ready")
+        post_load_ring_idle_max = max(pl) if pl else 0.0
+    unfinished_idle_max = None
+    if unfinished_key and idle_head:
+        uf = col(idle_head, unfinished_key)
+        unfinished_idle_max = max(uf) if uf else 0.0
+    # When dirty>100 AND unfinished_visual, mesh_async should stay fed.
+    # visual_holes alone can latch without unfinished (legacy) and SoftDefer
+    # not_render_ready must not demand mesh workers.
+    async_when_dirty = [
+        float(r.get("mesh_async") or 0)
+        for r in steady
+        if float(r.get("dirty") or 0) > 100
+        and float(r.get("unfinished_visual") or 0) > 0
+    ]
+    mesh_async_med_when_dirty = (
+        median(async_when_dirty) if async_when_dirty else 99.0
+    )
+    dark_face_stop = col(stop_tail, "dark_face_near")
+    if not dark_face_stop:
+        dark_face_stop = col(stop_tail, "dark_face_near_n")
+    stop_dark_face_near_end = (
+        dark_face_stop[-1] if dark_face_stop else None
+    )
+    stop_dark_face_near_max = (
+        max(dark_face_stop) if dark_face_stop else None
+    )
+    # Prefer stale-dark proxy for ARCH_D3 (void-edge at World_164 rim is expected).
+    dark_stale_stop = col(stop_tail, "dark_face_stale_near_n")
+    stop_dark_face_stale_near_end = (
+        dark_stale_stop[-1] if dark_stale_stop else None
+    )
+    dark_void_stop = col(stop_tail, "dark_face_void_near_n")
+    stop_dark_face_void_near_end = (
+        dark_void_stop[-1] if dark_void_stop else None
+    )
+    gates["post_load_ring_not_ready_eq_0"] = (
+        post_load_ring_idle_max is None or post_load_ring_idle_max <= 0.0
+    )
+    # SoftDefer Capture SLA (TD-ARCH-030): idle-head pending must fall or stay 0
+    # while SoftDefer floor ticks (spawn plr sticky → measurable stall).
+    softdefer_hits_idle = col(idle_head, "softdefer_capture_floor_hits_delta")
+    softdefer_capture_ticks_idle = (
+        sum(softdefer_hits_idle) if softdefer_hits_idle else 0.0
+    )
+    pending_idle = col(idle_head, "pending_light_focus")
+    pending_light_idle_delta = None
+    pending_light_idle_end = None
+    if pending_idle:
+        pending_light_idle_end = pending_idle[-1]
+        pending_light_idle_delta = pending_idle[-1] - pending_idle[0]
+    gates["spawn_soft_defer_progress"] = (
+        pending_light_idle_end is None
+        or pending_light_idle_end <= 0.0
+        or (
+            softdefer_capture_ticks_idle > 0
+            and pending_light_idle_delta is not None
+            and pending_light_idle_delta < 0
+        )
+        or softdefer_capture_ticks_idle <= 0
+    )
+    gates["mesh_async_floor_when_dirty"] = (
+        mesh_async_med_when_dirty is None or mesh_async_med_when_dirty >= 4.0
+    )
+    gates["stop_dark_face_near_lt_100"] = (
+        (
+            stop_dark_face_stale_near_end is not None
+            and stop_dark_face_stale_near_end < 100.0
+        )
+        or (
+            stop_dark_face_stale_near_end is None
+            and (
+                stop_dark_face_near_end is None or stop_dark_face_near_end < 100.0
+            )
+        )
+    )
+    # Land rim symptoms (manual 142306): stuck miss, miss at end, idle opaque churn.
+    gates["miss_stuck_max_run_sec_le_4"] = miss_stuck_max_run_sec <= 4.0
+    gates["miss_end_eq_0"] = miss_end <= 0.0
+    gates["opaque_idle_churn_max_le_120"] = opaque_idle_churn_max <= 120.0
+    # Light-debt holes with miss=0 (land-cruise L1–L4 nh_no_miss 0.39–0.65).
+    gates["nh_no_miss_rate_le_025"] = nh_no_miss_rate <= 0.25
+    gates_pass_count = sum(1 for v in gates.values() if v)
+
     # Manual 083042: pendf stuck ~40 for ~30s while wall~22–30 and holes=0.
     stop_wall = col(stop_segment, "wall_ms")
     stop_wall_med = median(stop_wall)
@@ -558,9 +848,23 @@ def analyze(
             "break_inflight_race_sum": break_race_sum,
             "break_dark_face_sum": break_dark_sum,
             "mesh_async_med": median(mesh_async),
+            "mesh_async_med_when_dirty": mesh_async_med_when_dirty,
+            "post_load_ring_idle_max": post_load_ring_idle_max,
+            "unfinished_idle_max": unfinished_idle_max,
+            "softdefer_capture_ticks_idle": softdefer_capture_ticks_idle,
+            "pending_light_idle_delta": pending_light_idle_delta,
+            "pending_light_idle_end": pending_light_idle_end,
+            "stop_dark_face_near_end": stop_dark_face_near_end,
+            "stop_dark_face_near_max": stop_dark_face_near_max,
+            "stop_dark_face_stale_near_end": stop_dark_face_stale_near_end,
+            "stop_dark_face_void_near_end": stop_dark_face_void_near_end,
             "stuck_async_holes_sec": stuck_async_holes_sec,
             "cold_relight_holes_sec": cold_relight_holes_sec,
             "dirty_high_sec": dirty_high_sec,
+            "miss_stuck_max_run_sec": miss_stuck_max_run_sec,
+            "miss_end": miss_end,
+            "opaque_idle_churn_max": opaque_idle_churn_max,
+            "nh_no_miss_rate": nh_no_miss_rate,
             "chunks_traveled": chunks_traveled,
             "focus_start": focus_pts[0] if focus_pts else None,
             "focus_end": focus_pts[-1] if focus_pts else None,
@@ -594,11 +898,60 @@ def analyze(
             ),
             "stop_segment_periods": len(stop_segment),
             "stop_tail_periods": len(stop_tail),
-        "stop_pending_plateau_sec": stop_pending_plateau_sec,
-        "stop_wall_med": stop_wall_med,
-        "healthy_unfinished_rate": healthy_unfinished_rate,
-        "manual_idle": manual_idle,
-    },
+            "stop_pending_plateau_sec": stop_pending_plateau_sec,
+            "stop_wall_med": stop_wall_med,
+            "healthy_unfinished_rate": healthy_unfinished_rate,
+            "manual_idle": manual_idle,
+            "backend_store_mode": backend_store_mode,
+            "backend_mesher_mode": backend_mesher_mode,
+            "backend_cull_mode": backend_cull_mode,
+            "backend_store_mdi": backend_store_mdi,
+            "backend_mesher_gpu": backend_mesher_gpu,
+            "backend_cull_gpu": backend_cull_gpu,
+            "gpu_draw_cmds_med": gpu_draw_cmds_med,
+            "gpu_cull_ms_med": gpu_cull_ms_med,
+            "vertex_pool_fill_med": vertex_pool_fill_med,
+            "gpu_cull_indirect_med": gpu_cull_indirect_med,
+            "gpu_mesh_vbo_dispatch_med": gpu_mesh_vbo_dispatch_med,
+            "gpu_light_seed_apply_med": gpu_light_seed_apply_med,
+            "gpu_mask_readback_med": gpu_mask_readback_med,
+            "gpu_blocklight_flood_med": gpu_blocklight_flood_med,
+            "gpu_fluid_readback_med": gpu_fluid_readback_med,
+            "gpu_light_readback_med": gpu_light_readback_med,
+            "gpu_opaque_emit_gpu_med": gpu_opaque_emit_gpu_med,
+            "gpu_opaque_emit_gpu_max": gpu_opaque_emit_gpu_max,
+            "gpu_transparent_sort_gpu_med": gpu_transparent_sort_gpu_med,
+            "gpu_transparent_sort_gpu_max": gpu_transparent_sort_gpu_max,
+            "gpu_fallback_rate": gpu_fallback_rate,
+            "gpu_fluid_scan_on_med": gpu_fluid_scan_on_med,
+            "backend_fluid_mode": backend_fluid_mode,
+            "backend_lighting_mode": backend_lighting_mode,
+            "backend_lighting_flat": backend_lighting_flat,
+            "backend_lighting_full": backend_lighting_full,
+            "caps_has_compute": caps_has_compute,
+            "caps_has_ssbo": caps_has_ssbo_med,
+            "caps_probe_completed": caps_probe_completed,
+            "android_gpu_user_pref": android_gpu_user_pref,
+            "android_gpu_effective": android_gpu_effective,
+            "android_gpu_deny_reason": android_gpu_deny_reason,
+            "gl_version": gl_version,
+            "gl_renderer": gl_renderer,
+            "opaque_cmd_total_med": opaque_cmd_total_med,
+            "opaque_cmd_on_med": opaque_cmd_on_med,
+            "opaque_culled_frac_med": opaque_culled_frac_med,
+            "cross_batch_count_med": cross_batch_count_med,
+            "cpu_aabb_would_on_med": cpu_aabb_would_on_med,
+            "edit_immediate_n_med": edit_immediate_n_med,
+            "edit_dirty_n_med": edit_dirty_n_med,
+            "edit_neighbor_pending_frames_med": edit_neighbor_pending_frames_med,
+            "pool_unsync_uploads_med": pool_unsync_uploads_med,
+            "pool_fence_wait_ms_med": pool_fence_wait_ms_med,
+            "chunk_meshed_culled0_med": chunk_meshed_culled0_med,
+            "chunk_meshed_unlit_med": chunk_meshed_unlit_med,
+            "chunk_not_ready_med": chunk_not_ready_med,
+            "opaque_on_min": opaque_on_min,
+            "blue_screen_suspect": blue_screen_suspect,
+        },
         "gates": gates,
         "gates_stop": gates_stop,
         "soft": soft,

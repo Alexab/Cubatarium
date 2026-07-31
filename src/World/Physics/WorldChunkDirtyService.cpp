@@ -5,6 +5,8 @@
 #include "World/Core/World.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
+#include "WorldGen/Core/ProceduralSettings.h"
+#include <chrono>
 
 namespace cutum
 {
@@ -92,8 +94,26 @@ void UWorldChunkDirtyService::DrainRebuildQueues(UWorld &world)
   }
 
   const std::vector<glm::ivec3> visualChunks = VisualQueue.PopBudgeted();
+  const float movement_speed = world.GetLastMovementSpeed();
+  const bool moving =
+      movement_speed > world.GetProceduralSettings().MovementPrefetchThreshold;
+  const size_t pending_dirty =
+      world.MeshService ? world.MeshService->GetDirtyCount() : 0;
+  const bool drain_time_cap = moving && pending_dirty > 200;
+  const auto drain_t0 = std::chrono::high_resolution_clock::now();
   for (glm::ivec3 chunk_coord : visualChunks)
   {
+    if (drain_time_cap)
+    {
+      const double drain_ms =
+          std::chrono::duration<double, std::milli>(
+              std::chrono::high_resolution_clock::now() - drain_t0)
+              .count();
+      if (drain_ms > 15.0)
+      {
+        break;
+      }
+    }
     world.ModifiedChunks.insert(chunk_coord);
     if (world.BlockRegistry)
     {

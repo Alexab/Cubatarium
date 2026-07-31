@@ -131,6 +131,23 @@ int main(int argc, char *argv[])
         {
           opt.TeleportToCruiseStart = false;
         }
+        else if (std::strcmp(argv[j], "--cruise-cx") == 0 && j + 1 < argc)
+        {
+          opt.CruiseStartChunkX = static_cast<float>(std::atof(argv[++j]));
+        }
+        else if (std::strcmp(argv[j], "--cruise-cz") == 0 && j + 1 < argc)
+        {
+          opt.CruiseStartChunkZ = static_cast<float>(std::atof(argv[++j]));
+        }
+        else if (std::strcmp(argv[j], "--min-alt-above-sea") == 0 &&
+                 j + 1 < argc)
+        {
+          opt.MinAltitudeAboveSea = static_cast<float>(std::atof(argv[++j]));
+        }
+        else if (std::strcmp(argv[j], "--cruise-eye-y") == 0 && j + 1 < argc)
+        {
+          opt.CruiseEyeY = static_cast<float>(std::atof(argv[++j]));
+        }
         else if (std::strcmp(argv[j], "--perf-out") == 0 && j + 1 < argc)
         {
           opt.PerfOutPath = argv[++j];
@@ -172,6 +189,24 @@ int main(int argc, char *argv[])
           {
             opt.BreakPhaseSec = 20.0;
           }
+        }
+        else if (std::strcmp(argv[j], "--yaw-sweep") == 0)
+        {
+          opt.YawSweepMode = true;
+          opt.Fly = false;
+          opt.HoldForward = false;
+          opt.HoldSpace = false;
+          opt.BreakStandMode = false;
+          opt.FlyStopMode = false;
+          opt.MinAltitudeAboveSea = 0.0f;
+          if (opt.IdleBeforeFlySec < 5.0)
+          {
+            opt.IdleBeforeFlySec = 5.0;
+          }
+        }
+        else if (std::strcmp(argv[j], "--yaw-sweep-sec") == 0 && j + 1 < argc)
+        {
+          opt.YawSweepSec = std::atof(argv[++j]);
         }
         else if (std::strcmp(argv[j], "--break-phase") == 0 && j + 1 < argc)
         {

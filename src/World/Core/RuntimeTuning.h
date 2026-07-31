@@ -39,7 +39,7 @@ struct URuntimeTuning
   int DirtySoftCap{1200};
   /// When mesh_async >= DirtyThrashAsyncMin, use this lower SoftCap (thrash).
   int DirtyThrashSoftCap{400};
-  int DirtyThrashAsyncMin{36};
+  int DirtyThrashAsyncMin{12};
   int PendingLightSoftCap{80};
   int RelightFifoSoftCap{96};
   int GpuVertexPoolReserveMb{64};

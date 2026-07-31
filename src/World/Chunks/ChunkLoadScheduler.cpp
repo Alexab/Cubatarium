@@ -232,9 +232,6 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
     }
     const auto apply_t0 = std::chrono::high_resolution_clock::now();
     pending.result.buffer.ApplyTo(world);
-    LastTickApplyMs += std::chrono::duration<double, std::milli>(
-                           std::chrono::high_resolution_clock::now() - apply_t0)
-                           .count();
     States[pending.result.coord] = ChunkLoadState::Committed;
     ActiveTokens.erase(pending.result.coord);
     RequestPriorities.erase(pending.result.coord);
@@ -250,6 +247,10 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
       MarkDirty(pending.result.coord, min_y, max_y,
                 pending.result.fluidSealed);
     }
+    // Include MarkDirty in apply wall — previously invisible in stream_ms gap.
+    LastTickApplyMs += std::chrono::duration<double, std::milli>(
+                           std::chrono::high_resolution_clock::now() - apply_t0)
+                           .count();
     ++committed;
   }
 }

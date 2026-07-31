@@ -34,7 +34,7 @@ WorldOperationKind KindForRunnerOp(WorldRunnerOp op)
 
 constexpr int kChunkBudgetPerFrame = 16;
 constexpr int kEnterGameGpuWarmupMinFrames = 3;
-constexpr int kEnterGameGpuWarmupMaxFrames = 8;
+constexpr int kEnterGameGpuWarmupMaxFrames = 16;
 
 } // namespace
 
@@ -193,6 +193,10 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink)
   const bool min_frames_done =
       frame_index + 1 >= kEnterGameGpuWarmupMinFrames;
   const bool mesh_ready = !World.NeedsEnterGameMeshWarmup();
+  if (!mesh_ready)
+  {
+    World.SetEnterGameWarmupMissingGreedy(World.CountPostLoadRingNotReady());
+  }
   // Do not block EnterGame on live streamer settle — cooperative load already
   // prepared spawn; streaming continues in InGame.
   if (EnterGameGpuWarmupFramesLeft > 0 &&

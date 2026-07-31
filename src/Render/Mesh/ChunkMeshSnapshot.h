@@ -4,6 +4,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Math/FluidCellState.h"
+#include "Render/Mesh/MeshNeighborPolicy.h"
 #include <array>
 #include <glm/glm.hpp>
 
@@ -27,6 +28,7 @@ struct ChunkMeshSnapshot
   std::array<BlockId, kShellCells> shellBlocks{};
   std::array<uint8_t, kShellCells> shellFluid{};
   std::array<uint8_t, kShellCells> shellLight{};
+  std::array<uint8_t, kShellCells> shellNeighborState{};
   uint64_t sourceRevision{0};
 
   static ChunkMeshSnapshot Capture(const UBlockWorld &world,
@@ -42,6 +44,7 @@ struct ChunkMeshSnapshot
   FluidCellState GetFluidLocal(glm::ivec3 local) const;
   FluidCellState GetFluid(glm::ivec3 worldPos) const;
   glm::ivec3 ChunkOrigin() const;
+  NeighborLoadState GetNeighborLoadState(glm::ivec3 worldPos) const;
 };
 
 } // namespace cutum

@@ -389,6 +389,8 @@ void UCore::LoadConfig(const std::string &config_file_name)
         }
         Render.GreedyMeshing = r.value("greedy_meshing", Render.GreedyMeshing);
         Render.AsyncMeshing = r.value("async_meshing", Render.AsyncMeshing);
+        Render.GpuPackedMeshing =
+            r.value("gpu_packed_meshing", Render.GpuPackedMeshing);
         Render.FaceQuads = r.value("face_quads", Render.FaceQuads);
         Render.FrustumCulling =
             r.value("frustum_culling", Render.FrustumCulling);
@@ -435,6 +437,9 @@ void UCore::LoadConfig(const std::string &config_file_name)
         Render.VSync = r.value("vsync", Render.VSync);
         Render.MsaaSamples =
             std::clamp(r.value("msaa_samples", Render.MsaaSamples), 0, 16);
+        // Missing key → default true (GPU-by-default).
+        Render.AndroidGpuEnabled =
+            r.value("android_gpu_enabled", Render.AndroidGpuEnabled);
         if (Render.GreedyMeshing && !Render.FaceQuads)
         {
           std::cout
@@ -721,6 +726,7 @@ void UCore::SaveConfigFile()
       GraphicsQualityProfile::ToConfigString(Render.Preset);
   render_json["greedy_meshing"] = Render.GreedyMeshing;
   render_json["async_meshing"] = Render.AsyncMeshing;
+  render_json["gpu_packed_meshing"] = Render.GpuPackedMeshing;
   render_json["face_quads"] = Render.FaceQuads;
   render_json["frustum_culling"] = Render.FrustumCulling;
   render_json["batch_cache"] = Render.BatchCache;
@@ -750,6 +756,7 @@ void UCore::SaveConfigFile()
       Render.AltitudeUseTerrainSurface;
   render_json["vsync"] = Render.VSync;
   render_json["msaa_samples"] = Render.MsaaSamples;
+  render_json["android_gpu_enabled"] = Render.AndroidGpuEnabled;
   system_data["render"] = render_json;
   json environment_json = DefaultEnvironmentConfig.ToJson();
   system_data["environment"] = environment_json;

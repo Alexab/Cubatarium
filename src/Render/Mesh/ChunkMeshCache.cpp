@@ -7,8 +7,14 @@
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "Render/Mesh/CrossInstanceCollector.h"
 #include "Render/Mesh/CrossMeshEmitter.h"
+#include "Render/Mesh/MeshApplyPolicy.h"
+#include "World/Streaming/MeshLitGate.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
+#include "Render/Mesh/GpuGreedyFaceExtract.h"
+#include "Render/Mesh/GpuMeshPipeline.h"
+#include "Render/Mesh/IUChunkCull.h"
+#include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Mesh/MeshLightSampling.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/GridMath.h"
@@ -459,17 +465,70 @@ bool UChunkMeshCache::HasGreedyMesh(glm::ivec3 chunk_coord) const
   return GreedyCache.find(chunk_coord) != GreedyCache.end();
 }
 
-bool UChunkMeshCache::ChunkHasFullyDarkFace(glm::ivec3 chunk_coord) const
+bool UChunkMeshCache::HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const
 {
   const auto it = GreedyCache.find(chunk_coord);
   if (it == GreedyCache.end())
   {
     return false;
   }
+  if (it->second.GpuResident && it->second.GpuQuadCount > 0)
+  {
+    return true;
+  }
   for (const GreedyMeshBatch &batch : it->second.batches)
+  {
+    if (!batch.vertices.empty() && !batch.indices.empty())
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool UChunkMeshCache::IsGpuExtractInFlight(glm::ivec3 chunk_coord) const
+{
+  return GpuExtractInFlight.count(chunk_coord) > 0;
+}
+
+bool UChunkMeshCache::IsPendingGpuApply(glm::ivec3 chunk_coord) const
+{
+  for (const PendingGpuApply &pending : PendingGpuApplies)
+  {
+    if (pending.coord == chunk_coord)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+void UChunkMeshCache::NoteGeometryDirty(glm::ivec3 chunk_coord)
+{
+  GeometryDirtyChunks.insert(chunk_coord);
+}
+
+void UChunkMeshCache::ConsumeGeometryDirtyChunks(
+    std::unordered_set<glm::ivec3, IVec3Hash> &out) const
+{
+  out.swap(GeometryDirtyChunks);
+  GeometryDirtyChunks.clear();
+}
+
+bool UChunkMeshCache::BatchesHaveFullyDarkFace(
+    const std::vector<GreedyMeshBatch> &batches)
+{
+  // Bottom faces (−Y, faceIndex 5) are normally light=0 (air/solid below has
+  // no skylight). Counting them made SoftDefer/reject/sticky treat every
+  // outdoor mesh as "dark" and drowned sticky side/top bake in diagnostics.
+  for (const GreedyMeshBatch &batch : batches)
   {
     for (const GreedyMeshVertex &v : batch.vertices)
     {
+      if (v.faceIndex >= 4.5f && v.faceIndex < 5.5f)
+      {
+        continue;
+      }
       if (v.skyLight <= 0.0f && v.blockLight <= 0.0f)
       {
         return true;
@@ -477,6 +536,213 @@ bool UChunkMeshCache::ChunkHasFullyDarkFace(glm::ivec3 chunk_coord) const
     }
   }
   return false;
+}
+
+bool UChunkMeshCache::ChunkHasFullyDarkFace(glm::ivec3 chunk_coord) const
+{
+  const auto it = GreedyCache.find(chunk_coord);
+  if (it == GreedyCache.end())
+  {
+    return false;
+  }
+  if (it->second.GpuResident)
+  {
+    return it->second.GpuHasDarkFace;
+  }
+  return BatchesHaveFullyDarkFace(it->second.batches);
+}
+
+bool UChunkMeshCache::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
+                                             const UBlockWorld &world) const
+{
+  const auto it = GreedyCache.find(chunk_coord);
+  if (it == GreedyCache.end())
+  {
+    return false;
+  }
+  auto face_air_offset = [](int fi) -> glm::ivec3
+  {
+    switch (fi)
+    {
+    case 0:
+      return {0, 0, 1};
+    case 1:
+      return {1, 0, 0};
+    case 2:
+      return {0, 0, -1};
+    case 3:
+      return {-1, 0, 0};
+    case 4:
+      return {0, 1, 0};
+    default:
+      return {0, -1, 0};
+    }
+  };
+  for (const GreedyMeshBatch &batch : it->second.batches)
+  {
+    for (const GreedyMeshVertex &v : batch.vertices)
+    {
+      if (v.skyLight > 0.0f || v.blockLight > 0.0f)
+      {
+        continue;
+      }
+      const int fi = static_cast<int>(v.faceIndex + 0.5f);
+      if (fi == 5)
+      {
+        continue; // −Y bottoms often legitimately unlit
+      }
+      const glm::ivec3 off = face_air_offset(fi);
+      const glm::ivec3 solid(
+          WorldCoordToBlockIndex(v.px - 0.5f * static_cast<float>(off.x)),
+          WorldCoordToBlockIndex(v.py - 0.5f * static_cast<float>(off.y)),
+          WorldCoordToBlockIndex(v.pz - 0.5f * static_cast<float>(off.z)));
+      const glm::ivec3 air = solid + off;
+      if (SampleLightPacked(world, air) != 0 ||
+          SampleLightPacked(world, solid) != 0)
+      {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool UChunkMeshCache::FindNearestDarkFaceNear(const glm::vec3 &camera_pos,
+                                              float max_dist, int chunk_radius,
+                                              DarkFaceHit &out,
+                                              int *out_count_near,
+                                              const UBlockWorld *world,
+                                              int *out_stale_dark,
+                                              int *out_void_edge) const
+{
+  if (out_count_near)
+  {
+    *out_count_near = 0;
+  }
+  if (out_stale_dark)
+  {
+    *out_stale_dark = 0;
+  }
+  if (out_void_edge)
+  {
+    *out_void_edge = 0;
+  }
+  if (max_dist <= 0.0f || chunk_radius < 0 || GreedyCache.empty())
+  {
+    return false;
+  }
+  const float max_dist2 = max_dist * max_dist;
+  const glm::ivec3 cam_chunk = UChunkManager::WorldToChunk(
+      glm::ivec3(WorldCoordToBlockIndex(camera_pos.x),
+                 WorldCoordToBlockIndex(camera_pos.y),
+                 WorldCoordToBlockIndex(camera_pos.z)));
+  bool found = false;
+  float best_d2 = max_dist2;
+  DarkFaceHit best{};
+  int count = 0;
+  int stale_n = 0;
+  int void_n = 0;
+  auto face_air_offset = [](int fi) -> glm::ivec3
+  {
+    switch (fi)
+    {
+    case 0:
+      return {0, 0, 1};
+    case 1:
+      return {1, 0, 0};
+    case 2:
+      return {0, 0, -1};
+    case 3:
+      return {-1, 0, 0};
+    case 4:
+      return {0, 1, 0};
+    default:
+      return {0, -1, 0};
+    }
+  };
+  for (const auto &entry : GreedyCache)
+  {
+    const glm::ivec3 &cc = entry.first;
+    const int dx = std::abs(cc.x - cam_chunk.x);
+    const int dy = std::abs(cc.y - cam_chunk.y);
+    const int dz = std::abs(cc.z - cam_chunk.z);
+    if ((std::max)(dx, (std::max)(dy, dz)) > chunk_radius)
+    {
+      continue;
+    }
+    for (const GreedyMeshBatch &batch : entry.second.batches)
+    {
+      for (const GreedyMeshVertex &v : batch.vertices)
+      {
+        // Skip −Y bottoms — same as BatchesHaveFullyDarkFace.
+        if (v.faceIndex >= 4.5f && v.faceIndex < 5.5f)
+        {
+          continue;
+        }
+        if (v.skyLight > 0.0f || v.blockLight > 0.0f)
+        {
+          continue;
+        }
+        const float ddx = v.px - camera_pos.x;
+        const float ddy = v.py - camera_pos.y;
+        const float ddz = v.pz - camera_pos.z;
+        const float d2 = ddx * ddx + ddy * ddy + ddz * ddz;
+        if (d2 > max_dist2)
+        {
+          continue;
+        }
+        ++count;
+        if (world)
+        {
+          const int fi = static_cast<int>(v.faceIndex + 0.5f);
+          const glm::ivec3 off = face_air_offset(fi);
+          const glm::ivec3 solid(
+              WorldCoordToBlockIndex(v.px - 0.5f * static_cast<float>(off.x)),
+              WorldCoordToBlockIndex(v.py - 0.5f * static_cast<float>(off.y)),
+              WorldCoordToBlockIndex(v.pz - 0.5f * static_cast<float>(off.z)));
+          const glm::ivec3 air = solid + off;
+          if (SampleLightPacked(*world, air) != 0 ||
+              SampleLightPacked(*world, solid) != 0)
+          {
+            ++stale_n;
+          }
+          else
+          {
+            ++void_n;
+          }
+        }
+        if (d2 < best_d2)
+        {
+          best_d2 = d2;
+          best.block = glm::ivec3(WorldCoordToBlockIndex(v.px),
+                                  WorldCoordToBlockIndex(v.py),
+                                  WorldCoordToBlockIndex(v.pz));
+          best.chunk = cc;
+          best.blockId = batch.blockId;
+          best.faceIndex = static_cast<int>(v.faceIndex);
+          best.dist = std::sqrt(d2);
+          found = true;
+        }
+      }
+    }
+  }
+  if (out_count_near)
+  {
+    *out_count_near = count;
+  }
+  if (out_stale_dark)
+  {
+    *out_stale_dark = stale_n;
+  }
+  if (out_void_edge)
+  {
+    *out_void_edge = void_n;
+  }
+  if (found)
+  {
+    out = best;
+  }
+  return found;
 }
 
 bool UChunkMeshCache::IsChunkMeshDirty(glm::ivec3 chunk_coord) const
@@ -523,6 +789,12 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
   {
     return false;
   }
+  if (MissingMemo.epoch == HoleQueryEpoch &&
+      MissingMemo.center == center_ground_chunk &&
+      MissingMemo.radius == radius_chunks)
+  {
+    return MissingMemo.result;
+  }
   bool missing = false;
   world.GetChunkManager().ForEachChunk(
       [&](const UChunk &chunk)
@@ -538,7 +810,19 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
         {
           return;
         }
-        if (GreedyCache.find(coord) != GreedyCache.end())
+        if (HasDrawableGreedyMesh(coord))
+        {
+          return;
+        }
+        // Committed cache entry (incl. intentional 0-quad occluded) is not a
+        // hole. SoftDefer uses HasDrawable separately so empty remesh is not
+        // deferred as "already meshed". Orphaned GpuExtract (no pending apply)
+        // falls through.
+        if (HasGreedyMesh(coord))
+        {
+          return;
+        }
+        if (IsPendingGpuApply(coord))
         {
           return;
         }
@@ -563,7 +847,16 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
           }
         }
       });
+  MissingMemo.epoch = HoleQueryEpoch;
+  MissingMemo.center = center_ground_chunk;
+  MissingMemo.radius = radius_chunks;
+  MissingMemo.result = missing;
   return missing;
+}
+
+void UChunkMeshCache::BeginHoleQueryFrame()
+{
+  ++HoleQueryEpoch;
 }
 
 bool UChunkMeshCache::FindNearestMissingGreedyMesh(
@@ -574,53 +867,106 @@ bool UChunkMeshCache::FindNearestMissingGreedyMesh(
   {
     return false;
   }
-  bool found = false;
-  int best_dist = std::numeric_limits<int>::max();
-  int best_vdist = std::numeric_limits<int>::max();
-  glm::ivec3 best{0};
-  world.GetChunkManager().ForEachChunk(
-      [&](const UChunk &chunk)
+  if (NearestMemo.epoch == HoleQueryEpoch &&
+      NearestMemo.center == center_ground_chunk &&
+      NearestMemo.radius == radius_chunks)
+  {
+    if (NearestMemo.found)
+    {
+      out_coord = NearestMemo.coord;
+    }
+    return NearestMemo.found;
+  }
+  // Ring-order + early exit. ForEachChunk over the whole resident set used to
+  // cost 70–120ms mesh_emerge_prep on hole frames (CB spike_holes) while
+  // searching for a nearest xz that is usually underfeet (r≤1).
+  // Callers pass focus_ground_horiz with y=0 — scan a tall cy band so altitude
+  // slices stay visible without walking every keep-shell chunk.
+  constexpr int kMissingScanMaxCy = 48;
+  const UChunkManager &chunks = world.GetChunkManager();
+  auto chunk_is_solid_missing = [&](glm::ivec3 coord) -> bool
+  {
+    if (HasDrawableGreedyMesh(coord))
+    {
+      return false;
+    }
+    if (HasGreedyMesh(coord))
+    {
+      return false;
+    }
+    if (IsPendingGpuApply(coord))
+    {
+      return false;
+    }
+    if (AsyncBuilder && AsyncBuilder->IsInFlight(coord))
+    {
+      return false;
+    }
+    const UChunk *chunk = chunks.GetChunk(coord);
+    if (!chunk)
+    {
+      return false;
+    }
+    for (int z = 0; z < CHUNK_SIZE; z += 4)
+    {
+      for (int x = 0; x < CHUNK_SIZE; x += 4)
       {
-        const glm::ivec3 coord = chunk.GetCoord();
-        const int dx = std::abs(coord.x - center_ground_chunk.x);
-        const int dz = std::abs(coord.z - center_ground_chunk.z);
-        const int horiz = std::max(dx, dz);
-        if (horiz > radius_chunks)
+        for (int y = 0; y < CHUNK_SIZE; y += 4)
         {
-          return;
-        }
-        if (GreedyCache.find(coord) != GreedyCache.end())
-        {
-          return;
-        }
-        bool solid = false;
-        for (int z = 0; z < CHUNK_SIZE && !solid; z += 4)
-        {
-          for (int x = 0; x < CHUNK_SIZE && !solid; x += 4)
+          if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
           {
-            for (int y = 0; y < CHUNK_SIZE && !solid; y += 4)
-            {
-              if (chunk.GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
-              {
-                solid = true;
-              }
-            }
+            return true;
           }
         }
-        if (!solid)
+      }
+    }
+    return false;
+  };
+  bool found = false;
+  glm::ivec3 best{0};
+  for (int r = 0; r <= radius_chunks; ++r)
+  {
+    glm::ivec3 best_ring{0};
+    int best_vdist = std::numeric_limits<int>::max();
+    bool found_ring = false;
+    for (int dz = -r; dz <= r; ++dz)
+    {
+      for (int dx = -r; dx <= r; ++dx)
+      {
+        if (r > 0 && std::max(std::abs(dx), std::abs(dz)) != r)
         {
-          return;
+          continue;
         }
-        const int vdist = std::abs(coord.y - center_ground_chunk.y);
-        if (!found || horiz < best_dist ||
-            (horiz == best_dist && vdist < best_vdist))
+        for (int cy = 0; cy <= kMissingScanMaxCy; ++cy)
         {
-          found = true;
-          best_dist = horiz;
-          best_vdist = vdist;
-          best = coord;
+          const glm::ivec3 coord(center_ground_chunk.x + dx, cy,
+                                 center_ground_chunk.z + dz);
+          if (!chunk_is_solid_missing(coord))
+          {
+            continue;
+          }
+          const int vdist = std::abs(cy - center_ground_chunk.y);
+          if (!found_ring || vdist < best_vdist)
+          {
+            found_ring = true;
+            best_vdist = vdist;
+            best_ring = coord;
+          }
         }
-      });
+      }
+    }
+    if (found_ring)
+    {
+      found = true;
+      best = best_ring;
+      break;
+    }
+  }
+  NearestMemo.epoch = HoleQueryEpoch;
+  NearestMemo.center = center_ground_chunk;
+  NearestMemo.radius = radius_chunks;
+  NearestMemo.found = found;
+  NearestMemo.coord = best;
   if (found)
   {
     out_coord = best;
@@ -664,6 +1010,81 @@ int UChunkMeshCache::CountDirtyWithinHorizontalRadius(
     }
   }
   return count;
+}
+
+int UChunkMeshCache::CountPendingGpuAppliesInHorizontalRadius(
+    glm::ivec3 center_ground_chunk, int radius_chunks) const
+{
+  if (radius_chunks < 0)
+  {
+    return 0;
+  }
+  int count = 0;
+  for (const PendingGpuApply &pending : PendingGpuApplies)
+  {
+    const int dx = std::abs(pending.coord.x - center_ground_chunk.x);
+    const int dz = std::abs(pending.coord.z - center_ground_chunk.z);
+    if (std::max(dx, dz) <= radius_chunks)
+    {
+      ++count;
+    }
+  }
+  return count;
+}
+
+int UChunkMeshCache::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
+                                                int keep_radius, int keep_cy,
+                                                bool remesh_only)
+{
+  if (keep_radius < 0)
+  {
+    return 0;
+  }
+  auto beyond_keep = [&](const glm::ivec3 &coord) {
+    const int horiz = std::max(std::abs(coord.x - center_chunk.x),
+                               std::abs(coord.z - center_chunk.z));
+    if (horiz > keep_radius)
+    {
+      return true;
+    }
+    if (keep_cy >= 0 && std::abs(coord.y - center_chunk.y) > keep_cy)
+    {
+      return true;
+    }
+    return false;
+  };
+  int dropped = 0;
+  for (auto it = Dirty.begin(); it != Dirty.end();)
+  {
+    if (!beyond_keep(*it))
+    {
+      ++it;
+      continue;
+    }
+    // Cruise: never drop first-mesh Dirty (creates holes in the focus ring).
+    if (remesh_only && !HasGreedyMesh(*it) &&
+        RemeshAfterApply.find(*it) == RemeshAfterApply.end())
+    {
+      ++it;
+      continue;
+    }
+    RemeshAfterApply.erase(*it);
+    it = Dirty.RemoveAt(it);
+    ++dropped;
+  }
+  for (auto it = RemeshAfterApply.begin(); it != RemeshAfterApply.end();)
+  {
+    if (beyond_keep(*it))
+    {
+      it = RemeshAfterApply.erase(it);
+      ++dropped;
+    }
+    else
+    {
+      ++it;
+    }
+  }
+  return dropped;
 }
 
 bool UChunkMeshCache::HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y,
@@ -726,10 +1147,57 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
   GreedyBatchesDirty = true;
   CrossBatchesDirty = true;
 }
+void UChunkMeshCache::EnsureGpuPipeline()
+{
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  if (!GpuPipelineInitAttempted)
+  {
+    GpuPipelineInitAttempted = true;
+    if (Render.GpuPackedMeshing)
+    {
+      GpuPipeline = std::make_unique<UGpuMeshPipeline>();
+      if (!GpuPipeline->Init())
+      {
+        GpuPipeline.reset();
+      }
+    }
+  }
+#endif
+}
+
+UGpuMeshPipeline *UChunkMeshCache::GetGpuMeshPipeline()
+{
+  EnsureGpuPipeline();
+  return GpuPipeline.get();
+}
+
+const UGpuMeshPipeline *UChunkMeshCache::GetGpuMeshPipeline() const
+{
+  return GpuPipeline.get();
+}
+
 void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
 {
+  if (GpuPipeline)
+  {
+    GpuPipeline->FreeChunk(chunkCoord);
+  }
+  GpuExtractInFlight.erase(chunkCoord);
+  for (auto it = PendingGpuApplies.begin(); it != PendingGpuApplies.end();)
+  {
+    if (it->coord == chunkCoord)
+    {
+      ActiveMeshSourceRevision.erase(chunkCoord);
+      it = PendingGpuApplies.erase(it);
+    }
+    else
+    {
+      ++it;
+    }
+  }
   Cache.erase(chunkCoord);
   GreedyCache.erase(chunkCoord);
+  NoteGeometryDirty(chunkCoord);
   const auto vIt = GreedyVertexCountByChunk.find(chunkCoord);
   if (vIt != GreedyVertexCountByChunk.end())
   {
@@ -762,8 +1230,13 @@ void UChunkMeshCache::RemoveColumn(glm::ivec3 ground_coord, int max_cy)
   for (int cy = 0; cy <= max_cy; ++cy)
   {
     const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
+    if (GpuPipeline)
+    {
+      GpuPipeline->FreeChunk(slice);
+    }
     Cache.erase(slice);
     GreedyCache.erase(slice);
+    NoteGeometryDirty(slice);
     const auto vIt = GreedyVertexCountByChunk.find(slice);
     if (vIt != GreedyVertexCountByChunk.end())
     {
@@ -888,14 +1361,34 @@ void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
   }
   GreedyOpaqueCutoutRefs.clear();
   GreedyTransparentRefs.clear();
+  GpuPackedOpaqueRefs.clear();
+  GpuPackedTransparentRefs.clear();
   GreedyOpaqueCutoutRefs.reserve(GreedyCache.size() * 4);
   GreedyTransparentRefs.reserve(GreedyCache.size());
+  GpuPackedOpaqueRefs.reserve(GreedyCache.size());
+  GpuPackedTransparentRefs.reserve(GreedyCache.size());
 
   for (const auto &entry : GreedyCache)
   {
     if (!ChunkPassesFrustum(frustum, cameraPos, maxCullDistance, entry.first,
                             horizontal_cull))
     {
+      continue;
+    }
+    if (entry.second.GpuResident && entry.second.GpuQuadCount > 0)
+    {
+      GpuPackedChunkRef pref;
+      pref.chunkCoord = entry.first;
+      pref.slotIndex = entry.second.GpuSlotIndex;
+      pref.blockRanges = entry.second.GpuBlockRanges;
+      if (entry.second.GpuTransparent)
+      {
+        GpuPackedTransparentRefs.push_back(std::move(pref));
+      }
+      else
+      {
+        GpuPackedOpaqueRefs.push_back(std::move(pref));
+      }
       continue;
     }
     const std::vector<GreedyMeshBatch> &batches = entry.second.batches;
@@ -974,6 +1467,79 @@ void UChunkMeshCache::RebuildFlatCrossInstances(const Frustum *frustum,
   }
   CrossBatchesDirty = false;
 }
+void UChunkMeshCache::RebuildGreedyVisibleForCull(
+    const Frustum *frustum, const glm::vec3 *camera_pos,
+    float max_cull_distance)
+{
+  RebuildFlatGreedyBatches(frustum, camera_pos, max_cull_distance);
+}
+
+void UChunkMeshCache::CollectGreedyCullSpheres(
+    std::vector<CullSphereEntry> &out) const
+{
+  out.clear();
+  out.reserve(GreedyCache.size());
+  for (const auto &entry : GreedyCache)
+  {
+    const glm::vec3 bmin = ChunkAABBMin(entry.first);
+    const glm::vec3 bmax = ChunkAABBMax(entry.first);
+    const glm::vec3 center = (bmin + bmax) * 0.5f;
+    const float radius = glm::length(bmax - center);
+    CullSphereEntry e;
+    e.sphere = glm::vec4(center, radius);
+    e.coord = entry.first;
+    out.push_back(e);
+  }
+}
+
+void UChunkMeshCache::RebuildFlatGreedyFromVisibilityMask(
+    const uint32_t *vis, size_t vis_count,
+    const std::vector<CullSphereEntry> &entries)
+{
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  GreedyOpaqueCutoutRefs.clear();
+  GreedyTransparentRefs.clear();
+  GreedyOpaqueCutoutRefs.reserve(GreedyCache.size() * 4);
+  GreedyTransparentRefs.reserve(GreedyCache.size());
+  const size_t n = (std::min)(vis_count, entries.size());
+  for (size_t i = 0; i < n; ++i)
+  {
+    if (!vis[i])
+    {
+      continue;
+    }
+    const auto it = GreedyCache.find(entries[i].coord);
+    if (it == GreedyCache.end())
+    {
+      continue;
+    }
+    const std::vector<GreedyMeshBatch> &batches = it->second.batches;
+    for (size_t bi = 0; bi < batches.size(); ++bi)
+    {
+      const GreedyMeshBatch &chunk_batch = batches[bi];
+      if (chunk_batch.vertices.empty() || chunk_batch.indices.empty())
+      {
+        continue;
+      }
+      const GreedyBatchRef ref{entries[i].coord, static_cast<uint16_t>(bi)};
+      if (chunk_batch.Transparent)
+      {
+        GreedyTransparentRefs.push_back(ref);
+      }
+      else
+      {
+        GreedyOpaqueCutoutRefs.push_back(ref);
+      }
+    }
+  }
+  GreedyBatchesDirty = false;
+  ++CullRevision;
+  LastFlatRebuildAt = std::chrono::steady_clock::now();
+  LastFlatRebuildMs = std::chrono::duration<double, std::milli>(
+                          std::chrono::high_resolution_clock::now() - t0)
+                          .count();
+}
+
 void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
                                              const glm::mat4 &viewProj,
                                              const glm::vec3 &cameraPos)
@@ -1003,7 +1569,19 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
     {
       if (needs_greedy_rebuild)
       {
-        RebuildFlatGreedyBatches(&frustum, &cameraPos, maxCullDistance);
+        const auto t0 = std::chrono::steady_clock::now();
+        if (CullBackend)
+        {
+          CullBackend->RebuildVisible(*this, &frustum, &cameraPos,
+                                      maxCullDistance);
+        }
+        else
+        {
+          RebuildFlatGreedyBatches(&frustum, &cameraPos, maxCullDistance);
+        }
+        LastGpuCullMs = std::chrono::duration<double, std::milli>(
+                            std::chrono::steady_clock::now() - t0)
+                            .count();
       }
       if (needs_cross_rebuild)
       {
@@ -1015,6 +1593,7 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
       if (needs_greedy_rebuild)
       {
         RebuildFlatGreedyBatches(nullptr, nullptr, 0.0f);
+        LastGpuCullMs = 0.0;
       }
       if (needs_cross_rebuild)
       {
@@ -1042,9 +1621,168 @@ void UChunkMeshCache::EnsureAsyncBuilder()
   {
     AsyncBuilder = std::make_unique<UAsyncMeshBuilder>();
   }
+  if (AsyncBuilder && MesherBackend)
+  {
+    AsyncBuilder->SetMesher(MesherBackend);
+  }
+}
+
+bool UChunkMeshCache::CommitGpuMeshResult(
+    const UBlockWorld &world, UBlockRegistry &registry, glm::ivec3 coord,
+    uint64_t source_revision, GpuMeshProcessResult &&gpu_result,
+    std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> cross_centers)
+{
+  (void)registry;
+  if (!world.GetChunkManager().HasChunk(coord))
+  {
+    if (GpuPipeline)
+    {
+      GpuPipeline->FreeChunk(coord);
+    }
+    return false;
+  }
+  const bool defer_until_lit = DeferMeshUntilLit && DeferMeshUntilLit(coord);
+  const bool had_mesh = HasDrawableGreedyMesh(coord);
+  const bool had_lit_mesh = had_mesh && !ChunkHasFullyDarkFace(coord);
+  if (ShouldRejectDarkMeshCommit(gpu_result.hasFullyDarkFace, defer_until_lit,
+                                 had_lit_mesh))
+  {
+    if (GpuPipeline)
+    {
+      GpuPipeline->FreeChunk(coord);
+    }
+    if (RemeshAfterApply.erase(coord) > 0 || defer_until_lit || !had_mesh)
+    {
+      MarkDirtyPriority(coord);
+    }
+    return false;
+  }
+
+  ChunkGreedyMesh &chunkMesh = GreedyCache[coord];
+  if (chunkMesh.GpuResident && chunkMesh.GpuSlotIndex >= 0 && GpuPipeline)
+  {
+    GpuPipeline->FreeChunk(coord);
+  }
+  chunkMesh.GpuResident = true;
+  chunkMesh.GpuSlotIndex = gpu_result.slotIndex;
+  chunkMesh.GpuQuadCount = gpu_result.quadCount;
+  chunkMesh.GpuTransparent = gpu_result.transparent;
+  chunkMesh.GpuHasDarkFace = gpu_result.hasFullyDarkFace;
+  chunkMesh.GpuBlockRanges = std::move(gpu_result.blockRanges);
+  chunkMesh.batches.clear();
+  chunkMesh.crossCenters = std::move(cross_centers);
+  GreedyVertexCountByChunk[coord] = 0;
+  NoteGeometryDirty(coord);
+  PendingMeshRevisionBump = true;
+  InstancesDirty = true;
+  CrossBatchesDirty = true;
+  GreedyBatchesDirty = true;
+  if (RemeshAfterApply.erase(coord) > 0)
+  {
+    MarkDirtyPriority(coord);
+  }
+  (void)source_revision;
+  return true;
+}
+
+int UChunkMeshCache::DrainPendingGpuMeshes(UBlockWorld &world,
+                                           UBlockRegistry &registry,
+                                           int max_count, double budget_ms)
+{
+  MeshRebuildTickStats stats{};
+  return ProcessPendingGpuMeshes(world, registry, max_count, budget_ms, stats);
+}
+
+int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
+                                           UBlockRegistry &registry,
+                                           int max_count, double budget_ms,
+                                           MeshRebuildTickStats &stats)
+{
+  EnsureGpuPipeline();
+  UGpuMeshPipeline *pipeline = GpuPipeline.get();
+  if (!pipeline || !pipeline->IsReady() || !Render.GpuPackedMeshing ||
+      PendingGpuApplies.empty() || max_count <= 0)
+  {
+    return 0;
+  }
+
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  int processed = 0;
+  while (!PendingGpuApplies.empty() && processed < max_count)
+  {
+    if (budget_ms > 0.0)
+    {
+      const double elapsed = std::chrono::duration<double, std::milli>(
+                                 std::chrono::high_resolution_clock::now() - t0)
+                                 .count();
+      if (elapsed >= budget_ms)
+      {
+        break;
+      }
+    }
+
+    PendingGpuApply pending = std::move(PendingGpuApplies.front());
+    PendingGpuApplies.pop_front();
+    GpuExtractInFlight.erase(pending.coord);
+
+    const uint64_t expected_revision = MeshRevisions.Current(pending.coord);
+    const auto revisionIt = ActiveMeshSourceRevision.find(pending.coord);
+    const bool has_active = revisionIt != ActiveMeshSourceRevision.end();
+    const uint64_t active_rev = has_active ? revisionIt->second : 0;
+    const MeshApplyRevDecision decision = ClassifyMeshApplyRevision(
+        has_active, active_rev, pending.sourceRevision, expected_revision);
+    if (decision == MeshApplyRevDecision::DropNoActive)
+    {
+      // CancelOutside / Invalidate cleared Active. If nothing drawable remains,
+      // re-queue FirstMesh — silent drop left forever-holes that place-block
+      // instantly healed (manual 215919). Guard dirty to avoid apply thrash.
+      if (!HasDrawableGreedyMesh(pending.coord) &&
+          !Dirty.Contains(pending.coord))
+      {
+        Dirty.MarkDirtyPriority(pending.coord);
+      }
+      continue;
+    }
+    if (decision == MeshApplyRevDecision::DiscardOlderKeepActive)
+    {
+      ++MeshApplySupersededCount;
+      continue;
+    }
+    if (decision == MeshApplyRevDecision::RemeshObsoleteTracked)
+    {
+      ActiveMeshSourceRevision.erase(pending.coord);
+      ++MeshApplyStaleCount;
+      Dirty.MarkDirty(pending.coord); // Remesh class, not FirstMesh
+      continue;
+    }
+
+    GpuMeshProcessResult gpu_result;
+    if (!pipeline->ProcessSnapshot(pending.snapshot, registry, gpu_result) ||
+        !gpu_result.success)
+    {
+      ActiveMeshSourceRevision.erase(pending.coord);
+      if (GpuPipeline)
+      {
+        GpuPipeline->FreeChunk(pending.coord);
+      }
+      Dirty.MarkDirtyPriority(pending.coord);
+      continue;
+    }
+
+    ActiveMeshSourceRevision.erase(pending.coord);
+    if (CommitGpuMeshResult(world, registry, pending.coord,
+                            pending.sourceRevision, std::move(gpu_result),
+                            std::move(pending.crossCenters)))
+    {
+      ++processed;
+      ++stats.Completed;
+    }
+  }
+  return processed;
 }
 
 void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
+                                      UBlockRegistry &registry,
                                       MeshBuildResult &&result)
 {
   if (!world.GetChunkManager().HasChunk(result.coord))
@@ -1057,22 +1795,129 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   {
     return;
   }
-  if (revisionIt->second != result.sourceRevision ||
-      result.sourceRevision != expected_revision)
+  const MeshApplyRevDecision decision = ClassifyMeshApplyRevision(
+      true, revisionIt->second, result.sourceRevision, expected_revision);
+  if (decision == MeshApplyRevDecision::DiscardOlderKeepActive)
+  {
+    // Older async result — keep Active tracking for the newer in-flight rev.
+    ++MeshApplySupersededCount;
+    return;
+  }
+  if (decision == MeshApplyRevDecision::RemeshObsoleteTracked)
   {
     ActiveMeshSourceRevision.erase(revisionIt);
-    // Stale result: re-queue WITHOUT bumping revision. MarkDirtyPriority used
-    // to bump when !existed and restart the invalidate→stale loop (idle
-    // async=42 + dirty flat, manual 210341).
+    GpuExtractInFlight.erase(result.coord);
+    // Tracked rev is obsolete vs Current — remesh WITHOUT bumping revision.
+    // Remesh class only (TD-ARCH-029); MarkDirtyPriority flooded FirstMesh.
     ++MeshApplyStaleCount;
-    Dirty.MarkDirtyPriority(result.coord);
+    Dirty.MarkDirty(result.coord);
     InstancesDirty = true;
     GreedyBatchesDirty = true;
     CrossBatchesDirty = true;
     return;
   }
+
+  // GPU packed-quad path: defer GL compute out of ApplyMeshResult so async
+  // drain stays fast and MeshEmergeTotalBudgetMs is not blown on one chunk.
+  if (result.GpuExtractPending && result.PendingSnapshot)
+  {
+    EnsureGpuPipeline();
+    if (Render.GpuPackedMeshing && GpuPipeline && GpuPipeline->IsReady())
+    {
+      PendingGpuApply pending;
+      pending.coord = result.coord;
+      pending.sourceRevision = result.sourceRevision;
+      pending.snapshot = std::move(*result.PendingSnapshot);
+      pending.crossCenters = std::move(result.crossCenters);
+      result.PendingSnapshot.reset();
+      result.GpuExtractPending = false;
+      if (MeshFocusValid)
+      {
+        const int horiz = std::max(
+            std::abs(pending.coord.x - MeshFocusGroundChunk.x),
+            std::abs(pending.coord.z - MeshFocusGroundChunk.z));
+        const bool missing =
+            GreedyCache.find(pending.coord) == GreedyCache.end();
+        if (missing && horiz <= MeshFocusRadiusChunks)
+        {
+          PendingGpuApplies.push_front(std::move(pending));
+        }
+        else
+        {
+          PendingGpuApplies.push_back(std::move(pending));
+        }
+      }
+      else
+      {
+        PendingGpuApplies.push_back(std::move(pending));
+      }
+      GpuExtractInFlight.insert(result.coord);
+      return;
+    }
+  }
+
   ActiveMeshSourceRevision.erase(revisionIt);
+
+  // Legacy GPF1 readback path (fallback).
+  if (result.GpuExtractPending && result.PendingSnapshot && MesherBackend)
+  {
+    bool extracted = MesherBackend->TryExtractOpaqueToBatches(
+        *result.PendingSnapshot, registry, result.coord, result.batches,
+        /*deferred_no_gpu_readback=*/false,
+        /*greedy_merge_rects=*/false);
+    if (!extracted)
+    {
+      std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
+      const auto quads =
+          MesherBackend->BuildChunkMesh(*result.PendingSnapshot, registry);
+      for (const GreedyQuad &q : quads)
+      {
+        GreedyMeshBatch &batch = byBlockId[q.Id];
+        batch.blockId = q.Id;
+        batch.Transparent = registry.IsTransparent(q.Id);
+        batch.AlphaCutout =
+            registry.GetRenderStyle(q.Id) == BlockRenderStyle::Cutout;
+        const size_t base_vertex = batch.vertices.size();
+        AppendGreedyQuad(q, result.coord, batch.vertices, batch.indices);
+        for (size_t i = base_vertex; i < batch.vertices.size(); ++i)
+        {
+          ApplyVertexLight(batch.vertices[i], q.LightPacked);
+        }
+      }
+      result.batches.clear();
+      result.batches.reserve(byBlockId.size());
+      for (auto &entry : byBlockId)
+      {
+        entry.second.blockId = entry.first;
+        result.batches.push_back(std::move(entry.second));
+      }
+    }
+    result.PendingSnapshot.reset();
+    result.GpuExtractPending = false;
+  }
+
+  const bool defer_until_lit =
+      DeferMeshUntilLit && DeferMeshUntilLit(result.coord);
+  const bool had_mesh = GreedyCache.find(result.coord) != GreedyCache.end();
+  const bool had_lit_mesh = had_mesh && !ChunkHasFullyDarkFace(result.coord);
+  const bool new_dark = BatchesHaveFullyDarkFace(result.batches);
+  if (ShouldRejectDarkMeshCommit(new_dark, defer_until_lit, had_lit_mesh))
+  {
+    // Keep prior lit mesh (or hole). SoftDefer/MarkRelit requeues deferred.
+    if (RemeshAfterApply.erase(result.coord) > 0 || defer_until_lit ||
+        !had_mesh)
+    {
+      MarkDirtyPriority(result.coord);
+    }
+    return;
+  }
+
   ChunkGreedyMesh &chunkMesh = GreedyCache[result.coord];
+  chunkMesh.GpuResident = false;
+  chunkMesh.GpuSlotIndex = -1;
+  chunkMesh.GpuQuadCount = 0;
+  chunkMesh.GpuHasDarkFace = false;
+  chunkMesh.GpuBlockRanges.clear();
   size_t new_vertex_count = 0;
   for (const GreedyMeshBatch &b : result.batches)
   {
@@ -1087,6 +1932,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   GreedyVertexCountTotal += new_vertex_count;
   chunkMesh.batches = std::move(result.batches);
   chunkMesh.crossCenters = std::move(result.crossCenters);
+  NoteGeometryDirty(result.coord);
   PendingMeshRevisionBump = true;
   InstancesDirty = true;
   CrossBatchesDirty = true;
@@ -1122,6 +1968,56 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
 
   if (!Dirty.empty())
   {
+    // When focus holes/pending-light debt are active, huge Dirty sets were being
+    // fully sorted on the main thread only to drop most remesh entries later in
+    // try_schedule(). Prune obviously unschedulable remesh work before the sort
+    // so mesh_dirty_tick_ms cannot dominate the frame at Dirty~400-900.
+    if (MeshFocusValid && Dirty.GetCount() > 256)
+    {
+      for (auto it = Dirty.begin(); it != Dirty.end();)
+      {
+        const bool has_mesh = GreedyCache.find(*it) != GreedyCache.end();
+        if (!has_mesh)
+        {
+          ++it;
+          continue;
+        }
+        if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
+        {
+          it = Dirty.RemoveAt(it);
+          continue;
+        }
+        if (StarveRemeshForHoles)
+        {
+          // Keep near-ring remesh so black faces on neighbors of a hole repair
+          // while FirstMesh runs (manual 090713: miss=1 + dark_stale≈2700).
+          if (MeshFocusValid)
+          {
+            const int horiz =
+                std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                         std::abs(it->z - MeshFocusGroundChunk.z));
+            if (horiz <= StarveRemeshKeepHoriz)
+            {
+              ++it;
+              continue;
+            }
+          }
+          it = Dirty.RemoveAt(it);
+          continue;
+        }
+        if (StarveOutsideFocusMesh)
+        {
+          const int horiz = std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                                     std::abs(it->z - MeshFocusGroundChunk.z));
+          if (horiz > MeshFocusRadiusChunks)
+          {
+            it = Dirty.RemoveAt(it);
+            continue;
+          }
+        }
+        ++it;
+      }
+    }
     // Precompute missing-mesh set once — SortByDistanceKey compares O(n log n)
     // times; per-compare GreedyCache.find was burning wall during flight.
     std::unordered_set<glm::ivec3, IVec3Hash> missing_set;
@@ -1138,10 +2034,26 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     if (MeshFocusValid)
     {
       // missing → effective horiz (forward bias) → preferred cy.
-      Dirty.SortByDistanceKey(MeshFocusGroundChunk, MeshVerticalPreferredCy,
-                              MeshPreferLowerCy, MeshVerticalPriorityValid,
-                              missing_mesh, MeshForwardBiasK, MeshForwardXz,
-                              MeshFocusRadiusChunks);
+      // Full stable_sort on Dirty~650 dominated mesh_dirty_tick (~100ms) while
+      // schedule budget is only a handful — partial_sort the front window.
+      constexpr size_t kMinSortFront = 64;
+      const size_t sort_front = std::max(
+          kMinSortFront,
+          static_cast<size_t>(std::max(8, max_schedule_per_frame) * 8 + 32));
+      if (Dirty.GetCount() > sort_front * 2)
+      {
+        Dirty.PartialSortByDistanceKey(
+            MeshFocusGroundChunk, MeshVerticalPreferredCy, MeshPreferLowerCy,
+            MeshVerticalPriorityValid, missing_mesh, sort_front,
+            MeshForwardBiasK, MeshForwardXz, MeshFocusRadiusChunks);
+      }
+      else
+      {
+        Dirty.SortByDistanceKey(MeshFocusGroundChunk, MeshVerticalPreferredCy,
+                                MeshPreferLowerCy, MeshVerticalPriorityValid,
+                                missing_mesh, MeshForwardBiasK, MeshForwardXz,
+                                MeshFocusRadiusChunks);
+      }
     }
     else
     {
@@ -1168,20 +2080,23 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   {
     EnsureAsyncBuilder();
     // Compact far remesh when backlog starves focus missing (Dirty~800 / async~42).
-    if (MeshFocusValid && Dirty.GetCount() > 300)
+    // After stale-apply fix: also compact when remesh plateau (dirty≫0, no holes).
+    if (MeshFocusValid && Dirty.GetCount() > 200)
     {
       const int in_flight = AsyncBuilder->GetInFlightCount();
       const int compact_horiz =
-          (in_flight >= 24 || Dirty.GetCount() > 400) ? MeshFocusRadiusChunks
+          (in_flight >= 16 || Dirty.GetCount() > 280) ? MeshFocusRadiusChunks
                                                       : MeshFocusRadiusChunks + 1;
-      if (StarveRemeshForHoles || in_flight >= 24 || Dirty.GetCount() > 420)
+      // Never compact underfeet (horiz==0); keep remesh only outside.
+      if (StarveRemeshForHoles || in_flight >= 16 || Dirty.GetCount() > 280)
       {
         for (auto it = Dirty.begin(); it != Dirty.end();)
         {
           const int horiz = std::max(std::abs(it->x - MeshFocusGroundChunk.x),
                                      std::abs(it->z - MeshFocusGroundChunk.z));
-          if (horiz > compact_horiz &&
-              GreedyCache.find(*it) != GreedyCache.end())
+          if (horiz > 0 && horiz > compact_horiz &&
+              GreedyCache.find(*it) != GreedyCache.end() &&
+              !Dirty.IsFirstMesh(*it))
           {
             it = Dirty.RemoveAt(it);
           }
@@ -1195,9 +2110,30 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     for (MeshBuildResult &result :
          AsyncBuilder->DrainCompleted(max_drain_per_frame))
     {
-      ApplyMeshResult(world, std::move(result));
+      ApplyMeshResult(world, registry, std::move(result));
       mesh_data_changed = true;
       ++stats.Completed;
+    }
+
+    if (Render.GpuPackedMeshing && !PendingGpuApplies.empty())
+    {
+      const bool focus_missing =
+          HasMissingGreedyMeshInHorizontalRadius(world, MeshFocusGroundChunk,
+                                                 RenderDistanceChunks);
+      const double gpu_budget =
+          focus_missing
+              ? std::max(8.0, MeshEmergeTotalBudgetMs * 0.6)
+              : std::max(6.0, MeshEmergeTotalBudgetMs * 0.5);
+      const int gpu_max =
+          std::max(3, std::max(max_drain_per_frame, max_schedule_per_frame));
+      const int gpu_done = ProcessPendingGpuMeshes(world, registry, gpu_max,
+                                                 gpu_budget, stats);
+      if (gpu_done > 0)
+      {
+        mesh_data_changed = true;
+        GreedyBatchesDirty = true;
+        CrossBatchesDirty = true;
+      }
     }
 
     const int max_pipeline = std::max(
@@ -1225,6 +2161,16 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         return Dirty.end();
       }
+      {
+        const double total_elapsed =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::high_resolution_clock::now() - dirty_tick_t0)
+                .count();
+        if (total_elapsed > MeshEmergeTotalBudgetMs)
+        {
+          return Dirty.end();
+        }
+      }
       if (AsyncBuilder->IsInFlight(*it))
       {
         return std::next(it);
@@ -1248,9 +2194,25 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (StarveRemeshForHoles &&
           GreedyCache.find(*it) != GreedyCache.end())
       {
-        // While holes exist remesh cannot fill them — drop so Admit/Pass1 missing
-        // can enter Dirty. MarkRelit requeues remesh after light.
-        return Dirty.RemoveAt(it);
+        // Keep near-ring remesh for neighbor black-face repair beside holes.
+        if (MeshFocusValid)
+        {
+          const int horiz =
+              std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                       std::abs(it->z - MeshFocusGroundChunk.z));
+          if (horiz <= StarveRemeshKeepHoriz)
+          {
+            // fall through to schedule
+          }
+          else
+          {
+            return Dirty.RemoveAt(it);
+          }
+        }
+        else
+        {
+          return Dirty.RemoveAt(it);
+        }
       }
       const uint64_t source_revision = MeshRevisions.Current(*it);
       const auto snap_t0 = std::chrono::high_resolution_clock::now();
@@ -1455,10 +2417,23 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (StarveRemeshForHoles &&
           GreedyCache.find(*it) != GreedyCache.end())
       {
-        // While holes exist remesh cannot fill them — drop so Admit/Pass1 missing
-        // can enter Dirty. MarkRelit requeues remesh after light.
-        it = Dirty.RemoveAt(it);
-        continue;
+        // Keep near-ring remesh for neighbor black-face repair beside holes.
+        if (MeshFocusValid)
+        {
+          const int horiz =
+              std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                       std::abs(it->z - MeshFocusGroundChunk.z));
+          if (horiz > StarveRemeshKeepHoriz)
+          {
+            it = Dirty.RemoveAt(it);
+            continue;
+          }
+        }
+        else
+        {
+          it = Dirty.RemoveAt(it);
+          continue;
+        }
       }
       const uint64_t source_revision = MeshRevisions.Current(*it);
       const auto snap_t0 = std::chrono::high_resolution_clock::now();
@@ -1492,6 +2467,21 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       CrossBatchesDirty = true;
     }
     BumpMeshRevisionIfNeeded();
+    if (Render.GpuPackedMeshing && !PendingGpuApplies.empty())
+    {
+      const double gpu_budget =
+          std::max(4.0, MeshEmergeTotalBudgetMs * 0.4);
+      const int gpu_max =
+          std::max(2, std::max(max_drain_per_frame, max_schedule_per_frame) / 2);
+      const int gpu_done = ProcessPendingGpuMeshes(world, registry, gpu_max,
+                                                 gpu_budget, stats);
+      if (gpu_done > 0)
+      {
+        mesh_data_changed = true;
+        GreedyBatchesDirty = true;
+        CrossBatchesDirty = true;
+      }
+    }
     LastRebuildTickStats = stats;
     LastMeshDirtyTickMs = std::chrono::duration<double, std::milli>(
                               std::chrono::high_resolution_clock::now() -
@@ -1530,11 +2520,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
 
 int UChunkMeshCache::GetAsyncInFlightCount() const
 {
-  if (!AsyncBuilder)
-  {
-    return 0;
-  }
-  return AsyncBuilder->GetInFlightCount();
+  const int async_n = AsyncBuilder ? AsyncBuilder->GetInFlightCount() : 0;
+  return async_n + static_cast<int>(GpuExtractInFlight.size());
 }
 
 size_t UChunkMeshCache::GetMeshCompletedSize() const
@@ -1584,7 +2571,7 @@ void UChunkMeshCache::DrainAsyncMeshResults(UBlockWorld &world,
   }
   for (MeshBuildResult &result : AsyncBuilder->DrainCompleted(max_per_frame))
   {
-    ApplyMeshResult(world, std::move(result));
+    ApplyMeshResult(world, registry, std::move(result));
   }
 }
 
@@ -1666,7 +2653,9 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     Cache.erase(chunkCoord);
     std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
     const auto quads =
-        UGreedyMesher::BuildChunkMesh(world, chunkCoord, registry);
+        MesherBackend
+            ? MesherBackend->BuildChunkMesh(world, chunkCoord, registry)
+            : UGreedyMesher::BuildChunkMesh(world, chunkCoord, registry);
     for (const GreedyQuad &q : quads)
     {
       GreedyMeshBatch &batch = byBlockId[q.Id];
@@ -1684,15 +2673,31 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
         vertex.wetness = SurfaceWetness * (top_face ? 0.15f : 0.05f);
       }
     }
-    const int max_local_y = MaxSolidLocalY(*chunk, registry);
-    ChunkGreedyMesh &chunkMesh = GreedyCache[chunkCoord];
-    chunkMesh.batches.clear();
-    chunkMesh.batches.reserve(byBlockId.size());
+    std::vector<GreedyMeshBatch> new_batches;
+    new_batches.reserve(byBlockId.size());
     for (auto &pair : byBlockId)
     {
       pair.second.blockId = pair.first;
-      chunkMesh.batches.push_back(std::move(pair.second));
+      new_batches.push_back(std::move(pair.second));
     }
+    const bool defer_until_lit =
+        DeferMeshUntilLit && DeferMeshUntilLit(chunkCoord);
+    const bool had_mesh = GreedyCache.find(chunkCoord) != GreedyCache.end();
+    const bool had_lit_mesh = had_mesh && !ChunkHasFullyDarkFace(chunkCoord);
+    const bool new_dark = BatchesHaveFullyDarkFace(new_batches);
+    if (ShouldRejectDarkMeshCommit(new_dark, defer_until_lit, had_lit_mesh))
+    {
+      // Keep prior lit mesh. Requeue only while SoftDefer owns the column —
+      // otherwise MarkDirty thrash rebuilds the same unlit result every tick.
+      if (defer_until_lit || !had_mesh)
+      {
+        MarkDirtyPriority(chunkCoord);
+      }
+      return;
+    }
+    const int max_local_y = MaxSolidLocalY(*chunk, registry);
+    ChunkGreedyMesh &chunkMesh = GreedyCache[chunkCoord];
+    chunkMesh.batches = std::move(new_batches);
     size_t new_vertex_count = 0;
     for (const GreedyMeshBatch &b : chunkMesh.batches)
     {
@@ -1708,6 +2713,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     chunkMesh.crossCenters.clear();
     CollectCrossInstancesInBand(*chunk, chunkCoord, registry, max_local_y,
                                 chunkMesh.crossCenters);
+    NoteGeometryDirty(chunkCoord);
   }
   else
   {

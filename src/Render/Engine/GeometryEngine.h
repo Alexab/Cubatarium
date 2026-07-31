@@ -17,7 +17,10 @@ typedef int GLint;
 #include "Render/Engine/AnimationClock.h"
 #include "Render/Engine/CrossGpuBackend.h"
 #include "Render/Engine/FluidSurfaceMap.h"
+#include "Render/Engine/IUFluidSurfaceProvider.h"
 #include "Render/Engine/GreedyGpuBackend.h"
+#include "Render/Engine/IUMeshGpuStore.h"
+#include "Render/Backend/RenderBackendFactory.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/SkyGradientPass.h"
 #include "Render/Engine/TextRenderer.h"
@@ -241,6 +244,8 @@ private:
   std::shared_ptr<UShaderProgram>
       greedyShader; // Greedy world mesh (UV in fragment shader)
   std::shared_ptr<UShaderProgram>
+      packedGreedyShader; // GPU packed-quad vertex pulling path
+  std::shared_ptr<UShaderProgram>
       crossInstancedShader; // Instanced cross vegetation sprites
   std::shared_ptr<UShaderProgram> overlayShader;
   std::shared_ptr<UShaderProgram>
@@ -265,7 +270,19 @@ private:
   // Sky color
   glm::vec4 skyColor; // Replace QVector4D with glm::vec4
   glm::vec3 BaseSkyColor{0.5f, 0.7f, 1.0f};
-  UFluidSurfaceMap FluidSurfaceMap;
+  std::unique_ptr<IUFluidSurfaceProvider> FluidSurfaceProvider;
+  UFluidSurfaceMap &FluidMap()
+  {
+    if (!FluidSurfaceProvider)
+    {
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+      FluidSurfaceProvider = std::make_unique<UCpuFluidSurfaceMap>();
+#else
+      FluidSurfaceProvider = std::make_unique<UGpuFluidSurfaceMap>();
+#endif
+    }
+    return FluidSurfaceProvider->Map();
+  }
   UUnderwaterFogPass UnderwaterFogPass_;
   USkyGradientPass SkyGradientPass_;
   UOpaqueDepthCapture OpaqueDepthCapture;
@@ -296,20 +313,26 @@ private:
   UAnimationClock AnimationClock;
 
   UCreatureDrawPass CreatureDraw_;
-  UGreedyGpuBackend GreedyGpuBackend;
+  URenderBackendBundle RenderBackends;
   UCrossGpuBackend CrossGpuBackend;
   GreedyGpuPassCache GreedyGpuOpaque;
   GreedyGpuPassCache GreedyGpuCutout;
   GreedyGpuPassCache GreedyGpuTransparent;
   CrossGpuPassCache CrossGpuPass;
+  std::vector<GreedyBatchRef> CachedTransparentSortedRefs;
+  uint64_t CachedTransparentSortRevision{0};
+  uint64_t CachedTransparentMeshRevision{0};
+  uint64_t CachedTransparentRefFingerprint{0};
   glm::mat4 PreparedTransparentVp{};
   const std::map<size_t, UTextureCube> *PreparedTransparentTextures{nullptr};
+  IUMeshGpuStore &MeshStore();
+  void EnsureRenderBackendsBound();
   void DrawGreedyOpaqueBatches(
       const UChunkMeshCache &cache,
-      const std::vector<GreedyBatchRef> &opaqueCutoutRefs,
-      const glm::mat4 &vp,
-                               const std::map<size_t, UTextureCube> &textures,
-                               uint64_t meshRevision, uint64_t cullRevision);
+      const std::vector<GreedyBatchRef> &opaqueCutoutRefs, const glm::mat4 &vp,
+      const glm::vec3 &cameraPos,
+      const std::map<size_t, UTextureCube> &textures, uint64_t meshRevision,
+      uint64_t cullRevision);
   void DrawCrossInstancedBatches(const std::vector<CrossInstanceBatch> &batches,
                                  const glm::mat4 &vp,
                                  const std::map<size_t, UTextureCube> &textures,
@@ -322,6 +345,14 @@ private:
                             const std::map<size_t, UTextureCube> &textures,
                             bool alphaCutout, bool transparentPass,
                             GreedyShaderMode mode, float shellAlphaThreshold);
+  void DrawPackedGpuMeshes(const UChunkMeshCache &cache,
+                           const std::vector<GpuPackedChunkRef> &chunk_refs,
+                           const glm::mat4 &vp,
+                           const std::map<size_t, UTextureCube> &textures,
+                           bool transparent_pass, GreedyShaderMode mode,
+                           float shell_alpha);
+
+  const UChunkMeshCache *PreparedTransparentCache{nullptr};
 
   std::string TransientMessage;
   double TransientMessageUntil{0.0};

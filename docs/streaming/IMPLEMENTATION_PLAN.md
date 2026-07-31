@@ -114,6 +114,30 @@ stateDiagram-v2
 - sync relight flood как универсальный recovery;
 - preview mesh до завершения света.
 
+## Статус (2026-07-28, V2–V5 migration arch/streaming-v2-v4)
+
+Honest status vs DoD (see `docs/TECH_DEBT_CHUNK_STREAMING.md` TD-ARCH). Baseline after
+`dc77df3b`: `bin/iter_reports/timeline/manual_dirty_sort.json`,
+`edge_dirty_sort.json` — F2/C/CB still NO-GO on edge.
+
+| Уровень | Статус | Evidence / gap |
+|---|---|---|
+| A0 CONTENT_IGNORE face skip | DONE | `MeshNeighborPolicy.h`, snapshot shell state |
+| A / V3 ingress seed | DONE (R1) | `SeedDecisionPolicy.h`; cruise healthy-frame sync; fail→PendingLight |
+| B ColumnFlowScheduler MVP | DONE | `ColumnFlowScheduler.{h,cpp}`, Emerge DrainOne |
+| C spike / ingress budget | PARTIAL | FocusIngressBudget + caps; wall/spike targets unmet |
+| D harness | DONE | `flight_sim_diag.py`, `--replay-edge`, timeline |
+| E1 draw = RenderReady | DONE | GeometryEngine filter + MDI no CollectAll; residual blue_screen (TD-ARCH-011) |
+| E2 V4 single owner | DONE (R2) | `ColumnFlowExecutor`; emerge Admit/Recover/Promote via DrainBudget |
+| E3 ring SLA | DONE (R3) | Visual FOV stall + unfinished cruise sample + MemoryBudget dirty soft-cap |
+| E4 backend parity | DONE (R4) | `SelectLightingSeedBackend` + Gpu=`ApplyGpuSkylightSeedToChunk`; Android→Cpu |
+| E5 docs freeze | DONE (R7) | Architecture V2–V5 landed; F2/C/CB still NO-GO (TD-ARCH-011/012 backlog) |
+
+Harness timeline: `bin/iter_reports/timeline_summary.json`, `tools/flight_sim_timeline_analyze.py`.
+Migration execution: plan Streaming Arch E Complete (R0–R7).
+
+---
+
 ## Статус (2026-07-21, после Era 11)
 
 ### Evidence regress
@@ -170,14 +194,16 @@ Evidence: `bin/flight_sim_gate_report_baseline_2cb85f3c.json`,
 Вывод: P0 = **frontier missing + cold relight** (A), не F2 Dirty drain.
 F2 (B) остаётся P1: idle remesh plateau / RemeshAfterApply.
 
-### Следующие шаги (скорректировано 2026-07-22, после phase execution)
+### Следующие шаги (после GPU ladder G0–GA, 2026-07-26)
 
-См. **`PHASE_EXECUTION_REPORT.md`** — полный отчёт с метриками и ветками.
+Streaming H→CB + GPU G0–GA закрыты на `opt_3d` (`g_ladder_land`: F2+G* GO;
+backends `gpu_greedy`/`mdi_vertex_pool`/`gpu_frustum`). CB spike/wall vs
+`cb_pack` — variance/slop; reference golden unchanged.
 
-1. **Merge `streaming/phase-4-unified` → `perf`** — лучший autofly (sticky=0, nr_end=25, fd_Δ=−59).
-2. **P0:** снизить `cold_relight_holes_sec` (сейчас ~12s) — доработка relight budget при cruise.
-3. **F2:** только heavy_dirty caps (без раннего порога 12/20); цель `fd_end≤280`.
-4. **Harness:** gate на `cold_relight_holes_sec≤3`; `--replay-manual` parity.
+1. **Merge** `opt_3d` → целевая ветка (PREMERGE + GPU §6).
+2. **Android device smoke** greedy+fluids ([`QA_ANDROID_2026.md`](../QA_ANDROID_2026.md)).
+3. Soft: deeper compute (full greedy extract, cull compaction, light flood) —
+   follow-ups inside GPU backends; do not reopen SoftDefer.
 
 ### Anti-Patterns (не возвращать)
 

@@ -31,6 +31,9 @@ struct FlightSimOptions
   float FacePitchDeg{-2.0f};
   /// Eye height above sea when too low (ocean cruise).
   float MinAltitudeAboveSea{28.0f};
+  /// Absolute eye Y for land cruise. When > 0, overrides sea+MinAltitude clamp
+  /// (inland hills sit above sea+28; manual land corridor ~y=96).
+  float CruiseEyeY{0.0f};
   /// Hold Space while flying to maintain altitude (manual FreeMove climb).
   bool HoldSpace{false};
   bool Sprint{false};
@@ -50,6 +53,9 @@ struct FlightSimOptions
   bool BreakStandMode{false};
   double BreakPhaseSec{20.0};
   double BreakIntervalSec{1.0};
+  /// Standing yaw sweep: cycle 0/90/180/270 every YawSweepSec (visual blue repro).
+  bool YawSweepMode{false};
+  double YawSweepSec{3.0};
   /// Show GLFW window (default hidden). Hidden still has a GL context; lighting
   /// runs the same path — use visible only for human eyeballing.
   bool VisibleWindow{false};

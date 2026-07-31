@@ -2,6 +2,9 @@
 #include "Render/GlIncludes.h"
 #include "glog/logging.h"
 #include <algorithm>
+#include <chrono>
+#include <cstdlib>
+#include <cstring>
 
 namespace cutum
 {
@@ -11,6 +14,32 @@ namespace
 
 constexpr unsigned int kArrayBuffer = GL_ARRAY_BUFFER;
 constexpr unsigned int kElementArrayBuffer = GL_ELEMENT_ARRAY_BUFFER;
+
+bool PoolSyncRequested()
+{
+  // Opt-in only: per-batch fence waits made wall≈2s (<1 FPS) on full pool rewrite.
+  // CUBATARIUM_POOL_SYNC=1 → wait once in Reserve before bump reset.
+  const char *env = std::getenv("CUBATARIUM_POOL_SYNC");
+  return env && env[0] == '1';
+}
+
+void WaitUploadFence(void *&fence_void, double &wait_ms_acc)
+{
+  if (!fence_void)
+  {
+    return;
+  }
+  auto *fence = static_cast<GLsync>(fence_void);
+  const auto t0 = std::chrono::steady_clock::now();
+  const GLenum r =
+      glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 16'000'000);
+  (void)r;
+  wait_ms_acc += std::chrono::duration<double, std::milli>(
+                     std::chrono::steady_clock::now() - t0)
+                     .count();
+  glDeleteSync(fence);
+  fence_void = nullptr;
+}
 
 } // namespace
 
@@ -30,20 +59,16 @@ bool UGreedyVertexPool::EnsureCapacity(size_t vertex_bytes, size_t index_bytes)
   bool clamped = false;
   if (MaxCapacityBytes > 0)
   {
-    const size_t current =
-        (std::max)(VertexCapacityBytes, want_v) +
-        (std::max)(IndexCapacityBytes, want_i);
+    const size_t current = (std::max)(VertexCapacityBytes, want_v) +
+                           (std::max)(IndexCapacityBytes, want_i);
     if (current > MaxCapacityBytes)
     {
-      // Prefer keeping existing capacity; refuse growth past max.
-      const size_t room_v =
-          MaxCapacityBytes > IndexCapacityBytes
-              ? MaxCapacityBytes - IndexCapacityBytes
-              : 0;
-      const size_t room_i =
-          MaxCapacityBytes > VertexCapacityBytes
-              ? MaxCapacityBytes - VertexCapacityBytes
-              : 0;
+      const size_t room_v = MaxCapacityBytes > IndexCapacityBytes
+                                ? MaxCapacityBytes - IndexCapacityBytes
+                                : 0;
+      const size_t room_i = MaxCapacityBytes > VertexCapacityBytes
+                                ? MaxCapacityBytes - VertexCapacityBytes
+                                : 0;
       if (want_v > room_v)
       {
         want_v = (std::max)(VertexCapacityBytes, room_v);
@@ -85,9 +110,17 @@ bool UGreedyVertexPool::EnsureCapacity(size_t vertex_bytes, size_t index_bytes)
 
 bool UGreedyVertexPool::Reserve(size_t vertex_bytes, size_t index_bytes)
 {
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  // One wait before bump-reset when opt-in sync is enabled (not per-batch).
+  if (PoolSyncRequested())
+  {
+    WaitUploadFence(UploadFence, FenceWaitMs);
+  }
+#endif
   const bool ok = EnsureCapacity(vertex_bytes, index_bytes);
   VertexUsedBytes = 0;
   IndexUsedBytes = 0;
+  FreeList.clear();
   return ok;
 }
 
@@ -96,6 +129,38 @@ bool UGreedyVertexPool::EnsureMinCapacity(size_t vertex_bytes,
 {
   return EnsureCapacity((std::max)(vertex_bytes, VertexCapacityBytes),
                         (std::max)(index_bytes, IndexCapacityBytes));
+}
+
+bool UGreedyVertexPool::TryAllocateFromFreeList(size_t vertex_bytes,
+                                                size_t index_bytes,
+                                                GreedyGpuPoolAllocation &out)
+{
+  for (size_t i = 0; i < FreeList.size(); ++i)
+  {
+    GreedyGpuPoolFreeSlot &slot = FreeList[i];
+    if (slot.vertexBytes >= vertex_bytes && slot.indexBytes >= index_bytes)
+    {
+      out.vertexByteOffset = slot.vertexByteOffset;
+      out.indexByteOffset = slot.indexByteOffset;
+      FreeList.erase(FreeList.begin() + static_cast<std::ptrdiff_t>(i));
+      return true;
+    }
+  }
+  return false;
+}
+
+void UGreedyVertexPool::Free(const GreedyGpuPoolAllocation &alloc)
+{
+  if (alloc.vertexCount == 0 || alloc.indexCount == 0)
+  {
+    return;
+  }
+  GreedyGpuPoolFreeSlot slot;
+  slot.vertexByteOffset = alloc.vertexByteOffset;
+  slot.indexByteOffset = alloc.indexByteOffset;
+  slot.vertexBytes = alloc.vertexCount * sizeof(GreedyMeshVertex);
+  slot.indexBytes = alloc.indexCount * sizeof(uint32_t);
+  FreeList.push_back(slot);
 }
 
 GreedyGpuPoolAllocation
@@ -112,43 +177,115 @@ UGreedyVertexPool::Allocate(const GreedyMeshBatch &batch)
 
   const size_t vertex_bytes = alloc.vertexCount * sizeof(GreedyMeshVertex);
   const size_t index_bytes = alloc.indexCount * sizeof(uint32_t);
-  const size_t needed_vertex = VertexUsedBytes + vertex_bytes;
-  const size_t needed_index = IndexUsedBytes + index_bytes;
-  if (needed_vertex > VertexCapacityBytes || needed_index > IndexCapacityBytes)
+
+  if (!TryAllocateFromFreeList(vertex_bytes, index_bytes, alloc))
   {
-    if (!EnsureCapacity(needed_vertex, needed_index))
+    const size_t needed_vertex = VertexUsedBytes + vertex_bytes;
+    const size_t needed_index = IndexUsedBytes + index_bytes;
+    if (needed_vertex > VertexCapacityBytes ||
+        needed_index > IndexCapacityBytes)
     {
-      // Skip orphan grow past Max — leave empty alloc (caller skips draw).
-      return GreedyGpuPoolAllocation{};
+      if (!EnsureCapacity(needed_vertex, needed_index))
+      {
+        return GreedyGpuPoolAllocation{};
+      }
     }
+    alloc.vertexByteOffset = VertexUsedBytes;
+    alloc.indexByteOffset = IndexUsedBytes;
+    VertexUsedBytes += vertex_bytes;
+    IndexUsedBytes += index_bytes;
   }
 
-  alloc.vertexByteOffset = VertexUsedBytes;
-  alloc.indexByteOffset = IndexUsedBytes;
-
   glBindBuffer(kArrayBuffer, VertexVbo);
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  {
+    ++UnsyncUploads;
+    void *mapped = glMapBufferRange(
+        kArrayBuffer, static_cast<GLintptr>(alloc.vertexByteOffset),
+        static_cast<GLsizeiptr>(vertex_bytes),
+        GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT |
+            GL_MAP_UNSYNCHRONIZED_BIT);
+    if (mapped)
+    {
+      std::memcpy(mapped, batch.vertices.data(), vertex_bytes);
+      glUnmapBuffer(kArrayBuffer);
+    }
+    else
+    {
+      glBufferSubData(kArrayBuffer,
+                      static_cast<GLintptr>(alloc.vertexByteOffset),
+                      static_cast<GLsizeiptr>(vertex_bytes),
+                      batch.vertices.data());
+    }
+  }
+#else
   glBufferSubData(kArrayBuffer, static_cast<GLintptr>(alloc.vertexByteOffset),
                   static_cast<GLsizeiptr>(vertex_bytes), batch.vertices.data());
+#endif
   glBindBuffer(kElementArrayBuffer, IndexEbo);
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  {
+    ++UnsyncUploads;
+    void *mapped = glMapBufferRange(
+        kElementArrayBuffer, static_cast<GLintptr>(alloc.indexByteOffset),
+        static_cast<GLsizeiptr>(index_bytes),
+        GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT |
+            GL_MAP_UNSYNCHRONIZED_BIT);
+    if (mapped)
+    {
+      std::memcpy(mapped, batch.indices.data(), index_bytes);
+      glUnmapBuffer(kElementArrayBuffer);
+    }
+    else
+    {
+      glBufferSubData(kElementArrayBuffer,
+                      static_cast<GLintptr>(alloc.indexByteOffset),
+                      static_cast<GLsizeiptr>(index_bytes),
+                      batch.indices.data());
+    }
+  }
+#else
   glBufferSubData(kElementArrayBuffer,
                   static_cast<GLintptr>(alloc.indexByteOffset),
                   static_cast<GLsizeiptr>(index_bytes), batch.indices.data());
+#endif
   glBindBuffer(kArrayBuffer, 0);
   glBindBuffer(kElementArrayBuffer, 0);
-
-  VertexUsedBytes += vertex_bytes;
-  IndexUsedBytes += index_bytes;
   return alloc;
+}
+
+void UGreedyVertexPool::SignalUploadComplete()
+{
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  if (!PoolSyncRequested())
+  {
+    return;
+  }
+  if (UploadFence)
+  {
+    glDeleteSync(static_cast<GLsync>(UploadFence));
+    UploadFence = nullptr;
+  }
+  UploadFence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+#endif
 }
 
 void UGreedyVertexPool::Reset()
 {
   VertexUsedBytes = 0;
   IndexUsedBytes = 0;
+  FreeList.clear();
 }
 
 void UGreedyVertexPool::Destroy()
 {
+  if (UploadFence)
+  {
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+    glDeleteSync(static_cast<GLsync>(UploadFence));
+#endif
+    UploadFence = nullptr;
+  }
   if (IndexEbo != 0)
   {
     glDeleteBuffers(1, &IndexEbo);
@@ -163,6 +300,7 @@ void UGreedyVertexPool::Destroy()
   IndexCapacityBytes = 0;
   VertexUsedBytes = 0;
   IndexUsedBytes = 0;
+  FreeList.clear();
 }
 
 } // namespace cutum

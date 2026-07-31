@@ -7,6 +7,7 @@
 #include "World/Math/GridMath.h"
 #include "World/Physics/CollisionReadiness.h"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 
 namespace cutum
@@ -187,6 +188,12 @@ bool UChunkStreamer::RingPrerequisitesMet(glm::ivec3 coord,
   {
     return true;
   }
+  // NearLoad / hole fill: never call IsTerrainChunkCompleteCached here —
+  // neighbor complete misses dominated streamer_update (CB ~130ms).
+  if (NearLoadRadius >= 0)
+  {
+    return true;
+  }
   // Only the inward Chebyshev step(s) toward LoadPriorityCenter.
   // Requiring every shorter-ring neighbor in the 8-neighborhood blocked the
   // forward corridor whenever a lateral inner column lagged ("empty roads").
@@ -200,9 +207,11 @@ bool UChunkStreamer::RingPrerequisitesMet(glm::ivec3 coord,
     // Do NOT gate on PendingLight / !LitReady. That created idle empty
     // pockets: pending_light stuck ~30, ring_blocked==candidates,
     // stream_loads=0 while wall~14ms. Light is a mesh concern; ring only
-    // orders terrain gen/load.
-    if (ProcedurallyGenerated.count(neighbor) &&
-        IsTerrainChunkCompleteCached(neighbor))
+    // orders terrain gen/load. Visual SLA uses OnIsColumnPendingLight via
+    // WorldStreaming FocusIngressBudget / MemoryBudget (not this gate).
+    // Trust ProcedurallyGenerated alone — IsTerrainChunkCompleteCached after
+    // invalidate re-scanned whole columns (CB streamer≈130ms).
+    if (ProcedurallyGenerated.count(neighbor))
     {
       return true;
     }
@@ -350,6 +359,29 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
   if (chunkCoord.y != 0)
   {
     return false;
+  }
+
+  // Hole / NearLoad path: skip IsTerrainChunkComplete column scans — one miss
+  // was 80ms+ and blew the load budget (CB spike streamer≈83). Async enqueue
+  // only outside underfeet; underfeet keeps full Ensure for F2 cold mesh.
+  if (!forceSync && AsyncGeneration && OnRequestAsyncChunk && NearLoadRadius >= 0)
+  {
+    const int dist = std::max(std::abs(chunkCoord.x - LoadPriorityCenter.x),
+                              std::abs(chunkCoord.z - LoadPriorityCenter.z));
+    if (dist > 1)
+    {
+      if (ProcedurallyGenerated.count(chunkCoord))
+      {
+        return true;
+      }
+      if (OnIsColumnPending && OnIsColumnPending(chunkCoord))
+      {
+        return false;
+      }
+      OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord));
+      note_queued();
+      return false;
+    }
   }
 
   if (OnIsColumnPending && OnIsColumnPending(chunkCoord))
@@ -542,6 +574,12 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
                                          const glm::vec3 &eyePos,
                                          const PlayerCapsule &cap)
 {
+  // ForEachChunk over resident set is O(chunks) — skip entirely when budget is 0
+  // (was still scanning then breaking; CB wall_no_holes streamer≈100ms+).
+  if (EffectiveUnloadOpsPerFrame <= 0)
+  {
+    return;
+  }
   const glm::ivec3 feetChunk = UChunkManager::WorldToChunk(feetBlockPos);
   const int limit = KeepRenderDistance + UnloadMargin;
   const int maxCy = (MaxHeight + CHUNK_SIZE - 1) / CHUNK_SIZE;
@@ -648,17 +686,26 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
   const glm::ivec3 loadCenter = LoadPriorityCenter;
 
   std::vector<glm::ivec3> toLoad;
-  toLoad.reserve(static_cast<size_t>((2 * VisualRenderDistance + 1) *
-                                     (2 * VisualRenderDistance + 1)));
-  for (int cx = loadCenter.x - VisualRenderDistance;
-       cx <= loadCenter.x + VisualRenderDistance; ++cx)
+  // When NearLoadRadius is set (holes / underfeet), only scan that ring —
+  // building+sorting full VisualRD² still cost ~150ms on hole frames (CB).
+  const int scan_radius =
+      NearLoadRadius >= 0
+          ? std::min(VisualRenderDistance, NearLoadRadius)
+          : (MaxLoadOpsPerFrame <= 2
+                 ? std::min(VisualRenderDistance, 4)
+                 : VisualRenderDistance);
+  toLoad.reserve(static_cast<size_t>((2 * scan_radius + 1) *
+                                     (2 * scan_radius + 1)));
+  for (int cx = loadCenter.x - scan_radius; cx <= loadCenter.x + scan_radius;
+       ++cx)
   {
-    for (int cz = loadCenter.z - VisualRenderDistance;
-         cz <= loadCenter.z + VisualRenderDistance; ++cz)
+    for (int cz = loadCenter.z - scan_radius; cz <= loadCenter.z + scan_radius;
+         ++cz)
     {
       const glm::ivec3 coord(cx, 0, cz);
-      if (ProcedurallyGenerated.count(coord) &&
-          IsTerrainChunkCompleteCached(coord))
+      // Trust ProcedurallyGenerated — IsTerrainChunkCompleteCached here caused
+      // full-column scans on cache misses across the whole RD (CB streamer spikes).
+      if (ProcedurallyGenerated.count(coord))
       {
         continue;
       }
@@ -671,11 +718,29 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
               return ChunkLoadPriorityFor(a) < ChunkLoadPriorityFor(b);
             });
 
+  const auto update_t0 = std::chrono::steady_clock::now();
+  // Soft stop after any completed op; hard stop at 2× even with loadOps==0 so a
+  // single EnsureChunkLoaded cannot stack forever (CB streamer≈83 on holes).
+  // Allow one cold attempt between soft and hard when still loadOps==0.
+  const double load_budget_ms = MaxLoadOpsPerFrame <= 2 ? 4.0 : 8.0;
+  const double load_hard_ms = load_budget_ms * 2.0;
   int loadOps = 0;
   for (const glm::ivec3 &coord : toLoad)
   {
     ++LastFrameStats.loadCandidates;
     if (loadOps >= MaxLoadOpsPerFrame)
+    {
+      break;
+    }
+    const double elapsed_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - update_t0)
+            .count();
+    if (elapsed_ms >= load_budget_ms && loadOps > 0)
+    {
+      break;
+    }
+    if (elapsed_ms >= load_hard_ms)
     {
       break;
     }
@@ -689,7 +754,7 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
         continue;
       }
     }
-    if (!RingPrerequisitesMet(coord))
+    if (NearLoadRadius < 0 && !RingPrerequisitesMet(coord))
     {
       ++LastFrameStats.ringGateBlocked;
       continue;
@@ -711,7 +776,12 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
     }
   }
 
-  UnloadDistantChunks(loadCenter, feetBlockPos, eyePos, cap);
+  // Skip unload on hitch budgets — ForEachChunk+save stacks with load scan.
+  // Also skip when EffectiveUnloadOpsPerFrame==0 (UnloadDistantChunks early-out).
+  if (MaxLoadOpsPerFrame > 2 && EffectiveUnloadOpsPerFrame > 0)
+  {
+    UnloadDistantChunks(loadCenter, feetBlockPos, eyePos, cap);
+  }
 }
 
 void UChunkStreamer::PrefetchAhead(glm::ivec3 feet_chunk,
@@ -883,6 +953,12 @@ void UChunkStreamer::PrefetchKeepShell(glm::ivec3 feet_chunk, int max_ops,
         continue;
       }
       if (OnIsColumnPending && OnIsColumnPending(coord))
+      {
+        continue;
+      }
+      // V5 visual SLA: do not expand keep shell onto unfinished FOV columns
+      // (OnIsColumnPendingLight = !IsColumnVisualReadyForRing).
+      if (OnIsColumnPendingLight && OnIsColumnPendingLight(coord))
       {
         continue;
       }

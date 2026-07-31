@@ -1,7 +1,10 @@
 
 #include "Render/Engine/GeometryEngine.h"
+#include "Render/Mesh/GpuMeshPipeline.h"
+#include "Render/Mesh/GpuMeshSlotAllocator.h"
 #include "World/Core/WorldLoadDiagnostics.h"
 #include "Blocks/BlockRegistry.h"
+#include "App/Settings/GraphicsQualityProfile.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
@@ -20,8 +23,18 @@
 #include "Render/Engine/DistanceFog.h"
 #include "Render/Engine/HorizonFogColor.h"
 #include "Render/Engine/FluidSurfaceMap.h"
+#include "Render/Engine/IUFluidSurfaceProvider.h"
+#include "Render/Mesh/GreedyMeshBatch.h"
+#include "Render/Mesh/GpuFluidColumnScan.h"
 #include "Render/Engine/FluidUnderwaterFogLogic.h"
-#include "Render/Engine/GreedyGpuBackend.h"
+#include "Render/Engine/IUMeshGpuStore.h"
+#include "Render/Engine/MdiVertexPoolStore.h"
+#include "Render/Backend/RenderBackendFactory.h"
+#include "Render/Backend/RenderBackendCaps.h"
+#include "Render/Backend/AndroidGpuPolicy.h"
+#include "Render/Backend/GpuHotPathFallback.h"
+#include "Render/Mesh/IUChunkCull.h"
+#include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
 #include "Render/Pipeline/GlStateMask.h"
@@ -30,7 +43,9 @@
 #include "Render/Pipeline/GreedyTransparentSort.h"
 #include "World/Adapters/WorldRenderReadAdapter.h"
 #include "World/Chunks/Chunk.h"
+#include "World/Chunks/ChunkManager.h"
 #include "World/Core/World.h"
+#include "World/Lighting/IULightingPipeline.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Physics/LiquidDebugTrace.h"
@@ -42,6 +57,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -131,7 +147,7 @@ UGeometryEngine::~UGeometryEngine()
   DestroyCubeBuffers();
   DestroyFaceQuadBuffers();
   DestroyGreedyMeshBuffers();
-  FluidSurfaceMap.DestroyGpuResources();
+  FluidMap().DestroyGpuResources();
   OpaqueDepthCapture.DestroyGpuResources();
   WeatherPass.DestroyGpuResources();
   DestroyPreviewBuffers();
@@ -148,8 +164,72 @@ void UGeometryEngine::SetCreatureTextureStorage(
   CreatureTextureStorage = std::move(storage);
 }
 
+void UGeometryEngine::EnsureRenderBackendsBound()
+{
+  if (!URenderBackendFactory::IsBound(RenderBackends))
+  {
+    RenderBackendCaps caps = GetActiveRenderBackendCaps();
+    if (!caps.ProbeCompleted)
+    {
+      // Bind before GL probe (tests / early init): keep platform defaults.
+      caps = DetectRenderBackendCaps();
+    }
+    AndroidGpuAllowlistConfig allowlist =
+        LoadAndroidGpuAllowlist("assets/config/android_gpu.json");
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+    // Prefer APK-extracted assets root when present.
+    {
+      const AndroidGpuAllowlistConfig from_assets =
+          LoadAndroidGpuAllowlist("config/android_gpu.json");
+      if (!from_assets.AllowRenderers.empty())
+      {
+        allowlist = from_assets;
+      }
+    }
+#endif
+    ApplyAndroidGpuPolicy(caps, Render.AndroidGpuEnabled, &allowlist);
+    SetActiveRenderBackendCaps(caps);
+    URenderBackendFactory::BindOnce(RenderBackends, caps);
+  }
+  if (!FluidSurfaceProvider)
+  {
+    FluidSurfaceProvider =
+        CreateFluidSurfaceProvider(GetActiveRenderBackendCaps());
+  }
+  if (WorldInstance && RenderBackends.Store)
+  {
+    bool prefer_patch = RenderBackends.Store->SupportsMultiDrawIndirect();
+    if (const char *env = std::getenv("CUBATARIUM_PREFER_GPU_STORE_PATCH"))
+    {
+      if (env[0] == '0')
+      {
+        prefer_patch = false;
+      }
+      else if (env[0] == '1')
+      {
+        prefer_patch = true;
+      }
+    }
+    WorldInstance->GetMeshService().SetPreferGpuStorePatch(prefer_patch);
+  }
+  if (WorldInstance)
+  {
+    auto &mesh = WorldInstance->GetMeshService();
+    mesh.SetCullBackend(RenderBackends.Cull.get());
+    mesh.SetMesherBackend(RenderBackends.Mesher.get());
+  }
+}
+
+IUMeshGpuStore &UGeometryEngine::MeshStore()
+{
+  EnsureRenderBackendsBound();
+  return *RenderBackends.Store;
+}
+
 bool UGeometryEngine::InitEngine()
 {
+  EnsureRenderBackendsBound();
+
   // Initialize UShaderManager
   shaderManager = std::make_shared<UShaderManager>();
   if (!shaderManager->Initialize())
@@ -360,6 +440,15 @@ float insetMix(float a, float b, float t, float inset) {
     return false;
   }
 
+  packedGreedyShader = shaderManager->CreateShader(
+      "packed_greedy", "shaders/vshader_packed_greedy.glsl",
+      "shaders/fshader_greedy.glsl");
+  if (!packedGreedyShader || !packedGreedyShader->IsValid())
+  {
+    std::cerr << "Failed to create packed greedy mesh shader" << std::endl;
+    return false;
+  }
+
   crossInstancedShader = shaderManager->CreateShader(
       "cross_instanced", "shaders/vshader_cross_instanced.glsl",
       "shaders/fshader_greedy.glsl");
@@ -397,6 +486,12 @@ float insetMix(float a, float b, float t, float inset) {
 void UGeometryEngine::Paint(int width_size, int height_size,
                             double view_duration)
 {
+  if (WorldInstance)
+  {
+    WorldInstance->GetPhysicsTelemetryMutable().GpuDrawCmds = 0;
+    WorldInstance->GetPhysicsTelemetryMutable().GpuCullIndirect = 0.0;
+    WorldInstance->GetPhysicsTelemetryMutable().GpuMeshVboDispatch = 0;
+  }
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
     AnimationClock.Tick(static_cast<float>(camera->GetDeltaTime()));
@@ -508,11 +603,44 @@ void UGeometryEngine::DrawCubeGeometry()
 
   if (useGreedyMesh)
   {
+    auto filter_render_ready_refs = [&](const std::vector<GreedyBatchRef> &in)
+    {
+      std::unordered_map<int64_t, bool> ready_cache;
+      std::vector<GreedyBatchRef> out;
+      out.reserve(in.size());
+      for (const GreedyBatchRef &ref : in)
+      {
+        const int64_t key =
+            (static_cast<int64_t>(ref.chunkCoord.x) << 32) ^
+            (static_cast<int64_t>(ref.chunkCoord.z) & 0xffffffffll);
+        auto it = ready_cache.find(key);
+        bool ready = false;
+        if (it != ready_cache.end())
+        {
+          ready = it->second;
+        }
+        else
+        {
+          ready = WorldInstance->IsColumnRenderReady(
+              glm::ivec3(ref.chunkCoord.x, 0, ref.chunkCoord.z));
+          ready_cache.emplace(key, ready);
+        }
+        if (ready)
+        {
+          out.push_back(ref);
+        }
+      }
+      return out;
+    };
     const UWorldMeshService::GreedyDrawSnapshot draw =
         mesh_service->PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
                                         WorldInstance->GetBlockRegistry(),
                                         camera);
-    const auto &opaqueCutoutRefs = draw.opaqueCutoutRefs;
+    std::vector<GreedyBatchRef> filtered_opaque =
+        filter_render_ready_refs(draw.opaqueCutoutRefs);
+    std::vector<GreedyBatchRef> filtered_transparent =
+        filter_render_ready_refs(draw.transparentRefs);
+    const std::vector<GreedyBatchRef> &opaqueCutoutRefs = filtered_opaque;
     if (!useBatchCache || !BlockBatchesValid ||
         opaqueCutoutRefs.size() != CachedInstanceCount ||
         draw.meshRevision != CachedMeshRevision)
@@ -522,7 +650,8 @@ void UGeometryEngine::DrawCubeGeometry()
       BlockBatchesValid = true;
     }
     const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
-    DrawGreedyOpaqueBatches(draw.cache, opaqueCutoutRefs, vp, textures,
+    DrawGreedyOpaqueBatches(draw.cache, opaqueCutoutRefs, vp,
+                            camera->GetPosition(), textures,
                             draw.meshRevision, draw.cullRevision);
     DrawCrossInstancedBatches(draw.crossBatches, vp, textures,
                               draw.meshRevision, draw.cullRevision);
@@ -532,7 +661,7 @@ void UGeometryEngine::DrawCubeGeometry()
     GLboolean cullWasEnabled;
     glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
     GreedyTransparentDrawContext tctx{draw.cache,
-                                      draw.transparentRefs,
+                                      filtered_transparent,
                                       vp,
                                       draw.meshRevision,
                                       draw.cullRevision,
@@ -555,9 +684,23 @@ void UGeometryEngine::DrawCubeGeometry()
   }
   else
   {
-    const auto &blockInstances = mesh_service->PrepareFaceInstances(
+    auto blockInstances = mesh_service->PrepareFaceInstances(
         WorldInstance->GetBlockWorld(), WorldInstance->GetBlockRegistry(),
         camera);
+    blockInstances.erase(
+        std::remove_if(
+            blockInstances.begin(), blockInstances.end(),
+            [&](const BlockInstance &inst)
+            {
+              const glm::vec3 world_pos(inst.model[3]);
+              const glm::ivec3 chunk = UChunkManager::WorldToChunk(
+                  glm::ivec3(static_cast<int>(std::floor(world_pos.x)),
+                             static_cast<int>(std::floor(world_pos.y)),
+                             static_cast<int>(std::floor(world_pos.z))));
+              const glm::ivec3 ground(chunk.x, 0, chunk.z);
+              return !WorldInstance->IsColumnRenderReady(ground);
+            }),
+        blockInstances.end());
     if (!useBatchCache || !BlockBatchesValid ||
         renderCount != CachedInstanceCount ||
         meshRevision != CachedMeshRevision)
@@ -630,8 +773,8 @@ void UGeometryEngine::SetRenderSettings(const RenderSettings &settings)
   Render = settings;
   SetGradientSky(Render.GradientSky);
   BlockBatchesValid = false;
-  GreedyGpuBackend.DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
-                              GreedyGpuTransparent);
+  MeshStore().DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
+                         GreedyGpuTransparent);
   DestroyFaceQuadBuffers();
 }
 
@@ -835,15 +978,15 @@ void UGeometryEngine::PrepareFrameRendering()
   {
     inv_view_rot = glm::transpose(glm::mat3(camera->GetViewMatrix()));
   }
-  FluidSurfaceMap.ClearLastFrameStats();
-  UnderwaterFogPass_.Update(*WorldInstance, Render, FluidSurfaceMap,
-                            BaseSkyColor, inv_view_rot);
+  FluidMap().ClearLastFrameStats();
+  UnderwaterFogPass_.Update(*WorldInstance, Render, FluidMap(), BaseSkyColor,
+                            inv_view_rot);
   skyColor = glm::vec4(UnderwaterFogPass_.GetSkyTint(), 1.0f);
   OverlayTintColor = UnderwaterFogPass_.GetOverlayTintColor();
   OverlayTintAlpha = UnderwaterFogPass_.GetOverlayTintAlpha();
   OverlayBlockId = UnderwaterFogPass_.GetOverlayBlockId();
   const FluidSurfaceMapFrameStats &fluid_stats =
-      FluidSurfaceMap.GetLastFrameStats();
+      FluidMap().GetLastFrameStats();
   WorldInstance->SetLastFluidMapCpuMs(fluid_stats.CpuMs);
   WorldInstance->SetLastFluidMapGpuMs(fluid_stats.GpuMs);
   WorldInstance->SetLastFluidMapDirtyChunks(fluid_stats.DirtyChunksPending);
@@ -869,7 +1012,7 @@ void UGeometryEngine::ApplyFogUniforms(
     const std::shared_ptr<UShaderProgram> &shader, const glm::vec3 &cameraPos,
     bool applyBelowSurfaceFog)
 {
-  UnderwaterFogPass_.ApplyUniforms(shader, cameraPos, FluidSurfaceMap,
+  UnderwaterFogPass_.ApplyUniforms(shader, cameraPos, FluidMap(),
                                    applyBelowSurfaceFog);
 }
 
@@ -922,73 +1065,273 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   OpaqueDepthCapture.ApplyShaderUniforms(greedyShader, opaqueDepthGuard);
   if (auto camera = WorldInstance->GetCurrentUserCamera())
   {
+    // alphaCutout here is shader discard mode (GPF5 merges solid+cutout), not
+    // a dedicated cutout-only pass — still apply underwater fog to opaque.
     ApplyFogUniforms(
         greedyShader, camera->GetPosition(),
-        cutum::ShouldApplyBelowSurfaceFogToPass(transparentPass, alphaCutout));
+        cutum::ShouldApplyBelowSurfaceFogToPass(transparentPass,
+                                                /*alpha_cutout=*/false));
   }
   ApplyGreedyEnvironmentUniforms(greedyShader);
   glActiveTexture(GL_TEXTURE0);
 
   glBindVertexArray(greedyMeshVAO);
   const GLsizei kStride = static_cast<GLsizei>(sizeof(GreedyMeshVertex));
-  for (const GreedyGpuBatch &gpu : cache.batches)
+  uint64_t draw_cmds = 0;
+
+  IUMeshGpuStore &store = MeshStore();
+  const bool use_mdi = store.SupportsMultiDrawIndirect() &&
+                       cache.usesVertexPool && cache.poolVbo != 0 &&
+                       cache.poolEbo != 0;
+  if (use_mdi)
   {
-    SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
-    if (gpu.indexCountGl <= 0)
-    {
-      continue;
-    }
-    const GLuint vbo = gpu.pooled ? cache.poolVbo : gpu.vbo;
-    const GLuint ebo = gpu.pooled ? cache.poolEbo : gpu.ebo;
-    if (vbo == 0 || ebo == 0)
-    {
-      continue;
-    }
-    const auto texIt = textures.find(static_cast<size_t>(gpu.blockId));
-    if (texIt == textures.end())
-    {
-      continue;
-    }
-    const GLuint textureId = texIt->second.GetTextureId();
-    if (textureId == 0)
-    {
-      continue;
-    }
-    glBindTexture(GL_TEXTURE_2D, textureId);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glVertexAttribPointer(
-        0, 3, GL_FLOAT, GL_FALSE, kStride,
-        reinterpret_cast<void *>(gpu.pooled ? gpu.vboByteOffset : 0));
+    // Local indices + baseVertex: attribs at buffer origin once.
+    glBindBuffer(GL_ARRAY_BUFFER, cache.poolVbo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cache.poolEbo);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, kStride, nullptr);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(
         1, 1, GL_FLOAT, GL_FALSE, kStride,
-        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
-                                 offsetof(GreedyMeshVertex, faceIndex)));
+        reinterpret_cast<void *>(offsetof(GreedyMeshVertex, faceIndex)));
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(
         2, 2, GL_FLOAT, GL_FALSE, kStride,
-        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
-                                 offsetof(GreedyMeshVertex, u)));
+        reinterpret_cast<void *>(offsetof(GreedyMeshVertex, u)));
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(
         3, 1, GL_FLOAT, GL_FALSE, kStride,
-        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
-                                 offsetof(GreedyMeshVertex, skyLight)));
+        reinterpret_cast<void *>(offsetof(GreedyMeshVertex, skyLight)));
     glEnableVertexAttribArray(3);
     glVertexAttribPointer(
         4, 1, GL_FLOAT, GL_FALSE, kStride,
-        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
-                                 offsetof(GreedyMeshVertex, blockLight)));
+        reinterpret_cast<void *>(offsetof(GreedyMeshVertex, blockLight)));
     glEnableVertexAttribArray(4);
     glVertexAttribPointer(
         5, 1, GL_FLOAT, GL_FALSE, kStride,
-        reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
-                                 offsetof(GreedyMeshVertex, wetness)));
+        reinterpret_cast<void *>(offsetof(GreedyMeshVertex, wetness)));
     glEnableVertexAttribArray(5);
-    glDrawElements(
-        GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
-        reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
+
+    std::vector<DrawElementsIndirectCommand> cmds;
+    size_t i = 0;
+    while (i < cache.batches.size())
+    {
+      const GreedyGpuBatch &head = cache.batches[i];
+      if (!head.pooled || head.indexCountGl <= 0)
+      {
+        ++i;
+        continue;
+      }
+      const auto texIt = textures.find(static_cast<size_t>(head.blockId));
+      if (texIt == textures.end() || texIt->second.GetTextureId() == 0)
+      {
+        ++i;
+        continue;
+      }
+
+      size_t j = i + 1;
+      while (j < cache.batches.size() && cache.batches[j].pooled &&
+             cache.batches[j].indexCountGl > 0 &&
+             cache.batches[j].blockId == head.blockId)
+      {
+        ++j;
+      }
+
+      SetBlockAnimUniforms(greedyShader, head.blockId, textures);
+      glBindTexture(GL_TEXTURE_2D, texIt->second.GetTextureId());
+      // P2: prefer GPU-resident 1:1 cmd table (instanceCount from compact).
+      if (store.SubmitIndirectCommandsGpuRange(cache, i, j))
+      {
+        ++draw_cmds;
+      }
+      else if (store.BuildIndirectCommandsRange(cache, i, j, cmds) > 0 &&
+               store.SubmitIndirectCommands(cmds))
+      {
+        NoteGpuHotPathFallback();
+        ++draw_cmds;
+      }
+      else
+      {
+        NoteGpuHotPathFallback();
+        for (size_t k = i; k < j; ++k)
+        {
+          const GreedyGpuBatch &gpu = cache.batches[k];
+          if (gpu.drawInstanceCount == 0)
+          {
+            continue;
+          }
+          const GLint base_vertex = static_cast<GLint>(
+              gpu.vboByteOffset / sizeof(GreedyMeshVertex));
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+          // GLES 3.1 core has no glDrawElementsBaseVertex (desktop MDI
+          // fallback only). Staging store avoids this path at runtime.
+          (void)base_vertex;
+          continue;
+#else
+          glDrawElementsBaseVertex(
+              GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
+              reinterpret_cast<void *>(gpu.eboByteOffset), base_vertex);
+          ++draw_cmds;
+#endif
+        }
+      }
+      i = j;
+    }
+
+    // Non-pooled leftovers (should be rare when usesVertexPool).
+    for (const GreedyGpuBatch &gpu : cache.batches)
+    {
+      if (gpu.pooled || gpu.indexCountGl <= 0)
+      {
+        continue;
+      }
+      if (gpu.vbo == 0 || gpu.ebo == 0)
+      {
+        continue;
+      }
+      const auto texIt = textures.find(static_cast<size_t>(gpu.blockId));
+      if (texIt == textures.end() || texIt->second.GetTextureId() == 0)
+      {
+        continue;
+      }
+      SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
+      glBindTexture(GL_TEXTURE_2D, texIt->second.GetTextureId());
+      glBindBuffer(GL_ARRAY_BUFFER, gpu.vbo);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpu.ebo);
+      glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, kStride, nullptr);
+      glEnableVertexAttribArray(0);
+      glVertexAttribPointer(
+          1, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>(offsetof(GreedyMeshVertex, faceIndex)));
+      glEnableVertexAttribArray(1);
+      glVertexAttribPointer(
+          2, 2, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>(offsetof(GreedyMeshVertex, u)));
+      glEnableVertexAttribArray(2);
+      glVertexAttribPointer(
+          3, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>(offsetof(GreedyMeshVertex, skyLight)));
+      glEnableVertexAttribArray(3);
+      glVertexAttribPointer(
+          4, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>(offsetof(GreedyMeshVertex, blockLight)));
+      glEnableVertexAttribArray(4);
+      glVertexAttribPointer(
+          5, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>(offsetof(GreedyMeshVertex, wetness)));
+      glEnableVertexAttribArray(5);
+      glDrawElements(GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT, nullptr);
+      NoteGpuHotPathFallback();
+      ++draw_cmds;
+    }
+  }
+  else
+  {
+    for (const GreedyGpuBatch &gpu : cache.batches)
+    {
+      SetBlockAnimUniforms(greedyShader, gpu.blockId, textures);
+      if (gpu.indexCountGl <= 0)
+      {
+        continue;
+      }
+      const GLuint vbo = gpu.pooled ? cache.poolVbo : gpu.vbo;
+      const GLuint ebo = gpu.pooled ? cache.poolEbo : gpu.ebo;
+      if (vbo == 0 || ebo == 0)
+      {
+        continue;
+      }
+      const auto texIt = textures.find(static_cast<size_t>(gpu.blockId));
+      if (texIt == textures.end())
+      {
+        continue;
+      }
+      const GLuint textureId = texIt->second.GetTextureId();
+      if (textureId == 0)
+      {
+        continue;
+      }
+      glBindTexture(GL_TEXTURE_2D, textureId);
+      glBindBuffer(GL_ARRAY_BUFFER, vbo);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+      glVertexAttribPointer(
+          0, 3, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>(gpu.pooled ? gpu.vboByteOffset : 0));
+      glEnableVertexAttribArray(0);
+      glVertexAttribPointer(
+          1, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                   offsetof(GreedyMeshVertex, faceIndex)));
+      glEnableVertexAttribArray(1);
+      glVertexAttribPointer(
+          2, 2, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                   offsetof(GreedyMeshVertex, u)));
+      glEnableVertexAttribArray(2);
+      glVertexAttribPointer(
+          3, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                   offsetof(GreedyMeshVertex, skyLight)));
+      glEnableVertexAttribArray(3);
+      glVertexAttribPointer(
+          4, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                   offsetof(GreedyMeshVertex, blockLight)));
+      glEnableVertexAttribArray(4);
+      glVertexAttribPointer(
+          5, 1, GL_FLOAT, GL_FALSE, kStride,
+          reinterpret_cast<void *>((gpu.pooled ? gpu.vboByteOffset : 0) +
+                                   offsetof(GreedyMeshVertex, wetness)));
+      glEnableVertexAttribArray(5);
+      glDrawElements(
+          GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
+          reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
+      NoteGpuHotPathFallback();
+      ++draw_cmds;
+    }
+  }
+
+  if (WorldInstance)
+  {
+    auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+    phys.GpuDrawCmds += draw_cmds;
+    phys.GpuCullMs = WorldInstance->GetMeshService().GetLastGpuCullMs();
+    if (RenderBackends.Mesher)
+    {
+      phys.BackendMesher = RenderBackends.Mesher->BackendName();
+    }
+    if (RenderBackends.Store)
+    {
+      phys.BackendStore = RenderBackends.Store->BackendName();
+    }
+    if (RenderBackends.Cull)
+    {
+      phys.BackendCull = RenderBackends.Cull->BackendName();
+    }
+    if (FluidSurfaceProvider)
+    {
+      phys.BackendFluid = FluidSurfaceProvider->BackendName();
+      phys.GpuFluidScanOn = PreferGpuFluidColumnScan() ? 1.0 : 0.0;
+    }
+    {
+      const LightingMode mode = WorldInstance->GetLightingPipeline().GetMode();
+      phys.BackendLightingMode =
+          mode == LightingMode::Flat
+              ? "flat"
+              : ((phys.BackendMesher.find("gpu_") != std::string::npos ||
+                  phys.BackendMesher.find("android_gpu") == 0)
+                     ? "gpu_full"
+                     : "full");
+    }
+    {
+      const RenderBackendCaps &caps = GetActiveRenderBackendCaps();
+      phys.CapsHasCompute = caps.HasCompute ? 1.0 : 0.0;
+      phys.CapsHasSsbo = caps.HasSsbo ? 1.0 : 0.0;
+      phys.CapsProbeCompleted = caps.ProbeCompleted ? 1.0 : 0.0;
+      phys.AndroidGpuUserPref = Render.AndroidGpuEnabled ? 1.0 : 0.0;
+      phys.AndroidGpuEffective = caps.AllowAndroidGpu ? 1.0 : 0.0;
+      phys.AndroidGpuDenyReason = caps.AndroidGpuDenyReason;
+      phys.GlVersion = caps.GlVersion;
+      phys.GlRenderer = caps.GlRenderer;
+    }
   }
 
   glBindVertexArray(0);
@@ -1003,9 +1346,9 @@ void UGeometryEngine::DrawGreedyGpuBatches(
 
 void UGeometryEngine::ResetWorldRenderState()
 {
-  FluidSurfaceMap.DestroyGpuResources();
-  GreedyGpuBackend.DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
-                              GreedyGpuTransparent);
+  FluidMap().DestroyGpuResources();
+  MeshStore().DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
+                         GreedyGpuTransparent);
   BlockBatchesValid = false;
   CachedMeshRevision = 0;
   CachedInstanceCount = 0;
@@ -1070,16 +1413,50 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
       mesh_service->PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
                                       WorldInstance->GetBlockRegistry(),
                                       camera);
+  auto filter_render_ready_refs = [&](const std::vector<GreedyBatchRef> &in)
+  {
+    std::unordered_map<int64_t, bool> ready_cache;
+    std::vector<GreedyBatchRef> out;
+    out.reserve(in.size());
+    for (const GreedyBatchRef &ref : in)
+    {
+      const int64_t key =
+          (static_cast<int64_t>(ref.chunkCoord.x) << 32) ^
+          (static_cast<int64_t>(ref.chunkCoord.z) & 0xffffffffll);
+      auto it = ready_cache.find(key);
+      bool ready = false;
+      if (it != ready_cache.end())
+      {
+        ready = it->second;
+      }
+      else
+      {
+        ready = WorldInstance->IsColumnRenderReady(
+            glm::ivec3(ref.chunkCoord.x, 0, ref.chunkCoord.z));
+        ready_cache.emplace(key, ready);
+      }
+      if (ready)
+      {
+        out.push_back(ref);
+      }
+    }
+    return out;
+  };
+  const std::vector<GreedyBatchRef> filtered_opaque =
+      filter_render_ready_refs(draw.opaqueCutoutRefs);
+  const std::vector<GreedyBatchRef> filtered_transparent =
+      filter_render_ready_refs(draw.transparentRefs);
   const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
   const auto textures = TextureCubeStorageInstance->GetTextures();
 
-  DrawGreedyOpaqueBatches(draw.cache, draw.opaqueCutoutRefs, vp, textures,
-                          draw.meshRevision, draw.cullRevision);
+  DrawGreedyOpaqueBatches(draw.cache, filtered_opaque, vp,
+                          camera->GetPosition(), textures, draw.meshRevision,
+                          draw.cullRevision);
   DrawCrossInstancedBatches(draw.crossBatches, vp, textures, draw.meshRevision,
                             draw.cullRevision);
 
   GreedyTransparentDrawContext tctx{draw.cache,
-                                    draw.transparentRefs,
+                                    filtered_transparent,
                                     vp,
                                     draw.meshRevision,
                                     draw.cullRevision,
@@ -1088,7 +1465,7 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
                                     textures};
   PrepareTransparent(tctx);
 
-  CachedInstanceCount = draw.opaqueCutoutRefs.size();
+  CachedInstanceCount = filtered_opaque.size();
   CachedMeshRevision = draw.meshRevision;
   BlockBatchesValid = true;
 }
@@ -1111,8 +1488,55 @@ void UGeometryEngine::DrawCrossInstancedBatches(
     return;
   }
 
-  CrossGpuBackend.RefreshPass(CrossGpuPass, batches, meshRevision,
+  std::unordered_map<int64_t, bool> render_ready_cache;
+  auto is_column_render_ready = [&](glm::ivec3 chunk) -> bool
+  {
+    const int64_t key =
+        (static_cast<int64_t>(chunk.x) << 32) ^
+        (static_cast<int64_t>(chunk.z) & 0xffffffffll);
+    const auto it = render_ready_cache.find(key);
+    if (it != render_ready_cache.end())
+    {
+      return it->second;
+    }
+    const bool ready = WorldInstance->IsColumnRenderReady(
+        glm::ivec3(chunk.x, 0, chunk.z));
+    render_ready_cache.emplace(key, ready);
+    return ready;
+  };
+  std::vector<CrossInstanceBatch> filtered_batches;
+  filtered_batches.reserve(batches.size());
+  for (const CrossInstanceBatch &batch : batches)
+  {
+    CrossInstanceBatch fb;
+    fb.blockId = batch.blockId;
+    for (const CrossInstanceGpu &inst : batch.instances)
+    {
+      const glm::ivec3 chunk = UChunkManager::WorldToChunk(
+          glm::ivec3(static_cast<int>(std::floor(inst.center.x)),
+                     static_cast<int>(std::floor(inst.center.y)),
+                     static_cast<int>(std::floor(inst.center.z))));
+      if (is_column_render_ready(chunk))
+      {
+        fb.instances.push_back(inst);
+      }
+    }
+    if (!fb.instances.empty())
+    {
+      filtered_batches.push_back(std::move(fb));
+    }
+  }
+  if (filtered_batches.empty())
+  {
+    return;
+  }
+  CrossGpuBackend.RefreshPass(CrossGpuPass, filtered_batches, meshRevision,
                               cullRevision);
+  if (WorldInstance)
+  {
+    WorldInstance->GetPhysicsTelemetryMutable().CrossBatchCount =
+        CrossGpuPass.batches.size();
+  }
   if (CrossGpuPass.batches.empty())
   {
     return;
@@ -1168,16 +1592,42 @@ void UGeometryEngine::DrawCrossInstancedBatches(
 
 void UGeometryEngine::DrawGreedyOpaqueBatches(
     const UChunkMeshCache &cache,
-    const std::vector<GreedyBatchRef> &opaqueCutoutRefs,
-    const glm::mat4 &vp,
-    const std::map<size_t, UTextureCube> &textures, uint64_t meshRevision,
-    uint64_t cullRevision)
+    const std::vector<GreedyBatchRef> &opaqueCutoutRefs, const glm::mat4 &vp,
+    const glm::vec3 &cameraPos, const std::map<size_t, UTextureCube> &textures,
+    uint64_t meshRevision, uint64_t cullRevision)
 {
+  IUMeshGpuStore &store = MeshStore();
+  const bool mdi_indirect_cull = store.SupportsMultiDrawIndirect();
+
+  // V2 draw gate: always use caller-filtered RenderReady refs. CollectAll
+  // bypassed IsColumnRenderReady (E1 hole) and drew lit-but-not-ready columns.
+  // Empty refs means nothing ready — do not re-expand from the pool.
+  // Frustum cull still runs via ApplyGpuCompactCull on this gated set.
+  std::vector<GreedyBatchRef> upload_refs = opaqueCutoutRefs;
+
+  if (WorldInstance)
+  {
+    const glm::ivec3 focus_block = WorldInstance->GetPreferredLoadFocusBlock();
+    const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
+    bool underfeet_in_draw = false;
+    for (const GreedyBatchRef &ref : upload_refs)
+    {
+      if (ref.chunkCoord.x == focus_chunk.x &&
+          ref.chunkCoord.z == focus_chunk.z)
+      {
+        underfeet_in_draw = true;
+        break;
+      }
+    }
+    WorldInstance->GetPhysicsTelemetryMutable().UnderfeetOpaquePresent =
+        underfeet_in_draw ? 1 : 0;
+  }
+
   std::vector<GreedyBatchRef> solid;
   std::vector<GreedyBatchRef> cutout;
-  solid.reserve(opaqueCutoutRefs.size());
-  cutout.reserve(opaqueCutoutRefs.size());
-  for (const GreedyBatchRef &ref : opaqueCutoutRefs)
+  solid.reserve(upload_refs.size());
+  cutout.reserve(upload_refs.size());
+  for (const GreedyBatchRef &ref : upload_refs)
   {
     const GreedyMeshBatch *batch = cache.TryGetGreedyBatch(ref);
     if (!batch)
@@ -1193,37 +1643,60 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
       solid.push_back(ref);
     }
   }
-  if (!solid.empty())
+  // GPF5: one opaque MDI pass for solid+cutout (alphaCutout shader path).
+  std::vector<GreedyBatchRef> opaque_draw;
+  opaque_draw.reserve(solid.size() + cutout.size());
+  opaque_draw.insert(opaque_draw.end(), solid.begin(), solid.end());
+  opaque_draw.insert(opaque_draw.end(), cutout.begin(), cutout.end());
+  // Sort by blockId so MDI can MultiDraw contiguous same-texture runs.
+  // sort_revision=1 invalidates pre-sort pool layouts (was always 0).
+  constexpr uint64_t kBlockIdSortRev = 1;
+  auto by_block_id = [&](const GreedyBatchRef &ra, const GreedyBatchRef &rb)
   {
-    GreedyGpuBackend.RefreshPassRefs(GreedyGpuOpaque, cache, solid, meshRevision,
-                                     cullRevision, 0);
-    DrawGreedyGpuBatches(GreedyGpuOpaque, vp, textures, false, false,
-                         GreedyShaderMode::TransparentColor, 0.0f);
-  }
-  if (!cutout.empty())
+    const GreedyMeshBatch *a = cache.TryGetGreedyBatch(ra);
+    const GreedyMeshBatch *b = cache.TryGetGreedyBatch(rb);
+    if (!a || !b)
+    {
+      return a != nullptr;
+    }
+    return a->blockId < b->blockId;
+  };
+
+  auto *mdi = mdi_indirect_cull
+                  ? dynamic_cast<UMdiVertexPoolStore *>(&store)
+                  : nullptr;
+  const Frustum frustum = Frustum::FromViewProjection(vp);
+  // Must match ChunkMeshCache::RebuildVisible (distance admit). 0 = plane-only
+  // and false-negatives hide terrain while cross (built with MaxCullDistance) remains.
+  const float max_cull_distance = cache.MaxCullDistance();
+  const bool horizontal_cull = cache.UseHorizontalCullDistance();
+
+  if (!opaque_draw.empty())
   {
-    std::sort(cutout.begin(), cutout.end(),
-              [&](const GreedyBatchRef &ra, const GreedyBatchRef &rb)
-              {
-                const GreedyMeshBatch *a = cache.TryGetGreedyBatch(ra);
-                const GreedyMeshBatch *b = cache.TryGetGreedyBatch(rb);
-                if (!a || !b)
-                {
-                  return a != nullptr;
-                }
-                return a->blockId < b->blockId;
-              });
-    GLboolean cullWasEnabled;
-    glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
-    glDisable(GL_CULL_FACE);
-    GreedyGpuBackend.RefreshPassRefs(GreedyGpuCutout, cache, cutout, meshRevision,
-                                     cullRevision, 0);
-    DrawGreedyGpuBatches(GreedyGpuCutout, vp, textures, true, false,
+    std::sort(opaque_draw.begin(), opaque_draw.end(), by_block_id);
+    GLboolean cullWasEnabled = GL_TRUE;
+    if (!cutout.empty())
+    {
+      glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
+      glDisable(GL_CULL_FACE);
+    }
+    store.RefreshPassRefs(GreedyGpuOpaque, cache, opaque_draw, meshRevision,
+                          cullRevision, kBlockIdSortRev);
+    if (mdi)
+    {
+      mdi->ApplyGpuCompactCull(GreedyGpuOpaque, frustum, cameraPos,
+                               max_cull_distance, horizontal_cull);
+    }
+    DrawGreedyGpuBatches(GreedyGpuOpaque, vp, textures, true, false,
                          GreedyShaderMode::TransparentColor, 0.0f);
-    if (cullWasEnabled)
+    if (!cutout.empty() && cullWasEnabled)
     {
       glEnable(GL_CULL_FACE);
     }
+  }
+  if (!cutout.empty())
+  {
+    MeshStore().DestroyPass(GreedyGpuCutout);
   }
   if (WorldInstance)
   {
@@ -1236,12 +1709,146 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
     phys.GpuPoolUsedMb = static_cast<double>(used) / (1024.0 * 1024.0);
     phys.GpuPoolCapMb = static_cast<double>(cap) / (1024.0 * 1024.0);
+    phys.VertexPoolFill =
+        cap > 0 ? static_cast<double>(used) / static_cast<double>(cap) : 0.0;
+    phys.PoolUnsyncUploads =
+        GreedyGpuOpaque.VertexPool.ConsumeUnsyncUploads() +
+        GreedyGpuCutout.VertexPool.ConsumeUnsyncUploads() +
+        GreedyGpuTransparent.VertexPool.ConsumeUnsyncUploads();
+    phys.PoolFenceWaitMs =
+        GreedyGpuOpaque.VertexPool.ConsumeFenceWaitMs() +
+        GreedyGpuCutout.VertexPool.ConsumeFenceWaitMs() +
+        GreedyGpuTransparent.VertexPool.ConsumeFenceWaitMs();
+    if (mdi)
+    {
+      phys.OpaqueCmdTotal = mdi->LastCullOpaqueTotal();
+      phys.OpaqueCmdOn = mdi->LastCullOpaqueOn();
+      phys.CpuAabbWouldOn = mdi->LastCpuAabbWouldOn();
+      phys.ChunkMeshedCulled0 =
+          phys.OpaqueCmdTotal > phys.OpaqueCmdOn
+              ? phys.OpaqueCmdTotal - phys.OpaqueCmdOn
+              : 0;
+      phys.GpuCullIndirect = 1.0;
+    }
   }
+
+  DrawPackedGpuMeshes(cache, cache.GetGpuPackedOpaqueRefs(), vp, textures, false,
+                      GreedyShaderMode::TransparentColor, 0.0f);
 }
+
+void UGeometryEngine::DrawPackedGpuMeshes(
+    const UChunkMeshCache &cache,
+    const std::vector<GpuPackedChunkRef> &chunk_refs, const glm::mat4 &vp,
+    const std::map<size_t, UTextureCube> &textures, bool transparent_pass,
+    GreedyShaderMode mode, float shell_alpha)
+{
+  const UGpuMeshPipeline *pipeline = cache.GetGpuMeshPipeline();
+  if (!pipeline || !pipeline->IsReady() || chunk_refs.empty())
+  {
+    return;
+  }
+  if (!packedGreedyShader || !packedGreedyShader->IsValid())
+  {
+    return;
+  }
+  if (greedyMeshVAO == 0 && !InitGreedyMeshBuffers())
+  {
+    return;
+  }
+
+  packedGreedyShader->Use();
+  packedGreedyShader->SetMat4("mvp_matrix", vp);
+  packedGreedyShader->SetInt("texture0", 0);
+  SetGreedyShaderMode(packedGreedyShader, false, transparent_pass, mode,
+                      shell_alpha);
+  const bool opaque_depth_guard =
+      transparent_pass && mode != GreedyShaderMode::ShellDepthPrepass;
+  if (opaque_depth_guard)
+  {
+    OpaqueDepthCapture.Bind();
+  }
+  OpaqueDepthCapture.ApplyShaderUniforms(packedGreedyShader, opaque_depth_guard);
+  if (WorldInstance)
+  {
+    if (auto camera = WorldInstance->GetCurrentUserCamera())
+    {
+      ApplyFogUniforms(
+          packedGreedyShader, camera->GetPosition(),
+          cutum::ShouldApplyBelowSurfaceFogToPass(transparent_pass, false));
+    }
+    ApplyGreedyEnvironmentUniforms(packedGreedyShader);
+  }
+  glActiveTexture(GL_TEXTURE0);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0,
+                   pipeline->GetAllocator().GetQuadSsbo());
+  glBindVertexArray(greedyMeshVAO);
+
+  for (const GpuPackedChunkRef &chunk : chunk_refs)
+  {
+    const GpuMeshSlot *slot =
+        pipeline->GetAllocator().GetSlot(chunk.chunkCoord);
+    if (!slot || slot->QuadCount == 0)
+    {
+      continue;
+    }
+    const glm::vec3 origin =
+        glm::vec3(chunk.chunkCoord * CHUNK_SIZE);
+    packedGreedyShader->SetVec3("chunkOrigin", origin);
+    for (const GpuBlockDrawRange &range : chunk.blockRanges)
+    {
+      if (range.Transparent != transparent_pass)
+      {
+        continue;
+      }
+      const auto texIt = textures.find(static_cast<size_t>(range.blockId));
+      if (texIt == textures.end())
+      {
+        continue;
+      }
+      const GLuint texture_id = texIt->second.GetTextureId();
+      if (texture_id == 0)
+      {
+        continue;
+      }
+      SetBlockAnimUniforms(packedGreedyShader, range.blockId, textures);
+      glBindTexture(GL_TEXTURE_2D, texture_id);
+      const GLint first =
+          static_cast<GLint>((slot->OffsetQuads + range.quadOffset) * 6u);
+      const GLsizei count = static_cast<GLsizei>(range.quadCount * 6u);
+      if (count <= 0)
+      {
+        continue;
+      }
+      glDrawArrays(GL_TRIANGLES, first, count);
+    }
+  }
+
+  glBindVertexArray(0);
+  packedGreedyShader->Unuse();
+}
+
+namespace
+{
+
+uint64_t TransparentRefListFingerprint(const std::vector<GreedyBatchRef> &refs)
+{
+  uint64_t h = refs.size();
+  for (const GreedyBatchRef &r : refs)
+  {
+    h ^= (static_cast<uint64_t>(static_cast<uint32_t>(r.chunkCoord.x)) << 42) ^
+         (static_cast<uint64_t>(static_cast<uint32_t>(r.chunkCoord.y)) << 21) ^
+         static_cast<uint64_t>(static_cast<uint32_t>(r.chunkCoord.z));
+    h ^= static_cast<uint64_t>(r.batchIndex) * 0x9e3779b97f4a7c15ull;
+  }
+  return h;
+}
+
+} // namespace
 
 void UGeometryEngine::PrepareTransparent(
     const GreedyTransparentDrawContext &ctx)
 {
+  PreparedTransparentCache = &ctx.cache;
   std::vector<GreedyBatchRef> filtered;
   filtered.reserve(ctx.transparentRefs.size());
   for (const GreedyBatchRef &ref : ctx.transparentRefs)
@@ -1260,16 +1867,44 @@ void UGeometryEngine::PrepareTransparent(
   }
   if (filtered.empty())
   {
-    GreedyGpuBackend.DestroyPass(GreedyGpuTransparent);
+    MeshStore().DestroyPass(GreedyGpuTransparent);
     PreparedTransparentTextures = nullptr;
+    CachedTransparentSortedRefs.clear();
+    CachedTransparentSortRevision = 0;
+    CachedTransparentMeshRevision = 0;
+    CachedTransparentRefFingerprint = 0;
     return;
   }
-  SortTransparentGreedyBatches(filtered, ctx.cache, ctx.cameraPos,
-                               ctx.blockRegistry);
   const uint64_t sortRevision = GreedyTransparentSortRevision(ctx.cameraPos);
-  GreedyGpuBackend.RefreshPassRefs(GreedyGpuTransparent, ctx.cache, filtered,
+  const uint64_t refFingerprint = TransparentRefListFingerprint(filtered);
+  const bool sort_inputs_unchanged =
+      sortRevision == CachedTransparentSortRevision &&
+      ctx.meshRevision == CachedTransparentMeshRevision &&
+      refFingerprint == CachedTransparentRefFingerprint &&
+      !CachedTransparentSortedRefs.empty();
+  if (sort_inputs_unchanged && !CachedTransparentSortedRefs.empty())
+  {
+    filtered = CachedTransparentSortedRefs;
+  }
+  else
+  {
+    SortTransparentGreedyBatches(filtered, ctx.cache, ctx.cameraPos,
+                                 ctx.blockRegistry);
+    CachedTransparentSortedRefs = filtered;
+    CachedTransparentSortRevision = sortRevision;
+    CachedTransparentMeshRevision = ctx.meshRevision;
+    CachedTransparentRefFingerprint = refFingerprint;
+  }
+  MeshStore().RefreshPassRefs(GreedyGpuTransparent, ctx.cache, filtered,
                                    ctx.meshRevision, ctx.cullRevision,
                                    sortRevision);
+  if (auto *mdi = dynamic_cast<UMdiVertexPoolStore *>(&MeshStore()))
+  {
+    const Frustum frustum = Frustum::FromViewProjection(ctx.viewProjection);
+    mdi->ApplyGpuCompactCull(GreedyGpuTransparent, frustum, ctx.cameraPos,
+                             ctx.cache.MaxCullDistance(),
+                             ctx.cache.UseHorizontalCullDistance());
+  }
   PreparedTransparentVp = ctx.viewProjection;
   PreparedTransparentTextures = &ctx.textures;
 }
@@ -1281,14 +1916,18 @@ void UGeometryEngine::DrawPreparedTransparent(GreedyShaderMode mode,
   {
     return;
   }
-#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
-  constexpr bool kAlphaCutout = false;
-#else
-  constexpr bool kAlphaCutout = true;
-#endif
+  const bool kAlphaCutout =
+      !GetActiveRenderBackendCaps().PreferSinglePassTransparent;
   DrawGreedyGpuBatches(GreedyGpuTransparent, PreparedTransparentVp,
                        *PreparedTransparentTextures, kAlphaCutout, true, mode,
                        shellAlpha);
+  if (PreparedTransparentCache)
+  {
+    DrawPackedGpuMeshes(*PreparedTransparentCache,
+                        PreparedTransparentCache->GetGpuPackedTransparentRefs(),
+                        PreparedTransparentVp, *PreparedTransparentTextures,
+                        true, mode, shellAlpha);
+  }
 }
 
 bool UGeometryEngine::InitGreedyMeshBuffers()
@@ -1330,8 +1969,8 @@ bool UGeometryEngine::InitGreedyMeshBuffers()
 
 void UGeometryEngine::DestroyGreedyMeshBuffers()
 {
-  GreedyGpuBackend.DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
-                              GreedyGpuTransparent);
+  MeshStore().DestroyAll(GreedyGpuOpaque, GreedyGpuCutout,
+                         GreedyGpuTransparent);
   CrossGpuBackend.DestroyAll(CrossGpuPass);
   if (greedyMeshEBO)
   {

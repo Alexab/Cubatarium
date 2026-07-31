@@ -110,11 +110,17 @@ void USettingsScreen::OnSave()
     const bool face = app.Render.FaceQuads;
     const bool frustum = app.Render.FrustumCulling;
     const bool batch = app.Render.BatchCache;
+    const bool android_gpu = SelectedAndroidGpuEnabled;
     app.Render = RenderSettings::FromPreset(SelectedGraphicsQuality);
     app.Render.GreedyMeshing = greedy;
     app.Render.FaceQuads = face;
     app.Render.FrustumCulling = frustum;
     app.Render.BatchCache = batch;
+    app.Render.AndroidGpuEnabled = android_gpu;
+  }
+  if (AndroidGpuBox)
+  {
+    app.Render.AndroidGpuEnabled = AndroidGpuBox->IsChecked();
   }
   if (LegacyHudBox)
   {
@@ -187,6 +193,7 @@ void USettingsScreen::Build(UGuiContext &ctx)
       std::clamp(appSnap.Ui.UiScaleUser, kGuiMinUserScale, kGuiMaxUserScale);
   SelectedControlScheme = appSnap.Ui.ControlScheme;
   SelectedGraphicsQuality = appSnap.Render.Preset;
+  SelectedAndroidGpuEnabled = appSnap.Render.AndroidGpuEnabled;
 
   auto backdrop = std::make_unique<UGuiPanel>(&theme);
   backdrop->SetBounds({0, 0, ViewportW, ViewportH});
@@ -399,6 +406,16 @@ void USettingsScreen::Build(UGuiContext &ctx)
   GraphicsQualityButton = graphicsQualityBtn.get();
   app.AddChild(std::move(graphicsQualityBtn));
 
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  auto androidGpuBox = std::make_unique<UGuiCheckbox>(
+      &theme, "GPU render (restart world)");
+  androidGpuBox->SetChecked(SelectedAndroidGpuEnabled);
+  androidGpuBox->SetOnChanged(
+      [this](bool checked) { SelectedAndroidGpuEnabled = checked; });
+  AndroidGpuBox = androidGpuBox.get();
+  app.AddChild(std::move(androidGpuBox));
+#endif
+
   UGuiPanel &world = frame->AddScrollPage();
   WorldPanel = &world;
   WorldForm = std::make_unique<UWorldGenSettingsForm>(&theme);
@@ -560,6 +577,11 @@ USettingsScreen::BuildAppGridItems(const GuiGridSpec &spec) const
   }
   addLabeledField(ControlSchemeLabel, ControlSchemeButton);
   addLabeledField(GraphicsQualityLabel, GraphicsQualityButton);
+  if (AndroidGpuBox)
+  {
+    items.push_back({AndroidGpuBox, row, 0, 1, cols, checkH});
+    ++row;
+  }
   return items;
 }
 

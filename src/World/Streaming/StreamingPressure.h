@@ -57,7 +57,7 @@ namespace streaming_pressure
 // Enter thresholds (escalate immediately when exceeded).
 inline constexpr int kEnterPendingYellow = 10;
 inline constexpr int kEnterPendingRed = 45;
-inline constexpr int kEnterDirtyYellow = 400;
+inline constexpr int kEnterDirtyYellow = 420;
 inline constexpr int kEnterDirtyRed = 900;
 inline constexpr double kEnterWallYellowMs = 20.0;
 inline constexpr double kEnterWallRedMs = 40.0;

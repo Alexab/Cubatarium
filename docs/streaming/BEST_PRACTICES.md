@@ -23,7 +23,25 @@
 | Bounded result queues (drop-oldest + requeue) | job graphs with backpressure | Completed mesh/relight grow-only → rings | высокий |
 | Grow-only GPU buffers with Reserve/Max | common GPU upload pools | `GreedyVertexPool` grow-only; Reserve/Max — Era 12 | средний |
 
-## Gap После Era 11
+## Gap После V2–V5 migration (arch/streaming-v2-v4, 2026-07-28)
+
+Architecture landed (R0–R7): SeedDecision fail→PendingLight, ColumnFlowExecutor,
+FOV/keep visual SLA (not terrain PendingLight gate), lighting seed factory
+Cpu≠Gpu, idle Capture progress, CollectAll removed. Evidence: `edge_R1`/`R2`/`R3`
+`run_outcome=success`.
+
+Era13 architecture DoD (026–030): **done** — Hide⇒Ticket via ColumnFlow
+Contains, AllowUnlitFirstMesh SoT SoftDefer, FocusPressure≠hole, Capture floor
+on UnfinishedVisual, FocusIngress Stage SLA. Remaining gate DoD (not architecture):
+
+- ARCH_D3 `wall_ms_med≤30` (lit remesh clamp; evidence autofly).
+- F2/C/CB residuals on edge; TD-ARCH-011 blue_screen; TD-ARCH-015 worker Capture backlog.
+
+Research alignment: Luanti/Minetest chunk job ownership, UE streaming memory
+budgets, Qt RHI capability backends, 0fps-style lighting-before-mesh — mapped to
+V3 seed, V4 executor, V5 visual SLA, E4 factory (see TD-ARCH closed table).
+
+## Gap После Era 11 (historical)
 
 - Preview mesh при `PendingLight` всё ещё возможен (R5).
 - Draw не гейтится `RenderReady`.
@@ -78,11 +96,26 @@ Cubatarium recover/admit/promote paths постепенно эволюциони
 - [Let's Make a Voxel Engine: Chunk Management](https://sites.google.com/site/letsmakeavoxelengine/home/chunk-management)
 - [Gamedev StackExchange: voxel lighting with occlusion](https://gamedev.stackexchange.com/questions/19207/how-can-i-implement-voxel-based-lighting-with-occlusion-in-a-minecraft-style-gam)
 
+## Gap После manual_1752 / Era 13 (2026-07-29)
+
+| Практика | Industry | Cubatarium после Era13 closeout | Gap |
+|----------|----------|--------------------------------|-----|
+| Hide ⇒ guaranteed repair ticket | Job graph + TTL/requeue | ColumnFlow Contains + sticky enqueue TickDerived | **closed** TD-ARCH-026 |
+| Throughput floor when FOV unfinished | Raise async/apply floor | AllowUnlitFirstMesh + schedule floors | **closed** TD-ARCH-027 |
+| Single ColumnRenderable SoT | One stage flag | GetColumnRenderableState + FocusPressure split | **closed** TD-ARCH-028/030 |
+| FirstMesh queue ≠ Remesh thrash | Separate priorities | FirstMesh tickets + lit remesh clamp | **closed** TD-ARCH-029 |
+| SoftDefer with Capture floor | Light debt must progress | Capture on UV\|missing; FocusIngress Stage SLA | **closed** TD-ARCH-030 |
+| Frontier rim first-mesh latency | Stage SLA | FocusIngress unfinished/stale-dark | **partial** TD-ARCH-033 |
+| GPU mesher end-to-end | Resident GPU mesh | Hybrid extract + packed path; cost ≠ readiness | средний (cost track) |
+
 ## Практический Вывод Для Cubatarium
 
 Наиболее полезные заимствования:
 
-1. Строгий `RenderReady` контракт.
+1. Строгий `RenderReady` / `ColumnRenderable` контракт.
 2. Commit-time skylight seed для загруженного соседнего ring.
 3. Отдельная метрика `unfinished_visual` как источник правды для gates.
 4. Постепенное схлопывание watchdog zoo в единый column scheduler.
+5. **Hide⇒RepairTicket** — никогда не прятать геометрию без job в ColumnFlow.
+6. **Async throughput floor** при unfinished FOV; cap только Immediate/sync.
+7. **FirstMesh ≠ Remesh** в dirty admission.

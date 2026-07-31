@@ -40,6 +40,16 @@ struct PhysicsTelemetry
   uint64_t MeshDiscardedLate{0};
   /// ApplyMeshResult rejected as stale (revision mismatch) — remesh thrash signal.
   uint64_t MeshApplyStale{0};
+  /// Deferred GPU mesh applies waiting for ProcessPendingGpuMeshes.
+  int PendingGpuAppliesN{0};
+  /// Ground columns in render ring without greedy mesh (excl. GpuExtractInFlight).
+  int PostLoadRingNotReady{0};
+  /// Missing greedy count when exiting EnterGame GPU warmup (diag snapshot).
+  int EnterGameWarmupMissingGreedy{0};
+  /// Frames where SoftDefer FOV+pending applied a Capture budget floor (cumulative).
+  uint64_t SoftDeferCaptureFloorHits{0};
+  /// Capture/relight bg budget requested by SoftDefer floor this frame (0 if idle).
+  int SoftDeferCaptureBudget{0};
   double RelightCompletedPerSec{0.0};
   double CommitPhysicsMs{0.0};
   double CommitRelightMs{0.0};
@@ -90,6 +100,20 @@ struct PhysicsTelemetry
   int FocusChunkX{0};
   int FocusChunkZ{0};
   int UnderfeetNeed{0};
+  /// Underfeet column SoT vs draw (invisible-ready blind spot).
+  int UnderfeetDrawOk{0};
+  int UnderfeetHasMesh{0};
+  int UnderfeetSticky{0};
+  int UnderfeetPendingLight{0};
+  /// ColumnRenderableState::BlockReason as int.
+  int UnderfeetReason{0};
+  /// 1 when underfeet xz appears in filtered opaque draw refs this frame.
+  int UnderfeetOpaquePresent{0};
+  /// FogPullIn effective state (0 = disabled / unset).
+  int FogPullInRd{0};
+  int FogPullInMargin{0};
+  float FogPullInStartRatio{0.0f};
+  int FogHoleDebt{0};
   /// Legacy OR latch (missing mesh OR pending light) — prefer VisualHoles.
   int NearFocusHoles{0};
   /// Missing GreedyCache in focus (visual holes only).
@@ -105,8 +129,11 @@ struct PhysicsTelemetry
   /// Pending-light + sticky black preview columns in focus (subset of dark).
   int FocusPendingDark{0};
   int FocusStickyRemesh{0};
-  /// Focus columns failing IsColumnRenderReady (mesh dirty/missing/inflight).
+  /// Focus columns failing SoT unfinished visual (alias of UnfinishedVisual sample).
+  /// Not pending+dirty pressure — see FocusPressure.
   int FocusNotRenderReady{0};
+  /// Pending+dirty scheduler pressure (SoftDefer Capture / ingress only).
+  int FocusPressure{0};
   /// Dirty mesh chunks inside focus radius (lit-but-dirty remesh debt).
   int FocusDirtyChunks{0};
   /// Unfinished focus columns ahead of movement/view forward (dot >= 0).
@@ -134,9 +161,65 @@ struct PhysicsTelemetry
   uint64_t RelightFifoDropped{0};
   double GpuPoolUsedMb{0.0};
   double GpuPoolCapMb{0.0};
+  /// Init-bound backend names (mesher/store/cull).
+  std::string BackendMesher{"cpu_greedy"};
+  std::string BackendStore{"cpu_staging"};
+  std::string BackendCull{"cpu_frustum"};
+  uint64_t GpuDrawCmds{0};
+  double GpuCullMs{0.0};
+  double VertexPoolFill{0.0};
+  /// 1 when opaque cull used GPU compact→indirect (no flat-ref rebuild).
+  double GpuCullIndirect{0.0};
+  /// Visual-debug: opaque MDI cmds after compact cull.
+  uint64_t OpaqueCmdTotal{0};
+  uint64_t OpaqueCmdOn{0};
+  uint64_t CrossBatchCount{0};
+  uint64_t CpuAabbWouldOn{0};
+  uint64_t EditImmediateN{0};
+  uint64_t EditDirtyN{0};
+  uint64_t EditNeighborPendingFrames{0};
+  uint64_t PoolUnsyncUploads{0};
+  double PoolFenceWaitMs{0.0};
+  /// Focus column split: meshed-but-culled vs not ready / unlit preview.
+  uint64_t ChunkMeshedCulled0{0};
+  uint64_t ChunkMeshedUnlit{0};
+  uint64_t ChunkNotReady{0};
+  /// Nearest non-bottom greedy vertex with sky+block light==0 near camera (diag).
+  int DarkFaceNearN{0};
+  /// Subset of DarkFaceNearN: mesh dark but light-field currently lit (repairable).
+  int DarkFaceStaleNearN{0};
+  /// Subset: mesh dark and light-field also 0 (world edge / cave / unloaded).
+  int DarkFaceVoidNearN{0};
+  int DarkFaceBlockX{0};
+  int DarkFaceBlockY{0};
+  int DarkFaceBlockZ{0};
+  int DarkFaceChunkX{0};
+  int DarkFaceChunkY{0};
+  int DarkFaceChunkZ{0};
+  int DarkFaceBlockId{0};
+  int DarkFaceIndex{0};
+  double DarkFaceDist{0.0};
+  uint64_t GpuMeshVboDispatch{0};
+  uint64_t GpuLightSeedApply{0};
+  /// 1 when PreferGpu fluid column scan is active this frame.
+  double GpuFluidScanOn{0.0};
+  std::string BackendFluid{"cpu_fluid_surface"};
+  /// "flat" | "full" | "gpu_full" — active lighting pipeline mode.
+  std::string BackendLightingMode{"full"};
+  uint64_t GpuMaskReadback{0};
+  uint64_t GpuBlocklightFlood{0};
   int MemoryPressure{0};
   int KeepMarginEff{0};
   uint64_t BufferExpandEvents{0};
+  /// GPF6 Android GPU policy telemetry (0/1 doubles for analyze medians).
+  double CapsHasCompute{0.0};
+  double CapsHasSsbo{0.0};
+  double CapsProbeCompleted{0.0};
+  double AndroidGpuUserPref{1.0};
+  double AndroidGpuEffective{0.0};
+  std::string AndroidGpuDenyReason{"n/a"};
+  std::string GlVersion;
+  std::string GlRenderer;
 };
 
 } // namespace cutum

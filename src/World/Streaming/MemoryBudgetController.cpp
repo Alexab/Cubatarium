@@ -77,6 +77,42 @@ UMemoryBudgetController::Evaluate(const MemoryBudgetSample &sample,
   {
     d.capture_hard_cap = 1;
   }
+  // V5 ring SLA: focus relight debt — cap capture when pending trail high.
+  // Keep at least 1 so FIFO cannot freeze under permanent holes (edge: fifo=34
+  // with capture_hard_cap=2 + hitch starved completed_n=0).
+  if (d.capture_hard_cap < 0 && sample.pending_light_focus > 15)
+  {
+    d.capture_hard_cap = sample.visual_holes > 0 ? 1 : 2;
+  }
+  // Ring SLA guard: block keep expand under focus debt; do not shrink RD on
+  // every hole frame (RD thrash → stream reload spikes / hang).
+  if (sample.visual_holes > 0 || sample.pending_light_focus > 8)
+  {
+    d.allow_keep_prewarm = false;
+  }
+  if (sample.pending_light_focus > 20 && sample.visual_holes > 0)
+  {
+    d.max_effective_rd = std::max(3, sample.visual_rd - 1);
+  }
+  // Soft-cap: dirty plateau under focus pending — shrink keep/prewarm so
+  // remesh DropRemesh/TrimPending can catch up (TD-ARCH-009).
+  if (sample.dirty_chunks > 400 && sample.pending_light_focus > 8)
+  {
+    d.allow_keep_prewarm = false;
+    d.keep_margin = sample.baseline_keep_margin;
+    if (d.capture_hard_cap < 0)
+    {
+      d.capture_hard_cap = 2;
+    }
+  }
+  else if (sample.dirty_chunks > 600)
+  {
+    d.allow_keep_prewarm = false;
+    if (d.capture_hard_cap < 0)
+    {
+      d.capture_hard_cap = 1;
+    }
+  }
 
   return d;
 }

@@ -1,8 +1,15 @@
 #include "World/Diagnostics/FramePerfMonitor.h"
 
 #include "App/Core.h"
+#include "Render/Mesh/GpuFluidColumnScan.h"
+#include "Render/Mesh/GpuGreedyOpaqueEmit.h"
+#include "Render/Pipeline/GpuTransparentSort.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Core/World.h"
+#include "World/Lighting/GpuBlocklightFlood.h"
+#include "Render/Backend/GpuHotPathFallback.h"
+#include "World/Lighting/GpuSkylightColumnSeed.h"
+#include "Render/Mesh/GpuGreedyMesher.h"
 #include "World/Physics/PhysicsTelemetry.h"
 #include "glog/logging.h"
 #include <chrono>
@@ -60,6 +67,8 @@ struct Session
   int MaxPendingLight{0};
   int SpikesWrittenThisPeriod{0};
   int FrameCount{0};
+  uint64_t MeshApplyStaleAtPeriodStart{0};
+  uint64_t SoftDeferCaptureFloorHitsAtPeriodStart{0};
   std::chrono::steady_clock::time_point LastEmit{
       std::chrono::steady_clock::now()};
 };
@@ -141,6 +150,8 @@ struct FrameNumbers
   double prepare_frame_ms{0.0};
   double post_scene_ms{0.0};
   double gui_overlay_ms{0.0};
+  double autosave_ms{0.0};
+  double render_total_ms{0.0};
   double residual_ms{0.0};
   double fluid_map_cpu_ms{0.0};
   double fluid_map_gpu_ms{0.0};
@@ -148,6 +159,7 @@ struct FrameNumbers
   int fluid_map_full_rebuild{0};
   double commit_apply_ms{0.0};
   double commit_seal_ms{0.0};
+  double commit_physics_ms{0.0};
   double streamer_update_ms{0.0};
   double async_io_ms{0.0};
   double relight_drain_ms{0.0};
@@ -177,6 +189,16 @@ struct FrameNumbers
   int focus_cx{0};
   int focus_cz{0};
   int underfeet_need{0};
+  int underfeet_draw_ok{0};
+  int underfeet_has_mesh{0};
+  int underfeet_sticky{0};
+  int underfeet_pending_light{0};
+  int underfeet_reason{0};
+  int underfeet_opaque_present{0};
+  int fog_pull_in_rd{0};
+  int fog_pull_in_margin{0};
+  float fog_pull_in_start_ratio{0.0f};
+  int fog_hole_debt{0};
   int near_focus_holes{0};
   int visual_holes{0};
   int unfinished_visual{0};
@@ -186,11 +208,19 @@ struct FrameNumbers
   int focus_pending_dark{0};
   int focus_sticky_remesh{0};
   int focus_not_render_ready{0};
+  int focus_pressure{0};
   int focus_dirty_chunks{0};
   int focus_unfinished_ahead{0};
   int focus_unfinished_behind{0};
   uint64_t mesh_discarded_late{0};
   uint64_t mesh_apply_stale{0};
+  uint64_t mesh_apply_stale_delta{0};
+  int pending_gpu_applies_n{0};
+  int post_load_ring_not_ready{0};
+  int enter_game_warmup_missing_greedy{0};
+  uint64_t softdefer_capture_floor_hits{0};
+  uint64_t softdefer_capture_floor_hits_delta{0};
+  int softdefer_capture_budget{0};
   double rss_mb{0.0};
   double private_mb{0.0};
   int chunk_count{0};
@@ -209,6 +239,57 @@ struct FrameNumbers
   uint64_t relight_fifo_dropped{0};
   double gpu_pool_used_mb{0.0};
   double gpu_pool_cap_mb{0.0};
+  uint64_t gpu_draw_cmds{0};
+  double gpu_cull_ms{0.0};
+  double vertex_pool_fill{0.0};
+  double gpu_cull_indirect{0.0};
+  uint64_t opaque_cmd_total{0};
+  uint64_t opaque_cmd_on{0};
+  uint64_t cross_batch_count{0};
+  uint64_t cpu_aabb_would_on{0};
+  uint64_t edit_immediate_n{0};
+  uint64_t edit_dirty_n{0};
+  uint64_t edit_neighbor_pending_frames{0};
+  uint64_t pool_unsync_uploads{0};
+  double pool_fence_wait_ms{0.0};
+  uint64_t chunk_meshed_culled0{0};
+  uint64_t chunk_meshed_unlit{0};
+  uint64_t chunk_not_ready{0};
+  int dark_face_near_n{0};
+  int dark_face_stale_near_n{0};
+  int dark_face_void_near_n{0};
+  int dark_face_bx{0};
+  int dark_face_by{0};
+  int dark_face_bz{0};
+  int dark_face_cx{0};
+  int dark_face_cy{0};
+  int dark_face_cz{0};
+  int dark_face_block_id{0};
+  int dark_face_index{0};
+  double dark_face_dist{0.0};
+  uint64_t gpu_mesh_vbo_dispatch{0};
+  uint64_t gpu_light_seed_apply{0};
+  uint64_t gpu_mask_readback{0};
+  uint64_t gpu_blocklight_flood{0};
+  uint64_t gpu_fluid_readback{0};
+  uint64_t gpu_light_readback{0};
+  uint64_t gpu_opaque_emit_gpu{0};
+  uint64_t gpu_transparent_sort_gpu{0};
+  uint64_t gpu_fallback{0};
+  double gpu_fluid_scan_on{0.0};
+  std::string backend_mesher;
+  std::string backend_store;
+  std::string backend_cull;
+  std::string backend_fluid;
+  std::string backend_lighting_mode;
+  double caps_has_compute{0.0};
+  double caps_has_ssbo{0.0};
+  double caps_probe_completed{0.0};
+  double android_gpu_user_pref{0.0};
+  double android_gpu_effective{0.0};
+  std::string android_gpu_deny_reason;
+  std::string gl_version;
+  std::string gl_renderer;
   int memory_pressure{0};
   int keep_margin_eff{0};
   uint64_t buffer_expand_events{0};
@@ -234,21 +315,14 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.mesh_emerge_ms = phys.MeshEmergeMs;
   n.scene_ms = world.GetDurationDrawSceneMks() / 1000.0;
   n.view_ms = world.GetDurationViewUpdateMks() / 1000.0;
-  n.sim_ms = n.phys_ms + n.stream_ms + n.mesh_emerge_ms + n.view_ms + n.scene_ms;
-  n.swap_wait_ms = swap_wait_ms;
-  n.unaccounted_ms = n.wall_ms - n.sim_ms - n.swap_wait_ms;
-  if (n.unaccounted_ms < 0.0 && n.unaccounted_ms > -1.0)
-  {
-    n.unaccounted_ms = 0.0;
-  }
+  // do_movement_ms captures the entire DoMovement() call from WindowManager,
+  // which already includes stream_ms + mesh_emerge_ms + tick_env_ms + phys_ms.
+  // Using it as the authoritative "logic" timer avoids double-counting.
+  n.do_movement_ms = phys.DoMovementMs;
   n.input_ms = world.GetLastInputMs();
   n.app_update_ms = world.GetLastAppUpdateMs();
-  // PhysicsStepMs already includes StreamMs + MeshEmergeMs; do not subtract
-  // them again. world_extra = Update wall outside the physics step timer.
-  n.world_extra_ms =
-      (std::max)(0.0, world.GetLastWorldTickMs() - n.phys_ms);
   n.views_ms = phys.ViewsMs;
-  n.do_movement_ms = phys.DoMovementMs;
+  n.swap_wait_ms = swap_wait_ms;
   n.block_input_ms = phys.BlockInputMs;
   n.tick_env_ms = phys.TickEnvMs;
   n.physics_block_ms = phys.BlockStepMs;
@@ -270,12 +344,29 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.prepare_frame_ms = world.GetLastPrepareFrameMs();
   n.post_scene_ms = world.GetLastPostSceneMs();
   n.gui_overlay_ms = world.GetLastGuiOverlayMs();
+  n.autosave_ms = world.GetLastAutosaveMs();
+  n.render_total_ms = world.GetLastRenderTotalMs();
+  // sim_ms = all measured main-loop work excluding swap. do_movement_ms already
+  // contains stream_ms + mesh_emerge_ms so they are NOT added separately.
+  // render_total_ms captures the entire Render() call including GL driver
+  // stalls, so prepare/scene/post/gui are its subcomponents (not added twice).
+  n.sim_ms = n.input_ms + n.app_update_ms + n.views_ms + n.do_movement_ms +
+             n.block_input_ms + n.autosave_ms + n.render_total_ms;
+  n.unaccounted_ms = n.wall_ms - n.sim_ms - n.swap_wait_ms;
+  if (n.unaccounted_ms < 0.0 && n.unaccounted_ms > -1.0)
+  {
+    n.unaccounted_ms = 0.0;
+  }
+  n.world_extra_ms =
+      (std::max)(0.0, world.GetLastWorldTickMs() - n.do_movement_ms);
+  n.residual_ms = n.unaccounted_ms - n.world_extra_ms;
   n.fluid_map_cpu_ms = world.GetLastFluidMapCpuMs();
   n.fluid_map_gpu_ms = world.GetLastFluidMapGpuMs();
   n.fluid_map_dirty = world.GetLastFluidMapDirtyChunks();
   n.fluid_map_full_rebuild = world.GetLastFluidMapFullRebuild() ? 1 : 0;
   n.commit_apply_ms = phys.CommitApplyMs;
   n.commit_seal_ms = phys.CommitSealMs;
+  n.commit_physics_ms = phys.CommitPhysicsMs;
   n.streamer_update_ms = phys.StreamerUpdateMs;
   n.async_io_ms = phys.AsyncIoMs;
   n.relight_drain_ms = phys.RelightDrainMs;
@@ -291,9 +382,6 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.prefetch_visual_ops = phys.PrefetchVisualOps;
   n.prefetch_keep_ops = phys.PrefetchKeepOps;
   n.gen_backlog_total = phys.GenBacklogTotal;
-  n.residual_ms = n.unaccounted_ms - n.input_ms - n.app_update_ms -
-                  n.world_extra_ms - n.prepare_frame_ms - n.post_scene_ms -
-                  n.gui_overlay_ms;
   const auto &md = world.GetMovementDiagnostics();
   n.flat_ms = md.flatRebuildMs;
   n.gen_q = md.genQueuePending;
@@ -310,6 +398,16 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.focus_cx = phys.FocusChunkX;
   n.focus_cz = phys.FocusChunkZ;
   n.underfeet_need = phys.UnderfeetNeed;
+  n.underfeet_draw_ok = phys.UnderfeetDrawOk;
+  n.underfeet_has_mesh = phys.UnderfeetHasMesh;
+  n.underfeet_sticky = phys.UnderfeetSticky;
+  n.underfeet_pending_light = phys.UnderfeetPendingLight;
+  n.underfeet_reason = phys.UnderfeetReason;
+  n.underfeet_opaque_present = phys.UnderfeetOpaquePresent;
+  n.fog_pull_in_rd = phys.FogPullInRd;
+  n.fog_pull_in_margin = phys.FogPullInMargin;
+  n.fog_pull_in_start_ratio = phys.FogPullInStartRatio;
+  n.fog_hole_debt = phys.FogHoleDebt;
   n.near_focus_holes = phys.NearFocusHoles;
   n.visual_holes = phys.VisualHoles;
   n.unfinished_visual = phys.UnfinishedVisual;
@@ -319,11 +417,17 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.focus_pending_dark = phys.FocusPendingDark;
   n.focus_sticky_remesh = phys.FocusStickyRemesh;
   n.focus_not_render_ready = phys.FocusNotRenderReady;
+  n.focus_pressure = phys.FocusPressure;
   n.focus_dirty_chunks = phys.FocusDirtyChunks;
   n.focus_unfinished_ahead = phys.FocusUnfinishedAhead;
   n.focus_unfinished_behind = phys.FocusUnfinishedBehind;
   n.mesh_discarded_late = phys.MeshDiscardedLate;
   n.mesh_apply_stale = phys.MeshApplyStale;
+  n.pending_gpu_applies_n = phys.PendingGpuAppliesN;
+  n.post_load_ring_not_ready = phys.PostLoadRingNotReady;
+  n.enter_game_warmup_missing_greedy = phys.EnterGameWarmupMissingGreedy;
+  n.softdefer_capture_floor_hits = phys.SoftDeferCaptureFloorHits;
+  n.softdefer_capture_budget = phys.SoftDeferCaptureBudget;
   n.pending_cols = phys.PendingFocusCols;
 #ifdef _WIN32
   PROCESS_MEMORY_COUNTERS_EX pmc{};
@@ -357,6 +461,57 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.relight_fifo_dropped = phys.RelightFifoDropped;
   n.gpu_pool_used_mb = phys.GpuPoolUsedMb;
   n.gpu_pool_cap_mb = phys.GpuPoolCapMb;
+  n.gpu_draw_cmds = phys.GpuDrawCmds;
+  n.gpu_cull_ms = phys.GpuCullMs;
+  n.vertex_pool_fill = phys.VertexPoolFill;
+  n.gpu_cull_indirect = phys.GpuCullIndirect;
+  n.opaque_cmd_total = phys.OpaqueCmdTotal;
+  n.opaque_cmd_on = phys.OpaqueCmdOn;
+  n.cross_batch_count = phys.CrossBatchCount;
+  n.cpu_aabb_would_on = phys.CpuAabbWouldOn;
+  n.edit_immediate_n = phys.EditImmediateN;
+  n.edit_dirty_n = phys.EditDirtyN;
+  n.edit_neighbor_pending_frames = phys.EditNeighborPendingFrames;
+  n.pool_unsync_uploads = phys.PoolUnsyncUploads;
+  n.pool_fence_wait_ms = phys.PoolFenceWaitMs;
+  n.chunk_meshed_culled0 = phys.ChunkMeshedCulled0;
+  n.chunk_meshed_unlit = phys.ChunkMeshedUnlit;
+  n.chunk_not_ready = phys.ChunkNotReady;
+  n.dark_face_near_n = phys.DarkFaceNearN;
+  n.dark_face_stale_near_n = phys.DarkFaceStaleNearN;
+  n.dark_face_void_near_n = phys.DarkFaceVoidNearN;
+  n.dark_face_bx = phys.DarkFaceBlockX;
+  n.dark_face_by = phys.DarkFaceBlockY;
+  n.dark_face_bz = phys.DarkFaceBlockZ;
+  n.dark_face_cx = phys.DarkFaceChunkX;
+  n.dark_face_cy = phys.DarkFaceChunkY;
+  n.dark_face_cz = phys.DarkFaceChunkZ;
+  n.dark_face_block_id = phys.DarkFaceBlockId;
+  n.dark_face_index = phys.DarkFaceIndex;
+  n.dark_face_dist = phys.DarkFaceDist;
+  n.gpu_mesh_vbo_dispatch = UGpuGreedyMesher::ConsumeMeshVboDispatchCount();
+  n.gpu_light_seed_apply = ConsumeGpuSkylightSeedApplyCount();
+  n.gpu_mask_readback = UGpuGreedyMesher::ConsumeMaskReadbackCount();
+  n.gpu_blocklight_flood = ConsumeGpuBlocklightFloodCount();
+  n.gpu_fluid_readback = ConsumeGpuFluidReadbackCount();
+  n.gpu_light_readback = ConsumeGpuSkylightSeedReadbackCount();
+  n.gpu_opaque_emit_gpu = ConsumeGpuOpaqueEmitCount();
+  n.gpu_transparent_sort_gpu = ConsumeGpuTransparentSortCount();
+  n.gpu_fallback = ConsumeGpuHotPathFallbackCount();
+  n.gpu_fluid_scan_on = phys.GpuFluidScanOn;
+  n.backend_mesher = phys.BackendMesher;
+  n.backend_store = phys.BackendStore;
+  n.backend_cull = phys.BackendCull;
+  n.backend_fluid = phys.BackendFluid;
+  n.backend_lighting_mode = phys.BackendLightingMode;
+  n.caps_has_compute = phys.CapsHasCompute;
+  n.caps_has_ssbo = phys.CapsHasSsbo;
+  n.caps_probe_completed = phys.CapsProbeCompleted;
+  n.android_gpu_user_pref = phys.AndroidGpuUserPref;
+  n.android_gpu_effective = phys.AndroidGpuEffective;
+  n.android_gpu_deny_reason = phys.AndroidGpuDenyReason;
+  n.gl_version = phys.GlVersion;
+  n.gl_renderer = phys.GlRenderer;
   n.keep_margin_eff = phys.KeepMarginEff;
   n.buffer_expand_events = phys.BufferExpandEvents;
   {
@@ -414,6 +569,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"prepare_frame_ms\":" << n.prepare_frame_ms
           << ",\"post_scene_ms\":" << n.post_scene_ms
           << ",\"gui_overlay_ms\":" << n.gui_overlay_ms
+          << ",\"autosave_ms\":" << n.autosave_ms
+          << ",\"render_total_ms\":" << n.render_total_ms
           << ",\"residual_ms\":" << n.residual_ms
           << ",\"fluid_map_cpu_ms\":" << n.fluid_map_cpu_ms
           << ",\"fluid_map_gpu_ms\":" << n.fluid_map_gpu_ms
@@ -421,6 +578,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"fluid_map_full_rebuild\":" << n.fluid_map_full_rebuild
           << ",\"commit_apply_ms\":" << n.commit_apply_ms
           << ",\"commit_seal_ms\":" << n.commit_seal_ms
+          << ",\"commit_physics_ms\":" << n.commit_physics_ms
           << ",\"streamer_update_ms\":" << n.streamer_update_ms
           << ",\"async_io_ms\":" << n.async_io_ms
           << ",\"relight_drain_ms\":" << n.relight_drain_ms
@@ -452,6 +610,16 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"pending_light_focus\":" << n.pending_light_focus
           << ",\"focus_cx\":" << n.focus_cx << ",\"focus_cz\":" << n.focus_cz
           << ",\"underfeet_need\":" << n.underfeet_need
+          << ",\"underfeet_draw_ok\":" << n.underfeet_draw_ok
+          << ",\"underfeet_has_mesh\":" << n.underfeet_has_mesh
+          << ",\"underfeet_sticky\":" << n.underfeet_sticky
+          << ",\"underfeet_pending_light\":" << n.underfeet_pending_light
+          << ",\"underfeet_reason\":" << n.underfeet_reason
+          << ",\"underfeet_opaque_present\":" << n.underfeet_opaque_present
+          << ",\"fog_pull_in_rd\":" << n.fog_pull_in_rd
+          << ",\"fog_pull_in_margin\":" << n.fog_pull_in_margin
+          << ",\"fog_pull_in_start_ratio\":" << n.fog_pull_in_start_ratio
+          << ",\"fog_hole_debt\":" << n.fog_hole_debt
           << ",\"near_focus_holes\":" << n.near_focus_holes
           << ",\"visual_holes\":" << n.visual_holes
           << ",\"unfinished_visual\":" << n.unfinished_visual
@@ -461,11 +629,22 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"focus_pending_dark\":" << n.focus_pending_dark
           << ",\"focus_sticky_remesh\":" << n.focus_sticky_remesh
           << ",\"focus_not_render_ready\":" << n.focus_not_render_ready
+          << ",\"focus_pressure\":" << n.focus_pressure
           << ",\"focus_dirty_chunks\":" << n.focus_dirty_chunks
           << ",\"focus_unfinished_ahead\":" << n.focus_unfinished_ahead
           << ",\"focus_unfinished_behind\":" << n.focus_unfinished_behind
           << ",\"mesh_discarded_late\":" << n.mesh_discarded_late
           << ",\"mesh_apply_stale\":" << n.mesh_apply_stale
+          << ",\"mesh_apply_stale_delta\":" << n.mesh_apply_stale_delta
+          << ",\"pending_gpu_applies_n\":" << n.pending_gpu_applies_n
+          << ",\"post_load_ring_not_ready\":" << n.post_load_ring_not_ready
+          << ",\"enter_game_warmup_missing_greedy\":"
+          << n.enter_game_warmup_missing_greedy
+          << ",\"softdefer_capture_floor_hits\":"
+          << n.softdefer_capture_floor_hits
+          << ",\"softdefer_capture_floor_hits_delta\":"
+          << n.softdefer_capture_floor_hits_delta
+          << ",\"softdefer_capture_budget\":" << n.softdefer_capture_budget
           << ",\"rss_mb\":" << n.rss_mb << ",\"private_mb\":" << n.private_mb
           << ",\"chunk_count\":" << n.chunk_count
           << ",\"greedy_vertices\":" << n.greedy_vertices
@@ -483,6 +662,59 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"relight_fifo_dropped\":" << n.relight_fifo_dropped
           << ",\"gpu_pool_used_mb\":" << n.gpu_pool_used_mb
           << ",\"gpu_pool_cap_mb\":" << n.gpu_pool_cap_mb
+          << ",\"gpu_draw_cmds\":" << n.gpu_draw_cmds
+          << ",\"gpu_cull_ms\":" << n.gpu_cull_ms
+          << ",\"vertex_pool_fill\":" << n.vertex_pool_fill
+          << ",\"gpu_cull_indirect\":" << n.gpu_cull_indirect
+          << ",\"opaque_cmd_total\":" << n.opaque_cmd_total
+          << ",\"opaque_cmd_on\":" << n.opaque_cmd_on
+          << ",\"cross_batch_count\":" << n.cross_batch_count
+          << ",\"cpu_aabb_would_on\":" << n.cpu_aabb_would_on
+          << ",\"edit_immediate_n\":" << n.edit_immediate_n
+          << ",\"edit_dirty_n\":" << n.edit_dirty_n
+          << ",\"edit_neighbor_pending_frames\":"
+          << n.edit_neighbor_pending_frames
+          << ",\"pool_unsync_uploads\":" << n.pool_unsync_uploads
+          << ",\"pool_fence_wait_ms\":" << n.pool_fence_wait_ms
+          << ",\"chunk_meshed_culled0\":" << n.chunk_meshed_culled0
+          << ",\"chunk_meshed_unlit\":" << n.chunk_meshed_unlit
+          << ",\"chunk_not_ready\":" << n.chunk_not_ready
+          << ",\"dark_face_near_n\":" << n.dark_face_near_n
+          << ",\"dark_face_stale_near_n\":" << n.dark_face_stale_near_n
+          << ",\"dark_face_void_near_n\":" << n.dark_face_void_near_n
+          << ",\"dark_face_bx\":" << n.dark_face_bx
+          << ",\"dark_face_by\":" << n.dark_face_by
+          << ",\"dark_face_bz\":" << n.dark_face_bz
+          << ",\"dark_face_cx\":" << n.dark_face_cx
+          << ",\"dark_face_cy\":" << n.dark_face_cy
+          << ",\"dark_face_cz\":" << n.dark_face_cz
+          << ",\"dark_face_block_id\":" << n.dark_face_block_id
+          << ",\"dark_face_index\":" << n.dark_face_index
+          << ",\"dark_face_dist\":" << n.dark_face_dist
+          << ",\"gpu_mesh_vbo_dispatch\":" << n.gpu_mesh_vbo_dispatch
+          << ",\"gpu_light_seed_apply\":" << n.gpu_light_seed_apply
+          << ",\"gpu_mask_readback\":" << n.gpu_mask_readback
+          << ",\"gpu_blocklight_flood\":" << n.gpu_blocklight_flood
+          << ",\"gpu_fluid_readback\":" << n.gpu_fluid_readback
+          << ",\"gpu_light_readback\":" << n.gpu_light_readback
+          << ",\"gpu_opaque_emit_gpu\":" << n.gpu_opaque_emit_gpu
+          << ",\"gpu_transparent_sort_gpu\":" << n.gpu_transparent_sort_gpu
+          << ",\"gpu_fallback\":" << n.gpu_fallback
+          << ",\"gpu_fluid_scan_on\":" << n.gpu_fluid_scan_on
+          << ",\"backend_mesher\":\"" << n.backend_mesher << "\""
+          << ",\"backend_store\":\"" << n.backend_store << "\""
+          << ",\"backend_cull\":\"" << n.backend_cull << "\""
+          << ",\"backend_fluid\":\"" << n.backend_fluid << "\""
+          << ",\"backend_lighting_mode\":\"" << n.backend_lighting_mode << "\""
+          << ",\"caps_has_compute\":" << n.caps_has_compute
+          << ",\"caps_has_ssbo\":" << n.caps_has_ssbo
+          << ",\"caps_probe_completed\":" << n.caps_probe_completed
+          << ",\"android_gpu_user_pref\":" << n.android_gpu_user_pref
+          << ",\"android_gpu_effective\":" << n.android_gpu_effective
+          << ",\"android_gpu_deny_reason\":\"" << n.android_gpu_deny_reason
+          << "\""
+          << ",\"gl_version\":\"" << n.gl_version << "\""
+          << ",\"gl_renderer\":\"" << n.gl_renderer << "\""
           << ",\"memory_pressure\":" << n.memory_pressure
           << ",\"keep_margin_eff\":" << n.keep_margin_eff
           << ",\"buffer_expand_events\":" << n.buffer_expand_events
@@ -523,6 +755,15 @@ void LogLine(const FrameNumbers &n, const char *kind, int frames,
       << " pending_dark=" << n.focus_pending_dark
       << " sticky=" << n.focus_sticky_remesh
       << " holes=" << n.near_focus_holes;
+  if (n.dark_face_near_n > 0)
+  {
+    oss << " dark_face_n=" << n.dark_face_near_n << " dark_block=("
+        << n.dark_face_bx << "," << n.dark_face_by << "," << n.dark_face_bz
+        << ") dark_chunk=(" << n.dark_face_cx << "," << n.dark_face_cy << ","
+        << n.dark_face_cz << ") dark_id=" << n.dark_face_block_id
+        << " dark_face=" << n.dark_face_index
+        << " dark_dist=" << n.dark_face_dist;
+  }
   if (!n.pending_cols.empty())
   {
     oss << " pending_cols=" << n.pending_cols;
@@ -666,8 +907,20 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
   }
 
   const FrameNumbers avg = AverageFromSession(s, n);
-  WriteJsonl(s, avg, "period", /*flush=*/true);
-  LogLine(avg, "period", s.FrameCount, s.MaxWallMs);
+  FrameNumbers period = avg;
+  period.mesh_apply_stale_delta =
+      n.mesh_apply_stale >= s.MeshApplyStaleAtPeriodStart
+          ? n.mesh_apply_stale - s.MeshApplyStaleAtPeriodStart
+          : 0;
+  period.softdefer_capture_floor_hits_delta =
+      n.softdefer_capture_floor_hits >= s.SoftDeferCaptureFloorHitsAtPeriodStart
+          ? n.softdefer_capture_floor_hits -
+                s.SoftDeferCaptureFloorHitsAtPeriodStart
+          : 0;
+  WriteJsonl(s, period, "period", /*flush=*/true);
+  LogLine(period, "period", s.FrameCount, s.MaxWallMs);
+  s.MeshApplyStaleAtPeriodStart = n.mesh_apply_stale;
+  s.SoftDeferCaptureFloorHitsAtPeriodStart = n.softdefer_capture_floor_hits;
   ResetAccum(s);
   s.LastEmit = now;
 }

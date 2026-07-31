@@ -303,10 +303,9 @@ unbounded BFS/queues дают 10–25 GB high-water при «нормальн�
 
 ## Legacy / Мёртвые Пути
 
-- `IsColumnVisualReadyForRing` callback зарегистрирован, но фактически не
-  определяет поведение streamer.
-- `RecoverStickyBlackFocusSync` и `RefreshIdleFocusGreedyRemesh` остались в
-  коде как альтернативные recovery paths.
+- `OnIsColumnPendingLight` (= `!IsColumnVisualReadyForRing`) влияет на
+  PrefetchKeepShell / MemoryBudget SLA; **не** на terrain `RingPrerequisitesMet`.
+- `RecoverStickyBlackFocusSync` удалён (R2); sticky → `ColumnFlowExecutor` RemeshSeam.
 - `RebuildChunkLegacy` остаётся sync fallback path.
 
 ## Anti-Patterns
@@ -318,3 +317,28 @@ unbounded BFS/queues дают 10–25 GB high-water при «нормальн�
 - Drop Completed без Dirty/relight requeue; erase PendingLight у cold hole.
 - Unbounded light BFS вне `HasChunk`; fluid `GetOrCreate` в missing.
 - Expand буферов при Soft/Hard memory pressure; `glBufferData` orphan каждый кадр.
+- Hide sticky/stale-dark **без** ColumnFlow repair ticket.
+- Cap `mesh_schedule` при holes (async underfeed).
+- Fog / draw-hide как замена FOV throughput.
+
+## Эра 13. Июль 29: Root Cause Freeze + Hide⇒Ticket
+
+Артефакты: `manual_latest_1645`, `manual_qual_fix3`, `manual_latest_1752`,
+`edge_qual_fix3`. Executive: [`ROOT_CAUSE_2026-07.md`](ROOT_CAUSE_2026-07.md).
+
+Что показал 1752:
+
+- `post_load_ring_not_ready=37` не падает за idle → spawn burst недостаточен
+  (TD-ARCH-021 reopen → partial).
+- `holes_rate=1.0`, Dirty≈300, MeshAsync≈2 → underfeed + SoftDefer.
+- Hide sticky/dark (022) улучшил stop в qual_fix3, ухудшил cruise (025).
+- GPU packed (Phase3) на ветке; mesher всё ещё hybrid на hot path.
+
+Дорожная карта исправления (не zoo-knobs):
+
+- D1: Hide⇒Ticket, async floor, spawn idle catch-up, stop sticky drain.
+- D2: ColumnRenderable SoT, FirstMesh/Remesh dirty class, ColumnFlow-only,
+  SoftDefer Capture floor.
+- D3: harness gates = architecture DoD; merge develop только после PASS.
+
+TD-ARCH-026..030 открыты в `TECH_DEBT_CHUNK_STREAMING.md`.

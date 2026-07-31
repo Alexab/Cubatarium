@@ -1,0 +1,42 @@
+{
+  "source_perf": [
+    "bin/logs/perf_20260730-084551_28308.jsonl",
+    "bin/logs/perf_20260730-131234_26312.jsonl",
+    "bin/logs/perf_20260730-142306_6000.jsonl"
+  ],
+  "world": "World_164",
+  "notes": "Manual inland land corridor (not ocean -47,5). Autofly --land-cruise mirrors this.",
+  "cruise": {
+    "start_focus_chunk": [-485, 50],
+    "alt_start_focus_chunk": [-489, 54],
+    "direction": "prefer south over land (yaw 90); west 180 sparse at eye-y 96",
+    "yaw_deg_for_sim": 90,
+    "pitch_deg_for_sim": 0,
+    "cruise_eye_y": 96,
+    "path_focus_chunks_example": [
+      [-485, 50],
+      [-486, 50],
+      [-487, 51],
+      [-488, 52],
+      [-489, 53],
+      [-489, 54],
+      [-490, 53],
+      [-491, 47]
+    ],
+    "symptoms": "miss stuck, dark_face_stale, opaque/land flicker; sticky often 0"
+  },
+  "flight_sim_defaults": {
+    "FaceYawDeg": 90,
+    "FacePitchDeg": 0,
+    "IdleBeforeFlySec": 8,
+    "CruiseEyeY": 96,
+    "CruiseStartChunkX": -485,
+    "CruiseStartChunkZ": 50,
+    "HoldSpace": true,
+    "TeleportToCruiseStart": true,
+    "FlyStopMode": true,
+    "HoldForward": true,
+    "Fly": true
+  },
+  "phase_id": "ARCH_D3_LAND"
+}

@@ -6,6 +6,8 @@
 #include "Render/Mesh/ChunkMeshRevisionRegistry.h"
 #include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/FluidSurfaceColumnSlice.h"
+#include "Render/Mesh/GpuPackedMeshTypes.h"
+#include "Render/Mesh/GpuMeshPipeline.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "World/Chunks/ChunkManager.h"
@@ -13,6 +15,7 @@
 #include <algorithm>
 #include <chrono>
 #include <climits>
+#include <deque>
 #include <functional>
 #include <glm/glm.hpp>
 #include <memory>
@@ -23,6 +26,8 @@ namespace cutum
 {
 struct Frustum;
 struct MeshBuildResult;
+class IUChunkCull;
+class IUChunkMesher;
 
 struct MeshRebuildTickStats
 {
@@ -100,10 +105,55 @@ public:
   void SetMeshCompletedCapacity(size_t cap);
   uint64_t GetMeshDiscardedLateCount() const;
   uint64_t GetMeshApplyStaleCount() const { return MeshApplyStaleCount; }
+  /// Older apply discarded while Active tracks a newer revision (not remesh).
+  uint64_t GetMeshApplySupersededCount() const
+  {
+    return MeshApplySupersededCount;
+  }
+  size_t GetPendingGpuAppliesCount() const { return PendingGpuApplies.size(); }
+  int CountPendingGpuAppliesInHorizontalRadius(glm::ivec3 center_ground_chunk,
+                                               int radius_chunks) const;
+  int DrainPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
+                            int max_count, double budget_ms);
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
-  /// True if any greedy vertex in chunk has sky+block light == 0.
+  /// True only when the cache entry has GPU quads or non-empty CPU batches.
+  /// Empty placeholders must NOT clear missing-mesh / SoftDefer holes
+  /// (manual 215919: place-block remesh instantly fills "invisible" chunk).
+  bool HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const;
+  bool IsGpuExtractInFlight(glm::ivec3 chunk_coord) const;
+  bool IsPendingGpuApply(glm::ivec3 chunk_coord) const;
+  /// True if any non-bottom greedy vertex has sky+block light == 0.
+  /// −Y bottoms are ignored (normally unlit).
   bool ChunkHasFullyDarkFace(glm::ivec3 chunk_coord) const;
+  static bool BatchesHaveFullyDarkFace(
+      const std::vector<GreedyMeshBatch> &batches);
+  /// Mesh vertex light=0 but current world light at the face air neighbor
+  /// is non-zero — stale bake (empty lightmap / missed MarkRelit remesh).
+  bool ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
+                              const UBlockWorld &world) const;
+
+  struct DarkFaceHit
+  {
+    glm::ivec3 block{0};
+    glm::ivec3 chunk{0};
+    BlockId blockId{BLOCK_AIR};
+    int faceIndex{0};
+    float dist{0.0f};
+  };
+  /// Nearest non-bottom mesh vertex with sky+block light == 0 (diag).
+  /// When `world` is set, also splits count into stale-dark (light-field lit)
+  /// vs void-edge (both mesh and field dark) for ARCH_D3 edge gates.
+  bool FindNearestDarkFaceNear(const glm::vec3 &camera_pos, float max_dist,
+                               int chunk_radius, DarkFaceHit &out,
+                               int *out_count_near = nullptr,
+                               const UBlockWorld *world = nullptr,
+                               int *out_stale_dark = nullptr,
+                               int *out_void_edge = nullptr) const;
+
+  /// Chunks whose greedy geometry changed since last GPU pool consume.
+  void ConsumeGeometryDirtyChunks(
+      std::unordered_set<glm::ivec3, IVec3Hash> &out) const;
   bool HasMissingGreedyMeshInHorizontalRadius(const UBlockWorld &world,
                                               glm::ivec3 center_ground_chunk,
                                               int radius_chunks) const;
@@ -111,6 +161,8 @@ public:
                                     glm::ivec3 center_ground_chunk,
                                     int radius_chunks,
                                     glm::ivec3 &out_coord) const;
+  /// Invalidate per-frame hole-query memo (call once before streaming/mesh).
+  void BeginHoleQueryFrame();
   const MeshRebuildTickStats &GetLastRebuildTickStats() const
   {
     return LastRebuildTickStats;
@@ -131,6 +183,29 @@ public:
   uint64_t GetCullRevision() const { return CullRevision; }
   void UpdateVisibleInstances(const Frustum &frustum, const glm::mat4 &viewProj,
                               const glm::vec3 &cameraPos);
+  /// Public cull entry for IUChunkCull backends (rebuilds flat greedy refs).
+  void RebuildGreedyVisibleForCull(const Frustum *frustum,
+                                   const glm::vec3 *camera_pos,
+                                   float max_cull_distance);
+
+  struct CullSphereEntry
+  {
+    glm::vec4 sphere{0.0f}; // xyz center, w radius
+    glm::ivec3 coord{0};
+  };
+  /// Fill one sphere per greedy chunk for GPU frustum compaction.
+  void CollectGreedyCullSpheres(std::vector<CullSphereEntry> &out) const;
+  /// Rebuild flat greedy refs for chunks marked visible (parallel to Collect).
+  void RebuildFlatGreedyFromVisibilityMask(const uint32_t *vis,
+                                           size_t vis_count,
+                                           const std::vector<CullSphereEntry> &entries);
+
+  /// Bound once from RenderBackendFactory (non-owning).
+  void SetCullBackend(IUChunkCull *cull) { CullBackend = cull; }
+  void SetMesherBackend(IUChunkMesher *mesher) { MesherBackend = mesher; }
+  IUChunkCull *GetCullBackend() const { return CullBackend; }
+  IUChunkMesher *GetMesherBackend() const { return MesherBackend; }
+  double GetLastGpuCullMs() const { return LastGpuCullMs; }
   void SetRenderSettings(const RenderSettings &settings);
   const RenderSettings &GetRenderSettings() const { return Render; }
   void SetRenderDistanceChunks(int distance)
@@ -161,6 +236,18 @@ public:
   void SetStarveOutsideFocusMesh(bool starve) { StarveOutsideFocusMesh = starve; }
   /// When true, skip remesh (already has greedy) until holes clear.
   void SetStarveRemeshForHoles(bool starve) { StarveRemeshForHoles = starve; }
+  /// Keep remesh within this Chebyshev radius while StarveRemeshForHoles
+  /// (neighbor black-face repair beside holes; manual 090713).
+  void SetStarveRemeshKeepHoriz(int keep_h)
+  {
+    StarveRemeshKeepHoriz = std::max(0, keep_h);
+  }
+  /// Drop Dirty beyond keep shell (Chebyshev horiz + optional |cy|).
+  /// remesh_only: only drop entries that already have greedy mesh (or are in
+  /// RemeshAfterApply) — safe on cruise; idle F2 fd_end uses remesh_only=false
+  /// to also clear first-mesh/air Dirty outside the eye shell.
+  int DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk, int keep_radius,
+                                  int keep_cy = -1, bool remesh_only = false);
   /// Chebyshev radius for SyncRebuildVisibleMissing hole-fill (1=underfeet).
   void SetSyncHoleFillRadius(int radius_chunks)
   {
@@ -191,6 +278,10 @@ public:
   {
     MeshSnapshotBudgetMs = std::max(1.0, ms);
   }
+  void SetMeshEmergeTotalBudgetMs(double ms)
+  {
+    MeshEmergeTotalBudgetMs = std::max(5.0, ms);
+  }
   void SetMeshScheduleOverflowPerFrame(int count)
   {
     MeshScheduleOverflowPerFrame = std::max(0, count);
@@ -199,6 +290,11 @@ public:
   {
     AltitudeAboveTerrain = altitude_above_terrain;
     AltitudeFogThresholdBlocks = threshold_blocks;
+  }
+  float GetAltitudeAboveTerrain() const { return AltitudeAboveTerrain; }
+  int GetAltitudeFogThresholdBlocks() const
+  {
+    return AltitudeFogThresholdBlocks;
   }
   void SetSurfaceWetness(float value)
   {
@@ -226,6 +322,16 @@ public:
   {
     return GreedyTransparentRefs;
   }
+  const std::vector<GpuPackedChunkRef> &GetGpuPackedOpaqueRefs() const
+  {
+    return GpuPackedOpaqueRefs;
+  }
+  const std::vector<GpuPackedChunkRef> &GetGpuPackedTransparentRefs() const
+  {
+    return GpuPackedTransparentRefs;
+  }
+  UGpuMeshPipeline *GetGpuMeshPipeline();
+  const UGpuMeshPipeline *GetGpuMeshPipeline() const;
   const GreedyMeshBatch *TryGetGreedyBatch(const GreedyBatchRef &ref) const
   {
     const auto it = GreedyCache.find(ref.chunkCoord);
@@ -244,16 +350,45 @@ public:
   {
     return CrossBatches;
   }
+  bool UseHorizontalCullDistance() const
+  {
+    return AltitudeAboveTerrain >
+           static_cast<float>(AltitudeFogThresholdBlocks);
+  }
+  /// Render-horizon distance admit for frustum cull (same as RebuildVisible).
+  float MaxCullDistance() const;
 
 private:
   struct ChunkGreedyMesh
   {
     std::vector<GreedyMeshBatch> batches;
     std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> crossCenters;
+    bool GpuResident{false};
+    int GpuSlotIndex{-1};
+    uint32_t GpuQuadCount{0};
+    bool GpuTransparent{false};
+    bool GpuHasDarkFace{false};
+    std::vector<GpuBlockDrawRange> GpuBlockRanges;
   };
+  struct PendingGpuApply
+  {
+    glm::ivec3 coord{0};
+    uint64_t sourceRevision{0};
+    ChunkMeshSnapshot snapshot;
+    std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> crossCenters;
+  };
+  void EnsureGpuPipeline();
+  bool CommitGpuMeshResult(
+      const UBlockWorld &world, UBlockRegistry &registry, glm::ivec3 coord,
+      uint64_t source_revision, GpuMeshProcessResult &&gpu_result,
+      std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> cross_centers);
+  int ProcessPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
+                              int max_count, double budget_ms,
+                              MeshRebuildTickStats &stats);
   void RebuildChunk(const UBlockWorld &world, UBlockRegistry &registry,
                     glm::ivec3 chunkCoord);
-  void ApplyMeshResult(const UBlockWorld &world, MeshBuildResult &&result);
+  void ApplyMeshResult(const UBlockWorld &world, UBlockRegistry &registry,
+                       MeshBuildResult &&result);
   void EnsureAsyncBuilder();
   void RebuildChunkLegacy(const UBlockWorld &world, UBlockRegistry &registry,
                           glm::ivec3 chunkCoord,
@@ -268,17 +403,14 @@ private:
                                  const glm::vec3 *cameraPos,
                                  float maxCullDistance);
   void InvalidateVisibleList();
-  bool UseHorizontalCullDistance() const
-  {
-    return AltitudeAboveTerrain >
-           static_cast<float>(AltitudeFogThresholdBlocks);
-  }
   std::unordered_map<glm::ivec3, std::vector<FaceInstance>, IVec3Hash> Cache;
   std::unordered_map<glm::ivec3, ChunkGreedyMesh, IVec3Hash> GreedyCache;
   UChunkDirtySet Dirty;
   std::vector<FaceInstance> Instances;
   std::vector<GreedyBatchRef> GreedyOpaqueCutoutRefs;
   std::vector<GreedyBatchRef> GreedyTransparentRefs;
+  std::vector<GpuPackedChunkRef> GpuPackedOpaqueRefs;
+  std::vector<GpuPackedChunkRef> GpuPackedTransparentRefs;
   std::vector<CrossInstanceBatch> CrossBatches;
   bool InstancesDirty{true};
   bool GreedyBatchesDirty{true};
@@ -295,13 +427,21 @@ private:
   float SurfaceWetness{0.0f};
   RenderSettings Render;
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
+  std::unique_ptr<UGpuMeshPipeline> GpuPipeline;
+  bool GpuPipelineInitAttempted{false};
+  std::deque<PendingGpuApply> PendingGpuApplies;
+  std::unordered_set<glm::ivec3, IVec3Hash> GpuExtractInFlight;
   double LastFlatRebuildMs{0.0};
+  double LastGpuCullMs{0.0};
   double LastMeshSyncMs{0.0};
   double LastMeshSnapshotMs{0.0};
   double LastMeshDirtyTickMs{0.0};
   double LastMeshImmediateMs{0.0};
   int LastMeshImmediateCount{0};
   uint64_t MeshApplyStaleCount{0};
+  uint64_t MeshApplySupersededCount{0};
+  IUChunkCull *CullBackend{nullptr};
+  IUChunkMesher *MesherBackend{nullptr};
   std::chrono::steady_clock::time_point LastFlatRebuildAt{};
   bool PendingMeshRevisionBump{false};
   UChunkMeshRevisionRegistry MeshRevisions;
@@ -323,7 +463,6 @@ private:
                                           float maxCullDistance);
   int SyncRebuildVisibleMissing(UBlockWorld &world, UBlockRegistry &registry,
                                 int max_sync, double max_ms = 0.0);
-  float MaxCullDistance() const;
   glm::ivec3 MeshFocusGroundChunk{0};
   int MeshFocusRadiusChunks{6};
   bool MeshFocusValid{false};
@@ -334,17 +473,41 @@ private:
   glm::vec2 MeshForwardXz{0.0f};
   bool StarveOutsideFocusMesh{false};
   bool StarveRemeshForHoles{false};
+  int StarveRemeshKeepHoriz{2};
   /// SyncRebuildVisibleMissing: fill missing within this Chebyshev radius.
   int SyncHoleFillRadius{1};
   int MaxOutsideFocusMeshPerFrame{2};
   int MaxRearFocusMeshPerFrame{0};
   std::unordered_set<glm::ivec3, IVec3Hash> RemeshAfterApply;
+  /// GPU pool incremental upload: chunks mutated since last Consume.
+  mutable std::unordered_set<glm::ivec3, IVec3Hash> GeometryDirtyChunks;
+  void NoteGeometryDirty(glm::ivec3 chunk_coord);
   /// -1 = no extra horizontal schedule cap (only focus starve applies).
   int MeshScheduleMaxHorizontalDist{-1};
   double MeshSnapshotBudgetMs{6.0};
+  double MeshEmergeTotalBudgetMs{25.0};
   /// When MaxHorizontalDist >= 0, allow this many farther schedules/frame.
   int MeshScheduleOverflowPerFrame{0};
   std::function<bool(glm::ivec3)> DeferMeshUntilLit;
+  // Per-DoMovement memo: HasMissing/FindNearest are called many times/frame.
+  mutable uint64_t HoleQueryEpoch{0};
+  struct MissingQueryMemo
+  {
+    uint64_t epoch{0};
+    glm::ivec3 center{0};
+    int radius{-1};
+    bool result{false};
+  };
+  mutable MissingQueryMemo MissingMemo{};
+  struct NearestQueryMemo
+  {
+    uint64_t epoch{0};
+    glm::ivec3 center{0};
+    int radius{-1};
+    bool found{false};
+    glm::ivec3 coord{0};
+  };
+  mutable NearestQueryMemo NearestMemo{};
 };
 } // namespace cutum
 #endif
