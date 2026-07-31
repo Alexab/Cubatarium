@@ -1873,8 +1873,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
         const int horiz = std::max(
             std::abs(pending.coord.x - MeshFocusGroundChunk.x),
             std::abs(pending.coord.z - MeshFocusGroundChunk.z));
-        const bool missing =
-            GreedyCache.find(pending.coord) == GreedyCache.end();
+        const bool missing = !HasDrawableGreedyMesh(pending.coord);
         if (missing && horiz <= MeshFocusRadiusChunks)
         {
           PendingGpuApplies.push_front(std::move(pending));
@@ -1935,7 +1934,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
 
   const bool defer_until_lit =
       DeferMeshUntilLit && DeferMeshUntilLit(result.coord);
-  const bool had_mesh = GreedyCache.find(result.coord) != GreedyCache.end();
+  // Empty SoftDefer placeholders must not count as had_lit (keep dark forever).
+  const bool had_mesh = HasDrawableGreedyMesh(result.coord);
   const bool had_lit_mesh = had_mesh && !ChunkHasFullyDarkFace(result.coord);
   const bool new_dark = BatchesHaveFullyDarkFace(result.batches);
   if (ShouldRejectDarkMeshCommit(new_dark, defer_until_lit, had_lit_mesh))
@@ -1950,11 +1950,18 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   }
 
   ChunkGreedyMesh &chunkMesh = GreedyCache[result.coord];
+  // CPU path replaces GPU mesh: free the committed slot or MDI still draws the
+  // stale dark SSBO while GpuResident was cleared (dark_face_stale spikes).
+  if (chunkMesh.GpuResident && GpuPipeline)
+  {
+    GpuPipeline->FreeChunk(result.coord);
+  }
   chunkMesh.GpuResident = false;
   chunkMesh.GpuSlotIndex = -1;
   chunkMesh.GpuQuadCount = 0;
   chunkMesh.GpuHasDarkFace = false;
   chunkMesh.GpuBlockRanges.clear();
+  chunkMesh.GpuTransparent = false;
   size_t new_vertex_count = 0;
   for (const GreedyMeshBatch &b : result.batches)
   {
@@ -2769,6 +2776,16 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     }
     const int max_local_y = MaxSolidLocalY(*chunk, registry);
     ChunkGreedyMesh &chunkMesh = GreedyCache[chunkCoord];
+    if (chunkMesh.GpuResident && GpuPipeline)
+    {
+      GpuPipeline->FreeChunk(chunkCoord);
+    }
+    chunkMesh.GpuResident = false;
+    chunkMesh.GpuSlotIndex = -1;
+    chunkMesh.GpuQuadCount = 0;
+    chunkMesh.GpuHasDarkFace = false;
+    chunkMesh.GpuBlockRanges.clear();
+    chunkMesh.GpuTransparent = false;
     chunkMesh.batches = std::move(new_batches);
     size_t new_vertex_count = 0;
     for (const GreedyMeshBatch &b : chunkMesh.batches)

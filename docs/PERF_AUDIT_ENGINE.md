@@ -427,3 +427,9 @@ Dark / failed commit frees staging only — live `ChunkToSlot` mesh stays until 
 `MarkDirtyPriority` hole-invalidate skips coords still InFlight / GpuExtract pending
 (avoids DiscardedLate storm from SoftDefer re-Mark).
 
+### Phase 3 (dark_face_stale / void) — landed
+
+CPU Apply frees committed GPU slot when replacing GpuResident mesh (stale SSBO draw).
+`had_mesh` / pending priority use `HasDrawable`. Stale repair threshold 40; void wave
+also when void>40 && stale>40 at idle.
+
