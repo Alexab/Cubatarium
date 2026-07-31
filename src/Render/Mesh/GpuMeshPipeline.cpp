@@ -4,7 +4,6 @@
 #include "Render/Mesh/GpuGreedyOpaqueEmit.h"
 #include "Render/GlIncludes.h"
 #include "glog/logging.h"
-#include <algorithm>
 #include <array>
 
 namespace cutum
@@ -12,34 +11,65 @@ namespace cutum
 namespace
 {
 
-void BuildBlockRangesFromQuads(const std::vector<PackedQuad> &quads,
-                               UBlockRegistry &registry,
-                               std::vector<GpuBlockDrawRange> &out_ranges)
+/// BlockType is 10 bits → 1024 buckets. Stable counting sort groups the same
+/// way as stable_sort by BlockType (ascending), and builds draw ranges + dark
+/// in the same O(n) passes (Phase C: mesh_emerge apply hot path).
+void CountingSortPackedQuadsByBlockType(std::vector<PackedQuad> &quads,
+                                        std::vector<PackedQuad> &scratch,
+                                        UBlockRegistry &registry,
+                                        std::vector<GpuBlockDrawRange> *out_ranges,
+                                        bool *out_has_dark)
 {
-  out_ranges.clear();
-  if (quads.empty())
+  constexpr size_t kBuckets = 1024;
+  std::array<uint32_t, kBuckets> counts{};
+  bool has_dark = false;
+  for (const PackedQuad &q : quads)
   {
-    return;
-  }
-  size_t i = 0;
-  while (i < quads.size())
-  {
-    const BlockId bid = static_cast<BlockId>(quads[i].BlockType());
-    size_t j = i + 1;
-    while (j < quads.size() &&
-           static_cast<BlockId>(quads[j].BlockType()) == bid)
+    ++counts[static_cast<size_t>(q.BlockType())];
+    if (!has_dark && q.Face() != 5 && q.SkyLight() <= 0 &&
+        q.BlockLight() <= 0)
     {
-      ++j;
+      has_dark = true;
     }
-    GpuBlockDrawRange range;
-    range.blockId = bid;
-    range.quadOffset = static_cast<uint32_t>(i);
-    range.quadCount = static_cast<uint32_t>(j - i);
-    range.Transparent = registry.IsTransparent(bid);
-    range.AlphaCutout =
-        registry.GetRenderStyle(bid) == BlockRenderStyle::Cutout;
-    out_ranges.push_back(range);
-    i = j;
+  }
+  std::array<uint32_t, kBuckets> offsets{};
+  uint32_t total = 0;
+  for (size_t b = 0; b < kBuckets; ++b)
+  {
+    offsets[b] = total;
+    total += counts[b];
+  }
+  if (out_ranges)
+  {
+    out_ranges->clear();
+    out_ranges->reserve(32);
+    for (size_t b = 0; b < kBuckets; ++b)
+    {
+      if (counts[b] == 0)
+      {
+        continue;
+      }
+      const BlockId bid = static_cast<BlockId>(b);
+      GpuBlockDrawRange range;
+      range.blockId = bid;
+      range.quadOffset = offsets[b];
+      range.quadCount = counts[b];
+      range.Transparent = registry.IsTransparent(bid);
+      range.AlphaCutout =
+          registry.GetRenderStyle(bid) == BlockRenderStyle::Cutout;
+      out_ranges->push_back(range);
+    }
+  }
+  scratch.resize(quads.size());
+  for (const PackedQuad &q : quads)
+  {
+    const size_t b = static_cast<size_t>(q.BlockType());
+    scratch[offsets[b]++] = q;
+  }
+  quads.swap(scratch);
+  if (out_has_dark)
+  {
+    *out_has_dark = has_dark;
   }
 }
 
@@ -76,6 +106,8 @@ bool UGpuMeshPipeline::Init(uint32_t max_slots)
     return false;
   }
   Ready = true;
+  ScratchQuads.reserve(UGpuMeshSlotAllocator::kMaxQuadsPerSlot);
+  ScratchQuadsSorted.reserve(UGpuMeshSlotAllocator::kMaxQuadsPerSlot);
   LOG(INFO) << "[GpuMeshPipeline] initialized with " << max_slots << " slots";
   return true;
 #endif
@@ -101,21 +133,27 @@ bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
                                         UBlockRegistry &registry,
                                         glm::ivec3 coord, int slot_idx,
                                         uint32_t &out_quad_count,
-                                        std::vector<PackedQuad> *out_sorted_quads)
+                                        std::vector<GpuBlockDrawRange> *out_ranges,
+                                        bool *out_has_dark_face)
 {
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
   (void)snapshot;
   (void)registry;
   (void)coord;
   (void)slot_idx;
-  (void)out_sorted_quads;
+  (void)out_ranges;
+  (void)out_has_dark_face;
   out_quad_count = 0;
   return false;
 #else
   out_quad_count = 0;
-  if (out_sorted_quads)
+  if (out_ranges)
   {
-    out_sorted_quads->clear();
+    out_ranges->clear();
+  }
+  if (out_has_dark_face)
+  {
+    *out_has_dark_face = false;
   }
   if (!SnapshotIsGpuExtractEligible(snapshot, registry) ||
       EmitState.PackedEmitProgram == 0)
@@ -201,7 +239,7 @@ bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
   // Counter readback is 16B — required for emit sizing. Full-quad download
-  // happens once below; ProcessSnapshot reuses it (Phase C: was duplicated).
+  // happens once below for CPU counting-sort + ranges/dark (Phase C).
   std::array<uint32_t, 4> counters{};
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, EmitState.CountersSsbo);
   glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(counters),
@@ -240,30 +278,26 @@ bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
   glUseProgram(0);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-  std::vector<PackedQuad> quads(rect_count);
+  ScratchQuads.resize(rect_count);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, Allocator.GetQuadSsbo());
   glGetBufferSubData(
       GL_SHADER_STORAGE_BUFFER,
       static_cast<GLintptr>(slot_offset * sizeof(PackedQuad)),
-      static_cast<GLsizeiptr>(quads.size() * sizeof(PackedQuad)), quads.data());
+      static_cast<GLsizeiptr>(ScratchQuads.size() * sizeof(PackedQuad)),
+      ScratchQuads.data());
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-  std::stable_sort(quads.begin(), quads.end(),
-                   [](const PackedQuad &a, const PackedQuad &b)
-                   { return a.BlockType() < b.BlockType(); });
+  CountingSortPackedQuadsByBlockType(ScratchQuads, ScratchQuadsSorted, registry,
+                                     out_ranges, out_has_dark_face);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, Allocator.GetQuadSsbo());
   glBufferSubData(GL_SHADER_STORAGE_BUFFER,
                   static_cast<GLintptr>(slot_offset * sizeof(PackedQuad)),
-                  static_cast<GLsizeiptr>(quads.size() * sizeof(PackedQuad)),
-                  quads.data());
+                  static_cast<GLsizeiptr>(ScratchQuads.size() * sizeof(PackedQuad)),
+                  ScratchQuads.data());
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
   Allocator.SetSlotQuadCount(slot_idx, rect_count);
   out_quad_count = rect_count;
-  if (out_sorted_quads)
-  {
-    *out_sorted_quads = std::move(quads);
-  }
   return true;
 #endif
 }
@@ -296,26 +330,12 @@ bool UGpuMeshPipeline::ProcessSnapshot(const ChunkMeshSnapshot &snapshot,
   }
 
   uint32_t quad_count = 0;
-  std::vector<PackedQuad> quads;
   if (!RunComputePasses(snapshot, registry, coord, slot_idx, quad_count,
-                        &quads))
+                        &out_result.blockRanges, &out_result.hasFullyDarkFace))
   {
     Allocator.FreeSlot(coord);
     return false;
   }
-
-  if (quad_count == 0)
-  {
-    out_result.success = true;
-    out_result.slotIndex = slot_idx;
-    out_result.quadCount = 0;
-    out_result.transparent = has_transparent;
-    return true;
-  }
-
-  // Ranges/dark from the same CPU buffer used for sort — no second SSBO download.
-  BuildBlockRangesFromQuads(quads, registry, out_result.blockRanges);
-  out_result.hasFullyDarkFace = PackedQuadsHaveFullyDarkFace(quads);
 
   out_result.success = true;
   out_result.slotIndex = slot_idx;

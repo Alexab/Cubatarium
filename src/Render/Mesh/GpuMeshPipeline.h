@@ -56,12 +56,16 @@ private:
   bool RunComputePasses(const ChunkMeshSnapshot &snapshot,
                         UBlockRegistry &registry, glm::ivec3 coord,
                         int slot_idx, uint32_t &out_quad_count,
-                        std::vector<PackedQuad> *out_sorted_quads = nullptr);
+                        std::vector<GpuBlockDrawRange> *out_ranges = nullptr,
+                        bool *out_has_dark_face = nullptr);
 
   bool Ready{false};
   GpuGreedyEmitState EmitState;
   UGpuMeshSlotAllocator Allocator;
   std::queue<PendingChunk> PendingQueue;
+  /// Reused across ProcessSnapshot — avoids per-apply heap alloc for ≤2048 quads.
+  std::vector<PackedQuad> ScratchQuads;
+  std::vector<PackedQuad> ScratchQuadsSorted;
 };
 
 } // namespace cutum

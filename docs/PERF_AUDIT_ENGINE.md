@@ -258,11 +258,11 @@ memory_soft_mb / memory_expand_keep_mb
 ## 7. Phase C — GPU hot-path hygiene (detailed)
 
 **Status (partial, 2026-07-31):** `gpu_mask_readback_med=0` on manual `194759`.
-`ProcessSnapshot` no longer double-downloads sorted quads (reuse buffer from
-`RunComputePasses`). Schedule/snapshot clamp when `pending_gpu≥12` and visuals
-healed; GPU apply `gpu_max`/`gpu_budget` boosted independently so schedule clamp
-does not starve drain. Full GPU-resident ranges/dark (no CPU quad download)
-still backlog.
+`ProcessSnapshot` no longer double-downloads sorted quads; BlockType grouping uses
+stable counting sort with ranges/dark in the same O(n) passes + scratch buffers.
+Schedule/snapshot clamp when `pending_gpu≥12` and visuals healed; GPU apply
+`gpu_max`/`gpu_budget` boosted independently. Full GPU-resident ranges/dark
+(no CPU quad download) still backlog.
 
 **Goal:** D1 best practices from [`GPU_PIPELINE.md`](streaming/GPU_PIPELINE.md): cruise `gpu_mask_readback_med==0`, single upload path, transparent keys from AABB/cullSphere, MDI fill% healthy.
 
