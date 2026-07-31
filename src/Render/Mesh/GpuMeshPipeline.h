@@ -5,6 +5,7 @@
 #include "Render/Mesh/GpuMeshSlotAllocator.h"
 #include "Render/Mesh/GpuPackedMeshTypes.h"
 #include "Render/Mesh/PackedQuad.h"
+#include "Render/GlIncludes.h"
 #include "Blocks/BlockRegistry.h"
 #include <glm/glm.hpp>
 #include <memory>
@@ -59,11 +60,28 @@ private:
                         std::vector<GpuBlockDrawRange> *out_ranges = nullptr,
                         bool *out_has_dark_face = nullptr);
 
+  /// GPU counting-sort in-slot; downloads histogram only (not full quads).
+  bool GpuSortSlotQuads(uint32_t slot_offset, uint32_t num_quads,
+                        UBlockRegistry &registry,
+                        std::vector<GpuBlockDrawRange> *out_ranges,
+                        bool *out_has_dark_face);
+
+  void ShutdownGpuSort();
+
   bool Ready{false};
   GpuGreedyEmitState EmitState;
   UGpuMeshSlotAllocator Allocator;
   std::queue<PendingChunk> PendingQueue;
-  /// Reused across ProcessSnapshot — avoids per-apply heap alloc for ≤2048 quads.
+
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  GLuint SortHistProgram{0};
+  GLuint SortScatterProgram{0};
+  GLuint SortCountsSsbo{0};  // 1025 uint: hist[1024] + dark flag
+  GLuint SortOffsetsSsbo{0}; // 1024 uint exclusive prefix (mutated by scatter)
+  GLuint SortScratchSsbo{0}; // kMaxQuadsPerSlot PackedQuads
+#endif
+
+  /// CPU fallback when GPU sort programs unavailable.
   std::vector<PackedQuad> ScratchQuads;
   std::vector<PackedQuad> ScratchQuadsSorted;
 };

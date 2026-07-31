@@ -258,11 +258,11 @@ memory_soft_mb / memory_expand_keep_mb
 ## 7. Phase C — GPU hot-path hygiene (detailed)
 
 **Status (partial, 2026-07-31):** `gpu_mask_readback_med=0` on manual `194759`.
-`ProcessSnapshot` no longer double-downloads sorted quads; BlockType grouping uses
-stable counting sort with ranges/dark in the same O(n) passes + scratch buffers.
-Schedule/snapshot clamp when `pending_gpu≥12` and visuals healed; GPU apply
-`gpu_max`/`gpu_budget` boosted independently. Full GPU-resident ranges/dark
-(no CPU quad download) still backlog.
+GPU BlockType counting-sort path compiled (hist+dark readback, scatter in-slot)
+but **disabled by default** (`kGpuSortMinQuads = max+1`): AMD iGPU SSBO atomics
+regressed `emerge_med` 67→85 when enabled. Typical path remains CPU counting-sort.
+Schedule clamp + apply drain boost remain. Residual: enable GPU sort on discrete
+GPUs / non-atomic algorithm; occupancy upload / counter sync; MDI/transparent.
 
 **Goal:** D1 best practices from [`GPU_PIPELINE.md`](streaming/GPU_PIPELINE.md): cruise `gpu_mask_readback_med==0`, single upload path, transparent keys from AABB/cullSphere, MDI fill% healthy.
 

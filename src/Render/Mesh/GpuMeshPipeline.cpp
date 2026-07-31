@@ -11,17 +11,17 @@ namespace cutum
 namespace
 {
 
-/// BlockType is 10 bits → 1024 buckets. Stable counting sort groups the same
-/// way as stable_sort by BlockType (ascending), and builds draw ranges + dark
-/// in the same O(n) passes (Phase C: mesh_emerge apply hot path).
+constexpr size_t kBlockTypeBuckets = 1024;
+constexpr size_t kSortCountsWords = kBlockTypeBuckets + 1; // + dark flag
+
+/// BlockType is 10 bits → 1024 buckets. Stable counting sort (CPU fallback).
 void CountingSortPackedQuadsByBlockType(std::vector<PackedQuad> &quads,
                                         std::vector<PackedQuad> &scratch,
                                         UBlockRegistry &registry,
                                         std::vector<GpuBlockDrawRange> *out_ranges,
                                         bool *out_has_dark)
 {
-  constexpr size_t kBuckets = 1024;
-  std::array<uint32_t, kBuckets> counts{};
+  std::array<uint32_t, kBlockTypeBuckets> counts{};
   bool has_dark = false;
   for (const PackedQuad &q : quads)
   {
@@ -32,9 +32,9 @@ void CountingSortPackedQuadsByBlockType(std::vector<PackedQuad> &quads,
       has_dark = true;
     }
   }
-  std::array<uint32_t, kBuckets> offsets{};
+  std::array<uint32_t, kBlockTypeBuckets> offsets{};
   uint32_t total = 0;
-  for (size_t b = 0; b < kBuckets; ++b)
+  for (size_t b = 0; b < kBlockTypeBuckets; ++b)
   {
     offsets[b] = total;
     total += counts[b];
@@ -43,7 +43,7 @@ void CountingSortPackedQuadsByBlockType(std::vector<PackedQuad> &quads,
   {
     out_ranges->clear();
     out_ranges->reserve(32);
-    for (size_t b = 0; b < kBuckets; ++b)
+    for (size_t b = 0; b < kBlockTypeBuckets; ++b)
     {
       if (counts[b] == 0)
       {
@@ -73,6 +73,35 @@ void CountingSortPackedQuadsByBlockType(std::vector<PackedQuad> &quads,
   }
 }
 
+void BuildRangesFromHistogram(const uint32_t *counts,
+                              const uint32_t *exclusive_offsets,
+                              UBlockRegistry &registry,
+                              std::vector<GpuBlockDrawRange> *out_ranges)
+{
+  if (!out_ranges)
+  {
+    return;
+  }
+  out_ranges->clear();
+  out_ranges->reserve(32);
+  for (size_t b = 0; b < kBlockTypeBuckets; ++b)
+  {
+    if (counts[b] == 0)
+    {
+      continue;
+    }
+    const BlockId bid = static_cast<BlockId>(b);
+    GpuBlockDrawRange range;
+    range.blockId = bid;
+    range.quadOffset = exclusive_offsets[b];
+    range.quadCount = counts[b];
+    range.Transparent = registry.IsTransparent(bid);
+    range.AlphaCutout =
+        registry.GetRenderStyle(bid) == BlockRenderStyle::Cutout;
+    out_ranges->push_back(range);
+  }
+}
+
 bool ChunkHasTransparentOrCutout(const ChunkMeshSnapshot &snapshot,
                                  UBlockRegistry &registry)
 {
@@ -86,6 +115,77 @@ bool ChunkHasTransparentOrCutout(const ChunkMeshSnapshot &snapshot,
   }
   return false;
 }
+
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+
+GLuint CompileSortCompute(const char *src, const char *label)
+{
+  const GLuint sh = glCreateShader(GL_COMPUTE_SHADER);
+  glShaderSource(sh, 1, &src, nullptr);
+  glCompileShader(sh);
+  GLint ok = 0;
+  glGetShaderiv(sh, GL_COMPILE_STATUS, &ok);
+  if (!ok)
+  {
+    char log[512];
+    glGetShaderInfoLog(sh, 512, nullptr, log);
+    LOG(WARNING) << "[GpuMeshPipeline] " << label << " compile failed: " << log;
+    glDeleteShader(sh);
+    return 0;
+  }
+  const GLuint prog = glCreateProgram();
+  glAttachShader(prog, sh);
+  glLinkProgram(prog);
+  glDeleteShader(sh);
+  glGetProgramiv(prog, GL_LINK_STATUS, &ok);
+  if (!ok)
+  {
+    LOG(WARNING) << "[GpuMeshPipeline] " << label << " link failed";
+    glDeleteProgram(prog);
+    return 0;
+  }
+  return prog;
+}
+
+// Histogram + dark flag. counts[0..1023]=BlockType hist, counts[1024]=dark.
+const char *kSortHistCompute = R"(#version 430
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) readonly buffer Quads { uvec2 quads[]; };
+layout(std430, binding = 1) buffer Counts { uint counts[]; };
+uniform uint numQuads;
+void main() {
+  uint i = gl_GlobalInvocationID.x;
+  if (i >= numQuads) return;
+  uvec2 q = quads[i];
+  uint bt = q.y & 0x3FFu;
+  atomicAdd(counts[bt], 1u);
+  uint face = (q.x >> 25u) & 0x7u;
+  uint sky = (q.y >> 10u) & 0xFu;
+  uint blk = (q.y >> 14u) & 0xFu;
+  if (face != 5u && sky == 0u && blk == 0u) {
+    atomicOr(counts[1024], 1u);
+  }
+}
+)";
+
+// Scatter by BlockType using exclusive offsets (atomically advanced).
+const char *kSortScatterCompute = R"(#version 430
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) readonly buffer Quads { uvec2 quads[]; };
+layout(std430, binding = 1) buffer Offsets { uint offsets[]; };
+layout(std430, binding = 2) writeonly buffer OutQuads { uvec2 outQuads[]; };
+uniform uint numQuads;
+void main() {
+  uint i = gl_GlobalInvocationID.x;
+  if (i >= numQuads) return;
+  uvec2 q = quads[i];
+  uint bt = q.y & 0x3FFu;
+  uint dst = atomicAdd(offsets[bt], 1u);
+  outQuads[dst] = q;
+}
+)";
+
+#endif
 
 } // namespace
 
@@ -105,11 +205,73 @@ bool UGpuMeshPipeline::Init(uint32_t max_slots)
     LOG(WARNING) << "[GpuMeshPipeline] slot allocator init failed";
     return false;
   }
+
+  SortHistProgram = CompileSortCompute(kSortHistCompute, "sort_hist");
+  SortScatterProgram = CompileSortCompute(kSortScatterCompute, "sort_scatter");
+  if (SortHistProgram && SortScatterProgram)
+  {
+    glGenBuffers(1, &SortCountsSsbo);
+    glGenBuffers(1, &SortOffsetsSsbo);
+    glGenBuffers(1, &SortScratchSsbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, SortCountsSsbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER,
+                 static_cast<GLsizeiptr>(kSortCountsWords * sizeof(uint32_t)),
+                 nullptr, GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, SortOffsetsSsbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER,
+                 static_cast<GLsizeiptr>(kBlockTypeBuckets * sizeof(uint32_t)),
+                 nullptr, GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, SortScratchSsbo);
+    glBufferData(
+        GL_SHADER_STORAGE_BUFFER,
+        static_cast<GLsizeiptr>(UGpuMeshSlotAllocator::kMaxQuadsPerSlot *
+                                sizeof(PackedQuad)),
+        nullptr, GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    LOG(INFO) << "[GpuMeshPipeline] GPU BlockType counting-sort ready";
+  }
+  else
+  {
+    LOG(WARNING) << "[GpuMeshPipeline] GPU sort unavailable — CPU fallback";
+    ShutdownGpuSort();
+  }
+
   Ready = true;
   ScratchQuads.reserve(UGpuMeshSlotAllocator::kMaxQuadsPerSlot);
   ScratchQuadsSorted.reserve(UGpuMeshSlotAllocator::kMaxQuadsPerSlot);
   LOG(INFO) << "[GpuMeshPipeline] initialized with " << max_slots << " slots";
   return true;
+#endif
+}
+
+void UGpuMeshPipeline::ShutdownGpuSort()
+{
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  if (SortHistProgram)
+  {
+    glDeleteProgram(SortHistProgram);
+    SortHistProgram = 0;
+  }
+  if (SortScatterProgram)
+  {
+    glDeleteProgram(SortScatterProgram);
+    SortScatterProgram = 0;
+  }
+  if (SortCountsSsbo)
+  {
+    glDeleteBuffers(1, &SortCountsSsbo);
+    SortCountsSsbo = 0;
+  }
+  if (SortOffsetsSsbo)
+  {
+    glDeleteBuffers(1, &SortOffsetsSsbo);
+    SortOffsetsSsbo = 0;
+  }
+  if (SortScratchSsbo)
+  {
+    glDeleteBuffers(1, &SortScratchSsbo);
+    SortScratchSsbo = 0;
+  }
 #endif
 }
 
@@ -120,6 +282,7 @@ void UGpuMeshPipeline::Shutdown()
   {
     PendingQueue.pop();
   }
+  ShutdownGpuSort();
   Ready = false;
 }
 
@@ -128,6 +291,82 @@ void UGpuMeshPipeline::EnqueueSnapshot(ChunkMeshSnapshot snapshot,
 {
   PendingQueue.push({std::move(snapshot), source_revision});
 }
+
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+bool UGpuMeshPipeline::GpuSortSlotQuads(
+    uint32_t slot_offset, uint32_t num_quads, UBlockRegistry &registry,
+    std::vector<GpuBlockDrawRange> *out_ranges, bool *out_has_dark_face)
+{
+  if (!SortHistProgram || !SortScatterProgram || num_quads == 0)
+  {
+    return false;
+  }
+
+  const GLsizeiptr quad_bytes =
+      static_cast<GLsizeiptr>(num_quads * sizeof(PackedQuad));
+  const GLintptr slot_byte_off =
+      static_cast<GLintptr>(slot_offset * sizeof(PackedQuad));
+
+  std::array<uint32_t, kSortCountsWords> zero_counts{};
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, SortCountsSsbo);
+  glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(zero_counts),
+                  zero_counts.data());
+
+  glBindBufferRange(GL_SHADER_STORAGE_BUFFER, 0, Allocator.GetQuadSsbo(),
+                    slot_byte_off, quad_bytes);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, SortCountsSsbo);
+  glUseProgram(SortHistProgram);
+  glUniform1ui(glGetUniformLocation(SortHistProgram, "numQuads"), num_quads);
+  glDispatchCompute((num_quads + 63u) / 64u, 1, 1);
+  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+  // Histogram + dark only (~4KB) — not the full quad payload.
+  std::array<uint32_t, kSortCountsWords> counts{};
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, SortCountsSsbo);
+  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(counts), counts.data());
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+  std::array<uint32_t, kBlockTypeBuckets> offsets{};
+  uint32_t total = 0;
+  for (size_t b = 0; b < kBlockTypeBuckets; ++b)
+  {
+    offsets[b] = total;
+    total += counts[b];
+  }
+  if (total != num_quads)
+  {
+    LOG(WARNING) << "[GpuMeshPipeline] sort hist total " << total
+                 << " != numQuads " << num_quads;
+    return false;
+  }
+  BuildRangesFromHistogram(counts.data(), offsets.data(), registry, out_ranges);
+  if (out_has_dark_face)
+  {
+    *out_has_dark_face = counts[kBlockTypeBuckets] != 0;
+  }
+
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, SortOffsetsSsbo);
+  glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(offsets), offsets.data());
+
+  glBindBufferRange(GL_SHADER_STORAGE_BUFFER, 0, Allocator.GetQuadSsbo(),
+                    slot_byte_off, quad_bytes);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, SortOffsetsSsbo);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, SortScratchSsbo);
+  glUseProgram(SortScatterProgram);
+  glUniform1ui(glGetUniformLocation(SortScatterProgram, "numQuads"), num_quads);
+  glDispatchCompute((num_quads + 63u) / 64u, 1, 1);
+  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+
+  glBindBuffer(GL_COPY_READ_BUFFER, SortScratchSsbo);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, Allocator.GetQuadSsbo());
+  glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0,
+                      slot_byte_off, quad_bytes);
+  glBindBuffer(GL_COPY_READ_BUFFER, 0);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+  glUseProgram(0);
+  return true;
+}
+#endif
 
 bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
                                         UBlockRegistry &registry,
@@ -238,8 +477,6 @@ bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
   glDispatchCompute(102u, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
-  // Counter readback is 16B — required for emit sizing. Full-quad download
-  // happens once below for CPU counting-sort + ranges/dark (Phase C).
   std::array<uint32_t, 4> counters{};
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, EmitState.CountersSsbo);
   glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(counters),
@@ -278,23 +515,36 @@ bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
   glUseProgram(0);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-  ScratchQuads.resize(rect_count);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, Allocator.GetQuadSsbo());
-  glGetBufferSubData(
-      GL_SHADER_STORAGE_BUFFER,
-      static_cast<GLintptr>(slot_offset * sizeof(PackedQuad)),
-      static_cast<GLsizeiptr>(ScratchQuads.size() * sizeof(PackedQuad)),
-      ScratchQuads.data());
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  // GPU hist+scatter uses SSBO atomics — on AMD iGPU always-on / mid thresholds
+  // raised emerge_med (67→85). Keep the path compiled but disabled until a
+  // non-atomic sort or discrete-GPU gate exists (max+1 ⇒ never).
+  constexpr uint32_t kGpuSortMinQuads =
+      UGpuMeshSlotAllocator::kMaxQuadsPerSlot + 1;
+  const bool sorted_gpu =
+      rect_count >= kGpuSortMinQuads &&
+      GpuSortSlotQuads(slot_offset, rect_count, registry, out_ranges,
+                       out_has_dark_face);
+  if (!sorted_gpu)
+  {
+    ScratchQuads.resize(rect_count);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, Allocator.GetQuadSsbo());
+    glGetBufferSubData(
+        GL_SHADER_STORAGE_BUFFER,
+        static_cast<GLintptr>(slot_offset * sizeof(PackedQuad)),
+        static_cast<GLsizeiptr>(ScratchQuads.size() * sizeof(PackedQuad)),
+        ScratchQuads.data());
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-  CountingSortPackedQuadsByBlockType(ScratchQuads, ScratchQuadsSorted, registry,
-                                     out_ranges, out_has_dark_face);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, Allocator.GetQuadSsbo());
-  glBufferSubData(GL_SHADER_STORAGE_BUFFER,
-                  static_cast<GLintptr>(slot_offset * sizeof(PackedQuad)),
-                  static_cast<GLsizeiptr>(ScratchQuads.size() * sizeof(PackedQuad)),
-                  ScratchQuads.data());
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    CountingSortPackedQuadsByBlockType(ScratchQuads, ScratchQuadsSorted,
+                                       registry, out_ranges, out_has_dark_face);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, Allocator.GetQuadSsbo());
+    glBufferSubData(
+        GL_SHADER_STORAGE_BUFFER,
+        static_cast<GLintptr>(slot_offset * sizeof(PackedQuad)),
+        static_cast<GLsizeiptr>(ScratchQuads.size() * sizeof(PackedQuad)),
+        ScratchQuads.data());
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  }
 
   Allocator.SetSlotQuadCount(slot_idx, rect_count);
   out_quad_count = rect_count;
