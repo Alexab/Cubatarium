@@ -1976,15 +1976,19 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     {
       for (auto it = Dirty.begin(); it != Dirty.end();)
       {
-        const bool has_mesh = GreedyCache.find(*it) != GreedyCache.end();
-        if (!has_mesh)
-        {
-          ++it;
-          continue;
-        }
+        // SoftDefer first: drop deferred work (remesh OR SoftDefer-blocked empty
+        // outside focus). In-focus empty SoftDefer returns Defer=false so they
+        // stay as FirstMesh. Keeping SoftDefer-true empties bloated Dirty~440
+        // (land_south_short undrawn_fix).
         if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
         {
           it = Dirty.RemoveAt(it);
+          continue;
+        }
+        const bool has_drawable = HasDrawableGreedyMesh(*it);
+        if (!has_drawable)
+        {
+          ++it;
           continue;
         }
         if (StarveRemeshForHoles)
@@ -2024,7 +2028,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     missing_set.reserve(Dirty.GetCount());
     for (const glm::ivec3 &coord : Dirty)
     {
-      if (GreedyCache.find(coord) == GreedyCache.end())
+      // Empty SoftDefer placeholders must sort as FirstMesh (missing), not remesh.
+      if (!HasDrawableGreedyMesh(coord))
       {
         missing_set.insert(coord);
       }
@@ -2181,18 +2186,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
       {
-        // Remesh of existing mesh while PendingLight: drop from Dirty until
-        // MarkRelit requeues. Leaving deferred remesh in Dirty (~500) starved
-        // first-mesh Pass1 (async stuck at 1–5, holes=1 entire stop).
-        // Must run before StarveRemeshForHoles.
-        if (GreedyCache.find(*it) != GreedyCache.end())
-        {
-          return Dirty.RemoveAt(it);
-        }
-        return std::next(it);
+        // SoftDefer-blocked: drop from Dirty until MarkRelit / undrawn heal /
+        // SoftDefer opens (in-focus empty SoftDefer returns false → schedule).
+        // Do not keep SoftDefer-true empties — Dirty bloat 184035/autofly.
+        return Dirty.RemoveAt(it);
       }
-      if (StarveRemeshForHoles &&
-          GreedyCache.find(*it) != GreedyCache.end())
+      if (StarveRemeshForHoles && HasDrawableGreedyMesh(*it))
       {
         // Keep near-ring remesh for neighbor black-face repair beside holes.
         if (MeshFocusValid)
@@ -2403,19 +2402,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
       {
-        // Remesh deferred while PendingLight: drop until MarkRelit requeues.
-        // Must run before StarveRemeshForHoles — otherwise deferred remesh stays
-        // in Dirty forever while holes=1 and starves first-mesh Pass1.
-        if (GreedyCache.find(*it) != GreedyCache.end())
-        {
-          it = Dirty.RemoveAt(it);
-          continue;
-        }
-        ++it;
+        // SoftDefer-blocked: drop until MarkRelit / undrawn heal re-admits.
+        it = Dirty.RemoveAt(it);
         continue;
       }
-      if (StarveRemeshForHoles &&
-          GreedyCache.find(*it) != GreedyCache.end())
+      if (StarveRemeshForHoles && HasDrawableGreedyMesh(*it))
       {
         // Keep near-ring remesh for neighbor black-face repair beside holes.
         if (MeshFocusValid)
@@ -2682,7 +2673,10 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     }
     const bool defer_until_lit =
         DeferMeshUntilLit && DeferMeshUntilLit(chunkCoord);
-    const bool had_mesh = GreedyCache.find(chunkCoord) != GreedyCache.end();
+    // Match CommitGpuMeshResult: empty SoftDefer placeholders (HasGreedy,
+    // !Drawable / GpuQuadCount=0) must NOT count as had_lit_mesh — otherwise
+    // place Immediate rejects dark rebuild and forever keeps undrawn (184035).
+    const bool had_mesh = HasDrawableGreedyMesh(chunkCoord);
     const bool had_lit_mesh = had_mesh && !ChunkHasFullyDarkFace(chunkCoord);
     const bool new_dark = BatchesHaveFullyDarkFace(new_batches);
     if (ShouldRejectDarkMeshCommit(new_dark, defer_until_lit, had_lit_mesh))

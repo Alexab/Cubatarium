@@ -406,28 +406,38 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   // Manual 102936: full-column Capture still ~1.6s — split into top-down Y
   // bands (RelightCaptureBandCy). SoftDefer keeps PendingLight until the
   // final band (finalize_pending_gate=false on partial).
-  double capture_drain_budget_ms = moving ? 3.0 : 8.0;
+  // Phase B: budgets from RuntimeTuning / streaming_tune.json.
+  double capture_drain_budget_ms =
+      moving ? static_cast<double>(tune.CaptureDrainMovingMs)
+             : static_cast<double>(tune.CaptureDrainIdleMs);
   // Narrow PendingLight bands are cheaper now; when focus still has missing
   // mesh plus light debt, allow a bit more Capture time so relight can clear
   // the gate instead of holding mesh_async at 0 for many seconds.
   if (async_bg && visual_holes && focus_pending_mid)
   {
-    capture_drain_budget_ms = moving ? 5.0 : 10.0;
+    capture_drain_budget_ms =
+        moving ? static_cast<double>(tune.CaptureDrainHolesMovingMs)
+               : static_cast<double>(tune.CaptureDrainHolesIdleMs);
     if (focus_pending_high)
     {
-      capture_drain_budget_ms = moving ? 6.0 : 12.0;
+      capture_drain_budget_ms =
+          moving ? static_cast<double>(tune.CaptureDrainHighPendingMovingMs)
+                 : static_cast<double>(tune.CaptureDrainHighPendingIdleMs);
     }
   }
+  const double capture_hot_mult =
+      std::max(1.0, static_cast<double>(tune.CaptureHotFrameMult));
+  const double capture_hot_skip_ms = capture_drain_budget_ms * capture_hot_mult;
   const double frame_ms_so_far = world.GetWallFrameDelta() * 1000.0;
   // Hot SoftDefer bypass: at most one Capture so cruise hitch stays bounded.
   // Async SoftDefer hole may enqueue even when wall is high (see drain_one).
   int bg_cap = max_bg_columns;
-  // S2 step A: cruise ≤1 Capture/frame (worker Capture hung — TD-ARCH-015 open).
+  // S2 step A: cruise ≤CaptureMovingBgCap (worker Capture hung — TD-ARCH-015).
   if (moving)
   {
-    bg_cap = std::min(bg_cap, 1);
+    bg_cap = std::min(bg_cap, std::max(1, tune.CaptureMovingBgCap));
   }
-  if (frame_ms_so_far >= capture_drain_budget_ms * 4.0 && visual_holes &&
+  if (frame_ms_so_far >= capture_hot_skip_ms && visual_holes &&
       focus_pending_mid)
   {
     bg_cap = std::min(bg_cap, 1);
@@ -450,11 +460,11 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     }
     // Frame already far over Capture budget (sticky hitch) — skip this frame.
     // SoftDefer hole exception: cruise wall often 40–200ms from stream, so the
-    // 4× skip (moving: wall≥16) starved Capture (fifo~96, rd≈0, miss=1 16s+).
+    // hot-frame skip starved Capture (fifo~96, rd≈0, miss=1 16s+).
     // SoftDefer hole: async enqueue is cheap — always allow one even on hot
-    // frames (startup wall 280–450 blocked @110 and plated cold=6). Sync
-    // Capture still skips when wall ≥110.
-    if (drained_bg == 0 && frame_ms_so_far >= capture_drain_budget_ms * 4.0)
+    // frames (startup wall 280–450 blocked @sync_skip and plated cold=6). Sync
+    // Capture still skips when wall ≥ CaptureSyncSkipWallMs.
+    if (drained_bg == 0 && frame_ms_so_far >= capture_hot_skip_ms)
     {
       const bool soft_defer_hole = visual_holes && focus_pending_mid;
       // Idle PendingLight progress (TD-ARCH-010): when holes=0 the SoftDefer
@@ -462,12 +472,16 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       // inflight is empty and wall is not catastrophic.
       const bool idle_pending_progress =
           !moving && focus_pending_mid &&
-          world.GetAsyncRelightInFlightCount() == 0 && frame_ms_so_far < 160.0;
+          world.GetAsyncRelightInFlightCount() == 0 &&
+          frame_ms_so_far <
+              static_cast<double>(tune.CaptureIdlePendingMaxWallMs);
       if (!soft_defer_hole && !idle_pending_progress)
       {
         return false;
       }
-      if (!async_bg && frame_ms_so_far >= 110.0 && !idle_pending_progress)
+      if (!async_bg &&
+          frame_ms_so_far >= static_cast<double>(tune.CaptureSyncSkipWallMs) &&
+          !idle_pending_progress)
       {
         return false;
       }

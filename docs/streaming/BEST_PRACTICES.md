@@ -1,5 +1,8 @@
 # Best Practices Comparison
 
+Full engine perf audit (all subsystems, Phase A–F roadmap, baseline evidence):
+[`../PERF_AUDIT_ENGINE.md`](../PERF_AUDIT_ENGINE.md).
+
 ## Главный Инвариант
 
 В mature voxel engines mesh sampling и light propagation синхронизированы так,

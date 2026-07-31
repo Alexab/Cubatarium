@@ -71,7 +71,11 @@ int main()
   Expect(ShouldRejectDarkMeshCommit(true, false, true),
          "dark remesh must not replace lit mesh");
   Expect(!ShouldRejectDarkMeshCommit(true, false, false),
-         "cave/unlit first mesh allowed when not deferred");
+         "cave/unlit/empty-placeholder first mesh allowed when not deferred");
+  // Empty SoftDefer placeholder: HasGreedy but !Drawable ⇒ had_lit_mesh=false
+  // so place Immediate must commit (manual 184035 undrawn).
+  Expect(!ShouldRejectDarkMeshCommit(true, false, /*had_lit_mesh=*/false),
+         "empty SoftDefer placeholder Immediate dark commit allowed");
 
   // SoT AllowUnlitFirstMesh + SoftDefer allow_unlit_first_mesh.
   Expect(AllowUnlitFirstMesh(false, 2, false, true),

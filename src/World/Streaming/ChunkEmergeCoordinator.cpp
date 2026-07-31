@@ -412,8 +412,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
 
   // Empty SoftDefer placeholders: HasGreedyMesh hides HasMissing, SoftDefer now
-  // keys off HasDrawable. MarkDirty camera-column only (not full r=1) so
-  // intentional 0-quad buried slices do not remesh-storm (manual 222446).
+  // keys off HasDrawable. Force Dirty on camera column + Chebyshev r<=1 so
+  // place/exit undrawn neighbors heal (manual 184035: uf ok but ring undrawn;
+  // Immediate rejected empty placeholder as "had lit mesh").
   bool underfeet_undrawn = false;
   {
     static int undrawn_force_cd = 0;
@@ -427,50 +428,58 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const int cy1 = std::min(max_cy, preferred_cy + 2);
     if (undrawn_force_cd <= 0)
     {
-      for (int cy = cy0; cy <= cy1; ++cy)
+      bool marked = false;
+      for (int dx = -1; dx <= 1 && !marked; ++dx)
       {
-        const glm::ivec3 coord(focus_ground_horiz.x, cy, focus_ground_horiz.z);
-        if (mesh_service.HasDrawableGreedyMesh(coord) ||
-            mesh_service.IsPendingGpuApply(coord) ||
-            mesh_service.HasInflightMeshBuild(coord) ||
-            mesh_service.IsChunkMeshDirty(coord))
+        for (int dz = -1; dz <= 1 && !marked; ++dz)
         {
-          continue;
-        }
-        // Only wrong-empty SoftDefer placeholders (cache entry, no quads).
-        // True missing (!HasGreedyMesh) is handled by HasMissing / Immediate.
-        if (!mesh_service.HasGreedyMesh(coord))
-        {
-          continue;
-        }
-        const UChunk *chunk =
-            world.GetBlockWorld().GetChunkManager().GetChunk(coord);
-        if (!chunk)
-        {
-          continue;
-        }
-        bool any_solid = false;
-        for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
-        {
-          for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+          for (int cy = cy0; cy <= cy1; ++cy)
           {
-            for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+            const glm::ivec3 coord(focus_ground_horiz.x + dx, cy,
+                                   focus_ground_horiz.z + dz);
+            if (mesh_service.HasDrawableGreedyMesh(coord) ||
+                mesh_service.IsPendingGpuApply(coord) ||
+                mesh_service.HasInflightMeshBuild(coord) ||
+                mesh_service.IsChunkMeshDirty(coord))
             {
-              if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+              continue;
+            }
+            // Only wrong-empty SoftDefer placeholders (cache entry, no quads).
+            if (!mesh_service.HasGreedyMesh(coord))
+            {
+              continue;
+            }
+            const UChunk *chunk =
+                world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+            if (!chunk)
+            {
+              continue;
+            }
+            bool any_solid = false;
+            for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+            {
+              for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
               {
-                any_solid = true;
+                for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+                {
+                  if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+                  {
+                    any_solid = true;
+                  }
+                }
               }
             }
+            if (!any_solid)
+            {
+              continue;
+            }
+            mesh_service.MarkDirtyPriority(coord);
+            underfeet_undrawn = true;
+            marked = true;
+            undrawn_force_cd = 12;
+            break;
           }
         }
-        if (!any_solid)
-        {
-          continue;
-        }
-        mesh_service.MarkDirtyPriority(coord);
-        underfeet_undrawn = true;
-        undrawn_force_cd = 20;
-        break;
       }
     }
   }
@@ -1118,14 +1127,23 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Flight FPS guard: clamp schedule while moving; drain may stay higher so
   // MeshAsync does not sit at pipeline depth while focus is missing mesh.
   // Exception: Dirty flush with no visual holes may exceed fly_cap.
+  // Phase B: baselines from RuntimeTuning (then StreamingPressure fly_cap).
   if (moving && (visual_holes || missing_underfeet || pending_dirty <= 400))
   {
-    // Holes: allow slightly higher schedule so focus missing can drain; hitch
-    // still clamps via last_frame_ms.
-    int fly_cap = last_frame_ms > 22.0 ? 8 : (last_frame_ms > 16.0 ? 12 : 16);
+    const URuntimeTuning &fly_tune = URuntimeTuning::Get();
+    int fly_cap =
+        last_frame_ms > static_cast<double>(fly_tune.MeshFlyWallHotMs)
+            ? fly_tune.MeshFlyCapWallHot
+            : (last_frame_ms > static_cast<double>(fly_tune.MeshFlyWallMidMs)
+                   ? fly_tune.MeshFlyCapWallMid
+                   : fly_tune.MeshFlyCapWallOk);
     if (visual_holes || missing_underfeet)
     {
-      fly_cap = std::max(fly_cap, last_frame_ms > 22.0 ? 10 : 14);
+      fly_cap = std::max(
+          fly_cap,
+          last_frame_ms > static_cast<double>(fly_tune.MeshFlyWallHotMs)
+              ? fly_tune.MeshFlyCapHolesHot
+              : fly_tune.MeshFlyCapHolesOk);
     }
     fly_cap = ApplyPressureCap(fly_cap, pressure.mesh_fly_cap);
     mesh_schedule = std::min(mesh_schedule, fly_cap);
@@ -1263,9 +1281,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // One greedy column can still overrun the budget once started — while moving
   // never call Immediate (Dirty→async only). Idle keeps bounded Immediate.
   // Immediate stats already reset at TickMeshEmerge entry.
+  // Phase B: budgets from RuntimeTuning (streaming_tune.json overlay).
   const auto immediate_budget_t0 = std::chrono::high_resolution_clock::now();
+  const URuntimeTuning &imm_tune = URuntimeTuning::Get();
   const double hard_immediate_ms =
-      last_frame_ms > 24.0 ? 4.0 : 6.0;
+      last_frame_ms > static_cast<double>(imm_tune.ImmediateHotWallMs)
+          ? static_cast<double>(imm_tune.ImmediateBudgetHotMs)
+          : static_cast<double>(imm_tune.ImmediateBudgetOkMs);
   auto immediate_ms_used = [&]() -> double
   {
     return std::chrono::duration<double, std::milli>(

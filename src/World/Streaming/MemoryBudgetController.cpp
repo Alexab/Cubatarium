@@ -38,7 +38,8 @@ UMemoryBudgetController::Evaluate(const MemoryBudgetSample &sample,
 
   const bool green_expand =
       d.memory_pressure == 0 && sample.visual_holes == 0 &&
-      sample.pending_light_focus == 0 && sample.last_wall_ms <= 28.0 &&
+      sample.pending_light_focus == 0 &&
+      sample.last_wall_ms <= static_cast<double>(tuning.MemoryGreenMaxWallMs) &&
       sample.private_mb < expand;
 
   if (green_expand)
@@ -73,7 +74,9 @@ UMemoryBudgetController::Evaluate(const MemoryBudgetSample &sample,
   {
     d.capture_hard_cap = 1;
   }
-  else if (d.capture_hard_cap < 0 && sample.last_wall_ms > 500.0)
+  else if (d.capture_hard_cap < 0 &&
+           sample.last_wall_ms >
+               static_cast<double>(tuning.MemoryHitchCaptureWallMs))
   {
     d.capture_hard_cap = 1;
   }
@@ -125,7 +128,9 @@ bool UMemoryBudgetController::MaybeEvaluate(int frame_counter,
   // Holes / hitch: re-evaluate immediately so capture_hard_cap applies this
   // frame (manual 091724: 20-frame lag left Capture uncapped into a hole).
   const bool urgent =
-      sample.visual_holes > 0 || sample.last_wall_ms > 100.0;
+      sample.visual_holes > 0 ||
+      sample.last_wall_ms >
+          static_cast<double>(tuning.MemoryUrgentEvalWallMs);
   if (!urgent && frame_counter - LastEvalFrame < kEvalIntervalFrames)
   {
     out = LastDecision;

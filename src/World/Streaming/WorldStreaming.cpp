@@ -2053,10 +2053,15 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     // A+B water: unfinished near fluid/sea → stronger pull-in + wider sky horizon.
     // Manual 084551: do NOT pull from wall≈40 alone (cruise wall often >40 →
     // fog/trees flicker); latch hole_debt + rate-limit shrink/expand.
+    // Phase B: expand/shrink/severe-wall from RuntimeTuning (not SoT predicates).
     {
-      constexpr double kFogPullInExpandSec = 2.5;
-      constexpr double kFogPullInShrinkSec = 0.45;
-      constexpr double kFogPullInSevereWallMs = 100.0;
+      const URuntimeTuning &fog_tune = URuntimeTuning::Get();
+      const double kFogPullInExpandSec =
+          static_cast<double>(fog_tune.FogPullInExpandSec);
+      const double kFogPullInShrinkSec =
+          static_cast<double>(fog_tune.FogPullInShrinkSec);
+      const double kFogPullInSevereWallMs =
+          static_cast<double>(fog_tune.FogPullInSevereWallMs);
       constexpr int kFogHoleHoldFrames = 90; // ~1.5s latch after holes clear
       int fog_rd = effectiveRenderDistance;
       int fog_margin = render.DistanceFogEndMarginBlocks;
