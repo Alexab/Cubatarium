@@ -178,7 +178,9 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
         {
           return;
         }
-        if (GreedyCache.find(coord) != GreedyCache.end())
+        // SoftDefer / empty GpuQuadCount placeholders still sit in GreedyCache —
+        // FirstMesh must key off Drawable, not mere cache presence (213543).
+        if (HasDrawableGreedyMesh(coord))
         {
           return;
         }
@@ -1133,8 +1135,23 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
   if (ActiveMeshSourceRevision.find(chunkCoord) !=
       ActiveMeshSourceRevision.end())
   {
-    RemeshAfterApply.insert(chunkCoord);
-    return;
+    // Hole (!Drawable): Active+RemeshAfterApply-only left miss sticky after
+    // CancelOutside / epoch DiscardedLate (manual 213543). Invalidate so
+    // FirstMesh can re-enter Dirty while a drawable mesh keeps Remesh deferral.
+    if (!HasDrawableGreedyMesh(chunkCoord))
+    {
+      InvalidateInFlightMeshBuild(chunkCoord);
+      if (AsyncBuilder)
+      {
+        AsyncBuilder->ForgetInflight(chunkCoord);
+      }
+      GpuExtractInFlight.erase(chunkCoord);
+    }
+    else
+    {
+      RemeshAfterApply.insert(chunkCoord);
+      return;
+    }
   }
   // Re-prioritize / re-queue: bump only when newly entering Dirty.
   const bool existed = Dirty.Contains(chunkCoord);
@@ -1793,6 +1810,16 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   const auto revisionIt = ActiveMeshSourceRevision.find(result.coord);
   if (revisionIt == ActiveMeshSourceRevision.end())
   {
+    // CancelOutside / Invalidate cleared Active before Drain. Silent drop of a
+    // hole left miss sticky while Dirty plateaued on remesh (manual 213543).
+    if (!HasDrawableGreedyMesh(result.coord) &&
+        !Dirty.Contains(result.coord))
+    {
+      Dirty.MarkDirtyPriority(result.coord);
+      InstancesDirty = true;
+      GreedyBatchesDirty = true;
+      CrossBatchesDirty = true;
+    }
     return;
   }
   const MeshApplyRevDecision decision = ClassifyMeshApplyRevision(
@@ -2112,6 +2139,16 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         }
       }
     }
+    for (const glm::ivec3 &coord : AsyncBuilder->TakeOverflowCoords())
+    {
+      MarkDirtyPriority(coord);
+    }
+    for (const glm::ivec3 &coord : AsyncBuilder->TakeDiscardedCoords())
+    {
+      // Epoch / jobId DiscardedLate frees InFlight but leaves Active orphan —
+      // force FirstMesh path via MarkDirtyPriority hole invalidate.
+      MarkDirtyPriority(coord);
+    }
     for (MeshBuildResult &result :
          AsyncBuilder->DrainCompleted(max_drain_per_frame))
     {
@@ -2261,8 +2298,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         const int dx = std::abs(it->x - MeshFocusGroundChunk.x);
         const int dz = std::abs(it->z - MeshFocusGroundChunk.z);
         const int horiz = std::max(dx, dz);
-        if (horiz > MeshFocusRadiusChunks ||
-            GreedyCache.find(*it) != GreedyCache.end())
+        if (horiz > MeshFocusRadiusChunks || HasDrawableGreedyMesh(*it))
         {
           ++it;
           continue;
@@ -2586,7 +2622,11 @@ void UChunkMeshCache::DrainAsyncMeshResults(UBlockWorld &world,
   }
   for (const glm::ivec3 &coord : AsyncBuilder->TakeOverflowCoords())
   {
-    Dirty.MarkDirtyPriority(coord);
+    MarkDirtyPriority(coord);
+  }
+  for (const glm::ivec3 &coord : AsyncBuilder->TakeDiscardedCoords())
+  {
+    MarkDirtyPriority(coord);
   }
   for (MeshBuildResult &result : AsyncBuilder->DrainCompleted(max_per_frame))
   {

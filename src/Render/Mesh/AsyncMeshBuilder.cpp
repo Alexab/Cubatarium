@@ -165,6 +165,8 @@ std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
   std::vector<MeshBuildResult> accepted;
   accepted.reserve(drained.size());
 
+  std::vector<glm::ivec3> discarded_now;
+  discarded_now.reserve(drained.size());
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
     for (MeshBuildResult &result : drained)
@@ -177,17 +179,25 @@ std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
         {
           InFlight.erase(it);
         }
+        discarded_now.push_back(result.coord);
         continue;
       }
       const auto it = InFlight.find(result.coord);
       if (it == InFlight.end() || it->second != result.jobId)
       {
         DiscardedLate.fetch_add(1, std::memory_order_relaxed);
+        discarded_now.push_back(result.coord);
         continue;
       }
       InFlight.erase(it);
       accepted.push_back(std::move(result));
     }
+  }
+  if (!discarded_now.empty())
+  {
+    std::lock_guard<std::mutex> dlock(DiscardedMutex);
+    DiscardedCoords.insert(DiscardedCoords.end(), discarded_now.begin(),
+                           discarded_now.end());
   }
   return accepted;
 }
@@ -258,6 +268,14 @@ std::vector<glm::ivec3> UAsyncMeshBuilder::TakeOverflowCoords()
   std::lock_guard<std::mutex> olock(OverflowMutex);
   std::vector<glm::ivec3> out;
   out.swap(OverflowCoords);
+  return out;
+}
+
+std::vector<glm::ivec3> UAsyncMeshBuilder::TakeDiscardedCoords()
+{
+  std::lock_guard<std::mutex> dlock(DiscardedMutex);
+  std::vector<glm::ivec3> out;
+  out.swap(DiscardedCoords);
   return out;
 }
 

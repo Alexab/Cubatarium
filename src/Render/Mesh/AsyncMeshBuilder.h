@@ -68,6 +68,8 @@ public:
   void SetCompletedCapacity(std::size_t cap) { Completed.SetCapacity(cap); }
   /// Coords whose Completed mesh was dropped by overflow; remesh via Dirty.
   std::vector<glm::ivec3> TakeOverflowCoords();
+  /// Coords discarded for stale epoch / jobId mismatch; remesh via Dirty.
+  std::vector<glm::ivec3> TakeDiscardedCoords();
 
 private:
   static constexpr int kPipelineSlotsPerWorker = 6;
@@ -83,6 +85,8 @@ private:
   std::atomic<uint64_t> DiscardedLate{0};
   mutable std::mutex OverflowMutex;
   std::vector<glm::ivec3> OverflowCoords;
+  mutable std::mutex DiscardedMutex;
+  std::vector<glm::ivec3> DiscardedCoords;
 };
 
 } // namespace cutum

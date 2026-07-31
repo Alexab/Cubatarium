@@ -389,6 +389,34 @@ flowchart TB
 
 ## 12. Next action after audit approval
 
-**Phase B landed** (Capture/Immediate/fly/DirtyThrash/Memory hitch/Fog timing knobs).
-Validate with autofly + manual land-exit vs `155432`, then implement **Phase C** GPU
-hygiene PR.
+**Phase B landed.** Phase C partial (mask=0, drain boost, CPU counting-sort; GPU
+sort path compiled but disabled on AMD iGPU).
+
+### Manual `213543` (2026-07-31) — plan correction
+
+Log: `perf_20260731-213543_19204.jsonl`. Route `(-479,63)→(-477,71)`.
+
+| Observation | Implication |
+|-------------|-------------|
+| Start stand `(-479,63)`: `miss=0`, uf OK, but `opaque` stuck **649** (not 1033) | Prior heal held for holes; draw density lower than `194759` exit |
+| Flight: `miss` sticky **1** most of the way; `fog_hole_debt=1` | Land-exit / undrawn column is **primary** again |
+| Exit `(-477,71)`: `miss=1`, `dirty~400`, `pgpu~33`, `stale=511`/`void=91` | Not a healed idle cruise — drain/GPU-sort gates do not apply |
+| Opaque **1033→339** in one period on exit stand | Remesh/discard storm (or view cull); `mesh_discarded_late` climbed to 104; SoftDefer capture floor hits 152 |
+| `mesh_emerge` ~55% + `mesh_dirty_tick` ~43% of wall on exit stand | Perf secondary until miss clears |
+
+**Reprioritized next steps**
+
+1. **Correctness:** sticky `focus_missing_mesh=1` at land-exit — identify missing column at `(-477,71)`, why Dirty/FirstMesh/Immediate do not fill while `dirty≥380`.
+2. **Correctness:** opaque collapse 1033→339 — check FreeChunk / memory hitch / SoftDefer capture storm / mass invalidate (not SoftDefer SoT / FreeChunk-skip).
+3. **Correctness residual:** `dark_face_stale` spikes (→2775 mid-flight) / void.
+4. **Perf (after miss=0 idle):** mesh_emerge / dirty_tick; enable GPU sort only with non-atomic or discrete-GPU gate.
+5. **Defer:** Phase D cull (`flat`/`gpu_cull` still ≪ scene/emerge).
+
+Validate with autofly + manual land-exit vs `155432` / this `213543` exit, not only cruise gates.
+
+### Phase 1 (sticky miss) — landed
+
+`MarkDirtyPriority`: Active + `!HasDrawable` → invalidate in-flight (not Remesh-only).
+FirstMesh sync / reserved Pass1: `!HasDrawable` (not `GreedyCache` presence).
+CPU Apply `DropNoActive` + async `DiscardedLate` coords → requeue Dirty.
+
