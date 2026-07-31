@@ -2125,12 +2125,22 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       const bool focus_missing =
           HasMissingGreedyMeshInHorizontalRadius(world, MeshFocusGroundChunk,
                                                  RenderDistanceChunks);
-      const double gpu_budget =
+      const size_t pending_n = PendingGpuApplies.size();
+      // Emerge may clamp schedule when pending_gpu≥12; do not let that starve
+      // apply drain (manual 194759: med≈16 while mesh_emerge~60ms).
+      double gpu_budget =
           focus_missing
               ? std::max(8.0, MeshEmergeTotalBudgetMs * 0.6)
               : std::max(6.0, MeshEmergeTotalBudgetMs * 0.5);
-      const int gpu_max =
+      int gpu_max =
           std::max(3, std::max(max_drain_per_frame, max_schedule_per_frame));
+      // Aggressive drain only when schedule clamp can starve apply (healed
+      // undrawn + pending_gpu backlog). With focus holes keep base caps.
+      if (!focus_missing && pending_n >= 12)
+      {
+        gpu_max = std::max(gpu_max, 16);
+        gpu_budget = std::max(gpu_budget, MeshEmergeTotalBudgetMs * 0.75);
+      }
       const int gpu_done = ProcessPendingGpuMeshes(world, registry, gpu_max,
                                                  gpu_budget, stats);
       if (gpu_done > 0)
@@ -2460,10 +2470,28 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     BumpMeshRevisionIfNeeded();
     if (Render.GpuPackedMeshing && !PendingGpuApplies.empty())
     {
-      const double gpu_budget =
-          std::max(4.0, MeshEmergeTotalBudgetMs * 0.4);
-      const int gpu_max =
+      const double tick_elapsed =
+          std::chrono::duration<double, std::milli>(
+              std::chrono::high_resolution_clock::now() - dirty_tick_t0)
+              .count();
+      const double remain =
+          std::max(0.0, MeshEmergeTotalBudgetMs - tick_elapsed);
+      const size_t pending_n = PendingGpuApplies.size();
+      const bool focus_missing =
+          HasMissingGreedyMeshInHorizontalRadius(world, MeshFocusGroundChunk,
+                                                 RenderDistanceChunks);
+      double gpu_budget =
+          std::min(remain, std::max(4.0, MeshEmergeTotalBudgetMs * 0.4));
+      int gpu_max =
           std::max(2, std::max(max_drain_per_frame, max_schedule_per_frame) / 2);
+      // Only steal leftover budget for backlog when visuals are already healed
+      // (manual 194759); during holes prefer FirstMesh / sync fill.
+      if (!focus_missing && pending_n >= 12 && remain > 1.0)
+      {
+        gpu_max = std::max(gpu_max, 12);
+        gpu_budget = std::max(
+            gpu_budget, std::min(remain, MeshEmergeTotalBudgetMs * 0.5));
+      }
       const int gpu_done = ProcessPendingGpuMeshes(world, registry, gpu_max,
                                                  gpu_budget, stats);
       if (gpu_done > 0)

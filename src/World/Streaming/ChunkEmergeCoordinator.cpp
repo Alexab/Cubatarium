@@ -1860,6 +1860,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   // Phase C / manual 194759: healed undrawn (miss=0) but pending_gpu backlog
   // (med≈16, max≈80) feeds mesh_emerge. Prefer draining apply over new snapshots.
+  // ChunkMeshCache boosts gpu_max/budget at the same threshold so this clamp
+  // does not starve ProcessPendingGpuMeshes.
   {
     const size_t pending_gpu = mesh_service.GetPendingGpuAppliesCount();
     if (!fov_unfinished && !missing_visible_mesh &&
