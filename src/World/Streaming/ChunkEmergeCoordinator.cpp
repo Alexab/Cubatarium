@@ -1858,6 +1858,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_drain = std::min(mesh_drain, moving ? 10 : 14);
     mesh_service.SetMeshSnapshotBudgetMs(moving ? 1.5 : 2.0);
   }
+  // Phase C / manual 194759: healed undrawn (miss=0) but pending_gpu backlog
+  // (med≈16, max≈80) feeds mesh_emerge. Prefer draining apply over new snapshots.
+  {
+    const size_t pending_gpu = mesh_service.GetPendingGpuAppliesCount();
+    if (!fov_unfinished && !missing_visible_mesh &&
+        world.GetPhysicsTelemetry().UnfinishedVisual == 0 &&
+        pending_gpu >= 12 && last_frame_ms > 24.0)
+    {
+      mesh_schedule = std::min(mesh_schedule, moving ? 4 : 6);
+      mesh_service.SetMeshSnapshotBudgetMs(moving ? 1.0 : 1.5);
+    }
+  }
   // Isolated missing column (manual 084551): FirstMesh every frame while any
   // focus missing — not only held UnfinishedVisual — and prefer admit over
   // remesh when Dirty is high on the rim.

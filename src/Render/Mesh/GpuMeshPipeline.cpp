@@ -100,17 +100,23 @@ void UGpuMeshPipeline::EnqueueSnapshot(ChunkMeshSnapshot snapshot,
 bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
                                         UBlockRegistry &registry,
                                         glm::ivec3 coord, int slot_idx,
-                                        uint32_t &out_quad_count)
+                                        uint32_t &out_quad_count,
+                                        std::vector<PackedQuad> *out_sorted_quads)
 {
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
   (void)snapshot;
   (void)registry;
   (void)coord;
   (void)slot_idx;
+  (void)out_sorted_quads;
   out_quad_count = 0;
   return false;
 #else
   out_quad_count = 0;
+  if (out_sorted_quads)
+  {
+    out_sorted_quads->clear();
+  }
   if (!SnapshotIsGpuExtractEligible(snapshot, registry) ||
       EmitState.PackedEmitProgram == 0)
   {
@@ -194,6 +200,8 @@ bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
   glDispatchCompute(102u, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
+  // Counter readback is 16B — required for emit sizing. Full-quad download
+  // happens once below; ProcessSnapshot reuses it (Phase C: was duplicated).
   std::array<uint32_t, 4> counters{};
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, EmitState.CountersSsbo);
   glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(counters),
@@ -252,6 +260,10 @@ bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
 
   Allocator.SetSlotQuadCount(slot_idx, rect_count);
   out_quad_count = rect_count;
+  if (out_sorted_quads)
+  {
+    *out_sorted_quads = std::move(quads);
+  }
   return true;
 #endif
 }
@@ -284,7 +296,9 @@ bool UGpuMeshPipeline::ProcessSnapshot(const ChunkMeshSnapshot &snapshot,
   }
 
   uint32_t quad_count = 0;
-  if (!RunComputePasses(snapshot, registry, coord, slot_idx, quad_count))
+  std::vector<PackedQuad> quads;
+  if (!RunComputePasses(snapshot, registry, coord, slot_idx, quad_count,
+                        &quads))
   {
     Allocator.FreeSlot(coord);
     return false;
@@ -299,18 +313,7 @@ bool UGpuMeshPipeline::ProcessSnapshot(const ChunkMeshSnapshot &snapshot,
     return true;
   }
 
-  const GpuMeshSlot *slot = Allocator.GetSlot(coord);
-  if (!slot)
-  {
-    return false;
-  }
-  std::vector<PackedQuad> quads(quad_count);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, Allocator.GetQuadSsbo());
-  glGetBufferSubData(
-      GL_SHADER_STORAGE_BUFFER,
-      static_cast<GLintptr>(slot->OffsetQuads * sizeof(PackedQuad)),
-      static_cast<GLsizeiptr>(quads.size() * sizeof(PackedQuad)), quads.data());
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  // Ranges/dark from the same CPU buffer used for sort — no second SSBO download.
   BuildBlockRangesFromQuads(quads, registry, out_result.blockRanges);
   out_result.hasFullyDarkFace = PackedQuadsHaveFullyDarkFace(quads);
 

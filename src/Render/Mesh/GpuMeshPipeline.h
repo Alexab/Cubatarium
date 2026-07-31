@@ -55,7 +55,8 @@ private:
 
   bool RunComputePasses(const ChunkMeshSnapshot &snapshot,
                         UBlockRegistry &registry, glm::ivec3 coord,
-                        int slot_idx, uint32_t &out_quad_count);
+                        int slot_idx, uint32_t &out_quad_count,
+                        std::vector<PackedQuad> *out_sorted_quads = nullptr);
 
   bool Ready{false};
   GpuGreedyEmitState EmitState;
