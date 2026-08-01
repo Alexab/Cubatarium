@@ -945,10 +945,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_schedule = std::max(mesh_schedule, gpu_cap);
     mesh_drain = std::max(mesh_drain, gpu_cap);
   }
-  // Early pending_gpu read — final clamp applied after floors/isolated_missing.
+  // Early pending_gpu read — MeshWorkAdmission Finalize applied after floors.
   const size_t pending_gpu_n = mesh_service.GetPendingGpuAppliesCount();
-  const bool gpu_backlog_deep = pending_gpu_n >= 24;
-  const bool gpu_backlog_warm = pending_gpu_n >= 16;
   if (focus_not_render_ready > 12 && pending_async_early < 10)
   {
     mesh_schedule = std::max(mesh_schedule, 14);
@@ -1962,18 +1960,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_drain = std::min(mesh_drain, moving ? 10 : 14);
     mesh_service.SetMeshSnapshotBudgetMs(moving ? 1.5 : 2.0);
   }
-  // Phase C / manual 194759: healed undrawn (miss=0) but pending_gpu backlog
-  // (med≈16, max≈80) feeds mesh_emerge. Prefer draining apply over new snapshots.
-  // ChunkMeshCache boosts gpu_max/budget at the same threshold so this clamp
-  // does not starve ProcessPendingGpuMeshes.
+  // Phase C snapshot budget when healed+backlog (schedule hard-cap → Admission).
+  if (!fov_unfinished && !missing_visible_mesh &&
+      world.GetPhysicsTelemetry().UnfinishedVisual == 0 &&
+      pending_gpu_n >= 12 && last_frame_ms > 24.0)
   {
-    if (!fov_unfinished && !missing_visible_mesh &&
-        world.GetPhysicsTelemetry().UnfinishedVisual == 0 &&
-        pending_gpu_n >= 12 && last_frame_ms > 24.0)
-    {
-      mesh_schedule = std::min(mesh_schedule, moving ? 4 : 6);
-      mesh_service.SetMeshSnapshotBudgetMs(moving ? 1.0 : 1.5);
-    }
+    mesh_service.SetMeshSnapshotBudgetMs(moving ? 1.0 : 1.5);
   }
   // Isolated missing column (manual 084551): FirstMesh every frame while any
   // focus missing — not only held UnfinishedVisual — and prefer admit over
@@ -2050,26 +2042,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     exec.DrainBudget(world, moving ? 2 : 3, focus_ground_horiz, focus_radius,
                      /*admit_batch=*/moving ? 2 : 3);
   }
-  // Final drain-first: floors/isolated_missing cannot override deep GPU backlog.
-  if (gpu_backlog_deep)
-  {
-    mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
-    mesh_schedule = std::min(mesh_schedule, 4);
-    mesh_drain = std::max(mesh_drain, 12);
-  }
-  else if (gpu_backlog_warm && (visual_holes || missing_visible_mesh))
-  {
-    // Warm backlog under miss: keep schedule near finish rate (~2-4/frame).
-    mesh_schedule = std::min(mesh_schedule, 2);
-    mesh_drain = std::max(mesh_drain, 12);
-    mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
-  }
-  else if (pending_gpu_n >= 12 && (visual_holes || missing_visible_mesh))
-  {
-    mesh_schedule = std::min(mesh_schedule, 4);
-  }
-  // E0: compute MeshWorkAdmission (stash for producers/consumer) + honest
-  // LastBudget SoT. Finalize* applied in E1 (replaces ad-hoc clamps above).
+  // E1: single Finalize via MeshWorkAdmission — replaces ad-hoc GPU clamps.
+  // Floors above only propose; HoleDrain/Deep/Warm hard-cap schedule & drain.
   {
     MeshWorkAdmissionInput ain{};
     ain.pending_gpu = pending_gpu_n;
@@ -2082,6 +2056,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.unfinished_visual = world.GetPhysicsTelemetry().UnfinishedVisual;
     const MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
     mesh_service.SetMeshWorkAdmission(adm);
+    mesh_schedule = FinalizeSchedule(mesh_schedule, adm);
+    mesh_drain = FinalizeDrain(mesh_drain, adm);
+    if (adm.mode == MeshWorkAdmission::Mode::HoleDrain ||
+        adm.mode == MeshWorkAdmission::Mode::DeepBacklog)
+    {
+      mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
+    }
     LastBudget.MaxMeshSchedule = mesh_schedule;
     LastBudget.MaxMeshDrain = mesh_drain;
     LastBudget.AdmissionMode = static_cast<int>(adm.mode);
@@ -2090,11 +2071,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   MeshRebuildTickStats tick_stats{};
   {
-    int post_drain = mesh_drain;
-    if (mesh_service.GetPendingGpuAppliesCount() >= 16)
-    {
-      post_drain = std::min(post_drain, 4);
-    }
+    const MeshWorkAdmission &adm = mesh_service.GetMeshWorkAdmission();
+    const int post_drain = std::max(mesh_drain, adm.max_drain);
     tick_stats = mesh_service.RebuildDirtyChunksWithStats(
         world.GetBlockWorld(), registry, mesh_drain, mesh_schedule,
         /*force_sync=*/false, sync_cap, sync_budget_ms);

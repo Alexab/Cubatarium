@@ -2538,9 +2538,15 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       MarkDirtyPriority(coord);
     }
     {
+      const MeshWorkAdmission &adm = WorkAdmission;
       int drain_cap = max_drain_per_frame;
-      if (PendingGpuApplies.size() >= 16)
+      if (adm.mode != MeshWorkAdmission::Mode::Normal)
       {
+        drain_cap = std::max(drain_cap, adm.max_drain);
+      }
+      else if (PendingGpuApplies.size() >= 16)
+      {
+        // Healed Normal path: prefer Finish over flooding Queued.
         drain_cap = std::min(drain_cap, 4);
       }
       for (MeshBuildResult &result : AsyncBuilder->DrainCompleted(drain_cap))
@@ -2553,30 +2559,25 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
 
     if (Render.GpuPackedMeshing && !PendingGpuApplies.empty())
     {
-      const bool focus_missing =
-          HasMissingGreedyMeshInHorizontalRadius(world, MeshFocusGroundChunk,
-                                                 RenderDistanceChunks);
+      const MeshWorkAdmission &adm = WorkAdmission;
       const size_t pending_n = PendingGpuApplies.size();
-      // Emerge may clamp schedule when pending_gpu≥12; do not let that starve
-      // apply drain (manual 194759: med≈16 while mesh_emerge~60ms).
       double gpu_budget =
-          focus_missing
-              ? std::max(8.0, MeshEmergeTotalBudgetMs * 0.6)
-              : std::max(6.0, MeshEmergeTotalBudgetMs * 0.5);
+          std::max(6.0, MeshEmergeTotalBudgetMs * adm.gpu_budget_frac);
       int gpu_max =
           std::max(3, std::max(max_drain_per_frame, max_schedule_per_frame));
-      // Drain-first: healed backlog or deep queue — spend emerge on apply.
-      if (!focus_missing && pending_n >= 12)
+      gpu_max = std::max(gpu_max, adm.gpu_apply_max);
+      if (adm.mode != MeshWorkAdmission::Mode::Normal)
       {
-        gpu_max = std::max(gpu_max, 16);
-        gpu_budget = std::max(gpu_budget, MeshEmergeTotalBudgetMs * 0.75);
+        max_schedule_per_frame =
+            std::min(max_schedule_per_frame, std::max(1, adm.max_schedule));
       }
-      if (pending_n >= 24 || (!focus_missing && pending_n >= 12))
+      else if (pending_n >= 24)
       {
-        gpu_max = std::max(gpu_max, pending_n >= 24 ? 24 : 16);
+        gpu_max = std::max(gpu_max, 24);
         gpu_budget = std::max(gpu_budget, MeshEmergeTotalBudgetMs * 0.85);
         max_schedule_per_frame = std::min(max_schedule_per_frame, 1);
       }
+      (void)pending_n;
       const int gpu_done = ProcessPendingGpuMeshes(world, registry, gpu_max,
                                                  gpu_budget, stats);
       if (gpu_done > 0)
@@ -2949,17 +2950,20 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           std::max(0.0, MeshEmergeTotalBudgetMs - tick_elapsed);
       if (remain > 0.0)
       {
+        const MeshWorkAdmission &adm = WorkAdmission;
         const size_t pending_n = PendingGpuApplies.size();
-        const bool focus_missing =
-            HasMissingGreedyMeshInHorizontalRadius(world, MeshFocusGroundChunk,
-                                                   RenderDistanceChunks);
         double gpu_budget =
-            std::min(remain, std::max(4.0, MeshEmergeTotalBudgetMs * 0.4));
+            std::min(remain, std::max(4.0, MeshEmergeTotalBudgetMs *
+                                               adm.gpu_budget_frac * 0.7));
         int gpu_max =
             std::max(2, std::max(max_drain_per_frame, max_schedule_per_frame) / 2);
-        // Only steal leftover budget for backlog when visuals are already healed
-        // (manual 194759); during holes prefer FirstMesh / sync fill.
-        if (!focus_missing && pending_n >= 12 && remain > 1.0)
+        if (adm.mode != MeshWorkAdmission::Mode::Normal && remain > 1.0)
+        {
+          gpu_max = std::max(gpu_max, std::min(adm.gpu_apply_max, 16));
+          gpu_budget = std::max(
+              gpu_budget, std::min(remain, MeshEmergeTotalBudgetMs * 0.5));
+        }
+        else if (pending_n >= 12 && remain > 1.0)
         {
           gpu_max = std::max(gpu_max, 12);
           gpu_budget = std::max(
