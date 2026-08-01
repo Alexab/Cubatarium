@@ -72,6 +72,9 @@ public:
   void MarkDirty(glm::ivec3 chunk_coord);
   void MarkDirtyPriority(glm::ivec3 chunk_coord);
   void PrefetchMeshCapture(const UBlockWorld &world, glm::ivec3 chunk_coord);
+  void PrefetchMeshCaptureBand(const UBlockWorld &world,
+                               glm::ivec3 ground_chunk_coord, int min_y,
+                               int max_y);
   void RequestRemeshAfterApply(glm::ivec3 chunk_coord);
   /// Invalidate fluid surface column cache when this block or a neighbor is liquid.
   void NotifyFluidSurfaceDirtyAtBlock(const UBlockWorld &world,

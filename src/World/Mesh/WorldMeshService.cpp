@@ -152,6 +152,19 @@ void UWorldMeshService::PrefetchMeshCapture(const UBlockWorld &world,
   Cache.PrefetchMeshCapture(world, chunk_coord);
 }
 
+void UWorldMeshService::PrefetchMeshCaptureBand(const UBlockWorld &world,
+                                                glm::ivec3 ground_chunk_coord,
+                                                int min_y, int max_y)
+{
+  const int cy0 = FloorDiv(min_y, CHUNK_SIZE);
+  const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
+  for (int cy = cy0; cy <= cy1; ++cy)
+  {
+    Cache.PrefetchMeshCapture(
+        world, glm::ivec3(ground_chunk_coord.x, cy, ground_chunk_coord.z));
+  }
+}
+
 void UWorldMeshService::RequestRemeshAfterApply(glm::ivec3 chunk_coord)
 {
   Cache.RequestRemeshAfterApply(chunk_coord);

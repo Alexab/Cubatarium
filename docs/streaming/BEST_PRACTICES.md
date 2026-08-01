@@ -38,7 +38,8 @@ Contains, AllowUnlitFirstMesh SoT SoftDefer, FocusPressure≠hole, Capture floor
 on UnfinishedVisual, FocusIngress Stage SLA. Remaining gate DoD (not architecture):
 
 - ARCH_D3 `wall_ms_med≤30` (lit remesh clamp; evidence autofly).
-- F2/C/CB residuals on edge; TD-ARCH-011 blue_screen; TD-ARCH-015 worker Capture backlog.
+- F2/C/CB residuals on edge; TD-ARCH-011 blue_screen; TD-ARCH-015 store contract
+  landed (worker Capture still off).
 
 Research alignment: Luanti/Minetest chunk job ownership, UE streaming memory
 budgets, Qt RHI capability backends, 0fps-style lighting-before-mesh — mapped to

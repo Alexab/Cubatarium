@@ -825,6 +825,9 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
       {
         world.MarkTerrainChunkMeshDirtySeamed(ground_coord, dirty_min, dirty_max,
                                               false);
+        // TD-ARCH-015: warm Capture store on first-mesh admit (not remesh).
+        world.GetMeshService().PrefetchMeshCaptureBand(
+            world.GetBlockWorld(), ground_coord, dirty_min, dirty_max);
       }
     }
     else

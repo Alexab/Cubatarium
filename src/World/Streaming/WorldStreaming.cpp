@@ -1272,7 +1272,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   }
   // TD-ARCH-030 / Phase 3: SoftDefer unfinished / missing → ColumnFlow ticket
   // (cap 1/tick). Do NOT inflate bg_budget Capture floor every period
-  // (manual 130338 SoftDefer thrash +329).
+  // (manual 130338 SoftDefer thrash +329; 171310 floor Δ+870).
   {
     const int unfinished = world.PhysicsTelemetryData.UnfinishedVisual;
     world.PhysicsTelemetryData.SoftDeferCaptureBudget = 0;
@@ -1289,13 +1289,19 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       world.PhysicsTelemetryData.SoftDeferCaptureBudget = floor_budget;
       if (floor_budget > 0)
       {
-        ++world.PhysicsTelemetryData.SoftDeferCaptureFloorHits;
         auto &exec = GetColumnFlowExecutor();
-        const ColumnWorkKind kind = missing_focus_mesh
-                                        ? ColumnWorkKind::FirstMesh
-                                        : ColumnWorkKind::RelightThenMesh;
-        exec.Enqueue(glm::ivec2(focus_horiz.x, focus_horiz.z), kind, 90);
-        exec.DrainBudget(world, 1, focus_horiz, focus_radius, /*admit_batch=*/1);
+        const glm::ivec2 focus_xz(focus_horiz.x, focus_horiz.z);
+        // Rate-limit: skip if ColumnFlow already owns a repair ticket.
+        if (!exec.HasRepairTicket(focus_xz))
+        {
+          ++world.PhysicsTelemetryData.SoftDeferCaptureFloorHits;
+          const ColumnWorkKind kind = missing_focus_mesh
+                                          ? ColumnWorkKind::FirstMesh
+                                          : ColumnWorkKind::RelightThenMesh;
+          exec.Enqueue(focus_xz, kind, 90);
+          exec.DrainBudget(world, 1, focus_horiz, focus_radius,
+                           /*admit_batch=*/1);
+        }
       }
       if (rim_first_mesh_sla)
       {
@@ -2090,23 +2096,25 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         const int unfinished = phys.UnfinishedVisual;
         const int unfinished_ahead = phys.FocusUnfinishedAhead;
         const int gpu_pending = phys.PendingGpuAppliesN;
-        // Latch on visual holes, or unfinished only while focus still missing
-        // mesh. Unfinished alone (dark/culled) must not refresh hold forever.
+        // Latch on visual holes or focus missing mesh only — UnfinishedVisual
+        // alone (dark/culled SoftDeferHeld) must not refresh hold (manual
+        // 171310: miss=0 holes=0 still fog_debt≈94% / opaque~327).
         const bool hole_debt_now =
-            phys.VisualHoles > 0 ||
-            (unfinished > 0 && phys.FocusMissingMesh > 0);
+            phys.VisualHoles > 0 || phys.FocusMissingMesh > 0;
         if (hole_debt_now)
         {
           FogPullInHoleHoldFrames = kFogHoleHoldFrames;
         }
+        else if (phys.FocusMissingMesh == 0 && phys.VisualHoles == 0)
+        {
+          // GO: fog_hole_debt→0 on stand when miss=0 (clear latch, do not
+          // wait 30/decay while SoftDeferHeld keeps unfinished>0).
+          FogPullInHoleHoldFrames = 0;
+        }
         else if (FogPullInHoleHoldFrames > 0)
         {
-          const int decay =
-              (phys.FocusMissingMesh == 0 && phys.VisualHoles == 0)
-                  ? kFogHoleDecayPerFrame
-                  : 1;
           FogPullInHoleHoldFrames =
-              std::max(0, FogPullInHoleHoldFrames - decay);
+              std::max(0, FogPullInHoleHoldFrames - kFogHoleDecayPerFrame);
         }
         const bool hole_debt = FogPullInHoleHoldFrames > 0;
         world.PhysicsTelemetryData.FogHoleDebt = hole_debt ? 1 : 0;

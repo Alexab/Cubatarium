@@ -461,16 +461,23 @@ bool UGpuMeshPipeline::CopyQuadsToPbo(uint32_t slot_offset, uint32_t quad_count,
   return true;
 }
 
-bool UGpuMeshPipeline::MapQuadsFromPbo(uint32_t quad_count, GLsync fence)
+UGpuMeshPipeline::GpuFinishStatus
+UGpuMeshPipeline::MapQuadsFromPbo(uint32_t quad_count, GLsync *inout_fence,
+                                  uint64_t timeout_ns)
 {
-  if (fence)
+  if (inout_fence && *inout_fence)
   {
-    const GLenum wait = glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT,
-                                         100'000'000); // 100ms
-    glDeleteSync(fence);
+    const GLenum wait =
+        glClientWaitSync(*inout_fence, GL_SYNC_FLUSH_COMMANDS_BIT, timeout_ns);
+    if (wait == GL_TIMEOUT_EXPIRED)
+    {
+      return GpuFinishStatus::NotReady;
+    }
+    glDeleteSync(*inout_fence);
+    *inout_fence = nullptr;
     if (wait == GL_WAIT_FAILED)
     {
-      return false;
+      return GpuFinishStatus::Failed;
     }
   }
   const GLsizeiptr quad_bytes =
@@ -482,12 +489,12 @@ bool UGpuMeshPipeline::MapQuadsFromPbo(uint32_t quad_count, GLsync fence)
   if (!mapped)
   {
     glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
-    return false;
+    return GpuFinishStatus::Failed;
   }
   std::memcpy(ScratchQuads.data(), mapped, static_cast<size_t>(quad_bytes));
   glUnmapBuffer(GL_COPY_WRITE_BUFFER);
   glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
-  return true;
+  return GpuFinishStatus::Ready;
 }
 #endif
 
@@ -648,9 +655,10 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
 #endif
 }
 
-bool UGpuMeshPipeline::FinishComputePasses(
+UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
     GpuApplyTicket &ticket, UBlockRegistry &registry, uint32_t &out_quad_count,
-    std::vector<GpuBlockDrawRange> *out_ranges, bool *out_has_dark_face)
+    std::vector<GpuBlockDrawRange> *out_ranges, bool *out_has_dark_face,
+    uint64_t timeout_ns)
 {
   out_quad_count = 0;
   if (out_ranges)
@@ -664,17 +672,22 @@ bool UGpuMeshPipeline::FinishComputePasses(
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
   (void)ticket;
   (void)registry;
-  return false;
+  (void)timeout_ns;
+  return GpuFinishStatus::Failed;
 #else
   if (!ticket.valid)
   {
-    return false;
+    return GpuFinishStatus::Failed;
   }
   out_quad_count = ticket.quadCount;
   if (ticket.quadCount == 0)
   {
-    ticket.fence = nullptr;
-    return true;
+    if (ticket.fence)
+    {
+      glDeleteSync(ticket.fence);
+      ticket.fence = nullptr;
+    }
+    return GpuFinishStatus::Ready;
   }
 
   // GPU hist+scatter disabled on AMD (atomics raised emerge). Keep compiled.
@@ -691,12 +704,16 @@ bool UGpuMeshPipeline::FinishComputePasses(
       glDeleteSync(ticket.fence);
       ticket.fence = nullptr;
     }
-    return true;
+    return GpuFinishStatus::Ready;
   }
 
-  GLsync fence = ticket.fence;
-  ticket.fence = nullptr;
-  if (!MapQuadsFromPbo(ticket.quadCount, fence))
+  const GpuFinishStatus map_st =
+      MapQuadsFromPbo(ticket.quadCount, &ticket.fence, timeout_ns);
+  if (map_st == GpuFinishStatus::NotReady)
+  {
+    return GpuFinishStatus::NotReady;
+  }
+  if (map_st == GpuFinishStatus::Failed)
   {
     // Fallback: direct SSBO readback if PBO map failed.
     ScratchQuads.resize(ticket.quadCount);
@@ -710,8 +727,18 @@ bool UGpuMeshPipeline::FinishComputePasses(
   }
   BuildRunLengthRangesFromUnsorted(ScratchQuads, registry, out_ranges,
                                    out_has_dark_face);
-  return true;
+  return GpuFinishStatus::Ready;
 #endif
+}
+
+bool UGpuMeshPipeline::FinishComputePasses(
+    GpuApplyTicket &ticket, UBlockRegistry &registry, uint32_t &out_quad_count,
+    std::vector<GpuBlockDrawRange> *out_ranges, bool *out_has_dark_face)
+{
+  return TryFinishComputePasses(ticket, registry, out_quad_count, out_ranges,
+                                out_has_dark_face,
+                                /*timeout_ns=*/100'000'000) ==
+         GpuFinishStatus::Ready;
 }
 
 bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,

@@ -1576,21 +1576,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               mesh_service.MarkDirtyPriority(coord);
               continue;
             }
-            // Moving: never Immediate (one greedy can be seconds). Prefer Dirty.
-            const bool allow_underfeet_immediate =
-                !moving && underfeet_immediate_cd <= 0 &&
-                underfeet_immediate_this_frame < kMaxUnderfeetImmediate &&
-                immediate_budget_ok();
-            if (!allow_underfeet_immediate)
-            {
-              mesh_service.MarkDirtyPriority(coord);
-              continue;
-            }
-            mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
-                                               coord);
+            // Moving: never Immediate. Idle: ColumnFlow + Dirty only
+            // (Phase 3 — no RebuildChunkImmediate zoo / emerge spikes).
+            mesh_service.MarkDirtyPriority(coord);
+            GetColumnFlowExecutor().Enqueue(
+                glm::ivec2(coord.x, coord.z), ColumnWorkKind::FirstMesh, 110);
             ++immediate;
-            ++underfeet_immediate_this_frame;
-            underfeet_immediate_cd = last_frame_ms > 20.0 ? 1 : 0;
+            continue;
           }
         }
       }

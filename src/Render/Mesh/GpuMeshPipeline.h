@@ -50,7 +50,18 @@ public:
   bool KickComputePasses(const ChunkMeshSnapshot &snapshot,
                          UBlockRegistry &registry, glm::ivec3 coord,
                          int slot_idx, GpuApplyTicket &out_ticket);
-  /// Wait fence, map PBO quads, build RLE ranges (Phase 0d/2).
+  enum class GpuFinishStatus : uint8_t
+  {
+    Ready = 0,
+    NotReady = 1,
+    Failed = 2,
+  };
+  /// Poll fence (timeout_ns=0 non-blocking), map PBO, build RLE ranges.
+  GpuFinishStatus TryFinishComputePasses(
+      GpuApplyTicket &ticket, UBlockRegistry &registry, uint32_t &out_quad_count,
+      std::vector<GpuBlockDrawRange> *out_ranges, bool *out_has_dark_face,
+      uint64_t timeout_ns);
+  /// Blocking Finish (up to 100ms) for sync ProcessSnapshot path.
   bool FinishComputePasses(GpuApplyTicket &ticket, UBlockRegistry &registry,
                            uint32_t &out_quad_count,
                            std::vector<GpuBlockDrawRange> *out_ranges,
@@ -92,7 +103,9 @@ private:
   void DestroyReadbackPbo();
   bool ReadCountersViaPbo(std::array<uint32_t, 4> &out_counters);
   bool CopyQuadsToPbo(uint32_t slot_offset, uint32_t quad_count, GLsync *out_fence);
-  bool MapQuadsFromPbo(uint32_t quad_count, GLsync fence);
+  /// timeout_ns=0 → poll; fence kept on NotReady (TIMEOUT_EXPIRED).
+  GpuFinishStatus MapQuadsFromPbo(uint32_t quad_count, GLsync *inout_fence,
+                                  uint64_t timeout_ns);
 
   bool Ready{false};
   GpuGreedyEmitState EmitState;
