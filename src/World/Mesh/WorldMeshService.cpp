@@ -552,6 +552,11 @@ bool UWorldMeshService::HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const
   return Cache.HasDrawableGreedyMesh(chunk_coord);
 }
 
+bool UWorldMeshService::HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const
+{
+  return Cache.HasMeshSatisfyingColumnReady(chunk_coord);
+}
+
 bool UWorldMeshService::IsGpuExtractInFlight(glm::ivec3 chunk_coord) const
 {
   return Cache.IsGpuExtractInFlight(chunk_coord);

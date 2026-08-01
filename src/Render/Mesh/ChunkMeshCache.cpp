@@ -488,6 +488,20 @@ bool UChunkMeshCache::HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const
   return false;
 }
 
+bool UChunkMeshCache::HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const
+{
+  if (HasDrawableGreedyMesh(chunk_coord))
+  {
+    return true;
+  }
+  // Intentional occluded GPU commit: resident slot with 0 quads. Distinguishes
+  // SoftDefer wrong-empty (usually !GpuResident) so FogPullIn/miss do not latch
+  // (manual 222446) while rim SoftDefer holes stay visible to hole SoT.
+  const auto it = GreedyCache.find(chunk_coord);
+  return it != GreedyCache.end() && it->second.GpuResident &&
+         it->second.GpuQuadCount == 0;
+}
+
 bool UChunkMeshCache::IsGpuExtractInFlight(glm::ivec3 chunk_coord) const
 {
   return GpuExtractInFlight.count(chunk_coord) > 0;
@@ -812,13 +826,13 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
         {
           return;
         }
-        if (HasDrawableGreedyMesh(coord))
+        if (HasMeshSatisfyingColumnReady(coord))
         {
           return;
         }
-        // Empty SoftDefer / undrawn placeholder (HasGreedy, !Drawable) is still a
-        // hole for solid chunks — HasGreedy early-out left rim forever undrawn
-        // (manual 101824 / 213543). Pending GPU / InFlight are in-flight fills.
+        // Empty SoftDefer / undrawn placeholder (!ready, often !GpuResident) is
+        // still a hole for solid chunks (manual 101824). Intentional 0-quad
+        // GPU commits are ready via HasMeshSatisfyingColumnReady.
         if (IsPendingGpuApply(coord))
         {
           return;
@@ -883,12 +897,11 @@ bool UChunkMeshCache::FindNearestMissingGreedyMesh(
   const UChunkManager &chunks = world.GetChunkManager();
   auto chunk_is_solid_missing = [&](glm::ivec3 coord) -> bool
   {
-    if (HasDrawableGreedyMesh(coord))
+    if (HasMeshSatisfyingColumnReady(coord))
     {
       return false;
     }
-    // Empty SoftDefer placeholders (HasGreedy, !Drawable) remain missing until
-    // a drawable mesh lands (manual 101824 rim).
+    // Empty SoftDefer placeholders remain missing until drawable/ready mesh.
     if (IsPendingGpuApply(coord))
     {
       return false;

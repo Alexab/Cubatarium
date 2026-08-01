@@ -1497,7 +1497,7 @@ int UWorld::AdmitFocusMeshIngress(int max_columns)
     {
       const glm::ivec3 coord(ground.x, cy, ground.z);
       const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-      if (!chunk || MeshService->HasDrawableGreedyMesh(coord) ||
+      if (!chunk || MeshService->HasMeshSatisfyingColumnReady(coord) ||
           MeshService->IsPendingGpuApply(coord))
       {
         continue;
@@ -1598,7 +1598,7 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
         {
           const glm::ivec3 coord(ground.x, cy, ground.z);
           const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-          if (!chunk || MeshService->HasDrawableGreedyMesh(coord) ||
+          if (!chunk || MeshService->HasMeshSatisfyingColumnReady(coord) ||
               MeshService->IsPendingGpuApply(coord) ||
               MeshService->HasInflightMeshBuild(coord))
           {
@@ -1936,7 +1936,7 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
       const glm::ivec3 coord(ground.x, cy, ground.z);
       // SoT draw_ok: drawable mesh OR queued GPU apply. Empty SoftDefer
       // placeholders (HasGreedy, !Drawable) must not look ready (manual 101824).
-      if (MeshService->HasDrawableGreedyMesh(coord))
+      if (MeshService->HasMeshSatisfyingColumnReady(coord))
       {
         out.draw_ok = true;
         out.reason = ColumnRenderableState::BlockReason::None;
@@ -1961,7 +1961,7 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     for (int cy = cy0; cy <= cy1; ++cy)
     {
       const glm::ivec3 coord(ground.x, cy, ground.z);
-      if (MeshService->HasDrawableGreedyMesh(coord) ||
+      if (MeshService->HasMeshSatisfyingColumnReady(coord) ||
           MeshService->IsPendingGpuApply(coord) ||
           MeshService->IsGpuExtractInFlight(coord))
       {
@@ -2005,7 +2005,7 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
   for (int cy = cy0; cy <= cy1; ++cy)
   {
     const glm::ivec3 coord(ground.x, cy, ground.z);
-    if (MeshService->HasDrawableGreedyMesh(coord))
+    if (MeshService->HasMeshSatisfyingColumnReady(coord))
     {
       has_mesh_or_gpu = true;
     }
@@ -2042,7 +2042,7 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     {
       continue;
     }
-    if (MeshService->HasDrawableGreedyMesh(coord))
+    if (MeshService->HasMeshSatisfyingColumnReady(coord))
     {
       saw_loaded_meshable = true;
       continue;

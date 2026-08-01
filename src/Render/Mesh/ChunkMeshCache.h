@@ -121,6 +121,9 @@ public:
   /// Empty placeholders must NOT clear missing-mesh / SoftDefer holes
   /// (manual 215919: place-block remesh instantly fills "invisible" chunk).
   bool HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const;
+  /// Drawable OR intentional GPU 0-quad commit (occluded). SoftDefer empty
+  /// (HasGreedy, !GpuResident) stays false — rim hole SoT (manual 101824).
+  bool HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const;
   bool IsGpuExtractInFlight(glm::ivec3 chunk_coord) const;
   bool IsPendingGpuApply(glm::ivec3 chunk_coord) const;
   /// True if any non-bottom greedy vertex has sky+block light == 0.
