@@ -96,6 +96,15 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     out.allow_neighbor_dirty = false;
     out.starve_remesh_horiz = 1;
     out.promote_relight = light_debt ? 4 : 2;
+    // Stop/idle: keep FirstMesh headroom so post_stop_missing_zero holds while
+    // GPU backlog drains (do not starve underfeet Immediate path).
+    if (!in.moving)
+    {
+      out.max_schedule = std::max(out.max_schedule, 4);
+      out.admit_batch = 2;
+      out.dirty_admit_budget = std::max(out.dirty_admit_budget, 2);
+      out.softdefer_requeue = std::max(out.softdefer_requeue, 1);
+    }
   }
   else if (in.pending_gpu >= 12)
   {

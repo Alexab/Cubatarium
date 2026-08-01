@@ -1539,6 +1539,27 @@ void UWorldStreaming::ResumeStreamerAfterQuiesce()
 void UWorldStreaming::TickMeshEmerge(UWorld &world)
 {
   EmergeCoordinator->TickMeshEmerge(world, LastPressureCaps);
+  // MeshWorkAdmission SoT lands in LastBudget at end of TickMeshEmerge.
+  // finish_telemetry in TickAsyncChunkSystems runs *before* emerge — write
+  // final schedule/drain/mode here so periods see HoleDrain under miss.
+  {
+    const auto &budget = EmergeCoordinator->GetLastBudget();
+    world.PhysicsTelemetryData.MeshScheduleFinal = budget.MaxMeshSchedule;
+    world.PhysicsTelemetryData.MeshDrainFinal = budget.MaxMeshDrain;
+    world.PhysicsTelemetryData.MeshAdmissionMode = budget.AdmissionMode;
+  }
+  world.PhysicsTelemetryData.PendingGpuAppliesN = static_cast<int>(
+      world.GetMeshService().GetPendingGpuAppliesCount());
+  world.PhysicsTelemetryData.PendingGpuQueuedN = static_cast<int>(
+      world.GetMeshService().GetPendingGpuQueuedCount());
+  world.PhysicsTelemetryData.PendingGpuKickedN = static_cast<int>(
+      world.GetMeshService().GetPendingGpuKickedCount());
+  world.PhysicsTelemetryData.GpuKickN =
+      world.GetMeshService().GetLastGpuKickN();
+  world.PhysicsTelemetryData.GpuFinishN =
+      world.GetMeshService().GetLastGpuFinishN();
+  world.PhysicsTelemetryData.GpuFinishNotReadyN =
+      world.GetMeshService().GetLastGpuFinishNotReadyN();
   world.PhysicsTelemetryData.MeshSyncMs =
       world.GetMeshService().GetLastMeshSyncMs();
   world.PhysicsTelemetryData.MeshSnapshotMs =

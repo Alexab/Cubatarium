@@ -166,20 +166,28 @@ int main()
     hole.pending_gpu = 14;
     hole.pending_gpu_queued = 10;
     hole.visual_holes = true;
+    hole.moving = true;
     const auto a2 = ComputeMeshWorkAdmission(hole);
     Expect(a2.mode == MeshWorkAdmission::Mode::HoleDrain, "pending+holes → HoleDrain");
     Expect(FinalizeSchedule(16, a2) == 4, "HoleDrain schedule<=4");
     Expect(!a2.allow_neighbor_dirty, "HoleDrain denies neighbor Dirty");
-    Expect(a2.admit_batch == 1, "HoleDrain admit_batch=1");
+    Expect(a2.admit_batch == 1, "HoleDrain admit_batch=1 while moving");
     Expect(a2.gpu_apply_max >= 16, "HoleDrain GPU boost under miss");
     Expect(FinalizeDrain(4, a2) >= 12, "HoleDrain drain floor");
+
+    MeshWorkAdmissionInput hole_idle = hole;
+    hole_idle.moving = false;
+    const auto a2i = ComputeMeshWorkAdmission(hole_idle);
+    Expect(a2i.admit_batch >= 2, "HoleDrain idle admit_batch>=2");
+    Expect(FinalizeSchedule(16, a2i) == 4, "HoleDrain idle schedule floor 4");
 
     MeshWorkAdmissionInput warm_hole{};
     warm_hole.pending_gpu = 18;
     warm_hole.visual_holes = true;
+    warm_hole.moving = true;
     const auto a3 = ComputeMeshWorkAdmission(warm_hole);
     Expect(a3.mode == MeshWorkAdmission::Mode::HoleDrain, "pending>=16+holes still HoleDrain");
-    Expect(FinalizeSchedule(16, a3) == 2, "warm holes schedule<=2");
+    Expect(FinalizeSchedule(16, a3) == 2, "warm holes schedule<=2 while moving");
 
     MeshWorkAdmissionInput deep{};
     deep.pending_gpu = 30;

@@ -952,7 +952,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.pending_gpu = pending_gpu_n;
     ain.pending_gpu_queued = mesh_service.GetPendingGpuQueuedCount();
     ain.pending_gpu_kicked = mesh_service.GetPendingGpuKickedCount();
-    ain.visual_holes = visual_holes || missing_visible_mesh;
+    ain.visual_holes = visual_holes || missing_visible_mesh ||
+                       world.GetPhysicsTelemetry().FocusMissingMesh > 0;
     ain.missing_underfeet = missing_underfeet;
     ain.moving = moving;
     ain.pending_light_near = pending_focus_count;
@@ -2079,7 +2080,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.pending_gpu = pending_gpu_n;
     ain.pending_gpu_queued = mesh_service.GetPendingGpuQueuedCount();
     ain.pending_gpu_kicked = mesh_service.GetPendingGpuKickedCount();
-    ain.visual_holes = visual_holes || missing_visible_mesh;
+    ain.visual_holes = visual_holes || missing_visible_mesh ||
+                       world.GetPhysicsTelemetry().FocusMissingMesh > 0;
     ain.missing_underfeet = missing_underfeet;
     ain.moving = moving;
     ain.pending_light_near = pending_focus_count;
