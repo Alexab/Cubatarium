@@ -367,7 +367,7 @@ void UGpuMeshPipeline::EnsureReadbackPbo()
 {
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
 #else
-  if (ReadbackPbo != 0)
+  if (ReadbackPbos[0] != 0)
   {
     return;
   }
@@ -375,9 +375,13 @@ void UGpuMeshPipeline::EnsureReadbackPbo()
       kReadbackQuadsOffset +
       static_cast<GLsizeiptr>(UGpuMeshSlotAllocator::kMaxQuadsPerSlot *
                               sizeof(PackedQuad));
-  glGenBuffers(1, &ReadbackPbo);
-  glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbo);
-  glBufferData(GL_COPY_WRITE_BUFFER, bytes, nullptr, GL_STREAM_READ);
+  for (int i = 0; i < kReadbackRing; ++i)
+  {
+    glGenBuffers(1, &ReadbackPbos[i]);
+    glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[i]);
+    glBufferData(GL_COPY_WRITE_BUFFER, bytes, nullptr, GL_STREAM_READ);
+    ReadbackInUse[i] = false;
+  }
   glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
 #endif
 }
@@ -386,20 +390,76 @@ void UGpuMeshPipeline::DestroyReadbackPbo()
 {
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
 #else
-  if (ReadbackPbo)
+  for (int i = 0; i < kReadbackRing; ++i)
   {
-    glDeleteBuffers(1, &ReadbackPbo);
-    ReadbackPbo = 0;
+    if (ReadbackPbos[i])
+    {
+      glDeleteBuffers(1, &ReadbackPbos[i]);
+      ReadbackPbos[i] = 0;
+    }
+    ReadbackInUse[i] = false;
   }
 #endif
 }
 
-#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
-bool UGpuMeshPipeline::ReadCountersViaPbo(std::array<uint32_t, 4> &out_counters)
+int UGpuMeshPipeline::AcquireReadbackSlot()
 {
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  return -1;
+#else
   EnsureReadbackPbo();
+  for (int i = 0; i < kReadbackRing; ++i)
+  {
+    if (!ReadbackInUse[i])
+    {
+      ReadbackInUse[i] = true;
+      return i;
+    }
+  }
+  return -1;
+#endif
+}
+
+void UGpuMeshPipeline::ReleaseReadbackSlot(GpuApplyTicket &ticket)
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  ticket.pboIndex = -1;
+#else
+  if (ticket.pboIndex >= 0 && ticket.pboIndex < kReadbackRing)
+  {
+    ReadbackInUse[ticket.pboIndex] = false;
+  }
+  ticket.pboIndex = -1;
+#endif
+}
+
+bool UGpuMeshPipeline::HasFreeReadbackSlot() const
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  return false;
+#else
+  for (int i = 0; i < kReadbackRing; ++i)
+  {
+    if (!ReadbackInUse[i])
+    {
+      return true;
+    }
+  }
+  return false;
+#endif
+}
+
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+bool UGpuMeshPipeline::ReadCountersViaPbo(int pbo_index,
+                                          std::array<uint32_t, 4> &out_counters)
+{
+  if (pbo_index < 0 || pbo_index >= kReadbackRing ||
+      ReadbackPbos[pbo_index] == 0)
+  {
+    return false;
+  }
   glBindBuffer(GL_COPY_READ_BUFFER, EmitState.CountersSsbo);
-  glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbo);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[pbo_index]);
   glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0,
                       kReadbackCountersBytes);
   glBindBuffer(GL_COPY_READ_BUFFER, 0);
@@ -420,7 +480,7 @@ bool UGpuMeshPipeline::ReadCountersViaPbo(std::array<uint32_t, 4> &out_counters)
   {
     return false;
   }
-  glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbo);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[pbo_index]);
   void *mapped =
       glMapBufferRange(GL_COPY_WRITE_BUFFER, 0, kReadbackCountersBytes,
                        GL_MAP_READ_BIT);
@@ -435,16 +495,20 @@ bool UGpuMeshPipeline::ReadCountersViaPbo(std::array<uint32_t, 4> &out_counters)
   return true;
 }
 
-bool UGpuMeshPipeline::CopyQuadsToPbo(uint32_t slot_offset, uint32_t quad_count,
-                                     GLsync *out_fence)
+bool UGpuMeshPipeline::CopyQuadsToPbo(int pbo_index, uint32_t slot_offset,
+                                      uint32_t quad_count, GLsync *out_fence)
 {
-  EnsureReadbackPbo();
+  if (pbo_index < 0 || pbo_index >= kReadbackRing ||
+      ReadbackPbos[pbo_index] == 0)
+  {
+    return false;
+  }
   const GLsizeiptr quad_bytes =
       static_cast<GLsizeiptr>(quad_count * sizeof(PackedQuad));
   const GLintptr slot_byte_off =
       static_cast<GLintptr>(slot_offset * sizeof(PackedQuad));
   glBindBuffer(GL_COPY_READ_BUFFER, Allocator.GetQuadSsbo());
-  glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbo);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[pbo_index]);
   glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, slot_byte_off,
                       kReadbackQuadsOffset, quad_bytes);
   glBindBuffer(GL_COPY_READ_BUFFER, 0);
@@ -462,9 +526,14 @@ bool UGpuMeshPipeline::CopyQuadsToPbo(uint32_t slot_offset, uint32_t quad_count,
 }
 
 UGpuMeshPipeline::GpuFinishStatus
-UGpuMeshPipeline::MapQuadsFromPbo(uint32_t quad_count, GLsync *inout_fence,
-                                  uint64_t timeout_ns)
+UGpuMeshPipeline::MapQuadsFromPbo(int pbo_index, uint32_t quad_count,
+                                  GLsync *inout_fence, uint64_t timeout_ns)
 {
+  if (pbo_index < 0 || pbo_index >= kReadbackRing ||
+      ReadbackPbos[pbo_index] == 0)
+  {
+    return GpuFinishStatus::Failed;
+  }
   if (inout_fence && *inout_fence)
   {
     const GLenum wait =
@@ -483,7 +552,7 @@ UGpuMeshPipeline::MapQuadsFromPbo(uint32_t quad_count, GLsync *inout_fence,
   const GLsizeiptr quad_bytes =
       static_cast<GLsizeiptr>(quad_count * sizeof(PackedQuad));
   ScratchQuads.resize(quad_count);
-  glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbo);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[pbo_index]);
   void *mapped = glMapBufferRange(GL_COPY_WRITE_BUFFER, kReadbackQuadsOffset,
                                   quad_bytes, GL_MAP_READ_BIT);
   if (!mapped)
@@ -513,6 +582,12 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
 #else
   if (!SnapshotIsGpuExtractEligible(snapshot, registry) ||
       EmitState.PackedEmitProgram == 0)
+  {
+    return false;
+  }
+
+  const int pbo_index = AcquireReadbackSlot();
+  if (pbo_index < 0)
   {
     return false;
   }
@@ -595,10 +670,12 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
   std::array<uint32_t, 4> counters{};
-  if (!ReadCountersViaPbo(counters))
+  if (!ReadCountersViaPbo(pbo_index, counters))
   {
     glUseProgram(0);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    out_ticket.pboIndex = pbo_index;
+    ReleaseReadbackSlot(out_ticket);
     return false;
   }
   const uint32_t rect_count = counters[0];
@@ -611,6 +688,9 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
     out_ticket.coord = coord;
     out_ticket.quadCount = 0;
     out_ticket.valid = true;
+    // Counters used the slot transiently — free for next Kick.
+    out_ticket.pboIndex = pbo_index;
+    ReleaseReadbackSlot(out_ticket);
     return true;
   }
   if (rect_count > UGpuMeshSlotAllocator::kMaxQuadsPerSlot)
@@ -618,12 +698,16 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
     LOG(WARNING) << "[GpuMeshPipeline] rect overflow " << rect_count;
     glUseProgram(0);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    out_ticket.pboIndex = pbo_index;
+    ReleaseReadbackSlot(out_ticket);
     return false;
   }
 
   const GpuMeshSlot *slot = Allocator.GetSlotByIndex(slot_idx);
   if (!slot)
   {
+    out_ticket.pboIndex = pbo_index;
+    ReleaseReadbackSlot(out_ticket);
     return false;
   }
   const uint32_t slot_offset = slot->OffsetQuads;
@@ -641,8 +725,10 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
 
   Allocator.SetSlotQuadCount(slot_idx, rect_count);
   GLsync fence = nullptr;
-  if (!CopyQuadsToPbo(slot_offset, rect_count, &fence))
+  if (!CopyQuadsToPbo(pbo_index, slot_offset, rect_count, &fence))
   {
+    out_ticket.pboIndex = pbo_index;
+    ReleaseReadbackSlot(out_ticket);
     return false;
   }
   out_ticket.slotIndex = slot_idx;
@@ -650,6 +736,7 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   out_ticket.quadCount = rect_count;
   out_ticket.slotOffsetQuads = slot_offset;
   out_ticket.fence = fence;
+  out_ticket.pboIndex = pbo_index;
   out_ticket.valid = true;
   return true;
 #endif
@@ -687,6 +774,7 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
       glDeleteSync(ticket.fence);
       ticket.fence = nullptr;
     }
+    ReleaseReadbackSlot(ticket);
     return GpuFinishStatus::Ready;
   }
 
@@ -704,11 +792,12 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
       glDeleteSync(ticket.fence);
       ticket.fence = nullptr;
     }
+    ReleaseReadbackSlot(ticket);
     return GpuFinishStatus::Ready;
   }
 
-  const GpuFinishStatus map_st =
-      MapQuadsFromPbo(ticket.quadCount, &ticket.fence, timeout_ns);
+  const GpuFinishStatus map_st = MapQuadsFromPbo(
+      ticket.pboIndex, ticket.quadCount, &ticket.fence, timeout_ns);
   if (map_st == GpuFinishStatus::NotReady)
   {
     return GpuFinishStatus::NotReady;
@@ -727,6 +816,7 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
   }
   BuildRunLengthRangesFromUnsorted(ScratchQuads, registry, out_ranges,
                                    out_has_dark_face);
+  ReleaseReadbackSlot(ticket);
   return GpuFinishStatus::Ready;
 #endif
 }

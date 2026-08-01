@@ -23,6 +23,7 @@ class UGpuMeshPipeline
 {
 public:
   static constexpr uint32_t kDefaultMaxSlots = 2048;
+  static constexpr int kReadbackRing = 4;
 
   bool Init(uint32_t max_slots = kDefaultMaxSlots);
   void Shutdown();
@@ -36,7 +37,7 @@ public:
                        UBlockRegistry &registry,
                        GpuMeshProcessResult &out_result);
 
-  /// Kick upload+compute+quad copy into PBO; does not wait for quad readback.
+  /// Kick upload+compute+quad copy into a ring PBO; does not wait for quads.
   /// Counter read (16B) still syncs inside Kick (needed before packed emit).
   struct GpuApplyTicket
   {
@@ -45,6 +46,7 @@ public:
     uint32_t quadCount{0};
     uint32_t slotOffsetQuads{0};
     GLsync fence{nullptr};
+    int pboIndex{-1};
     bool valid{false};
   };
   bool KickComputePasses(const ChunkMeshSnapshot &snapshot,
@@ -66,6 +68,10 @@ public:
                            uint32_t &out_quad_count,
                            std::vector<GpuBlockDrawRange> *out_ranges,
                            bool *out_has_dark_face);
+
+  /// Free ring PBO held by ticket (CancelOutside / fail paths).
+  void ReleaseReadbackSlot(GpuApplyTicket &ticket);
+  bool HasFreeReadbackSlot() const;
 
   /// Process queued snapshots: upload → compute → write to SSBO slots.
   int ProcessQueue(UBlockRegistry &registry, int budget);
@@ -101,11 +107,13 @@ private:
   void ShutdownGpuSort();
   void EnsureReadbackPbo();
   void DestroyReadbackPbo();
-  bool ReadCountersViaPbo(std::array<uint32_t, 4> &out_counters);
-  bool CopyQuadsToPbo(uint32_t slot_offset, uint32_t quad_count, GLsync *out_fence);
+  int AcquireReadbackSlot();
+  bool ReadCountersViaPbo(int pbo_index, std::array<uint32_t, 4> &out_counters);
+  bool CopyQuadsToPbo(int pbo_index, uint32_t slot_offset, uint32_t quad_count,
+                      GLsync *out_fence);
   /// timeout_ns=0 → poll; fence kept on NotReady (TIMEOUT_EXPIRED).
-  GpuFinishStatus MapQuadsFromPbo(uint32_t quad_count, GLsync *inout_fence,
-                                  uint64_t timeout_ns);
+  GpuFinishStatus MapQuadsFromPbo(int pbo_index, uint32_t quad_count,
+                                  GLsync *inout_fence, uint64_t timeout_ns);
 
   bool Ready{false};
   GpuGreedyEmitState EmitState;
@@ -118,9 +126,9 @@ private:
   GLuint SortCountsSsbo{0};  // 1025 uint: hist[1024] + dark flag
   GLuint SortOffsetsSsbo{0}; // 1024 uint exclusive prefix (mutated by scatter)
   GLuint SortScratchSsbo{0}; // kMaxQuadsPerSlot PackedQuads
-  /// Pack=counters(16) + PackedQuad[kMaxQuads]. CopyBufferSubData + fence
-  /// replaces glGetBufferSubData flush (main-thread offload Phase 0d).
-  GLuint ReadbackPbo{0};
+  /// Ring of pack=counters(16)+PackedQuad[kMaxQuads] — multi in-flight apply.
+  GLuint ReadbackPbos[kReadbackRing]{};
+  bool ReadbackInUse[kReadbackRing]{};
   static constexpr GLintptr kReadbackCountersBytes = 16;
   static constexpr GLintptr kReadbackQuadsOffset = 16;
 #endif

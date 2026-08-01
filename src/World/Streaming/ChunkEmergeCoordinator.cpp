@@ -944,11 +944,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_schedule = std::max(mesh_schedule, gpu_cap);
     mesh_drain = std::max(mesh_drain, gpu_cap);
   }
-  // Drain-first when GPU apply backlog grows (manual 130338 pgpu mid~39):
-  // stop feeding schedule so ProcessPendingGpuMeshes can clear emerge.
+  // Drain-first when GPU apply backlog is deep (ring PBO drains ~4/frame;
+  // clamp schedule only above 24 so Dirty is not starved at healthy ~12–20).
   {
     const size_t pending_gpu = mesh_service.GetPendingGpuAppliesCount();
-    if (pending_gpu >= 16 && moving && !visual_holes)
+    if (pending_gpu >= 24 && moving && !visual_holes)
     {
       mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
       mesh_schedule = std::min(mesh_schedule, 2);
@@ -1429,8 +1429,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       !moving &&
       (missing_visible_mesh || black_sticky > 0 || focus_not_render_ready > 0 ||
        (last_frame_ms <= 20.0 && pending_focus_count > 8));
-  // Moving: never walk the Immediate ring (MarkDirty flood + solid scans).
-  // Prefer nearest missing → Dirty/async only (Immediate banned while moving).
+  // Moving: skip full Immediate ring (MarkDirty flood). Underfeet r≤1 may
+  // still Immediate when async is cold (Phase B sticky-miss fix).
   if (moving && (underfeet_need || missing_visible_mesh))
   {
     glm::ivec3 hole{};
@@ -1454,7 +1454,28 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     if (have_hole && !mesh_service.HasInflightMeshBuild(hole))
     {
-      mesh_service.MarkDirtyPriority(hole);
+      const int hole_horiz =
+          std::max(std::abs(hole.x - focus_ground_horiz.x),
+                   std::abs(hole.z - focus_ground_horiz.z));
+      const bool allow_uf_imm =
+          underfeet_need && hole_horiz <= 1 &&
+          underfeet_immediate_cd <= 0 &&
+          underfeet_immediate_this_frame < kMaxUnderfeetImmediate &&
+          pending_async < 2 && immediate_ms_used() < 8.0 &&
+          !world.IsPendingLightBeforeMesh(glm::ivec2(hole.x, hole.z));
+      if (allow_uf_imm)
+      {
+        mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
+                                           hole);
+        ++underfeet_immediate_this_frame;
+        underfeet_immediate_cd = 1;
+        GetColumnFlowExecutor().Enqueue(glm::ivec2(hole.x, hole.z),
+                                        ColumnWorkKind::FirstMesh, 110);
+      }
+      else
+      {
+        mesh_service.MarkDirtyPriority(hole);
+      }
     }
   }
   else if (underfeet_need || idle_focus_sync)
@@ -1576,12 +1597,30 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               mesh_service.MarkDirtyPriority(coord);
               continue;
             }
-            // Moving: never Immediate. Idle: ColumnFlow + Dirty only
-            // (Phase 3 — no RebuildChunkImmediate zoo / emerge spikes).
-            mesh_service.MarkDirtyPriority(coord);
+            // Phase B (174511): narrow underfeet Immediate r≤1 only — breaks
+            // sticky miss without reopening focus-ring Immediate zoo.
             GetColumnFlowExecutor().Enqueue(
                 glm::ivec2(coord.x, coord.z), ColumnWorkKind::FirstMesh, 110);
-            ++immediate;
+            const bool allow_underfeet_immediate =
+                underfeet_immediate_cd <= 0 &&
+                underfeet_immediate_this_frame < kMaxUnderfeetImmediate &&
+                immediate_ms_used() < 8.0 &&
+                ((!moving && immediate_budget_ok()) ||
+                 (moving && pending_async < 2 && immediate_ms_used() < 8.0));
+            if (allow_underfeet_immediate &&
+                std::max(std::abs(dx), std::abs(dz)) <= 1)
+            {
+              mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
+                                                 coord);
+              ++immediate;
+              ++underfeet_immediate_this_frame;
+              underfeet_immediate_cd = last_frame_ms > 20.0 ? 1 : 0;
+            }
+            else
+            {
+              mesh_service.MarkDirtyPriority(coord);
+              ++immediate;
+            }
             continue;
           }
         }

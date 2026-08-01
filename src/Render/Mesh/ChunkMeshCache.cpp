@@ -480,6 +480,10 @@ void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
 #endif
       it->ticket.fence = nullptr;
     }
+    if (GpuPipeline)
+    {
+      GpuPipeline->ReleaseReadbackSlot(it->ticket);
+    }
     GpuExtractInFlight.erase(it->coord);
     it = PendingGpuApplies.erase(it);
   }
@@ -1856,9 +1860,12 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     return budget_ms <= 0.0 || elapsed_ms() < budget_ms;
   };
 
-  // Phase 2: finish priority over kick; caps keep hitch frames bounded.
-  const int finish_cap = std::min(8, max_count);
-  const int kick_cap = std::min(8, max_count);
+  // Phase A (174511): ring PBO → up to 4 Kick/Finish per tick; no shared-PBO
+  // single-apply bottleneck. Prefer Finish over Kick when budget tight.
+  const int finish_cap =
+      std::min(UGpuMeshPipeline::kReadbackRing, std::min(4, max_count));
+  const int kick_cap =
+      std::min(UGpuMeshPipeline::kReadbackRing, std::min(4, max_count));
   int processed = 0;
   int finished = 0;
   int kicked = 0;
@@ -1875,6 +1882,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
 #endif
       pending.ticket.fence = nullptr;
     }
+    pipeline->ReleaseReadbackSlot(pending.ticket);
     pending.ticket = {};
     ActiveMeshSourceRevision.erase(pending.coord);
     Dirty.MarkDirtyPriority(pending.coord);
@@ -1918,17 +1926,15 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     return true;
   };
 
-  // Pass B: poll kicked fences (timeout=0). Shared PBO → finish at most one.
-  for (auto it = PendingGpuApplies.begin(); it != PendingGpuApplies.end();)
+  // Pass B: poll all Kicked fences (timeout=0); skip NotReady, continue others.
+  for (auto it = PendingGpuApplies.begin();
+       it != PendingGpuApplies.end() && finished < finish_cap &&
+       processed < max_count && budget_left();)
   {
     if (it->phase != PendingGpuApply::Phase::Kicked)
     {
       ++it;
       continue;
-    }
-    if (!budget_left() || finished >= finish_cap || processed >= max_count)
-    {
-      break;
     }
     PendingGpuApply pending = std::move(*it);
     it = PendingGpuApplies.erase(it);
@@ -1937,7 +1943,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     bool dropped = false;
     if (!revision_ok(pending, dropped))
     {
-      break;
+      continue;
     }
 
     GpuMeshProcessResult gpu_result;
@@ -1950,14 +1956,14 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     if (st == UGpuMeshPipeline::GpuFinishStatus::NotReady)
     {
       pending.phase = PendingGpuApply::Phase::Kicked;
-      PendingGpuApplies.push_front(std::move(pending));
-      GpuExtractInFlight.insert(PendingGpuApplies.front().coord);
-      break;
+      PendingGpuApplies.push_back(std::move(pending));
+      GpuExtractInFlight.insert(PendingGpuApplies.back().coord);
+      continue;
     }
     if (st == UGpuMeshPipeline::GpuFinishStatus::Failed)
     {
       fail_ticket(pending);
-      break;
+      continue;
     }
     gpu_result.quadCount = quad_count;
     gpu_result.transparent = pending.transparent;
@@ -1970,27 +1976,28 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       ++finished;
       ++stats.Completed;
     }
-    break; // one Kicked / shared PBO
   }
 
-  // Pass A: Kick Queued only (no sync ProcessSnapshot) — Finish next poll.
-  auto any_kicked = [&]() {
-    return std::any_of(PendingGpuApplies.begin(), PendingGpuApplies.end(),
-                       [](const PendingGpuApply &p) {
-                         return p.phase == PendingGpuApply::Phase::Kicked;
-                       });
-  };
-  while (!PendingGpuApplies.empty() && kicked < kick_cap &&
-         processed < max_count && budget_left())
+  // Pass A: Kick Queued while free ring PBO + staging; stop new kicks at 55% budget.
+  while (kicked < kick_cap && processed < max_count && budget_left() &&
+         pipeline->HasFreeReadbackSlot())
   {
-    if (any_kicked() ||
-        PendingGpuApplies.front().phase == PendingGpuApply::Phase::Kicked)
+    if (budget_ms > 0.0 && elapsed_ms() >= budget_ms * 0.55)
     {
-      break; // shared PBO — wait for finish before another Kick
+      break; // Finish-only remainder — avoid Kick counter-sync storm
+    }
+    auto queued_it =
+        std::find_if(PendingGpuApplies.begin(), PendingGpuApplies.end(),
+                     [](const PendingGpuApply &p) {
+                       return p.phase == PendingGpuApply::Phase::Queued;
+                     });
+    if (queued_it == PendingGpuApplies.end())
+    {
+      break;
     }
 
-    PendingGpuApply pending = std::move(PendingGpuApplies.front());
-    PendingGpuApplies.pop_front();
+    PendingGpuApply pending = std::move(*queued_it);
+    PendingGpuApplies.erase(queued_it);
     GpuExtractInFlight.erase(pending.coord);
 
     bool dropped = false;
@@ -2028,10 +2035,9 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     pending.transparent = has_transparent;
     pending.phase = PendingGpuApply::Phase::Kicked;
     const glm::ivec3 kicked_coord = pending.coord;
-    PendingGpuApplies.push_front(std::move(pending));
+    PendingGpuApplies.push_back(std::move(pending));
     GpuExtractInFlight.insert(kicked_coord);
     ++kicked;
-    break; // one Kick / frame until Finish (shared PBO)
   }
   return processed;
 }
