@@ -420,7 +420,8 @@ Sticky miss FirstMesh, staging GPU slots, stale FreeChunk, healed-idle emerge cl
 
 ### Rim undrawn (manual `101824`) — landed
 
-Hole SoT / `draw_ok` / Admit: empty SoftDefer (`!HasDrawable`) counts as missing.
-Undrawn heal scans `focus_radius` (cap 4 MarkDirty/tick). SoftDefer prune keeps
-`!Drawable` Dirty until MayMesh (does not RemoveAt FirstMesh-empty forever).
+Hole SoT / Admit: SoftDefer empty (`!ready`) counts as missing; intentional GPU
+0-quad (`GpuResident && QuadCount==0`) is column-ready (`HasMeshSatisfyingColumnReady`).
+`draw_ok` uses ColumnReady. Undrawn heal scans `focus_radius` (cap 4/tick). SoftDefer
+prune keeps `!Drawable` Dirty until MayMesh.
 

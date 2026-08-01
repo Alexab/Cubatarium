@@ -2027,15 +2027,21 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     {
       for (auto it = Dirty.begin(); it != Dirty.end();)
       {
-        // SoftDefer remesh: drop deferred remesh to avoid Dirty bloat. Keep
-        // !Drawable (FirstMesh / empty SoftDefer) so MayMesh can schedule later
-        // without waiting for undrawn heal / MarkRelit (manual 101824 rim).
+        // SoftDefer remesh: drop. Keep in-focus !Drawable FirstMesh until MayMesh
+        // opens; drop outside SoftDefer empties (undrawn heal re-admits in radius)
+        // so Dirty cannot plateau on deferred rim (cruise miss_stuck).
         if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
         {
-          if (!HasDrawableGreedyMesh(*it))
+          if (!HasDrawableGreedyMesh(*it) && MeshFocusValid)
           {
-            ++it;
-            continue;
+            const int horiz =
+                std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                         std::abs(it->z - MeshFocusGroundChunk.z));
+            if (horiz <= MeshFocusRadiusChunks)
+            {
+              ++it;
+              continue;
+            }
           }
           it = Dirty.RemoveAt(it);
           continue;
@@ -2261,10 +2267,15 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
       {
-        // Remesh SoftDefer: drop. FirstMesh-empty: keep until MayMesh/Unlit allow.
-        if (!HasDrawableGreedyMesh(*it))
+        if (!HasDrawableGreedyMesh(*it) && MeshFocusValid)
         {
-          return std::next(it);
+          const int horiz =
+              std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                       std::abs(it->z - MeshFocusGroundChunk.z));
+          if (horiz <= MeshFocusRadiusChunks)
+          {
+            return std::next(it);
+          }
         }
         return Dirty.RemoveAt(it);
       }
@@ -2478,11 +2489,16 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
       {
-        // Remesh SoftDefer: drop. FirstMesh-empty: keep until MayMesh/Unlit allow.
-        if (!HasDrawableGreedyMesh(*it))
+        if (!HasDrawableGreedyMesh(*it) && MeshFocusValid)
         {
-          ++it;
-          continue;
+          const int horiz =
+              std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                       std::abs(it->z - MeshFocusGroundChunk.z));
+          if (horiz <= MeshFocusRadiusChunks)
+          {
+            ++it;
+            continue;
+          }
         }
         it = Dirty.RemoveAt(it);
         continue;
