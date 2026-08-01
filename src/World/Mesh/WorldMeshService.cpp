@@ -69,6 +69,21 @@ void UWorldMeshService::SetStarveRemeshKeepHoriz(int keep_h)
   Cache.SetStarveRemeshKeepHoriz(keep_h);
 }
 
+void UWorldMeshService::SetMeshWorkAdmission(const MeshWorkAdmission &adm)
+{
+  Cache.SetMeshWorkAdmission(adm);
+}
+
+const MeshWorkAdmission &UWorldMeshService::GetMeshWorkAdmission() const
+{
+  return Cache.GetMeshWorkAdmission();
+}
+
+bool UWorldMeshService::TryConsumeDirtyAdmit()
+{
+  return Cache.TryConsumeDirtyAdmit();
+}
+
 int UWorldMeshService::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
                                                    int keep_radius, int keep_cy,
                                                    bool remesh_only)

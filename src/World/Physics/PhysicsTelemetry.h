@@ -46,6 +46,10 @@ struct PhysicsTelemetry
   int PendingGpuQueuedN{0};
   /// Kicked phase (fence outstanding); capped by readback ring.
   int PendingGpuKickedN{0};
+  /// Final mesh schedule/drain after TickMeshEmerge (MeshWorkAdmission SoT).
+  int MeshScheduleFinal{0};
+  int MeshDrainFinal{0};
+  int MeshAdmissionMode{0};
   /// Kicks issued in last RebuildDirtyChunksWithStats tick.
   int GpuKickN{0};
   /// Successful Finish+Commit in last rebuild tick.

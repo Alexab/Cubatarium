@@ -6,6 +6,7 @@
 #include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include "World/Interfaces/IUWorldMeshSink.h"
+#include "World/Streaming/MeshWorkAdmission.h"
 #include <chrono>
 #include <functional>
 #include <glm/glm.hpp>
@@ -58,6 +59,10 @@ public:
   void SetStarveOutsideFocusMesh(bool starve);
   void SetStarveRemeshForHoles(bool starve);
   void SetStarveRemeshKeepHoriz(int keep_h);
+  void SetMeshWorkAdmission(const MeshWorkAdmission &adm);
+  const MeshWorkAdmission &GetMeshWorkAdmission() const;
+  /// Consume one Dirty-admit slot for FirstMesh/Held/neighbor (false = deny).
+  bool TryConsumeDirtyAdmit();
   int DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk, int keep_radius,
                                   int keep_cy = -1, bool remesh_only = false);
   void SetSyncHoleFillRadius(int radius_chunks);

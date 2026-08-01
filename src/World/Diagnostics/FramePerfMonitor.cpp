@@ -221,6 +221,9 @@ struct FrameNumbers
   int gpu_kick_n{0};
   int gpu_finish_n{0};
   int gpu_finish_not_ready_n{0};
+  int mesh_schedule_final{0};
+  int mesh_drain_final{0};
+  int mesh_admission_mode{0};
   int miss_cx{0};
   int miss_cy{0};
   int miss_cz{0};
@@ -452,6 +455,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.gpu_kick_n = phys.GpuKickN;
   n.gpu_finish_n = phys.GpuFinishN;
   n.gpu_finish_not_ready_n = phys.GpuFinishNotReadyN;
+  n.mesh_schedule_final = phys.MeshScheduleFinal;
+  n.mesh_drain_final = phys.MeshDrainFinal;
+  n.mesh_admission_mode = phys.MeshAdmissionMode;
   n.post_load_ring_not_ready = phys.PostLoadRingNotReady;
   n.enter_game_warmup_missing_greedy = phys.EnterGameWarmupMissingGreedy;
   n.softdefer_capture_floor_hits = phys.SoftDeferCaptureFloorHits;
@@ -684,6 +690,9 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"gpu_kick_n\":" << n.gpu_kick_n
           << ",\"gpu_finish_n\":" << n.gpu_finish_n
           << ",\"gpu_finish_not_ready_n\":" << n.gpu_finish_not_ready_n
+          << ",\"mesh_schedule_final\":" << n.mesh_schedule_final
+          << ",\"mesh_drain_final\":" << n.mesh_drain_final
+          << ",\"mesh_admission_mode\":" << n.mesh_admission_mode
           << ",\"post_load_ring_not_ready\":" << n.post_load_ring_not_ready
           << ",\"enter_game_warmup_missing_greedy\":"
           << n.enter_game_warmup_missing_greedy

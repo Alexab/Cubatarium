@@ -13,6 +13,7 @@
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
+#include "World/Streaming/MeshWorkAdmission.h"
 #include <algorithm>
 #include <chrono>
 #include <climits>
@@ -257,6 +258,21 @@ public:
   void SetStarveRemeshKeepHoriz(int keep_h)
   {
     StarveRemeshKeepHoriz = std::max(0, keep_h);
+  }
+  void SetMeshWorkAdmission(const MeshWorkAdmission &adm)
+  {
+    WorkAdmission = adm;
+    DirtyAdmitRemaining = std::max(0, adm.dirty_admit_budget);
+  }
+  const MeshWorkAdmission &GetMeshWorkAdmission() const { return WorkAdmission; }
+  bool TryConsumeDirtyAdmit()
+  {
+    if (DirtyAdmitRemaining <= 0)
+    {
+      return false;
+    }
+    --DirtyAdmitRemaining;
+    return true;
   }
   /// Drop Dirty beyond keep shell (Chebyshev horiz + optional |cy|).
   /// remesh_only: only drop entries that already have greedy mesh (or are in
@@ -504,6 +520,8 @@ private:
   bool StarveOutsideFocusMesh{false};
   bool StarveRemeshForHoles{false};
   int StarveRemeshKeepHoriz{2};
+  MeshWorkAdmission WorkAdmission{};
+  int DirtyAdmitRemaining{8};
   /// SyncRebuildVisibleMissing: fill missing within this Chebyshev radius.
   int SyncHoleFillRadius{1};
   int MaxOutsideFocusMeshPerFrame{2};

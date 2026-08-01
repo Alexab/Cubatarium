@@ -19,6 +19,10 @@ public:
     int MaxLoadOps{4};
     int MaxMeshDrain{8};
     int MaxMeshSchedule{8};
+    /// MeshWorkAdmission::Mode after TickMeshEmerge finalize (0=Normal…).
+    int AdmissionMode{0};
+    int DirtyAdmitBudget{8};
+    int GpuApplyMax{4};
   };
 
   static constexpr int kDefaultMeshDrain = 12;

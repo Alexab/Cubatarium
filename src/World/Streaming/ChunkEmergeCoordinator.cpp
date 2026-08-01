@@ -4,6 +4,7 @@
 #include "World/Streaming/ColumnRenderablePolicy.h"
 #include "World/Streaming/FocusIngressPolicy.h"
 #include "World/Streaming/MeshLitGate.h"
+#include "World/Streaming/MeshWorkAdmission.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Camera/Camera.h"
 #include "World/Chunks/ChunkManager.h"
@@ -2066,6 +2067,26 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   else if (pending_gpu_n >= 12 && (visual_holes || missing_visible_mesh))
   {
     mesh_schedule = std::min(mesh_schedule, 4);
+  }
+  // E0: compute MeshWorkAdmission (stash for producers/consumer) + honest
+  // LastBudget SoT. Finalize* applied in E1 (replaces ad-hoc clamps above).
+  {
+    MeshWorkAdmissionInput ain{};
+    ain.pending_gpu = pending_gpu_n;
+    ain.pending_gpu_queued = mesh_service.GetPendingGpuQueuedCount();
+    ain.pending_gpu_kicked = mesh_service.GetPendingGpuKickedCount();
+    ain.visual_holes = visual_holes || missing_visible_mesh;
+    ain.missing_underfeet = missing_underfeet;
+    ain.moving = moving;
+    ain.pending_light_near = pending_focus_count;
+    ain.unfinished_visual = world.GetPhysicsTelemetry().UnfinishedVisual;
+    const MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
+    mesh_service.SetMeshWorkAdmission(adm);
+    LastBudget.MaxMeshSchedule = mesh_schedule;
+    LastBudget.MaxMeshDrain = mesh_drain;
+    LastBudget.AdmissionMode = static_cast<int>(adm.mode);
+    LastBudget.DirtyAdmitBudget = adm.dirty_admit_budget;
+    LastBudget.GpuApplyMax = adm.gpu_apply_max;
   }
   MeshRebuildTickStats tick_stats{};
   {

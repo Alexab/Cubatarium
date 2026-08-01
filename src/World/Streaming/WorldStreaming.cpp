@@ -851,6 +851,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetMeshService().GetPendingGpuQueuedCount());
     world.PhysicsTelemetryData.PendingGpuKickedN = static_cast<int>(
         world.GetMeshService().GetPendingGpuKickedCount());
+    {
+      const auto &budget = EmergeCoordinator->GetLastBudget();
+      world.PhysicsTelemetryData.MeshScheduleFinal = budget.MaxMeshSchedule;
+      world.PhysicsTelemetryData.MeshDrainFinal = budget.MaxMeshDrain;
+      world.PhysicsTelemetryData.MeshAdmissionMode = budget.AdmissionMode;
+    }
     world.PhysicsTelemetryData.GpuKickN =
         world.GetMeshService().GetLastGpuKickN();
     world.PhysicsTelemetryData.GpuFinishN =

@@ -1,4 +1,5 @@
 #include "World/Streaming/MeshLitGate.h"
+#include "World/Streaming/MeshWorkAdmission.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
 #include "World/Streaming/ColumnFlowScheduler.h"
 
@@ -14,6 +15,11 @@ using cutum::ColumnSoTKind;
 using cutum::EnqueueStickyStaleRepairTickets;
 using cutum::UColumnFlowScheduler;
 using cutum::ColumnWorkKind;
+using cutum::ComputeMeshWorkAdmission;
+using cutum::FinalizeDrain;
+using cutum::FinalizeSchedule;
+using cutum::MeshWorkAdmission;
+using cutum::MeshWorkAdmissionInput;
 
 static int failures = 0;
 
@@ -138,6 +144,50 @@ int main()
     Expect(sched.Contains(sticky[0], ColumnWorkKind::PromoteRelight) ||
                sched.Contains(sticky[0], ColumnWorkKind::RemeshSeam),
            "sticky near → live repair ticket kinds");
+  }
+
+  // MeshWorkAdmission: floors propose, Finalize caps under backlog.
+  {
+    MeshWorkAdmissionInput normal{};
+    normal.pending_gpu = 4;
+    const auto a0 = ComputeMeshWorkAdmission(normal);
+    Expect(a0.mode == MeshWorkAdmission::Mode::Normal, "pending<12 → Normal");
+    Expect(FinalizeSchedule(16, a0) == 16, "Normal Finalize passthrough schedule");
+
+    MeshWorkAdmissionInput warm{};
+    warm.pending_gpu = 14;
+    warm.visual_holes = false;
+    const auto a1 = ComputeMeshWorkAdmission(warm);
+    Expect(a1.mode == MeshWorkAdmission::Mode::WarmBacklog, "pending>=12 !holes → Warm");
+    Expect(FinalizeSchedule(16, a1) == 6, "Warm caps schedule at 6");
+    Expect(a1.gpu_apply_max >= 16, "Warm GPU boost");
+
+    MeshWorkAdmissionInput hole{};
+    hole.pending_gpu = 14;
+    hole.pending_gpu_queued = 10;
+    hole.visual_holes = true;
+    const auto a2 = ComputeMeshWorkAdmission(hole);
+    Expect(a2.mode == MeshWorkAdmission::Mode::HoleDrain, "pending+holes → HoleDrain");
+    Expect(FinalizeSchedule(16, a2) == 4, "HoleDrain schedule<=4");
+    Expect(!a2.allow_neighbor_dirty, "HoleDrain denies neighbor Dirty");
+    Expect(a2.admit_batch == 1, "HoleDrain admit_batch=1");
+    Expect(a2.gpu_apply_max >= 16, "HoleDrain GPU boost under miss");
+    Expect(FinalizeDrain(4, a2) >= 12, "HoleDrain drain floor");
+
+    MeshWorkAdmissionInput warm_hole{};
+    warm_hole.pending_gpu = 18;
+    warm_hole.visual_holes = true;
+    const auto a3 = ComputeMeshWorkAdmission(warm_hole);
+    Expect(a3.mode == MeshWorkAdmission::Mode::HoleDrain, "pending>=16+holes still HoleDrain");
+    Expect(FinalizeSchedule(16, a3) == 2, "warm holes schedule<=2");
+
+    MeshWorkAdmissionInput deep{};
+    deep.pending_gpu = 30;
+    deep.visual_holes = true;
+    const auto a4 = ComputeMeshWorkAdmission(deep);
+    Expect(a4.mode == MeshWorkAdmission::Mode::DeepBacklog, "pending>=24 → Deep");
+    Expect(FinalizeSchedule(16, a4) == 2, "Deep schedule<=2");
+    Expect(a4.softdefer_requeue == 0, "Deep Held requeue 0");
   }
 
   if (failures != 0)
