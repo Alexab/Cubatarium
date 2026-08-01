@@ -2088,6 +2088,23 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_service.SetMeshWorkAdmission(adm);
     mesh_schedule = FinalizeSchedule(mesh_schedule, adm);
     mesh_drain = FinalizeDrain(mesh_drain, adm);
+    mesh_service.SetStarveRemeshKeepHoriz(adm.starve_remesh_horiz);
+    if ((visual_holes || missing_underfeet || missing_visible_mesh) &&
+        adm.mode != MeshWorkAdmission::Mode::Normal)
+    {
+      mesh_service.SetStarveRemeshForHoles(true);
+    }
+    if (adm.promote_relight > 0)
+    {
+      auto &exec = GetColumnFlowExecutor();
+      exec.RequestPromoteRelight(
+          glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 95);
+      // Async FIFO only — never sync RelightTerrainColumn on moving hot path.
+      exec.DrainIdlePendingLight(world, focus_ground_horiz, focus_radius,
+                                 adm.promote_relight, /*allow_sync=*/false,
+                                 last_frame_ms, pending_focus_count,
+                                 missing_visible_mesh);
+    }
     if (adm.mode == MeshWorkAdmission::Mode::HoleDrain ||
         adm.mode == MeshWorkAdmission::Mode::DeepBacklog)
     {
