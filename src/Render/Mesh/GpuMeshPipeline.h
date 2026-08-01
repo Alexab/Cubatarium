@@ -7,6 +7,7 @@
 #include "Render/Mesh/PackedQuad.h"
 #include "Render/GlIncludes.h"
 #include "Blocks/BlockRegistry.h"
+#include <array>
 #include <glm/glm.hpp>
 #include <memory>
 #include <queue>
@@ -34,6 +35,26 @@ public:
   bool ProcessSnapshot(const ChunkMeshSnapshot &snapshot,
                        UBlockRegistry &registry,
                        GpuMeshProcessResult &out_result);
+
+  /// Kick upload+compute+quad copy into PBO; does not wait for quad readback.
+  /// Counter read (16B) still syncs inside Kick (needed before packed emit).
+  struct GpuApplyTicket
+  {
+    int slotIndex{-1};
+    glm::ivec3 coord{0};
+    uint32_t quadCount{0};
+    uint32_t slotOffsetQuads{0};
+    GLsync fence{nullptr};
+    bool valid{false};
+  };
+  bool KickComputePasses(const ChunkMeshSnapshot &snapshot,
+                         UBlockRegistry &registry, glm::ivec3 coord,
+                         int slot_idx, GpuApplyTicket &out_ticket);
+  /// Wait fence, map PBO quads, build RLE ranges (Phase 0d/2).
+  bool FinishComputePasses(GpuApplyTicket &ticket, UBlockRegistry &registry,
+                           uint32_t &out_quad_count,
+                           std::vector<GpuBlockDrawRange> *out_ranges,
+                           bool *out_has_dark_face);
 
   /// Process queued snapshots: upload → compute → write to SSBO slots.
   int ProcessQueue(UBlockRegistry &registry, int budget);
@@ -67,6 +88,11 @@ private:
                         bool *out_has_dark_face);
 
   void ShutdownGpuSort();
+  void EnsureReadbackPbo();
+  void DestroyReadbackPbo();
+  bool ReadCountersViaPbo(std::array<uint32_t, 4> &out_counters);
+  bool CopyQuadsToPbo(uint32_t slot_offset, uint32_t quad_count, GLsync *out_fence);
+  bool MapQuadsFromPbo(uint32_t quad_count, GLsync fence);
 
   bool Ready{false};
   GpuGreedyEmitState EmitState;
@@ -79,6 +105,11 @@ private:
   GLuint SortCountsSsbo{0};  // 1025 uint: hist[1024] + dark flag
   GLuint SortOffsetsSsbo{0}; // 1024 uint exclusive prefix (mutated by scatter)
   GLuint SortScratchSsbo{0}; // kMaxQuadsPerSlot PackedQuads
+  /// Pack=counters(16) + PackedQuad[kMaxQuads]. CopyBufferSubData + fence
+  /// replaces glGetBufferSubData flush (main-thread offload Phase 0d).
+  GLuint ReadbackPbo{0};
+  static constexpr GLintptr kReadbackCountersBytes = 16;
+  static constexpr GLintptr kReadbackQuadsOffset = 16;
 #endif
 
   /// CPU fallback when GPU sort programs unavailable.

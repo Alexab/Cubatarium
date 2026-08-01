@@ -1270,13 +1270,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       }
     }
   }
-  // TD-ARCH-030: SoftDefer FOV unfinished / missing → Capture floor.
-  // Missing mesh alone must Capture even when pending_light_focus==0 —
-  // otherwise UnlitFirstMesh Dirty sits while Capture never runs
-  // (manual 213546 miss_stuck 18s with softd only when pend>0).
-  // Use SoT UnfinishedVisual / missing — NOT FocusNotRenderReady pressure
-  // proxy (pending+dirty) — that Capture'd every cruise period with uv=0 and
-  // inflated wall_med past ARCH_D3 ≤30.
+  // TD-ARCH-030 / Phase 3: SoftDefer unfinished / missing → ColumnFlow ticket
+  // (cap 1/tick). Do NOT inflate bg_budget Capture floor every period
+  // (manual 130338 SoftDefer thrash +329).
   {
     const int unfinished = world.PhysicsTelemetryData.UnfinishedVisual;
     world.PhysicsTelemetryData.SoftDeferCaptureBudget = 0;
@@ -1294,8 +1290,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       if (floor_budget > 0)
       {
         ++world.PhysicsTelemetryData.SoftDeferCaptureFloorHits;
+        auto &exec = GetColumnFlowExecutor();
+        const ColumnWorkKind kind = missing_focus_mesh
+                                        ? ColumnWorkKind::FirstMesh
+                                        : ColumnWorkKind::RelightThenMesh;
+        exec.Enqueue(glm::ivec2(focus_horiz.x, focus_horiz.z), kind, 90);
+        exec.DrainBudget(world, 1, focus_horiz, focus_radius, /*admit_batch=*/1);
       }
-      bg_budget = std::max(bg_budget, floor_budget);
       if (rim_first_mesh_sla)
       {
         bg_budget = std::min(bg_budget, moving_now ? 1 : 2);
@@ -2062,7 +2063,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
           static_cast<double>(fog_tune.FogPullInShrinkSec);
       const double kFogPullInSevereWallMs =
           static_cast<double>(fog_tune.FogPullInSevereWallMs);
-      constexpr int kFogHoleHoldFrames = 90; // ~1.5s latch after holes clear
+      // Shorter latch + fast decay when miss=0 (manual 130338: fog_debt=1
+      // forever while unfinished refreshed 90-frame hold → opaque~279).
+      constexpr int kFogHoleHoldFrames = 30;
+      constexpr int kFogHoleDecayPerFrame = 3;
       int fog_rd = effectiveRenderDistance;
       int fog_margin = render.DistanceFogEndMarginBlocks;
       float fog_start_ratio = effectiveFogStartRatio;
@@ -2086,18 +2090,23 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         const int unfinished = phys.UnfinishedVisual;
         const int unfinished_ahead = phys.FocusUnfinishedAhead;
         const int gpu_pending = phys.PendingGpuAppliesN;
-        // Latch only on visual holes / unfinished. gpu_pending alone kept
-        // FogRdMin+margin140 for the whole cruise while miss=uv=0
-        // (manual 213546: fog strip around drawn underfeet).
+        // Latch on visual holes, or unfinished only while focus still missing
+        // mesh. Unfinished alone (dark/culled) must not refresh hold forever.
         const bool hole_debt_now =
-            phys.VisualHoles > 0 || unfinished > 0;
+            phys.VisualHoles > 0 ||
+            (unfinished > 0 && phys.FocusMissingMesh > 0);
         if (hole_debt_now)
         {
           FogPullInHoleHoldFrames = kFogHoleHoldFrames;
         }
         else if (FogPullInHoleHoldFrames > 0)
         {
-          --FogPullInHoleHoldFrames;
+          const int decay =
+              (phys.FocusMissingMesh == 0 && phys.VisualHoles == 0)
+                  ? kFogHoleDecayPerFrame
+                  : 1;
+          FogPullInHoleHoldFrames =
+              std::max(0, FogPullInHoleHoldFrames - decay);
         }
         const bool hole_debt = FogPullInHoleHoldFrames > 0;
         world.PhysicsTelemetryData.FogHoleDebt = hole_debt ? 1 : 0;
@@ -2137,8 +2146,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
           }
         }
         // Wall alone must NOT shrink fog (cruise wall med≈80 → flicker). Only
-        // reinforce while already in hole latch, or on severe hitch.
-        if (hole_debt && (phys.StreamPressure >= 2 || wall_ms > kFogPullInSevereWallMs))
+        // reinforce while already in hole latch with real missing mesh, or on
+        // severe hitch (skip when miss=0 — manual 130338 opaque plateau).
+        if (hole_debt && phys.FocusMissingMesh > 0 &&
+            (phys.StreamPressure >= 2 || wall_ms > kFogPullInSevereWallMs))
         {
           target = std::min(target, target - 1);
           target_margin += 8;

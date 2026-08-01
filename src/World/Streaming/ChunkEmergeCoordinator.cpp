@@ -944,6 +944,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_schedule = std::max(mesh_schedule, gpu_cap);
     mesh_drain = std::max(mesh_drain, gpu_cap);
   }
+  // Drain-first when GPU apply backlog grows (manual 130338 pgpu mid~39):
+  // stop feeding schedule so ProcessPendingGpuMeshes can clear emerge.
+  {
+    const size_t pending_gpu = mesh_service.GetPendingGpuAppliesCount();
+    if (pending_gpu >= 16 && moving && !visual_holes)
+    {
+      mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
+      mesh_schedule = std::min(mesh_schedule, 2);
+      mesh_drain = std::max(mesh_drain, 12);
+    }
+  }
   if (focus_not_render_ready > 12 && pending_async_early < 10)
   {
     mesh_schedule = std::max(mesh_schedule, 14);

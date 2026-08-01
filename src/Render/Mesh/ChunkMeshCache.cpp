@@ -16,6 +16,7 @@
 #include "Render/Mesh/IUChunkCull.h"
 #include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Mesh/MeshLightSampling.h"
+#include "Render/GlIncludes.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/GridMath.h"
 #include <algorithm>
@@ -337,6 +338,7 @@ void UChunkMeshCache::MarkAllDirty()
   GreedyTransparentRefs.clear();
   MeshRevisions.Clear();
   ActiveMeshSourceRevision.clear();
+  CaptureStore.InvalidateAll();
   ++MeshRevision;
   InstancesDirty = true;
   GreedyBatchesDirty = true;
@@ -985,6 +987,19 @@ bool UChunkMeshCache::FindNearestMissingGreedyMesh(
 void UChunkMeshCache::BumpChunkMeshRevision(glm::ivec3 chunk_coord)
 {
   MeshRevisions.Bump(chunk_coord);
+  CaptureStore.Invalidate(chunk_coord);
+}
+
+void UChunkMeshCache::PrefetchMeshCapture(const UBlockWorld &world,
+                                          glm::ivec3 chunk_coord)
+{
+  const uint64_t rev = MeshRevisions.Current(chunk_coord);
+  CaptureStore.CaptureAndStore(world, chunk_coord, rev);
+}
+
+void UChunkMeshCache::InvalidateMeshCapture(glm::ivec3 chunk_coord)
+{
+  CaptureStore.Invalidate(chunk_coord);
 }
 
 void UChunkMeshCache::InvalidateInFlightMeshBuild(glm::ivec3 chunk_coord)
@@ -1299,6 +1314,8 @@ void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
   Dirty.Erase(chunkCoord);
   MeshRevisions.Erase(chunkCoord);
   ActiveMeshSourceRevision.erase(chunkCoord);
+  CaptureStore.Invalidate(chunkCoord);
+  SoftDeferHeld.erase(chunkCoord);
   GreedyBatchesDirty = true;
   if (chunkCoord.y == 0)
   {
@@ -1338,6 +1355,8 @@ void UChunkMeshCache::RemoveColumn(glm::ivec3 ground_coord, int max_cy)
     Dirty.Erase(slice);
     MeshRevisions.Erase(slice);
     ActiveMeshSourceRevision.erase(slice);
+    CaptureStore.Invalidate(slice);
+    SoftDeferHeld.erase(slice);
     if (AsyncBuilder)
     {
       AsyncBuilder->ForgetInflight(slice);
@@ -1802,18 +1821,114 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   }
 
   const auto t0 = std::chrono::high_resolution_clock::now();
+  auto elapsed_ms = [&]() {
+    return std::chrono::duration<double, std::milli>(
+               std::chrono::high_resolution_clock::now() - t0)
+        .count();
+  };
+  auto budget_left = [&]() {
+    return budget_ms <= 0.0 || elapsed_ms() < budget_ms;
+  };
+
   int processed = 0;
-  while (!PendingGpuApplies.empty() && processed < max_count)
-  {
-    if (budget_ms > 0.0)
+
+  auto fail_ticket = [&](PendingGpuApply &pending) {
+    if (pending.ticket.valid && pending.ticket.slotIndex >= 0)
     {
-      const double elapsed = std::chrono::duration<double, std::milli>(
-                                 std::chrono::high_resolution_clock::now() - t0)
-                                 .count();
-      if (elapsed >= budget_ms)
+      pipeline->GetAllocator().FreeSlotByIndex(pending.ticket.slotIndex);
+    }
+    if (pending.ticket.fence)
+    {
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+      glDeleteSync(pending.ticket.fence);
+#endif
+      pending.ticket.fence = nullptr;
+    }
+    ActiveMeshSourceRevision.erase(pending.coord);
+    Dirty.MarkDirtyPriority(pending.coord);
+  };
+
+  auto commit_from_ticket = [&](PendingGpuApply &pending) -> bool {
+    GpuMeshProcessResult gpu_result;
+    gpu_result.success = true;
+    gpu_result.slotIndex = pending.ticket.slotIndex;
+    uint32_t quad_count = 0;
+    if (!pipeline->FinishComputePasses(pending.ticket, registry, quad_count,
+                                       &gpu_result.blockRanges,
+                                       &gpu_result.hasFullyDarkFace))
+    {
+      fail_ticket(pending);
+      return false;
+    }
+    gpu_result.quadCount = quad_count;
+    gpu_result.transparent = pending.transparent;
+    // Transparent flag was set at AllocateStagingSlot — stored on pending.
+    ActiveMeshSourceRevision.erase(pending.coord);
+    if (CommitGpuMeshResult(world, registry, pending.coord,
+                            pending.sourceRevision, std::move(gpu_result),
+                            std::move(pending.crossCenters)))
+    {
+      ++processed;
+      ++stats.Completed;
+      return true;
+    }
+    return false;
+  };
+
+  // Pass B: finish deferred Kick (shared PBO — at most one Kicked).
+  for (auto it = PendingGpuApplies.begin(); it != PendingGpuApplies.end();)
+  {
+    if (it->phase != PendingGpuApply::Phase::Kicked)
+    {
+      ++it;
+      continue;
+    }
+    if (!budget_left() || processed >= max_count)
+    {
+      break;
+    }
+    PendingGpuApply pending = std::move(*it);
+    it = PendingGpuApplies.erase(it);
+    GpuExtractInFlight.erase(pending.coord);
+
+    const uint64_t expected_revision = MeshRevisions.Current(pending.coord);
+    const auto revisionIt = ActiveMeshSourceRevision.find(pending.coord);
+    const bool has_active = revisionIt != ActiveMeshSourceRevision.end();
+    const uint64_t active_rev = has_active ? revisionIt->second : 0;
+    const MeshApplyRevDecision decision = ClassifyMeshApplyRevision(
+        has_active, active_rev, pending.sourceRevision, expected_revision);
+    if (decision == MeshApplyRevDecision::DropNoActive)
+    {
+      fail_ticket(pending);
+      if (!HasDrawableGreedyMesh(pending.coord) && !Dirty.Contains(pending.coord))
       {
-        break;
+        Dirty.MarkDirtyPriority(pending.coord);
       }
+      break;
+    }
+    if (decision == MeshApplyRevDecision::DiscardOlderKeepActive)
+    {
+      fail_ticket(pending);
+      ++MeshApplySupersededCount;
+      break;
+    }
+    if (decision == MeshApplyRevDecision::RemeshObsoleteTracked)
+    {
+      fail_ticket(pending);
+      ++MeshApplyStaleCount;
+      Dirty.MarkDirty(pending.coord);
+      break;
+    }
+    commit_from_ticket(pending);
+    break; // only one Kicked / shared PBO
+  }
+
+  // Pass A: Kick Queued; defer Finish to next frame when backlog + budget tight.
+  while (!PendingGpuApplies.empty() && processed < max_count && budget_left())
+  {
+    if (PendingGpuApplies.front().phase == PendingGpuApply::Phase::Kicked)
+    {
+      break; // wait for Pass B next tick
     }
 
     PendingGpuApply pending = std::move(PendingGpuApplies.front());
@@ -1828,11 +1943,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         has_active, active_rev, pending.sourceRevision, expected_revision);
     if (decision == MeshApplyRevDecision::DropNoActive)
     {
-      // CancelOutside / Invalidate cleared Active. If nothing drawable remains,
-      // re-queue FirstMesh — silent drop left forever-holes that place-block
-      // instantly healed (manual 215919). Guard dirty to avoid apply thrash.
-      if (!HasDrawableGreedyMesh(pending.coord) &&
-          !Dirty.Contains(pending.coord))
+      if (!HasDrawableGreedyMesh(pending.coord) && !Dirty.Contains(pending.coord))
       {
         Dirty.MarkDirtyPriority(pending.coord);
       }
@@ -1847,29 +1958,70 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     {
       ActiveMeshSourceRevision.erase(pending.coord);
       ++MeshApplyStaleCount;
-      Dirty.MarkDirty(pending.coord); // Remesh class, not FirstMesh
+      Dirty.MarkDirty(pending.coord);
       continue;
     }
 
-    GpuMeshProcessResult gpu_result;
-    if (!pipeline->ProcessSnapshot(pending.snapshot, registry, gpu_result) ||
-        !gpu_result.success)
+    bool has_transparent = false;
+    for (BlockId id : pending.snapshot.blocks)
     {
+      if (id != 0 && (registry.IsTransparent(id) ||
+                      registry.GetRenderStyle(id) == BlockRenderStyle::Cutout))
+      {
+        has_transparent = true;
+        break;
+      }
+    }
+    // Use ProcessSnapshot path via Kick for staging allocation consistency.
+    const bool defer_finish =
+        PendingGpuApplies.size() >= 8 && budget_ms > 0.0 &&
+        elapsed_ms() >= budget_ms * 0.55;
+
+    // Kick via full ProcessSnapshot when finishing same frame (staging+commit).
+    if (!defer_finish)
+    {
+      GpuMeshProcessResult gpu_result;
+      if (!pipeline->ProcessSnapshot(pending.snapshot, registry, gpu_result) ||
+          !gpu_result.success)
+      {
+        ActiveMeshSourceRevision.erase(pending.coord);
+        Dirty.MarkDirtyPriority(pending.coord);
+        continue;
+      }
       ActiveMeshSourceRevision.erase(pending.coord);
-      // ProcessSnapshot frees its staging slot on failure; do not FreeChunk —
-      // that would drop a still-live committed mesh.
+      if (CommitGpuMeshResult(world, registry, pending.coord,
+                              pending.sourceRevision, std::move(gpu_result),
+                              std::move(pending.crossCenters)))
+      {
+        ++processed;
+        ++stats.Completed;
+      }
+      continue;
+    }
+
+    // Deferred: allocate staging + Kick only; Finish next frame (Phase 2).
+    const int slot_idx =
+        pipeline->GetAllocator().AllocateStagingSlot(has_transparent);
+    if (slot_idx < 0)
+    {
+      PendingGpuApplies.push_front(std::move(pending));
+      GpuExtractInFlight.insert(PendingGpuApplies.front().coord);
+      break;
+    }
+    if (!pipeline->KickComputePasses(pending.snapshot, registry, pending.coord,
+                                     slot_idx, pending.ticket))
+    {
+      pipeline->GetAllocator().FreeSlotByIndex(slot_idx);
+      ActiveMeshSourceRevision.erase(pending.coord);
       Dirty.MarkDirtyPriority(pending.coord);
       continue;
     }
-
-    ActiveMeshSourceRevision.erase(pending.coord);
-    if (CommitGpuMeshResult(world, registry, pending.coord,
-                            pending.sourceRevision, std::move(gpu_result),
-                            std::move(pending.crossCenters)))
-    {
-      ++processed;
-      ++stats.Completed;
-    }
+    pending.transparent = has_transparent;
+    pending.phase = PendingGpuApply::Phase::Kicked;
+    const glm::ivec3 kicked_coord = pending.coord;
+    PendingGpuApplies.push_front(std::move(pending));
+    GpuExtractInFlight.insert(kicked_coord);
+    break;
   }
   return processed;
 }
@@ -2073,6 +2225,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   MeshRebuildTickStats stats;
   LastMeshSyncMs = 0.0;
   LastMeshSnapshotMs = 0.0;
+  CaptureRefreshBudgetLeft = 4;
   LastMeshDirtyTickMs = 0.0;
   bool mesh_data_changed = false;
 
@@ -2164,13 +2317,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     if (MeshFocusValid)
     {
       // missing → effective horiz (forward bias) → preferred cy.
-      // Full stable_sort on Dirty~650 dominated mesh_dirty_tick (~100ms) while
-      // schedule budget is only a handful — partial_sort the front window.
-      constexpr size_t kMinSortFront = 64;
+      // Full sort on Dirty~174–278 still dominated dirty_tick (manual 130338);
+      // always partial_sort above 96 with a tighter front window.
+      constexpr size_t kPartialSortThreshold = 96;
+      constexpr size_t kMinSortFront = 48;
       const size_t sort_front = std::max(
           kMinSortFront,
-          static_cast<size_t>(std::max(8, max_schedule_per_frame) * 8 + 32));
-      if (Dirty.GetCount() > sort_front * 2)
+          static_cast<size_t>(std::max(8, max_schedule_per_frame) * 4 + 16));
+      if (Dirty.GetCount() > kPartialSortThreshold)
       {
         Dirty.PartialSortByDistanceKey(
             MeshFocusGroundChunk, MeshVerticalPreferredCy, MeshPreferLowerCy,
@@ -2269,12 +2423,17 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
               : std::max(6.0, MeshEmergeTotalBudgetMs * 0.5);
       int gpu_max =
           std::max(3, std::max(max_drain_per_frame, max_schedule_per_frame));
-      // Aggressive drain only when schedule clamp can starve apply (healed
-      // undrawn + pending_gpu backlog). With focus holes keep base caps.
+      // Drain-first: healed backlog or deep queue — spend emerge on apply.
       if (!focus_missing && pending_n >= 12)
       {
         gpu_max = std::max(gpu_max, 16);
         gpu_budget = std::max(gpu_budget, MeshEmergeTotalBudgetMs * 0.75);
+      }
+      if (pending_n >= 24 || (!focus_missing && pending_n >= 12))
+      {
+        gpu_max = std::max(gpu_max, pending_n >= 24 ? 24 : 16);
+        gpu_budget = std::max(gpu_budget, MeshEmergeTotalBudgetMs * 0.85);
+        max_schedule_per_frame = std::min(max_schedule_per_frame, 1);
       }
       const int gpu_done = ProcessPendingGpuMeshes(world, registry, gpu_max,
                                                  gpu_budget, stats);
@@ -2371,8 +2530,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       const uint64_t source_revision = MeshRevisions.Current(*it);
       const auto snap_t0 = std::chrono::high_resolution_clock::now();
-      ChunkMeshSnapshot snapshot =
-          ChunkMeshSnapshot::Capture(world, *it, source_revision);
+      ChunkMeshSnapshot snapshot = CaptureStore.TakeOrRefresh(
+          world, *it, source_revision, CaptureRefreshBudgetLeft);
       LastMeshSnapshotMs += std::chrono::duration<double, std::milli>(
                                 std::chrono::high_resolution_clock::now() -
                                 snap_t0)
@@ -2597,8 +2756,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       const uint64_t source_revision = MeshRevisions.Current(*it);
       const auto snap_t0 = std::chrono::high_resolution_clock::now();
-      ChunkMeshSnapshot snapshot =
-          ChunkMeshSnapshot::Capture(world, *it, source_revision);
+      ChunkMeshSnapshot snapshot = CaptureStore.TakeOrRefresh(
+          world, *it, source_revision, CaptureRefreshBudgetLeft);
       LastMeshSnapshotMs += std::chrono::duration<double, std::milli>(
                                 std::chrono::high_resolution_clock::now() -
                                 snap_t0)

@@ -1128,6 +1128,15 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
   // Primary may be absent from relit_chunks (chunk unload / empty apply slice).
   // Still drop SoftDefer gate — otherwise PendingLight waits forever
   // (manual 220951: pf/fdm stuck at 1 while other columns drained).
+  // TD-ARCH-015: warm Capture store after Dirty revisions so schedule skips
+  // live GetChunk shell Capture in the hot tick.
+  if (MeshService && !relit_chunks.empty())
+  {
+    for (const glm::ivec3 &coord : relit_chunks)
+    {
+      MeshService->PrefetchMeshCapture(GetBlockWorld(), coord);
+    }
+  }
   if (!finalize_pending_gate || !MeshService)
   {
     return;

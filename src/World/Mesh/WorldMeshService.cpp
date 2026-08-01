@@ -146,6 +146,12 @@ void UWorldMeshService::MarkDirtyPriority(glm::ivec3 chunk_coord)
   NotifyChunkBlocksChanged(chunk_coord);
 }
 
+void UWorldMeshService::PrefetchMeshCapture(const UBlockWorld &world,
+                                            glm::ivec3 chunk_coord)
+{
+  Cache.PrefetchMeshCapture(world, chunk_coord);
+}
+
 void UWorldMeshService::RequestRemeshAfterApply(glm::ivec3 chunk_coord)
 {
   Cache.RequestRemeshAfterApply(chunk_coord);

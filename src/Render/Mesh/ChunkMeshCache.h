@@ -8,6 +8,7 @@
 #include "Render/Mesh/FluidSurfaceColumnSlice.h"
 #include "Render/Mesh/GpuPackedMeshTypes.h"
 #include "Render/Mesh/GpuMeshPipeline.h"
+#include "Render/Mesh/MeshCaptureStore.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "World/Chunks/ChunkManager.h"
@@ -126,6 +127,11 @@ public:
   bool HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const;
   /// SoftDeferHeld side-set size (outside-focus !Drawable FirstMesh).
   size_t GetSoftDeferHeldCount() const { return SoftDeferHeld.size(); }
+  /// Prefetch immutable Capture into store (MarkRelit / commit). Main only.
+  void PrefetchMeshCapture(const UBlockWorld &world, glm::ivec3 chunk_coord);
+  void InvalidateMeshCapture(glm::ivec3 chunk_coord);
+  UMeshCaptureStore &GetCaptureStore() { return CaptureStore; }
+  const UMeshCaptureStore &GetCaptureStore() const { return CaptureStore; }
   bool IsGpuExtractInFlight(glm::ivec3 chunk_coord) const;
   bool IsPendingGpuApply(glm::ivec3 chunk_coord) const;
   /// True if any non-bottom greedy vertex has sky+block light == 0.
@@ -377,10 +383,18 @@ private:
   };
   struct PendingGpuApply
   {
+    enum class Phase : uint8_t
+    {
+      Queued = 0,
+      Kicked = 1,
+    };
     glm::ivec3 coord{0};
     uint64_t sourceRevision{0};
     ChunkMeshSnapshot snapshot;
     std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> crossCenters;
+    Phase phase{Phase::Queued};
+    bool transparent{false};
+    UGpuMeshPipeline::GpuApplyTicket ticket{};
   };
   void EnsureGpuPipeline();
   bool CommitGpuMeshResult(
@@ -433,6 +447,8 @@ private:
   RenderSettings Render;
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
   std::unique_ptr<UGpuMeshPipeline> GpuPipeline;
+  UMeshCaptureStore CaptureStore;
+  int CaptureRefreshBudgetLeft{4};
   bool GpuPipelineInitAttempted{false};
   std::deque<PendingGpuApply> PendingGpuApplies;
   std::unordered_set<glm::ivec3, IVec3Hash> GpuExtractInFlight;
