@@ -414,27 +414,13 @@ Log: `perf_20260731-213543_19204.jsonl`. Route `(-479,63)→(-477,71)`.
 
 Validate with autofly + manual land-exit vs `155432` / this `213543` exit, not only cruise gates.
 
-### Phase 1 (sticky miss) — landed
+### Phase 1–4 (perf_opt) landed earlier
 
-`MarkDirtyPriority`: Active + `!HasDrawable` → invalidate in-flight (not Remesh-only).
-FirstMesh sync / reserved Pass1: `!HasDrawable` (not `GreedyCache` presence).
-CPU Apply `DropNoActive` + async `DiscardedLate` coords → requeue Dirty.
+Sticky miss FirstMesh, staging GPU slots, stale FreeChunk, healed-idle emerge clamp.
 
-### Phase 2 (opaque collapse) — landed
+### Rim undrawn (manual `101824`) — landed
 
-GPU apply uses **staging** slots (`AllocateStagingSlot` → compute → `BindCommittedSlot`).
-Dark / failed commit frees staging only — live `ChunkToSlot` mesh stays until bind.
-`MarkDirtyPriority` hole-invalidate skips coords still InFlight / GpuExtract pending
-(avoids DiscardedLate storm from SoftDefer re-Mark).
-
-### Phase 3 (dark_face_stale / void) — landed
-
-CPU Apply frees committed GPU slot when replacing GpuResident mesh (stale SSBO draw).
-`had_mesh` / pending priority use `HasDrawable`. Stale repair threshold 40; void wave
-also when void>40 && stale>40 at idle.
-
-### Phase 4 (emerge/dirty_tick idle) — landed
-
-Healed idle (`miss=0`, no sticky/pending): `MeshEmergeTotalBudgetMs` 60→28
-(36 with lit focus-dirty debt). Hole/sticky recovery keeps 60.
+Hole SoT / `draw_ok` / Admit: empty SoftDefer (`!HasDrawable`) counts as missing.
+Undrawn heal scans `focus_radius` (cap 4 MarkDirty/tick). SoftDefer prune keeps
+`!Drawable` Dirty until MayMesh (does not RemoveAt FirstMesh-empty forever).
 

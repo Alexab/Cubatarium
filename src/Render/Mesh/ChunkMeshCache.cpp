@@ -816,14 +816,9 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
         {
           return;
         }
-        // Committed cache entry (incl. intentional 0-quad occluded) is not a
-        // hole. SoftDefer uses HasDrawable separately so empty remesh is not
-        // deferred as "already meshed". Orphaned GpuExtract (no pending apply)
-        // falls through.
-        if (HasGreedyMesh(coord))
-        {
-          return;
-        }
+        // Empty SoftDefer / undrawn placeholder (HasGreedy, !Drawable) is still a
+        // hole for solid chunks — HasGreedy early-out left rim forever undrawn
+        // (manual 101824 / 213543). Pending GPU / InFlight are in-flight fills.
         if (IsPendingGpuApply(coord))
         {
           return;
@@ -892,10 +887,8 @@ bool UChunkMeshCache::FindNearestMissingGreedyMesh(
     {
       return false;
     }
-    if (HasGreedyMesh(coord))
-    {
-      return false;
-    }
+    // Empty SoftDefer placeholders (HasGreedy, !Drawable) remain missing until
+    // a drawable mesh lands (manual 101824 rim).
     if (IsPendingGpuApply(coord))
     {
       return false;
@@ -1064,7 +1057,8 @@ int UChunkMeshCache::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
       continue;
     }
     // Cruise: never drop first-mesh Dirty (creates holes in the focus ring).
-    if (remesh_only && !HasGreedyMesh(*it) &&
+    // Empty SoftDefer placeholders are !Drawable — protect like !HasGreedy.
+    if (remesh_only && !HasDrawableGreedyMesh(*it) &&
         RemeshAfterApply.find(*it) == RemeshAfterApply.end())
     {
       ++it;
@@ -2020,12 +2014,16 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     {
       for (auto it = Dirty.begin(); it != Dirty.end();)
       {
-        // SoftDefer first: drop deferred work (remesh OR SoftDefer-blocked empty
-        // outside focus). In-focus empty SoftDefer returns Defer=false so they
-        // stay as FirstMesh. Keeping SoftDefer-true empties bloated Dirty~440
-        // (land_south_short undrawn_fix).
+        // SoftDefer remesh: drop deferred remesh to avoid Dirty bloat. Keep
+        // !Drawable (FirstMesh / empty SoftDefer) so MayMesh can schedule later
+        // without waiting for undrawn heal / MarkRelit (manual 101824 rim).
         if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
         {
+          if (!HasDrawableGreedyMesh(*it))
+          {
+            ++it;
+            continue;
+          }
           it = Dirty.RemoveAt(it);
           continue;
         }
@@ -2250,9 +2248,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
       {
-        // SoftDefer-blocked: drop from Dirty until MarkRelit / undrawn heal /
-        // SoftDefer opens (in-focus empty SoftDefer returns false → schedule).
-        // Do not keep SoftDefer-true empties — Dirty bloat 184035/autofly.
+        // Remesh SoftDefer: drop. FirstMesh-empty: keep until MayMesh/Unlit allow.
+        if (!HasDrawableGreedyMesh(*it))
+        {
+          return std::next(it);
+        }
         return Dirty.RemoveAt(it);
       }
       if (StarveRemeshForHoles && HasDrawableGreedyMesh(*it))
@@ -2465,7 +2465,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
       {
-        // SoftDefer-blocked: drop until MarkRelit / undrawn heal re-admits.
+        // Remesh SoftDefer: drop. FirstMesh-empty: keep until MayMesh/Unlit allow.
+        if (!HasDrawableGreedyMesh(*it))
+        {
+          ++it;
+          continue;
+        }
         it = Dirty.RemoveAt(it);
         continue;
       }

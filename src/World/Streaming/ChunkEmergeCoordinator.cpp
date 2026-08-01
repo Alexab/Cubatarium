@@ -411,10 +411,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
   }
 
-  // Empty SoftDefer placeholders: HasGreedyMesh hides HasMissing, SoftDefer now
-  // keys off HasDrawable. Force Dirty on camera column + Chebyshev r<=1 so
-  // place/exit undrawn neighbors heal (manual 184035: uf ok but ring undrawn;
-  // Immediate rejected empty placeholder as "had lit mesh").
+  // Empty SoftDefer placeholders: HasMissing now keys off !Drawable, but rim
+  // still needs Force Dirty when SoftDefer dropped entries. Scan focus_radius
+  // (was Chebyshev r<=1) with a per-frame MarkDirty cap (manual 101824 rim).
   bool underfeet_undrawn = false;
   {
     static int undrawn_force_cd = 0;
@@ -426,14 +425,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         0, FloorDiv(procedural.MaxHeight, CHUNK_SIZE));
     const int cy0 = std::max(0, preferred_cy - 1);
     const int cy1 = std::min(max_cy, preferred_cy + 2);
+    constexpr int kUndrawnMarkCap = 4;
     if (undrawn_force_cd <= 0)
     {
-      bool marked = false;
-      for (int dx = -1; dx <= 1 && !marked; ++dx)
+      int marked_n = 0;
+      const int heal_r = std::max(1, focus_radius);
+      for (int dx = -heal_r; dx <= heal_r && marked_n < kUndrawnMarkCap; ++dx)
       {
-        for (int dz = -1; dz <= 1 && !marked; ++dz)
+        for (int dz = -heal_r; dz <= heal_r && marked_n < kUndrawnMarkCap; ++dz)
         {
-          for (int cy = cy0; cy <= cy1; ++cy)
+          for (int cy = cy0; cy <= cy1 && marked_n < kUndrawnMarkCap; ++cy)
           {
             const glm::ivec3 coord(focus_ground_horiz.x + dx, cy,
                                    focus_ground_horiz.z + dz);
@@ -475,11 +476,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             }
             mesh_service.MarkDirtyPriority(coord);
             underfeet_undrawn = true;
-            marked = true;
-            undrawn_force_cd = 12;
-            break;
+            ++marked_n;
           }
         }
+      }
+      if (marked_n > 0)
+      {
+        undrawn_force_cd = 8;
       }
     }
   }
