@@ -381,8 +381,13 @@ void UGpuMeshPipeline::EnsureReadbackPbo()
     glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[i]);
     glBufferData(GL_COPY_WRITE_BUFFER, bytes, nullptr, GL_STREAM_READ);
     ReadbackInUse[i] = false;
+    glGenBuffers(1, &RectsHoldSsbo[i]);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, RectsHoldSsbo[i]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, kGpuRectsSsboBytes, nullptr,
+                 GL_DYNAMIC_DRAW);
   }
   glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 #endif
 }
 
@@ -396,6 +401,11 @@ void UGpuMeshPipeline::DestroyReadbackPbo()
     {
       glDeleteBuffers(1, &ReadbackPbos[i]);
       ReadbackPbos[i] = 0;
+    }
+    if (RectsHoldSsbo[i])
+    {
+      glDeleteBuffers(1, &RectsHoldSsbo[i]);
+      RectsHoldSsbo[i] = 0;
     }
     ReadbackInUse[i] = false;
   }
@@ -474,10 +484,11 @@ bool UGpuMeshPipeline::ReadCountersViaPbo(int pbo_index,
     return true;
   }
   const GLenum wait = glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT,
-                                       50'000'000); // 50ms
+                                       8'000'000); // 8ms — was 50ms hitch
   glDeleteSync(fence);
-  if (wait == GL_WAIT_FAILED)
+  if (wait == GL_WAIT_FAILED || wait == GL_TIMEOUT_EXPIRED)
   {
+    // Do not Map after timeout (can block again). Caller remeshes.
     return false;
   }
   glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[pbo_index]);
@@ -657,10 +668,13 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, EmitState.CountersSsbo);
   glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(zero_counters),
                zero_counters.data(), GL_DYNAMIC_DRAW);
+  const GLuint rects_ssbo = RectsHoldSsbo[pbo_index] != 0
+                                ? RectsHoldSsbo[pbo_index]
+                                : EmitState.RectsSsbo;
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, EmitState.MaskSsbo);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, EmitState.BlocksSsbo);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, EmitState.LightsSsbo);
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, EmitState.RectsSsbo);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, rects_ssbo);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, EmitState.CountersSsbo);
   glUseProgram(EmitState.GreedyProgram);
   glUniform1ui(glGetUniformLocation(EmitState.GreedyProgram, "side"), side);
@@ -669,49 +683,172 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   glDispatchCompute(102u, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
-  std::array<uint32_t, 4> counters{};
-  if (!ReadCountersViaPbo(pbo_index, counters))
+  // Async counter poll (D3): copy+fence without ClientWait — TryComplete later.
+  glBindBuffer(GL_COPY_READ_BUFFER, EmitState.CountersSsbo);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[pbo_index]);
+  glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0,
+                      kReadbackCountersBytes);
+  glBindBuffer(GL_COPY_READ_BUFFER, 0);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+  GLsync counter_fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+  glUseProgram(0);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  if (!counter_fence)
   {
+    // Fallback: sync read path.
+    std::array<uint32_t, 4> counters{};
+    if (!ReadCountersViaPbo(pbo_index, counters))
+    {
+      out_ticket.pboIndex = pbo_index;
+      ReleaseReadbackSlot(out_ticket);
+      return false;
+    }
+    // Re-enter emit via fake awaiting path completed inline below.
+    out_ticket.slotIndex = slot_idx;
+    out_ticket.coord = coord;
+    out_ticket.pboIndex = pbo_index;
+    out_ticket.valid = true;
+    out_ticket.awaitingCounters = false;
+    out_ticket.quadCount = counters[0];
+    if (counters[0] == 0)
+    {
+      Allocator.SetSlotQuadCount(slot_idx, 0);
+      ReleaseReadbackSlot(out_ticket);
+      return true;
+    }
+    // Fall through to packed emit with known count — use sync helper body.
+    // (Rare path: no fence support.)
+    const uint32_t rect_count = counters[0];
+    if (rect_count > UGpuMeshSlotAllocator::kMaxQuadsPerSlot)
+    {
+      ReleaseReadbackSlot(out_ticket);
+      return false;
+    }
+    const GpuMeshSlot *slot = Allocator.GetSlotByIndex(slot_idx);
+    if (!slot)
+    {
+      ReleaseReadbackSlot(out_ticket);
+      return false;
+    }
+    const uint32_t slot_offset = slot->OffsetQuads;
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, rects_ssbo);
+    glBindBufferRange(GL_SHADER_STORAGE_BUFFER, 1, Allocator.GetQuadSsbo(),
+                      static_cast<GLintptr>(slot_offset * sizeof(PackedQuad)),
+                      static_cast<GLsizeiptr>(rect_count * sizeof(PackedQuad)));
+    glUseProgram(EmitState.PackedEmitProgram);
+    glUniform1ui(glGetUniformLocation(EmitState.PackedEmitProgram, "numRects"),
+                 rect_count);
+    glDispatchCompute((rect_count + 63u) / 64u, 1, 1);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     glUseProgram(0);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-    out_ticket.pboIndex = pbo_index;
-    ReleaseReadbackSlot(out_ticket);
-    return false;
+    Allocator.SetSlotQuadCount(slot_idx, rect_count);
+    GLsync fence = nullptr;
+    if (!CopyQuadsToPbo(pbo_index, slot_offset, rect_count, &fence))
+    {
+      ReleaseReadbackSlot(out_ticket);
+      return false;
+    }
+    out_ticket.quadCount = rect_count;
+    out_ticket.slotOffsetQuads = slot_offset;
+    out_ticket.fence = fence;
+    return true;
   }
+
+  out_ticket.slotIndex = slot_idx;
+  out_ticket.coord = coord;
+  out_ticket.pboIndex = pbo_index;
+  out_ticket.fence = counter_fence;
+  out_ticket.awaitingCounters = true;
+  out_ticket.valid = true;
+  out_ticket.quadCount = 0;
+  return true;
+#endif
+}
+
+UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryCompleteCountersAndEmit(
+    GpuApplyTicket &ticket, UBlockRegistry &registry, uint64_t timeout_ns)
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  (void)ticket;
+  (void)registry;
+  (void)timeout_ns;
+  return GpuFinishStatus::Failed;
+#else
+  if (!ticket.valid || !ticket.awaitingCounters)
+  {
+    return ticket.valid ? GpuFinishStatus::Ready : GpuFinishStatus::Failed;
+  }
+  if (!ticket.fence)
+  {
+    ticket.awaitingCounters = false;
+    return GpuFinishStatus::Failed;
+  }
+  const GLenum wait =
+      glClientWaitSync(ticket.fence, GL_SYNC_FLUSH_COMMANDS_BIT, timeout_ns);
+  if (wait == GL_TIMEOUT_EXPIRED)
+  {
+    return GpuFinishStatus::NotReady;
+  }
+  if (wait == GL_WAIT_FAILED)
+  {
+    glDeleteSync(ticket.fence);
+    ticket.fence = nullptr;
+    ReleaseReadbackSlot(ticket);
+    ticket.awaitingCounters = false;
+    ticket.valid = false;
+    return GpuFinishStatus::Failed;
+  }
+  glDeleteSync(ticket.fence);
+  ticket.fence = nullptr;
+
+  std::array<uint32_t, 4> counters{};
+  glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[ticket.pboIndex]);
+  void *mapped =
+      glMapBufferRange(GL_COPY_WRITE_BUFFER, 0, kReadbackCountersBytes,
+                       GL_MAP_READ_BIT);
+  if (!mapped)
+  {
+    glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+    ReleaseReadbackSlot(ticket);
+    ticket.awaitingCounters = false;
+    ticket.valid = false;
+    return GpuFinishStatus::Failed;
+  }
+  std::memcpy(counters.data(), mapped, sizeof(counters));
+  glUnmapBuffer(GL_COPY_WRITE_BUFFER);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+
+  ticket.awaitingCounters = false;
   const uint32_t rect_count = counters[0];
   if (rect_count == 0)
   {
-    glUseProgram(0);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-    Allocator.SetSlotQuadCount(slot_idx, 0);
-    out_ticket.slotIndex = slot_idx;
-    out_ticket.coord = coord;
-    out_ticket.quadCount = 0;
-    out_ticket.valid = true;
-    // Counters used the slot transiently — free for next Kick.
-    out_ticket.pboIndex = pbo_index;
-    ReleaseReadbackSlot(out_ticket);
-    return true;
+    Allocator.SetSlotQuadCount(ticket.slotIndex, 0);
+    ticket.quadCount = 0;
+    ReleaseReadbackSlot(ticket);
+    return GpuFinishStatus::Ready;
   }
   if (rect_count > UGpuMeshSlotAllocator::kMaxQuadsPerSlot)
   {
     LOG(WARNING) << "[GpuMeshPipeline] rect overflow " << rect_count;
-    glUseProgram(0);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-    out_ticket.pboIndex = pbo_index;
-    ReleaseReadbackSlot(out_ticket);
-    return false;
+    ReleaseReadbackSlot(ticket);
+    ticket.valid = false;
+    return GpuFinishStatus::Failed;
   }
-
-  const GpuMeshSlot *slot = Allocator.GetSlotByIndex(slot_idx);
+  const GpuMeshSlot *slot = Allocator.GetSlotByIndex(ticket.slotIndex);
   if (!slot)
   {
-    out_ticket.pboIndex = pbo_index;
-    ReleaseReadbackSlot(out_ticket);
-    return false;
+    ReleaseReadbackSlot(ticket);
+    ticket.valid = false;
+    return GpuFinishStatus::Failed;
   }
   const uint32_t slot_offset = slot->OffsetQuads;
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, EmitState.RectsSsbo);
+  const GLuint rects_ssbo =
+      (ticket.pboIndex >= 0 && ticket.pboIndex < kReadbackRing &&
+       RectsHoldSsbo[ticket.pboIndex] != 0)
+          ? RectsHoldSsbo[ticket.pboIndex]
+          : EmitState.RectsSsbo;
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, rects_ssbo);
   glBindBufferRange(GL_SHADER_STORAGE_BUFFER, 1, Allocator.GetQuadSsbo(),
                     static_cast<GLintptr>(slot_offset * sizeof(PackedQuad)),
                     static_cast<GLsizeiptr>(rect_count * sizeof(PackedQuad)));
@@ -722,23 +859,19 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
   glUseProgram(0);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-  Allocator.SetSlotQuadCount(slot_idx, rect_count);
+  Allocator.SetSlotQuadCount(ticket.slotIndex, rect_count);
   GLsync fence = nullptr;
-  if (!CopyQuadsToPbo(pbo_index, slot_offset, rect_count, &fence))
+  if (!CopyQuadsToPbo(ticket.pboIndex, slot_offset, rect_count, &fence))
   {
-    out_ticket.pboIndex = pbo_index;
-    ReleaseReadbackSlot(out_ticket);
-    return false;
+    ReleaseReadbackSlot(ticket);
+    ticket.valid = false;
+    return GpuFinishStatus::Failed;
   }
-  out_ticket.slotIndex = slot_idx;
-  out_ticket.coord = coord;
-  out_ticket.quadCount = rect_count;
-  out_ticket.slotOffsetQuads = slot_offset;
-  out_ticket.fence = fence;
-  out_ticket.pboIndex = pbo_index;
-  out_ticket.valid = true;
-  return true;
+  ticket.quadCount = rect_count;
+  ticket.slotOffsetQuads = slot_offset;
+  ticket.fence = fence;
+  (void)registry;
+  return GpuFinishStatus::Ready;
 #endif
 }
 
@@ -843,6 +976,24 @@ bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
   {
     out_quad_count = 0;
     return false;
+  }
+  if (ticket.awaitingCounters)
+  {
+    const auto st = TryCompleteCountersAndEmit(ticket, registry,
+                                               /*timeout_ns=*/100'000'000);
+    if (st != GpuFinishStatus::Ready)
+    {
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+      if (ticket.fence)
+      {
+        glDeleteSync(ticket.fence);
+        ticket.fence = nullptr;
+      }
+#endif
+      ReleaseReadbackSlot(ticket);
+      out_quad_count = 0;
+      return false;
+    }
   }
   return FinishComputePasses(ticket, registry, out_quad_count, out_ranges,
                              out_has_dark_face);

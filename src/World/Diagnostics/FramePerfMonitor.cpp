@@ -216,6 +216,15 @@ struct FrameNumbers
   uint64_t mesh_apply_stale{0};
   uint64_t mesh_apply_stale_delta{0};
   int pending_gpu_applies_n{0};
+  int pending_gpu_queued_n{0};
+  int pending_gpu_kicked_n{0};
+  int gpu_kick_n{0};
+  int gpu_finish_n{0};
+  int gpu_finish_not_ready_n{0};
+  int miss_cx{0};
+  int miss_cy{0};
+  int miss_cz{0};
+  int miss_horiz{0};
   int post_load_ring_not_ready{0};
   int enter_game_warmup_missing_greedy{0};
   uint64_t softdefer_capture_floor_hits{0};
@@ -252,6 +261,9 @@ struct FrameNumbers
   double gpu_cull_indirect{0.0};
   uint64_t opaque_cmd_total{0};
   uint64_t opaque_cmd_on{0};
+  uint64_t opaque_refs_cpu_vis{0};
+  uint64_t opaque_refs_render_ready{0};
+  uint64_t opaque_mdi_eligible{0};
   uint64_t cross_batch_count{0};
   uint64_t cpu_aabb_would_on{0};
   uint64_t edit_immediate_n{0};
@@ -420,6 +432,10 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.unfinished_visual = phys.UnfinishedVisual;
   n.light_debt = phys.LightDebt;
   n.focus_missing_mesh = phys.FocusMissingMesh;
+  n.miss_cx = phys.MissCx;
+  n.miss_cy = phys.MissCy;
+  n.miss_cz = phys.MissCz;
+  n.miss_horiz = phys.MissHoriz;
   n.focus_dark_mesh = phys.FocusDarkMesh;
   n.focus_pending_dark = phys.FocusPendingDark;
   n.focus_sticky_remesh = phys.FocusStickyRemesh;
@@ -431,6 +447,11 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.mesh_discarded_late = phys.MeshDiscardedLate;
   n.mesh_apply_stale = phys.MeshApplyStale;
   n.pending_gpu_applies_n = phys.PendingGpuAppliesN;
+  n.pending_gpu_queued_n = phys.PendingGpuQueuedN;
+  n.pending_gpu_kicked_n = phys.PendingGpuKickedN;
+  n.gpu_kick_n = phys.GpuKickN;
+  n.gpu_finish_n = phys.GpuFinishN;
+  n.gpu_finish_not_ready_n = phys.GpuFinishNotReadyN;
   n.post_load_ring_not_ready = phys.PostLoadRingNotReady;
   n.enter_game_warmup_missing_greedy = phys.EnterGameWarmupMissingGreedy;
   n.softdefer_capture_floor_hits = phys.SoftDeferCaptureFloorHits;
@@ -481,6 +502,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.gpu_cull_indirect = phys.GpuCullIndirect;
   n.opaque_cmd_total = phys.OpaqueCmdTotal;
   n.opaque_cmd_on = phys.OpaqueCmdOn;
+  n.opaque_refs_cpu_vis = phys.OpaqueRefsCpuVis;
+  n.opaque_refs_render_ready = phys.OpaqueRefsRenderReady;
+  n.opaque_mdi_eligible = phys.OpaqueMdiEligible;
   n.cross_batch_count = phys.CrossBatchCount;
   n.cpu_aabb_would_on = phys.CpuAabbWouldOn;
   n.edit_immediate_n = phys.EditImmediateN;
@@ -639,6 +663,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"unfinished_visual\":" << n.unfinished_visual
           << ",\"light_debt\":" << n.light_debt
           << ",\"focus_missing_mesh\":" << n.focus_missing_mesh
+          << ",\"miss_cx\":" << n.miss_cx
+          << ",\"miss_cy\":" << n.miss_cy
+          << ",\"miss_cz\":" << n.miss_cz
+          << ",\"miss_horiz\":" << n.miss_horiz
           << ",\"focus_dark_mesh\":" << n.focus_dark_mesh
           << ",\"focus_pending_dark\":" << n.focus_pending_dark
           << ",\"focus_sticky_remesh\":" << n.focus_sticky_remesh
@@ -651,6 +679,11 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_apply_stale\":" << n.mesh_apply_stale
           << ",\"mesh_apply_stale_delta\":" << n.mesh_apply_stale_delta
           << ",\"pending_gpu_applies_n\":" << n.pending_gpu_applies_n
+          << ",\"pending_gpu_queued_n\":" << n.pending_gpu_queued_n
+          << ",\"pending_gpu_kicked_n\":" << n.pending_gpu_kicked_n
+          << ",\"gpu_kick_n\":" << n.gpu_kick_n
+          << ",\"gpu_finish_n\":" << n.gpu_finish_n
+          << ",\"gpu_finish_not_ready_n\":" << n.gpu_finish_not_ready_n
           << ",\"post_load_ring_not_ready\":" << n.post_load_ring_not_ready
           << ",\"enter_game_warmup_missing_greedy\":"
           << n.enter_game_warmup_missing_greedy
@@ -691,6 +724,9 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"gpu_cull_indirect\":" << n.gpu_cull_indirect
           << ",\"opaque_cmd_total\":" << n.opaque_cmd_total
           << ",\"opaque_cmd_on\":" << n.opaque_cmd_on
+          << ",\"opaque_refs_cpu_vis\":" << n.opaque_refs_cpu_vis
+          << ",\"opaque_refs_render_ready\":" << n.opaque_refs_render_ready
+          << ",\"opaque_mdi_eligible\":" << n.opaque_mdi_eligible
           << ",\"cross_batch_count\":" << n.cross_batch_count
           << ",\"cpu_aabb_would_on\":" << n.cpu_aabb_would_on
           << ",\"edit_immediate_n\":" << n.edit_immediate_n

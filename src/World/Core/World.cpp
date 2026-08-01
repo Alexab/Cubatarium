@@ -1553,7 +1553,8 @@ int UWorld::AdmitFocusMeshIngress(int max_columns)
 }
 
 int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
-                                      const glm::ivec2 *only_column)
+                                      const glm::ivec2 *only_column,
+                                      int only_cy)
 {
   if (!MeshService || max_columns <= 0)
   {
@@ -1685,9 +1686,17 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
           ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
           enqueue_min, enqueue_max);
     }
-    MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-        ground, remesh_min, remesh_max,
-        /*include_horizontal_neighbors=*/false);
+    if (only_cy >= 0)
+    {
+      const int y0 = only_cy * CHUNK_SIZE;
+      const int y1 = y0 + CHUNK_SIZE - 1;
+      MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground, y0, y1);
+    }
+    else
+    {
+      MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground, remesh_min,
+                                                  remesh_max);
+    }
     SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
     ++admitted;
   }

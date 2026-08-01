@@ -386,6 +386,27 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   const bool missing_near =
       world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
           world.GetBlockWorld(), focus_horiz, focus_radius);
+  if (missing_near)
+  {
+    glm::ivec3 miss_coord{0};
+    if (world.GetMeshService().FindNearestMissingGreedyMesh(
+            world.GetBlockWorld(), focus_horiz, focus_radius, miss_coord))
+    {
+      world.PhysicsTelemetryData.MissCx = miss_coord.x;
+      world.PhysicsTelemetryData.MissCy = miss_coord.y;
+      world.PhysicsTelemetryData.MissCz = miss_coord.z;
+      world.PhysicsTelemetryData.MissHoriz =
+          std::max(std::abs(miss_coord.x - focus_horiz.x),
+                   std::abs(miss_coord.z - focus_horiz.z));
+    }
+  }
+  else
+  {
+    world.PhysicsTelemetryData.MissCx = 0;
+    world.PhysicsTelemetryData.MissCy = 0;
+    world.PhysicsTelemetryData.MissCz = 0;
+    world.PhysicsTelemetryData.MissHoriz = 0;
+  }
   // Underfeet is a subset of focus — skip second full resident scan when focus
   // already reports no missing mesh (CB stream_ms on no-hole fly).
   const bool missing_underfeet =
@@ -826,6 +847,16 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetMeshService().GetMeshApplyStaleCount();
     world.PhysicsTelemetryData.PendingGpuAppliesN = static_cast<int>(
         world.GetMeshService().GetPendingGpuAppliesCount());
+    world.PhysicsTelemetryData.PendingGpuQueuedN = static_cast<int>(
+        world.GetMeshService().GetPendingGpuQueuedCount());
+    world.PhysicsTelemetryData.PendingGpuKickedN = static_cast<int>(
+        world.GetMeshService().GetPendingGpuKickedCount());
+    world.PhysicsTelemetryData.GpuKickN =
+        world.GetMeshService().GetLastGpuKickN();
+    world.PhysicsTelemetryData.GpuFinishN =
+        world.GetMeshService().GetLastGpuFinishN();
+    world.PhysicsTelemetryData.GpuFinishNotReadyN =
+        world.GetMeshService().GetLastGpuFinishNotReadyN();
     world.PhysicsTelemetryData.PostLoadRingNotReady =
         world.CountPostLoadRingNotReady();
     {
@@ -1298,7 +1329,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           const ColumnWorkKind kind = missing_focus_mesh
                                           ? ColumnWorkKind::FirstMesh
                                           : ColumnWorkKind::RelightThenMesh;
-          exec.Enqueue(focus_xz, kind, 90);
+          ColumnWorkItem item{};
+          item.column = focus_xz;
+          item.kind = kind;
+          item.priority = 90;
+          item.scan_full_focus = missing_focus_mesh;
+          item.cy = -1;
+          exec.Enqueue(item);
           exec.DrainBudget(world, 1, focus_horiz, focus_radius,
                            /*admit_batch=*/1);
         }

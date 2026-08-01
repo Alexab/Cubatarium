@@ -640,6 +640,13 @@ void UGeometryEngine::DrawCubeGeometry()
         filter_render_ready_refs(draw.opaqueCutoutRefs);
     std::vector<GreedyBatchRef> filtered_transparent =
         filter_render_ready_refs(draw.transparentRefs);
+    {
+      auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+      phys.OpaqueRefsCpuVis =
+          static_cast<uint64_t>(draw.opaqueCutoutRefs.size());
+      phys.OpaqueRefsRenderReady =
+          static_cast<uint64_t>(filtered_opaque.size());
+    }
     const std::vector<GreedyBatchRef> &opaqueCutoutRefs = filtered_opaque;
     if (!useBatchCache || !BlockBatchesValid ||
         opaqueCutoutRefs.size() != CachedInstanceCount ||
@@ -1648,6 +1655,11 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
   opaque_draw.reserve(solid.size() + cutout.size());
   opaque_draw.insert(opaque_draw.end(), solid.begin(), solid.end());
   opaque_draw.insert(opaque_draw.end(), cutout.begin(), cutout.end());
+  if (WorldInstance)
+  {
+    WorldInstance->GetPhysicsTelemetryMutable().OpaqueMdiEligible =
+        static_cast<uint64_t>(opaque_draw.size());
+  }
   // Sort by blockId so MDI can MultiDraw contiguous same-texture runs.
   // sort_revision=1 invalidates pre-sort pool layouts (was always 0).
   constexpr uint64_t kBlockIdSortRev = 1;

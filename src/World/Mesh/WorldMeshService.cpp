@@ -311,6 +311,46 @@ void UWorldMeshService::MarkTerrainChunkMeshDirtySeamedPriority(
   }
 }
 
+int UWorldMeshService::MarkMissingSlicesDirtyPriority(
+    const UBlockWorld &world, glm::ivec3 ground_chunk_coord, int min_y,
+    int max_y)
+{
+  const int cy0 = FloorDiv(min_y, CHUNK_SIZE);
+  const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
+  int marked = 0;
+  for (int cy = cy0; cy <= cy1; ++cy)
+  {
+    const glm::ivec3 coord(ground_chunk_coord.x, cy, ground_chunk_coord.z);
+    const UChunk *chunk = world.GetChunkManager().GetChunk(coord);
+    if (!chunk || HasMeshSatisfyingColumnReady(coord) ||
+        IsPendingGpuApply(coord) || HasInflightMeshBuild(coord))
+    {
+      continue;
+    }
+    bool solid = false;
+    for (int z = 0; z < CHUNK_SIZE && !solid; z += 4)
+    {
+      for (int x = 0; x < CHUNK_SIZE && !solid; x += 4)
+      {
+        for (int y = 0; y < CHUNK_SIZE && !solid; y += 4)
+        {
+          if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+          {
+            solid = true;
+          }
+        }
+      }
+    }
+    if (!solid)
+    {
+      continue;
+    }
+    MarkDirtyPriority(coord);
+    ++marked;
+  }
+  return marked;
+}
+
 void UWorldMeshService::MarkTerrainChunkMeshDirtyPriority(
     glm::ivec3 ground_chunk_coord, int min_y, int max_y)
 {
@@ -520,6 +560,31 @@ uint64_t UWorldMeshService::GetMeshApplyStaleCount() const
 size_t UWorldMeshService::GetPendingGpuAppliesCount() const
 {
   return Cache.GetPendingGpuAppliesCount();
+}
+
+size_t UWorldMeshService::GetPendingGpuQueuedCount() const
+{
+  return Cache.GetPendingGpuQueuedCount();
+}
+
+size_t UWorldMeshService::GetPendingGpuKickedCount() const
+{
+  return Cache.GetPendingGpuKickedCount();
+}
+
+int UWorldMeshService::GetLastGpuKickN() const
+{
+  return Cache.GetLastGpuKickN();
+}
+
+int UWorldMeshService::GetLastGpuFinishN() const
+{
+  return Cache.GetLastGpuFinishN();
+}
+
+int UWorldMeshService::GetLastGpuFinishNotReadyN() const
+{
+  return Cache.GetLastGpuFinishNotReadyN();
 }
 
 int UWorldMeshService::CountPendingGpuAppliesInHorizontalRadius(

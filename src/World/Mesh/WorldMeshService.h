@@ -96,6 +96,10 @@ public:
   void MarkTerrainChunkMeshDirtySeamedPriority(
       glm::ivec3 ground_chunk_coord, int min_y, int max_y,
       bool include_horizontal_neighbors = true);
+  /// Dirty only solid slices in [min_y,max_y] that fail column-ready / not in-flight.
+  int MarkMissingSlicesDirtyPriority(const UBlockWorld &world,
+                                     glm::ivec3 ground_chunk_coord, int min_y,
+                                     int max_y);
 
   void RebuildAll(UBlockWorld &world, UBlockRegistry &registry);
   void RebuildDirtyChunks(UBlockWorld &world, UBlockRegistry &registry,
@@ -141,6 +145,11 @@ public:
   uint64_t GetMeshDiscardedLateCount() const;
   uint64_t GetMeshApplyStaleCount() const;
   size_t GetPendingGpuAppliesCount() const;
+  size_t GetPendingGpuQueuedCount() const;
+  size_t GetPendingGpuKickedCount() const;
+  int GetLastGpuKickN() const;
+  int GetLastGpuFinishN() const;
+  int GetLastGpuFinishNotReadyN() const;
   int CountPendingGpuAppliesInHorizontalRadius(glm::ivec3 center_ground_chunk,
                                                int radius_chunks) const;
   int DrainPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,

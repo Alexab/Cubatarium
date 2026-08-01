@@ -112,6 +112,11 @@ public:
     return MeshApplySupersededCount;
   }
   size_t GetPendingGpuAppliesCount() const { return PendingGpuApplies.size(); }
+  size_t GetPendingGpuQueuedCount() const;
+  size_t GetPendingGpuKickedCount() const;
+  int GetLastGpuKickN() const { return LastGpuKickN; }
+  int GetLastGpuFinishN() const { return LastGpuFinishN; }
+  int GetLastGpuFinishNotReadyN() const { return LastGpuFinishNotReadyN; }
   int CountPendingGpuAppliesInHorizontalRadius(glm::ivec3 center_ground_chunk,
                                                int radius_chunks) const;
   int DrainPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
@@ -386,7 +391,8 @@ private:
     enum class Phase : uint8_t
     {
       Queued = 0,
-      Kicked = 1,
+      Dispatched = 1, // greedy done, awaiting counter poll + emit
+      Kicked = 2,     // quads in PBO, awaiting Finish
     };
     glm::ivec3 coord{0};
     uint64_t sourceRevision{0};
@@ -470,6 +476,9 @@ private:
   std::unordered_map<glm::ivec3, size_t, IVec3Hash> GreedyVertexCountByChunk;
   size_t GreedyVertexCountTotal{0};
   MeshRebuildTickStats LastRebuildTickStats{};
+  int LastGpuKickN{0};
+  int LastGpuFinishN{0};
+  int LastGpuFinishNotReadyN{0};
   std::unordered_map<glm::ivec3, FluidSurfaceColumnSlice, IVec3Hash>
       FluidSurfaceCache;
   std::unordered_set<glm::ivec3, IVec3Hash> FluidSurfaceDirty;

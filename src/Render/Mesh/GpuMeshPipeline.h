@@ -37,8 +37,9 @@ public:
                        UBlockRegistry &registry,
                        GpuMeshProcessResult &out_result);
 
-  /// Kick upload+compute+quad copy into a ring PBO; does not wait for quads.
-  /// Counter read (16B) still syncs inside Kick (needed before packed emit).
+  /// Kick upload+compute into ring PBO; counters polled async (Dispatched).
+  /// Rects live in per-slot RectsHoldSsbo so up to kReadbackRing Dispatched
+  /// can coexist without serializing Kick on shared EmitState.RectsSsbo.
   struct GpuApplyTicket
   {
     int slotIndex{-1};
@@ -48,6 +49,8 @@ public:
     GLsync fence{nullptr};
     int pboIndex{-1};
     bool valid{false};
+    /// True after greedy dispatch until counters mapped + packed emit done.
+    bool awaitingCounters{false};
   };
   bool KickComputePasses(const ChunkMeshSnapshot &snapshot,
                          UBlockRegistry &registry, glm::ivec3 coord,
@@ -58,6 +61,10 @@ public:
     NotReady = 1,
     Failed = 2,
   };
+  /// Poll counter fence (timeout_ns=0), map, packed emit, CopyQuads fence.
+  GpuFinishStatus TryCompleteCountersAndEmit(GpuApplyTicket &ticket,
+                                            UBlockRegistry &registry,
+                                            uint64_t timeout_ns);
   /// Poll fence (timeout_ns=0 non-blocking), map PBO, build RLE ranges.
   GpuFinishStatus TryFinishComputePasses(
       GpuApplyTicket &ticket, UBlockRegistry &registry, uint32_t &out_quad_count,
@@ -129,6 +136,8 @@ private:
   /// Ring of pack=counters(16)+PackedQuad[kMaxQuads] — multi in-flight apply.
   GLuint ReadbackPbos[kReadbackRing]{};
   bool ReadbackInUse[kReadbackRing]{};
+  /// Per-slot greedy rect hold — frees EmitState.RectsSsbo for next Kick.
+  GLuint RectsHoldSsbo[kReadbackRing]{};
   static constexpr GLintptr kReadbackCountersBytes = 16;
   static constexpr GLintptr kReadbackQuadsOffset = 16;
 #endif

@@ -944,17 +944,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_schedule = std::max(mesh_schedule, gpu_cap);
     mesh_drain = std::max(mesh_drain, gpu_cap);
   }
-  // Drain-first when GPU apply backlog is deep (ring PBO drains ~4/frame;
-  // clamp schedule only above 24 so Dirty is not starved at healthy ~12–20).
-  {
-    const size_t pending_gpu = mesh_service.GetPendingGpuAppliesCount();
-    if (pending_gpu >= 24 && moving && !visual_holes)
-    {
-      mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
-      mesh_schedule = std::min(mesh_schedule, 2);
-      mesh_drain = std::max(mesh_drain, 12);
-    }
-  }
+  // Early pending_gpu read — final clamp applied after floors/isolated_missing.
+  const size_t pending_gpu_n = mesh_service.GetPendingGpuAppliesCount();
+  const bool gpu_backlog_deep = pending_gpu_n >= 24;
+  const bool gpu_backlog_warm = pending_gpu_n >= 16;
   if (focus_not_render_ready > 12 && pending_async_early < 10)
   {
     mesh_schedule = std::max(mesh_schedule, 14);
@@ -1461,8 +1454,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           underfeet_need && hole_horiz <= 1 &&
           underfeet_immediate_cd <= 0 &&
           underfeet_immediate_this_frame < kMaxUnderfeetImmediate &&
-          pending_async < 2 && immediate_ms_used() < 8.0 &&
-          !world.IsPendingLightBeforeMesh(glm::ivec2(hole.x, hole.z));
+          pending_async < 2 && immediate_ms_used() < 8.0;
       if (allow_uf_imm)
       {
         mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
@@ -1472,9 +1464,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         GetColumnFlowExecutor().Enqueue(glm::ivec2(hole.x, hole.z),
                                         ColumnWorkKind::FirstMesh, 110);
       }
-      else
+      else if (!mesh_service.HasMeshSatisfyingColumnReady(hole) &&
+               !mesh_service.IsPendingGpuApply(hole) &&
+               !mesh_service.HasInflightMeshBuild(hole))
       {
         mesh_service.MarkDirtyPriority(hole);
+        GetColumnFlowExecutor().Enqueue(glm::ivec2(hole.x, hole.z),
+                                        ColumnWorkKind::FirstMesh, 110);
       }
     }
   }
@@ -1562,8 +1558,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             }
             const glm::ivec3 coord(focus_ground.x + dx, cy,
                                    focus_ground.z + dz);
-            if (mesh_service.HasGreedyMesh(coord) ||
-                mesh_service.IsPendingGpuApply(coord))
+            // SoftDefer empty placeholders still HasGreedyMesh but !ready —
+            // skipping them left miss sticky while Immediate never ran.
+            if (mesh_service.HasMeshSatisfyingColumnReady(coord) ||
+                mesh_service.IsPendingGpuApply(coord) ||
+                mesh_service.HasInflightMeshBuild(coord))
             {
               continue;
             }
@@ -1592,10 +1591,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             {
               continue;
             }
+            // UnlitFirstMesh SoT: PendingLight must not block Immediate on a
+            // missing slice — only remesh stays SoftDefer-gated.
             if (world.IsPendingLightBeforeMesh(glm::ivec2(coord.x, coord.z)))
             {
-              mesh_service.MarkDirtyPriority(coord);
-              continue;
+              GetColumnFlowExecutor().Enqueue(
+                  glm::ivec2(coord.x, coord.z),
+                  ColumnWorkKind::PromoteRelight, 100);
             }
             // Phase B (174511): narrow underfeet Immediate r≤1 only — breaks
             // sticky miss without reopening focus-ring Immediate zoo.
@@ -1964,10 +1966,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // ChunkMeshCache boosts gpu_max/budget at the same threshold so this clamp
   // does not starve ProcessPendingGpuMeshes.
   {
-    const size_t pending_gpu = mesh_service.GetPendingGpuAppliesCount();
     if (!fov_unfinished && !missing_visible_mesh &&
         world.GetPhysicsTelemetry().UnfinishedVisual == 0 &&
-        pending_gpu >= 12 && last_frame_ms > 24.0)
+        pending_gpu_n >= 12 && last_frame_ms > 24.0)
     {
       mesh_schedule = std::min(mesh_schedule, moving ? 4 : 6);
       mesh_service.SetMeshSnapshotBudgetMs(moving ? 1.0 : 1.5);
@@ -1990,36 +1991,100 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           focus_ground_horiz, /*keep_h=*/2, /*keep_cy=*/-1,
           /*remesh_only=*/true);
     }
-    // Plan P1-C: never leave schedule below admit floor before remesh.
+    // Admit floor before remesh — may be overridden by final GPU backlog clamp.
     mesh_schedule = std::max(mesh_schedule, moving ? 12 : 16);
     auto &exec = GetColumnFlowExecutor();
-    const glm::ivec2 hole_xz =
-        found_nearest_missing
-            ? glm::ivec2(isolated_hole.x, isolated_hole.z)
-            : glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z);
-    exec.Enqueue(hole_xz, ColumnWorkKind::FirstMesh, 100);
-    exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
-                 ColumnWorkKind::FirstMesh, 95);
+    if (found_nearest_missing)
+    {
+      ColumnWorkItem hole{};
+      hole.column = glm::ivec2(isolated_hole.x, isolated_hole.z);
+      hole.kind = ColumnWorkKind::FirstMesh;
+      hole.priority = 100;
+      hole.scan_full_focus = false;
+      hole.cy = isolated_hole.y;
+      exec.Enqueue(hole);
+    }
+    ColumnWorkItem focus_scan{};
+    focus_scan.column =
+        glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z);
+    focus_scan.kind = ColumnWorkKind::FirstMesh;
+    focus_scan.priority = 95;
+    focus_scan.scan_full_focus = true;
+    focus_scan.cy = -1;
+    exec.Enqueue(focus_scan);
     exec.DrainBudget(world, moving ? 3 : 4, focus_ground_horiz, focus_radius,
                      /*admit_batch=*/moving ? 3 : 4);
+    // Idle sticky: force Immediate on nearest hole within underfeet when it is
+    // not already in the mesh pipeline (HasMissing skips Pending/InFlight).
+    if (!moving && found_nearest_missing)
+    {
+      const int nh = std::max(
+          std::abs(isolated_hole.x - focus_ground_horiz.x),
+          std::abs(isolated_hole.z - focus_ground_horiz.z));
+      if (nh <= 1 && underfeet_immediate_cd <= 0 &&
+          underfeet_immediate_this_frame < kMaxUnderfeetImmediate &&
+          !mesh_service.HasMeshSatisfyingColumnReady(isolated_hole) &&
+          !mesh_service.IsPendingGpuApply(isolated_hole) &&
+          !mesh_service.HasInflightMeshBuild(isolated_hole) &&
+          immediate_ms_used() < 8.0)
+      {
+        mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
+                                           isolated_hole);
+        ++underfeet_immediate_this_frame;
+        underfeet_immediate_cd = 1;
+      }
+    }
   }
   else if (fov_unfinished)
   {
     auto &exec = GetColumnFlowExecutor();
-    exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
-                 ColumnWorkKind::FirstMesh, 90);
+    ColumnWorkItem focus_scan{};
+    focus_scan.column =
+        glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z);
+    focus_scan.kind = ColumnWorkKind::FirstMesh;
+    focus_scan.priority = 90;
+    focus_scan.scan_full_focus = true;
+    focus_scan.cy = -1;
+    exec.Enqueue(focus_scan);
     exec.DrainBudget(world, moving ? 2 : 3, focus_ground_horiz, focus_radius,
                      /*admit_batch=*/moving ? 2 : 3);
   }
-  const MeshRebuildTickStats tick_stats = mesh_service.RebuildDirtyChunksWithStats(
-      world.GetBlockWorld(), registry, mesh_drain, mesh_schedule,
-      /*force_sync=*/false, sync_cap, sync_budget_ms);
-  mesh_service.DrainAsyncMeshResults(world.GetBlockWorld(), registry, mesh_drain);
-  if (tick_stats.Completed > 0 || tick_stats.SyncRebuilt > 0 ||
-      (!moving && pending_focus_count > 0))
+  // Final drain-first: floors/isolated_missing cannot override deep GPU backlog.
+  if (gpu_backlog_deep)
   {
-    world.DrainFocusVisualWork(focus_ground_horiz, focus_radius,
-                               idle_recovery ? 24 : 12);
+    mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
+    mesh_schedule = std::min(mesh_schedule, 4);
+    mesh_drain = std::max(mesh_drain, 12);
+  }
+  else if (gpu_backlog_warm && (visual_holes || missing_visible_mesh))
+  {
+    // Warm backlog under miss: keep schedule near finish rate (~2-4/frame).
+    mesh_schedule = std::min(mesh_schedule, 2);
+    mesh_drain = std::max(mesh_drain, 12);
+    mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
+  }
+  else if (pending_gpu_n >= 12 && (visual_holes || missing_visible_mesh))
+  {
+    mesh_schedule = std::min(mesh_schedule, 4);
+  }
+  MeshRebuildTickStats tick_stats{};
+  {
+    int post_drain = mesh_drain;
+    if (mesh_service.GetPendingGpuAppliesCount() >= 16)
+    {
+      post_drain = std::min(post_drain, 4);
+    }
+    tick_stats = mesh_service.RebuildDirtyChunksWithStats(
+        world.GetBlockWorld(), registry, mesh_drain, mesh_schedule,
+        /*force_sync=*/false, sync_cap, sync_budget_ms);
+    mesh_service.DrainAsyncMeshResults(world.GetBlockWorld(), registry,
+                                       post_drain);
+    if (tick_stats.Completed > 0 || tick_stats.SyncRebuilt > 0 ||
+        (!moving && pending_focus_count > 0))
+    {
+      world.DrainFocusVisualWork(focus_ground_horiz, focus_radius,
+                                 idle_recovery ? 24 : 12);
+    }
   }
   // After Apply/RemeshAfterApply: prune again so next frame's FocusDirtyChunks
   // (counted at UpdateStreaming start) sees the eye-shell residual, not the
