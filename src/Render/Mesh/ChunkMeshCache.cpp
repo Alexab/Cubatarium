@@ -1203,7 +1203,7 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
   {
     return;
   }
-  constexpr int kRequeueBudget = 4;
+  const int kRequeueBudget = std::max(0, WorkAdmission.softdefer_requeue);
   int requeued = 0;
   for (auto it = SoftDeferHeld.begin(); it != SoftDeferHeld.end();)
   {
@@ -1228,6 +1228,11 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
     if (!still_deferred || in_focus)
     {
       if (requeued >= kRequeueBudget)
+      {
+        ++it;
+        continue;
+      }
+      if (!TryConsumeDirtyAdmit())
       {
         ++it;
         continue;

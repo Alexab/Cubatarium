@@ -945,8 +945,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_schedule = std::max(mesh_schedule, gpu_cap);
     mesh_drain = std::max(mesh_drain, gpu_cap);
   }
-  // Early pending_gpu read — MeshWorkAdmission Finalize applied after floors.
+  // Early pending_gpu read — MeshWorkAdmission for producers; Finalize later.
   const size_t pending_gpu_n = mesh_service.GetPendingGpuAppliesCount();
+  {
+    MeshWorkAdmissionInput ain{};
+    ain.pending_gpu = pending_gpu_n;
+    ain.pending_gpu_queued = mesh_service.GetPendingGpuQueuedCount();
+    ain.pending_gpu_kicked = mesh_service.GetPendingGpuKickedCount();
+    ain.visual_holes = visual_holes || missing_visible_mesh;
+    ain.missing_underfeet = missing_underfeet;
+    ain.moving = moving;
+    ain.pending_light_near = pending_focus_count;
+    ain.unfinished_visual = world.GetPhysicsTelemetry().UnfinishedVisual;
+    mesh_service.SetMeshWorkAdmission(ComputeMeshWorkAdmission(ain));
+  }
   if (focus_not_render_ready > 12 && pending_async_early < 10)
   {
     mesh_schedule = std::max(mesh_schedule, 14);
@@ -1806,7 +1818,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           // Nudge only *missing* underfeet-ring slices. Remesh-dirtying already
           // meshed neighbors caused RemeshAfterApply storms + discarded_late
           // (manual 213546 discards 0→111, opaque churn 925).
-          if (missing_visible_mesh)
+          // HoleDrain: ColumnFlow FirstMesh only — no neighbor Dirty bypass.
+          if (missing_visible_mesh &&
+              mesh_service.GetMeshWorkAdmission().allow_neighbor_dirty)
           {
             for (int dz = -1; dz <= 1; ++dz)
             {
@@ -1818,7 +1832,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 }
                 const glm::ivec3 neighbor(hole.x + dx, hole.y, hole.z + dz);
                 if (!mesh_service.HasDrawableGreedyMesh(neighbor) &&
-                    !mesh_service.IsPendingGpuApply(neighbor))
+                    !mesh_service.IsPendingGpuApply(neighbor) &&
+                    mesh_service.TryConsumeDirtyAdmit())
                 {
                   mesh_service.MarkDirtyPriority(neighbor);
                 }
@@ -1984,9 +1999,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           focus_ground_horiz, /*keep_h=*/2, /*keep_cy=*/-1,
           /*remesh_only=*/true);
     }
-    // Admit floor before remesh — may be overridden by final GPU backlog clamp.
+    // Admit floor before remesh — Finalize MeshWorkAdmission caps schedule.
     mesh_schedule = std::max(mesh_schedule, moving ? 12 : 16);
     auto &exec = GetColumnFlowExecutor();
+    const MeshWorkAdmission &adm = mesh_service.GetMeshWorkAdmission();
     if (found_nearest_missing)
     {
       ColumnWorkItem hole{};
@@ -1997,16 +2013,30 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       hole.cy = isolated_hole.y;
       exec.Enqueue(hole);
     }
-    ColumnWorkItem focus_scan{};
-    focus_scan.column =
-        glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z);
-    focus_scan.kind = ColumnWorkKind::FirstMesh;
-    focus_scan.priority = 95;
-    focus_scan.scan_full_focus = true;
-    focus_scan.cy = -1;
-    exec.Enqueue(focus_scan);
+    // Full-focus scan every frame only in Normal; under backlog every 3f.
+    static int focus_scan_cd = 0;
+    const bool full_scan =
+        adm.mode == MeshWorkAdmission::Mode::Normal || focus_scan_cd <= 0;
+    if (full_scan)
+    {
+      ColumnWorkItem focus_scan{};
+      focus_scan.column =
+          glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z);
+      focus_scan.kind = ColumnWorkKind::FirstMesh;
+      focus_scan.priority = 95;
+      focus_scan.scan_full_focus = true;
+      focus_scan.cy = -1;
+      exec.Enqueue(focus_scan);
+      focus_scan_cd =
+          adm.mode == MeshWorkAdmission::Mode::Normal ? 0 : 2;
+    }
+    else if (focus_scan_cd > 0)
+    {
+      --focus_scan_cd;
+    }
+    const int admit_n = std::max(1, adm.admit_batch);
     exec.DrainBudget(world, moving ? 3 : 4, focus_ground_horiz, focus_radius,
-                     /*admit_batch=*/moving ? 3 : 4);
+                     /*admit_batch=*/admit_n);
     // Idle sticky: force Immediate on nearest hole within underfeet when it is
     // not already in the mesh pipeline (HasMissing skips Pending/InFlight).
     if (!moving && found_nearest_missing)
