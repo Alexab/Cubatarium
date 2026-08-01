@@ -102,6 +102,74 @@ void BuildRangesFromHistogram(const uint32_t *counts,
   }
 }
 
+/// Build draw ranges from emit order without reordering GPU quads — skips
+/// full-slot glBufferSubData writeback after CPU readback (rim plan C1).
+void BuildRunLengthRangesFromUnsorted(const std::vector<PackedQuad> &quads,
+                                      UBlockRegistry &registry,
+                                      std::vector<GpuBlockDrawRange> *out_ranges,
+                                      bool *out_has_dark)
+{
+  bool has_dark = false;
+  if (out_ranges)
+  {
+    out_ranges->clear();
+    out_ranges->reserve(32);
+  }
+  uint32_t run_start = 0;
+  BlockId run_id = BLOCK_AIR;
+  bool have_run = false;
+  for (uint32_t i = 0; i < static_cast<uint32_t>(quads.size()); ++i)
+  {
+    const PackedQuad &q = quads[i];
+    const BlockId bid = static_cast<BlockId>(q.BlockType());
+    if (!has_dark && q.Face() != 5 && q.SkyLight() <= 0 &&
+        q.BlockLight() <= 0)
+    {
+      has_dark = true;
+    }
+    if (!have_run)
+    {
+      run_start = i;
+      run_id = bid;
+      have_run = true;
+      continue;
+    }
+    if (bid == run_id)
+    {
+      continue;
+    }
+    if (out_ranges)
+    {
+      GpuBlockDrawRange range;
+      range.blockId = run_id;
+      range.quadOffset = run_start;
+      range.quadCount = i - run_start;
+      range.Transparent = registry.IsTransparent(run_id);
+      range.AlphaCutout =
+          registry.GetRenderStyle(run_id) == BlockRenderStyle::Cutout;
+      out_ranges->push_back(range);
+    }
+    run_start = i;
+    run_id = bid;
+  }
+  if (have_run && out_ranges)
+  {
+    GpuBlockDrawRange range;
+    range.blockId = run_id;
+    range.quadOffset = run_start;
+    range.quadCount =
+        static_cast<uint32_t>(quads.size()) - run_start;
+    range.Transparent = registry.IsTransparent(run_id);
+    range.AlphaCutout =
+        registry.GetRenderStyle(run_id) == BlockRenderStyle::Cutout;
+    out_ranges->push_back(range);
+  }
+  if (out_has_dark)
+  {
+    *out_has_dark = has_dark;
+  }
+}
+
 bool ChunkHasTransparentOrCutout(const ChunkMeshSnapshot &snapshot,
                                  UBlockRegistry &registry)
 {
@@ -526,6 +594,9 @@ bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
                        out_has_dark_face);
   if (!sorted_gpu)
   {
+    // CPU fallback without full-slot writeback: read emit-order quads once,
+    // build RLE ranges in place, leave SSBO unchanged (avoids second sync
+    // transfer; AMD emerge was dominated by readback+sort+writeback).
     ScratchQuads.resize(rect_count);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, Allocator.GetQuadSsbo());
     glGetBufferSubData(
@@ -535,15 +606,8 @@ bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
         ScratchQuads.data());
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-    CountingSortPackedQuadsByBlockType(ScratchQuads, ScratchQuadsSorted,
-                                       registry, out_ranges, out_has_dark_face);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, Allocator.GetQuadSsbo());
-    glBufferSubData(
-        GL_SHADER_STORAGE_BUFFER,
-        static_cast<GLintptr>(slot_offset * sizeof(PackedQuad)),
-        static_cast<GLsizeiptr>(ScratchQuads.size() * sizeof(PackedQuad)),
-        ScratchQuads.data());
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    BuildRunLengthRangesFromUnsorted(ScratchQuads, registry, out_ranges,
+                                     out_has_dark_face);
   }
 
   Allocator.SetSlotQuadCount(slot_idx, rect_count);

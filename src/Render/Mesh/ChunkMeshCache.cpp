@@ -1112,8 +1112,66 @@ bool UChunkMeshCache::HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y,
   return false;
 }
 
+void UChunkMeshCache::HoldSoftDeferFirstMesh(glm::ivec3 chunk_coord)
+{
+  SoftDeferHeld.insert(chunk_coord);
+  constexpr size_t kSoftDeferHeldCap = 384;
+  if (SoftDeferHeld.size() <= kSoftDeferHeldCap)
+  {
+    return;
+  }
+  // Drop an arbitrary far entry so the side-set cannot grow unboundedly.
+  auto drop = SoftDeferHeld.begin();
+  SoftDeferHeld.erase(drop);
+}
+
+void UChunkMeshCache::RequeueSoftDeferHeld()
+{
+  if (SoftDeferHeld.empty())
+  {
+    return;
+  }
+  constexpr int kRequeueBudget = 4;
+  int requeued = 0;
+  for (auto it = SoftDeferHeld.begin(); it != SoftDeferHeld.end();)
+  {
+    const glm::ivec3 coord = *it;
+    if (HasDrawableGreedyMesh(coord) || IsPendingGpuApply(coord) ||
+        HasInflightMeshBuild(coord) || Dirty.Contains(coord))
+    {
+      it = SoftDeferHeld.erase(it);
+      continue;
+    }
+    const bool still_deferred =
+        DeferMeshUntilLit && DeferMeshUntilLit(coord);
+    bool in_focus = false;
+    if (MeshFocusValid)
+    {
+      const int horiz =
+          std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
+                   std::abs(coord.z - MeshFocusGroundChunk.z));
+      in_focus = horiz <= MeshFocusRadiusChunks;
+    }
+    // SoftDefer lifted or column entered focus (UnlitFirstMesh / MayMesh).
+    if (!still_deferred || in_focus)
+    {
+      if (requeued >= kRequeueBudget)
+      {
+        ++it;
+        continue;
+      }
+      it = SoftDeferHeld.erase(it);
+      MarkDirtyPriority(coord);
+      ++requeued;
+      continue;
+    }
+    ++it;
+  }
+}
+
 void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 {
+  SoftDeferHeld.erase(chunkCoord);
   // Mid-flight MarkDirty used to re-insert Dirty while Active stayed set —
   // Apply then immediately rescheduled forever (standing Dirty≈535 async=42).
   // Defer one remesh after Apply instead of stacking Dirty.
@@ -1139,6 +1197,7 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 }
 void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
 {
+  SoftDeferHeld.erase(chunkCoord);
   if (ActiveMeshSourceRevision.find(chunkCoord) !=
       ActiveMeshSourceRevision.end())
   {
@@ -2017,6 +2076,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastMeshDirtyTickMs = 0.0;
   bool mesh_data_changed = false;
 
+  RequeueSoftDeferHeld();
+
   if (!Dirty.empty())
   {
     // When focus holes/pending-light debt are active, huge Dirty sets were being
@@ -2028,20 +2089,23 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       for (auto it = Dirty.begin(); it != Dirty.end();)
       {
         // SoftDefer remesh: drop. Keep in-focus !Drawable FirstMesh until MayMesh
-        // opens; drop outside SoftDefer empties (undrawn heal re-admits in radius)
-        // so Dirty cannot plateau on deferred rim (cruise miss_stuck).
+        // opens; outside !Drawable → SoftDeferHeld (requeue when MayMesh/focus).
         if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
         {
-          if (!HasDrawableGreedyMesh(*it) && MeshFocusValid)
+          if (!HasDrawableGreedyMesh(*it))
           {
-            const int horiz =
-                std::max(std::abs(it->x - MeshFocusGroundChunk.x),
-                         std::abs(it->z - MeshFocusGroundChunk.z));
-            if (horiz <= MeshFocusRadiusChunks)
+            if (MeshFocusValid)
             {
-              ++it;
-              continue;
+              const int horiz =
+                  std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                           std::abs(it->z - MeshFocusGroundChunk.z));
+              if (horiz <= MeshFocusRadiusChunks)
+              {
+                ++it;
+                continue;
+              }
             }
+            HoldSoftDeferFirstMesh(*it);
           }
           it = Dirty.RemoveAt(it);
           continue;
@@ -2267,15 +2331,19 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
       {
-        if (!HasDrawableGreedyMesh(*it) && MeshFocusValid)
+        if (!HasDrawableGreedyMesh(*it))
         {
-          const int horiz =
-              std::max(std::abs(it->x - MeshFocusGroundChunk.x),
-                       std::abs(it->z - MeshFocusGroundChunk.z));
-          if (horiz <= MeshFocusRadiusChunks)
+          if (MeshFocusValid)
           {
-            return std::next(it);
+            const int horiz =
+                std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                         std::abs(it->z - MeshFocusGroundChunk.z));
+            if (horiz <= MeshFocusRadiusChunks)
+            {
+              return std::next(it);
+            }
           }
+          HoldSoftDeferFirstMesh(*it);
         }
         return Dirty.RemoveAt(it);
       }
@@ -2454,8 +2522,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           int outside_cap = outside_focus_cap;
           if (StarveOutsideFocusMesh)
           {
-            const bool missing =
-                GreedyCache.find(*it) == GreedyCache.end();
+            // Empty SoftDefer placeholders are FirstMesh (!Drawable), not remesh.
+            const bool missing = !HasDrawableGreedyMesh(*it);
             // MaxOutside==0 must stay hard zero (idle remesh). Old remesh
             // fallback to 1 fed CancelOutside discard storms.
             outside_cap =
@@ -2489,16 +2557,20 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
       {
-        if (!HasDrawableGreedyMesh(*it) && MeshFocusValid)
+        if (!HasDrawableGreedyMesh(*it))
         {
-          const int horiz =
-              std::max(std::abs(it->x - MeshFocusGroundChunk.x),
-                       std::abs(it->z - MeshFocusGroundChunk.z));
-          if (horiz <= MeshFocusRadiusChunks)
+          if (MeshFocusValid)
           {
-            ++it;
-            continue;
+            const int horiz =
+                std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                         std::abs(it->z - MeshFocusGroundChunk.z));
+            if (horiz <= MeshFocusRadiusChunks)
+            {
+              ++it;
+              continue;
+            }
           }
+          HoldSoftDeferFirstMesh(*it);
         }
         it = Dirty.RemoveAt(it);
         continue;

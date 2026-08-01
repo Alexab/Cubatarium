@@ -221,6 +221,13 @@ struct FrameNumbers
   uint64_t softdefer_capture_floor_hits{0};
   uint64_t softdefer_capture_floor_hits_delta{0};
   int softdefer_capture_budget{0};
+  int softdefer_empty_placeholder_n{0};
+  int softdefer_empty_stuck_n{0};
+  int softdefer_empty_stuck_cx{0};
+  int softdefer_empty_stuck_cy{0};
+  int softdefer_empty_stuck_cz{0};
+  int softdefer_empty_stuck_horiz{0};
+  int softdefer_held_n{0};
   double rss_mb{0.0};
   double private_mb{0.0};
   int chunk_count{0};
@@ -428,6 +435,13 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.enter_game_warmup_missing_greedy = phys.EnterGameWarmupMissingGreedy;
   n.softdefer_capture_floor_hits = phys.SoftDeferCaptureFloorHits;
   n.softdefer_capture_budget = phys.SoftDeferCaptureBudget;
+  n.softdefer_empty_placeholder_n = phys.SoftDeferEmptyPlaceholderN;
+  n.softdefer_empty_stuck_n = phys.SoftDeferEmptyStuckN;
+  n.softdefer_empty_stuck_cx = phys.SoftDeferEmptyStuckCx;
+  n.softdefer_empty_stuck_cy = phys.SoftDeferEmptyStuckCy;
+  n.softdefer_empty_stuck_cz = phys.SoftDeferEmptyStuckCz;
+  n.softdefer_empty_stuck_horiz = phys.SoftDeferEmptyStuckHoriz;
+  n.softdefer_held_n = phys.SoftDeferHeldN;
   n.pending_cols = phys.PendingFocusCols;
 #ifdef _WIN32
   PROCESS_MEMORY_COUNTERS_EX pmc{};
@@ -645,6 +659,15 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"softdefer_capture_floor_hits_delta\":"
           << n.softdefer_capture_floor_hits_delta
           << ",\"softdefer_capture_budget\":" << n.softdefer_capture_budget
+          << ",\"softdefer_empty_placeholder_n\":"
+          << n.softdefer_empty_placeholder_n
+          << ",\"softdefer_empty_stuck_n\":" << n.softdefer_empty_stuck_n
+          << ",\"softdefer_empty_stuck_cx\":" << n.softdefer_empty_stuck_cx
+          << ",\"softdefer_empty_stuck_cy\":" << n.softdefer_empty_stuck_cy
+          << ",\"softdefer_empty_stuck_cz\":" << n.softdefer_empty_stuck_cz
+          << ",\"softdefer_empty_stuck_horiz\":"
+          << n.softdefer_empty_stuck_horiz
+          << ",\"softdefer_held_n\":" << n.softdefer_held_n
           << ",\"rss_mb\":" << n.rss_mb << ",\"private_mb\":" << n.private_mb
           << ",\"chunk_count\":" << n.chunk_count
           << ",\"greedy_vertices\":" << n.greedy_vertices

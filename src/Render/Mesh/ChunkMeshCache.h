@@ -124,6 +124,8 @@ public:
   /// Drawable OR intentional GPU 0-quad commit (occluded). SoftDefer empty
   /// (HasGreedy, !GpuResident) stays false — rim hole SoT (manual 101824).
   bool HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const;
+  /// SoftDeferHeld side-set size (outside-focus !Drawable FirstMesh).
+  size_t GetSoftDeferHeldCount() const { return SoftDeferHeld.size(); }
   bool IsGpuExtractInFlight(glm::ivec3 chunk_coord) const;
   bool IsPendingGpuApply(glm::ivec3 chunk_coord) const;
   /// True if any non-bottom greedy vertex has sky+block light == 0.
@@ -482,6 +484,11 @@ private:
   int MaxOutsideFocusMeshPerFrame{2};
   int MaxRearFocusMeshPerFrame{0};
   std::unordered_set<glm::ivec3, IVec3Hash> RemeshAfterApply;
+  /// SoftDefer dropped !Drawable FirstMesh outside focus — requeue when
+  /// MayMesh / focus admits (rim plan B4; avoid forever-RemoveAt).
+  std::unordered_set<glm::ivec3, IVec3Hash> SoftDeferHeld;
+  void HoldSoftDeferFirstMesh(glm::ivec3 chunk_coord);
+  void RequeueSoftDeferHeld();
   /// GPU pool incremental upload: chunks mutated since last Consume.
   mutable std::unordered_set<glm::ivec3, IVec3Hash> GeometryDirtyChunks;
   void NoteGeometryDirty(glm::ivec3 chunk_coord);

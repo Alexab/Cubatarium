@@ -557,6 +557,11 @@ bool UWorldMeshService::HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) con
   return Cache.HasMeshSatisfyingColumnReady(chunk_coord);
 }
 
+size_t UWorldMeshService::GetSoftDeferHeldCount() const
+{
+  return Cache.GetSoftDeferHeldCount();
+}
+
 bool UWorldMeshService::IsGpuExtractInFlight(glm::ivec3 chunk_coord) const
 {
   return Cache.IsGpuExtractInFlight(chunk_coord);

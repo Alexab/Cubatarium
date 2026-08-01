@@ -415,11 +415,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // still needs Force Dirty when SoftDefer dropped entries. Scan focus_radius
   // (was Chebyshev r<=1) with a per-frame MarkDirty cap (manual 101824 rim).
   bool underfeet_undrawn = false;
+  auto &phys_telem = world.GetPhysicsTelemetryMutable();
+  phys_telem.SoftDeferEmptyPlaceholderN = 0;
+  phys_telem.SoftDeferEmptyStuckN = 0;
+  phys_telem.SoftDeferEmptyStuckDefer = 0;
   {
     static int undrawn_force_cd = 0;
+    static int stuck_smoke_cd = 0;
     if (undrawn_force_cd > 0)
     {
       --undrawn_force_cd;
+    }
+    if (stuck_smoke_cd > 0)
+    {
+      --stuck_smoke_cd;
     }
     const int max_cy = std::max(
         0, FloorDiv(procedural.MaxHeight, CHUNK_SIZE));
@@ -438,15 +447,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           {
             const glm::ivec3 coord(focus_ground_horiz.x + dx, cy,
                                    focus_ground_horiz.z + dz);
-            if (mesh_service.HasDrawableGreedyMesh(coord) ||
-                mesh_service.IsPendingGpuApply(coord) ||
-                mesh_service.HasInflightMeshBuild(coord) ||
-                mesh_service.IsChunkMeshDirty(coord))
+            const int horiz = std::max(std::abs(dx), std::abs(dz));
+            const bool has_drawable = mesh_service.HasDrawableGreedyMesh(coord);
+            const bool has_greedy = mesh_service.HasGreedyMesh(coord);
+            const bool is_dirty = mesh_service.IsChunkMeshDirty(coord);
+            const bool pending_gpu = mesh_service.IsPendingGpuApply(coord);
+            const bool inflight = mesh_service.HasInflightMeshBuild(coord);
+            if (has_drawable || pending_gpu || inflight || is_dirty)
             {
               continue;
             }
             // Only wrong-empty SoftDefer placeholders (cache entry, no quads).
-            if (!mesh_service.HasGreedyMesh(coord))
+            if (!has_greedy)
             {
               continue;
             }
@@ -474,6 +486,28 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             {
               continue;
             }
+            ++phys_telem.SoftDeferEmptyPlaceholderN;
+            // A2 smoke: stuck pattern HasGreedy && !Drawable && !Dirty && horiz>1
+            if (horiz > 1)
+            {
+              ++phys_telem.SoftDeferEmptyStuckN;
+              if (phys_telem.SoftDeferEmptyStuckN == 1)
+              {
+                phys_telem.SoftDeferEmptyStuckCx = coord.x;
+                phys_telem.SoftDeferEmptyStuckCy = coord.y;
+                phys_telem.SoftDeferEmptyStuckCz = coord.z;
+                phys_telem.SoftDeferEmptyStuckHoriz = horiz;
+                phys_telem.SoftDeferEmptyStuckDefer = 1;
+              }
+              if (stuck_smoke_cd <= 0)
+              {
+                std::cerr << "[SoftDeferEmptySmoke] HasGreedy=!Drawable "
+                          << "Dirty=0 SoftDefer~1 horiz=" << horiz << " at ("
+                          << coord.x << "," << coord.y << "," << coord.z
+                          << ")\n";
+                stuck_smoke_cd = 120;
+              }
+            }
             mesh_service.MarkDirtyPriority(coord);
             underfeet_undrawn = true;
             ++marked_n;
@@ -486,6 +520,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       }
     }
   }
+  phys_telem.SoftDeferHeldN =
+      static_cast<int>(mesh_service.GetSoftDeferHeldCount());
   const bool underfeet_need =
       missing_underfeet || pending_underfeet || underfeet_undrawn;
   if (underfeet_undrawn)
@@ -692,15 +728,24 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Healthy Dirty flush: raise outside-focus schedule so keep-shell remesh
   // cannot plateau ~450 forever (kMaxOutsideFocusPerFrame=2 alone).
   // Idle lit-but-dirty: never open outside cap — that regressed not_ready.
+  // C2: while focus has undrawn / visual holes, keep a trickle of outside
+  // FirstMesh (MaxOutside=0 starved rim behind sticky miss).
   if (idle_recovery || idle_remesh_debt)
   {
     mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
   }
   else if (moving &&
-           (visual_holes || missing_underfeet || pending_dirty > 450 ||
-            cruise_light_debt))
+           (visual_holes || missing_underfeet || underfeet_undrawn ||
+            pending_dirty > 450 || cruise_light_debt))
   {
-    mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
+    if (visual_holes || underfeet_undrawn || missing_underfeet)
+    {
+      mesh_service.SetMaxOutsideFocusMeshPerFrame(1);
+    }
+    else
+    {
+      mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
+    }
   }
   else if (!moving && focus_not_render_ready > 15 && last_frame_ms <= 28.0)
   {

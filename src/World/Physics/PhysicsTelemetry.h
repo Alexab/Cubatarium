@@ -50,6 +50,17 @@ struct PhysicsTelemetry
   uint64_t SoftDeferCaptureFloorHits{0};
   /// Capture/relight bg budget requested by SoftDefer floor this frame (0 if idle).
   int SoftDeferCaptureBudget{0};
+  /// Empty SoftDefer placeholders seen by undrawn heal this frame (A2 smoke).
+  int SoftDeferEmptyPlaceholderN{0};
+  /// Stuck pattern: HasGreedy && !Drawable && !Dirty && horiz>1.
+  int SoftDeferEmptyStuckN{0};
+  int SoftDeferEmptyStuckCx{0};
+  int SoftDeferEmptyStuckCy{0};
+  int SoftDeferEmptyStuckCz{0};
+  int SoftDeferEmptyStuckHoriz{0};
+  int SoftDeferEmptyStuckDefer{0};
+  /// SoftDeferHeld side-set size (outside-focus !Drawable FirstMesh).
+  int SoftDeferHeldN{0};
   double RelightCompletedPerSec{0.0};
   double CommitPhysicsMs{0.0};
   double CommitRelightMs{0.0};

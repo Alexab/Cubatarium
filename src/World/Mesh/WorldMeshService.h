@@ -151,6 +151,7 @@ public:
   /// placeholder entries that SoftDefer treated as "has mesh").
   bool HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const;
   bool HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const;
+  size_t GetSoftDeferHeldCount() const;
   bool IsGpuExtractInFlight(glm::ivec3 chunk_coord) const;
   /// Queued in PendingGpuApplies — orphaned GpuExtractInFlight alone is not.
   bool IsPendingGpuApply(glm::ivec3 chunk_coord) const;
