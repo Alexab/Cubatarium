@@ -510,13 +510,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 stuck_smoke_cd = 120;
               }
             }
-            // F2: SoftDefer empty → Dirty via DirtyAdmit (FirstMesh priority).
-            if (mesh_service.TryConsumeDirtyAdmit())
-            {
-              mesh_service.MarkDirtyPriority(coord);
-              underfeet_undrawn = true;
-              ++marked_n;
-            }
+            // FirstMesh placeholder — always Dirty (do not gate on DirtyAdmit;
+            // HoleDrain admit=0 left post_stop miss sticky).
+            mesh_service.MarkDirtyPriority(coord);
+            underfeet_undrawn = true;
+            ++marked_n;
           }
         }
       }

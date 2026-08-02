@@ -2907,15 +2907,6 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         ++it;
         continue;
       }
-      // Prefer remaining FirstMesh slots before remesh when holes + split quotas.
-      if (is_remesh && sched_adm.first_mesh_schedule > 0 &&
-          focus_missing_for_schedule &&
-          reserved_focus_scheduled < first_mesh_cap &&
-          scheduled < max_schedule_per_frame)
-      {
-        ++it;
-        continue;
-      }
       bool outside_focus = false;
       bool schedule_overflow = false;
       if (MeshFocusValid)
