@@ -502,7 +502,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 phys_telem.SoftDeferEmptyStuckDefer = 1;
               }
               if (stuck_smoke_cd <= 0)
-              {
+            {
                 std::cerr << "[SoftDeferEmptySmoke] HasGreedy=!Drawable "
                           << "Dirty=0 SoftDefer~1 horiz=" << horiz << " at ("
                           << coord.x << "," << coord.y << "," << coord.z
@@ -510,9 +510,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 stuck_smoke_cd = 120;
               }
             }
-            mesh_service.MarkDirtyPriority(coord);
-            underfeet_undrawn = true;
-            ++marked_n;
+            // F2: SoftDefer empty → Dirty via DirtyAdmit (FirstMesh priority).
+            if (mesh_service.TryConsumeDirtyAdmit())
+            {
+              mesh_service.MarkDirtyPriority(coord);
+              underfeet_undrawn = true;
+              ++marked_n;
+            }
           }
         }
       }

@@ -2605,13 +2605,20 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     }
     for (const glm::ivec3 &coord : AsyncBuilder->TakeOverflowCoords())
     {
-      MarkDirtyPriority(coord);
+      // Remesh overflow requeue gated; FirstMesh holes always re-enter Dirty.
+      if (!HasDrawableGreedyMesh(coord) || TryConsumeDirtyAdmit())
+      {
+        MarkDirtyPriority(coord);
+      }
     }
     for (const glm::ivec3 &coord : AsyncBuilder->TakeDiscardedCoords())
     {
       // Epoch / jobId DiscardedLate frees InFlight but leaves Active orphan —
-      // force FirstMesh path via MarkDirtyPriority hole invalidate.
-      MarkDirtyPriority(coord);
+      // FirstMesh always requeues; remesh discard respects DirtyAdmit.
+      if (!HasDrawableGreedyMesh(coord) || TryConsumeDirtyAdmit())
+      {
+        MarkDirtyPriority(coord);
+      }
     }
     if (!skip_gpu_consume)
     {
@@ -2681,8 +2688,18 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     int outside_focus_scheduled = 0;
     int overflow_scheduled = 0;
     int reserved_focus_scheduled = 0;
+    int remesh_scheduled = 0;
     const int outside_focus_cap = MaxOutsideFocusMeshPerFrame;
     constexpr int kReservedFocusMissingSlots = 16;
+    const MeshWorkAdmission &sched_adm = WorkAdmission;
+    // F2: under holes, Pass 1 uses first_mesh_schedule; remesh uses remesh_schedule.
+    const int first_mesh_cap =
+        sched_adm.first_mesh_schedule > 0
+            ? sched_adm.first_mesh_schedule
+            : kReservedFocusMissingSlots;
+    const int remesh_cap =
+        sched_adm.remesh_schedule > 0 ? sched_adm.remesh_schedule
+                                      : max_schedule_per_frame;
     const int rear_focus_cap = std::max(0, MaxRearFocusMeshPerFrame);
     int rear_focus_scheduled = 0;
 
@@ -2788,11 +2805,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         MeshFocusValid &&
         HasMissingGreedyMeshInHorizontalRadius(world, MeshFocusGroundChunk,
                                                MeshFocusRadiusChunks);
-    if (MeshFocusValid)
+    if (MeshFocusValid && first_mesh_cap > 0)
     {
       for (auto it = Dirty.begin();
            it != Dirty.end() && scheduled < max_schedule_per_frame &&
-           reserved_focus_scheduled < kReservedFocusMissingSlots;)
+           reserved_focus_scheduled < first_mesh_cap;)
       {
         const int dx = std::abs(it->x - MeshFocusGroundChunk.x);
         const int dz = std::abs(it->z - MeshFocusGroundChunk.z);
@@ -2879,6 +2896,22 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       // D1c: when drain-first left schedule=1 under miss, never spend it on remesh.
       if (focus_missing_for_schedule && max_schedule_per_frame <= 1 &&
           HasDrawableGreedyMesh(*it))
+      {
+        ++it;
+        continue;
+      }
+      // F2: remesh quota separate from FirstMesh under HoleDrain/Deep.
+      const bool is_remesh = HasDrawableGreedyMesh(*it);
+      if (is_remesh && remesh_scheduled >= remesh_cap)
+      {
+        ++it;
+        continue;
+      }
+      // Prefer remaining FirstMesh slots before remesh when holes + split quotas.
+      if (is_remesh && sched_adm.first_mesh_schedule > 0 &&
+          focus_missing_for_schedule &&
+          reserved_focus_scheduled < first_mesh_cap &&
+          scheduled < max_schedule_per_frame)
       {
         ++it;
         continue;
@@ -2993,6 +3026,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         }
       }
       const uint64_t source_revision = MeshRevisions.Current(*it);
+      const bool count_as_remesh = HasDrawableGreedyMesh(*it);
       const auto snap_t0 = std::chrono::high_resolution_clock::now();
       ChunkMeshSnapshot snapshot = CaptureStore.TakeOrRefresh(
           world, *it, source_revision, CaptureRefreshBudgetLeft);
@@ -3005,6 +3039,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       it = Dirty.RemoveAt(it);
       ++scheduled;
       ++stats.Scheduled;
+      if (count_as_remesh)
+      {
+        ++remesh_scheduled;
+      }
       if (schedule_overflow)
       {
         ++overflow_scheduled;
