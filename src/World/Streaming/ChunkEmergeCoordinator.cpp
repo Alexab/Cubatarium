@@ -7,6 +7,7 @@
 #include "World/Streaming/MeshWorkAdmission.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Camera/Camera.h"
+#include "Render/Mesh/GpuMeshPipeline.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/RuntimeTuning.h"
@@ -960,6 +961,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.pending_light_near = pending_focus_count;
     ain.unfinished_visual = world.GetPhysicsTelemetry().UnfinishedVisual;
     ain.prev_mode = static_cast<uint8_t>(LastBudget.AdmissionMode);
+    ain.ring_depth = UGpuMeshPipeline::kReadbackRing;
     mesh_service.SetMeshWorkAdmission(ComputeMeshWorkAdmission(ain));
   }
   if (focus_not_render_ready > 12 && pending_async_early < 10)
@@ -2105,6 +2107,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.pending_light_near = pending_focus_count;
     ain.unfinished_visual = world.GetPhysicsTelemetry().UnfinishedVisual;
     ain.prev_mode = static_cast<uint8_t>(LastBudget.AdmissionMode);
+    ain.ring_depth = UGpuMeshPipeline::kReadbackRing;
     const MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
     mesh_service.SetMeshWorkAdmission(adm);
     mesh_schedule = FinalizeSchedule(mesh_schedule, adm);

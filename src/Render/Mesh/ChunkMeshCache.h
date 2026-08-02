@@ -268,6 +268,7 @@ public:
   {
     WorkAdmission = adm;
     DirtyAdmitRemaining = std::max(0, adm.dirty_admit_budget);
+    EnqueueGpuRemaining = std::max(0, adm.enqueue_gpu_budget);
   }
   const MeshWorkAdmission &GetMeshWorkAdmission() const { return WorkAdmission; }
   bool TryConsumeDirtyAdmit()
@@ -277,6 +278,15 @@ public:
       return false;
     }
     --DirtyAdmitRemaining;
+    return true;
+  }
+  bool TryConsumeEnqueueGpu()
+  {
+    if (EnqueueGpuRemaining <= 0)
+    {
+      return false;
+    }
+    --EnqueueGpuRemaining;
     return true;
   }
   /// Drop Dirty beyond keep shell (Chebyshev horiz + optional |cy|).
@@ -528,6 +538,7 @@ private:
   int StarveRemeshKeepHoriz{2};
   MeshWorkAdmission WorkAdmission{};
   int DirtyAdmitRemaining{8};
+  int EnqueueGpuRemaining{8};
   /// SyncRebuildVisibleMissing: fill missing within this Chebyshev radius.
   int SyncHoleFillRadius{1};
   int MaxOutsideFocusMeshPerFrame{2};

@@ -23,7 +23,7 @@ class UGpuMeshPipeline
 {
 public:
   static constexpr uint32_t kDefaultMaxSlots = 2048;
-  static constexpr int kReadbackRing = 4;
+  static constexpr int kReadbackRing = 8;
 
   bool Init(uint32_t max_slots = kDefaultMaxSlots);
   void Shutdown();

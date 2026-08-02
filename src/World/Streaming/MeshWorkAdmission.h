@@ -24,7 +24,7 @@ struct MeshWorkAdmissionInput
   /// Previous frame mode for HoleDrain hysteresis (SoT 100351 Normal thrash).
   uint8_t prev_mode{0};
   /// GPU readback ring depth (kReadbackRing); used for enqueue_gpu_budget.
-  int ring_depth{4};
+  int ring_depth{8};
 };
 
 struct MeshWorkAdmission

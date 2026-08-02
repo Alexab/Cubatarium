@@ -236,6 +236,18 @@ int main()
     const auto a8 = ComputeMeshWorkAdmission(warm_hold);
     Expect(a8.mode == MeshWorkAdmission::Mode::WarmBacklog,
            "hysteresis Warm while pending>8 without holes");
+
+    // F1: enqueue_gpu_budget tracks ring − kicked.
+    MeshWorkAdmissionInput ring{};
+    ring.pending_gpu = 14;
+    ring.pending_gpu_kicked = 3;
+    ring.visual_holes = true;
+    ring.moving = true;
+    ring.ring_depth = 8;
+    const auto a9 = ComputeMeshWorkAdmission(ring);
+    Expect(a9.mode == MeshWorkAdmission::Mode::HoleDrain, "ring HoleDrain");
+    Expect(a9.enqueue_gpu_budget == 5, "HoleDrain enqueue = ring-kicked");
+    Expect(a9.gpu_apply_max >= 16, "HoleDrain apply_max ≥ ring*2");
   }
 
   if (failures != 0)

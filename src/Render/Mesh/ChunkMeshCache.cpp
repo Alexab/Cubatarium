@@ -1953,9 +1953,9 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   // Phase A (174511): ring PBO → up to 4 Kick/Finish per tick; no shared-PBO
   // single-apply bottleneck. Prefer Finish over Kick when budget tight.
   const int finish_cap =
-      std::min(UGpuMeshPipeline::kReadbackRing, std::min(4, max_count));
+      std::min(UGpuMeshPipeline::kReadbackRing, std::max(0, max_count));
   const int kick_cap =
-      std::min(UGpuMeshPipeline::kReadbackRing, std::min(4, max_count));
+      std::min(UGpuMeshPipeline::kReadbackRing, std::max(0, max_count));
   int processed = 0;
   int finished = 0;
   int kicked = 0;
@@ -2269,6 +2269,24 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     EnsureGpuPipeline();
     if (Render.GpuPackedMeshing && GpuPipeline && GpuPipeline->IsReady())
     {
+      // F1: do not grow Queued beyond ring-aligned admission budget.
+      if (!TryConsumeEnqueueGpu())
+      {
+        ActiveMeshSourceRevision.erase(revisionIt);
+        GpuExtractInFlight.erase(result.coord);
+        if (!HasDrawableGreedyMesh(result.coord))
+        {
+          Dirty.MarkDirtyPriority(result.coord);
+        }
+        else
+        {
+          Dirty.MarkDirty(result.coord);
+        }
+        InstancesDirty = true;
+        GreedyBatchesDirty = true;
+        CrossBatchesDirty = true;
+        return;
+      }
       PendingGpuApply pending;
       pending.coord = result.coord;
       pending.sourceRevision = result.sourceRevision;
