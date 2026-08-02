@@ -270,6 +270,17 @@ int main()
            "G0 holes+queued≥ring → HoleDrain despite pending<12");
     Expect(FinalizeSchedule(20, a10) <= 4, "G0 latch caps FOV floor sch=20");
 
+    MeshWorkAdmissionInput warm_pend{};
+    warm_pend.pending_gpu = 10;
+    warm_pend.pending_gpu_queued = 3;
+    warm_pend.visual_holes = true;
+    warm_pend.moving = true;
+    warm_pend.ring_depth = 8;
+    const auto a10b = ComputeMeshWorkAdmission(warm_pend);
+    Expect(a10b.mode == MeshWorkAdmission::Mode::HoleDrain,
+           "G0 holes+pending≥8 → HoleDrain even if queued<ring/2");
+    Expect(FinalizeSchedule(12, a10b) <= 4, "G0 warm-pending caps sch=12");
+
     MeshWorkAdmissionInput refill_exit{};
     refill_exit.pending_gpu = 6;
     refill_exit.pending_gpu_queued = 8;
