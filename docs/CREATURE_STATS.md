@@ -38,6 +38,21 @@ strength, agility, endurance, accuracy, intelligence, luck, perception
 Persisted as `game_mode` in `world_data.json`. Toggle: New World UI or
 `/gamemode creative|survival`. `/fly` is blocked in Survival.
 
+## Fatigue (Survival only)
+
+Fatigue starts at **0** (rested) and rises toward `max_fatigue`.
+
+| Situation | Rate (base) |
+|-----------|-------------|
+| Sprint (Ctrl + move, on ground) | +8 / sec |
+| In water | +5 / sec (stacks with sprint) |
+| Standing / walking / idle | −4 / sec recover |
+
+Endurance scales gain: higher END → slower fatigue build-up.
+At ≥95% fatigue sprint is gated off. **Creative** freezes all vitals (no drain).
+
+Satiety / thirst drain slowly while Survival (~0.15–0.2 / sec) even when idle.
+
 ## UI
 
 - Character sheet: key `c` (`UiSettings.CharacterKey`)

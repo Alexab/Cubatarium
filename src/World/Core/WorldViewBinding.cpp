@@ -468,7 +468,6 @@ void UWorld::RunLegacyPhysicsFrame()
       });
 
   bool is_moved = camera && camera->DoMovement(this);
-  CreatureVitalsSystem::Tick(*this, GetGameMode(), dt);
   static bool was_collision_ready = true;
   const bool collision_ready =
       !hasFeetBlockForReadiness ||
@@ -543,6 +542,9 @@ void UWorld::RunLegacyPhysicsFrame()
         static_cast<float>(camera->GetDeltaTime()), horizontalSpeed, this);
     is_moved = true;
   }
+
+  // After player facts sync so sprint/swim fatigue sees this frame's state.
+  CreatureVitalsSystem::Tick(*this, GetGameMode(), dt);
 
   const auto t_after_move = std::chrono::high_resolution_clock::now();
   PhysicsTelemetryData.StreamMs = 0.0;

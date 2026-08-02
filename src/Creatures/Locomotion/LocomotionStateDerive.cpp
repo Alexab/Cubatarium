@@ -7,7 +7,8 @@ namespace cutum
 namespace locomotion
 {
 constexpr float kMoveSpeedEpsilon = 0.05f;
-constexpr float kRunSpeedFactor = 1.35f;
+// Must sit below typical sprint_speed_multiplier (1.3) so Ctrl-sprint maps to Run.
+constexpr float kRunSpeedFactor = 1.15f;
 constexpr float kJumpVyThreshold = 0.5f;
 constexpr float kFallVyThreshold = -0.5f;
 constexpr float kCrouchStanceThreshold = 0.35f;
@@ -73,6 +74,14 @@ LocomotionState DeriveTerrestrial(const CreatureLocomotionFacts &raw,
   }
   if (raw.onGround && raw.horizontalSpeed > locomotion::kMoveSpeedEpsilon)
   {
+    // Camera sprint often sits just under runThreshold; honor Run hint once
+    // speed clearly exceeds walk (not a slow nudge).
+    if (hintInput && hintInput->hasSuggestedAnim &&
+        hintInput->suggestedAnim == LocomotionState::Run &&
+        raw.horizontalSpeed > caps.walkSpeed * 1.05f)
+    {
+      return LocomotionState::Run;
+    }
     return LocomotionState::Walk;
   }
   if (hintInput && hintInput->hasSuggestedAnim)

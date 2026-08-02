@@ -2,6 +2,8 @@
 #define GUI_LABEL_H
 
 #include "Gui/Widgets/GuiWidget.h"
+#include <glm/glm.hpp>
+#include <optional>
 #include <string>
 
 namespace cutum
@@ -25,6 +27,11 @@ public:
   void SetTextAlign(GuiTextAlign align) { TextAlign = align; }
   void SetDrawBackground(bool draw) { DrawBackground = draw; }
   void SetUseSecondaryColor(bool use) { UseSecondaryColor = use; }
+  void SetBackgroundColorOverride(const glm::vec4 &color)
+  {
+    BackgroundOverride = color;
+  }
+  void ClearBackgroundColorOverride() { BackgroundOverride.reset(); }
 
   void Draw(UGuiRenderer &renderer) override;
   int GetPreferredHeight() const override;
@@ -35,6 +42,7 @@ private:
   GuiTextAlign TextAlign{GuiTextAlign::Left};
   bool DrawBackground{false};
   bool UseSecondaryColor{false};
+  std::optional<glm::vec4> BackgroundOverride;
 };
 
 } // namespace cutum

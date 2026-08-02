@@ -176,6 +176,10 @@ void UCreature::RebuildLocomotionFactsFromController(
   input.bodyOriginBefore = BodyOrigin;
   input.bodyOriginAfter = BodyOrigin;
   input.dt = dt;
+  // Camera controller already resolved Walk/Run; speed-only derive can miss
+  // sprint when multiplier sits near the run threshold.
+  input.hasSuggestedAnim = true;
+  input.suggestedAnim = controller.GetLocomotionState();
   CreatureLocomotionFacts raw;
   FillTerrestrialRawFacts(raw, input, LocomotionArchetype, Yaw, Pitch);
   raw.animPhase = prevPhase;

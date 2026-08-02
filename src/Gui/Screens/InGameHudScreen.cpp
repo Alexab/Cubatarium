@@ -483,7 +483,9 @@ void UInGameHudScreen::EnsureVitalWidgets()
   }
   auto makeLabel = [this](UGuiLabel *&out) {
     auto lab = std::make_unique<UGuiLabel>(Theme, "");
+    // Opaque bar (TooltipBackground is too translucent → text washes out).
     lab->SetDrawBackground(true);
+    lab->SetBackgroundColorOverride(Theme->SlotBackground);
     lab->SetVisible(false);
     out = lab.get();
     RootPanel->AddChild(std::move(lab));
