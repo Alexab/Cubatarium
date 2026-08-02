@@ -177,6 +177,8 @@ public:
   bool IsGpuExtractInFlight(glm::ivec3 chunk_coord) const;
   /// Queued in PendingGpuApplies — orphaned GpuExtractInFlight alone is not.
   bool IsPendingGpuApply(glm::ivec3 chunk_coord) const;
+  bool IsPendingGpuQueued(glm::ivec3 chunk_coord) const;
+  bool DropQueuedPendingGpuApply(glm::ivec3 chunk_coord);
   bool ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
                              const UBlockWorld &world) const;
   bool IsChunkMeshDirty(glm::ivec3 chunk_coord) const;

@@ -706,6 +706,16 @@ bool UWorldMeshService::IsPendingGpuApply(glm::ivec3 chunk_coord) const
   return Cache.IsPendingGpuApply(chunk_coord);
 }
 
+bool UWorldMeshService::IsPendingGpuQueued(glm::ivec3 chunk_coord) const
+{
+  return Cache.IsPendingGpuQueued(chunk_coord);
+}
+
+bool UWorldMeshService::DropQueuedPendingGpuApply(glm::ivec3 chunk_coord)
+{
+  return Cache.DropQueuedPendingGpuApply(chunk_coord);
+}
+
 bool UWorldMeshService::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
                                               const UBlockWorld &world) const
 {

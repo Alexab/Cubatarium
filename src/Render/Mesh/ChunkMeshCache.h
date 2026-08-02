@@ -145,6 +145,12 @@ public:
   const UMeshCaptureStore &GetCaptureStore() const { return CaptureStore; }
   bool IsGpuExtractInFlight(glm::ivec3 chunk_coord) const;
   bool IsPendingGpuApply(glm::ivec3 chunk_coord) const;
+  /// True only while PendingGpuApply for coord is still Phase::Queued (not
+  /// Dispatched/Kicked). Used by sticky Immediate escape — never drop kicked.
+  bool IsPendingGpuQueued(glm::ivec3 chunk_coord) const;
+  /// Drop Queued-only pending for coord so Immediate can rebuild. Returns true
+  /// if a Queued entry was erased. Leaves Dispatched/Kicked untouched.
+  bool DropQueuedPendingGpuApply(glm::ivec3 chunk_coord);
   /// True if any non-bottom greedy vertex has sky+block light == 0.
   /// −Y bottoms are ignored (normally unlit).
   bool ChunkHasFullyDarkFace(glm::ivec3 chunk_coord) const;

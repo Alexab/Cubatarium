@@ -551,6 +551,40 @@ bool UChunkMeshCache::IsPendingGpuApply(glm::ivec3 chunk_coord) const
   return false;
 }
 
+bool UChunkMeshCache::IsPendingGpuQueued(glm::ivec3 chunk_coord) const
+{
+  for (const PendingGpuApply &pending : PendingGpuApplies)
+  {
+    if (pending.coord == chunk_coord)
+    {
+      return pending.phase == PendingGpuApply::Phase::Queued;
+    }
+  }
+  return false;
+}
+
+bool UChunkMeshCache::DropQueuedPendingGpuApply(glm::ivec3 chunk_coord)
+{
+  for (auto it = PendingGpuApplies.begin(); it != PendingGpuApplies.end(); ++it)
+  {
+    if (it->coord != chunk_coord)
+    {
+      continue;
+    }
+    if (it->phase != PendingGpuApply::Phase::Queued)
+    {
+      return false;
+    }
+    // Queued has no fence/staging yet — erase + clear Active so Immediate can
+    // Capture a fresh revision without fighting Kick/Finish.
+    ActiveMeshSourceRevision.erase(chunk_coord);
+    GpuExtractInFlight.erase(chunk_coord);
+    PendingGpuApplies.erase(it);
+    return true;
+  }
+  return false;
+}
+
 void UChunkMeshCache::NoteGeometryDirty(glm::ivec3 chunk_coord)
 {
   GeometryDirtyChunks.insert(chunk_coord);

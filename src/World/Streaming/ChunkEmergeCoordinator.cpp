@@ -2064,28 +2064,50 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         underfeet_immediate_cd = 1;
       }
     }
-    // F3: sticky nearest-hole Immediate escape (moving + idle stop) — ≥3 frames,
-    // horiz≤2, independent of underfeet / async<2 gates.
+    // G1: sticky nearest-hole Immediate — nh≤3; count frames while pipeline idle
+    // OR stuck Queued (PendingGpu blocks Imm otherwise). At sticky≥5 + Queued:
+    // drop Queued-only then Immediate (never Dispatched/Kicked).
     if (found_nearest_missing)
     {
-      const bool pipeline_idle =
-          !mesh_service.HasDrawableGreedyMesh(isolated_hole) &&
-          !mesh_service.IsPendingGpuApply(isolated_hole) &&
+      const bool no_drawable =
+          !mesh_service.HasDrawableGreedyMesh(isolated_hole);
+      const bool no_inflight =
           !mesh_service.HasInflightMeshBuild(isolated_hole);
-      mesh_service.UpdateStickyNearestHole(isolated_hole, pipeline_idle);
+      const bool queued_stuck =
+          mesh_service.IsPendingGpuQueued(isolated_hole);
+      const bool pipeline_idle =
+          no_drawable && !mesh_service.IsPendingGpuApply(isolated_hole) &&
+          no_inflight;
+      const bool sticky_alive =
+          no_drawable && no_inflight &&
+          (pipeline_idle || queued_stuck);
+      mesh_service.UpdateStickyNearestHole(isolated_hole, sticky_alive);
       const int nh = std::max(
           std::abs(isolated_hole.x - focus_ground_horiz.x),
           std::abs(isolated_hole.z - focus_ground_horiz.z));
-      if (pipeline_idle && nh <= 2 &&
-          mesh_service.GetStickyNearestHoleFrames() >= 3 &&
-          underfeet_immediate_this_frame < kMaxUnderfeetImmediate &&
-          immediate_ms_used() < (moving ? 6.0 : 8.0))
+      const int sticky_frames = mesh_service.GetStickyNearestHoleFrames();
+      const bool ms_ok = immediate_ms_used() < (moving ? 6.0 : 8.0);
+      const bool slot_ok =
+          underfeet_immediate_this_frame < kMaxUnderfeetImmediate;
+      if (nh <= 3 && slot_ok && ms_ok)
       {
-        mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
-                                           isolated_hole);
-        ++underfeet_immediate_this_frame;
-        underfeet_immediate_cd = 1;
-        mesh_service.UpdateStickyNearestHole(isolated_hole, false);
+        if (pipeline_idle && sticky_frames >= 3)
+        {
+          mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
+                                             isolated_hole);
+          ++underfeet_immediate_this_frame;
+          underfeet_immediate_cd = 1;
+          mesh_service.UpdateStickyNearestHole(isolated_hole, false);
+        }
+        else if (queued_stuck && sticky_frames >= 5 &&
+                 mesh_service.DropQueuedPendingGpuApply(isolated_hole))
+        {
+          mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
+                                             isolated_hole);
+          ++underfeet_immediate_this_frame;
+          underfeet_immediate_cd = 1;
+          mesh_service.UpdateStickyNearestHole(isolated_hole, false);
+        }
       }
     }
     else
