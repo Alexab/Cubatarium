@@ -2010,11 +2010,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_schedule = std::max(mesh_schedule, moving ? 12 : 16);
     auto &exec = GetColumnFlowExecutor();
     const MeshWorkAdmission &adm = mesh_service.GetMeshWorkAdmission();
-    // J2: healthy async under HoleDrain — cut sync ColumnFlow / full-focus
-    // scan so mesh_emerge does not hitch while workers already feed the ring.
+    // J2/K1: healthy async OR GPU pending backlog under HoleDrain — cut sync
+    // ColumnFlow / full-focus scan so mesh_emerge does not hitch while the
+    // ring already has work (manual 174559: async≈0, pending_gpu spikes 20–30).
     // Keep FirstMesh admit + nearest-hole Imm; do not touch idle FM≥6 quota.
     const bool async_healthy_hole_drain =
-        pending_async >= 12 &&
+        (pending_async >= 12 || pending_gpu_n >= 12) &&
         (adm.mode == MeshWorkAdmission::Mode::HoleDrain ||
          adm.mode == MeshWorkAdmission::Mode::DeepBacklog);
     if (found_nearest_missing)
@@ -2212,9 +2213,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             focus_ground_horiz, /*keep_h=*/1, /*keep_cy=*/-1,
             /*remesh_only=*/true);
       }
-      // J2: same frame as heavy GPU drain + healthy async — clamp SoftDeferHeld
-      // requeue burst so Rebuild does not fight Finish/Kick for Dirty slots.
-      if (pending_async >= 12 && gpu_consume_done > 0)
+      // J2/K1: same frame as heavy GPU drain + healthy async/GPU backlog —
+      // clamp SoftDeferHeld requeue so Rebuild does not fight Finish/Kick.
+      if ((pending_async >= 12 || pending_gpu_n >= 12) &&
+          gpu_consume_done > 0)
       {
         MeshWorkAdmission cut = adm;
         cut.softdefer_requeue = std::min(cut.softdefer_requeue, 1);
