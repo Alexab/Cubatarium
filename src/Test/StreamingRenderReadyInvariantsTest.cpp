@@ -252,7 +252,7 @@ int main()
     Expect(a9.mode == MeshWorkAdmission::Mode::HoleDrain, "ring HoleDrain");
     Expect(a9.enqueue_gpu_budget == 5, "HoleDrain enqueue = ring-kicked");
     Expect(a9.gpu_apply_max >= 16, "HoleDrain apply_max ≥ ring*2");
-    Expect(a9.first_mesh_schedule >= 2, "HoleDrain first_mesh≥2 moving");
+    Expect(a9.first_mesh_schedule >= 3, "HoleDrain first_mesh≥3 moving (G2)");
     Expect(a9.remesh_schedule <= 1, "HoleDrain remesh≤1");
     Expect(a9.max_schedule >= a9.first_mesh_schedule + a9.remesh_schedule,
            "max_schedule covers split quotas");

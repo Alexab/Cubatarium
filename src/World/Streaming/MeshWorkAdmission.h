@@ -88,7 +88,8 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
     out.allow_neighbor_dirty = false;
     out.starve_remesh_horiz = holes ? 1 : 2;
     out.promote_relight = light_debt ? 4 : (holes ? 2 : 0);
-    out.first_mesh_schedule = holes ? (in.moving ? 2 : 3) : 1;
+    // G2: moving holes FirstMesh headroom 2→3 (not 4; after G0 latch).
+    out.first_mesh_schedule = holes ? 3 : 1;
     out.remesh_schedule = holes ? 0 : 1;
     break;
   case MeshWorkAdmission::Mode::HoleDrain:
@@ -103,7 +104,8 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
     out.allow_neighbor_dirty = false;
     out.starve_remesh_horiz = 1;
     out.promote_relight = light_debt ? 4 : 2;
-    out.first_mesh_schedule = in.moving ? 2 : 3;
+    // G2: moving HoleDrain first_mesh 2→3 for rim miss; idle still ≥6 below.
+    out.first_mesh_schedule = 3;
     out.remesh_schedule = 1;
     if (!in.moving)
     {
