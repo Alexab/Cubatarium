@@ -66,6 +66,17 @@
 | TD-ARCH-032 | Era13 | ARCH_D1/D3 harness GO | Architecture A–E landed. Autofly×2 `--replay-manual`: `manual_arch_era13_01/02.json`. **cold_relight=2≤3 OK**; holes/async OK on 02. **D3 NO-GO:** `wall_ms_med≈44` (need ≤30), `post_stop_black_sticky_max≈9`. Stop SoftDefer zoo after 2 iters. | in-progress |
 | TD-ARCH-033 | Era13/rim | Frontier first-mesh latency (manual 225337) | Stage SLA + UnlitFirstMesh + sync promote | partial — confirm on World_164 edge smoke |
 
+### FOV/progressive plan (2026-08) — Open
+
+| ID | Added in | Item | Why deferred | Target |
+|----|----------|------|--------------|--------|
+| TD-ARCH-034 | 2026-08 FOV plan | Far-rim nh≥4 dual-backlog (manual 215629 mh=5) | Hotfix N0: full-scan nh≥4, no drain_cut when nh≥4, Pending→Relight, post-clear Finish | N0 |
+| TD-ARCH-035 | 2026-08 FOV plan | FOV idle FirstMesh / camera-front priority | After N0; no SoftDefer expand | P1 |
+| TD-ARCH-036 | 2026-08 FOV plan | Per-cy draw gate (column all-or-nothing) | After P1; mesh stays 16³ | P2 |
+| TD-ARCH-037 | 2026-08 FOV plan | Soft flight speed clamp on underfeet/near ahead miss | After P2; not hard pause | P3 |
+| TD-ARCH-038 | 2026-08 FOV plan | Fog knobs follow-up | Needs miss_frac≤0.45 and rim hold | P4 / backlog |
+| TD-ARCH-039 | 2026-08 FOV plan | Sub-16 mesh brick | Rejected as first step; revisit only if P2 insufficient | backlog / wont-fix preferred |
+
 Evidence (stale-apply + Era13 tails, 2026-07-29):
 - `manual_stale_apply_A.json` — `mesh_apply_stale`=0 (was ~392).
 - `manual_arch_td32b.json` / prior D3 live — **ARCH_D1** was GO before Era13 promote rewrite.

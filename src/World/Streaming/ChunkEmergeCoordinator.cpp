@@ -2019,31 +2019,50 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const bool backlog_hole_drain =
         hole_backlog_mode &&
         (pending_async >= 12 || pending_gpu_n >= 12);
-    const bool drain_cut =
-        hole_backlog_mode && pending_async >= 12;
     int nearest_miss_nh = -1;
     if (found_nearest_missing)
     {
       nearest_miss_nh = std::max(
           std::abs(isolated_hole.x - focus_ground_horiz.x),
           std::abs(isolated_hole.z - focus_ground_horiz.z));
-      ColumnWorkItem hole{};
-      hole.column = glm::ivec2(isolated_hole.x, isolated_hole.z);
-      hole.kind = ColumnWorkKind::FirstMesh;
-      hole.priority = 100;
-      hole.scan_full_focus = false;
-      hole.cy = isolated_hole.y;
-      exec.Enqueue(hole);
+      const glm::ivec2 hole_col(isolated_hole.x, isolated_hole.z);
+      // N0c: Admit skips Pending/InFlight — promote Relight instead of no-op
+      // FirstMesh enqueue (far-rim sticky mh=5 under dual backlog, 215629).
+      const bool nearest_in_pipeline =
+          mesh_service.IsPendingGpuApply(isolated_hole) ||
+          mesh_service.HasInflightMeshBuild(isolated_hole) ||
+          mesh_service.IsGpuExtractInFlight(isolated_hole);
+      if (nearest_in_pipeline)
+      {
+        exec.RequestPromoteRelight(hole_col, /*priority=*/55);
+      }
+      else
+      {
+        ColumnWorkItem hole{};
+        hole.column = hole_col;
+        hole.kind = ColumnWorkKind::FirstMesh;
+        hole.priority = 100;
+        hole.scan_full_focus = false;
+        hole.cy = isolated_hole.y;
+        exec.Enqueue(hole);
+      }
     }
+    // N0b: never cut Drain when known far miss (nh≥4); async≥12 alone still cuts
+    // only for closer rim (K1 pending_gpu cut remains forbidden).
+    const bool drain_cut = hole_backlog_mode && pending_async >= 12 &&
+                           !(nearest_miss_nh >= 4);
     // Full-focus scan every frame only in Normal; under backlog every 3f
     // (every 5f when GPU/async backlog — scan-only cut).
     // M1: rim plateau (nh 2–3) under HoleDrain/Deep — skip most full-focus
     // scans (nearest FirstMesh + Drain still run). Never skip underfeet
     // (nh≤1). Force a full-focus every 8 skipped frames so other ring holes
     // cannot starve forever (land-south miss_end).
+    // N0a: far rim nh≥4 — full-scan every frame (ignore focus_scan_cd / skip).
+    const bool far_rim_force_scan =
+        hole_backlog_mode && nearest_miss_nh >= 4;
     const bool rim_plateau_close =
-        hole_backlog_mode && found_nearest_missing && nearest_miss_nh >= 2 &&
-        nearest_miss_nh <= 3;
+        !far_rim_force_scan && hole_backlog_mode && found_nearest_missing &&
+        nearest_miss_nh >= 2 && nearest_miss_nh <= 3;
     static int focus_scan_cd = 0;
     static int rim_scan_skip_streak = 0;
     bool skip_full_scan_rim_close = false;
@@ -2064,8 +2083,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       rim_scan_skip_streak = 0;
     }
     const bool full_scan =
-        !skip_full_scan_rim_close &&
-        (adm.mode == MeshWorkAdmission::Mode::Normal || focus_scan_cd <= 0);
+        far_rim_force_scan ||
+        (!skip_full_scan_rim_close &&
+         (adm.mode == MeshWorkAdmission::Mode::Normal || focus_scan_cd <= 0));
     if (full_scan)
     {
       ColumnWorkItem focus_scan{};
@@ -2076,7 +2096,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       focus_scan.scan_full_focus = true;
       focus_scan.cy = -1;
       exec.Enqueue(focus_scan);
-      focus_scan_cd = adm.mode == MeshWorkAdmission::Mode::Normal
+      focus_scan_cd = (far_rim_force_scan ||
+                       adm.mode == MeshWorkAdmission::Mode::Normal)
                           ? 0
                           : (backlog_hole_drain ? 4 : 2);
     }
