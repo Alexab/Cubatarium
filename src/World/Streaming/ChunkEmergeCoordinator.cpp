@@ -2215,6 +2215,46 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     exec.DrainBudget(world, moving ? 2 : 3, focus_ground_horiz, focus_radius,
                      /*admit_batch=*/moving ? 2 : 3);
   }
+  // P3: soft cruise clamp — underfeet (or nh<=1 ahead under HoleDrain/Deep).
+  // Applied next movement tick via PhysicsTelemetry.StreamSpeedClampScale.
+  // Scale 0.85: land-south keeps underfeet≈1 all cruise; ×0.6–0.7 starved
+  // miss_end (chunks/miss_stuck regress vs P2). Soft integrity, not hard brake.
+  {
+    float clamp_scale = 1.0f;
+    if (moving)
+    {
+      if (missing_underfeet)
+      {
+        clamp_scale = 0.85f;
+      }
+      else if (found_nearest_missing)
+      {
+        const MeshWorkAdmission &adm_now =
+            mesh_service.GetMeshWorkAdmission();
+        const bool hole_mode =
+            adm_now.mode == MeshWorkAdmission::Mode::HoleDrain ||
+            adm_now.mode == MeshWorkAdmission::Mode::DeepBacklog;
+        const int nh = std::max(
+            std::abs(isolated_hole.x - focus_ground_horiz.x),
+            std::abs(isolated_hole.z - focus_ground_horiz.z));
+        if (hole_mode && nh <= 1)
+        {
+          const glm::vec2 vel = world.GetLastMovementDirXz();
+          const glm::vec2 to_hole(
+              static_cast<float>(isolated_hole.x - focus_ground_horiz.x),
+              static_cast<float>(isolated_hole.z - focus_ground_horiz.z));
+          const float vel_len = glm::length(vel);
+          const float hole_len = glm::length(to_hole);
+          if (vel_len > 0.01f && hole_len > 0.01f &&
+              glm::dot(vel / vel_len, to_hole / hole_len) > 0.5f)
+          {
+            clamp_scale = 0.85f;
+          }
+        }
+      }
+    }
+    world.GetPhysicsTelemetryMutable().StreamSpeedClampScale = clamp_scale;
+  }
   // F0: drain-first — Finish/Kick before Finalize so admission sees post-consume
   // pending (avoids mode=0/sch=12 thrash while telem pending stays high).
   int gpu_consume_done = 0;

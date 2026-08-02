@@ -537,6 +537,14 @@ void UWorld::RunLegacyPhysicsFrame()
     {
       horizontalSpeed = camLoc.ResolveHorizontalSpeed(moveInput);
     }
+    // P3: soft streaming integrity clamp (same scale as Camera::ProcessKeyboard).
+    {
+      const float clamp = GetPhysicsTelemetry().StreamSpeedClampScale;
+      if (clamp > 0.0f && clamp < 1.0f)
+      {
+        horizontalSpeed *= clamp;
+      }
+    }
     controlled->RebuildLocomotionFactsFromController(
         camLoc, controlled->GetLocomotion().GetCapabilities(),
         static_cast<float>(camera->GetDeltaTime()), horizontalSpeed, this);

@@ -72,10 +72,10 @@
 |----|----------|------|--------------|--------|
 | TD-ARCH-034 | 2026-08 FOV plan | Far-rim nh≥4 dual-backlog (manual 215629 mh=5) | Hotfix landed `9cfe265a`; smoke land-south miss_end=0 / post_stop_missing_zero | **done** 2026-08-02 (mid residual needs manual) |
 | TD-ARCH-035 | 2026-08 FOV plan | FOV idle FirstMesh / camera-front priority | Landed `b6b75a5f` + rear-slot fix `2ef3711f`; smoke miss_end=0 | **done** 2026-08-02 |
-| TD-ARCH-036 | 2026-08 FOV plan | Per-cy draw gate (column all-or-nothing) | P2 landing | P2 |
-| TD-ARCH-037 | 2026-08 FOV plan | Soft flight speed clamp on underfeet/near ahead miss | After P2; not hard pause | P3 |
+| TD-ARCH-036 | 2026-08 FOV plan | Per-cy draw gate (column all-or-nothing) | Landed `bd4e0356`; smoke miss_end=0 | **done** 2026-08-02 |
+| TD-ARCH-037 | 2026-08 FOV plan | Soft flight speed clamp on underfeet/near ahead miss | Soft ×0.85 on underfeet or HoleDrain/Deep nh≤1 ahead (stronger scales starved land-south miss_end); Camera+ViewBinding | **done** 2026-08-02 |
 | TD-ARCH-038 | 2026-08 FOV plan | Fog knobs follow-up | Needs miss_frac≤0.45 and rim hold | P4 / backlog |
-| TD-ARCH-039 | 2026-08 FOV plan | Sub-16 mesh brick | Rejected as first step; revisit only if P2 insufficient | backlog / wont-fix preferred |
+| TD-ARCH-039 | 2026-08 FOV plan | Sub-16 mesh brick | P2 closed visual progressive DoD without sub-16 | **wont-fix** 2026-08-02 |
 
 Evidence (stale-apply + Era13 tails, 2026-07-29):
 - `manual_stale_apply_A.json` — `mesh_apply_stale`=0 (was ~392).

@@ -172,6 +172,8 @@ struct PhysicsTelemetry
   int FocusUnfinishedBehind{0};
   /// 0=Green, 1=Yellow, 2=Red (StreamingPressureLevel).
   int StreamPressure{0};
+  /// P3 soft flight integrity: multiply horizontal cruise (1 = off; ~0.55–0.7).
+  float StreamSpeedClampScale{1.0f};
   /// PendingLightBeforeMesh count inside focus radius (vs global PendingLightCount).
   int PendingLightFocus{0};
   /// Comma-separated (cx,cz) for focus pending columns (telemetry only).

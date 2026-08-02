@@ -566,7 +566,17 @@ void UCamera::ProcessKeyboard(const UWorld *world, Camera_Movement direction,
                               const PlayerCapsule &collisionCap)
 {
   const PlayerInput input = BuildPlayerInput(false);
-  const float speed = Locomotion.ResolveHorizontalSpeed(input);
+  float speed = Locomotion.ResolveHorizontalSpeed(input);
+  // P3: soft streaming integrity clamp (underfeet / near ahead miss).
+  if (world)
+  {
+    const float clamp =
+        world->GetPhysicsTelemetry().StreamSpeedClampScale;
+    if (clamp > 0.0f && clamp < 1.0f)
+    {
+      speed *= clamp;
+    }
+  }
   const float velocity = speed * deltaTime;
   glm::vec3 shift(0.0f);
 
