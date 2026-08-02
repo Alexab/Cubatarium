@@ -24,10 +24,52 @@ struct URuntimeTuning
   /// Async relight inflight = RelightThreadCount * mult.
   int RelightInflightMultHigh{4};
   int RelightInflightMultHoles{8};
-  int MeshFlyCapYellow{10};
-  int MeshFlyCapRed{8};
+  /// StreamingPressure Yellow/Red mesh schedule caps (ApplyPressureCap).
+  /// Phase B defaults tightened vs historical 10/8 to cut emerge wall.
+  int MeshFlyCapYellow{8};
+  int MeshFlyCapRed{6};
   /// Added to recover_n after pressure caps (iterate knob).
   int RecoverNBoost{0};
+
+  // --- Phase B: main-thread Capture / Immediate / fly / hitch budgets ---
+  /// DrainRelightQueues Capture wall budgets (ms). SoftDefer hole exception
+  /// semantics stay in WorldPersistence; these only bound Capture time.
+  float CaptureDrainMovingMs{3.0f};
+  float CaptureDrainIdleMs{8.0f};
+  float CaptureDrainHolesMovingMs{5.0f};
+  float CaptureDrainHolesIdleMs{10.0f};
+  float CaptureDrainHighPendingMovingMs{6.0f};
+  float CaptureDrainHighPendingIdleMs{12.0f};
+  /// Skip further Capture when frame_ms >= budget * mult (unless SoftDefer hole).
+  float CaptureHotFrameMult{4.0f};
+  float CaptureSyncSkipWallMs{110.0f};
+  float CaptureIdlePendingMaxWallMs{160.0f};
+  /// Cruise max Captures/frame (TD-ARCH-015: worker Capture still backlog).
+  int CaptureMovingBgCap{1};
+
+  /// RebuildChunkImmediate hard budget (idle only; moving sync_cap=0).
+  float ImmediateBudgetHotMs{3.0f};
+  float ImmediateBudgetOkMs{5.0f};
+  float ImmediateHotWallMs{22.0f};
+
+  /// Moving mesh schedule baselines before StreamingPressure fly_cap.
+  float MeshFlyWallHotMs{22.0f};
+  float MeshFlyWallMidMs{16.0f};
+  int MeshFlyCapWallHot{6};
+  int MeshFlyCapWallMid{10};
+  int MeshFlyCapWallOk{12};
+  int MeshFlyCapHolesHot{8};
+  int MeshFlyCapHolesOk{12};
+
+  /// MemoryBudgetController Green expand / hitch Capture gates.
+  float MemoryGreenMaxWallMs{28.0f};
+  float MemoryHitchCaptureWallMs{400.0f};
+  float MemoryUrgentEvalWallMs{100.0f};
+
+  /// Fog pull-in timing only (not SoT / unfinished predicates).
+  float FogPullInExpandSec{2.5f};
+  float FogPullInShrinkSec{0.45f};
+  float FogPullInSevereWallMs{100.0f};
 
   /// Memory budget (med tier defaults). Soft < ExpandKeep < Budget.
   int MemoryBudgetMb{1536};
@@ -38,7 +80,8 @@ struct URuntimeTuning
   int RelightCompletedSlots{0};
   int DirtySoftCap{1200};
   /// When mesh_async >= DirtyThrashAsyncMin, use this lower SoftCap (thrash).
-  int DirtyThrashSoftCap{400};
+  /// Phase B: 320 (was 400) — engage remesh drop sooner under Yellow/async.
+  int DirtyThrashSoftCap{320};
   int DirtyThrashAsyncMin{12};
   int PendingLightSoftCap{80};
   int RelightFifoSoftCap{96};

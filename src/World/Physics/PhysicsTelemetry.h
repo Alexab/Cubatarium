@@ -42,6 +42,20 @@ struct PhysicsTelemetry
   uint64_t MeshApplyStale{0};
   /// Deferred GPU mesh applies waiting for ProcessPendingGpuMeshes.
   int PendingGpuAppliesN{0};
+  /// Queued phase only (not yet Kick).
+  int PendingGpuQueuedN{0};
+  /// Kicked phase (fence outstanding); capped by readback ring.
+  int PendingGpuKickedN{0};
+  /// Final mesh schedule/drain after TickMeshEmerge (MeshWorkAdmission SoT).
+  int MeshScheduleFinal{0};
+  int MeshDrainFinal{0};
+  int MeshAdmissionMode{0};
+  /// Kicks issued in last RebuildDirtyChunksWithStats tick.
+  int GpuKickN{0};
+  /// Successful Finish+Commit in last rebuild tick.
+  int GpuFinishN{0};
+  /// NotReady Finish polls in last rebuild tick.
+  int GpuFinishNotReadyN{0};
   /// Ground columns in render ring without greedy mesh (excl. GpuExtractInFlight).
   int PostLoadRingNotReady{0};
   /// Missing greedy count when exiting EnterGame GPU warmup (diag snapshot).
@@ -50,6 +64,17 @@ struct PhysicsTelemetry
   uint64_t SoftDeferCaptureFloorHits{0};
   /// Capture/relight bg budget requested by SoftDefer floor this frame (0 if idle).
   int SoftDeferCaptureBudget{0};
+  /// Empty SoftDefer placeholders seen by undrawn heal this frame (A2 smoke).
+  int SoftDeferEmptyPlaceholderN{0};
+  /// Stuck pattern: HasGreedy && !Drawable && !Dirty && horiz>1.
+  int SoftDeferEmptyStuckN{0};
+  int SoftDeferEmptyStuckCx{0};
+  int SoftDeferEmptyStuckCy{0};
+  int SoftDeferEmptyStuckCz{0};
+  int SoftDeferEmptyStuckHoriz{0};
+  int SoftDeferEmptyStuckDefer{0};
+  /// SoftDeferHeld side-set size (outside-focus !Drawable FirstMesh).
+  int SoftDeferHeldN{0};
   double RelightCompletedPerSec{0.0};
   double CommitPhysicsMs{0.0};
   double CommitRelightMs{0.0};
@@ -124,6 +149,11 @@ struct PhysicsTelemetry
   int LightDebt{0};
   /// Count of focus columns with missing mesh (0..N).
   int FocusMissingMesh{0};
+  /// Nearest missing slice witness (valid only when FocusMissingMesh!=0).
+  int MissCx{0};
+  int MissCy{0};
+  int MissCz{0};
+  int MissHoriz{0};
   /// Count of focus columns with mesh but no sky light sample.
   int FocusDarkMesh{0};
   /// Pending-light + sticky black preview columns in focus (subset of dark).
@@ -173,6 +203,10 @@ struct PhysicsTelemetry
   /// Visual-debug: opaque MDI cmds after compact cull.
   uint64_t OpaqueCmdTotal{0};
   uint64_t OpaqueCmdOn{0};
+  /// Stage sizes before compact cull (diag for opaque collapse).
+  uint64_t OpaqueRefsCpuVis{0};
+  uint64_t OpaqueRefsRenderReady{0};
+  uint64_t OpaqueMdiEligible{0};
   uint64_t CrossBatchCount{0};
   uint64_t CpuAabbWouldOn{0};
   uint64_t EditImmediateN{0};

@@ -45,16 +45,31 @@ public:
   void Shutdown();
 
   /// Allocate a slot for a chunk. Returns slot index or -1 on failure.
+  /// Reuses an existing mapping (overwrites live SSBO) — prefer staging+bind
+  /// for apply paths that may reject after compute.
   int AllocateSlot(glm::ivec3 chunk_coord, bool transparent);
+
+  /// Allocate a free slot without binding it to a chunk (staging for apply).
+  /// Bound only via BindCommittedSlot after a successful commit.
+  int AllocateStagingSlot(bool transparent);
+
+  /// Publish a staging slot as the live mesh for coord (frees prior live slot).
+  void BindCommittedSlot(glm::ivec3 chunk_coord, int slot_index);
 
   /// Free a slot previously allocated for a chunk.
   void FreeSlot(glm::ivec3 chunk_coord);
+
+  /// Free a slot by index (staging reject / failed ProcessSnapshot).
+  void FreeSlotByIndex(int slot_index);
 
   /// Returns true if the chunk has an allocated slot.
   bool HasSlot(glm::ivec3 chunk_coord) const;
 
   /// Get the slot for a chunk. Returns nullptr if not allocated.
   const GpuMeshSlot *GetSlot(glm::ivec3 chunk_coord) const;
+
+  /// Get slot by index (staging or committed).
+  const GpuMeshSlot *GetSlotByIndex(int slot_index) const;
 
   /// Update the quad count for a slot after GPU compute writes the data.
   void SetSlotQuadCount(int slot_index, uint32_t quad_count);

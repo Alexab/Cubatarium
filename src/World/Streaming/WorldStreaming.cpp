@@ -386,6 +386,27 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   const bool missing_near =
       world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
           world.GetBlockWorld(), focus_horiz, focus_radius);
+  if (missing_near)
+  {
+    glm::ivec3 miss_coord{0};
+    if (world.GetMeshService().FindNearestMissingGreedyMesh(
+            world.GetBlockWorld(), focus_horiz, focus_radius, miss_coord))
+    {
+      world.PhysicsTelemetryData.MissCx = miss_coord.x;
+      world.PhysicsTelemetryData.MissCy = miss_coord.y;
+      world.PhysicsTelemetryData.MissCz = miss_coord.z;
+      world.PhysicsTelemetryData.MissHoriz =
+          std::max(std::abs(miss_coord.x - focus_horiz.x),
+                   std::abs(miss_coord.z - focus_horiz.z));
+    }
+  }
+  else
+  {
+    world.PhysicsTelemetryData.MissCx = 0;
+    world.PhysicsTelemetryData.MissCy = 0;
+    world.PhysicsTelemetryData.MissCz = 0;
+    world.PhysicsTelemetryData.MissHoriz = 0;
+  }
   // Underfeet is a subset of focus — skip second full resident scan when focus
   // already reports no missing mesh (CB stream_ms on no-hole fly).
   const bool missing_underfeet =
@@ -826,6 +847,22 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetMeshService().GetMeshApplyStaleCount();
     world.PhysicsTelemetryData.PendingGpuAppliesN = static_cast<int>(
         world.GetMeshService().GetPendingGpuAppliesCount());
+    world.PhysicsTelemetryData.PendingGpuQueuedN = static_cast<int>(
+        world.GetMeshService().GetPendingGpuQueuedCount());
+    world.PhysicsTelemetryData.PendingGpuKickedN = static_cast<int>(
+        world.GetMeshService().GetPendingGpuKickedCount());
+    {
+      const auto &budget = EmergeCoordinator->GetLastBudget();
+      world.PhysicsTelemetryData.MeshScheduleFinal = budget.MaxMeshSchedule;
+      world.PhysicsTelemetryData.MeshDrainFinal = budget.MaxMeshDrain;
+      world.PhysicsTelemetryData.MeshAdmissionMode = budget.AdmissionMode;
+    }
+    world.PhysicsTelemetryData.GpuKickN =
+        world.GetMeshService().GetLastGpuKickN();
+    world.PhysicsTelemetryData.GpuFinishN =
+        world.GetMeshService().GetLastGpuFinishN();
+    world.PhysicsTelemetryData.GpuFinishNotReadyN =
+        world.GetMeshService().GetLastGpuFinishNotReadyN();
     world.PhysicsTelemetryData.PostLoadRingNotReady =
         world.CountPostLoadRingNotReady();
     {
@@ -1270,13 +1307,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       }
     }
   }
-  // TD-ARCH-030: SoftDefer FOV unfinished / missing → Capture floor.
-  // Missing mesh alone must Capture even when pending_light_focus==0 —
-  // otherwise UnlitFirstMesh Dirty sits while Capture never runs
-  // (manual 213546 miss_stuck 18s with softd only when pend>0).
-  // Use SoT UnfinishedVisual / missing — NOT FocusNotRenderReady pressure
-  // proxy (pending+dirty) — that Capture'd every cruise period with uv=0 and
-  // inflated wall_med past ARCH_D3 ≤30.
+  // TD-ARCH-030 / Phase 3: SoftDefer unfinished / missing → ColumnFlow ticket
+  // (cap 1/tick). Do NOT inflate bg_budget Capture floor every period
+  // (manual 130338 SoftDefer thrash +329; 171310 floor Δ+870).
   {
     const int unfinished = world.PhysicsTelemetryData.UnfinishedVisual;
     world.PhysicsTelemetryData.SoftDeferCaptureBudget = 0;
@@ -1293,9 +1326,26 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       world.PhysicsTelemetryData.SoftDeferCaptureBudget = floor_budget;
       if (floor_budget > 0)
       {
-        ++world.PhysicsTelemetryData.SoftDeferCaptureFloorHits;
+        auto &exec = GetColumnFlowExecutor();
+        const glm::ivec2 focus_xz(focus_horiz.x, focus_horiz.z);
+        // Rate-limit: skip if ColumnFlow already owns a repair ticket.
+        if (!exec.HasRepairTicket(focus_xz))
+        {
+          ++world.PhysicsTelemetryData.SoftDeferCaptureFloorHits;
+          const ColumnWorkKind kind = missing_focus_mesh
+                                          ? ColumnWorkKind::FirstMesh
+                                          : ColumnWorkKind::RelightThenMesh;
+          ColumnWorkItem item{};
+          item.column = focus_xz;
+          item.kind = kind;
+          item.priority = 90;
+          item.scan_full_focus = missing_focus_mesh;
+          item.cy = -1;
+          exec.Enqueue(item);
+          exec.DrainBudget(world, 1, focus_horiz, focus_radius,
+                           /*admit_batch=*/1);
+        }
       }
-      bg_budget = std::max(bg_budget, floor_budget);
       if (rim_first_mesh_sla)
       {
         bg_budget = std::min(bg_budget, moving_now ? 1 : 2);
@@ -1489,6 +1539,27 @@ void UWorldStreaming::ResumeStreamerAfterQuiesce()
 void UWorldStreaming::TickMeshEmerge(UWorld &world)
 {
   EmergeCoordinator->TickMeshEmerge(world, LastPressureCaps);
+  // MeshWorkAdmission SoT lands in LastBudget at end of TickMeshEmerge.
+  // finish_telemetry in TickAsyncChunkSystems runs *before* emerge — write
+  // final schedule/drain/mode here so periods see HoleDrain under miss.
+  {
+    const auto &budget = EmergeCoordinator->GetLastBudget();
+    world.PhysicsTelemetryData.MeshScheduleFinal = budget.MaxMeshSchedule;
+    world.PhysicsTelemetryData.MeshDrainFinal = budget.MaxMeshDrain;
+    world.PhysicsTelemetryData.MeshAdmissionMode = budget.AdmissionMode;
+  }
+  world.PhysicsTelemetryData.PendingGpuAppliesN = static_cast<int>(
+      world.GetMeshService().GetPendingGpuAppliesCount());
+  world.PhysicsTelemetryData.PendingGpuQueuedN = static_cast<int>(
+      world.GetMeshService().GetPendingGpuQueuedCount());
+  world.PhysicsTelemetryData.PendingGpuKickedN = static_cast<int>(
+      world.GetMeshService().GetPendingGpuKickedCount());
+  world.PhysicsTelemetryData.GpuKickN =
+      world.GetMeshService().GetLastGpuKickN();
+  world.PhysicsTelemetryData.GpuFinishN =
+      world.GetMeshService().GetLastGpuFinishN();
+  world.PhysicsTelemetryData.GpuFinishNotReadyN =
+      world.GetMeshService().GetLastGpuFinishNotReadyN();
   world.PhysicsTelemetryData.MeshSyncMs =
       world.GetMeshService().GetLastMeshSyncMs();
   world.PhysicsTelemetryData.MeshSnapshotMs =
@@ -2053,11 +2124,19 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     // A+B water: unfinished near fluid/sea → stronger pull-in + wider sky horizon.
     // Manual 084551: do NOT pull from wall≈40 alone (cruise wall often >40 →
     // fog/trees flicker); latch hole_debt + rate-limit shrink/expand.
+    // Phase B: expand/shrink/severe-wall from RuntimeTuning (not SoT predicates).
     {
-      constexpr double kFogPullInExpandSec = 2.5;
-      constexpr double kFogPullInShrinkSec = 0.45;
-      constexpr double kFogPullInSevereWallMs = 100.0;
-      constexpr int kFogHoleHoldFrames = 90; // ~1.5s latch after holes clear
+      const URuntimeTuning &fog_tune = URuntimeTuning::Get();
+      const double kFogPullInExpandSec =
+          static_cast<double>(fog_tune.FogPullInExpandSec);
+      const double kFogPullInShrinkSec =
+          static_cast<double>(fog_tune.FogPullInShrinkSec);
+      const double kFogPullInSevereWallMs =
+          static_cast<double>(fog_tune.FogPullInSevereWallMs);
+      // Shorter latch + fast decay when miss=0 (manual 130338: fog_debt=1
+      // forever while unfinished refreshed 90-frame hold → opaque~279).
+      constexpr int kFogHoleHoldFrames = 30;
+      constexpr int kFogHoleDecayPerFrame = 3;
       int fog_rd = effectiveRenderDistance;
       int fog_margin = render.DistanceFogEndMarginBlocks;
       float fog_start_ratio = effectiveFogStartRatio;
@@ -2081,18 +2160,25 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         const int unfinished = phys.UnfinishedVisual;
         const int unfinished_ahead = phys.FocusUnfinishedAhead;
         const int gpu_pending = phys.PendingGpuAppliesN;
-        // Latch only on visual holes / unfinished. gpu_pending alone kept
-        // FogRdMin+margin140 for the whole cruise while miss=uv=0
-        // (manual 213546: fog strip around drawn underfeet).
+        // Latch on visual holes or focus missing mesh only — UnfinishedVisual
+        // alone (dark/culled SoftDeferHeld) must not refresh hold (manual
+        // 171310: miss=0 holes=0 still fog_debt≈94% / opaque~327).
         const bool hole_debt_now =
-            phys.VisualHoles > 0 || unfinished > 0;
+            phys.VisualHoles > 0 || phys.FocusMissingMesh > 0;
         if (hole_debt_now)
         {
           FogPullInHoleHoldFrames = kFogHoleHoldFrames;
         }
+        else if (phys.FocusMissingMesh == 0 && phys.VisualHoles == 0)
+        {
+          // GO: fog_hole_debt→0 on stand when miss=0 (clear latch, do not
+          // wait 30/decay while SoftDeferHeld keeps unfinished>0).
+          FogPullInHoleHoldFrames = 0;
+        }
         else if (FogPullInHoleHoldFrames > 0)
         {
-          --FogPullInHoleHoldFrames;
+          FogPullInHoleHoldFrames =
+              std::max(0, FogPullInHoleHoldFrames - kFogHoleDecayPerFrame);
         }
         const bool hole_debt = FogPullInHoleHoldFrames > 0;
         world.PhysicsTelemetryData.FogHoleDebt = hole_debt ? 1 : 0;
@@ -2132,8 +2218,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
           }
         }
         // Wall alone must NOT shrink fog (cruise wall med≈80 → flicker). Only
-        // reinforce while already in hole latch, or on severe hitch.
-        if (hole_debt && (phys.StreamPressure >= 2 || wall_ms > kFogPullInSevereWallMs))
+        // reinforce while already in hole latch with real missing mesh, or on
+        // severe hitch (skip when miss=0 — manual 130338 opaque plateau).
+        if (hole_debt && phys.FocusMissingMesh > 0 &&
+            (phys.StreamPressure >= 2 || wall_ms > kFogPullInSevereWallMs))
         {
           target = std::min(target, target - 1);
           target_margin += 8;

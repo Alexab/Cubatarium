@@ -69,6 +69,21 @@ void UWorldMeshService::SetStarveRemeshKeepHoriz(int keep_h)
   Cache.SetStarveRemeshKeepHoriz(keep_h);
 }
 
+void UWorldMeshService::SetMeshWorkAdmission(const MeshWorkAdmission &adm)
+{
+  Cache.SetMeshWorkAdmission(adm);
+}
+
+const MeshWorkAdmission &UWorldMeshService::GetMeshWorkAdmission() const
+{
+  return Cache.GetMeshWorkAdmission();
+}
+
+bool UWorldMeshService::TryConsumeDirtyAdmit()
+{
+  return Cache.TryConsumeDirtyAdmit();
+}
+
 int UWorldMeshService::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
                                                    int keep_radius, int keep_cy,
                                                    bool remesh_only)
@@ -112,6 +127,11 @@ void UWorldMeshService::SetMeshEmergeTotalBudgetMs(double ms)
   Cache.SetMeshEmergeTotalBudgetMs(ms);
 }
 
+double UWorldMeshService::GetMeshEmergeTotalBudgetMs() const
+{
+  return Cache.GetMeshEmergeTotalBudgetMs();
+}
+
 void UWorldMeshService::SetAltitudeCullState(float altitude_above_terrain,
                                              int threshold_blocks)
 {
@@ -144,6 +164,25 @@ void UWorldMeshService::MarkDirtyPriority(glm::ivec3 chunk_coord)
 {
   Cache.MarkDirtyPriority(chunk_coord);
   NotifyChunkBlocksChanged(chunk_coord);
+}
+
+void UWorldMeshService::PrefetchMeshCapture(const UBlockWorld &world,
+                                            glm::ivec3 chunk_coord)
+{
+  Cache.PrefetchMeshCapture(world, chunk_coord);
+}
+
+void UWorldMeshService::PrefetchMeshCaptureBand(const UBlockWorld &world,
+                                                glm::ivec3 ground_chunk_coord,
+                                                int min_y, int max_y)
+{
+  const int cy0 = FloorDiv(min_y, CHUNK_SIZE);
+  const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
+  for (int cy = cy0; cy <= cy1; ++cy)
+  {
+    Cache.PrefetchMeshCapture(
+        world, glm::ivec3(ground_chunk_coord.x, cy, ground_chunk_coord.z));
+  }
 }
 
 void UWorldMeshService::RequestRemeshAfterApply(glm::ivec3 chunk_coord)
@@ -292,6 +331,46 @@ void UWorldMeshService::MarkTerrainChunkMeshDirtySeamedPriority(
   }
 }
 
+int UWorldMeshService::MarkMissingSlicesDirtyPriority(
+    const UBlockWorld &world, glm::ivec3 ground_chunk_coord, int min_y,
+    int max_y)
+{
+  const int cy0 = FloorDiv(min_y, CHUNK_SIZE);
+  const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
+  int marked = 0;
+  for (int cy = cy0; cy <= cy1; ++cy)
+  {
+    const glm::ivec3 coord(ground_chunk_coord.x, cy, ground_chunk_coord.z);
+    const UChunk *chunk = world.GetChunkManager().GetChunk(coord);
+    if (!chunk || HasMeshSatisfyingColumnReady(coord) ||
+        IsPendingGpuApply(coord) || HasInflightMeshBuild(coord))
+    {
+      continue;
+    }
+    bool solid = false;
+    for (int z = 0; z < CHUNK_SIZE && !solid; z += 4)
+    {
+      for (int x = 0; x < CHUNK_SIZE && !solid; x += 4)
+      {
+        for (int y = 0; y < CHUNK_SIZE && !solid; y += 4)
+        {
+          if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+          {
+            solid = true;
+          }
+        }
+      }
+    }
+    if (!solid)
+    {
+      continue;
+    }
+    MarkDirtyPriority(coord);
+    ++marked;
+  }
+  return marked;
+}
+
 void UWorldMeshService::MarkTerrainChunkMeshDirtyPriority(
     glm::ivec3 ground_chunk_coord, int min_y, int max_y)
 {
@@ -313,6 +392,26 @@ bool UWorldMeshService::FindNearestMissingGreedyMesh(
 {
   return Cache.FindNearestMissingGreedyMesh(world, center_ground_chunk,
                                             radius_chunks, out_coord);
+}
+
+void UWorldMeshService::UpdateStickyNearestHole(glm::ivec3 coord, bool alive)
+{
+  if (!alive)
+  {
+    StickyNearestHoleFrames = 0;
+    StickyNearestHoleCoord = glm::ivec3(0);
+    return;
+  }
+  if (coord == StickyNearestHoleCoord)
+  {
+    StickyNearestHoleFrames =
+        std::min(StickyNearestHoleFrames + 1, 1000000);
+  }
+  else
+  {
+    StickyNearestHoleCoord = coord;
+    StickyNearestHoleFrames = 1;
+  }
 }
 
 const MeshRebuildTickStats &UWorldMeshService::GetLastRebuildTickStats() const
@@ -337,11 +436,21 @@ void UWorldMeshService::RebuildDirtyChunks(UBlockWorld &world,
 MeshRebuildTickStats UWorldMeshService::RebuildDirtyChunksWithStats(
     UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
     int max_schedule_per_frame, bool force_sync, int max_sync_rebuild,
-    double max_sync_ms)
+    double max_sync_ms, bool skip_gpu_consume)
 {
   return Cache.RebuildDirtyChunksWithStats(world, registry, max_drain_per_frame,
                                            max_schedule_per_frame, force_sync,
-                                           max_sync_rebuild, max_sync_ms);
+                                           max_sync_rebuild, max_sync_ms,
+                                           skip_gpu_consume);
+}
+
+int UWorldMeshService::ConsumeGpuApplyBacklog(UBlockWorld &world,
+                                              UBlockRegistry &registry,
+                                              int max_drain, int gpu_max,
+                                              double gpu_budget_ms)
+{
+  return Cache.ConsumeGpuApplyBacklog(world, registry, max_drain, gpu_max,
+                                      gpu_budget_ms);
 }
 
 void UWorldMeshService::DrainAsyncMeshResults(UBlockWorld &world,
@@ -503,6 +612,31 @@ size_t UWorldMeshService::GetPendingGpuAppliesCount() const
   return Cache.GetPendingGpuAppliesCount();
 }
 
+size_t UWorldMeshService::GetPendingGpuQueuedCount() const
+{
+  return Cache.GetPendingGpuQueuedCount();
+}
+
+size_t UWorldMeshService::GetPendingGpuKickedCount() const
+{
+  return Cache.GetPendingGpuKickedCount();
+}
+
+int UWorldMeshService::GetLastGpuKickN() const
+{
+  return Cache.GetLastGpuKickN();
+}
+
+int UWorldMeshService::GetLastGpuFinishN() const
+{
+  return Cache.GetLastGpuFinishN();
+}
+
+int UWorldMeshService::GetLastGpuFinishNotReadyN() const
+{
+  return Cache.GetLastGpuFinishNotReadyN();
+}
+
 int UWorldMeshService::CountPendingGpuAppliesInHorizontalRadius(
     glm::ivec3 center_ground_chunk, int radius_chunks) const
 {
@@ -552,6 +686,16 @@ bool UWorldMeshService::HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const
   return Cache.HasDrawableGreedyMesh(chunk_coord);
 }
 
+bool UWorldMeshService::HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const
+{
+  return Cache.HasMeshSatisfyingColumnReady(chunk_coord);
+}
+
+size_t UWorldMeshService::GetSoftDeferHeldCount() const
+{
+  return Cache.GetSoftDeferHeldCount();
+}
+
 bool UWorldMeshService::IsGpuExtractInFlight(glm::ivec3 chunk_coord) const
 {
   return Cache.IsGpuExtractInFlight(chunk_coord);
@@ -560,6 +704,26 @@ bool UWorldMeshService::IsGpuExtractInFlight(glm::ivec3 chunk_coord) const
 bool UWorldMeshService::IsPendingGpuApply(glm::ivec3 chunk_coord) const
 {
   return Cache.IsPendingGpuApply(chunk_coord);
+}
+
+bool UWorldMeshService::IsPendingGpuQueued(glm::ivec3 chunk_coord) const
+{
+  return Cache.IsPendingGpuQueued(chunk_coord);
+}
+
+bool UWorldMeshService::IsPendingGpuKickedOrDispatched(glm::ivec3 chunk_coord) const
+{
+  return Cache.IsPendingGpuKickedOrDispatched(chunk_coord);
+}
+
+bool UWorldMeshService::PreferKickPendingGpuQueued(glm::ivec3 chunk_coord)
+{
+  return Cache.PreferKickPendingGpuQueued(chunk_coord);
+}
+
+bool UWorldMeshService::DropQueuedPendingGpuApply(glm::ivec3 chunk_coord)
+{
+  return Cache.DropQueuedPendingGpuApply(chunk_coord);
 }
 
 bool UWorldMeshService::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,

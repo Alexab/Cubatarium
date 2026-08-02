@@ -4,42 +4,170 @@
 #include "Render/Mesh/GpuGreedyOpaqueEmit.h"
 #include "Render/GlIncludes.h"
 #include "glog/logging.h"
-#include <algorithm>
 #include <array>
+#include <cstring>
 
 namespace cutum
 {
 namespace
 {
 
-void BuildBlockRangesFromQuads(const std::vector<PackedQuad> &quads,
-                               UBlockRegistry &registry,
-                               std::vector<GpuBlockDrawRange> &out_ranges)
+constexpr size_t kBlockTypeBuckets = 1024;
+constexpr size_t kSortCountsWords = kBlockTypeBuckets + 1; // + dark flag
+
+/// BlockType is 10 bits → 1024 buckets. Stable counting sort (CPU fallback).
+void CountingSortPackedQuadsByBlockType(std::vector<PackedQuad> &quads,
+                                        std::vector<PackedQuad> &scratch,
+                                        UBlockRegistry &registry,
+                                        std::vector<GpuBlockDrawRange> *out_ranges,
+                                        bool *out_has_dark)
 {
-  out_ranges.clear();
-  if (quads.empty())
+  std::array<uint32_t, kBlockTypeBuckets> counts{};
+  bool has_dark = false;
+  for (const PackedQuad &q : quads)
+  {
+    ++counts[static_cast<size_t>(q.BlockType())];
+    if (!has_dark && q.Face() != 5 && q.SkyLight() <= 0 &&
+        q.BlockLight() <= 0)
+    {
+      has_dark = true;
+    }
+  }
+  std::array<uint32_t, kBlockTypeBuckets> offsets{};
+  uint32_t total = 0;
+  for (size_t b = 0; b < kBlockTypeBuckets; ++b)
+  {
+    offsets[b] = total;
+    total += counts[b];
+  }
+  if (out_ranges)
+  {
+    out_ranges->clear();
+    out_ranges->reserve(32);
+    for (size_t b = 0; b < kBlockTypeBuckets; ++b)
+    {
+      if (counts[b] == 0)
+      {
+        continue;
+      }
+      const BlockId bid = static_cast<BlockId>(b);
+      GpuBlockDrawRange range;
+      range.blockId = bid;
+      range.quadOffset = offsets[b];
+      range.quadCount = counts[b];
+      range.Transparent = registry.IsTransparent(bid);
+      range.AlphaCutout =
+          registry.GetRenderStyle(bid) == BlockRenderStyle::Cutout;
+      out_ranges->push_back(range);
+    }
+  }
+  scratch.resize(quads.size());
+  for (const PackedQuad &q : quads)
+  {
+    const size_t b = static_cast<size_t>(q.BlockType());
+    scratch[offsets[b]++] = q;
+  }
+  quads.swap(scratch);
+  if (out_has_dark)
+  {
+    *out_has_dark = has_dark;
+  }
+}
+
+void BuildRangesFromHistogram(const uint32_t *counts,
+                              const uint32_t *exclusive_offsets,
+                              UBlockRegistry &registry,
+                              std::vector<GpuBlockDrawRange> *out_ranges)
+{
+  if (!out_ranges)
   {
     return;
   }
-  size_t i = 0;
-  while (i < quads.size())
+  out_ranges->clear();
+  out_ranges->reserve(32);
+  for (size_t b = 0; b < kBlockTypeBuckets; ++b)
   {
-    const BlockId bid = static_cast<BlockId>(quads[i].BlockType());
-    size_t j = i + 1;
-    while (j < quads.size() &&
-           static_cast<BlockId>(quads[j].BlockType()) == bid)
+    if (counts[b] == 0)
     {
-      ++j;
+      continue;
     }
+    const BlockId bid = static_cast<BlockId>(b);
     GpuBlockDrawRange range;
     range.blockId = bid;
-    range.quadOffset = static_cast<uint32_t>(i);
-    range.quadCount = static_cast<uint32_t>(j - i);
+    range.quadOffset = exclusive_offsets[b];
+    range.quadCount = counts[b];
     range.Transparent = registry.IsTransparent(bid);
     range.AlphaCutout =
         registry.GetRenderStyle(bid) == BlockRenderStyle::Cutout;
-    out_ranges.push_back(range);
-    i = j;
+    out_ranges->push_back(range);
+  }
+}
+
+/// Build draw ranges from emit order without reordering GPU quads — skips
+/// full-slot glBufferSubData writeback after CPU readback (rim plan C1).
+void BuildRunLengthRangesFromUnsorted(const std::vector<PackedQuad> &quads,
+                                      UBlockRegistry &registry,
+                                      std::vector<GpuBlockDrawRange> *out_ranges,
+                                      bool *out_has_dark)
+{
+  bool has_dark = false;
+  if (out_ranges)
+  {
+    out_ranges->clear();
+    out_ranges->reserve(32);
+  }
+  uint32_t run_start = 0;
+  BlockId run_id = BLOCK_AIR;
+  bool have_run = false;
+  for (uint32_t i = 0; i < static_cast<uint32_t>(quads.size()); ++i)
+  {
+    const PackedQuad &q = quads[i];
+    const BlockId bid = static_cast<BlockId>(q.BlockType());
+    if (!has_dark && q.Face() != 5 && q.SkyLight() <= 0 &&
+        q.BlockLight() <= 0)
+    {
+      has_dark = true;
+    }
+    if (!have_run)
+    {
+      run_start = i;
+      run_id = bid;
+      have_run = true;
+      continue;
+    }
+    if (bid == run_id)
+    {
+      continue;
+    }
+    if (out_ranges)
+    {
+      GpuBlockDrawRange range;
+      range.blockId = run_id;
+      range.quadOffset = run_start;
+      range.quadCount = i - run_start;
+      range.Transparent = registry.IsTransparent(run_id);
+      range.AlphaCutout =
+          registry.GetRenderStyle(run_id) == BlockRenderStyle::Cutout;
+      out_ranges->push_back(range);
+    }
+    run_start = i;
+    run_id = bid;
+  }
+  if (have_run && out_ranges)
+  {
+    GpuBlockDrawRange range;
+    range.blockId = run_id;
+    range.quadOffset = run_start;
+    range.quadCount =
+        static_cast<uint32_t>(quads.size()) - run_start;
+    range.Transparent = registry.IsTransparent(run_id);
+    range.AlphaCutout =
+        registry.GetRenderStyle(run_id) == BlockRenderStyle::Cutout;
+    out_ranges->push_back(range);
+  }
+  if (out_has_dark)
+  {
+    *out_has_dark = has_dark;
   }
 }
 
@@ -56,6 +184,77 @@ bool ChunkHasTransparentOrCutout(const ChunkMeshSnapshot &snapshot,
   }
   return false;
 }
+
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+
+GLuint CompileSortCompute(const char *src, const char *label)
+{
+  const GLuint sh = glCreateShader(GL_COMPUTE_SHADER);
+  glShaderSource(sh, 1, &src, nullptr);
+  glCompileShader(sh);
+  GLint ok = 0;
+  glGetShaderiv(sh, GL_COMPILE_STATUS, &ok);
+  if (!ok)
+  {
+    char log[512];
+    glGetShaderInfoLog(sh, 512, nullptr, log);
+    LOG(WARNING) << "[GpuMeshPipeline] " << label << " compile failed: " << log;
+    glDeleteShader(sh);
+    return 0;
+  }
+  const GLuint prog = glCreateProgram();
+  glAttachShader(prog, sh);
+  glLinkProgram(prog);
+  glDeleteShader(sh);
+  glGetProgramiv(prog, GL_LINK_STATUS, &ok);
+  if (!ok)
+  {
+    LOG(WARNING) << "[GpuMeshPipeline] " << label << " link failed";
+    glDeleteProgram(prog);
+    return 0;
+  }
+  return prog;
+}
+
+// Histogram + dark flag. counts[0..1023]=BlockType hist, counts[1024]=dark.
+const char *kSortHistCompute = R"(#version 430
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) readonly buffer Quads { uvec2 quads[]; };
+layout(std430, binding = 1) buffer Counts { uint counts[]; };
+uniform uint numQuads;
+void main() {
+  uint i = gl_GlobalInvocationID.x;
+  if (i >= numQuads) return;
+  uvec2 q = quads[i];
+  uint bt = q.y & 0x3FFu;
+  atomicAdd(counts[bt], 1u);
+  uint face = (q.x >> 25u) & 0x7u;
+  uint sky = (q.y >> 10u) & 0xFu;
+  uint blk = (q.y >> 14u) & 0xFu;
+  if (face != 5u && sky == 0u && blk == 0u) {
+    atomicOr(counts[1024], 1u);
+  }
+}
+)";
+
+// Scatter by BlockType using exclusive offsets (atomically advanced).
+const char *kSortScatterCompute = R"(#version 430
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) readonly buffer Quads { uvec2 quads[]; };
+layout(std430, binding = 1) buffer Offsets { uint offsets[]; };
+layout(std430, binding = 2) writeonly buffer OutQuads { uvec2 outQuads[]; };
+uniform uint numQuads;
+void main() {
+  uint i = gl_GlobalInvocationID.x;
+  if (i >= numQuads) return;
+  uvec2 q = quads[i];
+  uint bt = q.y & 0x3FFu;
+  uint dst = atomicAdd(offsets[bt], 1u);
+  outQuads[dst] = q;
+}
+)";
+
+#endif
 
 } // namespace
 
@@ -75,9 +274,74 @@ bool UGpuMeshPipeline::Init(uint32_t max_slots)
     LOG(WARNING) << "[GpuMeshPipeline] slot allocator init failed";
     return false;
   }
+
+  SortHistProgram = CompileSortCompute(kSortHistCompute, "sort_hist");
+  SortScatterProgram = CompileSortCompute(kSortScatterCompute, "sort_scatter");
+  if (SortHistProgram && SortScatterProgram)
+  {
+    glGenBuffers(1, &SortCountsSsbo);
+    glGenBuffers(1, &SortOffsetsSsbo);
+    glGenBuffers(1, &SortScratchSsbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, SortCountsSsbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER,
+                 static_cast<GLsizeiptr>(kSortCountsWords * sizeof(uint32_t)),
+                 nullptr, GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, SortOffsetsSsbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER,
+                 static_cast<GLsizeiptr>(kBlockTypeBuckets * sizeof(uint32_t)),
+                 nullptr, GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, SortScratchSsbo);
+    glBufferData(
+        GL_SHADER_STORAGE_BUFFER,
+        static_cast<GLsizeiptr>(UGpuMeshSlotAllocator::kMaxQuadsPerSlot *
+                                sizeof(PackedQuad)),
+        nullptr, GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    LOG(INFO) << "[GpuMeshPipeline] GPU BlockType counting-sort ready";
+  }
+  else
+  {
+    LOG(WARNING) << "[GpuMeshPipeline] GPU sort unavailable — CPU fallback";
+    ShutdownGpuSort();
+  }
+
   Ready = true;
+  ScratchQuads.reserve(UGpuMeshSlotAllocator::kMaxQuadsPerSlot);
+  ScratchQuadsSorted.reserve(UGpuMeshSlotAllocator::kMaxQuadsPerSlot);
+  EnsureReadbackPbo();
   LOG(INFO) << "[GpuMeshPipeline] initialized with " << max_slots << " slots";
   return true;
+#endif
+}
+
+void UGpuMeshPipeline::ShutdownGpuSort()
+{
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  if (SortHistProgram)
+  {
+    glDeleteProgram(SortHistProgram);
+    SortHistProgram = 0;
+  }
+  if (SortScatterProgram)
+  {
+    glDeleteProgram(SortScatterProgram);
+    SortScatterProgram = 0;
+  }
+  if (SortCountsSsbo)
+  {
+    glDeleteBuffers(1, &SortCountsSsbo);
+    SortCountsSsbo = 0;
+  }
+  if (SortOffsetsSsbo)
+  {
+    glDeleteBuffers(1, &SortOffsetsSsbo);
+    SortOffsetsSsbo = 0;
+  }
+  if (SortScratchSsbo)
+  {
+    glDeleteBuffers(1, &SortScratchSsbo);
+    SortScratchSsbo = 0;
+  }
 #endif
 }
 
@@ -88,6 +352,8 @@ void UGpuMeshPipeline::Shutdown()
   {
     PendingQueue.pop();
   }
+  ShutdownGpuSort();
+  DestroyReadbackPbo();
   Ready = false;
 }
 
@@ -97,22 +363,242 @@ void UGpuMeshPipeline::EnqueueSnapshot(ChunkMeshSnapshot snapshot,
   PendingQueue.push({std::move(snapshot), source_revision});
 }
 
-bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
-                                        UBlockRegistry &registry,
-                                        glm::ivec3 coord, int slot_idx,
-                                        uint32_t &out_quad_count)
+void UGpuMeshPipeline::EnsureReadbackPbo()
 {
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+#else
+  if (ReadbackPbos[0] != 0)
+  {
+    return;
+  }
+  const GLsizeiptr bytes =
+      kReadbackQuadsOffset +
+      static_cast<GLsizeiptr>(UGpuMeshSlotAllocator::kMaxQuadsPerSlot *
+                              sizeof(PackedQuad));
+  for (int i = 0; i < kReadbackRing; ++i)
+  {
+    glGenBuffers(1, &ReadbackPbos[i]);
+    glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[i]);
+    glBufferData(GL_COPY_WRITE_BUFFER, bytes, nullptr, GL_STREAM_READ);
+    ReadbackInUse[i] = false;
+    glGenBuffers(1, &RectsHoldSsbo[i]);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, RectsHoldSsbo[i]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, kGpuRectsSsboBytes, nullptr,
+                 GL_DYNAMIC_DRAW);
+  }
+  glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+#endif
+}
+
+void UGpuMeshPipeline::DestroyReadbackPbo()
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+#else
+  for (int i = 0; i < kReadbackRing; ++i)
+  {
+    if (ReadbackPbos[i])
+    {
+      glDeleteBuffers(1, &ReadbackPbos[i]);
+      ReadbackPbos[i] = 0;
+    }
+    if (RectsHoldSsbo[i])
+    {
+      glDeleteBuffers(1, &RectsHoldSsbo[i]);
+      RectsHoldSsbo[i] = 0;
+    }
+    ReadbackInUse[i] = false;
+  }
+#endif
+}
+
+int UGpuMeshPipeline::AcquireReadbackSlot()
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  return -1;
+#else
+  EnsureReadbackPbo();
+  for (int i = 0; i < kReadbackRing; ++i)
+  {
+    if (!ReadbackInUse[i])
+    {
+      ReadbackInUse[i] = true;
+      return i;
+    }
+  }
+  return -1;
+#endif
+}
+
+void UGpuMeshPipeline::ReleaseReadbackSlot(GpuApplyTicket &ticket)
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  ticket.pboIndex = -1;
+#else
+  if (ticket.pboIndex >= 0 && ticket.pboIndex < kReadbackRing)
+  {
+    ReadbackInUse[ticket.pboIndex] = false;
+  }
+  ticket.pboIndex = -1;
+#endif
+}
+
+bool UGpuMeshPipeline::HasFreeReadbackSlot() const
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  return false;
+#else
+  for (int i = 0; i < kReadbackRing; ++i)
+  {
+    if (!ReadbackInUse[i])
+    {
+      return true;
+    }
+  }
+  return false;
+#endif
+}
+
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+bool UGpuMeshPipeline::ReadCountersViaPbo(int pbo_index,
+                                          std::array<uint32_t, 4> &out_counters)
+{
+  if (pbo_index < 0 || pbo_index >= kReadbackRing ||
+      ReadbackPbos[pbo_index] == 0)
+  {
+    return false;
+  }
+  glBindBuffer(GL_COPY_READ_BUFFER, EmitState.CountersSsbo);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[pbo_index]);
+  glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0,
+                      kReadbackCountersBytes);
+  glBindBuffer(GL_COPY_READ_BUFFER, 0);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+  GLsync fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+  if (!fence)
+  {
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, EmitState.CountersSsbo);
+    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(out_counters),
+                       out_counters.data());
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    return true;
+  }
+  const GLenum wait = glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT,
+                                       8'000'000); // 8ms — was 50ms hitch
+  glDeleteSync(fence);
+  if (wait == GL_WAIT_FAILED || wait == GL_TIMEOUT_EXPIRED)
+  {
+    // Do not Map after timeout (can block again). Caller remeshes.
+    return false;
+  }
+  glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[pbo_index]);
+  void *mapped =
+      glMapBufferRange(GL_COPY_WRITE_BUFFER, 0, kReadbackCountersBytes,
+                       GL_MAP_READ_BIT);
+  if (!mapped)
+  {
+    glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+    return false;
+  }
+  std::memcpy(out_counters.data(), mapped, sizeof(out_counters));
+  glUnmapBuffer(GL_COPY_WRITE_BUFFER);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+  return true;
+}
+
+bool UGpuMeshPipeline::CopyQuadsToPbo(int pbo_index, uint32_t slot_offset,
+                                      uint32_t quad_count, GLsync *out_fence)
+{
+  if (pbo_index < 0 || pbo_index >= kReadbackRing ||
+      ReadbackPbos[pbo_index] == 0)
+  {
+    return false;
+  }
+  const GLsizeiptr quad_bytes =
+      static_cast<GLsizeiptr>(quad_count * sizeof(PackedQuad));
+  const GLintptr slot_byte_off =
+      static_cast<GLintptr>(slot_offset * sizeof(PackedQuad));
+  glBindBuffer(GL_COPY_READ_BUFFER, Allocator.GetQuadSsbo());
+  glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[pbo_index]);
+  glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, slot_byte_off,
+                      kReadbackQuadsOffset, quad_bytes);
+  glBindBuffer(GL_COPY_READ_BUFFER, 0);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+  if (out_fence)
+  {
+    if (*out_fence)
+    {
+      glDeleteSync(*out_fence);
+      *out_fence = nullptr;
+    }
+    *out_fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+  }
+  return true;
+}
+
+UGpuMeshPipeline::GpuFinishStatus
+UGpuMeshPipeline::MapQuadsFromPbo(int pbo_index, uint32_t quad_count,
+                                  GLsync *inout_fence, uint64_t timeout_ns)
+{
+  if (pbo_index < 0 || pbo_index >= kReadbackRing ||
+      ReadbackPbos[pbo_index] == 0)
+  {
+    return GpuFinishStatus::Failed;
+  }
+  if (inout_fence && *inout_fence)
+  {
+    const GLenum wait =
+        glClientWaitSync(*inout_fence, GL_SYNC_FLUSH_COMMANDS_BIT, timeout_ns);
+    if (wait == GL_TIMEOUT_EXPIRED)
+    {
+      return GpuFinishStatus::NotReady;
+    }
+    glDeleteSync(*inout_fence);
+    *inout_fence = nullptr;
+    if (wait == GL_WAIT_FAILED)
+    {
+      return GpuFinishStatus::Failed;
+    }
+  }
+  const GLsizeiptr quad_bytes =
+      static_cast<GLsizeiptr>(quad_count * sizeof(PackedQuad));
+  ScratchQuads.resize(quad_count);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[pbo_index]);
+  void *mapped = glMapBufferRange(GL_COPY_WRITE_BUFFER, kReadbackQuadsOffset,
+                                  quad_bytes, GL_MAP_READ_BIT);
+  if (!mapped)
+  {
+    glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+    return GpuFinishStatus::Failed;
+  }
+  std::memcpy(ScratchQuads.data(), mapped, static_cast<size_t>(quad_bytes));
+  glUnmapBuffer(GL_COPY_WRITE_BUFFER);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+  return GpuFinishStatus::Ready;
+}
+#endif
+
+bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
+                                         UBlockRegistry &registry,
+                                         glm::ivec3 coord, int slot_idx,
+                                         GpuApplyTicket &out_ticket)
+{
+  out_ticket = {};
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
   (void)snapshot;
   (void)registry;
   (void)coord;
   (void)slot_idx;
-  out_quad_count = 0;
   return false;
 #else
-  out_quad_count = 0;
   if (!SnapshotIsGpuExtractEligible(snapshot, registry) ||
       EmitState.PackedEmitProgram == 0)
+  {
+    return false;
+  }
+
+  const int pbo_index = AcquireReadbackSlot();
+  if (pbo_index < 0)
   {
     return false;
   }
@@ -182,10 +668,13 @@ bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, EmitState.CountersSsbo);
   glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(zero_counters),
                zero_counters.data(), GL_DYNAMIC_DRAW);
+  const GLuint rects_ssbo = RectsHoldSsbo[pbo_index] != 0
+                                ? RectsHoldSsbo[pbo_index]
+                                : EmitState.RectsSsbo;
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, EmitState.MaskSsbo);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, EmitState.BlocksSsbo);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, EmitState.LightsSsbo);
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, EmitState.RectsSsbo);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, rects_ssbo);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, EmitState.CountersSsbo);
   glUseProgram(EmitState.GreedyProgram);
   glUniform1ui(glGetUniformLocation(EmitState.GreedyProgram, "side"), side);
@@ -194,33 +683,172 @@ bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
   glDispatchCompute(102u, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
+  // Async counter poll (D3): copy+fence without ClientWait — TryComplete later.
+  glBindBuffer(GL_COPY_READ_BUFFER, EmitState.CountersSsbo);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[pbo_index]);
+  glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0,
+                      kReadbackCountersBytes);
+  glBindBuffer(GL_COPY_READ_BUFFER, 0);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+  GLsync counter_fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+  glUseProgram(0);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  if (!counter_fence)
+  {
+    // Fallback: sync read path.
+    std::array<uint32_t, 4> counters{};
+    if (!ReadCountersViaPbo(pbo_index, counters))
+    {
+      out_ticket.pboIndex = pbo_index;
+      ReleaseReadbackSlot(out_ticket);
+      return false;
+    }
+    // Re-enter emit via fake awaiting path completed inline below.
+    out_ticket.slotIndex = slot_idx;
+    out_ticket.coord = coord;
+    out_ticket.pboIndex = pbo_index;
+    out_ticket.valid = true;
+    out_ticket.awaitingCounters = false;
+    out_ticket.quadCount = counters[0];
+    if (counters[0] == 0)
+    {
+      Allocator.SetSlotQuadCount(slot_idx, 0);
+      ReleaseReadbackSlot(out_ticket);
+      return true;
+    }
+    // Fall through to packed emit with known count — use sync helper body.
+    // (Rare path: no fence support.)
+    const uint32_t rect_count = counters[0];
+    if (rect_count > UGpuMeshSlotAllocator::kMaxQuadsPerSlot)
+    {
+      ReleaseReadbackSlot(out_ticket);
+      return false;
+    }
+    const GpuMeshSlot *slot = Allocator.GetSlotByIndex(slot_idx);
+    if (!slot)
+    {
+      ReleaseReadbackSlot(out_ticket);
+      return false;
+    }
+    const uint32_t slot_offset = slot->OffsetQuads;
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, rects_ssbo);
+    glBindBufferRange(GL_SHADER_STORAGE_BUFFER, 1, Allocator.GetQuadSsbo(),
+                      static_cast<GLintptr>(slot_offset * sizeof(PackedQuad)),
+                      static_cast<GLsizeiptr>(rect_count * sizeof(PackedQuad)));
+    glUseProgram(EmitState.PackedEmitProgram);
+    glUniform1ui(glGetUniformLocation(EmitState.PackedEmitProgram, "numRects"),
+                 rect_count);
+    glDispatchCompute((rect_count + 63u) / 64u, 1, 1);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    glUseProgram(0);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    Allocator.SetSlotQuadCount(slot_idx, rect_count);
+    GLsync fence = nullptr;
+    if (!CopyQuadsToPbo(pbo_index, slot_offset, rect_count, &fence))
+    {
+      ReleaseReadbackSlot(out_ticket);
+      return false;
+    }
+    out_ticket.quadCount = rect_count;
+    out_ticket.slotOffsetQuads = slot_offset;
+    out_ticket.fence = fence;
+    return true;
+  }
+
+  out_ticket.slotIndex = slot_idx;
+  out_ticket.coord = coord;
+  out_ticket.pboIndex = pbo_index;
+  out_ticket.fence = counter_fence;
+  out_ticket.awaitingCounters = true;
+  out_ticket.valid = true;
+  out_ticket.quadCount = 0;
+  return true;
+#endif
+}
+
+UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryCompleteCountersAndEmit(
+    GpuApplyTicket &ticket, UBlockRegistry &registry, uint64_t timeout_ns)
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  (void)ticket;
+  (void)registry;
+  (void)timeout_ns;
+  return GpuFinishStatus::Failed;
+#else
+  if (!ticket.valid || !ticket.awaitingCounters)
+  {
+    return ticket.valid ? GpuFinishStatus::Ready : GpuFinishStatus::Failed;
+  }
+  if (!ticket.fence)
+  {
+    ticket.awaitingCounters = false;
+    return GpuFinishStatus::Failed;
+  }
+  const GLenum wait =
+      glClientWaitSync(ticket.fence, GL_SYNC_FLUSH_COMMANDS_BIT, timeout_ns);
+  if (wait == GL_TIMEOUT_EXPIRED)
+  {
+    return GpuFinishStatus::NotReady;
+  }
+  if (wait == GL_WAIT_FAILED)
+  {
+    glDeleteSync(ticket.fence);
+    ticket.fence = nullptr;
+    ReleaseReadbackSlot(ticket);
+    ticket.awaitingCounters = false;
+    ticket.valid = false;
+    return GpuFinishStatus::Failed;
+  }
+  glDeleteSync(ticket.fence);
+  ticket.fence = nullptr;
+
   std::array<uint32_t, 4> counters{};
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, EmitState.CountersSsbo);
-  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(counters),
-                     counters.data());
+  glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[ticket.pboIndex]);
+  void *mapped =
+      glMapBufferRange(GL_COPY_WRITE_BUFFER, 0, kReadbackCountersBytes,
+                       GL_MAP_READ_BIT);
+  if (!mapped)
+  {
+    glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+    ReleaseReadbackSlot(ticket);
+    ticket.awaitingCounters = false;
+    ticket.valid = false;
+    return GpuFinishStatus::Failed;
+  }
+  std::memcpy(counters.data(), mapped, sizeof(counters));
+  glUnmapBuffer(GL_COPY_WRITE_BUFFER);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+
+  ticket.awaitingCounters = false;
   const uint32_t rect_count = counters[0];
   if (rect_count == 0)
   {
-    glUseProgram(0);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-    Allocator.SetSlotQuadCount(slot_idx, 0);
-    return true;
+    Allocator.SetSlotQuadCount(ticket.slotIndex, 0);
+    ticket.quadCount = 0;
+    ReleaseReadbackSlot(ticket);
+    return GpuFinishStatus::Ready;
   }
   if (rect_count > UGpuMeshSlotAllocator::kMaxQuadsPerSlot)
   {
     LOG(WARNING) << "[GpuMeshPipeline] rect overflow " << rect_count;
-    glUseProgram(0);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-    return false;
+    ReleaseReadbackSlot(ticket);
+    ticket.valid = false;
+    return GpuFinishStatus::Failed;
   }
-
-  const GpuMeshSlot *slot = Allocator.GetSlot(coord);
+  const GpuMeshSlot *slot = Allocator.GetSlotByIndex(ticket.slotIndex);
   if (!slot)
   {
-    return false;
+    ReleaseReadbackSlot(ticket);
+    ticket.valid = false;
+    return GpuFinishStatus::Failed;
   }
   const uint32_t slot_offset = slot->OffsetQuads;
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, EmitState.RectsSsbo);
+  const GLuint rects_ssbo =
+      (ticket.pboIndex >= 0 && ticket.pboIndex < kReadbackRing &&
+       RectsHoldSsbo[ticket.pboIndex] != 0)
+          ? RectsHoldSsbo[ticket.pboIndex]
+          : EmitState.RectsSsbo;
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, rects_ssbo);
   glBindBufferRange(GL_SHADER_STORAGE_BUFFER, 1, Allocator.GetQuadSsbo(),
                     static_cast<GLintptr>(slot_offset * sizeof(PackedQuad)),
                     static_cast<GLsizeiptr>(rect_count * sizeof(PackedQuad)));
@@ -231,30 +859,221 @@ bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
   glUseProgram(0);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-  std::vector<PackedQuad> quads(rect_count);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, Allocator.GetQuadSsbo());
-  glGetBufferSubData(
-      GL_SHADER_STORAGE_BUFFER,
-      static_cast<GLintptr>(slot_offset * sizeof(PackedQuad)),
-      static_cast<GLsizeiptr>(quads.size() * sizeof(PackedQuad)), quads.data());
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-  std::stable_sort(quads.begin(), quads.end(),
-                   [](const PackedQuad &a, const PackedQuad &b)
-                   { return a.BlockType() < b.BlockType(); });
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, Allocator.GetQuadSsbo());
-  glBufferSubData(GL_SHADER_STORAGE_BUFFER,
-                  static_cast<GLintptr>(slot_offset * sizeof(PackedQuad)),
-                  static_cast<GLsizeiptr>(quads.size() * sizeof(PackedQuad)),
-                  quads.data());
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-  Allocator.SetSlotQuadCount(slot_idx, rect_count);
-  out_quad_count = rect_count;
-  return true;
+  Allocator.SetSlotQuadCount(ticket.slotIndex, rect_count);
+  GLsync fence = nullptr;
+  if (!CopyQuadsToPbo(ticket.pboIndex, slot_offset, rect_count, &fence))
+  {
+    ReleaseReadbackSlot(ticket);
+    ticket.valid = false;
+    return GpuFinishStatus::Failed;
+  }
+  ticket.quadCount = rect_count;
+  ticket.slotOffsetQuads = slot_offset;
+  ticket.fence = fence;
+  (void)registry;
+  return GpuFinishStatus::Ready;
 #endif
 }
+
+UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
+    GpuApplyTicket &ticket, UBlockRegistry &registry, uint32_t &out_quad_count,
+    std::vector<GpuBlockDrawRange> *out_ranges, bool *out_has_dark_face,
+    uint64_t timeout_ns)
+{
+  out_quad_count = 0;
+  if (out_ranges)
+  {
+    out_ranges->clear();
+  }
+  if (out_has_dark_face)
+  {
+    *out_has_dark_face = false;
+  }
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  (void)ticket;
+  (void)registry;
+  (void)timeout_ns;
+  return GpuFinishStatus::Failed;
+#else
+  if (!ticket.valid)
+  {
+    return GpuFinishStatus::Failed;
+  }
+  out_quad_count = ticket.quadCount;
+  if (ticket.quadCount == 0)
+  {
+    if (ticket.fence)
+    {
+      glDeleteSync(ticket.fence);
+      ticket.fence = nullptr;
+    }
+    ReleaseReadbackSlot(ticket);
+    return GpuFinishStatus::Ready;
+  }
+
+  // GPU hist+scatter disabled on AMD (atomics raised emerge). Keep compiled.
+  constexpr uint32_t kGpuSortMinQuads =
+      UGpuMeshSlotAllocator::kMaxQuadsPerSlot + 1;
+  const bool sorted_gpu =
+      ticket.quadCount >= kGpuSortMinQuads &&
+      GpuSortSlotQuads(ticket.slotOffsetQuads, ticket.quadCount, registry,
+                       out_ranges, out_has_dark_face);
+  if (sorted_gpu)
+  {
+    if (ticket.fence)
+    {
+      glDeleteSync(ticket.fence);
+      ticket.fence = nullptr;
+    }
+    ReleaseReadbackSlot(ticket);
+    return GpuFinishStatus::Ready;
+  }
+
+  const GpuFinishStatus map_st = MapQuadsFromPbo(
+      ticket.pboIndex, ticket.quadCount, &ticket.fence, timeout_ns);
+  if (map_st == GpuFinishStatus::NotReady)
+  {
+    return GpuFinishStatus::NotReady;
+  }
+  if (map_st == GpuFinishStatus::Failed)
+  {
+    // Fallback: direct SSBO readback if PBO map failed.
+    ScratchQuads.resize(ticket.quadCount);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, Allocator.GetQuadSsbo());
+    glGetBufferSubData(
+        GL_SHADER_STORAGE_BUFFER,
+        static_cast<GLintptr>(ticket.slotOffsetQuads * sizeof(PackedQuad)),
+        static_cast<GLsizeiptr>(ScratchQuads.size() * sizeof(PackedQuad)),
+        ScratchQuads.data());
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  }
+  BuildRunLengthRangesFromUnsorted(ScratchQuads, registry, out_ranges,
+                                   out_has_dark_face);
+  ReleaseReadbackSlot(ticket);
+  return GpuFinishStatus::Ready;
+#endif
+}
+
+bool UGpuMeshPipeline::FinishComputePasses(
+    GpuApplyTicket &ticket, UBlockRegistry &registry, uint32_t &out_quad_count,
+    std::vector<GpuBlockDrawRange> *out_ranges, bool *out_has_dark_face)
+{
+  return TryFinishComputePasses(ticket, registry, out_quad_count, out_ranges,
+                                out_has_dark_face,
+                                /*timeout_ns=*/100'000'000) ==
+         GpuFinishStatus::Ready;
+}
+
+bool UGpuMeshPipeline::RunComputePasses(const ChunkMeshSnapshot &snapshot,
+                                        UBlockRegistry &registry,
+                                        glm::ivec3 coord, int slot_idx,
+                                        uint32_t &out_quad_count,
+                                        std::vector<GpuBlockDrawRange> *out_ranges,
+                                        bool *out_has_dark_face)
+{
+  GpuApplyTicket ticket;
+  if (!KickComputePasses(snapshot, registry, coord, slot_idx, ticket))
+  {
+    out_quad_count = 0;
+    return false;
+  }
+  if (ticket.awaitingCounters)
+  {
+    const auto st = TryCompleteCountersAndEmit(ticket, registry,
+                                               /*timeout_ns=*/100'000'000);
+    if (st != GpuFinishStatus::Ready)
+    {
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+      if (ticket.fence)
+      {
+        glDeleteSync(ticket.fence);
+        ticket.fence = nullptr;
+      }
+#endif
+      ReleaseReadbackSlot(ticket);
+      out_quad_count = 0;
+      return false;
+    }
+  }
+  return FinishComputePasses(ticket, registry, out_quad_count, out_ranges,
+                             out_has_dark_face);
+}
+
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+bool UGpuMeshPipeline::GpuSortSlotQuads(
+    uint32_t slot_offset, uint32_t num_quads, UBlockRegistry &registry,
+    std::vector<GpuBlockDrawRange> *out_ranges, bool *out_has_dark_face)
+{
+  if (!SortHistProgram || !SortScatterProgram || num_quads == 0)
+  {
+    return false;
+  }
+
+  const GLsizeiptr quad_bytes =
+      static_cast<GLsizeiptr>(num_quads * sizeof(PackedQuad));
+  const GLintptr slot_byte_off =
+      static_cast<GLintptr>(slot_offset * sizeof(PackedQuad));
+
+  std::array<uint32_t, kSortCountsWords> zero_counts{};
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, SortCountsSsbo);
+  glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(zero_counts),
+                  zero_counts.data());
+
+  glBindBufferRange(GL_SHADER_STORAGE_BUFFER, 0, Allocator.GetQuadSsbo(),
+                    slot_byte_off, quad_bytes);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, SortCountsSsbo);
+  glUseProgram(SortHistProgram);
+  glUniform1ui(glGetUniformLocation(SortHistProgram, "numQuads"), num_quads);
+  glDispatchCompute((num_quads + 63u) / 64u, 1, 1);
+  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+  // Histogram + dark only (~4KB) — not the full quad payload.
+  std::array<uint32_t, kSortCountsWords> counts{};
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, SortCountsSsbo);
+  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(counts), counts.data());
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+  std::array<uint32_t, kBlockTypeBuckets> offsets{};
+  uint32_t total = 0;
+  for (size_t b = 0; b < kBlockTypeBuckets; ++b)
+  {
+    offsets[b] = total;
+    total += counts[b];
+  }
+  if (total != num_quads)
+  {
+    LOG(WARNING) << "[GpuMeshPipeline] sort hist total " << total
+                 << " != numQuads " << num_quads;
+    return false;
+  }
+  BuildRangesFromHistogram(counts.data(), offsets.data(), registry, out_ranges);
+  if (out_has_dark_face)
+  {
+    *out_has_dark_face = counts[kBlockTypeBuckets] != 0;
+  }
+
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, SortOffsetsSsbo);
+  glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(offsets), offsets.data());
+
+  glBindBufferRange(GL_SHADER_STORAGE_BUFFER, 0, Allocator.GetQuadSsbo(),
+                    slot_byte_off, quad_bytes);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, SortOffsetsSsbo);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, SortScratchSsbo);
+  glUseProgram(SortScatterProgram);
+  glUniform1ui(glGetUniformLocation(SortScatterProgram, "numQuads"), num_quads);
+  glDispatchCompute((num_quads + 63u) / 64u, 1, 1);
+  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+
+  glBindBuffer(GL_COPY_READ_BUFFER, SortScratchSsbo);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, Allocator.GetQuadSsbo());
+  glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0,
+                      slot_byte_off, quad_bytes);
+  glBindBuffer(GL_COPY_READ_BUFFER, 0);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+  glUseProgram(0);
+  return true;
+}
+#endif
 
 bool UGpuMeshPipeline::ProcessSnapshot(const ChunkMeshSnapshot &snapshot,
                                        UBlockRegistry &registry,
@@ -277,42 +1096,21 @@ bool UGpuMeshPipeline::ProcessSnapshot(const ChunkMeshSnapshot &snapshot,
 
   const glm::ivec3 coord = snapshot.coord;
   const bool has_transparent = ChunkHasTransparentOrCutout(snapshot, registry);
-  const int slot_idx = Allocator.AllocateSlot(coord, has_transparent);
+  // Staging: never overwrite a live ChunkToSlot mesh during compute. Dark /
+  // failed commit frees only the staging index (manual 213543 opaque collapse).
+  const int slot_idx = Allocator.AllocateStagingSlot(has_transparent);
   if (slot_idx < 0)
   {
     return false;
   }
 
   uint32_t quad_count = 0;
-  if (!RunComputePasses(snapshot, registry, coord, slot_idx, quad_count))
+  if (!RunComputePasses(snapshot, registry, coord, slot_idx, quad_count,
+                        &out_result.blockRanges, &out_result.hasFullyDarkFace))
   {
-    Allocator.FreeSlot(coord);
+    Allocator.FreeSlotByIndex(slot_idx);
     return false;
   }
-
-  if (quad_count == 0)
-  {
-    out_result.success = true;
-    out_result.slotIndex = slot_idx;
-    out_result.quadCount = 0;
-    out_result.transparent = has_transparent;
-    return true;
-  }
-
-  const GpuMeshSlot *slot = Allocator.GetSlot(coord);
-  if (!slot)
-  {
-    return false;
-  }
-  std::vector<PackedQuad> quads(quad_count);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, Allocator.GetQuadSsbo());
-  glGetBufferSubData(
-      GL_SHADER_STORAGE_BUFFER,
-      static_cast<GLintptr>(slot->OffsetQuads * sizeof(PackedQuad)),
-      static_cast<GLsizeiptr>(quads.size() * sizeof(PackedQuad)), quads.data());
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-  BuildBlockRangesFromQuads(quads, registry, out_result.blockRanges);
-  out_result.hasFullyDarkFace = PackedQuadsHaveFullyDarkFace(quads);
 
   out_result.success = true;
   out_result.slotIndex = slot_idx;

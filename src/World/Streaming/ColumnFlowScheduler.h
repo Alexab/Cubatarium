@@ -21,6 +21,10 @@ struct ColumnWorkItem
   glm::ivec2 column{0};
   ColumnWorkKind kind{ColumnWorkKind::FirstMesh};
   int priority{0};
+  /// True: Admit scans full focus ring (only=nullptr). False: filter to column.
+  bool scan_full_focus{false};
+  /// >=0 prefer this slice when admitting; -1 = whole remesh band missing slices.
+  int cy{-1};
 };
 
 /// Single-owner focus column work queue (V4 MVP).
@@ -28,10 +32,13 @@ class UColumnFlowScheduler
 {
 public:
   void Enqueue(glm::ivec2 column, ColumnWorkKind kind, int priority);
+  void Enqueue(const ColumnWorkItem &item);
   bool DrainOne(ColumnWorkItem &out);
   void Clear();
   size_t Size() const { return static_cast<size_t>(queue_.size()); }
   bool Contains(glm::ivec2 column, ColumnWorkKind kind) const;
+  bool Contains(glm::ivec2 column, ColumnWorkKind kind,
+                bool scan_full_focus) const;
 
 private:
   struct Compare

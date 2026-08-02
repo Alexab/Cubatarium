@@ -26,8 +26,8 @@ Knobs в `RuntimeTuning` / `bin/streaming_tune.json` (и опционально
 | `MeshCompletedSlots` | 0 → workers×6 | Completed mesh ring |
 | `RelightCompletedSlots` | 0 → workers×8 | Completed relight ring |
 | `DirtySoftCap` | 1200 | drop farthest remesh |
-| `DirtyThrashSoftCap` | 400 | SoftCap under Yellow/Red **or** async thrash |
-| `DirtyThrashAsyncMin` | 36 | async≥N → thrash SoftCap (also Yellow alone) |
+| `DirtyThrashSoftCap` | 320 | SoftCap under Yellow/Red **or** async thrash (Phase B) |
+| `DirtyThrashAsyncMin` | 12 | async≥N → thrash SoftCap (also Yellow alone) |
 | `PendingLightSoftCap` | 80 | drop farthest only if mesh+LitReady |
 | `RelightFifoSoftCap` | 96 | drop farthest FIFO |
 | `GpuVertexPoolReserveMb` | 64 | pre-Reserve |
@@ -122,12 +122,16 @@ emergency_cancel_outside, capture_hard_cap, memory_pressure.
 - Dirty thrash SoftCap (`DirtyThrashSoftCap` when stream Yellow/Red **or**
   `mesh_async≥DirtyThrashAsyncMin`) — SoftCap 1200 never engaged at Dirty~400–590
   with async≤29 (manual `20260723-091724`).
-- Capture hitch gate: `visual_holes>0` or `wall>500ms` → `capture_hard_cap=1`
-  even under byte-budget Green; controller re-evals immediately on holes/wall.
-  Drain checks wall budget **before** every Capture (was only after first).
+- Capture hitch gate: `visual_holes>0` or `wall>MemoryHitchCaptureWallMs` (default
+  **400**, was 500) → `capture_hard_cap=1` even under byte-budget Green; controller
+  re-evals immediately on holes/`MemoryUrgentEvalWallMs`. Drain checks wall budget
+  **before** every Capture (was only after first).
   **Y-band Capture** (`RelightCaptureBandCy=4`, top-down): SoftDefer keeps
   `PendingLight` until `finalize_pending_gate` on the last band (manual
   `102936` full-column ~1.6 s).
+  Phase B: Capture/Immediate/fly/fog budgets live in `URuntimeTuning` (see
+  [`PERF_AUDIT_ENGINE.md`](../PERF_AUDIT_ENGINE.md) §6). Dirty thrash SoftCap
+  default **320**.
 - PendingLight trim requires **HasMesh + LitReady**; free-list sized from Keep.
 - Relight FIFO soft-cap trims **far + priority** deques.
 

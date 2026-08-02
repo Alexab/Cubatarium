@@ -6,6 +6,7 @@
 #include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include "World/Interfaces/IUWorldMeshSink.h"
+#include "World/Streaming/MeshWorkAdmission.h"
 #include <chrono>
 #include <functional>
 #include <glm/glm.hpp>
@@ -58,6 +59,10 @@ public:
   void SetStarveOutsideFocusMesh(bool starve);
   void SetStarveRemeshForHoles(bool starve);
   void SetStarveRemeshKeepHoriz(int keep_h);
+  void SetMeshWorkAdmission(const MeshWorkAdmission &adm);
+  const MeshWorkAdmission &GetMeshWorkAdmission() const;
+  /// Consume one Dirty-admit slot for FirstMesh/Held/neighbor (false = deny).
+  bool TryConsumeDirtyAdmit();
   int DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk, int keep_radius,
                                   int keep_cy = -1, bool remesh_only = false);
   void SetSyncHoleFillRadius(int radius_chunks);
@@ -67,10 +72,15 @@ public:
   void SetMeshScheduleOverflowPerFrame(int count);
   void SetMeshSnapshotBudgetMs(double ms);
   void SetMeshEmergeTotalBudgetMs(double ms);
+  double GetMeshEmergeTotalBudgetMs() const;
   void SetAltitudeCullState(float altitude_above_terrain, int threshold_blocks);
 
   void MarkDirty(glm::ivec3 chunk_coord);
   void MarkDirtyPriority(glm::ivec3 chunk_coord);
+  void PrefetchMeshCapture(const UBlockWorld &world, glm::ivec3 chunk_coord);
+  void PrefetchMeshCaptureBand(const UBlockWorld &world,
+                               glm::ivec3 ground_chunk_coord, int min_y,
+                               int max_y);
   void RequestRemeshAfterApply(glm::ivec3 chunk_coord);
   /// Invalidate fluid surface column cache when this block or a neighbor is liquid.
   void NotifyFluidSurfaceDirtyAtBlock(const UBlockWorld &world,
@@ -92,6 +102,10 @@ public:
   void MarkTerrainChunkMeshDirtySeamedPriority(
       glm::ivec3 ground_chunk_coord, int min_y, int max_y,
       bool include_horizontal_neighbors = true);
+  /// Dirty only solid slices in [min_y,max_y] that fail column-ready / not in-flight.
+  int MarkMissingSlicesDirtyPriority(const UBlockWorld &world,
+                                     glm::ivec3 ground_chunk_coord, int min_y,
+                                     int max_y);
 
   void RebuildAll(UBlockWorld &world, UBlockRegistry &registry);
   void RebuildDirtyChunks(UBlockWorld &world, UBlockRegistry &registry,
@@ -99,7 +113,10 @@ public:
   MeshRebuildTickStats RebuildDirtyChunksWithStats(
       UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
       int max_schedule_per_frame, bool force_sync = false,
-      int max_sync_rebuild = -1, double max_sync_ms = 6.0);
+      int max_sync_rebuild = -1, double max_sync_ms = 6.0,
+      bool skip_gpu_consume = false);
+  int ConsumeGpuApplyBacklog(UBlockWorld &world, UBlockRegistry &registry,
+                             int max_drain, int gpu_max, double gpu_budget_ms);
   void DrainAsyncMeshResults(UBlockWorld &world, UBlockRegistry &registry,
                              int max_per_frame);
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,
@@ -137,6 +154,11 @@ public:
   uint64_t GetMeshDiscardedLateCount() const;
   uint64_t GetMeshApplyStaleCount() const;
   size_t GetPendingGpuAppliesCount() const;
+  size_t GetPendingGpuQueuedCount() const;
+  size_t GetPendingGpuKickedCount() const;
+  int GetLastGpuKickN() const;
+  int GetLastGpuFinishN() const;
+  int GetLastGpuFinishNotReadyN() const;
   int CountPendingGpuAppliesInHorizontalRadius(glm::ivec3 center_ground_chunk,
                                                int radius_chunks) const;
   int DrainPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
@@ -150,9 +172,15 @@ public:
   /// True only when cache has GPU quads or non-empty CPU batches (not empty
   /// placeholder entries that SoftDefer treated as "has mesh").
   bool HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const;
+  bool HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const;
+  size_t GetSoftDeferHeldCount() const;
   bool IsGpuExtractInFlight(glm::ivec3 chunk_coord) const;
   /// Queued in PendingGpuApplies — orphaned GpuExtractInFlight alone is not.
   bool IsPendingGpuApply(glm::ivec3 chunk_coord) const;
+  bool IsPendingGpuQueued(glm::ivec3 chunk_coord) const;
+  bool IsPendingGpuKickedOrDispatched(glm::ivec3 chunk_coord) const;
+  bool PreferKickPendingGpuQueued(glm::ivec3 chunk_coord);
+  bool DropQueuedPendingGpuApply(glm::ivec3 chunk_coord);
   bool ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
                              const UBlockWorld &world) const;
   bool IsChunkMeshDirty(glm::ivec3 chunk_coord) const;
@@ -166,6 +194,10 @@ public:
                                     glm::ivec3 center_ground_chunk,
                                     int radius_chunks,
                                     glm::ivec3 &out_coord) const;
+  /// Track nearest sticky miss for moving Immediate escape (F3).
+  void UpdateStickyNearestHole(glm::ivec3 coord, bool alive);
+  int GetStickyNearestHoleFrames() const { return StickyNearestHoleFrames; }
+  glm::ivec3 GetStickyNearestHoleCoord() const { return StickyNearestHoleCoord; }
   const MeshRebuildTickStats &GetLastRebuildTickStats() const;
   uint64_t GetMeshRevision() const;
   uint64_t GetCullRevision() const;
@@ -227,6 +259,8 @@ private:
   bool PreferGpuStorePatch{false};
   uint64_t LastEditImmediateN{0};
   uint64_t LastEditDirtyN{0};
+  glm::ivec3 StickyNearestHoleCoord{0};
+  int StickyNearestHoleFrames{0};
 };
 
 } // namespace cutum

@@ -985,9 +985,11 @@ public:
   int AdmitFocusMeshIngress(int max_columns = 8);
   /// Ring-scan focus for solid slices missing GreedyCache; mark Dirty only.
   /// If only_column is set, prefer that column first (V4 ColumnFlowExecutor).
+  /// only_cy >= 0 restricts MarkMissing to that slice (exact-slice FirstMesh).
   int AdmitFocusVisibleMissing(int max_columns = 8,
                                glm::vec2 forward_xz = glm::vec2(0.0f),
-                               const glm::ivec2 *only_column = nullptr);
+                               const glm::ivec2 *only_column = nullptr,
+                               int only_cy = -1);
   bool IsColumnStickyRemesh(glm::ivec2 ground_xz) const;
 
   /// Near-focus columns waiting for first light before first mesh (plan A).

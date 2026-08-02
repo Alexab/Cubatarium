@@ -21,7 +21,6 @@ namespace
 
 uint64_t gOpaqueEmitGpu = 0;
 
-constexpr uint32_t kMaxGpuRects = 16384u;
 constexpr uint32_t kGpuPlaneWorkgroups = 102u;
 constexpr int kGpuVertFloats = 10;
 
@@ -328,9 +327,8 @@ bool EnsureGpuOpaqueEmit(GpuGreedyEmitState &state)
   glGenBuffers(1, &state.IndexSsbo);
   glGenBuffers(1, &state.PackedQuadSsbo);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, state.RectsSsbo);
-  glBufferData(GL_SHADER_STORAGE_BUFFER,
-               static_cast<GLsizeiptr>(kMaxGpuRects * 9 * sizeof(uint32_t)),
-               nullptr, GL_DYNAMIC_DRAW);
+  glBufferData(GL_SHADER_STORAGE_BUFFER, kGpuRectsSsboBytes, nullptr,
+               GL_DYNAMIC_DRAW);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, state.VertSsbo);
   glBufferData(GL_SHADER_STORAGE_BUFFER,
                static_cast<GLsizeiptr>(kMaxGpuRects * 4 * kGpuVertFloats *

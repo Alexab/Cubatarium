@@ -1128,6 +1128,15 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
   // Primary may be absent from relit_chunks (chunk unload / empty apply slice).
   // Still drop SoftDefer gate — otherwise PendingLight waits forever
   // (manual 220951: pf/fdm stuck at 1 while other columns drained).
+  // TD-ARCH-015: warm Capture store after Dirty revisions so schedule skips
+  // live GetChunk shell Capture in the hot tick.
+  if (MeshService && !relit_chunks.empty())
+  {
+    for (const glm::ivec3 &coord : relit_chunks)
+    {
+      MeshService->PrefetchMeshCapture(GetBlockWorld(), coord);
+    }
+  }
   if (!finalize_pending_gate || !MeshService)
   {
     return;
@@ -1497,7 +1506,7 @@ int UWorld::AdmitFocusMeshIngress(int max_columns)
     {
       const glm::ivec3 coord(ground.x, cy, ground.z);
       const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-      if (!chunk || MeshService->HasGreedyMesh(coord) ||
+      if (!chunk || MeshService->HasMeshSatisfyingColumnReady(coord) ||
           MeshService->IsPendingGpuApply(coord))
       {
         continue;
@@ -1544,7 +1553,8 @@ int UWorld::AdmitFocusMeshIngress(int max_columns)
 }
 
 int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
-                                      const glm::ivec2 *only_column)
+                                      const glm::ivec2 *only_column,
+                                      int only_cy)
 {
   if (!MeshService || max_columns <= 0)
   {
@@ -1598,7 +1608,7 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
         {
           const glm::ivec3 coord(ground.x, cy, ground.z);
           const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-          if (!chunk || MeshService->HasGreedyMesh(coord) ||
+          if (!chunk || MeshService->HasMeshSatisfyingColumnReady(coord) ||
               MeshService->IsPendingGpuApply(coord) ||
               MeshService->HasInflightMeshBuild(coord))
           {
@@ -1676,9 +1686,17 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
           ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
           enqueue_min, enqueue_max);
     }
-    MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-        ground, remesh_min, remesh_max,
-        /*include_horizontal_neighbors=*/false);
+    if (only_cy >= 0)
+    {
+      const int y0 = only_cy * CHUNK_SIZE;
+      const int y1 = y0 + CHUNK_SIZE - 1;
+      MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground, y0, y1);
+    }
+    else
+    {
+      MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground, remesh_min,
+                                                  remesh_max);
+    }
     SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
     ++admitted;
   }
@@ -1934,9 +1952,9 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     for (int cy = cy0; cy <= cy1; ++cy)
     {
       const glm::ivec3 coord(ground.x, cy, ground.z);
-      // SoT draw_ok: committed cache (incl. intentional 0-quad) OR queued GPU
-      // apply. SoftDefer uses HasDrawable separately for empty SoftDefer holes.
-      if (MeshService->HasGreedyMesh(coord))
+      // SoT draw_ok: drawable mesh OR queued GPU apply. Empty SoftDefer
+      // placeholders (HasGreedy, !Drawable) must not look ready (manual 101824).
+      if (MeshService->HasMeshSatisfyingColumnReady(coord))
       {
         out.draw_ok = true;
         out.reason = ColumnRenderableState::BlockReason::None;
@@ -1961,13 +1979,13 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     for (int cy = cy0; cy <= cy1; ++cy)
     {
       const glm::ivec3 coord(ground.x, cy, ground.z);
-      if (MeshService->HasGreedyMesh(coord) ||
+      if (MeshService->HasMeshSatisfyingColumnReady(coord) ||
           MeshService->IsPendingGpuApply(coord) ||
           MeshService->IsGpuExtractInFlight(coord))
       {
         has_mesh_or_gpu = true;
       }
-      if (MeshService->HasGreedyMesh(coord) &&
+      if (MeshService->HasDrawableGreedyMesh(coord) &&
           MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
       {
         stale_dark_with_mesh = true;
@@ -1996,17 +2014,16 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     }
   }
 
-  // SoT: draw-when-meshed even if ColumnEmerge FSM is mid-transition
-  // (Generating/etc). Counting meshed columns as unfinished inflated cruise
-  // holes while SoftDefer+Capture still owed light (ARCH_D3 / manual_td32b).
-  // HasGreedyMesh (not HasDrawable): intentional 0-quad occluded solids must
-  // not latch unfinished≈80 + FogPullIn (manual 222446 regression).
+  // SoT: draw-when-drawable even if ColumnEmerge FSM is mid-transition
+  // (Generating/etc). Empty SoftDefer (HasGreedy, !Drawable) is NOT ready —
+  // HasGreedy-only left rim undrawn while fog/unfinished looked healed
+  // (manual 101824 / 222446 trade: prefer visible fill over false draw_ok).
   bool has_mesh_or_gpu = false;
   bool saw_gpu_inflight_early = false;
   for (int cy = cy0; cy <= cy1; ++cy)
   {
     const glm::ivec3 coord(ground.x, cy, ground.z);
-    if (MeshService->HasGreedyMesh(coord))
+    if (MeshService->HasMeshSatisfyingColumnReady(coord))
     {
       has_mesh_or_gpu = true;
     }
@@ -2043,7 +2060,7 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     {
       continue;
     }
-    if (MeshService->HasGreedyMesh(coord))
+    if (MeshService->HasMeshSatisfyingColumnReady(coord))
     {
       saw_loaded_meshable = true;
       continue;

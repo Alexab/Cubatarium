@@ -41,7 +41,7 @@ void URuntimeTuning::ApplyMemoryTier(const char *tier)
     t.MaxKeepPrefetchMargin = 2;
     t.MemoryExpandMaxRd = 5;
     t.DirtySoftCap = 800;
-    t.DirtyThrashSoftCap = 280;
+    t.DirtyThrashSoftCap = 240;
     t.MaxResidentChunks = 1024;
   }
   else if (high)
@@ -54,7 +54,7 @@ void URuntimeTuning::ApplyMemoryTier(const char *tier)
     t.MaxKeepPrefetchMargin = 6;
     t.MemoryExpandMaxRd = 8;
     t.DirtySoftCap = 2000;
-    t.DirtyThrashSoftCap = 600;
+    t.DirtyThrashSoftCap = 480;
     t.MaxResidentChunks = 4096;
   }
   else
@@ -68,7 +68,7 @@ void URuntimeTuning::ApplyMemoryTier(const char *tier)
     t.MaxKeepPrefetchMargin = 4;
     t.MemoryExpandMaxRd = 6;
     t.DirtySoftCap = 1200;
-    t.DirtyThrashSoftCap = 400;
+    t.DirtyThrashSoftCap = 320;
     t.MaxResidentChunks = 0; // auto Keep footprint
   }
 }
@@ -217,6 +217,134 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   {
     t.CompletedExpandEnabled =
         j.value("completed_expand_enabled", t.CompletedExpandEnabled);
+  }
+  // Phase B: Capture / Immediate / fly / hitch / fog timing.
+  if (j.contains("capture_drain_moving_ms"))
+  {
+    t.CaptureDrainMovingMs =
+        j.value("capture_drain_moving_ms", t.CaptureDrainMovingMs);
+  }
+  if (j.contains("capture_drain_idle_ms"))
+  {
+    t.CaptureDrainIdleMs =
+        j.value("capture_drain_idle_ms", t.CaptureDrainIdleMs);
+  }
+  if (j.contains("capture_drain_holes_moving_ms"))
+  {
+    t.CaptureDrainHolesMovingMs =
+        j.value("capture_drain_holes_moving_ms", t.CaptureDrainHolesMovingMs);
+  }
+  if (j.contains("capture_drain_holes_idle_ms"))
+  {
+    t.CaptureDrainHolesIdleMs =
+        j.value("capture_drain_holes_idle_ms", t.CaptureDrainHolesIdleMs);
+  }
+  if (j.contains("capture_drain_high_pending_moving_ms"))
+  {
+    t.CaptureDrainHighPendingMovingMs = j.value(
+        "capture_drain_high_pending_moving_ms", t.CaptureDrainHighPendingMovingMs);
+  }
+  if (j.contains("capture_drain_high_pending_idle_ms"))
+  {
+    t.CaptureDrainHighPendingIdleMs = j.value(
+        "capture_drain_high_pending_idle_ms", t.CaptureDrainHighPendingIdleMs);
+  }
+  if (j.contains("capture_hot_frame_mult"))
+  {
+    t.CaptureHotFrameMult =
+        j.value("capture_hot_frame_mult", t.CaptureHotFrameMult);
+  }
+  if (j.contains("capture_sync_skip_wall_ms"))
+  {
+    t.CaptureSyncSkipWallMs =
+        j.value("capture_sync_skip_wall_ms", t.CaptureSyncSkipWallMs);
+  }
+  if (j.contains("capture_idle_pending_max_wall_ms"))
+  {
+    t.CaptureIdlePendingMaxWallMs = j.value(
+        "capture_idle_pending_max_wall_ms", t.CaptureIdlePendingMaxWallMs);
+  }
+  if (j.contains("capture_moving_bg_cap"))
+  {
+    t.CaptureMovingBgCap =
+        j.value("capture_moving_bg_cap", t.CaptureMovingBgCap);
+  }
+  if (j.contains("immediate_budget_hot_ms"))
+  {
+    t.ImmediateBudgetHotMs =
+        j.value("immediate_budget_hot_ms", t.ImmediateBudgetHotMs);
+  }
+  if (j.contains("immediate_budget_ok_ms"))
+  {
+    t.ImmediateBudgetOkMs =
+        j.value("immediate_budget_ok_ms", t.ImmediateBudgetOkMs);
+  }
+  if (j.contains("immediate_hot_wall_ms"))
+  {
+    t.ImmediateHotWallMs =
+        j.value("immediate_hot_wall_ms", t.ImmediateHotWallMs);
+  }
+  if (j.contains("mesh_fly_wall_hot_ms"))
+  {
+    t.MeshFlyWallHotMs = j.value("mesh_fly_wall_hot_ms", t.MeshFlyWallHotMs);
+  }
+  if (j.contains("mesh_fly_wall_mid_ms"))
+  {
+    t.MeshFlyWallMidMs = j.value("mesh_fly_wall_mid_ms", t.MeshFlyWallMidMs);
+  }
+  if (j.contains("mesh_fly_cap_wall_hot"))
+  {
+    t.MeshFlyCapWallHot =
+        j.value("mesh_fly_cap_wall_hot", t.MeshFlyCapWallHot);
+  }
+  if (j.contains("mesh_fly_cap_wall_mid"))
+  {
+    t.MeshFlyCapWallMid =
+        j.value("mesh_fly_cap_wall_mid", t.MeshFlyCapWallMid);
+  }
+  if (j.contains("mesh_fly_cap_wall_ok"))
+  {
+    t.MeshFlyCapWallOk = j.value("mesh_fly_cap_wall_ok", t.MeshFlyCapWallOk);
+  }
+  if (j.contains("mesh_fly_cap_holes_hot"))
+  {
+    t.MeshFlyCapHolesHot =
+        j.value("mesh_fly_cap_holes_hot", t.MeshFlyCapHolesHot);
+  }
+  if (j.contains("mesh_fly_cap_holes_ok"))
+  {
+    t.MeshFlyCapHolesOk =
+        j.value("mesh_fly_cap_holes_ok", t.MeshFlyCapHolesOk);
+  }
+  if (j.contains("memory_green_max_wall_ms"))
+  {
+    t.MemoryGreenMaxWallMs =
+        j.value("memory_green_max_wall_ms", t.MemoryGreenMaxWallMs);
+  }
+  if (j.contains("memory_hitch_capture_wall_ms"))
+  {
+    t.MemoryHitchCaptureWallMs =
+        j.value("memory_hitch_capture_wall_ms", t.MemoryHitchCaptureWallMs);
+  }
+  if (j.contains("memory_urgent_eval_wall_ms"))
+  {
+    t.MemoryUrgentEvalWallMs =
+        j.value("memory_urgent_eval_wall_ms", t.MemoryUrgentEvalWallMs);
+  }
+  if (j.contains("fog_pull_in_expand_sec"))
+  {
+    t.FogPullInExpandSec =
+        j.value("fog_pull_in_expand_sec", t.FogPullInExpandSec);
+  }
+  if (j.contains("fog_pull_in_shrink_sec"))
+  {
+    t.FogPullInShrinkSec =
+        j.value("fog_pull_in_shrink_sec", t.FogPullInShrinkSec);
+  }
+  if (j.contains("fog_pull_in_severe_wall_ms"))
+  {
+    t.FogPullInSevereWallMs =
+        j.value("fog_pull_in_severe_wall_ms", t.FogPullInSevereWallMs);
   }
   last_path = path;
   last_mtime = mtime;

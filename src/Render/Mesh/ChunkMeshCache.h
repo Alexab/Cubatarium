@@ -8,10 +8,12 @@
 #include "Render/Mesh/FluidSurfaceColumnSlice.h"
 #include "Render/Mesh/GpuPackedMeshTypes.h"
 #include "Render/Mesh/GpuMeshPipeline.h"
+#include "Render/Mesh/MeshCaptureStore.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
+#include "World/Streaming/MeshWorkAdmission.h"
 #include <algorithm>
 #include <chrono>
 #include <climits>
@@ -69,7 +71,12 @@ public:
   MeshRebuildTickStats RebuildDirtyChunksWithStats(
       UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
       int max_schedule_per_frame, bool force_sync = false,
-      int max_sync_rebuild = -1, double max_sync_ms = 6.0);
+      int max_sync_rebuild = -1, double max_sync_ms = 6.0,
+      bool skip_gpu_consume = false);
+  /// DrainCompleted + ProcessPendingGpuMeshes so admission can Finalize on
+  /// post-Finish pending (F0 drain-first).
+  int ConsumeGpuApplyBacklog(UBlockWorld &world, UBlockRegistry &registry,
+                             int max_drain, int gpu_max, double gpu_budget_ms);
   void RebuildAll(UBlockWorld &world, UBlockRegistry &registry);
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,
                              glm::ivec3 chunkCoord);
@@ -111,6 +118,11 @@ public:
     return MeshApplySupersededCount;
   }
   size_t GetPendingGpuAppliesCount() const { return PendingGpuApplies.size(); }
+  size_t GetPendingGpuQueuedCount() const;
+  size_t GetPendingGpuKickedCount() const;
+  int GetLastGpuKickN() const { return LastGpuKickN; }
+  int GetLastGpuFinishN() const { return LastGpuFinishN; }
+  int GetLastGpuFinishNotReadyN() const { return LastGpuFinishNotReadyN; }
   int CountPendingGpuAppliesInHorizontalRadius(glm::ivec3 center_ground_chunk,
                                                int radius_chunks) const;
   int DrainPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
@@ -121,8 +133,28 @@ public:
   /// Empty placeholders must NOT clear missing-mesh / SoftDefer holes
   /// (manual 215919: place-block remesh instantly fills "invisible" chunk).
   bool HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const;
+  /// Drawable OR intentional GPU 0-quad commit (occluded). SoftDefer empty
+  /// (HasGreedy, !GpuResident) stays false — rim hole SoT (manual 101824).
+  bool HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const;
+  /// SoftDeferHeld side-set size (outside-focus !Drawable FirstMesh).
+  size_t GetSoftDeferHeldCount() const { return SoftDeferHeld.size(); }
+  /// Prefetch immutable Capture into store (MarkRelit / commit). Main only.
+  void PrefetchMeshCapture(const UBlockWorld &world, glm::ivec3 chunk_coord);
+  void InvalidateMeshCapture(glm::ivec3 chunk_coord);
+  UMeshCaptureStore &GetCaptureStore() { return CaptureStore; }
+  const UMeshCaptureStore &GetCaptureStore() const { return CaptureStore; }
   bool IsGpuExtractInFlight(glm::ivec3 chunk_coord) const;
   bool IsPendingGpuApply(glm::ivec3 chunk_coord) const;
+  /// True only while PendingGpuApply for coord is still Phase::Queued (not
+  /// Dispatched/Kicked). Used by sticky Immediate escape — never drop kicked.
+  bool IsPendingGpuQueued(glm::ivec3 chunk_coord) const;
+  /// True while coord is Kicked or Dispatched in the GPU ring.
+  bool IsPendingGpuKickedOrDispatched(glm::ivec3 chunk_coord) const;
+  /// Move Queued ticket for coord to front so Kick prefers it (no drop).
+  bool PreferKickPendingGpuQueued(glm::ivec3 chunk_coord);
+  /// Drop Queued-only pending for coord so Immediate can rebuild. Returns true
+  /// if a Queued entry was erased. Leaves Dispatched/Kicked untouched.
+  bool DropQueuedPendingGpuApply(glm::ivec3 chunk_coord);
   /// True if any non-bottom greedy vertex has sky+block light == 0.
   /// −Y bottoms are ignored (normally unlit).
   bool ChunkHasFullyDarkFace(glm::ivec3 chunk_coord) const;
@@ -242,6 +274,31 @@ public:
   {
     StarveRemeshKeepHoriz = std::max(0, keep_h);
   }
+  void SetMeshWorkAdmission(const MeshWorkAdmission &adm)
+  {
+    WorkAdmission = adm;
+    DirtyAdmitRemaining = std::max(0, adm.dirty_admit_budget);
+    EnqueueGpuRemaining = std::max(0, adm.enqueue_gpu_budget);
+  }
+  const MeshWorkAdmission &GetMeshWorkAdmission() const { return WorkAdmission; }
+  bool TryConsumeDirtyAdmit()
+  {
+    if (DirtyAdmitRemaining <= 0)
+    {
+      return false;
+    }
+    --DirtyAdmitRemaining;
+    return true;
+  }
+  bool TryConsumeEnqueueGpu()
+  {
+    if (EnqueueGpuRemaining <= 0)
+    {
+      return false;
+    }
+    --EnqueueGpuRemaining;
+    return true;
+  }
   /// Drop Dirty beyond keep shell (Chebyshev horiz + optional |cy|).
   /// remesh_only: only drop entries that already have greedy mesh (or are in
   /// RemeshAfterApply) — safe on cruise; idle F2 fd_end uses remesh_only=false
@@ -282,6 +339,7 @@ public:
   {
     MeshEmergeTotalBudgetMs = std::max(5.0, ms);
   }
+  double GetMeshEmergeTotalBudgetMs() const { return MeshEmergeTotalBudgetMs; }
   void SetMeshScheduleOverflowPerFrame(int count)
   {
     MeshScheduleOverflowPerFrame = std::max(0, count);
@@ -372,10 +430,19 @@ private:
   };
   struct PendingGpuApply
   {
+    enum class Phase : uint8_t
+    {
+      Queued = 0,
+      Dispatched = 1, // greedy done, awaiting counter poll + emit
+      Kicked = 2,     // quads in PBO, awaiting Finish
+    };
     glm::ivec3 coord{0};
     uint64_t sourceRevision{0};
     ChunkMeshSnapshot snapshot;
     std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> crossCenters;
+    Phase phase{Phase::Queued};
+    bool transparent{false};
+    UGpuMeshPipeline::GpuApplyTicket ticket{};
   };
   void EnsureGpuPipeline();
   bool CommitGpuMeshResult(
@@ -428,6 +495,8 @@ private:
   RenderSettings Render;
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
   std::unique_ptr<UGpuMeshPipeline> GpuPipeline;
+  UMeshCaptureStore CaptureStore;
+  int CaptureRefreshBudgetLeft{4};
   bool GpuPipelineInitAttempted{false};
   std::deque<PendingGpuApply> PendingGpuApplies;
   std::unordered_set<glm::ivec3, IVec3Hash> GpuExtractInFlight;
@@ -449,6 +518,9 @@ private:
   std::unordered_map<glm::ivec3, size_t, IVec3Hash> GreedyVertexCountByChunk;
   size_t GreedyVertexCountTotal{0};
   MeshRebuildTickStats LastRebuildTickStats{};
+  int LastGpuKickN{0};
+  int LastGpuFinishN{0};
+  int LastGpuFinishNotReadyN{0};
   std::unordered_map<glm::ivec3, FluidSurfaceColumnSlice, IVec3Hash>
       FluidSurfaceCache;
   std::unordered_set<glm::ivec3, IVec3Hash> FluidSurfaceDirty;
@@ -474,11 +546,19 @@ private:
   bool StarveOutsideFocusMesh{false};
   bool StarveRemeshForHoles{false};
   int StarveRemeshKeepHoriz{2};
+  MeshWorkAdmission WorkAdmission{};
+  int DirtyAdmitRemaining{8};
+  int EnqueueGpuRemaining{8};
   /// SyncRebuildVisibleMissing: fill missing within this Chebyshev radius.
   int SyncHoleFillRadius{1};
   int MaxOutsideFocusMeshPerFrame{2};
   int MaxRearFocusMeshPerFrame{0};
   std::unordered_set<glm::ivec3, IVec3Hash> RemeshAfterApply;
+  /// SoftDefer dropped !Drawable FirstMesh outside focus — requeue when
+  /// MayMesh / focus admits (rim plan B4; avoid forever-RemoveAt).
+  std::unordered_set<glm::ivec3, IVec3Hash> SoftDeferHeld;
+  void HoldSoftDeferFirstMesh(glm::ivec3 chunk_coord);
+  void RequeueSoftDeferHeld();
   /// GPU pool incremental upload: chunks mutated since last Consume.
   mutable std::unordered_set<glm::ivec3, IVec3Hash> GeometryDirtyChunks;
   void NoteGeometryDirty(glm::ivec3 chunk_coord);

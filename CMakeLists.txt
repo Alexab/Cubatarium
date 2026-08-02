@@ -383,6 +383,7 @@ set(SOURCES
     src/Core/Jobs/JobThreadBudget.cpp
     src/Core/Progress/LatestProgressSink.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/MeshCaptureStore.cpp
     src/Render/Mesh/AsyncMeshBuilder.cpp
     src/Render/Mesh/GreedyMesher.cpp
     src/App/Platform/InputManager.cpp
@@ -1421,6 +1422,7 @@ add_executable(decor_mesh_integration_test
     src/Render/Mesh/ChunkMeshCache.cpp
     src/Render/Mesh/ChunkMeshRevisionRegistry.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/MeshCaptureStore.cpp
     src/Render/Mesh/FluidSurfaceColumnSlice.cpp
     src/Render/Mesh/GpuGreedyOpaqueEmit.cpp
     src/Render/Mesh/GpuMeshPipeline.cpp

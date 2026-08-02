@@ -47,7 +47,7 @@
 |----|----------|------|--------------|--------|
 | TD-ARCH-011 | R0 | blue_screen / opaque_on_min residual after E1 | Edge still sees opaque_on_min=0 under load; draw blank fixed for meshed+Pending (016) | backlog |
 | TD-ARCH-013b | R4/tail | Android GLES compute skylight seed | Desktop F2/C/CB not GO; CPU seed remains | backlog |
-| TD-ARCH-015 | R0/S2 | Worker-side Capture band | Worker Capture hung edge_S1 (world races); step A cruise ≤1 Capture kept | backlog |
+| TD-ARCH-015 | R0/S2 | Worker-side Capture band | Main `UMeshCaptureStore` (Phase 1 offload): schedule uses store; MarkRelit prefetches; worker Capture still deferred until store-only consumer | done 2026-08-01 (store contract; worker path not re-enabled) |
 | TD-ARCH-017 | Phase0 | sim_ms double-counted stream+emerge inside phys_ms | Fixed: sim_ms now uses do_movement_ms (includes stream+emerge); old formula was phys_ms+stream+emerge+view+scene causing negative unacc | done 2026-07-29 |
 | TD-ARCH-018 | Phase0 | unacc=240ms in tail frames (emerge=0, scene=8ms) | render_total_ms added; sim_ms uses it; residual now = wall-sim-swap-world_extra; needs runtime verification | in-progress |
 | TD-ARCH-019 | Phase3a | GPF1 pipeline reads back rects+verts via glGetBufferSubData | GpuMeshPipeline wired into ChunkMeshCache+GeometryEngine; legacy readback remains fallback when GpuPackedMeshing=false or ProcessSnapshot fails | done 2026-07-29 |
@@ -61,7 +61,7 @@
 | TD-ARCH-027 | Era13 | Async throughput floor for FOV unfinished | SoftDefer **AllowUnlitFirstMesh** SoT predicate (r≤3\|\|nearest); `mesh_async_med_when_dirty≥4` | done 2026-07-29 — evidence `manual_arch_d3_live.json` |
 | TD-ARCH-028 | Era13 | ColumnRenderable single SoT | Draw/telemetry from one state API | done 2026-07-29 (D2a) |
 | TD-ARCH-029 | Era13 | FirstMesh vs Remesh dirty classes | FirstMesh must not starve behind remesh thrash | done 2026-07-29 (D2a) |
-| TD-ARCH-030 | Era13 | SoftDefer Capture/relight floor | Capture floor on SoT UnfinishedVisual/missing; **FocusPressure** = pending+dirty scheduler proxy only (not hole) | done 2026-07-29 |
+| TD-ARCH-030 | Era13 | SoftDefer Capture/relight floor | SoftDefer → ColumnFlow FirstMesh/RelightThenMesh (cap 1); no `bg_budget=max(floor)` thrash | done 2026-08-01 (Phase 3 offload) |
 | TD-ARCH-031 | manual_1957 | Older mesh apply orphaned Active → remesh thrash | Discard-older keep-Active; GPU pending without Active drops without Dirty | done 2026-07-29 |
 | TD-ARCH-032 | Era13 | ARCH_D1/D3 harness GO | Architecture A–E landed. Autofly×2 `--replay-manual`: `manual_arch_era13_01/02.json`. **cold_relight=2≤3 OK**; holes/async OK on 02. **D3 NO-GO:** `wall_ms_med≈44` (need ≤30), `post_stop_black_sticky_max≈9`. Stop SoftDefer zoo after 2 iters. | in-progress |
 | TD-ARCH-033 | Era13/rim | Frontier first-mesh latency (manual 225337) | Stage SLA + UnlitFirstMesh + sync promote | partial — confirm on World_164 edge smoke |
@@ -70,7 +70,7 @@ Evidence (stale-apply + Era13 tails, 2026-07-29):
 - `manual_stale_apply_A.json` — `mesh_apply_stale`=0 (was ~392).
 - `manual_arch_td32b.json` / prior D3 live — **ARCH_D1** was GO before Era13 promote rewrite.
 - Era13 A–E on `arch/streaming-v2-v4`: AllowUnlitFirstMesh, FocusPressure, ColumnFlow `RunPromoteRelightNow`, FocusIngress Stage SLA, lit remesh clamp (softened). Units PASS. Autofly×2 NO-GO on wall/sticky — do not merge develop.
-- Remaining open: TD-032 (D3 wall+sticky), TD-033 (rim confirm), 011, 015, 013b, 018; Android GLES.
+- Remaining open: TD-032 (D3 wall+sticky), TD-033 (rim confirm), 011, 013b, 018; Android GLES.
 
 **Do not merge `arch/streaming-v2-v4` → develop until ARCH_D3 PASS + explicit request.**
 
@@ -113,7 +113,8 @@ Debt pass S0: closed none; opened TD-ARCH-016; baseline autofly recorded.
   (closes TD-ARCH-016 blank FOV). FirstMesh admit also on `missing_visible_mesh`
   while cruise.
 - **S2:** Cruise Capture hard-cap ≤1 + tighter budgets (3–6ms). Worker Capture
-  attempted → hang; reverted; TD-ARCH-015 stays backlog.
+  attempted → hang; reverted. **2026-08-01:** main `UMeshCaptureStore` landed
+  (TD-ARCH-015 store contract); worker Capture remains off.
 - **S3:** Stop DropRemesh keep_h=2 when `focus_dirty>280` and holes/pending clear.
 - **S4:** TD-ARCH-013b remains backlog (desktop F2/C/CB not GO).
 

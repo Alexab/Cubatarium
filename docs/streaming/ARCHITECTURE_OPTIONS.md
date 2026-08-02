@@ -160,7 +160,26 @@ bounded idle drain owner. Refresh/Admit×N не являются primary.
 они распределяют ownership одной и той же колонки между несколькими
 механизмами.
 
-## Ownership Map (после iter 1–3 roadmap, 2026-07-22)
+## Ownership Map (после main-thread mesh offload, 2026-08-01)
+
+| Concern | Owner | Entry point | Notes |
+|---------|-------|-------------|-------|
+| Relight budget / FIFO drain | `WorldStreaming` | `DrainRelightQueues` + `bg_budget` | SoftDefer no longer inflates Capture floor into `bg_budget` |
+| Focus ingress promote | `ColumnFlowExecutor` only | `RequestPromoteRelight` / SoftDefer→`FirstMesh`\|`RelightThenMesh` | Streaming/Emerge must not call `Promote*` directly |
+| SoftDefer mesh gate | `MeshLitGate` + SoT | `AllowUnlitFirstMesh` → `allow_unlit_first_mesh` | remesh while pending still deferred; UnlitFirstMesh is explicit contract |
+| Immutable Capture | `UMeshCaptureStore` | MarkRelit prefetch → schedule `TakeOrRefresh` | TD-ARCH-015; live Capture only on store miss |
+| GPU mesh apply | `ChunkMeshCache` + `UGpuMeshPipeline` | Kick→fence→Finish→`CommitGpuMeshResult` | PBO readback; staging SoT unchanged |
+| FocusPressure vs UnfinishedVisual | `WorldStreaming` telemetry | `FocusNotRenderReady`=SoT UV; `FocusPressure`=pending+dirty | floors/fog/ARCH holes use UV\|missing only |
+| Sync hole fill | Emerge / ColumnFlow | `Enqueue(FirstMesh)` + `MarkDirtyPriority` | spike guard: cold async → underfeet only |
+| Mesh drain/schedule | `ChunkEmergeCoordinator` | `TickMeshEmerge` | drain-first when `pending_gpu` backlog |
+| Pending clear after mesh | `UWorld` | `DrainFocusVisualWork` | promote + clear; no Recover/Admit |
+| Idle lit-but-dirty | Emerge | `idle_remesh_debt` (nr>15 / fd>24) | keep threshold; landing one-shot boost |
+
+**Primary lifecycle:** MarkRelit → CaptureStore → Dirty → Async → Kick/Finish → Commit.
+
+**Не смешивать:** P0 relight floor и F2 heavy_dirty caps — разные budget axes.
+
+## Ownership Map (legacy, после iter 1–3 roadmap, 2026-07-22)
 
 | Concern | Owner | Entry point | Notes |
 |---------|-------|-------------|-------|

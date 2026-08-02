@@ -1,5 +1,6 @@
 #include "World/Streaming/ColumnFlowExecutor.h"
 
+#include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
 #include "World/Persistence/WorldPersistence.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
@@ -28,6 +29,26 @@ void UColumnFlowExecutor::RequestPromoteRelight(glm::ivec2 near_column,
   Enqueue(near_column, ColumnWorkKind::PromoteRelight, priority);
 }
 
+void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
+{
+  const int64_t key = CooldownKey(item.column, item.kind);
+  const auto it = last_dispatch_frame_.find(key);
+  if (it != last_dispatch_frame_.end() &&
+      frame_counter_ - it->second < kEnqueueCooldownFrames)
+  {
+    return;
+  }
+  scheduler_.Enqueue(item);
+}
+
+int64_t UColumnFlowExecutor::CooldownKey(glm::ivec2 column,
+                                         ColumnWorkKind kind)
+{
+  return (static_cast<int64_t>(column.x) << 32) |
+         (static_cast<int64_t>(column.y & 0xffff) << 16) |
+         static_cast<int64_t>(kind);
+}
+
 void UColumnFlowExecutor::RunPromoteRelightNow(UWorld &world,
                                                glm::ivec3 focus_ground_horiz,
                                                int focus_radius)
@@ -36,15 +57,32 @@ void UColumnFlowExecutor::RunPromoteRelightNow(UWorld &world,
   work.column = glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z);
   work.kind = ColumnWorkKind::PromoteRelight;
   work.priority = 100;
+  work.scan_full_focus = false;
   Dispatch(world, work, focus_ground_horiz, focus_radius, /*admit_batch=*/1);
 }
 
 bool UColumnFlowExecutor::HasRepairTicket(glm::ivec2 column) const
 {
-  return scheduler_.Contains(column, ColumnWorkKind::RemeshSeam) ||
-         scheduler_.Contains(column, ColumnWorkKind::RelightThenMesh) ||
-         scheduler_.Contains(column, ColumnWorkKind::PromoteRelight) ||
-         scheduler_.Contains(column, ColumnWorkKind::FirstMesh);
+  if (scheduler_.Contains(column, ColumnWorkKind::RemeshSeam) ||
+      scheduler_.Contains(column, ColumnWorkKind::RelightThenMesh) ||
+      scheduler_.Contains(column, ColumnWorkKind::PromoteRelight) ||
+      scheduler_.Contains(column, ColumnWorkKind::FirstMesh))
+  {
+    return true;
+  }
+  const ColumnWorkKind kinds[] = {
+      ColumnWorkKind::RemeshSeam, ColumnWorkKind::RelightThenMesh,
+      ColumnWorkKind::PromoteRelight, ColumnWorkKind::FirstMesh};
+  for (ColumnWorkKind kind : kinds)
+  {
+    const auto it = last_dispatch_frame_.find(CooldownKey(column, kind));
+    if (it != last_dispatch_frame_.end() &&
+        frame_counter_ - it->second < kEnqueueCooldownFrames)
+    {
+      return true;
+    }
+  }
+  return false;
 }
 
 void UColumnFlowExecutor::DrainRemeshSeamBudget(UWorld &world, int max_columns)
@@ -61,15 +99,22 @@ void UColumnFlowExecutor::Dispatch(UWorld &world, const ColumnWorkItem &work,
                                    glm::ivec3 focus_ground_horiz,
                                    int focus_radius, int admit_batch)
 {
-  const glm::ivec2 focus_xz(focus_ground_horiz.x, focus_ground_horiz.z);
-  // Sentinel focus enqueue → full ring scan (nullptr). Per-column → filter.
+  last_dispatch_frame_[CooldownKey(work.column, work.kind)] = frame_counter_;
   const glm::ivec2 *only =
-      (work.column.x == focus_xz.x && work.column.y == focus_xz.y) ? nullptr
-                                                                  : &work.column;
+      work.scan_full_focus ? nullptr : &work.column;
+  glm::vec2 forward_xz = world.GetLastMovementDirXz();
+  if (glm::length(forward_xz) < 0.01f)
+  {
+    if (const auto camera = world.GetCurrentUserCamera())
+    {
+      const glm::vec3 front = camera->GetFront();
+      forward_xz = glm::vec2(front.x, front.z);
+    }
+  }
   switch (work.kind)
   {
   case ColumnWorkKind::FirstMesh:
-    world.AdmitFocusVisibleMissing(admit_batch, glm::vec2(0.0f), only);
+    world.AdmitFocusVisibleMissing(admit_batch, forward_xz, only, work.cy);
     world.AdmitFocusMeshIngress(1);
     break;
   case ColumnWorkKind::RelightThenMesh:
@@ -91,6 +136,7 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
                                      glm::ivec3 focus_ground_horiz,
                                      int focus_radius, int admit_batch)
 {
+  ++frame_counter_;
   int drained = 0;
   ColumnWorkItem work{};
   while (drained < n && scheduler_.DrainOne(work))
@@ -110,6 +156,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
                                       int /*pending_focus_n*/, int recover_n,
                                       int admit_n)
 {
+  ++frame_counter_;
   const glm::ivec2 focus(focus_ground_horiz.x, focus_ground_horiz.z);
   std::vector<glm::ivec2> pending_cols;
   std::vector<glm::ivec2> sticky_cols;
@@ -126,7 +173,13 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       ((!moving && !idle_remesh_debt) || moving);
   if (hole_first_mesh)
   {
-    Enqueue(focus, ColumnWorkKind::FirstMesh, 100 + admit_n);
+    ColumnWorkItem item{};
+    item.column = focus;
+    item.kind = ColumnWorkKind::FirstMesh;
+    item.priority = 100 + admit_n;
+    item.scan_full_focus = true;
+    item.cy = -1;
+    Enqueue(item);
   }
 
   // should_relight_then_mesh / should_promote_relight: real pending columns.
@@ -159,8 +212,8 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   // Cooldown + cap avoid 092627 thrash. Do NOT require NearFocusHoles —
   // after Pending clears nh→0 while DarkFaceStaleNear stays high
   // (manual 182125/190350). Skip while missing so FirstMesh wins.
-  // Threshold 80 (was 200): manual 190350 idle start stale≈100 + void≈610
-  // never crossed 200, so residual blacks sat for ~16s with miss=nh=0.
+  // Threshold 40 (was 80): manual 213543 exit stale≈511 but autofly mid-heal
+  // often sits 40–80 with residual blacks while miss=0.
   std::vector<glm::ivec2> stale_dark_cols;
   std::vector<glm::ivec2> void_dark_cols;
   const int stale_n = world.GetPhysicsTelemetry().DarkFaceStaleNearN;
@@ -174,12 +227,14 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
           kStaleRepairCooldownSec;
   const bool allow_stale_wave =
       !missing_visible_mesh && cooldown_ok &&
-      (stale_n > 80 || (dark_n > 500 && stale_n > 0));
+      (stale_n > 40 || (dark_n > 500 && stale_n > 0));
   // Void-edge: light field 0 — Relight near-ring (manual 190350 void≫stale).
   // Idle/stop only: while moving Relight competed with FirstMesh
-  // (land_south_void_cruise miss_stuck 14).
+  // (land_south_void_cruise miss_stuck 14). Also allow mild void at stop when
+  // miss=0 so exit stand can heal without waiting void>200.
   const bool allow_void_wave =
-      !missing_visible_mesh && !moving && cooldown_ok && void_n > 200;
+      !missing_visible_mesh && !moving && cooldown_ok &&
+      (void_n > 200 || (void_n > 40 && stale_n > 40));
   if (allow_stale_wave)
   {
     const int stale_radius = focus_radius;

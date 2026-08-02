@@ -11,6 +11,11 @@
 namespace cutum
 {
 
+/// Max greedy rects written by compute; Rects SSBO / per-slot hold size.
+inline constexpr uint32_t kMaxGpuRects = 16384u;
+inline constexpr GLsizeiptr kGpuRectsSsboBytes =
+    static_cast<GLsizeiptr>(kMaxGpuRects * 9u * sizeof(uint32_t));
+
 struct GpuGreedyEmitState
 {
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
