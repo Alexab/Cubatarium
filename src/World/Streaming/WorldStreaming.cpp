@@ -28,6 +28,7 @@
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 #include "World/Core/RuntimeTuning.h"
+#include "App/Platform/Log.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -183,12 +184,26 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
     ChunkPopulator.reset();
     return;
   }
-  // Cancel/join old pool before replacing the populator it references.
+  // Cancel old pool before replacing the populator it references. Never join
+  // forever: in-flight populate/seal can outlive a short idle wait and used to
+  // hang SaveMetadata ("Saving world...") via EnsureStreamingActiveAfter…
   if (ChunkScheduler)
   {
     ChunkScheduler->CancelAllPending(std::chrono::milliseconds(0));
-    (void)ChunkScheduler->WaitForWorkersIdle(std::chrono::milliseconds(500));
-    ChunkScheduler.reset();
+    if (ChunkScheduler->WaitForWorkersIdle(std::chrono::milliseconds(500)))
+    {
+      ChunkScheduler.reset();
+      ChunkPopulator.reset();
+    }
+    else
+    {
+      CubatariumLogInfo(
+          "Streaming",
+          "InitChunkScheduler: workers busy after cancel — abandon old pool");
+      ChunkScheduler->ShutdownForProcessExit(std::chrono::milliseconds(0));
+      (void)ChunkScheduler.release();
+      (void)ChunkPopulator.release();
+    }
   }
   ChunkPopulator = std::make_unique<UPipelineChunkPopulator>(
       *world.BlockRegistry, world.ObjectLibrary, world.WorldgenOwnerPackId);

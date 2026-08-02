@@ -1878,6 +1878,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   }
   case Phase::SaveMetadata:
   {
+    CubatariumLogInfo("Save", "save_metadata begin");
     world.GetChunkStorage().WriteStorageMarker(FolderPath);
     world.SaveUsers(FolderPath + "/users.json");
     world.SaveCreatures(FolderPath + "/creatures.json");
@@ -1886,10 +1887,12 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     world.ModifiedChunks.clear();
     if (ResumeStreamingAfterSave)
     {
+      CubatariumLogInfo("Save", "save_metadata resume_streaming");
       world.EnsureStreamingActiveAfterBackgroundQuiesce();
     }
     CurrentPhase = Phase::Done;
     Active = false;
+    CubatariumLogInfo("Save", "save_metadata end");
     Report(sink, "done", 1.f, "World saved.");
     break;
   }

@@ -301,6 +301,7 @@ public:
                              class IUProgressSink *sink = nullptr);
   void EnsureStreamingActiveAfterBackgroundQuiesce();
   void ResumeAfterSessionSave();
+  bool IsBackgroundQuiesceFinished() const { return BackgroundQuiesceFinished; }
   void RefreshBlockRegistry();
   void OnBlockRegistryChanged();
   void OnBlockRegistryRuntimeOverlayChanged(

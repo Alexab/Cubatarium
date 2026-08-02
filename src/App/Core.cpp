@@ -812,7 +812,11 @@ void UCore::SaveSystem(const std::string &config_file_name)
   }
 
   SaveConfigFile();
-  if (!WorldInstance->GetWorldName().empty() || !ActiveWorldFolder.empty())
+  // Cooperative ShutdownSave already persisted terrain. Re-entering
+  // SaveWorld/SaveSessionSnapshot here blocked 8–12s on quit (and could hang
+  // on InitChunkScheduler join). Skip when background work was quiesced.
+  if ((!WorldInstance->GetWorldName().empty() || !ActiveWorldFolder.empty()) &&
+      !WorldInstance->IsBackgroundQuiesceFinished())
   {
     SaveWorld(WorldInstance->GetWorldName());
   }

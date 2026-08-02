@@ -121,7 +121,10 @@ bool UWorldOperationRunner::TickWorldOp(IUProgressSink &sink, int chunkBudget)
     }
     if (!World.HasActiveCooperativeOperation())
     {
-      World.BeginCooperativeSave(folder);
+      // SaveThenCreate / SaveThenLoad tear the session down next — do not
+      // resume streaming (InitChunkScheduler join) after this preliminary save.
+      const bool resume_streaming = !SaveBeforeOp;
+      World.BeginCooperativeSave(folder, resume_streaming);
     }
     if (World.TickCooperativeSave(sink, budget))
     {
@@ -247,6 +250,7 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
         (Request.op == WorldRunnerOp::SaveThenLoad ||
          Request.op == WorldRunnerOp::SaveThenCreate))
     {
+      SaveBeforeOp = false;
       if (Request.op == WorldRunnerOp::SaveThenLoad)
       {
         Core.PrepareLoadWorld(PendingWorldName);
