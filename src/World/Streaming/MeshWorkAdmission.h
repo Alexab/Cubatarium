@@ -83,7 +83,7 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
     out.gpu_apply_max = std::max(24, ring * 2);
     out.gpu_budget_frac = 0.85;
     out.dirty_admit_budget = 1;
-    out.softdefer_requeue = 0;
+    out.softdefer_requeue = holes ? 1 : 0;
     out.admit_batch = 1;
     out.allow_neighbor_dirty = false;
     out.starve_remesh_horiz = holes ? 1 : 2;
@@ -100,6 +100,11 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
     out.dirty_admit_budget =
         std::max(0, 4 - static_cast<int>(std::min<size_t>(queued, 4)));
     out.softdefer_requeue = out.dirty_admit_budget > 0 ? 1 : 0;
+    // G3: Held→Dirty headroom under miss (not empty FirstMesh DirtyAdmit).
+    if (holes)
+    {
+      out.softdefer_requeue = std::max(out.softdefer_requeue, 2);
+    }
     out.admit_batch = 1;
     out.allow_neighbor_dirty = false;
     out.starve_remesh_horiz = 1;

@@ -174,6 +174,7 @@ int main()
     Expect(a2.admit_batch == 1, "HoleDrain admit_batch=1 while moving");
     Expect(a2.gpu_apply_max >= 16, "HoleDrain GPU boost under miss");
     Expect(FinalizeDrain(4, a2) >= 12, "HoleDrain drain floor");
+    Expect(a2.softdefer_requeue >= 2, "HoleDrain Held requeue ≥2 under holes (G3)");
 
     MeshWorkAdmissionInput hole_idle = hole;
     hole_idle.moving = false;
@@ -199,7 +200,7 @@ int main()
     const auto a4 = ComputeMeshWorkAdmission(deep);
     Expect(a4.mode == MeshWorkAdmission::Mode::DeepBacklog, "pending>=24 → Deep");
     Expect(FinalizeSchedule(16, a4) <= 4, "Deep schedule capped");
-    Expect(a4.softdefer_requeue == 0, "Deep Held requeue 0");
+    Expect(a4.softdefer_requeue >= 1, "Deep Held requeue ≥1 under holes (G3)");
     Expect(a4.first_mesh_schedule >= 2, "Deep first_mesh under holes");
     Expect(FinalizeSchedule(16, a4) >= a4.first_mesh_schedule,
            "Deep schedule covers first_mesh");
