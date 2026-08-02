@@ -2010,16 +2010,23 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_schedule = std::max(mesh_schedule, moving ? 12 : 16);
     auto &exec = GetColumnFlowExecutor();
     const MeshWorkAdmission &adm = mesh_service.GetMeshWorkAdmission();
-    // J2/K1: healthy async OR GPU pending backlog under HoleDrain — cut sync
-    // ColumnFlow / full-focus scan so mesh_emerge does not hitch while the
-    // ring already has work (manual 174559: async≈0, pending_gpu spikes 20–30).
-    // Keep FirstMesh admit + nearest-hole Imm; do not touch idle FM≥6 quota.
-    const bool async_healthy_hole_drain =
-        (pending_async >= 12 || pending_gpu_n >= 12) &&
-        (adm.mode == MeshWorkAdmission::Mode::HoleDrain ||
-         adm.mode == MeshWorkAdmission::Mode::DeepBacklog);
+    // J2/K1/L1: under HoleDrain backlog, rarer full-focus scan saves wall.
+    // DrainBudget cut ONLY when pending_async≥12 (workers already feed ring).
+    // Cutting Drain on pending_gpu alone drifted rim mh 2–3→4–5 (manual 192715).
+    const bool hole_backlog_mode =
+        adm.mode == MeshWorkAdmission::Mode::HoleDrain ||
+        adm.mode == MeshWorkAdmission::Mode::DeepBacklog;
+    const bool backlog_hole_drain =
+        hole_backlog_mode &&
+        (pending_async >= 12 || pending_gpu_n >= 12);
+    const bool drain_cut =
+        hole_backlog_mode && pending_async >= 12;
+    int nearest_miss_nh = -1;
     if (found_nearest_missing)
     {
+      nearest_miss_nh = std::max(
+          std::abs(isolated_hole.x - focus_ground_horiz.x),
+          std::abs(isolated_hole.z - focus_ground_horiz.z));
       ColumnWorkItem hole{};
       hole.column = glm::ivec2(isolated_hole.x, isolated_hole.z);
       hole.kind = ColumnWorkKind::FirstMesh;
@@ -2029,7 +2036,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       exec.Enqueue(hole);
     }
     // Full-focus scan every frame only in Normal; under backlog every 3f
-    // (every 5f when async already healthy — J2).
+    // (every 5f when GPU/async backlog — scan-only cut).
     static int focus_scan_cd = 0;
     const bool full_scan =
         adm.mode == MeshWorkAdmission::Mode::Normal || focus_scan_cd <= 0;
@@ -2045,15 +2052,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       exec.Enqueue(focus_scan);
       focus_scan_cd = adm.mode == MeshWorkAdmission::Mode::Normal
                           ? 0
-                          : (async_healthy_hole_drain ? 4 : 2);
+                          : (backlog_hole_drain ? 4 : 2);
     }
     else if (focus_scan_cd > 0)
     {
       --focus_scan_cd;
     }
     const int admit_n = std::max(1, adm.admit_batch);
-    const int drain_steps =
-        async_healthy_hole_drain ? (moving ? 2 : 3) : (moving ? 3 : 4);
+    int drain_steps =
+        drain_cut ? (moving ? 2 : 3) : (moving ? 3 : 4);
+    // L2: nearest already at rim≥3 — never starve ColumnFlow FirstMesh drain.
+    if (hole_backlog_mode && nearest_miss_nh >= 3)
+    {
+      drain_steps = std::max(drain_steps, moving ? 3 : 4);
+    }
     exec.DrainBudget(world, drain_steps, focus_ground_horiz, focus_radius,
                      /*admit_batch=*/admit_n);
     // Idle sticky: force Immediate on nearest hole within underfeet when it is
