@@ -2037,9 +2037,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     // Full-focus scan every frame only in Normal; under backlog every 3f
     // (every 5f when GPU/async backlog — scan-only cut).
+    // M1: rim already close (nh≤3) under HoleDrain/Deep — skip full-focus
+    // scan this frame; nearest FirstMesh + DrainBudget still run (no Drain cut).
+    const bool skip_full_scan_rim_close =
+        hole_backlog_mode && found_nearest_missing && nearest_miss_nh >= 0 &&
+        nearest_miss_nh <= 3;
     static int focus_scan_cd = 0;
     const bool full_scan =
-        adm.mode == MeshWorkAdmission::Mode::Normal || focus_scan_cd <= 0;
+        !skip_full_scan_rim_close &&
+        (adm.mode == MeshWorkAdmission::Mode::Normal || focus_scan_cd <= 0);
     if (full_scan)
     {
       ColumnWorkItem focus_scan{};
