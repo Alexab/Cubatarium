@@ -5,6 +5,7 @@
 #include "ResourcePacks/ResourcePackResolver.h"
 #include "World/View/WorldViewSettings.h"
 #include "WorldGen/Core/ProceduralSettings.h"
+#include "Game/WorldGameMode.h"
 #include <string>
 #include <vector>
 
@@ -51,7 +52,9 @@ public:
   void ApplyNewWorldCreationRequest(UCore &core,
                                     const ProceduralSettings &settings,
                                     const ResourcePackSelection &selection,
-                                    const WorldViewSettings &view = {});
+                                    const WorldViewSettings &view = {},
+                                    WorldGameMode gameMode =
+                                        WorldGameMode::Creative);
   void RefreshWorldListAfterSave(UCore &core);
 };
 

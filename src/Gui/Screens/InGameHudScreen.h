@@ -56,8 +56,11 @@ public:
 
 private:
   void EnsureHotbarWidgets();
+  void EnsureVitalWidgets();
   void LayoutHotbar();
+  void LayoutVitals();
   void UpdateSlotData();
+  void UpdateVitalBars();
   void UpdateTooltips();
 
   UGameSession *Session{nullptr};
@@ -67,10 +70,15 @@ private:
   std::vector<UGuiSlot *> PrimarySlots;
   std::vector<UGuiSlot *> SecondarySlots;
   UGuiLabel *Tooltip{nullptr};
+  UGuiLabel *HealthLabel{nullptr};
+  UGuiLabel *SatietyLabel{nullptr};
+  UGuiLabel *ThirstLabel{nullptr};
+  UGuiLabel *FatigueLabel{nullptr};
   UGuiRenderer *Renderer{nullptr};
   int PointerX{-1};
   int PointerY{-1};
   bool HotbarBuilt{false};
+  bool VitalsBuilt{false};
 #if defined(__ANDROID__)
   std::unique_ptr<class UGuiTouchControls> TouchControls;
 #endif

@@ -21,6 +21,7 @@
 #include "World/Environment/EnvironmentConfig.h"
 #include "World/Physics/PhysicsProfile.h"
 #include "World/View/WorldViewSettings.h"
+#include "Game/WorldGameMode.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "ResourcePacks/ResourcePackResolver.h"
 #include <functional>
@@ -177,7 +178,9 @@ public:
   std::string SetupNewWorldForCreation();
   void ApplyNewWorldCreationRequest(const ProceduralSettings &settings,
                                     const ResourcePackSelection &selection,
-                                    const WorldViewSettings &view = {});
+                                    const WorldViewSettings &view = {},
+                                    WorldGameMode gameMode =
+                                        WorldGameMode::Creative);
   bool NeedsCreateWorldOnStartup() const;
   const std::filesystem::path &GetActiveWorldFolder() const
   {
@@ -228,6 +231,7 @@ private:
   ResourcePackSelection PendingNewWorldPackSelection;
   std::optional<ProceduralSettings> PendingNewWorldSettings;
   WorldViewSettings PendingNewWorldViewSettings;
+  WorldGameMode PendingNewWorldGameMode{WorldGameMode::Creative};
   ResourcePackSelection ActivePackSelection;
   bool ResourcePacksReady{false};
 

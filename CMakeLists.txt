@@ -121,6 +121,10 @@ set(SOURCES
     src/Creatures/Locomotion/CreatureLocomotionFacts.cpp
     src/Creatures/Core/Creature.cpp
     src/Creatures/Core/CreatureInventory.cpp
+    src/Creatures/Stats/CreatureStatsDefaults.cpp
+    src/Creatures/Stats/CreatureStatsJson.cpp
+    src/Creatures/Stats/CreatureVitalsSystem.cpp
+    src/Creatures/Combat/CreatureCombat.cpp
     src/Creatures/Player/Player.cpp
     src/Activity/CreatureActivityDirector.cpp
     src/Activity/WorldCreatureActivitySink.cpp
@@ -130,6 +134,7 @@ set(SOURCES
     src/Activity/Helpers/CreatureActivityNavigation.cpp
     src/Activity/Agents/FleeActivityAgent.cpp
     src/Activity/Agents/MeleeAttackActivityAgent.cpp
+    src/Activity/Agents/BotPlayerActivityAgent.cpp
     src/Activity/Brain/SimpleFsmBrain.cpp
     src/Navigation/WorldNavigationQueries.cpp
     src/Navigation/UNavigationPathfinder.cpp
@@ -453,6 +458,7 @@ set(SOURCES
     src/Gui/Screens/WorldResourcePacksScreen.cpp
     src/Gui/Screens/InGameHudScreen.cpp
     src/Gui/Screens/ConsoleScreen.cpp
+    src/Gui/Screens/CharacterSheetScreen.cpp
     src/Gui/Screens/CreativePaletteScreen.cpp
     src/Gui/Screens/WorldGenPaletteScreen.cpp
     src/Gui/Screens/WorldProgressScreen.cpp
@@ -846,6 +852,15 @@ add_executable(wander_interval_test
 target_include_directories(wander_interval_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(wander_interval_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(creature_stats_test
+    src/Creatures/Stats/CreatureStatsDefaults.cpp
+    src/Creatures/Stats/CreatureStatsJson.cpp
+    src/Creatures/Locomotion/LocomotionTypes.cpp
+    src/Test/CreatureStatsTest.cpp)
+target_include_directories(creature_stats_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(creature_stats_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(creature_skinned_draw_test
     src/Creatures/Visual/CreatureBonePaletteGpu.cpp

@@ -8,6 +8,7 @@
 #include "Creatures/Player/User.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Game/GameSession.h"
+#include "Game/WorldGameMode.h"
 #include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
 #include "World/Diagnostics/BlockInspectDiagnostics.h"
@@ -52,6 +53,24 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
 
   registry.Register("help", [&registry](const std::vector<std::string> &)
                     { return CommandResult{true, registry.FormatHelpText()}; });
+
+  registry.Register(
+      "gamemode",
+      [&session](const std::vector<std::string> &args)
+      {
+        if (args.size() < 2)
+        {
+          return CommandResult{false, "Usage: gamemode <creative|survival>"};
+        }
+        const WorldGameMode mode = WorldGameModeFromString(args[1]);
+        if (args[1] != "creative" && args[1] != "survival")
+        {
+          return CommandResult{false, "Unknown mode (creative|survival)"};
+        }
+        session.SyncToWorldGameMode(mode);
+        return CommandResult{true, std::string("Game mode: ") +
+                                       WorldGameModeToString(mode)};
+      });
 
   registry.Register(
       "worldgen",

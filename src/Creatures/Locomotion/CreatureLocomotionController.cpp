@@ -37,7 +37,7 @@ bool UCreatureLocomotionController::IsSprinting(
     const CreatureInput &input) const
 {
   if (Mode == CreatureMovementMode::Flying || !Caps.canSprint ||
-      !input.sprintHeld || !IsMovingInput(input))
+      !input.sprintHeld || !input.allowSprint || !IsMovingInput(input))
   {
     return false;
   }

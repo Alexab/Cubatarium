@@ -1,12 +1,14 @@
 #include "World/Core/WorldViewBinding.h"
 
 #include "Activity/WorldCreatureActivitySink.h"
+#include "Creatures/Combat/CreatureCombat.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Locomotion/CreatureLocomotionController.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Creatures/Player/PlayerCapsule.h"
 #include "Creatures/Player/User.h"
+#include "Creatures/Stats/CreatureVitalsSystem.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/ViewEngine.h"
@@ -458,10 +460,15 @@ void UWorld::RunLegacyPhysicsFrame()
         {
           return;
         }
+        if (creature.GetIntent().attackTargetId != 0)
+        {
+          CreatureCombat::TryMeleeStrike(*this, creature, GetGameMode());
+        }
         creature.ExecuteIntent(*this, dt);
       });
 
   bool is_moved = camera && camera->DoMovement(this);
+  CreatureVitalsSystem::Tick(*this, GetGameMode(), dt);
   static bool was_collision_ready = true;
   const bool collision_ready =
       !hasFeetBlockForReadiness ||

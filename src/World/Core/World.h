@@ -20,6 +20,7 @@
 #include "World/Environment/EnvironmentConfig.h"
 #include "World/Environment/WorldEnvironment.h"
 #include "World/View/WorldViewSettings.h"
+#include "Game/WorldGameMode.h"
 #include "World/IO/ChunkStorageTypes.h"
 #include "World/Math/CollisionVolume.h"
 #include "World/Physics/PhysicsProfile.h"
@@ -227,6 +228,8 @@ public:
   }
   uint32_t GetWorldSeed() const { return WorldSeed; }
   const std::string &GetTerrainType() const { return TerrainType; }
+  WorldGameMode GetGameMode() const { return GameMode; }
+  void SetGameMode(WorldGameMode mode) { GameMode = mode; }
 
   void Create(const std::string &world_name);
   void Load(const std::string &world_folder_path);
@@ -1207,6 +1210,7 @@ private:
   std::string CurrentUserName;
   uint32_t WorldSeed{12345};
   std::string TerrainType{"heightmap"};
+  WorldGameMode GameMode{WorldGameMode::Creative};
   ProceduralSettings ProceduralTemplate;
   std::unique_ptr<IUWorldGenPipeline> WorldGen;
   size_t CachedBlockCount{0};

@@ -34,6 +34,7 @@
 #include "App/Platform/Log.h"
 #include "App/WorldOperationRunner.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
+#include "Gui/Screens/CharacterSheetScreen.h"
 #include "Gui/Screens/WorldResourcePacksScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
 #include "Gui/Screens/LoadWorldScreen.h"
@@ -610,6 +611,10 @@ void UApplication::EnterGameAfterWorldChange()
     }
     World->PrepareEnterGameSession();
     LogWorldLoadDiag("enter_game_after_world_change", *World);
+    if (GameSession)
+    {
+      GameSession->SyncToWorldGameMode(World->GetGameMode());
+    }
   }
   RefreshBlockCatalog();
   ShowInGameHud();
@@ -691,6 +696,13 @@ void UApplication::CreateNewWorldWithSettings(
     const ProceduralSettings &settings, const ResourcePackSelection &selection,
     const WorldViewSettings &view)
 {
+  CreateNewWorldWithSettings(settings, selection, view, WorldGameMode::Creative);
+}
+
+void UApplication::CreateNewWorldWithSettings(
+    const ProceduralSettings &settings, const ResourcePackSelection &selection,
+    const WorldViewSettings &view, WorldGameMode gameMode)
+{
   if (!Core)
   {
     return;
@@ -702,6 +714,7 @@ void UApplication::CreateNewWorldWithSettings(
   request.settings = settings;
   request.packs = selection;
   request.view = view;
+  request.gameMode = gameMode;
   request.enterGameAfter = true;
   request.saveConfigAfter = true;
   BeginWorldOperation(std::move(request));
@@ -984,6 +997,12 @@ void UApplication::ShowInGameHud()
   PaletteScreen->Build(*GuiContext);
   PaletteScreen->SetVisible(false);
 
+  CharacterSheetScreen =
+      std::make_unique<UCharacterSheetScreen>(GameSession.get());
+  CharacterSheetScreen->OnAttach(*GuiContext);
+  CharacterSheetScreen->Build(*GuiContext);
+  CharacterSheetScreen->SetVisible(false);
+
   WorldGenScreen = std::make_unique<UWorldGenPaletteScreen>(
       World.get(), &GameSession->GetContentCatalog(), icons, preview);
   WorldGenScreen->OnAttach(*GuiContext);
@@ -996,13 +1015,14 @@ void UApplication::ShowInGameHud()
 bool UApplication::UsesUiPointer() const
 {
   return State == AppState::MainMenu || State == AppState::Loading || FreeCursor ||
-         ConsoleOpen || PaletteOpen || WorldGenOpen;
+         ConsoleOpen || PaletteOpen || WorldGenOpen || CharacterSheetOpen;
 }
 
 bool UApplication::BlocksGameMouseLook() const
 {
   return State == AppState::InGame &&
-         (FreeCursor || ConsoleOpen || PaletteOpen || WorldGenOpen);
+         (FreeCursor || ConsoleOpen || PaletteOpen || WorldGenOpen ||
+          CharacterSheetOpen);
 }
 
 AppCursorPolicy UApplication::GetCursorPolicy() const
@@ -1223,6 +1243,7 @@ void UApplication::EnterInGameInputState()
   SuppressConsoleToggleChar = false;
   PaletteOpen = false;
   WorldGenOpen = false;
+  CharacterSheetOpen = false;
   FreeCursor = false;
   if (WorldGenScreen)
   {
@@ -1231,6 +1252,10 @@ void UApplication::EnterInGameInputState()
   if (PaletteScreen)
   {
     PaletteScreen->SetVisible(false);
+  }
+  if (CharacterSheetScreen)
+  {
+    CharacterSheetScreen->SetVisible(false);
   }
 #if defined(__ANDROID__)
   Ui.ControlScheme = ControlScheme::Cubatarium;
@@ -1310,6 +1335,12 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
       OverlayCaptures[pointerIndex] = OverlayPointerCapture::Palette;
       return true;
     }
+    if (CharacterSheetOpen && CharacterSheetScreen &&
+        routeRoot(CharacterSheetScreen->GetRoot(), true))
+    {
+      OverlayCaptures[pointerIndex] = OverlayPointerCapture::CharacterSheet;
+      return true;
+    }
     if (ConsoleOpen && routeRoot(ConsoleScreen->GetRoot(), true))
     {
       OverlayCaptures[pointerIndex] = OverlayPointerCapture::Console;
@@ -1334,6 +1365,9 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
   {
   case OverlayPointerCapture::Palette:
     return PaletteOpen && routeRoot(PaletteScreen->GetRoot(), false);
+  case OverlayPointerCapture::CharacterSheet:
+    return CharacterSheetOpen && CharacterSheetScreen &&
+           routeRoot(CharacterSheetScreen->GetRoot(), false);
   case OverlayPointerCapture::WorldGen:
     return WorldGenOpen && routeRoot(WorldGenScreen->GetRoot(), false);
   case OverlayPointerCapture::Console:
@@ -1727,6 +1761,13 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     notifyViewport(PaletteScreen.get());
     GuiContext->RenderOverlay(*PaletteScreen->GetRoot(), width, height, false);
   }
+  if (CharacterSheetOpen && CharacterSheetScreen &&
+      CharacterSheetScreen->GetRoot())
+  {
+    notifyViewport(CharacterSheetScreen.get());
+    GuiContext->RenderOverlay(*CharacterSheetScreen->GetRoot(), width, height,
+                               false);
+  }
   if (WorldGenOpen && WorldGenScreen && WorldGenScreen->GetRoot())
   {
     WorldGenScreen->RenderPreview();
@@ -1771,14 +1812,14 @@ bool UApplication::WantsCaptureKeyboard() const
   {
     return true;
   }
-  return ConsoleOpen || PaletteOpen || WorldGenOpen ||
+  return ConsoleOpen || PaletteOpen || WorldGenOpen || CharacterSheetOpen ||
          GuiContext->WantsCaptureKeyboard();
 }
 
 bool UApplication::AllowsWorldMousePlacement() const
 {
   return State == AppState::InGame && !ConsoleOpen && !PaletteOpen &&
-         !WorldGenOpen;
+         !WorldGenOpen && !CharacterSheetOpen;
 }
 
 bool UApplication::RouteKey(int key, int Action, int Mods)

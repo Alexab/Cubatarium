@@ -10,9 +10,11 @@
 #include "Gui/Widgets/GuiScrollView.h"
 #include "Gui/Widgets/GuiWindow.h"
 #include "Gui/Widgets/GuiLabel.h"
+#include "Gui/Widgets/GuiListView.h"
 #include "Gui/Widgets/WorldGenSettingsForm.h"
 #include "Gui/Widgets/WorldViewSettingsForm.h"
 #include "Gui/Widgets/ResourcePackPickerForm.h"
+#include "Game/WorldGameMode.h"
 #include <algorithm>
 #include <iostream>
 
@@ -55,6 +57,7 @@ void UNewWorldScreen::OnCreate()
   const ProceduralSettings settings = WorldForm->ReadSettings();
   const WorldViewSettings view =
       ViewForm ? ViewForm->ReadSettings() : WorldViewSettings{};
+  const WorldGameMode gameMode = ReadSelectedGameMode();
   ResourcePackSelection packs =
       PackForm ? PackForm->ReadSelection() : ResourcePackSelection{};
   if (packs.Primary.empty())
@@ -73,9 +76,19 @@ void UNewWorldScreen::OnCreate()
   {
     packs.WorldgenOwner = packs.Primary.front();
   }
-  auto create = [this, settings, packs, view]()
-  { Host->CreateNewWorldWithSettings(settings, packs, view); };
+  auto create = [this, settings, packs, view, gameMode]()
+  { Host->CreateNewWorldWithSettings(settings, packs, view, gameMode); };
   Host->SaveIfNeededAndProceed(create);
+}
+
+WorldGameMode UNewWorldScreen::ReadSelectedGameMode() const
+{
+  if (!GameModeList)
+  {
+    return WorldGameMode::Creative;
+  }
+  return GameModeList->GetSelectedIndex() == 1 ? WorldGameMode::Survival
+                                               : WorldGameMode::Creative;
 }
 
 void UNewWorldScreen::Build(UGuiContext &ctx)
@@ -121,6 +134,16 @@ void UNewWorldScreen::Build(UGuiContext &ctx)
   ViewForm->SetSettings(WorldViewSettings{});
   ViewForm->SetOnLayoutChanged([this]() { RequestBodyRelayout(); });
   ViewForm->BuildInto(*body);
+
+  auto modeSection = std::make_unique<UGuiLabel>(&theme, "Game mode:");
+  GameModeSectionLabel = modeSection.get();
+  body->AddChild(std::move(modeSection));
+  auto modeList = std::make_unique<UGuiListView>(&theme);
+  GameModeList = modeList.get();
+  GameModeList->SetItems({"Creative", "Survival"});
+  GameModeList->SetSelectedIndex(0);
+  GameModeList->SetVisibleRowCount(2);
+  body->AddChild(std::move(modeList));
 
   WorldForm = std::make_unique<UWorldGenSettingsForm>(&theme);
   WorldForm->SetSettings(procSnap);
@@ -225,6 +248,10 @@ int UNewWorldScreen::MeasureWorldPageContentHeight(int width) const
   {
     height += label_h + ViewForm->MeasureHeight(area) + section_gap;
   }
+  if (GameModeList && theme)
+  {
+    height += label_h + GameModeList->GetPreferredHeight() + section_gap;
+  }
   if (WorldForm)
   {
     height += WorldForm->MeasureGridHeight(area, spec);
@@ -276,6 +303,18 @@ void UNewWorldScreen::LayoutWorldPage(const GuiRect &area) const
     const int viewH = ViewForm->MeasureHeight(area);
     ViewForm->Layout({area.X, y, area.W, viewH});
     y += viewH + section_gap;
+  }
+
+  if (GameModeList)
+  {
+    if (GameModeSectionLabel)
+    {
+      GameModeSectionLabel->SetBounds({area.X, y, area.W, label_h});
+      y += label_h;
+    }
+    const int modeH = GameModeList->GetPreferredHeight();
+    GameModeList->SetBounds({area.X, y, area.W, modeH});
+    y += modeH + section_gap;
   }
 
   if (WorldForm)

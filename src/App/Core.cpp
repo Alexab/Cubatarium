@@ -1087,10 +1087,11 @@ void UCore::CreateNewWorldWithSettings(
 
 void UCore::ApplyNewWorldCreationRequest(
     const ProceduralSettings &settings,
-    const ResourcePackSelection &resourcePacks, const WorldViewSettings &view)
+    const ResourcePackSelection &resourcePacks, const WorldViewSettings &view,
+    WorldGameMode gameMode)
 {
   WorldLifecycle.ApplyNewWorldCreationRequest(*this, settings, resourcePacks,
-                                              view);
+                                              view, gameMode);
 }
 
 WorldViewSettings UCore::GetCurrentWorldViewSettings() const

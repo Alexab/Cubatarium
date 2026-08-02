@@ -199,7 +199,8 @@ bool USkinDefinitionStorage::IsCompatible(const std::string &skinId,
   {
     return false;
   }
-  return it->second.creatureId == speciesId;
+  return it->second.creatureId == speciesId ||
+         (it->second.creatureId == "human" && speciesId == "bot");
 }
 
 } // namespace cutum

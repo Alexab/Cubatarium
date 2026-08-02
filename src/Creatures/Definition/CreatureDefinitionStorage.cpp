@@ -2,6 +2,8 @@
 #include "Core/Sort/CatalogSortUtil.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Creatures/Stats/CreatureStatsDefaults.h"
+#include "Creatures/Stats/CreatureStatsJson.h"
 #include "Creatures/Visual/CreatureRigidModelLoader.h"
 #include <algorithm>
 #include <filesystem>
@@ -170,6 +172,32 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
           bp.value("attack_range", def.behavior.attackRange);
       def.behavior.attackCooldown =
           bp.value("attack_cooldown", def.behavior.attackCooldown);
+    }
+    {
+      const auto tmpl = CreatureStatsDefaults::For(
+          def.role, def.catalog.tags, def.habitat, def.Id);
+      def.stats.vitalsTemplate = tmpl.vitals;
+      def.stats.attributes = tmpl.attributes;
+      def.stats.needsTick = tmpl.needsTick;
+      if (data.contains("vitals") && data["vitals"].is_object())
+      {
+        def.stats.hasVitalsOverride = true;
+        CreatureStatsJson::ReadVitalsTemplate(data["vitals"],
+                                              def.stats.vitalsTemplate);
+        def.stats.vitalsTemplate.ClampCurrents();
+        def.stats.vitalsTemplate.FillFull();
+      }
+      if (data.contains("attributes") && data["attributes"].is_object())
+      {
+        def.stats.hasAttributesOverride = true;
+        CreatureStatsJson::ReadAttributes(data["attributes"],
+                                          def.stats.attributes);
+      }
+      if (def.role == CreatureRole::ControlledDefault ||
+          def.role == CreatureRole::Bot)
+      {
+        def.stats.needsTick = true;
+      }
     }
     if (data.contains("locomotion"))
     {

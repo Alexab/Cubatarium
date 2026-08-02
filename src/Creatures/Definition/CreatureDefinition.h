@@ -3,12 +3,24 @@
 
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
+#include "Creatures/Stats/CreatureAttributes.h"
+#include "Creatures/Stats/CreatureVitals.h"
 #include <string>
 
 #include "Creatures/Locomotion/LocomotionTypes.h"
 
 namespace cutum
 {
+
+struct CreatureStatsSpec
+{
+  bool hasVitalsOverride{false};
+  bool hasAttributesOverride{false};
+  /// Maxima / armor / fatal wounds template; currents filled at spawn.
+  CreatureVitals vitalsTemplate{};
+  CreatureAttributes attributes{};
+  bool needsTick{false};
+};
 
 struct CreatureDefinition
 {
@@ -24,6 +36,7 @@ struct CreatureDefinition
   CreatureHabitat habitat{CreatureHabitat::Terrestrial};
   CreatureBehaviorParams behavior;
   CreatureVisualSpec visual;
+  CreatureStatsSpec stats;
 };
 
 } // namespace cutum

@@ -102,6 +102,17 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
         app.ScreenNav.CloseWorldGenOverlay();
         return true;
       }
+      if (app.CharacterSheetOpen)
+      {
+        app.CharacterSheetOpen = false;
+        if (app.CharacterSheetScreen)
+        {
+          app.CharacterSheetScreen->SetVisible(false);
+        }
+        app.GuiContext->ClearInputState();
+        app.SyncCursorVisibility();
+        return true;
+      }
       app.ReturnToMainMenu();
       return true;
     }
@@ -263,9 +274,14 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
       if (app.WorldGenOpen)
       {
         app.PaletteOpen = false;
+        app.CharacterSheetOpen = false;
         if (app.PaletteScreen)
         {
           app.PaletteScreen->SetVisible(false);
+        }
+        if (app.CharacterSheetScreen)
+        {
+          app.CharacterSheetScreen->SetVisible(false);
         }
       }
       else
@@ -275,6 +291,33 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
       if (app.WorldGenScreen)
       {
         app.WorldGenScreen->SetVisible(app.WorldGenOpen);
+      }
+      app.SyncCursorVisibility();
+      return true;
+    }
+    if (!app.ConsoleOpen && KeyNameIs(app.Ui.CharacterKey, key))
+    {
+      app.CharacterSheetOpen = !app.CharacterSheetOpen;
+      if (app.CharacterSheetOpen)
+      {
+        app.PaletteOpen = false;
+        app.WorldGenOpen = false;
+        if (app.PaletteScreen)
+        {
+          app.PaletteScreen->SetVisible(false);
+        }
+        if (app.WorldGenScreen)
+        {
+          app.WorldGenScreen->SetVisible(false);
+        }
+      }
+      else
+      {
+        app.GuiContext->ClearInputState();
+      }
+      if (app.CharacterSheetScreen)
+      {
+        app.CharacterSheetScreen->SetVisible(app.CharacterSheetOpen);
       }
       app.SyncCursorVisibility();
       return true;

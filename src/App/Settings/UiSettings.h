@@ -22,6 +22,7 @@ struct UiSettings
   std::string PaletteKey{"b"};      // creative palette, Blocks tab
   std::string WorldGenKey{"g"};     // world generation sets
   std::string InventoryKey{"e"};    // creative palette toggle (last main tab; default Blocks)
+  std::string CharacterKey{"c"};    // character sheet overlay
   int HotbarCount{1};
 
   ControlScheme ControlScheme{ControlScheme::Classic};

@@ -11,6 +11,7 @@
 #include "Creatures/Environment/CreatureEnvironment.h"
 #include "Creatures/Player/Player.h"
 #include "Creatures/Player/User.h"
+#include "Creatures/Stats/CreatureStatsJson.h"
 #include "Creatures/Visual/CreatureAppearance.h"
 #include "Creatures/Visual/CreatureVisualFactory.h"
 #include "Pose/CreaturePosePresenterRegistry.h"
@@ -334,6 +335,7 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
     creature->GetBoundsMutable().currentSizeBlocks = def->bounds.restSizeBlocks;
   }
   creature->SetCapabilities(def->locomotion);
+  creature->ApplyStatsFromDefinition(*def);
   creature->SetLocomotionArchetype(def->locomotionArchetype);
   creature->SetModelYawOffsetDeg(def->visual.modelYawOffsetDeg);
   creature->SetWalkCycleHz(def->visual.Animation.walkCycleHz);
@@ -826,6 +828,17 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
       creature->GetBoundsMutable().currentSizeBlocks =
           def->bounds.restSizeBlocks;
       creature->SetCapabilities(def->locomotion);
+      creature->ApplyStatsFromDefinition(*def);
+      if (!CreatureStatsJson::Read(c, creature->GetVitals(),
+                                   creature->GetAttributes()))
+      {
+        // Keep definition defaults when save has no stats block.
+      }
+      else
+      {
+        creature->GetAttributes().ClampAll();
+        creature->GetVitals().ClampCurrents();
+      }
       creature->SetLocomotionArchetype(def->locomotionArchetype);
       creature->SetModelYawOffsetDeg(def->visual.modelYawOffsetDeg);
       creature->SetWalkCycleHz(def->visual.Animation.walkCycleHz);
@@ -870,7 +883,7 @@ void UWorldEnvironment::LoadCreatures(const std::string &file_name)
 void UWorldEnvironment::SaveCreatures(const std::string &file_name)
 {
   json root;
-  root["format_version"] = 1;
+    root["format_version"] = 2;
   json arr = json::array();
   for (const auto &entry : Creatures)
   {
@@ -894,6 +907,8 @@ void UWorldEnvironment::SaveCreatures(const std::string &file_name)
                                 ? "flying"
                                 : "walking";
     creature.GetInventory().SerializeToJson(item);
+    CreatureStatsJson::Write(item, creature.GetVitals(),
+                             creature.GetAttributes());
     arr.push_back(item);
   }
   root["creatures"] = arr;

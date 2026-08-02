@@ -1,7 +1,9 @@
 #include "Gui/Screens/InGameHudScreen.h"
 #include "Game/GameSession.h"
 #include "Game/Inventory/SlotInteraction.h"
+#include "Game/WorldGameMode.h"
 #include "Gui/Core/GuiContext.h"
+#include "Gui/Interfaces/IUCharacterStatsViewModel.h"
 #include "Gui/Interfaces/IUGuiIconSource.h"
 #include "Gui/Layout/GuiLayout.h"
 #include "Gui/Layout/GuiTooltipLayout.h"
@@ -10,6 +12,7 @@
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiSlot.h"
 #include "Gui/Widgets/GuiWidget.h"
+#include <cstdio>
 
 #if defined(__ANDROID__)
 #include "Gui/Widgets/GuiTouchControls.h"
@@ -457,8 +460,11 @@ void UInGameHudScreen::Update(double /*dt*/)
     return;
   }
   EnsureHotbarWidgets();
+  EnsureVitalWidgets();
   LayoutHotbar();
+  LayoutVitals();
   UpdateSlotData();
+  UpdateVitalBars();
   UpdateTooltips();
 #if defined(__ANDROID__)
   if (TouchControls)
@@ -467,6 +473,97 @@ void UInGameHudScreen::Update(double /*dt*/)
                           GetContentOffsetY());
   }
 #endif
+}
+
+void UInGameHudScreen::EnsureVitalWidgets()
+{
+  if (VitalsBuilt || !RootPanel || !Theme)
+  {
+    return;
+  }
+  auto makeLabel = [this](UGuiLabel *&out) {
+    auto lab = std::make_unique<UGuiLabel>(Theme, "");
+    lab->SetDrawBackground(true);
+    lab->SetVisible(false);
+    out = lab.get();
+    RootPanel->AddChild(std::move(lab));
+  };
+  makeLabel(HealthLabel);
+  makeLabel(SatietyLabel);
+  makeLabel(ThirstLabel);
+  makeLabel(FatigueLabel);
+  VitalsBuilt = true;
+}
+
+void UInGameHudScreen::LayoutVitals()
+{
+  if (!VitalsBuilt || !Theme)
+  {
+    return;
+  }
+  const int line = 20;
+  const int pad = 8;
+  const int w = 180;
+  int y = pad + GetContentOffsetY();
+  const int x = pad + GetContentOffsetX();
+  UGuiLabel *labels[] = {HealthLabel, SatietyLabel, ThirstLabel, FatigueLabel};
+  for (UGuiLabel *lab : labels)
+  {
+    if (!lab)
+    {
+      continue;
+    }
+    lab->SetBounds({x, y, w, line});
+    y += line + 2;
+  }
+}
+
+void UInGameHudScreen::UpdateVitalBars()
+{
+  if (!VitalsBuilt || !Session)
+  {
+    return;
+  }
+  const bool survival =
+      Session->GetWorldGameMode() == WorldGameMode::Survival;
+  UGuiLabel *labels[] = {HealthLabel, SatietyLabel, ThirstLabel, FatigueLabel};
+  if (!survival)
+  {
+    for (UGuiLabel *lab : labels)
+    {
+      if (lab)
+      {
+        lab->SetVisible(false);
+      }
+    }
+    return;
+  }
+  const CharacterStatsSnapshot snap = Session->GetCharacterStatsSnapshot();
+  if (!snap.valid)
+  {
+    for (UGuiLabel *lab : labels)
+    {
+      if (lab)
+      {
+        lab->SetVisible(false);
+      }
+    }
+    return;
+  }
+  auto setBar = [](UGuiLabel *lab, const char *name, float cur, float max) {
+    if (!lab)
+    {
+      return;
+    }
+    char buf[64];
+    std::snprintf(buf, sizeof(buf), "%s %.0f/%.0f", name, cur, max);
+    lab->SetText(buf);
+    lab->SetVisible(true);
+  };
+  setBar(HealthLabel, "HP", snap.vitals.health, snap.vitals.maxHealth);
+  setBar(SatietyLabel, "Food", snap.vitals.satiety, snap.vitals.maxSatiety);
+  setBar(ThirstLabel, "Water", snap.vitals.thirst, snap.vitals.maxThirst);
+  setBar(FatigueLabel, "Fatigue", snap.vitals.fatigue, snap.vitals.maxFatigue);
 }
 
 } // namespace cutum

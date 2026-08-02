@@ -32,6 +32,15 @@ UCreature::UCreature(CreatureId Id, std::string typeId, glm::vec3 bodyOrigin,
 
 UCreature::~UCreature() = default;
 
+void UCreature::ApplyStatsFromDefinition(const CreatureDefinition &def)
+{
+  Vitals = def.stats.vitalsTemplate;
+  Attributes = def.stats.attributes;
+  NeedsTick = def.stats.needsTick;
+  Attributes.ClampAll();
+  Vitals.FillFull();
+}
+
 void UCreature::SetVisual(std::unique_ptr<IUCreatureVisual> visual)
 {
   Visual = std::move(visual);
@@ -244,6 +253,15 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
 
   glm::vec3 wish = Intent.moveDirWorld;
   float speed = Intent.moveSpeed;
+  {
+    const float agi =
+        0.75f + static_cast<float>(Attributes.agility) / 40.f; // ~1.0 at 10
+    const float fatiguePenalty =
+        Vitals.maxFatigue > 0.f
+            ? (1.f - 0.4f * (Vitals.fatigue / Vitals.maxFatigue))
+            : 1.f;
+    speed *= agi * std::max(0.4f, fatiguePenalty);
+  }
   if (habitat == CreatureHabitat::Terrestrial && !airMobility)
   {
     wish.y = 0.0f;
@@ -426,8 +444,21 @@ void UCreature::UpdateControlled(UWorld &world, const CreatureInput &input,
                                  float dt)
 {
   ClearIntent();
+  CreatureInput gated = input;
+  gated.allowSprint = Vitals.fatigue < Vitals.maxFatigue * 0.95f;
+  const CreatureLocomotionCapabilities baseCaps = Locomotion.GetCapabilities();
+  CreatureLocomotionCapabilities caps = baseCaps;
+  const float agi =
+      0.75f + static_cast<float>(Attributes.agility) / 40.f;
+  const float fatiguePenalty =
+      Vitals.maxFatigue > 0.f
+          ? (1.f - 0.4f * (Vitals.fatigue / Vitals.maxFatigue))
+          : 1.f;
+  caps.walkSpeed *= agi * std::max(0.4f, fatiguePenalty);
+  Locomotion.SetCapabilities(caps);
   glm::vec3 eye = GetLocomotionEye();
-  Locomotion.UpdateLocomotion(&world, eye, input, dt, Id);
+  Locomotion.UpdateLocomotion(&world, eye, gated, dt, Id);
+  Locomotion.SetCapabilities(baseCaps);
   SyncFeetFromLocomotion(world, eye);
   SyncBoundsFromStance();
 }

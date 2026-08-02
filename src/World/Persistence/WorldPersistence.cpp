@@ -6,8 +6,10 @@
 #include "Creatures/Player/Player.h"
 #include "Creatures/Player/PlayerCapsule.h"
 #include "Creatures/Player/User.h"
+#include "Creatures/Stats/CreatureStatsJson.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureVisualFactory.h"
+#include "Game/WorldGameMode.h"
 #include "Render/Camera/Camera.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkBuffer.h"
@@ -1425,6 +1427,21 @@ void UWorldPersistence::LoadUsers(UWorld &world, const std::string &file_name)
         {
           inv.EnsureDefaultHotbar();
         }
+        if (const CreatureDefinition *def =
+                world.GetCreatureDefinition(player_creature->GetTypeId()))
+        {
+          player_creature->ApplyStatsFromDefinition(*def);
+        }
+        if (!CreatureStatsJson::Read(user_data, player_creature->GetVitals(),
+                                     player_creature->GetAttributes()))
+        {
+          // Keep definition defaults.
+        }
+        else
+        {
+          player_creature->GetAttributes().ClampAll();
+          player_creature->GetVitals().ClampCurrents();
+        }
         player_creature->SetOrientation(ModelYawFromCameraYaw(yaw), pitch);
         if (!user->GetSelectedSkinId().empty())
         {
@@ -1493,6 +1510,8 @@ void UWorldPersistence::SaveUsers(UWorld &world, const std::string &file_name)
             world.GetCreature(user->GetPlayerCreatureId()))
     {
       player_creature->GetInventory().SerializeToJson(user_json);
+      CreatureStatsJson::Write(user_json, player_creature->GetVitals(),
+                               player_creature->GetAttributes());
     }
 
     objects[user_name] = user_json;
@@ -1663,6 +1682,16 @@ void UWorldPersistence::LoadWorldData(UWorld &world,
       world.SetViewSettings(WorldViewSettings{});
     }
 
+    if (d.contains("game_mode") && d["game_mode"].is_string())
+    {
+      world.SetGameMode(
+          WorldGameModeFromString(d["game_mode"].get<std::string>()));
+    }
+    else
+    {
+      world.SetGameMode(WorldGameMode::Creative);
+    }
+
     if (d.contains("environment") && d["environment"].is_object())
     {
       const json &env = d["environment"];
@@ -1799,6 +1828,7 @@ void UWorldPersistence::SaveWorldData(UWorld &world,
       world.GetEnvironmentState().CloudCoverageOverride;
   world_data["environment"] = env;
   world_data["view"] = world.GetViewSettings().ToJson();
+  world_data["game_mode"] = WorldGameModeToString(world.GetGameMode());
 
   std::ofstream file(file_name);
   if (file.is_open())

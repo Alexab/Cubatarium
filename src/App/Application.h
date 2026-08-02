@@ -17,6 +17,7 @@
 #include "Gui/Interfaces/IUGuiMenuHost.h"
 #include "Gui/Screens/ConsoleScreen.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
+#include "Gui/Screens/CharacterSheetScreen.h"
 #include "Gui/Screens/WorldGenPaletteScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
 #include "Gui/Screens/WorldProgressScreen.h"
@@ -149,6 +150,10 @@ public:
   void CreateNewWorldWithSettings(const ProceduralSettings &settings,
                                   const ResourcePackSelection &selection,
                                   const WorldViewSettings &view) override;
+  void CreateNewWorldWithSettings(const ProceduralSettings &settings,
+                                  const ResourcePackSelection &selection,
+                                  const WorldViewSettings &view,
+                                  WorldGameMode gameMode) override;
   void LoadSelectedWorld(const std::string &worldName) override;
   void RefreshWorldList() override;
   const std::vector<std::string> &GetWorldNames() const override;
@@ -219,6 +224,7 @@ private:
   bool ConsoleOpen{false};
   bool PaletteOpen{false};
   bool WorldGenOpen{false};
+  bool CharacterSheetOpen{false};
   bool FreeCursor{false};
   /// Подавить следующий glfw char после открытия консоли (символ
   /// клавиши-тоггла).
@@ -229,7 +235,8 @@ private:
     Palette,
     Console,
     Hud,
-    WorldGen
+    WorldGen,
+    CharacterSheet
   };
   static constexpr int kMaxOverlayPointers = 10;
   std::array<OverlayPointerCapture, kMaxOverlayPointers> OverlayCaptures{};
@@ -257,6 +264,7 @@ private:
   std::unique_ptr<UInGameHudScreen> HudScreen;
   std::unique_ptr<UConsoleScreen> ConsoleScreen;
   std::unique_ptr<UCreativePaletteScreen> PaletteScreen;
+  std::unique_ptr<UCharacterSheetScreen> CharacterSheetScreen;
   std::unique_ptr<UWorldGenPaletteScreen> WorldGenScreen;
   std::unique_ptr<IUGuiClipboard> Clipboard;
   std::unique_ptr<UGuiPopupMenu> OverlayPopup;

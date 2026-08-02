@@ -5,6 +5,8 @@
 #include "Console/ConsoleCommandHistory.h"
 #include "Content/ContentTypeRegistry.h"
 #include "Game/Inventory/SlotInteraction.h"
+#include "Game/WorldGameMode.h"
+#include "Gui/Interfaces/IUCharacterStatsViewModel.h"
 #include "Gui/Interfaces/IUContentCatalog.h"
 #include "Gui/Interfaces/IUGameCommandContext.h"
 #include "Gui/Interfaces/IUGuiGameActions.h"
@@ -26,7 +28,8 @@ class IUGameContent;
 class UGameSession : public IUGuiGameActions,
                      public IUHotbarViewModel,
                      public IUInventoryViewModel,
-                     public IUGameCommandContext
+                     public IUGameCommandContext,
+                     public IUCharacterStatsViewModel
 {
 public:
   UGameSession(UApplication *application, std::shared_ptr<UWorld> world);
@@ -85,6 +88,9 @@ public:
   std::string GetCreatureSpawnBlockedHint(const std::string &speciesId) const;
   InventoryMode GetInventoryMode() const override;
   void SetInventoryMode(InventoryMode mode) override;
+  void SyncToWorldGameMode(WorldGameMode mode);
+  WorldGameMode GetWorldGameMode() const override { return ActiveWorldGameMode; }
+  CharacterStatsSnapshot GetCharacterStatsSnapshot() const override;
 
   CommandResult Execute(const std::vector<std::string> &args) override;
   void AddChatLine(const std::string &line) override;
@@ -106,6 +112,7 @@ private:
   std::vector<std::string> ChatLog;
   UConsoleCommandHistory CommandHistory;
   InventoryMode ActiveInventoryMode{InventoryMode::Creative};
+  WorldGameMode ActiveWorldGameMode{WorldGameMode::Creative};
   std::optional<InventoryEntryRef> PendingAssignment;
   DragState Drag;
 };

@@ -7,6 +7,8 @@
 #include "Creatures/Locomotion/CreatureLocomotionController.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Creatures/Stats/CreatureAttributes.h"
+#include "Creatures/Stats/CreatureVitals.h"
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <memory>
@@ -17,6 +19,7 @@ namespace cutum
 
 class UWorld;
 class IUCreatureVisual;
+struct CreatureDefinition;
 
 class UCreature
 {
@@ -57,6 +60,14 @@ public:
   }
   UCreatureInventory &GetInventory() { return Inventory; }
   const UCreatureInventory &GetInventory() const { return Inventory; }
+
+  CreatureVitals &GetVitals() { return Vitals; }
+  const CreatureVitals &GetVitals() const { return Vitals; }
+  CreatureAttributes &GetAttributes() { return Attributes; }
+  const CreatureAttributes &GetAttributes() const { return Attributes; }
+  void ApplyStatsFromDefinition(const CreatureDefinition &def);
+  bool NeedsNeedsTick() const { return NeedsTick; }
+  void SetNeedsNeedsTick(bool v) { NeedsTick = v; }
 
   CreatureIntent GetIntent() const { return Intent; }
   void SetIntent(const CreatureIntent &intent) { Intent = intent; }
@@ -116,6 +127,9 @@ protected:
   CreatureBoundsState Bounds;
   UCreatureLocomotionController Locomotion;
   UCreatureInventory Inventory;
+  CreatureVitals Vitals{};
+  CreatureAttributes Attributes{};
+  bool NeedsTick{false};
   CreatureIntent Intent{};
   bool PlayerCharacter{false};
   bool Possessed{false};

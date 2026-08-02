@@ -559,6 +559,47 @@ void UGameSession::SetInventoryMode(InventoryMode mode)
   ActiveInventoryMode = mode;
 }
 
+void UGameSession::SyncToWorldGameMode(WorldGameMode mode)
+{
+  ActiveWorldGameMode = mode;
+  if (World)
+  {
+    World->SetGameMode(mode);
+  }
+  SetInventoryMode(mode == WorldGameMode::Survival ? InventoryMode::Owned
+                                                   : InventoryMode::Creative);
+}
+
+CharacterStatsSnapshot UGameSession::GetCharacterStatsSnapshot() const
+{
+  CharacterStatsSnapshot snap;
+  snap.gameMode = ActiveWorldGameMode;
+  if (!World)
+  {
+    return snap;
+  }
+  const UCreature *creature = World->GetControlledCreature();
+  if (!creature)
+  {
+    return snap;
+  }
+  snap.valid = true;
+  snap.typeId = creature->GetTypeId();
+  snap.skinId = creature->GetSkinId();
+  snap.vitals = creature->GetVitals();
+  snap.attributes = creature->GetAttributes();
+  if (const CreatureDefinition *def =
+          World->GetCreatureDefinition(creature->GetTypeId()))
+  {
+    snap.displayName = def->displayName;
+  }
+  else
+  {
+    snap.displayName = creature->GetTypeId();
+  }
+  return snap;
+}
+
 CommandResult UGameSession::Execute(const std::vector<std::string> &args)
 {
   if (args.empty())
