@@ -336,6 +336,20 @@ int main()
     Expect(a14.mode == MeshWorkAdmission::Mode::WarmBacklog,
            "queued>half-ring + pending≥8 → Warm without holes");
     Expect(FinalizeSchedule(12, a14) <= 6, "Warm caps FOV sch=12");
+
+    // J0: holes + cooled pending still HoleDrain (no FOV Normal refill).
+    MeshWorkAdmissionInput cool_holes_j0{};
+    cool_holes_j0.pending_gpu = 1;
+    cool_holes_j0.pending_gpu_queued = 0;
+    cool_holes_j0.pending_gpu_kicked = 1;
+    cool_holes_j0.visual_holes = false;
+    cool_holes_j0.unfinished_visual = 9;
+    cool_holes_j0.moving = true;
+    cool_holes_j0.ring_depth = 8;
+    const auto a15 = ComputeMeshWorkAdmission(cool_holes_j0);
+    Expect(a15.mode == MeshWorkAdmission::Mode::HoleDrain,
+           "J0 UV holes + pending=1 → HoleDrain not Normal");
+    Expect(FinalizeSchedule(12, a15) <= 5, "J0 cool holes caps sch=12");
   }
 
   if (failures != 0)

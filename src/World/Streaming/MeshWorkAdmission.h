@@ -202,11 +202,10 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   const int ring = std::max(1, in.ring_depth);
   const size_t queued_exit_cap =
       static_cast<size_t>(std::max(2, ring / 2));
-  // G0/I: after drain-first, pending can dip below 12 while Queued/holes remain —
-  // never Normal if Queued > half-ring OR pending still warm (≥8) under holes/UV.
-  // Autofly after I: Queued≥ring with !holes still chose Normal/sch=12 — demote Warm.
-  if (mode == MeshWorkAdmission::Mode::Normal &&
-      (queued > queued_exit_cap || in.pending_gpu >= 8))
+  // J0: never Normal under holes/UV — even with cooled pending/queued FOV floor
+  // sch=12 refill thrash (manual 170330 mid i=2: pend=1,mode=0,miss=1,uv=9).
+  // Without holes: Warm when Queued refill risk (pending≥8 + queued>half-ring).
+  if (mode == MeshWorkAdmission::Mode::Normal)
   {
     if (holes)
     {
