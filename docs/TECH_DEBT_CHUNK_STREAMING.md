@@ -66,22 +66,26 @@
 | TD-ARCH-032 | Era13 | ARCH_D1/D3 harness GO | Architecture A–E landed. Autofly×2 `--replay-manual`: `manual_arch_era13_01/02.json`. **cold_relight=2≤3 OK**; holes/async OK on 02. **D3 NO-GO:** `wall_ms_med≈44` (need ≤30), `post_stop_black_sticky_max≈9`. Stop SoftDefer zoo after 2 iters. | in-progress |
 | TD-ARCH-033 | Era13/rim | Frontier first-mesh latency (manual 225337) | Stage SLA + UnlitFirstMesh + sync promote | partial — confirm on World_164 edge smoke |
 
-### FOV/progressive plan (2026-08) — Open
+### FOV/progressive plan (2026-08) — Closed (P4 validate)
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-ARCH-034 | 2026-08 FOV plan | Far-rim nh≥4 dual-backlog (manual 215629 mh=5) | Hotfix landed `9cfe265a`; smoke land-south miss_end=0 / post_stop_missing_zero | **done** 2026-08-02 (mid residual needs manual) |
-| TD-ARCH-035 | 2026-08 FOV plan | FOV idle FirstMesh / camera-front priority | Landed `b6b75a5f` + rear-slot fix `2ef3711f`; smoke miss_end=0 | **done** 2026-08-02 |
-| TD-ARCH-036 | 2026-08 FOV plan | Per-cy draw gate (column all-or-nothing) | Landed `bd4e0356`; smoke miss_end=0 | **done** 2026-08-02 |
-| TD-ARCH-037 | 2026-08 FOV plan | Soft flight speed clamp on underfeet/near ahead miss | Soft ×0.85 on underfeet or HoleDrain/Deep nh≤1 ahead (stronger scales starved land-south miss_end); Camera+ViewBinding | **done** 2026-08-02 |
-| TD-ARCH-038 | 2026-08 FOV plan | Fog knobs follow-up | Needs miss_frac≤0.45 and rim hold | P4 / backlog |
+| TD-ARCH-034 | 2026-08 FOV plan | Far-rim nh≥4 dual-backlog (manual 215629 mh=5) | Hotfix `9cfe265a`; smoke PASS; mid residual still needs fresh manual vs 215629 | **done** 2026-08-02 (mid residual open → user manual) |
+| TD-ARCH-035 | 2026-08 FOV plan | FOV idle FirstMesh / camera-front priority | `b6b75a5f` + `2ef3711f`; smoke PASS | **done** 2026-08-02 |
+| TD-ARCH-036 | 2026-08 FOV plan | Per-cy draw gate (column all-or-nothing) | `bd4e0356`; smoke PASS | **done** 2026-08-02 |
+| TD-ARCH-037 | 2026-08 FOV plan | Soft flight speed clamp on underfeet/near ahead miss | `4abd8683` ×0.85 underfeet / HoleDrain nh≤1 ahead; smoke miss_end=0 | **done** 2026-08-02 |
+| TD-ARCH-038 | 2026-08 FOV plan | Fog knobs follow-up | P4: autofly holes≈0.27 but mid `215629` rim_ok=false (nh≥4); no Fog knobs without miss≤0.45 **and** rim hold | **open** backlog |
 | TD-ARCH-039 | 2026-08 FOV plan | Sub-16 mesh brick | P2 closed visual progressive DoD without sub-16 | **wont-fix** 2026-08-02 |
+
+P4 validate (`4abd8683` tip): unit `streaming_render_ready_invariants_test` PASS;
+`phase_P4_land_south_short.json` DoD miss_end=0 + post_stop_missing_zero.
+Anti-circle held: no pending_gpu drain cut, no kick_cut 0.55 under HoleDrain,
+no Imm expand, no Fog knobs, no SoftDefer predicate widen.
+TD-ARCH-032/033 unchanged (Era13 harness / rim latency — not plan blockers).
 
 Evidence (stale-apply + Era13 tails, 2026-07-29):
 - `manual_stale_apply_A.json` — `mesh_apply_stale`=0 (was ~392).
-- `manual_arch_td32b.json` / prior D3 live — **ARCH_D1** was GO before Era13 promote rewrite.
-- Era13 A–E on `arch/streaming-v2-v4`: AllowUnlitFirstMesh, FocusPressure, ColumnFlow `RunPromoteRelightNow`, FocusIngress Stage SLA, lit remesh clamp (softened). Units PASS. Autofly×2 NO-GO on wall/sticky — do not merge develop.
-- Remaining open: TD-032 (D3 wall+sticky), TD-033 (rim confirm), 011, 013b, 018; Android GLES.
+- Remaining open outside FOV plan: TD-032 (D3 wall+sticky), TD-033 (rim confirm), 011, 013b, 018; Android GLES.
 
 **Do not merge `arch/streaming-v2-v4` → develop until ARCH_D3 PASS + explicit request.**
 
