@@ -370,6 +370,25 @@ int main()
     const auto a16b = ComputeMeshWorkAdmission(finish_bias12);
     Expect(a16b.gpu_budget_frac >= 0.82 && a16b.gpu_budget_frac < 0.85,
            "J1 pending=12 keeps frac 0.82 not 0.85");
+
+    // K3: cooled pending + rim mh 2–3 → +1 remesh without cutting FirstMesh.
+    MeshWorkAdmissionInput rim_stale{};
+    rim_stale.pending_gpu = 6;
+    rim_stale.pending_gpu_queued = 0;
+    rim_stale.pending_gpu_kicked = 6;
+    rim_stale.visual_holes = true;
+    rim_stale.moving = true;
+    rim_stale.nearest_miss_horiz = 2;
+    rim_stale.ring_depth = 8;
+    rim_stale.prev_mode =
+        static_cast<uint8_t>(MeshWorkAdmission::Mode::HoleDrain);
+    const auto a17 = ComputeMeshWorkAdmission(rim_stale);
+    Expect(a17.mode == MeshWorkAdmission::Mode::HoleDrain, "K3 rim HoleDrain");
+    Expect(a17.remesh_schedule >= 2, "K3 +1 remesh under cooled rim miss");
+    Expect(a17.first_mesh_schedule >= 4, "K3 keeps FirstMesh≥4");
+    Expect(a17.max_schedule >=
+               a17.first_mesh_schedule + a17.remesh_schedule,
+           "K3 max_schedule covers FM+remesh");
   }
 
   if (failures != 0)

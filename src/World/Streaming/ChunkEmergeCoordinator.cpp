@@ -2180,6 +2180,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.unfinished_visual = world.GetPhysicsTelemetry().UnfinishedVisual;
     ain.prev_mode = static_cast<uint8_t>(LastBudget.AdmissionMode);
     ain.ring_depth = UGpuMeshPipeline::kReadbackRing;
+    // K3: rim mh for remesh band when pending cooled.
+    if (found_nearest_missing)
+    {
+      ain.nearest_miss_horiz = std::max(
+          std::abs(isolated_hole.x - focus_ground_horiz.x),
+          std::abs(isolated_hole.z - focus_ground_horiz.z));
+    }
+    else
+    {
+      ain.nearest_miss_horiz = world.GetPhysicsTelemetry().MissHoriz;
+    }
     const MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
     mesh_service.SetMeshWorkAdmission(adm);
     mesh_schedule = FinalizeSchedule(mesh_schedule, adm);

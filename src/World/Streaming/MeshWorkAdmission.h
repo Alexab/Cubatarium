@@ -25,6 +25,8 @@ struct MeshWorkAdmissionInput
   uint8_t prev_mode{0};
   /// GPU readback ring depth (kReadbackRing); used for enqueue_gpu_budget.
   int ring_depth{8};
+  /// Nearest focus miss Chebyshev horiz; <0 = unknown (skip K3 remesh band).
+  int nearest_miss_horiz{-1};
 };
 
 struct MeshWorkAdmission
@@ -275,6 +277,20 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     const int need = fm + std::max(0, out.remesh_schedule);
     out.max_schedule = std::max(out.max_schedule, need);
     out.max_schedule = std::min(out.max_schedule, std::max(need, 5));
+  }
+
+  // K3: rim miss (mh 2–3) with cooled GPU pending — +1 remesh for stale/UV
+  // without stealing FirstMesh slots (max_schedule covers FM+remesh).
+  if (holes && in.pending_gpu <= 8 && in.nearest_miss_horiz >= 2 &&
+      in.nearest_miss_horiz <= 3 &&
+      (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
+       out.mode == MeshWorkAdmission::Mode::DeepBacklog))
+  {
+    out.remesh_schedule = std::max(0, out.remesh_schedule) + 1;
+    out.starve_remesh_horiz = std::max(out.starve_remesh_horiz, 2);
+    const int fm = std::max(0, out.first_mesh_schedule);
+    out.max_schedule =
+        std::max(out.max_schedule, fm + std::max(0, out.remesh_schedule));
   }
   return out;
 }
