@@ -2135,8 +2135,13 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     }
   }
 
-  // Pass A: Kick Queued while free ring PBO + staging; stop new kicks at 55% budget.
-  // Prefer FirstMesh (!drawable) Queued so remesh backlog cannot starve the hole.
+  // Pass A: Kick Queued while free ring PBO + staging; stop new kicks late so
+  // HoleDrain can fill the ring (0.55 starved kick under Finish poll).
+  const double kick_cut =
+      (WorkAdmission.mode == MeshWorkAdmission::Mode::HoleDrain ||
+       WorkAdmission.mode == MeshWorkAdmission::Mode::DeepBacklog)
+          ? 0.90
+          : 0.55;
   auto find_prefer_queued = [&]() {
     auto missing_it = std::find_if(
         PendingGpuApplies.begin(), PendingGpuApplies.end(),
@@ -2156,7 +2161,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   while (kicked < kick_cap && processed < max_count && budget_left() &&
          pipeline->HasFreeReadbackSlot())
   {
-    if (budget_ms > 0.0 && elapsed_ms() >= budget_ms * 0.55)
+    if (budget_ms > 0.0 && elapsed_ms() >= budget_ms * kick_cut)
     {
       break; // Finish-only remainder — avoid Kick counter-sync storm
     }
@@ -2269,23 +2274,22 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     EnsureGpuPipeline();
     if (Render.GpuPackedMeshing && GpuPipeline && GpuPipeline->IsReady())
     {
-      // F1: do not grow Queued beyond ring-aligned admission budget.
-      if (!TryConsumeEnqueueGpu())
+      // F1: remesh Queued respects ring budget; FirstMesh holes always enqueue.
+      const bool missing_first =
+          !HasDrawableGreedyMesh(result.coord);
+      if (!missing_first && !TryConsumeEnqueueGpu())
       {
         ActiveMeshSourceRevision.erase(revisionIt);
         GpuExtractInFlight.erase(result.coord);
-        if (!HasDrawableGreedyMesh(result.coord))
-        {
-          Dirty.MarkDirtyPriority(result.coord);
-        }
-        else
-        {
-          Dirty.MarkDirty(result.coord);
-        }
+        Dirty.MarkDirty(result.coord);
         InstancesDirty = true;
         GreedyBatchesDirty = true;
         CrossBatchesDirty = true;
         return;
+      }
+      if (missing_first)
+      {
+        (void)TryConsumeEnqueueGpu(); // best-effort; never deny FirstMesh
       }
       PendingGpuApply pending;
       pending.coord = result.coord;

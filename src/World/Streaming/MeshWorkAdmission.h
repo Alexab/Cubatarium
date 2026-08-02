@@ -107,11 +107,12 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
     out.remesh_schedule = 1;
     if (!in.moving)
     {
-      out.max_schedule = std::max(out.max_schedule, 4);
+      out.max_schedule = std::max(out.max_schedule, 6);
       out.admit_batch = 2;
       out.dirty_admit_budget = std::max(out.dirty_admit_budget, 2);
       out.softdefer_requeue = std::max(out.softdefer_requeue, 1);
-      out.first_mesh_schedule = std::max(out.first_mesh_schedule, 3);
+      out.first_mesh_schedule = std::max(out.first_mesh_schedule, 6);
+      out.remesh_schedule = std::max(out.remesh_schedule, 1);
     }
     break;
   case MeshWorkAdmission::Mode::WarmBacklog:

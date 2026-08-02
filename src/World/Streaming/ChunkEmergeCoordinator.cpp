@@ -2064,9 +2064,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         underfeet_immediate_cd = 1;
       }
     }
-    // F3: moving nearest-hole Immediate escape — sticky ≥3 frames, horiz≤2,
-    // independent of underfeet / async<2 gates (SoT imm=0 mid-flight).
-    if (moving && found_nearest_missing)
+    // F3: sticky nearest-hole Immediate escape (moving + idle stop) — ≥3 frames,
+    // horiz≤2, independent of underfeet / async<2 gates.
+    if (found_nearest_missing)
     {
       const bool pipeline_idle =
           !mesh_service.HasDrawableGreedyMesh(isolated_hole) &&
@@ -2079,7 +2079,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       if (pipeline_idle && nh <= 2 &&
           mesh_service.GetStickyNearestHoleFrames() >= 3 &&
           underfeet_immediate_this_frame < kMaxUnderfeetImmediate &&
-          immediate_ms_used() < 6.0)
+          immediate_ms_used() < (moving ? 6.0 : 8.0))
       {
         mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
                                            isolated_hole);

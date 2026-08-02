@@ -179,7 +179,8 @@ int main()
     hole_idle.moving = false;
     const auto a2i = ComputeMeshWorkAdmission(hole_idle);
     Expect(a2i.admit_batch >= 2, "HoleDrain idle admit_batch>=2");
-    Expect(FinalizeSchedule(16, a2i) == 4, "HoleDrain idle schedule floor 4");
+    Expect(FinalizeSchedule(16, a2i) >= 4, "HoleDrain idle schedule floor ≥4");
+    Expect(a2i.first_mesh_schedule >= 4, "HoleDrain idle first_mesh headroom");
 
     MeshWorkAdmissionInput warm_hole{};
     warm_hole.pending_gpu = 18;
