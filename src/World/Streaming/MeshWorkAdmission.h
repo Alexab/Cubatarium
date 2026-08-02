@@ -189,14 +189,26 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
       holes && (in.pending_light_near >= 16 || in.unfinished_visual >= 8);
 
   MeshWorkAdmission::Mode mode = MeshWorkPickRawMode(in, holes);
+  const int ring = std::max(1, in.ring_depth);
+  const size_t queued_exit_cap =
+      static_cast<size_t>(std::max(2, ring / 2));
+  // G0: after drain-first, pending can dip below 12 while Queued still fills
+  // the ring — never Normal under holes (SoT 120321 mode=0/sch=20 thrash).
+  if (holes && queued >= static_cast<size_t>(ring) &&
+      mode == MeshWorkAdmission::Mode::Normal)
+  {
+    mode = MeshWorkAdmission::Mode::HoleDrain;
+  }
   const auto prev = static_cast<MeshWorkAdmission::Mode>(in.prev_mode);
   const bool was_hole_backlog =
       prev == MeshWorkAdmission::Mode::HoleDrain ||
       prev == MeshWorkAdmission::Mode::DeepBacklog;
-  // Exit HoleDrain/Deep only when holes cleared AND pending cooled (≤8).
+  // Exit HoleDrain/Deep only when holes cleared, pending cooled (≤8), and
+  // Queued drained below half-ring (avoid Immediate Normal refill).
   if (was_hole_backlog)
   {
-    const bool can_exit = !holes && in.pending_gpu <= 8;
+    const bool can_exit =
+        !holes && in.pending_gpu <= 8 && queued <= queued_exit_cap;
     if (!can_exit)
     {
       if (in.pending_gpu >= 24)
@@ -207,6 +219,11 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
       {
         mode = holes ? MeshWorkAdmission::Mode::HoleDrain
                      : MeshWorkAdmission::Mode::WarmBacklog;
+      }
+      else
+      {
+        // Pending cooled but Queued still high — stay Warm, not Normal.
+        mode = MeshWorkAdmission::Mode::WarmBacklog;
       }
     }
   }

@@ -225,6 +225,9 @@ int main()
     cool_clear.pending_gpu = 6;
     cool_clear.visual_holes = false;
     cool_clear.missing_underfeet = false;
+    // Explicit Queued telem (else MeshWorkQueuedApprox treats pending as queued).
+    cool_clear.pending_gpu_queued = 0;
+    cool_clear.pending_gpu_kicked = 6;
     const auto a7 = ComputeMeshWorkAdmission(cool_clear);
     Expect(a7.mode == MeshWorkAdmission::Mode::Normal,
            "hysteresis exits when !holes && pending<=8");
@@ -253,6 +256,35 @@ int main()
     Expect(a9.remesh_schedule <= 1, "HoleDrain remesh≤1");
     Expect(a9.max_schedule >= a9.first_mesh_schedule + a9.remesh_schedule,
            "max_schedule covers split quotas");
+
+    // G0: holes + queued ≥ ring → HoleDrain even when pending cooled below 12.
+    MeshWorkAdmissionInput refill{};
+    refill.pending_gpu = 10;
+    refill.pending_gpu_queued = 8;
+    refill.visual_holes = true;
+    refill.moving = true;
+    refill.ring_depth = 8;
+    const auto a10 = ComputeMeshWorkAdmission(refill);
+    Expect(a10.mode == MeshWorkAdmission::Mode::HoleDrain,
+           "G0 holes+queued≥ring → HoleDrain despite pending<12");
+    Expect(FinalizeSchedule(20, a10) <= 4, "G0 latch caps FOV floor sch=20");
+
+    MeshWorkAdmissionInput refill_exit{};
+    refill_exit.pending_gpu = 6;
+    refill_exit.pending_gpu_queued = 8;
+    refill_exit.visual_holes = false;
+    refill_exit.ring_depth = 8;
+    refill_exit.prev_mode =
+        static_cast<uint8_t>(MeshWorkAdmission::Mode::HoleDrain);
+    const auto a11 = ComputeMeshWorkAdmission(refill_exit);
+    Expect(a11.mode == MeshWorkAdmission::Mode::WarmBacklog,
+           "G0 hysteresis: queued>ring/2 blocks Normal exit");
+
+    MeshWorkAdmissionInput refill_clear = refill_exit;
+    refill_clear.pending_gpu_queued = 2;
+    const auto a12 = ComputeMeshWorkAdmission(refill_clear);
+    Expect(a12.mode == MeshWorkAdmission::Mode::Normal,
+           "G0 exits when !holes && pending≤8 && queued≤ring/2");
   }
 
   if (failures != 0)
