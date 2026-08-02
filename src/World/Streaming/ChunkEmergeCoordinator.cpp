@@ -568,8 +568,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           !moving ? std::max(tune.MeshForwardBiasK, 1.5f)
                   : tune.MeshForwardBiasK;
       mesh_service.SetMeshForwardBias(bias_k, fwd);
-      // Cruise: keep a few focus slots for behind-camera unfinished columns.
-      mesh_service.SetMaxRearFocusMeshPerFrame(moving ? 3 : 0);
+      // Cruise: rear slots for behind-camera unfinished. Idle+holes: keep a
+      // few rear slots so FOV bias cannot starve stop recovery (P1 smoke).
+      mesh_service.SetMaxRearFocusMeshPerFrame(
+          moving ? 3
+                 : ((visual_holes || missing_underfeet) ? 2 : 0));
     }
   }
   int mesh_drain = LastBudget.MaxMeshDrain;
