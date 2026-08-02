@@ -1874,6 +1874,9 @@ int UChunkMeshCache::ConsumeGpuApplyBacklog(UBlockWorld &world,
                                            int max_drain, int gpu_max,
                                            double gpu_budget_ms)
 {
+  LastGpuKickN = 0;
+  LastGpuFinishN = 0;
+  LastGpuFinishNotReadyN = 0;
   int done = 0;
   MeshRebuildTickStats stats{};
   if (AsyncBuilder)
@@ -2440,9 +2443,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastMeshSyncMs = 0.0;
   LastMeshSnapshotMs = 0.0;
   LastMeshDirtyTickMs = 0.0;
-  LastGpuKickN = 0;
-  LastGpuFinishN = 0;
-  LastGpuFinishNotReadyN = 0;
+  // F0 drain-first: ConsumeGpuApplyBacklog owns Kick/Finish before Rebuild.
+  // Do not wipe those counters when skip_gpu_consume (SoT gpu_kick_n telem).
+  if (!skip_gpu_consume)
+  {
+    LastGpuKickN = 0;
+    LastGpuFinishN = 0;
+    LastGpuFinishNotReadyN = 0;
+  }
   bool mesh_data_changed = false;
 
   RequeueSoftDeferHeld();
