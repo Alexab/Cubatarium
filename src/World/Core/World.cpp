@@ -1646,18 +1646,24 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
     }
   }
 
+  // P1: idle FOV fill — prefer look direction more strongly than ring alone
+  // (k≥1.5 vs MeshForwardBiasK 0.75). Horiz still primary via score.
   std::sort(candidates.begin(), candidates.end(),
             [](const Candidate &a, const Candidate &b)
             {
-              if (a.horiz != b.horiz)
+              const float score_a = static_cast<float>(a.horiz) -
+                                   1.5f * std::max(0.0f, a.forward_score);
+              const float score_b = static_cast<float>(b.horiz) -
+                                   1.5f * std::max(0.0f, b.forward_score);
+              if (score_a != score_b)
               {
-                return a.horiz < b.horiz;
+                return score_a < score_b;
               }
               if (a.forward_score != b.forward_score)
               {
                 return a.forward_score > b.forward_score;
               }
-              return false;
+              return a.horiz < b.horiz;
             });
 
   int admitted = 0;

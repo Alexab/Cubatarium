@@ -70,8 +70,8 @@
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-ARCH-034 | 2026-08 FOV plan | Far-rim nh≥4 dual-backlog (manual 215629 mh=5) | Hotfix N0: full-scan nh≥4, no drain_cut when nh≥4, Pending→Relight, post-clear Finish | N0 |
-| TD-ARCH-035 | 2026-08 FOV plan | FOV idle FirstMesh / camera-front priority | After N0; no SoftDefer expand | P1 |
+| TD-ARCH-034 | 2026-08 FOV plan | Far-rim nh≥4 dual-backlog (manual 215629 mh=5) | Hotfix landed `9cfe265a`; smoke land-south miss_end=0 / post_stop_missing_zero | **done** 2026-08-02 (mid residual needs manual) |
+| TD-ARCH-035 | 2026-08 FOV plan | FOV idle FirstMesh / camera-front priority | P1 landing | P1 → close on commit |
 | TD-ARCH-036 | 2026-08 FOV plan | Per-cy draw gate (column all-or-nothing) | After P1; mesh stays 16³ | P2 |
 | TD-ARCH-037 | 2026-08 FOV plan | Soft flight speed clamp on underfeet/near ahead miss | After P2; not hard pause | P3 |
 | TD-ARCH-038 | 2026-08 FOV plan | Fog knobs follow-up | Needs miss_frac≤0.45 and rim hold | P4 / backlog |

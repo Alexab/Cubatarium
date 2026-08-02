@@ -103,7 +103,11 @@ void UColumnFlowExecutor::Dispatch(UWorld &world, const ColumnWorkItem &work,
   const glm::ivec2 *only =
       work.scan_full_focus ? nullptr : &work.column;
   glm::vec2 forward_xz = world.GetLastMovementDirXz();
-  if (glm::length(forward_xz) < 0.01f)
+  // P1: idle / below prefetch — always camera look for FirstMesh FOV fill.
+  const bool idle_like =
+      world.GetLastMovementSpeed() <=
+      world.GetProceduralSettings().MovementPrefetchThreshold;
+  if (idle_like || glm::length(forward_xz) < 0.01f)
   {
     if (const auto camera = world.GetCurrentUserCamera())
     {

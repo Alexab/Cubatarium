@@ -545,8 +545,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
 
   {
     const URuntimeTuning &tune = URuntimeTuning::Get();
-    // Idle lit-but-dirty: no view bias — camera turn must not gate remesh
-    // (manual 210341: progress only after yaw, then plateau again).
+    // Idle lit-but-dirty: remesh stays isotropic (no view gate) — only when
+    // there are no holes (idle_remesh_debt already implies !missing).
+    // P1: with holes / cruise, idle uses camera-front + stronger bias (≥1.5).
     if (idle_remesh_debt)
     {
       mesh_service.SetMeshForwardBias(0.0f, glm::vec2(0.0f));
@@ -555,7 +556,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     else
     {
       glm::vec2 fwd = world.GetLastMovementDirXz();
-      if (glm::length(fwd) < 0.01f)
+      if (!moving || glm::length(fwd) < 0.01f)
       {
         if (const auto camera = world.GetCurrentUserCamera())
         {
@@ -563,7 +564,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           fwd = glm::vec2(front.x, front.z);
         }
       }
-      mesh_service.SetMeshForwardBias(tune.MeshForwardBiasK, fwd);
+      const float bias_k =
+          !moving ? std::max(tune.MeshForwardBiasK, 1.5f)
+                  : tune.MeshForwardBiasK;
+      mesh_service.SetMeshForwardBias(bias_k, fwd);
       // Cruise: keep a few focus slots for behind-camera unfinished columns.
       mesh_service.SetMaxRearFocusMeshPerFrame(moving ? 3 : 0);
     }
