@@ -324,6 +324,18 @@ int main()
     Expect(a13.mode == MeshWorkAdmission::Mode::HoleDrain,
            "I UV≥8 + pending≥8 → HoleDrain without visual_holes");
     Expect(FinalizeSchedule(12, a13) <= 5, "I UV holes caps FOV sch=12");
+
+    // Queued refill without visual holes → Warm (not Normal/sch=12).
+    MeshWorkAdmissionInput q_warm{};
+    q_warm.pending_gpu = 10;
+    q_warm.pending_gpu_queued = 8;
+    q_warm.visual_holes = false;
+    q_warm.unfinished_visual = 0;
+    q_warm.ring_depth = 8;
+    const auto a14 = ComputeMeshWorkAdmission(q_warm);
+    Expect(a14.mode == MeshWorkAdmission::Mode::WarmBacklog,
+           "queued>half-ring + pending≥8 → Warm without holes");
+    Expect(FinalizeSchedule(12, a14) <= 6, "Warm caps FOV sch=12");
   }
 
   if (failures != 0)

@@ -202,13 +202,20 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   const int ring = std::max(1, in.ring_depth);
   const size_t queued_exit_cap =
       static_cast<size_t>(std::max(2, ring / 2));
-  // G0: after drain-first, pending can dip below 12 while Queued/holes remain —
-  // never Normal under holes if Queued > half-ring OR pending still warm (≥8).
-  // Ring-only latch missed G4 thrash (pend≈10→FOV sch=12→telem pend/q high).
-  if (holes && mode == MeshWorkAdmission::Mode::Normal &&
+  // G0/I: after drain-first, pending can dip below 12 while Queued/holes remain —
+  // never Normal if Queued > half-ring OR pending still warm (≥8) under holes/UV.
+  // Autofly after I: Queued≥ring with !holes still chose Normal/sch=12 — demote Warm.
+  if (mode == MeshWorkAdmission::Mode::Normal &&
       (queued > queued_exit_cap || in.pending_gpu >= 8))
   {
-    mode = MeshWorkAdmission::Mode::HoleDrain;
+    if (holes)
+    {
+      mode = MeshWorkAdmission::Mode::HoleDrain;
+    }
+    else if (queued > queued_exit_cap && in.pending_gpu >= 8)
+    {
+      mode = MeshWorkAdmission::Mode::WarmBacklog;
+    }
   }
   const auto prev = static_cast<MeshWorkAdmission::Mode>(in.prev_mode);
   const bool was_hole_backlog =
