@@ -249,20 +249,16 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
 
   MeshWorkFillModeDefaults(out, mode, in, queued, holes, light_debt);
 
-  // J1: under HoleDrain/Deep miss backlog, give Finish more wall budget (Kick
-  // bias is in ChunkMeshCache kick_cut/finish_cap — keep enqueue capped).
-  // K2: pending≥16 deep backlog — slightly higher Finish wall share (0.85).
+  // J1/K2/M2: under HoleDrain/Deep miss backlog, give Finish more wall budget
+  // (Kick bias is in ChunkMeshCache kick_cut/finish_cap — keep enqueue capped).
+  // M2: pending≥12 already gets Finish wall share 0.85 (was 0.82 at 12 / 0.85 at 16).
   if (holes &&
       (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
        out.mode == MeshWorkAdmission::Mode::DeepBacklog))
   {
-    if (in.pending_gpu >= 16)
+    if (in.pending_gpu >= 12)
     {
       out.gpu_budget_frac = std::max(out.gpu_budget_frac, 0.85);
-    }
-    else if (in.pending_gpu >= 12)
-    {
-      out.gpu_budget_frac = std::max(out.gpu_budget_frac, 0.82);
     }
   }
 
@@ -279,9 +275,10 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     out.max_schedule = std::min(out.max_schedule, std::max(need, 5));
   }
 
-  // K3: rim miss (mh 2–3) with cooled GPU pending — +1 remesh for stale/UV
-  // without stealing FirstMesh slots (max_schedule covers FM+remesh).
-  if (holes && in.pending_gpu <= 8 && in.nearest_miss_horiz >= 2 &&
+  // K3/M3: rim miss (mh 2–3) with cooled-ish GPU pending — +1 remesh for
+  // stale/UV without stealing FirstMesh slots (max_schedule covers FM+remesh).
+  // M3: widen cooled band pending≤12 (was ≤8; med pending~11 skipped the band).
+  if (holes && in.pending_gpu <= 12 && in.nearest_miss_horiz >= 2 &&
       in.nearest_miss_horiz <= 3 &&
       (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
        out.mode == MeshWorkAdmission::Mode::DeepBacklog))

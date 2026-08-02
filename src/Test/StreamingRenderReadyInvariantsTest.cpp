@@ -368,10 +368,10 @@ int main()
     finish_bias12.pending_gpu_queued = 6;
     finish_bias12.pending_gpu_kicked = 6;
     const auto a16b = ComputeMeshWorkAdmission(finish_bias12);
-    Expect(a16b.gpu_budget_frac >= 0.82 && a16b.gpu_budget_frac < 0.85,
-           "J1 pending=12 keeps frac 0.82 not 0.85");
+    Expect(a16b.gpu_budget_frac >= 0.85,
+           "M2 pending=12 gets Finish budget frac 0.85");
 
-    // K3: cooled pending + rim mh 2–3 → +1 remesh without cutting FirstMesh.
+    // K3/M3: cooled pending + rim mh 2–3 → +1 remesh without cutting FirstMesh.
     MeshWorkAdmissionInput rim_stale{};
     rim_stale.pending_gpu = 6;
     rim_stale.pending_gpu_queued = 0;
@@ -389,6 +389,15 @@ int main()
     Expect(a17.max_schedule >=
                a17.first_mesh_schedule + a17.remesh_schedule,
            "K3 max_schedule covers FM+remesh");
+
+    // M3: remesh band still fires at pending=12 (widened from ≤8).
+    MeshWorkAdmissionInput rim_stale12 = rim_stale;
+    rim_stale12.pending_gpu = 12;
+    rim_stale12.pending_gpu_queued = 6;
+    rim_stale12.pending_gpu_kicked = 6;
+    const auto a17b = ComputeMeshWorkAdmission(rim_stale12);
+    Expect(a17b.remesh_schedule >= 2, "M3 +1 remesh at pending=12 rim miss");
+    Expect(a17b.first_mesh_schedule >= 4, "M3 keeps FirstMesh≥4 at pending=12");
   }
 
   if (failures != 0)

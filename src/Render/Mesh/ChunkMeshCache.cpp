@@ -2223,11 +2223,11 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   // Pass A: Kick Queued while free ring PBO + staging; stop new kicks late so
   // remaining budget can Finish fences that became ready during Kick.
   // J1/K2 miss backlog: cut Kick earlier (not freeze 0.55) so Finish catches up.
-  // K2 pending≥16: kick_cut 0.68 (was 0.72) — still above discarded 0.55.
+  // K2 pending≥16: kick_cut 0.68; M2 pending≥12: 0.70 (was 0.72) — above 0.55.
   const double kick_cut =
       (WorkAdmission.mode == MeshWorkAdmission::Mode::HoleDrain ||
        WorkAdmission.mode == MeshWorkAdmission::Mode::DeepBacklog)
-          ? (hole_finish_deep ? 0.68 : (hole_finish_bias ? 0.72 : 0.90))
+          ? (hole_finish_deep ? 0.68 : (hole_finish_bias ? 0.70 : 0.90))
           : 0.55;
   auto find_prefer_queued = [&]() {
     auto missing_it = std::find_if(
