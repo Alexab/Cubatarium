@@ -127,6 +127,11 @@ void UWorldMeshService::SetMeshEmergeTotalBudgetMs(double ms)
   Cache.SetMeshEmergeTotalBudgetMs(ms);
 }
 
+double UWorldMeshService::GetMeshEmergeTotalBudgetMs() const
+{
+  return Cache.GetMeshEmergeTotalBudgetMs();
+}
+
 void UWorldMeshService::SetAltitudeCullState(float altitude_above_terrain,
                                              int threshold_blocks)
 {
@@ -411,11 +416,21 @@ void UWorldMeshService::RebuildDirtyChunks(UBlockWorld &world,
 MeshRebuildTickStats UWorldMeshService::RebuildDirtyChunksWithStats(
     UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
     int max_schedule_per_frame, bool force_sync, int max_sync_rebuild,
-    double max_sync_ms)
+    double max_sync_ms, bool skip_gpu_consume)
 {
   return Cache.RebuildDirtyChunksWithStats(world, registry, max_drain_per_frame,
                                            max_schedule_per_frame, force_sync,
-                                           max_sync_rebuild, max_sync_ms);
+                                           max_sync_rebuild, max_sync_ms,
+                                           skip_gpu_consume);
+}
+
+int UWorldMeshService::ConsumeGpuApplyBacklog(UBlockWorld &world,
+                                              UBlockRegistry &registry,
+                                              int max_drain, int gpu_max,
+                                              double gpu_budget_ms)
+{
+  return Cache.ConsumeGpuApplyBacklog(world, registry, max_drain, gpu_max,
+                                      gpu_budget_ms);
 }
 
 void UWorldMeshService::DrainAsyncMeshResults(UBlockWorld &world,

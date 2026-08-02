@@ -187,15 +187,55 @@ int main()
     warm_hole.moving = true;
     const auto a3 = ComputeMeshWorkAdmission(warm_hole);
     Expect(a3.mode == MeshWorkAdmission::Mode::HoleDrain, "pending>=16+holes still HoleDrain");
-    Expect(FinalizeSchedule(16, a3) == 2, "warm holes schedule<=2 while moving");
+    Expect(FinalizeSchedule(16, a3) <= 4, "warm holes schedule capped");
+    Expect(a3.first_mesh_schedule >= 2, "HoleDrain first_mesh floor while moving");
+    Expect(FinalizeSchedule(16, a3) >= a3.first_mesh_schedule,
+           "schedule covers first_mesh quota");
 
     MeshWorkAdmissionInput deep{};
     deep.pending_gpu = 30;
     deep.visual_holes = true;
     const auto a4 = ComputeMeshWorkAdmission(deep);
     Expect(a4.mode == MeshWorkAdmission::Mode::DeepBacklog, "pending>=24 → Deep");
-    Expect(FinalizeSchedule(16, a4) == 2, "Deep schedule<=2");
+    Expect(FinalizeSchedule(16, a4) <= 4, "Deep schedule capped");
     Expect(a4.softdefer_requeue == 0, "Deep Held requeue 0");
+    Expect(a4.first_mesh_schedule >= 2, "Deep first_mesh under holes");
+    Expect(FinalizeSchedule(16, a4) >= a4.first_mesh_schedule,
+           "Deep schedule covers first_mesh");
+
+    // F0 hysteresis: stay in HoleDrain until holes clear AND pending≤8.
+    MeshWorkAdmissionInput sticky_exit = hole;
+    sticky_exit.pending_gpu = 10;
+    sticky_exit.visual_holes = true;
+    sticky_exit.prev_mode =
+        static_cast<uint8_t>(MeshWorkAdmission::Mode::HoleDrain);
+    const auto a5 = ComputeMeshWorkAdmission(sticky_exit);
+    Expect(a5.mode == MeshWorkAdmission::Mode::HoleDrain,
+           "hysteresis keeps HoleDrain while holes");
+
+    MeshWorkAdmissionInput cool_holes = sticky_exit;
+    cool_holes.pending_gpu = 6;
+    cool_holes.visual_holes = true;
+    const auto a6 = ComputeMeshWorkAdmission(cool_holes);
+    Expect(a6.mode == MeshWorkAdmission::Mode::HoleDrain,
+           "hysteresis keeps HoleDrain at pending<=8 with holes");
+
+    MeshWorkAdmissionInput cool_clear = sticky_exit;
+    cool_clear.pending_gpu = 6;
+    cool_clear.visual_holes = false;
+    cool_clear.missing_underfeet = false;
+    const auto a7 = ComputeMeshWorkAdmission(cool_clear);
+    Expect(a7.mode == MeshWorkAdmission::Mode::Normal,
+           "hysteresis exits when !holes && pending<=8");
+
+    MeshWorkAdmissionInput warm_hold = sticky_exit;
+    warm_hold.pending_gpu = 10;
+    warm_hold.visual_holes = false;
+    warm_hold.prev_mode =
+        static_cast<uint8_t>(MeshWorkAdmission::Mode::HoleDrain);
+    const auto a8 = ComputeMeshWorkAdmission(warm_hold);
+    Expect(a8.mode == MeshWorkAdmission::Mode::WarmBacklog,
+           "hysteresis Warm while pending>8 without holes");
   }
 
   if (failures != 0)

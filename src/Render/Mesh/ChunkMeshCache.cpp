@@ -1869,6 +1869,59 @@ int UChunkMeshCache::DrainPendingGpuMeshes(UBlockWorld &world,
   return ProcessPendingGpuMeshes(world, registry, max_count, budget_ms, stats);
 }
 
+int UChunkMeshCache::ConsumeGpuApplyBacklog(UBlockWorld &world,
+                                           UBlockRegistry &registry,
+                                           int max_drain, int gpu_max,
+                                           double gpu_budget_ms)
+{
+  int done = 0;
+  MeshRebuildTickStats stats{};
+  if (AsyncBuilder)
+  {
+    const MeshWorkAdmission &adm = WorkAdmission;
+    int drain_cap = max_drain;
+    if (adm.mode != MeshWorkAdmission::Mode::Normal)
+    {
+      drain_cap = std::max(drain_cap, adm.max_drain);
+    }
+    else if (PendingGpuApplies.size() >= 16)
+    {
+      drain_cap = std::min(drain_cap, 4);
+    }
+    for (MeshBuildResult &result : AsyncBuilder->DrainCompleted(drain_cap))
+    {
+      ApplyMeshResult(world, registry, std::move(result));
+      ++done;
+      ++stats.Completed;
+    }
+  }
+  if (Render.GpuPackedMeshing && !PendingGpuApplies.empty() && gpu_max > 0)
+  {
+    const MeshWorkAdmission &adm = WorkAdmission;
+    gpu_max = std::max(gpu_max, adm.gpu_apply_max);
+    double budget = gpu_budget_ms;
+    if (budget <= 0.0)
+    {
+      budget = std::max(6.0, MeshEmergeTotalBudgetMs * adm.gpu_budget_frac);
+    }
+    if (adm.mode == MeshWorkAdmission::Mode::Normal &&
+        PendingGpuApplies.size() >= 24)
+    {
+      gpu_max = std::max(gpu_max, 24);
+      budget = std::max(budget, MeshEmergeTotalBudgetMs * 0.85);
+    }
+    const int gpu_done =
+        ProcessPendingGpuMeshes(world, registry, gpu_max, budget, stats);
+    done += gpu_done;
+    if (gpu_done > 0)
+    {
+      GreedyBatchesDirty = true;
+      CrossBatchesDirty = true;
+    }
+  }
+  return done;
+}
+
 int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                                            UBlockRegistry &registry,
                                            int max_count, double budget_ms,
@@ -2356,7 +2409,7 @@ void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
 MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
     int max_schedule_per_frame, bool force_sync, int max_sync_rebuild,
-    double max_sync_ms)
+    double max_sync_ms, bool skip_gpu_consume)
 {
   const auto dirty_tick_t0 = std::chrono::high_resolution_clock::now();
   MeshRebuildTickStats stats;
@@ -2542,6 +2595,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       // force FirstMesh path via MarkDirtyPriority hole invalidate.
       MarkDirtyPriority(coord);
     }
+    if (!skip_gpu_consume)
     {
       const MeshWorkAdmission &adm = WorkAdmission;
       int drain_cap = max_drain_per_frame;
@@ -2562,7 +2616,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
     }
 
-    if (Render.GpuPackedMeshing && !PendingGpuApplies.empty())
+    if (!skip_gpu_consume && Render.GpuPackedMeshing &&
+        !PendingGpuApplies.empty())
     {
       const MeshWorkAdmission &adm = WorkAdmission;
       const size_t pending_n = PendingGpuApplies.size();
@@ -2591,6 +2646,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         GreedyBatchesDirty = true;
         CrossBatchesDirty = true;
       }
+    }
+    else if (skip_gpu_consume &&
+             WorkAdmission.mode != MeshWorkAdmission::Mode::Normal)
+    {
+      max_schedule_per_frame = std::min(max_schedule_per_frame,
+                                        std::max(1, WorkAdmission.max_schedule));
     }
 
     const int max_pipeline = std::max(

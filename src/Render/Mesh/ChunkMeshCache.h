@@ -71,7 +71,12 @@ public:
   MeshRebuildTickStats RebuildDirtyChunksWithStats(
       UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
       int max_schedule_per_frame, bool force_sync = false,
-      int max_sync_rebuild = -1, double max_sync_ms = 6.0);
+      int max_sync_rebuild = -1, double max_sync_ms = 6.0,
+      bool skip_gpu_consume = false);
+  /// DrainCompleted + ProcessPendingGpuMeshes so admission can Finalize on
+  /// post-Finish pending (F0 drain-first).
+  int ConsumeGpuApplyBacklog(UBlockWorld &world, UBlockRegistry &registry,
+                             int max_drain, int gpu_max, double gpu_budget_ms);
   void RebuildAll(UBlockWorld &world, UBlockRegistry &registry);
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,
                              glm::ivec3 chunkCoord);
@@ -314,6 +319,7 @@ public:
   {
     MeshEmergeTotalBudgetMs = std::max(5.0, ms);
   }
+  double GetMeshEmergeTotalBudgetMs() const { return MeshEmergeTotalBudgetMs; }
   void SetMeshScheduleOverflowPerFrame(int count)
   {
     MeshScheduleOverflowPerFrame = std::max(0, count);

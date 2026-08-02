@@ -72,6 +72,7 @@ public:
   void SetMeshScheduleOverflowPerFrame(int count);
   void SetMeshSnapshotBudgetMs(double ms);
   void SetMeshEmergeTotalBudgetMs(double ms);
+  double GetMeshEmergeTotalBudgetMs() const;
   void SetAltitudeCullState(float altitude_above_terrain, int threshold_blocks);
 
   void MarkDirty(glm::ivec3 chunk_coord);
@@ -112,7 +113,10 @@ public:
   MeshRebuildTickStats RebuildDirtyChunksWithStats(
       UBlockWorld &world, UBlockRegistry &registry, int max_drain_per_frame,
       int max_schedule_per_frame, bool force_sync = false,
-      int max_sync_rebuild = -1, double max_sync_ms = 6.0);
+      int max_sync_rebuild = -1, double max_sync_ms = 6.0,
+      bool skip_gpu_consume = false);
+  int ConsumeGpuApplyBacklog(UBlockWorld &world, UBlockRegistry &registry,
+                             int max_drain, int gpu_max, double gpu_budget_ms);
   void DrainAsyncMeshResults(UBlockWorld &world, UBlockRegistry &registry,
                              int max_per_frame);
   void RebuildChunkImmediate(const UBlockWorld &world, UBlockRegistry &registry,

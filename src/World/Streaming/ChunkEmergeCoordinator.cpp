@@ -945,8 +945,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_schedule = std::max(mesh_schedule, gpu_cap);
     mesh_drain = std::max(mesh_drain, gpu_cap);
   }
-  // Early pending_gpu read — MeshWorkAdmission for producers; Finalize later.
-  const size_t pending_gpu_n = mesh_service.GetPendingGpuAppliesCount();
+  // Early pending_gpu read — MeshWorkAdmission for producers; Finalize after
+  // drain-first consume so schedule sees post-Finish pending (F0).
+  size_t pending_gpu_n = mesh_service.GetPendingGpuAppliesCount();
   {
     MeshWorkAdmissionInput ain{};
     ain.pending_gpu = pending_gpu_n;
@@ -958,6 +959,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.moving = moving;
     ain.pending_light_near = pending_focus_count;
     ain.unfinished_visual = world.GetPhysicsTelemetry().UnfinishedVisual;
+    ain.prev_mode = static_cast<uint8_t>(LastBudget.AdmissionMode);
     mesh_service.SetMeshWorkAdmission(ComputeMeshWorkAdmission(ain));
   }
   if (focus_not_render_ready > 12 && pending_async_early < 10)
@@ -2073,9 +2075,25 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     exec.DrainBudget(world, moving ? 2 : 3, focus_ground_horiz, focus_radius,
                      /*admit_batch=*/moving ? 2 : 3);
   }
-  // E1: single Finalize via MeshWorkAdmission — replaces ad-hoc GPU clamps.
-  // Floors above only propose; HoleDrain/Deep/Warm hard-cap schedule & drain.
+  // F0: drain-first — Finish/Kick before Finalize so admission sees post-consume
+  // pending (avoids mode=0/sch=12 thrash while telem pending stays high).
+  int gpu_consume_done = 0;
   {
+    const MeshWorkAdmission &early_adm = mesh_service.GetMeshWorkAdmission();
+    const int consume_drain = FinalizeDrain(mesh_drain, early_adm);
+    const int consume_gpu =
+        std::max(early_adm.gpu_apply_max,
+                 std::max(3, std::max(mesh_drain, mesh_schedule)));
+    const double consume_budget =
+        std::max(6.0, mesh_service.GetMeshEmergeTotalBudgetMs() *
+                          early_adm.gpu_budget_frac);
+    gpu_consume_done = mesh_service.ConsumeGpuApplyBacklog(
+        world.GetBlockWorld(), registry, consume_drain, consume_gpu,
+        consume_budget);
+  }
+  // E1/F0: Finalize on post-drain pending; floors above only propose.
+  {
+    pending_gpu_n = mesh_service.GetPendingGpuAppliesCount();
     MeshWorkAdmissionInput ain{};
     ain.pending_gpu = pending_gpu_n;
     ain.pending_gpu_queued = mesh_service.GetPendingGpuQueuedCount();
@@ -2086,6 +2104,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.moving = moving;
     ain.pending_light_near = pending_focus_count;
     ain.unfinished_visual = world.GetPhysicsTelemetry().UnfinishedVisual;
+    ain.prev_mode = static_cast<uint8_t>(LastBudget.AdmissionMode);
     const MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
     mesh_service.SetMeshWorkAdmission(adm);
     mesh_schedule = FinalizeSchedule(mesh_schedule, adm);
@@ -2124,7 +2143,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const int post_drain = std::max(mesh_drain, adm.max_drain);
     tick_stats = mesh_service.RebuildDirtyChunksWithStats(
         world.GetBlockWorld(), registry, mesh_drain, mesh_schedule,
-        /*force_sync=*/false, sync_cap, sync_budget_ms);
+        /*force_sync=*/false, sync_cap, sync_budget_ms,
+        /*skip_gpu_consume=*/true);
+    tick_stats.Completed += gpu_consume_done;
     mesh_service.DrainAsyncMeshResults(world.GetBlockWorld(), registry,
                                        post_drain);
     if (tick_stats.Completed > 0 || tick_stats.SyncRebuilt > 0 ||

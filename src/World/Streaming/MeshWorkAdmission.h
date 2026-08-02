@@ -21,6 +21,10 @@ struct MeshWorkAdmissionInput
   bool moving{false};
   int pending_light_near{0};
   int unfinished_visual{0};
+  /// Previous frame mode for HoleDrain hysteresis (SoT 100351 Normal thrash).
+  uint8_t prev_mode{0};
+  /// GPU readback ring depth (kReadbackRing); used for enqueue_gpu_budget.
+  int ring_depth{4};
 };
 
 struct MeshWorkAdmission
@@ -43,6 +47,11 @@ struct MeshWorkAdmission
   bool allow_neighbor_dirty{true};
   int promote_relight{0};
   int starve_remesh_horiz{2};
+  /// Under holes: guaranteed FirstMesh slots (Pass 1); remesh uses remesh_schedule.
+  int first_mesh_schedule{0};
+  int remesh_schedule{0};
+  /// Max new Queued GPU applies this frame (Apply enqueue throttle).
+  int enqueue_gpu_budget{4};
   Mode mode{Mode::Normal};
 };
 
@@ -59,6 +68,116 @@ inline size_t MeshWorkQueuedApprox(const MeshWorkAdmissionInput &in)
   return in.pending_gpu - in.pending_gpu_kicked;
 }
 
+inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
+                                     MeshWorkAdmission::Mode mode,
+                                     const MeshWorkAdmissionInput &in,
+                                     size_t queued, bool holes, bool light_debt)
+{
+  out.mode = mode;
+  const int ring = std::max(1, in.ring_depth);
+  switch (mode)
+  {
+  case MeshWorkAdmission::Mode::DeepBacklog:
+    out.max_schedule = 2;
+    out.max_drain = 16;
+    out.gpu_apply_max = std::max(24, ring * 2);
+    out.gpu_budget_frac = 0.85;
+    out.dirty_admit_budget = 1;
+    out.softdefer_requeue = 0;
+    out.admit_batch = 1;
+    out.allow_neighbor_dirty = false;
+    out.starve_remesh_horiz = holes ? 1 : 2;
+    out.promote_relight = light_debt ? 4 : (holes ? 2 : 0);
+    out.first_mesh_schedule = holes ? (in.moving ? 2 : 3) : 1;
+    out.remesh_schedule = holes ? 0 : 1;
+    break;
+  case MeshWorkAdmission::Mode::HoleDrain:
+    out.max_schedule = in.pending_gpu >= 16 ? 2 : 4;
+    out.max_drain = 12;
+    out.gpu_apply_max = std::max(16, ring * 2);
+    out.gpu_budget_frac = 0.75;
+    out.dirty_admit_budget =
+        std::max(0, 4 - static_cast<int>(std::min<size_t>(queued, 4)));
+    out.softdefer_requeue = out.dirty_admit_budget > 0 ? 1 : 0;
+    out.admit_batch = 1;
+    out.allow_neighbor_dirty = false;
+    out.starve_remesh_horiz = 1;
+    out.promote_relight = light_debt ? 4 : 2;
+    out.first_mesh_schedule = in.moving ? 2 : 3;
+    out.remesh_schedule = 1;
+    if (!in.moving)
+    {
+      out.max_schedule = std::max(out.max_schedule, 4);
+      out.admit_batch = 2;
+      out.dirty_admit_budget = std::max(out.dirty_admit_budget, 2);
+      out.softdefer_requeue = std::max(out.softdefer_requeue, 1);
+      out.first_mesh_schedule = std::max(out.first_mesh_schedule, 3);
+    }
+    break;
+  case MeshWorkAdmission::Mode::WarmBacklog:
+    out.max_schedule = 6;
+    out.max_drain = 12;
+    out.gpu_apply_max = std::max(16, ring * 2);
+    out.gpu_budget_frac = 0.75;
+    out.dirty_admit_budget = 4;
+    out.softdefer_requeue = 2;
+    out.admit_batch = 2;
+    out.allow_neighbor_dirty = true;
+    out.starve_remesh_horiz = 2;
+    out.promote_relight = in.pending_light_near >= 16 ? 2 : 0;
+    out.first_mesh_schedule = holes ? 2 : 3;
+    out.remesh_schedule = 3;
+    break;
+  case MeshWorkAdmission::Mode::Normal:
+  default:
+    out.max_schedule = 0;
+    out.max_drain = 12;
+    out.gpu_apply_max = std::max(4, ring);
+    out.gpu_budget_frac = holes ? 0.6 : 0.5;
+    out.dirty_admit_budget = 8;
+    out.softdefer_requeue = 4;
+    out.admit_batch = holes ? (in.moving ? 3 : 4) : 4;
+    out.allow_neighbor_dirty = true;
+    out.starve_remesh_horiz = holes ? 2 : 3;
+    out.promote_relight = 0;
+    out.first_mesh_schedule = 0; // unused when Normal (full schedule)
+    out.remesh_schedule = 0;
+    break;
+  }
+  const int kicked = static_cast<int>(std::min<size_t>(in.pending_gpu_kicked, 64));
+  out.enqueue_gpu_budget =
+      std::max(0, ring - kicked + (mode == MeshWorkAdmission::Mode::Normal ? 2 : 0));
+  if (mode == MeshWorkAdmission::Mode::HoleDrain ||
+      mode == MeshWorkAdmission::Mode::DeepBacklog)
+  {
+    // Prefer Finish: do not refill Queued beyond one ring of headroom.
+    out.enqueue_gpu_budget = std::max(0, ring - kicked);
+  }
+  if (out.first_mesh_schedule > 0 && out.max_schedule > 0)
+  {
+    out.max_schedule =
+        std::max(out.max_schedule, out.first_mesh_schedule + out.remesh_schedule);
+  }
+}
+
+inline MeshWorkAdmission::Mode
+MeshWorkPickRawMode(const MeshWorkAdmissionInput &in, bool holes)
+{
+  if (in.pending_gpu >= 24)
+  {
+    return MeshWorkAdmission::Mode::DeepBacklog;
+  }
+  if (in.pending_gpu >= 12 && holes)
+  {
+    return MeshWorkAdmission::Mode::HoleDrain;
+  }
+  if (in.pending_gpu >= 12)
+  {
+    return MeshWorkAdmission::Mode::WarmBacklog;
+  }
+  return MeshWorkAdmission::Mode::Normal;
+}
+
 inline MeshWorkAdmission
 ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
 {
@@ -68,76 +187,35 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   const bool light_debt =
       holes && (in.pending_light_near >= 16 || in.unfinished_visual >= 8);
 
-  if (in.pending_gpu >= 24)
+  MeshWorkAdmission::Mode mode = MeshWorkPickRawMode(in, holes);
+  const auto prev = static_cast<MeshWorkAdmission::Mode>(in.prev_mode);
+  const bool was_hole_backlog =
+      prev == MeshWorkAdmission::Mode::HoleDrain ||
+      prev == MeshWorkAdmission::Mode::DeepBacklog;
+  // Exit HoleDrain/Deep only when holes cleared AND pending cooled (≤8).
+  if (was_hole_backlog)
   {
-    out.mode = MeshWorkAdmission::Mode::DeepBacklog;
-    out.max_schedule = 2;
-    out.max_drain = 16;
-    out.gpu_apply_max = 24;
-    out.gpu_budget_frac = 0.85;
-    out.dirty_admit_budget = 1;
-    out.softdefer_requeue = 0;
-    out.admit_batch = 1;
-    out.allow_neighbor_dirty = false;
-    out.starve_remesh_horiz = holes ? 1 : 2;
-    out.promote_relight = light_debt ? 4 : (holes ? 2 : 0);
-  }
-  else if (in.pending_gpu >= 12 && holes)
-  {
-    out.mode = MeshWorkAdmission::Mode::HoleDrain;
-    out.max_schedule = in.pending_gpu >= 16 ? 2 : 4;
-    out.max_drain = 12;
-    out.gpu_apply_max = 16;
-    out.gpu_budget_frac = 0.75;
-    out.dirty_admit_budget =
-        std::max(0, 4 - static_cast<int>(std::min<size_t>(queued, 4)));
-    out.softdefer_requeue = out.dirty_admit_budget > 0 ? 1 : 0;
-    out.admit_batch = 1;
-    out.allow_neighbor_dirty = false;
-    out.starve_remesh_horiz = 1;
-    out.promote_relight = light_debt ? 4 : 2;
-    // Stop/idle: keep FirstMesh headroom so post_stop_missing_zero holds while
-    // GPU backlog drains (do not starve underfeet Immediate path).
-    if (!in.moving)
+    const bool can_exit = !holes && in.pending_gpu <= 8;
+    if (!can_exit)
     {
-      out.max_schedule = std::max(out.max_schedule, 4);
-      out.admit_batch = 2;
-      out.dirty_admit_budget = std::max(out.dirty_admit_budget, 2);
-      out.softdefer_requeue = std::max(out.softdefer_requeue, 1);
+      if (in.pending_gpu >= 24)
+      {
+        mode = MeshWorkAdmission::Mode::DeepBacklog;
+      }
+      else if (holes || in.pending_gpu > 8)
+      {
+        mode = holes ? MeshWorkAdmission::Mode::HoleDrain
+                     : MeshWorkAdmission::Mode::WarmBacklog;
+      }
     }
   }
-  else if (in.pending_gpu >= 12)
-  {
-    out.mode = MeshWorkAdmission::Mode::WarmBacklog;
-    out.max_schedule = 6;
-    out.max_drain = 12;
-    out.gpu_apply_max = 16;
-    out.gpu_budget_frac = 0.75;
-    out.dirty_admit_budget = 4;
-    out.softdefer_requeue = 2;
-    out.admit_batch = 2;
-    out.allow_neighbor_dirty = true;
-    out.starve_remesh_horiz = 2;
-    out.promote_relight = in.pending_light_near >= 16 ? 2 : 0;
-  }
-  else
-  {
-    out.mode = MeshWorkAdmission::Mode::Normal;
-    out.max_schedule = 0; // Finalize ignores
-    out.max_drain = 12;
-    out.gpu_apply_max = 4;
-    out.gpu_budget_frac = holes ? 0.6 : 0.5;
-    out.dirty_admit_budget = 8;
-    out.softdefer_requeue = 4;
-    out.admit_batch = holes ? (in.moving ? 3 : 4) : 4;
-    out.allow_neighbor_dirty = true;
-    out.starve_remesh_horiz = holes ? 2 : 3;
-    out.promote_relight = 0;
-  }
+
+  MeshWorkFillModeDefaults(out, mode, in, queued, holes, light_debt);
 
   if (light_debt && out.mode != MeshWorkAdmission::Mode::Normal)
   {
     out.max_schedule = std::min(out.max_schedule, 3);
+    out.first_mesh_schedule = std::min(out.first_mesh_schedule, 3);
     out.starve_remesh_horiz = 1;
   }
   return out;
