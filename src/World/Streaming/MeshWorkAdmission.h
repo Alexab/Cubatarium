@@ -190,7 +190,10 @@ inline MeshWorkAdmission
 ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
 {
   MeshWorkAdmission out;
-  const bool holes = in.visual_holes || in.missing_underfeet;
+  // Visual miss OR underfeet OR unfinished FOV debt (manual 160240 thrash:
+  // UV=14 while visual_holes latch lagged → Normal/sch=12 with telem pending≥12).
+  const bool holes = in.visual_holes || in.missing_underfeet ||
+                     in.unfinished_visual >= 8;
   const size_t queued = MeshWorkQueuedApprox(in);
   const bool light_debt =
       holes && (in.pending_light_near >= 16 || in.unfinished_visual >= 8);

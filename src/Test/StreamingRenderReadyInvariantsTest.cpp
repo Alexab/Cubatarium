@@ -310,6 +310,20 @@ int main()
     const auto a12 = ComputeMeshWorkAdmission(refill_clear);
     Expect(a12.mode == MeshWorkAdmission::Mode::Normal,
            "G0 exits when !holes && pending≤8 && queued≤ring/2");
+
+    // I: unfinished_visual≥8 counts as holes for G0 latch (160240 thrash).
+    MeshWorkAdmissionInput uv_holes{};
+    uv_holes.pending_gpu = 10;
+    uv_holes.pending_gpu_queued = 3;
+    uv_holes.visual_holes = false;
+    uv_holes.missing_underfeet = false;
+    uv_holes.unfinished_visual = 14;
+    uv_holes.moving = true;
+    uv_holes.ring_depth = 8;
+    const auto a13 = ComputeMeshWorkAdmission(uv_holes);
+    Expect(a13.mode == MeshWorkAdmission::Mode::HoleDrain,
+           "I UV≥8 + pending≥8 → HoleDrain without visual_holes");
+    Expect(FinalizeSchedule(12, a13) <= 5, "I UV holes caps FOV sch=12");
   }
 
   if (failures != 0)

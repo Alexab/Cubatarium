@@ -2064,8 +2064,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         underfeet_immediate_cd = 1;
       }
     }
-    // G1/H: sticky nearest-hole Immediate — nh≤4 (manual 153832 miss_horiz med≈4);
-    // count frames while pipeline idle OR stuck Queued. At sticky≥5 + Queued:
+    // G1/H/I: sticky nearest-hole Immediate — nh≤5 (manual 160240 still has
+    // miss_horiz 5+). Count while pipeline idle OR Queued; sticky≥5 + Queued:
     // drop Queued-only then Immediate (never Dispatched/Kicked).
     if (found_nearest_missing)
     {
@@ -2089,7 +2089,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const bool ms_ok = immediate_ms_used() < (moving ? 6.0 : 8.0);
       const bool slot_ok =
           underfeet_immediate_this_frame < kMaxUnderfeetImmediate;
-      if (nh <= 4 && slot_ok && ms_ok)
+      if (nh <= 5 && slot_ok && ms_ok)
       {
         if (pipeline_idle && sticky_frames >= 3)
         {
