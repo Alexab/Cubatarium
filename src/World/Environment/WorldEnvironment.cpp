@@ -374,6 +374,19 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
     CreatureSpatialIndex.Upsert(id, Creatures[id]->GetBodyOrigin(), vol.halfExtents);
     CreatureSpatialIndexReady = true;
   }
+  // Survival: strip creative fly from terrestrial/humanoid spawn.
+  if (Owner.GetGameMode() == WorldGameMode::Survival &&
+      def->habitat != CreatureHabitat::Aerial)
+  {
+    CreatureLocomotionCapabilities caps = def->locomotion;
+    caps.canFly = false;
+    Creatures[id]->SetCapabilities(caps);
+    if (def->habitat == CreatureHabitat::Terrestrial &&
+        Creatures[id]->GetMovementMode() == CreatureMovementMode::Flying)
+    {
+      Creatures[id]->GetLocomotion().SetMode(CreatureMovementMode::Walking);
+    }
+  }
   return id;
 }
 

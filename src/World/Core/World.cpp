@@ -4724,6 +4724,39 @@ void UWorld::Create(const std::string &world_name)
   }
 }
 
+void UWorld::ApplyGameModeLocomotionPolicy()
+{
+  ForEachCreature(
+      [this](UCreature &creature)
+      {
+        const CreatureDefinition *def = GetCreatureDefinition(creature.GetTypeId());
+        if (!def)
+        {
+          return;
+        }
+        CreatureLocomotionCapabilities caps = def->locomotion;
+        // Survival: creative double-space fly only for true aerial habitat.
+        if (GameMode == WorldGameMode::Survival &&
+            def->habitat != CreatureHabitat::Aerial)
+        {
+          caps.canFly = false;
+          if (creature.GetMovementMode() == CreatureMovementMode::Flying &&
+              def->habitat == CreatureHabitat::Terrestrial)
+          {
+            creature.GetLocomotion().SetMode(CreatureMovementMode::Walking);
+          }
+        }
+        creature.SetCapabilities(caps);
+      });
+  if (GameMode == WorldGameMode::Survival)
+  {
+    if (auto camera = GetCurrentUserCamera())
+    {
+      camera->SetFreeMove(false);
+    }
+  }
+}
+
 void UWorld::Load(const std::string &world_folder_path)
 {
   UNullProgressSink sink;

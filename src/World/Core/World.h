@@ -230,6 +230,8 @@ public:
   const std::string &GetTerrainType() const { return TerrainType; }
   WorldGameMode GetGameMode() const { return GameMode; }
   void SetGameMode(WorldGameMode mode) { GameMode = mode; }
+  /// Survival: disable creative double-space fly for non-aerial species.
+  void ApplyGameModeLocomotionPolicy();
 
   void Create(const std::string &world_name);
   void Load(const std::string &world_folder_path);

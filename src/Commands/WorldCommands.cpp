@@ -486,6 +486,11 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
       "fly",
       [world](const std::vector<std::string> &args)
       {
+        if (world && world->GetGameMode() == WorldGameMode::Survival)
+        {
+          return CommandResult{false,
+                               "Creative fly disabled in Survival mode"};
+        }
         auto camera = world->GetCurrentUserCamera();
         if (!camera)
         {

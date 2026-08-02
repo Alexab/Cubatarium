@@ -1866,6 +1866,11 @@ void UApplication::TryToggleFlightOnJumpPress()
   {
     return;
   }
+  if (World->GetGameMode() == WorldGameMode::Survival)
+  {
+    // Survival: no creative double-space fly (aerial habitat keeps canFly caps).
+    return;
+  }
   auto camera = World->GetCurrentUserCamera();
   if (!camera || !camera->TryToggleFlightOnDoubleSpace())
   {

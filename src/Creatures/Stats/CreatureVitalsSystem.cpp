@@ -2,6 +2,7 @@
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Environment/CreatureEnvironment.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
 #include <algorithm>
 #include <cmath>
@@ -18,6 +19,7 @@ constexpr float kThirstDrainPerSec = 0.2f;
 constexpr float kStarveDamagePerSec = 2.0f;
 constexpr float kFatigueRecoverPerSec = 4.0f;
 constexpr float kFatigueSprintPerSec = 8.0f;
+constexpr float kFatigueSwimPerSec = 5.0f;
 constexpr float kBreathDrainPerSec = 6.0f;
 constexpr float kBreathRecoverPerSec = 20.0f;
 
@@ -48,21 +50,17 @@ void CreatureVitalsSystem::Tick(UWorld &world, WorldGameMode mode, float dt)
 
         const bool sprinting =
             creature.GetLocomotionFacts().state == LocomotionState::Run;
-        if (sprinting)
-        {
-          v.fatigue = std::min(v.maxFatigue,
-                               v.fatigue + kFatigueSprintPerSec * endMul * dt);
-        }
-        else
-        {
-          v.fatigue = std::max(0.f, v.fatigue - kFatigueRecoverPerSec * dt);
-        }
-
         const EnvironmentSample env = ProbeEnvironmentAt(
             world, creature.GetBodyOrigin(),
             creature.GetBounds().profile.restSizeBlocks);
+        float fatigueGain = 0.f;
+        if (sprinting)
+        {
+          fatigueGain += kFatigueSprintPerSec;
+        }
         if (env.inWater)
         {
+          fatigueGain += kFatigueSwimPerSec;
           v.breath = std::max(0.f, v.breath - kBreathDrainPerSec * dt);
           if (v.breath <= 0.f)
           {
@@ -75,6 +73,16 @@ void CreatureVitalsSystem::Tick(UWorld &world, WorldGameMode mode, float dt)
         else
         {
           v.breath = std::min(v.maxBreath, v.breath + kBreathRecoverPerSec * dt);
+        }
+
+        if (fatigueGain > 0.f)
+        {
+          v.fatigue = std::min(v.maxFatigue,
+                               v.fatigue + fatigueGain * endMul * dt);
+        }
+        else
+        {
+          v.fatigue = std::max(0.f, v.fatigue - kFatigueRecoverPerSec * dt);
         }
 
         if (v.satiety <= 0.f || v.thirst <= 0.f)
@@ -134,10 +142,17 @@ bool CreatureVitalsSystem::HandleLethal(UWorld &world, UCreature &target,
   {
     if (target.IsPlayerCharacter())
     {
-      // Soft fail: keep player, refill with empty needs as spectate-ish.
+      // Permanent death: keep entity, spectate via free-move fly, low HP.
       v.FillFull();
       v.fatalWounds = v.maxFatalWounds;
-      v.health = std::max(1.f, v.maxHealth * 0.25f);
+      v.health = 1.f;
+      v.satiety = 0.f;
+      v.thirst = 0.f;
+      if (auto camera = world.GetCurrentUserCamera())
+      {
+        camera->SetFreeMove(true);
+        target.GetLocomotion().SetMode(CreatureMovementMode::Flying);
+      }
       return false;
     }
     return true;

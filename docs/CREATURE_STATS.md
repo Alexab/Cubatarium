@@ -32,11 +32,11 @@ strength, agility, endurance, accuracy, intelligence, luck, perception
 
 ## Game modes
 
-- **Creative** (default): vitals frozen, immortal, `InventoryMode::Creative`
-- **Survival**: needs tick, damage, owned inventory
+- **Creative** (default): vitals frozen, immortal, `InventoryMode::Creative`, creative double-space fly allowed
+- **Survival**: needs tick, damage, owned inventory; **no creative fly** (aerial habitat keeps flight caps)
 
 Persisted as `game_mode` in `world_data.json`. Toggle: New World UI or
-`/gamemode creative|survival`.
+`/gamemode creative|survival`. `/fly` is blocked in Survival.
 
 ## UI
 

@@ -32,6 +32,17 @@ bool CreatureCombat::TryMeleeStrike(UWorld &world, UCreature &attacker,
     return false;
   }
   const float damage = ComputeMeleeDamage(attacker);
+  // Combat fatigue cost on the attacker (endurance-scaled).
+  {
+    CreatureVitals &av = attacker.GetVitals();
+    const float endMul =
+        1.f /
+        std::max(0.5f,
+                 0.5f + static_cast<float>(attacker.GetAttributes().endurance) /
+                            20.f);
+    av.fatigue = std::min(av.maxFatigue, av.fatigue + 6.f * endMul);
+    av.ClampCurrents();
+  }
   return CreatureVitalsSystem::ApplyDamage(world, *target, damage, mode);
 }
 

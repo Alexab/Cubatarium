@@ -11,6 +11,7 @@
 #include "Creatures/Player/User.h"
 #include "Game/CreatureVisualQaSpawner.h"
 #include "Game/Inventory/InventoryTypes.h"
+#include "Game/WorldGameMode.h"
 #include "Gui/Core/GuiMetrics.h"
 #include "Gui/Interfaces/IUInventoryViewModel.h"
 #include "Render/Engine/GeometryEngine.h"
@@ -754,7 +755,8 @@ void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int Mods)
     {
       if (auto camera = World->GetCurrentUserCamera())
       {
-        if (camera->TryToggleFlightOnDoubleSpace() && Geometries)
+        if (World->GetGameMode() != WorldGameMode::Survival &&
+            camera->TryToggleFlightOnDoubleSpace() && Geometries)
         {
           const std::string msg =
               camera->GetFreeMove()

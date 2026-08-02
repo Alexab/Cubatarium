@@ -565,6 +565,7 @@ void UGameSession::SyncToWorldGameMode(WorldGameMode mode)
   if (World)
   {
     World->SetGameMode(mode);
+    World->ApplyGameModeLocomotionPolicy();
   }
   SetInventoryMode(mode == WorldGameMode::Survival ? InventoryMode::Owned
                                                    : InventoryMode::Creative);

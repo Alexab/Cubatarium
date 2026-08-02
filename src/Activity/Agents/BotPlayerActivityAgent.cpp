@@ -2,10 +2,15 @@
 #include "Activity/Helpers/CreatureActivityNavigation.h"
 #include "Activity/Helpers/CreatureActivitySteering.h"
 #include "Activity/IUWorldPerception.h"
+#include "Creatures/Core/Creature.h"
+#include "Creatures/Core/CreatureCatalogTypes.h"
+#include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Core/CreatureIntent.h"
 #include "Navigation/NavigationTypes.h"
+#include "World/Core/World.h"
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace cutum
 {
@@ -21,6 +26,45 @@ float BotMoveSpeed(const CreatureBehaviorSnapshot &snapshot)
     speed = snapshot.locomotion.walkSpeed;
   }
   return speed;
+}
+
+bool IsHostileTarget(const UWorld &world, const UCreature &self,
+                     CreatureId candidateId)
+{
+  if (candidateId == 0 || candidateId == self.GetId())
+  {
+    return false;
+  }
+  const UCreature *other = world.GetCreature(candidateId);
+  if (!other || other->IsPlayerCharacter() || other->IsPossessed())
+  {
+    return false;
+  }
+  if (other->GetTypeId() == "bot" || other->GetTypeId() == self.GetTypeId())
+  {
+    return false;
+  }
+  const CreatureDefinition *def = world.GetCreatureDefinition(other->GetTypeId());
+  if (!def)
+  {
+    return false;
+  }
+  if (def->role == CreatureRole::Bot || def->role == CreatureRole::ControlledDefault)
+  {
+    return false;
+  }
+  if (def->behavior.Id == "melee_attack")
+  {
+    return true;
+  }
+  for (const auto &tag : def->catalog.tags)
+  {
+    if (tag == "hostile" || tag == "monster" || tag == "mobs_monster")
+    {
+      return true;
+    }
+  }
+  return false;
 }
 
 } // namespace
@@ -71,6 +115,77 @@ void UBotPlayerActivityAgent::Tick(IUWorldPerception &perception,
     CreatureIntent intent{};
     intent.clearOnApply = true;
 
+    const UWorld &world = sink.GetWorld();
+    const UCreature *self = world.GetCreature(Id);
+    if (!self)
+    {
+      continue;
+    }
+
+    // Prefer nearest hostile within aggro.
+    CreatureId hostileId = 0;
+    float hostileDist = std::numeric_limits<float>::max();
+    const auto neighbors = perception.QueryCreatureNeighborsInRadius(
+        view->bodyOrigin, behavior.aggroRadius, Id);
+    for (const CreatureNeighborView &n : neighbors)
+    {
+      if (!IsHostileTarget(world, *self, n.Id))
+      {
+        continue;
+      }
+      const float d = HorizontalDistanceXZ(view->bodyOrigin, n.bodyOrigin);
+      if (d < hostileDist)
+      {
+        hostileDist = d;
+        hostileId = n.Id;
+      }
+    }
+
+    if (hostileId != 0)
+    {
+      const float attackRange = std::max(1.2f, behavior.attackRange);
+      if (hostileDist <= attackRange)
+      {
+        bb.state = CreatureFsmState::Attack;
+        intent.attackTargetId = hostileId;
+        intent.suggestedAnim = LocomotionState::Action;
+        if (bb.actionTimer <= 0.f)
+        {
+          bb.actionTimer = std::max(0.5f, behavior.attackCooldown);
+        }
+        sink.SetIntent(Id, intent);
+        continue;
+      }
+
+      bb.state = CreatureFsmState::Chase;
+      const auto bodyOpt = perception.GetCreatureBodyOrigin(hostileId);
+      const glm::vec3 goal =
+          bodyOpt ? *bodyOpt : view->bodyOrigin;
+      NavigationQuery query;
+      query.search_distance = 32;
+      query.body_height =
+          NavigationBodyHeightForBounds(snapshot->boundsSize.y);
+      query.max_jump = snapshot->locomotion.jumpHeightBlocks;
+      const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
+          bb.navigation, world, view->bodyOrigin, goal, query, dt, 0.45f, Id,
+          view->typeId);
+      glm::vec3 move_dir = steer.move_dir;
+      if (glm::length(move_dir) < 1e-4f)
+      {
+        move_dir = XzDirectionFromTo(view->bodyOrigin, goal);
+        PickApproachDirection(perception, snapshot->habitat, view->bodyOrigin,
+                              move_dir, snapshot->boundsSize, Id, move_dir);
+      }
+      move_dir = ApplyWallFeelers(perception, snapshot->habitat,
+                                  view->bodyOrigin, move_dir,
+                                  snapshot->boundsSize, Id);
+      intent.moveDirWorld = move_dir;
+      intent.moveSpeed = BotMoveSpeed(*snapshot);
+      intent.suggestedAnim = LocomotionState::Run;
+      sink.SetIntent(Id, intent);
+      continue;
+    }
+
     const std::optional<ControlledCreatureInfo> controlled =
         perception.QueryControlledCreatureInfo();
     if (controlled)
@@ -87,8 +202,8 @@ void UBotPlayerActivityAgent::Tick(IUWorldPerception &perception,
             NavigationBodyHeightForBounds(snapshot->boundsSize.y);
         query.max_jump = snapshot->locomotion.jumpHeightBlocks;
         const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
-            bb.navigation, sink.GetWorld(), view->bodyOrigin, goal, query, dt,
-            0.45f, Id, view->typeId);
+            bb.navigation, world, view->bodyOrigin, goal, query, dt, 0.45f, Id,
+            view->typeId);
         glm::vec3 move_dir = steer.move_dir;
         if (glm::length(move_dir) < 1e-4f)
         {
@@ -112,7 +227,6 @@ void UBotPlayerActivityAgent::Tick(IUWorldPerception &perception,
     }
 
     // No controlled player: light wander.
-    bb.actionTimer -= dt;
     if (bb.actionTimer <= 0.f)
     {
       const float span =
