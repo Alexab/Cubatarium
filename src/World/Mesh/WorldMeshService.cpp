@@ -394,6 +394,26 @@ bool UWorldMeshService::FindNearestMissingGreedyMesh(
                                             radius_chunks, out_coord);
 }
 
+void UWorldMeshService::UpdateStickyNearestHole(glm::ivec3 coord, bool alive)
+{
+  if (!alive)
+  {
+    StickyNearestHoleFrames = 0;
+    StickyNearestHoleCoord = glm::ivec3(0);
+    return;
+  }
+  if (coord == StickyNearestHoleCoord)
+  {
+    StickyNearestHoleFrames =
+        std::min(StickyNearestHoleFrames + 1, 1000000);
+  }
+  else
+  {
+    StickyNearestHoleCoord = coord;
+    StickyNearestHoleFrames = 1;
+  }
+}
+
 const MeshRebuildTickStats &UWorldMeshService::GetLastRebuildTickStats() const
 {
   return Cache.GetLastRebuildTickStats();

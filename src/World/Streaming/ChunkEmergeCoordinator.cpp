@@ -2066,6 +2066,34 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         underfeet_immediate_cd = 1;
       }
     }
+    // F3: moving nearest-hole Immediate escape — sticky ≥3 frames, horiz≤2,
+    // independent of underfeet / async<2 gates (SoT imm=0 mid-flight).
+    if (moving && found_nearest_missing)
+    {
+      const bool pipeline_idle =
+          !mesh_service.HasDrawableGreedyMesh(isolated_hole) &&
+          !mesh_service.IsPendingGpuApply(isolated_hole) &&
+          !mesh_service.HasInflightMeshBuild(isolated_hole);
+      mesh_service.UpdateStickyNearestHole(isolated_hole, pipeline_idle);
+      const int nh = std::max(
+          std::abs(isolated_hole.x - focus_ground_horiz.x),
+          std::abs(isolated_hole.z - focus_ground_horiz.z));
+      if (pipeline_idle && nh <= 2 &&
+          mesh_service.GetStickyNearestHoleFrames() >= 3 &&
+          underfeet_immediate_this_frame < kMaxUnderfeetImmediate &&
+          immediate_ms_used() < 6.0)
+      {
+        mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
+                                           isolated_hole);
+        ++underfeet_immediate_this_frame;
+        underfeet_immediate_cd = 1;
+        mesh_service.UpdateStickyNearestHole(isolated_hole, false);
+      }
+    }
+    else
+    {
+      mesh_service.UpdateStickyNearestHole(glm::ivec3(0), false);
+    }
   }
   else if (fov_unfinished)
   {
@@ -2137,6 +2165,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         adm.mode == MeshWorkAdmission::Mode::DeepBacklog)
     {
       mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
+      // F3: prune remesh Dirty flood every HoleDrain frame (keep_h=1).
+      if (pending_dirty > 200 &&
+          (visual_holes || missing_visible_mesh || missing_underfeet))
+      {
+        mesh_service.DropRemeshDirtyBeyondRadius(
+            focus_ground_horiz, /*keep_h=*/1, /*keep_cy=*/-1,
+            /*remesh_only=*/true);
+      }
     }
     LastBudget.MaxMeshSchedule = mesh_schedule;
     LastBudget.MaxMeshDrain = mesh_drain;

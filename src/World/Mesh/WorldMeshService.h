@@ -190,6 +190,10 @@ public:
                                     glm::ivec3 center_ground_chunk,
                                     int radius_chunks,
                                     glm::ivec3 &out_coord) const;
+  /// Track nearest sticky miss for moving Immediate escape (F3).
+  void UpdateStickyNearestHole(glm::ivec3 coord, bool alive);
+  int GetStickyNearestHoleFrames() const { return StickyNearestHoleFrames; }
+  glm::ivec3 GetStickyNearestHoleCoord() const { return StickyNearestHoleCoord; }
   const MeshRebuildTickStats &GetLastRebuildTickStats() const;
   uint64_t GetMeshRevision() const;
   uint64_t GetCullRevision() const;
@@ -251,6 +255,8 @@ private:
   bool PreferGpuStorePatch{false};
   uint64_t LastEditImmediateN{0};
   uint64_t LastEditDirtyN{0};
+  glm::ivec3 StickyNearestHoleCoord{0};
+  int StickyNearestHoleFrames{0};
 };
 
 } // namespace cutum
