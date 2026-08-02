@@ -610,8 +610,10 @@ void UGeometryEngine::DrawCubeGeometry()
       out.reserve(in.size());
       for (const GreedyBatchRef &ref : in)
       {
+        // P2: per-cy slice key (not column xz alone).
         const int64_t key =
-            (static_cast<int64_t>(ref.chunkCoord.x) << 32) ^
+            (static_cast<int64_t>(ref.chunkCoord.x) << 42) ^
+            ((static_cast<int64_t>(ref.chunkCoord.y) & 0x3ffll) << 32) ^
             (static_cast<int64_t>(ref.chunkCoord.z) & 0xffffffffll);
         auto it = ready_cache.find(key);
         bool ready = false;
@@ -621,8 +623,7 @@ void UGeometryEngine::DrawCubeGeometry()
         }
         else
         {
-          ready = WorldInstance->IsColumnRenderReady(
-              glm::ivec3(ref.chunkCoord.x, 0, ref.chunkCoord.z));
+          ready = WorldInstance->IsChunkSliceRenderReady(ref.chunkCoord);
           ready_cache.emplace(key, ready);
         }
         if (ready)
@@ -1428,7 +1429,8 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
     for (const GreedyBatchRef &ref : in)
     {
       const int64_t key =
-          (static_cast<int64_t>(ref.chunkCoord.x) << 32) ^
+          (static_cast<int64_t>(ref.chunkCoord.x) << 42) ^
+          ((static_cast<int64_t>(ref.chunkCoord.y) & 0x3ffll) << 32) ^
           (static_cast<int64_t>(ref.chunkCoord.z) & 0xffffffffll);
       auto it = ready_cache.find(key);
       bool ready = false;
@@ -1438,8 +1440,7 @@ void UGeometryEngine::WarmupGreedyGpuFromWorld()
       }
       else
       {
-        ready = WorldInstance->IsColumnRenderReady(
-            glm::ivec3(ref.chunkCoord.x, 0, ref.chunkCoord.z));
+        ready = WorldInstance->IsChunkSliceRenderReady(ref.chunkCoord);
         ready_cache.emplace(key, ready);
       }
       if (ready)
@@ -1496,18 +1497,18 @@ void UGeometryEngine::DrawCrossInstancedBatches(
   }
 
   std::unordered_map<int64_t, bool> render_ready_cache;
-  auto is_column_render_ready = [&](glm::ivec3 chunk) -> bool
+  auto is_slice_render_ready = [&](glm::ivec3 chunk) -> bool
   {
     const int64_t key =
-        (static_cast<int64_t>(chunk.x) << 32) ^
+        (static_cast<int64_t>(chunk.x) << 42) ^
+        ((static_cast<int64_t>(chunk.y) & 0x3ffll) << 32) ^
         (static_cast<int64_t>(chunk.z) & 0xffffffffll);
     const auto it = render_ready_cache.find(key);
     if (it != render_ready_cache.end())
     {
       return it->second;
     }
-    const bool ready = WorldInstance->IsColumnRenderReady(
-        glm::ivec3(chunk.x, 0, chunk.z));
+    const bool ready = WorldInstance->IsChunkSliceRenderReady(chunk);
     render_ready_cache.emplace(key, ready);
     return ready;
   };
@@ -1523,7 +1524,7 @@ void UGeometryEngine::DrawCrossInstancedBatches(
           glm::ivec3(static_cast<int>(std::floor(inst.center.x)),
                      static_cast<int>(std::floor(inst.center.y)),
                      static_cast<int>(std::floor(inst.center.z))));
-      if (is_column_render_ready(chunk))
+      if (is_slice_render_ready(chunk))
       {
         fb.instances.push_back(inst);
       }

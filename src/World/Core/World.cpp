@@ -1917,6 +1917,33 @@ bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
   return GetColumnRenderableState(glm::ivec2(ground.x, ground.z)).draw_ok;
 }
 
+bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
+{
+  if (!MeshService)
+  {
+    return false;
+  }
+  if (MeshService->HasMeshSatisfyingColumnReady(chunk_coord) ||
+      MeshService->IsPendingGpuApply(chunk_coord) ||
+      MeshService->IsGpuExtractInFlight(chunk_coord))
+  {
+    return true;
+  }
+  const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);
+  if (!chunk)
+  {
+    return false;
+  }
+  for (const BlockId block : chunk->GetData())
+  {
+    if (block != BLOCK_AIR)
+    {
+      return false; // solid without mesh — not ready
+    }
+  }
+  return true; // air-only slice: nothing to draw
+}
+
 ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) const
 {
   ColumnRenderableState out;
@@ -2058,6 +2085,7 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
   }
   bool saw_loaded_meshable = false;
   bool saw_gpu_inflight = false;
+  bool saw_missing_solid = false;
   for (int cy = cy0; cy <= cy1; ++cy)
   {
     const glm::ivec3 coord(ground.x, cy, ground.z);
@@ -2091,15 +2119,24 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     {
       continue;
     }
-    out.reason = ColumnRenderableState::BlockReason::MissingMesh;
-    return out;
+    // P2: missing solid cy does not block drawing ready sibling slices
+    // (JE-like section progressive reveal). HasMissing* telemetry unchanged.
+    saw_missing_solid = true;
   }
   if (saw_loaded_meshable || out.stage == ColumnEmergeState::Empty)
   {
     out.draw_ok = true;
     out.reason = saw_gpu_inflight
                      ? ColumnRenderableState::BlockReason::GpuInFlight
-                     : ColumnRenderableState::BlockReason::None;
+                     : (saw_missing_solid
+                            ? ColumnRenderableState::BlockReason::MissingMesh
+                            : ColumnRenderableState::BlockReason::None);
+    // draw_ok true even with MissingMesh reason — partial column visible.
+    return out;
+  }
+  if (saw_missing_solid)
+  {
+    out.reason = ColumnRenderableState::BlockReason::MissingMesh;
     return out;
   }
   out.reason = ColumnRenderableState::BlockReason::NotLoaded;
