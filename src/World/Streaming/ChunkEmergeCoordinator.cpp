@@ -2075,9 +2075,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         underfeet_immediate_cd = 1;
       }
     }
-    // G1/H/I: sticky nearest-hole Immediate — nh≤5 (manual 160240 still has
-    // miss_horiz 5+). Count while pipeline idle OR Queued; sticky≥5 + Queued:
-    // drop Queued-only then Immediate (never Dispatched/Kicked).
+    // G1/H/I/J3: sticky nearest-hole Immediate — nh≤5. Count while pipeline
+    // idle, Queued, or Kicked/Dispatched (J3: track kicked rim without Kick
+    // drop). Escape drop+Imm remains Queued-only; kicked gets Kick prefer.
     if (found_nearest_missing)
     {
       const bool no_drawable =
@@ -2086,12 +2086,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           !mesh_service.HasInflightMeshBuild(isolated_hole);
       const bool queued_stuck =
           mesh_service.IsPendingGpuQueued(isolated_hole);
+      const bool kicked_stuck =
+          mesh_service.IsPendingGpuKickedOrDispatched(isolated_hole);
       const bool pipeline_idle =
           no_drawable && !mesh_service.IsPendingGpuApply(isolated_hole) &&
           no_inflight;
       const bool sticky_alive =
           no_drawable && no_inflight &&
-          (pipeline_idle || queued_stuck);
+          (pipeline_idle || queued_stuck || kicked_stuck);
       mesh_service.UpdateStickyNearestHole(isolated_hole, sticky_alive);
       const int nh = std::max(
           std::abs(isolated_hole.x - focus_ground_horiz.x),
@@ -2119,6 +2121,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           underfeet_immediate_cd = 1;
           mesh_service.UpdateStickyNearestHole(isolated_hole, false);
         }
+      }
+      // J3: nh≤3 sticky≥5 in GPU pipeline — hoist Queued Kick priority only
+      // (never drop/Immediate on Kicked/Dispatched).
+      if (nh <= 3 && sticky_frames >= 5 && (queued_stuck || kicked_stuck))
+      {
+        mesh_service.PreferKickPendingGpuQueued(isolated_hole);
       }
     }
     else

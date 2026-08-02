@@ -563,6 +563,40 @@ bool UChunkMeshCache::IsPendingGpuQueued(glm::ivec3 chunk_coord) const
   return false;
 }
 
+bool UChunkMeshCache::IsPendingGpuKickedOrDispatched(glm::ivec3 chunk_coord) const
+{
+  for (const PendingGpuApply &pending : PendingGpuApplies)
+  {
+    if (pending.coord == chunk_coord)
+    {
+      return pending.phase == PendingGpuApply::Phase::Kicked ||
+             pending.phase == PendingGpuApply::Phase::Dispatched;
+    }
+  }
+  return false;
+}
+
+bool UChunkMeshCache::PreferKickPendingGpuQueued(glm::ivec3 chunk_coord)
+{
+  for (auto it = PendingGpuApplies.begin(); it != PendingGpuApplies.end(); ++it)
+  {
+    if (it->coord != chunk_coord ||
+        it->phase != PendingGpuApply::Phase::Queued)
+    {
+      continue;
+    }
+    if (it == PendingGpuApplies.begin())
+    {
+      return true;
+    }
+    PendingGpuApply pending = std::move(*it);
+    PendingGpuApplies.erase(it);
+    PendingGpuApplies.push_front(std::move(pending));
+    return true;
+  }
+  return false;
+}
+
 bool UChunkMeshCache::DropQueuedPendingGpuApply(glm::ivec3 chunk_coord)
 {
   for (auto it = PendingGpuApplies.begin(); it != PendingGpuApplies.end(); ++it)

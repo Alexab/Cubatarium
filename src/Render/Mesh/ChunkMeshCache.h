@@ -148,6 +148,10 @@ public:
   /// True only while PendingGpuApply for coord is still Phase::Queued (not
   /// Dispatched/Kicked). Used by sticky Immediate escape — never drop kicked.
   bool IsPendingGpuQueued(glm::ivec3 chunk_coord) const;
+  /// True while coord is Kicked or Dispatched in the GPU ring.
+  bool IsPendingGpuKickedOrDispatched(glm::ivec3 chunk_coord) const;
+  /// Move Queued ticket for coord to front so Kick prefers it (no drop).
+  bool PreferKickPendingGpuQueued(glm::ivec3 chunk_coord);
   /// Drop Queued-only pending for coord so Immediate can rebuild. Returns true
   /// if a Queued entry was erased. Leaves Dispatched/Kicked untouched.
   bool DropQueuedPendingGpuApply(glm::ivec3 chunk_coord);

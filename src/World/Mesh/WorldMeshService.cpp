@@ -711,6 +711,16 @@ bool UWorldMeshService::IsPendingGpuQueued(glm::ivec3 chunk_coord) const
   return Cache.IsPendingGpuQueued(chunk_coord);
 }
 
+bool UWorldMeshService::IsPendingGpuKickedOrDispatched(glm::ivec3 chunk_coord) const
+{
+  return Cache.IsPendingGpuKickedOrDispatched(chunk_coord);
+}
+
+bool UWorldMeshService::PreferKickPendingGpuQueued(glm::ivec3 chunk_coord)
+{
+  return Cache.PreferKickPendingGpuQueued(chunk_coord);
+}
+
 bool UWorldMeshService::DropQueuedPendingGpuApply(glm::ivec3 chunk_coord)
 {
   return Cache.DropQueuedPendingGpuApply(chunk_coord);
