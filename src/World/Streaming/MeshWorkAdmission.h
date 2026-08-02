@@ -249,11 +249,19 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
 
   // J1: under HoleDrain/Deep miss backlog, give Finish more wall budget (Kick
   // bias is in ChunkMeshCache kick_cut/finish_cap — keep enqueue capped).
-  if (holes && in.pending_gpu >= 12 &&
+  // K2: pending≥16 deep backlog — slightly higher Finish wall share (0.85).
+  if (holes &&
       (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
        out.mode == MeshWorkAdmission::Mode::DeepBacklog))
   {
-    out.gpu_budget_frac = std::max(out.gpu_budget_frac, 0.82);
+    if (in.pending_gpu >= 16)
+    {
+      out.gpu_budget_frac = std::max(out.gpu_budget_frac, 0.85);
+    }
+    else if (in.pending_gpu >= 12)
+    {
+      out.gpu_budget_frac = std::max(out.gpu_budget_frac, 0.82);
+    }
   }
 
   if (light_debt && out.mode != MeshWorkAdmission::Mode::Normal)

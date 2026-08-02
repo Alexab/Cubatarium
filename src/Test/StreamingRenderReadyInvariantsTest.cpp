@@ -361,7 +361,15 @@ int main()
     finish_bias.ring_depth = 8;
     const auto a16 = ComputeMeshWorkAdmission(finish_bias);
     Expect(a16.mode == MeshWorkAdmission::Mode::HoleDrain, "J1 backlog HoleDrain");
-    Expect(a16.gpu_budget_frac >= 0.82, "J1 Finish budget frac under miss backlog");
+    Expect(a16.gpu_budget_frac >= 0.85, "K2 Finish budget frac under pending>=16");
+
+    MeshWorkAdmissionInput finish_bias12 = finish_bias;
+    finish_bias12.pending_gpu = 12;
+    finish_bias12.pending_gpu_queued = 6;
+    finish_bias12.pending_gpu_kicked = 6;
+    const auto a16b = ComputeMeshWorkAdmission(finish_bias12);
+    Expect(a16b.gpu_budget_frac >= 0.82 && a16b.gpu_budget_frac < 0.85,
+           "J1 pending=12 keeps frac 0.82 not 0.85");
   }
 
   if (failures != 0)

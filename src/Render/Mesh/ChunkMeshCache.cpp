@@ -2023,12 +2023,14 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
 
   // Phase A (174511): ring PBO → up to 4 Kick/Finish per tick; no shared-PBO
   // single-apply bottleneck. Prefer Finish over Kick when budget tight.
-  // J1: under HoleDrain/Deep miss backlog, bias Finish vs Kick so ring clears
-  // (manual 170330 finish_bl med=3 while pending~15–20).
+  // J1/K2: under HoleDrain/Deep miss backlog, bias Finish vs Kick so ring clears
+  // (manual 170330/174559 finish_bl med=3 while pending~15–30).
   const bool hole_finish_bias =
       (WorkAdmission.mode == MeshWorkAdmission::Mode::HoleDrain ||
        WorkAdmission.mode == MeshWorkAdmission::Mode::DeepBacklog) &&
       PendingGpuApplies.size() >= 12;
+  const bool hole_finish_deep =
+      hole_finish_bias && PendingGpuApplies.size() >= 16;
   int finish_cap =
       std::min(UGpuMeshPipeline::kReadbackRing, std::max(0, max_count));
   int kick_cap =
@@ -2220,11 +2222,12 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
 
   // Pass A: Kick Queued while free ring PBO + staging; stop new kicks late so
   // remaining budget can Finish fences that became ready during Kick.
-  // J1 miss backlog: cut Kick earlier (not freeze 0.55) so Finish catches up.
+  // J1/K2 miss backlog: cut Kick earlier (not freeze 0.55) so Finish catches up.
+  // K2 pending≥16: kick_cut 0.68 (was 0.72) — still above discarded 0.55.
   const double kick_cut =
       (WorkAdmission.mode == MeshWorkAdmission::Mode::HoleDrain ||
        WorkAdmission.mode == MeshWorkAdmission::Mode::DeepBacklog)
-          ? (hole_finish_bias ? 0.72 : 0.90)
+          ? (hole_finish_deep ? 0.68 : (hole_finish_bias ? 0.72 : 0.90))
           : 0.55;
   auto find_prefer_queued = [&]() {
     auto missing_it = std::find_if(
