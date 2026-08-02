@@ -169,7 +169,7 @@ int main()
     hole.moving = true;
     const auto a2 = ComputeMeshWorkAdmission(hole);
     Expect(a2.mode == MeshWorkAdmission::Mode::HoleDrain, "pending+holes → HoleDrain");
-    Expect(FinalizeSchedule(16, a2) == 4, "HoleDrain schedule<=4");
+    Expect(FinalizeSchedule(16, a2) == 5, "HoleDrain schedule covers FM4+remesh1");
     Expect(!a2.allow_neighbor_dirty, "HoleDrain denies neighbor Dirty");
     Expect(a2.admit_batch == 1, "HoleDrain admit_batch=1 while moving");
     Expect(a2.gpu_apply_max >= 16, "HoleDrain GPU boost under miss");
@@ -189,8 +189,8 @@ int main()
     warm_hole.moving = true;
     const auto a3 = ComputeMeshWorkAdmission(warm_hole);
     Expect(a3.mode == MeshWorkAdmission::Mode::HoleDrain, "pending>=16+holes still HoleDrain");
-    Expect(FinalizeSchedule(16, a3) <= 4, "warm holes schedule capped");
-    Expect(a3.first_mesh_schedule >= 2, "HoleDrain first_mesh floor while moving");
+    Expect(FinalizeSchedule(16, a3) <= 5, "warm holes schedule capped");
+    Expect(a3.first_mesh_schedule >= 4, "HoleDrain first_mesh floor while moving");
     Expect(FinalizeSchedule(16, a3) >= a3.first_mesh_schedule,
            "schedule covers first_mesh quota");
 
@@ -199,9 +199,9 @@ int main()
     deep.visual_holes = true;
     const auto a4 = ComputeMeshWorkAdmission(deep);
     Expect(a4.mode == MeshWorkAdmission::Mode::DeepBacklog, "pending>=24 → Deep");
-    Expect(FinalizeSchedule(16, a4) <= 4, "Deep schedule capped");
+    Expect(FinalizeSchedule(16, a4) <= 5, "Deep schedule capped");
     Expect(a4.softdefer_requeue >= 1, "Deep Held requeue ≥1 under holes (G3)");
-    Expect(a4.first_mesh_schedule >= 2, "Deep first_mesh under holes");
+    Expect(a4.first_mesh_schedule >= 4, "Deep first_mesh under holes");
     Expect(FinalizeSchedule(16, a4) >= a4.first_mesh_schedule,
            "Deep schedule covers first_mesh");
 
@@ -253,10 +253,23 @@ int main()
     Expect(a9.mode == MeshWorkAdmission::Mode::HoleDrain, "ring HoleDrain");
     Expect(a9.enqueue_gpu_budget == 5, "HoleDrain enqueue = ring-kicked");
     Expect(a9.gpu_apply_max >= 16, "HoleDrain apply_max ≥ ring*2");
-    Expect(a9.first_mesh_schedule >= 3, "HoleDrain first_mesh≥3 moving (G2)");
+    Expect(a9.first_mesh_schedule >= 4, "HoleDrain first_mesh≥4 moving (H)");
     Expect(a9.remesh_schedule <= 1, "HoleDrain remesh≤1");
     Expect(a9.max_schedule >= a9.first_mesh_schedule + a9.remesh_schedule,
            "max_schedule covers split quotas");
+
+    // H: light_debt must not crush FirstMesh below HoleDrain quota.
+    MeshWorkAdmissionInput debt = ring;
+    debt.unfinished_visual = 12;
+    debt.pending_gpu = 14;
+    debt.visual_holes = true;
+    debt.moving = true;
+    const auto a9d = ComputeMeshWorkAdmission(debt);
+    Expect(a9d.mode == MeshWorkAdmission::Mode::HoleDrain, "debt HoleDrain");
+    Expect(a9d.first_mesh_schedule >= 4, "light_debt keeps first_mesh≥4");
+    Expect(a9d.starve_remesh_horiz >= 2, "light_debt remesh keep_h≥2 for stale");
+    Expect(FinalizeSchedule(16, a9d) >= a9d.first_mesh_schedule,
+           "light_debt schedule covers first_mesh");
 
     // G0: holes + queued ≥ ring → HoleDrain even when pending cooled below 12.
     MeshWorkAdmissionInput refill{};
@@ -268,7 +281,7 @@ int main()
     const auto a10 = ComputeMeshWorkAdmission(refill);
     Expect(a10.mode == MeshWorkAdmission::Mode::HoleDrain,
            "G0 holes+queued≥ring → HoleDrain despite pending<12");
-    Expect(FinalizeSchedule(20, a10) <= 4, "G0 latch caps FOV floor sch=20");
+    Expect(FinalizeSchedule(20, a10) <= 5, "G0 latch caps FOV floor sch=20");
 
     MeshWorkAdmissionInput warm_pend{};
     warm_pend.pending_gpu = 10;
@@ -279,7 +292,7 @@ int main()
     const auto a10b = ComputeMeshWorkAdmission(warm_pend);
     Expect(a10b.mode == MeshWorkAdmission::Mode::HoleDrain,
            "G0 holes+pending≥8 → HoleDrain even if queued<ring/2");
-    Expect(FinalizeSchedule(12, a10b) <= 4, "G0 warm-pending caps sch=12");
+    Expect(FinalizeSchedule(12, a10b) <= 5, "G0 warm-pending caps sch=12");
 
     MeshWorkAdmissionInput refill_exit{};
     refill_exit.pending_gpu = 6;

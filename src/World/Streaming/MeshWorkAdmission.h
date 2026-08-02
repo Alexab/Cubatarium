@@ -88,8 +88,8 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
     out.allow_neighbor_dirty = false;
     out.starve_remesh_horiz = holes ? 1 : 2;
     out.promote_relight = light_debt ? 4 : (holes ? 2 : 0);
-    // G2: moving holes FirstMesh headroom 2→3 (not 4; after G0 latch).
-    out.first_mesh_schedule = holes ? 3 : 1;
+    // G2/H: moving holes FirstMesh headroom (was 2; G2→3; H→4 for rim miss_horiz).
+    out.first_mesh_schedule = holes ? 4 : 1;
     out.remesh_schedule = holes ? 0 : 1;
     break;
   case MeshWorkAdmission::Mode::HoleDrain:
@@ -109,8 +109,8 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
     out.allow_neighbor_dirty = false;
     out.starve_remesh_horiz = 1;
     out.promote_relight = light_debt ? 4 : 2;
-    // G2: moving HoleDrain first_mesh 2→3 for rim miss; idle still ≥6 below.
-    out.first_mesh_schedule = 3;
+    // H: moving HoleDrain first_mesh 3→4 (manual 153832 miss_frac after G).
+    out.first_mesh_schedule = 4;
     out.remesh_schedule = 1;
     if (!in.moving)
     {
@@ -240,9 +240,15 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
 
   if (light_debt && out.mode != MeshWorkAdmission::Mode::Normal)
   {
-    out.max_schedule = std::min(out.max_schedule, 3);
-    out.first_mesh_schedule = std::min(out.first_mesh_schedule, 3);
-    out.starve_remesh_horiz = 1;
+    // Manual 153832: UV≥8 crushed first_mesh to 3 and max_schedule to 3, nulling
+    // G2 FM bump and starving rim while remesh keep_h=1 let stale explode.
+    // Prefer FirstMesh slots; keep a small remesh band (horiz≤2) for stale.
+    out.remesh_schedule = std::min(out.remesh_schedule, 1);
+    out.starve_remesh_horiz = std::max(out.starve_remesh_horiz, 2);
+    const int fm = std::max(0, out.first_mesh_schedule);
+    const int need = fm + std::max(0, out.remesh_schedule);
+    out.max_schedule = std::max(out.max_schedule, need);
+    out.max_schedule = std::min(out.max_schedule, std::max(need, 5));
   }
   return out;
 }
