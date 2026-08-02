@@ -2010,6 +2010,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_schedule = std::max(mesh_schedule, moving ? 12 : 16);
     auto &exec = GetColumnFlowExecutor();
     const MeshWorkAdmission &adm = mesh_service.GetMeshWorkAdmission();
+    // J2: healthy async under HoleDrain — cut sync ColumnFlow / full-focus
+    // scan so mesh_emerge does not hitch while workers already feed the ring.
+    // Keep FirstMesh admit + nearest-hole Imm; do not touch idle FM≥6 quota.
+    const bool async_healthy_hole_drain =
+        pending_async >= 12 &&
+        (adm.mode == MeshWorkAdmission::Mode::HoleDrain ||
+         adm.mode == MeshWorkAdmission::Mode::DeepBacklog);
     if (found_nearest_missing)
     {
       ColumnWorkItem hole{};
@@ -2020,7 +2027,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       hole.cy = isolated_hole.y;
       exec.Enqueue(hole);
     }
-    // Full-focus scan every frame only in Normal; under backlog every 3f.
+    // Full-focus scan every frame only in Normal; under backlog every 3f
+    // (every 5f when async already healthy — J2).
     static int focus_scan_cd = 0;
     const bool full_scan =
         adm.mode == MeshWorkAdmission::Mode::Normal || focus_scan_cd <= 0;
@@ -2034,15 +2042,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       focus_scan.scan_full_focus = true;
       focus_scan.cy = -1;
       exec.Enqueue(focus_scan);
-      focus_scan_cd =
-          adm.mode == MeshWorkAdmission::Mode::Normal ? 0 : 2;
+      focus_scan_cd = adm.mode == MeshWorkAdmission::Mode::Normal
+                          ? 0
+                          : (async_healthy_hole_drain ? 4 : 2);
     }
     else if (focus_scan_cd > 0)
     {
       --focus_scan_cd;
     }
     const int admit_n = std::max(1, adm.admit_batch);
-    exec.DrainBudget(world, moving ? 3 : 4, focus_ground_horiz, focus_radius,
+    const int drain_steps =
+        async_healthy_hole_drain ? (moving ? 2 : 3) : (moving ? 3 : 4);
+    exec.DrainBudget(world, drain_steps, focus_ground_horiz, focus_radius,
                      /*admit_batch=*/admit_n);
     // Idle sticky: force Immediate on nearest hole within underfeet when it is
     // not already in the mesh pipeline (HasMissing skips Pending/InFlight).
@@ -2192,6 +2203,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         mesh_service.DropRemeshDirtyBeyondRadius(
             focus_ground_horiz, /*keep_h=*/1, /*keep_cy=*/-1,
             /*remesh_only=*/true);
+      }
+      // J2: same frame as heavy GPU drain + healthy async — clamp SoftDeferHeld
+      // requeue burst so Rebuild does not fight Finish/Kick for Dirty slots.
+      if (pending_async >= 12 && gpu_consume_done > 0)
+      {
+        MeshWorkAdmission cut = adm;
+        cut.softdefer_requeue = std::min(cut.softdefer_requeue, 1);
+        mesh_service.SetMeshWorkAdmission(cut);
       }
     }
     LastBudget.MaxMeshSchedule = mesh_schedule;
