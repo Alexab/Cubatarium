@@ -350,6 +350,18 @@ int main()
     Expect(a15.mode == MeshWorkAdmission::Mode::HoleDrain,
            "J0 UV holes + pending=1 → HoleDrain not Normal");
     Expect(FinalizeSchedule(12, a15) <= 5, "J0 cool holes caps sch=12");
+
+    // J1: miss backlog HoleDrain prefers Finish wall budget.
+    MeshWorkAdmissionInput finish_bias{};
+    finish_bias.pending_gpu = 16;
+    finish_bias.pending_gpu_queued = 8;
+    finish_bias.pending_gpu_kicked = 8;
+    finish_bias.visual_holes = true;
+    finish_bias.moving = true;
+    finish_bias.ring_depth = 8;
+    const auto a16 = ComputeMeshWorkAdmission(finish_bias);
+    Expect(a16.mode == MeshWorkAdmission::Mode::HoleDrain, "J1 backlog HoleDrain");
+    Expect(a16.gpu_budget_frac >= 0.82, "J1 Finish budget frac under miss backlog");
   }
 
   if (failures != 0)

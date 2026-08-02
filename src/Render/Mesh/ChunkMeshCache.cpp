@@ -1989,10 +1989,22 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
 
   // Phase A (174511): ring PBO → up to 4 Kick/Finish per tick; no shared-PBO
   // single-apply bottleneck. Prefer Finish over Kick when budget tight.
-  const int finish_cap =
+  // J1: under HoleDrain/Deep miss backlog, bias Finish vs Kick so ring clears
+  // (manual 170330 finish_bl med=3 while pending~15–20).
+  const bool hole_finish_bias =
+      (WorkAdmission.mode == MeshWorkAdmission::Mode::HoleDrain ||
+       WorkAdmission.mode == MeshWorkAdmission::Mode::DeepBacklog) &&
+      PendingGpuApplies.size() >= 12;
+  int finish_cap =
       std::min(UGpuMeshPipeline::kReadbackRing, std::max(0, max_count));
-  const int kick_cap =
+  int kick_cap =
       std::min(UGpuMeshPipeline::kReadbackRing, std::max(0, max_count));
+  if (hole_finish_bias)
+  {
+    finish_cap = std::min(UGpuMeshPipeline::kReadbackRing,
+                          std::max(finish_cap, (max_count * 3 + 3) / 4));
+    kick_cap = std::min(kick_cap, std::max(2, max_count / 2));
+  }
   int processed = 0;
   int finished = 0;
   int kicked = 0;
@@ -2173,11 +2185,12 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   }
 
   // Pass A: Kick Queued while free ring PBO + staging; stop new kicks late so
-  // HoleDrain can fill the ring (0.55 starved kick under Finish poll).
+  // remaining budget can Finish fences that became ready during Kick.
+  // J1 miss backlog: cut Kick earlier (not freeze 0.55) so Finish catches up.
   const double kick_cut =
       (WorkAdmission.mode == MeshWorkAdmission::Mode::HoleDrain ||
        WorkAdmission.mode == MeshWorkAdmission::Mode::DeepBacklog)
-          ? 0.90
+          ? (hole_finish_bias ? 0.72 : 0.90)
           : 0.55;
   auto find_prefer_queued = [&]() {
     auto missing_it = std::find_if(
@@ -2253,6 +2266,68 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     GpuExtractInFlight.insert(kicked_coord);
     ++kicked;
   }
+
+  // J1: second Finish pass with Kick-cut remainder (fences ready mid-Kick).
+  if (hole_finish_bias && finished < finish_cap && processed < max_count &&
+      budget_left())
+  {
+    for (size_t i = 0; i < PendingGpuApplies.size() && finished < finish_cap &&
+                       finish_attempts < finish_cap * 2 &&
+                       processed < max_count && budget_left();)
+    {
+      if (PendingGpuApplies[i].phase != PendingGpuApply::Phase::Kicked)
+      {
+        ++i;
+        continue;
+      }
+      ++finish_attempts;
+      PendingGpuApply &pending_ref = PendingGpuApplies[i];
+
+      bool dropped = false;
+      if (!revision_ok(pending_ref, dropped))
+      {
+        GpuExtractInFlight.erase(pending_ref.coord);
+        PendingGpuApplies.erase(PendingGpuApplies.begin() +
+                                static_cast<std::ptrdiff_t>(i));
+        continue;
+      }
+
+      GpuMeshProcessResult gpu_result;
+      gpu_result.success = true;
+      gpu_result.slotIndex = pending_ref.ticket.slotIndex;
+      uint32_t quad_count = 0;
+      const auto st = pipeline->TryFinishComputePasses(
+          pending_ref.ticket, registry, quad_count, &gpu_result.blockRanges,
+          &gpu_result.hasFullyDarkFace, /*timeout_ns=*/0);
+      if (st == UGpuMeshPipeline::GpuFinishStatus::NotReady)
+      {
+        ++LastGpuFinishNotReadyN;
+        ++i;
+        continue;
+      }
+      PendingGpuApply pending = std::move(pending_ref);
+      PendingGpuApplies.erase(PendingGpuApplies.begin() +
+                              static_cast<std::ptrdiff_t>(i));
+      GpuExtractInFlight.erase(pending.coord);
+      if (st == UGpuMeshPipeline::GpuFinishStatus::Failed)
+      {
+        fail_ticket(pending);
+        continue;
+      }
+      gpu_result.quadCount = quad_count;
+      gpu_result.transparent = pending.transparent;
+      ActiveMeshSourceRevision.erase(pending.coord);
+      if (CommitGpuMeshResult(world, registry, pending.coord,
+                              pending.sourceRevision, std::move(gpu_result),
+                              std::move(pending.crossCenters)))
+      {
+        ++processed;
+        ++finished;
+        ++stats.Completed;
+      }
+    }
+  }
+
   LastGpuKickN += kicked;
   LastGpuFinishN += finished;
   return processed;

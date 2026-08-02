@@ -247,6 +247,15 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
 
   MeshWorkFillModeDefaults(out, mode, in, queued, holes, light_debt);
 
+  // J1: under HoleDrain/Deep miss backlog, give Finish more wall budget (Kick
+  // bias is in ChunkMeshCache kick_cut/finish_cap — keep enqueue capped).
+  if (holes && in.pending_gpu >= 12 &&
+      (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
+       out.mode == MeshWorkAdmission::Mode::DeepBacklog))
+  {
+    out.gpu_budget_frac = std::max(out.gpu_budget_frac, 0.82);
+  }
+
   if (light_debt && out.mode != MeshWorkAdmission::Mode::Normal)
   {
     // Manual 153832: UV≥8 crushed first_mesh to 3 and max_schedule to 3, nulling
