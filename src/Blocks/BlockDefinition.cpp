@@ -441,6 +441,14 @@ ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j,
   {
     out.Definition.Lighting = ParseLightingFromJson(j["lighting"]);
   }
+  if (j.contains("hardness"))
+  {
+    if (j["hardness"].is_number())
+    {
+      const float hardness = j["hardness"].get<float>();
+      out.Definition.Hardness = (hardness < 0.0f) ? 0.0f : hardness;
+    }
+  }
   if (j.contains("types") && j["types"].is_array())
   {
     for (const auto &t : j["types"])

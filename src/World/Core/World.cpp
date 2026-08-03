@@ -8,6 +8,7 @@
 #include <climits>
 #include "Activity/WorldCreatureActivitySink.h"
 #include "App/Settings/RenderSettings.h"
+#include "Blocks/BlockDigRules.h"
 #include "Core/Progress/IUProgressSink.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
@@ -5613,8 +5614,19 @@ void UWorld::CancelBreakSession() { BreakSession.reset(); }
 
 void UWorld::TickBreakSession(float dt, float durationSeconds)
 {
-  if (!BreakSession || durationSeconds <= 0.f)
+  if (!BreakSession)
   {
+    return;
+  }
+  // Negative duration = unbreakable in Survival: no progress.
+  if (durationSeconds < 0.f)
+  {
+    return;
+  }
+  // Zero duration = instant (Creative / explicit instant dig).
+  if (durationSeconds <= 0.f)
+  {
+    BreakSession->progress = 1.f;
     return;
   }
   BreakSession->progress =
@@ -5645,6 +5657,32 @@ std::optional<glm::ivec3> UWorld::GetBreakSessionBlockPos() const
     return std::nullopt;
   }
   return BreakSession->blockPos;
+}
+
+float UWorld::ResolveBreakDurationSeconds() const
+{
+  if (!BreakSession)
+  {
+    return -1.f;
+  }
+  if (GameMode == WorldGameMode::Creative)
+  {
+    return BlockDigRules::DigDurationSeconds(BlockDigRules::DefaultHardness,
+                                             GameMode);
+  }
+  float hardness = BlockDigRules::DefaultHardness;
+  if (BlockRegistry)
+  {
+    if (const UBlockDefinitionStorage *defs = BlockRegistry->GetDefinitions())
+    {
+      const BlockId id = BlockWorld.GetBlock(BreakSession->blockPos);
+      if (const BlockDefinition *def = defs->GetById(id))
+      {
+        hardness = def->Hardness;
+      }
+    }
+  }
+  return BlockDigRules::DigDurationSeconds(hardness, GameMode);
 }
 
 FluidColumnSurface UWorld::FindFluidColumnSurfaceAt(int bx, int bz,

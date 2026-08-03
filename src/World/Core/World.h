@@ -20,6 +20,7 @@
 #include "World/Environment/EnvironmentConfig.h"
 #include "World/Environment/WorldEnvironment.h"
 #include "World/View/WorldViewSettings.h"
+#include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
 #include "World/IO/ChunkStorageTypes.h"
 #include "World/Math/CollisionVolume.h"
@@ -230,6 +231,8 @@ public:
   const std::string &GetTerrainType() const { return TerrainType; }
   WorldGameMode GetGameMode() const { return GameMode; }
   void SetGameMode(WorldGameMode mode) { GameMode = mode; }
+  WorldDifficulty GetDifficulty() const { return Difficulty; }
+  void SetDifficulty(WorldDifficulty difficulty) { Difficulty = difficulty; }
   /// Survival: disable creative double-space fly for non-aerial species.
   void ApplyGameModeLocomotionPolicy();
 
@@ -428,6 +431,8 @@ public:
   float GetBreakProgress() const;
   bool HasBreakSession() const { return BreakSession.has_value(); }
   std::optional<glm::ivec3> GetBreakSessionBlockPos() const;
+  /// Dig duration for the active break session (Creative=0, unbreakable=-1).
+  float ResolveBreakDurationSeconds() const;
   /// Flight-sim break-stand: request one CompleteBreakSession on next Update.
   void RequestFlightSimBreak() { FlightSimBreakRequested = true; }
   bool ConsumeFlightSimBreakRequest()
@@ -1216,6 +1221,7 @@ private:
   uint32_t WorldSeed{12345};
   std::string TerrainType{"heightmap"};
   WorldGameMode GameMode{WorldGameMode::Creative};
+  WorldDifficulty Difficulty{WorldDifficulty::Normal};
   ProceduralSettings ProceduralTemplate;
   std::unique_ptr<IUWorldGenPipeline> WorldGen;
   size_t CachedBlockCount{0};

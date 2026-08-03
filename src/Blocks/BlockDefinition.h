@@ -86,6 +86,8 @@ struct BlockDefinition
   std::string Name;
   std::string DisplayName;
   BlockId Id{BLOCK_AIR};
+  /// Dig hardness. 0 = unbreakable in Survival (Creative still breaks instantly).
+  float Hardness{1.0f};
   BlockAnimationSpec Animation;
   BlockPhysicsProfile Physics;
   BlockRenderProfile Render;

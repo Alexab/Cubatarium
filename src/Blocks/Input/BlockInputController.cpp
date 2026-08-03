@@ -1,4 +1,5 @@
 #include "Blocks/Input/BlockInputController.h"
+#include "Game/WorldGameMode.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "World/Core/World.h"
@@ -228,6 +229,11 @@ void UBlockInputController::HandleLeftPress(const BlockInputContext &ctx)
       ctx.World->GetIsBlockIntersectionExists())
   {
     ctx.World->StartBreakSession(ctx.World->GetBreakBlockPos());
+    if (ctx.World->GetGameMode() == WorldGameMode::Creative)
+    {
+      ctx.World->CompleteBreakSession();
+      LeftHeld = false;
+    }
   }
 }
 
@@ -436,7 +442,7 @@ void UBlockInputController::Tick(float dt, const BlockInputContext &ctx)
 
   if (ctx.World->HasBreakSession())
   {
-    ctx.World->TickBreakSession(dt, ctx.Ui->BreakDurationSeconds);
+    ctx.World->TickBreakSession(dt, ctx.World->ResolveBreakDurationSeconds());
     if (ctx.World->GetBreakProgress() >= 1.0f)
     {
       ctx.World->CompleteBreakSession();
@@ -464,12 +470,22 @@ void UBlockInputController::Tick(float dt, const BlockInputContext &ctx)
     if (holdSeconds >= ctx.Ui->BreakHoldMinSeconds)
     {
       ctx.World->StartBreakSession(ctx.World->GetBreakBlockPos());
+      if (ctx.World->GetGameMode() == WorldGameMode::Creative)
+      {
+        ctx.World->CompleteBreakSession();
+        LeftHeld = false;
+      }
     }
     return;
   }
 
   // Classic: break already started on press; Tick is a fallback if needed.
   ctx.World->StartBreakSession(ctx.World->GetBreakBlockPos());
+  if (ctx.World->GetGameMode() == WorldGameMode::Creative)
+  {
+    ctx.World->CompleteBreakSession();
+    LeftHeld = false;
+  }
 }
 
 } // namespace cutum
