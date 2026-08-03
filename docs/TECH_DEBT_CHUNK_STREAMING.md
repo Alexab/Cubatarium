@@ -70,22 +70,24 @@
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-ARCH-034 | 2026-08 FOV plan | Far-rim nh≥4 dual-backlog (manual 215629 mh=5) | Hotfix `9cfe265a`; mid `094817` miss_frac=0.85 sticky rim nh2–3 — N0e: FirstMesh+Relight, sticky scan escape /2 | **in-progress** mid residual |
-| TD-ARCH-035 | 2026-08 FOV plan | FOV idle FirstMesh / camera-front priority | Side FOV: keep nh1 Imm/clamp; lateral missing Pass1c cap2 only — wide off-forward reverted (103012) | **done** + side FOV follow-up |
+| TD-ARCH-034 | 2026-08 FOV plan | Far-rim nh≥4 dual-backlog (manual 215629 mh=5) | Hotfix N0/`9cfe265a`; mid residual sticky nh2–3: `104108` miss_frac≈0.93 mh_med=2 rim_ok wall~58–66. R1–R3 (`26a43613`/`9232821c`/`6829308e`): full-scan sticky nh2–3, FM floor≥8, Imm nh≤2 + idle Imm nh≤3, clamp ×0.70, lateral cap 3 when behind>ahead. Smoke land-south PASS; **mid DoD still needs same-path manual** | **in-progress** mid residual |
+| TD-ARCH-035 | 2026-08 FOV plan | FOV idle FirstMesh / camera-front priority | Side FOV: keep nh1 Imm/clamp; lateral missing Pass1c — R3 bump 2→3 when behind>ahead only; wide off-forward reverted (103012) | **done** + R3 lateral |
 | TD-ARCH-036 | 2026-08 FOV plan | Per-cy draw gate (column all-or-nothing) | `bd4e0356`; smoke PASS | **done** 2026-08-02 |
-| TD-ARCH-037 | 2026-08 FOV plan | Soft flight speed clamp on underfeet/near ahead miss | Restored plan nh≤2 ×0.75 (094817: uf=0 so nh≤1 never clamped); telem export | **done** follow-up |
-| TD-ARCH-038 | 2026-08 FOV plan | Fog knobs follow-up | P4: autofly holes≈0.27 but mid `215629` rim_ok=false (nh≥4); no Fog knobs without miss≤0.45 **and** rim hold | **open** backlog |
+| TD-ARCH-037 | 2026-08 FOV plan | Soft flight speed clamp on underfeet/near ahead miss | R2: nh≤2 always ×0.70 (no velocity cone); telem export | **done** R2 |
+| TD-ARCH-038 | 2026-08 FOV plan | Fog knobs follow-up | Gate: miss_frac≤0.45 **and** rim hold. Autofly holes low but mid `104108` miss_frac≈0.93 — **no Fog knobs** until mid gate | **open** backlog |
 | TD-ARCH-039 | 2026-08 FOV plan | Sub-16 mesh brick | P2 closed visual progressive DoD without sub-16 | **wont-fix** 2026-08-02 |
 
-P4 validate (`4abd8683` tip): unit `streaming_render_ready_invariants_test` PASS;
-`phase_P4_land_south_short.json` DoD miss_end=0 + post_stop_missing_zero.
+P4 validate + sticky-rim R1–R3: unit `streaming_render_ready_invariants_test` PASS;
+`phase_R1/R2/R3_land_south_short.json` DoD miss_end=0 + post_stop_missing_zero.
 Anti-circle held: no pending_gpu drain cut, no kick_cut 0.55 under HoleDrain,
-no Imm expand, no Fog knobs, no SoftDefer predicate widen.
+no Imm expand beyond nh≤5 sticky / idle nh≤3 stop, no Fog knobs, no SoftDefer
+predicate widen, no wide off-forward.
 TD-ARCH-032/033 unchanged (Era13 harness / rim latency — not plan blockers).
 
 Evidence (stale-apply + Era13 tails, 2026-07-29):
 - `manual_stale_apply_A.json` — `mesh_apply_stale`=0 (was ~392).
 - Remaining open outside FOV plan: TD-032 (D3 wall+sticky), TD-033 (rim confirm), 011, 013b, 018; Android GLES.
+- Mid residual evidence: `manual_latest_104108.json` / `perf_20260803-104108_9012.jsonl`.
 
 **Do not merge `arch/streaming-v2-v4` → develop until ARCH_D3 PASS + explicit request.**
 
