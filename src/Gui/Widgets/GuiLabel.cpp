@@ -27,9 +27,7 @@ void UGuiLabel::Draw(UGuiRenderer &renderer)
   }
   if (DrawBackground)
   {
-    const glm::vec4 &bg = BackgroundOverride ? *BackgroundOverride
-                                             : Theme->TooltipBackground;
-    renderer.DrawFilledRect(Bounds, bg);
+    renderer.DrawFilledRect(Bounds, Theme->TooltipBackground);
   }
   const glm::vec3 &color =
       UseSecondaryColor ? Theme->TextSecondary : Theme->TextPrimary;

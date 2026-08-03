@@ -12,6 +12,7 @@
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiSlot.h"
 #include "Gui/Widgets/GuiWidget.h"
+#include <algorithm>
 #include <cstdio>
 
 #if defined(__ANDROID__)
@@ -483,9 +484,7 @@ void UInGameHudScreen::EnsureVitalWidgets()
   }
   auto makeLabel = [this](UGuiLabel *&out) {
     auto lab = std::make_unique<UGuiLabel>(Theme, "");
-    // Opaque bar (TooltipBackground is too translucent → text washes out).
     lab->SetDrawBackground(true);
-    lab->SetBackgroundColorOverride(Theme->SlotBackground);
     lab->SetVisible(false);
     out = lab.get();
     RootPanel->AddChild(std::move(lab));
@@ -503,9 +502,12 @@ void UInGameHudScreen::LayoutVitals()
   {
     return;
   }
-  const int line = 20;
-  const int pad = 8;
-  const int w = 180;
+  // Theme metrics already include UI scale — do not hardcode 20px rows
+  // (FontSizeBody grows with scale and was taller than the bar on some displays).
+  const int line = Theme->FontSizeBody + Theme->Padding;
+  const int gap = std::max(2, Theme->Padding / 4);
+  const int pad = Theme->Padding;
+  const int w = std::max(Theme->FontSizeBody * 12, 120);
   int y = pad + GetContentOffsetY();
   const int x = pad + GetContentOffsetX();
   UGuiLabel *labels[] = {HealthLabel, SatietyLabel, ThirstLabel, FatigueLabel};
@@ -516,7 +518,7 @@ void UInGameHudScreen::LayoutVitals()
       continue;
     }
     lab->SetBounds({x, y, w, line});
-    y += line + 2;
+    y += line + gap;
   }
 }
 
