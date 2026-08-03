@@ -70,7 +70,7 @@
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-ARCH-034 | 2026-08 FOV plan | Far-rim nh≥4 dual-backlog (manual 215629 mh=5) | Knob cascade R1b/R1c regress (`142558` sch 10–12 gpu≈96 wall~84 vs `104108` wall~66). **S0** unwind absolute FM floors; **S1** rim pin + admission schedule↔Finish headroom; **S2** single clamp@miss, Imm nh≤2 only. Residual: mid DoD on same-path manual | **in-progress** systemic |
+| TD-ARCH-034 | 2026-08 FOV plan | Far-rim nh≥4 dual-backlog | S0–S2 systemic: pin + admission headroom. Mid `151852`: gpu_max=22 OK, wall~84 miss_end=1 Imm@stop; **S3** drop sch=max(12) overlay, Imm only when pending_gpu=0, PreferKick pin always, idle drain↑ | **in-progress** |
 | TD-ARCH-035 | 2026-08 FOV plan | FOV idle FirstMesh / camera-front priority | Side FOV: keep nh1 Imm/clamp; lateral missing Pass1c — R3 bump 2→3 when behind>ahead only; wide off-forward reverted (103012) | **done** + R3 lateral |
 | TD-ARCH-036 | 2026-08 FOV plan | Per-cy draw gate (column all-or-nothing) | `bd4e0356`; smoke PASS | **done** 2026-08-02 |
 | TD-ARCH-037 | 2026-08 FOV plan | Soft flight speed clamp on underfeet/near ahead miss | R2: nh≤2 always ×0.70 (no velocity cone); telem export | **done** R2 |

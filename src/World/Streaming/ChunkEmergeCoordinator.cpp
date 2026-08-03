@@ -2030,8 +2030,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           focus_ground_horiz, /*keep_h=*/2, /*keep_cy=*/-1,
           /*remesh_only=*/true);
     }
-    // Admit floor before remesh — Finalize MeshWorkAdmission caps schedule.
-    mesh_schedule = std::max(mesh_schedule, moving ? 12 : 16);
+    // S3: do NOT raise proposed schedule to 12/16 under holes — that fought
+    // admission (S0) and left Normal sch=12 thrash (manual 151852).
     auto &exec = GetColumnFlowExecutor();
     const MeshWorkAdmission &adm = mesh_service.GetMeshWorkAdmission();
     // J2/K1/L1: under HoleDrain backlog, rarer full-focus scan saves wall.
@@ -2062,11 +2062,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         // (Admit no-op if already Dirty) so ColumnFlow still drains the hole.
         // Manual 094817: extract-in-flight nearest skipped FirstMesh → sticky mh.
         exec.RequestPromoteRelight(hole_col, /*priority=*/55);
-        if (mesh_service.IsPendingGpuQueued(rim_hole) ||
-            mesh_service.IsPendingGpuKickedOrDispatched(rim_hole))
-        {
-          mesh_service.PreferKickPendingGpuQueued(rim_hole);
-        }
+      }
+      // S3: PreferKick pin whenever Queued/Kicked — not only when FindNearest
+      // still sees the hole (Pending hides it from HasMissing).
+      if (mesh_service.IsPendingGpuQueued(rim_hole) ||
+          mesh_service.IsPendingGpuKickedOrDispatched(rim_hole))
+      {
+        mesh_service.PreferKickPendingGpuQueued(rim_hole);
       }
       {
         ColumnWorkItem hole{};
@@ -2152,10 +2154,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       drain_steps = std::max(drain_steps, moving ? 3 : 4);
     }
-    exec.DrainBudget(world, drain_steps, focus_ground_horiz, focus_radius,
-                     /*admit_batch=*/admit_n);
-    // Idle sticky / S2 stop: Imm nearest pin nh≤2 only (not far-rim Imm).
+    // S3: idle + pin — drain harder for miss_end (151852 stop UV balloon).
     if (!moving && have_rim_target)
+    {
+      drain_steps = std::max(drain_steps, 5);
+    }
+    exec.DrainBudget(world, drain_steps, focus_ground_horiz, focus_radius,
+                     /*admit_batch=*/!moving && have_rim_target
+                                         ? std::max(admit_n, 3)
+                                         : admit_n);
+    // S3: Imm only when GPU Finish is idle — Imm while pending>0 burned
+    // wall 100–180ms at stop (151852) without clearing UV.
+    const bool gpu_finish_idle = pending_gpu_n == 0;
+    if (!moving && have_rim_target && gpu_finish_idle)
     {
       const int nh = std::max(
           std::abs(rim_hole.x - focus_ground_horiz.x),
@@ -2173,8 +2184,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         underfeet_immediate_cd = 1;
       }
     }
-    // G1/H/I/J3: sticky nearest-hole Immediate — nh≤2 only (S2). PreferKick on
-    // pin so Pending/InFlight hops cannot retarget.
+    // G1/H/I/J3: sticky pin Immediate — nh≤2 AND Finish idle (S3).
     if (have_rim_target)
     {
       const bool no_drawable =
@@ -2202,9 +2212,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const bool ms_ok = immediate_ms_used() < (moving ? 6.0 : 8.0);
       const bool slot_ok =
           underfeet_immediate_this_frame < kMaxUnderfeetImmediate;
-      if (nh <= 2 && slot_ok && ms_ok)
+      if (nh <= 2 && slot_ok && ms_ok && gpu_finish_idle)
       {
-        // S2: Imm only nh≤2 mid-surface (142558 far-rim Imm burned wall).
         const int idle_sticky_need = 1;
         const int queued_sticky_need = 2;
         if (pipeline_idle && sticky_frames >= idle_sticky_need)
@@ -2225,14 +2234,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           mesh_service.UpdateStickyNearestHole(rim_hole, false);
         }
       }
-      // J3/R1: PreferKick nh≤2 sticky≥2; nh≤3 sticky≥5 — always on pin.
-      if ((nh <= 2 && sticky_frames >= 2) ||
-          (nh <= 3 && sticky_frames >= 5))
+      // PreferKick pin every frame when queued/kicked (S3 — sticky gate was
+      // delaying Finish of the one hole that matters).
+      if (queued_stuck || kicked_stuck)
       {
-        if (queued_stuck || kicked_stuck)
-        {
-          mesh_service.PreferKickPendingGpuQueued(rim_hole);
-        }
+        mesh_service.PreferKickPendingGpuQueued(rim_hole);
       }
     }
     else
