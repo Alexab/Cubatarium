@@ -244,9 +244,13 @@ void UNewWorldScreen::Update(double /*dt*/)
   {
     DifficultyList->SetVisible(survival);
   }
-  if (BodyScroll)
+  if (survival != DifficultyVisibleCached)
   {
-    BodyScroll->LayoutContent(0, 0);
+    DifficultyVisibleCached = survival;
+    if (BodyScroll)
+    {
+      BodyScroll->LayoutContent(0, 0);
+    }
   }
 }
 

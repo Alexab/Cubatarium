@@ -55,6 +55,7 @@ private:
   UGuiLabel *PackSectionLabel{nullptr};
   std::unique_ptr<UResourcePackPickerForm> PackForm;
   bool NeedsBodyRelayout{false};
+  bool DifficultyVisibleCached{false};
 };
 
 } // namespace cutum

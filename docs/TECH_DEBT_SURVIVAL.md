@@ -17,10 +17,12 @@
 
 | ID | Closed in | Resolution |
 |----|-----------|------------|
-| | | |
+| TD-SURV-006 | surv-diff-v1 | HUD Breath bar for Survival drowning visibility — shipped on `InGameHudScreen` |
+| TD-SURV-007 | surv-diff-v1 | `WorldDifficulty` + persist + New World UI + `/difficulty` + vitals scale matrix |
 
 ## Notes
 
 - Mode (`WorldGameMode`) and difficulty (`WorldDifficulty`) stay separate.
 - Creative ignores difficulty (vitals frozen).
-- Missing `difficulty` in `world_data.json` → `normal` for Survival worlds.
+- Missing `difficulty` in `world_data.json` → `normal`.
+- TD-SURV-004 left Open: mid-session World Settings picker not added; console command is enough for v1.
