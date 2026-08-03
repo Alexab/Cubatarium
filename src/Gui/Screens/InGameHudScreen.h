@@ -74,6 +74,7 @@ private:
   UGuiLabel *SatietyLabel{nullptr};
   UGuiLabel *ThirstLabel{nullptr};
   UGuiLabel *FatigueLabel{nullptr};
+  UGuiLabel *BreathLabel{nullptr};
   UGuiRenderer *Renderer{nullptr};
   int PointerX{-1};
   int PointerY{-1};

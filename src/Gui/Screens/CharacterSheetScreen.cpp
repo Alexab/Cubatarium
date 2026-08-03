@@ -176,7 +176,10 @@ void UCharacterSheetScreen::RefreshLabels()
     }
     else
     {
-      ModeLabel->SetText("Mode: Survival");
+      char buf[96];
+      std::snprintf(buf, sizeof(buf), "Mode: Survival / %s",
+                    WorldDifficultyToString(snap.difficulty));
+      ModeLabel->SetText(buf);
     }
   }
   if (VitalLabels.size() >= 6 && snap.valid)

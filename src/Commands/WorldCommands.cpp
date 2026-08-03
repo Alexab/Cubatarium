@@ -8,6 +8,7 @@
 #include "Creatures/Player/User.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Game/GameSession.h"
+#include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
 #include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
@@ -70,6 +71,27 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
         session.SyncToWorldGameMode(mode);
         return CommandResult{true, std::string("Game mode: ") +
                                        WorldGameModeToString(mode)};
+      });
+
+  registry.Register(
+      "difficulty",
+      [&session](const std::vector<std::string> &args)
+      {
+        if (args.size() < 2)
+        {
+          return CommandResult{
+              false, "Usage: difficulty <peaceful|easy|normal>"};
+        }
+        const std::string key = Lower(args[1]);
+        if (key != "peaceful" && key != "easy" && key != "normal")
+        {
+          return CommandResult{
+              false, "Unknown difficulty (peaceful|easy|normal)"};
+        }
+        const WorldDifficulty difficulty = WorldDifficultyFromString(key);
+        session.SyncToWorldDifficulty(difficulty);
+        return CommandResult{true, std::string("Difficulty: ") +
+                                       WorldDifficultyToString(difficulty)};
       });
 
   registry.Register(

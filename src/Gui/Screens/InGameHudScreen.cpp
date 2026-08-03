@@ -493,6 +493,7 @@ void UInGameHudScreen::EnsureVitalWidgets()
   makeLabel(SatietyLabel);
   makeLabel(ThirstLabel);
   makeLabel(FatigueLabel);
+  makeLabel(BreathLabel);
   VitalsBuilt = true;
 }
 
@@ -510,7 +511,8 @@ void UInGameHudScreen::LayoutVitals()
   const int w = std::max(Theme->FontSizeBody * 12, 120);
   int y = pad + GetContentOffsetY();
   const int x = pad + GetContentOffsetX();
-  UGuiLabel *labels[] = {HealthLabel, SatietyLabel, ThirstLabel, FatigueLabel};
+  UGuiLabel *labels[] = {HealthLabel, SatietyLabel, ThirstLabel, FatigueLabel,
+                         BreathLabel};
   for (UGuiLabel *lab : labels)
   {
     if (!lab)
@@ -530,7 +532,8 @@ void UInGameHudScreen::UpdateVitalBars()
   }
   const bool survival =
       Session->GetWorldGameMode() == WorldGameMode::Survival;
-  UGuiLabel *labels[] = {HealthLabel, SatietyLabel, ThirstLabel, FatigueLabel};
+  UGuiLabel *labels[] = {HealthLabel, SatietyLabel, ThirstLabel, FatigueLabel,
+                         BreathLabel};
   if (!survival)
   {
     for (UGuiLabel *lab : labels)
@@ -568,6 +571,7 @@ void UInGameHudScreen::UpdateVitalBars()
   setBar(SatietyLabel, "Food", snap.vitals.satiety, snap.vitals.maxSatiety);
   setBar(ThirstLabel, "Water", snap.vitals.thirst, snap.vitals.maxThirst);
   setBar(FatigueLabel, "Fatigue", snap.vitals.fatigue, snap.vitals.maxFatigue);
+  setBar(BreathLabel, "Breath", snap.vitals.breath, snap.vitals.maxBreath);
 }
 
 } // namespace cutum

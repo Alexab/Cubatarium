@@ -2,6 +2,7 @@
 
 #include "Gui/Core/GuiScreenBase.h"
 #include "Gui/Core/GuiTypes.h"
+#include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
 #include <memory>
 
@@ -37,6 +38,7 @@ private:
   void LayoutWorldPageInScroll(UGuiScrollView &scroll) const;
   void LayoutWorldPage(const GuiRect &area) const;
   WorldGameMode ReadSelectedGameMode() const;
+  WorldDifficulty ReadSelectedDifficulty() const;
 
   IUGuiMenuHost *Host{nullptr};
   UGuiWindow *Window{nullptr};
@@ -48,6 +50,8 @@ private:
   std::unique_ptr<UWorldViewSettingsForm> ViewForm;
   UGuiLabel *GameModeSectionLabel{nullptr};
   UGuiListView *GameModeList{nullptr};
+  UGuiLabel *DifficultySectionLabel{nullptr};
+  UGuiListView *DifficultyList{nullptr};
   UGuiLabel *PackSectionLabel{nullptr};
   std::unique_ptr<UResourcePackPickerForm> PackForm;
   bool NeedsBodyRelayout{false};
