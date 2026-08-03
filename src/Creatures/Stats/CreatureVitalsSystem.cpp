@@ -2,10 +2,12 @@
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Environment/CreatureEnvironment.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Game/ModePolicy.h"
 #include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <vector>
 
 namespace cutum
@@ -50,7 +52,7 @@ DifficultyVitalsScale ScaleForDifficulty(WorldDifficulty difficulty)
 void CreatureVitalsSystem::Tick(UWorld &world, WorldGameMode mode,
                                 WorldDifficulty difficulty, float dt)
 {
-  if (mode != WorldGameMode::Survival || dt <= 0.f)
+  if (!ModePolicy::AllowsNeedsTick(mode) || dt <= 0.f)
   {
     return;
   }
@@ -140,17 +142,21 @@ void CreatureVitalsSystem::Tick(UWorld &world, WorldGameMode mode,
 
 bool CreatureVitalsSystem::ApplyDamage(UWorld &world, UCreature &target,
                                        float amount, WorldGameMode mode,
-                                       const char * /*reason*/)
+                                       const char *reason)
 {
   if (mode == WorldGameMode::Creative || amount <= 0.f)
   {
     return false;
   }
   CreatureVitals &v = target.GetVitals();
-  // Flat armor remains as fleshy mitigation; group math is applied upstream
-  // in InfluenceHitMath when the hit comes from Influence.
-  const float mitigated =
-      std::max(0.f, amount - v.armor * 0.5f);
+  float mitigated = amount;
+  // Influence hits are already mitigated via ResolveHitParams / armor_groups.
+  const bool pre_mitigated =
+      reason && (std::strcmp(reason, "influence") == 0);
+  if (!pre_mitigated)
+  {
+    mitigated = std::max(0.f, amount - v.armor * 0.5f);
+  }
   // Luck: small chance to shrug off a hit.
   if (target.GetAttributes().luck >= 18 && mitigated > 0.f)
   {

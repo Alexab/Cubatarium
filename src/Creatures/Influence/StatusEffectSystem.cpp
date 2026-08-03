@@ -2,6 +2,7 @@
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Influence/StatusEffectCatalog.h"
 #include "Creatures/Stats/CreatureVitalsSystem.h"
+#include "Game/ModePolicy.h"
 #include "World/Core/World.h"
 #include <algorithm>
 #include <vector>
@@ -82,7 +83,8 @@ void StatusEffectSystem::Tick(UWorld &world, WorldGameMode mode, float dt)
             continue;
           }
           inst.RemainingSec -= dt;
-          if (def->TickIntervalSec > 0.f && def->HealthPerTick != 0.f)
+          if (def->TickIntervalSec > 0.f && def->HealthPerTick != 0.f &&
+              ModePolicy::AllowsStatusDot(mode))
           {
             inst.TickAccumulator += dt;
             while (inst.TickAccumulator >= def->TickIntervalSec)

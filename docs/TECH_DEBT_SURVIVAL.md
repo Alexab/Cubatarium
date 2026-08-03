@@ -9,7 +9,7 @@
 |----|----------|------|--------------|--------|
 | TD-SURV-001 | surv-diff-v1 | Hard / Hardcore difficulty | Not requested in v1 | backlog |
 | TD-SURV-002 | surv-diff-v1 | Breath drain only when eyes/head submerged | Current AABB body / `inWater`; UX+physics change | backlog |
-| TD-SURV-003 | surv-diff-v1 | Peaceful: disable hostile aggro/combat | Needs-first; little hostile coverage yet | backlog |
+| TD-SURV-003 | surv-diff-v1 | Peaceful: disable hostile aggro/combat | Shipped via ModePolicy + SimpleFsmBrain + InfluenceResolver | closed Wave 2 |
 | TD-SURV-004 | surv-diff-v1 | Difficulty in World Settings mid-session UI | `/difficulty` covers change for v1 | backlog |
 | TD-SURV-005 | surv-diff-v1 | Separate starve vs drown damage rates | Shared `kStarveDamagePerSec` today | backlog |
 

@@ -212,6 +212,12 @@ const InventoryEntryRef *UCreatureInventory::GetActiveEntryRef() const
   return &slot.entry;
 }
 
+InventoryEntryRef *UCreatureInventory::GetActiveEntryRef()
+{
+  return const_cast<InventoryEntryRef *>(
+      static_cast<const UCreatureInventory *>(this)->GetActiveEntryRef());
+}
+
 void UCreatureInventory::EnsureHotbarCount(size_t count)
 {
   if (Hotbars.size() >= count)

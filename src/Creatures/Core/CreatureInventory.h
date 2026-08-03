@@ -34,6 +34,7 @@ public:
   void SetActiveSlotIndex(size_t slot) { ActiveSlotIndex = slot; }
 
   const InventoryEntryRef *GetActiveEntryRef() const;
+  InventoryEntryRef *GetActiveEntryRef();
   void EnsureHotbarCount(size_t count);
   bool AssignToHotbar(size_t bar, size_t slot, const InventoryEntryRef &entry);
   void ClearHotbarSlot(size_t bar, size_t slot);

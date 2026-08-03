@@ -1,6 +1,7 @@
 #include "Items/ToolCapabilities.h"
 #include "Blocks/BlockDigRules.h"
 #include "Game/Inventory/InventoryTypes.h"
+#include "Game/ModePolicy.h"
 #include <algorithm>
 #include <cmath>
 
@@ -16,16 +17,7 @@ int BareHandFleshyDamage(const CreatureAttributes &attrs)
 
 bool IsToolWearEnabled(WorldGameMode mode, WorldDifficulty difficulty)
 {
-  if (mode == WorldGameMode::Creative)
-  {
-    return false;
-  }
-  // Peaceful = easiest Survival tier (difficulty agent).
-  if (difficulty == WorldDifficulty::Peaceful)
-  {
-    return false;
-  }
-  return true;
+  return ModePolicy::AllowsToolWear(mode, difficulty);
 }
 
 std::unordered_map<std::string, int>

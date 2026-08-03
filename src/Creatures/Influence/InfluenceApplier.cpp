@@ -3,12 +3,51 @@
 #include "Creatures/Influence/InfluenceEvent.h"
 #include "Creatures/Influence/StatusEffectSystem.h"
 #include "Creatures/Stats/CreatureVitalsSystem.h"
+#include "Game/Inventory/InventoryTypes.h"
+#include "Items/ItemDefinitionStorage.h"
+#include "Items/ToolCapabilities.h"
 #include "World/Core/World.h"
 #include <algorithm>
 #include <cmath>
 
 namespace cutum
 {
+
+namespace
+{
+
+void ApplyMeleeToolWear(UWorld &world, UCreature &source,
+                        const InfluenceCapability &cap)
+{
+  if (cap.PunchAttackUses <= 0)
+  {
+    return;
+  }
+  InventoryEntryRef *active = source.GetInventory().GetActiveEntryRef();
+  if (!active || active->empty || active->kind != InventoryEntryKind::Item)
+  {
+    return;
+  }
+  const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
+  if (!items)
+  {
+    return;
+  }
+  const ItemDefinition *def = items->Get(active->Id);
+  if (!def || def->Id != cap.Id)
+  {
+    return;
+  }
+  const float wear_delta = 1.f / static_cast<float>(cap.PunchAttackUses);
+  const bool wear_on =
+      IsToolWearEnabled(world.GetGameMode(), world.GetDifficulty());
+  if (ApplyItemWear(*active, *def, wear_delta, wear_on))
+  {
+    // Slot cleared (destroy).
+  }
+}
+
+} // namespace
 
 InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
                                              InfluencePrediction &pred,
@@ -78,6 +117,12 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
     {
       StatusEffectSystem::ApplyStatus(*target, status_id);
     }
+  }
+
+  if (pred.Capability.Channel == InfluenceChannel::Melee &&
+      total_damage > 0.f)
+  {
+    ApplyMeleeToolWear(world, *source, pred.Capability);
   }
 
   source->ResetInfluenceCooldown();

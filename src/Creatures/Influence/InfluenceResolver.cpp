@@ -2,6 +2,7 @@
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Influence/BareHandToolInfluenceProvider.h"
 #include "Creatures/Influence/InfluenceHitMath.h"
+#include "Game/ModePolicy.h"
 #include "World/Core/World.h"
 #include <algorithm>
 #include <cmath>
@@ -49,11 +50,30 @@ InfluencePrediction InfluenceResolver::Resolve(
   pred.SourceId = source.GetId();
   pred.SourcePos = source.GetBodyOrigin();
 
-  if (mode == WorldGameMode::Creative)
+  if (!ModePolicy::AllowsCombatDamage(mode))
   {
     pred.CancelReason = "creative";
     pred.Cancelled = true;
     return pred;
+  }
+
+  if (!ModePolicy::AllowsHostileAggro(mode, world.GetDifficulty()))
+  {
+    // Safety net: hostile melee vs player cancelled on Peaceful.
+    const CreatureIntent &early = source.GetIntent();
+    const uint64_t early_target = ResolveTargetId(early);
+    if (early_target != 0)
+    {
+      if (const UCreature *t = world.GetCreature(early_target))
+      {
+        if (t->IsPlayerCharacter() && !source.IsPlayerCharacter())
+        {
+          pred.CancelReason = "peaceful";
+          pred.Cancelled = true;
+          return pred;
+        }
+      }
+    }
   }
 
   const CreatureIntent &intent = source.GetIntent();

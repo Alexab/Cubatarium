@@ -3,7 +3,9 @@
 #include "Activity/Helpers/CreatureActivitySteering.h"
 #include "Creatures/Core/CreatureIntent.h"
 #include "Creatures/Influence/InfluenceIntentUtil.h"
+#include "Game/ModePolicy.h"
 #include "Navigation/NavigationTypes.h"
+#include "World/Core/World.h"
 #include "World/Diagnostics/CreatureMovementDiagnostics.h"
 #include <algorithm>
 #include <cmath>
@@ -293,6 +295,21 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
       HorizontalDistanceXZ(view->bodyOrigin, controlled_body);
   blackboard.actionTimer -= dt;
 
+  {
+    const UWorld &world = sink.GetWorld();
+    if (!ModePolicy::AllowsHostileAggro(world.GetGameMode(),
+                                        world.GetDifficulty()))
+    {
+      blackboard.state = CreatureFsmState::Idle;
+      blackboard.targetId = 0;
+      intent.suggestedAnim = LocomotionState::Idle;
+      sink.SetIntent(self_id, intent);
+      RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, intent,
+                        "melee_peaceful_idle");
+      return;
+    }
+  }
+
   if (dist > snapshot->behavior.aggroRadius)
   {
     blackboard.state = CreatureFsmState::Idle;
@@ -312,6 +329,17 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
   // chasing so mobs climb out of pits / up stairs toward the player.
   if (dist <= snapshot->behavior.attackRange && std::abs(dy) <= 1.15f)
   {
+    const UWorld &world = sink.GetWorld();
+    if (!ModePolicy::AllowsHostileAggro(world.GetGameMode(),
+                                        world.GetDifficulty()))
+    {
+      blackboard.state = CreatureFsmState::Idle;
+      intent.suggestedAnim = LocomotionState::Idle;
+      sink.SetIntent(self_id, intent);
+      RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, intent,
+                        "melee_peaceful");
+      return;
+    }
     blackboard.state = CreatureFsmState::Attack;
     intent.moveDirWorld = glm::vec3(0.0f);
     intent.moveSpeed = 0.0f;
