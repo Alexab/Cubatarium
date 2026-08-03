@@ -1,4 +1,6 @@
 #include "Activity/Agents/BotPlayerActivityAgent.h"
+#include "Creatures/Influence/InfluenceIntentUtil.h"
+#include "Creatures/Core/Creature.h"
 #include "Activity/Helpers/CreatureActivityNavigation.h"
 #include "Activity/Helpers/CreatureActivitySteering.h"
 #include "Activity/IUWorldPerception.h"
@@ -148,6 +150,7 @@ void UBotPlayerActivityAgent::Tick(IUWorldPerception &perception,
       {
         bb.state = CreatureFsmState::Attack;
         intent.attackTargetId = hostileId;
+        SyncInfluenceFromAttackTarget(intent);
         intent.suggestedAnim = LocomotionState::Action;
         if (bb.actionTimer <= 0.f)
         {

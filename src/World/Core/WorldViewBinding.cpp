@@ -471,6 +471,27 @@ void UWorld::RunLegacyPhysicsFrame()
         creature.ExecuteIntent(*this, dt);
       });
 
+  // Controlled / possessed player: resolve Influence after agents (input may
+  // have set attackTargetId on LMB).
+  if (Environment.GetControlledCreatureId() != 0)
+  {
+    if (UCreature *controlled =
+            GetCreature(Environment.GetControlledCreatureId()))
+    {
+      const CreatureIntent &intent = controlled->GetIntent();
+      if (intent.attackTargetId != 0 || intent.Influence.TargetId != 0)
+      {
+        CreatureCombat::TryMeleeStrike(*this, *controlled, GetGameMode());
+        // One-shot: clear attack target after resolve attempt so hold-LMB dig
+        // does not spam; cooldown still gates actual hits.
+        CreatureIntent cleared = intent;
+        cleared.attackTargetId = 0;
+        cleared.Influence = InfluenceIntent{};
+        controlled->SetIntent(cleared);
+      }
+    }
+  }
+
   bool is_moved = camera && camera->DoMovement(this);
   static bool was_collision_ready = true;
   const bool collision_ready =

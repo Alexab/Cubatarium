@@ -2,10 +2,12 @@
 #include "Activity/Helpers/CreatureActivityNavigation.h"
 #include "Activity/Helpers/CreatureActivitySteering.h"
 #include "Creatures/Core/CreatureIntent.h"
+#include "Creatures/Influence/InfluenceIntentUtil.h"
 #include "Navigation/NavigationTypes.h"
 #include "World/Diagnostics/CreatureMovementDiagnostics.h"
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace cutum
 {
@@ -203,11 +205,85 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
 
   if (!controlled)
   {
-    blackboard.state = CreatureFsmState::Idle;
-    intent.suggestedAnim = LocomotionState::Idle;
+    // Mob↔mob fallback: chase/attack nearest other creature in aggro.
+    CreatureId nearest_id = 0;
+    glm::vec3 nearest_body = view->bodyOrigin;
+    float nearest_dist = std::numeric_limits<float>::max();
+    const auto neighbors = perception.QueryCreatureNeighborsInRadius(
+        view->bodyOrigin, snapshot->behavior.aggroRadius, self_id);
+    for (const CreatureNeighborView &n : neighbors)
+    {
+      const float d = HorizontalDistanceXZ(view->bodyOrigin, n.bodyOrigin);
+      if (d < nearest_dist)
+      {
+        nearest_dist = d;
+        nearest_id = n.Id;
+        nearest_body = n.bodyOrigin;
+      }
+    }
+    if (nearest_id == 0)
+    {
+      blackboard.state = CreatureFsmState::Idle;
+      intent.suggestedAnim = LocomotionState::Idle;
+      sink.SetIntent(self_id, intent);
+      RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, intent,
+                        "melee_no_target");
+      return;
+    }
+    blackboard.actionTimer -= dt;
+    blackboard.targetId = nearest_id;
+    blackboard.lastSeenPos = nearest_body;
+    const float dy = nearest_body.y - view->bodyOrigin.y;
+    if (nearest_dist <= snapshot->behavior.attackRange && std::abs(dy) <= 1.15f)
+    {
+      blackboard.state = CreatureFsmState::Attack;
+      intent.moveDirWorld = glm::vec3(0.0f);
+      intent.moveSpeed = 0.0f;
+      intent.attackTargetId = nearest_id;
+      SyncInfluenceFromAttackTarget(intent);
+      intent.suggestedAnim = LocomotionState::Action;
+      if (blackboard.actionTimer <= 0.0f)
+      {
+        blackboard.actionTimer = snapshot->behavior.attackCooldown;
+      }
+      sink.SetIntent(self_id, intent);
+      RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, intent,
+                        "melee_attack_mob");
+      return;
+    }
+    // Chase nearest (reuse path below via synthetic controlled goal).
+    blackboard.state = CreatureFsmState::Chase;
+    NavigationQuery query;
+    query.search_distance = 32;
+    query.body_height = NavigationBodyHeightForBounds(snapshot->boundsSize.y);
+    query.max_jump = snapshot->locomotion.jumpHeightBlocks;
+    const CreatureNavigationSteerResult steer = SteerCreatureAlongPath(
+        blackboard.navigation, sink.GetWorld(), view->bodyOrigin, nearest_body,
+        query, dt, 0.45f, self_id, view->typeId);
+    glm::vec3 move_dir = steer.move_dir;
+    if (!steer.has_path || glm::length(move_dir) < 1e-4f)
+    {
+      const glm::vec3 to_target =
+          XzDirectionFromTo(view->bodyOrigin, nearest_body);
+      if (!PickApproachDirection(perception, snapshot->habitat,
+                                 view->bodyOrigin, to_target,
+                                 snapshot->boundsSize, self_id, move_dir))
+      {
+        intent.moveDirWorld = glm::vec3(0.0f);
+        intent.moveSpeed = 0.0f;
+        intent.suggestedAnim = LocomotionState::Idle;
+        sink.SetIntent(self_id, intent);
+        return;
+      }
+    }
+    move_dir = SteerWithFeelersAndSeparation(perception, *view, *snapshot,
+                                             move_dir, 0.45f);
+    intent.moveDirWorld = move_dir;
+    intent.moveSpeed = ResolveIntentMoveSpeed(*snapshot);
+    intent.suggestedAnim = LocomotionState::Run;
     sink.SetIntent(self_id, intent);
     RecordBrainIntent(self_id, *view, *snapshot, blackboard.state, intent,
-                      "melee_no_controlled");
+                      "chase_mob");
     return;
   }
 
@@ -240,6 +316,7 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
     intent.moveDirWorld = glm::vec3(0.0f);
     intent.moveSpeed = 0.0f;
     intent.attackTargetId = controlled->Id;
+    SyncInfluenceFromAttackTarget(intent);
     intent.suggestedAnim = LocomotionState::Action;
     if (blackboard.actionTimer <= 0.0f)
     {

@@ -1,4 +1,11 @@
 #include "Blocks/Input/BlockInputController.h"
+#include "App/Application.h"
+#include "Creatures/Core/Creature.h"
+#include "Creatures/Influence/InfluenceIntentUtil.h"
+#include "Game/WorldGameMode.h"
+#include "Render/Camera/Camera.h"
+#include "Render/Engine/GeometryEngine.h"
+#include "World/Core/World.h"
 #include "Game/WorldGameMode.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/GeometryEngine.h"
@@ -13,6 +20,7 @@
 #include "App/Platform/GlfwKeyCompat.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
+#include "Creatures/Influence/InfluenceIntentUtil.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Camera/Camera.h"
@@ -172,6 +180,9 @@ void UBlockInputController::TryUseActiveSlot(const BlockInputContext &ctx)
     }
     break;
   }
+  case InventoryEntryKind::Item:
+    // Tools are used via dig/break path, not place.
+    break;
   case InventoryEntryKind::Block:
   default:
     ctx.World->AddObjectByView();
@@ -220,6 +231,35 @@ void UBlockInputController::HandleLeftPress(const BlockInputContext &ctx)
   {
     return;
   }
+
+  // Survival: LMB on a creature sets melee Influence intent on the controlled
+  // creature (resolved in WorldViewBinding). Prefer over dig when a creature is
+  // under the crosshair.
+  if (ctx.World->GetGameMode() == WorldGameMode::Survival)
+  {
+    if (auto camera = ctx.World->GetCurrentUserCamera())
+    {
+      const auto target = ctx.World->PickCreatureByView(
+          camera->GetPosition(), camera->GetFront(), 4.0f);
+      const CreatureId controlled_id = ctx.World->GetControlledCreatureId();
+      if (target && *target != controlled_id)
+      {
+        if (UCreature *self = ctx.World->GetCreature(controlled_id))
+        {
+          CreatureIntent intent = self->GetIntent();
+          intent.attackTargetId = *target;
+          SyncInfluenceFromAttackTarget(intent);
+          intent.suggestedAnim = LocomotionState::Action;
+          intent.clearOnApply = false;
+          self->SetIntent(intent);
+          LeftDownTime = std::chrono::steady_clock::now();
+          LeftHeld = true;
+          return;
+        }
+      }
+    }
+  }
+
   LeftDownTime = std::chrono::steady_clock::now();
   LeftHeld = true;
 

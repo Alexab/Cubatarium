@@ -84,6 +84,42 @@ InfluencePrediction InfluenceResolver::Resolve(
     return pred;
   }
 
+  // Aura / radius prototype: hit all neighbors in RadiusBlocks.
+  if (cap.Targeting == InfluenceTargeting::Radius && cap.RadiusBlocks > 0.f)
+  {
+    const auto neighbors = world.QueryCreatureNeighborsInRadius(
+        source.GetBodyOrigin(), cap.RadiusBlocks, source.GetId());
+    for (const auto &n : neighbors)
+    {
+      UCreature *target = world.GetCreature(n.Id);
+      if (!target)
+      {
+        continue;
+      }
+      const InfluenceHitParams hit = InfluenceHitMath::Compute(
+          target->GetArmorGroups(), cap, source.GetTimeSinceLastInfluenceSec());
+      if (!hit.DidHit || hit.Damage <= 0.f)
+      {
+        continue;
+      }
+      InfluenceTargetDelta delta;
+      delta.TargetId = n.Id;
+      delta.TargetPos = target->GetBodyOrigin();
+      delta.HealthDelta = -hit.Damage;
+      pred.Targets.push_back(delta);
+      pred.IntervalMul = hit.IntervalMul;
+    }
+    if (pred.Targets.empty())
+    {
+      pred.CancelReason = "no_radius_targets";
+      pred.Cancelled = true;
+      return pred;
+    }
+    pred.SourceFatigueDelta = cap.SourceFatigueCost;
+    pred.Valid = true;
+    return pred;
+  }
+
   const uint64_t target_id = ResolveTargetId(intent);
   if (target_id == 0 || target_id == source.GetId())
   {
