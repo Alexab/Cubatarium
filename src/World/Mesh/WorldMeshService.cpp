@@ -419,6 +419,29 @@ void UWorldMeshService::UpdateStickyNearestHole(glm::ivec3 coord, bool alive)
   }
 }
 
+void UWorldMeshService::UpdateRimHolePin(glm::ivec3 focus_horiz, int focus_radius,
+                                         bool found_nearest, glm::ivec3 nearest)
+{
+  const int margin = std::max(0, focus_radius) + 1;
+  const auto in_focus = [&](glm::ivec3 c) {
+    return std::max(std::abs(c.x - focus_horiz.x),
+                    std::abs(c.z - focus_horiz.z)) <= margin;
+  };
+  if (RimHolePinActive)
+  {
+    if (HasDrawableGreedyMesh(RimHolePinCoord) || !in_focus(RimHolePinCoord))
+    {
+      RimHolePinActive = false;
+      RimHolePinCoord = glm::ivec3(0);
+    }
+  }
+  if (!RimHolePinActive && found_nearest)
+  {
+    RimHolePinCoord = nearest;
+    RimHolePinActive = true;
+  }
+}
+
 const MeshRebuildTickStats &UWorldMeshService::GetLastRebuildTickStats() const
 {
   return Cache.GetLastRebuildTickStats();

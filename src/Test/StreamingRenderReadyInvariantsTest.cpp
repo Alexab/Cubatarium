@@ -281,7 +281,7 @@ int main()
     const auto a10 = ComputeMeshWorkAdmission(refill);
     Expect(a10.mode == MeshWorkAdmission::Mode::HoleDrain,
            "G0 holes+queued≥ring → HoleDrain despite pending<12");
-    Expect(FinalizeSchedule(20, a10) <= 5, "G0 latch caps FOV floor sch=20");
+    Expect(FinalizeSchedule(20, a10) <= 8, "G0 latch cool FM floor sch≤8 (S1)");
 
     MeshWorkAdmissionInput warm_pend{};
     warm_pend.pending_gpu = 10;
@@ -292,7 +292,7 @@ int main()
     const auto a10b = ComputeMeshWorkAdmission(warm_pend);
     Expect(a10b.mode == MeshWorkAdmission::Mode::HoleDrain,
            "G0 holes+pending≥8 → HoleDrain even if queued<ring/2");
-    Expect(FinalizeSchedule(12, a10b) <= 5, "G0 warm-pending caps sch=12");
+    Expect(FinalizeSchedule(12, a10b) <= 8, "G0 warm-pending cool FM sch≤8 (S1)");
 
     MeshWorkAdmissionInput refill_exit{};
     refill_exit.pending_gpu = 6;
@@ -323,7 +323,7 @@ int main()
     const auto a13 = ComputeMeshWorkAdmission(uv_holes);
     Expect(a13.mode == MeshWorkAdmission::Mode::HoleDrain,
            "I UV≥8 + pending≥8 → HoleDrain without visual_holes");
-    Expect(FinalizeSchedule(12, a13) <= 5, "I UV holes caps FOV sch=12");
+    Expect(FinalizeSchedule(12, a13) <= 8, "I UV holes cool FM sch≤8 (S1)");
 
     // Queued refill without visual holes → Warm (not Normal/sch=12).
     MeshWorkAdmissionInput q_warm{};
@@ -349,7 +349,7 @@ int main()
     const auto a15 = ComputeMeshWorkAdmission(cool_holes_j0);
     Expect(a15.mode == MeshWorkAdmission::Mode::HoleDrain,
            "J0 UV holes + pending=1 → HoleDrain not Normal");
-    Expect(FinalizeSchedule(12, a15) <= 5, "J0 cool holes caps sch=12");
+    Expect(FinalizeSchedule(12, a15) <= 8, "J0 cool holes FM sch≤8 (S1)");
 
     // J1: miss backlog HoleDrain prefers Finish wall budget.
     MeshWorkAdmissionInput finish_bias{};

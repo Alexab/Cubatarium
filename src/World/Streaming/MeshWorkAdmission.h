@@ -290,6 +290,39 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     out.max_schedule =
         std::max(out.max_schedule, fm + std::max(0, out.remesh_schedule));
   }
+
+  // S1: schedule ↔ Finish headroom (admission-owned; no coordinator nh floors).
+  // Hot GPU: remesh off + Finish boost; keep FirstMesh floor (≥4) so pin work
+  // still admits — do not crush FM to 2 (unit + morning 104108).
+  // Cool + holes: moderate FM 6–8 (replaces coordinator absolute floors).
+  // Manual 142558: absolute sch floor 10–12 while pending≥16 → gpu≈96 thrash.
+  if (holes &&
+      (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
+       out.mode == MeshWorkAdmission::Mode::DeepBacklog))
+  {
+    const int ring = std::max(1, in.ring_depth);
+    const int hot = ring * 2;
+    const int pending = static_cast<int>(
+        std::min<size_t>(in.pending_gpu, 1000000));
+    if (pending >= hot)
+    {
+      out.remesh_schedule = 0;
+      out.first_mesh_schedule = std::max(out.first_mesh_schedule, 4);
+      out.max_schedule = out.first_mesh_schedule;
+      out.max_drain = std::max(out.max_drain, std::max(16, ring * 2));
+      out.gpu_budget_frac = std::max(out.gpu_budget_frac, 0.90);
+      out.enqueue_gpu_budget =
+          std::min(out.enqueue_gpu_budget, std::max(0, ring / 2));
+    }
+    else if (pending <= 12)
+    {
+      out.first_mesh_schedule =
+          std::max(out.first_mesh_schedule, in.moving ? 6 : 8);
+      out.max_schedule = std::max(
+          out.max_schedule,
+          out.first_mesh_schedule + std::max(0, out.remesh_schedule));
+    }
+  }
   return out;
 }
 

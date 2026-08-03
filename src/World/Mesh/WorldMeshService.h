@@ -199,6 +199,17 @@ public:
   void UpdateStickyNearestHole(glm::ivec3 coord, bool alive);
   int GetStickyNearestHoleFrames() const { return StickyNearestHoleFrames; }
   glm::ivec3 GetStickyNearestHoleCoord() const { return StickyNearestHoleCoord; }
+  /// S1: pin nearest missing until FirstMesh drawable or leaves focus+margin.
+  /// Survives FindNearest hops while Pending/InFlight hide the hole.
+  void UpdateRimHolePin(glm::ivec3 focus_horiz, int focus_radius,
+                        bool found_nearest, glm::ivec3 nearest);
+  bool HasRimHolePin() const { return RimHolePinActive; }
+  glm::ivec3 GetRimHolePin() const { return RimHolePinCoord; }
+  void ClearRimHolePin()
+  {
+    RimHolePinActive = false;
+    RimHolePinCoord = glm::ivec3(0);
+  }
   const MeshRebuildTickStats &GetLastRebuildTickStats() const;
   uint64_t GetMeshRevision() const;
   uint64_t GetCullRevision() const;
@@ -262,6 +273,8 @@ private:
   uint64_t LastEditDirtyN{0};
   glm::ivec3 StickyNearestHoleCoord{0};
   int StickyNearestHoleFrames{0};
+  bool RimHolePinActive{false};
+  glm::ivec3 RimHolePinCoord{0};
 };
 
 } // namespace cutum

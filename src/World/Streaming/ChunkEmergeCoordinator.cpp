@@ -2012,9 +2012,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   glm::ivec3 isolated_hole{};
   const bool found_nearest_missing = mesh_service.FindNearestMissingGreedyMesh(
       world.GetBlockWorld(), focus_ground_horiz, focus_radius, isolated_hole);
+  // S1: pin nearest until FirstMesh drawable — FindNearest skips Pending/InFlight
+  // so the target hops while the visual void remains.
+  mesh_service.UpdateRimHolePin(focus_ground_horiz, focus_radius,
+                                found_nearest_missing, isolated_hole);
+  const bool have_rim_target = mesh_service.HasRimHolePin();
+  const glm::ivec3 rim_hole =
+      have_rim_target ? mesh_service.GetRimHolePin() : glm::ivec3(0);
   const bool isolated_missing =
       visual_holes || missing_visible_mesh || missing_underfeet ||
-      found_nearest_missing;
+      have_rim_target;
   if (isolated_missing)
   {
     if (pending_dirty > 200)
@@ -2037,28 +2044,28 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         hole_backlog_mode &&
         (pending_async >= 12 || pending_gpu_n >= 12);
     int nearest_miss_nh = -1;
-    if (found_nearest_missing)
+    if (have_rim_target)
     {
       nearest_miss_nh = std::max(
-          std::abs(isolated_hole.x - focus_ground_horiz.x),
-          std::abs(isolated_hole.z - focus_ground_horiz.z));
-      const glm::ivec2 hole_col(isolated_hole.x, isolated_hole.z);
+          std::abs(rim_hole.x - focus_ground_horiz.x),
+          std::abs(rim_hole.z - focus_ground_horiz.z));
+      const glm::ivec2 hole_col(rim_hole.x, rim_hole.z);
       // N0c: Admit skips Pending/InFlight — promote Relight instead of no-op
       // FirstMesh enqueue (far-rim sticky mh=5 under dual backlog, 215629).
       const bool nearest_in_pipeline =
-          mesh_service.IsPendingGpuApply(isolated_hole) ||
-          mesh_service.HasInflightMeshBuild(isolated_hole) ||
-          mesh_service.IsGpuExtractInFlight(isolated_hole);
+          mesh_service.IsPendingGpuApply(rim_hole) ||
+          mesh_service.HasInflightMeshBuild(rim_hole) ||
+          mesh_service.IsGpuExtractInFlight(rim_hole);
       if (nearest_in_pipeline)
       {
         // Relight helps light debt; it does NOT create FirstMesh. Keep enqueue
         // (Admit no-op if already Dirty) so ColumnFlow still drains the hole.
         // Manual 094817: extract-in-flight nearest skipped FirstMesh → sticky mh.
         exec.RequestPromoteRelight(hole_col, /*priority=*/55);
-        if (mesh_service.IsPendingGpuQueued(isolated_hole) ||
-            mesh_service.IsPendingGpuKickedOrDispatched(isolated_hole))
+        if (mesh_service.IsPendingGpuQueued(rim_hole) ||
+            mesh_service.IsPendingGpuKickedOrDispatched(rim_hole))
         {
-          mesh_service.PreferKickPendingGpuQueued(isolated_hole);
+          mesh_service.PreferKickPendingGpuQueued(rim_hole);
         }
       }
       {
@@ -2067,7 +2074,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         hole.kind = ColumnWorkKind::FirstMesh;
         hole.priority = 100;
         hole.scan_full_focus = false;
-        hole.cy = isolated_hole.y;
+        hole.cy = rim_hole.y;
         exec.Enqueue(hole);
       }
     }
@@ -2090,11 +2097,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         hole_backlog_mode && nearest_miss_nh >= 4;
     const int sticky_for_scan = mesh_service.GetStickyNearestHoleFrames();
     const bool sticky_rim_force_scan =
-        hole_backlog_mode && found_nearest_missing && sticky_for_scan >= 1 &&
+        hole_backlog_mode && have_rim_target && sticky_for_scan >= 1 &&
         nearest_miss_nh >= 2 && nearest_miss_nh <= 3;
     const bool rim_plateau_close =
         !far_rim_force_scan && !sticky_rim_force_scan && hole_backlog_mode &&
-        found_nearest_missing && nearest_miss_nh >= 2 && nearest_miss_nh <= 3;
+        have_rim_target && nearest_miss_nh >= 2 && nearest_miss_nh <= 3;
     static int focus_scan_cd = 0;
     static int rim_scan_skip_streak = 0;
     bool skip_full_scan_rim_close = false;
@@ -2147,51 +2154,50 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     exec.DrainBudget(world, drain_steps, focus_ground_horiz, focus_radius,
                      /*admit_batch=*/admit_n);
-    // Idle sticky / S2 stop: Imm nearest hole nh≤2 only (not far-rim Imm).
-    if (!moving && found_nearest_missing)
+    // Idle sticky / S2 stop: Imm nearest pin nh≤2 only (not far-rim Imm).
+    if (!moving && have_rim_target)
     {
       const int nh = std::max(
-          std::abs(isolated_hole.x - focus_ground_horiz.x),
-          std::abs(isolated_hole.z - focus_ground_horiz.z));
+          std::abs(rim_hole.x - focus_ground_horiz.x),
+          std::abs(rim_hole.z - focus_ground_horiz.z));
       if (nh <= 2 && underfeet_immediate_cd <= 0 &&
           underfeet_immediate_this_frame < kMaxUnderfeetImmediate &&
-          !mesh_service.HasMeshSatisfyingColumnReady(isolated_hole) &&
-          !mesh_service.IsPendingGpuApply(isolated_hole) &&
-          !mesh_service.HasInflightMeshBuild(isolated_hole) &&
+          !mesh_service.HasMeshSatisfyingColumnReady(rim_hole) &&
+          !mesh_service.IsPendingGpuApply(rim_hole) &&
+          !mesh_service.HasInflightMeshBuild(rim_hole) &&
           immediate_ms_used() < 8.0)
       {
         mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
-                                           isolated_hole);
+                                           rim_hole);
         ++underfeet_immediate_this_frame;
         underfeet_immediate_cd = 1;
       }
     }
-    // G1/H/I/J3: sticky nearest-hole Immediate — nh≤5. Count while pipeline
-    // idle, Queued, or Kicked/Dispatched (J3: track kicked rim without Kick
-    // drop). Escape drop+Imm remains Queued-only; kicked gets Kick prefer.
-    if (found_nearest_missing)
+    // G1/H/I/J3: sticky nearest-hole Immediate — nh≤2 only (S2). PreferKick on
+    // pin so Pending/InFlight hops cannot retarget.
+    if (have_rim_target)
     {
       const bool no_drawable =
-          !mesh_service.HasDrawableGreedyMesh(isolated_hole);
+          !mesh_service.HasDrawableGreedyMesh(rim_hole);
       const bool no_inflight =
-          !mesh_service.HasInflightMeshBuild(isolated_hole);
+          !mesh_service.HasInflightMeshBuild(rim_hole);
       const bool queued_stuck =
-          mesh_service.IsPendingGpuQueued(isolated_hole);
+          mesh_service.IsPendingGpuQueued(rim_hole);
       const bool kicked_stuck =
-          mesh_service.IsPendingGpuKickedOrDispatched(isolated_hole);
+          mesh_service.IsPendingGpuKickedOrDispatched(rim_hole);
       const bool extract_stuck =
-          mesh_service.IsGpuExtractInFlight(isolated_hole);
+          mesh_service.IsGpuExtractInFlight(rim_hole);
       const bool pipeline_idle =
-          no_drawable && !mesh_service.IsPendingGpuApply(isolated_hole) &&
+          no_drawable && !mesh_service.IsPendingGpuApply(rim_hole) &&
           no_inflight && !extract_stuck;
       const bool sticky_alive =
           no_drawable &&
           (pipeline_idle || queued_stuck || kicked_stuck ||
            (extract_stuck && no_inflight));
-      mesh_service.UpdateStickyNearestHole(isolated_hole, sticky_alive);
+      mesh_service.UpdateStickyNearestHole(rim_hole, sticky_alive);
       const int nh = std::max(
-          std::abs(isolated_hole.x - focus_ground_horiz.x),
-          std::abs(isolated_hole.z - focus_ground_horiz.z));
+          std::abs(rim_hole.x - focus_ground_horiz.x),
+          std::abs(rim_hole.z - focus_ground_horiz.z));
       const int sticky_frames = mesh_service.GetStickyNearestHoleFrames();
       const bool ms_ok = immediate_ms_used() < (moving ? 6.0 : 8.0);
       const bool slot_ok =
@@ -2204,28 +2210,28 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         if (pipeline_idle && sticky_frames >= idle_sticky_need)
         {
           mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
-                                             isolated_hole);
+                                             rim_hole);
           ++underfeet_immediate_this_frame;
           underfeet_immediate_cd = 1;
-          mesh_service.UpdateStickyNearestHole(isolated_hole, false);
+          mesh_service.UpdateStickyNearestHole(rim_hole, false);
         }
         else if (queued_stuck && sticky_frames >= queued_sticky_need &&
-                 mesh_service.DropQueuedPendingGpuApply(isolated_hole))
+                 mesh_service.DropQueuedPendingGpuApply(rim_hole))
         {
           mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
-                                             isolated_hole);
+                                             rim_hole);
           ++underfeet_immediate_this_frame;
           underfeet_immediate_cd = 1;
-          mesh_service.UpdateStickyNearestHole(isolated_hole, false);
+          mesh_service.UpdateStickyNearestHole(rim_hole, false);
         }
       }
-      // J3/R1: PreferKick nh≤2 sticky≥2; nh≤3 sticky≥5 (S0: drop R1c nh≤4 widen).
+      // J3/R1: PreferKick nh≤2 sticky≥2; nh≤3 sticky≥5 — always on pin.
       if ((nh <= 2 && sticky_frames >= 2) ||
           (nh <= 3 && sticky_frames >= 5))
       {
         if (queued_stuck || kicked_stuck)
         {
-          mesh_service.PreferKickPendingGpuQueued(isolated_hole);
+          mesh_service.PreferKickPendingGpuQueued(rim_hole);
         }
       }
     }
@@ -2248,11 +2254,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     exec.DrainBudget(world, moving ? 2 : 3, focus_ground_horiz, focus_radius,
                      /*admit_batch=*/moving ? 2 : 3);
   }
-  // S0/S2: one soft clamp — any moving focus miss (no nh ring cascade).
-  // Morning 104108 used ~0.75; R1c nh≤4×0.70 + sch floor fed gpu balloon.
+  // S0/S2: one soft clamp — any moving focus miss or live rim pin.
   {
     float clamp_scale = 1.0f;
-    if (moving && (missing_underfeet || found_nearest_missing ||
+    if (moving && (missing_underfeet || have_rim_target ||
                    world.GetPhysicsTelemetry().FocusMissingMesh > 0))
     {
       clamp_scale = 0.75f;
@@ -2290,12 +2295,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.unfinished_visual = world.GetPhysicsTelemetry().UnfinishedVisual;
     ain.prev_mode = static_cast<uint8_t>(LastBudget.AdmissionMode);
     ain.ring_depth = UGpuMeshPipeline::kReadbackRing;
-    // K3: rim mh for remesh band when pending cooled.
-    if (found_nearest_missing)
+    // K3: rim mh for remesh band when pending cooled (prefer pin).
+    if (have_rim_target)
     {
       ain.nearest_miss_horiz = std::max(
-          std::abs(isolated_hole.x - focus_ground_horiz.x),
-          std::abs(isolated_hole.z - focus_ground_horiz.z));
+          std::abs(rim_hole.x - focus_ground_horiz.x),
+          std::abs(rim_hole.z - focus_ground_horiz.z));
     }
     else
     {
