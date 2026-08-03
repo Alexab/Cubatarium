@@ -5,6 +5,7 @@
 #include "Console/ConsoleCommandHistory.h"
 #include "Content/ContentTypeRegistry.h"
 #include "Game/Inventory/SlotInteraction.h"
+#include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
 #include "Gui/Interfaces/IUCharacterStatsViewModel.h"
 #include "Gui/Interfaces/IUContentCatalog.h"
@@ -89,7 +90,12 @@ public:
   InventoryMode GetInventoryMode() const override;
   void SetInventoryMode(InventoryMode mode) override;
   void SyncToWorldGameMode(WorldGameMode mode);
+  void SyncToWorldDifficulty(WorldDifficulty difficulty);
   WorldGameMode GetWorldGameMode() const override { return ActiveWorldGameMode; }
+  WorldDifficulty GetWorldDifficulty() const override
+  {
+    return ActiveWorldDifficulty;
+  }
   CharacterStatsSnapshot GetCharacterStatsSnapshot() const override;
 
   CommandResult Execute(const std::vector<std::string> &args) override;
@@ -113,6 +119,7 @@ private:
   UConsoleCommandHistory CommandHistory;
   InventoryMode ActiveInventoryMode{InventoryMode::Creative};
   WorldGameMode ActiveWorldGameMode{WorldGameMode::Creative};
+  WorldDifficulty ActiveWorldDifficulty{WorldDifficulty::Normal};
   std::optional<InventoryEntryRef> PendingAssignment;
   DragState Drag;
 };

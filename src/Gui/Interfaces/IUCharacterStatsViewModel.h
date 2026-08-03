@@ -3,6 +3,7 @@
 
 #include "Creatures/Stats/CreatureAttributes.h"
 #include "Creatures/Stats/CreatureVitals.h"
+#include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
 #include <string>
 
@@ -17,6 +18,7 @@ struct CharacterStatsSnapshot
   CreatureVitals vitals{};
   CreatureAttributes attributes{};
   WorldGameMode gameMode{WorldGameMode::Creative};
+  WorldDifficulty difficulty{WorldDifficulty::Normal};
   bool valid{false};
 };
 
@@ -26,6 +28,7 @@ public:
   virtual ~IUCharacterStatsViewModel() = default;
   virtual CharacterStatsSnapshot GetCharacterStatsSnapshot() const = 0;
   virtual WorldGameMode GetWorldGameMode() const = 0;
+  virtual WorldDifficulty GetWorldDifficulty() const = 0;
 };
 
 } // namespace cutum

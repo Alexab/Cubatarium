@@ -5,6 +5,7 @@
 #include "World/View/WorldViewSettings.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "World/Core/World.h"
+#include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
 #include <functional>
 #include <string>
@@ -34,6 +35,7 @@ struct WorldRunnerRequest
   ResourcePackSelection packs;
   WorldViewSettings view;
   WorldGameMode gameMode{WorldGameMode::Creative};
+  WorldDifficulty difficulty{WorldDifficulty::Normal};
   bool enterGameAfter{false};
   bool saveConfigAfter{true};
   bool shutdownSaveSession{false};

@@ -5,6 +5,7 @@
 #include "ResourcePacks/ResourcePackResolver.h"
 #include "World/View/WorldViewSettings.h"
 #include "WorldGen/Core/ProceduralSettings.h"
+#include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
 #include <string>
 #include <vector>
@@ -54,7 +55,9 @@ public:
                                     const ResourcePackSelection &selection,
                                     const WorldViewSettings &view = {},
                                     WorldGameMode gameMode =
-                                        WorldGameMode::Creative);
+                                        WorldGameMode::Creative,
+                                    WorldDifficulty difficulty =
+                                        WorldDifficulty::Normal);
   void RefreshWorldListAfterSave(UCore &core);
 };
 

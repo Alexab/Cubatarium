@@ -3,6 +3,7 @@
 
 #include "ResourcePacks/ResourcePackResolver.h"
 #include "World/View/WorldViewSettings.h"
+#include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
 #include <functional>
 #include <string>
@@ -46,6 +47,12 @@ public:
                              const ResourcePackSelection &selection,
                              const WorldViewSettings &view,
                              WorldGameMode gameMode) = 0;
+  virtual void
+  CreateNewWorldWithSettings(const ProceduralSettings &settings,
+                             const ResourcePackSelection &selection,
+                             const WorldViewSettings &view,
+                             WorldGameMode gameMode,
+                             WorldDifficulty difficulty) = 0;
   virtual void LoadSelectedWorld(const std::string &worldName) = 0;
   virtual void RefreshWorldList() = 0;
   virtual const std::vector<std::string> &GetWorldNames() const = 0;

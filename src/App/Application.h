@@ -154,6 +154,11 @@ public:
                                   const ResourcePackSelection &selection,
                                   const WorldViewSettings &view,
                                   WorldGameMode gameMode) override;
+  void CreateNewWorldWithSettings(const ProceduralSettings &settings,
+                                  const ResourcePackSelection &selection,
+                                  const WorldViewSettings &view,
+                                  WorldGameMode gameMode,
+                                  WorldDifficulty difficulty) override;
   void LoadSelectedWorld(const std::string &worldName) override;
   void RefreshWorldList() override;
   const std::vector<std::string> &GetWorldNames() const override;

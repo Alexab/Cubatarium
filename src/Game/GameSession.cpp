@@ -571,10 +571,20 @@ void UGameSession::SyncToWorldGameMode(WorldGameMode mode)
                                                    : InventoryMode::Creative);
 }
 
+void UGameSession::SyncToWorldDifficulty(WorldDifficulty difficulty)
+{
+  ActiveWorldDifficulty = difficulty;
+  if (World)
+  {
+    World->SetDifficulty(difficulty);
+  }
+}
+
 CharacterStatsSnapshot UGameSession::GetCharacterStatsSnapshot() const
 {
   CharacterStatsSnapshot snap;
   snap.gameMode = ActiveWorldGameMode;
+  snap.difficulty = ActiveWorldDifficulty;
   if (!World)
   {
     return snap;

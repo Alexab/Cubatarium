@@ -614,6 +614,7 @@ void UApplication::EnterGameAfterWorldChange()
     if (GameSession)
     {
       GameSession->SyncToWorldGameMode(World->GetGameMode());
+      GameSession->SyncToWorldDifficulty(World->GetDifficulty());
     }
   }
   RefreshBlockCatalog();
@@ -703,6 +704,15 @@ void UApplication::CreateNewWorldWithSettings(
     const ProceduralSettings &settings, const ResourcePackSelection &selection,
     const WorldViewSettings &view, WorldGameMode gameMode)
 {
+  CreateNewWorldWithSettings(settings, selection, view, gameMode,
+                             WorldDifficulty::Normal);
+}
+
+void UApplication::CreateNewWorldWithSettings(
+    const ProceduralSettings &settings, const ResourcePackSelection &selection,
+    const WorldViewSettings &view, WorldGameMode gameMode,
+    WorldDifficulty difficulty)
+{
   if (!Core)
   {
     return;
@@ -715,6 +725,7 @@ void UApplication::CreateNewWorldWithSettings(
   request.packs = selection;
   request.view = view;
   request.gameMode = gameMode;
+  request.difficulty = difficulty;
   request.enterGameAfter = true;
   request.saveConfigAfter = true;
   BeginWorldOperation(std::move(request));

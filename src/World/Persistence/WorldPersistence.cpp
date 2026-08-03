@@ -9,6 +9,7 @@
 #include "Creatures/Stats/CreatureStatsJson.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureVisualFactory.h"
+#include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
 #include "Render/Camera/Camera.h"
 #include "World/Chunks/Chunk.h"
@@ -1692,6 +1693,16 @@ void UWorldPersistence::LoadWorldData(UWorld &world,
       world.SetGameMode(WorldGameMode::Creative);
     }
 
+    if (d.contains("difficulty") && d["difficulty"].is_string())
+    {
+      world.SetDifficulty(
+          WorldDifficultyFromString(d["difficulty"].get<std::string>()));
+    }
+    else
+    {
+      world.SetDifficulty(WorldDifficulty::Normal);
+    }
+
     if (d.contains("environment") && d["environment"].is_object())
     {
       const json &env = d["environment"];
@@ -1829,6 +1840,7 @@ void UWorldPersistence::SaveWorldData(UWorld &world,
   world_data["environment"] = env;
   world_data["view"] = world.GetViewSettings().ToJson();
   world_data["game_mode"] = WorldGameModeToString(world.GetGameMode());
+  world_data["difficulty"] = WorldDifficultyToString(world.GetDifficulty());
 
   std::ofstream file(file_name);
   if (file.is_open())
