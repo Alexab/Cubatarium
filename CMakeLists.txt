@@ -5,7 +5,7 @@ if(POLICY CMP0091)
 endif()
 
 # Static vcpkg triplet on Windows hosts. /MT runtime is applied after project()
-# only for MSVC / clang-cl ‚Äî GNU-style Clang (linux-ninja preset) must not get /Zc flags.
+# only for MSVC / clang-cl Ú¿‘ GNU-style Clang (linux-ninja preset) must not get /Zc flags.
 if(WIN32)
     set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "vcpkg triplet" FORCE)
     set(VCPKG_APPLOCAL_DEPS OFF CACHE BOOL "Copy DLL deps next to exe" FORCE)
@@ -130,6 +130,8 @@ set(SOURCES
     src/Creatures/Influence/InfluenceEvent.cpp
     src/Creatures/Influence/InfluenceResolver.cpp
     src/Creatures/Influence/InfluenceApplier.cpp
+    src/Creatures/Influence/StatusEffectCatalog.cpp
+    src/Creatures/Influence/StatusEffectSystem.cpp
     src/Creatures/Player/Player.cpp
     src/Activity/CreatureActivityDirector.cpp
     src/Activity/WorldCreatureActivitySink.cpp

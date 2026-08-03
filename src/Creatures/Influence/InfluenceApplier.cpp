@@ -1,6 +1,7 @@
 #include "Creatures/Influence/InfluenceApplier.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Influence/InfluenceEvent.h"
+#include "Creatures/Influence/StatusEffectSystem.h"
 #include "Creatures/Stats/CreatureVitalsSystem.h"
 #include "World/Core/World.h"
 #include <algorithm>
@@ -70,7 +71,12 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
       {
         result.AnyTargetRemoved = true;
         world.RemoveCreature(delta.TargetId);
+        continue;
       }
+    }
+    for (const std::string &status_id : delta.StatusIdsToAdd)
+    {
+      StatusEffectSystem::ApplyStatus(*target, status_id);
     }
   }
 

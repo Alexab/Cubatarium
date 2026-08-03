@@ -124,6 +124,8 @@ InfluencePrediction InfluenceResolver::Resolve(
   delta.TargetPos = target->GetBodyOrigin();
   delta.HealthDelta = -hit.Damage;
   pred.Targets.push_back(delta);
+  // Prototype status application from bare-hand melee.
+  pred.Targets.back().StatusIdsToAdd.push_back("bleed");
   pred.SourceFatigueDelta = cap.SourceFatigueCost;
   pred.IntervalMul = hit.IntervalMul;
   pred.Valid = true;

@@ -4,6 +4,7 @@
 #include "Creatures/Combat/CreatureCombat.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
+#include "Creatures/Influence/StatusEffectSystem.h"
 #include "Creatures/Locomotion/CreatureLocomotionController.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Creatures/Player/PlayerCapsule.h"
@@ -555,6 +556,7 @@ void UWorld::RunLegacyPhysicsFrame()
 
   // After player facts sync so sprint/swim fatigue sees this frame's state.
   CreatureVitalsSystem::Tick(*this, GetGameMode(), GetDifficulty(), dt);
+  StatusEffectSystem::Tick(*this, GetGameMode(), dt);
 
   const auto t_after_move = std::chrono::high_resolution_clock::now();
   PhysicsTelemetryData.StreamMs = 0.0;

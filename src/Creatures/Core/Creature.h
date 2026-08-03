@@ -8,6 +8,7 @@
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Creatures/Influence/InfluenceTypes.h"
+#include "Creatures/Influence/StatusEffectTypes.h"
 #include "Creatures/Stats/CreatureAttributes.h"
 #include "Creatures/Stats/CreatureVitals.h"
 #include <algorithm>
@@ -15,6 +16,7 @@
 #include <glm/glm.hpp>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace cutum
 {
@@ -85,6 +87,12 @@ public:
   }
   void ResetInfluenceCooldown() { TimeSinceLastInfluenceSec = 0.f; }
 
+  std::vector<StatusEffectInstance> &GetStatusEffects() { return StatusEffects; }
+  const std::vector<StatusEffectInstance> &GetStatusEffects() const
+  {
+    return StatusEffects;
+  }
+
   CreatureIntent GetIntent() const { return Intent; }
   void SetIntent(const CreatureIntent &intent) { Intent = intent; }
   void ClearIntent() { Intent = CreatureIntent{}; }
@@ -147,6 +155,7 @@ protected:
   CreatureAttributes Attributes{};
   ArmorGroups Armor{ArmorGroups::DefaultFleshy()};
   float TimeSinceLastInfluenceSec{1000.f};
+  std::vector<StatusEffectInstance> StatusEffects;
   bool NeedsTick{false};
   CreatureIntent Intent{};
   bool PlayerCharacter{false};

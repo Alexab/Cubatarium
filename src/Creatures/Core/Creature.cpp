@@ -2,6 +2,7 @@
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Environment/CreatureEnvironment.h"
+#include "Creatures/Influence/StatusEffectSystem.h"
 #include "Creatures/Locomotion/CreatureMotor.h"
 #include "Creatures/Player/PlayerCapsule.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
@@ -266,6 +267,7 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
             : 1.f;
     speed *= agi * std::max(0.4f, fatiguePenalty);
   }
+  speed *= StatusEffectSystem::GetMoveSpeedMultiplier(*this);
   if (habitat == CreatureHabitat::Terrestrial && !airMobility)
   {
     wish.y = 0.0f;
