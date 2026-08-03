@@ -17,24 +17,12 @@ namespace
 {
 uint64_t ResolveTargetId(const CreatureIntent &intent)
 {
-  if (intent.Influence.TargetId != 0)
-  {
-    return intent.Influence.TargetId;
-  }
-  return intent.attackTargetId;
+  return intent.Influence.TargetId;
 }
 
 InfluenceChannel ResolveChannel(const CreatureIntent &intent)
 {
-  if (intent.Influence.Channel != InfluenceChannel::None)
-  {
-    return intent.Influence.Channel;
-  }
-  if (intent.attackTargetId != 0 || intent.Influence.TargetId != 0)
-  {
-    return InfluenceChannel::Melee;
-  }
-  return InfluenceChannel::None;
+  return intent.Influence.Channel;
 }
 
 float HorizontalDistance(const glm::vec3 &a, const glm::vec3 &b)

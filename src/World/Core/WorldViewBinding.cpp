@@ -466,7 +466,8 @@ void UWorld::RunLegacyPhysicsFrame()
           return;
         }
         const CreatureIntent &intent = creature.GetIntent();
-        if (intent.attackTargetId != 0 || intent.Influence.TargetId != 0)
+        if (intent.Influence.Channel == InfluenceChannel::Melee &&
+            intent.Influence.TargetId != 0)
         {
           CreatureCombat::TryMeleeStrike(*this, creature, GetGameMode());
         }
@@ -474,8 +475,8 @@ void UWorld::RunLegacyPhysicsFrame()
       });
 
   // Controlled / possessed player: resolve Influence after agents (input may
-  // have set attackTargetId / Dig on LMB). Dig Intent is not player-gated in
-  // Resolver; session tick uses the world DigSession (player-owned for now).
+  // have set Melee / Dig via PlayerInteractionRouter). Dig Intent is not
+  // player-gated in Resolver; session tick uses the world DigSession.
   if (Environment.GetControlledCreatureId() != 0)
   {
     if (UCreature *controlled =
@@ -495,11 +496,11 @@ void UWorld::RunLegacyPhysicsFrame()
           controlled->SetIntent(cleared);
         }
       }
-      else if (intent.attackTargetId != 0 ||
+      else if (intent.Influence.Channel == InfluenceChannel::Melee &&
                intent.Influence.TargetId != 0)
       {
         CreatureCombat::TryMeleeStrike(*this, *controlled, GetGameMode());
-        // One-shot: clear attack target after resolve attempt so hold-LMB dig
+        // One-shot: clear Melee Intent after resolve attempt so hold-LMB dig
         // does not spam; cooldown still gates actual hits.
         CreatureIntent cleared = intent;
         cleared.attackTargetId = 0;

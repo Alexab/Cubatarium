@@ -10,8 +10,7 @@
 namespace cutum
 {
 
-/// Desired influence for this tick (melee/use/aura). TargetId mirrors legacy
-/// attackTargetId for a transitional period.
+/// Desired influence for this tick (melee/dig/use/aura). Sole attack/dig SoT.
 struct InfluenceIntent
 {
   InfluenceChannel Channel{InfluenceChannel::None};
@@ -32,7 +31,7 @@ struct CreatureIntent
   LocomotionState suggestedAnim{LocomotionState::Idle};
   glm::vec3 lookAtWorld{0.0f};
   float lookAtWeight{0.0f};
-  /// Legacy single-target melee id; kept in sync with Influence.TargetId when set.
+  /// Deprecated: unused; melee targets live in Influence.TargetId only.
   uint64_t attackTargetId{0};
   InfluenceIntent Influence{};
 };

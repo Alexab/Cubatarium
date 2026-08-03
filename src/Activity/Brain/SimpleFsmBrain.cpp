@@ -241,8 +241,7 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
       blackboard.state = CreatureFsmState::Attack;
       intent.moveDirWorld = glm::vec3(0.0f);
       intent.moveSpeed = 0.0f;
-      intent.attackTargetId = nearest_id;
-      SyncInfluenceFromAttackTarget(intent);
+      SetMeleeInfluenceIntent(intent, nearest_id);
       intent.suggestedAnim = LocomotionState::Action;
       if (blackboard.actionTimer <= 0.0f)
       {
@@ -343,8 +342,7 @@ void USimpleFsmBrain::Tick(UCreatureActivityBlackboard &blackboard,
     blackboard.state = CreatureFsmState::Attack;
     intent.moveDirWorld = glm::vec3(0.0f);
     intent.moveSpeed = 0.0f;
-    intent.attackTargetId = controlled->Id;
-    SyncInfluenceFromAttackTarget(intent);
+    SetMeleeInfluenceIntent(intent, controlled->Id);
     intent.suggestedAnim = LocomotionState::Action;
     if (blackboard.actionTimer <= 0.0f)
     {

@@ -6,24 +6,28 @@
 namespace cutum
 {
 
+/// Deprecated shim kept for transitional call sites; prefer writing
+/// Influence.Channel/TargetId directly (or PlayerInteractionRouter).
 inline void SyncInfluenceFromAttackTarget(CreatureIntent &intent)
 {
-  if (intent.attackTargetId == 0 && intent.Influence.TargetId == 0)
-  {
-    return;
-  }
-  if (intent.Influence.TargetId == 0)
+  if (intent.Influence.TargetId == 0 && intent.attackTargetId != 0)
   {
     intent.Influence.TargetId = intent.attackTargetId;
   }
-  if (intent.attackTargetId == 0)
-  {
-    intent.attackTargetId = intent.Influence.TargetId;
-  }
-  if (intent.Influence.Channel == InfluenceChannel::None)
+  intent.attackTargetId = 0;
+  if (intent.Influence.Channel == InfluenceChannel::None &&
+      intent.Influence.TargetId != 0)
   {
     intent.Influence.Channel = InfluenceChannel::Melee;
   }
+}
+
+inline void SetMeleeInfluenceIntent(CreatureIntent &intent, uint64_t targetId)
+{
+  intent.attackTargetId = 0;
+  intent.Influence = InfluenceIntent{};
+  intent.Influence.Channel = InfluenceChannel::Melee;
+  intent.Influence.TargetId = targetId;
 }
 
 } // namespace cutum

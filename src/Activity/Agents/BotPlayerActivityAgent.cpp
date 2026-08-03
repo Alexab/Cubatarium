@@ -149,8 +149,7 @@ void UBotPlayerActivityAgent::Tick(IUWorldPerception &perception,
       if (hostileDist <= attackRange)
       {
         bb.state = CreatureFsmState::Attack;
-        intent.attackTargetId = hostileId;
-        SyncInfluenceFromAttackTarget(intent);
+        SetMeleeInfluenceIntent(intent, hostileId);
         intent.suggestedAnim = LocomotionState::Action;
         if (bb.actionTimer <= 0.f)
         {

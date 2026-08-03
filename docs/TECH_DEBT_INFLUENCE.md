@@ -8,7 +8,6 @@
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
 | TD-INF-001 | 0 | Faction / friendly-fire filters on targeting | Needs faction model | accepted backlog |
-| TD-INF-002 | 0 | Punch/melee tool wear via same `ApplyItemWear` + ModePolicy gate | Dig wear shipped; melee wear not wired (`PunchAttackUses` unused). Provider for damage is wired (`UItemToolInfluenceProvider`) | deep-refactor Wave 2 |
 | TD-INF-004 | 0 | Social right-click channel (UI / trade / tame) | Separate from punch/dig Influence channels | accepted backlog |
 | TD-INF-006 | 0 | Cone targeting | Radius/single shipped; cone not needed for MVP | accepted backlog |
 | TD-INF-007 | 0 | Full gameplay particle budget / LOD | Minimal flash/beam/burst shipped | accepted backlog |
