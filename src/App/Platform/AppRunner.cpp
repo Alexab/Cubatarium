@@ -2,6 +2,8 @@
 
 #include "App/Application.h"
 #include "App/Core.h"
+#include "Items/ItemDefinitionStorage.h"
+#include "World/Objects/ObjectLibrary.h"
 #if !defined(__ANDROID__)
 #include "App/Platform/DesktopPlatformWindow.h"
 #include "App/Platform/GlfwKeyCompat.h"
@@ -66,6 +68,7 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
     auto block_definitions = std::make_shared<UBlockDefinitionStorage>();
 
     auto object_library = std::make_shared<UObjectLibrary>();
+    auto item_definitions = std::make_shared<UItemDefinitionStorage>();
     auto view_engine = std::make_shared<UViewEngine>();
     auto world = std::make_shared<UWorld>(texture_cube_instance, view_engine);
     auto text_renderer = std::make_shared<UTextRenderer>();
@@ -91,8 +94,8 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
     }
 
     auto core = std::make_shared<UCore>(
-        texture_base_instance, texture_cube_instance, object_library, world,
-        geometry_engine, view_engine);
+        texture_base_instance, texture_cube_instance, object_library,
+        item_definitions, world, geometry_engine, view_engine);
     geometry_engine->SetGameContent(core.get());
 
     texture_cube_instance->SetBlockDefinitions(block_definitions);
@@ -192,6 +195,7 @@ int RunEnterGameSmoke(IUPlatformPaths &paths, int in_game_frames)
         std::make_shared<UTextureCubeStorage>(texture_base_instance);
     auto block_definitions = std::make_shared<UBlockDefinitionStorage>();
     auto object_library = std::make_shared<UObjectLibrary>();
+    auto item_definitions = std::make_shared<UItemDefinitionStorage>();
     auto view_engine = std::make_shared<UViewEngine>();
     auto world = std::make_shared<UWorld>(texture_cube_instance, view_engine);
     auto text_renderer = std::make_shared<UTextRenderer>();
@@ -211,8 +215,8 @@ int RunEnterGameSmoke(IUPlatformPaths &paths, int in_game_frames)
     }
 
     auto core = std::make_shared<UCore>(
-        texture_base_instance, texture_cube_instance, object_library, world,
-        geometry_engine, view_engine);
+        texture_base_instance, texture_cube_instance, object_library,
+        item_definitions, world, geometry_engine, view_engine);
     geometry_engine->SetGameContent(core.get());
     texture_cube_instance->SetBlockDefinitions(block_definitions);
     world->SetBlockDefinitionStorage(block_definitions);
@@ -372,6 +376,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         std::make_shared<UTextureCubeStorage>(texture_base_instance);
     auto block_definitions = std::make_shared<UBlockDefinitionStorage>();
     auto object_library = std::make_shared<UObjectLibrary>();
+    auto item_definitions = std::make_shared<UItemDefinitionStorage>();
     auto view_engine = std::make_shared<UViewEngine>();
     auto world = std::make_shared<UWorld>(texture_cube_instance, view_engine);
     auto text_renderer = std::make_shared<UTextRenderer>();
@@ -391,8 +396,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     }
 
     auto core = std::make_shared<UCore>(
-        texture_base_instance, texture_cube_instance, object_library, world,
-        geometry_engine, view_engine);
+        texture_base_instance, texture_cube_instance, object_library,
+        item_definitions, world, geometry_engine, view_engine);
     geometry_engine->SetGameContent(core.get());
     texture_cube_instance->SetBlockDefinitions(block_definitions);
     world->SetBlockDefinitionStorage(block_definitions);

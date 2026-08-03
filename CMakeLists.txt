@@ -5,7 +5,7 @@ if(POLICY CMP0091)
 endif()
 
 # Static vcpkg triplet on Windows hosts. /MT runtime is applied after project()
-# only for MSVC / clang-cl Р„LL GNU-style Clang (linux-ninja preset) must not get /Zc flags.
+# only for MSVC / clang-cl Р вЂћLL GNU-style Clang (linux-ninja preset) must not get /Zc flags.
 if(WIN32)
     set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "vcpkg triplet" FORCE)
     set(VCPKG_APPLOCAL_DEPS OFF CACHE BOOL "Copy DLL deps next to exe" FORCE)
@@ -125,6 +125,10 @@ set(SOURCES
     src/Creatures/Stats/CreatureStatsJson.cpp
     src/Creatures/Stats/CreatureVitalsSystem.cpp
     src/Creatures/Combat/CreatureCombat.cpp
+    src/Items/ItemDefinitionStorage.cpp
+    src/Items/ToolCapabilities.cpp
+    src/Items/ItemWieldRenderer.cpp
+    src/Items/ItemToolInfluenceProvider.cpp
     src/Creatures/Influence/InfluenceHitMath.cpp
     src/Creatures/Influence/BareHandToolInfluenceProvider.cpp
     src/Creatures/Influence/InfluenceEvent.cpp
@@ -435,6 +439,7 @@ set(SOURCES
     src/Gui/Layout/DockedOverlayLayout.cpp
     src/Gui/Cache/InventoryIconService.cpp
     src/Gui/Cache/ObjectIconCache.cpp
+    src/Gui/Cache/ItemIconCache.cpp
     src/Gui/Cache/CreatureIconCache.cpp
     src/Gui/Core/GuiInputRouter.cpp
     src/Gui/Core/GuiFocus.cpp
@@ -883,6 +888,14 @@ add_executable(influence_hit_math_test
 target_include_directories(influence_hit_math_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(influence_hit_math_test glm::glm)
+
+add_executable(tool_capabilities_test
+    src/Items/ToolCapabilities.cpp
+    src/Test/ToolCapabilitiesTest.cpp)
+target_include_directories(tool_capabilities_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(tool_capabilities_test glm::glm)
+
 
 add_executable(creature_skinned_draw_test
     src/Creatures/Visual/CreatureBonePaletteGpu.cpp

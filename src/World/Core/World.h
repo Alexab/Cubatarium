@@ -96,6 +96,7 @@ class IULightingPipeline;
 class UViewEngine;
 class UTextureCubeStorage;
 class UObjectLibrary;
+class UItemDefinitionStorage;
 class UUser;
 class UCamera;
 class UWorldMeshService;
@@ -453,6 +454,14 @@ public:
 
   void SetObjectLibrary(UObjectLibrary *library) { ObjectLibrary = library; }
   UObjectLibrary *GetObjectLibrary() const { return ObjectLibrary; }
+  void SetItemDefinitionStorage(UItemDefinitionStorage *storage)
+  {
+    ItemDefinitions = storage;
+  }
+  UItemDefinitionStorage *GetItemDefinitionStorage() const
+  {
+    return ItemDefinitions;
+  }
 
   WorldGenSets &GetWorldGenSets() { return WorldGenSetsData; }
   const WorldGenSets &GetWorldGenSets() const { return WorldGenSetsData; }
@@ -1246,6 +1255,7 @@ private:
   std::shared_ptr<UTextureCubeStorage> TextureCubeInstance;
   std::unique_ptr<UWorldViewBinding> ViewBinding;
   UObjectLibrary *ObjectLibrary{nullptr};
+  UItemDefinitionStorage *ItemDefinitions{nullptr};
   WorldGenSets WorldGenSetsData;
   ObjectFeatureConfig ResolvedObjectFeatures;
 
@@ -1340,8 +1350,10 @@ private:
   {
     glm::ivec3 blockPos{0};
     float progress{0.f};
+    float pendingWearDelta{0.f};
+    std::string pendingToolId;
   };
-  std::optional<BlockBreakSession> BreakSession;
+  mutable std::optional<BlockBreakSession> BreakSession;
   bool FlightSimBreakRequested{false};
 
   uint64_t DurationDoMovementMks;

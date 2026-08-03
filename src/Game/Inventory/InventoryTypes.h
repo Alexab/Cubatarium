@@ -12,7 +12,8 @@ enum class InventoryEntryKind
   Block,
   Object,
   UCreature,
-  Skin
+  Skin,
+  Item
 };
 
 struct InventoryEntryRef
@@ -21,6 +22,9 @@ struct InventoryEntryRef
   std::string Id;
   int count{0};
   bool empty{true};
+  /// 0 = new, 1 = fully worn (tools / durable items).
+  float wear{0.f};
+  bool broken{false};
 };
 
 struct HotbarSlot

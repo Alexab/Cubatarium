@@ -39,6 +39,7 @@ class UTextureCubeStorage;
 class UCreatureTextureStorage;
 class UCreatureDefinitionStorage;
 class UObjectLibrary;
+class UItemDefinitionStorage;
 class UGeometryEngine;
 class UViewEngine;
 class UBlockDefinitionStorage;
@@ -54,6 +55,7 @@ public:
   UCore(std::shared_ptr<UTextureBaseStorage> texture_base_storage,
         std::shared_ptr<UTextureCubeStorage> texture_cube_storage,
         std::shared_ptr<UObjectLibrary> object_library,
+        std::shared_ptr<UItemDefinitionStorage> item_definitions,
         std::shared_ptr<UWorld> world,
         std::shared_ptr<UGeometryEngine> geometries,
         std::shared_ptr<UViewEngine> views);
@@ -110,9 +112,14 @@ public:
   {
     return ObjectLibraryInstance;
   }
+  std::shared_ptr<UItemDefinitionStorage> GetItemDefinitionStorage() const
+  {
+    return ItemDefinitionsInstance;
+  }
   const UBlockDefinitionStorage &Blocks() const override;
   const UObjectLibrary &Objects() const override;
   const UCreatureDefinitionStorage &Creatures() const override;
+  const UItemDefinitionStorage &Items() const override;
   const WorldGenPack &ActiveWorldGenPack() const override;
 
   std::shared_ptr<UBlockDefinitionStorage> GetBlockDefinitionStorage() const
@@ -246,6 +253,7 @@ private:
   std::shared_ptr<UTextureCubeStorage> TextureCubeStorageInstance;
   std::shared_ptr<UCreatureTextureStorage> CreatureTextureStorageInstance;
   std::shared_ptr<UObjectLibrary> ObjectLibraryInstance;
+  std::shared_ptr<UItemDefinitionStorage> ItemDefinitionsInstance;
   std::shared_ptr<UGeometryEngine> GeometryEngineInstance;
   std::shared_ptr<UViewEngine> ViewEngineInstance;
   std::shared_ptr<UWorld> WorldInstance;

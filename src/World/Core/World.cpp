@@ -9,6 +9,9 @@
 #include "Activity/WorldCreatureActivitySink.h"
 #include "App/Settings/RenderSettings.h"
 #include "Blocks/BlockDigRules.h"
+#include "Items/ToolCapabilities.h"
+#include "Items/ItemDefinitionStorage.h"
+#include "Creatures/Core/Creature.h"
 #include "Core/Progress/IUProgressSink.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
@@ -5640,8 +5643,39 @@ bool UWorld::CompleteBreakSession()
     return false;
   }
   const glm::ivec3 pos = BreakSession->blockPos;
+  const float wear_delta = BreakSession->pendingWearDelta;
+  const std::string tool_id = BreakSession->pendingToolId;
   BreakSession.reset();
   ++PhysicsTelemetryData.BreakCompleteN;
+
+  if (wear_delta > 0.f && !tool_id.empty() && ItemDefinitions)
+  {
+    if (UCreature *creature = GetControlledCreature())
+    {
+      const bool wear_enabled =
+          IsToolWearEnabled(GameMode, Difficulty);
+      auto &bars = creature->GetInventory().GetHotbarsMutable();
+      const size_t bar = creature->GetInventory().GetActiveBarIndex();
+      const size_t slot = creature->GetInventory().GetActiveSlotIndex();
+      if (bar < bars.size() && slot < bars[bar].slots.size())
+      {
+        auto &entry = bars[bar].slots[slot].entry;
+        if (!bars[bar].slots[slot].empty &&
+            entry.kind == InventoryEntryKind::Item && entry.Id == tool_id)
+        {
+          if (const ItemDefinition *def = ItemDefinitions->Get(tool_id))
+          {
+            if (ApplyItemWear(entry, *def, wear_delta, wear_enabled))
+            {
+              bars[bar].slots[slot].empty = true;
+              bars[bar].slots[slot].entry = InventoryEntryRef{};
+            }
+          }
+        }
+      }
+    }
+  }
+
   return DelBlockAt(pos);
 }
 
@@ -5665,12 +5699,9 @@ float UWorld::ResolveBreakDurationSeconds() const
   {
     return -1.f;
   }
-  if (GameMode == WorldGameMode::Creative)
-  {
-    return BlockDigRules::DigDurationSeconds(BlockDigRules::DefaultHardness,
-                                             GameMode);
-  }
-  float hardness = BlockDigRules::DefaultHardness;
+  BlockDefinition blockDef;
+  blockDef.Name = "unknown";
+  blockDef.Hardness = BlockDigRules::DefaultHardness;
   if (BlockRegistry)
   {
     if (const UBlockDefinitionStorage *defs = BlockRegistry->GetDefinitions())
@@ -5678,11 +5709,35 @@ float UWorld::ResolveBreakDurationSeconds() const
       const BlockId id = BlockWorld.GetBlock(BreakSession->blockPos);
       if (const BlockDefinition *def = defs->GetById(id))
       {
-        hardness = def->Hardness;
+        blockDef = *def;
       }
     }
   }
-  return BlockDigRules::DigDurationSeconds(hardness, GameMode);
+
+  const ItemDefinition *tool = nullptr;
+  CreatureAttributes attrs;
+  if (const UCreature *creature = GetControlledCreature())
+  {
+    attrs = creature->GetAttributes();
+    if (const InventoryEntryRef *active =
+            creature->GetInventory().GetActiveEntryRef())
+    {
+      if (!active->empty && active->kind == InventoryEntryKind::Item &&
+          !active->broken && ItemDefinitions)
+      {
+        tool = ItemDefinitions->Get(active->Id);
+      }
+    }
+  }
+  if (!tool && ItemDefinitions)
+  {
+    tool = ItemDefinitions->GetHandDefinition();
+  }
+
+  DigParams params = ResolveDigParams(tool, blockDef, attrs, GameMode);
+  BreakSession->pendingWearDelta = params.WearDelta;
+  BreakSession->pendingToolId = tool ? tool->Id : std::string{};
+  return params.DurationSec;
 }
 
 FluidColumnSurface UWorld::FindFluidColumnSurfaceAt(int bx, int bz,

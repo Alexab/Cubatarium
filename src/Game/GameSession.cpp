@@ -73,6 +73,7 @@ void UGameSession::ReindexBlockCatalog(const IUGameContent &content)
 {
   ContentCatalog.IndexBlocks(content.Blocks());
   ContentCatalog.IndexObjects(content.Objects());
+  ContentCatalog.IndexItems(content.Items());
   if (World)
   {
     ContentCatalog.IndexCreatures(content.Creatures());
@@ -187,12 +188,14 @@ std::array<HotbarSlotView, 10> UGameSession::GetBarSlots(size_t barIndex) const
   for (size_t i = 0; i < slots.size(); ++i)
   {
     const HotbarSlot &slot = bar.slots[i];
-    if (!slot.entry.Id.empty())
+    if (!slot.empty && !slot.entry.Id.empty())
     {
       slots[i].Id = slot.entry.Id;
       slots[i].label = HumanizeBlockName(slot.entry.Id);
       slots[i].entryKind = slot.entry.kind;
       slots[i].isBlock = (slot.entry.kind == InventoryEntryKind::Block);
+      slots[i].wear = slot.entry.wear;
+      slots[i].broken = slot.entry.broken;
     }
     slots[i].selected = (barIndex == activeBar) && (i == activeIndex);
     if (barIndex == 0)
@@ -438,12 +441,21 @@ UGameSession::GetEntries(ContentKind tab, const std::string &groupId,
     case ContentKind::Skin:
       ref.kind = InventoryEntryKind::Skin;
       break;
+    case ContentKind::Item:
+      ref.kind = InventoryEntryKind::Item;
+      break;
     }
     ref.Id = e.Id;
     ref.empty = false;
-    if (tab == ContentKind::UCreature || tab == ContentKind::Skin)
+    if (tab == ContentKind::UCreature || tab == ContentKind::Skin ||
+        tab == ContentKind::Item)
     {
-      ref.count = 1;
+      ref.count = (tab == ContentKind::Item) ? 1 : 1;
+      if (tab == ContentKind::Item)
+      {
+        ref.wear = 0.f;
+        ref.broken = false;
+      }
       result.push_back({ref, e.displayName});
       continue;
     }
@@ -499,6 +511,33 @@ bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
       {
         std::cerr
             << "GameSession: prefab not in catalog, hotbar assign rejected: "
+            << entry.Id << std::endl;
+        return false;
+      }
+    }
+    else if (entry.kind == InventoryEntryKind::Item)
+    {
+      bool found = false;
+      for (const auto &typeId : ContentCatalog.GetTypeIds(ContentKind::Item))
+      {
+        for (const auto &e :
+             ContentCatalog.GetEntries(ContentKind::Item, typeId))
+        {
+          if (e.Id == entry.Id)
+          {
+            found = true;
+            break;
+          }
+        }
+        if (found)
+        {
+          break;
+        }
+      }
+      if (!found)
+      {
+        std::cerr
+            << "GameSession: item not in catalog, hotbar assign rejected: "
             << entry.Id << std::endl;
         return false;
       }

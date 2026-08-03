@@ -13,6 +13,7 @@ class UBlockDefinitionStorage;
 class UCreatureDefinitionStorage;
 class UObjectLibrary;
 class USkinDefinitionStorage;
+class UItemDefinitionStorage;
 
 class UContentTypeRegistry : public IUContentCatalog
 {
@@ -22,6 +23,7 @@ public:
   void IndexObjects(const UObjectLibrary &prefabs);
   void IndexCreatures(const UCreatureDefinitionStorage &storage);
   void IndexSkins(const USkinDefinitionStorage &storage);
+  void IndexItems(const UItemDefinitionStorage &storage);
 
   std::vector<std::string> GetTypeIds(ContentKind kind) const override;
   std::string GetTypeDisplayName(const std::string &typeId) const override;
@@ -36,13 +38,16 @@ private:
   std::vector<ContentType> BlockTypes;
   std::vector<ContentType> ObjectTypes;
   std::vector<ContentType> CreatureTypes;
+  std::vector<ContentType> ItemTypes;
   std::unordered_map<std::string, ContentType> BlockTypeById;
   std::unordered_map<std::string, ContentType> ObjectTypeById;
   std::unordered_map<std::string, ContentType> CreatureTypeById;
+  std::unordered_map<std::string, ContentType> ItemTypeById;
   std::unordered_map<std::string, std::vector<CatalogEntry>> BlockEntries;
   std::unordered_map<std::string, std::vector<CatalogEntry>> ObjectEntries;
   std::unordered_map<std::string, std::vector<CatalogEntry>> CreatureEntries;
   std::unordered_map<std::string, std::vector<CatalogEntry>> SkinEntries;
+  std::unordered_map<std::string, std::vector<CatalogEntry>> ItemEntries;
 };
 
 } // namespace cutum

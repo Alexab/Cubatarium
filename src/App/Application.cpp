@@ -19,6 +19,10 @@
 #include "Game/GameSession.h"
 #include "Gui/Cache/CreatureIconCache.h"
 #include "Gui/Cache/InventoryIconService.h"
+#include "Items/ItemWieldRenderer.h"
+#include "Items/ItemDefinitionStorage.h"
+#include "Creatures/Core/Creature.h"
+#include "Gui/Cache/ItemIconCache.h"
 #include "Gui/Cache/ObjectIconCache.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiIconSource.h"
@@ -289,7 +293,9 @@ void UApplication::Startup(const std::string &configPath)
         }
       }
       IconSource = std::make_unique<UGuiIconSource>(
-          textures, std::move(objectCache), std::move(creatureCache));
+          textures, std::move(objectCache), std::move(creatureCache),
+          std::make_unique<UItemIconCache>(Core->GetItemDefinitionStorage(),
+                                           iconService));
     }
     auto previewRenderer = std::make_unique<UContentPreviewRenderer>(
         Core->GetObjectLibrary(), textures, BlockDefinitions, ShaderManager,
@@ -1439,6 +1445,9 @@ void UApplication::DrawDragGhost(int width, int height)
   case InventoryEntryKind::Skin:
     tex = IconSource->GetSkinIconTexture(drag.entry.Id);
     break;
+  case InventoryEntryKind::Item:
+    tex = IconSource->GetItemIconTexture(drag.entry.Id);
+    break;
   }
   if (tex == 0)
   {
@@ -1752,6 +1761,20 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     HudScreen->SyncSlotIcons();
     notifyViewport(HudScreen.get());
     GuiContext->RenderOverlay(*HudScreen->GetRoot(), width, height, false);
+  }
+  if (State == AppState::InGame && World && IconSource && GuiContext &&
+      !MinimalOverlayForBench && !PaletteOpen)
+  {
+    if (const UCreature *creature = World->GetControlledCreature())
+    {
+      const InventoryEntryRef *active =
+          creature->GetInventory().GetActiveEntryRef();
+      auto &renderer = GuiContext->GetRenderer();
+      renderer.BeginFrame(width, height);
+      DrawItemWieldOverlay(renderer, GuiContext->GetTheme(), IconSource.get(),
+                           active, width, height);
+      renderer.EndFrame();
+    }
   }
   if (ConsoleOpen && ConsoleScreen && ConsoleScreen->GetRoot())
   {

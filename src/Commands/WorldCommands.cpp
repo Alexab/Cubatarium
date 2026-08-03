@@ -10,6 +10,8 @@
 #include "Game/GameSession.h"
 #include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
+#include "Items/ItemDefinitionStorage.h"
+#include "Items/ToolCapabilities.h"
 #include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
 #include "World/Diagnostics/BlockInspectDiagnostics.h"
@@ -455,11 +457,27 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
                     {
                       if (args.size() < 2)
                       {
-                        return CommandResult{false, "Usage: give <block>"};
+                        return CommandResult{false, "Usage: give <id>"};
                       }
                       if (UCreatureInventory *inv = GetCommandInventory(world))
                       {
-                        inv->AddToInventory(args[1]);
+                        const std::string &id = args[1];
+                        if (world->GetItemDefinitionStorage() &&
+                            world->GetItemDefinitionStorage()->Get(id))
+                        {
+                          InventoryEntryRef entry;
+                          entry.empty = false;
+                          entry.kind = InventoryEntryKind::Item;
+                          entry.Id = id;
+                          entry.count = 1;
+                          entry.wear = 0.f;
+                          entry.broken = false;
+                          const size_t bar = inv->GetActiveBarIndex();
+                          const size_t slot = inv->GetActiveSlotIndex();
+                          inv->AssignToHotbar(bar, slot, entry);
+                          return CommandResult{true, "Gave tool " + id};
+                        }
+                        inv->AddToInventory(id);
                       }
                       else
                       {
@@ -467,6 +485,49 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
                       }
                       return CommandResult{true, "Added " + args[1]};
                     });
+
+  registry.Register(
+      "repair",
+      [world](const std::vector<std::string> &args)
+      {
+        (void)args;
+        UCreature *creature = world->GetControlledCreature();
+        if (!creature)
+        {
+          return CommandResult{false, "No controlled creature"};
+        }
+        UItemDefinitionStorage *items = world->GetItemDefinitionStorage();
+        if (!items)
+        {
+          return CommandResult{false, "No item definitions"};
+        }
+        auto &bars = creature->GetInventory().GetHotbarsMutable();
+        const size_t bar = creature->GetInventory().GetActiveBarIndex();
+        const size_t slot = creature->GetInventory().GetActiveSlotIndex();
+        if (bar >= bars.size() || slot >= bars[bar].slots.size() ||
+            bars[bar].slots[slot].empty)
+        {
+          return CommandResult{false, "Empty active slot"};
+        }
+        auto &entry = bars[bar].slots[slot].entry;
+        if (entry.kind != InventoryEntryKind::Item)
+        {
+          return CommandResult{false, "Active slot is not an item"};
+        }
+        const ItemDefinition *def = items->Get(entry.Id);
+        if (!def)
+        {
+          return CommandResult{false, "Unknown item"};
+        }
+        const std::string material =
+            def->Repair.Materials.empty() ? std::string{}
+                                          : def->Repair.Materials.front();
+        if (!TryRepairItem(entry, *def, material))
+        {
+          return CommandResult{false, "Repair failed"};
+        }
+        return CommandResult{true, "Repaired " + entry.Id};
+      });
 
   registry.Register(
       "tp",

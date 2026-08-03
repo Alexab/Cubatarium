@@ -92,8 +92,11 @@ void UCreativePaletteScreen::ApplyMainTab(int tab)
   case 2:
     Kind = ContentKind::UCreature;
     break;
-  default:
+  case 3:
     Kind = ContentKind::Skin;
+    break;
+  default:
+    Kind = ContentKind::Item;
     break;
   }
   if (MainTabs)
@@ -133,8 +136,11 @@ int UCreativePaletteScreen::GetActiveMainTab() const
     return 1;
   case ContentKind::UCreature:
     return 2;
-  default:
+  case ContentKind::Skin:
     return 3;
+  case ContentKind::Item:
+  default:
+    return 4;
   }
 }
 
@@ -154,7 +160,7 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
   Panel = panel.get();
 
   auto mainTabs = std::make_unique<UGuiTabBar>(Theme);
-  mainTabs->SetTabs({"Blocks", "Objects", "Creatures", "Skins"});
+  mainTabs->SetTabs({"Blocks", "Objects", "Creatures", "Skins", "Tools"});
   MainTabs = mainTabs.get();
   mainTabs->SetOnTabChanged(
       [this](int tab) { ApplyMainTab(tab); });
@@ -518,11 +524,16 @@ void UCreativePaletteScreen::RebuildGrid()
       {
         tex = Icons->GetSkinIconTexture(entryId);
       }
+      else if (Kind == ContentKind::Item)
+      {
+        tex = Icons->GetItemIconTexture(entryId);
+      }
       slot->SetIconTexture(tex);
     }
     InventoryEntryRef entry;
     entry.empty = false;
     entry.Id = entryId;
+    entry.count = 1;
     switch (Kind)
     {
     case ContentKind::Block:
@@ -536,6 +547,11 @@ void UCreativePaletteScreen::RebuildGrid()
       break;
     case ContentKind::Skin:
       entry.kind = InventoryEntryKind::Skin;
+      break;
+    case ContentKind::Item:
+      entry.kind = InventoryEntryKind::Item;
+      entry.wear = 0.f;
+      entry.broken = false;
       break;
     }
 

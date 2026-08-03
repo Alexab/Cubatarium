@@ -78,9 +78,29 @@ void UGuiSlot::Draw(UGuiRenderer &renderer)
                       Bounds.Y + Theme->Padding / 4, textColor);
   }
 
-  if (Dimmed)
+  if (Dimmed || Broken)
   {
     renderer.DrawFilledRect(Bounds, Theme->SlotDisabledFill);
+  }
+
+  if (WearProgress > 0.01f && WearProgress < 1.f)
+  {
+    const int barH = 3;
+    const GuiRect track{Bounds.X + 2, Bounds.Y + Bounds.H - barH - 2,
+                        Bounds.W - 4, barH};
+    renderer.DrawFilledRect(track, glm::vec4(0.1f, 0.1f, 0.1f, 0.85f));
+    const float remain = 1.f - WearProgress;
+    const int fillW = static_cast<int>((Bounds.W - 4) * remain);
+    glm::vec4 color{0.2f, 0.85f, 0.25f, 1.f};
+    if (remain < 0.35f)
+    {
+      color = glm::vec4(0.9f, 0.2f, 0.15f, 1.f);
+    }
+    else if (remain < 0.65f)
+    {
+      color = glm::vec4(0.9f, 0.85f, 0.15f, 1.f);
+    }
+    renderer.DrawFilledRect({track.X, track.Y, fillW, barH}, color);
   }
 }
 

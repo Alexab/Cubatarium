@@ -94,7 +94,8 @@ void UContentPreviewRenderer::Shutdown()
 bool UContentPreviewRenderer::SupportsKind(ContentKind kind) const
 {
   return kind == ContentKind::Block || kind == ContentKind::Object ||
-         kind == ContentKind::UCreature || kind == ContentKind::Skin;
+         kind == ContentKind::UCreature || kind == ContentKind::Skin ||
+         kind == ContentKind::Item;
 }
 
 bool UContentPreviewRenderer::EnsureFboSize(int size)

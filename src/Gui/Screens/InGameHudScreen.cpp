@@ -352,9 +352,17 @@ void UInGameHudScreen::SyncSlotIcons()
       case InventoryEntryKind::Skin:
         tex = Icons->GetSkinIconTexture(primary[i].Id);
         break;
+      case InventoryEntryKind::Item:
+        tex = Icons->GetItemIconTexture(primary[i].Id);
+        break;
       }
     }
     PrimarySlots[i]->SetIconTexture(tex);
+    PrimarySlots[i]->SetWearProgress(
+        primary[i].entryKind == InventoryEntryKind::Item ? primary[i].wear
+                                                         : 0.f);
+    PrimarySlots[i]->SetBroken(primary[i].entryKind == InventoryEntryKind::Item &&
+                               primary[i].broken);
   }
   const auto secondary = Session->GetBarSlots(1);
   for (size_t i = 0; i < SecondarySlots.size() && i < secondary.size(); ++i)
@@ -376,9 +384,18 @@ void UInGameHudScreen::SyncSlotIcons()
       case InventoryEntryKind::Skin:
         tex = Icons->GetSkinIconTexture(secondary[i].Id);
         break;
+      case InventoryEntryKind::Item:
+        tex = Icons->GetItemIconTexture(secondary[i].Id);
+        break;
       }
     }
     SecondarySlots[i]->SetIconTexture(tex);
+    SecondarySlots[i]->SetWearProgress(
+        secondary[i].entryKind == InventoryEntryKind::Item ? secondary[i].wear
+                                                           : 0.f);
+    SecondarySlots[i]->SetBroken(
+        secondary[i].entryKind == InventoryEntryKind::Item &&
+        secondary[i].broken);
   }
 }
 

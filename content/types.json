@@ -24,5 +24,13 @@
     { "id": "hostile", "displayName": "Hostile mobs", "sortOrder": 52 },
     { "id": "flying", "displayName": "Flying mobs", "sortOrder": 53 },
     { "id": "humanoid", "displayName": "Humanoid", "sortOrder": 60 }
+  ],
+  "itemTypes": [
+    { "id": "mining", "displayName": "Mining", "sortOrder": 10 },
+    { "id": "cutting", "displayName": "Cutting", "sortOrder": 20 },
+    { "id": "digging", "displayName": "Digging", "sortOrder": 30 },
+    { "id": "combat", "displayName": "Combat", "sortOrder": 40 },
+    { "id": "utility", "displayName": "Utility", "sortOrder": 50 },
+    { "id": "misc", "displayName": "Misc", "sortOrder": 999 }
   ]
 }

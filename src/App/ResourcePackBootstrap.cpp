@@ -8,6 +8,7 @@
 #include <glm/glm.hpp>
 
 #include "App/Core.h"
+#include "Items/ItemDefinitionStorage.h"
 #include "App/Platform/Log.h"
 #include "App/ResourcePackSelectionUtil.h"
 #include "Core/ColorUtil.h"
@@ -359,6 +360,22 @@ bool UResourcePackBootstrap::ApplyResourcePacks(
       return false;
     }
     core.WorldInstance->SetObjectLibrary(core.ObjectLibraryInstance.get());
+  }
+
+  if (core.ItemDefinitionsInstance)
+  {
+    const auto itemsPath = core.WorkDir / "content" / "items";
+    core.ItemDefinitionsInstance->Load(itemsPath.string());
+    for (const auto &pack : packs)
+    {
+      core.ItemDefinitionsInstance->LoadOverlay(
+          (pack.Root / "items").string());
+    }
+    if (core.WorldInstance)
+    {
+      core.WorldInstance->SetItemDefinitionStorage(
+          core.ItemDefinitionsInstance.get());
+    }
   }
 
   RebuildBlockTexturesFromMergeRegistry(core);

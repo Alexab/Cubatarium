@@ -264,9 +264,17 @@ void UCreatureInventory::SerializeToJson(nlohmann::json &out) const
         case InventoryEntryKind::Skin:
           s["kind"] = "skin";
           break;
+        case InventoryEntryKind::Item:
+          s["kind"] = "item";
+          break;
         }
         s["id"] = slot.entry.Id;
         s["count"] = slot.entry.count;
+        if (slot.entry.kind == InventoryEntryKind::Item)
+        {
+          s["wear"] = slot.entry.wear;
+          s["broken"] = slot.entry.broken;
+        }
       }
       slots.push_back(s);
     }
@@ -326,12 +334,18 @@ void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data,
             {
               bar.slots[si].entry.kind = InventoryEntryKind::Skin;
             }
+            else if (kind == "item")
+            {
+              bar.slots[si].entry.kind = InventoryEntryKind::Item;
+            }
             else
             {
               bar.slots[si].entry.kind = InventoryEntryKind::Block;
             }
             bar.slots[si].entry.Id = id;
             bar.slots[si].entry.count = slotJson.value("count", 0);
+            bar.slots[si].entry.wear = slotJson.value("wear", 0.f);
+            bar.slots[si].entry.broken = slotJson.value("broken", false);
             bar.slots[si].entry.empty = false;
             RemapLegacyHotbarEntryId(bar.slots[si].entry);
           }

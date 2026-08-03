@@ -7,9 +7,10 @@ namespace cutum
 UGuiIconSource::UGuiIconSource(
     std::shared_ptr<UTextureCubeStorage> textures,
     std::unique_ptr<UObjectIconCache> objectCache,
-    std::unique_ptr<UCreatureIconCache> creatureCache)
+    std::unique_ptr<UCreatureIconCache> creatureCache,
+    std::unique_ptr<UItemIconCache> itemCache)
     : Textures(std::move(textures)), ObjectCache(std::move(objectCache)),
-      CreatureCache(std::move(creatureCache))
+      CreatureCache(std::move(creatureCache)), ItemCache(std::move(itemCache))
 {
 }
 
@@ -71,6 +72,15 @@ GLuint UGuiIconSource::GetSkinIconTexture(const std::string &skinId)
   return CreatureCache->GetSkinIcon(skinId);
 }
 
+GLuint UGuiIconSource::GetItemIconTexture(const std::string &itemId)
+{
+  if (!ItemCache || itemId.empty())
+  {
+    return 0;
+  }
+  return ItemCache->GetIcon(itemId);
+}
+
 void UGuiIconSource::WarmupCreatureIcons(size_t maxPerFrame)
 {
   if (CreatureCache)
@@ -100,6 +110,14 @@ void UGuiIconSource::ClearCreatureIconCache()
   if (CreatureCache)
   {
     CreatureCache->ClearRenderedIcons();
+  }
+}
+
+void UGuiIconSource::ClearItemIconCache()
+{
+  if (ItemCache)
+  {
+    ItemCache->Invalidate();
   }
 }
 

@@ -21,6 +21,7 @@
 #include <windows.h>
 #endif
 #include "App/Core.h"
+#include "Items/ItemDefinitionStorage.h"
 #include "App/LegacyConfigAdapter.h"
 #include "App/Platform/Log.h"
 #include "App/RuntimeTuningConfig.h"
@@ -109,6 +110,16 @@ const UCreatureDefinitionStorage &UCore::Creatures() const
   return kEmpty;
 }
 
+const UItemDefinitionStorage &UCore::Items() const
+{
+  static const UItemDefinitionStorage kEmpty;
+  if (ItemDefinitionsInstance)
+  {
+    return *ItemDefinitionsInstance;
+  }
+  return kEmpty;
+}
+
 const WorldGenPack &UCore::ActiveWorldGenPack() const
 {
   return UWorldGenPack::Get();
@@ -132,12 +143,14 @@ std::filesystem::path GetExecutableDirectory()
 UCore::UCore(std::shared_ptr<UTextureBaseStorage> texture_base_storage_,
              std::shared_ptr<UTextureCubeStorage> texture_cube_storage_,
              std::shared_ptr<UObjectLibrary> object_library_,
+             std::shared_ptr<UItemDefinitionStorage> item_definitions_,
              std::shared_ptr<UWorld> World,
              std::shared_ptr<UGeometryEngine> Geometries,
              std::shared_ptr<UViewEngine> Views)
     : TextureBaseStorageInstance(texture_base_storage_),
       TextureCubeStorageInstance(texture_cube_storage_),
-      ObjectLibraryInstance(object_library_), WorldInstance(World),
+      ObjectLibraryInstance(object_library_),
+      ItemDefinitionsInstance(std::move(item_definitions_)), WorldInstance(World),
       GeometryEngineInstance(Geometries), ViewEngineInstance(Views)
 {
 }
