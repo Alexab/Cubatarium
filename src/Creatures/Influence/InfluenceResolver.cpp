@@ -50,7 +50,22 @@ InfluencePrediction InfluenceResolver::Resolve(
   pred.SourceId = source.GetId();
   pred.SourcePos = source.GetBodyOrigin();
 
-  if (!ModePolicy::AllowsCombatDamage(mode))
+  const CreatureIntent &intent = source.GetIntent();
+  const InfluenceChannel channel = ResolveChannel(intent);
+  if (channel == InfluenceChannel::None)
+  {
+    return pred;
+  }
+  if (channel == InfluenceChannel::Use)
+  {
+    pred.Capability.Channel = channel;
+    pred.CancelReason = "use_unimplemented";
+    pred.Cancelled = true;
+    return pred;
+  }
+
+  if (channel != InfluenceChannel::Dig &&
+      !ModePolicy::AllowsCombatDamage(mode))
   {
     pred.CancelReason = "creative";
     pred.Cancelled = true;
@@ -74,13 +89,6 @@ InfluencePrediction InfluenceResolver::Resolve(
         }
       }
     }
-  }
-
-  const CreatureIntent &intent = source.GetIntent();
-  const InfluenceChannel channel = ResolveChannel(intent);
-  if (channel == InfluenceChannel::None)
-  {
-    return pred;
   }
 
   InfluenceCapability cap;
