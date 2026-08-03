@@ -7,17 +7,17 @@
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-BB-001 | plan | Tool-based mining speed / harvest levels | No tool system yet; dig uses bare-hand `hardness * 1.5` only | backlog |
-| TD-BB-002 | plan | Remove or repurpose UI `BreakDurationSeconds` | Kept as legacy setting; dig path no longer uses it in Survival | backlog |
-| TD-BB-003 | plan | Sample block texture color for break particles | Neutral debris first; average-color sampling needs atlas read path | backlog |
-| TD-BB-004 | plan | Procedural crack fallback polish | Wireframe fallback if destroy_stage textures missing | close-tails |
-| TD-BB-005 | plan | Hardness table completeness vs Minecraft wiki | Pattern + exact table may miss rare pack-only names (fallback 1.0) | backlog |
+| TD-BB-001 | plan | Tool-based mining speed / harvest levels | No tool system integrated into dig path yet; dig uses bare-hand `hardness * 1.5` only | backlog |
+| TD-BB-002 | plan | Remove or repurpose UI `BreakDurationSeconds` | Kept as legacy setting; Survival dig uses hardness; Creative is instant | backlog |
+| TD-BB-003 | plan | Sample block texture color for break particles | Neutral gray-brown debris shipped; atlas average-color needs texture read path | backlog |
+| TD-BB-005 | plan | Hardness table completeness vs Minecraft wiki | Exact+pattern table covers current 291 pack names (0 fallback); rare new names still get 1.0 | backlog |
 
 ## Closed
 
 | ID | Closed in | Resolution |
 |----|-----------|------------|
-| *(none yet)* | | |
+| TD-BB-004 | 2026-08 | Wireframe fallback in `RenderBlockCrackOverlay` when destroy_stage textures/shader unavailable; textured path via `UBlockCrackOverlayPass` |
+| TD-BB-000 | 2026-08 | Hardness field + mode-aware dig + Creative instant; defaults applied to packs; crack stages + debris FX; C++ tests; `validate_content_completeness.py` in smoke |
 
 ## Ownership (parallel agents)
 
@@ -25,6 +25,13 @@
 |------|-------|
 | A Dig | `src/Blocks/BlockDefinition.*`, `BlockDigRules`, break session in `World.*`, `BlockInputController.*` |
 | B Content | `tools/block_hardness_defaults.yaml`, `tools/apply_block_hardness.py`, pack block JSON, validate scripts, `docs/RESOURCE_PACKS.md` |
-| C Visual | destroy_stage textures, `GeometryEngine` crack/particle hooks, `BlockBreakParticleSystem.*` |
+| C Visual | destroy_stage textures, `GeometryEngine` crack/particle hooks, `BlockBreakParticleSystem.*`, `BlockBreakFxPass.*`, `BlockCrackOverlayPass.*` |
 | D Tests | `src/Test/BlockHardness*.cpp`, `BlockBreak*.cpp`, CMake test targets, smoke hook |
 | Shared | this file (any agent may add Open rows) |
+
+## Close-tails notes (2026-08)
+
+- Creative LMB: instant complete (including hardness 0).
+- Survival hardness 0: no dig progress.
+- Dig formula helper: `BlockDigRules::DigDurationSeconds`.
+- Content gate: `python tools/validate_content_completeness.py` (also via `smoke_resource_packs.py`).
