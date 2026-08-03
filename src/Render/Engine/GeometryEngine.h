@@ -16,6 +16,7 @@ typedef int GLint;
 #include "App/Settings/RenderSettings.h"
 #include "Render/Backend/RenderBackendFactory.h"
 #include "Render/Blocks/BlockBreakFxPass.h"
+#include "Render/Blocks/BlockCrackOverlayPass.h"
 #include "Render/Effects/InfluenceFxPass.h"
 #include "Render/Engine/AnimationClock.h"
 #include "Render/Engine/CrossGpuBackend.h"
@@ -197,7 +198,6 @@ private:
   void DestroyOutlineBuffers();
   void RenderSelectionOutline();
   void RenderBlockCrackOverlay();
-  void RenderBlockBreakParticles();
   void RenderBiomeDebugOverlay();
 
   void DrawCubeGeometry();
@@ -290,6 +290,7 @@ private:
   USkyGradientPass SkyGradientPass_;
   UOpaqueDepthCapture OpaqueDepthCapture;
   UWeatherRenderPass WeatherPass;
+  UBlockCrackOverlayPass BlockCrackPass;
   UBlockBreakFxPass BlockBreakFx;
   UInfluenceFxPass InfluenceFx;
   glm::vec3 OverlayTintColor{0.0f};

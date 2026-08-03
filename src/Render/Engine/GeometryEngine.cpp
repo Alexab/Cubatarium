@@ -151,6 +151,7 @@ UGeometryEngine::~UGeometryEngine()
   FluidMap().DestroyGpuResources();
   OpaqueDepthCapture.DestroyGpuResources();
   WeatherPass.DestroyGpuResources();
+  BlockCrackPass.DestroyGpuResources();
   BlockBreakFx.DestroyGpuResources();
   InfluenceFx.DestroyGpuResources();
   DestroyPreviewBuffers();
@@ -483,10 +484,16 @@ float insetMix(float a, float b, float t, float inset) {
     return false;
   }
 
-  // Break FX are cosmetic: crack falls back to wireframe if shaders are absent.
+  // Cosmetic pass: crack falls back to wireframe when the shader is absent.
+  if (!BlockCrackPass.InitShader(shaderManager))
+  {
+    std::cerr << "Textured block crack disabled (shader load failed)"
+              << std::endl;
+  }
   if (!BlockBreakFx.InitShaders(shaderManager))
   {
-    std::cerr << "Block break FX disabled (shader load failed)" << std::endl;
+    std::cerr << "Block break debris disabled (shader load failed)"
+              << std::endl;
   }
   if (!InfluenceFx.InitShaders(shaderManager))
   {
@@ -737,7 +744,20 @@ void UGeometryEngine::DrawCubeGeometry()
 
   RenderSelectionOutline();
   RenderBlockCrackOverlay();
-  RenderBlockBreakParticles();
+  if (WorldInstance)
+  {
+    if (auto break_camera = WorldInstance->GetCurrentUserCamera())
+    {
+      const glm::mat4 view = break_camera->GetViewMatrix();
+      const glm::mat4 proj = break_camera->GetProjection();
+      const glm::mat4 view_inv = glm::inverse(view);
+      const glm::vec3 camera_right = glm::normalize(glm::vec3(view_inv[0]));
+      const glm::vec3 camera_up = glm::normalize(glm::vec3(view_inv[1]));
+      const float dt = static_cast<float>(break_camera->GetDeltaTime());
+      BlockBreakFx.UpdateAndRender(*WorldInstance, dt, proj * view,
+                                   camera_right, camera_up);
+    }
+  }
   RenderBiomeDebugOverlay();
   if (WorldInstance)
   {
@@ -3290,33 +3310,6 @@ void DrawBlockOutline(UShaderProgram *shader, GLuint vao, const glm::mat4 &mvp,
   shader->Unuse();
 }
 
-BlockBreakFxContext MakeBlockBreakFxContext(const UWorld &world,
-                                            const glm::mat4 &view,
-                                            const glm::mat4 &proj,
-                                            float dt_seconds)
-{
-  BlockBreakFxContext ctx;
-  ctx.ViewProj = proj * view;
-  const glm::mat3 view_rot = glm::mat3(view);
-  ctx.CameraRight = glm::normalize(glm::vec3(view_rot[0]));
-  ctx.CameraUp = glm::normalize(glm::vec3(view_rot[1]));
-  ctx.DeltaSec = dt_seconds;
-  ctx.HasSession = world.HasBreakSession();
-  if (const std::optional<glm::ivec3> session_pos =
-          world.GetBreakSessionBlockPos())
-  {
-    ctx.SessionBlockPos = *session_pos;
-  }
-  ctx.Progress = world.GetBreakProgress();
-  ctx.HasAimTarget = world.GetIsBlockIntersectionExists();
-  if (ctx.HasAimTarget)
-  {
-    ctx.AimBlockPos = world.GetBreakBlockPos();
-  }
-  ctx.BreakCompleteCount = world.GetPhysicsTelemetry().BreakCompleteN;
-  return ctx;
-}
-
 } // namespace
 
 void UGeometryEngine::RenderBlockCrackOverlay()
@@ -3335,9 +3328,11 @@ void UGeometryEngine::RenderBlockCrackOverlay()
 
   const glm::mat4 view = camera->GetViewMatrix();
   const glm::mat4 proj = camera->GetProjection();
-  if (BlockBreakFx.RenderCrack(
-          MakeBlockBreakFxContext(*WorldInstance, view, proj,
-                                  static_cast<float>(camera->GetDeltaTime()))))
+  BlockCrackOverlayRequest crack_request;
+  crack_request.ViewProj = proj * view;
+  crack_request.BlockPos = *blockPos;
+  crack_request.Progress = WorldInstance->GetBreakProgress();
+  if (BlockCrackPass.Render(crack_request))
   {
     return;
   }
@@ -3386,22 +3381,6 @@ void UGeometryEngine::RenderBlockCrackOverlay()
   {
     glDisable(GL_CULL_FACE);
   }
-}
-
-void UGeometryEngine::RenderBlockBreakParticles()
-{
-  if (!WorldInstance)
-  {
-    return;
-  }
-  auto camera = WorldInstance->GetCurrentUserCamera();
-  if (!camera)
-  {
-    return;
-  }
-  BlockBreakFx.UpdateAndRenderParticles(MakeBlockBreakFxContext(
-      *WorldInstance, camera->GetViewMatrix(), camera->GetProjection(),
-      static_cast<float>(camera->GetDeltaTime())));
 }
 
 void UGeometryEngine::RenderSelectionOutline()

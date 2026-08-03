@@ -5,7 +5,7 @@ if(POLICY CMP0091)
 endif()
 
 # Static vcpkg triplet on Windows hosts. /MT runtime is applied after project()
-# only for MSVC / clang-cl ªLL GNU-style Clang (linux-ninja preset) must not get /Zc flags.
+# only for MSVC / clang-cl Ð„LL GNU-style Clang (linux-ninja preset) must not get /Zc flags.
 if(WIN32)
     set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "vcpkg triplet" FORCE)
     set(VCPKG_APPLOCAL_DEPS OFF CACHE BOOL "Copy DLL deps next to exe" FORCE)
@@ -314,6 +314,9 @@ set(SOURCES
     src/Render/Weather/WeatherParticleSystem.cpp
     src/Render/Weather/WeatherRenderPass.cpp
     src/Render/Weather/WeatherExposure.cpp
+    src/Render/Blocks/BlockCrackOverlayPass.cpp
+    src/Render/Blocks/BlockBreakParticleSystem.cpp
+    src/Render/Blocks/BlockBreakFxPass.cpp
     src/World/Math/GridMath.cpp
     src/Blocks/BlockRegistry.cpp
     src/Blocks/BlockDefinition.cpp
@@ -531,6 +534,9 @@ set(HEADERS
     src/App/Platform/WindowManager.h
     src/Blocks/Input/BlockInputController.h
     src/Render/Engine/GeometryEngine.h
+    src/Render/Blocks/BlockCrackOverlayPass.h
+    src/Render/Blocks/BlockBreakParticleSystem.h
+    src/Render/Blocks/BlockBreakFxPass.h
     src/Render/Engine/UnderwaterFogPass.h
     src/Render/Engine/GreedyGpuBackend.h
     src/Render/Engine/CrossGpuBackend.h
