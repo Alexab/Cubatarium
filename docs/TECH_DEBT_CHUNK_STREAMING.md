@@ -70,7 +70,7 @@
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-ARCH-034 | 2026-08 FOV plan | Far-rim nh≥4 dual-backlog (manual 215629 mh=5) | Hotfix N0/`9cfe265a`; mid residual sticky nh2–3: `104108` miss_frac≈0.93 mh_med=2 rim_ok wall~58–66. R1–R3 (`26a43613`/`9232821c`/`6829308e`): full-scan sticky nh2–3, FM floor≥8, Imm nh≤2 + idle Imm nh≤3, clamp ×0.70, lateral cap 3 when behind>ahead. Smoke land-south PASS; **mid DoD still needs same-path manual** | **in-progress** mid residual |
+| TD-ARCH-034 | 2026-08 FOV plan | Far-rim nh≥4 dual-backlog (manual 215629 mh=5) | Hotfix N0 + R1–R3. Mid residual: `104108` sticky nh2–3; post-R **`121154` regress** mh_med=4 nh≥4≈0.54 wall≈118 clamp=0 (sticky≥3 rarely latches while flying; light_debt min-cap sch≤5). R1b: FM floor≥8 without sticky gate + far nh≥4; drop light_debt sch cap5; clamp nh≤3; Imm nh≥3 sticky≥5 | **in-progress** mid residual (need same-path manual) |
 | TD-ARCH-035 | 2026-08 FOV plan | FOV idle FirstMesh / camera-front priority | Side FOV: keep nh1 Imm/clamp; lateral missing Pass1c — R3 bump 2→3 when behind>ahead only; wide off-forward reverted (103012) | **done** + R3 lateral |
 | TD-ARCH-036 | 2026-08 FOV plan | Per-cy draw gate (column all-or-nothing) | `bd4e0356`; smoke PASS | **done** 2026-08-02 |
 | TD-ARCH-037 | 2026-08 FOV plan | Soft flight speed clamp on underfeet/near ahead miss | R2: nh≤2 always ×0.70 (no velocity cone); telem export | **done** R2 |

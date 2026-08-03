@@ -267,12 +267,13 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     // Manual 153832: UV≥8 crushed first_mesh to 3 and max_schedule to 3, nulling
     // G2 FM bump and starving rim while remesh keep_h=1 let stale explode.
     // Prefer FirstMesh slots; keep a small remesh band (horiz≤2) for stale.
+    // Manual 121154: do NOT min-cap max_schedule to 5 — that re-crushed rim
+    // FirstMesh (sch≈5, nh≥4 frac↑, wall↑) after R1 floor≥8.
     out.remesh_schedule = std::min(out.remesh_schedule, 1);
     out.starve_remesh_horiz = std::max(out.starve_remesh_horiz, 2);
     const int fm = std::max(0, out.first_mesh_schedule);
     const int need = fm + std::max(0, out.remesh_schedule);
     out.max_schedule = std::max(out.max_schedule, need);
-    out.max_schedule = std::min(out.max_schedule, std::max(need, 5));
   }
 
   // K3/M3: rim miss (mh 2–3) with cooled-ish GPU pending — +1 remesh for
