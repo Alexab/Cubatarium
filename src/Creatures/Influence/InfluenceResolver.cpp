@@ -244,8 +244,14 @@ InfluencePrediction InfluenceResolver::Resolve(
   delta.TargetPos = target->GetBodyOrigin();
   delta.HealthDelta = -hit.Damage;
   pred.Targets.push_back(delta);
-  // Prototype status application from bare-hand melee.
-  pred.Targets.back().StatusIdsToAdd.push_back("bleed");
+  // Status from capability / catalog (not hardcoded bleed).
+  for (const std::string &status_id : cap.OnHitStatusIds)
+  {
+    if (!status_id.empty())
+    {
+      pred.Targets.back().StatusIdsToAdd.push_back(status_id);
+    }
+  }
   pred.SourceFatigueDelta = cap.SourceFatigueCost;
   pred.IntervalMul = hit.IntervalMul;
   pred.Valid = true;

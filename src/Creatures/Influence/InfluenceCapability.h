@@ -3,6 +3,8 @@
 
 #include "Creatures/Influence/EffectSpec.h"
 #include "Creatures/Influence/InfluenceTypes.h"
+#include <string>
+#include <vector>
 
 namespace cutum
 {
@@ -21,6 +23,8 @@ struct InfluenceCapability
   float SourceFatigueCost{6.f};
   int PunchAttackUses{0};
   EffectSpec Effects;
+  /// Status effect ids applied to a successful single-target hit (catalog).
+  std::vector<std::string> OnHitStatusIds;
 
   static InfluenceCapability DefaultBareHand(int fleshy_damage)
   {
@@ -37,6 +41,7 @@ struct InfluenceCapability
     cap.Effects.Source.FlashStrength = 0.15f;
     cap.Effects.Path.DurationSec = 0.18f;
     cap.Effects.Path.FlashStrength = 0.5f;
+    cap.OnHitStatusIds.push_back("bleed");
     return cap;
   }
 };
