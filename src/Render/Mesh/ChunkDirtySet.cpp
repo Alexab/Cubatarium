@@ -122,7 +122,19 @@ auto MakeDistanceKeyLess(glm::ivec3 focus_ground_chunk, int preferred_cy,
       {
         return ma;
       }
-      if (!ma && !mb && focus_radius_for_tail >= 0)
+      // S4: FirstMesh/missing — raw Chebyshev near-first. Forward bias only as
+      // same-ring tie-break (EffectiveHorizDist let ahead@far beat side/near —
+      // manual 154048 flyover far-then-near).
+      if (ma && mb)
+      {
+        const int ha = HorizDist(a, focus_ground_chunk);
+        const int hb = HorizDist(b, focus_ground_chunk);
+        if (ha != hb)
+        {
+          return ha < hb;
+        }
+      }
+      else if (!ma && !mb && focus_radius_for_tail >= 0)
       {
         const int ha = HorizDist(a, focus_ground_chunk);
         const int hb = HorizDist(b, focus_ground_chunk);
@@ -134,6 +146,7 @@ auto MakeDistanceKeyLess(glm::ivec3 focus_ground_chunk, int preferred_cy,
         }
       }
     }
+    // Remesh primary distance, or missing same-Chebyshev tie-break.
     const float ea = EffectiveHorizDist(a, focus_ground_chunk, forward_bias_k,
                                        forward_xz);
     const float eb = EffectiveHorizDist(b, focus_ground_chunk, forward_bias_k,

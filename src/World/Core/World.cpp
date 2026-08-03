@@ -1486,13 +1486,17 @@ int UWorld::AdmitFocusMeshIngress(int max_columns)
   const int cy0 = FloorDiv(remesh_min, CHUNK_SIZE);
   const int cy1 = FloorDiv(remesh_max, CHUNK_SIZE);
   int admitted = 0;
-  // Cheap path: only columns already in PendingLightBeforeMesh near focus.
+  // S5: pick nearest PendingLight column — unordered_map iteration admitted
+  // arbitrary far ingress after FirstMesh dispatch (far-before-near).
+  struct IngressCand
+  {
+    glm::ivec2 key{0};
+    int dist{0};
+  };
+  std::vector<IngressCand> ingress;
+  ingress.reserve(PendingLightBeforeMesh.size());
   for (const auto &entry : PendingLightBeforeMesh)
   {
-    if (admitted >= max_columns)
-    {
-      break;
-    }
     const glm::ivec2 key = entry.first;
     const int dist =
         std::max(std::abs(key.x - focus.x), std::abs(key.y - focus.z));
@@ -1500,6 +1504,25 @@ int UWorld::AdmitFocusMeshIngress(int max_columns)
     {
       continue;
     }
+    ingress.push_back(IngressCand{key, dist});
+  }
+  std::sort(ingress.begin(), ingress.end(),
+            [](const IngressCand &a, const IngressCand &b)
+            {
+              if (a.dist != b.dist)
+              {
+                return a.dist < b.dist;
+              }
+              return a.key.x < b.key.x ||
+                     (a.key.x == b.key.x && a.key.y < b.key.y);
+            });
+  for (const IngressCand &cand : ingress)
+  {
+    if (admitted >= max_columns)
+    {
+      break;
+    }
+    const glm::ivec2 key = cand.key;
     const glm::ivec3 ground(key.x, 0, key.y);
     bool missing = false;
     for (int cy = cy0; cy <= cy1 && !missing; ++cy)
@@ -1646,29 +1669,21 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
     }
   }
 
-  // P1: idle FOV fill — prefer look direction more strongly than ring alone
-  // (k≥1.5). Moving: keep MeshForwardBiasK-scale (0.75); k=0.45 starved
-  // ahead and raised nh≥4 (manual 103012 regress vs 101354).
-  const bool idle_like =
-      GetLastMovementSpeed() <=
-      ProceduralTemplate.MovementPrefetchThreshold;
-  const float fov_k = idle_like ? 1.5f : 0.75f;
+  // S4: FirstMesh admit — raw Chebyshev near-first. Forward bias only as
+  // same-ring tie-break. EffectiveHorizDist (idle k≥1.5) admitted ahead@far
+  // before side/near underfeet — flyover far-then-near (manual 154048).
   std::sort(candidates.begin(), candidates.end(),
-            [fov_k](const Candidate &a, const Candidate &b)
+            [](const Candidate &a, const Candidate &b)
             {
-              const float score_a = static_cast<float>(a.horiz) -
-                                   fov_k * std::max(0.0f, a.forward_score);
-              const float score_b = static_cast<float>(b.horiz) -
-                                   fov_k * std::max(0.0f, b.forward_score);
-              if (score_a != score_b)
+              if (a.horiz != b.horiz)
               {
-                return score_a < score_b;
+                return a.horiz < b.horiz;
               }
               if (a.forward_score != b.forward_score)
               {
                 return a.forward_score > b.forward_score;
               }
-              return a.horiz < b.horiz;
+              return false;
             });
 
   int admitted = 0;
@@ -3705,6 +3720,30 @@ glm::ivec3 UWorld::GetPreferredLoadFocusBlock() const
     }
   }
   return WorldPosToBlock(SpawnPoint);
+}
+
+glm::ivec3 UWorld::GetPredictedSafetyFocusBlock() const
+{
+  glm::ivec3 feet = GetPreferredLoadFocusBlock();
+  if (LastMovementSpeed < ProceduralTemplate.MovementPrefetchThreshold)
+  {
+    return feet;
+  }
+  const glm::vec2 dir = LastMovementDirXz;
+  if (glm::length(dir) < 0.01f)
+  {
+    return feet;
+  }
+  // One chunk step along dominant horizontal axis (Chebyshev safety lead).
+  if (std::abs(dir.x) >= std::abs(dir.y))
+  {
+    feet.x += (dir.x >= 0.0f ? CHUNK_SIZE : -CHUNK_SIZE);
+  }
+  else
+  {
+    feet.z += (dir.y >= 0.0f ? CHUNK_SIZE : -CHUNK_SIZE);
+  }
+  return feet;
 }
 
 void UWorld::SetSpawnPoint(glm::vec3 value) { SpawnPoint = value; }
@@ -6077,6 +6116,134 @@ bool UWorld::IsCollisionReadyAtFeet(const glm::ivec3 &feetBlock) const
         feetBlock, PhysicsBudgetConfig.CollisionSafetyRadiusChunks);
   }
   return false;
+}
+
+bool UWorld::IsFlyIngressColumnReady(glm::ivec3 eye_chunk) const
+{
+  if (!MeshService)
+  {
+    return true;
+  }
+  // S7: O(1) frame cache — WASD can call this many times per tick.
+  if (FlyIngressCacheTick == PhysicsTickCounter &&
+      FlyIngressCacheChunk == eye_chunk)
+  {
+    return FlyIngressCacheReady;
+  }
+  auto finish = [&](bool ready) {
+    FlyIngressCacheTick = PhysicsTickCounter;
+    FlyIngressCacheChunk = eye_chunk;
+    FlyIngressCacheReady = ready;
+    return ready;
+  };
+
+  // Prefer compact ColumnSafety — no GetData / full voxel scan.
+  UChunkMeshCache::ColumnSafetyState st{};
+  if (MeshService->TryGetColumnSafety(glm::ivec2(eye_chunk.x, eye_chunk.z),
+                                      st))
+  {
+    if (!st.resident)
+    {
+      return finish(false);
+    }
+    if (!st.contains_solid || st.mesh_ready)
+    {
+      return finish(true);
+    }
+    // Solid committed, FirstMesh not applied yet. Allow when mesh work is
+    // already queued/in-flight/GPU — hard-stop only for idle unmeshed solid
+    // (SoftFlight still clamps on HasMissing).
+    const int max_cy = std::max(
+        0, FloorDiv(std::max(0, ProceduralTemplate.MaxHeight), CHUNK_SIZE));
+    const int cy_hi = std::min(max_cy, 12);
+    for (int cy = 0; cy <= cy_hi; ++cy)
+    {
+      const glm::ivec3 coord(eye_chunk.x, cy, eye_chunk.z);
+      if (MeshService->HasMeshSatisfyingColumnReady(coord) ||
+          MeshService->IsPendingGpuApply(coord) ||
+          MeshService->IsGpuExtractInFlight(coord) ||
+          MeshService->HasInflightMeshBuild(coord) ||
+          MeshService->IsChunkMeshDirty(coord))
+      {
+        return finish(true);
+      }
+    }
+    return finish(false);
+  }
+
+  // Fallback before ColumnSafety note: sparse solid + mesh/GPU flags only.
+  const int max_cy =
+      std::max(0, FloorDiv(std::max(0, ProceduralTemplate.MaxHeight), CHUNK_SIZE));
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  int band_min = std::max(0, focus_block.y - CHUNK_SIZE);
+  int band_max =
+      std::min(ProceduralTemplate.MaxHeight, focus_block.y + CHUNK_SIZE * 2);
+  if (ProceduralTemplate.FillWater)
+  {
+    const int sea = ProceduralTemplate.SeaLevel;
+    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
+    band_max =
+        std::max(band_max, std::min(ProceduralTemplate.MaxHeight,
+                                    sea + CHUNK_SIZE * 2));
+  }
+  band_min = std::min(band_min, std::max(0, eye_chunk.y * CHUNK_SIZE));
+  band_max = std::max(band_max, eye_chunk.y * CHUNK_SIZE + CHUNK_SIZE - 1);
+  const int cy0 = std::max(0, FloorDiv(band_min, CHUNK_SIZE));
+  const int cy1 = std::min(max_cy, FloorDiv(band_max, CHUNK_SIZE));
+
+  bool any_chunk = false;
+  bool any_drawable = false;
+  for (int cy = cy0; cy <= cy1; ++cy)
+  {
+    const glm::ivec3 coord(eye_chunk.x, cy, eye_chunk.z);
+    const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+    if (!chunk)
+    {
+      continue;
+    }
+    any_chunk = true;
+    if (MeshService->HasMeshSatisfyingColumnReady(coord) ||
+        MeshService->IsPendingGpuApply(coord) ||
+        MeshService->IsGpuExtractInFlight(coord))
+    {
+      any_drawable = true;
+      continue;
+    }
+    // Sparse solid probe (corners/center) — not full GetData().
+    static constexpr int kPts[][3] = {
+        {0, 0, 0},
+        {CHUNK_SIZE - 1, 0, 0},
+        {0, 0, CHUNK_SIZE - 1},
+        {CHUNK_SIZE - 1, 0, CHUNK_SIZE - 1},
+        {CHUNK_SIZE / 2, CHUNK_SIZE / 2, CHUNK_SIZE / 2},
+        {CHUNK_SIZE / 2, 0, CHUNK_SIZE / 2},
+    };
+    for (const auto &p : kPts)
+    {
+      if (chunk->GetBlockLocal(glm::ivec3(p[0], p[1], p[2])) != BLOCK_AIR)
+      {
+        return finish(false);
+      }
+    }
+  }
+  if (!any_chunk)
+  {
+    return finish(false);
+  }
+  if (!any_drawable)
+  {
+    const ColumnEmergeState stage =
+        GetColumnEmergeState(glm::ivec3(eye_chunk.x, 0, eye_chunk.z));
+    if (stage == ColumnEmergeState::Empty ||
+        stage == ColumnEmergeState::Generating ||
+        stage == ColumnEmergeState::VoxelsReady ||
+        stage == ColumnEmergeState::Lighting ||
+        stage == ColumnEmergeState::Meshing)
+    {
+      return finish(false);
+    }
+  }
+  return finish(true);
 }
 
 void UWorld::DoMovement()

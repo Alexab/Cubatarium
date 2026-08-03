@@ -398,6 +398,26 @@ int main()
     const auto a17b = ComputeMeshWorkAdmission(rim_stale12);
     Expect(a17b.remesh_schedule >= 2, "M3 +1 remesh at pending=12 rim miss");
     Expect(a17b.first_mesh_schedule >= 4, "M3 keeps FirstMesh≥4 at pending=12");
+
+    // S7: proactive FM floor while moving with incomplete safety ring, no holes.
+    MeshWorkAdmissionInput s7_pro{};
+    s7_pro.pending_gpu = 2;
+    s7_pro.pending_gpu_queued = 1;
+    s7_pro.pending_gpu_kicked = 1;
+    s7_pro.visual_holes = false;
+    s7_pro.missing_underfeet = false;
+    s7_pro.moving = true;
+    s7_pro.safety_ring_incomplete = true;
+    s7_pro.ring_depth = 8;
+    const auto a_s7 = ComputeMeshWorkAdmission(s7_pro);
+    Expect(a_s7.first_mesh_schedule >= 4,
+           "S7 proactive FirstMesh floor without holes");
+    // S7: commit near r≤2 may MarkDirty Unlit FirstMesh while PendingLight —
+    // SoftDefer + AllowUnlit must allow.
+    Expect(AllowUnlitFirstMesh(false, 2, false, true),
+           "S7 safety r≤2 AllowUnlit FirstMesh on commit");
+    Expect(!SoftDeferMeshUntilLitPolicy(false, false, true, true, true, true),
+           "S7 pending+unlit allow first mesh (commit→Dirty path)");
   }
 
   if (failures != 0)

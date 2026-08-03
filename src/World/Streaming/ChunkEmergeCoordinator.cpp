@@ -148,7 +148,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const double last_frame_ms =
       last_do_movement_ms > 0.5 ? last_do_movement_ms : last_frame_wall_ms;
 
-  const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
+  const glm::ivec3 focus_block = world.GetPredictedSafetyFocusBlock();
   const glm::ivec3 focus_ground =
       UChunkManager::WorldToChunk(focus_block);
   const glm::ivec3 focus_ground_horiz(focus_ground.x, 0, focus_ground.z);
@@ -968,6 +968,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Early pending_gpu read — MeshWorkAdmission for producers; Finalize after
   // drain-first consume so schedule sees post-Finish pending (F0).
   size_t pending_gpu_n = mesh_service.GetPendingGpuAppliesCount();
+  const bool safety_ring_incomplete =
+      mesh_service.HasMissingGreedyMeshInHorizontalRadius(
+          world.GetBlockWorld(), focus_ground_horiz, /*radius=*/2);
   {
     MeshWorkAdmissionInput ain{};
     ain.pending_gpu = pending_gpu_n;
@@ -981,6 +984,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.unfinished_visual = world.GetPhysicsTelemetry().UnfinishedVisual;
     ain.prev_mode = static_cast<uint8_t>(LastBudget.AdmissionMode);
     ain.ring_depth = UGpuMeshPipeline::kReadbackRing;
+    ain.safety_ring_incomplete = safety_ring_incomplete;
     mesh_service.SetMeshWorkAdmission(ComputeMeshWorkAdmission(ain));
   }
   if (focus_not_render_ready > 12 && pending_async_early < 10)
@@ -2012,8 +2016,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   glm::ivec3 isolated_hole{};
   const bool found_nearest_missing = mesh_service.FindNearestMissingGreedyMesh(
       world.GetBlockWorld(), focus_ground_horiz, focus_radius, isolated_hole);
-  // S1: pin nearest until FirstMesh drawable — FindNearest skips Pending/InFlight
-  // so the target hops while the visual void remains.
+  // S1/S4: pin nearest visual hole until drawable — FindNearest counts
+  // Pending/InFlight as holes so the pin sticks to the nearest undrawn column
+  // instead of hopping to a farther non-pipeline void (manual 154048).
   mesh_service.UpdateRimHolePin(focus_ground_horiz, focus_radius,
                                 found_nearest_missing, isolated_hole);
   const bool have_rim_target = mesh_service.HasRimHolePin();
@@ -2260,13 +2265,38 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     exec.DrainBudget(world, moving ? 2 : 3, focus_ground_horiz, focus_radius,
                      /*admit_batch=*/moving ? 2 : 3);
   }
-  // S0/S2: one soft clamp — any moving focus miss or live rim pin.
+  // S0/S2/S6: soft clamp graded by how close the frontier hole is.
+  // Flat ×0.75 still let the player reach the visible/unvisible gap
+  // (manual 170213: clamp=0.75, ahead=11–15, pref=0).
   {
     float clamp_scale = 1.0f;
-    if (moving && (missing_underfeet || have_rim_target ||
-                   world.GetPhysicsTelemetry().FocusMissingMesh > 0))
+    const int unfinished_ahead =
+        world.GetPhysicsTelemetry().FocusUnfinishedAhead;
+    const int miss_h = have_rim_target
+                           ? std::max(std::abs(rim_hole.x - focus_ground_horiz.x),
+                                      std::abs(rim_hole.z - focus_ground_horiz.z))
+                           : world.GetPhysicsTelemetry().MissHoriz;
+    const bool any_hole =
+        missing_underfeet || have_rim_target ||
+        world.GetPhysicsTelemetry().FocusMissingMesh > 0 ||
+        unfinished_ahead > 0;
+    // S6b: apply while FreeMove intent even if speed dipped below threshold
+    // for a period (manual 173742 clamp=1.0 with miss=1 at exit).
+    const bool clamp_motion = moving || world.GetTimeSinceMotionSec() < 0.35;
+    if (clamp_motion && any_hole)
     {
-      clamp_scale = 0.75f;
+      if (missing_underfeet || miss_h <= 1 || unfinished_ahead >= 8)
+      {
+        clamp_scale = 0.40f;
+      }
+      else if (miss_h <= 3 || unfinished_ahead >= 4)
+      {
+        clamp_scale = 0.55f;
+      }
+      else
+      {
+        clamp_scale = 0.70f;
+      }
     }
     world.GetPhysicsTelemetryMutable().StreamSpeedClampScale = clamp_scale;
   }
@@ -2312,6 +2342,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       ain.nearest_miss_horiz = world.GetPhysicsTelemetry().MissHoriz;
     }
+    ain.safety_ring_incomplete = safety_ring_incomplete;
     MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
     // S0: admission owns schedule — no coordinator FM floor / Finish boost
     // overlays (R1b/R1c sch=10–12 → pending_gpu≈96, wall regress vs 104108).

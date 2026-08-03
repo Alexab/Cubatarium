@@ -70,7 +70,7 @@
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-ARCH-034 | 2026-08 FOV plan | Far-rim nh≥4 dual-backlog | S0–S2 systemic: pin + admission headroom. Mid `151852`: gpu_max=22 OK, wall~84 miss_end=1 Imm@stop; **S3** drop sch=max(12) overlay, Imm only when pending_gpu=0, PreferKick pin always, idle drain↑ | **in-progress** |
+| TD-ARCH-034 | 2026-08 FOV plan | Far-rim nh≥4 dual-backlog | **S7**: RenderReady safety ring r=2 (predicted feet): commit→Unlit FirstMesh Dirty; ColumnSafety O(1) HasMissing/ingress; no hitch PrefetchAhead; safety load/commit floor≥3–4; proactive FM admission. Clamp/hard-stop backup only. Evidence targets mid≈`104108` wall, not `175819` 200–370 | **in-progress** S7 |
 | TD-ARCH-035 | 2026-08 FOV plan | FOV idle FirstMesh / camera-front priority | Side FOV: keep nh1 Imm/clamp; lateral missing Pass1c — R3 bump 2→3 when behind>ahead only; wide off-forward reverted (103012) | **done** + R3 lateral |
 | TD-ARCH-036 | 2026-08 FOV plan | Per-cy draw gate (column all-or-nothing) | `bd4e0356`; smoke PASS | **done** 2026-08-02 |
 | TD-ARCH-037 | 2026-08 FOV plan | Soft flight speed clamp on underfeet/near ahead miss | R2: nh≤2 always ×0.70 (no velocity cone); telem export | **done** R2 |

@@ -209,6 +209,21 @@ public:
   {
     RimHolePinActive = false;
     RimHolePinCoord = glm::ivec3(0);
+    Cache.ClearRimHolePin();
+  }
+  void NoteColumnSafetyCommit(glm::ivec2 xz, bool contains_solid)
+  {
+    Cache.NoteColumnSafetyCommit(xz, contains_solid);
+  }
+  void NoteColumnSafetyMeshReady(glm::ivec2 xz, bool ready)
+  {
+    Cache.NoteColumnSafetyMeshReady(xz, ready);
+  }
+  void ClearColumnSafety(glm::ivec2 xz) { Cache.ClearColumnSafety(xz); }
+  bool TryGetColumnSafety(glm::ivec2 xz,
+                          UChunkMeshCache::ColumnSafetyState &out) const
+  {
+    return Cache.TryGetColumnSafety(xz, out);
   }
   const MeshRebuildTickStats &GetLastRebuildTickStats() const;
   uint64_t GetMeshRevision() const;

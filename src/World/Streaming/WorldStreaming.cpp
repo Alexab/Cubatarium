@@ -219,7 +219,7 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         }
         const ProceduralSettings &settings = world.GetProceduralSettings();
         const glm::ivec3 focus_ground =
-            UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+            UChunkManager::WorldToChunk(world.GetPredictedSafetyFocusBlock());
         const int focus_radius = world.GetStreamingFocusRadius();
         const bool near_focus =
             std::abs(coord.x - focus_ground.x) <= focus_radius &&
@@ -297,6 +297,8 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
                   ground, dirty_min, dirty_max,
                   /*include_horizontal_neighbors=*/true);
+              world.MeshService->NoteColumnSafetyCommit(
+                  glm::ivec2(ground.x, ground.z), /*contains_solid=*/true);
             }
             else if (admit_far_dirty)
             {
@@ -331,7 +333,20 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                   ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, relight_priority,
                   enqueue_relight_min, enqueue_relight_max);
               world.NotePendingLightBeforeMesh(ground, dirty_min, dirty_max);
-              if (near_focus)
+              // S7: safety ring r≤2 — Unlit FirstMesh immediately on commit,
+              // do not wait for PendingLight → late ColumnFlow Admit.
+              constexpr int kSafetyR = 2;
+              const bool in_safety = horiz <= kSafetyR;
+              if (in_safety && world.MeshService)
+              {
+                world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+                    ground, dirty_min, dirty_max,
+                    /*include_horizontal_neighbors=*/false);
+                world.MeshService->NoteColumnSafetyCommit(
+                    glm::ivec2(ground.x, ground.z), /*contains_solid=*/true);
+                world.SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+              }
+              else if (near_focus)
               {
                 world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
               }
@@ -360,6 +375,8 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                 world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
                     ground, dirty_min, dirty_max,
                     /*include_horizontal_neighbors=*/true);
+                world.MeshService->NoteColumnSafetyCommit(
+                    glm::ivec2(ground.x, ground.z), /*contains_solid=*/true);
               }
               else
               {
@@ -377,16 +394,22 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
           world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
           world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
               ground, dirty_min, dirty_max, true);
+          world.MeshService->NoteColumnSafetyCommit(
+              glm::ivec2(ground.x, ground.z), /*contains_solid=*/true);
         }
         else if (LastPressureCaps.level == StreamingPressureLevel::Green)
         {
           world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
           world.MeshService->MarkTerrainChunkMeshDirtySeamed(
               ground, dirty_min, dirty_max, false);
+          world.MeshService->NoteColumnSafetyCommit(
+              glm::ivec2(ground.x, ground.z), /*contains_solid=*/true);
         }
         else
         {
           world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
+          // Do not NoteColumnSafetyCommit(solid) without Dirty — that latches
+          // HasMissing/ingress forever (land-south chunks_traveled≈1).
         }
       });
   world.Persistence->EnsureChunkIoInitialized();
@@ -394,7 +417,7 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
 
 void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
 {
-  const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
+  const glm::ivec3 focus_block = world.GetPredictedSafetyFocusBlock();
   const glm::ivec3 focus_ground = UChunkManager::WorldToChunk(focus_block);
   const glm::ivec3 focus_horiz(focus_ground.x, 0, focus_ground.z);
   const int focus_radius = world.GetStreamingFocusRadius();
@@ -634,7 +657,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       world.Persistence ? world.Persistence->GetPendingTerrainColumnRelightCount()
                         : 0;
 
-  const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
+  const glm::ivec3 focus_block = world.GetPredictedSafetyFocusBlock();
   const glm::ivec3 focus_ground = UChunkManager::WorldToChunk(focus_block);
   const glm::ivec3 focus_horiz(focus_ground.x, 0, focus_ground.z);
   const int focus_radius = world.GetStreamingFocusRadius();
@@ -644,6 +667,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                                                            focus_radius) ||
       world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
           world.GetBlockWorld(), focus_horiz, focus_radius);
+  const bool safety_ring_incomplete =
+      world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
+          world.GetBlockWorld(), focus_horiz, /*radius=*/2);
   const int gen_backlog_total =
       ChunkScheduler ? ChunkScheduler->GetGenBacklogTotal() : 0;
   const int mesh_async = world.GetMeshService().GetAsyncInFlightCount();
@@ -716,6 +742,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     if (near_focus_holes || underfeet_pressure)
     {
       keep_prewarm_surplus = false;
+    }
+    // S7: safety-ring commit floor while incomplete (even under ingress stall).
+    if (safety_ring_incomplete)
+    {
+      chunk_budget.MaxChunkCommits =
+          std::max(chunk_budget.MaxChunkCommits, 3);
+      chunk_budget.MaxLoadOps = std::max(chunk_budget.MaxLoadOps, 4);
     }
     if (Streamer)
     {
@@ -826,7 +859,16 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       }
       if (ingress_stall_frames > 8 && near_focus_holes && moving_fast)
       {
-        chunk_budget.MaxChunkCommits = 0;
+        // S7: never starve commits while safety ring incomplete.
+        if (safety_ring_incomplete)
+        {
+          chunk_budget.MaxChunkCommits =
+              std::max(chunk_budget.MaxChunkCommits, 3);
+        }
+        else
+        {
+          chunk_budget.MaxChunkCommits = 0;
+        }
       }
       // V5 FOV visual SLA (TD-ARCH-007): after stop, do not expand shell while
       // focus unfinished — PendingLight is a mesh concern, not terrain ring.
@@ -2370,7 +2412,11 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     // underfeet clamp (often 2) and stream_loads stayed ~0 while flying.
     const glm::ivec3 feet_chunk = UChunkManager::WorldToChunk(
         WorldPosToBlock(glm::vec3(eye.x, cap.feetY(eye) + 0.01f, eye.z)));
-    const glm::ivec3 focus_horiz(feet_chunk.x, 0, feet_chunk.z);
+    // S7: hole/load focus leads feet by one chunk along motion.
+    const glm::ivec3 safety_focus_block = world.GetPredictedSafetyFocusBlock();
+    const glm::ivec3 safety_focus_chunk =
+        UChunkManager::WorldToChunk(safety_focus_block);
+    const glm::ivec3 focus_horiz(safety_focus_chunk.x, 0, safety_focus_chunk.z);
     const int focus_radius = world.GetStreamingFocusRadius();
     const size_t dirty = meshService.GetDirtyCount();
     const int gen_backlog_total =
@@ -2384,6 +2430,9 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const bool visual_holes =
         meshService.HasMissingGreedyMeshInHorizontalRadius(
             world.GetBlockWorld(), focus_horiz, focus_radius);
+    const bool safety_ring_incomplete =
+        meshService.HasMissingGreedyMeshInHorizontalRadius(
+            world.GetBlockWorld(), focus_horiz, /*radius=*/2);
     // Cached via HoleQuery memo when args match; underfeet subset of focus.
     const bool underfeet_need =
         (visual_holes &&
@@ -2413,7 +2462,9 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         }
         else if (visual_holes || frame_ms > kBadFrameMs)
         {
-          Streamer->SetNearLoadRadius(std::min(focus_radius, 3));
+          // S6: was min(focus,3) — starved frontier while SoftFlight still
+          // allowed crossing into unloaded rim (manual 170213).
+          Streamer->SetNearLoadRadius(std::min(focus_radius, 4));
         }
         else
         {
@@ -2427,7 +2478,14 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         {
           load_ops = procedural.MaxLoadOpsPerFrameBoost;
         }
-        if (visual_holes || underfeet_need || frame_ms > kBadFrameMs)
+        // S7: do not crush safety-ring throughput on holes — floor ≥4 while
+        // ring incomplete; far work still limited via NearLoadRadius.
+        constexpr int kSafetyLoadFloor = 4;
+        if (safety_ring_incomplete)
+        {
+          load_ops = std::max(load_ops, kSafetyLoadFloor);
+        }
+        else if (visual_holes || underfeet_need || frame_ms > kBadFrameMs)
         {
           load_ops = std::min(load_ops, 2);
         }
@@ -2464,10 +2522,9 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
 
     const auto prefetch_t0 = std::chrono::high_resolution_clock::now();
     int prefetch_visual_ops = 0;
-    // Prefetch at cruise speed, but skip when hitch'd, holes, or pressure≠allow —
-    // Update still loads; deep ahead would only pile GenQ/Dirty (CB stream spikes).
-    if (frame_ms <= 20.0 && pressure.allow_prefetch && !visual_holes &&
-        !underfeet_need)
+    // S7: no speculative PrefetchAhead on hitch — that amplified wall 200–370.
+    // Healthy frames only; safety-ring fill is load/commit floor + FirstMesh.
+    if (pressure.allow_prefetch && moving_any && frame_ms <= 20.0)
     {
       Streamer->PrefetchAhead(feet_chunk, forward, lastMovementSpeed,
                               procedural.MovementPrefetchThreshold,

@@ -3,18 +3,14 @@
 namespace cutum
 {
 
-namespace
-{
-
-int64_t ColumnKey(glm::ivec2 column, ColumnWorkKind kind, bool scan_full_focus)
+int64_t UColumnFlowScheduler::ColumnKey(glm::ivec2 column, ColumnWorkKind kind,
+                                        bool scan_full_focus)
 {
   return (static_cast<int64_t>(column.x) << 32) |
          (static_cast<int64_t>(column.y & 0xffff) << 16) |
          (static_cast<int64_t>(kind) << 1) |
          (scan_full_focus ? 1 : 0);
 }
-
-} // namespace
 
 void UColumnFlowScheduler::Enqueue(glm::ivec2 column, ColumnWorkKind kind,
                                    int priority)
@@ -32,24 +28,40 @@ void UColumnFlowScheduler::Enqueue(const ColumnWorkItem &item)
 {
   const int64_t key =
       ColumnKey(item.column, item.kind, item.scan_full_focus);
-  if (inflight_.count(key) != 0)
+  const auto it = best_prio_.find(key);
+  if (it != best_prio_.end())
   {
+    // S5: bump priority for pinned/near FirstMesh — old dedupe kept prio=10
+    // forever while rim pin asked for 100 (manual 163318 far sticky).
+    if (it->second >= item.priority)
+    {
+      return;
+    }
+    it->second = item.priority;
+    queue_.push(item);
     return;
   }
-  inflight_.insert(key);
+  best_prio_.emplace(key, item.priority);
   queue_.push(item);
 }
 
 bool UColumnFlowScheduler::DrainOne(ColumnWorkItem &out)
 {
-  if (queue_.empty())
+  while (!queue_.empty())
   {
-    return false;
+    out = queue_.top();
+    queue_.pop();
+    const int64_t key =
+        ColumnKey(out.column, out.kind, out.scan_full_focus);
+    const auto it = best_prio_.find(key);
+    if (it == best_prio_.end() || it->second != out.priority)
+    {
+      continue; // stale after priority bump
+    }
+    best_prio_.erase(it);
+    return true;
   }
-  out = queue_.top();
-  queue_.pop();
-  inflight_.erase(ColumnKey(out.column, out.kind, out.scan_full_focus));
-  return true;
+  return false;
 }
 
 void UColumnFlowScheduler::Clear()
@@ -58,7 +70,7 @@ void UColumnFlowScheduler::Clear()
   {
     queue_.pop();
   }
-  inflight_.clear();
+  best_prio_.clear();
 }
 
 bool UColumnFlowScheduler::Contains(glm::ivec2 column,
@@ -70,7 +82,7 @@ bool UColumnFlowScheduler::Contains(glm::ivec2 column,
 bool UColumnFlowScheduler::Contains(glm::ivec2 column, ColumnWorkKind kind,
                                     bool scan_full_focus) const
 {
-  return inflight_.count(ColumnKey(column, kind, scan_full_focus)) != 0;
+  return best_prio_.count(ColumnKey(column, kind, scan_full_focus)) != 0;
 }
 
 } // namespace cutum

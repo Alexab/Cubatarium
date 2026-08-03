@@ -27,6 +27,8 @@ struct MeshWorkAdmissionInput
   int ring_depth{8};
   /// Nearest focus miss Chebyshev horiz; <0 = unknown (skip K3 remesh band).
   int nearest_miss_horiz{-1};
+  /// S7: safety ring r≤2 incomplete (missing solid FirstMesh / unloaded).
+  bool safety_ring_incomplete{false};
 };
 
 struct MeshWorkAdmission
@@ -322,6 +324,31 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
           out.max_schedule,
           out.first_mesh_schedule + std::max(0, out.remesh_schedule));
     }
+  }
+
+  // S7: proactive FirstMesh floor while moving with incomplete safety ring,
+  // even without FocusMissingMesh / visual_holes (prevent hole formation).
+  if (in.moving && in.safety_ring_incomplete)
+  {
+    out.first_mesh_schedule = std::max(out.first_mesh_schedule, 4);
+    if (out.mode == MeshWorkAdmission::Mode::Normal)
+    {
+      // Reserve FM band in Pass1 without entering HoleDrain thrash.
+      out.remesh_schedule = std::max(out.remesh_schedule, 0);
+    }
+    else
+    {
+      out.max_schedule = std::max(
+          out.max_schedule,
+          out.first_mesh_schedule + std::max(0, out.remesh_schedule));
+    }
+  }
+  else if (in.moving && !holes && out.mode != MeshWorkAdmission::Mode::Normal)
+  {
+    out.first_mesh_schedule = std::max(out.first_mesh_schedule, 3);
+    out.max_schedule = std::max(
+        out.max_schedule,
+        out.first_mesh_schedule + std::max(0, out.remesh_schedule));
   }
   return out;
 }

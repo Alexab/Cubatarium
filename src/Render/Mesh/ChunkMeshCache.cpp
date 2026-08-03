@@ -469,6 +469,10 @@ void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
       ++it;
       continue;
     }
+    // S5: GPU ticket destroy leaves !Drawable with no Dirty — flown-over
+    // columns never remesh until a rare full Admit (manual never-mesh).
+    const glm::ivec3 dropped = it->coord;
+    const bool need_rehold = !HasDrawableGreedyMesh(dropped);
     if (it->ticket.valid && it->ticket.slotIndex >= 0 && GpuPipeline)
     {
       GpuPipeline->GetAllocator().FreeSlotByIndex(it->ticket.slotIndex);
@@ -486,6 +490,10 @@ void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
     }
     GpuExtractInFlight.erase(it->coord);
     it = PendingGpuApplies.erase(it);
+    if (need_rehold)
+    {
+      HoldSoftDeferFirstMesh(dropped);
+    }
   }
 }
 
@@ -897,6 +905,73 @@ uint64_t UChunkMeshCache::GetInflightSourceRevision(
   return it->second;
 }
 
+void UChunkMeshCache::NoteColumnSafetyCommit(glm::ivec2 xz, bool contains_solid)
+{
+  ColumnSafetyState &st = ColumnSafetyByXz[PackColumnXz(xz.x, xz.y)];
+  st.resident = true;
+  st.contains_solid = st.contains_solid || contains_solid;
+  if (!contains_solid && !st.contains_solid)
+  {
+    st.mesh_ready = true; // air-only column has nothing to mesh
+  }
+}
+
+void UChunkMeshCache::NoteColumnSafetyMeshReady(glm::ivec2 xz, bool ready)
+{
+  ColumnSafetyState &st = ColumnSafetyByXz[PackColumnXz(xz.x, xz.y)];
+  st.resident = true;
+  if (ready)
+  {
+    st.mesh_ready = true;
+  }
+}
+
+void UChunkMeshCache::ClearColumnSafety(glm::ivec2 xz)
+{
+  ColumnSafetyByXz.erase(PackColumnXz(xz.x, xz.y));
+}
+
+bool UChunkMeshCache::TryGetColumnSafety(glm::ivec2 xz,
+                                         ColumnSafetyState &out) const
+{
+  const auto it = ColumnSafetyByXz.find(PackColumnXz(xz.x, xz.y));
+  if (it == ColumnSafetyByXz.end())
+  {
+    return false;
+  }
+  out = it->second;
+  return true;
+}
+
+namespace
+{
+bool ChunkLooksSolidSparse(const UChunk &chunk)
+{
+  // Corners + mid-edges + center — enough for terrain columns without full scan.
+  static constexpr int kPts[][3] = {
+      {0, 0, 0},          {CHUNK_SIZE - 1, 0, 0},
+      {0, 0, CHUNK_SIZE - 1}, {CHUNK_SIZE - 1, 0, CHUNK_SIZE - 1},
+      {0, CHUNK_SIZE - 1, 0}, {CHUNK_SIZE - 1, CHUNK_SIZE - 1, 0},
+      {0, CHUNK_SIZE - 1, CHUNK_SIZE - 1},
+      {CHUNK_SIZE - 1, CHUNK_SIZE - 1, CHUNK_SIZE - 1},
+      {CHUNK_SIZE / 2, CHUNK_SIZE / 2, CHUNK_SIZE / 2},
+      {CHUNK_SIZE / 2, 0, CHUNK_SIZE / 2},
+      {CHUNK_SIZE / 2, CHUNK_SIZE - 1, CHUNK_SIZE / 2},
+  };
+  for (const auto &p : kPts)
+  {
+    if (chunk.GetBlockLocal(glm::ivec3(p[0], p[1], p[2])) != BLOCK_AIR)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+constexpr int kSafetyRingR = 2;
+constexpr int kMissingCyProbeMax = 12;
+} // namespace
+
 bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
     const UBlockWorld &world, glm::ivec3 center_ground_chunk,
     int radius_chunks) const
@@ -905,63 +980,80 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
   {
     return false;
   }
-  if (MissingMemo.epoch == HoleQueryEpoch &&
-      MissingMemo.center == center_ground_chunk &&
-      MissingMemo.radius == radius_chunks)
+  MissingQueryMemo &memo =
+      (radius_chunks <= 1) ? MissingMemoNear : MissingMemoFocus;
+  if (memo.epoch == HoleQueryEpoch && memo.center == center_ground_chunk &&
+      memo.radius == radius_chunks)
   {
-    return MissingMemo.result;
+    return memo.result;
   }
+  // S7: ring walk `(2r+1)²` + ColumnSafety / sparse solid — no ForEachChunk.
+  const UChunkManager &chunks = world.GetChunkManager();
   bool missing = false;
-  world.GetChunkManager().ForEachChunk(
-      [&](const UChunk &chunk)
+  const int unloaded_max_r =
+      std::min(radius_chunks, kSafetyRingR); // only safety unloaded=hole
+  for (int dz = -radius_chunks; dz <= radius_chunks && !missing; ++dz)
+  {
+    for (int dx = -radius_chunks; dx <= radius_chunks && !missing; ++dx)
+    {
+      const int horiz = std::max(std::abs(dx), std::abs(dz));
+      const glm::ivec2 xz(center_ground_chunk.x + dx,
+                          center_ground_chunk.z + dz);
+      ColumnSafetyState st{};
+      if (TryGetColumnSafety(xz, st))
       {
-        if (missing)
+        if (!st.resident)
         {
-          return;
+          if (horiz <= unloaded_max_r)
+          {
+            missing = true;
+          }
+          continue;
         }
-        const glm::ivec3 coord = chunk.GetCoord();
-        const int dx = std::abs(coord.x - center_ground_chunk.x);
-        const int dz = std::abs(coord.z - center_ground_chunk.z);
-        if (std::max(dx, dz) > radius_chunks)
+        if (st.contains_solid && !st.mesh_ready)
         {
-          return;
+          missing = true;
         }
+        continue;
+      }
+      bool any = false;
+      bool solid_miss = false;
+      for (int cy = 0; cy <= kMissingCyProbeMax; ++cy)
+      {
+        const glm::ivec3 coord(xz.x, cy, xz.y);
+        const UChunk *chunk = chunks.GetChunk(coord);
+        if (!chunk)
+        {
+          continue;
+        }
+        any = true;
         if (HasMeshSatisfyingColumnReady(coord))
         {
-          return;
+          continue;
         }
-        // Empty SoftDefer / undrawn placeholder (!ready, often !GpuResident) is
-        // still a hole for solid chunks (manual 101824). Intentional 0-quad
-        // GPU commits are ready via HasMeshSatisfyingColumnReady.
-        if (IsPendingGpuApply(coord))
+        if (ChunkLooksSolidSparse(*chunk))
         {
-          return;
+          solid_miss = true;
+          break;
         }
-        if (AsyncBuilder && AsyncBuilder->IsInFlight(coord))
+      }
+      if (!any)
+      {
+        if (horiz <= unloaded_max_r)
         {
-          return; // pipeline already building — not a stuck hole
+          missing = true;
         }
-        // Ignore empty air slices — they never get a mesh and must not keep
-        // underfeet_need / near_focus_holes stuck true forever.
-        for (int z = 0; z < CHUNK_SIZE; z += 4)
-        {
-          for (int x = 0; x < CHUNK_SIZE; x += 4)
-          {
-            for (int y = 0; y < CHUNK_SIZE; y += 4)
-            {
-              if (chunk.GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
-              {
-                missing = true;
-                return;
-              }
-            }
-          }
-        }
-      });
-  MissingMemo.epoch = HoleQueryEpoch;
-  MissingMemo.center = center_ground_chunk;
-  MissingMemo.radius = radius_chunks;
-  MissingMemo.result = missing;
+      }
+      else if (solid_miss)
+      {
+        missing = true;
+      }
+    }
+  }
+  memo.epoch = HoleQueryEpoch;
+  memo.center = center_ground_chunk;
+  memo.radius = radius_chunks;
+  memo.result = missing;
   return missing;
 }
 
@@ -988,47 +1080,80 @@ bool UChunkMeshCache::FindNearestMissingGreedyMesh(
     }
     return NearestMemo.found;
   }
-  // Ring-order + early exit. ForEachChunk over the whole resident set used to
-  // cost 70–120ms mesh_emerge_prep on hole frames (CB spike_holes) while
-  // searching for a nearest xz that is usually underfeet (r≤1).
-  // Callers pass focus_ground_horiz with y=0 — scan a tall cy band so altitude
-  // slices stay visible without walking every keep-shell chunk.
-  constexpr int kMissingScanMaxCy = 48;
+  // S7: ring-order + ColumnSafety / sparse solid; unloaded only in safety r≤2.
   const UChunkManager &chunks = world.GetChunkManager();
-  auto chunk_is_solid_missing = [&](glm::ivec3 coord) -> bool
+  auto column_is_hole = [&](int dx, int dz, int r, glm::ivec3 &out_best,
+                            int &out_vdist) -> bool
   {
-    if (HasMeshSatisfyingColumnReady(coord))
+    const glm::ivec2 xz(center_ground_chunk.x + dx,
+                        center_ground_chunk.z + dz);
+    ColumnSafetyState st{};
+    if (TryGetColumnSafety(xz, st))
     {
-      return false;
-    }
-    // Empty SoftDefer placeholders remain missing until drawable/ready mesh.
-    if (IsPendingGpuApply(coord))
-    {
-      return false;
-    }
-    if (AsyncBuilder && AsyncBuilder->IsInFlight(coord))
-    {
-      return false;
-    }
-    const UChunk *chunk = chunks.GetChunk(coord);
-    if (!chunk)
-    {
-      return false;
-    }
-    for (int z = 0; z < CHUNK_SIZE; z += 4)
-    {
-      for (int x = 0; x < CHUNK_SIZE; x += 4)
+      if (!st.resident)
       {
-        for (int y = 0; y < CHUNK_SIZE; y += 4)
+        if (r > kSafetyRingR)
         {
-          if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
-          {
-            return true;
-          }
+          return false;
         }
+        out_best = glm::ivec3(xz.x, 0, xz.y);
+        out_vdist = std::abs(0 - center_ground_chunk.y);
+        return true;
+      }
+      if (st.contains_solid && !st.mesh_ready)
+      {
+        out_best = glm::ivec3(xz.x, 0, xz.y);
+        out_vdist = std::abs(0 - center_ground_chunk.y);
+        return true;
+      }
+      return false;
+    }
+    bool any = false;
+    int best_cy = 0;
+    int best_vd = std::numeric_limits<int>::max();
+    bool solid_miss = false;
+    for (int cy = 0; cy <= kMissingCyProbeMax; ++cy)
+    {
+      const glm::ivec3 coord(xz.x, cy, xz.y);
+      const UChunk *chunk = chunks.GetChunk(coord);
+      if (!chunk)
+      {
+        continue;
+      }
+      any = true;
+      if (HasMeshSatisfyingColumnReady(coord))
+      {
+        continue;
+      }
+      if (!ChunkLooksSolidSparse(*chunk))
+      {
+        continue;
+      }
+      solid_miss = true;
+      const int vd = std::abs(cy - center_ground_chunk.y);
+      if (vd < best_vd)
+      {
+        best_vd = vd;
+        best_cy = cy;
       }
     }
-    return false;
+    if (!any)
+    {
+      if (r > kSafetyRingR)
+      {
+        return false;
+      }
+      out_best = glm::ivec3(xz.x, 0, xz.y);
+      out_vdist = std::abs(0 - center_ground_chunk.y);
+      return true;
+    }
+    if (!solid_miss)
+    {
+      return false;
+    }
+    out_best = glm::ivec3(xz.x, best_cy, xz.y);
+    out_vdist = best_vd;
+    return true;
   };
   bool found = false;
   glm::ivec3 best{0};
@@ -1045,21 +1170,17 @@ bool UChunkMeshCache::FindNearestMissingGreedyMesh(
         {
           continue;
         }
-        for (int cy = 0; cy <= kMissingScanMaxCy; ++cy)
+        glm::ivec3 cand{0};
+        int vd = 0;
+        if (!column_is_hole(dx, dz, r, cand, vd))
         {
-          const glm::ivec3 coord(center_ground_chunk.x + dx, cy,
-                                 center_ground_chunk.z + dz);
-          if (!chunk_is_solid_missing(coord))
-          {
-            continue;
-          }
-          const int vdist = std::abs(cy - center_ground_chunk.y);
-          if (!found_ring || vdist < best_vdist)
-          {
-            found_ring = true;
-            best_vdist = vdist;
-            best_ring = coord;
-          }
+          continue;
+        }
+        if (!found_ring || vd < best_vdist)
+        {
+          found_ring = true;
+          best_vdist = vd;
+          best_ring = cand;
         }
       }
     }
@@ -1260,8 +1381,32 @@ void UChunkMeshCache::HoldSoftDeferFirstMesh(glm::ivec3 chunk_coord)
   {
     return;
   }
-  // Drop an arbitrary far entry so the side-set cannot grow unboundedly.
+  // S5: drop farthest from focus (not hash begin) — arbitrary drop lost near
+  // FirstMesh under overflow (manual 161117 softd≤77).
   auto drop = SoftDeferHeld.begin();
+  int best_dist = -1;
+  for (auto it = SoftDeferHeld.begin(); it != SoftDeferHeld.end(); ++it)
+  {
+    if (RimHolePinActive && *it == RimHolePinCoord)
+    {
+      continue;
+    }
+    int d = 0;
+    if (MeshFocusValid)
+    {
+      d = std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                   std::abs(it->z - MeshFocusGroundChunk.z));
+    }
+    if (d > best_dist)
+    {
+      best_dist = d;
+      drop = it;
+    }
+  }
+  if (RimHolePinActive && *drop == RimHolePinCoord)
+  {
+    return; // only pin left — keep over cap briefly
+  }
   SoftDeferHeld.erase(drop);
 }
 
@@ -1272,7 +1417,18 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
     return;
   }
   const int kRequeueBudget = std::max(0, WorkAdmission.softdefer_requeue);
-  int requeued = 0;
+  if (kRequeueBudget <= 0)
+  {
+    return;
+  }
+  struct Candidate
+  {
+    glm::ivec3 coord{0};
+    bool in_focus{false};
+    int horiz{0};
+  };
+  std::vector<Candidate> eligible;
+  eligible.reserve(SoftDeferHeld.size());
   for (auto it = SoftDeferHeld.begin(); it != SoftDeferHeld.end();)
   {
     const glm::ivec3 coord = *it;
@@ -1285,32 +1441,52 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
     const bool still_deferred =
         DeferMeshUntilLit && DeferMeshUntilLit(coord);
     bool in_focus = false;
+    int horiz = 0;
     if (MeshFocusValid)
     {
-      const int horiz =
-          std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
-                   std::abs(coord.z - MeshFocusGroundChunk.z));
+      horiz = std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
+                       std::abs(coord.z - MeshFocusGroundChunk.z));
       in_focus = horiz <= MeshFocusRadiusChunks;
     }
     // SoftDefer lifted or column entered focus (UnlitFirstMesh / MayMesh).
     if (!still_deferred || in_focus)
     {
-      if (requeued >= kRequeueBudget)
-      {
-        ++it;
-        continue;
-      }
-      if (!TryConsumeDirtyAdmit())
-      {
-        ++it;
-        continue;
-      }
-      it = SoftDeferHeld.erase(it);
-      MarkDirtyPriority(coord);
-      ++requeued;
-      continue;
+      eligible.push_back(Candidate{coord, in_focus, horiz});
     }
     ++it;
+  }
+  // S5: nearest-in-focus first — hash iteration order was far-before-near.
+  std::sort(eligible.begin(), eligible.end(),
+            [](const Candidate &a, const Candidate &b)
+            {
+              if (a.in_focus != b.in_focus)
+              {
+                return a.in_focus;
+              }
+              if (a.horiz != b.horiz)
+              {
+                return a.horiz < b.horiz;
+              }
+              return a.coord.y < b.coord.y;
+            });
+  int requeued = 0;
+  for (const Candidate &c : eligible)
+  {
+    if (requeued >= kRequeueBudget)
+    {
+      break;
+    }
+    if (!SoftDeferHeld.count(c.coord))
+    {
+      continue;
+    }
+    if (!TryConsumeDirtyAdmit())
+    {
+      break;
+    }
+    SoftDeferHeld.erase(c.coord);
+    MarkDirtyPriority(c.coord);
+    ++requeued;
   }
 }
 
@@ -1354,12 +1530,19 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
     {
       const bool inflight =
           AsyncBuilder && AsyncBuilder->IsInFlight(chunkCoord);
-      const bool gpu_pending =
+      const bool gpu_queued = IsPendingGpuApply(chunkCoord);
+      const bool gpu_extract_mark =
           GpuExtractInFlight.find(chunkCoord) != GpuExtractInFlight.end();
-      if (inflight || gpu_pending)
+      if (inflight || gpu_queued)
       {
         RemeshAfterApply.insert(chunkCoord);
         return;
+      }
+      // S5: orphan GpuExtractInFlight (CancelOutside / lost ticket) blocked
+      // MarkDirtyPriority forever — pin Pass0 never saw Dirty.
+      if (gpu_extract_mark)
+      {
+        GpuExtractInFlight.erase(chunkCoord);
       }
       InvalidateInFlightMeshBuild(chunkCoord);
       if (AsyncBuilder)
@@ -1494,6 +1677,7 @@ void UChunkMeshCache::RemoveColumn(glm::ivec3 ground_coord, int max_cy)
   }
   FluidSurfaceCache.erase(ground_coord);
   FluidSurfaceDirty.erase(ground_coord);
+  ClearColumnSafety(glm::ivec2(ground_coord.x, ground_coord.z));
   ++MeshRevision;
   GreedyBatchesDirty = true;
   InstancesDirty = true;
@@ -2562,6 +2746,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   chunkMesh.batches = std::move(result.batches);
   chunkMesh.crossCenters = std::move(result.crossCenters);
   NoteGeometryDirty(result.coord);
+  NoteColumnSafetyMeshReady(glm::ivec2(result.coord.x, result.coord.z), true);
   PendingMeshRevisionBump = true;
   InstancesDirty = true;
   CrossBatchesDirty = true;
@@ -2964,6 +3149,23 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       return it;
     };
 
+    // Pass 0: rim visual-hole pin (S4) — one reserved slot before focus walk so
+    // forward-biased Dirty order cannot starve the pinned near void.
+    if (RimHolePinActive && first_mesh_cap > 0 &&
+        scheduled < max_schedule_per_frame)
+    {
+      for (auto it = Dirty.begin(); it != Dirty.end();)
+      {
+        if (*it != RimHolePinCoord)
+        {
+          ++it;
+          continue;
+        }
+        (void)try_schedule(it, false, false, true);
+        break;
+      }
+    }
+
     // Pass 1: reserved slots for focus missing (highest priority).
     const bool focus_missing_for_schedule =
         MeshFocusValid &&
@@ -3013,6 +3215,13 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           const int dz = std::abs(it->z - MeshFocusGroundChunk.z);
           const int horiz = std::max(dx, dz);
           if (horiz > MeshFocusRadiusChunks)
+          {
+            ++it;
+            continue;
+          }
+          // S5: rear reserve must not spend schedule on remesh while holes
+          // remain — only !Drawable FirstMesh (manual 163318 mh=5 rear hop).
+          if (HasDrawableGreedyMesh(*it))
           {
             ++it;
             continue;

@@ -310,11 +310,13 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                      inflight_mult
                : 0;
 
-  // Continuously re-order priority FIFO by effective distance + forward bias.
+  // Continuously re-order priority FIFO. S5: under visual holes use raw
+  // Chebyshev — forward EffectiveDist lit far columns before near holes
+  // (manual 163318 / SoftDefer gate).
   if (PendingTerrainColumnRelightsPriority.size() > 1)
   {
     const glm::vec2 fwd = world.GetLastMovementDirXz();
-    const float bias_k = tune.MeshForwardBiasK;
+    const float bias_k = visual_holes ? 0.0f : tune.MeshForwardBiasK;
     auto effective = [&](glm::ivec2 col) -> float
     {
       const int cx = FloorDiv(col.x, CHUNK_SIZE);

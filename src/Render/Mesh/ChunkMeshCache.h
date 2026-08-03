@@ -245,6 +245,28 @@ public:
     RenderDistanceChunks = distance;
   }
   void SetMeshRebuildFocus(glm::ivec3 ground_chunk_coord, int radius_chunks);
+  /// S4: reserved Dirty schedule slot for pinned visual hole (before Pass1).
+  void SetRimHolePin(glm::ivec3 chunk_coord, bool active)
+  {
+    RimHolePinCoord = chunk_coord;
+    RimHolePinActive = active;
+  }
+  void ClearRimHolePin()
+  {
+    RimHolePinActive = false;
+    RimHolePinCoord = glm::ivec3(0);
+  }
+  /// S7: compact per-column safety flags (commit / mesh apply / unload).
+  struct ColumnSafetyState
+  {
+    bool resident{false};
+    bool contains_solid{false};
+    bool mesh_ready{false};
+  };
+  void NoteColumnSafetyCommit(glm::ivec2 xz, bool contains_solid);
+  void NoteColumnSafetyMeshReady(glm::ivec2 xz, bool ready);
+  void ClearColumnSafety(glm::ivec2 xz);
+  bool TryGetColumnSafety(glm::ivec2 xz, ColumnSafetyState &out) const;
   /// preferred_cy: sea/surface slice; prefer_lower_cy=true when camera underwater.
   void SetMeshVerticalPriority(int preferred_cy, bool prefer_lower_cy)
   {
@@ -543,6 +565,9 @@ private:
   glm::ivec3 MeshFocusGroundChunk{0};
   int MeshFocusRadiusChunks{6};
   bool MeshFocusValid{false};
+  /// S4: rim visual-hole pin — Pass0 schedules this Dirty entry first.
+  bool RimHolePinActive{false};
+  glm::ivec3 RimHolePinCoord{0};
   int MeshVerticalPreferredCy{0};
   bool MeshPreferLowerCy{false};
   bool MeshVerticalPriorityValid{false};
@@ -576,6 +601,7 @@ private:
   int MeshScheduleOverflowPerFrame{0};
   std::function<bool(glm::ivec3)> DeferMeshUntilLit;
   // Per-DoMovement memo: HasMissing/FindNearest are called many times/frame.
+  // S7: separate near (r≤1) vs focus memos so underfeet queries don't thrash.
   mutable uint64_t HoleQueryEpoch{0};
   struct MissingQueryMemo
   {
@@ -584,7 +610,8 @@ private:
     int radius{-1};
     bool result{false};
   };
-  mutable MissingQueryMemo MissingMemo{};
+  mutable MissingQueryMemo MissingMemoNear{};
+  mutable MissingQueryMemo MissingMemoFocus{};
   struct NearestQueryMemo
   {
     uint64_t epoch{0};
@@ -594,6 +621,13 @@ private:
     glm::ivec3 coord{0};
   };
   mutable NearestQueryMemo NearestMemo{};
+  /// S7 column safety — packed xz key.
+  std::unordered_map<uint64_t, ColumnSafetyState> ColumnSafetyByXz;
+  static uint64_t PackColumnXz(int x, int z)
+  {
+    return (static_cast<uint64_t>(static_cast<uint32_t>(x)) << 32) |
+           static_cast<uint32_t>(z);
+  }
 };
 } // namespace cutum
 #endif

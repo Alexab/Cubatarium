@@ -434,11 +434,35 @@ void UWorldMeshService::UpdateRimHolePin(glm::ivec3 focus_horiz, int focus_radiu
       RimHolePinActive = false;
       RimHolePinCoord = glm::ivec3(0);
     }
+    else if (found_nearest)
+    {
+      // Retarget only to a strictly nearer visual hole (new underfeet load).
+      const int pin_h =
+          std::max(std::abs(RimHolePinCoord.x - focus_horiz.x),
+                   std::abs(RimHolePinCoord.z - focus_horiz.z));
+      const int near_h = std::max(std::abs(nearest.x - focus_horiz.x),
+                                  std::abs(nearest.z - focus_horiz.z));
+      if (near_h < pin_h)
+      {
+        RimHolePinCoord = nearest;
+      }
+    }
   }
   if (!RimHolePinActive && found_nearest)
   {
     RimHolePinCoord = nearest;
     RimHolePinActive = true;
+  }
+  // S4: strong pin — Dirty front + Cache Pass0 reserved slot every frame while
+  // the visual void remains (ColumnFlow enqueue alone skipped Pending).
+  if (RimHolePinActive)
+  {
+    MarkDirtyPriority(RimHolePinCoord);
+    Cache.SetRimHolePin(RimHolePinCoord, true);
+  }
+  else
+  {
+    Cache.ClearRimHolePin();
   }
 }
 

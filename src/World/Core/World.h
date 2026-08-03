@@ -218,6 +218,8 @@ public:
   glm::vec3 GetSpawnPoint() const;
   void SetSpawnPoint(glm::vec3 value);
   glm::ivec3 GetPreferredLoadFocusBlock() const;
+  /// S7: feet + one chunk along motion/view for safety-ring centering.
+  glm::ivec3 GetPredictedSafetyFocusBlock() const;
 
   void SetTerrainParams(uint32_t Seed, const std::string &terrainType);
   void SetProceduralSettings(const ProceduralSettings &settings,
@@ -701,6 +703,9 @@ public:
     return PhysicsFlags;
   }
   bool IsCollisionReadyAtFeet(const glm::ivec3 &feetBlock) const;
+  /// Free-flight ingress: column at eye chunk must be loaded and FirstMesh
+  /// drawable for any solid slice in the local cy band (S6 frontier gap).
+  bool IsFlyIngressColumnReady(glm::ivec3 eye_chunk) const;
 
   struct MovementDiagnostics
   {
@@ -1312,6 +1317,9 @@ private:
   float AltitudeAboveTerrain{0.0f};
   StreamingAltitudePolicyParams AltitudeParams;
   glm::vec3 LastCameraPosition{0.0f};
+  mutable uint64_t FlyIngressCacheTick{~0ull};
+  mutable glm::ivec3 FlyIngressCacheChunk{0};
+  mutable bool FlyIngressCacheReady{true};
   float LastMovementSpeed{0.0f};
   double TimeSinceMotionSec{0.0};
   glm::vec2 LastMovementDirXz{0.0f};

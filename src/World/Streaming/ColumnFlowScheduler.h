@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <queue>
-#include <unordered_set>
+#include <unordered_map>
 #include <vector>
 
 namespace cutum
@@ -35,7 +35,8 @@ public:
   void Enqueue(const ColumnWorkItem &item);
   bool DrainOne(ColumnWorkItem &out);
   void Clear();
-  size_t Size() const { return static_cast<size_t>(queue_.size()); }
+  /// Logical queued count (ignores stale bumped duplicates in the heap).
+  size_t Size() const { return best_prio_.size(); }
   bool Contains(glm::ivec2 column, ColumnWorkKind kind) const;
   bool Contains(glm::ivec2 column, ColumnWorkKind kind,
                 bool scan_full_focus) const;
@@ -49,9 +50,13 @@ private:
     }
   };
 
+  static int64_t ColumnKey(glm::ivec2 column, ColumnWorkKind kind,
+                           bool scan_full_focus);
+
   std::priority_queue<ColumnWorkItem, std::vector<ColumnWorkItem>, Compare>
       queue_;
-  std::unordered_set<int64_t> inflight_;
+  /// Best pending priority per key — Enqueue may bump; Drain skips stale.
+  std::unordered_map<int64_t, int> best_prio_;
 };
 
 } // namespace cutum

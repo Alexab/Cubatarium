@@ -7,6 +7,8 @@
 #include "World/View/ViewRayMath.h"
 #include "Render/GlIncludes.h"
 #include "World/Core/World.h"
+#include "World/Chunks/ChunkManager.h"
+#include "World/Chunks/Chunk.h"
 #include <algorithm>
 #include <cmath>
 #if defined(__ANDROID__)
@@ -618,6 +620,66 @@ void UCamera::ProcessKeyboard(const UWorld *world, Camera_Movement direction,
 
   if (world)
   {
+    // S6/S6b: free-flight hard stop at unloaded / unmeshed columns.
+    // Also probe one chunk ahead along the shift — crossing only the landing
+    // cell let the player step into the gap (manual 173742 exit-in-hole).
+    if (FreeMove && (std::fabs(shift.x) > 1e-8f || std::fabs(shift.z) > 1e-8f))
+    {
+      const auto column_ok = [&](glm::vec3 p) -> bool
+      {
+        return world->IsFlyIngressColumnReady(
+            UChunkManager::WorldToChunk(p));
+      };
+      glm::vec3 horiz(shift.x, 0.0f, shift.z);
+      const float hlen = glm::length(horiz);
+      glm::vec3 probe = Position + shift;
+      if (hlen > 1e-6f)
+      {
+        const glm::vec3 dir = horiz / hlen;
+        probe = Position + dir * static_cast<float>(CHUNK_SIZE);
+      }
+      const bool land_ok = column_ok(Position + shift);
+      const bool ahead_ok = column_ok(probe);
+      if (!land_ok || !ahead_ok)
+      {
+        glm::vec3 sx = shift;
+        sx.z = 0.0f;
+        glm::vec3 sz = shift;
+        sz.x = 0.0f;
+        auto axis_ok = [&](glm::vec3 s) -> bool
+        {
+          if (glm::dot(s, s) < 1e-10f)
+          {
+            return true;
+          }
+          glm::vec3 p = Position + s;
+          if (!column_ok(p))
+          {
+            return false;
+          }
+          const float sl = std::sqrt(s.x * s.x + s.z * s.z);
+          if (sl < 1e-6f)
+          {
+            return true;
+          }
+          glm::vec3 ap =
+              Position + (s / sl) * static_cast<float>(CHUNK_SIZE);
+          return column_ok(ap);
+        };
+        if (axis_ok(sx))
+        {
+          shift = sx;
+        }
+        else if (axis_ok(sz))
+        {
+          shift = sz;
+        }
+        else
+        {
+          return;
+        }
+      }
+    }
     glm::vec3 newPos = world->ResolveMovement(
         Position, shift, collisionCap, world->GetMovementCollisionSkipId());
     Position = newPos;
