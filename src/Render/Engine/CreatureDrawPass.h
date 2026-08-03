@@ -71,6 +71,7 @@ private:
   std::shared_ptr<UShaderProgram> creatureSkinnedShader;
   CreatureRenderStats Stats;
   CreatureDrawQueue Queue;
+  float ActiveHitFlash01{0.f};
 };
 
 } // namespace cutum

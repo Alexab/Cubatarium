@@ -87,6 +87,16 @@ public:
   }
   void ResetInfluenceCooldown() { TimeSinceLastInfluenceSec = 0.f; }
 
+  void AddHitFlash(float strength)
+  {
+    HitFlash01 = std::min(1.f, HitFlash01 + std::max(0.f, strength));
+  }
+  float GetHitFlash01() const { return HitFlash01; }
+  void TickHitFlash(float dt)
+  {
+    HitFlash01 = std::max(0.f, HitFlash01 - dt * 4.f);
+  }
+
   std::vector<StatusEffectInstance> &GetStatusEffects() { return StatusEffects; }
   const std::vector<StatusEffectInstance> &GetStatusEffects() const
   {
@@ -155,6 +165,7 @@ protected:
   CreatureAttributes Attributes{};
   ArmorGroups Armor{ArmorGroups::DefaultFleshy()};
   float TimeSinceLastInfluenceSec{1000.f};
+  float HitFlash01{0.f};
   std::vector<StatusEffectInstance> StatusEffects;
   bool NeedsTick{false};
   CreatureIntent Intent{};

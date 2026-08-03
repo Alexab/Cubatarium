@@ -14,13 +14,15 @@ typedef float GLfloat;
 typedef int GLint;
 
 #include "App/Settings/RenderSettings.h"
+#include "Render/Backend/RenderBackendFactory.h"
+#include "Render/Blocks/BlockBreakFxPass.h"
+#include "Render/Effects/InfluenceFxPass.h"
 #include "Render/Engine/AnimationClock.h"
 #include "Render/Engine/CrossGpuBackend.h"
 #include "Render/Engine/FluidSurfaceMap.h"
-#include "Render/Engine/IUFluidSurfaceProvider.h"
 #include "Render/Engine/GreedyGpuBackend.h"
+#include "Render/Engine/IUFluidSurfaceProvider.h"
 #include "Render/Engine/IUMeshGpuStore.h"
-#include "Render/Backend/RenderBackendFactory.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/SkyGradientPass.h"
 #include "Render/Engine/TextRenderer.h"
@@ -195,6 +197,7 @@ private:
   void DestroyOutlineBuffers();
   void RenderSelectionOutline();
   void RenderBlockCrackOverlay();
+  void RenderBlockBreakParticles();
   void RenderBiomeDebugOverlay();
 
   void DrawCubeGeometry();
@@ -287,6 +290,8 @@ private:
   USkyGradientPass SkyGradientPass_;
   UOpaqueDepthCapture OpaqueDepthCapture;
   UWeatherRenderPass WeatherPass;
+  UBlockBreakFxPass BlockBreakFx;
+  UInfluenceFxPass InfluenceFx;
   glm::vec3 OverlayTintColor{0.0f};
   float OverlayTintAlpha{0.0f};
   BlockId OverlayBlockId{BLOCK_AIR};

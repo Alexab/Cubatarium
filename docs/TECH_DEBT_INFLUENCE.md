@@ -27,3 +27,4 @@
 - **Phase 0:** Influence types, hit math, `IUToolInfluenceProvider`, bare-hand stub, intent `Influence` field, this tracker, `CREATURE_INTERACTION.md` draft.
 - **Phase 1:** `InfluenceResolver` / `InfluenceApplier` / events; melee via Influence with range + cooldown; `ApplyDamage` reason tag; armor groups + punch timer on `UCreature`.
 - **Phase 2:** Status effects (`bleed`/`slow` builtins + `models/effects/*.json` samples); tick + move-speed mul; melee applies bleed.
+- **Phase 3:** Influence FX sink (hit flash on creatures, path beams + burst markers); `UInfluenceFxPass` after creature draw.

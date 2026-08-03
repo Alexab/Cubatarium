@@ -296,7 +296,9 @@ void UCreatureDrawPass::DrawTexturedPart(const glm::mat4 &mvp, GLuint texture,
   creatureShader->SetInt("texture0", 0);
   creatureShader->SetInt("uAnimFrame", 0);
   creatureShader->SetInt("uAnimFrameCount", 1);
-  creatureShader->SetVec4("uTint", glm::vec4(1.0f));
+  creatureShader->SetVec4(
+      "uTint", glm::vec4(1.0f + ActiveHitFlash01, 1.0f + ActiveHitFlash01,
+                         1.0f + ActiveHitFlash01, 1.0f));
   creatureShader->SetMat4("mvp_matrix", mvp);
 
   glBindVertexArray(vao);
@@ -379,7 +381,9 @@ void UCreatureDrawPass::DrawBoneSkeletonMesh(
   creatureShader->SetInt("texture0", 0);
   creatureShader->SetInt("uAnimFrame", 0);
   creatureShader->SetInt("uAnimFrameCount", 1);
-  creatureShader->SetVec4("uTint", glm::vec4(1.0f));
+  creatureShader->SetVec4(
+      "uTint", glm::vec4(1.0f + ActiveHitFlash01, 1.0f + ActiveHitFlash01,
+                         1.0f + ActiveHitFlash01, 1.0f));
   creatureShader->SetMat4("mvp_matrix", mvp);
 
   glBindVertexArray(vao);
@@ -551,7 +555,9 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
             }
           }
           visual->UpdatePose(creature, facts, pose, *def, dt);
+          ActiveHitFlash01 = creature.GetHitFlash01();
           visual->SubmitDraw(engine, viewProj);
+          ActiveHitFlash01 = 0.f;
         }
 
         draw_debug_bounds();

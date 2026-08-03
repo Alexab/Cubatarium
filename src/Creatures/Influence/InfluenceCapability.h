@@ -35,6 +35,8 @@ struct InfluenceCapability
     cap.Effects.Target.FlashStrength = 0.6f;
     cap.Effects.Target.DurationSec = 0.2f;
     cap.Effects.Source.FlashStrength = 0.15f;
+    cap.Effects.Path.DurationSec = 0.18f;
+    cap.Effects.Path.FlashStrength = 0.5f;
     return cap;
   }
 };

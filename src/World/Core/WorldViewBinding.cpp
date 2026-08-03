@@ -453,6 +453,7 @@ void UWorld::RunLegacyPhysicsFrame()
       [&](UCreature &creature)
       {
         creature.AdvanceInfluenceCooldown(dt);
+        creature.TickHitFlash(dt);
         if (Environment.GetControlledCreatureId() != 0 &&
             creature.GetId() == Environment.GetControlledCreatureId())
         {
