@@ -1,20 +1,36 @@
-﻿{
+{
   "id": "iron_shovel",
   "displayName": "Iron Shovel",
-  "types": ["digging"],
+  "types": [
+    "digging"
+  ],
   "stack_max": 1,
   "wear_end": "destroy",
   "model": "models/items/iron_shovel.json",
-  "repair": { "materials": ["iron_ingot", "iron"], "amount": 0.25 },
+  "repair": {
+    "materials": [
+      "iron_ingot",
+      "iron"
+    ],
+    "amount": 0.25
+  },
   "tool": {
     "full_punch_interval": 1.0,
-    "damage": { "melee": 3 },
+    "damage": {
+      "melee": 3,
+      "fleshy": 3
+    },
     "groupcaps": {
       "crumbly": {
         "maxlevel": 2,
         "uses": 120,
-        "times": { "2": 0.5, "1": 0.8, "3": 0.35 }
+        "times": {
+          "2": 0.5,
+          "1": 0.8,
+          "3": 0.35
+        }
       }
-    }
+    },
+    "punch_attack_uses": 120
   }
 }

@@ -1,6 +1,7 @@
 #include "Items/ToolCapabilities.h"
 #include "Items/ItemDefinition.h"
 #include "Blocks/BlockDefinition.h"
+#include "Creatures/Influence/InfluenceTypes.h"
 #include "Creatures/Stats/CreatureAttributes.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Game/WorldDifficulty.h"
@@ -54,6 +55,21 @@ int main()
   Expect(dig.DurationSec > 0.f, "positive dig time");
   Expect(dig.WearDelta > 0.f, "wear on dig");
   Expect(dig.MainGroup == "cracky", "main group cracky");
+
+  ToolCapabilitiesDef hit_tool;
+  hit_tool.FullPunchInterval = 1.0f;
+  hit_tool.PunchAttackUses = 100;
+  hit_tool.Damage.Groups["fleshy"] = 8;
+  ArmorGroups armor = ArmorGroups::DefaultFleshy();
+  attrs.accuracy = 10;
+  HitParams hit = ResolveHitParams(armor, hit_tool, attrs, 1.0f);
+  Expect(hit.DidHit && !hit.Missed, "hit lands");
+  Expect(std::fabs(hit.Damage - 8.f) < 0.05f, "hit damage 8");
+  Expect(hit.WearDelta > 0.f, "punch wear delta");
+
+  attrs.accuracy = 1;
+  HitParams maybe_miss = ResolveHitParams(armor, hit_tool, attrs, 0.01f);
+  Expect(maybe_miss.Missed || maybe_miss.DidHit, "low accuracy resolves");
 
   DigParams creative =
       ResolveDigParams(&pick, stone, attrs, WorldGameMode::Creative);

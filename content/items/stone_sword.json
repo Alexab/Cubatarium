@@ -1,20 +1,34 @@
-﻿{
+{
   "id": "stone_sword",
   "displayName": "Stone Sword",
-  "types": ["combat"],
+  "types": [
+    "combat"
+  ],
   "stack_max": 1,
   "wear_end": "destroy",
   "model": "models/items/stone_sword.json",
-  "repair": { "materials": ["stone"], "amount": 0.25 },
+  "repair": {
+    "materials": [
+      "stone"
+    ],
+    "amount": 0.25
+  },
   "tool": {
     "full_punch_interval": 1.0,
-    "damage": { "melee": 5 },
+    "damage": {
+      "melee": 5,
+      "fleshy": 5
+    },
     "groupcaps": {
       "snappy": {
         "maxlevel": 1,
         "uses": 80,
-        "times": { "2": 0.45, "3": 0.35 }
+        "times": {
+          "2": 0.45,
+          "3": 0.35
+        }
       }
-    }
+    },
+    "punch_attack_uses": 60
   }
 }

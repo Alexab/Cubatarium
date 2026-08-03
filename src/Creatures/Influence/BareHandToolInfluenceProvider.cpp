@@ -1,7 +1,7 @@
 #include "Creatures/Influence/BareHandToolInfluenceProvider.h"
 #include "Creatures/Core/Creature.h"
+#include "Items/ToolCapabilities.h"
 #include <algorithm>
-#include <cmath>
 
 namespace cutum
 {
@@ -14,11 +14,14 @@ bool UBareHandToolInfluenceProvider::TryGetCapability(
   {
     return false;
   }
-  const int strength = source.GetAttributes().strength;
-  const int fleshy =
-      std::max(1, static_cast<int>(std::lround(
-                      8.f * (0.5f + static_cast<float>(strength) / 20.f))));
+  const int fleshy = source.GetBareHandFleshyOverride() > 0
+                         ? source.GetBareHandFleshyOverride()
+                         : BareHandFleshyDamage(source.GetAttributes());
   out = InfluenceCapability::DefaultBareHand(fleshy);
+  if (source.GetBareHandIntervalOverride() > 0.f)
+  {
+    out.FullIntervalSec = source.GetBareHandIntervalOverride();
+  }
   return true;
 }
 

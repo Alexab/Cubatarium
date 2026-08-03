@@ -3,6 +3,7 @@
 
 #include "Creatures/Influence/InfluenceCapability.h"
 #include "Creatures/Influence/InfluenceTypes.h"
+#include "Creatures/Stats/CreatureAttributes.h"
 
 namespace cutum
 {
@@ -11,15 +12,17 @@ struct InfluenceHitParams
 {
   float Damage{0.f};
   float IntervalMul{1.f};
+  float WearDelta{0.f};
   bool DidHit{false};
+  bool Missed{false};
 };
 
-/// Luanti-style: damage = Σ damage[g] * clamp(dt/interval,0..1) * (armor[g]/100).
-/// Immortal armor group cancels the hit.
+/// Thin adapter over ToolCapabilities::ResolveHitParams (SoT hit math).
 struct InfluenceHitMath
 {
   static InfluenceHitParams Compute(const ArmorGroups &armor,
                                     const InfluenceCapability &cap,
+                                    const CreatureAttributes &attrs,
                                     float time_from_last_punch_sec);
 };
 

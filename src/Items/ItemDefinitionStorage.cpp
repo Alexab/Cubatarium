@@ -1,5 +1,6 @@
 #include "Items/ItemDefinitionStorage.h"
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -52,7 +53,9 @@ void UItemDefinitionStorage::EnsureHandDefinition()
   hand.HandFallback = true;
   hand.Hidden = true;
   hand.Tool.FullPunchInterval = 1.0f;
+  hand.Tool.PunchAttackUses = 0;
   hand.Tool.Damage.Melee = 1.f;
+  hand.Tool.Damage.Groups["fleshy"] = 1;
   ToolGroupCap soft;
   soft.MaxLevel = 1;
   soft.Uses = 0;
@@ -196,9 +199,34 @@ bool UItemDefinitionStorage::LoadFile(const std::string &path)
     {
       const auto &tool = data["tool"];
       def.Tool.FullPunchInterval = tool.value("full_punch_interval", 1.0f);
+      def.Tool.PunchAttackUses = tool.value("punch_attack_uses", 0);
       if (tool.contains("damage") && tool["damage"].is_object())
       {
-        def.Tool.Damage.Melee = tool["damage"].value("melee", 0.f);
+        const auto &dmg = tool["damage"];
+        def.Tool.Damage.Melee = dmg.value("melee", 0.f);
+        for (auto it = dmg.begin(); it != dmg.end(); ++it)
+        {
+          if (it.key() == "melee")
+          {
+            continue;
+          }
+          if (it.value().is_number_integer() || it.value().is_number_unsigned())
+          {
+            def.Tool.Damage.Groups[it.key()] = it.value().get<int>();
+          }
+          else if (it.value().is_number_float())
+          {
+            def.Tool.Damage.Groups[it.key()] =
+                static_cast<int>(std::lround(it.value().get<float>()));
+          }
+        }
+        if (def.Tool.Damage.Groups.find("fleshy") ==
+                def.Tool.Damage.Groups.end() &&
+            def.Tool.Damage.Melee > 0.f)
+        {
+          def.Tool.Damage.Groups["fleshy"] = std::max(
+              1, static_cast<int>(std::lround(def.Tool.Damage.Melee)));
+        }
       }
       if (tool.contains("groupcaps") && tool["groupcaps"].is_object())
       {

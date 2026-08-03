@@ -97,8 +97,9 @@ InfluencePrediction InfluenceResolver::Resolve(
         continue;
       }
       const InfluenceHitParams hit = InfluenceHitMath::Compute(
-          target->GetArmorGroups(), cap, source.GetTimeSinceLastInfluenceSec());
-      if (!hit.DidHit || hit.Damage <= 0.f)
+          target->GetArmorGroups(), cap, source.GetAttributes(),
+          source.GetTimeSinceLastInfluenceSec());
+      if (hit.Missed || !hit.DidHit || hit.Damage <= 0.f)
       {
         continue;
       }
@@ -147,7 +148,14 @@ InfluencePrediction InfluenceResolver::Resolve(
   }
 
   const InfluenceHitParams hit = InfluenceHitMath::Compute(
-      target->GetArmorGroups(), cap, source.GetTimeSinceLastInfluenceSec());
+      target->GetArmorGroups(), cap, source.GetAttributes(),
+      source.GetTimeSinceLastInfluenceSec());
+  if (hit.Missed)
+  {
+    pred.CancelReason = "miss";
+    pred.Cancelled = true;
+    return pred;
+  }
   if (!hit.DidHit || hit.Damage <= 0.f)
   {
     pred.CancelReason = hit.DidHit ? "zero_damage" : "no_hit";

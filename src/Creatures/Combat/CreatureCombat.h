@@ -11,12 +11,10 @@ class UWorld;
 
 struct CreatureCombat
 {
-  /// Resolve melee strike from attacker intent.attackTargetId.
+  /// Resolve melee strike from attacker Influence intent.
   /// Returns true if target was removed.
   static bool TryMeleeStrike(UWorld &world, UCreature &attacker,
                              WorldGameMode mode);
-
-  static float ComputeMeleeDamage(const UCreature &attacker);
 };
 
 } // namespace cutum

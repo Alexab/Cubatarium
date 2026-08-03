@@ -1,20 +1,36 @@
-﻿{
+{
   "id": "iron_pickaxe",
   "displayName": "Iron Pickaxe",
-  "types": ["mining"],
+  "types": [
+    "mining"
+  ],
   "stack_max": 1,
   "wear_end": "destroy",
   "model": "models/items/iron_pickaxe.json",
-  "repair": { "materials": ["iron_ingot", "iron"], "amount": 0.25 },
+  "repair": {
+    "materials": [
+      "iron_ingot",
+      "iron"
+    ],
+    "amount": 0.25
+  },
   "tool": {
     "full_punch_interval": 1.0,
-    "damage": { "melee": 4 },
+    "damage": {
+      "melee": 4,
+      "fleshy": 4
+    },
     "groupcaps": {
       "cracky": {
         "maxlevel": 2,
         "uses": 120,
-        "times": { "2": 0.8, "1": 1.4, "3": 0.5 }
+        "times": {
+          "2": 0.8,
+          "1": 1.4,
+          "3": 0.5
+        }
       }
-    }
+    },
+    "punch_attack_uses": 120
   }
 }

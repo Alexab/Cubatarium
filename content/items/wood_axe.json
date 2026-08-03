@@ -1,20 +1,33 @@
-﻿{
+{
   "id": "wood_axe",
   "displayName": "Wooden Axe",
-  "types": ["cutting"],
+  "types": [
+    "cutting"
+  ],
   "stack_max": 1,
   "wear_end": "destroy",
   "model": "models/items/wood_axe.json",
-  "repair": { "materials": ["wood"], "amount": 0.25 },
+  "repair": {
+    "materials": [
+      "wood"
+    ],
+    "amount": 0.25
+  },
   "tool": {
     "full_punch_interval": 1.0,
-    "damage": { "melee": 3 },
+    "damage": {
+      "melee": 3,
+      "fleshy": 3
+    },
     "groupcaps": {
       "choppy": {
         "maxlevel": 0,
         "uses": 30,
-        "times": { "3": 1 }
+        "times": {
+          "3": 1
+        }
       }
-    }
+    },
+    "punch_attack_uses": 30
   }
 }

@@ -1,20 +1,34 @@
-﻿{
+{
   "id": "stone_shovel",
   "displayName": "Stone Shovel",
-  "types": ["digging"],
+  "types": [
+    "digging"
+  ],
   "stack_max": 1,
   "wear_end": "destroy",
   "model": "models/items/stone_shovel.json",
-  "repair": { "materials": ["stone"], "amount": 0.25 },
+  "repair": {
+    "materials": [
+      "stone"
+    ],
+    "amount": 0.25
+  },
   "tool": {
     "full_punch_interval": 1.0,
-    "damage": { "melee": 2 },
+    "damage": {
+      "melee": 2,
+      "fleshy": 2
+    },
     "groupcaps": {
       "crumbly": {
         "maxlevel": 1,
         "uses": 60,
-        "times": { "2": 0.6, "3": 0.45 }
+        "times": {
+          "2": 0.6,
+          "3": 0.45
+        }
       }
-    }
+    },
+    "punch_attack_uses": 60
   }
 }

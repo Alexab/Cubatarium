@@ -7,6 +7,13 @@
 namespace cutum
 {
 
+int BareHandFleshyDamage(const CreatureAttributes &attrs)
+{
+  return std::max(
+      1, static_cast<int>(std::lround(
+             8.f * (0.5f + static_cast<float>(attrs.strength) / 20.f))));
+}
+
 bool IsToolWearEnabled(WorldGameMode mode, WorldDifficulty difficulty)
 {
   if (mode == WorldGameMode::Creative)
@@ -203,6 +210,72 @@ DigParams ResolveDigParams(const ItemDefinition *tool_or_null,
   result.WearDelta = best_wear;
   result.MainGroup = best_group;
   return result;
+}
+
+HitParams ResolveHitParams(const ArmorGroups &armor,
+                           const ToolCapabilitiesDef &tool,
+                           const CreatureAttributes &attrs,
+                           float time_from_last_punch_sec)
+{
+  HitParams out;
+  if (armor.IsImmortal())
+  {
+    out.CancelReason = "immortal";
+    return out;
+  }
+
+  // Accuracy 1–20: miss only when accuracy is low (<=5). Default 10 never misses.
+  // Chance = (6 - accuracy) * 10% at accuracy 1..5.
+  const int accuracy = std::clamp(attrs.accuracy, 1, 20);
+  if (accuracy <= 5)
+  {
+    const int miss_chance = (6 - accuracy) * 10;
+    const int roll =
+        (static_cast<int>(std::floor(time_from_last_punch_sec * 100.f)) +
+         accuracy * 7) %
+        100;
+    if (roll < miss_chance)
+    {
+      out.Missed = true;
+      out.CancelReason = "miss";
+      return out;
+    }
+  }
+
+  std::unordered_map<std::string, int> damage_groups = tool.Damage.Groups;
+  if (damage_groups.empty() && tool.Damage.Melee > 0.f)
+  {
+    damage_groups["fleshy"] =
+        std::max(1, static_cast<int>(std::lround(tool.Damage.Melee)));
+  }
+  if (damage_groups.empty())
+  {
+    out.CancelReason = "no_damage";
+    return out;
+  }
+
+  const float interval = std::max(0.05f, tool.FullPunchInterval);
+  out.IntervalMul =
+      std::clamp(time_from_last_punch_sec / interval, 0.f, 1.f);
+  float damage = 0.f;
+  for (const auto &pair : damage_groups)
+  {
+    const int armor_rating = armor.Get(pair.first);
+    damage += static_cast<float>(pair.second) * out.IntervalMul *
+              (static_cast<float>(armor_rating) / 100.f);
+  }
+  out.Damage = damage;
+  out.DidHit = damage > 0.f;
+  if (!out.DidHit)
+  {
+    out.CancelReason = "zero_damage";
+    return out;
+  }
+  if (tool.PunchAttackUses > 0)
+  {
+    out.WearDelta = 1.f / static_cast<float>(tool.PunchAttackUses);
+  }
+  return out;
 }
 
 bool ApplyItemWear(InventoryEntryRef &entry, const ItemDefinition &def,

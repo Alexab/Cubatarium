@@ -884,6 +884,7 @@ target_link_libraries(creature_stats_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(influence_hit_math_test
     src/Creatures/Influence/InfluenceHitMath.cpp
+    src/Items/ToolCapabilities.cpp
     src/Test/InfluenceHitMathTest.cpp)
 target_include_directories(influence_hit_math_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)

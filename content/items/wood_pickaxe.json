@@ -1,20 +1,33 @@
-﻿{
+{
   "id": "wood_pickaxe",
   "displayName": "Wooden Pickaxe",
-  "types": ["mining"],
+  "types": [
+    "mining"
+  ],
   "stack_max": 1,
   "wear_end": "destroy",
   "model": "models/items/wood_pickaxe.json",
-  "repair": { "materials": ["wood"], "amount": 0.25 },
+  "repair": {
+    "materials": [
+      "wood"
+    ],
+    "amount": 0.25
+  },
   "tool": {
     "full_punch_interval": 1.0,
-    "damage": { "melee": 2 },
+    "damage": {
+      "melee": 2,
+      "fleshy": 2
+    },
     "groupcaps": {
       "cracky": {
         "maxlevel": 0,
         "uses": 30,
-        "times": { "3": 1.2 }
+        "times": {
+          "3": 1.2
+        }
       }
-    }
+    },
+    "punch_attack_uses": 30
   }
 }

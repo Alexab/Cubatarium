@@ -25,12 +25,32 @@ struct ToolGroupCap
 
 struct ToolDamageGroups
 {
+  /// Legacy scalar; if Groups empty and Melee > 0, treated as fleshy.
   float Melee{0.f};
+  /// Luanti-style damage_groups (e.g. fleshy → amount).
+  std::unordered_map<std::string, int> Groups;
+
+  int FleshyOrMelee() const
+  {
+    const auto it = Groups.find("fleshy");
+    if (it != Groups.end())
+    {
+      return it->second;
+    }
+    if (Melee > 0.f)
+    {
+      return static_cast<int>(Melee);
+    }
+    return 0;
+  }
+
+  bool Empty() const { return Groups.empty() && !(Melee > 0.f); }
 };
 
 struct ToolCapabilitiesDef
 {
   float FullPunchInterval{1.0f};
+  int PunchAttackUses{0};
   ToolDamageGroups Damage;
   std::unordered_map<std::string, ToolGroupCap> GroupCaps;
 };
