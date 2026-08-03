@@ -552,7 +552,7 @@ void UWorld::RunLegacyPhysicsFrame()
   }
 
   // After player facts sync so sprint/swim fatigue sees this frame's state.
-  CreatureVitalsSystem::Tick(*this, GetGameMode(), dt);
+  CreatureVitalsSystem::Tick(*this, GetGameMode(), GetDifficulty(), dt);
 
   const auto t_after_move = std::chrono::high_resolution_clock::now();
   PhysicsTelemetryData.StreamMs = 0.0;

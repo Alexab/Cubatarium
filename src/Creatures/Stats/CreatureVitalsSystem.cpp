@@ -23,14 +23,39 @@ constexpr float kFatigueSwimPerSec = 5.0f;
 constexpr float kBreathDrainPerSec = 6.0f;
 constexpr float kBreathRecoverPerSec = 20.0f;
 
+struct DifficultyVitalsScale
+{
+  float NeedsDrain{1.f};
+  float FatigueGain{1.f};
+  float BreathDrain{1.f};
+  bool DrownDamage{true};
+};
+
+DifficultyVitalsScale ScaleForDifficulty(WorldDifficulty difficulty)
+{
+  switch (difficulty)
+  {
+  case WorldDifficulty::Peaceful:
+    return {0.f, 0.f, 0.f, false};
+  case WorldDifficulty::Easy:
+    return {0.5f, 0.5f, 0.25f, true};
+  case WorldDifficulty::Normal:
+  default:
+    return {1.f, 1.f, 1.f, true};
+  }
+}
+
 } // namespace
 
-void CreatureVitalsSystem::Tick(UWorld &world, WorldGameMode mode, float dt)
+void CreatureVitalsSystem::Tick(UWorld &world, WorldGameMode mode,
+                                WorldDifficulty difficulty, float dt)
 {
   if (mode != WorldGameMode::Survival || dt <= 0.f)
   {
     return;
   }
+
+  const DifficultyVitalsScale scale = ScaleForDifficulty(difficulty);
 
   std::vector<CreatureId> toRemove;
   world.ForEachCreature(
@@ -45,8 +70,10 @@ void CreatureVitalsSystem::Tick(UWorld &world, WorldGameMode mode, float dt)
         const float endMul =
             1.f / std::max(0.5f, 0.5f + static_cast<float>(a.endurance) / 20.f);
 
-        v.satiety = std::max(0.f, v.satiety - kSatietyDrainPerSec * dt);
-        v.thirst = std::max(0.f, v.thirst - kThirstDrainPerSec * dt);
+        v.satiety =
+            std::max(0.f, v.satiety - kSatietyDrainPerSec * scale.NeedsDrain * dt);
+        v.thirst =
+            std::max(0.f, v.thirst - kThirstDrainPerSec * scale.NeedsDrain * dt);
 
         const bool sprinting =
             creature.GetLocomotionFacts().state == LocomotionState::Run;
@@ -61,13 +88,21 @@ void CreatureVitalsSystem::Tick(UWorld &world, WorldGameMode mode, float dt)
         if (env.inWater)
         {
           fatigueGain += kFatigueSwimPerSec;
-          v.breath = std::max(0.f, v.breath - kBreathDrainPerSec * dt);
-          if (v.breath <= 0.f)
+          if (scale.BreathDrain > 0.f)
           {
-            if (ApplyDamage(world, creature, kStarveDamagePerSec * dt, mode))
+            v.breath = std::max(
+                0.f, v.breath - kBreathDrainPerSec * scale.BreathDrain * dt);
+            if (v.breath <= 0.f && scale.DrownDamage)
             {
-              toRemove.push_back(creature.GetId());
+              if (ApplyDamage(world, creature, kStarveDamagePerSec * dt, mode))
+              {
+                toRemove.push_back(creature.GetId());
+              }
             }
+          }
+          else
+          {
+            v.breath = v.maxBreath;
           }
         }
         else
@@ -75,17 +110,19 @@ void CreatureVitalsSystem::Tick(UWorld &world, WorldGameMode mode, float dt)
           v.breath = std::min(v.maxBreath, v.breath + kBreathRecoverPerSec * dt);
         }
 
-        if (fatigueGain > 0.f)
+        if (fatigueGain > 0.f && scale.FatigueGain > 0.f)
         {
-          v.fatigue = std::min(v.maxFatigue,
-                               v.fatigue + fatigueGain * endMul * dt);
+          v.fatigue = std::min(
+              v.maxFatigue,
+              v.fatigue + fatigueGain * scale.FatigueGain * endMul * dt);
         }
-        else
+        else if (fatigueGain <= 0.f)
         {
           v.fatigue = std::max(0.f, v.fatigue - kFatigueRecoverPerSec * dt);
         }
 
-        if (v.satiety <= 0.f || v.thirst <= 0.f)
+        if (scale.NeedsDrain > 0.f &&
+            (v.satiety <= 0.f || v.thirst <= 0.f))
         {
           if (ApplyDamage(world, creature, kStarveDamagePerSec * dt, mode))
           {

@@ -125,6 +125,8 @@ set(SOURCES
     src/Creatures/Stats/CreatureStatsJson.cpp
     src/Creatures/Stats/CreatureVitalsSystem.cpp
     src/Creatures/Combat/CreatureCombat.cpp
+    src/Creatures/Influence/InfluenceHitMath.cpp
+    src/Creatures/Influence/BareHandToolInfluenceProvider.cpp
     src/Creatures/Player/Player.cpp
     src/Activity/CreatureActivityDirector.cpp
     src/Activity/WorldCreatureActivitySink.cpp
@@ -861,6 +863,13 @@ add_executable(creature_stats_test
 target_include_directories(creature_stats_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(creature_stats_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(influence_hit_math_test
+    src/Creatures/Influence/InfluenceHitMath.cpp
+    src/Test/InfluenceHitMathTest.cpp)
+target_include_directories(influence_hit_math_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(influence_hit_math_test glm::glm)
 
 add_executable(creature_skinned_draw_test
     src/Creatures/Visual/CreatureBonePaletteGpu.cpp

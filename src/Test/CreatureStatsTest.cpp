@@ -2,11 +2,13 @@
 #include "Creatures/Stats/CreatureStatsDefaults.h"
 #include "Creatures/Stats/CreatureStatsJson.h"
 #include "Creatures/Stats/CreatureVitals.h"
+#include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
 
 #include <cstdlib>
 #include <iostream>
 #include <nlohmann/json.hpp>
+#include <string>
 
 static void Expect(bool cond, const char *message)
 {
@@ -90,9 +92,31 @@ int main()
            "mode from string");
   }
 
+  {
+    Expect(std::string(WorldDifficultyToString(WorldDifficulty::Peaceful)) ==
+               "peaceful",
+           "difficulty peaceful to string");
+    Expect(std::string(WorldDifficultyToString(WorldDifficulty::Easy)) ==
+               "easy",
+           "difficulty easy to string");
+    Expect(std::string(WorldDifficultyToString(WorldDifficulty::Normal)) ==
+               "normal",
+           "difficulty normal to string");
+    Expect(WorldDifficultyFromString("peaceful") == WorldDifficulty::Peaceful,
+           "difficulty from peaceful");
+    Expect(WorldDifficultyFromString("easy") == WorldDifficulty::Easy,
+           "difficulty from easy");
+    Expect(WorldDifficultyFromString("normal") == WorldDifficulty::Normal,
+           "difficulty from normal");
+    Expect(WorldDifficultyFromString("unknown") == WorldDifficulty::Normal,
+           "difficulty unknown defaults normal");
+  }
+
   // Creative freeze contract: callers must skip Tick when Creative —
   // verified by mode enum presence (runtime Tick is no-op for Creative).
   Expect(WorldGameMode::Creative != WorldGameMode::Survival, "modes differ");
+  Expect(WorldDifficulty::Peaceful != WorldDifficulty::Normal,
+         "difficulties differ");
 
   std::cout << "creature_stats_test: OK" << std::endl;
   return 0;
