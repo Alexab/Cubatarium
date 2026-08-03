@@ -5,7 +5,7 @@ if(POLICY CMP0091)
 endif()
 
 # Static vcpkg triplet on Windows hosts. /MT runtime is applied after project()
-# only for MSVC / clang-cl ЄLL GNU-style Clang (linux-ninja preset) must not get /Zc flags.
+# only for MSVC / clang-cl Р„LL GNU-style Clang (linux-ninja preset) must not get /Zc flags.
 if(WIN32)
     set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "vcpkg triplet" FORCE)
     set(VCPKG_APPLOCAL_DEPS OFF CACHE BOOL "Copy DLL deps next to exe" FORCE)
@@ -1115,6 +1115,23 @@ target_include_directories(block_light_emission_parse_test PRIVATE
 target_compile_definitions(block_light_emission_parse_test PRIVATE
     ${PHYSICS_LIGHT_REGISTRY_DEF})
 target_link_libraries(block_light_emission_parse_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(block_hardness_parse_test
+    
+    src/Blocks/BlockDefinition.cpp
+    src/Blocks/BlockDefinitionStorage.cpp
+    src/Test/BlockHardnessParseTest.cpp)
+target_include_directories(block_hardness_parse_test PRIVATE
+    /src)
+target_compile_definitions(block_hardness_parse_test PRIVATE
+    )
+target_link_libraries(block_hardness_parse_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(block_break_duration_test
+    src/Test/BlockBreakDurationTest.cpp)
+target_include_directories(block_break_duration_test PRIVATE
+    /src)
+
 
 add_executable(chunk_lighting_propagation_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
