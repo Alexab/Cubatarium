@@ -1,8 +1,10 @@
 #include "Blocks/BlockDigRules.h"
+#include "Creatures/Influence/DigSessionState.h"
 #include "Game/WorldGameMode.h"
 
 #include <cmath>
 #include <cstdlib>
+#include <glm/glm.hpp>
 #include <iostream>
 
 static void Expect(bool cond, const char *message)
@@ -73,6 +75,23 @@ int main()
     progress = 1.0f;
   }
   Expect(progress == 1.0f, "creative instant sets progress to 1");
+
+  // DigSessionState mirrors World break-session tick semantics.
+  {
+    cutum::DigSessionState session;
+    session.Start(glm::ivec3(1, 2, 3));
+    Expect(session.progress == 0.f, "dig session starts at 0");
+    session.Tick(0.5f, 1.0f);
+    ExpectNear(session.progress, 0.5f, "dig session half progress");
+    session.Tick(1.0f, 1.0f);
+    Expect(session.Complete(), "dig session completes");
+    session.Start(glm::ivec3(0, 0, 0));
+    session.Tick(0.1f, 0.0f);
+    Expect(session.Complete(), "dig duration 0 completes immediately");
+    session.Start(glm::ivec3(0, 0, 0));
+    session.Tick(1.0f, -1.0f);
+    Expect(session.progress == 0.f, "unbreakable dig duration does not progress");
+  }
 
   std::cout << "block_break_duration_test: OK" << std::endl;
   return 0;

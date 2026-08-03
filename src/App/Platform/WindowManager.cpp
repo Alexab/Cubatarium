@@ -8,6 +8,8 @@
 #include "Blocks/Input/BlockInputController.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
+#include "Creatures/Influence/InfluenceApplier.h"
+#include "Creatures/Influence/InfluenceResolver.h"
 #include "Creatures/Player/User.h"
 #include "Game/CreatureVisualQaSpawner.h"
 #include "Game/Inventory/InventoryTypes.h"
@@ -568,8 +570,28 @@ void UWindowManager::Update()
       }
       if (have_target)
       {
-        World->StartBreakSession(target);
-        World->CompleteBreakSession();
+        if (UCreature *controlled = World->GetControlledCreature())
+        {
+          CreatureIntent intent = controlled->GetIntent();
+          intent.attackTargetId = 0;
+          intent.Influence = InfluenceIntent{};
+          intent.Influence.Channel = InfluenceChannel::Dig;
+          intent.Influence.TargetBlockPos = target;
+          intent.Influence.HasTargetBlock = true;
+          controlled->SetIntent(intent);
+          InfluencePrediction pred = InfluenceResolver::Resolve(
+              *World, *controlled, World->GetGameMode(), nullptr);
+          InfluenceApplier::Apply(*World, pred, World->GetGameMode(),
+                                  /*dt=*/1.0e6f);
+          CreatureIntent cleared = controlled->GetIntent();
+          cleared.Influence = InfluenceIntent{};
+          controlled->SetIntent(cleared);
+        }
+        else
+        {
+          World->StartBreakSession(target);
+          World->CompleteBreakSession();
+        }
       }
     }
     if (BlockInput)

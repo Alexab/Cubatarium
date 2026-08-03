@@ -121,6 +121,41 @@ bool TryBlockInspectClick(const BlockInputContext &ctx)
   return true;
 }
 
+void SetDigIntent(UWorld &world, glm::ivec3 blockPos)
+{
+  if (UCreature *controlled = world.GetControlledCreature())
+  {
+    CreatureIntent intent = controlled->GetIntent();
+    intent.attackTargetId = 0;
+    intent.Influence = InfluenceIntent{};
+    intent.Influence.Channel = InfluenceChannel::Dig;
+    intent.Influence.TargetBlockPos = blockPos;
+    intent.Influence.HasTargetBlock = true;
+    intent.suggestedAnim = LocomotionState::Action;
+    intent.clearOnApply = false;
+    controlled->SetIntent(intent);
+  }
+}
+
+void ClearDigIntent(UWorld &world)
+{
+  if (UCreature *controlled = world.GetControlledCreature())
+  {
+    CreatureIntent intent = controlled->GetIntent();
+    if (intent.Influence.Channel == InfluenceChannel::Dig)
+    {
+      intent.Influence = InfluenceIntent{};
+      controlled->SetIntent(intent);
+    }
+  }
+}
+
+void BeginDig(UWorld &world, glm::ivec3 blockPos)
+{
+  // Intent only — DigSession starts in InfluenceApplier on Resolve/Apply.
+  SetDigIntent(world, blockPos);
+}
+
 } // namespace
 
 const InventoryEntryRef *
@@ -203,9 +238,11 @@ void UBlockInputController::CancelPointerInteraction(
     const BlockInputContext &ctx)
 {
   LeftHeld = false;
+  DigStartedForHold = false;
   if (ctx.World)
   {
     ctx.World->CancelBreakSession();
+    ClearDigIntent(*ctx.World);
   }
 }
 
@@ -217,8 +254,10 @@ void UBlockInputController::OnQuickTap(const BlockInputContext &ctx)
   }
   // Touch: Classic = RMB place/use; Cubatarium = LMB short tap place/use.
   ctx.World->CancelBreakSession();
+  ClearDigIntent(*ctx.World);
   TryUseActiveSlot(ctx);
   LeftHeld = false;
+  DigStartedForHold = false;
 }
 
 void UBlockInputController::HandleLeftPress(const BlockInputContext &ctx)
@@ -227,6 +266,7 @@ void UBlockInputController::HandleLeftPress(const BlockInputContext &ctx)
   {
     return;
   }
+  DigStartedForHold = false;
   if (TryBlockInspectClick(ctx))
   {
     return;
@@ -268,12 +308,8 @@ void UBlockInputController::HandleLeftPress(const BlockInputContext &ctx)
   if (ctx.Ui->ControlScheme == ControlScheme::Classic && !IsIsoCamera(ctx) &&
       ctx.World->GetIsBlockIntersectionExists())
   {
-    ctx.World->StartBreakSession(ctx.World->GetBreakBlockPos());
-    if (ctx.World->GetGameMode() == WorldGameMode::Creative)
-    {
-      ctx.World->CompleteBreakSession();
-      LeftHeld = false;
-    }
+    BeginDig(*ctx.World, ctx.World->GetBreakBlockPos());
+    DigStartedForHold = true;
   }
 }
 
@@ -283,12 +319,14 @@ void UBlockInputController::HandleLeftRelease(float holdSeconds,
   if (!ctx.Ui || !ctx.World)
   {
     LeftHeld = false;
+    DigStartedForHold = false;
     return;
   }
 
   if (IsCtrlHeld(ctx))
   {
     LeftHeld = false;
+    DigStartedForHold = false;
     return;
   }
 
@@ -301,20 +339,26 @@ void UBlockInputController::HandleLeftRelease(float holdSeconds,
     {
       // Short tap: place/use active slot (block, prefab, creature, skin).
       ctx.World->CancelBreakSession();
+      ClearDigIntent(*ctx.World);
+      DigStartedForHold = false;
       TryUseActiveSlot(ctx);
     }
     else if (holdSeconds < breakMin)
     {
       // Dead zone: no place, no break.
       ctx.World->CancelBreakSession();
+      ClearDigIntent(*ctx.World);
+      DigStartedForHold = false;
     }
-    else if (!ctx.World->HasBreakSession() &&
+    else if (!DigStartedForHold &&
              ctx.World->GetIsBlockIntersectionExists() &&
              !ShouldBlockBreakByMovement(ctx))
     {
-      // Long press release without Tick having started break yet.
-      ctx.World->StartBreakSession(ctx.World->GetBreakBlockPos());
+      // Long press release without Tick having started dig yet.
+      BeginDig(*ctx.World, ctx.World->GetBreakBlockPos());
+      DigStartedForHold = true;
     }
+    // Else: dig already armed — keep Dig intent; WVB finishes the session.
     LeftHeld = false;
     return;
   }
@@ -324,7 +368,9 @@ void UBlockInputController::HandleLeftRelease(float holdSeconds,
   {
     ctx.World->CancelBreakSession();
   }
+  ClearDigIntent(*ctx.World);
   LeftHeld = false;
+  DigStartedForHold = false;
 }
 
 void UBlockInputController::HandleRightPress(glm::vec2 pos,
@@ -482,12 +528,15 @@ void UBlockInputController::Tick(float dt, const BlockInputContext &ctx)
 
   if (ctx.World->HasBreakSession())
   {
-    ctx.World->TickBreakSession(dt, ctx.World->ResolveBreakDurationSeconds());
-    if (ctx.World->GetBreakProgress() >= 1.0f)
-    {
-      ctx.World->CompleteBreakSession();
-      LeftHeld = false;
-    }
+    (void)dt;
+    return;
+  }
+
+  if (DigStartedForHold)
+  {
+    ClearDigIntent(*ctx.World);
+    LeftHeld = false;
+    DigStartedForHold = false;
     return;
   }
 
@@ -509,23 +558,15 @@ void UBlockInputController::Tick(float dt, const BlockInputContext &ctx)
             .count();
     if (holdSeconds >= ctx.Ui->BreakHoldMinSeconds)
     {
-      ctx.World->StartBreakSession(ctx.World->GetBreakBlockPos());
-      if (ctx.World->GetGameMode() == WorldGameMode::Creative)
-      {
-        ctx.World->CompleteBreakSession();
-        LeftHeld = false;
-      }
+      BeginDig(*ctx.World, ctx.World->GetBreakBlockPos());
+      DigStartedForHold = true;
     }
     return;
   }
 
   // Classic: break already started on press; Tick is a fallback if needed.
-  ctx.World->StartBreakSession(ctx.World->GetBreakBlockPos());
-  if (ctx.World->GetGameMode() == WorldGameMode::Creative)
-  {
-    ctx.World->CompleteBreakSession();
-    LeftHeld = false;
-  }
+  BeginDig(*ctx.World, ctx.World->GetBreakBlockPos());
+  DigStartedForHold = true;
 }
 
 } // namespace cutum

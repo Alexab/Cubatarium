@@ -426,7 +426,8 @@ public:
   bool DelObjectByView();
   bool DelBlockAt(glm::ivec3 blockPos);
 
-  void StartBreakSession(glm::ivec3 blockPos);
+  void StartBreakSession(glm::ivec3 blockPos, float pendingWearDelta = 0.f,
+                         std::string pendingToolId = {});
   void CancelBreakSession();
   void TickBreakSession(float dt, float durationSeconds);
   bool CompleteBreakSession();

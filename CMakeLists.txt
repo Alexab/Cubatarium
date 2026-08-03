@@ -1145,6 +1145,7 @@ add_executable(block_break_duration_test
     src/Test/BlockBreakDurationTest.cpp)
 target_include_directories(block_break_duration_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(block_break_duration_test glm::glm)
 
 
 add_executable(chunk_lighting_propagation_test

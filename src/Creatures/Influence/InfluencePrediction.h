@@ -33,6 +33,11 @@ struct InfluencePrediction
   float IntervalMul{1.f};
   glm::vec3 SourcePos{0.f};
   std::vector<InfluenceTargetDelta> Targets;
+  glm::ivec3 DigBlockPos{0};
+  float DigDurationSec{-1.f};
+  float DigWearDelta{0.f};
+  bool DigEffective{false};
+  std::string DigToolId;
 };
 
 } // namespace cutum

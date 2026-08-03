@@ -9,6 +9,7 @@
 #include "World/Core/World.h"
 #include <algorithm>
 #include <cmath>
+#include <optional>
 
 namespace cutum
 {
@@ -51,11 +52,15 @@ void ApplyMeleeToolWear(UWorld &world, UCreature &source,
 
 InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
                                              InfluencePrediction &pred,
-                                             WorldGameMode mode)
+                                             WorldGameMode mode, float dt)
 {
   InfluenceApplyResult result;
   if (!pred.Valid || pred.Cancelled)
   {
+    if (pred.Capability.Channel == InfluenceChannel::Dig)
+    {
+      world.CancelBreakSession();
+    }
     InfluenceEvent ev;
     ev.Kind = InfluenceEventKind::Cancelled;
     ev.SourceId = pred.SourceId;
@@ -75,6 +80,39 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
   UCreature *source = world.GetCreature(pred.SourceId);
   if (!source)
   {
+    return result;
+  }
+
+  if (pred.Capability.Channel == InfluenceChannel::Dig)
+  {
+    const std::optional<glm::ivec3> session_pos =
+        world.GetBreakSessionBlockPos();
+    if (!session_pos || *session_pos != pred.DigBlockPos)
+    {
+      world.StartBreakSession(pred.DigBlockPos, pred.DigWearDelta,
+                              pred.DigToolId);
+    }
+    world.TickBreakSession(dt, pred.DigDurationSec);
+    if (world.GetBreakProgress() < 1.f)
+    {
+      result.Applied = true;
+      return result;
+    }
+
+    result.Applied = world.CompleteBreakSession();
+    InfluenceEvent ev;
+    ev.Kind = result.Applied ? InfluenceEventKind::Applied
+                             : InfluenceEventKind::Cancelled;
+    ev.SourceId = pred.SourceId;
+    ev.CapabilityId = pred.Capability.Id;
+    ev.Channel = InfluenceChannel::Dig;
+    ev.SourcePos = pred.SourcePos;
+    ev.TargetPos = glm::vec3(pred.DigBlockPos);
+    if (!result.Applied)
+    {
+      ev.CancelReason = "dig_complete_failed";
+    }
+    InfluenceEvents::Emit(ev);
     return result;
   }
 

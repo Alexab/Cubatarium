@@ -2,7 +2,10 @@
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Influence/BareHandToolInfluenceProvider.h"
 #include "Creatures/Influence/InfluenceHitMath.h"
+#include "Game/Inventory/InventoryTypes.h"
 #include "Game/ModePolicy.h"
+#include "Items/ItemDefinitionStorage.h"
+#include "Items/ToolCapabilities.h"
 #include "World/Core/World.h"
 #include <algorithm>
 #include <cmath>
@@ -72,7 +75,8 @@ InfluencePrediction InfluenceResolver::Resolve(
     return pred;
   }
 
-  if (!ModePolicy::AllowsHostileAggro(mode, world.GetDifficulty()))
+  if (channel != InfluenceChannel::Dig &&
+      !ModePolicy::AllowsHostileAggro(mode, world.GetDifficulty()))
   {
     // Safety net: hostile melee vs player cancelled on Peaceful.
     const CreatureIntent &early = source.GetIntent();
@@ -89,6 +93,62 @@ InfluencePrediction InfluenceResolver::Resolve(
         }
       }
     }
+  }
+
+  if (channel == InfluenceChannel::Dig)
+  {
+    pred.Capability.Channel = channel;
+    if (!intent.Influence.HasTargetBlock)
+    {
+      pred.CancelReason = "no_block_target";
+      pred.Cancelled = true;
+      return pred;
+    }
+
+    pred.DigBlockPos = intent.Influence.TargetBlockPos;
+    const BlockId block_id =
+        world.GetBlockWorld().GetBlock(pred.DigBlockPos);
+    const UBlockDefinitionStorage *blocks =
+        world.GetBlockRegistry().GetDefinitions();
+    const BlockDefinition *block = blocks ? blocks->GetById(block_id) : nullptr;
+    if (!block)
+    {
+      pred.CancelReason = "missing_block";
+      pred.Cancelled = true;
+      return pred;
+    }
+
+    const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
+    const ItemDefinition *tool = nullptr;
+    if (const InventoryEntryRef *active =
+            source.GetInventory().GetActiveEntryRef())
+    {
+      if (!active->empty && active->kind == InventoryEntryKind::Item &&
+          !active->broken && items)
+      {
+        tool = items->Get(active->Id);
+      }
+    }
+    if (!tool && items)
+    {
+      tool = items->GetHandDefinition();
+    }
+
+    const DigParams dig =
+        ResolveDigParams(tool, *block, source.GetAttributes(), mode);
+    pred.Capability.Id = tool ? tool->Id : "bare_hand";
+    pred.DigDurationSec = dig.DurationSec;
+    pred.DigWearDelta = dig.WearDelta;
+    pred.DigEffective = dig.Effective;
+    pred.DigToolId = tool ? tool->Id : std::string{};
+    if (!dig.Effective)
+    {
+      pred.CancelReason = "ineffective_dig";
+      pred.Cancelled = true;
+      return pred;
+    }
+    pred.Valid = true;
+    return pred;
   }
 
   InfluenceCapability cap;

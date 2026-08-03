@@ -5605,10 +5605,13 @@ bool UWorld::DelObjectByView(const glm::vec3 &position, const glm::vec3 &front)
   return DelBlockAt(hit->blockPos);
 }
 
-void UWorld::StartBreakSession(glm::ivec3 blockPos)
+void UWorld::StartBreakSession(glm::ivec3 blockPos, float pendingWearDelta,
+                               std::string pendingToolId)
 {
   DigSessionState session;
   session.Start(blockPos);
+  session.pendingWearDelta = pendingWearDelta;
+  session.pendingToolId = std::move(pendingToolId);
   BreakSession = session;
 }
 

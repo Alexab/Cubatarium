@@ -4,6 +4,8 @@
 #include "Creatures/Combat/CreatureCombat.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
+#include "Creatures/Influence/InfluenceApplier.h"
+#include "Creatures/Influence/InfluenceResolver.h"
 #include "Creatures/Influence/StatusEffectSystem.h"
 #include "Creatures/Locomotion/CreatureLocomotionController.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
@@ -472,14 +474,29 @@ void UWorld::RunLegacyPhysicsFrame()
       });
 
   // Controlled / possessed player: resolve Influence after agents (input may
-  // have set attackTargetId on LMB).
+  // have set attackTargetId / Dig on LMB). Dig Intent is not player-gated in
+  // Resolver; session tick uses the world DigSession (player-owned for now).
   if (Environment.GetControlledCreatureId() != 0)
   {
     if (UCreature *controlled =
             GetCreature(Environment.GetControlledCreatureId()))
     {
       const CreatureIntent &intent = controlled->GetIntent();
-      if (intent.attackTargetId != 0 || intent.Influence.TargetId != 0)
+      if (intent.Influence.Channel == InfluenceChannel::Dig)
+      {
+        InfluencePrediction pred =
+            InfluenceResolver::Resolve(*this, *controlled, GetGameMode(),
+                                       nullptr);
+        InfluenceApplier::Apply(*this, pred, GetGameMode(), dt);
+        if (!HasBreakSession())
+        {
+          CreatureIntent cleared = controlled->GetIntent();
+          cleared.Influence = InfluenceIntent{};
+          controlled->SetIntent(cleared);
+        }
+      }
+      else if (intent.attackTargetId != 0 ||
+               intent.Influence.TargetId != 0)
       {
         CreatureCombat::TryMeleeStrike(*this, *controlled, GetGameMode());
         // One-shot: clear attack target after resolve attempt so hold-LMB dig
