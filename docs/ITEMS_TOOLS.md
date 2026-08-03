@@ -16,33 +16,39 @@ Data-driven tools for player / bot / mobs (shared `UCreature` inventory + attrib
 | `stack_max` | Tools = 1 |
 | `wear_end` | `destroy` (default) / `broken` / `indestructible` |
 | `repair.materials`, `repair.amount` | Repair restore fraction |
-| `tool.groupcaps` | Luanti-style dig capabilities |
-| `tool.damage.melee` | Influence / combat damage |
+| `tool.groupcaps` | Dig capabilities (cracky/choppy/…) — domain A dig |
+| `tool.damage` / `damage.melee` | Combat damage groups (e.g. `fleshy`) — domain A hit; scalar `melee` maps to fleshy |
+| `tool.full_punch_interval` | Melee cooldown |
+| `tool.punch_attack_uses` | Wear denominator for melee hits |
 
 Hand is a built-in hidden def (`hand`) with weak `oddly_breakable_by_hand` / `crumbly` caps.
 
-## Dig contract (block agent)
+See [INTERACTION_ARCHITECTURE.md](INTERACTION_ARCHITECTURE.md) (decisions A + C) and
+[SURVIVAL_INTEGRATION.md](SURVIVAL_INTEGRATION.md) (`WorldDifficulty`).
+
+## Dig contract
 
 `ResolveDigParams(tool, block, attrs, mode)` in `src/Items/ToolCapabilities.*`.
+Hit math: `ResolveHitParams` (same module). Dig channel runs through Influence bus (TD-INF-013).
 
-Blocks may declare:
+Blocks should declare:
 
 ```json
 "dig": { "level": 1, "groups": { "cracky": 2 } }
 ```
 
-If `DigGroups` is empty, tools **infer** groups from `Types` / name / hardness (temporary; prefer explicit dig groups).
+If `DigGroups` is empty, tools **infer** groups from `Types` / name / hardness (fallback until packs filled).
 
-Hardness still gates unbreakable (`hardness <= 0` in Survival). Duration uses groupcaps when matched, else `BlockDigRules` baseline.
+Hardness gates unbreakable (`hardness <= 0` in Survival). On groupcap match, duration uses
+`times[rating]` (hardness does not further scale). Else `BlockDigRules` baseline `hardness * 1.5`.
 
 ## Wear gate
 
-`IsToolWearEnabled(mode, difficulty)`:
+`IsToolWearEnabled(mode, difficulty)` / ModePolicy:
 
 - **Creative** → no wear
 - **Survival + Peaceful** (easiest) → no wear
-- else → wear applies; `wear_end` decides destroy vs broken
-
+- else → wear on dig complete **and** melee hit; `wear_end` decides destroy vs broken
 ## Commands
 
 - `/give <item_id>` — assigns tool to active hotbar slot when id is an item
@@ -56,4 +62,6 @@ Hardness still gates unbreakable (`hardness <= 0` in Survival). Duration uses gr
 
 ## Influence handshake
 
-`UItemToolInfluenceProvider` implements `IUToolInfluenceProvider` so held tools feed melee capability (parallel influence system).
+`UItemToolInfluenceProvider` implements `IUToolInfluenceProvider` so held tools feed melee
+(and Dig channel uses the same item `groupcaps` via `ResolveDigParams`). One Influence bus;
+two group matchers (A).

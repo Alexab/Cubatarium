@@ -86,7 +86,9 @@ Face order for `textures` (6 entries): `[+Z, +X, -Z, -X, +Y, -Y]`
 Dig resistance. Cubatarium semantics (not identical to Minecraft):
 
 - `hardness = 0` — unbreakable in **Survival** (Creative still breaks instantly)
-- `hardness > 0` — Survival dig time ≈ `hardness * 1.5` seconds (bare hand)
+- `hardness > 0` — bare-hand / wrong-tool dig time ≈ `hardness * 1.5` seconds (`BlockDigRules`)
+- With matching tool `groupcaps`, dig time uses `times[rating]` (hardness gates unbreakable + InferDigGroups)
+- Prefer `"dig": { "level", "groups" }` on blocks ([ITEMS_TOOLS.md](ITEMS_TOOLS.md)); dig via Influence Dig channel ([INTERACTION_ARCHITECTURE.md](INTERACTION_ARCHITECTURE.md))
 - Soft plants use small positives (`0.05`–`0.2`), never `0`
 
 Defaults are applied from [`tools/block_hardness_defaults.yaml`](../tools/block_hardness_defaults.yaml) via:
