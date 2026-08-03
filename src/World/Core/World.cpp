@@ -1647,14 +1647,19 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
   }
 
   // P1: idle FOV fill — prefer look direction more strongly than ring alone
-  // (k≥1.5 vs MeshForwardBiasK 0.75). Horiz still primary via score.
+  // (k≥1.5). Moving: softer k so side FOV missing columns still admit
+  // (manual 101354: behind>ahead holes while cruise bias starved lateral).
+  const bool idle_like =
+      GetLastMovementSpeed() <=
+      ProceduralTemplate.MovementPrefetchThreshold;
+  const float fov_k = idle_like ? 1.5f : 0.45f;
   std::sort(candidates.begin(), candidates.end(),
-            [](const Candidate &a, const Candidate &b)
+            [fov_k](const Candidate &a, const Candidate &b)
             {
               const float score_a = static_cast<float>(a.horiz) -
-                                   1.5f * std::max(0.0f, a.forward_score);
+                                   fov_k * std::max(0.0f, a.forward_score);
               const float score_b = static_cast<float>(b.horiz) -
-                                   1.5f * std::max(0.0f, b.forward_score);
+                                   fov_k * std::max(0.0f, b.forward_score);
               if (score_a != score_b)
               {
                 return score_a < score_b;

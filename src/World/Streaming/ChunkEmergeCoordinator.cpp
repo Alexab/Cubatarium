@@ -568,11 +568,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           !moving ? std::max(tune.MeshForwardBiasK, 1.5f)
                   : tune.MeshForwardBiasK;
       mesh_service.SetMeshForwardBias(bias_k, fwd);
-      // Cruise: rear slots for behind-camera unfinished. Idle+holes: keep a
-      // few rear slots so FOV bias cannot starve stop recovery (P1 smoke).
-      mesh_service.SetMaxRearFocusMeshPerFrame(
-          moving ? 3
-                 : ((visual_holes || missing_underfeet) ? 2 : 0));
+      // Cruise: off-forward (rear+side) slots. Idle+holes: keep a few so FOV
+      // bias cannot starve stop recovery (P1 smoke). Boost when unfinished
+      // behind/side dominates ahead (manual 101354 side FOV).
+      int rear_slots = moving ? 4 : ((visual_holes || missing_underfeet) ? 2 : 0);
+      if (moving && (visual_holes || missing_underfeet))
+      {
+        const int unfinished_behind =
+            world.GetPhysicsTelemetry().FocusUnfinishedBehind;
+        const int unfinished_ahead =
+            world.GetPhysicsTelemetry().FocusUnfinishedAhead;
+        if (unfinished_behind > unfinished_ahead)
+        {
+          rear_slots = std::max(rear_slots, 5);
+        }
+      }
+      mesh_service.SetMaxRearFocusMeshPerFrame(rear_slots);
     }
   }
   int mesh_drain = LastBudget.MaxMeshDrain;
@@ -2186,7 +2197,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           underfeet_immediate_this_frame < kMaxUnderfeetImmediate;
       if (nh <= 5 && slot_ok && ms_ok)
       {
-        if (pipeline_idle && sticky_frames >= 3)
+        // nh≤1 mid-surface void (manual 101354): Imm after 1 sticky frame.
+        const int idle_sticky_need = nh <= 1 ? 1 : 3;
+        const int queued_sticky_need = nh <= 1 ? 2 : 5;
+        if (pipeline_idle && sticky_frames >= idle_sticky_need)
         {
           mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
                                              isolated_hole);
@@ -2194,7 +2208,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           underfeet_immediate_cd = 1;
           mesh_service.UpdateStickyNearestHole(isolated_hole, false);
         }
-        else if (queued_stuck && sticky_frames >= 5 &&
+        else if (queued_stuck && sticky_frames >= queued_sticky_need &&
                  mesh_service.DropQueuedPendingGpuApply(isolated_hole))
         {
           mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
@@ -2205,10 +2219,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         }
       }
       // J3: nh≤3 sticky≥5 in GPU pipeline — hoist Queued Kick priority only
-      // (never drop/Immediate on Kicked/Dispatched).
-      if (nh <= 3 && sticky_frames >= 5 && (queued_stuck || kicked_stuck))
+      // (never drop/Immediate on Kicked/Dispatched). nh≤1: kick sooner.
+      if ((nh <= 1 && sticky_frames >= 2) ||
+          (nh <= 3 && sticky_frames >= 5))
       {
-        mesh_service.PreferKickPendingGpuQueued(isolated_hole);
+        if (queued_stuck || kicked_stuck)
+        {
+          mesh_service.PreferKickPendingGpuQueued(isolated_hole);
+        }
       }
     }
     else
@@ -2245,26 +2263,35 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       }
       else if (found_nearest_missing)
       {
-        const MeshWorkAdmission &adm_now =
-            mesh_service.GetMeshWorkAdmission();
-        const bool hole_mode =
-            adm_now.mode == MeshWorkAdmission::Mode::HoleDrain ||
-            adm_now.mode == MeshWorkAdmission::Mode::DeepBacklog;
         const int nh = std::max(
             std::abs(isolated_hole.x - focus_ground_horiz.x),
             std::abs(isolated_hole.z - focus_ground_horiz.z));
-        if (hole_mode && nh <= 2)
+        // nh≤1: always soft-brake when nearest hole is underfeet-adjacent
+        // (manual 101354 mid-surface void with uf_draw=1 but mh=1).
+        if (nh <= 1)
         {
-          const glm::vec2 vel = world.GetLastMovementDirXz();
-          const glm::vec2 to_hole(
-              static_cast<float>(isolated_hole.x - focus_ground_horiz.x),
-              static_cast<float>(isolated_hole.z - focus_ground_horiz.z));
-          const float vel_len = glm::length(vel);
-          const float hole_len = glm::length(to_hole);
-          if (vel_len > 0.01f && hole_len > 0.01f &&
-              glm::dot(vel / vel_len, to_hole / hole_len) > 0.5f)
+          clamp_scale = 0.75f;
+        }
+        else
+        {
+          const MeshWorkAdmission &adm_now =
+              mesh_service.GetMeshWorkAdmission();
+          const bool hole_mode =
+              adm_now.mode == MeshWorkAdmission::Mode::HoleDrain ||
+              adm_now.mode == MeshWorkAdmission::Mode::DeepBacklog;
+          if (hole_mode && nh <= 2)
           {
-            clamp_scale = 0.75f;
+            const glm::vec2 vel = world.GetLastMovementDirXz();
+            const glm::vec2 to_hole(
+                static_cast<float>(isolated_hole.x - focus_ground_horiz.x),
+                static_cast<float>(isolated_hole.z - focus_ground_horiz.z));
+            const float vel_len = glm::length(vel);
+            const float hole_len = glm::length(to_hole);
+            if (vel_len > 0.01f && hole_len > 0.01f &&
+                glm::dot(vel / vel_len, to_hole / hole_len) > 0.5f)
+            {
+              clamp_scale = 0.75f;
+            }
           }
         }
       }

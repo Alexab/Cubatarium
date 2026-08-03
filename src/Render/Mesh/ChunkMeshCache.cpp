@@ -2993,8 +2993,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
     }
 
-    // Pass 1b: reserved rear-hemisphere focus slots so MeshForwardBias cannot
-    // leave unfinished columns behind the camera (manual 220707).
+    // Pass 1b: reserved off-forward focus slots so MeshForwardBias cannot
+    // leave unfinished columns behind *or beside* the camera (manual 220707
+    // rear; manual 101354 side FOV holes with behind≥ahead).
+    // Include lateral (dot < 0.35), not only strict rear (dot < -0.05).
     if (MeshFocusValid && rear_focus_cap > 0 && MeshForwardBiasK > 0.0f)
     {
       const float flen = std::sqrt(MeshForwardXz.x * MeshForwardXz.x +
@@ -3021,7 +3023,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
               static_cast<float>(it->z - MeshFocusGroundChunk.z);
           const float tlen = std::sqrt(tdx * tdx + tdz * tdz);
           if (tlen < 0.01f ||
-              (tdx / tlen) * fx + (tdz / tlen) * fz >= -0.05f)
+              (tdx / tlen) * fx + (tdz / tlen) * fz >= 0.35f)
           {
             ++it;
             continue;
