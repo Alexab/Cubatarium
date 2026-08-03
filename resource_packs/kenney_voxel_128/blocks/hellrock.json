@@ -2,6 +2,12 @@
   "name": "hellrock",
   "id": 67,
   "hardness": 0.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 3
+    }
+  },
   "types": [
     "natural"
   ],

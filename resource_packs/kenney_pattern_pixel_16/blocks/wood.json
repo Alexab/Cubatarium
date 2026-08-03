@@ -2,6 +2,12 @@
   "name": "wood",
   "id": 43,
   "hardness": 2,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "choppy": 2
+    }
+  },
   "types": [
     "natural",
     "building"

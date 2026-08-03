@@ -2,6 +2,12 @@
   "name": "end_portal_frame",
   "id": 755,
   "hardness": 0,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "natural"
   ],

@@ -2,6 +2,12 @@
   "name": "lava",
   "id": 128,
   "hardness": 100,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "fluid",
     "natural"

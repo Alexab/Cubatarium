@@ -2,6 +2,12 @@
   "name": "oreCoal",
   "id": 862,
   "hardness": 3,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "natural"
   ],

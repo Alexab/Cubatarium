@@ -2,6 +2,12 @@
   "name": "fire",
   "id": 371,
   "hardness": 100,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "natural"
   ],

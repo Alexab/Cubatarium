@@ -2,6 +2,12 @@
   "name": "mtg_lava_flowing",
   "id": 468,
   "hardness": 100,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "building"
   ],

@@ -2,6 +2,12 @@
   "name": "piston",
   "id": 670,
   "hardness": 0.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 3
+    }
+  },
   "types": [
     "natural"
   ],

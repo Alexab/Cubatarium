@@ -2,6 +2,13 @@
   "name": "tall_grass",
   "id": 568,
   "hardness": 0.05,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "oddly_breakable_by_hand": 3,
+      "snappy": 3
+    }
+  },
   "types": [
     "natural",
     "plants"

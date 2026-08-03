@@ -2,6 +2,12 @@
   "name": "mtg_ladder_wood",
   "id": 466,
   "hardness": 0.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "choppy": 2
+    }
+  },
   "types": [
     "building"
   ],

@@ -2,6 +2,12 @@
   "name": "stonebricksmooth",
   "id": 142,
   "hardness": 1.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "building"
   ],

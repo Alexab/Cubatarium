@@ -2,6 +2,12 @@
   "name": "jack_o_lantern",
   "id": 385,
   "hardness": 1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 3
+    }
+  },
   "types": [
     "natural"
   ],

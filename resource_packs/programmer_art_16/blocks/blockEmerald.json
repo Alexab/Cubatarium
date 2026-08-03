@@ -2,6 +2,12 @@
   "name": "blockEmerald",
   "id": 608,
   "hardness": 5,
+  "dig": {
+    "level": 2,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "building"
   ],

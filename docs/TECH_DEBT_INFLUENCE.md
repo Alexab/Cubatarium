@@ -14,24 +14,25 @@
 | TD-INF-007 | 0 | Full gameplay particle budget / LOD | Minimal flash/beam/burst shipped | accepted backlog |
 | TD-INF-009 | 0 | Intelligence-driven influence (skills / spells) | Attr unused | accepted backlog |
 | TD-INF-011 | 5 | Load `models/effects/*.json` into `UStatusEffectCatalog` at runtime | Builtins hardcoded; JSON is authoring samples | accepted backlog |
-| TD-INF-013 | deep-refactor | **Dig as Influence `Channel::Dig` (pipeline C)** | Break session today is a parallel path in `World`/`BlockInputController`, outside Influence Resolve/Apply/Events. Deep refactor target: one Intent→Resolve→Apply→Events bus for Melee **and** Dig; DigSessionState for progress; crack/break FX from Dig events. **Not** dig-as-HP and **not** merging dig group tables with damage/armor groups (see TD-INF-003). | deep-refactor Wave 3 |
 
 ## Closed
 
 | ID | Closed in | Resolution |
 |----|-----------|------------|
+| TD-INF-002 | Wave 2 | Melee wear via `ApplyItemWear` + ModePolicy / PunchAttackUses in InfluenceApplier |
 | TD-INF-003 | deep-refactor decision | **Wontfix: merge dig groupcaps tables with Influence damage/armor groups.** Luanti dual dictionaries (decision A). |
 | TD-INF-005 | Wave 1 | Minimal accuracy miss in `ResolveHitParams` (accuracy ≤ 5) |
 | TD-INF-008 | Wave 1b | `armor_groups` / `bare_hand` parse + ApplyStatsFromDefinition; zombie sample |
 | TD-INF-010 | 4 | Radius / aura targeting via `InfluenceTargeting::Radius` + spatial neighbors |
-| TD-INF-012 | 1–3 | Core Influence pipeline: resolve/apply, cooldown/range, events, status tick, FX sink (Melee/status; Dig channel = TD-INF-013) |
+| TD-INF-012 | 1–3 | Core Influence pipeline: resolve/apply, cooldown/range, events, status tick, FX sink |
+| TD-INF-013 | Wave 3 | Dig as Influence `Channel::Dig`: DigSessionState, ResolveDigParams prediction, BIC/WVB/flight-sim route; crack FX still polls session (events emit on complete) |
 
 ## Decision log (A vs C)
 
 | Decision | Meaning | Status |
 |----------|---------|--------|
 | **A** | Dig groups ≠ damage/armor groups (two dictionaries on one item) | **Accepted** — TD-INF-003 closed wontfix |
-| **C** | Dig goes through Influence pipeline (`Channel::Dig`) | **Accepted as deep-refactor target** — TD-INF-013 open (previously declined when scope was integration-only; reopened for deep refactor) |
+| **C** | Dig goes through Influence pipeline (`Channel::Dig`) | **Shipped Wave 3** — TD-INF-013 closed |
 
 Industrial note: Luanti/Minecraft keep separate dig vs punch **math** under one tool def. Cubatarium C unifies the **bus** (intent/resolve/apply/events/wear), not the group matchers — aligned with Action/Interaction frameworks, not with “blocks have HP”.
 
@@ -49,4 +50,4 @@ Industrial note: Luanti/Minecraft keep separate dig vs punch **math** under one 
 - [ ] Hit flash visible on target; brief path beam between source and target
 - [ ] Status `bleed` ticks after melee; move speed affected if `slow` applied
 - [ ] Fatal wounds / despawn still work after Influence damage
-- [ ] *(after TD-INF-013)* Survival dig of a diggable block goes through Influence Dig channel (progress + complete event); hardness 0 stays unbreakable; Creative instant via resolve duration 0
+- [x] *(TD-INF-013)* Survival dig of a diggable block goes through Influence Dig channel (progress + complete event); hardness 0 stays unbreakable; Creative instant via resolve duration 0

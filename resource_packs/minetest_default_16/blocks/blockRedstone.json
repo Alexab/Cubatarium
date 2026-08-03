@@ -2,6 +2,12 @@
   "name": "blockRedstone",
   "id": 348,
   "hardness": 5,
+  "dig": {
+    "level": 1,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "building"
   ],

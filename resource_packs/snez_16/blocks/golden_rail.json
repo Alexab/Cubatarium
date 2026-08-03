@@ -2,6 +2,12 @@
   "name": "golden_rail",
   "id": 905,
   "hardness": 0.7,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 3
+    }
+  },
   "types": [
     "natural"
   ],

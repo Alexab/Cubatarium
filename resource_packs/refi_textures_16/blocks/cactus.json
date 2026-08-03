@@ -2,6 +2,13 @@
   "name": "cactus",
   "id": 743,
   "hardness": 0.4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 3,
+      "oddly_breakable_by_hand": 3
+    }
+  },
   "types": [
     "natural",
     "plants"

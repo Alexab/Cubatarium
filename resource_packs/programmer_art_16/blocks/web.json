@@ -2,6 +2,12 @@
   "name": "web",
   "id": 710,
   "hardness": 4,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "decorative",
     "misc"

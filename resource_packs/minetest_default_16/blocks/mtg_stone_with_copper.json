@@ -2,6 +2,12 @@
   "name": "mtg_stone_with_copper",
   "id": 506,
   "hardness": 3,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "building"
   ],

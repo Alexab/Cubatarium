@@ -2,6 +2,12 @@
   "name": "mtg_mese",
   "id": 471,
   "hardness": 5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "building"
   ],

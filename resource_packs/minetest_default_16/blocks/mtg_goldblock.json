@@ -2,6 +2,12 @@
   "name": "mtg_goldblock",
   "id": 456,
   "hardness": 3,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "building"
   ],

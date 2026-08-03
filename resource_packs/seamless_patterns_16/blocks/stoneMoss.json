@@ -2,6 +2,12 @@
   "name": "stoneMoss",
   "id": 872,
   "hardness": 2,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "natural",
     "building"

@@ -2,6 +2,12 @@
   "name": "sandstone_carved",
   "id": 938,
   "hardness": 0.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 3
+    }
+  },
   "types": [
     "natural"
   ],

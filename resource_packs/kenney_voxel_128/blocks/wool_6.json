@@ -2,6 +2,13 @@
   "name": "wool_6",
   "id": 106,
   "hardness": 0.8,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "oddly_breakable_by_hand": 2,
+      "snappy": 2
+    }
+  },
   "types": [
     "decorative"
   ],

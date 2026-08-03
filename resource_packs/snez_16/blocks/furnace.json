@@ -2,6 +2,12 @@
   "name": "furnace",
   "id": 902,
   "hardness": 3.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "natural"
   ],

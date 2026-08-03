@@ -2,6 +2,12 @@
   "name": "mtg_tree",
   "id": 514,
   "hardness": 2,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "choppy": 2
+    }
+  },
   "types": [
     "building"
   ],

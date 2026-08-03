@@ -2,6 +2,12 @@
   "name": "oreGold",
   "id": 525,
   "hardness": 3,
+  "dig": {
+    "level": 2,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "natural"
   ],

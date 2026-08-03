@@ -2,6 +2,12 @@
   "name": "iron_bars",
   "id": 642,
   "hardness": 5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "natural"
   ],

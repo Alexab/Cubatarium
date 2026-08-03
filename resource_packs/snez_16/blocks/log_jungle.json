@@ -2,6 +2,12 @@
   "name": "log_jungle",
   "id": 918,
   "hardness": 2,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "choppy": 2
+    }
+  },
   "types": [
     "natural"
   ],

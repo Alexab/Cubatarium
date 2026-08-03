@@ -96,6 +96,26 @@ def validate_blocks() -> int:
                 if not isinstance(hardness, (int, float)) or hardness < 0:
                     err(f"{path}: hardness must be number >= 0")
                     errors += 1
+                elif isinstance(hardness, (int, float)) and hardness > 0:
+                    dig = data.get("dig")
+                    if not isinstance(dig, dict):
+                        err(f"{path}: hardness>0 requires dig object with groups")
+                        errors += 1
+                    else:
+                        groups = dig.get("groups")
+                        if not isinstance(groups, dict) or not groups:
+                            err(f"{path}: hardness>0 requires dig.groups")
+                            errors += 1
+                        level = dig.get("level")
+                        if level is not None and not isinstance(level, int):
+                            err(f"{path}: dig.level must be int when present")
+                            errors += 1
+                        elif isinstance(groups, dict):
+                            for gname, rating in groups.items():
+                                if not isinstance(rating, int):
+                                    err(f"{path}: dig.groups[{gname!r}] must be int")
+                                    errors += 1
+                                    break
 
             physics = data.get("physics")
             render = data.get("render") if isinstance(data.get("render"), dict) else {}

@@ -8,7 +8,6 @@
 |----|----------|------|--------------|--------|
 | TD-ITEM-001 | foundation | Backpack grid for durable item instances | Hotbar-only v1; storage map is count-only | accepted backlog |
 | TD-ITEM-002 | foundation | Anvil UI / craft two tools → one | `/repair` covers v1 | accepted backlog |
-| TD-ITEM-003 | dig | Explicit block `dig.groups` on all packs | InferDigGroups heuristic until deep-refactor Wave 3 apply script | deep-refactor Wave 3 |
 | TD-ITEM-004 | wield | Full shader-based FP 3D tool mesh (core-profile) | Screen-space icon overlay shipped as interim viewmodel | accepted backlog |
 | TD-ITEM-005 | wield | Third-person wield attachment | FP-first scope | accepted backlog |
 | TD-ITEM-006 | content | Dedicated glTF/obj models under `models/items/` | Procedural icons suffice for v1 | accepted backlog |
@@ -18,6 +17,7 @@
 
 | ID | Closed in | Resolution |
 |----|-----------|------------|
+| TD-ITEM-003 | Wave 3 | Explicit `dig.groups`/`dig.level` on packs via `tools/apply_block_dig_groups.py`; InferDigGroups remains fallback only |
 | TD-ITEM-010 | wear | Creative + Peaceful wear gate via `IsToolWearEnabled` + `WorldDifficulty::Peaceful` |
 | TD-ITEM-011 | foundation | `ContentKind::Item` + Tools palette tab + `UItemDefinitionStorage` |
 | TD-ITEM-012 | dig | `ResolveDigParams` wired into break duration + wear on complete; Dig Influence channel = TD-INF-013 |

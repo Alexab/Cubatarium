@@ -2,6 +2,12 @@
   "name": "sponge",
   "id": 559,
   "hardness": 0.6,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 3
+    }
+  },
   "types": [
     "natural"
   ],

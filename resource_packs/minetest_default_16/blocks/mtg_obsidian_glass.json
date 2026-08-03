@@ -2,6 +2,12 @@
   "name": "mtg_obsidian_glass",
   "id": 476,
   "hardness": 3,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "building"
   ],

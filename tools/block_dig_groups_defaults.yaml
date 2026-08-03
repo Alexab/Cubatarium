@@ -1,0 +1,287 @@
+schema_version: 1
+# Default dig.groups / dig.level for resource pack block JSON (Luanti-style).
+# Dig groups are a separate domain from Influence damage/armor groups (fleshy).
+#
+# Lookup order used by tools/apply_block_dig_groups.py:
+#   1. `exact` map keyed by block name (file stem)
+#   2. `patterns` list, first fnmatch hit wins (order matters)
+#   3. hardness-based fallback (mirrors InferDigGroups when DigGroups empty)
+#
+# Each entry: { level: int, groups: { name: rating, ... } }
+# hardness == 0 blocks still get dig.groups for content completeness but are
+# unbreakable via the hardness gate in ResolveDigParams.
+
+fallback:
+  level: 0
+  groups:
+    cracky: 2
+
+exact:
+  # --- Unbreakable (hardness 0) ---------------------------------------------
+  barrier:
+    level: 0
+    groups: { cracky: 1 }
+  bedrock:
+    level: 0
+    groups: { cracky: 1 }
+  command_block:
+    level: 0
+    groups: { cracky: 1 }
+  end_portal_frame:
+    level: 0
+    groups: { cracky: 1 }
+  end_portal_frame_eye:
+    level: 0
+    groups: { cracky: 1 }
+  selection:
+    level: 0
+    groups: { cracky: 1 }
+
+  # --- Soil / sand / snow ---------------------------------------------------
+  clay:
+    level: 0
+    groups: { crumbly: 2, oddly_breakable_by_hand: 2 }
+  dirt:
+    level: 0
+    groups: { crumbly: 2, oddly_breakable_by_hand: 2 }
+  farmland_dry:
+    level: 0
+    groups: { crumbly: 2, oddly_breakable_by_hand: 2 }
+  farmland_wet:
+    level: 0
+    groups: { crumbly: 2, oddly_breakable_by_hand: 2 }
+  grass:
+    level: 0
+    groups: { crumbly: 2, oddly_breakable_by_hand: 2 }
+  gravel:
+    level: 0
+    groups: { crumbly: 2, oddly_breakable_by_hand: 2 }
+  hellsand:
+    level: 0
+    groups: { crumbly: 2, oddly_breakable_by_hand: 2 }
+  mycelium:
+    level: 0
+    groups: { crumbly: 2, oddly_breakable_by_hand: 2 }
+  sand:
+    level: 0
+    groups: { crumbly: 2, oddly_breakable_by_hand: 2 }
+  snow:
+    level: 0
+    groups: { crumbly: 2, oddly_breakable_by_hand: 2 }
+  snow_layer:
+    level: 0
+    groups: { crumbly: 3, oddly_breakable_by_hand: 3 }
+
+  # --- Stone family ---------------------------------------------------------
+  brick:
+    level: 0
+    groups: { cracky: 2 }
+  hellrock:
+    level: 0
+    groups: { cracky: 3 }
+  nether_brick:
+    level: 0
+    groups: { cracky: 2 }
+  sandstone:
+    level: 0
+    groups: { cracky: 3 }
+  sandstone_carved:
+    level: 0
+    groups: { cracky: 3 }
+  sandstone_smooth:
+    level: 0
+    groups: { cracky: 3 }
+  stone:
+    level: 0
+    groups: { cracky: 2 }
+  stoneMoss:
+    level: 0
+    groups: { cracky: 2 }
+  stone_slab:
+    level: 0
+    groups: { cracky: 2 }
+  stone_slab_top:
+    level: 0
+    groups: { cracky: 2 }
+  stonebrick:
+    level: 0
+    groups: { cracky: 2 }
+  stonebricksmooth:
+    level: 0
+    groups: { cracky: 2 }
+  stonebricksmooth_carved:
+    level: 0
+    groups: { cracky: 2 }
+  stonebricksmooth_cracked:
+    level: 0
+    groups: { cracky: 2 }
+  stonebricksmooth_mossy:
+    level: 0
+    groups: { cracky: 2 }
+  whiteStone:
+    level: 1
+    groups: { cracky: 1 }
+  quartz_block:
+    level: 0
+    groups: { cracky: 3 }
+  quartz_chiseled:
+    level: 0
+    groups: { cracky: 3 }
+  quartz_pillar:
+    level: 0
+    groups: { cracky: 3 }
+  obsidian:
+    level: 3
+    groups: { cracky: 1 }
+
+  # --- Ores -----------------------------------------------------------------
+  nether_quartz_ore:
+    level: 1
+    groups: { cracky: 2 }
+  oreCoal:
+    level: 0
+    groups: { cracky: 2 }
+  oreDiamond:
+    level: 2
+    groups: { cracky: 2 }
+  oreEmerald:
+    level: 2
+    groups: { cracky: 2 }
+  oreGold:
+    level: 2
+    groups: { cracky: 2 }
+  oreIron:
+    level: 1
+    groups: { cracky: 2 }
+  oreLapis:
+    level: 1
+    groups: { cracky: 2 }
+  oreRedstone:
+    level: 2
+    groups: { cracky: 2 }
+  blockDiamond:
+    level: 2
+    groups: { cracky: 1 }
+  blockEmerald:
+    level: 2
+    groups: { cracky: 1 }
+  blockGold:
+    level: 2
+    groups: { cracky: 2 }
+  blockIron:
+    level: 1
+    groups: { cracky: 1 }
+  blockLapis:
+    level: 1
+    groups: { cracky: 2 }
+  blockRedstone:
+    level: 1
+    groups: { cracky: 1 }
+
+  # --- Wood -----------------------------------------------------------------
+  log_birch:
+    level: 0
+    groups: { choppy: 2 }
+  log_jungle:
+    level: 0
+    groups: { choppy: 2 }
+  log_spruce:
+    level: 0
+    groups: { choppy: 2 }
+  planks_birch:
+    level: 0
+    groups: { choppy: 2 }
+  planks_jungle:
+    level: 0
+    groups: { choppy: 2 }
+  planks_oak:
+    level: 0
+    groups: { choppy: 2 }
+  planks_spruce:
+    level: 0
+    groups: { choppy: 2 }
+  wood:
+    level: 0
+    groups: { choppy: 2 }
+
+patterns:
+  - match: "*leaves*"
+    dig:
+      level: 0
+      groups: { snappy: 3, oddly_breakable_by_hand: 3 }
+  - match: "*flower*"
+    dig:
+      level: 0
+      groups: { snappy: 3, oddly_breakable_by_hand: 3 }
+  - match: "*grass*"
+    dig:
+      level: 0
+      groups: { snappy: 3, oddly_breakable_by_hand: 3 }
+  - match: "log_*"
+    dig:
+      level: 0
+      groups: { choppy: 2 }
+  - match: "planks_*"
+    dig:
+      level: 0
+      groups: { choppy: 2 }
+  - match: "*wood*"
+    dig:
+      level: 0
+      groups: { choppy: 2 }
+  - match: "*dirt*"
+    dig:
+      level: 0
+      groups: { crumbly: 2, oddly_breakable_by_hand: 2 }
+  - match: "*sand*"
+    dig:
+      level: 0
+      groups: { crumbly: 2, oddly_breakable_by_hand: 2 }
+  - match: "*gravel*"
+    dig:
+      level: 0
+      groups: { crumbly: 2, oddly_breakable_by_hand: 2 }
+  - match: "*clay*"
+    dig:
+      level: 0
+      groups: { crumbly: 2, oddly_breakable_by_hand: 2 }
+  - match: "*snow*"
+    dig:
+      level: 0
+      groups: { crumbly: 2, oddly_breakable_by_hand: 2 }
+  - match: "ore*"
+    dig:
+      level: 1
+      groups: { cracky: 2 }
+  - match: "mtg_*dirt*"
+    dig:
+      level: 0
+      groups: { crumbly: 2, oddly_breakable_by_hand: 2 }
+  - match: "mtg_*sand*"
+    dig:
+      level: 0
+      groups: { crumbly: 2, oddly_breakable_by_hand: 2 }
+  - match: "mtg_*tree*"
+    dig:
+      level: 0
+      groups: { choppy: 2 }
+  - match: "mtg_*wood*"
+    dig:
+      level: 0
+      groups: { choppy: 2 }
+  - match: "mtg_*leaves*"
+    dig:
+      level: 0
+      groups: { snappy: 3, oddly_breakable_by_hand: 3 }
+  - match: "mtg_*stone*"
+    dig:
+      level: 0
+      groups: { cracky: 2 }
+  - match: "mtg_*cobble*"
+    dig:
+      level: 0
+      groups: { cracky: 2 }
+  - match: "wool_*"
+    dig:
+      level: 0
+      groups: { snappy: 2, oddly_breakable_by_hand: 2 }

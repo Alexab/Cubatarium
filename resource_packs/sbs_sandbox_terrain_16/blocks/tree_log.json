@@ -2,6 +2,12 @@
   "name": "tree_log",
   "id": 850,
   "hardness": 2,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "natural",
     "plants"

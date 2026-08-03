@@ -2,6 +2,12 @@
   "name": "whiteStone",
   "id": 150,
   "hardness": 3,
+  "dig": {
+    "level": 1,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "natural",
     "building"

@@ -2,6 +2,12 @@
   "name": "mtg_aspen_wood",
   "id": 412,
   "hardness": 2,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "choppy": 2
+    }
+  },
   "types": [
     "building"
   ],

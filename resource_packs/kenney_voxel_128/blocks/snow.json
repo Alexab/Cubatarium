@@ -2,6 +2,13 @@
   "name": "snow",
   "id": 82,
   "hardness": 0.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "crumbly": 2,
+      "oddly_breakable_by_hand": 2
+    }
+  },
   "types": [
     "natural"
   ],

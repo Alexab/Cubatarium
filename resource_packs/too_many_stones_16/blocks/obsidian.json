@@ -2,6 +2,12 @@
   "name": "obsidian",
   "id": 983,
   "hardness": 50,
+  "dig": {
+    "level": 3,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "natural"
   ],

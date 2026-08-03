@@ -2,6 +2,13 @@
   "name": "flower_pot",
   "id": 761,
   "hardness": 0.1,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "oddly_breakable_by_hand": 3,
+      "snappy": 3
+    }
+  },
   "types": [
     "natural"
   ],

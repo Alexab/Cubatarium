@@ -2,6 +2,12 @@
   "name": "mtg_obsidianbrick",
   "id": 477,
   "hardness": 50,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "building"
   ],

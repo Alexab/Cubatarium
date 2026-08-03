@@ -2,6 +2,12 @@
   "name": "wooden_door",
   "id": 713,
   "hardness": 3,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "choppy": 2
+    }
+  },
   "types": [
     "natural"
   ],

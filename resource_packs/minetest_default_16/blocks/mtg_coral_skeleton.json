@@ -2,6 +2,12 @@
   "name": "mtg_coral_skeleton",
   "id": 432,
   "hardness": 1.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "building"
   ],

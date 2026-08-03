@@ -2,6 +2,12 @@
   "name": "dispenser",
   "id": 753,
   "hardness": 3.5,
+  "dig": {
+    "level": 0,
+    "groups": {
+      "cracky": 1
+    }
+  },
   "types": [
     "natural"
   ],

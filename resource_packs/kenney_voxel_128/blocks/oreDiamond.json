@@ -2,6 +2,12 @@
   "name": "oreDiamond",
   "id": 74,
   "hardness": 3,
+  "dig": {
+    "level": 2,
+    "groups": {
+      "cracky": 2
+    }
+  },
   "types": [
     "natural"
   ],
