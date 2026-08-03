@@ -2222,10 +2222,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           mesh_service.UpdateStickyNearestHole(isolated_hole, false);
         }
       }
-      // J3/R1: nh≤2 sticky≥2 PreferKick; nh≤3 sticky≥5 (never drop Imm on
-      // Kicked/Dispatched).
-      if ((nh <= 2 && sticky_frames >= 2) ||
-          (nh <= 3 && sticky_frames >= 5))
+      // J3/R1/R1c: PreferKick earlier on rim (manual 141204: mh stuck 3–4 with
+      // gpu 45–96 — promote nearest Pending without Imm expand).
+      if ((nh <= 4 && sticky_frames >= 2) ||
+          (nh <= 5 && sticky_frames >= 5))
       {
         if (queued_stuck || kicked_stuck)
         {
@@ -2252,9 +2252,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     exec.DrainBudget(world, moving ? 2 : 3, focus_ground_horiz, focus_radius,
                      /*admit_batch=*/moving ? 2 : 3);
   }
-  // P3/R2/R1b: soft cruise clamp — underfeet or nh≤3 always (manual 121154
-  // mh stayed 3–5 so nh≤2 clamp never fired; player outran FirstMesh).
-  // Scale ×0.70; no SoftDefer/Imm-expand beyond nh≤5.
+  // P3/R2/R1c: soft cruise clamp — underfeet or nh≤4 (manual 141204 mh_med=4
+  // so nh≤3 left far-rim unclamped half the cruise). Scale ×0.70.
   {
     float clamp_scale = 1.0f;
     if (moving)
@@ -2268,7 +2267,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const int nh = std::max(
             std::abs(isolated_hole.x - focus_ground_horiz.x),
             std::abs(isolated_hole.z - focus_ground_horiz.z));
-        if (nh <= 3)
+        if (nh <= 4)
         {
           clamp_scale = 0.70f;
         }
@@ -2281,13 +2280,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   int gpu_consume_done = 0;
   {
     const MeshWorkAdmission &early_adm = mesh_service.GetMeshWorkAdmission();
-    const int consume_drain = FinalizeDrain(mesh_drain, early_adm);
-    const int consume_gpu =
+    int consume_drain = FinalizeDrain(mesh_drain, early_adm);
+    int consume_gpu =
         std::max(early_adm.gpu_apply_max,
                  std::max(3, std::max(mesh_drain, mesh_schedule)));
-    const double consume_budget =
+    double consume_budget =
         std::max(6.0, mesh_service.GetMeshEmergeTotalBudgetMs() *
                           early_adm.gpu_budget_frac);
+    // R1c: same-frame Finish headroom when GPU already ballooned (141204).
+    if ((visual_holes || missing_visible_mesh || missing_underfeet) &&
+        pending_gpu_n >= 24)
+    {
+      consume_drain = std::max(consume_drain, 24);
+      consume_gpu = std::max(consume_gpu, 32);
+      consume_budget = std::max(consume_budget, 10.0);
+    }
     gpu_consume_done = mesh_service.ConsumeGpuApplyBacklog(
         world.GetBlockWorld(), registry, consume_drain, consume_gpu,
         consume_budget);
@@ -2319,27 +2326,39 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       ain.nearest_miss_horiz = world.GetPhysicsTelemetry().MissHoriz;
     }
     MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
-    // R1/R1b: raise FirstMesh floor on moving holes (do not cut; manual 104108
-    // sch≈5–6; 121154 sticky rarely ≥3 while flying → floor never applied).
-    // nh≤3 close-rim or nh≥4 far-rim → ≥8.
+    // R1/R1b/R1c: raise FirstMesh floor on holes (lift, never cut).
+    // 141204: sch≈8 still left mh_med=4 sticky — bump ≥10 when nh≥3.
+    // Idle miss also gets ≥8 (miss_end residual).
     const bool r1_fm_floor =
-        moving && ain.visual_holes &&
+        ain.visual_holes &&
         (adm.mode == MeshWorkAdmission::Mode::HoleDrain ||
          adm.mode == MeshWorkAdmission::Mode::DeepBacklog) &&
         ain.nearest_miss_horiz >= 0 &&
         (ain.nearest_miss_horiz <= 3 || ain.nearest_miss_horiz >= 4);
+    const int fm_floor =
+        (moving && ain.nearest_miss_horiz >= 3) ? 10 : 8;
     if (r1_fm_floor)
     {
-      adm.first_mesh_schedule = std::max(adm.first_mesh_schedule, 8);
+      adm.first_mesh_schedule = std::max(adm.first_mesh_schedule, fm_floor);
       adm.max_schedule = std::max(
           adm.max_schedule,
           adm.first_mesh_schedule + std::max(0, adm.remesh_schedule));
+    }
+    // R1c: Finish boost on gpu balloon (141204 pending 45–96) — raise drain /
+    // apply caps only; do NOT cut schedule (K1 forbidden).
+    if (ain.visual_holes && pending_gpu_n >= 24 &&
+        (adm.mode == MeshWorkAdmission::Mode::HoleDrain ||
+         adm.mode == MeshWorkAdmission::Mode::DeepBacklog))
+    {
+      adm.max_drain = std::max(adm.max_drain, 24);
+      adm.gpu_apply_max = std::max(adm.gpu_apply_max, 32);
+      adm.gpu_budget_frac = std::max(adm.gpu_budget_frac, 0.90);
     }
     mesh_service.SetMeshWorkAdmission(adm);
     mesh_schedule = FinalizeSchedule(mesh_schedule, adm);
     if (r1_fm_floor)
     {
-      mesh_schedule = std::max(mesh_schedule, 8);
+      mesh_schedule = std::max(mesh_schedule, fm_floor);
     }
     mesh_drain = FinalizeDrain(mesh_drain, adm);
     mesh_service.SetStarveRemeshKeepHoriz(adm.starve_remesh_horiz);
