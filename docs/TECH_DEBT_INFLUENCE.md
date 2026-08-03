@@ -25,3 +25,4 @@
 ## Execution progress
 
 - **Phase 0:** Influence types, hit math, `IUToolInfluenceProvider`, bare-hand stub, intent `Influence` field, this tracker, `CREATURE_INTERACTION.md` draft.
+- **Phase 1:** `InfluenceResolver` / `InfluenceApplier` / events; melee via Influence with range + cooldown; `ApplyDamage` reason tag; armor groups + punch timer on `UCreature`.

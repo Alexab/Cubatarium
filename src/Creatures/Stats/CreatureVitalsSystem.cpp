@@ -139,13 +139,16 @@ void CreatureVitalsSystem::Tick(UWorld &world, WorldGameMode mode,
 }
 
 bool CreatureVitalsSystem::ApplyDamage(UWorld &world, UCreature &target,
-                                       float amount, WorldGameMode mode)
+                                       float amount, WorldGameMode mode,
+                                       const char * /*reason*/)
 {
   if (mode == WorldGameMode::Creative || amount <= 0.f)
   {
     return false;
   }
   CreatureVitals &v = target.GetVitals();
+  // Flat armor remains as fleshy mitigation; group math is applied upstream
+  // in InfluenceHitMath when the hit comes from Influence.
   const float mitigated =
       std::max(0.f, amount - v.armor * 0.5f);
   // Luck: small chance to shrug off a hit.

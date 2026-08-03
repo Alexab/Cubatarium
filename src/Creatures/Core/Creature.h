@@ -7,8 +7,10 @@
 #include "Creatures/Locomotion/CreatureLocomotionController.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Creatures/Influence/InfluenceTypes.h"
 #include "Creatures/Stats/CreatureAttributes.h"
 #include "Creatures/Stats/CreatureVitals.h"
+#include <algorithm>
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <memory>
@@ -68,6 +70,20 @@ public:
   void ApplyStatsFromDefinition(const CreatureDefinition &def);
   bool NeedsNeedsTick() const { return NeedsTick; }
   void SetNeedsNeedsTick(bool v) { NeedsTick = v; }
+
+  ArmorGroups &GetArmorGroups() { return Armor; }
+  const ArmorGroups &GetArmorGroups() const { return Armor; }
+  void SetArmorGroups(const ArmorGroups &g) { Armor = g; }
+
+  float GetTimeSinceLastInfluenceSec() const
+  {
+    return TimeSinceLastInfluenceSec;
+  }
+  void AdvanceInfluenceCooldown(float dt)
+  {
+    TimeSinceLastInfluenceSec += std::max(0.f, dt);
+  }
+  void ResetInfluenceCooldown() { TimeSinceLastInfluenceSec = 0.f; }
 
   CreatureIntent GetIntent() const { return Intent; }
   void SetIntent(const CreatureIntent &intent) { Intent = intent; }
@@ -129,6 +145,8 @@ protected:
   UCreatureInventory Inventory;
   CreatureVitals Vitals{};
   CreatureAttributes Attributes{};
+  ArmorGroups Armor{ArmorGroups::DefaultFleshy()};
+  float TimeSinceLastInfluenceSec{1000.f};
   bool NeedsTick{false};
   CreatureIntent Intent{};
   bool PlayerCharacter{false};

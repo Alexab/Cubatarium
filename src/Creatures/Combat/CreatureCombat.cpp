@@ -1,4 +1,7 @@
 #include "Creatures/Combat/CreatureCombat.h"
+#include "Items/ItemToolInfluenceProvider.h"
+#include "Creatures/Influence/InfluenceApplier.h"
+#include "Creatures/Influence/InfluenceResolver.h"
 #include "Creatures/Stats/CreatureVitalsSystem.h"
 #include "World/Core/World.h"
 #include <algorithm>
@@ -17,33 +20,16 @@ float CreatureCombat::ComputeMeleeDamage(const UCreature &attacker)
 bool CreatureCombat::TryMeleeStrike(UWorld &world, UCreature &attacker,
                                     WorldGameMode mode)
 {
-  if (mode == WorldGameMode::Creative)
+  UItemToolInfluenceProvider tools(world.GetItemDefinitionStorage());
+  InfluencePrediction pred =
+      InfluenceResolver::Resolve(world, attacker, mode, &tools);
+  if (!pred.Valid || pred.Cancelled)
   {
     return false;
   }
-  const CreatureId targetId = attacker.GetIntent().attackTargetId;
-  if (targetId == 0 || targetId == attacker.GetId())
-  {
-    return false;
-  }
-  UCreature *target = world.GetCreature(targetId);
-  if (!target)
-  {
-    return false;
-  }
-  const float damage = ComputeMeleeDamage(attacker);
-  // Combat fatigue cost on the attacker (endurance-scaled).
-  {
-    CreatureVitals &av = attacker.GetVitals();
-    const float endMul =
-        1.f /
-        std::max(0.5f,
-                 0.5f + static_cast<float>(attacker.GetAttributes().endurance) /
-                            20.f);
-    av.fatigue = std::min(av.maxFatigue, av.fatigue + 6.f * endMul);
-    av.ClampCurrents();
-  }
-  return CreatureVitalsSystem::ApplyDamage(world, *target, damage, mode);
+  const InfluenceApplyResult result =
+      InfluenceApplier::Apply(world, pred, mode);
+  return result.AnyTargetRemoved;
 }
 
 } // namespace cutum

@@ -451,6 +451,7 @@ void UWorld::RunLegacyPhysicsFrame()
   ForEachCreature(
       [&](UCreature &creature)
       {
+        creature.AdvanceInfluenceCooldown(dt);
         if (Environment.GetControlledCreatureId() != 0 &&
             creature.GetId() == Environment.GetControlledCreatureId())
         {
@@ -460,7 +461,8 @@ void UWorld::RunLegacyPhysicsFrame()
         {
           return;
         }
-        if (creature.GetIntent().attackTargetId != 0)
+        const CreatureIntent &intent = creature.GetIntent();
+        if (intent.attackTargetId != 0 || intent.Influence.TargetId != 0)
         {
           CreatureCombat::TryMeleeStrike(*this, creature, GetGameMode());
         }

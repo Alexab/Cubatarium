@@ -127,6 +127,9 @@ set(SOURCES
     src/Creatures/Combat/CreatureCombat.cpp
     src/Creatures/Influence/InfluenceHitMath.cpp
     src/Creatures/Influence/BareHandToolInfluenceProvider.cpp
+    src/Creatures/Influence/InfluenceEvent.cpp
+    src/Creatures/Influence/InfluenceResolver.cpp
+    src/Creatures/Influence/InfluenceApplier.cpp
     src/Creatures/Player/Player.cpp
     src/Activity/CreatureActivityDirector.cpp
     src/Activity/WorldCreatureActivitySink.cpp

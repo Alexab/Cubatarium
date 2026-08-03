@@ -18,8 +18,9 @@ struct CreatureVitalsSystem
                    float dt);
 
   /// Apply damage; returns true if the creature should be removed (permadeath).
+  /// `reason` is a tag for logs / Influence (e.g. "influence", "starve").
   static bool ApplyDamage(UWorld &world, UCreature &target, float amount,
-                          WorldGameMode mode);
+                          WorldGameMode mode, const char *reason = nullptr);
 
   /// Handle health<=0: fatal wound / respawn / despawn. Returns true if removed.
   static bool HandleLethal(UWorld &world, UCreature &target, WorldGameMode mode);
