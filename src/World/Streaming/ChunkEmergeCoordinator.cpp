@@ -552,6 +552,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       mesh_service.SetMeshForwardBias(0.0f, glm::vec2(0.0f));
       mesh_service.SetMaxRearFocusMeshPerFrame(0);
+      mesh_service.SetMaxLateralMissingMeshPerFrame(2);
     }
     else
     {
@@ -574,6 +575,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       mesh_service.SetMaxRearFocusMeshPerFrame(
           moving ? 3
                  : ((visual_holes || missing_underfeet) ? 2 : 0));
+      // R3: Pass1c missing-only; bump 2→3 when behind unfinished > ahead
+      // (p16 behind spike) without widening rear off-forward.
+      {
+        const auto &phys = world.GetPhysicsTelemetry();
+        mesh_service.SetMaxLateralMissingMeshPerFrame(
+            (phys.FocusUnfinishedBehind > phys.FocusUnfinishedAhead) ? 3
+                                                                     : 2);
+      }
     }
   }
   int mesh_drain = LastBudget.MaxMeshDrain;

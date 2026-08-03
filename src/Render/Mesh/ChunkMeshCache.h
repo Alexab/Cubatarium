@@ -320,6 +320,11 @@ public:
   {
     MaxRearFocusMeshPerFrame = std::max(0, count);
   }
+  /// Pass1c: lateral-only missing FirstMesh schedules (default 2; R3 may use 3).
+  void SetMaxLateralMissingMeshPerFrame(int count)
+  {
+    MaxLateralMissingMeshPerFrame = std::max(0, count);
+  }
   /// Queue remesh after in-flight Apply (light changed mid-build).
   void RequestRemeshAfterApply(glm::ivec3 chunk_coord)
   {
@@ -553,6 +558,7 @@ private:
   int SyncHoleFillRadius{1};
   int MaxOutsideFocusMeshPerFrame{2};
   int MaxRearFocusMeshPerFrame{0};
+  int MaxLateralMissingMeshPerFrame{2};
   std::unordered_set<glm::ivec3, IVec3Hash> RemeshAfterApply;
   /// SoftDefer dropped !Drawable FirstMesh outside focus — requeue when
   /// MayMesh / focus admits (rim plan B4; avoid forever-RemoveAt).

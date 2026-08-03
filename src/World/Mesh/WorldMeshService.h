@@ -68,6 +68,7 @@ public:
   void SetSyncHoleFillRadius(int radius_chunks);
   void SetMaxOutsideFocusMeshPerFrame(int count);
   void SetMaxRearFocusMeshPerFrame(int count);
+  void SetMaxLateralMissingMeshPerFrame(int count);
   void SetMeshScheduleMaxHorizontalDist(int radius_chunks);
   void SetMeshScheduleOverflowPerFrame(int count);
   void SetMeshSnapshotBudgetMs(double ms);

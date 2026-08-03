@@ -3044,8 +3044,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     }
 
     // Pass 1c: tiny lateral-only budget for *missing* FirstMesh (not remesh).
-    // Caps at 2 so sides get a chance without starving ahead (101354 symptom,
-    // 103012 regress from merging lateral into rear).
+    // Default cap=2 (101354 / 103012); R3 may raise to 3 when behind>ahead.
     if (MeshFocusValid && focus_missing_for_schedule &&
         MeshForwardBiasK > 0.0f && scheduled < max_schedule_per_frame)
     {
@@ -3055,11 +3054,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         const float fx = MeshForwardXz.x / flen;
         const float fz = MeshForwardXz.y / flen;
-        constexpr int kLateralMissingCap = 2;
+        const int lateral_missing_cap =
+            std::max(0, MaxLateralMissingMeshPerFrame);
         int lateral_scheduled = 0;
         for (auto it = Dirty.begin();
              it != Dirty.end() && scheduled < max_schedule_per_frame &&
-             lateral_scheduled < kLateralMissingCap;)
+             lateral_scheduled < lateral_missing_cap;)
         {
           if (HasDrawableGreedyMesh(*it))
           {

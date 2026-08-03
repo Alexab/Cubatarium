@@ -107,6 +107,11 @@ void UWorldMeshService::SetMaxRearFocusMeshPerFrame(int count)
   Cache.SetMaxRearFocusMeshPerFrame(count);
 }
 
+void UWorldMeshService::SetMaxLateralMissingMeshPerFrame(int count)
+{
+  Cache.SetMaxLateralMissingMeshPerFrame(count);
+}
+
 void UWorldMeshService::SetMeshScheduleMaxHorizontalDist(int radius_chunks)
 {
   Cache.SetMeshScheduleMaxHorizontalDist(radius_chunks);
