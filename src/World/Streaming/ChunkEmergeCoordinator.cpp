@@ -2136,14 +2136,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     exec.DrainBudget(world, drain_steps, focus_ground_horiz, focus_radius,
                      /*admit_batch=*/admit_n);
-    // Idle sticky: force Immediate on nearest hole within underfeet when it is
-    // not already in the mesh pipeline (HasMissing skips Pending/InFlight).
+    // Idle sticky / R3 stop: Imm nearest hole nh≤3 so miss_end/post_stop clear
+    // (manual 104108 post_stop_missing_max≈24; land-south R2 max=1).
     if (!moving && found_nearest_missing)
     {
       const int nh = std::max(
           std::abs(isolated_hole.x - focus_ground_horiz.x),
           std::abs(isolated_hole.z - focus_ground_horiz.z));
-      if (nh <= 1 && underfeet_immediate_cd <= 0 &&
+      if (nh <= 3 && underfeet_immediate_cd <= 0 &&
           underfeet_immediate_this_frame < kMaxUnderfeetImmediate &&
           !mesh_service.HasMeshSatisfyingColumnReady(isolated_hole) &&
           !mesh_service.IsPendingGpuApply(isolated_hole) &&
@@ -2188,9 +2188,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           underfeet_immediate_this_frame < kMaxUnderfeetImmediate;
       if (nh <= 5 && slot_ok && ms_ok)
       {
-        // nh≤1 mid-surface void (manual 101354): Imm after 1 sticky frame.
-        const int idle_sticky_need = nh <= 1 ? 1 : 3;
-        const int queued_sticky_need = nh <= 1 ? 2 : 5;
+        // R2 (manual 104108): Imm after 1 sticky frame for nh≤2 mid-surface.
+        const int idle_sticky_need = nh <= 2 ? 1 : 3;
+        const int queued_sticky_need = nh <= 2 ? 2 : 5;
         if (pipeline_idle && sticky_frames >= idle_sticky_need)
         {
           mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
@@ -2239,51 +2239,24 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     exec.DrainBudget(world, moving ? 2 : 3, focus_ground_horiz, focus_radius,
                      /*admit_batch=*/moving ? 2 : 3);
   }
-  // P3: soft cruise clamp — underfeet or near miss ahead under HoleDrain/Deep.
-  // Applied next movement tick via PhysicsTelemetry.StreamSpeedClampScale.
-  // Plan: nh<=2 ahead cone ×0.55–0.7. Land-south underfeet sticky starved at
-  // ×0.6; use ×0.75 (still soft) and keep nh<=2 so mid void-ahead engages
-  // (manual 094817: uf=0, mh 2–5, clamp never fired at nh<=1-only).
+  // P3/R2: soft cruise clamp — underfeet or nh≤2 always (manual 104108
+  // mh=2 plateau with Imm=0). Scale ×0.70; no SoftDefer/Imm-expand beyond nh≤5.
   {
     float clamp_scale = 1.0f;
     if (moving)
     {
       if (missing_underfeet)
       {
-        clamp_scale = 0.75f;
+        clamp_scale = 0.70f;
       }
       else if (found_nearest_missing)
       {
         const int nh = std::max(
             std::abs(isolated_hole.x - focus_ground_horiz.x),
             std::abs(isolated_hole.z - focus_ground_horiz.z));
-        // nh≤1: always soft-brake when nearest hole is underfeet-adjacent
-        // (manual 101354 mid-surface void with uf_draw=1 but mh=1).
-        if (nh <= 1)
+        if (nh <= 2)
         {
-          clamp_scale = 0.75f;
-        }
-        else
-        {
-          const MeshWorkAdmission &adm_now =
-              mesh_service.GetMeshWorkAdmission();
-          const bool hole_mode =
-              adm_now.mode == MeshWorkAdmission::Mode::HoleDrain ||
-              adm_now.mode == MeshWorkAdmission::Mode::DeepBacklog;
-          if (hole_mode && nh <= 2)
-          {
-            const glm::vec2 vel = world.GetLastMovementDirXz();
-            const glm::vec2 to_hole(
-                static_cast<float>(isolated_hole.x - focus_ground_horiz.x),
-                static_cast<float>(isolated_hole.z - focus_ground_horiz.z));
-            const float vel_len = glm::length(vel);
-            const float hole_len = glm::length(to_hole);
-            if (vel_len > 0.01f && hole_len > 0.01f &&
-                glm::dot(vel / vel_len, to_hole / hole_len) > 0.5f)
-            {
-              clamp_scale = 0.75f;
-            }
-          }
+          clamp_scale = 0.70f;
         }
       }
     }
