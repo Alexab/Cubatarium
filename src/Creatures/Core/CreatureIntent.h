@@ -18,6 +18,8 @@ struct InfluenceIntent
   uint64_t TargetId{0};
   glm::vec3 TargetPoint{0.0f};
   bool HasTargetPoint{false};
+  glm::ivec3 TargetBlockPos{0};
+  bool HasTargetBlock{false};
   std::string ActionId;
 };
 

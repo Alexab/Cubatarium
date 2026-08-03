@@ -9,6 +9,7 @@
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
+#include "Creatures/Influence/DigSessionState.h"
 #include "Creatures/Player/PlayerCapsule.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/StreamingAltitudePolicy.h"
@@ -1346,14 +1347,7 @@ private:
   bool PlaceTargetActive{false};
   glm::ivec3 PlaceBlockPos{0};
 
-  struct BlockBreakSession
-  {
-    glm::ivec3 blockPos{0};
-    float progress{0.f};
-    float pendingWearDelta{0.f};
-    std::string pendingToolId;
-  };
-  mutable std::optional<BlockBreakSession> BreakSession;
+  mutable std::optional<DigSessionState> BreakSession;
   bool FlightSimBreakRequested{false};
 
   uint64_t DurationDoMovementMks;

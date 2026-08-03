@@ -5607,13 +5607,19 @@ bool UWorld::DelObjectByView(const glm::vec3 &position, const glm::vec3 &front)
 
 void UWorld::StartBreakSession(glm::ivec3 blockPos)
 {
-  BlockBreakSession session;
-  session.blockPos = blockPos;
-  session.progress = 0.f;
+  DigSessionState session;
+  session.Start(blockPos);
   BreakSession = session;
 }
 
-void UWorld::CancelBreakSession() { BreakSession.reset(); }
+void UWorld::CancelBreakSession()
+{
+  if (BreakSession)
+  {
+    BreakSession->Cancel();
+  }
+  BreakSession.reset();
+}
 
 void UWorld::TickBreakSession(float dt, float durationSeconds)
 {
@@ -5621,19 +5627,7 @@ void UWorld::TickBreakSession(float dt, float durationSeconds)
   {
     return;
   }
-  // Negative duration = unbreakable in Survival: no progress.
-  if (durationSeconds < 0.f)
-  {
-    return;
-  }
-  // Zero duration = instant (Creative / explicit instant dig).
-  if (durationSeconds <= 0.f)
-  {
-    BreakSession->progress = 1.f;
-    return;
-  }
-  BreakSession->progress =
-      std::min(1.f, BreakSession->progress + dt / durationSeconds);
+  BreakSession->Tick(dt, durationSeconds);
 }
 
 bool UWorld::CompleteBreakSession()

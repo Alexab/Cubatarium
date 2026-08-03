@@ -13,7 +13,8 @@ enum class InfluenceChannel
   Melee,
   Ranged,
   Aura,
-  Use
+  Use,
+  Dig
 };
 
 enum class InfluenceTargeting
