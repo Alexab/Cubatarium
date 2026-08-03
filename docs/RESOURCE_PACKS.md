@@ -81,6 +81,21 @@ Full block definition. The numeric `id` field is optional and ignored at runtime
 
 Face order for `textures` (6 entries): `[+Z, +X, -Z, -X, +Y, -Y]`
 
+### hardness
+
+Dig resistance. Cubatarium semantics (not identical to Minecraft):
+
+- `hardness = 0` — unbreakable in **Survival** (Creative still breaks instantly)
+- `hardness > 0` — Survival dig time ≈ `hardness * 1.5` seconds (bare hand)
+- Soft plants use small positives (`0.05`–`0.2`), never `0`
+
+Defaults are applied from [`tools/block_hardness_defaults.yaml`](../tools/block_hardness_defaults.yaml) via:
+
+```bash
+python tools/apply_block_hardness.py --dry-run
+python tools/apply_block_hardness.py
+```
+
 Fluid-related `physics` fields:
 
 - `fluid_permeable` (`bool`, optional): explicit waterlogging/permeability override for non-liquid blocks. If omitted, fallback remains render-style + occupancy (`cross`/`cutout` with occupancy `< 1`).
