@@ -198,6 +198,40 @@ bool UCreatureDefinitionStorage::LoadFile(const std::string &path)
       {
         def.stats.needsTick = true;
       }
+      if (data.contains("armor_groups") && data["armor_groups"].is_object())
+      {
+        def.stats.hasArmorGroupsOverride = true;
+        def.stats.armorGroups.Ratings.clear();
+        for (auto it = data["armor_groups"].begin();
+             it != data["armor_groups"].end(); ++it)
+        {
+          if (it.value().is_number_integer() ||
+              it.value().is_number_unsigned())
+          {
+            def.stats.armorGroups.Ratings[it.key()] = it.value().get<int>();
+          }
+        }
+        if (def.stats.armorGroups.Ratings.empty())
+        {
+          def.stats.armorGroups = ArmorGroups::DefaultFleshy();
+        }
+      }
+      if (data.contains("bare_hand") && data["bare_hand"].is_object())
+      {
+        const auto &bh = data["bare_hand"];
+        def.stats.bareHand.hasOverride = true;
+        def.stats.bareHand.fullPunchInterval =
+            bh.value("full_punch_interval", 0.5f);
+        if (bh.contains("damage") && bh["damage"].is_object())
+        {
+          def.stats.bareHand.fleshyDamage =
+              bh["damage"].value("fleshy", bh["damage"].value("melee", 0));
+        }
+        else
+        {
+          def.stats.bareHand.fleshyDamage = bh.value("fleshy", 0);
+        }
+      }
     }
     if (data.contains("locomotion"))
     {

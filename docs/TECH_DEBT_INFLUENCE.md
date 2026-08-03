@@ -10,10 +10,8 @@
 | TD-INF-001 | 0 | Faction / friendly-fire filters on targeting | Needs faction model | accepted backlog |
 | TD-INF-002 | 0 | Punch/melee tool wear via same `ApplyItemWear` + ModePolicy gate | Dig wear shipped; melee wear not wired (`PunchAttackUses` unused). Provider for damage is wired (`UItemToolInfluenceProvider`) | deep-refactor Wave 2 |
 | TD-INF-004 | 0 | Social right-click channel (UI / trade / tame) | Separate from punch/dig Influence channels | accepted backlog |
-| TD-INF-005 | 0 | Accuracy / hit-chance using `attributes.accuracy` | Formula TBD; attr unused in resolve | accepted backlog |
 | TD-INF-006 | 0 | Cone targeting | Radius/single shipped; cone not needed for MVP | accepted backlog |
 | TD-INF-007 | 0 | Full gameplay particle budget / LOD | Minimal flash/beam/burst shipped | accepted backlog |
-| TD-INF-008 | 0 | `armor_groups` / `bare_hand` JSON on creature.json | Defaults in code (`ArmorGroups::DefaultFleshy`) | accepted backlog |
 | TD-INF-009 | 0 | Intelligence-driven influence (skills / spells) | Attr unused | accepted backlog |
 | TD-INF-011 | 5 | Load `models/effects/*.json` into `UStatusEffectCatalog` at runtime | Builtins hardcoded; JSON is authoring samples | accepted backlog |
 | TD-INF-013 | deep-refactor | **Dig as Influence `Channel::Dig` (pipeline C)** | Break session today is a parallel path in `World`/`BlockInputController`, outside Influence Resolve/Apply/Events. Deep refactor target: one Intent→Resolve→Apply→Events bus for Melee **and** Dig; DigSessionState for progress; crack/break FX from Dig events. **Not** dig-as-HP and **not** merging dig group tables with damage/armor groups (see TD-INF-003). | deep-refactor Wave 3 |
@@ -22,7 +20,9 @@
 
 | ID | Closed in | Resolution |
 |----|-----------|------------|
-| TD-INF-003 | deep-refactor decision | **Wontfix: merge dig groupcaps tables with Influence damage/armor groups.** Luanti dual dictionaries (decision A): `cracky`/`choppy`/… on blocks × tool `groupcaps` vs `fleshy`/… on creatures × tool `damage_groups`. Different rating semantics and carriers. Sharing the Interaction **pipeline** is TD-INF-013 (C), not sharing group name/formula tables. |
+| TD-INF-003 | deep-refactor decision | **Wontfix: merge dig groupcaps tables with Influence damage/armor groups.** Luanti dual dictionaries (decision A). |
+| TD-INF-005 | Wave 1 | Minimal accuracy miss in `ResolveHitParams` (accuracy ≤ 5) |
+| TD-INF-008 | Wave 1b | `armor_groups` / `bare_hand` parse + ApplyStatsFromDefinition; zombie sample |
 | TD-INF-010 | 4 | Radius / aura targeting via `InfluenceTargeting::Radius` + spatial neighbors |
 | TD-INF-012 | 1–3 | Core Influence pipeline: resolve/apply, cooldown/range, events, status tick, FX sink (Melee/status; Dig channel = TD-INF-013) |
 

@@ -76,6 +76,9 @@ public:
   ArmorGroups &GetArmorGroups() { return Armor; }
   const ArmorGroups &GetArmorGroups() const { return Armor; }
   void SetArmorGroups(const ArmorGroups &g) { Armor = g; }
+  /// -1 = use strength formula for bare-hand fleshy damage.
+  int GetBareHandFleshyOverride() const { return BareHandFleshyOverride; }
+  float GetBareHandIntervalOverride() const { return BareHandIntervalOverride; }
 
   float GetTimeSinceLastInfluenceSec() const
   {
@@ -164,6 +167,8 @@ protected:
   CreatureVitals Vitals{};
   CreatureAttributes Attributes{};
   ArmorGroups Armor{ArmorGroups::DefaultFleshy()};
+  int BareHandFleshyOverride{-1};
+  float BareHandIntervalOverride{-1.f};
   float TimeSinceLastInfluenceSec{1000.f};
   float HitFlash01{0.f};
   std::vector<StatusEffectInstance> StatusEffects;

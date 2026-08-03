@@ -38,6 +38,12 @@ void UCreature::ApplyStatsFromDefinition(const CreatureDefinition &def)
   Vitals = def.stats.vitalsTemplate;
   Attributes = def.stats.attributes;
   NeedsTick = def.stats.needsTick;
+  Armor = def.stats.armorGroups;
+  BareHandFleshyOverride =
+      def.stats.bareHand.hasOverride ? def.stats.bareHand.fleshyDamage : -1;
+  BareHandIntervalOverride = def.stats.bareHand.hasOverride
+                                 ? def.stats.bareHand.fullPunchInterval
+                                 : -1.f;
   Attributes.ClampAll();
   Vitals.FillFull();
 }

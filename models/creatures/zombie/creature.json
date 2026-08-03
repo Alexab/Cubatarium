@@ -82,6 +82,9 @@
     "max_fatal_wounds": 1,
     "armor": 2
   },
+  "armor_groups": {
+    "fleshy": 80
+  },
   "attributes": {
     "strength": 12,
     "agility": 8,
