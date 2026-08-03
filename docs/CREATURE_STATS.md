@@ -4,6 +4,12 @@ Canonical schema for player, bots, and all mobs. Runtime state lives on
 `UCreature`; definition defaults come from templates + optional `creature.json`
 blocks.
 
+Combat / status changes go through the **Influence** pipeline — see
+[CREATURE_INTERACTION.md](CREATURE_INTERACTION.md) and
+[TECH_DEBT_INFLUENCE.md](TECH_DEBT_INFLUENCE.md). Flat `armor` still mitigates
+in `ApplyDamage`; group ratings live on `UCreature::GetArmorGroups()` (default
+`fleshy=100`).
+
 ## Vitals
 
 | Field | Meaning |

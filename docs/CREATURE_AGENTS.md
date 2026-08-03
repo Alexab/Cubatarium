@@ -196,9 +196,9 @@ src/Activity/
 
 - [`IUAgentBrain`](../../src/Activity/Brain/IUAgentBrain.h), [`USimpleFsmBrain`](../../src/Activity/Brain/SimpleFsmBrain.cpp)
 - `flee` → [`FleeActivityAgent`](../../src/Activity/Agents/FleeActivityAgent.cpp) (sheep); steering фазы 0 (separation + `PickLocomotionDirection`) в flee-ветке brain
-- `melee_attack` → [`MeleeAttackActivityAgent`](../../src/Activity/Agents/MeleeAttackActivityAgent.cpp) (zombie, skeleton, dungeon_master)
-- `bot_player` → [`BotPlayerActivityAgent`](../../src/Activity/Agents/BotPlayerActivityAgent.cpp) (species `bot`): follow player, chase/attack hostiles via `attackTargetId`
-- `CreatureIntent.attackTargetId` → [`CreatureCombat::TryMeleeStrike`](../../src/Creatures/Combat/CreatureCombat.cpp) (Survival); perception масштабирует `aggro_radius`
+- `melee_attack` → [`MeleeAttackActivityAgent`](../../src/Activity/Agents/MeleeAttackActivityAgent.cpp) (zombie, skeleton, dungeon_master); prefers controlled player, else nearest mob (mob↔mob)
+- `bot_player` → [`BotPlayerActivityAgent`](../../src/Activity/Agents/BotPlayerActivityAgent.cpp) (species `bot`): follow player, chase/attack hostiles via `attackTargetId` + `InfluenceIntent`
+- `CreatureIntent.attackTargetId` / `Influence` → [`CreatureCombat::TryMeleeStrike`](../../src/Creatures/Combat/CreatureCombat.cpp) → Influence resolve/apply (Survival); see [`CREATURE_INTERACTION.md`](CREATURE_INTERACTION.md)
 - Stats / modes: [`CREATURE_STATS.md`](CREATURE_STATS.md)
 
 ---
