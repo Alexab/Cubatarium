@@ -2073,23 +2073,24 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     // (nh≤1). Force a full-focus every 8 skipped frames so other ring holes
     // cannot starve forever (land-south miss_end).
     // N0a: far rim nh≥4 — full-scan every frame (ignore focus_scan_cd / skip).
-    // N0e (manual 094817): sticky nh 2–3 miss_frac~0.85 — escape every 2 skips
-    // once sticky≥3 (was /8 only; nearest stuck while scan starved).
+    // R1 (manual 104108): sticky≥3 on nh 2–3 — never skip (miss_frac~0.93
+    // plateau; escape /2 was not enough).
     const bool far_rim_force_scan =
         hole_backlog_mode && nearest_miss_nh >= 4;
-    const bool rim_plateau_close =
-        !far_rim_force_scan && hole_backlog_mode && found_nearest_missing &&
+    const int sticky_for_scan = mesh_service.GetStickyNearestHoleFrames();
+    const bool sticky_rim_force_scan =
+        hole_backlog_mode && found_nearest_missing && sticky_for_scan >= 3 &&
         nearest_miss_nh >= 2 && nearest_miss_nh <= 3;
+    const bool rim_plateau_close =
+        !far_rim_force_scan && !sticky_rim_force_scan && hole_backlog_mode &&
+        found_nearest_missing && nearest_miss_nh >= 2 && nearest_miss_nh <= 3;
     static int focus_scan_cd = 0;
     static int rim_scan_skip_streak = 0;
     bool skip_full_scan_rim_close = false;
     if (rim_plateau_close)
     {
       ++rim_scan_skip_streak;
-      const int sticky_for_scan =
-          mesh_service.GetStickyNearestHoleFrames();
-      const int skip_before_force = sticky_for_scan >= 3 ? 2 : 8;
-      if (rim_scan_skip_streak < skip_before_force)
+      if (rim_scan_skip_streak < 8)
       {
         skip_full_scan_rim_close = true;
       }
@@ -2103,7 +2104,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       rim_scan_skip_streak = 0;
     }
     const bool full_scan =
-        far_rim_force_scan ||
+        far_rim_force_scan || sticky_rim_force_scan ||
         (!skip_full_scan_rim_close &&
          (adm.mode == MeshWorkAdmission::Mode::Normal || focus_scan_cd <= 0));
     if (full_scan)
@@ -2116,7 +2117,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       focus_scan.scan_full_focus = true;
       focus_scan.cy = -1;
       exec.Enqueue(focus_scan);
-      focus_scan_cd = (far_rim_force_scan ||
+      focus_scan_cd = (far_rim_force_scan || sticky_rim_force_scan ||
                        adm.mode == MeshWorkAdmission::Mode::Normal)
                           ? 0
                           : (backlog_hole_drain ? 4 : 2);
@@ -2208,9 +2209,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           mesh_service.UpdateStickyNearestHole(isolated_hole, false);
         }
       }
-      // J3: nh≤3 sticky≥5 in GPU pipeline — hoist Queued Kick priority only
-      // (never drop/Immediate on Kicked/Dispatched). nh≤1: kick sooner.
-      if ((nh <= 1 && sticky_frames >= 2) ||
+      // J3/R1: nh≤2 sticky≥2 PreferKick; nh≤3 sticky≥5 (never drop Imm on
+      // Kicked/Dispatched).
+      if ((nh <= 2 && sticky_frames >= 2) ||
           (nh <= 3 && sticky_frames >= 5))
       {
         if (queued_stuck || kicked_stuck)
@@ -2330,9 +2331,30 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       ain.nearest_miss_horiz = world.GetPhysicsTelemetry().MissHoriz;
     }
-    const MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
+    MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
+    // R1: sticky close-rim — raise FirstMesh floor (do not cut; manual 104108
+    // sch≈5–6 plateau). Moving HoleDrain/Deep + sticky≥3 + nh≤3 → ≥8.
+    if (moving && ain.visual_holes &&
+        (adm.mode == MeshWorkAdmission::Mode::HoleDrain ||
+         adm.mode == MeshWorkAdmission::Mode::DeepBacklog) &&
+        mesh_service.GetStickyNearestHoleFrames() >= 3 &&
+        ain.nearest_miss_horiz >= 0 && ain.nearest_miss_horiz <= 3)
+    {
+      adm.first_mesh_schedule = std::max(adm.first_mesh_schedule, 8);
+      adm.max_schedule = std::max(
+          adm.max_schedule,
+          adm.first_mesh_schedule + std::max(0, adm.remesh_schedule));
+    }
     mesh_service.SetMeshWorkAdmission(adm);
     mesh_schedule = FinalizeSchedule(mesh_schedule, adm);
+    if (moving && ain.visual_holes &&
+        (adm.mode == MeshWorkAdmission::Mode::HoleDrain ||
+         adm.mode == MeshWorkAdmission::Mode::DeepBacklog) &&
+        mesh_service.GetStickyNearestHoleFrames() >= 3 &&
+        ain.nearest_miss_horiz >= 0 && ain.nearest_miss_horiz <= 3)
+    {
+      mesh_schedule = std::max(mesh_schedule, 8);
+    }
     mesh_drain = FinalizeDrain(mesh_drain, adm);
     mesh_service.SetStarveRemeshKeepHoriz(adm.starve_remesh_horiz);
     if ((visual_holes || missing_underfeet || missing_visible_mesh) &&
