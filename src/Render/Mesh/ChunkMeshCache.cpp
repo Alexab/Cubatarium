@@ -2993,10 +2993,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
     }
 
-    // Pass 1b: reserved off-forward focus slots so MeshForwardBias cannot
-    // leave unfinished columns behind *or beside* the camera (manual 220707
-    // rear; manual 101354 side FOV holes with behind≥ahead).
-    // Include lateral (dot < 0.35), not only strict rear (dot < -0.05).
+    // Pass 1b: reserved rear-hemisphere focus slots so MeshForwardBias cannot
+    // leave unfinished columns behind the camera (manual 220707).
+    // Strict rear only (dot < -0.05). Wide off-forward (dot < 0.35) stole
+    // FirstMesh from ahead — nh≥4 + behind balloon (manual 103012).
     if (MeshFocusValid && rear_focus_cap > 0 && MeshForwardBiasK > 0.0f)
     {
       const float flen = std::sqrt(MeshForwardXz.x * MeshForwardXz.x +
@@ -3023,7 +3023,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
               static_cast<float>(it->z - MeshFocusGroundChunk.z);
           const float tlen = std::sqrt(tdx * tdx + tdz * tdz);
           if (tlen < 0.01f ||
-              (tdx / tlen) * fx + (tdz / tlen) * fz >= 0.35f)
+              (tdx / tlen) * fx + (tdz / tlen) * fz >= -0.05f)
           {
             ++it;
             continue;
@@ -3037,6 +3037,70 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           if (scheduled > scheduled_before)
           {
             ++rear_focus_scheduled;
+          }
+          it = next;
+        }
+      }
+    }
+
+    // Pass 1c: tiny lateral-only budget for *missing* FirstMesh (not remesh).
+    // Caps at 2 so sides get a chance without starving ahead (101354 symptom,
+    // 103012 regress from merging lateral into rear).
+    if (MeshFocusValid && focus_missing_for_schedule &&
+        MeshForwardBiasK > 0.0f && scheduled < max_schedule_per_frame)
+    {
+      const float flen = std::sqrt(MeshForwardXz.x * MeshForwardXz.x +
+                                   MeshForwardXz.y * MeshForwardXz.y);
+      if (flen >= 0.01f)
+      {
+        const float fx = MeshForwardXz.x / flen;
+        const float fz = MeshForwardXz.y / flen;
+        constexpr int kLateralMissingCap = 2;
+        int lateral_scheduled = 0;
+        for (auto it = Dirty.begin();
+             it != Dirty.end() && scheduled < max_schedule_per_frame &&
+             lateral_scheduled < kLateralMissingCap;)
+        {
+          if (HasDrawableGreedyMesh(*it))
+          {
+            ++it;
+            continue;
+          }
+          const int dx = std::abs(it->x - MeshFocusGroundChunk.x);
+          const int dz = std::abs(it->z - MeshFocusGroundChunk.z);
+          const int horiz = std::max(dx, dz);
+          if (horiz > MeshFocusRadiusChunks || horiz < 1)
+          {
+            ++it;
+            continue;
+          }
+          const float tdx =
+              static_cast<float>(it->x - MeshFocusGroundChunk.x);
+          const float tdz =
+              static_cast<float>(it->z - MeshFocusGroundChunk.z);
+          const float tlen = std::sqrt(tdx * tdx + tdz * tdz);
+          if (tlen < 0.01f)
+          {
+            ++it;
+            continue;
+          }
+          const float dot =
+              (tdx / tlen) * fx + (tdz / tlen) * fz;
+          // Lateral cone only — not forward, not strict rear.
+          if (dot >= 0.35f || dot < -0.05f)
+          {
+            ++it;
+            continue;
+          }
+          const int scheduled_before = scheduled;
+          auto next = try_schedule(it, false, false, false);
+          if (next == Dirty.end())
+          {
+            break;
+          }
+          if (scheduled > scheduled_before)
+          {
+            ++lateral_scheduled;
           }
           it = next;
         }

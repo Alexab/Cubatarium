@@ -568,22 +568,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           !moving ? std::max(tune.MeshForwardBiasK, 1.5f)
                   : tune.MeshForwardBiasK;
       mesh_service.SetMeshForwardBias(bias_k, fwd);
-      // Cruise: off-forward (rear+side) slots. Idle+holes: keep a few so FOV
-      // bias cannot starve stop recovery (P1 smoke). Boost when unfinished
-      // behind/side dominates ahead (manual 101354 side FOV).
-      int rear_slots = moving ? 4 : ((visual_holes || missing_underfeet) ? 2 : 0);
-      if (moving && (visual_holes || missing_underfeet))
-      {
-        const int unfinished_behind =
-            world.GetPhysicsTelemetry().FocusUnfinishedBehind;
-        const int unfinished_ahead =
-            world.GetPhysicsTelemetry().FocusUnfinishedAhead;
-        if (unfinished_behind > unfinished_ahead)
-        {
-          rear_slots = std::max(rear_slots, 5);
-        }
-      }
-      mesh_service.SetMaxRearFocusMeshPerFrame(rear_slots);
+      // Cruise: rear slots for behind-camera unfinished. Idle+holes: keep a
+      // few rear slots so FOV bias cannot starve stop recovery (P1 smoke).
+      // (Do not boost to 5 — manual 103012 behind unfinished ballooned.)
+      mesh_service.SetMaxRearFocusMeshPerFrame(
+          moving ? 3
+                 : ((visual_holes || missing_underfeet) ? 2 : 0));
     }
   }
   int mesh_drain = LastBudget.MaxMeshDrain;
