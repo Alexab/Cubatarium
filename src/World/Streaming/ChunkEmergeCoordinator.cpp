@@ -2041,9 +2041,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           mesh_service.IsGpuExtractInFlight(isolated_hole);
       if (nearest_in_pipeline)
       {
+        // Relight helps light debt; it does NOT create FirstMesh. Keep enqueue
+        // (Admit no-op if already Dirty) so ColumnFlow still drains the hole.
+        // Manual 094817: extract-in-flight nearest skipped FirstMesh → sticky mh.
         exec.RequestPromoteRelight(hole_col, /*priority=*/55);
+        if (mesh_service.IsPendingGpuQueued(isolated_hole) ||
+            mesh_service.IsPendingGpuKickedOrDispatched(isolated_hole))
+        {
+          mesh_service.PreferKickPendingGpuQueued(isolated_hole);
+        }
       }
-      else
       {
         ColumnWorkItem hole{};
         hole.column = hole_col;
@@ -2065,6 +2072,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     // (nh≤1). Force a full-focus every 8 skipped frames so other ring holes
     // cannot starve forever (land-south miss_end).
     // N0a: far rim nh≥4 — full-scan every frame (ignore focus_scan_cd / skip).
+    // N0e (manual 094817): sticky nh 2–3 miss_frac~0.85 — escape every 2 skips
+    // once sticky≥3 (was /8 only; nearest stuck while scan starved).
     const bool far_rim_force_scan =
         hole_backlog_mode && nearest_miss_nh >= 4;
     const bool rim_plateau_close =
@@ -2076,7 +2085,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     if (rim_plateau_close)
     {
       ++rim_scan_skip_streak;
-      if (rim_scan_skip_streak < 8)
+      const int sticky_for_scan =
+          mesh_service.GetStickyNearestHoleFrames();
+      const int skip_before_force = sticky_for_scan >= 3 ? 2 : 8;
+      if (rim_scan_skip_streak < skip_before_force)
       {
         skip_full_scan_rim_close = true;
       }
@@ -2155,12 +2167,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           mesh_service.IsPendingGpuQueued(isolated_hole);
       const bool kicked_stuck =
           mesh_service.IsPendingGpuKickedOrDispatched(isolated_hole);
+      const bool extract_stuck =
+          mesh_service.IsGpuExtractInFlight(isolated_hole);
       const bool pipeline_idle =
           no_drawable && !mesh_service.IsPendingGpuApply(isolated_hole) &&
-          no_inflight;
+          no_inflight && !extract_stuck;
       const bool sticky_alive =
-          no_drawable && no_inflight &&
-          (pipeline_idle || queued_stuck || kicked_stuck);
+          no_drawable &&
+          (pipeline_idle || queued_stuck || kicked_stuck ||
+           (extract_stuck && no_inflight));
       mesh_service.UpdateStickyNearestHole(isolated_hole, sticky_alive);
       const int nh = std::max(
           std::abs(isolated_hole.x - focus_ground_horiz.x),
@@ -2215,17 +2230,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     exec.DrainBudget(world, moving ? 2 : 3, focus_ground_horiz, focus_radius,
                      /*admit_batch=*/moving ? 2 : 3);
   }
-  // P3: soft cruise clamp — underfeet (or nh<=1 ahead under HoleDrain/Deep).
+  // P3: soft cruise clamp — underfeet or near miss ahead under HoleDrain/Deep.
   // Applied next movement tick via PhysicsTelemetry.StreamSpeedClampScale.
-  // Scale 0.85: land-south keeps underfeet≈1 all cruise; ×0.6–0.7 starved
-  // miss_end (chunks/miss_stuck regress vs P2). Soft integrity, not hard brake.
+  // Plan: nh<=2 ahead cone ×0.55–0.7. Land-south underfeet sticky starved at
+  // ×0.6; use ×0.75 (still soft) and keep nh<=2 so mid void-ahead engages
+  // (manual 094817: uf=0, mh 2–5, clamp never fired at nh<=1-only).
   {
     float clamp_scale = 1.0f;
     if (moving)
     {
       if (missing_underfeet)
       {
-        clamp_scale = 0.85f;
+        clamp_scale = 0.75f;
       }
       else if (found_nearest_missing)
       {
@@ -2237,7 +2253,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const int nh = std::max(
             std::abs(isolated_hole.x - focus_ground_horiz.x),
             std::abs(isolated_hole.z - focus_ground_horiz.z));
-        if (hole_mode && nh <= 1)
+        if (hole_mode && nh <= 2)
         {
           const glm::vec2 vel = world.GetLastMovementDirXz();
           const glm::vec2 to_hole(
@@ -2248,7 +2264,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           if (vel_len > 0.01f && hole_len > 0.01f &&
               glm::dot(vel / vel_len, to_hole / hole_len) > 0.5f)
           {
-            clamp_scale = 0.85f;
+            clamp_scale = 0.75f;
           }
         }
       }

@@ -543,7 +543,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   {
     int ahead = 0;
     int behind = 0;
-    if (!moving_for_telemetry)
+    // P1: count facing unfinished while moving too (was idle-only → always 0
+    // on cruise mid logs; blocks FOV diagnostics / SoftDefer facing bias).
     {
       glm::vec2 fwd = world.GetLastMovementDirXz();
       if (glm::length(fwd) < 0.01f)
@@ -554,8 +555,11 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
           fwd = glm::vec2(front.x, front.z);
         }
       }
-      world.CountUnfinishedVisualByFacing(focus_horiz, focus_radius, fwd, ahead,
-                                          behind);
+      if (glm::length(fwd) >= 0.01f)
+      {
+        world.CountUnfinishedVisualByFacing(focus_horiz, focus_radius, fwd,
+                                            ahead, behind);
+      }
     }
     world.PhysicsTelemetryData.FocusUnfinishedAhead = ahead;
     world.PhysicsTelemetryData.FocusUnfinishedBehind = behind;

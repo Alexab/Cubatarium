@@ -70,10 +70,10 @@
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-ARCH-034 | 2026-08 FOV plan | Far-rim nh≥4 dual-backlog (manual 215629 mh=5) | Hotfix `9cfe265a`; smoke PASS; mid residual still needs fresh manual vs 215629 | **done** 2026-08-02 (mid residual open → user manual) |
+| TD-ARCH-034 | 2026-08 FOV plan | Far-rim nh≥4 dual-backlog (manual 215629 mh=5) | Hotfix `9cfe265a`; mid `094817` miss_frac=0.85 sticky rim nh2–3 — N0e: FirstMesh+Relight, sticky scan escape /2 | **in-progress** mid residual |
 | TD-ARCH-035 | 2026-08 FOV plan | FOV idle FirstMesh / camera-front priority | `b6b75a5f` + `2ef3711f`; smoke PASS | **done** 2026-08-02 |
 | TD-ARCH-036 | 2026-08 FOV plan | Per-cy draw gate (column all-or-nothing) | `bd4e0356`; smoke PASS | **done** 2026-08-02 |
-| TD-ARCH-037 | 2026-08 FOV plan | Soft flight speed clamp on underfeet/near ahead miss | `4abd8683` ×0.85 underfeet / HoleDrain nh≤1 ahead; smoke miss_end=0 | **done** 2026-08-02 |
+| TD-ARCH-037 | 2026-08 FOV plan | Soft flight speed clamp on underfeet/near ahead miss | Restored plan nh≤2 ×0.75 (094817: uf=0 so nh≤1 never clamped); telem export | **done** follow-up |
 | TD-ARCH-038 | 2026-08 FOV plan | Fog knobs follow-up | P4: autofly holes≈0.27 but mid `215629` rim_ok=false (nh≥4); no Fog knobs without miss≤0.45 **and** rim hold | **open** backlog |
 | TD-ARCH-039 | 2026-08 FOV plan | Sub-16 mesh brick | P2 closed visual progressive DoD without sub-16 | **wont-fix** 2026-08-02 |
 
