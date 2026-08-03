@@ -199,6 +199,7 @@ set(SOURCES
     src/App/Settings/GraphicsQualityProfile.cpp
     src/App/Settings/UiSettings.cpp
     src/Blocks/Input/BlockInputController.cpp
+    src/Blocks/Input/PlayerInteractionRouter.cpp
     src/Render/Primitives/Cube.cpp
     src/Render/Primitives/CubeGL.cpp
     src/World/Objects/ObjectLibrary.cpp
@@ -538,6 +539,7 @@ set(HEADERS
     src/World/Mesh/WorldMeshService.h
     src/App/Platform/WindowManager.h
     src/Blocks/Input/BlockInputController.h
+    src/Blocks/Input/PlayerInteractionRouter.h
     src/Render/Engine/GeometryEngine.h
     src/Render/Blocks/BlockCrackOverlayPass.h
     src/Render/Blocks/BlockBreakParticleSystem.h

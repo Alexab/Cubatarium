@@ -1,30 +1,18 @@
 #include "Blocks/Input/BlockInputController.h"
 #include "App/Application.h"
+#include "Blocks/Input/PlayerInteractionRouter.h"
 #include "Creatures/Core/Creature.h"
-#include "Creatures/Influence/InfluenceIntentUtil.h"
+#include "Creatures/Core/CreatureInventory.h"
+#include "Game/Inventory/InventoryTypes.h"
 #include "Game/WorldGameMode.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "World/Core/World.h"
-#include "Game/WorldGameMode.h"
-#include "Render/Camera/Camera.h"
-#include "Render/Engine/GeometryEngine.h"
-#include "World/Core/World.h"
-
 #include "World/Diagnostics/BlockInspectDiagnostics.h"
-
-#include "App/Application.h"
 #if defined(__ANDROID__)
 #include "App/Platform/TouchInputBridge.h"
 #endif
 #include "App/Platform/GlfwKeyCompat.h"
-#include "Creatures/Core/Creature.h"
-#include "Creatures/Core/CreatureInventory.h"
-#include "Creatures/Influence/InfluenceIntentUtil.h"
-#include "Game/Inventory/InventoryTypes.h"
-#include "Render/Engine/GeometryEngine.h"
-#include "Render/Camera/Camera.h"
-#include "World/Core/World.h"
 
 #if !defined(__ANDROID__)
 #include <GLFW/glfw3.h>
@@ -121,39 +109,20 @@ bool TryBlockInspectClick(const BlockInputContext &ctx)
   return true;
 }
 
-void SetDigIntent(UWorld &world, glm::ivec3 blockPos)
-{
-  if (UCreature *controlled = world.GetControlledCreature())
-  {
-    CreatureIntent intent = controlled->GetIntent();
-    intent.attackTargetId = 0;
-    intent.Influence = InfluenceIntent{};
-    intent.Influence.Channel = InfluenceChannel::Dig;
-    intent.Influence.TargetBlockPos = blockPos;
-    intent.Influence.HasTargetBlock = true;
-    intent.suggestedAnim = LocomotionState::Action;
-    intent.clearOnApply = false;
-    controlled->SetIntent(intent);
-  }
-}
-
 void ClearDigIntent(UWorld &world)
 {
   if (UCreature *controlled = world.GetControlledCreature())
   {
-    CreatureIntent intent = controlled->GetIntent();
-    if (intent.Influence.Channel == InfluenceChannel::Dig)
-    {
-      intent.Influence = InfluenceIntent{};
-      controlled->SetIntent(intent);
-    }
+    PlayerInteractionRouter::ClearDigIntent(*controlled);
   }
 }
 
 void BeginDig(UWorld &world, glm::ivec3 blockPos)
 {
-  // Intent only — DigSession starts in InfluenceApplier on Resolve/Apply.
-  SetDigIntent(world, blockPos);
+  if (UCreature *controlled = world.GetControlledCreature())
+  {
+    PlayerInteractionRouter::BeginDigIntent(*controlled, blockPos);
+  }
 }
 
 } // namespace
@@ -272,30 +241,17 @@ void UBlockInputController::HandleLeftPress(const BlockInputContext &ctx)
     return;
   }
 
-  // Survival: LMB on a creature sets melee Influence intent on the controlled
-  // creature (resolved in WorldViewBinding). Prefer over dig when a creature is
-  // under the crosshair.
-  if (ctx.World->GetGameMode() == WorldGameMode::Survival)
+  // Survival: LMB on a creature → Melee Intent (Router); else dig below.
+  if (auto camera = ctx.World->GetCurrentUserCamera())
   {
-    if (auto camera = ctx.World->GetCurrentUserCamera())
+    if (UCreature *self = ctx.World->GetControlledCreature())
     {
-      const auto target = ctx.World->PickCreatureByView(
-          camera->GetPosition(), camera->GetFront(), 4.0f);
-      const CreatureId controlled_id = ctx.World->GetControlledCreatureId();
-      if (target && *target != controlled_id)
+      if (PlayerInteractionRouter::TryRouteMeleeFromView(
+              *ctx.World, *self, camera->GetPosition(), camera->GetFront()))
       {
-        if (UCreature *self = ctx.World->GetCreature(controlled_id))
-        {
-          CreatureIntent intent = self->GetIntent();
-          intent.attackTargetId = *target;
-          SyncInfluenceFromAttackTarget(intent);
-          intent.suggestedAnim = LocomotionState::Action;
-          intent.clearOnApply = false;
-          self->SetIntent(intent);
-          LeftDownTime = std::chrono::steady_clock::now();
-          LeftHeld = true;
-          return;
-        }
+        LeftDownTime = std::chrono::steady_clock::now();
+        LeftHeld = true;
+        return;
       }
     }
   }
