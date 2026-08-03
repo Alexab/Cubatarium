@@ -1,6 +1,7 @@
 {
   "name": "mtg_sand",
   "id": 490,
+  "hardness": 0.5,
   "types": [
     "building"
   ],

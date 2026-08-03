@@ -1,6 +1,7 @@
 {
   "name": "mtg_coral_brown",
   "id": 427,
+  "hardness": 1.5,
   "types": [
     "building"
   ],

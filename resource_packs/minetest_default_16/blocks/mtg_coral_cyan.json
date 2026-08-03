@@ -1,6 +1,7 @@
 {
   "name": "mtg_coral_cyan",
   "id": 428,
+  "hardness": 1.5,
   "types": [
     "building"
   ],

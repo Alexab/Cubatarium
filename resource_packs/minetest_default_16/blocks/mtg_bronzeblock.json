@@ -1,6 +1,7 @@
 {
   "name": "mtg_bronzeblock",
   "id": 416,
+  "hardness": 5,
   "types": [
     "building"
   ],

@@ -1,6 +1,7 @@
 {
   "name": "farmland_wet",
   "id": 629,
+  "hardness": 0.6,
   "types": [
     "natural"
   ],

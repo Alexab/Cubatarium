@@ -1,6 +1,7 @@
 {
   "name": "stone_slab",
   "id": 696,
+  "hardness": 2,
   "types": [
     "natural"
   ],

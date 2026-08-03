@@ -1,6 +1,7 @@
 {
   "name": "ice",
   "id": 69,
+  "hardness": 0.3,
   "types": [
     "natural"
   ],

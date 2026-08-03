@@ -1,6 +1,7 @@
 {
   "name": "mtg_aspen_leaves",
   "id": 409,
+  "hardness": 0.2,
   "types": [
     "building"
   ],

@@ -1,6 +1,7 @@
 {
   "name": "leaves_jungle_light",
   "id": 777,
+  "hardness": 0.2,
   "types": [
     "natural",
     "plants"

@@ -1,6 +1,7 @@
 {
   "name": "note_block",
   "id": 661,
+  "hardness": 2,
   "types": [
     "natural"
   ],

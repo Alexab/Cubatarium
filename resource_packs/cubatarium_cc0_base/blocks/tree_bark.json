@@ -1,20 +1,19 @@
 {
-    "name":  "tree_bark",
-    "id":  170,
-    "types":  [
-                  "natural",
-                  "plants"
-              ],
-    "textures":  [
-                     "tree_side",
-                     "tree_side",
-                     "tree_side",
-                     "tree_side",
-                     "tree_side",
-                     "tree_side"
-                 ],
-    "displayName":  "Tree Bark",
-    "render":  {
-
-               }
+  "name": "tree_bark",
+  "id": 170,
+  "hardness": 2,
+  "types": [
+    "natural",
+    "plants"
+  ],
+  "textures": [
+    "tree_side",
+    "tree_side",
+    "tree_side",
+    "tree_side",
+    "tree_side",
+    "tree_side"
+  ],
+  "displayName": "Tree Bark",
+  "render": {}
 }

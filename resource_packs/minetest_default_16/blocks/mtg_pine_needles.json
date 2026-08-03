@@ -1,6 +1,7 @@
 {
   "name": "mtg_pine_needles",
   "id": 485,
+  "hardness": 0.2,
   "types": [
     "building"
   ],

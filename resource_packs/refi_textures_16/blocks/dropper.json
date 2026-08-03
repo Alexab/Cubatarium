@@ -1,6 +1,7 @@
 {
   "name": "dropper",
   "id": 754,
+  "hardness": 3.5,
   "types": [
     "natural"
   ],

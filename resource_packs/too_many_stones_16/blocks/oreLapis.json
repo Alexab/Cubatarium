@@ -1,6 +1,7 @@
 {
   "name": "oreLapis",
   "id": 989,
+  "hardness": 3,
   "types": [
     "natural"
   ],

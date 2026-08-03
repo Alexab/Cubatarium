@@ -1,6 +1,7 @@
 {
   "name": "leaves_transparent",
   "id": 651,
+  "hardness": 0.2,
   "types": [
     "natural",
     "plants"

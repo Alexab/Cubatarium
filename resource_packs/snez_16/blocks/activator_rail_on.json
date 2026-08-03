@@ -1,6 +1,7 @@
 {
   "name": "activator_rail_on",
   "id": 881,
+  "hardness": 0.7,
   "types": [
     "natural"
   ],

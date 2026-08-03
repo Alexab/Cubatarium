@@ -1,6 +1,7 @@
 {
   "name": "mtg_ladder_wood",
   "id": 466,
+  "hardness": 0.4,
   "types": [
     "building"
   ],

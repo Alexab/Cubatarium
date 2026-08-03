@@ -1,6 +1,7 @@
 {
   "name": "blockRedstone",
   "id": 612,
+  "hardness": 5,
   "types": [
     "building"
   ],

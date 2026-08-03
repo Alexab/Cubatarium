@@ -1,6 +1,7 @@
 {
   "name": "mtg_obsidianbrick",
   "id": 477,
+  "hardness": 50,
   "types": [
     "building"
   ],

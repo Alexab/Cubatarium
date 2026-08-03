@@ -1,6 +1,7 @@
 {
   "name": "cactus",
   "id": 118,
+  "hardness": 0.4,
   "types": [
     "natural",
     "plants"

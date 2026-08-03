@@ -1,6 +1,7 @@
 {
   "name": "lever",
   "id": 652,
+  "hardness": 0.5,
   "types": [
     "natural"
   ],

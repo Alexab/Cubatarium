@@ -1,6 +1,7 @@
 {
   "name": "mtg_silver_sand",
   "id": 496,
+  "hardness": 0.5,
   "types": [
     "building"
   ],

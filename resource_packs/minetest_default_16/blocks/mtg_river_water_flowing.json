@@ -1,6 +1,7 @@
 {
   "name": "mtg_river_water_flowing",
   "id": 489,
+  "hardness": 100,
   "types": [
     "building"
   ],

@@ -1,6 +1,7 @@
 {
   "name": "mushroom_stem",
   "id": 517,
+  "hardness": 0.2,
   "types": [
     "natural"
   ],

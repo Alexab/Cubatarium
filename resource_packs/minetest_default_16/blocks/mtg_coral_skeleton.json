@@ -1,6 +1,7 @@
 {
   "name": "mtg_coral_skeleton",
   "id": 432,
+  "hardness": 1.5,
   "types": [
     "building"
   ],

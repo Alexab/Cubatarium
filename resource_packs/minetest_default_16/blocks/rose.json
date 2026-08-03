@@ -1,6 +1,7 @@
 {
   "name": "rose",
   "id": 548,
+  "hardness": 0.05,
   "types": [
     "natural",
     "plants"

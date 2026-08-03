@@ -1,6 +1,7 @@
 {
   "name": "stoneMoss",
   "id": 146,
+  "hardness": 2,
   "types": [
     "natural",
     "building"

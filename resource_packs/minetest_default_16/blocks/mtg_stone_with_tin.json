@@ -1,6 +1,7 @@
 {
   "name": "mtg_stone_with_tin",
   "id": 511,
+  "hardness": 3,
   "types": [
     "building"
   ],

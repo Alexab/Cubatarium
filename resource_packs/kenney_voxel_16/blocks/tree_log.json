@@ -1,6 +1,7 @@
 {
   "name": "tree_log",
   "id": 148,
+  "hardness": 2,
   "types": [
     "natural",
     "plants"

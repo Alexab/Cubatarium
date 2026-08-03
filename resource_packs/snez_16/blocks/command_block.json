@@ -1,6 +1,7 @@
 {
   "name": "command_block",
   "id": 893,
+  "hardness": 0,
   "types": [
     "natural"
   ],

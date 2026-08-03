@@ -1,6 +1,7 @@
 {
   "name": "mtg_steelblock",
   "id": 502,
+  "hardness": 5,
   "types": [
     "building"
   ],

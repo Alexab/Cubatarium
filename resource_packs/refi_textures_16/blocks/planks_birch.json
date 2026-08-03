@@ -1,6 +1,7 @@
 {
   "name": "planks_birch",
   "id": 791,
+  "hardness": 2,
   "types": [
     "natural"
   ],

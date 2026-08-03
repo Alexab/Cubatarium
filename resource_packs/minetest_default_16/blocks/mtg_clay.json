@@ -1,6 +1,7 @@
 {
   "name": "mtg_clay",
   "id": 422,
+  "hardness": 0.6,
   "types": [
     "building"
   ],

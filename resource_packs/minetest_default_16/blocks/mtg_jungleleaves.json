@@ -1,6 +1,7 @@
 {
   "name": "mtg_jungleleaves",
   "id": 461,
+  "hardness": 0.2,
   "types": [
     "building"
   ],

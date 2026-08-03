@@ -1,6 +1,7 @@
 {
   "name": "golden_rail_powered",
   "id": 766,
+  "hardness": 0.7,
   "types": [
     "natural"
   ],

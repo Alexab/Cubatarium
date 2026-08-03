@@ -1,6 +1,7 @@
 {
   "name": "wood",
   "id": 578,
+  "hardness": 2,
   "types": [
     "natural",
     "building"

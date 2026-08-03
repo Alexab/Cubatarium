@@ -1,6 +1,7 @@
 {
   "name": "lava",
   "id": 914,
+  "hardness": 100,
   "types": [
     "fluid",
     "natural"

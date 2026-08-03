@@ -1,6 +1,7 @@
 {
   "name": "mtg_bush_stem",
   "id": 419,
+  "hardness": 2,
   "types": [
     "building"
   ],

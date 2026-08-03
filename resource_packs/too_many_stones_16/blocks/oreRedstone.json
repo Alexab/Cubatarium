@@ -1,6 +1,7 @@
 {
   "name": "oreRedstone",
   "id": 990,
+  "hardness": 3,
   "types": [
     "natural"
   ],

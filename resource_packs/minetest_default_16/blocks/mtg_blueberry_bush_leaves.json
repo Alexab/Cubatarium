@@ -1,6 +1,7 @@
 {
   "name": "mtg_blueberry_bush_leaves",
   "id": 413,
+  "hardness": 0.2,
   "types": [
     "building"
   ],

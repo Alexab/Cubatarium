@@ -1,6 +1,7 @@
 {
   "name": "hellrock",
   "id": 7,
+  "hardness": 0.4,
   "types": [
     "natural"
   ],

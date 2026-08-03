@@ -1,6 +1,7 @@
 {
   "name": "stonebricksmooth_cracked",
   "id": 86,
+  "hardness": 1.5,
   "types": [
     "building"
   ],

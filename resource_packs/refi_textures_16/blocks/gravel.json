@@ -1,6 +1,7 @@
 {
   "name": "gravel",
   "id": 768,
+  "hardness": 0.5,
   "types": [
     "natural"
   ],

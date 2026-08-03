@@ -1,6 +1,7 @@
 {
   "name": "leaves_spruce",
   "id": 649,
+  "hardness": 0.2,
   "types": [
     "natural",
     "plants"

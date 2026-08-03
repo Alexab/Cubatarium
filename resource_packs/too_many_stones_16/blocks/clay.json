@@ -1,6 +1,7 @@
 {
   "name": "clay",
   "id": 976,
+  "hardness": 0.6,
   "types": [
     "natural"
   ],

@@ -1,6 +1,7 @@
 {
   "name": "mtg_snow",
   "id": 500,
+  "hardness": 0.5,
   "types": [
     "building"
   ],

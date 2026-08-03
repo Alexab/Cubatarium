@@ -1,6 +1,7 @@
 {
   "name": "mtg_lava_flowing",
   "id": 468,
+  "hardness": 100,
   "types": [
     "building"
   ],

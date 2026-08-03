@@ -1,6 +1,7 @@
 {
   "name": "thin_glass",
   "id": 569,
+  "hardness": 0.3,
   "types": [
     "building",
     "decorative"

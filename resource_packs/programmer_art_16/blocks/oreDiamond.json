@@ -1,6 +1,7 @@
 {
   "name": "oreDiamond",
   "id": 664,
+  "hardness": 3,
   "types": [
     "natural"
   ],

@@ -1,6 +1,7 @@
 {
   "name": "planks_jungle",
   "id": 792,
+  "hardness": 2,
   "types": [
     "natural"
   ],

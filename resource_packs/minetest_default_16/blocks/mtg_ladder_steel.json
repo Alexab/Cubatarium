@@ -1,6 +1,7 @@
 {
   "name": "mtg_ladder_steel",
   "id": 465,
+  "hardness": 2,
   "types": [
     "building"
   ],

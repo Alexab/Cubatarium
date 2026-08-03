@@ -1,6 +1,7 @@
 {
   "name": "beacon",
   "id": 736,
+  "hardness": 3,
   "types": [
     "natural"
   ],

@@ -1,6 +1,7 @@
 {
   "name": "blockDiamond",
   "id": 597,
+  "hardness": 5,
   "types": [
     "building"
   ],

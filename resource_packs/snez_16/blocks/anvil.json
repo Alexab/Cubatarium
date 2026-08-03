@@ -1,6 +1,7 @@
 {
   "name": "anvil",
   "id": 882,
+  "hardness": 5,
   "types": [
     "natural"
   ],

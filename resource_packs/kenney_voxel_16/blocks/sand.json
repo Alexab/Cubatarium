@@ -1,6 +1,7 @@
 {
   "name": "sand",
   "id": 138,
+  "hardness": 0.5,
   "types": [
     "natural"
   ],

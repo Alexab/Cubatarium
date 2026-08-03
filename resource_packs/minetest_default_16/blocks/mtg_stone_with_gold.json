@@ -1,6 +1,7 @@
 {
   "name": "mtg_stone_with_gold",
   "id": 508,
+  "hardness": 3,
   "types": [
     "building"
   ],

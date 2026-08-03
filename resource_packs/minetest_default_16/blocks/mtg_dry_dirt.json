@@ -1,6 +1,7 @@
 {
   "name": "mtg_dry_dirt",
   "id": 449,
+  "hardness": 0.5,
   "types": [
     "building"
   ],

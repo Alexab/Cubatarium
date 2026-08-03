@@ -1,6 +1,7 @@
 {
   "name": "log_spruce",
   "id": 398,
+  "hardness": 2,
   "types": [
     "natural"
   ],

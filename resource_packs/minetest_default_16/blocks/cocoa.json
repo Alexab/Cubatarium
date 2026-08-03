@@ -1,6 +1,7 @@
 {
   "name": "cocoa",
   "id": 358,
+  "hardness": 0.2,
   "types": [
     "natural"
   ],

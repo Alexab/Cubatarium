@@ -1,6 +1,7 @@
 {
   "name": "stonebricksmooth_carved",
   "id": 564,
+  "hardness": 1.5,
   "types": [
     "building"
   ],

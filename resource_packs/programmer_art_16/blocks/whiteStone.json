@@ -1,6 +1,7 @@
 {
   "name": "whiteStone",
   "id": 711,
+  "hardness": 3,
   "types": [
     "natural",
     "building"

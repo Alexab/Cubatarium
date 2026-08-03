@@ -1,6 +1,7 @@
 {
   "name": "oreIron",
   "id": 526,
+  "hardness": 3,
   "types": [
     "natural"
   ],

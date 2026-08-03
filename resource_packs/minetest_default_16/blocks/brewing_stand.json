@@ -1,6 +1,7 @@
 {
   "name": "brewing_stand",
   "id": 350,
+  "hardness": 0.5,
   "types": [
     "natural"
   ],

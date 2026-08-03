@@ -1,6 +1,7 @@
 {
   "name": "mtg_desert_stone",
   "id": 438,
+  "hardness": 1.5,
   "types": [
     "building"
   ],

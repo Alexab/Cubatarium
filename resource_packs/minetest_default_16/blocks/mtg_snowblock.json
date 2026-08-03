@@ -1,6 +1,7 @@
 {
   "name": "mtg_snowblock",
   "id": 501,
+  "hardness": 0.5,
   "types": [
     "building"
   ],

@@ -1,6 +1,7 @@
 {
   "name": "quartz_pillar",
   "id": 537,
+  "hardness": 0.8,
   "types": [
     "natural"
   ],

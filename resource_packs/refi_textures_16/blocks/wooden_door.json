@@ -1,6 +1,7 @@
 {
   "name": "wooden_door",
   "id": 836,
+  "hardness": 3,
   "types": [
     "natural"
   ],

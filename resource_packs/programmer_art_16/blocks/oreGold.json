@@ -1,6 +1,7 @@
 {
   "name": "oreGold",
   "id": 666,
+  "hardness": 3,
   "types": [
     "natural"
   ],

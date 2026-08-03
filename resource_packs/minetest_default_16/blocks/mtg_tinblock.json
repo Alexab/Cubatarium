@@ -1,6 +1,7 @@
 {
   "name": "mtg_tinblock",
   "id": 513,
+  "hardness": 5,
   "types": [
     "building"
   ],

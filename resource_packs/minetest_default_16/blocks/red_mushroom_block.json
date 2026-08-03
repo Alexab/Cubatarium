@@ -1,6 +1,7 @@
 {
   "name": "red_mushroom_block",
   "id": 540,
+  "hardness": 0.2,
   "types": [
     "natural"
   ],

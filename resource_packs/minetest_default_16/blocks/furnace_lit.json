@@ -1,6 +1,7 @@
 {
   "name": "furnace_lit",
   "id": 374,
+  "hardness": 3.5,
   "types": [
     "natural"
   ],

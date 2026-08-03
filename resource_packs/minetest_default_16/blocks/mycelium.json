@@ -1,6 +1,7 @@
 {
   "name": "mycelium",
   "id": 518,
+  "hardness": 0.6,
   "types": [
     "natural"
   ],

@@ -1,6 +1,7 @@
 {
   "name": "mtg_desert_sandstone_brick",
   "id": 437,
+  "hardness": 0.8,
   "types": [
     "building"
   ],

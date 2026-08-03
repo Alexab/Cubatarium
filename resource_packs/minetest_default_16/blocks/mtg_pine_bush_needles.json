@@ -1,6 +1,7 @@
 {
   "name": "mtg_pine_bush_needles",
   "id": 482,
+  "hardness": 0.2,
   "types": [
     "building"
   ],

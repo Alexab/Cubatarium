@@ -1,6 +1,7 @@
 {
   "name": "mtg_desert_stonebrick",
   "id": 440,
+  "hardness": 1.5,
   "types": [
     "building"
   ],

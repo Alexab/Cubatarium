@@ -1,6 +1,7 @@
 {
   "name": "dispenser",
   "id": 753,
+  "hardness": 3.5,
   "types": [
     "natural"
   ],

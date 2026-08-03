@@ -1,6 +1,7 @@
 {
   "name": "mtg_dirt_with_grass_footsteps",
   "id": 446,
+  "hardness": 0.6,
   "types": [
     "building"
   ],

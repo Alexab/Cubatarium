@@ -1,6 +1,7 @@
 {
   "name": "mtg_desert_sand",
   "id": 434,
+  "hardness": 0.5,
   "types": [
     "building"
   ],

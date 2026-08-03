@@ -1,6 +1,7 @@
 {
   "name": "mtg_goldblock",
   "id": 456,
+  "hardness": 3,
   "types": [
     "building"
   ],

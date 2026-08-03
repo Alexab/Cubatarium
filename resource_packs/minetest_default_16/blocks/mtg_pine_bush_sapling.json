@@ -1,6 +1,7 @@
 {
   "name": "mtg_pine_bush_sapling",
   "id": 483,
+  "hardness": 0.05,
   "types": [
     "building"
   ],

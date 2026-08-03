@@ -1,6 +1,7 @@
 {
   "name": "log_jungle",
   "id": 397,
+  "hardness": 2,
   "types": [
     "natural"
   ],

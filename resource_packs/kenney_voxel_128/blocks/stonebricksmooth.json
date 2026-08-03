@@ -1,6 +1,7 @@
 {
   "name": "stonebricksmooth",
   "id": 84,
+  "hardness": 1.5,
   "types": [
     "building"
   ],

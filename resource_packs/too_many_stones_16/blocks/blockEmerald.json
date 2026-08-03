@@ -1,6 +1,7 @@
 {
   "name": "blockEmerald",
   "id": 970,
+  "hardness": 5,
   "types": [
     "building"
   ],

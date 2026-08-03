@@ -1,6 +1,7 @@
 {
   "name": "stone",
   "id": 601,
+  "hardness": 1.5,
   "types": [
     "natural",
     "building"

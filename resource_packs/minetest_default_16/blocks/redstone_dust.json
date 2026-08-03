@@ -1,6 +1,7 @@
 {
   "name": "redstone_dust",
   "id": 541,
+  "hardness": 0.05,
   "types": [
     "natural"
   ],

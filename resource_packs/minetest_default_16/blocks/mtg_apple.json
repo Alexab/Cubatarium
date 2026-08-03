@@ -1,6 +1,7 @@
 {
   "name": "mtg_apple",
   "id": 408,
+  "hardness": 0.1,
   "types": [
     "building"
   ],

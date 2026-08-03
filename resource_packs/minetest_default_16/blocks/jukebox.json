@@ -1,6 +1,7 @@
 {
   "name": "jukebox",
   "id": 386,
+  "hardness": 2,
   "types": [
     "natural"
   ],

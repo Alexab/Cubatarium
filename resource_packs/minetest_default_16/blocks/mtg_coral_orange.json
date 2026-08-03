@@ -1,6 +1,7 @@
 {
   "name": "mtg_coral_orange",
   "id": 430,
+  "hardness": 1.5,
   "types": [
     "building"
   ],

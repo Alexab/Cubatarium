@@ -1,6 +1,7 @@
 {
   "name": "sandstone",
   "id": 992,
+  "hardness": 0.8,
   "types": [
     "natural",
     "building"

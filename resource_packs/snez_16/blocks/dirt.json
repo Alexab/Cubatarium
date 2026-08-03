@@ -1,6 +1,7 @@
 {
   "name": "dirt",
   "id": 897,
+  "hardness": 0.5,
   "types": [
     "natural"
   ],

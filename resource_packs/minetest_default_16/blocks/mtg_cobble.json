@@ -1,6 +1,7 @@
 {
   "name": "mtg_cobble",
   "id": 425,
+  "hardness": 2,
   "types": [
     "building"
   ],

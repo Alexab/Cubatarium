@@ -1,6 +1,7 @@
 {
   "name": "mtg_aspen_tree",
   "id": 411,
+  "hardness": 2,
   "types": [
     "building"
   ],

@@ -1,6 +1,7 @@
 {
   "name": "mtg_dirt_with_rainforest_litter",
   "id": 447,
+  "hardness": 0.6,
   "types": [
     "building"
   ],

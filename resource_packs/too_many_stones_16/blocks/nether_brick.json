@@ -1,6 +1,7 @@
 {
   "name": "nether_brick",
   "id": 982,
+  "hardness": 2,
   "types": [
     "natural"
   ],

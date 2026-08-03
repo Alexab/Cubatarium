@@ -1,6 +1,7 @@
 {
   "name": "mtg_coalblock",
   "id": 424,
+  "hardness": 5,
   "types": [
     "building"
   ],

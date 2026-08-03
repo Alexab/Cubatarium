@@ -1,6 +1,7 @@
 {
   "name": "tree_leaves",
   "id": 147,
+  "hardness": 0.2,
   "types": [
     "natural",
     "plants"

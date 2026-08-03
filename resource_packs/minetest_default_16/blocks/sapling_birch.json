@@ -1,6 +1,7 @@
 {
   "name": "sapling_birch",
   "id": 553,
+  "hardness": 0.05,
   "types": [
     "natural"
   ],

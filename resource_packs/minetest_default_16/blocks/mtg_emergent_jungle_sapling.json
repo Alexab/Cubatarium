@@ -1,6 +1,7 @@
 {
   "name": "mtg_emergent_jungle_sapling",
   "id": 453,
+  "hardness": 0.05,
   "types": [
     "building"
   ],

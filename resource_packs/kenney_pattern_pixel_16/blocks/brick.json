@@ -1,6 +1,7 @@
 {
   "name": "brick",
   "id": 35,
+  "hardness": 2,
   "types": [
     "natural"
   ],

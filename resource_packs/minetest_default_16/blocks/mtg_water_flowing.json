@@ -1,6 +1,7 @@
 {
   "name": "mtg_water_flowing",
   "id": 515,
+  "hardness": 100,
   "types": [
     "building"
   ],

@@ -1,6 +1,7 @@
 {
   "name": "blockGold",
   "id": 609,
+  "hardness": 3,
   "types": [
     "building"
   ],

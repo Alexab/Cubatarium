@@ -1,6 +1,7 @@
 {
   "name": "mtg_obsidian_block",
   "id": 475,
+  "hardness": 50,
   "types": [
     "building"
   ],

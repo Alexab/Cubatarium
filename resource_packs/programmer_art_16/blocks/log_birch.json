@@ -1,6 +1,7 @@
 {
   "name": "log_birch",
   "id": 654,
+  "hardness": 2,
   "types": [
     "natural"
   ],

@@ -1,6 +1,7 @@
 {
   "name": "snow",
   "id": 995,
+  "hardness": 0.5,
   "types": [
     "natural"
   ],

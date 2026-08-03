@@ -1,6 +1,7 @@
 {
   "name": "ladder",
   "id": 774,
+  "hardness": 0.4,
   "types": [
     "natural"
   ],

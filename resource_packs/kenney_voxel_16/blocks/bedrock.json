@@ -1,6 +1,7 @@
 {
   "name": "bedrock",
   "id": 110,
+  "hardness": 0,
   "types": [
     "building",
     "natural"

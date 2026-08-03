@@ -1,6 +1,7 @@
 {
   "name": "item_frame",
   "id": 912,
+  "hardness": 0.25,
   "types": [
     "natural"
   ],

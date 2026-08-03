@@ -1,6 +1,7 @@
 {
   "name": "obsidian",
   "id": 599,
+  "hardness": 50,
   "types": [
     "natural"
   ],

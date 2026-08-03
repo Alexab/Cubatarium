@@ -1,6 +1,7 @@
 {
   "name": "mtg_pine_tree",
   "id": 487,
+  "hardness": 2,
   "types": [
     "building"
   ],

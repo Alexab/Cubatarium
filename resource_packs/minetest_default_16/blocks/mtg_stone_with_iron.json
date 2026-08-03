@@ -1,6 +1,7 @@
 {
   "name": "mtg_stone_with_iron",
   "id": 509,
+  "hardness": 3,
   "types": [
     "building"
   ],

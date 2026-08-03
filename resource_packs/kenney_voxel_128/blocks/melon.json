@@ -1,6 +1,7 @@
 {
   "name": "melon",
   "id": 71,
+  "hardness": 1,
   "types": [
     "natural",
     "plants"

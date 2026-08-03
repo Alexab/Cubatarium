@@ -1,6 +1,7 @@
 {
   "name": "fire",
   "id": 4,
+  "hardness": 100,
   "types": [
     "natural"
   ],

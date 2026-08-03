@@ -1,6 +1,7 @@
 {
   "name": "mtg_jungletree",
   "id": 463,
+  "hardness": 2,
   "types": [
     "building"
   ],

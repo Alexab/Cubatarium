@@ -1,6 +1,7 @@
 {
   "name": "iron_bars",
   "id": 642,
+  "hardness": 5,
   "types": [
     "natural"
   ],

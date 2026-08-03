@@ -1,6 +1,7 @@
 {
   "name": "tree_bark",
   "id": 110,
+  "hardness": 2,
   "types": [
     "natural",
     "plants"

@@ -1,6 +1,7 @@
 {
   "name": "cake",
   "id": 891,
+  "hardness": 0.5,
   "types": [
     "natural"
   ],

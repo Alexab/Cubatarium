@@ -1,6 +1,7 @@
 {
   "name": "mtg_wood",
   "id": 516,
+  "hardness": 2,
   "types": [
     "building"
   ],

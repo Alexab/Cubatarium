@@ -1,6 +1,7 @@
 {
   "name": "hopper",
   "id": 910,
+  "hardness": 3,
   "types": [
     "natural"
   ],

@@ -1,6 +1,7 @@
 {
   "name": "brown_mushroom_block",
   "id": 352,
+  "hardness": 0.2,
   "types": [
     "natural"
   ],

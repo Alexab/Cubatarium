@@ -1,6 +1,7 @@
 {
   "name": "mtg_stonebrick",
   "id": 512,
+  "hardness": 1.5,
   "types": [
     "building"
   ],

@@ -1,6 +1,7 @@
 {
   "name": "planks_spruce",
   "id": 673,
+  "hardness": 2,
   "types": [
     "natural"
   ],

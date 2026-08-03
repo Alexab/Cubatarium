@@ -1,6 +1,7 @@
 {
   "name": "mtg_mese",
   "id": 471,
+  "hardness": 5,
   "types": [
     "building"
   ],

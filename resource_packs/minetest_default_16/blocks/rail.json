@@ -1,6 +1,7 @@
 {
   "name": "rail",
   "id": 538,
+  "hardness": 0.7,
   "types": [
     "natural"
   ],

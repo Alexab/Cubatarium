@@ -1,6 +1,7 @@
 {
   "name": "cauldron",
   "id": 356,
+  "hardness": 2,
   "types": [
     "natural"
   ],

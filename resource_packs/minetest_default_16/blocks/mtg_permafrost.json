@@ -1,6 +1,7 @@
 {
   "name": "mtg_permafrost",
   "id": 479,
+  "hardness": 1,
   "types": [
     "building"
   ],

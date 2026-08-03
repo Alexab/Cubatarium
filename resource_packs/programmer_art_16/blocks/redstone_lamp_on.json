@@ -1,6 +1,7 @@
 {
   "name": "redstone_lamp_on",
   "id": 678,
+  "hardness": 0.3,
   "types": [
     "natural"
   ],

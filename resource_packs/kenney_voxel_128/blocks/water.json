@@ -1,6 +1,7 @@
 {
   "name": "water",
   "id": 91,
+  "hardness": 100,
   "types": [
     "fluid",
     "natural"

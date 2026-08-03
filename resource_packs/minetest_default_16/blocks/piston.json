@@ -1,6 +1,7 @@
 {
   "name": "piston",
   "id": 529,
+  "hardness": 0.5,
   "types": [
     "natural"
   ],

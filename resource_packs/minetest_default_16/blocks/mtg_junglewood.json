@@ -1,6 +1,7 @@
 {
   "name": "mtg_junglewood",
   "id": 464,
+  "hardness": 2,
   "types": [
     "building"
   ],

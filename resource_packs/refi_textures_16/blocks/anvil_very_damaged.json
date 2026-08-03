@@ -1,6 +1,7 @@
 {
   "name": "anvil_very_damaged",
   "id": 735,
+  "hardness": 5,
   "types": [
     "natural"
   ],

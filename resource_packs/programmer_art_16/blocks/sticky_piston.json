@@ -1,6 +1,7 @@
 {
   "name": "sticky_piston",
   "id": 694,
+  "hardness": 0.5,
   "types": [
     "natural"
   ],

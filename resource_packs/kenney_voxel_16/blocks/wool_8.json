@@ -1,6 +1,7 @@
 {
   "name": "wool_8",
   "id": 166,
+  "hardness": 0.8,
   "types": [
     "decorative"
   ],

@@ -1,6 +1,7 @@
 {
   "name": "mtg_cactus",
   "id": 420,
+  "hardness": 0.4,
   "types": [
     "building"
   ],

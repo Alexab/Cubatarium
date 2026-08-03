@@ -1,6 +1,7 @@
 {
   "name": "mtg_diamondblock",
   "id": 441,
+  "hardness": 5,
   "types": [
     "building"
   ],

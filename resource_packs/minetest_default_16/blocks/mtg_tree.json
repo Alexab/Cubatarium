@@ -1,6 +1,7 @@
 {
   "name": "mtg_tree",
   "id": 514,
+  "hardness": 2,
   "types": [
     "building"
   ],

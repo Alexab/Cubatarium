@@ -1,6 +1,7 @@
 {
   "name": "lily_pad",
   "id": 782,
+  "hardness": 0.1,
   "types": [
     "natural",
     "plants"

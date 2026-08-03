@@ -1,6 +1,7 @@
 {
   "name": "nether_quartz_ore",
   "id": 660,
+  "hardness": 3,
   "types": [
     "natural"
   ],

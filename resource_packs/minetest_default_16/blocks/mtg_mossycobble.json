@@ -1,6 +1,7 @@
 {
   "name": "mtg_mossycobble",
   "id": 473,
+  "hardness": 2,
   "types": [
     "building"
   ],

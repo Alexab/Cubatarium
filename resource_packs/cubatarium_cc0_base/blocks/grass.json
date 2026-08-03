@@ -1,6 +1,7 @@
 {
   "name": "grass",
   "id": 5,
+  "hardness": 0.6,
   "types": [
     "natural",
     "plants"

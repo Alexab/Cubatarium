@@ -1,6 +1,7 @@
 {
   "name": "web",
   "id": 710,
+  "hardness": 4,
   "types": [
     "decorative",
     "misc"

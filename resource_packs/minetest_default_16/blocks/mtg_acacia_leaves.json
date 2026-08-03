@@ -1,6 +1,7 @@
 {
   "name": "mtg_acacia_leaves",
   "id": 404,
+  "hardness": 0.2,
   "types": [
     "building"
   ],

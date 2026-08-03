@@ -1,6 +1,7 @@
 {
   "name": "blockIron",
   "id": 56,
+  "hardness": 5,
   "types": [
     "building"
   ],

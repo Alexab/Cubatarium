@@ -1,6 +1,7 @@
 {
   "name": "mtg_sand_with_kelp",
   "id": 491,
+  "hardness": 0.5,
   "types": [
     "building"
   ],

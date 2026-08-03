@@ -1,6 +1,7 @@
 {
   "name": "stonebrick",
   "id": 817,
+  "hardness": 1.5,
   "types": [
     "natural"
   ],

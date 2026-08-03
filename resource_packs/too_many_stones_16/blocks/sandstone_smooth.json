@@ -1,6 +1,7 @@
 {
   "name": "sandstone_smooth",
   "id": 994,
+  "hardness": 0.8,
   "types": [
     "natural"
   ],

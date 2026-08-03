@@ -1,6 +1,7 @@
 {
   "name": "glowstone",
   "id": 376,
+  "hardness": 0.3,
   "types": [
     "natural"
   ],

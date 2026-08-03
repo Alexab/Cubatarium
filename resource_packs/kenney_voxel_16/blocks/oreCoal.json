@@ -1,6 +1,7 @@
 {
   "name": "oreCoal",
   "id": 131,
+  "hardness": 3,
   "types": [
     "natural"
   ],

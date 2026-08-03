@@ -1,6 +1,7 @@
 {
   "name": "bookshelf",
   "id": 613,
+  "hardness": 1.5,
   "types": [
     "building",
     "decorative"

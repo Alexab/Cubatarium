@@ -1,6 +1,7 @@
 {
   "name": "mtg_leaves",
   "id": 469,
+  "hardness": 0.2,
   "types": [
     "building"
   ],

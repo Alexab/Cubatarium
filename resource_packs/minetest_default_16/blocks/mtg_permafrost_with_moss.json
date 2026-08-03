@@ -1,6 +1,7 @@
 {
   "name": "mtg_permafrost_with_moss",
   "id": 480,
+  "hardness": 1,
   "types": [
     "building"
   ],

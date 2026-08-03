@@ -1,6 +1,7 @@
 {
   "name": "hellsand",
   "id": 380,
+  "hardness": 0.5,
   "types": [
     "natural"
   ],

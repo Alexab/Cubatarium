@@ -1,6 +1,7 @@
 {
   "name": "glass",
   "id": 64,
+  "hardness": 0.3,
   "types": [
     "building",
     "decorative"

@@ -1,6 +1,7 @@
 {
   "name": "mtg_copperblock",
   "id": 426,
+  "hardness": 5,
   "types": [
     "building"
   ],

@@ -1,6 +1,7 @@
 {
   "name": "mtg_ice",
   "id": 459,
+  "hardness": 0.3,
   "types": [
     "natural"
   ],

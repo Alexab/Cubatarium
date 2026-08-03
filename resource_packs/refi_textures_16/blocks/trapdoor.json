@@ -1,6 +1,7 @@
 {
   "name": "trapdoor",
   "id": 827,
+  "hardness": 3,
   "types": [
     "natural"
   ],

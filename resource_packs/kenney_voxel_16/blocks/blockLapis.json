@@ -1,6 +1,7 @@
 {
   "name": "blockLapis",
   "id": 115,
+  "hardness": 3,
   "types": [
     "building"
   ],

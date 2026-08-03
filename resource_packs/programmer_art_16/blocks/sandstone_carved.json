@@ -1,6 +1,7 @@
 {
   "name": "sandstone_carved",
   "id": 686,
+  "hardness": 0.8,
   "types": [
     "natural"
   ],

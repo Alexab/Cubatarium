@@ -1,6 +1,7 @@
 {
   "name": "tree_birch",
   "id": 960,
+  "hardness": 2,
   "types": [
     "natural"
   ],

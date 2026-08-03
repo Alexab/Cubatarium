@@ -1,6 +1,7 @@
 {
   "name": "flower_pot",
   "id": 761,
+  "hardness": 0.1,
   "types": [
     "natural"
   ],

@@ -1,6 +1,7 @@
 {
   "name": "mob_spawner",
   "id": 658,
+  "hardness": 5,
   "types": [
     "natural"
   ],

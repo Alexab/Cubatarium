@@ -1,6 +1,7 @@
 {
   "name": "mtg_acacia_tree",
   "id": 406,
+  "hardness": 2,
   "types": [
     "building"
   ],

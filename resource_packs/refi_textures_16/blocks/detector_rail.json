@@ -1,6 +1,7 @@
 {
   "name": "detector_rail",
   "id": 750,
+  "hardness": 0.7,
   "types": [
     "natural"
   ],

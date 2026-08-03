@@ -1,6 +1,7 @@
 {
   "name": "oreEmerald",
   "id": 524,
+  "hardness": 3,
   "types": [
     "natural"
   ],

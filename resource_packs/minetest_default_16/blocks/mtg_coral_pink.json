@@ -1,6 +1,7 @@
 {
   "name": "mtg_coral_pink",
   "id": 431,
+  "hardness": 1.5,
   "types": [
     "building"
   ],

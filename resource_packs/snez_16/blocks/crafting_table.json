@@ -1,6 +1,7 @@
 {
   "name": "crafting_table",
   "id": 894,
+  "hardness": 2.5,
   "types": [
     "natural"
   ],

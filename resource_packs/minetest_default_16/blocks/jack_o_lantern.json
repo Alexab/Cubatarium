@@ -1,6 +1,7 @@
 {
   "name": "jack_o_lantern",
   "id": 385,
+  "hardness": 1,
   "types": [
     "natural"
   ],

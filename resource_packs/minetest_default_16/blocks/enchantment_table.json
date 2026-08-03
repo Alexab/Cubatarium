@@ -1,6 +1,7 @@
 {
   "name": "enchantment_table",
   "id": 365,
+  "hardness": 5,
   "types": [
     "natural"
   ],

@@ -1,6 +1,7 @@
 {
   "name": "daylight_sensor",
   "id": 360,
+  "hardness": 0.2,
   "types": [
     "natural"
   ],

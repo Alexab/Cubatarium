@@ -1,6 +1,7 @@
 {
   "name": "mtg_acacia_bush_stem",
   "id": 403,
+  "hardness": 2,
   "types": [
     "building"
   ],

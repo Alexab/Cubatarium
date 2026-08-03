@@ -1,6 +1,7 @@
 {
   "name": "mtg_cloud",
   "id": 423,
+  "hardness": 0.5,
   "types": [
     "building"
   ],

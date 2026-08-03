@@ -1,6 +1,7 @@
 {
   "name": "mtg_silver_sandstone_block",
   "id": 498,
+  "hardness": 0.8,
   "types": [
     "building"
   ],

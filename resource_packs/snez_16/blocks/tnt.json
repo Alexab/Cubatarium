@@ -1,6 +1,7 @@
 {
   "name": "tnt",
   "id": 957,
+  "hardness": 0.1,
   "types": [
     "natural"
   ],

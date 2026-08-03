@@ -1,6 +1,7 @@
 {
   "name": "mtg_meselamp",
   "id": 472,
+  "hardness": 0.3,
   "types": [
     "building"
   ],

@@ -1,6 +1,7 @@
 {
   "name": "mtg_dry_dirt_with_dry_grass",
   "id": 450,
+  "hardness": 0.6,
   "types": [
     "building"
   ],

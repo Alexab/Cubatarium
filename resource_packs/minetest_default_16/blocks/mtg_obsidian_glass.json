@@ -1,6 +1,7 @@
 {
   "name": "mtg_obsidian_glass",
   "id": 476,
+  "hardness": 3,
   "types": [
     "building"
   ],

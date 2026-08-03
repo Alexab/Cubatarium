@@ -1,6 +1,7 @@
 {
   "name": "leaves_jungle",
   "id": 776,
+  "hardness": 0.2,
   "types": [
     "natural",
     "plants"
