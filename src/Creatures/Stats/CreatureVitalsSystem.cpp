@@ -150,7 +150,8 @@ bool CreatureVitalsSystem::ApplyDamage(UWorld &world, UCreature &target,
   }
   CreatureVitals &v = target.GetVitals();
   float mitigated = amount;
-  // Influence hits are already mitigated via ResolveHitParams / armor_groups.
+  // reason "influence": already group-mitigated (ResolveHitParams). Other
+  // reasons (starve/drown/status/null) still use flat armor*0.5.
   const bool pre_mitigated =
       reason && (std::strcmp(reason, "influence") == 0);
   if (!pre_mitigated)

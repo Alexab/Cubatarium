@@ -7,7 +7,6 @@
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-BB-002 | plan | Remove or repurpose UI `BreakDurationSeconds` | Kept as legacy setting; Survival dig uses hardness/tools; Creative is instant | backlog |
 | TD-BB-003 | plan | Sample block texture color for break particles | Neutral gray-brown debris shipped; atlas average-color needs texture read path | backlog |
 | TD-BB-005 | plan | Hardness table completeness vs Minecraft wiki | Exact+pattern table covers current 291 pack names (0 fallback); rare new names still get 1.0 | backlog |
 
@@ -15,7 +14,8 @@
 
 | ID | Closed in | Resolution |
 |----|-----------|------------|
-| TD-BB-001 | deep-refactor | Tool mining wired: `ResolveDigParams` in dig path (groupcaps × dig groups / InferDigGroups; hardness baseline for hand). Further Dig-via-Influence = TD-INF-013. |
+| TD-BB-001 | deep-refactor | Tool mining wired: `ResolveDigParams` in dig path (groupcaps × dig groups / InferDigGroups; hardness baseline for hand). Dig-via-Influence = TD-INF-013 (closed Wave 3). |
+| TD-BB-002 | Wave 5 | `UiSettings::BreakDurationSeconds` deprecated/unused by dig; dig time from ResolveDigParams only |
 | TD-BB-004 | 2026-08 | Wireframe fallback in `RenderBlockCrackOverlay` when destroy_stage textures/shader unavailable; textured path via `UBlockCrackOverlayPass` |
 | TD-BB-000 | 2026-08 | Hardness field + mode-aware dig + Creative instant; defaults applied to packs; crack stages + debris FX; C++ tests; `validate_content_completeness.py` in smoke |
 ## Ownership (parallel agents)

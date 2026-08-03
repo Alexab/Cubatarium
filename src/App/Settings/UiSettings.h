@@ -28,6 +28,8 @@ struct UiSettings
   ControlScheme ControlScheme{ControlScheme::Classic};
   float PlaceClickMaxSeconds{0.20f};
   float BreakHoldMinSeconds{0.50f};
+  /// Deprecated: unused by dig (ResolveDigParams / DigSession). Kept for
+  /// config round-trip only; do not wire into Influence Dig.
   float BreakDurationSeconds{0.25f};
   /// Cubatarium only: RMB drag distance before treating as camera look.
   int RmbDragThresholdPx{4};

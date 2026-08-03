@@ -39,3 +39,12 @@ Creative ignores difficulty for vitals (frozen). Wear/combat still consult ModeP
 - else → true
 
 Applies on dig complete **and** successful melee hit (same `ApplyItemWear`).
+
+## Damage reasons (`CreatureVitalsSystem::ApplyDamage`)
+
+| reason | Mitigation |
+|--------|------------|
+| `"influence"` | Pre-mitigated by `ResolveHitParams` / armor_groups — **no** flat `armor*0.5` |
+| `"starve"` / `"drown"` / `"status"` / null | Flat `armor*0.5` still applied |
+
+Creative: all ApplyDamage no-ops.
