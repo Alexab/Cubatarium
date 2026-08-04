@@ -196,7 +196,8 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
   panel->AddChild(std::move(tooltip));
 
   auto usageHint = std::make_unique<UGuiLabel>(
-      Theme, "Click → selected hotbar slot · Drag onto hotbar");
+      Theme,
+      "Tool = hotbar slot (1-0). Click → selected slot · Drag onto bottom hotbar");
   usageHint->SetUseSecondaryColor(true);
   usageHint->SetVisible(false);
   UsageHintLabel = usageHint.get();
@@ -229,9 +230,29 @@ void UCreativePaletteScreen::RelayoutPanel()
   {
     return;
   }
-  const DockedLayout layout = DockedOverlayLayout::Compute(
+  DockedLayout layout = DockedOverlayLayout::Compute(
       ViewportW, ViewportH, GetContentOffsetX(), GetContentOffsetY(), 70, 28,
       *Theme);
+  const int slotSize = Theme->HotbarSlotSize;
+  const int hotbarReserve =
+      slotSize + Theme->HotbarMarginBottom + Theme->Padding * 2;
+  const int maxPanelH =
+      std::max(Scaled(120), ViewportH - hotbarReserve - ViewportH / 12);
+  if (layout.main.H > maxPanelH)
+  {
+    const int shrink = layout.main.H - maxPanelH;
+    layout.main.H = maxPanelH;
+    layout.main.Y += shrink / 2;
+    layout.preview.H = maxPanelH;
+    layout.preview.Y = layout.main.Y;
+  }
+  const int maxBottom =
+      GetContentOffsetY() + ViewportH - hotbarReserve;
+  if (layout.main.Y + layout.main.H > maxBottom)
+  {
+    layout.main.Y = maxBottom - layout.main.H;
+    layout.preview.Y = layout.main.Y;
+  }
   if (RootShell)
   {
     RootShell->SetBounds(
@@ -247,12 +268,6 @@ void UCreativePaletteScreen::RelayoutPanel()
   const int panelY = layout.main.Y;
   const int panelW = layout.main.W;
   const int panelH = layout.main.H;
-  const int slotSize = Theme->HotbarSlotSize;
-  const int hotbarReserve =
-      slotSize + Theme->HotbarMarginBottom + Theme->Padding * 2;
-  const int maxPanelH =
-      std::max(Scaled(120), ViewportH - hotbarReserve - ViewportH / 12);
-  (void)maxPanelH;
 
   const int pad = Theme->Padding;
   const int tabH = Theme->TabBarHeight;

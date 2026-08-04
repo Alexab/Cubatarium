@@ -321,7 +321,8 @@ void UApplication::Startup(const std::string &configPath)
     {
       auto fpView = std::make_unique<UFpViewmodelRenderer>(
           Core->GetItemDefinitionStorage(), BlockDefinitions,
-          Core->GetTextureCubeStorage(), ShaderManager);
+          Core->GetTextureCubeStorage(), Core->GetCreatureTextureStorage(),
+          ShaderManager);
       if (fpView->Initialize())
       {
         FpViewmodelRenderer = std::move(fpView);
@@ -1451,6 +1452,15 @@ bool UApplication::ResolveSlotAt(int x, int y, SlotAddress &out)
       out.surface = SlotSurface::CharacterOffhand;
       return true;
     }
+    // Main on the sheet mirrors the active hotbar slot (right hand).
+    if (CharacterSheetScreen->PickMainSlot(x, y) && GameSession)
+    {
+      out = SlotAddress{};
+      out.surface = SlotSurface::Hotbar;
+      out.bar = 0;
+      out.slot = GameSession->GetSelectedSlot(0);
+      return true;
+    }
   }
   if (PaletteOpen && PaletteScreen && PaletteScreen->PickSlot(x, y, out))
   {
@@ -1829,6 +1839,8 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
         fpParams.FramebufferH = height;
         fpParams.Active = inv.GetActiveEntryRef();
         fpParams.Offhand = &inv.GetEquippedOffhand();
+        fpParams.SpeciesId = creature->GetTypeId();
+        fpParams.SkinId = creature->GetSkinId();
         FpViewmodelRenderer->DrawWorldOverlay(fpParams);
       }
     }

@@ -10,12 +10,14 @@ Data-driven tools for player / bot / mobs (shared `UCreature` inventory + attrib
 
 ### How to equip (Creative)
 
-1. Open palette → **Tools**.
+There is **no separate “equip to hand” action**. The **active hotbar slot** *is* the right hand (FP viewmodel / dig / place). Character sheet **Main** mirrors that slot.
+
+1. Open palette → **Tools** (leave the bottom hotbar visible — drag target).
 2. Pick a sub-tab (Mining / Utility / Armor / …).
-3. **Click** an item to assign it to the **currently selected hotbar slot**, or **drag** onto a hotbar slot.
-4. Hotbar keys `1–9` / `0` select the active tool/block (right FP hand when Perspective + `ShowFpWield`).
+3. **Click** an item to assign it to the **currently selected hotbar slot**, or **drag** onto a bottom hotbar slot (or onto sheet **Main**).
+4. Hotbar keys `1–9` / `0` (or wheel in Perspective) select the active tool/block.
 5. **Armor**: open character sheet (**C**), drag armor from Tools → Armor onto paper-doll slots (Head/Chest/…).
-6. **Offhand**: on the character sheet, drag an Item or Block onto **Offhand** (beside Feet) — shown in the left FP hand.
+6. **Offhand**: on the character sheet, drag an Item or Block onto **Offhand** — left FP hand.
 
 Or: `/give <item_id>` into the active hotbar slot.
 

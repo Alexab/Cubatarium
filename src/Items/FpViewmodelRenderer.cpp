@@ -2,6 +2,9 @@
 
 #include "App/Platform/IUPlatformPaths.h"
 #include "Blocks/BlockDefinitionStorage.h"
+#include "Creatures/Visual/CreaturePartMeshData.h"
+#include "Creatures/Visual/CreatureTextureResolver.h"
+#include "Creatures/Visual/CreatureTextureStorage.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Render/Engine/ShaderManager.h"
@@ -16,6 +19,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -37,8 +41,16 @@ constexpr float kPi = 3.14159265358979323846f;
 
 const glm::vec3 kEye{0.f, 0.05f, 0.0f};
 const glm::vec3 kTarget{0.15f, -0.35f, -0.85f};
-const glm::vec3 kHandSocketR{0.32f, -0.05f, -0.30f};
-const glm::vec3 kHandSocketL{-0.32f, -0.05f, -0.30f};
+// Local arm space: hangs along -Y; BuildRootMatrix tilts toward camera (-Z).
+const glm::vec3 kHandSocketR{0.06f, -0.50f, 0.04f};
+const glm::vec3 kHandSocketL{-0.06f, -0.50f, 0.04f};
+
+// Classic Steve rightArm UV origin on player_skin_atlas (see human geometry).
+constexpr int kArmUvU = 40;
+constexpr int kArmUvV = 16;
+constexpr int kArmUvW = 4;
+constexpr int kArmUvH = 12;
+constexpr int kArmUvD = 4;
 
 glm::vec3 ReadVec3(const nlohmann::json &arr, const glm::vec3 &fallback)
 {
@@ -63,15 +75,90 @@ float UnwrapDeltaDeg(float from, float to)
   }
   return d;
 }
+
+struct FaceUvPixels
+{
+  int u0, v0, u1, v1;
+};
+
+enum class UvCorner : uint8_t
+{
+  Bl,
+  Br,
+  Tl,
+  Tr,
+};
+
+constexpr UvCorner kFaceUvCorners[6][4] = {
+    {UvCorner::Bl, UvCorner::Br, UvCorner::Tl, UvCorner::Tr},
+    {UvCorner::Bl, UvCorner::Br, UvCorner::Tl, UvCorner::Tr},
+    {UvCorner::Br, UvCorner::Bl, UvCorner::Tr, UvCorner::Tl},
+    {UvCorner::Tr, UvCorner::Br, UvCorner::Tl, UvCorner::Bl},
+    {UvCorner::Bl, UvCorner::Br, UvCorner::Tl, UvCorner::Tr},
+    {UvCorner::Bl, UvCorner::Br, UvCorner::Tr, UvCorner::Tl},
+};
+
+FaceUvPixels ArmFacePixels(int faceIndex)
+{
+  const int u = kArmUvU;
+  const int v = kArmUvV;
+  const int w = kArmUvW;
+  const int h = kArmUvH;
+  const int d = kArmUvD;
+  switch (faceIndex)
+  {
+  case 0:
+    return {u + d + w + d, v + d, u + d + w + d + w, v + d + h};
+  case 1:
+    return {u + d + w, v + d, u + d + w + d, v + d + h};
+  case 2:
+    return {u + d, v + d, u + d + w, v + d + h};
+  case 3:
+    return {u, v + d, u + d, v + d + h};
+  case 4:
+    return {u + d, v, u + d + w, v + d};
+  case 5:
+    return {u + d + w, v, u + d + w + w, v + d};
+  default:
+    return {u, v, u + 1, v + 1};
+  }
+}
+
+void GlUvForCorner(UvCorner corner, float u0, float v0, float u1, float v1,
+                   float &outU, float &outV)
+{
+  switch (corner)
+  {
+  case UvCorner::Bl:
+    outU = u0;
+    outV = v1;
+    break;
+  case UvCorner::Br:
+    outU = u1;
+    outV = v1;
+    break;
+  case UvCorner::Tl:
+    outU = u0;
+    outV = v0;
+    break;
+  case UvCorner::Tr:
+    outU = u1;
+    outV = v0;
+    break;
+  }
+}
 } // namespace
 
 UFpViewmodelRenderer::UFpViewmodelRenderer(
     std::shared_ptr<UItemDefinitionStorage> items,
     std::shared_ptr<UBlockDefinitionStorage> blocks,
     std::shared_ptr<UTextureCubeStorage> textures,
+    std::shared_ptr<UCreatureTextureStorage> creatureTextures,
     std::shared_ptr<UShaderManager> shaderManager)
     : Items(std::move(items)), Blocks(std::move(blocks)),
-      Textures(std::move(textures)), ShaderManager(std::move(shaderManager))
+      Textures(std::move(textures)),
+      CreatureTextures(std::move(creatureTextures)),
+      ShaderManager(std::move(shaderManager))
 {
 }
 
@@ -115,21 +202,28 @@ void UFpViewmodelRenderer::Shutdown()
   delTex(SleeveTex);
   delTex(MetalTex);
   delTex(WoodTex);
-  if (CubeEbo != 0)
-  {
-    glDeleteBuffers(1, &CubeEbo);
-    CubeEbo = 0;
-  }
-  if (CubeVbo != 0)
-  {
-    glDeleteBuffers(1, &CubeVbo);
-    CubeVbo = 0;
-  }
-  if (CubeVao != 0)
-  {
-    glDeleteVertexArrays(1, &CubeVao);
-    CubeVao = 0;
-  }
+  auto delBuf = [](GLuint &b) {
+    if (b != 0)
+    {
+      glDeleteBuffers(1, &b);
+      b = 0;
+    }
+  };
+  auto delVao = [](GLuint &v) {
+    if (v != 0)
+    {
+      glDeleteVertexArrays(1, &v);
+      v = 0;
+    }
+  };
+  delBuf(CubeEbo);
+  delBuf(CubeVbo);
+  delVao(CubeVao);
+  delBuf(ArmSkinEbo);
+  delBuf(ArmSkinVbo);
+  delVao(ArmSkinVao);
+  ArmSkinTexW = 0;
+  ArmSkinTexH = 0;
   Shader.reset();
 }
 
@@ -176,6 +270,81 @@ bool UFpViewmodelRenderer::InitCubeMesh()
   return true;
 }
 
+bool UFpViewmodelRenderer::EnsureArmSkinMesh(int texW, int texH)
+{
+  if (texW <= 0 || texH <= 0)
+  {
+    return false;
+  }
+  if (ArmSkinVao != 0 && ArmSkinTexW == texW && ArmSkinTexH == texH)
+  {
+    return true;
+  }
+  if (ArmSkinEbo != 0)
+  {
+    glDeleteBuffers(1, &ArmSkinEbo);
+    ArmSkinEbo = 0;
+  }
+  if (ArmSkinVbo != 0)
+  {
+    glDeleteBuffers(1, &ArmSkinVbo);
+    ArmSkinVbo = 0;
+  }
+  if (ArmSkinVao != 0)
+  {
+    glDeleteVertexArrays(1, &ArmSkinVao);
+    ArmSkinVao = 0;
+  }
+
+  float posUv[24 * 5];
+  int idx = 0;
+  const float tw = static_cast<float>(texW);
+  const float th = static_cast<float>(texH);
+  constexpr float kUvInsetPx = 0.5f;
+  for (int face = 0; face < 6; ++face)
+  {
+    const FaceUvPixels px = ArmFacePixels(face);
+    const float u0 = (static_cast<float>(px.u0) + kUvInsetPx) / tw;
+    const float v0 = (static_cast<float>(px.v0) + kUvInsetPx) / th;
+    const float u1 = (static_cast<float>(px.u1) - kUvInsetPx) / tw;
+    const float v1 = (static_cast<float>(px.v1) - kUvInsetPx) / th;
+    const int base = face * 4;
+    for (int i = 0; i < 4; ++i)
+    {
+      posUv[idx++] = kCreaturePartPositions[(base + i) * 3 + 0];
+      posUv[idx++] = kCreaturePartPositions[(base + i) * 3 + 1];
+      posUv[idx++] = kCreaturePartPositions[(base + i) * 3 + 2];
+      float tu = 0.f;
+      float tv = 0.f;
+      GlUvForCorner(kFaceUvCorners[face][i], u0, v0, u1, v1, tu, tv);
+      posUv[idx++] = tu;
+      posUv[idx++] = tv;
+    }
+  }
+  const unsigned int indices[] = {
+      0,  1,  2,  2,  1,  3,  4,  5,  6,  6,  5,  7,  8,  9,  10, 10, 9,  11,
+      12, 13, 14, 14, 13, 15, 16, 17, 18, 18, 17, 19, 20, 21, 22, 22, 21, 23,
+  };
+
+  glGenVertexArrays(1, &ArmSkinVao);
+  glGenBuffers(1, &ArmSkinVbo);
+  glGenBuffers(1, &ArmSkinEbo);
+  glBindVertexArray(ArmSkinVao);
+  glBindBuffer(GL_ARRAY_BUFFER, ArmSkinVbo);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(posUv), posUv, GL_STATIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ArmSkinEbo);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+                        reinterpret_cast<void *>(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
+  glBindVertexArray(0);
+  ArmSkinTexW = texW;
+  ArmSkinTexH = texH;
+  return ArmSkinVao != 0;
+}
+
 GLuint UFpViewmodelRenderer::SolidTex(unsigned char r, unsigned char g,
                                       unsigned char b)
 {
@@ -194,10 +363,12 @@ GLuint UFpViewmodelRenderer::SolidTex(unsigned char r, unsigned char g,
 std::vector<UFpViewmodelRenderer::Part>
 UFpViewmodelRenderer::ArmPartsRight() const
 {
-  return {
-      Part{0.22f, -0.42f, -0.55f, 0.18f, 0.50f, 0.18f, 55, 70, 110},
-      Part{0.26f, -0.18f, -0.38f, 0.14f, 0.14f, 0.14f, 210, 160, 120},
-  };
+  // Local -Y hang: sleeve then hand; skin atlas on both when available.
+  Part sleeve{0.0f, -0.22f, 0.0f, 0.16f, 0.42f, 0.16f, 55, 70, 110};
+  sleeve.useSkinAtlas = true;
+  Part hand{0.0f, -0.48f, 0.02f, 0.15f, 0.15f, 0.15f, 210, 160, 120};
+  hand.useSkinAtlas = true;
+  return {sleeve, hand};
 }
 
 std::vector<UFpViewmodelRenderer::Part>
@@ -327,23 +498,49 @@ glm::mat4 UFpViewmodelRenderer::BuildRootMatrix(bool mirrorX) const
                                            glm::vec3(0.f, 1.f, 0.f));
     swing = glm::mat4_cast(glm::slerp(idle, punch, t));
   }
-  glm::mat4 root =
-      glm::translate(glm::mat4(1.f), glm::vec3(ox, oy, oz)) * swing;
+
+  // Idle: local -Y arm → camera forward (-Z), slight inward yaw.
+  const glm::quat orient =
+      glm::angleAxis(glm::radians(-78.f), glm::vec3(1.f, 0.f, 0.f)) *
+      glm::angleAxis(glm::radians(mirrorX ? -14.f : 14.f),
+                     glm::vec3(0.f, 1.f, 0.f));
+  const float basex = (mirrorX ? -0.28f : 0.28f) + ox;
+  const float basey = -0.12f + oy;
+  const float basez = -0.32f + oz;
+  glm::mat4 root = glm::translate(glm::mat4(1.f), glm::vec3(basex, basey, basez)) *
+                   glm::mat4_cast(orient) * swing;
   if (mirrorX)
   {
-    root = glm::scale(root, glm::vec3(-1.f, 1.f, 1.f));
+    root = root * glm::scale(glm::mat4(1.f), glm::vec3(-1.f, 1.f, 1.f));
   }
   return root;
 }
 
 void UFpViewmodelRenderer::DrawParts(const std::vector<Part> &parts,
-                                     const glm::mat4 &mvpBase)
+                                     const glm::mat4 &mvpBase, GLuint skinAtlas)
 {
-  glBindVertexArray(CubeVao);
+  GLint skinW = 0;
+  GLint skinH = 0;
+  const bool haveSkin = skinAtlas != 0;
+  if (haveSkin)
+  {
+    glBindTexture(GL_TEXTURE_2D, skinAtlas);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &skinW);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &skinH);
+    EnsureArmSkinMesh(skinW, skinH);
+  }
+
   for (const Part &p : parts)
   {
+    const bool skinPart = p.useSkinAtlas && haveSkin && ArmSkinVao != 0;
     GLuint tex = MetalTex;
-    if (p.g > 140 && p.b < 140)
+    GLuint vao = CubeVao;
+    if (skinPart)
+    {
+      tex = skinAtlas;
+      vao = ArmSkinVao;
+    }
+    else if (p.g > 140 && p.b < 140)
     {
       tex = SkinTex;
     }
@@ -357,6 +554,7 @@ void UFpViewmodelRenderer::DrawParts(const std::vector<Part> &parts,
     }
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, tex != 0 ? tex : MetalTex);
+    glBindVertexArray(vao);
     const glm::mat4 model =
         glm::translate(glm::mat4(1.f), glm::vec3(p.ox, p.oy, p.oz)) *
         glm::scale(glm::mat4(1.f), glm::vec3(p.sx, p.sy, p.sz));
@@ -396,6 +594,7 @@ UFpViewmodelRenderer::ToolParts(const std::string &itemId,
                 ReadVec3(partJson.value("size", nlohmann::json::array()),
                          glm::vec3(0.2f));
             Part p;
+            // Tool JSON is Y-up; local arm hangs along -Y → root tilts to -Z.
             p.ox = socket.x + off.x * 0.55f;
             p.oy = socket.y + off.y * 0.55f;
             p.oz = socket.z + off.z * 0.55f;
@@ -428,7 +627,7 @@ UFpViewmodelRenderer::ToolParts(const std::string &itemId,
   }
   if (parts.empty())
   {
-    parts.push_back(Part{socket.x + 0.05f, socket.y + 0.05f, socket.z, 0.08f,
+    parts.push_back(Part{socket.x + 0.05f, socket.y - 0.05f, socket.z, 0.08f,
                          0.35f, 0.08f, 185, 190, 200});
   }
   return parts;
@@ -444,7 +643,7 @@ void UFpViewmodelRenderer::DrawHeld(const InventoryEntryRef *entry,
   }
   if (entry->kind == InventoryEntryKind::Item && !entry->broken)
   {
-    DrawParts(ToolParts(entry->Id, socket), mvpBase);
+    DrawParts(ToolParts(entry->Id, socket), mvpBase, 0);
     return;
   }
   if (entry->kind == InventoryEntryKind::Block)
@@ -479,6 +678,17 @@ GLuint UFpViewmodelRenderer::ResolveBlockAtlas(const std::string &typeName) cons
     }
   }
   return 0;
+}
+
+GLuint UFpViewmodelRenderer::ResolvePlayerSkin(const std::string &speciesId,
+                                               const std::string &skinId) const
+{
+  if (!CreatureTextures)
+  {
+    return 0;
+  }
+  return ResolveCreatureSpeciesTexture(*CreatureTextures, speciesId, "diffuse",
+                                       "body", skinId);
 }
 
 bool UFpViewmodelRenderer::TryDrawSkinnedArms(const glm::mat4 &, bool)
@@ -533,6 +743,8 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
   const glm::mat4 view =
       glm::lookAt(kEye, kTarget, glm::vec3(0.f, 1.f, 0.f));
   const glm::mat4 pv = projection * view;
+  const GLuint skinAtlas =
+      ResolvePlayerSkin(params.SpeciesId, params.SkinId);
 
   Shader->Use();
   Shader->SetInt("texture0", 0);
@@ -542,14 +754,14 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
   const glm::mat4 rootR = BuildRootMatrix(false);
   if (!TryDrawSkinnedArms(pv * rootR, false))
   {
-    DrawParts(ArmPartsRight(), pv * rootR);
+    DrawParts(ArmPartsRight(), pv * rootR, skinAtlas);
   }
   DrawHeld(params.Active, kHandSocketR, pv * rootR);
 
   const glm::mat4 rootL = BuildRootMatrix(true);
   if (!TryDrawSkinnedArms(pv * rootL, true))
   {
-    DrawParts(ArmPartsLeft(), pv * rootL);
+    DrawParts(ArmPartsLeft(), pv * rootL, skinAtlas);
   }
   DrawHeld(params.Offhand, kHandSocketL, pv * rootL);
 

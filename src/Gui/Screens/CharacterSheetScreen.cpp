@@ -171,9 +171,38 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
     for (int i = 0; i < 2; ++i)
     {
       auto slot = std::make_unique<UGuiSlot>(&theme);
-      slot->SetLabel(i == 0 ? "Main" : "Offhand");
+      slot->SetLabel(i == 0 ? "Main (=hotbar)" : "Offhand");
       slot->SetIconTexture(0);
-      if (i == 1)
+      if (i == 0)
+      {
+        slot->SetOnBeginDrag([this]() {
+          auto *session = dynamic_cast<UGameSession *>(Stats);
+          if (!session)
+          {
+            return;
+          }
+          SlotAddress address;
+          address.surface = SlotSurface::Hotbar;
+          address.bar = 0;
+          address.slot = session->GetSelectedSlot(0);
+          const InventoryEntryRef entry =
+              session->GetHotbarEntryRef(address.bar, address.slot);
+          if (!entry.empty)
+          {
+            session->BeginDragFromSlot(address, entry);
+          }
+        });
+        slot->SetOnClick([this]() {
+          auto *session = dynamic_cast<UGameSession *>(Stats);
+          if (!session)
+          {
+            return;
+          }
+          const size_t slot = session->GetSelectedSlot(0);
+          session->ApplyPendingAssignment(0, slot);
+        });
+      }
+      else
       {
         SlotAddress address;
         address.surface = SlotSurface::CharacterOffhand;
@@ -387,6 +416,15 @@ bool UCharacterSheetScreen::PickArmorSlot(int x, int y, size_t &outSlot) const
     }
   }
   return false;
+}
+
+bool UCharacterSheetScreen::PickMainSlot(int x, int y) const
+{
+  if (ToolSlots.empty() || !ToolSlots[0])
+  {
+    return false;
+  }
+  return PointInBounds(x, y, ToolSlots[0]->GetBounds());
 }
 
 bool UCharacterSheetScreen::PickOffhandSlot(int x, int y) const
