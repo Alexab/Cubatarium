@@ -258,6 +258,10 @@ public:
   void CancelCooperativeOperation();
   bool BlocksAsyncRelightDrain() const;
 
+  /// Drop loaded terrain/mesh work before replacing the world (SaveThenCreate/Load).
+  /// Does NOT latch BackgroundQuiesceFinished (that breaks cooperative create).
+  void AbandonTerrainForWorldReplace();
+
   std::shared_ptr<UUser> GetUser(const std::string &Name);
   bool AddUser(const std::string &Name);
   void DelUser(const std::string &Name);

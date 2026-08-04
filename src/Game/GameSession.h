@@ -113,6 +113,8 @@ public:
   void SaveCommandHistory();
 
 private:
+  void EnsureOwnedStorageForHotbarEntry(const InventoryEntryRef &entry);
+
   UApplication *Application;
   std::shared_ptr<UWorld> World;
   UCommandRegistry UCommandRegistry;

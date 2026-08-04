@@ -235,7 +235,37 @@ bool UGameSession::AssignSlot(size_t barIndex, size_t slotIndex,
     return false;
   }
   inv->EnsureHotbarCount(static_cast<size_t>(GetHotbarCountSetting()));
-  return inv->AssignToHotbar(barIndex, slotIndex, entry);
+  const bool ok = inv->AssignToHotbar(barIndex, slotIndex, entry);
+  if (ok)
+  {
+    EnsureOwnedStorageForHotbarEntry(entry);
+  }
+  return ok;
+}
+
+void UGameSession::EnsureOwnedStorageForHotbarEntry(
+    const InventoryEntryRef &entry)
+{
+  if (ActiveInventoryMode != InventoryMode::Owned)
+  {
+    return;
+  }
+  if (entry.kind != InventoryEntryKind::Item &&
+      entry.kind != InventoryEntryKind::Object)
+  {
+    return;
+  }
+  UCreatureInventory *inv = GetControlledInventory(World.get());
+  if (!inv || entry.Id.empty())
+  {
+    return;
+  }
+  auto &storage = inv->GetStorageMutable();
+  const auto it = storage.find(entry.Id);
+  if (it == storage.end() || it->second == 0)
+  {
+    storage[entry.Id] = 1;
+  }
 }
 
 void UGameSession::BeginPendingAssignment(const InventoryEntryRef &entry)
@@ -359,6 +389,8 @@ void UGameSession::BeginDragFromSlot(const SlotAddress &source,
   {
     return;
   }
+  // A new drag supersedes click-to-assign pending state.
+  PendingAssignment.reset();
   Drag.Active = true;
   Drag.entry = entry;
   Drag.source = source;
@@ -366,12 +398,16 @@ void UGameSession::BeginDragFromSlot(const SlotAddress &source,
 
 bool UGameSession::IsDragging() const { return Drag.Active; }
 
-void UGameSession::CancelDrag() { Drag = DragState{}; }
+void UGameSession::CancelDrag()
+{
+  Drag = DragState{};
+}
 
 bool UGameSession::DropOnSlot(const SlotAddress &target)
 {
   if (!Drag.Active || target.surface == SlotSurface::None)
   {
+    CancelDrag();
     return false;
   }
   if (SameSlotAddress(target, Drag.source))
@@ -385,12 +421,10 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
 
   if (target.surface == SlotSurface::Hotbar)
   {
-    if (!CanAssignToHotbar(entry, target.bar, target.slot))
+    if (!CanAssignToHotbar(entry, target.bar, target.slot) ||
+        !AssignSlot(target.bar, target.slot, entry))
     {
-      return false;
-    }
-    if (!AssignSlot(target.bar, target.slot, entry))
-    {
+      CancelDrag();
       return false;
     }
     if (source.surface == SlotSurface::Hotbar &&
@@ -429,16 +463,10 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
     UCreatureInventory *inv = GetControlledInventory(World.get());
     UItemDefinitionStorage *items =
         World ? World->GetItemDefinitionStorage() : nullptr;
-    if (!inv || !items)
+    if (!inv || !items || entry.kind != InventoryEntryKind::Item ||
+        !inv->EquipArmor(target.slot, entry, *items))
     {
-      return false;
-    }
-    if (entry.kind != InventoryEntryKind::Item)
-    {
-      return false;
-    }
-    if (!inv->EquipArmor(target.slot, entry, *items))
-    {
+      CancelDrag();
       return false;
     }
     if (source.surface == SlotSurface::Hotbar)
@@ -461,17 +489,11 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
   if (target.surface == SlotSurface::CharacterOffhand)
   {
     UCreatureInventory *inv = GetControlledInventory(World.get());
-    if (!inv)
+    if (!inv || (entry.kind != InventoryEntryKind::Item &&
+                 entry.kind != InventoryEntryKind::Block) ||
+        !inv->EquipOffhand(entry))
     {
-      return false;
-    }
-    if (entry.kind != InventoryEntryKind::Item &&
-        entry.kind != InventoryEntryKind::Block)
-    {
-      return false;
-    }
-    if (!inv->EquipOffhand(entry))
-    {
+      CancelDrag();
       return false;
     }
     if (source.surface == SlotSurface::Hotbar)
@@ -488,10 +510,6 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
           inv->UnequipArmor(source.slot, *items);
         }
       }
-    }
-    else if (source.surface == SlotSurface::CharacterOffhand)
-    {
-      // replaced in place
     }
     CancelDrag();
     return true;
@@ -534,6 +552,8 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
     return true;
   }
 
+  // PaletteGrid ← PaletteGrid (or other unsupported): cancel, do not assign.
+  CancelDrag();
   return false;
 }
 
@@ -635,13 +655,27 @@ UGameSession::GetEntries(ContentKind tab, const std::string &groupId,
 bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
                                      size_t barIndex, size_t slotIndex) const
 {
-  if (entry.empty || slotIndex >= 10)
+  if (entry.empty || entry.Id.empty() || slotIndex >= 10)
   {
     return false;
   }
-  if (World)
+  const UCreatureInventory *creatureInv = GetControlledInventory(World.get());
+  if (!creatureInv)
   {
-    if (entry.kind == InventoryEntryKind::Block)
+    return false;
+  }
+  const_cast<UCreatureInventory *>(creatureInv)
+      ->EnsureHotbarCount(static_cast<size_t>(GetHotbarCountSetting()));
+  if (barIndex >= creatureInv->GetHotbarCount())
+  {
+    return false;
+  }
+
+  // Creative: Tools palette entries must land on the hotbar. Validate blocks
+  // against the registry; Items/Objects/etc. are trusted from the catalog UI.
+  if (ActiveInventoryMode == InventoryMode::Creative)
+  {
+    if (entry.kind == InventoryEntryKind::Block && World)
     {
       if (World->GetBlockRegistry().GetIdByTypeName(entry.Id) == BLOCK_AIR)
       {
@@ -651,25 +685,25 @@ bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
         return false;
       }
     }
-    else if (entry.kind == InventoryEntryKind::Object)
+    return true;
+  }
+
+  if (World)
+  {
+    if (entry.kind == InventoryEntryKind::Block)
     {
-      const auto entries =
-          ContentCatalog.GetEntries(ContentKind::Object, entry.Id);
-      if (entries.empty())
+      if (World->GetBlockRegistry().GetIdByTypeName(entry.Id) == BLOCK_AIR)
       {
-        std::cerr
-            << "GameSession: prefab not in catalog, hotbar assign rejected: "
-            << entry.Id << std::endl;
         return false;
       }
     }
-    else if (entry.kind == InventoryEntryKind::Item)
+    else if (entry.kind == InventoryEntryKind::Object)
     {
       bool found = false;
-      for (const auto &typeId : ContentCatalog.GetTypeIds(ContentKind::Item))
+      for (const auto &typeId : ContentCatalog.GetTypeIds(ContentKind::Object))
       {
         for (const auto &e :
-             ContentCatalog.GetEntries(ContentKind::Item, typeId))
+             ContentCatalog.GetEntries(ContentKind::Object, typeId))
         {
           if (e.Id == entry.Id)
           {
@@ -684,28 +718,35 @@ bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
       }
       if (!found)
       {
-        std::cerr
-            << "GameSession: item not in catalog, hotbar assign rejected: "
-            << entry.Id << std::endl;
+        return false;
+      }
+    }
+    else if (entry.kind == InventoryEntryKind::Item)
+    {
+      const UItemDefinitionStorage *items = World->GetItemDefinitionStorage();
+      if (!items || !items->Get(entry.Id))
+      {
         return false;
       }
     }
   }
-  const UCreatureInventory *creatureInv = GetControlledInventory(World.get());
-  if (!creatureInv)
+
+  // Blocks: Survival economy still requires Storage>0.
+  if (entry.kind == InventoryEntryKind::Block)
   {
-    return false;
+    const auto &inv = creatureInv->GetStorage();
+    const auto it = inv.find(entry.Id);
+    return it != inv.end() && it->second > 0;
   }
-  const_cast<UCreatureInventory *>(creatureInv)
-      ->EnsureHotbarCount(static_cast<size_t>(GetHotbarCountSetting()));
-  if (barIndex >= creatureInv->GetHotbarCount())
-  {
-    return false;
-  }
-  if (ActiveInventoryMode == InventoryMode::Creative)
+
+  // Items/Objects from creative-style palette: catalog presence is enough.
+  // Grant happens in AssignSlot via EnsureOwnedStorageForHotbarEntry.
+  if (entry.kind == InventoryEntryKind::Item ||
+      entry.kind == InventoryEntryKind::Object)
   {
     return true;
   }
+
   const auto &inv = creatureInv->GetStorage();
   const auto it = inv.find(entry.Id);
   return it != inv.end() && it->second > 0;

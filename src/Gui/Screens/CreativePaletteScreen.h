@@ -32,6 +32,10 @@ public:
   ~UCreativePaletteScreen();
 
   bool PickSlot(int x, int y, SlotAddress &out) const;
+  /// Hotbar strip only (priority drop target while palette is open).
+  bool PickHotbarStrip(int x, int y, SlotAddress &out) const;
+  /// Creative grid cell only (trash / identity), not hotbar.
+  bool PickGridSlot(int x, int y, SlotAddress &out) const;
 
   void OnViewportChanged(int width, int height) override;
 
@@ -55,6 +59,9 @@ private:
   void RelayoutPanel();
   void LayoutGridInScroll();
   void SyncPreviewDock();
+  void EnsureHotbarStrip();
+  void LayoutHotbarStrip();
+  void SyncHotbarStrip();
 
   IUContentCatalog *Catalog{nullptr};
   UGameSession *Session{nullptr};
@@ -71,8 +78,10 @@ private:
   UGuiScrollView *Scroll{nullptr};
   UGuiLabel *TooltipLabel{nullptr};
   UGuiLabel *UsageHintLabel{nullptr};
+  UGuiLabel *HotbarStripLabel{nullptr};
   UGuiRenderer *Renderer{nullptr};
   std::vector<UGuiSlot *> GridSlots;
+  std::vector<UGuiSlot *> HotbarStripSlots;
   int PointerX{-1};
   int PointerY{-1};
   bool PointerPressed{false};
@@ -85,6 +94,7 @@ private:
   const GuiTheme *Theme{nullptr};
   bool Visible{false};
   bool Built{false};
+  bool HotbarStripBuilt{false};
 };
 
 } // namespace cutum

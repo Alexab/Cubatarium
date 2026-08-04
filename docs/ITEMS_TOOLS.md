@@ -12,9 +12,9 @@ Data-driven tools for player / bot / mobs (shared `UCreature` inventory + attrib
 
 There is **no separate “equip to hand” action**. The **active hotbar slot** *is* the right hand (FP viewmodel / dig / place). Character sheet **Main** mirrors that slot.
 
-1. Open palette → **Tools** (leave the bottom hotbar visible — drag target).
+1. Open palette → **Tools** (use the bottom **Hotbar** row labeled drop target).
 2. Pick a sub-tab (Mining / Utility / Armor / …).
-3. **Click** an item to assign it to the **currently selected hotbar slot**, or **drag** onto a bottom hotbar slot (or onto sheet **Main**).
+3. **Click** an item to assign it to the **currently selected hotbar slot**, or **drag** onto the Hotbar strip (or HUD hotbar). Releasing over the Tools grid cancels the drag (does not assign).
 4. Hotbar keys `1–9` / `0` (or wheel in Perspective) select the active tool/block.
 5. **Armor**: open character sheet (**C**), drag armor from Tools → Armor onto paper-doll slots (Head/Chest/…).
 6. **Offhand**: on the character sheet, drag an Item or Block onto **Offhand** — left FP hand.

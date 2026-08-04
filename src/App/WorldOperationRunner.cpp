@@ -230,6 +230,24 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
     sink.Report("prepare", 0.f, "Preparing new world...");
     return false;
 
+  case Stage::PreReplaceTerrain:
+    sink.Report("teardown", 0.05f, "Clearing previous world...");
+    World.AbandonTerrainForWorldReplace();
+    if (Request.op == WorldRunnerOp::SaveThenLoad)
+    {
+      Core.PrepareLoadWorld(PendingWorldName);
+      PendingWorldOp = WorldRunnerOp::Load;
+      CurrentStage = Stage::WorldOperation;
+      sink.Begin(WorldOperationKind::Load);
+      sink.Report("load", 0.f, "Loading world...");
+    }
+    else
+    {
+      PendingWorldOp = WorldRunnerOp::Create;
+      CurrentStage = Stage::PrepareCreate;
+    }
+    return false;
+
   case Stage::WorldOperation:
   {
     const WorldOperationKind kind =
@@ -252,18 +270,8 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
          Request.op == WorldRunnerOp::SaveThenCreate))
     {
       SaveBeforeOp = false;
-      if (Request.op == WorldRunnerOp::SaveThenLoad)
-      {
-        Core.PrepareLoadWorld(PendingWorldName);
-        PendingWorldOp = WorldRunnerOp::Load;
-        sink.Begin(WorldOperationKind::Load);
-        sink.Report("load", 0.f, "Loading world...");
-      }
-      else
-      {
-        PendingWorldOp = WorldRunnerOp::Create;
-        CurrentStage = Stage::PrepareCreate;
-      }
+      CurrentStage = Stage::PreReplaceTerrain;
+      sink.Report("teardown", 0.f, "Clearing previous world...");
       return false;
     }
 

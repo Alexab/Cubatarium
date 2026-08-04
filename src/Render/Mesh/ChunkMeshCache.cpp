@@ -362,10 +362,15 @@ void UChunkMeshCache::RebuildAll(UBlockWorld &world, UBlockRegistry &registry)
   if (Render.AsyncMeshing && Render.GreedyMeshing)
   {
     EnsureAsyncBuilder();
-    while (HasPendingAsyncMeshWork())
+    int guard = 0;
+    while (HasPendingAsyncMeshWork() && guard++ < 64)
     {
       RebuildDirtyChunks(world, registry, 10000, 10000);
-      AsyncBuilder->WaitIdle();
+      if (!AsyncBuilder->WaitIdleFor(std::chrono::milliseconds(2000)))
+      {
+        CancelAsyncMeshWork();
+        break;
+      }
     }
   }
 }

@@ -428,27 +428,14 @@ bool UInputRouter::RouteMouseButton(UApplication &app, int button, bool pressed,
   {
     app.DragCursorX = x;
     app.DragCursorY = y;
-    if (event.Button == GuiMouseButton::Left && !pressed && app.GameSession &&
-        app.GameSession->IsDragging())
+    if (event.Button == GuiMouseButton::Left && !pressed)
     {
-      SlotAddress target;
-      const bool hasTarget = app.ResolveSlotAt(x, y, target);
-      if (hasTarget)
+      if ((app.GameSession && app.GameSession->IsDragging()) ||
+          app.OverlayPressedWidget || app.HasAnyOverlayCapture())
       {
-        if (!app.GameSession->DropOnSlot(target))
-        {
-          app.GameSession->CancelDrag();
-        }
+        app.FinishInventoryPointerGesture(event);
+        return true;
       }
-      else
-      {
-        app.GameSession->CancelDrag();
-      }
-      if (app.HasAnyOverlayCapture())
-      {
-        app.TryRouteInGameOverlay(event, false);
-      }
-      return true;
     }
     if ((app.OverlayPopup && app.OverlayPopup->IsOpen()) || app.ConsoleOpen)
     {
@@ -501,6 +488,13 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y, int pointer_i
   {
     app.DragCursorX = x;
     app.DragCursorY = y;
+    // Deliver move to the pressed overlay leaf so GuiSlot can BeginDrag.
+    if (app.OverlayPressedWidget &&
+        !(app.GameSession && app.GameSession->IsDragging()))
+    {
+      app.OverlayPressedWidget->OnMouseMove(event);
+      return true;
+    }
     if (app.GameSession && app.GameSession->IsDragging())
     {
       return true;

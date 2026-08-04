@@ -45,6 +45,7 @@ class UViewEngine;
 class UTextRenderer;
 class UShaderManager;
 class UGuiContext;
+class UGuiWidget;
 class UGameSession;
 class UBlockDefinitionStorage;
 class UGuiIconSource;
@@ -208,6 +209,8 @@ private:
   bool BlocksGameMouseLook() const;
   bool TryRouteInGameOverlay(const GuiMouseEvent &event, bool Pressed);
   bool HasAnyOverlayCapture() const;
+  /// End inventory/overlay pointer gesture: drop or cancel drag, clear Pressed.
+  void FinishInventoryPointerGesture(const GuiMouseEvent &event);
   bool ResolveSlotAt(int x, int y, SlotAddress &out);
   void DrawDragGhost(int width, int height);
   void ClearGameplayKeyboard();
@@ -249,6 +252,8 @@ private:
   };
   static constexpr int kMaxOverlayPointers = 10;
   std::array<OverlayPointerCapture, kMaxOverlayPointers> OverlayCaptures{};
+  /// Leaf widget that received overlay mouse-down (slot owner for teardown).
+  UGuiWidget *OverlayPressedWidget{nullptr};
   int NormalizeOverlayPointer(int PointerId) const;
   int DragCursorX{0};
   int DragCursorY{0};

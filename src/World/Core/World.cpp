@@ -4299,6 +4299,40 @@ void UWorld::RebuildBlockMesh()
   BlockWorldReady = CachedBlockCount > 0;
 }
 
+void UWorld::AbandonTerrainForWorldReplace()
+{
+  if (HasActiveCooperativeOperation())
+  {
+    CancelCooperativeOperation();
+  }
+
+  if (Streaming)
+  {
+    Streaming->CancelChunkGeneration();
+    Streaming->AbandonWorkersForProcessExit(std::chrono::milliseconds(150));
+  }
+  if (Persistence)
+  {
+    (void)Persistence->AbortAsyncChunkIoFor(std::chrono::milliseconds(0));
+  }
+
+  if (MeshService)
+  {
+    MeshService->CancelAsyncMeshWork();
+    (void)MeshService->WaitForAsyncMeshIdleFor(std::chrono::milliseconds(2000));
+  }
+  CancelAsyncRelightWork();
+
+  BlockWorld.Clear();
+  if (MeshService)
+  {
+    MeshService->GetCache().MarkAllDirty();
+  }
+  ModifiedChunks.clear();
+  BlockWorldReady = false;
+  CachedBlockCount = 0;
+}
+
 bool UWorld::IsReasonablePlayerPosition(const glm::vec3 &position) const
 {
   if (!std::isfinite(position.x) || !std::isfinite(position.y) ||

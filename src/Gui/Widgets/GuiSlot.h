@@ -31,6 +31,12 @@ public:
   {
     OnBeginDrag = std::move(handler);
   }
+  /// Force-clear press/drag tracking (inventory gesture teardown).
+  void ClearPressState()
+  {
+    Pressed = false;
+    DragStarted = false;
+  }
   const std::string &GetLabel() const { return Label; }
 
   void Draw(UGuiRenderer &renderer) override;

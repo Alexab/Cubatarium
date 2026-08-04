@@ -33,7 +33,30 @@ UCreativePaletteScreen::UCreativePaletteScreen(IUContentCatalog *catalog,
 
 UCreativePaletteScreen::~UCreativePaletteScreen() = default;
 
-bool UCreativePaletteScreen::PickSlot(int x, int y, SlotAddress &out) const
+bool UCreativePaletteScreen::PickHotbarStrip(int x, int y,
+                                             SlotAddress &out) const
+{
+  if (!Visible)
+  {
+    return false;
+  }
+  for (size_t i = 0; i < HotbarStripSlots.size(); ++i)
+  {
+    const UGuiSlot *slot = HotbarStripSlots[i];
+    if (!slot || !slot->IsVisible() || !slot->GetBounds().Contains(x, y))
+    {
+      continue;
+    }
+    out = SlotAddress{};
+    out.surface = SlotSurface::Hotbar;
+    out.bar = 0;
+    out.slot = i;
+    return true;
+  }
+  return false;
+}
+
+bool UCreativePaletteScreen::PickGridSlot(int x, int y, SlotAddress &out) const
 {
   if (!Visible)
   {
@@ -50,6 +73,7 @@ bool UCreativePaletteScreen::PickSlot(int x, int y, SlotAddress &out) const
     {
       return false;
     }
+    out = SlotAddress{};
     out.surface = SlotSurface::PaletteGrid;
     out.paletteKind = Kind;
     out.entryId = GridEntryIds[i];
@@ -58,6 +82,15 @@ bool UCreativePaletteScreen::PickSlot(int x, int y, SlotAddress &out) const
     return true;
   }
   return false;
+}
+
+bool UCreativePaletteScreen::PickSlot(int x, int y, SlotAddress &out) const
+{
+  if (PickHotbarStrip(x, y, out))
+  {
+    return true;
+  }
+  return PickGridSlot(x, y, out);
 }
 
 void UCreativePaletteScreen::SetVisible(bool visible)
@@ -149,6 +182,9 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
 {
   Theme = &ctx.GetTheme();
   Renderer = &ctx.GetRenderer();
+  HotbarStripBuilt = false;
+  HotbarStripSlots.clear();
+  HotbarStripLabel = nullptr;
 
   auto rootShell = std::make_unique<UGuiPanel>(Theme);
   rootShell->SetDrawBackground(false);
@@ -197,11 +233,16 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
 
   auto usageHint = std::make_unique<UGuiLabel>(
       Theme,
-      "Tool = hotbar slot (1-0). Click → selected slot · Drag onto bottom hotbar");
+      "Click → selected slot · Drag onto Hotbar row below · keys 1-0 = hand");
   usageHint->SetUseSecondaryColor(true);
   usageHint->SetVisible(false);
   UsageHintLabel = usageHint.get();
   panel->AddChild(std::move(usageHint));
+
+  auto stripLabel = std::make_unique<UGuiLabel>(Theme, "Hotbar (drop tools here)");
+  stripLabel->SetUseSecondaryColor(true);
+  HotbarStripLabel = stripLabel.get();
+  rootShell->AddChild(std::move(stripLabel));
 
   panel->AddChild(std::move(mainTabs));
   panel->AddChild(std::move(subTabs));
@@ -216,6 +257,7 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
   Kind = ContentKind::Block;
   ActiveTypeId = "misc";
   Built = false;
+  EnsureHotbarStrip();
 }
 
 void UCreativePaletteScreen::OnViewportChanged(int width, int height)
@@ -305,6 +347,140 @@ void UCreativePaletteScreen::RelayoutPanel()
       Scroll->LayoutContent();
       LayoutGridInScroll();
     }
+  }
+  LayoutHotbarStrip();
+}
+
+void UCreativePaletteScreen::EnsureHotbarStrip()
+{
+  if (HotbarStripBuilt || !RootShell || !Theme || !Session)
+  {
+    return;
+  }
+  for (size_t i = 0; i < 10; ++i)
+  {
+    auto slot = std::make_unique<UGuiSlot>(Theme);
+    const size_t index = i;
+    SlotAddress address;
+    address.surface = SlotSurface::Hotbar;
+    address.bar = 0;
+    address.slot = index;
+    slot->SetOnClick(
+        [this, index]()
+        {
+          if (!Session)
+          {
+            return;
+          }
+          if (!Session->ApplyPendingAssignment(0, index))
+          {
+            Session->SelectSlot(0, index);
+          }
+        });
+    slot->SetOnBeginDrag(
+        [this, address]()
+        {
+          if (!Session)
+          {
+            return;
+          }
+          const InventoryEntryRef entry =
+              Session->GetHotbarEntryRef(address.bar, address.slot);
+          if (!entry.empty)
+          {
+            Session->BeginDragFromSlot(address, entry);
+          }
+        });
+    const int hotkeyNumber = (index < 9) ? static_cast<int>(index + 1) : 0;
+    slot->SetCornerHint(std::to_string(hotkeyNumber));
+    HotbarStripSlots.push_back(
+        static_cast<UGuiSlot *>(RootShell->AddChild(std::move(slot))));
+    HotbarStripSlots.back()->SetZOrder(50);
+  }
+  if (HotbarStripLabel)
+  {
+    HotbarStripLabel->SetZOrder(49);
+  }
+  HotbarStripBuilt = true;
+  LayoutHotbarStrip();
+}
+
+void UCreativePaletteScreen::LayoutHotbarStrip()
+{
+  if (!HotbarStripBuilt || !Theme)
+  {
+    return;
+  }
+  EnsureHotbarStrip();
+  const int slotSize = Theme->HotbarSlotSize;
+  const int gap = Theme->HotbarSlotGap;
+  const int totalW = static_cast<int>(HotbarStripSlots.size()) * slotSize +
+                     (static_cast<int>(HotbarStripSlots.size()) - 1) * gap;
+  const int startX = GetContentOffsetX() + (ViewportW - totalW) / 2;
+  const int rowY = GetContentOffsetY() + ViewportH - Theme->HotbarMarginBottom -
+                   slotSize;
+  if (HotbarStripLabel)
+  {
+    HotbarStripLabel->SetBounds(
+        {startX, rowY - Theme->FontSizeBody - Theme->Padding / 2, totalW,
+         Theme->FontSizeBody + 4});
+  }
+  int x = startX;
+  for (UGuiSlot *slot : HotbarStripSlots)
+  {
+    if (slot)
+    {
+      slot->SetBounds({x, rowY, slotSize, slotSize});
+      slot->SetVisible(true);
+      x += slotSize + gap;
+    }
+  }
+}
+
+void UCreativePaletteScreen::SyncHotbarStrip()
+{
+  if (!Session || !HotbarStripBuilt)
+  {
+    return;
+  }
+  const auto primary = Session->GetBarSlots(0);
+  for (size_t i = 0; i < HotbarStripSlots.size() && i < primary.size(); ++i)
+  {
+    UGuiSlot *slot = HotbarStripSlots[i];
+    if (!slot)
+    {
+      continue;
+    }
+    slot->SetSelected(primary[i].selected);
+    slot->SetLabel(primary[i].label);
+    GLuint tex = 0;
+    if (Icons && !primary[i].Id.empty())
+    {
+      switch (primary[i].entryKind)
+      {
+      case InventoryEntryKind::Block:
+        tex = Icons->GetBlockIconTexture(primary[i].Id);
+        break;
+      case InventoryEntryKind::Object:
+        tex = Icons->GetObjectIconTexture(primary[i].Id);
+        break;
+      case InventoryEntryKind::UCreature:
+        tex = Icons->GetCreatureIconTexture(primary[i].Id);
+        break;
+      case InventoryEntryKind::Skin:
+        tex = Icons->GetSkinIconTexture(primary[i].Id);
+        break;
+      case InventoryEntryKind::Item:
+        tex = Icons->GetItemIconTexture(primary[i].Id);
+        break;
+      }
+    }
+    slot->SetIconTexture(tex);
+    slot->SetWearProgress(primary[i].entryKind == InventoryEntryKind::Item
+                              ? primary[i].wear
+                              : 0.f);
+    slot->SetBroken(primary[i].entryKind == InventoryEntryKind::Item &&
+                    primary[i].broken);
   }
 }
 
@@ -409,6 +585,7 @@ void UCreativePaletteScreen::Update(double dt)
     return;
   }
   RelayoutPanel();
+  SyncHotbarStrip();
 
   if (PointerPressed && PointerX >= 0 && PointerY >= 0)
   {
@@ -611,6 +788,7 @@ void UCreativePaletteScreen::RebuildGrid()
           if (Session->AssignToHotbar(entry, bar, slot))
           {
             Session->ClearPendingAssignment();
+            Session->SelectSlot(bar, slot);
           }
           else
           {

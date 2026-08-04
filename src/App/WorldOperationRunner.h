@@ -76,6 +76,7 @@ private:
   {
     Idle,
     PrepareCreate,
+    PreReplaceTerrain,
     WorldOperation,
     PostLoadUsers,
     PostCreateUsers,

@@ -47,6 +47,7 @@
 #include "Gui/Screens/NewWorldScreen.h"
 #include "Gui/Screens/SettingsScreen.h"
 #include "Gui/Widgets/GuiPopupMenu.h"
+#include "Gui/Widgets/GuiSlot.h"
 #include "Gui/Widgets/GuiWidget.h"
 #include "WorldGen/Core/WorldGenRefs.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
@@ -1337,101 +1338,193 @@ bool UApplication::HasAnyOverlayCapture() const
   return false;
 }
 
+void UApplication::FinishInventoryPointerGesture(const GuiMouseEvent &event)
+{
+  const int pointerIndex = NormalizeOverlayPointer(event.PointerId);
+
+  if (GameSession && GameSession->IsDragging())
+  {
+    SlotAddress target;
+    if (ResolveSlotAt(event.X, event.Y, target))
+    {
+      if (!GameSession->DropOnSlot(target))
+      {
+        GameSession->CancelDrag();
+        GameSession->ClearPendingAssignment();
+      }
+    }
+    else
+    {
+      GameSession->CancelDrag();
+    }
+  }
+
+  if (OverlayPressedWidget)
+  {
+    OverlayPressedWidget->OnMouseUp(event);
+    if (auto *slot = dynamic_cast<UGuiSlot *>(OverlayPressedWidget))
+    {
+      slot->ClearPressState();
+    }
+  }
+  else
+  {
+    // Capture lost but Pressed may still be stuck on a slot under an overlay.
+    const OverlayPointerCapture capture = OverlayCaptures[pointerIndex];
+    auto routeUp = [&](UGuiWidget *root)
+    {
+      if (root)
+      {
+        root->OnMouseUp(event);
+      }
+    };
+    switch (capture)
+    {
+    case OverlayPointerCapture::Palette:
+      if (PaletteOpen && PaletteScreen)
+      {
+        routeUp(PaletteScreen->GetRoot());
+      }
+      break;
+    case OverlayPointerCapture::CharacterSheet:
+      if (CharacterSheetOpen && CharacterSheetScreen)
+      {
+        routeUp(CharacterSheetScreen->GetRoot());
+      }
+      break;
+    case OverlayPointerCapture::WorldGen:
+      if (WorldGenOpen && WorldGenScreen)
+      {
+        routeUp(WorldGenScreen->GetRoot());
+      }
+      break;
+    case OverlayPointerCapture::Console:
+      if (ConsoleOpen && ConsoleScreen)
+      {
+        routeUp(ConsoleScreen->GetRoot());
+      }
+      break;
+    case OverlayPointerCapture::Hud:
+      routeUp(HudScreen ? HudScreen->GetRoot() : nullptr);
+#if defined(__ANDROID__)
+      ReleaseHudJoystickCaptureForPointer(event.PointerId);
+#endif
+      break;
+    default:
+      break;
+    }
+  }
+
+  OverlayCaptures[pointerIndex] = OverlayPointerCapture::None;
+  OverlayPressedWidget = nullptr;
+}
+
 bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
                                          bool Pressed)
 {
   const int pointerIndex = NormalizeOverlayPointer(event.PointerId);
 
-  auto routeRoot = [&](UGuiWidget *root, bool requireHitTest) -> bool
+  auto routeRootDown = [&](UGuiWidget *root) -> UGuiWidget *
   {
     if (!root)
     {
-      return false;
+      return nullptr;
     }
-    if (requireHitTest && !root->HitTest(event.X, event.Y))
+    UGuiWidget *hit = root->HitTest(event.X, event.Y);
+    if (!hit)
     {
-      return false;
+      return nullptr;
     }
-    return Pressed ? root->OnMouseDown(event) : root->OnMouseUp(event);
+    if (!root->OnMouseDown(event))
+    {
+      return nullptr;
+    }
+    return hit;
   };
 
   if (Pressed)
   {
+    OverlayPressedWidget = nullptr;
 #if defined(__ANDROID__)
     if (HudScreen && HudScreen->HitTestTouchControls(event.X, event.Y))
     {
-      if (routeRoot(HudScreen->GetRoot(), true))
+      if (UGuiWidget *hit = routeRootDown(HudScreen->GetRoot()))
       {
         OverlayCaptures[pointerIndex] = OverlayPointerCapture::Hud;
+        OverlayPressedWidget = hit;
         return true;
       }
     }
 #endif
-    if (WorldGenOpen && routeRoot(WorldGenScreen->GetRoot(), true))
+    if (WorldGenOpen)
     {
-      OverlayCaptures[pointerIndex] = OverlayPointerCapture::WorldGen;
-      return true;
+      if (UGuiWidget *hit = routeRootDown(WorldGenScreen->GetRoot()))
+      {
+        OverlayCaptures[pointerIndex] = OverlayPointerCapture::WorldGen;
+        OverlayPressedWidget = hit;
+        return true;
+      }
     }
-    if (PaletteOpen && routeRoot(PaletteScreen->GetRoot(), true))
+    if (PaletteOpen)
     {
-      OverlayCaptures[pointerIndex] = OverlayPointerCapture::Palette;
-      return true;
+      if (UGuiWidget *hit = routeRootDown(PaletteScreen->GetRoot()))
+      {
+        OverlayCaptures[pointerIndex] = OverlayPointerCapture::Palette;
+        OverlayPressedWidget = hit;
+        return true;
+      }
     }
-    if (CharacterSheetOpen && CharacterSheetScreen &&
-        routeRoot(CharacterSheetScreen->GetRoot(), true))
+    if (CharacterSheetOpen && CharacterSheetScreen)
     {
-      OverlayCaptures[pointerIndex] = OverlayPointerCapture::CharacterSheet;
-      return true;
+      if (UGuiWidget *hit = routeRootDown(CharacterSheetScreen->GetRoot()))
+      {
+        OverlayCaptures[pointerIndex] = OverlayPointerCapture::CharacterSheet;
+        OverlayPressedWidget = hit;
+        return true;
+      }
     }
-    if (ConsoleOpen && routeRoot(ConsoleScreen->GetRoot(), true))
+    if (ConsoleOpen)
     {
-      OverlayCaptures[pointerIndex] = OverlayPointerCapture::Console;
-      return true;
+      if (UGuiWidget *hit = routeRootDown(ConsoleScreen->GetRoot()))
+      {
+        OverlayCaptures[pointerIndex] = OverlayPointerCapture::Console;
+        OverlayPressedWidget = hit;
+        return true;
+      }
     }
-    if (routeRoot(HudScreen ? HudScreen->GetRoot() : nullptr, true))
+    if (UGuiWidget *hit =
+            routeRootDown(HudScreen ? HudScreen->GetRoot() : nullptr))
     {
       OverlayCaptures[pointerIndex] = OverlayPointerCapture::Hud;
+      OverlayPressedWidget = hit;
       return true;
     }
     return false;
   }
 
-  const OverlayPointerCapture capture = OverlayCaptures[pointerIndex];
-  OverlayCaptures[pointerIndex] = OverlayPointerCapture::None;
-  if (capture == OverlayPointerCapture::None)
+  // Mouse-up without an explicit FinishInventoryPointerGesture call.
   {
-    return false;
-  }
-
-  switch (capture)
-  {
-  case OverlayPointerCapture::Palette:
-    return PaletteOpen && routeRoot(PaletteScreen->GetRoot(), false);
-  case OverlayPointerCapture::CharacterSheet:
-    return CharacterSheetOpen && CharacterSheetScreen &&
-           routeRoot(CharacterSheetScreen->GetRoot(), false);
-  case OverlayPointerCapture::WorldGen:
-    return WorldGenOpen && routeRoot(WorldGenScreen->GetRoot(), false);
-  case OverlayPointerCapture::Console:
-    return ConsoleOpen && routeRoot(ConsoleScreen->GetRoot(), false);
-  case OverlayPointerCapture::Hud:
-  {
-    const bool handled =
-        routeRoot(HudScreen ? HudScreen->GetRoot() : nullptr, false);
-#if defined(__ANDROID__)
-    ReleaseHudJoystickCaptureForPointer(event.PointerId);
-#endif
-    return handled;
-  }
-  default:
-    return false;
+    const bool hadGesture =
+        OverlayPressedWidget != nullptr ||
+        OverlayCaptures[pointerIndex] != OverlayPointerCapture::None ||
+        (GameSession && GameSession->IsDragging());
+    if (!hadGesture)
+    {
+      return false;
+    }
+    FinishInventoryPointerGesture(event);
+    return true;
   }
 }
 
 bool UApplication::ResolveSlotAt(int x, int y, SlotAddress &out)
 {
-  // Хотбар под палитрой: при drop сначала проверяем HUD, иначе палитра
-  // «съедает» цель.
+  // Hotbar targets first so Tools grid never swallows drops meant for hotbar.
+  if (PaletteOpen && PaletteScreen &&
+      PaletteScreen->PickHotbarStrip(x, y, out))
+  {
+    return true;
+  }
   if (HudScreen && HudScreen->PickSlot(x, y, out))
   {
     return true;
@@ -1452,7 +1545,6 @@ bool UApplication::ResolveSlotAt(int x, int y, SlotAddress &out)
       out.surface = SlotSurface::CharacterOffhand;
       return true;
     }
-    // Main on the sheet mirrors the active hotbar slot (right hand).
     if (CharacterSheetScreen->PickMainSlot(x, y) && GameSession)
     {
       out = SlotAddress{};
@@ -1462,7 +1554,7 @@ bool UApplication::ResolveSlotAt(int x, int y, SlotAddress &out)
       return true;
     }
   }
-  if (PaletteOpen && PaletteScreen && PaletteScreen->PickSlot(x, y, out))
+  if (PaletteOpen && PaletteScreen && PaletteScreen->PickGridSlot(x, y, out))
   {
     return true;
   }

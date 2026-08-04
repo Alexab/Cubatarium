@@ -39,11 +39,12 @@ constexpr float kSwingSpeed = 3.5f;
 constexpr float kBobSpeedScale = 2.0f;
 constexpr float kPi = 3.14159265358979323846f;
 
-const glm::vec3 kEye{0.f, 0.05f, 0.0f};
-const glm::vec3 kTarget{0.15f, -0.35f, -0.85f};
-// Local arm space: hangs along -Y; BuildRootMatrix tilts toward camera (-Z).
-const glm::vec3 kHandSocketR{0.06f, -0.50f, 0.04f};
-const glm::vec3 kHandSocketL{-0.06f, -0.50f, 0.04f};
+const glm::vec3 kEye{0.f, 0.0f, 0.0f};
+const glm::vec3 kTarget{0.05f, -0.15f, -1.0f};
+// After idle Rx(+88°): local -Y = forward (-Z view); local -Z = up (+Y view).
+// Previous +Z pushed the held item down under the wrist in frame.
+const glm::vec3 kHandSocketR{0.04f, -0.62f, -0.14f};
+const glm::vec3 kHandSocketL{-0.04f, -0.62f, -0.14f};
 
 // Classic Steve rightArm UV origin on player_skin_atlas (see human geometry).
 constexpr int kArmUvU = 40;
@@ -60,6 +61,33 @@ glm::vec3 ReadVec3(const nlohmann::json &arr, const glm::vec3 &fallback)
   }
   return glm::vec3(arr[0].get<float>(), arr[1].get<float>(),
                    arr[2].get<float>());
+}
+
+// Tool JSON is Y-up (handle along +Y). Arm local hangs along -Y; after root
+// Rx(+88°) that is camera-forward. Mapping JSON +Y onto arm -Y made tools
+// collinear with the forearm. Wield space: JSON +Y → mostly arm -Z (up in
+// FP frame / above palm), with a small lean toward -Y (into the scene).
+constexpr float kToolWieldScale = 0.7f;
+constexpr float kToolWieldLeanDeg = 28.f;
+
+glm::vec3 ToolJsonOffsetToArm(const glm::vec3 &off)
+{
+  // Base: (x, y, z)_json → (x, z, -y)_arm  (Y-up → -Z up from palm)
+  const glm::vec3 base(off.x, off.z, -off.y);
+  const float lean = glm::radians(kToolWieldLeanDeg);
+  const float c = std::cos(lean);
+  const float sn = std::sin(lean);
+  return {base.x, base.y * c - base.z * sn, base.y * sn + base.z * c};
+}
+
+glm::vec3 ToolJsonSizeToArm(const glm::vec3 &sz)
+{
+  // Same axis remap, then AABB extents after Rx(lean).
+  const glm::vec3 base(sz.x, sz.z, sz.y);
+  const float lean = glm::radians(kToolWieldLeanDeg);
+  const float c = std::abs(std::cos(lean));
+  const float sn = std::abs(std::sin(lean));
+  return {base.x, base.y * c + base.z * sn, base.y * sn + base.z * c};
 }
 
 float UnwrapDeltaDeg(float from, float to)
@@ -364,9 +392,9 @@ std::vector<UFpViewmodelRenderer::Part>
 UFpViewmodelRenderer::ArmPartsRight() const
 {
   // Local -Y hang: sleeve then hand; skin atlas on both when available.
-  Part sleeve{0.0f, -0.22f, 0.0f, 0.16f, 0.42f, 0.16f, 55, 70, 110};
+  Part sleeve{0.0f, -0.26f, 0.0f, 0.18f, 0.52f, 0.18f, 55, 70, 110};
   sleeve.useSkinAtlas = true;
-  Part hand{0.0f, -0.48f, 0.02f, 0.15f, 0.15f, 0.15f, 210, 160, 120};
+  Part hand{0.0f, -0.55f, 0.02f, 0.16f, 0.16f, 0.16f, 210, 160, 120};
   hand.useSkinAtlas = true;
   return {sleeve, hand};
 }
@@ -499,14 +527,17 @@ glm::mat4 UFpViewmodelRenderer::BuildRootMatrix(bool mirrorX) const
     swing = glm::mat4_cast(glm::slerp(idle, punch, t));
   }
 
-  // Idle: local -Y arm → camera forward (-Z), slight inward yaw.
+  // Idle: local -Y → camera forward (-Z). Shoulder sits below the frame so
+  // the arm enters from the bottom edge (MC/Luanti FP framing). Small yaw so
+  // left/right hands share nearly the same depth.
+  // Held socket uses local -Z for "above palm" after this orient.
   const glm::quat orient =
-      glm::angleAxis(glm::radians(-78.f), glm::vec3(1.f, 0.f, 0.f)) *
-      glm::angleAxis(glm::radians(mirrorX ? -14.f : 14.f),
+      glm::angleAxis(glm::radians(88.f), glm::vec3(1.f, 0.f, 0.f)) *
+      glm::angleAxis(glm::radians(mirrorX ? -6.f : 6.f),
                      glm::vec3(0.f, 1.f, 0.f));
-  const float basex = (mirrorX ? -0.28f : 0.28f) + ox;
-  const float basey = -0.12f + oy;
-  const float basez = -0.32f + oz;
+  const float basex = (mirrorX ? -0.40f : 0.40f) + ox;
+  const float basey = -0.78f + oy;
+  const float basez = -0.30f + oz;
   glm::mat4 root = glm::translate(glm::mat4(1.f), glm::vec3(basex, basey, basez)) *
                    glm::mat4_cast(orient) * swing;
   if (mirrorX)
@@ -594,13 +625,14 @@ UFpViewmodelRenderer::ToolParts(const std::string &itemId,
                 ReadVec3(partJson.value("size", nlohmann::json::array()),
                          glm::vec3(0.2f));
             Part p;
-            // Tool JSON is Y-up; local arm hangs along -Y → root tilts to -Z.
-            p.ox = socket.x + off.x * 0.55f;
-            p.oy = socket.y + off.y * 0.55f;
-            p.oz = socket.z + off.z * 0.55f;
-            p.sx = std::max(0.04f, sz.x * 0.55f);
-            p.sy = std::max(0.04f, sz.y * 0.55f);
-            p.sz = std::max(0.04f, sz.z * 0.55f);
+            const glm::vec3 armOff = ToolJsonOffsetToArm(off) * kToolWieldScale;
+            const glm::vec3 armSz = ToolJsonSizeToArm(sz) * kToolWieldScale;
+            p.ox = socket.x + armOff.x;
+            p.oy = socket.y + armOff.y;
+            p.oz = socket.z + armOff.z;
+            p.sx = std::max(0.04f, armSz.x);
+            p.sy = std::max(0.04f, armSz.y);
+            p.sz = std::max(0.04f, armSz.z);
             p.r = 185;
             p.g = 190;
             p.b = 200;
@@ -627,8 +659,15 @@ UFpViewmodelRenderer::ToolParts(const std::string &itemId,
   }
   if (parts.empty())
   {
-    parts.push_back(Part{socket.x + 0.05f, socket.y - 0.05f, socket.z, 0.08f,
-                         0.35f, 0.08f, 185, 190, 200});
+    // Fallback rod: long axis along arm -Z (up from palm), not along the arm.
+    const glm::vec3 armOff =
+        ToolJsonOffsetToArm(glm::vec3(0.f, 0.18f, 0.f)) * kToolWieldScale;
+    const glm::vec3 armSz =
+        ToolJsonSizeToArm(glm::vec3(0.07f, 0.38f, 0.07f)) * kToolWieldScale;
+    parts.push_back(Part{socket.x + armOff.x, socket.y + armOff.y,
+                         socket.z + armOff.z, std::max(0.04f, armSz.x),
+                         std::max(0.04f, armSz.y), std::max(0.04f, armSz.z), 185,
+                         190, 200});
   }
   return parts;
 }
@@ -710,9 +749,12 @@ void UFpViewmodelRenderer::DrawBlockCube(const std::string &typeName,
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, atlas);
   glBindVertexArray(CubeVao);
-  const float s = 0.24f;
+  const float s = 0.22f;
+  const glm::mat4 tilt =
+      glm::rotate(glm::mat4(1.f), glm::radians(-18.f), glm::vec3(1.f, 0.f, 0.f)) *
+      glm::rotate(glm::mat4(1.f), glm::radians(28.f), glm::vec3(0.f, 1.f, 0.f));
   const glm::mat4 model =
-      glm::translate(glm::mat4(1.f), socket) *
+      glm::translate(glm::mat4(1.f), socket) * tilt *
       glm::scale(glm::mat4(1.f), glm::vec3(s, s, s));
   Shader->SetMat4("mvp_matrix", mvpBase * model);
   glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
