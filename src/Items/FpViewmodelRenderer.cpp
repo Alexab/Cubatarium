@@ -1,16 +1,17 @@
 #include "Items/FpViewmodelRenderer.h"
 
 #include "App/Platform/IUPlatformPaths.h"
-#include "Gui/Core/GuiRenderer.h"
-#include "Gui/Core/GuiTheme.h"
+#include "Blocks/BlockDefinitionStorage.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
+#include "Render/Textures/TextureCube.h"
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
@@ -23,7 +24,21 @@ namespace cutum
 
 namespace
 {
-constexpr float kFovDeg = 50.0f;
+constexpr float kFovDeg = 72.0f;
+constexpr float kNear = 0.05f;
+constexpr float kFar = 10.0f;
+constexpr float kInertiaBaseX = 0.12f;
+constexpr float kInertiaBaseY = -0.08f;
+constexpr float kInertiaAmpX = 0.035f;
+constexpr float kInertiaAmpY = 0.05f;
+constexpr float kSwingSpeed = 3.5f;
+constexpr float kBobSpeedScale = 2.0f;
+constexpr float kPi = 3.14159265358979323846f;
+
+const glm::vec3 kEye{0.f, 0.05f, 0.0f};
+const glm::vec3 kTarget{0.15f, -0.35f, -0.85f};
+const glm::vec3 kHandSocketR{0.32f, -0.05f, -0.30f};
+const glm::vec3 kHandSocketL{-0.32f, -0.05f, -0.30f};
 
 glm::vec3 ReadVec3(const nlohmann::json &arr, const glm::vec3 &fallback)
 {
@@ -34,12 +49,29 @@ glm::vec3 ReadVec3(const nlohmann::json &arr, const glm::vec3 &fallback)
   return glm::vec3(arr[0].get<float>(), arr[1].get<float>(),
                    arr[2].get<float>());
 }
+
+float UnwrapDeltaDeg(float from, float to)
+{
+  float d = to - from;
+  while (d > 180.f)
+  {
+    d -= 360.f;
+  }
+  while (d < -180.f)
+  {
+    d += 360.f;
+  }
+  return d;
+}
 } // namespace
 
 UFpViewmodelRenderer::UFpViewmodelRenderer(
     std::shared_ptr<UItemDefinitionStorage> items,
+    std::shared_ptr<UBlockDefinitionStorage> blocks,
+    std::shared_ptr<UTextureCubeStorage> textures,
     std::shared_ptr<UShaderManager> shaderManager)
-    : Items(std::move(items)), ShaderManager(std::move(shaderManager))
+    : Items(std::move(items)), Blocks(std::move(blocks)),
+      Textures(std::move(textures)), ShaderManager(std::move(shaderManager))
 {
 }
 
@@ -65,7 +97,9 @@ bool UFpViewmodelRenderer::Initialize()
   SleeveTex = SolidTex(55, 70, 110);
   MetalTex = SolidTex(180, 185, 195);
   WoodTex = SolidTex(158, 107, 56);
-  return EnsureFbo(256);
+  Motion.WieldOffsetX = kInertiaBaseX;
+  Motion.WieldOffsetY = kInertiaBaseY;
+  return true;
 }
 
 void UFpViewmodelRenderer::Shutdown()
@@ -77,18 +111,6 @@ void UFpViewmodelRenderer::Shutdown()
       t = 0;
     }
   };
-  if (DepthRbo != 0)
-  {
-    glDeleteRenderbuffers(1, &DepthRbo);
-    DepthRbo = 0;
-  }
-  delTex(ColorTex);
-  if (Fbo != 0)
-  {
-    glDeleteFramebuffers(1, &Fbo);
-    Fbo = 0;
-  }
-  FboSize = 0;
   delTex(SkinTex);
   delTex(SleeveTex);
   delTex(MetalTex);
@@ -154,50 +176,6 @@ bool UFpViewmodelRenderer::InitCubeMesh()
   return true;
 }
 
-bool UFpViewmodelRenderer::EnsureFbo(int size)
-{
-  const int clamped = std::max(128, std::min(size, 512));
-  if (Fbo != 0 && FboSize == clamped)
-  {
-    return true;
-  }
-  if (DepthRbo != 0)
-  {
-    glDeleteRenderbuffers(1, &DepthRbo);
-    DepthRbo = 0;
-  }
-  if (ColorTex != 0)
-  {
-    glDeleteTextures(1, &ColorTex);
-    ColorTex = 0;
-  }
-  if (Fbo != 0)
-  {
-    glDeleteFramebuffers(1, &Fbo);
-    Fbo = 0;
-  }
-  glGenFramebuffers(1, &Fbo);
-  glGenTextures(1, &ColorTex);
-  glBindTexture(GL_TEXTURE_2D, ColorTex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, clamped, clamped, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         ColorTex, 0);
-  glGenRenderbuffers(1, &DepthRbo);
-  glBindRenderbuffer(GL_RENDERBUFFER, DepthRbo);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, clamped, clamped);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER,
-                            DepthRbo);
-  const bool ok =
-      glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  FboSize = ok ? clamped : 0;
-  return ok;
-}
-
 GLuint UFpViewmodelRenderer::SolidTex(unsigned char r, unsigned char g,
                                       unsigned char b)
 {
@@ -213,81 +191,53 @@ GLuint UFpViewmodelRenderer::SolidTex(unsigned char r, unsigned char g,
   return tex;
 }
 
-std::vector<UFpViewmodelRenderer::Part> UFpViewmodelRenderer::ArmParts() const
+std::vector<UFpViewmodelRenderer::Part>
+UFpViewmodelRenderer::ArmPartsRight() const
 {
-  // Right-arm viewmodel (camera looks toward -Z); boxes in front of camera.
   return {
-      Part{0.28f, -0.55f, -0.55f, 0.2f, 0.55f, 0.2f, 55, 70, 110},   // sleeve
-      Part{0.34f, -0.22f, -0.38f, 0.16f, 0.16f, 0.16f, 210, 160, 120}, // hand
+      Part{0.22f, -0.42f, -0.55f, 0.18f, 0.50f, 0.18f, 55, 70, 110},
+      Part{0.26f, -0.18f, -0.38f, 0.14f, 0.14f, 0.14f, 210, 160, 120},
   };
 }
 
 std::vector<UFpViewmodelRenderer::Part>
-UFpViewmodelRenderer::ToolParts(const std::string &itemId) const
+UFpViewmodelRenderer::ArmPartsLeft() const
 {
-  std::vector<Part> parts;
-  if (!Items || itemId.empty())
+  auto parts = ArmPartsRight();
+  for (Part &p : parts)
   {
-    return parts;
-  }
-  const auto *def = Items->Get(itemId);
-  if (def && !def->ModelPath.empty())
-  {
-    IUPlatformPaths *paths = IUPlatformPaths::TryGet();
-    std::string jsonText;
-    if (paths && paths->ReadAssetText(def->ModelPath, jsonText))
-    {
-      try
-      {
-        const nlohmann::json data = nlohmann::json::parse(jsonText);
-        if (data.contains("parts") && data["parts"].is_array())
-        {
-          for (const auto &partJson : data["parts"])
-          {
-            const glm::vec3 off =
-                ReadVec3(partJson.value("offset", nlohmann::json::array()),
-                         glm::vec3(0.f));
-            const glm::vec3 sz =
-                ReadVec3(partJson.value("size", nlohmann::json::array()),
-                         glm::vec3(0.2f));
-            // Place near hand, scale down for viewmodel.
-            Part p;
-            p.ox = 0.42f + off.x * 0.55f;
-            p.oy = -0.05f + off.y * 0.55f;
-            p.oz = -0.28f + off.z * 0.55f;
-            p.sx = std::max(0.04f, sz.x * 0.55f);
-            p.sy = std::max(0.04f, sz.y * 0.55f);
-            p.sz = std::max(0.04f, sz.z * 0.55f);
-            p.r = 185;
-            p.g = 190;
-            p.b = 200;
-            if (itemId.find("wood") != std::string::npos)
-            {
-              p.r = 158;
-              p.g = 107;
-              p.b = 56;
-            }
-            else if (itemId.find("stone") != std::string::npos)
-            {
-              p.r = 140;
-              p.g = 140;
-              p.b = 132;
-            }
-            parts.push_back(p);
-          }
-        }
-      }
-      catch (...)
-      {
-      }
-    }
-  }
-  if (parts.empty())
-  {
-    parts.push_back(
-        Part{0.45f, 0.0f, -0.3f, 0.08f, 0.35f, 0.08f, 185, 190, 200});
+    p.ox = -p.ox;
   }
   return parts;
+}
+
+void UFpViewmodelRenderer::Update(float dt, float cameraYawDeg,
+                                  float cameraPitchDeg, float moveSpeedHint)
+{
+  (void)dt;
+  (void)cameraYawDeg;
+  (void)cameraPitchDeg;
+  (void)moveSpeedHint;
+  // Filled in motion stage.
+}
+
+void UFpViewmodelRenderer::NotifySwing(FpSwingKind kind)
+{
+  (void)kind;
+  // Filled in motion stage.
+}
+
+glm::mat4 UFpViewmodelRenderer::BuildRootMatrix(bool mirrorX) const
+{
+  const float ox = (mirrorX ? -Motion.WieldOffsetX : Motion.WieldOffsetX) +
+                   (mirrorX ? -BobX : BobX);
+  const float oy = Motion.WieldOffsetY + BobY;
+  glm::mat4 root = glm::translate(glm::mat4(1.f), glm::vec3(ox, oy, 0.f));
+  if (mirrorX)
+  {
+    root = glm::scale(root, glm::vec3(-1.f, 1.f, 1.f));
+  }
+  return root;
 }
 
 void UFpViewmodelRenderer::DrawParts(const std::vector<Part> &parts,
@@ -320,63 +270,67 @@ void UFpViewmodelRenderer::DrawParts(const std::vector<Part> &parts,
   glBindVertexArray(0);
 }
 
-GLuint UFpViewmodelRenderer::RenderFrame(const InventoryEntryRef *active,
-                                         int size)
+std::vector<UFpViewmodelRenderer::Part>
+UFpViewmodelRenderer::ToolParts(const std::string &, const glm::vec3 &) const
 {
-  if (!Shader || !EnsureFbo(size) || FboSize <= 0)
+  return {};
+}
+
+void UFpViewmodelRenderer::DrawHeld(const InventoryEntryRef *, const glm::vec3 &,
+                                    const glm::mat4 &)
+{
+  // Filled in held-content stage.
+}
+
+void UFpViewmodelRenderer::DrawBlockCube(const std::string &, const glm::vec3 &,
+                                         const glm::mat4 &)
+{
+}
+
+GLuint UFpViewmodelRenderer::ResolveBlockAtlas(const std::string &) const
+{
+  return 0;
+}
+
+void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
+{
+  if (!Shader || params.FramebufferW <= 0 || params.FramebufferH <= 0)
   {
-    return 0;
+    return;
   }
-  UGlStateScope glState(kGlMaskIconFbo);
-  glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
-  glViewport(0, 0, FboSize, FboSize);
+  UGlStateScope glState(kGlMaskFpViewmodel3D);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glViewport(0, 0, params.FramebufferW, params.FramebufferH);
+  glClear(GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
   glDepthMask(GL_TRUE);
+  glDepthFunc(GL_LESS);
   glDisable(GL_CULL_FACE);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  glClearColor(0.f, 0.f, 0.f, 0.f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+  const float aspect = static_cast<float>(params.FramebufferW) /
+                       static_cast<float>(params.FramebufferH);
   const glm::mat4 projection =
-      glm::perspective(glm::radians(kFovDeg), 1.0f, 0.05f, 20.0f);
+      glm::perspective(glm::radians(kFovDeg), aspect, kNear, kFar);
   const glm::mat4 view =
-      glm::lookAt(glm::vec3(0.05f, 0.05f, 0.15f), glm::vec3(0.3f, -0.25f, -0.45f),
-                  glm::vec3(0.f, 1.f, 0.f));
-  const glm::mat4 mvpBase = projection * view;
+      glm::lookAt(kEye, kTarget, glm::vec3(0.f, 1.f, 0.f));
+  const glm::mat4 pv = projection * view;
 
   Shader->Use();
   Shader->SetInt("texture0", 0);
   Shader->SetInt("uAnimFrame", 0);
   Shader->SetInt("uAnimFrameCount", 1);
 
-  DrawParts(ArmParts(), mvpBase);
-  if (active && !active->empty && active->kind == InventoryEntryKind::Item &&
-      !active->Id.empty() && !active->broken)
-  {
-    DrawParts(ToolParts(active->Id), mvpBase);
-  }
+  const glm::mat4 rootR = BuildRootMatrix(false);
+  DrawParts(ArmPartsRight(), pv * rootR);
+  DrawHeld(params.Active, kHandSocketR, pv * rootR);
+
+  const glm::mat4 rootL = BuildRootMatrix(true);
+  DrawParts(ArmPartsLeft(), pv * rootL);
+  DrawHeld(params.Offhand, kHandSocketL, pv * rootL);
 
   Shader->Unuse();
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  return ColorTex;
-}
-
-void UFpViewmodelRenderer::DrawOverlay(UGuiRenderer &renderer,
-                                       const GuiTheme &theme,
-                                       const InventoryEntryRef *active,
-                                       int framebuffer_w, int framebuffer_h)
-{
-  const int size = std::max(160, theme.HotbarSlotSize * 4);
-  const GLuint tex = RenderFrame(active, size);
-  if (tex == 0)
-  {
-    return;
-  }
-  const int drawSize = std::max(140, theme.HotbarSlotSize * 3);
-  const int x = framebuffer_w - drawSize - theme.Padding;
-  const int y = framebuffer_h - drawSize - theme.Padding * 2;
-  renderer.DrawTexturedRect({x, y, drawSize, drawSize}, tex);
 }
 
 } // namespace cutum

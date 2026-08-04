@@ -35,6 +35,12 @@ const char *WorldProjectionModeToString(WorldProjectionMode mode);
 bool WorldProjectionModeFromString(const std::string &value,
                                    WorldProjectionMode &out);
 
+inline bool ShouldDrawFpViewmodel(const WorldViewSettings &v)
+{
+  return v.ShowFpWield &&
+         v.Projection == WorldProjectionMode::Perspective;
+}
+
 } // namespace cutum
 
 #endif

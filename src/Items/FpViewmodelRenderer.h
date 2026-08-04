@@ -1,11 +1,13 @@
 #ifndef FP_VIEWMODEL_RENDERER_H
 #define FP_VIEWMODEL_RENDERER_H
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include <glm/mat4x4.hpp>
+#include <glm/vec3.hpp>
 
 typedef unsigned int GLuint;
 
@@ -13,27 +15,46 @@ namespace cutum
 {
 
 class UItemDefinitionStorage;
+class UBlockDefinitionStorage;
+class UTextureCubeStorage;
 class UShaderManager;
-class UGuiRenderer;
-struct GuiTheme;
 struct InventoryEntryRef;
 
-/// Minecraft/Luanti-style first-person box arms + held tool (FBO → UI blit).
-/// Not a full skinned FP mesh (see TD-ITEM-004).
+enum class FpSwingKind : uint8_t
+{
+  Dig = 0,
+  Place = 1,
+  Melee = 2
+};
+
+struct FpViewmodelDrawParams
+{
+  int FramebufferW{0};
+  int FramebufferH{0};
+  const InventoryEntryRef *Active{nullptr};
+  const InventoryEntryRef *Offhand{nullptr};
+};
+
+/// Luanti-style clear-Z FP viewmodel + Minecraft dual arms (box mesh).
+/// Not body-in-FP; skinned arms remain TD-ITEM-004.
 class UFpViewmodelRenderer
 {
 public:
   UFpViewmodelRenderer(std::shared_ptr<UItemDefinitionStorage> items,
+                       std::shared_ptr<UBlockDefinitionStorage> blocks,
+                       std::shared_ptr<UTextureCubeStorage> textures,
                        std::shared_ptr<UShaderManager> shaderManager);
   ~UFpViewmodelRenderer();
 
   bool Initialize();
   void Shutdown();
 
-  /// Renders 3D arms (+ tool if held) and blits into the lower-right corner.
-  void DrawOverlay(UGuiRenderer &renderer, const GuiTheme &theme,
-                   const InventoryEntryRef *active, int framebuffer_w,
-                   int framebuffer_h);
+  void Update(float dt, float cameraYawDeg, float cameraPitchDeg,
+              float moveSpeedHint);
+  void NotifySwing(FpSwingKind kind);
+
+  /// AFTER Geometry::Paint, BEFORE HUD. Default framebuffer.
+  void DrawWorldOverlay(const FpViewmodelDrawParams &params);
 
 private:
   struct Part
@@ -49,29 +70,49 @@ private:
     unsigned char b{110};
   };
 
+  struct FpMotion
+  {
+    float BobPhase{0.f};
+    float DigAnim{-1.f};
+    int DigButton{-1};
+    float WieldOffsetX{0.f};
+    float WieldOffsetY{0.f};
+    float LastYaw{0.f};
+    float LastPitch{0.f};
+    bool HaveLastAngles{false};
+  };
+
   bool InitCubeMesh();
-  bool EnsureFbo(int size);
   GLuint SolidTex(unsigned char r, unsigned char g, unsigned char b);
   void DrawParts(const std::vector<Part> &parts, const glm::mat4 &mvpBase);
-  std::vector<Part> ArmParts() const;
-  std::vector<Part> ToolParts(const std::string &itemId) const;
-  GLuint RenderFrame(const InventoryEntryRef *active, int size);
+  std::vector<Part> ArmPartsRight() const;
+  std::vector<Part> ArmPartsLeft() const;
+  std::vector<Part> ToolParts(const std::string &itemId,
+                               const glm::vec3 &socket) const;
+  void DrawHeld(const InventoryEntryRef *entry, const glm::vec3 &socket,
+                const glm::mat4 &mvpBase);
+  void DrawBlockCube(const std::string &typeName, const glm::vec3 &socket,
+                     const glm::mat4 &mvpBase);
+  GLuint ResolveBlockAtlas(const std::string &typeName) const;
+  glm::mat4 BuildRootMatrix(bool mirrorX) const;
 
   std::shared_ptr<UItemDefinitionStorage> Items;
+  std::shared_ptr<UBlockDefinitionStorage> Blocks;
+  std::shared_ptr<UTextureCubeStorage> Textures;
   std::shared_ptr<UShaderManager> ShaderManager;
   std::shared_ptr<class UShaderProgram> Shader;
 
   GLuint CubeVao{0};
   GLuint CubeVbo{0};
   GLuint CubeEbo{0};
-  GLuint Fbo{0};
-  GLuint ColorTex{0};
-  GLuint DepthRbo{0};
-  int FboSize{0};
   GLuint SkinTex{0};
   GLuint SleeveTex{0};
   GLuint MetalTex{0};
   GLuint WoodTex{0};
+
+  FpMotion Motion;
+  float BobX{0.f};
+  float BobY{0.f};
 };
 
 } // namespace cutum

@@ -320,7 +320,8 @@ void UApplication::Startup(const std::string &configPath)
     if (Core && ShaderManager)
     {
       auto fpView = std::make_unique<UFpViewmodelRenderer>(
-          Core->GetItemDefinitionStorage(), ShaderManager);
+          Core->GetItemDefinitionStorage(), BlockDefinitions,
+          Core->GetTextureCubeStorage(), ShaderManager);
       if (fpView->Initialize())
       {
         FpViewmodelRenderer = std::move(fpView);
@@ -1784,6 +1785,25 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     Geometry->Paint(width, height, viewDuration);
   }
 
+  if (State == AppState::InGame && World && !MinimalOverlayForBench &&
+      !PaletteOpen && FpViewmodelRenderer)
+  {
+    const WorldViewSettings &view = World->GetViewSettings();
+    if (ShouldDrawFpViewmodel(view))
+    {
+      if (const UCreature *creature = World->GetControlledCreature())
+      {
+        const auto &inv = creature->GetInventory();
+        FpViewmodelDrawParams fpParams;
+        fpParams.FramebufferW = width;
+        fpParams.FramebufferH = height;
+        fpParams.Active = inv.GetActiveEntryRef();
+        fpParams.Offhand = nullptr;
+        FpViewmodelRenderer->DrawWorldOverlay(fpParams);
+      }
+    }
+  }
+
   const auto gui_begin = std::chrono::high_resolution_clock::now();
   const bool hitch_gui =
       World && (World->GetWallFrameDelta() * 1000.0) > 24.0;
@@ -1799,27 +1819,6 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     HudScreen->SyncSlotIcons();
     notifyViewport(HudScreen.get());
     GuiContext->RenderOverlay(*HudScreen->GetRoot(), width, height, false);
-  }
-  if (State == AppState::InGame && World && IconSource && GuiContext &&
-      !MinimalOverlayForBench && !PaletteOpen)
-  {
-    const WorldViewSettings &view = World->GetViewSettings();
-    const bool showFp =
-        view.ShowFpWield &&
-        view.Projection == WorldProjectionMode::Perspective;
-    if (showFp && FpViewmodelRenderer)
-    {
-      if (const UCreature *creature = World->GetControlledCreature())
-      {
-        const InventoryEntryRef *active =
-            creature->GetInventory().GetActiveEntryRef();
-        auto &renderer = GuiContext->GetRenderer();
-        renderer.BeginFrame(width, height);
-        FpViewmodelRenderer->DrawOverlay(renderer, GuiContext->GetTheme(),
-                                         active, width, height);
-        renderer.EndFrame();
-      }
-    }
   }
   if (ConsoleOpen && ConsoleScreen && ConsoleScreen->GetRoot())
   {
