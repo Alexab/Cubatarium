@@ -39,8 +39,8 @@ public:
 
   /// Hit-test armor slots for inventory drag routing (0..5), returns false if miss.
   bool PickArmorSlot(int x, int y, size_t &outSlot) const;
-  /// Hit-test tool display slots (read-only hotbar mirrors).
-  bool PickToolSlot(int x, int y, size_t &outSlot) const;
+  /// Hit-test offhand slot (Tool2).
+  bool PickOffhandSlot(int x, int y) const;
 
 private:
   void Relayout();

@@ -369,6 +369,32 @@ void UCreatureInventory::UnequipArmor(size_t slot,
   }
 }
 
+const InventoryEntryRef &UCreatureInventory::GetEquippedOffhand() const
+{
+  return EquippedOffhand;
+}
+
+bool UCreatureInventory::EquipOffhand(const InventoryEntryRef &entry)
+{
+  if (entry.empty || entry.Id.empty())
+  {
+    return false;
+  }
+  if (entry.kind != InventoryEntryKind::Item &&
+      entry.kind != InventoryEntryKind::Block)
+  {
+    return false;
+  }
+  EquippedOffhand = entry;
+  EquippedOffhand.empty = false;
+  return true;
+}
+
+void UCreatureInventory::UnequipOffhand()
+{
+  EquippedOffhand = InventoryEntryRef{};
+}
+
 void UCreatureInventory::EnsureHotbarCount(size_t count)
 {
   if (Hotbars.size() >= count)
@@ -458,6 +484,32 @@ void UCreatureInventory::SerializeToJson(nlohmann::json &out) const
     equipped.push_back(s);
   }
   out["equipped_armor"] = equipped;
+
+  {
+    nlohmann::json oh;
+    oh["empty"] = EquippedOffhand.empty;
+    if (!EquippedOffhand.empty)
+    {
+      switch (EquippedOffhand.kind)
+      {
+      case InventoryEntryKind::Block:
+        oh["kind"] = "block";
+        break;
+      case InventoryEntryKind::Item:
+      default:
+        oh["kind"] = "item";
+        break;
+      }
+      oh["id"] = EquippedOffhand.Id;
+      oh["count"] = EquippedOffhand.count;
+      if (EquippedOffhand.kind == InventoryEntryKind::Item)
+      {
+        oh["wear"] = EquippedOffhand.wear;
+        oh["broken"] = EquippedOffhand.broken;
+      }
+    }
+    out["equipped_offhand"] = oh;
+  }
 
   nlohmann::json groups = nlohmann::json::object();
   for (const auto &pair : EquippedArmorGroups.Ratings)
@@ -588,6 +640,32 @@ void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data,
         EquippedArmorGroups.Ratings[it.key()] =
             static_cast<int>(std::lround(it.value().get<float>()));
       }
+    }
+  }
+
+  EquippedOffhand = InventoryEntryRef{};
+  if (data.contains("equipped_offhand") && data["equipped_offhand"].is_object())
+  {
+    const auto &oh = data["equipped_offhand"];
+    const bool empty =
+        oh.value("empty", oh.value("id", std::string()).empty());
+    EquippedOffhand.empty = empty;
+    if (!empty)
+    {
+      const std::string kind = oh.value("kind", "item");
+      if (kind == "block")
+      {
+        EquippedOffhand.kind = InventoryEntryKind::Block;
+      }
+      else
+      {
+        EquippedOffhand.kind = InventoryEntryKind::Item;
+      }
+      EquippedOffhand.Id = oh.value("id", "");
+      EquippedOffhand.count = oh.value("count", 1);
+      EquippedOffhand.wear = oh.value("wear", 0.f);
+      EquippedOffhand.broken = oh.value("broken", false);
+      EquippedOffhand.empty = EquippedOffhand.Id.empty();
     }
   }
 }

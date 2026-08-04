@@ -171,8 +171,25 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
     for (int i = 0; i < 2; ++i)
     {
       auto slot = std::make_unique<UGuiSlot>(&theme);
-      slot->SetLabel(i == 0 ? "Tool 1" : "Tool 2");
+      slot->SetLabel(i == 0 ? "Main" : "Offhand");
       slot->SetIconTexture(0);
+      if (i == 1)
+      {
+        SlotAddress address;
+        address.surface = SlotSurface::CharacterOffhand;
+        slot->SetOnBeginDrag([this, address]() {
+          auto *session = dynamic_cast<UGameSession *>(Stats);
+          if (!session)
+          {
+            return;
+          }
+          const InventoryEntryRef entry = session->GetOffhandEntryRef();
+          if (!entry.empty)
+          {
+            session->BeginDragFromSlot(address, entry);
+          }
+        });
+      }
       ToolSlots.push_back(slot.get());
       DollPanel->AddChild(std::move(slot));
     }
@@ -372,17 +389,13 @@ bool UCharacterSheetScreen::PickArmorSlot(int x, int y, size_t &outSlot) const
   return false;
 }
 
-bool UCharacterSheetScreen::PickToolSlot(int x, int y, size_t &outSlot) const
+bool UCharacterSheetScreen::PickOffhandSlot(int x, int y) const
 {
-  for (size_t i = 0; i < ToolSlots.size(); ++i)
+  if (ToolSlots.size() < 2 || !ToolSlots[1])
   {
-    if (ToolSlots[i] && PointInBounds(x, y, ToolSlots[i]->GetBounds()))
-    {
-      outSlot = i;
-      return true;
-    }
+    return false;
   }
-  return false;
+  return PointInBounds(x, y, ToolSlots[1]->GetBounds());
 }
 
 void UCharacterSheetScreen::RefreshLabels()
@@ -479,7 +492,10 @@ void UCharacterSheetScreen::RefreshLabels()
       const auto &s = snap.equippedTools[i];
       if (ToolSlots[i] && !s.itemId.empty())
       {
-        ToolSlots[i]->SetIconTexture(Icons->GetItemIconTexture(s.itemId));
+        const GLuint tex =
+            s.isBlock ? Icons->GetBlockIconTexture(s.itemId)
+                      : Icons->GetItemIconTexture(s.itemId);
+        ToolSlots[i]->SetIconTexture(tex);
         ToolSlots[i]->SetWearProgress(s.wear);
         ToolSlots[i]->SetBroken(s.broken);
         ToolSlots[i]->SetDimmed(false);

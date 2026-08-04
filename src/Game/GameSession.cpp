@@ -290,6 +290,10 @@ bool SameSlotAddress(const SlotAddress &a, const SlotAddress &b)
   {
     return a.slot == b.slot;
   }
+  if (a.surface == SlotSurface::CharacterOffhand)
+  {
+    return true;
+  }
   return true;
 }
 
@@ -335,6 +339,17 @@ InventoryEntryRef UGameSession::GetArmorEntryRef(size_t armorSlot) const
     return entry;
   }
   return inv->GetEquippedArmor(armorSlot);
+}
+
+InventoryEntryRef UGameSession::GetOffhandEntryRef() const
+{
+  InventoryEntryRef entry;
+  const UCreatureInventory *inv = GetControlledInventory(World.get());
+  if (!inv)
+  {
+    return entry;
+  }
+  return inv->GetEquippedOffhand();
 }
 
 void UGameSession::BeginDragFromSlot(const SlotAddress &source,
@@ -397,6 +412,13 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
         }
       }
     }
+    if (source.surface == SlotSurface::CharacterOffhand)
+    {
+      if (UCreatureInventory *inv = GetControlledInventory(World.get()))
+      {
+        inv->UnequipOffhand();
+      }
+    }
     SelectSlot(target.bar, target.slot);
     CancelDrag();
     return true;
@@ -428,6 +450,49 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
     {
       inv->UnequipArmor(source.slot, *items);
     }
+    else if (source.surface == SlotSurface::CharacterOffhand)
+    {
+      inv->UnequipOffhand();
+    }
+    CancelDrag();
+    return true;
+  }
+
+  if (target.surface == SlotSurface::CharacterOffhand)
+  {
+    UCreatureInventory *inv = GetControlledInventory(World.get());
+    if (!inv)
+    {
+      return false;
+    }
+    if (entry.kind != InventoryEntryKind::Item &&
+        entry.kind != InventoryEntryKind::Block)
+    {
+      return false;
+    }
+    if (!inv->EquipOffhand(entry))
+    {
+      return false;
+    }
+    if (source.surface == SlotSurface::Hotbar)
+    {
+      inv->ClearHotbarSlot(source.bar, source.slot);
+    }
+    else if (source.surface == SlotSurface::CharacterArmor)
+    {
+      if (UItemDefinitionStorage *items =
+              World ? World->GetItemDefinitionStorage() : nullptr)
+      {
+        if (items)
+        {
+          inv->UnequipArmor(source.slot, *items);
+        }
+      }
+    }
+    else if (source.surface == SlotSurface::CharacterOffhand)
+    {
+      // replaced in place
+    }
     CancelDrag();
     return true;
   }
@@ -453,6 +518,17 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
       {
         inv->UnequipArmor(source.slot, *items);
       }
+    }
+    CancelDrag();
+    return true;
+  }
+
+  if (target.surface == SlotSurface::PaletteGrid &&
+      source.surface == SlotSurface::CharacterOffhand)
+  {
+    if (UCreatureInventory *inv = GetControlledInventory(World.get()))
+    {
+      inv->UnequipOffhand();
     }
     CancelDrag();
     return true;
@@ -722,29 +798,26 @@ CharacterStatsSnapshot UGameSession::GetCharacterStatsSnapshot() const
   }
   for (size_t i = 0; i < 2; ++i)
   {
-    const size_t barIndex = i;
-    if (barIndex >= inv.GetHotbarCount())
+    snap.equippedTools[i] = CharacterStatsSnapshot::EquippedSlotSnapshot{};
+  }
+  {
+    const InventoryEntryRef *active = inv.GetActiveEntryRef();
+    if (active && !active->empty && !active->Id.empty() &&
+        (active->kind == InventoryEntryKind::Item ||
+         active->kind == InventoryEntryKind::Block))
     {
-      snap.equippedTools[i] = CharacterStatsSnapshot::EquippedSlotSnapshot{};
-      continue;
+      snap.equippedTools[0].itemId = active->Id;
+      snap.equippedTools[0].wear = active->wear;
+      snap.equippedTools[0].broken = active->broken;
+      snap.equippedTools[0].isBlock = active->kind == InventoryEntryKind::Block;
     }
-    size_t selectedSlot = inv.GetActiveSlotIndex(barIndex);
-    if (selectedSlot >= 10)
+    const InventoryEntryRef &oh = inv.GetEquippedOffhand();
+    if (!oh.empty && !oh.Id.empty())
     {
-      selectedSlot = 0;
-    }
-    const HotbarBar &bar = inv.GetHotbar(barIndex);
-    const HotbarSlot &slot = bar.slots[selectedSlot];
-    if (!slot.empty && slot.entry.kind == InventoryEntryKind::Item &&
-        !slot.entry.Id.empty())
-    {
-      snap.equippedTools[i].itemId = slot.entry.Id;
-      snap.equippedTools[i].wear = slot.entry.wear;
-      snap.equippedTools[i].broken = slot.entry.broken;
-    }
-    else
-    {
-      snap.equippedTools[i] = CharacterStatsSnapshot::EquippedSlotSnapshot{};
+      snap.equippedTools[1].itemId = oh.Id;
+      snap.equippedTools[1].wear = oh.wear;
+      snap.equippedTools[1].broken = oh.broken;
+      snap.equippedTools[1].isBlock = oh.kind == InventoryEntryKind::Block;
     }
   }
 

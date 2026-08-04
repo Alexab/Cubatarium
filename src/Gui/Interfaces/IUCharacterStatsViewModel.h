@@ -18,6 +18,7 @@ struct CharacterStatsSnapshot
     std::string itemId;
     float wear{0.f};
     bool broken{false};
+    bool isBlock{false};
   };
 
   std::string displayName;

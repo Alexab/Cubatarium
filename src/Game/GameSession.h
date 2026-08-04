@@ -76,6 +76,7 @@ public:
   void CancelDrag();
   InventoryEntryRef GetHotbarEntryRef(size_t barIndex, size_t slotIndex) const;
   InventoryEntryRef GetArmorEntryRef(size_t armorSlot) const;
+  InventoryEntryRef GetOffhandEntryRef() const;
 
   std::vector<InventoryGroupView> GetGroups(ContentKind tab,
                                             InventoryMode mode) const override;

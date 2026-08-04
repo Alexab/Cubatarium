@@ -1445,6 +1445,12 @@ bool UApplication::ResolveSlotAt(int x, int y, SlotAddress &out)
       out.slot = armorSlot;
       return true;
     }
+    if (CharacterSheetScreen->PickOffhandSlot(x, y))
+    {
+      out = SlotAddress{};
+      out.surface = SlotSurface::CharacterOffhand;
+      return true;
+    }
   }
   if (PaletteOpen && PaletteScreen && PaletteScreen->PickSlot(x, y, out))
   {
@@ -1818,7 +1824,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
         fpParams.FramebufferW = width;
         fpParams.FramebufferH = height;
         fpParams.Active = inv.GetActiveEntryRef();
-        fpParams.Offhand = nullptr;
+        fpParams.Offhand = &inv.GetEquippedOffhand();
         FpViewmodelRenderer->DrawWorldOverlay(fpParams);
       }
     }

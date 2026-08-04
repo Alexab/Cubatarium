@@ -59,6 +59,10 @@ public:
   void UnequipArmor(size_t slot, const UItemDefinitionStorage &items);
   const ArmorGroups &GetEquippedArmorGroups() const { return EquippedArmorGroups; }
 
+  const InventoryEntryRef &GetEquippedOffhand() const;
+  bool EquipOffhand(const InventoryEntryRef &entry);
+  void UnequipOffhand();
+
 private:
   std::map<std::string, int> Storage;
   std::vector<HotbarBar> Hotbars;
@@ -67,6 +71,7 @@ private:
 
   std::array<InventoryEntryRef, 6> EquippedArmor{};
   ArmorGroups EquippedArmorGroups{};
+  InventoryEntryRef EquippedOffhand{};
 };
 
 } // namespace cutum
