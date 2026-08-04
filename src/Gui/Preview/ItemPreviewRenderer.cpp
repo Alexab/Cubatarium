@@ -1,6 +1,8 @@
 #include "Gui/Preview/ItemPreviewRenderer.h"
 
 #include "App/Platform/IUPlatformPaths.h"
+#include "Creatures/Visual/Gltf/CreatureGltfLoader.h"
+#include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Render/GlIncludes.h"
 #include "Render/Engine/ShaderManager.h"
@@ -11,8 +13,12 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
+#include <filesystem>
+#include <iostream>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace cutum
@@ -23,6 +29,8 @@ namespace
 constexpr float kDefaultOrbitDistance = 3.0f;
 constexpr float kFovDeg = 35.0f;
 
+std::unordered_set<std::string> gItemModelMissingLogged;
+
 struct Rgb
 {
   unsigned char r{158};
@@ -30,27 +38,35 @@ struct Rgb
   unsigned char b{56};
 };
 
-Rgb ToolRgb(const std::string &id)
-{
-  // Rough palette to make rotation silhouettes readable even without textures.
-  if (id.find("iron") != std::string::npos)
+  Rgb ToolRgb(const std::string &id)
   {
-    return Rgb{185, 190, 200};
+    // Rough palette to make rotation silhouettes readable even without textures.
+    if (id.find("leather") != std::string::npos)
+    {
+      return Rgb{120, 78, 48};
+    }
+    if (id.find("iron") != std::string::npos)
+    {
+      return Rgb{185, 190, 200};
+    }
+    if (id.find("stone") != std::string::npos)
+    {
+      return Rgb{140, 140, 132};
+    }
+    if (id.find("gold") != std::string::npos)
+    {
+      return Rgb{225, 170, 60};
+    }
+    if (id.find("diamond") != std::string::npos)
+    {
+      return Rgb{120, 210, 255};
+    }
+    if (id.find("wood") != std::string::npos)
+    {
+      return Rgb{158, 107, 56};
+    }
+    return Rgb{158, 107, 56};
   }
-  if (id.find("stone") != std::string::npos)
-  {
-    return Rgb{140, 140, 132};
-  }
-  if (id.find("gold") != std::string::npos)
-  {
-    return Rgb{225, 170, 60};
-  }
-  if (id.find("diamond") != std::string::npos)
-  {
-    return Rgb{120, 210, 255};
-  }
-  return Rgb{158, 107, 56};
-}
 
 glm::vec3 ReadVec3(const nlohmann::json &arr, const glm::vec3 &fallback)
 {
@@ -99,6 +115,21 @@ void UItemPreviewRenderer::Shutdown()
 {
   Invalidate();
 
+  if (ScratchMeshEbo != 0)
+  {
+    glDeleteBuffers(1, &ScratchMeshEbo);
+    ScratchMeshEbo = 0;
+  }
+  if (ScratchMeshVbo != 0)
+  {
+    glDeleteBuffers(1, &ScratchMeshVbo);
+    ScratchMeshVbo = 0;
+  }
+  if (ScratchMeshVao != 0)
+  {
+    glDeleteVertexArrays(1, &ScratchMeshVao);
+    ScratchMeshVao = 0;
+  }
   if (CubeEbo != 0)
   {
     glDeleteBuffers(1, &CubeEbo);
@@ -271,6 +302,12 @@ bool UItemPreviewRenderer::TryLoadPartsFromModelJson(
   std::string jsonText;
   if (!paths->ReadAssetText(outModelRelPath, jsonText))
   {
+    if (gItemModelMissingLogged.insert(itemId).second)
+    {
+      std::cerr << "ItemPreviewRenderer: missing model asset for item="
+                << itemId << " path=" << outModelRelPath
+                << " (using procedural fallback)\n";
+    }
     return false;
   }
 
@@ -281,9 +318,16 @@ bool UItemPreviewRenderer::TryLoadPartsFromModelJson(
   }
   catch (...)
   {
+    if (gItemModelMissingLogged.insert(itemId + "|parse").second)
+    {
+      std::cerr << "ItemPreviewRenderer: failed to parse model for item="
+                << itemId << " path=" << outModelRelPath << '\n';
+    }
     return false;
   }
 
+  // Prefer parts[] JSON authoring. Non-parts files (e.g. future wrappers)
+  // fall through to glTF / procedural paths without spam.
   if (!data.contains("parts") || !data["parts"].is_array())
   {
     return false;
@@ -308,6 +352,154 @@ bool UItemPreviewRenderer::TryLoadPartsFromModelJson(
   }
 
   return !outParts.empty();
+}
+
+bool UItemPreviewRenderer::TryDrawGltfModel(const std::string &itemId,
+                                            const std::string &modelRel,
+                                            const glm::mat4 &projection,
+                                            const glm::mat4 &view)
+{
+  IUPlatformPaths *paths = IUPlatformPaths::TryGet();
+  if (!paths || modelRel.empty())
+  {
+    return false;
+  }
+
+  std::string gltfRel = modelRel;
+  auto endsWithIgnoreCase = [](const std::string &s, const char *suf) {
+    const size_t n = std::char_traits<char>::length(suf);
+    if (s.size() < n)
+    {
+      return false;
+    }
+    for (size_t i = 0; i < n; ++i)
+    {
+      const char a = static_cast<char>(std::tolower(static_cast<unsigned char>(
+          s[s.size() - n + i])));
+      const char b = static_cast<char>(std::tolower(static_cast<unsigned char>(
+          suf[i])));
+      if (a != b)
+      {
+        return false;
+      }
+    }
+    return true;
+  };
+  const bool isGltf =
+      endsWithIgnoreCase(modelRel, ".gltf") || endsWithIgnoreCase(modelRel, ".glb");
+  if (!isGltf)
+  {
+    // Convention: models/items/<id>/model.gltf next to or instead of .json
+    const std::filesystem::path asDir =
+        std::filesystem::path(modelRel).parent_path() /
+        std::filesystem::path(modelRel).stem() / "model.gltf";
+    const std::filesystem::path sibling =
+        std::filesystem::path("models/items") / itemId / "model.gltf";
+    if (paths->AssetExists(asDir.generic_string()))
+    {
+      gltfRel = asDir.generic_string();
+    }
+    else if (paths->AssetExists(sibling.generic_string()))
+    {
+      gltfRel = sibling.generic_string();
+    }
+    else
+    {
+      return false;
+    }
+  }
+  else if (!paths->AssetExists(gltfRel))
+  {
+    return false;
+  }
+
+  const std::filesystem::path absPath = paths->AssetRoot() / gltfRel;
+  auto asset = CreatureGltfLoader::LoadFromFile(absPath.string());
+  if (!asset || asset->primitives.empty())
+  {
+    if (gItemModelMissingLogged.insert(itemId + "|gltf").second)
+    {
+      std::cerr << "ItemPreviewRenderer: failed to load glTF for item="
+                << itemId << " path=" << gltfRel << '\n';
+    }
+    return false;
+  }
+
+  glm::vec3 minV(1e9f);
+  glm::vec3 maxV(-1e9f);
+  for (const GltfPrimitiveCpu &prim : asset->primitives)
+  {
+    const auto &posUv = prim.mesh.interleavedPosUv;
+    for (size_t i = 0; i + 4 < posUv.size(); i += 5)
+    {
+      const glm::vec3 p(posUv[i], posUv[i + 1], posUv[i + 2]);
+      minV = glm::min(minV, p);
+      maxV = glm::max(maxV, p);
+    }
+  }
+  if (minV.x > maxV.x)
+  {
+    return false;
+  }
+
+  const glm::vec3 center = (minV + maxV) * 0.5f;
+  const glm::vec3 ext = maxV - minV;
+  const float maxExtent =
+      std::max(1e-5f, std::max(ext.x, std::max(ext.y, ext.z)));
+  const float scale = 1.2f / maxExtent;
+  const glm::mat4 modelMat =
+      glm::scale(glm::mat4(1.f), glm::vec3(scale)) *
+      glm::translate(glm::mat4(1.f), -center);
+  const glm::mat4 mvp = projection * view * modelMat;
+
+  if (ScratchMeshVao == 0)
+  {
+    glGenVertexArrays(1, &ScratchMeshVao);
+    glGenBuffers(1, &ScratchMeshVbo);
+    glGenBuffers(1, &ScratchMeshEbo);
+  }
+
+  const GLuint colorTex = GetOrCreateColorTexture(itemId);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, colorTex);
+
+  Shader->Use();
+  Shader->SetInt("texture0", 0);
+  Shader->SetInt("uAnimFrame", 0);
+  Shader->SetInt("uAnimFrameCount", 1);
+  Shader->SetMat4("mvp_matrix", mvp);
+
+  bool drew = false;
+  for (const GltfPrimitiveCpu &prim : asset->primitives)
+  {
+    const auto &mesh = prim.mesh;
+    if (mesh.interleavedPosUv.empty() || mesh.indices.empty())
+    {
+      continue;
+    }
+    glBindVertexArray(ScratchMeshVao);
+    glBindBuffer(GL_ARRAY_BUFFER, ScratchMeshVbo);
+    glBufferData(GL_ARRAY_BUFFER,
+                 static_cast<GLsizeiptr>(mesh.interleavedPosUv.size() *
+                                         sizeof(float)),
+                 mesh.interleavedPosUv.data(), GL_STREAM_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ScratchMeshEbo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                 static_cast<GLsizeiptr>(mesh.indices.size() * sizeof(unsigned)),
+                 mesh.indices.data(), GL_STREAM_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+                          reinterpret_cast<void *>(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh.indices.size()),
+                   GL_UNSIGNED_INT, nullptr);
+    drew = true;
+  }
+
+  glBindVertexArray(0);
+  Shader->Unuse();
+  return drew;
 }
 
 std::vector<UItemPreviewRenderer::Part>
@@ -407,9 +599,30 @@ GLuint UItemPreviewRenderer::RenderToUniqueTexture(const std::string &itemId,
   glClearColor(0.12f, 0.12f, 0.14f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  std::vector<Part> parts;
+  const glm::mat4 projection =
+      glm::perspective(glm::radians(kFovDeg), 1.0f, 0.1f, 50.0f);
+  const glm::mat4 view = OrbitView(yawDeg, pitchDeg, kDefaultOrbitDistance);
+
   std::string modelRel;
-  if (!TryLoadPartsFromModelJson(itemId, modelRel, parts))
+  const auto *def = Items->Get(itemId);
+  if (def)
+  {
+    modelRel = def->ModelPath;
+  }
+
+  // Prefer static glTF when present, then parts[] cubes, then procedural.
+  if (TryDrawGltfModel(itemId, modelRel, projection, view))
+  {
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                           ColorTex, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    return tex;
+  }
+
+  std::vector<Part> parts;
+  std::string partsRel;
+  if (!TryLoadPartsFromModelJson(itemId, partsRel, parts))
   {
     parts = FallbackParts(itemId);
   }
@@ -436,10 +649,6 @@ GLuint UItemPreviewRenderer::RenderToUniqueTexture(const std::string &itemId,
   const glm::vec3 ext = maxV - minV;
   const float maxExtent = std::max(1e-5f, std::max(ext.x, std::max(ext.y, ext.z)));
   const float scale = 1.2f / maxExtent;
-
-  const glm::mat4 projection =
-      glm::perspective(glm::radians(kFovDeg), 1.0f, 0.1f, 50.0f);
-  const glm::mat4 view = OrbitView(yawDeg, pitchDeg, kDefaultOrbitDistance);
 
   Shader->Use();
   Shader->SetInt("texture0", 0);

@@ -1,0 +1,19 @@
+{
+  "id": "stone_knife",
+  "displayName": "Stone Knife",
+  "types": [
+    "combat",
+    "tool"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "model": "models/items/stone_knife.json",
+  "tool": {
+    "full_punch_interval": 1.0,
+    "damage": {
+      "fleshy": 3,
+      "melee": 3
+    },
+    "punch_attack_uses": 80
+  }
+}

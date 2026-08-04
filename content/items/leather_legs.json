@@ -1,0 +1,19 @@
+{
+  "id": "leather_legs",
+  "displayName": "Leather Leggings",
+  "types": [
+    "armor",
+    "legs"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "model": "models/items/leather_legs.json",
+  "armor": {
+    "slots": [
+      "legs"
+    ],
+    "armor_groups": {
+      "fleshy": 40
+    }
+  }
+}

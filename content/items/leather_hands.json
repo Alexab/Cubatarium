@@ -1,0 +1,19 @@
+{
+  "id": "leather_hands",
+  "displayName": "Leather Gloves",
+  "types": [
+    "armor",
+    "hands"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "model": "models/items/leather_hands.json",
+  "armor": {
+    "slots": [
+      "hands"
+    ],
+    "armor_groups": {
+      "fleshy": 40
+    }
+  }
+}

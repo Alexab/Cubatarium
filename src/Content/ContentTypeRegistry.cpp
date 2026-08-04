@@ -11,6 +11,7 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <sstream>
+#include <unordered_set>
 
 namespace cutum
 {
@@ -268,13 +269,34 @@ void UContentTypeRegistry::IndexItems(const UItemDefinitionStorage &storage)
 {
   ItemEntries.clear();
   EnsureDefaultTypes();
+  std::unordered_set<std::string> knownItemTypes;
   for (const auto &type : ItemTypes)
   {
     ItemEntries[type.Id] = {};
+    knownItemTypes.insert(type.Id);
   }
   for (const std::string &Id : storage.ListCatalogIds())
   {
-    const auto typeIds = GetTypesForTags(storage.GetTypes(Id));
+    const auto rawTypeIds = GetTypesForTags(storage.GetTypes(Id));
+    // Keep only catalog itemTypes; if none match, fall back to misc so orphans
+    // still appear under Tools → Misc.
+    std::vector<std::string> typeIds;
+    std::unordered_set<std::string> seen;
+    for (const std::string &typeId : rawTypeIds)
+    {
+      if (!knownItemTypes.count(typeId))
+      {
+        continue;
+      }
+      if (seen.insert(typeId).second)
+      {
+        typeIds.push_back(typeId);
+      }
+    }
+    if (typeIds.empty())
+    {
+      typeIds.push_back(kMiscType);
+    }
     CatalogEntry entry{Id, storage.GetDisplayName(Id)};
     for (const auto &typeId : typeIds)
     {

@@ -221,6 +221,19 @@ Luanti schematic files in `third_party/schematics/` (also used from `prefabs/` /
 | [minetest-game/default](https://github.com/minetest-game/default) | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) | `mtg/*.mts` (trees, bushes, …) |
 | [X-DE1/ruined_structures](https://github.com/X-DE1/ruined_structures) | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) | `ruined_structures/*.mts` |
 
+## Item / armor models
+
+Curated low-poly item and armor previews under [`models/items/`](models/items/) (`parts[]` JSON, CC0 educational authoring). Optional upstream CC0 glTF import via [`tools/import_item_models.py`](tools/import_item_models.py).
+
+| Source | License | Notes |
+|--------|---------|-------|
+| Cubatarium authored `parts[]` | CC0-1.0 | Shipped defaults; visual language inspired by the packs below |
+| [Kenney Survival Kit](https://www.kenney.nl/assets/survival-kit) | CC0-1.0 | Optional glTF import |
+| [KayKit RPG Tools Bits](https://kaylousberg.itch.io/rpg-tools-bits) | CC0-1.0 | Optional glTF import |
+| [Quaternius](https://quaternius.com/) Fantasy Props / Ultimate RPG Items | CC0-1.0 | Optional glTF import |
+
+Details: [`docs/ITEM_ASSETS.md`](docs/ITEM_ASSETS.md).
+
 ## Removed from repository
 
 Minecraft-derived block textures and JSON under `textures/blocks/` and `models/blocks/` were removed from version control as part of the resource-pack migration. They may be regenerated locally for personal use only via `tools/migrate_to_resource_pack.ps1` into `resource_packs/minecraft_legacy_16/` (gitignored). **Do not redistribute** Minecraft-derived assets.

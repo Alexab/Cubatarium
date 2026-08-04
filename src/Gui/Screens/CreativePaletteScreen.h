@@ -70,6 +70,7 @@ private:
   UGuiTabBar *SubTabs{nullptr};
   UGuiScrollView *Scroll{nullptr};
   UGuiLabel *TooltipLabel{nullptr};
+  UGuiLabel *UsageHintLabel{nullptr};
   UGuiRenderer *Renderer{nullptr};
   std::vector<UGuiSlot *> GridSlots;
   int PointerX{-1};

@@ -1,6 +1,7 @@
 #include "Gui/Widgets/WorldViewSettingsForm.h"
 
 #include "Gui/Core/GuiTheme.h"
+#include "Gui/Widgets/GuiCheckbox.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiListView.h"
 #include "Gui/Widgets/GuiPanel.h"
@@ -61,6 +62,10 @@ void UWorldViewSettingsForm::SetSettings(const WorldViewSettings &settings)
     OrthoSizeInput->SetText(
         std::to_string(static_cast<int>(FormSettings.OrthoSize)));
   }
+  if (ShowFpWieldCheckbox)
+  {
+    ShowFpWieldCheckbox->SetChecked(FormSettings.ShowFpWield);
+  }
   UpdateFieldVisibility();
 }
 
@@ -77,6 +82,10 @@ WorldViewSettings UWorldViewSettingsForm::ReadSettings() const
   {
     settings.OrthoSize =
         ParseFloatOr(OrthoSizeInput->GetText(), settings.OrthoSize);
+  }
+  if (ShowFpWieldCheckbox)
+  {
+    settings.ShowFpWield = ShowFpWieldCheckbox->IsChecked();
   }
   settings.Validate();
   return settings;
@@ -135,6 +144,14 @@ void UWorldViewSettingsForm::BuildInto(UGuiPanel &panel)
       std::to_string(static_cast<int>(FormSettings.OrthoSize)));
   panel.AddChild(std::move(orthoInput));
 
+  auto fpWield = std::make_unique<UGuiCheckbox>(
+      Theme, "Show first-person hands / tool");
+  ShowFpWieldCheckbox = fpWield.get();
+  ShowFpWieldCheckbox->SetChecked(FormSettings.ShowFpWield);
+  ShowFpWieldCheckbox->SetDescription(
+      "Screen-space viewmodel overlay in Perspective (FPS) camera.");
+  panel.AddChild(std::move(fpWield));
+
   Built = true;
   UpdateFieldVisibility();
 }
@@ -157,6 +174,9 @@ int UWorldViewSettingsForm::MeasureHeight(const GuiRect &area) const
     height += row + gap;
     height += row + gap;
   }
+  height += (ShowFpWieldCheckbox ? ShowFpWieldCheckbox->GetPreferredHeight()
+                                 : row) +
+            gap;
   return height;
 }
 
@@ -188,6 +208,8 @@ void UWorldViewSettingsForm::Layout(const GuiRect &area) const
         ProjectionList ? ProjectionList->GetPreferredHeight() : row * 2);
   place(OrthoSizeLabel, row);
   place(OrthoSizeInput, row);
+  place(ShowFpWieldCheckbox,
+        ShowFpWieldCheckbox ? ShowFpWieldCheckbox->GetPreferredHeight() : row);
 }
 
 } // namespace cutum

@@ -1,0 +1,19 @@
+{
+  "id": "iron_head",
+  "displayName": "Iron Helmet",
+  "types": [
+    "armor",
+    "head"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "model": "models/items/iron_head.json",
+  "armor": {
+    "slots": [
+      "head"
+    ],
+    "armor_groups": {
+      "fleshy": 90
+    }
+  }
+}

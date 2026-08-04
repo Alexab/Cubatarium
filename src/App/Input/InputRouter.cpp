@@ -537,6 +537,13 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y, int pointer_i
           return true;
         }
         break;
+      case UApplication::OverlayPointerCapture::CharacterSheet:
+        if (app.CharacterSheetOpen && app.CharacterSheetScreen &&
+            routeCapturedMove(app.CharacterSheetScreen->GetRoot()))
+        {
+          return true;
+        }
+        break;
       default:
         break;
       }
@@ -569,6 +576,10 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y, int pointer_i
     if (app.WorldGenOpen)
     {
       handled |= routeMove(app.WorldGenScreen->GetRoot());
+    }
+    if (app.CharacterSheetOpen && app.CharacterSheetScreen)
+    {
+      handled |= routeMove(app.CharacterSheetScreen->GetRoot());
     }
     handled |= routeMove(app.HudScreen ? app.HudScreen->GetRoot() : nullptr);
     return handled;

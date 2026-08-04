@@ -53,9 +53,7 @@ void UGuiSlot::Draw(UGuiRenderer &renderer)
     {
       text = text.substr(0, 8);
     }
-    renderer.DrawText(text, Bounds.X + Theme->Padding / 2,
-                      Bounds.Y + Bounds.H / 2 - Theme->FontSizeBody / 2,
-                      Theme->TextSecondary);
+    renderer.DrawTextCenteredInRect(Bounds, text, Theme->TextSecondary);
   }
 
   if (Selected)

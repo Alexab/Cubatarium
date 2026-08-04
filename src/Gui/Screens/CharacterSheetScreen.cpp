@@ -10,6 +10,8 @@
 #include "Gui/Preview/CreaturePreviewRenderer.h"
 #include "Gui/Interfaces/IUHotbarViewModel.h"
 #include "Gui/Interfaces/IUGuiIconSource.h"
+#include "Game/GameSession.h"
+#include "Game/Inventory/SlotInteraction.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -23,8 +25,16 @@ namespace cutum
 namespace
 {
 
-constexpr int kSheetW = 360;
-constexpr int kSheetH = 420;
+constexpr int kSheetW = 560;
+constexpr int kSheetH = 500;
+constexpr int kLineH = 20;
+constexpr int kSlotSize = 48;
+constexpr int kSlotGap = 6;
+
+bool PointInBounds(int x, int y, const GuiRect &b)
+{
+  return x >= b.X && y >= b.Y && x < b.X + b.W && y < b.Y + b.H;
+}
 
 } // namespace
 
@@ -63,10 +73,19 @@ void UCharacterSheetScreen::SetVisible(bool visible)
   {
     glDeleteTextures(1, &PreviewTexture);
     PreviewTexture = 0;
+    LastPreviewSize = 0;
+    LastPreviewYaw = 0.f;
+    LastPreviewPitch = 0.f;
+    LastCachedTypeId.clear();
+    LastCachedSkinId.clear();
     if (PreviewViewport)
     {
       PreviewViewport->SetPreviewTexture(0);
     }
+  }
+  else if (Visible && Built)
+  {
+    RefreshLabels();
   }
 }
 
@@ -102,53 +121,96 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
 
   auto mode = std::make_unique<UGuiLabel>(&theme, "");
   ModeLabel = mode.get();
+  ModeLabel->SetUseSecondaryColor(true);
   body->AddChild(std::move(mode));
 
-  // Preview + equipment slots (placed in Relayout()).
+  // Paper-doll panel (preview + equipment).
   {
+    auto doll = std::make_unique<UGuiPanel>(&theme);
+    DollPanel = doll.get();
+    DollPanel->SetDrawBackground(true);
+
+    auto eqHead = std::make_unique<UGuiLabel>(&theme, "Equipment");
+    EquipmentHeader = eqHead.get();
+    DollPanel->AddChild(std::move(eqHead));
+
     auto preview = std::make_unique<UGuiPreviewViewport>(&theme);
     PreviewViewport = preview.get();
-    PreviewViewport->SetOnRotationChanged([this](float /*yaw*/, float /*pitch*/) {
-      RenderCharacterPreview();
-    });
-    body->AddChild(std::move(preview));
+    PreviewViewport->SetOnRotationChanged(
+        [this](float /*yaw*/, float /*pitch*/) { RenderCharacterPreview(); });
+    DollPanel->AddChild(std::move(preview));
+
+    ArmorSlots.clear();
+    ToolSlots.clear();
+    const char *armorNames[6] = {"Head", "Chest", "Arms",
+                                 "Hands", "Legs", "Feet"};
+    for (int i = 0; i < 6; ++i)
+    {
+      auto slot = std::make_unique<UGuiSlot>(&theme);
+      slot->SetLabel(armorNames[i]);
+      slot->SetIconTexture(0);
+      const size_t armorIndex = static_cast<size_t>(i);
+      SlotAddress address;
+      address.surface = SlotSurface::CharacterArmor;
+      address.slot = armorIndex;
+      slot->SetOnBeginDrag([this, address, armorIndex]() {
+        auto *session = dynamic_cast<UGameSession *>(Stats);
+        if (!session)
+        {
+          return;
+        }
+        const InventoryEntryRef entry = session->GetArmorEntryRef(armorIndex);
+        if (!entry.empty)
+        {
+          session->BeginDragFromSlot(address, entry);
+        }
+      });
+      ArmorSlots.push_back(slot.get());
+      DollPanel->AddChild(std::move(slot));
+    }
+    for (int i = 0; i < 2; ++i)
+    {
+      auto slot = std::make_unique<UGuiSlot>(&theme);
+      slot->SetLabel(i == 0 ? "Tool 1" : "Tool 2");
+      slot->SetIconTexture(0);
+      ToolSlots.push_back(slot.get());
+      DollPanel->AddChild(std::move(slot));
+    }
+
+    body->AddChild(std::move(doll));
   }
 
-  ArmorSlots.clear();
-  ToolSlots.clear();
-  const char *armorNames[6] = {"Head", "Chest", "Arms", "Hands",
-                               "Legs", "Feet"};
-  for (int i = 0; i < 6; ++i)
+  // Stats panel (vitals + attributes).
   {
-    auto slot = std::make_unique<UGuiSlot>(&theme);
-    slot->SetLabel(armorNames[i]);
-    slot->SetIconTexture(0);
-    ArmorSlots.push_back(slot.get());
-    body->AddChild(std::move(slot));
-  }
-  for (int i = 0; i < 2; ++i)
-  {
-    auto slot = std::make_unique<UGuiSlot>(&theme);
-    slot->SetLabel(i == 0 ? "Tool (1)" : "Tool (2)");
-    slot->SetIconTexture(0);
-    ToolSlots.push_back(slot.get());
-    body->AddChild(std::move(slot));
-  }
+    auto stats = std::make_unique<UGuiPanel>(&theme);
+    StatsPanel = stats.get();
+    StatsPanel->SetDrawBackground(true);
 
-  VitalLabels.clear();
-  for (int i = 0; i < 6; ++i)
-  {
-    auto lab = std::make_unique<UGuiLabel>(&theme, "");
-    VitalLabels.push_back(lab.get());
-    body->AddChild(std::move(lab));
-  }
+    auto vitHead = std::make_unique<UGuiLabel>(&theme, "Vitals");
+    VitalsHeader = vitHead.get();
+    StatsPanel->AddChild(std::move(vitHead));
 
-  AttrLabels.clear();
-  for (int i = 0; i < 7; ++i)
-  {
-    auto lab = std::make_unique<UGuiLabel>(&theme, "");
-    AttrLabels.push_back(lab.get());
-    body->AddChild(std::move(lab));
+    VitalLabels.clear();
+    for (int i = 0; i < 7; ++i)
+    {
+      auto lab = std::make_unique<UGuiLabel>(&theme, "");
+      VitalLabels.push_back(lab.get());
+      StatsPanel->AddChild(std::move(lab));
+    }
+
+    auto attrHead = std::make_unique<UGuiLabel>(&theme, "Attributes");
+    AttrsHeader = attrHead.get();
+    StatsPanel->AddChild(std::move(attrHead));
+
+    AttrLabels.clear();
+    for (int i = 0; i < 7; ++i)
+    {
+      auto lab = std::make_unique<UGuiLabel>(&theme, "");
+      AttrLabels.push_back(lab.get());
+      StatsPanel->AddChild(std::move(lab));
+    }
+
+    body->AddChild(std::move(stats));
   }
 
   window->AddChild(std::move(body));
@@ -167,30 +229,109 @@ void UCharacterSheetScreen::Relayout()
     return;
   }
   Root->SetBounds({0, 0, ViewportW, ViewportH});
-  const int x = std::max(8, (ViewportW - kSheetW) / 2);
-  const int y = std::max(8, (ViewportH - kSheetH) / 2);
-  Window->SetBounds({x, y, kSheetW, kSheetH});
-  const GuiRect client = Window->GetClientArea();
-  const int line = 22;
 
-  // Two-column layout:
-  // - left: text (title/mode/vitals/attributes)
-  // - right: 3D preview + armor/tool slots
-  const int rightW = std::min(160, std::max(120, client.W - 16));
-  const int rightX = client.X + client.W - rightW - 8;
-  const int leftX = client.X + 8;
-  const int leftW = std::max(80, rightX - leftX - 4);
+  const int sheetW = std::min(kSheetW, std::max(320, ViewportW - 16));
+  const int sheetH = std::min(kSheetH, std::max(360, ViewportH - 16));
+  const int x = std::max(8, (ViewportW - sheetW) / 2);
+  const int y = std::max(8, (ViewportH - sheetH) / 2);
+  Window->SetBounds({x, y, sheetW, sheetH});
+  const GuiRect client = Window->GetClientArea();
 
   int cy = client.Y + 4;
   if (TitleMeta)
   {
-    TitleMeta->SetBounds({leftX, cy, leftW, line});
-    cy += line;
+    TitleMeta->SetBounds({client.X + 8, cy, client.W - 16, kLineH});
+    cy += kLineH;
   }
   if (ModeLabel)
   {
-    ModeLabel->SetBounds({leftX, cy, leftW, line});
-    cy += line + 6;
+    ModeLabel->SetBounds({client.X + 8, cy, client.W - 16, kLineH});
+    cy += kLineH + 6;
+  }
+
+  // Two columns under identity: doll (left ~58%) + stats (right ~40%).
+  const int gap = 8;
+  const int contentH = client.Y + client.H - cy - 8;
+  const int dollW = std::max(220, (client.W * 58) / 100);
+  const int statsW = std::max(160, client.W - dollW - gap - 16);
+  const int dollX = client.X + 8;
+  const int statsX = dollX + dollW + gap;
+
+  if (DollPanel)
+  {
+    DollPanel->SetBounds({dollX, cy, dollW, contentH});
+  }
+  if (StatsPanel)
+  {
+    StatsPanel->SetBounds({statsX, cy, statsW, contentH});
+  }
+
+  // --- Paper-doll interior ---
+  //        [Head]
+  // [Chest][PREVIEW][Arms]
+  // [Legs]          [Hands]
+  //   [Tool1][Feet][Tool2]
+  const int pad = 8;
+  const int headerH = kLineH;
+  if (EquipmentHeader)
+  {
+    EquipmentHeader->SetBounds({dollX + pad, cy + pad, dollW - pad * 2, headerH});
+  }
+
+  const int slotColW = kSlotSize + kSlotGap;
+  const int previewSide = std::min(
+      180, std::max(110, dollW - pad * 2 - slotColW * 2 - 8));
+  const int headerBottom = cy + pad + headerH;
+  // Reserve a full slot row above the preview for Head (centered).
+  const int previewTop = headerBottom + 4 + kSlotSize + kSlotGap;
+  const int previewX = dollX + (dollW - previewSide) / 2;
+  if (PreviewViewport)
+  {
+    PreviewViewport->SetBounds(
+        {previewX, previewTop, previewSide, previewSide});
+  }
+
+  const int leftSlotX = previewX - slotColW - 4;
+  const int rightSlotX = previewX + previewSide + 4;
+  const int midY = previewTop + previewSide / 2 - kSlotSize / 2;
+
+  auto placeArmor = [&](int index, int sx, int sy) {
+    if (index >= 0 && index < static_cast<int>(ArmorSlots.size()) &&
+        ArmorSlots[index])
+    {
+      ArmorSlots[index]->SetBounds({sx, sy, kSlotSize, kSlotSize});
+    }
+  };
+
+  const int headX = previewX + (previewSide - kSlotSize) / 2;
+  const int headY = previewTop - kSlotSize - kSlotGap;
+  placeArmor(0, headX, headY);                                   // Head
+  placeArmor(1, leftSlotX, midY - kSlotSize / 2 - 4);             // Chest
+  placeArmor(4, leftSlotX, midY + kSlotSize / 2 + 4);             // Legs
+  placeArmor(2, rightSlotX, midY - kSlotSize / 2 - 4);            // Arms
+  placeArmor(3, rightSlotX, midY + kSlotSize / 2 + 4);            // Hands
+
+  const int bottomY = previewTop + previewSide + kSlotGap;
+  const int feetX = previewX + (previewSide - kSlotSize) / 2;
+  placeArmor(5, feetX, bottomY);                                 // Feet
+
+  if (ToolSlots.size() >= 1 && ToolSlots[0])
+  {
+    ToolSlots[0]->SetBounds(
+        {feetX - (kSlotSize + kSlotGap), bottomY, kSlotSize, kSlotSize});
+  }
+  if (ToolSlots.size() >= 2 && ToolSlots[1])
+  {
+    ToolSlots[1]->SetBounds(
+        {feetX + (kSlotSize + kSlotGap), bottomY, kSlotSize, kSlotSize});
+  }
+
+  // --- Stats interior ---
+  int sy = cy + pad;
+  if (VitalsHeader)
+  {
+    VitalsHeader->SetBounds({statsX + pad, sy, statsW - pad * 2, headerH});
+    sy += headerH + 4;
   }
   for (UGuiLabel *lab : VitalLabels)
   {
@@ -198,63 +339,50 @@ void UCharacterSheetScreen::Relayout()
     {
       continue;
     }
-    lab->SetBounds({leftX, cy, leftW, line});
-    cy += line;
+    lab->SetBounds({statsX + pad, sy, statsW - pad * 2, kLineH});
+    sy += kLineH;
   }
-  cy += 8;
+  sy += 10;
+  if (AttrsHeader)
+  {
+    AttrsHeader->SetBounds({statsX + pad, sy, statsW - pad * 2, headerH});
+    sy += headerH + 4;
+  }
   for (UGuiLabel *lab : AttrLabels)
   {
     if (!lab)
     {
       continue;
     }
-    lab->SetBounds({leftX, cy, leftW, line});
-    cy += line;
+    lab->SetBounds({statsX + pad, sy, statsW - pad * 2, kLineH});
+    sy += kLineH;
   }
+}
 
-  // Preview viewport.
-  if (PreviewViewport)
+bool UCharacterSheetScreen::PickArmorSlot(int x, int y, size_t &outSlot) const
+{
+  for (size_t i = 0; i < ArmorSlots.size(); ++i)
   {
-    constexpr int previewH = 160;
-    PreviewViewport->SetBounds({rightX, client.Y + 8, rightW, previewH});
-  }
-
-  // Slots.
-  constexpr int previewH = 160;
-  constexpr int slotGap = 6;
-  constexpr int slotCols = 2;
-  const int slotSize =
-      std::max(44, std::min(60, (rightW - slotGap) / slotCols));
-  const int slotRowH = slotSize + slotGap;
-  const int slotStartX =
-      rightX + std::max(0, (rightW - (slotCols * slotSize + slotGap)) / 2);
-  const int slotStartY = client.Y + 8 + previewH + 8;
-
-  for (int i = 0; i < static_cast<int>(ArmorSlots.size()); ++i)
-  {
-    if (!ArmorSlots[i])
+    if (ArmorSlots[i] && PointInBounds(x, y, ArmorSlots[i]->GetBounds()))
     {
-      continue;
+      outSlot = i;
+      return true;
     }
-    const int row = i / slotCols;
-    const int col = i % slotCols;
-    ArmorSlots[i]->SetBounds({slotStartX + col * slotRowH, slotStartY + row * slotRowH,
-                               slotSize, slotSize});
   }
+  return false;
+}
 
-  // Tools: next row after armor grid.
-  const int toolRow = 3;
-  for (int i = 0; i < static_cast<int>(ToolSlots.size()); ++i)
+bool UCharacterSheetScreen::PickToolSlot(int x, int y, size_t &outSlot) const
+{
+  for (size_t i = 0; i < ToolSlots.size(); ++i)
   {
-    if (!ToolSlots[i])
+    if (ToolSlots[i] && PointInBounds(x, y, ToolSlots[i]->GetBounds()))
     {
-      continue;
+      outSlot = i;
+      return true;
     }
-    const int col = i % slotCols;
-    ToolSlots[i]->SetBounds({slotStartX + col * slotRowH,
-                              slotStartY + toolRow * slotRowH, slotSize,
-                              slotSize});
   }
+  return false;
 }
 
 void UCharacterSheetScreen::RefreshLabels()
@@ -292,7 +420,7 @@ void UCharacterSheetScreen::RefreshLabels()
       ModeLabel->SetText(buf);
     }
   }
-  if (VitalLabels.size() >= 6 && snap.valid)
+  if (VitalLabels.size() >= 7 && snap.valid)
   {
     const auto &v = snap.vitals;
     VitalLabels[0]->SetText(FormatBar("Health", v.health, v.maxHealth));
@@ -301,9 +429,12 @@ void UCharacterSheetScreen::RefreshLabels()
     VitalLabels[3]->SetText(FormatBar("Fatigue", v.fatigue, v.maxFatigue));
     VitalLabels[4]->SetText(FormatBar("Breath", v.breath, v.maxBreath));
     char wounds[64];
-    std::snprintf(wounds, sizeof(wounds), "Fatal wounds: %d / %d  Armor: %.0f",
-                  v.fatalWounds, v.maxFatalWounds, v.armor);
+    std::snprintf(wounds, sizeof(wounds), "Fatal wounds: %d / %d",
+                  v.fatalWounds, v.maxFatalWounds);
     VitalLabels[5]->SetText(wounds);
+    char armor[48];
+    std::snprintf(armor, sizeof(armor), "Armor: %.0f", v.armor);
+    VitalLabels[6]->SetText(armor);
   }
   if (AttrLabels.size() >= 7 && snap.valid)
   {
@@ -322,11 +453,9 @@ void UCharacterSheetScreen::RefreshLabels()
     setAttr(AttrLabels[6], "Perception", a.perception);
   }
 
-  // Update equipment slots from snapshot (armor + 2 active tools).
   if (Icons)
   {
-    for (int i = 0; i < 6 && i < static_cast<int>(ArmorSlots.size());
-         ++i)
+    for (int i = 0; i < 6 && i < static_cast<int>(ArmorSlots.size()); ++i)
     {
       const auto &s = snap.equippedArmor[i];
       if (ArmorSlots[i] && !s.itemId.empty())
@@ -365,7 +494,6 @@ void UCharacterSheetScreen::RefreshLabels()
     }
   }
 
-  // Update character preview.
   PreviewValid = snap.valid && !snap.typeId.empty();
   PreviewTypeId = snap.typeId;
   PreviewSkinId = snap.skinId;
@@ -404,11 +532,12 @@ void UCharacterSheetScreen::RenderCharacterPreview()
 
   const float yaw = PreviewViewport->GetYaw();
   const float pitch = PreviewViewport->GetPitch();
-  const bool sameAngles =
+  const bool sameCache =
+      PreviewTexture != 0 && size == LastPreviewSize &&
+      PreviewTypeId == LastCachedTypeId && PreviewSkinId == LastCachedSkinId &&
       std::abs(yaw - LastPreviewYaw) < 0.01f &&
-      std::abs(pitch - LastPreviewPitch) < 0.01f &&
-      size == LastPreviewSize;
-  if (PreviewTexture != 0 && sameAngles)
+      std::abs(pitch - LastPreviewPitch) < 0.01f;
+  if (sameCache)
   {
     return;
   }
@@ -429,6 +558,8 @@ void UCharacterSheetScreen::RenderCharacterPreview()
   LastPreviewYaw = yaw;
   LastPreviewPitch = pitch;
   LastPreviewSize = size;
+  LastCachedTypeId = PreviewTypeId;
+  LastCachedSkinId = PreviewSkinId;
 }
 
 void UCharacterSheetScreen::Update(double /*dt*/)

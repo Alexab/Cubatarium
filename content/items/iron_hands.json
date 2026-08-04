@@ -1,0 +1,19 @@
+{
+  "id": "iron_hands",
+  "displayName": "Iron Gloves",
+  "types": [
+    "armor",
+    "hands"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "model": "models/items/iron_hands.json",
+  "armor": {
+    "slots": [
+      "hands"
+    ],
+    "armor_groups": {
+      "fleshy": 90
+    }
+  }
+}

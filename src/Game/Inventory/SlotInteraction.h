@@ -13,7 +13,8 @@ enum class SlotSurface
 {
   None,
   PaletteGrid,
-  Hotbar
+  Hotbar,
+  CharacterArmor
 };
 
 struct SlotAddress

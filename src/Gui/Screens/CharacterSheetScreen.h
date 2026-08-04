@@ -37,6 +37,11 @@ public:
   void SetVisible(bool visible);
   void Toggle();
 
+  /// Hit-test armor slots for inventory drag routing (0..5), returns false if miss.
+  bool PickArmorSlot(int x, int y, size_t &outSlot) const;
+  /// Hit-test tool display slots (read-only hotbar mirrors).
+  bool PickToolSlot(int x, int y, size_t &outSlot) const;
+
 private:
   void Relayout();
   void RefreshLabels();
@@ -47,6 +52,13 @@ private:
   UCreaturePreviewRenderer *CreaturePreview{nullptr};
   IUGuiIconSource *Icons{nullptr};
   UGuiWindow *Window{nullptr};
+
+  UGuiPanel *DollPanel{nullptr};
+  UGuiPanel *StatsPanel{nullptr};
+  UGuiLabel *EquipmentHeader{nullptr};
+  UGuiLabel *VitalsHeader{nullptr};
+  UGuiLabel *AttrsHeader{nullptr};
+
   UGuiPreviewViewport *PreviewViewport{nullptr};
   std::vector<UGuiSlot *> ArmorSlots;
   std::vector<UGuiSlot *> ToolSlots;
@@ -57,6 +69,8 @@ private:
   float LastPreviewYaw{0.f};
   float LastPreviewPitch{0.f};
   int LastPreviewSize{0};
+  std::string LastCachedTypeId;
+  std::string LastCachedSkinId;
   UGuiLabel *TitleMeta{nullptr};
   UGuiLabel *ModeLabel{nullptr};
   std::vector<UGuiLabel *> VitalLabels;

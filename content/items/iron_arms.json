@@ -1,0 +1,19 @@
+{
+  "id": "iron_arms",
+  "displayName": "Iron Arm Guards",
+  "types": [
+    "armor",
+    "arms"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "model": "models/items/iron_arms.json",
+  "armor": {
+    "slots": [
+      "arms"
+    ],
+    "armor_groups": {
+      "fleshy": 90
+    }
+  }
+}

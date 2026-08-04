@@ -75,6 +75,7 @@ public:
   bool DropOnSlot(const SlotAddress &target);
   void CancelDrag();
   InventoryEntryRef GetHotbarEntryRef(size_t barIndex, size_t slotIndex) const;
+  InventoryEntryRef GetArmorEntryRef(size_t armorSlot) const;
 
   std::vector<InventoryGroupView> GetGroups(ContentKind tab,
                                             InventoryMode mode) const override;

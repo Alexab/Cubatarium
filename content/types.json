@@ -31,6 +31,7 @@
     { "id": "digging", "displayName": "Digging", "sortOrder": 30 },
     { "id": "combat", "displayName": "Combat", "sortOrder": 40 },
     { "id": "utility", "displayName": "Utility", "sortOrder": 50 },
+    { "id": "armor", "displayName": "Armor", "sortOrder": 60 },
     { "id": "misc", "displayName": "Misc", "sortOrder": 999 }
   ]
 }

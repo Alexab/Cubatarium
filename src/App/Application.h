@@ -49,6 +49,7 @@ class UBlockDefinitionStorage;
 class UGuiIconSource;
 class UContentPreviewRenderer;
 class UCreaturePreviewRenderer;
+class UFpViewmodelRenderer;
 class UMainMenuScreen;
 class UWorldResourcePacksScreen;
 
@@ -266,6 +267,7 @@ private:
   std::unique_ptr<UGuiIconSource> IconSource;
   std::shared_ptr<UCreaturePreviewRenderer> CreaturePreviewRenderer;
   std::unique_ptr<UContentPreviewRenderer> ContentPreviewRenderer;
+  std::unique_ptr<UFpViewmodelRenderer> FpViewmodelRenderer;
   std::unique_ptr<UInGameHudScreen> HudScreen;
   std::unique_ptr<UConsoleScreen> ConsoleScreen;
   std::unique_ptr<UCreativePaletteScreen> PaletteScreen;

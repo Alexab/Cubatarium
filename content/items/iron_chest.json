@@ -1,0 +1,19 @@
+{
+  "id": "iron_chest",
+  "displayName": "Iron Chestplate",
+  "types": [
+    "armor",
+    "chest"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "model": "models/items/iron_chest.json",
+  "armor": {
+    "slots": [
+      "chest"
+    ],
+    "armor_groups": {
+      "fleshy": 100
+    }
+  }
+}

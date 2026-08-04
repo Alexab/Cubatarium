@@ -1,0 +1,19 @@
+{
+  "id": "leather_feet",
+  "displayName": "Leather Boots",
+  "types": [
+    "armor",
+    "feet"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "model": "models/items/leather_feet.json",
+  "armor": {
+    "slots": [
+      "feet"
+    ],
+    "armor_groups": {
+      "fleshy": 40
+    }
+  }
+}

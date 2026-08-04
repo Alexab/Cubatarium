@@ -1,0 +1,19 @@
+{
+  "id": "iron_legs",
+  "displayName": "Iron Leggings",
+  "types": [
+    "armor",
+    "legs"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "model": "models/items/iron_legs.json",
+  "armor": {
+    "slots": [
+      "legs"
+    ],
+    "armor_groups": {
+      "fleshy": 90
+    }
+  }
+}

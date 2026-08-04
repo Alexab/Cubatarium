@@ -128,6 +128,7 @@ set(SOURCES
     src/Items/ItemDefinitionStorage.cpp
     src/Items/ToolCapabilities.cpp
     src/Items/ItemWieldRenderer.cpp
+    src/Items/FpViewmodelRenderer.cpp
     src/Items/ItemToolInfluenceProvider.cpp
     src/Creatures/Influence/InfluenceHitMath.cpp
     src/Creatures/Influence/BareHandToolInfluenceProvider.cpp

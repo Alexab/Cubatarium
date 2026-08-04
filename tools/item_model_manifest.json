@@ -1,0 +1,60 @@
+{
+  "sources": [
+    {
+      "id": "kenney_survival_kit",
+      "name": "Kenney Survival Kit",
+      "license": "CC0-1.0",
+      "url": "https://www.kenney.nl/assets/survival-kit"
+    },
+    {
+      "id": "kaykit_rpg_tools",
+      "name": "KayKit RPG Tools Bits",
+      "license": "CC0-1.0",
+      "url": "https://kaylousberg.itch.io/rpg-tools-bits"
+    },
+    {
+      "id": "quaternius_fantasy_props",
+      "name": "Quaternius Fantasy Props MegaKit / Ultimate RPG Items",
+      "license": "CC0-1.0",
+      "url": "https://quaternius.com/"
+    }
+  ],
+  "items": {
+    "iron_sword": {
+      "source": "quaternius_fantasy_props",
+      "glob": "**/Sword*.gltf"
+    },
+    "iron_axe": {
+      "source": "kaykit_rpg_tools",
+      "glob": "**/axe*.gltf"
+    },
+    "iron_pickaxe": {
+      "source": "kaykit_rpg_tools",
+      "glob": "**/pickaxe*.gltf"
+    },
+    "iron_shovel": {
+      "source": "kenney_survival_kit",
+      "glob": "**/shovel*.gltf"
+    },
+    "iron_hammer": {
+      "source": "kaykit_rpg_tools",
+      "glob": "**/hammer*.gltf"
+    },
+    "wood_bow": {
+      "source": "quaternius_fantasy_props",
+      "glob": "**/Bow*.gltf"
+    },
+    "leather_head": {
+      "source": "quaternius_fantasy_props",
+      "glob": "**/Helmet*.gltf"
+    },
+    "iron_head": {
+      "source": "quaternius_fantasy_props",
+      "glob": "**/Helmet*.gltf"
+    },
+    "iron_chest": {
+      "source": "quaternius_fantasy_props",
+      "glob": "**/Armor*.gltf"
+    }
+  }
+}

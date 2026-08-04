@@ -12,6 +12,7 @@
 #include "Creatures/Player/Player.h"
 #include "Creatures/Player/User.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
+#include "Items/ItemDefinitionStorage.h"
 #include "Render/Camera/Camera.h"
 #include "ResourcePacks/BlockNameUtil.h"
 #include "World/Core/World.h"
@@ -285,6 +286,10 @@ bool SameSlotAddress(const SlotAddress &a, const SlotAddress &b)
   {
     return a.paletteKind == b.paletteKind && a.entryId == b.entryId;
   }
+  if (a.surface == SlotSurface::CharacterArmor)
+  {
+    return a.slot == b.slot;
+  }
   return true;
 }
 
@@ -319,6 +324,17 @@ InventoryEntryRef UGameSession::GetHotbarEntryRef(size_t barIndex,
     return entry;
   }
   return slot.entry;
+}
+
+InventoryEntryRef UGameSession::GetArmorEntryRef(size_t armorSlot) const
+{
+  InventoryEntryRef entry;
+  const UCreatureInventory *inv = GetControlledInventory(World.get());
+  if (!inv || armorSlot >= 6)
+  {
+    return entry;
+  }
+  return inv->GetEquippedArmor(armorSlot);
 }
 
 void UGameSession::BeginDragFromSlot(const SlotAddress &source,
@@ -370,7 +386,48 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
         inv->ClearHotbarSlot(source.bar, source.slot);
       }
     }
+    if (source.surface == SlotSurface::CharacterArmor)
+    {
+      if (UCreatureInventory *inv = GetControlledInventory(World.get()))
+      {
+        if (UItemDefinitionStorage *items =
+                World ? World->GetItemDefinitionStorage() : nullptr)
+        {
+          inv->UnequipArmor(source.slot, *items);
+        }
+      }
+    }
     SelectSlot(target.bar, target.slot);
+    CancelDrag();
+    return true;
+  }
+
+  if (target.surface == SlotSurface::CharacterArmor)
+  {
+    UCreatureInventory *inv = GetControlledInventory(World.get());
+    UItemDefinitionStorage *items =
+        World ? World->GetItemDefinitionStorage() : nullptr;
+    if (!inv || !items)
+    {
+      return false;
+    }
+    if (entry.kind != InventoryEntryKind::Item)
+    {
+      return false;
+    }
+    if (!inv->EquipArmor(target.slot, entry, *items))
+    {
+      return false;
+    }
+    if (source.surface == SlotSurface::Hotbar)
+    {
+      inv->ClearHotbarSlot(source.bar, source.slot);
+    }
+    else if (source.surface == SlotSurface::CharacterArmor &&
+             source.slot != target.slot)
+    {
+      inv->UnequipArmor(source.slot, *items);
+    }
     CancelDrag();
     return true;
   }
@@ -381,6 +438,21 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
     if (UCreatureInventory *inv = GetControlledInventory(World.get()))
     {
       inv->ClearHotbarSlot(source.bar, source.slot);
+    }
+    CancelDrag();
+    return true;
+  }
+
+  if (target.surface == SlotSurface::PaletteGrid &&
+      source.surface == SlotSurface::CharacterArmor)
+  {
+    if (UCreatureInventory *inv = GetControlledInventory(World.get()))
+    {
+      if (UItemDefinitionStorage *items =
+              World ? World->GetItemDefinitionStorage() : nullptr)
+      {
+        inv->UnequipArmor(source.slot, *items);
+      }
     }
     CancelDrag();
     return true;

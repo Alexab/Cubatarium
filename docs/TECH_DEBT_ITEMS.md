@@ -8,9 +8,8 @@
 |----|----------|------|--------------|--------|
 | TD-ITEM-001 | foundation | Backpack grid for durable item instances | Hotbar-only v1; storage map is count-only | accepted backlog |
 | TD-ITEM-002 | foundation | Anvil UI / craft two tools → one | `/repair` covers v1 | accepted backlog |
-| TD-ITEM-004 | wield | Full shader-based FP 3D tool mesh (core-profile) | Screen-space icon overlay shipped as interim viewmodel | accepted backlog |
+| TD-ITEM-004 | wield | Full shader-based / skinned FP 3D tool mesh (core-profile) | Box-arm viewmodel via `UFpViewmodelRenderer` (`ShowFpWield`) is interim | accepted backlog |
 | TD-ITEM-005 | wield | Third-person wield attachment | FP-first scope | accepted backlog |
-| TD-ITEM-006 | content | Dedicated glTF/obj models under `models/items/` | Procedural icons suffice for v1 | accepted backlog |
 | TD-ITEM-007 | combat | Enchantments / tool modifiers beyond melee | Out of scope | wontfix-v1 |
 
 ## Closed
@@ -18,13 +17,15 @@
 | ID | Closed in | Resolution |
 |----|-----------|------------|
 | TD-ITEM-003 | Wave 3 | Explicit `dig.groups`/`dig.level` on packs via `tools/apply_block_dig_groups.py`; InferDigGroups remains fallback only |
+| TD-ITEM-006 | character sheet tails | Curated `models/items/*.json` parts + optional glTF via `UItemPreviewRenderer` / `import_item_models.py`; see `docs/ITEM_ASSETS.md` |
 | TD-ITEM-010 | wear | Creative + Peaceful wear gate via `IsToolWearEnabled` + `WorldDifficulty::Peaceful` |
 | TD-ITEM-011 | foundation | `ContentKind::Item` + Tools palette tab + `UItemDefinitionStorage` |
 | TD-ITEM-012 | dig | `ResolveDigParams` wired into break duration + wear on complete; Dig Influence channel = TD-INF-013 |
 | TD-ITEM-013 | content | Base 12 tools wood/stone/iron × pick/axe/shovel/sword |
 | TD-ITEM-014 | influence | `UItemToolInfluenceProvider` used from `CreatureCombat::TryMeleeStrike` |
-| TD-ITEM-015 | wield | FP overlay via `DrawItemWieldOverlay` (icon billboard); full mesh remains TD-ITEM-004 |
+| TD-ITEM-015 | wield | FP box viewmodel via `UFpViewmodelRenderer` (3D cube arms + held tool); full skinned mesh remains TD-ITEM-004; gated by `WorldViewSettings::ShowFpWield` |
 | TD-ITEM-016 | qa | `tool_capabilities_test` covers wear gate + dig + destroy wear |
+| TD-ITEM-017 | character sheet | Paper-doll CharacterSheet + armor equip via `SlotSurface::CharacterArmor`; `armor_equipment_test` |
 
 ## Deep-refactor notes
 

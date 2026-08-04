@@ -19,7 +19,7 @@
 #include "Game/GameSession.h"
 #include "Gui/Cache/CreatureIconCache.h"
 #include "Gui/Cache/InventoryIconService.h"
-#include "Items/ItemWieldRenderer.h"
+#include "Items/FpViewmodelRenderer.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Creatures/Core/Creature.h"
 #include "Gui/Cache/ItemIconCache.h"
@@ -315,6 +315,16 @@ void UApplication::Startup(const std::string &configPath)
     if (previewRenderer->Initialize())
     {
       ContentPreviewRenderer = std::move(previewRenderer);
+    }
+
+    if (Core && ShaderManager)
+    {
+      auto fpView = std::make_unique<UFpViewmodelRenderer>(
+          Core->GetItemDefinitionStorage(), ShaderManager);
+      if (fpView->Initialize())
+      {
+        FpViewmodelRenderer = std::move(fpView);
+      }
     }
   }
 
@@ -1424,6 +1434,17 @@ bool UApplication::ResolveSlotAt(int x, int y, SlotAddress &out)
   {
     return true;
   }
+  if (CharacterSheetOpen && CharacterSheetScreen)
+  {
+    size_t armorSlot = 0;
+    if (CharacterSheetScreen->PickArmorSlot(x, y, armorSlot))
+    {
+      out = SlotAddress{};
+      out.surface = SlotSurface::CharacterArmor;
+      out.slot = armorSlot;
+      return true;
+    }
+  }
   if (PaletteOpen && PaletteScreen && PaletteScreen->PickSlot(x, y, out))
   {
     return true;
@@ -1592,6 +1613,10 @@ void UApplication::Update(double dt)
     if (WorldGenScreen)
     {
       WorldGenScreen->Update(dt);
+    }
+    if (CharacterSheetOpen && CharacterSheetScreen)
+    {
+      CharacterSheetScreen->Update(dt);
     }
   }
   SyncCursorVisibility();
@@ -1778,15 +1803,22 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   if (State == AppState::InGame && World && IconSource && GuiContext &&
       !MinimalOverlayForBench && !PaletteOpen)
   {
-    if (const UCreature *creature = World->GetControlledCreature())
+    const WorldViewSettings &view = World->GetViewSettings();
+    const bool showFp =
+        view.ShowFpWield &&
+        view.Projection == WorldProjectionMode::Perspective;
+    if (showFp && FpViewmodelRenderer)
     {
-      const InventoryEntryRef *active =
-          creature->GetInventory().GetActiveEntryRef();
-      auto &renderer = GuiContext->GetRenderer();
-      renderer.BeginFrame(width, height);
-      DrawItemWieldOverlay(renderer, GuiContext->GetTheme(), IconSource.get(),
-                           active, width, height);
-      renderer.EndFrame();
+      if (const UCreature *creature = World->GetControlledCreature())
+      {
+        const InventoryEntryRef *active =
+            creature->GetInventory().GetActiveEntryRef();
+        auto &renderer = GuiContext->GetRenderer();
+        renderer.BeginFrame(width, height);
+        FpViewmodelRenderer->DrawOverlay(renderer, GuiContext->GetTheme(),
+                                         active, width, height);
+        renderer.EndFrame();
+      }
     }
   }
   if (ConsoleOpen && ConsoleScreen && ConsoleScreen->GetRoot())

@@ -1,0 +1,19 @@
+{
+  "id": "leather_head",
+  "displayName": "Leather Helmet",
+  "types": [
+    "armor",
+    "head"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "model": "models/items/leather_head.json",
+  "armor": {
+    "slots": [
+      "head"
+    ],
+    "armor_groups": {
+      "fleshy": 40
+    }
+  }
+}

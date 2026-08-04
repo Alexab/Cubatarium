@@ -16,10 +16,9 @@ namespace cutum
 class UItemDefinitionStorage;
 class UShaderManager;
 
-/// Lightweight 3D preview renderer for item tools.
-/// - Primary goal (UX): show rotated "3D-ish" tool model in UI.
-/// - Optional: when item `model` json exists, try parsing simple `parts[]`
-///   schema (offset/size/texture) and render it as multiple cubes.
+/// Lightweight 3D preview renderer for item tools / armor props.
+/// Supports (in order): static glTF via CreatureGltfLoader, parts[] JSON cubes,
+/// then procedural FallbackParts.
 class UItemPreviewRenderer
 {
 public:
@@ -55,6 +54,10 @@ private:
                                   std::string &outModelRelPath,
                                   std::vector<Part> &outParts) const;
 
+  /// Returns true if a static glTF mesh was drawn into the bound FBO.
+  bool TryDrawGltfModel(const std::string &itemId, const std::string &modelRel,
+                        const glm::mat4 &projection, const glm::mat4 &view);
+
   std::vector<Part> FallbackParts(const std::string &itemId) const;
 
   glm::mat4 OrbitView(float yawDeg, float pitchDeg, float distance) const;
@@ -67,6 +70,9 @@ private:
   GLuint CubeVao{0};
   GLuint CubeVbo{0};
   GLuint CubeEbo{0};
+  GLuint ScratchMeshVao{0};
+  GLuint ScratchMeshVbo{0};
+  GLuint ScratchMeshEbo{0};
 
   GLuint Fbo{0};
   GLuint ColorTex{0};

@@ -114,6 +114,7 @@ void UCreativePaletteScreen::ApplyMainTab(int tab)
     PreviewDock->ClearSelection();
   }
   Built = false;
+  RelayoutPanel();
 }
 
 void UCreativePaletteScreen::OpenWithMainTab(int tab)
@@ -194,6 +195,13 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
   TooltipLabel = tooltip.get();
   panel->AddChild(std::move(tooltip));
 
+  auto usageHint = std::make_unique<UGuiLabel>(
+      Theme, "Click → selected hotbar slot · Drag onto hotbar");
+  usageHint->SetUseSecondaryColor(true);
+  usageHint->SetVisible(false);
+  UsageHintLabel = usageHint.get();
+  panel->AddChild(std::move(usageHint));
+
   panel->AddChild(std::move(mainTabs));
   panel->AddChild(std::move(subTabs));
   panel->AddChild(std::move(scroll));
@@ -258,9 +266,23 @@ void UCreativePaletteScreen::RelayoutPanel()
     SubTabs->SetBounds({panelX + pad, panelY + pad + tabH + pad, panelW - pad * 2,
                         tabH});
   }
+  const int hintH = Theme->FontSizeBody + 4;
+  const bool showToolsHint = Kind == ContentKind::Item;
+  if (UsageHintLabel)
+  {
+    UsageHintLabel->SetVisible(showToolsHint);
+    if (showToolsHint)
+    {
+      UsageHintLabel->SetBounds(
+          {panelX + pad, panelY + pad + tabH + pad + tabH + pad / 2,
+           panelW - pad * 2, hintH});
+    }
+  }
   if (Scroll)
   {
-    const int scrollTop = panelY + pad + tabH + pad + tabH + pad;
+    const int hintGap = showToolsHint ? (hintH + pad / 2) : 0;
+    const int scrollTop =
+        panelY + pad + tabH + pad + tabH + pad + hintGap;
     const int scrollH = std::max(0, panelH - (scrollTop - panelY) - pad);
     Scroll->SetBounds({panelX + pad, scrollTop, panelW - pad * 2, scrollH});
     if (Built)

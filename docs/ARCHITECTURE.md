@@ -306,6 +306,10 @@ Console is toggled via `ui.console_key` (default grave). Chat log lines are appe
 
 **Hotbar UI:** slots show block/prefab textures when available; tooltips show the active or hovered item name (block label above the block row, prefab label below the prefab row). Selected slots use a stronger border/fill from `GuiTheme`.
 
+**Character sheet (`C`):** paper-doll layout — framed 3D creature preview (`UCreaturePreviewRenderer`) + 6 armor slots + 2 tool mirrors; vitals/attributes in a separate stats column. Armor drag/drop uses `SlotSurface::CharacterArmor` → `CreatureInventory::EquipArmor`. Item icons go through `UItemPreviewRenderer` (parts[] / optional glTF). See [`ITEM_ASSETS.md`](ITEM_ASSETS.md).
+
+**FP viewmodel:** `UFpViewmodelRenderer` draws Minecraft-style 3D box arms + held tool (FBO → UI blit) when `WorldViewSettings::ShowFpWield` is true and projection is Perspective (World settings checkbox). Full skinned FP mesh remains TD-ITEM-004.
+
 **Main menu:** `Load Last World` (or `Resume` after Esc), `Load World`, `New World`, `Settings`, `Quit`.
 
 **Settings (`SettingsScreen`):** tab **Application** — `default_user`, `default_world`, streaming, render distance, **Graphics quality** (`render.performance_preset`), meshing `render.*` toggles, `gameplay.step_up`, `ui.*` (written to `config.json` via `Core::SaveConfigFile`). Tab **World defaults** — `procedural.*` template for the next new worlds only (does not change an already loaded world's `world_data.json`).
