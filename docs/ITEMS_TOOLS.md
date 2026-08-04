@@ -13,8 +13,9 @@ Data-driven tools for player / bot / mobs (shared `UCreature` inventory + attrib
 1. Open palette → **Tools**.
 2. Pick a sub-tab (Mining / Utility / Armor / …).
 3. **Click** an item to assign it to the **currently selected hotbar slot**, or **drag** onto a hotbar slot.
-4. Hotbar keys `1–9` / `0` select the active tool (shown in FP view when enabled).
+4. Hotbar keys `1–9` / `0` select the active tool/block (right FP hand when Perspective + `ShowFpWield`).
 5. **Armor**: open character sheet (**C**), drag armor from Tools → Armor onto paper-doll slots (Head/Chest/…).
+6. **Offhand**: on the character sheet, drag an Item or Block onto **Offhand** (beside Feet) — shown in the left FP hand.
 
 Or: `/give <item_id>` into the active hotbar slot.
 
@@ -68,7 +69,7 @@ Hardness gates unbreakable (`hardness <= 0` in Survival). On groupcap match, dur
 
 - Inventory / hotbar icons: `UItemIconCache` via `UItemPreviewRenderer` (parts[] / optional glTF)
 - Hotbar: wear bar + broken dim
-- FP viewmodel: box-arm + held tool (`ShowFpWield` in world settings; full mesh = TD-ITEM-004)
+- FP viewmodel: clear-Z dual box arms + held Item/Block (`ShowFpWield`, Perspective only; isometric hides hands). Offhand on sheet. Skinned = TD-ITEM-004.
 - Models: [`ITEM_ASSETS.md`](ITEM_ASSETS.md)
 
 ## Influence handshake

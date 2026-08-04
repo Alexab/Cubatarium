@@ -308,7 +308,7 @@ Console is toggled via `ui.console_key` (default grave). Chat log lines are appe
 
 **Character sheet (`C`):** paper-doll layout — framed 3D creature preview (`UCreaturePreviewRenderer`) + 6 armor slots + 2 tool mirrors; vitals/attributes in a separate stats column. Armor drag/drop uses `SlotSurface::CharacterArmor` → `CreatureInventory::EquipArmor`. Item icons go through `UItemPreviewRenderer` (parts[] / optional glTF). See [`ITEM_ASSETS.md`](ITEM_ASSETS.md).
 
-**FP viewmodel:** `UFpViewmodelRenderer` draws Minecraft-style 3D box arms + held tool (FBO → UI blit) when `WorldViewSettings::ShowFpWield` is true and projection is Perspective (World settings checkbox). Full skinned FP mesh remains TD-ITEM-004.
+**FP viewmodel:** Hybrid Luanti + Minecraft. After `Geometry::Paint`, `UFpViewmodelRenderer::DrawWorldOverlay` clears depth and draws dual box arms + held Item/Block at FOV **72°** (working area). Gated by `ShouldDrawFpViewmodel` (`ShowFpWield` + Perspective only — **hidden in isometric**). Offhand via character sheet. Dig/place swing + arm inertia. Not body-in-FP; skinned arms remain TD-ITEM-004 on the same pass.
 
 **Main menu:** `Load Last World` (or `Resume` after Esc), `Load World`, `New World`, `Settings`, `Quit`.
 

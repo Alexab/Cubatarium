@@ -23,7 +23,7 @@ struct WorldViewSettings
   int IsoYawIndex{0};
   float IsoPitchDeg{35.264f};
   IsoViewPreset IsoBoomPreset{IsoViewPreset::Standard};
-  /// First-person screen-space hands / tool overlay (default on).
+  /// First-person hands / tool (Perspective only; isometric ignores).
   bool ShowFpWield{true};
 
   void Validate();

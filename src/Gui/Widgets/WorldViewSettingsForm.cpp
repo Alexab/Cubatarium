@@ -149,7 +149,7 @@ void UWorldViewSettingsForm::BuildInto(UGuiPanel &panel)
   ShowFpWieldCheckbox = fpWield.get();
   ShowFpWieldCheckbox->SetChecked(FormSettings.ShowFpWield);
   ShowFpWieldCheckbox->SetDescription(
-      "Screen-space viewmodel overlay in Perspective (FPS) camera.");
+      "Perspective only; hidden in isometric. Clear-Z dual arms + held tool/block.");
   panel.AddChild(std::move(fpWield));
 
   Built = true;

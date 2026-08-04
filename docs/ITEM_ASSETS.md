@@ -18,7 +18,7 @@ Item definitions in `content/items/*.json` set `"model"` to the preferred asset.
 
 **Armor (2 sets × 6 slots):** `leather_*` and `iron_*` for `head`, `chest`, `arms`, `hands`, `legs`, `feet` with `armor.slots` + `armor.armor_groups`. Visible under Creative **Tools → Armor** (`itemTypes` includes `armor`).
 
-First-person wield uses the same `parts[]` (scaled into `UFpViewmodelRenderer` box arms) when a tool is in the active hotbar slot.
+First-person wield uses the same `parts[]` (and Block atlas cubes) in `UFpViewmodelRenderer::DrawWorldOverlay` (clear-Z, FOV 72°, dual arms + offhand). Perspective only.
 
 Shipped mesh authoring is low-poly `parts[]` JSON (CC0 / Cubatarium educational). Visual language is intentionally compatible with common CC0 low-poly kits.
 
