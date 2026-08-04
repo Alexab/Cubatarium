@@ -1,4 +1,5 @@
 #include "Gui/Cache/ItemIconCache.h"
+#include "Gui/Preview/ItemPreviewRenderer.h"
 #include "Render/GlIncludes.h"
 #include <algorithm>
 #include <vector>
@@ -86,8 +87,10 @@ void PaintTool(std::vector<unsigned char> &px, int size, const std::string &id)
 
 UItemIconCache::UItemIconCache(
     std::shared_ptr<UItemDefinitionStorage> items,
-    std::shared_ptr<UInventoryIconService> iconService)
-    : Items(std::move(items)), IconService(std::move(iconService))
+    std::shared_ptr<UInventoryIconService> iconService,
+    std::shared_ptr<UItemPreviewRenderer> itemPreview)
+    : Items(std::move(items)), IconService(std::move(iconService)),
+      ItemPreview(std::move(itemPreview))
 {
 }
 
@@ -98,6 +101,17 @@ void UItemIconCache::EnsureFbo(int)
 GLuint UItemIconCache::RenderItemIcon(const std::string &itemId)
 {
   constexpr int kSize = 64;
+
+  if (ItemPreview)
+  {
+    const GLuint tex = ItemPreview->RenderToUniqueTexture(itemId, kSize, 45.f,
+                                                           20.f);
+    if (tex != 0)
+    {
+      return tex;
+    }
+  }
+
   std::vector<unsigned char> pixels(static_cast<size_t>(kSize * kSize * 4), 0);
   PaintTool(pixels, kSize, itemId);
 

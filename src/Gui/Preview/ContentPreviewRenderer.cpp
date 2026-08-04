@@ -10,6 +10,7 @@
 #include "Render/Textures/TextureCube.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Objects/ObjectLibrary.h"
+#include "Gui/Preview/ItemPreviewRenderer.h"
 
 #include "Render/GlIncludes.h"
 #include <algorithm>
@@ -31,10 +32,11 @@ UContentPreviewRenderer::UContentPreviewRenderer(
     std::shared_ptr<UTextureCubeStorage> textures,
     std::shared_ptr<UBlockDefinitionStorage> blockDefs,
     std::shared_ptr<UShaderManager> shader_manager,
-    std::shared_ptr<UCreaturePreviewRenderer> creatures)
+    std::shared_ptr<UCreaturePreviewRenderer> creatures,
+    std::shared_ptr<UItemPreviewRenderer> itemPreview)
     : Objects(std::move(objects)), Textures(std::move(textures)),
       BlockDefs(std::move(blockDefs)), ShaderManager(std::move(shader_manager)),
-      Creatures(std::move(creatures))
+      Creatures(std::move(creatures)), ItemPreview(std::move(itemPreview))
 {
 }
 
@@ -296,6 +298,12 @@ GLuint UContentPreviewRenderer::RenderUnique(ContentKind kind,
     return Creatures->RenderToUniqueTexture(
         species->GetControlledDefaultSpeciesId(), id, size, yawDeg, pitchDeg,
         animTimeSec, animateWalk);
+  }
+
+  if (kind == ContentKind::Item)
+  {
+    return ItemPreview ? ItemPreview->RenderToUniqueTexture(id, size, yawDeg, pitchDeg)
+                        : 0;
   }
 
   if (kind != ContentKind::Block && kind != ContentKind::Object)

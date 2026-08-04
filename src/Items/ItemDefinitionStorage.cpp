@@ -170,6 +170,37 @@ bool UItemDefinitionStorage::LoadFile(const std::string &path)
     def.ModelPath = data.value("model", "");
     def.HandFallback = data.value("hand_fallback", false);
     def.Hidden = data.value("hidden", false);
+    if (data.contains("armor") && data["armor"].is_object())
+    {
+      const auto &armor = data["armor"];
+      if (armor.contains("slots") && armor["slots"].is_array())
+      {
+        for (const auto &s : armor["slots"])
+        {
+          if (s.is_string())
+          {
+            def.Armor.Slots.push_back(s.get<std::string>());
+          }
+        }
+      }
+      if (armor.contains("armor_groups") &&
+          armor["armor_groups"].is_object())
+      {
+        for (auto it = armor["armor_groups"].begin();
+             it != armor["armor_groups"].end(); ++it)
+        {
+          if (it.value().is_number_integer() || it.value().is_number_unsigned())
+          {
+            def.Armor.ArmorGroups[it.key()] = it.value().get<int>();
+          }
+          else if (it.value().is_number_float())
+          {
+            def.Armor.ArmorGroups[it.key()] =
+                static_cast<int>(std::lround(it.value().get<float>()));
+          }
+        }
+      }
+    }
     if (data.contains("types") && data["types"].is_array())
     {
       for (const auto &t : data["types"])

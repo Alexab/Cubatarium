@@ -638,6 +638,44 @@ CharacterStatsSnapshot UGameSession::GetCharacterStatsSnapshot() const
   snap.skinId = creature->GetSkinId();
   snap.vitals = creature->GetVitals();
   snap.attributes = creature->GetAttributes();
+
+  // Equipped armor (0..5) + active tool items (2 slots).
+  const UCreatureInventory &inv = creature->GetInventory();
+  for (size_t i = 0; i < 6; ++i)
+  {
+    const InventoryEntryRef &e = inv.GetEquippedArmor(i);
+    snap.equippedArmor[i].itemId = e.empty ? std::string() : e.Id;
+    snap.equippedArmor[i].wear = e.wear;
+    snap.equippedArmor[i].broken = e.broken;
+  }
+  for (size_t i = 0; i < 2; ++i)
+  {
+    const size_t barIndex = i;
+    if (barIndex >= inv.GetHotbarCount())
+    {
+      snap.equippedTools[i] = CharacterStatsSnapshot::EquippedSlotSnapshot{};
+      continue;
+    }
+    size_t selectedSlot = inv.GetActiveSlotIndex(barIndex);
+    if (selectedSlot >= 10)
+    {
+      selectedSlot = 0;
+    }
+    const HotbarBar &bar = inv.GetHotbar(barIndex);
+    const HotbarSlot &slot = bar.slots[selectedSlot];
+    if (!slot.empty && slot.entry.kind == InventoryEntryKind::Item &&
+        !slot.entry.Id.empty())
+    {
+      snap.equippedTools[i].itemId = slot.entry.Id;
+      snap.equippedTools[i].wear = slot.entry.wear;
+      snap.equippedTools[i].broken = slot.entry.broken;
+    }
+    else
+    {
+      snap.equippedTools[i] = CharacterStatsSnapshot::EquippedSlotSnapshot{};
+    }
+  }
+
   if (const CreatureDefinition *def =
           World->GetCreatureDefinition(creature->GetTypeId()))
   {

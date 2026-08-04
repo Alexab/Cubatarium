@@ -74,7 +74,18 @@ public:
   void SetNeedsNeedsTick(bool v) { NeedsTick = v; }
 
   ArmorGroups &GetArmorGroups() { return Armor; }
-  const ArmorGroups &GetArmorGroups() const { return Armor; }
+  const ArmorGroups &GetArmorGroups() const
+  {
+    // Total includes equipped armor contributions (pre-aggregated in
+    // CreatureInventory).
+    TotalArmorGroups = Armor;
+    const ArmorGroups &eq = Inventory.GetEquippedArmorGroups();
+    for (const auto &pair : eq.Ratings)
+    {
+      TotalArmorGroups.Ratings[pair.first] += pair.second;
+    }
+    return TotalArmorGroups;
+  }
   void SetArmorGroups(const ArmorGroups &g) { Armor = g; }
   /// -1 = use strength formula for bare-hand fleshy damage.
   int GetBareHandFleshyOverride() const { return BareHandFleshyOverride; }
@@ -167,6 +178,7 @@ protected:
   CreatureVitals Vitals{};
   CreatureAttributes Attributes{};
   ArmorGroups Armor{ArmorGroups::DefaultFleshy()};
+  mutable ArmorGroups TotalArmorGroups{};
   int BareHandFleshyOverride{-1};
   float BareHandIntervalOverride{-1.f};
   float TimeSinceLastInfluenceSec{1000.f};

@@ -2,13 +2,17 @@
 #define CREATUREINVENTORY_H
 
 #include "Game/Inventory/InventoryTypes.h"
+#include "Creatures/Influence/InfluenceTypes.h"
 #include <map>
+#include <array>
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
 
 namespace cutum
 {
+
+class UItemDefinitionStorage;
 
 class UCreatureInventory
 {
@@ -47,11 +51,22 @@ public:
   void SerializeToJson(nlohmann::json &out) const;
   void DeserializeFromJson(const nlohmann::json &data, size_t maxBarCount = 4);
 
+  // Armor equipment (0..5):
+  // 0=head,1=chest,2=arms,3=hands,4=legs,5=feet.
+  const InventoryEntryRef &GetEquippedArmor(size_t slot) const;
+  bool EquipArmor(size_t slot, const InventoryEntryRef &entry,
+                   const UItemDefinitionStorage &items);
+  void UnequipArmor(size_t slot, const UItemDefinitionStorage &items);
+  const ArmorGroups &GetEquippedArmorGroups() const { return EquippedArmorGroups; }
+
 private:
   std::map<std::string, int> Storage;
   std::vector<HotbarBar> Hotbars;
   size_t ActiveBarIndex{0};
   size_t ActiveSlotIndex{0};
+
+  std::array<InventoryEntryRef, 6> EquippedArmor{};
+  ArmorGroups EquippedArmorGroups{};
 };
 
 } // namespace cutum

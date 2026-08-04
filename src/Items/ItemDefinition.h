@@ -61,6 +61,14 @@ struct ItemRepairDef
   float Amount{0.25f};
 };
 
+struct ItemArmorDef
+{
+  /// Slot ids: {"head","chest","arms","hands","legs","feet"}.
+  std::vector<std::string> Slots;
+  /// Luanti-style armor_groups: group -> rating (int).
+  std::unordered_map<std::string, int> ArmorGroups;
+};
+
 struct ItemDefinition
 {
   std::string Id;
@@ -70,6 +78,7 @@ struct ItemDefinition
   ItemWearEnd WearEnd{ItemWearEnd::Destroy};
   ItemRepairDef Repair;
   std::string ModelPath;
+  ItemArmorDef Armor;
   ToolCapabilitiesDef Tool;
   bool HandFallback{false};
   bool Hidden{false};

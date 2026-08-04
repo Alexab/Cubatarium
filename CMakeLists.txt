@@ -433,6 +433,7 @@ set(SOURCES
     src/Gui/Batch/UiTexturedQuadBatch.cpp
     src/Gui/Core/GuiIconSource.cpp
     src/Gui/Preview/ContentPreviewRenderer.cpp
+    src/Gui/Preview/ItemPreviewRenderer.cpp
     src/Gui/Preview/CreaturePreviewRenderer.cpp
     src/Gui/Preview/CreaturePreviewLayout.cpp
     src/Gui/Preview/ObjectPreviewLayout.cpp
@@ -901,6 +902,15 @@ add_executable(tool_capabilities_test
 target_include_directories(tool_capabilities_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(tool_capabilities_test glm::glm)
+
+add_executable(armor_equipment_test
+    src/Items/ItemDefinitionStorage.cpp
+    src/Creatures/Core/CreatureInventory.cpp
+    src/Items/ToolCapabilities.cpp
+    src/Test/ArmorEquipmentTest.cpp)
+target_include_directories(armor_equipment_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(armor_equipment_test glm::glm nlohmann_json::nlohmann_json)
 
 
 add_executable(creature_skinned_draw_test

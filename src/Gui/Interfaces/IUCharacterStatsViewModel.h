@@ -5,6 +5,7 @@
 #include "Creatures/Stats/CreatureVitals.h"
 #include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
+#include <array>
 #include <string>
 
 namespace cutum
@@ -12,11 +13,20 @@ namespace cutum
 
 struct CharacterStatsSnapshot
 {
+  struct EquippedSlotSnapshot
+  {
+    std::string itemId;
+    float wear{0.f};
+    bool broken{false};
+  };
+
   std::string displayName;
   std::string typeId;
   std::string skinId;
   CreatureVitals vitals{};
   CreatureAttributes attributes{};
+  std::array<EquippedSlotSnapshot, 6> equippedArmor{};
+  std::array<EquippedSlotSnapshot, 2> equippedTools{};
   WorldGameMode gameMode{WorldGameMode::Creative};
   WorldDifficulty difficulty{WorldDifficulty::Normal};
   bool valid{false};

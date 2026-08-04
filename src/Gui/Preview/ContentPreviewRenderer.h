@@ -17,6 +17,7 @@ class UObjectLibrary;
 class UShaderManager;
 class UTextureCubeStorage;
 class UCreaturePreviewRenderer;
+class UItemPreviewRenderer;
 
 class UContentPreviewRenderer
 {
@@ -26,6 +27,8 @@ public:
                           std::shared_ptr<UBlockDefinitionStorage> blockDefs,
                           std::shared_ptr<UShaderManager> shaderManager,
                           std::shared_ptr<UCreaturePreviewRenderer> creatures =
+                              nullptr,
+                          std::shared_ptr<UItemPreviewRenderer> itemPreview =
                               nullptr);
   ~UContentPreviewRenderer();
 
@@ -55,6 +58,7 @@ private:
   std::shared_ptr<UBlockDefinitionStorage> BlockDefs;
   std::shared_ptr<UShaderManager> ShaderManager;
   std::shared_ptr<UCreaturePreviewRenderer> Creatures;
+  std::shared_ptr<UItemPreviewRenderer> ItemPreview;
   std::shared_ptr<class UShaderProgram> Shader;
 
   GLuint CubeVao{0};

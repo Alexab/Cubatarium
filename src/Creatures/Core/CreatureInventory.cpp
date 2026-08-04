@@ -1,4 +1,5 @@
 #include "Creatures/Core/CreatureInventory.h"
+#include "Items/ItemDefinitionStorage.h"
 #include <nlohmann/json.hpp>
 
 namespace cutum
@@ -7,6 +8,19 @@ namespace cutum
 namespace
 {
 constexpr size_t kHotbarSlots = 10;
+
+constexpr size_t kArmorSlots = 6;
+
+const char *ArmorSlotId(size_t slot)
+{
+  static constexpr const char *ids[kArmorSlots] = {"head",  "chest", "arms",
+                                                    "hands", "legs",  "feet"};
+  if (slot >= kArmorSlots)
+  {
+    return "";
+  }
+  return ids[slot];
+}
 
 void RemapLegacyHotbarEntryId(InventoryEntryRef &entry)
 {
@@ -218,6 +232,143 @@ InventoryEntryRef *UCreatureInventory::GetActiveEntryRef()
       static_cast<const UCreatureInventory *>(this)->GetActiveEntryRef());
 }
 
+const InventoryEntryRef &UCreatureInventory::GetEquippedArmor(size_t slot) const
+{
+  static InventoryEntryRef kEmpty;
+  if (slot >= kArmorSlots)
+  {
+    return kEmpty;
+  }
+  return EquippedArmor[slot];
+}
+
+bool UCreatureInventory::EquipArmor(size_t slot, const InventoryEntryRef &entry,
+                                     const UItemDefinitionStorage &items)
+{
+  if (slot >= kArmorSlots)
+  {
+    return false;
+  }
+  if (entry.empty || entry.kind != InventoryEntryKind::Item || entry.Id.empty())
+  {
+    return false;
+  }
+
+  const ItemDefinition *def = items.Get(entry.Id);
+  if (!def || def->Armor.ArmorGroups.empty() || def->Armor.Slots.empty())
+  {
+    return false;
+  }
+
+  const char *slotId = ArmorSlotId(slot);
+  bool slotAllowed = false;
+  for (const std::string &s : def->Armor.Slots)
+  {
+    if (s == slotId)
+    {
+      slotAllowed = true;
+      break;
+    }
+  }
+  if (!slotAllowed)
+  {
+    return false;
+  }
+
+  EquippedArmor[slot] = entry;
+
+  // Recompute pre-aggregated armor groups.
+  EquippedArmorGroups.Ratings.clear();
+  for (size_t i = 0; i < kArmorSlots; ++i)
+  {
+    const InventoryEntryRef &e = EquippedArmor[i];
+    if (e.empty || e.kind != InventoryEntryKind::Item || e.Id.empty())
+    {
+      continue;
+    }
+    if (e.broken)
+    {
+      continue;
+    }
+    const ItemDefinition *ed = items.Get(e.Id);
+    if (!ed || ed->Armor.ArmorGroups.empty())
+    {
+      continue;
+    }
+    const char *sid = ArmorSlotId(i);
+    if (!ed->Armor.Slots.empty())
+    {
+      bool allowed = false;
+      for (const std::string &s : ed->Armor.Slots)
+      {
+        if (s == sid)
+        {
+          allowed = true;
+          break;
+        }
+      }
+      if (!allowed)
+      {
+        continue;
+      }
+    }
+    for (const auto &pair : ed->Armor.ArmorGroups)
+    {
+      EquippedArmorGroups.Ratings[pair.first] += pair.second;
+    }
+  }
+  return true;
+}
+
+void UCreatureInventory::UnequipArmor(size_t slot,
+                                       const UItemDefinitionStorage &items)
+{
+  if (slot >= kArmorSlots)
+  {
+    return;
+  }
+  EquippedArmor[slot] = InventoryEntryRef{};
+  EquippedArmorGroups.Ratings.clear();
+  for (size_t i = 0; i < kArmorSlots; ++i)
+  {
+    const InventoryEntryRef &e = EquippedArmor[i];
+    if (e.empty || e.kind != InventoryEntryKind::Item || e.Id.empty())
+    {
+      continue;
+    }
+    if (e.broken)
+    {
+      continue;
+    }
+    const ItemDefinition *ed = items.Get(e.Id);
+    if (!ed || ed->Armor.ArmorGroups.empty())
+    {
+      continue;
+    }
+    const char *sid = ArmorSlotId(i);
+    if (!ed->Armor.Slots.empty())
+    {
+      bool allowed = false;
+      for (const std::string &s : ed->Armor.Slots)
+      {
+        if (s == sid)
+        {
+          allowed = true;
+          break;
+        }
+      }
+      if (!allowed)
+      {
+        continue;
+      }
+    }
+    for (const auto &pair : ed->Armor.ArmorGroups)
+    {
+      EquippedArmorGroups.Ratings[pair.first] += pair.second;
+    }
+  }
+}
+
 void UCreatureInventory::EnsureHotbarCount(size_t count)
 {
   if (Hotbars.size() >= count)
@@ -289,6 +440,31 @@ void UCreatureInventory::SerializeToJson(nlohmann::json &out) const
   out["hotbars"] = bars;
   out["active_bar"] = ActiveBarIndex;
   out["active_slot"] = ActiveSlotIndex;
+
+  nlohmann::json equipped = nlohmann::json::array();
+  for (size_t i = 0; i < kArmorSlots; ++i)
+  {
+    const InventoryEntryRef &e = EquippedArmor[i];
+    nlohmann::json s;
+    s["empty"] = e.empty;
+    if (!e.empty)
+    {
+      s["kind"] = "item";
+      s["id"] = e.Id;
+      s["wear"] = e.wear;
+      s["broken"] = e.broken;
+      s["count"] = e.count;
+    }
+    equipped.push_back(s);
+  }
+  out["equipped_armor"] = equipped;
+
+  nlohmann::json groups = nlohmann::json::object();
+  for (const auto &pair : EquippedArmorGroups.Ratings)
+  {
+    groups[pair.first] = pair.second;
+  }
+  out["equipped_armor_groups"] = groups;
 }
 
 void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data,
@@ -371,6 +547,48 @@ void UCreatureInventory::DeserializeFromJson(const nlohmann::json &data,
   if (ActiveSlotIndex >= kHotbarSlots)
   {
     ActiveSlotIndex = 0;
+  }
+
+  EquippedArmor = {};
+  EquippedArmorGroups.Ratings.clear();
+
+  if (data.contains("equipped_armor") && data["equipped_armor"].is_array())
+  {
+    const auto &arr = data["equipped_armor"];
+    const size_t n = std::min(static_cast<size_t>(arr.size()), kArmorSlots);
+    for (size_t i = 0; i < n; ++i)
+    {
+      const auto &ej = arr[i];
+      const bool empty = ej.value("empty", ej.value("id", std::string()).empty());
+      EquippedArmor[i].empty = empty;
+      if (!empty)
+      {
+        EquippedArmor[i].kind = InventoryEntryKind::Item;
+        EquippedArmor[i].Id = ej.value("id", "");
+        EquippedArmor[i].count = ej.value("count", 1);
+        EquippedArmor[i].wear = ej.value("wear", 0.f);
+        EquippedArmor[i].broken = ej.value("broken", false);
+        EquippedArmor[i].empty = EquippedArmor[i].Id.empty();
+      }
+    }
+  }
+
+  if (data.contains("equipped_armor_groups") &&
+      data["equipped_armor_groups"].is_object())
+  {
+    for (auto it = data["equipped_armor_groups"].begin();
+         it != data["equipped_armor_groups"].end(); ++it)
+    {
+      if (it.value().is_number_integer() || it.value().is_number_unsigned())
+      {
+        EquippedArmorGroups.Ratings[it.key()] = it.value().get<int>();
+      }
+      else if (it.value().is_number_float())
+      {
+        EquippedArmorGroups.Ratings[it.key()] =
+            static_cast<int>(std::lround(it.value().get<float>()));
+      }
+    }
   }
 }
 

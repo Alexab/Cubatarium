@@ -28,6 +28,7 @@
 #include "Gui/Core/GuiIconSource.h"
 #include "Gui/Preview/ContentPreviewRenderer.h"
 #include "Gui/Preview/CreaturePreviewRenderer.h"
+#include "Gui/Preview/ItemPreviewRenderer.h"
 #include "Gui/Core/GuiMetrics.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiScale.h"
@@ -272,6 +273,17 @@ void UApplication::Startup(const std::string &configPath)
     }
     CreaturePreviewRenderer = creaturePreview;
 
+    std::shared_ptr<UItemPreviewRenderer> itemPreview;
+    if (Core && ShaderManager)
+    {
+      itemPreview = std::make_shared<UItemPreviewRenderer>(
+          Core->GetItemDefinitionStorage(), ShaderManager);
+      if (!itemPreview->Initialize())
+      {
+        itemPreview.reset();
+      }
+    }
+
     auto iconService = std::make_shared<UInventoryIconService>();
     if (!iconService->Initialize())
     {
@@ -295,11 +307,11 @@ void UApplication::Startup(const std::string &configPath)
       IconSource = std::make_unique<UGuiIconSource>(
           textures, std::move(objectCache), std::move(creatureCache),
           std::make_unique<UItemIconCache>(Core->GetItemDefinitionStorage(),
-                                           iconService));
+                                           iconService, itemPreview));
     }
     auto previewRenderer = std::make_unique<UContentPreviewRenderer>(
         Core->GetObjectLibrary(), textures, BlockDefinitions, ShaderManager,
-        creaturePreview);
+        creaturePreview, itemPreview);
     if (previewRenderer->Initialize())
     {
       ContentPreviewRenderer = std::move(previewRenderer);
@@ -1015,7 +1027,8 @@ void UApplication::ShowInGameHud()
   PaletteScreen->SetVisible(false);
 
   CharacterSheetScreen =
-      std::make_unique<UCharacterSheetScreen>(GameSession.get());
+      std::make_unique<UCharacterSheetScreen>(
+          GameSession.get(), CreaturePreviewRenderer.get(), icons);
   CharacterSheetScreen->OnAttach(*GuiContext);
   CharacterSheetScreen->Build(*GuiContext);
   CharacterSheetScreen->SetVisible(false);
