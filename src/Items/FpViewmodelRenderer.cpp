@@ -271,25 +271,139 @@ void UFpViewmodelRenderer::DrawParts(const std::vector<Part> &parts,
 }
 
 std::vector<UFpViewmodelRenderer::Part>
-UFpViewmodelRenderer::ToolParts(const std::string &, const glm::vec3 &) const
+UFpViewmodelRenderer::ToolParts(const std::string &itemId,
+                                const glm::vec3 &socket) const
 {
-  return {};
+  std::vector<Part> parts;
+  if (!Items || itemId.empty())
+  {
+    return parts;
+  }
+  const auto *def = Items->Get(itemId);
+  if (def && !def->ModelPath.empty())
+  {
+    IUPlatformPaths *paths = IUPlatformPaths::TryGet();
+    std::string jsonText;
+    if (paths && paths->ReadAssetText(def->ModelPath, jsonText))
+    {
+      try
+      {
+        const nlohmann::json data = nlohmann::json::parse(jsonText);
+        if (data.contains("parts") && data["parts"].is_array())
+        {
+          for (const auto &partJson : data["parts"])
+          {
+            const glm::vec3 off =
+                ReadVec3(partJson.value("offset", nlohmann::json::array()),
+                         glm::vec3(0.f));
+            const glm::vec3 sz =
+                ReadVec3(partJson.value("size", nlohmann::json::array()),
+                         glm::vec3(0.2f));
+            Part p;
+            p.ox = socket.x + off.x * 0.55f;
+            p.oy = socket.y + off.y * 0.55f;
+            p.oz = socket.z + off.z * 0.55f;
+            p.sx = std::max(0.04f, sz.x * 0.55f);
+            p.sy = std::max(0.04f, sz.y * 0.55f);
+            p.sz = std::max(0.04f, sz.z * 0.55f);
+            p.r = 185;
+            p.g = 190;
+            p.b = 200;
+            if (itemId.find("wood") != std::string::npos)
+            {
+              p.r = 158;
+              p.g = 107;
+              p.b = 56;
+            }
+            else if (itemId.find("stone") != std::string::npos)
+            {
+              p.r = 140;
+              p.g = 140;
+              p.b = 132;
+            }
+            parts.push_back(p);
+          }
+        }
+      }
+      catch (...)
+      {
+      }
+    }
+  }
+  if (parts.empty())
+  {
+    parts.push_back(Part{socket.x + 0.05f, socket.y + 0.05f, socket.z, 0.08f,
+                         0.35f, 0.08f, 185, 190, 200});
+  }
+  return parts;
 }
 
-void UFpViewmodelRenderer::DrawHeld(const InventoryEntryRef *, const glm::vec3 &,
-                                    const glm::mat4 &)
+void UFpViewmodelRenderer::DrawHeld(const InventoryEntryRef *entry,
+                                    const glm::vec3 &socket,
+                                    const glm::mat4 &mvpBase)
 {
-  // Filled in held-content stage.
+  if (!entry || entry->empty || entry->Id.empty())
+  {
+    return;
+  }
+  if (entry->kind == InventoryEntryKind::Item && !entry->broken)
+  {
+    DrawParts(ToolParts(entry->Id, socket), mvpBase);
+    return;
+  }
+  if (entry->kind == InventoryEntryKind::Block)
+  {
+    DrawBlockCube(entry->Id, socket, mvpBase);
+  }
 }
 
-void UFpViewmodelRenderer::DrawBlockCube(const std::string &, const glm::vec3 &,
-                                         const glm::mat4 &)
+GLuint UFpViewmodelRenderer::ResolveBlockAtlas(const std::string &typeName) const
 {
-}
-
-GLuint UFpViewmodelRenderer::ResolveBlockAtlas(const std::string &) const
-{
+  if (!Blocks || !Textures || typeName.empty())
+  {
+    return 0;
+  }
+  const BlockDefinition *def = Blocks->GetByName(typeName);
+  if (!def)
+  {
+    return 0;
+  }
+  const size_t typeId = Textures->GetTypeIdByName(def->Name);
+  const auto &texMap = Textures->GetTextures();
+  const auto it = texMap.find(typeId);
+  if (it != texMap.end())
+  {
+    return it->second.GetTexture();
+  }
+  for (const auto &kv : texMap)
+  {
+    if (kv.second.GetName() == def->Name)
+    {
+      return kv.second.GetTexture();
+    }
+  }
   return 0;
+}
+
+void UFpViewmodelRenderer::DrawBlockCube(const std::string &typeName,
+                                         const glm::vec3 &socket,
+                                         const glm::mat4 &mvpBase)
+{
+  const GLuint atlas = ResolveBlockAtlas(typeName);
+  if (atlas == 0 || CubeVao == 0 || !Shader)
+  {
+    return;
+  }
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, atlas);
+  glBindVertexArray(CubeVao);
+  const float s = 0.24f;
+  const glm::mat4 model =
+      glm::translate(glm::mat4(1.f), socket) *
+      glm::scale(glm::mat4(1.f), glm::vec3(s, s, s));
+  Shader->SetMat4("mvp_matrix", mvpBase * model);
+  glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
+  glBindVertexArray(0);
 }
 
 void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
