@@ -95,6 +95,9 @@ private:
                      const glm::mat4 &mvpBase);
   GLuint ResolveBlockAtlas(const std::string &typeName) const;
   glm::mat4 BuildRootMatrix(bool mirrorX) const;
+  /// TD-ITEM-004: draw skinned arm mesh if loaded; otherwise false → box arms.
+  /// Still a separate viewmodel pass (not body-in-FP).
+  bool TryDrawSkinnedArms(const glm::mat4 &mvpBase, bool leftHand);
 
   std::shared_ptr<UItemDefinitionStorage> Items;
   std::shared_ptr<UBlockDefinitionStorage> Blocks;

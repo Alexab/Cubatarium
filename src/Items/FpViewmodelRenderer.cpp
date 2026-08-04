@@ -481,6 +481,13 @@ GLuint UFpViewmodelRenderer::ResolveBlockAtlas(const std::string &typeName) cons
   return 0;
 }
 
+bool UFpViewmodelRenderer::TryDrawSkinnedArms(const glm::mat4 &, bool)
+{
+  // TD-ITEM-004: load creature/item arm glTF into this pass when assets exist.
+  // Do not switch to body-in-FP (camera inside world creature mesh).
+  return false;
+}
+
 void UFpViewmodelRenderer::DrawBlockCube(const std::string &typeName,
                                          const glm::vec3 &socket,
                                          const glm::mat4 &mvpBase)
@@ -533,11 +540,17 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
   Shader->SetInt("uAnimFrameCount", 1);
 
   const glm::mat4 rootR = BuildRootMatrix(false);
-  DrawParts(ArmPartsRight(), pv * rootR);
+  if (!TryDrawSkinnedArms(pv * rootR, false))
+  {
+    DrawParts(ArmPartsRight(), pv * rootR);
+  }
   DrawHeld(params.Active, kHandSocketR, pv * rootR);
 
   const glm::mat4 rootL = BuildRootMatrix(true);
-  DrawParts(ArmPartsLeft(), pv * rootL);
+  if (!TryDrawSkinnedArms(pv * rootL, true))
+  {
+    DrawParts(ArmPartsLeft(), pv * rootL);
+  }
   DrawHeld(params.Offhand, kHandSocketL, pv * rootL);
 
   Shader->Unuse();
