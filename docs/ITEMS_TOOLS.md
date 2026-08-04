@@ -8,16 +8,19 @@ Data-driven tools for player / bot / mobs (shared `UCreature` inventory + attrib
 - Catalog groups: `itemTypes` in [`content/types.json`](../content/types.json) (`mining`, `cutting`, `digging`, `combat`, `utility`, `armor`, `misc`)
 - Palette tab: **Tools** (5th tab). Key **B** opens **Blocks**, not Tools — use inventory key / last tab or switch to Tools manually.
 
-### How to equip (Creative)
+### How to equip (palette / hotbar)
 
 There is **no separate “equip to hand” action**. The **active hotbar slot** *is* the right hand (FP viewmodel / dig / place). Character sheet **Main** mirrors that slot.
 
-1. Open palette → **Tools** (use the bottom **Hotbar** row labeled drop target).
-2. Pick a sub-tab (Mining / Utility / Armor / …).
-3. **Click** an item to assign it to the **currently selected hotbar slot**, or **drag** onto the Hotbar strip (or HUD hotbar). Releasing over the Tools grid cancels the drag (does not assign).
-4. Hotbar keys `1–9` / `0` (or wheel in Perspective) select the active tool/block.
-5. **Armor**: open character sheet (**C**), drag armor from Tools → Armor onto paper-doll slots (Head/Chest/…).
-6. **Offhand**: on the character sheet, drag an Item or Block onto **Offhand** — left FP hand.
+The same palette is used in **Creative and Survival** (mode-agnostic UI). Drag/assign does not branch on game mode.
+
+1. Open palette → **Blocks**, **Tools**, **Objects**, etc. Use the bottom **Hotbar** strip (`Hotbar (drop here)`).
+2. Pick a sub-tab when present (e.g. Mining / Utility / Armor).
+3. **Click** an entry to assign it to the **currently selected hotbar slot**, or **drag** onto the Hotbar strip (or HUD hotbar). Releasing over the catalog grid cancels the drag (does not assign).
+4. Hotbar keys `1–9` / `0` (or wheel in Perspective) select the active hand slot (block or tool).
+5. Successful palette assign grants `Storage[id]=1` if missing or zero; `-1` means unlimited and is left unchanged.
+6. **Armor**: open character sheet (**C**), drag armor from Tools → Armor onto paper-doll slots (Head/Chest/…).
+7. **Offhand**: on the character sheet, drag an Item or Block onto **Offhand** — left FP hand.
 
 Or: `/give <item_id>` into the active hotbar slot.
 

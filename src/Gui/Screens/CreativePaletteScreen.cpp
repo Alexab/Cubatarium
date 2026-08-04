@@ -239,7 +239,7 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
   UsageHintLabel = usageHint.get();
   panel->AddChild(std::move(usageHint));
 
-  auto stripLabel = std::make_unique<UGuiLabel>(Theme, "Hotbar (drop tools here)");
+  auto stripLabel = std::make_unique<UGuiLabel>(Theme, "Hotbar (drop here)");
   stripLabel->SetUseSecondaryColor(true);
   HotbarStripLabel = stripLabel.get();
   rootShell->AddChild(std::move(stripLabel));
@@ -324,20 +324,16 @@ void UCreativePaletteScreen::RelayoutPanel()
                         tabH});
   }
   const int hintH = Theme->FontSizeBody + 4;
-  const bool showToolsHint = Kind == ContentKind::Item;
   if (UsageHintLabel)
   {
-    UsageHintLabel->SetVisible(showToolsHint);
-    if (showToolsHint)
-    {
-      UsageHintLabel->SetBounds(
-          {panelX + pad, panelY + pad + tabH + pad + tabH + pad / 2,
-           panelW - pad * 2, hintH});
-    }
+    UsageHintLabel->SetVisible(true);
+    UsageHintLabel->SetBounds(
+        {panelX + pad, panelY + pad + tabH + pad + tabH + pad / 2,
+         panelW - pad * 2, hintH});
   }
   if (Scroll)
   {
-    const int hintGap = showToolsHint ? (hintH + pad / 2) : 0;
+    const int hintGap = hintH + pad / 2;
     const int scrollTop =
         panelY + pad + tabH + pad + tabH + pad + hintGap;
     const int scrollH = std::max(0, panelH - (scrollTop - panelY) - pad);

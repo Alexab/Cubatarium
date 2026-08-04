@@ -166,7 +166,7 @@ bool UContentPreviewRenderer::InitCubeMesh()
       0.5f,  -0.5f, 0.5f,  cubeShift, 1.0f, 0.5f,  -0.5f, -0.5f, cubeShift * 2.0f,
       1.0f,  0.5f,  0.5f,  0.5f,  cubeShift, 0.0f, 0.5f,  0.5f,  -0.5f, cubeShift * 2.0f,
       0.0f,  0.5f,  -0.5f, -0.5f, cubeShift * 2.0f, 1.0f, -0.5f, -0.5f, -0.5f,
-      cubeShift * 3.0f, 1.0f, 0.5f, 0.5f, -0.5f, cubeShift * 2.0f, 0.0f, 0.5f, 0.5f,
+      cubeShift * 3.0f, 1.0f, 0.5f, 0.5f, -0.5f, cubeShift * 2.0f, 0.0f, -0.5f, 0.5f,
       -0.5f, cubeShift * 3.0f, 0.0f, -0.5f, -0.5f, -0.5f, cubeShift * 3.0f, 1.0f,
       -0.5f, -0.5f, 0.5f,  cubeShift * 4.0f, 1.0f, -0.5f, 0.5f, -0.5f, cubeShift * 3.0f,
       0.0f,  -0.5f, 0.5f,  0.5f,  cubeShift * 4.0f, 0.0f, -0.5f, 0.5f,  0.5f,

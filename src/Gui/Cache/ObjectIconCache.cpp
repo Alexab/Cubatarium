@@ -180,7 +180,7 @@ bool UObjectIconCache::InitCubeMesh()
       -0.5f,
       cubeShift * 2.0f,
       0.0f,
-      0.5f,
+      -0.5f,
       0.5f,
       -0.5f,
       cubeShift * 3.0f,

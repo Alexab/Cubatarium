@@ -238,20 +238,17 @@ bool UGameSession::AssignSlot(size_t barIndex, size_t slotIndex,
   const bool ok = inv->AssignToHotbar(barIndex, slotIndex, entry);
   if (ok)
   {
-    EnsureOwnedStorageForHotbarEntry(entry);
+    EnsureStorageForHotbarEntry(entry);
   }
   return ok;
 }
 
-void UGameSession::EnsureOwnedStorageForHotbarEntry(
-    const InventoryEntryRef &entry)
+void UGameSession::EnsureStorageForHotbarEntry(const InventoryEntryRef &entry)
 {
-  if (ActiveInventoryMode != InventoryMode::Owned)
-  {
-    return;
-  }
+  // Grant for any game mode: palette is mode-agnostic.
   if (entry.kind != InventoryEntryKind::Item &&
-      entry.kind != InventoryEntryKind::Object)
+      entry.kind != InventoryEntryKind::Object &&
+      entry.kind != InventoryEntryKind::Block)
   {
     return;
   }
@@ -636,7 +633,7 @@ UGameSession::GetEntries(ContentKind tab, const std::string &groupId,
         ref.count = it->second;
       }
     }
-    if (mode == InventoryMode::Owned && ref.count <= 0)
+    if (mode == InventoryMode::Owned && ref.count == 0)
     {
       continue;
     }
@@ -671,85 +668,71 @@ bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
     return false;
   }
 
-  // Creative: Tools palette entries must land on the hotbar. Validate blocks
-  // against the registry; Items/Objects/etc. are trusted from the catalog UI.
-  if (ActiveInventoryMode == InventoryMode::Creative)
+  // Palette/hotbar are mode-agnostic for now: catalog validity only.
+  // Do not branch on ActiveInventoryMode / WorldGameMode here.
+  if (!World)
   {
-    if (entry.kind == InventoryEntryKind::Block && World)
+    return false;
+  }
+
+  switch (entry.kind)
+  {
+  case InventoryEntryKind::Block:
+    if (World->GetBlockRegistry().GetIdByTypeName(entry.Id) == BLOCK_AIR)
     {
-      if (World->GetBlockRegistry().GetIdByTypeName(entry.Id) == BLOCK_AIR)
-      {
-        std::cerr
-            << "GameSession: block not in registry, hotbar assign rejected: "
-            << entry.Id << std::endl;
-        return false;
-      }
+      std::cerr
+          << "GameSession: block not in registry, hotbar assign rejected: "
+          << entry.Id << std::endl;
+      return false;
     }
     return true;
+
+  case InventoryEntryKind::Item:
+  {
+    const UItemDefinitionStorage *items = World->GetItemDefinitionStorage();
+    return items && items->Get(entry.Id) != nullptr;
   }
 
-  if (World)
+  case InventoryEntryKind::Object:
   {
-    if (entry.kind == InventoryEntryKind::Block)
+    for (const auto &typeId : ContentCatalog.GetTypeIds(ContentKind::Object))
     {
-      if (World->GetBlockRegistry().GetIdByTypeName(entry.Id) == BLOCK_AIR)
+      for (const auto &e :
+           ContentCatalog.GetEntries(ContentKind::Object, typeId))
       {
-        return false;
-      }
-    }
-    else if (entry.kind == InventoryEntryKind::Object)
-    {
-      bool found = false;
-      for (const auto &typeId : ContentCatalog.GetTypeIds(ContentKind::Object))
-      {
-        for (const auto &e :
-             ContentCatalog.GetEntries(ContentKind::Object, typeId))
+        if (e.Id == entry.Id)
         {
-          if (e.Id == entry.Id)
-          {
-            found = true;
-            break;
-          }
-        }
-        if (found)
-        {
-          break;
+          return true;
         }
       }
-      if (!found)
-      {
-        return false;
-      }
     }
-    else if (entry.kind == InventoryEntryKind::Item)
-    {
-      const UItemDefinitionStorage *items = World->GetItemDefinitionStorage();
-      if (!items || !items->Get(entry.Id))
-      {
-        return false;
-      }
-    }
+    return false;
   }
 
-  // Blocks: Survival economy still requires Storage>0.
-  if (entry.kind == InventoryEntryKind::Block)
+  case InventoryEntryKind::UCreature:
+  case InventoryEntryKind::Skin:
   {
+    const ContentKind tab = (entry.kind == InventoryEntryKind::Skin)
+                                ? ContentKind::Skin
+                                : ContentKind::UCreature;
+    for (const auto &typeId : ContentCatalog.GetTypeIds(tab))
+    {
+      for (const auto &e : ContentCatalog.GetEntries(tab, typeId))
+      {
+        if (e.Id == entry.Id)
+        {
+          return true;
+        }
+      }
+    }
     const auto &inv = creatureInv->GetStorage();
     const auto it = inv.find(entry.Id);
-    return it != inv.end() && it->second > 0;
+    return it != inv.end() && it->second != 0;
   }
 
-  // Items/Objects from creative-style palette: catalog presence is enough.
-  // Grant happens in AssignSlot via EnsureOwnedStorageForHotbarEntry.
-  if (entry.kind == InventoryEntryKind::Item ||
-      entry.kind == InventoryEntryKind::Object)
-  {
-    return true;
+  default:
+    return false;
   }
-
-  const auto &inv = creatureInv->GetStorage();
-  const auto it = inv.find(entry.Id);
-  return it != inv.end() && it->second > 0;
 }
 
 bool UGameSession::AssignToHotbar(const InventoryEntryRef &entry,
