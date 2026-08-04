@@ -25,6 +25,7 @@
 #include "ResourcePacks/ResourcePackResolver.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include <array>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
@@ -50,6 +51,7 @@ class UGuiIconSource;
 class UContentPreviewRenderer;
 class UCreaturePreviewRenderer;
 class UFpViewmodelRenderer;
+enum class FpSwingKind : uint8_t;
 class UMainMenuScreen;
 class UWorldResourcePacksScreen;
 
@@ -101,6 +103,7 @@ public:
   void Update(double dt);
   void ProcessInput();
   void RenderFrame(int width, int height, double viewDuration);
+  void NotifyFpSwing(FpSwingKind kind);
   void SetViewportInsets(int left, int top, int right, int bottom);
   void SetKeyboardInsetBottom(int bottom);
   void SetUiScale(float scale);

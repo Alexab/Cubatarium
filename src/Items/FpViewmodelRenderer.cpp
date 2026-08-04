@@ -214,25 +214,121 @@ UFpViewmodelRenderer::ArmPartsLeft() const
 void UFpViewmodelRenderer::Update(float dt, float cameraYawDeg,
                                   float cameraPitchDeg, float moveSpeedHint)
 {
-  (void)dt;
-  (void)cameraYawDeg;
-  (void)cameraPitchDeg;
-  (void)moveSpeedHint;
-  // Filled in motion stage.
+  if (dt < 0.f)
+  {
+    dt = 0.f;
+  }
+  Motion.BobPhase += dt * (1.5f + moveSpeedHint * kBobSpeedScale);
+  BobX = 0.008f * std::sin(Motion.BobPhase);
+  BobY = 0.006f * std::sin(Motion.BobPhase * 2.f);
+
+  if (!Motion.HaveLastAngles)
+  {
+    Motion.LastYaw = cameraYawDeg;
+    Motion.LastPitch = cameraPitchDeg;
+    Motion.HaveLastAngles = true;
+    Motion.WieldOffsetX = kInertiaBaseX;
+    Motion.WieldOffsetY = kInertiaBaseY;
+  }
+  else
+  {
+    const float dYaw = UnwrapDeltaDeg(Motion.LastYaw, cameraYawDeg);
+    const float dPitch = cameraPitchDeg - Motion.LastPitch;
+    const float velX = std::fabs(dYaw) / std::max(dt, 0.001f) * 0.01f;
+    const float velY = std::fabs(dPitch) / std::max(dt, 0.001f);
+    const float gapX = std::fabs(kInertiaBaseX - Motion.WieldOffsetX);
+    const float gapY = std::fabs(kInertiaBaseY - Motion.WieldOffsetY);
+    if (velX > 1.f || velY > 1.f)
+    {
+      if (velX > 1.f)
+      {
+        const float acc = 0.12f * (velX - gapX * 0.1f) * 0.001f;
+        Motion.WieldOffsetX += (dYaw < 0.f) ? acc : -acc;
+        Motion.WieldOffsetX = std::clamp(
+            Motion.WieldOffsetX, kInertiaBaseX - kInertiaAmpX * 0.5f,
+            kInertiaBaseX + kInertiaAmpX * 0.5f);
+      }
+      if (velY > 1.f)
+      {
+        const float acc = 0.12f * (velY - gapY * 0.1f) * 0.001f;
+        Motion.WieldOffsetY += (dPitch > 0.f) ? acc : -acc;
+        Motion.WieldOffsetY = std::clamp(
+            Motion.WieldOffsetY, kInertiaBaseY - kInertiaAmpY * 0.5f,
+            kInertiaBaseY + kInertiaAmpY * 0.5f);
+      }
+    }
+    else
+    {
+      const float decX = 0.35f * dt * 0.05f;
+      const float decY = 0.25f * dt * 0.05f;
+      if (Motion.WieldOffsetX > kInertiaBaseX)
+      {
+        Motion.WieldOffsetX =
+            std::max(kInertiaBaseX, Motion.WieldOffsetX - decX);
+      }
+      else
+      {
+        Motion.WieldOffsetX =
+            std::min(kInertiaBaseX, Motion.WieldOffsetX + decX);
+      }
+      if (Motion.WieldOffsetY > kInertiaBaseY)
+      {
+        Motion.WieldOffsetY =
+            std::max(kInertiaBaseY, Motion.WieldOffsetY - decY);
+      }
+      else
+      {
+        Motion.WieldOffsetY =
+            std::min(kInertiaBaseY, Motion.WieldOffsetY + decY);
+      }
+    }
+    Motion.LastYaw = cameraYawDeg;
+    Motion.LastPitch = cameraPitchDeg;
+  }
+
+  if (Motion.DigAnim >= 0.f)
+  {
+    Motion.DigAnim += dt * kSwingSpeed;
+    if (Motion.DigAnim >= 1.f)
+    {
+      Motion.DigAnim = -1.f;
+      Motion.DigButton = -1;
+    }
+  }
 }
 
 void UFpViewmodelRenderer::NotifySwing(FpSwingKind kind)
 {
-  (void)kind;
-  // Filled in motion stage.
+  if (kind == FpSwingKind::Place || Motion.DigButton < 0)
+  {
+    Motion.DigButton = (kind == FpSwingKind::Place) ? 1 : 0;
+    Motion.DigAnim = 0.f;
+  }
 }
 
 glm::mat4 UFpViewmodelRenderer::BuildRootMatrix(bool mirrorX) const
 {
-  const float ox = (mirrorX ? -Motion.WieldOffsetX : Motion.WieldOffsetX) +
-                   (mirrorX ? -BobX : BobX);
-  const float oy = Motion.WieldOffsetY + BobY;
-  glm::mat4 root = glm::translate(glm::mat4(1.f), glm::vec3(ox, oy, 0.f));
+  float ox = (mirrorX ? -Motion.WieldOffsetX : Motion.WieldOffsetX) +
+             (mirrorX ? -BobX : BobX);
+  float oy = Motion.WieldOffsetY + BobY;
+  float oz = 0.f;
+  glm::mat4 swing(1.f);
+  if (Motion.DigAnim >= 0.f && !mirrorX)
+  {
+    const float f = Motion.DigAnim;
+    ox += -0.10f * std::sin(std::pow(f, 0.8f) * kPi);
+    oy += 0.05f * std::sin(f * 1.8f * kPi);
+    oz += 0.025f;
+    const float t = std::sin(f * kPi);
+    const glm::quat idle = glm::quat(1.f, 0.f, 0.f, 0.f);
+    const glm::quat punch = glm::angleAxis(glm::radians(-35.f * t),
+                                           glm::vec3(1.f, 0.f, 0.f)) *
+                            glm::angleAxis(glm::radians(20.f * t),
+                                           glm::vec3(0.f, 1.f, 0.f));
+    swing = glm::mat4_cast(glm::slerp(idle, punch, t));
+  }
+  glm::mat4 root =
+      glm::translate(glm::mat4(1.f), glm::vec3(ox, oy, oz)) * swing;
   if (mirrorX)
   {
     root = glm::scale(root, glm::vec3(-1.f, 1.f, 1.f));

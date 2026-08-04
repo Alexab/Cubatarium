@@ -5,6 +5,7 @@
 #include "Creatures/Core/CreatureInventory.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Game/WorldGameMode.h"
+#include "Items/FpViewmodelRenderer.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "World/Core/World.h"
@@ -117,11 +118,19 @@ void ClearDigIntent(UWorld &world)
   }
 }
 
-void BeginDig(UWorld &world, glm::ivec3 blockPos)
+void BeginDig(const BlockInputContext &ctx, glm::ivec3 blockPos)
 {
-  if (UCreature *controlled = world.GetControlledCreature())
+  if (!ctx.World)
+  {
+    return;
+  }
+  if (UCreature *controlled = ctx.World->GetControlledCreature())
   {
     PlayerInteractionRouter::BeginDigIntent(*controlled, blockPos);
+  }
+  if (ctx.App)
+  {
+    ctx.App->NotifyFpSwing(FpSwingKind::Dig);
   }
 }
 
@@ -152,13 +161,19 @@ void UBlockInputController::TryUseActiveSlot(const BlockInputContext &ctx)
   {
     return;
   }
+  bool placed = false;
   switch (Active->kind)
   {
   case InventoryEntryKind::Object:
     ctx.World->PlaceActiveObjectByView();
+    placed = true;
     break;
   case InventoryEntryKind::UCreature:
-    if (!ctx.World->SpawnCreatureByView(Active->Id) && ctx.Geometries)
+    if (ctx.World->SpawnCreatureByView(Active->Id))
+    {
+      placed = true;
+    }
+    else if (ctx.Geometries)
     {
       ctx.Geometries->ShowTransientMessage("Cannot spawn " + Active->Id, 2.0);
     }
@@ -175,7 +190,8 @@ void UBlockInputController::TryUseActiveSlot(const BlockInputContext &ctx)
     std::string error;
     if (target && ctx.World->TryApplySkin(*target, Active->Id, &error))
     {
-      return;
+      placed = true;
+      break;
     }
     if (ctx.Geometries)
     {
@@ -190,7 +206,12 @@ void UBlockInputController::TryUseActiveSlot(const BlockInputContext &ctx)
   case InventoryEntryKind::Block:
   default:
     ctx.World->AddObjectByView();
+    placed = true;
     break;
+  }
+  if (placed && ctx.App)
+  {
+    ctx.App->NotifyFpSwing(FpSwingKind::Place);
   }
 }
 
@@ -249,6 +270,10 @@ void UBlockInputController::HandleLeftPress(const BlockInputContext &ctx)
       if (PlayerInteractionRouter::TryRouteMeleeFromView(
               *ctx.World, *self, camera->GetPosition(), camera->GetFront()))
       {
+        if (ctx.App)
+        {
+          ctx.App->NotifyFpSwing(FpSwingKind::Melee);
+        }
         LeftDownTime = std::chrono::steady_clock::now();
         LeftHeld = true;
         return;
@@ -264,7 +289,7 @@ void UBlockInputController::HandleLeftPress(const BlockInputContext &ctx)
   if (ctx.Ui->ControlScheme == ControlScheme::Classic && !IsIsoCamera(ctx) &&
       ctx.World->GetIsBlockIntersectionExists())
   {
-    BeginDig(*ctx.World, ctx.World->GetBreakBlockPos());
+    BeginDig(ctx, ctx.World->GetBreakBlockPos());
     DigStartedForHold = true;
   }
 }
@@ -311,7 +336,7 @@ void UBlockInputController::HandleLeftRelease(float holdSeconds,
              !ShouldBlockBreakByMovement(ctx))
     {
       // Long press release without Tick having started dig yet.
-      BeginDig(*ctx.World, ctx.World->GetBreakBlockPos());
+      BeginDig(ctx, ctx.World->GetBreakBlockPos());
       DigStartedForHold = true;
     }
     // Else: dig already armed — keep Dig intent; WVB finishes the session.
@@ -514,14 +539,14 @@ void UBlockInputController::Tick(float dt, const BlockInputContext &ctx)
             .count();
     if (holdSeconds >= ctx.Ui->BreakHoldMinSeconds)
     {
-      BeginDig(*ctx.World, ctx.World->GetBreakBlockPos());
+      BeginDig(ctx, ctx.World->GetBreakBlockPos());
       DigStartedForHold = true;
     }
     return;
   }
 
   // Classic: break already started on press; Tick is a fallback if needed.
-  BeginDig(*ctx.World, ctx.World->GetBreakBlockPos());
+  BeginDig(ctx, ctx.World->GetBreakBlockPos());
   DigStartedForHold = true;
 }
 

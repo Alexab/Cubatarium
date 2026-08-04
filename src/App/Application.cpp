@@ -1497,6 +1497,14 @@ void UApplication::DrawDragGhost(int width, int height)
   renderer.EndFrame();
 }
 
+void UApplication::NotifyFpSwing(FpSwingKind kind)
+{
+  if (FpViewmodelRenderer)
+  {
+    FpViewmodelRenderer->NotifySwing(kind);
+  }
+}
+
 void UApplication::Update(double dt)
 {
   if (PendingEnterGame)
@@ -1618,6 +1626,18 @@ void UApplication::Update(double dt)
     if (CharacterSheetOpen && CharacterSheetScreen)
     {
       CharacterSheetScreen->Update(dt);
+    }
+    if (FpViewmodelRenderer && World)
+    {
+      float yaw = 0.f;
+      float pitch = 0.f;
+      float speed = 0.f;
+      if (auto cam = World->GetCurrentUserCamera())
+      {
+        yaw = cam->GetYaw();
+        pitch = cam->GetPitch();
+      }
+      FpViewmodelRenderer->Update(static_cast<float>(dt), yaw, pitch, speed);
     }
   }
   SyncCursorVisibility();
