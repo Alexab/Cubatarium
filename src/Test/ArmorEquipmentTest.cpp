@@ -117,6 +117,59 @@ int main()
   Expect(!afterBroken.DidHit && !afterBroken.Missed,
          "broken armor should not contribute to damage");
 
+  // 3) Offhand equip + JSON round-trip.
+  {
+    UCreatureInventory ohInv;
+    InventoryEntryRef empty;
+    Expect(!ohInv.EquipOffhand(empty), "EquipOffhand rejects empty");
+
+    InventoryEntryRef toolEntry;
+    toolEntry.empty = false;
+    toolEntry.kind = InventoryEntryKind::Item;
+    toolEntry.Id = "iron_pickaxe";
+    toolEntry.count = 1;
+    toolEntry.wear = 0.25f;
+    toolEntry.broken = false;
+    Expect(ohInv.EquipOffhand(toolEntry), "EquipOffhand accepts Item");
+    Expect(!ohInv.GetEquippedOffhand().empty &&
+               ohInv.GetEquippedOffhand().Id == "iron_pickaxe" &&
+               std::fabs(ohInv.GetEquippedOffhand().wear - 0.25f) < 1e-4f,
+           "offhand item stored");
+
+    InventoryEntryRef blockEntry;
+    blockEntry.empty = false;
+    blockEntry.kind = InventoryEntryKind::Block;
+    blockEntry.Id = "wood";
+    blockEntry.count = -1;
+    Expect(ohInv.EquipOffhand(blockEntry), "EquipOffhand accepts Block");
+    Expect(ohInv.GetEquippedOffhand().kind == InventoryEntryKind::Block &&
+               ohInv.GetEquippedOffhand().Id == "wood",
+           "offhand block overwrites item");
+
+    nlohmann::json serialized;
+    ohInv.SerializeToJson(serialized);
+    Expect(serialized.contains("equipped_offhand"), "JSON has equipped_offhand");
+    Expect(serialized["equipped_offhand"].value("kind", "") == "block" &&
+               serialized["equipped_offhand"].value("id", "") == "wood",
+           "equipped_offhand JSON fields");
+
+    UCreatureInventory restored;
+    restored.DeserializeFromJson(serialized);
+    const InventoryEntryRef &roundTrip = restored.GetEquippedOffhand();
+    Expect(!roundTrip.empty && roundTrip.kind == InventoryEntryKind::Block &&
+               roundTrip.Id == "wood" && roundTrip.count == -1,
+           "offhand JSON round-trip");
+
+    restored.UnequipOffhand();
+    Expect(restored.GetEquippedOffhand().empty, "UnequipOffhand clears slot");
+
+    InventoryEntryRef bad;
+    bad.empty = false;
+    bad.kind = InventoryEntryKind::Object;
+    bad.Id = "chest";
+    Expect(!ohInv.EquipOffhand(bad), "EquipOffhand rejects Object kind");
+  }
+
   fs::remove_all(tmp);
 
   if (Failures != 0)

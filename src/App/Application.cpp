@@ -1643,6 +1643,10 @@ void UApplication::Update(double dt)
         yaw = cam->GetYaw();
         pitch = cam->GetPitch();
       }
+      if (const UCreature *creature = World->GetControlledCreature())
+      {
+        speed = creature->GetLocomotionFacts().horizontalSpeed;
+      }
       FpViewmodelRenderer->Update(static_cast<float>(dt), yaw, pitch, speed);
     }
   }

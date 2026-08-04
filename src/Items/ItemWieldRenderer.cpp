@@ -11,8 +11,8 @@ void UItemWieldRenderer::DrawFirstPerson(const InventoryEntryRef *active,
                                          const UItemDefinitionStorage *items,
                                          float aspect, bool broken_visual)
 {
-  // FP box arms + tool are drawn by UFpViewmodelRenderer::DrawOverlay
-  // (Application RenderFrame). Full skinned mesh remains TD-ITEM-004.
+  // FP box arms + tool are drawn by UFpViewmodelRenderer::DrawWorldOverlay
+  // (Application RenderFrame, after world paint). Skinned arms = TD-ITEM-004.
   (void)active;
   (void)items;
   (void)aspect;
