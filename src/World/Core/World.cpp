@@ -8,7 +8,6 @@
 #include <climits>
 #include "Activity/WorldCreatureActivitySink.h"
 #include "App/Settings/RenderSettings.h"
-#include "Blocks/BlockDigRules.h"
 #include "Items/ToolCapabilities.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Creatures/Core/Creature.h"
@@ -5688,53 +5687,6 @@ std::optional<glm::ivec3> UWorld::GetBreakSessionBlockPos() const
     return std::nullopt;
   }
   return BreakSession->blockPos;
-}
-
-float UWorld::ResolveBreakDurationSeconds() const
-{
-  if (!BreakSession)
-  {
-    return -1.f;
-  }
-  BlockDefinition blockDef;
-  blockDef.Name = "unknown";
-  blockDef.Hardness = BlockDigRules::DefaultHardness;
-  if (BlockRegistry)
-  {
-    if (const UBlockDefinitionStorage *defs = BlockRegistry->GetDefinitions())
-    {
-      const BlockId id = BlockWorld.GetBlock(BreakSession->blockPos);
-      if (const BlockDefinition *def = defs->GetById(id))
-      {
-        blockDef = *def;
-      }
-    }
-  }
-
-  const ItemDefinition *tool = nullptr;
-  CreatureAttributes attrs;
-  if (const UCreature *creature = GetControlledCreature())
-  {
-    attrs = creature->GetAttributes();
-    if (const InventoryEntryRef *active =
-            creature->GetInventory().GetActiveEntryRef())
-    {
-      if (!active->empty && active->kind == InventoryEntryKind::Item &&
-          !active->broken && ItemDefinitions)
-      {
-        tool = ItemDefinitions->Get(active->Id);
-      }
-    }
-  }
-  if (!tool && ItemDefinitions)
-  {
-    tool = ItemDefinitions->GetHandDefinition();
-  }
-
-  DigParams params = ResolveDigParams(tool, blockDef, attrs, GameMode);
-  BreakSession->pendingWearDelta = params.WearDelta;
-  BreakSession->pendingToolId = tool ? tool->Id : std::string{};
-  return params.DurationSec;
 }
 
 FluidColumnSurface UWorld::FindFluidColumnSurfaceAt(int bx, int bz,

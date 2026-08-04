@@ -879,6 +879,9 @@ add_executable(creature_stats_test
     src/Creatures/Stats/CreatureStatsDefaults.cpp
     src/Creatures/Stats/CreatureStatsJson.cpp
     src/Creatures/Locomotion/LocomotionTypes.cpp
+    src/Creatures/Core/CreatureCatalogTypes.cpp
+    src/Creatures/Definition/CreatureDefinitionStorage.cpp
+    src/Creatures/Visual/CreatureRigidModelLoader.cpp
     src/Test/CreatureStatsTest.cpp)
 target_include_directories(creature_stats_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)

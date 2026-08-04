@@ -47,6 +47,11 @@ void UInfluenceFxSystem::OnInfluenceEvent(const InfluenceEvent &event)
   {
     return;
   }
+  // Dig complete is handled by BlockBreakFxPass; no melee flash/beam for Dig.
+  if (event.Channel == InfluenceChannel::Dig)
+  {
+    return;
+  }
 
   if (g_InfluenceFxWorld)
   {

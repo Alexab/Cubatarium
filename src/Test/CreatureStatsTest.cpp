@@ -2,10 +2,14 @@
 #include "Creatures/Stats/CreatureStatsDefaults.h"
 #include "Creatures/Stats/CreatureStatsJson.h"
 #include "Creatures/Stats/CreatureVitals.h"
+#include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
 
+#include <cmath>
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -117,6 +121,42 @@ int main()
   Expect(WorldGameMode::Creative != WorldGameMode::Survival, "modes differ");
   Expect(WorldDifficulty::Peaceful != WorldDifficulty::Normal,
          "difficulties differ");
+
+  {
+    // TD-INF-008: armor_groups / bare_hand parse roundtrip via definition load.
+    namespace fs = std::filesystem;
+    const fs::path tmp =
+        fs::temp_directory_path() / "cubatarium_armor_groups_test";
+    const fs::path species = tmp / "armor_test_mob";
+    fs::create_directories(species);
+    const fs::path jsonPath = species / "creature.json";
+    {
+      std::ofstream out(jsonPath);
+      out << R"({
+  "id": "armor_test_mob",
+  "display_name": "Armor Test",
+  "role": "mob",
+  "armor_groups": { "fleshy": 80 },
+  "bare_hand": {
+    "full_punch_interval": 0.4,
+    "damage": { "fleshy": 7 }
+  },
+  "vitals": { "max_health": 40, "max_fatal_wounds": 1 },
+  "attributes": { "strength": 11 }
+})";
+    }
+    UCreatureDefinitionStorage storage;
+    Expect(storage.LoadFile(jsonPath.string()), "load armor_test_mob json");
+    const CreatureDefinition *def = storage.Get("armor_test_mob");
+    Expect(def != nullptr, "armor_test_mob definition present");
+    Expect(def->stats.hasArmorGroupsOverride, "armor_groups override flag");
+    Expect(def->stats.armorGroups.Get("fleshy") == 80, "armor fleshy 80");
+    Expect(def->stats.bareHand.hasOverride, "bare_hand override flag");
+    Expect(def->stats.bareHand.fleshyDamage == 7, "bare_hand fleshy 7");
+    Expect(std::fabs(def->stats.bareHand.fullPunchInterval - 0.4f) < 1e-4f,
+           "bare_hand interval 0.4");
+    fs::remove_all(tmp);
+  }
 
   std::cout << "creature_stats_test: OK" << std::endl;
   return 0;

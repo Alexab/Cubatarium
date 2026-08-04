@@ -434,8 +434,6 @@ public:
   float GetBreakProgress() const;
   bool HasBreakSession() const { return BreakSession.has_value(); }
   std::optional<glm::ivec3> GetBreakSessionBlockPos() const;
-  /// Dig duration for the active break session (Creative=0, unbreakable=-1).
-  float ResolveBreakDurationSeconds() const;
   /// Flight-sim break-stand: request one CompleteBreakSession on next Update.
   void RequestFlightSimBreak() { FlightSimBreakRequested = true; }
   bool ConsumeFlightSimBreakRequest()

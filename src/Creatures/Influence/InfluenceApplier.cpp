@@ -93,8 +93,19 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
                               pred.DigToolId);
     }
     world.TickBreakSession(dt, pred.DigDurationSec);
-    if (world.GetBreakProgress() < 1.f)
+    const float dig_progress = world.GetBreakProgress();
+    if (dig_progress < 1.f)
     {
+      InfluenceEvent progress_ev;
+      progress_ev.Kind = InfluenceEventKind::DigProgress;
+      progress_ev.SourceId = pred.SourceId;
+      progress_ev.CapabilityId = pred.Capability.Id;
+      progress_ev.Channel = InfluenceChannel::Dig;
+      progress_ev.DigProgress = dig_progress;
+      progress_ev.DigBlockPos = pred.DigBlockPos;
+      progress_ev.SourcePos = pred.SourcePos;
+      progress_ev.TargetPos = glm::vec3(pred.DigBlockPos);
+      InfluenceEvents::Emit(progress_ev);
       result.Applied = true;
       return result;
     }
@@ -106,6 +117,8 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
     ev.SourceId = pred.SourceId;
     ev.CapabilityId = pred.Capability.Id;
     ev.Channel = InfluenceChannel::Dig;
+    ev.DigProgress = 1.f;
+    ev.DigBlockPos = pred.DigBlockPos;
     ev.SourcePos = pred.SourcePos;
     ev.TargetPos = glm::vec3(pred.DigBlockPos);
     if (!result.Applied)

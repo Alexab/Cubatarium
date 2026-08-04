@@ -16,7 +16,8 @@ using CreatureId = uint64_t;
 enum class InfluenceEventKind
 {
   Applied = 0,
-  Cancelled
+  Cancelled,
+  DigProgress
 };
 
 struct InfluenceEvent
@@ -27,6 +28,8 @@ struct InfluenceEvent
   std::string CapabilityId;
   InfluenceChannel Channel{InfluenceChannel::None};
   float DamageDealt{0.f};
+  float DigProgress{0.f};
+  glm::ivec3 DigBlockPos{0};
   glm::vec3 SourcePos{0.f};
   glm::vec3 TargetPos{0.f};
   EffectSpec Effects;

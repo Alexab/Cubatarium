@@ -15,6 +15,8 @@ class UCreatureDefinitionStorage
 public:
   void Load(const std::string &folder);
   void LoadOverlay(const std::string &folder);
+  /// Load a single creature.json (also used by unit tests).
+  bool LoadFile(const std::string &path);
   const CreatureDefinition *Get(const std::string &Id) const;
   size_t Count() const;
 
@@ -23,8 +25,6 @@ public:
   std::string GetControlledDefaultSpeciesId() const;
 
 private:
-  bool LoadFile(const std::string &path);
-
   std::unordered_map<std::string, CreatureDefinition> Definitions;
   mutable std::shared_mutex DefinitionsMutex;
 };

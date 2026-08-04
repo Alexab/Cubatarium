@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstring>
 #include <iostream>
+#include <optional>
 #include <vector>
 
 namespace cutum
@@ -48,11 +49,21 @@ bool UBlockBreakFxPass::InitShaders(
     std::cerr << "Failed to create block debris shader" << std::endl;
     return false;
   }
+  if (!SinkRegistered)
+  {
+    InfluenceEvents::AddSink(this);
+    SinkRegistered = true;
+  }
   return true;
 }
 
 void UBlockBreakFxPass::DestroyGpuResources()
 {
+  if (SinkRegistered)
+  {
+    InfluenceEvents::RemoveSink(this);
+    SinkRegistered = false;
+  }
   Particles.Reset();
   if (Ebo != 0)
   {
@@ -79,6 +90,79 @@ void UBlockBreakFxPass::DestroyGpuResources()
   HadSession = false;
   LastProgress = 0.0f;
   HitProgressCursor = 0.0f;
+}
+
+void UBlockBreakFxPass::ApplyDigProgress(glm::ivec3 block_pos, float progress)
+{
+  if (!HadSession || block_pos != LastBlockPos)
+  {
+    LastBlockPos = block_pos;
+    HitProgressCursor = 0.0f;
+    LastProgress = 0.0f;
+  }
+  const glm::vec3 center = BlockCenter(block_pos);
+  while (progress >= HitProgressCursor + kHitProgressStep)
+  {
+    HitProgressCursor += kHitProgressStep;
+    Particles.SpawnHitDebris(center,
+                             UBlockBreakParticleSystem::kHitDebrisPerStep);
+  }
+  LastProgress = progress;
+  HadSession = true;
+}
+
+void UBlockBreakFxPass::NotifyDigEnded(bool completed)
+{
+  if (HadSession && completed && LastProgress >= 0.85f)
+  {
+    Particles.SpawnBreakBurst(BlockCenter(LastBlockPos),
+                              UBlockBreakParticleSystem::kBurstDebris);
+  }
+  HadSession = false;
+  LastProgress = 0.0f;
+  HitProgressCursor = 0.0f;
+}
+
+void UBlockBreakFxPass::OnInfluenceEvent(const InfluenceEvent &event)
+{
+  if (event.Channel != InfluenceChannel::Dig)
+  {
+    return;
+  }
+  if (event.Kind == InfluenceEventKind::DigProgress)
+  {
+    ApplyDigProgress(event.DigBlockPos, event.DigProgress);
+    return;
+  }
+  if (event.Kind == InfluenceEventKind::Applied)
+  {
+    ApplyDigProgress(event.DigBlockPos, 1.f);
+    NotifyDigEnded(true);
+    return;
+  }
+  if (event.Kind == InfluenceEventKind::Cancelled)
+  {
+    NotifyDigEnded(false);
+  }
+}
+
+void UBlockBreakFxPass::SyncFromWorld(UWorld &world)
+{
+  // DigSessionState remains SoT for crack overlay; debris also gets Dig
+  // Influence DigProgress events. Poll keeps FX correct if events are missed.
+  const bool has_session = world.HasBreakSession();
+  if (has_session)
+  {
+    if (const std::optional<glm::ivec3> pos = world.GetBreakSessionBlockPos())
+    {
+      ApplyDigProgress(*pos, world.GetBreakProgress());
+    }
+    return;
+  }
+  if (HadSession)
+  {
+    NotifyDigEnded(LastProgress >= 0.85f);
+  }
 }
 
 bool UBlockBreakFxPass::EnsureGpu()
@@ -130,44 +214,6 @@ bool UBlockBreakFxPass::EnsureGpu()
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
   glBindVertexArray(0);
   return true;
-}
-
-void UBlockBreakFxPass::SyncFromWorld(UWorld &world)
-{
-  const bool has_session = world.HasBreakSession();
-  if (has_session)
-  {
-    const std::optional<glm::ivec3> pos = world.GetBreakSessionBlockPos();
-    const float progress = world.GetBreakProgress();
-    if (pos)
-    {
-      if (!HadSession || *pos != LastBlockPos)
-      {
-        LastBlockPos = *pos;
-        HitProgressCursor = 0.0f;
-        LastProgress = 0.0f;
-      }
-      const glm::vec3 center = BlockCenter(*pos);
-      while (progress >= HitProgressCursor + kHitProgressStep)
-      {
-        HitProgressCursor += kHitProgressStep;
-        Particles.SpawnHitDebris(
-            center, UBlockBreakParticleSystem::kHitDebrisPerStep);
-      }
-      LastProgress = progress;
-    }
-    HadSession = true;
-    return;
-  }
-
-  if (HadSession && LastProgress >= 0.85f)
-  {
-    Particles.SpawnBreakBurst(BlockCenter(LastBlockPos),
-                              UBlockBreakParticleSystem::kBurstDebris);
-  }
-  HadSession = false;
-  LastProgress = 0.0f;
-  HitProgressCursor = 0.0f;
 }
 
 void UBlockBreakFxPass::DrawInstances(const glm::mat4 &view_proj,

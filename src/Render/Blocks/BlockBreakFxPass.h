@@ -1,6 +1,7 @@
 #ifndef BLOCK_BREAK_FX_PASS_H
 #define BLOCK_BREAK_FX_PASS_H
 
+#include "Creatures/Influence/InfluenceEvent.h"
 #include "Render/Blocks/BlockBreakParticleSystem.h"
 
 #include <glm/glm.hpp>
@@ -15,8 +16,9 @@ class UShaderManager;
 class UShaderProgram;
 class UWorld;
 
-/// Hit chips + break burst debris for the active dig session.
-class UBlockBreakFxPass
+/// Hit chips + break burst debris. Dig progress from DigSessionState (poll)
+/// and DigProgress / Dig Applied Influence events (bus sink).
+class UBlockBreakFxPass : public IUInfluenceEventSink
 {
 public:
   bool InitShaders(const std::shared_ptr<UShaderManager> &shader_manager);
@@ -27,9 +29,13 @@ public:
                        const glm::mat4 &view_proj, const glm::vec3 &camera_right,
                        const glm::vec3 &camera_up);
 
+  void OnInfluenceEvent(const InfluenceEvent &event) override;
+
 private:
   bool EnsureGpu();
   void SyncFromWorld(UWorld &world);
+  void ApplyDigProgress(glm::ivec3 block_pos, float progress);
+  void NotifyDigEnded(bool completed);
   void DrawInstances(const glm::mat4 &view_proj, const glm::vec3 &camera_right,
                      const glm::vec3 &camera_up);
 
@@ -43,6 +49,7 @@ private:
   int IndexCount{0};
   size_t InstanceCapacity{0};
 
+  bool SinkRegistered{false};
   bool HadSession{false};
   float LastProgress{0.0f};
   float HitProgressCursor{0.0f};

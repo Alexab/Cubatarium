@@ -48,7 +48,7 @@ Interface: `IUToolInfluenceProvider` (`src/Creatures/Influence/IUToolInfluencePr
 | Items | Item defs, `UItemToolInfluenceProvider`, `ResolveDigParams` / `ResolveHitParams`, wear |
 
 Combat facade `CreatureCombat::TryMeleeStrike` constructs `UItemToolInfluenceProvider` and
-runs Resolve→Apply. Dig uses the same bus with `Channel::Dig` (TD-INF-013).
+runs Resolve→Apply. Dig uses the same bus with `Channel::Dig` (shipped).
 
 ## Channels
 

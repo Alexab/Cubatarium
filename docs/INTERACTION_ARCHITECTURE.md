@@ -9,7 +9,7 @@ Related: [CREATURE_INTERACTION.md](CREATURE_INTERACTION.md), [ITEMS_TOOLS.md](IT
 | ID | Meaning | Status |
 |----|---------|--------|
 | **A** | Dig groups ≠ damage/armor groups (two dictionaries on one item) | Accepted (TD-INF-003 wontfix merge) |
-| **C** | Dig goes through Influence pipeline (`Channel::Dig`) | Target / shipping (TD-INF-013) |
+| **C** | Dig goes through Influence pipeline (`Channel::Dig`) | **Shipped** (TD-INF-013 closed) |
 
 Industrial note: Luanti/Minecraft keep separate dig vs punch **math** under one tool def.
 Cubatarium C unifies the **bus** (intent → resolve → apply → events → wear), not group matchers.
@@ -24,7 +24,7 @@ PlayerInteractionRouter / ActivityAgent
        Dig  → ResolveDigParams (block dig groups × tool groupcaps)
        Melee → ResolveHitParams (armor groups × tool damage_groups)
   → InfluenceApplier → vitals / DigSessionState+DelBlock / wear / status
-  → InfluenceEvents → FX (creature flash/beam; crack/break)
+  → InfluenceEvents → FX (melee flash/beam; DigProgress/Applied → BlockBreakFxPass; crack polls DigSessionState)
 ```
 
 ## Dual group domains (A)

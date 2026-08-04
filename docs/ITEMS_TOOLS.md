@@ -29,7 +29,7 @@ See [INTERACTION_ARCHITECTURE.md](INTERACTION_ARCHITECTURE.md) (decisions A + C)
 ## Dig contract
 
 `ResolveDigParams(tool, block, attrs, mode)` in `src/Items/ToolCapabilities.*`.
-Hit math: `ResolveHitParams` (same module). Dig channel runs through Influence bus (TD-INF-013).
+Hit math: `ResolveHitParams` (same module). Dig channel runs through Influence bus (`Channel::Dig`, shipped).
 
 Blocks should declare:
 

@@ -87,7 +87,7 @@ Dig resistance. Cubatarium semantics (not identical to Minecraft):
 
 - `hardness = 0` — unbreakable in **Survival** (Creative still breaks instantly)
 - `hardness > 0` — bare-hand / wrong-tool dig time ≈ `hardness * 1.5` seconds (`BlockDigRules`)
-- With matching tool `groupcaps`, dig time uses `times[rating]` (hardness gates unbreakable + InferDigGroups)
+- With matching tool `groupcaps`, dig time uses `times[rating]` (hardness gates unbreakable; packs carry explicit `dig.groups`, `InferDigGroups` is fallback only)
 - Prefer `"dig": { "level", "groups" }` on blocks ([ITEMS_TOOLS.md](ITEMS_TOOLS.md)); dig via Influence Dig channel ([INTERACTION_ARCHITECTURE.md](INTERACTION_ARCHITECTURE.md))
 - Soft plants use small positives (`0.05`–`0.2`), never `0`
 

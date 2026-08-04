@@ -39,7 +39,8 @@ int BareHandFleshyDamage(const CreatureAttributes &attrs);
 /// Creative: no wear. Survival+Peaceful (easiest): no wear.
 bool IsToolWearEnabled(WorldGameMode mode, WorldDifficulty difficulty);
 
-/// Infer dig groups when BlockDefinition.DigGroups is empty (TD until packs fill dig.groups).
+/// Infer dig groups when BlockDefinition.DigGroups is empty (fallback only;
+/// packs carry explicit dig.groups via tools/apply_block_dig_groups.py).
 std::unordered_map<std::string, int>
 InferDigGroups(const BlockDefinition &block);
 

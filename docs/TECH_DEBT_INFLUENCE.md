@@ -24,7 +24,7 @@
 | TD-INF-010 | 4 | Radius / aura targeting via `InfluenceTargeting::Radius` + spatial neighbors |
 | TD-INF-011 | Wave 5 | Load `models/effects/*.json` into catalog; builtins remain fallback |
 | TD-INF-012 | 1–3 | Core Influence pipeline: resolve/apply, cooldown/range, events, status tick, FX sink |
-| TD-INF-013 | Wave 3 | Dig as Influence `Channel::Dig`: DigSessionState, ResolveDigParams prediction, BIC/WVB/flight-sim route; crack FX still polls session (events emit on complete) |
+| TD-INF-013 | Wave 3 | Dig as Influence `Channel::Dig`: DigSessionState, ResolveDigParams, BIC/WVB/flight-sim; DigProgress/Applied events; BlockBreakFxPass sinks Dig events (crack overlay still polls DigSessionState) |
 
 ## Decision log (A vs C)
 
@@ -42,7 +42,7 @@ Industrial note: Luanti/Minecraft keep separate dig vs punch **math** under one 
 
 ## Survival QA checklist
 
-Deep-refactor bus (Melee+Dig) is implemented; remaining boxes are manual smoke.
+Deep-refactor bus (Melee+Dig) shipped. Unit/integration coverage: dig session, hit/wear, armor_groups parse, content validate. Remaining boxes = in-game smoke.
 
 - [ ] Survival mode: LMB on mob within melee pick reach (≤ strike reach) deals damage (cooldown), not every frame
 - [ ] Creative: LMB on creature does not deal Influence damage
@@ -54,3 +54,4 @@ Deep-refactor bus (Melee+Dig) is implemented; remaining boxes are manual smoke.
 - [x] Survival dig of a diggable block goes through Influence Dig channel (progress + complete event); hardness 0 stays unbreakable; Creative instant via resolve duration 0
 - [x] Dig Intent is not player-gated in Resolver; player Dig session is world-owned
 - [x] Explicit pack `dig.groups` with InferDigGroups fallback; Use channel cancels `use_unimplemented`
+- [x] Dig debris FX listens to DigProgress/Applied Influence events (plus DigSessionState poll fallback)
