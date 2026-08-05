@@ -139,7 +139,7 @@ struct PhysicsTelemetry
   int FogPullInMargin{0};
   float FogPullInStartRatio{0.0f};
   int FogHoleDebt{0};
-  /// Legacy OR latch (missing mesh OR pending light) — prefer VisualHoles.
+  /// Missing mesh in focus (alias of VisualHoles). Dark/light debt are separate.
   int NearFocusHoles{0};
   /// Missing GreedyCache in focus (visual holes only).
   int VisualHoles{0};

@@ -566,11 +566,12 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   // SoT unfinished (held sample while cruise); not pending-proxy.
   world.PhysicsTelemetryData.UnfinishedVisual = unfinished_visual;
   world.PhysicsTelemetryData.LightDebt = pending_light_focus > 0 ? 1 : 0;
-  // NearFocusHoles telemetry: mesh/dark holes only. Pending-light debt is
-  // LightDebt — counting it here inflated nh_no_miss_rate with miss=0
-  // (land-stage SoftDefer remesh-until-lit).
-  world.PhysicsTelemetryData.NearFocusHoles =
-      (missing_near || dark_preview > 0) ? 1 : 0;
+  // NearFocusHoles telemetry = missing mesh only (same as VisualHoles).
+  // Pending-light → LightDebt; sticky/pending_dark → FocusDarkMesh /
+  // FocusStickyRemesh / FocusPendingDark. OR-ing dark_preview here was
+  // overwritten after UpdateStreaming's mesh-only write, then re-applied in
+  // TickAsync and inflated nh_no_miss_rate with miss=0 (SoftDefer remesh).
+  world.PhysicsTelemetryData.NearFocusHoles = missing_near ? 1 : 0;
 
   // Underfeet column: catch draw_ok-but-invisible blind spot (manual 201621).
   {

@@ -68,6 +68,8 @@
 
 **2026-08-05 perf_opt3:** `NearFocusHoles` telemetry no longer ORs pending-light debt (kept in `LightDebt`); reduces false `nh_no_miss_rate` when SoftDefer remesh-until-lit with mesh present. Admission still uses pending-light urgency locally.
 
+**perf_opt3 closeout (2026-08-05):** P0–P2/P4 code+commit done. P3a telemetry: `NearFocusHoles` = missing mesh only (dark/sticky → `FocusDarkMesh*`; light → `LightDebt`); land-stand `nh_no_miss_rate=0` after fix. Full ARCH_D3_LAND still NO-GO (run variance: miss_stuck/holes/wall/sticky/churn) — rim/emerge residual, no SoftDefer zoo. P3b land-south-short vs P1g: see `phase_p3b_land_south_short.json`. DoD wall≤40 / merge→develop / D* deferred. MemoryBudget=`GetLastPrivateMb`; opaque sort=`PreferGpuOpaqueCountingSort` + `CUBATARIUM_GPU_OPAQUE_SORT`.
+
 ### FOV/progressive plan (2026-08) — Closed (P4 validate)
 
 | ID | Added in | Item | Why deferred | Target |
