@@ -18,6 +18,7 @@
 #include "Gui/Screens/ConsoleScreen.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/Screens/SurvivalInventoryScreen.h"
+#include "Gui/Screens/DeathScreen.h"
 #include "Gui/Screens/CharacterSheetScreen.h"
 #include "Gui/Screens/WorldGenPaletteScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
@@ -240,6 +241,7 @@ private:
   bool WorldGenOpen{false};
   bool CharacterSheetOpen{false};
   bool SurvivalInventoryOpen{false};
+  bool DeathScreenOpen{false};
   bool FreeCursor{false};
   /// Подавить следующий glfw char после открытия консоли (символ
   /// клавиши-тоггла).
@@ -252,7 +254,8 @@ private:
     Hud,
     WorldGen,
     CharacterSheet,
-    SurvivalInventory
+    SurvivalInventory,
+    Death
   };
   static constexpr int kMaxOverlayPointers = 10;
   std::array<OverlayPointerCapture, kMaxOverlayPointers> OverlayCaptures{};
@@ -284,6 +287,7 @@ private:
   std::unique_ptr<UConsoleScreen> ConsoleScreen;
   std::unique_ptr<UCreativePaletteScreen> PaletteScreen;
   std::unique_ptr<USurvivalInventoryScreen> SurvivalInventoryScreen;
+  std::unique_ptr<UDeathScreen> DeathScreen;
   std::unique_ptr<UCharacterSheetScreen> CharacterSheetScreen;
   std::unique_ptr<UWorldGenPaletteScreen> WorldGenScreen;
   std::unique_ptr<IUGuiClipboard> Clipboard;

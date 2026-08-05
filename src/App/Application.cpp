@@ -23,6 +23,8 @@
 #include "Items/ItemDefinitionStorage.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Definition/CreatureDefinition.h"
+#include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Creatures/Stats/CreatureVitals.h"
 #include "Game/ModePolicy.h"
 #include "Gui/Cache/ItemIconCache.h"
 #include "Gui/Cache/ObjectIconCache.h"
@@ -42,6 +44,7 @@
 #include "App/WorldOperationRunner.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/Screens/SurvivalInventoryScreen.h"
+#include "Gui/Screens/DeathScreen.h"
 #include "Gui/Screens/CharacterSheetScreen.h"
 #include "Gui/Screens/WorldResourcePacksScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
@@ -1067,6 +1070,62 @@ void UApplication::ShowInGameHud()
   SurvivalInventoryScreen->Build(*GuiContext);
   SurvivalInventoryScreen->SetVisible(false);
 
+  DeathScreen = std::make_unique<UDeathScreen>();
+  DeathScreen->OnAttach(*GuiContext);
+  DeathScreen->Build(*GuiContext);
+  DeathScreen->SetOnRespawn(
+      [this]()
+      {
+        if (!World)
+        {
+          return;
+        }
+        World->SetPlayerDead(false);
+        if (UCreature *player = World->GetPlayerCreature())
+        {
+          CreatureVitals &v = player->GetVitals();
+          v.FillFull();
+          v.fatalWounds = 0;
+          const glm::vec3 spawn = World->GetSpawnPoint();
+          player->SetBodyOrigin(
+              glm::vec3(spawn.x, spawn.y - player->GetEyeOffset().y, spawn.z));
+          player->GetLocomotion().SetMode(CreatureMovementMode::Walking);
+        }
+        if (auto camera = World->GetCurrentUserCamera())
+        {
+          camera->SetFreeMove(false);
+        }
+        DeathScreenOpen = false;
+        if (DeathScreen)
+        {
+          DeathScreen->SetVisible(false);
+        }
+        SyncCursorVisibility();
+      });
+  DeathScreen->SetOnSpectate(
+      [this]()
+      {
+        if (!World)
+        {
+          return;
+        }
+        if (UCreature *player = World->GetPlayerCreature())
+        {
+          player->GetLocomotion().SetMode(CreatureMovementMode::Flying);
+        }
+        if (auto camera = World->GetCurrentUserCamera())
+        {
+          camera->SetFreeMove(true);
+        }
+        DeathScreenOpen = false;
+        if (DeathScreen)
+        {
+          DeathScreen->SetVisible(false);
+        }
+        SyncCursorVisibility();
+      });
+  DeathScreen->SetVisible(false);
+
   CharacterSheetScreen =
       std::make_unique<UCharacterSheetScreen>(
           GameSession.get(), CreaturePreviewRenderer.get(), icons);
@@ -1087,14 +1146,14 @@ bool UApplication::UsesUiPointer() const
 {
   return State == AppState::MainMenu || State == AppState::Loading || FreeCursor ||
          ConsoleOpen || PaletteOpen || WorldGenOpen || CharacterSheetOpen ||
-         SurvivalInventoryOpen;
+         SurvivalInventoryOpen || DeathScreenOpen;
 }
 
 bool UApplication::BlocksGameMouseLook() const
 {
   return State == AppState::InGame &&
          (FreeCursor || ConsoleOpen || PaletteOpen || WorldGenOpen ||
-          CharacterSheetOpen || SurvivalInventoryOpen);
+          CharacterSheetOpen || SurvivalInventoryOpen || DeathScreenOpen);
 }
 
 AppCursorPolicy UApplication::GetCursorPolicy() const
@@ -1317,6 +1376,7 @@ void UApplication::EnterInGameInputState()
   WorldGenOpen = false;
   CharacterSheetOpen = false;
   SurvivalInventoryOpen = false;
+  DeathScreenOpen = false;
   FreeCursor = false;
   if (WorldGenScreen)
   {
@@ -1329,6 +1389,10 @@ void UApplication::EnterInGameInputState()
   if (SurvivalInventoryScreen)
   {
     SurvivalInventoryScreen->SetVisible(false);
+  }
+  if (DeathScreen)
+  {
+    DeathScreen->SetVisible(false);
   }
   if (CharacterSheetScreen)
   {
@@ -1426,6 +1490,12 @@ void UApplication::FinishInventoryPointerGesture(const GuiMouseEvent &event)
         routeUp(SurvivalInventoryScreen->GetRoot());
       }
       break;
+    case OverlayPointerCapture::Death:
+      if (DeathScreenOpen && DeathScreen)
+      {
+        routeUp(DeathScreen->GetRoot());
+      }
+      break;
     case OverlayPointerCapture::CharacterSheet:
       if (CharacterSheetOpen && CharacterSheetScreen)
       {
@@ -1496,6 +1566,15 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
       }
     }
 #endif
+    if (DeathScreenOpen && DeathScreen)
+    {
+      if (UGuiWidget *hit = routeRootDown(DeathScreen->GetRoot()))
+      {
+        OverlayCaptures[pointerIndex] = OverlayPointerCapture::Death;
+        OverlayPressedWidget = hit;
+        return true;
+      }
+    }
     if (WorldGenOpen)
     {
       if (UGuiWidget *hit = routeRootDown(WorldGenScreen->GetRoot()))
@@ -1781,6 +1860,17 @@ void UApplication::Update(double dt)
     {
       SurvivalInventoryScreen->Update(dt);
     }
+    if (World && World->IsPlayerDead() && !DeathScreenOpen && DeathScreen)
+    {
+      DeathScreenOpen = true;
+      DeathScreen->SetCause("Fatal wounds");
+      DeathScreen->SetVisible(true);
+      SyncCursorVisibility();
+    }
+    if (DeathScreenOpen && DeathScreen)
+    {
+      DeathScreen->Update(dt);
+    }
     if (WorldGenScreen)
     {
       WorldGenScreen->Update(dt);
@@ -2034,6 +2124,11 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     GuiContext->RenderOverlay(*SurvivalInventoryScreen->GetRoot(), width,
                                height, false);
   }
+  if (DeathScreenOpen && DeathScreen && DeathScreen->GetRoot())
+  {
+    notifyViewport(DeathScreen.get());
+    GuiContext->RenderOverlay(*DeathScreen->GetRoot(), width, height, false);
+  }
   if (CharacterSheetOpen && CharacterSheetScreen &&
       CharacterSheetScreen->GetRoot())
   {
@@ -2086,14 +2181,15 @@ bool UApplication::WantsCaptureKeyboard() const
     return true;
   }
   return ConsoleOpen || PaletteOpen || WorldGenOpen || CharacterSheetOpen ||
-         SurvivalInventoryOpen ||
+         SurvivalInventoryOpen || DeathScreenOpen ||
          GuiContext->WantsCaptureKeyboard();
 }
 
 bool UApplication::AllowsWorldMousePlacement() const
 {
   return State == AppState::InGame && !ConsoleOpen && !PaletteOpen &&
-         !WorldGenOpen && !CharacterSheetOpen && !SurvivalInventoryOpen;
+         !WorldGenOpen && !CharacterSheetOpen && !SurvivalInventoryOpen &&
+         !DeathScreenOpen;
 }
 
 bool UApplication::RouteKey(int key, int Action, int Mods)

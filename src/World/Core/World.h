@@ -220,6 +220,8 @@ public:
 
   glm::vec3 GetSpawnPoint() const;
   void SetSpawnPoint(glm::vec3 value);
+  bool IsPlayerDead() const { return PlayerDead; }
+  void SetPlayerDead(bool dead) { PlayerDead = dead; }
   glm::ivec3 GetPreferredLoadFocusBlock() const;
 
   void SetTerrainParams(uint32_t Seed, const std::string &terrainType);
@@ -1230,6 +1232,7 @@ private:
 
   std::string WorldName;
   glm::vec3 SpawnPoint;
+  bool PlayerDead{false};
   std::string CurrentUserName;
   uint32_t WorldSeed{12345};
   std::string TerrainType{"heightmap"};

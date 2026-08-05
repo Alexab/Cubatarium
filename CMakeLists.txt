@@ -485,6 +485,7 @@ set(SOURCES
     src/Gui/Screens/CharacterSheetScreen.cpp
     src/Gui/Screens/CreativePaletteScreen.cpp
     src/Gui/Screens/SurvivalInventoryScreen.cpp
+    src/Gui/Screens/DeathScreen.cpp
     src/Gui/Screens/WorldGenPaletteScreen.cpp
     src/Gui/Screens/WorldProgressScreen.cpp
     src/App/Platform/AppRunner.cpp
@@ -669,6 +670,7 @@ set(HEADERS
     src/Gui/Screens/WorldGenPaletteScreen.h
     src/Gui/Screens/CreativePaletteScreen.h
     src/Gui/Screens/SurvivalInventoryScreen.h
+    src/Gui/Screens/DeathScreen.h
     src/Gui/Screens/WorldProgressScreen.h
     src/Core/Progress/ProgressTypes.h
     src/Core/Progress/IUProgressSink.h

@@ -189,17 +189,13 @@ bool CreatureVitalsSystem::HandleLethal(UWorld &world, UCreature &target,
   {
     if (target.IsPlayerCharacter())
     {
-      // Permanent death: keep entity, spectate via free-move fly, low HP.
+      // Permanent death: keep entity, show death UI (Application), low HP.
       v.FillFull();
       v.fatalWounds = v.maxFatalWounds;
       v.health = 1.f;
       v.satiety = 0.f;
       v.thirst = 0.f;
-      if (auto camera = world.GetCurrentUserCamera())
-      {
-        camera->SetFreeMove(true);
-        target.GetLocomotion().SetMode(CreatureMovementMode::Flying);
-      }
+      world.SetPlayerDead(true);
       return false;
     }
     return true;
