@@ -5,6 +5,7 @@
 #include "Render/GlIncludes.h"
 #include "glog/logging.h"
 #include <array>
+#include <cstdlib>
 #include <cstring>
 
 namespace cutum
@@ -911,9 +912,16 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
     return GpuFinishStatus::Ready;
   }
 
-  // GPU hist+scatter disabled on AMD (atomics raised emerge). Keep compiled.
-  constexpr uint32_t kGpuSortMinQuads =
-      UGpuMeshSlotAllocator::kMaxQuadsPerSlot + 1;
+  // GPU hist+scatter: default off (AMD iGPU atomics raised emerge). Enable via
+  // CUBATARIUM_GPU_OPAQUE_SORT=1 for discrete-GPU A/B only.
+  static const uint32_t kGpuSortMinQuads = []() -> uint32_t {
+    const char *env = std::getenv("CUBATARIUM_GPU_OPAQUE_SORT");
+    if (env && env[0] == '1' && env[1] == '\0')
+    {
+      return 256u;
+    }
+    return UGpuMeshSlotAllocator::kMaxQuadsPerSlot + 1u;
+  }();
   const bool sorted_gpu =
       ticket.quadCount >= kGpuSortMinQuads &&
       GpuSortSlotQuads(ticket.slotOffsetQuads, ticket.quadCount, registry,

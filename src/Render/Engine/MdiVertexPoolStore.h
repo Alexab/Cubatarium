@@ -69,6 +69,12 @@ public:
   uint64_t LastCullOpaqueOn() const { return LastCullOpaqueOn_; }
   uint64_t LastCpuAabbWouldOn() const { return LastCpuAabbWouldOn_; }
 
+  /// Enable rare CullStatsSsbo GetBufferSubData (default off — hot path free).
+  void SetCullStatsReadbackEnabled(bool enabled)
+  {
+    CullStatsReadbackEnabled_ = enabled;
+  }
+
 private:
   bool EnsureCullProgram();
   void RebuildIndirectCmdTable(GreedyGpuPassCache &cache);
@@ -88,6 +94,7 @@ private:
   GLuint CullStatsSsbo{0};
   bool CullInitAttempted{false};
   bool CullProgramIsSphere{false};
+  bool CullStatsReadbackEnabled_{false};
 
   std::vector<uint8_t> StagingScratch;
   MeshGpuBucketHandle MappedHandle{};
@@ -95,5 +102,8 @@ private:
   size_t MappedVboCapacity{0};
   void *MappedPtr{nullptr};
 };
+
+/// Period consume of CullStatsSsbo GetBufferSubData count (sync readback).
+uint64_t ConsumeGpuCullStatsReadbackCount();
 
 } // namespace cutum

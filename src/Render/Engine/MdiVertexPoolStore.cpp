@@ -14,6 +14,8 @@ namespace cutum
 namespace
 {
 
+uint64_t gCullStatsReadback = 0;
+
 enum class GpuCullMode
 {
   Aabb,
@@ -748,14 +750,21 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
   glUseProgram(0);
 
-  uint32_t visible = 0;
-  if (CullStatsSsbo != 0)
+  // P1b: no CullStats GetBufferSubData on hot path (sync stall). Approximate
+  // opaque_cmd_on telemetry from CPU AABB would-on when readback is off.
+  if (CullStatsReadbackEnabled_ && CullStatsSsbo != 0)
   {
+    uint32_t visible = 0;
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, CullStatsSsbo);
     glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(uint32_t), &visible);
+    ++gCullStatsReadback;
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    LastCullOpaqueOn_ = visible;
   }
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-  LastCullOpaqueOn_ = visible;
+  else
+  {
+    LastCullOpaqueOn_ = LastCpuAabbWouldOn_;
+  }
 
   // No full vis readback: IndirectCmdsBuffer is authoritative for MultiDraw.
   // Keep CPU drawInstanceCount=1 so rare DrawElementsBaseVertex fallback still
@@ -835,6 +844,13 @@ void UMdiVertexPoolStore::FlipBucketOwnership(MeshGpuBucketHandle handle)
   MappedHandle = {};
   StagingScratch.clear();
   MappedPtr = nullptr;
+}
+
+uint64_t ConsumeGpuCullStatsReadbackCount()
+{
+  const uint64_t v = gCullStatsReadback;
+  gCullStatsReadback = 0;
+  return v;
 }
 
 } // namespace cutum

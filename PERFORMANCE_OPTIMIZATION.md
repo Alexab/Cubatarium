@@ -25,10 +25,21 @@ InGame frames write:
 
 - glog: `[Perf] kind=period|spike wall_ms=… sim_ms=… swap_wait_ms=… unaccounted_ms=… prepare_frame_ms=… post_scene_ms=… gui_overlay_ms=… residual_ms=…`
 - JSONL: `bin/logs/perf_<YYYYMMDD-HHMMSS>_<pid>.jsonl`
+- Self-cost: `perf_collect_ms` / `perf_emit_ms` (not part of `sim_ms`)
 
 Interval: `ui.perf_log_interval_sec` (default 2). Spikes (`wall_ms > 100`) log immediately. No world save required.
 
+**Profiling levels**
+
+| Level | What | Cost |
+|-------|------|------|
+| Always-on (InGame) | Phase timers, counters, period JSONL; RSS/Private sampled every 30 frames | Keep `perf_collect_ms` ≪ 0.5 ms |
+| HUD (`ui.show_performance`) | On-screen Wall/Sim/Swap overlay | Negligible |
+| Flight-sim / gates | Full autofly + `flight_sim_phase_gate.py` | Offline analysis |
+
 **Wall ≪ Sim** → inspect `swap_wait_ms`; if near zero, use `prepare_frame_ms` / `post_scene_ms` / `gui_overlay_ms` / `app_update_ms` / `residual_ms` from the same JSONL line.
+
+Transparent greedy batches sort on **CPU** by default (avoids SSBO `glGetBufferSubData` stalls). GPU bitonic path remains compiled for future zero-readback work. Opaque GPU counting-sort stays off unless `CUBATARIUM_GPU_OPAQUE_SORT=1`.
 
 ## World streaming
 

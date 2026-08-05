@@ -1,9 +1,6 @@
 #include "Render/Pipeline/GreedyTransparentSort.h"
 
 #include "Blocks/BlockRegistry.h"
-#include "Render/Backend/GpuHotPathFallback.h"
-#include "Render/Backend/RenderBackendCaps.h"
-#include "Render/Pipeline/GpuTransparentSort.h"
 
 #include <algorithm>
 #include <cmath>
@@ -106,15 +103,8 @@ void SortTransparentGreedyBatches(
     const UChunkMeshCache &cache, const glm::vec3 &cameraPos,
     const UBlockRegistry &registry)
 {
-  const RenderBackendCaps &caps = GetActiveRenderBackendCaps();
-  if (caps.Platform == RenderPlatformKind::Desktop && caps.HasCompute)
-  {
-    if (TryGpuSortTransparentGreedyBatches(refs, cache, cameraPos, registry))
-    {
-      return;
-    }
-    NoteGpuHotPathFallback();
-  }
+  // P1a: CPU sort on hot path. GPU bitonic+SubData (TryGpuSort*) stays compiled
+  // for future D-TRANSP-GPU zero-readback reorder; do not call here.
   std::vector<SortKey> keys;
   keys.reserve(refs.size());
   for (size_t i = 0; i < refs.size(); ++i)
