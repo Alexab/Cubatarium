@@ -1315,7 +1315,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       auto &exec = GetColumnFlowExecutor();
       int admit_n =
           (!moving && missing_visible_mesh && !idle_remesh_debt)
-              ? 3
+              ? 1
               : (!moving && pending_near_light && !idle_remesh_debt)
                     ? 1
                     : ((moving && (visual_holes || missing_visible_mesh)) ? 1
@@ -1350,8 +1350,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                        ColumnWorkKind::RelightThenMesh, relight_prio);
         }
       }
-      exec.DrainBudget(world, recover_n, focus_ground_horiz, focus_radius,
-                       std::max(1, admit_n));
+      exec.DrainBudget(world, recover_n, focus_ground_horiz, focus_radius, 1);
       // Edge stale-dark / post-miss sticky: raise seam drain near sticky
       // (land_fix P3 — keep_h already 2–3 via StarveRemeshKeepHoriz).
       const int dark_n = world.GetPhysicsTelemetry().DarkFaceNearN;
