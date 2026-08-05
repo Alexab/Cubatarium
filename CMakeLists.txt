@@ -1570,6 +1570,7 @@ add_executable(decor_mesh_integration_test
     src/Render/Mesh/GpuGreedyOpaqueEmit.cpp
     src/Render/Mesh/GpuMeshPipeline.cpp
     src/Render/Mesh/GpuMeshSlotAllocator.cpp
+    src/Render/Backend/RenderBackendCaps.cpp
     src/Test/GpuFluidColumnScanHostStub.cpp
     src/Render/Mesh/GreedyMesher.cpp
     src/World/Core/FluidColumnSurfaceQuery.cpp
