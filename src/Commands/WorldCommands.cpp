@@ -9,6 +9,7 @@
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Game/GameSession.h"
 #include "Game/WorldDifficulty.h"
+#include "Game/ModePolicy.h"
 #include "Game/WorldGameMode.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ToolCapabilities.h"
@@ -569,7 +570,16 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
       "fly",
       [world](const std::vector<std::string> &args)
       {
-        if (world && world->GetGameMode() == WorldGameMode::Survival)
+        CreatureHabitat habitat = CreatureHabitat::Terrestrial;
+        if (UCreature *controlled = world->GetControlledCreature())
+        {
+          if (const CreatureDefinition *def =
+                  world->GetCreatureDefinition(controlled->GetTypeId()))
+          {
+            habitat = def->habitat;
+          }
+        }
+        if (!ModePolicy::AllowsFlight(world->GetGameMode(), habitat))
         {
           return CommandResult{false,
                                "Creative fly disabled in Survival mode"};

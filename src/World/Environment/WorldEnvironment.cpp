@@ -18,6 +18,8 @@
 #include "Render/Camera/Camera.h"
 #include "Render/Primitives/Cube.h"
 #include "World/Core/World.h"
+#include "Game/ModePolicy.h"
+#include "Game/WorldGameMode.h"
 #include "World/Math/CollisionVolume.h"
 #include "World/Math/GridMath.h"
 #include <algorithm>
@@ -374,9 +376,8 @@ CreatureId UWorldEnvironment::SpawnCreature(const std::string &speciesId,
     CreatureSpatialIndex.Upsert(id, Creatures[id]->GetBodyOrigin(), vol.halfExtents);
     CreatureSpatialIndexReady = true;
   }
-  // Survival: strip creative fly from terrestrial/humanoid spawn.
-  if (Owner.GetGameMode() == WorldGameMode::Survival &&
-      def->habitat != CreatureHabitat::Aerial)
+  // Survival: strip creative fly unless aerial habitat allows it.
+  if (!ModePolicy::AllowsFlight(Owner.GetGameMode(), def->habitat))
   {
     CreatureLocomotionCapabilities caps = def->locomotion;
     caps.canFly = false;

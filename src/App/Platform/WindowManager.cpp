@@ -7,6 +7,7 @@
 #include "App/Platform/Log.h"
 #include "Blocks/Input/BlockInputController.h"
 #include "Creatures/Core/Creature.h"
+#include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Core/CreatureInventory.h"
 #include "Creatures/Influence/InfluenceApplier.h"
 #include "Creatures/Influence/InfluenceResolver.h"
@@ -14,6 +15,7 @@
 #include "Game/CreatureVisualQaSpawner.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Game/WorldGameMode.h"
+#include "Game/ModePolicy.h"
 #include "Gui/Core/GuiMetrics.h"
 #include "Gui/Interfaces/IUInventoryViewModel.h"
 #include "Render/Engine/GeometryEngine.h"
@@ -777,7 +779,16 @@ void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int Mods)
     {
       if (auto camera = World->GetCurrentUserCamera())
       {
-        if (World->GetGameMode() != WorldGameMode::Survival &&
+        CreatureHabitat habitat = CreatureHabitat::Terrestrial;
+        if (UCreature *controlled = World->GetControlledCreature())
+        {
+          if (const CreatureDefinition *def =
+                  World->GetCreatureDefinition(controlled->GetTypeId()))
+          {
+            habitat = def->habitat;
+          }
+        }
+        if (ModePolicy::AllowsFlight(World->GetGameMode(), habitat) &&
             camera->TryToggleFlightOnDoubleSpace() && Geometries)
         {
           const std::string msg =
@@ -791,8 +802,8 @@ void UWindowManager::HandleKeyEvent(KeyCode key, KeyState state, int Mods)
     else if (key == KeyCode::Key_F12)
     {
 #ifndef __ANDROID__
-      if (Application && Application->GetGameSession().GetInventoryMode() ==
-                             InventoryMode::Creative)
+      if (Application && World &&
+          ModePolicy::AllowsQaSpawner(World->GetGameMode()))
       {
         UCreatureVisualQaSpawner spawner(*World);
         const bool batch = (Mods & GLFW_MOD_SHIFT) != 0;

@@ -10,6 +10,7 @@
 #include "App/Settings/RenderSettings.h"
 #include "Items/ToolCapabilities.h"
 #include "Items/ItemDefinitionStorage.h"
+#include "Game/ModePolicy.h"
 #include "Creatures/Core/Creature.h"
 #include "Core/Progress/IUProgressSink.h"
 #include "Creatures/Core/Creature.h"
@@ -4815,9 +4816,7 @@ void UWorld::ApplyGameModeLocomotionPolicy()
           return;
         }
         CreatureLocomotionCapabilities caps = def->locomotion;
-        // Survival: creative double-space fly only for true aerial habitat.
-        if (GameMode == WorldGameMode::Survival &&
-            def->habitat != CreatureHabitat::Aerial)
+        if (!ModePolicy::AllowsFlight(GameMode, def->habitat))
         {
           caps.canFly = false;
           if (creature.GetMovementMode() == CreatureMovementMode::Flying &&
@@ -4832,7 +4831,19 @@ void UWorld::ApplyGameModeLocomotionPolicy()
   {
     if (auto camera = GetCurrentUserCamera())
     {
-      camera->SetFreeMove(false);
+      CreatureHabitat habitat = CreatureHabitat::Terrestrial;
+      if (UCreature *controlled = GetControlledCreature())
+      {
+        if (const CreatureDefinition *def =
+                GetCreatureDefinition(controlled->GetTypeId()))
+        {
+          habitat = def->habitat;
+        }
+      }
+      if (!ModePolicy::AllowsFlight(GameMode, habitat))
+      {
+        camera->SetFreeMove(false);
+      }
     }
   }
 }

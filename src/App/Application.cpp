@@ -22,6 +22,8 @@
 #include "Items/FpViewmodelRenderer.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Creatures/Core/Creature.h"
+#include "Creatures/Definition/CreatureDefinition.h"
+#include "Game/ModePolicy.h"
 #include "Gui/Cache/ItemIconCache.h"
 #include "Gui/Cache/ObjectIconCache.h"
 #include "Gui/Core/GuiContext.h"
@@ -2078,9 +2080,17 @@ void UApplication::TryToggleFlightOnJumpPress()
   {
     return;
   }
-  if (World->GetGameMode() == WorldGameMode::Survival)
+  CreatureHabitat habitat = CreatureHabitat::Terrestrial;
+  if (UCreature *controlled = World->GetControlledCreature())
   {
-    // Survival: no creative double-space fly (aerial habitat keeps canFly caps).
+    if (const CreatureDefinition *def =
+            World->GetCreatureDefinition(controlled->GetTypeId()))
+    {
+      habitat = def->habitat;
+    }
+  }
+  if (!ModePolicy::AllowsFlight(World->GetGameMode(), habitat))
+  {
     return;
   }
   auto camera = World->GetCurrentUserCamera();

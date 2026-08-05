@@ -5,6 +5,7 @@
 #include "Creatures/Core/CreatureInventory.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Game/WorldGameMode.h"
+#include "Game/ModePolicy.h"
 #include "Items/FpViewmodelRenderer.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/GeometryEngine.h"
@@ -217,11 +218,16 @@ void UBlockInputController::TryUseActiveSlot(const BlockInputContext &ctx)
 
 void UBlockInputController::TryInstantBreak(const BlockInputContext &ctx)
 {
-  if (ctx.World)
+  if (!ctx.World)
   {
-    ctx.World->CancelBreakSession();
-    ctx.World->DelObjectByView();
+    return;
   }
+  if (!ModePolicy::AllowsInstantDelete(ctx.World->GetGameMode()))
+  {
+    return;
+  }
+  ctx.World->CancelBreakSession();
+  ctx.World->DelObjectByView();
 }
 
 void UBlockInputController::CancelPointerInteraction(
