@@ -1,4 +1,5 @@
 #include "Game/GameSession.h"
+#include "Game/ModePolicy.h"
 #include "Game/Interfaces/IUGameContent.h"
 #include "App/Application.h"
 #include "Blocks/BlockDefinitionStorage.h"
@@ -555,6 +556,12 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
 }
 
 std::vector<InventoryGroupView>
+UGameSession::GetGroups(ContentKind tab) const
+{
+  return GetGroups(tab, GetInventoryMode());
+}
+
+std::vector<InventoryGroupView>
 UGameSession::GetGroups(ContentKind tab, InventoryMode mode) const
 {
   std::vector<InventoryGroupView> groups;
@@ -578,6 +585,12 @@ UGameSession::GetGroups(ContentKind tab, InventoryMode mode) const
                      return a.label < b.label;
                    });
   return groups;
+}
+
+std::vector<InventoryEntryView>
+UGameSession::GetEntries(ContentKind tab, const std::string &groupId) const
+{
+  return GetEntries(tab, groupId, GetInventoryMode());
 }
 
 std::vector<InventoryEntryView>
@@ -668,8 +681,8 @@ bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
     return false;
   }
 
-  // Palette/hotbar are mode-agnostic for now: catalog validity only.
-  // Do not branch on ActiveInventoryMode / WorldGameMode here.
+  // Palette/hotbar validation uses derived inventory mode.
+  const InventoryMode inventoryMode = GetInventoryMode();
   if (!World)
   {
     return false;
@@ -685,6 +698,12 @@ bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
           << entry.Id << std::endl;
       return false;
     }
+    if (inventoryMode == InventoryMode::Owned)
+    {
+      const auto &storage = creatureInv->GetStorage();
+      const auto it = storage.find(entry.Id);
+      return it != storage.end() && it->second != 0;
+    }
     return true;
 
   case InventoryEntryKind::Item:
@@ -695,6 +714,7 @@ bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
 
   case InventoryEntryKind::Object:
   {
+    bool inCatalog = false;
     for (const auto &typeId : ContentCatalog.GetTypeIds(ContentKind::Object))
     {
       for (const auto &e :
@@ -702,16 +722,36 @@ bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
       {
         if (e.Id == entry.Id)
         {
-          return true;
+          inCatalog = true;
+          break;
         }
       }
+      if (inCatalog)
+      {
+        break;
+      }
     }
-    return false;
+    if (!inCatalog)
+    {
+      return false;
+    }
+    if (inventoryMode == InventoryMode::Owned)
+    {
+      const auto &storage = creatureInv->GetStorage();
+      const auto it = storage.find(entry.Id);
+      return it != storage.end() && it->second != 0;
+    }
+    return true;
   }
 
   case InventoryEntryKind::UCreature:
   case InventoryEntryKind::Skin:
   {
+    if (inventoryMode == InventoryMode::Owned &&
+        !ModePolicy::AllowsMobSpawnFromPalette(ActiveWorldGameMode))
+    {
+      return false;
+    }
     const ContentKind tab = (entry.kind == InventoryEntryKind::Skin)
                                 ? ContentKind::Skin
                                 : ContentKind::UCreature;
@@ -762,24 +802,39 @@ UGameSession::GetCreatureSpawnBlockedHint(const std::string &speciesId) const
 
 InventoryMode UGameSession::GetInventoryMode() const
 {
-  return ActiveInventoryMode;
-}
-
-void UGameSession::SetInventoryMode(InventoryMode mode)
-{
-  ActiveInventoryMode = mode;
+  if (CheatCreativeInventory)
+  {
+    return InventoryMode::Creative;
+  }
+  if (!World)
+  {
+    return InventoryMode::Creative;
+  }
+  return World->GetGameMode() == WorldGameMode::Creative ? InventoryMode::Creative
+                                                         : InventoryMode::Owned;
 }
 
 void UGameSession::SyncToWorldGameMode(WorldGameMode mode)
 {
+  const WorldGameMode previous = ActiveWorldGameMode;
   ActiveWorldGameMode = mode;
   if (World)
   {
     World->SetGameMode(mode);
     World->ApplyGameModeLocomotionPolicy();
+    if (mode == WorldGameMode::Survival && previous == WorldGameMode::Creative)
+    {
+      if (UCreature *creature = World->GetControlledCreature())
+      {
+        creature->GetInventory().MigrateCreativeStorageToSurvival();
+      }
+    }
   }
-  SetInventoryMode(mode == WorldGameMode::Survival ? InventoryMode::Owned
-                                                   : InventoryMode::Creative);
+  if (Application && previous != mode &&
+      !ModePolicy::AllowsCreativePalette(mode))
+  {
+    Application->CloseCreativePalette();
+  }
 }
 
 void UGameSession::SyncToWorldDifficulty(WorldDifficulty difficulty)

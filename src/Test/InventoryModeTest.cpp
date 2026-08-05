@@ -44,6 +44,16 @@ int main()
     Expect(entry.second != -1, "survival storage has no unlimited counts");
   }
 
+  UCreatureInventory survivalAfterMigrate;
+  survivalAfterMigrate.InitCreativeDefaults();
+  survivalAfterMigrate.MigrateCreativeStorageToSurvival();
+  Expect(survivalAfterMigrate.GetStorage().empty(),
+         "migrate removes unlimited storage entries");
+  for (const auto &entry : survivalAfterMigrate.GetStorage())
+  {
+    Expect(entry.second != -1, "migrate leaves no unlimited counts");
+  }
+
   if (Failures != 0)
   {
     std::cerr << "inventory_mode_test: " << Failures << " failure(s)"

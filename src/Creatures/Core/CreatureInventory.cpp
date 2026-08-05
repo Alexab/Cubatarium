@@ -69,6 +69,44 @@ void UCreatureInventory::InitCreativeDefaults()
   }
 }
 
+void UCreatureInventory::MigrateCreativeStorageToSurvival()
+{
+  for (auto it = Storage.begin(); it != Storage.end();)
+  {
+    if (it->second < 0)
+    {
+      it = Storage.erase(it);
+    }
+    else
+    {
+      ++it;
+    }
+  }
+  for (auto &bar : Hotbars)
+  {
+    for (auto &slot : bar.slots)
+    {
+      if (slot.empty)
+      {
+        continue;
+      }
+      if (slot.entry.count < 0)
+      {
+        if (slot.entry.kind == InventoryEntryKind::Block ||
+            slot.entry.kind == InventoryEntryKind::Object)
+        {
+          slot.entry.count = 1;
+        }
+        else
+        {
+          slot.empty = true;
+          slot.entry = InventoryEntryRef{};
+        }
+      }
+    }
+  }
+}
+
 void UCreatureInventory::EnsureDefaultHotbar()
 {
   EnsureHotbarCount(1);

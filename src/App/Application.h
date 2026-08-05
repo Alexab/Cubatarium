@@ -184,6 +184,7 @@ public:
   void ShowWorldSettings();
   void ShowNewWorld();
   void ShowLoadWorld();
+  void CloseCreativePalette();
   void BeginWorldOperation(WorldRunnerRequest request,
                            std::function<void()> onComplete = nullptr);
   void OnWorldOperationFinished();

@@ -32,17 +32,14 @@ class IUInventoryViewModel
 {
 public:
   virtual ~IUInventoryViewModel() = default;
-  virtual std::vector<InventoryGroupView>
-  GetGroups(ContentKind tab, InventoryMode mode) const = 0;
+  virtual std::vector<InventoryGroupView> GetGroups(ContentKind tab) const = 0;
   virtual std::vector<InventoryEntryView>
-  GetEntries(ContentKind tab, const std::string &groupId,
-             InventoryMode mode) const = 0;
-  virtual bool CanAssignToHotbar(const InventoryEntryRef &entry,
-                                 size_t barIndex, size_t slotIndex) const = 0;
+  GetEntries(ContentKind tab, const std::string &groupId) const = 0;
+  virtual bool CanAssignToHotbar(const InventoryEntryRef &entry, size_t barIndex,
+                                 size_t slotIndex) const = 0;
   virtual bool AssignToHotbar(const InventoryEntryRef &entry, size_t barIndex,
                               size_t slotIndex) = 0;
   virtual InventoryMode GetInventoryMode() const = 0;
-  virtual void SetInventoryMode(InventoryMode mode) = 0;
 };
 
 } // namespace cutum

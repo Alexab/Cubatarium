@@ -1,5 +1,6 @@
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Content/ContentTypeRegistry.h"
+#include "Game/ModePolicy.h"
 #include "Game/GameSession.h"
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiContext.h"
@@ -95,6 +96,11 @@ bool UCreativePaletteScreen::PickSlot(int x, int y, SlotAddress &out) const
 
 void UCreativePaletteScreen::SetVisible(bool visible)
 {
+  if (visible && Session &&
+      !ModePolicy::AllowsCreativePalette(Session->GetWorldGameMode()))
+  {
+    visible = false;
+  }
   Visible = visible;
   if (Root)
   {
@@ -706,14 +712,15 @@ void UCreativePaletteScreen::RebuildGrid()
   GridEntryLabels.clear();
   GridSpawnHints.clear();
 
-  const auto entries =
-      Catalog->GetEntries(Kind, ActiveTypeId.empty() ? "misc" : ActiveTypeId);
+  const std::string groupId =
+      ActiveTypeId.empty() ? "misc" : ActiveTypeId;
+  const auto views = Session->GetEntries(Kind, groupId);
   const int slotSize = Theme->HotbarSlotSize;
-  for (size_t i = 0; i < entries.size(); ++i)
+  for (size_t i = 0; i < views.size(); ++i)
   {
     auto slot = std::make_unique<UGuiSlot>(Theme);
     slot->SetBounds({0, 0, slotSize, slotSize});
-    const std::string entryId = entries[i].Id;
+    const std::string entryId = views[i].ref.Id;
     slot->SetSelected(entryId == SelectedEntryId);
     if (Icons)
     {
@@ -740,30 +747,7 @@ void UCreativePaletteScreen::RebuildGrid()
       }
       slot->SetIconTexture(tex);
     }
-    InventoryEntryRef entry;
-    entry.empty = false;
-    entry.Id = entryId;
-    entry.count = 1;
-    switch (Kind)
-    {
-    case ContentKind::Block:
-      entry.kind = InventoryEntryKind::Block;
-      break;
-    case ContentKind::Object:
-      entry.kind = InventoryEntryKind::Object;
-      break;
-    case ContentKind::UCreature:
-      entry.kind = InventoryEntryKind::UCreature;
-      break;
-    case ContentKind::Skin:
-      entry.kind = InventoryEntryKind::Skin;
-      break;
-    case ContentKind::Item:
-      entry.kind = InventoryEntryKind::Item;
-      entry.wear = 0.f;
-      entry.broken = false;
-      break;
-    }
+    InventoryEntryRef entry = views[i].ref;
 
     SlotAddress address;
     address.surface = SlotSurface::PaletteGrid;
@@ -814,7 +798,7 @@ void UCreativePaletteScreen::RebuildGrid()
         static_cast<UGuiSlot *>(Scroll->Content().AddChild(std::move(slot)));
     GridSlots.push_back(ptr);
     GridEntryIds.push_back(entryId);
-    GridEntryLabels.push_back(entries[i].displayName);
+    GridEntryLabels.push_back(views[i].label);
     GridSpawnHints.push_back(std::move(spawnHint));
   }
 

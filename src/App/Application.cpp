@@ -902,6 +902,24 @@ const std::vector<std::string> &UApplication::GetWorldNames() const
   return Core ? Core->GetWorldList() : kEmpty;
 }
 
+void UApplication::CloseCreativePalette()
+{
+  if (!PaletteOpen)
+  {
+    return;
+  }
+  PaletteOpen = false;
+  if (PaletteScreen)
+  {
+    PaletteScreen->SetVisible(false);
+  }
+  if (GuiContext)
+  {
+    GuiContext->ClearInputState();
+  }
+  SyncCursorVisibility();
+}
+
 void UApplication::ShowInGameHud()
 {
   ProgressScreen = nullptr;

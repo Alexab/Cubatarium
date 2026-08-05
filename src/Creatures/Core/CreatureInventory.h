@@ -24,6 +24,8 @@ public:
 
   /// Creative-mode defaults (counts -1 = unlimited).
   void InitCreativeDefaults();
+  /// Strip unlimited counts when switching Creative -> Survival.
+  void MigrateCreativeStorageToSurvival();
   void EnsureDefaultHotbar();
   bool IsPrimaryHotbarEmpty() const;
   void SetObjectHotbar(const std::vector<std::string> &object_names);

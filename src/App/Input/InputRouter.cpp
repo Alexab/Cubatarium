@@ -3,6 +3,8 @@
 #include "App/Application.h"
 #include "App/Settings/AppState.h"
 #include "Game/GameSession.h"
+#include "Game/ModePolicy.h"
+#include "Game/WorldGameMode.h"
 #include "Game/Inventory/HotbarInput.h"
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiContext.h"
@@ -201,6 +203,16 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
     }
     if (!app.ConsoleOpen && KeyNameIs(app.Ui.PaletteKey, key))
     {
+      if (!app.World ||
+          !ModePolicy::AllowsCreativePalette(app.World->GetGameMode()))
+      {
+        if (app.Geometry)
+        {
+          app.Geometry->ShowTransientMessage(
+              "Creative palette is not available in Survival mode", 2.5);
+        }
+        return true;
+      }
       const bool sameTabOpen = app.PaletteOpen && app.PaletteScreen &&
                                app.PaletteScreen->GetActiveMainTab() == 0;
       if (sameTabOpen)
@@ -236,6 +248,16 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
     }
     if (!app.ConsoleOpen && KeyNameIs(app.Ui.InventoryKey, key))
     {
+      if (!app.World ||
+          !ModePolicy::AllowsCreativePalette(app.World->GetGameMode()))
+      {
+        if (app.Geometry)
+        {
+          app.Geometry->ShowTransientMessage(
+              "Creative palette is not available in Survival mode", 2.5);
+        }
+        return true;
+      }
       if (app.PaletteOpen)
       {
         app.PaletteOpen = false;

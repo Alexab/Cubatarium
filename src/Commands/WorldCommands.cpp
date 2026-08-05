@@ -77,6 +77,29 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
       });
 
   registry.Register(
+      "cheat",
+      [&session](const std::vector<std::string> &args)
+      {
+        if (args.size() < 3 || args[1] != "inventory")
+        {
+          return CommandResult{
+              false, "Usage: cheat inventory creative <on|off>"};
+        }
+        if (args[2] != "creative")
+        {
+          return CommandResult{false, "Unknown cheat (inventory creative)"};
+        }
+        bool enable = true;
+        if (args.size() >= 4)
+        {
+          enable = args[3] == "on" || args[3] == "1" || args[3] == "true";
+        }
+        session.SetCheatCreativeInventory(enable);
+        return CommandResult{
+            true, enable ? "Creative inventory cheat ON" : "Creative inventory cheat OFF"};
+      });
+
+  registry.Register(
       "difficulty",
       [&session](const std::vector<std::string> &args)
       {
