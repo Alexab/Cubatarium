@@ -78,7 +78,10 @@ void UGuiSlot::Draw(UGuiRenderer &renderer)
 
   if (Dimmed || Broken)
   {
-    renderer.DrawFilledRect(Bounds, Theme->SlotDisabledFill);
+    // Broken tools: red tint overlay (C3 UX).
+    const glm::vec4 tint =
+        Broken ? glm::vec4(0.85f, 0.12f, 0.1f, 0.45f) : Theme->SlotDisabledFill;
+    renderer.DrawFilledRect(Bounds, tint);
   }
 
   if (WearProgress > 0.01f && WearProgress < 1.f)
