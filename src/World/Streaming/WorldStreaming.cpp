@@ -565,8 +565,11 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   // SoT unfinished (held sample while cruise); not pending-proxy.
   world.PhysicsTelemetryData.UnfinishedVisual = unfinished_visual;
   world.PhysicsTelemetryData.LightDebt = pending_light_focus > 0 ? 1 : 0;
+  // NearFocusHoles telemetry: mesh/dark holes only. Pending-light debt is
+  // LightDebt — counting it here inflated nh_no_miss_rate with miss=0
+  // (land-stage SoftDefer remesh-until-lit).
   world.PhysicsTelemetryData.NearFocusHoles =
-      (missing_near || pending_light_focus > 0 || dark_preview > 0) ? 1 : 0;
+      (missing_near || dark_preview > 0) ? 1 : 0;
 
   // Underfeet column: catch draw_ok-but-invisible blind spot (manual 201621).
   {
@@ -939,12 +942,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       // Terrain commits can enqueue a large cold fluid frontier burst.
       // When the queue is long or the frame is already hot, seed only a tiny
       // subset and let later frames continue the scan instead of spiking phys_ms.
-      const bool hot_frame = frame_ms > 16.0 || pending_seed > 32;
-      const bool cold_backlog = pending_seed > 96 || gen_backlog_total > 0;
+      const bool hot_frame = frame_ms > 14.0 || pending_seed > 24;
+      const bool cold_backlog = pending_seed > 64 || gen_backlog_total > 0;
       if (hot_frame)
       {
-        budgets.MaxColumnsPerCommit = near_column ? 2 : 1;
-        budgets.MaxLiquidEnqueuePerCommit = near_column ? 24 : 8;
+        budgets.MaxColumnsPerCommit = near_column ? 1 : 0;
+        budgets.MaxLiquidEnqueuePerCommit = near_column ? 16 : 0;
       }
       if (cold_backlog)
       {
@@ -2526,7 +2529,8 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     world.PhysicsTelemetryData.VisualHoles = visual_holes ? 1 : 0;
     world.PhysicsTelemetryData.LightDebt =
         world.HasPendingLightBeforeMeshNear(focus_horiz, focus_radius) ? 1 : 0;
-    world.PhysicsTelemetryData.NearFocusHoles = near_focus_holes ? 1 : 0;
+    // Telemetry NearFocusHoles = mesh holes only (see RefreshStreamingPressure).
+    world.PhysicsTelemetryData.NearFocusHoles = visual_holes ? 1 : 0;
     world.PhysicsTelemetryData.PendingFocusCols =
         world.FormatPendingLightFocusColumns(focus_horiz, focus_radius, 12);
     // StreamPressure / PendingLightFocus already set in RefreshStreamingPressure.
