@@ -168,6 +168,13 @@ void UNewWorldScreen::Build(UGuiContext &ctx)
   GameModeList->SetVisibleRowCount(2);
   body->AddChild(std::move(modeList));
 
+  auto modeDesc = std::make_unique<UGuiLabel>(
+      &theme, "Unlimited blocks, fly, no vitals drain.\n"
+              "Build freely from the creative palette.");
+  modeDesc->SetUseSecondaryColor(true);
+  GameModeDescLabel = modeDesc.get();
+  body->AddChild(std::move(modeDesc));
+
   auto difficultySection = std::make_unique<UGuiLabel>(&theme, "Difficulty:");
   DifficultySectionLabel = difficultySection.get();
   body->AddChild(std::move(difficultySection));
@@ -236,6 +243,14 @@ void UNewWorldScreen::Update(double /*dt*/)
     BodyScroll->LayoutContent(0, 0);
   }
   const bool survival = ReadSelectedGameMode() == WorldGameMode::Survival;
+  if (GameModeDescLabel)
+  {
+    GameModeDescLabel->SetText(
+        survival ? "Gather resources, craft, manage hunger and health.\n"
+                   "Blocks and items are limited — dig and loot to survive."
+                 : "Unlimited blocks, fly, no vitals drain.\n"
+                   "Build freely from the creative palette.");
+  }
   if (DifficultySectionLabel)
   {
     DifficultySectionLabel->SetVisible(survival);
@@ -301,6 +316,10 @@ int UNewWorldScreen::MeasureWorldPageContentHeight(int width) const
   if (GameModeList && theme)
   {
     height += label_h + GameModeList->GetPreferredHeight() + section_gap;
+  }
+  if (GameModeDescLabel && theme)
+  {
+    height += GameModeDescLabel->GetPreferredHeight() + section_gap;
   }
   if (DifficultyList && theme &&
       ReadSelectedGameMode() == WorldGameMode::Survival)
@@ -370,6 +389,13 @@ void UNewWorldScreen::LayoutWorldPage(const GuiRect &area) const
     const int modeH = GameModeList->GetPreferredHeight();
     GameModeList->SetBounds({area.X, y, area.W, modeH});
     y += modeH + section_gap;
+  }
+
+  if (GameModeDescLabel)
+  {
+    const int descH = GameModeDescLabel->GetPreferredHeight();
+    GameModeDescLabel->SetBounds({area.X, y, area.W, descH});
+    y += descH + section_gap;
   }
 
   if (DifficultyList && ReadSelectedGameMode() == WorldGameMode::Survival)

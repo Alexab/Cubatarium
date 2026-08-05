@@ -79,6 +79,7 @@ private:
   UGuiLabel *TooltipLabel{nullptr};
   UGuiLabel *UsageHintLabel{nullptr};
   UGuiLabel *HotbarStripLabel{nullptr};
+  UGuiPanel *HotbarStripDivider{nullptr};
   UGuiRenderer *Renderer{nullptr};
   std::vector<UGuiSlot *> GridSlots;
   std::vector<UGuiSlot *> HotbarStripSlots;

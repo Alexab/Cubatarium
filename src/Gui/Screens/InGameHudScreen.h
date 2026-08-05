@@ -3,7 +3,9 @@
 
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiScreenBase.h"
+#include "Gui/Interfaces/IUHotbarViewModel.h"
 #include <memory>
+#include <string>
 #include <vector>
 #if defined(__ANDROID__)
 #include "Gui/Widgets/GuiTouchControls.h"
@@ -57,11 +59,15 @@ public:
 private:
   void EnsureHotbarWidgets();
   void EnsureVitalWidgets();
+  void EnsureModeBadge();
   void LayoutHotbar();
   void LayoutVitals();
+  void LayoutModeBadge();
   void UpdateSlotData();
   void UpdateVitalBars();
+  void UpdateModeBadge();
   void UpdateTooltips();
+  std::string FormatHotbarTooltip(const HotbarSlotView &slot) const;
 
   UGameSession *Session{nullptr};
   IUGuiIconSource *Icons{nullptr};
@@ -69,7 +75,9 @@ private:
   UGuiPanel *RootPanel{nullptr};
   std::vector<UGuiSlot *> PrimarySlots;
   std::vector<UGuiSlot *> SecondarySlots;
+  UGuiPanel *HotbarDivider{nullptr};
   UGuiLabel *Tooltip{nullptr};
+  UGuiLabel *ModeBadge{nullptr};
   UGuiLabel *HealthLabel{nullptr};
   UGuiLabel *SatietyLabel{nullptr};
   UGuiLabel *ThirstLabel{nullptr};
@@ -80,6 +88,7 @@ private:
   int PointerY{-1};
   bool HotbarBuilt{false};
   bool VitalsBuilt{false};
+  bool ModeBadgeBuilt{false};
 #if defined(__ANDROID__)
   std::unique_ptr<class UGuiTouchControls> TouchControls;
 #endif

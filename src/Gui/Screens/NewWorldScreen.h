@@ -50,6 +50,7 @@ private:
   std::unique_ptr<UWorldViewSettingsForm> ViewForm;
   UGuiLabel *GameModeSectionLabel{nullptr};
   UGuiListView *GameModeList{nullptr};
+  UGuiLabel *GameModeDescLabel{nullptr};
   UGuiLabel *DifficultySectionLabel{nullptr};
   UGuiListView *DifficultyList{nullptr};
   UGuiLabel *PackSectionLabel{nullptr};

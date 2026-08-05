@@ -12,9 +12,12 @@
 #include "Gui/Preview/ContentPreviewRenderer.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Widgets/GuiLabel.h"
+#include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiScrollView.h"
 #include "Gui/Widgets/GuiSlot.h"
 #include "Gui/Widgets/GuiTabBar.h"
+#include "Items/ItemDefinitionStorage.h"
+#include "World/Core/World.h"
 
 #include "ResourcePacks/BlockNameUtil.h"
 
@@ -403,6 +406,10 @@ void UCreativePaletteScreen::EnsureHotbarStrip()
   {
     HotbarStripLabel->SetZOrder(49);
   }
+  auto divider = std::make_unique<UGuiPanel>(Theme);
+  divider->SetDrawBackground(true);
+  divider->SetZOrder(49);
+  HotbarStripDivider = static_cast<UGuiPanel *>(RootShell->AddChild(std::move(divider)));
   HotbarStripBuilt = true;
   LayoutHotbarStrip();
 }
@@ -416,8 +423,11 @@ void UCreativePaletteScreen::LayoutHotbarStrip()
   EnsureHotbarStrip();
   const int slotSize = Theme->HotbarSlotSize;
   const int gap = Theme->HotbarSlotGap;
-  const int totalW = static_cast<int>(HotbarStripSlots.size()) * slotSize +
-                     (static_cast<int>(HotbarStripSlots.size()) - 1) * gap;
+  const int sectionGap = gap * 3 + std::max(2, Theme->BorderThickness * 2);
+  const int slotCount = static_cast<int>(HotbarStripSlots.size());
+  const int totalW =
+      slotCount * slotSize + std::max(0, slotCount - 1) * gap +
+      (slotCount > 5 ? sectionGap - gap : 0);
   const int startX = GetContentOffsetX() + (ViewportW - totalW) / 2;
   const int rowY = GetContentOffsetY() + ViewportH - Theme->HotbarMarginBottom -
                    slotSize;
@@ -428,14 +438,35 @@ void UCreativePaletteScreen::LayoutHotbarStrip()
          Theme->FontSizeBody + 4});
   }
   int x = startX;
-  for (UGuiSlot *slot : HotbarStripSlots)
+  for (size_t i = 0; i < HotbarStripSlots.size(); ++i)
   {
+    UGuiSlot *slot = HotbarStripSlots[i];
     if (slot)
     {
       slot->SetBounds({x, rowY, slotSize, slotSize});
       slot->SetVisible(true);
-      x += slotSize + gap;
+      x += slotSize;
+      if (i + 1 < HotbarStripSlots.size())
+      {
+        x += (i == 4) ? sectionGap : gap;
+      }
     }
+  }
+  if (HotbarStripDivider && HotbarStripSlots.size() > 5 &&
+      HotbarStripSlots[4] && HotbarStripSlots[5])
+  {
+    const GuiRect left = HotbarStripSlots[4]->GetBounds();
+    const GuiRect right = HotbarStripSlots[5]->GetBounds();
+    const int mid = (left.X + left.W + right.X) / 2;
+    const int divW = std::max(2, Theme->BorderThickness * 2);
+    const int divH = slotSize * 3 / 4;
+    HotbarStripDivider->SetVisible(true);
+    HotbarStripDivider->SetBounds(
+        {mid - divW / 2, rowY + (slotSize - divH) / 2, divW, divH});
+  }
+  else if (HotbarStripDivider)
+  {
+    HotbarStripDivider->SetVisible(false);
   }
 }
 
@@ -533,6 +564,16 @@ void UCreativePaletteScreen::UpdateTooltip()
     {
       text += "\n" + GridSpawnHints[static_cast<size_t>(HoldSlotIndex)];
     }
+    if (Kind == ContentKind::Item && Session)
+    {
+      const auto world = Session->GetWorld();
+      UItemDefinitionStorage *items =
+          world ? world->GetItemDefinitionStorage() : nullptr;
+      const ItemDefinition *def =
+          items ? items->Get(GridEntryIds[static_cast<size_t>(HoldSlotIndex)])
+                : nullptr;
+      text = BuildItemTooltipText(text, def);
+    }
     if (PointerX < 0 || PointerY < 0)
     {
       UGuiSlot *slot = static_cast<size_t>(HoldSlotIndex) < GridSlots.size()
@@ -561,6 +602,15 @@ void UCreativePaletteScreen::UpdateTooltip()
             !GridSpawnHints[i].empty())
         {
           text += "\n" + GridSpawnHints[i];
+        }
+        if (Kind == ContentKind::Item && Session)
+        {
+          const auto world = Session->GetWorld();
+          UItemDefinitionStorage *items =
+              world ? world->GetItemDefinitionStorage() : nullptr;
+          const ItemDefinition *def =
+              items ? items->Get(GridEntryIds[i]) : nullptr;
+          text = BuildItemTooltipText(text, def);
         }
         break;
       }
