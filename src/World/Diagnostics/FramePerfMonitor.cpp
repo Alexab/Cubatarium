@@ -1046,8 +1046,8 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
   LogLine(period, "period", s.FrameCount, s.MaxWallMs);
   s.MeshApplyStaleAtPeriodStart = n.mesh_apply_stale;
   s.SoftDeferCaptureFloorHitsAtPeriodStart = n.softdefer_capture_floor_hits;
-  // Arm one cull-stats SubData on the next draw for the following period sample.
-  RequestCullStatsReadbackOnce();
+  // CullStats SubData only when ShowPerformance enables readback — not every
+  // period (GPU sync hitch ~2s on cruise).
   ResetAccum(s);
   s.LastEmit = now;
 }

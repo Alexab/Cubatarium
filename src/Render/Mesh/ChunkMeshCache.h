@@ -491,6 +491,10 @@ private:
   uint64_t LastCullMeshRevision{0};
   uint64_t LastVisibleMeshRevision{0};
   std::vector<glm::ivec3> LastVisibleChunks;
+  /// Quantized look (2° bins) for flat-rebuild skip; replaces raw plane eps.
+  int LastCullIYaw{INT32_MIN};
+  int LastCullIPitch{INT32_MIN};
+  bool HaveLastCullViewKey{false};
   std::array<glm::vec4, 6> LastCullPlanes{};
   bool HaveLastCullPlanes{false};
   int RenderDistanceChunks{4};

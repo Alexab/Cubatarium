@@ -33,6 +33,29 @@ namespace cutum
 
 namespace
 {
+struct CullViewKeyAngles
+{
+  int iyaw{0};
+  int ipitch{0};
+};
+
+CullViewKeyAngles QuantizeCullViewKey(const Frustum &frustum)
+{
+  // Near plane normal ≈ view forward (Frustum::FromViewProjection).
+  glm::vec3 look(frustum.planes[4]);
+  const float len = glm::length(look);
+  if (len > 1e-6f)
+  {
+    look /= len;
+  }
+  constexpr float kRad2Deg = 57.29577951308232f;
+  const float yaw_deg = std::atan2(look.x, look.z) * kRad2Deg;
+  const float pitch_deg =
+      std::asin(std::clamp(look.y, -1.0f, 1.0f)) * kRad2Deg;
+  return {static_cast<int>(std::floor(yaw_deg / 2.0f)),
+          static_cast<int>(std::floor(pitch_deg / 2.0f))};
+}
+
 bool IsFullyEnclosed(const UBlockWorld &world, glm::ivec3 pos)
 {
   for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
@@ -305,6 +328,9 @@ void UChunkMeshCache::InvalidateVisibleList()
   CrossBatchesDirty = true;
   LastCullCameraChunk = glm::ivec3(INT32_MAX, INT32_MAX, INT32_MAX);
   LastCullMeshRevision = 0;
+  HaveLastCullViewKey = false;
+  LastCullIYaw = INT32_MIN;
+  LastCullIPitch = INT32_MIN;
 }
 void UChunkMeshCache::SetRenderSettings(const RenderSettings &settings)
 {
@@ -1552,24 +1578,13 @@ bool UChunkMeshCache::TrySkipFlatRebuildForVisibleChunks(
       glm::ivec3(WorldCoordToBlockIndex(cameraPos->x),
                  WorldCoordToBlockIndex(cameraPos->y),
                  WorldCoordToBlockIndex(cameraPos->z)));
-  // Same camera chunk + mesh + frustum → reuse LastVisibleChunks without
-  // rescanning GreedyCache (TD-CS-018). Frustum change (look/zoom) must miss.
-  constexpr float kPlaneEps = 1e-4f;
-  const bool frustum_same =
-      HaveLastCullPlanes &&
-      [&]()
-      {
-        for (size_t i = 0; i < 6; ++i)
-        {
-          if (glm::length(frustum->planes[i] - LastCullPlanes[i]) > kPlaneEps)
-          {
-            return false;
-          }
-        }
-        return true;
-      }();
+  // Same camera chunk + mesh + quantized look (2°) → reuse LastVisibleChunks
+  // without rescanning GreedyCache (TD-CS-018). Raw plane eps was too tight.
+  const CullViewKeyAngles look = QuantizeCullViewKey(*frustum);
+  const bool view_same = HaveLastCullViewKey && look.iyaw == LastCullIYaw &&
+                         look.ipitch == LastCullIPitch;
   if (cam_chunk == LastCullCameraChunk &&
-      MeshRevision == LastVisibleMeshRevision && frustum_same &&
+      MeshRevision == LastVisibleMeshRevision && view_same &&
       !LastVisibleChunks.empty())
   {
     return true;
@@ -1605,6 +1620,9 @@ bool UChunkMeshCache::TrySkipFlatRebuildForVisibleChunks(
     LastCullCameraChunk = cam_chunk;
     LastCullPlanes = frustum->planes;
     HaveLastCullPlanes = true;
+    LastCullIYaw = look.iyaw;
+    LastCullIPitch = look.ipitch;
+    HaveLastCullViewKey = true;
     return true;
   }
   LastVisibleChunks = std::move(visible);
@@ -1612,6 +1630,9 @@ bool UChunkMeshCache::TrySkipFlatRebuildForVisibleChunks(
   LastCullCameraChunk = cam_chunk;
   LastCullPlanes = frustum->planes;
   HaveLastCullPlanes = true;
+  LastCullIYaw = look.iyaw;
+  LastCullIPitch = look.ipitch;
+  HaveLastCullViewKey = true;
   return false;
 }
 void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
@@ -1839,23 +1860,13 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
   const bool needs_cross_rebuild =
       CrossBatchesDirty ||
       (CrossBatches.empty() && TotalCrossCenterCount() > 0);
-  constexpr float kPlaneEps = 1e-4f;
-  bool frustum_same = HaveLastCullPlanes;
-  if (frustum_same)
-  {
-    for (size_t i = 0; i < 6; ++i)
-    {
-      if (glm::length(frustum.planes[i] - LastCullPlanes[i]) > kPlaneEps)
-      {
-        frustum_same = false;
-        break;
-      }
-    }
-  }
-  // Skip only when camera chunk + mesh + frustum are unchanged (TD-CS-018).
+  const CullViewKeyAngles look = QuantizeCullViewKey(frustum);
+  const bool view_same = HaveLastCullViewKey && look.iyaw == LastCullIYaw &&
+                         look.ipitch == LastCullIPitch;
+  // Skip only when camera chunk + mesh + quantized look are unchanged.
   if (!InstancesDirty && !needs_greedy_rebuild && !needs_cross_rebuild &&
       MeshRevision == LastCullMeshRevision &&
-      camera_chunk == LastCullCameraChunk && frustum_same)
+      camera_chunk == LastCullCameraChunk && view_same)
   {
     return;
   }
@@ -1912,6 +1923,9 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
   LastCullMeshRevision = MeshRevision;
   LastCullPlanes = frustum.planes;
   HaveLastCullPlanes = true;
+  LastCullIYaw = look.iyaw;
+  LastCullIPitch = look.ipitch;
+  HaveLastCullViewKey = true;
 }
 void UChunkMeshCache::EnsureAsyncBuilder()
 {
