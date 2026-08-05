@@ -489,6 +489,7 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
                         if (world->GetItemDefinitionStorage() &&
                             world->GetItemDefinitionStorage()->Get(id))
                         {
+                          inv->AddToInventory(id);
                           InventoryEntryRef entry;
                           entry.empty = false;
                           entry.kind = InventoryEntryKind::Item;

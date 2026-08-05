@@ -625,15 +625,38 @@ UGameSession::GetEntries(ContentKind tab, const std::string &groupId,
     }
     ref.Id = e.Id;
     ref.empty = false;
-    if (tab == ContentKind::UCreature || tab == ContentKind::Skin ||
-        tab == ContentKind::Item)
+    if (tab == ContentKind::UCreature || tab == ContentKind::Skin)
     {
-      ref.count = (tab == ContentKind::Item) ? 1 : 1;
-      if (tab == ContentKind::Item)
+      ref.count = 1;
+      result.push_back({ref, e.displayName});
+      continue;
+    }
+    if (tab == ContentKind::Item)
+    {
+      ref.wear = 0.f;
+      ref.broken = false;
+
+      int count = 1;
+      if (mode == InventoryMode::Owned)
       {
-        ref.wear = 0.f;
-        ref.broken = false;
+        if (!inv)
+        {
+          continue;
+        }
+        const auto it = inv->find(e.Id);
+        if (it == inv->end() || it->second == 0)
+        {
+          continue;
+        }
+        count = it->second;
+        if (count < 0)
+        {
+          // Unlimited (should not happen for items in survival) — show as
+          // "1" to keep UI sane.
+          count = 1;
+        }
       }
+      ref.count = count;
       result.push_back({ref, e.displayName});
       continue;
     }
@@ -709,7 +732,17 @@ bool UGameSession::CanAssignToHotbar(const InventoryEntryRef &entry,
   case InventoryEntryKind::Item:
   {
     const UItemDefinitionStorage *items = World->GetItemDefinitionStorage();
-    return items && items->Get(entry.Id) != nullptr;
+    if (!items || items->Get(entry.Id) == nullptr)
+    {
+      return false;
+    }
+    if (inventoryMode == InventoryMode::Owned)
+    {
+      const auto &storage = creatureInv->GetStorage();
+      const auto it = storage.find(entry.Id);
+      return it != storage.end() && it->second != 0;
+    }
+    return true;
   }
 
   case InventoryEntryKind::Object:

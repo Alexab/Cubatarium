@@ -41,6 +41,7 @@
 #include "App/Platform/Log.h"
 #include "App/WorldOperationRunner.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
+#include "Gui/Screens/SurvivalInventoryScreen.h"
 #include "Gui/Screens/CharacterSheetScreen.h"
 #include "Gui/Screens/WorldResourcePacksScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
@@ -1059,6 +1060,13 @@ void UApplication::ShowInGameHud()
   PaletteScreen->Build(*GuiContext);
   PaletteScreen->SetVisible(false);
 
+  SurvivalInventoryScreen =
+      std::make_unique<USurvivalInventoryScreen>(
+          &GameSession->GetContentCatalog(), GameSession.get(), icons);
+  SurvivalInventoryScreen->OnAttach(*GuiContext);
+  SurvivalInventoryScreen->Build(*GuiContext);
+  SurvivalInventoryScreen->SetVisible(false);
+
   CharacterSheetScreen =
       std::make_unique<UCharacterSheetScreen>(
           GameSession.get(), CreaturePreviewRenderer.get(), icons);
@@ -1078,14 +1086,15 @@ void UApplication::ShowInGameHud()
 bool UApplication::UsesUiPointer() const
 {
   return State == AppState::MainMenu || State == AppState::Loading || FreeCursor ||
-         ConsoleOpen || PaletteOpen || WorldGenOpen || CharacterSheetOpen;
+         ConsoleOpen || PaletteOpen || WorldGenOpen || CharacterSheetOpen ||
+         SurvivalInventoryOpen;
 }
 
 bool UApplication::BlocksGameMouseLook() const
 {
   return State == AppState::InGame &&
          (FreeCursor || ConsoleOpen || PaletteOpen || WorldGenOpen ||
-          CharacterSheetOpen);
+          CharacterSheetOpen || SurvivalInventoryOpen);
 }
 
 AppCursorPolicy UApplication::GetCursorPolicy() const
@@ -1307,6 +1316,7 @@ void UApplication::EnterInGameInputState()
   PaletteOpen = false;
   WorldGenOpen = false;
   CharacterSheetOpen = false;
+  SurvivalInventoryOpen = false;
   FreeCursor = false;
   if (WorldGenScreen)
   {
@@ -1315,6 +1325,10 @@ void UApplication::EnterInGameInputState()
   if (PaletteScreen)
   {
     PaletteScreen->SetVisible(false);
+  }
+  if (SurvivalInventoryScreen)
+  {
+    SurvivalInventoryScreen->SetVisible(false);
   }
   if (CharacterSheetScreen)
   {
@@ -1406,6 +1420,12 @@ void UApplication::FinishInventoryPointerGesture(const GuiMouseEvent &event)
         routeUp(PaletteScreen->GetRoot());
       }
       break;
+    case OverlayPointerCapture::SurvivalInventory:
+      if (SurvivalInventoryOpen && SurvivalInventoryScreen)
+      {
+        routeUp(SurvivalInventoryScreen->GetRoot());
+      }
+      break;
     case OverlayPointerCapture::CharacterSheet:
       if (CharacterSheetOpen && CharacterSheetScreen)
       {
@@ -1490,6 +1510,16 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
       if (UGuiWidget *hit = routeRootDown(PaletteScreen->GetRoot()))
       {
         OverlayCaptures[pointerIndex] = OverlayPointerCapture::Palette;
+        OverlayPressedWidget = hit;
+        return true;
+      }
+    }
+    if (SurvivalInventoryOpen && SurvivalInventoryScreen)
+    {
+      if (UGuiWidget *hit =
+              routeRootDown(SurvivalInventoryScreen->GetRoot()))
+      {
+        OverlayCaptures[pointerIndex] = OverlayPointerCapture::SurvivalInventory;
         OverlayPressedWidget = hit;
         return true;
       }
@@ -1747,6 +1777,10 @@ void UApplication::Update(double dt)
     {
       PaletteScreen->Update(dt);
     }
+    if (SurvivalInventoryOpen && SurvivalInventoryScreen)
+    {
+      SurvivalInventoryScreen->Update(dt);
+    }
     if (WorldGenScreen)
     {
       WorldGenScreen->Update(dt);
@@ -1993,6 +2027,13 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     notifyViewport(PaletteScreen.get());
     GuiContext->RenderOverlay(*PaletteScreen->GetRoot(), width, height, false);
   }
+  if (SurvivalInventoryOpen && SurvivalInventoryScreen &&
+      SurvivalInventoryScreen->GetRoot())
+  {
+    notifyViewport(SurvivalInventoryScreen.get());
+    GuiContext->RenderOverlay(*SurvivalInventoryScreen->GetRoot(), width,
+                               height, false);
+  }
   if (CharacterSheetOpen && CharacterSheetScreen &&
       CharacterSheetScreen->GetRoot())
   {
@@ -2007,7 +2048,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     GuiContext->RenderOverlay(*WorldGenScreen->GetRoot(), width, height, false);
   }
 #if defined(__ANDROID__)
-  if (HudScreen && (PaletteOpen || WorldGenOpen))
+  if (HudScreen && (PaletteOpen || WorldGenOpen || SurvivalInventoryOpen))
   {
     HudScreen->RenderTouchControlsOverlay(*GuiContext, width, height);
   }
@@ -2045,13 +2086,14 @@ bool UApplication::WantsCaptureKeyboard() const
     return true;
   }
   return ConsoleOpen || PaletteOpen || WorldGenOpen || CharacterSheetOpen ||
+         SurvivalInventoryOpen ||
          GuiContext->WantsCaptureKeyboard();
 }
 
 bool UApplication::AllowsWorldMousePlacement() const
 {
   return State == AppState::InGame && !ConsoleOpen && !PaletteOpen &&
-         !WorldGenOpen && !CharacterSheetOpen;
+         !WorldGenOpen && !CharacterSheetOpen && !SurvivalInventoryOpen;
 }
 
 bool UApplication::RouteKey(int key, int Action, int Mods)

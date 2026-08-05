@@ -248,16 +248,45 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
     }
     if (!app.ConsoleOpen && KeyNameIs(app.Ui.InventoryKey, key))
     {
-      if (!app.World ||
-          !ModePolicy::AllowsCreativePalette(app.World->GetGameMode()))
+      const bool allowCreativePalette = app.World &&
+                                         ModePolicy::AllowsCreativePalette(
+                                             app.World->GetGameMode());
+
+      // Survival mode: InventoryKey toggles backpack UI.
+      if (!allowCreativePalette)
       {
-        if (app.Geometry)
+        if (app.SurvivalInventoryOpen)
         {
-          app.Geometry->ShowTransientMessage(
-              "Creative palette is not available in Survival mode", 2.5);
+          app.SurvivalInventoryOpen = false;
+          if (app.SurvivalInventoryScreen)
+          {
+            app.SurvivalInventoryScreen->SetVisible(false);
+          }
+          app.GuiContext->ClearInputState();
         }
+        else
+        {
+          app.SurvivalInventoryOpen = true;
+          app.PaletteOpen = false;
+          app.WorldGenOpen = false;
+          if (app.PaletteScreen)
+          {
+            app.PaletteScreen->SetVisible(false);
+          }
+          if (app.WorldGenScreen)
+          {
+            app.WorldGenScreen->SetVisible(false);
+          }
+          if (app.SurvivalInventoryScreen)
+          {
+            app.SurvivalInventoryScreen->SetVisible(true);
+          }
+        }
+        app.SyncCursorVisibility();
         return true;
       }
+
+      // Creative mode: InventoryKey toggles the creative palette.
       if (app.PaletteOpen)
       {
         app.PaletteOpen = false;
