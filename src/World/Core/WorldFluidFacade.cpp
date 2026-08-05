@@ -81,6 +81,9 @@ bool UWorldFluidFacade::TryAddFluidObject(UWorld &world, glm::ivec3 block_pos,
   world.PublishNeighborPhysicsEvents(block_pos);
   if (world.GetPhysicsFeatureFlags().EnableFluids)
   {
+    // Player place must enter the fluid queue immediately — TryEnqueue is
+    // gated by spread period and can miss a one-shot place off-phase.
+    world.ForceEnqueueFluidAt(block_pos);
     EnqueueFluidFrontierAt(world, block_pos);
   }
   return true;
@@ -112,13 +115,14 @@ void UWorldFluidFacade::ApplyBreakSiteFluidFlood(
   UBlockWorld &block_world = world.GetBlockWorld();
   if (block_world.IsAir(block_pos) && world.BlockPhysicsService)
   {
-    world.TryEnqueueFluidAt(block_pos);
+    world.ForceEnqueueFluidAt(block_pos);
   }
   for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
   {
     const glm::ivec3 neighbor = block_pos + offset;
     if (registry.IsLiquid(block_world.GetBlock(neighbor)))
     {
+      world.ForceEnqueueFluidAt(neighbor);
       mesh_touch_blocks.push_back(neighbor);
     }
   }
