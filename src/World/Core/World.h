@@ -10,6 +10,7 @@
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Influence/DigSessionState.h"
+#include "World/Interaction/BlockBreakService.h"
 #include "Creatures/Player/PlayerCapsule.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/StreamingAltitudePolicy.h"
@@ -438,7 +439,10 @@ public:
   void TickBreakSession(float dt, float durationSeconds);
   bool CompleteBreakSession();
   float GetBreakProgress() const;
-  bool HasBreakSession() const { return BreakSession.has_value(); }
+  bool HasBreakSession() const
+  {
+    return BreakService && BreakService->HasSession();
+  }
   std::optional<glm::ivec3> GetBreakSessionBlockPos() const;
   /// Flight-sim break-stand: request one CompleteBreakSession on next Update.
   void RequestFlightSimBreak() { FlightSimBreakRequested = true; }
@@ -1137,6 +1141,8 @@ public:
 
   friend class UWorldViewBinding;
   friend class UMovementDiagnosticsRecorder;
+  friend class UBlockPlacementService;
+  friend class UBlockBreakService;
 
 private:
   friend class UWorldCooperativeSession;
@@ -1353,7 +1359,7 @@ private:
   bool PlaceTargetActive{false};
   glm::ivec3 PlaceBlockPos{0};
 
-  mutable std::optional<DigSessionState> BreakSession;
+  mutable std::unique_ptr<UBlockBreakService> BreakService;
   bool FlightSimBreakRequested{false};
 
   uint64_t DurationDoMovementMks;

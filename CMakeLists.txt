@@ -121,6 +121,7 @@ set(SOURCES
     src/Creatures/Locomotion/CreatureLocomotionFacts.cpp
     src/Creatures/Core/Creature.cpp
     src/Creatures/Core/CreatureInventory.cpp
+    src/Creatures/Roles/CreatureRoleHandlerFactory.cpp
     src/Creatures/Stats/CreatureStatsDefaults.cpp
     src/Creatures/Stats/CreatureStatsJson.cpp
     src/Creatures/Stats/CreatureVitalsSystem.cpp
@@ -247,6 +248,8 @@ set(SOURCES
     src/World/Physics/WorldPhysicsScheduler.cpp
     src/World/Physics/WorldMovementPhysicsService.cpp
     src/World/Physics/WorldBlockPhysicsService.cpp
+    src/World/Interaction/BlockBreakService.cpp
+    src/World/Interaction/BlockPlacementService.cpp
     src/World/Physics/WorldChunkDirtyService.cpp
     src/World/Physics/ChunkRebuildQueue.cpp
     src/World/Physics/IUChunkDirtyService.cpp

@@ -64,6 +64,8 @@
 #include "World/Physics/WorldChunkDirtyService.h"
 #include "World/Physics/WorldMovementPhysicsService.h"
 #include "World/Physics/WorldPhysicsScheduler.h"
+#include "World/Interaction/BlockBreakService.h"
+#include "World/Interaction/BlockPlacementService.h"
 #include "World/Raycast/BlockRaycast.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
@@ -5508,94 +5510,14 @@ UWorld::FindNearestFreeCubePosition(const glm::vec3 &position,
 
 bool UWorld::AddObjectByView(const glm::vec3 &position, const glm::vec3 &front)
 {
-  auto user = GetCurrentUser();
-  if (!user)
-  {
-    return false;
-  }
-
-  UCreature *controlled = GetControlledCreature();
-  if (!controlled)
-  {
-    return false;
-  }
-  const InventoryEntryRef *activeEntry =
-      controlled->GetInventory().GetActiveEntryRef();
-  if (!activeEntry || activeEntry->empty ||
-      activeEntry->kind != InventoryEntryKind::Block ||
-      activeEntry->Id.empty())
-  {
-    return false;
-  }
-  const std::string &blockType = activeEntry->Id;
-  const InventoryEntryRef entryCopy = *activeEntry;
-  if (!ResourceEconomyService::CanPlace(GameMode,
-                                         controlled->GetInventory(),
-                                         entryCopy))
-  {
-    return false;
-  }
-
-  PlayerCapsule cap = ViewBinding ? ViewBinding->ResolvePlacementCapsule(*this)
-                                  : PlayerCapsule::Standing();
-
-  float max_distance = 8.0f;
-  glm::vec3 player_eye = position;
-  if (auto camera = GetCurrentUserCamera())
-  {
-    max_distance = camera->GetBlockInteractMaxDistance();
-    player_eye = camera->GetPosition();
-  }
-  const BlockPlacementResolve resolved = Collision.ResolveBlockPlacement(
-      position, front, cap, max_distance, player_eye);
-  if (!resolved.place_block_pos)
-  {
-    return false;
-  }
-  if (AddObject(blockType, BlockCenter(*resolved.place_block_pos)))
-  {
-    // Consume only after placement succeeds.
-    (void)ResourceEconomyService::ConsumeOnPlace(GameMode,
-                                                  controlled->GetInventory(),
-                                                  entryCopy);
-    UpdateIntersection(position, front);
-    return true;
-  }
-  return false;
+  return UBlockPlacementService::AddObjectByView(*this, position, front);
 }
 
 bool UWorld::PlaceActiveObjectByView(const glm::vec3 &position,
                                      const glm::vec3 &front)
 {
-  auto user = GetCurrentUser();
-  if (!user)
-  {
-    return false;
-  }
-
-  UCreature *controlled = GetControlledCreature();
-  if (!controlled)
-  {
-    return false;
-  }
-  const std::string &prefabName =
-      controlled->GetInventory().GetActiveObjectName();
-  if (prefabName.empty())
-  {
-    return false;
-  }
-
-  const auto anchor = FindObjectAnchorFromView(position, front);
-  if (!anchor.has_value())
-  {
-    return false;
-  }
-  if (PlaceObject(prefabName, anchor.value()))
-  {
-    UpdateIntersection(position, front);
-    return true;
-  }
-  return false;
+  return UBlockPlacementService::PlaceActiveObjectByView(*this, position,
+                                                         front);
 }
 
 bool UWorld::DelBlockAt(glm::ivec3 blockPos)
@@ -5670,101 +5592,46 @@ bool UWorld::DelObjectByView(const glm::vec3 &position, const glm::vec3 &front)
 void UWorld::StartBreakSession(glm::ivec3 blockPos, float pendingWearDelta,
                                std::string pendingToolId)
 {
-  DigSessionState session;
-  session.Start(blockPos);
-  session.pendingWearDelta = pendingWearDelta;
-  session.pendingToolId = std::move(pendingToolId);
-  BreakSession = session;
+  if (!BreakService)
+  {
+    BreakService = std::make_unique<UBlockBreakService>();
+  }
+  BreakService->Start(blockPos, pendingWearDelta, std::move(pendingToolId));
 }
 
 void UWorld::CancelBreakSession()
 {
-  if (BreakSession)
+  if (BreakService)
   {
-    BreakSession->Cancel();
+    BreakService->Cancel();
   }
-  BreakSession.reset();
 }
 
 void UWorld::TickBreakSession(float dt, float durationSeconds)
 {
-  if (!BreakSession)
+  if (BreakService)
   {
-    return;
+    BreakService->Tick(dt, durationSeconds);
   }
-  BreakSession->Tick(dt, durationSeconds);
 }
 
 bool UWorld::CompleteBreakSession()
 {
-  if (!BreakSession)
+  if (!BreakService)
   {
     return false;
   }
-  const glm::ivec3 pos = BreakSession->blockPos;
-  const float wear_delta = BreakSession->pendingWearDelta;
-  const std::string tool_id = BreakSession->pendingToolId;
-  BreakSession.reset();
-  ++PhysicsTelemetryData.BreakCompleteN;
-  const BlockId removedId = BlockWorld.GetBlock(pos);
-  const std::string blockTypeName =
-      (BlockRegistry && removedId != BLOCK_AIR)
-          ? BlockRegistry->GetTypeNameById(removedId)
-          : std::string{};
-
-  if (wear_delta > 0.f && !tool_id.empty() && ItemDefinitions)
-  {
-    if (UCreature *creature = GetControlledCreature())
-    {
-      const bool wear_enabled =
-          IsToolWearEnabled(GameMode, Difficulty);
-      auto &bars = creature->GetInventory().GetHotbarsMutable();
-      const size_t bar = creature->GetInventory().GetActiveBarIndex();
-      const size_t slot = creature->GetInventory().GetActiveSlotIndex();
-      if (bar < bars.size() && slot < bars[bar].slots.size())
-      {
-        auto &entry = bars[bar].slots[slot].entry;
-        if (!bars[bar].slots[slot].empty &&
-            entry.kind == InventoryEntryKind::Item && entry.Id == tool_id)
-        {
-          if (const ItemDefinition *def = ItemDefinitions->Get(tool_id))
-          {
-            if (ApplyItemWear(entry, *def, wear_delta, wear_enabled))
-            {
-              bars[bar].slots[slot].empty = true;
-              bars[bar].slots[slot].entry = InventoryEntryRef{};
-            }
-          }
-        }
-      }
-    }
-  }
-
-  if (!blockTypeName.empty())
-  {
-    if (UCreature *creature = GetControlledCreature())
-    {
-      ResourceEconomyService::GrantBlockDrop(GameMode,
-                                             creature->GetInventory(),
-                                             blockTypeName,
-                                             /*count=*/1);
-    }
-  }
-  return DelBlockAt(pos);
+  return BreakService->Complete(*this);
 }
 
 float UWorld::GetBreakProgress() const
 {
-  return BreakSession ? BreakSession->progress : 0.f;
+  return BreakService ? BreakService->GetProgress() : 0.f;
 }
 
 std::optional<glm::ivec3> UWorld::GetBreakSessionBlockPos() const
 {
-  if (!BreakSession)
-  {
-    return std::nullopt;
-  }
-  return BreakSession->blockPos;
+  return BreakService ? BreakService->GetBlockPos() : std::nullopt;
 }
 
 FluidColumnSurface UWorld::FindFluidColumnSurfaceAt(int bx, int bz,
@@ -5956,6 +5823,7 @@ void UWorld::ConfigurePhysicsServices()
 {
   BlockPhysicsService = std::make_unique<UWorldBlockPhysicsService>();
   MovementPhysicsService = std::make_unique<UWorldMovementPhysicsService>();
+  BreakService = std::make_unique<UBlockBreakService>();
   ChunkDirtyService = std::make_unique<UWorldChunkDirtyService>();
   if (BlockPhysicsService)
   {
