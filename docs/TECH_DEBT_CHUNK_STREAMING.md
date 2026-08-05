@@ -66,6 +66,8 @@
 | TD-ARCH-032 | Era13 | ARCH_D1/D3 harness GO | Architecture A–E landed. Autofly×2 `--replay-manual`: `manual_arch_era13_01/02.json`. **cold_relight=2≤3 OK**; holes/async OK on 02. **D3 NO-GO:** `wall_ms_med≈44` (need ≤30), `post_stop_black_sticky_max≈9`. Stop SoftDefer zoo after 2 iters. | in-progress |
 | TD-ARCH-033 | Era13/rim | Frontier first-mesh latency (manual 225337) | Stage SLA + UnlitFirstMesh + sync promote | partial — confirm on World_164 edge smoke |
 
+**2026-08-05 perf_opt3:** `NearFocusHoles` telemetry no longer ORs pending-light debt (kept in `LightDebt`); reduces false `nh_no_miss_rate` when SoftDefer remesh-until-lit with mesh present. Admission still uses pending-light urgency locally.
+
 ### FOV/progressive plan (2026-08) — Closed (P4 validate)
 
 | ID | Added in | Item | Why deferred | Target |
