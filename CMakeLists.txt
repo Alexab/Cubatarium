@@ -423,6 +423,7 @@ set(SOURCES
     src/App/Platform/CursorCapture.cpp
     src/Game/GameSession.cpp
     src/Game/CreatureVisualQaSpawner.cpp
+    src/Game/Economy/ResourceEconomy.cpp
     src/Content/ContentTypeRegistry.cpp
     src/Commands/CommandRegistry.cpp
     src/Commands/WorldCommands.cpp
@@ -1173,6 +1174,16 @@ add_executable(inventory_mode_test
 target_include_directories(inventory_mode_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(inventory_mode_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(resource_economy_test
+    src/Creatures/Core/CreatureInventory.cpp
+    src/Items/ItemDefinitionStorage.cpp
+    src/Items/ToolCapabilities.cpp
+    src/Game/Economy/ResourceEconomy.cpp
+    src/Test/ResourceEconomyTest.cpp)
+target_include_directories(resource_economy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(resource_economy_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(mode_policy_test
     src/Test/ModePolicyTest.cpp)

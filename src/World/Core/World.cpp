@@ -11,6 +11,7 @@
 #include "Items/ToolCapabilities.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Game/ModePolicy.h"
+#include "Game/Economy/ResourceEconomy.h"
 #include "Creatures/Core/Creature.h"
 #include "Core/Progress/IUProgressSink.h"
 #include "Creatures/Core/Creature.h"
@@ -5518,9 +5519,19 @@ bool UWorld::AddObjectByView(const glm::vec3 &position, const glm::vec3 &front)
   {
     return false;
   }
-  const std::string &blockType =
-      controlled->GetInventory().GetActiveBlockTypeName();
-  if (blockType.empty())
+  const InventoryEntryRef *activeEntry =
+      controlled->GetInventory().GetActiveEntryRef();
+  if (!activeEntry || activeEntry->empty ||
+      activeEntry->kind != InventoryEntryKind::Block ||
+      activeEntry->Id.empty())
+  {
+    return false;
+  }
+  const std::string &blockType = activeEntry->Id;
+  const InventoryEntryRef entryCopy = *activeEntry;
+  if (!ResourceEconomyService::CanPlace(GameMode,
+                                         controlled->GetInventory(),
+                                         entryCopy))
   {
     return false;
   }
@@ -5543,6 +5554,10 @@ bool UWorld::AddObjectByView(const glm::vec3 &position, const glm::vec3 &front)
   }
   if (AddObject(blockType, BlockCenter(*resolved.place_block_pos)))
   {
+    // Consume only after placement succeeds.
+    (void)ResourceEconomyService::ConsumeOnPlace(GameMode,
+                                                  controlled->GetInventory(),
+                                                  entryCopy);
     UpdateIntersection(position, front);
     return true;
   }
@@ -5691,6 +5706,11 @@ bool UWorld::CompleteBreakSession()
   const std::string tool_id = BreakSession->pendingToolId;
   BreakSession.reset();
   ++PhysicsTelemetryData.BreakCompleteN;
+  const BlockId removedId = BlockWorld.GetBlock(pos);
+  const std::string blockTypeName =
+      (BlockRegistry && removedId != BLOCK_AIR)
+          ? BlockRegistry->GetTypeNameById(removedId)
+          : std::string{};
 
   if (wear_delta > 0.f && !tool_id.empty() && ItemDefinitions)
   {
@@ -5720,6 +5740,16 @@ bool UWorld::CompleteBreakSession()
     }
   }
 
+  if (!blockTypeName.empty())
+  {
+    if (UCreature *creature = GetControlledCreature())
+    {
+      ResourceEconomyService::GrantBlockDrop(GameMode,
+                                             creature->GetInventory(),
+                                             blockTypeName,
+                                             /*count=*/1);
+    }
+  }
   return DelBlockAt(pos);
 }
 
