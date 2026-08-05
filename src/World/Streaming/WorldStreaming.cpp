@@ -944,12 +944,25 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       // Terrain commits can enqueue a large cold fluid frontier burst.
       // When the queue is long or the frame is already hot, seed only a tiny
       // subset and let later frames continue the scan instead of spiking phys_ms.
-      const bool hot_frame = frame_ms > 14.0 || pending_seed > 24;
-      const bool cold_backlog = pending_seed > 64 || gen_backlog_total > 0;
+      const bool hot_frame = frame_ms > 16.0 || pending_seed > 32;
+      const bool cold_backlog = pending_seed > 96 || gen_backlog_total > 0;
       if (hot_frame)
       {
-        budgets.MaxColumnsPerCommit = near_column ? 1 : 0;
-        budgets.MaxLiquidEnqueuePerCommit = near_column ? 16 : 0;
+        if (near_column)
+        {
+          budgets.MaxColumnsPerCommit = 1;
+          budgets.MaxLiquidEnqueuePerCommit = 24;
+        }
+        else if (keep_prewarm_surplus && !near_mesh_backlog)
+        {
+          budgets.MaxColumnsPerCommit = 1;
+          budgets.MaxLiquidEnqueuePerCommit = 8;
+        }
+        else
+        {
+          budgets.MaxColumnsPerCommit = 0;
+          budgets.MaxLiquidEnqueuePerCommit = 0;
+        }
       }
       if (cold_backlog)
       {
@@ -957,6 +970,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             std::min(budgets.MaxColumnsPerCommit, near_column ? 1 : 0);
         budgets.MaxLiquidEnqueuePerCommit =
             std::min(budgets.MaxLiquidEnqueuePerCommit, near_column ? 8 : 0);
+        if (!near_column && keep_prewarm_surplus && !near_mesh_backlog)
+        {
+          budgets.MaxColumnsPerCommit =
+              std::max(budgets.MaxColumnsPerCommit, 1);
+          budgets.MaxLiquidEnqueuePerCommit =
+              std::max(budgets.MaxLiquidEnqueuePerCommit, 8);
+        }
       }
       return budgets;
     };
