@@ -199,6 +199,8 @@ struct PhysicsTelemetry
   std::string BackendCull{"cpu_frustum"};
   uint64_t GpuDrawCmds{0};
   double GpuCullMs{0.0};
+  /// CPU wall around GPU compact dispatch (excludes SubData); 0 on CPU cull.
+  double GpuCullGpuMs{0.0};
   double VertexPoolFill{0.0};
   /// 1 when opaque cull used GPU compact→indirect (no flat-ref rebuild).
   double GpuCullIndirect{0.0};

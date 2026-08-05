@@ -4,6 +4,8 @@
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "glog/logging.h"
+#include <atomic>
+#include <chrono>
 #include <cstdlib>
 #include <cstring>
 #include <string>
@@ -15,6 +17,7 @@ namespace
 {
 
 uint64_t gCullStatsReadback = 0;
+std::atomic<bool> gCullStatsReadbackOnce{false};
 
 enum class GpuCullMode
 {
@@ -643,6 +646,7 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   LastCullOpaqueTotal_ = 0;
   LastCullOpaqueOn_ = 0;
   LastCpuAabbWouldOn_ = 0;
+  LastCompactCullGpuMs_ = 0.0;
 
   uint64_t aabb_on = 0;
   uint64_t eligible = 0;
@@ -746,13 +750,19 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   }
   glUseProgram(CullProgram);
   const uint32_t n = ubo.batchCount;
+  const auto gpu_t0 = std::chrono::steady_clock::now();
   glDispatchCompute((n + 63u) / 64u, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
   glUseProgram(0);
+  LastCompactCullGpuMs_ = std::chrono::duration<double, std::milli>(
+                              std::chrono::steady_clock::now() - gpu_t0)
+                              .count();
 
-  // P1b: no CullStats GetBufferSubData on hot path (sync stall). Approximate
-  // opaque_cmd_on telemetry from CPU AABB would-on when readback is off.
-  if (CullStatsReadbackEnabled_ && CullStatsSsbo != 0)
+  // P1b: SubData only when HUD/period armed — default cruise stays sync-free.
+  const bool do_stats_readback =
+      CullStatsReadbackEnabled_ ||
+      gCullStatsReadbackOnce.exchange(false, std::memory_order_relaxed);
+  if (do_stats_readback && CullStatsSsbo != 0)
   {
     uint32_t visible = 0;
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, CullStatsSsbo);
@@ -851,6 +861,11 @@ uint64_t ConsumeGpuCullStatsReadbackCount()
   const uint64_t v = gCullStatsReadback;
   gCullStatsReadback = 0;
   return v;
+}
+
+void RequestCullStatsReadbackOnce()
+{
+  gCullStatsReadbackOnce.store(true, std::memory_order_relaxed);
 }
 
 } // namespace cutum

@@ -14,6 +14,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Streaming/MeshWorkAdmission.h"
+#include <array>
 #include <algorithm>
 #include <chrono>
 #include <climits>
@@ -490,6 +491,8 @@ private:
   uint64_t LastCullMeshRevision{0};
   uint64_t LastVisibleMeshRevision{0};
   std::vector<glm::ivec3> LastVisibleChunks;
+  std::array<glm::vec4, 6> LastCullPlanes{};
+  bool HaveLastCullPlanes{false};
   int RenderDistanceChunks{4};
   float AltitudeAboveTerrain{0.0f};
   int AltitudeFogThresholdBlocks{32};

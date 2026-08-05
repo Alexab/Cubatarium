@@ -1548,14 +1548,29 @@ bool UChunkMeshCache::TrySkipFlatRebuildForVisibleChunks(
   {
     return false;
   }
-  // Fast path: same camera chunk + mesh revision → reuse LastVisibleChunks
-  // without rescanning GreedyCache (TD-CS-018 incremental cull).
   const glm::ivec3 cam_chunk = UChunkManager::WorldToChunk(
       glm::ivec3(WorldCoordToBlockIndex(cameraPos->x),
                  WorldCoordToBlockIndex(cameraPos->y),
                  WorldCoordToBlockIndex(cameraPos->z)));
+  // Same camera chunk + mesh + frustum → reuse LastVisibleChunks without
+  // rescanning GreedyCache (TD-CS-018). Frustum change (look/zoom) must miss.
+  constexpr float kPlaneEps = 1e-4f;
+  const bool frustum_same =
+      HaveLastCullPlanes &&
+      [&]()
+      {
+        for (size_t i = 0; i < 6; ++i)
+        {
+          if (glm::length(frustum->planes[i] - LastCullPlanes[i]) > kPlaneEps)
+          {
+            return false;
+          }
+        }
+        return true;
+      }();
   if (cam_chunk == LastCullCameraChunk &&
-      MeshRevision == LastVisibleMeshRevision && !LastVisibleChunks.empty())
+      MeshRevision == LastVisibleMeshRevision && frustum_same &&
+      !LastVisibleChunks.empty())
   {
     return true;
   }
@@ -1588,11 +1603,15 @@ bool UChunkMeshCache::TrySkipFlatRebuildForVisibleChunks(
   if (visible == LastVisibleChunks && MeshRevision == LastVisibleMeshRevision)
   {
     LastCullCameraChunk = cam_chunk;
+    LastCullPlanes = frustum->planes;
+    HaveLastCullPlanes = true;
     return true;
   }
   LastVisibleChunks = std::move(visible);
   LastVisibleMeshRevision = MeshRevision;
   LastCullCameraChunk = cam_chunk;
+  LastCullPlanes = frustum->planes;
+  HaveLastCullPlanes = true;
   return false;
 }
 void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
@@ -1820,11 +1839,23 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
   const bool needs_cross_rebuild =
       CrossBatchesDirty ||
       (CrossBatches.empty() && TotalCrossCenterCount() > 0);
-  // Trade-off: camera rotation inside the same chunk does not rebuild flat
-  // lists.
+  constexpr float kPlaneEps = 1e-4f;
+  bool frustum_same = HaveLastCullPlanes;
+  if (frustum_same)
+  {
+    for (size_t i = 0; i < 6; ++i)
+    {
+      if (glm::length(frustum.planes[i] - LastCullPlanes[i]) > kPlaneEps)
+      {
+        frustum_same = false;
+        break;
+      }
+    }
+  }
+  // Skip only when camera chunk + mesh + frustum are unchanged (TD-CS-018).
   if (!InstancesDirty && !needs_greedy_rebuild && !needs_cross_rebuild &&
       MeshRevision == LastCullMeshRevision &&
-      camera_chunk == LastCullCameraChunk)
+      camera_chunk == LastCullCameraChunk && frustum_same)
   {
     return;
   }
@@ -1879,6 +1910,8 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
   }
   LastCullCameraChunk = camera_chunk;
   LastCullMeshRevision = MeshRevision;
+  LastCullPlanes = frustum.planes;
+  HaveLastCullPlanes = true;
 }
 void UChunkMeshCache::EnsureAsyncBuilder()
 {

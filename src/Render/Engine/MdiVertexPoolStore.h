@@ -68,6 +68,8 @@ public:
   uint64_t LastCullOpaqueTotal() const { return LastCullOpaqueTotal_; }
   uint64_t LastCullOpaqueOn() const { return LastCullOpaqueOn_; }
   uint64_t LastCpuAabbWouldOn() const { return LastCpuAabbWouldOn_; }
+  /// CPU wall around compact dispatch (no SubData); 0 on CPU cull path.
+  double LastCompactCullGpuMs() const { return LastCompactCullGpuMs_; }
 
   /// Enable rare CullStatsSsbo GetBufferSubData (default off — hot path free).
   void SetCullStatsReadbackEnabled(bool enabled)
@@ -86,6 +88,7 @@ private:
   uint64_t LastCullOpaqueTotal_{0};
   uint64_t LastCullOpaqueOn_{0};
   uint64_t LastCpuAabbWouldOn_{0};
+  double LastCompactCullGpuMs_{0.0};
 
   GLuint CullProgram{0};
   GLuint CullFrustumUbo{0};
@@ -105,5 +108,7 @@ private:
 
 /// Period consume of CullStatsSsbo GetBufferSubData count (sync readback).
 uint64_t ConsumeGpuCullStatsReadbackCount();
+/// Arm one upcoming ApplyGpuCompactCull to SubData CullStats (period/HUD).
+void RequestCullStatsReadbackOnce();
 
 } // namespace cutum

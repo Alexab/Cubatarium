@@ -1740,6 +1740,7 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
                           cullRevision, kBlockIdSortRev);
     if (mdi)
     {
+      mdi->SetCullStatsReadbackEnabled(ShowPerformance);
       mdi->ApplyGpuCompactCull(GreedyGpuOpaque, frustum, cameraPos,
                                max_cull_distance, horizontal_cull);
     }
@@ -1763,6 +1764,7 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
                        GreedyGpuCutout.VertexPool.CapacityBytes() +
                        GreedyGpuTransparent.VertexPool.CapacityBytes();
     auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+    phys.GpuCullGpuMs = 0.0;
     phys.GpuPoolUsedMb = static_cast<double>(used) / (1024.0 * 1024.0);
     phys.GpuPoolCapMb = static_cast<double>(cap) / (1024.0 * 1024.0);
     phys.VertexPoolFill =
@@ -1785,6 +1787,7 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
               ? phys.OpaqueCmdTotal - phys.OpaqueCmdOn
               : 0;
       phys.GpuCullIndirect = 1.0;
+      phys.GpuCullGpuMs = mdi->LastCompactCullGpuMs();
     }
   }
 
@@ -1960,6 +1963,11 @@ void UGeometryEngine::PrepareTransparent(
     mdi->ApplyGpuCompactCull(GreedyGpuTransparent, frustum, ctx.cameraPos,
                              ctx.cache.MaxCullDistance(),
                              ctx.cache.UseHorizontalCullDistance());
+    if (WorldInstance)
+    {
+      WorldInstance->GetPhysicsTelemetryMutable().GpuCullGpuMs +=
+          mdi->LastCompactCullGpuMs();
+    }
   }
   PreparedTransparentVp = ctx.viewProjection;
   PreparedTransparentTextures = &ctx.textures;

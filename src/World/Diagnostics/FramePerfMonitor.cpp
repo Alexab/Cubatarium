@@ -303,6 +303,7 @@ struct FrameNumbers
   uint64_t gpu_transparent_sort_readback{0};
   uint64_t gpu_cull_stats_readback{0};
   double gpu_cull_cpu_ms{0.0};
+  double gpu_cull_gpu_ms{0.0};
   uint64_t gpu_blocklight_flood{0};
   uint64_t gpu_fluid_readback{0};
   uint64_t gpu_light_readback{0};
@@ -523,6 +524,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.gpu_draw_cmds = phys.GpuDrawCmds;
   n.gpu_cull_ms = phys.GpuCullMs;
   n.gpu_cull_cpu_ms = phys.GpuCullMs;
+  n.gpu_cull_gpu_ms = phys.GpuCullGpuMs;
   n.vertex_pool_fill = phys.VertexPoolFill;
   n.gpu_cull_indirect = phys.GpuCullIndirect;
   n.opaque_cmd_total = phys.OpaqueCmdTotal;
@@ -753,6 +755,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"gpu_draw_cmds\":" << n.gpu_draw_cmds
           << ",\"gpu_cull_ms\":" << n.gpu_cull_ms
           << ",\"gpu_cull_cpu_ms\":" << n.gpu_cull_cpu_ms
+          << ",\"gpu_cull_gpu_ms\":" << n.gpu_cull_gpu_ms
           << ",\"vertex_pool_fill\":" << n.vertex_pool_fill
           << ",\"gpu_cull_indirect\":" << n.gpu_cull_indirect
           << ",\"opaque_cmd_total\":" << n.opaque_cmd_total
@@ -1043,6 +1046,8 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
   LogLine(period, "period", s.FrameCount, s.MaxWallMs);
   s.MeshApplyStaleAtPeriodStart = n.mesh_apply_stale;
   s.SoftDeferCaptureFloorHitsAtPeriodStart = n.softdefer_capture_floor_hits;
+  // Arm one cull-stats SubData on the next draw for the following period sample.
+  RequestCullStatsReadbackOnce();
   ResetAccum(s);
   s.LastEmit = now;
 }
