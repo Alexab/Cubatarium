@@ -12,4 +12,8 @@ bool TryGpuSortTransparentGreedyBatches(
 
 uint64_t ConsumeGpuTransparentSortCount() { return 0; }
 
+void NoteGpuTransparentSortReadback() {}
+
+uint64_t ConsumeGpuTransparentSortReadbackCount() { return 0; }
+
 } // namespace cutum

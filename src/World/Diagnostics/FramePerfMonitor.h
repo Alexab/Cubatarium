@@ -17,9 +17,11 @@ public:
   static void EnsureSession();
 
   /// Record one InGame frame. `swap_wait_ms` is wall time spent in SwapBuffers.
+  /// `frame_wall_ms` is same-frame wall (begin→after swap); does not mutate
+  /// World wall delta used for gameplay timing.
   /// `interval_sec` comes from UiSettings::PerfLogIntervalSec (default 2).
   static void OnInGameFrame(UWorld &world, double swap_wait_ms,
-                            double interval_sec);
+                            double interval_sec, double frame_wall_ms);
 
   static void Shutdown();
 

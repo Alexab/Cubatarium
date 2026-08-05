@@ -16,4 +16,8 @@ bool TryGpuSortTransparentGreedyBatches(
 
 uint64_t ConsumeGpuTransparentSortCount();
 
+/// Incremented on each keys SSBO glGetBufferSubData (sync readback).
+void NoteGpuTransparentSortReadback();
+uint64_t ConsumeGpuTransparentSortReadbackCount();
+
 } // namespace cutum

@@ -1,6 +1,7 @@
 #include "World/Diagnostics/FramePerfMonitor.h"
 
 #include "App/Core.h"
+#include "Render/Engine/MdiVertexPoolStore.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
 #include "Render/Mesh/GpuGreedyOpaqueEmit.h"
 #include "Render/Pipeline/GpuTransparentSort.h"
@@ -71,6 +72,11 @@ struct Session
   uint64_t SoftDeferCaptureFloorHitsAtPeriodStart{0};
   std::chrono::steady_clock::time_point LastEmit{
       std::chrono::steady_clock::now()};
+  double LastRssMb{0.0};
+  double LastPrivateMb{0.0};
+  int FramesSinceMemSample{30};
+  double AccumPerfCollectMs{0.0};
+  double AccumPerfEmitMs{0.0};
 };
 
 Session &GetSession()
@@ -153,6 +159,8 @@ struct FrameNumbers
   double autosave_ms{0.0};
   double render_total_ms{0.0};
   double residual_ms{0.0};
+  double perf_collect_ms{0.0};
+  double perf_emit_ms{0.0};
   double fluid_map_cpu_ms{0.0};
   double fluid_map_gpu_ms{0.0};
   int fluid_map_dirty{0};
@@ -292,6 +300,9 @@ struct FrameNumbers
   uint64_t gpu_mesh_vbo_dispatch{0};
   uint64_t gpu_light_seed_apply{0};
   uint64_t gpu_mask_readback{0};
+  uint64_t gpu_transparent_sort_readback{0};
+  uint64_t gpu_cull_stats_readback{0};
+  double gpu_cull_cpu_ms{0.0};
   uint64_t gpu_blocklight_flood{0};
   uint64_t gpu_fluid_readback{0};
   uint64_t gpu_light_readback{0};
@@ -327,11 +338,13 @@ struct FrameNumbers
   int spikes{0};
 };
 
-FrameNumbers Compute(UWorld &world, double swap_wait_ms)
+FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
+                     Session &s)
 {
   FrameNumbers n;
   const PhysicsTelemetry &phys = world.GetPhysicsTelemetry();
-  n.wall_ms = world.GetWallFrameDelta() * 1000.0;
+  n.wall_ms = frame_wall_ms > 0.0 ? frame_wall_ms
+                                  : world.GetWallFrameDelta() * 1000.0;
   n.phys_ms = phys.PhysicsStepMs;
   n.stream_ms = phys.StreamMs;
   n.mesh_emerge_ms = phys.MeshEmergeMs;
@@ -470,17 +483,26 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.softdefer_empty_stuck_horiz = phys.SoftDeferEmptyStuckHoriz;
   n.softdefer_held_n = phys.SoftDeferHeldN;
   n.pending_cols = phys.PendingFocusCols;
-#ifdef _WIN32
-  PROCESS_MEMORY_COUNTERS_EX pmc{};
-  pmc.cb = sizeof(pmc);
-  if (GetProcessMemoryInfo(GetCurrentProcess(),
-                           reinterpret_cast<PROCESS_MEMORY_COUNTERS *>(&pmc),
-                           sizeof(pmc)))
+  ++s.FramesSinceMemSample;
+  if (s.FramesSinceMemSample >= 30)
   {
-    n.rss_mb = static_cast<double>(pmc.WorkingSetSize) / (1024.0 * 1024.0);
-    n.private_mb = static_cast<double>(pmc.PrivateUsage) / (1024.0 * 1024.0);
-  }
+#ifdef _WIN32
+    PROCESS_MEMORY_COUNTERS_EX pmc{};
+    pmc.cb = sizeof(pmc);
+    if (GetProcessMemoryInfo(GetCurrentProcess(),
+                             reinterpret_cast<PROCESS_MEMORY_COUNTERS *>(&pmc),
+                             sizeof(pmc)))
+    {
+      s.LastRssMb =
+          static_cast<double>(pmc.WorkingSetSize) / (1024.0 * 1024.0);
+      s.LastPrivateMb =
+          static_cast<double>(pmc.PrivateUsage) / (1024.0 * 1024.0);
+    }
 #endif
+    s.FramesSinceMemSample = 0;
+  }
+  n.rss_mb = s.LastRssMb;
+  n.private_mb = s.LastPrivateMb;
   n.chunk_count = static_cast<int>(
       world.GetBlockWorld().GetChunkManager().GetResidentChunkCount());
   n.greedy_vertices = world.GetRenderInstanceCount();
@@ -500,6 +522,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.gpu_pool_cap_mb = phys.GpuPoolCapMb;
   n.gpu_draw_cmds = phys.GpuDrawCmds;
   n.gpu_cull_ms = phys.GpuCullMs;
+  n.gpu_cull_cpu_ms = phys.GpuCullMs;
   n.vertex_pool_fill = phys.VertexPoolFill;
   n.gpu_cull_indirect = phys.GpuCullIndirect;
   n.opaque_cmd_total = phys.OpaqueCmdTotal;
@@ -532,6 +555,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
   n.gpu_mesh_vbo_dispatch = UGpuGreedyMesher::ConsumeMeshVboDispatchCount();
   n.gpu_light_seed_apply = ConsumeGpuSkylightSeedApplyCount();
   n.gpu_mask_readback = UGpuGreedyMesher::ConsumeMaskReadbackCount();
+  n.gpu_transparent_sort_readback = ConsumeGpuTransparentSortReadbackCount();
+  n.gpu_cull_stats_readback = ConsumeGpuCullStatsReadbackCount();
   n.gpu_blocklight_flood = ConsumeGpuBlocklightFloodCount();
   n.gpu_fluid_readback = ConsumeGpuFluidReadbackCount();
   n.gpu_light_readback = ConsumeGpuSkylightSeedReadbackCount();
@@ -612,6 +637,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"autosave_ms\":" << n.autosave_ms
           << ",\"render_total_ms\":" << n.render_total_ms
           << ",\"residual_ms\":" << n.residual_ms
+          << ",\"perf_collect_ms\":" << n.perf_collect_ms
+          << ",\"perf_emit_ms\":" << n.perf_emit_ms
           << ",\"fluid_map_cpu_ms\":" << n.fluid_map_cpu_ms
           << ",\"fluid_map_gpu_ms\":" << n.fluid_map_gpu_ms
           << ",\"fluid_map_dirty\":" << n.fluid_map_dirty
@@ -725,6 +752,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"gpu_pool_cap_mb\":" << n.gpu_pool_cap_mb
           << ",\"gpu_draw_cmds\":" << n.gpu_draw_cmds
           << ",\"gpu_cull_ms\":" << n.gpu_cull_ms
+          << ",\"gpu_cull_cpu_ms\":" << n.gpu_cull_cpu_ms
           << ",\"vertex_pool_fill\":" << n.vertex_pool_fill
           << ",\"gpu_cull_indirect\":" << n.gpu_cull_indirect
           << ",\"opaque_cmd_total\":" << n.opaque_cmd_total
@@ -758,6 +786,9 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"gpu_mesh_vbo_dispatch\":" << n.gpu_mesh_vbo_dispatch
           << ",\"gpu_light_seed_apply\":" << n.gpu_light_seed_apply
           << ",\"gpu_mask_readback\":" << n.gpu_mask_readback
+          << ",\"gpu_transparent_sort_readback\":"
+          << n.gpu_transparent_sort_readback
+          << ",\"gpu_cull_stats_readback\":" << n.gpu_cull_stats_readback
           << ",\"gpu_blocklight_flood\":" << n.gpu_blocklight_flood
           << ",\"gpu_fluid_readback\":" << n.gpu_fluid_readback
           << ",\"gpu_light_readback\":" << n.gpu_light_readback
@@ -856,6 +887,8 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumMeshEmergeMs += n.mesh_emerge_ms;
   s.AccumSceneMs += n.scene_ms;
   s.AccumPhysMs += n.phys_ms;
+  s.AccumPerfCollectMs += n.perf_collect_ms;
+  s.AccumPerfEmitMs += n.perf_emit_ms;
   s.MaxWallMs = (std::max)(s.MaxWallMs, n.wall_ms);
   s.MaxStreamMs = (std::max)(s.MaxStreamMs, n.stream_ms);
   s.MaxMeshEmergeMs = (std::max)(s.MaxMeshEmergeMs, n.mesh_emerge_ms);
@@ -887,6 +920,8 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
   avg.mesh_emerge_ms = s.AccumMeshEmergeMs * inv;
   avg.scene_ms = s.AccumSceneMs * inv;
   avg.phys_ms = s.AccumPhysMs * inv;
+  avg.perf_collect_ms = s.AccumPerfCollectMs * inv;
+  avg.perf_emit_ms = s.AccumPerfEmitMs * inv;
   avg.max_wall_ms = s.MaxWallMs;
   avg.max_stream_ms = s.MaxStreamMs;
   avg.max_mesh_emerge_ms = s.MaxMeshEmergeMs;
@@ -918,6 +953,8 @@ void ResetAccum(Session &s)
   s.AccumMeshEmergeMs = 0.0;
   s.AccumSceneMs = 0.0;
   s.AccumPhysMs = 0.0;
+  s.AccumPerfCollectMs = 0.0;
+  s.AccumPerfEmitMs = 0.0;
   s.MaxWallMs = 0.0;
   s.MaxStreamMs = 0.0;
   s.MaxMeshEmergeMs = 0.0;
@@ -939,13 +976,18 @@ void UFramePerfMonitor::EnsureSession()
 }
 
 void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
-                                      double interval_sec)
+                                      double interval_sec, double frame_wall_ms)
 {
   Session &s = GetSession();
   std::lock_guard<std::mutex> lock(s.Mutex);
   OpenSessionLocked(s);
 
-  const FrameNumbers n = Compute(world, swap_wait_ms);
+  const auto collect_begin = std::chrono::steady_clock::now();
+  FrameNumbers n = Compute(world, swap_wait_ms, frame_wall_ms, s);
+  n.perf_collect_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - collect_begin)
+          .count();
   Accumulate(s, n);
 
   // Cap spike disk writes: cheap in-memory accumulate always; at most a few
@@ -953,7 +995,13 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
   constexpr int kMaxSpikesPerPeriod = 6;
   if (n.wall_ms > 100.0 && s.SpikesWrittenThisPeriod < kMaxSpikesPerPeriod)
   {
+    const auto emit_begin = std::chrono::steady_clock::now();
     WriteJsonl(s, n, "spike", /*flush=*/false);
+    n.perf_emit_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - emit_begin)
+            .count();
+    s.AccumPerfEmitMs += n.perf_emit_ms;
     ++s.SpikesWrittenThisPeriod;
     if (n.wall_ms > 250.0)
     {
@@ -970,6 +1018,9 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
     return;
   }
 
+  // Force a memory sample on period boundaries for MemoryBudget accuracy.
+  s.FramesSinceMemSample = 30;
+
   const FrameNumbers avg = AverageFromSession(s, n);
   FrameNumbers period = avg;
   period.mesh_apply_stale_delta =
@@ -981,7 +1032,12 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
           ? n.softdefer_capture_floor_hits -
                 s.SoftDeferCaptureFloorHitsAtPeriodStart
           : 0;
+  const auto emit_begin = std::chrono::steady_clock::now();
   WriteJsonl(s, period, "period", /*flush=*/true);
+  period.perf_emit_ms =
+      std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - emit_begin)
+          .count();
   LogLine(period, "period", s.FrameCount, s.MaxWallMs);
   s.MeshApplyStaleAtPeriodStart = n.mesh_apply_stale;
   s.SoftDeferCaptureFloorHitsAtPeriodStart = n.softdefer_capture_floor_hits;

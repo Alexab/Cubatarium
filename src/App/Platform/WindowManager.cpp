@@ -401,8 +401,6 @@ void UWindowManager::Run()
     if (World)
     {
       World->SetLastSwapWaitMs(swap_wait_ms);
-      // Same-frame wall for perf log (HUD still uses inter-frame DeltaTime).
-      World->SetWallFrameDelta(frame_wall_ms / 1000.0);
     }
     if (World && Application && Application->GetState() == AppState::InGame)
     {
@@ -411,9 +409,8 @@ void UWindowManager::Run()
       {
         interval = Core->GetUiSettings().PerfLogIntervalSec;
       }
-      UFramePerfMonitor::OnInGameFrame(*World, swap_wait_ms, interval);
-      // Restore inter-frame delta for gameplay timing consistency next frame.
-      World->SetWallFrameDelta(DeltaTime);
+      UFramePerfMonitor::OnInGameFrame(*World, swap_wait_ms, interval,
+                                       frame_wall_ms);
     }
 
     if (StopPredicate && StopPredicate())

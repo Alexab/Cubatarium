@@ -503,10 +503,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               }
               if (stuck_smoke_cd <= 0)
             {
+#if defined(CUBATARIUM_SOFTDEFER_SMOKE)
                 std::cerr << "[SoftDeferEmptySmoke] HasGreedy=!Drawable "
                           << "Dirty=0 SoftDefer~1 horiz=" << horiz << " at ("
                           << coord.x << "," << coord.y << "," << coord.z
                           << ")\n";
+#endif
                 stuck_smoke_cd = 120;
               }
             }
