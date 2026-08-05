@@ -1,17 +1,18 @@
 #include "Gui/Screens/SurvivalInventoryScreen.h"
 
 #include "Game/GameSession.h"
-#include "Gui/Interfaces/IUContentCatalog.h"
+#include "Gui/Core/GuiContext.h"
+#include "Gui/Core/GuiTheme.h"
 #include "Gui/Interfaces/IUGuiIconSource.h"
+#include "Gui/Layout/DockedOverlayLayout.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiScrollView.h"
 #include "Gui/Widgets/GuiSlot.h"
-#include "Gui/Core/GuiContext.h"
+#include "Gui/Widgets/GuiTabBar.h"
 #include "Game/Inventory/SlotInteraction.h"
 
 #include <algorithm>
-#include <iostream>
 #include <memory>
 
 namespace cutum
@@ -30,6 +31,7 @@ void USurvivalInventoryScreen::Build(UGuiContext &ctx)
 {
   Theme = &ctx.GetTheme();
   Built = false;
+  Kind = ContentKind::Block;
 
   auto rootShell = std::make_unique<UGuiPanel>(Theme);
   rootShell->SetDrawBackground(false);
@@ -41,16 +43,28 @@ void USurvivalInventoryScreen::Build(UGuiContext &ctx)
   panel->SetZOrder(10);
   Panel = panel.get();
 
-  auto title = std::make_unique<UGuiLabel>(Theme, "Backpack (items)");
+  auto title = std::make_unique<UGuiLabel>(Theme, "Backpack");
   title->SetUseSecondaryColor(true);
+  Title = title.get();
   Panel->AddChild(std::move(title));
+
+  auto tabs = std::make_unique<UGuiTabBar>(Theme);
+  tabs->SetTabs({"Blocks", "Items"});
+  Tabs = tabs.get();
+  Tabs->SetOnTabChanged([this](int tab) { ApplyTab(tab); });
+  Panel->AddChild(std::move(tabs));
+
+  auto empty = std::make_unique<UGuiLabel>(
+      Theme, "Empty — break blocks or craft to collect resources");
+  empty->SetUseSecondaryColor(true);
+  EmptyHint = empty.get();
+  Panel->AddChild(std::move(empty));
 
   auto scroll = std::make_unique<UGuiScrollView>(Theme);
   Scroll = scroll.get();
   Panel->AddChild(std::move(scroll));
 
   RootShell->AddChild(std::move(panel));
-
   Root = std::move(rootShell);
 
   SetVisible(false);
@@ -59,7 +73,7 @@ void USurvivalInventoryScreen::Build(UGuiContext &ctx)
 void USurvivalInventoryScreen::OnViewportChanged(int width, int height)
 {
   UGuiScreenBase::OnViewportChanged(width, height);
-  LayoutGridInScroll();
+  RelayoutPanel();
 }
 
 void USurvivalInventoryScreen::SetVisible(bool visible)
@@ -72,14 +86,97 @@ void USurvivalInventoryScreen::SetVisible(bool visible)
   if (visible)
   {
     RebuildGrid();
+    RelayoutPanel();
   }
 }
 
 void USurvivalInventoryScreen::Toggle() { SetVisible(!Visible); }
 
-void USurvivalInventoryScreen::Update(double dt)
+void USurvivalInventoryScreen::Update(double /*dt*/) {}
+
+void USurvivalInventoryScreen::ApplyTab(int tab)
 {
-  (void)dt;
+  Kind = (tab == 1) ? ContentKind::Item : ContentKind::Block;
+  RebuildGrid();
+  RelayoutPanel();
+}
+
+void USurvivalInventoryScreen::RelayoutPanel()
+{
+  if (!Panel || !Theme || !RootShell)
+  {
+    return;
+  }
+
+  DockedLayout layout = DockedOverlayLayout::Compute(
+      ViewportW, ViewportH, GetContentOffsetX(), GetContentOffsetY(), 70, 0,
+      *Theme);
+  const int slotSize = Theme->HotbarSlotSize;
+  const int hotbarReserve =
+      slotSize + Theme->HotbarMarginBottom + Theme->Padding * 2;
+  const int maxPanelH =
+      std::max(Scaled(160), ViewportH - hotbarReserve - ViewportH / 12);
+  if (layout.main.H > maxPanelH)
+  {
+    const int shrink = layout.main.H - maxPanelH;
+    layout.main.H = maxPanelH;
+    layout.main.Y += shrink / 2;
+  }
+  const int maxBottom = GetContentOffsetY() + ViewportH - hotbarReserve;
+  if (layout.main.Y + layout.main.H > maxBottom)
+  {
+    layout.main.Y = maxBottom - layout.main.H;
+  }
+
+  // Survival backpack uses the main dock only (no preview pane).
+  layout.main.W = std::min(layout.main.W + layout.preview.W + Theme->Padding,
+                           ViewportW - Theme->Padding * 2);
+  layout.main.X = GetContentOffsetX() +
+                  (ViewportW - layout.main.W) / 2;
+
+  RootShell->SetBounds(
+      {GetContentOffsetX(), GetContentOffsetY(), ViewportW, ViewportH});
+  Panel->SetBounds(layout.main);
+
+  const int pad = Theme->Padding;
+  const int panelX = layout.main.X;
+  const int panelY = layout.main.Y;
+  const int panelW = layout.main.W;
+  const int panelH = layout.main.H;
+  const int tabH = Theme->TabBarHeight;
+  const int titleH = Theme->FontSizeBody + 8;
+
+  if (Title)
+  {
+    Title->SetBounds({panelX + pad, panelY + pad, panelW - pad * 2, titleH});
+  }
+  if (Tabs)
+  {
+    Tabs->SetBounds(
+        {panelX + pad, panelY + pad + titleH + pad / 2, panelW - pad * 2, tabH});
+  }
+
+  const int scrollTop = panelY + pad + titleH + pad / 2 + tabH + pad;
+  const int scrollH = std::max(0, panelH - (scrollTop - panelY) - pad);
+  if (Scroll)
+  {
+    Scroll->SetBounds({panelX + pad, scrollTop, panelW - pad * 2, scrollH});
+  }
+  if (EmptyHint)
+  {
+    EmptyHint->SetBounds(
+        {panelX + pad, scrollTop + pad, panelW - pad * 2, titleH * 2});
+    EmptyHint->SetVisible(GridSlots.empty());
+  }
+
+  if (Built)
+  {
+    LayoutGridInScroll();
+    if (Scroll)
+    {
+      Scroll->LayoutContent();
+    }
+  }
 }
 
 void USurvivalInventoryScreen::RebuildGrid()
@@ -93,11 +190,11 @@ void USurvivalInventoryScreen::RebuildGrid()
   GridSlots.clear();
   GridEntryIds.clear();
 
-  const auto typeIds = Catalog->GetTypeIds(ContentKind::Item);
   std::vector<InventoryEntryView> all;
+  const auto typeIds = Catalog->GetTypeIds(Kind);
   for (const auto &typeId : typeIds)
   {
-    const auto entries = Session->GetEntries(ContentKind::Item, typeId);
+    const auto entries = Session->GetEntries(Kind, typeId);
     all.insert(all.end(), entries.begin(), entries.end());
   }
 
@@ -110,10 +207,19 @@ void USurvivalInventoryScreen::RebuildGrid()
             });
 
   const int slotSize = Theme->HotbarSlotSize;
-  for (size_t i = 0; i < all.size(); ++i)
+  for (const InventoryEntryView &view : all)
   {
-    const InventoryEntryRef entry = all[i].ref;
-    if (entry.empty || entry.Id.empty() || entry.kind != InventoryEntryKind::Item)
+    const InventoryEntryRef entry = view.ref;
+    if (entry.empty || entry.Id.empty())
+    {
+      continue;
+    }
+    if (Kind == ContentKind::Block &&
+        entry.kind != InventoryEntryKind::Block)
+    {
+      continue;
+    }
+    if (Kind == ContentKind::Item && entry.kind != InventoryEntryKind::Item)
     {
       continue;
     }
@@ -123,13 +229,20 @@ void USurvivalInventoryScreen::RebuildGrid()
 
     if (Icons)
     {
-      const unsigned tex = Icons->GetItemIconTexture(entry.Id);
+      const unsigned tex =
+          (Kind == ContentKind::Block)
+              ? Icons->GetBlockIconTexture(entry.Id)
+              : Icons->GetItemIconTexture(entry.Id);
       slot->SetIconTexture(tex);
     }
 
     if (entry.count > 1)
     {
       slot->SetCornerHint("x" + std::to_string(entry.count));
+    }
+    else if (entry.count < 0)
+    {
+      slot->SetCornerHint("inf");
     }
 
     const InventoryEntryRef entryCopy = entry;
@@ -151,6 +264,11 @@ void USurvivalInventoryScreen::RebuildGrid()
     GridEntryIds.push_back(entry.Id);
   }
 
+  if (EmptyHint)
+  {
+    EmptyHint->SetVisible(GridSlots.empty());
+  }
+
   Scroll->SetAfterScrollLayout([this](UGuiScrollView &)
                                { LayoutGridInScroll(); });
   Scroll->LayoutContent();
@@ -167,7 +285,7 @@ void USurvivalInventoryScreen::LayoutGridInScroll()
   const GuiRect contentRect = Scroll->Content().GetBounds();
   const int slotSize = Theme->HotbarSlotSize;
   const int gap = Theme->HotbarSlotGap;
-  const int viewportW = contentRect.W;
+  const int viewportW = std::max(1, contentRect.W);
   const int viewportH = std::max(1, Scroll->GetBounds().H);
   const int denom = std::max(1, slotSize + gap);
   const int cols = std::max(1, (viewportW + gap) / denom);
@@ -198,11 +316,9 @@ void USurvivalInventoryScreen::LayoutGridInScroll()
                        ? 0
                        : static_cast<int>((GridSlots.size() + cols - 1) / cols);
   const int contentHeight =
-      std::max(viewportH, rows * (slotSize + gap) - (rows > 0 ? gap : 0) +
-                               8);
+      std::max(viewportH, rows * (slotSize + gap) - (rows > 0 ? gap : 0) + 8);
   Scroll->Content().SetBounds(
       {contentRect.X, contentTop, viewportW, contentHeight});
 }
 
 } // namespace cutum
-

@@ -39,6 +39,22 @@ int main()
   }
   Expect(survivalInv.GetStorage().empty(),
          "survival does not init creative defaults");
+  survivalInv.EnsureDefaultHotbar();
+  Expect(survivalInv.GetActiveEntryRef() == nullptr,
+         "survival default hotbar has empty hands");
+  for (const auto &slot : survivalInv.GetHotbar(0).slots)
+  {
+    Expect(slot.empty || slot.entry.Id.empty(),
+           "survival default hotbar has no wood stub");
+  }
+
+  UCreatureInventory creativeHotbar;
+  creativeHotbar.InitCreativeDefaults();
+  creativeHotbar.EnsureDefaultHotbar();
+  Expect(creativeHotbar.GetActiveEntryRef() != nullptr &&
+             creativeHotbar.GetActiveEntryRef()->Id == "wood",
+         "creative default hotbar equips wood");
+
   for (const auto &entry : survivalInv.GetStorage())
   {
     Expect(entry.second != -1, "survival storage has no unlimited counts");

@@ -2,6 +2,7 @@
 #define SURVIVAL_INVENTORY_SCREEN_H
 
 #include "Gui/Core/GuiScreenBase.h"
+#include "Gui/Interfaces/IUContentCatalog.h"
 
 #include <string>
 #include <vector>
@@ -9,15 +10,16 @@
 namespace cutum
 {
 
-class IUContentCatalog;
 class UGameSession;
 class IUGuiIconSource;
 class UGuiScrollView;
 class UGuiPanel;
 class UGuiSlot;
+class UGuiLabel;
+class UGuiTabBar;
 struct GuiTheme;
 
-/// Survival backpack UI (owned items only).
+/// Survival backpack UI: owned blocks + items from creature storage.
 class USurvivalInventoryScreen : public UGuiScreenBase
 {
 public:
@@ -35,8 +37,10 @@ public:
   void OnViewportChanged(int width, int height) override;
 
 private:
+  void RelayoutPanel();
   void RebuildGrid();
   void LayoutGridInScroll();
+  void ApplyTab(int tab);
 
   IUContentCatalog *Catalog{nullptr};
   UGameSession *Session{nullptr};
@@ -44,9 +48,13 @@ private:
 
   UGuiPanel *RootShell{nullptr};
   UGuiPanel *Panel{nullptr};
+  UGuiLabel *Title{nullptr};
+  UGuiLabel *EmptyHint{nullptr};
+  UGuiTabBar *Tabs{nullptr};
   UGuiScrollView *Scroll{nullptr};
 
   const GuiTheme *Theme{nullptr};
+  ContentKind Kind{ContentKind::Block};
   bool Visible{false};
   bool Built{false};
 
@@ -57,4 +65,3 @@ private:
 } // namespace cutum
 
 #endif
-

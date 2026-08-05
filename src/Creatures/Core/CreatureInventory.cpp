@@ -110,16 +110,14 @@ void UCreatureInventory::MigrateCreativeStorageToSurvival()
 void UCreatureInventory::EnsureDefaultHotbar()
 {
   EnsureHotbarCount(1);
-  bool hotbarEmpty = true;
-  for (const auto &slot : GetHotbar(0).slots)
-  {
-    if (!slot.empty && !slot.entry.Id.empty())
-    {
-      hotbarEmpty = false;
-      break;
-    }
-  }
-  if (GetHotbar(0).slots[1].empty)
+
+  const auto woodIt = Storage.find("wood");
+  const bool creativeUnlimitedWood =
+      woodIt != Storage.end() && woodIt->second < 0;
+
+  // Creative-only stub: put unlimited wood in slot 1 when storage already has
+  // unlimited wood (InitCreativeDefaults). Survival starts with empty hands.
+  if (creativeUnlimitedWood)
   {
     bool hasBlock = false;
     for (const auto &slot : GetHotbar(0).slots)
@@ -131,7 +129,7 @@ void UCreatureInventory::EnsureDefaultHotbar()
         break;
       }
     }
-    if (!hasBlock)
+    if (!hasBlock && GetHotbar(0).slots[1].empty)
     {
       InventoryEntryRef wood;
       wood.kind = InventoryEntryKind::Block;
@@ -141,9 +139,62 @@ void UCreatureInventory::EnsureDefaultHotbar()
       AssignToHotbar(0, 1, wood);
     }
   }
+
+  // Owned / survival: drop hotbar ghosts that are not backed by storage, and
+  // convert leftover creative unlimited counts to owned stack sizes.
+  for (size_t slot = 0; slot < Hotbars[0].slots.size(); ++slot)
+  {
+    auto &s = Hotbars[0].slots[slot];
+    if (s.empty || s.entry.Id.empty())
+    {
+      continue;
+    }
+    if (s.entry.kind != InventoryEntryKind::Block &&
+        s.entry.kind != InventoryEntryKind::Object)
+    {
+      continue;
+    }
+    const auto it = Storage.find(s.entry.Id);
+    if (it == Storage.end() || it->second == 0)
+    {
+      ClearHotbarSlot(0, slot);
+      continue;
+    }
+    if (s.entry.count < 0 && it->second >= 0)
+    {
+      s.entry.count = it->second;
+    }
+  }
+
+  bool hotbarEmpty = true;
+  size_t firstFilled = 0;
+  bool foundFilled = false;
+  for (size_t slot = 0; slot < GetHotbar(0).slots.size(); ++slot)
+  {
+    const auto &s = GetHotbar(0).slots[slot];
+    if (!s.empty && !s.entry.Id.empty())
+    {
+      hotbarEmpty = false;
+      if (!foundFilled)
+      {
+        firstFilled = slot;
+        foundFilled = true;
+      }
+    }
+  }
+
   if (hotbarEmpty)
   {
-    SetActiveSlot(0, 1);
+    SetActiveSlot(0, 0);
+  }
+  else if (foundFilled)
+  {
+    const size_t active = GetActiveSlotIndex();
+    if (active >= GetHotbar(0).slots.size() ||
+        GetHotbar(0).slots[active].empty)
+    {
+      SetActiveSlot(0, firstFilled);
+    }
   }
 }
 

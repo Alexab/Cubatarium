@@ -81,21 +81,25 @@ bool ResourceEconomyService::ConsumeOnPlace(WorldGameMode mode,
     it->second = next;
   }
 
-  // Clear active slot if it was using the consumed stack.
-  if (inv.GetStorage().find(activeEntry.Id) == inv.GetStorage().end())
+  // Sync hotbar counts for matching stacks.
+  auto &bars = inv.GetHotbarsMutable();
+  for (size_t bi = 0; bi < bars.size(); ++bi)
   {
-    const size_t bar = inv.GetActiveBarIndex();
-    const size_t slot = inv.GetActiveSlotIndex();
-
-    if (bar < inv.GetHotbarCount() && slot < 10)
+    for (size_t si = 0; si < bars[bi].slots.size(); ++si)
     {
-      if (auto *activeRef = inv.GetActiveEntryRef())
+      auto &slot = bars[bi].slots[si];
+      if (slot.empty || slot.entry.kind != activeEntry.kind ||
+          slot.entry.Id != activeEntry.Id)
       {
-        if (activeRef->kind == activeEntry.kind &&
-            activeRef->Id == activeEntry.Id)
-        {
-          inv.ClearHotbarSlot(bar, slot);
-        }
+        continue;
+      }
+      if (next <= 0)
+      {
+        inv.ClearHotbarSlot(bi, si);
+      }
+      else
+      {
+        slot.entry.count = next;
       }
     }
   }
@@ -126,6 +130,43 @@ void ResourceEconomyService::GrantBlockDrop(WorldGameMode mode,
   }
 
   inv.AddItem(blockTypeName, count);
+
+  // Keep hotbar stack counts in sync so the HUD reflects backpack totals.
+  const auto storageIt = inv.GetStorage().find(blockTypeName);
+  const int total =
+      (storageIt == inv.GetStorage().end()) ? 0 : storageIt->second;
+  if (total <= 0)
+  {
+    return;
+  }
+
+  auto &bars = inv.GetHotbarsMutable();
+  bool syncedExisting = false;
+  for (auto &bar : bars)
+  {
+    for (auto &slot : bar.slots)
+    {
+      if (slot.empty || slot.entry.Id != blockTypeName ||
+          slot.entry.kind != InventoryEntryKind::Block)
+      {
+        continue;
+      }
+      slot.entry.count = total;
+      syncedExisting = true;
+    }
+  }
+
+  // Empty hands: auto-equip the drop so place/dig loop works immediately.
+  if (!syncedExisting && !inv.GetActiveEntryRef())
+  {
+    InventoryEntryRef entry;
+    entry.empty = false;
+    entry.kind = InventoryEntryKind::Block;
+    entry.Id = blockTypeName;
+    entry.count = total;
+    inv.AssignToHotbar(inv.GetActiveBarIndex(), inv.GetActiveSlotIndex(),
+                       entry);
+  }
 }
 
 } // namespace cutum
