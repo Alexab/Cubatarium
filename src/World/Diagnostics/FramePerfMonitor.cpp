@@ -481,12 +481,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms)
     n.private_mb = static_cast<double>(pmc.PrivateUsage) / (1024.0 * 1024.0);
   }
 #endif
-  {
-    int chunks = 0;
-    world.GetBlockWorld().GetChunkManager().ForEachChunk(
-        [&](const auto &) { ++chunks; });
-    n.chunk_count = chunks;
-  }
+  n.chunk_count = static_cast<int>(
+      world.GetBlockWorld().GetChunkManager().GetResidentChunkCount());
   n.greedy_vertices = world.GetRenderInstanceCount();
   n.mesh_completed_n = phys.MeshCompletedN;
   n.mesh_completed_cap = phys.MeshCompletedCap;

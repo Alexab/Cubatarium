@@ -40,6 +40,8 @@ public:
   void EnsureChunk(glm::ivec3 chunk_coord);
   void RemoveChunk(glm::ivec3 chunk_coord);
   void ForEachChunk(const std::function<void(const UChunk &)> &fn) const;
+  /// O(1) resident chunk count (loaded map size, not free-list).
+  size_t GetResidentChunkCount() const { return Chunks.size(); }
   /// Cap recycled chunks retained after unload (0 = destroy immediately).
   void SetMaxFreeListChunks(size_t cap) { MaxFreeListChunks = cap; }
   size_t GetFreeListSize() const { return FreeList.size(); }
