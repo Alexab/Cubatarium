@@ -1548,6 +1548,17 @@ bool UChunkMeshCache::TrySkipFlatRebuildForVisibleChunks(
   {
     return false;
   }
+  // Fast path: same camera chunk + mesh revision → reuse LastVisibleChunks
+  // without rescanning GreedyCache (TD-CS-018 incremental cull).
+  const glm::ivec3 cam_chunk = UChunkManager::WorldToChunk(
+      glm::ivec3(WorldCoordToBlockIndex(cameraPos->x),
+                 WorldCoordToBlockIndex(cameraPos->y),
+                 WorldCoordToBlockIndex(cameraPos->z)));
+  if (cam_chunk == LastCullCameraChunk &&
+      MeshRevision == LastVisibleMeshRevision && !LastVisibleChunks.empty())
+  {
+    return true;
+  }
   const bool horizontal_cull = UseHorizontalCullDistance();
   std::vector<glm::ivec3> visible;
   visible.reserve(GreedyCache.size());
@@ -1576,10 +1587,12 @@ bool UChunkMeshCache::TrySkipFlatRebuildForVisibleChunks(
             });
   if (visible == LastVisibleChunks && MeshRevision == LastVisibleMeshRevision)
   {
+    LastCullCameraChunk = cam_chunk;
     return true;
   }
   LastVisibleChunks = std::move(visible);
   LastVisibleMeshRevision = MeshRevision;
+  LastCullCameraChunk = cam_chunk;
   return false;
 }
 void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
