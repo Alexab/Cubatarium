@@ -47,15 +47,13 @@ InfluencePrediction InfluenceResolver::Resolve(
   {
     return pred;
   }
-  if (channel == InfluenceChannel::Use)
-  {
-    pred.Capability.Channel = channel;
-    pred.CancelReason = "use_unimplemented";
-    pred.Cancelled = true;
-    return pred;
-  }
 
-  if (channel != InfluenceChannel::Dig &&
+  const InfluenceChannel capChannel =
+      channel == InfluenceChannel::Use ? InfluenceChannel::Melee : channel;
+
+  // "Use" is not necessarily combat, but for now we route it through the
+  // same influence pipeline as melee capabilities.
+  if (channel != InfluenceChannel::Dig && channel != InfluenceChannel::Use &&
       !ModePolicy::AllowsCombatDamage(mode))
   {
     pred.CancelReason = "creative";
@@ -63,7 +61,7 @@ InfluencePrediction InfluenceResolver::Resolve(
     return pred;
   }
 
-  if (channel != InfluenceChannel::Dig &&
+  if (channel != InfluenceChannel::Dig && channel != InfluenceChannel::Use &&
       !ModePolicy::AllowsHostileAggro(mode, world.GetDifficulty()))
   {
     // Safety net: hostile melee vs player cancelled on Peaceful.
@@ -142,9 +140,9 @@ InfluencePrediction InfluenceResolver::Resolve(
   InfluenceCapability cap;
   const UBareHandToolInfluenceProvider bare;
   const IUToolInfluenceProvider *provider = tools ? tools : &bare;
-  if (!provider->TryGetCapability(source, channel, cap))
+  if (!provider->TryGetCapability(source, capChannel, cap))
   {
-    if (!bare.TryGetCapability(source, InfluenceChannel::Melee, cap))
+    if (!bare.TryGetCapability(source, capChannel, cap))
     {
       pred.CancelReason = "no_capability";
       pred.Cancelled = true;
