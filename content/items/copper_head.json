@@ -1,0 +1,19 @@
+{
+  "id": "copper_head",
+  "displayName": "Copper Head",
+  "types": [
+    "armor",
+    "head"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "armor": {
+    "slots": [
+      "head"
+    ],
+    "armor_groups": {
+      "fleshy": 56
+    }
+  },
+  "model": "models/items/copper_head/model.gltf"
+}

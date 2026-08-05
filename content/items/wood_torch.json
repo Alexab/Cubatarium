@@ -1,0 +1,25 @@
+{
+  "id": "wood_torch",
+  "displayName": "Wood Torch",
+  "types": [
+    "utility"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "repair": {
+    "materials": [
+      "oak_log",
+      "wood"
+    ],
+    "amount": 0.25
+  },
+  "tool": {
+    "full_punch_interval": 1.0,
+    "damage": {
+      "melee": 1,
+      "fleshy": 1
+    },
+    "punch_attack_uses": 60
+  },
+  "model": "models/items/wood_torch/model.gltf"
+}

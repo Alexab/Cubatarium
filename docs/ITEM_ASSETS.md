@@ -6,41 +6,60 @@ Educational Cubatarium content under `models/items/` and `content/items/`.
 
 | Priority | Format | Path pattern | Renderer |
 |----------|--------|--------------|----------|
-| 1 | Static glTF | `models/items/<id>/model.gltf` (or `model` field ending in `.gltf`) | `UItemPreviewRenderer` via `CreatureGltfLoader` |
-| 2 | `parts[]` JSON | `models/items/<id>.json` | Cube parts FBO preview |
+| 1 | Static glTF | `models/items/<id>/model.gltf` (or `model` field ending in `.gltf`) | Icons: `UItemPreviewRenderer`; FP: `UFpViewmodelRenderer::TryDrawGltfHeld`; worn armor: `WornEquipmentDrawer` |
+| 2 | `parts[]` JSON | `models/items/<id>.json` | Cube parts FBO / FP fallback |
 | 3 | Procedural | (none) | `FallbackParts` by item id keywords |
 
 Item definitions in `content/items/*.json` set `"model"` to the preferred asset.
 
-## Shipped curated set (v1)
+## Folder layout (canon)
 
-**Tools (12 existing + 3 demo):** wood/stone/iron × sword, axe, pickaxe, shovel; plus `iron_hammer`, `stone_knife`, `wood_bow`.
+```
+models/items/<id>/
+  model.gltf
+  model.bin? / textures / model.glb (optional upstream)
+  ATTRIBUTION.json
+  LICENSE.txt
+  wear.json          # armor attach: bones, offset, euler_deg, scale
+content/items/<id>.json
+models/items/<id>.json   # parts_v1 fallback (kept)
+```
 
-**Armor (2 sets × 6 slots):** `leather_*` and `iron_*` for `head`, `chest`, `arms`, `hands`, `legs`, `feet` with `armor.slots` + `armor.armor_groups`. Visible under Creative **Tools → Armor** (`itemTypes` includes `armor`).
+## Shipped catalog
 
-First-person wield uses the same `parts[]` (and Block atlas cubes) in `UFpViewmodelRenderer::DrawWorldOverlay` (clear-Z, FOV 72°, dual arms + offhand). Perspective only.
+Base tools (wood/stone/iron × sword/axe/pickaxe/shovel) plus hammer/knife/bow; leather + iron armor sets; expanded free-tier catalog (copper tools/armor, spears, shields, utility tools, Kenney upgraded tools). See `tools/item_model_manifest.json`.
 
-Shipped mesh authoring is low-poly `parts[]` JSON (CC0 / Cubatarium educational). Visual language is intentionally compatible with common CC0 low-poly kits.
+First-person wield: glTF when present, else `parts[]` / block cubes (`DrawWorldOverlay`, clear-Z, FOV 72°). Perspective only.
+
+Worn armor: attached to human `bone_skeleton` bones (`hat`, `body`, `*Arm`, `*Leg`, `*Item`) in world TP and character-sheet 3D preview.
 
 ## Upstream CC0 sources (import)
 
 | Pack | License | URL | Use |
-|------|---------|-----|-----|
-| Kenney Survival Kit | CC0-1.0 | https://www.kenney.nl/assets/survival-kit | tools (shovel, …) |
-| KayKit RPG Tools Bits | CC0-1.0 | https://kaylousberg.itch.io/rpg-tools-bits | pickaxe, axe, hammer |
-| Quaternius Fantasy Props / Ultimate RPG Items | CC0-1.0 | https://quaternius.com/ | swords, bows, helmets, armor props |
+|------|---------|-----|------|
+| Kenney Survival Kit | CC0-1.0 | https://www.kenney.nl/assets/survival-kit | shovel/axe/pickaxe/hammer/hoe (GLB→glTF) |
+| KayKit RPG Tools Bits | CC0-1.0 | https://kaylousberg.itch.io/rpg-tools-bits | hand tools (place under `third_party/asset_cache/`) |
+| KayKit Fantasy Weapons Bits | CC0-1.0 | https://kaylousberg.itch.io/fantasy-weapons-bits | swords/spears/shields |
+| Quaternius Fantasy Props | CC0-1.0 | https://quaternius.com/ | armor/weapon props |
 
-Import helper:
+Without packs, `tools/parts_to_gltf.py` builds educational CC0 stand-in glTF from `parts_v1`.
 
 ```bash
+# Inventory extracted pack
+python tools/inventory_pack_assets.py --pack-root third_party/asset_cache/kenney_survival_kit --source-id kenney_survival_kit
+
+# Import (requires --source-id)
 python tools/import_item_models.py --list
-python tools/import_item_models.py --pack-root /path/to/extracted/pack
+python tools/import_item_models.py --source-id kenney_survival_kit --pack-root third_party/asset_cache/kenney_survival_kit --retarget-content
+
+# Generate stubs for role:new + validate
+python tools/generate_item_defs_from_manifest.py
+python tools/parts_to_gltf.py --retarget-content
+python tools/validate_item_defs.py
 ```
 
-Manifest: [`tools/item_model_manifest.json`](../tools/item_model_manifest.json) (created on first run).
-
-After import, optionally retarget `"model"` in `content/items/<id>.json` to `models/items/<id>/model.gltf`.
+Manifest: [`tools/item_model_manifest.json`](../tools/item_model_manifest.json). Cache: [`third_party/asset_cache/README.md`](../third_party/asset_cache/README.md) (gitignored extracts).
 
 ## Attribution
 
-See [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md) § Item / armor models.
+See [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md) § Item / armor models. Only CC0-1.0 content is accepted.

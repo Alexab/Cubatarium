@@ -7,7 +7,7 @@
   ],
   "stack_max": 1,
   "wear_end": "destroy",
-  "model": "models/items/iron_head.json",
+  "model": "models/items/iron_head/model.gltf",
   "armor": {
     "slots": [
       "head"

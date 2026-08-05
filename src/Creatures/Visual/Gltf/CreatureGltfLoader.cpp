@@ -25,8 +25,29 @@ std::vector<uint8_t> ReadFileBytes(const std::string &path)
                               std::istreambuf_iterator<char>());
 }
 
+std::vector<std::vector<uint8_t>> LoadGltfBuffers(
+    const nlohmann::json &gltf, const std::filesystem::path &baseDir)
+{
+  std::vector<std::vector<uint8_t>> bins;
+  if (!gltf.contains("buffers") || !gltf["buffers"].is_array())
+  {
+    return bins;
+  }
+  bins.resize(gltf["buffers"].size());
+  for (size_t i = 0; i < bins.size(); ++i)
+  {
+    const std::string uri = gltf["buffers"][i].value("uri", "");
+    if (uri.empty() || uri.rfind("data:", 0) == 0)
+    {
+      continue;
+    }
+    bins[i] = ReadFileBytes((baseDir / uri).string());
+  }
+  return bins;
+}
+
 const uint8_t *AccessorPtr(const nlohmann::json &gltf,
-                           const std::vector<uint8_t> &bin,
+                           const std::vector<std::vector<uint8_t>> &bins,
                            int accessorIndex, size_t &byteStride,
                            int &componentType, std::string &type, size_t &count)
 {
@@ -49,6 +70,12 @@ const uint8_t *AccessorPtr(const nlohmann::json &gltf,
     return nullptr;
   }
   const auto &bv = gltf["bufferViews"][bvIndex];
+  const int bufferIndex = bv.value("buffer", 0);
+  if (bufferIndex < 0 || bufferIndex >= static_cast<int>(bins.size()))
+  {
+    return nullptr;
+  }
+  const std::vector<uint8_t> &bin = bins[static_cast<size_t>(bufferIndex)];
   const size_t offset = bv.value("byteOffset", 0) + acc.value("byteOffset", 0);
   byteStride = bv.value("byteStride", 0);
   if (offset >= bin.size())
@@ -101,7 +128,7 @@ size_t TypeComponents(const std::string &type)
 }
 
 std::vector<float> ReadFloatAccessor(const nlohmann::json &gltf,
-                                     const std::vector<uint8_t> &bin,
+                                     const std::vector<std::vector<uint8_t>> &bins,
                                      int accessorIndex)
 {
   size_t stride = 0;
@@ -109,7 +136,7 @@ std::vector<float> ReadFloatAccessor(const nlohmann::json &gltf,
   std::string type;
   size_t count = 0;
   const uint8_t *ptr =
-      AccessorPtr(gltf, bin, accessorIndex, stride, componentType, type, count);
+      AccessorPtr(gltf, bins, accessorIndex, stride, componentType, type, count);
   if (!ptr || componentType != 5126)
   {
     return {};
@@ -136,7 +163,7 @@ std::vector<float> ReadFloatAccessor(const nlohmann::json &gltf,
 }
 
 std::vector<unsigned int>
-ReadIndexAccessor(const nlohmann::json &gltf, const std::vector<uint8_t> &bin,
+ReadIndexAccessor(const nlohmann::json &gltf, const std::vector<std::vector<uint8_t>> &bins,
                   int accessorIndex)
 {
   size_t stride = 0;
@@ -144,7 +171,7 @@ ReadIndexAccessor(const nlohmann::json &gltf, const std::vector<uint8_t> &bin,
   std::string type;
   size_t count = 0;
   const uint8_t *ptr =
-      AccessorPtr(gltf, bin, accessorIndex, stride, componentType, type, count);
+      AccessorPtr(gltf, bins, accessorIndex, stride, componentType, type, count);
   if (!ptr || type != "SCALAR")
   {
     return {};
@@ -212,7 +239,7 @@ std::string MaterialTextureStem(const nlohmann::json &gltf, int materialIndex)
 }
 
 std::vector<uint8_t> ReadU8Accessor(const nlohmann::json &gltf,
-                                    const std::vector<uint8_t> &bin,
+                                    const std::vector<std::vector<uint8_t>> &bins,
                                     int accessorIndex)
 {
   size_t stride = 0;
@@ -220,7 +247,7 @@ std::vector<uint8_t> ReadU8Accessor(const nlohmann::json &gltf,
   std::string type;
   size_t count = 0;
   const uint8_t *ptr =
-      AccessorPtr(gltf, bin, accessorIndex, stride, componentType, type, count);
+      AccessorPtr(gltf, bins, accessorIndex, stride, componentType, type, count);
   if (!ptr || componentType != 5121)
   {
     return {};
@@ -244,10 +271,10 @@ std::vector<uint8_t> ReadU8Accessor(const nlohmann::json &gltf,
 }
 
 std::vector<glm::mat4> ReadMat4Accessor(const nlohmann::json &gltf,
-                                        const std::vector<uint8_t> &bin,
+                                        const std::vector<std::vector<uint8_t>> &bins,
                                         int accessorIndex)
 {
-  const std::vector<float> floats = ReadFloatAccessor(gltf, bin, accessorIndex);
+  const std::vector<float> floats = ReadFloatAccessor(gltf, bins, accessorIndex);
   std::vector<glm::mat4> mats;
   for (size_t i = 0; i + 15 < floats.size(); i += 16)
   {
@@ -311,7 +338,8 @@ void ParseNodes(const nlohmann::json &gltf, CreatureGltfMeshAsset &asset)
   }
 }
 
-void ParseSkin(const nlohmann::json &gltf, const std::vector<uint8_t> &bin,
+void ParseSkin(const nlohmann::json &gltf,
+               const std::vector<std::vector<uint8_t>> &bins,
                CreatureGltfMeshAsset &asset)
 {
   if (!gltf.contains("skins") || gltf["skins"].empty())
@@ -327,12 +355,13 @@ void ParseSkin(const nlohmann::json &gltf, const std::vector<uint8_t> &bin,
     }
   }
   const int ibmAcc = skinJson.value("inverseBindMatrices", -1);
-  asset.skin.inverseBindMatrices = ReadMat4Accessor(gltf, bin, ibmAcc);
+  asset.skin.inverseBindMatrices = ReadMat4Accessor(gltf, bins, ibmAcc);
   asset.hasSkin = !asset.skin.jointNodes.empty();
 }
 
 GltfAnimationChannelCpu
-ReadAnimationChannel(const nlohmann::json &gltf, const std::vector<uint8_t> &bin,
+ReadAnimationChannel(const nlohmann::json &gltf,
+                     const std::vector<std::vector<uint8_t>> &bins,
                      const nlohmann::json &channelJson,
                      const nlohmann::json &samplerJson)
 {
@@ -345,8 +374,8 @@ ReadAnimationChannel(const nlohmann::json &gltf, const std::vector<uint8_t> &bin
   }
   const int inputAcc = samplerJson.value("input", -1);
   const int outputAcc = samplerJson.value("output", -1);
-  ch.keyTimes = ReadFloatAccessor(gltf, bin, inputAcc);
-  const std::vector<float> outFloats = ReadFloatAccessor(gltf, bin, outputAcc);
+  ch.keyTimes = ReadFloatAccessor(gltf, bins, inputAcc);
+  const std::vector<float> outFloats = ReadFloatAccessor(gltf, bins, outputAcc);
   if (ch.path == "translation" || ch.path == "scale")
   {
     for (size_t i = 0; i + 2 < outFloats.size(); i += 3)
@@ -388,22 +417,13 @@ CreatureGltfLoader::LoadFromFile(const std::string &gltfPath)
     return nullptr;
   }
 
-  std::vector<uint8_t> bin;
-  if (gltf.contains("buffers") && gltf["buffers"].is_array() &&
-      !gltf["buffers"].empty())
-  {
-    const std::string uri = gltf["buffers"][0].value("uri", "");
-    if (!uri.empty() && uri != "data:application/octet-stream;base64,")
-    {
-      const std::filesystem::path base =
-          std::filesystem::path(gltfPath).parent_path();
-      bin = ReadFileBytes((base / uri).string());
-    }
-  }
+  const std::filesystem::path baseDir =
+      std::filesystem::path(gltfPath).parent_path();
+  const std::vector<std::vector<uint8_t>> bins = LoadGltfBuffers(gltf, baseDir);
 
   auto asset = std::make_shared<CreatureGltfMeshAsset>();
   ParseNodes(gltf, *asset);
-  ParseSkin(gltf, bin, *asset);
+  ParseSkin(gltf, bins, *asset);
   if (gltf.contains("nodes") && gltf["nodes"].is_array() && !gltf["nodes"].empty())
   {
     asset->rootNodeIndex = 0;
@@ -427,13 +447,13 @@ CreatureGltfLoader::LoadFromFile(const std::string &gltfPath)
         const int jointsAcc = primJson["attributes"].value("JOINTS_0", -1);
         const int weightsAcc = primJson["attributes"].value("WEIGHTS_0", -1);
         const std::vector<float> positions =
-            ReadFloatAccessor(gltf, bin, posAcc);
-        const std::vector<float> uvs = ReadFloatAccessor(gltf, bin, uvAcc);
+            ReadFloatAccessor(gltf, bins, posAcc);
+        const std::vector<float> uvs = ReadFloatAccessor(gltf, bins, uvAcc);
         const int idxAcc = primJson.value("indices", -1);
         BuildInterleavedMesh(prim.mesh, positions, uvs);
-        prim.mesh.indices = ReadIndexAccessor(gltf, bin, idxAcc);
-        prim.jointIndices = ReadU8Accessor(gltf, bin, jointsAcc);
-        prim.jointWeights = ReadFloatAccessor(gltf, bin, weightsAcc);
+        prim.mesh.indices = ReadIndexAccessor(gltf, bins, idxAcc);
+        prim.jointIndices = ReadU8Accessor(gltf, bins, jointsAcc);
+        prim.jointWeights = ReadFloatAccessor(gltf, bins, weightsAcc);
         prim.skinned = !prim.jointIndices.empty() && !prim.jointWeights.empty() &&
                        asset->hasSkin;
         prim.textureStem =
@@ -463,7 +483,7 @@ CreatureGltfLoader::LoadFromFile(const std::string &gltfPath)
               samplerIndex < static_cast<int>(samplers.size()))
           {
             anim.channels.push_back(ReadAnimationChannel(
-                gltf, bin, chJson, samplers[samplerIndex]));
+                gltf, bins, chJson, samplers[samplerIndex]));
           }
         }
       }

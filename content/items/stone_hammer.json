@@ -1,0 +1,37 @@
+{
+  "id": "stone_hammer",
+  "displayName": "Stone Hammer",
+  "types": [
+    "utility",
+    "mining"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "repair": {
+    "materials": [
+      "cobble",
+      "stone"
+    ],
+    "amount": 0.25
+  },
+  "tool": {
+    "full_punch_interval": 1.1,
+    "damage": {
+      "melee": 3,
+      "fleshy": 3
+    },
+    "groupcaps": {
+      "cracky": {
+        "maxlevel": 1,
+        "uses": 40,
+        "times": {
+          "1": 2.0,
+          "2": 1.4,
+          "3": 1.0
+        }
+      }
+    },
+    "punch_attack_uses": 100
+  },
+  "model": "models/items/stone_hammer/model.gltf"
+}

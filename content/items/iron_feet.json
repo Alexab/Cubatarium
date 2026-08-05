@@ -7,7 +7,7 @@
   ],
   "stack_max": 1,
   "wear_end": "destroy",
-  "model": "models/items/iron_feet.json",
+  "model": "models/items/iron_feet/model.gltf",
   "armor": {
     "slots": [
       "feet"

@@ -7,7 +7,7 @@
   ],
   "stack_max": 1,
   "wear_end": "destroy",
-  "model": "models/items/leather_feet.json",
+  "model": "models/items/leather_feet/model.gltf",
   "armor": {
     "slots": [
       "feet"

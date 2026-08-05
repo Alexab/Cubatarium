@@ -223,14 +223,17 @@ Luanti schematic files in `third_party/schematics/` (also used from `prefabs/` /
 
 ## Item / armor models
 
-Curated low-poly item and armor previews under [`models/items/`](models/items/) (`parts[]` JSON, CC0 educational authoring). Optional upstream CC0 glTF import via [`tools/import_item_models.py`](tools/import_item_models.py).
+Curated and imported item/armor assets under [`models/items/`](models/items/) (`parts_v1` JSON + folder-per-id `model.gltf`). Import via [`tools/import_item_models.py`](tools/import_item_models.py); stand-in glTF via [`tools/parts_to_gltf.py`](tools/parts_to_gltf.py). Manifest: [`tools/item_model_manifest.json`](tools/item_model_manifest.json).
 
 | Source | License | Notes |
 |--------|---------|-------|
-| Cubatarium authored `parts[]` | CC0-1.0 | Shipped defaults; visual language inspired by the packs below |
-| [Kenney Survival Kit](https://www.kenney.nl/assets/survival-kit) | CC0-1.0 | Optional glTF import |
-| [KayKit RPG Tools Bits](https://kaylousberg.itch.io/rpg-tools-bits) | CC0-1.0 | Optional glTF import |
-| [Quaternius](https://quaternius.com/) Fantasy Props / Ultimate RPG Items | CC0-1.0 | Optional glTF import |
+| Cubatarium authored `parts[]` / stand-in glTF | CC0-1.0 | Shipped defaults and educational box glTF |
+| [Kenney Survival Kit](https://www.kenney.nl/assets/survival-kit) | CC0-1.0 | Imported tools (axe/pickaxe/shovel/hammer/hoe); GLB converted to glTF |
+| [KayKit RPG Tools Bits](https://kaylousberg.itch.io/rpg-tools-bits) | CC0-1.0 | Optional; place free tier under `third_party/asset_cache/kaykit_rpg_tools/` |
+| [KayKit Fantasy Weapons Bits](https://kaylousberg.itch.io/fantasy-weapons-bits) | CC0-1.0 | Optional; place free tier under `third_party/asset_cache/kaykit_fantasy_weapons/` |
+| [Quaternius](https://quaternius.com/) Fantasy Props / Ultimate RPG Items | CC0-1.0 | Optional armor/weapon props |
+
+Imported item ids (Kenney + catalog): see `tools/item_model_manifest.json` and per-folder `ATTRIBUTION.json`. Do not commit raw pack zips (`third_party/asset_cache/` is gitignored).
 
 Details: [`docs/ITEM_ASSETS.md`](docs/ITEM_ASSETS.md).
 
@@ -240,4 +243,4 @@ Minecraft-derived block textures and JSON under `textures/blocks/` and `models/b
 
 ---
 
-*Last updated: 2026-06-23. For privacy practices see [`packaging/android/store-assets/PRIVACY_POLICY.md`](packaging/android/store-assets/PRIVACY_POLICY.md).*
+*Last updated: 2026-08-04. For privacy practices see [`packaging/android/store-assets/PRIVACY_POLICY.md`](packaging/android/store-assets/PRIVACY_POLICY.md).*

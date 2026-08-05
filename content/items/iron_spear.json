@@ -1,0 +1,25 @@
+{
+  "id": "iron_spear",
+  "displayName": "Iron Spear",
+  "types": [
+    "combat"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "repair": {
+    "materials": [
+      "iron_ingot",
+      "iron"
+    ],
+    "amount": 0.25
+  },
+  "tool": {
+    "full_punch_interval": 1.0,
+    "damage": {
+      "melee": 5,
+      "fleshy": 5
+    },
+    "punch_attack_uses": 140
+  },
+  "model": "models/items/iron_spear/model.gltf"
+}

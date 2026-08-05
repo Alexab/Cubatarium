@@ -1,6 +1,7 @@
 #ifndef CREATURE_PREVIEW_RENDERER_H
 #define CREATURE_PREVIEW_RENDERER_H
 
+#include <array>
 #include <memory>
 #include <string>
 
@@ -15,6 +16,7 @@ class UCreatureDefinitionStorage;
 class USkinDefinitionStorage;
 class UCreatureTextureStorage;
 class UShaderManager;
+struct WornArmorPreviewSlot;
 
 class UCreaturePreviewRenderer
 {
@@ -39,11 +41,11 @@ public:
                 int size, float yawDeg, float pitchDeg);
 
   /// Allocates a standalone texture (for icon cache entries).
-  GLuint RenderToUniqueTexture(const std::string &speciesId,
-                               const std::string &skinId, int size,
-                               float yawDeg, float pitchDeg,
-                               float animTimeSec = 0.f,
-                               bool animateWalk = false);
+  GLuint RenderToUniqueTexture(
+      const std::string &speciesId, const std::string &skinId, int size,
+      float yawDeg, float pitchDeg, float animTimeSec = 0.f,
+      bool animateWalk = false,
+      const std::array<WornArmorPreviewSlot, 6> *armor = nullptr);
 
   GLuint CreateSolidColorTexture(int size, float r, float g, float b, float a);
 
@@ -56,7 +58,9 @@ private:
   glm::mat4 OrbitView(float yawDeg, float pitchDeg, float distance) const;
   bool DrawSpeciesParts(const std::string &speciesId, const std::string &skinId,
                         int viewportSize, float yawDeg, float pitchDeg,
-                        float animTimeSec = 0.f, bool animateWalk = false);
+                        float animTimeSec = 0.f, bool animateWalk = false,
+                        const std::array<WornArmorPreviewSlot, 6> *armor =
+                            nullptr);
 
   std::shared_ptr<UCreatureDefinitionStorage> Species;
   std::shared_ptr<USkinDefinitionStorage> Skins;

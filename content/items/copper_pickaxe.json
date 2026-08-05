@@ -1,0 +1,36 @@
+{
+  "id": "copper_pickaxe",
+  "displayName": "Copper Pickaxe",
+  "types": [
+    "mining"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "repair": {
+    "materials": [
+      "copper_ingot",
+      "copper"
+    ],
+    "amount": 0.25
+  },
+  "tool": {
+    "full_punch_interval": 1.0,
+    "damage": {
+      "melee": 3,
+      "fleshy": 3
+    },
+    "groupcaps": {
+      "cracky": {
+        "maxlevel": 2,
+        "uses": 80,
+        "times": {
+          "1": 1.6,
+          "2": 1.0,
+          "3": 0.7
+        }
+      }
+    },
+    "punch_attack_uses": 80
+  },
+  "model": "models/items/copper_pickaxe/model.gltf"
+}

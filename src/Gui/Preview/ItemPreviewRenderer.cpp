@@ -1,5 +1,7 @@
 #include "Gui/Preview/ItemPreviewRenderer.h"
 
+#include "Items/ItemGltfTextureCache.h"
+
 #include "App/Platform/IUPlatformPaths.h"
 #include "Creatures/Visual/Gltf/CreatureGltfLoader.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
@@ -459,15 +461,12 @@ bool UItemPreviewRenderer::TryDrawGltfModel(const std::string &itemId,
     glGenBuffers(1, &ScratchMeshEbo);
   }
 
-  const GLuint colorTex = GetOrCreateColorTexture(itemId);
-  glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, colorTex);
+  const GLuint fallbackTex = GetOrCreateColorTexture(itemId);
 
   Shader->Use();
   Shader->SetInt("texture0", 0);
   Shader->SetInt("uAnimFrame", 0);
   Shader->SetInt("uAnimFrameCount", 1);
-  Shader->SetMat4("mvp_matrix", mvp);
 
   bool drew = false;
   for (const GltfPrimitiveCpu &prim : asset->primitives)
@@ -477,6 +476,15 @@ bool UItemPreviewRenderer::TryDrawGltfModel(const std::string &itemId,
     {
       continue;
     }
+    GLuint tex =
+        ItemGltfTextureCache::Instance().Get(absPath, prim.textureStem);
+    if (tex == 0)
+    {
+      tex = fallbackTex;
+    }
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    Shader->SetMat4("mvp_matrix", mvp);
     glBindVertexArray(ScratchMeshVao);
     glBindBuffer(GL_ARRAY_BUFFER, ScratchMeshVbo);
     glBufferData(GL_ARRAY_BUFFER,

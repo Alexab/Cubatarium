@@ -1,0 +1,19 @@
+{
+  "id": "copper_chest",
+  "displayName": "Copper Chest",
+  "types": [
+    "armor",
+    "chest"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "armor": {
+    "slots": [
+      "chest"
+    ],
+    "armor_groups": {
+      "fleshy": 70
+    }
+  },
+  "model": "models/items/copper_chest/model.gltf"
+}

@@ -1,0 +1,36 @@
+{
+  "id": "tool_shovel_upgraded",
+  "displayName": "Tool Shovel Upgraded",
+  "types": [
+    "digging"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "repair": {
+    "materials": [
+      "iron_ingot",
+      "iron"
+    ],
+    "amount": 0.25
+  },
+  "tool": {
+    "full_punch_interval": 1.0,
+    "damage": {
+      "melee": 3,
+      "fleshy": 3
+    },
+    "groupcaps": {
+      "crumbly": {
+        "maxlevel": 3,
+        "uses": 120,
+        "times": {
+          "1": 1.4,
+          "2": 0.8,
+          "3": 0.5
+        }
+      }
+    },
+    "punch_attack_uses": 120
+  },
+  "model": "models/items/tool_shovel_upgraded/model.gltf"
+}

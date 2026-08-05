@@ -129,6 +129,7 @@ set(SOURCES
     src/Items/ToolCapabilities.cpp
     src/Items/ItemWieldRenderer.cpp
     src/Items/FpViewmodelRenderer.cpp
+    src/Items/ItemGltfTextureCache.cpp
     src/Items/ItemToolInfluenceProvider.cpp
     src/Creatures/Influence/InfluenceHitMath.cpp
     src/Creatures/Influence/BareHandToolInfluenceProvider.cpp
@@ -170,6 +171,7 @@ set(SOURCES
     src/Creatures/Visual/CreatureRigidModelLoader.cpp
     src/Creatures/Visual/CreatureVisualRigid.cpp
     src/Creatures/Visual/CreatureVisualBoneSkeleton.cpp
+    src/Creatures/Visual/WornEquipmentDrawer.cpp
     src/Creatures/Visual/CreatureVisualGltf.cpp
     src/Creatures/Visual/CreatureVisualSprite.cpp
     src/Creatures/Visual/CreatureVisualFactory.cpp

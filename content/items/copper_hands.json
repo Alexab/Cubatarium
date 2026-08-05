@@ -1,0 +1,19 @@
+{
+  "id": "copper_hands",
+  "displayName": "Copper Hands",
+  "types": [
+    "armor",
+    "hands"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "armor": {
+    "slots": [
+      "hands"
+    ],
+    "armor_groups": {
+      "fleshy": 28
+    }
+  },
+  "model": "models/items/copper_hands/model.gltf"
+}

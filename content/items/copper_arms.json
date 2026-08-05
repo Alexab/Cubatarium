@@ -1,0 +1,19 @@
+{
+  "id": "copper_arms",
+  "displayName": "Copper Arms",
+  "types": [
+    "armor",
+    "arms"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "armor": {
+    "slots": [
+      "arms"
+    ],
+    "armor_groups": {
+      "fleshy": 42
+    }
+  },
+  "model": "models/items/copper_arms/model.gltf"
+}

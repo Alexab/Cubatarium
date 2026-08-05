@@ -8,6 +8,7 @@
 #include "Gui/Widgets/GuiSlot.h"
 #include "Gui/Widgets/GuiWindow.h"
 #include "Gui/Preview/CreaturePreviewRenderer.h"
+#include "Creatures/Visual/WornEquipmentDrawer.h"
 #include "Gui/Interfaces/IUHotbarViewModel.h"
 #include "Gui/Interfaces/IUGuiIconSource.h"
 #include "Game/GameSession.h"
@@ -584,11 +585,31 @@ void UCharacterSheetScreen::RenderCharacterPreview()
     return;
   }
 
+  std::array<WornArmorPreviewSlot, 6> armorSlots{};
+  std::string armorKey;
+  if (Stats)
+  {
+    const CharacterStatsSnapshot snap = Stats->GetCharacterStatsSnapshot();
+    for (size_t i = 0; i < 6; ++i)
+    {
+      const auto &s = snap.equippedArmor[i];
+      if (!s.itemId.empty() && !s.broken)
+      {
+        armorSlots[i].ItemId = s.itemId;
+      }
+      armorKey += s.itemId;
+      armorKey.push_back('|');
+      armorKey += s.broken ? '1' : '0';
+      armorKey.push_back(';');
+    }
+  }
+
   const float yaw = PreviewViewport->GetYaw();
   const float pitch = PreviewViewport->GetPitch();
   const bool sameCache =
       PreviewTexture != 0 && size == LastPreviewSize &&
       PreviewTypeId == LastCachedTypeId && PreviewSkinId == LastCachedSkinId &&
+      armorKey == LastCachedArmorKey &&
       std::abs(yaw - LastPreviewYaw) < 0.01f &&
       std::abs(pitch - LastPreviewPitch) < 0.01f;
   if (sameCache)
@@ -597,7 +618,7 @@ void UCharacterSheetScreen::RenderCharacterPreview()
   }
 
   const GLuint tex = CreaturePreview->RenderToUniqueTexture(
-      PreviewTypeId, PreviewSkinId, size, yaw, pitch);
+      PreviewTypeId, PreviewSkinId, size, yaw, pitch, 0.f, false, &armorSlots);
   if (tex == 0)
   {
     return;
@@ -614,6 +635,7 @@ void UCharacterSheetScreen::RenderCharacterPreview()
   LastPreviewSize = size;
   LastCachedTypeId = PreviewTypeId;
   LastCachedSkinId = PreviewSkinId;
+  LastCachedArmorKey = armorKey;
 }
 
 void UCharacterSheetScreen::Update(double /*dt*/)

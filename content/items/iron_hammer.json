@@ -7,7 +7,7 @@
   ],
   "stack_max": 1,
   "wear_end": "destroy",
-  "model": "models/items/iron_hammer.json",
+  "model": "models/items/iron_hammer/model.gltf",
   "tool": {
     "full_punch_interval": 1.0,
     "damage": {

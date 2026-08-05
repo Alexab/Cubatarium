@@ -1,0 +1,25 @@
+{
+  "id": "wood_spear",
+  "displayName": "Wood Spear",
+  "types": [
+    "combat"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "repair": {
+    "materials": [
+      "oak_log",
+      "wood"
+    ],
+    "amount": 0.25
+  },
+  "tool": {
+    "full_punch_interval": 1.0,
+    "damage": {
+      "melee": 2,
+      "fleshy": 2
+    },
+    "punch_attack_uses": 50
+  },
+  "model": "models/items/wood_spear/model.gltf"
+}

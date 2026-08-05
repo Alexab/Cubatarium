@@ -188,6 +188,12 @@ Base definitions live under `models/creatures/` and `models/skins/`. Enabled pac
 
 After pack apply, live creatures refresh visuals from the updated catalog.
 
+## Items overlay
+
+Base item defs live under `content/items/`. Enabled packs may overlay JSON from `resource_packs/<pack_id>/items/*.json` (loaded after base via `ResourcePackBootstrap`; later packs win). Models still resolve from the asset root (`models/items/...`); pack overlays typically change stats/`model` paths, not binary meshes.
+
+See also [`docs/ITEM_ASSETS.md`](ITEM_ASSETS.md) and [`docs/ITEMS_TOOLS.md`](ITEMS_TOOLS.md).
+
 ## Prefabs from packs
 
 `WorkDir/prefabs/` is loaded first (short names). Each enabled pack may add `prefabs/*.json`; names are registered as `pack_id::local_name` (same pattern as duplicate blocks).

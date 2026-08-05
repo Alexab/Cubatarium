@@ -94,6 +94,10 @@ resource_packs/minecraft_legacy_16/
 resource_packs/_build_staging_*/
 .placeholder_cache/
 
+# Upstream CC0 pack extracts (manual download; do not commit zips/extracts)
+third_party/asset_cache/
+**/models/items/**/__import_tmp*
+
 # Local dev / debug artifacts
 /emulator-logcat*.txt
 /emulator-*.png

@@ -6,7 +6,7 @@
   ],
   "stack_max": 1,
   "wear_end": "destroy",
-  "model": "models/items/iron_sword.json",
+  "model": "models/items/iron_sword/model.gltf",
   "repair": {
     "materials": [
       "iron_ingot",

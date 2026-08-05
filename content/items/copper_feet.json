@@ -1,0 +1,19 @@
+{
+  "id": "copper_feet",
+  "displayName": "Copper Feet",
+  "types": [
+    "armor",
+    "feet"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "armor": {
+    "slots": [
+      "feet"
+    ],
+    "armor_groups": {
+      "fleshy": 35
+    }
+  },
+  "model": "models/items/copper_feet/model.gltf"
+}

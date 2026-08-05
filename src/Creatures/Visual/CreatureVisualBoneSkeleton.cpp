@@ -1,14 +1,17 @@
 #include "Creatures/Visual/CreatureVisualBoneSkeleton.h"
 
 #include "Creatures/Core/Creature.h"
+#include "Creatures/Core/CreatureInventory.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Visual/CreatureDrawRequest.h"
 #include "Creatures/Visual/CreatureRootTransform.h"
 #include "Creatures/Visual/CreatureTextureResolver.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
+#include "Creatures/Visual/WornEquipmentDrawer.h"
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.h"
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonModelSpace.h"
+#include "Game/Inventory/InventoryTypes.h"
 #include "Pose/BoneSkeleton/BoneSkeletonPoseEngine.h"
 #include "Render/Engine/GeometryEngine.h"
 #include <glm/gtc/matrix_transform.hpp>
@@ -75,6 +78,17 @@ void UCreatureVisualBoneSkeleton::UpdatePose(
     {
       CachedBoneMatrices[boneIdx] =
           Hierarchy->ComputeBoneMatrix(boneIdx, BonePose);
+    }
+  }
+
+  PoseCreature = &creature;
+  for (size_t i = 0; i < EquippedArmorIds.size(); ++i)
+  {
+    EquippedArmorIds[i].clear();
+    const InventoryEntryRef &e = creature.GetInventory().GetEquippedArmor(i);
+    if (!e.empty && !e.broken && e.kind == InventoryEntryKind::Item)
+    {
+      EquippedArmorIds[i] = e.Id;
     }
   }
 }
@@ -150,6 +164,30 @@ void UCreatureVisualBoneSkeleton::SubmitDraw(UGeometryEngine &engine,
         queue.Push(std::move(req));
       }
     }
+  }
+
+  if (PoseCreature)
+  {
+    WornEquipmentDrawer::SubmitFromCreature(
+        engine, *PoseCreature, viewProj, bodyMat,
+        [this](const std::string &boneName, glm::mat4 &out) -> bool
+        {
+          if (!MeshAsset || !Hierarchy)
+          {
+            return false;
+          }
+          const auto it = MeshAsset->geometry.boneIndexByName.find(boneName);
+          if (it == MeshAsset->geometry.boneIndexByName.end())
+          {
+            return false;
+          }
+          if (it->second >= CachedBoneMatrices.size())
+          {
+            return false;
+          }
+          out = CachedBoneMatrices[it->second];
+          return true;
+        });
   }
 }
 

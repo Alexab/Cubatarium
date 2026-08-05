@@ -7,7 +7,7 @@
   ],
   "stack_max": 1,
   "wear_end": "destroy",
-  "model": "models/items/iron_arms.json",
+  "model": "models/items/iron_arms/model.gltf",
   "armor": {
     "slots": [
       "arms"

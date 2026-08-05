@@ -17,6 +17,7 @@
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.h"
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonModelSpace.h"
+#include "Creatures/Visual/WornEquipmentDrawer.h"
 #include "Gui/Preview/CreaturePreviewLayout.h"
 #include "Pose/BoneSkeleton/BoneSkeletonPoseEngine.h"
 #include "Render/Engine/ShaderManager.h"
@@ -401,7 +402,8 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
                                                 int viewportSize, float yawDeg,
                                                 float pitchDeg,
                                                 float animTimeSec,
-                                                bool animateWalk)
+                                                bool animateWalk,
+                                                const std::array<WornArmorPreviewSlot, 6> *armor)
 {
   if (!Species || !Skins || !Textures || !Shader || viewportSize <= 0)
   {
@@ -642,6 +644,24 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(const std::string &speciesId,
     glBindVertexArray(0);
     Shader->Unuse();
     glBindTexture(GL_TEXTURE_2D, 0);
+
+    if (armor)
+    {
+      const glm::mat4 viewProj = projection * view;
+      WornEquipmentDrawer::DrawImmediate(
+          *armor, viewProj, bodyMat,
+          [&](const std::string &boneName, glm::mat4 &out) -> bool
+          {
+            const auto it = meshAsset->geometry.boneIndexByName.find(boneName);
+            if (it == meshAsset->geometry.boneIndexByName.end())
+            {
+              return false;
+            }
+            out = hierarchy.ComputeBoneMatrix(it->second, pose);
+            return true;
+          },
+          Shader.get());
+    }
     return true;
   }
 
@@ -723,7 +743,8 @@ GLuint UCreaturePreviewRenderer::Render(const std::string &speciesId,
 
 GLuint UCreaturePreviewRenderer::RenderToUniqueTexture(
     const std::string &speciesId, const std::string &skinId, int size,
-    float yawDeg, float pitchDeg, float animTimeSec, bool animateWalk)
+    float yawDeg, float pitchDeg, float animTimeSec, bool animateWalk,
+    const std::array<WornArmorPreviewSlot, 6> *armor)
 {
   if (speciesId.empty() || !Shader)
   {
@@ -761,7 +782,7 @@ GLuint UCreaturePreviewRenderer::RenderToUniqueTexture(
   glDisable(GL_CULL_FACE);
 
   if (!DrawSpeciesParts(speciesId, skinId, clamped, yawDeg, pitchDeg,
-                        animTimeSec, animateWalk))
+                        animTimeSec, animateWalk, armor))
   {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDeleteTextures(1, &tex);

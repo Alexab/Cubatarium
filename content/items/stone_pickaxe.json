@@ -6,7 +6,7 @@
   ],
   "stack_max": 1,
   "wear_end": "destroy",
-  "model": "models/items/stone_pickaxe.json",
+  "model": "models/items/stone_pickaxe/model.gltf",
   "repair": {
     "materials": [
       "stone"

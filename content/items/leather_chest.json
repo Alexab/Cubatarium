@@ -7,7 +7,7 @@
   ],
   "stack_max": 1,
   "wear_end": "destroy",
-  "model": "models/items/leather_chest.json",
+  "model": "models/items/leather_chest/model.gltf",
   "armor": {
     "slots": [
       "chest"

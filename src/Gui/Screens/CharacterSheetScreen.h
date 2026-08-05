@@ -73,6 +73,7 @@ private:
   int LastPreviewSize{0};
   std::string LastCachedTypeId;
   std::string LastCachedSkinId;
+  std::string LastCachedArmorKey;
   UGuiLabel *TitleMeta{nullptr};
   UGuiLabel *ModeLabel{nullptr};
   std::vector<UGuiLabel *> VitalLabels;

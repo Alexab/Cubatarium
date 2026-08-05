@@ -1,0 +1,26 @@
+{
+  "id": "wood_shield",
+  "displayName": "Wood Shield",
+  "types": [
+    "combat",
+    "utility"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "repair": {
+    "materials": [
+      "oak_log",
+      "wood"
+    ],
+    "amount": 0.25
+  },
+  "tool": {
+    "full_punch_interval": 1.5,
+    "damage": {
+      "melee": 0,
+      "fleshy": 0
+    },
+    "punch_attack_uses": 200
+  },
+  "model": "models/items/wood_shield/model.gltf"
+}

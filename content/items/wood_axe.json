@@ -6,7 +6,7 @@
   ],
   "stack_max": 1,
   "wear_end": "destroy",
-  "model": "models/items/wood_axe.json",
+  "model": "models/items/wood_axe/model.gltf",
   "repair": {
     "materials": [
       "wood"

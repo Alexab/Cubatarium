@@ -3,6 +3,7 @@
 
 #include "Creatures/Visual/CreatureVisual.h"
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonTypes.h"
+#include <array>
 #include <glm/glm.hpp>
 #include <memory>
 #include <string>
@@ -36,6 +37,9 @@ private:
   std::vector<glm::mat4> CachedBoneMatrices;
   std::shared_ptr<const CreatureBoneSkeletonMeshAsset> MeshAsset;
   std::unique_ptr<BoneSkeletonHierarchy> Hierarchy;
+  /// Equipped armor item ids snapshot (empty = none), size 6.
+  std::array<std::string, 6> EquippedArmorIds{};
+  const UCreature *PoseCreature{nullptr};
 };
 
 std::unique_ptr<IUCreatureVisual> CreateCreatureVisualBoneSkeleton();

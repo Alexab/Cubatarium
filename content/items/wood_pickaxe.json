@@ -6,7 +6,7 @@
   ],
   "stack_max": 1,
   "wear_end": "destroy",
-  "model": "models/items/wood_pickaxe.json",
+  "model": "models/items/wood_pickaxe/model.gltf",
   "repair": {
     "materials": [
       "wood"

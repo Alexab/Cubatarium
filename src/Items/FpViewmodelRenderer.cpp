@@ -5,8 +5,11 @@
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureTextureResolver.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
+#include "Creatures/Visual/Gltf/CreatureGltfLoader.h"
+#include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
 #include "Game/Inventory/InventoryTypes.h"
 #include "Items/ItemDefinitionStorage.h"
+#include "Items/ItemGltfTextureCache.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
 #include "Render/Pipeline/GlStateMask.h"
@@ -18,9 +21,13 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstring>
+#include <filesystem>
+#include <mutex>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace cutum
@@ -69,6 +76,8 @@ glm::vec3 ReadVec3(const nlohmann::json &arr, const glm::vec3 &fallback)
 // FP frame / above palm), with a small lean toward -Y (into the scene).
 constexpr float kToolWieldScale = 0.7f;
 constexpr float kToolWieldLeanDeg = 28.f;
+/// Target longest axis in arm-local wield space (~matches parts_v1 rod length).
+constexpr float kFpWieldTargetExtent = 0.72f;
 
 glm::vec3 ToolJsonOffsetToArm(const glm::vec3 &off)
 {
@@ -682,13 +691,190 @@ void UFpViewmodelRenderer::DrawHeld(const InventoryEntryRef *entry,
   }
   if (entry->kind == InventoryEntryKind::Item && !entry->broken)
   {
-    DrawParts(ToolParts(entry->Id, socket), mvpBase, 0);
+    if (!TryDrawGltfHeld(entry->Id, socket, mvpBase))
+    {
+      DrawParts(ToolParts(entry->Id, socket), mvpBase, 0);
+    }
     return;
   }
   if (entry->kind == InventoryEntryKind::Block)
   {
     DrawBlockCube(entry->Id, socket, mvpBase);
   }
+}
+
+bool UFpViewmodelRenderer::TryDrawGltfHeld(const std::string &itemId,
+                                           const glm::vec3 &socket,
+                                           const glm::mat4 &mvpBase)
+{
+  if (!Items || !Shader || itemId.empty())
+  {
+    return false;
+  }
+  const auto *def = Items->Get(itemId);
+  IUPlatformPaths *paths = IUPlatformPaths::TryGet();
+  if (!paths || !def)
+  {
+    return false;
+  }
+
+  std::string gltfRel = def->ModelPath;
+  auto endsWithIgnoreCase = [](const std::string &s, const char *suf)
+  {
+    const size_t n = std::char_traits<char>::length(suf);
+    if (s.size() < n)
+    {
+      return false;
+    }
+    for (size_t i = 0; i < n; ++i)
+    {
+      const char a = static_cast<char>(
+          std::tolower(static_cast<unsigned char>(s[s.size() - n + i])));
+      const char b =
+          static_cast<char>(std::tolower(static_cast<unsigned char>(suf[i])));
+      if (a != b)
+      {
+        return false;
+      }
+    }
+    return true;
+  };
+  const bool isGltf = endsWithIgnoreCase(gltfRel, ".gltf") ||
+                      endsWithIgnoreCase(gltfRel, ".glb");
+  if (!isGltf)
+  {
+    const std::filesystem::path sibling =
+        std::filesystem::path("models/items") / itemId / "model.gltf";
+    if (paths->AssetExists(sibling.generic_string()))
+    {
+      gltfRel = sibling.generic_string();
+    }
+    else
+    {
+      return false;
+    }
+  }
+  else if (!paths->AssetExists(gltfRel))
+  {
+    return false;
+  }
+
+  const std::filesystem::path absGltf = paths->AssetRoot() / gltfRel;
+
+  static std::mutex cacheMu;
+  static std::unordered_map<std::string, std::shared_ptr<CreatureGltfMeshAsset>>
+      cache;
+  std::shared_ptr<CreatureGltfMeshAsset> asset;
+  {
+    std::lock_guard<std::mutex> lock(cacheMu);
+    const auto it = cache.find(itemId);
+    if (it != cache.end())
+    {
+      asset = it->second;
+    }
+    else
+    {
+      const auto abs = absGltf.string();
+      asset = CreatureGltfLoader::LoadFromFile(abs);
+      if (asset)
+      {
+        cache[itemId] = asset;
+      }
+    }
+  }
+  if (!asset || asset->primitives.empty())
+  {
+    return false;
+  }
+
+  glm::vec3 minV(1e9f), maxV(-1e9f);
+  for (const GltfPrimitiveCpu &prim : asset->primitives)
+  {
+    const auto &posUv = prim.mesh.interleavedPosUv;
+    for (size_t i = 0; i + 4 < posUv.size(); i += 5)
+    {
+      const glm::vec3 p(posUv[i], posUv[i + 1], posUv[i + 2]);
+      minV = glm::min(minV, p);
+      maxV = glm::max(maxV, p);
+    }
+  }
+  if (minV.x > maxV.x)
+  {
+    return false;
+  }
+  const glm::vec3 center = (minV + maxV) * 0.5f;
+  const glm::vec3 ext = maxV - minV;
+  const float maxExtent =
+      std::max(1e-5f, std::max(ext.x, std::max(ext.y, ext.z)));
+  const float fitScale = kFpWieldTargetExtent / maxExtent;
+
+  // Same Y-up → arm remap as parts; lean so blade sits above palm.
+  const glm::mat4 orient =
+      glm::rotate(glm::mat4(1.f), glm::radians(kToolWieldLeanDeg),
+                  glm::vec3(1.f, 0.f, 0.f)) *
+      glm::mat4(glm::vec4(1, 0, 0, 0), glm::vec4(0, 0, -1, 0),
+                glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, 0, 1));
+  const glm::mat4 model =
+      glm::translate(glm::mat4(1.f), socket) * orient *
+      glm::scale(glm::mat4(1.f), glm::vec3(fitScale * kToolWieldScale)) *
+      glm::translate(glm::mat4(1.f), -center);
+  const glm::mat4 mvp = mvpBase * model;
+
+  static GLuint vao = 0, vbo = 0, ebo = 0;
+  if (vao == 0)
+  {
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+    glGenBuffers(1, &ebo);
+  }
+
+  GLuint fallbackTex = MetalTex;
+  if (itemId.find("wood") != std::string::npos)
+  {
+    fallbackTex = WoodTex != 0 ? WoodTex : MetalTex;
+  }
+
+  bool drew = false;
+  for (const GltfPrimitiveCpu &prim : asset->primitives)
+  {
+    const auto &mesh = prim.mesh;
+    if (mesh.interleavedPosUv.empty() || mesh.indices.empty())
+    {
+      continue;
+    }
+    GLuint tex = ItemGltfTextureCache::Instance().Get(absGltf, prim.textureStem);
+    if (tex == 0)
+    {
+      tex = fallbackTex;
+    }
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, tex != 0 ? tex : fallbackTex);
+    Shader->Use();
+    Shader->SetInt("texture0", 0);
+    Shader->SetInt("uAnimFrame", 0);
+    Shader->SetInt("uAnimFrameCount", 1);
+    Shader->SetMat4("mvp_matrix", mvp);
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER,
+                 static_cast<GLsizeiptr>(mesh.interleavedPosUv.size() *
+                                         sizeof(float)),
+                 mesh.interleavedPosUv.data(), GL_STREAM_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                 static_cast<GLsizeiptr>(mesh.indices.size() * sizeof(unsigned)),
+                 mesh.indices.data(), GL_STREAM_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+                          reinterpret_cast<void *>(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh.indices.size()),
+                   GL_UNSIGNED_INT, nullptr);
+    drew = true;
+  }
+  glBindVertexArray(0);
+  return drew;
 }
 
 GLuint UFpViewmodelRenderer::ResolveBlockAtlas(const std::string &typeName) const

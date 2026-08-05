@@ -72,9 +72,11 @@ Hardness gates unbreakable (`hardness <= 0` in Survival). On groupcap match, dur
 
 ## Visuals
 
-- Inventory / hotbar icons: `UItemIconCache` via `UItemPreviewRenderer` (parts[] / optional glTF)
+- Inventory / hotbar icons: `UItemIconCache` via `UItemPreviewRenderer` (glTF → parts[] → FallbackParts)
 - Hotbar: wear bar + broken dim
-- FP viewmodel: clear-Z dual box arms + held Item/Block (`ShowFpWield`, Perspective only; isometric hides hands). Offhand on sheet. Skinned = TD-ITEM-004.
+- FP viewmodel: clear-Z dual box arms + held Item/Block (`ShowFpWield`, Perspective only). Held items prefer glTF (`TryDrawGltfHeld`), else parts. Offhand on sheet. Skinned arms = TD-ITEM-004.
+- Worn armor: `WornEquipmentDrawer` attaches equipped armor glTF to human `bone_skeleton` bones in world + character sheet preview (`wear.json` / defaults). TP tool wield remains TD-ITEM-005.
+- `stone_knife`: melee + weak `snappy` dig. `wood_bow`: melee-light only (ranged = TD-ITEM-008).
 - Models: [`ITEM_ASSETS.md`](ITEM_ASSETS.md)
 
 ## Influence handshake

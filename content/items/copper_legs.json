@@ -1,0 +1,19 @@
+{
+  "id": "copper_legs",
+  "displayName": "Copper Legs",
+  "types": [
+    "armor",
+    "legs"
+  ],
+  "stack_max": 1,
+  "wear_end": "destroy",
+  "armor": {
+    "slots": [
+      "legs"
+    ],
+    "armor_groups": {
+      "fleshy": 49
+    }
+  },
+  "model": "models/items/copper_legs/model.gltf"
+}

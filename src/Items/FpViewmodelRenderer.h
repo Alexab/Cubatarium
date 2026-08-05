@@ -99,6 +99,8 @@ private:
                                const glm::vec3 &socket) const;
   void DrawHeld(const InventoryEntryRef *entry, const glm::vec3 &socket,
                 const glm::mat4 &mvpBase);
+  bool TryDrawGltfHeld(const std::string &itemId, const glm::vec3 &socket,
+                       const glm::mat4 &mvpBase);
   void DrawBlockCube(const std::string &typeName, const glm::vec3 &socket,
                      const glm::mat4 &mvpBase);
   GLuint ResolveBlockAtlas(const std::string &typeName) const;
