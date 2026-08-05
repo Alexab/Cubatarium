@@ -1165,6 +1165,12 @@ target_include_directories(block_break_duration_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(block_break_duration_test glm::glm)
 
+add_executable(mode_policy_test
+    src/Test/ModePolicyTest.cpp)
+target_include_directories(mode_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(mode_policy_test glm::glm)
+
 
 add_executable(chunk_lighting_propagation_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
