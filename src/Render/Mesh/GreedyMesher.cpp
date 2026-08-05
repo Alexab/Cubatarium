@@ -195,7 +195,11 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
   if (ShouldSkipFaceForNeighbor(
           reader.GetNeighborLoadState(neighbor_pos)))
   {
-    return true;
+    // Liquid sides toward unloaded neighbors must still emit (missing faces).
+    if (!registry.IsLiquid(face_id))
+    {
+      return true;
+    }
   }
 
   const BlockId neighbor = reader.GetBlock(neighbor_pos);
