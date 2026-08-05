@@ -39,7 +39,7 @@ Interval: `ui.perf_log_interval_sec` (default 2). Spikes (`wall_ms > 100`) log i
 
 **Wall ≪ Sim** → inspect `swap_wait_ms`; if near zero, use `prepare_frame_ms` / `post_scene_ms` / `gui_overlay_ms` / `app_update_ms` / `residual_ms` from the same JSONL line.
 
-Transparent greedy batches sort on **CPU** by default (avoids SSBO `glGetBufferSubData` stalls). GPU bitonic path remains compiled for future zero-readback work. Opaque GPU counting-sort: auto on discrete GPUs (`PreferGpuOpaqueCountingSort`); force with `CUBATARIUM_GPU_OPAQUE_SORT=1`, force off with `=0`.
+Transparent greedy batches sort on **CPU** by default (avoids SSBO `glGetBufferSubData` stalls). GPU bitonic path remains compiled for future zero-readback work. Opaque GPU counting-sort: **default off**; opt-in with `CUBATARIUM_GPU_OPAQUE_SORT=1` (threshold 256 quads).
 
 ## World streaming
 

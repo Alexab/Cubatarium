@@ -913,19 +913,11 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
     return GpuFinishStatus::Ready;
   }
 
-  // GPU hist+scatter: default off on iGPU (AMD atomics raised emerge). Enable
-  // via CUBATARIUM_GPU_OPAQUE_SORT=1 force, or auto on discrete GPUs (caps).
+  // GPU hist+scatter: default off (AMD atomics / emerge risk). Opt-in only via
+  // CUBATARIUM_GPU_OPAQUE_SORT=1 — no auto PreferGpuOpaqueCountingSort.
   static const uint32_t kGpuSortMinQuads = []() -> uint32_t {
     const char *env = std::getenv("CUBATARIUM_GPU_OPAQUE_SORT");
     if (env && env[0] == '1' && env[1] == '\0')
-    {
-      return 256u;
-    }
-    if (env && env[0] == '0' && env[1] == '\0')
-    {
-      return UGpuMeshSlotAllocator::kMaxQuadsPerSlot + 1u;
-    }
-    if (PreferGpuOpaqueCountingSort(GetActiveRenderBackendCaps()))
     {
       return 256u;
     }
