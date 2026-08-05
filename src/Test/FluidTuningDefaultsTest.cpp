@@ -52,10 +52,16 @@ static void TestRuntimeTuningDefaults()
   // Phase B streaming budget defaults (wall↓ without SoT changes).
   FluidTest::Expect(t.MeshFlyCapYellow == 8, kTestName, "mesh fly yellow");
   FluidTest::Expect(t.MeshFlyCapRed == 6, kTestName, "mesh fly red");
-  FluidTest::Expect(t.DirtyThrashSoftCap == 280, kTestName, "dirty thrash soft");
-  FluidTest::Expect(t.MeshFlyCapWallHot == 5, kTestName, "mesh fly wall hot");
+  FluidTest::Expect(t.DirtyThrashSoftCap == 320, kTestName, "dirty thrash soft");
+  FluidTest::Expect(t.MeshFlyCapWallHot == 6, kTestName, "mesh fly wall hot");
+  FluidTest::Expect(t.MeshFlyCapWallMid == 10, kTestName, "mesh fly wall mid");
   FluidTest::Expect(t.ImmediateBudgetHotMs == 3.0f, kTestName, "imm hot ms");
-  FluidTest::Expect(t.CaptureDrainMovingMs == 2.5f, kTestName, "capture moving");
+  FluidTest::Expect(t.CaptureDrainMovingMs == 3.0f, kTestName, "capture moving");
+  FluidTest::Expect(t.CaptureDrainHolesMovingMs == 5.0f, kTestName,
+                    "capture holes moving");
+  FluidTest::Expect(t.CaptureDrainHighPendingMovingMs == 6.0f, kTestName,
+                    "capture high pending moving");
+  FluidTest::Expect(t.CaptureHotFrameMult == 4.0f, kTestName, "capture hot mult");
   FluidTest::Expect(t.CaptureMovingBgCap == 1, kTestName, "capture moving bg");
   FluidTest::Expect(t.MemoryHitchCaptureWallMs == 400.0f, kTestName,
                     "memory hitch wall");
