@@ -456,6 +456,7 @@ void UWorld::RunLegacyPhysicsFrame()
       {
         creature.AdvanceInfluenceCooldown(dt);
         creature.TickHitFlash(dt);
+        creature.TickHealthBar(dt);
         if (Environment.GetControlledCreatureId() != 0 &&
             creature.GetId() == Environment.GetControlledCreatureId())
         {
@@ -542,6 +543,8 @@ void UWorld::RunLegacyPhysicsFrame()
 
   if (controlled && camera)
   {
+    // Camera locomotion is the source of truth for the controlled player;
+    // sync body origin / facts from the camera controller (not UpdateControlled).
     const glm::vec3 eye = camera->GetPosition();
     float feetY = FeetYFromEye(eye, controlled->GetEyeOffset().y);
     if (!camera->GetFreeMove() && camera->HasAnchoredFeet())

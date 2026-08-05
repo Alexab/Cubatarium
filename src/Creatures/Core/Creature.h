@@ -11,6 +11,7 @@
 #include "Creatures/Influence/StatusEffectTypes.h"
 #include "Creatures/Stats/CreatureAttributes.h"
 #include "Creatures/Stats/CreatureVitals.h"
+#include "Creatures/Roles/ICreatureRoleHandler.h"
 #include <algorithm>
 #include <cstdint>
 #include <glm/glm.hpp>
@@ -111,6 +112,13 @@ public:
     HitFlash01 = std::max(0.f, HitFlash01 - dt * 4.f);
   }
 
+  void NotifyDamaged() { HealthBarVisibleSec = 2.f; }
+  void TickHealthBar(float dt)
+  {
+    HealthBarVisibleSec = std::max(0.f, HealthBarVisibleSec - std::max(0.f, dt));
+  }
+  float GetHealthBarVisibleSec() const { return HealthBarVisibleSec; }
+
   std::vector<StatusEffectInstance> &GetStatusEffects() { return StatusEffects; }
   const std::vector<StatusEffectInstance> &GetStatusEffects() const
   {
@@ -145,15 +153,26 @@ public:
       float horizontalSpeedOverride = -1.0f,
       const UWorld *world = nullptr);
 
-  bool IsPlayerCharacter() const { return PlayerCharacter; }
-  void SetPlayerCharacter(bool v) { PlayerCharacter = v; }
-  bool IsPossessed() const { return Possessed; }
-  void SetPossessed(bool v) { Possessed = v; }
+  bool IsPlayerCharacter() const
+  {
+    return RoleHandler ? RoleHandler->IsPlayer() : PlayerCharacter;
+  }
+  void SetPlayerCharacter(bool v);
+  bool IsPossessed() const
+  {
+    return RoleHandler ? RoleHandler->IsExternallyControlled() : Possessed;
+  }
+  void SetPossessed(bool v);
 
-  virtual bool IsPlayer() const { return false; }
+  virtual bool IsPlayer() const
+  {
+    return RoleHandler ? RoleHandler->IsPlayer() : false;
+  }
+  ICreatureRoleHandler &GetRoleHandler();
+  const ICreatureRoleHandler &GetRoleHandler() const;
+  void SetRoleHandler(std::unique_ptr<ICreatureRoleHandler> handler);
+
   virtual void ExecuteIntent(UWorld &world, float dt);
-  virtual void UpdateControlled(UWorld &world, const CreatureInput &input,
-                                float dt);
 
   IUCreatureVisual *GetVisual() { return Visual.get(); }
   void SetVisual(std::unique_ptr<IUCreatureVisual> visual);
@@ -183,11 +202,13 @@ protected:
   float BareHandIntervalOverride{-1.f};
   float TimeSinceLastInfluenceSec{1000.f};
   float HitFlash01{0.f};
+  float HealthBarVisibleSec{0.f};
   std::vector<StatusEffectInstance> StatusEffects;
   bool NeedsTick{false};
   CreatureIntent Intent{};
   bool PlayerCharacter{false};
   bool Possessed{false};
+  std::unique_ptr<ICreatureRoleHandler> RoleHandler;
   std::unique_ptr<IUCreatureVisual> Visual;
   LocomotionArchetype LocomotionArchetype{
       LocomotionArchetype::TerrestrialBiped};

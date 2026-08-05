@@ -5,6 +5,7 @@
 #include "Creatures/Influence/StatusEffectSystem.h"
 #include "Creatures/Locomotion/CreatureMotor.h"
 #include "Creatures/Player/PlayerCapsule.h"
+#include "Creatures/Roles/CreatureRoleHandlerFactory.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureVisual.h"
 #include "World/Core/World.h"
@@ -21,7 +22,8 @@ namespace cutum
 UCreature::UCreature(CreatureId Id, std::string typeId, glm::vec3 bodyOrigin,
                      glm::vec3 eyeOffset)
     : Id(Id), TypeId(std::move(typeId)), BodyOrigin(bodyOrigin),
-      EyeOffset(eyeOffset)
+      EyeOffset(eyeOffset),
+      RoleHandler(CreateCreatureRoleHandler(CreatureRoleKind::Mob))
 {
   Bounds.profile.restSizeBlocks = glm::vec3(0.6f, 1.8f, 0.6f);
   Bounds.profile.minSizeBlocks = glm::vec3(0.6f, 1.5f, 0.6f);
@@ -32,6 +34,56 @@ UCreature::UCreature(CreatureId Id, std::string typeId, glm::vec3 bodyOrigin,
 }
 
 UCreature::~UCreature() = default;
+
+void UCreature::SetPlayerCharacter(bool v)
+{
+  PlayerCharacter = v;
+  if (v)
+  {
+    RoleHandler = CreateCreatureRoleHandler(CreatureRoleKind::Player);
+  }
+  else if (!RoleHandler || RoleHandler->IsPlayer())
+  {
+    RoleHandler = CreateCreatureRoleHandler(CreatureRoleKind::Mob);
+  }
+  if (RoleHandler)
+  {
+    RoleHandler->SetExternallyControlled(Possessed);
+  }
+}
+
+void UCreature::SetPossessed(bool v)
+{
+  Possessed = v;
+  if (RoleHandler)
+  {
+    RoleHandler->SetExternallyControlled(v);
+  }
+}
+
+ICreatureRoleHandler &UCreature::GetRoleHandler()
+{
+  if (!RoleHandler)
+  {
+    RoleHandler = CreateCreatureRoleHandler(CreatureRoleKind::Mob);
+  }
+  return *RoleHandler;
+}
+
+const ICreatureRoleHandler &UCreature::GetRoleHandler() const
+{
+  return const_cast<UCreature *>(this)->GetRoleHandler();
+}
+
+void UCreature::SetRoleHandler(std::unique_ptr<ICreatureRoleHandler> handler)
+{
+  RoleHandler = std::move(handler);
+  if (RoleHandler)
+  {
+    PlayerCharacter = RoleHandler->IsPlayer();
+    RoleHandler->SetExternallyControlled(Possessed);
+  }
+}
 
 void UCreature::ApplyStatsFromDefinition(const CreatureDefinition &def)
 {
@@ -450,29 +502,6 @@ void UCreature::ExecuteIntent(UWorld &world, float dt)
     UCreatureMovementDiagnostics::Record(rec);
   }
   LastBodyOrigin = BodyOrigin;
-}
-
-void UCreature::UpdateControlled(UWorld &world, const CreatureInput &input,
-                                 float dt)
-{
-  ClearIntent();
-  CreatureInput gated = input;
-  gated.allowSprint = Vitals.fatigue < Vitals.maxFatigue * 0.95f;
-  const CreatureLocomotionCapabilities baseCaps = Locomotion.GetCapabilities();
-  CreatureLocomotionCapabilities caps = baseCaps;
-  const float agi =
-      0.75f + static_cast<float>(Attributes.agility) / 40.f;
-  const float fatiguePenalty =
-      Vitals.maxFatigue > 0.f
-          ? (1.f - 0.4f * (Vitals.fatigue / Vitals.maxFatigue))
-          : 1.f;
-  caps.walkSpeed *= agi * std::max(0.4f, fatiguePenalty);
-  Locomotion.SetCapabilities(caps);
-  glm::vec3 eye = GetLocomotionEye();
-  Locomotion.UpdateLocomotion(&world, eye, gated, dt, Id);
-  Locomotion.SetCapabilities(baseCaps);
-  SyncFeetFromLocomotion(world, eye);
-  SyncBoundsFromStance();
 }
 
 } // namespace cutum
