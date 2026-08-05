@@ -68,7 +68,7 @@ void URuntimeTuning::ApplyMemoryTier(const char *tier)
     t.MaxKeepPrefetchMargin = 4;
     t.MemoryExpandMaxRd = 6;
     t.DirtySoftCap = 1200;
-    t.DirtyThrashSoftCap = 320;
+    t.DirtyThrashSoftCap = 280;
     t.MaxResidentChunks = 0; // auto Keep footprint
   }
 }
