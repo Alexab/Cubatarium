@@ -18,6 +18,8 @@
 #include "Gui/Screens/ConsoleScreen.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/Screens/SurvivalInventoryScreen.h"
+#include "Gui/Screens/CraftingScreen.h"
+#include "Gui/Screens/AnvilScreen.h"
 #include "Gui/Screens/DeathScreen.h"
 #include "Gui/Screens/CharacterSheetScreen.h"
 #include "Gui/Screens/WorldGenPaletteScreen.h"
@@ -107,6 +109,8 @@ public:
   void ProcessInput();
   void RenderFrame(int width, int height, double viewDuration);
   void NotifyFpSwing(FpSwingKind kind);
+  void OpenCraftingScreen();
+  void OpenAnvilScreen();
   void SetViewportInsets(int left, int top, int right, int bottom);
   void SetKeyboardInsetBottom(int bottom);
   void SetUiScale(float scale);
@@ -241,6 +245,8 @@ private:
   bool WorldGenOpen{false};
   bool CharacterSheetOpen{false};
   bool SurvivalInventoryOpen{false};
+  bool CraftingOpen{false};
+  bool AnvilOpen{false};
   bool DeathScreenOpen{false};
   bool FreeCursor{false};
   /// Подавить следующий glfw char после открытия консоли (символ
@@ -255,6 +261,8 @@ private:
     WorldGen,
     CharacterSheet,
     SurvivalInventory,
+    Crafting,
+    Anvil,
     Death
   };
   static constexpr int kMaxOverlayPointers = 10;
@@ -287,6 +295,8 @@ private:
   std::unique_ptr<UConsoleScreen> ConsoleScreen;
   std::unique_ptr<UCreativePaletteScreen> PaletteScreen;
   std::unique_ptr<USurvivalInventoryScreen> SurvivalInventoryScreen;
+  std::unique_ptr<UCraftingScreen> CraftingScreen;
+  std::unique_ptr<UAnvilScreen> AnvilScreen;
   std::unique_ptr<UDeathScreen> DeathScreen;
   std::unique_ptr<UCharacterSheetScreen> CharacterSheetScreen;
   std::unique_ptr<UWorldGenPaletteScreen> WorldGenScreen;

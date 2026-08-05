@@ -13,6 +13,7 @@
 #include "Render/Engine/GeometryEngine.h"
 #include "World/Core/World.h"
 #include "World/Diagnostics/BlockInspectDiagnostics.h"
+#include "World/Raycast/BlockRaycast.h"
 #if defined(__ANDROID__)
 #include "App/Platform/TouchInputBridge.h"
 #endif
@@ -153,9 +154,48 @@ UBlockInputController::GetActiveEntry(const BlockInputContext &ctx) const
   return nullptr;
 }
 
+bool TryOpenWorkstationUi(const BlockInputContext &ctx)
+{
+  if (!ctx.World || !ctx.App)
+  {
+    return false;
+  }
+  auto camera = ctx.World->GetCurrentUserCamera();
+  if (!camera)
+  {
+    return false;
+  }
+  const auto hit = RaycastSolidBlocks(ctx.World->GetBlockWorld(),
+                                      ctx.World->GetBlockRegistry(),
+                                      camera->GetPosition(), camera->GetFront(),
+                                      8.0f);
+  if (!hit)
+  {
+    return false;
+  }
+  const BlockId id = ctx.World->GetBlockWorld().GetBlock(hit->blockPos);
+  const std::string &name = ctx.World->GetBlockRegistry().GetTypeNameById(id);
+  if (name == "crafting_table")
+  {
+    ctx.App->OpenCraftingScreen();
+    return true;
+  }
+  if (name == "anvil" || name == "anvil_slightly_damaged" ||
+      name == "anvil_very_damaged")
+  {
+    ctx.App->OpenAnvilScreen();
+    return true;
+  }
+  return false;
+}
+
 void UBlockInputController::TryUseActiveSlot(const BlockInputContext &ctx)
 {
   if (!ctx.World)
+  {
+    return;
+  }
+  if (TryOpenWorkstationUi(ctx))
   {
     return;
   }

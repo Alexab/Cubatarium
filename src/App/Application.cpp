@@ -45,6 +45,8 @@
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/Screens/SurvivalInventoryScreen.h"
 #include "Gui/Screens/DeathScreen.h"
+#include "Gui/Screens/CraftingScreen.h"
+#include "Gui/Screens/AnvilScreen.h"
 #include "Gui/Screens/CharacterSheetScreen.h"
 #include "Gui/Screens/WorldResourcePacksScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
@@ -1070,6 +1072,17 @@ void UApplication::ShowInGameHud()
   SurvivalInventoryScreen->Build(*GuiContext);
   SurvivalInventoryScreen->SetVisible(false);
 
+  CraftingScreen = std::make_unique<UCraftingScreen>(
+      GameSession.get(), World.get(), icons);
+  CraftingScreen->OnAttach(*GuiContext);
+  CraftingScreen->Build(*GuiContext);
+  CraftingScreen->SetVisible(false);
+
+  AnvilScreen = std::make_unique<UAnvilScreen>(World.get(), icons);
+  AnvilScreen->OnAttach(*GuiContext);
+  AnvilScreen->Build(*GuiContext);
+  AnvilScreen->SetVisible(false);
+
   DeathScreen = std::make_unique<UDeathScreen>();
   DeathScreen->OnAttach(*GuiContext);
   DeathScreen->Build(*GuiContext);
@@ -1146,14 +1159,14 @@ bool UApplication::UsesUiPointer() const
 {
   return State == AppState::MainMenu || State == AppState::Loading || FreeCursor ||
          ConsoleOpen || PaletteOpen || WorldGenOpen || CharacterSheetOpen ||
-         SurvivalInventoryOpen || DeathScreenOpen;
+         SurvivalInventoryOpen || CraftingOpen || AnvilOpen || DeathScreenOpen;
 }
 
 bool UApplication::BlocksGameMouseLook() const
 {
   return State == AppState::InGame &&
          (FreeCursor || ConsoleOpen || PaletteOpen || WorldGenOpen ||
-          CharacterSheetOpen || SurvivalInventoryOpen || DeathScreenOpen);
+          CharacterSheetOpen || SurvivalInventoryOpen || CraftingOpen || AnvilOpen || DeathScreenOpen);
 }
 
 AppCursorPolicy UApplication::GetCursorPolicy() const
@@ -1376,6 +1389,8 @@ void UApplication::EnterInGameInputState()
   WorldGenOpen = false;
   CharacterSheetOpen = false;
   SurvivalInventoryOpen = false;
+  CraftingOpen = false;
+  AnvilOpen = false;
   DeathScreenOpen = false;
   FreeCursor = false;
   if (WorldGenScreen)
@@ -1389,6 +1404,14 @@ void UApplication::EnterInGameInputState()
   if (SurvivalInventoryScreen)
   {
     SurvivalInventoryScreen->SetVisible(false);
+  }
+  if (CraftingScreen)
+  {
+    CraftingScreen->SetVisible(false);
+  }
+  if (AnvilScreen)
+  {
+    AnvilScreen->SetVisible(false);
   }
   if (DeathScreen)
   {
@@ -1488,6 +1511,18 @@ void UApplication::FinishInventoryPointerGesture(const GuiMouseEvent &event)
       if (SurvivalInventoryOpen && SurvivalInventoryScreen)
       {
         routeUp(SurvivalInventoryScreen->GetRoot());
+      }
+      break;
+    case OverlayPointerCapture::Crafting:
+      if (CraftingOpen && CraftingScreen)
+      {
+        routeUp(CraftingScreen->GetRoot());
+      }
+      break;
+    case OverlayPointerCapture::Anvil:
+      if (AnvilOpen && AnvilScreen)
+      {
+        routeUp(AnvilScreen->GetRoot());
       }
       break;
     case OverlayPointerCapture::Death:
@@ -1599,6 +1634,24 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
               routeRootDown(SurvivalInventoryScreen->GetRoot()))
       {
         OverlayCaptures[pointerIndex] = OverlayPointerCapture::SurvivalInventory;
+        OverlayPressedWidget = hit;
+        return true;
+      }
+    }
+    if (CraftingOpen && CraftingScreen)
+    {
+      if (UGuiWidget *hit = routeRootDown(CraftingScreen->GetRoot()))
+      {
+        OverlayCaptures[pointerIndex] = OverlayPointerCapture::Crafting;
+        OverlayPressedWidget = hit;
+        return true;
+      }
+    }
+    if (AnvilOpen && AnvilScreen)
+    {
+      if (UGuiWidget *hit = routeRootDown(AnvilScreen->GetRoot()))
+      {
+        OverlayCaptures[pointerIndex] = OverlayPointerCapture::Anvil;
         OverlayPressedWidget = hit;
         return true;
       }
@@ -1742,6 +1795,80 @@ void UApplication::NotifyFpSwing(FpSwingKind kind)
   }
 }
 
+void UApplication::OpenCraftingScreen()
+{
+  if (!CraftingScreen)
+  {
+    return;
+  }
+  CraftingScreen->SetWorld(World.get());
+  CraftingOpen = true;
+  AnvilOpen = false;
+  SurvivalInventoryOpen = false;
+  PaletteOpen = false;
+  WorldGenOpen = false;
+  CharacterSheetOpen = false;
+  if (AnvilScreen)
+  {
+    AnvilScreen->SetVisible(false);
+  }
+  if (SurvivalInventoryScreen)
+  {
+    SurvivalInventoryScreen->SetVisible(false);
+  }
+  if (PaletteScreen)
+  {
+    PaletteScreen->SetVisible(false);
+  }
+  if (WorldGenScreen)
+  {
+    WorldGenScreen->SetVisible(false);
+  }
+  if (CharacterSheetScreen)
+  {
+    CharacterSheetScreen->SetVisible(false);
+  }
+  CraftingScreen->SetVisible(true);
+  SyncCursorVisibility();
+}
+
+void UApplication::OpenAnvilScreen()
+{
+  if (!AnvilScreen)
+  {
+    return;
+  }
+  AnvilScreen->SetWorld(World.get());
+  AnvilOpen = true;
+  CraftingOpen = false;
+  SurvivalInventoryOpen = false;
+  PaletteOpen = false;
+  WorldGenOpen = false;
+  CharacterSheetOpen = false;
+  if (CraftingScreen)
+  {
+    CraftingScreen->SetVisible(false);
+  }
+  if (SurvivalInventoryScreen)
+  {
+    SurvivalInventoryScreen->SetVisible(false);
+  }
+  if (PaletteScreen)
+  {
+    PaletteScreen->SetVisible(false);
+  }
+  if (WorldGenScreen)
+  {
+    WorldGenScreen->SetVisible(false);
+  }
+  if (CharacterSheetScreen)
+  {
+    CharacterSheetScreen->SetVisible(false);
+  }
+  AnvilScreen->SetVisible(true);
+  SyncCursorVisibility();
+}
+
 void UApplication::Update(double dt)
 {
   if (PendingEnterGame)
@@ -1859,6 +1986,14 @@ void UApplication::Update(double dt)
     if (SurvivalInventoryOpen && SurvivalInventoryScreen)
     {
       SurvivalInventoryScreen->Update(dt);
+    }
+    if (CraftingOpen && CraftingScreen)
+    {
+      CraftingScreen->Update(dt);
+    }
+    if (AnvilOpen && AnvilScreen)
+    {
+      AnvilScreen->Update(dt);
     }
     if (World && World->IsPlayerDead() && !DeathScreenOpen && DeathScreen)
     {
@@ -2124,6 +2259,16 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     GuiContext->RenderOverlay(*SurvivalInventoryScreen->GetRoot(), width,
                                height, false);
   }
+  if (CraftingOpen && CraftingScreen && CraftingScreen->GetRoot())
+  {
+    notifyViewport(CraftingScreen.get());
+    GuiContext->RenderOverlay(*CraftingScreen->GetRoot(), width, height, false);
+  }
+  if (AnvilOpen && AnvilScreen && AnvilScreen->GetRoot())
+  {
+    notifyViewport(AnvilScreen.get());
+    GuiContext->RenderOverlay(*AnvilScreen->GetRoot(), width, height, false);
+  }
   if (DeathScreenOpen && DeathScreen && DeathScreen->GetRoot())
   {
     notifyViewport(DeathScreen.get());
@@ -2143,7 +2288,8 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     GuiContext->RenderOverlay(*WorldGenScreen->GetRoot(), width, height, false);
   }
 #if defined(__ANDROID__)
-  if (HudScreen && (PaletteOpen || WorldGenOpen || SurvivalInventoryOpen))
+  if (HudScreen && (PaletteOpen || WorldGenOpen || SurvivalInventoryOpen ||
+                    CraftingOpen || AnvilOpen))
   {
     HudScreen->RenderTouchControlsOverlay(*GuiContext, width, height);
   }
@@ -2181,14 +2327,14 @@ bool UApplication::WantsCaptureKeyboard() const
     return true;
   }
   return ConsoleOpen || PaletteOpen || WorldGenOpen || CharacterSheetOpen ||
-         SurvivalInventoryOpen || DeathScreenOpen ||
+         SurvivalInventoryOpen || CraftingOpen || AnvilOpen || DeathScreenOpen ||
          GuiContext->WantsCaptureKeyboard();
 }
 
 bool UApplication::AllowsWorldMousePlacement() const
 {
   return State == AppState::InGame && !ConsoleOpen && !PaletteOpen &&
-         !WorldGenOpen && !CharacterSheetOpen && !SurvivalInventoryOpen &&
+         !WorldGenOpen && !CharacterSheetOpen && !SurvivalInventoryOpen && !CraftingOpen && !AnvilOpen &&
          !DeathScreenOpen;
 }
 

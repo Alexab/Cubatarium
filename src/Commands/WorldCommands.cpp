@@ -8,6 +8,7 @@
 #include "Creatures/Player/User.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Game/GameSession.h"
+#include "Game/Crafting/RecipeRegistry.h"
 #include "Game/WorldDifficulty.h"
 #include "Game/ModePolicy.h"
 #include "Game/WorldGameMode.h"
@@ -510,6 +511,36 @@ void RegisterWorldCommands(UGameSession &session, UCommandRegistry &registry)
                       }
                       return CommandResult{true, "Added " + args[1]};
                     });
+
+  registry.Register(
+      "craft",
+      [world](const std::vector<std::string> &args)
+      {
+        if (args.size() < 2)
+        {
+          return CommandResult{false, "Usage: craft <recipe_id>"};
+        }
+        UCreatureInventory *inv = GetCommandInventory(world);
+        if (!inv)
+        {
+          return CommandResult{false, "No controlled creature"};
+        }
+        URecipeRegistry recipes;
+        if (!recipes.LoadFromDirectory("content/recipes"))
+        {
+          return CommandResult{false, "No recipes loaded"};
+        }
+        const RecipeDefinition *recipe = recipes.FindById(args[1]);
+        if (!recipe)
+        {
+          return CommandResult{false, "Unknown recipe: " + args[1]};
+        }
+        if (!recipes.TryCraft(*inv, *recipe))
+        {
+          return CommandResult{false, "Missing ingredients for " + args[1]};
+        }
+        return CommandResult{true, "Crafted " + recipe->Output.Id};
+      });
 
   registry.Register(
       "repair",

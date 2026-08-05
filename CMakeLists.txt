@@ -425,6 +425,7 @@ set(SOURCES
     src/Game/GameSession.cpp
     src/Game/CreatureVisualQaSpawner.cpp
     src/Game/Economy/ResourceEconomy.cpp
+    src/Game/Crafting/RecipeRegistry.cpp
     src/Content/ContentTypeRegistry.cpp
     src/Commands/CommandRegistry.cpp
     src/Commands/WorldCommands.cpp
@@ -486,6 +487,8 @@ set(SOURCES
     src/Gui/Screens/CreativePaletteScreen.cpp
     src/Gui/Screens/SurvivalInventoryScreen.cpp
     src/Gui/Screens/DeathScreen.cpp
+    src/Gui/Screens/CraftingScreen.cpp
+    src/Gui/Screens/AnvilScreen.cpp
     src/Gui/Screens/WorldGenPaletteScreen.cpp
     src/Gui/Screens/WorldProgressScreen.cpp
     src/App/Platform/AppRunner.cpp
@@ -671,6 +674,8 @@ set(HEADERS
     src/Gui/Screens/CreativePaletteScreen.h
     src/Gui/Screens/SurvivalInventoryScreen.h
     src/Gui/Screens/DeathScreen.h
+    src/Gui/Screens/CraftingScreen.h
+    src/Gui/Screens/AnvilScreen.h
     src/Gui/Screens/WorldProgressScreen.h
     src/Core/Progress/ProgressTypes.h
     src/Core/Progress/IUProgressSink.h
@@ -1184,8 +1189,18 @@ add_executable(influence_use_test
     src/Items/ItemUseRegistry.cpp
     src/Test/InfluenceUseTest.cpp)
 target_include_directories(influence_use_test PRIVATE
-    \/src)
+    ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(influence_use_test glm::glm)
+
+add_executable(recipe_registry_test
+    src/Creatures/Core/CreatureInventory.cpp
+    src/Items/ItemDefinitionStorage.cpp
+    src/Items/ToolCapabilities.cpp
+    src/Game/Crafting/RecipeRegistry.cpp
+    src/Test/RecipeRegistryTest.cpp)
+target_include_directories(recipe_registry_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(recipe_registry_test glm::glm nlohmann_json::nlohmann_json)
 
 add_executable(resource_economy_test
     src/Creatures/Core/CreatureInventory.cpp

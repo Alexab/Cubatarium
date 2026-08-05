@@ -115,6 +115,39 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
         app.SyncCursorVisibility();
         return true;
       }
+      if (app.SurvivalInventoryOpen)
+      {
+        app.SurvivalInventoryOpen = false;
+        if (app.SurvivalInventoryScreen)
+        {
+          app.SurvivalInventoryScreen->SetVisible(false);
+        }
+        app.GuiContext->ClearInputState();
+        app.SyncCursorVisibility();
+        return true;
+      }
+      if (app.CraftingOpen)
+      {
+        app.CraftingOpen = false;
+        if (app.CraftingScreen)
+        {
+          app.CraftingScreen->SetVisible(false);
+        }
+        app.GuiContext->ClearInputState();
+        app.SyncCursorVisibility();
+        return true;
+      }
+      if (app.AnvilOpen)
+      {
+        app.AnvilOpen = false;
+        if (app.AnvilScreen)
+        {
+          app.AnvilScreen->SetVisible(false);
+        }
+        app.GuiContext->ClearInputState();
+        app.SyncCursorVisibility();
+        return true;
+      }
       app.ReturnToMainMenu();
       return true;
     }
@@ -589,6 +622,27 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y, int pointer_i
           return true;
         }
         break;
+      case UApplication::OverlayPointerCapture::SurvivalInventory:
+        if (app.SurvivalInventoryOpen && app.SurvivalInventoryScreen &&
+            routeCapturedMove(app.SurvivalInventoryScreen->GetRoot()))
+        {
+          return true;
+        }
+        break;
+      case UApplication::OverlayPointerCapture::Crafting:
+        if (app.CraftingOpen && app.CraftingScreen &&
+            routeCapturedMove(app.CraftingScreen->GetRoot()))
+        {
+          return true;
+        }
+        break;
+      case UApplication::OverlayPointerCapture::Anvil:
+        if (app.AnvilOpen && app.AnvilScreen &&
+            routeCapturedMove(app.AnvilScreen->GetRoot()))
+        {
+          return true;
+        }
+        break;
       default:
         break;
       }
@@ -625,6 +679,18 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y, int pointer_i
     if (app.CharacterSheetOpen && app.CharacterSheetScreen)
     {
       handled |= routeMove(app.CharacterSheetScreen->GetRoot());
+    }
+    if (app.SurvivalInventoryOpen && app.SurvivalInventoryScreen)
+    {
+      handled |= routeMove(app.SurvivalInventoryScreen->GetRoot());
+    }
+    if (app.CraftingOpen && app.CraftingScreen)
+    {
+      handled |= routeMove(app.CraftingScreen->GetRoot());
+    }
+    if (app.AnvilOpen && app.AnvilScreen)
+    {
+      handled |= routeMove(app.AnvilScreen->GetRoot());
     }
     handled |= routeMove(app.HudScreen ? app.HudScreen->GetRoot() : nullptr);
     return handled;
