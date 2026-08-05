@@ -5369,7 +5369,10 @@ bool UWorld::AddUser(const std::string &Name)
       }
     }
     UCreatureInventory &inv = player->GetInventory();
-    inv.InitCreativeDefaults();
+    if (ModePolicy::ShouldInitCreativeDefaults(GameMode))
+    {
+      inv.InitCreativeDefaults();
+    }
     inv.EnsureDefaultHotbar();
   }
   if (Users.size() == 1)

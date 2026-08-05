@@ -1165,6 +1165,15 @@ target_include_directories(block_break_duration_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(block_break_duration_test glm::glm)
 
+add_executable(inventory_mode_test
+    src/Creatures/Core/CreatureInventory.cpp
+    src/Items/ItemDefinitionStorage.cpp
+    src/Items/ToolCapabilities.cpp
+    src/Test/InventoryModeTest.cpp)
+target_include_directories(inventory_mode_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(inventory_mode_test glm::glm nlohmann_json::nlohmann_json)
+
 add_executable(mode_policy_test
     src/Test/ModePolicyTest.cpp)
 target_include_directories(mode_policy_test PRIVATE

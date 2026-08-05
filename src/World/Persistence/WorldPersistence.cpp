@@ -10,6 +10,7 @@
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Creatures/Visual/CreatureVisualFactory.h"
 #include "Game/WorldDifficulty.h"
+#include "Game/ModePolicy.h"
 #include "Game/WorldGameMode.h"
 #include "Render/Camera/Camera.h"
 #include "World/Chunks/Chunk.h"
@@ -1422,7 +1423,10 @@ void UWorldPersistence::LoadUsers(UWorld &world, const std::string &file_name)
         inv.DeserializeFromJson(user_data, hotbar_count);
         if (inv.GetStorage().empty())
         {
-          inv.InitCreativeDefaults();
+          if (ModePolicy::ShouldInitCreativeDefaults(world.GetGameMode()))
+          {
+            inv.InitCreativeDefaults();
+          }
         }
         if (!had_hotbars || inv.IsPrimaryHotbarEmpty())
         {
