@@ -27,6 +27,11 @@ public:
 
   /// Absolute path of the current/last perf_*.jsonl session (empty if none).
   static std::string GetLastSessionPath();
+
+  /// Last sampled process memory (updated every ~30 InGame frames). 0 until
+  /// first sample — MemoryBudget should fall back to a one-shot query.
+  static double GetLastPrivateMb();
+  static double GetLastRssMb();
 };
 
 } // namespace cutum

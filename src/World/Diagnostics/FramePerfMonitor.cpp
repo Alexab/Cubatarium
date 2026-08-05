@@ -864,7 +864,9 @@ void LogLine(const FrameNumbers &n, const char *kind, int frames,
     oss << " pending_cols=" << n.pending_cols;
   }
   oss << " max_wall_ms=" << max_wall << " max_stream_ms=" << n.max_stream_ms
-      << " max_ring=" << n.max_ring_blocked << " frames=" << frames;
+      << " max_ring=" << n.max_ring_blocked << " frames=" << frames
+      << " perf_collect_ms=" << n.perf_collect_ms
+      << " perf_emit_ms=" << n.perf_emit_ms;
   LOG(INFO) << oss.str();
 }
 
@@ -1069,6 +1071,20 @@ std::string UFramePerfMonitor::GetLastSessionPath()
   Session &s = GetSession();
   std::lock_guard<std::mutex> lock(s.Mutex);
   return s.Path;
+}
+
+double UFramePerfMonitor::GetLastPrivateMb()
+{
+  Session &s = GetSession();
+  std::lock_guard<std::mutex> lock(s.Mutex);
+  return s.LastPrivateMb;
+}
+
+double UFramePerfMonitor::GetLastRssMb()
+{
+  Session &s = GetSession();
+  std::lock_guard<std::mutex> lock(s.Mutex);
+  return s.LastRssMb;
 }
 
 } // namespace cutum

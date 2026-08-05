@@ -72,6 +72,39 @@ inline bool PreferGpuLightingSeed(const RenderBackendCaps &caps)
 #endif
 }
 
+/// Heuristic: discrete GPU (safe for SSBO atomics counting-sort). iGPU deny
+/// list matches AMD/Intel integrated that regressed emerge when sort enabled.
+inline bool PreferGpuOpaqueCountingSort(const RenderBackendCaps &caps)
+{
+  if (caps.ForceCpuBackends || !caps.HasCompute || !caps.HasSsbo)
+  {
+    return false;
+  }
+  if (caps.Platform != RenderPlatformKind::Desktop)
+  {
+    return false;
+  }
+  const std::string &r = caps.GlRenderer;
+  // Known iGPU / APU strings — keep CPU counting-sort (emerge regress).
+  if (r.find("AMD Radeon Graphics") != std::string::npos ||
+      r.find("Radeon(TM) Graphics") != std::string::npos ||
+      r.find("Intel(R) UHD") != std::string::npos ||
+      r.find("Intel(R) HD") != std::string::npos ||
+      r.find("Intel(R) Iris") != std::string::npos ||
+      r.find("Mali-") != std::string::npos ||
+      r.find("Adreno") != std::string::npos)
+  {
+    return false;
+  }
+  // Discrete-ish tokens.
+  return r.find("GeForce") != std::string::npos ||
+         r.find("RTX") != std::string::npos ||
+         r.find("GTX") != std::string::npos ||
+         r.find("Radeon RX") != std::string::npos ||
+         r.find("Radeon Pro") != std::string::npos ||
+         r.find("Arc") != std::string::npos;
+}
+
 /// Platform compile-time defaults (no GL context required).
 RenderBackendCaps DetectRenderBackendCaps();
 

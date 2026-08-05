@@ -2,6 +2,7 @@
 #include "Render/Mesh/PackedQuad.h"
 #include "Render/Mesh/GpuGreedyFaceExtract.h"
 #include "Render/Mesh/GpuGreedyOpaqueEmit.h"
+#include "Render/Backend/RenderBackendCaps.h"
 #include "Render/GlIncludes.h"
 #include "glog/logging.h"
 #include <array>
@@ -912,11 +913,19 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
     return GpuFinishStatus::Ready;
   }
 
-  // GPU hist+scatter: default off (AMD iGPU atomics raised emerge). Enable via
-  // CUBATARIUM_GPU_OPAQUE_SORT=1 for discrete-GPU A/B only.
+  // GPU hist+scatter: default off on iGPU (AMD atomics raised emerge). Enable
+  // via CUBATARIUM_GPU_OPAQUE_SORT=1 force, or auto on discrete GPUs (caps).
   static const uint32_t kGpuSortMinQuads = []() -> uint32_t {
     const char *env = std::getenv("CUBATARIUM_GPU_OPAQUE_SORT");
     if (env && env[0] == '1' && env[1] == '\0')
+    {
+      return 256u;
+    }
+    if (env && env[0] == '0' && env[1] == '\0')
+    {
+      return UGpuMeshSlotAllocator::kMaxQuadsPerSlot + 1u;
+    }
+    if (PreferGpuOpaqueCountingSort(GetActiveRenderBackendCaps()))
     {
       return 256u;
     }

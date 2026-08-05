@@ -51,12 +51,17 @@ set `render.android_gpu_enabled=false` to opt out (restart world).
 ## Telemetry
 
 `backend_mesher/store/cull/fluid/lighting_mode`, `gpu_draw_cmds`, `gpu_cull_ms`,
-`vertex_pool_fill`, `gpu_cull_indirect`, `gpu_mesh_vbo_dispatch`,
-`gpu_light_seed_apply`, `gpu_mask_readback`, `gpu_blocklight_flood`,
-`gpu_fluid_scan_on`, `caps_probe_completed`, `caps_has_compute`,
+`gpu_cull_cpu_ms`, `vertex_pool_fill`, `gpu_cull_indirect`, `gpu_mesh_vbo_dispatch`,
+`gpu_light_seed_apply`, `gpu_mask_readback`, `gpu_transparent_sort_readback`,
+`gpu_cull_stats_readback`, `gpu_blocklight_flood`, `gpu_fluid_scan_on`,
+`perf_collect_ms`, `perf_emit_ms`, `caps_probe_completed`, `caps_has_compute`,
 `android_gpu_user_pref`, `android_gpu_effective`, `android_gpu_deny_reason`,
 `gl_version`, `gl_renderer`
 in `perf_*.jsonl`.
+
+Always-on FramePerf keeps RSS/Private sampling every ~30 frames (`GetLastPrivateMb`
+for MemoryBudget). Transparent sort is CPU-default; GPU bitonic+SubData stays off
+the hot path (`gpu_transparent_sort_readback_med` should be 0).
 
 Analyze emits `*_med` / `backend_*_mode` for gates in
 `flight_sim_phase_gate.py` (D1a–D1d, AG0–AG4, F2/PA).

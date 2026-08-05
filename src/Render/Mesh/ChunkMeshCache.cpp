@@ -2186,6 +2186,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       continue;
     }
     pending_ref.phase = PendingGpuApply::Phase::Kicked;
+    TouchPendingGpuIndex();
     ++i;
   }
 

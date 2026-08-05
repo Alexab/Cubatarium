@@ -7,6 +7,7 @@
 #include "World/Math/GridMath.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Physics/ChunkPhysicsSeed.h"
+#include "World/Diagnostics/FramePerfMonitor.h"
 #include "World/Lighting/LightingSeedBackendFactory.h"
 #include "Render/Backend/RenderBackendCaps.h"
 #include "App/Settings/RenderSettings.h"
@@ -1991,15 +1992,22 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       sample.dirty_chunks = world.PhysicsTelemetryData.FocusDirtyChunks;
       sample.baseline_keep_margin = URuntimeTuning::Get().KeepPrefetchMargin;
       sample.visual_rd = effectiveRenderDistance;
+      // Prefer FramePerf cached sample (every ~30 frames) — avoid per-tick
+      // GetProcessMemoryInfo on the streaming hot path (P0b).
+      sample.private_mb = UFramePerfMonitor::GetLastPrivateMb();
 #ifdef _WIN32
-      PROCESS_MEMORY_COUNTERS_EX pmc{};
-      pmc.cb = sizeof(pmc);
-      if (GetProcessMemoryInfo(
-              GetCurrentProcess(),
-              reinterpret_cast<PROCESS_MEMORY_COUNTERS *>(&pmc), sizeof(pmc)))
+      if (sample.private_mb <= 0.0)
       {
-        sample.private_mb =
-            static_cast<double>(pmc.PrivateUsage) / (1024.0 * 1024.0);
+        PROCESS_MEMORY_COUNTERS_EX pmc{};
+        pmc.cb = sizeof(pmc);
+        if (GetProcessMemoryInfo(
+                GetCurrentProcess(),
+                reinterpret_cast<PROCESS_MEMORY_COUNTERS *>(&pmc),
+                sizeof(pmc)))
+        {
+          sample.private_mb =
+              static_cast<double>(pmc.PrivateUsage) / (1024.0 * 1024.0);
+        }
       }
 #endif
       MemoryBudgetDecision decision;
