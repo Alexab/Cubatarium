@@ -76,14 +76,21 @@ bool UWorldFluidFacade::TryAddFluidObject(UWorld &world, glm::ivec3 block_pos,
                                      liquid_id, place_state);
   ++world.CachedBlockCount;
   world.BlockWorldReady = true;
-  world.MarkBlockChunkDirty(block_pos);
+  world.MarkBlockChunkDirty(block_pos, /*sync_neighbor_chunks=*/true,
+                            /*sync_light_ring=*/false);
   world.PublishBlockPhysicsEvent(block_pos);
   world.PublishNeighborPhysicsEvents(block_pos);
   if (world.GetPhysicsFeatureFlags().EnableFluids)
   {
     // Player place must enter the fluid queue immediately — TryEnqueue is
     // gated by spread period and can miss a one-shot place off-phase.
+    // Force-enqueue source + face neighbors (air pull drives horizontal spread;
+    // source tick alone does not push sideways).
     world.ForceEnqueueFluidAt(block_pos);
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      world.ForceEnqueueFluidAt(block_pos + offset);
+    }
     EnqueueFluidFrontierAt(world, block_pos);
   }
   return true;

@@ -22,6 +22,9 @@ struct FluidSpreadStats
 {
   uint64_t Candidates{0};
   uint64_t Applied{0};
+  /// Off-phase liquid tick dropped without work — caller must re-enqueue so
+  /// ForceEnqueue place wakes are not silently lost until another seed.
+  bool NeedsReschedule{false};
   std::vector<FluidSpreadChange> Changes;
 };
 

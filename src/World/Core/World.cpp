@@ -5234,10 +5234,10 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
       std::max(PhysicsTelemetryData.EditLightEmission, emission);
   const auto edit_t0 = std::chrono::high_resolution_clock::now();
   ApplyEditFastRelight({blockPos});
-  // Face-neighbor Immediate: dig/place seams. Light ring when placing emitters
-  // so glow is not delayed behind mesh_async backlog (manual 230913).
+  // Face-neighbor Immediate + light ring so side-wall underside air that lost
+  // skylight still remeshes neighbors (manual absolute-black under place).
   MarkBlockChunkDirty(blockPos, /*sync_neighbor_chunks=*/true,
-                      /*sync_light_ring=*/emission > 0);
+                      /*sync_light_ring=*/true);
   PhysicsTelemetryData.EditToFirstMeshMs =
       std::chrono::duration<double, std::milli>(
           std::chrono::high_resolution_clock::now() - edit_t0)

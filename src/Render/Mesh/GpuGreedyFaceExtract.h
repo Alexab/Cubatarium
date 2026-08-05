@@ -4,6 +4,7 @@
 #include "Render/Mesh/GreedyMesher.h"
 #include "Render/Mesh/MeshNeighborPolicy.h"
 #include "Blocks/BlockRegistry.h"
+#include "World/Lighting/LightUtil.h"
 #include <array>
 #include <cstdint>
 #include <unordered_map>
@@ -138,17 +139,36 @@ inline void BuildPaddedLight(const ChunkMeshSnapshot &snap,
   }
 }
 
-/// Same rule as GreedyMesher::FaceLightPacked: prefer air-neighbor light.
+/// Same rule as GreedyMesher::FaceLightPacked: prefer air-neighbor light,
+/// then horizontal samples around the face (side-wall underside), then solid.
 inline uint8_t FaceLightPackedSnap(const ChunkMeshSnapshot &snap,
                                    glm::ivec3 local_solid, int axis, int sign)
 {
   glm::ivec3 air = local_solid;
   air[axis] += sign;
-  const uint8_t face =
-      snap.GetLightPacked(snap.ChunkOrigin() + air);
+  const glm::ivec3 world_air = snap.ChunkOrigin() + air;
+  const uint8_t face = snap.GetLightPacked(world_air);
   if (face != 0)
   {
     return face;
+  }
+  static constexpr glm::ivec3 kHoriz[] = {
+      {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+  uint8_t best = 0;
+  int best_sum = 0;
+  for (const glm::ivec3 &o : kHoriz)
+  {
+    const uint8_t packed = snap.GetLightPacked(world_air + o);
+    const int sum = UnpackSky(packed) + UnpackBlock(packed);
+    if (sum > best_sum)
+    {
+      best_sum = sum;
+      best = packed;
+    }
+  }
+  if (best != 0)
+  {
+    return best;
   }
   return snap.GetLightPacked(snap.ChunkOrigin() + local_solid);
 }

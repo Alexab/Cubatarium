@@ -16,6 +16,7 @@
 
 #include "World/Math/FluidCellState.h"
 #include "World/Physics/FluidBlockResolver.h"
+#include "World/Lighting/LightUtil.h"
 
 #include <algorithm>
 
@@ -346,6 +347,26 @@ uint8_t FaceLightPacked(IUChunkMeshReader &reader, glm::ivec3 block_pos,
   if (face_light != 0)
   {
     return face_light;
+  }
+  // Side-wall place: underside (−Y) air can be wiped to 0 by sky remove while
+  // horizontal neighbors still carry skylight — sample them before solid.
+  static constexpr glm::ivec3 kHoriz[] = {
+      {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+  uint8_t best = 0;
+  int best_sum = 0;
+  for (const glm::ivec3 &o : kHoriz)
+  {
+    const uint8_t packed = reader.GetLightPacked(face_air + o);
+    const int sum = UnpackSky(packed) + UnpackBlock(packed);
+    if (sum > best_sum)
+    {
+      best_sum = sum;
+      best = packed;
+    }
+  }
+  if (best != 0)
+  {
+    return best;
   }
   return reader.GetLightPacked(block_pos);
 }

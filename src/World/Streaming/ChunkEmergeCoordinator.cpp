@@ -1969,6 +1969,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       sync_cap = 0;
     }
   }
+  // Player dig/place: restore a tiny moving Immediate after cruise/hitch clamps
+  // so side-wall edits are not SoftDefer-stuck invisible (manual 000459).
+  if (world.GetPlayerRelightMeshBurstFrames() > 0)
+  {
+    sync_cap = std::max(sync_cap, moving ? 1 : 2);
+  }
   // TD-ARCH-027 final floor AFTER wall clamps — FOV unfinished never async-starve.
   if (fov_unfinished && pending_async < 8)
   {

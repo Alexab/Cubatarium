@@ -1956,8 +1956,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   const bool defer_until_lit = DeferMeshUntilLit && DeferMeshUntilLit(coord);
   const bool had_mesh = HasDrawableGreedyMesh(coord);
   const bool had_lit_mesh = had_mesh && !ChunkHasFullyDarkFace(coord);
-  if (ShouldRejectDarkMeshCommit(gpu_result.hasFullyDarkFace, defer_until_lit,
-                                 had_lit_mesh))
+  if (ShouldRejectDarkMeshCommit(gpu_result.hasFullyDarkFace,
+                                 defer_until_lit && had_mesh, had_lit_mesh))
   {
     // Free staging only — FreeChunk(coord) would drop the live lit mesh that
     // ProcessSnapshot used to overwrite in-place (opaque collapse 213543).
@@ -2608,7 +2608,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   const bool had_mesh = HasDrawableGreedyMesh(result.coord);
   const bool had_lit_mesh = had_mesh && !ChunkHasFullyDarkFace(result.coord);
   const bool new_dark = BatchesHaveFullyDarkFace(result.batches);
-  if (ShouldRejectDarkMeshCommit(new_dark, defer_until_lit, had_lit_mesh))
+  if (ShouldRejectDarkMeshCommit(new_dark, defer_until_lit && had_mesh,
+                                 had_lit_mesh))
   {
     // Keep prior lit mesh (or hole). SoftDefer/MarkRelit requeues deferred.
     if (RemeshAfterApply.erase(result.coord) > 0 || defer_until_lit ||
@@ -3551,7 +3552,10 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     const bool had_mesh = HasDrawableGreedyMesh(chunkCoord);
     const bool had_lit_mesh = had_mesh && !ChunkHasFullyDarkFace(chunkCoord);
     const bool new_dark = BatchesHaveFullyDarkFace(new_batches);
-    if (ShouldRejectDarkMeshCommit(new_dark, defer_until_lit, had_lit_mesh))
+    // First mesh (!had_mesh): never SoftDefer-reject dark place — otherwise
+    // side-wall / far-focus edits stay invisible until Capture clears the gate.
+    if (ShouldRejectDarkMeshCommit(new_dark, defer_until_lit && had_mesh,
+                                   had_lit_mesh))
     {
       // Keep prior lit mesh. Requeue only while SoftDefer owns the column —
       // otherwise MarkDirty thrash rebuilds the same unlit result every tick.
