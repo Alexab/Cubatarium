@@ -5,6 +5,7 @@
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Creatures/Stats/CreatureVitals.h"
 #include "Creatures/Visual/CreatureBonePaletteGpu.h"
 #include "Creatures/Visual/CreatureMeshGpuCache.h"
 #include "Creatures/Visual/CreatureVisibility.h"
@@ -18,6 +19,7 @@
 #include "Render/GlIncludes.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Core/World.h"
+#include <algorithm>
 #include <chrono>
 #include <iostream>
 
@@ -558,6 +560,45 @@ void UCreatureDrawPass::Render(UWorld &world, UGeometryEngine &engine,
           ActiveHitFlash01 = creature.GetHitFlash01();
           visual->SubmitDraw(engine, viewProj);
           ActiveHitFlash01 = 0.f;
+        }
+
+        // World-space mob health bar (fade ~2s after damage).
+        if (!creature.IsPlayerCharacter() &&
+            creature.GetHealthBarVisibleSec() > 0.f)
+        {
+          const CreatureVitals &vitals = creature.GetVitals();
+          const float ratio =
+              vitals.maxHealth > 0.f
+                  ? std::clamp(vitals.health / vitals.maxHealth, 0.f, 1.f)
+                  : 0.f;
+          const glm::vec3 bodyOrigin = creature.GetBodyOrigin();
+          const glm::vec3 sizeBlocks = creature.GetBounds().currentSizeBlocks;
+          const float topY =
+              BoundsFeetY(bodyOrigin) + std::max(0.6f, sizeBlocks.y) + 0.25f;
+          const glm::vec3 barCenter(bodyOrigin.x, topY, bodyOrigin.z);
+          const float barW = std::max(0.6f, sizeBlocks.x * 0.9f);
+          glm::mat4 bg = glm::translate(glm::mat4(1.0f), barCenter);
+          bg = glm::scale(bg, glm::vec3(barW, 0.08f, 0.08f));
+          engine.DrawBoxWireframe(viewProj * bg,
+                                  glm::vec4(0.15f, 0.15f, 0.15f, 0.9f));
+          if (ratio > 0.01f)
+          {
+            const float fillW = barW * ratio;
+            const glm::vec3 fillCenter =
+                barCenter + glm::vec3(-(barW - fillW) * 0.5f, 0.f, 0.f);
+            glm::mat4 fill = glm::translate(glm::mat4(1.0f), fillCenter);
+            fill = glm::scale(fill, glm::vec3(fillW, 0.06f, 0.06f));
+            glm::vec4 color{0.2f, 0.85f, 0.25f, 1.f};
+            if (ratio < 0.35f)
+            {
+              color = glm::vec4(0.9f, 0.2f, 0.15f, 1.f);
+            }
+            else if (ratio < 0.65f)
+            {
+              color = glm::vec4(0.9f, 0.85f, 0.15f, 1.f);
+            }
+            engine.DrawBoxWireframe(viewProj * fill, color);
+          }
         }
 
         draw_debug_bounds();

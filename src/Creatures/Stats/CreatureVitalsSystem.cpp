@@ -168,6 +168,7 @@ bool CreatureVitalsSystem::ApplyDamage(UWorld &world, UCreature &target,
     }
   }
   v.health = std::max(0.f, v.health - mitigated);
+  target.NotifyDamaged();
   if (v.health <= 0.f)
   {
     return HandleLethal(world, target, mode);
