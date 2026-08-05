@@ -15,7 +15,7 @@ public:
   UPlayer(CreatureId Id, const std::string &speciesId, glm::vec3 bodyOrigin,
           glm::vec3 eyeOffset);
 
-  bool IsPlayer() const override { return true; }
+  bool IsPlayer() const override { return GetRoleHandler().IsPlayer(); }
 
   void BindUser(const std::shared_ptr<UUser> &user) { User = user; }
   std::shared_ptr<UUser> GetUser() const { return User.lock(); }
