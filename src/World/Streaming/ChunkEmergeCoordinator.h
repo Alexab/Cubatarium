@@ -46,6 +46,10 @@ public:
 
 private:
   FrameBudget LastBudget{};
+  int UndrawnForceCd{0};
+  int StuckSmokeCd{0};
+  int FocusScanCd{0};
+  int RimScanSkipStreak{0};
 };
 
 } // namespace cutum

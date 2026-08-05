@@ -470,6 +470,8 @@ private:
                                  const glm::vec3 *cameraPos,
                                  float maxCullDistance);
   void InvalidateVisibleList();
+  void TouchPendingGpuIndex() { ++PendingGpuMutationEpoch; }
+  void EnsurePendingGpuIndex() const;
   std::unordered_map<glm::ivec3, std::vector<FaceInstance>, IVec3Hash> Cache;
   std::unordered_map<glm::ivec3, ChunkGreedyMesh, IVec3Hash> GreedyCache;
   UChunkDirtySet Dirty;
@@ -499,6 +501,10 @@ private:
   int CaptureRefreshBudgetLeft{4};
   bool GpuPipelineInitAttempted{false};
   std::deque<PendingGpuApply> PendingGpuApplies;
+  mutable std::unordered_map<glm::ivec3, PendingGpuApply::Phase, IVec3Hash>
+      PendingGpuIndex;
+  uint64_t PendingGpuMutationEpoch{0};
+  mutable uint64_t PendingGpuIndexEpoch{0};
   std::unordered_set<glm::ivec3, IVec3Hash> GpuExtractInFlight;
   double LastFlatRebuildMs{0.0};
   double LastGpuCullMs{0.0};

@@ -422,22 +422,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   phys_telem.SoftDeferEmptyStuckN = 0;
   phys_telem.SoftDeferEmptyStuckDefer = 0;
   {
-    static int undrawn_force_cd = 0;
-    static int stuck_smoke_cd = 0;
-    if (undrawn_force_cd > 0)
+    if (UndrawnForceCd > 0)
     {
-      --undrawn_force_cd;
+      --UndrawnForceCd;
     }
-    if (stuck_smoke_cd > 0)
+    if (StuckSmokeCd > 0)
     {
-      --stuck_smoke_cd;
+      --StuckSmokeCd;
     }
     const int max_cy = std::max(
         0, FloorDiv(procedural.MaxHeight, CHUNK_SIZE));
     const int cy0 = std::max(0, preferred_cy - 1);
     const int cy1 = std::min(max_cy, preferred_cy + 2);
     constexpr int kUndrawnMarkCap = 4;
-    if (undrawn_force_cd <= 0)
+    if (UndrawnForceCd <= 0)
     {
       int marked_n = 0;
       const int heal_r = std::max(1, focus_radius);
@@ -501,7 +499,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 phys_telem.SoftDeferEmptyStuckHoriz = horiz;
                 phys_telem.SoftDeferEmptyStuckDefer = 1;
               }
-              if (stuck_smoke_cd <= 0)
+              if (StuckSmokeCd <= 0)
             {
 #if defined(CUBATARIUM_SOFTDEFER_SMOKE)
                 std::cerr << "[SoftDeferEmptySmoke] HasGreedy=!Drawable "
@@ -509,7 +507,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                           << coord.x << "," << coord.y << "," << coord.z
                           << ")\n";
 #endif
-                stuck_smoke_cd = 120;
+                StuckSmokeCd = 120;
               }
             }
             // FirstMesh placeholder — always Dirty (do not gate on DirtyAdmit;
@@ -522,7 +520,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       }
       if (marked_n > 0)
       {
-        undrawn_force_cd = 8;
+        UndrawnForceCd = 8;
       }
     }
   }
@@ -2066,35 +2064,33 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     // scans (nearest FirstMesh + Drain still run). Never skip underfeet
     // (nh≤1). Force a full-focus every 8 skipped frames so other ring holes
     // cannot starve forever (land-south miss_end).
-    // N0a: far rim nh≥4 — full-scan every frame (ignore focus_scan_cd / skip).
+    // N0a: far rim nh≥4 — full-scan every frame (ignore FocusScanCd / skip).
     const bool far_rim_force_scan =
         hole_backlog_mode && nearest_miss_nh >= 4;
     const bool rim_plateau_close =
         !far_rim_force_scan && hole_backlog_mode && found_nearest_missing &&
         nearest_miss_nh >= 2 && nearest_miss_nh <= 3;
-    static int focus_scan_cd = 0;
-    static int rim_scan_skip_streak = 0;
     bool skip_full_scan_rim_close = false;
     if (rim_plateau_close)
     {
-      ++rim_scan_skip_streak;
-      if (rim_scan_skip_streak < 8)
+      ++RimScanSkipStreak;
+      if (RimScanSkipStreak < 8)
       {
         skip_full_scan_rim_close = true;
       }
       else
       {
-        rim_scan_skip_streak = 0;
+        RimScanSkipStreak = 0;
       }
     }
     else
     {
-      rim_scan_skip_streak = 0;
+      RimScanSkipStreak = 0;
     }
     const bool full_scan =
         far_rim_force_scan ||
         (!skip_full_scan_rim_close &&
-         (adm.mode == MeshWorkAdmission::Mode::Normal || focus_scan_cd <= 0));
+         (adm.mode == MeshWorkAdmission::Mode::Normal || FocusScanCd <= 0));
     if (full_scan)
     {
       ColumnWorkItem focus_scan{};
@@ -2105,14 +2101,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       focus_scan.scan_full_focus = true;
       focus_scan.cy = -1;
       exec.Enqueue(focus_scan);
-      focus_scan_cd = (far_rim_force_scan ||
+      FocusScanCd = (far_rim_force_scan ||
                        adm.mode == MeshWorkAdmission::Mode::Normal)
                           ? 0
                           : (backlog_hole_drain ? 4 : 2);
     }
-    else if (focus_scan_cd > 0)
+    else if (FocusScanCd > 0)
     {
-      --focus_scan_cd;
+      --FocusScanCd;
     }
     const int admit_n = std::max(1, adm.admit_batch);
     int drain_steps =
