@@ -5277,14 +5277,36 @@ bool UWorld::PlaceObject(const std::string &prefab_name,
   {
     return false;
   }
+  std::vector<glm::ivec3> placed_blocks;
+  placed_blocks.reserve(prefab->voxels.size());
+  int max_emission = 0;
   for (const auto &voxel : prefab->voxels)
   {
     const glm::ivec3 worldPos = anchorWorldPos + voxel.offset - prefab->anchor;
     const BlockId blockId =
         ResolveObjectVoxelPlacementId(voxel, *BlockRegistry);
-    if (BlockWorld.GetBlock(worldPos) == blockId)
+    if (BlockWorld.GetBlock(worldPos) != blockId)
     {
-      MarkBlockChunkDirty(worldPos);
+      continue;
+    }
+    placed_blocks.push_back(worldPos);
+    max_emission =
+        std::max(max_emission, BlockRegistry->GetLightEmission(blockId));
+  }
+  if (!placed_blocks.empty())
+  {
+    ApplyEditFastRelight(placed_blocks);
+    for (const glm::ivec3 &worldPos : placed_blocks)
+    {
+      MarkBlockChunkDirty(worldPos, /*sync_neighbor_chunks=*/true,
+                          /*sync_light_ring=*/max_emission > 0);
+    }
+    ApplyEditLighting(placed_blocks);
+    if (max_emission > 0)
+    {
+      PhysicsTelemetryData.EditLightEmission =
+          std::max(PhysicsTelemetryData.EditLightEmission, max_emission);
+      PlayerRelightMeshBurstFrames = 5;
     }
   }
   return true;
