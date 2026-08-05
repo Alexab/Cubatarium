@@ -226,6 +226,31 @@ bool UItemDefinitionStorage::LoadFile(const std::string &path)
         }
       }
     }
+    if (data.contains("use_action") || data.contains("use"))
+    {
+      const nlohmann::json use =
+          data.contains("use") && data["use"].is_object() ? data["use"]
+                                                          : nlohmann::json::object();
+      const std::string action =
+          data.contains("use_action")
+              ? data.value("use_action", std::string{})
+              : use.value("action", std::string{});
+      if (action == "eat")
+      {
+        def.Use.Action = ItemUseActionKind::Eat;
+      }
+      else if (action == "drink")
+      {
+        def.Use.Action = ItemUseActionKind::Drink;
+      }
+      else if (action == "place_block")
+      {
+        def.Use.Action = ItemUseActionKind::PlaceBlock;
+      }
+      def.Use.Satiety = use.value("satiety", data.value("satiety", 0.f));
+      def.Use.Thirst = use.value("thirst", data.value("thirst", 0.f));
+      def.Use.Health = use.value("health", data.value("health", 0.f));
+    }
     if (data.contains("tool") && data["tool"].is_object())
     {
       const auto &tool = data["tool"];

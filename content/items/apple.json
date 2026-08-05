@@ -1,0 +1,13 @@
+{
+  "id": "apple",
+  "displayName": "Apple",
+  "types": ["misc"],
+  "stack_max": 16,
+  "wear_end": "destroy",
+  "use_action": "eat",
+  "use": {
+    "action": "eat",
+    "satiety": 20,
+    "health": 2
+  }
+}

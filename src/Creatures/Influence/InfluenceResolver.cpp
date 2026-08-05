@@ -5,6 +5,7 @@
 #include "Game/Inventory/InventoryTypes.h"
 #include "Game/ModePolicy.h"
 #include "Items/ItemDefinitionStorage.h"
+#include "Items/ItemUseRegistry.h"
 #include "Items/ToolCapabilities.h"
 #include "World/Core/World.h"
 #include <algorithm>
@@ -48,12 +49,55 @@ InfluencePrediction InfluenceResolver::Resolve(
     return pred;
   }
 
-  const InfluenceChannel capChannel =
-      channel == InfluenceChannel::Use ? InfluenceChannel::Melee : channel;
+  if (channel == InfluenceChannel::Use)
+  {
+    pred.Capability.Channel = channel;
+    const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
+    const InventoryEntryRef *active = source.GetInventory().GetActiveEntryRef();
+    if (!active || active->empty || active->kind != InventoryEntryKind::Item ||
+        active->Id.empty() || !items)
+    {
+      pred.CancelReason = "no_use_item";
+      pred.Cancelled = true;
+      return pred;
+    }
+    const ItemDefinition *def = items->Get(active->Id);
+    if (!def)
+    {
+      pred.CancelReason = "unknown_item";
+      pred.Cancelled = true;
+      return pred;
+    }
+    const ItemUseParams use = ItemUseRegistry::FromDefinition(*def);
+    if (use.Action != ItemUseAction::Eat && use.Action != ItemUseAction::Drink)
+    {
+      pred.CancelReason = "no_use_action";
+      pred.Cancelled = true;
+      return pred;
+    }
+    if (source.GetTimeSinceLastInfluenceSec() < 0.35f)
+    {
+      pred.CancelReason = "cooldown";
+      pred.Cancelled = true;
+      return pred;
+    }
+    pred.UseSelf = true;
+    pred.UseItemId = active->Id;
+    pred.UseSatietyDelta = use.SatietyDelta;
+    pred.UseThirstDelta = use.ThirstDelta;
+    pred.UseHealthDelta = use.HealthDelta;
+    pred.Capability.Id = active->Id;
+    pred.Capability.FullIntervalSec = 0.35f;
+    InfluenceTargetDelta self;
+    self.TargetId = source.GetId();
+    self.TargetPos = source.GetBodyOrigin();
+    self.HealthDelta = use.HealthDelta;
+    pred.Targets.push_back(self);
+    pred.Valid = true;
+    return pred;
+  }
 
-  // "Use" is not necessarily combat, but for now we route it through the
-  // same influence pipeline as melee capabilities.
-  if (channel != InfluenceChannel::Dig && channel != InfluenceChannel::Use &&
+  if (channel != InfluenceChannel::Dig &&
       !ModePolicy::AllowsCombatDamage(mode))
   {
     pred.CancelReason = "creative";
@@ -61,7 +105,7 @@ InfluencePrediction InfluenceResolver::Resolve(
     return pred;
   }
 
-  if (channel != InfluenceChannel::Dig && channel != InfluenceChannel::Use &&
+  if (channel != InfluenceChannel::Dig &&
       !ModePolicy::AllowsHostileAggro(mode, world.GetDifficulty()))
   {
     // Safety net: hostile melee vs player cancelled on Peaceful.
@@ -140,9 +184,9 @@ InfluencePrediction InfluenceResolver::Resolve(
   InfluenceCapability cap;
   const UBareHandToolInfluenceProvider bare;
   const IUToolInfluenceProvider *provider = tools ? tools : &bare;
-  if (!provider->TryGetCapability(source, capChannel, cap))
+  if (!provider->TryGetCapability(source, channel, cap))
   {
-    if (!bare.TryGetCapability(source, capChannel, cap))
+    if (!bare.TryGetCapability(source, InfluenceChannel::Melee, cap))
     {
       pred.CancelReason = "no_capability";
       pred.Cancelled = true;

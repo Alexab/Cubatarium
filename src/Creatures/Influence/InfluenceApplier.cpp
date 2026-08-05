@@ -4,6 +4,7 @@
 #include "Creatures/Influence/StatusEffectSystem.h"
 #include "Creatures/Stats/CreatureVitalsSystem.h"
 #include "Game/Inventory/InventoryTypes.h"
+#include "Game/ModePolicy.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ToolCapabilities.h"
 #include "World/Core/World.h"
@@ -129,6 +130,66 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
     return result;
   }
 
+  if (pred.Capability.Channel == InfluenceChannel::Use && pred.UseSelf)
+  {
+    CreatureVitals &v = source->GetVitals();
+    if (pred.UseSatietyDelta != 0.f)
+    {
+      v.satiety = std::clamp(v.satiety + pred.UseSatietyDelta, 0.f, v.maxSatiety);
+    }
+    if (pred.UseThirstDelta != 0.f)
+    {
+      v.thirst = std::clamp(v.thirst + pred.UseThirstDelta, 0.f, v.maxThirst);
+    }
+    if (pred.UseHealthDelta != 0.f)
+    {
+      v.health = std::clamp(v.health + pred.UseHealthDelta, 0.f, v.maxHealth);
+    }
+    v.ClampCurrents();
+
+    // Consume one from storage and active hotbar if present.
+    auto &storage = source->GetInventory().GetStorageMutable();
+    const auto it = storage.find(pred.UseItemId);
+    if (it != storage.end() && it->second > 0)
+    {
+      --it->second;
+      if (it->second <= 0)
+      {
+        storage.erase(it);
+      }
+    }
+    if (InventoryEntryRef *active = source->GetInventory().GetActiveEntryRef())
+    {
+      if (!active->empty && active->kind == InventoryEntryKind::Item &&
+          active->Id == pred.UseItemId)
+      {
+        if (active->count > 1)
+        {
+          --active->count;
+        }
+        else
+        {
+          const size_t bar = source->GetInventory().GetActiveBarIndex();
+          const size_t slot = source->GetInventory().GetActiveSlotIndex();
+          source->GetInventory().ClearHotbarSlot(bar, slot);
+        }
+      }
+    }
+
+    source->ResetInfluenceCooldown();
+    InfluenceEvent ev;
+    ev.Kind = InfluenceEventKind::Applied;
+    ev.SourceId = pred.SourceId;
+    ev.CapabilityId = pred.Capability.Id;
+    ev.Channel = InfluenceChannel::Use;
+    ev.SourcePos = pred.SourcePos;
+    ev.TargetPos = pred.SourcePos;
+    ev.Effects = pred.Capability.Effects;
+    InfluenceEvents::Emit(ev);
+    result.Applied = true;
+    return result;
+  }
+
   if (pred.SourceFatigueDelta > 0.f)
   {
     CreatureVitals &av = source->GetVitals();
@@ -162,6 +223,44 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
         result.AnyTargetRemoved = true;
         world.RemoveCreature(delta.TargetId);
         continue;
+      }
+
+      // Survival combat: wear a random equipped armor piece.
+      if (ModePolicy::AllowsCombatDamage(mode) && ModePolicy::AllowsToolWear(
+              mode, world.GetDifficulty()))
+      {
+        auto &inv = target->GetInventory();
+        const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
+        if (items)
+        {
+          std::vector<size_t> worn;
+          for (size_t slot = 0; slot < 6; ++slot)
+          {
+            const InventoryEntryRef &e = inv.GetEquippedArmor(slot);
+            if (!e.empty && !e.broken && e.kind == InventoryEntryKind::Item)
+            {
+              worn.push_back(slot);
+            }
+          }
+          if (!worn.empty())
+          {
+            const size_t pick = worn[static_cast<size_t>(
+                world.GetPhysicsTickCounter() % worn.size())];
+            InventoryEntryRef armor = inv.GetEquippedArmor(pick);
+            if (const ItemDefinition *def = items->Get(armor.Id))
+            {
+              const float armorWear = 0.01f * amount;
+              if (ApplyItemWear(armor, *def, armorWear, true))
+              {
+                inv.UnequipArmor(pick, *items);
+              }
+              else
+              {
+                inv.EquipArmor(pick, armor, *items);
+              }
+            }
+          }
+        }
       }
     }
     for (const std::string &status_id : delta.StatusIdsToAdd)

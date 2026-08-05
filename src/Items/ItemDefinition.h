@@ -69,6 +69,22 @@ struct ItemArmorDef
   std::unordered_map<std::string, int> ArmorGroups;
 };
 
+enum class ItemUseActionKind
+{
+  None = 0,
+  Eat,
+  Drink,
+  PlaceBlock
+};
+
+struct ItemUseDef
+{
+  ItemUseActionKind Action{ItemUseActionKind::None};
+  float Satiety{0.f};
+  float Thirst{0.f};
+  float Health{0.f};
+};
+
 struct ItemDefinition
 {
   std::string Id;
@@ -80,6 +96,7 @@ struct ItemDefinition
   std::string ModelPath;
   ItemArmorDef Armor;
   ToolCapabilitiesDef Tool;
+  ItemUseDef Use;
   bool HandFallback{false};
   bool Hidden{false};
 };

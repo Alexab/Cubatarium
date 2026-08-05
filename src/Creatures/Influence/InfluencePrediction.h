@@ -38,6 +38,12 @@ struct InfluencePrediction
   float DigWearDelta{0.f};
   bool DigEffective{false};
   std::string DigToolId;
+  /// Self-use (eat/drink) payload.
+  bool UseSelf{false};
+  float UseSatietyDelta{0.f};
+  float UseThirstDelta{0.f};
+  float UseHealthDelta{0.f};
+  std::string UseItemId;
 };
 
 } // namespace cutum

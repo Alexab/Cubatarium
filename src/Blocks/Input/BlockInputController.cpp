@@ -7,6 +7,8 @@
 #include "Game/WorldGameMode.h"
 #include "Game/ModePolicy.h"
 #include "Items/FpViewmodelRenderer.h"
+#include "Items/ItemDefinitionStorage.h"
+#include "Items/ItemUseRegistry.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "World/Core/World.h"
@@ -202,8 +204,28 @@ void UBlockInputController::TryUseActiveSlot(const BlockInputContext &ctx)
     break;
   }
   case InventoryEntryKind::Item:
-    // Tools are used via dig/break path, not place.
+  {
+    // Consumables (eat/drink) via Use influence channel.
+    UCreature *controlled = ctx.World->GetControlledCreature();
+    const UItemDefinitionStorage *items = ctx.World->GetItemDefinitionStorage();
+    if (controlled && items)
+    {
+      if (const ItemDefinition *def = items->Get(Active->Id))
+      {
+        const ItemUseParams use = ItemUseRegistry::FromDefinition(*def);
+        if (use.Action == ItemUseAction::Eat ||
+            use.Action == ItemUseAction::Drink)
+        {
+          PlayerInteractionRouter::SetUseIntent(*controlled);
+          if (ctx.App)
+          {
+            ctx.App->NotifyFpSwing(FpSwingKind::Place);
+          }
+        }
+      }
+    }
     break;
+  }
   case InventoryEntryKind::Block:
   default:
     ctx.World->AddObjectByView();

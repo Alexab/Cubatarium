@@ -1,0 +1,13 @@
+{
+  "id": "bread",
+  "displayName": "Bread",
+  "types": ["misc"],
+  "stack_max": 16,
+  "wear_end": "destroy",
+  "use_action": "eat",
+  "use": {
+    "action": "eat",
+    "satiety": 35,
+    "health": 1
+  }
+}

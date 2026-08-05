@@ -126,6 +126,7 @@ set(SOURCES
     src/Creatures/Stats/CreatureVitalsSystem.cpp
     src/Creatures/Combat/CreatureCombat.cpp
     src/Items/ItemDefinitionStorage.cpp
+    src/Items/ItemUseRegistry.cpp
     src/Items/ToolCapabilities.cpp
     src/Items/ItemWieldRenderer.cpp
     src/Items/FpViewmodelRenderer.cpp
@@ -1176,6 +1177,13 @@ add_executable(inventory_mode_test
 target_include_directories(inventory_mode_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(inventory_mode_test glm::glm nlohmann_json::nlohmann_json)
+
+add_executable(influence_use_test
+    src/Items/ItemUseRegistry.cpp
+    src/Test/InfluenceUseTest.cpp)
+target_include_directories(influence_use_test PRIVATE
+    \/src)
+target_link_libraries(influence_use_test glm::glm)
 
 add_executable(resource_economy_test
     src/Creatures/Core/CreatureInventory.cpp

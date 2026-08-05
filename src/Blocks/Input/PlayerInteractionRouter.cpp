@@ -68,4 +68,16 @@ void PlayerInteractionRouter::SetMeleeIntent(UCreature &attacker,
   attacker.SetIntent(intent);
 }
 
+void PlayerInteractionRouter::SetUseIntent(UCreature &controlled)
+{
+  CreatureIntent intent = controlled.GetIntent();
+  intent.attackTargetId = 0;
+  intent.Influence = InfluenceIntent{};
+  intent.Influence.Channel = InfluenceChannel::Use;
+  intent.Influence.TargetId = controlled.GetId();
+  intent.suggestedAnim = LocomotionState::Action;
+  intent.clearOnApply = true;
+  controlled.SetIntent(intent);
+}
+
 } // namespace cutum

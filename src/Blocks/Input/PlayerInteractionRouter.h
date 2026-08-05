@@ -31,6 +31,9 @@ struct PlayerInteractionRouter
 
   /// Write Melee InfluenceIntent only (no legacy attackTargetId).
   static void SetMeleeIntent(UCreature &attacker, CreatureId targetId);
+
+  /// Self-use (eat/drink) InfluenceIntent on controlled creature.
+  static void SetUseIntent(UCreature &controlled);
 };
 
 } // namespace cutum
