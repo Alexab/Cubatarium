@@ -28,6 +28,7 @@ int main()
   using cutum::EvaluateStickyRemeshDrain;
   using cutum::IdleFocusDirtyDebtInput;
   using cutum::IdleMeshDrainCapInput;
+  using cutum::kIdleCalmStickyRemnant;
   using cutum::IdleRecoveryBgBudgetInput;
   using cutum::IdleVisualDrainInput;
   using cutum::StickyRemeshDrainInput;
@@ -133,6 +134,31 @@ int main()
     Expect(d.mesh_schedule <= 3, "calm idle hot wall schedule<=3");
     Expect(d.emerge_total_budget_ms <= 8.0, "calm idle hot wall emerge<=8");
     Expect(d.sync_cap == 0, "calm idle hot wall sync off");
+  }
+
+  {
+    // I4c: idle-clean calm periods had black_sticky=2; must still pace.
+    IdleMeshDrainCapInput in;
+    in.moving = false;
+    in.black_sticky = kIdleCalmStickyRemnant;
+    in.last_frame_ms = 86.0;
+    in.mesh_drain = 14;
+    in.mesh_schedule = 12;
+    const auto d = EvaluateIdleMeshDrainCap(in);
+    Expect(d.active, "remnant sticky still caps drain");
+    Expect(d.sync_cap == 0, "remnant sticky sync off");
+    Expect(d.emerge_total_budget_ms <= 8.0, "remnant sticky emerge<=8");
+  }
+
+  {
+    IdleMeshDrainCapInput in;
+    in.moving = false;
+    in.black_sticky = kIdleCalmStickyRemnant + 1;
+    in.last_frame_ms = 86.0;
+    in.mesh_drain = 14;
+    in.mesh_schedule = 12;
+    const auto d = EvaluateIdleMeshDrainCap(in);
+    Expect(!d.active, "above remnant sticky skips calm cap");
   }
 
   {

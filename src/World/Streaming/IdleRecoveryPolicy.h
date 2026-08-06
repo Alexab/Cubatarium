@@ -193,6 +193,11 @@ struct IdleRecoveryBgBudgetInput
   int bg_budget_in{0};
 };
 
+/// Remnant dark-face count that is still "perf-calm" (matches analyze
+/// classify_stop_period: sticky alone is visual, not light-debt recovery).
+/// I4b idle-clean: black_sticky=2 blocked all I4b caps → sync~36ms/frame.
+inline constexpr int kIdleCalmStickyRemnant = 2;
+
 struct IdleMeshDrainCapInput
 {
   bool moving{false};
@@ -217,9 +222,9 @@ struct IdleMeshDrainCapDecision
   double sync_budget_ms{0.0};
 };
 
-/// Calm stand with no visual/light debt: pace dirty_tick so wall can recover.
-/// I4b: also cap emerge total + SyncRebuild — I4 calm still spent ~37ms dirty_tick
-/// under MeshEmergeTotalBudgetMs=28.
+/// Calm stand with no light/mesh debt: pace dirty_tick so wall can recover.
+/// I4b: also cap emerge total + SyncRebuild.
+/// I4c: allow sticky <= kIdleCalmStickyRemnant (classifier calm with sticky=2).
 inline IdleMeshDrainCapDecision EvaluateIdleMeshDrainCap(
     const IdleMeshDrainCapInput &in)
 {
@@ -227,7 +232,7 @@ inline IdleMeshDrainCapDecision EvaluateIdleMeshDrainCap(
   out.mesh_drain = in.mesh_drain;
   out.mesh_schedule = in.mesh_schedule;
   if (in.moving || in.missing_visible_mesh || in.pending_focus_count > 0 ||
-      in.black_sticky > 0 || in.not_ready_early > 0)
+      in.black_sticky > kIdleCalmStickyRemnant || in.not_ready_early > 0)
   {
     return out;
   }
