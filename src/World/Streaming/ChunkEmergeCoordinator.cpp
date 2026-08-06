@@ -1888,6 +1888,30 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               }
             }
           }
+          // Q2 seam: already-drawable neighbors keep Unknown-culled side faces
+          // until remeshed after this hole FirstMesh lands (manual 191432).
+          // Cap 4; HoleDrain-safe (does not admit missing neighbors).
+          if (missing_visible_mesh)
+          {
+            int seamed = 0;
+            for (int dz = -1; dz <= 1 && seamed < 4; ++dz)
+            {
+              for (int dx = -1; dx <= 1 && seamed < 4; ++dx)
+              {
+                if (dx == 0 && dz == 0)
+                {
+                  continue;
+                }
+                const glm::ivec3 neighbor(hole.x + dx, hole.y, hole.z + dz);
+                if (mesh_service.HasDrawableGreedyMesh(neighbor) &&
+                    mesh_service.TryConsumeDirtyAdmit())
+                {
+                  mesh_service.MarkDirtyPriority(neighbor);
+                  ++seamed;
+                }
+              }
+            }
+          }
         }
       }
       }

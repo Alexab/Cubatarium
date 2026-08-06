@@ -752,7 +752,19 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                << "  \"end_focus\": [" << end_focus_cx << ", " << end_focus_cz
                << "],\n"
                << "  \"chunks_traveled_cheb\": " << chunks_traveled << ",\n"
-               << "  \"perf_jsonl\": \"" << perf_path << "\",\n"
+               << "  \"perf_jsonl\": \""
+               << [&]() {
+                    std::string p = perf_path;
+                    for (char &c : p)
+                    {
+                      if (c == '\\')
+                      {
+                        c = '/';
+                      }
+                    }
+                    return p;
+                  }()
+               << "\",\n"
                << "  \"analyze\": \"run tools/flight_sim_analyze.py on perf\"\n"
                << "}\n";
       }
