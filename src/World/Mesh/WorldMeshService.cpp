@@ -9,6 +9,7 @@
 #include "World/Mesh/EditMeshRemeshPolicy.h"
 #include "World/Physics/PhysicsTelemetry.h"
 #include <algorithm>
+#include <chrono>
 #include <unordered_set>
 #include <vector>
 
@@ -951,11 +952,26 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
     }
   };
 
+  // C1: hard time-cap Immediate remesh — fluid/edit with cap=9 burned
+  // physics_block ~0.8–1.4s (manual 162944). Defer remainder to Dirty/async.
+  const auto imm_budget_t0 = std::chrono::high_resolution_clock::now();
+  constexpr double kEditImmediateBudgetMs = 8.0;
+  int immediate_done = 0;
   for (const glm::ivec3 &chunk_coord : decision.ImmediateChunks)
   {
+    const double spent_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - imm_budget_t0)
+            .count();
+    if (immediate_done > 0 && spent_ms > kEditImmediateBudgetMs)
+    {
+      MarkDirtyPriority(chunk_coord);
+      continue;
+    }
     note_race_before_immediate(chunk_coord);
     RebuildChunkImmediate(block_world, *registry, chunk_coord);
     note_dark_after_immediate(chunk_coord);
+    ++immediate_done;
   }
   for (const glm::ivec3 &chunk_coord : decision.DirtyChunks)
   {

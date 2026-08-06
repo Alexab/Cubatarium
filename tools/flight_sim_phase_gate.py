@@ -403,6 +403,17 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("post_stop_missing_max", "le", 0.0),
         ("chunks_traveled", "ge", 6.0),
     ],
+    # Moving cruise stress (fly-clean): judge fly segment, not stop-only.
+    "FLY_CLEAN": [
+        ("chunks_traveled", "ge", 6.0),
+        ("wall_ms_fly_med", "le", 200.0),
+        ("physics_block_ms_p95", "le", 5.0),
+    ],
+    # Edit/control smoke: soft hitch budget for C1 regate.
+    "IDLE_EDIT_SMOKE": [
+        ("physics_block_ms_p95", "le", 50.0),
+        ("break_complete_sum", "ge", 1.0),
+    ],
 }
 
 

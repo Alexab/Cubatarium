@@ -3176,13 +3176,9 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
       ++it;
       continue;
     }
-    if (MeshService->HasDirtyInColumnBand(key, band_min, band_max))
-    {
-      ++it;
-      continue;
-    }
-    // Keep sticky only while stale-dark remesh debt remains. Void-edge faces
-    // are Relight-owned — holding sticky forced RemeshSeam thrash (201621).
+    // I6: lit + mesh + no stale-dark → clear sticky even if Dirty still queues
+    // remesh. Holding sticky for Dirty pinned autofly post_stop sticky 4–6 while
+    // manual calm clears to 0 (async remesh does not need sticky SoT).
     bool still_stale = false;
     for (int cy = cy0; cy <= cy1; ++cy)
     {
@@ -3199,6 +3195,16 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
       ++it;
       continue;
     }
+    if (MeshService->HasDirtyInColumnBand(key, band_min, band_max))
+    {
+      // Keep draining remesh, but sticky gate is for black/stale faces only.
+      it = StickyRemeshAfterLight.erase(it);
+      SetColumnEmergeState(ground, ColumnEmergeState::RenderReady);
+      ++cleared;
+      continue;
+    }
+    // Keep sticky only while stale-dark remesh debt remains. Void-edge faces
+    // are Relight-owned — holding sticky forced RemeshSeam thrash (201621).
     it = StickyRemeshAfterLight.erase(it);
     SetColumnEmergeState(ground, ColumnEmergeState::RenderReady);
     ++cleared;

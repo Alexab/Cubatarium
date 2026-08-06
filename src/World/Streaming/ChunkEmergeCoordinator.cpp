@@ -2004,6 +2004,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     sync_cap = std::max(sync_cap, moving ? 1 : 2);
   }
+  // F0: hot moving cruise — kill SyncRebuild unless underfeet miss or edit burst.
+  if (moving && last_frame_ms > 20.0 && !missing_underfeet &&
+      world.GetPlayerRelightMeshBurstFrames() <= 0)
+  {
+    sync_cap = 0;
+  }
   // TD-ARCH-027 final floor AFTER wall clamps — FOV unfinished never async-starve.
   if (fov_unfinished && pending_async < 8)
   {

@@ -1455,6 +1455,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   }
   else
   {
+    // I7: calm stand with remesh debt but no holes — Capture inflates stream
+    // (manual calm stream~46 with fd flat). Prefer remesh drain over Capture.
+    const int unfinished_vis = world.PhysicsTelemetryData.UnfinishedVisual;
+    const bool calm_fd_plateau =
+        !moving_now && !missing_focus_mesh && unfinished_vis <= 0 &&
+        pending_light_focus_n == 0 &&
+        world.PhysicsTelemetryData.FocusDirtyChunks > 24;
     const int hard_cap =
         moving_now
             ? ((missing_focus_mesh && pending_light_focus_n > 0)
@@ -1464,7 +1471,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                           ? 3
                           : (pending_light_focus_n > 8 ? 6 : 4))
                    : (frame_ms > kBadFrameMs ? 1 : 2))
-            : (frame_ms > kBadFrameMs ? 2 : 4);
+            : (calm_fd_plateau
+                   ? (frame_ms > kBadFrameMs ? 0 : 1)
+                   : (frame_ms > kBadFrameMs ? 2 : 4));
     bg_budget = std::min(bg_budget, hard_cap);
     if (LastMemoryDecision.capture_hard_cap >= 0)
     {
