@@ -2812,15 +2812,22 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         max_sync_rebuild >= 0
             ? max_sync_rebuild
             : std::max(2, std::min(12, max_schedule_per_frame));
-    const auto sync_t0 = std::chrono::high_resolution_clock::now();
-    const int sync_filled =
-        SyncRebuildVisibleMissing(world, registry, sync_cap, max_sync_ms);
-    LastMeshSyncMs = std::chrono::duration<double, std::milli>(
-                         std::chrono::high_resolution_clock::now() - sync_t0)
-                         .count();
-    stats.SyncRebuilt += sync_filled;
-    stats.Completed += sync_filled;
-    mesh_data_changed = sync_filled > 0;
+    if (sync_cap <= 0)
+    {
+      LastMeshSyncMs = 0.0;
+    }
+    else
+    {
+      const auto sync_t0 = std::chrono::high_resolution_clock::now();
+      const int sync_filled =
+          SyncRebuildVisibleMissing(world, registry, sync_cap, max_sync_ms);
+      LastMeshSyncMs = std::chrono::duration<double, std::milli>(
+                           std::chrono::high_resolution_clock::now() - sync_t0)
+                           .count();
+      stats.SyncRebuilt += sync_filled;
+      stats.Completed += sync_filled;
+      mesh_data_changed = sync_filled > 0;
+    }
   }
   if (!force_sync && Render.AsyncMeshing && Render.GreedyMeshing)
   {

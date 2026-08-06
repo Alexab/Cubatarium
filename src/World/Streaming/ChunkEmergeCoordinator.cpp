@@ -394,6 +394,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     // ClearPending and inflated not_ready — keep underfeet only.
     world.PruneStickyRemeshOutside(focus_ground_horiz, /*radius=*/1);
   }
+  // I6: long calm stand — drop leftover sticky (void-edge stale can pin count=1).
+  if (!moving && pending_focus_count == 0 && !missing_visible_mesh &&
+      black_sticky > 0 && world.GetTimeSinceMotionSec() > 12.0)
+  {
+    world.PruneStickyRemeshOutside(focus_ground_horiz, /*radius=*/0);
+    world.ClearPendingLightAfterMeshCommitted(32);
+  }
   prep_sticky_ms = prep_ms_since(prep_t);
   prep_t = std::chrono::high_resolution_clock::now();
   // visual_holes = missing mesh only; near_focus_holes kept for legacy paths
@@ -2011,11 +2018,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     sync_cap = std::max(sync_cap, moving ? 1 : 2);
   }
-  // F0: hot frames never SyncRebuild (async-only). Fly-segment "moving" can
-  // briefly drop below MovementPrefetchThreshold while miss=1, reopening
-  // idle sync_cap 2–8 and burning mesh_sync~60–170 (fly_clean_F0c).
-  if ((last_frame_ms > 20.0 || last_frame_wall_ms > 20.0) &&
-      world.GetPlayerRelightMeshBurstFrames() <= 0)
+  // F0: SyncRebuild off unless dig/edit burst. Hot-frame gating still left a
+  // cool→hot hitch (prev do_move<20 opens sync_cap, SyncRebuild burns 100–300ms).
+  if (world.GetPlayerRelightMeshBurstFrames() <= 0)
   {
     sync_cap = 0;
   }
@@ -2440,9 +2445,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       sync_budget_ms = std::min(sync_budget_ms, calm_cap.sync_budget_ms);
     }
   }
-  // F0 re-assert: hole/admission floors above must not reopen SyncRebuild when hot.
-  if ((last_frame_ms > 20.0 || last_frame_wall_ms > 20.0) &&
-      world.GetPlayerRelightMeshBurstFrames() <= 0)
+  // F0 re-assert immediately before RebuildDirtyChunks.
+  if (world.GetPlayerRelightMeshBurstFrames() <= 0)
   {
     sync_cap = 0;
   }
