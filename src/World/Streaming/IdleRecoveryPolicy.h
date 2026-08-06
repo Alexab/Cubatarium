@@ -122,7 +122,13 @@ inline StickyRemeshDrainDecision EvaluateStickyRemeshDrain(
     return out;
   }
   out.run_drain = true;
-  if (in.last_frame_ms <= 55.0)
+  // I4f: wall~35 with sticky=4 never cleared on budget 2 — raise while FPS OK.
+  if (in.last_frame_ms <= 40.0)
+  {
+    out.budget =
+        in.black_sticky > 4 ? 4 : (in.black_sticky > 1 ? 3 : 2);
+  }
+  else if (in.last_frame_ms <= 55.0)
   {
     out.budget =
         in.black_sticky > 4 ? 3 : (in.black_sticky > 1 ? 2 : 1);
@@ -248,7 +254,8 @@ inline IdleMeshDrainCapDecision EvaluateIdleMeshDrainCap(
       out.mesh_drain = std::min(in.mesh_drain, 8);
       out.mesh_schedule = std::min(in.mesh_schedule, 8);
       out.snapshot_budget_ms = 2.0;
-      out.emerge_total_budget_ms = 12.0;
+      // I4f: emerge gate ≤10 — hot remnant was 12 and calm emerge med ~12.
+      out.emerge_total_budget_ms = 10.0;
     }
     else
     {
@@ -268,14 +275,14 @@ inline IdleMeshDrainCapDecision EvaluateIdleMeshDrainCap(
       out.mesh_drain = std::min(in.mesh_drain, 10);
       out.mesh_schedule = std::min(in.mesh_schedule, 10);
       out.snapshot_budget_ms = 2.0;
-      out.emerge_total_budget_ms = 16.0;
+      out.emerge_total_budget_ms = 10.0;
     }
     else
     {
       out.mesh_drain = std::min(in.mesh_drain, 3);
       out.mesh_schedule = std::min(in.mesh_schedule, 4);
       out.snapshot_budget_ms = 1.5;
-      out.emerge_total_budget_ms = 12.0;
+      out.emerge_total_budget_ms = 10.0;
     }
     out.sync_cap = 0;
     out.sync_budget_ms = 0.5;
@@ -287,7 +294,7 @@ inline IdleMeshDrainCapDecision EvaluateIdleMeshDrainCap(
     out.mesh_drain = std::min(in.mesh_drain, remnant_sticky ? 10 : 6);
     out.mesh_schedule = std::min(in.mesh_schedule, remnant_sticky ? 10 : 6);
     out.snapshot_budget_ms = 2.0;
-    out.emerge_total_budget_ms = remnant_sticky ? 20.0 : 16.0;
+    out.emerge_total_budget_ms = remnant_sticky ? 12.0 : 10.0;
     out.sync_cap = 0;
     out.sync_budget_ms = 1.0;
   }

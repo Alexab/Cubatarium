@@ -214,9 +214,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const int pending_async_early = mesh_service.GetAsyncInFlightCount();
   // Idle-only: CountUnfinishedVisualNear is O(focus²) complete+ready scans.
   // Moving paths never use not_ready_early (idle_remesh_debt requires !moving).
+  // I4f: lit idle with no pending/miss — skip the scan (prep was ~7ms of emerge).
   const int not_ready_early =
       moving ? 0
-             : world.CountUnfinishedVisualNear(focus_ground_horiz, focus_radius);
+      : (pending_focus_count == 0 && !missing_visible_mesh)
+            ? 0
+            : world.CountUnfinishedVisualNear(focus_ground_horiz, focus_radius);
   const int focus_dirty_early =
       mesh_service.CountDirtyWithinHorizontalRadius(focus_ground_horiz,
                                                     focus_radius);
@@ -365,10 +368,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     world.PruneStickyRemeshOutside(focus_ground_horiz, /*radius=*/1);
   }
-  else if (idle_remesh_debt || black_sticky > 4)
+  else if (idle_remesh_debt || black_sticky > 0)
   {
     // Idle catch-up: sticky full-focus flood (manual 210341: 7→13) blocked
     // ClearPending and inflated not_ready — keep underfeet only.
+    // I4f: prune at sticky>=1 (was >4); sticky=4 never pruned and never cleared.
     world.PruneStickyRemeshOutside(focus_ground_horiz, /*radius=*/1);
   }
   // visual_holes = missing mesh only; near_focus_holes kept for legacy paths
@@ -821,13 +825,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   mesh_service.SetMeshEmergeTotalBudgetMs(
       moving ? 25.0
              : (healed_idle_emerge
-                    ? (idle_focus_dirty_debt ? 36.0 : 16.0)
+                    ? (idle_focus_dirty_debt ? 36.0 : 10.0)
                     : 60.0));
 
   // Healthy flight with no visual holes: flush Dirty so pressure can leave Red
   // (Dirty plateaus ~700 trapped Red when exit required dirty<=500).
   // Skip while focus relight debt is high — flush starved MarkRelit (pending~50).
-  if (idle_recovery)
+  // I4f: sticky-only calm must not floor Dirty drain (ColumnFlow owns sticky).
+  if (idle_recovery &&
+      (pending_focus_count > 0 || missing_visible_mesh || visual_holes))
   {
     mesh_drain = std::max(mesh_drain, 14);
     mesh_schedule = std::max(mesh_schedule, 12);
@@ -2287,9 +2293,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const int consume_gpu =
         std::max(early_adm.gpu_apply_max,
                  std::max(3, std::max(mesh_drain, mesh_schedule)));
+    // I4f: calm emerge residual was ~3.5ms from max(6, emerge*frac) floor.
+    const bool calm_gpu_pace =
+        !moving && pending_focus_count == 0 && !missing_visible_mesh &&
+        last_frame_ms > 16.0;
+    const double emerge_budget = mesh_service.GetMeshEmergeTotalBudgetMs();
     const double consume_budget =
-        std::max(6.0, mesh_service.GetMeshEmergeTotalBudgetMs() *
-                          early_adm.gpu_budget_frac);
+        calm_gpu_pace
+            ? std::max(1.0, emerge_budget * early_adm.gpu_budget_frac)
+            : std::max(6.0, emerge_budget * early_adm.gpu_budget_frac);
     gpu_consume_done = mesh_service.ConsumeGpuApplyBacklog(
         world.GetBlockWorld(), registry, consume_drain, consume_gpu,
         consume_budget);
