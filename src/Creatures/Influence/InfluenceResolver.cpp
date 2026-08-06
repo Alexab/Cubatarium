@@ -10,6 +10,7 @@
 #include "World/Core/World.h"
 #include <algorithm>
 #include <cmath>
+#include <glm/glm.hpp>
 
 namespace cutum
 {
@@ -329,7 +330,39 @@ InfluencePrediction InfluenceResolver::Resolve(
   InfluenceTargetDelta delta;
   delta.TargetId = target_id;
   delta.TargetPos = target->GetBodyOrigin();
-  delta.HealthDelta = -hit.Damage;
+  float damage = hit.Damage;
+  {
+    const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
+    const InventoryEntryRef &off = target->GetInventory().GetEquippedOffhand();
+    if (items && !off.empty && !off.broken &&
+        off.kind == InventoryEntryKind::Item)
+    {
+      if (const ItemDefinition *shield = items->Get(off.Id))
+      {
+        if (shield->Block.Enabled)
+        {
+          bool frontal = true;
+          const glm::vec3 toAtk =
+              glm::normalize(source.GetBodyOrigin() - target->GetBodyOrigin());
+          const float yawRad = glm::radians(target->GetYaw());
+          const glm::vec3 forward{std::sin(yawRad), 0.f, std::cos(yawRad)};
+          const float cosAng = glm::dot(forward, toAtk);
+          const float halfAng =
+              glm::radians(std::max(1.f, shield->Block.AngleDeg) * 0.5f);
+          frontal = cosAng >= std::cos(halfAng);
+          if (target->IsBlocking() && frontal)
+          {
+            damage *= std::clamp(shield->Block.DamageMul, 0.f, 1.f);
+          }
+          else
+          {
+            damage *= std::clamp(shield->Block.PassiveDamageMul, 0.f, 1.f);
+          }
+        }
+      }
+    }
+  }
+  delta.HealthDelta = -damage;
   pred.Targets.push_back(delta);
   // Status from capability / catalog (not hardcoded bleed).
   for (const std::string &status_id : cap.OnHitStatusIds)

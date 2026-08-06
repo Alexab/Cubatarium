@@ -469,6 +469,33 @@ void UBlockInputController::HandleRightPress(glm::vec2 pos,
   RightDragExceeded = false;
   RightLookActive = false;
 
+  // Offhand shield: RMB hold = block (overrides look when shield equipped).
+  if (ctx.World)
+  {
+    if (UCreature *self = ctx.World->GetControlledCreature())
+    {
+      const UItemDefinitionStorage *items =
+          ctx.World->GetItemDefinitionStorage();
+      const InventoryEntryRef &off = self->GetInventory().GetEquippedOffhand();
+      if (items && !off.empty && !off.broken &&
+          off.kind == InventoryEntryKind::Item)
+      {
+        if (const ItemDefinition *def = items->Get(off.Id))
+        {
+          if (def->Block.Enabled)
+          {
+            self->SetBlocking(true);
+            if (ctx.App)
+            {
+              ctx.App->NotifyFpUseVisual(DefaultUsePreset(*def, "block"), true);
+            }
+            return;
+          }
+        }
+      }
+    }
+  }
+
   if (!UsesRmbLook(ctx))
   {
     return;
@@ -490,6 +517,18 @@ void UBlockInputController::HandleRightRelease(const BlockInputContext &ctx)
     RightPressed = false;
     RightLookActive = false;
     return;
+  }
+
+  if (UCreature *self = ctx.World->GetControlledCreature())
+  {
+    if (self->IsBlocking())
+    {
+      self->SetBlocking(false);
+      if (ctx.App)
+      {
+        ctx.App->ClearFpHeldVisual();
+      }
+    }
   }
 
   RightPressed = false;

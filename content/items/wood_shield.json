@@ -22,6 +22,18 @@
     },
     "punch_attack_uses": 200
   },
+  "armor": {
+    "armor_groups": {
+      "fleshy": 15
+    }
+  },
+  "block": {
+    "enabled": true,
+    "damage_mul": 0.25,
+    "angle_deg": 120,
+    "passive_damage_mul": 0.85,
+    "block_uses": 200
+  },
   "model": "models/items/wood_shield/model.gltf",
   "visual": {
     "wield_scale": 1.5,

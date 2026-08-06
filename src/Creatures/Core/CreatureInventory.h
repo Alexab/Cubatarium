@@ -63,9 +63,15 @@ public:
 
   const InventoryEntryRef &GetEquippedOffhand() const;
   bool EquipOffhand(const InventoryEntryRef &entry);
+  bool EquipOffhand(const InventoryEntryRef &entry,
+                    const UItemDefinitionStorage &items);
   void UnequipOffhand();
+  void UnequipOffhand(const UItemDefinitionStorage &items);
+  const ArmorGroups &GetOffhandArmorGroups() const { return OffhandArmorGroups; }
 
 private:
+  void RecalcOffhandArmorGroups(const UItemDefinitionStorage *items);
+
   std::map<std::string, int> Storage;
   std::vector<HotbarBar> Hotbars;
   size_t ActiveBarIndex{0};
@@ -74,6 +80,7 @@ private:
   std::array<InventoryEntryRef, 6> EquippedArmor{};
   ArmorGroups EquippedArmorGroups{};
   InventoryEntryRef EquippedOffhand{};
+  ArmorGroups OffhandArmorGroups{};
 };
 
 } // namespace cutum

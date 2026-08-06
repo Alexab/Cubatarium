@@ -463,6 +463,26 @@ const InventoryEntryRef &UCreatureInventory::GetEquippedOffhand() const
   return EquippedOffhand;
 }
 
+void UCreatureInventory::RecalcOffhandArmorGroups(
+    const UItemDefinitionStorage *items)
+{
+  OffhandArmorGroups.Ratings.clear();
+  if (!items || EquippedOffhand.empty || EquippedOffhand.broken ||
+      EquippedOffhand.kind != InventoryEntryKind::Item)
+  {
+    return;
+  }
+  const ItemDefinition *def = items->Get(EquippedOffhand.Id);
+  if (!def || def->Armor.ArmorGroups.empty())
+  {
+    return;
+  }
+  for (const auto &pair : def->Armor.ArmorGroups)
+  {
+    OffhandArmorGroups.Ratings[pair.first] += pair.second;
+  }
+}
+
 bool UCreatureInventory::EquipOffhand(const InventoryEntryRef &entry)
 {
   if (entry.empty || entry.Id.empty())
@@ -476,12 +496,31 @@ bool UCreatureInventory::EquipOffhand(const InventoryEntryRef &entry)
   }
   EquippedOffhand = entry;
   EquippedOffhand.empty = false;
+  OffhandArmorGroups.Ratings.clear();
+  return true;
+}
+
+bool UCreatureInventory::EquipOffhand(const InventoryEntryRef &entry,
+                                      const UItemDefinitionStorage &items)
+{
+  if (!EquipOffhand(entry))
+  {
+    return false;
+  }
+  RecalcOffhandArmorGroups(&items);
   return true;
 }
 
 void UCreatureInventory::UnequipOffhand()
 {
   EquippedOffhand = InventoryEntryRef{};
+  OffhandArmorGroups.Ratings.clear();
+}
+
+void UCreatureInventory::UnequipOffhand(const UItemDefinitionStorage &items)
+{
+  (void)items;
+  UnequipOffhand();
 }
 
 void UCreatureInventory::EnsureHotbarCount(size_t count)

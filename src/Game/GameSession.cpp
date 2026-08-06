@@ -488,8 +488,16 @@ bool UGameSession::DropOnSlot(const SlotAddress &target)
   {
     UCreatureInventory *inv = GetControlledInventory(World.get());
     if (!inv || (entry.kind != InventoryEntryKind::Item &&
-                 entry.kind != InventoryEntryKind::Block) ||
-        !inv->EquipOffhand(entry))
+                 entry.kind != InventoryEntryKind::Block))
+    {
+      CancelDrag();
+      return false;
+    }
+    UItemDefinitionStorage *items =
+        World ? World->GetItemDefinitionStorage() : nullptr;
+    const bool ok =
+        items ? inv->EquipOffhand(entry, *items) : inv->EquipOffhand(entry);
+    if (!ok)
     {
       CancelDrag();
       return false;

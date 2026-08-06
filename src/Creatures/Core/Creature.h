@@ -78,12 +78,23 @@ public:
   const ArmorGroups &GetArmorGroups() const
   {
     // Total includes equipped armor contributions (pre-aggregated in
-    // CreatureInventory).
+    // CreatureInventory) plus offhand shield armor_groups.
     TotalArmorGroups = Armor;
     const ArmorGroups &eq = Inventory.GetEquippedArmorGroups();
     for (const auto &pair : eq.Ratings)
     {
       TotalArmorGroups.Ratings[pair.first] += pair.second;
+    }
+    const InventoryEntryRef &off = Inventory.GetEquippedOffhand();
+    if (!off.empty && !off.broken && off.kind == InventoryEntryKind::Item)
+    {
+      // Offhand groups resolved lazily via optional storage pointer is not
+      // available here; Inventory exposes cached offhand groups when set.
+      const ArmorGroups &offGroups = Inventory.GetOffhandArmorGroups();
+      for (const auto &pair : offGroups.Ratings)
+      {
+        TotalArmorGroups.Ratings[pair.first] += pair.second;
+      }
     }
     return TotalArmorGroups;
   }
@@ -101,6 +112,9 @@ public:
     TimeSinceLastInfluenceSec += std::max(0.f, dt);
   }
   void ResetInfluenceCooldown() { TimeSinceLastInfluenceSec = 0.f; }
+
+  bool IsBlocking() const { return Blocking; }
+  void SetBlocking(bool v) { Blocking = v; }
 
   void AddHitFlash(float strength)
   {
@@ -203,6 +217,7 @@ protected:
   float TimeSinceLastInfluenceSec{1000.f};
   float HitFlash01{0.f};
   float HealthBarVisibleSec{0.f};
+  bool Blocking{false};
   std::vector<StatusEffectInstance> StatusEffects;
   bool NeedsTick{false};
   CreatureIntent Intent{};

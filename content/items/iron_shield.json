@@ -22,6 +22,18 @@
     },
     "punch_attack_uses": 200
   },
+  "armor": {
+    "armor_groups": {
+      "fleshy": 25
+    }
+  },
+  "block": {
+    "enabled": true,
+    "damage_mul": 0.2,
+    "angle_deg": 120,
+    "passive_damage_mul": 0.8,
+    "block_uses": 200
+  },
   "model": "models/items/iron_shield/model.gltf",
   "visual": {
     "wield_scale": 1.5,

@@ -99,8 +99,13 @@ Hardness gates unbreakable (`hardness <= 0` in Survival). On groupcap match, dur
 - Swing/use presets: [`content/item_visual_presets.json`](../content/item_visual_presets.json)
 - Models: [`ITEM_ASSETS.md`](ITEM_ASSETS.md)
 
+## Shield / bow controls
+
+- **Bow** (`wood_bow`): Survival LMB hitscan up to `ranged.range` blocks; consumes `arrow` from storage/hotbar.
+- **Shield** (offhand): passive `armor.armor_groups` + `block.passive_damage_mul`; hold **RMB** to block (`block.damage_mul`, front arc). FP plays `raise_shield`.
+
 ## Influence handshake
 
-`UItemToolInfluenceProvider` implements `IUToolInfluenceProvider` so held tools feed melee
+`UItemToolInfluenceProvider` implements `IUToolInfluenceProvider` so held tools feed melee/ranged
 (and Dig channel uses the same item `groupcaps` via `ResolveDigParams`). One Influence bus;
 two group matchers (A).
