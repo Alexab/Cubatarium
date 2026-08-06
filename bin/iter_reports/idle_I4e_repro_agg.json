@@ -1,0 +1,52 @@
+{
+  "runs": [
+    {
+      "calm_stop_wall_med": 49.271,
+      "calm_stop_emerge_med": 16.0853,
+      "calm_stop_stream_med": 13.1125,
+      "stop_mesh_prep_med": 6.1714,
+      "post_stop_black_sticky_max": 6.0,
+      "chunks_traveled": 3
+    },
+    {
+      "calm_stop_wall_med": 57.4973,
+      "calm_stop_emerge_med": 18.6516,
+      "calm_stop_stream_med": 17.9643,
+      "stop_mesh_prep_med": 8.0205,
+      "post_stop_black_sticky_max": 2.0,
+      "chunks_traveled": 3
+    },
+    {
+      "calm_stop_wall_med": 31.1082,
+      "calm_stop_emerge_med": 11.8987,
+      "calm_stop_stream_med": 9.01975,
+      "stop_mesh_prep_med": 5.692,
+      "post_stop_black_sticky_max": 6.0,
+      "chunks_traveled": 3
+    }
+  ],
+  "median": {
+    "calm_stop_wall_med": 49.271,
+    "calm_stop_emerge_med": 16.0853,
+    "calm_stop_stream_med": 13.1125,
+    "stop_mesh_prep_med": 6.1714,
+    "post_stop_black_sticky_max": 6.0,
+    "chunks_traveled": 3
+  },
+  "min": {
+    "calm_stop_wall_med": 31.1082,
+    "calm_stop_emerge_med": 11.8987,
+    "calm_stop_stream_med": 9.01975,
+    "stop_mesh_prep_med": 5.692,
+    "post_stop_black_sticky_max": 2.0,
+    "chunks_traveled": 3
+  },
+  "max": {
+    "calm_stop_wall_med": 57.4973,
+    "calm_stop_emerge_med": 18.6516,
+    "calm_stop_stream_med": 17.9643,
+    "stop_mesh_prep_med": 8.0205,
+    "post_stop_black_sticky_max": 6.0,
+    "chunks_traveled": 3
+  }
+}
