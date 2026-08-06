@@ -109,6 +109,12 @@ struct PhysicsTelemetry
   double MeshDirtyTickMs{0.0};
   /// TickMeshEmerge wall before RebuildDirtyChunksWithStats (prep/idle/cold).
   double MeshEmergePrepMs{0.0};
+  /// I5 prep sub-timers (ms) inside MeshEmergePrepMs.
+  double MeshEmergePrepMissingMs{0.0};
+  double MeshEmergePrepUnfinishedMs{0.0};
+  double MeshEmergePrepStickyMs{0.0};
+  double MeshEmergePrepDropDirtyMs{0.0};
+  double MeshEmergePrepOtherMs{0.0};
   int PrefetchVisualOps{0};
   int PrefetchKeepOps{0};
   int GenBacklogTotal{0};

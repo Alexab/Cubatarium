@@ -608,6 +608,11 @@ void UWorld::RunLegacyPhysicsFrame()
   PhysicsTelemetryData.RelightDrainMs = 0.0;
   PhysicsTelemetryData.MeshEmergeMs = 0.0;
   PhysicsTelemetryData.MeshEmergePrepMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePrepMissingMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePrepUnfinishedMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePrepStickyMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePrepDropDirtyMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePrepOtherMs = 0.0;
 
   if (camera)
   {

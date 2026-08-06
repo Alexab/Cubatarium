@@ -130,6 +130,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     UWorld &world, const StreamingPressureCaps &pressure)
 {
   const auto emerge_t0 = std::chrono::high_resolution_clock::now();
+  auto prep_ms_since =
+      [](std::chrono::high_resolution_clock::time_point t0) -> double
+  {
+    return std::chrono::duration<double, std::milli>(
+               std::chrono::high_resolution_clock::now() - t0)
+        .count();
+  };
+  auto prep_t = emerge_t0;
+  double prep_missing_ms = 0.0;
+  double prep_unfinished_ms = 0.0;
+  double prep_sticky_ms = 0.0;
+  double prep_drop_dirty_ms = 0.0;
   UBlockRegistry &registry = world.GetBlockRegistry();
   UWorldMeshService &mesh_service = world.GetMeshService();
   // Count any Immediate this tick (including early idle paths).
@@ -171,6 +183,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       mesh_service.FindNearestMissingGreedyMesh(
           world.GetBlockWorld(), focus_ground_horiz, focus_radius,
           nearest_missing_hole);
+  prep_missing_ms = prep_ms_since(prep_t);
+  prep_t = std::chrono::high_resolution_clock::now();
   mesh_service.SetDeferMeshUntilLitFn(
       [&world, &mesh_service, focus_ground_horiz, focus_radius,
        have_nearest_missing, nearest_missing_hole](glm::ivec3 chunk_coord)
@@ -220,6 +234,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const int focus_dirty_early =
       mesh_service.CountDirtyWithinHorizontalRadius(focus_ground_horiz,
                                                     focus_radius);
+  prep_unfinished_ms += prep_ms_since(prep_t);
+  prep_t = std::chrono::high_resolution_clock::now();
   // Lit-but-dirty catch-up: only when focus still has *missing* mesh pressure.
   // Remesh-of-existing (fd high, nr from Dirty/Active) must not latch forever —
   // IsColumnRenderReady no longer counts Dirty; keep debt off for remesh-only.
@@ -371,13 +387,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     // ClearPending and inflated not_ready — keep underfeet only.
     world.PruneStickyRemeshOutside(focus_ground_horiz, /*radius=*/1);
   }
+  prep_sticky_ms = prep_ms_since(prep_t);
+  prep_t = std::chrono::high_resolution_clock::now();
   // visual_holes = missing mesh only; near_focus_holes kept for legacy paths
   // that still want light-debt urgency for relight (not starve).
   const bool visual_holes = missing_visible_mesh;
   // Same cruise skip as not_ready_early — idle catch-up still counts fully.
-  const int focus_not_render_ready =
-      moving ? 0
-             : world.CountUnfinishedVisualNear(focus_ground_horiz, focus_radius);
+  // I5: reuse not_ready_early — second CountUnfinishedVisualNear was duplicate.
+  const int focus_not_render_ready = not_ready_early;
   const bool unfinished_visual =
       visual_holes || focus_not_render_ready > 0;
   const bool near_focus_holes = visual_holes || pending_near_light;
@@ -387,6 +404,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           world.GetBlockWorld(), focus_ground_horiz, /*radius=*/1);
   const bool pending_underfeet =
       world.HasPendingLightBeforeMeshNear(focus_ground_horiz, /*radius=*/1);
+  prep_unfinished_ms += prep_ms_since(prep_t);
+  prep_t = std::chrono::high_resolution_clock::now();
 
   int preferred_cy = focus_ground.y;
   bool prefer_lower_cy = false;
@@ -693,10 +712,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         (visual_holes || missing_underfeet)
             ? std::min(focus_radius, stale_n > 200 ? 3 : 2)
             : focus_radius;
+    const auto drop_t0 = std::chrono::high_resolution_clock::now();
     world.GetPhysicsTelemetryMutable().DirtyDropped += static_cast<uint64_t>(
         std::max(0, mesh_service.DropRemeshDirtyBeyondRadius(
                         focus_ground_horiz, drop_keep_h, /*keep_cy=*/-1,
                         /*remesh_only=*/true)));
+    prep_drop_dirty_ms += prep_ms_since(drop_t0);
   }
   // While sticky remesh drains after pending→0, suppress seam MarkDirty even
   // before sticky hits 0 — otherwise remesh thrash pins async≈42 and nr climbs
@@ -1931,6 +1952,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       std::chrono::duration<double, std::milli>(
           std::chrono::high_resolution_clock::now() - emerge_t0)
           .count();
+  {
+    auto &pt = world.GetPhysicsTelemetryMutable();
+    pt.MeshEmergePrepMissingMs = prep_missing_ms;
+    pt.MeshEmergePrepUnfinishedMs = prep_unfinished_ms;
+    pt.MeshEmergePrepStickyMs = prep_sticky_ms;
+    pt.MeshEmergePrepDropDirtyMs = prep_drop_dirty_ms;
+    const double accounted = prep_missing_ms + prep_unfinished_ms +
+                             prep_sticky_ms + prep_drop_dirty_ms;
+    pt.MeshEmergePrepOtherMs =
+        std::max(0.0, pt.MeshEmergePrepMs - accounted);
+  }
   // Moving + dirty backlog: ensure minimum async feed rate so dirty queue
   // drains steadily instead of starving.
   if (moving && pending_dirty > 100 && pending_async < 8)

@@ -108,6 +108,11 @@ def segment_metrics(rows: list[dict]) -> dict:
             "mesh_immediate_med": None,
             "mesh_dirty_tick_med": None,
             "mesh_prep_med": None,
+            "mesh_prep_missing_med": None,
+            "mesh_prep_unfinished_med": None,
+            "mesh_prep_sticky_med": None,
+            "mesh_prep_drop_dirty_med": None,
+            "mesh_prep_other_med": None,
             "physics_block_p95": None,
         }
 
@@ -123,6 +128,15 @@ def segment_metrics(rows: list[dict]) -> dict:
         "mesh_immediate_med": median(col(rows, "mesh_immediate_ms")),
         "mesh_dirty_tick_med": median(col(rows, "mesh_dirty_tick_ms")),
         "mesh_prep_med": median(col(rows, "mesh_emerge_prep_ms")),
+        "mesh_prep_missing_med": median(col(rows, "mesh_emerge_prep_missing_ms")),
+        "mesh_prep_unfinished_med": median(
+            col(rows, "mesh_emerge_prep_unfinished_ms")
+        ),
+        "mesh_prep_sticky_med": median(col(rows, "mesh_emerge_prep_sticky_ms")),
+        "mesh_prep_drop_dirty_med": median(
+            col(rows, "mesh_emerge_prep_drop_dirty_ms")
+        ),
+        "mesh_prep_other_med": median(col(rows, "mesh_emerge_prep_other_ms")),
         "physics_block_p95": p95(pb) if pb else None,
     }
 
@@ -1014,6 +1028,21 @@ def analyze(
             "stop_mesh_immediate_med": stop_segment_metrics["mesh_immediate_med"],
             "stop_mesh_dirty_tick_med": stop_segment_metrics["mesh_dirty_tick_med"],
             "stop_mesh_prep_med": stop_segment_metrics["mesh_prep_med"],
+            "stop_mesh_prep_missing_med": stop_segment_metrics[
+                "mesh_prep_missing_med"
+            ],
+            "stop_mesh_prep_unfinished_med": stop_segment_metrics[
+                "mesh_prep_unfinished_med"
+            ],
+            "stop_mesh_prep_sticky_med": stop_segment_metrics[
+                "mesh_prep_sticky_med"
+            ],
+            "stop_mesh_prep_drop_dirty_med": stop_segment_metrics[
+                "mesh_prep_drop_dirty_med"
+            ],
+            "stop_mesh_prep_other_med": stop_segment_metrics[
+                "mesh_prep_other_med"
+            ],
             "physics_block_ms_p95": physics_block_ms_p95,
             "backend_store_mode": backend_store_mode,
             "backend_mesher_mode": backend_mesher_mode,

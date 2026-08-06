@@ -177,6 +177,11 @@ struct FrameNumbers
   int mesh_immediate_count{0};
   double mesh_dirty_tick_ms{0.0};
   double mesh_emerge_prep_ms{0.0};
+  double mesh_emerge_prep_missing_ms{0.0};
+  double mesh_emerge_prep_unfinished_ms{0.0};
+  double mesh_emerge_prep_sticky_ms{0.0};
+  double mesh_emerge_prep_drop_dirty_ms{0.0};
+  double mesh_emerge_prep_other_ms{0.0};
   int keep_cols{0};
   int visual_cols{0};
   double idle_prefetch_ms{0.0};
@@ -412,6 +417,11 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_immediate_count = phys.MeshImmediateCount;
   n.mesh_dirty_tick_ms = phys.MeshDirtyTickMs;
   n.mesh_emerge_prep_ms = phys.MeshEmergePrepMs;
+  n.mesh_emerge_prep_missing_ms = phys.MeshEmergePrepMissingMs;
+  n.mesh_emerge_prep_unfinished_ms = phys.MeshEmergePrepUnfinishedMs;
+  n.mesh_emerge_prep_sticky_ms = phys.MeshEmergePrepStickyMs;
+  n.mesh_emerge_prep_drop_dirty_ms = phys.MeshEmergePrepDropDirtyMs;
+  n.mesh_emerge_prep_other_ms = phys.MeshEmergePrepOtherMs;
   n.keep_cols = phys.KeepCols;
   n.visual_cols = phys.VisualCols;
   n.idle_prefetch_ms = phys.IdlePrefetchMs;
@@ -657,6 +667,13 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_immediate_count\":" << n.mesh_immediate_count
           << ",\"mesh_dirty_tick_ms\":" << n.mesh_dirty_tick_ms
           << ",\"mesh_emerge_prep_ms\":" << n.mesh_emerge_prep_ms
+          << ",\"mesh_emerge_prep_missing_ms\":" << n.mesh_emerge_prep_missing_ms
+          << ",\"mesh_emerge_prep_unfinished_ms\":"
+          << n.mesh_emerge_prep_unfinished_ms
+          << ",\"mesh_emerge_prep_sticky_ms\":" << n.mesh_emerge_prep_sticky_ms
+          << ",\"mesh_emerge_prep_drop_dirty_ms\":"
+          << n.mesh_emerge_prep_drop_dirty_ms
+          << ",\"mesh_emerge_prep_other_ms\":" << n.mesh_emerge_prep_other_ms
           << ",\"keep_cols\":" << n.keep_cols
           << ",\"visual_cols\":" << n.visual_cols
           << ",\"idle_prefetch_ms\":" << n.idle_prefetch_ms
