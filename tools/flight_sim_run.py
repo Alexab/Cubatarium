@@ -497,7 +497,8 @@ def main() -> int:
         if args.pitch is None:
             args.pitch = 0.0
         if args.yaw is None:
-            args.yaw = 270.0
+            # South over land (same as land-cruise): yaw 270 gave opaque~4/blue.
+            args.yaw = 90.0
         if args.cruise_cx is None:
             args.cruise_cx = -483.0
         if args.cruise_cz is None:
