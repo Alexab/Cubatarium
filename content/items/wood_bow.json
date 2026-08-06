@@ -15,17 +15,26 @@
     "amount": 0.25
   },
   "tool": {
-    "full_punch_interval": 1.2,
+    "full_punch_interval": 0.9,
     "damage": {
-      "fleshy": 1,
-      "melee": 1
+      "fleshy": 5,
+      "melee": 5
     },
     "punch_attack_uses": 100
+  },
+  "ranged": {
+    "enabled": true,
+    "range": 16,
+    "ammo_id": "arrow",
+    "require_los": true
   },
   "visual": {
     "wield_scale": 1.4,
     "use": {
       "ranged": "draw_bow"
+    },
+    "swing": {
+      "melee": "slash_weapon"
     }
   }
 }

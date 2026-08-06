@@ -22,4 +22,10 @@ bool CreatureCombat::TryMeleeStrike(UWorld &world, UCreature &attacker,
   return result.AnyTargetRemoved;
 }
 
+bool CreatureCombat::TryRangedStrike(UWorld &world, UCreature &attacker,
+                                     WorldGameMode mode)
+{
+  return TryMeleeStrike(world, attacker, mode);
+}
+
 } // namespace cutum

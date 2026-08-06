@@ -269,10 +269,69 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
     }
   }
 
-  if (pred.Capability.Channel == InfluenceChannel::Melee &&
+  if ((pred.Capability.Channel == InfluenceChannel::Melee ||
+       pred.Capability.Channel == InfluenceChannel::Ranged) &&
       total_damage > 0.f)
   {
     ApplyMeleeToolWear(world, *source, pred.Capability);
+    if (pred.Capability.Channel == InfluenceChannel::Ranged)
+    {
+      const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
+      if (items)
+      {
+        if (const ItemDefinition *bow = items->Get(pred.Capability.Id))
+        {
+          if (!bow->Ranged.AmmoId.empty())
+          {
+            auto &storage = source->GetInventory().GetStorageMutable();
+            const auto it = storage.find(bow->Ranged.AmmoId);
+            if (it != storage.end() && it->second < 0)
+            {
+              // Unlimited creative stock.
+            }
+            else if (it != storage.end() && it->second > 0)
+            {
+              --it->second;
+              if (it->second <= 0)
+              {
+                storage.erase(it);
+              }
+            }
+            else
+            {
+              auto &hotbars = source->GetInventory().GetHotbarsMutable();
+              bool done = false;
+              for (auto &bar : hotbars)
+              {
+                for (auto &slot : bar.slots)
+                {
+                  if (slot.entry.empty ||
+                      slot.entry.kind != InventoryEntryKind::Item ||
+                      slot.entry.Id != bow->Ranged.AmmoId)
+                  {
+                    continue;
+                  }
+                  if (slot.entry.count > 1)
+                  {
+                    --slot.entry.count;
+                  }
+                  else
+                  {
+                    slot.entry = InventoryEntryRef{};
+                  }
+                  done = true;
+                  break;
+                }
+                if (done)
+                {
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   source->ResetInfluenceCooldown();

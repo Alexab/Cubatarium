@@ -186,7 +186,8 @@ InfluencePrediction InfluenceResolver::Resolve(
   const IUToolInfluenceProvider *provider = tools ? tools : &bare;
   if (!provider->TryGetCapability(source, channel, cap))
   {
-    if (!bare.TryGetCapability(source, InfluenceChannel::Melee, cap))
+    if (channel == InfluenceChannel::Ranged ||
+        !bare.TryGetCapability(source, InfluenceChannel::Melee, cap))
     {
       pred.CancelReason = "no_capability";
       pred.Cancelled = true;
@@ -194,6 +195,50 @@ InfluencePrediction InfluenceResolver::Resolve(
     }
   }
   pred.Capability = cap;
+
+  if (channel == InfluenceChannel::Ranged)
+  {
+    const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
+    if (items)
+    {
+      if (const ItemDefinition *bow = items->Get(cap.Id))
+      {
+        if (!bow->Ranged.AmmoId.empty())
+        {
+          const auto &storage = source.GetInventory().GetStorage();
+          const auto it = storage.find(bow->Ranged.AmmoId);
+          bool haveAmmo = it != storage.end() && it->second != 0;
+          if (!haveAmmo)
+          {
+            for (const auto &bar : source.GetInventory().GetHotbars())
+            {
+              for (const auto &slot : bar.slots)
+              {
+                if (!slot.entry.empty &&
+                    slot.entry.kind == InventoryEntryKind::Item &&
+                    slot.entry.Id == bow->Ranged.AmmoId &&
+                    slot.entry.count != 0)
+                {
+                  haveAmmo = true;
+                  break;
+                }
+              }
+              if (haveAmmo)
+              {
+                break;
+              }
+            }
+          }
+          if (!haveAmmo)
+          {
+            pred.CancelReason = "no_ammo";
+            pred.Cancelled = true;
+            return pred;
+          }
+        }
+      }
+    }
+  }
 
   if (source.GetTimeSinceLastInfluenceSec() < cap.FullIntervalSec)
   {

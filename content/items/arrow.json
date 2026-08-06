@@ -1,0 +1,11 @@
+{
+  "id": "arrow",
+  "displayName": "Arrow",
+  "types": ["combat", "misc"],
+  "stack_max": 64,
+  "wear_end": "destroy",
+  "model": "models/items/wood_spear/model.gltf",
+  "visual": {
+    "wield_scale": 0.8
+  }
+}

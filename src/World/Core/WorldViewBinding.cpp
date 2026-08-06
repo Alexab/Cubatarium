@@ -508,6 +508,15 @@ void UWorld::RunLegacyPhysicsFrame()
         cleared.Influence = InfluenceIntent{};
         controlled->SetIntent(cleared);
       }
+      else if (intent.Influence.Channel == InfluenceChannel::Ranged &&
+               intent.Influence.TargetId != 0)
+      {
+        CreatureCombat::TryRangedStrike(*this, *controlled, GetGameMode());
+        CreatureIntent cleared = intent;
+        cleared.attackTargetId = 0;
+        cleared.Influence = InfluenceIntent{};
+        controlled->SetIntent(cleared);
+      }
       else if (intent.Influence.Channel == InfluenceChannel::Use)
       {
         InfluencePrediction pred =

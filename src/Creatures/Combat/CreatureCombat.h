@@ -15,6 +15,9 @@ struct CreatureCombat
   /// Returns true if target was removed.
   static bool TryMeleeStrike(UWorld &world, UCreature &attacker,
                              WorldGameMode mode);
+  /// Hitscan ranged strike (bow); same apply path as melee.
+  static bool TryRangedStrike(UWorld &world, UCreature &attacker,
+                              WorldGameMode mode);
 };
 
 } // namespace cutum

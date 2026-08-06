@@ -34,6 +34,12 @@ struct PlayerInteractionRouter
 
   /// Self-use (eat/drink) InfluenceIntent on controlled creature.
   static void SetUseIntent(UCreature &controlled);
+
+  /// Hitscan ranged (bow): pick within `rangeBlocks`.
+  static bool TryRouteRangedFromView(UWorld &world, UCreature &controlled,
+                                     const glm::vec3 &eye,
+                                     const glm::vec3 &front, float rangeBlocks);
+  static void SetRangedIntent(UCreature &attacker, CreatureId targetId);
 };
 
 } // namespace cutum

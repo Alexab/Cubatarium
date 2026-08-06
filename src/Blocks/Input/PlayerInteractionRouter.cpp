@@ -1,7 +1,9 @@
 #include "Blocks/Input/PlayerInteractionRouter.h"
 #include "Creatures/Influence/InfluenceCapability.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
+#include "Game/WorldGameMode.h"
 #include "World/Core/World.h"
+#include <algorithm>
 
 namespace cutum
 {
@@ -78,6 +80,39 @@ void PlayerInteractionRouter::SetUseIntent(UCreature &controlled)
   intent.suggestedAnim = LocomotionState::Action;
   intent.clearOnApply = true;
   controlled.SetIntent(intent);
+}
+
+void PlayerInteractionRouter::SetRangedIntent(UCreature &attacker,
+                                              CreatureId targetId)
+{
+  CreatureIntent intent = attacker.GetIntent();
+  intent.attackTargetId = 0;
+  intent.Influence = InfluenceIntent{};
+  intent.Influence.Channel = InfluenceChannel::Ranged;
+  intent.Influence.TargetId = targetId;
+  intent.suggestedAnim = LocomotionState::Action;
+  intent.clearOnApply = false;
+  attacker.SetIntent(intent);
+}
+
+bool PlayerInteractionRouter::TryRouteRangedFromView(UWorld &world,
+                                                     UCreature &controlled,
+                                                     const glm::vec3 &eye,
+                                                     const glm::vec3 &front,
+                                                     float rangeBlocks)
+{
+  if (world.GetGameMode() != WorldGameMode::Survival)
+  {
+    return false;
+  }
+  const float reach = std::max(2.f, rangeBlocks) + 0.35f;
+  const auto target = world.PickCreatureByView(eye, front, reach);
+  if (!target || *target == controlled.GetId())
+  {
+    return false;
+  }
+  SetRangedIntent(controlled, *target);
+  return true;
 }
 
 } // namespace cutum

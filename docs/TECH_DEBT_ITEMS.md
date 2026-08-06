@@ -11,7 +11,8 @@
 | TD-ITEM-004 | wield | Skinned FP arms on same clear-Z / FOV72 pass (not body-in-FP) | **Closed**: mesh FP arms via atlas UV boxes in `TryDrawSkinnedArms`; full weighted skinning optional | closed |
 | TD-ITEM-005 | wield | Third-person wield attachment | **Closed**: `SubmitWieldedFromCreature` on `rightItem`/`leftItem`; hidden when FP viewmodel on | closed |
 | TD-ITEM-007 | combat | Enchantments / tool modifiers beyond melee | Out of scope | wontfix-v1 |
-| TD-ITEM-008 | combat | Bow projectiles / ranged | wood_bow is melee-light only | accepted backlog |
+| TD-ITEM-008 | combat | Bow projectiles / ranged | **Closed**: hitscan Ranged + arrow ammo; physics projectiles = TD-ITEM-019 | closed |
+| TD-ITEM-019 | combat | Physics bow projectiles / stuck arrows | Hitscan shipped as TD-ITEM-008 | accepted backlog |
 
 ## Closed
 

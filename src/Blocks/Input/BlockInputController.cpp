@@ -335,11 +335,45 @@ void UBlockInputController::HandleLeftPress(const BlockInputContext &ctx)
     return;
   }
 
-  // Survival: LMB on a creature → Melee Intent (Router); else dig below.
+  // Survival: LMB with ranged weapon → Ranged Intent; else melee creature; else dig.
   if (auto camera = ctx.World->GetCurrentUserCamera())
   {
     if (UCreature *self = ctx.World->GetControlledCreature())
     {
+      const UItemDefinitionStorage *items = ctx.World->GetItemDefinitionStorage();
+      const InventoryEntryRef *active = self->GetInventory().GetActiveEntryRef();
+      if (items && active && !active->empty &&
+          active->kind == InventoryEntryKind::Item && !active->broken)
+      {
+        if (const ItemDefinition *def = items->Get(active->Id))
+        {
+          if (def->Ranged.Enabled)
+          {
+            if (PlayerInteractionRouter::TryRouteRangedFromView(
+                    *ctx.World, *self, camera->GetPosition(),
+                    camera->GetFront(), def->Ranged.RangeBlocks))
+            {
+              if (ctx.App)
+              {
+                ctx.App->NotifyFpUseVisual(
+                    DefaultUsePreset(*def, "ranged"), false);
+              }
+              LeftDownTime = std::chrono::steady_clock::now();
+              LeftHeld = true;
+              return;
+            }
+            // No target: still play draw, no dig with bow.
+            if (ctx.App)
+            {
+              ctx.App->NotifyFpUseVisual(DefaultUsePreset(*def, "ranged"),
+                                         false);
+            }
+            LeftDownTime = std::chrono::steady_clock::now();
+            LeftHeld = true;
+            return;
+          }
+        }
+      }
       if (PlayerInteractionRouter::TryRouteMeleeFromView(
               *ctx.World, *self, camera->GetPosition(), camera->GetFront()))
       {
