@@ -21,6 +21,7 @@
 #include "Gui/Cache/InventoryIconService.h"
 #include "Items/FpViewmodelRenderer.h"
 #include "Items/ItemDefinitionStorage.h"
+#include "Creatures/Visual/WornEquipmentDrawer.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
@@ -2209,7 +2210,16 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
         std::chrono::duration<double, std::milli>(
             std::chrono::high_resolution_clock::now() - prepare_begin)
             .count());
-    Geometry->Paint(width, height, viewDuration);
+    {
+      const WorldViewSettings &view = World->GetViewSettings();
+      WornEquipmentDrawer::SetHidePossessedWield(ShouldDrawFpViewmodel(view));
+      if (auto items = Core && Core->GetItemDefinitionStorage())
+      {
+        WornEquipmentDrawer::SetItemDefinitions(items.get());
+      }
+      Geometry->Paint(width, height, viewDuration);
+      WornEquipmentDrawer::SetHidePossessedWield(false);
+    }
   }
 
   if (State == AppState::InGame && World && !MinimalOverlayForBench &&

@@ -8,6 +8,7 @@
 #include "Creatures/Visual/CreatureTextureResolver.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
 #include "Creatures/Visual/WornEquipmentDrawer.h"
+#include "Items/ItemDefinitionStorage.h"
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonHierarchy.h"
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonModelSpace.h"
@@ -168,8 +169,7 @@ void UCreatureVisualBoneSkeleton::SubmitDraw(UGeometryEngine &engine,
 
   if (PoseCreature)
   {
-    WornEquipmentDrawer::SubmitFromCreature(
-        engine, *PoseCreature, viewProj, bodyMat,
+    const auto boneLookup =
         [this](const std::string &boneName, glm::mat4 &out) -> bool
         {
           if (!MeshAsset || !Hierarchy)
@@ -187,7 +187,13 @@ void UCreatureVisualBoneSkeleton::SubmitDraw(UGeometryEngine &engine,
           }
           out = CachedBoneMatrices[it->second];
           return true;
-        });
+        };
+    WornEquipmentDrawer::SubmitFromCreature(engine, *PoseCreature, viewProj,
+                                            bodyMat, boneLookup);
+    const UItemDefinitionStorage *items = nullptr;
+    // Items storage is optional; scale falls back to category defaults via id.
+    WornEquipmentDrawer::SubmitWieldedFromCreature(
+        engine, *PoseCreature, items, viewProj, bodyMat, boneLookup);
   }
 }
 

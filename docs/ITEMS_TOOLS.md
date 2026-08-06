@@ -95,9 +95,8 @@ Hardness gates unbreakable (`hardness <= 0` in Survival). On groupcap match, dur
 - Inventory / hotbar icons: `UItemIconCache` via `UItemPreviewRenderer` (glTF → parts[] → FallbackParts)
 - Hotbar: wear bar + broken dim
 - FP viewmodel: clear-Z dual box arms + held Item/Block (`ShowFpWield`, Perspective only). Held items prefer glTF (`TryDrawGltfHeld`), else parts. Scale = AABB fit × `visual.wield_scale` (category defaults via `ItemVisualDefaults` / `tools/apply_item_visual_defaults.py`). Target tool length ≫ FP block cube (~0.22).
+- Worn armor: `WornEquipmentDrawer` on `bone_skeleton`. TP tool/offhand on `rightItem`/`leftItem` (hidden for possessed player when FP viewmodel is on).
 - Swing/use presets: [`content/item_visual_presets.json`](../content/item_visual_presets.json)
-- Offhand on sheet. Skinned/mesh FP arms = TD-ITEM-004.
-- Worn armor: `WornEquipmentDrawer` on `bone_skeleton`. TP tool wield = TD-ITEM-005.
 - Models: [`ITEM_ASSETS.md`](ITEM_ASSETS.md)
 
 ## Influence handshake

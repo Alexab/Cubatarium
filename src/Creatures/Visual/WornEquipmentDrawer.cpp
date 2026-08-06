@@ -8,7 +8,9 @@
 #include "Creatures/Visual/Gltf/CreatureGltfLoader.h"
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
 #include "Game/Inventory/InventoryTypes.h"
+#include "Items/ItemDefinitionStorage.h"
 #include "Items/ItemGltfTextureCache.h"
+#include "Items/ItemVisualDefaults.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
@@ -351,7 +353,6 @@ void SubmitItemOnBones(UGeometryEngine *engine, UShaderProgram *shader,
         req.Kind = CreatureDrawKind::SkeletalMesh;
         req.Mvp = mvp;
         req.Texture = tex;
-        // Lifetime: asset is cached globally for process lifetime.
         req.SkeletalMesh = &prim.mesh;
         engine->GetCreatureDrawQueue().Push(std::move(req));
       }
@@ -359,7 +360,151 @@ void SubmitItemOnBones(UGeometryEngine *engine, UShaderProgram *shader,
   }
 }
 
+void SubmitItemOnSingleBone(UGeometryEngine *engine, UShaderProgram *shader,
+                            const std::string &itemId,
+                            const std::string &boneName, float extraScale,
+                            const float offset[3], const float euler[3],
+                            const glm::mat4 &viewProj, const glm::mat4 &bodyMat,
+                            const BoneMatrixLookupFn &bones, bool immediate)
+{
+  if (itemId.empty() || boneName.empty())
+  {
+    return;
+  }
+  auto asset = LoadItemGltf(itemId);
+  if (!asset || asset->primitives.empty())
+  {
+    return;
+  }
+  WearLocal wear;
+  wear.bones = {boneName};
+  wear.offset = glm::vec3(offset[0], offset[1], offset[2]);
+  wear.eulerDeg = glm::vec3(euler[0], euler[1], euler[2]);
+  wear.scale = extraScale;
+  const glm::mat4 fit = FitGltfToBone(*asset, 0.7f);
+  const glm::mat4 local = WearLocalMatrix(wear) * fit;
+  const std::filesystem::path gltfAbs = ResolveGltfAbs(itemId);
+  const GLuint fallbackTex = SolidColorTex(itemId);
+
+  glm::mat4 boneMat(1.f);
+  if (!bones(boneName, boneMat))
+  {
+    return;
+  }
+  const glm::mat4 mvp = viewProj * bodyMat * boneMat * local;
+  for (const GltfPrimitiveCpu &prim : asset->primitives)
+  {
+    if (prim.mesh.interleavedPosUv.empty() || prim.mesh.indices.empty())
+    {
+      continue;
+    }
+    GLuint tex = 0;
+    if (!gltfAbs.empty())
+    {
+      tex = ItemGltfTextureCache::Instance().Get(gltfAbs, prim.textureStem);
+    }
+    if (tex == 0)
+    {
+      tex = fallbackTex;
+    }
+    if (immediate && shader)
+    {
+      static GLuint vao = 0, vbo = 0, ebo = 0;
+      if (vao == 0)
+      {
+        glGenVertexArrays(1, &vao);
+        glGenBuffers(1, &vbo);
+        glGenBuffers(1, &ebo);
+      }
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, tex);
+      shader->Use();
+      shader->SetInt("texture0", 0);
+      shader->SetInt("uAnimFrame", 0);
+      shader->SetInt("uAnimFrameCount", 1);
+      shader->SetMat4("mvp_matrix", mvp);
+      glBindVertexArray(vao);
+      glBindBuffer(GL_ARRAY_BUFFER, vbo);
+      glBufferData(GL_ARRAY_BUFFER,
+                   static_cast<GLsizeiptr>(prim.mesh.interleavedPosUv.size() *
+                                           sizeof(float)),
+                   prim.mesh.interleavedPosUv.data(), GL_STREAM_DRAW);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+      glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                   static_cast<GLsizeiptr>(prim.mesh.indices.size() *
+                                           sizeof(unsigned)),
+                   prim.mesh.indices.data(), GL_STREAM_DRAW);
+      glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+                            nullptr);
+      glEnableVertexAttribArray(0);
+      glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+                            reinterpret_cast<void *>(3 * sizeof(float)));
+      glEnableVertexAttribArray(1);
+      glDrawElements(GL_TRIANGLES,
+                     static_cast<GLsizei>(prim.mesh.indices.size()),
+                     GL_UNSIGNED_INT, nullptr);
+      glBindVertexArray(0);
+    }
+    else if (engine)
+    {
+      CreatureDrawRequest req;
+      req.Kind = CreatureDrawKind::SkeletalMesh;
+      req.Mvp = mvp;
+      req.Texture = tex;
+      req.SkeletalMesh = &prim.mesh;
+      engine->GetCreatureDrawQueue().Push(std::move(req));
+    }
+  }
+}
+
+bool g_HidePossessedWield = false;
+const UItemDefinitionStorage *g_ItemDefinitions = nullptr;
+
+void ResolveWieldParams(const UItemDefinitionStorage *items,
+                        const std::string &itemId, float &scale,
+                        float offset[3], float euler[3])
+{
+  scale = 1.25f;
+  offset[0] = offset[1] = offset[2] = 0.f;
+  euler[0] = euler[1] = euler[2] = 0.f;
+  const UItemDefinitionStorage *src = items ? items : g_ItemDefinitions;
+  if (!src || itemId.empty())
+  {
+    return;
+  }
+  if (const ItemDefinition *def = src->Get(itemId))
+  {
+    scale = DefaultWieldScale(*def);
+    offset[0] = def->Visual.WieldOffset[0];
+    offset[1] = def->Visual.WieldOffset[1];
+    offset[2] = def->Visual.WieldOffset[2];
+    euler[0] = def->Visual.WieldEulerDeg[0];
+    euler[1] = def->Visual.WieldEulerDeg[1];
+    euler[2] = def->Visual.WieldEulerDeg[2];
+  }
+}
+
 } // namespace
+
+void WornEquipmentDrawer::SetHidePossessedWield(bool hide)
+{
+  g_HidePossessedWield = hide;
+}
+
+bool WornEquipmentDrawer::HidePossessedWield()
+{
+  return g_HidePossessedWield;
+}
+
+void WornEquipmentDrawer::SetItemDefinitions(const UItemDefinitionStorage *items)
+{
+  g_ItemDefinitions = items;
+}
+
+const UItemDefinitionStorage *WornEquipmentDrawer::ItemDefinitions()
+{
+  return g_ItemDefinitions;
+}
 
 void WornEquipmentDrawer::SubmitFromCreature(UGeometryEngine &engine,
                                              const UCreature &creature,
@@ -377,6 +522,58 @@ void WornEquipmentDrawer::SubmitFromCreature(UGeometryEngine &engine,
     }
   }
   SubmitFromSlots(engine, slots, viewProj, bodyMat, bones);
+}
+
+void WornEquipmentDrawer::SubmitWieldedFromCreature(
+    UGeometryEngine &engine, const UCreature &creature,
+    const UItemDefinitionStorage *items, const glm::mat4 &viewProj,
+    const glm::mat4 &bodyMat, const BoneMatrixLookupFn &bones)
+{
+  if (g_HidePossessedWield && creature.IsPossessed())
+  {
+    return;
+  }
+  const InventoryEntryRef *active = creature.GetInventory().GetActiveEntryRef();
+  const InventoryEntryRef &off = creature.GetInventory().GetEquippedOffhand();
+  std::string mainId;
+  std::string offId;
+  if (active && !active->empty && !active->broken &&
+      active->kind == InventoryEntryKind::Item)
+  {
+    mainId = active->Id;
+  }
+  if (!off.empty && !off.broken && off.kind == InventoryEntryKind::Item)
+  {
+    offId = off.Id;
+  }
+  SubmitWieldedPreview(&engine, nullptr, mainId, offId, items, viewProj, bodyMat,
+                       bones, false);
+}
+
+void WornEquipmentDrawer::SubmitWieldedPreview(
+    UGeometryEngine *engine, UShaderProgram *shader, const std::string &mainItemId,
+    const std::string &offhandItemId, const UItemDefinitionStorage *items,
+    const glm::mat4 &viewProj, const glm::mat4 &bodyMat,
+    const BoneMatrixLookupFn &bones, bool immediate)
+{
+  float scale = 1.25f;
+  float offset[3] = {0, 0, 0};
+  float euler[3] = {0, 0, 0};
+  if (!mainItemId.empty())
+  {
+    ResolveWieldParams(items, mainItemId, scale, offset, euler);
+    // Hands armor may also occupy *Item; nudge tool slightly outward.
+    offset[1] += 0.05f;
+    SubmitItemOnSingleBone(engine, shader, mainItemId, "rightItem", scale,
+                           offset, euler, viewProj, bodyMat, bones, immediate);
+  }
+  if (!offhandItemId.empty())
+  {
+    ResolveWieldParams(items, offhandItemId, scale, offset, euler);
+    offset[1] += 0.05f;
+    SubmitItemOnSingleBone(engine, shader, offhandItemId, "leftItem", scale,
+                           offset, euler, viewProj, bodyMat, bones, immediate);
+  }
 }
 
 void WornEquipmentDrawer::SubmitFromSlots(

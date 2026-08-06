@@ -9,7 +9,7 @@
 | TD-ITEM-001 | foundation | Backpack grid for durable item instances | Hotbar-only v1; storage map is count-only | accepted backlog |
 | TD-ITEM-002 | foundation | Anvil UI / craft two tools → one | `/repair` covers v1 | accepted backlog |
 | TD-ITEM-004 | wield | Skinned FP arms on same clear-Z / FOV72 pass (not body-in-FP) | Box dual-arm viewmodel + Item/Block held is shipped; attach glTF arms later | accepted backlog |
-| TD-ITEM-005 | wield | Third-person wield attachment | FP-first scope | accepted backlog |
+| TD-ITEM-005 | wield | Third-person wield attachment | **Closed**: `SubmitWieldedFromCreature` on `rightItem`/`leftItem`; hidden when FP viewmodel on | closed |
 | TD-ITEM-007 | combat | Enchantments / tool modifiers beyond melee | Out of scope | wontfix-v1 |
 | TD-ITEM-008 | combat | Bow projectiles / ranged | wood_bow is melee-light only | accepted backlog |
 
