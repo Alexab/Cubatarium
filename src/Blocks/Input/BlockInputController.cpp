@@ -9,6 +9,7 @@
 #include "Items/FpViewmodelRenderer.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ItemUseRegistry.h"
+#include "Items/ItemVisualDefaults.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "World/Core/World.h"
@@ -259,7 +260,11 @@ void UBlockInputController::TryUseActiveSlot(const BlockInputContext &ctx)
           PlayerInteractionRouter::SetUseIntent(*controlled);
           if (ctx.App)
           {
-            ctx.App->NotifyFpSwing(FpSwingKind::Place);
+            const std::string preset =
+                DefaultUsePreset(*def, use.Action == ItemUseAction::Drink
+                                           ? "drink"
+                                           : "eat");
+            ctx.App->NotifyFpUseVisual(preset, false);
           }
         }
       }

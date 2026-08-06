@@ -109,6 +109,8 @@ public:
   void ProcessInput();
   void RenderFrame(int width, int height, double viewDuration);
   void NotifyFpSwing(FpSwingKind kind);
+  void NotifyFpUseVisual(const std::string &presetId, bool hold);
+  void ClearFpHeldVisual();
   void OpenCraftingScreen();
   void OpenAnvilScreen();
   void SetViewportInsets(int left, int top, int right, int bottom);

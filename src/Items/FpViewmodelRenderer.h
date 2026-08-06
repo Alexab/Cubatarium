@@ -52,6 +52,9 @@ public:
   void Update(float dt, float cameraYawDeg, float cameraPitchDeg,
               float moveSpeedHint);
   void NotifySwing(FpSwingKind kind);
+  void NotifyUseVisual(const std::string &presetId, bool holdAtEnd);
+  void ClearHeldVisual();
+  void SetActiveItemHint(const std::string &itemId);
 
   /// AFTER Geometry::Paint, BEFORE HUD. Default framebuffer.
   void DrawWorldOverlay(const FpViewmodelDrawParams &params);
@@ -71,6 +74,17 @@ private:
     bool useSkinAtlas{false};
   };
 
+  struct FpAnimPlayback
+  {
+    std::string PresetId;
+    float T{-1.f};
+    float Duration{0.28f};
+    bool HoldAtEnd{false};
+    bool Holding{false};
+    ItemVisualPreset Snapshot{};
+    bool HaveSnapshot{false};
+  };
+
   struct FpMotion
   {
     float BobPhase{0.f};
@@ -81,7 +95,14 @@ private:
     float LastYaw{0.f};
     float LastPitch{0.f};
     bool HaveLastAngles{false};
+    FpAnimPlayback Anim;
+    std::string ActiveItemHint;
   };
+
+  void BeginPresetAnim(const std::string &presetId, bool holdAtEnd);
+  float SampleEasing(float t, ItemVisualEasing easing) const;
+  void ApplyPresetToOffsets(float eased, float &ox, float &oy, float &oz,
+                            glm::mat4 &swing) const;
 
   bool InitCubeMesh();
   bool EnsureArmSkinMesh(int texW, int texH);

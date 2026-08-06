@@ -508,6 +508,16 @@ void UWorld::RunLegacyPhysicsFrame()
         cleared.Influence = InfluenceIntent{};
         controlled->SetIntent(cleared);
       }
+      else if (intent.Influence.Channel == InfluenceChannel::Use)
+      {
+        InfluencePrediction pred =
+            InfluenceResolver::Resolve(*this, *controlled, GetGameMode(),
+                                       nullptr);
+        InfluenceApplier::Apply(*this, pred, GetGameMode(), dt);
+        CreatureIntent cleared = intent;
+        cleared.Influence = InfluenceIntent{};
+        controlled->SetIntent(cleared);
+      }
     }
   }
 

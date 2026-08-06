@@ -495,7 +495,26 @@ void UFpViewmodelRenderer::Update(float dt, float cameraYawDeg,
     Motion.LastPitch = cameraPitchDeg;
   }
 
-  if (Motion.DigAnim >= 0.f)
+  if (Motion.Anim.T >= 0.f && !Motion.Anim.Holding)
+  {
+    const float dur = std::max(0.05f, Motion.Anim.Duration);
+    Motion.Anim.T += dt / dur;
+    if (Motion.Anim.T >= 1.f)
+    {
+      if (Motion.Anim.HoldAtEnd)
+      {
+        Motion.Anim.T = 1.f;
+        Motion.Anim.Holding = true;
+      }
+      else
+      {
+        Motion.Anim.T = -1.f;
+        Motion.Anim.HaveSnapshot = false;
+        Motion.DigButton = -1;
+      }
+    }
+  }
+  else if (Motion.DigAnim >= 0.f && Motion.Anim.T < 0.f)
   {
     Motion.DigAnim += dt * kSwingSpeed;
     if (Motion.DigAnim >= 1.f)
@@ -506,13 +525,136 @@ void UFpViewmodelRenderer::Update(float dt, float cameraYawDeg,
   }
 }
 
+void UFpViewmodelRenderer::BeginPresetAnim(const std::string &presetId,
+                                           bool holdAtEnd)
+{
+  Motion.Anim.PresetId = presetId;
+  Motion.Anim.T = 0.f;
+  Motion.Anim.Holding = false;
+  Motion.Anim.HoldAtEnd = holdAtEnd;
+  Motion.Anim.HaveSnapshot = false;
+  Motion.Anim.Duration = 0.28f;
+  if (Items)
+  {
+    if (const ItemVisualPreset *p = Items->VisualPresets().Get(presetId))
+    {
+      Motion.Anim.Snapshot = *p;
+      Motion.Anim.HaveSnapshot = true;
+      Motion.Anim.Duration = std::max(0.05f, p->Duration);
+      Motion.Anim.HoldAtEnd = holdAtEnd || p->HoldAtEnd;
+    }
+  }
+}
+
 void UFpViewmodelRenderer::NotifySwing(FpSwingKind kind)
 {
-  if (kind == FpSwingKind::Place || Motion.DigButton < 0)
+  // Place always restarts; Dig/Melee ignored while a one-shot swing plays.
+  if (kind != FpSwingKind::Place && Motion.Anim.T >= 0.f &&
+      !Motion.Anim.Holding)
   {
-    Motion.DigButton = (kind == FpSwingKind::Place) ? 1 : 0;
-    Motion.DigAnim = 0.f;
+    return;
   }
+  Motion.DigButton = (kind == FpSwingKind::Place) ? 1 : 0;
+  Motion.DigAnim = 0.f;
+  std::string preset = "dig_tool";
+  if (Items && !Motion.ActiveItemHint.empty())
+  {
+    if (const ItemDefinition *def = Items->Get(Motion.ActiveItemHint))
+    {
+      preset = DefaultSwingPreset(*def, kind);
+    }
+  }
+  else if (kind == FpSwingKind::Place)
+  {
+    preset = "place_block";
+  }
+  else if (kind == FpSwingKind::Melee)
+  {
+    preset = "slash_weapon";
+  }
+  BeginPresetAnim(preset, false);
+}
+
+void UFpViewmodelRenderer::NotifyUseVisual(const std::string &presetId,
+                                           bool holdAtEnd)
+{
+  if (presetId.empty())
+  {
+    return;
+  }
+  BeginPresetAnim(presetId, holdAtEnd);
+}
+
+void UFpViewmodelRenderer::ClearHeldVisual()
+{
+  Motion.Anim.T = -1.f;
+  Motion.Anim.Holding = false;
+  Motion.Anim.HaveSnapshot = false;
+  Motion.DigAnim = -1.f;
+  Motion.DigButton = -1;
+}
+
+void UFpViewmodelRenderer::SetActiveItemHint(const std::string &itemId)
+{
+  Motion.ActiveItemHint = itemId;
+}
+
+float UFpViewmodelRenderer::SampleEasing(float t, ItemVisualEasing easing) const
+{
+  t = std::clamp(t, 0.f, 1.f);
+  switch (easing)
+  {
+  case ItemVisualEasing::Linear:
+    return t;
+  case ItemVisualEasing::Smoothstep:
+    return t * t * (3.f - 2.f * t);
+  case ItemVisualEasing::SinPi:
+  default:
+    return std::sin(t * kPi);
+  }
+}
+
+void UFpViewmodelRenderer::ApplyPresetToOffsets(float eased, float &ox,
+                                                float &oy, float &oz,
+                                                glm::mat4 &swing) const
+{
+  if (!Motion.Anim.HaveSnapshot)
+  {
+    return;
+  }
+  const ItemVisualArmKeys &arm = Motion.Anim.Snapshot.Arm;
+  auto lerp2 = [eased](const float v[2], bool has) {
+    return has ? (v[0] + (v[1] - v[0]) * eased) : 0.f;
+  };
+  if (arm.HasTx)
+  {
+    ox += lerp2(arm.Tx, true);
+  }
+  if (arm.HasTy)
+  {
+    oy += lerp2(arm.Ty, true);
+  }
+  if (arm.HasTz)
+  {
+    oz += lerp2(arm.Tz, true);
+  }
+  const float rx = glm::radians(lerp2(arm.RxDeg, arm.HasRx));
+  const float ry = glm::radians(lerp2(arm.RyDeg, arm.HasRy));
+  const float rz = glm::radians(lerp2(arm.RzDeg, arm.HasRz));
+  glm::quat punch = glm::quat(1.f, 0.f, 0.f, 0.f);
+  if (arm.HasRx)
+  {
+    punch = glm::angleAxis(rx, glm::vec3(1.f, 0.f, 0.f)) * punch;
+  }
+  if (arm.HasRy)
+  {
+    punch = glm::angleAxis(ry, glm::vec3(0.f, 1.f, 0.f)) * punch;
+  }
+  if (arm.HasRz)
+  {
+    punch = glm::angleAxis(rz, glm::vec3(0.f, 0.f, 1.f)) * punch;
+  }
+  swing = glm::mat4_cast(punch);
 }
 
 glm::mat4 UFpViewmodelRenderer::BuildRootMatrix(bool mirrorX) const
@@ -522,7 +664,13 @@ glm::mat4 UFpViewmodelRenderer::BuildRootMatrix(bool mirrorX) const
   float oy = Motion.WieldOffsetY + BobY;
   float oz = 0.f;
   glm::mat4 swing(1.f);
-  if (Motion.DigAnim >= 0.f && !mirrorX)
+  if (Motion.Anim.T >= 0.f && !mirrorX && Motion.Anim.HaveSnapshot)
+  {
+    const float eased =
+        SampleEasing(Motion.Anim.T, Motion.Anim.Snapshot.Easing);
+    ApplyPresetToOffsets(eased, ox, oy, oz, swing);
+  }
+  else if (Motion.DigAnim >= 0.f && !mirrorX)
   {
     const float f = Motion.DigAnim;
     ox += -0.10f * std::sin(std::pow(f, 0.8f) * kPi);
@@ -977,6 +1125,16 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
   if (!Shader || params.FramebufferW <= 0 || params.FramebufferH <= 0)
   {
     return;
+  }
+  if (params.Active && !params.Active->empty &&
+      params.Active->kind == InventoryEntryKind::Item)
+  {
+    SetActiveItemHint(params.Active->Id);
+  }
+  else if (params.Active && !params.Active->empty &&
+           params.Active->kind == InventoryEntryKind::Block)
+  {
+    SetActiveItemHint({});
   }
   UGlStateScope glState(kGlMaskFpViewmodel3D);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);

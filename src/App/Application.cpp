@@ -1795,6 +1795,22 @@ void UApplication::NotifyFpSwing(FpSwingKind kind)
   }
 }
 
+void UApplication::NotifyFpUseVisual(const std::string &presetId, bool hold)
+{
+  if (FpViewmodelRenderer)
+  {
+    FpViewmodelRenderer->NotifyUseVisual(presetId, hold);
+  }
+}
+
+void UApplication::ClearFpHeldVisual()
+{
+  if (FpViewmodelRenderer)
+  {
+    FpViewmodelRenderer->ClearHeldVisual();
+  }
+}
+
 void UApplication::OpenCraftingScreen()
 {
   if (!CraftingScreen)
