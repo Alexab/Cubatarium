@@ -36,8 +36,28 @@ Or: `/give <item_id>` into the active hotbar slot.
 | `tool.damage` / `damage.melee` | Combat damage groups (e.g. `fleshy`) — domain A hit; scalar `melee` maps to fleshy |
 | `tool.full_punch_interval` | Melee cooldown |
 | `tool.punch_attack_uses` | Wear denominator for melee hits |
+| `visual.*` | FP/TP wield scale, offset, euler, swing/use preset ids |
+| `ranged.*` | Hitscan bow: enabled, range, ammo_id |
+| `block.*` | Shield: enabled, damage_mul, angle, passive mul |
 
 Hand is a built-in hidden def (`hand`) with weak `oddly_breakable_by_hand` / `crumbly` caps.
+
+### Critical vs hideable
+
+**Critical** (must stay in catalog even without textures; must not set `hidden`):
+
+- Built-in `hand`
+- Mining: `wood/stone/iron/copper_{pickaxe,axe,shovel}`, `tool_{pickaxe,axe,shovel}_upgraded`
+- Other dig: hammers, `wood_mallet`, `iron_hoe`, upgraded hammer/hoe
+- Melee: swords, spears, `iron_dagger`, `stone_knife`
+- `wood_bow`, `wood_shield`, `iron_shield`
+- All leather/copper/iron armor slots
+- `apple`, `bread`, `wood_torch`
+
+**Hideable** if assets stay broken (no fishing/crop gameplay): `fishing_rod`, `iron_scythe`.
+
+Audit: `python tools/audit_item_visuals.py` → `bin/iter_reports/item_visual_audit.json`.
+Validate: `python tools/validate_item_defs.py`.
 
 See [INTERACTION_ARCHITECTURE.md](INTERACTION_ARCHITECTURE.md) (decisions A + C) and
 [SURVIVAL_INTEGRATION.md](SURVIVAL_INTEGRATION.md) (`WorldDifficulty`).
