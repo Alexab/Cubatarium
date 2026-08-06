@@ -1,6 +1,7 @@
 {
   "id": "iron_scythe",
   "displayName": "Iron Scythe",
+  "hidden": true,
   "types": [
     "utility"
   ],

@@ -1,6 +1,7 @@
 {
   "id": "fishing_rod",
   "displayName": "Fishing Rod",
+  "hidden": true,
   "types": [
     "utility"
   ],

@@ -17,5 +17,6 @@
     "use": {
       "eat": "eat_hand"
     }
-  }
+  },
+  "model": "models/items/bread/model.gltf"
 }

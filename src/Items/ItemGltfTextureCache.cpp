@@ -5,6 +5,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <vector>
 #include <nlohmann/json.hpp>
 
 namespace cutum
@@ -71,6 +72,47 @@ void IndexPngDir(const std::filesystem::path &dir,
   }
 }
 
+GLuint MakeSolidRgba(unsigned char r, unsigned char g, unsigned char b,
+                     unsigned char a = 255)
+{
+  const unsigned char rgba[4] = {r, g, b, a};
+  GLuint tex = 0;
+  glGenTextures(1, &tex);
+  glBindTexture(GL_TEXTURE_2D, tex);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+               rgba);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glBindTexture(GL_TEXTURE_2D, 0);
+  return tex;
+}
+
+GLuint LoadPngFromMemory(const unsigned char *data, int size)
+{
+  if (!data || size <= 0)
+  {
+    return 0;
+  }
+  int w = 0, h = 0, ch = 0;
+  unsigned char *pixels = stbi_load_from_memory(data, size, &w, &h, &ch, 4);
+  if (!pixels)
+  {
+    return 0;
+  }
+  GLuint tex = 0;
+  glGenTextures(1, &tex);
+  glBindTexture(GL_TEXTURE_2D, tex);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+               pixels);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glBindTexture(GL_TEXTURE_2D, 0);
+  stbi_image_free(pixels);
+  return tex;
+}
+
 void LoadFromGltfJson(const std::filesystem::path &gltfPath,
                       std::unordered_map<std::string, GLuint> &out)
 {
@@ -89,47 +131,96 @@ void LoadFromGltfJson(const std::filesystem::path &gltfPath,
     return;
   }
   const std::filesystem::path modelDir = gltfPath.parent_path();
-  if (!gltf.contains("images") || !gltf["images"].is_array())
+
+  // Resolve image sources (external URI or bufferView).
+  std::vector<GLuint> imageTex;
+  if (gltf.contains("images") && gltf["images"].is_array())
   {
-    return;
-  }
-  std::vector<std::filesystem::path> imagePaths;
-  for (const auto &img : gltf["images"])
-  {
-    if (!img.contains("uri"))
+    imageTex.resize(gltf["images"].size(), 0);
+    for (size_t i = 0; i < gltf["images"].size(); ++i)
     {
-      continue;
+      const auto &img = gltf["images"][i];
+      if (img.contains("uri") && img["uri"].is_string())
+      {
+        const std::string uri = img["uri"].get<std::string>();
+        if (!uri.empty() && uri.find("data:") != 0)
+        {
+          imageTex[i] = LoadPng(modelDir / uri);
+        }
+        continue;
+      }
+      if (!img.contains("bufferView") || !gltf.contains("bufferViews") ||
+          !gltf.contains("buffers"))
+      {
+        continue;
+      }
+      const int bvIndex = img["bufferView"].get<int>();
+      if (bvIndex < 0 ||
+          bvIndex >= static_cast<int>(gltf["bufferViews"].size()))
+      {
+        continue;
+      }
+      const auto &bv = gltf["bufferViews"][bvIndex];
+      const int bufIndex = bv.value("buffer", 0);
+      const int byteOffset = bv.value("byteOffset", 0);
+      const int byteLength = bv.value("byteLength", 0);
+      if (bufIndex < 0 || bufIndex >= static_cast<int>(gltf["buffers"].size()) ||
+          byteLength <= 0)
+      {
+        continue;
+      }
+      const std::string bufUri = gltf["buffers"][bufIndex].value("uri", "");
+      if (bufUri.empty() || bufUri.find("data:") == 0)
+      {
+        continue;
+      }
+      const auto binPath = modelDir / bufUri;
+      std::ifstream bin(binPath, std::ios::binary);
+      if (!bin)
+      {
+        continue;
+      }
+      bin.seekg(byteOffset);
+      std::vector<unsigned char> bytes(static_cast<size_t>(byteLength));
+      bin.read(reinterpret_cast<char *>(bytes.data()), byteLength);
+      if (bin.gcount() != byteLength)
+      {
+        continue;
+      }
+      imageTex[i] = LoadPngFromMemory(bytes.data(), byteLength);
     }
-    const std::string uri = img["uri"].get<std::string>();
-    if (uri.empty() || uri.find("data:") == 0)
-    {
-      continue;
-    }
-    imagePaths.push_back(modelDir / uri);
   }
+
   if (!gltf.contains("materials") || !gltf["materials"].is_array())
   {
-    for (const auto &p : imagePaths)
+    for (size_t i = 0; i < imageTex.size(); ++i)
     {
-      const std::string stem = p.stem().string();
-      if (out.find(stem) == out.end())
+      if (imageTex[i] != 0)
       {
-        const GLuint tex = LoadPng(p);
-        if (tex != 0)
+        out["img_" + std::to_string(i)] = imageTex[i];
+        if (out.find("body") == out.end())
         {
-          out[stem] = tex;
+          out["body"] = imageTex[i];
         }
       }
     }
     return;
   }
+
+  int matIndex = 0;
   for (const auto &mat : gltf["materials"])
   {
     std::string stem = mat.value("name", std::string());
     if (stem.empty())
     {
-      continue;
+      stem = "body";
+      if (matIndex > 0)
+      {
+        stem = "__mat_" + std::to_string(matIndex);
+      }
     }
+    ++matIndex;
+
     int texIndex = -1;
     if (mat.contains("pbrMetallicRoughness") &&
         mat["pbrMetallicRoughness"].contains("baseColorTexture"))
@@ -137,64 +228,42 @@ void LoadFromGltfJson(const std::filesystem::path &gltfPath,
       texIndex =
           mat["pbrMetallicRoughness"]["baseColorTexture"].value("index", -1);
     }
-    if (texIndex < 0 || !gltf.contains("textures") ||
-        texIndex >= static_cast<int>(gltf["textures"].size()))
+    if (texIndex >= 0 && gltf.contains("textures") &&
+        texIndex < static_cast<int>(gltf["textures"].size()))
     {
-      if (mat.contains("pbrMetallicRoughness"))
+      const int srcIndex = gltf["textures"][texIndex].value("source", -1);
+      if (srcIndex >= 0 && srcIndex < static_cast<int>(imageTex.size()) &&
+          imageTex[static_cast<size_t>(srcIndex)] != 0)
       {
-        const auto &pbr = mat["pbrMetallicRoughness"];
-        if (pbr.contains("baseColorFactor") && pbr["baseColorFactor"].is_array() &&
-            pbr["baseColorFactor"].size() >= 3)
+        out[stem] = imageTex[static_cast<size_t>(srcIndex)];
+        if (out.find("body") == out.end())
         {
-          const std::string key =
-              stem.empty() ? "__factor__" : stem + "_factor";
-          if (out.find(key) != out.end())
-          {
-            continue;
-          }
-          const auto &c = pbr["baseColorFactor"];
-          const unsigned char rgba[4] = {
-              static_cast<unsigned char>(c[0].get<float>() * 255.f),
-              static_cast<unsigned char>(c[1].get<float>() * 255.f),
-              static_cast<unsigned char>(c[2].get<float>() * 255.f),
-              static_cast<unsigned char>(
-                  (c.size() > 3 ? c[3].get<float>() : 1.f) * 255.f)};
-          GLuint tex = 0;
-          glGenTextures(1, &tex);
-          glBindTexture(GL_TEXTURE_2D, tex);
-          glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA,
-                       GL_UNSIGNED_BYTE, rgba);
-          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-          glBindTexture(GL_TEXTURE_2D, 0);
-          out[key] = tex;
-          if (stem.empty())
-          {
-            out["body"] = tex;
-          }
+          out["body"] = out[stem];
+        }
+        continue;
+      }
+    }
+
+    if (mat.contains("pbrMetallicRoughness"))
+    {
+      const auto &pbr = mat["pbrMetallicRoughness"];
+      if (pbr.contains("baseColorFactor") && pbr["baseColorFactor"].is_array() &&
+          pbr["baseColorFactor"].size() >= 3)
+      {
+        const auto &c = pbr["baseColorFactor"];
+        const GLuint tex = MakeSolidRgba(
+            static_cast<unsigned char>(c[0].get<float>() * 255.f),
+            static_cast<unsigned char>(c[1].get<float>() * 255.f),
+            static_cast<unsigned char>(c[2].get<float>() * 255.f),
+            static_cast<unsigned char>(
+                (c.size() > 3 ? c[3].get<float>() : 1.f) * 255.f));
+        out[stem] = tex;
+        out[stem + "_factor"] = tex;
+        if (out.find("body") == out.end())
+        {
+          out["body"] = tex;
         }
       }
-      continue;
-    }
-    const int srcIndex = gltf["textures"][texIndex].value("source", -1);
-    if (srcIndex < 0 || srcIndex >= static_cast<int>(gltf["images"].size()))
-    {
-      continue;
-    }
-    const std::string uri = gltf["images"][srcIndex].value("uri", "");
-    if (uri.empty() || uri.find("data:") == 0)
-    {
-      continue;
-    }
-    const auto imgPath = modelDir / uri;
-    if (out.find(stem) != out.end())
-    {
-      continue;
-    }
-    const GLuint tex = LoadPng(imgPath);
-    if (tex != 0)
-    {
-      out[stem] = tex;
     }
   }
 }
