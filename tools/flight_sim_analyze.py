@@ -75,6 +75,58 @@ def detect_stop_segment(periods: list[dict], min_len: int = 3) -> list[dict]:
     return periods[-min_len:] if len(periods) >= min_len else periods
 
 
+def classify_stop_period(r: dict) -> str:
+    """Classify a focus-plateau period: calm / recovery / contaminated stand."""
+    pb = float(r.get("physics_block_ms") or 0)
+    imm = float(r.get("edit_immediate_n") or 0)
+    pend = float(r.get("pending_light_focus") or 0)
+    if imm > 0 or pb >= 50.0:
+        return "contaminated_stop"
+    # Recovery = light debt still clearing; sticky alone is visual, not perf-idle.
+    if pend > 0:
+        return "recovery_stop"
+    if pb < 5.0 and imm == 0:
+        return "calm_stop"
+    return "recovery_stop"
+
+
+def segment_metrics(rows: list[dict]) -> dict:
+    """Median/p95 wall and sub-timers for a period subset."""
+
+    def col(rs: list[dict], key: str) -> list[float]:
+        return [float(r.get(key) or 0) for r in rs]
+
+    if not rows:
+        return {
+            "n": 0,
+            "wall_med": None,
+            "wall_p95": None,
+            "emerge_med": None,
+            "stream_med": None,
+            "phys_med": None,
+            "relight_med": None,
+            "mesh_immediate_med": None,
+            "mesh_dirty_tick_med": None,
+            "mesh_prep_med": None,
+            "physics_block_p95": None,
+        }
+
+    pb = col(rows, "physics_block_ms")
+    return {
+        "n": len(rows),
+        "wall_med": median(col(rows, "wall_ms")),
+        "wall_p95": p95(col(rows, "wall_ms")),
+        "emerge_med": median(col(rows, "mesh_emerge_ms")),
+        "stream_med": median(col(rows, "stream_ms")),
+        "phys_med": median(col(rows, "phys_ms")),
+        "relight_med": median(col(rows, "relight_drain_ms")),
+        "mesh_immediate_med": median(col(rows, "mesh_immediate_ms")),
+        "mesh_dirty_tick_med": median(col(rows, "mesh_dirty_tick_ms")),
+        "mesh_prep_med": median(col(rows, "mesh_emerge_prep_ms")),
+        "physics_block_p95": p95(pb) if pb else None,
+    }
+
+
 def detect_longest_stop_segment(periods: list[dict], min_len: int = 5) -> list[dict]:
     """Longest contiguous focus plateau (manual idle / hover)."""
     if len(periods) < min_len:
@@ -520,6 +572,7 @@ def analyze(
     break_complete_sum = sum(int(r.get("break_complete_n") or 0) for r in rows)
     break_race_sum = sum(int(r.get("break_inflight_race_n") or 0) for r in rows)
     break_dark_sum = sum(int(r.get("break_dark_face_n") or 0) for r in rows)
+    place_complete_sum = sum(int(r.get("place_complete_n") or 0) for r in rows)
 
     async_stuck_sec = max(stuck_async_holes_sec, mesh_async_stuck_sec)
     wall_fly_med = median(wall_fly)
@@ -699,6 +752,44 @@ def analyze(
     # Manual 083042: pendf stuck ~40 for ~30s while wall~22–30 and holes=0.
     stop_wall = col(stop_segment, "wall_ms")
     stop_wall_med = median(stop_wall)
+
+    edit_immediate_max = max(
+        (float(r.get("edit_immediate_n") or 0) for r in steady), default=0.0
+    )
+    physics_block_steady = col(steady, "physics_block_ms")
+    physics_block_steady_p95 = p95(physics_block_steady)
+    contaminated_idle = (
+        edit_immediate_max > 0.0
+        or (
+            physics_block_steady_p95 is not None
+            and physics_block_steady_p95 > 50.0
+        )
+        or break_complete_sum > 0
+        or place_complete_sum > 0
+    )
+
+    calm_stop_rows = [
+        r for r in stop_segment if classify_stop_period(r) == "calm_stop"
+    ]
+    recovery_stop_rows = [
+        r for r in stop_segment if classify_stop_period(r) == "recovery_stop"
+    ]
+    contaminated_stop_rows = [
+        r for r in stop_segment if classify_stop_period(r) == "contaminated_stop"
+    ]
+    calm_stop_metrics = segment_metrics(calm_stop_rows)
+    recovery_stop_metrics = segment_metrics(recovery_stop_rows)
+    contaminated_stop_metrics = segment_metrics(contaminated_stop_rows)
+    stop_segment_metrics = segment_metrics(stop_segment)
+
+    calm_stop_wall_med = calm_stop_metrics["wall_med"]
+    if calm_stop_wall_med is None or calm_stop_metrics["n"] < 5:
+        calm_stop_wall_med = stop_wall_med
+
+    physics_block_ms_p95 = calm_stop_metrics["physics_block_p95"]
+    if physics_block_ms_p95 is None:
+        physics_block_ms_p95 = stop_segment_metrics["physics_block_p95"]
+
     stop_pending_full = col(stop_segment, "pending_light_focus")
     stop_pending_plateau_sec = 0.0
     plateau_pending_threshold = 5.0 if manual_idle else 20.0
@@ -902,6 +993,28 @@ def analyze(
             "stop_wall_med": stop_wall_med,
             "healthy_unfinished_rate": healthy_unfinished_rate,
             "manual_idle": manual_idle,
+            "contaminated_idle": 1.0 if contaminated_idle else 0.0,
+            "place_complete_sum": place_complete_sum,
+            "edit_immediate_max": edit_immediate_max,
+            "physics_block_steady_p95": physics_block_steady_p95,
+            "calm_stop_periods": calm_stop_metrics["n"],
+            "recovery_stop_periods": recovery_stop_metrics["n"],
+            "contaminated_stop_periods": contaminated_stop_metrics["n"],
+            "calm_stop_wall_med": calm_stop_wall_med,
+            "calm_stop_wall_p95": calm_stop_metrics["wall_p95"],
+            "calm_stop_emerge_med": calm_stop_metrics["emerge_med"],
+            "calm_stop_stream_med": calm_stop_metrics["stream_med"],
+            "calm_stop_phys_med": calm_stop_metrics["phys_med"],
+            "recovery_stop_wall_med": recovery_stop_metrics["wall_med"],
+            "contaminated_stop_wall_med": contaminated_stop_metrics["wall_med"],
+            "stop_emerge_med": stop_segment_metrics["emerge_med"],
+            "stop_stream_med": stop_segment_metrics["stream_med"],
+            "stop_phys_med": stop_segment_metrics["phys_med"],
+            "stop_relight_med": stop_segment_metrics["relight_med"],
+            "stop_mesh_immediate_med": stop_segment_metrics["mesh_immediate_med"],
+            "stop_mesh_dirty_tick_med": stop_segment_metrics["mesh_dirty_tick_med"],
+            "stop_mesh_prep_med": stop_segment_metrics["mesh_prep_med"],
+            "physics_block_ms_p95": physics_block_ms_p95,
             "backend_store_mode": backend_store_mode,
             "backend_mesher_mode": backend_mesher_mode,
             "backend_cull_mode": backend_cull_mode,

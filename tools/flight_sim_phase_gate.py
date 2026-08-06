@@ -370,6 +370,25 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("wall_ms_med", "le", 55.0),
         ("chunks_traveled", "ge", 3.0),
     ],
+    # Clean idle stand (idle-clean scenario): calm stop without edit/fluid.
+    "IDLE_CLEAN": [
+        ("contaminated_idle", "le", 0.0),
+        ("calm_stop_wall_med", "le", 55.0),
+        ("stop_emerge_med", "le", 10.0),
+        ("stop_stream_med", "le", 15.0),
+        ("stop_phys_med", "le", 12.0),
+        ("physics_block_ms_p95", "le", 5.0),
+        ("edit_immediate_n_med", "le", 0.0),
+        ("stop_focus_dirty_delta", "le", 0.0),
+        ("opaque_idle_churn_max", "le", 120.0),
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("post_stop_missing_max", "le", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    # Contaminated idle (manual after place/fluid): report-only wall gates.
+    "IDLE_DIRTY": [
+        ("contaminated_idle", "ge", 1.0),
+    ],
 }
 
 

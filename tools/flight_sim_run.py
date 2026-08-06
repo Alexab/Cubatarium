@@ -357,9 +357,10 @@ def main() -> int:
             "land-stand",
             "land-south",
             "land-south-short",
+            "idle-clean",
         ],
         help="named scenario (break-stand / visual-* / land-cruise / land-stand / "
-        "land-south / land-south-short)",
+        "land-south / land-south-short / idle-clean)",
     )
     ap.add_argument("--break-phase-sec", type=float, default=20.0)
     ap.add_argument("--break-interval-sec", type=float, default=1.0)
@@ -439,6 +440,39 @@ def main() -> int:
         args.land_south = True
     if args.scenario == "land-south-short":
         args.land_south_short = True
+
+    if args.scenario == "idle-clean":
+        # Clean idle perf: land −Z corridor, short fly, long stand (≥60s), no edit.
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.resume = False
+        args.teleport_cruise = True
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 270.0
+        if args.cruise_cx is None:
+            args.cruise_cx = -483.0
+        if args.cruise_cz is None:
+            args.cruise_cz = 54.0
+        if args.cruise_eye_y is None:
+            args.cruise_eye_y = 96.0
+        args.idle_sec = max(args.idle_sec, 8.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 20.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 20.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 60.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 60.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 16.0)
 
     if args.replay_manual:
         args.world = "World_164"
@@ -706,7 +740,15 @@ def main() -> int:
         "--report",
         str(args.report),
     ]
-    if args.replay_manual or args.fly_stop or args.land_cruise or args.land_stand or args.land_south or args.land_south_short:
+    if (
+        args.replay_manual
+        or args.fly_stop
+        or args.land_cruise
+        or args.land_stand
+        or args.land_south
+        or args.land_south_short
+        or args.scenario == "idle-clean"
+    ):
         analyze_cmd.append("--manual-idle")
     if getattr(args, "warmup_sec", None) is not None:
         analyze_cmd.extend(["--warmup-sec", str(args.warmup_sec)])
