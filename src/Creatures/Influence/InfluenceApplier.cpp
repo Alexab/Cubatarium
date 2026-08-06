@@ -318,6 +318,7 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
                   else
                   {
                     slot.entry = InventoryEntryRef{};
+                    slot.empty = true;
                   }
                   done = true;
                   break;

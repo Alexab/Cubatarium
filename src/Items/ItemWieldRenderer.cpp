@@ -3,16 +3,12 @@
 namespace cutum
 {
 
-void UItemWieldRenderer::DrawMesh(const std::string &, float, float, float)
-{
-}
-
 void UItemWieldRenderer::DrawFirstPerson(const InventoryEntryRef *active,
                                          const UItemDefinitionStorage *items,
                                          float aspect, bool broken_visual)
 {
-  // FP box arms + tool are drawn by UFpViewmodelRenderer::DrawWorldOverlay
-  // (Application RenderFrame, after world paint). Skinned arms = TD-ITEM-004.
+  // No-op: UFpViewmodelRenderer::DrawWorldOverlay is the sole FP path
+  // (Application::RenderFrame after world paint).
   (void)active;
   (void)items;
   (void)aspect;

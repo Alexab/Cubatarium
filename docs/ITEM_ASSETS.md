@@ -29,9 +29,13 @@ models/items/<id>.json   # parts_v1 fallback (kept)
 
 Base tools (wood/stone/iron × sword/axe/pickaxe/shovel) plus hammer/knife/bow; leather + iron armor sets; expanded free-tier catalog (copper tools/armor, spears, shields, utility tools, Kenney upgraded tools). See `tools/item_model_manifest.json`.
 
-First-person wield: glTF when present, else `parts[]` / block cubes (`DrawWorldOverlay`, clear-Z, FOV 72°). Perspective only.
+First-person wield: glTF when present, else `parts[]` / block cubes (`DrawWorldOverlay`, clear-Z, FOV 72°). Scale via `visual.wield_scale` (category defaults). Swing/use from `content/item_visual_presets.json`. Perspective only.
 
-Worn armor: attached to human `bone_skeleton` bones (`hat`, `body`, `*Arm`, `*Leg`, `*Item`) in world TP and character-sheet 3D preview.
+Third-person: hotbar/offhand on `rightItem`/`leftItem` via `WornEquipmentDrawer::SubmitWieldedFromCreature`.
+
+Worn armor: attached to human `bone_skeleton` bones (`hat`, `body`, `*Arm`, `*Leg`, `*Item`) in world TP and character-sheet 3D preview. `ItemGltfTextureCache` loads PNG, bufferView images, and unnamed `baseColorFactor` materials.
+
+Tooling: `tools/audit_item_visuals.py`, `tools/apply_item_visual_defaults.py`, `tools/validate_item_defs.py`, `tools/parts_to_gltf.py`.
 
 ## Upstream CC0 sources (import)
 
