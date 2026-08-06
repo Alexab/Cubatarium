@@ -2287,15 +2287,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const int consume_gpu =
         std::max(early_adm.gpu_apply_max,
                  std::max(3, std::max(mesh_drain, mesh_schedule)));
-    // I4f: calm emerge residual was ~3.5ms from max(6, emerge*frac) floor.
-    const bool calm_gpu_pace =
-        !moving && pending_focus_count == 0 && !missing_visible_mesh &&
-        last_frame_ms > 16.0;
-    const double emerge_budget = mesh_service.GetMeshEmergeTotalBudgetMs();
     const double consume_budget =
-        calm_gpu_pace
-            ? std::max(1.0, emerge_budget * early_adm.gpu_budget_frac)
-            : std::max(6.0, emerge_budget * early_adm.gpu_budget_frac);
+        std::max(6.0, mesh_service.GetMeshEmergeTotalBudgetMs() *
+                          early_adm.gpu_budget_frac);
     gpu_consume_done = mesh_service.ConsumeGpuApplyBacklog(
         world.GetBlockWorld(), registry, consume_drain, consume_gpu,
         consume_budget);
