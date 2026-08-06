@@ -590,6 +590,9 @@ def analyze(
 
     async_stuck_sec = max(stuck_async_holes_sec, mesh_async_stuck_sec)
     wall_fly_med = median(wall_fly)
+    mesh_sync_fly_med = (
+        median(col(fly_segment, "mesh_sync_ms")) if fly_segment else None
+    )
     gates = {
         "visual_holes_rate_le_0_10": effective_holes_rate <= 0.10,
         "dirty_med_le_400": ok_med(median(dirty), 400),
@@ -927,6 +930,7 @@ def analyze(
             "red_rate": red_rate,
             "wall_ms_med": median(wall),
             "wall_ms_fly_med": wall_fly_med,
+            "mesh_sync_fly_med": mesh_sync_fly_med,
             "wall_ms_no_holes_med": wall_ms_no_holes_med,
             "dirty_med_no_holes": dirty_med_no_holes,
             "mesh_async_med_no_holes": mesh_async_med_no_holes,

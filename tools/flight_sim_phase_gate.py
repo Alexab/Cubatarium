@@ -407,6 +407,7 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
     "FLY_CLEAN": [
         ("chunks_traveled", "ge", 6.0),
         ("wall_ms_fly_med", "le", 200.0),
+        ("mesh_sync_fly_med", "le", 5.0),
         ("physics_block_ms_p95", "le", 5.0),
     ],
     # Edit/control smoke: soft hitch budget for C1 regate.
