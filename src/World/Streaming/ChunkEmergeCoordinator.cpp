@@ -395,8 +395,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     world.PruneStickyRemeshOutside(focus_ground_horiz, /*radius=*/1);
   }
   // I6: long calm stand — drop leftover sticky (void-edge stale can pin count=1).
+  // P1 idle-clean: 12s left sticky=1 on calm stand; prune sooner when miss=0.
   if (!moving && pending_focus_count == 0 && !missing_visible_mesh &&
-      black_sticky > 0 && world.GetTimeSinceMotionSec() > 12.0)
+      black_sticky > 0 && world.GetTimeSinceMotionSec() > 6.0)
   {
     world.PruneStickyRemeshOutside(focus_ground_horiz, /*radius=*/0);
     world.ClearPendingLightAfterMeshCommitted(32);
@@ -856,7 +857,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   mesh_service.SetMeshEmergeTotalBudgetMs(
       moving ? 25.0
              : (healed_idle_emerge
-                    ? (idle_focus_dirty_debt ? 36.0 : 16.0)
+                    ? (idle_focus_dirty_debt ? 28.0 : 14.0)
                     : 60.0));
 
   // Healthy flight with no visual holes: flush Dirty so pressure can leave Red
@@ -881,7 +882,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   // S3: stop Dirty plateau — drop remesh outside wider FOV shell.
   if (!moving && !visual_holes && !pending_near_light &&
-      focus_dirty_early > 280)
+      focus_dirty_early > 100)
   {
     mesh_service.DropRemeshDirtyBeyondRadius(focus_dirty_keep, /*keep_h=*/2,
                                             /*keep_cy=*/2);
