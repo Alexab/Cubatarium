@@ -1089,11 +1089,13 @@ GLuint UFpViewmodelRenderer::ResolvePlayerSkin(const std::string &speciesId,
                                        "body", skinId);
 }
 
-bool UFpViewmodelRenderer::TryDrawSkinnedArms(const glm::mat4 &, bool)
+bool UFpViewmodelRenderer::TryDrawSkinnedArms(const glm::mat4 &mvpBase,
+                                              bool leftHand, GLuint skinAtlas)
 {
-  // TD-ITEM-004: load creature/item arm glTF into this pass when assets exist.
-  // Do not switch to body-in-FP (camera inside world creature mesh).
-  return false;
+  // TD-ITEM-004: authored mesh FP arms using Steve-atlas UV boxes (not
+  // body-in-FP). Full weighted skinning can replace this path later.
+  DrawParts(leftHand ? ArmPartsLeft() : ArmPartsRight(), mvpBase, skinAtlas);
+  return true;
 }
 
 void UFpViewmodelRenderer::DrawBlockCube(const std::string &typeName,
@@ -1163,14 +1165,14 @@ void UFpViewmodelRenderer::DrawWorldOverlay(const FpViewmodelDrawParams &params)
   Shader->SetInt("uAnimFrameCount", 1);
 
   const glm::mat4 rootR = BuildRootMatrix(false);
-  if (!TryDrawSkinnedArms(pv * rootR, false))
+  if (!TryDrawSkinnedArms(pv * rootR, false, skinAtlas))
   {
     DrawParts(ArmPartsRight(), pv * rootR, skinAtlas);
   }
   DrawHeld(params.Active, kHandSocketR, pv * rootR);
 
   const glm::mat4 rootL = BuildRootMatrix(true);
-  if (!TryDrawSkinnedArms(pv * rootL, true))
+  if (!TryDrawSkinnedArms(pv * rootL, true, skinAtlas))
   {
     DrawParts(ArmPartsLeft(), pv * rootL, skinAtlas);
   }

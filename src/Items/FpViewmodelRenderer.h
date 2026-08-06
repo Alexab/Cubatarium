@@ -123,8 +123,9 @@ private:
   GLuint ResolvePlayerSkin(const std::string &speciesId,
                            const std::string &skinId) const;
   glm::mat4 BuildRootMatrix(bool mirrorX) const;
-  /// TD-ITEM-004: draw skinned arm mesh if loaded; otherwise false → box arms.
-  bool TryDrawSkinnedArms(const glm::mat4 &mvpBase, bool leftHand);
+  /// Mesh FP arms (box UV atlas path). Full GPU skinning remains optional.
+  bool TryDrawSkinnedArms(const glm::mat4 &mvpBase, bool leftHand,
+                          GLuint skinAtlas);
 
   std::shared_ptr<UItemDefinitionStorage> Items;
   std::shared_ptr<UBlockDefinitionStorage> Blocks;
