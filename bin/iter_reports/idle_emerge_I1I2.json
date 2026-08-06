@@ -1,0 +1,170 @@
+{
+  "perf_jsonl": "bin\\logs\\perf_20260806-110306_30884.jsonl",
+  "stop_periods": 30,
+  "stop_wall": {
+    "n": 30,
+    "wall_med": 207.84249999999997,
+    "wall_p95": 317.832,
+    "emerge_med": 152.0745,
+    "stream_med": 31.25835,
+    "phys_med": 189.65300000000002,
+    "relight_med": 5.9876000000000005,
+    "mesh_immediate_med": 0.0,
+    "mesh_dirty_tick_med": 98.0635,
+    "mesh_prep_med": 31.168950000000002,
+    "physics_block_p95": 0.023
+  },
+  "debt": {
+    "pending_light_focus_end": 8.0,
+    "unfinished_visual_end": 0.0,
+    "holes_end": 0.0,
+    "dirty_end": 402.0,
+    "mesh_async_end": 10.0,
+    "focus_end": [
+      -483,
+      48
+    ]
+  },
+  "calm_stop": {
+    "n": 0,
+    "wall": {
+      "n": 0,
+      "wall_med": null,
+      "wall_p95": null,
+      "emerge_med": null,
+      "stream_med": null,
+      "phys_med": null,
+      "relight_med": null,
+      "mesh_immediate_med": null,
+      "mesh_dirty_tick_med": null,
+      "mesh_prep_med": null,
+      "physics_block_p95": null
+    },
+    "emerge_split": {
+      "n": 0,
+      "parts": [],
+      "residual_med": null,
+      "residual_p95": null
+    }
+  },
+  "recovery_stop": {
+    "n": 30,
+    "wall": {
+      "n": 30,
+      "wall_med": 207.84249999999997,
+      "wall_p95": 317.832,
+      "emerge_med": 152.0745,
+      "stream_med": 31.25835,
+      "phys_med": 189.65300000000002,
+      "relight_med": 5.9876000000000005,
+      "mesh_immediate_med": 0.0,
+      "mesh_dirty_tick_med": 98.0635,
+      "mesh_prep_med": 31.168950000000002,
+      "physics_block_p95": 0.023
+    },
+    "emerge_split": {
+      "n": 30,
+      "emerge_med": 152.0745,
+      "emerge_p95": 215.234,
+      "accounted_med": 224.45290000000003,
+      "accounted_p95": 491.9529,
+      "parts": [
+        {
+          "key": "mesh_emerge_prep_ms",
+          "label": "prep",
+          "med": 31.168950000000002,
+          "p95": 75.2618,
+          "pct_of_emerge": 20.495842498249218
+        },
+        {
+          "key": "relight_drain_ms",
+          "label": "relight",
+          "med": 5.9876000000000005,
+          "p95": 54.3517,
+          "pct_of_emerge": 3.937280740689596
+        },
+        {
+          "key": "mesh_immediate_ms",
+          "label": "immediate",
+          "med": 0.0,
+          "p95": 55.4644,
+          "pct_of_emerge": 0.0
+        },
+        {
+          "key": "mesh_dirty_tick_ms",
+          "label": "dirty_tick",
+          "med": 98.0635,
+          "p95": 159.033,
+          "pct_of_emerge": 64.48385495267122
+        },
+        {
+          "key": "mesh_sync_ms",
+          "label": "sync",
+          "med": 89.23285000000001,
+          "p95": 147.842,
+          "pct_of_emerge": 58.67706288694029
+        },
+        {
+          "key": "residual",
+          "label": "residual",
+          "med": 0.0,
+          "p95": 25.720699999999994,
+          "pct_of_emerge": 0.0
+        }
+      ]
+    }
+  },
+  "all_stop": {
+    "emerge_split": {
+      "n": 30,
+      "emerge_med": 152.0745,
+      "emerge_p95": 215.234,
+      "accounted_med": 224.45290000000003,
+      "accounted_p95": 491.9529,
+      "parts": [
+        {
+          "key": "mesh_emerge_prep_ms",
+          "label": "prep",
+          "med": 31.168950000000002,
+          "p95": 75.2618,
+          "pct_of_emerge": 20.495842498249218
+        },
+        {
+          "key": "relight_drain_ms",
+          "label": "relight",
+          "med": 5.9876000000000005,
+          "p95": 54.3517,
+          "pct_of_emerge": 3.937280740689596
+        },
+        {
+          "key": "mesh_immediate_ms",
+          "label": "immediate",
+          "med": 0.0,
+          "p95": 55.4644,
+          "pct_of_emerge": 0.0
+        },
+        {
+          "key": "mesh_dirty_tick_ms",
+          "label": "dirty_tick",
+          "med": 98.0635,
+          "p95": 159.033,
+          "pct_of_emerge": 64.48385495267122
+        },
+        {
+          "key": "mesh_sync_ms",
+          "label": "sync",
+          "med": 89.23285000000001,
+          "p95": 147.842,
+          "pct_of_emerge": 58.67706288694029
+        },
+        {
+          "key": "residual",
+          "label": "residual",
+          "med": 0.0,
+          "p95": 25.720699999999994,
+          "pct_of_emerge": 0.0
+        }
+      ]
+    }
+  }
+}
