@@ -811,14 +811,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
        (idle_recovery && pending_focus_count > 0))
           ? 48.0
           : (idle_focus_dirty_debt ? 28.0 : 6.0));
-  // Healed idle (miss=0, no pending; sticky<=remnant OK): default idle emerge
-  // 60ms ate wall on land-exit stand. Keep 60 only while recovering holes/light
-  // or sticky above remnant; lit remesh catch-up gets mid band.
-  // I4c: sticky==2 was blocking 16ms band → SyncRebuild ~36ms every calm frame.
+  // Healed idle (miss=0, no pending/holes): default idle emerge 60ms ate wall.
+  // Keep 60 only while recovering holes/light. Sticky remesh is async — do not
+  // hold the 60ms SyncRebuild band just because black_sticky>0 (I4e: sticky=8
+  // kept emerge=60 and sync~35ms on classifier-calm stand).
   const bool healed_idle_emerge =
       !moving && !visual_holes && !missing_underfeet &&
-      !missing_visible_mesh && black_sticky <= kIdleCalmStickyRemnant &&
-      pending_focus_count == 0;
+      !missing_visible_mesh && pending_focus_count == 0;
   mesh_service.SetMeshEmergeTotalBudgetMs(
       moving ? 25.0
              : (healed_idle_emerge

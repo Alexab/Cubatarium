@@ -153,14 +153,29 @@ int main()
   }
 
   {
+    // I4e: high sticky must still kill SyncRebuild when no light/mesh debt.
     IdleMeshDrainCapInput in;
     in.moving = false;
-    in.black_sticky = kIdleCalmStickyRemnant + 1;
+    in.black_sticky = 8;
     in.last_frame_ms = 86.0;
     in.mesh_drain = 14;
     in.mesh_schedule = 12;
     const auto d = EvaluateIdleMeshDrainCap(in);
-    Expect(!d.active, "above remnant sticky skips calm cap");
+    Expect(d.active, "high sticky still caps when no pending");
+    Expect(d.sync_cap == 0, "high sticky sync off");
+    Expect(d.mesh_drain >= 8, "high sticky keeps remesh drain");
+  }
+
+  {
+    IdleMeshDrainCapInput in;
+    in.moving = false;
+    in.black_sticky = kIdleCalmStickyRemnant + 1;
+    in.pending_focus_count = 1;
+    in.last_frame_ms = 86.0;
+    in.mesh_drain = 14;
+    in.mesh_schedule = 12;
+    const auto d = EvaluateIdleMeshDrainCap(in);
+    Expect(!d.active, "pending light skips calm cap");
   }
 
   {

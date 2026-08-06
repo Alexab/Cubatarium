@@ -224,9 +224,10 @@ struct IdleMeshDrainCapDecision
 
 /// Calm stand with no light/mesh debt: pace dirty_tick so wall can recover.
 /// I4b: also cap emerge total + SyncRebuild.
-/// I4c/I4d: sticky<=kIdleCalmStickyRemnant is classifier-calm, but I4c's full
-/// hot-wall drain=2 starved sticky remesh (sticky 2→7, wall↑). Remnant sticky
-/// only kills SyncRebuild (the ~36ms waste); keep remesh drain for repair.
+/// I4d: sticky remnant keeps remesh drain (I4c drain=2 grew sticky).
+/// I4e: do not early-out on sticky — I4d calm had sticky=8 so caps never fired
+/// and SyncRebuild still burned ~35ms. Sticky remesh is async; SyncRebuild is
+/// for missing first-mesh (already gated by missing_visible_mesh).
 inline IdleMeshDrainCapDecision EvaluateIdleMeshDrainCap(
     const IdleMeshDrainCapInput &in)
 {
@@ -234,7 +235,7 @@ inline IdleMeshDrainCapDecision EvaluateIdleMeshDrainCap(
   out.mesh_drain = in.mesh_drain;
   out.mesh_schedule = in.mesh_schedule;
   if (in.moving || in.missing_visible_mesh || in.pending_focus_count > 0 ||
-      in.black_sticky > kIdleCalmStickyRemnant || in.not_ready_early > 0)
+      in.not_ready_early > 0)
   {
     return out;
   }
