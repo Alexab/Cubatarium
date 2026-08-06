@@ -226,14 +226,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool idle_remesh_debt =
       !moving && pending_focus_count == 0 && black_sticky == 0 &&
       !missing_visible_mesh && not_ready_early > 32;
-  // Focus lit-but-dirty backlog with nr≈0 still fails F2 fd_end≤280 — treat as
-  // catch-up debt so StarveOutside + SuppressSeam + drain run. Allow a few
-  // PendingLight (stop often sits at pend=1). Allow prune while a SoftDefer
-  // hole flickers — otherwise Drop never runs and fd climbs (f2_fd_yband +147).
-  const bool idle_focus_dirty_debt =
-      !moving && pending_focus_count <= 16 && black_sticky == 0 &&
-      focus_dirty_early > 280 &&
-      (!missing_visible_mesh || focus_dirty_early > 320);
+  // Focus lit-but-dirty backlog with nr≈0 still fails F2 fd_end≤280. Use a
+  // small persistence latch: activate debt only when dirty is high for several
+  // consecutive idle frames and does not improve.
+  static int idle_focus_dirty_prev = 0;
+  static int idle_focus_dirty_high_frames = 0;
+  const auto focus_dirty_debt = EvaluateIdleFocusDirtyDebt(
+      IdleFocusDirtyDebtInput{moving, pending_focus_count, black_sticky,
+                              missing_visible_mesh, focus_dirty_early,
+                              idle_focus_dirty_prev,
+                              idle_focus_dirty_high_frames});
+  idle_focus_dirty_prev = focus_dirty_debt.prev_focus_dirty_next;
+  idle_focus_dirty_high_frames = focus_dirty_debt.high_frames_next;
+  const bool idle_focus_dirty_debt = focus_dirty_debt.active;
   // Pipeline full with no visual light debt → remesh thrash (manual 214430 /
   // 221846: async=42 with Dirty 58–224). Do not require Dirty>200.
   const bool remesh_thrash_only =

@@ -134,6 +134,53 @@ inline StickyRemeshDrainDecision EvaluateStickyRemeshDrain(
   return out;
 }
 
+struct IdleFocusDirtyDebtInput
+{
+  bool moving{false};
+  int pending_focus_count{0};
+  int black_sticky{0};
+  bool missing_visible_mesh{false};
+  int focus_dirty_early{0};
+  int prev_focus_dirty{0};
+  int high_frames{0};
+};
+
+struct IdleFocusDirtyDebtDecision
+{
+  bool active{false};
+  int prev_focus_dirty_next{0};
+  int high_frames_next{0};
+};
+
+/// I4: avoid latching lit-but-dirty debt unless it persists and does not improve.
+inline IdleFocusDirtyDebtDecision EvaluateIdleFocusDirtyDebt(
+    const IdleFocusDirtyDebtInput &in)
+{
+  IdleFocusDirtyDebtDecision out;
+  out.prev_focus_dirty_next = in.focus_dirty_early;
+
+  if (in.moving || in.black_sticky > 0 || in.pending_focus_count > 16)
+  {
+    out.high_frames_next = 0;
+    return out;
+  }
+
+  const bool threshold_hit =
+      in.missing_visible_mesh ? (in.focus_dirty_early > 320)
+                              : (in.focus_dirty_early > 280);
+  if (!threshold_hit)
+  {
+    out.high_frames_next = 0;
+    return out;
+  }
+
+  const int dirty_delta = in.focus_dirty_early - in.prev_focus_dirty;
+  const bool not_improving = dirty_delta >= -8;
+  out.high_frames_next = not_improving ? (in.high_frames + 1) : 0;
+  out.active = out.high_frames_next >= 3;
+  return out;
+}
+
 struct IdleRecoveryBgBudgetInput
 {
   bool idle_recovery{false};

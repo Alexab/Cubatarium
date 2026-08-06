@@ -22,9 +22,11 @@ void Expect(bool cond, const char *msg)
 int main()
 {
   using cutum::ComputeIdleRecoveryBgBudget;
+  using cutum::EvaluateIdleFocusDirtyDebt;
   using cutum::EvaluateIdleMeshDrainCap;
   using cutum::EvaluateIdleVisualDrain;
   using cutum::EvaluateStickyRemeshDrain;
+  using cutum::IdleFocusDirtyDebtInput;
   using cutum::IdleMeshDrainCapInput;
   using cutum::IdleRecoveryBgBudgetInput;
   using cutum::IdleVisualDrainInput;
@@ -141,6 +143,33 @@ int main()
     const auto d = EvaluateIdleMeshDrainCap(in);
     Expect(!d.active, "pending debt skips calm cap");
     Expect(d.mesh_drain == 14, "pending debt unchanged");
+  }
+
+  {
+    IdleFocusDirtyDebtInput in;
+    in.moving = false;
+    in.pending_focus_count = 0;
+    in.black_sticky = 0;
+    in.missing_visible_mesh = false;
+    in.focus_dirty_early = 300;
+    in.prev_focus_dirty = 300;
+    in.high_frames = 2;
+    const auto d = EvaluateIdleFocusDirtyDebt(in);
+    Expect(d.active, "dirty debt latch activates after persistence");
+  }
+
+  {
+    IdleFocusDirtyDebtInput in;
+    in.moving = false;
+    in.pending_focus_count = 0;
+    in.black_sticky = 0;
+    in.missing_visible_mesh = false;
+    in.focus_dirty_early = 260;
+    in.prev_focus_dirty = 300;
+    in.high_frames = 5;
+    const auto d = EvaluateIdleFocusDirtyDebt(in);
+    Expect(!d.active, "dirty debt clears below threshold");
+    Expect(d.high_frames_next == 0, "dirty debt frame counter resets");
   }
 
   if (gFails != 0)
