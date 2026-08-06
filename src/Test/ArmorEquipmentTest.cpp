@@ -170,6 +170,80 @@ int main()
     Expect(!ohInv.EquipOffhand(bad), "EquipOffhand rejects Object kind");
   }
 
+  // 4) Shield block schema + offhand armor_groups aggregate.
+  {
+    const fs::path shieldJson = itemsDir / "wood_shield_test.json";
+    {
+      std::ofstream out(shieldJson);
+      out << R"({
+  "id": "wood_shield_test",
+  "displayName": "Test Shield",
+  "wear_end": "destroy",
+  "armor": { "armor_groups": { "fleshy": 15 } },
+  "block": {
+    "enabled": true,
+    "damage_mul": 0.25,
+    "passive_damage_mul": 0.85,
+    "angle_deg": 120,
+    "block_uses": 50
+  },
+  "visual": { "wield_scale": 1.5, "use": { "block": "raise_shield" } },
+  "tool": { "punch_attack_uses": 80 }
+})";
+    }
+    const fs::path bowJson = itemsDir / "bow_test.json";
+    {
+      std::ofstream out(bowJson);
+      out << R"({
+  "id": "bow_test",
+  "displayName": "Test Bow",
+  "ranged": {
+    "enabled": true,
+    "range": 16,
+    "ammo_id": "arrow",
+    "require_los": true
+  },
+  "visual": { "wield_scale": 1.4, "use": { "ranged": "draw_bow" } }
+})";
+    }
+    storage.Load(itemsDir.string());
+    const ItemDefinition *shield = storage.Get("wood_shield_test");
+    Expect(shield != nullptr, "shield definition present");
+    if (shield)
+    {
+      Expect(shield->Block.Enabled, "block.enabled");
+      Expect(std::fabs(shield->Block.DamageMul - 0.25f) < 1e-4f, "block.damage_mul");
+      Expect(std::fabs(shield->Block.PassiveDamageMul - 0.85f) < 1e-4f,
+             "block.passive_damage_mul");
+      Expect(shield->Block.BlockUses == 50, "block.block_uses");
+      Expect(std::fabs(shield->Visual.WieldScale - 1.5f) < 1e-4f,
+             "visual.wield_scale");
+      Expect(shield->Visual.Use.Block == "raise_shield", "visual.use.block");
+    }
+    const ItemDefinition *bow = storage.Get("bow_test");
+    Expect(bow != nullptr, "bow definition present");
+    if (bow)
+    {
+      Expect(bow->Ranged.Enabled, "ranged.enabled");
+      Expect(std::fabs(bow->Ranged.RangeBlocks - 16.f) < 1e-4f, "ranged.range");
+      Expect(bow->Ranged.AmmoId == "arrow", "ranged.ammo_id");
+      Expect(bow->Ranged.RequireLos, "ranged.require_los");
+    }
+
+    UCreatureInventory shieldInv;
+    InventoryEntryRef shieldEntry;
+    shieldEntry.empty = false;
+    shieldEntry.kind = InventoryEntryKind::Item;
+    shieldEntry.Id = "wood_shield_test";
+    shieldEntry.count = 1;
+    Expect(shieldInv.EquipOffhand(shieldEntry, storage),
+           "EquipOffhand shield with items");
+    const auto &ohGroups = shieldInv.GetOffhandArmorGroups();
+    const auto it = ohGroups.Ratings.find("fleshy");
+    Expect(it != ohGroups.Ratings.end() && it->second == 15,
+           "offhand armor_groups fleshy from shield");
+  }
+
   fs::remove_all(tmp);
 
   if (Failures != 0)

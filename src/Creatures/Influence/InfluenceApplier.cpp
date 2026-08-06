@@ -263,6 +263,45 @@ InfluenceApplyResult InfluenceApplier::Apply(UWorld &world,
         }
       }
     }
+    // Active frontal block wears offhand even when damage mul zeroes the hit.
+    if (delta.ShieldBlocked &&
+        ModePolicy::AllowsCombatDamage(mode) &&
+        ModePolicy::AllowsToolWear(mode, world.GetDifficulty()))
+    {
+      auto &inv = target->GetInventory();
+      const UItemDefinitionStorage *items = world.GetItemDefinitionStorage();
+      if (items)
+      {
+        InventoryEntryRef off = inv.GetEquippedOffhand();
+        if (!off.empty && !off.broken && off.kind == InventoryEntryKind::Item)
+        {
+          if (const ItemDefinition *shield = items->Get(off.Id))
+          {
+            if (shield->Block.Enabled)
+            {
+              int uses = shield->Block.BlockUses;
+              if (uses <= 0)
+              {
+                uses = shield->Tool.PunchAttackUses;
+              }
+              if (uses <= 0)
+              {
+                uses = 100;
+              }
+              const float shieldWear = 1.f / static_cast<float>(uses);
+              if (ApplyItemWear(off, *shield, shieldWear, true))
+              {
+                inv.UnequipOffhand(*items);
+              }
+              else
+              {
+                inv.EquipOffhand(off, *items);
+              }
+            }
+          }
+        }
+      }
+    }
     for (const std::string &status_id : delta.StatusIdsToAdd)
     {
       StatusEffectSystem::ApplyStatus(*target, status_id);

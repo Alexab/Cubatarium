@@ -152,8 +152,19 @@ def write_gltf(dest_dir: Path, item_id: str, parts: list[dict], license_note: st
                         "attributes": {"POSITION": 0, "TEXCOORD_0": 1},
                         "indices": 2,
                         "mode": 4,
+                        "material": 0,
                     }
                 ],
+            }
+        ],
+        "materials": [
+            {
+                "name": "body",
+                "pbrMetallicRoughness": {
+                    "baseColorFactor": [0.72, 0.72, 0.76, 1.0],
+                    "metallicFactor": 0.0,
+                    "roughnessFactor": 1.0,
+                },
             }
         ],
         "nodes": [{"mesh": 0, "name": item_id}],

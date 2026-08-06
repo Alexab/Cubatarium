@@ -20,6 +20,8 @@ struct InfluenceTargetDelta
   float FatigueDelta{0.f};
   std::vector<std::string> StatusIdsToAdd;
   glm::vec3 TargetPos{0.f};
+  /// True when defender active-blocked with a frontal shield this hit.
+  bool ShieldBlocked{false};
 };
 
 struct InfluencePrediction

@@ -1,5 +1,6 @@
 #include "Items/ToolCapabilities.h"
 #include "Items/ItemDefinition.h"
+#include "Items/ItemVisualDefaults.h"
 #include "Blocks/BlockDefinition.h"
 #include "Creatures/Influence/InfluenceTypes.h"
 #include "Creatures/Stats/CreatureAttributes.h"
@@ -85,6 +86,29 @@ int main()
   Expect(entry.wear == 0.f, "wear unchanged when disabled");
   Expect(ApplyItemWear(entry, pick, 1.f, true), "destroy clears");
   Expect(entry.empty, "destroyed entry empty");
+
+  // Category / explicit wield_scale defaults (ItemVisualDefaults).
+  {
+    ItemDefinition spear;
+    spear.Id = "wood_spear";
+    Expect(std::fabs(DefaultWieldScale(spear) - 1.80f) < 1e-4f,
+           "spear category scale");
+    ItemDefinition food;
+    food.Id = "apple";
+    food.Use.Action = ItemUseActionKind::Eat;
+    Expect(std::fabs(DefaultWieldScale(food) - 0.95f) < 1e-4f, "eat scale");
+    ItemDefinition bow;
+    bow.Id = "wood_bow";
+    bow.Ranged.Enabled = true;
+    Expect(std::fabs(DefaultWieldScale(bow) - 1.40f) < 1e-4f, "bow scale");
+    ItemDefinition scaled = spear;
+    scaled.Visual.HasWieldScale = true;
+    scaled.Visual.WieldScale = 2.5f;
+    Expect(std::fabs(DefaultWieldScale(scaled) - 2.5f) < 1e-4f,
+           "explicit wield_scale wins");
+    Expect(DefaultSwingPreset(spear, FpSwingKind::Melee) == "thrust_spear",
+           "spear melee preset");
+  }
 
   if (Failures != 0)
   {

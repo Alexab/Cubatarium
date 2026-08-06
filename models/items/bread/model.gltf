@@ -69,7 +69,8 @@
             "TEXCOORD_0": 1
           },
           "indices": 2,
-          "mode": 4
+          "mode": 4,
+          "material": 0
         }
       ]
     }
@@ -87,5 +88,34 @@
       ]
     }
   ],
-  "scene": 0
+  "scene": 0,
+  "images": [
+    {
+      "uri": "Textures/body.png",
+      "name": "body"
+    }
+  ],
+  "textures": [
+    {
+      "source": 0
+    }
+  ],
+  "materials": [
+    {
+      "name": "body",
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "baseColorFactor": [
+          0.8235294117647058,
+          0.6470588235294118,
+          0.35294117647058826,
+          1.0
+        ],
+        "metallicFactor": 0.0,
+        "roughnessFactor": 1.0
+      }
+    }
+  ]
 }

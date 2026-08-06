@@ -351,7 +351,8 @@ void UBlockInputController::HandleLeftPress(const BlockInputContext &ctx)
           {
             if (PlayerInteractionRouter::TryRouteRangedFromView(
                     *ctx.World, *self, camera->GetPosition(),
-                    camera->GetFront(), def->Ranged.RangeBlocks))
+                    camera->GetFront(), def->Ranged.RangeBlocks,
+                    def->Ranged.RequireLos))
             {
               if (ctx.App)
               {

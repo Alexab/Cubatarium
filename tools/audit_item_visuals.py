@@ -149,6 +149,12 @@ def inspect_gltf(gltf_path: Path) -> dict:
     return info
 
 
+# Hard blockers for critical accept (missing model/materials). Soft notes remain
+# in issues for armor factor/embedded (runtime cache handles them).
+HARD_ISSUES = {"no_model", "gltf_no_materials"}
+SOFT_ISSUES = {"factor_only", "embedded_image_only"}
+
+
 def audit_item(path: Path) -> dict:
     data = json.loads(path.read_text(encoding="utf-8"))
     item_id = data.get("id") or path.stem
@@ -198,6 +204,14 @@ def main() -> int:
             for i in items
             if i["critical"] and i["issues"]
         ],
+        "critical_hard_issues": [
+            {
+                "id": i["id"],
+                "issues": [x for x in i["issues"] if x in HARD_ISSUES],
+            }
+            for i in items
+            if i["critical"] and any(x in HARD_ISSUES for x in i["issues"])
+        ],
         "hideable": [i["id"] for i in items if i["hideable"]],
         "items": items,
     }
@@ -209,12 +223,19 @@ def main() -> int:
     print(f"audit_item_visuals: {summary['count']} items, "
           f"{summary['critical']} critical, "
           f"{summary['with_issues']} with issues")
-    if summary["critical_with_issues"]:
-        print("critical issues:")
-        for row in summary["critical_with_issues"]:
+    if summary["critical_hard_issues"]:
+        print("critical hard issues (missing model/materials):")
+        for row in summary["critical_hard_issues"]:
             print(f"  {row['id']}: {', '.join(row['issues'])}")
+    soft = [
+        {"id": i["id"], "issues": [x for x in i["issues"] if x in SOFT_ISSUES]}
+        for i in items
+        if i["critical"] and any(x in SOFT_ISSUES for x in i["issues"])
+    ]
+    if soft:
+        print(f"critical soft notes ({len(soft)}): factor_only/embedded ok via cache")
     print(f"wrote {out_path.relative_to(ROOT)}")
-    return 0
+    return 1 if summary["critical_hard_issues"] else 0
 
 
 if __name__ == "__main__":

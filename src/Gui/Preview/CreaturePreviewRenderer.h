@@ -41,11 +41,14 @@ public:
                 int size, float yawDeg, float pitchDeg);
 
   /// Allocates a standalone texture (for icon cache entries).
+  /// Optional main/offhand item ids attach to rightItem/leftItem bones.
   GLuint RenderToUniqueTexture(
       const std::string &speciesId, const std::string &skinId, int size,
       float yawDeg, float pitchDeg, float animTimeSec = 0.f,
       bool animateWalk = false,
-      const std::array<WornArmorPreviewSlot, 6> *armor = nullptr);
+      const std::array<WornArmorPreviewSlot, 6> *armor = nullptr,
+      const std::string *mainItemId = nullptr,
+      const std::string *offhandItemId = nullptr);
 
   GLuint CreateSolidColorTexture(int size, float r, float g, float b, float a);
 
@@ -60,7 +63,9 @@ private:
                         int viewportSize, float yawDeg, float pitchDeg,
                         float animTimeSec = 0.f, bool animateWalk = false,
                         const std::array<WornArmorPreviewSlot, 6> *armor =
-                            nullptr);
+                            nullptr,
+                        const std::string *mainItemId = nullptr,
+                        const std::string *offhandItemId = nullptr);
 
   std::shared_ptr<UCreatureDefinitionStorage> Species;
   std::shared_ptr<USkinDefinitionStorage> Skins;

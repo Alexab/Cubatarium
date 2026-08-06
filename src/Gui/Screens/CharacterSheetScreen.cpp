@@ -587,6 +587,9 @@ void UCharacterSheetScreen::RenderCharacterPreview()
 
   std::array<WornArmorPreviewSlot, 6> armorSlots{};
   std::string armorKey;
+  std::string mainId;
+  std::string offId;
+  std::string wieldKey;
   if (Stats)
   {
     const CharacterStatsSnapshot snap = Stats->GetCharacterStatsSnapshot();
@@ -602,6 +605,17 @@ void UCharacterSheetScreen::RenderCharacterPreview()
       armorKey += s.broken ? '1' : '0';
       armorKey.push_back(';');
     }
+    const auto &main = snap.equippedTools[0];
+    const auto &off = snap.equippedTools[1];
+    if (!main.itemId.empty() && !main.broken && !main.isBlock)
+    {
+      mainId = main.itemId;
+    }
+    if (!off.itemId.empty() && !off.broken && !off.isBlock)
+    {
+      offId = off.itemId;
+    }
+    wieldKey = mainId + "|" + offId;
   }
 
   const float yaw = PreviewViewport->GetYaw();
@@ -609,7 +623,7 @@ void UCharacterSheetScreen::RenderCharacterPreview()
   const bool sameCache =
       PreviewTexture != 0 && size == LastPreviewSize &&
       PreviewTypeId == LastCachedTypeId && PreviewSkinId == LastCachedSkinId &&
-      armorKey == LastCachedArmorKey &&
+      armorKey == LastCachedArmorKey && wieldKey == LastCachedWieldKey &&
       std::abs(yaw - LastPreviewYaw) < 0.01f &&
       std::abs(pitch - LastPreviewPitch) < 0.01f;
   if (sameCache)
@@ -618,7 +632,8 @@ void UCharacterSheetScreen::RenderCharacterPreview()
   }
 
   const GLuint tex = CreaturePreview->RenderToUniqueTexture(
-      PreviewTypeId, PreviewSkinId, size, yaw, pitch, 0.f, false, &armorSlots);
+      PreviewTypeId, PreviewSkinId, size, yaw, pitch, 0.f, false, &armorSlots,
+      mainId.empty() ? nullptr : &mainId, offId.empty() ? nullptr : &offId);
   if (tex == 0)
   {
     return;
@@ -636,6 +651,7 @@ void UCharacterSheetScreen::RenderCharacterPreview()
   LastCachedTypeId = PreviewTypeId;
   LastCachedSkinId = PreviewSkinId;
   LastCachedArmorKey = armorKey;
+  LastCachedWieldKey = wieldKey;
 }
 
 void UCharacterSheetScreen::Update(double /*dt*/)

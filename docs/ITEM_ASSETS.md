@@ -31,7 +31,7 @@ Base tools (wood/stone/iron × sword/axe/pickaxe/shovel) plus hammer/knife/bow; 
 
 First-person wield: glTF when present, else `parts[]` / block cubes (`DrawWorldOverlay`, clear-Z, FOV 72°). Scale via `visual.wield_scale` (category defaults). Swing/use from `content/item_visual_presets.json`. Perspective only.
 
-Third-person: hotbar/offhand on `rightItem`/`leftItem` via `WornEquipmentDrawer::SubmitWieldedFromCreature`.
+Third-person: hotbar/offhand on `rightItem`/`leftItem` via `WornEquipmentDrawer::SubmitWieldedFromCreature` (prefers `ItemDefinition.ModelPath` glTF, else sibling, else `parts_v1` boxes). Character sheet paper-doll uses the same attach path (`SubmitWieldedPreview`).
 
 Worn armor: attached to human `bone_skeleton` bones (`hat`, `body`, `*Arm`, `*Leg`, `*Item`) in world TP and character-sheet 3D preview. `ItemGltfTextureCache` loads PNG, bufferView images, and unnamed `baseColorFactor` materials.
 

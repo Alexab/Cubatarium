@@ -36,9 +36,11 @@ struct PlayerInteractionRouter
   static void SetUseIntent(UCreature &controlled);
 
   /// Hitscan ranged (bow): pick within `rangeBlocks`.
+  /// When `requireLos`, reject if a solid block is closer than the target.
   static bool TryRouteRangedFromView(UWorld &world, UCreature &controlled,
                                      const glm::vec3 &eye,
-                                     const glm::vec3 &front, float rangeBlocks);
+                                     const glm::vec3 &front, float rangeBlocks,
+                                     bool requireLos = true);
   static void SetRangedIntent(UCreature &attacker, CreatureId targetId);
 };
 

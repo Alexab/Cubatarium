@@ -3,7 +3,9 @@
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Game/WorldGameMode.h"
 #include "World/Core/World.h"
+#include "World/Raycast/BlockRaycast.h"
 #include <algorithm>
+#include <cmath>
 
 namespace cutum
 {
@@ -99,7 +101,8 @@ bool PlayerInteractionRouter::TryRouteRangedFromView(UWorld &world,
                                                      UCreature &controlled,
                                                      const glm::vec3 &eye,
                                                      const glm::vec3 &front,
-                                                     float rangeBlocks)
+                                                     float rangeBlocks,
+                                                     bool requireLos)
 {
   if (world.GetGameMode() != WorldGameMode::Survival)
   {
@@ -110,6 +113,30 @@ bool PlayerInteractionRouter::TryRouteRangedFromView(UWorld &world,
   if (!target || *target == controlled.GetId())
   {
     return false;
+  }
+  if (requireLos)
+  {
+    const UCreature *creature = world.GetCreature(*target);
+    if (!creature)
+    {
+      return false;
+    }
+    const glm::vec3 toTarget = creature->GetBodyOrigin() - eye;
+    const float dist = glm::length(toTarget);
+    if (dist > 1e-3f)
+    {
+      const glm::vec3 dir = toTarget / dist;
+      const float maxCheck = std::max(0.f, dist - 0.35f);
+      if (maxCheck > 0.05f)
+      {
+        if (const auto blockHit = RaycastSolidBlocks(
+                world.GetBlockWorld(), world.GetBlockRegistry(), eye, dir,
+                maxCheck))
+        {
+          return false;
+        }
+      }
+    }
   }
   SetRangedIntent(controlled, *target);
   return true;

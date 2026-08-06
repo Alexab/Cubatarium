@@ -353,6 +353,7 @@ InfluencePrediction InfluenceResolver::Resolve(
           if (target->IsBlocking() && frontal)
           {
             damage *= std::clamp(shield->Block.DamageMul, 0.f, 1.f);
+            delta.ShieldBlocked = true;
           }
           else
           {
