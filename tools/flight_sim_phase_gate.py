@@ -371,12 +371,13 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("chunks_traveled", "ge", 3.0),
     ],
     # Clean idle stand (idle-clean scenario): calm stop without edit/fluid.
+    # Use calm_* for emerge/stream; phys_ms aliases MovementStepMs so do NOT
+    # gate stop_phys_med (conflicts with stream≤15+emerge≤10). Hitch = block p95.
     "IDLE_CLEAN": [
         ("contaminated_idle", "le", 0.0),
         ("calm_stop_wall_med", "le", 55.0),
-        ("stop_emerge_med", "le", 10.0),
-        ("stop_stream_med", "le", 15.0),
-        ("stop_phys_med", "le", 12.0),
+        ("calm_stop_emerge_med", "le", 10.0),
+        ("calm_stop_stream_med", "le", 15.0),
         ("physics_block_ms_p95", "le", 5.0),
         ("edit_immediate_n_med", "le", 0.0),
         ("stop_focus_dirty_delta", "le", 0.0),
@@ -388,6 +389,19 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
     # Contaminated idle (manual after place/fluid): report-only wall gates.
     "IDLE_DIRTY": [
         ("contaminated_idle", "ge", 1.0),
+    ],
+    # Debtful idle stand (idle-warm): remesh/stream pressure closer to manual.
+    "IDLE_WARM": [
+        ("contaminated_idle", "le", 0.0),
+        ("post_stop_focus_dirty_med", "ge", 40.0),
+        ("dirty_med", "ge", 10.0),
+        ("calm_stop_wall_med", "le", 140.0),
+        ("calm_stop_emerge_med", "le", 50.0),
+        ("calm_stop_stream_med", "le", 55.0),
+        ("physics_block_ms_p95", "le", 5.0),
+        ("edit_immediate_n_med", "le", 0.0),
+        ("post_stop_missing_max", "le", 0.0),
+        ("chunks_traveled", "ge", 6.0),
     ],
 }
 
