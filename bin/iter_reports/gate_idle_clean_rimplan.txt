@@ -1,0 +1,12 @@
+NO-GO phase=IDLE_CLEAN failed=['calm_stop_emerge_med', 'calm_stop_stream_med', 'post_stop_black_sticky_max']
+  contaminated_idle=0.0 le 0.0 -> OK
+  calm_stop_wall_med=50.543 le 55.0 -> OK
+  calm_stop_emerge_med=None le 10.0 -> FAIL
+  calm_stop_stream_med=None le 18.0 -> FAIL
+  physics_block_ms_p95=0.0072 le 5.0 -> OK
+  edit_immediate_n_med=0.0 le 0.0 -> OK
+  stop_focus_dirty_delta=-1.0 le 0.0 -> OK
+  opaque_idle_churn_max=82.0 le 160.0 -> OK
+  post_stop_black_sticky_max=5.0 le 0.0 -> FAIL
+  post_stop_missing_max=0.0 le 0.0 -> OK
+  chunks_traveled=4 ge 3.0 -> OK
