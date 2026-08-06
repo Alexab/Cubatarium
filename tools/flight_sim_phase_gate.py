@@ -394,13 +394,13 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
     "IDLE_WARM": [
         ("contaminated_idle", "le", 0.0),
         ("post_stop_focus_dirty_med", "ge", 40.0),
-        ("dirty_med", "ge", 10.0),
         ("calm_stop_wall_med", "le", 140.0),
         ("calm_stop_emerge_med", "le", 50.0),
         ("calm_stop_stream_med", "le", 55.0),
         ("physics_block_ms_p95", "le", 5.0),
         ("edit_immediate_n_med", "le", 0.0),
         ("post_stop_missing_max", "le", 0.0),
+        ("opaque_cmd_on_med", "ge", 200.0),
         ("chunks_traveled", "ge", 6.0),
     ],
     # Moving cruise stress (fly-clean): judge fly segment, not stop-only.
