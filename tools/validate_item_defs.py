@@ -141,7 +141,12 @@ def main() -> int:
             caps = (data.get("tool") or {}).get("groupcaps") or {}
             if not caps:
                 errors.append(f"{item_id}: dig types without tool.groupcaps")
-        if "combat" in types and "armor" not in types and "shield" not in item_id:
+        if (
+            "combat" in types
+            and "armor" not in types
+            and "shield" not in item_id
+            and item_id not in {"arrow"}
+        ):
             dmg = (data.get("tool") or {}).get("damage") or {}
             ranged = data.get("ranged") or {}
             if not dmg and not ranged.get("enabled"):
