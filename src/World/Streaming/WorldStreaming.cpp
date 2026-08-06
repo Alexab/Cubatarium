@@ -1,6 +1,7 @@
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/FocusIngressPolicy.h"
+#include "World/Streaming/IdleRecoveryPolicy.h"
 #include "World/Streaming/SeedDecisionPolicy.h"
 #include "World/Streaming/MemoryBudgetController.h"
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
@@ -1279,19 +1280,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
        mesh_async_n >= 36 || missing_focus_mesh);
   if (idle_recovery)
   {
-    bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 16 : 32);
-    if (black_sticky_focus > 0 || mesh_async_n >= 40 ||
-        pending_light_focus_n > 15 || missing_focus_mesh)
-    {
-      bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 20 : 40);
-    }
-    // Clean stop with light debt only: keep enqueue hot so MarkRelit can clear
-    // pending without sync RelightColumn (which caused 1–2s spikes).
-    if (pending_light_focus_n > 15 && black_sticky_focus == 0 &&
-        !missing_focus_mesh)
-    {
-      bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 24 : 48);
-    }
+    bg_budget = ComputeIdleRecoveryBgBudget(IdleRecoveryBgBudgetInput{
+        idle_recovery, frame_ms, kBadFrameMs, pending_light_focus_n,
+        black_sticky_focus, missing_focus_mesh, mesh_async_n, bg_budget});
   }
   else if (pending_light_focus_n > 0 && frame_ms > kBadFrameMs)
   {

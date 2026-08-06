@@ -1314,6 +1314,11 @@ add_executable(focus_ingress_policy_test
 target_include_directories(focus_ingress_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
+add_executable(idle_recovery_policy_test
+    src/Test/IdleRecoveryPolicyTest.cpp)
+target_include_directories(idle_recovery_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
 add_executable(seed_decision_policy_test
     src/Test/SeedDecisionPolicyTest.cpp)
 target_include_directories(seed_decision_policy_test PRIVATE

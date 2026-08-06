@@ -3,6 +3,7 @@
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
 #include "World/Streaming/FocusIngressPolicy.h"
+#include "World/Streaming/IdleRecoveryPolicy.h"
 #include "World/Streaming/MeshLitGate.h"
 #include "World/Streaming/MeshWorkAdmission.h"
 #include "Blocks/BlockRegistry.h"
@@ -303,24 +304,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       idle_pending_plateau_frames = 0;
       idle_pending_plateau_last = pending_focus_count;
     }
-    if (idle_visual_drain_cd <= 0 && last_frame_ms <= 28.0)
+    const auto visual_drain = EvaluateIdleVisualDrain(IdleVisualDrainInput{
+        last_frame_ms, idle_visual_drain_cd, pending_focus_count,
+        missing_visible_mesh, idle_pending_plateau_frames});
+    if (visual_drain.run_drain)
     {
-      const int budget =
-          pending_focus_count > 30
-              ? 8
-              : (pending_focus_count > 15 ? 6
-                                         : (pending_focus_count > 0 ? 4 : 3));
-      const int plateau_frames =
-          missing_visible_mesh ? 12 : 45;
-      const double plateau_wall_ms = missing_visible_mesh ? 120.0 : 18.0;
-      const bool allow_sync =
-          idle_pending_plateau_frames >= plateau_frames &&
-          last_frame_ms <= plateau_wall_ms && pending_focus_count > 0 &&
-          last_frame_ms <= 40.0;
       GetColumnFlowExecutor().DrainIdlePendingLight(
-          world, focus_ground_horiz, focus_radius, budget, allow_sync,
-          last_frame_ms, pending_focus_count, missing_visible_mesh);
-      if (allow_sync)
+          world, focus_ground_horiz, focus_radius, visual_drain.budget,
+          visual_drain.allow_sync, last_frame_ms, pending_focus_count,
+          missing_visible_mesh);
+      if (visual_drain.allow_sync)
       {
         idle_pending_plateau_frames = 0;
       }
@@ -329,7 +322,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         // E2 ownership: enqueue then drain (dispatch all kinds). Enqueue-only
         // starved Admit until recover_watchdog and left holes/pending high.
         // Scheduler dedupes same column+kind, so one FirstMesh carries admit_n.
-        const int admit_n = std::min(2, budget);
+        const int admit_n = std::min(2, visual_drain.budget);
         auto &exec = GetColumnFlowExecutor();
         exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
                      ColumnWorkKind::FirstMesh, 40 + admit_n);
@@ -342,8 +335,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               ? 24
               : 12;
       world.ClearPendingLightAfterMeshCommitted(clear_n);
-      idle_visual_drain_cd =
-          pending_focus_count > 8 ? 1 : (pending_focus_count > 0 ? 2 : 8);
+      idle_visual_drain_cd = visual_drain.idle_visual_drain_cd_next;
     }
     else if (idle_visual_drain_cd > 0)
     {
@@ -351,11 +343,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     // Sticky remesh outside the wall≤28 visual-drain gate: stop-tail wall is
     // often 40–55ms (F2 sticky grew while SyncIdle never ran). ColumnFlow only.
-    if (black_sticky > 0 && last_frame_ms <= 55.0)
+    const auto sticky_drain = EvaluateStickyRemeshDrain(
+        StickyRemeshDrainInput{black_sticky, last_frame_ms});
+    if (sticky_drain.run_drain)
     {
-      const int sticky_n =
-          black_sticky > 4 ? 3 : (black_sticky > 1 ? 2 : 1);
-      GetColumnFlowExecutor().DrainRemeshSeamBudget(world, sticky_n);
+      GetColumnFlowExecutor().DrainRemeshSeamBudget(world, sticky_drain.budget);
     }
   }
   else
