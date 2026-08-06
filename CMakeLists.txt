@@ -923,6 +923,7 @@ target_link_libraries(tool_capabilities_test glm::glm)
 
 add_executable(armor_equipment_test
     src/Items/ItemDefinitionStorage.cpp
+    src/Items/ItemVisualPresetLibrary.cpp
     src/Creatures/Core/CreatureInventory.cpp
     src/Items/ToolCapabilities.cpp
     src/Test/ArmorEquipmentTest.cpp)
@@ -1183,6 +1184,7 @@ target_link_libraries(block_break_duration_test glm::glm)
 add_executable(inventory_mode_test
     src/Creatures/Core/CreatureInventory.cpp
     src/Items/ItemDefinitionStorage.cpp
+    src/Items/ItemVisualPresetLibrary.cpp
     src/Items/ToolCapabilities.cpp
     src/Test/InventoryModeTest.cpp)
 target_include_directories(inventory_mode_test PRIVATE
@@ -1199,6 +1201,7 @@ target_link_libraries(influence_use_test glm::glm)
 add_executable(recipe_registry_test
     src/Creatures/Core/CreatureInventory.cpp
     src/Items/ItemDefinitionStorage.cpp
+    src/Items/ItemVisualPresetLibrary.cpp
     src/Items/ToolCapabilities.cpp
     src/Game/Crafting/RecipeRegistry.cpp
     src/Test/RecipeRegistryTest.cpp)
@@ -1209,6 +1212,7 @@ target_link_libraries(recipe_registry_test glm::glm nlohmann_json::nlohmann_json
 add_executable(resource_economy_test
     src/Creatures/Core/CreatureInventory.cpp
     src/Items/ItemDefinitionStorage.cpp
+    src/Items/ItemVisualPresetLibrary.cpp
     src/Items/ToolCapabilities.cpp
     src/Game/Economy/ResourceEconomy.cpp
     src/Test/ResourceEconomyTest.cpp)
