@@ -224,7 +224,9 @@ struct IdleMeshDrainCapDecision
 
 /// Calm stand with no light/mesh debt: pace dirty_tick so wall can recover.
 /// I4b: also cap emerge total + SyncRebuild.
-/// I4c: allow sticky <= kIdleCalmStickyRemnant (classifier calm with sticky=2).
+/// I4c/I4d: sticky<=kIdleCalmStickyRemnant is classifier-calm, but I4c's full
+/// hot-wall drain=2 starved sticky remesh (sticky 2→7, wall↑). Remnant sticky
+/// only kills SyncRebuild (the ~36ms waste); keep remesh drain for repair.
 inline IdleMeshDrainCapDecision EvaluateIdleMeshDrainCap(
     const IdleMeshDrainCapInput &in)
 {
@@ -236,23 +238,44 @@ inline IdleMeshDrainCapDecision EvaluateIdleMeshDrainCap(
   {
     return out;
   }
+  const bool remnant_sticky = in.black_sticky > 0;
   if (in.last_frame_ms > 55.0)
   {
     out.active = true;
-    out.mesh_drain = std::min(in.mesh_drain, 2);
-    out.mesh_schedule = std::min(in.mesh_schedule, 3);
-    out.snapshot_budget_ms = 1.0;
-    out.emerge_total_budget_ms = 8.0;
+    if (remnant_sticky)
+    {
+      out.mesh_drain = std::min(in.mesh_drain, 8);
+      out.mesh_schedule = std::min(in.mesh_schedule, 8);
+      out.snapshot_budget_ms = 2.0;
+      out.emerge_total_budget_ms = 12.0;
+    }
+    else
+    {
+      out.mesh_drain = std::min(in.mesh_drain, 2);
+      out.mesh_schedule = std::min(in.mesh_schedule, 3);
+      out.snapshot_budget_ms = 1.0;
+      out.emerge_total_budget_ms = 8.0;
+    }
     out.sync_cap = 0;
     out.sync_budget_ms = 0.5;
   }
   else if (in.last_frame_ms > 28.0)
   {
     out.active = true;
-    out.mesh_drain = std::min(in.mesh_drain, 3);
-    out.mesh_schedule = std::min(in.mesh_schedule, 4);
-    out.snapshot_budget_ms = 1.5;
-    out.emerge_total_budget_ms = 12.0;
+    if (remnant_sticky)
+    {
+      out.mesh_drain = std::min(in.mesh_drain, 10);
+      out.mesh_schedule = std::min(in.mesh_schedule, 10);
+      out.snapshot_budget_ms = 2.0;
+      out.emerge_total_budget_ms = 16.0;
+    }
+    else
+    {
+      out.mesh_drain = std::min(in.mesh_drain, 3);
+      out.mesh_schedule = std::min(in.mesh_schedule, 4);
+      out.snapshot_budget_ms = 1.5;
+      out.emerge_total_budget_ms = 12.0;
+    }
     out.sync_cap = 0;
     out.sync_budget_ms = 0.5;
   }
@@ -260,10 +283,10 @@ inline IdleMeshDrainCapDecision EvaluateIdleMeshDrainCap(
   {
     // Mild headroom toward IDLE_CLEAN ≤55 wall while FPS is already OK-ish.
     out.active = true;
-    out.mesh_drain = std::min(in.mesh_drain, 6);
-    out.mesh_schedule = std::min(in.mesh_schedule, 6);
+    out.mesh_drain = std::min(in.mesh_drain, remnant_sticky ? 10 : 6);
+    out.mesh_schedule = std::min(in.mesh_schedule, remnant_sticky ? 10 : 6);
     out.snapshot_budget_ms = 2.0;
-    out.emerge_total_budget_ms = 16.0;
+    out.emerge_total_budget_ms = remnant_sticky ? 20.0 : 16.0;
     out.sync_cap = 0;
     out.sync_budget_ms = 1.0;
   }

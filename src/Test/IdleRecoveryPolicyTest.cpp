@@ -137,7 +137,7 @@ int main()
   }
 
   {
-    // I4c: idle-clean calm periods had black_sticky=2; must still pace.
+    // I4c/I4d: idle-clean calm periods had black_sticky=2; pace sync only.
     IdleMeshDrainCapInput in;
     in.moving = false;
     in.black_sticky = kIdleCalmStickyRemnant;
@@ -147,7 +147,9 @@ int main()
     const auto d = EvaluateIdleMeshDrainCap(in);
     Expect(d.active, "remnant sticky still caps drain");
     Expect(d.sync_cap == 0, "remnant sticky sync off");
-    Expect(d.emerge_total_budget_ms <= 8.0, "remnant sticky emerge<=8");
+    Expect(d.emerge_total_budget_ms <= 12.0, "remnant sticky emerge<=12");
+    Expect(d.mesh_drain >= 8, "remnant sticky keeps remesh drain");
+    Expect(d.mesh_drain <= 8, "remnant sticky drain capped at 8");
   }
 
   {
