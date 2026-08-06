@@ -214,12 +214,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const int pending_async_early = mesh_service.GetAsyncInFlightCount();
   // Idle-only: CountUnfinishedVisualNear is O(focus²) complete+ready scans.
   // Moving paths never use not_ready_early (idle_remesh_debt requires !moving).
-  // I4f: lit idle with no pending/miss — skip the scan (prep was ~7ms of emerge).
   const int not_ready_early =
       moving ? 0
-      : (pending_focus_count == 0 && !missing_visible_mesh)
-            ? 0
-            : world.CountUnfinishedVisualNear(focus_ground_horiz, focus_radius);
+             : world.CountUnfinishedVisualNear(focus_ground_horiz, focus_radius);
   const int focus_dirty_early =
       mesh_service.CountDirtyWithinHorizontalRadius(focus_ground_horiz,
                                                     focus_radius);
@@ -368,11 +365,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     world.PruneStickyRemeshOutside(focus_ground_horiz, /*radius=*/1);
   }
-  else if (idle_remesh_debt || black_sticky > 0)
+  else if (idle_remesh_debt || black_sticky > 4)
   {
     // Idle catch-up: sticky full-focus flood (manual 210341: 7→13) blocked
     // ClearPending and inflated not_ready — keep underfeet only.
-    // I4f: prune at sticky>=1 (was >4); sticky=4 never pruned and never cleared.
     world.PruneStickyRemeshOutside(focus_ground_horiz, /*radius=*/1);
   }
   // visual_holes = missing mesh only; near_focus_holes kept for legacy paths
@@ -825,15 +821,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   mesh_service.SetMeshEmergeTotalBudgetMs(
       moving ? 25.0
              : (healed_idle_emerge
-                    ? (idle_focus_dirty_debt ? 36.0 : 10.0)
+                    ? (idle_focus_dirty_debt ? 36.0 : 16.0)
                     : 60.0));
 
   // Healthy flight with no visual holes: flush Dirty so pressure can leave Red
   // (Dirty plateaus ~700 trapped Red when exit required dirty<=500).
   // Skip while focus relight debt is high — flush starved MarkRelit (pending~50).
-  // I4f: sticky-only calm must not floor Dirty drain (ColumnFlow owns sticky).
-  if (idle_recovery &&
-      (pending_focus_count > 0 || missing_visible_mesh || visual_holes))
+  if (idle_recovery)
   {
     mesh_drain = std::max(mesh_drain, 14);
     mesh_schedule = std::max(mesh_schedule, 12);

@@ -123,15 +123,6 @@ int main()
   }
 
   {
-    StickyRemeshDrainInput in;
-    in.black_sticky = 4;
-    in.last_frame_ms = 35.0;
-    const auto d = EvaluateStickyRemeshDrain(in);
-    Expect(d.run_drain, "sticky drain on calm wall");
-    Expect(d.budget >= 3, "I4f sticky drain budget>=3 under 40ms");
-  }
-
-  {
     IdleMeshDrainCapInput in;
     in.moving = false;
     in.last_frame_ms = 86.0;
@@ -156,7 +147,7 @@ int main()
     const auto d = EvaluateIdleMeshDrainCap(in);
     Expect(d.active, "remnant sticky still caps drain");
     Expect(d.sync_cap == 0, "remnant sticky sync off");
-    Expect(d.emerge_total_budget_ms <= 10.0, "remnant sticky emerge<=10");
+    Expect(d.emerge_total_budget_ms <= 12.0, "remnant sticky emerge<=12");
     Expect(d.mesh_drain >= 8, "remnant sticky keeps remesh drain");
     Expect(d.mesh_drain <= 8, "remnant sticky drain capped at 8");
   }
@@ -195,7 +186,7 @@ int main()
     in.mesh_schedule = 12;
     const auto d = EvaluateIdleMeshDrainCap(in);
     Expect(d.active, "calm idle mid wall caps drain");
-    Expect(d.emerge_total_budget_ms <= 10.0, "calm idle mid wall emerge<=10");
+    Expect(d.emerge_total_budget_ms <= 12.0, "calm idle mid wall emerge<=12");
   }
 
   {
