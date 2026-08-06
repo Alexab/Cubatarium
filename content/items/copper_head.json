@@ -15,5 +15,8 @@
       "fleshy": 56
     }
   },
-  "model": "models/items/copper_head/model.gltf"
+  "model": "models/items/copper_head/model.gltf",
+  "visual": {
+    "wield_scale": 1.0
+  }
 }

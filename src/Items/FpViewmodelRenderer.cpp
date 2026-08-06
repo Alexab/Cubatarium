@@ -10,6 +10,7 @@
 #include "Game/Inventory/InventoryTypes.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ItemGltfTextureCache.h"
+#include "Items/ItemVisualDefaults.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
 #include "Render/Pipeline/GlStateMask.h"
@@ -74,10 +75,10 @@ glm::vec3 ReadVec3(const nlohmann::json &arr, const glm::vec3 &fallback)
 // Rx(+88°) that is camera-forward. Mapping JSON +Y onto arm -Y made tools
 // collinear with the forearm. Wield space: JSON +Y → mostly arm -Z (up in
 // FP frame / above palm), with a small lean toward -Y (into the scene).
-constexpr float kToolWieldScale = 0.7f;
+constexpr float kToolWieldScale = 0.85f;
 constexpr float kToolWieldLeanDeg = 28.f;
 /// Target longest axis in arm-local wield space (~matches parts_v1 rod length).
-constexpr float kFpWieldTargetExtent = 0.72f;
+constexpr float kFpWieldTargetExtent = 0.95f;
 
 glm::vec3 ToolJsonOffsetToArm(const glm::vec3 &off)
 {
@@ -804,9 +805,32 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const std::string &itemId,
   }
   const glm::vec3 center = (minV + maxV) * 0.5f;
   const glm::vec3 ext = maxV - minV;
-  const float maxExtent =
-      std::max(1e-5f, std::max(ext.x, std::max(ext.y, ext.z)));
-  const float fitScale = kFpWieldTargetExtent / maxExtent;
+  float fitExtent = std::max(ext.x, std::max(ext.y, ext.z));
+  if (def->Visual.FitAxis == "x")
+  {
+    fitExtent = ext.x;
+  }
+  else if (def->Visual.FitAxis == "y")
+  {
+    fitExtent = ext.y;
+  }
+  else if (def->Visual.FitAxis == "z")
+  {
+    fitExtent = ext.z;
+  }
+  fitExtent = std::max(1e-5f, fitExtent);
+  const float fitScale = kFpWieldTargetExtent / fitExtent;
+  const float wieldScale = DefaultWieldScale(*def);
+  const glm::vec3 visualOff(def->Visual.WieldOffset[0],
+                            def->Visual.WieldOffset[1],
+                            def->Visual.WieldOffset[2]);
+  const glm::mat4 visualRot =
+      glm::rotate(glm::mat4(1.f), glm::radians(def->Visual.WieldEulerDeg[0]),
+                  glm::vec3(1.f, 0.f, 0.f)) *
+      glm::rotate(glm::mat4(1.f), glm::radians(def->Visual.WieldEulerDeg[1]),
+                  glm::vec3(0.f, 1.f, 0.f)) *
+      glm::rotate(glm::mat4(1.f), glm::radians(def->Visual.WieldEulerDeg[2]),
+                  glm::vec3(0.f, 0.f, 1.f));
 
   // Same Y-up → arm remap as parts; lean so blade sits above palm.
   const glm::mat4 orient =
@@ -815,9 +839,10 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const std::string &itemId,
       glm::mat4(glm::vec4(1, 0, 0, 0), glm::vec4(0, 0, -1, 0),
                 glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, 0, 1));
   const glm::mat4 model =
-      glm::translate(glm::mat4(1.f), socket) * orient *
-      glm::scale(glm::mat4(1.f), glm::vec3(fitScale * kToolWieldScale)) *
-      glm::translate(glm::mat4(1.f), -center);
+      glm::translate(glm::mat4(1.f), socket) * orient * visualRot *
+      glm::scale(glm::mat4(1.f),
+                 glm::vec3(fitScale * kToolWieldScale * wieldScale)) *
+      glm::translate(glm::mat4(1.f), -center + visualOff);
   const glm::mat4 mvp = mvpBase * model;
 
   static GLuint vao = 0, vbo = 0, ebo = 0;

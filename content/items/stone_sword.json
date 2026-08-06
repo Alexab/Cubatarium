@@ -30,5 +30,11 @@
       }
     },
     "punch_attack_uses": 60
+  },
+  "visual": {
+    "wield_scale": 1.35,
+    "swing": {
+      "melee": "slash_weapon"
+    }
   }
 }

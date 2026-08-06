@@ -1,7 +1,9 @@
 {
   "id": "bread",
   "displayName": "Bread",
-  "types": ["misc"],
+  "types": [
+    "misc"
+  ],
   "stack_max": 16,
   "wear_end": "destroy",
   "use_action": "eat",
@@ -9,5 +11,11 @@
     "action": "eat",
     "satiety": 35,
     "health": 1
+  },
+  "visual": {
+    "wield_scale": 0.95,
+    "use": {
+      "eat": "eat_hand"
+    }
   }
 }

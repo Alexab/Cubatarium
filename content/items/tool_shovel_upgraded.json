@@ -32,5 +32,12 @@
     },
     "punch_attack_uses": 120
   },
-  "model": "models/items/tool_shovel_upgraded/model.gltf"
+  "model": "models/items/tool_shovel_upgraded/model.gltf",
+  "visual": {
+    "wield_scale": 1.5,
+    "swing": {
+      "dig": "dig_tool",
+      "melee": "dig_tool"
+    }
+  }
 }

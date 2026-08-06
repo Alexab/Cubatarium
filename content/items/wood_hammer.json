@@ -33,5 +33,12 @@
     },
     "punch_attack_uses": 100
   },
-  "model": "models/items/wood_hammer/model.gltf"
+  "model": "models/items/wood_hammer/model.gltf",
+  "visual": {
+    "wield_scale": 1.5,
+    "swing": {
+      "dig": "dig_tool",
+      "melee": "dig_tool"
+    }
+  }
 }

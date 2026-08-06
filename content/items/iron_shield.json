@@ -22,5 +22,11 @@
     },
     "punch_attack_uses": 200
   },
-  "model": "models/items/iron_shield/model.gltf"
+  "model": "models/items/iron_shield/model.gltf",
+  "visual": {
+    "wield_scale": 1.5,
+    "use": {
+      "block": "raise_shield"
+    }
+  }
 }

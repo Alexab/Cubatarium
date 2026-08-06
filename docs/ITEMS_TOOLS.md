@@ -94,9 +94,10 @@ Hardness gates unbreakable (`hardness <= 0` in Survival). On groupcap match, dur
 
 - Inventory / hotbar icons: `UItemIconCache` via `UItemPreviewRenderer` (glTF → parts[] → FallbackParts)
 - Hotbar: wear bar + broken dim
-- FP viewmodel: clear-Z dual box arms + held Item/Block (`ShowFpWield`, Perspective only). Held items prefer glTF (`TryDrawGltfHeld`), else parts. Offhand on sheet. Skinned arms = TD-ITEM-004.
-- Worn armor: `WornEquipmentDrawer` attaches equipped armor glTF to human `bone_skeleton` bones in world + character sheet preview (`wear.json` / defaults). TP tool wield remains TD-ITEM-005.
-- `stone_knife`: melee + weak `snappy` dig. `wood_bow`: melee-light only (ranged = TD-ITEM-008).
+- FP viewmodel: clear-Z dual box arms + held Item/Block (`ShowFpWield`, Perspective only). Held items prefer glTF (`TryDrawGltfHeld`), else parts. Scale = AABB fit × `visual.wield_scale` (category defaults via `ItemVisualDefaults` / `tools/apply_item_visual_defaults.py`). Target tool length ≫ FP block cube (~0.22).
+- Swing/use presets: [`content/item_visual_presets.json`](../content/item_visual_presets.json)
+- Offhand on sheet. Skinned/mesh FP arms = TD-ITEM-004.
+- Worn armor: `WornEquipmentDrawer` on `bone_skeleton`. TP tool wield = TD-ITEM-005.
 - Models: [`ITEM_ASSETS.md`](ITEM_ASSETS.md)
 
 ## Influence handshake

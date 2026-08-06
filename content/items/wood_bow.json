@@ -21,5 +21,11 @@
       "melee": 1
     },
     "punch_attack_uses": 100
+  },
+  "visual": {
+    "wield_scale": 1.4,
+    "use": {
+      "ranged": "draw_bow"
+    }
   }
 }

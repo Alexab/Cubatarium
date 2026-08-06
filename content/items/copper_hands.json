@@ -15,5 +15,8 @@
       "fleshy": 28
     }
   },
-  "model": "models/items/copper_hands/model.gltf"
+  "model": "models/items/copper_hands/model.gltf",
+  "visual": {
+    "wield_scale": 1.0
+  }
 }

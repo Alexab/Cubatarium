@@ -15,5 +15,8 @@
       "fleshy": 35
     }
   },
-  "model": "models/items/copper_feet/model.gltf"
+  "model": "models/items/copper_feet/model.gltf",
+  "visual": {
+    "wield_scale": 1.0
+  }
 }

@@ -30,5 +30,12 @@
       }
     },
     "punch_attack_uses": 60
+  },
+  "visual": {
+    "wield_scale": 1.5,
+    "swing": {
+      "dig": "dig_tool",
+      "melee": "dig_tool"
+    }
   }
 }

@@ -15,5 +15,8 @@
       "fleshy": 42
     }
   },
-  "model": "models/items/copper_arms/model.gltf"
+  "model": "models/items/copper_arms/model.gltf",
+  "visual": {
+    "wield_scale": 1.0
+  }
 }

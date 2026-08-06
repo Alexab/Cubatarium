@@ -26,5 +26,12 @@
         }
       }
     }
+  },
+  "visual": {
+    "wield_scale": 1.5,
+    "swing": {
+      "dig": "dig_tool",
+      "melee": "dig_tool"
+    }
   }
 }

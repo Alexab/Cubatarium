@@ -32,5 +32,12 @@
     },
     "punch_attack_uses": 80
   },
-  "model": "models/items/copper_shovel/model.gltf"
+  "model": "models/items/copper_shovel/model.gltf",
+  "visual": {
+    "wield_scale": 1.5,
+    "swing": {
+      "dig": "dig_tool",
+      "melee": "dig_tool"
+    }
+  }
 }

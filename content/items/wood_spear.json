@@ -21,5 +21,11 @@
     },
     "punch_attack_uses": 50
   },
-  "model": "models/items/wood_spear/model.gltf"
+  "model": "models/items/wood_spear/model.gltf",
+  "visual": {
+    "wield_scale": 1.8,
+    "swing": {
+      "melee": "thrust_spear"
+    }
+  }
 }

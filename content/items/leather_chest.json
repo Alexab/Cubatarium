@@ -15,5 +15,8 @@
     "armor_groups": {
       "fleshy": 50
     }
+  },
+  "visual": {
+    "wield_scale": 1.0
   }
 }

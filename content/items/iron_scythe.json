@@ -21,5 +21,8 @@
     },
     "punch_attack_uses": 60
   },
-  "model": "models/items/iron_scythe/model.gltf"
+  "model": "models/items/iron_scythe/model.gltf",
+  "visual": {
+    "wield_scale": 1.25
+  }
 }

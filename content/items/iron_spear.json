@@ -21,5 +21,11 @@
     },
     "punch_attack_uses": 140
   },
-  "model": "models/items/iron_spear/model.gltf"
+  "model": "models/items/iron_spear/model.gltf",
+  "visual": {
+    "wield_scale": 1.85,
+    "swing": {
+      "melee": "thrust_spear"
+    }
+  }
 }

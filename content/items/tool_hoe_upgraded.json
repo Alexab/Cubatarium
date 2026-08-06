@@ -21,5 +21,8 @@
     },
     "punch_attack_uses": 60
   },
-  "model": "models/items/tool_hoe_upgraded/model.gltf"
+  "model": "models/items/tool_hoe_upgraded/model.gltf",
+  "visual": {
+    "wield_scale": 1.25
+  }
 }
