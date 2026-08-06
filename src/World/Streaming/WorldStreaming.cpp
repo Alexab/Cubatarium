@@ -60,6 +60,18 @@ constexpr int kRelightBgClampCooldownMs = 400;
 constexpr int kAdaptiveRdMin = 3;
 constexpr double kAdaptiveRdHysteresisSec = 2.5;
 
+/// SoftDefer / rim FirstMesh repair anchor: nearest miss witness when present.
+/// Manual 191432 exit stuck miss_horiz=2–3 while tickets stayed on focus_xz.
+inline glm::ivec2 RepairColumnFromMissWitness(const PhysicsTelemetry &phys,
+                                              glm::ivec2 focus_xz)
+{
+  if (phys.FocusMissingMesh != 0 && phys.MissHoriz > 0)
+  {
+    return glm::ivec2(phys.MissCx, phys.MissCz);
+  }
+  return focus_xz;
+}
+
 struct KeepPrewarmGate
 {
   bool allow{false};
@@ -1316,11 +1328,19 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   if (ingress.active && ingress.promote_once)
   {
     auto &exec = GetColumnFlowExecutor();
+    const glm::ivec2 focus_xz(focus_horiz.x, focus_horiz.z);
+    const glm::ivec2 repair_xz = RepairColumnFromMissWitness(
+        world.PhysicsTelemetryData, focus_xz);
     // Rim SLA: FirstMesh Drain before any promote Capture.
     if (rim_first_mesh_sla && ingress.first_mesh_admit > 0)
     {
-      exec.Enqueue(glm::ivec2(focus_horiz.x, focus_horiz.z),
-                   ColumnWorkKind::FirstMesh, 100);
+      if (repair_xz != focus_xz)
+      {
+        ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
+        world.PhysicsTelemetryData.SoftDeferWitnessHoriz =
+            world.PhysicsTelemetryData.MissHoriz;
+      }
+      exec.Enqueue(repair_xz, ColumnWorkKind::FirstMesh, 100);
       exec.DrainBudget(world, moving_now ? 2 : 3, focus_horiz, focus_radius,
                        ingress.first_mesh_admit);
       // Underfeet promote only (r=1) — no full-focus promote while missing.
@@ -1331,8 +1351,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       exec.RunPromoteRelightNow(world, focus_horiz, focus_radius);
       if (ingress.first_mesh_admit > 0)
       {
-        exec.Enqueue(glm::ivec2(focus_horiz.x, focus_horiz.z),
-                     ColumnWorkKind::FirstMesh, 80);
+        if (repair_xz != focus_xz)
+        {
+          ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
+          world.PhysicsTelemetryData.SoftDeferWitnessHoriz =
+              world.PhysicsTelemetryData.MissHoriz;
+        }
+        exec.Enqueue(repair_xz, ColumnWorkKind::FirstMesh, 80);
         exec.DrainBudget(world, 1, focus_horiz, focus_radius,
                          ingress.first_mesh_admit);
       }
@@ -1359,15 +1384,25 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       {
         auto &exec = GetColumnFlowExecutor();
         const glm::ivec2 focus_xz(focus_horiz.x, focus_horiz.z);
-        // Rate-limit: skip if ColumnFlow already owns a repair ticket.
-        if (!exec.HasRepairTicket(focus_xz))
+        // Anchor on miss witness (horiz 2–3 rim), not focus — else HasRepairTicket
+        // on focus blocks floor while hole never gets FirstMesh (manual 191432).
+        const glm::ivec2 repair_xz = RepairColumnFromMissWitness(
+            world.PhysicsTelemetryData, focus_xz);
+        // Rate-limit: skip if ColumnFlow already owns a repair ticket on target.
+        if (!exec.HasRepairTicket(repair_xz))
         {
           ++world.PhysicsTelemetryData.SoftDeferCaptureFloorHits;
+          if (repair_xz != focus_xz)
+          {
+            ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
+            world.PhysicsTelemetryData.SoftDeferWitnessHoriz =
+                world.PhysicsTelemetryData.MissHoriz;
+          }
           const ColumnWorkKind kind = missing_focus_mesh
                                           ? ColumnWorkKind::FirstMesh
                                           : ColumnWorkKind::RelightThenMesh;
           ColumnWorkItem item{};
-          item.column = focus_xz;
+          item.column = repair_xz;
           item.kind = kind;
           item.priority = 90;
           item.scan_full_focus = missing_focus_mesh;

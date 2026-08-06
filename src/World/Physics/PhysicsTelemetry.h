@@ -62,6 +62,10 @@ struct PhysicsTelemetry
   int EnterGameWarmupMissingGreedy{0};
   /// Frames where SoftDefer FOV+pending applied a Capture budget floor (cumulative).
   uint64_t SoftDeferCaptureFloorHits{0};
+  /// SoftDefer/rim FirstMesh ticket retargeted from focus to MissCx/Cz (cumulative).
+  uint64_t SoftDeferWitnessRetarget{0};
+  /// Last witness MissHoriz when SoftDeferWitnessRetarget fired (0 if focus).
+  int SoftDeferWitnessHoriz{0};
   /// Capture/relight bg budget requested by SoftDefer floor this frame (0 if idle).
   int SoftDeferCaptureBudget{0};
   /// Empty SoftDefer placeholders seen by undrawn heal this frame (A2 smoke).

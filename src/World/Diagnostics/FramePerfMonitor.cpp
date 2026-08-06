@@ -70,6 +70,7 @@ struct Session
   int FrameCount{0};
   uint64_t MeshApplyStaleAtPeriodStart{0};
   uint64_t SoftDeferCaptureFloorHitsAtPeriodStart{0};
+  uint64_t SoftDeferWitnessRetargetAtPeriodStart{0};
   std::chrono::steady_clock::time_point LastEmit{
       std::chrono::steady_clock::now()};
   double LastRssMb{0.0};
@@ -245,6 +246,9 @@ struct FrameNumbers
   int enter_game_warmup_missing_greedy{0};
   uint64_t softdefer_capture_floor_hits{0};
   uint64_t softdefer_capture_floor_hits_delta{0};
+  uint64_t softdefer_witness_retarget{0};
+  uint64_t softdefer_witness_retarget_delta{0};
+  int softdefer_witness_horiz{0};
   int softdefer_capture_budget{0};
   int softdefer_empty_placeholder_n{0};
   int softdefer_empty_stuck_n{0};
@@ -485,6 +489,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.post_load_ring_not_ready = phys.PostLoadRingNotReady;
   n.enter_game_warmup_missing_greedy = phys.EnterGameWarmupMissingGreedy;
   n.softdefer_capture_floor_hits = phys.SoftDeferCaptureFloorHits;
+  n.softdefer_witness_retarget = phys.SoftDeferWitnessRetarget;
+  n.softdefer_witness_horiz = phys.SoftDeferWitnessHoriz;
   n.softdefer_capture_budget = phys.SoftDeferCaptureBudget;
   n.softdefer_empty_placeholder_n = phys.SoftDeferEmptyPlaceholderN;
   n.softdefer_empty_stuck_n = phys.SoftDeferEmptyStuckN;
@@ -742,6 +748,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.softdefer_capture_floor_hits
           << ",\"softdefer_capture_floor_hits_delta\":"
           << n.softdefer_capture_floor_hits_delta
+          << ",\"softdefer_witness_retarget\":" << n.softdefer_witness_retarget
+          << ",\"softdefer_witness_retarget_delta\":"
+          << n.softdefer_witness_retarget_delta
+          << ",\"softdefer_witness_horiz\":" << n.softdefer_witness_horiz
           << ",\"softdefer_capture_budget\":" << n.softdefer_capture_budget
           << ",\"softdefer_empty_placeholder_n\":"
           << n.softdefer_empty_placeholder_n
@@ -1054,6 +1064,11 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
           ? n.softdefer_capture_floor_hits -
                 s.SoftDeferCaptureFloorHitsAtPeriodStart
           : 0;
+  period.softdefer_witness_retarget_delta =
+      n.softdefer_witness_retarget >= s.SoftDeferWitnessRetargetAtPeriodStart
+          ? n.softdefer_witness_retarget -
+                s.SoftDeferWitnessRetargetAtPeriodStart
+          : 0;
   const auto emit_begin = std::chrono::steady_clock::now();
   WriteJsonl(s, period, "period", /*flush=*/true);
   period.perf_emit_ms =
@@ -1063,6 +1078,7 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
   LogLine(period, "period", s.FrameCount, s.MaxWallMs);
   s.MeshApplyStaleAtPeriodStart = n.mesh_apply_stale;
   s.SoftDeferCaptureFloorHitsAtPeriodStart = n.softdefer_capture_floor_hits;
+  s.SoftDeferWitnessRetargetAtPeriodStart = n.softdefer_witness_retarget;
   // CullStats SubData only when ShowPerformance enables readback — not every
   // period (GPU sync hitch ~2s on cruise).
   ResetAccum(s);
