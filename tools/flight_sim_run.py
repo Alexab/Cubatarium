@@ -358,13 +358,21 @@ def main() -> int:
             "land-south",
             "land-south-short",
             "idle-clean",
+            "idle-warm",
+            "idle-edit-smoke",
+            "fly-clean",
         ],
-        help="named scenario (break-stand / visual-* / land-cruise / land-stand / "
-        "land-south / land-south-short / idle-clean)",
+        help="named scenario (break-stand / visual-* / land-* / idle-* / fly-clean)",
     )
     ap.add_argument("--break-phase-sec", type=float, default=20.0)
     ap.add_argument("--break-interval-sec", type=float, default=1.0)
     ap.add_argument("--yaw-sweep-sec", type=float, default=3.0)
+    ap.add_argument(
+        "--repeat",
+        type=int,
+        default=1,
+        help="run scenario N times; write report, report_2..N, and report_agg.json",
+    )
     args = ap.parse_args()
 
     if args.scenario == "break-stand":
@@ -468,6 +476,96 @@ def main() -> int:
             args.stop_phase_sec = 60.0
         else:
             args.stop_phase_sec = max(args.stop_phase_sec, 60.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 16.0)
+
+    if args.scenario == "idle-warm":
+        # Debtful stand near manual focus (-482,72): longer fly accumulates remesh.
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        if "--resume" in sys.argv:
+            args.resume = True
+            args.teleport_cruise = False
+        else:
+            args.resume = False
+            args.teleport_cruise = True
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 270.0
+        if args.cruise_cx is None:
+            args.cruise_cx = -483.0
+        if args.cruise_cz is None:
+            args.cruise_cz = 54.0
+        if args.cruise_eye_y is None:
+            args.cruise_eye_y = 96.0
+        args.idle_sec = max(args.idle_sec, 8.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 40.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 40.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 60.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 60.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 16.0)
+
+    if args.scenario == "idle-edit-smoke":
+        # Stand + forced dig pulse for control-lag / physics_block regression.
+        args.world = args.world or "World_164"
+        args.no_fly = True
+        args.fly_stop = False
+        args.resume = True
+        args.teleport_cruise = False
+        args.hold_space = False
+        args.sprint = False
+        if args.pitch is None:
+            args.pitch = 55.0
+        args.idle_sec = max(args.idle_sec, 15.0)
+        args.break_phase_sec = max(args.break_phase_sec, 8.0)
+        args.break_interval_sec = min(args.break_interval_sec, 1.0)
+        # Idle → edit → post-edit stand (~30s) inside break window + tail.
+        min_edit = args.idle_sec + args.break_phase_sec + 30.0 + 5.0
+        if args.seconds < min_edit:
+            args.seconds = min_edit
+        args.warmup_sec = max(args.warmup_sec, 8.0)
+
+    if args.scenario == "fly-clean":
+        # Moving cruise stress: fly ≥40s; judge move-segment sync/wall, not stop.
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.resume = False
+        args.teleport_cruise = True
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 270.0
+        if args.cruise_cx is None:
+            args.cruise_cx = -483.0
+        if args.cruise_cz is None:
+            args.cruise_cz = 54.0
+        if args.cruise_eye_y is None:
+            args.cruise_eye_y = 96.0
+        args.idle_sec = max(args.idle_sec, 8.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 40.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 40.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 20.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 15.0)
         args.seconds = max(
             args.seconds,
             args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
@@ -639,205 +737,294 @@ def main() -> int:
         if args.seconds < min_sec:
             args.seconds = min_sec
 
-    t0 = time.time()
-    sim_cmd = [
-        str(EXE),
-        "--flight-sim",
-        "--world",
-        args.world,
-        "--seconds",
-        str(args.seconds),
-        "--report",
-        str(BIN / "flight_sim_report.json"),
-    ]
-    if args.scenario == "break-stand" or args.scenario == "visual-dig":
-        sim_cmd.append("--break-stand")
-        sim_cmd.extend(["--break-phase", str(args.break_phase_sec)])
-        sim_cmd.extend(["--break-interval", str(args.break_interval_sec)])
-        sim_cmd.append("--no-fly")
-        sim_cmd.append("--no-hold-forward")
-    elif args.scenario == "visual-blue":
-        sim_cmd.append("--yaw-sweep")
-        sim_cmd.extend(["--yaw-sweep-sec", str(args.yaw_sweep_sec)])
-        sim_cmd.append("--no-fly")
-        sim_cmd.append("--no-hold-forward")
-    elif args.no_fly:
-        sim_cmd.append("--no-fly")
-        sim_cmd.append("--no-hold-forward")
-    else:
-        sim_cmd.extend(["--fly", "--hold-forward"])
-    if args.fly_stop and args.scenario not in (
-        "break-stand",
-        "visual-dig",
-        "visual-blue",
-    ):
-        sim_cmd.append("--fly-stop")
-        sim_cmd.extend(["--fly-phase", str(args.fly_phase_sec)])
-        sim_cmd.extend(["--stop-phase", str(args.stop_phase_sec)])
-    sim_cmd.extend(["--idle", str(args.idle_sec)])
-    if args.sprint:
-        sim_cmd.append("--sprint")
-    if args.hold_space:
-        sim_cmd.append("--hold-space")
-    if args.pitch is not None:
-        sim_cmd.extend(["--pitch", str(args.pitch)])
-    if args.yaw is not None:
-        sim_cmd.extend(["--yaw", str(args.yaw)])
-    if args.visible:
-        sim_cmd.append("--visible")
-    if args.teleport_cruise:
-        sim_cmd.append("--teleport-cruise")
-    else:
-        sim_cmd.append("--no-teleport-cruise")
-    if args.cruise_cx is not None:
-        sim_cmd.extend(["--cruise-cx", str(args.cruise_cx)])
-    if args.cruise_cz is not None:
-        sim_cmd.extend(["--cruise-cz", str(args.cruise_cz)])
-    if args.cruise_eye_y is not None:
-        sim_cmd.extend(["--cruise-eye-y", str(args.cruise_eye_y)])
+    repeats = max(1, int(args.repeat or 1))
+    base_report = args.report
+    last_rc = 0
+    run_reports: list[Path] = []
 
-    process_timeout = args.process_timeout
-    if process_timeout <= 0.0:
-        process_timeout = args.seconds + 120.0
-    if args.fly_stop:
-        process_timeout = max(process_timeout, 420.0)
-    if args.scenario in ("break-stand", "visual-dig", "visual-blue"):
-        process_timeout = max(process_timeout, args.seconds + 180.0)
+    for rep in range(1, repeats + 1):
+        if repeats > 1:
+            if rep == 1:
+                report_path = base_report
+            else:
+                stem = base_report.stem
+                report_path = base_report.with_name(f"{stem}_{rep}{base_report.suffix}")
+            args.report = report_path
+            print(f"=== repeat {rep}/{repeats} → {report_path} ===", flush=True)
+        else:
+            report_path = base_report
 
-    print("running:", " ".join(sim_cmd), flush=True)
-    rc = run_with_timeout(sim_cmd, BIN, process_timeout)
-    hang_killed = rc == 124
-    kill_cubatarium_orphans()
+        t0 = time.time()
+        if not args.skip_preflight:
+            kill_cubatarium_orphans()
 
-    perf = newest_perf(t0)
-    if perf is None:
-        report_path = BIN / "flight_sim_report.json"
+        sim_cmd = [
+            str(EXE),
+            "--flight-sim",
+            "--world",
+            args.world,
+            "--seconds",
+            str(args.seconds),
+            "--report",
+            str(BIN / "flight_sim_report.json"),
+        ]
+        break_scenarios = ("break-stand", "visual-dig", "idle-edit-smoke")
+        if args.scenario in break_scenarios:
+            sim_cmd.append("--break-stand")
+            sim_cmd.extend(["--break-phase", str(args.break_phase_sec)])
+            sim_cmd.extend(["--break-interval", str(args.break_interval_sec)])
+            sim_cmd.append("--no-fly")
+            sim_cmd.append("--no-hold-forward")
+        elif args.scenario == "visual-blue":
+            sim_cmd.append("--yaw-sweep")
+            sim_cmd.extend(["--yaw-sweep-sec", str(args.yaw_sweep_sec)])
+            sim_cmd.append("--no-fly")
+            sim_cmd.append("--no-hold-forward")
+        elif args.no_fly:
+            sim_cmd.append("--no-fly")
+            sim_cmd.append("--no-hold-forward")
+        else:
+            sim_cmd.extend(["--fly", "--hold-forward"])
+        if args.fly_stop and args.scenario not in (
+            "break-stand",
+            "visual-dig",
+            "visual-blue",
+            "idle-edit-smoke",
+        ):
+            sim_cmd.append("--fly-stop")
+            sim_cmd.extend(["--fly-phase", str(args.fly_phase_sec)])
+            sim_cmd.extend(["--stop-phase", str(args.stop_phase_sec)])
+        sim_cmd.extend(["--idle", str(args.idle_sec)])
+        if args.sprint:
+            sim_cmd.append("--sprint")
+        if args.hold_space:
+            sim_cmd.append("--hold-space")
+        if args.pitch is not None:
+            sim_cmd.extend(["--pitch", str(args.pitch)])
+        if args.yaw is not None:
+            sim_cmd.extend(["--yaw", str(args.yaw)])
+        if args.visible:
+            sim_cmd.append("--visible")
+        if args.teleport_cruise:
+            sim_cmd.append("--teleport-cruise")
+        else:
+            sim_cmd.append("--no-teleport-cruise")
+        if args.cruise_cx is not None:
+            sim_cmd.extend(["--cruise-cx", str(args.cruise_cx)])
+        if args.cruise_cz is not None:
+            sim_cmd.extend(["--cruise-cz", str(args.cruise_cz)])
+        if args.cruise_eye_y is not None:
+            sim_cmd.extend(["--cruise-eye-y", str(args.cruise_eye_y)])
+
+        process_timeout = args.process_timeout
+        if process_timeout <= 0.0:
+            process_timeout = args.seconds + 120.0
+        if args.fly_stop:
+            process_timeout = max(process_timeout, 420.0)
+        if args.scenario in ("break-stand", "visual-dig", "visual-blue", "idle-edit-smoke"):
+            process_timeout = max(process_timeout, args.seconds + 180.0)
+
+        print("running:", " ".join(sim_cmd), flush=True)
+        rc = run_with_timeout(sim_cmd, BIN, process_timeout)
+        hang_killed = rc == 124
+        kill_cubatarium_orphans()
+
+        perf = newest_perf(t0)
+        if perf is None:
+            flight_report = BIN / "flight_sim_report.json"
+            if flight_report.is_file():
+                data = json.loads(flight_report.read_text(encoding="utf-8"))
+                p = data.get("perf_jsonl") or ""
+                if p and Path(p).is_file():
+                    perf = Path(p)
+
+        ana = 1
+        if perf is None:
+            print("FAIL: no perf jsonl produced", file=sys.stderr)
+            append_phase_history(
+                {
+                    "phase": args.phase_id or "unspecified",
+                    "rc": rc,
+                    "hang_killed": hang_killed,
+                    "perf": None,
+                    "report": str(report_path),
+                    "repeat": rep,
+                }
+            )
+            last_rc = 3 if hang_killed else 1
+            if repeats == 1:
+                return last_rc
+            continue
+
+        print(f"analyzing {perf}", flush=True)
+        analyze_cmd = [
+            sys.executable,
+            str(ANALYZE),
+            str(perf),
+            "--report",
+            str(report_path),
+        ]
+        if (
+            args.replay_manual
+            or args.fly_stop
+            or args.land_cruise
+            or args.land_stand
+            or args.land_south
+            or args.land_south_short
+            or args.scenario
+            in ("idle-clean", "idle-warm", "idle-edit-smoke", "fly-clean")
+        ):
+            analyze_cmd.append("--manual-idle")
+        if getattr(args, "warmup_sec", None) is not None:
+            analyze_cmd.extend(["--warmup-sec", str(args.warmup_sec)])
+        ana = subprocess.call(analyze_cmd)
+        info_log = None
+        if DIAG.is_file():
+            import importlib.util
+
+            spec = importlib.util.spec_from_file_location("flight_sim_diag", DIAG)
+            if spec and spec.loader:
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                info_log = mod.newest_info_log(t0)
+        annotate_report_run(report_path, hang_killed, rc, perf, info_log)
+
+        metrics_summary: dict = {}
         if report_path.is_file():
-            data = json.loads(report_path.read_text(encoding="utf-8"))
-            p = data.get("perf_jsonl") or ""
-            if p and Path(p).is_file():
-                perf = Path(p)
+            run_reports.append(report_path)
+            try:
+                result = json.loads(report_path.read_text(encoding="utf-8"))
+                metrics_summary = {
+                    "pass": result.get("pass"),
+                    "hang_killed": result.get("hang_killed"),
+                    "gates_pass_count": gates_pass_count(result),
+                    "gates_stop_pass_count": gates_stop_pass_count(result),
+                    "metrics": {
+                        k: (result.get("metrics") or {}).get(k)
+                        for k in (
+                            "pending_light_focus_med",
+                            "post_stop_pending_med",
+                            "post_stop_not_ready_end",
+                            "stop_not_ready_delta",
+                            "post_stop_black_sticky_max",
+                            "stop_wall_med",
+                            "calm_stop_wall_med",
+                            "calm_stop_emerge_med",
+                            "calm_stop_stream_med",
+                            "stop_mesh_prep_med",
+                            "chunks_traveled",
+                            "dominant_spike_class",
+                            "dominant_heavy_spike_class",
+                            "spike_max_world_extra",
+                            "spike_world_extra_dominant_rate",
+                            "break_complete_sum",
+                            "break_inflight_race_sum",
+                            "break_dark_face_sum",
+                            "wall_ms_med",
+                            "wall_ms_fly_med",
+                            "tick_env_fly_max",
+                            "world_extra_fly_max",
+                        )
+                    },
+                    "soft": {
+                        k: (result.get("soft") or {}).get(k)
+                        for k in (
+                            "dominant_spike_class",
+                            "dominant_heavy_spike_class",
+                            "soft_world_extra_ok",
+                            "spike_bucket_counts",
+                        )
+                    },
+                }
+                if args.update_best and not hang_killed:
+                    if args.fly_stop:
+                        best_path = BIN / "flight_sim_gate_report_stop_best.json"
+                    else:
+                        best_path = BIN / "flight_sim_gate_report_west_best.json"
+                    best = load_best(best_path)
+                    if is_better(result, best):
+                        best_path.write_text(
+                            report_path.read_text(encoding="utf-8"), encoding="utf-8"
+                        )
+                        print(f"updated best: {best_path}", flush=True)
+            except (json.JSONDecodeError, OSError):
+                pass
 
-    ana = 1
-    if perf is None:
-        print("FAIL: no perf jsonl produced", file=sys.stderr)
         append_phase_history(
             {
                 "phase": args.phase_id or "unspecified",
                 "rc": rc,
+                "ana": ana,
                 "hang_killed": hang_killed,
-                "perf": None,
-                "report": str(args.report),
+                "perf": str(perf),
+                "report": str(report_path),
+                "repeat": rep,
+                "summary": metrics_summary,
             }
         )
-        return 3 if hang_killed else 1
 
-    print(f"analyzing {perf}", flush=True)
-    analyze_cmd = [
-        sys.executable,
-        str(ANALYZE),
-        str(perf),
-        "--report",
-        str(args.report),
-    ]
-    if (
-        args.replay_manual
-        or args.fly_stop
-        or args.land_cruise
-        or args.land_stand
-        or args.land_south
-        or args.land_south_short
-        or args.scenario == "idle-clean"
-    ):
-        analyze_cmd.append("--manual-idle")
-    if getattr(args, "warmup_sec", None) is not None:
-        analyze_cmd.extend(["--warmup-sec", str(args.warmup_sec)])
-    ana = subprocess.call(analyze_cmd)
-    info_log = None
-    if DIAG.is_file():
-        import importlib.util
+        if hang_killed:
+            print("flight-sim process HANG-KILLED exit=124", file=sys.stderr)
+            last_rc = 3
+        elif rc != 0:
+            print(f"flight-sim process exit={rc}", file=sys.stderr)
+            last_rc = rc
+        else:
+            last_rc = ana
 
-        spec = importlib.util.spec_from_file_location("flight_sim_diag", DIAG)
-        if spec and spec.loader:
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
-            info_log = mod.newest_info_log(t0)
-    annotate_report_run(args.report, hang_killed, rc, perf, info_log)
+    if repeats > 1 and run_reports:
+        agg_path = base_report.with_name(f"{base_report.stem}_agg{base_report.suffix}")
+        write_repeat_aggregate(run_reports, agg_path)
+        print(f"wrote aggregate: {agg_path}", flush=True)
 
-    metrics_summary: dict = {}
-    if args.report.is_file():
+    return last_rc
+
+
+AGG_METRIC_KEYS = (
+    "calm_stop_wall_med",
+    "calm_stop_emerge_med",
+    "calm_stop_stream_med",
+    "calm_stop_phys_med",
+    "stop_mesh_prep_med",
+    "stop_wall_med",
+    "wall_ms_med",
+    "wall_ms_fly_med",
+    "dirty_med",
+    "post_stop_focus_dirty_med",
+    "post_stop_black_sticky_max",
+    "post_stop_missing_max",
+    "physics_block_ms_p95",
+    "chunks_traveled",
+    "opaque_cmd_on_med",
+)
+
+
+def write_repeat_aggregate(reports: list[Path], out: Path) -> None:
+    import statistics
+
+    rows: list[dict] = []
+    for p in reports:
         try:
-            result = json.loads(args.report.read_text(encoding="utf-8"))
-            metrics_summary = {
-                "pass": result.get("pass"),
-                "hang_killed": result.get("hang_killed"),
-                "gates_pass_count": gates_pass_count(result),
-                "gates_stop_pass_count": gates_stop_pass_count(result),
-                "metrics": {
-                    k: (result.get("metrics") or {}).get(k)
-                    for k in (
-                        "pending_light_focus_med",
-                        "post_stop_pending_med",
-                        "post_stop_not_ready_end",
-                        "stop_not_ready_delta",
-                        "post_stop_black_sticky_max",
-                        "stop_wall_med",
-                        "chunks_traveled",
-                        "dominant_spike_class",
-                        "dominant_heavy_spike_class",
-                        "spike_max_world_extra",
-                        "spike_world_extra_dominant_rate",
-                        "break_complete_sum",
-                        "break_inflight_race_sum",
-                        "break_dark_face_sum",
-                        "wall_ms_med",
-                        "tick_env_fly_max",
-                        "world_extra_fly_max",
-                    )
-                },
-                "soft": {
-                    k: (result.get("soft") or {}).get(k)
-                    for k in (
-                        "dominant_spike_class",
-                        "dominant_heavy_spike_class",
-                        "soft_world_extra_ok",
-                        "spike_bucket_counts",
-                    )
-                },
-            }
-            if args.update_best and not hang_killed:
-                if args.fly_stop:
-                    best_path = BIN / "flight_sim_gate_report_stop_best.json"
-                else:
-                    best_path = BIN / "flight_sim_gate_report_west_best.json"
-                best = load_best(best_path)
-                if is_better(result, best):
-                    best_path.write_text(
-                        args.report.read_text(encoding="utf-8"), encoding="utf-8"
-                    )
-                    print(f"updated best: {best_path}", flush=True)
+            data = json.loads(p.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
-            pass
-
-    append_phase_history(
-        {
-            "phase": args.phase_id or "unspecified",
-            "rc": rc,
-            "ana": ana,
-            "hang_killed": hang_killed,
-            "perf": str(perf),
-            "report": str(args.report),
-            "summary": metrics_summary,
-        }
-    )
-
-    if hang_killed:
-        print("flight-sim process HANG-KILLED exit=124", file=sys.stderr)
-        return 3
-    if rc != 0:
-        print(f"flight-sim process exit={rc}", file=sys.stderr)
-        return rc
-    return ana
+            continue
+        m = data.get("metrics") or {}
+        rows.append(
+            {
+                "report": str(p),
+                "pass": data.get("pass"),
+                **{k: m.get(k) for k in AGG_METRIC_KEYS},
+            }
+        )
+    agg: dict = {"n": len(rows), "runs": rows, "median": {}, "min": {}, "max": {}}
+    for k in AGG_METRIC_KEYS:
+        vals = [r[k] for r in rows if r.get(k) is not None]
+        if not vals:
+            continue
+        agg["median"][k] = statistics.median(vals)
+        agg["min"][k] = min(vals)
+        agg["max"][k] = max(vals)
+    out.write_text(json.dumps(agg, indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
