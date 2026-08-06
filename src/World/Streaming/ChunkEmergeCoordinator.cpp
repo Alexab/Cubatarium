@@ -821,7 +821,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   mesh_service.SetMeshEmergeTotalBudgetMs(
       moving ? 25.0
              : (healed_idle_emerge
-                    ? (idle_focus_dirty_debt ? 36.0 : 28.0)
+                    ? (idle_focus_dirty_debt ? 36.0 : 16.0)
                     : 60.0));
 
   // Healthy flight with no visual holes: flush Dirty so pressure can leave Red
@@ -1913,7 +1913,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Remaining Immediate/SyncRebuild budget shares the hard Immediate ceiling.
   // Moving underfeet: keep SyncRebuild ≤~3ms wall so one chunk cannot hitch.
   const double immediate_spent = immediate_ms_used();
-  const double sync_budget_ms =
+  double sync_budget_ms =
       moving ? std::min(3.0, std::max(0.5, hard_immediate_ms - immediate_spent))
              : std::max(0.5,
                         std::min(hard_immediate_ms - immediate_spent,
@@ -2270,6 +2270,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       {
         mesh_service.SetMeshSnapshotBudgetMs(calm_cap.snapshot_budget_ms);
       }
+      if (calm_cap.emerge_total_budget_ms > 0.0)
+      {
+        mesh_service.SetMeshEmergeTotalBudgetMs(calm_cap.emerge_total_budget_ms);
+      }
+      sync_cap = std::min(sync_cap < 0 ? 0 : sync_cap, calm_cap.sync_cap);
+      sync_budget_ms = std::min(sync_budget_ms, calm_cap.sync_budget_ms);
     }
   }
   // F0: drain-first — Finish/Kick before Finalize so admission sees post-consume
@@ -2362,6 +2368,30 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     LastBudget.AdmissionMode = static_cast<int>(adm.mode);
     LastBudget.DirtyAdmitBudget = adm.dirty_admit_budget;
     LastBudget.GpuApplyMax = adm.gpu_apply_max;
+  }
+  // I4b: re-assert calm dirty_tick caps after Finalize — admission floors must
+  // not restore drain/schedule/emerge budget on clean stand.
+  {
+    const auto calm_cap = EvaluateIdleMeshDrainCap(IdleMeshDrainCapInput{
+        moving, missing_visible_mesh, pending_focus_count, black_sticky,
+        not_ready_early, last_frame_ms, mesh_drain, mesh_schedule});
+    if (calm_cap.active)
+    {
+      mesh_drain = calm_cap.mesh_drain;
+      mesh_schedule = calm_cap.mesh_schedule;
+      LastBudget.MaxMeshSchedule = mesh_schedule;
+      LastBudget.MaxMeshDrain = mesh_drain;
+      if (calm_cap.snapshot_budget_ms > 0.0)
+      {
+        mesh_service.SetMeshSnapshotBudgetMs(calm_cap.snapshot_budget_ms);
+      }
+      if (calm_cap.emerge_total_budget_ms > 0.0)
+      {
+        mesh_service.SetMeshEmergeTotalBudgetMs(calm_cap.emerge_total_budget_ms);
+      }
+      sync_cap = std::min(sync_cap < 0 ? 0 : sync_cap, calm_cap.sync_cap);
+      sync_budget_ms = std::min(sync_budget_ms, calm_cap.sync_budget_ms);
+    }
   }
   MeshRebuildTickStats tick_stats{};
   {

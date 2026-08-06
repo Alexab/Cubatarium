@@ -211,9 +211,15 @@ struct IdleMeshDrainCapDecision
   int mesh_drain{0};
   int mesh_schedule{0};
   double snapshot_budget_ms{0.0};
+  /// Hard wall for RebuildDirtyChunksWithStats (dirty_tick dominant on calm).
+  double emerge_total_budget_ms{0.0};
+  int sync_cap{0};
+  double sync_budget_ms{0.0};
 };
 
 /// Calm stand with no visual/light debt: pace dirty_tick so wall can recover.
+/// I4b: also cap emerge total + SyncRebuild — I4 calm still spent ~37ms dirty_tick
+/// under MeshEmergeTotalBudgetMs=28.
 inline IdleMeshDrainCapDecision EvaluateIdleMeshDrainCap(
     const IdleMeshDrainCapInput &in)
 {
@@ -230,14 +236,31 @@ inline IdleMeshDrainCapDecision EvaluateIdleMeshDrainCap(
     out.active = true;
     out.mesh_drain = std::min(in.mesh_drain, 2);
     out.mesh_schedule = std::min(in.mesh_schedule, 3);
-    out.snapshot_budget_ms = 1.5;
+    out.snapshot_budget_ms = 1.0;
+    out.emerge_total_budget_ms = 8.0;
+    out.sync_cap = 0;
+    out.sync_budget_ms = 0.5;
   }
   else if (in.last_frame_ms > 28.0)
   {
     out.active = true;
-    out.mesh_drain = std::min(in.mesh_drain, 4);
-    out.mesh_schedule = std::min(in.mesh_schedule, 5);
+    out.mesh_drain = std::min(in.mesh_drain, 3);
+    out.mesh_schedule = std::min(in.mesh_schedule, 4);
+    out.snapshot_budget_ms = 1.5;
+    out.emerge_total_budget_ms = 12.0;
+    out.sync_cap = 0;
+    out.sync_budget_ms = 0.5;
+  }
+  else if (in.last_frame_ms > 16.0)
+  {
+    // Mild headroom toward IDLE_CLEAN ≤55 wall while FPS is already OK-ish.
+    out.active = true;
+    out.mesh_drain = std::min(in.mesh_drain, 6);
+    out.mesh_schedule = std::min(in.mesh_schedule, 6);
     out.snapshot_budget_ms = 2.0;
+    out.emerge_total_budget_ms = 16.0;
+    out.sync_cap = 0;
+    out.sync_budget_ms = 1.0;
   }
   return out;
 }

@@ -131,6 +131,19 @@ int main()
     Expect(d.active, "calm idle hot wall caps drain");
     Expect(d.mesh_drain <= 2, "calm idle hot wall drain<=2");
     Expect(d.mesh_schedule <= 3, "calm idle hot wall schedule<=3");
+    Expect(d.emerge_total_budget_ms <= 8.0, "calm idle hot wall emerge<=8");
+    Expect(d.sync_cap == 0, "calm idle hot wall sync off");
+  }
+
+  {
+    IdleMeshDrainCapInput in;
+    in.moving = false;
+    in.last_frame_ms = 40.0;
+    in.mesh_drain = 14;
+    in.mesh_schedule = 12;
+    const auto d = EvaluateIdleMeshDrainCap(in);
+    Expect(d.active, "calm idle mid wall caps drain");
+    Expect(d.emerge_total_budget_ms <= 12.0, "calm idle mid wall emerge<=12");
   }
 
   {
