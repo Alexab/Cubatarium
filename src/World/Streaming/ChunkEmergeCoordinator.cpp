@@ -2445,18 +2445,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       sync_budget_ms = std::min(sync_budget_ms, calm_cap.sync_budget_ms);
     }
   }
-  // F0 re-assert immediately before RebuildDirtyChunks.
-  if (world.GetPlayerRelightMeshBurstFrames() <= 0)
-  {
-    sync_cap = 0;
-  }
+  // F0: SyncRebuild always off in TickMeshEmerge. Dig/edit uses
+  // RebuildChunkImmediate (PlayerRelightMeshBurst); SyncRebuild was still
+  // burning 100–200ms whenever burst frames were non-zero on cruise.
+  sync_cap = 0;
   MeshRebuildTickStats tick_stats{};
   {
     const MeshWorkAdmission &adm = mesh_service.GetMeshWorkAdmission();
     const int post_drain = std::max(mesh_drain, adm.max_drain);
     tick_stats = mesh_service.RebuildDirtyChunksWithStats(
         world.GetBlockWorld(), registry, mesh_drain, mesh_schedule,
-        /*force_sync=*/false, sync_cap, sync_budget_ms,
+        /*force_sync=*/false, /*max_sync_rebuild=*/0, sync_budget_ms,
         /*skip_gpu_consume=*/true);
     tick_stats.Completed += gpu_consume_done;
     mesh_service.DrainAsyncMeshResults(world.GetBlockWorld(), registry,
