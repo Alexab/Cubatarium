@@ -911,7 +911,7 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
   const RenderSettings &render = Cache.GetRenderSettings();
   policy_in.AsyncMeshing = render.AsyncMeshing;
   policy_in.GreedyMeshing = render.GreedyMeshing;
-  policy_in.ImmediateChunkCap = 9;
+  policy_in.ImmediateChunkCap = 2;
   policy_in.PreferGpuStorePatch = PreferGpuStorePatch;
 
   const EditMeshRemeshDecision decision = EvaluateEditMeshRemesh(policy_in);
@@ -952,10 +952,13 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
     }
   };
 
-  // C1: hard time-cap Immediate remesh — fluid/edit with cap=9 burned
-  // physics_block ~0.8–1.4s (manual 162944). Defer remainder to Dirty/async.
+  // C1/P2: hard time-cap Immediate remesh — fluid/edit with cap=9 burned
+  // physics_block ~0.8–1.4s (manual 162944). Dig bursts (edit_immediate_n=7,
+  // manual 191432 spikes 700–860ms) must not chain more than one Immediate
+  // on the hot frame; defer remainder to Dirty/async.
   const auto imm_budget_t0 = std::chrono::high_resolution_clock::now();
   constexpr double kEditImmediateBudgetMs = 8.0;
+  constexpr int kEditImmediateMaxHot = 1;
   int immediate_done = 0;
   for (const glm::ivec3 &chunk_coord : decision.ImmediateChunks)
   {
@@ -963,7 +966,8 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
         std::chrono::duration<double, std::milli>(
             std::chrono::high_resolution_clock::now() - imm_budget_t0)
             .count();
-    if (immediate_done > 0 && spent_ms > kEditImmediateBudgetMs)
+    if (immediate_done >= kEditImmediateMaxHot ||
+        (immediate_done > 0 && spent_ms > kEditImmediateBudgetMs))
     {
       MarkDirtyPriority(chunk_coord);
       continue;
