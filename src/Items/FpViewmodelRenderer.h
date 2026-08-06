@@ -9,6 +9,8 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 
+#include "Items/ItemVisualPresetLibrary.h"
+
 typedef unsigned int GLuint;
 
 namespace cutum
@@ -20,13 +22,6 @@ class UTextureCubeStorage;
 class UCreatureTextureStorage;
 class UShaderManager;
 struct InventoryEntryRef;
-
-enum class FpSwingKind : uint8_t
-{
-  Dig = 0,
-  Place = 1,
-  Melee = 2
-};
 
 struct FpViewmodelDrawParams
 {

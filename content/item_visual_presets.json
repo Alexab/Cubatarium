@@ -1,0 +1,65 @@
+{
+  "dig_tool": {
+    "duration": 0.28,
+    "easing": "sin_pi",
+    "arm": {
+      "rx_deg": [0, -40],
+      "ry_deg": [0, 20],
+      "tz": [0, 0.025],
+      "tx": [0, -0.10],
+      "ty": [0, 0.05]
+    }
+  },
+  "slash_weapon": {
+    "duration": 0.32,
+    "easing": "sin_pi",
+    "arm": {
+      "rx_deg": [0, -45],
+      "ry_deg": [0, 35],
+      "tx": [0, -0.08]
+    }
+  },
+  "thrust_spear": {
+    "duration": 0.30,
+    "easing": "sin_pi",
+    "arm": {
+      "rx_deg": [0, -15],
+      "tz": [0, -0.20]
+    }
+  },
+  "place_block": {
+    "duration": 0.22,
+    "easing": "sin_pi",
+    "arm": {
+      "rx_deg": [0, -25],
+      "ty": [0, 0.08]
+    }
+  },
+  "eat_hand": {
+    "duration": 0.55,
+    "easing": "sin_pi",
+    "arm": {
+      "rx_deg": [0, -30],
+      "ty": [0, 0.14],
+      "tz": [0, -0.05]
+    }
+  },
+  "draw_bow": {
+    "duration": 0.45,
+    "easing": "smoothstep",
+    "hold_at_end": true,
+    "arm": {
+      "rx_deg": [0, -12],
+      "tz": [0, -0.10]
+    }
+  },
+  "raise_shield": {
+    "duration": 0.18,
+    "easing": "smoothstep",
+    "hold_at_end": true,
+    "arm": {
+      "rx_deg": [0, -55],
+      "ry_deg": [0, -35]
+    }
+  }
+}

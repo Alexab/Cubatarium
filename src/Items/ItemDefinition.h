@@ -85,6 +85,50 @@ struct ItemUseDef
   float Health{0.f};
 };
 
+struct ItemVisualSwingMap
+{
+  std::string Dig;
+  std::string Melee;
+  std::string Place;
+};
+
+struct ItemVisualUseMap
+{
+  std::string Eat;
+  std::string Drink;
+  std::string Ranged;
+  std::string Block;
+};
+
+struct ItemVisualDef
+{
+  /// Multiplier after AABB fit; 0 = use category default at resolve time.
+  float WieldScale{0.f};
+  float WieldOffset[3]{0.f, 0.f, 0.f};
+  float WieldEulerDeg[3]{0.f, 0.f, 0.f};
+  std::string FitAxis{"longest"};
+  bool HasWieldScale{false};
+  ItemVisualSwingMap Swing;
+  ItemVisualUseMap Use;
+};
+
+struct ItemRangedDef
+{
+  bool Enabled{false};
+  float RangeBlocks{16.f};
+  std::string AmmoId;
+  bool RequireLos{true};
+};
+
+struct ItemBlockDef
+{
+  bool Enabled{false};
+  float DamageMul{0.25f};
+  float AngleDeg{120.f};
+  float PassiveDamageMul{0.85f};
+  int BlockUses{0};
+};
+
 struct ItemDefinition
 {
   std::string Id;
@@ -97,6 +141,9 @@ struct ItemDefinition
   ItemArmorDef Armor;
   ToolCapabilitiesDef Tool;
   ItemUseDef Use;
+  ItemVisualDef Visual;
+  ItemRangedDef Ranged;
+  ItemBlockDef Block;
   bool HandFallback{false};
   bool Hidden{false};
 };

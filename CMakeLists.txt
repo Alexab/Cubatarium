@@ -133,6 +133,7 @@ set(SOURCES
     src/Items/FpViewmodelRenderer.cpp
     src/Items/ItemGltfTextureCache.cpp
     src/Items/ItemToolInfluenceProvider.cpp
+    src/Items/ItemVisualPresetLibrary.cpp
     src/Creatures/Influence/InfluenceHitMath.cpp
     src/Creatures/Influence/BareHandToolInfluenceProvider.cpp
     src/Creatures/Influence/InfluenceEvent.cpp

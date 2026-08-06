@@ -37,6 +37,17 @@ ToolGroupCap ParseGroupCap(const nlohmann::json &j)
   return cap;
 }
 
+void ReadVec3(const nlohmann::json &j, const char *key, float out[3])
+{
+  if (!j.contains(key) || !j[key].is_array() || j[key].size() < 3)
+  {
+    return;
+  }
+  out[0] = j[key][0].get<float>();
+  out[1] = j[key][1].get<float>();
+  out[2] = j[key][2].get<float>();
+}
+
 } // namespace
 
 void UItemDefinitionStorage::EnsureHandDefinition()
@@ -76,6 +87,17 @@ void UItemDefinitionStorage::Clear()
   std::unique_lock lock(DefinitionsMutex);
   Definitions.clear();
   EnsureHandDefinition();
+}
+
+bool UItemDefinitionStorage::LoadVisualPresets(const std::string &path)
+{
+  const bool ok = Presets.Load(path);
+  if (ok)
+  {
+    std::cout << "UItemDefinitionStorage: loaded " << Presets.Count()
+              << " item visual presets from " << path << std::endl;
+  }
+  return ok;
 }
 
 void UItemDefinitionStorage::Load(const std::string &folder)
@@ -295,6 +317,51 @@ bool UItemDefinitionStorage::LoadFile(const std::string &path)
           }
         }
       }
+    }
+    if (data.contains("visual") && data["visual"].is_object())
+    {
+      const auto &v = data["visual"];
+      if (v.contains("wield_scale") && v["wield_scale"].is_number())
+      {
+        def.Visual.WieldScale = v["wield_scale"].get<float>();
+        def.Visual.HasWieldScale = true;
+      }
+      ReadVec3(v, "wield_offset", def.Visual.WieldOffset);
+      ReadVec3(v, "wield_euler_deg", def.Visual.WieldEulerDeg);
+      def.Visual.FitAxis = v.value("fit_axis", std::string("longest"));
+      if (v.contains("swing") && v["swing"].is_object())
+      {
+        const auto &s = v["swing"];
+        def.Visual.Swing.Dig = s.value("dig", std::string{});
+        def.Visual.Swing.Melee = s.value("melee", std::string{});
+        def.Visual.Swing.Place = s.value("place", std::string{});
+      }
+      if (v.contains("use") && v["use"].is_object())
+      {
+        const auto &u = v["use"];
+        def.Visual.Use.Eat = u.value("eat", std::string{});
+        def.Visual.Use.Drink = u.value("drink", std::string{});
+        def.Visual.Use.Ranged = u.value("ranged", std::string{});
+        def.Visual.Use.Block = u.value("block", std::string{});
+      }
+    }
+    if (data.contains("ranged") && data["ranged"].is_object())
+    {
+      const auto &r = data["ranged"];
+      def.Ranged.Enabled = r.value("enabled", false);
+      def.Ranged.RangeBlocks =
+          r.value("range", r.value("range_blocks", 16.f));
+      def.Ranged.AmmoId = r.value("ammo_id", r.value("ammo", std::string{}));
+      def.Ranged.RequireLos = r.value("require_los", true);
+    }
+    if (data.contains("block") && data["block"].is_object())
+    {
+      const auto &b = data["block"];
+      def.Block.Enabled = b.value("enabled", false);
+      def.Block.DamageMul = b.value("damage_mul", 0.25f);
+      def.Block.AngleDeg = b.value("angle_deg", 120.f);
+      def.Block.PassiveDamageMul = b.value("passive_damage_mul", 0.85f);
+      def.Block.BlockUses = b.value("block_uses", 0);
     }
     {
       std::unique_lock lock(DefinitionsMutex);

@@ -371,6 +371,9 @@ bool UResourcePackBootstrap::ApplyResourcePacks(
       core.ItemDefinitionsInstance->LoadOverlay(
           (pack.Root / "items").string());
     }
+    const auto presetsPath =
+        core.WorkDir / "content" / "item_visual_presets.json";
+    core.ItemDefinitionsInstance->LoadVisualPresets(presetsPath.string());
     if (core.WorldInstance)
     {
       core.WorldInstance->SetItemDefinitionStorage(
