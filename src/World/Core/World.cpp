@@ -2870,7 +2870,10 @@ int UWorld::CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
     }
     for (int cy = cy0; cy <= cy1; ++cy)
     {
-      if (MeshService->HasGreedyMesh(glm::ivec3(key.x, cy, key.y)))
+      const glm::ivec3 coord(key.x, cy, key.y);
+      // I6: sticky set can linger after lit remesh; only count black/stale debt.
+      if (MeshService->HasGreedyMesh(coord) &&
+          MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
       {
         ++sticky;
         break;

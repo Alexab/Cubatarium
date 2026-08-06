@@ -2011,10 +2011,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     sync_cap = std::max(sync_cap, moving ? 1 : 2);
   }
-  // F0: moving cruise — never SyncRebuild (async-only). Dig/edit burst may keep
-  // a tiny Immediate path via sync_cap max above; without burst always 0 even if
-  // missing_underfeet flicker would skip the old F0 gate and leave sync_cap=1.
-  if (moving && world.GetPlayerRelightMeshBurstFrames() <= 0)
+  // F0: hot frames never SyncRebuild (async-only). Fly-segment "moving" can
+  // briefly drop below MovementPrefetchThreshold while miss=1, reopening
+  // idle sync_cap 2–8 and burning mesh_sync~60–170 (fly_clean_F0c).
+  if ((last_frame_ms > 20.0 || last_frame_wall_ms > 20.0) &&
+      world.GetPlayerRelightMeshBurstFrames() <= 0)
   {
     sync_cap = 0;
   }
@@ -2439,8 +2440,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       sync_budget_ms = std::min(sync_budget_ms, calm_cap.sync_budget_ms);
     }
   }
-  // F0 re-assert: hole/admission floors above must not reopen SyncRebuild on move.
-  if (moving && world.GetPlayerRelightMeshBurstFrames() <= 0)
+  // F0 re-assert: hole/admission floors above must not reopen SyncRebuild when hot.
+  if ((last_frame_ms > 20.0 || last_frame_wall_ms > 20.0) &&
+      world.GetPlayerRelightMeshBurstFrames() <= 0)
   {
     sync_cap = 0;
   }
