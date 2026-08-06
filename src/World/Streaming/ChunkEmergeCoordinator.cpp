@@ -370,6 +370,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       GetColumnFlowExecutor().DrainRemeshSeamBudget(world, sticky_drain.budget);
     }
+    // I6: after sticky drain, drop lit remesh sticky that no longer has stale-dark
+    // (Dirty-only leftover was pinning autofly sticky 2–6).
+    if (pending_focus_count == 0 && !missing_visible_mesh && black_sticky > 0)
+    {
+      world.ClearPendingLightAfterMeshCommitted(
+          std::max(8, black_sticky + 4));
+    }
   }
   else
   {
@@ -2004,8 +2011,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     sync_cap = std::max(sync_cap, moving ? 1 : 2);
   }
-  // F0: hot moving cruise — kill SyncRebuild unless underfeet miss or edit burst.
-  if (moving && last_frame_ms > 20.0 && !missing_underfeet &&
+  // F0: moving cruise — never SyncRebuild without underfeet miss / edit burst.
+  // Gate on wall OR do_movement: DoMovement alone can sit <20 while wall~200
+  // and mesh_sync~80 (fly-clean F0 NO-GO).
+  if (moving && !missing_underfeet &&
       world.GetPlayerRelightMeshBurstFrames() <= 0)
   {
     sync_cap = 0;
