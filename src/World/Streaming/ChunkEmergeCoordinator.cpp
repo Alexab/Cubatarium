@@ -2253,6 +2253,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     world.GetPhysicsTelemetryMutable().StreamSpeedClampScale = clamp_scale;
   }
+  {
+    const auto calm_cap = EvaluateIdleMeshDrainCap(IdleMeshDrainCapInput{
+        moving, missing_visible_mesh, pending_focus_count, black_sticky,
+        not_ready_early, last_frame_ms, mesh_drain, mesh_schedule});
+    if (calm_cap.active)
+    {
+      mesh_drain = calm_cap.mesh_drain;
+      mesh_schedule = calm_cap.mesh_schedule;
+      if (calm_cap.snapshot_budget_ms > 0.0)
+      {
+        mesh_service.SetMeshSnapshotBudgetMs(calm_cap.snapshot_budget_ms);
+      }
+    }
+  }
   // F0: drain-first — Finish/Kick before Finalize so admission sees post-consume
   // pending (avoids mode=0/sch=12 thrash while telem pending stays high).
   int gpu_consume_done = 0;

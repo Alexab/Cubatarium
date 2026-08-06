@@ -22,8 +22,10 @@ void Expect(bool cond, const char *msg)
 int main()
 {
   using cutum::ComputeIdleRecoveryBgBudget;
+  using cutum::EvaluateIdleMeshDrainCap;
   using cutum::EvaluateIdleVisualDrain;
   using cutum::EvaluateStickyRemeshDrain;
+  using cutum::IdleMeshDrainCapInput;
   using cutum::IdleRecoveryBgBudgetInput;
   using cutum::IdleVisualDrainInput;
   using cutum::StickyRemeshDrainInput;
@@ -115,6 +117,30 @@ int main()
     const auto d = EvaluateStickyRemeshDrain(in);
     Expect(d.run_drain, "sticky drain extended to 80ms");
     Expect(d.budget == 1, "sticky drain mid-wall budget 1");
+  }
+
+  {
+    IdleMeshDrainCapInput in;
+    in.moving = false;
+    in.last_frame_ms = 86.0;
+    in.mesh_drain = 14;
+    in.mesh_schedule = 12;
+    const auto d = EvaluateIdleMeshDrainCap(in);
+    Expect(d.active, "calm idle hot wall caps drain");
+    Expect(d.mesh_drain <= 2, "calm idle hot wall drain<=2");
+    Expect(d.mesh_schedule <= 3, "calm idle hot wall schedule<=3");
+  }
+
+  {
+    IdleMeshDrainCapInput in;
+    in.moving = false;
+    in.pending_focus_count = 4;
+    in.last_frame_ms = 86.0;
+    in.mesh_drain = 14;
+    in.mesh_schedule = 12;
+    const auto d = EvaluateIdleMeshDrainCap(in);
+    Expect(!d.active, "pending debt skips calm cap");
+    Expect(d.mesh_drain == 14, "pending debt unchanged");
   }
 
   if (gFails != 0)

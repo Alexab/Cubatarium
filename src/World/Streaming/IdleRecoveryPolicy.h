@@ -146,6 +146,55 @@ struct IdleRecoveryBgBudgetInput
   int bg_budget_in{0};
 };
 
+struct IdleMeshDrainCapInput
+{
+  bool moving{false};
+  bool missing_visible_mesh{false};
+  int pending_focus_count{0};
+  int black_sticky{0};
+  int not_ready_early{0};
+  double last_frame_ms{0.0};
+  int mesh_drain{0};
+  int mesh_schedule{0};
+};
+
+struct IdleMeshDrainCapDecision
+{
+  bool active{false};
+  int mesh_drain{0};
+  int mesh_schedule{0};
+  double snapshot_budget_ms{0.0};
+};
+
+/// Calm stand with no visual/light debt: pace dirty_tick so wall can recover.
+inline IdleMeshDrainCapDecision EvaluateIdleMeshDrainCap(
+    const IdleMeshDrainCapInput &in)
+{
+  IdleMeshDrainCapDecision out;
+  out.mesh_drain = in.mesh_drain;
+  out.mesh_schedule = in.mesh_schedule;
+  if (in.moving || in.missing_visible_mesh || in.pending_focus_count > 0 ||
+      in.black_sticky > 0 || in.not_ready_early > 0)
+  {
+    return out;
+  }
+  if (in.last_frame_ms > 55.0)
+  {
+    out.active = true;
+    out.mesh_drain = std::min(in.mesh_drain, 2);
+    out.mesh_schedule = std::min(in.mesh_schedule, 3);
+    out.snapshot_budget_ms = 1.5;
+  }
+  else if (in.last_frame_ms > 28.0)
+  {
+    out.active = true;
+    out.mesh_drain = std::min(in.mesh_drain, 4);
+    out.mesh_schedule = std::min(in.mesh_schedule, 5);
+    out.snapshot_budget_ms = 2.0;
+  }
+  return out;
+}
+
 inline int ComputeIdleRecoveryBgBudget(const IdleRecoveryBgBudgetInput &in)
 {
   if (!in.idle_recovery)
