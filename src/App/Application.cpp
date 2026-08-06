@@ -2213,9 +2213,12 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     {
       const WorldViewSettings &view = World->GetViewSettings();
       WornEquipmentDrawer::SetHidePossessedWield(ShouldDrawFpViewmodel(view));
-      if (auto items = Core && Core->GetItemDefinitionStorage())
+      if (Core)
       {
-        WornEquipmentDrawer::SetItemDefinitions(items.get());
+        if (auto items = Core->GetItemDefinitionStorage())
+        {
+          WornEquipmentDrawer::SetItemDefinitions(items.get());
+        }
       }
       Geometry->Paint(width, height, viewDuration);
       WornEquipmentDrawer::SetHidePossessedWield(false);
