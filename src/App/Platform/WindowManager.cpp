@@ -27,6 +27,7 @@
 #include "World/Core/World.h"
 #include "World/Diagnostics/FramePerfMonitor.h"
 #include "World/Math/BlockTypes.h"
+#include "World/Mesh/WorldMeshService.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "Core/Progress/IUProgressSink.h"
 #include <cmath>
@@ -508,6 +509,10 @@ void UWindowManager::Update()
     tele.BreakDarkFaceN = 0;
     tele.PlaceCompleteN = 0;
     tele.PlaceEmissionN = 0;
+    tele.AutosaveDeferredN = 0;
+    tele.AutosaveSkippedTickN = 0;
+    tele.DigSeamPendingN = 0;
+    tele.DigSeamRemeshN = 0;
     tele.EditLightEmission = 0;
     tele.FastRelightMs = 0.0;
     tele.EditToFirstMeshMs = 0.0;
@@ -606,6 +611,22 @@ void UWindowManager::Update()
       World->GetPhysicsTelemetryMutable().BlockInputMs =
           std::chrono::duration<double, std::milli>(clock::now() - t0).count();
     }
+    RefreshEditHotSticky();
+    // DigSeam after BlockInput so dig Immediate is visible and we do not stack
+    // a second Immediate on the dig frame (manual 215711).
+    {
+      PhysicsTelemetry &tele = World->GetPhysicsTelemetryMutable();
+      UWorldMeshService &mesh = World->GetMeshService();
+      mesh.TickDigSeamDrain(World->GetBlockWorld(), World->GetBlockRegistry(),
+                            &tele);
+      tele.DigSeamPendingN = mesh.GetLastDigSeamPendingN();
+      tele.DigSeamRemeshN = mesh.GetLastDigSeamRemeshN();
+      if (tele.DigSeamRemeshN > 0)
+      {
+        tele.MeshImmediateCount = mesh.GetLastMeshImmediateCount();
+        tele.MeshImmediateMs = mesh.GetLastMeshImmediateMs();
+      }
+    }
   }
 
   if (Core && World && Application &&
@@ -623,13 +644,50 @@ void UWindowManager::Update()
              std::chrono::duration<double>(now - LastAutosaveTime).count() >=
                  KAutosaveIntervalSec)
     {
+      // Do not advance LastAutosaveTime here — deferred Begin would burn the
+      // interval (dig hitch manual 215711).
       AutosaveRequested = true;
-      LastAutosaveTime = now;
     }
   }
   else
   {
     SeenInGameForAutosave = false;
+  }
+}
+
+bool UWindowManager::IsEditHotForAutosave() const
+{
+  if (!World)
+  {
+    return false;
+  }
+  const PhysicsTelemetry &tele = World->GetPhysicsTelemetry();
+  if (tele.BreakCompleteN > 0 || tele.PlaceCompleteN > 0)
+  {
+    return true;
+  }
+  const UWorldMeshService &mesh = World->GetMeshService();
+  if (mesh.GetLastMeshImmediateCount() > 0 || mesh.GetLastEditImmediateN() > 0)
+  {
+    return true;
+  }
+  return std::chrono::steady_clock::now() < EditHotUntil;
+}
+
+void UWindowManager::RefreshEditHotSticky()
+{
+  if (!World)
+  {
+    return;
+  }
+  const PhysicsTelemetry &tele = World->GetPhysicsTelemetry();
+  const UWorldMeshService &mesh = World->GetMeshService();
+  if (tele.BreakCompleteN > 0 || tele.PlaceCompleteN > 0 ||
+      mesh.GetLastMeshImmediateCount() > 0 || mesh.GetLastEditImmediateN() > 0)
+  {
+    EditHotUntil = std::chrono::steady_clock::now() +
+                   std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                       std::chrono::duration<double>(KEditHotStickySec));
   }
 }
 
@@ -652,16 +710,24 @@ void UWindowManager::TickBudgetedAutosave()
     }
     return;
   }
+  PhysicsTelemetry &tele = World->GetPhysicsTelemetryMutable();
   if (AutosaveRequested && !AutosaveInProgress)
   {
-    AutosaveRequested = false;
+    if (IsEditHotForAutosave())
+    {
+      ++tele.AutosaveDeferredN;
+      return;
+    }
     const std::string folder = Core->GetActiveWorldFolder().string();
     if (folder.empty() || World->HasActiveCooperativeOperation())
     {
+      // Keep AutosaveRequested so we retry next frame.
       return;
     }
     World->BeginCooperativeSave(folder);
     AutosaveInProgress = true;
+    AutosaveRequested = false;
+    LastAutosaveTime = std::chrono::steady_clock::now();
   }
   if (!AutosaveInProgress)
   {
@@ -672,8 +738,13 @@ void UWindowManager::TickBudgetedAutosave()
     AutosaveInProgress = false;
     return;
   }
+  if (IsEditHotForAutosave())
+  {
+    ++tele.AutosaveSkippedTickN;
+    return;
+  }
   UNullProgressSink sink;
-  if (World->TickCooperativeSave(sink, /*chunkBudget=*/8))
+  if (World->TickCooperativeSave(sink, /*chunkBudget=*/1))
   {
     World->ResumeAfterSessionSave();
     AutosaveInProgress = false;

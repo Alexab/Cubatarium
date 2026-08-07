@@ -1349,6 +1349,12 @@ target_include_directories(edit_mesh_remesh_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(edit_mesh_remesh_policy_test glm::glm)
 
+add_executable(dig_seam_queue_test
+    src/Test/DigSeamQueueTest.cpp)
+target_include_directories(dig_seam_queue_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(dig_seam_queue_test glm::glm)
+
 add_executable(render_backend_factory_test
     src/Test/RenderBackendFactoryTest.cpp
     src/Render/Backend/RenderBackendSelect.cpp

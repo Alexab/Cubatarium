@@ -107,6 +107,12 @@ struct PhysicsTelemetry
   /// Place UX diagnostics (per-frame; reset each Update).
   int PlaceCompleteN{0};
   int PlaceEmissionN{0};
+  /// Autosave deferred Begin / skipped Tick while edit-hot (per-frame).
+  int AutosaveDeferredN{0};
+  int AutosaveSkippedTickN{0};
+  /// DigSeam: P2-demoted face remesh queue (per-frame after drain).
+  int DigSeamPendingN{0};
+  int DigSeamRemeshN{0};
   /// Max light emission among blocks edited this frame (0 if none).
   int EditLightEmission{0};
   /// RebuildDirtyChunksWithStats wall (sync fill + schedule + apply drain).

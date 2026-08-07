@@ -6,6 +6,7 @@
 #include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
 #include "World/Interfaces/IUWorldMeshSink.h"
+#include "World/Mesh/DigSeamQueue.h"
 #include "World/Streaming/MeshWorkAdmission.h"
 #include <chrono>
 #include <functional>
@@ -246,6 +247,14 @@ public:
   void MarkChunksContainingBlockIds(const UBlockWorld &block_world,
                                     const std::vector<BlockId> &block_ids);
 
+  /// DigSeam: P2-demoted face Immediate → guaranteed remesh (manual 215711 X-ray).
+  void EnqueueDigSeam(glm::ivec3 chunk_coord);
+  size_t GetDigSeamPendingCount() const { return DigSeam.Size(); }
+  int GetLastDigSeamRemeshN() const { return LastDigSeamRemeshN; }
+  int GetLastDigSeamPendingN() const { return LastDigSeamPendingN; }
+  void TickDigSeamDrain(UBlockWorld &block_world, UBlockRegistry &registry,
+                        const PhysicsTelemetry *frame_tele);
+
   const std::vector<CrossInstanceBatch> &
   GetCrossRenderBatches(UBlockWorld &world, UBlockRegistry &registry,
                         const std::shared_ptr<UCamera> &camera);
@@ -261,6 +270,10 @@ private:
   uint64_t LastEditDirtyN{0};
   glm::ivec3 StickyNearestHoleCoord{0};
   int StickyNearestHoleFrames{0};
+
+  DigSeamQueue DigSeam;
+  int LastDigSeamRemeshN{0};
+  int LastDigSeamPendingN{0};
 };
 
 } // namespace cutum

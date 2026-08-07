@@ -158,6 +158,10 @@ struct FrameNumbers
   double post_scene_ms{0.0};
   double gui_overlay_ms{0.0};
   double autosave_ms{0.0};
+  int autosave_deferred_n{0};
+  int autosave_skipped_tick_n{0};
+  int dig_seam_pending_n{0};
+  int dig_seam_remesh_n{0};
   double render_total_ms{0.0};
   double residual_ms{0.0};
   double perf_collect_ms{0.0};
@@ -390,6 +394,10 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.post_scene_ms = world.GetLastPostSceneMs();
   n.gui_overlay_ms = world.GetLastGuiOverlayMs();
   n.autosave_ms = world.GetLastAutosaveMs();
+  n.autosave_deferred_n = phys.AutosaveDeferredN;
+  n.autosave_skipped_tick_n = phys.AutosaveSkippedTickN;
+  n.dig_seam_pending_n = phys.DigSeamPendingN;
+  n.dig_seam_remesh_n = phys.DigSeamRemeshN;
   n.render_total_ms = world.GetLastRenderTotalMs();
   // sim_ms = all measured main-loop work excluding swap. do_movement_ms already
   // contains stream_ms + mesh_emerge_ms so they are NOT added separately.
@@ -653,6 +661,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"post_scene_ms\":" << n.post_scene_ms
           << ",\"gui_overlay_ms\":" << n.gui_overlay_ms
           << ",\"autosave_ms\":" << n.autosave_ms
+          << ",\"autosave_deferred_n\":" << n.autosave_deferred_n
+          << ",\"autosave_skipped_tick_n\":" << n.autosave_skipped_tick_n
+          << ",\"dig_seam_pending_n\":" << n.dig_seam_pending_n
+          << ",\"dig_seam_remesh_n\":" << n.dig_seam_remesh_n
           << ",\"render_total_ms\":" << n.render_total_ms
           << ",\"residual_ms\":" << n.residual_ms
           << ",\"perf_collect_ms\":" << n.perf_collect_ms

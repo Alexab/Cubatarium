@@ -10,6 +10,7 @@
 #include "World/Physics/PhysicsTelemetry.h"
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <unordered_set>
 #include <vector>
 
@@ -955,7 +956,27 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
   // C1/P2: hard time-cap Immediate remesh — fluid/edit with cap=9 burned
   // physics_block ~0.8–1.4s (manual 162944). Dig bursts (edit_immediate_n=7,
   // manual 191432 spikes 700–860ms) must not chain more than one Immediate
-  // on the hot frame; defer remainder to Dirty/async.
+  // on the hot frame; defer remainder to Dirty/async + DigSeam for face X-ray.
+  std::unordered_set<glm::ivec3, IVec3Hash> center_chunks;
+  for (const glm::ivec3 &block_pos : block_positions)
+  {
+    center_chunks.insert(detail::EditWorldToChunk(block_pos));
+  }
+  auto is_face_adj = [&](const glm::ivec3 &chunk_coord) -> bool
+  {
+    for (const glm::ivec3 &c : center_chunks)
+    {
+      const int dx = std::abs(chunk_coord.x - c.x);
+      const int dy = std::abs(chunk_coord.y - c.y);
+      const int dz = std::abs(chunk_coord.z - c.z);
+      if (dx + dy + dz == 1)
+      {
+        return true;
+      }
+    }
+    return false;
+  };
+
   const auto imm_budget_t0 = std::chrono::high_resolution_clock::now();
   constexpr double kEditImmediateBudgetMs = 8.0;
   constexpr int kEditImmediateMaxHot = 1;
@@ -970,6 +991,11 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
         (immediate_done > 0 && spent_ms > kEditImmediateBudgetMs))
     {
       MarkDirtyPriority(chunk_coord);
+      // Face Immediate demoted by P2 → DigSeam (manual 215711 side X-ray).
+      if (is_face_adj(chunk_coord) || center_chunks.count(chunk_coord) == 0)
+      {
+        EnqueueDigSeam(chunk_coord);
+      }
       continue;
     }
     note_race_before_immediate(chunk_coord);
@@ -980,6 +1006,54 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
   for (const glm::ivec3 &chunk_coord : decision.DirtyChunks)
   {
     MarkDirtyPriority(chunk_coord);
+  }
+}
+
+void UWorldMeshService::EnqueueDigSeam(glm::ivec3 chunk_coord)
+{
+  DigSeam.Enqueue(chunk_coord);
+}
+
+void UWorldMeshService::TickDigSeamDrain(UBlockWorld &block_world,
+                                         UBlockRegistry &registry,
+                                         const PhysicsTelemetry *frame_tele)
+{
+  LastDigSeamRemeshN = 0;
+  LastDigSeamPendingN = static_cast<int>(DigSeam.Size());
+  if (DigSeam.Empty())
+  {
+    return;
+  }
+  // Never stack a second Immediate on the dig/edit hot frame.
+  if (GetLastMeshImmediateCount() > 0)
+  {
+    return;
+  }
+  if (frame_tele &&
+      (frame_tele->BreakCompleteN > 0 || frame_tele->PlaceCompleteN > 0))
+  {
+    return;
+  }
+
+  while (!DigSeam.Empty())
+  {
+    glm::ivec3 coord;
+    if (!DigSeam.TryPop(coord))
+    {
+      break;
+    }
+    LastDigSeamPendingN = static_cast<int>(DigSeam.Size());
+
+    const bool drawable = HasDrawableGreedyMesh(coord);
+    const bool dark_face = Cache.ChunkHasFullyDarkFace(coord);
+    if (!drawable && !dark_face)
+    {
+      MarkDirtyPriority(coord);
+      continue;
+    }
+    RebuildChunkImmediate(block_world, registry, coord);
+    LastDigSeamRemeshN = 1;
+    break;
   }
 }
 
