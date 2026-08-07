@@ -666,8 +666,9 @@ bool UWindowManager::IsEditHotForAutosave() const
   {
     return true;
   }
-  const UWorldMeshService &mesh = World->GetMeshService();
-  if (mesh.GetLastMeshImmediateCount() > 0 || mesh.GetLastEditImmediateN() > 0)
+  // Use per-frame Immediate count only — LastEditImmediateN is last-edit policy
+  // size and stays non-zero across idle frames.
+  if (World->GetMeshService().GetLastMeshImmediateCount() > 0)
   {
     return true;
   }
@@ -681,9 +682,8 @@ void UWindowManager::RefreshEditHotSticky()
     return;
   }
   const PhysicsTelemetry &tele = World->GetPhysicsTelemetry();
-  const UWorldMeshService &mesh = World->GetMeshService();
   if (tele.BreakCompleteN > 0 || tele.PlaceCompleteN > 0 ||
-      mesh.GetLastMeshImmediateCount() > 0 || mesh.GetLastEditImmediateN() > 0)
+      World->GetMeshService().GetLastMeshImmediateCount() > 0)
   {
     EditHotUntil = std::chrono::steady_clock::now() +
                    std::chrono::duration_cast<std::chrono::steady_clock::duration>(
