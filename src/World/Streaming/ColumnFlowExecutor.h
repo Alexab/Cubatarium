@@ -38,10 +38,12 @@ public:
   }
 
   /// Scan focus truth and enqueue derived work (uses real column coords).
+  /// last_frame_ms / pending_async gate stand stale-wave under miss (manual 131827).
   void TickDerived(UWorld &world, glm::ivec3 focus_ground_horiz, int focus_radius,
                    bool moving, bool missing_visible_mesh, bool visual_holes,
                    bool idle_remesh_debt, bool idle_focus_dirty_debt,
-                   int pending_focus_n, int recover_n, int admit_n);
+                   int pending_focus_n, int recover_n, int admit_n,
+                   double last_frame_ms = 0.0, int pending_async = 0);
 
   /// Drain up to n queued items; dispatch uses item.column.
   int DrainBudget(UWorld &world, int n, glm::ivec3 focus_ground_horiz,

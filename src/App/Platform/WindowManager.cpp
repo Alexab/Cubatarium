@@ -513,6 +513,9 @@ void UWindowManager::Update()
     tele.AutosaveSkippedTickN = 0;
     tele.DigSeamPendingN = 0;
     tele.DigSeamRemeshN = 0;
+    tele.StaleRepairWaveN = 0;
+    tele.StandRimDirtyN = 0;
+    tele.StandRimImmN = 0;
     tele.EditLightEmission = 0;
     tele.FastRelightMs = 0.0;
     tele.EditToFirstMeshMs = 0.0;

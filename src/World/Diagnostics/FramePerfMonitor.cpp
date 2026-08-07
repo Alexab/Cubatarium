@@ -162,6 +162,9 @@ struct FrameNumbers
   int autosave_skipped_tick_n{0};
   int dig_seam_pending_n{0};
   int dig_seam_remesh_n{0};
+  int stale_repair_wave_n{0};
+  int stand_rim_dirty_n{0};
+  int stand_rim_imm_n{0};
   double render_total_ms{0.0};
   double residual_ms{0.0};
   double perf_collect_ms{0.0};
@@ -398,6 +401,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.autosave_skipped_tick_n = phys.AutosaveSkippedTickN;
   n.dig_seam_pending_n = phys.DigSeamPendingN;
   n.dig_seam_remesh_n = phys.DigSeamRemeshN;
+  n.stale_repair_wave_n = phys.StaleRepairWaveN;
+  n.stand_rim_dirty_n = phys.StandRimDirtyN;
+  n.stand_rim_imm_n = phys.StandRimImmN;
   n.render_total_ms = world.GetLastRenderTotalMs();
   // sim_ms = all measured main-loop work excluding swap. do_movement_ms already
   // contains stream_ms + mesh_emerge_ms so they are NOT added separately.
@@ -665,6 +671,9 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"autosave_skipped_tick_n\":" << n.autosave_skipped_tick_n
           << ",\"dig_seam_pending_n\":" << n.dig_seam_pending_n
           << ",\"dig_seam_remesh_n\":" << n.dig_seam_remesh_n
+          << ",\"stale_repair_wave_n\":" << n.stale_repair_wave_n
+          << ",\"stand_rim_dirty_n\":" << n.stand_rim_dirty_n
+          << ",\"stand_rim_imm_n\":" << n.stand_rim_imm_n
           << ",\"render_total_ms\":" << n.render_total_ms
           << ",\"residual_ms\":" << n.residual_ms
           << ",\"perf_collect_ms\":" << n.perf_collect_ms

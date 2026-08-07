@@ -1366,7 +1366,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       exec.TickDerived(world, focus_ground_horiz, focus_radius, moving,
                        missing_visible_mesh, visual_holes, idle_remesh_debt,
                        idle_focus_dirty_debt, pending_focus_n, recover_n,
-                       admit_n);
+                       admit_n, last_frame_ms, pending_async);
       if (!idle_remesh_debt && !idle_focus_dirty_debt)
       {
         const int pending_dark_preview =
@@ -2110,12 +2110,35 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         hole_backlog_mode &&
         (pending_async >= 12 || pending_gpu_n >= 12);
     int nearest_miss_nh = -1;
+    if (StandWitnessColumnDirtyCd > 0)
+    {
+      --StandWitnessColumnDirtyCd;
+    }
     if (found_nearest_missing)
     {
       nearest_miss_nh = std::max(
           std::abs(isolated_hole.x - focus_ground_horiz.x),
           std::abs(isolated_hole.z - focus_ground_horiz.z));
       const glm::ivec2 hole_col(isolated_hole.x, isolated_hole.z);
+      // Stand: Dirty full witness column cy0..band so low-cy rim slices heal
+      // alongside exact FirstMesh (manual 131827 miss cy0–2). Cruise: exact cy.
+      if (!moving && StandWitnessColumnDirtyCd <= 0)
+      {
+        const int max_y = procedural.MaxHeight;
+        const int player_max =
+            std::min(max_y, focus_ground.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
+        const int hole_max =
+            (isolated_hole.y + 1) * CHUNK_SIZE - 1;
+        const int remesh_max = std::max(player_max, hole_max);
+        const glm::ivec3 ground(isolated_hole.x, 0, isolated_hole.z);
+        const int marked = mesh_service.MarkMissingSlicesDirtyPriority(
+            world.GetBlockWorld(), ground, 0, remesh_max);
+        if (marked > 0)
+        {
+          world.GetPhysicsTelemetryMutable().StandRimDirtyN += marked;
+        }
+        StandWitnessColumnDirtyCd = 12;
+      }
       // N0c: Admit skips Pending/InFlight — promote Relight instead of no-op
       // FirstMesh enqueue (far-rim sticky mh=5 under dual backlog, 215629).
       const bool nearest_in_pipeline =
@@ -2226,6 +2249,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     // G1/H/I/J3: sticky nearest-hole Immediate — nh≤5. Count while pipeline
     // idle, Queued, or Kicked/Dispatched (J3: track kicked rim without Kick
     // drop). Escape drop+Imm remains Queued-only; kicked gets Kick prefer.
+    // Stand nh≤3: separate StandRimStickyFrames so Inflight thrash does not
+    // reset (manual 131827); Dirty first, Imm only on calm wall.
     if (found_nearest_missing)
     {
       const bool no_drawable =
@@ -2250,7 +2275,64 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const bool ms_ok = immediate_ms_used() < (moving ? 6.0 : 8.0);
       const bool slot_ok =
           underfeet_immediate_this_frame < kMaxUnderfeetImmediate;
-      if (nh <= 5 && slot_ok && ms_ok)
+
+      const bool stand_rim = !moving && nh <= 3;
+      int stand_frames = 0;
+      if (stand_rim && no_drawable)
+      {
+        const bool same_stand =
+            isolated_hole.x == StandRimStickyCx &&
+            isolated_hole.y == StandRimStickyCy &&
+            isolated_hole.z == StandRimStickyCz;
+        if (same_stand)
+        {
+          StandRimStickyFrames =
+              std::min(StandRimStickyFrames + 1, 1000000);
+        }
+        else
+        {
+          StandRimStickyCx = isolated_hole.x;
+          StandRimStickyCy = isolated_hole.y;
+          StandRimStickyCz = isolated_hole.z;
+          StandRimStickyFrames = 1;
+        }
+        stand_frames = StandRimStickyFrames;
+        if (stand_frames >= 3)
+        {
+          mesh_service.MarkDirtyPriority(isolated_hole);
+          ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
+        }
+        const bool calm_imm =
+            last_frame_ms <= 40.0 && immediate_ms_used() < 4.0 &&
+            pending_async < 12 && slot_ok;
+        if (stand_frames >= 5 && calm_imm &&
+            (pipeline_idle || queued_stuck))
+        {
+          if (queued_stuck)
+          {
+            mesh_service.DropQueuedPendingGpuApply(isolated_hole);
+          }
+          mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
+                                             isolated_hole);
+          ++underfeet_immediate_this_frame;
+          underfeet_immediate_cd = 2;
+          ++world.GetPhysicsTelemetryMutable().StandRimImmN;
+          StandRimStickyFrames = 0;
+          StandRimStickyCx = StandRimStickyCy = StandRimStickyCz = 0;
+          mesh_service.UpdateStickyNearestHole(isolated_hole, false);
+        }
+        else if (stand_frames >= 5 && kicked_stuck)
+        {
+          mesh_service.PreferKickPendingGpuQueued(isolated_hole);
+        }
+      }
+      else
+      {
+        StandRimStickyFrames = 0;
+        StandRimStickyCx = StandRimStickyCy = StandRimStickyCz = 0;
+      }
+
+      if (!stand_rim && nh <= 5 && slot_ok && ms_ok)
       {
         if (pipeline_idle && sticky_frames >= 3)
         {
@@ -2271,8 +2353,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         }
       }
       // J3: nh≤3 sticky≥5 in GPU pipeline — hoist Queued Kick priority only
-      // (never drop/Immediate on Kicked/Dispatched).
-      if (nh <= 3 && sticky_frames >= 5 && (queued_stuck || kicked_stuck))
+      // (never drop/Immediate on Kicked/Dispatched). Cruise / non-stand-rim.
+      if (!stand_rim && nh <= 3 && sticky_frames >= 5 &&
+          (queued_stuck || kicked_stuck))
       {
         mesh_service.PreferKickPendingGpuQueued(isolated_hole);
       }
@@ -2280,6 +2363,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     else
     {
       mesh_service.UpdateStickyNearestHole(glm::ivec3(0), false);
+      StandRimStickyFrames = 0;
+      StandRimStickyCx = StandRimStickyCy = StandRimStickyCz = 0;
     }
   }
   else if (fov_unfinished)

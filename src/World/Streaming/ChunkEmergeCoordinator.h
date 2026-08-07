@@ -50,6 +50,13 @@ private:
   int StuckSmokeCd{0};
   int FocusScanCd{0};
   int RimScanSkipStreak{0};
+  /// Stand witness full-column Dirty rate-limit (manual 131827 cy0–2 rim).
+  int StandWitnessColumnDirtyCd{0};
+  /// Stand nh≤3 sticky frames (Inflight must not reset; separate from cruise).
+  int StandRimStickyFrames{0};
+  int StandRimStickyCx{0};
+  int StandRimStickyCy{0};
+  int StandRimStickyCz{0};
 };
 
 } // namespace cutum

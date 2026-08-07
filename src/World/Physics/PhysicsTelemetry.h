@@ -113,6 +113,10 @@ struct PhysicsTelemetry
   /// DigSeam: P2-demoted face remesh queue (per-frame after drain).
   int DigSeamPendingN{0};
   int DigSeamRemeshN{0};
+  /// Stand rim heal (manual 131827): stale-wave cols / Dirty / calm Imm.
+  int StaleRepairWaveN{0};
+  int StandRimDirtyN{0};
+  int StandRimImmN{0};
   /// Max light emission among blocks edited this frame (0 if none).
   int EditLightEmission{0};
   /// RebuildDirtyChunksWithStats wall (sync fill + schedule + apply drain).

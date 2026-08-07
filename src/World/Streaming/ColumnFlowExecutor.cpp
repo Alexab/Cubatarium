@@ -158,7 +158,8 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
                                       bool visual_holes, bool idle_remesh_debt,
                                       bool idle_focus_dirty_debt,
                                       int /*pending_focus_n*/, int recover_n,
-                                      int admit_n)
+                                      int admit_n, double last_frame_ms,
+                                      int pending_async)
 {
   ++frame_counter_;
   const glm::ivec2 focus(focus_ground_horiz.x, focus_ground_horiz.z);
@@ -215,7 +216,9 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   // should_remesh_seam: sticky always; stale-dark as gated waves.
   // Cooldown + cap avoid 092627 thrash. Do NOT require NearFocusHoles —
   // after Pending clears nh→0 while DarkFaceStaleNear stays high
-  // (manual 182125/190350). Skip while missing so FirstMesh wins.
+  // (manual 182125/190350). Cruise: skip while missing so FirstMesh wins.
+  // Stand: allow stale-wave under miss (cap 1) so drawable-but-stale rim
+  // faces heal without waiting miss=0 (manual 131827 exit stale 1200+).
   // Threshold 40 (was 80): manual 213543 exit stale≈511 but autofly mid-heal
   // often sits 40–80 with residual blacks while miss=0.
   std::vector<glm::ivec2> stale_dark_cols;
@@ -229,20 +232,31 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       LastStaleRepairWave.time_since_epoch().count() == 0 ||
       std::chrono::duration<double>(now - LastStaleRepairWave).count() >=
           kStaleRepairCooldownSec;
+  const bool allow_stale_wave_base =
+      cooldown_ok && (stale_n > 40 || (dark_n > 500 && stale_n > 0));
   const bool allow_stale_wave =
-      !missing_visible_mesh && cooldown_ok &&
-      (stale_n > 40 || (dark_n > 500 && stale_n > 0));
+      moving
+          ? (!missing_visible_mesh && allow_stale_wave_base)
+          : (allow_stale_wave_base && last_frame_ms <= 50.0 &&
+             pending_async < 24 &&
+             (!missing_visible_mesh || stale_n > 40));
   // Void-edge: light field 0 — Relight near-ring (manual 190350 void≫stale).
   // Idle/stop only: while moving Relight competed with FirstMesh
   // (land_south_void_cruise miss_stuck 14). Also allow mild void at stop when
   // miss=0 so exit stand can heal without waiting void>200.
+  // Never void-wave under miss (Relight thrash vs FirstMesh).
   const bool allow_void_wave =
       !missing_visible_mesh && !moving && cooldown_ok &&
       (void_n > 200 || (void_n > 40 && stale_n > 40));
   if (allow_stale_wave)
   {
-    const int stale_radius = focus_radius;
-    const int stale_cap = std::min(4, std::max(2, recover_n / 2));
+    const int stale_radius =
+        (missing_visible_mesh && !moving) ? std::min(2, focus_radius)
+                                          : focus_radius;
+    const int stale_cap =
+        (missing_visible_mesh && !moving)
+            ? 1
+            : std::min(4, std::max(2, recover_n / 2));
     world.CollectStaleDarkFocusColumns(focus_ground_horiz, stale_radius,
                                        stale_dark_cols, stale_cap);
   }
@@ -265,6 +279,8 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       world.NoteColumnRepairNeeded(col);
     }
     LastStaleRepairWave = now;
+    world.GetPhysicsTelemetryMutable().StaleRepairWaveN +=
+        static_cast<int>(stale_dark_cols.size());
   }
   else if (allow_void_wave && !void_dark_cols.empty())
   {
