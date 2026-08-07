@@ -38,6 +38,7 @@ inline SeedDecision EvaluateSeedDecision(const SeedDecisionInput &in)
 
   // Era14 TD-ARCH-044: widen cheap commit seed so PendingLight trail shrinks.
   // Still cheap_seed only on cruise — never full RelightTerrainColumn under load.
+  // Keep 32/28 (p2b 28/24 regress miss_stuck 2→12 / holes↑).
   if (in.moving_cruise)
   {
     if (in.can_seed && (in.underfeet || in.near_focus) &&

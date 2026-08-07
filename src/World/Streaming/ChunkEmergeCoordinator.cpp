@@ -396,11 +396,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   // I6: long calm stand — drop leftover sticky (void-edge stale can pin count=1).
   // P1 idle-clean: prune leftover sticky quickly once miss/pending clear.
-  if (!moving && pending_focus_count == 0 && !missing_visible_mesh &&
-      black_sticky > 0 && world.GetTimeSinceMotionSec() > 3.0)
+  // Era14: also drop pin sticky when stale-near already 0 (gate black_sticky=1
+  // with stop_dark_face_stale_near_end=0 — remesh ticket drained, set leftover).
+  if (!moving && !missing_visible_mesh && black_sticky > 0)
   {
-    world.PruneStickyRemeshOutside(focus_ground_horiz, /*radius=*/0);
-    world.ClearPendingLightAfterMeshCommitted(32);
+    const int stale_near = world.GetPhysicsTelemetry().DarkFaceStaleNearN;
+    const double since_motion = world.GetTimeSinceMotionSec();
+    if ((pending_focus_count == 0 && since_motion > 1.5) ||
+        (stale_near == 0 && since_motion > 1.0 && black_sticky <= 2))
+    {
+      world.PruneStickyRemeshOutside(focus_ground_horiz, /*radius=*/0);
+      world.ClearPendingLightAfterMeshCommitted(32);
+    }
   }
   prep_sticky_ms = prep_ms_since(prep_t);
   prep_t = std::chrono::high_resolution_clock::now();
@@ -1793,7 +1800,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // → sticky 2–5). Promote/async light must clear the gate; mesh fills after.
   // Spike guard (manual 134418): cold async=0 + hole → no non-underfeet sync
   // fill (mesh_emerge 0.7–3s hitch). Moving: non-underfeet always Dirty/async.
-  if (missing_visible_mesh && last_frame_ms <= 50.0)
+  // Era14 TD-ARCH-041: MarkDirty / promote always under miss — Imm only stays
+  // behind budget/calm (DISCARD wall as Dirty enqueue gate).
+  if (missing_visible_mesh)
   {
     static int force_hole_cd = 0;
     const FocusIngressDecision ingress = EvaluateFocusIngress(FocusIngressInput{
@@ -1834,8 +1843,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             AllowSyncHoleFillForColumn(ingress, hole_underfeet) ||
             (is_nearest_hole && pending_async < 4);
         const double force_frame_cap = 40.0;
+        const bool calm_enough_for_imm = last_frame_ms <= 50.0;
         const bool want_immediate =
-            sync_ok && !hole_pending &&
+            calm_enough_for_imm && sync_ok && !hole_pending &&
             (!hole_underfeet ||
              (underfeet_immediate_cd <= 0 &&
               underfeet_immediate_this_frame < kMaxUnderfeetImmediate)) &&
@@ -1893,6 +1903,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           // Q2 seam: already-drawable neighbors keep Unknown-culled side faces
           // until remeshed after this hole FirstMesh lands (manual 191432).
           // Cap 4; HoleDrain-safe (does not admit missing neighbors).
+          // Q2 seam: already-drawable neighbors keep Unknown-culled side faces
+          // until remeshed after this hole FirstMesh lands (manual 191432).
+          // Cap 4; HoleDrain-safe. Always under miss — wall cost is async Dirty
+          // (p2c holes=0.2 with hot-skip; p2 full seam holes≈0.045).
           if (missing_visible_mesh)
           {
             int seamed = 0;
@@ -2291,12 +2305,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           StandRimStickyFrames = 1;
         }
         stand_frames = StandRimStickyFrames;
-        if (stand_frames >= 2)
+        if (stand_frames >= 1)
         {
           mesh_service.MarkDirtyPriority(isolated_hole);
           ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
         }
-        if (stand_frames >= 3 && (queued_stuck || kicked_stuck))
+        if (stand_frames >= 2 && (queued_stuck || kicked_stuck))
         {
           mesh_service.PreferKickPendingGpuQueued(isolated_hole);
         }

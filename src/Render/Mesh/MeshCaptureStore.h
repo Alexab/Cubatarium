@@ -15,6 +15,10 @@ class UBlockWorld;
 /// Immutable mesh capture cache (TD-ARCH-015 / main-thread offload Phase 1).
 /// Schedule prefers stored snapshots; live Capture only on miss/epoch mismatch
 /// within a per-tick budget.
+///
+/// Era14 TD-ARCH-046: worker-side Capture remains deferred. Prior worker path
+/// hung; store-only consumer is required before re-enable. Throughput knobs =
+/// refresh budget + MeshSnapshotBudgetMs (not Imm/zoo).
 class UMeshCaptureStore
 {
 public:

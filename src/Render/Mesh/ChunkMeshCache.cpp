@@ -2677,7 +2677,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   const auto dirty_tick_t0 = std::chrono::high_resolution_clock::now();
   MeshRebuildTickStats stats;
   CaptureRefreshBudgetLeft =
-      std::max(2, static_cast<int>(MeshSnapshotBudgetMs * 0.5));
+      // Era14 TD-ARCH-046: prefer store hit; live Capture refresh is the hitch.
+      // Cap refreshes from MeshSnapshotBudgetMs (already cruise-clamped in
+      // emerge). Floor 1 so schedule can still progress on store miss.
+      std::max(1, static_cast<int>(MeshSnapshotBudgetMs * 0.35));
   LastMeshSyncMs = 0.0;
   LastMeshSnapshotMs = 0.0;
   LastMeshDirtyTickMs = 0.0;

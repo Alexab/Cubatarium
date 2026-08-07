@@ -87,6 +87,11 @@ Autofly loop (every code phase): build → `flight_sim_run` → analyze →
 `flight_sim_phase_gate` → update TD → checkpoint commit. Land scenarios
 (`--land-cruise` / `ARCH_D3_LAND`) required for rim/tops phases.
 
+**Era14 residual (2026-08-07):** do not merge to develop until `ARCH_D3_LAND`
+GO (holes≤0.10) and ocean `ARCH_D3` wall≤30. Best land near-GO:
+`bin/iter_reports/timeline/era14_p2c_land.json` (miss_stuck=4, wall≈54.6,
+sticky=0, holes≈0.2). Worker Capture remains deferred (TD-ARCH-046).
+
 **Backend matrix (R4):** desktop
 
 ```powershell

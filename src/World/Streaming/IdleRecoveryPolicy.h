@@ -7,6 +7,10 @@ namespace cutum
 
 /// Pure idle-recovery policy (I1/I2): tiered visual drain gate + hot-frame
 /// Capture budget cap. Extracted from ChunkEmergeCoordinator / WorldStreaming.
+///
+/// Era14 TD-ARCH-047: wall tiers here throttle **sync cost** (Capture / sync
+/// pending drain) only. FOV FirstMesh / stale enqueue must not require calm
+/// `last_frame_ms` — that ownership lives in ColumnDesiredStage + ColumnFlow.
 
 struct IdleVisualDrainInput
 {
@@ -117,12 +121,19 @@ inline StickyRemeshDrainDecision EvaluateStickyRemeshDrain(
     const StickyRemeshDrainInput &in)
 {
   StickyRemeshDrainDecision out;
-  if (in.black_sticky <= 0 || in.last_frame_ms > 80.0)
+  if (in.black_sticky <= 0)
   {
     return out;
   }
+  // Era14 TD-ARCH-041/047: never skip FOV sticky remesh solely for wall —
+  // throttle budget (async ticket drain). Old `ms>80` skip left sticky=1
+  // plateau while stop wall sat ~150–170 (era14_p2_land).
   out.run_drain = true;
-  if (in.last_frame_ms <= 55.0)
+  if (in.last_frame_ms > 80.0)
+  {
+    out.budget = 1;
+  }
+  else if (in.last_frame_ms <= 55.0)
   {
     out.budget =
         in.black_sticky > 4 ? 3 : (in.black_sticky > 1 ? 2 : 1);

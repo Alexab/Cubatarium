@@ -123,6 +123,16 @@ int main()
   }
 
   {
+    // Era14: wall>80 no longer skips FOV sticky remesh (budget=1).
+    StickyRemeshDrainInput in;
+    in.black_sticky = 1;
+    in.last_frame_ms = 160.0;
+    const auto d = EvaluateStickyRemeshDrain(in);
+    Expect(d.run_drain, "hot wall still drains sticky");
+    Expect(d.budget == 1, "hot wall sticky budget 1");
+  }
+
+  {
     IdleMeshDrainCapInput in;
     in.moving = false;
     in.last_frame_ms = 86.0;

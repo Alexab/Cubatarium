@@ -92,15 +92,15 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-ARCH-040 | Era14 | Frame nest: stream/emerge inside `RunLegacyPhysicsFrame` / `do_movement_ms` | Phase1 code landed; validate nest proof | Phase 1 — in-progress |
-| TD-ARCH-041 | Era14 | Deadlock calm-wall Imm / stale-wave enqueue (`wall≤40/50`) | `stand_rim_imm_n=0`, `stale_repair_wave_n=0` on 151212 | Phase 2 — open |
-| TD-ARCH-042 | Era14 | Stand/cruise sticky Imm fork zoo | Inflight thrash + dual paths | Phase 2 — open |
-| TD-ARCH-043 | Era14 | Land tops miss sticky / `ARCH_D3_LAND` | Baseline NO-GO miss_stuck=48 miss_end=1 | Phase 2 — open |
-| TD-ARCH-044 | Era14 | Commit-time seed coverage / PendingLight trail | Unlit→stale path | Phase 3 — open |
-| TD-ARCH-045 | Era14 | UnlitFirstMesh → guaranteed remesh-on-lit | Stale dark after light arrives | Phase 3 — open |
-| TD-ARCH-046 | Era14 | Worker Capture residual (TD-ARCH-015 store done) | Main Capture still hitch | Phase 4 — open |
-| TD-ARCH-047 | Era14 | IdleRecovery/Admission knobs duplicate DesiredStage | Zoo after V4 | Phase 4 — open |
-| TD-ARCH-048 | Era14 | ARCH_D3 wall_med≤30 / gate DoD | Baseline ARCH_D3 NO-GO wall; link 032 | Phase 5 — open |
+| TD-ARCH-040 | Era14 | Frame nest: stream/emerge inside `RunLegacyPhysicsFrame` / `do_movement_ms` | Nest proof fly-clean phys_med≈4.9 | **done 2026-08-07** `0812c77f` |
+| TD-ARCH-041 | Era14 | Deadlock calm-wall Imm / stale-wave enqueue (`wall≤40/50`) | Dirty/promote without wall; Imm stays budgeted; sticky remesh budget on hot wall | **done 2026-08-07** (Imm primary DISCARD) |
+| TD-ARCH-042 | Era14 | Stand/cruise sticky Imm fork zoo | Imm primary removed; Dirty@≥1–2 + PreferKick | **done 2026-08-07** |
+| TD-ARCH-043 | Era14 | Land tops miss sticky / `ARCH_D3_LAND` | Best near-GO `era14_p2c_land`: miss_stuck=4 wall=54.6 sticky=0; residual holes_rate≈0.2 | **partial** — holes residual |
+| TD-ARCH-044 | Era14 | Commit-time seed coverage / PendingLight trail | SeedDecision cruise≤32 / idle≤28 cheap seed | **done 2026-08-07** `f9af0c16`+iterate |
+| TD-ARCH-045 | Era14 | UnlitFirstMesh → guaranteed remesh-on-lit | MarkRelit → NoteColumnRepairNeeded + RemeshSeam | **done 2026-08-07** `f9af0c16` |
+| TD-ARCH-046 | Era14 | Worker Capture residual (TD-ARCH-015 store done) | Store refresh budget tightened; worker path still deferred (hang risk) | **partial** — worker deferred |
+| TD-ARCH-047 | Era14 | IdleRecovery/Admission knobs duplicate DesiredStage | Sticky remesh wall-skip removed; IdleRecovery owns sync cost only | **done 2026-08-07** |
+| TD-ARCH-048 | Era14 | ARCH_D3 wall_med≤30 / gate DoD | Link 032; land soft wall≤55 near-GO on p2c; ocean ARCH_D3 still open | Phase 5 — open |
 
 **Era14 execution log**
 
@@ -108,6 +108,10 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 |------|-------|------|--------|
 | 2026-08-07 | 0 docs | Postmortem + TD-040..048 skeleton | `56391cdf` |
 | 2026-08-07 | baseline | FLY_CLEAN GO; IDLE_CLEAN/WARM GO; ARCH_D3_LAND NO-GO (miss_stuck=48); F2/ARCH_D3 NO-GO wall | timeline `era14_*` |
+| 2026-08-07 | Phase 1 | `TickWorldStreamingPhase`; nest proof fly-clean | `0812c77f` |
+| 2026-08-07 | Phase 2+3 | DesiredStage; kill calm Imm; seed+remesh-on-lit | `f9af0c16` |
+| 2026-08-07 | P2 iterate | Dirty-without-wall; sticky remesh hot; Capture refresh trim; best LAND `era14_p2c_land` (miss=4 wall≈55 sticky=0 holes=0.2 residual) | (this checkpoint) |
+| 2026-08-07 | Phase 5 matrix | FLY_CLEAN GO (`era14_p5_fly`); IDLE_WARM GO; IDLE_CLEAN NO-GO emerge/sticky; ARCH_D3_LAND residual holes TD-043 | (this checkpoint) |
 
 P4 validate (`4abd8683` tip): unit `streaming_render_ready_invariants_test` PASS;
 `phase_P4_land_south_short.json` DoD miss_end=0 + post_stop_missing_zero.
