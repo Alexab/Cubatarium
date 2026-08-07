@@ -649,6 +649,8 @@ public:
                  const PlayerCapsule &cap, float maxTriggerDistance) const;
   void DoMovement();
   void RunLegacyPhysicsFrame();
+  /// Era14: streaming/mesh phase outside locomotion (TD-ARCH-040).
+  void TickWorldStreamingPhase();
   void UpdateIntersection(const glm::vec3 &position, const glm::vec3 &front);
   void UpdateStreaming();
   size_t GetRenderInstanceCount() const;

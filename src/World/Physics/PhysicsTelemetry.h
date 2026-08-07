@@ -97,6 +97,8 @@ struct PhysicsTelemetry
   /// WindowManager::Update split (outside PhysicsStepMs).
   double ViewsMs{0.0};
   double DoMovementMs{0.0};
+  /// Era14: TickWorldStreamingPhase wall (stream+emerge); outside DoMovementMs.
+  double WorldStreamingPhaseMs{0.0};
   double BlockInputMs{0.0};
   /// TickEnvironment wall inside DoMovement (before PhysicsStep timer).
   double TickEnvMs{0.0};

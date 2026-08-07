@@ -141,6 +141,7 @@ struct FrameNumbers
   double world_extra_ms{0.0};
   double views_ms{0.0};
   double do_movement_ms{0.0};
+  double world_streaming_phase_ms{0.0};
   double block_input_ms{0.0};
   double tick_env_ms{0.0};
   double physics_block_ms{0.0};
@@ -367,10 +368,10 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_emerge_ms = phys.MeshEmergeMs;
   n.scene_ms = world.GetDurationDrawSceneMks() / 1000.0;
   n.view_ms = world.GetDurationViewUpdateMks() / 1000.0;
-  // do_movement_ms captures the entire DoMovement() call from WindowManager,
-  // which already includes stream_ms + mesh_emerge_ms + tick_env_ms + phys_ms.
-  // Using it as the authoritative "logic" timer avoids double-counting.
+  // Era14: DoMovement is locomotion-only; stream/emerge live in
+  // TickWorldStreamingPhase (WorldStreamingPhaseMs / stream_ms+mesh_emerge_ms).
   n.do_movement_ms = phys.DoMovementMs;
+  n.world_streaming_phase_ms = phys.WorldStreamingPhaseMs;
   n.input_ms = world.GetLastInputMs();
   n.app_update_ms = world.GetLastAppUpdateMs();
   n.views_ms = phys.ViewsMs;
@@ -405,19 +406,20 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.stand_rim_dirty_n = phys.StandRimDirtyN;
   n.stand_rim_imm_n = phys.StandRimImmN;
   n.render_total_ms = world.GetLastRenderTotalMs();
-  // sim_ms = all measured main-loop work excluding swap. do_movement_ms already
-  // contains stream_ms + mesh_emerge_ms so they are NOT added separately.
-  // render_total_ms captures the entire Render() call including GL driver
-  // stalls, so prepare/scene/post/gui are its subcomponents (not added twice).
+  // sim_ms = main-loop work excluding swap. Era14: do_movement is locomotion;
+  // stream/emerge are in world_streaming_phase_ms (also mirrored as stream_ms /
+  // mesh_emerge_ms — do not add those again).
   n.sim_ms = n.input_ms + n.app_update_ms + n.views_ms + n.do_movement_ms +
-             n.block_input_ms + n.autosave_ms + n.render_total_ms;
+             n.world_streaming_phase_ms + n.block_input_ms + n.autosave_ms +
+             n.render_total_ms;
   n.unaccounted_ms = n.wall_ms - n.sim_ms - n.swap_wait_ms;
   if (n.unaccounted_ms < 0.0 && n.unaccounted_ms > -1.0)
   {
     n.unaccounted_ms = 0.0;
   }
-  n.world_extra_ms =
-      (std::max)(0.0, world.GetLastWorldTickMs() - n.do_movement_ms);
+  n.world_extra_ms = (std::max)(
+      0.0, world.GetLastWorldTickMs() - n.do_movement_ms -
+               n.world_streaming_phase_ms);
   n.residual_ms = n.unaccounted_ms - n.world_extra_ms;
   n.fluid_map_cpu_ms = world.GetLastFluidMapCpuMs();
   n.fluid_map_gpu_ms = world.GetLastFluidMapGpuMs();
@@ -650,6 +652,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"world_extra_ms\":" << n.world_extra_ms
           << ",\"views_ms\":" << n.views_ms
           << ",\"do_movement_ms\":" << n.do_movement_ms
+          << ",\"world_streaming_phase_ms\":" << n.world_streaming_phase_ms
           << ",\"block_input_ms\":" << n.block_input_ms
           << ",\"tick_env_ms\":" << n.tick_env_ms
           << ",\"physics_block_ms\":" << n.physics_block_ms

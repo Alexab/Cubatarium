@@ -92,21 +92,22 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 
 | ID | Added in | Item | Why deferred | Target |
 |----|----------|------|--------------|--------|
-| TD-ARCH-040 | Era14 | Frame nest: stream/emerge inside `RunLegacyPhysicsFrame` / `do_movement_ms` | phys mislabeled; heal deadlock | Phase 1 — open |
+| TD-ARCH-040 | Era14 | Frame nest: stream/emerge inside `RunLegacyPhysicsFrame` / `do_movement_ms` | Phase1 code landed; validate nest proof | Phase 1 — in-progress |
 | TD-ARCH-041 | Era14 | Deadlock calm-wall Imm / stale-wave enqueue (`wall≤40/50`) | `stand_rim_imm_n=0`, `stale_repair_wave_n=0` on 151212 | Phase 2 — open |
 | TD-ARCH-042 | Era14 | Stand/cruise sticky Imm fork zoo | Inflight thrash + dual paths | Phase 2 — open |
-| TD-ARCH-043 | Era14 | Land tops miss sticky / `ARCH_D3_LAND` | cy0 miss underfeet-ok; ocean autofly miss | Phase 2 — open |
+| TD-ARCH-043 | Era14 | Land tops miss sticky / `ARCH_D3_LAND` | Baseline NO-GO miss_stuck=48 miss_end=1 | Phase 2 — open |
 | TD-ARCH-044 | Era14 | Commit-time seed coverage / PendingLight trail | Unlit→stale path | Phase 3 — open |
 | TD-ARCH-045 | Era14 | UnlitFirstMesh → guaranteed remesh-on-lit | Stale dark after light arrives | Phase 3 — open |
 | TD-ARCH-046 | Era14 | Worker Capture residual (TD-ARCH-015 store done) | Main Capture still hitch | Phase 4 — open |
 | TD-ARCH-047 | Era14 | IdleRecovery/Admission knobs duplicate DesiredStage | Zoo after V4 | Phase 4 — open |
-| TD-ARCH-048 | Era14 | ARCH_D3 wall_med≤30 / gate DoD | Link TD-ARCH-032 | Phase 5 — open |
+| TD-ARCH-048 | Era14 | ARCH_D3 wall_med≤30 / gate DoD | Baseline ARCH_D3 NO-GO wall; link 032 | Phase 5 — open |
 
 **Era14 execution log**
 
 | Date | Phase | Note | Commit |
 |------|-------|------|--------|
-| 2026-08-07 | 0 docs | Postmortem + TD-040..048 skeleton | (pending) |
+| 2026-08-07 | 0 docs | Postmortem + TD-040..048 skeleton | `56391cdf` |
+| 2026-08-07 | baseline | FLY_CLEAN GO; IDLE_CLEAN/WARM GO; ARCH_D3_LAND NO-GO (miss_stuck=48); F2/ARCH_D3 NO-GO wall | timeline `era14_*` |
 
 P4 validate (`4abd8683` tip): unit `streaming_render_ready_invariants_test` PASS;
 `phase_P4_land_south_short.json` DoD miss_end=0 + post_stop_missing_zero.

@@ -621,47 +621,9 @@ void UWorld::RunLegacyPhysicsFrame()
   StatusEffectSystem::Tick(*this, GetGameMode(), dt);
 
   const auto t_after_move = std::chrono::high_resolution_clock::now();
-  PhysicsTelemetryData.StreamMs = 0.0;
-  PhysicsTelemetryData.StreamerUpdateMs = 0.0;
-  PhysicsTelemetryData.AsyncIoMs = 0.0;
-  PhysicsTelemetryData.RelightDrainMs = 0.0;
-  PhysicsTelemetryData.MeshEmergeMs = 0.0;
-  PhysicsTelemetryData.MeshEmergePrepMs = 0.0;
-  PhysicsTelemetryData.MeshEmergePrepMissingMs = 0.0;
-  PhysicsTelemetryData.MeshEmergePrepUnfinishedMs = 0.0;
-  PhysicsTelemetryData.MeshEmergePrepStickyMs = 0.0;
-  PhysicsTelemetryData.MeshEmergePrepDropDirtyMs = 0.0;
-  PhysicsTelemetryData.MeshEmergePrepOtherMs = 0.0;
-
-  if (camera)
-  {
-    const auto t_before_stream = std::chrono::high_resolution_clock::now();
-    GetMeshService().BeginHoleQueryFrame();
-    UpdateStreaming();
-    TickAsyncChunkSystems();
-    const auto t_after_stream = std::chrono::high_resolution_clock::now();
-    TickEnterGameMeshBurst();
-    TickMeshEmerge();
-    const auto t_after_mesh = std::chrono::high_resolution_clock::now();
-    BlockWorldReady = true;
-
-    PhysicsTelemetryData.StreamMs =
-        std::chrono::duration<double, std::milli>(t_after_stream - t_before_stream)
-            .count();
-    PhysicsTelemetryData.MeshEmergeMs =
-        std::chrono::duration<double, std::milli>(t_after_mesh - t_after_stream)
-            .count();
-    PhysicsTelemetryData.MeshSyncMs =
-        GetMeshService().GetLastMeshSyncMs();
-    PhysicsTelemetryData.MeshSnapshotMs =
-        GetMeshService().GetLastMeshSnapshotMs();
-    PhysicsTelemetryData.MeshImmediateMs =
-        GetMeshService().GetLastMeshImmediateMs();
-    PhysicsTelemetryData.MeshImmediateCount =
-        GetMeshService().GetLastMeshImmediateCount();
-    PhysicsTelemetryData.MeshDirtyTickMs =
-        GetMeshService().GetLastMeshDirtyTickMs();
-  }
+  // Era14 TD-ARCH-040: UpdateStreaming / TickMeshEmerge run in
+  // TickWorldStreamingPhase (WindowManager, after DoMovement) so phys_ms /
+  // MovementStepMs stay locomotion-only.
 
   if (is_moved && camera)
   {
@@ -693,6 +655,66 @@ void UWorld::RunLegacyPhysicsFrame()
                                 : PhysicsTelemetryData.MovementStepMs;
   SetLastMovementFrameMs(hitch_ms);
   UMovementDiagnosticsRecorder::Update(*this, camera, prevPlayerY);
+}
+
+void UWorld::TickWorldStreamingPhase()
+{
+  if (!BlockWorldReady)
+  {
+    return;
+  }
+  if (!GetCurrentUserCamera())
+  {
+    return;
+  }
+
+  Streaming->ResetFrameTiming();
+
+  PhysicsTelemetryData.StreamMs = 0.0;
+  PhysicsTelemetryData.StreamerUpdateMs = 0.0;
+  PhysicsTelemetryData.AsyncIoMs = 0.0;
+  PhysicsTelemetryData.RelightDrainMs = 0.0;
+  PhysicsTelemetryData.MeshEmergeMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePrepMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePrepMissingMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePrepUnfinishedMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePrepStickyMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePrepDropDirtyMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePrepOtherMs = 0.0;
+
+  const auto t_before_stream = std::chrono::high_resolution_clock::now();
+  GetMeshService().BeginHoleQueryFrame();
+  UpdateStreaming();
+  TickAsyncChunkSystems();
+  const auto t_after_stream = std::chrono::high_resolution_clock::now();
+  TickEnterGameMeshBurst();
+  TickMeshEmerge();
+  const auto t_after_mesh = std::chrono::high_resolution_clock::now();
+  BlockWorldReady = true;
+
+  PhysicsTelemetryData.StreamMs =
+      std::chrono::duration<double, std::milli>(t_after_stream - t_before_stream)
+          .count();
+  PhysicsTelemetryData.MeshEmergeMs =
+      std::chrono::duration<double, std::milli>(t_after_mesh - t_after_stream)
+          .count();
+  PhysicsTelemetryData.MeshSyncMs = GetMeshService().GetLastMeshSyncMs();
+  PhysicsTelemetryData.MeshSnapshotMs =
+      GetMeshService().GetLastMeshSnapshotMs();
+  PhysicsTelemetryData.MeshImmediateMs =
+      GetMeshService().GetLastMeshImmediateMs();
+  PhysicsTelemetryData.MeshImmediateCount =
+      GetMeshService().GetLastMeshImmediateCount();
+  PhysicsTelemetryData.MeshDirtyTickMs =
+      GetMeshService().GetLastMeshDirtyTickMs();
+
+  // Hitch for streaming speed clamp / budgets: prefer wall, else stream+emerge.
+  const double stream_hitch =
+      PhysicsTelemetryData.StreamMs + PhysicsTelemetryData.MeshEmergeMs;
+  if (stream_hitch > GetLastMovementFrameMs())
+  {
+    SetLastMovementFrameMs(stream_hitch);
+  }
 }
 
 } // namespace cutum

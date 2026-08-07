@@ -502,6 +502,7 @@ void UWindowManager::Update()
     PhysicsTelemetry &tele = World->GetPhysicsTelemetryMutable();
     tele.ViewsMs = 0.0;
     tele.DoMovementMs = 0.0;
+    tele.WorldStreamingPhaseMs = 0.0;
     tele.BlockInputMs = 0.0;
     tele.TickEnvMs = 0.0;
     tele.BreakCompleteN = 0;
@@ -538,6 +539,13 @@ void UWindowManager::Update()
       const auto t0 = clock::now();
       World->DoMovement();
       World->GetPhysicsTelemetryMutable().DoMovementMs =
+          std::chrono::duration<double, std::milli>(clock::now() - t0).count();
+    }
+    // Era14: stream/mesh outside DoMovement so phys_ms stays locomotion-only.
+    {
+      const auto t0 = clock::now();
+      World->TickWorldStreamingPhase();
+      World->GetPhysicsTelemetryMutable().WorldStreamingPhaseMs =
           std::chrono::duration<double, std::milli>(clock::now() - t0).count();
     }
     if (World->ConsumeFlightSimBreakRequest())
