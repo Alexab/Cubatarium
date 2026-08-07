@@ -71,6 +71,22 @@ python tools/flight_sim_phase_gate.py --phase-id ARCH_D3 --report bin/iter_repor
 
 Do **not** merge to `develop` until ARCH_D3 GO (+ F2/C/CB as before).
 
+## Era14 V4 reject list (2026-08)
+
+Reject PR / do not merge streaming changes that:
+
+- Reintroduce calm-wall Imm as **primary** FirstMesh (`last_frame_ms≤40` gate on rim Imm).
+- Gate stale-wave **enqueue** on `last_frame_ms≤50` (cost throttle only).
+- Nest `UpdateStreaming` / `TickMeshEmerge` back inside `RunLegacyPhysicsFrame`.
+- Add stand vs cruise sticky Imm forks.
+- Cap `mesh_schedule` on holes; fog-as-throughput; SoftDefer zoo packages.
+- Close a phase without autofly gate report + TD-ARCH update in
+  `TECH_DEBT_CHUNK_STREAMING.md`.
+
+Autofly loop (every code phase): build → `flight_sim_run` → analyze →
+`flight_sim_phase_gate` → update TD → checkpoint commit. Land scenarios
+(`--land-cruise` / `ARCH_D3_LAND`) required for rim/tops phases.
+
 **Backend matrix (R4):** desktop
 
 ```powershell

@@ -1,10 +1,11 @@
 # Engine Performance Audit (all subsystems)
 
-> Date: 2026-07-31  
+> Date: 2026-07-31; **Era14 overlay 2026-08-07**  
 > Baseline commit lineage: SoftDefer empty-mesh fix `b6e89e28` (ancestor of `HEAD`).  
-> Evidence: [`bin/iter_reports/perf_audit_baseline_phaseA.json`](../bin/iter_reports/perf_audit_baseline_phaseA.json)  
+> Evidence: [`bin/iter_reports/perf_audit_baseline_phaseA.json`](../bin/iter_reports/perf_audit_baseline_phaseA.json);  
+> Era14 manual: [`bin/iter_reports/manual_latest_151212.json`](../bin/iter_reports/manual_latest_151212.json)  
 > Analyzer: [`bin/iter_reports/_analyze_perf_audit_baseline.py`](../bin/iter_reports/_analyze_perf_audit_baseline.py)  
-> Companions: [`streaming/BEST_PRACTICES.md`](streaming/BEST_PRACTICES.md), [`streaming/GPU_PIPELINE.md`](streaming/GPU_PIPELINE.md), [`THREADING_AUDIT.md`](THREADING_AUDIT.md), [`TECH_DEBT_CHUNK_STREAMING.md`](TECH_DEBT_CHUNK_STREAMING.md), [`streaming/MEMORY_BUDGET.md`](streaming/MEMORY_BUDGET.md)
+> Companions: [`streaming/BEST_PRACTICES.md`](streaming/BEST_PRACTICES.md), [`streaming/GPU_PIPELINE.md`](streaming/GPU_PIPELINE.md), [`THREADING_AUDIT.md`](THREADING_AUDIT.md), [`TECH_DEBT_CHUNK_STREAMING.md`](TECH_DEBT_CHUNK_STREAMING.md), [`streaming/MEMORY_BUDGET.md`](streaming/MEMORY_BUDGET.md), [`streaming/ROOT_CAUSE_2026-08.md`](streaming/ROOT_CAUSE_2026-08.md)
 
 ## 1. Scope and invariants
 

@@ -112,6 +112,21 @@ Cubatarium recover/admit/promote paths постепенно эволюциони
 | Frontier rim first-mesh latency | Stage SLA | FocusIngress unfinished/stale-dark | **partial** TD-ARCH-033 |
 | GPU mesher end-to-end | Resident GPU mesh | Hybrid extract + packed path; cost ≠ readiness | средний (cost track) |
 
+## Gap После Era14 (2026-08, manual_151212)
+
+Architecture DoD Era13 ≠ gate DoD. New gap: **Frame contract** — streaming/mesh
+must not nest inside locomotion (`RunLegacyPhysicsFrame`); heal admission must
+not require calm `last_frame_ms`. See
+[`ROOT_CAUSE_2026-08.md`](ROOT_CAUSE_2026-08.md),
+[`ERA14_POSTMORTEM.md`](ERA14_POSTMORTEM.md).
+
+| Практика | Industry | Cubatarium Era14 | Gap |
+|----------|----------|------------------|-----|
+| Main thread bookkeeping + budgeted apply | CryEngine / streaming ch.23 | stream+emerge inside DoMovement | **critical** TD-040 |
+| Never starve FOV FirstMesh on dirty wall | N rebuilds/frame + async floor | Imm/stale enqueue wall-gated | **critical** TD-041 |
+| Derived chunk DesiredStage | voxel job graph | stand/cruise Imm forks | **high** TD-042 |
+| Land FOV validation | scenario matrix | ocean cruise misses tops | **high** TD-043 |
+
 ## Практический Вывод Для Cubatarium
 
 Наиболее полезные заимствования:
