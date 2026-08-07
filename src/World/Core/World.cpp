@@ -1018,6 +1018,11 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         if (horiz <= sticky_r)
         {
           StickyRemeshAfterLight.insert(key);
+          // Era14 TD-ARCH-045: UnlitFirstMesh → guaranteed RemeshSeam ticket
+          // when light arrives (no wall-gated Imm).
+          NoteColumnRepairNeeded(key);
+          GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RemeshSeam,
+                                          /*priority=*/70);
         }
       }
       AsyncRelightColumnsInFlight.erase(key);

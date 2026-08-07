@@ -111,8 +111,8 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
     out.allow_neighbor_dirty = false;
     out.starve_remesh_horiz = 1;
     out.promote_relight = light_debt ? 4 : 2;
-    // H: moving HoleDrain first_mesh 3→4 (manual 153832 miss_frac after G).
-    out.first_mesh_schedule = 4;
+    // H/Era14: moving HoleDrain first_mesh 4→5 (miss_stuck 8s→target ≤4).
+    out.first_mesh_schedule = 5;
     out.remesh_schedule = 1;
     if (!in.moving)
     {

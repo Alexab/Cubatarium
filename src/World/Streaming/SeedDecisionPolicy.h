@@ -36,15 +36,16 @@ inline SeedDecision EvaluateSeedDecision(const SeedDecisionInput &in)
       in.underfeet || (in.near_focus && in.pending_light_focus <= 20) ||
       (in.near_focus && in.can_seed);
 
-  // Cruise near-focus: cheap budgeted seed when frame has headroom (plan R1).
-  // Hot cruise → priority FIFO only (RelightTerrainColumn is 1–7s under load).
+  // Era14 TD-ARCH-044: widen cheap commit seed so PendingLight trail shrinks.
+  // Still cheap_seed only on cruise — never full RelightTerrainColumn under load.
   if (in.moving_cruise)
   {
-    if (in.near_focus && in.can_seed && in.frame_ms <= 20.0)
+    if (in.can_seed && (in.underfeet || in.near_focus) &&
+        in.frame_ms <= 32.0)
     {
       out.try_sync_seed = true;
       out.cheap_seed = true;
-      out.budget_ms = in.underfeet ? 1.5 : 2.0;
+      out.budget_ms = in.underfeet ? 2.0 : 2.5;
       return out;
     }
     out.enqueue_pending = true;
@@ -52,21 +53,19 @@ inline SeedDecision EvaluateSeedDecision(const SeedDecisionInput &in)
     return out;
   }
 
-  // Idle underfeet: full sync seed (F2 cold).
-  if (in.underfeet && in.can_seed && in.frame_ms <= 16.0 &&
-      in.visual_holes == 0)
+  // Idle underfeet: prefer sync seed even with mild hitch / holes (F2 cold).
+  if (in.underfeet && in.can_seed && in.frame_ms <= 28.0)
   {
     out.try_sync_seed = true;
-    out.budget_ms = 3.0;
+    out.budget_ms = 3.5;
     return out;
   }
 
-  // Idle near-focus with neighborhood: budgeted sync only when frame has
-  // headroom. Unbounded near-focus Relight during load hung edge.
-  if (in.near_focus && in.can_seed && in.frame_ms <= 20.0)
+  // Idle near-focus with neighborhood.
+  if (in.near_focus && in.can_seed && in.frame_ms <= 28.0)
   {
     out.try_sync_seed = true;
-    out.budget_ms = in.underfeet ? 3.0 : 2.0;
+    out.budget_ms = in.underfeet ? 3.5 : 2.5;
     return out;
   }
 

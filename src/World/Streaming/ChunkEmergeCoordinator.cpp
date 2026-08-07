@@ -2246,11 +2246,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         underfeet_immediate_cd = 1;
       }
     }
-    // G1/H/I/J3: sticky nearest-hole Immediate — nh≤5. Count while pipeline
-    // idle, Queued, or Kicked/Dispatched (J3: track kicked rim without Kick
-    // drop). Escape drop+Imm remains Queued-only; kicked gets Kick prefer.
-    // Stand nh≤3: separate StandRimStickyFrames so Inflight thrash does not
-    // reset (manual 131827); Dirty first, Imm only on calm wall.
+    // Era14 TD-ARCH-042: DesiredStage / Dirty FirstMesh floor — no stand/cruise
+    // sticky Imm primary. Keep Dirty@≥3 + PreferKick for GPU queue.
     if (found_nearest_missing)
     {
       const bool no_drawable =
@@ -2272,9 +2269,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           std::abs(isolated_hole.x - focus_ground_horiz.x),
           std::abs(isolated_hole.z - focus_ground_horiz.z));
       const int sticky_frames = mesh_service.GetStickyNearestHoleFrames();
-      const bool ms_ok = immediate_ms_used() < (moving ? 6.0 : 8.0);
-      const bool slot_ok =
-          underfeet_immediate_this_frame < kMaxUnderfeetImmediate;
 
       const bool stand_rim = !moving && nh <= 3;
       int stand_frames = 0;
@@ -2297,31 +2291,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           StandRimStickyFrames = 1;
         }
         stand_frames = StandRimStickyFrames;
-        if (stand_frames >= 3)
+        if (stand_frames >= 2)
         {
           mesh_service.MarkDirtyPriority(isolated_hole);
           ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
         }
-        const bool calm_imm =
-            last_frame_ms <= 40.0 && immediate_ms_used() < 4.0 &&
-            pending_async < 12 && slot_ok;
-        if (stand_frames >= 5 && calm_imm &&
-            (pipeline_idle || queued_stuck))
-        {
-          if (queued_stuck)
-          {
-            mesh_service.DropQueuedPendingGpuApply(isolated_hole);
-          }
-          mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
-                                             isolated_hole);
-          ++underfeet_immediate_this_frame;
-          underfeet_immediate_cd = 2;
-          ++world.GetPhysicsTelemetryMutable().StandRimImmN;
-          StandRimStickyFrames = 0;
-          StandRimStickyCx = StandRimStickyCy = StandRimStickyCz = 0;
-          mesh_service.UpdateStickyNearestHole(isolated_hole, false);
-        }
-        else if (stand_frames >= 5 && kicked_stuck)
+        if (stand_frames >= 3 && (queued_stuck || kicked_stuck))
         {
           mesh_service.PreferKickPendingGpuQueued(isolated_hole);
         }
@@ -2332,32 +2307,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         StandRimStickyCx = StandRimStickyCy = StandRimStickyCz = 0;
       }
 
-      if (!stand_rim && nh <= 5 && slot_ok && ms_ok)
-      {
-        if (pipeline_idle && sticky_frames >= 3)
-        {
-          mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
-                                             isolated_hole);
-          ++underfeet_immediate_this_frame;
-          underfeet_immediate_cd = 1;
-          mesh_service.UpdateStickyNearestHole(isolated_hole, false);
-        }
-        else if (queued_stuck && sticky_frames >= 5 &&
-                 mesh_service.DropQueuedPendingGpuApply(isolated_hole))
-        {
-          mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
-                                             isolated_hole);
-          ++underfeet_immediate_this_frame;
-          underfeet_immediate_cd = 1;
-          mesh_service.UpdateStickyNearestHole(isolated_hole, false);
-        }
-      }
-      // J3: nh≤3 sticky≥5 in GPU pipeline — hoist Queued Kick priority only
-      // (never drop/Immediate on Kicked/Dispatched). Cruise / non-stand-rim.
-      if (!stand_rim && nh <= 3 && sticky_frames >= 5 &&
+      // Cruise / far: Kick prefer only — no Immediate escape (F0 + DesiredStage).
+      if (!stand_rim && nh <= 5 && sticky_frames >= 5 &&
           (queued_stuck || kicked_stuck))
       {
         mesh_service.PreferKickPendingGpuQueued(isolated_hole);
+      }
+      if (!stand_rim && nh <= 3 && sticky_frames >= 3 && pipeline_idle)
+      {
+        mesh_service.MarkDirtyPriority(isolated_hole);
       }
     }
     else

@@ -3,6 +3,7 @@
 #include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
 #include "World/Persistence/WorldPersistence.h"
+#include "World/Streaming/ColumnDesiredStage.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
 
 #include <algorithm>
@@ -158,7 +159,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
                                       bool visual_holes, bool idle_remesh_debt,
                                       bool idle_focus_dirty_debt,
                                       int /*pending_focus_n*/, int recover_n,
-                                      int admit_n, double last_frame_ms,
+                                      int admit_n, double /*last_frame_ms*/,
                                       int pending_async)
 {
   ++frame_counter_;
@@ -214,13 +215,9 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   }
 
   // should_remesh_seam: sticky always; stale-dark as gated waves.
-  // Cooldown + cap avoid 092627 thrash. Do NOT require NearFocusHoles —
-  // after Pending clears nh→0 while DarkFaceStaleNear stays high
-  // (manual 182125/190350). Cruise: skip while missing so FirstMesh wins.
-  // Stand: allow stale-wave under miss (cap 1) so drawable-but-stale rim
-  // faces heal without waiting miss=0 (manual 131827 exit stale 1200+).
-  // Threshold 40 (was 80): manual 213543 exit stale≈511 but autofly mid-heal
-  // often sits 40–80 with residual blacks while miss=0.
+  // Era14 TD-ARCH-041: enqueue without last_frame_ms wall gate; cost is
+  // drained via ticket budget / async Dirty, not Imm. Cruise may stale-wave
+  // under miss (cap 1) so drawable-but-stale rim heals without waiting miss=0.
   std::vector<glm::ivec2> stale_dark_cols;
   std::vector<glm::ivec2> void_dark_cols;
   const int stale_n = world.GetPhysicsTelemetry().DarkFaceStaleNearN;
@@ -234,29 +231,29 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
           kStaleRepairCooldownSec;
   const bool allow_stale_wave_base =
       cooldown_ok && (stale_n > 40 || (dark_n > 500 && stale_n > 0));
+  // Async backlog soft-throttle only (not wall). Keep FirstMesh priority when
+  // pending_async is extreme.
+  const bool async_ok = pending_async < 48;
+  const ColumnDesiredDecision desired = DeriveColumnDesiredStage(
+      missing_visible_mesh, /*stale_focus=*/allow_stale_wave_base && async_ok,
+      /*void_focus=*/!missing_visible_mesh && !moving && cooldown_ok &&
+          (void_n > 200 || (void_n > 40 && stale_n > 40)),
+      /*pending_light=*/false);
   const bool allow_stale_wave =
-      moving
-          ? (!missing_visible_mesh && allow_stale_wave_base)
-          : (allow_stale_wave_base && last_frame_ms <= 50.0 &&
-             pending_async < 24 &&
-             (!missing_visible_mesh || stale_n > 40));
-  // Void-edge: light field 0 — Relight near-ring (manual 190350 void≫stale).
-  // Idle/stop only: while moving Relight competed with FirstMesh
-  // (land_south_void_cruise miss_stuck 14). Also allow mild void at stop when
-  // miss=0 so exit stand can heal without waiting void>200.
-  // Never void-wave under miss (Relight thrash vs FirstMesh).
+      desired.stage == ColumnDesiredStage::RemeshSeam ||
+      (allow_stale_wave_base && async_ok &&
+       (missing_visible_mesh ? (stale_n > 40) : true));
   const bool allow_void_wave =
-      !missing_visible_mesh && !moving && cooldown_ok &&
-      (void_n > 200 || (void_n > 40 && stale_n > 40));
+      desired.stage == ColumnDesiredStage::RelightOnly ||
+      (!missing_visible_mesh && !moving && cooldown_ok &&
+       (void_n > 200 || (void_n > 40 && stale_n > 40)));
   if (allow_stale_wave)
   {
     const int stale_radius =
-        (missing_visible_mesh && !moving) ? std::min(2, focus_radius)
-                                          : focus_radius;
+        missing_visible_mesh ? std::min(2, focus_radius) : focus_radius;
     const int stale_cap =
-        (missing_visible_mesh && !moving)
-            ? 1
-            : std::min(4, std::max(2, recover_n / 2));
+        missing_visible_mesh ? 1
+                             : std::min(4, std::max(2, recover_n / 2));
     world.CollectStaleDarkFocusColumns(focus_ground_horiz, stale_radius,
                                        stale_dark_cols, stale_cap);
   }
