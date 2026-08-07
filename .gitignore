@@ -66,6 +66,13 @@
 /bin/_*.py
 /bin/_*.cpp
 
+# Nested mistaken runtime copy (bin synced under bin/)
+/bin/bin/
+
+# Autofly / analyze local dumps. Already-tracked goldens stay tracked;
+# promote a new checkpoint with: git add -f bin/iter_reports/<path>
+/bin/iter_reports/
+
 # Desktop CMake build trees
 /build/desktop-msvc/
 /build/desktop-linux/
@@ -76,6 +83,16 @@ Debug
 
 
 bin/console_history.txt
+
+# Root agent/build scratch logs (not packaging)
+/build_*.txt
+/stdout
+/autofly_*.txt
+
+# Python bytecode / caches (anywhere)
+**/__pycache__/
+*.py[cod]
+*$py.class
 
 # Gradle syncAssets output (sources are in repo root)
 platforms/android/app/src/main/assets/
@@ -103,9 +120,10 @@ third_party/asset_cache/
 /emulator-*.png
 /emulator_screenshot.png
 /purple_smoke_report.json
-tools/__pycache__/
-tools/audit/__pycache__/
 tools/_members_out.txt
+tools/_download_*.py
+tools/_probe_*.py
+tools/_pack_inventory_*.json
 tools/debug_uv_overlays/
 /_tmp_*.png
 /audit_report.json
