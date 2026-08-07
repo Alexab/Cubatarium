@@ -110,8 +110,8 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | 2026-08-07 | baseline | FLY_CLEAN GO; IDLE_CLEAN/WARM GO; ARCH_D3_LAND NO-GO (miss_stuck=48); F2/ARCH_D3 NO-GO wall | timeline `era14_*` |
 | 2026-08-07 | Phase 1 | `TickWorldStreamingPhase`; nest proof fly-clean | `0812c77f` |
 | 2026-08-07 | Phase 2+3 | DesiredStage; kill calm Imm; seed+remesh-on-lit | `f9af0c16` |
-| 2026-08-07 | P2 iterate | Dirty-without-wall; sticky remesh hot; Capture refresh trim; best LAND `era14_p2c_land` (miss=4 wall≈55 sticky=0 holes=0.2 residual) | (this checkpoint) |
-| 2026-08-07 | Phase 5 matrix | FLY_CLEAN GO (`era14_p5_fly`); IDLE_WARM GO; IDLE_CLEAN NO-GO emerge/sticky; ARCH_D3_LAND residual holes TD-043 | (this checkpoint) |
+| 2026-08-07 | P2 iterate | Dirty-without-wall; sticky remesh hot; Capture refresh trim; best LAND `era14_p2c_land` (miss=4 wall≈55 sticky=0 holes=0.2 residual) | `7f268eb1` |
+| 2026-08-07 | Phase 5 matrix | FLY_CLEAN GO (`era14_p5_fly`); IDLE_WARM GO; IDLE_CLEAN NO-GO emerge/sticky; ARCH_D3_LAND residual holes TD-043 | `7f268eb1` |
 
 P4 validate (`4abd8683` tip): unit `streaming_render_ready_invariants_test` PASS;
 `phase_P4_land_south_short.json` DoD miss_end=0 + post_stop_missing_zero.
