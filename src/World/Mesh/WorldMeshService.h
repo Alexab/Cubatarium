@@ -107,6 +107,10 @@ public:
   int MarkMissingSlicesDirtyPriority(const UBlockWorld &world,
                                      glm::ivec3 ground_chunk_coord, int min_y,
                                      int max_y);
+  /// Enqueue missing solid slices below placed block for post-place DigSeam.
+  int EnqueueColumnMissingDigSeamBelow(const UBlockWorld &world,
+                                       glm::ivec3 block_pos,
+                                       int max_enqueue = 4);
 
   void RebuildAll(UBlockWorld &world, UBlockRegistry &registry);
   void RebuildDirtyChunks(UBlockWorld &world, UBlockRegistry &registry,

@@ -373,6 +373,50 @@ int UWorldMeshService::MarkMissingSlicesDirtyPriority(
   return marked;
 }
 
+int UWorldMeshService::EnqueueColumnMissingDigSeamBelow(
+    const UBlockWorld &world, glm::ivec3 block_pos, int max_enqueue)
+{
+  if (max_enqueue <= 0)
+  {
+    return 0;
+  }
+  const int gx = FloorDiv(block_pos.x, CHUNK_SIZE);
+  const int gz = FloorDiv(block_pos.z, CHUNK_SIZE);
+  const int placed_cy = FloorDiv(block_pos.y, CHUNK_SIZE);
+  int enqueued = 0;
+  for (int cy = 0; cy < placed_cy && enqueued < max_enqueue; ++cy)
+  {
+    const glm::ivec3 coord(gx, cy, gz);
+    const UChunk *chunk = world.GetChunkManager().GetChunk(coord);
+    if (!chunk || HasMeshSatisfyingColumnReady(coord) ||
+        IsPendingGpuApply(coord) || HasInflightMeshBuild(coord))
+    {
+      continue;
+    }
+    bool solid = false;
+    for (int z = 0; z < CHUNK_SIZE && !solid; z += 4)
+    {
+      for (int x = 0; x < CHUNK_SIZE && !solid; x += 4)
+      {
+        for (int y = 0; y < CHUNK_SIZE && !solid; y += 4)
+        {
+          if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+          {
+            solid = true;
+          }
+        }
+      }
+    }
+    if (!solid)
+    {
+      continue;
+    }
+    EnqueueDigSeam(coord);
+    ++enqueued;
+  }
+  return enqueued;
+}
+
 void UWorldMeshService::MarkTerrainChunkMeshDirtyPriority(
     glm::ivec3 ground_chunk_coord, int min_y, int max_y)
 {

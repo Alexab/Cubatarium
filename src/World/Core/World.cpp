@@ -1611,7 +1611,9 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
         const int horiz = std::max(std::abs(dx), std::abs(dz));
         const glm::ivec3 ground(key.x, 0, key.y);
         bool missing = false;
-        for (int cy = cy0; cy <= cy1 && !missing; ++cy)
+        // Scan full column for missing solid slices — player-altitude band alone
+        // missed cy=0..2 at exit (manual 110751: miss_cy=0–3, underfeet OK).
+        for (int cy = 0; cy <= cy1 && !missing; ++cy)
         {
           const glm::ivec3 coord(ground.x, cy, ground.z);
           const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
@@ -1707,7 +1709,7 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
     }
     else
     {
-      MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground, remesh_min,
+      MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground, 0,
                                                   remesh_max);
     }
     SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
@@ -5247,6 +5249,16 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
   // skylight still remeshes neighbors (manual absolute-black under place).
   MarkBlockChunkDirty(blockPos, /*sync_neighbor_chunks=*/true,
                       /*sync_light_ring=*/true);
+  // Place Immediate remesh'es placed slice only; enqueue lower missing column
+  // slices for DigSeam drain (manual 110751: top invisible, place no heal).
+  if (MeshService)
+  {
+    const glm::ivec3 ground_col(FloorDiv(blockPos.x, CHUNK_SIZE), 0,
+                                FloorDiv(blockPos.z, CHUNK_SIZE));
+    MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground_col, 0,
+                                                blockPos.y + CHUNK_SIZE);
+    MeshService->EnqueueColumnMissingDigSeamBelow(BlockWorld, blockPos);
+  }
   PhysicsTelemetryData.EditToFirstMeshMs =
       std::chrono::duration<double, std::milli>(
           std::chrono::high_resolution_clock::now() - edit_t0)

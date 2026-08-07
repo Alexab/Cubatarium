@@ -360,6 +360,13 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
     "ARCH_D3_LAND": [
         ("miss_stuck_max_run_sec", "le", 4.0),
         ("miss_end", "le", 0.0),
+        ("miss_end_stop", "le", 0.0),
+        ("post_stop_focus_miss_max", "le", 0.0),
+        ("post_stop_miss_low_cy_n", "le", 0.0),
+        ("post_stop_underfeet_ok_miss_n", "le", 0.0),
+        ("tail_focus_miss_max", "le", 0.0),
+        ("tail_miss_low_cy_n", "le", 0.0),
+        ("tail_underfeet_ok_miss_n", "le", 0.0),
         ("effective_holes_rate", "le", 0.10),
         ("nh_no_miss_rate", "le", 0.25),
         ("stop_dark_face_stale_near_end", "lt", 100.0),

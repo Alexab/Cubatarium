@@ -444,6 +444,11 @@ def analyze(
     miss_end = 0.0
     if periods:
         miss_end = float(periods[-1].get(miss_key) or 0)
+    miss_mesh_key = (
+        "focus_missing_mesh"
+        if any("focus_missing_mesh" in r for r in steady)
+        else None
+    )
     nh_no_miss_n = 0
     for r in steady:
         nh = float(r.get("near_focus_holes") or 0)
@@ -503,6 +508,11 @@ def analyze(
         if manual_idle
         else detect_stop_segment(steady, min_len=max(3, stop_tail_periods // 2))
     )
+    miss_end_stop = 0.0
+    if stop_segment and miss_mesh_key:
+        miss_end_stop = float(stop_segment[-1].get(miss_mesh_key) or 0)
+    elif stop_segment:
+        miss_end_stop = float(stop_segment[-1].get(miss_key) or 0)
     fly_segment = (
         steady[: len(steady) - len(stop_segment)] if stop_segment else steady
     )
@@ -617,6 +627,9 @@ def analyze(
     )
     black_sticky_stop = col(stop_tail, sticky_key)
     missing_stop = col(stop_tail, hole_key)
+    focus_miss_stop = (
+        col(stop_tail, miss_mesh_key) if miss_mesh_key else []
+    )
     unfinished_stop = col(stop_tail, unfinished_key) if unfinished_key else []
     not_ready_stop = col(stop_tail, "focus_not_render_ready")
     pending_stop = col(stop_tail, "pending_light_focus")
@@ -626,6 +639,41 @@ def analyze(
         max(black_sticky_stop) if black_sticky_stop else None
     )
     post_stop_missing_max = max(missing_stop) if missing_stop else None
+    post_stop_focus_miss_max = (
+        max(focus_miss_stop) if focus_miss_stop else None
+    )
+    post_stop_miss_low_cy_n = sum(
+        1
+        for r in stop_tail
+        if float(r.get("focus_missing_mesh") or 0) > 0
+        and int(r.get("miss_cy") or 99) <= 3
+    )
+    post_stop_underfeet_ok_miss_n = sum(
+        1
+        for r in stop_tail
+        if int(r.get("underfeet_draw_ok") or 0) == 1
+        and float(r.get("focus_missing_mesh") or 0) > 0
+    )
+    session_tail = (
+        periods[-max(3, stop_tail_periods) :] if periods else []
+    )
+    tail_focus_miss_max = (
+        max(float(r.get("focus_missing_mesh") or 0) for r in session_tail)
+        if session_tail and miss_mesh_key
+        else None
+    )
+    tail_miss_low_cy_n = sum(
+        1
+        for r in session_tail
+        if float(r.get("focus_missing_mesh") or 0) > 0
+        and int(r.get("miss_cy") or 99) <= 3
+    )
+    tail_underfeet_ok_miss_n = sum(
+        1
+        for r in session_tail
+        if int(r.get("underfeet_draw_ok") or 0) == 1
+        and float(r.get("focus_missing_mesh") or 0) > 0
+    )
     stop_effective = []
     for i, r in enumerate(stop_tail):
         h = float(r.get(hole_key) or 0)
@@ -761,6 +809,19 @@ def analyze(
     # Land rim symptoms (manual 142306): stuck miss, miss at end, idle opaque churn.
     gates["miss_stuck_max_run_sec_le_4"] = miss_stuck_max_run_sec <= 4.0
     gates["miss_end_eq_0"] = miss_end <= 0.0
+    gates["miss_end_stop_eq_0"] = miss_end_stop <= 0.0
+    gates["post_stop_focus_miss_zero"] = (
+        post_stop_focus_miss_max is None or post_stop_focus_miss_max <= 0.5
+    )
+    gates["post_stop_miss_low_cy_zero"] = post_stop_miss_low_cy_n == 0
+    gates["post_stop_underfeet_ok_miss_zero"] = (
+        post_stop_underfeet_ok_miss_n == 0
+    )
+    gates["tail_focus_miss_zero"] = (
+        tail_focus_miss_max is None or tail_focus_miss_max <= 0.5
+    )
+    gates["tail_miss_low_cy_zero"] = tail_miss_low_cy_n == 0
+    gates["tail_underfeet_ok_miss_zero"] = tail_underfeet_ok_miss_n == 0
     gates["opaque_idle_churn_max_le_120"] = opaque_idle_churn_max <= 120.0
     # Light-debt holes with miss=0 (land-cruise L1–L4 nh_no_miss 0.39–0.65).
     gates["nh_no_miss_rate_le_025"] = nh_no_miss_rate <= 0.25
@@ -972,6 +1033,13 @@ def analyze(
             "dirty_high_sec": dirty_high_sec,
             "miss_stuck_max_run_sec": miss_stuck_max_run_sec,
             "miss_end": miss_end,
+            "miss_end_stop": miss_end_stop,
+            "post_stop_focus_miss_max": post_stop_focus_miss_max,
+            "post_stop_miss_low_cy_n": post_stop_miss_low_cy_n,
+            "post_stop_underfeet_ok_miss_n": post_stop_underfeet_ok_miss_n,
+            "tail_focus_miss_max": tail_focus_miss_max,
+            "tail_miss_low_cy_n": tail_miss_low_cy_n,
+            "tail_underfeet_ok_miss_n": tail_underfeet_ok_miss_n,
             "opaque_idle_churn_max": opaque_idle_churn_max,
             "nh_no_miss_rate": nh_no_miss_rate,
             "chunks_traveled": chunks_traveled,

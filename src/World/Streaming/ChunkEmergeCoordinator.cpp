@@ -463,7 +463,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     const int max_cy = std::max(
         0, FloorDiv(procedural.MaxHeight, CHUNK_SIZE));
-    const int cy0 = std::max(0, preferred_cy - 1);
+    const int cy0 =
+        missing_visible_mesh ? 0 : std::max(0, preferred_cy - 1);
     const int cy1 = std::min(max_cy, preferred_cy + 2);
     constexpr int kUndrawnMarkCap = 4;
     if (UndrawnForceCd <= 0)
