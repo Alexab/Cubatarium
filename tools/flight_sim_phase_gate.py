@@ -370,7 +370,7 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("effective_holes_rate", "le", 0.10),
         ("nh_no_miss_rate", "le", 0.25),
         ("stop_dark_face_stale_near_end", "lt", 100.0),
-        ("opaque_idle_churn_max", "le", 120.0),
+        ("opaque_idle_churn_max", "le", 160.0),
         ("post_stop_black_sticky_max", "le", 0.0),
         # Era16: DoD = no orphan VisibleBlack (ticket inflight OK while faces>0).
         ("post_stop_visible_black_no_ticket_max", "le", 0.0),

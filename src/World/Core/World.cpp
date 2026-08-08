@@ -2818,8 +2818,29 @@ int UWorld::RemeshColumnSeamTicket(glm::ivec2 ground_xz)
     StickyRemeshAfterLight.erase(ground_xz);
     return 0;
   }
+  // Era16 P2: calm idle with no near dark / miss — keep Flow ticket armed by
+  // caller, but skip MarkDirty (opaque_idle_churn / emerge from remesh thrash).
+  const auto &telem = GetPhysicsTelemetry();
   const glm::ivec3 focus =
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const bool calm_idle =
+      LastMovementSpeed <= ProceduralTemplate.MovementPrefetchThreshold &&
+      telem.FocusMissingMesh == 0 && telem.DarkFaceNearN == 0 &&
+      telem.DarkFaceStaleNearN == 0;
+  if (calm_idle)
+  {
+    StickyRemeshAfterLight.erase(ground_xz);
+    return 0;
+  }
+  // Era16 P2: only remesh nearest ring — far FOV VisibleBlack tickets stay
+  // armed without MarkDirty (land opaque_idle_churn from far remesh).
+  const int horiz = std::max(std::abs(ground_xz.x - focus.x),
+                             std::abs(ground_xz.y - focus.z));
+  if (horiz > 2)
+  {
+    StickyRemeshAfterLight.erase(ground_xz);
+    return 0;
+  }
   const int preferred_cy = focus.y;
   const int remesh_min = (preferred_cy - 1) * CHUNK_SIZE;
   const int remesh_max =
