@@ -55,4 +55,12 @@ inline bool CpuReplaceFreeFirstWouldHole(bool gpu_drawable,
   return gpu_drawable && !new_cpu_batches_drawable;
 }
 
+/// Era20 I-M3: skip FreeChunk / keep prior GPU when replacement CPU is empty
+/// SoftDefer placeholder (HasGreedy && !Drawable flicker).
+inline bool ShouldKeepPriorGpuOnEmptyCpuReplace(bool gpu_drawable,
+                                                bool new_cpu_batches_drawable)
+{
+  return CpuReplaceFreeFirstWouldHole(gpu_drawable, new_cpu_batches_drawable);
+}
+
 } // namespace cutum

@@ -21,6 +21,7 @@ int main()
   using cutum::ClassifyMeshApplyRevision;
   using cutum::CpuReplaceFreeFirstWouldHole;
   using cutum::MeshApplyRevDecision;
+  using cutum::ShouldKeepPriorGpuOnEmptyCpuReplace;
   using cutum::ShouldPublishCpuBatchesBeforeFreeGpu;
   using cutum::UChunkMeshRevisionRegistry;
 
@@ -80,6 +81,10 @@ int main()
   Expect(!CpuReplaceFreeFirstWouldHole(/*gpu_drawable=*/false,
                                        /*new_cpu=*/false),
          "no GPU drawable: free-first not a residency hole");
+  Expect(ShouldKeepPriorGpuOnEmptyCpuReplace(true, false),
+         "Era20: keep prior GPU on empty SoftDefer replace");
+  Expect(!ShouldKeepPriorGpuOnEmptyCpuReplace(true, true),
+         "Era20: new CPU drawable → allow replace");
 
   if (failures != 0)
   {

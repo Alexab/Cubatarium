@@ -2663,6 +2663,15 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       new_cpu_drawable = true;
     }
   }
+  // Era20 I-M3: SoftDefer/empty CPU must not FreeChunk a live GPU drawable.
+  // Intentional occluded empty (no SoftDefer) still FreeChunks → 0-quad ready.
+  if (ShouldKeepPriorGpuOnEmptyCpuReplace(had_gpu_drawable, new_cpu_drawable) &&
+      (defer_until_lit || SoftDeferHeld.count(result.coord) > 0))
+  {
+    ++MeshReplaceHoleAvoided;
+    MarkDirtyPriority(result.coord);
+    return;
+  }
   const auto oldIt = GreedyVertexCountByChunk.find(result.coord);
   if (oldIt != GreedyVertexCountByChunk.end())
   {
@@ -2689,7 +2698,10 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   chunkMesh.GpuBlockRanges.clear();
   chunkMesh.GpuTransparent = false;
   // Intentional empty: match Immediate / GPU 0-quad ready (HasMeshSatisfying).
-  if (new_vertex_count == 0)
+  // SoftDefer empty placeholders must stay !ready (I-M3) — do not fake
+  // GpuResident 0-quad or miss/holes latch on undrawn SoftDefer.
+  if (new_vertex_count == 0 && !defer_until_lit &&
+      SoftDeferHeld.count(result.coord) == 0)
   {
     chunkMesh.GpuResident = true;
     chunkMesh.GpuSlotIndex = -1;
@@ -3644,6 +3656,14 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
         new_cpu_drawable = true;
       }
     }
+    // Era20 I-M3: SoftDefer/empty Immediate must not FreeChunk live GPU drawable.
+    if (ShouldKeepPriorGpuOnEmptyCpuReplace(had_gpu_drawable, new_cpu_drawable) &&
+        (defer_until_lit || SoftDeferHeld.count(chunkCoord) > 0))
+    {
+      ++MeshReplaceHoleAvoided;
+      MarkDirtyPriority(chunkCoord);
+      return;
+    }
     chunkMesh.batches = std::move(new_batches);
     if (had_gpu_resident)
     {
@@ -3661,7 +3681,9 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     chunkMesh.GpuTransparent = false;
     // Intentional empty (fully occluded solid): match GPU 0-quad ready so
     // HasMissing cannot latch forever on CPU Immediate (miss_cy sticky).
-    if (new_vertex_count == 0)
+    // SoftDefer empty stays !ready (Era20 I-M3).
+    if (new_vertex_count == 0 && !defer_until_lit &&
+        SoftDeferHeld.count(chunkCoord) == 0)
     {
       chunkMesh.GpuResident = true;
       chunkMesh.GpuSlotIndex = -1;

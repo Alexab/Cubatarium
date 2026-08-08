@@ -75,9 +75,12 @@ int main()
     in.hot_frame_ms = 80.0;
     in.miss_first_budget = true;
     in.era18_vb_capture_floor = true;
+    in.era18_vb_bg_budget_floor = true;
     const auto d = EvaluateFrameStreamingBudget(in);
-    Expect(d.soft_defer_capture_budget == 0, "hot VB: Capture floor off");
-    Expect(!d.apply_vb_bg_floor, "hot VB: bg floor off");
+    Expect(d.soft_defer_capture_budget == 1, "Era20: hot VB !miss keeps Relight=1");
+    Expect(d.apply_vb_bg_floor && d.vb_bg_budget_floor == 1,
+           "Era20: hot VB !miss keeps bg floor 1");
+    Expect(!d.capture_first_mesh_only, "hot VB !miss: Relight kind");
   }
 
   {

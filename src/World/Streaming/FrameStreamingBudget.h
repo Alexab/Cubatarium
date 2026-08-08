@@ -85,7 +85,8 @@ inline FrameStreamingBudgetDecision EvaluateFrameStreamingBudget(
 
   if (in.miss_first_budget)
   {
-    // I-B2: under miss — Capture ≤1, FirstMesh only; VB Relight Capture off.
+    // I-B2 / Era20: under miss — Capture ≥1 FirstMesh always (escape hatch);
+    // heal_deferred telem may still fire but must not zero this floor.
     if (miss)
     {
       out.soft_defer_capture_budget = 1;
@@ -119,8 +120,10 @@ inline FrameStreamingBudgetDecision EvaluateFrameStreamingBudget(
     {
       if (hot)
       {
-        // I-B1: shrink Capture/VB heal on hot wall (not mild >24ms frames).
-        out.soft_defer_capture_budget = 0;
+        // Era20 I-M4: when !miss, keep Relight mid-floor 1 even on hot wall so
+        // VB no_ticket orphans drain (214034 no_ticket max 16).
+        out.soft_defer_capture_budget = 1;
+        out.capture_first_mesh_only = false;
         out.heal_deferred_for_miss = true;
       }
       else
@@ -129,13 +132,13 @@ inline FrameStreamingBudgetDecision EvaluateFrameStreamingBudget(
       }
     }
 
-    // VB bg_budget floor — off on hot; calm/mid keep when VB or pending_focus.
+    // VB bg_budget floor — off on hot under miss; when !miss keep mid-floor 1.
     if (in.era18_vb_bg_budget_floor && in.visible_black_n > 0 && !miss)
     {
       if (hot)
       {
-        out.apply_vb_bg_floor = false;
-        out.vb_bg_budget_floor = 0;
+        out.apply_vb_bg_floor = true;
+        out.vb_bg_budget_floor = 1;
         out.heal_deferred_for_miss = true;
       }
       else
