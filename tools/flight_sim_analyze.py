@@ -638,6 +638,14 @@ def analyze(
     post_stop_black_sticky_max = (
         max(black_sticky_stop) if black_sticky_stop else None
     )
+    vis_black_stop = col(stop_tail, "visible_black_focus_n")
+    vis_black_no_ticket_stop = col(stop_tail, "visible_black_no_ticket_n")
+    post_stop_visible_black_max = (
+        max(vis_black_stop) if vis_black_stop else None
+    )
+    post_stop_visible_black_no_ticket_max = (
+        max(vis_black_no_ticket_stop) if vis_black_no_ticket_stop else None
+    )
     post_stop_missing_max = max(missing_stop) if missing_stop else None
     post_stop_focus_miss_max = (
         max(focus_miss_stop) if focus_miss_stop else None
@@ -913,6 +921,11 @@ def analyze(
         "post_stop_pending_med_le_15": ok_med(post_stop_pending_med, pending_stop_limit),
         "post_stop_black_sticky_zero": post_stop_black_sticky_max is not None
         and post_stop_black_sticky_max <= 0.5,
+        # Era16 TD-052: report-only in P0 (hard gate added in P1).
+        "post_stop_visible_black_no_ticket_zero": (
+            post_stop_visible_black_no_ticket_max is None
+            or post_stop_visible_black_no_ticket_max <= 0.5
+        ),
         "post_stop_missing_zero": post_stop_missing_max is not None
         and post_stop_missing_max <= 0.5,
         "post_stop_effective_holes_zero": post_stop_effective_holes_rate <= 0.05,
@@ -1049,6 +1062,8 @@ def analyze(
             "gates_total": len(gates),
             "post_stop_pending_med": post_stop_pending_med,
             "post_stop_black_sticky_max": post_stop_black_sticky_max,
+            "post_stop_visible_black_max": post_stop_visible_black_max,
+            "post_stop_visible_black_no_ticket_max": post_stop_visible_black_no_ticket_max,
             "post_stop_missing_max": post_stop_missing_max,
             "post_stop_effective_holes_rate": post_stop_effective_holes_rate,
             "gates_stop_pass_count": gates_stop_pass_count,

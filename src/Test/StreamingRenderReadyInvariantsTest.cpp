@@ -99,11 +99,12 @@ int main()
   Expect(!SoftDeferMeshUntilLitPolicy(false, false, true, true, true, false),
          "policy: focus missing never SoftDefer-skips first mesh");
 
-  // TD-ARCH-026: SoT sticky/stale-dark (real invariants, not Expect(true)).
+  // TD-ARCH-026 / Era16 TD-052: SoT sticky/stale-dark (honest repair ticket).
   {
     const auto no_mesh_sticky =
         ClassifyStickyStaleDarkSoT(/*has_mesh=*/false, /*sticky=*/true,
-                                   /*stale=*/false, /*horiz=*/3);
+                                   /*stale=*/false, /*horiz=*/3,
+                                   /*has_real_repair_ticket=*/true);
     Expect(no_mesh_sticky.kind == ColumnSoTKind::StickyRemesh,
            "sticky without mesh → StickyRemesh");
     Expect(!no_mesh_sticky.draw_ok, "sticky without mesh → hide (no draw_ok)");
@@ -111,17 +112,23 @@ int main()
            "sticky without mesh → has_repair_ticket");
 
     const auto meshed_sticky =
-        ClassifyStickyStaleDarkSoT(true, true, false, 3);
+        ClassifyStickyStaleDarkSoT(true, true, false, 3, true);
     Expect(meshed_sticky.draw_ok && meshed_sticky.has_repair_ticket,
            "meshed sticky → draw_ok + repair ticket");
 
-    const auto stale =
-        ClassifyStickyStaleDarkSoT(true, false, true, 3);
-    Expect(stale.kind == ColumnSoTKind::StaleDark, "stale-dark kind");
-    Expect(stale.draw_ok && stale.has_repair_ticket,
-           "meshed stale-dark → draw_ok + repair ticket");
+    const auto stale_orphan =
+        ClassifyStickyStaleDarkSoT(true, false, true, 3, false);
+    Expect(stale_orphan.kind == ColumnSoTKind::StaleDark, "stale-dark kind");
+    Expect(stale_orphan.draw_ok, "meshed stale-dark → draw_ok");
+    Expect(!stale_orphan.has_repair_ticket,
+           "Era16: stale-dark without real ticket → has_repair_ticket false");
 
-    const auto near = ClassifyStickyStaleDarkSoT(false, true, false, 1);
+    const auto stale_ticketed =
+        ClassifyStickyStaleDarkSoT(true, false, true, 3, true);
+    Expect(stale_ticketed.has_repair_ticket,
+           "stale-dark with real ticket → has_repair_ticket true");
+
+    const auto near = ClassifyStickyStaleDarkSoT(false, true, false, 1, true);
     Expect(near.kind == ColumnSoTKind::None,
            "near ring uses other path (SoT sticky classifier idle)");
   }
@@ -169,7 +176,8 @@ int main()
     hole.moving = true;
     const auto a2 = ComputeMeshWorkAdmission(hole);
     Expect(a2.mode == MeshWorkAdmission::Mode::HoleDrain, "pending+holes → HoleDrain");
-    Expect(FinalizeSchedule(16, a2) == 5, "HoleDrain schedule covers FM4+remesh1");
+    // Era14 H: moving HoleDrain first_mesh=6 + remesh=1 → max_schedule=7.
+    Expect(FinalizeSchedule(16, a2) == 7, "HoleDrain schedule covers FM6+remesh1");
     Expect(!a2.allow_neighbor_dirty, "HoleDrain denies neighbor Dirty");
     Expect(a2.admit_batch == 1, "HoleDrain admit_batch=1 while moving");
     Expect(a2.gpu_apply_max >= 16, "HoleDrain GPU boost under miss");
@@ -189,7 +197,7 @@ int main()
     warm_hole.moving = true;
     const auto a3 = ComputeMeshWorkAdmission(warm_hole);
     Expect(a3.mode == MeshWorkAdmission::Mode::HoleDrain, "pending>=16+holes still HoleDrain");
-    Expect(FinalizeSchedule(16, a3) <= 5, "warm holes schedule capped");
+    Expect(FinalizeSchedule(16, a3) <= 7, "warm holes schedule capped");
     Expect(a3.first_mesh_schedule >= 4, "HoleDrain first_mesh floor while moving");
     Expect(FinalizeSchedule(16, a3) >= a3.first_mesh_schedule,
            "schedule covers first_mesh quota");
@@ -281,7 +289,7 @@ int main()
     const auto a10 = ComputeMeshWorkAdmission(refill);
     Expect(a10.mode == MeshWorkAdmission::Mode::HoleDrain,
            "G0 holes+queued≥ring → HoleDrain despite pending<12");
-    Expect(FinalizeSchedule(20, a10) <= 5, "G0 latch caps FOV floor sch=20");
+    Expect(FinalizeSchedule(20, a10) <= 7, "G0 latch caps FOV floor sch=20");
 
     MeshWorkAdmissionInput warm_pend{};
     warm_pend.pending_gpu = 10;
@@ -292,7 +300,7 @@ int main()
     const auto a10b = ComputeMeshWorkAdmission(warm_pend);
     Expect(a10b.mode == MeshWorkAdmission::Mode::HoleDrain,
            "G0 holes+pending≥8 → HoleDrain even if queued<ring/2");
-    Expect(FinalizeSchedule(12, a10b) <= 5, "G0 warm-pending caps sch=12");
+    Expect(FinalizeSchedule(12, a10b) <= 7, "G0 warm-pending caps sch=12");
 
     MeshWorkAdmissionInput refill_exit{};
     refill_exit.pending_gpu = 6;
@@ -323,7 +331,7 @@ int main()
     const auto a13 = ComputeMeshWorkAdmission(uv_holes);
     Expect(a13.mode == MeshWorkAdmission::Mode::HoleDrain,
            "I UV≥8 + pending≥8 → HoleDrain without visual_holes");
-    Expect(FinalizeSchedule(12, a13) <= 5, "I UV holes caps FOV sch=12");
+    Expect(FinalizeSchedule(12, a13) <= 7, "I UV holes caps FOV sch=12");
 
     // Queued refill without visual holes → Warm (not Normal/sch=12).
     MeshWorkAdmissionInput q_warm{};
@@ -349,7 +357,7 @@ int main()
     const auto a15 = ComputeMeshWorkAdmission(cool_holes_j0);
     Expect(a15.mode == MeshWorkAdmission::Mode::HoleDrain,
            "J0 UV holes + pending=1 → HoleDrain not Normal");
-    Expect(FinalizeSchedule(12, a15) <= 5, "J0 cool holes caps sch=12");
+    Expect(FinalizeSchedule(12, a15) <= 7, "J0 cool holes caps sch=12");
 
     // J1: miss backlog HoleDrain prefers Finish wall budget.
     MeshWorkAdmissionInput finish_bias{};

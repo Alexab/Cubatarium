@@ -104,6 +104,11 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-049 | Era15 | MeshResidency: FreeChunk-before-replace flicker | CPU Apply/Immediate publish batches before FreeChunk; `mesh_replace_hole_avoided` telem; FLY_CLEAN GO `era15_p1_fly` | **done 2026-08-08** `327dd006`+ |
 | TD-ARCH-050 | Era15 | ColumnPublication Unlit→Lit + SoftDeferHeld∥ColumnFlow | LitPending on Unlit FirstMesh; sticky_r≠gate MarkRelit; SoftDeferHeld→FirstMesh ticket; DesiredStage lit_pending/unlit; IDLE_CLEAN/WARM GO | **done 2026-08-08** `327dd006`+ (LAND holes residual via 043/051) |
 | TD-ARCH-051 | Era15 | FirstMesh-until-Drawable / PreferKick Kicked stall | PreferKick promotes Queued+Kicked+Dispatched; land sticky=0 miss_end=0; holes/miss gate still open | **partial** — ARCH_D3_LAND holes residual |
+| TD-ARCH-052 | Era16 | VisibleBlack SoT / black_sticky≠user black | `CountVisibleBlackFocusMeshes`; honest StaleDark ticket; telem `visible_black_*`; manual `113932` stale≈4740 sticky=0 | **open** — P0 diag; P1 Hide⇒Ticket |
+
+> **Era16 VisibleBlack (2026-08-08):** `black_sticky` only counts `StickyRemeshAfterLight` ∩ stale.
+> User-visible black = drawable stale/fully-dark columns (`VisibleBlackFocusN`); orphans =
+> `VisibleBlackNoTicketN`. Manual `perf_20260808-113932`: sticky=0 while stale≈4740.
 
 > **Era15 architecture-first (2026-08-08):** close visual residual (flicker / black / holes) via SoT
 > (MeshResidency, ColumnPublication Unlit→LitPending→LitReady, SoftDeferHeld→ColumnFlow,

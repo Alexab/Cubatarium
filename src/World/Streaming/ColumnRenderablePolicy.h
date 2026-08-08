@@ -25,10 +25,11 @@ struct ColumnSoTDecision
 };
 
 /// horiz>1 sticky/stale-dark path used by GetColumnRenderableState.
-inline ColumnSoTDecision ClassifyStickyStaleDarkSoT(bool has_mesh_or_gpu,
-                                                    bool sticky,
-                                                    bool stale_dark_with_mesh,
-                                                    int horiz_from_focus)
+/// Era16 TD-052: has_real_repair_ticket must reflect ColumnFlow Contains and/or
+/// StickyRemesh membership — never claim a ticket that does not exist.
+inline ColumnSoTDecision ClassifyStickyStaleDarkSoT(
+    bool has_mesh_or_gpu, bool sticky, bool stale_dark_with_mesh,
+    int horiz_from_focus, bool has_real_repair_ticket = false)
 {
   ColumnSoTDecision out;
   if (horiz_from_focus <= 1)
@@ -38,14 +39,14 @@ inline ColumnSoTDecision ClassifyStickyStaleDarkSoT(bool has_mesh_or_gpu,
   if (sticky)
   {
     out.kind = ColumnSoTKind::StickyRemesh;
-    out.has_repair_ticket = true;
+    out.has_repair_ticket = has_real_repair_ticket || sticky;
     out.draw_ok = has_mesh_or_gpu;
     return out;
   }
   if (stale_dark_with_mesh)
   {
     out.kind = ColumnSoTKind::StaleDark;
-    out.has_repair_ticket = true;
+    out.has_repair_ticket = has_real_repair_ticket;
     out.draw_ok = true; // draw-when-meshed; SoftDefer still blocks dark first-mesh
     return out;
   }

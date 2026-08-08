@@ -518,6 +518,31 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   world.PhysicsTelemetryData.FocusStickyRemesh = sticky_remesh;
   world.PhysicsTelemetryData.FocusPendingDark = pending_dark;
   world.PhysicsTelemetryData.FocusDarkMesh = dark_preview;
+  // Era16 TD-052: VisibleBlack column SoT (independent of StickyRemesh set).
+  // Idle: every frame. Cruise: every 4 frames (mirror unfinished sample).
+  {
+    static int visible_black_sample_cd = 0;
+    static int last_visible_black = 0;
+    static int last_visible_black_no_ticket = 0;
+    int no_ticket = 0;
+    if (!moving_for_telemetry)
+    {
+      last_visible_black = world.CountVisibleBlackFocusMeshes(
+          focus_ground, focus_radius, &no_ticket);
+      last_visible_black_no_ticket = no_ticket;
+      visible_black_sample_cd = 0;
+    }
+    else if (--visible_black_sample_cd <= 0)
+    {
+      last_visible_black = world.CountVisibleBlackFocusMeshes(
+          focus_ground, focus_radius, &no_ticket);
+      last_visible_black_no_ticket = no_ticket;
+      visible_black_sample_cd = 4;
+    }
+    world.PhysicsTelemetryData.VisibleBlackFocusN = last_visible_black;
+    world.PhysicsTelemetryData.VisibleBlackNoTicketN =
+        last_visible_black_no_ticket;
+  }
   world.PhysicsTelemetryData.FocusNotRenderReady = unfinished_visual;
   world.PhysicsTelemetryData.FocusPressure = focus_pressure;
   world.PhysicsTelemetryData.FocusDirtyChunks = focus_dirty_chunks;

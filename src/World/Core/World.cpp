@@ -2038,23 +2038,22 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
       }
     }
     const bool sticky = IsColumnStickyRemesh(ground_xz);
+    const bool has_real_repair_ticket =
+        GetColumnFlowExecutor().HasRepairTicket(ground_xz) || sticky;
     const ColumnSoTDecision sot = ClassifyStickyStaleDarkSoT(
-        has_mesh_or_gpu, sticky, stale_dark_with_mesh, horiz_from_focus);
+        has_mesh_or_gpu, sticky, stale_dark_with_mesh, horiz_from_focus,
+        has_real_repair_ticket);
     if (sot.kind == ColumnSoTKind::StickyRemesh)
     {
       out.reason = ColumnRenderableState::BlockReason::StickyRemesh;
-      out.has_repair_ticket =
-          GetColumnFlowExecutor().HasRepairTicket(ground_xz) ||
-          IsColumnStickyRemesh(ground_xz) || sot.has_repair_ticket;
+      out.has_repair_ticket = has_real_repair_ticket || sot.has_repair_ticket;
       out.draw_ok = sot.draw_ok;
       return out;
     }
     if (sot.kind == ColumnSoTKind::StaleDark)
     {
       out.reason = ColumnRenderableState::BlockReason::StaleDark;
-      out.has_repair_ticket =
-          GetColumnFlowExecutor().HasRepairTicket(ground_xz) ||
-          sot.has_repair_ticket;
+      out.has_repair_ticket = has_real_repair_ticket;
       out.draw_ok = sot.draw_ok;
       return out;
     }
@@ -2887,6 +2886,75 @@ int UWorld::CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
     }
   }
   return sticky;
+}
+
+int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
+                                         int radius_chunks,
+                                         int *out_no_ticket) const
+{
+  if (out_no_ticket)
+  {
+    *out_no_ticket = 0;
+  }
+  if (!MeshService || radius_chunks < 0)
+  {
+    return 0;
+  }
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const int sea = ProceduralTemplate.SeaLevel;
+  int band_min =
+      std::max(0, focus_ground_chunk.y * CHUNK_SIZE - CHUNK_SIZE);
+  int band_max = std::min(max_y, focus_ground_chunk.y * CHUNK_SIZE +
+                                      CHUNK_SIZE * 3 - 1);
+  if (ProceduralTemplate.FillWater)
+  {
+    band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
+    band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE * 2));
+  }
+  const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
+  const int cy1 = FloorDiv(band_max, CHUNK_SIZE);
+  int visible_black = 0;
+  int no_ticket = 0;
+  for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
+  {
+    for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
+    {
+      const glm::ivec2 key(focus_ground_chunk.x + dx,
+                           focus_ground_chunk.z + dz);
+      bool is_black = false;
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(key.x, cy, key.y);
+        if (!MeshService->HasDrawableGreedyMesh(coord))
+        {
+          continue;
+        }
+        if (MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld) ||
+            MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+        {
+          is_black = true;
+          break;
+        }
+      }
+      if (!is_black)
+      {
+        continue;
+      }
+      ++visible_black;
+      const bool has_ticket =
+          GetColumnFlowExecutor().HasRepairTicket(key) ||
+          IsColumnStickyRemesh(key);
+      if (!has_ticket)
+      {
+        ++no_ticket;
+      }
+    }
+  }
+  if (out_no_ticket)
+  {
+    *out_no_ticket = no_ticket;
+  }
+  return visible_black;
 }
 
 int UWorld::CountPendingDarkFocusMeshes(glm::ivec3 focus_ground_chunk,

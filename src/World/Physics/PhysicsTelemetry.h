@@ -183,6 +183,10 @@ struct PhysicsTelemetry
   /// Pending-light + sticky black preview columns in focus (subset of dark).
   int FocusPendingDark{0};
   int FocusStickyRemesh{0};
+  /// Era16 TD-052: focus columns with drawable stale/fully-dark mesh (user black).
+  int VisibleBlackFocusN{0};
+  /// Subset of VisibleBlackFocusN without ColumnFlow repair ticket / StickyRemesh.
+  int VisibleBlackNoTicketN{0};
   /// Focus columns failing SoT unfinished visual (alias of UnfinishedVisual sample).
   /// Not pending+dirty pressure — see FocusPressure.
   int FocusNotRenderReady{0};

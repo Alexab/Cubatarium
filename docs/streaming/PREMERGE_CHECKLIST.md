@@ -103,6 +103,12 @@ holes≈0.24 miss_stuck=8 (TD-043 still open). Ocean ARCH_D3 / TD-048 open.
 Worker Capture deferred (TD-ARCH-046). Do not merge to develop until ARCH_D3_LAND
 holes≤0.10.
 
+**Era16 VisibleBlack (2026-08-08):** `black_sticky` ≠ user-visible black. DoD uses
+`visible_black_no_ticket_n` / `post_stop_visible_black_no_ticket_max` (TD-052).
+Reject: claiming StaleDark repair ticket without ColumnFlow/Sticky; gating only on
+`black_sticky` while `dark_face_stale_near_n` plateaus. Manual baseline:
+`perf_20260808-113932`.
+
 **Backend matrix (R4):** desktop
 
 ```powershell
