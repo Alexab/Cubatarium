@@ -148,8 +148,10 @@ force-N) are not DoD — SoT closes the gap.
 | Keep old GPU mesh until new upload ready | minecraft-renderer pendingReplace; VoxelMan commit; Transvoxel hole-free | GPU packed: staging+`BindCommittedSlot` OK; CPU Apply/Immediate `FreeChunk` before write | **P1** MeshResidency TD-049 |
 | Placeholder Unlit + guaranteed lit remesh | light-before **or** stable Unlit then lit | `AllowUnlitFirstMesh` + remesh-on-lit gated by `sticky_r≤1` idle | **P2a** UnlitPublished→LitPending→LitReady; sticky_r≠gate TD-050 |
 | Single owner / Hide⇒ticket in job graph | continuous `should_mesh`; ColumnFlow Contains | SoftDeferHeld parallel zoo outside Flow | **P2b** SoftDeferHeld→ColumnFlow ticket TD-050 |
-| FirstMesh until Drawable (dual-queue) | MC HP rebuild; FirstMesh≠Remesh | PreferKick Queued-only; Held/prune compete cy0 | **P3** FirstMesh-until-Drawable TD-051 / TD-043 |
+| FirstMesh until Drawable (dual-queue) | MC HP rebuild; FirstMesh≠Remesh | PreferKick Queued-only; Held/prune compete cy0 | **P3 landed partial** PreferKick Kicked; TD-051/043 holes residual |
 | Strict light-before-first-draw entire FOV | mature engines often hide unlit | AllowUnlitFirstMesh (TD-027 hole SLA) | **keep** — Unlit is temporary stage, not final RenderReady |
+
+**Era15 closeout (2026-08-08):** TD-049/050 **done**; TD-051/043 **partial** (`era15_p3b_land` holes≈0.24 miss_stuck=8 sticky=0 wall≈45). FLY_CLEAN + IDLE_CLEAN + IDLE_WARM GO. Ocean ARCH_D3 / TD-048 still open. TD-046 Capture deferred.
 
 ## Практический Вывод Для Cubatarium
 

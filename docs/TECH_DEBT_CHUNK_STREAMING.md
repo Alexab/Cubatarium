@@ -95,21 +95,22 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-040 | Era14 | Frame nest: stream/emerge inside `RunLegacyPhysicsFrame` / `do_movement_ms` | Nest proof fly-clean phys_med≈4.9 | **done 2026-08-07** `0812c77f` |
 | TD-ARCH-041 | Era14 | Deadlock calm-wall Imm / stale-wave enqueue (`wall≤40/50`) | Dirty/promote without wall; Imm stays budgeted; sticky remesh budget on hot wall | **done 2026-08-07** (Imm primary DISCARD) |
 | TD-ARCH-042 | Era14 | Stand/cruise sticky Imm fork zoo | Imm primary removed; Dirty@≥1–2 + PreferKick | **done 2026-08-07** |
-| TD-ARCH-043 | Era14 | Land tops miss sticky / `ARCH_D3_LAND` | Best Era14.1: `era14_1_land` miss_stuck=6 wall≈52.8 sticky=0 holes=0.2 (p2c miss=4); PreferKick tops HP + SoftDefer floor | **partial** — holes/miss residual |
+| TD-ARCH-043 | Era14 | Land tops miss sticky / `ARCH_D3_LAND` | Era15 best `era15_p3b_land` miss_stuck=8 holes≈0.24 wall≈45 sticky=0 miss_end=0 (SoT landed; gate holes≤0.10 still open) | **partial** — holes/miss residual |
 | TD-ARCH-044 | Era14 | Commit-time seed coverage / PendingLight trail | SeedDecision cruise≤32 / idle≤28 cheap seed | **done 2026-08-07** `f9af0c16`+iterate |
 | TD-ARCH-045 | Era14 | UnlitFirstMesh → guaranteed remesh-on-lit | MarkRelit → NoteColumnRepairNeeded + RemeshSeam | **done 2026-08-07** `f9af0c16` |
 | TD-ARCH-046 | Era14 | Worker Capture residual (TD-ARCH-015 store done) | Store refresh budget tightened; worker path still deferred (hang risk) | **partial** — worker deferred |
 | TD-ARCH-047 | Era14 | IdleRecovery/Admission knobs duplicate DesiredStage | Sticky remesh wall-skip removed; IdleRecovery owns sync cost only | **done 2026-08-07** |
-| TD-ARCH-048 | Era14 | ARCH_D3 wall_med≤30 / gate DoD | Phase budget 24ms + miss carve-out; land soft wall OK; ocean ARCH_D3 still open | **partial** — ocean wall open |
-| TD-ARCH-049 | Era15 | MeshResidency: FreeChunk-before-replace flicker | CPU `ApplyMeshResult`/`RebuildChunk` frees live GPU before new write; GPU packed already atomic via staging+`BindCommittedSlot`. Evidence manual `093701` `mesh_discarded_late` med≈10/frame | **open** — Era15 P1 |
-| TD-ARCH-050 | Era15 | ColumnPublication Unlit→Lit + SoftDeferHeld∥ColumnFlow | UnlitFirstMesh draws while lit remesh gated by `sticky_r`; SoftDeferHeld side-set parks FirstMesh outside ColumnFlow Contains. Evidence `093701` void/stale plateau + `softdefer_held≈28` | **open** — Era15 P2 |
-| TD-ARCH-051 | Era15 | FirstMesh-until-Drawable / PreferKick Kicked stall | PreferKick only `Queued`; SoftDeferHeld/remesh prune compete with cy0 FirstMesh. Lands TD-043 residual (holes≈0.2 miss_stuck=6) | **open** — Era15 P3 |
+| TD-ARCH-048 | Era14 | ARCH_D3 wall_med≤30 / gate DoD | Era15 ocean `era15_p4_ocean` wall≈236 holes≈0.61 sticky=0 (still NO-GO); land soft wall OK | **partial** — ocean wall open |
+| TD-ARCH-049 | Era15 | MeshResidency: FreeChunk-before-replace flicker | CPU Apply/Immediate publish batches before FreeChunk; `mesh_replace_hole_avoided` telem; FLY_CLEAN GO `era15_p1_fly` | **done 2026-08-08** `327dd006`+ |
+| TD-ARCH-050 | Era15 | ColumnPublication Unlit→Lit + SoftDeferHeld∥ColumnFlow | LitPending on Unlit FirstMesh; sticky_r≠gate MarkRelit; SoftDeferHeld→FirstMesh ticket; DesiredStage lit_pending/unlit; IDLE_CLEAN/WARM GO | **done 2026-08-08** `327dd006`+ (LAND holes residual via 043/051) |
+| TD-ARCH-051 | Era15 | FirstMesh-until-Drawable / PreferKick Kicked stall | PreferKick promotes Queued+Kicked+Dispatched; land sticky=0 miss_end=0; holes/miss gate still open | **partial** — ARCH_D3_LAND holes residual |
 
 > **Era15 architecture-first (2026-08-08):** close visual residual (flicker / black / holes) via SoT
 > (MeshResidency, ColumnPublication Unlit→LitPending→LitReady, SoftDeferHeld→ColumnFlow,
 > FirstMesh-until-Drawable). Knobs ≠ DoD. DISCARD: Imm primary, wall-gate Dirty, SoftDefer zoo,
 > worker Capture TD-046. Baseline Era14.1 `f7d25446` + manual `perf_20260808-093701`.
-> Timeline: `bin/iter_reports/timeline/era14_1_*`.
+> Evidence: timeline `era15_p1_fly` / `era15_p3b_land` / `era15_p4_idle` / `era15_p4_warm`.
+> Commits: `195b22c4` docs; `327dd006` P1–P3 SoT; `d692d49b` LitPending FirstMesh-only.
 
 **Era14 execution log**
 
