@@ -124,11 +124,14 @@ P3 matrix autofly GO; ocean soft (`era18_p3_ocean` ARCH_D3 — TD-048). Manual
 **regressed FPS/miss** (TD-055). Reject: claim CLOSED on autofly while heal-floors
 force spend on hitch; knobs-as-DoD; Worker Capture (TD-046).
 
-**Era19 FrameStreamingBudget (2026-08-08):** TD-055 **open**. Unified
-`FrameStreamingBudget` + kill-switches `era18_vb_capture_floor` /
-`era18_vb_bg_budget_floor` / `miss_first_frame_budget`. Analyze `heal_on_hot_sec`.
-Reject: Era18-style `max` floors while VB on hitch; GO without `191229`-class
-manual evidence.
+**Era19 FrameStreamingBudget (2026-08-08):** TD-055 **partial** (autofly GO;
+manual eye pending). Unified `FrameStreamingBudget` + kill-switches
+`era18_vb_capture_floor` / `era18_vb_bg_budget_floor` / `miss_first_frame_budget`.
+hot_frame_ms=80 shrink; miss-first Capture≤1 FirstMesh; calm pending mid-floor;
+P2 PendingLight vs Remesh exclusivity. Analyze `heal_on_hot_sec`.
+Evidence: `era19_p3_fly`/`era19_p3_warm`/`era19_p3b_idle`/`era19_p1_land2`.
+Reject: Era18-style `max` floors while VB on hot wall; GO without `191229`-class
+manual re-flight; Worker Capture.
 
 **Backend matrix (R4):** desktop
 

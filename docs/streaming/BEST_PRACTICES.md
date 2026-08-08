@@ -153,17 +153,19 @@ force-N) are not DoD — SoT closes the gap.
 
 **Era15 closeout (2026-08-08):** TD-049/050 **done**; TD-051/043 **partial** (`era15_p3b_land` holes≈0.24 miss_stuck=8 sticky=0 wall≈45). FLY_CLEAN + IDLE_CLEAN + IDLE_WARM GO. Ocean ARCH_D3 / TD-048 still open. TD-046 Capture deferred.
 
-## Gap После Era19 plan (2026-08-08) — open (TD-055)
+## Gap После Era19 plan (2026-08-08) — autofly CLOSED (manual eye pending)
 
 | Практика | Industry | Cubatarium | Era19 SoT |
 |----------|----------|------------|-----------|
-| Per-frame time budget mesh/stream | Cubyz `maximumMeshTime`; UE cell/spawn limits | Era18 count `max` floors without ms SoT | `FrameStreamingBudget` + kill-switches |
-| Dual-queue HP FirstMesh vs LP heal | MC highPriorityQuota | VB Capture/bg compete under miss/hitch | miss-first (P1): Capture≤1 FirstMesh; VB floors off on hitch |
-| Autofly ≠ visual merge | PREMERGE | Era18 closed on autofly while `191229` FPS collapse | manual `191229` class mandatory |
+| Per-frame time budget mesh/stream | Cubyz `maximumMeshTime`; UE cell/spawn limits | Era18 count `max` floors without ms SoT | **done** `FrameStreamingBudget` + kill-switches |
+| Dual-queue HP FirstMesh vs LP heal | MC highPriorityQuota | VB Capture/bg compete under miss/hitch | **done** miss-first: Capture≤1 FirstMesh; VB floors off when wall>80 |
+| Column light→mesh stage exclusivity | Unity/Burst stages | dual Remesh+Relight | **done** P2 PendingLight owns column |
+| Autofly ≠ visual merge | PREMERGE | Era18 closed on autofly while `191229` FPS collapse | autofly matrix GO; **manual 191229-class re-flight** before merge |
 
-**Baseline regression:** `perf_20260808-191229` / `manual_191229_analyze.json`.
-Keep NotePendingLight / Contains ticket / FirstMesh class. Rewrite Era18 hot
-`max` floors. Gap CLOSED only with manual wall/holes/miss GO + autofly matrix.
+**Evidence:** `era19_p3_fly` FLY_CLEAN GO; `era19_p3_warm` IDLE_WARM GO;
+`era19_p3b_idle`/`era19_p1c_idle` IDLE_CLEAN GO; `era19_p1_land2` ARCH_D3_LAND GO.
+Baseline `perf_20260808-191229` (`heal_on_hot_sec` soft_fail). Keep NotePendingLight.
+Reject Era18-style `max` floors while VB on hot wall.
 
 ## Gap После Era18 plan (2026-08-08) — **regressed FPS/miss** (light-debt soft OK)
 

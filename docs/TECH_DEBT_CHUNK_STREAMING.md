@@ -106,15 +106,23 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-051 | Era15 | FirstMesh-until-Drawable / PreferKick Kicked stall | PreferKick Queued+Kicked; Era16 land holes≈0.04 ARCH_D3_LAND GO | **done 2026-08-08** via Era16 P2 |
 | TD-ARCH-052 | Era16 | VisibleBlack SoT / black_sticky≠user black | `CountVisibleBlackFocusMeshes`; honest StaleDark; Hide⇒Ticket RemeshSeam; IDLE_CLEAN+ARCH_D3_LAND no_ticket=0 | **done 2026-08-08** P0–P3 |
 | TD-ARCH-053 | Era17 | Heal-until-predicate / ticket≠progress | Real Contains ticket; Progress/Stalled telem; void RelightThenMesh; FirstMesh class | **done 2026-08-08** P0–P2 |
-| TD-ARCH-054 | Era18 | Focus light-debt / VB without PendingLight | Void RecoverUnlit⇒NotePendingLight; drain/capture floors while VB>0; manual 165953 | **partial 2026-08-08** light path OK on autofly; **regressed FPS/miss** on manual `191229` (TD-055) |
-| TD-ARCH-055 | Era19 | FrameStreamingBudget / heal-on-hot feedback | Era18 `max` floors force Capture/VB spend on hot wall → wall↑ holes↑ miss↑ (`191229`) | **open 2026-08-08** P0 harness + kill-switches |
+| TD-ARCH-054 | Era18 | Focus light-debt / VB without PendingLight | Void RecoverUnlit⇒NotePendingLight; drain/capture floors while VB>0; manual 165953 | **partial 2026-08-08** light path OK; FPS/miss fixed via TD-055 autofly; manual eye pending |
+| TD-ARCH-055 | Era19 | FrameStreamingBudget / heal-on-hot feedback | Era18 `max` floors force Capture/VB spend on hot wall → wall↑ holes↑ miss↑ (`191229`) | **partial 2026-08-08** FrameStreamingBudget + miss-first; autofly matrix GO; manual 191229-class re-flight pending |
 
-> **Era19 FrameStreamingBudget (2026-08-08):** Manual `perf_20260808-191229` after Era18:
-> light-debt soft fails fixed (8/2/0 vs 112s), but `wall_ms_med` 118→**279**,
-> `holes_rate` 0.21→**0.57**, `miss_stuck` 16s→**40s**. Root: continuous heal +
-> Capture floors on already-hot frames. Kill-switches:
-> `era18_vb_capture_floor`, `era18_vb_bg_budget_floor`; SoT
-> `FrameStreamingBudget` + analyze `heal_on_hot_sec`. Autofly ≠ merge.
+> **Era19 FrameStreamingBudget closeout (2026-08-08):** Unified `FrameStreamingBudget`
+> (hot_frame_ms=80 shrink; miss-first Capture≤1 FirstMesh; calm pending mid-floor).
+> Kill-switches: `era18_vb_capture_floor`, `era18_vb_bg_budget_floor`,
+> `miss_first_frame_budget`. P2: PendingLight vs Remesh exclusivity.
+> Autofly: `era19_p3_fly`/`era19_p3_warm` FLY/IDLE_WARM GO; `era19_p3b_idle` /
+> `era19_p1c_idle` IDLE_CLEAN GO; `era19_p1_land2` ARCH_D3_LAND GO
+> (land matrix flaky opaque/miss — use land2 SoT). Baseline regression `191229`
+> (`heal_on_hot_sec` soft_fail). Gap CLOSED for autofly; **manual eye** on
+> 191229-class corridor still required before merge claim.
+> Keep NotePendingLight / Contains ticket / FirstMesh class. Reject heal-floors-on-hitch.
+
+> **Era19 FrameStreamingBudget (2026-08-08):** Manual `perf_20260808-191229` —
+> heal-on-hot SoT (`wall_med` 279, holes 0.57, miss_stuck 40s). Fixed by
+> FrameStreamingBudget; do not claim visual merge without new manual log.
 
 > **Era18 focus light-debt closeout (2026-08-08):** P0–P3 landed. Autofly
 > `era18_p3_fly`/`idle`/`warm`/`land` GO; ocean ARCH_D3 soft (TD-048).
