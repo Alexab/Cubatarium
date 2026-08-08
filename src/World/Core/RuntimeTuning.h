@@ -90,6 +90,13 @@ struct URuntimeTuning
   int DirtyThrashAsyncMin{12};
   int PendingLightSoftCap{80};
   int RelightFifoSoftCap{96};
+  /// Era19 kill-switch: SoftDefer Capture floor while VisibleBlack (Era18).
+  /// Default true = current Era18 behavior until miss-first budget owns it.
+  bool Era18VbCaptureFloor{true};
+  /// Era19 kill-switch: bg_budget floor while VisibleBlack (Era18).
+  bool Era18VbBgBudgetFloor{true};
+  /// Era19 P1: unified miss-first FrameStreamingBudget (default off in P0).
+  bool MissFirstFrameBudget{false};
   int GpuVertexPoolReserveMb{64};
   int GpuVertexPoolMaxMb{256};
   int MaxKeepPrefetchMargin{4};

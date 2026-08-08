@@ -12,6 +12,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/RuntimeTuning.h"
+#include "World/Streaming/FrameStreamingBudget.h"
 #include "World/Core/World.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Math/GridMath.h"
@@ -1417,26 +1418,23 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                        ColumnWorkKind::RelightThenMesh, relight_prio);
         }
       }
-      // Era17: drain enough to turn Contains into Dirty/PendingLight progress.
-      // Era18 P3: hitch orphans (manual 165953 exit no_ticket spike) — keep a
-      // floor even when wall is hot so DrainBudget still pops Relight/Remesh.
-      int drain_n = recover_n;
-      if (world.GetPhysicsTelemetry().VisibleBlackFocusN > 0)
-      {
-        const int vb_floor = moving ? 4 : 8;
-        const int hitch_floor =
-            last_frame_ms > 40.0 ? (moving ? 6 : 10) : vb_floor;
-        drain_n = std::max(drain_n, hitch_floor);
-      }
-      if (world.GetPhysicsTelemetry().VisibleBlackNoTicketN > 0)
-      {
-        drain_n = std::max(drain_n, moving ? 6 : 10);
-      }
+      // Era19: hitch drain via FrameStreamingBudget — FirstMesh/no_ticket only
+      // under miss_first (no VB Capture/Relight storm on hot wall).
+      const bool hitch_drain = last_frame_ms > 40.0;
+      int drain_n = EvaluateMissFirstDrainN(
+          recover_n, missing_visible_mesh,
+          world.GetPhysicsTelemetry().VisibleBlackNoTicketN > 0,
+          world.GetPhysicsTelemetry().VisibleBlackFocusN > 0, hitch_drain,
+          moving, URuntimeTuning::Get().MissFirstFrameBudget);
       exec.DrainBudget(world, drain_n, focus_ground_horiz, focus_radius, 1);
       // Edge stale-dark / post-miss sticky: raise seam drain near sticky
       // (land_fix P3 — keep_h already 2–3 via StarveRemeshKeepHoriz).
+      // Era19 miss-first: do not Seam-storm on hitch while missing tops.
       const int dark_n = world.GetPhysicsTelemetry().DarkFaceNearN;
-      if (dark_n > 200 || black_sticky > 0)
+      const bool skip_seam_storm =
+          URuntimeTuning::Get().MissFirstFrameBudget && hitch_drain &&
+          missing_visible_mesh;
+      if (!skip_seam_storm && (dark_n > 200 || black_sticky > 0))
       {
         const int seam_n = std::clamp(
             3 + (dark_n > 800 ? 4 : 0) + black_sticky * 2, 3, 10);

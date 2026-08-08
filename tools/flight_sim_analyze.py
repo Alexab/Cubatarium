@@ -450,6 +450,16 @@ def analyze(
         lambda r: float(r.get("visible_black_focus_n") or 0) > 0
         and float(r.get("softdefer_capture_budget") or 0) <= 0
     )
+    # Era19: VB heal forced on already-hot frames while tops still missing
+    # (manual 191229: wall_med 279 + holes↑ — heal-on-hot feedback).
+    heal_on_hot_sec = _max_run_sec(
+        lambda r: float(r.get("visible_black_focus_n") or 0) > 0
+        and float(r.get("wall_ms") or r.get("max_wall_ms") or 0) > 200.0
+        and (
+            float(r.get("focus_missing_mesh") or 0) > 0
+            or float(r.get("visual_holes") or r.get("near_focus_holes") or 0) > 0
+        )
+    )
 
     # Land-cruise symptoms (manual 131234 / 142306): miss stuck, miss at end,
     # opaque draw-list churn while hovering on one focus chunk.
@@ -1012,6 +1022,8 @@ def analyze(
         "vb_without_pending_light_focus_sec": vb_without_pending_light_focus_sec,
         "relight_drain_near_zero_while_vb_sec": relight_drain_near_zero_while_vb_sec,
         "softdefer_capture_zero_while_vb_sec": softdefer_capture_zero_while_vb_sec,
+        "heal_on_hot_sec": heal_on_hot_sec,
+        "heal_on_hot_soft_fail": heal_on_hot_sec >= 20.0,
         "vb_without_pending_light_focus_soft_fail": (
             vb_without_pending_light_focus_sec >= 30.0
         ),
@@ -1098,6 +1110,7 @@ def analyze(
             "vb_without_pending_light_focus_sec": vb_without_pending_light_focus_sec,
             "relight_drain_near_zero_while_vb_sec": relight_drain_near_zero_while_vb_sec,
             "softdefer_capture_zero_while_vb_sec": softdefer_capture_zero_while_vb_sec,
+            "heal_on_hot_sec": heal_on_hot_sec,
             "dirty_high_sec": dirty_high_sec,
             "miss_stuck_max_run_sec": miss_stuck_max_run_sec,
             "miss_end": miss_end,

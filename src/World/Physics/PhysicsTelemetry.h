@@ -70,6 +70,12 @@ struct PhysicsTelemetry
   int SoftDeferWitnessHoriz{0};
   /// Capture/relight bg budget requested by SoftDefer floor this frame (0 if idle).
   int SoftDeferCaptureBudget{0};
+  /// Era19 FrameStreamingBudget soft ms SoT (bad-frame threshold).
+  int FrameBudgetMs{0};
+  /// 1 when Capture floor would spend on an already-hot frame.
+  int CaptureOverBudget{0};
+  /// 1 when VB Capture/bg heal was deferred for miss/hitch (I-B1/I-B2).
+  int HealDeferredForMiss{0};
   /// Empty SoftDefer placeholders seen by undrawn heal this frame (A2 smoke).
   int SoftDeferEmptyPlaceholderN{0};
   /// Stuck pattern: HasGreedy && !Drawable && !Dirty && horiz>1.

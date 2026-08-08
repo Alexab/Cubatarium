@@ -106,15 +106,21 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-051 | Era15 | FirstMesh-until-Drawable / PreferKick Kicked stall | PreferKick Queued+Kicked; Era16 land holes≈0.04 ARCH_D3_LAND GO | **done 2026-08-08** via Era16 P2 |
 | TD-ARCH-052 | Era16 | VisibleBlack SoT / black_sticky≠user black | `CountVisibleBlackFocusMeshes`; honest StaleDark; Hide⇒Ticket RemeshSeam; IDLE_CLEAN+ARCH_D3_LAND no_ticket=0 | **done 2026-08-08** P0–P3 |
 | TD-ARCH-053 | Era17 | Heal-until-predicate / ticket≠progress | Real Contains ticket; Progress/Stalled telem; void RelightThenMesh; FirstMesh class | **done 2026-08-08** P0–P2 |
-| TD-ARCH-054 | Era18 | Focus light-debt / VB without PendingLight | Void RecoverUnlit⇒NotePendingLight; drain/capture floors while VB>0; manual 165953 | **partial 2026-08-08** autofly GO; manual recheck |
+| TD-ARCH-054 | Era18 | Focus light-debt / VB without PendingLight | Void RecoverUnlit⇒NotePendingLight; drain/capture floors while VB>0; manual 165953 | **partial 2026-08-08** light path OK on autofly; **regressed FPS/miss** on manual `191229` (TD-055) |
+| TD-ARCH-055 | Era19 | FrameStreamingBudget / heal-on-hot feedback | Era18 `max` floors force Capture/VB spend on hot wall → wall↑ holes↑ miss↑ (`191229`) | **open 2026-08-08** P0 harness + kill-switches |
+
+> **Era19 FrameStreamingBudget (2026-08-08):** Manual `perf_20260808-191229` after Era18:
+> light-debt soft fails fixed (8/2/0 vs 112s), but `wall_ms_med` 118→**279**,
+> `holes_rate` 0.21→**0.57**, `miss_stuck` 16s→**40s**. Root: continuous heal +
+> Capture floors on already-hot frames. Kill-switches:
+> `era18_vb_capture_floor`, `era18_vb_bg_budget_floor`; SoT
+> `FrameStreamingBudget` + analyze `heal_on_hot_sec`. Autofly ≠ merge.
 
 > **Era18 focus light-debt closeout (2026-08-08):** P0–P3 landed. Autofly
 > `era18_p3_fly`/`idle`/`warm`/`land` GO; ocean ARCH_D3 soft (TD-048).
 > Evidence: `era18_p1_idle`, `era18_p2_idle`, `era18_p3_*`.
-> Manual replay `era18_p3_manual_replay` / `perf_20260808-185529` at `(-489,68)`:
-> `softdefer_capture_zero_while_vb=0`, `vb_without_pending_light_focus_sec=6`
-> (was 112 on `165953`), `no_ticket=0`, faces end=0; miss_stuck residual.
-> TD-054 stays **partial** until user eye confirm on stand-in-black corridor.
+> Manual `191229` shows light-debt soft OK but **FPS/holes/miss regression** —
+> TD-054 stays **partial**; Gap Era18 honesty → regressed; fix via TD-055.
 
 > **Era18 focus light-debt (2026-08-08):** Manual `165953` — VB=53 plateau with
 > `pending_light_focus=0`, `relight_drain≈0`, `softdefer_capture_budget=0`, fifo frozen.

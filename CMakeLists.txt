@@ -1319,6 +1319,11 @@ add_executable(focus_ingress_policy_test
 target_include_directories(focus_ingress_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
+add_executable(frame_streaming_budget_test
+    src/Test/FrameStreamingBudgetTest.cpp)
+target_include_directories(frame_streaming_budget_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
 add_executable(idle_recovery_policy_test
     src/Test/IdleRecoveryPolicyTest.cpp)
 target_include_directories(idle_recovery_policy_test PRIVATE

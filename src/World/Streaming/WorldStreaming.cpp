@@ -1,6 +1,7 @@
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/FocusIngressPolicy.h"
+#include "World/Streaming/FrameStreamingBudget.h"
 #include "World/Streaming/IdleRecoveryPolicy.h"
 #include "World/Streaming/SeedDecisionPolicy.h"
 #include "World/Streaming/MemoryBudgetController.h"
@@ -1320,19 +1321,40 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     // capture so PendingLight columns do not keep dark meshes for many periods.
     bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 3 : 4);
   }
-  // Era18 I-L2: VisibleBlack without pending_light_focus still needs drain
-  // (manual 165953: VB=53, pending_focus=0, drain≈0 for minutes).
+  // Era18 I-L2 / Era19 FrameStreamingBudget: VB bg floor via single Evaluate.
   const int visible_black_n =
       world.GetPhysicsTelemetry().VisibleBlackFocusN;
-  if (visible_black_n > 0 || dark_face_near_n > 500)
-  {
-    bg_budget =
-        std::max(bg_budget, frame_ms > kBadFrameMs ? 1 : 2);
-  }
   const int mesh_async_n = world.GetMeshService().GetAsyncInFlightCount();
   const bool missing_focus_mesh =
       world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
           world.GetBlockWorld(), focus_horiz, focus_radius);
+  const bool moving_now_early =
+      world.GetLastMovementSpeed() > procedural.MovementPrefetchThreshold;
+  const auto &tune_budget = URuntimeTuning::Get();
+  const FrameStreamingBudgetDecision early_budget =
+      EvaluateFrameStreamingBudget(FrameStreamingBudgetInput{
+          frame_ms, kBadFrameMs, missing_focus_mesh,
+          world.PhysicsTelemetryData.UnfinishedVisual, visible_black_n,
+          pending_light_focus_n, moving_now_early,
+          tune_budget.Era18VbCaptureFloor, tune_budget.Era18VbBgBudgetFloor,
+          tune_budget.MissFirstFrameBudget});
+  if (early_budget.apply_vb_bg_floor)
+  {
+    bg_budget = std::max(bg_budget, early_budget.vb_bg_budget_floor);
+  }
+  else if (!tune_budget.MissFirstFrameBudget &&
+           tune_budget.Era18VbBgBudgetFloor &&
+           (visible_black_n > 0 || dark_face_near_n > 500))
+  {
+    // Legacy Era18: dark_face_near also keyed the floor (kill-switch gated).
+    bg_budget =
+        std::max(bg_budget, frame_ms > kBadFrameMs ? 1 : 2);
+  }
+  world.PhysicsTelemetryData.FrameBudgetMs = early_budget.frame_budget_ms;
+  world.PhysicsTelemetryData.CaptureOverBudget =
+      early_budget.capture_over_budget ? 1 : 0;
+  world.PhysicsTelemetryData.HealDeferredForMiss =
+      early_budget.heal_deferred_for_miss ? 1 : 0;
   const bool idle_recovery =
       world.GetLastMovementSpeed() <=
           procedural.MovementPrefetchThreshold &&
@@ -1411,73 +1433,67 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       }
     }
   }
-  // TD-ARCH-030 / Phase 3: SoftDefer unfinished / missing → ColumnFlow ticket
-  // (cap 1/tick). Do NOT inflate bg_budget Capture floor every period
-  // (manual 130338 SoftDefer thrash +329; 171310 floor Δ+870).
-  // Era18 I-L3: also floor while VisibleBlack>0 (manual 165953 capture_budget=0
-  // for minutes with VB=53 / unfinished=0).
+  // TD-ARCH-030 / Era19: SoftDefer Capture floor via FrameStreamingBudget SoT.
+  // (manual 130338 SoftDefer thrash; Era18 VB floor; Era19 miss-first hitch).
   {
     const int unfinished = world.PhysicsTelemetryData.UnfinishedVisual;
-    const int visible_black_n =
+    const int visible_black_n_cap =
         world.GetPhysicsTelemetry().VisibleBlackFocusN;
-    world.PhysicsTelemetryData.SoftDeferCaptureBudget = 0;
-    if (unfinished > 0 || missing_focus_mesh || visible_black_n > 0)
+    const auto &tune = URuntimeTuning::Get();
+    const FrameStreamingBudgetDecision budget =
+        EvaluateFrameStreamingBudget(FrameStreamingBudgetInput{
+            frame_ms, kBadFrameMs, missing_focus_mesh, unfinished,
+            visible_black_n_cap, pending_light_focus_n, moving_now,
+            tune.Era18VbCaptureFloor, tune.Era18VbBgBudgetFloor,
+            tune.MissFirstFrameBudget});
+    world.PhysicsTelemetryData.SoftDeferCaptureBudget =
+        budget.soft_defer_capture_budget;
+    world.PhysicsTelemetryData.FrameBudgetMs = budget.frame_budget_ms;
+    world.PhysicsTelemetryData.CaptureOverBudget =
+        budget.capture_over_budget ? 1 : 0;
+    world.PhysicsTelemetryData.HealDeferredForMiss =
+        budget.heal_deferred_for_miss ? 1 : 0;
+    if (budget.apply_vb_bg_floor)
     {
-      // Era14.1 A3: miss Capture floor — keep move=1 (floor=2 raised wall on 1b);
-      // idle stays 2 for SoftDefer light progress.
-      int floor_budget = 0;
-      if (missing_focus_mesh)
+      bg_budget = std::max(bg_budget, budget.vb_bg_budget_floor);
+    }
+    const int floor_budget = budget.soft_defer_capture_budget;
+    if (floor_budget > 0)
+    {
+      auto &exec = GetColumnFlowExecutor();
+      const glm::ivec2 focus_xz(focus_horiz.x, focus_horiz.z);
+      // Anchor on miss witness (horiz 2–3 rim), not focus — else HasRepairTicket
+      // on focus blocks floor while hole never gets FirstMesh (manual 191432).
+      const glm::ivec2 repair_xz = RepairColumnFromMissWitness(
+          world.PhysicsTelemetryData, focus_xz);
+      // Rate-limit: skip if ColumnFlow already owns a repair ticket on target.
+      if (!exec.HasRepairTicket(repair_xz))
       {
-        floor_budget = moving_now ? 1 : 2;
-      }
-      else if (unfinished > 0 && pending_light_focus_n > 0)
-      {
-        floor_budget = frame_ms > kBadFrameMs
-                           ? std::min(4, 1 + unfinished / 8)
-                           : std::min(6, 2 + unfinished / 6);
-      }
-      else if (visible_black_n > 0)
-      {
-        // Cap 2 idle / 1 moving — avoid Era14 SoftDefer thrash.
-        floor_budget = moving_now ? 1 : 2;
-      }
-      world.PhysicsTelemetryData.SoftDeferCaptureBudget = floor_budget;
-      if (floor_budget > 0)
-      {
-        auto &exec = GetColumnFlowExecutor();
-        const glm::ivec2 focus_xz(focus_horiz.x, focus_horiz.z);
-        // Anchor on miss witness (horiz 2–3 rim), not focus — else HasRepairTicket
-        // on focus blocks floor while hole never gets FirstMesh (manual 191432).
-        const glm::ivec2 repair_xz = RepairColumnFromMissWitness(
-            world.PhysicsTelemetryData, focus_xz);
-        // Rate-limit: skip if ColumnFlow already owns a repair ticket on target.
-        if (!exec.HasRepairTicket(repair_xz))
+        ++world.PhysicsTelemetryData.SoftDeferCaptureFloorHits;
+        if (repair_xz != focus_xz)
         {
-          ++world.PhysicsTelemetryData.SoftDeferCaptureFloorHits;
-          if (repair_xz != focus_xz)
-          {
-            ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
-            world.PhysicsTelemetryData.SoftDeferWitnessHoriz =
-                world.PhysicsTelemetryData.MissHoriz;
-          }
-          const ColumnWorkKind kind = missing_focus_mesh
-                                          ? ColumnWorkKind::FirstMesh
-                                          : ColumnWorkKind::RelightThenMesh;
-          ColumnWorkItem item{};
-          item.column = repair_xz;
-          item.kind = kind;
-          item.priority = 90;
-          item.scan_full_focus = missing_focus_mesh;
-          item.cy = -1;
-          exec.Enqueue(item);
-          exec.DrainBudget(world, 1, focus_horiz, focus_radius,
-                           /*admit_batch=*/1);
+          ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
+          world.PhysicsTelemetryData.SoftDeferWitnessHoriz =
+              world.PhysicsTelemetryData.MissHoriz;
         }
+        const ColumnWorkKind kind =
+            (missing_focus_mesh || budget.capture_first_mesh_only)
+                ? ColumnWorkKind::FirstMesh
+                : ColumnWorkKind::RelightThenMesh;
+        ColumnWorkItem item{};
+        item.column = repair_xz;
+        item.kind = kind;
+        item.priority = 90;
+        item.scan_full_focus = missing_focus_mesh;
+        item.cy = -1;
+        exec.Enqueue(item);
+        exec.DrainBudget(world, 1, focus_horiz, focus_radius,
+                         /*admit_batch=*/1);
       }
-      if (rim_first_mesh_sla)
-      {
-        bg_budget = std::min(bg_budget, moving_now ? 1 : 2);
-      }
+    }
+    if (rim_first_mesh_sla)
+    {
+      bg_budget = std::min(bg_budget, moving_now ? 1 : 2);
     }
   }
   // Two-tier promote via ColumnFlow only (underfeet then focus). Streaming

@@ -153,17 +153,28 @@ force-N) are not DoD — SoT closes the gap.
 
 **Era15 closeout (2026-08-08):** TD-049/050 **done**; TD-051/043 **partial** (`era15_p3b_land` holes≈0.24 miss_stuck=8 sticky=0 wall≈45). FLY_CLEAN + IDLE_CLEAN + IDLE_WARM GO. Ocean ARCH_D3 / TD-048 still open. TD-046 Capture deferred.
 
-## Gap После Era18 plan (2026-08-08) — partial (autofly GO; manual pending)
+## Gap После Era19 plan (2026-08-08) — open (TD-055)
+
+| Практика | Industry | Cubatarium | Era19 SoT |
+|----------|----------|------------|-----------|
+| Per-frame time budget mesh/stream | Cubyz `maximumMeshTime`; UE cell/spawn limits | Era18 count `max` floors without ms SoT | `FrameStreamingBudget` + kill-switches |
+| Dual-queue HP FirstMesh vs LP heal | MC highPriorityQuota | VB Capture/bg compete under miss/hitch | miss-first (P1): Capture≤1 FirstMesh; VB floors off on hitch |
+| Autofly ≠ visual merge | PREMERGE | Era18 closed on autofly while `191229` FPS collapse | manual `191229` class mandatory |
+
+**Baseline regression:** `perf_20260808-191229` / `manual_191229_analyze.json`.
+Keep NotePendingLight / Contains ticket / FirstMesh class. Rewrite Era18 hot
+`max` floors. Gap CLOSED only with manual wall/holes/miss GO + autofly matrix.
+
+## Gap После Era18 plan (2026-08-08) — **regressed FPS/miss** (light-debt soft OK)
 
 | Практика | Industry | Cubatarium | Era18 SoT |
 |----------|----------|------------|-----------|
 | Void/black ⇒ focus PendingLight gate | light-before-lit-draw | RecoverUnlit FIFO+MarkDirty without Note | **done** P1 NotePendingLight TD-054 |
-| Drain/capture while VisibleBlack | never starve FOV light | floors keyed only on pending_light_focus | **done** P1–P2 VB floors |
-| Manual land-exit / stand-in-black SoT | autofly ≠ eye | autofly GO, manual `165953` pre-fix | **pending** user re-flight |
+| Drain/capture while VisibleBlack | never starve FOV light | floors keyed only on pending_light_focus | **done** P1–P2 VB floors — **caused** heal-on-hot (`191229`) |
+| Manual land-exit / stand-in-black SoT | autofly ≠ eye | autofly GO, manual `165953` pre-fix | **regressed** wall/holes/miss on `191229` → TD-055 |
 
-**Baseline:** `perf_20260808-165953`. Autofly: `era18_p3_fly`/`idle`/`warm`/`land` GO.
-Manual replay `era18_p3_manual_replay`: capture dead fixed; VB-without-pending 6s
-(was 112); miss_stuck residual. Gap stays partial until eye confirm.
+**Baseline:** `perf_20260808-165953` → post-fix `191229`. Autofly GO ≠ merge.
+Light-debt soft fails fixed; FPS collapse + holes↑ — do not claim CLOSED.
 
 ## Gap После Era17 plan (2026-08-08) — partial (superseded light-debt)
 

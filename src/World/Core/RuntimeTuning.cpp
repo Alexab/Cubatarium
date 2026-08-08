@@ -192,6 +192,12 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   {
     t.RelightFifoSoftCap =
         j.value("relight_fifo_soft_cap", t.RelightFifoSoftCap);
+    t.Era18VbCaptureFloor =
+        j.value("era18_vb_capture_floor", t.Era18VbCaptureFloor);
+    t.Era18VbBgBudgetFloor =
+        j.value("era18_vb_bg_budget_floor", t.Era18VbBgBudgetFloor);
+    t.MissFirstFrameBudget =
+        j.value("miss_first_frame_budget", t.MissFirstFrameBudget);
   }
   if (j.contains("gpu_vertex_pool_reserve_mb"))
   {

@@ -264,6 +264,9 @@ struct FrameNumbers
   uint64_t softdefer_witness_retarget_delta{0};
   int softdefer_witness_horiz{0};
   int softdefer_capture_budget{0};
+  int frame_budget_ms{0};
+  int capture_over_budget{0};
+  int heal_deferred_for_miss{0};
   int softdefer_empty_placeholder_n{0};
   int softdefer_empty_stuck_n{0};
   int softdefer_empty_stuck_cx{0};
@@ -519,6 +522,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.softdefer_witness_retarget = phys.SoftDeferWitnessRetarget;
   n.softdefer_witness_horiz = phys.SoftDeferWitnessHoriz;
   n.softdefer_capture_budget = phys.SoftDeferCaptureBudget;
+  n.frame_budget_ms = phys.FrameBudgetMs;
+  n.capture_over_budget = phys.CaptureOverBudget;
+  n.heal_deferred_for_miss = phys.HealDeferredForMiss;
   n.softdefer_empty_placeholder_n = phys.SoftDeferEmptyPlaceholderN;
   n.softdefer_empty_stuck_n = phys.SoftDeferEmptyStuckN;
   n.softdefer_empty_stuck_cx = phys.SoftDeferEmptyStuckCx;
@@ -793,6 +799,9 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.softdefer_witness_retarget_delta
           << ",\"softdefer_witness_horiz\":" << n.softdefer_witness_horiz
           << ",\"softdefer_capture_budget\":" << n.softdefer_capture_budget
+          << ",\"frame_budget_ms\":" << n.frame_budget_ms
+          << ",\"capture_over_budget\":" << n.capture_over_budget
+          << ",\"heal_deferred_for_miss\":" << n.heal_deferred_for_miss
           << ",\"softdefer_empty_placeholder_n\":"
           << n.softdefer_empty_placeholder_n
           << ",\"softdefer_empty_stuck_n\":" << n.softdefer_empty_stuck_n

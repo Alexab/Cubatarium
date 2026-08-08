@@ -119,10 +119,16 @@ when miss cy≤1. P3 matrix: `era17_p3_fly`/`idle`/`warm`/`land` GO; ocean soft
 **Era18 focus light-debt closeout (2026-08-08):** TD-054 **partial**. Void
 RecoverUnlit⇒`NotePendingLightBeforeMesh`; bg_budget/idle_recovery/SoftDeferCapture
 floors while `VB>0`; focus FIFO pin; miss unfinished-storm FirstMesh; hitch drain.
-P3 matrix: `era18_p3_fly`/`idle`/`warm`/`land` GO; ocean soft (`era18_p3_ocean`
-ARCH_D3 — TD-048). Manual `165953` class: **re-flight after pull** before claiming
-CLOSED. Reject: GO on `no_ticket=0` while `VB` plateau + drain/capture dead;
-claim manual closed without new log; remesh-only void heal.
+P3 matrix autofly GO; ocean soft (`era18_p3_ocean` ARCH_D3 — TD-048). Manual
+`191229`: light-debt soft OK but **wall_med≈279 holes≈0.57 miss_stuck≈40s** —
+**regressed FPS/miss** (TD-055). Reject: claim CLOSED on autofly while heal-floors
+force spend on hitch; knobs-as-DoD; Worker Capture (TD-046).
+
+**Era19 FrameStreamingBudget (2026-08-08):** TD-055 **open**. Unified
+`FrameStreamingBudget` + kill-switches `era18_vb_capture_floor` /
+`era18_vb_bg_budget_floor` / `miss_first_frame_budget`. Analyze `heal_on_hot_sec`.
+Reject: Era18-style `max` floors while VB on hitch; GO without `191229`-class
+manual evidence.
 
 **Backend matrix (R4):** desktop
 
