@@ -153,14 +153,17 @@ force-N) are not DoD — SoT closes the gap.
 
 **Era15 closeout (2026-08-08):** TD-049/050 **done**; TD-051/043 **partial** (`era15_p3b_land` holes≈0.24 miss_stuck=8 sticky=0 wall≈45). FLY_CLEAN + IDLE_CLEAN + IDLE_WARM GO. Ocean ARCH_D3 / TD-048 still open. TD-046 Capture deferred.
 
-## Gap После Era20 plan (2026-08-08) — open (TD-056)
+## Gap После Era20 plan (2026-08-08) — autofly GO; TD-056 **partial** (manual eye)
 
 | Практика | Industry | Cubatarium | Era20 SoT |
 |----------|----------|------------|-----------|
-| HP FirstMesh must progress under miss | MC dual-queue | tops class cy≤1; Imm off wall>50; async=0 sticky | miss class cy≤3/mh≤4 + cold-async Imm |
-| Hide/not-draw empty until ready | Hide⇒Ticket | SoftDefer empty HasGreedy∧!Drawable flicker | SoftDeferEmpty→FirstMesh; no empty-ready |
-| Enter time-sliced | UE spawn limits | RD+1 ring + drain×8 → app_update≈2s | underfeet gate + warmup budget |
-| Autofly ≠ visual merge | PREMERGE | Era19 autofly GO; manual `214034` holes/black | manual `214034` mandatory |
+| HP FirstMesh must progress under miss | MC dual-queue | tops class cy≤1; Imm off wall>50; async=0 sticky | **done** miss class cy≤3/mh≤4 + cold-async Imm |
+| Hide/not-draw empty until ready | Hide⇒Ticket | SoftDefer empty HasGreedy∧!Drawable flicker | **done** keep-prior FreeChunk; SoftDefer empty !ready |
+| Enter time-sliced | UE spawn limits | RD+1 ring + drain×8 → app_update≈2s | **done** r≤2 gate; enter_app≈100; SpawnRingCatchUp |
+| Autofly ≠ visual merge | PREMERGE | Era19 autofly GO; manual `214034` holes/black | autofly GO; **manual `214034` still required** |
+
+**Evidence:** `era20_p3_fly` FLY; `era20_p3_idle` IDLE_CLEAN; `era20_p3_land3`
+ARCH_D3_LAND; `era20_p3_warm` IDLE_WARM. Baseline `214034` not visual-merge.
 
 **Baseline:** `perf_20260808-214034` / `manual_214034_analyze.json`. Keep
 FrameStreamingBudget. Reject Imm primary; Era18 VB Capture storm; autofly-only close.

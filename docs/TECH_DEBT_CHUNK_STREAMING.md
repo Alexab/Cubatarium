@@ -108,14 +108,17 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-053 | Era17 | Heal-until-predicate / ticket≠progress | Real Contains ticket; Progress/Stalled telem; void RelightThenMesh; FirstMesh class | **done 2026-08-08** P0–P2 |
 | TD-ARCH-054 | Era18 | Focus light-debt / VB without PendingLight | Void RecoverUnlit⇒NotePendingLight; drain/capture floors while VB>0; manual 165953 | **partial 2026-08-08** light path OK; FPS/miss fixed via TD-055 autofly; manual eye pending |
 | TD-ARCH-055 | Era19 | FrameStreamingBudget / heal-on-hot feedback | Era18 `max` floors force Capture/VB spend on hot wall → wall↑ holes↑ miss↑ (`191229`) | **partial 2026-08-08** FrameStreamingBudget + miss-first; autofly GO; manual `214034` still holes/black |
-| TD-ARCH-056 | Era20 | Manual Visual SLA / rim FirstMesh escape | `214034`: miss_cy=3 outside tops; Imm off on hot; SoftDefer empty; VB no_ticket↑; enter app_update≈2s | **open 2026-08-08** P0 harness |
+| TD-ARCH-056 | Era20 | Manual Visual SLA / rim FirstMesh escape | `214034`: miss_cy=3; Imm off; SoftDefer empty; VB no_ticket↑; enter≈2s | **partial 2026-08-08** autofly FLY/IDLE/WARM/LAND GO; enter_app≈100; **manual eye** still required |
 
-> **Era20 Manual Visual SLA (2026-08-08):** Manual `perf_20260808-214034` after Era19:
-> wall_med≈246 (чуть лучше 279), but **holes_rate 0.76** (хуже 0.57),
-> VB no_ticket max **16** (было 4), miss≈98% periods, enter `app_update≈2097`.
-> Witness `miss_cy=3`/`mh=4` вне Era17 tops (`cy≤1`); cold async=0 + Imm wall-gate.
-> KEEP FrameStreamingBudget / NotePendingLight. Fix: rim FirstMesh class +
-> cold-async Imm escape + SoftDeferEmpty→FM + enter budget. Autofly ≠ merge.
+> **Era20 Manual Visual SLA closeout (2026-08-08):** P0–P3 landed.
+> Rim FirstMesh class cy≤3/mh≤4; cold-async Imm escape; SoftDeferEmpty→FM;
+> empty FreeChunk keep-prior; VB Relight floor when !miss hot; enter r≤2 gate
+> (`enter_app_update_max`≈100 vs baseline 2097). Autofly: `era20_p3_fly`
+> FLY_CLEAN; `era20_p3_idle` IDLE_CLEAN; `era20_p3_warm` IDLE_WARM;
+> `era20_p3_land3` ARCH_D3_LAND. TD-056 **partial** until manual `214034`-class
+> eye. KEEP FrameStreamingBudget. Reject Imm-off while async-dead under miss;
+> heal-floors-on-hitch; Imm primary zoo. Baseline SoT remains
+> `perf_20260808-214034` (holes 0.76 / no_ticket 16 / enter≈2097).
 
 > **Era19 FrameStreamingBudget closeout (2026-08-08):** Unified `FrameStreamingBudget`
 > (hot_frame_ms=80 shrink; miss-first Capture≤1 FirstMesh; calm pending mid-floor).

@@ -128,11 +128,11 @@ force spend on hitch; knobs-as-DoD; Worker Capture (TD-046).
 manual `214034` holes/black residual → TD-056). Unified `FrameStreamingBudget`.
 Reject: Era18-style `max` floors while VB on hot wall; Worker Capture.
 
-**Era20 Manual Visual SLA (2026-08-08):** TD-056 **open**. Rim FirstMesh class
-cy≤3/mh≤4; cold-async Imm escape; SoftDeferEmpty→FM; enter app_update budget.
-Analyze: `soft_defer_empty_stuck_sec`, `miss_cy_gt1_frac`, `enter_app_update_max`.
-Reject: Imm-off while async=0 under miss; claim CLOSED without `214034`-class
-manual GO; Imm primary zoo.
+**Era20 Manual Visual SLA (2026-08-08):** TD-056 **partial** (autofly GO;
+enter_app≈100; manual `214034`-class eye still required). Rim FirstMesh
+cy≤3/mh≤4; cold-async Imm; SoftDeferEmpty→FM; empty keep-prior; VB Relight
+floor !miss hot; enter r≤2 + SpawnRingCatchUp. Reject: Imm-off while async=0
+under miss; heal-floors-on-hitch; Imm primary zoo; claim CLOSED without manual.
 
 **Backend matrix (R4):** desktop
 
