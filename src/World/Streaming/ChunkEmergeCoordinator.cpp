@@ -1418,10 +1418,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         }
       }
       // Era17: drain enough to turn Contains into Dirty/PendingLight progress.
+      // Era18 P3: hitch orphans (manual 165953 exit no_ticket spike) — keep a
+      // floor even when wall is hot so DrainBudget still pops Relight/Remesh.
       int drain_n = recover_n;
       if (world.GetPhysicsTelemetry().VisibleBlackFocusN > 0)
       {
-        drain_n = std::max(drain_n, moving ? 4 : 8);
+        const int vb_floor = moving ? 4 : 8;
+        const int hitch_floor =
+            last_frame_ms > 40.0 ? (moving ? 6 : 10) : vb_floor;
+        drain_n = std::max(drain_n, hitch_floor);
+      }
+      if (world.GetPhysicsTelemetry().VisibleBlackNoTicketN > 0)
+      {
+        drain_n = std::max(drain_n, moving ? 6 : 10);
       }
       exec.DrainBudget(world, drain_n, focus_ground_horiz, focus_radius, 1);
       // Edge stale-dark / post-miss sticky: raise seam drain near sticky

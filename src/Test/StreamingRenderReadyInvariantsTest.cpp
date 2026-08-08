@@ -437,6 +437,15 @@ int main()
     const auto a18 = ComputeMeshWorkAdmission(tops_miss);
     Expect(a18.remesh_schedule == 0, "Era17: miss cy0 remesh_schedule=0");
     Expect(a18.first_mesh_schedule >= 6, "Era17: miss cy0 FirstMesh≥6");
+
+    // Era18 P3: unfinished storm + miss rim cy≤2 ⇒ remesh_schedule=0.
+    MeshWorkAdmissionInput a18u = tops_miss;
+    a18u.nearest_miss_cy = 2;
+    a18u.unfinished_visual = 8;
+    a18u.pending_gpu = 14;
+    const auto a18s = ComputeMeshWorkAdmission(a18u);
+    Expect(a18s.remesh_schedule == 0, "Era18: unfinished storm remesh=0");
+    Expect(a18s.first_mesh_schedule >= 6, "Era18: unfinished storm FirstMesh≥6");
   }
 
   if (failures != 0)

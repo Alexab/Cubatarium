@@ -253,9 +253,14 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
 
   // Era17 P2: missing tops (cy≤1) — FirstMesh priority class; remesh_schedule=0
   // so remesh admit cannot starve HoleDrain FirstMesh (manual 144227 miss sticky).
+  // Era18 P3: unfinished climb under dirty storm (manual 165953) — same class
+  // when unfinished_visual>0 and miss witness present (cy may be 0–2 rim).
   const bool miss_tops =
       holes && in.nearest_miss_cy >= 0 && in.nearest_miss_cy <= 1;
-  if (miss_tops &&
+  const bool unfinished_storm =
+      holes && in.unfinished_visual > 0 && in.nearest_miss_cy >= 0 &&
+      in.nearest_miss_cy <= 2 && in.pending_gpu >= 12;
+  if ((miss_tops || unfinished_storm) &&
       (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
        out.mode == MeshWorkAdmission::Mode::DeepBacklog))
   {
