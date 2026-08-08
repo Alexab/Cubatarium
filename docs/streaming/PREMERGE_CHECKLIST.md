@@ -116,12 +116,13 @@ Progress/Stalled telem; continuous VB heal (void RelightThenMesh); FirstMesh cla
 when miss cy≤1. P3 matrix: `era17_p3_fly`/`idle`/`warm`/`land` GO; ocean soft
 (`era17_p3_ocean` ARCH_D3 NO-GO — TD-048). Manual residual → Era18 TD-054.
 
-**Era18 focus light-debt (2026-08-08):** TD-054 **open**. Reject: GO on `no_ticket=0`
-while `VB` plateau + `pending_light_focus=0` + `relight_drain≈0` +
-`softdefer_capture_budget=0` (manual `165953`). Void RecoverUnlit must
-`NotePendingLightBeforeMesh`; drain/capture floors while `VB>0`. Autofly alone ≠
-visual merge — manual stand-in-black / land-exit required before claiming CLOSED.
-Reject: remesh-only void heal; claim `144227`/`165953` closed without new log.
+**Era18 focus light-debt closeout (2026-08-08):** TD-054 **partial**. Void
+RecoverUnlit⇒`NotePendingLightBeforeMesh`; bg_budget/idle_recovery/SoftDeferCapture
+floors while `VB>0`; focus FIFO pin; miss unfinished-storm FirstMesh; hitch drain.
+P3 matrix: `era18_p3_fly`/`idle`/`warm`/`land` GO; ocean soft (`era18_p3_ocean`
+ARCH_D3 — TD-048). Manual `165953` class: **re-flight after pull** before claiming
+CLOSED. Reject: GO on `no_ticket=0` while `VB` plateau + drain/capture dead;
+claim manual closed without new log; remesh-only void heal.
 
 **Backend matrix (R4):** desktop
 

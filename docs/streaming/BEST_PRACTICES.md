@@ -153,15 +153,17 @@ force-N) are not DoD — SoT closes the gap.
 
 **Era15 closeout (2026-08-08):** TD-049/050 **done**; TD-051/043 **partial** (`era15_p3b_land` holes≈0.24 miss_stuck=8 sticky=0 wall≈45). FLY_CLEAN + IDLE_CLEAN + IDLE_WARM GO. Ocean ARCH_D3 / TD-048 still open. TD-046 Capture deferred.
 
-## Gap После Era18 plan (2026-08-08) — OPEN
+## Gap После Era18 plan (2026-08-08) — partial (autofly GO; manual pending)
 
 | Практика | Industry | Cubatarium | Era18 SoT |
 |----------|----------|------------|-----------|
-| Void/black ⇒ focus PendingLight gate | light-before-lit-draw | RecoverUnlit FIFO+MarkDirty without Note | **P1** NotePendingLight TD-054 |
-| Drain/capture while VisibleBlack | never starve FOV light | floors keyed only on pending_light_focus | **P1–P2** VB floors |
-| Manual land-exit / stand-in-black SoT | autofly ≠ eye | autofly GO, manual `165953` fail | **P3** manual mandatory |
+| Void/black ⇒ focus PendingLight gate | light-before-lit-draw | RecoverUnlit FIFO+MarkDirty without Note | **done** P1 NotePendingLight TD-054 |
+| Drain/capture while VisibleBlack | never starve FOV light | floors keyed only on pending_light_focus | **done** P1–P2 VB floors |
+| Manual land-exit / stand-in-black SoT | autofly ≠ eye | autofly GO, manual `165953` pre-fix | **pending** user re-flight |
 
-**Baseline:** `perf_20260808-165953` — VB plateau, drain/capture dead, exit miss/unfinished.
+**Baseline:** `perf_20260808-165953`. Autofly: `era18_p3_fly`/`idle`/`warm`/`land` GO.
+Manual replay `era18_p3_manual_replay`: capture dead fixed; VB-without-pending 6s
+(was 112); miss_stuck residual. Gap stays partial until eye confirm.
 
 ## Gap После Era17 plan (2026-08-08) — partial (superseded light-debt)
 

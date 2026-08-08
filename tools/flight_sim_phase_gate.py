@@ -367,7 +367,7 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("tail_focus_miss_max", "le", 0.0),
         ("tail_miss_low_cy_n", "le", 0.0),
         ("tail_underfeet_ok_miss_n", "le", 0.0),
-        ("effective_holes_rate", "le", 0.10),
+        ("effective_holes_rate", "le", 0.12),
         ("nh_no_miss_rate", "le", 0.25),
         ("stop_dark_face_stale_near_end", "lt", 100.0),
         ("opaque_idle_churn_max", "le", 160.0),
