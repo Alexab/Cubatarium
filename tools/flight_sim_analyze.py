@@ -460,6 +460,32 @@ def analyze(
             or float(r.get("visual_holes") or r.get("near_focus_holes") or 0) > 0
         )
     )
+    # Era20: SoftDefer empty stuck (HasGreedy∧!Drawable) while moving/miss.
+    soft_defer_empty_stuck_sec = _max_run_sec(
+        lambda r: float(r.get("softdefer_empty_stuck_n") or 0) > 0
+    )
+    miss_cy_gt1_n = sum(
+        1
+        for r in steady
+        if float(r.get("focus_missing_mesh") or 0) > 0
+        and int(r.get("miss_cy") or -1) > 1
+    )
+    miss_periods_n = sum(
+        1 for r in steady if float(r.get("focus_missing_mesh") or 0) > 0
+    )
+    miss_cy_gt1_frac = (
+        float(miss_cy_gt1_n) / float(miss_periods_n) if miss_periods_n else 0.0
+    )
+    app_updates = [
+        float(r.get("app_update_ms") or 0) for r in periods if r.get("app_update_ms") is not None
+    ]
+    # First InGame periods often carry enter hitch (manual 214034 ≈2097).
+    enter_app_update_max = max(app_updates[:3]) if app_updates else None
+    if enter_app_update_max is None and periods:
+        enter_app_update_max = max(
+            (float(r.get("app_update_ms") or 0) for r in periods[:3]),
+            default=None,
+        )
 
     # Land-cruise symptoms (manual 131234 / 142306): miss stuck, miss at end,
     # opaque draw-list churn while hovering on one focus chunk.
@@ -1032,6 +1058,13 @@ def analyze(
         "softdefer_capture_zero_while_vb_sec": softdefer_capture_zero_while_vb_sec,
         "heal_on_hot_sec": heal_on_hot_sec,
         "heal_on_hot_soft_fail": heal_on_hot_sec >= 20.0,
+        "soft_defer_empty_stuck_sec": soft_defer_empty_stuck_sec,
+        "soft_defer_empty_stuck_soft_fail": soft_defer_empty_stuck_sec >= 20.0,
+        "miss_cy_gt1_frac": miss_cy_gt1_frac,
+        "enter_app_update_max": enter_app_update_max,
+        "enter_app_update_soft_fail": (
+            enter_app_update_max is not None and enter_app_update_max >= 800.0
+        ),
         "vb_without_pending_light_focus_soft_fail": (
             vb_without_pending_light_focus_sec >= 30.0
         ),
@@ -1119,6 +1152,9 @@ def analyze(
             "relight_drain_near_zero_while_vb_sec": relight_drain_near_zero_while_vb_sec,
             "softdefer_capture_zero_while_vb_sec": softdefer_capture_zero_while_vb_sec,
             "heal_on_hot_sec": heal_on_hot_sec,
+            "soft_defer_empty_stuck_sec": soft_defer_empty_stuck_sec,
+            "miss_cy_gt1_frac": miss_cy_gt1_frac,
+            "enter_app_update_max": enter_app_update_max,
             "dirty_high_sec": dirty_high_sec,
             "miss_stuck_max_run_sec": miss_stuck_max_run_sec,
             "miss_end": miss_end,

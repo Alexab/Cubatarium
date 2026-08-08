@@ -28,8 +28,28 @@ struct MeshWorkAdmissionInput
   /// Nearest focus miss Chebyshev horiz; <0 = unknown (skip K3 remesh band).
   int nearest_miss_horiz{-1};
   /// Nearest focus miss chunk Y; <0 = unknown. Era17: cy≤1 ⇒ FirstMesh class.
+  /// Era20: cy≤3 OR mh≤4 (manual 214034 miss_cy=3 mh=4).
   int nearest_miss_cy{-1};
 };
+
+/// Era20 I-M1: FirstMesh priority class while FOV holes (manual 214034).
+inline bool IsMissFirstMeshClass(bool holes, int nearest_miss_cy,
+                                 int nearest_miss_horiz)
+{
+  if (!holes)
+  {
+    return false;
+  }
+  if (nearest_miss_cy >= 0 && nearest_miss_cy <= 3)
+  {
+    return true;
+  }
+  if (nearest_miss_horiz >= 0 && nearest_miss_horiz <= 4)
+  {
+    return true;
+  }
+  return false;
+}
 
 struct MeshWorkAdmission
 {

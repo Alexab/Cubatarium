@@ -125,13 +125,14 @@ P3 matrix autofly GO; ocean soft (`era18_p3_ocean` ARCH_D3 — TD-048). Manual
 force spend on hitch; knobs-as-DoD; Worker Capture (TD-046).
 
 **Era19 FrameStreamingBudget (2026-08-08):** TD-055 **partial** (autofly GO;
-manual eye pending). Unified `FrameStreamingBudget` + kill-switches
-`era18_vb_capture_floor` / `era18_vb_bg_budget_floor` / `miss_first_frame_budget`.
-hot_frame_ms=80 shrink; miss-first Capture≤1 FirstMesh; calm pending mid-floor;
-P2 PendingLight vs Remesh exclusivity. Analyze `heal_on_hot_sec`.
-Evidence: `era19_p3_fly`/`era19_p3_warm`/`era19_p3b_idle`/`era19_p1_land2`.
-Reject: Era18-style `max` floors while VB on hot wall; GO without `191229`-class
-manual re-flight; Worker Capture.
+manual `214034` holes/black residual → TD-056). Unified `FrameStreamingBudget`.
+Reject: Era18-style `max` floors while VB on hot wall; Worker Capture.
+
+**Era20 Manual Visual SLA (2026-08-08):** TD-056 **open**. Rim FirstMesh class
+cy≤3/mh≤4; cold-async Imm escape; SoftDeferEmpty→FM; enter app_update budget.
+Analyze: `soft_defer_empty_stuck_sec`, `miss_cy_gt1_frac`, `enter_app_update_max`.
+Reject: Imm-off while async=0 under miss; claim CLOSED without `214034`-class
+manual GO; Imm primary zoo.
 
 **Backend matrix (R4):** desktop
 

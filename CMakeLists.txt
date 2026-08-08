@@ -1314,6 +1314,11 @@ add_executable(mesh_neighbor_policy_test
 target_include_directories(mesh_neighbor_policy_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
+add_executable(miss_first_mesh_class_test
+    src/Test/MissFirstMeshClassTest.cpp)
+target_include_directories(miss_first_mesh_class_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
 add_executable(focus_ingress_policy_test
     src/Test/FocusIngressPolicyTest.cpp)
 target_include_directories(focus_ingress_policy_test PRIVATE

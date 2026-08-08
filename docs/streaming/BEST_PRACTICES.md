@@ -153,19 +153,30 @@ force-N) are not DoD — SoT closes the gap.
 
 **Era15 closeout (2026-08-08):** TD-049/050 **done**; TD-051/043 **partial** (`era15_p3b_land` holes≈0.24 miss_stuck=8 sticky=0 wall≈45). FLY_CLEAN + IDLE_CLEAN + IDLE_WARM GO. Ocean ARCH_D3 / TD-048 still open. TD-046 Capture deferred.
 
-## Gap После Era19 plan (2026-08-08) — autofly CLOSED (manual eye pending)
+## Gap После Era20 plan (2026-08-08) — open (TD-056)
+
+| Практика | Industry | Cubatarium | Era20 SoT |
+|----------|----------|------------|-----------|
+| HP FirstMesh must progress under miss | MC dual-queue | tops class cy≤1; Imm off wall>50; async=0 sticky | miss class cy≤3/mh≤4 + cold-async Imm |
+| Hide/not-draw empty until ready | Hide⇒Ticket | SoftDefer empty HasGreedy∧!Drawable flicker | SoftDeferEmpty→FirstMesh; no empty-ready |
+| Enter time-sliced | UE spawn limits | RD+1 ring + drain×8 → app_update≈2s | underfeet gate + warmup budget |
+| Autofly ≠ visual merge | PREMERGE | Era19 autofly GO; manual `214034` holes/black | manual `214034` mandatory |
+
+**Baseline:** `perf_20260808-214034` / `manual_214034_analyze.json`. Keep
+FrameStreamingBudget. Reject Imm primary; Era18 VB Capture storm; autofly-only close.
+
+## Gap После Era19 plan (2026-08-08) — autofly CLOSED; **manual superseded by 214034**
 
 | Практика | Industry | Cubatarium | Era19 SoT |
 |----------|----------|------------|-----------|
 | Per-frame time budget mesh/stream | Cubyz `maximumMeshTime`; UE cell/spawn limits | Era18 count `max` floors without ms SoT | **done** `FrameStreamingBudget` + kill-switches |
-| Dual-queue HP FirstMesh vs LP heal | MC highPriorityQuota | VB Capture/bg compete under miss/hitch | **done** miss-first: Capture≤1 FirstMesh; VB floors off when wall>80 |
+| Dual-queue HP FirstMesh vs LP heal | MC highPriorityQuota | VB Capture/bg compete under miss/hitch | **done** miss-first — **under-healed** rim on `214034` |
 | Column light→mesh stage exclusivity | Unity/Burst stages | dual Remesh+Relight | **done** P2 PendingLight owns column |
-| Autofly ≠ visual merge | PREMERGE | Era18 closed on autofly while `191229` FPS collapse | autofly matrix GO; **manual 191229-class re-flight** before merge |
+| Autofly ≠ visual merge | PREMERGE | Era18 closed on autofly while `191229` FPS collapse | autofly GO; manual `214034` holes↑ no_ticket↑ → TD-056 |
 
 **Evidence:** `era19_p3_fly` FLY_CLEAN GO; `era19_p3_warm` IDLE_WARM GO;
 `era19_p3b_idle`/`era19_p1c_idle` IDLE_CLEAN GO; `era19_p1_land2` ARCH_D3_LAND GO.
-Baseline `perf_20260808-191229` (`heal_on_hot_sec` soft_fail). Keep NotePendingLight.
-Reject Era18-style `max` floors while VB on hot wall.
+Manual `214034` = new SoT (not visual merge).
 
 ## Gap После Era18 plan (2026-08-08) — **regressed FPS/miss** (light-debt soft OK)
 

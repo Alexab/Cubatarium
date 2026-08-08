@@ -107,7 +107,15 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-052 | Era16 | VisibleBlack SoT / black_sticky≠user black | `CountVisibleBlackFocusMeshes`; honest StaleDark; Hide⇒Ticket RemeshSeam; IDLE_CLEAN+ARCH_D3_LAND no_ticket=0 | **done 2026-08-08** P0–P3 |
 | TD-ARCH-053 | Era17 | Heal-until-predicate / ticket≠progress | Real Contains ticket; Progress/Stalled telem; void RelightThenMesh; FirstMesh class | **done 2026-08-08** P0–P2 |
 | TD-ARCH-054 | Era18 | Focus light-debt / VB without PendingLight | Void RecoverUnlit⇒NotePendingLight; drain/capture floors while VB>0; manual 165953 | **partial 2026-08-08** light path OK; FPS/miss fixed via TD-055 autofly; manual eye pending |
-| TD-ARCH-055 | Era19 | FrameStreamingBudget / heal-on-hot feedback | Era18 `max` floors force Capture/VB spend on hot wall → wall↑ holes↑ miss↑ (`191229`) | **partial 2026-08-08** FrameStreamingBudget + miss-first; autofly matrix GO; manual 191229-class re-flight pending |
+| TD-ARCH-055 | Era19 | FrameStreamingBudget / heal-on-hot feedback | Era18 `max` floors force Capture/VB spend on hot wall → wall↑ holes↑ miss↑ (`191229`) | **partial 2026-08-08** FrameStreamingBudget + miss-first; autofly GO; manual `214034` still holes/black |
+| TD-ARCH-056 | Era20 | Manual Visual SLA / rim FirstMesh escape | `214034`: miss_cy=3 outside tops; Imm off on hot; SoftDefer empty; VB no_ticket↑; enter app_update≈2s | **open 2026-08-08** P0 harness |
+
+> **Era20 Manual Visual SLA (2026-08-08):** Manual `perf_20260808-214034` after Era19:
+> wall_med≈246 (чуть лучше 279), but **holes_rate 0.76** (хуже 0.57),
+> VB no_ticket max **16** (было 4), miss≈98% periods, enter `app_update≈2097`.
+> Witness `miss_cy=3`/`mh=4` вне Era17 tops (`cy≤1`); cold async=0 + Imm wall-gate.
+> KEEP FrameStreamingBudget / NotePendingLight. Fix: rim FirstMesh class +
+> cold-async Imm escape + SoftDeferEmpty→FM + enter budget. Autofly ≠ merge.
 
 > **Era19 FrameStreamingBudget closeout (2026-08-08):** Unified `FrameStreamingBudget`
 > (hot_frame_ms=80 shrink; miss-first Capture≤1 FirstMesh; calm pending mid-floor).
