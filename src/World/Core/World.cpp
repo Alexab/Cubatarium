@@ -1437,6 +1437,9 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
         }
         // Stuck black mesh on lit-ready columns: remesh when baked side/top
         // faces are dark or world light outran the mesh (stale bake).
+        // Era18 I-L1: void/fully-dark must NotePendingLightBeforeMesh — FIFO +
+        // MarkDirty alone leaves pending_light_focus=0 and starves drain
+        // (manual 165953). P1 implements Note on this path.
         bool bad_mesh = false;
         if (has_mesh)
         {

@@ -425,6 +425,32 @@ def analyze(
             run = 0
     cold_relight_holes_sec = cold_relight_holes * 2.0
 
+    # Era18 P0: focus light-debt honesty (manual 165953 stand-in-black).
+    # Period≈2s (same scale as miss_stuck / cold_relight).
+    def _max_run_sec(pred) -> float:
+        run = 0
+        best = 0
+        for r in steady:
+            if pred(r):
+                run += 1
+                best = max(best, run)
+            else:
+                run = 0
+        return best * 2.0
+
+    vb_without_pending_light_focus_sec = _max_run_sec(
+        lambda r: float(r.get("visible_black_focus_n") or 0) > 0
+        and float(r.get("pending_light_focus") or 0) <= 0
+    )
+    relight_drain_near_zero_while_vb_sec = _max_run_sec(
+        lambda r: float(r.get("visible_black_focus_n") or 0) > 0
+        and float(r.get("relight_drain_ms") or 0) < 0.5
+    )
+    softdefer_capture_zero_while_vb_sec = _max_run_sec(
+        lambda r: float(r.get("visible_black_focus_n") or 0) > 0
+        and float(r.get("softdefer_capture_budget") or 0) <= 0
+    )
+
     # Land-cruise symptoms (manual 131234 / 142306): miss stuck, miss at end,
     # opaque draw-list churn while hovering on one focus chunk.
     miss_key = (
@@ -982,6 +1008,19 @@ def analyze(
         "holes_rate_raw": holes_rate,
         "mesh_async_stuck_sec": mesh_async_stuck_sec,
         "cold_relight_holes_sec": cold_relight_holes_sec,
+        # Era18 P0 report-only (hard floors land in P1/P2).
+        "vb_without_pending_light_focus_sec": vb_without_pending_light_focus_sec,
+        "relight_drain_near_zero_while_vb_sec": relight_drain_near_zero_while_vb_sec,
+        "softdefer_capture_zero_while_vb_sec": softdefer_capture_zero_while_vb_sec,
+        "vb_without_pending_light_focus_soft_fail": (
+            vb_without_pending_light_focus_sec >= 30.0
+        ),
+        "relight_drain_dead_while_vb_soft_fail": (
+            relight_drain_near_zero_while_vb_sec >= 30.0
+        ),
+        "softdefer_capture_dead_while_vb_soft_fail": (
+            softdefer_capture_zero_while_vb_sec >= 30.0
+        ),
         "gates_stop": gates_stop,
         "stop_segment_periods": len(stop_segment),
         "stop_pending_delta": stop_pending_delta,
@@ -1056,6 +1095,9 @@ def analyze(
             "stop_dark_face_void_near_end": stop_dark_face_void_near_end,
             "stuck_async_holes_sec": stuck_async_holes_sec,
             "cold_relight_holes_sec": cold_relight_holes_sec,
+            "vb_without_pending_light_focus_sec": vb_without_pending_light_focus_sec,
+            "relight_drain_near_zero_while_vb_sec": relight_drain_near_zero_while_vb_sec,
+            "softdefer_capture_zero_while_vb_sec": softdefer_capture_zero_while_vb_sec,
             "dirty_high_sec": dirty_high_sec,
             "miss_stuck_max_run_sec": miss_stuck_max_run_sec,
             "miss_end": miss_end,

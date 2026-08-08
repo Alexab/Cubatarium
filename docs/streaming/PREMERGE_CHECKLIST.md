@@ -114,10 +114,14 @@ on `black_sticky` while VisibleBlack orphans remain.
 **Era17 heal-until closeout (2026-08-08):** TD-053 **done**. Contains-only ticket +
 Progress/Stalled telem; continuous VB heal (void RelightThenMesh); FirstMesh class
 when miss cy≤1. P3 matrix: `era17_p3_fly`/`idle`/`warm`/`land` GO; ocean soft
-(`era17_p3_ocean` ARCH_D3 NO-GO — TD-048). Manual `144227` class: heal DoD + miss
-tops priority. Autofly alone ≠ visual merge — re-check manual land-exit after pull.
-Reject: phantom live-window tickets; GO on no_ticket while faces plateau; remesh
-starve cy≤1 FirstMesh.
+(`era17_p3_ocean` ARCH_D3 NO-GO — TD-048). Manual residual → Era18 TD-054.
+
+**Era18 focus light-debt (2026-08-08):** TD-054 **open**. Reject: GO on `no_ticket=0`
+while `VB` plateau + `pending_light_focus=0` + `relight_drain≈0` +
+`softdefer_capture_budget=0` (manual `165953`). Void RecoverUnlit must
+`NotePendingLightBeforeMesh`; drain/capture floors while `VB>0`. Autofly alone ≠
+visual merge — manual stand-in-black / land-exit required before claiming CLOSED.
+Reject: remesh-only void heal; claim `144227`/`165953` closed without new log.
 
 **Backend matrix (R4):** desktop
 

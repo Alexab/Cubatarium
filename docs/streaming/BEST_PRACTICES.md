@@ -153,16 +153,26 @@ force-N) are not DoD — SoT closes the gap.
 
 **Era15 closeout (2026-08-08):** TD-049/050 **done**; TD-051/043 **partial** (`era15_p3b_land` holes≈0.24 miss_stuck=8 sticky=0 wall≈45). FLY_CLEAN + IDLE_CLEAN + IDLE_WARM GO. Ocean ARCH_D3 / TD-048 still open. TD-046 Capture deferred.
 
-## Gap После Era17 plan (2026-08-08) — CLOSED
+## Gap После Era18 plan (2026-08-08) — OPEN
+
+| Практика | Industry | Cubatarium | Era18 SoT |
+|----------|----------|------------|-----------|
+| Void/black ⇒ focus PendingLight gate | light-before-lit-draw | RecoverUnlit FIFO+MarkDirty without Note | **P1** NotePendingLight TD-054 |
+| Drain/capture while VisibleBlack | never starve FOV light | floors keyed only on pending_light_focus | **P1–P2** VB floors |
+| Manual land-exit / stand-in-black SoT | autofly ≠ eye | autofly GO, manual `165953` fail | **P3** manual mandatory |
+
+**Baseline:** `perf_20260808-165953` — VB plateau, drain/capture dead, exit miss/unfinished.
+
+## Gap После Era17 plan (2026-08-08) — partial (superseded light-debt)
 
 | Практика | Industry | Cubatarium | Era17 SoT |
 |----------|----------|------------|-----------|
 | Ticket = work in flight not live-window | Hide⇒Ticket | Contains ∨ Dirty/Inflight/PendingLight | **done** P0 TD-053 |
-| Heal until predicate false | continuous should_mesh | derive while VB>0; void RelightThenMesh | **done** P1 |
-| FirstMesh priority class under miss tops | MC dual-queue | remesh_schedule=0 when miss cy≤1 | **done** P2 |
+| Heal until predicate false | continuous should_mesh | derive while VB>0; void RelightThenMesh | **partial** ticket without focus PendingLight |
+| FirstMesh priority class under miss tops | MC dual-queue | remesh_schedule=0 when miss cy≤1 | **done** P2 (exit miss residual TD-054) |
 
 **Era17 closeout:** IDLE_CLEAN + ARCH_D3_LAND GO (`era17_p1_idle`, `era17_p2_land`);
-manual `144227` residual class closed via heal-until + FirstMesh class.
+manual `144227`/`165953` class **open** via TD-054 (autofly ≠ visual merge).
 
 ## Gap После Era16 plan (2026-08-08) — superseded by Era17
 
@@ -174,7 +184,7 @@ manual `144227` residual class closed via heal-until + FirstMesh class.
 
 **Era16 closeout:** P3 matrix GO — `era16_p3_fly` / `idle` / `warm` / `land`;
 ocean ARCH_D3 soft residual TD-048 (`era16_p3_ocean` wall≈226, no_ticket=0).
-**Manual residual `144227`:** closed via Era17.
+**Manual residual `144227`/`165953`:** open via Era18 TD-054 (ticket≠focus light debt).
 
 ## Практический Вывод Для Cubatarium
 

@@ -106,11 +106,16 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-051 | Era15 | FirstMesh-until-Drawable / PreferKick Kicked stall | PreferKick Queued+Kicked; Era16 land holes≈0.04 ARCH_D3_LAND GO | **done 2026-08-08** via Era16 P2 |
 | TD-ARCH-052 | Era16 | VisibleBlack SoT / black_sticky≠user black | `CountVisibleBlackFocusMeshes`; honest StaleDark; Hide⇒Ticket RemeshSeam; IDLE_CLEAN+ARCH_D3_LAND no_ticket=0 | **done 2026-08-08** P0–P3 |
 | TD-ARCH-053 | Era17 | Heal-until-predicate / ticket≠progress | Real Contains ticket; Progress/Stalled telem; void RelightThenMesh; FirstMesh class | **done 2026-08-08** P0–P2 |
+| TD-ARCH-054 | Era18 | Focus light-debt / VB without PendingLight | Void RecoverUnlit⇒NotePendingLight; drain/capture floors while VB>0; manual 165953 | **open 2026-08-08** |
+
+> **Era18 focus light-debt (2026-08-08):** Manual `165953` — VB=53 plateau with
+> `pending_light_focus=0`, `relight_drain≈0`, `softdefer_capture_budget=0`, fifo frozen.
+> Ticket≠light debt. Autofly land GO ≠ visual merge.
 
 > **Era17 heal-until closeout (2026-08-08):** Contains-only ticket + Progress/Stalled;
 > continuous VB heal (void→RelightThenMesh, stale→MarkDirty); FirstMesh class cy≤1.
-> Evidence: `era17_p1_idle`/`land`, `era17_p2_land`. Manual `144227` class addressed
-> (no_ticket DoD + miss tops priority). Autofly ≠ sole visual merge SoT.
+> Evidence: `era17_p1_idle`/`land`, `era17_p2_land`. Manual `144227` class **partial** —
+> superseded residual `165953` (TD-054). Autofly ≠ sole visual merge SoT.
 
 > **Era16 VisibleBlack closeout (2026-08-08):** `black_sticky` ⊆ StickyRemeshAfterLight;
 > DoD = `VisibleBlackNoTicketN` / `post_stop_visible_black_no_ticket_max=0`.

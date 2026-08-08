@@ -156,6 +156,25 @@ int main()
            "sticky near → live repair ticket kinds");
   }
 
+  // Era18 I-L1: void VisibleBlack tickets are RelightThenMesh (+Promote), never
+  // RemeshSeam-only. RecoverUnlit void path must NotePendingLight (P1) so focus
+  // drain sees debt — covered by TD-054 + World.cpp SoT comment until full world
+  // fixture; queue kind contract is enforced here.
+  {
+    UColumnFlowScheduler sched;
+    const glm::ivec2 focus{0, 0};
+    std::vector<glm::ivec2> void_cols{{1, 0}, {3, 0}};
+    EnqueueVoidDarkRelightTickets(sched, focus, void_cols);
+    Expect(sched.Contains(void_cols[0], ColumnWorkKind::RelightThenMesh),
+           "Era18: void near → RelightThenMesh");
+    Expect(sched.Contains(void_cols[0], ColumnWorkKind::PromoteRelight),
+           "Era18: void near → PromoteRelight");
+    Expect(!sched.Contains(void_cols[0], ColumnWorkKind::RemeshSeam),
+           "Era18: void must not RemeshSeam-only");
+    Expect(sched.Contains(void_cols[1], ColumnWorkKind::RelightThenMesh),
+           "Era18: void far → RelightThenMesh");
+  }
+
   // MeshWorkAdmission: floors propose, Finalize caps under backlog.
   {
     MeshWorkAdmissionInput normal{};
