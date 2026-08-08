@@ -67,8 +67,8 @@ inline bool AllowUnlitFirstMesh(bool has_mesh, int /*horiz_from_focus*/,
   return true;
 }
 
-/// VisibleBlack Hide⇒Ticket: RemeshSeam (+ near Relight) without full
-/// RelightThenMesh storm used by sticky/stale waves.
+/// VisibleBlack Hide⇒Ticket for stale-dark columns: RemeshSeam (+ near Promote).
+/// Void VisibleBlack must use EnqueueVoidDarkRelightTickets (RelightThenMesh).
 inline void EnqueueVisibleBlackRepairTickets(
     UColumnFlowScheduler &scheduler, glm::ivec2 focus,
     const std::vector<glm::ivec2> &cols)

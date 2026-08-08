@@ -2821,25 +2821,10 @@ int UWorld::RemeshColumnSeamTicket(glm::ivec2 ground_xz)
     StickyRemeshAfterLight.erase(ground_xz);
     return 0;
   }
-  // Era17 P0: calm/far skip MarkDirty must return 0 honestly (noop ≠ heal).
-  // Do not erase sticky as "healed" — VisibleBlack may still be true (P1 MarkDirty).
-  const auto &telem = GetPhysicsTelemetry();
+  // Era17 P1: VisibleBlack stale in focus ring always MarkDirty (heal-until).
+  // Far/calm skip removed for stale_dark — churn capped by Collect repair_cap.
   const glm::ivec3 focus =
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
-  const bool calm_idle =
-      LastMovementSpeed <= ProceduralTemplate.MovementPrefetchThreshold &&
-      telem.FocusMissingMesh == 0 && telem.DarkFaceNearN == 0 &&
-      telem.DarkFaceStaleNearN == 0;
-  if (calm_idle)
-  {
-    return 0;
-  }
-  const int horiz = std::max(std::abs(ground_xz.x - focus.x),
-                             std::abs(ground_xz.y - focus.z));
-  if (horiz > 2)
-  {
-    return 0;
-  }
   const int preferred_cy = focus.y;
   const int remesh_min = (preferred_cy - 1) * CHUNK_SIZE;
   const int remesh_max =

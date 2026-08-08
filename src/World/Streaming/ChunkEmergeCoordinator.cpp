@@ -1373,8 +1373,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         (!moving && pending_focus_n > 15 && recover_watchdog_frames >= 2) ||
         (world.GetPhysicsTelemetry().DarkFaceNearN > 500 &&
          recover_watchdog_frames >= 2) ||
-        // Era16: ticket orphans every watchdog 4 (not every frame).
-        (world.GetPhysicsTelemetry().VisibleBlackNoTicketN > 0 &&
+        // Era16: ticket orphans; Era17: also while VisibleBlackFocusN>0 (heal-until).
+        ((world.GetPhysicsTelemetry().VisibleBlackNoTicketN > 0 ||
+          world.GetPhysicsTelemetry().VisibleBlackFocusN > 0) &&
          recover_watchdog_frames >= 4);
     if (recover_now && recover_n > 0)
     {
@@ -1416,7 +1417,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                        ColumnWorkKind::RelightThenMesh, relight_prio);
         }
       }
-      exec.DrainBudget(world, recover_n, focus_ground_horiz, focus_radius, 1);
+      // Era17: drain enough to turn Contains into Dirty/PendingLight progress.
+      int drain_n = recover_n;
+      if (world.GetPhysicsTelemetry().VisibleBlackFocusN > 0)
+      {
+        drain_n = std::max(drain_n, moving ? 4 : 8);
+      }
+      exec.DrainBudget(world, drain_n, focus_ground_horiz, focus_radius, 1);
       // Edge stale-dark / post-miss sticky: raise seam drain near sticky
       // (land_fix P3 — keep_h already 2–3 via StarveRemeshKeepHoriz).
       const int dark_n = world.GetPhysicsTelemetry().DarkFaceNearN;

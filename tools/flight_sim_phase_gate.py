@@ -372,11 +372,11 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("stop_dark_face_stale_near_end", "lt", 100.0),
         ("opaque_idle_churn_max", "le", 160.0),
         ("post_stop_black_sticky_max", "le", 0.0),
-        # Era17 P0: soft — Contains-only ticket honesty raises no_ticket until P1 heal.
-        # Hard restore in P1 after continuous VB + correct kinds.
-        # ("post_stop_visible_black_no_ticket_max", "le", 0.0),
-        # Soft 70: land density + Era16 remesh tax; p2 GO wall≈52, p3 matrix
-        # sometimes 66–67 under same binary (machine load). Holes/miss/sticky hard.
+        # Era17 P1: hard heal — no orphan VisibleBlack; stalled queue=0.
+        ("post_stop_visible_black_no_ticket_max", "le", 0.0),
+        # Stalled (=Contains without Dirty yet) is mid-queue; report-only.
+        # ("post_stop_visible_black_stalled_max", "le", 0.0),
+        # Soft 70: land density + remesh tax.
         ("wall_ms_med", "le", 70.0),
         ("chunks_traveled", "ge", 3.0),
     ],
@@ -386,18 +386,18 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
     "IDLE_CLEAN": [
         ("contaminated_idle", "le", 0.0),
         ("calm_stop_wall_med", "le", 55.0),
-        # Era17 P0: Contains-only ticket may leave brief sticky/remesh tax; tighten in P1.
+        # Era17 remesh/relight tax under heal-until (was 18 Era16).
         ("calm_stop_emerge_med", "le", 25.0),
         ("calm_stop_stream_med", "le", 18.0),
         ("physics_block_ms_p95", "le", 5.0),
         ("edit_immediate_n_med", "le", 0.0),
         ("stop_focus_dirty_delta", "le", 0.0),
         ("opaque_idle_churn_max", "le", 160.0),
-        # Era17 P0 soft sticky≤1 flake under honesty; hard 0 restored P1.
-        ("post_stop_black_sticky_max", "le", 1.0),
-        # Era17 P0: soft — Contains-only ticket honesty raises no_ticket until P1 heal.
-        # Hard restore in P1 after continuous VB + correct kinds.
-        # ("post_stop_visible_black_no_ticket_max", "le", 0.0),
+        ("post_stop_black_sticky_max", "le", 0.0),
+        ("post_stop_visible_black_no_ticket_max", "le", 0.0),
+        # Stalled report-only (queue membership before Dirty/PendingLight).
+        # ("post_stop_visible_black_stalled_max", "le", 0.0),
+        ("stop_dark_face_stale_near_end", "lt", 200.0),
         ("post_stop_missing_max", "le", 0.0),
         ("chunks_traveled", "ge", 3.0),
     ],

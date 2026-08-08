@@ -119,7 +119,11 @@ void UColumnFlowExecutor::Dispatch(UWorld &world, const ColumnWorkItem &work,
     {
       // Era16: targeted column remesh — SyncIdle scans whole sticky set and
       // stormed emerge when every VisibleBlack ticket dispatched RemeshSeam.
-      world.RemeshColumnSeamTicket(*only);
+      // Era17: noop Remesh must not leave enqueue cooldown (re-derive next tick).
+      if (world.RemeshColumnSeamTicket(*only) <= 0)
+      {
+        last_dispatch_frame_.erase(CooldownKey(work.column, work.kind));
+      }
     }
     else
     {
@@ -222,8 +226,6 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   const int void_n = world.GetPhysicsTelemetry().DarkFaceVoidNearN;
   const int visible_black_n =
       world.GetPhysicsTelemetry().VisibleBlackFocusN;
-  const int visible_black_no_ticket =
-      world.GetPhysicsTelemetry().VisibleBlackNoTicketN;
   constexpr double kStaleRepairCooldownSec = 2.0;
   const auto now = std::chrono::steady_clock::now();
   const bool cooldown_ok =
@@ -247,8 +249,8 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       /*void_focus=*/!missing_visible_mesh && !moving && cooldown_ok &&
           (void_n > 200 || (void_n > 40 && stale_n > 40)),
       pending_light, lit_pending, unlit_published);
-  const bool nearest_vb_ticket =
-      async_ok && visible_black_no_ticket > 0;
+  const bool nearest_vb_heal =
+      async_ok && visible_black_n > 0;
   const bool allow_stale_wave =
       desired.stage == ColumnDesiredStage::RemeshSeam ||
       world.GetPhysicsTelemetry().FocusStickyRemesh > 0 ||
@@ -259,12 +261,13 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       desired.stage == ColumnDesiredStage::RelightThenMesh ||
       (!missing_visible_mesh && !moving && cooldown_ok &&
        (void_n > 200 || (void_n > 40 && stale_n > 40)));
-  const int repair_cap = std::min(6, std::max(2, recover_n / 2));
+  const int repair_cap =
+      !moving ? std::min(12, std::max(4, recover_n))
+              : std::min(6, std::max(2, recover_n / 2));
 
-  // Era16 Hide=>Ticket: light Remesh for orphans (targeted Dispatch). Void:
-  // PromoteRelight only in P0 — RelightThenMesh heal lands in Era17 P1.
-  // Era17: no arm_repair phantom live-window; Contains after Enqueue is SoT.
-  if (nearest_vb_ticket)
+  // Era17 P1: continuous heal while VisibleBlackFocusN>0 (not only NoTicket).
+  // Stale → RemeshSeam (+MarkDirty). Void → RelightThenMesh+Promote (I-H3).
+  if (nearest_vb_heal)
   {
     const int vb_radius =
         missing_visible_mesh ? std::min(2, focus_radius) : focus_radius;
@@ -272,15 +275,18 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
                                        stale_dark_cols, repair_cap);
     world.CollectFullyDarkFocusColumns(focus_ground_horiz, vb_radius,
                                        void_dark_cols, repair_cap);
-    EnqueueVisibleBlackRepairTickets(scheduler_, focus, stale_dark_cols);
-    for (const glm::ivec2 &col : void_dark_cols)
+    if (!stale_dark_cols.empty())
     {
-      scheduler_.Enqueue(col, ColumnWorkKind::PromoteRelight, 45);
+      EnqueueVisibleBlackRepairTickets(scheduler_, focus, stale_dark_cols);
+    }
+    if (!void_dark_cols.empty())
+    {
+      EnqueueVoidDarkRelightTickets(scheduler_, focus, void_dark_cols);
     }
   }
 
-  // Classic sticky/stale wave (thresholds + Sticky Note).
-  if (!nearest_vb_ticket && allow_stale_wave)
+  // Classic sticky/stale wave (thresholds + Sticky Note) when not in VB heal.
+  if (!nearest_vb_heal && allow_stale_wave)
   {
     stale_dark_cols.clear();
     const int stale_radius =
@@ -290,14 +296,14 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     world.CollectStaleDarkFocusColumns(focus_ground_horiz, stale_radius,
                                        stale_dark_cols, stale_cap);
   }
-  if (!nearest_vb_ticket && allow_void_wave)
+  if (!nearest_vb_heal && allow_void_wave)
   {
     void_dark_cols.clear();
     const int void_cap = std::min(4, std::max(2, recover_n / 2));
     world.CollectFullyDarkFocusColumns(focus_ground_horiz, /*radius=*/2,
                                        void_dark_cols, void_cap);
   }
-  if (!nearest_vb_ticket)
+  if (!nearest_vb_heal)
   {
     // Sticky maintenance: RemeshSeam only. Avoid RelightThenMesh triple while
     // sticky>0 (era16 emerge storm).
@@ -319,7 +325,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     }
   }
   if (cooldown_ok && allow_stale_wave_base && !stale_dark_cols.empty() &&
-      !nearest_vb_ticket)
+      !nearest_vb_heal)
   {
     for (const glm::ivec2 &col : stale_dark_cols)
     {
@@ -330,11 +336,11 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
         static_cast<int>(stale_dark_cols.size());
   }
   else if (cooldown_ok && allow_void_wave && !void_dark_cols.empty() &&
-           !nearest_vb_ticket)
+           !nearest_vb_heal)
   {
     LastStaleRepairWave = now;
   }
-  if (nearest_vb_ticket || !stale_dark_cols.empty() || !void_dark_cols.empty())
+  if (nearest_vb_heal || !stale_dark_cols.empty() || !void_dark_cols.empty())
   {
     int no_ticket = 0;
     int progress_n = 0;
