@@ -57,6 +57,7 @@ struct Session
   double AccumFluidGpuMs{0.0};
   double AccumStreamMs{0.0};
   double AccumMeshEmergeMs{0.0};
+  double AccumWorldStreamingPhaseMs{0.0};
   double AccumSceneMs{0.0};
   double AccumPhysMs{0.0};
   double MaxWallMs{0.0};
@@ -941,6 +942,7 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumFluidGpuMs += n.fluid_map_gpu_ms;
   s.AccumStreamMs += n.stream_ms;
   s.AccumMeshEmergeMs += n.mesh_emerge_ms;
+  s.AccumWorldStreamingPhaseMs += n.world_streaming_phase_ms;
   s.AccumSceneMs += n.scene_ms;
   s.AccumPhysMs += n.phys_ms;
   s.AccumPerfCollectMs += n.perf_collect_ms;
@@ -974,6 +976,7 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
   avg.fluid_map_gpu_ms = s.AccumFluidGpuMs * inv;
   avg.stream_ms = s.AccumStreamMs * inv;
   avg.mesh_emerge_ms = s.AccumMeshEmergeMs * inv;
+  avg.world_streaming_phase_ms = s.AccumWorldStreamingPhaseMs * inv;
   avg.scene_ms = s.AccumSceneMs * inv;
   avg.phys_ms = s.AccumPhysMs * inv;
   avg.perf_collect_ms = s.AccumPerfCollectMs * inv;
@@ -1007,6 +1010,7 @@ void ResetAccum(Session &s)
   s.AccumFluidGpuMs = 0.0;
   s.AccumStreamMs = 0.0;
   s.AccumMeshEmergeMs = 0.0;
+  s.AccumWorldStreamingPhaseMs = 0.0;
   s.AccumSceneMs = 0.0;
   s.AccumPhysMs = 0.0;
   s.AccumPerfCollectMs = 0.0;

@@ -22,6 +22,7 @@
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Streaming/WorldStreaming.h"
+#include "World/Core/RuntimeTuning.h"
 
 #include <chrono>
 #include <optional>
@@ -687,7 +688,25 @@ void UWorld::TickWorldStreamingPhase()
   UpdateStreaming();
   TickAsyncChunkSystems();
   const auto t_after_stream = std::chrono::high_resolution_clock::now();
-  TickEnterGameMeshBurst();
+  // Era14.1 B: UE-style phase time budget. Miss/UV carve-out — always emerge.
+  // When stream already spent the budget on a clean frame, skip EnterGame burst
+  // (non-miss prep) but still TickMeshEmerge for SoftDefer/Dirty heal.
+  const double stream_elapsed_ms =
+      std::chrono::duration<double, std::milli>(t_after_stream - t_before_stream)
+          .count();
+  const bool miss_carve_out =
+      PhysicsTelemetryData.FocusMissingMesh != 0 ||
+      PhysicsTelemetryData.VisualHoles != 0 ||
+      PhysicsTelemetryData.UnfinishedVisual >= 8 ||
+      PhysicsTelemetryData.FocusStickyRemesh > 0;
+  const float phase_budget =
+      URuntimeTuning::Get().StreamingPhaseBudgetMs;
+  const bool over_phase_budget =
+      phase_budget > 0.0f && stream_elapsed_ms >= static_cast<double>(phase_budget);
+  if (!over_phase_budget || miss_carve_out)
+  {
+    TickEnterGameMeshBurst();
+  }
   TickMeshEmerge();
   const auto t_after_mesh = std::chrono::high_resolution_clock::now();
   BlockWorldReady = true;

@@ -552,6 +552,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             // FirstMesh placeholder — always Dirty (do not gate on DirtyAdmit;
             // HoleDrain admit=0 left post_stop miss sticky).
             mesh_service.MarkDirtyPriority(coord);
+            // Era14.1 A2: empty stuck escape — PreferKick if already Queued/Kicked.
+            if (horiz > 1 || missing_visible_mesh)
+            {
+              mesh_service.PreferKickPendingGpuQueued(coord);
+            }
             underfeet_undrawn = true;
             ++marked_n;
           }
@@ -2260,8 +2265,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         underfeet_immediate_cd = 1;
       }
     }
-    // Era14 TD-ARCH-042: DesiredStage / Dirty FirstMesh floor — no stand/cruise
-    // sticky Imm primary. Keep Dirty@≥3 + PreferKick for GPU queue.
+    // Era14 TD-ARCH-042 / Era14.1 A1: DesiredStage Dirty FirstMesh — no Imm
+    // primary. Minecraft-style HP quota: nearest tops (cy≤3) PreferKick every
+    // miss frame (was stand≥2 / cruise sticky≥5 — too late vs miss sticky).
     if (found_nearest_missing)
     {
       const bool no_drawable =
@@ -2283,6 +2289,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           std::abs(isolated_hole.x - focus_ground_horiz.x),
           std::abs(isolated_hole.z - focus_ground_horiz.z));
       const int sticky_frames = mesh_service.GetStickyNearestHoleFrames();
+      const bool tops_hp =
+          missing_visible_mesh && isolated_hole.y <= 3 && no_drawable;
+
+      // A1 HP quota: every miss-frame Dirty + PreferKick nearest tops column.
+      if (tops_hp)
+      {
+        mesh_service.MarkDirtyPriority(isolated_hole);
+        ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
+        if (queued_stuck || kicked_stuck ||
+            mesh_service.IsPendingGpuApply(isolated_hole))
+        {
+          mesh_service.PreferKickPendingGpuQueued(isolated_hole);
+        }
+      }
 
       const bool stand_rim = !moving && nh <= 3;
       int stand_frames = 0;
@@ -2305,12 +2325,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           StandRimStickyFrames = 1;
         }
         stand_frames = StandRimStickyFrames;
-        if (stand_frames >= 1)
+        if (!tops_hp && stand_frames >= 1)
         {
           mesh_service.MarkDirtyPriority(isolated_hole);
           ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
         }
-        if (stand_frames >= 2 && (queued_stuck || kicked_stuck))
+        if (!tops_hp && stand_frames >= 1 &&
+            (queued_stuck || kicked_stuck))
         {
           mesh_service.PreferKickPendingGpuQueued(isolated_hole);
         }
@@ -2322,12 +2343,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       }
 
       // Cruise / far: Kick prefer only — no Immediate escape (F0 + DesiredStage).
-      if (!stand_rim && nh <= 5 && sticky_frames >= 5 &&
+      // Era14.1: sticky≥2 (was ≥5) when not already covered by tops_hp.
+      if (!tops_hp && !stand_rim && nh <= 5 && sticky_frames >= 2 &&
           (queued_stuck || kicked_stuck))
       {
         mesh_service.PreferKickPendingGpuQueued(isolated_hole);
       }
-      if (!stand_rim && nh <= 3 && sticky_frames >= 3 && pipeline_idle)
+      if (!tops_hp && !stand_rim && nh <= 3 && sticky_frames >= 2 &&
+          pipeline_idle)
       {
         mesh_service.MarkDirtyPriority(isolated_hole);
       }
@@ -2488,13 +2511,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             focus_ground_horiz, /*keep_h=*/1, /*keep_cy=*/-1,
             /*remesh_only=*/true);
       }
-      // J2/K1: same frame as heavy GPU drain + healthy async/GPU backlog —
-      // clamp SoftDeferHeld requeue so Rebuild does not fight Finish/Kick.
+      // J2/K1 / Era14.1 A2: under miss never clamp SoftDeferHeld requeue below 1
+      // (was unconditional min(...,1) which could zero via prior adm=0).
       if ((pending_async >= 12 || pending_gpu_n >= 12) &&
           gpu_consume_done > 0)
       {
         MeshWorkAdmission cut = adm;
-        cut.softdefer_requeue = std::min(cut.softdefer_requeue, 1);
+        const int floor_rq = missing_visible_mesh ? 1 : 0;
+        cut.softdefer_requeue =
+            std::max(floor_rq, std::min(cut.softdefer_requeue, 1));
         mesh_service.SetMeshWorkAdmission(cut);
       }
     }

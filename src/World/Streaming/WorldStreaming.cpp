@@ -1371,6 +1371,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     world.PhysicsTelemetryData.SoftDeferCaptureBudget = 0;
     if (unfinished > 0 || missing_focus_mesh)
     {
+      // Era14.1 A3: miss Capture floor — keep move=1 (floor=2 raised wall on 1b);
+      // idle stays 2 for SoftDefer light progress.
       int floor_budget =
           missing_focus_mesh
               ? (moving_now ? 1 : 2)

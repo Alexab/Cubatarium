@@ -135,12 +135,13 @@ inline StickyRemeshDrainDecision EvaluateStickyRemeshDrain(
   }
   else if (in.last_frame_ms <= 55.0)
   {
+    // Era14.1 C: single sticky needs ≥2 drains on calm idle (IDLE_CLEAN sticky=1).
     out.budget =
-        in.black_sticky > 4 ? 3 : (in.black_sticky > 1 ? 2 : 1);
+        in.black_sticky > 4 ? 3 : (in.black_sticky >= 1 ? 2 : 1);
   }
   else
   {
-    out.budget = 1;
+    out.budget = in.black_sticky >= 1 ? 2 : 1;
   }
   return out;
 }
@@ -279,14 +280,16 @@ inline IdleMeshDrainCapDecision EvaluateIdleMeshDrainCap(
       out.mesh_drain = std::min(in.mesh_drain, 10);
       out.mesh_schedule = std::min(in.mesh_schedule, 10);
       out.snapshot_budget_ms = 2.0;
-      out.emerge_total_budget_ms = 16.0;
+      // Era14.1 C: sticky remnant ≤12 so IDLE_CLEAN emerge≤10 after sticky clears.
+      out.emerge_total_budget_ms = 12.0;
     }
     else
     {
       out.mesh_drain = std::min(in.mesh_drain, 3);
       out.mesh_schedule = std::min(in.mesh_schedule, 4);
       out.snapshot_budget_ms = 1.5;
-      out.emerge_total_budget_ms = 12.0;
+      // Era14.1 C: calm_stop_emerge_med gate ≤10 (was 12 → med≈14.6).
+      out.emerge_total_budget_ms = 10.0;
     }
     out.sync_cap = 0;
     out.sync_budget_ms = 0.5;

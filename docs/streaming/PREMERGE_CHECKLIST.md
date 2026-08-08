@@ -90,7 +90,10 @@ Autofly loop (every code phase): build → `flight_sim_run` → analyze →
 **Era14 residual (2026-08-07):** do not merge to develop until `ARCH_D3_LAND`
 GO (holes≤0.10) and ocean `ARCH_D3` wall≤30. Best land near-GO:
 `bin/iter_reports/timeline/era14_p2c_land.json` (miss_stuck=4, wall≈54.6,
-sticky=0, holes≈0.2). Worker Capture remains deferred (TD-ARCH-046).
+sticky=0, holes≈0.2). Era14.1: PreferKick tops HP + SoftDefer miss floor +
+phase budget 24ms + Android phase parity; `IDLE_CLEAN`/`IDLE_WARM`/`FLY_CLEAN`
+GO (`era14_1_idle`/`warm`/`fly`); land best `era14_1_land` miss=6 holes=0.2
+wall≈53; ocean `era14_1_ocean` wall≈49. Worker Capture deferred (TD-ARCH-046).
 
 **Backend matrix (R4):** desktop
 

@@ -119,7 +119,17 @@ int main()
     in.last_frame_ms = 60.0;
     const auto d = EvaluateStickyRemeshDrain(in);
     Expect(d.run_drain, "sticky drain extended to 80ms");
-    Expect(d.budget == 1, "sticky drain mid-wall budget 1");
+    // Era14.1 C: mid-wall sticky needs budget≥2 to clear IDLE_CLEAN sticky=1.
+    Expect(d.budget == 2, "sticky drain mid-wall budget 2");
+  }
+
+  {
+    StickyRemeshDrainInput in;
+    in.black_sticky = 1;
+    in.last_frame_ms = 40.0;
+    const auto d = EvaluateStickyRemeshDrain(in);
+    Expect(d.run_drain, "calm sticky drains");
+    Expect(d.budget == 2, "calm sticky=1 budget 2");
   }
 
   {
@@ -196,7 +206,7 @@ int main()
     in.mesh_schedule = 12;
     const auto d = EvaluateIdleMeshDrainCap(in);
     Expect(d.active, "calm idle mid wall caps drain");
-    Expect(d.emerge_total_budget_ms <= 12.0, "calm idle mid wall emerge<=12");
+    Expect(d.emerge_total_budget_ms <= 10.0, "calm idle mid wall emerge<=10");
   }
 
   {

@@ -95,12 +95,12 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-040 | Era14 | Frame nest: stream/emerge inside `RunLegacyPhysicsFrame` / `do_movement_ms` | Nest proof fly-clean phys_med≈4.9 | **done 2026-08-07** `0812c77f` |
 | TD-ARCH-041 | Era14 | Deadlock calm-wall Imm / stale-wave enqueue (`wall≤40/50`) | Dirty/promote without wall; Imm stays budgeted; sticky remesh budget on hot wall | **done 2026-08-07** (Imm primary DISCARD) |
 | TD-ARCH-042 | Era14 | Stand/cruise sticky Imm fork zoo | Imm primary removed; Dirty@≥1–2 + PreferKick | **done 2026-08-07** |
-| TD-ARCH-043 | Era14 | Land tops miss sticky / `ARCH_D3_LAND` | Best near-GO `era14_p2c_land`: miss_stuck=4 wall=54.6 sticky=0; residual holes_rate≈0.2 | **partial** — holes residual |
+| TD-ARCH-043 | Era14 | Land tops miss sticky / `ARCH_D3_LAND` | Best Era14.1: `era14_1_land` miss_stuck=6 wall≈52.8 sticky=0 holes=0.2 (p2c miss=4); PreferKick tops HP + SoftDefer floor | **partial** — holes/miss residual |
 | TD-ARCH-044 | Era14 | Commit-time seed coverage / PendingLight trail | SeedDecision cruise≤32 / idle≤28 cheap seed | **done 2026-08-07** `f9af0c16`+iterate |
 | TD-ARCH-045 | Era14 | UnlitFirstMesh → guaranteed remesh-on-lit | MarkRelit → NoteColumnRepairNeeded + RemeshSeam | **done 2026-08-07** `f9af0c16` |
 | TD-ARCH-046 | Era14 | Worker Capture residual (TD-ARCH-015 store done) | Store refresh budget tightened; worker path still deferred (hang risk) | **partial** — worker deferred |
 | TD-ARCH-047 | Era14 | IdleRecovery/Admission knobs duplicate DesiredStage | Sticky remesh wall-skip removed; IdleRecovery owns sync cost only | **done 2026-08-07** |
-| TD-ARCH-048 | Era14 | ARCH_D3 wall_med≤30 / gate DoD | Link 032; land soft wall≤55 near-GO on p2c; ocean ARCH_D3 still open | Phase 5 — open |
+| TD-ARCH-048 | Era14 | ARCH_D3 wall_med≤30 / gate DoD | Phase budget 24ms + miss carve-out; land soft wall OK; ocean ARCH_D3 still open | **partial** — ocean wall open |
 
 **Era14 execution log**
 
@@ -112,6 +112,11 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | 2026-08-07 | Phase 2+3 | DesiredStage; kill calm Imm; seed+remesh-on-lit | `f9af0c16` |
 | 2026-08-07 | P2 iterate | Dirty-without-wall; sticky remesh hot; Capture refresh trim; best LAND `era14_p2c_land` (miss=4 wall≈55 sticky=0 holes=0.2 residual) | `7f268eb1` |
 | 2026-08-07 | Phase 5 matrix | FLY_CLEAN GO (`era14_p5_fly`); IDLE_WARM GO; IDLE_CLEAN NO-GO emerge/sticky; ARCH_D3_LAND residual holes TD-043 | `7f268eb1` |
+| 2026-08-07 | Era14.1 analyze | manual `202855` vs `151212`: nest fixed; root = SoftDeferHeld+pending light (54% miss frames held≥8∧pend≥12; p2c=0%); PreferKick late; period `world_streaming_phase_ms`=last-frame artifact | — |
+| 2026-08-07 | Era14.1 code | PreferKick tops HP; SoftDefer requeue floor under miss; phase budget 24ms miss carve-out; period phase avg; IDLE sticky/emerge; Android TickWorldStreamingPhase | working tree |
+| 2026-08-07 | Era14.1 matrix | FLY_CLEAN+IDLE_CLEAN+IDLE_WARM GO; ARCH_D3_LAND best `era14_1_land` miss=6 holes=0.2 wall≈53 sticky=0; ocean ARCH_D3 wall≈49 NO-GO; Capture TD-046 deferred | timeline `era14_1_*` |
+
+**Era14.1 root (manual `perf_20260807-202855_2064`):** pending_light~12–24 + SoftDeferHeld~18 under miss → DeepBacklog/HoleDrain + J2 softdefer_requeue clamp → nearest tops not PreferKicked every frame → miss sticky. DISCARD unchanged (no Imm primary / wall-gated Dirty). Period `world_streaming_phase_ms` now averaged (was last-frame artifact).
 
 P4 validate (`4abd8683` tip): unit `streaming_render_ready_invariants_test` PASS;
 `phase_P4_land_south_short.json` DoD miss_end=0 + post_stop_missing_zero.

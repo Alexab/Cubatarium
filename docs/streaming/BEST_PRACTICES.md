@@ -127,6 +127,17 @@ not require calm `last_frame_ms`. See
 | Derived chunk DesiredStage | voxel job graph | stand/cruise Imm forks | **high** TD-042 |
 | Land FOV validation | scenario matrix | ocean cruise misses tops | **high** TD-043 |
 
+## Gap После Era14.1 residual (2026-08-07)
+
+| Практика | Industry | Cubatarium Era14.1 | Gap |
+|----------|----------|--------------------|-----|
+| High-priority FOV FirstMesh quota (MC dual-queue) | PreferKick nearest tops every miss frame | **landed** | TD-043 holes≤0.10 still open |
+| SoftDefer held escape under miss | requeue floor≥1 | **landed** | — |
+| Time-sliced streaming phase budget (UE) | 24ms + miss carve-out | **landed** | ocean wall≤30 open TD-048 |
+| Period phase telem avg | avg like wall | **landed** | — |
+| Cross-platform frame contract | Android TickWorldStreamingPhase | **landed** | — |
+| IDLE sticky remesh budget | calm sticky≥2 drains | **IDLE_CLEAN GO** | — |
+
 ## Практический Вывод Для Cubatarium
 
 Наиболее полезные заимствования:

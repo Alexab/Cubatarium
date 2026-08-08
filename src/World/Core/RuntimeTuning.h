@@ -47,6 +47,11 @@ struct URuntimeTuning
   /// Cruise max Captures/frame (TD-ARCH-015: worker Capture still backlog).
   int CaptureMovingBgCap{1};
 
+  /// Era14.1 B: hard wall budget for TickWorldStreamingPhase (ms). Miss / UV
+  /// carve-out skips this — FirstMesh/emerge heal always runs. Cuts EnterGame
+  /// burst when stream already spent the budget on a clean frame.
+  float StreamingPhaseBudgetMs{24.0f};
+
   /// RebuildChunkImmediate hard budget (idle only; moving sync_cap=0).
   float ImmediateBudgetHotMs{3.0f};
   float ImmediateBudgetOkMs{5.0f};
