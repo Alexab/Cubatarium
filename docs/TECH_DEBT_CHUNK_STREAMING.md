@@ -100,16 +100,17 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-045 | Era14 | UnlitFirstMesh → guaranteed remesh-on-lit | MarkRelit → NoteColumnRepairNeeded + RemeshSeam | **done 2026-08-07** `f9af0c16` |
 | TD-ARCH-046 | Era14 | Worker Capture residual (TD-ARCH-015 store done) | Store refresh budget tightened; worker path still deferred (hang risk) | **partial** — worker deferred |
 | TD-ARCH-047 | Era14 | IdleRecovery/Admission knobs duplicate DesiredStage | Sticky remesh wall-skip removed; IdleRecovery owns sync cost only | **done 2026-08-07** |
-| TD-ARCH-048 | Era14 | ARCH_D3 wall_med≤30 / gate DoD | Era16 ocean `era16_p3_ocean` wall≈226 holes≈0.82 sticky=0 no_ticket=0 (ARCH_D3 soft NO-GO); land ARCH_D3_LAND GO wall soft≤70 | **partial** — ocean wall/holes open |
+| TD-ARCH-048 | Era14 | ARCH_D3 wall_med≤30 / gate DoD | Era17 ocean `era17_p3_ocean` soft ARCH_D3 (TD-048 residual); land ARCH_D3_LAND GO | **partial** — ocean wall/holes open |
 | TD-ARCH-049 | Era15 | MeshResidency: FreeChunk-before-replace flicker | CPU Apply/Immediate publish batches before FreeChunk; `mesh_replace_hole_avoided` telem; FLY_CLEAN GO `era15_p1_fly` | **done 2026-08-08** `327dd006`+ |
 | TD-ARCH-050 | Era15 | ColumnPublication Unlit→Lit + SoftDeferHeld∥ColumnFlow | LitPending on Unlit FirstMesh; sticky_r≠gate MarkRelit; SoftDeferHeld→FirstMesh ticket; DesiredStage lit_pending/unlit; IDLE_CLEAN/WARM GO | **done 2026-08-08** `327dd006`+ (LAND holes residual via 043/051) |
 | TD-ARCH-051 | Era15 | FirstMesh-until-Drawable / PreferKick Kicked stall | PreferKick Queued+Kicked; Era16 land holes≈0.04 ARCH_D3_LAND GO | **done 2026-08-08** via Era16 P2 |
 | TD-ARCH-052 | Era16 | VisibleBlack SoT / black_sticky≠user black | `CountVisibleBlackFocusMeshes`; honest StaleDark; Hide⇒Ticket RemeshSeam; IDLE_CLEAN+ARCH_D3_LAND no_ticket=0 | **done 2026-08-08** P0–P3 |
-| TD-ARCH-053 | Era17 | Heal-until-predicate / ticket≠progress | Real Contains ticket; Progress/Stalled telem; void RelightThenMesh; FirstMesh class | **open** — P0 honesty |
+| TD-ARCH-053 | Era17 | Heal-until-predicate / ticket≠progress | Real Contains ticket; Progress/Stalled telem; void RelightThenMesh; FirstMesh class | **done 2026-08-08** P0–P2 |
 
-> **Era17 heal-until (2026-08-08):** manual `144227` — VB ticketed without heal (phantom
-> live-window / Remesh noop / void Promote-only) + miss tops starve. DoD = NoTicket=0
-> **and** Progress/Stalled honest + faces↓ on stop; FirstMesh priority under miss.
+> **Era17 heal-until closeout (2026-08-08):** Contains-only ticket + Progress/Stalled;
+> continuous VB heal (void→RelightThenMesh, stale→MarkDirty); FirstMesh class cy≤1.
+> Evidence: `era17_p1_idle`/`land`, `era17_p2_land`. Manual `144227` class addressed
+> (no_ticket DoD + miss tops priority). Autofly ≠ sole visual merge SoT.
 
 > **Era16 VisibleBlack closeout (2026-08-08):** `black_sticky` ⊆ StickyRemeshAfterLight;
 > DoD = `VisibleBlackNoTicketN` / `post_stop_visible_black_no_ticket_max=0`.

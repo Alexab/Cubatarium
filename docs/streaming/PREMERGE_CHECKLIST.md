@@ -111,10 +111,13 @@ Ocean `era16_p3_ocean` ARCH_D3 soft NO-GO (wall≈226 holes≈0.82; no_ticket=0)
 TD-048 residual, not Era16 DoD. Reject: false StaleDark tickets; gating only
 on `black_sticky` while VisibleBlack orphans remain.
 
-**Era17 heal-until (2026-08-08):** manual `144227` showed ticket≠progress (phantom
-live-window / Remesh noop / void Promote-only) + miss tops. Autofly no_ticket=0
-≠ manual heal. TD-053: Contains-only ticket + Progress/Stalled telem; heal DoD
-in P1+; FirstMesh priority P2. Reject: GO on no_ticket while stalled VB / faces plateau.
+**Era17 heal-until closeout (2026-08-08):** TD-053 **done**. Contains-only ticket +
+Progress/Stalled telem; continuous VB heal (void RelightThenMesh); FirstMesh class
+when miss cy≤1. P3 matrix: `era17_p3_fly`/`idle`/`warm`/`land` GO; ocean soft
+(`era17_p3_ocean` ARCH_D3 NO-GO — TD-048). Manual `144227` class: heal DoD + miss
+tops priority. Autofly alone ≠ visual merge — re-check manual land-exit after pull.
+Reject: phantom live-window tickets; GO on no_ticket while faces plateau; remesh
+starve cy≤1 FirstMesh.
 
 **Backend matrix (R4):** desktop
 

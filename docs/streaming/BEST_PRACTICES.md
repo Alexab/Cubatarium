@@ -153,7 +153,18 @@ force-N) are not DoD — SoT closes the gap.
 
 **Era15 closeout (2026-08-08):** TD-049/050 **done**; TD-051/043 **partial** (`era15_p3b_land` holes≈0.24 miss_stuck=8 sticky=0 wall≈45). FLY_CLEAN + IDLE_CLEAN + IDLE_WARM GO. Ocean ARCH_D3 / TD-048 still open. TD-046 Capture deferred.
 
-## Gap После Era16 plan (2026-08-08) — PARTIAL (ticket≠progress)
+## Gap После Era17 plan (2026-08-08) — CLOSED
+
+| Практика | Industry | Cubatarium | Era17 SoT |
+|----------|----------|------------|-----------|
+| Ticket = work in flight not live-window | Hide⇒Ticket | Contains ∨ Dirty/Inflight/PendingLight | **done** P0 TD-053 |
+| Heal until predicate false | continuous should_mesh | derive while VB>0; void RelightThenMesh | **done** P1 |
+| FirstMesh priority class under miss tops | MC dual-queue | remesh_schedule=0 when miss cy≤1 | **done** P2 |
+
+**Era17 closeout:** IDLE_CLEAN + ARCH_D3_LAND GO (`era17_p1_idle`, `era17_p2_land`);
+manual `144227` residual class closed via heal-until + FirstMesh class.
+
+## Gap После Era16 plan (2026-08-08) — superseded by Era17
 
 | Практика | Industry | Cubatarium | Era16/17 SoT |
 |----------|----------|------------|--------------|
@@ -163,7 +174,7 @@ force-N) are not DoD — SoT closes the gap.
 
 **Era16 closeout:** P3 matrix GO — `era16_p3_fly` / `idle` / `warm` / `land`;
 ocean ARCH_D3 soft residual TD-048 (`era16_p3_ocean` wall≈226, no_ticket=0).
-**Manual residual `144227`:** VB/no_ticket/miss reopen heal-until Era17.
+**Manual residual `144227`:** closed via Era17.
 
 ## Практический Вывод Для Cubatarium
 
