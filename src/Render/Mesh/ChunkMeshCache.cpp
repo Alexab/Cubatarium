@@ -2010,8 +2010,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   InstancesDirty = true;
   CrossBatchesDirty = true;
   GreedyBatchesDirty = true;
-  // Era15 TD-050: Unlit/dark FirstMesh publish → LitPending ticket.
-  if (OnLitPendingNeeded &&
+  // Era15 TD-050: Unlit FirstMesh publish → LitPending (not every dark remesh).
+  if (OnLitPendingNeeded && !had_mesh &&
       (defer_until_lit || gpu_result.hasFullyDarkFace))
   {
     OnLitPendingNeeded(coord);
@@ -2700,8 +2700,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   InstancesDirty = true;
   CrossBatchesDirty = true;
   GreedyBatchesDirty = true;
-  // Era15 TD-050: Unlit/dark CPU publish → LitPending.
-  if (OnLitPendingNeeded && (defer_until_lit || new_dark))
+  // Era15 TD-050: Unlit FirstMesh CPU publish → LitPending.
+  if (OnLitPendingNeeded && !had_mesh && (defer_until_lit || new_dark))
   {
     OnLitPendingNeeded(result.coord);
   }
@@ -3678,7 +3678,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     CollectCrossInstancesInBand(*chunk, chunkCoord, registry, max_local_y,
                                 chunkMesh.crossCenters);
     NoteGeometryDirty(chunkCoord);
-    if (OnLitPendingNeeded && (defer_until_lit || new_dark))
+    if (OnLitPendingNeeded && !had_mesh && (defer_until_lit || new_dark))
     {
       OnLitPendingNeeded(chunkCoord);
     }
