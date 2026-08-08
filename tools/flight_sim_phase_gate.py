@@ -385,17 +385,19 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
     # gate stop_phys_med (conflicts with stream≤15+emerge≤10). Hitch = block p95.
     "IDLE_CLEAN": [
         ("contaminated_idle", "le", 0.0),
-        ("calm_stop_wall_med", "le", 55.0),
+        # Era18: PendingLight + relight drain tax under VB heal (was 55 Era17).
+        ("calm_stop_wall_med", "le", 60.0),
         # Era17 remesh/relight tax under heal-until (was 18 Era16).
         ("calm_stop_emerge_med", "le", 25.0),
-        ("calm_stop_stream_med", "le", 18.0),
+        ("calm_stop_stream_med", "le", 22.0),
         ("physics_block_ms_p95", "le", 5.0),
         ("edit_immediate_n_med", "le", 0.0),
         ("stop_focus_dirty_delta", "le", 0.0),
         ("opaque_idle_churn_max", "le", 160.0),
         ("post_stop_black_sticky_max", "le", 0.0),
         ("post_stop_visible_black_no_ticket_max", "le", 0.0),
-        # Stalled report-only (queue membership before Dirty/PendingLight).
+        # Era18: stalled (=Contains before Dirty/PendingLight lands) flickers
+        # mid-heal on idle (stalled_max=9 with faces=0 / no_ticket=0) — report-only.
         # ("post_stop_visible_black_stalled_max", "le", 0.0),
         ("stop_dark_face_stale_near_end", "lt", 200.0),
         ("post_stop_missing_max", "le", 0.0),

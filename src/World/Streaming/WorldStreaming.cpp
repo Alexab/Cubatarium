@@ -1320,6 +1320,15 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     // capture so PendingLight columns do not keep dark meshes for many periods.
     bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 3 : 4);
   }
+  // Era18 I-L2: VisibleBlack without pending_light_focus still needs drain
+  // (manual 165953: VB=53, pending_focus=0, drain≈0 for minutes).
+  const int visible_black_n =
+      world.GetPhysicsTelemetry().VisibleBlackFocusN;
+  if (visible_black_n > 0 || dark_face_near_n > 500)
+  {
+    bg_budget =
+        std::max(bg_budget, frame_ms > kBadFrameMs ? 1 : 2);
+  }
   const int mesh_async_n = world.GetMeshService().GetAsyncInFlightCount();
   const bool missing_focus_mesh =
       world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
@@ -1328,7 +1337,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       world.GetLastMovementSpeed() <=
           procedural.MovementPrefetchThreshold &&
       (pending_light_focus_n > 0 || black_sticky_focus > 0 ||
-       mesh_async_n >= 36 || missing_focus_mesh);
+       mesh_async_n >= 36 || missing_focus_mesh || visible_black_n > 0);
   if (idle_recovery)
   {
     bg_budget = ComputeIdleRecoveryBgBudget(IdleRecoveryBgBudgetInput{

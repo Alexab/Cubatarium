@@ -1439,8 +1439,9 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
         // faces are dark or world light outran the mesh (stale bake).
         // Era18 I-L1: void/fully-dark must NotePendingLightBeforeMesh — FIFO +
         // MarkDirty alone leaves pending_light_focus=0 and starves drain
-        // (manual 165953). P1 implements Note on this path.
+        // (manual 165953).
         bool bad_mesh = false;
+        bool fully_dark = false;
         if (has_mesh)
         {
           for (int cy = cy0; cy <= cy1; ++cy)
@@ -1450,8 +1451,13 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             {
               continue;
             }
-            if (MeshService->GetCache().ChunkHasFullyDarkFace(coord) ||
-                MeshService->GetCache().ChunkHasStaleDarkFaces(coord,
+            if (MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+            {
+              fully_dark = true;
+              bad_mesh = true;
+              break;
+            }
+            if (MeshService->GetCache().ChunkHasStaleDarkFaces(coord,
                                                               BlockWorld))
             {
               bad_mesh = true;
@@ -1461,11 +1467,21 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
         }
         if (has_mesh && bad_mesh)
         {
-          if (!any_sky)
+          // Void / no sky in chunk data: light debt gate before remesh so
+          // Streaming drain/idle_recovery see focus PendingLight.
+          if (!any_sky || fully_dark)
           {
+            NotePendingLightBeforeMesh(ground, remesh_min, remesh_max);
+            // Light path owns heal — do not leave StickyRemesh ghost (IDLE
+            // black_sticky=1 with faces already 0; manual/autofly false sticky).
+            StickyRemeshAfterLight.erase(glm::ivec2(ground.x, ground.z));
             Persistence->EnqueueTerrainColumnRelight(
                 ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
                 remesh_min, remesh_max);
+            // Do NOT MarkDirty here — SoftDefer rejects light=0 remesh of an
+            // already-built mesh; MarkRelit remeshes when lit (pending path).
+            ++repaired;
+            continue;
           }
           MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
               ground, remesh_min, remesh_max,
@@ -2929,6 +2945,14 @@ int UWorld::CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
         std::max(std::abs(key.x - focus_ground_chunk.x),
                  std::abs(key.y - focus_ground_chunk.z));
     if (dist > radius_chunks)
+    {
+      continue;
+    }
+    // Era18: remesh-on-lit MarkRelit inserts sticky before RemeshSeam drain —
+    // do not count columns already ticketed / pending light (stop_tail max
+    // flicker black_sticky=1 with faces already healing).
+    if (GetColumnFlowExecutor().HasRepairTicket(key) ||
+        IsPendingLightBeforeMesh(key))
     {
       continue;
     }
