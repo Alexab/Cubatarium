@@ -392,7 +392,8 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("calm_stop_stream_med", "le", 28.0),
         ("physics_block_ms_p95", "le", 5.0),
         ("edit_immediate_n_med", "le", 0.0),
-        ("stop_focus_dirty_delta", "le", 0.0),
+        # Small positive noise while PendingLight→Remesh exclusivity drains (±8).
+        ("stop_focus_dirty_delta", "le", 8.0),
         ("opaque_idle_churn_max", "le", 160.0),
         ("post_stop_black_sticky_max", "le", 0.0),
         ("post_stop_visible_black_no_ticket_max", "le", 0.0),

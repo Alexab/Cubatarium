@@ -1331,9 +1331,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   const bool moving_now_early =
       world.GetLastMovementSpeed() > procedural.MovementPrefetchThreshold;
   const auto &tune_budget = URuntimeTuning::Get();
+  constexpr float kHotFrameMs = 80.0f;
   const FrameStreamingBudgetDecision early_budget =
       EvaluateFrameStreamingBudget(FrameStreamingBudgetInput{
-          frame_ms, kBadFrameMs, missing_focus_mesh,
+          frame_ms, kBadFrameMs, kHotFrameMs, missing_focus_mesh,
           world.PhysicsTelemetryData.UnfinishedVisual, visible_black_n,
           pending_light_focus_n, moving_now_early,
           tune_budget.Era18VbCaptureFloor, tune_budget.Era18VbBgBudgetFloor,
@@ -1442,8 +1443,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     const auto &tune = URuntimeTuning::Get();
     const FrameStreamingBudgetDecision budget =
         EvaluateFrameStreamingBudget(FrameStreamingBudgetInput{
-            frame_ms, kBadFrameMs, missing_focus_mesh, unfinished,
-            visible_black_n_cap, pending_light_focus_n, moving_now,
+            frame_ms, kBadFrameMs, /*hot_frame_ms=*/80.0, missing_focus_mesh,
+            unfinished, visible_black_n_cap, pending_light_focus_n, moving_now,
             tune.Era18VbCaptureFloor, tune.Era18VbBgBudgetFloor,
             tune.MissFirstFrameBudget});
     world.PhysicsTelemetryData.SoftDeferCaptureBudget =

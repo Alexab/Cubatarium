@@ -41,6 +41,7 @@ int main()
     in.visible_black_n = 20;
     in.frame_ms = 280.0;
     in.bad_frame_ms = 24.0;
+    in.hot_frame_ms = 80.0;
     in.miss_first_budget = true;
     in.era18_vb_capture_floor = true;
     in.era18_vb_bg_budget_floor = true;
@@ -56,12 +57,39 @@ int main()
     FrameStreamingBudgetInput in;
     in.missing_visible_mesh = false;
     in.visible_black_n = 10;
+    in.frame_ms = 45.0; // typical idle wall — not hot
+    in.hot_frame_ms = 80.0;
+    in.miss_first_budget = true;
+    in.era18_vb_capture_floor = true;
+    in.era18_vb_bg_budget_floor = true;
+    const auto d = EvaluateFrameStreamingBudget(in);
+    Expect(d.soft_defer_capture_budget == 2, "mid idle VB: keep Capture floor");
+    Expect(d.apply_vb_bg_floor, "mid idle VB: keep bg floor");
+  }
+
+  {
+    FrameStreamingBudgetInput in;
+    in.missing_visible_mesh = false;
+    in.visible_black_n = 10;
     in.frame_ms = 300.0;
+    in.hot_frame_ms = 80.0;
     in.miss_first_budget = true;
     in.era18_vb_capture_floor = true;
     const auto d = EvaluateFrameStreamingBudget(in);
-    Expect(d.soft_defer_capture_budget == 0, "hitch VB: Capture floor off");
-    Expect(!d.apply_vb_bg_floor, "hitch VB: bg floor off");
+    Expect(d.soft_defer_capture_budget == 0, "hot VB: Capture floor off");
+    Expect(!d.apply_vb_bg_floor, "hot VB: bg floor off");
+  }
+
+  {
+    FrameStreamingBudgetInput in;
+    in.pending_light_focus_n = 12;
+    in.frame_ms = 40.0;
+    in.hot_frame_ms = 80.0;
+    in.miss_first_budget = true;
+    in.era18_vb_bg_budget_floor = true;
+    const auto d = EvaluateFrameStreamingBudget(in);
+    Expect(d.soft_defer_capture_budget >= 1, "calm pending: Capture mid floor");
+    Expect(!d.capture_first_mesh_only, "calm pending: Relight Capture kind");
   }
 
   {

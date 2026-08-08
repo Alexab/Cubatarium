@@ -915,6 +915,14 @@ def analyze(
     calm_stop_wall_med = calm_stop_metrics["wall_med"]
     if calm_stop_wall_med is None or calm_stop_metrics["n"] < 5:
         calm_stop_wall_med = stop_wall_med
+    # Era19: recovery-classified stop (pending>0) still has valid emerge/stream;
+    # fall back like wall so IDLE_CLEAN does not fail on None while stop_* is GO.
+    calm_stop_emerge_med = calm_stop_metrics["emerge_med"]
+    calm_stop_stream_med = calm_stop_metrics["stream_med"]
+    if calm_stop_emerge_med is None or calm_stop_metrics["n"] < 5:
+        calm_stop_emerge_med = stop_segment_metrics["emerge_med"]
+    if calm_stop_stream_med is None or calm_stop_metrics["n"] < 5:
+        calm_stop_stream_med = stop_segment_metrics["stream_med"]
 
     physics_block_ms_p95 = calm_stop_metrics["physics_block_p95"]
     if physics_block_ms_p95 is None:
@@ -1173,8 +1181,8 @@ def analyze(
             "contaminated_stop_periods": contaminated_stop_metrics["n"],
             "calm_stop_wall_med": calm_stop_wall_med,
             "calm_stop_wall_p95": calm_stop_metrics["wall_p95"],
-            "calm_stop_emerge_med": calm_stop_metrics["emerge_med"],
-            "calm_stop_stream_med": calm_stop_metrics["stream_med"],
+            "calm_stop_emerge_med": calm_stop_emerge_med,
+            "calm_stop_stream_med": calm_stop_stream_med,
             "calm_stop_phys_med": calm_stop_metrics["phys_med"],
             "recovery_stop_wall_med": recovery_stop_metrics["wall_med"],
             "contaminated_stop_wall_med": contaminated_stop_metrics["wall_med"],

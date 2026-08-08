@@ -11,6 +11,8 @@ struct FrameStreamingBudgetInput
 {
   double frame_ms{0.0};
   double bad_frame_ms{24.0};
+  /// Shrink VB Capture/bg only above this (idle wall often >24 but <80).
+  double hot_frame_ms{80.0};
   bool missing_visible_mesh{false};
   int unfinished{0};
   int visible_black_n{0};
@@ -20,7 +22,7 @@ struct FrameStreamingBudgetInput
   bool era18_vb_capture_floor{true};
   /// Kill-switch: Era18 bg_budget floor while VB (bisect).
   bool era18_vb_bg_budget_floor{true};
-  /// Era19 P1: miss-first — shrink Capture/VB heal on hitch; FirstMesh under miss.
+  /// Era19 P1: miss-first — shrink Capture/VB heal on hot wall; FirstMesh under miss.
   bool miss_first_budget{false};
 };
 
@@ -77,6 +79,7 @@ inline FrameStreamingBudgetDecision EvaluateFrameStreamingBudget(
   FrameStreamingBudgetDecision out;
   out.frame_budget_ms = static_cast<int>(in.bad_frame_ms);
   const bool hitch = in.frame_ms > in.bad_frame_ms;
+  const bool hot = in.frame_ms > in.hot_frame_ms;
   const bool miss = in.missing_visible_mesh;
   const bool unfinished = in.unfinished > 0;
 
@@ -87,12 +90,12 @@ inline FrameStreamingBudgetDecision EvaluateFrameStreamingBudget(
     {
       out.soft_defer_capture_budget = 1;
       out.capture_first_mesh_only = true;
-      if (hitch || in.visible_black_n > 0)
+      if (hot || in.visible_black_n > 0)
       {
         out.heal_deferred_for_miss = true;
       }
-      // Calm idle: keep light mid-floor 1 when pending_focus (risk mitigation).
-      if (!hitch && in.pending_light_focus_n > 0 &&
+      // Calm/mid idle: keep light mid-floor 1 when pending_focus (risk mitigation).
+      if (!hot && in.pending_light_focus_n > 0 &&
           in.era18_vb_bg_budget_floor)
       {
         out.apply_vb_bg_floor = true;
@@ -104,8 +107,8 @@ inline FrameStreamingBudgetDecision EvaluateFrameStreamingBudget(
       int floor_budget =
           hitch ? std::min(4, 1 + in.unfinished / 8)
                 : std::min(6, 2 + in.unfinished / 6);
-      // Hitch: shrink Capture first (never starve FirstMesh path separately).
-      if (hitch)
+      // Truly hot wall: shrink Capture first.
+      if (hot)
       {
         floor_budget = std::min(floor_budget, 1);
         out.capture_over_budget = floor_budget > 0;
@@ -114,9 +117,9 @@ inline FrameStreamingBudgetDecision EvaluateFrameStreamingBudget(
     }
     else if (in.visible_black_n > 0 && in.era18_vb_capture_floor)
     {
-      if (hitch)
+      if (hot)
       {
-        // I-B1: shrink Capture/VB heal on hot wall.
+        // I-B1: shrink Capture/VB heal on hot wall (not mild >24ms frames).
         out.soft_defer_capture_budget = 0;
         out.heal_deferred_for_miss = true;
       }
@@ -126,10 +129,10 @@ inline FrameStreamingBudgetDecision EvaluateFrameStreamingBudget(
       }
     }
 
-    // VB bg_budget floor — off on hitch; calm keep when VB or pending_focus.
+    // VB bg_budget floor — off on hot; calm/mid keep when VB or pending_focus.
     if (in.era18_vb_bg_budget_floor && in.visible_black_n > 0 && !miss)
     {
-      if (hitch)
+      if (hot)
       {
         out.apply_vb_bg_floor = false;
         out.vb_bg_budget_floor = 0;
@@ -140,6 +143,22 @@ inline FrameStreamingBudgetDecision EvaluateFrameStreamingBudget(
         out.apply_vb_bg_floor = true;
         out.vb_bg_budget_floor = in.moving ? 1 : 2;
       }
+    }
+
+    // Risk mitigation (TD-055): calm/mid pending_focus must not stall Capture
+    // when unfinished=0 and VB=0 (Era18 SoftDefer only keyed unfinished|miss|VB).
+    if (!miss && !hot && in.pending_light_focus_n > 0 &&
+        out.soft_defer_capture_budget <= 0)
+    {
+      out.soft_defer_capture_budget =
+          in.moving ? 1 : (in.pending_light_focus_n > 8 ? 2 : 1);
+      out.capture_first_mesh_only = false;
+    }
+    if (!miss && !hot && in.pending_light_focus_n > 0 &&
+        in.era18_vb_bg_budget_floor && !out.apply_vb_bg_floor)
+    {
+      out.apply_vb_bg_floor = true;
+      out.vb_bg_budget_floor = std::max(out.vb_bg_budget_floor, 1);
     }
   }
   else
