@@ -40,15 +40,8 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
     return;
   }
   scheduler_.Enqueue(item);
-  // Era16: arm HasRepairTicket live window at enqueue (not only Dispatch),
-  // so NoTicket telem drops before DrainBudget runs.
-  if (item.kind == ColumnWorkKind::RemeshSeam ||
-      item.kind == ColumnWorkKind::RelightThenMesh ||
-      item.kind == ColumnWorkKind::PromoteRelight ||
-      item.kind == ColumnWorkKind::FirstMesh)
-  {
-    last_dispatch_frame_[key] = frame_counter_;
-  }
+  // Era17: do NOT arm last_dispatch at Enqueue — HasRepairTicket is Contains
+  // only. last_dispatch_frame_ remains enqueue cooldown after Dispatch.
 }
 
 int64_t UColumnFlowExecutor::CooldownKey(glm::ivec2 column,
@@ -73,29 +66,13 @@ void UColumnFlowExecutor::RunPromoteRelightNow(UWorld &world,
 
 bool UColumnFlowExecutor::HasRepairTicket(glm::ivec2 column) const
 {
-  if (scheduler_.Contains(column, ColumnWorkKind::RemeshSeam) ||
-      scheduler_.Contains(column, ColumnWorkKind::RelightThenMesh) ||
-      scheduler_.Contains(column, ColumnWorkKind::PromoteRelight) ||
-      scheduler_.Contains(column, ColumnWorkKind::FirstMesh))
-  {
-    return true;
-  }
-  const ColumnWorkKind kinds[] = {
-      ColumnWorkKind::RemeshSeam, ColumnWorkKind::RelightThenMesh,
-      ColumnWorkKind::PromoteRelight, ColumnWorkKind::FirstMesh};
-  // Era16: live window bridges recover_watchdog gaps so VisibleBlack
-  // NoTicket telem stays 0 while repair is in-flight / recently dispatched.
-  constexpr int kRepairTicketLiveFrames = 180;
-  for (ColumnWorkKind kind : kinds)
-  {
-    const auto it = last_dispatch_frame_.find(CooldownKey(column, kind));
-    if (it != last_dispatch_frame_.end() &&
-        frame_counter_ - it->second < kRepairTicketLiveFrames)
-    {
-      return true;
-    }
-  }
-  return false;
+  // Era17 I-H1: ticket SoT = live Flow queue membership only (not live-window).
+  // Progress (Dirty/Inflight/PendingLight) is tracked separately via
+  // UWorld::ColumnHasRepairProgress for NoTicket / Collect skip.
+  return scheduler_.Contains(column, ColumnWorkKind::RemeshSeam) ||
+         scheduler_.Contains(column, ColumnWorkKind::RelightThenMesh) ||
+         scheduler_.Contains(column, ColumnWorkKind::PromoteRelight) ||
+         scheduler_.Contains(column, ColumnWorkKind::FirstMesh);
 }
 
 void UColumnFlowExecutor::DrainRemeshSeamBudget(UWorld &world, int max_columns)
@@ -284,20 +261,9 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
        (void_n > 200 || (void_n > 40 && stale_n > 40)));
   const int repair_cap = std::min(6, std::max(2, recover_n / 2));
 
-  auto arm_repair = [&](const std::vector<glm::ivec2> &cols) {
-    for (const glm::ivec2 &col : cols)
-    {
-      last_dispatch_frame_[CooldownKey(col, ColumnWorkKind::RemeshSeam)] =
-          frame_counter_;
-      last_dispatch_frame_[CooldownKey(col, ColumnWorkKind::RelightThenMesh)] =
-          frame_counter_;
-      last_dispatch_frame_[CooldownKey(col, ColumnWorkKind::PromoteRelight)] =
-          frame_counter_;
-    }
-  };
-
   // Era16 Hide=>Ticket: light Remesh for orphans (targeted Dispatch). Void:
-  // PromoteRelight only — RelightThenMesh here stormed emerge/sticky.
+  // PromoteRelight only in P0 — RelightThenMesh heal lands in Era17 P1.
+  // Era17: no arm_repair phantom live-window; Contains after Enqueue is SoT.
   if (nearest_vb_ticket)
   {
     const int vb_radius =
@@ -311,8 +277,6 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     {
       scheduler_.Enqueue(col, ColumnWorkKind::PromoteRelight, 45);
     }
-    arm_repair(stale_dark_cols);
-    arm_repair(void_dark_cols);
   }
 
   // Classic sticky/stale wave (thresholds + Sticky Note).
@@ -339,7 +303,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     // sticky>0 (era16 emerge storm).
     for (const glm::ivec2 &col : sticky_cols)
     {
-      if (!HasRepairTicket(col))
+      if (!HasRepairTicket(col) && !world.ColumnHasRepairProgress(col))
       {
         Enqueue(col, ColumnWorkKind::RemeshSeam, 30);
       }
@@ -348,12 +312,10 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     {
       EnqueueStickyStaleRepairTickets(scheduler_, focus, /*sticky*/ {},
                                       stale_dark_cols);
-      arm_repair(stale_dark_cols);
     }
     if (!void_dark_cols.empty())
     {
       EnqueueVoidDarkRelightTickets(scheduler_, focus, void_dark_cols);
-      arm_repair(void_dark_cols);
     }
   }
   if (cooldown_ok && allow_stale_wave_base && !stale_dark_cols.empty() &&
@@ -375,11 +337,15 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   if (nearest_vb_ticket || !stale_dark_cols.empty() || !void_dark_cols.empty())
   {
     int no_ticket = 0;
+    int progress_n = 0;
+    int stalled_n = 0;
     const int vb = world.CountVisibleBlackFocusMeshes(
-        focus_ground_horiz, focus_radius, &no_ticket);
+        focus_ground_horiz, focus_radius, &no_ticket, &progress_n, &stalled_n);
     auto &telem = world.GetPhysicsTelemetryMutable();
     telem.VisibleBlackFocusN = vb;
     telem.VisibleBlackNoTicketN = no_ticket;
+    telem.VisibleBlackProgressN = progress_n;
+    telem.VisibleBlackStalledN = stalled_n;
   }
 }
 

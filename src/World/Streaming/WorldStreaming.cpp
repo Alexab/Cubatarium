@@ -524,24 +524,36 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     static int visible_black_sample_cd = 0;
     static int last_visible_black = 0;
     static int last_visible_black_no_ticket = 0;
+    static int last_visible_black_progress = 0;
+    static int last_visible_black_stalled = 0;
     int no_ticket = 0;
+    int progress_n = 0;
+    int stalled_n = 0;
     if (!moving_for_telemetry)
     {
       last_visible_black = world.CountVisibleBlackFocusMeshes(
-          focus_ground, focus_radius, &no_ticket);
+          focus_ground, focus_radius, &no_ticket, &progress_n, &stalled_n);
       last_visible_black_no_ticket = no_ticket;
+      last_visible_black_progress = progress_n;
+      last_visible_black_stalled = stalled_n;
       visible_black_sample_cd = 0;
     }
     else if (--visible_black_sample_cd <= 0)
     {
       last_visible_black = world.CountVisibleBlackFocusMeshes(
-          focus_ground, focus_radius, &no_ticket);
+          focus_ground, focus_radius, &no_ticket, &progress_n, &stalled_n);
       last_visible_black_no_ticket = no_ticket;
+      last_visible_black_progress = progress_n;
+      last_visible_black_stalled = stalled_n;
       visible_black_sample_cd = 4;
     }
     world.PhysicsTelemetryData.VisibleBlackFocusN = last_visible_black;
     world.PhysicsTelemetryData.VisibleBlackNoTicketN =
         last_visible_black_no_ticket;
+    world.PhysicsTelemetryData.VisibleBlackProgressN =
+        last_visible_black_progress;
+    world.PhysicsTelemetryData.VisibleBlackStalledN =
+        last_visible_black_stalled;
   }
   world.PhysicsTelemetryData.FocusNotRenderReady = unfinished_visual;
   world.PhysicsTelemetryData.FocusPressure = focus_pressure;

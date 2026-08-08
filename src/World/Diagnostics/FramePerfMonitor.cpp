@@ -232,6 +232,8 @@ struct FrameNumbers
   int focus_sticky_remesh{0};
   int visible_black_focus_n{0};
   int visible_black_no_ticket_n{0};
+  int visible_black_progress_n{0};
+  int visible_black_stalled_n{0};
   int focus_not_render_ready{0};
   int focus_pressure{0};
   int focus_dirty_chunks{0};
@@ -492,6 +494,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.focus_sticky_remesh = phys.FocusStickyRemesh;
   n.visible_black_focus_n = phys.VisibleBlackFocusN;
   n.visible_black_no_ticket_n = phys.VisibleBlackNoTicketN;
+  n.visible_black_progress_n = phys.VisibleBlackProgressN;
+  n.visible_black_stalled_n = phys.VisibleBlackStalledN;
   n.focus_not_render_ready = phys.FocusNotRenderReady;
   n.focus_pressure = phys.FocusPressure;
   n.focus_dirty_chunks = phys.FocusDirtyChunks;
@@ -757,6 +761,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"focus_sticky_remesh\":" << n.focus_sticky_remesh
           << ",\"visible_black_focus_n\":" << n.visible_black_focus_n
           << ",\"visible_black_no_ticket_n\":" << n.visible_black_no_ticket_n
+          << ",\"visible_black_progress_n\":" << n.visible_black_progress_n
+          << ",\"visible_black_stalled_n\":" << n.visible_black_stalled_n
           << ",\"focus_not_render_ready\":" << n.focus_not_render_ready
           << ",\"focus_pressure\":" << n.focus_pressure
           << ",\"focus_dirty_chunks\":" << n.focus_dirty_chunks
@@ -880,6 +886,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"black_sticky\":" << n.focus_sticky_remesh
           << ",\"visible_black_focus_n\":" << n.visible_black_focus_n
           << ",\"visible_black_no_ticket_n\":" << n.visible_black_no_ticket_n
+          << ",\"visible_black_progress_n\":" << n.visible_black_progress_n
+          << ",\"visible_black_stalled_n\":" << n.visible_black_stalled_n
           << ",\"pending_cols\":\"" << n.pending_cols << "\""
           << ",\"max_wall_ms\":" << n.max_wall_ms
           << ",\"max_stream_ms\":" << n.max_stream_ms

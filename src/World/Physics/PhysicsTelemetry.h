@@ -185,8 +185,12 @@ struct PhysicsTelemetry
   int FocusStickyRemesh{0};
   /// Era16 TD-052: focus columns with drawable stale/fully-dark mesh (user black).
   int VisibleBlackFocusN{0};
-  /// Subset of VisibleBlackFocusN without ColumnFlow repair ticket / StickyRemesh.
+  /// Subset of VisibleBlackFocusN without Flow Contains / Progress / Sticky.
   int VisibleBlackNoTicketN{0};
+  /// Era17: VB with Contains ∨ Dirty/Inflight/PendingLight ∨ Sticky.
+  int VisibleBlackProgressN{0};
+  /// Era17: VB with Contains but no Dirty/Inflight/PendingLight (queued stall).
+  int VisibleBlackStalledN{0};
   /// Focus columns failing SoT unfinished visual (alias of UnfinishedVisual sample).
   /// Not pending+dirty pressure — see FocusPressure.
   int FocusNotRenderReady{0};

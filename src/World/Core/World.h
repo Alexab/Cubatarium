@@ -1070,11 +1070,17 @@ public:
   int CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
                                   int radius_chunks) const;
   /// Era16 TD-052: focus columns with drawable dark/stale mesh (user-visible
-  /// black), independent of StickyRemeshAfterLight. out_no_ticket = subset
-  /// without HasRepairTicket and without StickyRemesh membership.
+  /// black), independent of StickyRemeshAfterLight.
+  /// out_no_ticket = VB ∧ ¬Contains ∧ ¬Progress ∧ ¬Sticky.
+  /// out_progress = VB ∧ (Contains ∨ Progress ∨ Sticky).
+  /// out_stalled = VB ∧ Contains ∧ ¬Progress ∧ ¬Sticky (queued, no mesh/light work yet).
   int CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
                                    int radius_chunks,
-                                   int *out_no_ticket = nullptr) const;
+                                   int *out_no_ticket = nullptr,
+                                   int *out_progress = nullptr,
+                                   int *out_stalled = nullptr) const;
+  /// Era17: Dirty / Inflight|Queued|Kicked / PendingLight for a column.
+  bool ColumnHasRepairProgress(glm::ivec2 ground_xz) const;
   /// PendingLight columns that already have a greedy mesh (dark preview).
   int CountPendingDarkFocusMeshes(glm::ivec3 focus_ground_chunk,
                                   int radius_chunks) const;

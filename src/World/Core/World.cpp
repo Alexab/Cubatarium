@@ -1967,10 +1967,10 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
   }
   const glm::ivec3 ground(ground_xz.x, 0, ground_xz.y);
   out.stage = GetColumnEmergeState(ground);
-  // Live ColumnFlow ticket OR sticky set (NoteColumnRepairNeeded).
+  // Live ColumnFlow Contains OR sticky OR real Dirty/Inflight/PendingLight.
   out.has_repair_ticket =
       GetColumnFlowExecutor().HasRepairTicket(ground_xz) ||
-      IsColumnStickyRemesh(ground_xz);
+      IsColumnStickyRemesh(ground_xz) || ColumnHasRepairProgress(ground_xz);
 
   const int max_cy =
       std::max(0, FloorDiv(std::max(0, ProceduralTemplate.MaxHeight), CHUNK_SIZE));
@@ -2039,7 +2039,8 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     }
     const bool sticky = IsColumnStickyRemesh(ground_xz);
     const bool has_real_repair_ticket =
-        GetColumnFlowExecutor().HasRepairTicket(ground_xz) || sticky;
+        GetColumnFlowExecutor().HasRepairTicket(ground_xz) || sticky ||
+        ColumnHasRepairProgress(ground_xz);
     const ColumnSoTDecision sot = ClassifyStickyStaleDarkSoT(
         has_mesh_or_gpu, sticky, stale_dark_with_mesh, horiz_from_focus,
         has_real_repair_ticket);
@@ -2684,9 +2685,10 @@ int UWorld::CollectStaleDarkFocusColumns(glm::ivec3 focus_ground_horiz,
       {
         continue; // sticky path already tickets RemeshSeam
       }
-      // Era16: skip columns that already have a live Flow repair ticket so the
-      // budgeted cap advances to VisibleBlack orphans (Hide⇒Ticket).
-      if (GetColumnFlowExecutor().HasRepairTicket(key))
+      // Era17: skip columns with live Flow Contains OR real repair progress
+      // (Dirty/Inflight/PendingLight). Phantom live-window removed.
+      if (GetColumnFlowExecutor().HasRepairTicket(key) ||
+          ColumnHasRepairProgress(key))
       {
         continue;
       }
@@ -2752,7 +2754,8 @@ int UWorld::CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
       {
         continue;
       }
-      if (GetColumnFlowExecutor().HasRepairTicket(key))
+      if (GetColumnFlowExecutor().HasRepairTicket(key) ||
+          ColumnHasRepairProgress(key))
       {
         continue;
       }
@@ -2818,8 +2821,8 @@ int UWorld::RemeshColumnSeamTicket(glm::ivec2 ground_xz)
     StickyRemeshAfterLight.erase(ground_xz);
     return 0;
   }
-  // Era16 P2: calm idle with no near dark / miss — keep Flow ticket armed by
-  // caller, but skip MarkDirty (opaque_idle_churn / emerge from remesh thrash).
+  // Era17 P0: calm/far skip MarkDirty must return 0 honestly (noop ≠ heal).
+  // Do not erase sticky as "healed" — VisibleBlack may still be true (P1 MarkDirty).
   const auto &telem = GetPhysicsTelemetry();
   const glm::ivec3 focus =
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
@@ -2829,16 +2832,12 @@ int UWorld::RemeshColumnSeamTicket(glm::ivec2 ground_xz)
       telem.DarkFaceStaleNearN == 0;
   if (calm_idle)
   {
-    StickyRemeshAfterLight.erase(ground_xz);
     return 0;
   }
-  // Era16 P2: only remesh nearest ring — far FOV VisibleBlack tickets stay
-  // armed without MarkDirty (land opaque_idle_churn from far remesh).
   const int horiz = std::max(std::abs(ground_xz.x - focus.x),
                              std::abs(ground_xz.y - focus.z));
   if (horiz > 2)
   {
-    StickyRemeshAfterLight.erase(ground_xz);
     return 0;
   }
   const int preferred_cy = focus.y;
@@ -2962,11 +2961,21 @@ int UWorld::CountBlackStickyFocusMeshes(glm::ivec3 focus_ground_chunk,
 
 int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
                                          int radius_chunks,
-                                         int *out_no_ticket) const
+                                         int *out_no_ticket,
+                                         int *out_progress,
+                                         int *out_stalled) const
 {
   if (out_no_ticket)
   {
     *out_no_ticket = 0;
+  }
+  if (out_progress)
+  {
+    *out_progress = 0;
+  }
+  if (out_stalled)
+  {
+    *out_stalled = 0;
   }
   if (!MeshService || radius_chunks < 0)
   {
@@ -2987,6 +2996,8 @@ int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
   const int cy1 = FloorDiv(band_max, CHUNK_SIZE);
   int visible_black = 0;
   int no_ticket = 0;
+  int progress_n = 0;
+  int stalled_n = 0;
   for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
   {
     for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
@@ -3013,10 +3024,18 @@ int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
         continue;
       }
       ++visible_black;
-      const bool has_ticket =
-          GetColumnFlowExecutor().HasRepairTicket(key) ||
-          IsColumnStickyRemesh(key);
-      if (!has_ticket)
+      const bool contains = GetColumnFlowExecutor().HasRepairTicket(key);
+      const bool progress = ColumnHasRepairProgress(key);
+      const bool sticky = IsColumnStickyRemesh(key);
+      if (contains || progress || sticky)
+      {
+        ++progress_n;
+      }
+      if (contains && !progress && !sticky)
+      {
+        ++stalled_n;
+      }
+      if (!contains && !progress && !sticky)
       {
         ++no_ticket;
       }
@@ -3026,7 +3045,45 @@ int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
   {
     *out_no_ticket = no_ticket;
   }
+  if (out_progress)
+  {
+    *out_progress = progress_n;
+  }
+  if (out_stalled)
+  {
+    *out_stalled = stalled_n;
+  }
   return visible_black;
+}
+
+bool UWorld::ColumnHasRepairProgress(glm::ivec2 ground_xz) const
+{
+  if (IsPendingLightBeforeMesh(ground_xz))
+  {
+    return true;
+  }
+  if (!MeshService)
+  {
+    return false;
+  }
+  const int max_y = ProceduralTemplate.MaxHeight;
+  if (MeshService->HasDirtyInColumnBand(ground_xz, 0, max_y))
+  {
+    return true;
+  }
+  const int max_cy = std::max(0, FloorDiv(max_y, CHUNK_SIZE));
+  for (int cy = 0; cy <= max_cy; ++cy)
+  {
+    const glm::ivec3 coord(ground_xz.x, cy, ground_xz.y);
+    if (MeshService->IsPendingGpuApply(coord) ||
+        MeshService->IsPendingGpuQueued(coord) ||
+        MeshService->IsPendingGpuKickedOrDispatched(coord) ||
+        MeshService->HasInflightMeshBuild(coord))
+    {
+      return true;
+    }
+  }
+  return false;
 }
 
 int UWorld::CountPendingDarkFocusMeshes(glm::ivec3 focus_ground_chunk,

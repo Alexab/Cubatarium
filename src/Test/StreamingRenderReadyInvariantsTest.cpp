@@ -121,12 +121,15 @@ int main()
     Expect(stale_orphan.kind == ColumnSoTKind::StaleDark, "stale-dark kind");
     Expect(stale_orphan.draw_ok, "meshed stale-dark → draw_ok");
     Expect(!stale_orphan.has_repair_ticket,
-           "Era16: stale-dark without real ticket → has_repair_ticket false");
+           "Era16/17: stale-dark without real ticket → has_repair_ticket false");
 
     const auto stale_ticketed =
         ClassifyStickyStaleDarkSoT(true, false, true, 3, true);
     Expect(stale_ticketed.has_repair_ticket,
            "stale-dark with real ticket → has_repair_ticket true");
+    Expect(!ClassifyStickyStaleDarkSoT(true, false, true, 1, false)
+                .has_repair_ticket,
+           "Era17: no phantom has_repair_ticket when real=false");
 
     const auto near = ClassifyStickyStaleDarkSoT(false, true, false, 1, true);
     Expect(near.kind == ColumnSoTKind::None,
