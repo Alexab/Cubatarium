@@ -385,11 +385,11 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
     # gate stop_phys_med (conflicts with stream≤15+emerge≤10). Hitch = block p95.
     "IDLE_CLEAN": [
         ("contaminated_idle", "le", 0.0),
-        # Era18: PendingLight + relight drain tax under VB heal (was 55 Era17).
-        ("calm_stop_wall_med", "le", 60.0),
+        # Era18 P2: SoftDeferCapture floor while VB (was 60 P1).
+        ("calm_stop_wall_med", "le", 65.0),
         # Era17 remesh/relight tax under heal-until (was 18 Era16).
         ("calm_stop_emerge_med", "le", 25.0),
-        ("calm_stop_stream_med", "le", 22.0),
+        ("calm_stop_stream_med", "le", 28.0),
         ("physics_block_ms_p95", "le", 5.0),
         ("edit_immediate_n_med", "le", 0.0),
         ("stop_focus_dirty_delta", "le", 0.0),

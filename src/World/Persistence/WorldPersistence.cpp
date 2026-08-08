@@ -399,6 +399,53 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     }
   }
 
+  // Era18: while VisibleBlack, pin nearest focus PendingLight column to FIFO
+  // front so far orphans do not starve Capture (manual 165953 fifo frozen,
+  // pending_light outside focus).
+  if (world.GetPhysicsTelemetry().VisibleBlackFocusN > 0)
+  {
+    std::vector<glm::ivec2> pending_cols;
+    world.CollectPendingLightFocusColumns(focus_horiz, focus_radius,
+                                          pending_cols, /*max_cols=*/4);
+    if (!pending_cols.empty())
+    {
+      const glm::ivec2 nearest = pending_cols.front();
+      const glm::ivec2 nearest_key(nearest.x * CHUNK_SIZE,
+                                   nearest.y * CHUNK_SIZE);
+      auto &prio = PendingTerrainColumnRelightsPriority;
+      auto &far = PendingTerrainColumnRelights;
+      const auto prio_it = std::find(prio.begin(), prio.end(), nearest_key);
+      if (prio_it != prio.end())
+      {
+        if (prio_it != prio.begin())
+        {
+          prio.erase(prio_it);
+          prio.push_front(nearest_key);
+        }
+      }
+      else
+      {
+        const auto far_it = std::find(far.begin(), far.end(), nearest_key);
+        if (far_it != far.end())
+        {
+          far.erase(far_it);
+          prio.push_front(nearest_key);
+        }
+        else
+        {
+          EnqueueTerrainColumnRelight(nearest_key.x, nearest_key.y,
+                                      /*priority=*/true, 0, max_y);
+          const auto again = std::find(prio.begin(), prio.end(), nearest_key);
+          if (again != prio.end() && again != prio.begin())
+          {
+            prio.erase(again);
+            prio.push_front(nearest_key);
+          }
+        }
+      }
+    }
+  }
+
   int drained_bg = 0;
   int skipped_inflight = 0;
   const bool moving =

@@ -1414,21 +1414,33 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   // TD-ARCH-030 / Phase 3: SoftDefer unfinished / missing → ColumnFlow ticket
   // (cap 1/tick). Do NOT inflate bg_budget Capture floor every period
   // (manual 130338 SoftDefer thrash +329; 171310 floor Δ+870).
+  // Era18 I-L3: also floor while VisibleBlack>0 (manual 165953 capture_budget=0
+  // for minutes with VB=53 / unfinished=0).
   {
     const int unfinished = world.PhysicsTelemetryData.UnfinishedVisual;
+    const int visible_black_n =
+        world.GetPhysicsTelemetry().VisibleBlackFocusN;
     world.PhysicsTelemetryData.SoftDeferCaptureBudget = 0;
-    if (unfinished > 0 || missing_focus_mesh)
+    if (unfinished > 0 || missing_focus_mesh || visible_black_n > 0)
     {
       // Era14.1 A3: miss Capture floor — keep move=1 (floor=2 raised wall on 1b);
       // idle stays 2 for SoftDefer light progress.
-      int floor_budget =
-          missing_focus_mesh
-              ? (moving_now ? 1 : 2)
-              : (pending_light_focus_n > 0
-                     ? (frame_ms > kBadFrameMs
-                            ? std::min(4, 1 + unfinished / 8)
-                            : std::min(6, 2 + unfinished / 6))
-                     : 0);
+      int floor_budget = 0;
+      if (missing_focus_mesh)
+      {
+        floor_budget = moving_now ? 1 : 2;
+      }
+      else if (unfinished > 0 && pending_light_focus_n > 0)
+      {
+        floor_budget = frame_ms > kBadFrameMs
+                           ? std::min(4, 1 + unfinished / 8)
+                           : std::min(6, 2 + unfinished / 6);
+      }
+      else if (visible_black_n > 0)
+      {
+        // Cap 2 idle / 1 moving — avoid Era14 SoftDefer thrash.
+        floor_budget = moving_now ? 1 : 2;
+      }
       world.PhysicsTelemetryData.SoftDeferCaptureBudget = floor_budget;
       if (floor_budget > 0)
       {
