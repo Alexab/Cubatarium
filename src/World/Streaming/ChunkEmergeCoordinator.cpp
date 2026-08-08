@@ -96,8 +96,10 @@ UChunkEmergeCoordinator::WarmupBudget(int mesh_flush)
 UChunkEmergeCoordinator::FrameBudget
 UChunkEmergeCoordinator::CooperativeWarmupBudget(int coop_budget)
 {
+  // Era20: shrink vs Era19×8/128 (enter app_update≈2s), but keep enough to
+  // seed r≤2 before InGame so land miss doesn't stick from empty spawn ring.
   const int mesh =
-      std::min(128, std::max(coop_budget * 8, 32));
+      std::min(64, std::max(coop_budget * 4, 16));
   FrameBudget budget;
   budget.MaxMeshDrain = mesh;
   budget.MaxMeshSchedule = mesh;

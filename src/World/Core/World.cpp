@@ -4640,7 +4640,10 @@ namespace
 
 int EnterGameMeshRadiusChunks(const UWorld &world)
 {
-  return std::max(1, world.GetRenderDistanceChunks() + 1);
+  // Era20 I-M5: enter gate is underfeet / r≤2 — not full RD+1 (manual 214034
+  // enter app_update≈2097 waiting Visual RD). Outer ring → SpawnRingCatchUp.
+  (void)world;
+  return 2;
 }
 
 bool HasMissingGreedyMeshesNearFocus(const UWorld &world)
@@ -4790,23 +4793,15 @@ bool UWorld::NeedsEnterGameMeshWarmup() const
     return false;
   }
   const UWorldMeshService &mesh = *MeshService;
-  if (mesh.HasPendingAsyncMeshWork())
-  {
-    return true;
-  }
   const glm::ivec3 center =
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
   const int radius = EnterGameMeshRadiusChunks(*this);
+  // Era20: do not wait global async / full RD+1 — only enter underfeet ring.
   if (mesh.HasDirtyWithinHorizontalRadius(center, radius))
   {
     return true;
   }
   if (HasMissingGreedyMeshesNearFocus(*this))
-  {
-    return true;
-  }
-  // TD-ARCH-021/D2b: Visual RD spawn barrier — post-load ring must be draw-ready.
-  if (CountPostLoadRingNotReady() > 0)
   {
     return true;
   }

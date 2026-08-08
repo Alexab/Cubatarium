@@ -1920,8 +1920,10 @@ void UApplication::Update(double dt)
       {
         constexpr int kGpuWarmupMaxFrames = 16;
         constexpr int kGpuWarmupMinFrames = 3;
-        constexpr int kGpuWarmupMeshBudget = 16;
-        constexpr int kGpuWarmupStreamingBudget = 8;
+        // Era20: smaller per-frame mesh budget; GPU upload only on last ready
+        // frame so EnterGameAfterWorldChange ≠ mega WarmupGreedy spike.
+        constexpr int kGpuWarmupMeshBudget = 8;
+        constexpr int kGpuWarmupStreamingBudget = 4;
         const int remaining = WorldOpRunner->EnterGameGpuWarmupFramesRemaining();
         const int frame = kGpuWarmupMaxFrames - remaining;
         if (Geometry && World)
@@ -1950,8 +1952,13 @@ void UApplication::Update(double dt)
           if (upload_ready)
           {
             World->WarmupVisibleListAtCamera();
-            Geometry->WarmupGreedyGpuFromWorld();
-            LogWorldLoadDiag("gpu_warmup_draw", *World);
+            // Era20: full greedy GPU warmup only near warmup end — avoids
+            // stacking WarmupGreedy every frame + EnterGameAfterWorldChange.
+            if (remaining <= 2)
+            {
+              Geometry->WarmupGreedyGpuFromWorld();
+              LogWorldLoadDiag("gpu_warmup_draw", *World);
+            }
           }
         }
         WorldOpRunner->AdvanceEnterGameGpuWarmup(ProgressSink);

@@ -181,7 +181,9 @@ void UWorldStreaming::PrepareEnterGameSession(UWorld &world)
     world.ApplySpawnToCamera();
   }
   world.ConsumeSpawnAreaPreparedByCooperativeLoad();
-  world.BeginEnterGameMeshBurst(5);
+  // Era20: thinner enter gate (r≤2) — longer burst so SpawnRingCatchUp paints
+  // the rest of RD without a multi-second enter hitch.
+  world.BeginEnterGameMeshBurst(12);
 }
 
 void UWorldStreaming::WarmupSpawnAreaForEnterGame(UWorld &world)
