@@ -76,6 +76,8 @@ struct PhysicsTelemetry
   int CaptureOverBudget{0};
   /// 1 when VB Capture/bg heal was deferred for miss/hitch (I-B1/I-B2).
   int HealDeferredForMiss{0};
+  /// Era19 P2: Remesh skipped because column is in PendingLight stage.
+  uint64_t StageSkipRemeshPendingLight{0};
   /// Empty SoftDefer placeholders seen by undrawn heal this frame (A2 smoke).
   int SoftDeferEmptyPlaceholderN{0};
   /// Stuck pattern: HasGreedy && !Drawable && !Dirty && horiz>1.

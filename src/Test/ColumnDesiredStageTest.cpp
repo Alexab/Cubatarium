@@ -30,6 +30,11 @@ int main()
     Expect(d.enqueue_without_wall_gate, "FirstMesh no wall gate");
   }
   {
+    const auto d = DeriveColumnDesiredStage(false, true, false, true);
+    Expect(d.stage == ColumnDesiredStage::RelightThenMesh,
+           "pending_light beats stale remesh (Era19 exclusivity)");
+  }
+  {
     const auto d = DeriveColumnDesiredStage(false, true, false, false);
     Expect(d.stage == ColumnDesiredStage::RemeshSeam, "stale → RemeshSeam");
   }

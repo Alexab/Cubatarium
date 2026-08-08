@@ -34,7 +34,14 @@ inline ColumnDesiredDecision DeriveColumnDesiredStage(
     out.stage = ColumnDesiredStage::FirstMesh;
     return out;
   }
-  // LitPending / stale drawable → remesh (Unlit→Lit guarantee).
+  // Era19 P2 I-B3/exclusivity: PendingLight owns the column — no RemeshSeam
+  // dual with Relight in the same TickDerived decision.
+  if (pending_light)
+  {
+    out.stage = ColumnDesiredStage::RelightThenMesh;
+    return out;
+  }
+  // LitPending / stale drawable → remesh (Unlit→Lit guarantee) after light.
   if (lit_pending || stale_focus)
   {
     out.stage = ColumnDesiredStage::RemeshSeam;
@@ -47,10 +54,6 @@ inline ColumnDesiredDecision DeriveColumnDesiredStage(
     out.stage = unlit_published ? ColumnDesiredStage::RelightThenMesh
                                 : ColumnDesiredStage::RelightOnly;
     return out;
-  }
-  if (pending_light)
-  {
-    out.stage = ColumnDesiredStage::RelightThenMesh;
   }
   return out;
 }

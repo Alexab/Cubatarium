@@ -267,6 +267,7 @@ struct FrameNumbers
   int frame_budget_ms{0};
   int capture_over_budget{0};
   int heal_deferred_for_miss{0};
+  uint64_t stage_skip_remesh_pending_light{0};
   int softdefer_empty_placeholder_n{0};
   int softdefer_empty_stuck_n{0};
   int softdefer_empty_stuck_cx{0};
@@ -525,6 +526,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.frame_budget_ms = phys.FrameBudgetMs;
   n.capture_over_budget = phys.CaptureOverBudget;
   n.heal_deferred_for_miss = phys.HealDeferredForMiss;
+  n.stage_skip_remesh_pending_light = phys.StageSkipRemeshPendingLight;
   n.softdefer_empty_placeholder_n = phys.SoftDeferEmptyPlaceholderN;
   n.softdefer_empty_stuck_n = phys.SoftDeferEmptyStuckN;
   n.softdefer_empty_stuck_cx = phys.SoftDeferEmptyStuckCx;
@@ -802,6 +804,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"frame_budget_ms\":" << n.frame_budget_ms
           << ",\"capture_over_budget\":" << n.capture_over_budget
           << ",\"heal_deferred_for_miss\":" << n.heal_deferred_for_miss
+          << ",\"stage_skip_remesh_pending_light\":"
+          << n.stage_skip_remesh_pending_light
           << ",\"softdefer_empty_placeholder_n\":"
           << n.softdefer_empty_placeholder_n
           << ",\"softdefer_empty_stuck_n\":" << n.softdefer_empty_stuck_n

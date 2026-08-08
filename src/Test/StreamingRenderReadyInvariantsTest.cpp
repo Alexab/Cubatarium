@@ -136,12 +136,13 @@ int main()
            "near ring uses other path (SoT sticky classifier idle)");
   }
 
-  // Hide/sticky/stale without mesh ⇒ scheduler contains RemeshSeam|RelightThenMesh.
+  // Hide/sticky/stale without mesh ⇒ RemeshSeam; near sticky may Relight.
+  // Era19 P2: stale → Remesh only (no RelightThenMesh dual).
   {
     UColumnFlowScheduler sched;
     const glm::ivec2 focus{10, 20};
     std::vector<glm::ivec2> sticky{{12, 20}};      // horiz=2 → near Relight
-    std::vector<glm::ivec2> stale{{15, 20}};       // horiz=5 → far Remesh+Relight
+    std::vector<glm::ivec2> stale{{15, 20}};       // horiz=5 → Remesh only
     EnqueueStickyStaleRepairTickets(sched, focus, sticky, stale);
     Expect(sched.Contains(sticky[0], ColumnWorkKind::RemeshSeam),
            "sticky → RemeshSeam ticket");
@@ -149,8 +150,8 @@ int main()
            "near sticky → RelightThenMesh");
     Expect(sched.Contains(stale[0], ColumnWorkKind::RemeshSeam),
            "stale-dark → RemeshSeam");
-    Expect(sched.Contains(stale[0], ColumnWorkKind::RelightThenMesh),
-           "stale-dark → RelightThenMesh");
+    Expect(!sched.Contains(stale[0], ColumnWorkKind::RelightThenMesh),
+           "Era19: stale must not dual RelightThenMesh");
     Expect(sched.Contains(sticky[0], ColumnWorkKind::PromoteRelight) ||
                sched.Contains(sticky[0], ColumnWorkKind::RemeshSeam),
            "sticky near → live repair ticket kinds");

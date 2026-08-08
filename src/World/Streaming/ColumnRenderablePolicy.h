@@ -111,9 +111,12 @@ inline void EnqueueStickyStaleRepairTickets(
   {
     const int d = near_dist(col);
     const int prio_boost = d <= 2 ? 20 : 0;
-    scheduler.Enqueue(col, ColumnWorkKind::RelightThenMesh, 40 + prio_boost);
-    scheduler.Enqueue(col, ColumnWorkKind::PromoteRelight, 35 + prio_boost);
+    // Era19 P2 I-H3 harden: stale → Remesh only (void uses RelightThenMesh).
     scheduler.Enqueue(col, ColumnWorkKind::RemeshSeam, 28 + prio_boost);
+    if (d <= 2)
+    {
+      scheduler.Enqueue(col, ColumnWorkKind::PromoteRelight, 35 + prio_boost);
+    }
   }
 }
 

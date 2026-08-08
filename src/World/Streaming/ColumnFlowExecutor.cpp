@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
+#include <unordered_set>
 #include <vector>
 
 namespace cutum
@@ -266,7 +268,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
               : std::min(6, std::max(2, recover_n / 2));
 
   // Era17 P1: continuous heal while VisibleBlackFocusN>0 (not only NoTicket).
-  // Stale → RemeshSeam (+MarkDirty). Void → RelightThenMesh+Promote (I-H3).
+  // Era19 P2: void→Relight only; stale→Remesh only; PendingLight skips Remesh.
   if (nearest_vb_heal)
   {
     const int vb_radius =
@@ -275,6 +277,58 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
                                        stale_dark_cols, repair_cap);
     world.CollectFullyDarkFocusColumns(focus_ground_horiz, vb_radius,
                                        void_dark_cols, repair_cap);
+    // Drop columns already in PendingLight from stale Remesh set.
+    if (!pending_cols.empty() && !stale_dark_cols.empty())
+    {
+      std::unordered_set<uint64_t> pending_keys;
+      pending_keys.reserve(pending_cols.size() * 2);
+      for (const glm::ivec2 &c : pending_cols)
+      {
+        pending_keys.insert((static_cast<uint64_t>(static_cast<uint32_t>(c.x))
+                             << 32) |
+                            static_cast<uint32_t>(c.y));
+      }
+      stale_dark_cols.erase(
+          std::remove_if(stale_dark_cols.begin(), stale_dark_cols.end(),
+                         [&](const glm::ivec2 &c) {
+                           const uint64_t k =
+                               (static_cast<uint64_t>(
+                                    static_cast<uint32_t>(c.x))
+                                << 32) |
+                               static_cast<uint32_t>(c.y);
+                           if (pending_keys.count(k))
+                           {
+                             ++world.GetPhysicsTelemetryMutable()
+                                   .StageSkipRemeshPendingLight;
+                             return true;
+                           }
+                           return false;
+                         }),
+          stale_dark_cols.end());
+    }
+    // Void wins over stale for the same column (Relight only).
+    if (!void_dark_cols.empty() && !stale_dark_cols.empty())
+    {
+      std::unordered_set<uint64_t> void_keys;
+      void_keys.reserve(void_dark_cols.size() * 2);
+      for (const glm::ivec2 &c : void_dark_cols)
+      {
+        void_keys.insert((static_cast<uint64_t>(static_cast<uint32_t>(c.x))
+                          << 32) |
+                         static_cast<uint32_t>(c.y));
+      }
+      stale_dark_cols.erase(
+          std::remove_if(stale_dark_cols.begin(), stale_dark_cols.end(),
+                         [&](const glm::ivec2 &c) {
+                           const uint64_t k =
+                               (static_cast<uint64_t>(
+                                    static_cast<uint32_t>(c.x))
+                                << 32) |
+                               static_cast<uint32_t>(c.y);
+                           return void_keys.count(k) > 0;
+                         }),
+          stale_dark_cols.end());
+    }
     if (!stale_dark_cols.empty())
     {
       EnqueueVisibleBlackRepairTickets(scheduler_, focus, stale_dark_cols);
@@ -305,10 +359,14 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   }
   if (!nearest_vb_heal)
   {
-    // Sticky maintenance: RemeshSeam only. Avoid RelightThenMesh triple while
-    // sticky>0 (era16 emerge storm).
+    // Sticky maintenance: RemeshSeam only. Skip columns still in PendingLight.
     for (const glm::ivec2 &col : sticky_cols)
     {
+      if (world.IsPendingLightBeforeMesh(col))
+      {
+        ++world.GetPhysicsTelemetryMutable().StageSkipRemeshPendingLight;
+        continue;
+      }
       if (!HasRepairTicket(col) && !world.ColumnHasRepairProgress(col))
       {
         Enqueue(col, ColumnWorkKind::RemeshSeam, 30);
