@@ -56,6 +56,17 @@ void UWorldMeshService::SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> f
   Cache.SetDeferMeshUntilLitFn(std::move(fn));
 }
 
+void UWorldMeshService::SetOnLitPendingNeededFn(
+    std::function<void(glm::ivec3)> fn)
+{
+  Cache.SetOnLitPendingNeededFn(std::move(fn));
+}
+
+void UWorldMeshService::SetOnSoftDeferHeldFn(std::function<void(glm::ivec3)> fn)
+{
+  Cache.SetOnSoftDeferHeldFn(std::move(fn));
+}
+
 void UWorldMeshService::SetStarveOutsideFocusMesh(bool starve)
 {
   Cache.SetStarveOutsideFocusMesh(starve);
@@ -651,6 +662,11 @@ uint64_t UWorldMeshService::GetMeshDiscardedLateCount() const
 uint64_t UWorldMeshService::GetMeshApplyStaleCount() const
 {
   return Cache.GetMeshApplyStaleCount();
+}
+
+uint64_t UWorldMeshService::GetMeshReplaceHoleAvoidedCount() const
+{
+  return Cache.GetMeshReplaceHoleAvoidedCount();
 }
 
 size_t UWorldMeshService::GetPendingGpuAppliesCount() const

@@ -878,6 +878,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetMeshDiscardedLateCount();
     world.PhysicsTelemetryData.MeshApplyStale =
         world.GetMeshService().GetMeshApplyStaleCount();
+    world.PhysicsTelemetryData.MeshReplaceHoleAvoided =
+        world.GetMeshService().GetMeshReplaceHoleAvoidedCount();
     world.PhysicsTelemetryData.PendingGpuAppliesN = static_cast<int>(
         world.GetMeshService().GetPendingGpuAppliesCount());
     world.PhysicsTelemetryData.PendingGpuQueuedN = static_cast<int>(

@@ -611,25 +611,38 @@ void UChunkMeshCache::EnsurePendingGpuIndex() const
 
 bool UChunkMeshCache::PreferKickPendingGpuQueued(glm::ivec3 chunk_coord)
 {
-  for (auto it = PendingGpuApplies.begin(); it != PendingGpuApplies.end(); ++it)
-  {
-    if (it->coord != chunk_coord ||
-        it->phase != PendingGpuApply::Phase::Queued)
+  // Era15 TD-051: also promote Kicked/Dispatched to front so Finish drains
+  // nearest tops stall (API was Queued-only → PreferKick no-op under Kick).
+  auto promote = [&](PendingGpuApply::Phase want) -> bool {
+    for (auto it = PendingGpuApplies.begin(); it != PendingGpuApplies.end();
+         ++it)
     {
-      continue;
-    }
-    if (it == PendingGpuApplies.begin())
-    {
+      if (it->coord != chunk_coord || it->phase != want)
+      {
+        continue;
+      }
+      if (it == PendingGpuApplies.begin())
+      {
+        return true;
+      }
+      PendingGpuApply pending = std::move(*it);
+      PendingGpuApplies.erase(it);
+      TouchPendingGpuIndex();
+      PendingGpuApplies.push_front(std::move(pending));
+      TouchPendingGpuIndex();
       return true;
     }
-    PendingGpuApply pending = std::move(*it);
-    PendingGpuApplies.erase(it);
-    TouchPendingGpuIndex();
-    PendingGpuApplies.push_front(std::move(pending));
-    TouchPendingGpuIndex();
+    return false;
+  };
+  if (promote(PendingGpuApply::Phase::Queued))
+  {
     return true;
   }
-  return false;
+  if (promote(PendingGpuApply::Phase::Kicked))
+  {
+    return true;
+  }
+  return promote(PendingGpuApply::Phase::Dispatched);
 }
 
 bool UChunkMeshCache::DropQueuedPendingGpuApply(glm::ivec3 chunk_coord)
@@ -1291,6 +1304,11 @@ bool UChunkMeshCache::HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y,
 void UChunkMeshCache::HoldSoftDeferFirstMesh(glm::ivec3 chunk_coord)
 {
   SoftDeferHeld.insert(chunk_coord);
+  // Era15 TD-050: Held must not park FirstMesh outside ColumnFlow.
+  if (OnSoftDeferHeld)
+  {
+    OnSoftDeferHeld(chunk_coord);
+  }
   constexpr size_t kSoftDeferHeldCap = 384;
   if (SoftDeferHeld.size() <= kSoftDeferHeldCap)
   {
@@ -1992,6 +2010,12 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   InstancesDirty = true;
   CrossBatchesDirty = true;
   GreedyBatchesDirty = true;
+  // Era15 TD-050: Unlit/dark FirstMesh publish → LitPending ticket.
+  if (OnLitPendingNeeded &&
+      (defer_until_lit || gpu_result.hasFullyDarkFace))
+  {
+    OnLitPendingNeeded(coord);
+  }
   if (RemeshAfterApply.erase(coord) > 0)
   {
     MarkDirtyPriority(coord);
@@ -2621,22 +2645,23 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   }
 
   ChunkGreedyMesh &chunkMesh = GreedyCache[result.coord];
-  // CPU path replaces GPU mesh: free the committed slot or MDI still draws the
-  // stale dark SSBO while GpuResident was cleared (dark_face_stale spikes).
-  if (chunkMesh.GpuResident && GpuPipeline)
-  {
-    GpuPipeline->FreeChunk(result.coord);
-  }
-  chunkMesh.GpuResident = false;
-  chunkMesh.GpuSlotIndex = -1;
-  chunkMesh.GpuQuadCount = 0;
-  chunkMesh.GpuHasDarkFace = false;
-  chunkMesh.GpuBlockRanges.clear();
-  chunkMesh.GpuTransparent = false;
+  // Era15 TD-ARCH-049 MeshResidency: publish CPU batches before FreeChunk so
+  // HasDrawable never drops when GPU was the sole drawable source. Freeing
+  // first left a one-frame sky hole (flicker / mesh_discarded_late thrash).
+  // After CPU publish, FreeChunk is still required or MDI keeps drawing the
+  // stale GPU SSBO while GpuResident is cleared (dark_face_stale spikes).
+  const bool had_gpu_resident = chunkMesh.GpuResident && GpuPipeline;
+  const bool had_gpu_drawable =
+      had_gpu_resident && chunkMesh.GpuQuadCount > 0;
   size_t new_vertex_count = 0;
+  bool new_cpu_drawable = false;
   for (const GreedyMeshBatch &b : result.batches)
   {
     new_vertex_count += b.vertices.size();
+    if (!b.vertices.empty() && !b.indices.empty())
+    {
+      new_cpu_drawable = true;
+    }
   }
   const auto oldIt = GreedyVertexCountByChunk.find(result.coord);
   if (oldIt != GreedyVertexCountByChunk.end())
@@ -2645,13 +2670,41 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   }
   GreedyVertexCountByChunk[result.coord] = new_vertex_count;
   GreedyVertexCountTotal += new_vertex_count;
+  // Write-first: CPU drawable before FreeChunk (ShouldPublishCpuBatchesBeforeFreeGpu).
   chunkMesh.batches = std::move(result.batches);
   chunkMesh.crossCenters = std::move(result.crossCenters);
+  if (had_gpu_resident)
+  {
+    // Regress counter: free-first would have holed GPU-only drawable columns.
+    if (CpuReplaceFreeFirstWouldHole(had_gpu_drawable, new_cpu_drawable))
+    {
+      ++MeshReplaceHoleAvoided;
+    }
+    GpuPipeline->FreeChunk(result.coord);
+  }
+  chunkMesh.GpuResident = false;
+  chunkMesh.GpuSlotIndex = -1;
+  chunkMesh.GpuQuadCount = 0;
+  chunkMesh.GpuHasDarkFace = false;
+  chunkMesh.GpuBlockRanges.clear();
+  chunkMesh.GpuTransparent = false;
+  // Intentional empty: match Immediate / GPU 0-quad ready (HasMeshSatisfying).
+  if (new_vertex_count == 0)
+  {
+    chunkMesh.GpuResident = true;
+    chunkMesh.GpuSlotIndex = -1;
+    chunkMesh.GpuQuadCount = 0;
+  }
   NoteGeometryDirty(result.coord);
   PendingMeshRevisionBump = true;
   InstancesDirty = true;
   CrossBatchesDirty = true;
   GreedyBatchesDirty = true;
+  // Era15 TD-050: Unlit/dark CPU publish → LitPending.
+  if (OnLitPendingNeeded && (defer_until_lit || new_dark))
+  {
+    OnLitPendingNeeded(result.coord);
+  }
   // Light/content changed while this build was Active — remesh once with a
   // fresh Capture (avoids MarkDirty mid-flight Dirty plateau).
   if (RemeshAfterApply.erase(result.coord) > 0)
@@ -3577,8 +3630,27 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     }
     const int max_local_y = MaxSolidLocalY(*chunk, registry);
     ChunkGreedyMesh &chunkMesh = GreedyCache[chunkCoord];
-    if (chunkMesh.GpuResident && GpuPipeline)
+    // Era15 TD-ARCH-049: publish CPU batches before FreeChunk (MeshResidency).
+    const bool had_gpu_resident = chunkMesh.GpuResident && GpuPipeline;
+    const bool had_gpu_drawable =
+        had_gpu_resident && chunkMesh.GpuQuadCount > 0;
+    size_t new_vertex_count = 0;
+    bool new_cpu_drawable = false;
+    for (const GreedyMeshBatch &b : new_batches)
     {
+      new_vertex_count += b.vertices.size();
+      if (!b.vertices.empty() && !b.indices.empty())
+      {
+        new_cpu_drawable = true;
+      }
+    }
+    chunkMesh.batches = std::move(new_batches);
+    if (had_gpu_resident)
+    {
+      if (CpuReplaceFreeFirstWouldHole(had_gpu_drawable, new_cpu_drawable))
+      {
+        ++MeshReplaceHoleAvoided;
+      }
       GpuPipeline->FreeChunk(chunkCoord);
     }
     chunkMesh.GpuResident = false;
@@ -3587,12 +3659,6 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     chunkMesh.GpuHasDarkFace = false;
     chunkMesh.GpuBlockRanges.clear();
     chunkMesh.GpuTransparent = false;
-    chunkMesh.batches = std::move(new_batches);
-    size_t new_vertex_count = 0;
-    for (const GreedyMeshBatch &b : chunkMesh.batches)
-    {
-      new_vertex_count += b.vertices.size();
-    }
     // Intentional empty (fully occluded solid): match GPU 0-quad ready so
     // HasMissing cannot latch forever on CPU Immediate (miss_cy sticky).
     if (new_vertex_count == 0)
@@ -3612,6 +3678,10 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     CollectCrossInstancesInBand(*chunk, chunkCoord, registry, max_local_y,
                                 chunkMesh.crossCenters);
     NoteGeometryDirty(chunkCoord);
+    if (OnLitPendingNeeded && (defer_until_lit || new_dark))
+    {
+      OnLitPendingNeeded(chunkCoord);
+    }
   }
   else
   {

@@ -118,6 +118,11 @@ public:
   {
     return MeshApplySupersededCount;
   }
+  /// Era15 TD-049: times write-before-free avoided a GPU-only drawable hole.
+  uint64_t GetMeshReplaceHoleAvoidedCount() const
+  {
+    return MeshReplaceHoleAvoided;
+  }
   size_t GetPendingGpuAppliesCount() const { return PendingGpuApplies.size(); }
   size_t GetPendingGpuQueuedCount() const;
   size_t GetPendingGpuKickedCount() const;
@@ -151,7 +156,8 @@ public:
   bool IsPendingGpuQueued(glm::ivec3 chunk_coord) const;
   /// True while coord is Kicked or Dispatched in the GPU ring.
   bool IsPendingGpuKickedOrDispatched(glm::ivec3 chunk_coord) const;
-  /// Move Queued ticket for coord to front so Kick prefers it (no drop).
+  /// Move Queued/Kicked/Dispatched ticket for coord to front (Era15 TD-051:
+  /// Finish drains nearest tops; was Queued-only no-op under Kick stall).
   bool PreferKickPendingGpuQueued(glm::ivec3 chunk_coord);
   /// Drop Queued-only pending for coord so Immediate can rebuild. Returns true
   /// if a Queued entry was erased. Leaves Dispatched/Kicked untouched.
@@ -264,6 +270,16 @@ public:
   void SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn)
   {
     DeferMeshUntilLit = std::move(fn);
+  }
+  /// Era15 TD-050: Unlit/dark publish → LitPending (Note+RemeshSeam in World).
+  void SetOnLitPendingNeededFn(std::function<void(glm::ivec3)> fn)
+  {
+    OnLitPendingNeeded = std::move(fn);
+  }
+  /// Era15 TD-050: SoftDeferHeld insert → ColumnFlow FirstMesh ticket.
+  void SetOnSoftDeferHeldFn(std::function<void(glm::ivec3)> fn)
+  {
+    OnSoftDeferHeld = std::move(fn);
   }
   /// When true, skip outside-focus dirty trickle (near holes / pending light).
   void SetStarveOutsideFocusMesh(bool starve) { StarveOutsideFocusMesh = starve; }
@@ -522,6 +538,7 @@ private:
   int LastMeshImmediateCount{0};
   uint64_t MeshApplyStaleCount{0};
   uint64_t MeshApplySupersededCount{0};
+  uint64_t MeshReplaceHoleAvoided{0};
   IUChunkCull *CullBackend{nullptr};
   IUChunkMesher *MesherBackend{nullptr};
   std::chrono::steady_clock::time_point LastFlatRebuildAt{};
@@ -582,6 +599,8 @@ private:
   /// When MaxHorizontalDist >= 0, allow this many farther schedules/frame.
   int MeshScheduleOverflowPerFrame{0};
   std::function<bool(glm::ivec3)> DeferMeshUntilLit;
+  std::function<void(glm::ivec3)> OnLitPendingNeeded;
+  std::function<void(glm::ivec3)> OnSoftDeferHeld;
   // Per-DoMovement memo: HasMissing/FindNearest are called many times/frame.
   mutable uint64_t HoleQueryEpoch{0};
   struct MissingQueryMemo

@@ -57,6 +57,8 @@ public:
   void ClearMeshVerticalPriority();
   void SetMeshForwardBias(float bias_k, glm::vec2 forward_xz);
   void SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn);
+  void SetOnLitPendingNeededFn(std::function<void(glm::ivec3)> fn);
+  void SetOnSoftDeferHeldFn(std::function<void(glm::ivec3)> fn);
   void SetStarveOutsideFocusMesh(bool starve);
   void SetStarveRemeshForHoles(bool starve);
   void SetStarveRemeshKeepHoriz(int keep_h);
@@ -158,6 +160,7 @@ public:
   void SetMeshCompletedCapacity(size_t cap);
   uint64_t GetMeshDiscardedLateCount() const;
   uint64_t GetMeshApplyStaleCount() const;
+  uint64_t GetMeshReplaceHoleAvoidedCount() const;
   size_t GetPendingGpuAppliesCount() const;
   size_t GetPendingGpuQueuedCount() const;
   size_t GetPendingGpuKickedCount() const;

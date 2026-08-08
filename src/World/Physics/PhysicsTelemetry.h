@@ -40,6 +40,8 @@ struct PhysicsTelemetry
   uint64_t MeshDiscardedLate{0};
   /// ApplyMeshResult rejected as stale (revision mismatch) — remesh thrash signal.
   uint64_t MeshApplyStale{0};
+  /// Era15 TD-049: CPU replace published before FreeChunk when GPU-only drawable.
+  uint64_t MeshReplaceHoleAvoided{0};
   /// Deferred GPU mesh applies waiting for ProcessPendingGpuMeshes.
   int PendingGpuAppliesN{0};
   /// Queued phase only (not yet Kick).

@@ -43,6 +43,18 @@ int main()
            "pending light → RelightThenMesh");
   }
   {
+    const auto d = DeriveColumnDesiredStage(false, false, false, false,
+                                            /*lit_pending=*/true);
+    Expect(d.stage == ColumnDesiredStage::RemeshSeam,
+           "LitPending → RemeshSeam");
+  }
+  {
+    const auto d = DeriveColumnDesiredStage(false, false, true, false, false,
+                                            /*unlit_published=*/true);
+    Expect(d.stage == ColumnDesiredStage::RelightThenMesh,
+           "void+UnlitPublished → RelightThenMesh");
+  }
+  {
     const auto d = DeriveColumnDesiredStage(false, false, false, false);
     Expect(d.stage == ColumnDesiredStage::None, "idle SoT → None");
   }

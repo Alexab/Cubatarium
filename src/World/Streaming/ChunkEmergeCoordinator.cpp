@@ -213,6 +213,23 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             world.RequiresLightingLitGate() && pending, in_focus, may_mesh,
             allow_unlit);
       });
+  // Era15 TD-050: Unlit publish → LitPending (sticky + RemeshSeam ticket).
+  mesh_service.SetOnLitPendingNeededFn(
+      [&world](glm::ivec3 chunk_coord)
+      {
+        const glm::ivec2 key(chunk_coord.x, chunk_coord.z);
+        world.NoteColumnRepairNeeded(key);
+        GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RemeshSeam,
+                                        /*priority=*/70);
+      });
+  // Era15 TD-050: SoftDeferHeld → ColumnFlow FirstMesh (Hide⇒Ticket).
+  mesh_service.SetOnSoftDeferHeldFn(
+      [](glm::ivec3 chunk_coord)
+      {
+        const glm::ivec2 key(chunk_coord.x, chunk_coord.z);
+        GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::FirstMesh,
+                                        /*priority=*/100);
+      });
 
   const bool near_mesh_backlog =
       mesh_service.HasDirtyWithinHorizontalRadius(focus_ground_horiz,

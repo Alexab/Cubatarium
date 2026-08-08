@@ -19,7 +19,9 @@ static void Expect(bool cond, const char *message)
 int main()
 {
   using cutum::ClassifyMeshApplyRevision;
+  using cutum::CpuReplaceFreeFirstWouldHole;
   using cutum::MeshApplyRevDecision;
+  using cutum::ShouldPublishCpuBatchesBeforeFreeGpu;
   using cutum::UChunkMeshRevisionRegistry;
 
   // --- Registry ---
@@ -65,6 +67,19 @@ int main()
   Expect(ClassifyMeshApplyRevision(true, 3, 3, 3) ==
              MeshApplyRevDecision::Commit,
          "matching Active+Current commits");
+
+  // --- Era15 MeshResidency (TD-049) ---
+  Expect(ShouldPublishCpuBatchesBeforeFreeGpu(),
+         "CPU replace must publish batches before FreeChunk");
+  Expect(CpuReplaceFreeFirstWouldHole(/*gpu_drawable=*/true,
+                                      /*new_cpu=*/false),
+         "GPU-only drawable free-first would hole");
+  Expect(!CpuReplaceFreeFirstWouldHole(/*gpu_drawable=*/true,
+                                       /*new_cpu=*/true),
+         "CPU replacement ready: free-first still drawable via batches");
+  Expect(!CpuReplaceFreeFirstWouldHole(/*gpu_drawable=*/false,
+                                       /*new_cpu=*/false),
+         "no GPU drawable: free-first not a residency hole");
 
   if (failures != 0)
   {

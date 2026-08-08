@@ -238,6 +238,7 @@ struct FrameNumbers
   uint64_t mesh_discarded_late{0};
   uint64_t mesh_apply_stale{0};
   uint64_t mesh_apply_stale_delta{0};
+  uint64_t mesh_replace_hole_avoided{0};
   int pending_gpu_applies_n{0};
   int pending_gpu_queued_n{0};
   int pending_gpu_kicked_n{0};
@@ -494,6 +495,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.focus_unfinished_behind = phys.FocusUnfinishedBehind;
   n.mesh_discarded_late = phys.MeshDiscardedLate;
   n.mesh_apply_stale = phys.MeshApplyStale;
+  n.mesh_replace_hole_avoided = phys.MeshReplaceHoleAvoided;
   n.pending_gpu_applies_n = phys.PendingGpuAppliesN;
   n.pending_gpu_queued_n = phys.PendingGpuQueuedN;
   n.pending_gpu_kicked_n = phys.PendingGpuKickedN;
@@ -757,6 +759,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_discarded_late\":" << n.mesh_discarded_late
           << ",\"mesh_apply_stale\":" << n.mesh_apply_stale
           << ",\"mesh_apply_stale_delta\":" << n.mesh_apply_stale_delta
+          << ",\"mesh_replace_hole_avoided\":" << n.mesh_replace_hole_avoided
           << ",\"pending_gpu_applies_n\":" << n.pending_gpu_applies_n
           << ",\"pending_gpu_queued_n\":" << n.pending_gpu_queued_n
           << ",\"pending_gpu_kicked_n\":" << n.pending_gpu_kicked_n

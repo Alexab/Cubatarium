@@ -234,17 +234,28 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   // Async backlog soft-throttle only (not wall). Keep FirstMesh priority when
   // pending_async is extreme.
   const bool async_ok = pending_async < 48;
+  const bool pending_light =
+      world.GetPhysicsTelemetry().FocusPendingDark > 0;
+  const bool lit_pending =
+      world.GetPhysicsTelemetry().FocusStickyRemesh > 0;
+  // UnlitPublished proxy: pending dark with drawable pressure (not miss).
+  const bool unlit_published =
+      pending_light && !missing_visible_mesh &&
+      (world.GetPhysicsTelemetry().FocusDarkMesh > 0 ||
+       world.GetPhysicsTelemetry().DarkFaceVoidNearN > 0);
   const ColumnDesiredDecision desired = DeriveColumnDesiredStage(
       missing_visible_mesh, /*stale_focus=*/allow_stale_wave_base && async_ok,
       /*void_focus=*/!missing_visible_mesh && !moving && cooldown_ok &&
           (void_n > 200 || (void_n > 40 && stale_n > 40)),
-      /*pending_light=*/false);
+      pending_light, lit_pending, unlit_published);
   const bool allow_stale_wave =
       desired.stage == ColumnDesiredStage::RemeshSeam ||
+      lit_pending ||
       (allow_stale_wave_base && async_ok &&
        (missing_visible_mesh ? (stale_n > 40) : true));
   const bool allow_void_wave =
       desired.stage == ColumnDesiredStage::RelightOnly ||
+      desired.stage == ColumnDesiredStage::RelightThenMesh ||
       (!missing_visible_mesh && !moving && cooldown_ok &&
        (void_n > 200 || (void_n > 40 && stale_n > 40)));
   if (allow_stale_wave)

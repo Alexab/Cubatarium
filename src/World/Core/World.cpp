@@ -1005,9 +1005,9 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
         const int horiz = std::max(std::abs(key.x - focus_chunk.x),
                                    std::abs(key.y - focus_chunk.z));
-        // Cruise: only track underfeet sticky. Idle: never expand sticky ring —
-        // async-saturated insert of full focus made sticky 7→13 while Dirty
-        // remesh thrash left not_ready climbing (manual 210341).
+        // Era15 TD-ARCH-050: sticky_r is telem/cap for far inserts only — had
+        // drawable Unlit/LitPending always gets RemeshSeam (not sticky_r gate).
+        // Cruise/idle sticky_r kept for diagnostics of ring pressure.
         const bool idle =
             LastMovementSpeed <= ProceduralTemplate.MovementPrefetchThreshold;
         const int pending_n =
@@ -1015,15 +1015,14 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         const int sticky_r =
             idle ? 1
                  : (pending_n > 10 ? GetStreamingFocusRadius() : 1);
-        if (horiz <= sticky_r)
-        {
-          StickyRemeshAfterLight.insert(key);
-          // Era14 TD-ARCH-045: UnlitFirstMesh → guaranteed RemeshSeam ticket
-          // when light arrives (no wall-gated Imm).
-          NoteColumnRepairNeeded(key);
-          GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RemeshSeam,
-                                          /*priority=*/70);
-        }
+        (void)sticky_r;
+        (void)horiz;
+        StickyRemeshAfterLight.insert(key);
+        // Era14 TD-ARCH-045 / Era15 P2a: UnlitFirstMesh → guaranteed RemeshSeam
+        // when light arrives (no wall-gated Imm; sticky_r ≠ gate).
+        NoteColumnRepairNeeded(key);
+        GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RemeshSeam,
+                                        /*priority=*/70);
       }
       AsyncRelightColumnsInFlight.erase(key);
       if (finalize_pending_gate)
