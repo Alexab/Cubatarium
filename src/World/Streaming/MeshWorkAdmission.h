@@ -27,6 +27,8 @@ struct MeshWorkAdmissionInput
   int ring_depth{8};
   /// Nearest focus miss Chebyshev horiz; <0 = unknown (skip K3 remesh band).
   int nearest_miss_horiz{-1};
+  /// Nearest focus miss chunk Y; <0 = unknown. Era17: cy≤1 ⇒ FirstMesh class.
+  int nearest_miss_cy{-1};
 };
 
 struct MeshWorkAdmission
@@ -249,6 +251,20 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
 
   MeshWorkFillModeDefaults(out, mode, in, queued, holes, light_debt);
 
+  // Era17 P2: missing tops (cy≤1) — FirstMesh priority class; remesh_schedule=0
+  // so remesh admit cannot starve HoleDrain FirstMesh (manual 144227 miss sticky).
+  const bool miss_tops =
+      holes && in.nearest_miss_cy >= 0 && in.nearest_miss_cy <= 1;
+  if (miss_tops &&
+      (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
+       out.mode == MeshWorkAdmission::Mode::DeepBacklog))
+  {
+    out.remesh_schedule = 0;
+    out.first_mesh_schedule = std::max(out.first_mesh_schedule, 6);
+    out.max_schedule =
+        std::max(out.max_schedule, out.first_mesh_schedule);
+  }
+
   // J1/K2/M2: under HoleDrain/Deep miss backlog, give Finish more wall budget
   // (Kick bias is in ChunkMeshCache kick_cut/finish_cap — keep enqueue capped).
   // M2: pending≥12 already gets Finish wall share 0.85 (was 0.82 at 12 / 0.85 at 16).
@@ -267,7 +283,7 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     // Manual 153832: UV≥8 crushed first_mesh to 3 and max_schedule to 3, nulling
     // G2 FM bump and starving rim while remesh keep_h=1 let stale explode.
     // Prefer FirstMesh slots; keep a small remesh band (horiz≤2) for stale.
-    out.remesh_schedule = std::min(out.remesh_schedule, 1);
+    out.remesh_schedule = miss_tops ? 0 : std::min(out.remesh_schedule, 1);
     out.starve_remesh_horiz = std::max(out.starve_remesh_horiz, 2);
     const int fm = std::max(0, out.first_mesh_schedule);
     const int need = fm + std::max(0, out.remesh_schedule);
@@ -277,9 +293,10 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
 
   // K3/M3: rim miss (mh 2–3) with cooled-ish GPU pending — +1 remesh for
   // stale/UV without stealing FirstMesh slots (max_schedule covers FM+remesh).
+  // Era17: skip when miss cy≤1 (tops FirstMesh class owns the schedule).
   // M3: widen cooled band pending≤12 (was ≤8; med pending~11 skipped the band).
-  if (holes && in.pending_gpu <= 12 && in.nearest_miss_horiz >= 2 &&
-      in.nearest_miss_horiz <= 3 &&
+  if (!miss_tops && holes && in.pending_gpu <= 12 &&
+      in.nearest_miss_horiz >= 2 && in.nearest_miss_horiz <= 3 &&
       (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
        out.mode == MeshWorkAdmission::Mode::DeepBacklog))
   {

@@ -390,6 +390,7 @@ int main()
     rim_stale.visual_holes = true;
     rim_stale.moving = true;
     rim_stale.nearest_miss_horiz = 2;
+    rim_stale.nearest_miss_cy = 2;
     rim_stale.ring_depth = 8;
     rim_stale.prev_mode =
         static_cast<uint8_t>(MeshWorkAdmission::Mode::HoleDrain);
@@ -409,6 +410,14 @@ int main()
     const auto a17b = ComputeMeshWorkAdmission(rim_stale12);
     Expect(a17b.remesh_schedule >= 2, "M3 +1 remesh at pending=12 rim miss");
     Expect(a17b.first_mesh_schedule >= 4, "M3 keeps FirstMesh≥4 at pending=12");
+
+    // Era17 P2: miss cy≤1 ⇒ remesh_schedule=0 (FirstMesh class).
+    MeshWorkAdmissionInput tops_miss = rim_stale;
+    tops_miss.nearest_miss_cy = 0;
+    tops_miss.nearest_miss_horiz = 1;
+    const auto a18 = ComputeMeshWorkAdmission(tops_miss);
+    Expect(a18.remesh_schedule == 0, "Era17: miss cy0 remesh_schedule=0");
+    Expect(a18.first_mesh_schedule >= 6, "Era17: miss cy0 FirstMesh≥6");
   }
 
   if (failures != 0)

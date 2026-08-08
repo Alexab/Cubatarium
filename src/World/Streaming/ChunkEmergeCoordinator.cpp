@@ -2318,9 +2318,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const int sticky_frames = mesh_service.GetStickyNearestHoleFrames();
       const bool tops_hp =
           missing_visible_mesh && isolated_hole.y <= 3 && no_drawable;
+      // Era17 P2: cy≤1 miss always PreferKick (FirstMesh class), even mid FOV.
+      const bool tops_firstmesh_class =
+          missing_visible_mesh && isolated_hole.y <= 1 && no_drawable;
 
       // A1 HP quota: every miss-frame Dirty + PreferKick nearest tops column.
-      if (tops_hp)
+      if (tops_hp || tops_firstmesh_class)
       {
         mesh_service.MarkDirtyPriority(isolated_hole);
         ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
@@ -2500,10 +2503,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       ain.nearest_miss_horiz = std::max(
           std::abs(isolated_hole.x - focus_ground_horiz.x),
           std::abs(isolated_hole.z - focus_ground_horiz.z));
+      ain.nearest_miss_cy = isolated_hole.y;
     }
     else
     {
       ain.nearest_miss_horiz = world.GetPhysicsTelemetry().MissHoriz;
+      ain.nearest_miss_cy = world.GetPhysicsTelemetry().MissCy;
     }
     const MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
     mesh_service.SetMeshWorkAdmission(adm);
