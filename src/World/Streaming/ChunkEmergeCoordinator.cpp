@@ -6,6 +6,7 @@
 #include "World/Streaming/IdleRecoveryPolicy.h"
 #include "World/Streaming/MeshLitGate.h"
 #include "World/Streaming/MeshWorkAdmission.h"
+#include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Mesh/GpuMeshPipeline.h"
@@ -495,6 +496,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     if (UndrawnForceCd <= 0)
     {
       int marked_n = 0;
+      int empty_fm_enqueue_n = 0;
       const int heal_r = std::max(1, focus_radius);
       for (int dx = -heal_r; dx <= heal_r && marked_n < kUndrawnMarkCap; ++dx)
       {
@@ -514,7 +516,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             {
               continue;
             }
-            // Only wrong-empty SoftDefer placeholders (cache entry, no quads).
             if (!has_greedy)
             {
               continue;
@@ -539,7 +540,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 }
               }
             }
-            if (!any_solid)
+            if (!IsSoftDeferEmptyPlaceholder(has_greedy, has_drawable, is_dirty,
+                                             pending_gpu, inflight, any_solid))
             {
               continue;
             }
@@ -557,7 +559,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 phys_telem.SoftDeferEmptyStuckDefer = 1;
               }
               if (StuckSmokeCd <= 0)
-            {
+              {
 #if defined(CUBATARIUM_SOFTDEFER_SMOKE)
                 std::cerr << "[SoftDeferEmptySmoke] HasGreedy=!Drawable "
                           << "Dirty=0 SoftDefer~1 horiz=" << horiz << " at ("
@@ -570,10 +572,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             // FirstMesh placeholder — always Dirty (do not gate on DirtyAdmit;
             // HoleDrain admit=0 left post_stop miss sticky).
             mesh_service.MarkDirtyPriority(coord);
-            // Era14.1 A2: empty stuck escape — PreferKick if already Queued/Kicked.
-            if (horiz > 1 || missing_visible_mesh)
+            // Era20: under miss escalate SoftDefer empty via ColumnFlow FirstMesh
+            // (cap 2). PreferKick omitted — kicking empty GPU applies caused
+            // opaque_idle_churn storms (era20_p1_land3 churn≈469).
+            if (empty_fm_enqueue_n < 2 &&
+                ShouldEnqueueSoftDeferEmptyFirstMesh(true, horiz,
+                                                     missing_visible_mesh))
             {
-              mesh_service.PreferKickPendingGpuQueued(coord);
+              ++empty_fm_enqueue_n;
+              auto &exec = GetColumnFlowExecutor();
+              ColumnWorkItem item{};
+              item.column = glm::ivec2(coord.x, coord.z);
+              item.kind = ColumnWorkKind::FirstMesh;
+              item.priority = 105;
+              item.scan_full_focus = missing_visible_mesh;
+              item.cy = coord.y;
+              exec.Enqueue(item);
             }
             underfeet_undrawn = true;
             ++marked_n;
@@ -1035,6 +1049,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.unfinished_visual = world.GetPhysicsTelemetry().UnfinishedVisual;
     ain.prev_mode = static_cast<uint8_t>(LastBudget.AdmissionMode);
     ain.ring_depth = UGpuMeshPipeline::kReadbackRing;
+    // Era20: miss cy/horiz into early admit (was Finalize-only) so SoftDefer/
+    // PreferKick see FirstMesh class for 214034 cy=3/mh=4 witnesses.
+    ain.nearest_miss_horiz = world.GetPhysicsTelemetry().MissHoriz;
+    ain.nearest_miss_cy = world.GetPhysicsTelemetry().MissCy;
+    if (have_nearest_missing)
+    {
+      ain.nearest_miss_horiz = std::max(
+          std::abs(nearest_missing_hole.x - focus_ground_horiz.x),
+          std::abs(nearest_missing_hole.z - focus_ground_horiz.z));
+      ain.nearest_miss_cy = nearest_missing_hole.y;
+    }
     mesh_service.SetMeshWorkAdmission(ComputeMeshWorkAdmission(ain));
   }
   if (focus_not_render_ready > 12 && pending_async_early < 10)
@@ -1883,16 +1908,25 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             (is_nearest_hole && pending_async < 4);
         const double force_frame_cap = 40.0;
         const bool calm_enough_for_imm = last_frame_ms <= 50.0;
+        // Era20 I-M2: cold-async Imm escape — ignore wall when async dead under
+        // miss (manual 214034: wall~246 Imm=0 + async=0 sticky).
+        const bool cold_async_escape =
+            ShouldColdAsyncImmEscape(missing_visible_mesh, pending_async) &&
+            is_nearest_hole && !hole_pending;
         const bool want_immediate =
-            calm_enough_for_imm && sync_ok && !hole_pending &&
+            (calm_enough_for_imm || cold_async_escape) && sync_ok &&
+            !hole_pending &&
             (!hole_underfeet ||
              (underfeet_immediate_cd <= 0 &&
               underfeet_immediate_this_frame < kMaxUnderfeetImmediate)) &&
-            (moving
-                 ? ((hole_underfeet ||
-                     (is_nearest_hole && pending_async < 2)) &&
-                    pending_async < 4 && immediate_ms_used() < 8.0)
-                 : (last_frame_ms <= force_frame_cap && immediate_budget_ok()));
+            (cold_async_escape
+                 ? (immediate_ms_used() < 12.0)
+                 : (moving
+                        ? ((hole_underfeet ||
+                            (is_nearest_hole && pending_async < 2)) &&
+                           pending_async < 4 && immediate_ms_used() < 8.0)
+                        : (last_frame_ms <= force_frame_cap &&
+                           immediate_budget_ok())));
         if (want_immediate)
         {
           mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
@@ -1904,7 +1938,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           }
           // One Immediate per ~2 frames while moving — enough to break cold
           // 2s periods without mesh_emerge hitch storms.
-          if (moving)
+          // Cold-async escape: always rate-limit 1/tick nearest only.
+          if (moving || cold_async_escape)
           {
             force_hole_cd = 1;
           }

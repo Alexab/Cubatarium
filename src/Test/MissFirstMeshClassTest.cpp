@@ -45,10 +45,10 @@ int main()
          "empty SoftDefer placeholder");
   Expect(!IsSoftDeferEmptyPlaceholder(true, true, false, false, false, true),
          "drawable not empty");
-  Expect(ShouldEnqueueSoftDeferEmptyFirstMesh(true, 2, false),
-         "stuck horiz>1 → FM");
+  Expect(!ShouldEnqueueSoftDeferEmptyFirstMesh(true, 2, false),
+         "no PreferKick without miss");
   Expect(ShouldEnqueueSoftDeferEmptyFirstMesh(true, 0, true),
-         "underfeet empty while miss → FM");
+         "empty while miss → FM");
   Expect(!ShouldEnqueueSoftDeferEmptyFirstMesh(false, 5, true),
          "not placeholder → no FM");
 

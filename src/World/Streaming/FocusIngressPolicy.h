@@ -37,12 +37,12 @@ inline FocusIngressDecision EvaluateFocusIngress(const FocusIngressInput &in)
   FocusIngressDecision out;
   // Frontier active: classic missing+pending, OR SoT unfinished, OR stale-dark
   // remesh debt near camera (manual 225337 rim wait with uv≈0 / dark high).
-  const bool classic =
-      in.moving && in.missing_mesh && in.pending_focus > 0;
+  // Era20: miss activates even when !moving (idle/stop miss stuck 214034).
+  const bool classic = in.missing_mesh && in.pending_focus > 0;
   const bool sot_frontier =
-      in.moving && (in.unfinished_visual > 0 || in.missing_mesh);
+      in.missing_mesh || (in.moving && in.unfinished_visual > 0);
   const bool stale_frontier =
-      in.moving && in.stale_dark_near > 8 &&
+      (in.moving || in.missing_mesh) && in.stale_dark_near > 8 &&
       (in.pending_focus > 0 || in.unfinished_visual > 0 || in.missing_mesh);
   if (!classic && !sot_frontier && !stale_frontier)
   {

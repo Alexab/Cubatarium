@@ -20,16 +20,18 @@ inline bool IsSoftDeferEmptyPlaceholder(bool has_greedy, bool has_drawable,
   return true;
 }
 
-/// Stuck rim empty (horiz>1) or any empty while missing tops → ColumnFlow FM.
+/// Stuck SoftDefer empty → ColumnFlow FirstMesh only while FOV miss
+/// (idle PreferKick without miss caused remesh churn; MarkDirty still heals).
 inline bool ShouldEnqueueSoftDeferEmptyFirstMesh(bool empty_placeholder,
                                                  int horiz,
                                                  bool missing_visible_mesh)
 {
-  if (!empty_placeholder)
+  (void)horiz;
+  if (!empty_placeholder || !missing_visible_mesh)
   {
     return false;
   }
-  return horiz > 1 || missing_visible_mesh;
+  return true;
 }
 
 /// Era20 I-M2: Imm/Force Dirty escape when miss and async dead (ignore wall).

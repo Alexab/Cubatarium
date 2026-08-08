@@ -402,15 +402,15 @@ int main()
     Expect(a16b.gpu_budget_frac >= 0.85,
            "M2 pending=12 gets Finish budget frac 0.85");
 
-    // K3/M3: cooled pending + rim mh 2–3 → +1 remesh without cutting FirstMesh.
+    // K3/M3: cooled pending + rim outside FirstMesh class (mh 5–6) → +1 remesh.
     MeshWorkAdmissionInput rim_stale{};
     rim_stale.pending_gpu = 6;
     rim_stale.pending_gpu_queued = 0;
     rim_stale.pending_gpu_kicked = 6;
     rim_stale.visual_holes = true;
     rim_stale.moving = true;
-    rim_stale.nearest_miss_horiz = 2;
-    rim_stale.nearest_miss_cy = 2;
+    rim_stale.nearest_miss_horiz = 5; // Era20 remesh band (mh≤4 = FirstMesh)
+    rim_stale.nearest_miss_cy = 5;
     rim_stale.ring_depth = 8;
     rim_stale.prev_mode =
         static_cast<uint8_t>(MeshWorkAdmission::Mode::HoleDrain);
@@ -431,12 +431,19 @@ int main()
     Expect(a17b.remesh_schedule >= 2, "M3 +1 remesh at pending=12 rim miss");
     Expect(a17b.first_mesh_schedule >= 4, "M3 keeps FirstMesh≥4 at pending=12");
 
-    // Era17 P2: miss cy≤1 ⇒ remesh_schedule=0 (FirstMesh class).
+    // Era17/20: miss cy≤3 ⇒ remesh_schedule=0 (FirstMesh class).
     MeshWorkAdmissionInput tops_miss = rim_stale;
     tops_miss.nearest_miss_cy = 0;
     tops_miss.nearest_miss_horiz = 1;
     const auto a18 = ComputeMeshWorkAdmission(tops_miss);
     Expect(a18.remesh_schedule == 0, "Era17: miss cy0 remesh_schedule=0");
+
+    MeshWorkAdmissionInput tops_cy3 = rim_stale;
+    tops_cy3.nearest_miss_cy = 3;
+    tops_cy3.nearest_miss_horiz = 4;
+    const auto a20 = ComputeMeshWorkAdmission(tops_cy3);
+    Expect(a20.remesh_schedule == 0, "Era20: miss cy3/mh4 remesh_schedule=0");
+    Expect(a20.first_mesh_schedule >= 6, "Era20: FirstMesh class FM≥6");
     Expect(a18.first_mesh_schedule >= 6, "Era17: miss cy0 FirstMesh≥6");
 
     // Era18 P3: unfinished storm + miss rim cy≤2 ⇒ remesh_schedule=0.

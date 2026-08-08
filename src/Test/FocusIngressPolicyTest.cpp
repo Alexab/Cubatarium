@@ -74,7 +74,8 @@ int main()
     in.mesh_async = 0;
     in.frame_ms = 16.0;
     const auto d = EvaluateFocusIngress(in);
-    Expect(!d.active, "idle not cruise ingress");
+    Expect(d.active, "Era20: idle miss still activates ingress");
+    Expect(d.first_mesh_admit >= 2, "idle miss → FirstMesh admit");
   }
 
   {

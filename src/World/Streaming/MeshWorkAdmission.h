@@ -271,15 +271,15 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
 
   MeshWorkFillModeDefaults(out, mode, in, queued, holes, light_debt);
 
-  // Era17 P2: missing tops (cy≤1) — FirstMesh priority class; remesh_schedule=0
-  // so remesh admit cannot starve HoleDrain FirstMesh (manual 144227 miss sticky).
-  // Era18 P3: unfinished climb under dirty storm (manual 165953) — same class
-  // when unfinished_visual>0 and miss witness present (cy may be 0–2 rim).
+  // Era17/20: FirstMesh priority class while FOV holes — remesh_schedule=0.
+  // Era20: cy≤3 OR mh≤4 (manual 214034 miss_cy=3 mh=4 outside old cy≤1).
+  // Era18 P3: unfinished climb under dirty storm — same class when UV>0.
   const bool miss_tops =
-      holes && in.nearest_miss_cy >= 0 && in.nearest_miss_cy <= 1;
+      IsMissFirstMeshClass(holes, in.nearest_miss_cy, in.nearest_miss_horiz);
   const bool unfinished_storm =
-      holes && in.unfinished_visual > 0 && in.nearest_miss_cy >= 0 &&
-      in.nearest_miss_cy <= 2 && in.pending_gpu >= 12;
+      holes && in.unfinished_visual > 0 &&
+      IsMissFirstMeshClass(true, in.nearest_miss_cy, in.nearest_miss_horiz) &&
+      in.pending_gpu >= 12;
   if ((miss_tops || unfinished_storm) &&
       (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
        out.mode == MeshWorkAdmission::Mode::DeepBacklog))
@@ -316,12 +316,12 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     out.max_schedule = std::min(out.max_schedule, std::max(need, 5));
   }
 
-  // K3/M3: rim miss (mh 2–3) with cooled-ish GPU pending — +1 remesh for
-  // stale/UV without stealing FirstMesh slots (max_schedule covers FM+remesh).
-  // Era17: skip when miss cy≤1 (tops FirstMesh class owns the schedule).
-  // M3: widen cooled band pending≤12 (was ≤8; med pending~11 skipped the band).
+  // K3/M3: rim miss outside FirstMesh class with cooled-ish GPU pending — +1
+  // remesh for stale/UV without stealing FirstMesh slots.
+  // Era20: FirstMesh class owns cy≤3 OR mh≤4; remesh band is mh 5–6.
+  // M3: cooled band pending≤12 (was ≤8; med pending~11 skipped the band).
   if (!miss_tops && holes && in.pending_gpu <= 12 &&
-      in.nearest_miss_horiz >= 2 && in.nearest_miss_horiz <= 3 &&
+      in.nearest_miss_horiz >= 5 && in.nearest_miss_horiz <= 6 &&
       (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
        out.mode == MeshWorkAdmission::Mode::DeepBacklog))
   {
