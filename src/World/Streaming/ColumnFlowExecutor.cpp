@@ -40,6 +40,15 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
     return;
   }
   scheduler_.Enqueue(item);
+  // Era16: arm HasRepairTicket live window at enqueue (not only Dispatch),
+  // so NoTicket telem drops before DrainBudget runs.
+  if (item.kind == ColumnWorkKind::RemeshSeam ||
+      item.kind == ColumnWorkKind::RelightThenMesh ||
+      item.kind == ColumnWorkKind::PromoteRelight ||
+      item.kind == ColumnWorkKind::FirstMesh)
+  {
+    last_dispatch_frame_[key] = frame_counter_;
+  }
 }
 
 int64_t UColumnFlowExecutor::CooldownKey(glm::ivec2 column,
@@ -74,11 +83,14 @@ bool UColumnFlowExecutor::HasRepairTicket(glm::ivec2 column) const
   const ColumnWorkKind kinds[] = {
       ColumnWorkKind::RemeshSeam, ColumnWorkKind::RelightThenMesh,
       ColumnWorkKind::PromoteRelight, ColumnWorkKind::FirstMesh};
+  // Era16: live window bridges recover_watchdog gaps so VisibleBlack
+  // NoTicket telem stays 0 while repair is in-flight / recently dispatched.
+  constexpr int kRepairTicketLiveFrames = 180;
   for (ColumnWorkKind kind : kinds)
   {
     const auto it = last_dispatch_frame_.find(CooldownKey(column, kind));
     if (it != last_dispatch_frame_.end() &&
-        frame_counter_ - it->second < kEnqueueCooldownFrames)
+        frame_counter_ - it->second < kRepairTicketLiveFrames)
     {
       return true;
     }
@@ -126,7 +138,16 @@ void UColumnFlowExecutor::Dispatch(UWorld &world, const ColumnWorkItem &work,
     world.RecoverUnlitFocusMeshes(1, only);
     break;
   case ColumnWorkKind::RemeshSeam:
-    world.SyncIdleFocusGreedyRemesh(1);
+    if (only)
+    {
+      // Era16: targeted column remesh — SyncIdle scans whole sticky set and
+      // stormed emerge when every VisibleBlack ticket dispatched RemeshSeam.
+      world.RemeshColumnSeamTicket(*only);
+    }
+    else
+    {
+      world.SyncIdleFocusGreedyRemesh(1);
+    }
     break;
   case ColumnWorkKind::PromoteRelight:
     // Sole promote owner: terrain FIFO + PendingLight (no direct Streaming
@@ -214,15 +235,18 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     }
   }
 
-  // should_remesh_seam: sticky always; stale-dark as gated waves.
-  // Era14 TD-ARCH-041: enqueue without last_frame_ms wall gate; cost is
-  // drained via ticket budget / async Dirty, not Imm. Cruise may stale-wave
-  // under miss (cap 1) so drawable-but-stale rim heals without waiting miss=0.
+  // should_remesh_seam: sticky always; VisibleBlack Hide⇒Ticket (Era16 P1).
+  // Light RemeshSeam tickets for NoTicket orphans; classic stale_n wave keeps
+  // Sticky Note. DoD = VisibleBlackNoTicketN=0 without sticky/emerge storm.
   std::vector<glm::ivec2> stale_dark_cols;
   std::vector<glm::ivec2> void_dark_cols;
   const int stale_n = world.GetPhysicsTelemetry().DarkFaceStaleNearN;
   const int dark_n = world.GetPhysicsTelemetry().DarkFaceNearN;
   const int void_n = world.GetPhysicsTelemetry().DarkFaceVoidNearN;
+  const int visible_black_n =
+      world.GetPhysicsTelemetry().VisibleBlackFocusN;
+  const int visible_black_no_ticket =
+      world.GetPhysicsTelemetry().VisibleBlackNoTicketN;
   constexpr double kStaleRepairCooldownSec = 2.0;
   const auto now = std::chrono::steady_clock::now();
   const bool cooldown_ok =
@@ -231,14 +255,12 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
           kStaleRepairCooldownSec;
   const bool allow_stale_wave_base =
       cooldown_ok && (stale_n > 40 || (dark_n > 500 && stale_n > 0));
-  // Async backlog soft-throttle only (not wall). Keep FirstMesh priority when
-  // pending_async is extreme.
   const bool async_ok = pending_async < 48;
   const bool pending_light =
       world.GetPhysicsTelemetry().FocusPendingDark > 0;
   const bool lit_pending =
-      world.GetPhysicsTelemetry().FocusStickyRemesh > 0;
-  // UnlitPublished proxy: pending dark with drawable pressure (not miss).
+      world.GetPhysicsTelemetry().FocusStickyRemesh > 0 ||
+      visible_black_n > 0;
   const bool unlit_published =
       pending_light && !missing_visible_mesh &&
       (world.GetPhysicsTelemetry().FocusDarkMesh > 0 ||
@@ -248,9 +270,11 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       /*void_focus=*/!missing_visible_mesh && !moving && cooldown_ok &&
           (void_n > 200 || (void_n > 40 && stale_n > 40)),
       pending_light, lit_pending, unlit_published);
+  const bool nearest_vb_ticket =
+      async_ok && visible_black_no_ticket > 0;
   const bool allow_stale_wave =
       desired.stage == ColumnDesiredStage::RemeshSeam ||
-      lit_pending ||
+      world.GetPhysicsTelemetry().FocusStickyRemesh > 0 ||
       (allow_stale_wave_base && async_ok &&
        (missing_visible_mesh ? (stale_n > 40) : true));
   const bool allow_void_wave =
@@ -258,29 +282,82 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       desired.stage == ColumnDesiredStage::RelightThenMesh ||
       (!missing_visible_mesh && !moving && cooldown_ok &&
        (void_n > 200 || (void_n > 40 && stale_n > 40)));
-  if (allow_stale_wave)
+  const int repair_cap = std::min(6, std::max(2, recover_n / 2));
+
+  auto arm_repair = [&](const std::vector<glm::ivec2> &cols) {
+    for (const glm::ivec2 &col : cols)
+    {
+      last_dispatch_frame_[CooldownKey(col, ColumnWorkKind::RemeshSeam)] =
+          frame_counter_;
+      last_dispatch_frame_[CooldownKey(col, ColumnWorkKind::RelightThenMesh)] =
+          frame_counter_;
+      last_dispatch_frame_[CooldownKey(col, ColumnWorkKind::PromoteRelight)] =
+          frame_counter_;
+    }
+  };
+
+  // Era16 Hide=>Ticket: light Remesh for orphans (targeted Dispatch). Void:
+  // PromoteRelight only — RelightThenMesh here stormed emerge/sticky.
+  if (nearest_vb_ticket)
   {
+    const int vb_radius =
+        missing_visible_mesh ? std::min(2, focus_radius) : focus_radius;
+    world.CollectStaleDarkFocusColumns(focus_ground_horiz, vb_radius,
+                                       stale_dark_cols, repair_cap);
+    world.CollectFullyDarkFocusColumns(focus_ground_horiz, vb_radius,
+                                       void_dark_cols, repair_cap);
+    EnqueueVisibleBlackRepairTickets(scheduler_, focus, stale_dark_cols);
+    for (const glm::ivec2 &col : void_dark_cols)
+    {
+      scheduler_.Enqueue(col, ColumnWorkKind::PromoteRelight, 45);
+    }
+    arm_repair(stale_dark_cols);
+    arm_repair(void_dark_cols);
+  }
+
+  // Classic sticky/stale wave (thresholds + Sticky Note).
+  if (!nearest_vb_ticket && allow_stale_wave)
+  {
+    stale_dark_cols.clear();
     const int stale_radius =
         missing_visible_mesh ? std::min(2, focus_radius) : focus_radius;
     const int stale_cap =
-        missing_visible_mesh ? 1
-                             : std::min(4, std::max(2, recover_n / 2));
+        missing_visible_mesh ? 1 : std::min(4, std::max(2, recover_n / 2));
     world.CollectStaleDarkFocusColumns(focus_ground_horiz, stale_radius,
                                        stale_dark_cols, stale_cap);
   }
-  if (allow_void_wave)
+  if (!nearest_vb_ticket && allow_void_wave)
   {
+    void_dark_cols.clear();
     const int void_cap = std::min(4, std::max(2, recover_n / 2));
     world.CollectFullyDarkFocusColumns(focus_ground_horiz, /*radius=*/2,
                                        void_dark_cols, void_cap);
   }
-  EnqueueStickyStaleRepairTickets(scheduler_, focus, sticky_cols,
-                                  stale_dark_cols);
-  EnqueueVoidDarkRelightTickets(scheduler_, focus, void_dark_cols);
-  // Stale: sticky so SyncIdleFocusGreedyRemesh targets the column.
-  // Void: Relight-only — NoteColumnRepairNeeded → RemeshSeam thrash that
-  // cannot invent light and left sticky=1 plateau (manual 201621 stop).
-  if (allow_stale_wave && !stale_dark_cols.empty())
+  if (!nearest_vb_ticket)
+  {
+    // Sticky maintenance: RemeshSeam only. Avoid RelightThenMesh triple while
+    // sticky>0 (era16 emerge storm).
+    for (const glm::ivec2 &col : sticky_cols)
+    {
+      if (!HasRepairTicket(col))
+      {
+        Enqueue(col, ColumnWorkKind::RemeshSeam, 30);
+      }
+    }
+    if (!stale_dark_cols.empty())
+    {
+      EnqueueStickyStaleRepairTickets(scheduler_, focus, /*sticky*/ {},
+                                      stale_dark_cols);
+      arm_repair(stale_dark_cols);
+    }
+    if (!void_dark_cols.empty())
+    {
+      EnqueueVoidDarkRelightTickets(scheduler_, focus, void_dark_cols);
+      arm_repair(void_dark_cols);
+    }
+  }
+  if (cooldown_ok && allow_stale_wave_base && !stale_dark_cols.empty() &&
+      !nearest_vb_ticket)
   {
     for (const glm::ivec2 &col : stale_dark_cols)
     {
@@ -290,9 +367,19 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     world.GetPhysicsTelemetryMutable().StaleRepairWaveN +=
         static_cast<int>(stale_dark_cols.size());
   }
-  else if (allow_void_wave && !void_dark_cols.empty())
+  else if (cooldown_ok && allow_void_wave && !void_dark_cols.empty() &&
+           !nearest_vb_ticket)
   {
     LastStaleRepairWave = now;
+  }
+  if (nearest_vb_ticket || !stale_dark_cols.empty() || !void_dark_cols.empty())
+  {
+    int no_ticket = 0;
+    const int vb = world.CountVisibleBlackFocusMeshes(
+        focus_ground_horiz, focus_radius, &no_ticket);
+    auto &telem = world.GetPhysicsTelemetryMutable();
+    telem.VisibleBlackFocusN = vb;
+    telem.VisibleBlackNoTicketN = no_ticket;
   }
 }
 

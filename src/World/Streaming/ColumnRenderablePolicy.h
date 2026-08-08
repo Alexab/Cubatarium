@@ -67,6 +67,27 @@ inline bool AllowUnlitFirstMesh(bool has_mesh, int /*horiz_from_focus*/,
   return true;
 }
 
+/// VisibleBlack Hide⇒Ticket: RemeshSeam (+ near Relight) without full
+/// RelightThenMesh storm used by sticky/stale waves.
+inline void EnqueueVisibleBlackRepairTickets(
+    UColumnFlowScheduler &scheduler, glm::ivec2 focus,
+    const std::vector<glm::ivec2> &cols)
+{
+  auto near_dist = [&](glm::ivec2 col) {
+    return std::max(std::abs(col.x - focus.x), std::abs(col.y - focus.y));
+  };
+  for (const glm::ivec2 &col : cols)
+  {
+    const int d = near_dist(col);
+    const int prio_boost = d <= 2 ? 20 : 0;
+    scheduler.Enqueue(col, ColumnWorkKind::RemeshSeam, 28 + prio_boost);
+    if (d <= 2)
+    {
+      scheduler.Enqueue(col, ColumnWorkKind::PromoteRelight, 35 + prio_boost);
+    }
+  }
+}
+
 /// Enqueue RemeshSeam / RelightThenMesh tickets for sticky + stale-dark columns
 /// (mirrors UColumnFlowExecutor::TickDerived repair section).
 inline void EnqueueStickyStaleRepairTickets(

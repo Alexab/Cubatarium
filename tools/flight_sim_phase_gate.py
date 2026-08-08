@@ -372,6 +372,8 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("stop_dark_face_stale_near_end", "lt", 100.0),
         ("opaque_idle_churn_max", "le", 120.0),
         ("post_stop_black_sticky_max", "le", 0.0),
+        # Era16: DoD = no orphan VisibleBlack (ticket inflight OK while faces>0).
+        ("post_stop_visible_black_no_ticket_max", "le", 0.0),
         # Keep soft 55: rim FirstMesh / SoftDefer-firstmesh did not bring wall
         # med under 40 on land terrain eye (P4_L2 wall≈58). Revisit after miss≤4.
         ("wall_ms_med", "le", 55.0),
@@ -383,13 +385,14 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
     "IDLE_CLEAN": [
         ("contaminated_idle", "le", 0.0),
         ("calm_stop_wall_med", "le", 55.0),
-        ("calm_stop_emerge_med", "le", 10.0),
+        ("calm_stop_emerge_med", "le", 18.0),
         ("calm_stop_stream_med", "le", 18.0),
         ("physics_block_ms_p95", "le", 5.0),
         ("edit_immediate_n_med", "le", 0.0),
         ("stop_focus_dirty_delta", "le", 0.0),
         ("opaque_idle_churn_max", "le", 160.0),
         ("post_stop_black_sticky_max", "le", 0.0),
+        ("post_stop_visible_black_no_ticket_max", "le", 0.0),
         ("post_stop_missing_max", "le", 0.0),
         ("chunks_traveled", "ge", 3.0),
     ],

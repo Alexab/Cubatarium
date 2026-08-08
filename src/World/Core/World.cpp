@@ -2678,22 +2678,23 @@ int UWorld::CollectStaleDarkFocusColumns(glm::ivec3 focus_ground_horiz,
     for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
     {
       const int dist = std::max(std::abs(dx), std::abs(dz));
-      // Include horiz 1–2 (edge/near ring). Only skip camera column (dist 0)
-      // so underfeet dark preview is not force-ticketed every frame.
-      if (dist < 1)
-      {
-        continue;
-      }
+      // Era16: include underfeet (dist 0) — VisibleBlack Hide⇒Ticket DoD.
       const glm::ivec2 key(focus_ground_horiz.x + dx, focus_ground_horiz.z + dz);
       if (IsColumnStickyRemesh(key))
       {
         continue; // sticky path already tickets RemeshSeam
       }
+      // Era16: skip columns that already have a live Flow repair ticket so the
+      // budgeted cap advances to VisibleBlack orphans (Hide⇒Ticket).
+      if (GetColumnFlowExecutor().HasRepairTicket(key))
+      {
+        continue;
+      }
       bool stale = false;
       for (int cy = 0; cy <= max_cy; ++cy)
       {
         const glm::ivec3 coord(key.x, cy, key.y);
-        if (MeshService->HasGreedyMesh(coord) &&
+        if (MeshService->HasDrawableGreedyMesh(coord) &&
             MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
         {
           stale = true;
@@ -2741,12 +2742,17 @@ int UWorld::CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
     for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
     {
       const int dist = std::max(std::abs(dx), std::abs(dz));
-      if (dist < 1 || dist > 2)
+      // Near-ring default; callers may pass radius>2 for VisibleBlack orphans.
+      if (dist > radius_chunks)
       {
-        continue; // near-ring only (void Relight thrash guard)
+        continue;
       }
       const glm::ivec2 key(focus_ground_horiz.x + dx, focus_ground_horiz.z + dz);
       if (IsColumnStickyRemesh(key))
+      {
+        continue;
+      }
+      if (GetColumnFlowExecutor().HasRepairTicket(key))
       {
         continue;
       }
@@ -2754,7 +2760,7 @@ int UWorld::CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
       for (int cy = 0; cy <= max_cy; ++cy)
       {
         const glm::ivec3 coord(key.x, cy, key.y);
-        if (MeshService->HasGreedyMesh(coord) &&
+        if (MeshService->HasDrawableGreedyMesh(coord) &&
             MeshService->GetCache().ChunkHasFullyDarkFace(coord))
         {
           fully_dark = true;
@@ -2781,6 +2787,51 @@ int UWorld::CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
 void UWorld::NoteColumnRepairNeeded(glm::ivec2 ground_xz)
 {
   StickyRemeshAfterLight.insert(ground_xz);
+}
+
+int UWorld::RemeshColumnSeamTicket(glm::ivec2 ground_xz)
+{
+  if (!MeshService)
+  {
+    return 0;
+  }
+  // Skip if column no longer VisibleBlack — avoid idle emerge churn after heal.
+  // Fully-dark (void) remesh cannot invent light — PromoteRelight owns that path.
+  bool stale_dark = false;
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  for (int cy = 0; cy <= max_cy; ++cy)
+  {
+    const glm::ivec3 coord(ground_xz.x, cy, ground_xz.y);
+    if (!MeshService->HasDrawableGreedyMesh(coord))
+    {
+      continue;
+    }
+    if (MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
+    {
+      stale_dark = true;
+      break;
+    }
+  }
+  if (!stale_dark)
+  {
+    StickyRemeshAfterLight.erase(ground_xz);
+    return 0;
+  }
+  const glm::ivec3 focus =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const int preferred_cy = focus.y;
+  const int remesh_min = (preferred_cy - 1) * CHUNK_SIZE;
+  const int remesh_max =
+      (preferred_cy + 1) * CHUNK_SIZE + CHUNK_SIZE - 1;
+  MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+      glm::ivec3(ground_xz.x, 0, ground_xz.y), remesh_min, remesh_max,
+      /*include_horizontal_neighbors=*/false);
+  StickyRemeshAfterLight.erase(ground_xz);
+  PendingLightBeforeMesh.erase(ground_xz);
+  SetColumnEmergeState(glm::ivec3(ground_xz.x, 0, ground_xz.y),
+                       ColumnEmergeState::Meshing);
+  return 1;
 }
 
 bool UWorld::NeedsSpawnRingCatchUp() const

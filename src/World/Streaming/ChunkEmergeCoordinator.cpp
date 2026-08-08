@@ -1372,7 +1372,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         (black_sticky > 0 && !moving && recover_watchdog_frames >= 4) ||
         (!moving && pending_focus_n > 15 && recover_watchdog_frames >= 2) ||
         (world.GetPhysicsTelemetry().DarkFaceNearN > 500 &&
-         recover_watchdog_frames >= 2);
+         recover_watchdog_frames >= 2) ||
+        // Era16: ticket orphans every watchdog 4 (not every frame).
+        (world.GetPhysicsTelemetry().VisibleBlackNoTicketN > 0 &&
+         recover_watchdog_frames >= 4);
     if (recover_now && recover_n > 0)
     {
       auto &exec = GetColumnFlowExecutor();

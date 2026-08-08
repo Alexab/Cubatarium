@@ -410,6 +410,8 @@ public:
   bool NeedsSpawnRingCatchUp() const;
   /// Hide⇒Ticket: mark column for ColumnFlow RemeshSeam (StickyRemesh set).
   void NoteColumnRepairNeeded(glm::ivec2 ground_xz);
+  /// Era16: targeted RemeshSeam for one column (MarkDirty + clear sticky).
+  int RemeshColumnSeamTicket(glm::ivec2 ground_xz);
   void SetEnterGameWarmupMissingGreedy(int n);
   int GetEnterGameWarmupMissingGreedy() const
   {
