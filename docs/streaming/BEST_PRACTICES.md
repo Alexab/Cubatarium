@@ -153,13 +153,16 @@ force-N) are not DoD — SoT closes the gap.
 
 **Era15 closeout (2026-08-08):** TD-049/050 **done**; TD-051/043 **partial** (`era15_p3b_land` holes≈0.24 miss_stuck=8 sticky=0 wall≈45). FLY_CLEAN + IDLE_CLEAN + IDLE_WARM GO. Ocean ARCH_D3 / TD-048 still open. TD-046 Capture deferred.
 
-## Gap После Era16 plan (2026-08-08)
+## Gap После Era16 plan (2026-08-08) — CLOSED
 
 | Практика | Industry | Cubatarium | Era16 SoT |
 |----------|----------|------------|-----------|
-| Visibility debt = column SoT not sticky-set | job graph truth | `black_sticky` ⊆ StickyRemeshAfterLight; user black = `dark_face_stale` | **P0** VisibleBlackFocusN / NoTicketN TD-052 |
-| Hide/degraded ⇒ real repair ticket | Hide⇒Ticket | StaleDark claimed `has_repair_ticket=true` without Flow | **P0** honest policy; **P1** enqueue guarantee |
-| Continuous should_mesh for dark drawable | derive next work | stale wave only if stale_n>40 | **P1** nearest-ring ticket |
+| Visibility debt = column SoT not sticky-set | job graph truth | `black_sticky` ⊆ StickyRemeshAfterLight | **done** VisibleBlackFocusN / NoTicketN TD-052 |
+| Hide/degraded ⇒ real repair ticket | Hide⇒Ticket | honest StaleDark + RemeshSeam orphans | **done** P1 no_ticket=0 |
+| Continuous should_mesh for dark drawable | derive next work | nearest-ring ticket each recover | **done** P1/P2 |
+
+**Era16 closeout:** P3 matrix GO — `era16_p3_fly` / `idle` / `warm` / `land`;
+ocean ARCH_D3 soft residual TD-048 (`era16_p3_ocean` wall≈226, no_ticket=0).
 
 ## Практический Вывод Для Cubatarium
 

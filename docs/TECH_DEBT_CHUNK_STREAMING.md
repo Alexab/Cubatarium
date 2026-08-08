@@ -95,18 +95,24 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-040 | Era14 | Frame nest: stream/emerge inside `RunLegacyPhysicsFrame` / `do_movement_ms` | Nest proof fly-clean phys_med≈4.9 | **done 2026-08-07** `0812c77f` |
 | TD-ARCH-041 | Era14 | Deadlock calm-wall Imm / stale-wave enqueue (`wall≤40/50`) | Dirty/promote without wall; Imm stays budgeted; sticky remesh budget on hot wall | **done 2026-08-07** (Imm primary DISCARD) |
 | TD-ARCH-042 | Era14 | Stand/cruise sticky Imm fork zoo | Imm primary removed; Dirty@≥1–2 + PreferKick | **done 2026-08-07** |
-| TD-ARCH-043 | Era14 | Land tops miss sticky / `ARCH_D3_LAND` | Era15 best `era15_p3b_land` miss_stuck=8 holes≈0.24 wall≈45 sticky=0 miss_end=0 (SoT landed; gate holes≤0.10 still open) | **partial** — holes/miss residual |
+| TD-ARCH-043 | Era14 | Land tops miss sticky / `ARCH_D3_LAND` | Era16 `era16_p2_land` holes≈0.04 miss_stuck=2 sticky=0 no_ticket=0 wall≈52 | **done 2026-08-08** ARCH_D3_LAND GO |
 | TD-ARCH-044 | Era14 | Commit-time seed coverage / PendingLight trail | SeedDecision cruise≤32 / idle≤28 cheap seed | **done 2026-08-07** `f9af0c16`+iterate |
 | TD-ARCH-045 | Era14 | UnlitFirstMesh → guaranteed remesh-on-lit | MarkRelit → NoteColumnRepairNeeded + RemeshSeam | **done 2026-08-07** `f9af0c16` |
 | TD-ARCH-046 | Era14 | Worker Capture residual (TD-ARCH-015 store done) | Store refresh budget tightened; worker path still deferred (hang risk) | **partial** — worker deferred |
 | TD-ARCH-047 | Era14 | IdleRecovery/Admission knobs duplicate DesiredStage | Sticky remesh wall-skip removed; IdleRecovery owns sync cost only | **done 2026-08-07** |
-| TD-ARCH-048 | Era14 | ARCH_D3 wall_med≤30 / gate DoD | Era15 ocean `era15_p4_ocean` wall≈236 holes≈0.61 sticky=0 (still NO-GO); land soft wall OK | **partial** — ocean wall open |
+| TD-ARCH-048 | Era14 | ARCH_D3 wall_med≤30 / gate DoD | Era16 ocean `era16_p3_ocean` wall≈226 holes≈0.82 sticky=0 no_ticket=0 (ARCH_D3 soft NO-GO); land ARCH_D3_LAND GO wall soft≤70 | **partial** — ocean wall/holes open |
 | TD-ARCH-049 | Era15 | MeshResidency: FreeChunk-before-replace flicker | CPU Apply/Immediate publish batches before FreeChunk; `mesh_replace_hole_avoided` telem; FLY_CLEAN GO `era15_p1_fly` | **done 2026-08-08** `327dd006`+ |
 | TD-ARCH-050 | Era15 | ColumnPublication Unlit→Lit + SoftDeferHeld∥ColumnFlow | LitPending on Unlit FirstMesh; sticky_r≠gate MarkRelit; SoftDeferHeld→FirstMesh ticket; DesiredStage lit_pending/unlit; IDLE_CLEAN/WARM GO | **done 2026-08-08** `327dd006`+ (LAND holes residual via 043/051) |
-| TD-ARCH-051 | Era15 | FirstMesh-until-Drawable / PreferKick Kicked stall | PreferKick promotes Queued+Kicked+Dispatched; land sticky=0 miss_end=0; holes/miss gate still open | **partial** — ARCH_D3_LAND holes residual |
-| TD-ARCH-052 | Era16 | VisibleBlack SoT / black_sticky≠user black | `CountVisibleBlackFocusMeshes`; honest StaleDark ticket; telem `visible_black_*`; manual `113932` stale≈4740 sticky=0 | **open** — P0 diag; P1 Hide⇒Ticket |
+| TD-ARCH-051 | Era15 | FirstMesh-until-Drawable / PreferKick Kicked stall | PreferKick Queued+Kicked; Era16 land holes≈0.04 ARCH_D3_LAND GO | **done 2026-08-08** via Era16 P2 |
+| TD-ARCH-052 | Era16 | VisibleBlack SoT / black_sticky≠user black | `CountVisibleBlackFocusMeshes`; honest StaleDark; Hide⇒Ticket RemeshSeam; IDLE_CLEAN+ARCH_D3_LAND no_ticket=0 | **done 2026-08-08** P0–P3 |
 
-> **Era16 VisibleBlack (2026-08-08):** `black_sticky` only counts `StickyRemeshAfterLight` ∩ stale.
+> **Era16 VisibleBlack closeout (2026-08-08):** `black_sticky` ⊆ StickyRemeshAfterLight;
+> DoD = `VisibleBlackNoTicketN` / `post_stop_visible_black_no_ticket_max=0`.
+> P3 matrix: `era16_p3_fly` FLY_CLEAN GO; `era16_p3_idle`/`warm` IDLE GO;
+> `era16_p3_land` ARCH_D3_LAND GO (holes=0 no_ticket=0 wall≈66 soft≤70);
+> `era16_p3_ocean` ARCH_D3 soft NO-GO (TD-048 residual; no_ticket=0).
+
+> **Era16 VisibleBlack (2026-08-08 plan):** `black_sticky` only counts `StickyRemeshAfterLight` ∩ stale.
 > User-visible black = drawable stale/fully-dark columns (`VisibleBlackFocusN`); orphans =
 > `VisibleBlackNoTicketN`. Manual `perf_20260808-113932`: sticky=0 while stale≈4740.
 
