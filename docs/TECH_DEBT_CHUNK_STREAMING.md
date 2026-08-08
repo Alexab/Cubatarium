@@ -101,6 +101,15 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-046 | Era14 | Worker Capture residual (TD-ARCH-015 store done) | Store refresh budget tightened; worker path still deferred (hang risk) | **partial** — worker deferred |
 | TD-ARCH-047 | Era14 | IdleRecovery/Admission knobs duplicate DesiredStage | Sticky remesh wall-skip removed; IdleRecovery owns sync cost only | **done 2026-08-07** |
 | TD-ARCH-048 | Era14 | ARCH_D3 wall_med≤30 / gate DoD | Phase budget 24ms + miss carve-out; land soft wall OK; ocean ARCH_D3 still open | **partial** — ocean wall open |
+| TD-ARCH-049 | Era15 | MeshResidency: FreeChunk-before-replace flicker | CPU `ApplyMeshResult`/`RebuildChunk` frees live GPU before new write; GPU packed already atomic via staging+`BindCommittedSlot`. Evidence manual `093701` `mesh_discarded_late` med≈10/frame | **open** — Era15 P1 |
+| TD-ARCH-050 | Era15 | ColumnPublication Unlit→Lit + SoftDeferHeld∥ColumnFlow | UnlitFirstMesh draws while lit remesh gated by `sticky_r`; SoftDeferHeld side-set parks FirstMesh outside ColumnFlow Contains. Evidence `093701` void/stale plateau + `softdefer_held≈28` | **open** — Era15 P2 |
+| TD-ARCH-051 | Era15 | FirstMesh-until-Drawable / PreferKick Kicked stall | PreferKick only `Queued`; SoftDeferHeld/remesh prune compete with cy0 FirstMesh. Lands TD-043 residual (holes≈0.2 miss_stuck=6) | **open** — Era15 P3 |
+
+> **Era15 architecture-first (2026-08-08):** close visual residual (flicker / black / holes) via SoT
+> (MeshResidency, ColumnPublication Unlit→LitPending→LitReady, SoftDeferHeld→ColumnFlow,
+> FirstMesh-until-Drawable). Knobs ≠ DoD. DISCARD: Imm primary, wall-gate Dirty, SoftDefer zoo,
+> worker Capture TD-046. Baseline Era14.1 `f7d25446` + manual `perf_20260808-093701`.
+> Timeline: `bin/iter_reports/timeline/era14_1_*`.
 
 **Era14 execution log**
 

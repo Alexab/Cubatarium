@@ -138,6 +138,19 @@ not require calm `last_frame_ms`. See
 | Cross-platform frame contract | Android TickWorldStreamingPhase | **landed** | — |
 | IDLE sticky remesh budget | calm sticky≥2 drains | **IDLE_CLEAN GO** | — |
 
+## Gap После Era15 plan (2026-08-08)
+
+Architecture-first residual after Era14.1. Knobs (`sticky_r`, PreferKick-only, SoftDeferHeld
+force-N) are not DoD — SoT closes the gap.
+
+| Практика | Industry | Cubatarium pre-Era15 | Era15 SoT |
+|----------|----------|----------------------|-----------|
+| Keep old GPU mesh until new upload ready | minecraft-renderer pendingReplace; VoxelMan commit; Transvoxel hole-free | GPU packed: staging+`BindCommittedSlot` OK; CPU Apply/Immediate `FreeChunk` before write | **P1** MeshResidency TD-049 |
+| Placeholder Unlit + guaranteed lit remesh | light-before **or** stable Unlit then lit | `AllowUnlitFirstMesh` + remesh-on-lit gated by `sticky_r≤1` idle | **P2a** UnlitPublished→LitPending→LitReady; sticky_r≠gate TD-050 |
+| Single owner / Hide⇒ticket in job graph | continuous `should_mesh`; ColumnFlow Contains | SoftDeferHeld parallel zoo outside Flow | **P2b** SoftDeferHeld→ColumnFlow ticket TD-050 |
+| FirstMesh until Drawable (dual-queue) | MC HP rebuild; FirstMesh≠Remesh | PreferKick Queued-only; Held/prune compete cy0 | **P3** FirstMesh-until-Drawable TD-051 / TD-043 |
+| Strict light-before-first-draw entire FOV | mature engines often hide unlit | AllowUnlitFirstMesh (TD-027 hole SLA) | **keep** — Unlit is temporary stage, not final RenderReady |
+
 ## Практический Вывод Для Cubatarium
 
 Наиболее полезные заимствования:

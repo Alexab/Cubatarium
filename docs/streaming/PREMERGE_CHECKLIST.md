@@ -95,6 +95,14 @@ phase budget 24ms + Android phase parity; `IDLE_CLEAN`/`IDLE_WARM`/`FLY_CLEAN`
 GO (`era14_1_idle`/`warm`/`fly`); land best `era14_1_land` miss=6 holes=0.2
 wall≈53; ocean `era14_1_ocean` wall≈49. Worker Capture deferred (TD-ARCH-046).
 
+**Era15 architecture-first (2026-08-08):** visual residual (flicker / black / holes)
+via SoT — MeshResidency (TD-049), ColumnPublication Unlit→Lit + SoftDeferHeld→ColumnFlow
+(TD-050), FirstMesh-until-Drawable (TD-051). **Knobs ≠ DoD.** Reject additionally:
+- FreeChunk / clear live drawable before replacement is ready (CPU Apply/Immediate).
+- SoftDeferHeld that parks FirstMesh without a ColumnFlow repair ticket.
+- Closing TD-049..051 with PreferKick/`sticky_r`/force SoftDeferHeld drain alone.
+Manual baseline: `perf_20260808-093701`. Autofly per phase → timeline `era15_*`.
+
 **Backend matrix (R4):** desktop
 
 ```powershell
