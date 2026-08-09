@@ -1,5 +1,6 @@
 #include "World/Streaming/MeshWorkAdmission.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
+#include "World/Streaming/FrontierStagePolicy.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -175,6 +176,41 @@ int main()
          "Era24 KEEP: PreferKick SoftDefer empty only Queued/Kicked");
   Expect(!ShouldPreferKickSoftDeferEmptyStuck(true, true, false),
          "Era24 KEEP: idle SoftDefer empty → no PreferKick storm");
+
+  // --- Era25 Frontier Column Stage SLA ---
+  using cutum::FrontierColumnNeedsFirstMeshAfterLit;
+  using cutum::FrontierColumnNeedsLightTicket;
+  using cutum::FrontierNearLoadOpsFloor;
+  using cutum::IsFrontierPressure;
+
+  Expect(IsFrontierPressure(1, 0, true, 0),
+         "Era25 I-F4: gen_backlog + miss ⇒ frontier pressure");
+  Expect(IsFrontierPressure(0, 2, false, 250),
+         "Era25 I-F4: async_queued + void>T ⇒ frontier pressure");
+  Expect(!IsFrontierPressure(0, 0, true, 999),
+         "Era25 I-F4: no gen/async → no frontier pressure");
+  Expect(!IsFrontierPressure(3, 0, false, 50),
+         "Era25 I-F4: gen without miss/void → no pressure");
+  Expect(FrontierColumnNeedsLightTicket(true, true, false, false),
+         "Era25 I-F2: near + pending + !drawable ⇒ light ticket");
+  Expect(FrontierColumnNeedsLightTicket(true, true, true, true),
+         "Era25 I-F2: near + pending + fully-dark ⇒ light ticket");
+  Expect(!FrontierColumnNeedsLightTicket(true, true, true, false),
+         "Era25 I-F2: drawable lit → no light ticket");
+  Expect(!FrontierColumnNeedsLightTicket(false, true, false, true),
+         "Era25 I-F2: far → no light ticket");
+  Expect(FrontierColumnNeedsFirstMeshAfterLit(true, true, false, true),
+         "Era25 I-F3: near lit solid !drawable ⇒ FirstMesh");
+  Expect(!FrontierColumnNeedsFirstMeshAfterLit(true, true, true, true),
+         "Era25 I-F3: drawable → no FirstMesh");
+  Expect(!FrontierColumnNeedsFirstMeshAfterLit(true, false, false, true),
+         "Era25 I-F3: not lit → no FirstMesh yet");
+  Expect(FrontierNearLoadOpsFloor(true, true, 2) == 3,
+         "Era25 I-F5: frontier moving floor ops ≥3");
+  Expect(FrontierNearLoadOpsFloor(true, true, 5) == 5,
+         "Era25 I-F5: keep higher base ops");
+  Expect(FrontierNearLoadOpsFloor(false, true, 2) == 2,
+         "Era25 I-F5: no pressure → base ops");
 
   {
     MeshWorkAdmissionInput in;

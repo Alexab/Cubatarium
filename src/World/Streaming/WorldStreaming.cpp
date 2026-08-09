@@ -14,6 +14,7 @@
 #include "Render/Backend/RenderBackendCaps.h"
 #include "Render/Mesh/MeshApplyPolicy.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
+#include "World/Streaming/FrontierStagePolicy.h"
 #include "App/Settings/RenderSettings.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Player/PlayerCapsule.h"
@@ -2707,9 +2708,25 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     {
       world.PhysicsTelemetryData.StreamLoads = st->loadsThisFrame;
       world.PhysicsTelemetryData.StreamAsyncQueued = st->asyncQueuedThisFrame;
+      world.PhysicsTelemetryData.StreamDiskCompleteN = st->diskCompleteThisFrame;
       world.PhysicsTelemetryData.StreamRingBlocked = st->ringGateBlocked;
       world.PhysicsTelemetryData.StreamNearSkipped = st->nearLoadSkipped;
       world.PhysicsTelemetryData.StreamLoadCandidates = st->loadCandidates;
+    }
+    if (ChunkScheduler)
+    {
+      world.PhysicsTelemetryData.StreamGenCommitN =
+          ChunkScheduler->GetLastCommitsThisFrame();
+    }
+    {
+      const int void_n = world.PhysicsTelemetryData.DarkFaceVoidNearN;
+      const bool miss = world.PhysicsTelemetryData.FocusMissingMesh != 0;
+      world.PhysicsTelemetryData.FrontierPressure =
+          IsFrontierPressure(gen_backlog_total,
+                             world.PhysicsTelemetryData.StreamAsyncQueued, miss,
+                             void_n)
+              ? 1
+              : 0;
     }
     world.PhysicsTelemetryData.PendingLightCount =
         static_cast<int>(world.GetPendingLightBeforeMeshCount());

@@ -233,6 +233,19 @@ empty_stuck≤2s matrix; miss_end=0 fly/idle/land (warm miss_end soft).
 (void/dark=0). Reject Imm-as-empty-heal; SoftDefer knobs-as-DoD; PreferKick
 every empty every frame.
 
+## Gap После Era25 plan (2026-08-09) — Frontier stage SLA; TD-061 **open**
+
+| Практика | Industry | Cubatarium | Era25 SoT |
+|----------|----------|------------|-----------|
+| Disk vs gen ingress honesty | MC ticket / UE stream stats | `stream_loads≡0` while gen commits | **P0** stream_disk_complete_n / stream_gen_commit_n |
+| Light ticket until LIGHT done | MC ChunkStatus LIGHT ticket | PendingLight without FM residency | **P0** FrontierColumnNeedsLightTicket |
+| FirstMesh after LitReady | MC FULL / HP rebuild | SoftDefer empty only | **P0** FrontierColumnNeedsFirstMeshAfterLit |
+| Load-ahead under frontier | UE loading range 2–4× | NearLoad clamp ≤2 under miss | **P0** FrontierNearLoadOpsFloor |
+
+**Baseline:** `perf_20260809-203144` / `manual_203144_analyze.json`. Mid void OK;
+frontier void_end≈412. Reject Imm; SoftDefer knobs-as-DoD; hitch Capture;
+Relight-steal-FirstMesh.
+
 ## Gap После Era19 plan (2026-08-08) — autofly CLOSED; **manual superseded by 214034**
 
 | Практика | Industry | Cubatarium | Era19 SoT |

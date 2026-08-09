@@ -112,7 +112,16 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-057 | Era21 | Residency Replace + FOV SoT | CPU remesh FreeChunk before BindCommitted flicker; Relight ticket blocks miss Capture; SoftDefer empty HasGreedy SoT | **partial 2026-08-09** autofly FLY/IDLE/WARM/LAND GO; manual `154049` eye → TD-058 |
 | TD-ARCH-058 | Era22 | SoftDefer Heal SLA + VB ticket radius | SoftDeferHeld/empty without FirstMesh SLA; VB collect r≤2 vs Count full focus orphans; miss heal latency | **partial 2026-08-09** autofly GO; manual `172232` eye → TD-059 |
 | TD-ARCH-059 | Era23 | Void Relight dual-queue + rim miss SLA | void_near≈596; Relight starve under miss; Held-as-progress masks Collect; miss PreferKick too late; place-hole fall | **partial 2026-08-09** autofly GO; manual `193059` blacks closed (void/dark=0); empty residual → TD-060 |
-| TD-ARCH-060 | Era24 | SoftDefer Empty FirstMesh-until-Drawable | SoftDefer empty FOV stick (`HasGreedy∧!Drawable`); empty_stuck≈8s; miss_end=1 on `193059` | **partial 2026-08-09** autofly FLY/IDLE/WARM GO; LAND soft post_stop miss; wait manual `193059`-class eye |
+| TD-ARCH-060 | Era24 | SoftDefer Empty FirstMesh-until-Drawable | SoftDefer empty FOV stick (`HasGreedy∧!Drawable`); empty_stuck≈8s; miss_end=1 on `193059` | **partial 2026-08-09** autofly GO; mid-corridor eye OK on `203144`; empty_stuck≈6; frontier void → TD-061 |
+| TD-ARCH-061 | Era25 | Frontier Column Stage SLA | Frontier gen→light→mesh lag; void_end≈412 on `203144` west; `stream_loads≡0` masks gen | **open 2026-08-09** P0 predicates/telem; wait P1–P3 + manual |
+
+> **Era25 Frontier Column Stage SLA (2026-08-09):** Manual `203144` after Era24:
+> mid-cruise void≈0 / empty sides OK; west frontier `cx≲−497` void→1000+,
+> dirty≈1190, gen commits while `stream_loads≡0`. Fix: disk/gen telem honesty;
+> MC-style light ticket + FirstMesh on near commit; FrameStreamingBudget
+> frontier_pressure dual-queue; UE load-ahead NearLoad floor. KEEP
+> FrameStreamingBudget / Capture FM-under-miss / Era23–24. Reject Imm;
+> SoftDefer knobs-as-DoD; hitch Capture; Relight-steal-FirstMesh.
 
 > **Era24 SoftDefer Empty closeout (2026-08-09):** P0–P3 landed. Hide⇒Ticket
 > (ProcessSnapshot/Immediate no idle SoftDefer undrawn publish); FirstMesh-

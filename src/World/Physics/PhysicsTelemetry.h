@@ -156,6 +156,12 @@ struct PhysicsTelemetry
   /// Streaming gate diagnostics (filled each UpdateStreaming).
   int StreamLoads{0};
   int StreamAsyncQueued{0};
+  /// Era25 I-F1: disk Ensure complete this frame (honest vs stream_loads).
+  int StreamDiskCompleteN{0};
+  /// Era25 I-F1: gen scheduler commits this frame.
+  int StreamGenCommitN{0};
+  /// Era25 I-F4: frontier_pressure predicate result (0/1).
+  int FrontierPressure{0};
   int StreamRingBlocked{0};
   int StreamNearSkipped{0};
   int StreamLoadCandidates{0};

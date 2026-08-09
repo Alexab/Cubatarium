@@ -62,6 +62,8 @@ public:
   int GetCompletedReadyCount() const;
   int GetGenBacklogTotal() const;
   double GetLastTickApplyMs() const { return LastTickApplyMs; }
+  /// Era25: gen commits applied during last Tick (frame honesty).
+  int GetLastCommitsThisFrame() const { return LastCommitsThisFrame; }
 
 private:
   struct PendingRequest
@@ -105,6 +107,7 @@ private:
   std::unordered_map<glm::ivec3, ChunkGenerationToken, IVec3Hash> ActiveTokens;
   std::unordered_map<glm::ivec3, int, IVec3Hash> RequestPriorities;
   double LastTickApplyMs{0.0};
+  int LastCommitsThisFrame{0};
 };
 
 } // namespace cutum

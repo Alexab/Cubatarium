@@ -429,6 +429,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
       {
         ProcedurallyGenerated.insert(chunkCoord);
         MarkTerrainColumnMeshDirty(OnMarkDirty, chunkCoord);
+        ++LastFrameStats.diskCompleteThisFrame;
         return true;
       }
       ClearTerrainColumnChunks(World, chunkCoord, MaxHeight);

@@ -27,6 +27,8 @@ struct StreamingFrameStats
     unloadsThisFrame = 0;
     savesThisFrame = 0;
     asyncQueuedThisFrame = 0;
+    diskCompleteThisFrame = 0;
+    genCommitThisFrame = 0;
     ringGateBlocked = 0;
     nearLoadSkipped = 0;
     loadCandidates = 0;
@@ -39,6 +41,10 @@ struct StreamingFrameStats
   int savesThisFrame{0};
   /// Async column requests issued this frame (EnsureChunkLoaded queued work).
   int asyncQueuedThisFrame{0};
+  /// Era25: sync Ensure completed via OnLoadChunk (disk-hit honesty).
+  int diskCompleteThisFrame{0};
+  /// Era25: async gen commits applied this frame (scheduler Tick).
+  int genCommitThisFrame{0};
   /// Candidates that failed RingPrerequisitesMet this frame.
   int ringGateBlocked{0};
   /// Candidates skipped by NearLoadRadius clamp.
