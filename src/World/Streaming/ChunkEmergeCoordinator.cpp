@@ -24,6 +24,7 @@
 #include <cmath>
 #include <iostream>
 #include <thread>
+#include <unordered_set>
 #include <vector>
 
 namespace cutum
@@ -485,14 +486,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
   }
 
-  // Empty SoftDefer placeholders: HasMissing now keys off !Drawable, but rim
-  // still needs Force Dirty when SoftDefer dropped entries. Scan focus_radius
-  // (was Chebyshev r<=1) with a per-frame MarkDirty cap (manual 101824 rim).
+  // SoftDefer empty / Hide⇒Ticket: FirstMesh-until-Drawable ownership + age SLA.
   bool underfeet_undrawn = false;
   auto &phys_telem = world.GetPhysicsTelemetryMutable();
   phys_telem.SoftDeferEmptyPlaceholderN = 0;
   phys_telem.SoftDeferEmptyStuckN = 0;
   phys_telem.SoftDeferEmptyStuckDefer = 0;
+  phys_telem.SoftDeferEmptyAgeMaxFrames = 0;
+  phys_telem.SoftDeferEmptyOwnedN = 0;
   {
     if (UndrawnForceCd > 0)
     {
@@ -507,17 +508,23 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const int cy0 =
         missing_visible_mesh ? 0 : std::max(0, preferred_cy - 1);
     const int cy1 = std::min(max_cy, preferred_cy + 2);
-    constexpr int kUndrawnMarkCap = 4;
+    // Era24: rim soft ownership budget (not DoD knob) — per-coord FirstMesh.
+    constexpr int kEmptyOwnershipCap = 6;
     if (UndrawnForceCd <= 0)
     {
       int marked_n = 0;
       int empty_fm_enqueue_n = 0;
+      bool age_drain_done = false;
+      std::unordered_set<glm::ivec3, IVec3Hash> seen_empty;
+      auto &exec = GetColumnFlowExecutor();
       const int heal_r = std::max(1, focus_radius);
-      for (int dx = -heal_r; dx <= heal_r && marked_n < kUndrawnMarkCap; ++dx)
+      for (int dx = -heal_r; dx <= heal_r && marked_n < kEmptyOwnershipCap;
+           ++dx)
       {
-        for (int dz = -heal_r; dz <= heal_r && marked_n < kUndrawnMarkCap; ++dz)
+        for (int dz = -heal_r; dz <= heal_r && marked_n < kEmptyOwnershipCap;
+             ++dz)
         {
-          for (int cy = cy0; cy <= cy1 && marked_n < kUndrawnMarkCap; ++cy)
+          for (int cy = cy0; cy <= cy1 && marked_n < kEmptyOwnershipCap; ++cy)
           {
             const glm::ivec3 coord(focus_ground_horiz.x + dx, cy,
                                    focus_ground_horiz.z + dz);
@@ -527,11 +534,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             const bool is_dirty = mesh_service.IsChunkMeshDirty(coord);
             const bool pending_gpu = mesh_service.IsPendingGpuApply(coord);
             const bool inflight = mesh_service.HasInflightMeshBuild(coord);
+            const bool soft_held = mesh_service.IsSoftDeferHeld(coord);
             if (has_drawable || pending_gpu || inflight || is_dirty)
             {
               continue;
             }
-            if (!has_greedy)
+            // SoftDefer empty (HasGreedy) or Hide⇒Ticket Absent+Held.
+            if (!has_greedy && !soft_held)
             {
               continue;
             }
@@ -555,12 +564,46 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 }
               }
             }
-            if (!IsSoftDeferEmptyPlaceholder(has_greedy, has_drawable, is_dirty,
-                                             pending_gpu, inflight, any_solid))
+            if (!any_solid)
             {
               continue;
             }
-            ++phys_telem.SoftDeferEmptyPlaceholderN;
+            const bool empty_placeholder = IsSoftDeferEmptyPlaceholder(
+                has_greedy, has_drawable, is_dirty, pending_gpu, inflight,
+                any_solid);
+            const bool hide_held =
+                !has_greedy && soft_held && any_solid && !has_drawable;
+            if (!empty_placeholder && !hide_held)
+            {
+              continue;
+            }
+            if (empty_placeholder)
+            {
+              ++phys_telem.SoftDeferEmptyPlaceholderN;
+            }
+            // Rim scan is already FOV-focus; SoftDefer empty needs FirstMesh.
+            if (!SoftDeferEmptyNeedsFirstMeshOwnership(
+                    empty_placeholder || hide_held, /*miss_or_in_focus=*/true))
+            {
+              continue;
+            }
+            seen_empty.insert(coord);
+            {
+              const auto age_it = SoftDeferEmptyAgeFrames.find(coord);
+              if (age_it == SoftDeferEmptyAgeFrames.end())
+              {
+                SoftDeferEmptyAgeFrames.emplace(coord, 0);
+              }
+              else
+              {
+                ++age_it->second;
+              }
+            }
+            const int age_frames = SoftDeferEmptyAgeFrames[coord];
+            if (age_frames > phys_telem.SoftDeferEmptyAgeMaxFrames)
+            {
+              phys_telem.SoftDeferEmptyAgeMaxFrames = age_frames;
+            }
             // A2 smoke: stuck pattern HasGreedy && !Drawable && !Dirty && horiz>1
             if (horiz > 1)
             {
@@ -584,35 +627,80 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 StuckSmokeCd = 120;
               }
             }
-            // FirstMesh placeholder — always Dirty (do not gate on DirtyAdmit;
-            // HoleDrain admit=0 left post_stop miss sticky).
             mesh_service.MarkDirtyPriority(coord);
-            // Era20/Era23 P2: under miss escalate SoftDefer empty via ColumnFlow
-            // FirstMesh (cap 2). PreferKick only when already Queued/Kicked stuck.
-            if (empty_fm_enqueue_n < 2 &&
-                ShouldEnqueueSoftDeferEmptyFirstMesh(true, horiz,
-                                                     missing_visible_mesh))
+            const glm::ivec2 col(coord.x, coord.z);
+            // Era24 I-E2: FirstMesh ownership per SoftDefer empty coord
+            // (soft cap kEmptyOwnershipCap; dedupe via Contains).
+            if (empty_fm_enqueue_n < kEmptyOwnershipCap)
             {
-              ++empty_fm_enqueue_n;
-              auto &exec = GetColumnFlowExecutor();
+              if (!exec.Scheduler().Contains(col, ColumnWorkKind::FirstMesh))
+              {
+                ++empty_fm_enqueue_n;
+              }
               ColumnWorkItem item{};
-              item.column = glm::ivec2(coord.x, coord.z);
+              item.column = col;
               item.kind = ColumnWorkKind::FirstMesh;
               item.priority = 105;
               item.scan_full_focus = missing_visible_mesh;
               item.cy = coord.y;
               exec.Enqueue(item);
-              if (ShouldPreferKickSoftDeferEmptyStuck(
-                      true, missing_visible_mesh,
-                      mesh_service.IsPendingGpuQueued(coord) ||
-                          mesh_service.IsPendingGpuKickedOrDispatched(coord)))
+              const bool gpu_queued =
+                  mesh_service.IsPendingGpuQueued(coord) ||
+                  mesh_service.IsPendingGpuKickedOrDispatched(coord);
+              if (ShouldPreferKickSoftDeferEmptyStuck(true, missing_visible_mesh,
+                                                      gpu_queued))
               {
                 mesh_service.PreferKickPendingGpuQueued(coord);
+              }
+            }
+            if (exec.Scheduler().Contains(col, ColumnWorkKind::FirstMesh))
+            {
+              ++phys_telem.SoftDeferEmptyOwnedN;
+            }
+            // Era24 I-E4: age SLA PreferKick / Capture-class drain.
+            if (ShouldEscalateSoftDeferEmptyAge(age_frames))
+            {
+              const bool gpu_queued =
+                  mesh_service.IsPendingGpuQueued(coord) ||
+                  mesh_service.IsPendingGpuKickedOrDispatched(coord);
+              if (ShouldPreferKickSoftDeferEmptyStuck(true, missing_visible_mesh,
+                                                      gpu_queued))
+              {
+                mesh_service.PreferKickPendingGpuQueued(coord);
+              }
+              else if (!gpu_queued)
+              {
+                ColumnWorkItem item{};
+                item.column = col;
+                item.kind = ColumnWorkKind::FirstMesh;
+                item.priority = 110;
+                item.scan_full_focus = missing_visible_mesh;
+                item.cy = coord.y;
+                exec.Enqueue(item);
+                if (!age_drain_done)
+                {
+                  exec.DrainBudget(world, 1, focus_ground_horiz, focus_radius,
+                                   /*admit_batch=*/1);
+                  age_drain_done = true;
+                }
               }
             }
             underfeet_undrawn = true;
             ++marked_n;
           }
+        }
+      }
+      // Drop ages for SoftDefer empty that left the rim / healed.
+      for (auto it = SoftDeferEmptyAgeFrames.begin();
+           it != SoftDeferEmptyAgeFrames.end();)
+      {
+        if (seen_empty.count(it->first) == 0)
+        {
+          it = SoftDeferEmptyAgeFrames.erase(it);
+        }
+        else
+        {
+          ++it;
         }
       }
       if (marked_n > 0)

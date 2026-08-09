@@ -763,6 +763,11 @@ size_t UWorldMeshService::GetSoftDeferHeldCount() const
   return Cache.GetSoftDeferHeldCount();
 }
 
+bool UWorldMeshService::IsSoftDeferHeld(glm::ivec3 chunk_coord) const
+{
+  return Cache.IsSoftDeferHeld(chunk_coord);
+}
+
 bool UWorldMeshService::HasSoftDeferHeldInColumn(glm::ivec2 ground_xz) const
 {
   return Cache.HasSoftDeferHeldInColumn(ground_xz);

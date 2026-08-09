@@ -1471,8 +1471,18 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       const glm::ivec2 focus_xz(focus_horiz.x, focus_horiz.z);
       // Anchor on miss witness (horiz 2–3 rim), not focus — else HasRepairTicket
       // on focus blocks floor while hole never gets FirstMesh (manual 191432).
-      const glm::ivec2 repair_xz = RepairColumnFromMissWitness(
+      glm::ivec2 repair_xz = RepairColumnFromMissWitness(
           world.PhysicsTelemetryData, focus_xz);
+      int repair_cy = -1;
+      // Era24: pin SoftDefer empty stuck witness cy under miss Capture.
+      if (missing_focus_mesh &&
+          world.PhysicsTelemetryData.SoftDeferEmptyStuckN > 0)
+      {
+        repair_xz =
+            glm::ivec2(world.PhysicsTelemetryData.SoftDeferEmptyStuckCx,
+                       world.PhysicsTelemetryData.SoftDeferEmptyStuckCz);
+        repair_cy = world.PhysicsTelemetryData.SoftDeferEmptyStuckCy;
+      }
       // Era21 I-M6: under miss only FirstMesh Contains blocks Capture —
       // Relight/Remesh tickets must not starve rim FirstMesh.
       const bool has_fm =
@@ -1486,7 +1496,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         {
           ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
           world.PhysicsTelemetryData.SoftDeferWitnessHoriz =
-              world.PhysicsTelemetryData.MissHoriz;
+              world.PhysicsTelemetryData.SoftDeferEmptyStuckN > 0
+                  ? world.PhysicsTelemetryData.SoftDeferEmptyStuckHoriz
+                  : world.PhysicsTelemetryData.MissHoriz;
         }
         const ColumnWorkKind kind =
             (missing_focus_mesh || budget.capture_first_mesh_only)
@@ -1497,7 +1509,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         item.kind = kind;
         item.priority = 90;
         item.scan_full_focus = missing_focus_mesh;
-        item.cy = -1;
+        item.cy = repair_cy;
         exec.Enqueue(item);
         exec.DrainBudget(world, 1, focus_horiz, focus_radius,
                          /*admit_batch=*/1);

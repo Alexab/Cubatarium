@@ -1363,8 +1363,10 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
       in_focus = horiz <= MeshFocusRadiusChunks;
     }
     const bool miss_or_focus = StarveRemeshForHoles || in_focus;
-    // Era22 I-S2: refresh ColumnFlow FirstMesh Contains while Held (cap 2).
-    if (OnSoftDeferHeld && ticket_refresh < 2)
+    // Era22/Era24: refresh FirstMesh Contains while Held. Under miss/focus
+    // SoftDefer empty ownership — rim soft cap (not global 2).
+    const int ticket_cap = miss_or_focus ? 8 : 2;
+    if (OnSoftDeferHeld && ticket_refresh < ticket_cap)
     {
       OnSoftDeferHeld(coord);
       ++ticket_refresh;

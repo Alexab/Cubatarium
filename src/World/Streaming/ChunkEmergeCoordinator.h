@@ -1,7 +1,10 @@
 #ifndef CHUNKEMERGECOORDINATOR_H
 #define CHUNKEMERGECOORDINATOR_H
 
+#include "World/Chunks/ChunkManager.h"
 #include "World/Streaming/StreamingPressure.h"
+
+#include <unordered_map>
 
 namespace cutum
 {
@@ -59,6 +62,8 @@ private:
   int StandRimStickyCz{0};
   /// Era22 I-M8: consecutive frames with FOV miss (~120f ≈ 1 period ≈2s).
   int MissWitnessAgeFrames{0};
+  /// Era24 I-E4: SoftDefer empty / Hide⇒Ticket age (frames since first seen).
+  std::unordered_map<glm::ivec3, int, IVec3Hash> SoftDeferEmptyAgeFrames;
 };
 
 } // namespace cutum
