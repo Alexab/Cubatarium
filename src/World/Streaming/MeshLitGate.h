@@ -3,21 +3,33 @@
 namespace cutum
 {
 
-/// Soft-defer / first-mesh gate (V2 RenderReady).
-/// First-mesh in focus/underfeet is never deferred (UnlitFirstMesh SoT) —
-/// SoftDefer only blocks remesh while PendingLight. land_fix miss=1 sticky
-/// runs came from deferring first-mesh until Capture cleared the gate.
-/// Player dig/place does not set PendingLight.
+/// Soft-defer / first-mesh gate (V2 RenderReady / Era28 Visual Stage).
+/// Near FOV (AllowUnlitFirstMesh=false): hide-until-lit while PendingLight —
+/// do not publish Unlit dark/bright preview. Far FOV may Unlit via allow flag.
+/// Remesh while PendingLight always deferred. Player dig/place does not set
+/// PendingLight.
 inline bool SoftDeferMeshUntilLitPolicy(bool underfeet, bool has_mesh,
                                         bool pending_light, bool in_focus,
                                         bool may_mesh_outside_focus,
                                         bool allow_unlit_first_mesh = false)
 {
-  // Missing mesh: always allow in focus / underfeet / explicit unlit allow.
-  if (!has_mesh &&
-      (underfeet || in_focus || allow_unlit_first_mesh))
+  if (!has_mesh)
   {
-    return false;
+    // Era28 I-V1: Unlit preview only when explicitly allowed (far rim).
+    if (allow_unlit_first_mesh)
+    {
+      return false;
+    }
+    // Light debt → defer (Relight-before-draw); Unlit allow bypasses above.
+    if (pending_light)
+    {
+      return true;
+    }
+    if (underfeet || in_focus)
+    {
+      return false; // lit gate open → schedule FirstMesh
+    }
+    return !may_mesh_outside_focus;
   }
   if (pending_light)
   {
@@ -32,7 +44,7 @@ inline bool SoftDeferMeshUntilLitPolicy(bool underfeet, bool has_mesh,
 
 /// Reject committing a mesh that has fully-dark faces when light is still
 /// pending, or when it would replace an already-lit mesh (dig/async race).
-/// Cave / UnlitFirstMesh first-mesh with light=0 is allowed (no lit predecessor).
+/// Cave / far UnlitFirstMesh first-mesh with light=0 is allowed (no lit predecessor).
 inline bool ShouldRejectDarkMeshCommit(bool new_has_dark_face,
                                        bool defer_until_lit,
                                        bool had_lit_mesh)

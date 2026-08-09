@@ -34,12 +34,10 @@ static void Expect(bool cond, const char *msg)
 
 int main()
 {
-  // SoftDefer: first-mesh in focus/underfeet never deferred (UnlitFirstMesh).
-  // Remesh while pending stays deferred.
-  // Contract: AdmitFocusVisibleMissing must MarkDirty while PendingLight
-  // (manual 170154 forever-hole when Admit skipped Dirty).
-  Expect(!SoftDeferMeshUntilLitPolicy(true, false, true, true, false, false),
-         "underfeet missing+pending allows first mesh");
+  // Era28: near FOV missing+pending → hide-until-lit (no Unlit preview).
+  // Remesh while pending stays deferred. Far Unlit via allow_unlit flag.
+  Expect(SoftDeferMeshUntilLitPolicy(true, false, true, true, false, false),
+         "Era28: underfeet missing+pending hide-until-lit");
   Expect(SoftDeferMeshUntilLitPolicy(true, true, true, true, false, false),
          "underfeet has_mesh+pending defer remesh");
   Expect(!SoftDeferMeshUntilLitPolicy(true, true, false, true, false, false),
@@ -47,9 +45,9 @@ int main()
   Expect(!SoftDeferMeshUntilLitPolicy(true, false, false, true, false, false),
          "underfeet missing+lit allow first mesh");
 
-  // Focus missing + pending => allow first mesh (SoftDefer remesh-only).
-  Expect(!SoftDeferMeshUntilLitPolicy(false, false, true, true, true, false),
-         "focus missing+pending allows first mesh");
+  // Focus missing + pending without Unlit allow => defer (Relight-before-draw).
+  Expect(SoftDeferMeshUntilLitPolicy(false, false, true, true, true, false),
+         "Era28: focus missing+pending hide-until-lit");
   // Focus missing + lit => allow.
   Expect(!SoftDeferMeshUntilLitPolicy(false, false, false, true, true, false),
          "focus missing+lit allow");
@@ -83,21 +81,23 @@ int main()
   Expect(!ShouldRejectDarkMeshCommit(true, false, /*had_lit_mesh=*/false),
          "empty SoftDefer placeholder Immediate dark commit allowed");
 
-  // SoT AllowUnlitFirstMesh + SoftDefer allow_unlit_first_mesh.
-  Expect(AllowUnlitFirstMesh(false, 2, false, true),
-         "missing in focus → AllowUnlitFirstMesh");
+  // Era28 AllowUnlitFirstMesh: near horiz≤2 no Unlit; far OK.
+  Expect(!AllowUnlitFirstMesh(false, 2, false, true),
+         "Era28: near horiz≤2 → no AllowUnlitFirstMesh");
+  Expect(!AllowUnlitFirstMesh(false, 1, false, true),
+         "Era28: underfeet horiz → no AllowUnlitFirstMesh");
   Expect(AllowUnlitFirstMesh(false, 5, true, true),
          "far missing in focus → AllowUnlitFirstMesh");
   Expect(!AllowUnlitFirstMesh(true, 1, true, true),
          "has_mesh never AllowUnlitFirstMesh");
   Expect(AllowUnlitFirstMesh(false, 5, false, true),
-         "any FOV missing → AllowUnlitFirstMesh (land rim)");
+         "far FOV missing → AllowUnlitFirstMesh");
   Expect(!AllowUnlitFirstMesh(false, 5, false, false),
          "outside focus → no AllowUnlitFirstMesh");
   Expect(!SoftDeferMeshUntilLitPolicy(false, false, true, true, true, true),
-         "policy: pending+focus allows first mesh");
-  Expect(!SoftDeferMeshUntilLitPolicy(false, false, true, true, true, false),
-         "policy: focus missing never SoftDefer-skips first mesh");
+         "policy: pending+focus+allow_unlit allows first mesh");
+  Expect(SoftDeferMeshUntilLitPolicy(false, false, true, true, true, false),
+         "Era28: focus missing+pending without Unlit → SoftDefer");
 
   // TD-ARCH-026 / Era16 TD-052: SoT sticky/stale-dark (honest repair ticket).
   {

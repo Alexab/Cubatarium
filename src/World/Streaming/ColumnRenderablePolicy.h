@@ -53,18 +53,17 @@ inline ColumnSoTDecision ClassifyStickyStaleDarkSoT(
   return out;
 }
 
-/// Explicit SoT contract: FOV missing may first-mesh while PendingLight
-/// (UnlitFirstMesh / dark preview). Remesh while pending stays deferred.
-/// Full focus missing (not only nearest): SoftDefer rim waits on Capture
-/// otherwise leave miss=1 for many periods (land_fix_P1c timeline).
-inline bool AllowUnlitFirstMesh(bool has_mesh, int /*horiz_from_focus*/,
-                                bool /*is_nearest_missing*/, bool in_focus)
+/// Era28 I-V1: UnlitFirstMesh only outside near FOV (horiz > near_r).
+/// Near missing waits Relight-before-draw; far may Unlit preview.
+inline bool AllowUnlitFirstMesh(bool has_mesh, int horiz_from_focus,
+                                bool /*is_nearest_missing*/, bool in_focus,
+                                int near_r = 2)
 {
   if (has_mesh || !in_focus)
   {
     return false;
   }
-  return true;
+  return horiz_from_focus > near_r;
 }
 
 /// VisibleBlack Hide⇒Ticket for stale-dark columns: RemeshSeam (+ near Promote).

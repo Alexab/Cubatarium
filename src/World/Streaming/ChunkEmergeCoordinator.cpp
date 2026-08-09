@@ -222,10 +222,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const glm::ivec3 ground(chunk_coord.x, 0, chunk_coord.z);
         const bool may_mesh =
             world.MayMeshColumn(ground, /*underfeet_preview=*/false);
-        // SoftDefer: remesh while pending always deferred. UnlitFirstMesh is an
-        // explicit SoT allow (AllowUnlitFirstMesh), not a pending-mask bypass.
+        // Era28: Unlit only far (AllowUnlitFirstMesh horiz>2); near hide-until-lit.
         const bool allow_unlit = AllowUnlitFirstMesh(
-            has_mesh, horiz, is_nearest_hole, in_focus);
+            has_mesh, horiz, is_nearest_hole, in_focus,
+            kVisualStageNearFovHoriz);
         return SoftDeferMeshUntilLitPolicy(
             underfeet, has_mesh,
             world.RequiresLightingLitGate() && pending, in_focus, may_mesh,
