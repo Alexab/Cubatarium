@@ -182,6 +182,8 @@ public:
   bool HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const;
   bool HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const;
   size_t GetSoftDeferHeldCount() const;
+  /// Era22 I-S2: SoftDeferHeld slice in column (xz) for repair-progress honesty.
+  bool HasSoftDeferHeldInColumn(glm::ivec2 ground_xz) const;
   bool IsGpuExtractInFlight(glm::ivec3 chunk_coord) const;
   /// Queued in PendingGpuApplies — orphaned GpuExtractInFlight alone is not.
   bool IsPendingGpuApply(glm::ivec3 chunk_coord) const;

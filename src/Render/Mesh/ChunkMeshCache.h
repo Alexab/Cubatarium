@@ -144,6 +144,8 @@ public:
   bool HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const;
   /// SoftDeferHeld side-set size (outside-focus !Drawable FirstMesh).
   size_t GetSoftDeferHeldCount() const { return SoftDeferHeld.size(); }
+  /// Era22 I-S2: any SoftDeferHeld slice in column (xz).
+  bool HasSoftDeferHeldInColumn(glm::ivec2 ground_xz) const;
   /// Prefetch immutable Capture into store (MarkRelit / commit). Main only.
   void PrefetchMeshCapture(const UBlockWorld &world, glm::ivec3 chunk_coord);
   void InvalidateMeshCapture(glm::ivec3 chunk_coord);

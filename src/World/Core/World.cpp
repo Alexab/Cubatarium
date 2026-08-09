@@ -69,6 +69,7 @@
 #include "World/Raycast/BlockRaycast.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
+#include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
@@ -3077,6 +3078,12 @@ bool UWorld::ColumnHasRepairProgress(glm::ivec2 ground_xz) const
   if (!MeshService)
   {
     return false;
+  }
+  // Era22 I-S2: SoftDeferHeld ∈ progress (Hide⇒Ticket honesty for no_ticket).
+  if (SoftDeferHeldCountsAsRepairProgress(
+          MeshService->HasSoftDeferHeldInColumn(ground_xz)))
+  {
+    return true;
   }
   const int max_y = ProceduralTemplate.MaxHeight;
   if (MeshService->HasDirtyInColumnBand(ground_xz, 0, max_y))

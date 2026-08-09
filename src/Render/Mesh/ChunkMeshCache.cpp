@@ -9,6 +9,7 @@
 #include "Render/Mesh/CrossMeshEmitter.h"
 #include "Render/Mesh/MeshApplyPolicy.h"
 #include "World/Streaming/MeshLitGate.h"
+#include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
 #include "Render/Mesh/GpuGreedyFaceExtract.h"
@@ -1301,10 +1302,23 @@ bool UChunkMeshCache::HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y,
   return false;
 }
 
+bool UChunkMeshCache::HasSoftDeferHeldInColumn(glm::ivec2 ground_xz) const
+{
+  for (const glm::ivec3 &coord : SoftDeferHeld)
+  {
+    if (coord.x == ground_xz.x && coord.z == ground_xz.y)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 void UChunkMeshCache::HoldSoftDeferFirstMesh(glm::ivec3 chunk_coord)
 {
   const bool inserted = SoftDeferHeld.insert(chunk_coord).second;
-  // Era15 TD-050: Held must not park FirstMesh outside ColumnFlow.
+  // Era15 TD-050 / Era22 I-S2: Held must not park FirstMesh outside ColumnFlow.
+  // Re-fire on insert; Requeue refreshes Contains while Held stays empty.
   if (inserted && OnSoftDeferHeld)
   {
     OnSoftDeferHeld(chunk_coord);
@@ -1327,11 +1341,13 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
   }
   const int kRequeueBudget = std::max(0, WorkAdmission.softdefer_requeue);
   int requeued = 0;
+  int ticket_refresh = 0;
   for (auto it = SoftDeferHeld.begin(); it != SoftDeferHeld.end();)
   {
     const glm::ivec3 coord = *it;
     if (HasDrawableGreedyMesh(coord) || IsPendingGpuApply(coord) ||
-        HasInflightMeshBuild(coord) || Dirty.Contains(coord))
+        HasInflightMeshBuild(coord) || Dirty.Contains(coord) ||
+        HasMeshSatisfyingColumnReady(coord))
     {
       it = SoftDeferHeld.erase(it);
       continue;
@@ -1346,15 +1362,19 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
                    std::abs(coord.z - MeshFocusGroundChunk.z));
       in_focus = horiz <= MeshFocusRadiusChunks;
     }
-    // SoftDefer lifted or column entered focus (UnlitFirstMesh / MayMesh).
-    if (!still_deferred || in_focus)
+    const bool miss_or_focus = StarveRemeshForHoles || in_focus;
+    // Era22 I-S2: refresh ColumnFlow FirstMesh Contains while Held (cap 2).
+    if (OnSoftDeferHeld && ticket_refresh < 2)
     {
-      if (requeued >= kRequeueBudget)
-      {
-        ++it;
-        continue;
-      }
-      if (!TryConsumeDirtyAdmit())
+      OnSoftDeferHeld(coord);
+      ++ticket_refresh;
+    }
+    // Era22 I-S1: under miss/focus (or SoftDefer lifted) → Dirty schedule.
+    if (ShouldScheduleFirstMeshUnderSoftDefer(/*has_drawable=*/false,
+                                              miss_or_focus) ||
+        !still_deferred || in_focus)
+    {
+      if (requeued >= kRequeueBudget || !TryConsumeDirtyAdmit())
       {
         ++it;
         continue;
@@ -2805,23 +2825,29 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     {
       for (auto it = Dirty.begin(); it != Dirty.end();)
       {
-        // SoftDefer remesh: drop. Keep in-focus !Drawable FirstMesh until MayMesh
-        // opens; outside !Drawable → SoftDeferHeld (requeue when MayMesh/focus).
+        // SoftDefer remesh: drop. Era22 I-S1: under miss/focus !Drawable
+        // FirstMesh keep Dirty for schedule (not RemoveAt / Held-park forever).
+        // Outside !Drawable → SoftDeferHeld (requeue when MayMesh/focus).
         if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
         {
-          if (!HasDrawableGreedyMesh(*it))
+          const bool has_drawable = HasDrawableGreedyMesh(*it);
+          bool in_focus = false;
+          if (MeshFocusValid)
           {
-            if (MeshFocusValid)
-            {
-              const int horiz =
-                  std::max(std::abs(it->x - MeshFocusGroundChunk.x),
-                           std::abs(it->z - MeshFocusGroundChunk.z));
-              if (horiz <= MeshFocusRadiusChunks)
-              {
-                ++it;
-                continue;
-              }
-            }
+            const int horiz =
+                std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                         std::abs(it->z - MeshFocusGroundChunk.z));
+            in_focus = horiz <= MeshFocusRadiusChunks;
+          }
+          const bool miss_or_focus = StarveRemeshForHoles || in_focus;
+          if (ShouldScheduleFirstMeshUnderSoftDefer(has_drawable,
+                                                    miss_or_focus))
+          {
+            ++it;
+            continue;
+          }
+          if (!has_drawable)
+          {
             HoldSoftDeferFirstMesh(*it);
           }
           it = Dirty.RemoveAt(it);
@@ -3093,21 +3119,29 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
       {
-        if (!HasDrawableGreedyMesh(*it))
+        const bool has_drawable = HasDrawableGreedyMesh(*it);
+        bool in_focus = false;
+        if (MeshFocusValid)
         {
-          if (MeshFocusValid)
-          {
-            const int horiz =
-                std::max(std::abs(it->x - MeshFocusGroundChunk.x),
-                         std::abs(it->z - MeshFocusGroundChunk.z));
-            if (horiz <= MeshFocusRadiusChunks)
-            {
-              return std::next(it);
-            }
-          }
-          HoldSoftDeferFirstMesh(*it);
+          const int horiz =
+              std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                       std::abs(it->z - MeshFocusGroundChunk.z));
+          in_focus = horiz <= MeshFocusRadiusChunks;
         }
-        return Dirty.RemoveAt(it);
+        const bool miss_or_focus = StarveRemeshForHoles || in_focus;
+        // Era22 I-S1: schedule FirstMesh under SoftDefer for !Drawable.
+        if (ShouldScheduleFirstMeshUnderSoftDefer(has_drawable, miss_or_focus))
+        {
+          // fall through to Capture/Enqueue
+        }
+        else
+        {
+          if (!has_drawable)
+          {
+            HoldSoftDeferFirstMesh(*it);
+          }
+          return Dirty.RemoveAt(it);
+        }
       }
       if (StarveRemeshForHoles && HasDrawableGreedyMesh(*it))
       {
@@ -3337,23 +3371,29 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
       {
-        if (!HasDrawableGreedyMesh(*it))
+        const bool has_drawable = HasDrawableGreedyMesh(*it);
+        bool in_focus = false;
+        if (MeshFocusValid)
         {
-          if (MeshFocusValid)
-          {
-            const int horiz =
-                std::max(std::abs(it->x - MeshFocusGroundChunk.x),
-                         std::abs(it->z - MeshFocusGroundChunk.z));
-            if (horiz <= MeshFocusRadiusChunks)
-            {
-              ++it;
-              continue;
-            }
-          }
-          HoldSoftDeferFirstMesh(*it);
+          const int horiz =
+              std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                       std::abs(it->z - MeshFocusGroundChunk.z));
+          in_focus = horiz <= MeshFocusRadiusChunks;
         }
-        it = Dirty.RemoveAt(it);
-        continue;
+        const bool miss_or_focus = StarveRemeshForHoles || in_focus;
+        if (ShouldScheduleFirstMeshUnderSoftDefer(has_drawable, miss_or_focus))
+        {
+          // Era22 I-S1: fall through to schedule FirstMesh.
+        }
+        else
+        {
+          if (!has_drawable)
+          {
+            HoldSoftDeferFirstMesh(*it);
+          }
+          it = Dirty.RemoveAt(it);
+          continue;
+        }
       }
       if (StarveRemeshForHoles && HasDrawableGreedyMesh(*it))
       {

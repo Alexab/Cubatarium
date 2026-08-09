@@ -181,6 +181,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool missing_visible_mesh =
       mesh_service.HasMissingGreedyMeshInHorizontalRadius(
           world.GetBlockWorld(), focus_ground_horiz, focus_radius);
+  // Era22 I-M8: track miss witness age (~120 frames ≈ 1 period ≈2s).
+  if (missing_visible_mesh)
+  {
+    MissWitnessAgeFrames =
+        std::min(MissWitnessAgeFrames + 1, 1000000);
+  }
+  else
+  {
+    MissWitnessAgeFrames = 0;
+  }
   glm::ivec3 nearest_missing_hole{};
   const bool have_nearest_missing =
       missing_visible_mesh &&
@@ -226,13 +236,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RemeshSeam,
                                         /*priority=*/70);
       });
-  // Era15 TD-050: SoftDeferHeld → ColumnFlow FirstMesh (Hide⇒Ticket).
+  // Era15 TD-050 / Era22 I-S2: SoftDeferHeld → ColumnFlow FirstMesh with cy.
   mesh_service.SetOnSoftDeferHeldFn(
       [](glm::ivec3 chunk_coord)
       {
-        const glm::ivec2 key(chunk_coord.x, chunk_coord.z);
-        GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::FirstMesh,
-                                        /*priority=*/100);
+        ColumnWorkItem item{};
+        item.column = glm::ivec2(chunk_coord.x, chunk_coord.z);
+        item.kind = ColumnWorkKind::FirstMesh;
+        item.priority = 100;
+        item.cy = chunk_coord.y;
+        GetColumnFlowExecutor().Enqueue(item);
       });
 
   const bool near_mesh_backlog =
@@ -2384,6 +2397,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         }
       }
 
+      // Era22 I-M8: miss witness age >T (~2 periods / ~4s) → PreferKick witness.
+      // Admit bump applied after Finalize (so ComputeMeshWorkAdmission cannot
+      // overwrite).
+      {
+        const int miss_age_periods = MissWitnessAgeFrames / 120;
+        if (ShouldMissTimeSlaKick(missing_visible_mesh, miss_age_periods))
+        {
+          mesh_service.MarkDirtyPriority(isolated_hole);
+          ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
+          mesh_service.PreferKickPendingGpuQueued(isolated_hole);
+          mesh_schedule = std::max(mesh_schedule, 12);
+        }
+      }
+
       const bool stand_rim = !moving && nh <= 3;
       int stand_frames = 0;
       if (stand_rim && no_drawable)
@@ -2564,6 +2591,30 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_service.SetMeshWorkAdmission(adm);
     mesh_schedule = FinalizeSchedule(mesh_schedule, adm);
     mesh_drain = FinalizeDrain(mesh_drain, adm);
+    // Era22 I-A1: post-Finalize async floor under miss|UV (TD-027 intent).
+    {
+      const int uv = world.GetPhysicsTelemetry().UnfinishedVisual;
+      const int floor = AsyncScheduleFloorUnderMiss(
+          missing_visible_mesh || fov_unfinished || uv > 0);
+      if (floor > 0)
+      {
+        mesh_schedule = std::max(mesh_schedule, floor);
+      }
+    }
+    // Era22 I-M8: FocusIngress admit bump after Finalize (age SLA).
+    {
+      const int miss_age_periods = MissWitnessAgeFrames / 120;
+      if (ShouldMissTimeSlaKick(missing_visible_mesh, miss_age_periods))
+      {
+        MeshWorkAdmission bumped = adm;
+        bumped.dirty_admit_budget = std::max(bumped.dirty_admit_budget, 2);
+        bumped.softdefer_requeue = std::max(bumped.softdefer_requeue, 1);
+        bumped.first_mesh_schedule =
+            std::max(bumped.first_mesh_schedule, 4);
+        mesh_service.SetMeshWorkAdmission(bumped);
+        mesh_schedule = std::max(mesh_schedule, 12);
+      }
+    }
     mesh_service.SetStarveRemeshKeepHoriz(adm.starve_remesh_horiz);
     if ((visual_holes || missing_underfeet || missing_visible_mesh) &&
         adm.mode != MeshWorkAdmission::Mode::Normal)

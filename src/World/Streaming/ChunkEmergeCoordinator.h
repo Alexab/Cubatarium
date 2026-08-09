@@ -57,6 +57,8 @@ private:
   int StandRimStickyCx{0};
   int StandRimStickyCy{0};
   int StandRimStickyCz{0};
+  /// Era22 I-M8: consecutive frames with FOV miss (~120f ≈ 1 period ≈2s).
+  int MissWitnessAgeFrames{0};
 };
 
 } // namespace cutum
