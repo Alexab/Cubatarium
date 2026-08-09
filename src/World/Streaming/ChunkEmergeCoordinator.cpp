@@ -598,7 +598,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       }
       if (marked_n > 0)
       {
-        UndrawnForceCd = 8;
+        // Era21: under miss FirstMesh class, do not throttle UndrawnForceCd to 8
+        // without FM progress — rim empty needs frequent Dirty.
+        UndrawnForceCd =
+            (missing_visible_mesh &&
+             IsMissFirstMeshClass(true, phys_telem.MissCy, phys_telem.MissHoriz))
+                ? 2
+                : 8;
       }
     }
   }

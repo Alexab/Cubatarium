@@ -12,6 +12,7 @@
 #include "World/Diagnostics/FramePerfMonitor.h"
 #include "World/Lighting/LightingSeedBackendFactory.h"
 #include "Render/Backend/RenderBackendCaps.h"
+#include "Render/Mesh/MeshApplyPolicy.h"
 #include "App/Settings/RenderSettings.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Player/PlayerCapsule.h"
@@ -1469,8 +1470,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       // on focus blocks floor while hole never gets FirstMesh (manual 191432).
       const glm::ivec2 repair_xz = RepairColumnFromMissWitness(
           world.PhysicsTelemetryData, focus_xz);
-      // Rate-limit: skip if ColumnFlow already owns a repair ticket on target.
-      if (!exec.HasRepairTicket(repair_xz))
+      // Era21 I-M6: under miss only FirstMesh Contains blocks Capture —
+      // Relight/Remesh tickets must not starve rim FirstMesh.
+      const bool has_fm =
+          exec.Scheduler().Contains(repair_xz, ColumnWorkKind::FirstMesh);
+      const bool has_any = exec.HasRepairTicket(repair_xz);
+      if (!SoftDeferCaptureBlockedByRepairTicket(missing_focus_mesh, has_fm,
+                                                 has_any))
       {
         ++world.PhysicsTelemetryData.SoftDeferCaptureFloorHits;
         if (repair_xz != focus_xz)
@@ -2503,9 +2509,13 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const size_t dirty_for_unload = meshService.GetDirtyCount();
     int unload_ops = world.MaxUnloadOpsPerFrame;
     // Moving / dirty / hitch: skip unload ForEach (CB wall_no_holes streamer).
+    // Era21: dirty>64 (same Adaptive RD shrink trigger) — dirty≈100 plateau
+    // with FogPullIn VisualRD=1 let brief wall dips unload Keep while
+    // near_mesh_backlog blocked reload (land opaque_idle_churn≈1300 / chunks
+    // 1149→124). Era20 survived the same telem by luck of unload timing.
     const bool moving_for_unload =
         lastMovementSpeed >= procedural.MovementPrefetchThreshold;
-    if (moving_for_unload || frame_ms > 16.0 || dirty_for_unload > 280)
+    if (moving_for_unload || frame_ms > 16.0 || dirty_for_unload > 64)
     {
       unload_ops = 0;
     }

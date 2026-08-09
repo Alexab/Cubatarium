@@ -1297,7 +1297,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
           {
             continue;
           }
-          if (MeshService->HasGreedyMesh(coord) ||
+          if (MeshService->HasMeshSatisfyingColumnReady(coord) ||
               MeshService->IsPendingGpuApply(coord))
           {
             has_mesh = true;
