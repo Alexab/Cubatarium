@@ -108,6 +108,17 @@ int main()
   Expect(!SoftDeferCaptureBlockedByRepairTicket(false, false, false),
          "Era21: no ticket → Capture allowed");
 
+  // --- Era27 I-A4 Inflight supersede hold (PendingReplace residency) ---
+  using cutum::ShouldHoldInflightSupersedeUnderMissUndrawn;
+  Expect(ShouldHoldInflightSupersedeUnderMissUndrawn(true, true, false),
+         "Era27: SoftDefer undrawn + Inflight ⇒ hold supersede");
+  Expect(!ShouldHoldInflightSupersedeUnderMissUndrawn(true, true, true),
+         "Era27: Drawable → normal supersede");
+  Expect(!ShouldHoldInflightSupersedeUnderMissUndrawn(true, false, false),
+         "Era27: no Inflight → no hold");
+  Expect(!ShouldHoldInflightSupersedeUnderMissUndrawn(false, true, false),
+         "Era27: !SoftDefer undrawn → no hold");
+
   if (failures != 0)
   {
     std::cerr << failures << " failure(s)" << std::endl;

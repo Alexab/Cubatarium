@@ -8,6 +8,7 @@
 #include "Render/Mesh/CrossInstanceCollector.h"
 #include "Render/Mesh/CrossMeshEmitter.h"
 #include "Render/Mesh/MeshApplyPolicy.h"
+#include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/MeshLitGate.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
@@ -1418,6 +1419,7 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 }
 void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
 {
+  const bool was_soft_held = SoftDeferHeld.count(chunkCoord) > 0;
   SoftDeferHeld.erase(chunkCoord);
   if (ActiveMeshSourceRevision.find(chunkCoord) !=
       ActiveMeshSourceRevision.end())
@@ -1432,7 +1434,14 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
           AsyncBuilder && AsyncBuilder->IsInFlight(chunkCoord);
       const bool gpu_pending =
           GpuExtractInFlight.find(chunkCoord) != GpuExtractInFlight.end();
-      if (inflight || gpu_pending)
+      const bool pending_gpu_apply = IsPendingGpuApply(chunkCoord);
+      // Era27 I-A4: SoftDefer empty / Hide⇒Ticket undrawn with live Active or
+      // PendingReplace — hold supersede (no Forget → discarded_late hole).
+      const bool soft_undrawn =
+          was_soft_held || HasGreedyMesh(chunkCoord);
+      if (inflight || gpu_pending || pending_gpu_apply ||
+          ShouldHoldInflightSupersedeUnderMissUndrawn(
+              soft_undrawn, /*has_inflight=*/true, /*has_drawable=*/false))
       {
         RemeshAfterApply.insert(chunkCoord);
         return;

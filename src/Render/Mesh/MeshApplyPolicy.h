@@ -86,4 +86,13 @@ inline bool SoftDeferCaptureBlockedByRepairTicket(bool missing_visible_mesh,
   return has_any_repair_ticket;
 }
 
+/// Era27 I-A4: under SoftDefer/miss undrawn, live Inflight or PendingReplace
+/// must not be Forget/superseded into a hole frame (PendingReplace is the
+/// residency layer — no second drawable cache).
+inline bool ShouldHoldInflightSupersedeUnderMissUndrawn(
+    bool soft_or_miss_undrawn, bool has_inflight_or_pending, bool has_drawable)
+{
+  return soft_or_miss_undrawn && has_inflight_or_pending && !has_drawable;
+}
+
 } // namespace cutum
