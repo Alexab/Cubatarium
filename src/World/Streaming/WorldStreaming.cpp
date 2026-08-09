@@ -1431,13 +1431,18 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       world.GetLastMovementSpeed() > procedural.MovementPrefetchThreshold;
   const auto &tune_budget = URuntimeTuning::Get();
   constexpr float kHotFrameMs = 80.0f;
+  const int async_queued_budget =
+      Streamer ? Streamer->GetLastFrameStats().asyncQueuedThisFrame
+               : world.PhysicsTelemetryData.StreamAsyncQueued;
+  const int void_n_budget = world.PhysicsTelemetryData.DarkFaceVoidNearN;
   const FrameStreamingBudgetDecision early_budget =
       EvaluateFrameStreamingBudget(FrameStreamingBudgetInput{
           frame_ms, kBadFrameMs, kHotFrameMs, missing_focus_mesh,
           world.PhysicsTelemetryData.UnfinishedVisual, visible_black_n,
           pending_light_focus_n, moving_now_early,
           tune_budget.Era18VbCaptureFloor, tune_budget.Era18VbBgBudgetFloor,
-          tune_budget.MissFirstFrameBudget});
+          tune_budget.MissFirstFrameBudget, gen_backlog_total,
+          async_queued_budget, void_n_budget});
   if (early_budget.apply_vb_bg_floor)
   {
     bg_budget = std::max(bg_budget, early_budget.vb_bg_budget_floor);
@@ -1545,7 +1550,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             frame_ms, kBadFrameMs, /*hot_frame_ms=*/80.0, missing_focus_mesh,
             unfinished, visible_black_n_cap, pending_light_focus_n, moving_now,
             tune.Era18VbCaptureFloor, tune.Era18VbBgBudgetFloor,
-            tune.MissFirstFrameBudget});
+            tune.MissFirstFrameBudget, gen_backlog_total, async_queued_budget,
+            void_n_budget});
     world.PhysicsTelemetryData.SoftDeferCaptureBudget =
         budget.soft_defer_capture_budget;
     world.PhysicsTelemetryData.FrameBudgetMs = budget.frame_budget_ms;
@@ -2712,6 +2718,16 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         if (visual_holes || underfeet_need || frame_ms > kBadFrameMs)
         {
           load_ops = std::min(load_ops, 2);
+        }
+        // Era25 I-F5: under frontier_pressure moving, keep NearLoad floor ≥3
+        // (UE load-ahead — do not clamp to underfeet-only).
+        {
+          const int void_n = world.PhysicsTelemetryData.DarkFaceVoidNearN;
+          const bool miss = world.PhysicsTelemetryData.FocusMissingMesh != 0;
+          const int async_q = world.PhysicsTelemetryData.StreamAsyncQueued;
+          const bool frontier =
+              IsFrontierPressure(gen_backlog_total, async_q, miss, void_n);
+          load_ops = FrontierNearLoadOpsFloor(frontier, true, load_ops);
         }
         load_ops = ApplyPressureCap(load_ops, pressure.max_load_ops_cap);
         Streamer->SetMaxLoadOpsPerFrame(std::max(1, load_ops));

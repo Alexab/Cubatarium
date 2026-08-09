@@ -136,6 +136,25 @@ int main()
     Expect(d == 2, "miss-first: hitch VB alone does not storm drain");
   }
 
+  {
+    // Era25 I-F4: frontier_pressure dual-queue under miss+gen+void.
+    FrameStreamingBudgetInput in;
+    in.missing_visible_mesh = true;
+    in.miss_first_budget = true;
+    in.era18_vb_bg_budget_floor = true;
+    in.gen_backlog = 8;
+    in.async_queued = 0;
+    in.void_n = 412;
+    in.frame_ms = 90.0;
+    in.hot_frame_ms = 80.0;
+    in.visible_black_n = 0;
+    const auto d = EvaluateFrameStreamingBudget(in);
+    Expect(d.soft_defer_capture_budget >= 1, "Era25: frontier Capture FM≥1");
+    Expect(d.capture_first_mesh_only, "Era25: frontier Capture FirstMesh-only");
+    Expect(d.apply_vb_bg_floor && d.vb_bg_budget_floor >= 1,
+           "Era25: frontier void Relight bg floor≥1 (no starve under miss)");
+  }
+
   if (gFails != 0)
   {
     std::cerr << gFails << " failures\n";

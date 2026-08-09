@@ -1,5 +1,7 @@
 #pragma once
 
+#include "World/Streaming/FrontierStagePolicy.h"
+
 #include <algorithm>
 
 namespace cutum
@@ -24,6 +26,10 @@ struct FrameStreamingBudgetInput
   bool era18_vb_bg_budget_floor{true};
   /// Era19 P1: miss-first — shrink Capture/VB heal on hot wall; FirstMesh under miss.
   bool miss_first_budget{false};
+  /// Era25 I-F4: gen/async ingress honesty for frontier dual-queue.
+  int gen_backlog{0};
+  int async_queued{0};
+  int void_n{0};
 };
 
 struct FrameStreamingBudgetDecision
@@ -169,6 +175,20 @@ inline FrameStreamingBudgetDecision EvaluateFrameStreamingBudget(
     {
       out.apply_vb_bg_floor = true;
       out.vb_bg_budget_floor = std::max(out.vb_bg_budget_floor, 1);
+    }
+
+    // Era25 I-F4: frontier_pressure — Capture FirstMesh floor + void Relight
+    // slots without Relight-stealing FirstMesh Contains (dual-queue).
+    if (IsFrontierPressure(in.gen_backlog, in.async_queued, miss, in.void_n))
+    {
+      out.soft_defer_capture_budget =
+          std::max(out.soft_defer_capture_budget, 1);
+      out.capture_first_mesh_only = true;
+      if (in.void_n > 200)
+      {
+        out.apply_vb_bg_floor = true;
+        out.vb_bg_budget_floor = std::max(out.vb_bg_budget_floor, 1);
+      }
     }
   }
   else
