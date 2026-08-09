@@ -111,7 +111,21 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-056 | Era20 | Manual Visual SLA / rim FirstMesh escape | `214034`→`102236`: wall↓ no_ticket=0 enter↓; FOV miss/VB/flicker residual | **partial 2026-08-09** manual eye better; TD-057 |
 | TD-ARCH-057 | Era21 | Residency Replace + FOV SoT | CPU remesh FreeChunk before BindCommitted flicker; Relight ticket blocks miss Capture; SoftDefer empty HasGreedy SoT | **partial 2026-08-09** autofly FLY/IDLE/WARM/LAND GO; manual `154049` eye → TD-058 |
 | TD-ARCH-058 | Era22 | SoftDefer Heal SLA + VB ticket radius | SoftDeferHeld/empty without FirstMesh SLA; VB collect r≤2 vs Count full focus orphans; miss heal latency | **partial 2026-08-09** autofly GO; manual `172232` eye → TD-059 |
-| TD-ARCH-059 | Era23 | Void Relight dual-queue + rim miss SLA | void_near≈596; Relight starve under miss; Held-as-progress masks Collect; miss PreferKick too late; place-hole fall | **open 2026-08-09** P0 predicates; wait P1–P3 + manual `172232`-class |
+| TD-ARCH-059 | Era23 | Void Relight dual-queue + rim miss SLA | void_near≈596; Relight starve under miss; Held-as-progress masks Collect; miss PreferKick too late; place-hole fall | **partial 2026-08-09** autofly FLY/IDLE/WARM GO + P2 LAND GO; P3 land soft post_stop miss; manual `172232`-class eye pending |
+
+> **Era23 Void Relight / rim miss closeout (2026-08-09):** P0–P3 landed.
+> SoftDeferHeld ≠ void progress while fully-dark; Relight slots for void_n>T or
+> miss+void (not VB remesh-only steal); NotePendingLight on void enqueue under
+> void_pressure (cap 2, StickyRemesh clear); PreferKick FirstMesh-class every
+> miss-frame + SoftDefer empty Queued/Kicked stuck; place SoftDefer empty /
+> !Drawable ⇒ FirstMesh+Dirty; DigSeam !drawable Immediate; MarkDirtyPriority
+> keeps live InFlight (I-R2 / PendingReplace KEEP; discarded_late cruise≈0).
+> Autofly: `era23_p3_fly` FLY; `era23_p3_idle` IDLE_CLEAN; `era23_p3_warm`
+> IDLE_WARM; `era23_p2_land` ARCH_D3_LAND. KEEP FrameStreamingBudget / keep-GPU /
+> Capture FM-under-miss / Era22 SoftDefer !Drawable schedule. Reject Imm primary;
+> hitch VB Capture; Held-as-void-progress; Relight-steal-FirstMesh under
+> miss+VB remesh-only; SoftDefer knobs-as-fix. TD-059 remains **partial**
+> until manual eye.
 
 > **Era23 Void Relight / rim miss (2026-08-09):** Manual `perf_20260809-172232`
 > after Era22: wall≈96 KEEP; holes 0.30→0.50; miss_stuck 50→34; SoftDefer empty

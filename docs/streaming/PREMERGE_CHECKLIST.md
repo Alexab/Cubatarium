@@ -147,10 +147,13 @@ no_ticket; miss age PreferKick; async floor≥12 post-Finalize under miss|UV.
 Reject: SoftDeferHeld-without-Contains; VB-collect≪Count; Imm-as-heal;
 Era18 hitch Capture storm; SoftDefer knobs-as-fix.
 
-**Era23 Void Relight / rim miss (2026-08-09):** TD-059 **open** until manual
-`172232`-class eye (void_near≪596; no_ticket=0; miss_stuck≤12; SoftDefer empty≤2;
-place-fall rare). Reject: Held-as-void-progress; Relight-starve-under-miss;
-Imm-as-heal; hitch Capture storm; SoftDefer knobs-as-fix.
+**Era23 Void Relight / rim miss (2026-08-09):** TD-059 **partial** (autofly
+matrix GO; manual `172232`-class eye still required for void_near≪596 /
+place-fall). Void Relight dual-queue (void_n>T or miss+void); Note on void
+enqueue under pressure; Held≠void progress; PreferKick FirstMesh-class every
+miss-frame + SoftDefer empty Queued/Kicked; place-hole FirstMesh + DigSeam
+!drawable Immediate. Reject: Held-as-void-progress; Relight-steal-FirstMesh
+under miss+VB remesh-only; Imm-as-heal; hitch Capture storm; SoftDefer knobs.
 
 **Backend matrix (R4):** desktop
 
