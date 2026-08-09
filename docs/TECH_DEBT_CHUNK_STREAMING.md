@@ -114,7 +114,18 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-059 | Era23 | Void Relight dual-queue + rim miss SLA | void_near≈596; Relight starve under miss; Held-as-progress masks Collect; miss PreferKick too late; place-hole fall | **partial 2026-08-09** autofly GO; manual `193059` blacks closed (void/dark=0); empty residual → TD-060 |
 | TD-ARCH-060 | Era24 | SoftDefer Empty FirstMesh-until-Drawable | SoftDefer empty FOV stick (`HasGreedy∧!Drawable`); empty_stuck≈8s; miss_end=1 on `193059` | **partial 2026-08-09** autofly GO; mid-corridor eye OK on `203144`; empty_stuck≈6; frontier void → TD-061 |
 | TD-ARCH-061 | Era25 | Frontier Column Stage SLA | Frontier gen→light→mesh lag; void_end≈412 on `203144` west; `stream_loads≡0` masks gen | **partial 2026-08-09** P0–P3 landed; autofly FLY/IDLE/WARM GO; LAND soft post_stop miss; wait manual `203144`-class |
-| TD-ARCH-062 | Era26 | Ocean Dual-Debt + Load Light Parallel | Ocean void/VB + SoftDefer empty sides; Relight starve under miss moving; coop RelightColumns sync serial | **open 2026-08-09** SoT `214325`; wait P0–P3 + manual |
+| TD-ARCH-062 | Era26 | Ocean Dual-Debt + Load Light Parallel | Ocean void/VB + SoftDefer empty sides; Relight starve under miss moving; coop RelightColumns sync serial | **partial 2026-08-09** P0–P3 landed; FLY/WARM GO; IDLE soft wall/emerge; LAND soft miss; wait manual `214325` |
+
+> **Era26 Ocean Dual-Debt closeout (2026-08-09):** P0–P3 landed.
+> Lateral Relight under miss (moving drain void_T/VB; VoidRelightCollectRadius;
+> rim preserve void bg; CollectFullyDark FM-only honesty); SoftDefer empty∥void
+> Relight ticket (Note only void_n>T); FillWater lateral Y + SoftDefer sea cy;
+> coop async RelightColumns (inflight RelightThreadCount×3, no frontier re-queue).
+> Autofly: `era26_p2_fly` FLY_CLEAN; `era26_p3_warm` IDLE_WARM; `era26_p3_idle2`
+> IDLE_CLEAN soft (calm wall/emerge); `era26_p3_land` ARCH_D3_LAND soft miss.
+> KEEP Era23–25. Reject Imm; SoftDefer knobs; Relight-steal-FirstMesh Capture;
+> live parallel RelightColumn; coop frontier re-queue. TD-062 **partial** until
+> manual ocean void_med≪249 / empty≤2 / miss_end=0 / wall≪268.
 
 > **Era26 Ocean Dual-Debt (2026-08-09):** Manual `214325` after Era25: ocean west
 > (−498,70)→(−511,68); wall~268; void max 1416 / med~249; VB 38/61; holes~84%;

@@ -166,11 +166,12 @@ on near commit; frontier_pressure dual-queue; NearLoad/PrefetchAhead load-ahead.
 Reject: Imm FOV; SoftDefer knobs-as-DoD; hitch Capture; Relight-steal-FirstMesh;
 stream_loads-as-gen-progress.
 
-**Era26 Ocean Dual-Debt + Load Light Parallel (2026-08-09):** TD-062 **open**
-until manual `214325`-class ocean void_med≪249 / empty_stuck≤2 / miss_end=0.
-Lateral Relight under miss; SoftDefer empty∥void; FillWater lateral Y; coop
-async RelightColumns. Reject: Imm; SoftDefer knobs; Relight-steal-FirstMesh
-Capture; live parallel RelightColumn; coop frontier re-queue.
+**Era26 Ocean Dual-Debt + Load Light Parallel (2026-08-09):** TD-062 **partial**
+(autofly FLY/WARM GO; IDLE soft wall/emerge; LAND soft miss; wait manual
+`214325`-class ocean void_med≪249 / empty_stuck≤2 / miss_end=0). Lateral Relight
+under miss; SoftDefer empty∥void; FillWater lateral Y; coop async RelightColumns.
+Reject: Imm; SoftDefer knobs; Relight-steal-FirstMesh Capture; live parallel
+RelightColumn; coop frontier re-queue.
 
 **Backend matrix (R4):** desktop
 
