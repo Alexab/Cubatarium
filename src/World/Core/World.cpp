@@ -2547,8 +2547,6 @@ int UWorld::DrainIdleFocusPendingLightSync(glm::ivec3 focus_ground_horiz,
   }
   const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
   const int cy1 = FloorDiv(band_max, CHUNK_SIZE);
-  // Sync path: full RelightTerrainColumn below (AsyncRelight already returned).
-  const int cy1 = FloorDiv(band_max, CHUNK_SIZE);
 
   struct Candidate
   {
