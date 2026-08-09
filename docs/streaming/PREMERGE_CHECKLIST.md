@@ -182,6 +182,13 @@ keep-GPU is the residency layer. Reject: Imm; SoftDefer knobs-as-DoD;
 PreferKick every empty every frame; FreeChunk-before-Bind; second mesh cache;
 claim CLOSED on autofly while manual still blinks.
 
+**Era28 Visual Stage Gate (2026-08-10):** TD-064 **partial** (autofly FLY/WARM GO;
+IDLE soft dirtyΔ; LAND soft miss; wait manual `012208`-class opaque≪658 / unlit↓ /
+empty≤4s / miss_end=0). Near FOV hide-until-lit; SoftDefer Dirty coalesce;
+PreferKick after age SLA; RemeshAfterApply-only while Building. Autofly opaque
+churn ≤67 (vs manual 631). Reject: Unlit near «ради дыр»; Imm; second cache;
+CLOSED without manual eye.
+
 **Backend matrix (R4):** desktop
 
 ```powershell

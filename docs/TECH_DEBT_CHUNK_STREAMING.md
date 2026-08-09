@@ -116,7 +116,17 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-061 | Era25 | Frontier Column Stage SLA | Frontier gen→light→mesh lag; void_end≈412 on `203144` west; `stream_loads≡0` masks gen | **partial 2026-08-09** P0–P3 landed; autofly FLY/IDLE/WARM GO; LAND soft post_stop miss; wait manual `203144`-class |
 | TD-ARCH-062 | Era26 | Ocean Dual-Debt + Load Light Parallel | Ocean void/VB + SoftDefer empty sides; Relight starve under miss moving; coop RelightColumns sync serial | **partial 2026-08-09** P0–P3 landed; FLY/WARM GO; IDLE soft wall/emerge; LAND soft miss; wait manual `214325` |
 | TD-ARCH-063 | Era27 | Anti-Flicker Ownership | SoftDefer Capture retarget thrash + MarkRelit remesh blink + discarded_late supersede after Era26 heal (`224912`) | **partial 2026-08-09** P0–P3 landed; FLY/IDLE/WARM GO; LAND soft miss; wait manual `224912` |
-| TD-ARCH-064 | Era28 | Visual Stage Gate | UnlitFirstMesh + SoftDefer Dirty thrash → black/empty/green flicker (`012208` opaque swing 658) | **open 2026-08-10** P0 Dirty coalesce |
+| TD-ARCH-064 | Era28 | Visual Stage Gate | UnlitFirstMesh + SoftDefer Dirty thrash → black/empty/green flicker (`012208` opaque swing 658) | **partial 2026-08-10** P0–P3 landed; FLY/WARM GO; IDLE soft dirtyΔ; LAND soft miss; wait manual `012208` |
+
+> **Era28 Visual Stage Gate closeout (2026-08-10):** P0–P3 landed. SoftDefer Dirty
+> coalesce while FM/Inflight owned; near FOV hide-until-lit (`AllowUnlit` horiz>2);
+> PreferKick SoftDefer empty only after age SLA; MarkRelit RemeshAfterApply-only
+> while Building. Residency KEEP PendingReplace — **no new drawable cache**.
+> Autofly: `era28_p4_fly` FLY_CLEAN (opaque_idle_churn_max=52); `era28_p4_warm`
+> IDLE_WARM; `era28_p4_idle` IDLE_CLEAN soft `stop_focus_dirty_delta`;
+> `era28_p4_land` ARCH_D3_LAND soft miss. Opaque churn gate ≤120 GO on all.
+> TD-064 **partial** until manual `012208`-class: opaque≪658; VB/unlit near↓;
+> empty≤4s; miss_end=0; no black/empty/green blink eye.
 
 > **Era28 Visual Stage Gate (2026-08-10):** Manual `012208` after Era27: retarget/
 > discarded_late↓ but flicker↑ (`opaque_cmd_on` swing 658 vs 179; unlit med 24;

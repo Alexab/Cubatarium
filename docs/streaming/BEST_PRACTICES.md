@@ -233,6 +233,21 @@ empty_stuck≤2s matrix; miss_end=0 fly/idle/land (warm miss_end soft).
 (void/dark=0). Reject Imm-as-empty-heal; SoftDefer knobs-as-DoD; PreferKick
 every empty every frame.
 
+## Gap После Era28 closeout (2026-08-10) — Visual Stage Gate; TD-064 **partial**
+
+| Практика | Industry | Cubatarium | Era28 SoT |
+|----------|----------|------------|-----------|
+| Hide-until-lit near FOV | MC light-before-draw | UnlitFirstMesh any FOV missing | **done** AllowUnlit horiz>2 + SoftDefer pending defer |
+| SoftDefer empty without Dirty storm | ticket ownership | MarkDirty every UndrawnForceCd | **done** SoftDeferEmptyShouldMarkDirty |
+| PreferKick after stage age | HP escalate | PreferKick every empty scan | **done** age SLA only |
+| Single remesh publish | pendingReplace once | MarkRelit Dirty while Building | **done** RemeshAfterApply-only |
+
+**Evidence:** `era28_p4_fly` FLY_CLEAN opaque=52; `era28_p4_warm` IDLE_WARM;
+`era28_p4_idle` IDLE_CLEAN soft dirtyΔ; `era28_p4_land` ARCH_D3_LAND soft miss.
+**Baseline:** `perf_20260810-012208` / `manual_012208_analyze.json`. Reject Unlit
+near as hole fix; Imm; second cache. TD-064 **partial** until manual opaque≪658 /
+miss_end=0.
+
 ## Gap После Era27 closeout (2026-08-09) — Anti-flicker ownership; TD-063 **partial**
 
 | Практика | Industry | Cubatarium | Era27 SoT |
