@@ -148,12 +148,15 @@ Reject: SoftDeferHeld-without-Contains; VB-collect≪Count; Imm-as-heal;
 Era18 hitch Capture storm; SoftDefer knobs-as-fix.
 
 **Era23 Void Relight / rim miss (2026-08-09):** TD-059 **partial** (autofly
-matrix GO; manual `172232`-class eye still required for void_near≪596 /
-place-fall). Void Relight dual-queue (void_n>T or miss+void); Note on void
-enqueue under pressure; Held≠void progress; PreferKick FirstMesh-class every
-miss-frame + SoftDefer empty Queued/Kicked; place-hole FirstMesh + DigSeam
-!drawable Immediate. Reject: Held-as-void-progress; Relight-steal-FirstMesh
-under miss+VB remesh-only; Imm-as-heal; hitch Capture storm; SoftDefer knobs.
+GO; manual `193059` blacks closed void/dark=0; SoftDefer empty → TD-060).
+Reject: Held-as-void-progress; Relight-steal-FirstMesh; Imm-as-heal; hitch
+Capture; SoftDefer knobs.
+
+**Era24 SoftDefer Empty FirstMesh-until-Drawable (2026-08-09):** TD-060 **open**
+until manual `193059`-class empty_stuck≤2 / miss_end=0. Hide⇒Ticket (no idle
+undrawn publish); FirstMesh ownership + age SLA. Reject: SoftDefer-empty-as-
+HasGreedy-progress; Imm-as-empty-heal; PreferKick every empty every frame;
+SoftDefer knobs-as-DoD.
 
 **Backend matrix (R4):** desktop
 

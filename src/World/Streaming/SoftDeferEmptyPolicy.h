@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cstdint>
 
 namespace cutum
 {
@@ -158,6 +159,32 @@ inline bool ShouldForceFirstMeshOnPlaceHole(bool soft_defer_empty_or_undrawn,
                                             bool near_or_underfeet)
 {
   return soft_defer_empty_or_undrawn && near_or_underfeet;
+}
+
+/// Era24 I-E2: SoftDefer empty under FOV miss/focus needs FirstMesh ownership
+/// until Drawable (Hide⇒Ticket).
+inline bool SoftDeferEmptyNeedsFirstMeshOwnership(bool empty_placeholder,
+                                                  bool miss_or_in_focus)
+{
+  return empty_placeholder && miss_or_in_focus;
+}
+
+/// Era24 I-E4: SoftDefer empty age (frames) ⇒ escalate PreferKick/Capture.
+inline bool ShouldEscalateSoftDeferEmptyAge(int age_frames,
+                                            int sla_frames = 45)
+{
+  return age_frames >= sla_frames;
+}
+
+/// Era24 I-E3: SoftDefer empty heal is FirstMesh-class only (not Remesh/Relight).
+enum class SoftDeferEmptyHealKind : uint8_t
+{
+  FirstMesh = 0
+};
+
+inline SoftDeferEmptyHealKind SoftDeferEmptyHealKindOf()
+{
+  return SoftDeferEmptyHealKind::FirstMesh;
 }
 
 } // namespace cutum

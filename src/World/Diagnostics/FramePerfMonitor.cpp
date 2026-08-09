@@ -274,6 +274,9 @@ struct FrameNumbers
   int softdefer_empty_stuck_cy{0};
   int softdefer_empty_stuck_cz{0};
   int softdefer_empty_stuck_horiz{0};
+  int softdefer_empty_age_max_frames{0};
+  int softdefer_empty_owned_n{0};
+  int softdefer_empty_publish_avoided{0};
   int softdefer_held_n{0};
   double rss_mb{0.0};
   double private_mb{0.0};
@@ -533,6 +536,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.softdefer_empty_stuck_cy = phys.SoftDeferEmptyStuckCy;
   n.softdefer_empty_stuck_cz = phys.SoftDeferEmptyStuckCz;
   n.softdefer_empty_stuck_horiz = phys.SoftDeferEmptyStuckHoriz;
+  n.softdefer_empty_age_max_frames = phys.SoftDeferEmptyAgeMaxFrames;
+  n.softdefer_empty_owned_n = phys.SoftDeferEmptyOwnedN;
+  n.softdefer_empty_publish_avoided = phys.SoftDeferEmptyPublishAvoided;
   n.softdefer_held_n = phys.SoftDeferHeldN;
   n.pending_cols = phys.PendingFocusCols;
   ++s.FramesSinceMemSample;
@@ -814,6 +820,11 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"softdefer_empty_stuck_cz\":" << n.softdefer_empty_stuck_cz
           << ",\"softdefer_empty_stuck_horiz\":"
           << n.softdefer_empty_stuck_horiz
+          << ",\"softdefer_empty_age_max_frames\":"
+          << n.softdefer_empty_age_max_frames
+          << ",\"softdefer_empty_owned_n\":" << n.softdefer_empty_owned_n
+          << ",\"softdefer_empty_publish_avoided\":"
+          << n.softdefer_empty_publish_avoided
           << ",\"softdefer_held_n\":" << n.softdefer_held_n
           << ",\"rss_mb\":" << n.rss_mb << ",\"private_mb\":" << n.private_mb
           << ",\"chunk_count\":" << n.chunk_count

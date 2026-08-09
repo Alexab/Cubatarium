@@ -217,6 +217,18 @@ post_stop miss residual, miss_end=0). Baseline `172232` not visual-merge.
 FrameStreamingBudget. Reject Imm primary; hitch Capture; Held-as-void-progress;
 Relight-steal-FirstMesh under miss+VB remesh-only.
 
+## Gap После Era24 plan (2026-08-09) — SoftDefer empty; TD-060 **open**
+
+| Практика | Industry | Cubatarium | Era24 SoT |
+|----------|----------|------------|-----------|
+| Hide⇒Ticket undrawn SoftDefer | hide until ready | Publish idle `HasGreedy∧!Drawable` | **P0** SoftDeferEmptyNeedsFirstMeshOwnership |
+| FirstMesh-until-Drawable ownership | MC HP rebuild SLA | MarkDirty + FM cap2; PreferKick only if Queued | **P0** SoftDeferEmptyHealKind::FirstMesh |
+| SoftDefer empty age SLA | stage age escalate | UndrawnForceCd / knobs | **P0** ShouldEscalateSoftDeferEmptyAge (45f) |
+
+**Baseline:** `perf_20260809-193059` / `manual_193059_analyze.json`. Blacks closed
+(void/dark=0). Reject Imm-as-empty-heal; SoftDefer knobs-as-DoD; PreferKick
+every empty every frame.
+
 ## Gap После Era19 plan (2026-08-08) — autofly CLOSED; **manual superseded by 214034**
 
 | Практика | Industry | Cubatarium | Era19 SoT |

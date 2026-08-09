@@ -151,6 +151,31 @@ int main()
   Expect(!ShouldForceFirstMeshOnPlaceHole(false, true),
          "Era23 I-P1: drawable near → no force");
 
+  // --- Era24 SoftDefer empty FirstMesh-until-Drawable ---
+  using cutum::ShouldEscalateSoftDeferEmptyAge;
+  using cutum::SoftDeferEmptyHealKind;
+  using cutum::SoftDeferEmptyHealKindOf;
+  using cutum::SoftDeferEmptyNeedsFirstMeshOwnership;
+
+  Expect(SoftDeferEmptyNeedsFirstMeshOwnership(true, true),
+         "Era24 I-E2: empty + miss/focus ⇒ FirstMesh ownership");
+  Expect(!SoftDeferEmptyNeedsFirstMeshOwnership(true, false),
+         "Era24 I-E2: empty outside FOV → no ownership");
+  Expect(!SoftDeferEmptyNeedsFirstMeshOwnership(false, true),
+         "Era24 I-E2: not empty → no ownership");
+  Expect(!ShouldEscalateSoftDeferEmptyAge(44),
+         "Era24 I-E4: age 44 < sla 45 → no escalate");
+  Expect(ShouldEscalateSoftDeferEmptyAge(45),
+         "Era24 I-E4: age 45 ≥ sla → escalate");
+  Expect(ShouldEscalateSoftDeferEmptyAge(60, 45),
+         "Era24 I-E4: age past sla → escalate");
+  Expect(SoftDeferEmptyHealKindOf() == SoftDeferEmptyHealKind::FirstMesh,
+         "Era24 I-E3: SoftDefer empty heal is FirstMesh only");
+  Expect(ShouldPreferKickSoftDeferEmptyStuck(true, true, true),
+         "Era24 KEEP: PreferKick SoftDefer empty only Queued/Kicked");
+  Expect(!ShouldPreferKickSoftDeferEmptyStuck(true, true, false),
+         "Era24 KEEP: idle SoftDefer empty → no PreferKick storm");
+
   {
     MeshWorkAdmissionInput in;
     in.pending_gpu = 6;
