@@ -255,6 +255,18 @@ int main()
          "Era26 I-O4: empty lit → no parallel Relight");
   Expect(!SoftDeferEmptyNeedsParallelVoidRelight(false, true),
          "Era26 I-O4: not empty → no parallel Relight");
+  {
+    int bmin = 40;
+    int bmax = 50;
+    cutum::FillWaterLateralRemeshBand(true, 3, 64, 256, bmin, bmax, 16);
+    Expect(bmin <= 48 && bmax >= 80,
+           "Era26 I-O5: FillWater lateral widens sea±CHUNK");
+    int keep_min = 40;
+    int keep_max = 50;
+    cutum::FillWaterLateralRemeshBand(true, 1, 64, 256, keep_min, keep_max, 16);
+    Expect(keep_min == 40 && keep_max == 50,
+           "Era26 I-O5: horiz≤1 leaves band to underfeet path");
+  }
 
   {
     MeshWorkAdmissionInput in;

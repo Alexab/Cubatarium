@@ -506,9 +506,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     const int max_cy = std::max(
         0, FloorDiv(procedural.MaxHeight, CHUNK_SIZE));
-    const int cy0 =
+    int cy0 =
         missing_visible_mesh ? 0 : std::max(0, preferred_cy - 1);
-    const int cy1 = std::min(max_cy, preferred_cy + 2);
+    int cy1 = std::min(max_cy, preferred_cy + 2);
+    // Era26 I-O5: SoftDefer empty scan covers sea band under FillWater so
+    // ocean lateral empty (horiz 2–5) is not missed by preferred_cy window.
+    if (procedural.FillWater)
+    {
+      const int sea = procedural.SeaLevel;
+      const int sea_cy0 =
+          FloorDiv(std::max(0, sea - CHUNK_SIZE), CHUNK_SIZE);
+      const int sea_cy1 = FloorDiv(
+          std::min(procedural.MaxHeight, sea + CHUNK_SIZE), CHUNK_SIZE);
+      cy0 = std::min(cy0, sea_cy0);
+      cy1 = std::max(cy1, std::min(max_cy, sea_cy1));
+    }
     // Era24: rim soft ownership budget (not DoD knob) — per-coord FirstMesh.
     constexpr int kEmptyOwnershipCap = 6;
     if (UndrawnForceCd <= 0)

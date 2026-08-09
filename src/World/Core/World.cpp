@@ -977,6 +977,10 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
               dirty_max,
               std::min(column_max_y, focus_block.y + CHUNK_SIZE * 2));
         }
+        // Era26 I-O5: FillWater lateral (horiz 2–5) remesh sea±CHUNK band.
+        FillWaterLateralRemeshBand(ProceduralTemplate.FillWater, horiz, sea,
+                                   column_max_y, dirty_min, dirty_max,
+                                   CHUNK_SIZE);
       }
       // Partial relight results must not feed Dirty while the first-light gate
       // is still closed. Those remeshes are soft-deferred anyway and were a big
