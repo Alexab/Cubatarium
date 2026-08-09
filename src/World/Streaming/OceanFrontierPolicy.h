@@ -15,7 +15,7 @@ inline bool ShouldDrainPendingLightUnderMissMoving(bool miss, bool moving,
   {
     return false;
   }
-  return void_n > void_T || vb_n > 0 || void_n > 0;
+  return void_n > void_T || vb_n > 0;
 }
 
 /// Era26 I-O1: void Relight collect radius — full focus under void_pressure

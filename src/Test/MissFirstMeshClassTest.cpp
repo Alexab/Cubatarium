@@ -227,10 +227,10 @@ int main()
 
   Expect(ShouldDrainPendingLightUnderMissMoving(true, true, 250, 0),
          "Era26 I-O1: miss+moving+void>T ⇒ drain");
-  Expect(ShouldDrainPendingLightUnderMissMoving(true, true, 10, 5),
-         "Era26 I-O1: miss+moving+void>0 ⇒ drain");
-  Expect(!ShouldDrainPendingLightUnderMissMoving(true, true, 0, 0),
-         "Era26 I-O1: miss+moving no void/VB → no drain");
+  Expect(ShouldDrainPendingLightUnderMissMoving(true, true, 0, 5),
+         "Era26 I-O1: miss+moving+VB ⇒ drain");
+  Expect(!ShouldDrainPendingLightUnderMissMoving(true, true, 10, 0),
+         "Era26 I-O1: miss+moving void≤T no VB → no drain");
   Expect(!ShouldDrainPendingLightUnderMissMoving(false, true, 500, 10),
          "Era26 I-O1: !miss → no special drain");
   Expect(!ShouldDrainPendingLightUnderMissMoving(true, false, 500, 10),
