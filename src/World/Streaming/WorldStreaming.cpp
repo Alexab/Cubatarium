@@ -1500,6 +1500,16 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                          /*admit_batch=*/1);
       }
     }
+    // Era22 P2: Capture FirstMesh KEEP under miss; still drain Relight when
+    // no_ticket orphans exist (do not starve Relight with FM-only Capture).
+    if (world.PhysicsTelemetryData.VisibleBlackNoTicketN > 0)
+    {
+      bg_budget = std::max(bg_budget, 1);
+      auto &exec = GetColumnFlowExecutor();
+      exec.DrainIdlePendingLight(world, focus_horiz, focus_radius, /*max=*/1,
+                                 /*allow_sync=*/false, frame_ms,
+                                 pending_light_focus_n, missing_focus_mesh);
+    }
     if (rim_first_mesh_sla)
     {
       bg_budget = std::min(bg_budget, moving_now ? 1 : 2);

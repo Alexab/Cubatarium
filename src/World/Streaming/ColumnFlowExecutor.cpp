@@ -5,6 +5,7 @@
 #include "World/Persistence/WorldPersistence.h"
 #include "World/Streaming/ColumnDesiredStage.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
+#include "World/Streaming/SoftDeferEmptyPolicy.h"
 
 #include <algorithm>
 #include <chrono>
@@ -228,6 +229,8 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   const int void_n = world.GetPhysicsTelemetry().DarkFaceVoidNearN;
   const int visible_black_n =
       world.GetPhysicsTelemetry().VisibleBlackFocusN;
+  const int visible_black_no_ticket_n =
+      world.GetPhysicsTelemetry().VisibleBlackNoTicketN;
   constexpr double kStaleRepairCooldownSec = 2.0;
   const auto now = std::chrono::steady_clock::now();
   const bool cooldown_ok =
@@ -253,6 +256,8 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       pending_light, lit_pending, unlit_published);
   const bool nearest_vb_heal =
       async_ok && visible_black_n > 0;
+  const bool nearest_vb_no_ticket =
+      ShouldEnqueueNearestVbNoTicket(visible_black_no_ticket_n > 0, async_ok);
   const bool allow_stale_wave =
       desired.stage == ColumnDesiredStage::RemeshSeam ||
       world.GetPhysicsTelemetry().FocusStickyRemesh > 0 ||
@@ -269,14 +274,18 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
 
   // Era17 P1: continuous heal while VisibleBlackFocusN>0 (not only NoTicket).
   // Era19 P2: void→Relight only; stale→Remesh only; PendingLight skips Remesh.
-  if (nearest_vb_heal)
+  // Era22 I-V3: no_ticket ⇒ collect on full focus_radius (nearest 1–2).
+  if (nearest_vb_heal || nearest_vb_no_ticket)
   {
-    const int vb_radius =
-        missing_visible_mesh ? std::min(2, focus_radius) : focus_radius;
+    const int vb_radius = VisibleBlackTicketCollectRadius(
+        focus_radius, missing_visible_mesh, visible_black_no_ticket_n > 0);
+    const int vb_cap =
+        nearest_vb_no_ticket ? std::min(2, std::max(1, repair_cap))
+                             : repair_cap;
     world.CollectStaleDarkFocusColumns(focus_ground_horiz, vb_radius,
-                                       stale_dark_cols, repair_cap);
+                                       stale_dark_cols, vb_cap);
     world.CollectFullyDarkFocusColumns(focus_ground_horiz, vb_radius,
-                                       void_dark_cols, repair_cap);
+                                       void_dark_cols, vb_cap);
     // Drop columns already in PendingLight from stale Remesh set.
     if (!pending_cols.empty() && !stale_dark_cols.empty())
     {
@@ -340,7 +349,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   }
 
   // Classic sticky/stale wave (thresholds + Sticky Note) when not in VB heal.
-  if (!nearest_vb_heal && allow_stale_wave)
+  if (!nearest_vb_heal && !nearest_vb_no_ticket && allow_stale_wave)
   {
     stale_dark_cols.clear();
     const int stale_radius =
@@ -350,7 +359,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     world.CollectStaleDarkFocusColumns(focus_ground_horiz, stale_radius,
                                        stale_dark_cols, stale_cap);
   }
-  if (!nearest_vb_heal && allow_void_wave)
+  if (!nearest_vb_heal && !nearest_vb_no_ticket && allow_void_wave)
   {
     void_dark_cols.clear();
     const int void_cap = std::min(4, std::max(2, recover_n / 2));
