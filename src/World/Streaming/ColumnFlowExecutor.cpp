@@ -5,6 +5,7 @@
 #include "World/Streaming/ColumnDesiredStage.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
+#include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Math/GridMath.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 
@@ -282,8 +283,10 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   // Era23 I-V4/I-V7: void pressure keeps void_cap≥2 even when no_ticket=0.
   if (nearest_vb_heal || nearest_vb_no_ticket || void_pressure)
   {
-    const int vb_radius = VisibleBlackTicketCollectRadius(
-        focus_radius, missing_visible_mesh, visible_black_no_ticket_n > 0);
+    // Era26 I-O1: under void_pressure use full focus radius (not VB clamp≤2).
+    const int vb_radius = VoidRelightCollectRadius(
+        focus_radius, missing_visible_mesh, void_pressure,
+        visible_black_no_ticket_n > 0);
     const int stale_cap =
         nearest_vb_no_ticket ? std::min(2, std::max(1, repair_cap))
                              : repair_cap;

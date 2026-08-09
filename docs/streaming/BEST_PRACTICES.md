@@ -233,6 +233,18 @@ empty_stuck≤2s matrix; miss_end=0 fly/idle/land (warm miss_end soft).
 (void/dark=0). Reject Imm-as-empty-heal; SoftDefer knobs-as-DoD; PreferKick
 every empty every frame.
 
+## Gap После Era26 plan (2026-08-09) — Ocean dual-debt; TD-062 **open**
+
+| Практика | Industry | Cubatarium | Era26 SoT |
+|----------|----------|------------|-----------|
+| LP Relight under miss+moving | MC HP vs LP | DrainIdle moving return 0 | **P0** ShouldDrainPendingLightUnderMissMoving |
+| Void collect full focus | MC light ticket radius | VB collect clamp r≤2 under miss | **P0** VoidRelightCollectRadius |
+| Empty∥void same column | dual stage | SoftDefer heal FirstMesh-only | **P1** SoftDeferEmptyNeedsParallelVoidRelight |
+| Coop load async light | snapshot JobPool | RelightColumns sync 8–32 serial | **P3** scoped AsyncRelightBuilder |
+
+**Baseline:** `perf_20260809-214325` / `manual_214325_analyze.json`. Ocean void/empty
+sides. Reject Imm; SoftDefer knobs; Relight-steal-FirstMesh Capture.
+
 ## Gap После Era25 closeout (2026-08-09) — Frontier stage SLA; TD-061 **partial**
 
 | Практика | Industry | Cubatarium | Era25 SoT |

@@ -1,6 +1,7 @@
 #include "World/Streaming/MeshWorkAdmission.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/FrontierStagePolicy.h"
+#include "World/Streaming/OceanFrontierPolicy.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -216,6 +217,44 @@ int main()
          "Era25 I-F5: frontier NearLoad radius ≥ focus");
   Expect(FrontierNearLoadRadius(false, true, 2, 4) == 2,
          "Era25 I-F5: !frontier keeps NearLoad radius clamp");
+
+  // --- Era26 Ocean Dual-Debt ---
+  using cutum::CollectFullyDarkSkipsOnlyRelightOwnership;
+  using cutum::ShouldDrainPendingLightUnderMissMoving;
+  using cutum::ShouldPreserveVoidBgSlotsUnderRimSla;
+  using cutum::SoftDeferEmptyNeedsParallelVoidRelight;
+  using cutum::VoidRelightCollectRadius;
+
+  Expect(ShouldDrainPendingLightUnderMissMoving(true, true, 250, 0),
+         "Era26 I-O1: miss+moving+void>T ⇒ drain");
+  Expect(ShouldDrainPendingLightUnderMissMoving(true, true, 10, 5),
+         "Era26 I-O1: miss+moving+void>0 ⇒ drain");
+  Expect(!ShouldDrainPendingLightUnderMissMoving(true, true, 0, 0),
+         "Era26 I-O1: miss+moving no void/VB → no drain");
+  Expect(!ShouldDrainPendingLightUnderMissMoving(false, true, 500, 10),
+         "Era26 I-O1: !miss → no special drain");
+  Expect(!ShouldDrainPendingLightUnderMissMoving(true, false, 500, 10),
+         "Era26 I-O1: !moving → idle path owns drain");
+  Expect(VoidRelightCollectRadius(4, true, true, false) == 4,
+         "Era26 I-O1: void_pressure ⇒ full focus radius");
+  Expect(VoidRelightCollectRadius(4, true, false, false) == 2,
+         "Era26 I-O1: miss !void_pressure ⇒ clamp 2");
+  Expect(VoidRelightCollectRadius(4, false, false, false) == 4,
+         "Era26 I-O1: !miss ⇒ full radius");
+  Expect(CollectFullyDarkSkipsOnlyRelightOwnership(true),
+         "Era26 I-O3: Relight/Pending ⇒ skip Collect");
+  Expect(!CollectFullyDarkSkipsOnlyRelightOwnership(false),
+         "Era26 I-O3: FirstMesh-only/Dirty → no skip");
+  Expect(ShouldPreserveVoidBgSlotsUnderRimSla(true, true),
+         "Era26 I-O2: rim+void_slots ⇒ preserve bg");
+  Expect(!ShouldPreserveVoidBgSlotsUnderRimSla(true, false),
+         "Era26 I-O2: rim without void → normal clamp");
+  Expect(SoftDeferEmptyNeedsParallelVoidRelight(true, true),
+         "Era26 I-O4: empty+void ⇒ parallel Relight");
+  Expect(!SoftDeferEmptyNeedsParallelVoidRelight(true, false),
+         "Era26 I-O4: empty lit → no parallel Relight");
+  Expect(!SoftDeferEmptyNeedsParallelVoidRelight(false, true),
+         "Era26 I-O4: not empty → no parallel Relight");
 
   {
     MeshWorkAdmissionInput in;

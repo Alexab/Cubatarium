@@ -114,6 +114,16 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-059 | Era23 | Void Relight dual-queue + rim miss SLA | void_near≈596; Relight starve under miss; Held-as-progress masks Collect; miss PreferKick too late; place-hole fall | **partial 2026-08-09** autofly GO; manual `193059` blacks closed (void/dark=0); empty residual → TD-060 |
 | TD-ARCH-060 | Era24 | SoftDefer Empty FirstMesh-until-Drawable | SoftDefer empty FOV stick (`HasGreedy∧!Drawable`); empty_stuck≈8s; miss_end=1 on `193059` | **partial 2026-08-09** autofly GO; mid-corridor eye OK on `203144`; empty_stuck≈6; frontier void → TD-061 |
 | TD-ARCH-061 | Era25 | Frontier Column Stage SLA | Frontier gen→light→mesh lag; void_end≈412 on `203144` west; `stream_loads≡0` masks gen | **partial 2026-08-09** P0–P3 landed; autofly FLY/IDLE/WARM GO; LAND soft post_stop miss; wait manual `203144`-class |
+| TD-ARCH-062 | Era26 | Ocean Dual-Debt + Load Light Parallel | Ocean void/VB + SoftDefer empty sides; Relight starve under miss moving; coop RelightColumns sync serial | **open 2026-08-09** SoT `214325`; wait P0–P3 + manual |
+
+> **Era26 Ocean Dual-Debt (2026-08-09):** Manual `214325` after Era25: ocean west
+> (−498,70)→(−511,68); wall~268; void max 1416 / med~249; VB 38/61; holes~84%;
+> SoftDefer empty stuck~14s horiz 2–5; Capture≡1 FM-only; fifo 66–97 /
+> completed≈0. Fix: lateral Relight under miss (moving drain + full-focus void
+> collect + rim preserve void bg slots); SoftDefer empty∥void parallel;
+> FillWater lateral Y; coop async RelightColumns. KEEP Era23–25 dual-queue /
+> Capture FM-under-miss. Reject Imm; SoftDefer knobs; Relight-steal-FirstMesh
+> Capture; live parallel RelightColumn; coop frontier re-queue.
 
 > **Era25 Frontier Column Stage SLA closeout (2026-08-09):** P0–P3 landed.
 > Disk/gen telem (`stream_disk_complete_n` / `stream_gen_commit_n` /

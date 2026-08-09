@@ -70,6 +70,7 @@
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
+#include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralConfigIO.h"
@@ -2389,7 +2390,15 @@ int UWorld::DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
   }
   if (LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold)
   {
-    return 0;
+    // Era26 I-O1: under miss+void/VB allow capped drain while moving
+    // (ocean lateral Relight; idle-only gate starved fifo on 214325).
+    if (!ShouldDrainPendingLightUnderMissMoving(
+            PhysicsTelemetryData.FocusMissingMesh != 0, /*moving=*/true,
+            PhysicsTelemetryData.DarkFaceVoidNearN,
+            PhysicsTelemetryData.VisibleBlackFocusN))
+    {
+      return 0;
+    }
   }
   const int max_y = ProceduralTemplate.MaxHeight;
   const int sea = ProceduralTemplate.SeaLevel;
@@ -2517,7 +2526,13 @@ int UWorld::DrainIdleFocusPendingLightSync(glm::ivec3 focus_ground_horiz,
   }
   if (LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold)
   {
-    return 0;
+    if (!ShouldDrainPendingLightUnderMissMoving(
+            PhysicsTelemetryData.FocusMissingMesh != 0, /*moving=*/true,
+            PhysicsTelemetryData.DarkFaceVoidNearN,
+            PhysicsTelemetryData.VisibleBlackFocusN))
+    {
+      return 0;
+    }
   }
   const int max_y = ProceduralTemplate.MaxHeight;
   const int sea = ProceduralTemplate.SeaLevel;
@@ -2531,6 +2546,8 @@ int UWorld::DrainIdleFocusPendingLightSync(glm::ivec3 focus_ground_horiz,
     band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE * 2));
   }
   const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
+  const int cy1 = FloorDiv(band_max, CHUNK_SIZE);
+  // Sync path: full RelightTerrainColumn below (AsyncRelight already returned).
   const int cy1 = FloorDiv(band_max, CHUNK_SIZE);
 
   struct Candidate
@@ -2797,8 +2814,14 @@ int UWorld::CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
       {
         continue;
       }
-      if (GetColumnFlowExecutor().HasRepairTicket(key) ||
-          ColumnHasRepairProgress(key))
+      // Era26 I-O3: skip only Relight/PendingLight — FirstMesh/Dirty-empty
+      // must not mask void Collect (ocean dual-debt 214325).
+      const auto &flow = GetColumnFlowExecutor();
+      const bool has_relight_or_pending =
+          flow.Scheduler().Contains(key, ColumnWorkKind::RelightThenMesh) ||
+          flow.Scheduler().Contains(key, ColumnWorkKind::PromoteRelight) ||
+          IsPendingLightBeforeMesh(key);
+      if (CollectFullyDarkSkipsOnlyRelightOwnership(has_relight_or_pending))
       {
         continue;
       }

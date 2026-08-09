@@ -15,6 +15,7 @@
 #include "Render/Mesh/MeshApplyPolicy.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/FrontierStagePolicy.h"
+#include "World/Streaming/OceanFrontierPolicy.h"
 #include "App/Settings/RenderSettings.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Player/PlayerCapsule.h"
@@ -1614,8 +1615,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                          /*admit_batch=*/1);
       }
     }
-    // Era22 P2 / Era23 I-V4: Capture FirstMesh KEEP under miss; drain Relight
-    // when no_ticket OR void pressure (dual-queue — do not starve Relight).
+    // Era22 P2 / Era23 I-V4 / Era26 I-O2: Capture FirstMesh KEEP under miss;
+    // drain Relight when no_ticket OR void pressure; do not clamp away void
+    // bg slots under rim_first_mesh_sla.
+    bool void_slots_active = false;
+    int void_relight_n = 0;
     {
       const int void_n = world.PhysicsTelemetryData.DarkFaceVoidNearN;
       const int vb_n = world.PhysicsTelemetryData.VisibleBlackFocusN;
@@ -1623,18 +1627,27 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           void_n, vb_n, missing_focus_mesh);
       if (world.PhysicsTelemetryData.VisibleBlackNoTicketN > 0 || void_slots)
       {
-        const int relight_n =
+        void_relight_n =
             void_slots ? (void_n > 400 ? 2 : 1) : 1;
-        bg_budget = std::max(bg_budget, relight_n);
+        void_slots_active = void_slots;
+        bg_budget = std::max(bg_budget, void_relight_n);
         auto &exec = GetColumnFlowExecutor();
-        exec.DrainIdlePendingLight(world, focus_horiz, focus_radius, relight_n,
+        exec.DrainIdlePendingLight(world, focus_horiz, focus_radius,
+                                   void_relight_n,
                                    /*allow_sync=*/false, frame_ms,
                                    pending_light_focus_n, missing_focus_mesh);
       }
     }
     if (rim_first_mesh_sla)
     {
-      bg_budget = std::min(bg_budget, moving_now ? 1 : 2);
+      if (ShouldPreserveVoidBgSlotsUnderRimSla(true, void_slots_active))
+      {
+        bg_budget = std::max(bg_budget, void_relight_n);
+      }
+      else
+      {
+        bg_budget = std::min(bg_budget, moving_now ? 1 : 2);
+      }
     }
   }
   // Two-tier promote via ColumnFlow only (underfeet then focus). Streaming
