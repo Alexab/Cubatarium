@@ -182,15 +182,19 @@ IDLE_WARM; `era21_p12_land9` ARCH_D3_LAND. Baseline `102236` not visual-merge.
 
 **Baseline:** `perf_20260809-102236` / `manual_102236_analyze.json`.
 
-## Gap После Era22 plan (2026-08-09) — SoftDefer Heal SLA; TD-058 **open**
+## Gap После Era22 plan (2026-08-09) — SoftDefer Heal SLA; TD-058 **partial**
 
 | Практика | Industry | Cubatarium | Era22 SoT |
 |----------|----------|------------|-----------|
-| SoftDefer !Drawable ⇒ schedule FirstMesh | hide-until-ready + SLA | SoftDefer prune keep Dirty / Held without schedule | **P0** predicates; wire P1 |
-| SoftDeferHeld ⇒ Contains + progress | Hide⇒Ticket | Held outside ColumnHasRepairProgress | **P0** SoftDeferHeldCountsAsRepairProgress |
-| VB Collect radius ≡ Count radius | ticket for every orphan | Collect r≤2 under miss; Count full focus | **P0** VisibleBlackTicketCollectRadius |
-| Miss time PreferKick | stage SLA | miss_stuck 50s without age kick | **P0** ShouldMissTimeSlaKick |
-| Async floor under miss\|UV | TD-027 | Finalize clamps schedule≪12 | **P0** AsyncScheduleFloorUnderMiss |
+| SoftDefer !Drawable ⇒ schedule FirstMesh | hide-until-ready + SLA | SoftDefer prune keep Dirty / Held without schedule | **done** ShouldScheduleFirstMeshUnderSoftDefer |
+| SoftDeferHeld ⇒ Contains + progress | Hide⇒Ticket | Held outside ColumnHasRepairProgress | **done** SoftDeferHeldCountsAsRepairProgress + cy FM |
+| VB Collect radius ≡ Count radius | ticket for every orphan | Collect r≤2 under miss; Count full focus | **done** VisibleBlackTicketCollectRadius |
+| Miss time PreferKick | stage SLA | miss_stuck 50s without age kick | **done** ShouldMissTimeSlaKick (~2 periods) |
+| Async floor under miss\|UV | TD-027 | Finalize clamps schedule≪12 | **done** AsyncScheduleFloorUnderMiss post-Finalize |
+
+**Evidence:** `era22_p3_fly` FLY_CLEAN; `era22_p3_idle` IDLE_CLEAN;
+`era22_p3_warm` IDLE_WARM; `era22_p3_land` ARCH_D3_LAND. Baseline `154049`
+not visual-merge until manual eye.
 
 **Baseline:** `perf_20260809-154049` / `manual_154049_analyze.json`. Keep
 FrameStreamingBudget. Reject Imm primary; hitch VB Capture; SoftDefer knobs-as-fix.

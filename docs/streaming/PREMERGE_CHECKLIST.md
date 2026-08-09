@@ -140,10 +140,12 @@ VB mid-floor under miss+hot; unload Dirty>64 gate. Analyze:
 Reject: FreeChunk-before-Bind; Relight-ticket-blocks-miss-Capture; Imm primary;
 hitch VB Capture storm.
 
-**Era22 SoftDefer Heal SLA (2026-08-09):** TD-058 **open** until manual
-`154049`-class eye (miss_stuck≪50; SoftDefer empty stuck≤2; no_ticket=0;
-place-to-reveal↓). Reject: SoftDeferHeld-without-Contains; VB-collect≪Count;
-Imm-as-heal; Era18 hitch Capture storm; SoftDefer knobs-as-fix.
+**Era22 SoftDefer Heal SLA (2026-08-09):** TD-058 **partial** (autofly matrix;
+manual `154049`-class eye still required). SoftDefer FirstMesh schedule under
+miss/focus; SoftDeferHeld ∈ progress + Contains cy; VB full-focus tickets when
+no_ticket; miss age PreferKick; async floor≥12 post-Finalize under miss|UV.
+Reject: SoftDeferHeld-without-Contains; VB-collect≪Count; Imm-as-heal;
+Era18 hitch Capture storm; SoftDefer knobs-as-fix.
 
 **Backend matrix (R4):** desktop
 

@@ -110,7 +110,19 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-055 | Era19 | FrameStreamingBudget / heal-on-hot feedback | Era18 `max` floors force Capture/VB spend on hot wall → wall↑ holes↑ miss↑ (`191229`) | **partial 2026-08-08** FrameStreamingBudget + miss-first; autofly GO; manual `214034` still holes/black |
 | TD-ARCH-056 | Era20 | Manual Visual SLA / rim FirstMesh escape | `214034`→`102236`: wall↓ no_ticket=0 enter↓; FOV miss/VB/flicker residual | **partial 2026-08-09** manual eye better; TD-057 |
 | TD-ARCH-057 | Era21 | Residency Replace + FOV SoT | CPU remesh FreeChunk before BindCommitted flicker; Relight ticket blocks miss Capture; SoftDefer empty HasGreedy SoT | **partial 2026-08-09** autofly FLY/IDLE/WARM/LAND GO; manual `154049` eye → TD-058 |
-| TD-ARCH-058 | Era22 | SoftDefer Heal SLA + VB ticket radius | SoftDeferHeld/empty without FirstMesh SLA; VB collect r≤2 vs Count full focus orphans; miss heal latency | **open 2026-08-09** P0 predicates; wait P1–P3 + manual `154049`-class |
+| TD-ARCH-058 | Era22 | SoftDefer Heal SLA + VB ticket radius | SoftDeferHeld/empty without FirstMesh SLA; VB collect r≤2 vs Count full focus orphans; miss heal latency | **partial 2026-08-09** P0–P3 code+autofly; manual `154049`-class eye still required |
+
+> **Era22 SoftDefer Heal SLA closeout (2026-08-09):** P0–P3 landed.
+> SoftDefer !Drawable FirstMesh schedule under miss/focus; SoftDeferHeld ∈
+> ColumnHasRepairProgress + FirstMesh cy Contains refresh; VB collect full
+> focus when no_ticket; Relight drain≥1 while no_ticket; miss age PreferKick
+> (~2 periods); post-Finalize async schedule floor≥12 under miss|UV.
+> Autofly: `era22_p3_fly` FLY_CLEAN; `era22_p3_idle` IDLE_CLEAN;
+> `era22_p3_warm` IDLE_WARM; `era22_p3_land` ARCH_D3_LAND (no_ticket=0).
+> KEEP FrameStreamingBudget / keep-GPU / Capture FM-under-miss / unload Dirty>64.
+> Reject Imm primary; hitch VB Capture; SoftDeferHeld-without-Contains;
+> VB-collect≪Count; SoftDefer knobs-as-fix. TD-058 **partial** until manual
+> `154049`-class eye (miss_stuck≪50; SoftDefer empty≤2; no_ticket=0).
 
 > **Era22 SoftDefer Heal SLA (2026-08-09):** Manual `perf_20260809-154049` after Era21:
 > wall≈110 KEEP; flicker/stale_dark closed; enter≈41. Residual: miss_stuck
