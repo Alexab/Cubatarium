@@ -71,6 +71,7 @@
 #include "World/Streaming/ColumnRenderablePolicy.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
+#include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
@@ -1063,6 +1064,33 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       {
         // Light committed; FirstMesh ticket / PendingReplace owns heal.
         continue;
+      }
+      // Era28 I-V3: Building FirstMesh/Inflight/Pending !Drawable → RemeshAfterApply
+      // only (no Dirty bump / opaque churn storm).
+      {
+        bool building_owned = has_fm_ticket;
+        for (int cy = cy0; cy <= cy1 && !building_owned; ++cy)
+        {
+          const glm::ivec3 coord(key.x, cy, key.y);
+          if (MeshService->HasInflightMeshBuild(coord) ||
+              MeshService->IsPendingGpuApply(coord))
+          {
+            building_owned = true;
+          }
+        }
+        if (ShouldRemeshAfterApplyOnlyWhileBuilding(building_owned,
+                                                    any_drawable))
+        {
+          for (int cy = cy0; cy <= cy1; ++cy)
+          {
+            const glm::ivec3 coord(key.x, cy, key.y);
+            if (!MeshService->IsChunkMeshDirty(coord))
+            {
+              MeshService->RequestRemeshAfterApply(coord);
+            }
+          }
+          continue;
+        }
       }
       if (dirty_max < dirty_min)
       {
