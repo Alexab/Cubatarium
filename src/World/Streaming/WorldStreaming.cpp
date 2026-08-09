@@ -317,6 +317,13 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
                   ground, dirty_min, dirty_max,
                   /*include_horizontal_neighbors=*/true);
+              auto &exec = GetColumnFlowExecutor();
+              ColumnWorkItem fm{};
+              fm.column = glm::ivec2(ground.x, ground.z);
+              fm.kind = ColumnWorkKind::FirstMesh;
+              fm.priority = 105;
+              fm.cy = FloorDiv(world.GetPreferredLoadFocusBlock().y, CHUNK_SIZE);
+              exec.Enqueue(fm);
             }
             else if (admit_far_dirty)
             {
@@ -366,6 +373,73 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                 world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
               }
             };
+            auto enqueue_frontier_stage_tickets =
+                [&](bool lit_ready_now, bool pending_light_now)
+            {
+              if (!near_focus)
+              {
+                return;
+              }
+              auto &exec = GetColumnFlowExecutor();
+              const glm::ivec2 col(ground.x, ground.z);
+              // I-F2: light ticket residency while PendingLight on near column.
+              const bool any_drawable = [&]()
+              {
+                const int cy0 = FloorDiv(dirty_min, CHUNK_SIZE);
+                const int cy1 = FloorDiv(dirty_max, CHUNK_SIZE);
+                for (int cy = cy0; cy <= cy1; ++cy)
+                {
+                  if (world.MeshService->HasDrawableGreedyMesh(
+                          glm::ivec3(ground.x, cy, ground.z)))
+                  {
+                    return true;
+                  }
+                }
+                return false;
+              }();
+              if (FrontierColumnNeedsLightTicket(near_focus, pending_light_now,
+                                                 any_drawable,
+                                                 /*fully_dark=*/!any_drawable))
+              {
+                if (!exec.Scheduler().Contains(col,
+                                               ColumnWorkKind::RelightThenMesh))
+                {
+                  ColumnWorkItem relight{};
+                  relight.column = col;
+                  relight.kind = ColumnWorkKind::RelightThenMesh;
+                  relight.priority = 95;
+                  relight.scan_full_focus = false;
+                  relight.cy = -1;
+                  exec.Enqueue(relight);
+                }
+                // Note under void pressure only (KEEP Era23 cap discipline).
+                if (world.PhysicsTelemetryData.DarkFaceVoidNearN > 200 ||
+                    world.PhysicsTelemetryData.FocusMissingMesh != 0)
+                {
+                  world.EnqueueVoidDarkColumnRelightNote(col);
+                }
+              }
+              // I-F3: FirstMesh-until-Drawable after LitReady (or while
+              // pending — schedule early so Capture/admit can pin cy).
+              if (FrontierColumnNeedsFirstMeshAfterLit(
+                      near_focus, lit_ready_now || pending_light_now,
+                      any_drawable, /*solid=*/true))
+              {
+                const int cy0 = FloorDiv(dirty_min, CHUNK_SIZE);
+                const int cy1 = FloorDiv(dirty_max, CHUNK_SIZE);
+                const int focus_cy =
+                    FloorDiv(world.GetPreferredLoadFocusBlock().y, CHUNK_SIZE);
+                const int pin_cy =
+                    std::clamp(focus_cy, std::min(cy0, cy1), std::max(cy0, cy1));
+                ColumnWorkItem fm{};
+                fm.column = col;
+                fm.kind = ColumnWorkKind::FirstMesh;
+                fm.priority = 105;
+                fm.scan_full_focus = world.PhysicsTelemetryData.FocusMissingMesh != 0;
+                fm.cy = pin_cy;
+                exec.Enqueue(fm);
+              }
+            };
             if (seed_decision.try_sync_seed)
             {
               const RenderBackendCaps &caps = GetActiveRenderBackendCaps();
@@ -380,15 +454,21 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                 world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
                     ground, dirty_min, dirty_max,
                     /*include_horizontal_neighbors=*/true);
+                enqueue_frontier_stage_tickets(/*lit_ready_now=*/true,
+                                              /*pending_light_now=*/false);
               }
               else
               {
                 enqueue_pending_light();
+                enqueue_frontier_stage_tickets(/*lit_ready_now=*/false,
+                                              /*pending_light_now=*/true);
               }
             }
             else
             {
               enqueue_pending_light();
+              enqueue_frontier_stage_tickets(/*lit_ready_now=*/false,
+                                            /*pending_light_now=*/true);
             }
           }
         }
@@ -397,6 +477,18 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
           world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
           world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
               ground, dirty_min, dirty_max, true);
+          // Flat/no-relight-deferred path: still pin FirstMesh for near commit.
+          {
+            auto &exec = GetColumnFlowExecutor();
+            const int focus_cy =
+                FloorDiv(world.GetPreferredLoadFocusBlock().y, CHUNK_SIZE);
+            ColumnWorkItem fm{};
+            fm.column = glm::ivec2(ground.x, ground.z);
+            fm.kind = ColumnWorkKind::FirstMesh;
+            fm.priority = 105;
+            fm.cy = focus_cy;
+            exec.Enqueue(fm);
+          }
         }
         else if (LastPressureCaps.level == StreamingPressureLevel::Green)
         {
