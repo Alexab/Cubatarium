@@ -52,6 +52,47 @@ int main()
   Expect(!ShouldEnqueueSoftDeferEmptyFirstMesh(false, 5, true),
          "not placeholder → no FM");
 
+  // --- Era22 SoftDefer Heal SLA / VB ticket predicates ---
+  using cutum::AsyncScheduleFloorUnderMiss;
+  using cutum::ShouldEnqueueNearestVbNoTicket;
+  using cutum::ShouldMissTimeSlaKick;
+  using cutum::ShouldScheduleFirstMeshUnderSoftDefer;
+  using cutum::SoftDeferHeldCountsAsRepairProgress;
+  using cutum::VisibleBlackTicketCollectRadius;
+
+  Expect(ShouldScheduleFirstMeshUnderSoftDefer(false, true),
+         "Era22 I-S1: !Drawable + miss/focus → schedule FirstMesh");
+  Expect(!ShouldScheduleFirstMeshUnderSoftDefer(true, true),
+         "Era22 I-S1: drawable remesh stays SoftDefer-drop");
+  Expect(!ShouldScheduleFirstMeshUnderSoftDefer(false, false),
+         "Era22 I-S1: outside miss/focus → Held path, not force schedule");
+  Expect(SoftDeferHeldCountsAsRepairProgress(true),
+         "Era22 I-S2: SoftDeferHeld ∈ repair progress");
+  Expect(!SoftDeferHeldCountsAsRepairProgress(false),
+         "Era22 I-S2: no Held → no progress credit");
+  Expect(VisibleBlackTicketCollectRadius(5, true, true) == 5,
+         "Era22 I-V3: no_ticket → full focus collect");
+  Expect(VisibleBlackTicketCollectRadius(5, true, false) == 2,
+         "Era22 I-V3: miss without no_ticket may keep r≤2");
+  Expect(VisibleBlackTicketCollectRadius(5, false, false) == 5,
+         "Era22 I-V3: !miss → full focus");
+  Expect(ShouldEnqueueNearestVbNoTicket(true, true),
+         "Era22 I-V3: no_ticket + async_ok → enqueue");
+  Expect(!ShouldEnqueueNearestVbNoTicket(true, false),
+         "Era22 I-V3: async saturated → skip nearest enqueue storm");
+  Expect(!ShouldEnqueueNearestVbNoTicket(false, true),
+         "Era22 I-V3: no orphan → no dedicated nearest enqueue");
+  Expect(ShouldMissTimeSlaKick(true, 2),
+         "Era22 I-M8: miss age ≥2 periods → PreferKick");
+  Expect(!ShouldMissTimeSlaKick(true, 1),
+         "Era22 I-M8: age < SLA → no PreferKick storm");
+  Expect(!ShouldMissTimeSlaKick(false, 10),
+         "Era22 I-M8: no miss → no time SLA");
+  Expect(AsyncScheduleFloorUnderMiss(true) == 12,
+         "Era22 I-A1: miss|UV async floor ≥12");
+  Expect(AsyncScheduleFloorUnderMiss(false) == 0,
+         "Era22 I-A1: calm → no floor");
+
   {
     MeshWorkAdmissionInput in;
     in.pending_gpu = 6;

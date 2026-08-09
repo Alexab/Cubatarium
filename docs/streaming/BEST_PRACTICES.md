@@ -175,12 +175,25 @@ FrameStreamingBudget. Reject Imm primary; Era18 VB Capture storm; autofly-only c
 | Keep old GPU until new upload ready | BindCommitted / pendingReplace | GPU path OK; CPU remesh FreeChunk | **done** defer FreeChunk until Bind |
 | HP FirstMesh not blocked by LP tickets | dual-queue | Relight ticket skips SoftDefer Capture under miss | **done** FirstMesh-only Capture gate |
 | Satisfying SoT for empty SoftDefer | hide until ready | RecoverUnlit HasGreedy treats empty as mesh | **done** Satisfying/Drawable |
-| Autofly ≠ visual merge | PREMERGE | Era20 autofly GO; manual `102236` flicker/FOV | autofly GO; **manual `102236` still required** |
+| Autofly ≠ visual merge | PREMERGE | Era20 autofly GO; manual `102236` flicker/FOV | autofly GO; **manual `154049` → TD-058** |
 
 **Evidence:** `era21_p3_fly` FLY; `era21_p12_idle` IDLE_CLEAN; `era21_p3_warm`
 IDLE_WARM; `era21_p12_land9` ARCH_D3_LAND. Baseline `102236` not visual-merge.
 
 **Baseline:** `perf_20260809-102236` / `manual_102236_analyze.json`.
+
+## Gap После Era22 plan (2026-08-09) — SoftDefer Heal SLA; TD-058 **open**
+
+| Практика | Industry | Cubatarium | Era22 SoT |
+|----------|----------|------------|-----------|
+| SoftDefer !Drawable ⇒ schedule FirstMesh | hide-until-ready + SLA | SoftDefer prune keep Dirty / Held without schedule | **P0** predicates; wire P1 |
+| SoftDeferHeld ⇒ Contains + progress | Hide⇒Ticket | Held outside ColumnHasRepairProgress | **P0** SoftDeferHeldCountsAsRepairProgress |
+| VB Collect radius ≡ Count radius | ticket for every orphan | Collect r≤2 under miss; Count full focus | **P0** VisibleBlackTicketCollectRadius |
+| Miss time PreferKick | stage SLA | miss_stuck 50s without age kick | **P0** ShouldMissTimeSlaKick |
+| Async floor under miss\|UV | TD-027 | Finalize clamps schedule≪12 | **P0** AsyncScheduleFloorUnderMiss |
+
+**Baseline:** `perf_20260809-154049` / `manual_154049_analyze.json`. Keep
+FrameStreamingBudget. Reject Imm primary; hitch VB Capture; SoftDefer knobs-as-fix.
 
 ## Gap После Era19 plan (2026-08-08) — autofly CLOSED; **manual superseded by 214034**
 
