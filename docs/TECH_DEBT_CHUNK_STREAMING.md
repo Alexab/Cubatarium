@@ -115,6 +115,20 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-060 | Era24 | SoftDefer Empty FirstMesh-until-Drawable | SoftDefer empty FOV stick (`HasGreedy∧!Drawable`); empty_stuck≈8s; miss_end=1 on `193059` | **partial 2026-08-09** autofly GO; mid-corridor eye OK on `203144`; empty_stuck≈6; frontier void → TD-061 |
 | TD-ARCH-061 | Era25 | Frontier Column Stage SLA | Frontier gen→light→mesh lag; void_end≈412 on `203144` west; `stream_loads≡0` masks gen | **partial 2026-08-09** P0–P3 landed; autofly FLY/IDLE/WARM GO; LAND soft post_stop miss; wait manual `203144`-class |
 | TD-ARCH-062 | Era26 | Ocean Dual-Debt + Load Light Parallel | Ocean void/VB + SoftDefer empty sides; Relight starve under miss moving; coop RelightColumns sync serial | **partial 2026-08-09** P0–P3 landed; FLY/WARM GO; IDLE soft wall/emerge; LAND soft miss; wait manual `214325` |
+| TD-ARCH-063 | Era27 | Anti-Flicker Ownership | SoftDefer Capture retarget thrash + MarkRelit remesh blink + discarded_late supersede after Era26 heal (`224912`) | **open 2026-08-09** P0 pin/age sticky |
+
+> **Era27 Anti-Flicker Ownership (2026-08-09):** Manual `224912` after Era26: heal
+> faster (wall~165 vs ~268, empty~6s vs ~14s) but flicker — SoftDefer retarget
+> ~3.3/frame, Capture hits ~1.6/frame, discarded_late cruise~13, empty age max~7
+> (SLA 45 never reached), miss_end=1. Land remesh blink. Industry hold-until-bind
+> already SoT via PendingReplace / keep-GPU / Hide⇒Ticket / MeshLitGate — **no new
+> drawable cache**. Era27 = ownership anti-thrash: Capture witness pin T=8;
+> SoftDefer empty age sticky under ownership cap; MarkRelit remesh damp on
+> SoftDefer-empty !Drawable owned; Inflight supersede hold under miss. KEEP
+> Era21–26 PendingReplace / Capture FM-under-miss / SoftDefer Hide⇒Ticket /
+> Era26 void dual-debt. Reject Imm; SoftDefer knobs-as-DoD; PreferKick every
+> empty every frame; FreeChunk-before-Bind; wholesale Era26 Relight rollback;
+> second mesh cache beside GreedyCache.
 
 > **Era26 Ocean Dual-Debt closeout (2026-08-09):** P0–P3 landed.
 > Lateral Relight under miss (moving drain void_T/VB; VoidRelightCollectRadius;

@@ -7,6 +7,7 @@
 #include "World/Streaming/MeshLitGate.h"
 #include "World/Streaming/MeshWorkAdmission.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
+#include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Camera/Camera.h"
@@ -751,11 +752,27 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           }
         }
       }
-      // Drop ages for SoftDefer empty that left the rim / healed.
+      // Era27 I-A2: drop ages only when healed / left rim — capped scan must
+      // not SoftDeferEmptyAgeShouldReset sticky empties skipped by ownership cap.
       for (auto it = SoftDeferEmptyAgeFrames.begin();
            it != SoftDeferEmptyAgeFrames.end();)
       {
-        if (seen_empty.count(it->first) == 0)
+        if (seen_empty.count(it->first) != 0)
+        {
+          ++it;
+          continue;
+        }
+        const glm::ivec3 &coord = it->first;
+        const int dx = std::abs(coord.x - focus_ground_horiz.x);
+        const int dz = std::abs(coord.z - focus_ground_horiz.z);
+        const bool in_rim = std::max(dx, dz) <= heal_r && coord.y >= cy0 &&
+                            coord.y <= cy1;
+        const bool has_drawable = mesh_service.HasDrawableGreedyMesh(coord);
+        const bool has_greedy = mesh_service.HasGreedyMesh(coord);
+        const bool soft_held = mesh_service.IsSoftDeferHeld(coord);
+        const bool still_empty =
+            in_rim && !has_drawable && (has_greedy || soft_held);
+        if (SoftDeferEmptyAgeShouldReset(still_empty, /*had_progress=*/false))
         {
           it = SoftDeferEmptyAgeFrames.erase(it);
         }

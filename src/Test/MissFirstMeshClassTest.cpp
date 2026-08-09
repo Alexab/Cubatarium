@@ -1,5 +1,6 @@
 #include "World/Streaming/MeshWorkAdmission.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
+#include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/FrontierStagePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 
@@ -267,6 +268,43 @@ int main()
     Expect(keep_min == 40 && keep_max == 50,
            "Era26 I-O5: horiz≤1 leaves band to underfeet path");
   }
+
+  // --- Era27 Anti-Flicker Ownership ---
+  using cutum::ShouldDampMarkRelitRemeshOnSoftDeferEmpty;
+  using cutum::ShouldHoldInflightSupersedeUnderMiss;
+  using cutum::ShouldRetargetSoftDeferCaptureWitness;
+  using cutum::SoftDeferEmptyAgeShouldReset;
+  using cutum::kSoftDeferCaptureWitnessPinFrames;
+
+  Expect(kSoftDeferCaptureWitnessPinFrames == 8, "Era27 I-A1: pin_T default 8");
+  Expect(ShouldRetargetSoftDeferCaptureWitness(false, 0, 8, false, true),
+         "Era27 I-A1: !pin_valid ⇒ retarget");
+  Expect(!ShouldRetargetSoftDeferCaptureWitness(true, 3, 8, false, true),
+         "Era27 I-A1: pin live + still empty ⇒ hold");
+  Expect(ShouldRetargetSoftDeferCaptureWitness(true, 8, 8, false, true),
+         "Era27 I-A1: pin_age ≥ T ⇒ retarget");
+  Expect(ShouldRetargetSoftDeferCaptureWitness(true, 2, 8, true, true),
+         "Era27 I-A1: better horiz ⇒ retarget");
+  Expect(ShouldRetargetSoftDeferCaptureWitness(true, 2, 8, false, false),
+         "Era27 I-A1: pinned healed ⇒ retarget");
+  Expect(!SoftDeferEmptyAgeShouldReset(true, false),
+         "Era27 I-A2: still empty no progress ⇒ sticky age");
+  Expect(SoftDeferEmptyAgeShouldReset(false, false),
+         "Era27 I-A2: healed ⇒ reset age");
+  Expect(SoftDeferEmptyAgeShouldReset(true, true),
+         "Era27 I-A2: progress ⇒ reset age");
+  Expect(ShouldDampMarkRelitRemeshOnSoftDeferEmpty(true, false),
+         "Era27 I-A3: SoftDefer-empty owned !Drawable ⇒ damp remesh");
+  Expect(!ShouldDampMarkRelitRemeshOnSoftDeferEmpty(true, true),
+         "Era27 I-A3: Drawable lit⇒relit remesh KEEP");
+  Expect(!ShouldDampMarkRelitRemeshOnSoftDeferEmpty(false, false),
+         "Era27 I-A3: not SoftDefer-owned → no damp");
+  Expect(ShouldHoldInflightSupersedeUnderMiss(true, true, false),
+         "Era27 I-A4: miss+Inflight !Drawable ⇒ hold supersede");
+  Expect(!ShouldHoldInflightSupersedeUnderMiss(true, true, true),
+         "Era27 I-A4: Drawable → normal supersede OK");
+  Expect(!ShouldHoldInflightSupersedeUnderMiss(false, true, false),
+         "Era27 I-A4: !miss → no hold");
 
   {
     MeshWorkAdmissionInput in;

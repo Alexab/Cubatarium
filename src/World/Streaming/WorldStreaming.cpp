@@ -14,6 +14,7 @@
 #include "Render/Backend/RenderBackendCaps.h"
 #include "Render/Mesh/MeshApplyPolicy.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
+#include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/FrontierStagePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "App/Settings/RenderSettings.h"
@@ -1587,17 +1588,72 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       const glm::ivec2 focus_xz(focus_horiz.x, focus_horiz.z);
       // Anchor on miss witness (horiz 2–3 rim), not focus — else HasRepairTicket
       // on focus blocks floor while hole never gets FirstMesh (manual 191432).
-      glm::ivec2 repair_xz = RepairColumnFromMissWitness(
+      glm::ivec2 cand_xz = RepairColumnFromMissWitness(
           world.PhysicsTelemetryData, focus_xz);
-      int repair_cy = -1;
-      // Era24: pin SoftDefer empty stuck witness cy under miss Capture.
+      int cand_cy = -1;
+      int cand_horiz = world.PhysicsTelemetryData.MissHoriz;
+      // Era24: SoftDefer empty stuck witness cy under miss Capture.
       if (missing_focus_mesh &&
           world.PhysicsTelemetryData.SoftDeferEmptyStuckN > 0)
       {
-        repair_xz =
+        cand_xz =
             glm::ivec2(world.PhysicsTelemetryData.SoftDeferEmptyStuckCx,
                        world.PhysicsTelemetryData.SoftDeferEmptyStuckCz);
-        repair_cy = world.PhysicsTelemetryData.SoftDeferEmptyStuckCy;
+        cand_cy = world.PhysicsTelemetryData.SoftDeferEmptyStuckCy;
+        cand_horiz = world.PhysicsTelemetryData.SoftDeferEmptyStuckHoriz;
+      }
+      // Era27 I-A1: pin Capture witness for T frames — retarget only via
+      // ShouldRetargetSoftDeferCaptureWitness (manual 224912 retarget thrash).
+      glm::ivec2 repair_xz = cand_xz;
+      int repair_cy = cand_cy;
+      int repair_horiz = cand_horiz;
+      bool did_retarget = false;
+      {
+        bool pinned_still = false;
+        if (SoftDeferCapturePinValid)
+        {
+          const glm::ivec3 pin_coord(SoftDeferCapturePinCx,
+                                     SoftDeferCapturePinCy >= 0
+                                         ? SoftDeferCapturePinCy
+                                         : 0,
+                                     SoftDeferCapturePinCz);
+          const bool pin_drawable =
+              world.GetMeshService().HasDrawableGreedyMesh(pin_coord);
+          const bool pin_greedy =
+              world.GetMeshService().HasGreedyMesh(pin_coord);
+          const bool pin_held =
+              world.GetMeshService().IsSoftDeferHeld(pin_coord);
+          pinned_still =
+              missing_focus_mesh && !pin_drawable && (pin_greedy || pin_held);
+          if (SoftDeferCapturePinCy < 0)
+          {
+            pinned_still = missing_focus_mesh;
+          }
+        }
+        const bool better_horiz =
+            SoftDeferCapturePinValid && cand_horiz > 0 &&
+            SoftDeferCapturePinHoriz > 0 &&
+            cand_horiz < SoftDeferCapturePinHoriz;
+        const bool retarget = ShouldRetargetSoftDeferCaptureWitness(
+            SoftDeferCapturePinValid, SoftDeferCapturePinAge,
+            kSoftDeferCaptureWitnessPinFrames, better_horiz, pinned_still);
+        if (retarget)
+        {
+          SoftDeferCapturePinValid = true;
+          SoftDeferCapturePinCx = cand_xz.x;
+          SoftDeferCapturePinCz = cand_xz.y;
+          SoftDeferCapturePinCy = cand_cy;
+          SoftDeferCapturePinHoriz = cand_horiz;
+          SoftDeferCapturePinAge = 0;
+          did_retarget = (cand_xz != focus_xz);
+        }
+        else
+        {
+          repair_xz = glm::ivec2(SoftDeferCapturePinCx, SoftDeferCapturePinCz);
+          repair_cy = SoftDeferCapturePinCy;
+          repair_horiz = SoftDeferCapturePinHoriz;
+          ++SoftDeferCapturePinAge;
+        }
       }
       // Era21 I-M6: under miss only FirstMesh Contains blocks Capture —
       // Relight/Remesh tickets must not starve rim FirstMesh.
@@ -1608,13 +1664,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                                                  has_any))
       {
         ++world.PhysicsTelemetryData.SoftDeferCaptureFloorHits;
-        if (repair_xz != focus_xz)
+        if (did_retarget)
         {
           ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
-          world.PhysicsTelemetryData.SoftDeferWitnessHoriz =
-              world.PhysicsTelemetryData.SoftDeferEmptyStuckN > 0
-                  ? world.PhysicsTelemetryData.SoftDeferEmptyStuckHoriz
-                  : world.PhysicsTelemetryData.MissHoriz;
+          world.PhysicsTelemetryData.SoftDeferWitnessHoriz = repair_horiz;
         }
         const ColumnWorkKind kind =
             (missing_focus_mesh || budget.capture_first_mesh_only)
@@ -1630,6 +1683,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         exec.DrainBudget(world, 1, focus_horiz, focus_radius,
                          /*admit_batch=*/1);
       }
+    }
+    else if (!missing_focus_mesh)
+    {
+      SoftDeferCapturePinValid = false;
+      SoftDeferCapturePinAge = 0;
     }
     // Era22 P2 / Era23 I-V4 / Era26 I-O2: Capture FirstMesh KEEP under miss;
     // drain Relight when no_ticket OR void pressure; do not clamp away void
