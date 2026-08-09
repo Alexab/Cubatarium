@@ -1,6 +1,7 @@
 #include "World/Streaming/MeshWorkAdmission.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
+#include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/FrontierStagePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 
@@ -305,6 +306,46 @@ int main()
          "Era27 I-A4: Drawable → normal supersede OK");
   Expect(!ShouldHoldInflightSupersedeUnderMiss(false, true, false),
          "Era27 I-A4: !miss → no hold");
+
+  // --- Era28 Visual Stage Gate ---
+  using cutum::ShouldAllowUnlitFirstMeshNearFov;
+  using cutum::ShouldPublishMeshToDraw;
+  using cutum::ShouldRelightBeforeDrawNear;
+  using cutum::ShouldRemeshAfterApplyOnlyWhileBuilding;
+  using cutum::SoftDeferEmptyShouldMarkDirty;
+  using cutum::kVisualStageNearFovHoriz;
+
+  Expect(kVisualStageNearFovHoriz == 2, "Era28 I-V1: near_r default 2");
+  Expect(!ShouldAllowUnlitFirstMeshNearFov(false, true, 1, 2),
+         "Era28 I-V1: near horiz⇒ no Unlit");
+  Expect(!ShouldAllowUnlitFirstMeshNearFov(false, true, 2, 2),
+         "Era28 I-V1: horiz==near_r ⇒ no Unlit");
+  Expect(ShouldAllowUnlitFirstMeshNearFov(false, true, 3, 2),
+         "Era28 I-V1: far ⇒ Unlit OK");
+  Expect(!ShouldAllowUnlitFirstMeshNearFov(true, true, 5, 2),
+         "Era28 I-V1: has_mesh ⇒ no Unlit");
+  Expect(!SoftDeferEmptyShouldMarkDirty(true, true, false),
+         "Era28 I-V2: FM ticket ⇒ no Dirty");
+  Expect(!SoftDeferEmptyShouldMarkDirty(true, false, true),
+         "Era28 I-V2: Inflight/Pending ⇒ no Dirty");
+  Expect(SoftDeferEmptyShouldMarkDirty(true, false, false),
+         "Era28 I-V2: dead ownership ⇒ MarkDirty");
+  Expect(!SoftDeferEmptyShouldMarkDirty(false, false, false),
+         "Era28 I-V2: not empty ⇒ no Dirty");
+  Expect(ShouldPublishMeshToDraw(true, false, true),
+         "Era28 I-V1: lit ⇒ publish");
+  Expect(ShouldPublishMeshToDraw(false, true, true),
+         "Era28 I-V1: keep-prior ⇒ publish");
+  Expect(!ShouldPublishMeshToDraw(false, false, true),
+         "Era28 I-V1: Unlit preview alone ⇒ no publish");
+  Expect(ShouldRelightBeforeDrawNear(true, true, false),
+         "Era28 I-V4: near+void !lit ⇒ Relight before draw");
+  Expect(!ShouldRelightBeforeDrawNear(true, true, true),
+         "Era28 I-V4: already lit ⇒ no Relight-before-draw");
+  Expect(ShouldRemeshAfterApplyOnlyWhileBuilding(true, false),
+         "Era28 I-V3: Building !lit ⇒ RemeshAfterApply only");
+  Expect(!ShouldRemeshAfterApplyOnlyWhileBuilding(true, true),
+         "Era28 I-V3: lit drawable ⇒ normal remesh OK");
 
   {
     MeshWorkAdmissionInput in;

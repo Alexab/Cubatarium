@@ -116,6 +116,15 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-061 | Era25 | Frontier Column Stage SLA | Frontier gen→light→mesh lag; void_end≈412 on `203144` west; `stream_loads≡0` masks gen | **partial 2026-08-09** P0–P3 landed; autofly FLY/IDLE/WARM GO; LAND soft post_stop miss; wait manual `203144`-class |
 | TD-ARCH-062 | Era26 | Ocean Dual-Debt + Load Light Parallel | Ocean void/VB + SoftDefer empty sides; Relight starve under miss moving; coop RelightColumns sync serial | **partial 2026-08-09** P0–P3 landed; FLY/WARM GO; IDLE soft wall/emerge; LAND soft miss; wait manual `214325` |
 | TD-ARCH-063 | Era27 | Anti-Flicker Ownership | SoftDefer Capture retarget thrash + MarkRelit remesh blink + discarded_late supersede after Era26 heal (`224912`) | **partial 2026-08-09** P0–P3 landed; FLY/IDLE/WARM GO; LAND soft miss; wait manual `224912` |
+| TD-ARCH-064 | Era28 | Visual Stage Gate | UnlitFirstMesh + SoftDefer Dirty thrash → black/empty/green flicker (`012208` opaque swing 658) | **open 2026-08-10** P0 Dirty coalesce |
+
+> **Era28 Visual Stage Gate (2026-08-10):** Manual `012208` after Era27: retarget/
+> discarded_late↓ but flicker↑ (`opaque_cmd_on` swing 658 vs 179; unlit med 24;
+> void_near med ~4666). Root: UnlitFirstMesh near FOV + SoftDefer MarkDirty every
+> scan while FirstMesh owned. SoT: draw only LitDrawable or keep-prior GPU near;
+> SoftDefer empty Hide+ticket without Dirty storm; Relight-before-draw near.
+> KEEP Era21–27 PendingReplace / Capture pin / Inflight hold. Reject Imm; second
+> cache; Unlit near «ради дыр»; knobs-as-DoD; CLOSED without manual eye.
 
 > **Era27 Anti-Flicker Ownership closeout (2026-08-09):** P0–P3 landed.
 > Capture witness pin T=8; SoftDefer empty age sticky; MarkRelit remesh damp

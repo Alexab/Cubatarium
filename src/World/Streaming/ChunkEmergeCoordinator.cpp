@@ -8,6 +8,7 @@
 #include "World/Streaming/MeshWorkAdmission.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
+#include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Camera/Camera.h"
@@ -641,13 +642,25 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 StuckSmokeCd = 120;
               }
             }
-            mesh_service.MarkDirtyPriority(coord);
             const glm::ivec2 col(coord.x, coord.z);
+            const bool has_fm =
+                exec.Scheduler().Contains(col, ColumnWorkKind::FirstMesh);
+            const bool inflight_or_pending =
+                mesh_service.HasInflightMeshBuild(coord) ||
+                mesh_service.IsPendingGpuApply(coord) ||
+                mesh_service.IsPendingGpuQueued(coord) ||
+                mesh_service.IsPendingGpuKickedOrDispatched(coord);
+            // Era28 I-V2: no Dirty storm while FirstMesh / Inflight / PendingGpu
+            // already owns SoftDefer empty (manual 012208 opaque churn).
+            if (SoftDeferEmptyShouldMarkDirty(true, has_fm, inflight_or_pending))
+            {
+              mesh_service.MarkDirtyPriority(coord);
+            }
             // Era24 I-E2: FirstMesh ownership per SoftDefer empty coord
             // (soft cap kEmptyOwnershipCap; dedupe via Contains).
             if (empty_fm_enqueue_n < kEmptyOwnershipCap)
             {
-              if (!exec.Scheduler().Contains(col, ColumnWorkKind::FirstMesh))
+              if (!has_fm)
               {
                 ++empty_fm_enqueue_n;
               }
