@@ -161,6 +161,7 @@ public:
   uint64_t GetMeshDiscardedLateCount() const;
   uint64_t GetMeshApplyStaleCount() const;
   uint64_t GetMeshReplaceHoleAvoidedCount() const;
+  uint64_t GetSoftDeferEmptyPublishAvoidedCount() const;
   size_t GetPendingGpuAppliesCount() const;
   size_t GetPendingGpuQueuedCount() const;
   size_t GetPendingGpuKickedCount() const;

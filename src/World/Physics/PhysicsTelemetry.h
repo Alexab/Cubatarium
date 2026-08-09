@@ -91,8 +91,8 @@ struct PhysicsTelemetry
   int SoftDeferEmptyAgeMaxFrames{0};
   /// Era24: SoftDefer empty coords with ColumnFlow FirstMesh Contains.
   int SoftDeferEmptyOwnedN{0};
-  /// Era24: SoftDefer empty publish avoided (Hide⇒Ticket).
-  int SoftDeferEmptyPublishAvoided{0};
+  /// Era24: SoftDefer empty publish avoided (Hide⇒Ticket), cumulative.
+  uint64_t SoftDeferEmptyPublishAvoided{0};
   /// SoftDeferHeld side-set size (outside-focus !Drawable FirstMesh).
   int SoftDeferHeldN{0};
   double RelightCompletedPerSec{0.0};

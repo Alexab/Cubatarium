@@ -276,7 +276,7 @@ struct FrameNumbers
   int softdefer_empty_stuck_horiz{0};
   int softdefer_empty_age_max_frames{0};
   int softdefer_empty_owned_n{0};
-  int softdefer_empty_publish_avoided{0};
+  uint64_t softdefer_empty_publish_avoided{0};
   int softdefer_held_n{0};
   double rss_mb{0.0};
   double private_mb{0.0};

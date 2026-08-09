@@ -123,6 +123,10 @@ public:
   {
     return MeshReplaceHoleAvoided;
   }
+  uint64_t GetSoftDeferEmptyPublishAvoidedCount() const
+  {
+    return SoftDeferEmptyPublishAvoided;
+  }
   size_t GetPendingGpuAppliesCount() const { return PendingGpuApplies.size(); }
   size_t GetPendingGpuQueuedCount() const;
   size_t GetPendingGpuKickedCount() const;
@@ -541,6 +545,8 @@ private:
   uint64_t MeshApplyStaleCount{0};
   uint64_t MeshApplySupersededCount{0};
   uint64_t MeshReplaceHoleAvoided{0};
+  /// Era24 I-E1: SoftDefer undrawn publish avoided (Hide⇒Ticket).
+  uint64_t SoftDeferEmptyPublishAvoided{0};
   IUChunkCull *CullBackend{nullptr};
   IUChunkMesher *MesherBackend{nullptr};
   std::chrono::steady_clock::time_point LastFlatRebuildAt{};

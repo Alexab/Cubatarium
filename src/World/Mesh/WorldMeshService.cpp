@@ -669,6 +669,11 @@ uint64_t UWorldMeshService::GetMeshReplaceHoleAvoidedCount() const
   return Cache.GetMeshReplaceHoleAvoidedCount();
 }
 
+uint64_t UWorldMeshService::GetSoftDeferEmptyPublishAvoidedCount() const
+{
+  return Cache.GetSoftDeferEmptyPublishAvoidedCount();
+}
+
 size_t UWorldMeshService::GetPendingGpuAppliesCount() const
 {
   return Cache.GetPendingGpuAppliesCount();
