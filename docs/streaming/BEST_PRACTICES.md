@@ -233,7 +233,23 @@ empty_stuck≤2s matrix; miss_end=0 fly/idle/land (warm miss_end soft).
 (void/dark=0). Reject Imm-as-empty-heal; SoftDefer knobs-as-DoD; PreferKick
 every empty every frame.
 
-## Gap После Era25 plan (2026-08-09) — Frontier stage SLA; TD-061 **open**
+## Gap После Era25 closeout (2026-08-09) — Frontier stage SLA; TD-061 **partial**
+
+| Практика | Industry | Cubatarium | Era25 SoT |
+|----------|----------|------------|-----------|
+| Disk vs gen ingress honesty | MC ticket / UE stream stats | `stream_loads≡0` while gen commits | **done** stream_disk_complete_n / stream_gen_commit_n |
+| Light ticket until LIGHT done | MC ChunkStatus LIGHT ticket | PendingLight without FM residency | **done** FrontierColumnNeedsLightTicket + commit enqueue |
+| FirstMesh after LitReady | MC FULL / HP rebuild | SoftDefer empty only | **done** FrontierColumnNeedsFirstMeshAfterLit on commit |
+| Dual-queue under frontier | MC HP vs LP | Relight starve under miss+void | **done** FrameStreamingBudget frontier_pressure |
+| Load-ahead under frontier | UE loading range 2–4× | NearLoad clamp ≤2 under miss | **done** NearLoadOps/radius + PrefetchAhead bias |
+
+**Evidence:** `era25_p3_fly` FLY_CLEAN; `era25_p3_idle2` IDLE_CLEAN;
+`era25_p3_warm` IDLE_WARM; `era25_p3_land` ARCH_D3_LAND soft post_stop miss.
+**Baseline:** `perf_20260809-203144` / `manual_203144_analyze.json`. Mid void OK;
+frontier void_end≈412. Reject Imm; SoftDefer knobs-as-DoD; hitch Capture;
+Relight-steal-FirstMesh. TD-061 **partial** until manual frontier void≪412.
+
+## Gap После Era25 plan (2026-08-09) — Frontier stage SLA; TD-061 **open** (superseded by closeout)
 
 | Практика | Industry | Cubatarium | Era25 SoT |
 |----------|----------|------------|-----------|

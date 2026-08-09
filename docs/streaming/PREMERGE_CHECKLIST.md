@@ -159,11 +159,12 @@ age SLA; Capture SoftDefer stuck cy pin. Reject: SoftDefer-empty-as-HasGreedy-
 progress; Imm-as-empty-heal; PreferKick every empty every frame; SoftDefer
 knobs-as-DoD.
 
-**Era25 Frontier Column Stage SLA (2026-08-09):** TD-061 **open** until manual
-`203144`-class frontier void≪412 / empty_stuck≤2 / miss_end=0. Disk/gen telem;
-light ticket + FirstMesh on near commit; frontier_pressure dual-queue;
-NearLoad floor. Reject: Imm FOV; SoftDefer knobs-as-DoD; hitch Capture;
-Relight-steal-FirstMesh; stream_loads-as-gen-progress.
+**Era25 Frontier Column Stage SLA (2026-08-09):** TD-061 **partial** (autofly
+FLY/IDLE/WARM GO; LAND soft post_stop miss; wait manual `203144`-class frontier
+void≪412 / empty_stuck≤2 / miss_end=0). Disk/gen telem; light ticket + FirstMesh
+on near commit; frontier_pressure dual-queue; NearLoad/PrefetchAhead load-ahead.
+Reject: Imm FOV; SoftDefer knobs-as-DoD; hitch Capture; Relight-steal-FirstMesh;
+stream_loads-as-gen-progress.
 
 **Backend matrix (R4):** desktop
 
