@@ -7,6 +7,7 @@
 #include "World/Streaming/MeshLitGate.h"
 #include "World/Streaming/MeshWorkAdmission.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
+#include "World/Streaming/OceanFrontierPolicy.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Mesh/GpuMeshPipeline.h"
@@ -651,6 +652,54 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                                                       gpu_queued))
               {
                 mesh_service.PreferKickPendingGpuQueued(coord);
+              }
+            }
+            // Era26 I-O4: SoftDefer empty ∥ void — parallel RelightThenMesh
+            // (kind-separate; Capture stays FirstMesh under miss).
+            {
+              bool fully_dark_or_void =
+                  mesh_service.HasDrawableGreedyMesh(coord) &&
+                  mesh_service.GetCache().ChunkHasFullyDarkFace(coord);
+              if (!fully_dark_or_void && empty_placeholder)
+              {
+                const int max_cy = std::max(
+                    0, FloorDiv(world.GetProceduralSettings().MaxHeight,
+                                CHUNK_SIZE));
+                for (int cy = 0; cy <= max_cy; ++cy)
+                {
+                  const glm::ivec3 c(col.x, cy, col.y);
+                  if (mesh_service.HasDrawableGreedyMesh(c) &&
+                      mesh_service.GetCache().ChunkHasFullyDarkFace(c))
+                  {
+                    fully_dark_or_void = true;
+                    break;
+                  }
+                }
+                if (!fully_dark_or_void &&
+                    (world.IsPendingLightBeforeMesh(col) ||
+                     phys_telem.DarkFaceVoidNearN > 0))
+                {
+                  fully_dark_or_void = true;
+                }
+              }
+              if (SoftDeferEmptyNeedsParallelVoidRelight(empty_placeholder,
+                                                         fully_dark_or_void))
+              {
+                if (!exec.Scheduler().Contains(col,
+                                               ColumnWorkKind::RelightThenMesh))
+                {
+                  ColumnWorkItem relight{};
+                  relight.column = col;
+                  relight.kind = ColumnWorkKind::RelightThenMesh;
+                  relight.priority = 95;
+                  relight.scan_full_focus = missing_visible_mesh;
+                  relight.cy = coord.y;
+                  exec.Enqueue(relight);
+                }
+                if (phys_telem.DarkFaceVoidNearN > 200 || missing_visible_mesh)
+                {
+                  world.EnqueueVoidDarkColumnRelightNote(col);
+                }
               }
             }
             if (exec.Scheduler().Contains(col, ColumnWorkKind::FirstMesh))

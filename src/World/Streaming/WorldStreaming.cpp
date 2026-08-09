@@ -439,6 +439,22 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                 fm.scan_full_focus = world.PhysicsTelemetryData.FocusMissingMesh != 0;
                 fm.cy = pin_cy;
                 exec.Enqueue(fm);
+                // Era26 I-O4: near SoftDefer-class undrawn + pending/void ⇒
+                // keep Relight parallel (I-F2 may already have enqueued).
+                if (SoftDeferEmptyNeedsParallelVoidRelight(
+                        !any_drawable, pending_light_now || !any_drawable))
+                {
+                  if (!exec.Scheduler().Contains(
+                          col, ColumnWorkKind::RelightThenMesh))
+                  {
+                    ColumnWorkItem relight{};
+                    relight.column = col;
+                    relight.kind = ColumnWorkKind::RelightThenMesh;
+                    relight.priority = 95;
+                    relight.cy = pin_cy;
+                    exec.Enqueue(relight);
+                  }
+                }
               }
             };
             if (seed_decision.try_sync_seed)
