@@ -21,8 +21,10 @@ int main()
   using cutum::ClassifyMeshApplyRevision;
   using cutum::CpuReplaceFreeFirstWouldHole;
   using cutum::MeshApplyRevDecision;
+  using cutum::ShouldDeferFreeChunkUntilPackedReplace;
   using cutum::ShouldKeepPriorGpuOnEmptyCpuReplace;
   using cutum::ShouldPublishCpuBatchesBeforeFreeGpu;
+  using cutum::SoftDeferCaptureBlockedByRepairTicket;
   using cutum::UChunkMeshRevisionRegistry;
 
   // --- Registry ---
@@ -84,7 +86,27 @@ int main()
   Expect(ShouldKeepPriorGpuOnEmptyCpuReplace(true, false),
          "Era20: keep prior GPU on empty SoftDefer replace");
   Expect(!ShouldKeepPriorGpuOnEmptyCpuReplace(true, true),
-         "Era20: new CPU drawable → allow replace");
+         "Era20: empty-only keep-prior; non-empty uses PendingReplace");
+
+  // --- Era21 I-R1 PendingReplace ---
+  Expect(ShouldDeferFreeChunkUntilPackedReplace(/*gpu=*/true, /*cpu=*/true),
+         "Era21: GPU drawable remesh defers FreeChunk until BindCommitted");
+  Expect(ShouldDeferFreeChunkUntilPackedReplace(true, false),
+         "Era21: GPU drawable + empty CPU also defers FreeChunk");
+  Expect(!ShouldDeferFreeChunkUntilPackedReplace(false, true),
+         "Era21: no prior GPU → FreeChunk N/A");
+
+  // --- Era21 I-M6 miss Capture ticket SoT ---
+  Expect(!SoftDeferCaptureBlockedByRepairTicket(/*miss=*/true,
+                                                /*fm=*/false,
+                                                /*any=*/true),
+         "Era21: Relight/Remesh must not block Capture under miss");
+  Expect(SoftDeferCaptureBlockedByRepairTicket(true, true, true),
+         "Era21: FirstMesh ticket blocks Capture under miss");
+  Expect(SoftDeferCaptureBlockedByRepairTicket(/*miss=*/false, false, true),
+         "Era21: any repair blocks Capture when !miss");
+  Expect(!SoftDeferCaptureBlockedByRepairTicket(false, false, false),
+         "Era21: no ticket → Capture allowed");
 
   if (failures != 0)
   {

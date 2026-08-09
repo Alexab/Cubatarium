@@ -108,7 +108,14 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-053 | Era17 | Heal-until-predicate / ticket≠progress | Real Contains ticket; Progress/Stalled telem; void RelightThenMesh; FirstMesh class | **done 2026-08-08** P0–P2 |
 | TD-ARCH-054 | Era18 | Focus light-debt / VB without PendingLight | Void RecoverUnlit⇒NotePendingLight; drain/capture floors while VB>0; manual 165953 | **partial 2026-08-08** light path OK; FPS/miss fixed via TD-055 autofly; manual eye pending |
 | TD-ARCH-055 | Era19 | FrameStreamingBudget / heal-on-hot feedback | Era18 `max` floors force Capture/VB spend on hot wall → wall↑ holes↑ miss↑ (`191229`) | **partial 2026-08-08** FrameStreamingBudget + miss-first; autofly GO; manual `214034` still holes/black |
-| TD-ARCH-056 | Era20 | Manual Visual SLA / rim FirstMesh escape | `214034`: miss_cy=3; Imm off; SoftDefer empty; VB no_ticket↑; enter≈2s | **partial 2026-08-08** autofly FLY/IDLE/WARM/LAND GO; enter_app≈100; **manual eye** still required |
+| TD-ARCH-056 | Era20 | Manual Visual SLA / rim FirstMesh escape | `214034`→`102236`: wall↓ no_ticket=0 enter↓; FOV miss/VB/flicker residual | **partial 2026-08-09** manual eye better; TD-057 |
+| TD-ARCH-057 | Era21 | Residency Replace + FOV SoT | CPU remesh FreeChunk before BindCommitted flicker; Relight ticket blocks miss Capture; SoftDefer empty HasGreedy SoT | **open 2026-08-09** P0 harness |
+
+> **Era21 Residency FOV (2026-08-09):** Manual `perf_20260809-102236` after Era20:
+> wall≈111 (was 246), no_ticket=0, enter≈584. Residual: drawable remesh flicker
+> (`discarded_late` ramp), FOV miss mh=4, VB 29–49 with progress. Fix: keep GPU
+> until BindCommitted; Capture FirstMesh-only under miss; Satisfying SoT.
+> KEEP FrameStreamingBudget. Reject Imm primary; FreeChunk-before-Bind; hitch floors.
 
 > **Era20 Manual Visual SLA closeout (2026-08-08):** P0–P3 landed.
 > Rim FirstMesh class cy≤3/mh≤4; cold-async Imm escape; SoftDeferEmpty→FM;

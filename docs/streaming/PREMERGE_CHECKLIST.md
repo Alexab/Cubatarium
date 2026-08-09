@@ -129,10 +129,14 @@ manual `214034` holes/black residual → TD-056). Unified `FrameStreamingBudget`
 Reject: Era18-style `max` floors while VB on hot wall; Worker Capture.
 
 **Era20 Manual Visual SLA (2026-08-08):** TD-056 **partial** (autofly GO;
-enter_app≈100; manual `214034`-class eye still required). Rim FirstMesh
-cy≤3/mh≤4; cold-async Imm; SoftDeferEmpty→FM; empty keep-prior; VB Relight
-floor !miss hot; enter r≤2 + SpawnRingCatchUp. Reject: Imm-off while async=0
-under miss; heal-floors-on-hitch; Imm primary zoo; claim CLOSED without manual.
+enter_app≈100; manual `102236` improved FPS/no_ticket — flicker/FOV → TD-057).
+Reject: Imm-off while async=0 under miss; heal-floors-on-hitch; Imm primary zoo.
+
+**Era21 Residency FOV (2026-08-09):** TD-057 **open**. Keep GPU until
+BindCommitted; SoftDefer Capture FirstMesh-only under miss; RecoverUnlit
+Satisfying SoT. Analyze: `mesh_discarded_late_delta_cruise`,
+`vb_progress_without_dark_clear_sec`. Reject: FreeChunk-before-Bind;
+Relight-ticket-blocks-miss-Capture; Imm primary; hitch VB Capture storm.
 
 **Backend matrix (R4):** desktop
 

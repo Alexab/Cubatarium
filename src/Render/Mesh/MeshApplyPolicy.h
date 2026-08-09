@@ -63,4 +63,27 @@ inline bool ShouldKeepPriorGpuOnEmptyCpuReplace(bool gpu_drawable,
   return CpuReplaceFreeFirstWouldHole(gpu_drawable, new_cpu_batches_drawable);
 }
 
+/// Era21 I-R1 PendingReplace: already-GPU-drawable remesh must not FreeChunk
+/// until BindCommittedSlot of the new packed mesh (or explicit unload).
+/// Empty SoftDefer keep-prior (I-M3) remains a separate early-out.
+/// new_cpu_drawable does not authorize FreeChunk while live SSBO draws.
+inline bool ShouldDeferFreeChunkUntilPackedReplace(bool had_gpu_drawable,
+                                                   bool /*new_cpu_drawable*/)
+{
+  return had_gpu_drawable;
+}
+
+/// Era21 I-M6: under FOV miss, SoftDefer Capture is blocked only by a live
+/// FirstMesh ticket — Relight/Remesh alone must not starve rim FirstMesh.
+inline bool SoftDeferCaptureBlockedByRepairTicket(bool missing_visible_mesh,
+                                                  bool has_first_mesh_ticket,
+                                                  bool has_any_repair_ticket)
+{
+  if (missing_visible_mesh)
+  {
+    return has_first_mesh_ticket;
+  }
+  return has_any_repair_ticket;
+}
+
 } // namespace cutum

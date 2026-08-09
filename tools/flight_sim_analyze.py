@@ -464,6 +464,10 @@ def analyze(
     soft_defer_empty_stuck_sec = _max_run_sec(
         lambda r: float(r.get("softdefer_empty_stuck_n") or 0) > 0
     )
+    # Era21: remesh thrash proxy — discarded_late ramp during cruise (not stop).
+    mesh_discarded_late_delta_cruise = 0.0
+    # Era21: VB tickets/progress without dark faces clearing (heal stall).
+    vb_progress_without_dark_clear_sec = 0.0
     miss_cy_gt1_n = sum(
         1
         for r in steady
@@ -577,6 +581,18 @@ def analyze(
         miss_end_stop = float(stop_segment[-1].get(miss_key) or 0)
     fly_segment = (
         steady[: len(steady) - len(stop_segment)] if stop_segment else steady
+    )
+    if len(fly_segment) >= 2:
+        d0 = float(fly_segment[0].get("mesh_discarded_late") or 0)
+        d1 = float(fly_segment[-1].get("mesh_discarded_late") or 0)
+        mesh_discarded_late_delta_cruise = max(0.0, d1 - d0)
+    vb_progress_without_dark_clear_sec = _max_run_sec(
+        lambda r: float(r.get("visible_black_focus_n") or 0) > 0
+        and float(r.get("visible_black_progress_n") or 0) > 0
+        and float(r.get("visible_black_no_ticket_n") or 0) <= 0
+        and float(r.get("dark_face_stale_near_n") or r.get("dark_face_near_n") or 0)
+        > 0
+        and float(r.get("wall_ms") or r.get("max_wall_ms") or 0) > 80.0
     )
     wall_fly = col(fly_segment, "wall_ms") if fly_segment else wall
 
@@ -1060,6 +1076,8 @@ def analyze(
         "heal_on_hot_soft_fail": heal_on_hot_sec >= 20.0,
         "soft_defer_empty_stuck_sec": soft_defer_empty_stuck_sec,
         "soft_defer_empty_stuck_soft_fail": soft_defer_empty_stuck_sec >= 20.0,
+        "mesh_discarded_late_delta_cruise": mesh_discarded_late_delta_cruise,
+        "vb_progress_without_dark_clear_sec": vb_progress_without_dark_clear_sec,
         "miss_cy_gt1_frac": miss_cy_gt1_frac,
         "enter_app_update_max": enter_app_update_max,
         "enter_app_update_soft_fail": (
@@ -1153,6 +1171,8 @@ def analyze(
             "softdefer_capture_zero_while_vb_sec": softdefer_capture_zero_while_vb_sec,
             "heal_on_hot_sec": heal_on_hot_sec,
             "soft_defer_empty_stuck_sec": soft_defer_empty_stuck_sec,
+            "mesh_discarded_late_delta_cruise": mesh_discarded_late_delta_cruise,
+            "vb_progress_without_dark_clear_sec": vb_progress_without_dark_clear_sec,
             "miss_cy_gt1_frac": miss_cy_gt1_frac,
             "enter_app_update_max": enter_app_update_max,
             "dirty_high_sec": dirty_high_sec,
