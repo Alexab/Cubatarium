@@ -113,9 +113,9 @@ int main()
   Expect(ShouldReserveVoidRelightSlots(250, 0, false),
          "Era23 I-V4: void_n>T even without miss");
   Expect(ShouldReserveVoidRelightSlots(40, 2, true),
-         "Era23 I-V4: miss + void/VB ⇒ Relight slots");
-  Expect(ShouldReserveVoidRelightSlots(0, 3, true),
-         "Era23 I-V4: miss + VB ⇒ Relight slots");
+         "Era23 I-V4: miss + void faces ⇒ Relight slots");
+  Expect(!ShouldReserveVoidRelightSlots(0, 3, true),
+         "Era23 I-V4: miss + VB remesh-only → no Relight steal");
   Expect(!ShouldReserveVoidRelightSlots(40, 2, false),
          "Era23 I-V4: idle void below T → no Relight reserve");
   Expect(!ShouldReserveVoidRelightSlots(0, 3, false),

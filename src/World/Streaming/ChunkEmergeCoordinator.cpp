@@ -587,9 +587,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             // FirstMesh placeholder — always Dirty (do not gate on DirtyAdmit;
             // HoleDrain admit=0 left post_stop miss sticky).
             mesh_service.MarkDirtyPriority(coord);
-            // Era20: under miss escalate SoftDefer empty via ColumnFlow FirstMesh
-            // (cap 2). PreferKick omitted — kicking empty GPU applies caused
-            // opaque_idle_churn storms (era20_p1_land3 churn≈469).
+            // Era20/Era23 P2: under miss escalate SoftDefer empty via ColumnFlow
+            // FirstMesh (cap 2). PreferKick only when already Queued/Kicked stuck.
             if (empty_fm_enqueue_n < 2 &&
                 ShouldEnqueueSoftDeferEmptyFirstMesh(true, horiz,
                                                      missing_visible_mesh))
@@ -603,6 +602,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               item.scan_full_focus = missing_visible_mesh;
               item.cy = coord.y;
               exec.Enqueue(item);
+              if (ShouldPreferKickSoftDeferEmptyStuck(
+                      true, missing_visible_mesh,
+                      mesh_service.IsPendingGpuQueued(coord) ||
+                          mesh_service.IsPendingGpuKickedOrDispatched(coord)))
+              {
+                mesh_service.PreferKickPendingGpuQueued(coord);
+              }
             }
             underfeet_undrawn = true;
             ++marked_n;
@@ -2394,6 +2400,27 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             mesh_service.IsPendingGpuApply(isolated_hole))
         {
           mesh_service.PreferKickPendingGpuQueued(isolated_hole);
+        }
+      }
+
+      // Era23 I-M9: FirstMesh-class PreferKick every miss-frame (age SLA backup).
+      // PreferKick only when GPU queue stuck — Dirty alone starts idle pipeline.
+      {
+        const bool miss_fm_class = IsMissFirstMeshClass(
+            missing_visible_mesh, isolated_hole.y, nh);
+        if (ShouldPreferKickMissWitnessEarly(missing_visible_mesh,
+                                             miss_fm_class))
+        {
+          if (!(tops_hp || tops_firstmesh_class))
+          {
+            mesh_service.MarkDirtyPriority(isolated_hole);
+            ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
+          }
+          if (queued_stuck || kicked_stuck ||
+              mesh_service.IsPendingGpuApply(isolated_hole))
+          {
+            mesh_service.PreferKickPendingGpuQueued(isolated_hole);
+          }
         }
       }
 

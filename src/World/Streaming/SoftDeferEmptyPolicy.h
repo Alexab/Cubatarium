@@ -105,21 +105,18 @@ inline bool SoftDeferHeldCountsAsVoidProgress(bool soft_defer_held,
 }
 
 /// Era23 I-V4: reserve RelightThenMesh slots for void debt above T, or under
-/// miss dual-queue. Idle VB remesh without void_n>T must not burn Relight.
+/// miss when void faces live. Idle/miss VB remesh-only must not steal FirstMesh.
 inline bool ShouldReserveVoidRelightSlots(int dark_face_void_near_n,
                                           int visible_black_n,
                                           bool missing_visible_mesh,
                                           int void_threshold = 200)
 {
+  (void)visible_black_n;
   if (dark_face_void_near_n > void_threshold)
   {
     return true;
   }
-  if (!missing_visible_mesh)
-  {
-    return false;
-  }
-  return dark_face_void_near_n > 0 || visible_black_n > 0;
+  return missing_visible_mesh && dark_face_void_near_n > 0;
 }
 
 /// Era23 I-V4: void collect cap independent of no_ticket nearest-N=1–2.
