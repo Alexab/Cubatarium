@@ -5511,7 +5511,23 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
     MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground_col, 0,
                                                 blockPos.y + CHUNK_SIZE);
     MeshService->EnqueueColumnMissingDigSeamBelow(BlockWorld, blockPos);
-    // Era23 I-P1 place-hole FirstMesh: wired in P3 after IDLE hold.
+    // Era23 I-P1: SoftDefer empty / !Drawable under place → FirstMesh + Dirty
+    // same tick (collision already via MarkBlockChunkDirty). No Imm flood.
+    const glm::ivec3 place_chunk = UChunkManager::WorldToChunk(blockPos);
+    const bool drawable = MeshService->HasDrawableGreedyMesh(place_chunk);
+    const bool soft_empty =
+        MeshService->HasGreedyMesh(place_chunk) && !drawable;
+    if (ShouldForceFirstMeshOnPlaceHole(soft_empty || !drawable,
+                                        /*near_or_underfeet=*/true))
+    {
+      MeshService->MarkDirtyPriority(place_chunk);
+      ColumnWorkItem item{};
+      item.column = glm::ivec2(place_chunk.x, place_chunk.z);
+      item.kind = ColumnWorkKind::FirstMesh;
+      item.priority = 110;
+      item.cy = place_chunk.y;
+      GetColumnFlowExecutor().Enqueue(item);
+    }
   }
   PhysicsTelemetryData.EditToFirstMeshMs =
       std::chrono::duration<double, std::milli>(

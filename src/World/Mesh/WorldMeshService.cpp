@@ -1109,13 +1109,8 @@ void UWorldMeshService::TickDigSeamDrain(UBlockWorld &block_world,
     }
     LastDigSeamPendingN = static_cast<int>(DigSeam.Size());
 
-    const bool drawable = HasDrawableGreedyMesh(coord);
-    const bool dark_face = Cache.ChunkHasFullyDarkFace(coord);
-    if (!drawable && !dark_face)
-    {
-      MarkDirtyPriority(coord);
-      continue;
-    }
+    // Era23 I-P1: !drawable underfeet/near is a hole — remesh Immediate, do not
+    // treat SoftDefer empty as "already ok".
     RebuildChunkImmediate(block_world, registry, coord);
     LastDigSeamRemeshN = 1;
     break;
