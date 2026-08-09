@@ -1303,9 +1303,9 @@ bool UChunkMeshCache::HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y,
 
 void UChunkMeshCache::HoldSoftDeferFirstMesh(glm::ivec3 chunk_coord)
 {
-  SoftDeferHeld.insert(chunk_coord);
+  const bool inserted = SoftDeferHeld.insert(chunk_coord).second;
   // Era15 TD-050: Held must not park FirstMesh outside ColumnFlow.
-  if (OnSoftDeferHeld)
+  if (inserted && OnSoftDeferHeld)
   {
     OnSoftDeferHeld(chunk_coord);
   }
@@ -1659,15 +1659,18 @@ void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
 {
   // Rate-limit full greedy batch rebuilds: light edits can produce many mesh
   // results per second; rebuilding the full flat batch list every frame can
-  // dominate CPU time.
+  // dominate CPU time. Era21 I-R2: never skip after residency demote / keep-GPU
+  // (stale GpuPacked refs → sky hole while GetSlot null).
   if (GreedyBatchesDirty)
   {
     const auto now = std::chrono::steady_clock::now();
-    if (LastFlatRebuildAt != std::chrono::steady_clock::time_point{} &&
+    if (!ForceFlatRebuildNext &&
+        LastFlatRebuildAt != std::chrono::steady_clock::time_point{} &&
         now - LastFlatRebuildAt < std::chrono::milliseconds(50))
     {
       return;
     }
+    ForceFlatRebuildNext = false;
   }
   if (frustum && cameraPos &&
       !GreedyBatchesDirty &&
@@ -2682,6 +2685,37 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   // Write-first: CPU drawable before FreeChunk (ShouldPublishCpuBatchesBeforeFreeGpu).
   chunkMesh.batches = std::move(result.batches);
   chunkMesh.crossCenters = std::move(result.crossCenters);
+  const bool intentional_empty =
+      new_vertex_count == 0 && !defer_until_lit &&
+      SoftDeferHeld.count(result.coord) == 0;
+  // Era21 I-R1: keep live GPU SSBO until BindCommitted (PendingReplace).
+  // Intentional occluded empty still FreeChunks → 0-quad ready.
+  if (ShouldDeferFreeChunkUntilPackedReplace(had_gpu_drawable,
+                                             new_cpu_drawable) &&
+      !intentional_empty)
+  {
+    ++MeshReplaceHoleAvoided;
+    // Keep same live SSBO — do not mark GreedyBatchesDirty/ForceFlat (refs OK).
+    // CPU batches still update for Satisfying / seam queries.
+    PendingMeshRevisionBump = true;
+    CrossBatchesDirty = true;
+    // Do not MarkDirty here — that re-enters CPU remesh → churn storm
+    // (era21_p1_land opaque_idle_churn≈1323). Live SSBO stays until a later
+    // GpuExtract BindCommitted or intentional unload; PreferKick if already queued.
+    if (IsPendingGpuApply(result.coord))
+    {
+      PreferKickPendingGpuQueued(result.coord);
+    }
+    if (OnLitPendingNeeded && !had_mesh && (defer_until_lit || new_dark))
+    {
+      OnLitPendingNeeded(result.coord);
+    }
+    if (RemeshAfterApply.erase(result.coord) > 0)
+    {
+      MarkDirtyPriority(result.coord);
+    }
+    return;
+  }
   if (had_gpu_resident)
   {
     // Regress counter: free-first would have holed GPU-only drawable columns.
@@ -2690,6 +2724,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       ++MeshReplaceHoleAvoided;
     }
     GpuPipeline->FreeChunk(result.coord);
+    ForceFlatRebuildNext = true;
   }
   chunkMesh.GpuResident = false;
   chunkMesh.GpuSlotIndex = -1;
@@ -2700,8 +2735,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   // Intentional empty: match Immediate / GPU 0-quad ready (HasMeshSatisfying).
   // SoftDefer empty placeholders must stay !ready (I-M3) — do not fake
   // GpuResident 0-quad or miss/holes latch on undrawn SoftDefer.
-  if (new_vertex_count == 0 && !defer_until_lit &&
-      SoftDeferHeld.count(result.coord) == 0)
+  if (intentional_empty)
   {
     chunkMesh.GpuResident = true;
     chunkMesh.GpuSlotIndex = -1;
@@ -3665,6 +3699,38 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       return;
     }
     chunkMesh.batches = std::move(new_batches);
+    const bool intentional_empty =
+        new_vertex_count == 0 && !defer_until_lit &&
+        SoftDeferHeld.count(chunkCoord) == 0;
+    // Era21 I-R1: keep live GPU until BindCommitted (PendingReplace).
+    if (ShouldDeferFreeChunkUntilPackedReplace(had_gpu_drawable,
+                                               new_cpu_drawable) &&
+        !intentional_empty)
+    {
+      ++MeshReplaceHoleAvoided;
+      // Same live SSBO — do not ForceFlatRebuild / GreedyBatchesDirty (refs OK).
+      const auto oldItKeep = GreedyVertexCountByChunk.find(chunkCoord);
+      if (oldItKeep != GreedyVertexCountByChunk.end())
+      {
+        GreedyVertexCountTotal -= oldItKeep->second;
+      }
+      GreedyVertexCountByChunk[chunkCoord] = new_vertex_count;
+      GreedyVertexCountTotal += new_vertex_count;
+      chunkMesh.crossCenters.clear();
+      CollectCrossInstancesInBand(*chunk, chunkCoord, registry, max_local_y,
+                                  chunkMesh.crossCenters);
+      PendingMeshRevisionBump = true;
+      CrossBatchesDirty = true;
+      if (IsPendingGpuApply(chunkCoord))
+      {
+        PreferKickPendingGpuQueued(chunkCoord);
+      }
+      if (OnLitPendingNeeded && !had_mesh && (defer_until_lit || new_dark))
+      {
+        OnLitPendingNeeded(chunkCoord);
+      }
+      return;
+    }
     if (had_gpu_resident)
     {
       if (CpuReplaceFreeFirstWouldHole(had_gpu_drawable, new_cpu_drawable))
@@ -3672,6 +3738,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
         ++MeshReplaceHoleAvoided;
       }
       GpuPipeline->FreeChunk(chunkCoord);
+      ForceFlatRebuildNext = true;
     }
     chunkMesh.GpuResident = false;
     chunkMesh.GpuSlotIndex = -1;
@@ -3682,8 +3749,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     // Intentional empty (fully occluded solid): match GPU 0-quad ready so
     // HasMissing cannot latch forever on CPU Immediate (miss_cy sticky).
     // SoftDefer empty stays !ready (Era20 I-M3).
-    if (new_vertex_count == 0 && !defer_until_lit &&
-        SoftDeferHeld.count(chunkCoord) == 0)
+    if (intentional_empty)
     {
       chunkMesh.GpuResident = true;
       chunkMesh.GpuSlotIndex = -1;
