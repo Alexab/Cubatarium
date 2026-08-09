@@ -1028,6 +1028,8 @@ public:
 
   /// Near-focus columns waiting for first light before first mesh (plan A).
   void NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y);
+  /// Era23 I-V5: NotePendingLight + priority FIFO on void enqueue (ColumnFlow).
+  void EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz);
   void ClearPendingLightBeforeMesh(glm::ivec2 ground_xz);
   bool IsPendingLightBeforeMesh(glm::ivec2 ground_xz) const;
   bool HasPendingLightBeforeMeshNear(glm::ivec3 focus_ground_horiz,

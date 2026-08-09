@@ -1765,6 +1765,29 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
   it->second.max_y = std::max(it->second.max_y, max_y);
 }
 
+void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
+{
+  if (!Persistence || !ShouldNotePendingLightOnVoidEnqueue(true))
+  {
+    return;
+  }
+  // Cap flood: already-Noted columns keep Dispatch/FIFO; do not re-Note/Enqueue
+  // every TickDerived frame (IDLE emerge tax).
+  if (IsPendingLightBeforeMesh(col_xz))
+  {
+    return;
+  }
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const glm::ivec3 ground(col_xz.x, 0, col_xz.y);
+  // Match RecoverUnlit: light path owns heal — drop StickyRemesh ghost so
+  // PendingLight+mesh does not latch black_sticky (IDLE gate).
+  StickyRemeshAfterLight.erase(col_xz);
+  NotePendingLightBeforeMesh(ground, 0, max_y);
+  Persistence->EnqueueTerrainColumnRelight(col_xz.x * CHUNK_SIZE,
+                                           col_xz.y * CHUNK_SIZE,
+                                           /*priority=*/true, 0, max_y);
+}
+
 void UWorld::ClearPendingLightBeforeMesh(glm::ivec2 ground_xz)
 {
   PendingLightBeforeMesh.erase(ground_xz);
@@ -3079,11 +3102,26 @@ bool UWorld::ColumnHasRepairProgress(glm::ivec2 ground_xz) const
   {
     return false;
   }
-  // Era22 I-S2: SoftDeferHeld ∈ progress (Hide⇒Ticket honesty for no_ticket).
-  if (SoftDeferHeldCountsAsRepairProgress(
-          MeshService->HasSoftDeferHeldInColumn(ground_xz)))
+  // Era22 I-S2 / Era23 I-V6: SoftDeferHeld ∈ progress only when not fully-dark
+  // (Held must not skip CollectFullyDark / mask void faces on 172232).
+  if (MeshService->HasSoftDeferHeldInColumn(ground_xz))
   {
-    return true;
+    bool fully_dark = false;
+    const int max_cy = std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+    for (int cy = 0; cy <= max_cy; ++cy)
+    {
+      const glm::ivec3 coord(ground_xz.x, cy, ground_xz.y);
+      if (MeshService->HasDrawableGreedyMesh(coord) &&
+          MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+      {
+        fully_dark = true;
+        break;
+      }
+    }
+    if (SoftDeferHeldCountsAsVoidProgress(true, fully_dark))
+    {
+      return true;
+    }
   }
   const int max_y = ProceduralTemplate.MaxHeight;
   if (MeshService->HasDirtyInColumnBand(ground_xz, 0, max_y))
@@ -5473,6 +5511,7 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
     MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground_col, 0,
                                                 blockPos.y + CHUNK_SIZE);
     MeshService->EnqueueColumnMissingDigSeamBelow(BlockWorld, blockPos);
+    // Era23 I-P1 place-hole FirstMesh: wired in P3 after IDLE hold.
   }
   PhysicsTelemetryData.EditToFirstMeshMs =
       std::chrono::duration<double, std::milli>(

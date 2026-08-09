@@ -13,6 +13,7 @@
 #include "World/Lighting/LightingSeedBackendFactory.h"
 #include "Render/Backend/RenderBackendCaps.h"
 #include "Render/Mesh/MeshApplyPolicy.h"
+#include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "App/Settings/RenderSettings.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Player/PlayerCapsule.h"
@@ -1500,15 +1501,23 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                          /*admit_batch=*/1);
       }
     }
-    // Era22 P2: Capture FirstMesh KEEP under miss; still drain Relight when
-    // no_ticket orphans exist (do not starve Relight with FM-only Capture).
-    if (world.PhysicsTelemetryData.VisibleBlackNoTicketN > 0)
+    // Era22 P2 / Era23 I-V4: Capture FirstMesh KEEP under miss; drain Relight
+    // when no_ticket OR void pressure (dual-queue — do not starve Relight).
     {
-      bg_budget = std::max(bg_budget, 1);
-      auto &exec = GetColumnFlowExecutor();
-      exec.DrainIdlePendingLight(world, focus_horiz, focus_radius, /*max=*/1,
-                                 /*allow_sync=*/false, frame_ms,
-                                 pending_light_focus_n, missing_focus_mesh);
+      const int void_n = world.PhysicsTelemetryData.DarkFaceVoidNearN;
+      const int vb_n = world.PhysicsTelemetryData.VisibleBlackFocusN;
+      const bool void_slots = ShouldReserveVoidRelightSlots(
+          void_n, vb_n, missing_focus_mesh);
+      if (world.PhysicsTelemetryData.VisibleBlackNoTicketN > 0 || void_slots)
+      {
+        const int relight_n =
+            void_slots ? (void_n > 400 ? 2 : 1) : 1;
+        bg_budget = std::max(bg_budget, relight_n);
+        auto &exec = GetColumnFlowExecutor();
+        exec.DrainIdlePendingLight(world, focus_horiz, focus_radius, relight_n,
+                                   /*allow_sync=*/false, frame_ms,
+                                   pending_light_focus_n, missing_focus_mesh);
+      }
     }
     if (rim_first_mesh_sla)
     {

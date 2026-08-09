@@ -104,18 +104,22 @@ inline bool SoftDeferHeldCountsAsVoidProgress(bool soft_defer_held,
   return soft_defer_held;
 }
 
-/// Era23 I-V4: reserve RelightThenMesh slots while void faces or VB live
-/// (dual-queue under miss — not hitch Capture storm).
+/// Era23 I-V4: reserve RelightThenMesh slots for void debt above T, or under
+/// miss dual-queue. Idle VB remesh without void_n>T must not burn Relight.
 inline bool ShouldReserveVoidRelightSlots(int dark_face_void_near_n,
                                           int visible_black_n,
-                                          bool /*missing_visible_mesh*/,
+                                          bool missing_visible_mesh,
                                           int void_threshold = 200)
 {
-  if (visible_black_n > 0)
+  if (dark_face_void_near_n > void_threshold)
   {
     return true;
   }
-  return dark_face_void_near_n > void_threshold;
+  if (!missing_visible_mesh)
+  {
+    return false;
+  }
+  return dark_face_void_near_n > 0 || visible_black_n > 0;
 }
 
 /// Era23 I-V4: void collect cap independent of no_ticket nearest-N=1–2.
@@ -141,6 +145,15 @@ inline bool ShouldPreferKickMissWitnessEarly(bool missing_visible_mesh,
                                              bool miss_first_mesh_class)
 {
   return missing_visible_mesh && miss_first_mesh_class;
+}
+
+/// Era23 P2: SoftDefer empty PreferKick only when GPU queue is stuck on the
+/// same coord (not empty placeholder apply storm).
+inline bool ShouldPreferKickSoftDeferEmptyStuck(bool soft_defer_empty,
+                                                bool missing_visible_mesh,
+                                                bool queued_or_kicked_stuck)
+{
+  return soft_defer_empty && missing_visible_mesh && queued_or_kicked_stuck;
 }
 
 /// Era23 I-P1: SoftDefer empty / !Drawable place column needs FirstMesh SLA.

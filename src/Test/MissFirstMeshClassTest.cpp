@@ -97,6 +97,7 @@ int main()
   using cutum::ShouldForceFirstMeshOnPlaceHole;
   using cutum::ShouldNotePendingLightOnVoidEnqueue;
   using cutum::ShouldPreferKickMissWitnessEarly;
+  using cutum::ShouldPreferKickSoftDeferEmptyStuck;
   using cutum::ShouldReserveVoidRelightSlots;
   using cutum::SoftDeferHeldCountsAsVoidProgress;
   using cutum::VoidRelightCollectCap;
@@ -109,8 +110,16 @@ int main()
          "Era23 I-V6: no Held → no progress");
   Expect(ShouldReserveVoidRelightSlots(250, 0, true),
          "Era23 I-V4: void_n>T ⇒ Relight slots");
+  Expect(ShouldReserveVoidRelightSlots(250, 0, false),
+         "Era23 I-V4: void_n>T even without miss");
+  Expect(ShouldReserveVoidRelightSlots(40, 2, true),
+         "Era23 I-V4: miss + void/VB ⇒ Relight slots");
   Expect(ShouldReserveVoidRelightSlots(0, 3, true),
-         "Era23 I-V4: VB>0 ⇒ Relight slots under miss");
+         "Era23 I-V4: miss + VB ⇒ Relight slots");
+  Expect(!ShouldReserveVoidRelightSlots(40, 2, false),
+         "Era23 I-V4: idle void below T → no Relight reserve");
+  Expect(!ShouldReserveVoidRelightSlots(0, 3, false),
+         "Era23 I-V4: idle VB remesh-only → no Relight reserve");
   Expect(!ShouldReserveVoidRelightSlots(50, 0, false),
          "Era23 I-V4: calm void below T → no reserve");
   Expect(VoidRelightCollectCap(2, true) >= 2,
@@ -127,6 +136,14 @@ int main()
          "Era23 I-M9: miss outside class → age SLA only");
   Expect(!ShouldPreferKickMissWitnessEarly(false, true),
          "Era23 I-M9: no miss → no early PreferKick");
+
+  Expect(ShouldPreferKickSoftDeferEmptyStuck(true, true, true),
+         "Era23 P2: SoftDefer empty + Queued/Kicked ⇒ PreferKick");
+  Expect(!ShouldPreferKickSoftDeferEmptyStuck(true, true, false),
+         "Era23 P2: empty without GPU stuck → no PreferKick");
+  Expect(!ShouldPreferKickSoftDeferEmptyStuck(true, false, true),
+         "Era23 P2: no miss → no SoftDefer PreferKick");
+
   Expect(ShouldForceFirstMeshOnPlaceHole(true, true),
          "Era23 I-P1: empty/undrawn near ⇒ FirstMesh");
   Expect(!ShouldForceFirstMeshOnPlaceHole(true, false),
