@@ -217,13 +217,17 @@ post_stop miss residual, miss_end=0). Baseline `172232` not visual-merge.
 FrameStreamingBudget. Reject Imm primary; hitch Capture; Held-as-void-progress;
 Relight-steal-FirstMesh under miss+VB remesh-only.
 
-## Gap После Era24 plan (2026-08-09) — SoftDefer empty; TD-060 **open**
+## Gap После Era24 plan (2026-08-09) — SoftDefer empty; TD-060 **partial**
 
 | Практика | Industry | Cubatarium | Era24 SoT |
 |----------|----------|------------|-----------|
-| Hide⇒Ticket undrawn SoftDefer | hide until ready | Publish idle `HasGreedy∧!Drawable` | **P0** SoftDeferEmptyNeedsFirstMeshOwnership |
-| FirstMesh-until-Drawable ownership | MC HP rebuild SLA | MarkDirty + FM cap2; PreferKick only if Queued | **P0** SoftDeferEmptyHealKind::FirstMesh |
-| SoftDefer empty age SLA | stage age escalate | UndrawnForceCd / knobs | **P0** ShouldEscalateSoftDeferEmptyAge (45f) |
+| Hide⇒Ticket undrawn SoftDefer | hide until ready | Publish idle `HasGreedy∧!Drawable` | **done** erase+Hold+Dirty (no undrawn publish) |
+| FirstMesh-until-Drawable ownership | MC HP rebuild SLA | MarkDirty + FM cap2; PreferKick only if Queued | **done** per-coord FM ≤6 + age SLA 45f |
+| SoftDefer empty age SLA | stage age escalate | UndrawnForceCd / knobs | **done** PreferKick Queued / Capture cy pin |
+
+**Evidence:** `era24_p3_fly` FLY_CLEAN; `era24_p3_idle` IDLE_CLEAN;
+`era24_p3_warm` IDLE_WARM; `era24_p3_land` ARCH_D3_LAND soft post_stop miss.
+empty_stuck≤2s matrix; miss_end=0 fly/idle/land (warm miss_end soft).
 
 **Baseline:** `perf_20260809-193059` / `manual_193059_analyze.json`. Blacks closed
 (void/dark=0). Reject Imm-as-empty-heal; SoftDefer knobs-as-DoD; PreferKick

@@ -152,11 +152,12 @@ GO; manual `193059` blacks closed void/dark=0; SoftDefer empty → TD-060).
 Reject: Held-as-void-progress; Relight-steal-FirstMesh; Imm-as-heal; hitch
 Capture; SoftDefer knobs.
 
-**Era24 SoftDefer Empty FirstMesh-until-Drawable (2026-08-09):** TD-060 **open**
-until manual `193059`-class empty_stuck≤2 / miss_end=0. Hide⇒Ticket (no idle
-undrawn publish); FirstMesh ownership + age SLA. Reject: SoftDefer-empty-as-
-HasGreedy-progress; Imm-as-empty-heal; PreferKick every empty every frame;
-SoftDefer knobs-as-DoD.
+**Era24 SoftDefer Empty FirstMesh-until-Drawable (2026-08-09):** TD-060
+**partial** (autofly FLY/IDLE/WARM GO; LAND soft post_stop miss; wait manual
+`193059`-class empty_stuck≤2 / miss_end=0). Hide⇒Ticket; FirstMesh ownership +
+age SLA; Capture SoftDefer stuck cy pin. Reject: SoftDefer-empty-as-HasGreedy-
+progress; Imm-as-empty-heal; PreferKick every empty every frame; SoftDefer
+knobs-as-DoD.
 
 **Backend matrix (R4):** desktop
 

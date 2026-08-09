@@ -112,7 +112,18 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-057 | Era21 | Residency Replace + FOV SoT | CPU remesh FreeChunk before BindCommitted flicker; Relight ticket blocks miss Capture; SoftDefer empty HasGreedy SoT | **partial 2026-08-09** autofly FLY/IDLE/WARM/LAND GO; manual `154049` eye → TD-058 |
 | TD-ARCH-058 | Era22 | SoftDefer Heal SLA + VB ticket radius | SoftDeferHeld/empty without FirstMesh SLA; VB collect r≤2 vs Count full focus orphans; miss heal latency | **partial 2026-08-09** autofly GO; manual `172232` eye → TD-059 |
 | TD-ARCH-059 | Era23 | Void Relight dual-queue + rim miss SLA | void_near≈596; Relight starve under miss; Held-as-progress masks Collect; miss PreferKick too late; place-hole fall | **partial 2026-08-09** autofly GO; manual `193059` blacks closed (void/dark=0); empty residual → TD-060 |
-| TD-ARCH-060 | Era24 | SoftDefer Empty FirstMesh-until-Drawable | SoftDefer empty FOV stick (`HasGreedy∧!Drawable`); empty_stuck≈8s; miss_end=1 on `193059` | **open 2026-08-09** P0 predicates; wait P1–P3 + manual |
+| TD-ARCH-060 | Era24 | SoftDefer Empty FirstMesh-until-Drawable | SoftDefer empty FOV stick (`HasGreedy∧!Drawable`); empty_stuck≈8s; miss_end=1 on `193059` | **partial 2026-08-09** autofly FLY/IDLE/WARM GO; LAND soft post_stop miss; wait manual `193059`-class eye |
+
+> **Era24 SoftDefer Empty closeout (2026-08-09):** P0–P3 landed. Hide⇒Ticket
+> (ProcessSnapshot/Immediate no idle SoftDefer undrawn publish); FirstMesh-
+> until-Drawable ownership + age SLA (45f PreferKick/Capture cy pin); miss_cy>1
+> FirstMesh pin. Autofly: `era24_p3_fly` FLY_CLEAN; `era24_p3_idle` IDLE_CLEAN;
+> `era24_p3_warm` IDLE_WARM; `era24_p3_land` ARCH_D3_LAND soft (post_stop miss /
+> miss_stuck residual; miss_end=0). empty_stuck≤2s on matrix; discarded_late
+> cruise soft residual on fly. KEEP FrameStreamingBudget / keep-GPU / Capture
+> FM-under-miss / Era23 void dual-queue. Reject Imm-as-empty-heal; SoftDefer
+> knobs-as-DoD; PreferKick every empty every frame; FreeChunk-before-Bind.
+> TD-060 remains **partial** until manual eye empty_stuck≤2 / miss_end=0.
 
 > **Era24 SoftDefer Empty (2026-08-09):** Manual `perf_20260809-193059` after
 > Era23: wall/fly≈86/84; void/dark stop=0 (blacks closed); SoftDefer empty
