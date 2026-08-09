@@ -211,6 +211,11 @@ int main()
          "Era25 I-F5: keep higher base ops");
   Expect(FrontierNearLoadOpsFloor(false, true, 2) == 2,
          "Era25 I-F5: no pressure → base ops");
+  using cutum::FrontierNearLoadRadius;
+  Expect(FrontierNearLoadRadius(true, true, 2, 4) == 4,
+         "Era25 I-F5: frontier NearLoad radius ≥ focus");
+  Expect(FrontierNearLoadRadius(false, true, 2, 4) == 2,
+         "Era25 I-F5: !frontier keeps NearLoad radius clamp");
 
   {
     MeshWorkAdmissionInput in;

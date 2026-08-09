@@ -2691,17 +2691,27 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const StreamingPressureCaps &pressure = LastPressureCaps;
     if (Streamer)
     {
+      const int void_n_load = world.PhysicsTelemetryData.DarkFaceVoidNearN;
+      const bool miss_load = world.PhysicsTelemetryData.FocusMissingMesh != 0;
+      const int async_q_load = world.PhysicsTelemetryData.StreamAsyncQueued;
+      const bool frontier_moving =
+          (moving_fast || moving_any) &&
+          IsFrontierPressure(gen_backlog_total, async_q_load, miss_load,
+                             void_n_load);
+      Streamer->SetFrontierLoadAhead(frontier_moving);
       if (moving_fast || moving_any)
       {
         // Moving used to force NearLoadRadius=-1 (full VisualRD scan). On hole
         // frames that alone was ~150ms streamer_update (CB spike_holes).
         if (underfeet_need)
         {
-          Streamer->SetNearLoadRadius(2);
+          Streamer->SetNearLoadRadius(FrontierNearLoadRadius(
+              frontier_moving, true, /*clamped=*/2, focus_radius));
         }
         else if (visual_holes || frame_ms > kBadFrameMs)
         {
-          Streamer->SetNearLoadRadius(std::min(focus_radius, 3));
+          Streamer->SetNearLoadRadius(FrontierNearLoadRadius(
+              frontier_moving, true, std::min(focus_radius, 3), focus_radius));
         }
         else
         {
@@ -2721,14 +2731,8 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         }
         // Era25 I-F5: under frontier_pressure moving, keep NearLoad floor ≥3
         // (UE load-ahead — do not clamp to underfeet-only).
-        {
-          const int void_n = world.PhysicsTelemetryData.DarkFaceVoidNearN;
-          const bool miss = world.PhysicsTelemetryData.FocusMissingMesh != 0;
-          const int async_q = world.PhysicsTelemetryData.StreamAsyncQueued;
-          const bool frontier =
-              IsFrontierPressure(gen_backlog_total, async_q, miss, void_n);
-          load_ops = FrontierNearLoadOpsFloor(frontier, true, load_ops);
-        }
+        load_ops =
+            FrontierNearLoadOpsFloor(frontier_moving, true, load_ops);
         load_ops = ApplyPressureCap(load_ops, pressure.max_load_ops_cap);
         Streamer->SetMaxLoadOpsPerFrame(std::max(1, load_ops));
       }
@@ -2764,8 +2768,16 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     int prefetch_visual_ops = 0;
     // Prefetch at cruise speed, but skip when hitch'd, holes, or pressure≠allow —
     // Update still loads; deep ahead would only pile GenQ/Dirty (CB stream spikes).
-    if (frame_ms <= 20.0 && pressure.allow_prefetch && !visual_holes &&
-        !underfeet_need)
+    // Era25 I-F5: under frontier_pressure keep view-forward PrefetchAhead even
+    // with holes (budgeted; still gated by calm wall ≤20ms — no hitch Capture).
+    const bool frontier_prefetch =
+        Streamer &&
+        IsFrontierPressure(gen_backlog_total,
+                           world.PhysicsTelemetryData.StreamAsyncQueued,
+                           world.PhysicsTelemetryData.FocusMissingMesh != 0,
+                           world.PhysicsTelemetryData.DarkFaceVoidNearN);
+    if (frame_ms <= 20.0 && pressure.allow_prefetch &&
+        (((!visual_holes && !underfeet_need) || frontier_prefetch)))
     {
       Streamer->PrefetchAhead(feet_chunk, forward, lastMovementSpeed,
                               procedural.MovementPrefetchThreshold,

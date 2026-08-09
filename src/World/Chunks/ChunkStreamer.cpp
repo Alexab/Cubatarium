@@ -157,8 +157,15 @@ int UChunkStreamer::ChunkHorizontalDistance(glm::ivec3 groundCoord) const
 
 int UChunkStreamer::ChunkLoadPriorityFor(glm::ivec3 groundCoord) const
 {
+  ChunkLoadPriorityParams params = PriorityParams;
+  if (FrontierLoadAhead)
+  {
+    // UE-style forward bias under frontier ingress (not hitch Capture).
+    params.ViewBiasWeight = std::max(params.ViewBiasWeight, 40);
+    params.ViewAheadBonus = std::max(params.ViewAheadBonus, 800);
+  }
   int priority = ComputeChunkLoadPriority(groundCoord, LoadPriorityCenter, ViewForwardXz,
-                                          PriorityParams);
+                                          params);
   if (CollisionUrgent)
   {
     // Horizontal only: load candidates are ground (y=0); comparing feet cy
@@ -830,6 +837,11 @@ void UChunkStreamer::PrefetchAhead(glm::ivec3 feet_chunk,
   {
     max_steps = 4;
   }
+  // Era25 I-F5: under frontier_pressure, deepen forward corridor (UE load-ahead).
+  if (FrontierLoadAhead)
+  {
+    max_steps = std::max(max_steps, 6);
+  }
   max_steps = std::min(max_steps, std::max(2, VisualRenderDistance));
 
   const glm::vec3 right(-forward.z, 0.0f, forward.x);
@@ -842,7 +854,8 @@ void UChunkStreamer::PrefetchAhead(glm::ivec3 feet_chunk,
     {
       return;
     }
-    if (NearLoadRadius >= 0 && dist > NearLoadRadius)
+    // Frontier load-ahead may queue beyond NearLoad hole clamp (budgeted ops).
+    if (NearLoadRadius >= 0 && dist > NearLoadRadius && !FrontierLoadAhead)
     {
       return;
     }

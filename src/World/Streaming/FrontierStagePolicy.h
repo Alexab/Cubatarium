@@ -50,4 +50,15 @@ inline int FrontierNearLoadOpsFloor(bool frontier_pressure, bool moving,
   return base_ops < floor_ops ? floor_ops : base_ops;
 }
 
+/// Era25 I-F5: NearLoad radius under frontier moving — at least focus band.
+inline int FrontierNearLoadRadius(bool frontier_pressure, bool moving,
+                                  int clamped_radius, int focus_radius)
+{
+  if (!frontier_pressure || !moving)
+  {
+    return clamped_radius;
+  }
+  return clamped_radius < focus_radius ? focus_radius : clamped_radius;
+}
+
 } // namespace cutum
