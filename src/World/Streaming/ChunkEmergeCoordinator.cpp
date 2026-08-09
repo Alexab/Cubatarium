@@ -688,8 +688,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                   }
                 }
                 if (!fully_dark_or_void &&
-                    (world.IsPendingLightBeforeMesh(col) ||
-                     phys_telem.DarkFaceVoidNearN > 0))
+                    world.IsPendingLightBeforeMesh(col))
                 {
                   fully_dark_or_void = true;
                 }
@@ -708,7 +707,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                   relight.cy = coord.y;
                   exec.Enqueue(relight);
                 }
-                if (phys_telem.DarkFaceVoidNearN > 200 || missing_visible_mesh)
+                // KEEP Era23 Note discipline: void_pressure only (not every miss).
+                if (phys_telem.DarkFaceVoidNearN > 200)
                 {
                   world.EnqueueVoidDarkColumnRelightNote(col);
                 }

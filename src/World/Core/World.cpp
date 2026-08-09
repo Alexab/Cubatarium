@@ -2816,14 +2816,20 @@ int UWorld::CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
       {
         continue;
       }
-      // Era26 I-O3: skip only Relight/PendingLight — FirstMesh/Dirty-empty
-      // must not mask void Collect (ocean dual-debt 214325).
+      // Era26 I-O3: skip Relight/PendingLight ownership. FirstMesh-only must
+      // not mask void (dual-debt). Dirty/gpu without FM still counts as progress.
       const auto &flow = GetColumnFlowExecutor();
       const bool has_relight_or_pending =
           flow.Scheduler().Contains(key, ColumnWorkKind::RelightThenMesh) ||
           flow.Scheduler().Contains(key, ColumnWorkKind::PromoteRelight) ||
           IsPendingLightBeforeMesh(key);
       if (CollectFullyDarkSkipsOnlyRelightOwnership(has_relight_or_pending))
+      {
+        continue;
+      }
+      const bool first_mesh_only =
+          flow.Scheduler().Contains(key, ColumnWorkKind::FirstMesh);
+      if (!first_mesh_only && ColumnHasRepairProgress(key))
       {
         continue;
       }

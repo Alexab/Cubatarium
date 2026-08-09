@@ -1341,7 +1341,36 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   {
     const int max_y = world.ProceduralTemplate.MaxHeight;
     const auto tick_t0 = std::chrono::steady_clock::now();
-    if (world.BlockRegistry)
+    const bool use_async = world.ProceduralTemplate.AsyncRelight &&
+                           world.AllowsAsyncLighting() && world.BlockRegistry;
+    if (use_async)
+    {
+      // Era26 I-L1: scoped async RelightColumns (snapshot JobPool). Drain
+      // without frontier re-queue / priority mesh — streaming is blocked.
+      world.DrainAsyncRelightResults(/*max_per_frame=*/48,
+                                     /*priority_mesh=*/false,
+                                     /*enqueue_background_frontier=*/false);
+      world.ReconcileAsyncRelightColumnInFlight();
+
+      const int workers =
+          std::clamp(world.ProceduralTemplate.RelightThreadCount, 1, 8);
+      const int max_inflight = workers * 3;
+      int schedule_batch = std::clamp(budget, 2, 8);
+      while (ColumnRelightScheduledIndex < ColumnRelightQueue.size() &&
+             schedule_batch > 0 &&
+             world.GetAsyncRelightInFlightCount() < max_inflight)
+      {
+        const glm::ivec2 &col =
+            ColumnRelightQueue[ColumnRelightScheduledIndex++];
+        world.EnqueueAsyncTerrainColumnRelight(
+            col.x * CHUNK_SIZE, col.y * CHUNK_SIZE, 0, max_y,
+            /*include_skylight=*/true, /*include_block_light=*/false,
+            /*finalize_pending_gate=*/false);
+        --schedule_batch;
+      }
+      ColumnRelightIndex = ColumnRelightScheduledIndex;
+    }
+    else if (world.BlockRegistry)
     {
       const int column_budget = std::clamp(budget, 8, 32);
       int relit = 0;
@@ -1354,11 +1383,15 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
             false, true);
         ++relit;
       }
+      ColumnRelightScheduledIndex = ColumnRelightIndex;
     }
 
-    const bool columns_done =
-        ColumnRelightIndex >= ColumnRelightQueue.size();
-    const size_t relight_done = ColumnRelightIndex;
+    const bool columns_scheduled =
+        ColumnRelightScheduledIndex >= ColumnRelightQueue.size();
+    const bool async_idle =
+        !use_async || !world.HasPendingAsyncRelightWork();
+    const bool columns_done = columns_scheduled && async_idle;
+    const size_t relight_done = ColumnRelightScheduledIndex;
     const size_t relight_total = ColumnRelightQueue.size();
 
     bool force_done = columns_done;
@@ -1374,6 +1407,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                   << "ms, done=" << relight_done << "/" << relight_total
                   << " — continuing to mesh warmup" << std::endl;
         ColumnRelightIndex = ColumnRelightQueue.size();
+        ColumnRelightScheduledIndex = ColumnRelightQueue.size();
+        if (use_async)
+        {
+          world.CancelAsyncRelightWork();
+        }
         force_done = true;
       }
     }
@@ -1387,23 +1425,28 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         Kind == WorldCoopKind::Create ? kCreateWeightRelight : kPhaseWeightRelight;
     const float relight_inner =
         relight_total > 0
-            ? std::min(1.0f, static_cast<float>(ColumnRelightIndex) /
+            ? std::min(1.0f, static_cast<float>(ColumnRelightScheduledIndex) /
                                  static_cast<float>(relight_total))
             : 1.0f;
     const float relight_frac = relight_base + relight_weight * relight_inner;
     Report(sink, "relight", relight_frac,
            force_done ? "Lighting ready."
                       : "Computing lighting... " +
-                            std::to_string(ColumnRelightIndex) + "/" +
+                            std::to_string(ColumnRelightScheduledIndex) + "/" +
                             std::to_string(relight_total));
 
     if (force_done)
     {
+      if (use_async && world.HasPendingAsyncRelightWork())
+      {
+        world.CancelAsyncRelightWork();
+      }
       const auto tick_t1 = std::chrono::steady_clock::now();
       const double tick_ms =
           std::chrono::duration<double, std::milli>(tick_t1 - tick_t0).count();
       std::cout << "[WorldLoad] RelightColumns done: " << relight_total
-                << " columns, last_tick_ms=" << tick_ms << std::endl;
+                << " columns, async=" << (use_async ? 1 : 0)
+                << ", last_tick_ms=" << tick_ms << std::endl;
       BeginEmissiveBlockLightQueue(world);
       if (CurrentPhase == Phase::MeshWarmup)
       {
