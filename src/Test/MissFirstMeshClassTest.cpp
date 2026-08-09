@@ -346,6 +346,13 @@ int main()
          "Era28 I-V3: Building !lit ⇒ RemeshAfterApply only");
   Expect(!ShouldRemeshAfterApplyOnlyWhileBuilding(true, true),
          "Era28 I-V3: lit drawable ⇒ normal remesh OK");
+  using cutum::SoftDeferEmptyPreferKickAfterAgeOnly;
+  Expect(SoftDeferEmptyPreferKickAfterAgeOnly(true, true, true, true),
+         "Era28 P2: age SLA + Queued ⇒ PreferKick");
+  Expect(!SoftDeferEmptyPreferKickAfterAgeOnly(false, true, true, true),
+         "Era28 P2: before age SLA ⇒ no PreferKick");
+  Expect(!SoftDeferEmptyPreferKickAfterAgeOnly(true, true, true, false),
+         "Era28 P2: age SLA without GPU stuck ⇒ no PreferKick");
 
   {
     MeshWorkAdmissionInput in;

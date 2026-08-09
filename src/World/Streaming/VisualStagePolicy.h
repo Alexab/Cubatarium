@@ -74,4 +74,17 @@ inline bool ShouldRemeshAfterApplyOnlyWhileBuilding(bool building_owned,
   return building_owned;
 }
 
+/// Era28 I-V2/P2: PreferKick SoftDefer empty only after age SLA (not every scan).
+inline bool SoftDeferEmptyPreferKickAfterAgeOnly(bool age_sla,
+                                                 bool soft_defer_empty,
+                                                 bool missing_visible_mesh,
+                                                 bool queued_or_kicked_stuck)
+{
+  if (!age_sla)
+  {
+    return false;
+  }
+  return soft_defer_empty && missing_visible_mesh && queued_or_kicked_stuck;
+}
+
 } // namespace cutum

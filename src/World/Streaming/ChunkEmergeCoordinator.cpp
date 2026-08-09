@@ -671,14 +671,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               item.scan_full_focus = missing_visible_mesh;
               item.cy = coord.y;
               exec.Enqueue(item);
-              const bool gpu_queued =
-                  mesh_service.IsPendingGpuQueued(coord) ||
-                  mesh_service.IsPendingGpuKickedOrDispatched(coord);
-              if (ShouldPreferKickSoftDeferEmptyStuck(true, missing_visible_mesh,
-                                                      gpu_queued))
-              {
-                mesh_service.PreferKickPendingGpuQueued(coord);
-              }
+              // Era28 P2: PreferKick only after age SLA (not every ownership scan).
             }
             // Era26 I-O4: SoftDefer empty ∥ void — parallel RelightThenMesh
             // (kind-separate; Capture stays FirstMesh under miss).
@@ -732,14 +725,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             {
               ++phys_telem.SoftDeferEmptyOwnedN;
             }
-            // Era24 I-E4: age SLA PreferKick / Capture-class drain.
+            // Era24 I-E4 / Era28 P2: age SLA PreferKick / Capture-class drain.
             if (ShouldEscalateSoftDeferEmptyAge(age_frames))
             {
               const bool gpu_queued =
                   mesh_service.IsPendingGpuQueued(coord) ||
                   mesh_service.IsPendingGpuKickedOrDispatched(coord);
-              if (ShouldPreferKickSoftDeferEmptyStuck(true, missing_visible_mesh,
-                                                      gpu_queued))
+              if (SoftDeferEmptyPreferKickAfterAgeOnly(
+                      true, true, missing_visible_mesh, gpu_queued))
               {
                 mesh_service.PreferKickPendingGpuQueued(coord);
               }
