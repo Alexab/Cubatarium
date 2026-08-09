@@ -233,6 +233,23 @@ empty_stuck≤2s matrix; miss_end=0 fly/idle/land (warm miss_end soft).
 (void/dark=0). Reject Imm-as-empty-heal; SoftDefer knobs-as-DoD; PreferKick
 every empty every frame.
 
+## Gap После Era27 closeout (2026-08-09) — Anti-flicker ownership; TD-063 **partial**
+
+| Практика | Industry | Cubatarium | Era27 SoT |
+|----------|----------|------------|-----------|
+| Hold GPU until bind | pendingReplace / mesh_storage swap | PendingReplace + keep-prior + Hide⇒Ticket | **KEEP** — residency SoT; **no new cache** |
+| Capture witness pin | HP quota sticky target | SoftDefer retarget every miss frame | **done** pin T=8 + better-horiz/age escape |
+| SoftDefer empty age sticky | stage age SLA | ownership-cap erase resets age | **done** SoftDeferEmptyAgeShouldReset |
+| Relight remesh damp | light without remesh churn | MarkRelit RemeshSeam on SoftDefer empty | **done** damp !Drawable + FM/Pending owned |
+| Inflight supersede hold | discard only stale after bind | MarkDirtyPriority Forget → discarded_late | **done** hold SoftDefer undrawn Active |
+
+**Evidence:** `era27_p3_fly` FLY_CLEAN; `era27_p3_idle` IDLE_CLEAN;
+`era27_p3_warm` IDLE_WARM; `era27_p3_land` ARCH_D3_LAND soft miss.
+**Baseline:** `perf_20260809-224912` / `manual_224912_analyze.json`. Heal-speed Era26
+KEEP; flicker = schedule thrash. Reject Imm; SoftDefer knobs; second drawable
+cache; FreeChunk-before-Bind. TD-063 **partial** until manual retarget/f≤1.5,
+discarded_late cruise≤2, miss_end=0, no remesh-blink eye.
+
 ## Gap После Era26 closeout (2026-08-09) — Ocean dual-debt; TD-062 **partial**
 
 | Практика | Industry | Cubatarium | Era26 SoT |

@@ -173,6 +173,15 @@ under miss; SoftDefer empty∥void; FillWater lateral Y; coop async RelightColum
 Reject: Imm; SoftDefer knobs; Relight-steal-FirstMesh Capture; live parallel
 RelightColumn; coop frontier re-queue.
 
+**Era27 Anti-Flicker Ownership (2026-08-09):** TD-063 **partial** (autofly
+FLY/IDLE/WARM GO; LAND soft miss; wait manual `224912`-class retarget/f≤1.5,
+discarded_late cruise≤2, miss_end=0, no remesh-blink). Capture witness pin T=8;
+SoftDefer empty age sticky; MarkRelit remesh damp SoftDefer-empty owned; Inflight
+supersede hold under miss. **No new drawable cache** — PendingReplace /
+keep-GPU is the residency layer. Reject: Imm; SoftDefer knobs-as-DoD;
+PreferKick every empty every frame; FreeChunk-before-Bind; second mesh cache;
+claim CLOSED on autofly while manual still blinks.
+
 **Backend matrix (R4):** desktop
 
 ```powershell
