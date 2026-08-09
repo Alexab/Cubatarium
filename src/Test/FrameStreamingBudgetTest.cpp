@@ -85,6 +85,22 @@ int main()
 
   {
     FrameStreamingBudgetInput in;
+    in.missing_visible_mesh = true;
+    in.visible_black_n = 10;
+    in.frame_ms = 300.0;
+    in.hot_frame_ms = 80.0;
+    in.miss_first_budget = true;
+    in.era18_vb_bg_budget_floor = true;
+    const auto d = EvaluateFrameStreamingBudget(in);
+    Expect(d.soft_defer_capture_budget == 1, "Era21: miss hot keeps Capture FM=1");
+    Expect(d.capture_first_mesh_only, "Era21: miss hot Capture is FirstMesh");
+    Expect(d.apply_vb_bg_floor && d.vb_bg_budget_floor == 1,
+           "Era21 I-V2: miss+hot VB mid-floor 1");
+    Expect(d.heal_deferred_for_miss, "Era21: heal_deferred telem under miss+VB");
+  }
+
+  {
+    FrameStreamingBudgetInput in;
     in.pending_light_focus_n = 12;
     in.frame_ms = 40.0;
     in.hot_frame_ms = 80.0;

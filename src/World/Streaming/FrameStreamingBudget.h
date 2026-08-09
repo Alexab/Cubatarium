@@ -95,12 +95,19 @@ inline FrameStreamingBudgetDecision EvaluateFrameStreamingBudget(
       {
         out.heal_deferred_for_miss = true;
       }
+      // Era21 I-V2: under miss+hot keep Promote/Relight mid-floor 1 nearest VB
+      // (not Capture FM storm / Era18 max floors).
+      if (in.visible_black_n > 0 && in.era18_vb_bg_budget_floor)
+      {
+        out.apply_vb_bg_floor = true;
+        out.vb_bg_budget_floor = 1;
+      }
       // Calm/mid idle: keep light mid-floor 1 when pending_focus (risk mitigation).
       if (!hot && in.pending_light_focus_n > 0 &&
           in.era18_vb_bg_budget_floor)
       {
         out.apply_vb_bg_floor = true;
-        out.vb_bg_budget_floor = 1;
+        out.vb_bg_budget_floor = std::max(out.vb_bg_budget_floor, 1);
       }
     }
     else if (unfinished && in.pending_light_focus_n > 0)
