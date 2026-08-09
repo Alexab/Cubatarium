@@ -70,6 +70,7 @@
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
+#include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
@@ -991,21 +992,44 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         continue;
       }
       bool had_mesh = false;
+      bool any_drawable = false;
+      bool soft_defer_empty_owned = false;
       const int cy0 = FloorDiv(dirty_min, CHUNK_SIZE);
       const int cy1 = FloorDiv(dirty_max, CHUNK_SIZE);
+      const bool has_fm_ticket = GetColumnFlowExecutor().Scheduler().Contains(
+          key, ColumnWorkKind::FirstMesh);
       for (int cy = cy0; cy <= cy1; ++cy)
       {
-        if (MeshService->HasGreedyMesh(glm::ivec3(key.x, cy, key.y)))
+        const glm::ivec3 coord(key.x, cy, key.y);
+        if (MeshService->HasGreedyMesh(coord))
         {
           had_mesh = true;
-          break;
+        }
+        if (MeshService->HasDrawableGreedyMesh(coord))
+        {
+          any_drawable = true;
+        }
+        else if (MeshService->HasGreedyMesh(coord) ||
+                 MeshService->IsSoftDeferHeld(coord))
+        {
+          const bool pending_or_inflight =
+              MeshService->IsPendingGpuApply(coord) ||
+              MeshService->HasInflightMeshBuild(coord);
+          if (has_fm_ticket || pending_or_inflight)
+          {
+            soft_defer_empty_owned = true;
+          }
         }
       }
+      // Era27 I-A3: SoftDefer-empty FirstMesh/PendingReplace owned !Drawable —
+      // light apply without RemeshSeam/Dirty storm (manual 224912 blink).
+      const bool damp_soft_empty_remesh = ShouldDampMarkRelitRemeshOnSoftDeferEmpty(
+          soft_defer_empty_owned, any_drawable);
       if (finalize_pending_gate)
       {
         PendingLightBeforeMesh.erase(key);
       }
-      if (finalize_pending_gate && had_mesh)
+      if (finalize_pending_gate && had_mesh && !damp_soft_empty_remesh)
       {
         const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
         const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
@@ -1034,6 +1058,11 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       if (finalize_pending_gate)
       {
         SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
+      }
+      if (damp_soft_empty_remesh)
+      {
+        // Light committed; FirstMesh ticket / PendingReplace owns heal.
+        continue;
       }
       if (dirty_max < dirty_min)
       {
