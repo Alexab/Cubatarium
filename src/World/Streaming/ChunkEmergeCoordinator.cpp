@@ -2510,6 +2510,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             mesh_service.PreferKickPendingGpuQueued(isolated_hole);
           }
         }
+        // Era24 P3 / I-E5: miss_cy>1 residual — pin FirstMesh on witness cy
+        // (SoftDefer empty heal must not leave higher-cy hole orphaned).
+        if (missing_visible_mesh && isolated_hole.y > 1 && miss_fm_class)
+        {
+          ColumnWorkItem pin{};
+          pin.column = glm::ivec2(isolated_hole.x, isolated_hole.z);
+          pin.kind = ColumnWorkKind::FirstMesh;
+          pin.priority = 108;
+          pin.scan_full_focus = true;
+          pin.cy = isolated_hole.y;
+          exec.Enqueue(pin);
+          if (queued_stuck || kicked_stuck)
+          {
+            mesh_service.PreferKickPendingGpuQueued(isolated_hole);
+          }
+        }
       }
 
       // Era22 I-M8: miss witness age >T (~2 periods / ~4s) → PreferKick witness.

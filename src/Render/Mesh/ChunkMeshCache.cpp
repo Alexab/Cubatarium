@@ -2699,6 +2699,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   }
   // Era24 I-E1 Hide⇒Ticket: SoftDefer empty must not leave idle
   // HasGreedy∧!Drawable in GreedyCache. Absent + FirstMesh ticket instead.
+  // I-R2: erase only when !had_gpu_drawable (never FreeChunk live drawable).
   if ((defer_until_lit || SoftDeferHeld.count(result.coord) > 0) &&
       !new_cpu_drawable && !had_gpu_drawable)
   {
