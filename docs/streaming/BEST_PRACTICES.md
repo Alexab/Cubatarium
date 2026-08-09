@@ -168,14 +168,17 @@ ARCH_D3_LAND; `era20_p3_warm` IDLE_WARM. Baseline `214034` not visual-merge.
 **Baseline:** `perf_20260808-214034` / `manual_214034_analyze.json`. Keep
 FrameStreamingBudget. Reject Imm primary; Era18 VB Capture storm; autofly-only close.
 
-## Gap После Era21 plan (2026-08-09) — open (TD-057)
+## Gap После Era21 plan (2026-08-09) — autofly GO; TD-057 **partial** (manual eye)
 
 | Практика | Industry | Cubatarium | Era21 SoT |
 |----------|----------|------------|-----------|
-| Keep old GPU until new upload ready | BindCommitted / pendingReplace | GPU path OK; CPU remesh FreeChunk | defer FreeChunk until Bind |
-| HP FirstMesh not blocked by LP tickets | dual-queue | Relight ticket skips SoftDefer Capture under miss | FirstMesh-only Capture gate |
-| Satisfying SoT for empty SoftDefer | hide until ready | RecoverUnlit HasGreedy treats empty as mesh | Satisfying/Drawable |
-| Autofly ≠ visual merge | PREMERGE | Era20 autofly GO; manual `102236` flicker/FOV | manual `102236` DoD |
+| Keep old GPU until new upload ready | BindCommitted / pendingReplace | GPU path OK; CPU remesh FreeChunk | **done** defer FreeChunk until Bind |
+| HP FirstMesh not blocked by LP tickets | dual-queue | Relight ticket skips SoftDefer Capture under miss | **done** FirstMesh-only Capture gate |
+| Satisfying SoT for empty SoftDefer | hide until ready | RecoverUnlit HasGreedy treats empty as mesh | **done** Satisfying/Drawable |
+| Autofly ≠ visual merge | PREMERGE | Era20 autofly GO; manual `102236` flicker/FOV | autofly GO; **manual `102236` still required** |
+
+**Evidence:** `era21_p3_fly` FLY; `era21_p12_idle` IDLE_CLEAN; `era21_p3_warm`
+IDLE_WARM; `era21_p12_land9` ARCH_D3_LAND. Baseline `102236` not visual-merge.
 
 **Baseline:** `perf_20260809-102236` / `manual_102236_analyze.json`.
 

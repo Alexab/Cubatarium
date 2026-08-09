@@ -132,11 +132,13 @@ Reject: Era18-style `max` floors while VB on hot wall; Worker Capture.
 enter_app≈100; manual `102236` improved FPS/no_ticket — flicker/FOV → TD-057).
 Reject: Imm-off while async=0 under miss; heal-floors-on-hitch; Imm primary zoo.
 
-**Era21 Residency FOV (2026-08-09):** TD-057 **open**. Keep GPU until
-BindCommitted; SoftDefer Capture FirstMesh-only under miss; RecoverUnlit
-Satisfying SoT. Analyze: `mesh_discarded_late_delta_cruise`,
-`vb_progress_without_dark_clear_sec`. Reject: FreeChunk-before-Bind;
-Relight-ticket-blocks-miss-Capture; Imm primary; hitch VB Capture storm.
+**Era21 Residency FOV (2026-08-09):** TD-057 **partial** (autofly GO;
+manual `102236`-class eye still required). Keep GPU until BindCommitted;
+SoftDefer Capture FirstMesh-only under miss; RecoverUnlit Satisfying;
+VB mid-floor under miss+hot; unload Dirty>64 gate. Analyze:
+`mesh_discarded_late_delta_cruise`, `vb_progress_without_dark_clear_sec`.
+Reject: FreeChunk-before-Bind; Relight-ticket-blocks-miss-Capture; Imm primary;
+hitch VB Capture storm.
 
 **Backend matrix (R4):** desktop
 

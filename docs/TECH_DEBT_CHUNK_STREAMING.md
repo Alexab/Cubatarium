@@ -109,7 +109,18 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-054 | Era18 | Focus light-debt / VB without PendingLight | Void RecoverUnlit⇒NotePendingLight; drain/capture floors while VB>0; manual 165953 | **partial 2026-08-08** light path OK; FPS/miss fixed via TD-055 autofly; manual eye pending |
 | TD-ARCH-055 | Era19 | FrameStreamingBudget / heal-on-hot feedback | Era18 `max` floors force Capture/VB spend on hot wall → wall↑ holes↑ miss↑ (`191229`) | **partial 2026-08-08** FrameStreamingBudget + miss-first; autofly GO; manual `214034` still holes/black |
 | TD-ARCH-056 | Era20 | Manual Visual SLA / rim FirstMesh escape | `214034`→`102236`: wall↓ no_ticket=0 enter↓; FOV miss/VB/flicker residual | **partial 2026-08-09** manual eye better; TD-057 |
-| TD-ARCH-057 | Era21 | Residency Replace + FOV SoT | CPU remesh FreeChunk before BindCommitted flicker; Relight ticket blocks miss Capture; SoftDefer empty HasGreedy SoT | **open 2026-08-09** P0 harness |
+| TD-ARCH-057 | Era21 | Residency Replace + FOV SoT | CPU remesh FreeChunk before BindCommitted flicker; Relight ticket blocks miss Capture; SoftDefer empty HasGreedy SoT | **partial 2026-08-09** autofly FLY/IDLE/WARM/LAND GO; manual `102236` eye still required |
+
+> **Era21 Residency FOV closeout (2026-08-09):** P0–P3 landed.
+> Keep GPU until BindCommitted (no FreeChunk demote on remesh); ForceFlat on
+> residency demote; unload gated while Dirty>64 (FogPullIn unload spiral);
+> SoftDefer Capture FirstMesh-only under miss; RecoverUnlit Satisfying SoT;
+> UndrawnForceCd=2 under miss class; VB mid-floor 1 under miss+hot.
+> Autofly: `era21_p3_fly` FLY_CLEAN; `era21_p12_idle` IDLE_CLEAN;
+> `era21_p3_warm` IDLE_WARM; `era21_p12_land9` ARCH_D3_LAND (land flaky —
+> reuse best GO). TD-057 **partial** until manual `102236`-class eye.
+> KEEP FrameStreamingBudget. Reject FreeChunk-before-Bind;
+> Relight-ticket-blocks-miss-Capture; Imm primary; hitch VB Capture storm.
 
 > **Era21 Residency FOV (2026-08-09):** Manual `perf_20260809-102236` after Era20:
 > wall≈111 (was 246), no_ticket=0, enter≈584. Residual: drawable remesh flicker
