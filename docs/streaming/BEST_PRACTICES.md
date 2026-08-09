@@ -199,6 +199,19 @@ not visual-merge until manual eye.
 **Baseline:** `perf_20260809-154049` / `manual_154049_analyze.json`. Keep
 FrameStreamingBudget. Reject Imm primary; hitch VB Capture; SoftDefer knobs-as-fix.
 
+## Gap После Era23 plan (2026-08-09) — Void Relight dual-queue; TD-059 **open**
+
+| Практика | Industry | Cubatarium | Era23 SoT |
+|----------|----------|------------|-----------|
+| Dual-queue HP FirstMesh vs LP Relight | MC highPriorityQuota | Relight starve under miss while void_near↑ | **P0** ShouldReserveVoidRelightSlots |
+| Void enqueue ⇒ PendingLight gate | light-before-remesh | Note only on RecoverUnlit Dispatch | **P0** ShouldNotePendingLightOnVoidEnqueue |
+| Held ≠ lit progress for fully-dark | Hide⇒Ticket honesty | SoftDeferHeld skips CollectFullyDark | **P0** SoftDeferHeldCountsAsVoidProgress |
+| Rim miss PreferKick early | stage SLA | kick only after ~4s age | **P0** ShouldPreferKickMissWitnessEarly |
+| Place in empty/undrawn column | collision+mesh SLA | Immediate SoftDefer-park / DigSeam skip | **P0** ShouldForceFirstMeshOnPlaceHole |
+
+**Baseline:** `perf_20260809-172232` / `manual_172232_analyze.json`. Keep
+FrameStreamingBudget. Reject Imm primary; hitch Capture; Held-as-void-progress.
+
 ## Gap После Era19 plan (2026-08-08) — autofly CLOSED; **manual superseded by 214034**
 
 | Практика | Industry | Cubatarium | Era19 SoT |

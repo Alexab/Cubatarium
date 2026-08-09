@@ -93,6 +93,47 @@ int main()
   Expect(AsyncScheduleFloorUnderMiss(false) == 0,
          "Era22 I-A1: calm → no floor");
 
+  // --- Era23 Void Relight / rim miss / place-hole predicates ---
+  using cutum::ShouldForceFirstMeshOnPlaceHole;
+  using cutum::ShouldNotePendingLightOnVoidEnqueue;
+  using cutum::ShouldPreferKickMissWitnessEarly;
+  using cutum::ShouldReserveVoidRelightSlots;
+  using cutum::SoftDeferHeldCountsAsVoidProgress;
+  using cutum::VoidRelightCollectCap;
+
+  Expect(!SoftDeferHeldCountsAsVoidProgress(true, true),
+         "Era23 I-V6: Held + fully-dark ⇒ not void progress");
+  Expect(SoftDeferHeldCountsAsVoidProgress(true, false),
+         "Era23 I-V6: Held without fully-dark still counts");
+  Expect(!SoftDeferHeldCountsAsVoidProgress(false, true),
+         "Era23 I-V6: no Held → no progress");
+  Expect(ShouldReserveVoidRelightSlots(250, 0, true),
+         "Era23 I-V4: void_n>T ⇒ Relight slots");
+  Expect(ShouldReserveVoidRelightSlots(0, 3, true),
+         "Era23 I-V4: VB>0 ⇒ Relight slots under miss");
+  Expect(!ShouldReserveVoidRelightSlots(50, 0, false),
+         "Era23 I-V4: calm void below T → no reserve");
+  Expect(VoidRelightCollectCap(2, true) >= 2,
+         "Era23 I-V4: void pressure keeps void_cap≥2");
+  Expect(VoidRelightCollectCap(1, true) >= 2,
+         "Era23 I-V4: void pressure floors cap at 2");
+  Expect(ShouldNotePendingLightOnVoidEnqueue(true),
+         "Era23 I-V5: fully-dark/no_sky ⇒ Note on enqueue");
+  Expect(!ShouldNotePendingLightOnVoidEnqueue(false),
+         "Era23 I-V5: lit remesh path → no void Note");
+  Expect(ShouldPreferKickMissWitnessEarly(true, true),
+         "Era23 I-M9: miss + FirstMesh class → PreferKick every frame");
+  Expect(!ShouldPreferKickMissWitnessEarly(true, false),
+         "Era23 I-M9: miss outside class → age SLA only");
+  Expect(!ShouldPreferKickMissWitnessEarly(false, true),
+         "Era23 I-M9: no miss → no early PreferKick");
+  Expect(ShouldForceFirstMeshOnPlaceHole(true, true),
+         "Era23 I-P1: empty/undrawn near ⇒ FirstMesh");
+  Expect(!ShouldForceFirstMeshOnPlaceHole(true, false),
+         "Era23 I-P1: far empty → no force");
+  Expect(!ShouldForceFirstMeshOnPlaceHole(false, true),
+         "Era23 I-P1: drawable near → no force");
+
   {
     MeshWorkAdmissionInput in;
     in.pending_gpu = 6;

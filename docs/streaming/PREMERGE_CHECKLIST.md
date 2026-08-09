@@ -141,11 +141,16 @@ Reject: FreeChunk-before-Bind; Relight-ticket-blocks-miss-Capture; Imm primary;
 hitch VB Capture storm.
 
 **Era22 SoftDefer Heal SLA (2026-08-09):** TD-058 **partial** (autofly matrix;
-manual `154049`-class eye still required). SoftDefer FirstMesh schedule under
+manual `172232` eye → TD-059). SoftDefer FirstMesh schedule under
 miss/focus; SoftDeferHeld ∈ progress + Contains cy; VB full-focus tickets when
 no_ticket; miss age PreferKick; async floor≥12 post-Finalize under miss|UV.
 Reject: SoftDeferHeld-without-Contains; VB-collect≪Count; Imm-as-heal;
 Era18 hitch Capture storm; SoftDefer knobs-as-fix.
+
+**Era23 Void Relight / rim miss (2026-08-09):** TD-059 **open** until manual
+`172232`-class eye (void_near≪596; no_ticket=0; miss_stuck≤12; SoftDefer empty≤2;
+place-fall rare). Reject: Held-as-void-progress; Relight-starve-under-miss;
+Imm-as-heal; hitch Capture storm; SoftDefer knobs-as-fix.
 
 **Backend matrix (R4):** desktop
 

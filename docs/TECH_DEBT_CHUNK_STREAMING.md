@@ -110,7 +110,18 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-055 | Era19 | FrameStreamingBudget / heal-on-hot feedback | Era18 `max` floors force Capture/VB spend on hot wall → wall↑ holes↑ miss↑ (`191229`) | **partial 2026-08-08** FrameStreamingBudget + miss-first; autofly GO; manual `214034` still holes/black |
 | TD-ARCH-056 | Era20 | Manual Visual SLA / rim FirstMesh escape | `214034`→`102236`: wall↓ no_ticket=0 enter↓; FOV miss/VB/flicker residual | **partial 2026-08-09** manual eye better; TD-057 |
 | TD-ARCH-057 | Era21 | Residency Replace + FOV SoT | CPU remesh FreeChunk before BindCommitted flicker; Relight ticket blocks miss Capture; SoftDefer empty HasGreedy SoT | **partial 2026-08-09** autofly FLY/IDLE/WARM/LAND GO; manual `154049` eye → TD-058 |
-| TD-ARCH-058 | Era22 | SoftDefer Heal SLA + VB ticket radius | SoftDeferHeld/empty without FirstMesh SLA; VB collect r≤2 vs Count full focus orphans; miss heal latency | **partial 2026-08-09** P0–P3 code+autofly; manual `154049`-class eye still required |
+| TD-ARCH-058 | Era22 | SoftDefer Heal SLA + VB ticket radius | SoftDeferHeld/empty without FirstMesh SLA; VB collect r≤2 vs Count full focus orphans; miss heal latency | **partial 2026-08-09** autofly GO; manual `172232` eye → TD-059 |
+| TD-ARCH-059 | Era23 | Void Relight dual-queue + rim miss SLA | void_near≈596; Relight starve under miss; Held-as-progress masks Collect; miss PreferKick too late; place-hole fall | **open 2026-08-09** P0 predicates; wait P1–P3 + manual `172232`-class |
+
+> **Era23 Void Relight / rim miss (2026-08-09):** Manual `perf_20260809-172232`
+> after Era22: wall≈96 KEEP; holes 0.30→0.50; miss_stuck 50→34; SoftDefer empty
+> 8→6; no_ticket 12→13; void_near stop 0→596; discarded_late cruise 0→3;
+> SoftDeferHeld=0 (Held-SLA unused). Fix: void Relight dual-queue under miss;
+> NotePendingLight on void enqueue; Held≠void progress for fully-dark; PreferKick
+> miss witness every FirstMesh-class frame; place-hole FirstMesh+collision.
+> KEEP FrameStreamingBudget / keep-GPU / Capture FM-under-miss / Era22 SoftDefer
+> !Drawable schedule. Reject Imm primary; hitch VB Capture; SoftDefer knobs;
+> Held-as-progress for fully-dark.
 
 > **Era22 SoftDefer Heal SLA closeout (2026-08-09):** P0–P3 landed.
 > SoftDefer !Drawable FirstMesh schedule under miss/focus; SoftDeferHeld ∈

@@ -92,4 +92,62 @@ inline int AsyncScheduleFloorUnderMiss(bool miss_or_unfinished_visual)
   return miss_or_unfinished_visual ? 12 : 0;
 }
 
+/// Era23 I-V6: SoftDeferHeld must not count as void-heal progress while the
+/// column still has fully-dark faces (Collect skip masked void on 172232).
+inline bool SoftDeferHeldCountsAsVoidProgress(bool soft_defer_held,
+                                              bool has_fully_dark_face)
+{
+  if (has_fully_dark_face)
+  {
+    return false;
+  }
+  return soft_defer_held;
+}
+
+/// Era23 I-V4: reserve RelightThenMesh slots while void faces or VB live
+/// (dual-queue under miss — not hitch Capture storm).
+inline bool ShouldReserveVoidRelightSlots(int dark_face_void_near_n,
+                                          int visible_black_n,
+                                          bool /*missing_visible_mesh*/,
+                                          int void_threshold = 200)
+{
+  if (visible_black_n > 0)
+  {
+    return true;
+  }
+  return dark_face_void_near_n > void_threshold;
+}
+
+/// Era23 I-V4: void collect cap independent of no_ticket nearest-N=1–2.
+inline int VoidRelightCollectCap(int repair_cap, bool void_pressure)
+{
+  const int base = std::max(1, repair_cap);
+  if (void_pressure)
+  {
+    return std::max(base, std::min(4, std::max(2, repair_cap)));
+  }
+  return base;
+}
+
+/// Era23 I-V5: NotePendingLight when enqueueing void Relight (not only Dispatch).
+inline bool ShouldNotePendingLightOnVoidEnqueue(bool fully_dark_or_no_sky)
+{
+  return fully_dark_or_no_sky;
+}
+
+/// Era23 I-M9: PreferKick miss witness every miss-frame in FirstMesh class
+/// (do not wait age≥2 periods).
+inline bool ShouldPreferKickMissWitnessEarly(bool missing_visible_mesh,
+                                             bool miss_first_mesh_class)
+{
+  return missing_visible_mesh && miss_first_mesh_class;
+}
+
+/// Era23 I-P1: SoftDefer empty / !Drawable place column needs FirstMesh SLA.
+inline bool ShouldForceFirstMeshOnPlaceHole(bool soft_defer_empty_or_undrawn,
+                                            bool near_or_underfeet)
+{
+  return soft_defer_empty_or_undrawn && near_or_underfeet;
+}
+
 } // namespace cutum
