@@ -322,6 +322,13 @@ def main() -> int:
         help="hold Space while flying (climb / maintain altitude)",
     )
     ap.add_argument(
+        "--min-alt-above-sea",
+        type=float,
+        default=None,
+        help="AppRunner MinAltitudeAboveSea (ocean void telem needs ≤~12 so "
+        "DarkFaceVoidNearN sphere 24m sees sea faces; default exe 28)",
+    )
+    ap.add_argument(
         "--pitch",
         type=float,
         default=None,
@@ -578,22 +585,27 @@ def main() -> int:
         args.warmup_sec = max(args.warmup_sec, 16.0)
 
     def _apply_ocean_cruise_base():
+        # Era31 void-debt parity: DarkFaceVoidNearN is a 24m sphere — sea+28 +
+        # HoldSpace climb made autofly blind (void_max=0) while manual saw 774+.
         args.world = args.world or "World_164"
         args.fly_stop = True
         args.sprint = False
-        args.hold_space = True
+        args.hold_space = False
+        if args.min_alt_above_sea is None:
+            args.min_alt_above_sea = 10.0
         if args.pitch is None:
             args.pitch = 0.0
         if args.yaw is None:
             args.yaw = 180.0
+        # Manual SoT corridor 122032/153653 (−550…−555, ~110), not (−525,100).
         if args.cruise_cx is None:
-            args.cruise_cx = -525.0
+            args.cruise_cx = -550.0
         if args.cruise_cz is None:
-            args.cruise_cz = 100.0
+            args.cruise_cz = 110.0
 
     if args.scenario == "ocean-cruise":
-        # Manual 104841 ocean west cruise: (−525,100)→(−551,103), FillWater horizon
-        # heal stress (void/VB/fluid). No cruise_eye_y — AppRunner sea+alt clamp.
+        # Ocean west cruise FillWater horizon heal stress (void/VB/fluid).
+        # No cruise_eye_y — AppRunner sea+min_alt clamp.
         _apply_ocean_cruise_base()
         args.resume = False
         args.teleport_cruise = True
@@ -633,12 +645,16 @@ def main() -> int:
         args.warmup_sec = max(args.warmup_sec, 16.0)
 
     if args.scenario == "ocean-cruise-stress":
-        # Resume + longer fly + sprint — wall pressure + residency parity.
+        # Cold teleport + short idle + sprint — void/holes parity with manual.
+        # (Warm resume + idle≥12 + sea+28 hid void; OCEAN_CRUISE_STRESS DoD.)
         _apply_ocean_cruise_base()
-        args.resume = True
-        args.teleport_cruise = False
+        args.resume = False
+        args.teleport_cruise = True
         args.sprint = True
-        args.idle_sec = max(args.idle_sec, 12.0)
+        if "--idle-sec" not in sys.argv:
+            args.idle_sec = 3.0
+        else:
+            args.idle_sec = max(args.idle_sec, 3.0)
         if "--fly-phase-sec" not in sys.argv:
             args.fly_phase_sec = 90.0
         else:
@@ -651,7 +667,11 @@ def main() -> int:
             args.seconds,
             args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
         )
-        args.warmup_sec = max(args.warmup_sec, 16.0)
+        # Keep early void peak in fly segment (warmup 16 ate period 0–1).
+        if "--warmup-sec" not in sys.argv:
+            args.warmup_sec = 8.0
+        else:
+            args.warmup_sec = min(args.warmup_sec, 8.0)
 
     if args.scenario == "ocean-cruise-short":
         # Stop-debt snapshot (land_south_short lesson): shorter idle keeps void.
@@ -919,6 +939,8 @@ def main() -> int:
             sim_cmd.extend(["--cruise-cz", str(args.cruise_cz)])
         if args.cruise_eye_y is not None:
             sim_cmd.extend(["--cruise-eye-y", str(args.cruise_eye_y)])
+        if args.min_alt_above_sea is not None:
+            sim_cmd.extend(["--min-alt-above-sea", str(args.min_alt_above_sea)])
 
         process_timeout = args.process_timeout
         if process_timeout <= 0.0:

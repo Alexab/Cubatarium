@@ -1,61 +1,40 @@
-# Era31 Autofly Matrix Results (2026-08-10)
+# Era31 Autofly Void-Debt Parity (2026-08-10)
 
-Build: post-Era31 + ForceCap hang fix + VB Relight slot + single WarmupGreedy.  
-World: `World_164`. SoT manual still `122032` (pre-Era31 code).
+## Root cause (H4 fixed in harness)
 
-## Runs
+Autofly `fly_void_near_max=0` was **altitude-blind telemetry**, not missing ocean debt:
 
-| Scenario | Report | Perf log |
-|----------|--------|----------|
-| smoke | `bin/iter_reports/era31_ocean_smoke.json` | `perf_20260810-151531_9900` |
-| stress | `bin/iter_reports/era31_ocean_stress.json` | `perf_20260810-151730_26932` |
-| enter | `bin/iter_reports/era31_ocean_enter.json` | (enter scenario) |
-| smoke2 (post Relight/enter tweak) | `bin/iter_reports/era31_ocean_smoke2.json` | `perf_20260810-152716_26876` |
-| stress2 | `bin/iter_reports/era31_ocean_stress2.json` | `perf_20260810-152918_504` |
+- `DarkFaceVoidNearN` = unlit faces within **24m** of camera
+- Old ocean scenarios: `hold_space=True` + default `MinAltitudeAboveSea=28` → eye ≫24m above sea faces
+- Stress was warm resume + idle≥12 → early void peak eaten before fly analyze
 
-## Metrics vs Era31 targets (vs manual 122032)
+## Harness fix (`tools/flight_sim_run.py`)
 
-| Metric | 122032 manual | smoke2 | stress2 | Target | Autofly? |
-|--------|---------------|--------|---------|--------|----------|
-| `fly_void_near_max` | 1823 | **0** | **0** | ≪800 | no debt (H4) |
-| `effective_holes_rate` | 70% | 17% | 34% | ≤30% | stress 34% soft |
-| `fly_visible_black_max` | 44 | — | 21 | ≤20 | stress ~GO |
-| `vb_progress_without_dark_clear_sec` | 22s | **0** | **0** | ≈0 | **GO** |
-| `wall_ms_fly_med` | 123 | 40 | 47 | ≤80 | **GO** |
-| `enter_app_update_max` | 1196 | 1026 | 890 | ≤200 | **NO** |
-| `opaque_idle_churn_max` | 251 | 24 | 124 | ≤120 | smoke GO / stress soft |
-| `fly_frontier_pressure_frac` | 1.0 | 0.86 | 0.90 | KEEP | **GO** |
-| `emerge_spike_frac` | 0.67 | 0.52 | **0.26** | ≪0.8 | improved |
-| `void_drain_rate` | −54 | 0 | 0 | >0 under debt | N/A (void=0) |
+- `--min-alt-above-sea` forwarded to exe (ocean default **10**)
+- Ocean: `hold_space=False`
+- Cruise coords → **−550 / 110** (manual 122032/153653 corridor)
+- `ocean-cruise-stress`: cold **teleport**, idle=3, warmup_sec=8, sprint KEEP
 
-## Gates
+## Results (post-fix)
 
-| Gate | Result | Note |
-|------|--------|------|
-| `OCEAN_CRUISE` | **GO** | soft WARN: enter_app, relight_drain_while_vb |
-| `OCEAN_CRUISE_STRESS` | **NO-GO** | void≥400 / holes≥40% not reproduced (autofly still cleaner than manual) |
-| `OCEAN_MANUAL` | **NO-GO** | needs new post-fix manual flight + eye; 122032 is pre-Era31 |
+| Run | void max | holes | frontier | wall fly | Gate |
+|-----|----------|-------|----------|----------|------|
+| stress **before** (`era31_ocean_stress2`) | **0** | 34% | 0.90 | 47 | STRESS NO-GO |
+| stress **after** (`era31_void_parity_stress`) | **3578** | **67%** | 0.96 | 100 | **OCEAN_CRUISE_STRESS GO** |
+| smoke after (`era31_void_parity_smoke`) | **1585** | 89% | 0.87 | 99 | OCEAN_CRUISE NO-GO (aspirational clean) |
+| manual 153653 | 774 | 74% | 1.0 | 121 | OCEAN_MANUAL NO-GO |
 
-## Plan checklist (Q0–Q6)
+## Semantics
 
-| Phase | Implemented in code? | Target met on autofly? | Notes |
-|-------|----------------------|------------------------|-------|
-| Q0 harness / SoT 122032 | yes | yes | metrics + baseline doc |
-| Q1 heal throughput | yes | **partial** | pressure ON; void debt not reproduced by autofly; Relight-while-VB still soft-warn |
-| Q2 emerge/heal split | yes | **improved** | emerge_spike_frac 0.67→0.26 on stress2; wall≪123 |
-| Q3 VB dark-clear | yes | **yes** | vb_progress_without_dark_clear=0 |
-| Q4 full enter cap | yes (then fixed hang) | **no** | ForceCap mid-load removed; enter_app still ~0.9–1.1s |
-| Q5 opaque churn | yes | **mostly** | smoke 24; stress2 124 (soft over 120) |
-| Q6 OCEAN_MANUAL GO | docs/gates | **no** | TD-066 remains **partial** until manual eye |
+- **OCEAN_CRUISE_STRESS** — parity DoD: must reproduce void≥400 + holes≥40% (now GO).
+- **OCEAN_CRUISE** — aspirational heal targets; after altitude fix smoke is honest-dirty (NO-GO OK).
+- **OCEAN_MANUAL** — still requires manual eye; autofly parity no longer false-clean on void.
 
-## Honest verdict
+## Commands
 
-- Era31 **landed** pressure→throughput wiring, VB honesty, emerge cap, opaque damp, enter hang fix.
-- Autofly **cannot CLOSE** Era31: smoke is still too clean on void (H4), stress does not reproduce void≥400, enter hitch remains ≫200ms.
-- **DoD** stays: new manual flight on 122032-class zone + `OCEAN_MANUAL GO` + eye.
-
-## Follow-ups (Era32 candidates)
-
-1. Enter hitch: profile first InGame `app_update` (WarmupGreedy / PrepareEnter / streamer init).
-2. Autofly void parity: colder teleport / denser FillWater path so stress can hit void≥400.
-3. Relight telem honesty: `relight_drain_ms` vs async FIFO (soft fail may be async-false).
+```powershell
+python tools/flight_sim_run.py --scenario ocean-cruise-stress --phase-id era31_void_parity `
+  --report bin/iter_reports/era31_void_parity_stress.json
+python tools/flight_sim_phase_gate.py --phase-id OCEAN_CRUISE_STRESS `
+  --report bin/iter_reports/era31_void_parity_stress.json
+```

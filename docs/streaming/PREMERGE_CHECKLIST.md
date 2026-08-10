@@ -273,11 +273,11 @@ python tools/flight_sim_iterate.py --world World_164 --iterations 3 --build-firs
 
 ## 4c. Era31 Ocean Heal Throughput (smoke ≠ DoD)
 
-**Smoke** (`OCEAN_CRUISE`) — autofly `ocean-cruise`; может GO при void=0 (слишком чистый teleport path).
+**Smoke** (`OCEAN_CRUISE`) — autofly `ocean-cruise`; after void-parity harness (sea+10, no HoldSpace, −550/110) smoke sees real debt — aspirational clean thresholds may NO-GO (honest).
 
-**Parity** (`OCEAN_CRUISE_STRESS`) — `ocean-cruise-stress` must reproduce void≥400 + holes≥40% pre-fix.
+**Parity** (`OCEAN_CRUISE_STRESS`) — cold teleport + idle=3 + sprint; must reproduce void≥400 + holes≥40% (DoD for harness).
 
-**DoD** (`OCEAN_MANUAL`) — analyze manual `122032`-class log (post-Era30 zone); CLOSED только при GO + eye.
+**DoD** (`OCEAN_MANUAL`) — analyze manual `122032`/`153653`-class log; CLOSED только при GO + eye.
 
 Era31 bisect metrics: `void_peak_period_idx`, `void_drain_rate`, `emerge_spike_frac`, `vb_progress_without_dark_clear_sec`.
 
