@@ -56,17 +56,21 @@ inline bool ShouldPublishMeshToDraw(bool lit_drawable, bool keep_prior_gpu_live,
   return false;
 }
 
-/// Era32 I-L1: hide fully-dark drawable in LitDrawable ring until lit/replace.
+/// Era32 I-L1: hide fully-dark drawable in LitDrawable ring until lit binds.
 /// Universal (land+ocean) — not gated on ocean_heal.
+/// pending_replace_lit is ignored: PendingLight/PendingGpu keep-prior was
+/// drawing Unlit black plugs for the whole Relight→Remesh window (manual
+/// 183525 eye). Hole until lit bind > black surface in FOV.
 inline bool ShouldHideFullyDarkUntilLitInRing(int horiz, bool fully_dark,
                                              bool pending_replace_lit,
                                              int ring = kVisualStageLitDrawableHoriz)
 {
+  (void)pending_replace_lit;
   if (horiz > ring || !fully_dark)
   {
     return false;
   }
-  return !pending_replace_lit;
+  return true;
 }
 
 /// Era28 I-V4: near void/VB needs Relight before first draw (not Unlit preview).

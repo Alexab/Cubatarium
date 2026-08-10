@@ -2085,25 +2085,20 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
   {
     return false;
   }
-  if (MeshService->IsPendingGpuApply(chunk_coord) ||
-      MeshService->IsGpuExtractInFlight(chunk_coord))
-  {
-    return true;
-  }
   if (MeshService->HasMeshSatisfyingColumnReady(chunk_coord))
   {
-    // Era32 I-L1: per-slice LitDrawable — fully-dark in ring is not drawn
-    // (column siblings may still be lit). Keep-prior PendingLight allows draw.
-    const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
-    if (!IsPendingLightBeforeMesh(col) &&
-        MeshService->GetCache().ChunkHasFullyDarkFace(chunk_coord))
+    // Era32 I-L1: never draw fully-dark plugs in LitDrawable ring.
+    // Check before PendingGpu keep-prior (manual 183525 black surface).
+    // StaleDark is heal-only (not hide) — hiding it remesh-thrashed ocean
+    // (discarded_late≈50, void spiral hide3).
+    if (MeshService->GetCache().ChunkHasFullyDarkFace(chunk_coord))
     {
       const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
       const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
       const int horiz =
           std::max(std::abs(chunk_coord.x - focus_chunk.x),
                    std::abs(chunk_coord.z - focus_chunk.z));
-      if (horiz <= kVisualStageLitDrawableHoriz)
+      if (ShouldHideFullyDarkUntilLitInRing(horiz, true, false))
       {
         return false;
       }
@@ -3216,6 +3211,10 @@ int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
         {
           continue;
         }
+        // Count drawable dark for Relight heal tickets even when LitDrawable
+        // draw gate hides them (IsChunkSliceRenderReady=false). Drawn-only
+        // counting starved EnqueueVisibleBlackRepairTickets → void spiral
+        // (era32_hide2_ocean void≈3.2k).
         if (MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld) ||
             MeshService->GetCache().ChunkHasFullyDarkFace(coord))
         {

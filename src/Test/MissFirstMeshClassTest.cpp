@@ -172,12 +172,14 @@ int main()
          "Era24 I-E2: empty outside FOV → no ownership");
   Expect(!SoftDeferEmptyNeedsFirstMeshOwnership(false, true),
          "Era24 I-E2: not empty → no ownership");
-  Expect(!ShouldEscalateSoftDeferEmptyAge(44),
-         "Era24 I-E4: age 44 < sla 45 → no escalate");
-  Expect(ShouldEscalateSoftDeferEmptyAge(45),
-         "Era24 I-E4: age 45 ≥ sla → escalate");
+  Expect(!ShouldEscalateSoftDeferEmptyAge(29),
+         "Era32: age 29 < sla 30 → no escalate");
+  Expect(ShouldEscalateSoftDeferEmptyAge(30),
+         "Era32: age 30 ≥ sla → escalate");
   Expect(ShouldEscalateSoftDeferEmptyAge(60, 45),
-         "Era24 I-E4: age past sla → escalate");
+         "Era32: explicit sla 45 still honored");
+  Expect(ShouldEscalateSoftDeferEmptyAge(44),
+         "Era32: default sla 30 → age 44 escalates");
   Expect(SoftDeferEmptyHealKindOf() == SoftDeferEmptyHealKind::FirstMesh,
          "Era24 I-E3: SoftDefer empty heal is FirstMesh only");
   Expect(ShouldPreferKickSoftDeferEmptyStuck(true, true, true),
@@ -346,8 +348,8 @@ int main()
          "Era32: fully-dark at ring edge hide");
   Expect(!ShouldHideFullyDarkUntilLitInRing(5, true, false),
          "Era32: hinterland fully-dark no ring hide");
-  Expect(!ShouldHideFullyDarkUntilLitInRing(2, true, true),
-         "Era32: pending replace ⇒ no hide");
+  Expect(ShouldHideFullyDarkUntilLitInRing(2, true, true),
+         "Era32: fully-dark never keep-prior (hole > black plug)");
   Expect(!SoftDeferEmptyShouldMarkDirty(true, true, false),
          "Era28 I-V2: FM ticket ⇒ no Dirty");
   Expect(!SoftDeferEmptyShouldMarkDirty(true, false, true),
