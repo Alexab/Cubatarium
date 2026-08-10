@@ -1,7 +1,7 @@
 # Era32 LitDrawable FOV SLA — baseline
 
 **Branch:** `perf_opt7`  
-**Commits:** `9ac2c68f` (P0–P3), `6d54fd0e` (slice draw gate + Relight Note floors)  
+**Commits:** `9ac2c68f` → `93d471e6`  
 **SoT manual eye:** `165423`-class; autofly ≠ CLOSED
 
 ## Contract (land + ocean)
@@ -15,26 +15,29 @@
 | SoftDefer empty | Never `FreeChunk` live `GpuResident` |
 | RemeshAfterApply | VisualStage damp (not ocean_heal-only) |
 | FirstMesh SLA | `first_mesh_admit ≥ 1` on miss/unfinished |
-| SoftDefer | Must **not** force-hide live dark (drops Dirty → void spiral) |
+| SoftDefer | Must **not** force-hide live dark (Dirty remesh) |
+| Relight floors | KEEP Era31 NoteMin=2 / vb_bg≤2 (higher flooded void) |
 
-## Autofly results
+## Best autofly evidence
 
-| Scenario | VB | unlit | churn | miss_end | holes | void | Gate |
-|----------|-----|-------|-------|----------|-------|------|------|
-| `era32_v2_ocean` | 56 | 33.5 | **45** | 1 | **0.44** | 2606 | OCEAN_CRUISE NO-GO |
-| `era32_v2_land` | 23 | 1 | 74 | **0** | **0.09** | 0 | **FLY_CLEAN + ARCH_D3_LAND GO** |
-| `era32_v2_stress` | 55 | 21 | 39 | 1 | 0.63 | 4217 | **OCEAN_CRUISE_STRESS GO** |
-| `era32_fix_ocean` | 60 | 24 | **43** | 1 | 1.0* | **1545** | best void among Era32 ocean |
-| baseline `165423` | 68 | 21 | 161 | 1 | 0.80 | 1491 | pre-Era32 manual |
+| Scenario | VB | churn | miss_end | holes | void | Gate |
+|----------|-----|-------|----------|-------|------|------|
+| `era32_v2_land` | 23 | 74 | 0 | **0.09** | 0 | **FLY_CLEAN + ARCH_D3_LAND GO** |
+| `era32_v5_land` | 24 | 245 | **0** | **0.00** | 0 | FLY_CLEAN GO; ARCH soft churn |
+| `era32_v2_stress` | 55 | 39 | 1 | 0.63 | 4217 | **OCEAN_CRUISE_STRESS GO** |
+| `era32_v5_ocean` | 61 | **51** | 1 | 0.46 | 1793 | OCEAN_CRUISE NO-GO |
+| `era32_fix_ocean` | 60 | **43** | 1 | 1.0* | **1545** | best ocean void |
+| baseline `165423` | 68 | 161 | 1 | 0.80 | 1491 | pre-Era32 manual |
 
-\*pre column/draw split. Churn DoD ≤80: **met** on land+ocean samples.
+Churn DoD ≤80: met on ocean + best land sample. Ocean void/VB/miss_end still above OCEAN_MANUAL.
 
 ## Status
 
-- **Land:** Era32 publication + anti-flicker **GO** (ARCH_D3_LAND / FLY_CLEAN on `era32_v2_land`).
-- **Ocean:** stress harness GO; smoke/manual still NO-GO (void/VB/miss_end). TD-066 **partial**.
-- **Eye:** request manual land+ocean on LitDrawable build (`165423`-class zone).
+- **Land:** publication + anti-flicker largely **GO** (best `era32_v2_land` ARCH_D3_LAND).
+- **Ocean:** stress harness GO; smoke/manual **partial** (void≈1.5–1.8k, VB≈60, miss_end=1).
+- **TD-066:** partial until `OCEAN_MANUAL GO` + eye.
+- **Next:** manual eye land+ocean on this build; ocean void/VB throughput without Note/vb_bg flood.
 
 ## REJECT
 
-SoftDefer force-hide live dark; ocean_heal-only publication; Unlit near; CLOSED on autofly smoke; vb_bg floors >2 without void-drain proof.
+SoftDefer force-hide live dark; ocean_heal-only publication; Unlit near; CLOSED on smoke; NoteMin/vb_bg knobs without void-drain proof.
