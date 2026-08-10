@@ -990,7 +990,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // MarkDirty kept re-feeding Dirty while existing meshes remeshed.
   const bool suppress_seam_standing_churn =
       !moving && pending_focus_count == 0 && !missing_visible_mesh &&
-      black_sticky == 0 && pending_dirty_early > 100;
+      black_sticky == 0 && pending_dirty_early > 48;
   world.SetSuppressRelightSeamDirty(idle_remesh_debt || idle_focus_dirty_debt ||
                                     suppress_seam_for_sticky_catchup ||
                                     suppress_seam_standing_churn);
