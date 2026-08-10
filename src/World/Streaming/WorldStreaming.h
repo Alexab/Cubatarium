@@ -151,6 +151,8 @@ private:
   int SoftDeferCapturePinCy{-1};
   int SoftDeferCapturePinHoriz{0};
   int SoftDeferCapturePinAge{0};
+  /// Pin length; Era29 enter sets EnterSpawnCapturePinFrames(), else Era27 T=8.
+  int SoftDeferCapturePinMaxAge{8};
 };
 
 } // namespace cutum

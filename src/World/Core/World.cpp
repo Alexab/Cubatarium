@@ -1066,6 +1066,28 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         // Light committed; FirstMesh ticket / PendingReplace owns heal.
         continue;
       }
+      // Era29 P3: far Unlit with drawable — RemeshAfterApply only (no MarkDirty
+      // remesh-on-lit opaque storm; KEEP near Unlit hide-until-lit).
+      {
+        const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+        const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
+        const int far_horiz = std::max(std::abs(key.x - focus_chunk.x),
+                                       std::abs(key.y - focus_chunk.z));
+        if (ShouldDampFarUnlitRemeshOnLit(any_drawable, far_horiz,
+                                         kVisualStageNearFovHoriz))
+        {
+          for (int cy = cy0; cy <= cy1; ++cy)
+          {
+            const glm::ivec3 coord(key.x, cy, key.y);
+            if (!MeshService->IsChunkMeshDirty(coord) &&
+                MeshService->HasDrawableGreedyMesh(coord))
+            {
+              MeshService->RequestRemeshAfterApply(coord);
+            }
+          }
+          continue;
+        }
+      }
       // Era28 I-V3: Building FirstMesh/Inflight/Pending !Drawable → RemeshAfterApply
       // only (no Dirty bump / opaque churn storm).
       {
@@ -1118,6 +1140,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         // Idle remesh: do not MarkDirty Inflight (re-Dirty after Apply froze
         // focus_dirty). Request post-Apply remesh instead so Capture sees new
         // light without mid-flight thrash.
+        // Era29 P4: also RemeshAfterApply-only for live drawable (opaque stop).
         for (int cy = cy0; cy <= cy1; ++cy)
         {
           const glm::ivec3 coord(key.x, cy, key.y);
@@ -1125,7 +1148,10 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           {
             continue;
           }
-          if (MeshService->HasInflightMeshBuild(coord))
+          if (MeshService->HasInflightMeshBuild(coord) ||
+              ShouldRemeshAfterApplyOnlyOnIdleDrawable(
+                  /*idle_or_suppress=*/true,
+                  MeshService->HasDrawableGreedyMesh(coord)))
           {
             MeshService->RequestRemeshAfterApply(coord);
             continue;
@@ -2881,7 +2907,9 @@ int UWorld::CollectFullyDarkFocusColumns(glm::ivec3 focus_ground_horiz,
           flow.Scheduler().Contains(key, ColumnWorkKind::RelightThenMesh) ||
           flow.Scheduler().Contains(key, ColumnWorkKind::PromoteRelight) ||
           IsPendingLightBeforeMesh(key);
-      if (CollectFullyDarkSkipsOnlyRelightOwnership(has_relight_or_pending))
+      // Era29 P3: near FOV always report fully-dark (VB honesty); far keeps
+      // Era26 Relight/Pending skip.
+      if (CollectFullyDarkShouldSkipForOwnership(dist, has_relight_or_pending))
       {
         continue;
       }

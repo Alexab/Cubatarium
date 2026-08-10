@@ -358,9 +358,13 @@ int main()
   // --- Era29 Enter Visual Warmup ---
   using cutum::EnterOpaqueChurnSoftMax;
   using cutum::EnterSoftDeferEmptyNeedsFirstMesh;
+  using cutum::EnterSpawnCapturePinFrames;
   using cutum::EnterUnderfeetNeedsLitDrawable;
   using cutum::EnterVisualWarmupAppUpdateSoftMs;
   using cutum::EnterVisualWarmupRadiusChunks;
+  using cutum::CollectFullyDarkShouldSkipForOwnership;
+  using cutum::ShouldDampFarUnlitRemeshOnLit;
+  using cutum::ShouldRemeshAfterApplyOnlyOnIdleDrawable;
   using cutum::ShouldRunEnterStreamingWarmupDespiteSpawnPrepared;
 
   Expect(EnterVisualWarmupRadiusChunks() == 1,
@@ -383,6 +387,20 @@ int main()
          "Era29 I-E5: enter_app soft ≤200");
   Expect(EnterOpaqueChurnSoftMax() == 200,
          "Era29 P4: opaque churn soft max 200");
+  Expect(EnterSpawnCapturePinFrames() == 16,
+         "Era29 P3: enter Capture pin 16 frames");
+  Expect(!CollectFullyDarkShouldSkipForOwnership(0, true),
+         "Era29 P3: near PendingLight ⇒ no CollectFullyDark skip");
+  Expect(CollectFullyDarkShouldSkipForOwnership(3, true),
+         "Era29 P3: far PendingLight ⇒ skip CollectFullyDark");
+  Expect(ShouldDampFarUnlitRemeshOnLit(true, 3),
+         "Era29 P3: far drawable Unlit ⇒ damp remesh-on-lit");
+  Expect(!ShouldDampFarUnlitRemeshOnLit(true, 1),
+         "Era29 P3: near drawable ⇒ no far damp");
+  Expect(ShouldRemeshAfterApplyOnlyOnIdleDrawable(true, true),
+         "Era29 P4: idle drawable ⇒ RemeshAfterApply");
+  Expect(!ShouldRemeshAfterApplyOnlyOnIdleDrawable(true, false),
+         "Era29 P4: idle !drawable ⇒ no RemeshAfterApply-only");
 
   {
     MeshWorkAdmissionInput in;

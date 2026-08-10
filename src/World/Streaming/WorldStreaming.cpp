@@ -15,6 +15,7 @@
 #include "Render/Mesh/MeshApplyPolicy.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
+#include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/FrontierStagePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "App/Settings/RenderSettings.h"
@@ -189,6 +190,19 @@ void UWorldStreaming::PrepareEnterGameSession(UWorld &world)
   // Era20: thinner enter gate (r≤2) — longer burst so SpawnRingCatchUp paints
   // the rest of RD without a multi-second enter hitch.
   world.BeginEnterGameMeshBurst(12);
+  // Era29 P3: pin Capture witness at spawn so first InGame frames don't retarget
+  // SoftDefer empty thrash (manual 091332 ENTER retarget_d=15).
+  {
+    const glm::ivec3 focus =
+        UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+    SoftDeferCapturePinValid = true;
+    SoftDeferCapturePinCx = focus.x;
+    SoftDeferCapturePinCz = focus.z;
+    SoftDeferCapturePinCy = focus.y;
+    SoftDeferCapturePinHoriz = 0;
+    SoftDeferCapturePinAge = 0;
+    SoftDeferCapturePinMaxAge = EnterSpawnCapturePinFrames();
+  }
 }
 
 void UWorldStreaming::WarmupSpawnAreaForEnterGame(UWorld &world)
@@ -1634,9 +1648,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             SoftDeferCapturePinValid && cand_horiz > 0 &&
             SoftDeferCapturePinHoriz > 0 &&
             cand_horiz < SoftDeferCapturePinHoriz;
+        const int pin_T = SoftDeferCapturePinMaxAge > 0
+                              ? SoftDeferCapturePinMaxAge
+                              : kSoftDeferCaptureWitnessPinFrames;
         const bool retarget = ShouldRetargetSoftDeferCaptureWitness(
-            SoftDeferCapturePinValid, SoftDeferCapturePinAge,
-            kSoftDeferCaptureWitnessPinFrames, better_horiz, pinned_still);
+            SoftDeferCapturePinValid, SoftDeferCapturePinAge, pin_T,
+            better_horiz, pinned_still);
         if (retarget)
         {
           SoftDeferCapturePinValid = true;
@@ -1645,6 +1662,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           SoftDeferCapturePinCy = cand_cy;
           SoftDeferCapturePinHoriz = cand_horiz;
           SoftDeferCapturePinAge = 0;
+          SoftDeferCapturePinMaxAge = kSoftDeferCaptureWitnessPinFrames;
           did_retarget = (cand_xz != focus_xz);
         }
         else
