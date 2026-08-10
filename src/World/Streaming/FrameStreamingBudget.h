@@ -192,17 +192,17 @@ inline FrameStreamingBudgetDecision EvaluateFrameStreamingBudget(
       }
     }
 
-    // Era31 I-T1/I-T2: ocean heal throughput — stronger void Relight floors.
+    // Era31/32: ocean heal throughput — stronger void Relight floors.
     const bool ocean_heal =
         IsOceanHealPressure(miss, in.void_n, in.visible_black_n, 200);
     if (ocean_heal)
     {
       out.apply_vb_bg_floor = true;
       out.vb_bg_budget_floor =
-          std::max(out.vb_bg_budget_floor, in.void_n > 200 ? 2 : 1);
+          std::max(out.vb_bg_budget_floor, in.void_n > 200 ? 3 : 2);
       if (in.moving && in.void_n > 200)
       {
-        out.vb_bg_budget_floor = std::max(out.vb_bg_budget_floor, 2);
+        out.vb_bg_budget_floor = std::max(out.vb_bg_budget_floor, 4);
       }
     }
   }

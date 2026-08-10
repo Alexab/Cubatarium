@@ -92,13 +92,13 @@ inline bool ShouldDrainPendingLightUnderOceanVoid(bool moving, int void_n,
   return void_n > void_T || vb_n > 0;
 }
 
-/// Era31 I-T1: min void Relight Note enqueue per frame under ocean heal.
+/// Era31/32: min void Relight Note enqueue per frame under ocean heal.
 inline int OceanHealVoidRelightNoteMinPerFrame()
 {
-  return 2;
+  return 4;
 }
 
-/// Era31 I-T1: moving Relight drain floor columns under ocean heal + void debt.
+/// Era31/32: moving Relight drain floor columns under ocean heal + void debt.
 inline int OceanHealMovingRelightDrainFloor(bool ocean_heal, bool moving,
                                             int void_n, int void_T = 200)
 {
@@ -106,7 +106,7 @@ inline int OceanHealMovingRelightDrainFloor(bool ocean_heal, bool moving,
   {
     return 0;
   }
-  return void_n > void_T ? 2 : 1;
+  return void_n > void_T ? 3 : 2;
 }
 
 /// Era31 I-T2: cap MeshEmerge budget under ocean heal pressure (moving cruise).

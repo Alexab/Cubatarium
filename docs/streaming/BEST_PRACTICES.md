@@ -233,6 +233,19 @@ empty_stuck≤2s matrix; miss_end=0 fly/idle/land (warm miss_end soft).
 (void/dark=0). Reject Imm-as-empty-heal; SoftDefer knobs-as-DoD; PreferKick
 every empty every frame.
 
+## Gap После Era32 (2026-08-10) — LitDrawable FOV SLA; TD-066 **partial**
+
+| Практика | Industry | Cubatarium | Era32 SoT |
+|----------|----------|------------|-----------|
+| Light-before-draw FOV ring | MC hide/neutral | Unlit horiz>2 mid-FOV | **done** lit_ring=4 + slice hide fully-dark |
+| Dark heal = Relight then mesh | Starlight | VB→RemeshSeam | **done** VB→RelightThenMesh |
+| Atomic SoftDefer empty | PendingReplace | FreeChunk 0-quad resident | **done** keep GpuResident |
+| Dual-queue HP FirstMesh | MC highPriorityQuota | Relight steal under miss | **done** admit≥1 + Relight floors |
+
+**Evidence:** land `ARCH_D3_LAND`/`FLY_CLEAN` GO (`era32_v2_land`); ocean stress GO;
+ocean smoke/manual still NO-GO (void/VB). See [`ERA32_LITDRAWABLE_BASELINE.md`](ERA32_LITDRAWABLE_BASELINE.md).
+**REJECT:** SoftDefer force-hide live dark; ocean_heal-only publication; CLOSED on smoke.
+
 ## Gap После Era28 closeout (2026-08-10) — Visual Stage Gate; TD-064 **partial**
 
 | Практика | Industry | Cubatarium | Era28 SoT |

@@ -2085,10 +2085,29 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
   {
     return false;
   }
-  if (MeshService->HasMeshSatisfyingColumnReady(chunk_coord) ||
-      MeshService->IsPendingGpuApply(chunk_coord) ||
+  if (MeshService->IsPendingGpuApply(chunk_coord) ||
       MeshService->IsGpuExtractInFlight(chunk_coord))
   {
+    return true;
+  }
+  if (MeshService->HasMeshSatisfyingColumnReady(chunk_coord))
+  {
+    // Era32 I-L1: per-slice LitDrawable — fully-dark in ring is not drawn
+    // (column siblings may still be lit). Keep-prior PendingLight allows draw.
+    const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
+    if (!IsPendingLightBeforeMesh(col) &&
+        MeshService->GetCache().ChunkHasFullyDarkFace(chunk_coord))
+    {
+      const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+      const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
+      const int horiz =
+          std::max(std::abs(chunk_coord.x - focus_chunk.x),
+                   std::abs(chunk_coord.z - focus_chunk.z));
+      if (horiz <= kVisualStageLitDrawableHoriz)
+      {
+        return false;
+      }
+    }
     return true;
   }
   const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);
@@ -2172,7 +2191,6 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     bool has_mesh_or_gpu = false;
     bool stale_dark_with_mesh = false;
     bool fully_dark_drawable = false;
-    bool keep_prior = false;
     for (int cy = cy0; cy <= cy1; ++cy)
     {
       const glm::ivec3 coord(ground.x, cy, ground.z);
@@ -2181,11 +2199,6 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
           MeshService->IsGpuExtractInFlight(coord))
       {
         has_mesh_or_gpu = true;
-      }
-      if (MeshService->IsPendingGpuApply(coord) ||
-          MeshService->IsGpuExtractInFlight(coord))
-      {
-        keep_prior = true;
       }
       if (MeshService->HasDrawableGreedyMesh(coord) &&
           MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
@@ -2202,16 +2215,8 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     const bool has_real_repair_ticket =
         GetColumnFlowExecutor().HasRepairTicket(ground_xz) || sticky ||
         ColumnHasRepairProgress(ground_xz);
-    // Era32 I-L1: fully-dark in LitDrawable ring is unfinished (!draw_ok)
-    // unless keep-prior GPU/PendingReplace is live.
-    if (fully_dark_drawable && !keep_prior &&
-        horiz_from_focus <= kVisualStageLitDrawableHoriz)
-    {
-      out.reason = ColumnRenderableState::BlockReason::StaleDark;
-      out.has_repair_ticket = has_real_repair_ticket;
-      out.draw_ok = false;
-      return out;
-    }
+    // Era32: column draw_ok stays meshed-ready (holes telem = missing mesh).
+    // Per-slice LitDrawable hide is IsChunkSliceRenderReady (no black plugs).
     const ColumnSoTDecision sot = ClassifyStickyStaleDarkSoT(
         has_mesh_or_gpu, sticky, stale_dark_with_mesh, horiz_from_focus,
         has_real_repair_ticket, fully_dark_drawable,
@@ -2220,14 +2225,14 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     {
       out.reason = ColumnRenderableState::BlockReason::StickyRemesh;
       out.has_repair_ticket = has_real_repair_ticket || sot.has_repair_ticket;
-      out.draw_ok = sot.draw_ok;
+      out.draw_ok = has_mesh_or_gpu;
       return out;
     }
     if (sot.kind == ColumnSoTKind::StaleDark)
     {
       out.reason = ColumnRenderableState::BlockReason::StaleDark;
       out.has_repair_ticket = has_real_repair_ticket;
-      out.draw_ok = sot.draw_ok;
+      out.draw_ok = has_mesh_or_gpu;
       return out;
     }
   }
@@ -2236,11 +2241,8 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
   // (Generating/etc). Empty SoftDefer (HasGreedy, !Drawable) is NOT ready —
   // HasGreedy-only left rim undrawn while fog/unfinished looked healed
   // (manual 101824 / 222446 trade: prefer visible fill over false draw_ok).
-  // Era32 I-L1: fully-dark in LitDrawable ring (incl. underfeet) is unfinished.
   bool has_mesh_or_gpu = false;
   bool saw_gpu_inflight_early = false;
-  bool fully_dark_drawable_ring = false;
-  bool keep_prior_ring = false;
   for (int cy = cy0; cy <= cy1; ++cy)
   {
     const glm::ivec3 coord(ground.x, cy, ground.z);
@@ -2253,20 +2255,7 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     {
       has_mesh_or_gpu = true;
       saw_gpu_inflight_early = true;
-      keep_prior_ring = true;
     }
-    if (MeshService->HasDrawableGreedyMesh(coord) &&
-        MeshService->GetCache().ChunkHasFullyDarkFace(coord))
-    {
-      fully_dark_drawable_ring = true;
-    }
-  }
-  if (fully_dark_drawable_ring && !keep_prior_ring &&
-      horiz_from_focus <= kVisualStageLitDrawableHoriz)
-  {
-    out.reason = ColumnRenderableState::BlockReason::StaleDark;
-    out.draw_ok = false;
-    return out;
   }
   if (out.stage != ColumnEmergeState::RenderReady &&
       out.stage != ColumnEmergeState::LitReady &&
