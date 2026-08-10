@@ -2,6 +2,7 @@
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
+#include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/FrontierStagePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 
@@ -353,6 +354,35 @@ int main()
          "Era28 P2: before age SLA ⇒ no PreferKick");
   Expect(!SoftDeferEmptyPreferKickAfterAgeOnly(true, true, true, false),
          "Era28 P2: age SLA without GPU stuck ⇒ no PreferKick");
+
+  // --- Era29 Enter Visual Warmup ---
+  using cutum::EnterOpaqueChurnSoftMax;
+  using cutum::EnterSoftDeferEmptyNeedsFirstMesh;
+  using cutum::EnterUnderfeetNeedsLitDrawable;
+  using cutum::EnterVisualWarmupAppUpdateSoftMs;
+  using cutum::EnterVisualWarmupRadiusChunks;
+  using cutum::ShouldRunEnterStreamingWarmupDespiteSpawnPrepared;
+
+  Expect(EnterVisualWarmupRadiusChunks() == 1,
+         "Era29 I-E1: underfeet visual radius 1");
+  Expect(EnterUnderfeetNeedsLitDrawable(false, false),
+         "Era29 I-E1: !lit !keep-prior ⇒ needs warmup");
+  Expect(!EnterUnderfeetNeedsLitDrawable(true, false),
+         "Era29 I-E1: lit drawable ⇒ ready");
+  Expect(!EnterUnderfeetNeedsLitDrawable(false, true),
+         "Era29 I-E1: keep-prior ⇒ ready");
+  Expect(EnterSoftDeferEmptyNeedsFirstMesh(true, true),
+         "Era29 I-E4: empty underfeet ⇒ FirstMesh");
+  Expect(!EnterSoftDeferEmptyNeedsFirstMesh(true, false),
+         "Era29 I-E4: empty far → no enter FirstMesh force");
+  Expect(ShouldRunEnterStreamingWarmupDespiteSpawnPrepared(true),
+         "Era29 I-E2: always warmup despite coop prepare");
+  Expect(ShouldRunEnterStreamingWarmupDespiteSpawnPrepared(false),
+         "Era29 I-E2: warmup when !prepared");
+  Expect(EnterVisualWarmupAppUpdateSoftMs() == 200,
+         "Era29 I-E5: enter_app soft ≤200");
+  Expect(EnterOpaqueChurnSoftMax() == 200,
+         "Era29 P4: opaque churn soft max 200");
 
   {
     MeshWorkAdmissionInput in;

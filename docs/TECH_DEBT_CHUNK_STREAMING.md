@@ -117,6 +117,15 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-062 | Era26 | Ocean Dual-Debt + Load Light Parallel | Ocean void/VB + SoftDefer empty sides; Relight starve under miss moving; coop RelightColumns sync serial | **partial 2026-08-09** P0–P3 landed; FLY/WARM GO; IDLE soft wall/emerge; LAND soft miss; wait manual `214325` |
 | TD-ARCH-063 | Era27 | Anti-Flicker Ownership | SoftDefer Capture retarget thrash + MarkRelit remesh blink + discarded_late supersede after Era26 heal (`224912`) | **partial 2026-08-09** P0–P3 landed; FLY/IDLE/WARM GO; LAND soft miss; wait manual `224912` |
 | TD-ARCH-064 | Era28 | Visual Stage Gate | UnlitFirstMesh + SoftDefer Dirty thrash → black/empty/green flicker (`012208` opaque swing 658) | **partial 2026-08-10** P0–P3 landed; FLY/WARM GO; IDLE soft dirtyΔ; LAND soft miss; wait manual `012208` |
+| TD-ARCH-065 | Era29 | Enter Visual Warmup | Progress bar closes on greedy r≤2; SoftDefer/PendingLight/VB explode on ENTER (`091332`) | **open 2026-08-10** P0 predicates |
+
+> **Era29 Enter Visual Warmup (2026-08-10):** Manual `091332` after Era28: cruise
+> flicker OK; ENTER blink (VB~49 void~9k unlit↑ empty=6); FOV black/empty remain;
+> opaque_churn=880; wall med~103 (better). Root: bar gate greedy-only + skip
+> `TickEnterStreamingWarmup` after coop prepare. Fix: underfeet LitDrawable gate
+> on bar; always budgeted streaming/emerge; no RD+1 wait; enter_app soft ≤200.
+> KEEP Era28 hide-until-lit / Dirty coalesce / PendingReplace. Reject Unlit near
+> on bar; MarkAllDirty warmup; CLOSED without ENTER eye.
 
 > **Era28 Visual Stage Gate closeout (2026-08-10):** P0–P3 landed. SoftDefer Dirty
 > coalesce while FM/Inflight owned; near FOV hide-until-lit (`AllowUnlit` horiz>2);
