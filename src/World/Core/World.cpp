@@ -72,6 +72,7 @@
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
+#include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
@@ -4938,7 +4939,71 @@ bool UWorld::NeedsEnterGameMeshWarmup() const
   {
     return true;
   }
-  return mesh.CountPendingGpuAppliesInHorizontalRadius(center, radius) > 0;
+  if (mesh.CountPendingGpuAppliesInHorizontalRadius(center, radius) > 0)
+  {
+    return true;
+  }
+  // Era29 I-E1/I-E3/I-E4: underfeet visual stage (lit / SoftDefer / PendingLight).
+  return NeedsEnterGameVisualWarmup();
+}
+
+bool UWorld::NeedsEnterGameVisualWarmup() const
+{
+  if (!MeshService || !BlockRegistry)
+  {
+    return false;
+  }
+  const UWorldMeshService &mesh = *MeshService;
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
+  const glm::ivec3 focus_ground(center.x, 0, center.z);
+  const int visual_r = EnterVisualWarmupRadiusChunks();
+  if (HasPendingLightBeforeMeshNear(focus_ground, visual_r))
+  {
+    return true;
+  }
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
+  const int cy0 = std::max(0, focus_cy - 1);
+  const int cy1 = std::min(max_cy, focus_cy + 2);
+  for (int dx = -visual_r; dx <= visual_r; ++dx)
+  {
+    for (int dz = -visual_r; dz <= visual_r; ++dz)
+    {
+      const bool underfeet = true; // loop already clipped to visual_r
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(center.x + dx, cy, center.z + dz);
+        if (!BlockWorld.GetChunkManager().HasChunk(coord))
+        {
+          continue;
+        }
+        const bool has_drawable = mesh.HasDrawableGreedyMesh(coord);
+        const bool has_greedy = mesh.HasGreedyMesh(coord);
+        const bool soft_held = mesh.IsSoftDeferHeld(coord);
+        const bool empty_or_held =
+            (!has_drawable && has_greedy) || soft_held;
+        if (EnterSoftDeferEmptyNeedsFirstMesh(empty_or_held, underfeet))
+        {
+          return true;
+        }
+        if (!has_greedy && !has_drawable)
+        {
+          continue;
+        }
+        const bool fully_dark =
+            has_drawable && mesh.GetCache().ChunkHasFullyDarkFace(coord);
+        const bool lit_drawable = has_drawable && !fully_dark;
+        // Keep-prior counts only when already lit (dark drawable = VB debt).
+        if (EnterUnderfeetNeedsLitDrawable(lit_drawable, lit_drawable))
+        {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
 }
 
 bool UWorld::IsCreateSpawnWarmupSettled() const

@@ -34,7 +34,7 @@ WorldOperationKind KindForRunnerOp(WorldRunnerOp op)
 
 constexpr int kChunkBudgetPerFrame = 16;
 constexpr int kEnterGameGpuWarmupMinFrames = 3;
-constexpr int kEnterGameGpuWarmupMaxFrames = 16;
+constexpr int kEnterGameGpuWarmupMaxFrames = 24;
 
 } // namespace
 

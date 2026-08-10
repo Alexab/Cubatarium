@@ -400,6 +400,8 @@ public:
   /// Build pending terrain meshes before GPU upload (returns true when ready).
   bool DrainEnterGameMeshWarmup(int budget);
   bool NeedsEnterGameMeshWarmup() const;
+  /// Era29: underfeet LitDrawable / SoftDefer empty / PendingLight still owed.
+  bool NeedsEnterGameVisualWarmup() const;
   /// Spawn ring has greedy mesh committed (no missing, no pending GPU apply).
   bool IsSpawnMeshRingReady() const;
   int CountPostLoadRingNotReady() const;
