@@ -3,6 +3,7 @@
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/FrontierStagePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 
@@ -191,8 +192,10 @@ int main()
          "Era25 I-F4: gen_backlog + miss ⇒ frontier pressure");
   Expect(IsFrontierPressure(0, 2, false, 250),
          "Era25 I-F4: async_queued + void>T ⇒ frontier pressure");
-  Expect(!IsFrontierPressure(0, 0, true, 999),
-         "Era25 I-F4: no gen/async → no frontier pressure");
+  Expect(IsFrontierPressure(0, 0, true, 999),
+         "Era30 I-O1: void>T without gen/async ⇒ ocean heal pressure");
+  Expect(IsFrontierPressure(0, 0, false, 50, 200, 3),
+         "Era30 I-O1: VB without gen/async ⇒ ocean heal pressure");
   Expect(!IsFrontierPressure(3, 0, false, 50),
          "Era25 I-F4: gen without miss/void → no pressure");
   Expect(FrontierColumnNeedsLightTicket(true, true, false, false),
@@ -401,6 +404,42 @@ int main()
          "Era29 P4: idle drawable ⇒ RemeshAfterApply");
   Expect(!ShouldRemeshAfterApplyOnlyOnIdleDrawable(true, false),
          "Era29 P4: idle !drawable ⇒ no RemeshAfterApply-only");
+
+  // --- Era30 Ocean Cruise SLA ---
+  using cutum::EnterVisualWarmupHardCapMs;
+  using cutum::FluidMapShouldThrottleCruise;
+  using cutum::IsOceanHealPressure;
+  using cutum::OceanCaptureWitnessPinFrames;
+  using cutum::OceanVoidRelightDrainCapMoving;
+  using cutum::ShouldDampOceanCaptureRetarget;
+  using cutum::ShouldDrainPendingLightUnderOceanVoid;
+  using cutum::ShouldFrontierPressureDespiteEmptyGen;
+  using cutum::ShouldSkipStaleRemeshForPendingVoid;
+
+  Expect(IsOceanHealPressure(false, 250, 0), "Era30 I-O1: void>T ⇒ heal pressure");
+  Expect(IsOceanHealPressure(false, 0, 2), "Era30 I-O1: VB ⇒ heal pressure");
+  Expect(!IsOceanHealPressure(false, 50, 0), "Era30 I-O1: calm void/VB");
+  Expect(ShouldFrontierPressureDespiteEmptyGen(true, true, true),
+         "Era30 I-O1: empty gen+async + ocean heal");
+  Expect(!ShouldFrontierPressureDespiteEmptyGen(true, true, false),
+         "Era30 I-O1: empty queues without heal");
+  Expect(OceanVoidRelightDrainCapMoving(true, 1) == 2,
+         "Era30 I-O2: void moving drain cap floor");
+  Expect(!ShouldSkipStaleRemeshForPendingVoid(true, true),
+         "Era30 I-O3: void column keeps Relight path");
+  Expect(ShouldSkipStaleRemeshForPendingVoid(true, false),
+         "Era30 I-O3: stale-only pending skips remesh");
+  Expect(FluidMapShouldThrottleCruise(40, 35.0, true, 250, 0),
+         "Era30 I-O4: cruise throttle under void heal");
+  Expect(!FluidMapShouldThrottleCruise(40, 35.0, false, 250, 0),
+         "Era30 I-O4: idle → no cruise throttle");
+  Expect(EnterVisualWarmupHardCapMs() == 200, "Era30 I-O6: enter hard cap 200ms");
+  Expect(OceanCaptureWitnessPinFrames() == 12,
+         "Era30 I-O5: ocean Capture pin 12 frames");
+  Expect(!ShouldDampOceanCaptureRetarget(true, 3, true),
+         "Era30 I-O5: damp horiz≥2 retarget on ocean heal");
+  Expect(ShouldDrainPendingLightUnderOceanVoid(true, 250, 0),
+         "Era30 I-O3: moving void drain without miss");
 
   {
     MeshWorkAdmissionInput in;

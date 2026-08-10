@@ -17,6 +17,7 @@
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/FrontierStagePolicy.h"
+#include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "App/Settings/RenderSettings.h"
 #include "Blocks/BlockRegistry.h"
@@ -1644,13 +1645,20 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             pinned_still = missing_focus_mesh;
           }
         }
-        const bool better_horiz =
+        const bool ocean_heal = IsOceanHealPressure(
+            missing_focus_mesh, world.PhysicsTelemetryData.DarkFaceVoidNearN,
+            world.PhysicsTelemetryData.VisibleBlackFocusN);
+        const bool better_horiz_raw =
             SoftDeferCapturePinValid && cand_horiz > 0 &&
             SoftDeferCapturePinHoriz > 0 &&
             cand_horiz < SoftDeferCapturePinHoriz;
-        const int pin_T = SoftDeferCapturePinMaxAge > 0
-                              ? SoftDeferCapturePinMaxAge
-                              : kSoftDeferCaptureWitnessPinFrames;
+        const bool better_horiz = ShouldDampOceanCaptureRetarget(
+            ocean_heal, cand_horiz, better_horiz_raw);
+        const int pin_T =
+            ocean_heal
+                ? OceanCaptureWitnessPinFrames()
+                : (SoftDeferCapturePinMaxAge > 0 ? SoftDeferCapturePinMaxAge
+                                                 : kSoftDeferCaptureWitnessPinFrames);
         const bool retarget = ShouldRetargetSoftDeferCaptureWitness(
             SoftDeferCapturePinValid, SoftDeferCapturePinAge, pin_T,
             better_horiz, pinned_still);
@@ -2797,12 +2805,13 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     if (Streamer)
     {
       const int void_n_load = world.PhysicsTelemetryData.DarkFaceVoidNearN;
+      const int vb_n_load = world.PhysicsTelemetryData.VisibleBlackFocusN;
       const bool miss_load = world.PhysicsTelemetryData.FocusMissingMesh != 0;
       const int async_q_load = world.PhysicsTelemetryData.StreamAsyncQueued;
       const bool frontier_moving =
           (moving_fast || moving_any) &&
           IsFrontierPressure(gen_backlog_total, async_q_load, miss_load,
-                             void_n_load);
+                             void_n_load, 200, vb_n_load);
       Streamer->SetFrontierLoadAhead(frontier_moving);
       if (moving_fast || moving_any)
       {
@@ -2880,7 +2889,8 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         IsFrontierPressure(gen_backlog_total,
                            world.PhysicsTelemetryData.StreamAsyncQueued,
                            world.PhysicsTelemetryData.FocusMissingMesh != 0,
-                           world.PhysicsTelemetryData.DarkFaceVoidNearN);
+                           world.PhysicsTelemetryData.DarkFaceVoidNearN, 200,
+                           world.PhysicsTelemetryData.VisibleBlackFocusN);
     if (frame_ms <= 20.0 && pressure.allow_prefetch &&
         (((!visual_holes && !underfeet_need) || frontier_prefetch)))
     {
@@ -2945,11 +2955,12 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     }
     {
       const int void_n = world.PhysicsTelemetryData.DarkFaceVoidNearN;
+      const int vb_n = world.PhysicsTelemetryData.VisibleBlackFocusN;
       const bool miss = world.PhysicsTelemetryData.FocusMissingMesh != 0;
       world.PhysicsTelemetryData.FrontierPressure =
           IsFrontierPressure(gen_backlog_total,
                              world.PhysicsTelemetryData.StreamAsyncQueued, miss,
-                             void_n)
+                             void_n, 200, vb_n)
               ? 1
               : 0;
     }

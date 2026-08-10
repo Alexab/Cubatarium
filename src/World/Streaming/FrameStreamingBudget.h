@@ -179,7 +179,8 @@ inline FrameStreamingBudgetDecision EvaluateFrameStreamingBudget(
 
     // Era25 I-F4: frontier_pressure — Capture FirstMesh floor + void Relight
     // slots without Relight-stealing FirstMesh Contains (dual-queue).
-    if (IsFrontierPressure(in.gen_backlog, in.async_queued, miss, in.void_n))
+    if (IsFrontierPressure(in.gen_backlog, in.async_queued, miss, in.void_n, 200,
+                           in.visible_black_n))
     {
       out.soft_defer_capture_budget =
           std::max(out.soft_defer_capture_budget, 1);

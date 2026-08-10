@@ -428,10 +428,51 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("mesh_sync_fly_med", "le", 5.0),
         ("physics_block_ms_p95", "le", 5.0),
     ],
+    # Ocean FillWater cruise (manual 104841): fly-segment void/VB/fluid + stop tail.
+    # Smoke only — aspirational Era30 targets; see OCEAN_CRUISE_STRESS for parity.
+    "OCEAN_CRUISE": [
+        ("chunks_traveled", "ge", 6.0),
+        ("wall_ms_fly_med", "le", 200.0),
+        ("mesh_sync_fly_med", "le", 5.0),
+        ("physics_block_ms_p95", "le", 5.0),
+        ("effective_holes_rate", "le", 0.30),
+        ("fly_void_near_max", "le", 800.0),
+        ("stop_dark_face_void_near_end", "le", 100.0),
+        ("post_stop_visible_black_max", "le", 20.0),
+        ("fly_fluid_map_cpu_max", "le", 80.0),
+    ],
+    # Era30 H0: parity regression — must reproduce manual debt pre-fix.
+    "OCEAN_CRUISE_STRESS": [
+        ("chunks_traveled", "ge", 6.0),
+        ("wall_ms_fly_med", "le", 200.0),
+        ("fly_void_near_max", "ge", 400.0),
+        ("effective_holes_rate", "ge", 0.40),
+        ("fly_frontier_pressure_frac", "ge", 0.05),
+    ],
+    # Era30 DoD: analyze manual 104841-class log (post-fix targets).
+    "OCEAN_MANUAL": [
+        ("chunks_traveled", "ge", 6.0),
+        ("effective_holes_rate", "le", 0.30),
+        ("fly_void_near_max", "le", 800.0),
+        ("stop_dark_face_void_near_end", "le", 100.0),
+        ("post_stop_visible_black_max", "le", 20.0),
+        ("fly_fluid_map_cpu_max", "le", 80.0),
+        ("enter_app_update_max", "le", 200.0),
+    ],
     # Edit/control smoke: soft hitch budget for C1 regate.
     "IDLE_EDIT_SMOKE": [
         ("physics_block_ms_p95", "le", 50.0),
         ("break_complete_sum", "ge", 1.0),
+    ],
+}
+
+
+# Informational soft gates (printed; do not fail hard GO).
+PHASE_SOFT_GATES: dict[str, list[tuple[str, str, float]]] = {
+    "OCEAN_CRUISE": [
+        ("relight_drain_near_zero_while_vb_sec", "le", 10.0),
+        ("enter_app_update_max", "le", 200.0),
+        ("fly_visible_black_max", "le", 40.0),
     ],
 }
 
@@ -492,6 +533,7 @@ def main() -> int:
         return 3
 
     gates = PHASE_GATES.get(args.phase_id, [])
+    soft_gates = PHASE_SOFT_GATES.get(args.phase_id, [])
     failed = []
     arch = args.phase_id.startswith("ARCH_")
     for key, op, limit in gates:
@@ -500,6 +542,14 @@ def main() -> int:
         print(f"  {key}={val} {op} {limit} -> {'OK' if ok else 'FAIL'}")
         if not ok:
             failed.append(key)
+
+    for key, op, limit in soft_gates:
+        val = metric(data, key)
+        if val is None:
+            print(f"  [soft] {key}=None {op} {limit} -> N/A")
+            continue
+        ok = check(op, val, limit)
+        print(f"  [soft] {key}={val} {op} {limit} -> {'OK' if ok else 'WARN'}")
 
     if args.baseline and args.baseline.is_file() and args.phase_id in ("V2b", "V3", "F"):
         base = json.loads(args.baseline.read_text(encoding="utf-8"))

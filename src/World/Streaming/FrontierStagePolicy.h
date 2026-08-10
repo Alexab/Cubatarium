@@ -1,12 +1,22 @@
 #pragma once
 
+#include "World/Streaming/OceanCruisePolicy.h"
+
 namespace cutum
 {
 
-/// Era25 I-F4: frontier pressure — gen/async ingress under miss or void.
+/// Era25 I-F4 + Era30 I-O1: frontier pressure — gen/async ingress under miss or
+/// void; ocean heal pressure without gen/async backlog.
 inline bool IsFrontierPressure(int gen_backlog, int async_queued, bool miss,
-                               int void_n, int void_T = 200)
+                               int void_n, int void_T = 200, int vb_n = 0)
 {
+  const bool ocean_heal =
+      IsOceanHealPressure(miss, void_n, vb_n, void_T);
+  if (ShouldFrontierPressureDespiteEmptyGen(gen_backlog <= 0, async_queued <= 0,
+                                            ocean_heal))
+  {
+    return true;
+  }
   if (gen_backlog <= 0 && async_queued <= 0)
   {
     return false;

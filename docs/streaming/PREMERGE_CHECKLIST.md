@@ -210,6 +210,15 @@ Edge replay (World_164 boundary):
 python tools/flight_sim_run.py --replay-edge --report bin/iter_reports/edge_replay.json
 ```
 
+Ocean FillWater cruise (manual `104841` corridor):
+
+```powershell
+python tools/flight_sim_run.py --scenario ocean-cruise --phase-id OCEAN_CRUISE `
+  --report bin/iter_reports/era30_ocean_cruise.json --process-timeout 480 --warmup-sec 16
+python tools/flight_sim_phase_gate.py --phase-id OCEAN_CRUISE `
+  --report bin/iter_reports/era30_ocean_cruise.json
+```
+
 Rolling summary: `bin/iter_reports/timeline_summary.json` via `flight_sim_iterate.py --timeline-summary`.
 
 ## 3. Manual replay parity
@@ -261,6 +270,38 @@ python tools/flight_sim_iterate.py --world World_164 --iterations 3 --build-firs
 - классифицирует причины (main-thread hitch, light debt plateau, dirty backlog, sticky-dark);
 - формирует рекомендации для следующей доработки;
 - останавливается раньше, если выполнены критерии по spike/wall/pending/dark.
+
+## 4c. Era30 Ocean Cruise (smoke ≠ DoD)
+
+**Smoke** (`OCEAN_CRUISE`) — autofly `ocean-cruise`; может GO при void=0 (слишком чистый teleport path).
+
+**Parity** (`OCEAN_CRUISE_STRESS`) — `ocean-cruise-stress` или `ocean-cruise-enter` must reproduce ≥25% manual debt pre-fix.
+
+**DoD** (`OCEAN_MANUAL`) — analyze manual `104841`-class log; CLOSED только при GO + eye.
+
+```powershell
+# Smoke
+python tools/flight_sim_run.py --scenario ocean-cruise --phase-id era30_ocean_smoke `
+  --report bin/iter_reports/era30_ocean_smoke.json
+python tools/flight_sim_phase_gate.py --phase-id OCEAN_CRUISE --report bin/iter_reports/era30_ocean_smoke.json
+
+# Parity matrix
+python tools/flight_sim_run.py --scenario ocean-cruise-stress --phase-id era30_ocean_stress `
+  --report bin/iter_reports/era30_ocean_stress.json
+python tools/flight_sim_phase_gate.py --phase-id OCEAN_CRUISE_STRESS --report bin/iter_reports/era30_ocean_stress.json
+
+# Manual DoD (existing log)
+python tools/flight_sim_analyze.py bin/logs/perf_20260810-104841_30332.jsonl `
+  --manual-idle --warmup-sec 16 --report bin/iter_reports/manual_104841.json
+python tools/flight_sim_phase_gate.py --phase-id OCEAN_MANUAL --report bin/iter_reports/manual_104841.json
+
+# Side-by-side parity
+python tools/flight_sim_parity.py `
+  --manual-report bin/iter_reports/manual_104841.json `
+  --autofly-report bin/iter_reports/era30_ocean_stress.json
+```
+
+Matrix scenarios: `ocean-cruise` | `ocean-cruise-enter` | `ocean-cruise-stress` | `ocean-cruise-short`.
 
 ## 5. Anti-patterns (reject merge)
 

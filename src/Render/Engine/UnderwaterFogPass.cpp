@@ -6,6 +6,7 @@
 #include "Render/Engine/HorizonFogColor.h"
 #include "Render/GlIncludes.h"
 #include "Render/Mesh/FluidSurfaceColumnSlice.h"
+#include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Core/World.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
@@ -49,10 +50,17 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
   bool map_ready = surface_map.IsValid();
   if (nearby_fluid)
   {
+    const bool moving =
+        world.GetLastMovementSpeed() >
+        world.GetProceduralSettings().MovementPrefetchThreshold;
+    const bool cruise_throttle = FluidMapShouldThrottleCruise(
+        world.GetLastFluidMapDirtyChunks(), world.GetLastMovementFrameMs(),
+        moving, world.GetPhysicsTelemetry().DarkFaceVoidNearN,
+        world.GetPhysicsTelemetry().VisibleBlackFocusN);
     map_ready = surface_map.Update(
         world.GetBlockWorld(), registry, mesh_service.GetCache(),
         camera_block_xz, eye_block_y, mesh_service.GetMeshRevision(),
-        world.GetLastMovementFrameMs());
+        world.GetLastMovementFrameMs(), cruise_throttle);
   }
 
   const bool partial_submerge =

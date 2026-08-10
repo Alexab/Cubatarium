@@ -73,6 +73,7 @@
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
@@ -2483,6 +2484,9 @@ int UWorld::DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
     if (!ShouldDrainPendingLightUnderMissMoving(
             PhysicsTelemetryData.FocusMissingMesh != 0, /*moving=*/true,
             PhysicsTelemetryData.DarkFaceVoidNearN,
+            PhysicsTelemetryData.VisibleBlackFocusN) &&
+        !ShouldDrainPendingLightUnderOceanVoid(
+            /*moving=*/true, PhysicsTelemetryData.DarkFaceVoidNearN,
             PhysicsTelemetryData.VisibleBlackFocusN))
     {
       return 0;
@@ -2617,6 +2621,9 @@ int UWorld::DrainIdleFocusPendingLightSync(glm::ivec3 focus_ground_horiz,
     if (!ShouldDrainPendingLightUnderMissMoving(
             PhysicsTelemetryData.FocusMissingMesh != 0, /*moving=*/true,
             PhysicsTelemetryData.DarkFaceVoidNearN,
+            PhysicsTelemetryData.VisibleBlackFocusN) &&
+        !ShouldDrainPendingLightUnderOceanVoid(
+            /*moving=*/true, PhysicsTelemetryData.DarkFaceVoidNearN,
             PhysicsTelemetryData.VisibleBlackFocusN))
     {
       return 0;

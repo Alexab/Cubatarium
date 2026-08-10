@@ -5,6 +5,7 @@
 #include "World/Streaming/ColumnDesiredStage.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
+#include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Math/GridMath.h"
 #include "WorldGen/Core/ProceduralSettings.h"
@@ -290,12 +291,14 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     const int stale_cap =
         nearest_vb_no_ticket ? std::min(2, std::max(1, repair_cap))
                              : repair_cap;
-    const int void_cap = VoidRelightCollectCap(repair_cap, void_pressure);
-    world.CollectStaleDarkFocusColumns(focus_ground_horiz, vb_radius,
-                                       stale_dark_cols, stale_cap);
+    const int void_cap = OceanVoidRelightDrainCapMoving(
+        void_pressure, VoidRelightCollectCap(repair_cap, void_pressure));
     world.CollectFullyDarkFocusColumns(focus_ground_horiz, vb_radius,
                                        void_dark_cols, void_cap);
-    // Drop columns already in PendingLight from stale Remesh set.
+    world.CollectStaleDarkFocusColumns(focus_ground_horiz, vb_radius,
+                                       stale_dark_cols, stale_cap);
+    // Drop columns already in PendingLight from stale Remesh set — void columns
+    // must RelightThenMesh (Era30 I-O3), not skip as stale-only.
     if (!pending_cols.empty() && !stale_dark_cols.empty())
     {
       std::unordered_set<uint64_t> pending_keys;
@@ -306,6 +309,14 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
                              << 32) |
                             static_cast<uint32_t>(c.y));
       }
+      std::unordered_set<uint64_t> void_keys;
+      void_keys.reserve(void_dark_cols.size() * 2);
+      for (const glm::ivec2 &c : void_dark_cols)
+      {
+        void_keys.insert((static_cast<uint64_t>(static_cast<uint32_t>(c.x))
+                          << 32) |
+                         static_cast<uint32_t>(c.y));
+      }
       stale_dark_cols.erase(
           std::remove_if(stale_dark_cols.begin(), stale_dark_cols.end(),
                          [&](const glm::ivec2 &c) {
@@ -314,7 +325,12 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
                                     static_cast<uint32_t>(c.x))
                                 << 32) |
                                static_cast<uint32_t>(c.y);
-                           if (pending_keys.count(k))
+                           if (!pending_keys.count(k))
+                           {
+                             return false;
+                           }
+                           const bool void_col = void_keys.count(k) > 0;
+                           if (ShouldSkipStaleRemeshForPendingVoid(true, void_col))
                            {
                              ++world.GetPhysicsTelemetryMutable()
                                    .StageSkipRemeshPendingLight;

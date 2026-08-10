@@ -69,7 +69,7 @@ public:
     return EnterGameGpuWarmupFramesLeft;
   }
   /// @return true when GPU warmup stage finished.
-  bool AdvanceEnterGameGpuWarmup(IUProgressSink &sink);
+  bool AdvanceEnterGameGpuWarmup(IUProgressSink &sink, double frame_ms = 0.0);
 
 private:
   enum class Stage
@@ -108,6 +108,7 @@ private:
   bool SaveBeforeOp{false};
   WorldRunnerOp PendingWorldOp{WorldRunnerOp::Load};
   int EnterGameGpuWarmupFramesLeft{0};
+  double EnterGameGpuWarmupElapsedMs{0.0};
   UBackgroundQuiesceState ShutdownQuiesceState{};
 };
 

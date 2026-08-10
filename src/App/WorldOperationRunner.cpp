@@ -1,4 +1,5 @@
 #include "App/WorldOperationRunner.h"
+#include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Core/WorldLoadDiagnostics.h"
 #include "App/Core.h"
 #include "Core/Progress/ProgressTypes.h"
@@ -181,12 +182,14 @@ void UWorldOperationRunner::PrepareCreateWorld()
   PendingWorldName = Core.SetupNewWorldForCreation();
 }
 
-bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink)
+bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
+                                                      double frame_ms)
 {
   if (CurrentStage != Stage::EnterGameGpuWarmup)
   {
     return true;
   }
+  EnterGameGpuWarmupElapsedMs += frame_ms;
   const int frame_index =
       kEnterGameGpuWarmupMaxFrames - EnterGameGpuWarmupFramesLeft;
   const float frac =
@@ -197,14 +200,18 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink)
   const bool min_frames_done =
       frame_index + 1 >= kEnterGameGpuWarmupMinFrames;
   const bool mesh_ready = !World.NeedsEnterGameMeshWarmup();
+  const bool cap_reached =
+      EnterGameGpuWarmupElapsedMs >=
+      static_cast<double>(EnterVisualWarmupHardCapMs());
   if (!mesh_ready)
   {
     World.SetEnterGameWarmupMissingGreedy(World.CountPostLoadRingNotReady());
   }
   // Do not block EnterGame on live streamer settle — cooperative load already
   // prepared spawn; streaming continues in InGame.
-  if (EnterGameGpuWarmupFramesLeft > 0 &&
-      (!min_frames_done || !mesh_ready))
+  // Era30 I-O6: hard cap — close bar after soft budget even if visual debt lingers.
+  if (EnterGameGpuWarmupFramesLeft > 0 && (!min_frames_done || !mesh_ready) &&
+      !cap_reached)
   {
     return false;
   }
@@ -306,6 +313,7 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
     {
       CurrentStage = Stage::EnterGameGpuWarmup;
       EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupMaxFrames;
+      EnterGameGpuWarmupElapsedMs = 0.0;
       return false;
     }
     Success = true;
@@ -346,6 +354,7 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
     {
       CurrentStage = Stage::EnterGameGpuWarmup;
       EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupMaxFrames;
+      EnterGameGpuWarmupElapsedMs = 0.0;
       return false;
     }
     Success = true;

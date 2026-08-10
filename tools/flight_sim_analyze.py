@@ -175,6 +175,7 @@ def analyze(
     warmup_sec: float = 5.0,
     stop_tail_periods: int = 5,
     manual_idle: bool = False,
+    baseline_manual: Path | None = None,
 ) -> dict:
     rows = [
         json.loads(line)
@@ -678,6 +679,22 @@ def analyze(
 
     async_stuck_sec = max(stuck_async_holes_sec, mesh_async_stuck_sec)
     wall_fly_med = median(wall_fly)
+    void_fly = col(fly_segment, "dark_face_void_near_n") if fly_segment else []
+    vb_fly = col(fly_segment, "visible_black_focus_n") if fly_segment else []
+    fluid_fly = col(fly_segment, "fluid_map_cpu_ms") if fly_segment else []
+    fly_void_near_max = max(void_fly) if void_fly else None
+    fly_visible_black_max = max(vb_fly) if vb_fly else None
+    fly_fluid_map_cpu_max = max(fluid_fly) if fluid_fly else None
+    frontier_fly = col(fly_segment, "frontier_pressure") if fly_segment else []
+    fly_frontier_pressure_frac = (
+        sum(1 for v in frontier_fly if v > 0) / len(frontier_fly)
+        if frontier_fly
+        else None
+    )
+    chunk_count_fly = col(fly_segment, "chunk_count") if fly_segment else []
+    chunk_count_end = (
+        float(chunk_count_fly[-1]) if chunk_count_fly else None
+    )
     mesh_sync_fly_med = (
         median(col(fly_segment, "mesh_sync_ms")) if fly_segment else None
     )
@@ -830,6 +847,11 @@ def analyze(
     if unfinished_key and idle_head:
         uf = col(idle_head, unfinished_key)
         unfinished_idle_max = max(uf) if uf else 0.0
+    enter_void_near_max = None
+    if idle_head:
+        enter_void = col(idle_head, "dark_face_void_near_n")
+        enter_void_near_max = max(enter_void) if enter_void else None
+    enter_unfinished_max = unfinished_idle_max
     # When dirty>100 AND unfinished_visual, mesh_async should stay fed.
     # visual_holes alone can latch without unfinished (legacy) and SoftDefer
     # not_render_ready must not demand mesh workers.
@@ -1081,7 +1103,7 @@ def analyze(
         "miss_cy_gt1_frac": miss_cy_gt1_frac,
         "enter_app_update_max": enter_app_update_max,
         "enter_app_update_soft_fail": (
-            enter_app_update_max is not None and enter_app_update_max >= 800.0
+            enter_app_update_max is not None and enter_app_update_max > 200.0
         ),
         "vb_without_pending_light_focus_soft_fail": (
             vb_without_pending_light_focus_sec >= 30.0
@@ -1110,7 +1132,30 @@ def analyze(
         and spike_world_extra_dominant_rate <= 0.35,
     }
 
-    return {
+    parity_vs_manual = None
+    if baseline_manual and baseline_manual.is_file():
+        try:
+            base = json.loads(baseline_manual.read_text(encoding="utf-8"))
+            bm = base.get("metrics") or {}
+            cur_m = {
+                "fly_void_near_max": fly_void_near_max,
+                "effective_holes_rate": effective_holes_rate,
+                "wall_ms_fly_med": wall_fly_med,
+                "chunk_count_end": chunk_count_end,
+            }
+            parity_vs_manual = {}
+            for k, cur in cur_m.items():
+                base_v = bm.get(k)
+                if cur is None or base_v is None:
+                    parity_vs_manual[k] = None
+                elif float(base_v) == 0.0:
+                    parity_vs_manual[k] = 1.0 if float(cur) == 0.0 else None
+                else:
+                    parity_vs_manual[k] = float(cur) / float(base_v)
+        except (json.JSONDecodeError, OSError, TypeError, ValueError):
+            parity_vs_manual = None
+
+    out = {
         "perf_jsonl": str(path),
         "periods": len(periods),
         "steady_periods": len(steady),
@@ -1127,6 +1172,13 @@ def analyze(
             "red_rate": red_rate,
             "wall_ms_med": median(wall),
             "wall_ms_fly_med": wall_fly_med,
+            "fly_void_near_max": fly_void_near_max,
+            "fly_visible_black_max": fly_visible_black_max,
+            "fly_fluid_map_cpu_max": fly_fluid_map_cpu_max,
+            "fly_frontier_pressure_frac": fly_frontier_pressure_frac,
+            "chunk_count_end": chunk_count_end,
+            "enter_void_near_max": enter_void_near_max,
+            "enter_unfinished_max": enter_unfinished_max,
             "mesh_sync_fly_med": mesh_sync_fly_med,
             "wall_ms_no_holes_med": wall_ms_no_holes_med,
             "dirty_med_no_holes": dirty_med_no_holes,
@@ -1320,6 +1372,9 @@ def analyze(
         "soft": soft,
         "pass": passed,
     }
+    if parity_vs_manual is not None:
+        out["parity_vs_manual"] = parity_vs_manual
+    return out
 
 
 def main() -> int:
@@ -1333,6 +1388,12 @@ def main() -> int:
         help="use longest focus plateau + stricter pending stop gates",
     )
     ap.add_argument("--report", type=Path, default=None)
+    ap.add_argument(
+        "--baseline-manual",
+        type=Path,
+        default=None,
+        help="optional manual analyze JSON for parity ratios",
+    )
     args = ap.parse_args()
     if not args.perf_jsonl.is_file():
         print(f"FAIL: missing {args.perf_jsonl}", file=sys.stderr)
@@ -1342,6 +1403,7 @@ def main() -> int:
         args.warmup_sec,
         args.stop_tail_periods,
         manual_idle=args.manual_idle,
+        baseline_manual=args.baseline_manual,
     )
     text = json.dumps(result, indent=2)
     print(text)

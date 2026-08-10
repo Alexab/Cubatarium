@@ -1965,7 +1965,7 @@ void UApplication::Update(double dt)
             }
           }
         }
-        WorldOpRunner->AdvanceEnterGameGpuWarmup(ProgressSink);
+        WorldOpRunner->AdvanceEnterGameGpuWarmup(ProgressSink, dt * 1000.0);
       }
       if (WorldOpRunner->Tick(ProgressSink, kLoadChunkBudget))
       {

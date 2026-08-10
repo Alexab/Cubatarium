@@ -361,8 +361,12 @@ def main() -> int:
             "idle-warm",
             "idle-edit-smoke",
             "fly-clean",
+            "ocean-cruise",
+            "ocean-cruise-enter",
+            "ocean-cruise-stress",
+            "ocean-cruise-short",
         ],
-        help="named scenario (break-stand / visual-* / land-* / idle-* / fly-clean)",
+        help="named scenario (break-stand / visual-* / land-* / idle-* / fly-clean / ocean-cruise*)",
     )
     ap.add_argument("--break-phase-sec", type=float, default=20.0)
     ap.add_argument("--break-interval-sec", type=float, default=1.0)
@@ -567,6 +571,105 @@ def main() -> int:
             args.stop_phase_sec = 20.0
         else:
             args.stop_phase_sec = max(args.stop_phase_sec, 15.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 16.0)
+
+    def _apply_ocean_cruise_base():
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 180.0
+        if args.cruise_cx is None:
+            args.cruise_cx = -525.0
+        if args.cruise_cz is None:
+            args.cruise_cz = 100.0
+
+    if args.scenario == "ocean-cruise":
+        # Manual 104841 ocean west cruise: (−525,100)→(−551,103), FillWater horizon
+        # heal stress (void/VB/fluid). No cruise_eye_y — AppRunner sea+alt clamp.
+        _apply_ocean_cruise_base()
+        args.resume = False
+        args.teleport_cruise = True
+        args.idle_sec = max(args.idle_sec, 8.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 65.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 60.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 15.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 10.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 16.0)
+
+    if args.scenario == "ocean-cruise-enter":
+        # Full enter path (no teleport) — reproduces manual residency buildup.
+        _apply_ocean_cruise_base()
+        args.resume = False
+        args.teleport_cruise = False
+        args.idle_sec = max(args.idle_sec, 45.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 65.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 60.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 15.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 10.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 16.0)
+
+    if args.scenario == "ocean-cruise-stress":
+        # Resume + longer fly + sprint — wall pressure + residency parity.
+        _apply_ocean_cruise_base()
+        args.resume = True
+        args.teleport_cruise = False
+        args.sprint = True
+        args.idle_sec = max(args.idle_sec, 12.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 90.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 75.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 15.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 10.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 16.0)
+
+    if args.scenario == "ocean-cruise-short":
+        # Stop-debt snapshot (land_south_short lesson): shorter idle keeps void.
+        _apply_ocean_cruise_base()
+        args.resume = False
+        args.teleport_cruise = True
+        if "--idle-sec" not in sys.argv:
+            args.idle_sec = 3.0
+        else:
+            args.idle_sec = max(args.idle_sec, 3.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 65.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 60.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 15.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 10.0)
         args.seconds = max(
             args.seconds,
             args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
@@ -822,7 +925,16 @@ def main() -> int:
             process_timeout = args.seconds + 120.0
         if args.fly_stop:
             process_timeout = max(process_timeout, 420.0)
-        if args.scenario in ("break-stand", "visual-dig", "visual-blue", "idle-edit-smoke"):
+        if args.scenario in (
+            "break-stand",
+            "visual-dig",
+            "visual-blue",
+            "idle-edit-smoke",
+            "ocean-cruise",
+            "ocean-cruise-enter",
+            "ocean-cruise-stress",
+            "ocean-cruise-short",
+        ):
             process_timeout = max(process_timeout, args.seconds + 180.0)
 
         print("running:", " ".join(sim_cmd), flush=True)
@@ -873,7 +985,8 @@ def main() -> int:
             or args.land_south
             or args.land_south_short
             or args.scenario
-            in ("idle-clean", "idle-warm", "idle-edit-smoke", "fly-clean")
+            in ("idle-clean", "idle-warm", "idle-edit-smoke", "fly-clean", "ocean-cruise")
+            or (args.scenario or "").startswith("ocean-cruise")
         ):
             analyze_cmd.append("--manual-idle")
         if getattr(args, "warmup_sec", None) is not None:
