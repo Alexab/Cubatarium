@@ -248,6 +248,22 @@ every empty every frame.
 near as hole fix; Imm; second cache. TD-064 **partial** until manual opaque≪658 /
 miss_end=0.
 
+## Gap После Era29 closeout (2026-08-10) — Enter Visual Warmup; TD-065 **partial**
+
+| Практика | Industry | Cubatarium | Era29 SoT |
+|----------|----------|------------|-----------|
+| Progress bar = Visual Stage underfeet | lit/keep-prior before play | greedy r≤2 only | **done** NeedsEnterGameVisualWarmup + LitDrawable |
+| Bar-side streaming/emerge | heal SoftDefer on load | skip if coop prepared | **done** TickEnterStreamingWarmup always |
+| Capture pin at spawn | sticky HP after enter | retarget thrash ENTER | **done** pin T=16 on PrepareEnterGameSession |
+| Near VB honesty | dual-queue Relight | CollectFullyDark skip Pending | **done** near no-skip |
+| Far Unlit remesh damp | remesh-after-apply | MarkDirty remesh-on-lit | **done** horiz>2 RemeshAfterApply |
+| Idle opaque churn | single publish | Dirty storm stop | **done** idle drawable RemeshAfterApply + seam suppress@48 |
+
+**Evidence:** `era29_p4_fly` FLY_CLEAN opaque=67; `era29_p4_warm` IDLE_WARM opaque=42;
+`era29_p4_idle` IDLE_CLEAN opaque=103; `era29_p4_land` ARCH_D3_LAND soft miss.
+**Baseline:** `perf_20260810-091332`. Reject RD+1 bar wait; Unlit near on bar;
+MarkAllDirty warmup; claim CLOSED without manual ENTER eye.
+
 ## Gap После Era27 closeout (2026-08-09) — Anti-flicker ownership; TD-063 **partial**
 
 | Практика | Industry | Cubatarium | Era27 SoT |

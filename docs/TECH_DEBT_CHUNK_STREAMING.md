@@ -117,7 +117,18 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-062 | Era26 | Ocean Dual-Debt + Load Light Parallel | Ocean void/VB + SoftDefer empty sides; Relight starve under miss moving; coop RelightColumns sync serial | **partial 2026-08-09** P0–P3 landed; FLY/WARM GO; IDLE soft wall/emerge; LAND soft miss; wait manual `214325` |
 | TD-ARCH-063 | Era27 | Anti-Flicker Ownership | SoftDefer Capture retarget thrash + MarkRelit remesh blink + discarded_late supersede after Era26 heal (`224912`) | **partial 2026-08-09** P0–P3 landed; FLY/IDLE/WARM GO; LAND soft miss; wait manual `224912` |
 | TD-ARCH-064 | Era28 | Visual Stage Gate | UnlitFirstMesh + SoftDefer Dirty thrash → black/empty/green flicker (`012208` opaque swing 658) | **partial 2026-08-10** P0–P3 landed; FLY/WARM GO; IDLE soft dirtyΔ; LAND soft miss; wait manual `012208` |
-| TD-ARCH-065 | Era29 | Enter Visual Warmup | Progress bar closes on greedy r≤2; SoftDefer/PendingLight/VB explode on ENTER (`091332`) | **open 2026-08-10** P0 predicates |
+| TD-ARCH-065 | Era29 | Enter Visual Warmup | Progress bar closes on greedy r≤2; SoftDefer/PendingLight/VB explode on ENTER (`091332`) | **partial 2026-08-10** P0–P4 landed; FLY/IDLE/WARM GO; LAND soft miss; wait manual ENTER eye |
+
+> **Era29 Enter Visual Warmup closeout (2026-08-10):** P0–P4 landed. Progress bar
+> always runs budgeted `TickEnterStreamingWarmup` (I-E2); enter gate adds underfeet
+> LitDrawable / SoftDefer empty / PendingLight (I-E1/E3/E4) with frame cap 24;
+> spawn Capture pin T=16; near CollectFullyDark honesty; far Unlit remesh-on-lit
+> RemeshAfterApply; idle drawable RemeshAfterApply + standing seam suppress dirty>48.
+> enter_app soft ≤200; opaque_churn soft ≤200. Autofly: `era29_p4_fly` FLY_CLEAN
+> (opaque=67); `era29_p4_warm` IDLE_WARM (opaque=42); `era29_p4_idle` IDLE_CLEAN
+> (opaque=103); `era29_p4_land` ARCH_D3_LAND soft post_stop miss. KEEP Era28
+> hide-until-lit / Dirty coalesce / PendingReplace. Reject RD+1 bar wait; Unlit
+> near on bar; MarkAllDirty warmup; CLOSED without manual ENTER eye (`091332`).
 
 > **Era29 Enter Visual Warmup (2026-08-10):** Manual `091332` after Era28: cruise
 > flicker OK; ENTER blink (VB~49 void~9k unlit↑ empty=6); FOV black/empty remain;

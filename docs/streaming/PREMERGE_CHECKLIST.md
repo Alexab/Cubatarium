@@ -189,6 +189,12 @@ PreferKick after age SLA; RemeshAfterApply-only while Building. Autofly opaque
 churn ≤67 (vs manual 631). Reject: Unlit near «ради дыр»; Imm; second cache;
 CLOSED without manual eye.
 
+**Era29 Enter Visual Warmup (2026-08-10):** TD-065 **partial** (autofly FLY/IDLE/WARM
+GO; LAND soft miss; wait manual `091332`-class ENTER eye). Bar-side streaming always;
+underfeet LitDrawable gate (cap 24); spawn Capture pin T=16; near VB honesty;
+far Unlit remesh damp; idle drawable RemeshAfterApply. Autofly opaque≤103 (≪880).
+Reject: RD+1 bar wait; Unlit near on bar; MarkAllDirty warmup; CLOSED without ENTER eye.
+
 **Backend matrix (R4):** desktop
 
 ```powershell
