@@ -474,9 +474,11 @@ int main()
   Expect(ShouldRemeshAfterApplyOnlyOnMovingCruiseHeal(true, true, true),
          "Era31 I-T5: moving cruise heal ⇒ RemeshAfterApply-only");
   Expect(ShouldForceEnterVisualCap(250.0, false),
-         "Era31 I-T4: elapsed ≥200 ⇒ force cap");
+         "Era31 I-T4: GpuWarmup elapsed ≥200 ⇒ force cap");
   Expect(ShouldForceEnterVisualCap(50.0, true),
-         "Era31 I-T4: visual soft ready ⇒ force cap");
+         "Era31 I-T4: mesh soft ready ⇒ force cap");
+  Expect(!ShouldForceEnterVisualCap(50.0, false),
+         "Era31 I-T4: early GpuWarmup without ready ⇒ no cap");
 
   {
     MeshWorkAdmissionInput in;

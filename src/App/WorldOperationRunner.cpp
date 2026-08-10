@@ -150,11 +150,6 @@ bool UWorldOperationRunner::TickWorldOp(IUProgressSink &sink, int chunkBudget)
     {
       return true;
     }
-    if (Request.op == WorldRunnerOp::EnterGame && EnterVisualCapReached())
-    {
-      World.ForceCapEnterGameLoad(sink);
-      return true;
-    }
     return false;
   }
   case WorldRunnerOp::Create:
@@ -206,8 +201,10 @@ bool UWorldOperationRunner::EnterVisualCapReached() const
   {
     return false;
   }
-  return ShouldForceEnterVisualCap(EnterLoadElapsedMs,
-                                   !World.NeedsEnterGameVisualWarmup());
+  // Soft-ready only: do NOT key off EnterLoadElapsedMs here — that timer
+  // includes cooperative terrain load (seconds) and would abort/skip warmup
+  // after 200ms with an unfinished world (stuck on "World loaded" 100%).
+  return !World.NeedsEnterGameMeshWarmup();
 }
 
 bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
@@ -228,10 +225,9 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   const bool min_frames_done =
       frame_index + 1 >= kEnterGameGpuWarmupMinFrames;
   const bool mesh_ready = !World.NeedsEnterGameMeshWarmup();
+  // Era31 I-T4: hard cap applies to GpuWarmup wall only (not full coop load).
   const bool cap_reached =
-      EnterGameGpuWarmupElapsedMs >=
-          static_cast<double>(EnterVisualWarmupHardCapMs()) ||
-      EnterVisualCapReached();
+      ShouldForceEnterVisualCap(EnterGameGpuWarmupElapsedMs, mesh_ready);
   if (!mesh_ready)
   {
     World.SetEnterGameWarmupMissingGreedy(World.CountPostLoadRingNotReady());
