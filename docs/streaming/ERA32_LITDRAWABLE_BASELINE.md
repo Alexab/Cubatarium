@@ -27,6 +27,7 @@
 | Hide dark out to full focus_radius | void 3–7k spiral |
 | Hide StaleDark (not only FullyDark) | discarded_late≈50 remesh thrash |
 | CountVisibleBlack drawn-only | starved VB Relight tickets |
+| RelightThenMesh on every Unlit LitPending | void≈6.2k flood (era32_relight) |
 | NoteMin/vb_bg knobs without void-drain proof | void flood |
 
 ## Evidence

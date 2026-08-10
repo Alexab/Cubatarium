@@ -246,6 +246,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             allow_unlit);
       });
   // Era15 TD-050: Unlit publish → LitPending (sticky + RemeshSeam ticket).
+  // KEEP RemeshSeam here — RelightThenMesh on every Unlit FirstMesh flooded
+  // void (era32_relight_ocean void≈6.2k). Void/VB Relight stays on
+  // EnqueueVoidDarkRelightTickets / Note floors.
   mesh_service.SetOnLitPendingNeededFn(
       [&world](glm::ivec3 chunk_coord)
       {
