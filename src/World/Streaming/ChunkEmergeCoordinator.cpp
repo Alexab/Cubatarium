@@ -548,7 +548,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       cy1 = std::max(cy1, std::min(max_cy, sea_cy1));
     }
     // Era24: rim soft ownership budget (not DoD knob) — per-coord FirstMesh.
-    constexpr int kEmptyOwnershipCap = 6;
+    constexpr int kEmptyOwnershipCap = 12;
     if (UndrawnForceCd <= 0)
     {
       int marked_n = 0;
@@ -2549,9 +2549,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         hole_backlog_mode && nearest_miss_nh >= 4;
     const bool rim_plateau_close =
         !far_rim_force_scan && hole_backlog_mode && found_nearest_missing &&
-        nearest_miss_nh >= 2 && nearest_miss_nh <= 3 &&
-        // Era33 P2: SoftDefer-empty debt → keep full-focus residual (miss_end).
-        phys_telem.SoftDeferEmptyPlaceholderN == 0;
+        nearest_miss_nh >= 2 && nearest_miss_nh <= 3;
     bool skip_full_scan_rim_close = false;
     if (rim_plateau_close)
     {

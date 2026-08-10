@@ -173,14 +173,14 @@ int main()
          "Era24 I-E2: empty outside FOV → no ownership");
   Expect(!SoftDeferEmptyNeedsFirstMeshOwnership(false, true),
          "Era24 I-E2: not empty → no ownership");
-  Expect(!ShouldEscalateSoftDeferEmptyAge(29),
-         "Era32: age 29 < sla 30 → no escalate");
-  Expect(ShouldEscalateSoftDeferEmptyAge(30),
-         "Era32: age 30 ≥ sla → escalate");
+  Expect(!ShouldEscalateSoftDeferEmptyAge(14),
+         "Era33: age 14 < sla 15 → no escalate");
+  Expect(ShouldEscalateSoftDeferEmptyAge(15),
+         "Era33: age 15 ≥ sla → escalate");
   Expect(ShouldEscalateSoftDeferEmptyAge(60, 45),
          "Era32: explicit sla 45 still honored");
   Expect(ShouldEscalateSoftDeferEmptyAge(44),
-         "Era32: default sla 30 → age 44 escalates");
+         "Era33: default sla 15 → age 44 escalates");
   Expect(SoftDeferEmptyHealKindOf() == SoftDeferEmptyHealKind::FirstMesh,
          "Era24 I-E3: SoftDefer empty heal is FirstMesh only");
   Expect(ShouldPreferKickSoftDeferEmptyStuck(true, true, true),

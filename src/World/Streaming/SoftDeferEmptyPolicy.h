@@ -173,9 +173,10 @@ inline bool SoftDeferEmptyNeedsFirstMeshOwnership(bool empty_placeholder,
 }
 
 /// Era24 I-E4: SoftDefer empty age (frames) ⇒ escalate PreferKick/Capture.
-/// Era32: tighter SLA under FOV miss (miss_stuck 28–38s on hide4) — 30 frames.
+/// Era32/33: tighter SLA under FOV miss — 15 frames (~0.25s @60) vs 30
+/// (miss_stuck 28–54s / holes≈1.0 when PreferKick waited too long).
 inline bool ShouldEscalateSoftDeferEmptyAge(int age_frames,
-                                            int sla_frames = 30)
+                                            int sla_frames = 15)
 {
   return age_frames >= sla_frames;
 }

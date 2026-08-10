@@ -25,24 +25,19 @@ Keep Era32 REJECT list. Additionally:
 | Enter Dirty/greedy radius = full LitDrawable ring (4) | enter Dirty flood / hitch risk — KEEP Dirty r≤2, visual gate r=4 |
 | Full `GetData()` solid scan in `NeedsEnterGameVisualWarmup` | enter_app≈1.4s — use sparse sample |
 
-## Autofly evidence (`202125`)
+## Autofly evidence
 
-| Metric | Value | Target |
-|--------|-------|--------|
-| effective_holes_rate | **0.24** | ≤0.30 |
-| fly_void_near_max | **0** | ≤800 |
-| miss_stuck_max_run_sec | 6 | ≤4 |
-| miss_end | 1 | 0 |
-| enter_void_near_max | **14** | ≪2371 land cold |
-| enter_app_update_max | 1420 (pre sparse fix) | ≤200 soft |
-| post_stop_visible_black_max | 21 | ≤20 |
-| opaque_idle_churn_max | 3 | ≤80 |
+| Sample | holes | void | miss_stuck | enter_void | VB stop | Notes |
+|--------|-------|------|------------|------------|---------|-------|
+| hang-killed `202125` (partial) | 0.09–0.24 | 0 | 6 | 14 | 21 | incomplete periods; misleading GO trend |
+| full Debug `215510` | **0.97** | 725 | 36 | 7 | 40 | PreferKick-on-Remesh flood + denser HoleDrain |
+| full Release `era33_rel` | **0.94** | 1758 | 30 | 19 | 36 | worse wall/void |
 
-OCEAN_CRUISE: near-GO (VB stop 21>20; miss residual). Holes/void strong vs `202518` holes=1.0.
+P2 follow-up: PreferKick only SoftDefer age SLA (15f); empty ownership cap 12; no RemeshAfterApply PreferKick flood.
 
 ## Status
 
-- **P0 Cold enter:** ring=4 on bar; no cold force-cap; ground/sea Y-band.
+- **P0 Cold enter:** ring=4 on bar; no cold force-cap; ground/sea Y-band; sparse solid sample.
 - **P1 cy_order:** land ground-first Immediate order.
-- **P2 FOV fill:** lit PreferKick + HoleDrain residual; holes trending ≤0.30.
-- **P3:** needs clean autofly matrix + `OCEAN_MANUAL` + eye (ocean+land). Closed only with eye.
+- **P2 FOV fill:** SoftDefer FirstMesh ownership + age PreferKick; holes still NO-GO on full cruise.
+- **P3:** docs/TD-066 updated; full matrix + `OCEAN_MANUAL` + eye still required for CLOSED.

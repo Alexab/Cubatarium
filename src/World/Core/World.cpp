@@ -1097,14 +1097,6 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                 MeshService->HasDrawableGreedyMesh(coord))
             {
               MeshService->RequestRemeshAfterApply(coord);
-              // Era33 P2: lit-ring PendingGpu → PreferKick so bind is not stuck
-              // behind hinterland queue (ocean holes after Relight).
-              if (far_horiz <= kVisualStageLitDrawableHoriz &&
-                  (MeshService->IsPendingGpuQueued(coord) ||
-                   MeshService->IsPendingGpuKickedOrDispatched(coord)))
-              {
-                MeshService->PreferKickPendingGpuQueued(coord);
-              }
             }
           }
           continue;
@@ -1132,11 +1124,6 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
             if (!MeshService->IsChunkMeshDirty(coord))
             {
               MeshService->RequestRemeshAfterApply(coord);
-              if (MeshService->IsPendingGpuQueued(coord) ||
-                  MeshService->IsPendingGpuKickedOrDispatched(coord))
-              {
-                MeshService->PreferKickPendingGpuQueued(coord);
-              }
             }
           }
           continue;
@@ -1197,11 +1184,6 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                   moving_cruise, void_vb_pressure, has_drawable))
           {
             MeshService->RequestRemeshAfterApply(coord);
-            if (MeshService->IsPendingGpuQueued(coord) ||
-                MeshService->IsPendingGpuKickedOrDispatched(coord))
-            {
-              MeshService->PreferKickPendingGpuQueued(coord);
-            }
             continue;
           }
           if (priority_mesh)
@@ -5103,7 +5085,12 @@ bool UWorld::NeedsEnterGameVisualWarmup() const
   {
     for (int dz = -visual_r; dz <= visual_r; ++dz)
     {
-      const bool in_initial_ring = true; // loop already clipped to visual_r
+      const bool in_initial_ring =
+          std::max(std::abs(dx), std::abs(dz)) <= visual_r;
+      // SoftDefer empty: underfeet only on enter bar (full-ring SoftDefer scan
+      // stacked Drain into enter_app multi-second hitch). LitDrawable FullyDark
+      // / missing solid still cover the whole LitDrawable ring.
+      const bool soft_underfeet = std::max(std::abs(dx), std::abs(dz)) <= 1;
       for (int cy = cy0; cy <= cy1; ++cy)
       {
         const glm::ivec3 coord(center.x + dx, cy, center.z + dz);
@@ -5117,7 +5104,7 @@ bool UWorld::NeedsEnterGameVisualWarmup() const
         const bool soft_held = mesh.IsSoftDeferHeld(coord);
         const bool empty_or_held =
             (!has_drawable && has_greedy) || soft_held;
-        if (EnterSoftDeferEmptyNeedsFirstMesh(empty_or_held, in_initial_ring))
+        if (EnterSoftDeferEmptyNeedsFirstMesh(empty_or_held, soft_underfeet))
         {
           return true;
         }
