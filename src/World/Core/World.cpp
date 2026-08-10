@@ -1142,6 +1142,14 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         // focus_dirty). Request post-Apply remesh instead so Capture sees new
         // light without mid-flight thrash.
         // Era29 P4: also RemeshAfterApply-only for live drawable (opaque stop).
+        // Era31 I-T5: extend to moving cruise under ocean heal pressure.
+        const bool ocean_heal_remesh =
+            IsOceanHealPressure(
+                PhysicsTelemetryData.FocusMissingMesh != 0,
+                PhysicsTelemetryData.DarkFaceVoidNearN,
+                PhysicsTelemetryData.VisibleBlackFocusN);
+        const bool moving_cruise =
+            LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold;
         for (int cy = cy0; cy <= cy1; ++cy)
         {
           const glm::ivec3 coord(key.x, cy, key.y);
@@ -1149,10 +1157,12 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           {
             continue;
           }
+          const bool has_drawable = MeshService->HasDrawableGreedyMesh(coord);
           if (MeshService->HasInflightMeshBuild(coord) ||
               ShouldRemeshAfterApplyOnlyOnIdleDrawable(
-                  /*idle_or_suppress=*/true,
-                  MeshService->HasDrawableGreedyMesh(coord)))
+                  /*idle_or_suppress=*/true, has_drawable) ||
+              ShouldRemeshAfterApplyOnlyOnMovingCruiseHeal(
+                  moving_cruise, ocean_heal_remesh, has_drawable))
           {
             MeshService->RequestRemeshAfterApply(coord);
             continue;
@@ -3187,7 +3197,21 @@ int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
       const bool contains = GetColumnFlowExecutor().HasRepairTicket(key);
       const bool progress = ColumnHasRepairProgress(key);
       const bool sticky = IsColumnStickyRemesh(key);
-      if (contains || progress || sticky)
+      bool column_fully_dark = false;
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(key.x, cy, key.y);
+        if (MeshService->HasDrawableGreedyMesh(coord) &&
+            MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+        {
+          column_fully_dark = true;
+          break;
+        }
+      }
+      const bool pending_replace = IsPendingLightBeforeMesh(key);
+      const bool counts_progress = ShouldCountVisibleBlackProgress(
+          contains || progress || sticky, column_fully_dark, pending_replace);
+      if (counts_progress)
       {
         ++progress_n;
       }
@@ -5409,6 +5433,15 @@ bool UWorld::TickCooperativeLoad(IUProgressSink &sink, int chunkBudget)
     return true;
   }
   return CoopSession->Tick(*this, sink, chunkBudget);
+}
+
+bool UWorld::ForceCapEnterGameLoad(IUProgressSink &sink)
+{
+  if (!CoopSession)
+  {
+    return true;
+  }
+  return CoopSession->ForceCapEnterGameVisual(*this, sink);
 }
 
 void UWorld::BeginCooperativeSave(const std::string &world_folder_path,
