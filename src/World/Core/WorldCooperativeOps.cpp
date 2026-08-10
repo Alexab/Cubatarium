@@ -80,7 +80,7 @@ constexpr int kMeshWarmupMaxTicks = 50000;
 constexpr int kMeshWarmupMaxWallMs = 75000;
 /// Hidden-window flight-sim: RelightColumns can stall >2min on World_164.
 constexpr int kRelightColumnsMaxWallMs = 60000;
-constexpr int kCreateSpawnWarmupMaxTicks = 48;
+constexpr int kCreateSpawnWarmupMaxTicks = 1800; // Era33: ring=4 cold settle
 constexpr int kStreamUnloadMarginChunks = 1;
 
 glm::ivec3 ResolveSpatialLoadCenter(const UWorld &world)
@@ -1807,9 +1807,17 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
              prepare_view_base + kCreateWeightPrepare * stream_inner,
              spawn_settled ? "Preparing view..."
                            : "Loading nearby terrain...");
+      // Era33 P0: do not leave create bar until LitDrawable initial FOV is
+      // settled (hard tick ceiling is safety only).
       if (!spawn_settled && StreamingWarmupTicks < kCreateSpawnWarmupMaxTicks)
       {
         break;
+      }
+      if (!spawn_settled)
+      {
+        // Absolute ceiling hit — still report and continue (avoid infinite bar).
+        std::cerr << "[Era33] create spawn warmup ceiling reached while "
+                     "NeedsEnterGameMeshWarmup still true\n";
       }
     }
     else

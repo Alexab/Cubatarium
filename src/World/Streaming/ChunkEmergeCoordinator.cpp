@@ -11,6 +11,7 @@
 #include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Streaming/OceanCruisePolicy.h"
+#include "World/Streaming/CyOrderPolicy.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Mesh/GpuMeshPipeline.h"
@@ -503,6 +504,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       // Near sea only — do not force sea_cy when flying with holes
       // (that starved player-altitude approach meshes).
       preferred_cy = sea_cy;
+    }
+    else if (!procedural.FillWater)
+    {
+      // Era33 P1: SoftDefer/empty scan prefers ground band over canopy cy.
+      prefer_lower_cy = true;
+      preferred_cy = std::min(preferred_cy, focus_ground.y);
     }
   }
 
@@ -1886,35 +1893,50 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const int cy0 = FloorDiv(band_min_y, CHUNK_SIZE);
     const int cy1 = FloorDiv(band_max_y, CHUNK_SIZE);
     const int sea_cy = FloorDiv(procedural.SeaLevel, CHUNK_SIZE);
+    // Era33 P1: land — ground/underfeet before canopy (miss_cy≈2–3 / tree tops
+    // in void). Ocean — KEEP sea_cy early, then ± expand.
     int prefer_cy = focus_ground.y;
     if (procedural.FillWater && std::abs(focus_ground.y - sea_cy) <= 3)
     {
       prefer_cy = sea_cy;
     }
-    // Prefer prefer_cy, then sea (if distinct), then expand within [cy0, cy1].
-    std::vector<int> cy_order;
-    cy_order.reserve(static_cast<size_t>(cy1 - cy0 + 1));
-    auto push_cy = [&](int cy)
+    else if (!procedural.FillWater)
     {
-      if (cy < cy0 || cy > cy1)
+      // Prefer lowest loaded solid / cy0 as ground band, not camera canopy cy.
+      prefer_cy = cy0;
+      for (int cy = cy0; cy <= std::min(cy1, focus_ground.y); ++cy)
       {
-        return;
+        const glm::ivec3 probe(focus_ground.x, cy, focus_ground.z);
+        const UChunk *probe_chunk =
+            world.GetBlockWorld().GetChunkManager().GetChunk(probe);
+        if (!probe_chunk)
+        {
+          continue;
+        }
+        bool solid = false;
+        for (int z = 0; z < CHUNK_SIZE && !solid; z += 4)
+        {
+          for (int x = 0; x < CHUNK_SIZE && !solid; x += 4)
+          {
+            for (int y = 0; y < CHUNK_SIZE && !solid; y += 4)
+            {
+              if (probe_chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+              {
+                solid = true;
+              }
+            }
+          }
+        }
+        if (solid)
+        {
+          prefer_cy = cy;
+          break;
+        }
       }
-      if (std::find(cy_order.begin(), cy_order.end(), cy) == cy_order.end())
-      {
-        cy_order.push_back(cy);
-      }
-    };
-    push_cy(prefer_cy);
-    if (procedural.FillWater)
-    {
-      push_cy(sea_cy);
     }
-    for (int d = 1; d <= std::max(prefer_cy - cy0, cy1 - prefer_cy); ++d)
-    {
-      push_cy(prefer_cy - d);
-      push_cy(prefer_cy + d);
-    }
+    std::vector<int> cy_order =
+        BuildMeshCyVisitOrder(cy0, cy1, prefer_cy, sea_cy,
+                              procedural.FillWater);
     int immediate = 0;
     // Underfeet alone: camera ±1. Focus visual holes / idle holes: whole ring
     // (mirrors schedule — underfeet r=1 must not starve neighbor first-mesh).
@@ -2520,19 +2542,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     // (every 5f when GPU/async backlog — scan-only cut).
     // M1: rim plateau (nh 2–3) under HoleDrain/Deep — skip most full-focus
     // scans (nearest FirstMesh + Drain still run). Never skip underfeet
-    // (nh≤1). Force a full-focus every 8 skipped frames so other ring holes
-    // cannot starve forever (land-south miss_end).
+    // (nh≤1). Force a full-focus every 4 skipped frames so other ring holes
+    // cannot starve forever (Era33 P2 miss_end=0; was 8 → land miss_end).
     // N0a: far rim nh≥4 — full-scan every frame (ignore FocusScanCd / skip).
     const bool far_rim_force_scan =
         hole_backlog_mode && nearest_miss_nh >= 4;
     const bool rim_plateau_close =
         !far_rim_force_scan && hole_backlog_mode && found_nearest_missing &&
-        nearest_miss_nh >= 2 && nearest_miss_nh <= 3;
+        nearest_miss_nh >= 2 && nearest_miss_nh <= 3 &&
+        // Era33 P2: SoftDefer-empty debt → keep full-focus residual (miss_end).
+        phys_telem.SoftDeferEmptyPlaceholderN == 0;
     bool skip_full_scan_rim_close = false;
     if (rim_plateau_close)
     {
       ++RimScanSkipStreak;
-      if (RimScanSkipStreak < 8)
+      if (RimScanSkipStreak < 4)
       {
         skip_full_scan_rim_close = true;
       }

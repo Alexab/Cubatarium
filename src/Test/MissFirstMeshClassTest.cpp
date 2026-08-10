@@ -2,6 +2,7 @@
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
+#include "World/Streaming/CyOrderPolicy.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/FrontierStagePolicy.h"
@@ -392,8 +393,8 @@ int main()
   using cutum::ShouldRemeshAfterApplyOnlyOnIdleDrawable;
   using cutum::ShouldRunEnterStreamingWarmupDespiteSpawnPrepared;
 
-  Expect(EnterVisualWarmupRadiusChunks() == 1,
-         "Era29 I-E1: underfeet visual radius 1");
+  Expect(EnterVisualWarmupRadiusChunks() == kVisualStageLitDrawableHoriz,
+         "Era33 P0: enter visual radius = LitDrawable ring 4");
   Expect(EnterUnderfeetNeedsLitDrawable(false, false),
          "Era29 I-E1: !lit !keep-prior ⇒ needs warmup");
   Expect(!EnterUnderfeetNeedsLitDrawable(true, false),
@@ -500,11 +501,28 @@ int main()
   Expect(ShouldRemeshAfterApplyOnlyOnMovingCruiseHeal(true, true, true),
          "Era31 I-T5: moving cruise heal ⇒ RemeshAfterApply-only");
   Expect(ShouldForceEnterVisualCap(250.0, false),
-         "Era31 I-T4: GpuWarmup elapsed ≥200 ⇒ force cap");
+         "Era31 I-T4: GpuWarmup elapsed ≥200 ⇒ force cap (load)");
   Expect(ShouldForceEnterVisualCap(50.0, true),
          "Era31 I-T4: mesh soft ready ⇒ force cap");
   Expect(!ShouldForceEnterVisualCap(50.0, false),
          "Era31 I-T4: early GpuWarmup without ready ⇒ no cap");
+  Expect(!ShouldForceEnterVisualCap(250.0, false, /*cold_create=*/true),
+         "Era33 P0: cold create never force-cap while debt");
+  Expect(ShouldForceEnterVisualCap(250.0, true, /*cold_create=*/true),
+         "Era33 P0: cold create force when soft-ready");
+
+  // --- Era33 P1 cy_order ---
+  {
+    using cutum::BuildMeshCyVisitOrder;
+    const auto land = BuildMeshCyVisitOrder(/*cy0=*/0, /*cy1=*/4, /*prefer=*/0,
+                                            /*sea=*/2, /*fill_water=*/false);
+    Expect(!land.empty() && land[0] == 0, "Era33 P1: land starts at ground");
+    Expect(land.size() >= 3 && land[1] == 1, "Era33 P1: land then +1");
+    Expect(land.size() >= 4 && land[2] == 2, "Era33 P1: land canopy after ±1");
+    const auto ocean = BuildMeshCyVisitOrder(0, 4, /*prefer=*/2, /*sea=*/2,
+                                             /*fill_water=*/true);
+    Expect(!ocean.empty() && ocean[0] == 2, "Era33 P1: ocean sea/prefer first");
+  }
 
   {
     MeshWorkAdmissionInput in;

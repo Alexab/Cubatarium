@@ -116,6 +116,8 @@ private:
   int EnterGameGpuWarmupFramesLeft{0};
   double EnterGameGpuWarmupElapsedMs{0.0};
   double EnterLoadElapsedMs{0.0};
+  /// Era33: Create/SaveThenCreate must not force-cap GpuWarmup while visual debt.
+  bool EnterGameColdCreate{false};
   UBackgroundQuiesceState ShutdownQuiesceState{};
 };
 

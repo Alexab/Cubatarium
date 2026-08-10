@@ -1,12 +1,15 @@
 #pragma once
 
+#include "World/Streaming/VisualStagePolicy.h"
+
 namespace cutum
 {
 
-/// Era29 I-E1: underfeet visual gate radius (LitDrawable); greedy floor stays 2.
+/// Era33 P0: initial-area visual gate on progress bar = LitDrawable FOV ring.
+/// (Era29 was underfeet r=1; cold create entered InGame with empty FOV.)
 inline int EnterVisualWarmupRadiusChunks()
 {
-  return 1;
+  return kVisualStageLitDrawableHoriz;
 }
 
 /// Era29 I-E1: underfeet still needs visual warmup when neither lit drawable

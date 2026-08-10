@@ -159,11 +159,21 @@ inline bool ShouldRemeshAfterApplyOnlyOnMovingCruiseHeal(bool moving,
   return moving && ocean_heal_pressure && has_drawable;
 }
 
-/// Era31 I-T4: force close enter bar when soft budget or underfeet visual ready.
-inline bool ShouldForceEnterVisualCap(double elapsed_ms, bool visual_soft_ready)
+/// Era31 I-T4 / Era33 P0: force close enter bar when soft-ready, or (load/
+/// resume only) when GpuWarmup wall hits hard cap. Cold create must not force
+/// while visual debt remains — initial FOV stays on the world-create bar.
+inline bool ShouldForceEnterVisualCap(double elapsed_ms, bool visual_soft_ready,
+                                      bool cold_create = false)
 {
-  return elapsed_ms >= static_cast<double>(EnterVisualWarmupHardCapMs()) ||
-         visual_soft_ready;
+  if (visual_soft_ready)
+  {
+    return true;
+  }
+  if (cold_create)
+  {
+    return false;
+  }
+  return elapsed_ms >= static_cast<double>(EnterVisualWarmupHardCapMs());
 }
 
 } // namespace cutum

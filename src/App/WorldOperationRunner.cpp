@@ -54,6 +54,7 @@ void UWorldOperationRunner::Start(WorldRunnerRequest request)
   SaveBeforeOp = false;
   PendingWorldOp = WorldRunnerOp::Load;
   EnterLoadElapsedMs = 0.0;
+  EnterGameColdCreate = false;
 
   switch (Request.op)
   {
@@ -225,9 +226,10 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   const bool min_frames_done =
       frame_index + 1 >= kEnterGameGpuWarmupMinFrames;
   const bool mesh_ready = !World.NeedsEnterGameMeshWarmup();
-  // Era31 I-T4: hard cap applies to GpuWarmup wall only (not full coop load).
-  const bool cap_reached =
-      ShouldForceEnterVisualCap(EnterGameGpuWarmupElapsedMs, mesh_ready);
+  // Era31 I-T4 / Era33 P0: hard cap only for load/resume — cold create waits
+  // LitDrawable initial FOV on the bar.
+  const bool cap_reached = ShouldForceEnterVisualCap(
+      EnterGameGpuWarmupElapsedMs, mesh_ready, EnterGameColdCreate);
   if (!mesh_ready)
   {
     World.SetEnterGameWarmupMissingGreedy(World.CountPostLoadRingNotReady());
@@ -344,6 +346,7 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
       CurrentStage = Stage::EnterGameGpuWarmup;
       EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupMaxFrames;
       EnterGameGpuWarmupElapsedMs = 0.0;
+      EnterGameColdCreate = false;
       return false;
     }
     Success = true;
@@ -390,8 +393,11 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
       CurrentStage = Stage::EnterGameGpuWarmup;
       EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupMaxFrames;
       EnterGameGpuWarmupElapsedMs = 0.0;
+      EnterGameColdCreate = true;
       return false;
     }
+    // Create + enterGameAfter: PrepareView already settled LitDrawable ring;
+    // EnterGameAfterWorldChange runs from Application after Done.
     Success = true;
     Active = false;
     CurrentStage = Stage::Done;

@@ -1097,6 +1097,14 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                 MeshService->HasDrawableGreedyMesh(coord))
             {
               MeshService->RequestRemeshAfterApply(coord);
+              // Era33 P2: lit-ring PendingGpu → PreferKick so bind is not stuck
+              // behind hinterland queue (ocean holes after Relight).
+              if (far_horiz <= kVisualStageLitDrawableHoriz &&
+                  (MeshService->IsPendingGpuQueued(coord) ||
+                   MeshService->IsPendingGpuKickedOrDispatched(coord)))
+              {
+                MeshService->PreferKickPendingGpuQueued(coord);
+              }
             }
           }
           continue;
@@ -1124,6 +1132,11 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
             if (!MeshService->IsChunkMeshDirty(coord))
             {
               MeshService->RequestRemeshAfterApply(coord);
+              if (MeshService->IsPendingGpuQueued(coord) ||
+                  MeshService->IsPendingGpuKickedOrDispatched(coord))
+              {
+                MeshService->PreferKickPendingGpuQueued(coord);
+              }
             }
           }
           continue;
@@ -1184,6 +1197,11 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                   moving_cruise, void_vb_pressure, has_drawable))
           {
             MeshService->RequestRemeshAfterApply(coord);
+            if (MeshService->IsPendingGpuQueued(coord) ||
+                MeshService->IsPendingGpuKickedOrDispatched(coord))
+            {
+              MeshService->PreferKickPendingGpuQueued(coord);
+            }
             continue;
           }
           if (priority_mesh)
@@ -4879,8 +4897,8 @@ namespace
 
 int EnterGameMeshRadiusChunks(const UWorld &world)
 {
-  // Era20 I-M5: enter gate is underfeet / r≤2 — not full RD+1 (manual 214034
-  // enter app_update≈2097 waiting Visual RD). Outer ring → SpawnRingCatchUp.
+  // Era20/33: Dirty/greedy underfeet r≤2 for enter mesh burst — not full FOV.
+  // LitDrawable ring=4 settle is NeedsEnterGameVisualWarmup (called below).
   (void)world;
   return 2;
 }
@@ -5070,17 +5088,27 @@ bool UWorld::NeedsEnterGameVisualWarmup() const
   const int max_cy =
       std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
   const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
-  const int cy0 = std::max(0, focus_cy - 1);
-  const int cy1 = std::min(max_cy, focus_cy + 2);
+  const int sea_cy = FloorDiv(std::max(0, ProceduralTemplate.SeaLevel),
+                               CHUNK_SIZE);
+  // Era33 P0: ground/sea band first (not only camera cy±) so canopy cannot
+  // look "ready" while terrain/sea slices are still empty SoftDefer.
+  int cy0 = 0;
+  int cy1 = std::min(max_cy, std::max(focus_cy + 2, sea_cy + 1));
+  if (ProceduralTemplate.FillWater)
+  {
+    cy0 = std::min(cy0, std::max(0, sea_cy - 1));
+  }
+  cy0 = std::min(cy0, std::max(0, focus_cy - 1));
   for (int dx = -visual_r; dx <= visual_r; ++dx)
   {
     for (int dz = -visual_r; dz <= visual_r; ++dz)
     {
-      const bool underfeet = true; // loop already clipped to visual_r
+      const bool in_initial_ring = true; // loop already clipped to visual_r
       for (int cy = cy0; cy <= cy1; ++cy)
       {
         const glm::ivec3 coord(center.x + dx, cy, center.z + dz);
-        if (!BlockWorld.GetChunkManager().HasChunk(coord))
+        const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+        if (!chunk)
         {
           continue;
         }
@@ -5089,19 +5117,43 @@ bool UWorld::NeedsEnterGameVisualWarmup() const
         const bool soft_held = mesh.IsSoftDeferHeld(coord);
         const bool empty_or_held =
             (!has_drawable && has_greedy) || soft_held;
-        if (EnterSoftDeferEmptyNeedsFirstMesh(empty_or_held, underfeet))
+        if (EnterSoftDeferEmptyNeedsFirstMesh(empty_or_held, in_initial_ring))
         {
           return true;
         }
-        if (!has_greedy && !has_drawable)
+        bool any_solid = false;
+        // Sparse sample — full GetData() scan per slice made enter_app≈1.4s.
+        for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+        {
+          for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+          {
+            for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+            {
+              if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+              {
+                any_solid = true;
+              }
+            }
+          }
+        }
+        if (!any_solid)
         {
           continue;
+        }
+        if (!has_greedy && !has_drawable)
+        {
+          // Solid slice still missing FirstMesh — keep create bar open.
+          return true;
+        }
+        if (mesh.IsPendingGpuApply(coord) || mesh.IsGpuExtractInFlight(coord))
+        {
+          return true;
         }
         const bool fully_dark =
             has_drawable && mesh.GetCache().ChunkHasFullyDarkFace(coord);
         const bool lit_drawable = has_drawable && !fully_dark;
-        // Keep-prior counts only when already lit (dark drawable = VB debt).
-        if (EnterUnderfeetNeedsLitDrawable(lit_drawable, lit_drawable))
+        // Era33: never treat FullyDark keep-prior as enter-ready (hole > plug).
+        if (EnterUnderfeetNeedsLitDrawable(lit_drawable, /*keep_prior_gpu=*/false))
         {
           return true;
         }
@@ -5113,23 +5165,12 @@ bool UWorld::NeedsEnterGameVisualWarmup() const
 
 bool UWorld::IsCreateSpawnWarmupSettled() const
 {
-  if (!IsStreamingEnabled() || !Streaming || !Streaming->HasStreamer())
+  if (GetBlockWorld().CountNonAir() == 0)
   {
-    if (GetBlockWorld().CountNonAir() == 0)
-    {
-      return true;
-    }
-    const glm::ivec3 feet = GetPreferredLoadFocusBlock();
-    const glm::ivec3 center = UChunkManager::WorldToChunk(feet);
-    const int radius = RenderDistanceChunks + 1;
-    const UWorldMeshService &mesh = *MeshService;
-    if (mesh.HasDirtyWithinHorizontalRadius(center, radius))
-    {
-      return false;
-    }
-    return !mesh.HasPendingAsyncMeshWork();
+    return true;
   }
-  return IsEnterStreamingWarmupSettled();
+  // Era33 P0: create/enter initial FOV settle = mesh+visual LitDrawable ring.
+  return !NeedsEnterGameMeshWarmup();
 }
 
 void UWorld::DrainSpawnRadiusMeshWarmup(int budget)

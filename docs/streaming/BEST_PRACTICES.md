@@ -246,6 +246,19 @@ every empty every frame.
 ocean smoke/manual still NO-GO (void/VB). See [`ERA32_LITDRAWABLE_BASELINE.md`](ERA32_LITDRAWABLE_BASELINE.md).
 **REJECT:** SoftDefer force-hide live dark; ocean_heal-only publication; CLOSED on smoke.
 
+## Gap После Era33 (2026-08-10) — ColdEnter + FOV Fill; TD-066 **partial**
+
+| Практика | Industry | Cubatarium | Era33 SoT |
+|----------|----------|------------|-----------|
+| Initial FOV on create bar | load screen until near ready | r=1 + 200ms force → tops in void | **done** LitDrawable ring=4; no cold force-cap |
+| Ground before canopy mesh | column bottom-up | prefer camera cy | **done** land cy_order ground±1 then up |
+| SoftDefer empty → FirstMesh fill | ticket until Drawable | holes≈100% after blacks fixed | PreferKick lit bind + HoleDrain residual |
+| Enter solid scan cheap | occupancy bit | full GetData per slice | **done** sparse sample (enter hitch) |
+
+**Evidence:** autofly `202125` holes≈0.24 / void≈0 (vs `202518` holes=1.0); VB stop 21≈20;
+miss residual. See [`ERA33_COLDENTER_BASELINE.md`](ERA33_COLDENTER_BASELINE.md).
+**REJECT:** Dirty enter radius=4; full GetData enter scan; CLOSED without eye.
+
 ## Gap После Era28 closeout (2026-08-10) — Visual Stage Gate; TD-064 **partial**
 
 | Практика | Industry | Cubatarium | Era28 SoT |

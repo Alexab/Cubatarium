@@ -307,27 +307,28 @@ Matrix scenarios: `ocean-cruise` | `ocean-cruise-enter` | `ocean-cruise-stress` 
 
 See also: [`ERA31_OCEAN_BASELINE.md`](ERA31_OCEAN_BASELINE.md), [`ERA31_AUTOFLY_RESULTS.md`](ERA31_AUTOFLY_RESULTS.md).
 
-## TD-066 (partial) / Era32 LitDrawable
+## TD-066 (partial) / Era33 ColdEnter + FOV Fill
 
 Ocean cruise SLA tracked in `OceanCruisePolicy.h` + Era32 LitDrawable FOV
-([`ERA32_LITDRAWABLE_BASELINE.md`](ERA32_LITDRAWABLE_BASELINE.md)). **Status: partial**
-until `OCEAN_MANUAL GO` + eye on `165423`-class (land+ocean). Era32 landed:
-lit_ring=4, slice draw hide for fully-dark, VB→RelightThenMesh, SoftDefer empty
-no FreeChunk resident, RemeshAfterApply VisualStage damp, FirstMesh admit floor.
+([`ERA32_LITDRAWABLE_BASELINE.md`](ERA32_LITDRAWABLE_BASELINE.md)) + Era33
+ColdEnter ([`ERA33_COLDENTER_BASELINE.md`](ERA33_COLDENTER_BASELINE.md)).
+**Status: partial** until `OCEAN_MANUAL GO` + eye on ocean+land cold enter.
+Era33 landed: enter visual ring=4 on progress bar (no cold force-cap), land
+cy_order ground-before-canopy, SoftDefer-empty FirstMesh + lit PreferKick,
+HoleDrain residual denser. KEEP Era32 REJECT list.
 
-## 4d. Era32 LitDrawable FOV (autofly every code phase)
+## 4d. Era33 ColdEnter / FOV Fill (autofly every code phase)
 
 ```powershell
-python tools/flight_sim_run.py --scenario ocean-cruise --phase-id era32_ocean `
-  --report bin/iter_reports/era32_ocean.json
-python tools/flight_sim_phase_gate.py --phase-id OCEAN_CRUISE --report bin/iter_reports/era32_ocean.json
-python tools/flight_sim_run.py --scenario ocean-cruise-stress --phase-id era32_stress `
-  --report bin/iter_reports/era32_stress.json
-python tools/flight_sim_phase_gate.py --phase-id OCEAN_CRUISE_STRESS --report bin/iter_reports/era32_stress.json
-python tools/flight_sim_run.py --land-cruise --phase-id era32_land `
-  --report bin/iter_reports/era32_land.json
-python tools/flight_sim_phase_gate.py --phase-id FLY_CLEAN --report bin/iter_reports/era32_land.json
-python tools/flight_sim_phase_gate.py --phase-id ARCH_D3_LAND --report bin/iter_reports/era32_land.json
+python tools/flight_sim_run.py --scenario ocean-cruise --phase-id era33_ocean `
+  --report bin/iter_reports/era33_ocean.json
+python tools/flight_sim_phase_gate.py --phase-id OCEAN_CRUISE --report bin/iter_reports/era33_ocean.json
+python tools/flight_sim_run.py --scenario ocean-cruise-stress --phase-id era33_stress `
+  --report bin/iter_reports/era33_stress.json
+python tools/flight_sim_phase_gate.py --phase-id OCEAN_CRUISE_STRESS --report bin/iter_reports/era33_stress.json
+python tools/flight_sim_run.py --scenario land-south --phase-id era33_land `
+  --report bin/iter_reports/era33_land.json
+python tools/flight_sim_phase_gate.py --phase-id ARCH_D3_LAND --report bin/iter_reports/era33_land.json
 ```
 
 CLOSED only with `OCEAN_MANUAL` + land eye — not autofly smoke alone.
