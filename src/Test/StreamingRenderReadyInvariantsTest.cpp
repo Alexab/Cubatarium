@@ -8,6 +8,7 @@
 #include <vector>
 
 using cutum::ShouldRejectDarkMeshCommit;
+using cutum::ShouldMarkDirtyAfterDarkSoftDeferReject;
 using cutum::SoftDeferMeshUntilLitPolicy;
 using cutum::AllowUnlitFirstMesh;
 using cutum::ClassifyStickyStaleDarkSoT;
@@ -80,6 +81,13 @@ int main()
   // so place Immediate must commit (manual 184035 undrawn).
   Expect(!ShouldRejectDarkMeshCommit(true, false, /*had_lit_mesh=*/false),
          "empty SoftDefer placeholder Immediate dark commit allowed");
+  Expect(!ShouldMarkDirtyAfterDarkSoftDeferReject(/*remesh_after=*/false,
+                                                  /*had_mesh=*/true),
+         "Era32: SoftDefer reject + had_mesh → no Dirty storm");
+  Expect(ShouldMarkDirtyAfterDarkSoftDeferReject(false, /*had_mesh=*/false),
+         "Era32: SoftDefer reject FirstMesh → MarkDirty");
+  Expect(ShouldMarkDirtyAfterDarkSoftDeferReject(true, true),
+         "Era32: RemeshAfterApply → MarkDirty even with had_mesh");
 
   // Era28 AllowUnlitFirstMesh: LitDrawable ring (default 4) no Unlit; hinterland OK.
   Expect(!AllowUnlitFirstMesh(false, 2, false, true),

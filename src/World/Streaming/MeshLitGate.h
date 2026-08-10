@@ -60,4 +60,18 @@ inline bool ShouldRejectDarkMeshCommit(bool new_has_dark_face,
   return had_lit_mesh;
 }
 
+/// Era32: after SoftDefer-reject of a dark remesh, do not MarkDirty when a
+/// drawable already exists — MarkRelit owns the single requeue. Dirty-on-reject
+/// stormed discarded_late/opaque_churn (manual 195432: 55 / 290) and starved
+/// FirstMesh that fills empty ocean surface holes.
+inline bool ShouldMarkDirtyAfterDarkSoftDeferReject(bool remesh_after_apply,
+                                                    bool had_mesh)
+{
+  if (remesh_after_apply)
+  {
+    return true;
+  }
+  return !had_mesh;
+}
+
 } // namespace cutum

@@ -1064,7 +1064,20 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       }
       if (damp_soft_empty_remesh)
       {
-        // Light committed; FirstMesh ticket / PendingReplace owns heal.
+        // Light committed; SoftDefer opens — one Dirty so FirstMesh rebuilds
+        // with lit samples (FM ticket alone left SoftDeferHeld empty stuck
+        // while SoftDeferEmptyShouldMarkDirty skipped Dirty — manual 195432
+        // miss_stuck≈44s / empty ocean holes).
+        for (int cy = cy0; cy <= cy1; ++cy)
+        {
+          const glm::ivec3 coord(key.x, cy, key.y);
+          if (!MeshService->HasDrawableGreedyMesh(coord) &&
+              (MeshService->HasGreedyMesh(coord) ||
+               MeshService->IsSoftDeferHeld(coord)))
+          {
+            MeshService->MarkDirtyPriority(coord);
+          }
+        }
         continue;
       }
       // Era29 P3: far Unlit with drawable — RemeshAfterApply only (no MarkDirty

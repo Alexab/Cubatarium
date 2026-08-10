@@ -2017,7 +2017,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     {
       GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
     }
-    if (RemeshAfterApply.erase(coord) > 0 || defer_until_lit || !had_mesh)
+    const bool remesh_after = RemeshAfterApply.erase(coord) > 0;
+    if (ShouldMarkDirtyAfterDarkSoftDeferReject(remesh_after, had_mesh))
     {
       MarkDirtyPriority(coord);
     }
@@ -2669,9 +2670,9 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   if (ShouldRejectDarkMeshCommit(new_dark, defer_until_lit && had_mesh,
                                  had_lit_mesh))
   {
-    // Keep prior lit mesh (or hole). SoftDefer/MarkRelit requeues deferred.
-    if (RemeshAfterApply.erase(result.coord) > 0 || defer_until_lit ||
-        !had_mesh)
+    // Keep prior lit mesh (or hole). MarkRelit owns requeue when SoftDefer+had_mesh.
+    const bool remesh_after = RemeshAfterApply.erase(result.coord) > 0;
+    if (ShouldMarkDirtyAfterDarkSoftDeferReject(remesh_after, had_mesh))
     {
       MarkDirtyPriority(result.coord);
     }
@@ -3746,9 +3747,9 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     if (ShouldRejectDarkMeshCommit(new_dark, defer_until_lit && had_mesh,
                                    had_lit_mesh))
     {
-      // Keep prior lit mesh. Requeue only while SoftDefer owns the column —
-      // otherwise MarkDirty thrash rebuilds the same unlit result every tick.
-      if (defer_until_lit || !had_mesh)
+      // SoftDefer+had_mesh: wait MarkRelit (no Dirty thrash — manual 195432).
+      if (ShouldMarkDirtyAfterDarkSoftDeferReject(/*remesh_after_apply=*/false,
+                                                 had_mesh))
       {
         MarkDirtyPriority(chunkCoord);
       }
