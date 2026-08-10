@@ -1957,9 +1957,9 @@ void UApplication::Update(double dt)
           if (upload_ready)
           {
             World->WarmupVisibleListAtCamera();
-            // Era20: full greedy GPU warmup only near warmup end — avoids
-            // stacking WarmupGreedy every frame + EnterGameAfterWorldChange.
-            if (remaining <= 2)
+            // Era20/Era31: single GPU greedy warmup on last remaining frame —
+            // remaining<=2 was stacking WarmupGreedy into enter_app hitch.
+            if (remaining == 1)
             {
               Geometry->WarmupGreedyGpuFromWorld();
               LogWorldLoadDiag("gpu_warmup_draw", *World);

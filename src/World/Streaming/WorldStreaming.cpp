@@ -1730,18 +1730,22 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       const int vb_n = world.PhysicsTelemetryData.VisibleBlackFocusN;
       const bool void_slots = ShouldReserveVoidRelightSlots(
           void_n, vb_n, missing_focus_mesh);
-      if (world.PhysicsTelemetryData.VisibleBlackNoTicketN > 0 || void_slots)
+      const bool ocean_heal =
+          IsOceanHealPressure(missing_focus_mesh, void_n, vb_n);
+      // Era31: drain under VB/ocean heal even when no_ticket=0 (autofly soft fail
+      // relight_drain_near_zero_while_vb_sec).
+      if (world.PhysicsTelemetryData.VisibleBlackNoTicketN > 0 || void_slots ||
+          ocean_heal)
       {
         void_relight_n =
             void_slots ? (void_n > 400 ? 2 : 1) : 1;
-        // Era31 I-T1: ocean heal — min 2 Relight slots/frame under void debt.
-        if (IsOceanHealPressure(missing_focus_mesh, void_n, vb_n))
+        if (ocean_heal)
         {
           void_relight_n = std::max(
               void_relight_n,
-              OceanVoidRelightDrainCapMoving(void_n > 200, 2));
+              OceanVoidRelightDrainCapMoving(void_n > 200 || vb_n > 0, 2));
         }
-        void_slots_active = void_slots;
+        void_slots_active = void_slots || ocean_heal;
         bg_budget = std::max(bg_budget, void_relight_n);
         auto &exec = GetColumnFlowExecutor();
         exec.DrainIdlePendingLight(world, focus_horiz, focus_radius,

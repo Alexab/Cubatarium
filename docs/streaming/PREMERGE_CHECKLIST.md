@@ -305,7 +305,7 @@ python tools/flight_sim_parity.py `
 
 Matrix scenarios: `ocean-cruise` | `ocean-cruise-enter` | `ocean-cruise-stress` | `ocean-cruise-short`.
 
-See also: [`ERA31_OCEAN_BASELINE.md`](ERA31_OCEAN_BASELINE.md).
+See also: [`ERA31_OCEAN_BASELINE.md`](ERA31_OCEAN_BASELINE.md), [`ERA31_AUTOFLY_RESULTS.md`](ERA31_AUTOFLY_RESULTS.md).
 
 ## TD-066 (partial)
 

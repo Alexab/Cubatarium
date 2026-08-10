@@ -48,7 +48,8 @@ Pre-Era30 manual: `bin/logs/perf_20260810-104841_30332.jsonl`
 
 ## TD-066
 
-**Partial** until post-Era31 build passes `OCEAN_MANUAL` on 122032-class zone + eye sign-off. Absorbs Era30 note: admission (`frontier_pressure`) without throughput was the gap Era31 closes.
+**Partial** until post-Era31 **manual** `OCEAN_MANUAL GO` + eye on 122032-class zone.  
+Autofly matrix (2026-08-10): see [`ERA31_AUTOFLY_RESULTS.md`](ERA31_AUTOFLY_RESULTS.md) — `OCEAN_CRUISE GO`, `OCEAN_CRUISE_STRESS NO-GO` (void not reproduced), enter_app still ≫200.
 
 ## Code (Era31 Q1–Q6)
 
