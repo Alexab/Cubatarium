@@ -441,6 +441,43 @@ int main()
   Expect(ShouldDrainPendingLightUnderOceanVoid(true, 250, 0),
          "Era30 I-O3: moving void drain without miss");
 
+  // --- Era31 Ocean Heal Throughput ---
+  using cutum::OceanHealMeshEmergeBudgetMs;
+  using cutum::OceanHealMovingRelightDrainFloor;
+  using cutum::OceanHealRelightCarveOutMs;
+  using cutum::OceanHealVoidRelightNoteMinPerFrame;
+  using cutum::ShouldCountVisibleBlackProgress;
+  using cutum::ShouldForceEnterVisualCap;
+  using cutum::ShouldHideDrawableUntilLitNearRim;
+  using cutum::ShouldRemeshAfterApplyOnlyOnMovingCruiseHeal;
+
+  Expect(OceanHealVoidRelightNoteMinPerFrame() == 2,
+         "Era31 I-T1: void Note min 2/frame");
+  Expect(OceanHealMovingRelightDrainFloor(true, true, 250) == 2,
+         "Era31 I-T1: moving void drain floor 2");
+  Expect(OceanHealMovingRelightDrainFloor(true, true, 50) == 1,
+         "Era31 I-T1: moving VB-only drain floor 1");
+  Expect(OceanHealMeshEmergeBudgetMs() <= 16.0,
+         "Era31 I-T2: emerge cap ≤16ms");
+  Expect(OceanHealRelightCarveOutMs() >= 4.0,
+         "Era31 I-T2: Relight carve-out ≥4ms");
+  Expect(!ShouldCountVisibleBlackProgress(true, true, false),
+         "Era31 I-T3: fully-dark ⇒ no VB progress");
+  Expect(ShouldCountVisibleBlackProgress(true, true, true),
+         "Era31 I-T3: pending lit slot ⇒ progress OK");
+  Expect(ShouldCountVisibleBlackProgress(true, false, false),
+         "Era31 I-T3: not fully-dark ⇒ progress OK");
+  Expect(ShouldHideDrawableUntilLitNearRim(true, 1, true, false),
+         "Era31 I-T3: near rim hide until lit");
+  Expect(!ShouldHideDrawableUntilLitNearRim(true, 4, true, false),
+         "Era31 I-T3: far rim no hide");
+  Expect(ShouldRemeshAfterApplyOnlyOnMovingCruiseHeal(true, true, true),
+         "Era31 I-T5: moving cruise heal ⇒ RemeshAfterApply-only");
+  Expect(ShouldForceEnterVisualCap(250.0, false),
+         "Era31 I-T4: elapsed ≥200 ⇒ force cap");
+  Expect(ShouldForceEnterVisualCap(50.0, true),
+         "Era31 I-T4: visual soft ready ⇒ force cap");
+
   {
     MeshWorkAdmissionInput in;
     in.pending_gpu = 6;

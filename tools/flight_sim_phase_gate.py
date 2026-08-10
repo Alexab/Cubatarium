@@ -473,6 +473,11 @@ PHASE_SOFT_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("relight_drain_near_zero_while_vb_sec", "le", 10.0),
         ("enter_app_update_max", "le", 200.0),
         ("fly_visible_black_max", "le", 40.0),
+        ("vb_progress_without_dark_clear_sec", "le", 5.0),
+    ],
+    "OCEAN_MANUAL": [
+        ("vb_progress_without_dark_clear_sec", "le", 5.0),
+        ("opaque_idle_churn_max", "le", 120.0),
     ],
 }
 

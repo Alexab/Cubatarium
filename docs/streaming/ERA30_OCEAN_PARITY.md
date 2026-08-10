@@ -1,8 +1,10 @@
-# Era30 Ocean Autofly Parity Research (H0)
+# Era31 Ocean Autofly Parity Research (supersedes Era30 baseline doc)
 
-SoT manual: `bin/logs/perf_20260810-104841_30332.jsonl`  
-SoT autofly smoke: `bin/logs/perf_20260810-113512_16520.jsonl`  
-Parity JSON: `bin/iter_reports/era30_ocean_parity.json`
+See [`ERA31_OCEAN_BASELINE.md`](ERA31_OCEAN_BASELINE.md) for current SoT (`122032`).
+
+SoT manual (Era30): `bin/logs/perf_20260810-104841_30332.jsonl`  
+SoT manual (Era31): `bin/logs/perf_20260810-122032_27372.jsonl`  
+SoT autofly smoke: `bin/logs/perf_20260810-113512_16520.jsonl`
 
 ## Root-cause matrix (baseline pre-fix)
 

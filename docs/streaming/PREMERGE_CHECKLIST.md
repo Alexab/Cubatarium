@@ -271,37 +271,45 @@ python tools/flight_sim_iterate.py --world World_164 --iterations 3 --build-firs
 - формирует рекомендации для следующей доработки;
 - останавливается раньше, если выполнены критерии по spike/wall/pending/dark.
 
-## 4c. Era30 Ocean Cruise (smoke ≠ DoD)
+## 4c. Era31 Ocean Heal Throughput (smoke ≠ DoD)
 
 **Smoke** (`OCEAN_CRUISE`) — autofly `ocean-cruise`; может GO при void=0 (слишком чистый teleport path).
 
-**Parity** (`OCEAN_CRUISE_STRESS`) — `ocean-cruise-stress` или `ocean-cruise-enter` must reproduce ≥25% manual debt pre-fix.
+**Parity** (`OCEAN_CRUISE_STRESS`) — `ocean-cruise-stress` must reproduce void≥400 + holes≥40% pre-fix.
 
-**DoD** (`OCEAN_MANUAL`) — analyze manual `104841`-class log; CLOSED только при GO + eye.
+**DoD** (`OCEAN_MANUAL`) — analyze manual `122032`-class log (post-Era30 zone); CLOSED только при GO + eye.
+
+Era31 bisect metrics: `void_peak_period_idx`, `void_drain_rate`, `emerge_spike_frac`, `vb_progress_without_dark_clear_sec`.
 
 ```powershell
 # Smoke
-python tools/flight_sim_run.py --scenario ocean-cruise --phase-id era30_ocean_smoke `
-  --report bin/iter_reports/era30_ocean_smoke.json
-python tools/flight_sim_phase_gate.py --phase-id OCEAN_CRUISE --report bin/iter_reports/era30_ocean_smoke.json
+python tools/flight_sim_run.py --scenario ocean-cruise --phase-id era31_ocean_smoke `
+  --report bin/iter_reports/era31_ocean_smoke.json
+python tools/flight_sim_phase_gate.py --phase-id OCEAN_CRUISE --report bin/iter_reports/era31_ocean_smoke.json
 
 # Parity matrix
-python tools/flight_sim_run.py --scenario ocean-cruise-stress --phase-id era30_ocean_stress `
-  --report bin/iter_reports/era30_ocean_stress.json
-python tools/flight_sim_phase_gate.py --phase-id OCEAN_CRUISE_STRESS --report bin/iter_reports/era30_ocean_stress.json
+python tools/flight_sim_run.py --scenario ocean-cruise-stress --phase-id era31_ocean_stress `
+  --report bin/iter_reports/era31_ocean_stress.json
+python tools/flight_sim_phase_gate.py --phase-id OCEAN_CRUISE_STRESS --report bin/iter_reports/era31_ocean_stress.json
 
-# Manual DoD (existing log)
-python tools/flight_sim_analyze.py bin/logs/perf_20260810-104841_30332.jsonl `
-  --manual-idle --warmup-sec 16 --report bin/iter_reports/manual_104841.json
-python tools/flight_sim_phase_gate.py --phase-id OCEAN_MANUAL --report bin/iter_reports/manual_104841.json
+# Manual DoD (122032 SoT)
+python tools/flight_sim_analyze.py bin/logs/perf_20260810-122032_27372.jsonl `
+  --manual-idle --warmup-sec 16 --report bin/iter_reports/manual_122032.json
+python tools/flight_sim_phase_gate.py --phase-id OCEAN_MANUAL --report bin/iter_reports/manual_122032.json
 
 # Side-by-side parity
 python tools/flight_sim_parity.py `
-  --manual-report bin/iter_reports/manual_104841.json `
-  --autofly-report bin/iter_reports/era30_ocean_stress.json
+  --manual-report bin/iter_reports/manual_122032.json `
+  --autofly-report bin/iter_reports/era31_ocean_stress.json
 ```
 
 Matrix scenarios: `ocean-cruise` | `ocean-cruise-enter` | `ocean-cruise-stress` | `ocean-cruise-short`.
+
+See also: [`ERA31_OCEAN_BASELINE.md`](ERA31_OCEAN_BASELINE.md).
+
+## TD-066 (partial)
+
+Ocean cruise SLA tracked in `OceanCruisePolicy.h`. **Status: partial** until `OCEAN_MANUAL GO` on post-Era31 build + manual eye on 122032-class zone. Era30 admission (frontier_pressure) landed; Era31 adds throughput (void drain, emerge/heal split, VB honesty, enter cap, opaque damp).
 
 ## 5. Anti-patterns (reject merge)
 
