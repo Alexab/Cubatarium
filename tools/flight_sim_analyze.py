@@ -685,6 +685,26 @@ def analyze(
     fly_void_near_max = max(void_fly) if void_fly else None
     fly_visible_black_max = max(vb_fly) if vb_fly else None
     fly_fluid_map_cpu_max = max(fluid_fly) if fluid_fly else None
+    void_peak_period_idx = None
+    void_drain_rate = None
+    if void_fly and fly_segment:
+        void_peak_period_idx = int(
+            max(range(len(void_fly)), key=lambda i: void_fly[i])
+        )
+        if len(void_fly) >= 2 and void_peak_period_idx < len(void_fly) - 1:
+            tail = void_fly[void_peak_period_idx:]
+            duration_sec = (len(tail) - 1) * 2.0
+            if duration_sec > 0:
+                void_drain_rate = (tail[0] - tail[-1]) / duration_sec
+        elif len(void_fly) >= 2:
+            duration_sec = (len(void_fly) - 1) * 2.0
+            if duration_sec > 0:
+                void_drain_rate = (void_fly[0] - void_fly[-1]) / duration_sec
+    emerge_spike_frac = (
+        float(spike_buckets.get("emerge", 0)) / float(len(spikes))
+        if spikes
+        else None
+    )
     frontier_fly = col(fly_segment, "frontier_pressure") if fly_segment else []
     fly_frontier_pressure_frac = (
         sum(1 for v in frontier_fly if v > 0) / len(frontier_fly)
@@ -1174,6 +1194,9 @@ def analyze(
             "wall_ms_fly_med": wall_fly_med,
             "fly_void_near_max": fly_void_near_max,
             "fly_visible_black_max": fly_visible_black_max,
+            "void_peak_period_idx": void_peak_period_idx,
+            "void_drain_rate": void_drain_rate,
+            "emerge_spike_frac": emerge_spike_frac,
             "fly_fluid_map_cpu_max": fly_fluid_map_cpu_max,
             "fly_frontier_pressure_frac": fly_frontier_pressure_frac,
             "chunk_count_end": chunk_count_end,
