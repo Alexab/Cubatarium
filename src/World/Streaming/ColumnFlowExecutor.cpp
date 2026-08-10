@@ -245,18 +245,22 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   const bool async_ok = pending_async < 48;
   const bool pending_light =
       world.GetPhysicsTelemetry().FocusPendingDark > 0;
+  // Era32 P1: lit_pending = sticky remesh-after-light only — NOT visible_black_n
+  // (VB must RelightThenMesh, not DesiredStage RemeshSeam).
   const bool lit_pending =
-      world.GetPhysicsTelemetry().FocusStickyRemesh > 0 ||
-      visible_black_n > 0;
+      world.GetPhysicsTelemetry().FocusStickyRemesh > 0;
   const bool unlit_published =
       pending_light && !missing_visible_mesh &&
       (world.GetPhysicsTelemetry().FocusDarkMesh > 0 ||
        world.GetPhysicsTelemetry().DarkFaceVoidNearN > 0);
+  const bool dark_drawable =
+      visible_black_n > 0 ||
+      world.GetPhysicsTelemetry().DarkFaceVoidNearN > 0;
   const ColumnDesiredDecision desired = DeriveColumnDesiredStage(
       missing_visible_mesh, /*stale_focus=*/allow_stale_wave_base && async_ok,
       /*void_focus=*/!missing_visible_mesh && !moving && cooldown_ok &&
           (void_n > 200 || (void_n > 40 && stale_n > 40)),
-      pending_light, lit_pending, unlit_published);
+      pending_light, lit_pending, unlit_published, dark_drawable);
   const bool nearest_vb_heal =
       async_ok && visible_black_n > 0;
   const bool nearest_vb_no_ticket =

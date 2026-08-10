@@ -224,25 +224,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const glm::ivec3 ground(chunk_coord.x, 0, chunk_coord.z);
         const bool may_mesh =
             world.MayMeshColumn(ground, /*underfeet_preview=*/false);
-        // Era28: Unlit only far (AllowUnlitFirstMesh horiz>2); near hide-until-lit.
-        const bool allow_unlit = AllowUnlitFirstMesh(
-            has_mesh, horiz, is_nearest_hole, in_focus,
-            kVisualStageNearFovHoriz);
-        const int void_n = world.GetPhysicsTelemetry().DarkFaceVoidNearN;
-        const int vb_n = world.GetPhysicsTelemetry().VisibleBlackFocusN;
-        const bool ocean_heal =
-            IsOceanHealPressure(missing_visible_mesh, void_n, vb_n);
+        // Era32: Unlit only hinterland (horiz > LitDrawable ring).
+        // Do NOT SoftDefer-force-hide live fully-dark drawables — that drops
+        // Dirty remesh (lit upgrade) and spirals void (ocean smoke regress).
+        // Publication honesty: draw_ok=false in GetColumnRenderableState;
+        // AllowUnlit=false in ring blocks Unlit-as-policy for FirstMesh gate.
         const bool fully_dark =
             has_mesh &&
             mesh_service.GetCache().ChunkHasFullyDarkFace(chunk_coord);
         const bool pending_replace =
             pending || mesh_service.IsPendingGpuApply(chunk_coord);
-        if (ShouldHideDrawableUntilLitNearRim(
-                ocean_heal, horiz, fully_dark, pending_replace,
-                kVisualStageNearFovHoriz))
-        {
-          return true;
-        }
+        const bool allow_unlit = AllowUnlitFirstMesh(
+            has_mesh, horiz, is_nearest_hole, in_focus,
+            kVisualStageLitDrawableHoriz);
+        (void)fully_dark;
+        (void)pending_replace;
+        (void)missing_visible_mesh;
         return SoftDeferMeshUntilLitPolicy(
             underfeet, has_mesh,
             world.RequiresLightingLitGate() && pending, in_focus, may_mesh,

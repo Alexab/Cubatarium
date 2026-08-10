@@ -81,17 +81,21 @@ int main()
   Expect(!ShouldRejectDarkMeshCommit(true, false, /*had_lit_mesh=*/false),
          "empty SoftDefer placeholder Immediate dark commit allowed");
 
-  // Era28 AllowUnlitFirstMesh: near horiz≤2 no Unlit; far OK.
+  // Era28 AllowUnlitFirstMesh: LitDrawable ring (default 4) no Unlit; hinterland OK.
   Expect(!AllowUnlitFirstMesh(false, 2, false, true),
-         "Era28: near horiz≤2 → no AllowUnlitFirstMesh");
+         "Era32: ring horiz≤4 → no AllowUnlitFirstMesh");
   Expect(!AllowUnlitFirstMesh(false, 1, false, true),
-         "Era28: underfeet horiz → no AllowUnlitFirstMesh");
+         "Era32: underfeet horiz → no AllowUnlitFirstMesh");
+  Expect(!AllowUnlitFirstMesh(false, 4, false, true),
+         "Era32: horiz==lit_ring → no AllowUnlitFirstMesh");
+  Expect(!AllowUnlitFirstMesh(false, 3, false, true),
+         "Era32: mid-ring horiz=3 → no AllowUnlitFirstMesh");
   Expect(AllowUnlitFirstMesh(false, 5, true, true),
-         "far missing in focus → AllowUnlitFirstMesh");
+         "hinterland missing in focus → AllowUnlitFirstMesh");
   Expect(!AllowUnlitFirstMesh(true, 1, true, true),
          "has_mesh never AllowUnlitFirstMesh");
   Expect(AllowUnlitFirstMesh(false, 5, false, true),
-         "far FOV missing → AllowUnlitFirstMesh");
+         "hinterland FOV missing → AllowUnlitFirstMesh");
   Expect(!AllowUnlitFirstMesh(false, 5, false, false),
          "outside focus → no AllowUnlitFirstMesh");
   Expect(!SoftDeferMeshUntilLitPolicy(false, false, true, true, true, true),
@@ -115,11 +119,17 @@ int main()
         ClassifyStickyStaleDarkSoT(true, true, false, 3, true);
     Expect(meshed_sticky.draw_ok && meshed_sticky.has_repair_ticket,
            "meshed sticky → draw_ok + repair ticket");
+    Expect(!ClassifyStickyStaleDarkSoT(true, true, false, 3, true, true).draw_ok,
+           "Era32: fully-dark sticky mid-ring → !draw_ok");
 
     const auto stale_orphan =
         ClassifyStickyStaleDarkSoT(true, false, true, 3, false);
     Expect(stale_orphan.kind == ColumnSoTKind::StaleDark, "stale-dark kind");
-    Expect(stale_orphan.draw_ok, "meshed stale-dark → draw_ok");
+    Expect(stale_orphan.draw_ok, "meshed stale-dark (not fully-dark) → draw_ok");
+    Expect(!ClassifyStickyStaleDarkSoT(true, false, true, 3, false, true).draw_ok,
+           "Era32: fully-dark stale mid-ring → !draw_ok");
+    Expect(ClassifyStickyStaleDarkSoT(true, false, true, 5, false, true).draw_ok,
+           "Era32: fully-dark hinterland → draw_ok");
     Expect(!stale_orphan.has_repair_ticket,
            "Era16/17: stale-dark without real ticket → has_repair_ticket false");
 
@@ -157,10 +167,8 @@ int main()
            "sticky near → live repair ticket kinds");
   }
 
-  // Era18 I-L1: void VisibleBlack tickets are RelightThenMesh (+Promote), never
-  // RemeshSeam-only. RecoverUnlit void path must NotePendingLight (P1) so focus
-  // drain sees debt — covered by TD-054 + World.cpp SoT comment until full world
-  // fixture; queue kind contract is enforced here.
+  // Era18/32: void + VisibleBlack tickets are RelightThenMesh (+Promote), never
+  // RemeshSeam-only.
   {
     UColumnFlowScheduler sched;
     const glm::ivec2 focus{0, 0};
@@ -174,6 +182,16 @@ int main()
            "Era18: void must not RemeshSeam-only");
     Expect(sched.Contains(void_cols[1], ColumnWorkKind::RelightThenMesh),
            "Era18: void far → RelightThenMesh");
+  }
+  {
+    UColumnFlowScheduler sched;
+    const glm::ivec2 focus{0, 0};
+    std::vector<glm::ivec2> vb_cols{{2, 0}};
+    EnqueueVisibleBlackRepairTickets(sched, focus, vb_cols);
+    Expect(sched.Contains(vb_cols[0], ColumnWorkKind::RelightThenMesh),
+           "Era32: VB → RelightThenMesh");
+    Expect(!sched.Contains(vb_cols[0], ColumnWorkKind::RemeshSeam),
+           "Era32: VB must not RemeshSeam-only");
   }
 
   // MeshWorkAdmission: floors propose, Finalize caps under backlog.

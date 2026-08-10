@@ -1,5 +1,7 @@
 #pragma once
 
+#include "World/Streaming/VisualStagePolicy.h"
+
 #include <algorithm>
 
 namespace cutum
@@ -135,17 +137,17 @@ inline bool ShouldCountVisibleBlackProgress(bool has_ticket_or_progress,
   return !fully_dark;
 }
 
-/// Era31 I-T3: near rim hide drawable until lit under ocean heal.
+/// Era31 I-T3 (legacy): near rim hide under ocean heal.
+/// Era32: prod uses ShouldHideFullyDarkUntilLitInRing (VisualStage, no ocean_heal).
+/// Kept for unit compatibility; ocean_heal ignored when ring predicate applies.
 inline bool ShouldHideDrawableUntilLitNearRim(bool ocean_heal_pressure, int horiz,
                                             bool fully_dark,
                                             bool pending_replace_lit,
                                             int near_r = 2)
 {
-  if (!ocean_heal_pressure || horiz > near_r)
-  {
-    return false;
-  }
-  return fully_dark && !pending_replace_lit;
+  (void)ocean_heal_pressure;
+  (void)near_r;
+  return ShouldHideFullyDarkUntilLitInRing(horiz, fully_dark, pending_replace_lit);
 }
 
 /// Era31 I-T5: moving cruise + heal pressure → RemeshAfterApply-only.

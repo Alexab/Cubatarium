@@ -71,6 +71,12 @@ inline FocusIngressDecision EvaluateFocusIngress(const FocusIngressInput &in)
     out.first_mesh_admit =
         std::max(out.first_mesh_admit, cold_pool ? 5 : 3);
   }
+  // Era32 P3: empty∨miss FOV — guarantee ≥1 FirstMesh admit/frame
+  // (dual-debt must not starve HP FirstMesh under Relight pressure).
+  if (in.missing_mesh || in.unfinished_visual > 0)
+  {
+    out.first_mesh_admit = std::max(out.first_mesh_admit, 1);
+  }
 
   // Capture() for a terrain column runs on the main thread inside Drain.
   // Pace: few enqueues/frame while moving; SoftDefer Capture floor elsewhere.

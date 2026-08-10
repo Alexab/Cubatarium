@@ -3,11 +3,16 @@
 namespace cutum
 {
 
-/// Era28 I-V1: near FOV radius for hide-until-lit (underfeet + rim ≤2).
+/// Era28 I-V1: near FOV radius for underfeet / enter pin / far-Unlit damp.
 constexpr int kVisualStageNearFovHoriz = 2;
+
+/// Era32 I-L1: LitDrawable publication ring (land+ocean). Unlit FirstMesh only
+/// hinterland (horiz > ring); fully-dark drawable in ring is unfinished.
+constexpr int kVisualStageLitDrawableHoriz = 4;
 
 /// Era28 I-V1: UnlitFirstMesh allowed only outside near FOV (hide-until-lit near).
 /// has_mesh or !in_focus → never; near horiz ≤ near_r → false; far → true.
+/// Era32: pass kVisualStageLitDrawableHoriz as near_r for FOV publication.
 inline bool ShouldAllowUnlitFirstMeshNearFov(bool has_mesh, bool in_focus,
                                              int horiz, int near_r = 2)
 {
@@ -38,8 +43,8 @@ inline bool SoftDeferEmptyShouldMarkDirty(bool empty_or_held, bool has_fm_ticket
   return true;
 }
 
-/// Era28 I-V1/V3: near FOV draw publish — LitDrawable or keep-prior GPU only
-/// (no Unlit preview into MDI).
+/// Era28 I-V1/V3 / Era32 I-L1: FOV draw publish — LitDrawable or keep-prior GPU
+/// only (no Unlit / fully-dark preview into MDI). Wired in SoftDefer prod path.
 inline bool ShouldPublishMeshToDraw(bool lit_drawable, bool keep_prior_gpu_live,
                                     bool unlit_preview)
 {
@@ -51,7 +56,21 @@ inline bool ShouldPublishMeshToDraw(bool lit_drawable, bool keep_prior_gpu_live,
   return false;
 }
 
+/// Era32 I-L1: hide fully-dark drawable in LitDrawable ring until lit/replace.
+/// Universal (land+ocean) — not gated on ocean_heal.
+inline bool ShouldHideFullyDarkUntilLitInRing(int horiz, bool fully_dark,
+                                             bool pending_replace_lit,
+                                             int ring = kVisualStageLitDrawableHoriz)
+{
+  if (horiz > ring || !fully_dark)
+  {
+    return false;
+  }
+  return !pending_replace_lit;
+}
+
 /// Era28 I-V4: near void/VB needs Relight before first draw (not Unlit preview).
+/// Era32: near_fov means inside LitDrawable ring.
 inline bool ShouldRelightBeforeDrawNear(bool near_fov, bool void_or_vb,
                                         bool has_lit_drawable)
 {
@@ -72,6 +91,19 @@ inline bool ShouldRemeshAfterApplyOnlyWhileBuilding(bool building_owned,
     return false;
   }
   return building_owned;
+}
+
+/// Era32 P2: live drawable remesh → RemeshAfterApply only (land+ocean), not
+/// MarkDirty storm. pressure = suppress seam / void|VB / idle drawable.
+inline bool ShouldRemeshAfterApplyOnlyOnLiveDrawable(bool has_drawable,
+                                                     bool suppress_or_pressure,
+                                                     bool building_or_pending)
+{
+  if (!has_drawable)
+  {
+    return false;
+  }
+  return suppress_or_pressure || building_or_pending;
 }
 
 /// Era28 I-V2/P2: PreferKick SoftDefer empty only after age SLA (not every scan).

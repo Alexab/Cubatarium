@@ -1141,13 +1141,11 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         // Idle remesh: do not MarkDirty Inflight (re-Dirty after Apply froze
         // focus_dirty). Request post-Apply remesh instead so Capture sees new
         // light without mid-flight thrash.
-        // Era29 P4: also RemeshAfterApply-only for live drawable (opaque stop).
-        // Era31 I-T5: extend to moving cruise under ocean heal pressure.
-        const bool ocean_heal_remesh =
-            IsOceanHealPressure(
-                PhysicsTelemetryData.FocusMissingMesh != 0,
-                PhysicsTelemetryData.DarkFaceVoidNearN,
-                PhysicsTelemetryData.VisibleBlackFocusN);
+        // Era29/32: RemeshAfterApply-only for live drawable (land+ocean) —
+        // VisualStage pressure, not ocean_heal-only.
+        const bool void_vb_pressure =
+            PhysicsTelemetryData.DarkFaceVoidNearN > 200 ||
+            PhysicsTelemetryData.VisibleBlackFocusN > 0;
         const bool moving_cruise =
             LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold;
         for (int cy = cy0; cy <= cy1; ++cy)
@@ -1158,11 +1156,19 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
             continue;
           }
           const bool has_drawable = MeshService->HasDrawableGreedyMesh(coord);
-          if (MeshService->HasInflightMeshBuild(coord) ||
+          const bool building =
+              MeshService->HasInflightMeshBuild(coord) ||
+              MeshService->IsPendingGpuApply(coord);
+          // Inside SuppressRelightSeamDirty: live drawable → RemeshAfterApply only
+          // (land+ocean; VisualStage, not ocean_heal gate).
+          if (building ||
+              ShouldRemeshAfterApplyOnlyOnLiveDrawable(has_drawable,
+                                                       /*suppress_or_pressure=*/true,
+                                                       building) ||
               ShouldRemeshAfterApplyOnlyOnIdleDrawable(
                   /*idle_or_suppress=*/true, has_drawable) ||
               ShouldRemeshAfterApplyOnlyOnMovingCruiseHeal(
-                  moving_cruise, ocean_heal_remesh, has_drawable))
+                  moving_cruise, void_vb_pressure, has_drawable))
           {
             MeshService->RequestRemeshAfterApply(coord);
             continue;
@@ -2165,6 +2171,8 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
   {
     bool has_mesh_or_gpu = false;
     bool stale_dark_with_mesh = false;
+    bool fully_dark_drawable = false;
+    bool keep_prior = false;
     for (int cy = cy0; cy <= cy1; ++cy)
     {
       const glm::ivec3 coord(ground.x, cy, ground.z);
@@ -2174,19 +2182,40 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
       {
         has_mesh_or_gpu = true;
       }
+      if (MeshService->IsPendingGpuApply(coord) ||
+          MeshService->IsGpuExtractInFlight(coord))
+      {
+        keep_prior = true;
+      }
       if (MeshService->HasDrawableGreedyMesh(coord) &&
           MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
       {
         stale_dark_with_mesh = true;
+      }
+      if (MeshService->HasDrawableGreedyMesh(coord) &&
+          MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+      {
+        fully_dark_drawable = true;
       }
     }
     const bool sticky = IsColumnStickyRemesh(ground_xz);
     const bool has_real_repair_ticket =
         GetColumnFlowExecutor().HasRepairTicket(ground_xz) || sticky ||
         ColumnHasRepairProgress(ground_xz);
+    // Era32 I-L1: fully-dark in LitDrawable ring is unfinished (!draw_ok)
+    // unless keep-prior GPU/PendingReplace is live.
+    if (fully_dark_drawable && !keep_prior &&
+        horiz_from_focus <= kVisualStageLitDrawableHoriz)
+    {
+      out.reason = ColumnRenderableState::BlockReason::StaleDark;
+      out.has_repair_ticket = has_real_repair_ticket;
+      out.draw_ok = false;
+      return out;
+    }
     const ColumnSoTDecision sot = ClassifyStickyStaleDarkSoT(
         has_mesh_or_gpu, sticky, stale_dark_with_mesh, horiz_from_focus,
-        has_real_repair_ticket);
+        has_real_repair_ticket, fully_dark_drawable,
+        kVisualStageLitDrawableHoriz);
     if (sot.kind == ColumnSoTKind::StickyRemesh)
     {
       out.reason = ColumnRenderableState::BlockReason::StickyRemesh;
@@ -2207,8 +2236,11 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
   // (Generating/etc). Empty SoftDefer (HasGreedy, !Drawable) is NOT ready —
   // HasGreedy-only left rim undrawn while fog/unfinished looked healed
   // (manual 101824 / 222446 trade: prefer visible fill over false draw_ok).
+  // Era32 I-L1: fully-dark in LitDrawable ring (incl. underfeet) is unfinished.
   bool has_mesh_or_gpu = false;
   bool saw_gpu_inflight_early = false;
+  bool fully_dark_drawable_ring = false;
+  bool keep_prior_ring = false;
   for (int cy = cy0; cy <= cy1; ++cy)
   {
     const glm::ivec3 coord(ground.x, cy, ground.z);
@@ -2221,7 +2253,20 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     {
       has_mesh_or_gpu = true;
       saw_gpu_inflight_early = true;
+      keep_prior_ring = true;
     }
+    if (MeshService->HasDrawableGreedyMesh(coord) &&
+        MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+    {
+      fully_dark_drawable_ring = true;
+    }
+  }
+  if (fully_dark_drawable_ring && !keep_prior_ring &&
+      horiz_from_focus <= kVisualStageLitDrawableHoriz)
+  {
+    out.reason = ColumnRenderableState::BlockReason::StaleDark;
+    out.draw_ok = false;
+    return out;
   }
   if (out.stage != ColumnEmergeState::RenderReady &&
       out.stage != ColumnEmergeState::LitReady &&

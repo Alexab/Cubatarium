@@ -52,7 +52,9 @@ int main()
   Expect(!IsSoftDeferEmptyPlaceholder(true, true, false, false, false, true),
          "drawable not empty");
   Expect(!ShouldEnqueueSoftDeferEmptyFirstMesh(true, 2, false),
-         "no PreferKick without miss");
+         "no FM without miss or in_focus");
+  Expect(ShouldEnqueueSoftDeferEmptyFirstMesh(true, 2, false, true),
+         "Era32 P3: empty in_focus → FM");
   Expect(ShouldEnqueueSoftDeferEmptyFirstMesh(true, 0, true),
          "empty while miss → FM");
   Expect(!ShouldEnqueueSoftDeferEmptyFirstMesh(false, 5, true),
@@ -120,12 +122,13 @@ int main()
          "Era23 I-V4: void_n>T even without miss");
   Expect(ShouldReserveVoidRelightSlots(40, 2, true),
          "Era23 I-V4: miss + void faces ⇒ Relight slots");
-  Expect(!ShouldReserveVoidRelightSlots(0, 3, true),
-         "Era23 I-V4: miss + VB remesh-only → no Relight steal");
-  Expect(!ShouldReserveVoidRelightSlots(40, 2, false),
-         "Era23 I-V4: idle void below T → no Relight reserve");
-  Expect(!ShouldReserveVoidRelightSlots(0, 3, false),
-         "Era23 I-V4: idle VB remesh-only → no Relight reserve");
+  // Era31 I-T1 / Era32 P1: VB reserves Relight (not RemeshSeam-as-heal).
+  Expect(ShouldReserveVoidRelightSlots(0, 3, true),
+         "Era31/32: miss + VB ⇒ Relight reserve");
+  Expect(ShouldReserveVoidRelightSlots(40, 2, false),
+         "Era31/32: idle VB ⇒ Relight reserve");
+  Expect(ShouldReserveVoidRelightSlots(0, 3, false),
+         "Era31/32: idle VB ⇒ Relight reserve");
   Expect(!ShouldReserveVoidRelightSlots(50, 0, false),
          "Era23 I-V4: calm void below T → no reserve");
   Expect(VoidRelightCollectCap(2, true) >= 2,
@@ -318,16 +321,33 @@ int main()
   using cutum::ShouldRemeshAfterApplyOnlyWhileBuilding;
   using cutum::SoftDeferEmptyShouldMarkDirty;
   using cutum::kVisualStageNearFovHoriz;
+  using cutum::kVisualStageLitDrawableHoriz;
+  using cutum::ShouldHideFullyDarkUntilLitInRing;
 
   Expect(kVisualStageNearFovHoriz == 2, "Era28 I-V1: near_r default 2");
+  Expect(kVisualStageLitDrawableHoriz == 4, "Era32 I-L1: lit ring default 4");
   Expect(!ShouldAllowUnlitFirstMeshNearFov(false, true, 1, 2),
          "Era28 I-V1: near horiz⇒ no Unlit");
   Expect(!ShouldAllowUnlitFirstMeshNearFov(false, true, 2, 2),
          "Era28 I-V1: horiz==near_r ⇒ no Unlit");
   Expect(ShouldAllowUnlitFirstMeshNearFov(false, true, 3, 2),
-         "Era28 I-V1: far ⇒ Unlit OK");
+         "Era28 I-V1: far of near_r=2 ⇒ Unlit OK");
+  Expect(!ShouldAllowUnlitFirstMeshNearFov(
+             false, true, 3, kVisualStageLitDrawableHoriz),
+         "Era32: mid lit-ring ⇒ no Unlit");
+  Expect(ShouldAllowUnlitFirstMeshNearFov(
+             false, true, 5, kVisualStageLitDrawableHoriz),
+         "Era32: hinterland ⇒ Unlit OK");
   Expect(!ShouldAllowUnlitFirstMeshNearFov(true, true, 5, 2),
          "Era28 I-V1: has_mesh ⇒ no Unlit");
+  Expect(ShouldHideFullyDarkUntilLitInRing(3, true, false),
+         "Era32: fully-dark mid-ring hide without ocean_heal");
+  Expect(ShouldHideFullyDarkUntilLitInRing(4, true, false),
+         "Era32: fully-dark at ring edge hide");
+  Expect(!ShouldHideFullyDarkUntilLitInRing(5, true, false),
+         "Era32: hinterland fully-dark no ring hide");
+  Expect(!ShouldHideFullyDarkUntilLitInRing(2, true, true),
+         "Era32: pending replace ⇒ no hide");
   Expect(!SoftDeferEmptyShouldMarkDirty(true, true, false),
          "Era28 I-V2: FM ticket ⇒ no Dirty");
   Expect(!SoftDeferEmptyShouldMarkDirty(true, false, true),
@@ -468,9 +488,13 @@ int main()
   Expect(ShouldCountVisibleBlackProgress(true, false, false),
          "Era31 I-T3: not fully-dark ⇒ progress OK");
   Expect(ShouldHideDrawableUntilLitNearRim(true, 1, true, false),
-         "Era31 I-T3: near rim hide until lit");
-  Expect(!ShouldHideDrawableUntilLitNearRim(true, 4, true, false),
-         "Era31 I-T3: far rim no hide");
+         "Era32: near rim hide until lit (universal ring)");
+  Expect(ShouldHideDrawableUntilLitNearRim(false, 1, true, false),
+         "Era32: hide without ocean_heal");
+  Expect(ShouldHideDrawableUntilLitNearRim(true, 4, true, false),
+         "Era32: lit-ring edge hide");
+  Expect(!ShouldHideDrawableUntilLitNearRim(true, 5, true, false),
+         "Era32: hinterland no ring hide");
   Expect(ShouldRemeshAfterApplyOnlyOnMovingCruiseHeal(true, true, true),
          "Era31 I-T5: moving cruise heal ⇒ RemeshAfterApply-only");
   Expect(ShouldForceEnterVisualCap(250.0, false),

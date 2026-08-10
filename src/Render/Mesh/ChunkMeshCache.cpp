@@ -2706,23 +2706,28 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     MarkDirtyPriority(result.coord);
     return;
   }
-  // Era24 I-E1 Hide⇒Ticket: SoftDefer empty must not leave idle
-  // HasGreedy∧!Drawable in GreedyCache. Absent + FirstMesh ticket instead.
-  // I-R2: erase only when !had_gpu_drawable (never FreeChunk live drawable).
+  // Era24 I-E1 / Era32 I-L3: SoftDefer empty — never erase live GPU resident.
+  // Keep prior slot + ticket; Absent+erase only when !GpuResident.
   if ((defer_until_lit || SoftDeferHeld.count(result.coord) > 0) &&
-      !new_cpu_drawable && !had_gpu_drawable)
+      !new_cpu_drawable)
   {
     ++SoftDeferEmptyPublishAvoided;
+    if (had_gpu_resident)
+    {
+      ++MeshReplaceHoleAvoided;
+      HoldSoftDeferFirstMesh(result.coord);
+      if (IsPendingGpuApply(result.coord))
+      {
+        PreferKickPendingGpuQueued(result.coord);
+      }
+      MarkDirtyPriority(result.coord);
+      return;
+    }
     const auto oldItAvoid = GreedyVertexCountByChunk.find(result.coord);
     if (oldItAvoid != GreedyVertexCountByChunk.end())
     {
       GreedyVertexCountTotal -= oldItAvoid->second;
       GreedyVertexCountByChunk.erase(oldItAvoid);
-    }
-    if (had_gpu_resident && GpuPipeline)
-    {
-      GpuPipeline->FreeChunk(result.coord);
-      ForceFlatRebuildNext = true;
     }
     GreedyCache.erase(result.coord);
     NoteGeometryDirty(result.coord);
@@ -3773,21 +3778,27 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       MarkDirtyPriority(chunkCoord);
       return;
     }
-    // Era24 I-E1 Hide⇒Ticket: SoftDefer empty Immediate — Absent + ticket.
+    // Era24 I-E1 / Era32 I-L3: SoftDefer empty Immediate — keep GpuResident.
     if ((defer_until_lit || SoftDeferHeld.count(chunkCoord) > 0) &&
-        !new_cpu_drawable && !had_gpu_drawable)
+        !new_cpu_drawable)
     {
       ++SoftDeferEmptyPublishAvoided;
+      if (had_gpu_resident)
+      {
+        ++MeshReplaceHoleAvoided;
+        HoldSoftDeferFirstMesh(chunkCoord);
+        if (IsPendingGpuApply(chunkCoord))
+        {
+          PreferKickPendingGpuQueued(chunkCoord);
+        }
+        MarkDirtyPriority(chunkCoord);
+        return;
+      }
       const auto oldItAvoid = GreedyVertexCountByChunk.find(chunkCoord);
       if (oldItAvoid != GreedyVertexCountByChunk.end())
       {
         GreedyVertexCountTotal -= oldItAvoid->second;
         GreedyVertexCountByChunk.erase(oldItAvoid);
-      }
-      if (had_gpu_resident && GpuPipeline)
-      {
-        GpuPipeline->FreeChunk(chunkCoord);
-        ForceFlatRebuildNext = true;
       }
       GreedyCache.erase(chunkCoord);
       NoteGeometryDirty(chunkCoord);

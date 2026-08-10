@@ -40,7 +40,8 @@ int main()
   }
   {
     const auto d = DeriveColumnDesiredStage(false, false, true, false);
-    Expect(d.stage == ColumnDesiredStage::RelightOnly, "void → RelightOnly");
+    Expect(d.stage == ColumnDesiredStage::RelightThenMesh,
+           "Era32: void → RelightThenMesh");
   }
   {
     const auto d = DeriveColumnDesiredStage(false, false, false, true);
@@ -51,13 +52,25 @@ int main()
     const auto d = DeriveColumnDesiredStage(false, false, false, false,
                                             /*lit_pending=*/true);
     Expect(d.stage == ColumnDesiredStage::RemeshSeam,
-           "LitPending → RemeshSeam");
+           "LitPending (post-light sticky) → RemeshSeam");
   }
   {
     const auto d = DeriveColumnDesiredStage(false, false, true, false, false,
                                             /*unlit_published=*/true);
     Expect(d.stage == ColumnDesiredStage::RelightThenMesh,
            "void+UnlitPublished → RelightThenMesh");
+  }
+  {
+    const auto d = DeriveColumnDesiredStage(false, false, false, false, false,
+                                            false, /*dark_drawable=*/true);
+    Expect(d.stage == ColumnDesiredStage::RelightThenMesh,
+           "Era32: dark_drawable/VB → RelightThenMesh (not RemeshSeam)");
+  }
+  {
+    const auto d = DeriveColumnDesiredStage(false, false, false, false, true,
+                                            false, /*dark_drawable=*/true);
+    Expect(d.stage == ColumnDesiredStage::RelightThenMesh,
+           "Era32: dark_drawable beats lit_pending RemeshSeam");
   }
   {
     const auto d = DeriveColumnDesiredStage(false, false, false, false);

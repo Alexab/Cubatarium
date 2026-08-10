@@ -23,18 +23,19 @@ inline bool IsSoftDeferEmptyPlaceholder(bool has_greedy, bool has_drawable,
   return true;
 }
 
-/// Stuck SoftDefer empty → ColumnFlow FirstMesh only while FOV miss
-/// (idle PreferKick without miss caused remesh churn; MarkDirty still heals).
+/// Stuck SoftDefer empty → ColumnFlow FirstMesh while FOV miss OR in-focus
+/// SoftDefer-held undrawn (Era32 P3: black-as-hole after LitDrawable ring).
 inline bool ShouldEnqueueSoftDeferEmptyFirstMesh(bool empty_placeholder,
                                                  int horiz,
-                                                 bool missing_visible_mesh)
+                                                 bool missing_visible_mesh,
+                                                 bool in_focus = false)
 {
   (void)horiz;
-  if (!empty_placeholder || !missing_visible_mesh)
+  if (!empty_placeholder)
   {
     return false;
   }
-  return true;
+  return missing_visible_mesh || in_focus;
 }
 
 /// Era20 I-M2: Imm/Force Dirty escape when miss and async dead (ignore wall).

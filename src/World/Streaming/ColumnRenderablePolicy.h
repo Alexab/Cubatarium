@@ -1,6 +1,7 @@
 #pragma once
 
 #include "World/Streaming/ColumnFlowScheduler.h"
+#include "World/Streaming/VisualStagePolicy.h"
 
 #include <glm/glm.hpp>
 #include <vector>
@@ -27,37 +28,43 @@ struct ColumnSoTDecision
 /// horiz>1 sticky/stale-dark path used by GetColumnRenderableState.
 /// Era16 TD-052: has_real_repair_ticket must reflect ColumnFlow Contains and/or
 /// StickyRemesh membership — never claim a ticket that does not exist.
+/// Era32 I-L1: fully-dark drawable inside LitDrawable ring is not draw_ok.
 inline ColumnSoTDecision ClassifyStickyStaleDarkSoT(
     bool has_mesh_or_gpu, bool sticky, bool stale_dark_with_mesh,
-    int horiz_from_focus, bool has_real_repair_ticket = false)
+    int horiz_from_focus, bool has_real_repair_ticket = false,
+    bool fully_dark_drawable = false,
+    int lit_ring = kVisualStageLitDrawableHoriz)
 {
   ColumnSoTDecision out;
   if (horiz_from_focus <= 1)
   {
     return out;
   }
+  const bool dark_unfinished =
+      fully_dark_drawable && horiz_from_focus <= lit_ring;
   if (sticky)
   {
     out.kind = ColumnSoTKind::StickyRemesh;
     out.has_repair_ticket = has_real_repair_ticket || sticky;
-    out.draw_ok = has_mesh_or_gpu;
+    out.draw_ok = has_mesh_or_gpu && !dark_unfinished;
     return out;
   }
   if (stale_dark_with_mesh)
   {
     out.kind = ColumnSoTKind::StaleDark;
     out.has_repair_ticket = has_real_repair_ticket;
-    out.draw_ok = true; // draw-when-meshed; SoftDefer still blocks dark first-mesh
+    // draw-when-meshed hinterland; LitDrawable ring waits Relight-before-draw.
+    out.draw_ok = !dark_unfinished;
     return out;
   }
   return out;
 }
 
-/// Era28 I-V1: UnlitFirstMesh only outside near FOV (horiz > near_r).
-/// Near missing waits Relight-before-draw; far may Unlit preview.
+/// Era28/32: UnlitFirstMesh only outside LitDrawable ring (horiz > ring).
+/// Ring missing waits Relight-before-draw; hinterland may Unlit preview.
 inline bool AllowUnlitFirstMesh(bool has_mesh, int horiz_from_focus,
                                 bool /*is_nearest_missing*/, bool in_focus,
-                                int near_r = 2)
+                                int near_r = kVisualStageLitDrawableHoriz)
 {
   if (has_mesh || !in_focus)
   {
@@ -66,29 +73,36 @@ inline bool AllowUnlitFirstMesh(bool has_mesh, int horiz_from_focus,
   return horiz_from_focus > near_r;
 }
 
-/// VisibleBlack Hide⇒Ticket for stale-dark columns: RemeshSeam (+ near Promote).
-/// Void VisibleBlack must use EnqueueVoidDarkRelightTickets (RelightThenMesh).
-inline void EnqueueVisibleBlackRepairTickets(
+/// Void-edge / VisibleBlack debt: Relight-first (mesh dark + light field 0).
+/// No RemeshSeam — remesh alone cannot invent light (manual 190350 / Era32 P1).
+inline void EnqueueVoidDarkRelightTickets(
     UColumnFlowScheduler &scheduler, glm::ivec2 focus,
-    const std::vector<glm::ivec2> &cols)
+    const std::vector<glm::ivec2> &void_dark_cols)
 {
   auto near_dist = [&](glm::ivec2 col) {
     return std::max(std::abs(col.x - focus.x), std::abs(col.y - focus.y));
   };
-  for (const glm::ivec2 &col : cols)
+  for (const glm::ivec2 &col : void_dark_cols)
   {
     const int d = near_dist(col);
-    const int prio_boost = d <= 2 ? 20 : 0;
-    scheduler.Enqueue(col, ColumnWorkKind::RemeshSeam, 28 + prio_boost);
-    if (d <= 2)
-    {
-      scheduler.Enqueue(col, ColumnWorkKind::PromoteRelight, 35 + prio_boost);
-    }
+    const int prio_boost = d <= 2 ? 25 : 0;
+    scheduler.Enqueue(col, ColumnWorkKind::RelightThenMesh, 50 + prio_boost);
+    scheduler.Enqueue(col, ColumnWorkKind::PromoteRelight, 45 + prio_boost);
   }
+}
+
+/// VisibleBlack Hide⇒Ticket: RelightThenMesh (+ Promote) — same as void.
+inline void EnqueueVisibleBlackRepairTickets(
+    UColumnFlowScheduler &scheduler, glm::ivec2 focus,
+    const std::vector<glm::ivec2> &cols)
+{
+  EnqueueVoidDarkRelightTickets(scheduler, focus, cols);
 }
 
 /// Enqueue RemeshSeam / RelightThenMesh tickets for sticky + stale-dark columns
 /// (mirrors UColumnFlowExecutor::TickDerived repair section).
+/// Era32: fully-dark / void-class stale must not use RemeshSeam-as-heal —
+/// caller routes those through EnqueueVoidDarkRelightTickets.
 inline void EnqueueStickyStaleRepairTickets(
     UColumnFlowScheduler &scheduler, glm::ivec2 focus,
     const std::vector<glm::ivec2> &sticky_cols,
@@ -110,30 +124,12 @@ inline void EnqueueStickyStaleRepairTickets(
   {
     const int d = near_dist(col);
     const int prio_boost = d <= 2 ? 20 : 0;
-    // Era19 P2 I-H3 harden: stale → Remesh only (void uses RelightThenMesh).
+    // Non-fully-dark stale seam mismatch with light present → Remesh.
     scheduler.Enqueue(col, ColumnWorkKind::RemeshSeam, 28 + prio_boost);
     if (d <= 2)
     {
       scheduler.Enqueue(col, ColumnWorkKind::PromoteRelight, 35 + prio_boost);
     }
-  }
-}
-
-/// Void-edge debt: Relight-first (mesh dark + light field 0). No RemeshSeam —
-/// remesh alone cannot invent light (manual 190350 void≈610).
-inline void EnqueueVoidDarkRelightTickets(
-    UColumnFlowScheduler &scheduler, glm::ivec2 focus,
-    const std::vector<glm::ivec2> &void_dark_cols)
-{
-  auto near_dist = [&](glm::ivec2 col) {
-    return std::max(std::abs(col.x - focus.x), std::abs(col.y - focus.y));
-  };
-  for (const glm::ivec2 &col : void_dark_cols)
-  {
-    const int d = near_dist(col);
-    const int prio_boost = d <= 2 ? 25 : 0;
-    scheduler.Enqueue(col, ColumnWorkKind::RelightThenMesh, 50 + prio_boost);
-    scheduler.Enqueue(col, ColumnWorkKind::PromoteRelight, 45 + prio_boost);
   }
 }
 
