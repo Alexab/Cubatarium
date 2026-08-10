@@ -38,6 +38,8 @@ public:
   void BeginCreate(UWorld &world, const std::string &world_name);
   /// @return true when the operation finished successfully.
   bool Tick(UWorld &world, IUProgressSink &sink, int chunkBudget);
+  /// Era31 I-T4: force-complete EnterGame load when visual cap reached.
+  bool ForceCapEnterGameVisual(UWorld &world, IUProgressSink &sink);
   void Cancel();
   void CancelBackgroundWorkers();
 

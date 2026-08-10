@@ -567,6 +567,35 @@ void UWorldCooperativeSession::Report(IUProgressSink &sink,
   sink.Report(phaseId, fraction, message);
 }
 
+bool UWorldCooperativeSession::ForceCapEnterGameVisual(UWorld &world,
+                                                       IUProgressSink &sink)
+{
+  if (!Active || Kind != WorldCoopKind::Load)
+  {
+    return false;
+  }
+  if (CurrentPhase == Phase::Done)
+  {
+    return true;
+  }
+  world.FinalizePlayerAfterWorldLoad();
+  if (auto user = world.GetCurrentUser())
+  {
+    world.ApplyUserToCamera(user);
+  }
+  else
+  {
+    world.ApplySpawnToCamera();
+  }
+  world.WarmupVisibleListAtCamera();
+  FinalizeCooperativeLoadForEnterGame(world, Kind);
+  CurrentPhase = Phase::Done;
+  Active = false;
+  StreamingWarmupTicks = 0;
+  Report(sink, "done", 1.f, "World loaded.");
+  return true;
+}
+
 void UWorldCooperativeSession::Cancel()
 {
   Active = false;

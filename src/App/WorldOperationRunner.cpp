@@ -53,6 +53,7 @@ void UWorldOperationRunner::Start(WorldRunnerRequest request)
   PendingWorldName.clear();
   SaveBeforeOp = false;
   PendingWorldOp = WorldRunnerOp::Load;
+  EnterLoadElapsedMs = 0.0;
 
   switch (Request.op)
   {
@@ -149,6 +150,11 @@ bool UWorldOperationRunner::TickWorldOp(IUProgressSink &sink, int chunkBudget)
     {
       return true;
     }
+    if (Request.op == WorldRunnerOp::EnterGame && EnterVisualCapReached())
+    {
+      World.ForceCapEnterGameLoad(sink);
+      return true;
+    }
     return false;
   }
   case WorldRunnerOp::Create:
@@ -182,6 +188,28 @@ void UWorldOperationRunner::PrepareCreateWorld()
   PendingWorldName = Core.SetupNewWorldForCreation();
 }
 
+void UWorldOperationRunner::AccumulateEnterLoadMs(double frame_ms)
+{
+  if (!Active || Request.op != WorldRunnerOp::EnterGame)
+  {
+    return;
+  }
+  if (frame_ms > 0.0)
+  {
+    EnterLoadElapsedMs += frame_ms;
+  }
+}
+
+bool UWorldOperationRunner::EnterVisualCapReached() const
+{
+  if (Request.op != WorldRunnerOp::EnterGame)
+  {
+    return false;
+  }
+  return ShouldForceEnterVisualCap(EnterLoadElapsedMs,
+                                   !World.NeedsEnterGameVisualWarmup());
+}
+
 bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
                                                       double frame_ms)
 {
@@ -202,7 +230,8 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   const bool mesh_ready = !World.NeedsEnterGameMeshWarmup();
   const bool cap_reached =
       EnterGameGpuWarmupElapsedMs >=
-      static_cast<double>(EnterVisualWarmupHardCapMs());
+          static_cast<double>(EnterVisualWarmupHardCapMs()) ||
+      EnterVisualCapReached();
   if (!mesh_ready)
   {
     World.SetEnterGameWarmupMissingGreedy(World.CountPostLoadRingNotReady());
@@ -311,6 +340,11 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
     }
     if (Request.op == WorldRunnerOp::EnterGame)
     {
+      if (EnterVisualCapReached())
+      {
+        CurrentStage = Stage::EnterGameFinalize;
+        return false;
+      }
       CurrentStage = Stage::EnterGameGpuWarmup;
       EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupMaxFrames;
       EnterGameGpuWarmupElapsedMs = 0.0;
@@ -352,6 +386,11 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
     }
     if (Request.op == WorldRunnerOp::EnterGame)
     {
+      if (EnterVisualCapReached())
+      {
+        CurrentStage = Stage::EnterGameFinalize;
+        return false;
+      }
       CurrentStage = Stage::EnterGameGpuWarmup;
       EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupMaxFrames;
       EnterGameGpuWarmupElapsedMs = 0.0;

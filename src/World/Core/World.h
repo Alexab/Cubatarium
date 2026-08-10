@@ -252,6 +252,8 @@ public:
 
   void BeginCooperativeLoad(const std::string &world_folder_path);
   bool TickCooperativeLoad(class IUProgressSink &sink, int chunkBudget);
+  /// Era31 I-T4: skip cooperative load warmup when enter visual cap hit.
+  bool ForceCapEnterGameLoad(class IUProgressSink &sink);
   void BeginCooperativeSave(const std::string &world_folder_path,
                             bool resume_streaming_after_save = true);
   bool TickCooperativeSave(class IUProgressSink &sink, int chunkBudget);

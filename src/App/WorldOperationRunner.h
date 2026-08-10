@@ -70,6 +70,12 @@ public:
   }
   /// @return true when GPU warmup stage finished.
   bool AdvanceEnterGameGpuWarmup(IUProgressSink &sink, double frame_ms = 0.0);
+  void AccumulateEnterLoadMs(double frame_ms);
+  bool IsEnterGameOperation() const
+  {
+    return Request.op == WorldRunnerOp::EnterGame;
+  }
+  bool EnterVisualCapReached() const;
 
 private:
   enum class Stage
@@ -109,6 +115,7 @@ private:
   WorldRunnerOp PendingWorldOp{WorldRunnerOp::Load};
   int EnterGameGpuWarmupFramesLeft{0};
   double EnterGameGpuWarmupElapsedMs{0.0};
+  double EnterLoadElapsedMs{0.0};
   UBackgroundQuiesceState ShutdownQuiesceState{};
 };
 

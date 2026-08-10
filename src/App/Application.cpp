@@ -1917,6 +1917,7 @@ void UApplication::Update(double dt)
 #endif
     if (WorldOpRunner)
     {
+      WorldOpRunner->AccumulateEnterLoadMs(dt * 1000.0);
       if (WorldOpRunner->IsEnterGameGpuWarmupStage())
       {
         constexpr int kGpuWarmupMaxFrames = 24;
