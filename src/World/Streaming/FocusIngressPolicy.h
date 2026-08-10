@@ -18,6 +18,8 @@ struct FocusIngressInput
   int unfinished_visual{0};
   /// Stale-dark faces near camera (mesh dark, field lit) — remesh/light debt.
   int stale_dark_near{0};
+  /// Era34 P1: SoftDefer empty placeholders in focus (FirstMesh admit floor).
+  int soft_defer_empty_n{0};
 };
 
 struct FocusIngressDecision
@@ -40,7 +42,8 @@ inline FocusIngressDecision EvaluateFocusIngress(const FocusIngressInput &in)
   // Era20: miss activates even when !moving (idle/stop miss stuck 214034).
   const bool classic = in.missing_mesh && in.pending_focus > 0;
   const bool sot_frontier =
-      in.missing_mesh || (in.moving && in.unfinished_visual > 0);
+      in.missing_mesh || (in.moving && in.unfinished_visual > 0) ||
+      (in.moving && in.soft_defer_empty_n > 0);
   const bool stale_frontier =
       (in.moving || in.missing_mesh) && in.stale_dark_near > 8 &&
       (in.pending_focus > 0 || in.unfinished_visual > 0 || in.missing_mesh);
@@ -73,7 +76,8 @@ inline FocusIngressDecision EvaluateFocusIngress(const FocusIngressInput &in)
   }
   // Era32 P3: empty∨miss FOV — guarantee ≥1 FirstMesh admit/frame
   // (dual-debt must not starve HP FirstMesh under Relight pressure).
-  if (in.missing_mesh || in.unfinished_visual > 0)
+  // Era34 P1: SoftDefer empty also floors FirstMesh admit.
+  if (in.missing_mesh || in.unfinished_visual > 0 || in.soft_defer_empty_n > 0)
   {
     out.first_mesh_admit = std::max(out.first_mesh_admit, 1);
   }

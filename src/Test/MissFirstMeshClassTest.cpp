@@ -511,6 +511,58 @@ int main()
   Expect(ShouldForceEnterVisualCap(250.0, true, /*cold_create=*/true),
          "Era33 P0: cold create force when soft-ready");
 
+  // --- Era34 CreateBar debt / soft wall ---
+  {
+    using cutum::CreateBarDebtFraction;
+    using cutum::CreateNearFovSoftDeferRadiusChunks;
+    using cutum::CreateSpawnWarmupHardWallMs;
+    using cutum::CreateSpawnWarmupMaxTicks;
+    using cutum::CreateSpawnWarmupSoftWallMs;
+    using cutum::ShouldHardLeaveCreateSpawnWarmup;
+    using cutum::ShouldSoftLeaveCreateSpawnWarmup;
+
+    Expect(CreateNearFovSoftDeferRadiusChunks() == 2,
+           "Era34 P0: near-FOV SoftDefer radius 2");
+    Expect(CreateSpawnWarmupSoftWallMs() == 12000, "Era34 P0: soft wall 12s");
+    Expect(CreateSpawnWarmupHardWallMs() == 20000, "Era34 P0: hard wall 20s");
+    Expect(CreateSpawnWarmupMaxTicks() == 360, "Era34 P0: max ticks 360");
+    Expect(CreateBarDebtFraction(10, 10) == 1.0f,
+           "Era34 P0: full debt ⇒ fraction 1");
+    Expect(CreateBarDebtFraction(0, 10) == 0.0f,
+           "Era34 P0: zero debt ⇒ fraction 0");
+    Expect(CreateBarDebtFraction(5, 10) < CreateBarDebtFraction(8, 10),
+           "Era34 P0: debt↓ ⇒ fraction↓ (monotonic)");
+    const float p_hi = 1.0f - CreateBarDebtFraction(2, 10);
+    const float p_lo = 1.0f - CreateBarDebtFraction(8, 10);
+    Expect(p_hi > p_lo, "Era34 P0: debt↓ ⇒ progress↑");
+    Expect(!ShouldSoftLeaveCreateSpawnWarmup(false, 15000.0),
+           "Era34 P0: soft wall requires underfeet lit");
+    Expect(ShouldSoftLeaveCreateSpawnWarmup(true, 12000.0),
+           "Era34 P0: soft wall after underfeet + 12s");
+    Expect(!ShouldSoftLeaveCreateSpawnWarmup(true, 5000.0),
+           "Era34 P0: soft wall not before 12s");
+    Expect(ShouldHardLeaveCreateSpawnWarmup(20000.0, 1),
+           "Era34 P0: hard wall 20s");
+    Expect(ShouldHardLeaveCreateSpawnWarmup(1000.0, 360),
+           "Era34 P0: hard leave on tick ceiling");
+    Expect(!ShouldHardLeaveCreateSpawnWarmup(1000.0, 100),
+           "Era34 P0: no hard leave early");
+    // Near settle ≠ ring4: SoftDefer at horiz=3 is outside create SoftDefer r≤2.
+    Expect(CreateNearFovSoftDeferRadiusChunks() < kVisualStageLitDrawableHoriz,
+           "Era34 P0: near settle radius < LitDrawable ring4");
+  }
+
+  // --- Era34 P2 FirstMesh bias ---
+  {
+    using cutum::ShouldBiasFirstMeshOverRemesh;
+    Expect(ShouldBiasFirstMeshOverRemesh(1, false, true),
+           "Era34 P2: SoftDefer empty moving ⇒ FM bias");
+    Expect(ShouldBiasFirstMeshOverRemesh(0, true, true),
+           "Era34 P2: holes moving ⇒ FM bias");
+    Expect(!ShouldBiasFirstMeshOverRemesh(1, true, false),
+           "Era34 P2: idle ⇒ no FM bias");
+  }
+
   // --- Era33 P1 cy_order ---
   {
     using cutum::BuildMeshCyVisitOrder;

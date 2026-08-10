@@ -1527,7 +1527,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   const FocusIngressDecision ingress = EvaluateFocusIngress(FocusIngressInput{
       moving_now, missing_focus_mesh, pending_light_focus_n, mesh_async_n,
       frame_ms, world.PhysicsTelemetryData.UnfinishedVisual,
-      world.PhysicsTelemetryData.DarkFaceStaleNearN});
+      world.PhysicsTelemetryData.DarkFaceStaleNearN,
+      world.PhysicsTelemetryData.SoftDeferEmptyPlaceholderN});
   if (ingress.relight_floor > 0)
   {
     bg_budget = std::max(bg_budget, ingress.relight_floor);

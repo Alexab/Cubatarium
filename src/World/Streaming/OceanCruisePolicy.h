@@ -116,6 +116,18 @@ inline double OceanHealMeshEmergeBudgetMs()
   return 14.0;
 }
 
+/// Era34 P2: under SoftDefer empty / holes while moving — prefer FirstMesh over
+/// remesh/dirty flood (emerge budget stays ≤ OceanHealMeshEmergeBudgetMs).
+inline bool ShouldBiasFirstMeshOverRemesh(int soft_defer_empty_n, bool holes,
+                                          bool moving)
+{
+  if (!moving)
+  {
+    return false;
+  }
+  return soft_defer_empty_n > 0 || holes;
+}
+
 /// Era31 I-T2: protected Relight carve-out ms (not zero-sum stolen from emerge).
 inline double OceanHealRelightCarveOutMs()
 {

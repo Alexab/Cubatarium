@@ -2,6 +2,7 @@
 #include "World/Core/WorldLoadDiagnostics.h"
 #include "App/Platform/Log.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
+#include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "Core/Jobs/JobThreadPool.h"
 #include "Core/Jobs/JobThreadBudget.h"
@@ -80,7 +81,6 @@ constexpr int kMeshWarmupMaxTicks = 50000;
 constexpr int kMeshWarmupMaxWallMs = 75000;
 /// Hidden-window flight-sim: RelightColumns can stall >2min on World_164.
 constexpr int kRelightColumnsMaxWallMs = 60000;
-constexpr int kCreateSpawnWarmupMaxTicks = 1800; // Era33: ring=4 cold settle
 constexpr int kStreamUnloadMarginChunks = 1;
 
 glm::ivec3 ResolveSpatialLoadCenter(const UWorld &world)
@@ -592,6 +592,7 @@ bool UWorldCooperativeSession::ForceCapEnterGameVisual(UWorld &world,
   CurrentPhase = Phase::Done;
   Active = false;
   StreamingWarmupTicks = 0;
+  StreamingWarmupPeakDebt = 0;
   Report(sink, "done", 1.f, "World loaded.");
   return true;
 }
@@ -1791,33 +1792,60 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       if (StreamingWarmupTicks == 0)
       {
         WarnIfTerrainMeshesMissing(world, "PrepareView before spawn warmup");
+        StreamingWarmupWallStart = std::chrono::steady_clock::now();
+        StreamingWarmupPeakDebt = 0;
       }
       TickCreateSpawnMeshWarmup(world, std::max(1, budget / 2));
       ++StreamingWarmupTicks;
+      bool underfeet_lit = false;
+      const int debt = world.CountCreateNearFovWarmupDebt(&underfeet_lit);
+      if (debt > StreamingWarmupPeakDebt)
+      {
+        StreamingWarmupPeakDebt = debt;
+      }
       const bool spawn_settled = IsCreateSpawnWarmupSettled(world);
       const float prepare_view_base =
           CooperativeCreateMeshProgressBase() + kCreateWeightMeshWarmup;
+      const int denom = std::max(1, StreamingWarmupPeakDebt);
       const float stream_inner =
           spawn_settled ? 1.0f
-                        : std::min(0.95f,
-                                   static_cast<float>(StreamingWarmupTicks) /
-                                       static_cast<float>(
-                                           kCreateSpawnWarmupMaxTicks));
+                        : (1.0f - CreateBarDebtFraction(debt, denom));
+      const double elapsed_ms = std::chrono::duration<double, std::milli>(
+                                    std::chrono::steady_clock::now() -
+                                    StreamingWarmupWallStart)
+                                    .count();
+      std::string status;
+      if (spawn_settled)
+      {
+        status = "Preparing view...";
+      }
+      else
+      {
+        status = "Loading FOV… " + std::to_string(debt) + " left";
+      }
       Report(sink, "prepare_view",
-             prepare_view_base + kCreateWeightPrepare * stream_inner,
-             spawn_settled ? "Preparing view..."
-                           : "Loading nearby terrain...");
-      // Era33 P0: do not leave create bar until LitDrawable initial FOV is
-      // settled (hard tick ceiling is safety only).
-      if (!spawn_settled && StreamingWarmupTicks < kCreateSpawnWarmupMaxTicks)
+             prepare_view_base + kCreateWeightPrepare * stream_inner, status);
+      // Era34 P0: leave on near-FOV settle, soft wall after underfeet lit, or
+      // hard safety ceiling (not Era33 ticks/1800 grind).
+      if (spawn_settled)
+      {
+        // fall through to Finalize
+      }
+      else if (ShouldSoftLeaveCreateSpawnWarmup(underfeet_lit, elapsed_ms))
+      {
+        std::cerr << "[Era34] create spawn soft-wall after underfeet lit ("
+                  << elapsed_ms << "ms, debt=" << debt << ")\n";
+      }
+      else if (ShouldHardLeaveCreateSpawnWarmup(elapsed_ms,
+                                                StreamingWarmupTicks))
+      {
+        std::cerr << "[Era34] create spawn hard ceiling (" << elapsed_ms
+                  << "ms, ticks=" << StreamingWarmupTicks << ", debt=" << debt
+                  << ")\n";
+      }
+      else
       {
         break;
-      }
-      if (!spawn_settled)
-      {
-        // Absolute ceiling hit — still report and continue (avoid infinite bar).
-        std::cerr << "[Era33] create spawn warmup ceiling reached while "
-                     "NeedsEnterGameMeshWarmup still true\n";
       }
     }
     else
@@ -1830,6 +1858,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     CurrentPhase = Phase::Done;
     Active = false;
     StreamingWarmupTicks = 0;
+    StreamingWarmupPeakDebt = 0;
     const float prepare_view_base =
         Kind == WorldCoopKind::Create
             ? (CooperativeCreateMeshProgressBase() + kCreateWeightMeshWarmup)

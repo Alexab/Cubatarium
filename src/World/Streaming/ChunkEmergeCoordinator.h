@@ -64,6 +64,8 @@ private:
   int MissWitnessAgeFrames{0};
   /// Era24 I-E4: SoftDefer empty / Hide⇒Ticket age (frames since first seen).
   std::unordered_map<glm::ivec3, int, IVec3Hash> SoftDeferEmptyAgeFrames;
+  /// Era34 P1: rotate SoftDefer empty ownership when cap saturates.
+  int SoftDeferEmptyScanOffset{0};
 };
 
 } // namespace cutum

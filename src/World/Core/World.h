@@ -422,6 +422,8 @@ public:
     return EnterGameWarmupMissingGreedy;
   }
   bool IsCreateSpawnWarmupSettled() const;
+  /// Era34 P0: near-FOV (r≤2) create-bar debt; sets underfeet LitDrawable ready.
+  int CountCreateNearFovWarmupDebt(bool *out_underfeet_lit_ready) const;
   void DrainSpawnRadiusMeshWarmup(int budget);
   void RefreshPersistedTerrainAfterSave();
   void MarkSpawnAreaPreparedByCooperativeLoad();

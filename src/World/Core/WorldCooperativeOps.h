@@ -121,6 +121,8 @@ private:
   size_t MeshWarmupProcessedMax{0};
   size_t MeshWarmupCompletedTotal{0};
   int StreamingWarmupTicks{0};
+  int StreamingWarmupPeakDebt{0};
+  std::chrono::steady_clock::time_point StreamingWarmupWallStart{};
 
   void BeginDeferredRelightQueue(UWorld &world);
   void BeginBulkChunkRelightQueue(UWorld &world);

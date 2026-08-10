@@ -307,31 +307,30 @@ Matrix scenarios: `ocean-cruise` | `ocean-cruise-enter` | `ocean-cruise-stress` 
 
 See also: [`ERA31_OCEAN_BASELINE.md`](ERA31_OCEAN_BASELINE.md), [`ERA31_AUTOFLY_RESULTS.md`](ERA31_AUTOFLY_RESULTS.md).
 
-## TD-066 (partial) / Era33 ColdEnter + FOV Fill
+## TD-066 (partial) / Era34 CreateBar + SoftDefer FOV Fill
 
-Ocean cruise SLA tracked in `OceanCruisePolicy.h` + Era32 LitDrawable FOV
-([`ERA32_LITDRAWABLE_BASELINE.md`](ERA32_LITDRAWABLE_BASELINE.md)) + Era33
-ColdEnter ([`ERA33_COLDENTER_BASELINE.md`](ERA33_COLDENTER_BASELINE.md)).
-**Status: partial** until `OCEAN_MANUAL GO` + eye on ocean+land cold enter.
-Era33 landed: enter visual ring=4 on progress bar (no cold force-cap), land
-cy_order ground-before-canopy, SoftDefer-empty FirstMesh + lit PreferKick,
-HoleDrain residual denser. KEEP Era32 REJECT list.
+Ocean cruise SLA + Era32 LitDrawable + Era33 ColdEnter + Era34 CreateBar
+([`ERA34_CREATEBAR_BASELINE.md`](ERA34_CREATEBAR_BASELINE.md)).
+**Status: partial** until `OCEAN_MANUAL GO` + eye on ocean cruise **and** new-world create
+(no minute bar @96–99%, no spawn void). Era34: debt create-bar near-FOV settle +
+soft wall after underfeet lit; SoftDefer ownership rotate; emerge FM bias.
+KEEP Era32/33 REJECT (+ no PreferKick-on-Remesh; no tick-only create progress).
 
-## 4d. Era33 ColdEnter / FOV Fill (autofly every code phase)
+## 4e. Era34 CreateBar / SoftDefer FOV (autofly every code phase)
 
 ```powershell
-python tools/flight_sim_run.py --scenario ocean-cruise --phase-id era33_ocean `
-  --report bin/iter_reports/era33_ocean.json
-python tools/flight_sim_phase_gate.py --phase-id OCEAN_CRUISE --report bin/iter_reports/era33_ocean.json
-python tools/flight_sim_run.py --scenario ocean-cruise-stress --phase-id era33_stress `
-  --report bin/iter_reports/era33_stress.json
-python tools/flight_sim_phase_gate.py --phase-id OCEAN_CRUISE_STRESS --report bin/iter_reports/era33_stress.json
-python tools/flight_sim_run.py --scenario land-south --phase-id era33_land `
-  --report bin/iter_reports/era33_land.json
-python tools/flight_sim_phase_gate.py --phase-id ARCH_D3_LAND --report bin/iter_reports/era33_land.json
+python tools/flight_sim_run.py --scenario ocean-cruise --phase-id era34_ocean `
+  --report bin/iter_reports/era34_ocean.json
+python tools/flight_sim_phase_gate.py --phase-id OCEAN_CRUISE --report bin/iter_reports/era34_ocean.json
+python tools/flight_sim_run.py --scenario ocean-cruise-stress --phase-id era34_stress `
+  --report bin/iter_reports/era34_stress.json
+python tools/flight_sim_phase_gate.py --phase-id OCEAN_CRUISE_STRESS --report bin/iter_reports/era34_stress.json
+python tools/flight_sim_run.py --scenario land-south --phase-id era34_land `
+  --report bin/iter_reports/era34_land.json
+python tools/flight_sim_phase_gate.py --phase-id ARCH_D3_LAND --report bin/iter_reports/era34_land.json
 ```
 
-CLOSED only with `OCEAN_MANUAL` + land eye — not autofly smoke alone.
+CLOSED only with `OCEAN_MANUAL` + create land eye — not autofly smoke alone.
 
 ## 5. Anti-patterns (reject merge)
 

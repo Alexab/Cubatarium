@@ -2,6 +2,8 @@
 
 #include "World/Streaming/VisualStagePolicy.h"
 
+#include <algorithm>
+
 namespace cutum
 {
 
@@ -10,6 +12,54 @@ namespace cutum
 inline int EnterVisualWarmupRadiusChunks()
 {
   return kVisualStageLitDrawableHoriz;
+}
+
+/// Era34 P0: create-bar SoftDefer settle radius (near FOV); ring 3–4 InGame.
+inline int CreateNearFovSoftDeferRadiusChunks()
+{
+  return 2;
+}
+
+/// Era34 P0: soft leave PrepareView after underfeet lit (ms wall).
+inline int CreateSpawnWarmupSoftWallMs()
+{
+  return 12000;
+}
+
+/// Era34 P0: hard safety leave PrepareView (ms wall).
+inline int CreateSpawnWarmupHardWallMs()
+{
+  return 20000;
+}
+
+/// Era34 P0: tick safety ceiling (≪ Era33 1800).
+inline int CreateSpawnWarmupMaxTicks()
+{
+  return 360;
+}
+
+/// Era34 P0: debt_frac = clamp(debt / max(1, denom), 0, 1).
+inline float CreateBarDebtFraction(int debt, int denom)
+{
+  const int d = std::max(1, denom);
+  const float frac =
+      static_cast<float>(std::max(0, debt)) / static_cast<float>(d);
+  return std::min(1.0f, std::max(0.0f, frac));
+}
+
+/// Era34 P0: soft leave only after underfeet LitDrawable ready.
+inline bool ShouldSoftLeaveCreateSpawnWarmup(bool underfeet_lit_ready,
+                                             double elapsed_ms)
+{
+  return underfeet_lit_ready &&
+         elapsed_ms >= static_cast<double>(CreateSpawnWarmupSoftWallMs());
+}
+
+/// Era34 P0: hard leave on wall or tick ceiling.
+inline bool ShouldHardLeaveCreateSpawnWarmup(double elapsed_ms, int ticks)
+{
+  return elapsed_ms >= static_cast<double>(CreateSpawnWarmupHardWallMs()) ||
+         ticks >= CreateSpawnWarmupMaxTicks();
 }
 
 /// Era29 I-E1: underfeet still needs visual warmup when neither lit drawable

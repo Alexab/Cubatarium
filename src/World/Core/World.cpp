@@ -5156,8 +5156,125 @@ bool UWorld::IsCreateSpawnWarmupSettled() const
   {
     return true;
   }
-  // Era33 P0: create/enter initial FOV settle = mesh+visual LitDrawable ring.
-  return !NeedsEnterGameMeshWarmup();
+  // Era34 P0: near-FOV settle (underfeet lit + SoftDefer/mesh debt r≤2), not
+  // full LitDrawable ring=4 (Era33 tick grind / 224116).
+  bool underfeet_lit = false;
+  return CountCreateNearFovWarmupDebt(&underfeet_lit) == 0;
+}
+
+int UWorld::CountCreateNearFovWarmupDebt(bool *out_underfeet_lit_ready) const
+{
+  bool underfeet_lit_ready = true;
+  if (out_underfeet_lit_ready)
+  {
+    *out_underfeet_lit_ready = true;
+  }
+  if (!MeshService || !BlockRegistry)
+  {
+    return 0;
+  }
+  const UWorldMeshService &mesh = *MeshService;
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
+  const glm::ivec3 focus_ground(center.x, 0, center.z);
+  const int near_r = CreateNearFovSoftDeferRadiusChunks();
+  int debt = 0;
+  if (HasPendingLightBeforeMeshNear(focus_ground, near_r))
+  {
+    ++debt;
+  }
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
+  const int sea_cy =
+      FloorDiv(std::max(0, ProceduralTemplate.SeaLevel), CHUNK_SIZE);
+  int cy0 = 0;
+  int cy1 = std::min(max_cy, std::max(focus_cy + 2, sea_cy + 1));
+  if (ProceduralTemplate.FillWater)
+  {
+    cy0 = std::min(cy0, std::max(0, sea_cy - 1));
+  }
+  cy0 = std::min(cy0, std::max(0, focus_cy - 1));
+  for (int dx = -near_r; dx <= near_r; ++dx)
+  {
+    for (int dz = -near_r; dz <= near_r; ++dz)
+    {
+      const int horiz = std::max(std::abs(dx), std::abs(dz));
+      const bool underfeet = horiz <= 1;
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(center.x + dx, cy, center.z + dz);
+        const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+        if (!chunk)
+        {
+          continue;
+        }
+        const bool has_drawable = mesh.HasDrawableGreedyMesh(coord);
+        const bool has_greedy = mesh.HasGreedyMesh(coord);
+        const bool soft_held = mesh.IsSoftDeferHeld(coord);
+        const bool empty_or_held =
+            (!has_drawable && has_greedy) || soft_held;
+        if (empty_or_held)
+        {
+          ++debt;
+          if (underfeet)
+          {
+            underfeet_lit_ready = false;
+          }
+          continue;
+        }
+        bool any_solid = false;
+        for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+        {
+          for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+          {
+            for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+            {
+              if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+              {
+                any_solid = true;
+              }
+            }
+          }
+        }
+        if (!any_solid)
+        {
+          continue;
+        }
+        if (!has_greedy && !has_drawable)
+        {
+          ++debt;
+          if (underfeet)
+          {
+            underfeet_lit_ready = false;
+          }
+          continue;
+        }
+        if (mesh.IsPendingGpuApply(coord) || mesh.IsGpuExtractInFlight(coord))
+        {
+          ++debt;
+          continue;
+        }
+        if (underfeet)
+        {
+          const bool fully_dark =
+              has_drawable && mesh.GetCache().ChunkHasFullyDarkFace(coord);
+          const bool lit_drawable = has_drawable && !fully_dark;
+          if (EnterUnderfeetNeedsLitDrawable(lit_drawable,
+                                             /*keep_prior_gpu=*/false))
+          {
+            ++debt;
+            underfeet_lit_ready = false;
+          }
+        }
+      }
+    }
+  }
+  if (out_underfeet_lit_ready)
+  {
+    *out_underfeet_lit_ready = underfeet_lit_ready;
+  }
+  return debt;
 }
 
 void UWorld::DrainSpawnRadiusMeshWarmup(int budget)

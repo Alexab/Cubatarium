@@ -259,6 +259,18 @@ ocean smoke/manual still NO-GO (void/VB). See [`ERA32_LITDRAWABLE_BASELINE.md`](
 miss residual. See [`ERA33_COLDENTER_BASELINE.md`](ERA33_COLDENTER_BASELINE.md).
 **REJECT:** Dirty enter radius=4; full GetData enter scan; CLOSED without eye.
 
+## Gap После Era34 (2026-08-10) — CreateBar SLA + SoftDefer FOV; TD-066 **partial**
+
+| Практика | Industry | Cubatarium | Era34 SoT |
+|----------|----------|------------|-----------|
+| Create bar = near-FOV debt | honest remaining work | ticks/1800 @96–99% | **done** debt fraction + `N left` |
+| Soft wall after feet ready | leave bar, finish InGame | wait ring=4 SoftDefer minutes | **done** 12s soft after underfeet lit |
+| SoftDefer empty ownership rotate | round-robin under cap | first-N starve rim | **done** scan offset + Cd=2 |
+| Cruise emerge under holes | FirstMesh > remesh flood | wall_fly≈263 | **done** FM bias + emerge≤14 |
+
+**Evidence:** manuals `223200` / `224116` SoT; see [`ERA34_CREATEBAR_BASELINE.md`](ERA34_CREATEBAR_BASELINE.md).
+**REJECT:** tick-only create progress; PreferKick on RemeshAfterApply; CLOSED without create+ocean eye.
+
 ## Gap После Era28 closeout (2026-08-10) — Visual Stage Gate; TD-064 **partial**
 
 | Практика | Industry | Cubatarium | Era28 SoT |

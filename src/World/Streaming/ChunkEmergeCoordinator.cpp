@@ -557,14 +557,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       std::unordered_set<glm::ivec3, IVec3Hash> seen_empty;
       auto &exec = GetColumnFlowExecutor();
       const int heal_r = std::max(1, focus_radius);
-      for (int dx = -heal_r; dx <= heal_r && marked_n < kEmptyOwnershipCap;
-           ++dx)
+      // Era34 P1: rotate ownership start so cap=12 cannot starve rim empties.
+      const int diam = 2 * heal_r + 1;
+      const int cells = std::max(1, diam * diam);
+      const int start = SoftDeferEmptyScanOffset % cells;
+      for (int step = 0; step < cells; ++step)
       {
-        for (int dz = -heal_r; dz <= heal_r && marked_n < kEmptyOwnershipCap;
-             ++dz)
+        const int idx = (start + step) % cells;
+        const int dx = (idx % diam) - heal_r;
+        const int dz = (idx / diam) - heal_r;
+        for (int cy = cy0; cy <= cy1; ++cy)
         {
-          for (int cy = cy0; cy <= cy1 && marked_n < kEmptyOwnershipCap; ++cy)
-          {
             const glm::ivec3 coord(focus_ground_horiz.x + dx, cy,
                                    focus_ground_horiz.z + dz);
             const int horiz = std::max(std::abs(dx), std::abs(dz));
@@ -674,15 +677,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 mesh_service.IsPendingGpuApply(coord) ||
                 mesh_service.IsPendingGpuQueued(coord) ||
                 mesh_service.IsPendingGpuKickedOrDispatched(coord);
+            // Era34 P1: ownership/Dirty only under cap; age PreferKick always.
+            const bool under_own_cap = marked_n < kEmptyOwnershipCap;
             // Era28 I-V2: no Dirty storm while FirstMesh / Inflight / PendingGpu
             // already owns SoftDefer empty (manual 012208 opaque churn).
-            if (SoftDeferEmptyShouldMarkDirty(true, has_fm, inflight_or_pending))
+            if (under_own_cap &&
+                SoftDeferEmptyShouldMarkDirty(true, has_fm, inflight_or_pending))
             {
               mesh_service.MarkDirtyPriority(coord);
             }
             // Era24 I-E2: FirstMesh ownership per SoftDefer empty coord
             // (soft cap kEmptyOwnershipCap; dedupe via Contains).
-            if (empty_fm_enqueue_n < kEmptyOwnershipCap)
+            if (under_own_cap && empty_fm_enqueue_n < kEmptyOwnershipCap)
             {
               if (!has_fm)
               {
@@ -699,6 +705,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             }
             // Era26 I-O4: SoftDefer empty ∥ void — parallel RelightThenMesh
             // (kind-separate; Capture stays FirstMesh under miss).
+            if (under_own_cap)
             {
               bool fully_dark_or_void =
                   mesh_service.HasDrawableGreedyMesh(coord) &&
@@ -708,9 +715,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 const int max_cy = std::max(
                     0, FloorDiv(world.GetProceduralSettings().MaxHeight,
                                 CHUNK_SIZE));
-                for (int cy = 0; cy <= max_cy; ++cy)
+                for (int cy_v = 0; cy_v <= max_cy; ++cy_v)
                 {
-                  const glm::ivec3 c(col.x, cy, col.y);
+                  const glm::ivec3 c(col.x, cy_v, col.y);
                   if (mesh_service.HasDrawableGreedyMesh(c) &&
                       mesh_service.GetCache().ChunkHasFullyDarkFace(c))
                   {
@@ -779,7 +786,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             }
             underfeet_undrawn = true;
             ++marked_n;
-          }
         }
       }
       // Era27 I-A2: drop ages only when healed / left rim — capped scan must
@@ -815,11 +821,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       {
         // Era21: under miss FirstMesh class, do not throttle UndrawnForceCd to 8
         // without FM progress — rim empty needs frequent Dirty.
+        // Era34 P1: SoftDefer empty residual every 2 frames (not 8).
         UndrawnForceCd =
             (missing_visible_mesh &&
              IsMissFirstMeshClass(true, phys_telem.MissCy, phys_telem.MissHoriz))
                 ? 2
-                : 8;
+                : (phys_telem.SoftDeferEmptyPlaceholderN > 0 ? 2 : 8);
+        if (phys_telem.SoftDeferEmptyPlaceholderN > 0)
+        {
+          SoftDeferEmptyScanOffset =
+              (SoftDeferEmptyScanOffset + kEmptyOwnershipCap) % cells;
+        }
       }
     }
   }
@@ -1146,6 +1158,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                                                  /*keep_h=*/2, /*keep_cy=*/2,
                                                  /*remesh_only=*/true);
       }
+    }
+    // Era34 P2: SoftDefer empty / holes while moving — clamp emerge + bias FM.
+    if (ShouldBiasFirstMeshOverRemesh(phys_ocean.SoftDeferEmptyPlaceholderN,
+                                      visual_holes || missing_visible_mesh,
+                                      moving))
+    {
+      mesh_service.SetMeshEmergeTotalBudgetMs(std::min(
+          mesh_service.GetMeshEmergeTotalBudgetMs(),
+          OceanHealMeshEmergeBudgetMs()));
+      mesh_service.SetStarveRemeshForHoles(true);
+      mesh_drain = std::max(mesh_drain, 14);
+      mesh_schedule = std::max(mesh_schedule, 12);
     }
   }
 
@@ -1782,7 +1806,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         EvaluateFocusIngress(FocusIngressInput{
             moving, missing_visible_mesh, pending_focus_count, pending_async,
             last_frame_ms, world.GetPhysicsTelemetry().UnfinishedVisual,
-            world.GetPhysicsTelemetry().DarkFaceStaleNearN});
+            world.GetPhysicsTelemetry().DarkFaceStaleNearN,
+            world.GetPhysicsTelemetry().SoftDeferEmptyPlaceholderN});
     if (cold.active && cold.promote_once &&
         (pending_focus_count > 0 || missing_visible_mesh))
     {
@@ -2158,7 +2183,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const FocusIngressDecision ingress = EvaluateFocusIngress(FocusIngressInput{
         moving, missing_visible_mesh, pending_focus_count, pending_async,
         last_frame_ms, world.GetPhysicsTelemetry().UnfinishedVisual,
-        world.GetPhysicsTelemetry().DarkFaceStaleNearN});
+        world.GetPhysicsTelemetry().DarkFaceStaleNearN,
+        world.GetPhysicsTelemetry().SoftDeferEmptyPlaceholderN});
     if (force_hole_cd <= 0)
     {
       {
