@@ -471,12 +471,12 @@ int main()
   using cutum::ShouldHideDrawableUntilLitNearRim;
   using cutum::ShouldRemeshAfterApplyOnlyOnMovingCruiseHeal;
 
-  Expect(OceanHealVoidRelightNoteMinPerFrame() == 4,
-         "Era32: void Note min 4/frame");
-  Expect(OceanHealMovingRelightDrainFloor(true, true, 250) == 3,
-         "Era32: moving void drain floor 3");
-  Expect(OceanHealMovingRelightDrainFloor(true, true, 50) == 2,
-         "Era32: moving VB-only drain floor 2");
+  Expect(OceanHealVoidRelightNoteMinPerFrame() == 2,
+         "Era31/32: void Note min 2/frame");
+  Expect(OceanHealMovingRelightDrainFloor(true, true, 250) == 2,
+         "Era31/32: moving void drain floor 2");
+  Expect(OceanHealMovingRelightDrainFloor(true, true, 50) == 1,
+         "Era31/32: moving VB-only drain floor 1");
   Expect(OceanHealMeshEmergeBudgetMs() <= 16.0,
          "Era31 I-T2: emerge cap ≤16ms");
   Expect(OceanHealRelightCarveOutMs() >= 4.0,
