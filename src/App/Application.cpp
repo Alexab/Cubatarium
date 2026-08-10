@@ -1,6 +1,7 @@
 #include "App/Application.h"
 #include "Game/Inventory/HotbarInput.h"
 #include "Game/Inventory/SlotInteraction.h"
+#include "World/Streaming/EnterVisualWarmupPolicy.h"
 
 #include "App/Platform/Log.h"
 #include "App/Core.h"
@@ -1918,12 +1919,13 @@ void UApplication::Update(double dt)
     {
       if (WorldOpRunner->IsEnterGameGpuWarmupStage())
       {
-        constexpr int kGpuWarmupMaxFrames = 16;
+        constexpr int kGpuWarmupMaxFrames = 24;
         constexpr int kGpuWarmupMinFrames = 3;
         // Era20: smaller per-frame mesh budget; GPU upload only on last ready
         // frame so EnterGameAfterWorldChange ≠ mega WarmupGreedy spike.
+        // Era29: slightly higher streaming budget — SoftDefer/PendingLight on bar.
         constexpr int kGpuWarmupMeshBudget = 8;
-        constexpr int kGpuWarmupStreamingBudget = 4;
+        constexpr int kGpuWarmupStreamingBudget = 6;
         const int remaining = WorldOpRunner->EnterGameGpuWarmupFramesRemaining();
         const int frame = kGpuWarmupMaxFrames - remaining;
         if (Geometry && World)
@@ -1939,9 +1941,11 @@ void UApplication::Update(double dt)
             {
               World->DrainEnterGameMeshWarmup(kGpuWarmupMeshBudget);
             }
-            // Cooperative load already prepared spawn; streaming Tick here races
-            // mesh Dirty iterators and was crashing EnterGame (0x80000003).
-            if (!World->IsSpawnAreaPreparedByCooperativeLoad())
+            // Era29 I-E2: always budgeted streaming/emerge on bar — coop prepare
+            // must not skip SoftDefer/PendingLight heal (manual 091332 ENTER blink).
+            // Still no MarkAllDirtyFromWorld inside TickEnterStreamingWarmup.
+            if (ShouldRunEnterStreamingWarmupDespiteSpawnPrepared(
+                    World->IsSpawnAreaPreparedByCooperativeLoad()))
             {
               World->TickEnterStreamingWarmup(kGpuWarmupStreamingBudget);
             }
