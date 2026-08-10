@@ -1480,6 +1480,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     bg_budget = std::max(bg_budget, early_budget.vb_bg_budget_floor);
   }
+  // Era31 I-T2: Relight carve-out under ocean heal (not stolen by emerge cap).
+  if (IsOceanHealPressure(missing_focus_mesh, void_n_budget, visible_black_n))
+  {
+    bg_budget = std::max(bg_budget, 2);
+  }
   else if (!tune_budget.MissFirstFrameBudget &&
            tune_budget.Era18VbBgBudgetFloor &&
            (visible_black_n > 0 || dark_face_near_n > 500))
@@ -1729,6 +1734,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       {
         void_relight_n =
             void_slots ? (void_n > 400 ? 2 : 1) : 1;
+        // Era31 I-T1: ocean heal — min 2 Relight slots/frame under void debt.
+        if (IsOceanHealPressure(missing_focus_mesh, void_n, vb_n))
+        {
+          void_relight_n = std::max(
+              void_relight_n,
+              OceanVoidRelightDrainCapMoving(void_n > 200, 2));
+        }
         void_slots_active = void_slots;
         bg_budget = std::max(bg_budget, void_relight_n);
         auto &exec = GetColumnFlowExecutor();

@@ -90,4 +90,77 @@ inline bool ShouldDrainPendingLightUnderOceanVoid(bool moving, int void_n,
   return void_n > void_T || vb_n > 0;
 }
 
+/// Era31 I-T1: min void Relight Note enqueue per frame under ocean heal.
+inline int OceanHealVoidRelightNoteMinPerFrame()
+{
+  return 2;
+}
+
+/// Era31 I-T1: moving Relight drain floor columns under ocean heal + void debt.
+inline int OceanHealMovingRelightDrainFloor(bool ocean_heal, bool moving,
+                                            int void_n, int void_T = 200)
+{
+  if (!ocean_heal || !moving)
+  {
+    return 0;
+  }
+  return void_n > void_T ? 2 : 1;
+}
+
+/// Era31 I-T2: cap MeshEmerge budget under ocean heal pressure (moving cruise).
+inline double OceanHealMeshEmergeBudgetMs()
+{
+  return 14.0;
+}
+
+/// Era31 I-T2: protected Relight carve-out ms (not zero-sum stolen from emerge).
+inline double OceanHealRelightCarveOutMs()
+{
+  return 6.0;
+}
+
+/// Era31 I-T3: VB progress only when dark debt clearing or lit slot pending.
+inline bool ShouldCountVisibleBlackProgress(bool has_ticket_or_progress,
+                                            bool fully_dark,
+                                            bool pending_replace_lit)
+{
+  if (!has_ticket_or_progress)
+  {
+    return false;
+  }
+  if (pending_replace_lit)
+  {
+    return true;
+  }
+  return !fully_dark;
+}
+
+/// Era31 I-T3: near rim hide drawable until lit under ocean heal.
+inline bool ShouldHideDrawableUntilLitNearRim(bool ocean_heal_pressure, int horiz,
+                                            bool fully_dark,
+                                            bool pending_replace_lit,
+                                            int near_r = 2)
+{
+  if (!ocean_heal_pressure || horiz > near_r)
+  {
+    return false;
+  }
+  return fully_dark && !pending_replace_lit;
+}
+
+/// Era31 I-T5: moving cruise + heal pressure → RemeshAfterApply-only.
+inline bool ShouldRemeshAfterApplyOnlyOnMovingCruiseHeal(bool moving,
+                                                         bool ocean_heal_pressure,
+                                                         bool has_drawable)
+{
+  return moving && ocean_heal_pressure && has_drawable;
+}
+
+/// Era31 I-T4: force close enter bar when soft budget or underfeet visual ready.
+inline bool ShouldForceEnterVisualCap(double elapsed_ms, bool visual_soft_ready)
+{
+  return elapsed_ms >= static_cast<double>(EnterVisualWarmupHardCapMs()) ||
+         visual_soft_ready;
+}
+
 } // namespace cutum

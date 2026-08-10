@@ -372,12 +372,16 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       EnqueueVoidDarkRelightTickets(scheduler_, focus, void_dark_cols);
       // Era23 I-V5: Note+FIFO on void enqueue under void pressure (void_n>T /
       // miss dual-queue). VB-heal remesh tickets still Dispatch→RecoverUnlit Note.
-      if (void_pressure)
+      const bool ocean_heal_note = IsOceanHealPressure(
+          missing_visible_mesh, void_n, visible_black_n);
+      if (void_pressure || ocean_heal_note)
       {
+        const int note_cap =
+            ocean_heal_note ? OceanHealVoidRelightNoteMinPerFrame() : 2;
         int note_n = 0;
         for (const glm::ivec2 &col : void_dark_cols)
         {
-          if (note_n >= 2)
+          if (note_n >= note_cap)
           {
             break;
           }

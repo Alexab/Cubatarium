@@ -10,6 +10,7 @@
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
+#include "World/Streaming/OceanCruisePolicy.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Mesh/GpuMeshPipeline.h"
@@ -205,7 +206,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   prep_t = std::chrono::high_resolution_clock::now();
   mesh_service.SetDeferMeshUntilLitFn(
       [&world, &mesh_service, focus_ground_horiz, focus_radius,
-       have_nearest_missing, nearest_missing_hole](glm::ivec3 chunk_coord)
+       have_nearest_missing, nearest_missing_hole,
+       missing_visible_mesh](glm::ivec3 chunk_coord)
       {
         const int horiz =
             std::max(std::abs(chunk_coord.x - focus_ground_horiz.x),
@@ -226,6 +228,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const bool allow_unlit = AllowUnlitFirstMesh(
             has_mesh, horiz, is_nearest_hole, in_focus,
             kVisualStageNearFovHoriz);
+        const int void_n = world.GetPhysicsTelemetry().DarkFaceVoidNearN;
+        const int vb_n = world.GetPhysicsTelemetry().VisibleBlackFocusN;
+        const bool ocean_heal =
+            IsOceanHealPressure(missing_visible_mesh, void_n, vb_n);
+        const bool fully_dark =
+            has_mesh &&
+            mesh_service.GetCache().ChunkHasFullyDarkFace(chunk_coord);
+        const bool pending_replace =
+            pending || mesh_service.IsPendingGpuApply(chunk_coord);
+        if (ShouldHideDrawableUntilLitNearRim(
+                ocean_heal, horiz, fully_dark, pending_replace,
+                kVisualStageNearFovHoriz))
+        {
+          return true;
+        }
         return SoftDeferMeshUntilLitPolicy(
             underfeet, has_mesh,
             world.RequiresLightingLitGate() && pending, in_focus, may_mesh,
@@ -1103,6 +1120,27 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
              : (healed_idle_emerge
                     ? (idle_focus_dirty_debt ? 28.0 : 14.0)
                     : 60.0));
+  // Era31 I-T2: cap emerge + defer far stale remesh under ocean heal pressure.
+  {
+    auto &phys_ocean = world.GetPhysicsTelemetryMutable();
+    const bool ocean_heal = IsOceanHealPressure(
+        missing_visible_mesh, phys_ocean.DarkFaceVoidNearN,
+        phys_ocean.VisibleBlackFocusN);
+    if (ocean_heal)
+    {
+      if (moving)
+      {
+        mesh_service.SetMeshEmergeTotalBudgetMs(OceanHealMeshEmergeBudgetMs());
+      }
+      if (phys_ocean.DarkFaceVoidNearN > 200)
+      {
+        mesh_service.SetStarveRemeshKeepHoriz(2);
+        mesh_service.DropRemeshDirtyBeyondRadius(focus_ground_horiz,
+                                                 /*keep_h=*/2, /*keep_cy=*/2,
+                                                 /*remesh_only=*/true);
+      }
+    }
+  }
 
   // Healthy flight with no visual holes: flush Dirty so pressure can leave Red
   // (Dirty plateaus ~700 trapped Red when exit required dirty<=500).
@@ -1349,6 +1387,33 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     else if (cruise_promote_cd > 0)
     {
       --cruise_promote_cd;
+    }
+  }
+  // Era31 I-T1: ocean void heal moving drain floor (even without miss).
+  {
+    const int void_n = world.GetPhysicsTelemetry().DarkFaceVoidNearN;
+    const int vb_n = world.GetPhysicsTelemetry().VisibleBlackFocusN;
+    const bool ocean_heal =
+        IsOceanHealPressure(missing_visible_mesh, void_n, vb_n);
+    if (moving && ocean_heal)
+    {
+      static int ocean_void_drain_cd = 0;
+      if (ocean_void_drain_cd <= 0)
+      {
+        const int floor =
+            OceanHealMovingRelightDrainFloor(ocean_heal, moving, void_n);
+        if (floor > 0)
+        {
+          GetColumnFlowExecutor().DrainIdlePendingLight(
+              world, focus_ground_horiz, focus_radius, floor, false,
+              last_frame_ms, pending_focus_count, missing_visible_mesh);
+        }
+        ocean_void_drain_cd = 1;
+      }
+      else
+      {
+        --ocean_void_drain_cd;
+      }
     }
   }
 
