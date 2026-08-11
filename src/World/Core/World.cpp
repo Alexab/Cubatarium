@@ -5224,11 +5224,13 @@ int UWorld::CountCreateNearFovWarmupDebt(bool *out_underfeet_lit_ready) const
           continue;
         }
         bool any_solid = false;
-        for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+        // Era35 P5: stride-2 for near-FOV debt count (matches emerge scan).
+        const int probe_stride = underfeet ? 2 : 4;
+        for (int z = 0; z < CHUNK_SIZE && !any_solid; z += probe_stride)
         {
-          for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+          for (int x = 0; x < CHUNK_SIZE && !any_solid; x += probe_stride)
           {
-            for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+            for (int y = 0; y < CHUNK_SIZE && !any_solid; y += probe_stride)
             {
               if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
               {

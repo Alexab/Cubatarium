@@ -130,4 +130,46 @@ inline bool ShouldRemeshAfterApplyOnlyOnIdleDrawable(bool idle_or_suppress,
   return idle_or_suppress && has_drawable;
 }
 
+/// Era35 P1: SoftDefer empty scan cy-window for near-FOV columns (horiz<=2)
+/// covers full column (0..max_cy) so air chunks with trees/leaves above
+/// preferred_cy+2 are not permanently stuck as SoftDefer empty.
+inline int SoftDeferCyWindowNearTop(int max_cy, int preferred_cy, int horiz,
+                                    int near_r = 2)
+{
+  if (horiz <= near_r)
+  {
+    return max_cy;
+  }
+  return std::min(max_cy, preferred_cy + 2);
+}
+
+/// Era35 P2: dynamic SoftDefer empty ownership cap based on current empty count.
+inline int SoftDeferOwnershipCap(int softdefer_empty_n)
+{
+  return std::min(24, softdefer_empty_n / 4 + 12);
+}
+
+/// Era35 P4: cruise catch-up emerge budget boost when SoftDefer empty lag.
+inline double CruiseCatchUpEmergeBudgetMs(double base_ms,
+                                          int softdefer_empty_n,
+                                          bool moving)
+{
+  if (!moving || softdefer_empty_n <= 5)
+  {
+    return base_ms;
+  }
+  return base_ms * 1.5;
+}
+
+/// Era35 P4: cruise catch-up ownership cap boost.
+inline int CruiseCatchUpOwnershipCap(int base_cap, int softdefer_empty_n,
+                                     bool moving)
+{
+  if (!moving || softdefer_empty_n <= 5)
+  {
+    return base_cap;
+  }
+  return std::max(base_cap, 18);
+}
+
 } // namespace cutum

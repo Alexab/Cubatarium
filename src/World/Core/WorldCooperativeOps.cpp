@@ -1794,6 +1794,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         WarnIfTerrainMeshesMissing(world, "PrepareView before spawn warmup");
         StreamingWarmupWallStart = std::chrono::steady_clock::now();
         StreamingWarmupPeakDebt = 0;
+        StreamingWarmupLastRawDebt = 0;
+        StreamingWarmupDisplayDebt = 0;
       }
       TickCreateSpawnMeshWarmup(world, std::max(1, budget / 2));
       ++StreamingWarmupTicks;
@@ -1803,13 +1805,24 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       {
         StreamingWarmupPeakDebt = debt;
       }
+      // Era35 P3: monotonic display debt — only decreases, never jumps up.
+      if (StreamingWarmupTicks == 1)
+      {
+        StreamingWarmupDisplayDebt = debt;
+      }
+      else
+      {
+        StreamingWarmupDisplayDebt = std::min(StreamingWarmupDisplayDebt, debt);
+      }
+      StreamingWarmupLastRawDebt = debt;
       const bool spawn_settled = IsCreateSpawnWarmupSettled(world);
       const float prepare_view_base =
           CooperativeCreateMeshProgressBase() + kCreateWeightMeshWarmup;
       const int denom = std::max(1, StreamingWarmupPeakDebt);
       const float stream_inner =
           spawn_settled ? 1.0f
-                        : (1.0f - CreateBarDebtFraction(debt, denom));
+                        : (1.0f - CreateBarDebtFraction(
+                                      StreamingWarmupDisplayDebt, denom));
       const double elapsed_ms = std::chrono::duration<double, std::milli>(
                                     std::chrono::steady_clock::now() -
                                     StreamingWarmupWallStart)
@@ -1821,7 +1834,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       }
       else
       {
-        status = "Loading FOV… " + std::to_string(debt) + " left";
+        status = "Loading FOV… " +
+                 std::to_string(StreamingWarmupDisplayDebt) + " left";
       }
       Report(sink, "prepare_view",
              prepare_view_base + kCreateWeightPrepare * stream_inner, status);
@@ -1859,6 +1873,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     Active = false;
     StreamingWarmupTicks = 0;
     StreamingWarmupPeakDebt = 0;
+    StreamingWarmupLastRawDebt = 0;
+    StreamingWarmupDisplayDebt = 0;
     const float prepare_view_base =
         Kind == WorldCoopKind::Create
             ? (CooperativeCreateMeshProgressBase() + kCreateWeightMeshWarmup)

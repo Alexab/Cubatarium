@@ -122,6 +122,10 @@ private:
   size_t MeshWarmupCompletedTotal{0};
   int StreamingWarmupTicks{0};
   int StreamingWarmupPeakDebt{0};
+  /// Era35 P3: last raw debt for monotonic display.
+  int StreamingWarmupLastRawDebt{0};
+  /// Era35 P3: monotonic display debt (only decreases).
+  int StreamingWarmupDisplayDebt{0};
   std::chrono::steady_clock::time_point StreamingWarmupWallStart{};
 
   void BeginDeferredRelightQueue(UWorld &world);

@@ -552,6 +552,48 @@ int main()
            "Era34 P0: near settle radius < LitDrawable ring4");
   }
 
+  // --- Era35 P1 cy-window ---
+  {
+    using cutum::SoftDeferCyWindowNearTop;
+    Expect(SoftDeferCyWindowNearTop(10, 3, 1) == 10,
+           "Era35 P1: near-FOV (horiz=1) gets max_cy");
+    Expect(SoftDeferCyWindowNearTop(10, 3, 2) == 10,
+           "Era35 P1: near-FOV (horiz=2) gets max_cy");
+    Expect(SoftDeferCyWindowNearTop(10, 3, 3) == 5,
+           "Era35 P1: far (horiz=3) gets preferred+2");
+    Expect(SoftDeferCyWindowNearTop(10, 3, 5) == 5,
+           "Era35 P1: far (horiz=5) gets preferred+2");
+  }
+
+  // --- Era35 P2 dynamic ownership cap ---
+  {
+    using cutum::SoftDeferOwnershipCap;
+    Expect(SoftDeferOwnershipCap(0) == 12,
+           "Era35 P2: zero empty → cap=12");
+    Expect(SoftDeferOwnershipCap(48) == 24,
+           "Era35 P2: 48 empty → cap=24");
+    Expect(SoftDeferOwnershipCap(100) == 24,
+           "Era35 P2: 100 empty → cap clamped to 24");
+    Expect(SoftDeferOwnershipCap(20) == 17,
+           "Era35 P2: 20 empty → cap=17");
+  }
+
+  // --- Era35 P4 cruise catch-up ---
+  {
+    using cutum::CruiseCatchUpEmergeBudgetMs;
+    using cutum::CruiseCatchUpOwnershipCap;
+    Expect(CruiseCatchUpEmergeBudgetMs(14.0, 10, true) > 14.0,
+           "Era35 P4: moving with empty>5 → boosted budget");
+    Expect(CruiseCatchUpEmergeBudgetMs(14.0, 3, true) == 14.0,
+           "Era35 P4: moving with empty<=5 → no boost");
+    Expect(CruiseCatchUpEmergeBudgetMs(14.0, 10, false) == 14.0,
+           "Era35 P4: idle → no boost");
+    Expect(CruiseCatchUpOwnershipCap(12, 10, true) == 18,
+           "Era35 P4: moving with empty>5 → cap 18");
+    Expect(CruiseCatchUpOwnershipCap(12, 3, true) == 12,
+           "Era35 P4: moving with empty<=5 → cap unchanged");
+  }
+
   // --- Era34 P2 FirstMesh bias ---
   {
     using cutum::ShouldBiasFirstMeshOverRemesh;

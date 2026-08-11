@@ -12,6 +12,7 @@
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/CyOrderPolicy.h"
+#include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Mesh/GpuMeshPipeline.h"
@@ -534,7 +535,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         0, FloorDiv(procedural.MaxHeight, CHUNK_SIZE));
     int cy0 =
         missing_visible_mesh ? 0 : std::max(0, preferred_cy - 1);
-    int cy1 = std::min(max_cy, preferred_cy + 2);
+    // Era35 P1: base cy1; near-FOV columns get full-column scan below.
+    const int cy1_base = std::min(max_cy, preferred_cy + 2);
+    int cy1 = cy1_base;
     // Era26 I-O5: SoftDefer empty scan covers sea band under FillWater so
     // ocean lateral empty (horiz 2–5) is not missed by preferred_cy window.
     if (procedural.FillWater)
@@ -548,7 +551,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       cy1 = std::max(cy1, std::min(max_cy, sea_cy1));
     }
     // Era24: rim soft ownership budget (not DoD knob) — per-coord FirstMesh.
-    constexpr int kEmptyOwnershipCap = 12;
+    // Era35 P2: dynamic cap based on current empty count (12..24).
+    // Era35 P4: cruise catch-up boosts cap to 18 when moving with empty > 5.
+    const int kEmptyOwnershipCap = CruiseCatchUpOwnershipCap(
+        SoftDeferOwnershipCap(phys_telem.SoftDeferEmptyPlaceholderN),
+        phys_telem.SoftDeferEmptyPlaceholderN, moving);
     if (UndrawnForceCd <= 0)
     {
       int marked_n = 0;
@@ -566,11 +573,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const int idx = (start + step) % cells;
         const int dx = (idx % diam) - heal_r;
         const int dz = (idx / diam) - heal_r;
-        for (int cy = cy0; cy <= cy1; ++cy)
+        const int horiz = std::max(std::abs(dx), std::abs(dz));
+        // Era35 P1: near-FOV columns scan full height.
+        const int col_cy1 = SoftDeferCyWindowNearTop(max_cy, preferred_cy,
+                                                     horiz);
+        const int eff_cy1 = std::max(cy1, col_cy1);
+        for (int cy = cy0; cy <= eff_cy1; ++cy)
         {
             const glm::ivec3 coord(focus_ground_horiz.x + dx, cy,
                                    focus_ground_horiz.z + dz);
-            const int horiz = std::max(std::abs(dx), std::abs(dz));
             const bool has_drawable = mesh_service.HasDrawableGreedyMesh(coord);
             const bool has_greedy = mesh_service.HasGreedyMesh(coord);
             const bool is_dirty = mesh_service.IsChunkMeshDirty(coord);
@@ -593,11 +604,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               continue;
             }
             bool any_solid = false;
-            for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+            // Era35 P5: stride-2 for near-FOV to catch sparse leaf blocks.
+            const int probe_stride = (horiz <= 2) ? 2 : 4;
+            for (int z = 0; z < CHUNK_SIZE && !any_solid; z += probe_stride)
             {
-              for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+              for (int x = 0; x < CHUNK_SIZE && !any_solid; x += probe_stride)
               {
-                for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+                for (int y = 0; y < CHUNK_SIZE && !any_solid; y += probe_stride)
                 {
                   if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
                   {
@@ -1164,9 +1177,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                                       visual_holes || missing_visible_mesh,
                                       moving))
     {
+      // Era35 P4: boost emerge budget when SoftDefer empty lag during cruise.
+      const double cruise_budget = CruiseCatchUpEmergeBudgetMs(
+          OceanHealMeshEmergeBudgetMs(), phys_ocean.SoftDeferEmptyPlaceholderN,
+          moving);
       mesh_service.SetMeshEmergeTotalBudgetMs(std::min(
-          mesh_service.GetMeshEmergeTotalBudgetMs(),
-          OceanHealMeshEmergeBudgetMs()));
+          mesh_service.GetMeshEmergeTotalBudgetMs(), cruise_budget));
       mesh_service.SetStarveRemeshForHoles(true);
       mesh_drain = std::max(mesh_drain, 14);
       mesh_schedule = std::max(mesh_schedule, 12);
