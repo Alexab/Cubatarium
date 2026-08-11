@@ -118,6 +118,8 @@ private:
   double EnterLoadElapsedMs{0.0};
   /// Era33: Create/SaveThenCreate must not force-cap GpuWarmup while visual debt.
   bool EnterGameColdCreate{false};
+  /// Era41: peak FOV lit debt for monotonic progress on the bar.
+  int EnterGameFovLitPeakDebt{0};
   UBackgroundQuiesceState ShutdownQuiesceState{};
 };
 

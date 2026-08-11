@@ -5178,16 +5178,185 @@ bool UWorld::NeedsEnterGameVisualWarmup() const
   return false;
 }
 
+int UWorld::CountEnterFovLitDebt() const
+{
+  if (!MeshService || !BlockRegistry)
+  {
+    return 0;
+  }
+  const UWorldMeshService &mesh = *MeshService;
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
+  const glm::ivec3 focus_ground(center.x, 0, center.z);
+  const int visual_r = EnterVisualWarmupRadiusChunks();
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
+  const int sea_cy =
+      FloorDiv(std::max(0, ProceduralTemplate.SeaLevel), CHUNK_SIZE);
+  int cy0 = 0;
+  int cy1 = std::min(max_cy, std::max(focus_cy + 2, sea_cy + 1));
+  if (ProceduralTemplate.FillWater)
+  {
+    cy0 = std::min(cy0, std::max(0, sea_cy - 1));
+  }
+  cy0 = std::min(cy0, std::max(0, focus_cy - 1));
+
+  int debt = 0;
+  for (int dx = -visual_r; dx <= visual_r; ++dx)
+  {
+    for (int dz = -visual_r; dz <= visual_r; ++dz)
+    {
+      const glm::ivec2 col(center.x + dx, center.z + dz);
+      if (IsPendingLightBeforeMesh(col))
+      {
+        ++debt;
+        continue;
+      }
+      bool fully_dark_solid = false;
+      for (int cy = cy0; cy <= cy1 && !fully_dark_solid; ++cy)
+      {
+        const glm::ivec3 coord(col.x, cy, col.y);
+        const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+        if (!chunk)
+        {
+          continue;
+        }
+        const bool has_drawable = mesh.HasDrawableGreedyMesh(coord);
+        if (!has_drawable)
+        {
+          continue;
+        }
+        bool any_solid = false;
+        for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+        {
+          for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+          {
+            for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+            {
+              if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+              {
+                any_solid = true;
+              }
+            }
+          }
+        }
+        if (!any_solid)
+        {
+          continue;
+        }
+        if (mesh.GetCache().ChunkHasFullyDarkFace(coord))
+        {
+          fully_dark_solid = true;
+        }
+      }
+      if (fully_dark_solid)
+      {
+        ++debt;
+      }
+    }
+  }
+  return debt;
+}
+
+int UWorld::TickEnterFovLitPass(int capture_budget)
+{
+  if (!Persistence || !MeshService || !BlockRegistry)
+  {
+    return 0;
+  }
+  const int cap_budget =
+      capture_budget > 0 ? capture_budget : EnterFovRelightCaptureBudget();
+  const int apply_budget = EnterFovRelightApplyBudget();
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
+  const glm::ivec3 focus_ground(center.x, 0, center.z);
+  const int visual_r = EnterVisualWarmupRadiusChunks();
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const int max_cy = std::max(0, FloorDiv(max_y, CHUNK_SIZE));
+  const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
+  const int sea_cy =
+      FloorDiv(std::max(0, ProceduralTemplate.SeaLevel), CHUNK_SIZE);
+  int cy0 = 0;
+  int cy1 = std::min(max_cy, std::max(focus_cy + 2, sea_cy + 1));
+  if (ProceduralTemplate.FillWater)
+  {
+    cy0 = std::min(cy0, std::max(0, sea_cy - 1));
+  }
+  cy0 = std::min(cy0, std::max(0, focus_cy - 1));
+  const int band_min = std::max(0, cy0 * CHUNK_SIZE);
+  const int band_max = std::min(max_y, (cy1 + 1) * CHUNK_SIZE - 1);
+
+  // Priority-enqueue every FOV column that still needs light.
+  int enqueued = 0;
+  for (int dx = -visual_r; dx <= visual_r; ++dx)
+  {
+    for (int dz = -visual_r; dz <= visual_r; ++dz)
+    {
+      const glm::ivec2 col(center.x + dx, center.z + dz);
+      bool need = IsPendingLightBeforeMesh(col);
+      if (!need)
+      {
+        for (int cy = cy0; cy <= cy1; ++cy)
+        {
+          const glm::ivec3 coord(col.x, cy, col.y);
+          const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+          if (!chunk || !MeshService->HasDrawableGreedyMesh(coord))
+          {
+            continue;
+          }
+          bool any_solid = false;
+          for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+          {
+            for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+            {
+              for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+              {
+                if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+                {
+                  any_solid = true;
+                }
+              }
+            }
+          }
+          if (any_solid &&
+              MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+          {
+            need = true;
+            NotePendingLightBeforeMesh(glm::ivec3(col.x, 0, col.y), band_min,
+                                       band_max);
+            break;
+          }
+        }
+      }
+      if (!need)
+      {
+        continue;
+      }
+      Persistence->EnqueueTerrainColumnRelight(col.x * CHUNK_SIZE,
+                                               col.y * CHUNK_SIZE,
+                                               /*priority=*/true, band_min,
+                                               band_max);
+      ++enqueued;
+    }
+  }
+
+  DrainRelightQueuesBudget(/*max_player_jobs=*/0, cap_budget);
+  DrainAsyncRelightResults(apply_budget, /*priority_mesh=*/true,
+                           /*enqueue_background_frontier=*/false);
+  return enqueued;
+}
+
 bool UWorld::IsCreateSpawnWarmupSettled() const
 {
   if (GetBlockWorld().CountNonAir() == 0)
   {
     return true;
   }
-  // Era34 P0: near-FOV settle (underfeet lit + SoftDefer/mesh debt r≤2), not
-  // full LitDrawable ring=4 (Era33 tick grind / 224116).
+  // Era34 P0: near-FOV settle; Era41: also LitDrawable FOV lit debt ring=4.
   bool underfeet_lit = false;
-  return CountCreateNearFovWarmupDebt(&underfeet_lit) == 0;
+  return CountCreateNearFovWarmupDebt(&underfeet_lit) == 0 &&
+         CountEnterFovLitDebt() == 0;
 }
 
 int UWorld::CountCreateNearFovWarmupDebt(bool *out_underfeet_lit_ready) const

@@ -1,4 +1,5 @@
 #include "App/WorldOperationRunner.h"
+#include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Core/WorldLoadDiagnostics.h"
 #include "App/Core.h"
@@ -6,6 +7,7 @@
 #include "World/Core/World.h"
 #include <chrono>
 #include <iostream>
+#include <string>
 
 namespace cutum
 {
@@ -216,29 +218,48 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
     return true;
   }
   EnterGameGpuWarmupElapsedMs += frame_ms;
+  const int fov_debt = World.CountEnterFovLitDebt();
+  if (fov_debt > EnterGameFovLitPeakDebt)
+  {
+    EnterGameFovLitPeakDebt = fov_debt;
+  }
+  const bool mesh_ready = !World.NeedsEnterGameMeshWarmup();
+  const bool fov_ready = fov_debt <= 0;
+  const bool soft_ready = mesh_ready && fov_ready;
+  // Era41: wait for LitDrawable FOV lit (or 15s hard-wall) — no 200ms load abort.
+  const bool cap_reached = ShouldForceEnterVisualCap(
+      EnterGameGpuWarmupElapsedMs, soft_ready, EnterGameColdCreate);
+  const float lit_prog =
+      EnterFovLitProgressFraction(fov_debt, EnterGameFovLitPeakDebt);
+  const float frac = 0.94f + 0.05f * lit_prog;
+  std::string status;
+  if (fov_debt > 0)
+  {
+    status = "Lighting FOV… " + std::to_string(fov_debt) + " left";
+  }
+  else if (!mesh_ready)
+  {
+    status = "Uploading terrain...";
+  }
+  else
+  {
+    status = "Preparing view...";
+  }
+  sink.Report("prepare_view", frac, status);
+  if (EnterGameGpuWarmupFramesLeft > 0)
+  {
+    --EnterGameGpuWarmupFramesLeft;
+  }
   const int frame_index =
       kEnterGameGpuWarmupMaxFrames - EnterGameGpuWarmupFramesLeft;
-  const float frac =
-      0.94f + 0.05f * (static_cast<float>(frame_index + 1) /
-                        static_cast<float>(kEnterGameGpuWarmupMaxFrames));
-  sink.Report("prepare_view", frac, "Uploading terrain...");
-  --EnterGameGpuWarmupFramesLeft;
   const bool min_frames_done =
-      frame_index + 1 >= kEnterGameGpuWarmupMinFrames;
-  const bool mesh_ready = !World.NeedsEnterGameMeshWarmup();
-  // Era31 I-T4 / Era33 P0: hard cap only for load/resume — cold create waits
-  // LitDrawable initial FOV on the bar.
-  const bool cap_reached = ShouldForceEnterVisualCap(
-      EnterGameGpuWarmupElapsedMs, mesh_ready, EnterGameColdCreate);
+      frame_index >= kEnterGameGpuWarmupMinFrames;
   if (!mesh_ready)
   {
     World.SetEnterGameWarmupMissingGreedy(World.CountPostLoadRingNotReady());
   }
-  // Do not block EnterGame on live streamer settle — cooperative load already
-  // prepared spawn; streaming continues in InGame.
-  // Era30 I-O6: hard cap — close bar after soft budget even if visual debt lingers.
-  if (EnterGameGpuWarmupFramesLeft > 0 && (!min_frames_done || !mesh_ready) &&
-      !cap_reached)
+  // Stay on bar until min frames + FOV/mesh ready, unless hard-wall.
+  if ((!min_frames_done || !soft_ready) && !cap_reached)
   {
     return false;
   }
@@ -346,6 +367,7 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
       CurrentStage = Stage::EnterGameGpuWarmup;
       EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupMaxFrames;
       EnterGameGpuWarmupElapsedMs = 0.0;
+      EnterGameFovLitPeakDebt = 0;
       EnterGameColdCreate = false;
       return false;
     }
@@ -393,6 +415,7 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
       CurrentStage = Stage::EnterGameGpuWarmup;
       EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupMaxFrames;
       EnterGameGpuWarmupElapsedMs = 0.0;
+      EnterGameFovLitPeakDebt = 0;
       EnterGameColdCreate = true;
       return false;
     }

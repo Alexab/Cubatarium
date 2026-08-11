@@ -1,5 +1,6 @@
 #pragma once
 
+#include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
 
 #include <algorithm>
@@ -58,10 +59,11 @@ inline bool FluidMapShouldThrottleCruise(int pending, double wall_ms,
   return pending > 32 || wall_ms > 30.0;
 }
 
-/// Era30 I-O6: hard enter_app visual gate cap (ms).
+/// Era30 I-O6 / Era41: legacy soft enter_app name kept; FOV lit uses
+/// EnterFovLitHardWallMs (15s). Do not abort load at 200ms.
 inline int EnterVisualWarmupHardCapMs()
 {
-  return 200;
+  return EnterFovLitHardWallMs();
 }
 
 /// Era30 I-O5: ocean cruise Capture witness pin (separate from enter T=16).
@@ -171,21 +173,17 @@ inline bool ShouldRemeshAfterApplyOnlyOnMovingCruiseHeal(bool moving,
   return moving && ocean_heal_pressure && has_drawable;
 }
 
-/// Era31 I-T4 / Era33 P0: force close enter bar when soft-ready, or (load/
-/// resume only) when GpuWarmup wall hits hard cap. Cold create must not force
-/// while visual debt remains — initial FOV stays on the world-create bar.
+/// Era31 I-T4 / Era33 P0 / Era41: force close enter bar when soft-ready, or
+/// when FOV-lit hard-wall (15s) is hit. Load/resume no longer abort at 200ms
+/// while PendingLight/FullyDark remain in LitDrawable ring.
 inline bool ShouldForceEnterVisualCap(double elapsed_ms, bool visual_soft_ready,
-                                      bool cold_create = false)
+                                      bool /*cold_create*/ = false)
 {
   if (visual_soft_ready)
   {
     return true;
   }
-  if (cold_create)
-  {
-    return false;
-  }
-  return elapsed_ms >= static_cast<double>(EnterVisualWarmupHardCapMs());
+  return elapsed_ms >= static_cast<double>(EnterFovLitHardWallMs());
 }
 
 } // namespace cutum

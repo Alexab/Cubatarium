@@ -263,6 +263,41 @@ inline int EnterWarmupSoftDeferOwnershipCap(int base_cap, int softdefer_empty_n,
   return std::max(base_cap, 18);
 }
 
+/// Era41: safety hard-wall for Enter FOV lit pass (ms). Not the old 200ms abort.
+inline int EnterFovLitHardWallMs()
+{
+  return 15000;
+}
+
+/// Era41: Capture columns per enter FOV lit tick (async workers parallelize).
+inline int EnterFovRelightCaptureBudget()
+{
+  return 4;
+}
+
+/// Era41: async Relight apply budget while enter FOV lit pass is active.
+inline int EnterFovRelightApplyBudget()
+{
+  return 12;
+}
+
+/// Era41: progress fraction for Lighting FOV bar (1 - debt/peak).
+inline float EnterFovLitProgressFraction(int debt, int peak_debt)
+{
+  return 1.0f - CreateBarDebtFraction(debt, std::max(1, peak_debt));
+}
+
+/// Era41: hold enter bar while FOV lit debt remains (unless hard-wall).
+inline bool ShouldHoldEnterBarForFovLit(int fov_lit_debt, double elapsed_ms,
+                                        int hard_wall_ms = EnterFovLitHardWallMs())
+{
+  if (fov_lit_debt <= 0)
+  {
+    return false;
+  }
+  return elapsed_ms < static_cast<double>(hard_wall_ms);
+}
+
 /// Era35 P1: SoftDefer empty scan cy-window for near-FOV columns (horiz<=2)
 /// covers full column (0..max_cy) so air chunks with trees/leaves above
 /// preferred_cy+2 are not permanently stuck as SoftDefer empty.

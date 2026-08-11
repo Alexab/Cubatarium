@@ -122,6 +122,14 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-067 | Era38 | Near-FOV Work Priority + Resume Parity | SoftDefer ownership row-major+cap starves near; Unlit hinterland + rear slots; autofly≠manual | **partial 2026-08-11** A0–A3 + B harness; gate=`land-cruise-resume`; CLOSED only within 2× manual + eye |
 | TD-ARCH-068 | Era39 | SoftDefer Anti-Flicker + Hidden-Neighbor Seam | SoftDefer empty publish/withdraw flicker; ready-chunk faces X-ray when SoftDefer-hidden neighbor; FIFO residual | **partial 2026-08-11** P0–P2 + A4 (floor 12 + unlit telem split); wait manual eye |
 | TD-ARCH-069 | Era40 | Relight FIFO Unfreeze (miss rim) | SoftDefer pin horiz≤2 misses rim 3–4; floors silent at pendf≈15; fifo≈96 completed≈0 | **partial 2026-08-11** P0–P3 landed; resume fifo still ~95; wait manual rim eye |
+| TD-ARCH-070 | Era41 | Enter FOV Lit on progress bar | Load/resume aborted enter at 200ms; FOV PendingLight/FullyDark left for InGame | **partial 2026-08-11** P0–P2 landed; wait manual World_174 enter+fly eye |
+
+> **Era41 Enter FOV Lit (2026-08-11):** Progress bar holds until LitDrawable ring=4
+> PendingLight/FullyDark debt clears (or 15s hard-wall). `TickEnterFovLitPass`
+> priority-enqueues FOV columns, elevated Capture (4) + async apply (12);
+> status `Lighting FOV… N left`. Removed load-only 200ms `ShouldForceEnterVisualCap`
+> abort. Create PrepareView also drains FOV lit and will not soft-leave while
+> fov_debt>0. Reject: LitDrawable ring off; Unlit void; CLOSED without manual eye.
 
 > **Era40 Relight FIFO Unfreeze (2026-08-11):** Miss/SoftDefer Relight pin covers
 > LitDrawable ring (`horiz≤4`); force Enqueue miss∧(PendingLight∨undrawn); miss

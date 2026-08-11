@@ -212,13 +212,17 @@ record = `land-cruise-resume`. Miss-rim Relight pin≤4 + pendf>15 floors + soft
 miss Capture exception. CLOSED only after manual World_174 rim eye (underfeet KEEP;
 horiz 2–4 fill) and cruise_fifo/completed DoD.
 
+**Era41 Enter FOV Lit (2026-08-11):** TD-ARCH-070 **partial**. Progress bar waits
+for LitDrawable ring=4 lighting (`Lighting FOV… N left`); hard-wall 15s replaces
+200ms load abort. Manual SoT: enter FOV lit, then fly vs `manual_era40_204252`.
+
 ```powershell
 python tools/flight_sim_run.py --scenario land-cruise-resume --world World_174 `
-  --phase-id ERA40_LAND_RESUME --report bin/iter_reports/era40_land_resume.json `
+  --phase-id ERA41_LAND_RESUME --report bin/iter_reports/era41_land_resume.json `
   --process-timeout 480 --warmup-sec 20 `
-  --baseline-manual bin/iter_reports/manual_era39_194443.json
+  --baseline-manual bin/iter_reports/manual_era40_204252.json
 python tools/flight_sim_phase_gate.py --phase-id ARCH_D3_LAND `
-  --report bin/iter_reports/era40_land_resume.json
+  --report bin/iter_reports/era41_land_resume.json
 ```
 
 **Backend matrix (R4):** desktop

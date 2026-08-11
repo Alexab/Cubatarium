@@ -1798,11 +1798,14 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         StreamingWarmupDisplayDebt = 0;
       }
       TickCreateSpawnMeshWarmup(world, std::max(1, budget / 2));
+      // Era41: light LitDrawable FOV on create bar (async Capture + workers).
+      world.TickEnterFovLitPass(EnterFovRelightCaptureBudget());
       ++StreamingWarmupTicks;
       bool underfeet_lit = false;
       const int raw_debt = world.CountCreateNearFovWarmupDebt(&underfeet_lit);
+      const int fov_debt = world.CountEnterFovLitDebt();
       const auto &phys = world.GetPhysicsTelemetry();
-      const int debt = raw_debt + phys.FocusDarkMesh +
+      const int debt = raw_debt + fov_debt + phys.FocusDarkMesh +
                        phys.SoftDeferEmptyPlaceholderN;
       if (debt > StreamingWarmupPeakDebt)
       {
@@ -1835,6 +1838,10 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       {
         status = "Preparing view...";
       }
+      else if (fov_debt > 0)
+      {
+        status = "Lighting FOV… " + std::to_string(fov_debt) + " left";
+      }
       else
       {
         status = "Loading FOV… " +
@@ -1842,13 +1849,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       }
       Report(sink, "prepare_view",
              prepare_view_base + kCreateWeightPrepare * stream_inner, status);
-      // Era34 P0: leave on near-FOV settle, soft wall after underfeet lit, or
-      // hard safety ceiling (not Era33 ticks/1800 grind).
+      // Era34/Era41: settle, soft wall only after FOV lit debt clear, or hard wall.
       if (spawn_settled)
       {
         // fall through to Finalize
       }
-      else if (ShouldSoftLeaveCreateSpawnWarmup(underfeet_lit, elapsed_ms))
+      else if (ShouldSoftLeaveCreateSpawnWarmup(underfeet_lit, elapsed_ms) &&
+               fov_debt <= 0)
       {
         std::cerr << "[Era34] create spawn soft-wall after underfeet lit ("
                   << elapsed_ms << "ms, debt=" << debt << ")\n";
@@ -1859,6 +1866,12 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         std::cerr << "[Era34] create spawn hard ceiling (" << elapsed_ms
                   << "ms, ticks=" << StreamingWarmupTicks << ", debt=" << debt
                   << ")\n";
+      }
+      else if (fov_debt > 0 &&
+               !ShouldHoldEnterBarForFovLit(fov_debt, elapsed_ms))
+      {
+        std::cerr << "[Era41] create FOV lit hard-wall (" << elapsed_ms
+                  << "ms, fov=" << fov_debt << ")\n";
       }
       else
       {

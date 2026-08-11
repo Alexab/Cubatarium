@@ -404,6 +404,10 @@ public:
   bool NeedsEnterGameMeshWarmup() const;
   /// Era29: underfeet LitDrawable / SoftDefer empty / PendingLight still owed.
   bool NeedsEnterGameVisualWarmup() const;
+  /// Era41: PendingLight or FullyDark columns in LitDrawable enter ring.
+  int CountEnterFovLitDebt() const;
+  /// Era41: priority-enqueue FOV columns + elevated Capture/apply on progress bar.
+  int TickEnterFovLitPass(int capture_budget = -1);
   /// Spawn ring has greedy mesh committed (no missing, no pending GPU apply).
   bool IsSpawnMeshRingReady() const;
   int CountPostLoadRingNotReady() const;

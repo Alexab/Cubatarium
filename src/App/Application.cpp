@@ -1950,6 +1950,8 @@ void UApplication::Update(double dt)
             {
               World->TickEnterStreamingWarmup(kGpuWarmupStreamingBudget);
             }
+            // Era41: drain LitDrawable FOV Relight on the progress bar.
+            World->TickEnterFovLitPass(EnterFovRelightCaptureBudget());
           }
           const bool upload_ready =
               frame >= kGpuWarmupMinFrames - 1 &&
