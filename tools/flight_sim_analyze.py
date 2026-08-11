@@ -901,6 +901,36 @@ def analyze(
     cruise_softdefer_empty_med = median(
         col(cruise_src, "softdefer_empty_placeholder_n")
     )
+    cruise_relight_completed_med = median(col(cruise_src, "relight_completed_n"))
+    cruise_fifo_dropped_vals = col(cruise_src, "relight_fifo_dropped")
+    cruise_fifo_dropped_delta = None
+    if len(cruise_fifo_dropped_vals) >= 2:
+        cruise_fifo_dropped_delta = (
+            cruise_fifo_dropped_vals[-1] - cruise_fifo_dropped_vals[0]
+        )
+    cruise_false_clear_vals = col(cruise_src, "relight_false_clear_n")
+    cruise_false_clear_delta = None
+    if len(cruise_false_clear_vals) >= 2:
+        cruise_false_clear_delta = (
+            cruise_false_clear_vals[-1] - cruise_false_clear_vals[0]
+        )
+    # Era40 P3: FIFO stuck soft-fail (soft-cap + completed~0 + dropped churn).
+    fifo_soft_cap = 96
+    miss_end_or_stuck = (miss_end > 0.0) or (miss_stuck_max_run_sec > 4.0)
+    relight_fifo_stuck_soft_fail = (
+        cruise_fifo_med is not None
+        and cruise_fifo_med >= fifo_soft_cap - 1
+        and (cruise_relight_completed_med is None or cruise_relight_completed_med <= 0)
+        and cruise_fifo_dropped_delta is not None
+        and cruise_fifo_dropped_delta > 0
+        and miss_end_or_stuck
+    )
+    relight_false_clear_soft_fail = (
+        cruise_false_clear_delta is not None
+        and cruise_false_clear_delta > 8
+        and miss_end_or_stuck
+        and (cruise_relight_completed_med is None or cruise_relight_completed_med <= 0)
+    )
     # When dirty>100 AND unfinished_visual, mesh_async should stay fed.
     # visual_holes alone can latch without unfinished (legacy) and SoftDefer
     # not_render_ready must not demand mesh workers.
@@ -1163,6 +1193,11 @@ def analyze(
         "softdefer_capture_dead_while_vb_soft_fail": (
             softdefer_capture_zero_while_vb_sec >= 30.0
         ),
+        "relight_fifo_stuck_soft_fail": relight_fifo_stuck_soft_fail,
+        "relight_false_clear_soft_fail": relight_false_clear_soft_fail,
+        "cruise_relight_completed_med": cruise_relight_completed_med,
+        "cruise_fifo_dropped_delta": cruise_fifo_dropped_delta,
+        "cruise_false_clear_delta": cruise_false_clear_delta,
         "gates_stop": gates_stop,
         "stop_segment_periods": len(stop_segment),
         "stop_pending_delta": stop_pending_delta,
@@ -1258,6 +1293,9 @@ def analyze(
             "cruise_fifo_med": cruise_fifo_med,
             "cruise_unlit_med": cruise_unlit_med,
             "cruise_softdefer_empty_med": cruise_softdefer_empty_med,
+            "cruise_relight_completed_med": cruise_relight_completed_med,
+            "cruise_fifo_dropped_delta": cruise_fifo_dropped_delta,
+            "cruise_false_clear_delta": cruise_false_clear_delta,
             "mesh_sync_fly_med": mesh_sync_fly_med,
             "wall_ms_no_holes_med": wall_ms_no_holes_med,
             "dirty_med_no_holes": dirty_med_no_holes,

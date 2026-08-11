@@ -6,6 +6,7 @@
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/NearFovWorkPriority.h"
 #include "World/Streaming/OceanCruisePolicy.h"
+#include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/FrontierStagePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 
@@ -613,7 +614,7 @@ int main()
            "Era36 B1: surface cy=4 -> band 3..7");
   }
 
-  // --- Era36 B2 dynamic capture cap ---
+  // --- Era36 B2 / Era40 dynamic capture cap (threshold 15) ---
   {
     using cutum::DynamicCaptureMovingBgCap;
     Expect(DynamicCaptureMovingBgCap(5) == 1,
@@ -622,30 +623,30 @@ int main()
            "Era36 B2: pending=25 -> cap 3");
     Expect(DynamicCaptureMovingBgCap(50) == 4,
            "Era36 B2: pending=50 -> cap clamped to 4");
-    Expect(DynamicCaptureMovingBgCap(20) == 1,
-           "Era36 B2: pending=20 (threshold) -> base cap");
-    Expect(DynamicCaptureMovingBgCap(21) == 3,
-           "Era36 B2: pending=21 -> cap 3");
+    Expect(DynamicCaptureMovingBgCap(15) == 1,
+           "Era40: pending=15 (threshold) -> base cap");
+    Expect(DynamicCaptureMovingBgCap(16) == 2,
+           "Era40: pending=16 -> cap 2");
   }
 
-  // --- Era36 B3 land moving drain ---
+  // --- Era36 B3 / Era40 land moving drain (threshold 15) ---
   {
     using cutum::LandMovingRelightDrainFloor;
     using cutum::ShouldDrainPendingLightLandMoving;
     Expect(!ShouldDrainPendingLightLandMoving(10),
-           "Era36 B3: low pending -> no drain");
-    Expect(!ShouldDrainPendingLightLandMoving(30),
-           "Era36 B3: pending=30 (threshold) -> no drain");
-    Expect(ShouldDrainPendingLightLandMoving(31),
-           "Era36 B3: pending=31 -> drain");
+           "Era40: low pending -> no drain");
+    Expect(!ShouldDrainPendingLightLandMoving(15),
+           "Era40: pending=15 (threshold) -> no drain");
+    Expect(ShouldDrainPendingLightLandMoving(16),
+           "Era40: pending=16 -> drain");
     Expect(ShouldDrainPendingLightLandMoving(50),
-           "Era36 B3: high pending -> drain");
+           "Era40: high pending -> drain");
     Expect(LandMovingRelightDrainFloor(true, 10) == 0,
-           "Era36 B3: floor 0 when pending low");
-    Expect(LandMovingRelightDrainFloor(true, 31) == 1,
-           "Era36 B3: floor 1 when pending high");
+           "Era40: floor 0 when pending low");
+    Expect(LandMovingRelightDrainFloor(true, 16) == 1,
+           "Era40: floor 1 when pending>15");
     Expect(LandMovingRelightDrainFloor(false, 50) == 0,
-           "Era36 B3: floor 0 when idle");
+           "Era40: floor 0 when idle");
   }
 
   // --- Era38 A0 near-FOV work score ---
@@ -711,10 +712,10 @@ int main()
     using cutum::LandRelightGpuApplyFloor;
     Expect(LandRelightGpuApplyFloor(50, 10, 3) == 3,
            "Era37 P1b: low pending keeps base");
-    Expect(LandRelightGpuApplyFloor(70, 25, 3) == 12,
-           "Era39 A4: fifo+pending boost apply floor to 12");
-    Expect(LandRelightGpuApplyFloor(70, 10, 5) == 5,
-           "Era37 P1b: fifo alone insufficient");
+    Expect(LandRelightGpuApplyFloor(70, 16, 3) == 12,
+           "Era40: fifo+pendf>15 boost apply floor to 12");
+    Expect(LandRelightGpuApplyFloor(70, 15, 5) == 5,
+           "Era40: pendf=15 alone insufficient");
   }
 
   // --- Era37 P4 enter warmup ownership ---
@@ -821,6 +822,41 @@ int main()
     // P0 harness: predicate true; full remesh=0 wire lands in P1.
     Expect(IsMissFirstMeshClass(true, in.nearest_miss_cy, in.nearest_miss_horiz),
            "214034 witness is FirstMesh class");
+  }
+
+  // --- Era40 Relight FIFO miss-rim pin ---
+  {
+    using cutum::RelightMissPinMaxHoriz;
+    using cutum::ShouldBoostRelightDrainUnderFifoMissStarve;
+    using cutum::ShouldForceMissColumnFifoEnqueue;
+    using cutum::ShouldPreferMissFinalizeBand;
+    using cutum::RelightFifoStuckSoftFail;
+    Expect(RelightMissPinMaxHoriz() == 4,
+           "Era40: miss pin max horiz = LitDrawable ring");
+    Expect(ShouldForceMissColumnFifoEnqueue(true, true, false),
+           "Era40: force enqueue miss+pending even if not in FIFO");
+    Expect(!ShouldForceMissColumnFifoEnqueue(true, true, true),
+           "Era40: already in FIFO -> force enqueue false");
+    Expect(!ShouldForceMissColumnFifoEnqueue(false, true, false),
+           "Era40: no force without miss");
+    Expect(!ShouldForceMissColumnFifoEnqueue(true, false, false),
+           "Era40: no force without pending/void");
+    Expect(ShouldPreferMissFinalizeBand(0),
+           "Era40: underfeet prefer finalize");
+    Expect(ShouldPreferMissFinalizeBand(4),
+           "Era40: rim horiz4 prefer finalize");
+    Expect(!ShouldPreferMissFinalizeBand(5),
+           "Era40: beyond ring no finalize prefer");
+    Expect(ShouldBoostRelightDrainUnderFifoMissStarve(96, 96, 0, true),
+           "Era40: soft-cap + completed0 + miss -> boost");
+    Expect(!ShouldBoostRelightDrainUnderFifoMissStarve(96, 96, 0, false),
+           "Era40: no boost without miss");
+    Expect(!ShouldBoostRelightDrainUnderFifoMissStarve(40, 96, 0, true),
+           "Era40: no boost below soft-cap");
+    Expect(RelightFifoStuckSoftFail(96, 96, 0, 5, true),
+           "Era40: fifo stuck soft-fail when completed=0");
+    Expect(!RelightFifoStuckSoftFail(96, 96, 2, 5, true),
+           "Era40: no soft-fail when completed>0");
   }
 
   if (gFails != 0)

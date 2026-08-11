@@ -207,13 +207,18 @@ CLOSED only if resume-autofly `cruise_pending/fifo/unlit` within **2×** manual
 Same gate `land-cruise-resume`. SoftDefer sticky ownership + hidden-neighbor Air
 shell; A4 GPU apply floor 12 when fifo debt remains after P0–P2.
 
+**Era40 Relight FIFO Unfreeze (2026-08-11):** TD-ARCH-069 **partial**. Gate of
+record = `land-cruise-resume`. Miss-rim Relight pin≤4 + pendf>15 floors + soft-cap
+miss Capture exception. CLOSED only after manual World_174 rim eye (underfeet KEEP;
+horiz 2–4 fill) and cruise_fifo/completed DoD.
+
 ```powershell
 python tools/flight_sim_run.py --scenario land-cruise-resume --world World_174 `
-  --phase-id ERA39_LAND_RESUME --report bin/iter_reports/era39_land_resume.json `
+  --phase-id ERA40_LAND_RESUME --report bin/iter_reports/era40_land_resume.json `
   --process-timeout 480 --warmup-sec 20 `
-  --baseline-manual bin/iter_reports/manual_era37_172314.json
+  --baseline-manual bin/iter_reports/manual_era39_194443.json
 python tools/flight_sim_phase_gate.py --phase-id ARCH_D3_LAND `
-  --report bin/iter_reports/era39_land_resume.json
+  --report bin/iter_reports/era40_land_resume.json
 ```
 
 **Backend matrix (R4):** desktop

@@ -20,6 +20,7 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/NearFovWorkPriority.h"
+#include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Core/World.h"
 #include "World/Mesh/WorldMeshService.h"
@@ -424,16 +425,38 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         far.erase(far_it);
         prio.push_front(hole_key);
       }
-      else if (world.IsPendingLightBeforeMesh(hole_xz))
+      else
       {
-        // PendingLight SoftDefer hole with empty FIFO entry — force Capture.
-        EnqueueTerrainColumnRelight(hole_key.x, hole_key.y, /*priority=*/true,
-                                    0, max_y);
-        const auto again = std::find(prio.begin(), prio.end(), hole_key);
-        if (again != prio.end() && again != prio.begin())
+        // Era40: force Enqueue for miss/SoftDefer hole even if not yet in FIFO
+        // (PendingLight, or SoftDefer-empty HasGreedy∧!Drawable).
+        bool undrawn = false;
+        if (world.MeshService)
         {
-          prio.erase(again);
-          prio.push_front(hole_key);
+          const int max_cy_hole = std::max(0, FloorDiv(max_y, CHUNK_SIZE));
+          for (int cy = 0; cy <= max_cy_hole; ++cy)
+          {
+            const glm::ivec3 coord(soft_defer_hole.x, cy, soft_defer_hole.z);
+            if (world.MeshService->HasGreedyMesh(coord) &&
+                !world.MeshService->HasDrawableGreedyMesh(coord))
+            {
+              undrawn = true;
+              break;
+            }
+          }
+        }
+        const bool pending_or_void =
+            world.IsPendingLightBeforeMesh(hole_xz) || undrawn;
+        if (ShouldForceMissColumnFifoEnqueue(/*miss=*/true, pending_or_void,
+                                             /*already_in_fifo=*/false))
+        {
+          EnqueueTerrainColumnRelight(hole_key.x, hole_key.y, /*priority=*/true,
+                                      0, max_y);
+          const auto again = std::find(prio.begin(), prio.end(), hole_key);
+          if (again != prio.end() && again != prio.begin())
+          {
+            prio.erase(again);
+            prio.push_front(hole_key);
+          }
         }
       }
     }
@@ -486,8 +509,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     }
   }
 
-  // Era38 A3: pin SoftDefer-empty near (horiz<=2) PendingLight columns so
-  // Capture clears lit gate before hinterland trees.
+  // Era38 A3 / Era40: pin SoftDefer-empty / miss rim (horiz<=LitDrawable ring)
+  // PendingLight columns so Capture clears lit gate before hinterland trees.
   if (world.MeshService)
   {
     auto &prio = PendingTerrainColumnRelightsPriority;
@@ -520,17 +543,19 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         prio.push_front(nearest_key);
       }
     };
+    const int pin_max_horiz = RelightMissPinMaxHoriz();
     const int max_cy_pin =
         std::max(0, FloorDiv(max_y, CHUNK_SIZE));
     int pinned = 0;
     std::vector<std::pair<int, glm::ivec2>> near_empty;
-    near_empty.reserve(25);
-    for (int dx = -2; dx <= 2; ++dx)
+    near_empty.reserve(static_cast<size_t>((pin_max_horiz * 2 + 1) *
+                                           (pin_max_horiz * 2 + 1)));
+    for (int dx = -pin_max_horiz; dx <= pin_max_horiz; ++dx)
     {
-      for (int dz = -2; dz <= 2; ++dz)
+      for (int dz = -pin_max_horiz; dz <= pin_max_horiz; ++dz)
       {
         const int horiz = std::max(std::abs(dx), std::abs(dz));
-        if (horiz > 2)
+        if (horiz > pin_max_horiz)
         {
           continue;
         }
@@ -571,6 +596,38 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                            entry.second.y * CHUNK_SIZE);
       pin_key(key);
       ++pinned;
+    }
+    // Era40: always pin FOV miss witness (PendingLight / SoftDefer-empty /
+    // missing mesh), even when not SoftDefer-empty and not already in FIFO.
+    const auto &phys = world.GetPhysicsTelemetry();
+    if (phys.FocusMissingMesh > 0 &&
+        ShouldPreferMissFinalizeBand(phys.MissHoriz))
+    {
+      const glm::ivec2 miss_col(phys.MissCx, phys.MissCz);
+      bool undrawn = false;
+      for (int cy = 0; cy <= max_cy_pin; ++cy)
+      {
+        const glm::ivec3 coord(miss_col.x, cy, miss_col.y);
+        if (world.MeshService->HasGreedyMesh(coord) &&
+            !world.MeshService->HasDrawableGreedyMesh(coord))
+        {
+          undrawn = true;
+          break;
+        }
+      }
+      const bool pending_or_void =
+          world.IsPendingLightBeforeMesh(miss_col) || undrawn;
+      const glm::ivec2 miss_key(miss_col.x * CHUNK_SIZE,
+                                miss_col.y * CHUNK_SIZE);
+      const bool already_in_fifo =
+          PendingTerrainColumnRelightKeys.count(miss_key) != 0;
+      if (pending_or_void &&
+          (already_in_fifo ||
+           ShouldForceMissColumnFifoEnqueue(/*miss=*/true, pending_or_void,
+                                            already_in_fifo)))
+      {
+        pin_key(miss_key);
+      }
     }
   }
 
@@ -649,6 +706,11 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     if (drained_bg == 0 && frame_ms_so_far >= capture_hot_skip_ms)
     {
       const bool soft_defer_hole = visual_holes && focus_pending_mid;
+      // Era40: miss rim (horiz<=4) also bypasses hot-frame Capture skip.
+      const bool miss_rim_pin =
+          visual_holes &&
+          ShouldPreferMissFinalizeBand(
+              world.GetPhysicsTelemetry().MissHoriz);
       // Idle PendingLight progress (TD-ARCH-010): when holes=0 the SoftDefer
       // exception never fired and FIFO stalled. Allow one Capture/enqueue if
       // inflight is empty and wall is not catastrophic.
@@ -657,7 +719,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
           world.GetAsyncRelightInFlightCount() == 0 &&
           frame_ms_so_far <
               static_cast<double>(tune.CaptureIdlePendingMaxWallMs);
-      if (!soft_defer_hole && !idle_pending_progress)
+      if (!soft_defer_hole && !miss_rim_pin && !idle_pending_progress)
       {
         return false;
       }
@@ -738,7 +800,10 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     int remainder_min = -1;
     int remainder_max = -1;
     bool finalize_gate = true;
-    if (async_bg && band_cy > 0)
+    // Era40: miss rim pin prefers one full finalize Capture (no partial Y-band).
+    const bool miss_finalize_band =
+        visual_holes && ShouldPreferMissFinalizeBand(horiz_dist);
+    if (async_bg && band_cy > 0 && !miss_finalize_band)
     {
       const int band_h = band_cy * CHUNK_SIZE;
       const int span = relight_max - relight_min;
@@ -866,7 +931,8 @@ int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
       const int cz = FloorDiv(it->y, CHUNK_SIZE);
       const int dist =
           std::max(std::abs(cx - focus_ground.x), std::abs(cz - focus_ground.z));
-      if (dist <= 1)
+      // Era40: never Trim/drop LitDrawable-ring miss pin columns.
+      if (dist <= RelightMissPinMaxHoriz())
       {
         continue;
       }

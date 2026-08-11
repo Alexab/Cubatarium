@@ -19,6 +19,7 @@
 #include "World/Streaming/FrontierStagePolicy.h"
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
+#include "World/Streaming/RelightFifoPolicy.h"
 #include "App/Settings/RenderSettings.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Player/PlayerCapsule.h"
@@ -1542,6 +1543,21 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     bg_budget = std::min(bg_budget, moving_now ? 1 : 2);
   }
+  // Era40: soft-cap FIFO stuck (completed~0) under FOV miss — keep Capture
+  // floor even on hot frames / after rim SLA min (manual 194443 pendf~15).
+  {
+    const int fifo_n =
+        world.Persistence
+            ? world.Persistence->GetPendingTerrainColumnRelightCount()
+            : 0;
+    const int soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
+    if (ShouldBoostRelightDrainUnderFifoMissStarve(
+            fifo_n, soft_cap, world.PhysicsTelemetryData.RelightCompletedN,
+            missing_focus_mesh))
+    {
+      bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 2 : 3);
+    }
+  }
   if (ingress.active && ingress.promote_once)
   {
     auto &exec = GetColumnFlowExecutor();
@@ -1864,6 +1880,20 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                    ? (frame_ms > kBadFrameMs ? 0 : 1)
                    : (frame_ms > kBadFrameMs ? 2 : 3));
     bg_budget = std::min(bg_budget, hard_cap);
+    // Era40 miss exception: do not let hard_cap squash soft-cap starve boost.
+    {
+      const int fifo_n =
+          world.Persistence
+              ? world.Persistence->GetPendingTerrainColumnRelightCount()
+              : 0;
+      const int soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
+      if (ShouldBoostRelightDrainUnderFifoMissStarve(
+              fifo_n, soft_cap, world.PhysicsTelemetryData.RelightCompletedN,
+              missing_focus_mesh))
+      {
+        bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 2 : 3);
+      }
+    }
     if (LastMemoryDecision.capture_hard_cap >= 0)
     {
       bg_budget = std::min(bg_budget, LastMemoryDecision.capture_hard_cap);

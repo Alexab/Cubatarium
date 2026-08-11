@@ -297,6 +297,7 @@ struct FrameNumbers
   uint64_t dirty_dropped{0};
   uint64_t pending_light_dropped{0};
   uint64_t relight_fifo_dropped{0};
+  uint64_t relight_false_clear_n{0};
   double gpu_pool_used_mb{0.0};
   double gpu_pool_cap_mb{0.0};
   uint64_t gpu_draw_cmds{0};
@@ -584,6 +585,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.dirty_dropped = phys.DirtyDropped;
   n.pending_light_dropped = phys.PendingLightDropped;
   n.relight_fifo_dropped = phys.RelightFifoDropped;
+  n.relight_false_clear_n = phys.RelightFalseClearN;
   n.gpu_pool_used_mb = phys.GpuPoolUsedMb;
   n.gpu_pool_cap_mb = phys.GpuPoolCapMb;
   n.gpu_draw_cmds = phys.GpuDrawCmds;
@@ -854,6 +856,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"dirty_dropped\":" << n.dirty_dropped
           << ",\"pending_light_dropped\":" << n.pending_light_dropped
           << ",\"relight_fifo_dropped\":" << n.relight_fifo_dropped
+          << ",\"relight_false_clear_n\":" << n.relight_false_clear_n
           << ",\"gpu_pool_used_mb\":" << n.gpu_pool_used_mb
           << ",\"gpu_pool_cap_mb\":" << n.gpu_pool_cap_mb
           << ",\"gpu_draw_cmds\":" << n.gpu_draw_cmds

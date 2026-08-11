@@ -121,6 +121,16 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-066 | Era37 | Manual/Autofly Parity + Near-FOV Visual SLA | Era36 autofly GO but manual `161544` unchanged (FIFO~96, unlit~20); teleport vs resume incomparable | **partial 2026-08-11** P0–P5 landed; `land-cruise-resume` harness; wait manual+resume parity eye |
 | TD-ARCH-067 | Era38 | Near-FOV Work Priority + Resume Parity | SoftDefer ownership row-major+cap starves near; Unlit hinterland + rear slots; autofly≠manual | **partial 2026-08-11** A0–A3 + B harness; gate=`land-cruise-resume`; CLOSED only within 2× manual + eye |
 | TD-ARCH-068 | Era39 | SoftDefer Anti-Flicker + Hidden-Neighbor Seam | SoftDefer empty publish/withdraw flicker; ready-chunk faces X-ray when SoftDefer-hidden neighbor; FIFO residual | **partial 2026-08-11** P0–P2 + A4 (floor 12 + unlit telem split); wait manual eye |
+| TD-ARCH-069 | Era40 | Relight FIFO Unfreeze (miss rim) | SoftDefer pin horiz≤2 misses rim 3–4; floors silent at pendf≈15; fifo≈96 completed≈0 | **partial 2026-08-11** P0–P3 landed; resume fifo still ~95; wait manual rim eye |
+
+> **Era40 Relight FIFO Unfreeze (2026-08-11):** Miss/SoftDefer Relight pin covers
+> LitDrawable ring (`horiz≤4`); force Enqueue miss∧(PendingLight∨undrawn); miss
+> finalize band (no partial Y-split on rim); Trim protects pin ring; Capture floors
+> fire at pendf>15; soft-cap∧completed≈0∧miss raises `bg_budget` even after rim SLA.
+> Telem: `relight_false_clear_n` + analyze `relight_fifo_stuck_soft_fail`. Evidence:
+> `era40_land_resume` cruise_fifo_med≈95 (vs Era39 A4 same), completed_med=0,
+> miss_stuck 6s (≤12), holes≈0.04; soft fifo-stuck=true. Reject: LitDrawable ring
+> off; Unlit void; CLOSED without manual World_174 rim eye.
 
 > **Era39 SoftDefer Anti-Flicker + Seam (2026-08-11):** SoftDefer empty recount every
 > frame / ownership on Cd; near sticky ownership; PublishAvoided Dirty damp + keep

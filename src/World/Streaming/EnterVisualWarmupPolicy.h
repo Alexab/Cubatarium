@@ -158,28 +158,27 @@ inline int RelightSurfaceBandMaxY(int surface_block_y, int chunk_size,
   return std::min(original_max_y, surface_max);
 }
 
-/// Era36 B2: dynamic CaptureMovingBgCap based on pending light pressure.
+/// Era36 B2 / Era40: dynamic CaptureMovingBgCap — fire at pendf>15 (was 20).
 inline int DynamicCaptureMovingBgCap(int pending_light_focus,
                                      int base_cap = 1)
 {
-  if (pending_light_focus <= 20)
+  if (pending_light_focus <= 15)
   {
     return base_cap;
   }
   return std::min(4, pending_light_focus / 10 + 1);
 }
 
-/// Era36 B3: allow DrainIdlePendingLight on land while moving with high
-/// pending (not just ocean void/miss).
+/// Era36 B3 / Era40: land moving drain when pendf>15 (was 30).
 inline bool ShouldDrainPendingLightLandMoving(int pending_light_focus,
-                                              int threshold = 30)
+                                              int threshold = 15)
 {
   return pending_light_focus > threshold;
 }
 
-/// Era36 B3: moving drain floor for land cruise light debt (mirrors ocean).
+/// Era36 B3 / Era40: moving drain floor for land cruise light debt.
 inline int LandMovingRelightDrainFloor(bool moving, int pending_light_focus,
-                                       int threshold = 30)
+                                       int threshold = 15)
 {
   if (!moving || !ShouldDrainPendingLightLandMoving(pending_light_focus,
                                                     threshold))
@@ -240,10 +239,11 @@ inline bool AllowUnlitDrawableUnderLightDebt(int pending_focus, int unlit_near,
   return pending_focus > pending_threshold || unlit_near > unlit_threshold;
 }
 
-/// Era37 P1b / Era39 A4: boost GPU relight apply when FIFO is saturated on land.
+/// Era37 P1b / Era39 A4 / Era40: boost GPU relight apply when FIFO saturated.
+/// Pending threshold 15 so cruise pendf≈14–16 still arms the floor.
 inline int LandRelightGpuApplyFloor(int relight_fifo_n, int pending_focus,
                                     int base_gpu_apply, int fifo_threshold = 60,
-                                    int pending_threshold = 20)
+                                    int pending_threshold = 15)
 {
   if (relight_fifo_n <= fifo_threshold || pending_focus <= pending_threshold)
   {
