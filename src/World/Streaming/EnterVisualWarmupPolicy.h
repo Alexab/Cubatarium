@@ -240,7 +240,7 @@ inline bool AllowUnlitDrawableUnderLightDebt(int pending_focus, int unlit_near,
   return pending_focus > pending_threshold || unlit_near > unlit_threshold;
 }
 
-/// Era37 P1b: boost GPU relight apply when FIFO is saturated on land.
+/// Era37 P1b / Era39 A4: boost GPU relight apply when FIFO is saturated on land.
 inline int LandRelightGpuApplyFloor(int relight_fifo_n, int pending_focus,
                                     int base_gpu_apply, int fifo_threshold = 60,
                                     int pending_threshold = 20)
@@ -249,7 +249,7 @@ inline int LandRelightGpuApplyFloor(int relight_fifo_n, int pending_focus,
   {
     return base_gpu_apply;
   }
-  return std::max(base_gpu_apply, 8);
+  return std::max(base_gpu_apply, 12);
 }
 
 /// Era37 P4: enter warmup SoftDefer empty ownership boost.

@@ -593,138 +593,186 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       float view_dot{0.0f};
       bool empty_placeholder{false};
     };
-    if (UndrawnForceCd <= 0)
+    // Era39: always recount SoftDefer empty; ownership apply only when Cd ready.
+    std::vector<SoftDeferEmptyCand> cands;
+    cands.reserve(64);
+    std::unordered_set<glm::ivec3, IVec3Hash> seen_empty;
+    auto &exec = GetColumnFlowExecutor();
+    const int heal_r = std::max(1, focus_radius);
+    const int diam = 2 * heal_r + 1;
+    const int cells = std::max(1, diam * diam);
+    int empty_near_n = 0;
+    for (int idx = 0; idx < cells; ++idx)
     {
-      std::vector<SoftDeferEmptyCand> cands;
-      cands.reserve(64);
-      std::unordered_set<glm::ivec3, IVec3Hash> seen_empty;
-      auto &exec = GetColumnFlowExecutor();
-      const int heal_r = std::max(1, focus_radius);
-      const int diam = 2 * heal_r + 1;
-      const int cells = std::max(1, diam * diam);
-      int empty_near_n = 0;
-      for (int idx = 0; idx < cells; ++idx)
+      const int dx = (idx % diam) - heal_r;
+      const int dz = (idx / diam) - heal_r;
+      const int horiz = std::max(std::abs(dx), std::abs(dz));
+      const int col_cy1 =
+          SoftDeferCyWindowNearTop(max_cy, preferred_cy, horiz);
+      const int eff_cy1 = std::max(cy1, col_cy1);
+      for (int cy = cy0; cy <= eff_cy1; ++cy)
       {
-        const int dx = (idx % diam) - heal_r;
-        const int dz = (idx / diam) - heal_r;
-        const int horiz = std::max(std::abs(dx), std::abs(dz));
-        const int col_cy1 =
-            SoftDeferCyWindowNearTop(max_cy, preferred_cy, horiz);
-        const int eff_cy1 = std::max(cy1, col_cy1);
-        for (int cy = cy0; cy <= eff_cy1; ++cy)
+        const glm::ivec3 coord(focus_ground_horiz.x + dx, cy,
+                               focus_ground_horiz.z + dz);
+        const bool has_drawable = mesh_service.HasDrawableGreedyMesh(coord);
+        const bool has_greedy = mesh_service.HasGreedyMesh(coord);
+        const bool is_dirty = mesh_service.IsChunkMeshDirty(coord);
+        const bool pending_gpu = mesh_service.IsPendingGpuApply(coord);
+        const bool inflight = mesh_service.HasInflightMeshBuild(coord);
+        const bool soft_held = mesh_service.IsSoftDeferHeld(coord);
+        if (has_drawable || pending_gpu || inflight || is_dirty)
         {
-          const glm::ivec3 coord(focus_ground_horiz.x + dx, cy,
-                                 focus_ground_horiz.z + dz);
-          const bool has_drawable = mesh_service.HasDrawableGreedyMesh(coord);
-          const bool has_greedy = mesh_service.HasGreedyMesh(coord);
-          const bool is_dirty = mesh_service.IsChunkMeshDirty(coord);
-          const bool pending_gpu = mesh_service.IsPendingGpuApply(coord);
-          const bool inflight = mesh_service.HasInflightMeshBuild(coord);
-          const bool soft_held = mesh_service.IsSoftDeferHeld(coord);
-          if (has_drawable || pending_gpu || inflight || is_dirty)
+          continue;
+        }
+        if (!has_greedy && !soft_held)
+        {
+          continue;
+        }
+        const UChunk *chunk =
+            world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+        if (!chunk)
+        {
+          continue;
+        }
+        bool any_solid = false;
+        const int probe_stride = (horiz <= 2) ? 2 : 4;
+        for (int z = 0; z < CHUNK_SIZE && !any_solid; z += probe_stride)
+        {
+          for (int x = 0; x < CHUNK_SIZE && !any_solid; x += probe_stride)
           {
-            continue;
-          }
-          if (!has_greedy && !soft_held)
-          {
-            continue;
-          }
-          const UChunk *chunk =
-              world.GetBlockWorld().GetChunkManager().GetChunk(coord);
-          if (!chunk)
-          {
-            continue;
-          }
-          bool any_solid = false;
-          const int probe_stride = (horiz <= 2) ? 2 : 4;
-          for (int z = 0; z < CHUNK_SIZE && !any_solid; z += probe_stride)
-          {
-            for (int x = 0; x < CHUNK_SIZE && !any_solid; x += probe_stride)
+            for (int y = 0; y < CHUNK_SIZE && !any_solid; y += probe_stride)
             {
-              for (int y = 0; y < CHUNK_SIZE && !any_solid; y += probe_stride)
+              if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
               {
-                if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
-                {
-                  any_solid = true;
-                }
+                any_solid = true;
               }
             }
           }
-          if (!any_solid)
-          {
-            continue;
-          }
-          const bool empty_placeholder = IsSoftDeferEmptyPlaceholder(
-              has_greedy, has_drawable, is_dirty, pending_gpu, inflight,
-              any_solid);
-          const bool hide_held =
-              !has_greedy && soft_held && any_solid && !has_drawable;
-          if (!empty_placeholder && !hide_held)
-          {
-            continue;
-          }
-          if (empty_placeholder)
-          {
-            ++phys_telem.SoftDeferEmptyPlaceholderN;
-          }
-          if (!SoftDeferEmptyNeedsFirstMeshOwnership(
-                  empty_placeholder || hide_held, /*miss_or_in_focus=*/true))
-          {
-            continue;
-          }
-          seen_empty.insert(coord);
-          {
-            const auto age_it = SoftDeferEmptyAgeFrames.find(coord);
-            if (age_it == SoftDeferEmptyAgeFrames.end())
-            {
-              SoftDeferEmptyAgeFrames.emplace(coord, 0);
-            }
-            else
-            {
-              ++age_it->second;
-            }
-          }
-          const int age_frames = SoftDeferEmptyAgeFrames[coord];
-          if (age_frames > phys_telem.SoftDeferEmptyAgeMaxFrames)
-          {
-            phys_telem.SoftDeferEmptyAgeMaxFrames = age_frames;
-          }
-          if (horiz > 1)
-          {
-            ++phys_telem.SoftDeferEmptyStuckN;
-            if (phys_telem.SoftDeferEmptyStuckN == 1)
-            {
-              phys_telem.SoftDeferEmptyStuckCx = coord.x;
-              phys_telem.SoftDeferEmptyStuckCy = coord.y;
-              phys_telem.SoftDeferEmptyStuckCz = coord.z;
-              phys_telem.SoftDeferEmptyStuckHoriz = horiz;
-              phys_telem.SoftDeferEmptyStuckDefer = 1;
-            }
-            if (StuckSmokeCd <= 0)
-            {
-#if defined(CUBATARIUM_SOFTDEFER_SMOKE)
-              std::cerr << "[SoftDeferEmptySmoke] HasGreedy=!Drawable "
-                        << "Dirty=0 SoftDefer~1 horiz=" << horiz << " at ("
-                        << coord.x << "," << coord.y << "," << coord.z
-                        << ")\n";
-#endif
-              StuckSmokeCd = 120;
-            }
-          }
-          if (horiz <= 2)
-          {
-            ++empty_near_n;
-          }
-          SoftDeferEmptyCand cand{};
-          cand.coord = coord;
-          cand.horiz = horiz;
-          cand.view_dot = view_dot_at(dx, dz);
-          cand.empty_placeholder = empty_placeholder;
-          cands.push_back(cand);
         }
+        if (!any_solid)
+        {
+          continue;
+        }
+        const bool empty_placeholder = IsSoftDeferEmptyPlaceholder(
+            has_greedy, has_drawable, is_dirty, pending_gpu, inflight,
+            any_solid);
+        const bool hide_held =
+            !has_greedy && soft_held && any_solid && !has_drawable;
+        if (!empty_placeholder && !hide_held)
+        {
+          continue;
+        }
+        if (empty_placeholder)
+        {
+          ++phys_telem.SoftDeferEmptyPlaceholderN;
+        }
+        if (!SoftDeferEmptyNeedsFirstMeshOwnership(
+                empty_placeholder || hide_held, /*miss_or_in_focus=*/true))
+        {
+          continue;
+        }
+        seen_empty.insert(coord);
+        {
+          const auto age_it = SoftDeferEmptyAgeFrames.find(coord);
+          if (age_it == SoftDeferEmptyAgeFrames.end())
+          {
+            SoftDeferEmptyAgeFrames.emplace(coord, 0);
+          }
+          else
+          {
+            ++age_it->second;
+          }
+        }
+        const int age_frames = SoftDeferEmptyAgeFrames[coord];
+        if (age_frames > phys_telem.SoftDeferEmptyAgeMaxFrames)
+        {
+          phys_telem.SoftDeferEmptyAgeMaxFrames = age_frames;
+        }
+        if (horiz > 1)
+        {
+          ++phys_telem.SoftDeferEmptyStuckN;
+          if (phys_telem.SoftDeferEmptyStuckN == 1)
+          {
+            phys_telem.SoftDeferEmptyStuckCx = coord.x;
+            phys_telem.SoftDeferEmptyStuckCy = coord.y;
+            phys_telem.SoftDeferEmptyStuckCz = coord.z;
+            phys_telem.SoftDeferEmptyStuckHoriz = horiz;
+            phys_telem.SoftDeferEmptyStuckDefer = 1;
+          }
+          if (StuckSmokeCd <= 0)
+          {
+#if defined(CUBATARIUM_SOFTDEFER_SMOKE)
+            std::cerr << "[SoftDeferEmptySmoke] HasGreedy=!Drawable "
+                      << "Dirty=0 SoftDefer~1 horiz=" << horiz << " at ("
+                      << coord.x << "," << coord.y << "," << coord.z
+                      << ")\n";
+#endif
+            StuckSmokeCd = 120;
+          }
+        }
+        if (horiz <= 2)
+        {
+          ++empty_near_n;
+        }
+        SoftDeferEmptyCand cand{};
+        cand.coord = coord;
+        cand.horiz = horiz;
+        cand.view_dot = view_dot_at(dx, dz);
+        cand.empty_placeholder = empty_placeholder;
+        cands.push_back(cand);
       }
-      phys_telem.SoftDeferEmptyNearN = empty_near_n;
+    }
+    phys_telem.SoftDeferEmptyNearN = empty_near_n;
 
+    // Era39 P2: remesh drawable face-neighbors when SoftDefer-hidden enters/leaves.
+    {
+      int seamed = 0;
+      auto remesh_drawable_faces = [&](glm::ivec3 hidden, bool now_hidden,
+                                       bool prev_hidden)
+      {
+        static const glm::ivec3 kFace[4] = {
+            {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+        for (const glm::ivec3 &d : kFace)
+        {
+          if (seamed >= 4)
+          {
+            break;
+          }
+          const glm::ivec3 nb = hidden + d;
+          const bool has_draw = mesh_service.HasDrawableGreedyMesh(nb);
+          if (!ShouldRemeshDrawableForHiddenNeighborSeam(has_draw, now_hidden,
+                                                         prev_hidden))
+          {
+            continue;
+          }
+          if (!mesh_service.TryConsumeDirtyAdmit())
+          {
+            continue;
+          }
+          mesh_service.GetCache().InvalidateMeshCapture(nb);
+          mesh_service.MarkDirtyPriority(nb);
+          ++seamed;
+        }
+      };
+      for (const glm::ivec3 &coord : seen_empty)
+      {
+        const bool prev = SoftDeferEmptyPrevSeen.count(coord) > 0;
+        remesh_drawable_faces(coord, /*now_hidden=*/true, prev);
+      }
+      for (const glm::ivec3 &coord : SoftDeferEmptyPrevSeen)
+      {
+        if (seen_empty.count(coord) != 0)
+        {
+          continue;
+        }
+        remesh_drawable_faces(coord, /*now_hidden=*/false,
+                              /*prev_hidden=*/true);
+      }
+      SoftDeferEmptyPrevSeen = seen_empty;
+    }
+
+    if (SoftDeferEmptyShouldApplyOwnership(UndrawnForceCd <= 0))
+    {
       std::stable_sort(cands.begin(), cands.end(),
                        [](const SoftDeferEmptyCand &a,
                           const SoftDeferEmptyCand &b)
@@ -811,6 +859,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         }
         if (allow_own)
         {
+          SoftDeferEmptyOwned.insert(coord);
           bool fully_dark_or_void =
               mesh_service.HasDrawableGreedyMesh(coord) &&
               mesh_service.GetCache().ChunkHasFullyDarkFace(coord);
@@ -891,23 +940,28 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         underfeet_undrawn = true;
       };
 
-      // Near first (sorted), then rim (sorted + rotated). near_reserve documents
-      // the policy floor; near-first list already guarantees near before rim.
+      // Near first (sorted), then rim (sorted + rotated). near sticky owns
+      // outside cap; cap only admits new ownership.
       (void)near_reserve;
-      auto run_list = [&](const std::vector<SoftDeferEmptyCand> &list)
+      auto run_list = [&](const std::vector<SoftDeferEmptyCand> &list,
+                          bool near_ring)
       {
         for (const SoftDeferEmptyCand &cand : list)
         {
-          const bool allow_own = marked_n < kEmptyOwnershipCap;
-          if (allow_own)
+          const bool had_own = SoftDeferEmptyOwned.count(cand.coord) > 0;
+          const bool sticky = near_ring && SoftDeferEmptyShouldKeepOwnership(
+                                               /*still_empty=*/true, had_own);
+          bool allow_own = sticky;
+          if (!allow_own && marked_n < kEmptyOwnershipCap)
           {
+            allow_own = true;
             ++marked_n;
           }
           apply_ownership(cand, allow_own);
         }
       };
-      run_list(near_cands);
-      run_list(rim_cands);
+      run_list(near_cands, /*near_ring=*/true);
+      run_list(rim_cands, /*near_ring=*/false);
 
       for (auto it = SoftDeferEmptyAgeFrames.begin();
            it != SoftDeferEmptyAgeFrames.end();)
@@ -927,6 +981,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const bool soft_held = mesh_service.IsSoftDeferHeld(coord);
         const bool still_empty =
             in_rim && !has_drawable && (has_greedy || soft_held);
+        SoftDeferEmptyOwned.erase(coord);
         if (SoftDeferEmptyAgeShouldReset(still_empty, /*had_progress=*/false))
         {
           it = SoftDeferEmptyAgeFrames.erase(it);
@@ -949,6 +1004,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               (SoftDeferEmptyScanOffset + kEmptyOwnershipCap) %
               std::max(1, static_cast<int>(rim_cands.size()));
         }
+      }
+    }
+    else
+    {
+      // Cd cooling: keep sticky OwnedN telemetry honest without Dirty storm.
+      for (const SoftDeferEmptyCand &cand : cands)
+      {
+        const glm::ivec2 col(cand.coord.x, cand.coord.z);
+        if (exec.Scheduler().Contains(col, ColumnWorkKind::FirstMesh) ||
+            SoftDeferEmptyOwned.count(cand.coord) > 0)
+        {
+          ++phys_telem.SoftDeferEmptyOwnedN;
+        }
+        underfeet_undrawn = true;
       }
     }
   }

@@ -64,9 +64,9 @@ int ShellFlatIndex(int face, int cell)
 
 } // namespace
 
-ChunkMeshSnapshot ChunkMeshSnapshot::Capture(const UBlockWorld &world,
-                                             glm::ivec3 chunkCoord,
-                                             uint64_t sourceRevision)
+ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
+    const UBlockWorld &world, glm::ivec3 chunkCoord, uint64_t sourceRevision,
+    NeighborVisualDrawableFn neighbor_drawable, void *neighbor_drawable_ctx)
 {
   ChunkMeshSnapshot snapshot;
   snapshot.coord = chunkCoord;
@@ -104,11 +104,20 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(const UBlockWorld &world,
           const UChunk *neighbor_chunk =
               world.GetChunkManager().GetChunk(lightChunkCoord);
           const bool neighbor_loaded = neighbor_chunk != nullptr;
+          bool neighbor_visually_drawable = neighbor_loaded;
+          if (neighbor_loaded && neighbor_drawable)
+          {
+            neighbor_visually_drawable =
+                neighbor_drawable(neighbor_drawable_ctx, lightChunkCoord);
+          }
+          const BlockId raw = world.GetBlock(worldPos);
           snapshot.shellBlocks[static_cast<size_t>(flat)] =
-              world.GetBlock(worldPos);
+              ShellBlockForNeighborOcclusion(raw, neighbor_visually_drawable);
           snapshot.shellNeighborState[static_cast<size_t>(flat)] =
               static_cast<uint8_t>(ClassifyShellCell(
-                  neighbor_loaded, snapshot.shellBlocks[static_cast<size_t>(flat)]));
+                  neighbor_loaded,
+                  snapshot.shellBlocks[static_cast<size_t>(flat)],
+                  neighbor_visually_drawable));
           if (neighbor_chunk)
           {
             snapshot.shellLight[static_cast<size_t>(flat)] =

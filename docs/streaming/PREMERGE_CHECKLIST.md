@@ -203,13 +203,17 @@ Reject: RD+1 bar wait; Unlit near on bar; MarkAllDirty warmup; CLOSED without EN
 CLOSED only if resume-autofly `cruise_pending/fifo/unlit` within **2×** manual
 `172314`-class **and** manual eye GO. Teleport `land-cruise` = smoke only.
 
+**Era39 SoftDefer Anti-Flicker + Seam (2026-08-11):** TD-ARCH-068 **partial**.
+Same gate `land-cruise-resume`. SoftDefer sticky ownership + hidden-neighbor Air
+shell; A4 GPU apply floor 12 when fifo debt remains after P0–P2.
+
 ```powershell
 python tools/flight_sim_run.py --scenario land-cruise-resume --world World_174 `
-  --phase-id ERA38_LAND_RESUME --report bin/iter_reports/era38_land_resume.json `
+  --phase-id ERA39_LAND_RESUME --report bin/iter_reports/era39_land_resume.json `
   --process-timeout 480 --warmup-sec 20 `
   --baseline-manual bin/iter_reports/manual_era37_172314.json
 python tools/flight_sim_phase_gate.py --phase-id ARCH_D3_LAND `
-  --report bin/iter_reports/era38_land_resume.json
+  --report bin/iter_reports/era39_land_resume.json
 ```
 
 **Backend matrix (R4):** desktop

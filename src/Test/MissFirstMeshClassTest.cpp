@@ -318,6 +318,46 @@ int main()
   Expect(!ShouldHoldInflightSupersedeUnderMiss(false, true, false),
          "Era27 I-A4: !miss → no hold");
 
+  // --- Era39 SoftDefer anti-flicker + hidden-neighbor seam ---
+  {
+    using cutum::ShouldRemeshDrawableForHiddenNeighborSeam;
+    using cutum::SoftDeferEmptyShouldApplyOwnership;
+    using cutum::SoftDeferEmptyShouldKeepOwnership;
+    using cutum::SoftDeferEmptyShouldMarkDirtyAfterAvoid;
+    using cutum::IsSoftDeferHiddenNeighbor;
+
+    Expect(SoftDeferEmptyShouldKeepOwnership(true, true),
+           "Era39: sticky own while still empty");
+    Expect(!SoftDeferEmptyShouldKeepOwnership(false, true),
+           "Era39: drop own when healed");
+    Expect(!SoftDeferEmptyShouldKeepOwnership(true, false),
+           "Era39: no sticky without prior ownership");
+    Expect(!SoftDeferEmptyShouldMarkDirtyAfterAvoid(true, 0),
+           "Era39: damp Dirty while FM/pending after avoid");
+    Expect(!SoftDeferEmptyShouldMarkDirtyAfterAvoid(false, 2),
+           "Era39: damp Dirty until min_frames");
+    Expect(SoftDeferEmptyShouldMarkDirtyAfterAvoid(false, 4),
+           "Era39: Dirty OK after min_frames without ticket");
+    Expect(SoftDeferEmptyShouldApplyOwnership(true),
+           "Era39: apply ownership when Cd ready");
+    Expect(!SoftDeferEmptyShouldApplyOwnership(false),
+           "Era39: count-only while Cd cooling");
+    Expect(ShouldRemeshDrawableForHiddenNeighborSeam(true, true, false),
+           "Era39: remesh drawable on SoftDefer-hidden enter");
+    Expect(ShouldRemeshDrawableForHiddenNeighborSeam(true, false, true),
+           "Era39: remesh drawable on SoftDefer-hidden leave/heal");
+    Expect(!ShouldRemeshDrawableForHiddenNeighborSeam(true, true, true),
+           "Era39: no remesh when hidden state unchanged");
+    Expect(!ShouldRemeshDrawableForHiddenNeighborSeam(false, true, false),
+           "Era39: skip remesh if self !Drawable");
+    Expect(IsSoftDeferHiddenNeighbor(true, false, true),
+           "Era39: loaded SoftDefer empty/held = hidden neighbor");
+    Expect(!IsSoftDeferHiddenNeighbor(true, true, true),
+           "Era39: drawable neighbor not hidden");
+    Expect(!IsSoftDeferHiddenNeighbor(false, false, true),
+           "Era39: unloaded → Unknown path, not SoftDefer-hidden");
+  }
+
   // --- Era28 Visual Stage Gate ---
   using cutum::ShouldAllowUnlitFirstMeshNearFov;
   using cutum::ShouldPublishMeshToDraw;
@@ -671,8 +711,8 @@ int main()
     using cutum::LandRelightGpuApplyFloor;
     Expect(LandRelightGpuApplyFloor(50, 10, 3) == 3,
            "Era37 P1b: low pending keeps base");
-    Expect(LandRelightGpuApplyFloor(70, 25, 3) == 8,
-           "Era37 P1b: fifo+pending boost apply floor");
+    Expect(LandRelightGpuApplyFloor(70, 25, 3) == 12,
+           "Era39 A4: fifo+pending boost apply floor to 12");
     Expect(LandRelightGpuApplyFloor(70, 10, 5) == 5,
            "Era37 P1b: fifo alone insufficient");
   }

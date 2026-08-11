@@ -649,6 +649,9 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   world.PhysicsTelemetryData.FocusStickyRemesh = sticky_remesh;
   world.PhysicsTelemetryData.FocusPendingDark = pending_dark;
   world.PhysicsTelemetryData.FocusDarkMesh = dark_preview;
+  // Era39 A4: split Type A — pending-dark (hidden) vs sticky remesh (preview).
+  world.PhysicsTelemetryData.FocusDarkMeshHidden = pending_dark;
+  world.PhysicsTelemetryData.FocusDarkMeshPreview = sticky_remesh;
   // Era16 TD-052: VisibleBlack column SoT (independent of StickyRemesh set).
   // Idle: every frame. Cruise: every 4 frames (mirror unfinished sample).
   {
@@ -2007,6 +2010,12 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
   world.PhysicsTelemetryData.ChunkMeshedUnlit =
       static_cast<uint64_t>(
           (std::max)(0, world.PhysicsTelemetryData.FocusDarkMesh));
+  world.PhysicsTelemetryData.ChunkMeshedUnlitHidden =
+      static_cast<uint64_t>(
+          (std::max)(0, world.PhysicsTelemetryData.FocusDarkMeshHidden));
+  world.PhysicsTelemetryData.ChunkMeshedUnlitPreview =
+      static_cast<uint64_t>(
+          (std::max)(0, world.PhysicsTelemetryData.FocusDarkMeshPreview));
   world.PhysicsTelemetryData.MeshDirtyTickMs =
       world.GetMeshService().GetLastMeshDirtyTickMs();
 }

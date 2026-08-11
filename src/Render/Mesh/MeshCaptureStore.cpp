@@ -47,8 +47,8 @@ ChunkMeshSnapshot UMeshCaptureStore::CaptureAndStore(const UBlockWorld &world,
                                                      glm::ivec3 coord,
                                                      uint64_t source_revision)
 {
-  ChunkMeshSnapshot snap =
-      ChunkMeshSnapshot::Capture(world, coord, source_revision);
+  ChunkMeshSnapshot snap = ChunkMeshSnapshot::Capture(
+      world, coord, source_revision, NeighborDrawableFn_, NeighborDrawableCtx_);
   Entry entry;
   entry.worldEpoch = WorldEpoch_;
   entry.sourceRevision = source_revision;

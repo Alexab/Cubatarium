@@ -31,9 +31,16 @@ struct ChunkMeshSnapshot
   std::array<uint8_t, kShellCells> shellNeighborState{};
   uint64_t sourceRevision{0};
 
+  /// Optional: when false for a neighbor chunk coord, shell treats that
+  /// neighbor as Air (Era39 SoftDefer-hidden seam). Nullptr ⇒ all drawable.
+  using NeighborVisualDrawableFn = bool (*)(void *ctx, glm::ivec3 neighbor_chunk);
+
   static ChunkMeshSnapshot Capture(const UBlockWorld &world,
                                    glm::ivec3 chunkCoord,
-                                   uint64_t sourceRevision);
+                                   uint64_t sourceRevision,
+                                   NeighborVisualDrawableFn neighbor_drawable =
+                                       nullptr,
+                                   void *neighbor_drawable_ctx = nullptr);
 
   BlockId GetBlock(glm::ivec3 worldPos) const;
   BlockId GetBlockLocal(glm::ivec3 local) const;

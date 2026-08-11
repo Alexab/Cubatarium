@@ -192,4 +192,17 @@ inline SoftDeferEmptyHealKind SoftDeferEmptyHealKindOf()
   return SoftDeferEmptyHealKind::FirstMesh;
 }
 
+/// Era39: SoftDefer-hidden neighbor (loaded solid, no drawable / SoftDefer
+/// empty or Held) must not occlude faces of a ready chunk.
+inline bool IsSoftDeferHiddenNeighbor(bool neighbor_chunk_loaded,
+                                      bool neighbor_visually_drawable,
+                                      bool soft_defer_empty_or_held)
+{
+  if (!neighbor_chunk_loaded || neighbor_visually_drawable)
+  {
+    return false;
+  }
+  return soft_defer_empty_or_held;
+}
+
 } // namespace cutum

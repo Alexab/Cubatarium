@@ -317,6 +317,8 @@ struct FrameNumbers
   double pool_fence_wait_ms{0.0};
   uint64_t chunk_meshed_culled0{0};
   uint64_t chunk_meshed_unlit{0};
+  uint64_t chunk_meshed_unlit_hidden{0};
+  uint64_t chunk_meshed_unlit_preview{0};
   uint64_t chunk_not_ready{0};
   int dark_face_near_n{0};
   int dark_face_stale_near_n{0};
@@ -604,6 +606,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.pool_fence_wait_ms = phys.PoolFenceWaitMs;
   n.chunk_meshed_culled0 = phys.ChunkMeshedCulled0;
   n.chunk_meshed_unlit = phys.ChunkMeshedUnlit;
+  n.chunk_meshed_unlit_hidden = phys.ChunkMeshedUnlitHidden;
+  n.chunk_meshed_unlit_preview = phys.ChunkMeshedUnlitPreview;
   n.chunk_not_ready = phys.ChunkNotReady;
   n.dark_face_near_n = phys.DarkFaceNearN;
   n.dark_face_stale_near_n = phys.DarkFaceStaleNearN;
@@ -873,6 +877,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"pool_fence_wait_ms\":" << n.pool_fence_wait_ms
           << ",\"chunk_meshed_culled0\":" << n.chunk_meshed_culled0
           << ",\"chunk_meshed_unlit\":" << n.chunk_meshed_unlit
+          << ",\"chunk_meshed_unlit_hidden\":" << n.chunk_meshed_unlit_hidden
+          << ",\"chunk_meshed_unlit_preview\":" << n.chunk_meshed_unlit_preview
           << ",\"chunk_not_ready\":" << n.chunk_not_ready
           << ",\"dark_face_near_n\":" << n.dark_face_near_n
           << ",\"dark_face_stale_near_n\":" << n.dark_face_stale_near_n

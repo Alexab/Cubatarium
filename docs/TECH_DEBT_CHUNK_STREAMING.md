@@ -120,6 +120,14 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-065 | Era29 | Enter Visual Warmup | Progress bar closes on greedy r≤2; SoftDefer/PendingLight/VB explode on ENTER (`091332`) | **partial 2026-08-10** P0–P4 landed; FLY/IDLE/WARM GO; LAND soft miss; wait manual ENTER eye |
 | TD-ARCH-066 | Era37 | Manual/Autofly Parity + Near-FOV Visual SLA | Era36 autofly GO but manual `161544` unchanged (FIFO~96, unlit~20); teleport vs resume incomparable | **partial 2026-08-11** P0–P5 landed; `land-cruise-resume` harness; wait manual+resume parity eye |
 | TD-ARCH-067 | Era38 | Near-FOV Work Priority + Resume Parity | SoftDefer ownership row-major+cap starves near; Unlit hinterland + rear slots; autofly≠manual | **partial 2026-08-11** A0–A3 + B harness; gate=`land-cruise-resume`; CLOSED only within 2× manual + eye |
+| TD-ARCH-068 | Era39 | SoftDefer Anti-Flicker + Hidden-Neighbor Seam | SoftDefer empty publish/withdraw flicker; ready-chunk faces X-ray when SoftDefer-hidden neighbor; FIFO residual | **partial 2026-08-11** P0–P2 + A4 (floor 12 + unlit telem split); wait manual eye |
+
+> **Era39 SoftDefer Anti-Flicker + Seam (2026-08-11):** SoftDefer empty recount every
+> frame / ownership on Cd; near sticky ownership; PublishAvoided Dirty damp + keep
+> HasGreedy (no erase flash). Snapshot treats SoftDefer-hidden neighbor as Air;
+> remesh drawable face-neighbors on SoftDefer empty enter/leave. A4 after resume
+> debt gate: `LandRelightGpuApplyFloor` 8→12; `chunk_meshed_unlit_{hidden,preview}`.
+> Reject: LitDrawable ring off; Unlit void; CLOSED without manual eye.
 
 > **Era38 Near-FOV Work Priority (2026-08-11):** SoftDefer empty collect→`NearFovWorkScore`
 > sort→near-first ownership; starve hinterland Unlit / rear Pass1b while near empty or

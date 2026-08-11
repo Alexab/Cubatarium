@@ -552,6 +552,11 @@ private:
   uint64_t MeshReplaceHoleAvoided{0};
   /// Era24 I-E1: SoftDefer undrawn publish avoided (Hide⇒Ticket).
   uint64_t SoftDeferEmptyPublishAvoided{0};
+  /// Era39: frames since SoftDeferEmptyPublishAvoided (Dirty damp).
+  std::unordered_map<glm::ivec3, int, IVec3Hash> SoftDeferEmptyAvoidFrames;
+  void NoteSoftDeferEmptyPublishAvoided(glm::ivec3 coord);
+  void MaybeMarkDirtyAfterSoftDeferEmptyAvoid(glm::ivec3 coord);
+  void AgeSoftDeferEmptyAvoidFrames();
   IUChunkCull *CullBackend{nullptr};
   IUChunkMesher *MesherBackend{nullptr};
   std::chrono::steady_clock::time_point LastFlatRebuildAt{};

@@ -5,6 +5,7 @@
 #include "World/Streaming/StreamingPressure.h"
 
 #include <unordered_map>
+#include <unordered_set>
 
 namespace cutum
 {
@@ -64,6 +65,10 @@ private:
   int MissWitnessAgeFrames{0};
   /// Era24 I-E4: SoftDefer empty / Hide⇒Ticket age (frames since first seen).
   std::unordered_map<glm::ivec3, int, IVec3Hash> SoftDeferEmptyAgeFrames;
+  /// Era39: sticky SoftDefer empty ownership until healed.
+  std::unordered_set<glm::ivec3, IVec3Hash> SoftDeferEmptyOwned;
+  /// Era39: previous-frame SoftDefer empty set (hidden-neighbor seam).
+  std::unordered_set<glm::ivec3, IVec3Hash> SoftDeferEmptyPrevSeen;
   /// Era34 P1: rotate SoftDefer empty ownership when cap saturates.
   int SoftDeferEmptyScanOffset{0};
 };

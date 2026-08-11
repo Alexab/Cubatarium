@@ -40,6 +40,14 @@ public:
                                   uint64_t source_revision,
                                   int &refresh_budget);
 
+  /// Era39: SoftDefer-hidden neighbors → Air shell (capture-time).
+  void SetNeighborVisualDrawableFn(
+      ChunkMeshSnapshot::NeighborVisualDrawableFn fn, void *ctx)
+  {
+    NeighborDrawableFn_ = fn;
+    NeighborDrawableCtx_ = ctx;
+  }
+
   size_t Size() const { return Store_.size(); }
 
 private:
@@ -51,6 +59,8 @@ private:
   };
   uint64_t WorldEpoch_{1};
   std::unordered_map<glm::ivec3, Entry, IVec3Hash> Store_;
+  ChunkMeshSnapshot::NeighborVisualDrawableFn NeighborDrawableFn_{nullptr};
+  void *NeighborDrawableCtx_{nullptr};
 };
 
 } // namespace cutum

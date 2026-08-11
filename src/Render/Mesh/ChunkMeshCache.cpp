@@ -35,6 +35,18 @@ namespace cutum
 
 namespace
 {
+
+bool CacheNeighborVisuallyDrawable(void *ctx, glm::ivec3 neighbor_chunk)
+{
+  auto *cache = static_cast<UChunkMeshCache *>(ctx);
+  if (!cache)
+  {
+    return true;
+  }
+  // Era39: SoftDefer empty / Held / undrawn ⇒ not an occluder for shell faces.
+  return cache->HasDrawableGreedyMesh(neighbor_chunk);
+}
+
 struct CullViewKeyAngles
 {
   int iyaw{0};
@@ -1142,6 +1154,7 @@ void UChunkMeshCache::BumpChunkMeshRevision(glm::ivec3 chunk_coord)
 void UChunkMeshCache::PrefetchMeshCapture(const UBlockWorld &world,
                                           glm::ivec3 chunk_coord)
 {
+  CaptureStore.SetNeighborVisualDrawableFn(CacheNeighborVisuallyDrawable, this);
   const uint64_t rev = MeshRevisions.Current(chunk_coord);
   CaptureStore.CaptureAndStore(world, chunk_coord, rev);
 }
@@ -1332,6 +1345,47 @@ void UChunkMeshCache::HoldSoftDeferFirstMesh(glm::ivec3 chunk_coord)
   // Drop an arbitrary far entry so the side-set cannot grow unboundedly.
   auto drop = SoftDeferHeld.begin();
   SoftDeferHeld.erase(drop);
+}
+
+void UChunkMeshCache::NoteSoftDeferEmptyPublishAvoided(glm::ivec3 coord)
+{
+  ++SoftDeferEmptyPublishAvoided;
+  SoftDeferEmptyAvoidFrames[coord] = 0;
+}
+
+void UChunkMeshCache::AgeSoftDeferEmptyAvoidFrames()
+{
+  for (auto it = SoftDeferEmptyAvoidFrames.begin();
+       it != SoftDeferEmptyAvoidFrames.end();)
+  {
+    ++it->second;
+    if (it->second > 120)
+    {
+      it = SoftDeferEmptyAvoidFrames.erase(it);
+    }
+    else
+    {
+      ++it;
+    }
+  }
+}
+
+void UChunkMeshCache::MaybeMarkDirtyAfterSoftDeferEmptyAvoid(glm::ivec3 coord)
+{
+  const bool has_ticket =
+      IsPendingGpuApply(coord) || HasInflightMeshBuild(coord) ||
+      IsPendingGpuQueued(coord) || IsPendingGpuKickedOrDispatched(coord) ||
+      Dirty.Contains(coord);
+  int frames = 999;
+  const auto it = SoftDeferEmptyAvoidFrames.find(coord);
+  if (it != SoftDeferEmptyAvoidFrames.end())
+  {
+    frames = it->second;
+  }
+  if (SoftDeferEmptyShouldMarkDirtyAfterAvoid(has_ticket, frames))
+  {
+    MarkDirtyPriority(coord);
+  }
 }
 
 void UChunkMeshCache::RequeueSoftDeferHeld()
@@ -2712,28 +2766,20 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   if ((defer_until_lit || SoftDeferHeld.count(result.coord) > 0) &&
       !new_cpu_drawable)
   {
-    ++SoftDeferEmptyPublishAvoided;
+    NoteSoftDeferEmptyPublishAvoided(result.coord);
+    HoldSoftDeferFirstMesh(result.coord);
+    if (IsPendingGpuApply(result.coord))
+    {
+      PreferKickPendingGpuQueued(result.coord);
+    }
     if (had_gpu_resident)
     {
       ++MeshReplaceHoleAvoided;
-      HoldSoftDeferFirstMesh(result.coord);
-      if (IsPendingGpuApply(result.coord))
-      {
-        PreferKickPendingGpuQueued(result.coord);
-      }
-      MarkDirtyPriority(result.coord);
+      MaybeMarkDirtyAfterSoftDeferEmptyAvoid(result.coord);
       return;
     }
-    const auto oldItAvoid = GreedyVertexCountByChunk.find(result.coord);
-    if (oldItAvoid != GreedyVertexCountByChunk.end())
-    {
-      GreedyVertexCountTotal -= oldItAvoid->second;
-      GreedyVertexCountByChunk.erase(oldItAvoid);
-    }
-    GreedyCache.erase(result.coord);
-    NoteGeometryDirty(result.coord);
-    HoldSoftDeferFirstMesh(result.coord);
-    MarkDirtyPriority(result.coord);
+    // Era39: keep HasGreedy sticky — do not erase GreedyCache (flash).
+    MaybeMarkDirtyAfterSoftDeferEmptyAvoid(result.coord);
     return;
   }
   const auto oldIt = GreedyVertexCountByChunk.find(result.coord);
@@ -2854,6 +2900,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   }
   bool mesh_data_changed = false;
 
+  CaptureStore.SetNeighborVisualDrawableFn(CacheNeighborVisuallyDrawable, this);
+  AgeSoftDeferEmptyAvoidFrames();
   RequeueSoftDeferHeld();
 
   if (!Dirty.empty())
@@ -3783,28 +3831,20 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     if ((defer_until_lit || SoftDeferHeld.count(chunkCoord) > 0) &&
         !new_cpu_drawable)
     {
-      ++SoftDeferEmptyPublishAvoided;
+      NoteSoftDeferEmptyPublishAvoided(chunkCoord);
+      HoldSoftDeferFirstMesh(chunkCoord);
+      if (IsPendingGpuApply(chunkCoord))
+      {
+        PreferKickPendingGpuQueued(chunkCoord);
+      }
       if (had_gpu_resident)
       {
         ++MeshReplaceHoleAvoided;
-        HoldSoftDeferFirstMesh(chunkCoord);
-        if (IsPendingGpuApply(chunkCoord))
-        {
-          PreferKickPendingGpuQueued(chunkCoord);
-        }
-        MarkDirtyPriority(chunkCoord);
+        MaybeMarkDirtyAfterSoftDeferEmptyAvoid(chunkCoord);
         return;
       }
-      const auto oldItAvoid = GreedyVertexCountByChunk.find(chunkCoord);
-      if (oldItAvoid != GreedyVertexCountByChunk.end())
-      {
-        GreedyVertexCountTotal -= oldItAvoid->second;
-        GreedyVertexCountByChunk.erase(oldItAvoid);
-      }
-      GreedyCache.erase(chunkCoord);
-      NoteGeometryDirty(chunkCoord);
-      HoldSoftDeferFirstMesh(chunkCoord);
-      MarkDirtyPriority(chunkCoord);
+      // Era39: keep HasGreedy sticky — do not erase GreedyCache (flash).
+      MaybeMarkDirtyAfterSoftDeferEmptyAvoid(chunkCoord);
       return;
     }
     chunkMesh.batches = std::move(new_batches);

@@ -202,6 +202,9 @@ struct PhysicsTelemetry
   int MissHoriz{0};
   /// Count of focus columns with mesh but no sky light sample.
   int FocusDarkMesh{0};
+  /// Era39 A4: pending-dark (hidden until lit) vs sticky remesh (preview class).
+  int FocusDarkMeshHidden{0};
+  int FocusDarkMeshPreview{0};
   /// Pending-light + sticky black preview columns in focus (subset of dark).
   int FocusPendingDark{0};
   int FocusStickyRemesh{0};
@@ -278,6 +281,9 @@ struct PhysicsTelemetry
   /// Focus column split: meshed-but-culled vs not ready / unlit preview.
   uint64_t ChunkMeshedCulled0{0};
   uint64_t ChunkMeshedUnlit{0};
+  /// Era39 A4: Type A split — hidden (pending-dark) vs sticky preview.
+  uint64_t ChunkMeshedUnlitHidden{0};
+  uint64_t ChunkMeshedUnlitPreview{0};
   uint64_t ChunkNotReady{0};
   /// Nearest non-bottom greedy vertex with sky+block light==0 near camera (diag).
   int DarkFaceNearN{0};
