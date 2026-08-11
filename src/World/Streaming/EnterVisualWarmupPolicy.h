@@ -3,6 +3,7 @@
 #include "World/Streaming/VisualStagePolicy.h"
 
 #include <algorithm>
+#include <utility>
 
 namespace cutum
 {
@@ -128,6 +129,64 @@ inline bool ShouldRemeshAfterApplyOnlyOnIdleDrawable(bool idle_or_suppress,
                                                      bool has_drawable)
 {
   return idle_or_suppress && has_drawable;
+}
+
+/// Era36 B1: visible surface cy-band (surface_cy-1 .. surface_cy+3).
+inline std::pair<int, int> RelightSurfaceBandCy(int surface_block_y,
+                                                int chunk_size, int max_cy)
+{
+  const int surface_cy = std::max(0, surface_block_y / chunk_size);
+  return {std::max(0, surface_cy - 1), std::min(max_cy, surface_cy + 3)};
+}
+
+/// Era36 B1: relight Y-band surface clamp — skip underground chunks that
+/// are invisible from the surface. Returns min_y clamped to surface band.
+inline int RelightSurfaceBandMinY(int surface_block_y, int chunk_size,
+                                  int original_min_y)
+{
+  const int surface_min = std::max(0, surface_block_y - chunk_size);
+  return std::max(original_min_y, surface_min);
+}
+
+/// Era36 B1: clamp max_y to surface band top (surface_cy+3).
+inline int RelightSurfaceBandMaxY(int surface_block_y, int chunk_size,
+                                  int max_height, int original_max_y)
+{
+  const int max_cy = std::max(0, max_height / chunk_size);
+  const int cy1 = RelightSurfaceBandCy(surface_block_y, chunk_size, max_cy).second;
+  const int surface_max = std::min(max_height, (cy1 + 1) * chunk_size - 1);
+  return std::min(original_max_y, surface_max);
+}
+
+/// Era36 B2: dynamic CaptureMovingBgCap based on pending light pressure.
+inline int DynamicCaptureMovingBgCap(int pending_light_focus,
+                                     int base_cap = 1)
+{
+  if (pending_light_focus <= 20)
+  {
+    return base_cap;
+  }
+  return std::min(4, pending_light_focus / 10 + 1);
+}
+
+/// Era36 B3: allow DrainIdlePendingLight on land while moving with high
+/// pending (not just ocean void/miss).
+inline bool ShouldDrainPendingLightLandMoving(int pending_light_focus,
+                                              int threshold = 30)
+{
+  return pending_light_focus > threshold;
+}
+
+/// Era36 B3: moving drain floor for land cruise light debt (mirrors ocean).
+inline int LandMovingRelightDrainFloor(bool moving, int pending_light_focus,
+                                       int threshold = 30)
+{
+  if (!moving || !ShouldDrainPendingLightLandMoving(pending_light_focus,
+                                                    threshold))
+  {
+    return 0;
+  }
+  return 1;
 }
 
 /// Era35 P1: SoftDefer empty scan cy-window for near-FOV columns (horiz<=2)

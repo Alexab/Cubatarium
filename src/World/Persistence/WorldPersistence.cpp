@@ -18,6 +18,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Core/World.h"
 #include "World/Mesh/WorldMeshService.h"
@@ -276,6 +277,11 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   }
   world.ReconcileAsyncRelightColumnInFlight();
   const int max_y = world.ProceduralTemplate.MaxHeight;
+  const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
+  const int surface_band_min =
+      RelightSurfaceBandMinY(focus_block.y, CHUNK_SIZE, 0);
+  const int surface_band_max =
+      RelightSurfaceBandMaxY(focus_block.y, CHUNK_SIZE, max_y, max_y);
   const bool async_bg =
       world.ProceduralTemplate.AsyncRelight &&
       !world.IsLightingRelightDeferred() && world.AllowsAsyncLighting();
@@ -484,9 +490,12 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   // Async SoftDefer hole may enqueue even when wall is high (see drain_one).
   int bg_cap = max_bg_columns;
   // S2 step A: cruise ≤CaptureMovingBgCap (worker Capture hung — TD-ARCH-015).
+  // Era36 B2: dynamic cap based on pending light pressure.
   if (moving)
   {
-    bg_cap = std::min(bg_cap, std::max(1, tune.CaptureMovingBgCap));
+    const int dynamic_cap =
+        DynamicCaptureMovingBgCap(pending_light_focus_n, tune.CaptureMovingBgCap);
+    bg_cap = std::min(bg_cap, std::max(1, dynamic_cap));
   }
   if (frame_ms_so_far >= capture_hot_skip_ms && visual_holes &&
       focus_pending_mid)
@@ -570,8 +579,18 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         relight_max = max_y;
       }
     }
+    // Era36 B1: clamp Capture Y-band to visible surface — drop underground.
     const glm::ivec2 ground_xz(FloorDiv(col.x, CHUNK_SIZE),
                                FloorDiv(col.y, CHUNK_SIZE));
+    relight_min = std::max(relight_min, surface_band_min);
+    relight_max = std::min(relight_max, surface_band_max);
+    if (relight_max < relight_min)
+    {
+      // Entire band underground — clear pending so FIFO does not spin forever.
+      world.ClearPendingLightBeforeMesh(ground_xz);
+      PendingTerrainColumnRelightKeys.erase(col);
+      return skipped_inflight < std::max(8, max_bg_columns * 4);
+    }
     const int horiz_dist =
         std::max(std::abs(ground_xz.x - focus_horiz.x),
                  std::abs(ground_xz.y - focus_horiz.z));
@@ -634,6 +653,18 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     else
     {
       world.RelightTerrainColumn(col.x, col.y, relight_min, relight_max, false);
+    }
+    if (remainder_min >= 0)
+    {
+      // Era36 B1: underground remainder is invisible — do not requeue.
+      if (remainder_max < surface_band_min)
+      {
+        remainder_min = -1;
+      }
+      else
+      {
+        remainder_min = std::max(remainder_min, surface_band_min);
+      }
     }
     if (remainder_min >= 0)
     {

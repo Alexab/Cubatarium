@@ -1437,6 +1437,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
   }
   // Era31 I-T1: ocean void heal moving drain floor (even without miss).
+  // Era36 B3: land cruise pending-light drain while moving (not ocean-only).
   {
     const int void_n = world.GetPhysicsTelemetry().DarkFaceVoidNearN;
     const int vb_n = world.GetPhysicsTelemetry().VisibleBlackFocusN;
@@ -1460,6 +1461,25 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       else
       {
         --ocean_void_drain_cd;
+      }
+    }
+    else if (moving)
+    {
+      static int land_pending_drain_cd = 0;
+      if (land_pending_drain_cd <= 0)
+      {
+        const int floor = LandMovingRelightDrainFloor(moving, pending_focus_count);
+        if (floor > 0)
+        {
+          GetColumnFlowExecutor().DrainIdlePendingLight(
+              world, focus_ground_horiz, focus_radius, floor, false,
+              last_frame_ms, pending_focus_count, missing_visible_mesh);
+        }
+        land_pending_drain_cd = 1;
+      }
+      else
+      {
+        --land_pending_drain_cd;
       }
     }
   }

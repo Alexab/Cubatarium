@@ -1871,6 +1871,15 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
   {
     ground.y = 0;
   }
+  // Era36 B1: clamp to visible surface band — skip underground relight waste.
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const int max_h = ProceduralTemplate.MaxHeight;
+  min_y = RelightSurfaceBandMinY(focus_block.y, CHUNK_SIZE, min_y);
+  max_y = RelightSurfaceBandMaxY(focus_block.y, CHUNK_SIZE, max_h, max_y);
+  if (max_y < min_y)
+  {
+    return;
+  }
   const glm::ivec2 key(ground.x, ground.z);
   SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
   auto [it, inserted] = PendingLightBeforeMesh.try_emplace(key);
@@ -1901,10 +1910,21 @@ void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
   // Match RecoverUnlit: light path owns heal — drop StickyRemesh ghost so
   // PendingLight+mesh does not latch black_sticky (IDLE gate).
   StickyRemeshAfterLight.erase(col_xz);
-  NotePendingLightBeforeMesh(ground, 0, max_y);
+  // Era36 B1: clamp min_y/max_y to surface band — skip invisible underground.
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const int surface_min_y =
+      RelightSurfaceBandMinY(focus_block.y, CHUNK_SIZE, 0);
+  const int surface_max_y =
+      RelightSurfaceBandMaxY(focus_block.y, CHUNK_SIZE, max_y, max_y);
+  if (surface_max_y < surface_min_y)
+  {
+    return;
+  }
+  NotePendingLightBeforeMesh(ground, surface_min_y, surface_max_y);
   Persistence->EnqueueTerrainColumnRelight(col_xz.x * CHUNK_SIZE,
                                            col_xz.y * CHUNK_SIZE,
-                                           /*priority=*/true, 0, max_y);
+                                           /*priority=*/true, surface_min_y,
+                                           surface_max_y);
 }
 
 void UWorld::ClearPendingLightBeforeMesh(glm::ivec2 ground_xz)
@@ -2533,13 +2553,17 @@ int UWorld::DrainIdleFocusPendingLight(glm::ivec3 focus_ground_horiz,
   {
     // Era26 I-O1: under miss+void/VB allow capped drain while moving
     // (ocean lateral Relight; idle-only gate starved fifo on 214325).
+    // Era36 B3: also drain on land when pending_light_focus is high.
+    const int pending_focus_n =
+        CountPendingLightBeforeMeshNear(focus_ground_horiz, radius_chunks);
     if (!ShouldDrainPendingLightUnderMissMoving(
             PhysicsTelemetryData.FocusMissingMesh != 0, /*moving=*/true,
             PhysicsTelemetryData.DarkFaceVoidNearN,
             PhysicsTelemetryData.VisibleBlackFocusN) &&
         !ShouldDrainPendingLightUnderOceanVoid(
             /*moving=*/true, PhysicsTelemetryData.DarkFaceVoidNearN,
-            PhysicsTelemetryData.VisibleBlackFocusN))
+            PhysicsTelemetryData.VisibleBlackFocusN) &&
+        !ShouldDrainPendingLightLandMoving(pending_focus_n))
     {
       return 0;
     }
@@ -2670,13 +2694,17 @@ int UWorld::DrainIdleFocusPendingLightSync(glm::ivec3 focus_ground_horiz,
   }
   if (LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold)
   {
+    // Era36 B3: also drain on land when pending_light_focus is high.
+    const int sync_pending_n =
+        CountPendingLightBeforeMeshNear(focus_ground_horiz, radius_chunks);
     if (!ShouldDrainPendingLightUnderMissMoving(
             PhysicsTelemetryData.FocusMissingMesh != 0, /*moving=*/true,
             PhysicsTelemetryData.DarkFaceVoidNearN,
             PhysicsTelemetryData.VisibleBlackFocusN) &&
         !ShouldDrainPendingLightUnderOceanVoid(
             /*moving=*/true, PhysicsTelemetryData.DarkFaceVoidNearN,
-            PhysicsTelemetryData.VisibleBlackFocusN))
+            PhysicsTelemetryData.VisibleBlackFocusN) &&
+        !ShouldDrainPendingLightLandMoving(sync_pending_n))
     {
       return 0;
     }

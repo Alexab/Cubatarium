@@ -552,6 +552,61 @@ int main()
            "Era34 P0: near settle radius < LitDrawable ring4");
   }
 
+  // --- Era36 B1 surface band clamp ---
+  {
+    using cutum::RelightSurfaceBandCy;
+    using cutum::RelightSurfaceBandMaxY;
+    using cutum::RelightSurfaceBandMinY;
+    Expect(RelightSurfaceBandMinY(64, 16, 0) == 48,
+           "Era36 B1: surface_y=64 clamps min_y from 0 to 48");
+    Expect(RelightSurfaceBandMinY(16, 16, 0) == 0,
+           "Era36 B1: surface_y=16 clamps to 0");
+    Expect(RelightSurfaceBandMinY(64, 16, 60) == 60,
+           "Era36 B1: original min_y=60 > surface_min=48, keeps 60");
+    Expect(RelightSurfaceBandMaxY(64, 16, 255, 255) == 127,
+           "Era36 B1: surface_y=64 caps max_y at cy7 top (127)");
+    Expect(RelightSurfaceBandMaxY(64, 16, 255, 100) == 100,
+           "Era36 B1: original max below band top keeps original");
+    const auto band = RelightSurfaceBandCy(64, 16, 15);
+    Expect(band.first == 3 && band.second == 7,
+           "Era36 B1: surface cy=4 -> band 3..7");
+  }
+
+  // --- Era36 B2 dynamic capture cap ---
+  {
+    using cutum::DynamicCaptureMovingBgCap;
+    Expect(DynamicCaptureMovingBgCap(5) == 1,
+           "Era36 B2: low pending -> base cap 1");
+    Expect(DynamicCaptureMovingBgCap(25) == 3,
+           "Era36 B2: pending=25 -> cap 3");
+    Expect(DynamicCaptureMovingBgCap(50) == 4,
+           "Era36 B2: pending=50 -> cap clamped to 4");
+    Expect(DynamicCaptureMovingBgCap(20) == 1,
+           "Era36 B2: pending=20 (threshold) -> base cap");
+    Expect(DynamicCaptureMovingBgCap(21) == 3,
+           "Era36 B2: pending=21 -> cap 3");
+  }
+
+  // --- Era36 B3 land moving drain ---
+  {
+    using cutum::LandMovingRelightDrainFloor;
+    using cutum::ShouldDrainPendingLightLandMoving;
+    Expect(!ShouldDrainPendingLightLandMoving(10),
+           "Era36 B3: low pending -> no drain");
+    Expect(!ShouldDrainPendingLightLandMoving(30),
+           "Era36 B3: pending=30 (threshold) -> no drain");
+    Expect(ShouldDrainPendingLightLandMoving(31),
+           "Era36 B3: pending=31 -> drain");
+    Expect(ShouldDrainPendingLightLandMoving(50),
+           "Era36 B3: high pending -> drain");
+    Expect(LandMovingRelightDrainFloor(true, 10) == 0,
+           "Era36 B3: floor 0 when pending low");
+    Expect(LandMovingRelightDrainFloor(true, 31) == 1,
+           "Era36 B3: floor 1 when pending high");
+    Expect(LandMovingRelightDrainFloor(false, 50) == 0,
+           "Era36 B3: floor 0 when idle");
+  }
+
   // --- Era35 P1 cy-window ---
   {
     using cutum::SoftDeferCyWindowNearTop;
