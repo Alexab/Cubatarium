@@ -4,6 +4,7 @@
 #include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/CyOrderPolicy.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include "World/Streaming/NearFovWorkPriority.h"
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/FrontierStagePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
@@ -605,6 +606,45 @@ int main()
            "Era36 B3: floor 1 when pending high");
     Expect(LandMovingRelightDrainFloor(false, 50) == 0,
            "Era36 B3: floor 0 when idle");
+  }
+
+  // --- Era38 A0 near-FOV work score ---
+  {
+    using cutum::ColumnFlowFirstMeshPriority;
+    using cutum::ColumnFlowRelightPriorityUnderMiss;
+    using cutum::NearFovWorkScore;
+    using cutum::SoftDeferEmptyNearReserveSlots;
+    using cutum::StarveHinterlandUnlit;
+    Expect(NearFovWorkScore(0, 0.0f) < NearFovWorkScore(2, 0.0f),
+           "Era38 A0: underfeet sooner than side horiz2");
+    Expect(NearFovWorkScore(1, 1.0f) < NearFovWorkScore(1, 0.0f),
+           "Era38 A0: ahead beats side at same horiz");
+    Expect(NearFovWorkScore(2, 0.0f) == NearFovWorkScore(2, -1.0f),
+           "Era38 A0: behind gets no fwd credit (ties side)");
+    Expect(NearFovWorkScore(1, 1.0f) < NearFovWorkScore(0, 0.0f),
+           "Era38 A0: Admit mirror — ahead+1 can beat underfeet");
+    Expect(NearFovWorkScore(2, 1.0f) < NearFovWorkScore(5, 1.0f),
+           "Era38 A0: near ahead beats far ahead");
+    Expect(SoftDeferEmptyNearReserveSlots(12) == 6,
+           "Era38 A0: reserve half cap capped at 6");
+    Expect(SoftDeferEmptyNearReserveSlots(4) == 2,
+           "Era38 A0: reserve half of small cap");
+    Expect(SoftDeferEmptyNearReserveSlots(1) == 1,
+           "Era38 A0: reserve at least 1");
+    Expect(ColumnFlowFirstMeshPriority(105, 0, 4) == 109,
+           "Era38 A0: underfeet FirstMesh prio boost");
+    Expect(ColumnFlowFirstMeshPriority(105, 4, 4) == 105,
+           "Era38 A0: rim FirstMesh keeps base");
+    Expect(ColumnFlowRelightPriorityUnderMiss(55, 0, 4, true) == 59,
+           "Era38 A0: near Relight boost under miss");
+    Expect(ColumnFlowRelightPriorityUnderMiss(95, 0, 10, true) == 99,
+           "Era38 A0: Relight clamped to 99 under miss");
+    Expect(StarveHinterlandUnlit(1, 0),
+           "Era38 A0: starve when SoftDefer empty near");
+    Expect(StarveHinterlandUnlit(0, 16),
+           "Era38 A0: starve when pending debt");
+    Expect(!StarveHinterlandUnlit(0, 10),
+           "Era38 A0: no starve when clear");
   }
 
   // --- Era37 P0 unlit hole preview ---

@@ -7,6 +7,7 @@
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
+#include "World/Streaming/NearFovWorkPriority.h"
 #include "World/Math/GridMath.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 
@@ -190,7 +191,8 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     ColumnWorkItem item{};
     item.column = focus;
     item.kind = ColumnWorkKind::FirstMesh;
-    item.priority = 100 + admit_n;
+    item.priority =
+        ColumnFlowFirstMeshPriority(100 + admit_n, /*horiz=*/0, focus_radius);
     item.scan_full_focus = true;
     item.cy = -1;
     Enqueue(item);
@@ -211,7 +213,12 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       {
         break;
       }
-      Enqueue(col, ColumnWorkKind::RelightThenMesh, relight_hi - enq);
+      const int horiz =
+          std::max(std::abs(col.x - focus.x), std::abs(col.y - focus.y));
+      Enqueue(col, ColumnWorkKind::RelightThenMesh,
+              ColumnFlowRelightPriorityUnderMiss(relight_hi - enq, horiz,
+                                                 focus_radius,
+                                                 missing_visible_mesh));
       Enqueue(col, ColumnWorkKind::PromoteRelight, promote_hi - enq);
       ++enq;
     }

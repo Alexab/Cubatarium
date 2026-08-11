@@ -80,6 +80,8 @@ struct PhysicsTelemetry
   uint64_t StageSkipRemeshPendingLight{0};
   /// Empty SoftDefer placeholders seen by undrawn heal this frame (A2 smoke).
   int SoftDeferEmptyPlaceholderN{0};
+  /// Era38: SoftDefer empty coords with horiz<=2 (previous frame until scan).
+  int SoftDeferEmptyNearN{0};
   /// Stuck pattern: HasGreedy && !Drawable && !Dirty && horiz>1.
   int SoftDeferEmptyStuckN{0};
   int SoftDeferEmptyStuckCx{0};

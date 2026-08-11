@@ -872,6 +872,35 @@ def analyze(
         enter_void = col(idle_head, "dark_face_void_near_n")
         enter_void_near_max = max(enter_void) if enter_void else None
     enter_unfinished_max = unfinished_idle_max
+    # Era38 B2: enter vs cruise debt split (before chunks move / while flying).
+    enter_pending_vals = col(idle_head, "pending_light_focus")
+    enter_pending_max = max(enter_pending_vals) if enter_pending_vals else None
+    enter_softdefer_vals = col(idle_head, "softdefer_empty_placeholder_n")
+    enter_softdefer_empty_max = (
+        max(enter_softdefer_vals) if enter_softdefer_vals else None
+    )
+    enter_unlit_vals = col(idle_head, "chunk_meshed_unlit")
+    enter_unlit_max = max(enter_unlit_vals) if enter_unlit_vals else None
+    fly_rows = [
+        r
+        for r in steady
+        if float(r.get("speed") or r.get("movement_speed") or 0) > 0.5
+        or int(r.get("moving") or 0) == 1
+    ]
+    if len(fly_rows) < 3:
+        fly_rows = [
+            r
+            for r in steady
+            if float(r.get("chunks_traveled_delta") or 0) > 0
+            or float(r.get("stream_pressure") or 0) > 0
+        ]
+    cruise_src = fly_rows if len(fly_rows) >= 3 else steady
+    cruise_pending_med = median(col(cruise_src, "pending_light_focus"))
+    cruise_fifo_med = median(col(cruise_src, "relight_fifo_n"))
+    cruise_unlit_med = median(col(cruise_src, "chunk_meshed_unlit"))
+    cruise_softdefer_empty_med = median(
+        col(cruise_src, "softdefer_empty_placeholder_n")
+    )
     # When dirty>100 AND unfinished_visual, mesh_async should stay fed.
     # visual_holes alone can latch without unfinished (legacy) and SoftDefer
     # not_render_ready must not demand mesh workers.
@@ -1153,6 +1182,7 @@ def analyze(
     }
 
     parity_vs_manual = None
+    parity_within_2x = None
     if baseline_manual and baseline_manual.is_file():
         try:
             base = json.loads(baseline_manual.read_text(encoding="utf-8"))
@@ -1162,6 +1192,11 @@ def analyze(
                 "effective_holes_rate": effective_holes_rate,
                 "wall_ms_fly_med": wall_fly_med,
                 "chunk_count_end": chunk_count_end,
+                "cruise_pending_med": cruise_pending_med,
+                "cruise_fifo_med": cruise_fifo_med,
+                "cruise_unlit_med": cruise_unlit_med,
+                "pending_light_focus_med": median(pending_f),
+                "chunk_meshed_unlit_med": chunk_meshed_unlit_med,
             }
             parity_vs_manual = {}
             for k, cur in cur_m.items():
@@ -1172,9 +1207,23 @@ def analyze(
                     parity_vs_manual[k] = 1.0 if float(cur) == 0.0 else None
                 else:
                     parity_vs_manual[k] = float(cur) / float(base_v)
+            # Era38: soft fail if cruise pending/fifo/unlit > 2× manual.
+            def _over_2x(key: str) -> bool:
+                ratio = parity_vs_manual.get(key) if parity_vs_manual else None
+                return ratio is not None and float(ratio) > 2.0
+
+            parity_within_2x = not (
+                _over_2x("cruise_pending_med")
+                or _over_2x("cruise_fifo_med")
+                or _over_2x("cruise_unlit_med")
+                or _over_2x("pending_light_focus_med")
+                or _over_2x("chunk_meshed_unlit_med")
+            )
         except (json.JSONDecodeError, OSError, TypeError, ValueError):
             parity_vs_manual = None
-
+            parity_within_2x = None
+    soft["parity_within_2x"] = parity_within_2x
+    soft["parity_within_2x_soft_fail"] = parity_within_2x is False
     out = {
         "perf_jsonl": str(path),
         "periods": len(periods),
@@ -1202,6 +1251,13 @@ def analyze(
             "chunk_count_end": chunk_count_end,
             "enter_void_near_max": enter_void_near_max,
             "enter_unfinished_max": enter_unfinished_max,
+            "enter_pending_max": enter_pending_max,
+            "enter_softdefer_empty_max": enter_softdefer_empty_max,
+            "enter_unlit_max": enter_unlit_max,
+            "cruise_pending_med": cruise_pending_med,
+            "cruise_fifo_med": cruise_fifo_med,
+            "cruise_unlit_med": cruise_unlit_med,
+            "cruise_softdefer_empty_med": cruise_softdefer_empty_med,
             "mesh_sync_fly_med": mesh_sync_fly_med,
             "wall_ms_no_holes_med": wall_ms_no_holes_med,
             "dirty_med_no_holes": dirty_med_no_holes,

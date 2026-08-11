@@ -13,6 +13,7 @@
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/CyOrderPolicy.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include "World/Streaming/NearFovWorkPriority.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Camera/Camera.h"
 #include "Render/Mesh/GpuMeshPipeline.h"
@@ -239,9 +240,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             mesh_service.GetCache().ChunkHasFullyDarkFace(chunk_coord);
         const bool pending_replace =
             pending || mesh_service.IsPendingGpuApply(chunk_coord);
-        const bool allow_unlit = AllowUnlitFirstMesh(
-            has_mesh, horiz, is_nearest_hole, in_focus,
-            kVisualStageLitDrawableHoriz);
+        const bool starve_hinterland = StarveHinterlandUnlit(
+            world.GetPhysicsTelemetry().SoftDeferEmptyNearN,
+            pending_focus_count);
+        const bool allow_unlit =
+            !starve_hinterland &&
+            AllowUnlitFirstMesh(has_mesh, horiz, is_nearest_hole, in_focus,
+                                kVisualStageLitDrawableHoriz);
         const bool allow_unlit_hole = AllowUnlitDrawableUnderLightDebt(
             pending_focus_count, unlit_near_count, horiz, fully_dark,
             has_greedy, underfeet);
@@ -517,8 +522,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
 
   // SoftDefer empty / Hide⇒Ticket: FirstMesh-until-Drawable ownership + age SLA.
+  // Era38 A1: collect → NearFovWorkScore sort → near reserve → rim-only offset.
   bool underfeet_undrawn = false;
   auto &phys_telem = world.GetPhysicsTelemetryMutable();
+  const int prev_softdefer_empty = phys_telem.SoftDeferEmptyPlaceholderN;
   phys_telem.SoftDeferEmptyPlaceholderN = 0;
   phys_telem.SoftDeferEmptyStuckN = 0;
   phys_telem.SoftDeferEmptyStuckDefer = 0;
@@ -537,11 +544,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         0, FloorDiv(procedural.MaxHeight, CHUNK_SIZE));
     int cy0 =
         missing_visible_mesh ? 0 : std::max(0, preferred_cy - 1);
-    // Era35 P1: base cy1; near-FOV columns get full-column scan below.
     const int cy1_base = std::min(max_cy, preferred_cy + 2);
     int cy1 = cy1_base;
-    // Era26 I-O5: SoftDefer empty scan covers sea band under FillWater so
-    // ocean lateral empty (horiz 2–5) is not missed by preferred_cy window.
     if (procedural.FillWater)
     {
       const int sea = procedural.SeaLevel;
@@ -552,261 +556,359 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       cy0 = std::min(cy0, sea_cy0);
       cy1 = std::max(cy1, std::min(max_cy, sea_cy1));
     }
-    // Era24: rim soft ownership budget (not DoD knob) — per-coord FirstMesh.
-    // Era35 P2: dynamic cap based on current empty count (12..24).
-    // Era35 P4: cruise catch-up boosts cap to 18 when moving with empty > 5.
     const int kEmptyOwnershipCap = EnterWarmupSoftDeferOwnershipCap(
         CruiseCatchUpOwnershipCap(
-            SoftDeferOwnershipCap(phys_telem.SoftDeferEmptyPlaceholderN),
-            phys_telem.SoftDeferEmptyPlaceholderN, moving),
-        phys_telem.SoftDeferEmptyPlaceholderN, enter_warmup_active);
+            SoftDeferOwnershipCap(prev_softdefer_empty), prev_softdefer_empty,
+            moving),
+        prev_softdefer_empty, enter_warmup_active);
+    glm::vec2 view_fwd = world.GetLastMovementDirXz();
+    if (!moving || glm::length(view_fwd) < 0.01f)
+    {
+      if (const auto camera = world.GetCurrentUserCamera())
+      {
+        const glm::vec3 front = camera->GetFront();
+        view_fwd = glm::vec2(front.x, front.z);
+      }
+    }
+    const float view_flen = glm::length(view_fwd);
+    auto view_dot_at = [&](int dx, int dz) -> float
+    {
+      if (view_flen < 0.01f)
+      {
+        return 0.0f;
+      }
+      const float clen =
+          std::sqrt(static_cast<float>(dx * dx + dz * dz));
+      if (clen < 0.01f)
+      {
+        return 1.0f;
+      }
+      return (static_cast<float>(dx) / clen) * (view_fwd.x / view_flen) +
+             (static_cast<float>(dz) / clen) * (view_fwd.y / view_flen);
+    };
+    struct SoftDeferEmptyCand
+    {
+      glm::ivec3 coord{};
+      int horiz{0};
+      float view_dot{0.0f};
+      bool empty_placeholder{false};
+    };
     if (UndrawnForceCd <= 0)
     {
-      int marked_n = 0;
-      int empty_fm_enqueue_n = 0;
-      bool age_drain_done = false;
+      std::vector<SoftDeferEmptyCand> cands;
+      cands.reserve(64);
       std::unordered_set<glm::ivec3, IVec3Hash> seen_empty;
       auto &exec = GetColumnFlowExecutor();
       const int heal_r = std::max(1, focus_radius);
-      // Era34 P1: rotate ownership start so cap=12 cannot starve rim empties.
       const int diam = 2 * heal_r + 1;
       const int cells = std::max(1, diam * diam);
-      const int start = SoftDeferEmptyScanOffset % cells;
-      for (int step = 0; step < cells; ++step)
+      int empty_near_n = 0;
+      for (int idx = 0; idx < cells; ++idx)
       {
-        const int idx = (start + step) % cells;
         const int dx = (idx % diam) - heal_r;
         const int dz = (idx / diam) - heal_r;
         const int horiz = std::max(std::abs(dx), std::abs(dz));
-        // Era35 P1: near-FOV columns scan full height.
-        const int col_cy1 = SoftDeferCyWindowNearTop(max_cy, preferred_cy,
-                                                     horiz);
+        const int col_cy1 =
+            SoftDeferCyWindowNearTop(max_cy, preferred_cy, horiz);
         const int eff_cy1 = std::max(cy1, col_cy1);
         for (int cy = cy0; cy <= eff_cy1; ++cy)
         {
-            const glm::ivec3 coord(focus_ground_horiz.x + dx, cy,
-                                   focus_ground_horiz.z + dz);
-            const bool has_drawable = mesh_service.HasDrawableGreedyMesh(coord);
-            const bool has_greedy = mesh_service.HasGreedyMesh(coord);
-            const bool is_dirty = mesh_service.IsChunkMeshDirty(coord);
-            const bool pending_gpu = mesh_service.IsPendingGpuApply(coord);
-            const bool inflight = mesh_service.HasInflightMeshBuild(coord);
-            const bool soft_held = mesh_service.IsSoftDeferHeld(coord);
-            if (has_drawable || pending_gpu || inflight || is_dirty)
+          const glm::ivec3 coord(focus_ground_horiz.x + dx, cy,
+                                 focus_ground_horiz.z + dz);
+          const bool has_drawable = mesh_service.HasDrawableGreedyMesh(coord);
+          const bool has_greedy = mesh_service.HasGreedyMesh(coord);
+          const bool is_dirty = mesh_service.IsChunkMeshDirty(coord);
+          const bool pending_gpu = mesh_service.IsPendingGpuApply(coord);
+          const bool inflight = mesh_service.HasInflightMeshBuild(coord);
+          const bool soft_held = mesh_service.IsSoftDeferHeld(coord);
+          if (has_drawable || pending_gpu || inflight || is_dirty)
+          {
+            continue;
+          }
+          if (!has_greedy && !soft_held)
+          {
+            continue;
+          }
+          const UChunk *chunk =
+              world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+          if (!chunk)
+          {
+            continue;
+          }
+          bool any_solid = false;
+          const int probe_stride = (horiz <= 2) ? 2 : 4;
+          for (int z = 0; z < CHUNK_SIZE && !any_solid; z += probe_stride)
+          {
+            for (int x = 0; x < CHUNK_SIZE && !any_solid; x += probe_stride)
             {
-              continue;
-            }
-            // SoftDefer empty (HasGreedy) or Hide⇒Ticket Absent+Held.
-            if (!has_greedy && !soft_held)
-            {
-              continue;
-            }
-            const UChunk *chunk =
-                world.GetBlockWorld().GetChunkManager().GetChunk(coord);
-            if (!chunk)
-            {
-              continue;
-            }
-            bool any_solid = false;
-            // Era35 P5: stride-2 for near-FOV to catch sparse leaf blocks.
-            const int probe_stride = (horiz <= 2) ? 2 : 4;
-            for (int z = 0; z < CHUNK_SIZE && !any_solid; z += probe_stride)
-            {
-              for (int x = 0; x < CHUNK_SIZE && !any_solid; x += probe_stride)
+              for (int y = 0; y < CHUNK_SIZE && !any_solid; y += probe_stride)
               {
-                for (int y = 0; y < CHUNK_SIZE && !any_solid; y += probe_stride)
+                if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
                 {
-                  if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
-                  {
-                    any_solid = true;
-                  }
+                  any_solid = true;
                 }
               }
             }
-            if (!any_solid)
+          }
+          if (!any_solid)
+          {
+            continue;
+          }
+          const bool empty_placeholder = IsSoftDeferEmptyPlaceholder(
+              has_greedy, has_drawable, is_dirty, pending_gpu, inflight,
+              any_solid);
+          const bool hide_held =
+              !has_greedy && soft_held && any_solid && !has_drawable;
+          if (!empty_placeholder && !hide_held)
+          {
+            continue;
+          }
+          if (empty_placeholder)
+          {
+            ++phys_telem.SoftDeferEmptyPlaceholderN;
+          }
+          if (!SoftDeferEmptyNeedsFirstMeshOwnership(
+                  empty_placeholder || hide_held, /*miss_or_in_focus=*/true))
+          {
+            continue;
+          }
+          seen_empty.insert(coord);
+          {
+            const auto age_it = SoftDeferEmptyAgeFrames.find(coord);
+            if (age_it == SoftDeferEmptyAgeFrames.end())
             {
-              continue;
+              SoftDeferEmptyAgeFrames.emplace(coord, 0);
             }
-            const bool empty_placeholder = IsSoftDeferEmptyPlaceholder(
-                has_greedy, has_drawable, is_dirty, pending_gpu, inflight,
-                any_solid);
-            const bool hide_held =
-                !has_greedy && soft_held && any_solid && !has_drawable;
-            if (!empty_placeholder && !hide_held)
+            else
             {
-              continue;
+              ++age_it->second;
             }
-            if (empty_placeholder)
+          }
+          const int age_frames = SoftDeferEmptyAgeFrames[coord];
+          if (age_frames > phys_telem.SoftDeferEmptyAgeMaxFrames)
+          {
+            phys_telem.SoftDeferEmptyAgeMaxFrames = age_frames;
+          }
+          if (horiz > 1)
+          {
+            ++phys_telem.SoftDeferEmptyStuckN;
+            if (phys_telem.SoftDeferEmptyStuckN == 1)
             {
-              ++phys_telem.SoftDeferEmptyPlaceholderN;
+              phys_telem.SoftDeferEmptyStuckCx = coord.x;
+              phys_telem.SoftDeferEmptyStuckCy = coord.y;
+              phys_telem.SoftDeferEmptyStuckCz = coord.z;
+              phys_telem.SoftDeferEmptyStuckHoriz = horiz;
+              phys_telem.SoftDeferEmptyStuckDefer = 1;
             }
-            // Rim scan is already FOV-focus; SoftDefer empty needs FirstMesh.
-            if (!SoftDeferEmptyNeedsFirstMeshOwnership(
-                    empty_placeholder || hide_held, /*miss_or_in_focus=*/true))
+            if (StuckSmokeCd <= 0)
             {
-              continue;
-            }
-            seen_empty.insert(coord);
-            {
-              const auto age_it = SoftDeferEmptyAgeFrames.find(coord);
-              if (age_it == SoftDeferEmptyAgeFrames.end())
-              {
-                SoftDeferEmptyAgeFrames.emplace(coord, 0);
-              }
-              else
-              {
-                ++age_it->second;
-              }
-            }
-            const int age_frames = SoftDeferEmptyAgeFrames[coord];
-            if (age_frames > phys_telem.SoftDeferEmptyAgeMaxFrames)
-            {
-              phys_telem.SoftDeferEmptyAgeMaxFrames = age_frames;
-            }
-            // A2 smoke: stuck pattern HasGreedy && !Drawable && !Dirty && horiz>1
-            if (horiz > 1)
-            {
-              ++phys_telem.SoftDeferEmptyStuckN;
-              if (phys_telem.SoftDeferEmptyStuckN == 1)
-              {
-                phys_telem.SoftDeferEmptyStuckCx = coord.x;
-                phys_telem.SoftDeferEmptyStuckCy = coord.y;
-                phys_telem.SoftDeferEmptyStuckCz = coord.z;
-                phys_telem.SoftDeferEmptyStuckHoriz = horiz;
-                phys_telem.SoftDeferEmptyStuckDefer = 1;
-              }
-              if (StuckSmokeCd <= 0)
-              {
 #if defined(CUBATARIUM_SOFTDEFER_SMOKE)
-                std::cerr << "[SoftDeferEmptySmoke] HasGreedy=!Drawable "
-                          << "Dirty=0 SoftDefer~1 horiz=" << horiz << " at ("
-                          << coord.x << "," << coord.y << "," << coord.z
-                          << ")\n";
+              std::cerr << "[SoftDeferEmptySmoke] HasGreedy=!Drawable "
+                        << "Dirty=0 SoftDefer~1 horiz=" << horiz << " at ("
+                        << coord.x << "," << coord.y << "," << coord.z
+                        << ")\n";
 #endif
-                StuckSmokeCd = 120;
-              }
+              StuckSmokeCd = 120;
             }
-            const glm::ivec2 col(coord.x, coord.z);
-            const bool has_fm =
-                exec.Scheduler().Contains(col, ColumnWorkKind::FirstMesh);
-            const bool inflight_or_pending =
-                mesh_service.HasInflightMeshBuild(coord) ||
-                mesh_service.IsPendingGpuApply(coord) ||
-                mesh_service.IsPendingGpuQueued(coord) ||
-                mesh_service.IsPendingGpuKickedOrDispatched(coord);
-            // Era34 P1: ownership/Dirty only under cap; age PreferKick always.
-            const bool under_own_cap = marked_n < kEmptyOwnershipCap;
-            // Era28 I-V2: no Dirty storm while FirstMesh / Inflight / PendingGpu
-            // already owns SoftDefer empty (manual 012208 opaque churn).
-            if (under_own_cap &&
-                SoftDeferEmptyShouldMarkDirty(true, has_fm, inflight_or_pending))
-            {
-              mesh_service.MarkDirtyPriority(coord);
-            }
-            // Era24 I-E2: FirstMesh ownership per SoftDefer empty coord
-            // (soft cap kEmptyOwnershipCap; dedupe via Contains).
-            if (under_own_cap && empty_fm_enqueue_n < kEmptyOwnershipCap)
-            {
-              if (!has_fm)
-              {
-                ++empty_fm_enqueue_n;
-              }
-              ColumnWorkItem item{};
-              item.column = col;
-              item.kind = ColumnWorkKind::FirstMesh;
-              item.priority = 105;
-              item.scan_full_focus = missing_visible_mesh;
-              item.cy = coord.y;
-              exec.Enqueue(item);
-              // Era28 P2: PreferKick only after age SLA (not every ownership scan).
-            }
-            // Era26 I-O4: SoftDefer empty ∥ void — parallel RelightThenMesh
-            // (kind-separate; Capture stays FirstMesh under miss).
-            if (under_own_cap)
-            {
-              bool fully_dark_or_void =
-                  mesh_service.HasDrawableGreedyMesh(coord) &&
-                  mesh_service.GetCache().ChunkHasFullyDarkFace(coord);
-              if (!fully_dark_or_void && empty_placeholder)
-              {
-                const int max_cy = std::max(
-                    0, FloorDiv(world.GetProceduralSettings().MaxHeight,
-                                CHUNK_SIZE));
-                for (int cy_v = 0; cy_v <= max_cy; ++cy_v)
-                {
-                  const glm::ivec3 c(col.x, cy_v, col.y);
-                  if (mesh_service.HasDrawableGreedyMesh(c) &&
-                      mesh_service.GetCache().ChunkHasFullyDarkFace(c))
-                  {
-                    fully_dark_or_void = true;
-                    break;
-                  }
-                }
-                if (!fully_dark_or_void &&
-                    world.IsPendingLightBeforeMesh(col))
-                {
-                  fully_dark_or_void = true;
-                }
-              }
-              if (SoftDeferEmptyNeedsParallelVoidRelight(empty_placeholder,
-                                                         fully_dark_or_void))
-              {
-                if (!exec.Scheduler().Contains(col,
-                                               ColumnWorkKind::RelightThenMesh))
-                {
-                  ColumnWorkItem relight{};
-                  relight.column = col;
-                  relight.kind = ColumnWorkKind::RelightThenMesh;
-                  relight.priority = 95;
-                  relight.scan_full_focus = missing_visible_mesh;
-                  relight.cy = coord.y;
-                  exec.Enqueue(relight);
-                }
-                // KEEP Era23 Note discipline: void_pressure only (not every miss).
-                if (phys_telem.DarkFaceVoidNearN > 200)
-                {
-                  world.EnqueueVoidDarkColumnRelightNote(col);
-                }
-              }
-            }
-            if (exec.Scheduler().Contains(col, ColumnWorkKind::FirstMesh))
-            {
-              ++phys_telem.SoftDeferEmptyOwnedN;
-            }
-            // Era24 I-E4 / Era28 P2: age SLA PreferKick / Capture-class drain.
-            if (ShouldEscalateSoftDeferEmptyAge(age_frames))
-            {
-              const bool gpu_queued =
-                  mesh_service.IsPendingGpuQueued(coord) ||
-                  mesh_service.IsPendingGpuKickedOrDispatched(coord);
-              if (SoftDeferEmptyPreferKickAfterAgeOnly(
-                      true, true, missing_visible_mesh, gpu_queued))
-              {
-                mesh_service.PreferKickPendingGpuQueued(coord);
-              }
-              else if (!gpu_queued)
-              {
-                ColumnWorkItem item{};
-                item.column = col;
-                item.kind = ColumnWorkKind::FirstMesh;
-                item.priority = 110;
-                item.scan_full_focus = missing_visible_mesh;
-                item.cy = coord.y;
-                exec.Enqueue(item);
-                if (!age_drain_done)
-                {
-                  exec.DrainBudget(world, 1, focus_ground_horiz, focus_radius,
-                                   /*admit_batch=*/1);
-                  age_drain_done = true;
-                }
-              }
-            }
-            underfeet_undrawn = true;
-            ++marked_n;
+          }
+          if (horiz <= 2)
+          {
+            ++empty_near_n;
+          }
+          SoftDeferEmptyCand cand{};
+          cand.coord = coord;
+          cand.horiz = horiz;
+          cand.view_dot = view_dot_at(dx, dz);
+          cand.empty_placeholder = empty_placeholder;
+          cands.push_back(cand);
         }
       }
-      // Era27 I-A2: drop ages only when healed / left rim — capped scan must
-      // not SoftDeferEmptyAgeShouldReset sticky empties skipped by ownership cap.
+      phys_telem.SoftDeferEmptyNearN = empty_near_n;
+
+      std::stable_sort(cands.begin(), cands.end(),
+                       [](const SoftDeferEmptyCand &a,
+                          const SoftDeferEmptyCand &b)
+                       {
+                         const float sa =
+                             NearFovWorkScore(a.horiz, a.view_dot);
+                         const float sb =
+                             NearFovWorkScore(b.horiz, b.view_dot);
+                         if (sa != sb)
+                         {
+                           return sa < sb;
+                         }
+                         if (a.view_dot != b.view_dot)
+                         {
+                           return a.view_dot > b.view_dot;
+                         }
+                         return a.horiz < b.horiz;
+                       });
+
+      const int near_reserve =
+          SoftDeferEmptyNearReserveSlots(kEmptyOwnershipCap);
+      std::vector<SoftDeferEmptyCand> near_cands;
+      std::vector<SoftDeferEmptyCand> rim_cands;
+      near_cands.reserve(cands.size());
+      rim_cands.reserve(cands.size());
+      for (const SoftDeferEmptyCand &c : cands)
+      {
+        if (c.horiz <= 2)
+        {
+          near_cands.push_back(c);
+        }
+        else
+        {
+          rim_cands.push_back(c);
+        }
+      }
+      // Era38: rim-only rotation so near ring is never offset-starved.
+      if (!rim_cands.empty())
+      {
+        const int rim_n = static_cast<int>(rim_cands.size());
+        const int rot = SoftDeferEmptyScanOffset % rim_n;
+        if (rot > 0)
+        {
+          std::rotate(rim_cands.begin(), rim_cands.begin() + rot,
+                      rim_cands.end());
+        }
+      }
+
+      int marked_n = 0;
+      int empty_fm_enqueue_n = 0;
+      bool age_drain_done = false;
+      auto apply_ownership = [&](const SoftDeferEmptyCand &cand,
+                                 bool allow_own)
+      {
+        const glm::ivec3 coord = cand.coord;
+        const int horiz = cand.horiz;
+        const glm::ivec2 col(coord.x, coord.z);
+        const bool has_fm =
+            exec.Scheduler().Contains(col, ColumnWorkKind::FirstMesh);
+        const bool inflight_or_pending =
+            mesh_service.HasInflightMeshBuild(coord) ||
+            mesh_service.IsPendingGpuApply(coord) ||
+            mesh_service.IsPendingGpuQueued(coord) ||
+            mesh_service.IsPendingGpuKickedOrDispatched(coord);
+        if (allow_own &&
+            SoftDeferEmptyShouldMarkDirty(true, has_fm, inflight_or_pending))
+        {
+          mesh_service.MarkDirtyPriority(coord);
+        }
+        if (allow_own && empty_fm_enqueue_n < kEmptyOwnershipCap)
+        {
+          if (!has_fm)
+          {
+            ++empty_fm_enqueue_n;
+          }
+          ColumnWorkItem item{};
+          item.column = col;
+          item.kind = ColumnWorkKind::FirstMesh;
+          item.priority =
+              ColumnFlowFirstMeshPriority(105, horiz, heal_r);
+          item.scan_full_focus = missing_visible_mesh;
+          item.cy = coord.y;
+          exec.Enqueue(item);
+        }
+        if (allow_own)
+        {
+          bool fully_dark_or_void =
+              mesh_service.HasDrawableGreedyMesh(coord) &&
+              mesh_service.GetCache().ChunkHasFullyDarkFace(coord);
+          if (!fully_dark_or_void && cand.empty_placeholder)
+          {
+            const int max_cy_v = std::max(
+                0, FloorDiv(world.GetProceduralSettings().MaxHeight,
+                            CHUNK_SIZE));
+            for (int cy_v = 0; cy_v <= max_cy_v; ++cy_v)
+            {
+              const glm::ivec3 c(col.x, cy_v, col.y);
+              if (mesh_service.HasDrawableGreedyMesh(c) &&
+                  mesh_service.GetCache().ChunkHasFullyDarkFace(c))
+              {
+                fully_dark_or_void = true;
+                break;
+              }
+            }
+            if (!fully_dark_or_void &&
+                world.IsPendingLightBeforeMesh(col))
+            {
+              fully_dark_or_void = true;
+            }
+          }
+          if (SoftDeferEmptyNeedsParallelVoidRelight(cand.empty_placeholder,
+                                                     fully_dark_or_void))
+          {
+            if (!exec.Scheduler().Contains(col,
+                                           ColumnWorkKind::RelightThenMesh))
+            {
+              ColumnWorkItem relight{};
+              relight.column = col;
+              relight.kind = ColumnWorkKind::RelightThenMesh;
+              relight.priority = ColumnFlowRelightPriorityUnderMiss(
+                  95, horiz, heal_r, missing_visible_mesh);
+              relight.scan_full_focus = missing_visible_mesh;
+              relight.cy = coord.y;
+              exec.Enqueue(relight);
+            }
+            if (phys_telem.DarkFaceVoidNearN > 200)
+            {
+              world.EnqueueVoidDarkColumnRelightNote(col);
+            }
+          }
+        }
+        if (exec.Scheduler().Contains(col, ColumnWorkKind::FirstMesh))
+        {
+          ++phys_telem.SoftDeferEmptyOwnedN;
+        }
+        const int age_frames = SoftDeferEmptyAgeFrames[coord];
+        if (ShouldEscalateSoftDeferEmptyAge(age_frames))
+        {
+          const bool gpu_queued =
+              mesh_service.IsPendingGpuQueued(coord) ||
+              mesh_service.IsPendingGpuKickedOrDispatched(coord);
+          if (SoftDeferEmptyPreferKickAfterAgeOnly(
+                  true, true, missing_visible_mesh, gpu_queued))
+          {
+            mesh_service.PreferKickPendingGpuQueued(coord);
+          }
+          else if (!gpu_queued)
+          {
+            ColumnWorkItem item{};
+            item.column = col;
+            item.kind = ColumnWorkKind::FirstMesh;
+            item.priority = 110;
+            item.scan_full_focus = missing_visible_mesh;
+            item.cy = coord.y;
+            exec.Enqueue(item);
+            if (!age_drain_done)
+            {
+              exec.DrainBudget(world, 1, focus_ground_horiz, focus_radius,
+                               /*admit_batch=*/1);
+              age_drain_done = true;
+            }
+          }
+        }
+        underfeet_undrawn = true;
+      };
+
+      // Near first (sorted), then rim (sorted + rotated). near_reserve documents
+      // the policy floor; near-first list already guarantees near before rim.
+      (void)near_reserve;
+      auto run_list = [&](const std::vector<SoftDeferEmptyCand> &list)
+      {
+        for (const SoftDeferEmptyCand &cand : list)
+        {
+          const bool allow_own = marked_n < kEmptyOwnershipCap;
+          if (allow_own)
+          {
+            ++marked_n;
+          }
+          apply_ownership(cand, allow_own);
+        }
+      };
+      run_list(near_cands);
+      run_list(rim_cands);
+
       for (auto it = SoftDeferEmptyAgeFrames.begin();
            it != SoftDeferEmptyAgeFrames.end();)
       {
@@ -834,24 +936,23 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           ++it;
         }
       }
-      if (marked_n > 0)
+      if (marked_n > 0 || !cands.empty())
       {
-        // Era21: under miss FirstMesh class, do not throttle UndrawnForceCd to 8
-        // without FM progress — rim empty needs frequent Dirty.
-        // Era34 P1: SoftDefer empty residual every 2 frames (not 8).
         UndrawnForceCd =
             (missing_visible_mesh &&
              IsMissFirstMeshClass(true, phys_telem.MissCy, phys_telem.MissHoriz))
                 ? 2
                 : (phys_telem.SoftDeferEmptyPlaceholderN > 0 ? 2 : 8);
-        if (phys_telem.SoftDeferEmptyPlaceholderN > 0)
+        if (!rim_cands.empty())
         {
           SoftDeferEmptyScanOffset =
-              (SoftDeferEmptyScanOffset + kEmptyOwnershipCap) % cells;
+              (SoftDeferEmptyScanOffset + kEmptyOwnershipCap) %
+              std::max(1, static_cast<int>(rim_cands.size()));
         }
       }
     }
   }
+
   phys_telem.SoftDeferHeldN =
       static_cast<int>(mesh_service.GetSoftDeferHeldCount());
   const bool underfeet_need =
@@ -896,11 +997,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           !moving ? std::max(tune.MeshForwardBiasK, 1.5f)
                   : tune.MeshForwardBiasK;
       mesh_service.SetMeshForwardBias(bias_k, fwd);
-      // Cruise: rear slots for behind-camera unfinished. Idle+holes: keep a
-      // few rear slots so FOV bias cannot starve stop recovery (P1 smoke).
+      // Era38 A2: no rear Pass1b while near SoftDefer empty or pending debt.
+      const bool starve_hinterland = StarveHinterlandUnlit(
+          phys_telem.SoftDeferEmptyNearN, pending_focus_count);
       mesh_service.SetMaxRearFocusMeshPerFrame(
-          moving ? 3
-                 : ((visual_holes || missing_underfeet) ? 2 : 0));
+          starve_hinterland
+              ? 0
+              : (moving ? 3
+                        : ((visual_holes || missing_underfeet) ? 2 : 0)));
     }
   }
   int mesh_drain = LastBudget.MaxMeshDrain;

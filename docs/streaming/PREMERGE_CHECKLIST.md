@@ -196,17 +196,20 @@ far Unlit remesh damp; idle drawable RemeshAfterApply. Autofly opaque≤103 (≪
 Reject: RD+1 bar wait; Unlit near on bar; MarkAllDirty warmup; CLOSED without ENTER eye.
 
 **Era37 Manual/Autofly Parity (2026-08-11):** TD-ARCH-066 **partial**. Run both:
-`land-cruise` (teleport) and `land-cruise-resume` (World_174, resume, no teleport).
-Gate: resume-autofly pending/fifo within 2× manual `161544`-class; **CLOSED only
-with GO on both + manual eye**. Reject: unlit preview on fully-dark void; CLOSED on
-teleport-autofly alone.
+`land-cruise` (teleport smoke) and `land-cruise-resume` (World_174, resume, no teleport).
+
+**Era38 Near-FOV Priority (2026-08-11):** TD-ARCH-067 **partial**. Gate of record =
+`land-cruise-resume` (no default `--cruise-eye-y`; idle≥15 stand-before-fly).
+CLOSED only if resume-autofly `cruise_pending/fifo/unlit` within **2×** manual
+`172314`-class **and** manual eye GO. Teleport `land-cruise` = smoke only.
 
 ```powershell
 python tools/flight_sim_run.py --scenario land-cruise-resume --world World_174 `
-  --phase-id ERA37_LAND_RESUME --report bin/iter_reports/era37_land_resume.json `
-  --process-timeout 480 --warmup-sec 20
+  --phase-id ERA38_LAND_RESUME --report bin/iter_reports/era38_land_resume.json `
+  --process-timeout 480 --warmup-sec 20 `
+  --baseline-manual bin/iter_reports/manual_era37_172314.json
 python tools/flight_sim_phase_gate.py --phase-id ARCH_D3_LAND `
-  --report bin/iter_reports/era37_land_resume.json
+  --report bin/iter_reports/era38_land_resume.json
 ```
 
 **Backend matrix (R4):** desktop

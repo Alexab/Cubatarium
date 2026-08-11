@@ -351,6 +351,11 @@ def main() -> int:
         help="do not kill orphan Cubatarium before run (debug only)",
     )
     ap.add_argument(
+        "--baseline-manual",
+        default="",
+        help="analyze --baseline-manual path for Era38 2x parity soft gate",
+    )
+    ap.add_argument(
         "--scenario",
         default="",
         choices=[
@@ -745,8 +750,8 @@ def main() -> int:
         args.warmup_sec = max(args.warmup_sec, 16.0)
 
     if getattr(args, "land_cruise_resume", False):
-        # Manual/autofly parity: World_174 spawn corridor, resume save pos,
-        # cooperative enter — no teleport (Era37 P3).
+        # Era38 B1: gate of record — World_174 resume, no teleport, stand-before-fly.
+        # Do NOT default cruise_eye_y (keep save height unless CLI set --cruise-eye-y).
         args.world = args.world or "World_174"
         args.fly_stop = True
         args.resume = True
@@ -757,13 +762,12 @@ def main() -> int:
             args.pitch = 0.0
         if args.yaw is None:
             args.yaw = 90.0
+        # Optional corridor hints only (no teleport); unused when teleport=False.
         if args.cruise_cx is None:
             args.cruise_cx = 2.0
         if args.cruise_cz is None:
             args.cruise_cz = -10.0
-        if args.cruise_eye_y is None:
-            args.cruise_eye_y = 64.0
-        args.idle_sec = max(args.idle_sec, 12.0)
+        args.idle_sec = max(args.idle_sec, 15.0)
         args.fly_phase_sec = max(args.fly_phase_sec, 45.0)
         args.stop_phase_sec = max(args.stop_phase_sec, 45.0)
         args.seconds = max(
@@ -1044,6 +1048,8 @@ def main() -> int:
             analyze_cmd.append("--manual-idle")
         if getattr(args, "warmup_sec", None) is not None:
             analyze_cmd.extend(["--warmup-sec", str(args.warmup_sec)])
+        if getattr(args, "baseline_manual", None):
+            analyze_cmd.extend(["--baseline-manual", str(args.baseline_manual)])
         ana = subprocess.call(analyze_cmd)
         info_log = None
         if DIAG.is_file():

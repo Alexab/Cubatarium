@@ -119,6 +119,16 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-064 | Era28 | Visual Stage Gate | UnlitFirstMesh + SoftDefer Dirty thrash → black/empty/green flicker (`012208` opaque swing 658) | **partial 2026-08-10** P0–P3 landed; FLY/WARM GO; IDLE soft dirtyΔ; LAND soft miss; wait manual `012208` |
 | TD-ARCH-065 | Era29 | Enter Visual Warmup | Progress bar closes on greedy r≤2; SoftDefer/PendingLight/VB explode on ENTER (`091332`) | **partial 2026-08-10** P0–P4 landed; FLY/IDLE/WARM GO; LAND soft miss; wait manual ENTER eye |
 | TD-ARCH-066 | Era37 | Manual/Autofly Parity + Near-FOV Visual SLA | Era36 autofly GO but manual `161544` unchanged (FIFO~96, unlit~20); teleport vs resume incomparable | **partial 2026-08-11** P0–P5 landed; `land-cruise-resume` harness; wait manual+resume parity eye |
+| TD-ARCH-067 | Era38 | Near-FOV Work Priority + Resume Parity | SoftDefer ownership row-major+cap starves near; Unlit hinterland + rear slots; autofly≠manual | **partial 2026-08-11** A0–A3 + B harness; gate=`land-cruise-resume`; CLOSED only within 2× manual + eye |
+
+> **Era38 Near-FOV Work Priority (2026-08-11):** SoftDefer empty collect→`NearFovWorkScore`
+> sort→near-first ownership; starve hinterland Unlit / rear Pass1b while near empty or
+> pending>15; ColumnFlow FirstMesh/Relight `f(horiz)`; Relight pin SoftDefer-empty
+> `horiz≤2`. Harness: resume no eye-y override, idle≥15s stand; analyze enter/cruise
+> split + `parity_within_2x`. Evidence: `era38_land_resume` gates 20/23, pending/unlit
+> med=0, `parity_within_2x=true` vs manual `172314`; cruise_fifo_med≈74 (still high).
+> Manual eye + Type A residual still open (TD-066). Teleport `land-cruise` = smoke only.
+> Reject: LitDrawable ring removal; Unlit void; CLOSED on teleport-autofly alone.
 
 > **Era37 Manual/Autofly Parity (2026-08-11):** P0 unlit hole preview under light
 > debt (`AllowUnlitDrawableUnderLightDebt`); P1 false-clear pending fix +

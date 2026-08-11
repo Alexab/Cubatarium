@@ -19,6 +19,7 @@
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include "World/Streaming/NearFovWorkPriority.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Core/World.h"
 #include "World/Mesh/WorldMeshService.h"
@@ -482,6 +483,94 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
           }
         }
       }
+    }
+  }
+
+  // Era38 A3: pin SoftDefer-empty near (horiz<=2) PendingLight columns so
+  // Capture clears lit gate before hinterland trees.
+  if (world.MeshService)
+  {
+    auto &prio = PendingTerrainColumnRelightsPriority;
+    auto &far = PendingTerrainColumnRelights;
+    auto pin_key = [&](glm::ivec2 nearest_key)
+    {
+      const auto prio_it = std::find(prio.begin(), prio.end(), nearest_key);
+      if (prio_it != prio.end())
+      {
+        if (prio_it != prio.begin())
+        {
+          prio.erase(prio_it);
+          prio.push_front(nearest_key);
+        }
+        return;
+      }
+      const auto far_it = std::find(far.begin(), far.end(), nearest_key);
+      if (far_it != far.end())
+      {
+        far.erase(far_it);
+        prio.push_front(nearest_key);
+        return;
+      }
+      EnqueueTerrainColumnRelight(nearest_key.x, nearest_key.y,
+                                  /*priority=*/true, 0, max_y);
+      const auto again = std::find(prio.begin(), prio.end(), nearest_key);
+      if (again != prio.end() && again != prio.begin())
+      {
+        prio.erase(again);
+        prio.push_front(nearest_key);
+      }
+    };
+    const int max_cy_pin =
+        std::max(0, FloorDiv(max_y, CHUNK_SIZE));
+    int pinned = 0;
+    std::vector<std::pair<int, glm::ivec2>> near_empty;
+    near_empty.reserve(25);
+    for (int dx = -2; dx <= 2; ++dx)
+    {
+      for (int dz = -2; dz <= 2; ++dz)
+      {
+        const int horiz = std::max(std::abs(dx), std::abs(dz));
+        if (horiz > 2)
+        {
+          continue;
+        }
+        const glm::ivec2 col(focus_horiz.x + dx, focus_horiz.z + dz);
+        if (!world.IsPendingLightBeforeMesh(col))
+        {
+          continue;
+        }
+        bool softdefer_empty = false;
+        for (int cy = 0; cy <= max_cy_pin; ++cy)
+        {
+          const glm::ivec3 coord(col.x, cy, col.y);
+          if (world.MeshService->HasGreedyMesh(coord) &&
+              !world.MeshService->HasDrawableGreedyMesh(coord))
+          {
+            softdefer_empty = true;
+            break;
+          }
+        }
+        if (!softdefer_empty)
+        {
+          continue;
+        }
+        near_empty.emplace_back(horiz, col);
+      }
+    }
+    std::stable_sort(near_empty.begin(), near_empty.end(),
+                     [](const auto &a, const auto &b)
+                     { return a.first > b.first; });
+    // Pin farthest first so nearest ends at front after push_front.
+    for (const auto &entry : near_empty)
+    {
+      if (pinned >= 4)
+      {
+        break;
+      }
+      const glm::ivec2 key(entry.second.x * CHUNK_SIZE,
+                           entry.second.y * CHUNK_SIZE);
+      pin_key(key);
+      ++pinned;
     }
   }
 
