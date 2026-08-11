@@ -206,10 +206,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           nearest_missing_hole);
   prep_missing_ms = prep_ms_since(prep_t);
   prep_t = std::chrono::high_resolution_clock::now();
+  const bool pending_near_light =
+      world.HasPendingLightBeforeMeshNear(focus_ground_horiz, focus_radius);
+  const int pending_focus_count =
+      world.CountPendingLightBeforeMeshNear(focus_ground_horiz, focus_radius);
+  const int unlit_near_count = world.GetPhysicsTelemetry().FocusDarkMesh;
+  const bool enter_warmup_active = !world.IsCreateSpawnWarmupSettled();
   mesh_service.SetDeferMeshUntilLitFn(
       [&world, &mesh_service, focus_ground_horiz, focus_radius,
        have_nearest_missing, nearest_missing_hole,
-       missing_visible_mesh](glm::ivec3 chunk_coord)
+       missing_visible_mesh, pending_focus_count, unlit_near_count](
+          glm::ivec3 chunk_coord)
       {
         const int horiz =
             std::max(std::abs(chunk_coord.x - focus_ground_horiz.x),
@@ -222,30 +229,28 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             chunk_coord.x == nearest_missing_hole.x &&
             chunk_coord.z == nearest_missing_hole.z;
         const bool has_mesh = mesh_service.HasDrawableGreedyMesh(chunk_coord);
+        const bool has_greedy = mesh_service.HasGreedyMesh(chunk_coord);
         const bool in_focus = horiz <= focus_radius;
         const glm::ivec3 ground(chunk_coord.x, 0, chunk_coord.z);
         const bool may_mesh =
             world.MayMeshColumn(ground, /*underfeet_preview=*/false);
-        // Era32: Unlit only hinterland (horiz > LitDrawable ring).
-        // Do NOT SoftDefer-force-hide live fully-dark drawables — that drops
-        // Dirty remesh (lit upgrade) and spirals void (ocean smoke regress).
-        // Publication honesty: draw_ok=false in GetColumnRenderableState;
-        // AllowUnlit=false in ring blocks Unlit-as-policy for FirstMesh gate.
         const bool fully_dark =
-            has_mesh &&
+            has_greedy &&
             mesh_service.GetCache().ChunkHasFullyDarkFace(chunk_coord);
         const bool pending_replace =
             pending || mesh_service.IsPendingGpuApply(chunk_coord);
         const bool allow_unlit = AllowUnlitFirstMesh(
             has_mesh, horiz, is_nearest_hole, in_focus,
             kVisualStageLitDrawableHoriz);
-        (void)fully_dark;
+        const bool allow_unlit_hole = AllowUnlitDrawableUnderLightDebt(
+            pending_focus_count, unlit_near_count, horiz, fully_dark,
+            has_greedy, underfeet);
         (void)pending_replace;
         (void)missing_visible_mesh;
         return SoftDeferMeshUntilLitPolicy(
-            underfeet, has_mesh,
+            underfeet, has_mesh || has_greedy,
             world.RequiresLightingLitGate() && pending, in_focus, may_mesh,
-            allow_unlit);
+            allow_unlit, allow_unlit_hole);
       });
   // Era15 TD-050: Unlit publish → LitPending (sticky + RemeshSeam ticket).
   // KEEP RemeshSeam here — RelightThenMesh on every Unlit FirstMesh flooded
@@ -275,10 +280,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       mesh_service.HasDirtyWithinHorizontalRadius(focus_ground_horiz,
                                                  focus_radius) ||
       missing_visible_mesh;
-  const bool pending_near_light =
-      world.HasPendingLightBeforeMeshNear(focus_ground_horiz, focus_radius);
-  const int pending_focus_count =
-      world.CountPendingLightBeforeMeshNear(focus_ground_horiz, focus_radius);
+  (void)pending_near_light;
   const int black_sticky = world.CountBlackStickyFocusMeshes(focus_ground,
                                                              focus_radius);
   const size_t pending_dirty_early = mesh_service.GetDirtyCount();
@@ -553,9 +555,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     // Era24: rim soft ownership budget (not DoD knob) — per-coord FirstMesh.
     // Era35 P2: dynamic cap based on current empty count (12..24).
     // Era35 P4: cruise catch-up boosts cap to 18 when moving with empty > 5.
-    const int kEmptyOwnershipCap = CruiseCatchUpOwnershipCap(
-        SoftDeferOwnershipCap(phys_telem.SoftDeferEmptyPlaceholderN),
-        phys_telem.SoftDeferEmptyPlaceholderN, moving);
+    const int kEmptyOwnershipCap = EnterWarmupSoftDeferOwnershipCap(
+        CruiseCatchUpOwnershipCap(
+            SoftDeferOwnershipCap(phys_telem.SoftDeferEmptyPlaceholderN),
+            phys_telem.SoftDeferEmptyPlaceholderN, moving),
+        phys_telem.SoftDeferEmptyPlaceholderN, enter_warmup_active);
     if (UndrawnForceCd <= 0)
     {
       int marked_n = 0;
@@ -2913,9 +2917,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     const MeshWorkAdmission &early_adm = mesh_service.GetMeshWorkAdmission();
     const int consume_drain = FinalizeDrain(mesh_drain, early_adm);
-    const int consume_gpu =
+    const int relight_fifo_n = world.GetPhysicsTelemetry().RelightFifoN;
+    const int consume_gpu_base =
         std::max(early_adm.gpu_apply_max,
                  std::max(3, std::max(mesh_drain, mesh_schedule)));
+    const int consume_gpu = LandRelightGpuApplyFloor(
+        relight_fifo_n, pending_focus_count, consume_gpu_base);
     const double consume_budget =
         std::max(6.0, mesh_service.GetMeshEmergeTotalBudgetMs() *
                           early_adm.gpu_budget_frac);

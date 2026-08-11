@@ -607,6 +607,60 @@ int main()
            "Era36 B3: floor 0 when idle");
   }
 
+  // --- Era37 P0 unlit hole preview ---
+  {
+    using cutum::AllowUnlitDrawableUnderLightDebt;
+    Expect(!AllowUnlitDrawableUnderLightDebt(20, 5, 4, true, true, false),
+           "Era37 P0: fully-dark void rejected");
+    Expect(!AllowUnlitDrawableUnderLightDebt(20, 5, 4, false, false, false),
+           "Era37 P0: no greedy mesh rejected");
+    Expect(!AllowUnlitDrawableUnderLightDebt(20, 5, 4, false, true, true),
+           "Era37 P0: underfeet rejected");
+    Expect(!AllowUnlitDrawableUnderLightDebt(20, 5, 5, false, true, false),
+           "Era37 P0: outside LitDrawable ring rejected");
+    Expect(AllowUnlitDrawableUnderLightDebt(20, 5, 4, false, true, false),
+           "Era37 P0: pending debt allows ring preview");
+    Expect(AllowUnlitDrawableUnderLightDebt(10, 12, 3, false, true, false),
+           "Era37 P0: unlit_near threshold allows preview");
+    Expect(!AllowUnlitDrawableUnderLightDebt(10, 5, 3, false, true, false),
+           "Era37 P0: low debt blocks preview");
+  }
+
+  // --- Era37 P1b GPU apply floor ---
+  {
+    using cutum::LandRelightGpuApplyFloor;
+    Expect(LandRelightGpuApplyFloor(50, 10, 3) == 3,
+           "Era37 P1b: low pending keeps base");
+    Expect(LandRelightGpuApplyFloor(70, 25, 3) == 8,
+           "Era37 P1b: fifo+pending boost apply floor");
+    Expect(LandRelightGpuApplyFloor(70, 10, 5) == 5,
+           "Era37 P1b: fifo alone insufficient");
+  }
+
+  // --- Era37 P4 enter warmup ownership ---
+  {
+    using cutum::EnterWarmupSoftDeferOwnershipCap;
+    Expect(EnterWarmupSoftDeferOwnershipCap(12, 10, false) == 12,
+           "Era37 P4: inactive warmup keeps base");
+    Expect(EnterWarmupSoftDeferOwnershipCap(12, 10, true) == 18,
+           "Era37 P4: active warmup boosts cap");
+    Expect(EnterWarmupSoftDeferOwnershipCap(12, 3, true) == 12,
+           "Era37 P4: low empty keeps base");
+  }
+
+  // --- Era37 P5 per-column surface band ---
+  {
+    using cutum::RelightColumnSurfaceBlockY;
+    using cutum::RelightSurfaceBandForColumn;
+    Expect(RelightColumnSurfaceBlockY(64, 96) == 96,
+           "Era37 P5: column top overrides focus");
+    Expect(RelightColumnSurfaceBlockY(64, -1) == 64,
+           "Era37 P5: fallback to focus when no column top");
+    const auto hill = RelightSurfaceBandForColumn(64, 96, 16, 255, 0, 255);
+    Expect(hill.first == 80 && hill.second == 159,
+           "Era37 P5: hill column band uses column surface");
+  }
+
   // --- Era35 P1 cy-window ---
   {
     using cutum::SoftDeferCyWindowNearTop;

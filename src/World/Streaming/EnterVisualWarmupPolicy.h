@@ -189,6 +189,80 @@ inline int LandMovingRelightDrainFloor(bool moving, int pending_light_focus,
   return 1;
 }
 
+/// Era37 P5: per-column surface Y for relight band (fallback to focus Y).
+inline int RelightColumnSurfaceBlockY(int focus_block_y, int column_top_block_y)
+{
+  if (column_top_block_y >= 0)
+  {
+    return column_top_block_y;
+  }
+  return focus_block_y;
+}
+
+/// Era37 P5: clamp relight block-Y range to visible surface for one column.
+inline std::pair<int, int> RelightSurfaceBandForColumn(int focus_block_y,
+                                                      int column_top_block_y,
+                                                      int chunk_size,
+                                                      int max_height,
+                                                      int orig_min_y,
+                                                      int orig_max_y)
+{
+  const int surface_y =
+      RelightColumnSurfaceBlockY(focus_block_y, column_top_block_y);
+  const int band_min = RelightSurfaceBandMinY(surface_y, chunk_size, orig_min_y);
+  const int band_max =
+      RelightSurfaceBandMaxY(surface_y, chunk_size, max_height, orig_max_y);
+  return {band_min, band_max};
+}
+
+/// Era37 P0: allow unlit drawable in LitDrawable ring under light debt.
+inline bool AllowUnlitDrawableUnderLightDebt(int pending_focus, int unlit_near,
+                                             int horiz, bool fully_dark,
+                                             bool has_greedy_mesh,
+                                             bool underfeet,
+                                             int pending_threshold = 15,
+                                             int unlit_threshold = 10,
+                                             int lit_ring =
+                                                 kVisualStageLitDrawableHoriz)
+{
+  if (fully_dark || !has_greedy_mesh)
+  {
+    return false;
+  }
+  if (underfeet)
+  {
+    return false;
+  }
+  if (horiz > lit_ring)
+  {
+    return false;
+  }
+  return pending_focus > pending_threshold || unlit_near > unlit_threshold;
+}
+
+/// Era37 P1b: boost GPU relight apply when FIFO is saturated on land.
+inline int LandRelightGpuApplyFloor(int relight_fifo_n, int pending_focus,
+                                    int base_gpu_apply, int fifo_threshold = 60,
+                                    int pending_threshold = 20)
+{
+  if (relight_fifo_n <= fifo_threshold || pending_focus <= pending_threshold)
+  {
+    return base_gpu_apply;
+  }
+  return std::max(base_gpu_apply, 8);
+}
+
+/// Era37 P4: enter warmup SoftDefer empty ownership boost.
+inline int EnterWarmupSoftDeferOwnershipCap(int base_cap, int softdefer_empty_n,
+                                            bool enter_warmup_active)
+{
+  if (!enter_warmup_active || softdefer_empty_n <= 5)
+  {
+    return base_cap;
+  }
+  return std::max(base_cap, 18);
+}
+
 /// Era35 P1: SoftDefer empty scan cy-window for near-FOV columns (horiz<=2)
 /// covers full column (0..max_cy) so air chunks with trees/leaves above
 /// preferred_cy+2 are not permanently stuck as SoftDefer empty.

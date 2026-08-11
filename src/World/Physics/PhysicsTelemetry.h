@@ -239,6 +239,9 @@ struct PhysicsTelemetry
   uint64_t RelightCompletedDiscarded{0};
   int DirtyN{0};
   int PendingLightN{0};
+  /// Era37 P1c: underground relight skip / false-clear counters.
+  uint64_t RelightSkippedUndergroundN{0};
+  uint64_t RelightFalseClearN{0};
   int RelightFifoN{0};
   uint64_t DirtyDropped{0};
   uint64_t PendingLightDropped{0};

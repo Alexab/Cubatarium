@@ -1800,7 +1800,10 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       TickCreateSpawnMeshWarmup(world, std::max(1, budget / 2));
       ++StreamingWarmupTicks;
       bool underfeet_lit = false;
-      const int debt = world.CountCreateNearFovWarmupDebt(&underfeet_lit);
+      const int raw_debt = world.CountCreateNearFovWarmupDebt(&underfeet_lit);
+      const auto &phys = world.GetPhysicsTelemetry();
+      const int debt = raw_debt + phys.FocusDarkMesh +
+                       phys.SoftDeferEmptyPlaceholderN;
       if (debt > StreamingWarmupPeakDebt)
       {
         StreamingWarmupPeakDebt = debt;

@@ -118,6 +118,14 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-063 | Era27 | Anti-Flicker Ownership | SoftDefer Capture retarget thrash + MarkRelit remesh blink + discarded_late supersede after Era26 heal (`224912`) | **partial 2026-08-09** P0–P3 landed; FLY/IDLE/WARM GO; LAND soft miss; wait manual `224912` |
 | TD-ARCH-064 | Era28 | Visual Stage Gate | UnlitFirstMesh + SoftDefer Dirty thrash → black/empty/green flicker (`012208` opaque swing 658) | **partial 2026-08-10** P0–P3 landed; FLY/WARM GO; IDLE soft dirtyΔ; LAND soft miss; wait manual `012208` |
 | TD-ARCH-065 | Era29 | Enter Visual Warmup | Progress bar closes on greedy r≤2; SoftDefer/PendingLight/VB explode on ENTER (`091332`) | **partial 2026-08-10** P0–P4 landed; FLY/IDLE/WARM GO; LAND soft miss; wait manual ENTER eye |
+| TD-ARCH-066 | Era37 | Manual/Autofly Parity + Near-FOV Visual SLA | Era36 autofly GO but manual `161544` unchanged (FIFO~96, unlit~20); teleport vs resume incomparable | **partial 2026-08-11** P0–P5 landed; `land-cruise-resume` harness; wait manual+resume parity eye |
+
+> **Era37 Manual/Autofly Parity (2026-08-11):** P0 unlit hole preview under light
+> debt (`AllowUnlitDrawableUnderLightDebt`); P1 false-clear pending fix +
+> `LandRelightGpuApplyFloor`; P2 VB ticket on surface-band skip; P3
+> `land-cruise-resume` scenario (World_174, no teleport); P4 enter debt +
+> warmup ownership boost; P5 per-column relight surface band. Reject: unlit preview
+> on fully-dark void; CLOSED on teleport-autofly without resume/manual eye.
 
 > **Era29 Enter Visual Warmup closeout (2026-08-10):** P0–P4 landed. Progress bar
 > always runs budgeted `TickEnterStreamingWarmup` (I-E2); enter gate adds underfeet

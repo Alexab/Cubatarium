@@ -56,6 +56,10 @@ int main()
   // Remesh of existing while pending => defer (even with unlit allow).
   Expect(SoftDeferMeshUntilLitPolicy(false, true, true, true, true, true),
          "focus has_mesh+pending defer remesh despite unlit allow");
+  Expect(!SoftDeferMeshUntilLitPolicy(false, true, true, true, true, false, true),
+         "Era37: hole preview allows pending meshed draw in ring");
+  Expect(SoftDeferMeshUntilLitPolicy(false, true, true, true, true, false, false),
+         "Era37: pending meshed without hole preview still defers");
   Expect(!SoftDeferMeshUntilLitPolicy(false, true, false, true, true, false),
          "focus has_mesh+lit allow remesh");
 

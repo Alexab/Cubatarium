@@ -51,6 +51,39 @@ namespace cutum
 namespace
 {
 
+int ColumnTopBlockY(const UWorld &world, glm::ivec2 ground_xz, int max_y)
+{
+  const glm::ivec3 ground(ground_xz.x, 0, ground_xz.y);
+  const int top_cy =
+      GetHighestNonAirChunkSlice(world.GetBlockWorld(), ground, max_y);
+  if (top_cy < 0)
+  {
+    return -1;
+  }
+  return std::min(max_y, (top_cy + 1) * CHUNK_SIZE - 1);
+}
+
+bool ColumnSurfaceBandNeedsRelight(const UWorld &world, glm::ivec2 ground_xz,
+                                   int band_min, int band_max)
+{
+  const UWorldMeshService &mesh = world.GetMeshService();
+  const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
+  const int cy1 = FloorDiv(band_max, CHUNK_SIZE);
+  for (int cy = cy0; cy <= cy1; ++cy)
+  {
+    const glm::ivec3 coord(ground_xz.x, cy, ground_xz.y);
+    if (!mesh.HasGreedyMesh(coord))
+    {
+      continue;
+    }
+    if (mesh.GetCache().ChunkHasFullyDarkFace(coord))
+    {
+      return true;
+    }
+  }
+  return world.IsPendingLightBeforeMesh(ground_xz);
+}
+
 constexpr float kMaxReasonablePlayerY = 512.0f;
 constexpr float kMinReasonablePlayerY = -32.0f;
 
@@ -579,17 +612,33 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         relight_max = max_y;
       }
     }
-    // Era36 B1: clamp Capture Y-band to visible surface — drop underground.
+    // Era36/37 B1: clamp Capture Y-band to visible surface — drop underground.
     const glm::ivec2 ground_xz(FloorDiv(col.x, CHUNK_SIZE),
                                FloorDiv(col.y, CHUNK_SIZE));
-    relight_min = std::max(relight_min, surface_band_min);
-    relight_max = std::min(relight_max, surface_band_max);
+    const int col_top_y = ColumnTopBlockY(world, ground_xz, max_y);
+    const auto col_band = RelightSurfaceBandForColumn(
+        focus_block.y, col_top_y, CHUNK_SIZE, max_y, relight_min, relight_max);
+    relight_min = col_band.first;
+    relight_max = col_band.second;
     if (relight_max < relight_min)
     {
-      // Entire band underground — clear pending so FIFO does not spin forever.
-      world.ClearPendingLightBeforeMesh(ground_xz);
-      PendingTerrainColumnRelightKeys.erase(col);
-      return skipped_inflight < std::max(8, max_bg_columns * 4);
+      auto &telem = world.GetPhysicsTelemetryMutable();
+      if (ColumnSurfaceBandNeedsRelight(world, ground_xz, surface_band_min,
+                                        surface_band_max))
+      {
+        relight_min = surface_band_min;
+        relight_max = surface_band_max;
+        ++telem.RelightSkippedUndergroundN;
+        world.NotePendingLightBeforeMesh(glm::ivec3(ground_xz.x, 0, ground_xz.y),
+                                         relight_min, relight_max);
+      }
+      else
+      {
+        world.ClearPendingLightBeforeMesh(ground_xz);
+        ++telem.RelightFalseClearN;
+        PendingTerrainColumnRelightKeys.erase(col);
+        return skipped_inflight < std::max(8, max_bg_columns * 4);
+      }
     }
     const int horiz_dist =
         std::max(std::abs(ground_xz.x - focus_horiz.x),

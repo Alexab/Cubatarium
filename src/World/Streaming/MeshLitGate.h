@@ -11,7 +11,8 @@ namespace cutum
 inline bool SoftDeferMeshUntilLitPolicy(bool underfeet, bool has_mesh,
                                         bool pending_light, bool in_focus,
                                         bool may_mesh_outside_focus,
-                                        bool allow_unlit_first_mesh = false)
+                                        bool allow_unlit_first_mesh = false,
+                                        bool allow_unlit_hole_preview = false)
 {
   if (!has_mesh)
   {
@@ -33,6 +34,11 @@ inline bool SoftDeferMeshUntilLitPolicy(bool underfeet, bool has_mesh,
   }
   if (pending_light)
   {
+    // Era37 P0: controlled unlit hole preview in LitDrawable ring under debt.
+    if (allow_unlit_hole_preview)
+    {
+      return false;
+    }
     return true;
   }
   if (underfeet || in_focus)

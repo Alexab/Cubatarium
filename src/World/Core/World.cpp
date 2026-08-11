@@ -1871,11 +1871,6 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
   {
     ground.y = 0;
   }
-  // Era36 B1: clamp to visible surface band — skip underground relight waste.
-  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
-  const int max_h = ProceduralTemplate.MaxHeight;
-  min_y = RelightSurfaceBandMinY(focus_block.y, CHUNK_SIZE, min_y);
-  max_y = RelightSurfaceBandMaxY(focus_block.y, CHUNK_SIZE, max_h, max_y);
   if (max_y < min_y)
   {
     return;
@@ -1910,21 +1905,26 @@ void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
   // Match RecoverUnlit: light path owns heal — drop StickyRemesh ghost so
   // PendingLight+mesh does not latch black_sticky (IDLE gate).
   StickyRemeshAfterLight.erase(col_xz);
-  // Era36 B1: clamp min_y/max_y to surface band — skip invisible underground.
+  // Era37 P5: per-column surface band (hills/trees), not focus Y only.
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
-  const int surface_min_y =
-      RelightSurfaceBandMinY(focus_block.y, CHUNK_SIZE, 0);
-  const int surface_max_y =
-      RelightSurfaceBandMaxY(focus_block.y, CHUNK_SIZE, max_y, max_y);
-  if (surface_max_y < surface_min_y)
+  const int col_top_cy =
+      GetHighestNonAirChunkSlice(BlockWorld, ground, max_y);
+  const int col_top_y =
+      col_top_cy >= 0
+          ? std::min(max_y, (col_top_cy + 1) * CHUNK_SIZE - 1)
+          : -1;
+  const auto surface_band = RelightSurfaceBandForColumn(
+      focus_block.y, col_top_y, CHUNK_SIZE, max_y, 0, max_y);
+  if (surface_band.second < surface_band.first)
   {
     return;
   }
-  NotePendingLightBeforeMesh(ground, surface_min_y, surface_max_y);
+  NotePendingLightBeforeMesh(ground, surface_band.first, surface_band.second);
   Persistence->EnqueueTerrainColumnRelight(col_xz.x * CHUNK_SIZE,
                                            col_xz.y * CHUNK_SIZE,
-                                           /*priority=*/true, surface_min_y,
-                                           surface_max_y);
+                                           /*priority=*/true,
+                                           surface_band.first,
+                                           surface_band.second);
 }
 
 void UWorld::ClearPendingLightBeforeMesh(glm::ivec2 ground_xz)

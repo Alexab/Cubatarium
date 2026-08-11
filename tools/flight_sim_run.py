@@ -361,6 +361,7 @@ def main() -> int:
             "visual-flicker",
             "visual-edge",
             "land-cruise",
+            "land-cruise-resume",
             "land-stand",
             "land-south",
             "land-south-short",
@@ -453,6 +454,8 @@ def main() -> int:
 
     if args.scenario == "land-cruise":
         args.land_cruise = True
+    if args.scenario == "land-cruise-resume":
+        args.land_cruise_resume = True
     if args.scenario == "land-stand":
         args.land_stand = True
     if args.scenario == "land-south":
@@ -740,6 +743,34 @@ def main() -> int:
         # Skip cold-spawn miss in analyze (land_fix_P1e: miss=1 for ~12s at
         # teleport). Do not raise idle — longer idle raised wall/dirty (P1f).
         args.warmup_sec = max(args.warmup_sec, 16.0)
+
+    if getattr(args, "land_cruise_resume", False):
+        # Manual/autofly parity: World_174 spawn corridor, resume save pos,
+        # cooperative enter — no teleport (Era37 P3).
+        args.world = args.world or "World_174"
+        args.fly_stop = True
+        args.resume = True
+        args.teleport_cruise = False
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 90.0
+        if args.cruise_cx is None:
+            args.cruise_cx = 2.0
+        if args.cruise_cz is None:
+            args.cruise_cz = -10.0
+        if args.cruise_eye_y is None:
+            args.cruise_eye_y = 64.0
+        args.idle_sec = max(args.idle_sec, 12.0)
+        args.fly_phase_sec = max(args.fly_phase_sec, 45.0)
+        args.stop_phase_sec = max(args.stop_phase_sec, 45.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 20.0)
 
     if args.land_stand:
         # Forever-hole repro (manual 170154): short east fly then stand ≥60s.
