@@ -8,12 +8,12 @@
     "cmake.parallelJobs": 8,
     "cmake.useCMakePresets": "always",
     "cmake.configurePreset": "windows-msvc",
-    "cmake.buildPreset": "windows-msvc-debug",
-    "cmake.configureOnOpen": true,
+    "cmake.buildPreset": "windows-msvc-release",
+    "cmake.configureOnOpen": false,
     "cmake.configureOnEdit": false,
+    "cmake.buildBeforeRun": false,
     "cmake.environment": {
-        "VCPKG_ROOT": "E:/vcpkg",
-        "VCToolsVersion": ""
+        "VCPKG_ROOT": "E:/vcpkg"
     },
     "cmake.debugConfig": {
         "cwd": "${workspaceFolder}/bin",
