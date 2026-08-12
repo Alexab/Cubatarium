@@ -5187,34 +5187,26 @@ int UWorld::CountEnterFovLitDebt() const
   const UWorldMeshService &mesh = *MeshService;
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
   const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
-  const glm::ivec3 focus_ground(center.x, 0, center.z);
-  const int visual_r = EnterVisualWarmupRadiusChunks();
+  // Era42: full enter volume = RD+1 (same as coop spawn/load), not FOV ring=4.
+  const int lit_r =
+      std::max(EnterVisualWarmupRadiusChunks(), GetRenderDistanceChunks() + 1);
   const int max_cy =
       std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
-  const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
-  const int sea_cy =
-      FloorDiv(std::max(0, ProceduralTemplate.SeaLevel), CHUNK_SIZE);
-  int cy0 = 0;
-  int cy1 = std::min(max_cy, std::max(focus_cy + 2, sea_cy + 1));
-  if (ProceduralTemplate.FillWater)
-  {
-    cy0 = std::min(cy0, std::max(0, sea_cy - 1));
-  }
-  cy0 = std::min(cy0, std::max(0, focus_cy - 1));
 
-  int debt = 0;
-  for (int dx = -visual_r; dx <= visual_r; ++dx)
+  // All PendingLight tickets (including hinterland beyond RD) count as debt.
+  int debt = static_cast<int>(PendingLightBeforeMesh.size());
+
+  for (int dx = -lit_r; dx <= lit_r; ++dx)
   {
-    for (int dz = -visual_r; dz <= visual_r; ++dz)
+    for (int dz = -lit_r; dz <= lit_r; ++dz)
     {
       const glm::ivec2 col(center.x + dx, center.z + dz);
       if (IsPendingLightBeforeMesh(col))
       {
-        ++debt;
         continue;
       }
       bool fully_dark_solid = false;
-      for (int cy = cy0; cy <= cy1 && !fully_dark_solid; ++cy)
+      for (int cy = 0; cy <= max_cy && !fully_dark_solid; ++cy)
       {
         const glm::ivec3 coord(col.x, cy, col.y);
         const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
@@ -5222,8 +5214,7 @@ int UWorld::CountEnterFovLitDebt() const
         {
           continue;
         }
-        const bool has_drawable = mesh.HasDrawableGreedyMesh(coord);
-        if (!has_drawable)
+        if (!mesh.HasDrawableGreedyMesh(coord))
         {
           continue;
         }
@@ -5265,83 +5256,125 @@ int UWorld::TickEnterFovLitPass(int capture_budget)
   {
     return 0;
   }
+  struct EnterFovLitPassScope
+  {
+    UWorld &w;
+    explicit EnterFovLitPassScope(UWorld &world) : w(world)
+    {
+      w.EnterFovLitPassActive = true;
+    }
+    ~EnterFovLitPassScope() { w.EnterFovLitPassActive = false; }
+  } scope(*this);
+
   const int cap_budget =
-      capture_budget > 0 ? capture_budget : EnterFovRelightCaptureBudget();
-  const int apply_budget = EnterFovRelightApplyBudget();
+      capture_budget > 0
+          ? capture_budget
+          : std::max(1, URuntimeTuning::Get().EnterFovLitCaptureBudget);
+  const int apply_budget =
+      std::max(1, URuntimeTuning::Get().EnterFovLitApplyBudget);
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
   const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
-  const glm::ivec3 focus_ground(center.x, 0, center.z);
-  const int visual_r = EnterVisualWarmupRadiusChunks();
+  const int fov_r = EnterVisualWarmupRadiusChunks();
+  const int lit_r =
+      std::max(fov_r, GetRenderDistanceChunks() + 1);
   const int max_y = ProceduralTemplate.MaxHeight;
   const int max_cy = std::max(0, FloorDiv(max_y, CHUNK_SIZE));
-  const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
-  const int sea_cy =
-      FloorDiv(std::max(0, ProceduralTemplate.SeaLevel), CHUNK_SIZE);
-  int cy0 = 0;
-  int cy1 = std::min(max_cy, std::max(focus_cy + 2, sea_cy + 1));
-  if (ProceduralTemplate.FillWater)
-  {
-    cy0 = std::min(cy0, std::max(0, sea_cy - 1));
-  }
-  cy0 = std::min(cy0, std::max(0, focus_cy - 1));
-  const int band_min = std::max(0, cy0 * CHUNK_SIZE);
-  const int band_max = std::min(max_y, (cy1 + 1) * CHUNK_SIZE - 1);
+  // Era42: full-column band so cy above/below surface cannot remain dark.
+  const int band_min = 0;
+  const int band_max = max_y;
 
-  // Priority-enqueue every FOV column that still needs light.
-  int enqueued = 0;
-  for (int dx = -visual_r; dx <= visual_r; ++dx)
-  {
-    for (int dz = -visual_r; dz <= visual_r; ++dz)
+  auto column_needs_light = [&](glm::ivec2 col) -> bool {
+    if (IsPendingLightBeforeMesh(col))
     {
-      const glm::ivec2 col(center.x + dx, center.z + dz);
-      bool need = IsPendingLightBeforeMesh(col);
-      if (!need)
-      {
-        for (int cy = cy0; cy <= cy1; ++cy)
-        {
-          const glm::ivec3 coord(col.x, cy, col.y);
-          const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-          if (!chunk || !MeshService->HasDrawableGreedyMesh(coord))
-          {
-            continue;
-          }
-          bool any_solid = false;
-          for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
-          {
-            for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
-            {
-              for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
-              {
-                if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
-                {
-                  any_solid = true;
-                }
-              }
-            }
-          }
-          if (any_solid &&
-              MeshService->GetCache().ChunkHasFullyDarkFace(coord))
-          {
-            need = true;
-            NotePendingLightBeforeMesh(glm::ivec3(col.x, 0, col.y), band_min,
-                                       band_max);
-            break;
-          }
-        }
-      }
-      if (!need)
+      return true;
+    }
+    for (int cy = 0; cy <= max_cy; ++cy)
+    {
+      const glm::ivec3 coord(col.x, cy, col.y);
+      const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+      if (!chunk || !MeshService->HasDrawableGreedyMesh(coord))
       {
         continue;
       }
-      Persistence->EnqueueTerrainColumnRelight(col.x * CHUNK_SIZE,
-                                               col.y * CHUNK_SIZE,
-                                               /*priority=*/true, band_min,
-                                               band_max);
+      bool any_solid = false;
+      for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+      {
+        for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+        {
+          for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+          {
+            if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+            {
+              any_solid = true;
+            }
+          }
+        }
+      }
+      if (any_solid && MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+      {
+        NotePendingLightBeforeMesh(glm::ivec3(col.x, 0, col.y), band_min,
+                                   band_max);
+        return true;
+      }
+    }
+    return false;
+  };
+
+  auto enqueue_col = [&](glm::ivec2 col, bool priority) {
+    Persistence->EnqueueTerrainColumnRelight(col.x * CHUNK_SIZE,
+                                             col.y * CHUNK_SIZE, priority,
+                                             band_min, band_max);
+  };
+
+  // Priority-enqueue FOV first, then remaining RD / hinterland PendingLight.
+  int enqueued = 0;
+  for (int dx = -fov_r; dx <= fov_r; ++dx)
+  {
+    for (int dz = -fov_r; dz <= fov_r; ++dz)
+    {
+      const glm::ivec2 col(center.x + dx, center.z + dz);
+      if (!column_needs_light(col))
+      {
+        continue;
+      }
+      enqueue_col(col, /*priority=*/true);
       ++enqueued;
     }
   }
+  for (int dx = -lit_r; dx <= lit_r; ++dx)
+  {
+    for (int dz = -lit_r; dz <= lit_r; ++dz)
+    {
+      if (std::max(std::abs(dx), std::abs(dz)) <= fov_r)
+      {
+        continue;
+      }
+      const glm::ivec2 col(center.x + dx, center.z + dz);
+      if (!column_needs_light(col))
+      {
+        continue;
+      }
+      enqueue_col(col, /*priority=*/false);
+      ++enqueued;
+    }
+  }
+  for (const auto &entry : PendingLightBeforeMesh)
+  {
+    const glm::ivec2 &col = entry.first;
+    const int horiz =
+        std::max(std::abs(col.x - center.x), std::abs(col.y - center.z));
+    if (horiz <= lit_r)
+    {
+      continue;
+    }
+    enqueue_col(col, /*priority=*/false);
+    ++enqueued;
+  }
 
   DrainRelightQueuesBudget(/*max_player_jobs=*/0, cap_budget);
+  // Second apply pass — workers may finish Captures from this frame.
+  DrainAsyncRelightResults(apply_budget, /*priority_mesh=*/true,
+                           /*enqueue_background_frontier=*/false);
   DrainAsyncRelightResults(apply_budget, /*priority_mesh=*/true,
                            /*enqueue_background_frontier=*/false);
   return enqueued;

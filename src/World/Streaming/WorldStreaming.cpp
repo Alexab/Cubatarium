@@ -2491,7 +2491,9 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
             Streamer->GetVisualRenderDistance());
       }
       // TD-ARCH-009: soft-cap Dirty/Pending under MemoryBudget pressure.
-      if (sample.dirty_chunks > 400 && sample.pending_light_focus > 8)
+      // Era42: never trim PendingLight while enter lit pass is draining.
+      if (!world.IsEnterFovLitPassActive() && sample.dirty_chunks > 400 &&
+          sample.pending_light_focus > 8)
       {
         const int soft =
             std::max(16, URuntimeTuning::Get().PendingLightSoftCap);

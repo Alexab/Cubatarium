@@ -59,8 +59,8 @@ inline bool FluidMapShouldThrottleCruise(int pending, double wall_ms,
   return pending > 32 || wall_ms > 30.0;
 }
 
-/// Era30 I-O6 / Era41: legacy soft enter_app name kept; FOV lit uses
-/// EnterFovLitHardWallMs (15s). Do not abort load at 200ms.
+/// Era30 I-O6 / Era41/Era42: legacy soft enter_app name kept; lit warn wall
+/// uses EnterFovLitHardWallMs. Do not abort load at 200ms.
 inline int EnterVisualWarmupHardCapMs()
 {
   return EnterFovLitHardWallMs();
@@ -173,17 +173,25 @@ inline bool ShouldRemeshAfterApplyOnlyOnMovingCruiseHeal(bool moving,
   return moving && ocean_heal_pressure && has_drawable;
 }
 
-/// Era31 I-T4 / Era33 P0 / Era41: force close enter bar when soft-ready, or
-/// when FOV-lit hard-wall (15s) is hit. Load/resume no longer abort at 200ms
-/// while PendingLight/FullyDark remain in LitDrawable ring.
+/// Era31 I-T4 / Era33 P0 / Era41 / Era42: close enter bar when soft-ready.
+/// With require_zero (default), hard-wall never force-closes while lit debt
+/// remains — elapsed is warn-only. Set require_zero=false for debug abort.
 inline bool ShouldForceEnterVisualCap(double elapsed_ms, bool visual_soft_ready,
-                                      bool /*cold_create*/ = false)
+                                      bool /*cold_create*/ = false,
+                                      int hard_wall_ms = -1,
+                                      bool require_zero = true)
 {
   if (visual_soft_ready)
   {
     return true;
   }
-  return elapsed_ms >= static_cast<double>(EnterFovLitHardWallMs());
+  if (require_zero)
+  {
+    return false;
+  }
+  const int wall =
+      hard_wall_ms > 0 ? hard_wall_ms : EnterFovLitHardWallMs();
+  return elapsed_ms >= static_cast<double>(wall);
 }
 
 } // namespace cutum

@@ -110,6 +110,20 @@ struct URuntimeTuning
   /// Cumulative buffer expand events (Completed rings / GPU Reserve).
   uint64_t BufferExpandEvents{0};
 
+  /// Era41b/Era42: Enter lit pass knobs (streaming_tune.json / defaults).
+  /// Warn threshold ms (force-abort only when EnterLitRequireZero=false).
+  int EnterFovLitHardWallMs{120000};
+  /// Captures per TickEnterFovLitPass frame (main-thread; workers parallelize).
+  int EnterFovLitCaptureBudget{16};
+  /// DrainAsyncRelightResults budget while enter lit is active.
+  int EnterFovLitApplyBudget{64};
+  /// Capture wall budget (ms) while EnterFovLitPassActive — feeds workers.
+  float EnterFovLitCaptureDrainMs{80.0f};
+  /// Inflight multiplier overlay during enter lit (× RelightThreadCount).
+  int EnterFovLitInflightMult{12};
+  /// Era42: hold progress bar until lit debt==0 (hard-wall does not abort).
+  bool EnterLitRequireZero{true};
+
   static URuntimeTuning &Get();
   static void ResetToDefaults();
   /// Apply low|med|high preset (keeps other knobs unless tier sets them).

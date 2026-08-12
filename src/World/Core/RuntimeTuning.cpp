@@ -352,6 +352,36 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
     t.FogPullInSevereWallMs =
         j.value("fog_pull_in_severe_wall_ms", t.FogPullInSevereWallMs);
   }
+  if (j.contains("enter_fov_lit_hard_wall_ms"))
+  {
+    t.EnterFovLitHardWallMs =
+        j.value("enter_fov_lit_hard_wall_ms", t.EnterFovLitHardWallMs);
+  }
+  if (j.contains("enter_fov_lit_capture_budget"))
+  {
+    t.EnterFovLitCaptureBudget =
+        j.value("enter_fov_lit_capture_budget", t.EnterFovLitCaptureBudget);
+  }
+  if (j.contains("enter_fov_lit_apply_budget"))
+  {
+    t.EnterFovLitApplyBudget =
+        j.value("enter_fov_lit_apply_budget", t.EnterFovLitApplyBudget);
+  }
+  if (j.contains("enter_fov_lit_capture_drain_ms"))
+  {
+    t.EnterFovLitCaptureDrainMs =
+        j.value("enter_fov_lit_capture_drain_ms", t.EnterFovLitCaptureDrainMs);
+  }
+  if (j.contains("enter_fov_lit_inflight_mult"))
+  {
+    t.EnterFovLitInflightMult =
+        j.value("enter_fov_lit_inflight_mult", t.EnterFovLitInflightMult);
+  }
+  if (j.contains("enter_lit_require_zero"))
+  {
+    t.EnterLitRequireZero =
+        j.value("enter_lit_require_zero", t.EnterLitRequireZero);
+  }
   last_path = path;
   last_mtime = mtime;
   have_mtime = true;

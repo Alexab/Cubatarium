@@ -498,8 +498,8 @@ int main()
          "Era30 I-O4: cruise throttle under void heal");
   Expect(!FluidMapShouldThrottleCruise(40, 35.0, false, 250, 0),
          "Era30 I-O4: idle → no cruise throttle");
-  Expect(EnterVisualWarmupHardCapMs() == 15000,
-         "Era41: enter FOV lit hard wall 15s (was 200ms load abort)");
+  Expect(EnterVisualWarmupHardCapMs() == 120000,
+         "Era42: enter lit warn wall default 120s");
   Expect(OceanCaptureWitnessPinFrames() == 12,
          "Era30 I-O5: ocean Capture pin 12 frames");
   Expect(!ShouldDampOceanCaptureRetarget(true, 3, true),
@@ -551,23 +551,27 @@ int main()
          "Era41: early GpuWarmup without ready ⇒ no cap");
   Expect(!ShouldForceEnterVisualCap(250.0, false, /*cold_create=*/true),
          "Era41: cold create also waits FOV (same hard-wall)");
-  Expect(ShouldForceEnterVisualCap(15000.0, false),
-         "Era41: hard-wall 15s ⇒ force even with debt");
-  Expect(ShouldForceEnterVisualCap(15000.0, false, /*cold_create=*/true),
-         "Era41: hard-wall applies to cold create too");
+  Expect(!ShouldForceEnterVisualCap(120000.0, false),
+         "Era42: require_zero ⇒ hard-wall does not force with debt");
+  Expect(!ShouldForceEnterVisualCap(120000.0, false, /*cold_create=*/true),
+         "Era42: require_zero holds cold create past warn wall");
+  Expect(ShouldForceEnterVisualCap(120000.0, false, /*cold_create=*/false,
+                                   /*hard_wall_ms=*/-1,
+                                   /*require_zero=*/false),
+         "Era42: require_zero=false ⇒ hard-wall abort for debug");
   Expect(ShouldForceEnterVisualCap(250.0, true, /*cold_create=*/true),
          "Era41: soft-ready ⇒ force regardless of create/load");
 
-  // --- Era41 Enter FOV lit budgets / progress ---
+  // --- Era41/Era42 Enter lit budgets / progress ---
   {
     using cutum::EnterFovLitHardWallMs;
     using cutum::EnterFovLitProgressFraction;
     using cutum::EnterFovRelightApplyBudget;
     using cutum::EnterFovRelightCaptureBudget;
     using cutum::ShouldHoldEnterBarForFovLit;
-    Expect(EnterFovLitHardWallMs() == 15000, "Era41: FOV lit hard wall 15s");
-    Expect(EnterFovRelightCaptureBudget() >= 4, "Era41: Capture budget ≥4");
-    Expect(EnterFovRelightApplyBudget() >= 12, "Era41: apply budget ≥12");
+    Expect(EnterFovLitHardWallMs() == 120000, "Era42: lit warn wall 120s");
+    Expect(EnterFovRelightCaptureBudget() >= 16, "Era42: Capture budget ≥16");
+    Expect(EnterFovRelightApplyBudget() >= 64, "Era42: apply budget ≥64");
     Expect(EnterFovLitProgressFraction(0, 10) == 1.0f,
            "Era41: zero debt ⇒ progress 1");
     Expect(EnterFovLitProgressFraction(10, 10) == 0.0f,
@@ -579,8 +583,11 @@ int main()
            "Era41: hold bar while FOV debt");
     Expect(!ShouldHoldEnterBarForFovLit(0, 1000.0),
            "Era41: no hold when debt cleared");
-    Expect(!ShouldHoldEnterBarForFovLit(5, 15000.0),
-           "Era41: no hold past hard-wall");
+    Expect(ShouldHoldEnterBarForFovLit(5, 120000.0),
+           "Era42: require_zero holds past warn wall");
+    Expect(!ShouldHoldEnterBarForFovLit(5, 120000.0, EnterFovLitHardWallMs(),
+                                       /*require_zero=*/false),
+           "Era42: require_zero=false releases past wall");
   }
 
   // --- Era34 CreateBar debt / soft wall ---

@@ -127,6 +127,7 @@ private:
   /// Era35 P3: monotonic display debt (only decreases).
   int StreamingWarmupDisplayDebt{0};
   std::chrono::steady_clock::time_point StreamingWarmupWallStart{};
+  bool StreamingWarmupLitWarnLogged{false};
 
   void BeginDeferredRelightQueue(UWorld &world);
   void BeginBulkChunkRelightQueue(UWorld &world);

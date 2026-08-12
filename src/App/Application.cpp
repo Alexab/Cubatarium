@@ -2,6 +2,7 @@
 #include "Game/Inventory/HotbarInput.h"
 #include "Game/Inventory/SlotInteraction.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include "World/Core/RuntimeTuning.h"
 
 #include "App/Platform/Log.h"
 #include "App/Core.h"
@@ -1951,7 +1952,8 @@ void UApplication::Update(double dt)
               World->TickEnterStreamingWarmup(kGpuWarmupStreamingBudget);
             }
             // Era41: drain LitDrawable FOV Relight on the progress bar.
-            World->TickEnterFovLitPass(EnterFovRelightCaptureBudget());
+            World->TickEnterFovLitPass(
+                std::max(1, URuntimeTuning::Get().EnterFovLitCaptureBudget));
           }
           const bool upload_ready =
               frame >= kGpuWarmupMinFrames - 1 &&

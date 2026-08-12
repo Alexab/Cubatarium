@@ -1,5 +1,6 @@
 #include "World/Core/WorldCooperativeOps.h"
 #include "World/Core/WorldLoadDiagnostics.h"
+#include "World/Core/RuntimeTuning.h"
 #include "App/Platform/Log.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
@@ -1796,10 +1797,12 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         StreamingWarmupPeakDebt = 0;
         StreamingWarmupLastRawDebt = 0;
         StreamingWarmupDisplayDebt = 0;
+        StreamingWarmupLitWarnLogged = false;
       }
       TickCreateSpawnMeshWarmup(world, std::max(1, budget / 2));
       // Era41: light LitDrawable FOV on create bar (async Capture + workers).
-      world.TickEnterFovLitPass(EnterFovRelightCaptureBudget());
+      world.TickEnterFovLitPass(
+          std::max(1, URuntimeTuning::Get().EnterFovLitCaptureBudget));
       ++StreamingWarmupTicks;
       bool underfeet_lit = false;
       const int raw_debt = world.CountCreateNearFovWarmupDebt(&underfeet_lit);
@@ -1840,7 +1843,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       }
       else if (fov_debt > 0)
       {
-        status = "Lighting FOV… " + std::to_string(fov_debt) + " left";
+        status = "Lighting… " + std::to_string(fov_debt) + " left";
       }
       else
       {
@@ -1849,13 +1852,39 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       }
       Report(sink, "prepare_view",
              prepare_view_base + kCreateWeightPrepare * stream_inner, status);
-      // Era34/Era41: settle, soft wall only after FOV lit debt clear, or hard wall.
+      // Era42: never leave create bar while lit debt remains (require_zero).
+      // Soft/hard create walls apply only after lit debt clears.
+      const bool require_zero = URuntimeTuning::Get().EnterLitRequireZero;
       if (spawn_settled)
       {
         // fall through to Finalize
       }
-      else if (ShouldSoftLeaveCreateSpawnWarmup(underfeet_lit, elapsed_ms) &&
-               fov_debt <= 0)
+      else if (fov_debt > 0)
+      {
+        if (!require_zero &&
+            !ShouldHoldEnterBarForFovLit(
+                fov_debt, elapsed_ms,
+                URuntimeTuning::Get().EnterFovLitHardWallMs,
+                /*require_zero=*/false))
+        {
+          std::cerr << "[Era42] create lit hard-wall abort (" << elapsed_ms
+                    << "ms, lit=" << fov_debt << ")\n";
+        }
+        else
+        {
+          if (!StreamingWarmupLitWarnLogged &&
+              elapsed_ms >=
+                  static_cast<double>(
+                      URuntimeTuning::Get().EnterFovLitHardWallMs))
+          {
+            StreamingWarmupLitWarnLogged = true;
+            std::cerr << "[Era42] create lit still draining past warn wall ("
+                      << elapsed_ms << "ms, lit=" << fov_debt << ")\n";
+          }
+          break;
+        }
+      }
+      else if (ShouldSoftLeaveCreateSpawnWarmup(underfeet_lit, elapsed_ms))
       {
         std::cerr << "[Era34] create spawn soft-wall after underfeet lit ("
                   << elapsed_ms << "ms, debt=" << debt << ")\n";
@@ -1866,12 +1895,6 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         std::cerr << "[Era34] create spawn hard ceiling (" << elapsed_ms
                   << "ms, ticks=" << StreamingWarmupTicks << ", debt=" << debt
                   << ")\n";
-      }
-      else if (fov_debt > 0 &&
-               !ShouldHoldEnterBarForFovLit(fov_debt, elapsed_ms))
-      {
-        std::cerr << "[Era41] create FOV lit hard-wall (" << elapsed_ms
-                  << "ms, fov=" << fov_debt << ")\n";
       }
       else
       {
@@ -1891,6 +1914,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     StreamingWarmupPeakDebt = 0;
     StreamingWarmupLastRawDebt = 0;
     StreamingWarmupDisplayDebt = 0;
+    StreamingWarmupLitWarnLogged = false;
     const float prepare_view_base =
         Kind == WorldCoopKind::Create
             ? (CooperativeCreateMeshProgressBase() + kCreateWeightMeshWarmup)

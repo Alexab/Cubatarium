@@ -337,10 +337,15 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
           world.ProceduralTemplate.MovementPrefetchThreshold &&
       (focus_pending_mid || visual_holes);
   const URuntimeTuning &tune = URuntimeTuning::Get();
+  const bool enter_fov_lit = world.IsEnterFovLitPassActive();
   // MultHigh was loaded from tune but unused — use it for idle/mid pending so
   // stop can drain light debt without waiting for holes.
   int inflight_mult = 2;
-  if (focus_pending_high || visual_holes)
+  if (enter_fov_lit)
+  {
+    inflight_mult = std::max(3, tune.EnterFovLitInflightMult);
+  }
+  else if (focus_pending_high || visual_holes)
   {
     inflight_mult = std::max(3, tune.RelightInflightMultHoles);
   }
@@ -643,13 +648,16 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   // bands (RelightCaptureBandCy). SoftDefer keeps PendingLight until the
   // final band (finalize_pending_gate=false on partial).
   // Phase B: budgets from RuntimeTuning / streaming_tune.json.
+  // Era41b: enter FOV lit pass uses elevated Capture wall to feed workers.
   double capture_drain_budget_ms =
-      moving ? static_cast<double>(tune.CaptureDrainMovingMs)
-             : static_cast<double>(tune.CaptureDrainIdleMs);
+      enter_fov_lit
+          ? static_cast<double>(tune.EnterFovLitCaptureDrainMs)
+          : (moving ? static_cast<double>(tune.CaptureDrainMovingMs)
+                    : static_cast<double>(tune.CaptureDrainIdleMs));
   // Narrow PendingLight bands are cheaper now; when focus still has missing
   // mesh plus light debt, allow a bit more Capture time so relight can clear
   // the gate instead of holding mesh_async at 0 for many seconds.
-  if (async_bg && visual_holes && focus_pending_mid)
+  if (!enter_fov_lit && async_bg && visual_holes && focus_pending_mid)
   {
     capture_drain_budget_ms =
         moving ? static_cast<double>(tune.CaptureDrainHolesMovingMs)
@@ -670,14 +678,15 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   int bg_cap = max_bg_columns;
   // S2 step A: cruise ≤CaptureMovingBgCap (worker Capture hung — TD-ARCH-015).
   // Era36 B2: dynamic cap based on pending light pressure.
-  if (moving)
+  // Era41b: enter FOV lit keeps caller Capture budget (feed async workers).
+  if (moving && !enter_fov_lit)
   {
     const int dynamic_cap =
         DynamicCaptureMovingBgCap(pending_light_focus_n, tune.CaptureMovingBgCap);
     bg_cap = std::min(bg_cap, std::max(1, dynamic_cap));
   }
-  if (frame_ms_so_far >= capture_hot_skip_ms && visual_holes &&
-      focus_pending_mid)
+  if (!enter_fov_lit && frame_ms_so_far >= capture_hot_skip_ms &&
+      visual_holes && focus_pending_mid)
   {
     bg_cap = std::min(bg_cap, 1);
   }
@@ -719,7 +728,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
           world.GetAsyncRelightInFlightCount() == 0 &&
           frame_ms_so_far <
               static_cast<double>(tune.CaptureIdlePendingMaxWallMs);
-      if (!soft_defer_hole && !miss_rim_pin && !idle_pending_progress)
+      if (!enter_fov_lit && !soft_defer_hole && !miss_rim_pin &&
+          !idle_pending_progress)
       {
         return false;
       }
@@ -801,8 +811,10 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     int remainder_max = -1;
     bool finalize_gate = true;
     // Era40: miss rim pin prefers one full finalize Capture (no partial Y-band).
+    // Era41b: enter FOV lit pass always finalizes — Completed ring must advance.
     const bool miss_finalize_band =
-        visual_holes && ShouldPreferMissFinalizeBand(horiz_dist);
+        enter_fov_lit ||
+        (visual_holes && ShouldPreferMissFinalizeBand(horiz_dist));
     if (async_bg && band_cy > 0 && !miss_finalize_band)
     {
       const int band_h = band_cy * CHUNK_SIZE;

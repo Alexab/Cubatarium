@@ -1118,7 +1118,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           focus_ground_horiz, 360, 1);
       phys.DirtyDropped += static_cast<uint64_t>(std::max(0, dropped));
     }
-    if (mtune.PendingLightSoftCap > 0 &&
+    if (!world.IsEnterFovLitPassActive() && mtune.PendingLightSoftCap > 0 &&
         world.GetPendingLightBeforeMeshCount() >
             static_cast<size_t>(mtune.PendingLightSoftCap))
     {
@@ -1126,7 +1126,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           focus_ground_horiz, mtune.PendingLightSoftCap);
       phys.PendingLightDropped += static_cast<uint64_t>(std::max(0, dropped));
     }
-    if (mtune.RelightFifoSoftCap > 0)
+    if (!world.IsEnterFovLitPassActive() && mtune.RelightFifoSoftCap > 0)
     {
       const int dropped = world.TrimFarRelightFifoFarthest(
           focus_ground_horiz, mtune.RelightFifoSoftCap);

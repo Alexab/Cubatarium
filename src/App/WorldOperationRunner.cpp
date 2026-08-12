@@ -1,6 +1,7 @@
 #include "App/WorldOperationRunner.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/OceanCruisePolicy.h"
+#include "World/Core/RuntimeTuning.h"
 #include "World/Core/WorldLoadDiagnostics.h"
 #include "App/Core.h"
 #include "Core/Progress/ProgressTypes.h"
@@ -226,16 +227,29 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   const bool mesh_ready = !World.NeedsEnterGameMeshWarmup();
   const bool fov_ready = fov_debt <= 0;
   const bool soft_ready = mesh_ready && fov_ready;
-  // Era41: wait for LitDrawable FOV lit (or 15s hard-wall) — no 200ms load abort.
+  const auto &tune = URuntimeTuning::Get();
+  // Era42: wait for full enter lit debt==0; hard-wall aborts only if
+  // enter_lit_require_zero=false.
   const bool cap_reached = ShouldForceEnterVisualCap(
-      EnterGameGpuWarmupElapsedMs, soft_ready, EnterGameColdCreate);
+      EnterGameGpuWarmupElapsedMs, soft_ready, EnterGameColdCreate,
+      tune.EnterFovLitHardWallMs, tune.EnterLitRequireZero);
+  if (!cap_reached && fov_debt > 0 &&
+      EnterGameGpuWarmupElapsedMs >=
+          static_cast<double>(tune.EnterFovLitHardWallMs) &&
+      !EnterGameLitWarnLogged)
+  {
+    EnterGameLitWarnLogged = true;
+    std::cerr << "[Era42] enter lit still draining past warn wall ("
+              << EnterGameGpuWarmupElapsedMs << "ms, lit=" << fov_debt
+              << ")\n";
+  }
   const float lit_prog =
       EnterFovLitProgressFraction(fov_debt, EnterGameFovLitPeakDebt);
   const float frac = 0.94f + 0.05f * lit_prog;
   std::string status;
   if (fov_debt > 0)
   {
-    status = "Lighting FOV… " + std::to_string(fov_debt) + " left";
+    status = "Lighting… " + std::to_string(fov_debt) + " left";
   }
   else if (!mesh_ready)
   {
@@ -368,6 +382,7 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
       EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupMaxFrames;
       EnterGameGpuWarmupElapsedMs = 0.0;
       EnterGameFovLitPeakDebt = 0;
+      EnterGameLitWarnLogged = false;
       EnterGameColdCreate = false;
       return false;
     }
@@ -416,6 +431,7 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
       EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupMaxFrames;
       EnterGameGpuWarmupElapsedMs = 0.0;
       EnterGameFovLitPeakDebt = 0;
+      EnterGameLitWarnLogged = false;
       EnterGameColdCreate = true;
       return false;
     }

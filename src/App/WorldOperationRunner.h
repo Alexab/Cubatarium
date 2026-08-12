@@ -120,6 +120,8 @@ private:
   bool EnterGameColdCreate{false};
   /// Era41: peak FOV lit debt for monotonic progress on the bar.
   int EnterGameFovLitPeakDebt{0};
+  /// Era42: one-shot warn when lit drain exceeds hard_wall_ms while holding.
+  bool EnterGameLitWarnLogged{false};
   UBackgroundQuiesceState ShutdownQuiesceState{};
 };
 

@@ -263,37 +263,46 @@ inline int EnterWarmupSoftDeferOwnershipCap(int base_cap, int softdefer_empty_n,
   return std::max(base_cap, 18);
 }
 
-/// Era41: safety hard-wall for Enter FOV lit pass (ms). Not the old 200ms abort.
+/// Era41/Era42: warn threshold ms for Enter lit pass (not force-abort when
+/// EnterLitRequireZero). Runtime: streaming_tune.json `enter_fov_lit_hard_wall_ms`.
 inline int EnterFovLitHardWallMs()
 {
-  return 15000;
+  return 120000;
 }
 
-/// Era41: Capture columns per enter FOV lit tick (async workers parallelize).
+/// Era41/Era42: Captures per enter lit tick.
+/// Override: `enter_fov_lit_capture_budget`.
 inline int EnterFovRelightCaptureBudget()
 {
-  return 4;
+  return 16;
 }
 
-/// Era41: async Relight apply budget while enter FOV lit pass is active.
+/// Era41/Era42: async Relight apply budget on enter lit pass.
+/// Override: `enter_fov_lit_apply_budget`.
 inline int EnterFovRelightApplyBudget()
 {
-  return 12;
+  return 64;
 }
 
-/// Era41: progress fraction for Lighting FOV bar (1 - debt/peak).
+/// Era41: progress fraction for Lighting bar (1 - debt/peak).
 inline float EnterFovLitProgressFraction(int debt, int peak_debt)
 {
   return 1.0f - CreateBarDebtFraction(debt, std::max(1, peak_debt));
 }
 
-/// Era41: hold enter bar while FOV lit debt remains (unless hard-wall).
+/// Era41/Era42: hold enter bar while lit debt remains.
+/// When require_zero (default), hard-wall does not release the bar.
 inline bool ShouldHoldEnterBarForFovLit(int fov_lit_debt, double elapsed_ms,
-                                        int hard_wall_ms = EnterFovLitHardWallMs())
+                                        int hard_wall_ms = EnterFovLitHardWallMs(),
+                                        bool require_zero = true)
 {
   if (fov_lit_debt <= 0)
   {
     return false;
+  }
+  if (require_zero)
+  {
+    return true;
   }
   return elapsed_ms < static_cast<double>(hard_wall_ms);
 }

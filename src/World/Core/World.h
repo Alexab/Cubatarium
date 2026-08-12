@@ -404,9 +404,9 @@ public:
   bool NeedsEnterGameMeshWarmup() const;
   /// Era29: underfeet LitDrawable / SoftDefer empty / PendingLight still owed.
   bool NeedsEnterGameVisualWarmup() const;
-  /// Era41: PendingLight or FullyDark columns in LitDrawable enter ring.
+  /// Era42: PendingLight (global) + FullyDark in RD+1 around spawn focus.
   int CountEnterFovLitDebt() const;
-  /// Era41: priority-enqueue FOV columns + elevated Capture/apply on progress bar.
+  /// Era42: priority-enqueue RD/PendingLight + elevated Capture/apply on bar.
   int TickEnterFovLitPass(int capture_budget = -1);
   /// Spawn ring has greedy mesh committed (no missing, no pending GPU apply).
   bool IsSpawnMeshRingReady() const;
@@ -425,6 +425,7 @@ public:
   {
     return EnterGameWarmupMissingGreedy;
   }
+  bool IsEnterFovLitPassActive() const { return EnterFovLitPassActive; }
   bool IsCreateSpawnWarmupSettled() const;
   /// Era34 P0: near-FOV (r≤2) create-bar debt; sets underfeet LitDrawable ready.
   int CountCreateNearFovWarmupDebt(bool *out_underfeet_lit_ready) const;
@@ -1327,6 +1328,8 @@ private:
   int PlayerRelightMeshBurstFrames{0};
   int EnterGameMeshBurstFrames{0};
   int EnterGameWarmupMissingGreedy{0};
+  /// Era41b: DrainRelightQueues uses elevated Capture/inflight while true.
+  bool EnterFovLitPassActive{false};
   struct PendingRelightMeshColumnRange
   {
     int min_y{0};
