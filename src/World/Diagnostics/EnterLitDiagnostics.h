@@ -30,6 +30,13 @@ struct EnterLitSample
   int relight_fifo_dropped{0};
   int top_dirty_cx{0};
   int top_dirty_cz{0};
+  /// Era45: R4 diagnostics.
+  int remesh_after_apply_n{0};
+  int stuck_dirty_cx{0};
+  int stuck_dirty_cy{0};
+  int stuck_dirty_cz{0};
+  bool suppress_relight_seam{false};
+  uint64_t mark_relit_raa_total{0};
 };
 
 /// Era44: per-frame step timings (deltas) inside gpu_warmup.

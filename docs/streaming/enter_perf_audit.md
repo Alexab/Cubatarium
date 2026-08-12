@@ -1,62 +1,75 @@
-# Enter-load performance audit (Era44)
+# Enter-load performance audit (Era44–Era45)
 
-Manual reference run: World_174, log `20260812-153650`, enter_lit `20260812-153720.jsonl`.
+Manual reference runs: World_174.
 
-## Timeline
+| Run | Log | Symptom |
+|-----|-----|---------|
+| Pre-Era44 | `20260812-153650` | gpu_warmup ~120s, mesh abort forced InGame with holes |
+| Era44 variant A | `20260812-163342` | coop PrepareView >8 min, plateau fifo≈6–13, gpu≈15–26, mesh_dirty=1 |
+| Era45 target | autoload `--timeout-sec 300` | phase=done ≤3 min, mesh_dirty/gpu/fifo→0 at settle |
 
-| Phase | Wall | Progress bar | Notes |
-|-------|------|--------------|-------|
-| Cooperative load | ~30 s | 0–93%, relight/mesh messages | 574 chunks, bulk relight ~17 s |
-| `phase=done` | instant | jump to ~93% | coop mesh_warmup ~4 s |
-| `EnterGameGpuWarmup` | **~120 s** | stuck ~99% «Uploading terrain…» (pre-Era44) | `TickEnterGateMeshDrain` 0.9–1.5 s/frame |
-| mesh abort (Era43f) | 15:39:22 | — | forced InGame with residual blockers |
-| `first_paint` | 15:39:22 | screen clears | `mesh_dirty=79`, `mesh_in_flight=18` |
+## Timeline (163342 — R4 livelock baseline)
 
-Era44 fixes: honest 93→100% debt bar, mesh abort → `abort_drain` (gate stays until `IsSpawnMeshRingReady()`).
+| Time | Phase | Key metrics |
+|------|-------|-------------|
+| 16:34:07 | coop mesh_warmup | 511 dirty → mesh build |
+| 16:34:10 | prepare_view frame 0 | BeginEnterLitGate, fifo=81 |
+| 16:34:12+ | coop PrepareView drain | no phase=done 8+ min |
+| plateau | stuck | mesh_dirty=1, gpu=15–26, fifo≈6–13, debt=0, ring=0 |
 
-## Dominant step (gpu_warmup)
+## R4 root cause (confirmed)
 
-From manual jsonl / glog (pre-profile instrumentation):
+**R4** — ownership livelock: Relight → MarkRelit → RequestRemeshAfterApply → GPU commit → MarkDirty → rebuild → new GPU pending → repeat.
 
-| Step | Avg ms/frame | Max ms/frame | % of frame wall (est.) |
-|------|--------------|--------------|------------------------|
-| `TickEnterGateMeshDrain` (6× emerge) | 900–1500 | ~1500 | **75–85%** |
-| `DrainEnterGameMeshWarmup` | 50–200 | ~300 | 5–15% |
-| `TickEnterFovLitPass` | 10–80 | ~120 | 5–10% |
+Primary enter multiplier: Path C (`SuppressRelightSeamDirty` + idle + `ShouldRemeshAfterApplyOnlyOnIdleDrawable`).
 
-**Dominant bucket:** `gate_drain` (>40% wall). Profile summary now emitted as `[EnterWarmup] profile` when ring becomes ready.
+Evidence from 163342:
+- `debt=0` while fifo>0 (lit snapshot vs mesh-ready semantic gap — R6)
+- `suppress_relight_seam=1` during enter idle
+- `mesh_dirty=1` + `gpu_pending>0` with status wrongly showing «Lighting queue»
 
-## Redundancy hypotheses (R1–R7)
+## Era44b fixes (UX + abort wall)
 
-| ID | Hypothesis | Verdict | Evidence |
-|----|------------|---------|----------|
-| R1 | Coop relight + gate FIFO duplicate columns | **Likely** | `relight_columns` ~17 s coop, then `fifo_n=79` at gpu_warmup frame 0 |
-| R2 | 6× `TickMeshEmerge` per frame | **Confirmed** | `gate_drain_ms` ~1 s, fifo −1..−2/frame; knob `enter_gate_mesh_drain_iterations` added |
-| R3 | `DrainEnterGameMeshWarmup` + gate overlap | **Partial** | Both active; gpu_pending oscillates 8–19 |
-| R4 | Relight→MarkRelit→remesh loop | **Suspected** | fifo↓ but gpu_pending flat; watch `stage_skip_remesh_pending_light` |
-| R5 | Partial Y-band Capture requeue | **Inconclusive** | needs `RelightFalseClearN` from live profile |
-| R6 | Snapshot ghost vs FIFO | **Observed** | `snapshot_debt=0` while `fifo_n>0` for extended period |
-| R7 | GPU apply starvation under gate | **Suspected** | `gpu_pending` flat 8–19 while `mesh_emerge_ms` high |
+1. Shared `BuildEnterWarmupStatus` — mesh/gpu blockers priority over fifo.
+2. Coop PrepareView `coop_abort_drain` after `enter_mesh_abort_ms` (gate stays, no force done).
+3. `MaybeLogHeartbeat` in coop path; `EnterWarmupCombinedDebt` weights mesh_dirty.
 
-## Root cause statement
+## Era45 R4 fixes (ownership)
 
-Enter-load wall time is dominated by **`TickEnterGateMeshDrain` (6× full emerge pipeline per frame)** while relight FIFO and GPU pending drain slowly; Era43f mesh abort masked the stall by forcing InGame with holes.
+1. **B1 diagnostics:** `GetRemeshAfterApplyCount`, `FindFirstDirtyInHorizontalRadius`, `mark_relit_raa_total`, `suppress_relight_seam` in jsonl/heartbeat.
+2. **B2:** `ClassifyRemeshAfterLitApply` — skip dirty/raa, PreferKick when gpu pending, skip inflight; applied to all MarkRelit RAA paths.
+3. **B3:** RAA commit coalesce — skip MarkDirty if already dirty (GPU + CPU defer + CPU normal).
+4. **B4:** MarkDirty/MarkDirtyPriority guard — no double RAA insert.
+5. **B5:** `ShouldSuppressRelightSeamDirtyForEnterGate` — disable suppress until spawn ring ready.
 
-## Era44 quick wins (implemented)
+## Redundancy hypotheses (updated)
 
-1. Honest combined progress (fifo/gpu/ring/lit) on gpu_warmup bar.
-2. Mesh abort → `abort_drain` until `IsSpawnMeshRingReady()` (no `EndEnterLitGate` on abort).
-3. `BeginEnterLitGate` at end of coop mesh_warmup (Load) + drain under coop `PrepareView`.
-4. Per-step forensics: `RecordFrameSteps`, heartbeat churn counters, `[EnterWarmup] profile`.
-5. Tuning: `enter_gate_mesh_drain_iterations`, `enter_force_ingame_ms` (last resort ≥300 s).
+| ID | Verdict | Notes |
+|----|---------|-------|
+| R1 | Likely | Coop relight + gate FIFO duplicate |
+| R2 | Confirmed | 6× TickMeshEmerge per frame |
+| R3 | Partial | DrainEnterGameMeshWarmup + gate overlap |
+| R4 | **Confirmed + fixed** | RAA↔MarkDirty loop; Path C on enter |
+| R5 | Inconclusive | Partial band finalize=false |
+| R6 | Observed | snapshot debt=0 masks mesh churn |
+| R7 | Suspected | GPU drain starved under gate |
 
-## Before/after verification
-
-Run:
+## Verification
 
 ```text
 cd bin
 .\Cubatarium.exe --console --autoload-last-world --visible --timeout-sec 300
 ```
 
-Check: bar moves 93→100% with fifo/gpu/ring status; no InGame with `mesh_dirty>10` unless `force_ingame`; `enter_lit_*.jsonl` has `heartbeat` + `profile` lines.
+Success criteria (World_174):
+
+| Metric | Before (163342) | After target |
+|--------|-----------------|--------------|
+| coop PrepareView wall | >8 min | ≤3 min to phase=done |
+| mesh_dirty at settle | 1 | 0 |
+| gpu_pending at settle | 15–26 | 0 |
+| fifo/inflight at settle | plateau 6/10 | 0 |
+| remesh_after_apply_n | >0 plateau | 0 at ring ready |
+| status when gpu>0 | «Lighting queue» | «Building terrain…» |
+
+Unit: `miss_first_mesh_class_test` — `ClassifyRemeshAfterLitApply`, `EnterWarmupStatusPrefersMeshOverFifo`.

@@ -1,8 +1,10 @@
 #pragma once
 
+#include "World/Diagnostics/EnterLitDiagnostics.h"
 #include "World/Streaming/VisualStagePolicy.h"
 
 #include <algorithm>
+#include <string>
 #include <utility>
 
 namespace cutum
@@ -443,6 +445,155 @@ inline int CruiseCatchUpOwnershipCap(int base_cap, int softdefer_empty_n,
     return base_cap;
   }
   return std::max(base_cap, 18);
+}
+
+/// Era44b: elapsed suffix for enter warmup status strings.
+inline std::string FormatEnterWarmupElapsed(double elapsed_ms)
+{
+  const int sec = static_cast<int>(elapsed_ms / 1000.0);
+  return " (" + std::to_string(sec) + "s)";
+}
+
+/// Era44b: shared enter warmup status — mesh/gpu blockers beat fifo/lit queue.
+inline std::string BuildEnterWarmupStatus(const EnterLitSample &sample,
+                                          int fov_debt, bool ring_ready,
+                                          bool abort_drain, double elapsed_ms,
+                                          int hard_wall_ms)
+{
+  const bool slow = elapsed_ms >= static_cast<double>(hard_wall_ms);
+  const std::string elapsed_suffix = FormatEnterWarmupElapsed(elapsed_ms);
+  if (abort_drain && !ring_ready)
+  {
+    std::string status =
+        "Finishing terrain (slow)… fifo=" + std::to_string(sample.fifo_n) +
+        " gpu=" + std::to_string(sample.mesh_gpu_pending_near) + " ring=" +
+        std::to_string(sample.ring_not_ready);
+    if (sample.mesh_async_pending)
+    {
+      status += " async=1";
+    }
+    status += elapsed_suffix;
+    if (slow)
+    {
+      status += " (slow)";
+    }
+    return status;
+  }
+  if (sample.mesh_dirty || sample.mesh_missing_greedy ||
+      sample.mesh_gpu_pending_near > 0 || sample.mesh_async_pending ||
+      !ring_ready)
+  {
+    std::string status =
+        "Building terrain… gpu=" +
+        std::to_string(sample.mesh_gpu_pending_near);
+    if (sample.mesh_async_pending)
+    {
+      status += " async=1";
+    }
+    status += " dirty=" + std::to_string(sample.mesh_dirty ? 1 : 0);
+    status += elapsed_suffix;
+    if (slow)
+    {
+      status += " (slow)";
+    }
+    return status;
+  }
+  if (fov_debt > 0 || sample.fifo_n > 0 || sample.inflight > 0)
+  {
+    std::string status = "Lighting queue… fifo=" + std::to_string(sample.fifo_n) +
+                         " inflight=" + std::to_string(sample.inflight);
+    if (fov_debt > 0)
+    {
+      status += " debt=" + std::to_string(fov_debt);
+    }
+    status += elapsed_suffix;
+    if (slow)
+    {
+      status += " (slow)";
+    }
+    return status;
+  }
+  if (sample.ring_not_ready > 0)
+  {
+    std::string status =
+        "Finishing view… ring=" + std::to_string(sample.ring_not_ready) +
+        " left" + elapsed_suffix;
+    if (slow)
+    {
+      status += " (slow)";
+    }
+    return status;
+  }
+  return "Preparing view..." + elapsed_suffix;
+}
+
+/// Era44b: combined debt for coop/gpu_warmup progress (mesh_dirty weighted).
+inline int EnterWarmupCombinedDebt(const EnterLitSample &sample, int fov_debt)
+{
+  return sample.fifo_n + sample.mesh_gpu_pending_near + sample.ring_not_ready +
+         fov_debt + (sample.mesh_dirty ? 8 : 0);
+}
+
+/// Era44b: status prefers mesh/gpu over fifo when both are active.
+inline bool EnterWarmupStatusPrefersMeshOverFifo(const EnterLitSample &sample,
+                                                 int fov_debt, bool ring_ready,
+                                                 bool abort_drain)
+{
+  const std::string status =
+      BuildEnterWarmupStatus(sample, fov_debt, ring_ready, abort_drain, 0.0, 0);
+  return status.rfind("Building terrain", 0) == 0 ||
+         status.rfind("Finishing terrain", 0) == 0;
+}
+
+/// Era45 B5: allow seam MarkDirty on enter until spawn ring ready.
+inline bool ShouldSuppressRelightSeamDirtyForEnterGate(
+    bool enter_lit_gate_active, bool spawn_mesh_ring_ready, bool base_suppress)
+{
+  if (enter_lit_gate_active && !spawn_mesh_ring_ready)
+  {
+    return false;
+  }
+  return base_suppress;
+}
+
+/// Era45 B2: ownership policy for MarkRelit → RemeshAfterApply.
+enum class RemeshAfterLitApplyDecision
+{
+  Schedule,
+  SkipAlreadyDirty,
+  SkipAlreadyRaa,
+  PreferKickGpu,
+  SkipInflight,
+};
+
+inline RemeshAfterLitApplyDecision ClassifyRemeshAfterLitApply(
+    bool is_dirty, bool raa_pending, bool gpu_pending, bool inflight)
+{
+  if (is_dirty)
+  {
+    return RemeshAfterLitApplyDecision::SkipAlreadyDirty;
+  }
+  if (raa_pending)
+  {
+    return RemeshAfterLitApplyDecision::SkipAlreadyRaa;
+  }
+  if (gpu_pending)
+  {
+    return RemeshAfterLitApplyDecision::PreferKickGpu;
+  }
+  if (inflight)
+  {
+    return RemeshAfterLitApplyDecision::SkipInflight;
+  }
+  return RemeshAfterLitApplyDecision::Schedule;
+}
+
+inline bool ShouldScheduleRemeshAfterLitApply(bool is_dirty, bool raa_pending,
+                                              bool gpu_pending, bool inflight)
+{
+  return ClassifyRemeshAfterLitApply(is_dirty, raa_pending, gpu_pending,
+                                     inflight) ==
+         RemeshAfterLitApplyDecision::Schedule;
 }
 
 } // namespace cutum

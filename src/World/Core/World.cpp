@@ -921,6 +921,30 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
   {
     primary_set.insert(g);
   }
+  auto schedule_remesh_after_lit_apply = [this](const glm::ivec3 &coord)
+  {
+    if (!MeshService)
+    {
+      return;
+    }
+    const bool is_dirty = MeshService->IsChunkMeshDirty(coord);
+    const bool raa_pending = MeshService->IsRemeshAfterApplyPending(coord);
+    const bool gpu_pending = MeshService->IsPendingGpuApply(coord);
+    const bool inflight = MeshService->HasInflightMeshBuild(coord);
+    switch (ClassifyRemeshAfterLitApply(is_dirty, raa_pending, gpu_pending,
+                                        inflight))
+    {
+    case RemeshAfterLitApplyDecision::Schedule:
+      ++PhysicsTelemetryData.MarkRelitRemeshAfterApplyN;
+      MeshService->RequestRemeshAfterApply(coord);
+      break;
+    case RemeshAfterLitApplyDecision::PreferKickGpu:
+      MeshService->PreferKickPendingGpuQueued(coord);
+      break;
+    default:
+      break;
+    }
+  };
   // Per-column Y from chunks that were actually lit.
   struct YBand
   {
@@ -1096,7 +1120,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
             if (!MeshService->IsChunkMeshDirty(coord) &&
                 MeshService->HasDrawableGreedyMesh(coord))
             {
-              MeshService->RequestRemeshAfterApply(coord);
+              schedule_remesh_after_lit_apply(coord);
             }
           }
           continue;
@@ -1123,7 +1147,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
             const glm::ivec3 coord(key.x, cy, key.y);
             if (!MeshService->IsChunkMeshDirty(coord))
             {
-              MeshService->RequestRemeshAfterApply(coord);
+              schedule_remesh_after_lit_apply(coord);
             }
           }
           continue;
@@ -1183,7 +1207,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
               ShouldRemeshAfterApplyOnlyOnMovingCruiseHeal(
                   moving_cruise, void_vb_pressure, has_drawable))
           {
-            MeshService->RequestRemeshAfterApply(coord);
+            schedule_remesh_after_lit_apply(coord);
             continue;
           }
           if (priority_mesh)

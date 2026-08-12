@@ -2,6 +2,8 @@
 
 #include "App/Platform/Log.h"
 #include "World/Core/World.h"
+#include "World/Chunks/ChunkManager.h"
+#include "World/Mesh/WorldMeshService.h"
 #include "World/Persistence/WorldPersistence.h"
 #include "glog/logging.h"
 
@@ -119,7 +121,13 @@ void WriteJsonlLine(const EnterLitSample &s, const char *kind = nullptr)
           << s.stage_skip_remesh_pending_light
           << ",\"relight_fifo_dropped\":" << s.relight_fifo_dropped
           << ",\"top_dirty_cx\":" << s.top_dirty_cx
-          << ",\"top_dirty_cz\":" << s.top_dirty_cz;
+          << ",\"top_dirty_cz\":" << s.top_dirty_cz
+          << ",\"remesh_after_apply_n\":" << s.remesh_after_apply_n
+          << ",\"stuck_dirty_cx\":" << s.stuck_dirty_cx
+          << ",\"stuck_dirty_cy\":" << s.stuck_dirty_cy
+          << ",\"stuck_dirty_cz\":" << s.stuck_dirty_cz
+          << ",\"suppress_relight_seam\":" << (s.suppress_relight_seam ? 1 : 0)
+          << ",\"mark_relit_raa_total\":" << s.mark_relit_raa_total;
   if (kind != nullptr)
   {
     g_jsonl << ",\"kind\":\"" << kind << "\"";
@@ -202,6 +210,19 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
   out.relight_fifo_dropped = phys.RelightFifoDropped;
   out.top_dirty_cx = phys.MissCx;
   out.top_dirty_cz = phys.MissCz;
+  const UWorldMeshService &mesh = world.GetMeshService();
+  out.remesh_after_apply_n = static_cast<int>(mesh.GetRemeshAfterApplyCount());
+  const glm::ivec3 focus = world.GetPreferredLoadFocusBlock();
+  const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus);
+  glm::ivec3 stuck{};
+  if (mesh.FindFirstDirtyInHorizontalRadius(focus_chunk, 4, stuck))
+  {
+    out.stuck_dirty_cx = stuck.x;
+    out.stuck_dirty_cy = stuck.y;
+    out.stuck_dirty_cz = stuck.z;
+  }
+  out.suppress_relight_seam = world.IsSuppressRelightSeamDirty();
+  out.mark_relit_raa_total = phys.MarkRelitRemeshAfterApplyN;
 }
 
 void UEnterLitDiagnostics::MaybeLog(const EnterLitSample &sample,
@@ -250,8 +271,14 @@ void UEnterLitDiagnostics::MaybeLogHeartbeat(const EnterLitSample &sample,
             << " ring=" << sample.ring_not_ready
             << " relight_completed=" << sample.relight_completed_n
             << " stage_skip_remesh=" << sample.stage_skip_remesh_pending_light
+            << " suppress_relight_seam="
+            << (sample.suppress_relight_seam ? 1 : 0)
+            << " remesh_after_apply_n=" << sample.remesh_after_apply_n
+            << " mark_relit_raa_total=" << sample.mark_relit_raa_total
             << " top_dirty=(" << sample.top_dirty_cx << ","
-            << sample.top_dirty_cz << ")";
+            << sample.top_dirty_cz << ")"
+            << " stuck_dirty=(" << sample.stuck_dirty_cx << ","
+            << sample.stuck_dirty_cy << "," << sample.stuck_dirty_cz << ")";
   CubatariumFlushLogs();
   std::lock_guard<std::mutex> lock(g_session_mutex);
   if (g_session_open)

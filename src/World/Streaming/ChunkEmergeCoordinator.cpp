@@ -1217,9 +1217,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool suppress_seam_standing_churn =
       !moving && pending_focus_count == 0 && !missing_visible_mesh &&
       black_sticky == 0 && pending_dirty_early > 48;
-  world.SetSuppressRelightSeamDirty(idle_remesh_debt || idle_focus_dirty_debt ||
-                                    suppress_seam_for_sticky_catchup ||
-                                    suppress_seam_standing_churn);
+  const bool base_suppress =
+      idle_remesh_debt || idle_focus_dirty_debt ||
+      suppress_seam_for_sticky_catchup || suppress_seam_standing_churn;
+  world.SetSuppressRelightSeamDirty(
+      ShouldSuppressRelightSeamDirtyForEnterGate(
+          world.IsEnterLitGateActive(), world.IsSpawnMeshRingReady(),
+          base_suppress));
   // Always scan full focus for sync hole-fill when holes exist. Cap rebuild
   // count via sync_cap (cruise tiny, idle larger) — radius=2 while "moving"
   // missed stop holes when residual speed kept moving=true.

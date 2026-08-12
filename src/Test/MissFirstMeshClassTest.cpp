@@ -4,6 +4,7 @@
 #include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/CyOrderPolicy.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include "World/Diagnostics/EnterLitDiagnostics.h"
 #include "World/Streaming/NearFovWorkPriority.h"
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/RelightFifoPolicy.h"
@@ -655,6 +656,52 @@ int main()
            "Era44: force_ingame not before wall");
     Expect(ShouldForceEnterInGameAfterAbortDrain(300000.0, 300000),
            "Era44: force_ingame at wall");
+  }
+
+  // --- Era44b/Era45 enter warmup status + R4 ownership ---
+  {
+    using cutum::BuildEnterWarmupStatus;
+    using cutum::ClassifyRemeshAfterLitApply;
+    using cutum::EnterWarmupStatusPrefersMeshOverFifo;
+    using cutum::RemeshAfterLitApplyDecision;
+    using cutum::ShouldSuppressRelightSeamDirtyForEnterGate;
+    cutum::EnterLitSample sample{};
+    sample.fifo_n = 10;
+    sample.inflight = 5;
+    sample.mesh_gpu_pending_near = 15;
+    sample.mesh_dirty = true;
+    Expect(EnterWarmupStatusPrefersMeshOverFifo(sample, 0, false, false),
+           "Era44b: mesh/gpu status beats fifo");
+    const std::string mesh_status =
+        BuildEnterWarmupStatus(sample, 0, false, false, 5000.0, 120000);
+    Expect(mesh_status.rfind("Building terrain", 0) == 0,
+           "Era44b: gpu_pending shows Building terrain");
+    cutum::EnterLitSample lit_only{};
+    lit_only.fifo_n = 8;
+    lit_only.inflight = 3;
+    const std::string lit_status =
+        BuildEnterWarmupStatus(lit_only, 2, true, false, 1000.0, 120000);
+    Expect(lit_status.rfind("Lighting queue", 0) == 0,
+           "Era44b: fifo-only shows Lighting queue");
+    Expect(ClassifyRemeshAfterLitApply(true, false, false, false) ==
+               RemeshAfterLitApplyDecision::SkipAlreadyDirty,
+           "Era45: dirty ⇒ skip RAA");
+    Expect(ClassifyRemeshAfterLitApply(false, true, false, false) ==
+               RemeshAfterLitApplyDecision::SkipAlreadyRaa,
+           "Era45: raa pending ⇒ skip");
+    Expect(ClassifyRemeshAfterLitApply(false, false, true, false) ==
+               RemeshAfterLitApplyDecision::PreferKickGpu,
+           "Era45: gpu pending ⇒ PreferKick");
+    Expect(ClassifyRemeshAfterLitApply(false, false, false, true) ==
+               RemeshAfterLitApplyDecision::SkipInflight,
+           "Era45: inflight ⇒ skip");
+    Expect(ClassifyRemeshAfterLitApply(false, false, false, false) ==
+               RemeshAfterLitApplyDecision::Schedule,
+           "Era45: clear ⇒ Schedule");
+    Expect(!ShouldSuppressRelightSeamDirtyForEnterGate(true, false, true),
+           "Era45 B5: enter gate !ring ⇒ no suppress");
+    Expect(ShouldSuppressRelightSeamDirtyForEnterGate(true, true, true),
+           "Era45 B5: ring ready ⇒ keep base suppress");
   }
 
   // --- Era34 CreateBar debt / soft wall ---

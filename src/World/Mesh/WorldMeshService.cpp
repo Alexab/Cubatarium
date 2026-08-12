@@ -203,6 +203,23 @@ void UWorldMeshService::RequestRemeshAfterApply(glm::ivec3 chunk_coord)
   Cache.RequestRemeshAfterApply(chunk_coord);
 }
 
+size_t UWorldMeshService::GetRemeshAfterApplyCount() const
+{
+  return Cache.GetRemeshAfterApplyCount();
+}
+
+bool UWorldMeshService::IsRemeshAfterApplyPending(glm::ivec3 chunk_coord) const
+{
+  return Cache.IsRemeshAfterApplyPending(chunk_coord);
+}
+
+bool UWorldMeshService::FindFirstDirtyInHorizontalRadius(
+    glm::ivec3 center_chunk, int radius_chunks, glm::ivec3 &out_coord) const
+{
+  return Cache.FindFirstDirtyInHorizontalRadius(center_chunk, radius_chunks,
+                                                out_coord);
+}
+
 void UWorldMeshService::NotifyFluidSurfaceDirtyAtBlock(
     const UBlockWorld &world, UBlockRegistry *registry, glm::ivec3 block_pos)
 {

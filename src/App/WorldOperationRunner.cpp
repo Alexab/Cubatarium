@@ -43,81 +43,6 @@ constexpr int kChunkBudgetPerFrame = 16;
 constexpr int kEnterGameGpuWarmupMinFrames = 3;
 constexpr int kEnterGameGpuWarmupMaxFrames = 24;
 
-std::string FormatEnterWarmupElapsed(double elapsed_ms)
-{
-  const int sec = static_cast<int>(elapsed_ms / 1000.0);
-  return " (" + std::to_string(sec) + "s)";
-}
-
-std::string BuildEnterGpuWarmupStatus(const EnterLitSample &sample, int fov_debt,
-                                      bool ring_ready, bool abort_drain,
-                                      double elapsed_ms, int hard_wall_ms)
-{
-  const bool slow = elapsed_ms >= static_cast<double>(hard_wall_ms);
-  const std::string elapsed_suffix = FormatEnterWarmupElapsed(elapsed_ms);
-  if (abort_drain && !ring_ready)
-  {
-    std::string status =
-        "Finishing terrain (slow)… fifo=" + std::to_string(sample.fifo_n) +
-        " gpu=" + std::to_string(sample.mesh_gpu_pending_near) + " ring=" +
-        std::to_string(sample.ring_not_ready);
-    if (sample.mesh_async_pending)
-    {
-      status += " async=1";
-    }
-    status += elapsed_suffix;
-    if (slow)
-    {
-      status += " (slow)";
-    }
-    return status;
-  }
-  if (fov_debt > 0 || sample.fifo_n > 0 || sample.inflight > 0)
-  {
-    std::string status = "Lighting queue… fifo=" + std::to_string(sample.fifo_n) +
-                         " inflight=" + std::to_string(sample.inflight);
-    if (fov_debt > 0)
-    {
-      status += " debt=" + std::to_string(fov_debt);
-    }
-    status += elapsed_suffix;
-    if (slow)
-    {
-      status += " (slow)";
-    }
-    return status;
-  }
-  if (!ring_ready || sample.mesh_dirty || sample.mesh_missing_greedy ||
-      sample.mesh_gpu_pending_near > 0 || sample.mesh_async_pending)
-  {
-    std::string status =
-        "Building terrain… gpu=" + std::to_string(sample.mesh_gpu_pending_near);
-    if (sample.mesh_async_pending)
-    {
-      status += " async=1";
-    }
-    status += " dirty=" + std::to_string(sample.mesh_dirty ? 1 : 0);
-    status += elapsed_suffix;
-    if (slow)
-    {
-      status += " (slow)";
-    }
-    return status;
-  }
-  if (sample.ring_not_ready > 0)
-  {
-    std::string status =
-        "Finishing view… ring=" + std::to_string(sample.ring_not_ready) +
-        " left" + elapsed_suffix;
-    if (slow)
-    {
-      status += " (slow)";
-    }
-    return status;
-  }
-  return "Preparing view..." + elapsed_suffix;
-}
-
 } // namespace
 
 UWorldOperationRunner::UWorldOperationRunner(UCore &core, UWorld &world)
@@ -370,7 +295,7 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   const float enter_prog =
       EnterGpuWarmupMonotonicProgress(raw_prog, EnterGameDisplayProgress);
   const float frac = 0.93f + 0.07f * enter_prog;
-  const std::string status = BuildEnterGpuWarmupStatus(
+  const std::string status = BuildEnterWarmupStatus(
       lit_sample, fov_debt, ring_ready, EnterGameAbortDrainMode,
       EnterGameGpuWarmupElapsedMs, tune.EnterFovLitHardWallMs);
   sink.Report("prepare_view", frac, status);

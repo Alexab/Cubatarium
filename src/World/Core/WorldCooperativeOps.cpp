@@ -2,6 +2,7 @@
 #include "World/Core/WorldLoadDiagnostics.h"
 #include "World/Core/RuntimeTuning.h"
 #include "App/Platform/Log.h"
+#include "glog/logging.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Diagnostics/EnterLitDiagnostics.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
@@ -1935,6 +1936,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
           StreamingWarmupLastRawDebt = 0;
           StreamingWarmupDisplayDebt = 0;
           StreamingWarmupLitWarnLogged = false;
+          StreamingWarmupAbortDrainMode = false;
+          StreamingWarmupAbortLogged = false;
         }
         TickCreateSpawnMeshWarmup(world, std::max(1, budget / 2));
         world.TickEnterFovLitPass(
@@ -1948,9 +1951,9 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         EnterLitSample lit_sample{};
         UEnterLitDiagnostics::Sample(world, elapsed_ms, lit_sample);
         UEnterLitDiagnostics::MaybeLog(lit_sample, StreamingWarmupTicks);
-        const int combined_debt = lit_sample.fifo_n +
-                                  lit_sample.mesh_gpu_pending_near +
-                                  lit_sample.ring_not_ready + fov_debt;
+        UEnterLitDiagnostics::MaybeLogHeartbeat(lit_sample, 2000.0);
+        const int combined_debt =
+            EnterWarmupCombinedDebt(lit_sample, fov_debt);
         if (combined_debt > StreamingWarmupPeakDebt)
         {
           StreamingWarmupPeakDebt = combined_debt;
@@ -1971,42 +1974,34 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                    kProceduralFillWeightMeshWarmup)
                 : CooperativeLoadProgressAfterMesh();
         const int denom = std::max(1, StreamingWarmupPeakDebt);
+        const bool ring_ready = world.IsSpawnMeshRingReady();
         const bool load_settled =
-            world.IsSpawnMeshRingReady() && fov_debt <= 0 &&
-            lit_sample.ring_not_ready == 0;
+            ring_ready && fov_debt <= 0 && lit_sample.ring_not_ready == 0;
+        if (!StreamingWarmupAbortDrainMode &&
+            ShouldForceEnterMeshAbort(fov_debt, ring_ready, elapsed_ms,
+                                      URuntimeTuning::Get().EnterMeshAbortMs))
+        {
+          StreamingWarmupAbortDrainMode = true;
+          if (!StreamingWarmupAbortLogged)
+          {
+            StreamingWarmupAbortLogged = true;
+            LOG(INFO) << "[EnterWarmup] coop_abort_drain elapsed_ms="
+                      << elapsed_ms << " dirty="
+                      << (lit_sample.mesh_dirty ? 1 : 0)
+                      << " gpu_pending=" << lit_sample.mesh_gpu_pending_near
+                      << " fifo=" << lit_sample.fifo_n << " ring="
+                      << (ring_ready ? 1 : 0);
+            CubatariumFlushLogs();
+          }
+        }
         const float stream_inner =
             load_settled
                 ? 1.0f
                 : (1.0f - CreateBarDebtFraction(StreamingWarmupDisplayDebt,
                                                 denom));
-        std::string status;
-        if (fov_debt > 0 || lit_sample.fifo_n > 0 || lit_sample.inflight > 0)
-        {
-          status = "Lighting queue… fifo=" + std::to_string(lit_sample.fifo_n) +
-                   " inflight=" + std::to_string(lit_sample.inflight);
-          if (fov_debt > 0)
-          {
-            status += " debt=" + std::to_string(fov_debt);
-          }
-        }
-        else if (!world.IsSpawnMeshRingReady())
-        {
-          status = "Building terrain… gpu=" +
-                   std::to_string(lit_sample.mesh_gpu_pending_near);
-          if (lit_sample.mesh_async_pending)
-          {
-            status += " async=1";
-          }
-        }
-        else if (lit_sample.ring_not_ready > 0)
-        {
-          status = "Finishing view… ring=" +
-                   std::to_string(lit_sample.ring_not_ready) + " left";
-        }
-        else
-        {
-          status = "Preparing view...";
-        }
+        const std::string status = BuildEnterWarmupStatus(
+            lit_sample, fov_debt, ring_ready, StreamingWarmupAbortDrainMode,
+            elapsed_ms, URuntimeTuning::Get().EnterFovLitHardWallMs);
         Report(sink, "prepare_view",
                prepare_view_base + kPhaseWeightPrepareView * stream_inner,
                status);
@@ -2032,6 +2027,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     StreamingWarmupLastRawDebt = 0;
     StreamingWarmupDisplayDebt = 0;
     StreamingWarmupLitWarnLogged = false;
+    StreamingWarmupAbortDrainMode = false;
+    StreamingWarmupAbortLogged = false;
     const float prepare_view_base =
         Kind == WorldCoopKind::Create
             ? (CooperativeCreateMeshProgressBase() + kCreateWeightMeshWarmup)

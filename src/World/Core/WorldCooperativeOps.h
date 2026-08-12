@@ -128,6 +128,9 @@ private:
   int StreamingWarmupDisplayDebt{0};
   std::chrono::steady_clock::time_point StreamingWarmupWallStart{};
   bool StreamingWarmupLitWarnLogged{false};
+  /// Era44b: abort-drain after enter_mesh_abort_ms (gate stays active).
+  bool StreamingWarmupAbortDrainMode{false};
+  bool StreamingWarmupAbortLogged{false};
 
   void BeginDeferredRelightQueue(UWorld &world);
   void BeginBulkChunkRelightQueue(UWorld &world);

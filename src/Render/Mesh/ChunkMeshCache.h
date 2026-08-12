@@ -353,6 +353,14 @@ public:
   {
     RemeshAfterApply.insert(chunk_coord);
   }
+  size_t GetRemeshAfterApplyCount() const { return RemeshAfterApply.size(); }
+  bool IsRemeshAfterApplyPending(glm::ivec3 chunk_coord) const
+  {
+    return RemeshAfterApply.count(chunk_coord) > 0;
+  }
+  bool FindFirstDirtyInHorizontalRadius(glm::ivec3 center_chunk,
+                                        int radius_chunks,
+                                        glm::ivec3 &out_coord) const;
   /// When >= 0, prefer scheduling within this Chebyshev distance. Chunks
   /// farther may still schedule up to MeshScheduleOverflowPerFrame (soft prefer).
   void SetMeshScheduleMaxHorizontalDist(int radius_chunks)

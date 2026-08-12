@@ -1197,6 +1197,26 @@ int UChunkMeshCache::CountDirtyWithinHorizontalRadius(
   return count;
 }
 
+bool UChunkMeshCache::FindFirstDirtyInHorizontalRadius(
+    glm::ivec3 center_chunk, int radius_chunks, glm::ivec3 &out_coord) const
+{
+  if (radius_chunks < 0)
+  {
+    return false;
+  }
+  for (const glm::ivec3 &coord : Dirty)
+  {
+    const int dx = std::abs(coord.x - center_chunk.x);
+    const int dz = std::abs(coord.z - center_chunk.z);
+    if (std::max(dx, dz) <= radius_chunks)
+    {
+      out_coord = coord;
+      return true;
+    }
+  }
+  return false;
+}
+
 size_t UChunkMeshCache::GetPendingGpuQueuedCount() const
 {
   size_t n = 0;
@@ -1454,6 +1474,10 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
   if (ActiveMeshSourceRevision.find(chunkCoord) !=
       ActiveMeshSourceRevision.end())
   {
+    if (RemeshAfterApply.count(chunkCoord) > 0 || Dirty.Contains(chunkCoord))
+    {
+      return;
+    }
     RemeshAfterApply.insert(chunkCoord);
     return;
   }
@@ -1497,6 +1521,11 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
           ShouldHoldInflightSupersedeUnderMissUndrawn(
               soft_undrawn, /*has_inflight=*/true, /*has_drawable=*/false))
       {
+        if (RemeshAfterApply.count(chunkCoord) > 0 ||
+            Dirty.Contains(chunkCoord))
+        {
+          return;
+        }
         RemeshAfterApply.insert(chunkCoord);
         return;
       }
@@ -1508,6 +1537,10 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
     }
     else
     {
+      if (RemeshAfterApply.count(chunkCoord) > 0 || Dirty.Contains(chunkCoord))
+      {
+        return;
+      }
       RemeshAfterApply.insert(chunkCoord);
       return;
     }
@@ -2107,7 +2140,10 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   }
   if (RemeshAfterApply.erase(coord) > 0)
   {
-    MarkDirtyPriority(coord);
+    if (!Dirty.Contains(coord))
+    {
+      MarkDirtyPriority(coord);
+    }
   }
   (void)source_revision;
   return true;
@@ -2819,7 +2855,10 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     }
     if (RemeshAfterApply.erase(result.coord) > 0)
     {
-      MarkDirtyPriority(result.coord);
+      if (!Dirty.Contains(result.coord))
+      {
+        MarkDirtyPriority(result.coord);
+      }
     }
     return;
   }
@@ -2862,7 +2901,10 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   // fresh Capture (avoids MarkDirty mid-flight Dirty plateau).
   if (RemeshAfterApply.erase(result.coord) > 0)
   {
-    MarkDirtyPriority(result.coord);
+    if (!Dirty.Contains(result.coord))
+    {
+      MarkDirtyPriority(result.coord);
+    }
   }
 }
 

@@ -248,6 +248,8 @@ struct PhysicsTelemetry
   uint64_t RelightSkippedUndergroundN{0};
   uint64_t RelightFalseClearN{0};
   int RelightFifoN{0};
+  /// Era45: MarkRelit RequestRemeshAfterApply calls (cumulative).
+  uint64_t MarkRelitRemeshAfterApplyN{0};
   uint64_t DirtyDropped{0};
   uint64_t PendingLightDropped{0};
   uint64_t RelightFifoDropped{0};

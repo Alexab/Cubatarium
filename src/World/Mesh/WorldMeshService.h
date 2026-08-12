@@ -85,6 +85,11 @@ public:
                                glm::ivec3 ground_chunk_coord, int min_y,
                                int max_y);
   void RequestRemeshAfterApply(glm::ivec3 chunk_coord);
+  size_t GetRemeshAfterApplyCount() const;
+  bool IsRemeshAfterApplyPending(glm::ivec3 chunk_coord) const;
+  bool FindFirstDirtyInHorizontalRadius(glm::ivec3 center_chunk,
+                                        int radius_chunks,
+                                        glm::ivec3 &out_coord) const;
   /// Invalidate fluid surface column cache when this block or a neighbor is liquid.
   void NotifyFluidSurfaceDirtyAtBlock(const UBlockWorld &world,
                                       UBlockRegistry *registry,
