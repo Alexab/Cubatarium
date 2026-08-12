@@ -393,9 +393,14 @@ void UApplication::BeginShutdownOperation(const bool saveSession,
 
 bool UApplication::TryBeginShutdownFromWindowClose()
 {
-  if (!Core || !World || State == AppState::Loading)
+  if (!Core || !World)
   {
     return false;
+  }
+  if (State == AppState::Loading)
+  {
+    RequestQuit();
+    return true;
   }
   BeginShutdownOperation(HasWorldSession(), true);
   return true;
@@ -1943,18 +1948,19 @@ void UApplication::Update(double dt)
               World->BeginEnterLitGate();
             }
           }
-          else
+          if (frame > 0 && World->NeedsEnterGameMeshWarmup())
           {
-            if (World->NeedsEnterGameMeshWarmup())
-            {
-              World->DrainEnterGameMeshWarmup(kGpuWarmupMeshBudget);
-            }
-            if (!ShouldSkipEnterStreamingWarmup(World->IsEnterLitGateActive()) &&
-                ShouldRunEnterStreamingWarmupDespiteSpawnPrepared(
-                    World->IsSpawnAreaPreparedByCooperativeLoad()))
-            {
-              World->TickEnterStreamingWarmup(kGpuWarmupStreamingBudget);
-            }
+            World->DrainEnterGameMeshWarmup(kGpuWarmupMeshBudget);
+          }
+          if (frame > 0 &&
+              !ShouldSkipEnterStreamingWarmup(World->IsEnterLitGateActive()) &&
+              ShouldRunEnterStreamingWarmupDespiteSpawnPrepared(
+                  World->IsSpawnAreaPreparedByCooperativeLoad()))
+          {
+            World->TickEnterStreamingWarmup(kGpuWarmupStreamingBudget);
+          }
+          if (frame >= 0)
+          {
             World->TickEnterFovLitPass(
                 std::max(1, URuntimeTuning::Get().EnterFovLitCaptureBudget));
           }

@@ -5242,15 +5242,9 @@ bool UWorld::IsEnterLitSnapshotColumnResolved(glm::ivec2 col_chunk_xz) const
   {
     return false;
   }
-  if (ColumnFullyDarkSolidDrawable(col_chunk_xz))
-  {
-    return false;
-  }
-  if (!IsColumnLitReady(glm::ivec3(col_chunk_xz.x, 0, col_chunk_xz.y)))
-  {
-    return false;
-  }
-  return true;
+  // LitReady is set by MarkRelit finalize; do not re-check mesh FullyDark here —
+  // with streaming frozen, stale greedy faces can stay dark while light is done.
+  return IsColumnLitReady(glm::ivec3(col_chunk_xz.x, 0, col_chunk_xz.y));
 }
 
 int UWorld::CountEnterLitSnapshotDebt() const

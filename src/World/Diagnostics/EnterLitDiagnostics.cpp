@@ -93,7 +93,11 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
 void UEnterLitDiagnostics::MaybeLog(const EnterLitSample &sample,
                                     int frame_index, int every_n_frames)
 {
-  if (every_n_frames <= 0 || frame_index % every_n_frames != 0)
+  if (every_n_frames <= 0)
+  {
+    return;
+  }
+  if (frame_index > 0 && frame_index % every_n_frames != 0)
   {
     return;
   }
