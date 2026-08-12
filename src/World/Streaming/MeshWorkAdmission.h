@@ -30,6 +30,8 @@ struct MeshWorkAdmissionInput
   /// Nearest focus miss chunk Y; <0 = unknown. Era17: cy≤1 ⇒ FirstMesh class.
   /// Era20: cy≤3 OR mh≤4 (manual 214034 miss_cy=3 mh=4).
   int nearest_miss_cy{-1};
+  /// Era47 P2: EnterLitGate — never Normal; force HoleDrain/WarmBacklog.
+  bool enter_lit_gate{false};
 };
 
 /// Era20 I-M1: FirstMesh priority class while FOV holes (manual 214034).
@@ -239,6 +241,14 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     {
       mode = MeshWorkAdmission::Mode::WarmBacklog;
     }
+  }
+  // Era47 P2: enter gate must not sit in Normal (drain_cap=4 / schedule=1
+  // throttles stall gpu_pending plateau while MarkRelit still feeds).
+  if (in.enter_lit_gate && mode == MeshWorkAdmission::Mode::Normal)
+  {
+    mode = (holes || in.pending_gpu >= 8)
+               ? MeshWorkAdmission::Mode::HoleDrain
+               : MeshWorkAdmission::Mode::WarmBacklog;
   }
   const auto prev = static_cast<MeshWorkAdmission::Mode>(in.prev_mode);
   const bool was_hole_backlog =

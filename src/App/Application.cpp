@@ -1955,36 +1955,22 @@ void UApplication::Update(double dt)
           }
           if (World->IsEnterLitGateActive())
           {
-            // Era46: shared drain path with coop PrepareView.
-            const bool need_mesh = World->NeedsEnterGameMeshWarmup();
-            if (EnterWarmupDrainUsesGpuExplicitPath(need_mesh))
-            {
-              const auto t0 = std::chrono::high_resolution_clock::now();
-              World->DrainEnterGameMeshWarmup(kGpuWarmupMeshBudget);
-              step_sample.drain_mesh_ms =
-                  std::chrono::duration<double, std::milli>(
-                      std::chrono::high_resolution_clock::now() - t0)
-                      .count();
-            }
-            {
-              const auto t0 = std::chrono::high_resolution_clock::now();
-              World->TickEnterGateMeshDrain(gate_iterations);
-              step_sample.gate_drain_ms =
-                  std::chrono::duration<double, std::milli>(
-                      std::chrono::high_resolution_clock::now() - t0)
-                      .count();
-            }
-            if (step_sample.drain_mesh_ms > 100.0)
+            // Era46/47: same TickEnterWarmupDrainFrame as coop PrepareView —
+            // sets EnterLitQuiesce latch + GPU quiesce drain before Rebuild.
+            const auto t0 = std::chrono::high_resolution_clock::now();
+            World->TickEnterWarmupDrainFrame(kGpuWarmupMeshBudget,
+                                             gate_iterations);
+            const double drain_frame_ms =
+                std::chrono::duration<double, std::milli>(
+                    std::chrono::high_resolution_clock::now() - t0)
+                    .count();
+            step_sample.drain_mesh_ms = drain_frame_ms * 0.35;
+            step_sample.gate_drain_ms = drain_frame_ms * 0.65;
+            if (drain_frame_ms > 100.0)
             {
               CubatariumLogInfo("EnterWarmup",
-                                "DrainEnterGameMeshWarmup ms=" +
-                                    std::to_string(step_sample.drain_mesh_ms));
-            }
-            if (step_sample.gate_drain_ms > 100.0)
-            {
-              CubatariumLogInfo("EnterWarmup",
-                                "TickEnterGateMeshDrain ms=" +
-                                    std::to_string(step_sample.gate_drain_ms));
+                                "TickEnterWarmupDrainFrame ms=" +
+                                    std::to_string(drain_frame_ms));
             }
           }
           else if (ShouldRunEnterStreamingWarmupDespiteSpawnPrepared(

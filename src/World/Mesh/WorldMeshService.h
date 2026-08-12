@@ -64,6 +64,11 @@ public:
   void SetStarveRemeshKeepHoriz(int keep_h);
   void SetMeshWorkAdmission(const MeshWorkAdmission &adm);
   const MeshWorkAdmission &GetMeshWorkAdmission() const;
+  /// Era47: EnterLitGate GPU quiesce drain (PreferKick-only RAA, no Normal throttle).
+  void SetEnterGpuQuiesceDrain(bool active);
+  bool IsEnterGpuQuiesceDrain() const;
+  void SetEnterLitQuiesce(bool active);
+  bool IsEnterLitQuiesce() const;
   /// Consume one Dirty-admit slot for FirstMesh/Held/neighbor (false = deny).
   bool TryConsumeDirtyAdmit();
   int DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk, int keep_radius,

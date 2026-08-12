@@ -126,6 +126,11 @@ public:
   /// Era46: RAA commit → MarkDirty vs PreferKick telemetry.
   uint64_t GetRaaCommitMarkDirtyCount() const { return RaaCommitMarkDirtyN; }
   uint64_t GetMarkDirtyToRaaCount() const { return MarkDirtyToRaaN; }
+  /// Era47 P0: Dirty schedule skipped while async InFlight.
+  uint64_t GetDirtyScheduleSkipInflightCount() const
+  {
+    return DirtyScheduleSkipInflightN;
+  }
   uint64_t GetSoftDeferEmptyPublishAvoidedCount() const
   {
     return SoftDeferEmptyPublishAvoided;
@@ -311,6 +316,14 @@ public:
     DirtyAdmitRemaining = std::max(0, adm.dirty_admit_budget);
     EnqueueGpuRemaining = std::max(0, adm.enqueue_gpu_budget);
   }
+  /// Era47: under EnterLitGate — PreferKick-only RAA commit + no Normal
+  /// drain_cap/schedule throttles that stall GPU quiescence.
+  void SetEnterGpuQuiesceDrain(bool active) { EnterGpuQuiesceDrain = active; }
+  bool IsEnterGpuQuiesceDrain() const { return EnterGpuQuiesceDrain; }
+  /// Era47: lit SoT quiesce (debt=0, fifo=0) — drop drawable remesh Dirty /
+  /// no mid-flight RAA park that refeeds GPU.
+  void SetEnterLitQuiesce(bool active) { EnterLitQuiesce = active; }
+  bool IsEnterLitQuiesce() const { return EnterLitQuiesce; }
   const MeshWorkAdmission &GetMeshWorkAdmission() const { return WorkAdmission; }
   bool TryConsumeDirtyAdmit()
   {
@@ -565,6 +578,12 @@ private:
   uint64_t RaaCommitMarkDirtyN{0};
   /// Era46: MarkDirty*/Active → RemeshAfterApply insert.
   uint64_t MarkDirtyToRaaN{0};
+  /// Era47 P0: RebuildDirty skipped InFlight Dirty entries.
+  uint64_t DirtyScheduleSkipInflightN{0};
+  /// Era47: EnterLitGate mesh/GPU quiesce drain mode.
+  bool EnterGpuQuiesceDrain{false};
+  /// Era47: EnterLitGate + fifo/debt=0 producer suppress.
+  bool EnterLitQuiesce{false};
   /// Era24 I-E1: SoftDefer undrawn publish avoided (Hide⇒Ticket).
   uint64_t SoftDeferEmptyPublishAvoided{0};
   /// Era39: frames since SoftDeferEmptyPublishAvoided (Dirty damp).

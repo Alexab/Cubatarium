@@ -1447,6 +1447,13 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
       OnSoftDeferHeld(coord);
       ++ticket_refresh;
     }
+    // Era47: lit-quiesce — keep SoftDeferHeld tickets, do not re-Dirty
+    // (sticky Dirty blocks IsSpawnMeshRingReady).
+    if (EnterLitQuiesce)
+    {
+      ++it;
+      continue;
+    }
     // Era22 I-S1: under miss/focus (or SoftDefer lifted) → Dirty schedule.
     if (ShouldScheduleFirstMeshUnderSoftDefer(/*has_drawable=*/false,
                                               miss_or_focus) ||
@@ -1478,6 +1485,12 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
     if (IsPendingGpuApply(chunkCoord))
     {
       PreferKickPendingGpuQueued(chunkCoord);
+      return;
+    }
+    // Era47 P3: under enter lit-quiesce do not park RAA for drawable remesh —
+    // RAA→Apply churn keeps gpu_pending plateau while gate waits Dirty=0.
+    if (EnterLitQuiesce && HasDrawableGreedyMesh(chunkCoord))
+    {
       return;
     }
     if (RemeshAfterApply.count(chunkCoord) > 0 || Dirty.Contains(chunkCoord))
@@ -1553,6 +1566,11 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
       if (IsPendingGpuApply(chunkCoord))
       {
         PreferKickPendingGpuQueued(chunkCoord);
+        return;
+      }
+      // Era47 P3: enter lit-quiesce — no RAA park for already-drawable remesh.
+      if (EnterLitQuiesce)
+      {
         return;
       }
       if (RemeshAfterApply.count(chunkCoord) > 0 || Dirty.Contains(chunkCoord))
@@ -2160,12 +2178,17 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   if (RemeshAfterApply.erase(coord) > 0)
   {
     const bool gpu_pending = IsPendingGpuApply(coord);
-    if (ShouldPreferKickAfterRemeshAfterApplyCommit(gpu_pending))
+    if (ShouldPreferKickAfterRemeshAfterApplyCommit(gpu_pending) ||
+        EnterLitQuiesce)
     {
-      PreferKickPendingGpuQueued(coord);
+      if (gpu_pending)
+      {
+        PreferKickPendingGpuQueued(coord);
+      }
     }
     else if (ShouldMarkDirtyAfterRemeshAfterApplyCommit(Dirty.Contains(coord),
-                                                        gpu_pending))
+                                                        gpu_pending,
+                                                        EnterLitQuiesce))
     {
       MarkDirtyPriority(coord);
       ++RaaCommitMarkDirtyN;
@@ -2201,7 +2224,7 @@ int UChunkMeshCache::ConsumeGpuApplyBacklog(UBlockWorld &world,
     {
       drain_cap = std::max(drain_cap, adm.max_drain);
     }
-    else if (PendingGpuApplies.size() >= 16)
+    else if (!EnterGpuQuiesceDrain && PendingGpuApplies.size() >= 16)
     {
       drain_cap = std::min(drain_cap, 4);
     }
@@ -2221,7 +2244,7 @@ int UChunkMeshCache::ConsumeGpuApplyBacklog(UBlockWorld &world,
     {
       budget = std::max(6.0, MeshEmergeTotalBudgetMs * adm.gpu_budget_frac);
     }
-    if (adm.mode == MeshWorkAdmission::Mode::Normal &&
+    if ((adm.mode == MeshWorkAdmission::Mode::Normal || EnterGpuQuiesceDrain) &&
         PendingGpuApplies.size() >= 24)
     {
       gpu_max = std::max(gpu_max, 24);
@@ -2693,7 +2716,20 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       {
         ActiveMeshSourceRevision.erase(revisionIt);
         GpuExtractInFlight.erase(result.coord);
-        Dirty.MarkDirty(result.coord);
+        // Era47 P3: under enter lit-quiesce park RAA instead of Dirty refeed.
+        if (EnterLitQuiesce)
+        {
+          RemeshAfterApply.insert(result.coord);
+          ++MarkDirtyToRaaN;
+          if (IsPendingGpuApply(result.coord))
+          {
+            PreferKickPendingGpuQueued(result.coord);
+          }
+        }
+        else
+        {
+          Dirty.MarkDirty(result.coord);
+        }
         InstancesDirty = true;
         GreedyBatchesDirty = true;
         CrossBatchesDirty = true;
@@ -2882,12 +2918,17 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     if (RemeshAfterApply.erase(result.coord) > 0)
     {
       const bool gpu_pending = IsPendingGpuApply(result.coord);
-      if (ShouldPreferKickAfterRemeshAfterApplyCommit(gpu_pending))
+      if (ShouldPreferKickAfterRemeshAfterApplyCommit(gpu_pending) ||
+          EnterLitQuiesce)
       {
-        PreferKickPendingGpuQueued(result.coord);
+        if (gpu_pending)
+        {
+          PreferKickPendingGpuQueued(result.coord);
+        }
       }
       else if (ShouldMarkDirtyAfterRemeshAfterApplyCommit(
-                   Dirty.Contains(result.coord), gpu_pending))
+                   Dirty.Contains(result.coord), gpu_pending,
+                   EnterLitQuiesce))
       {
         MarkDirtyPriority(result.coord);
         ++RaaCommitMarkDirtyN;
@@ -2935,12 +2976,17 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   if (RemeshAfterApply.erase(result.coord) > 0)
   {
     const bool gpu_pending = IsPendingGpuApply(result.coord);
-    if (ShouldPreferKickAfterRemeshAfterApplyCommit(gpu_pending))
+    if (ShouldPreferKickAfterRemeshAfterApplyCommit(gpu_pending) ||
+        EnterLitQuiesce)
     {
-      PreferKickPendingGpuQueued(result.coord);
+      if (gpu_pending)
+      {
+        PreferKickPendingGpuQueued(result.coord);
+      }
     }
     else if (ShouldMarkDirtyAfterRemeshAfterApplyCommit(
-                 Dirty.Contains(result.coord), gpu_pending))
+                 Dirty.Contains(result.coord), gpu_pending,
+                 EnterLitQuiesce))
     {
       MarkDirtyPriority(result.coord);
       ++RaaCommitMarkDirtyN;
@@ -2985,6 +3031,55 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   CaptureStore.SetNeighborVisualDrawableFn(CacheNeighborVisuallyDrawable, this);
   AgeSoftDeferEmptyAvoidFrames();
   RequeueSoftDeferHeld();
+
+  // Era47: lit-quiesce Dirty prune runs before sort/schedule — sticky
+  // drawable/SoftDefer/orphan (!HasChunk) otherwise block IsSpawnMeshRingReady
+  // forever while gpu/async already 0 (World_174 stuck_dirty y=4).
+  if (EnterLitQuiesce && !Dirty.empty())
+  {
+    for (auto it = Dirty.begin(); it != Dirty.end();)
+    {
+      if (!world.GetChunkManager().HasChunk(*it))
+      {
+        it = Dirty.RemoveAt(it);
+        continue;
+      }
+      const bool soft_empty =
+          HasGreedyMesh(*it) && !HasDrawableGreedyMesh(*it);
+      if (HasDrawableGreedyMesh(*it) || SoftDeferHeld.count(*it) > 0 ||
+          soft_empty)
+      {
+        it = Dirty.RemoveAt(it);
+        continue;
+      }
+      // Pending-light park: SoftDeferHeld owns FirstMesh; keep Dirty only when
+      // we will schedule FirstMesh this frame.
+      if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
+      {
+        const bool has_drawable = HasDrawableGreedyMesh(*it);
+        bool in_focus = false;
+        if (MeshFocusValid)
+        {
+          const int horiz =
+              std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                       std::abs(it->z - MeshFocusGroundChunk.z));
+          in_focus = horiz <= MeshFocusRadiusChunks;
+        }
+        const bool miss_or_focus = StarveRemeshForHoles || in_focus;
+        if (!ShouldScheduleFirstMeshUnderSoftDefer(has_drawable,
+                                                   miss_or_focus))
+        {
+          if (!has_drawable)
+          {
+            HoldSoftDeferFirstMesh(*it);
+          }
+          it = Dirty.RemoveAt(it);
+          continue;
+        }
+      }
+      ++it;
+    }
+  }
 
   if (!Dirty.empty())
   {
@@ -3184,7 +3279,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         drain_cap = std::max(drain_cap, adm.max_drain);
       }
-      else if (PendingGpuApplies.size() >= 16)
+      else if (!EnterGpuQuiesceDrain && PendingGpuApplies.size() >= 16)
       {
         // Healed Normal path: prefer Finish over flooding Queued.
         drain_cap = std::min(drain_cap, 4);
@@ -3212,11 +3307,16 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         max_schedule_per_frame =
             std::min(max_schedule_per_frame, std::max(1, adm.max_schedule));
       }
-      else if (pending_n >= 24)
+      else if (!EnterGpuQuiesceDrain && pending_n >= 24)
       {
         gpu_max = std::max(gpu_max, 24);
         gpu_budget = std::max(gpu_budget, MeshEmergeTotalBudgetMs * 0.85);
         max_schedule_per_frame = std::min(max_schedule_per_frame, 1);
+      }
+      else if (EnterGpuQuiesceDrain && pending_n >= 24)
+      {
+        gpu_max = std::max(gpu_max, 24);
+        gpu_budget = std::max(gpu_budget, MeshEmergeTotalBudgetMs * 0.85);
       }
       (void)pending_n;
       const int gpu_done = ProcessPendingGpuMeshes(world, registry, gpu_max,
@@ -3235,6 +3335,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                                         std::max(1, WorkAdmission.max_schedule));
     }
 
+    // Era47: after lit-quiesce prune, remaining Dirty are FirstMesh holes —
+    // never sit at max_schedule=0 (sticky ring forever).
+    if (EnterLitQuiesce && max_schedule_per_frame <= 0 && !Dirty.empty())
+    {
+      max_schedule_per_frame = 1;
+    }
     const int max_pipeline = std::max(
         max_schedule_per_frame, AsyncBuilder->GetMaxPipelineDepth());
     // Cap main-thread snapshot capture. Default 6ms; raise under visual holes /
@@ -3280,12 +3386,28 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           return Dirty.end();
         }
       }
+      if (EnterLitQuiesce && HasDrawableGreedyMesh(*it))
+      {
+        return Dirty.RemoveAt(it);
+      }
+      // Era47: SoftDeferHeld owned by ColumnFlow FirstMesh — Dirty remesh under
+      // lit-quiesce only blocks IsSpawnMeshRingReady without helping holes.
+      if (EnterLitQuiesce && SoftDeferHeld.count(*it) > 0)
+      {
+        return Dirty.RemoveAt(it);
+      }
       if (AsyncBuilder->IsInFlight(*it))
       {
+        ++DirtyScheduleSkipInflightN;
         return std::next(it);
       }
       if (!world.GetChunkManager().HasChunk(*it))
       {
+        // Era47: orphan Dirty under streaming freeze must not sticky-block ring.
+        if (EnterLitQuiesce)
+        {
+          return Dirty.RemoveAt(it);
+        }
         return std::next(it);
       }
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
@@ -3452,8 +3574,21 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         break;
       }
+      // Era47: enter lit-quiesce — drop drawable remesh Dirty (gate blocker),
+      // even if still InFlight (otherwise sticky Dirty forever).
+      if (EnterLitQuiesce && HasDrawableGreedyMesh(*it))
+      {
+        it = Dirty.RemoveAt(it);
+        continue;
+      }
+      if (EnterLitQuiesce && SoftDeferHeld.count(*it) > 0)
+      {
+        it = Dirty.RemoveAt(it);
+        continue;
+      }
       if (AsyncBuilder->IsInFlight(*it))
       {
+        ++DirtyScheduleSkipInflightN;
         ++it;
         continue;
       }

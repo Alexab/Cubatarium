@@ -87,6 +87,26 @@ void UWorldMeshService::SetMeshWorkAdmission(const MeshWorkAdmission &adm)
   Cache.SetMeshWorkAdmission(adm);
 }
 
+void UWorldMeshService::SetEnterGpuQuiesceDrain(bool active)
+{
+  Cache.SetEnterGpuQuiesceDrain(active);
+}
+
+bool UWorldMeshService::IsEnterGpuQuiesceDrain() const
+{
+  return Cache.IsEnterGpuQuiesceDrain();
+}
+
+void UWorldMeshService::SetEnterLitQuiesce(bool active)
+{
+  Cache.SetEnterLitQuiesce(active);
+}
+
+bool UWorldMeshService::IsEnterLitQuiesce() const
+{
+  return Cache.IsEnterLitQuiesce();
+}
+
 const MeshWorkAdmission &UWorldMeshService::GetMeshWorkAdmission() const
 {
   return Cache.GetMeshWorkAdmission();

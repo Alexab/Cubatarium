@@ -1,4 +1,4 @@
-# Enter-load performance audit (Era44–Era46)
+# Enter-load performance audit (Era44–Era47)
 
 Manual reference runs: World_174.
 
@@ -7,62 +7,44 @@ Manual reference runs: World_174.
 | Pre-Era44 | `20260812-153650` | gpu_warmup ~120s, mesh abort forced InGame with holes |
 | Era44 variant A | `20260812-163342` | coop PrepareView >8 min, plateau fifo≈6–13, gpu≈15–26, mesh_dirty=1 |
 | Era45 post-fix | `20260812-175811` / `enter_lit_20260812-175840.jsonl` | coop >26 min; mark_relit_raa_total froze at 33; **gpu≈15–24 plateau** |
-| Era46 verify | `20260812-191815` / `enter_lit_20260812-191911.jsonl` | remesh_after_apply_n med≈1 (was ~13); gpu≈8–18 + mesh_dirty=1 still; run cut ~105s wall |
+| Era46 verify | `20260812-191815` / `enter_lit_20260812-191911.jsonl` | remesh_after_apply_n med≈1; gpu≈8–18 + mesh_dirty=1; cut ~105s |
+| Era47 pre-fix | `enter_lit_20260812-215450.jsonl` | quiesce latch on; sticky Dirty `(2,4,-14)` 135s+; timeout 181s `ingame_frames=0` |
+| **Era47 GO** | `autoload ~57s` / `enter_lit_20260812-223146.jsonl` | **`ingame_ok`**, dirty cleared ~2s after quiesce |
 
-## Era45 post-mortem (175840)
+## Era47 diagnosis
 
-| Metric | t≈34s | t≈120s (coop_abort_drain) | t≈26min |
-|--------|-------|---------------------------|---------|
-| fifo | 77→11 | 5 | 3–15 |
-| gpu_pending | 5→17 | 17 | **15–24 (med≈19)** |
-| mesh_dirty | 1 | 1 | **1** |
-| remesh_after_apply_n | 5→16 | 13 | **6–20 (med≈13)** |
-| mark_relit_raa_total | 0→33 | 33 | **33 frozen** |
-| suppress_relight_seam | 0 | 0 | 0 |
+Not “finish all columns.” After lit SoT (`snapshot_debt=0`) EnterLitGate waited on `IsSpawnMeshRingReady()` while MarkRelit / Dirty↔GPU refeed kept ingress alive. Era47 scopes producers off under lit-quiesce and forces enter GPU admission.
 
-**Era45 partial:** MarkRelit RAA storm stopped (`mark_relit_raa_total→33`); B5 suppress=0. **Not systemic:** drain throughput left gpu/dirty plateau (R7). Abort wall only grew `(Ns)` status — gate still held (`load_settled=false`).
+Sticky World_174 remnant: single Dirty at cy=4 with `gpu/async=0` blocked the ring until early lit-quiesce prune (`!HasChunk` / SoftDefer park / drawable+soft_empty drop) + Application/`TickEnterWarmupDrainFrame` parity.
 
-## Root causes
+## Era47 fixes
 
-| ID | Verdict | Notes |
-|----|---------|-------|
-| R4 | Confirmed + Era45 partial / Era46 coalesce v2 | Residual `remesh_after_apply_n≈13` via MarkDirty→RAA without MarkRelit |
-| R6 | Observed | snapshot debt=0 while fifo>0 (lit vs mesh-ready) |
-| R7 | **Confirmed + Era46 fix** | Coop PrepareView lacked `DrainEnterGameMeshWarmup`; emerge iters = budget/4 vs gpu_warmup 6 |
+| Phase | Change |
+|-------|--------|
+| P0 | enter_lit: `gpu_kick/finish`, `mark_relit_prefer_kick`, `dirty_schedule_skip_inflight`, `pending_gpu_global`, `enter_lit_quiesce`, `dirty_n`, stuck chunk/drawable |
+| P1 | `ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce` + latch on debt=0; Classify PreferKick/Skip only |
+| P2 | `enter_lit_gate` → never Normal admission; ban Normal drain_cap=4 / schedule=1 under `EnterGpuQuiesceDrain` |
+| P3 | RAA PreferKick-only under quiesce; no MarkDirty refeed; SoftDeferHeld no re-Dirty; early Dirty prune |
+| P4 | Coop + Application both call `TickEnterWarmupDrainFrame` |
 
-## Era46 fixes (systemic throughput — not stop-condition bypass)
+KEEP: no force `phase=done` / InGame on abort; gate still `IsSpawnMeshRingReady` + lit debt clear.
 
-1. Shared enter drain frame: `DrainEnterGameMeshWarmup` + `TickEnterGateMeshDrain(EnterGateMeshDrainIterations)` on **both** coop Load PrepareView and Application gpu_warmup.
-2. RAA commit coalesce v2: PreferKick if GPU still pending; MarkDirty only when clear; MarkDirty mid-flight PreferKick when GPU pending.
-3. Telemetry: `ring_blocker`, `raa_commit_mark_dirty_n`, `markdirty_to_raa_n`; enter_lit jsonl under `bin/logs/` via exe dir.
-4. Coop `RecordFrameSteps` + escalate GPU budget×2 only after abort_drain ≥3 min (gate unchanged).
-5. Gate invariant KEEP: `phase=done` only when `IsSpawnMeshRingReady()` + lit debt clear.
+## Era47 verify (223146 + autoload_report)
 
-## Era46 verify (191911)
-
-| Metric | Era45 (175840 plateau) | Era46 (191911 ~0–105s) |
-|--------|------------------------|-------------------------|
-| remesh_after_apply_n | med≈13 | **med≈1** (often 0–5) |
-| gpu_pending | 15–24 | 8–18 (still flat) |
-| mesh_dirty | 1 | 1 (ring_blocker=dirty) |
-| mark_relit_raa_total | 33 freeze | still grows (100@105s) |
-| raa_commit_md / md_to_raa | n/a | 80 / 226 @105s |
-| phase=done | no (26+ min) | not reached in this cut |
-
-**Conclusion:** R4 residual (RAA set size) largely fixed by coalesce v2 + PreferKick. R7 drain parity is wired, but sticky `mesh_dirty=1` + gpu backlog still blocks `IsSpawnMeshRingReady()` — needs follow-up on stuck dirty slice ownership (not stop-condition bypass).
-
-## Verification
+| Metric | Era46 (191911) | Era47 target | Era47 observed |
+|--------|----------------|--------------|----------------|
+| after debt=0: mark_relit Schedule | grows | ~0 | mr_raa stays 0 |
+| `gpu_pending_near` after lit-quiesce | plateau 8–18 | →0 | 0 by ~2s |
+| `mesh_dirty` | sticky 1 | 0 | 0 by ~2s |
+| `phase=done` / InGame | no | ≤3 min | **`ingame_ok` ~57s** |
 
 ```text
 cd bin
 .\Cubatarium.exe --console --autoload-last-world --visible --timeout-sec 300
 ```
 
-| Metric | Era45 (175840) | Era46 target | Era46 observed |
-|--------|----------------|--------------|----------------|
-| coop PrepareView wall | >26 min | ≤3 min | incomplete run ~105s |
-| mesh_dirty at settle | 1 | 0 | still 1 mid-run |
-| gpu_pending at settle | 15–24 | 0 | ~15 mid-run |
-| remesh_after_apply_n | ~13 plateau | 0 | **~1** |
+Unit: `miss_first_mesh_class_test` — Era47 predicates — **OK**.
 
-Unit: `miss_first_mesh_class_test` — Era46 PreferKick/escalate/ring_blocker predicates — **OK**.
+## Epoch note
+
+Full `MeshPublishGate` deferred. Reopen if cruise/ocean repeats Dirty↔GPU refeed class outside enter.

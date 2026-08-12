@@ -133,7 +133,17 @@ void WriteJsonlLine(const EnterLitSample &s, const char *kind = nullptr)
           << ",\"ring_blocker\":\"" << (s.ring_blocker ? s.ring_blocker : "none")
           << "\""
           << ",\"raa_commit_mark_dirty_n\":" << s.raa_commit_mark_dirty_n
-          << ",\"markdirty_to_raa_n\":" << s.markdirty_to_raa_n;
+          << ",\"markdirty_to_raa_n\":" << s.markdirty_to_raa_n
+          << ",\"gpu_kick_n\":" << s.gpu_kick_n
+          << ",\"gpu_finish_n\":" << s.gpu_finish_n
+          << ",\"mark_relit_prefer_kick_n\":" << s.mark_relit_prefer_kick_n
+          << ",\"dirty_schedule_skip_inflight_n\":"
+          << s.dirty_schedule_skip_inflight_n
+          << ",\"pending_gpu_global\":" << s.pending_gpu_global
+          << ",\"enter_lit_quiesce\":" << (s.enter_lit_quiesce ? 1 : 0)
+          << ",\"dirty_n\":" << s.dirty_n
+          << ",\"stuck_has_chunk\":" << s.stuck_has_chunk
+          << ",\"stuck_has_drawable\":" << s.stuck_has_drawable;
   if (kind != nullptr)
   {
     g_jsonl << ",\"kind\":\"" << kind << "\"";
@@ -226,6 +236,9 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
     out.stuck_dirty_cx = stuck.x;
     out.stuck_dirty_cy = stuck.y;
     out.stuck_dirty_cz = stuck.z;
+    out.stuck_has_chunk =
+        world.GetBlockWorld().GetChunkManager().HasChunk(stuck) ? 1 : 0;
+    out.stuck_has_drawable = mesh.HasDrawableGreedyMesh(stuck) ? 1 : 0;
   }
   out.suppress_relight_seam = world.IsSuppressRelightSeamDirty();
   out.mark_relit_raa_total = phys.MarkRelitRemeshAfterApplyN;
@@ -234,6 +247,16 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
       out.mesh_missing_greedy);
   out.raa_commit_mark_dirty_n = mesh.GetCache().GetRaaCommitMarkDirtyCount();
   out.markdirty_to_raa_n = mesh.GetCache().GetMarkDirtyToRaaCount();
+  out.gpu_kick_n = mesh.GetLastGpuKickN();
+  out.gpu_finish_n = mesh.GetLastGpuFinishN();
+  out.mark_relit_prefer_kick_n = phys.MarkRelitPreferKickN;
+  out.dirty_schedule_skip_inflight_n =
+      mesh.GetCache().GetDirtyScheduleSkipInflightCount();
+  out.pending_gpu_global =
+      static_cast<int>(mesh.GetPendingGpuAppliesCount());
+  out.enter_lit_quiesce =
+      world.IsEnterLitQuiesceLatched() || mesh.IsEnterLitQuiesce();
+  out.dirty_n = static_cast<int>(mesh.GetDirtyCount());
 }
 
 void UEnterLitDiagnostics::MaybeLog(const EnterLitSample &sample,
@@ -290,6 +313,11 @@ void UEnterLitDiagnostics::MaybeLogHeartbeat(const EnterLitSample &sample,
             << (sample.ring_blocker ? sample.ring_blocker : "none")
             << " raa_commit_md=" << sample.raa_commit_mark_dirty_n
             << " md_to_raa=" << sample.markdirty_to_raa_n
+            << " gpu_kick=" << sample.gpu_kick_n
+            << " gpu_finish=" << sample.gpu_finish_n
+            << " mark_relit_pk=" << sample.mark_relit_prefer_kick_n
+            << " dirty_skip_inflight=" << sample.dirty_schedule_skip_inflight_n
+            << " pending_gpu_global=" << sample.pending_gpu_global
             << " top_dirty=(" << sample.top_dirty_cx << ","
             << sample.top_dirty_cz << ")"
             << " stuck_dirty=(" << sample.stuck_dirty_cx << ","

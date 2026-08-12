@@ -348,11 +348,26 @@ inline bool ShouldPreferKickAfterRemeshAfterApplyCommit(bool gpu_pending)
   return gpu_pending;
 }
 
-/// Era46 B: MarkDirty after RAA commit only when not already dirty and not GPU.
+/// Era46 B / Era47 P3: MarkDirty after RAA commit only when not already dirty
+/// and not GPU. Under enter lit gate — never MarkDirty (PreferKick-only).
 inline bool ShouldMarkDirtyAfterRemeshAfterApplyCommit(bool already_dirty,
-                                                      bool gpu_pending)
+                                                      bool gpu_pending,
+                                                      bool enter_lit_gate = false)
 {
+  if (enter_lit_gate)
+  {
+    return false;
+  }
   return !already_dirty && !gpu_pending;
+}
+
+/// Era47 P1: after lit snapshot debt clear under enter gate, MarkRelit must not
+/// feed new Dirty/RAA/RemeshSeam — PreferKick/Skip only. Fifo residual alone
+/// does not keep remesh producers open (latch uses debt).
+inline bool ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(
+    bool enter_lit_gate_active, int snapshot_debt, int /*fifo_n*/ = 0)
+{
+  return enter_lit_gate_active && snapshot_debt <= 0;
 }
 
 /// Era46 C: escalate GPU drain after abort_drain wall (ms).
@@ -597,10 +612,12 @@ enum class RemeshAfterLitApplyDecision
   SkipAlreadyRaa,
   PreferKickGpu,
   SkipInflight,
+  SkipEnterLitQuiesce,
 };
 
 inline RemeshAfterLitApplyDecision ClassifyRemeshAfterLitApply(
-    bool is_dirty, bool raa_pending, bool gpu_pending, bool inflight)
+    bool is_dirty, bool raa_pending, bool gpu_pending, bool inflight,
+    bool enter_lit_quiesce = false)
 {
   if (is_dirty)
   {
@@ -618,14 +635,19 @@ inline RemeshAfterLitApplyDecision ClassifyRemeshAfterLitApply(
   {
     return RemeshAfterLitApplyDecision::SkipInflight;
   }
+  if (enter_lit_quiesce)
+  {
+    return RemeshAfterLitApplyDecision::SkipEnterLitQuiesce;
+  }
   return RemeshAfterLitApplyDecision::Schedule;
 }
 
 inline bool ShouldScheduleRemeshAfterLitApply(bool is_dirty, bool raa_pending,
-                                              bool gpu_pending, bool inflight)
+                                              bool gpu_pending, bool inflight,
+                                              bool enter_lit_quiesce = false)
 {
   return ClassifyRemeshAfterLitApply(is_dirty, raa_pending, gpu_pending,
-                                     inflight) ==
+                                     inflight, enter_lit_quiesce) ==
          RemeshAfterLitApplyDecision::Schedule;
 }
 

@@ -41,6 +41,17 @@ struct EnterLitSample
   const char *ring_blocker{"none"};
   uint64_t raa_commit_mark_dirty_n{0};
   uint64_t markdirty_to_raa_n{0};
+  /// Era47 P0: producer/egress forensics.
+  int gpu_kick_n{0};
+  int gpu_finish_n{0};
+  uint64_t mark_relit_prefer_kick_n{0};
+  uint64_t dirty_schedule_skip_inflight_n{0};
+  int pending_gpu_global{0};
+  /// Era47: latch + Dirty size (prove prune path).
+  bool enter_lit_quiesce{false};
+  int dirty_n{0};
+  int stuck_has_chunk{0};
+  int stuck_has_drawable{0};
 };
 
 /// Era44: per-frame step timings (deltas) inside gpu_warmup.

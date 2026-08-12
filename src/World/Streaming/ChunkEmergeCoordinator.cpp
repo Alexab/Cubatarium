@@ -1518,6 +1518,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     // PreferKick see FirstMesh class for 214034 cy=3/mh=4 witnesses.
     ain.nearest_miss_horiz = world.GetPhysicsTelemetry().MissHoriz;
     ain.nearest_miss_cy = world.GetPhysicsTelemetry().MissCy;
+    ain.enter_lit_gate = world.IsEnterLitGateActive();
     if (have_nearest_missing)
     {
       ain.nearest_miss_horiz = std::max(
@@ -3135,6 +3136,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       ain.nearest_miss_horiz = world.GetPhysicsTelemetry().MissHoriz;
       ain.nearest_miss_cy = world.GetPhysicsTelemetry().MissCy;
     }
+    ain.enter_lit_gate = world.IsEnterLitGateActive();
     const MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
     mesh_service.SetMeshWorkAdmission(adm);
     mesh_schedule = FinalizeSchedule(mesh_schedule, adm);

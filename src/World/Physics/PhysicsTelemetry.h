@@ -250,10 +250,14 @@ struct PhysicsTelemetry
   int RelightFifoN{0};
   /// Era45: MarkRelit RequestRemeshAfterApply calls (cumulative).
   uint64_t MarkRelitRemeshAfterApplyN{0};
+  /// Era47 P0: MarkRelit PreferKickGpu decisions (cumulative).
+  uint64_t MarkRelitPreferKickN{0};
   /// Era46: RAA commit scheduled MarkDirty (not PreferKick).
   uint64_t RaaCommitMarkDirtyN{0};
   /// Era46: MarkDirty mid-flight deferred into RemeshAfterApply.
   uint64_t MarkDirtyToRaaN{0};
+  /// Era47 P0: Dirty schedule skipped because async InFlight (cumulative).
+  uint64_t DirtyScheduleSkipInflightN{0};
   uint64_t DirtyDropped{0};
   uint64_t PendingLightDropped{0};
   uint64_t RelightFifoDropped{0};

@@ -444,6 +444,8 @@ public:
   void EndEnterLitGate();
   bool IsEnterLitGateActive() const { return EnterLitGateActive; }
   bool IsEnterLitSnapshotCaptured() const { return EnterLitSnapshotCaptured; }
+  /// Era47: latched lit-quiesce (debt=0 and fifo hit 0 once under gate).
+  bool IsEnterLitQuiesceLatched() const { return EnterLitQuiesceLatched; }
   int GetEnterLitSnapshotSize() const
   {
     return static_cast<int>(EnterLitDebtSnapshot.size());
@@ -1356,6 +1358,8 @@ private:
   /// Era43: enter lit gate — snapshot columns + frozen streaming until debt==0.
   bool EnterLitGateActive{false};
   bool EnterLitSnapshotCaptured{false};
+  /// Era47: once snapshot debt=0 under gate, stay quiesced despite fifo blips.
+  bool EnterLitQuiesceLatched{false};
   bool StreamingEnabledBeforeEnterLitGate{true};
   int EnterLitGateLitRadiusChunks() const;
   bool ColumnFullyDarkSolidDrawable(glm::ivec2 col_chunk_xz) const;

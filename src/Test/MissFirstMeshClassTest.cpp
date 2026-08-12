@@ -740,6 +740,46 @@ int main()
            "Era46: ring_blocker gpu when no dirty");
   }
 
+  // --- Era47 enter lit quiesce / PreferKick-only / admission ---
+  {
+    using cutum::ClassifyRemeshAfterLitApply;
+    using cutum::ComputeMeshWorkAdmission;
+    using cutum::MeshWorkAdmission;
+    using cutum::MeshWorkAdmissionInput;
+    using cutum::RemeshAfterLitApplyDecision;
+    using cutum::ShouldMarkDirtyAfterRemeshAfterApplyCommit;
+    using cutum::ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce;
+    Expect(!ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(false, 0, 0),
+           "Era47: no suppress without enter gate");
+    Expect(!ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(true, 1, 0),
+           "Era47: no suppress while snapshot debt");
+    Expect(ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(true, 0, 3),
+           "Era47: fifo residual does not block suppress when debt=0");
+    Expect(ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(true, 0, 0),
+           "Era47: suppress MarkRelit remesh at lit quiesce");
+    // Latch semantics covered in World EnterLitQuiesceLatched (fifo blips).
+    Expect(ClassifyRemeshAfterLitApply(false, false, false, false, true) ==
+               RemeshAfterLitApplyDecision::SkipEnterLitQuiesce,
+           "Era47: clear under quiesce ⇒ Skip (no Schedule)");
+    Expect(ClassifyRemeshAfterLitApply(false, false, true, false, true) ==
+               RemeshAfterLitApplyDecision::PreferKickGpu,
+           "Era47: gpu under quiesce ⇒ PreferKick");
+    Expect(ClassifyRemeshAfterLitApply(false, false, false, false, false) ==
+               RemeshAfterLitApplyDecision::Schedule,
+           "Era47: clear without quiesce ⇒ Schedule");
+    Expect(!ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, true),
+           "Era47 P3: enter gate ⇒ no RAA MarkDirty");
+    Expect(ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, false),
+           "Era47: outside enter MarkDirty still allowed when clear");
+    MeshWorkAdmissionInput enter_in{};
+    enter_in.pending_gpu = 4;
+    enter_in.enter_lit_gate = true;
+    enter_in.ring_depth = 8;
+    const auto enter_adm = ComputeMeshWorkAdmission(enter_in);
+    Expect(enter_adm.mode != MeshWorkAdmission::Mode::Normal,
+           "Era47 P2: enter gate never Normal admission");
+  }
+
   // --- Era34 CreateBar debt / soft wall ---
   {
     using cutum::CreateBarDebtFraction;

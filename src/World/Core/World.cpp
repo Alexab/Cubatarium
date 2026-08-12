@@ -885,6 +885,15 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                                     const std::vector<glm::ivec2> &primary_grounds,
                                     bool finalize_pending_gate)
 {
+  const bool enter_quiesce =
+      EnterLitQuiesceLatched ||
+      ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(
+          EnterLitGateActive, CountEnterFovLitDebt(),
+          GetPendingTerrainRelightFifoCount());
+  if (enter_quiesce && EnterLitGateActive)
+  {
+    EnterLitQuiesceLatched = true;
+  }
   if (relit_chunks.empty())
   {
     // Job finished with nothing to apply (empty capture / unloaded). Still
@@ -901,7 +910,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       SetColumnEmergeState(glm::ivec3(g.x, 0, g.y), ColumnEmergeState::LitReady);
       // Empty apply used to leave Lighting columns with no Dirty forever if
       // commit skipped preview (trail wedge). Admit first mesh now.
-      if (MeshService)
+      // Era47 P1: under lit quiesce do not refeed Dirty for already-ready ring.
+      if (MeshService && !enter_quiesce)
       {
         const glm::ivec3 ground(g.x, 0, g.y);
         const int sea = ProceduralTemplate.SeaLevel;
@@ -921,7 +931,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
   {
     primary_set.insert(g);
   }
-  auto schedule_remesh_after_lit_apply = [this](const glm::ivec3 &coord)
+  auto schedule_remesh_after_lit_apply =
+      [this, enter_quiesce](const glm::ivec3 &coord)
   {
     if (!MeshService)
     {
@@ -932,13 +943,14 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     const bool gpu_pending = MeshService->IsPendingGpuApply(coord);
     const bool inflight = MeshService->HasInflightMeshBuild(coord);
     switch (ClassifyRemeshAfterLitApply(is_dirty, raa_pending, gpu_pending,
-                                        inflight))
+                                        inflight, enter_quiesce))
     {
     case RemeshAfterLitApplyDecision::Schedule:
       ++PhysicsTelemetryData.MarkRelitRemeshAfterApplyN;
       MeshService->RequestRemeshAfterApply(coord);
       break;
     case RemeshAfterLitApplyDecision::PreferKickGpu:
+      ++PhysicsTelemetryData.MarkRelitPreferKickN;
       MeshService->PreferKickPendingGpuQueued(coord);
       break;
     default:
@@ -1074,12 +1086,16 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                  : (pending_n > 10 ? GetStreamingFocusRadius() : 1);
         (void)sticky_r;
         (void)horiz;
-        StickyRemeshAfterLight.insert(key);
-        // Era14 TD-ARCH-045 / Era15 P2a: UnlitFirstMesh → guaranteed RemeshSeam
-        // when light arrives (no wall-gated Imm; sticky_r ≠ gate).
-        NoteColumnRepairNeeded(key);
-        GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RemeshSeam,
-                                        /*priority=*/70);
+        // Era47 P1: after lit quiesce do not enqueue RemeshSeam (refeeds Dirty/GPU).
+        if (!enter_quiesce)
+        {
+          StickyRemeshAfterLight.insert(key);
+          // Era14 TD-ARCH-045 / Era15 P2a: UnlitFirstMesh → guaranteed RemeshSeam
+          // when light arrives (no wall-gated Imm; sticky_r ≠ gate).
+          NoteColumnRepairNeeded(key);
+          GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RemeshSeam,
+                                          /*priority=*/70);
+        }
       }
       AsyncRelightColumnsInFlight.erase(key);
       if (finalize_pending_gate)
@@ -1092,6 +1108,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         // with lit samples (FM ticket alone left SoftDeferHeld empty stuck
         // while SoftDeferEmptyShouldMarkDirty skipped Dirty — manual 195432
         // miss_stuck≈44s / empty ocean holes).
+        // Era47 P1: under quiesce keep hole Dirty only (!drawable).
         for (int cy = cy0; cy <= cy1; ++cy)
         {
           const glm::ivec3 coord(key.x, cy, key.y);
@@ -1101,6 +1118,44 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           {
             MeshService->MarkDirtyPriority(coord);
           }
+        }
+        continue;
+      }
+      // Era47 P1: lit-quiesce under enter — PreferKick/Skip for drawable;
+      // MarkDirty only for undrawn holes (no seamed Dirty / RemeshSeam feed).
+      if (enter_quiesce)
+      {
+        for (int cy = cy0; cy <= cy1; ++cy)
+        {
+          const glm::ivec3 coord(key.x, cy, key.y);
+          if (MeshService->IsChunkMeshDirty(coord))
+          {
+            continue;
+          }
+          if (!MeshService->HasDrawableGreedyMesh(coord) &&
+              (MeshService->HasGreedyMesh(coord) ||
+               MeshService->IsSoftDeferHeld(coord) ||
+               MeshService->HasInflightMeshBuild(coord) ||
+               MeshService->IsPendingGpuApply(coord)))
+          {
+            if (MeshService->IsPendingGpuApply(coord))
+            {
+              MeshService->PreferKickPendingGpuQueued(coord);
+            }
+            else if (!MeshService->HasInflightMeshBuild(coord))
+            {
+              MeshService->MarkDirtyPriority(coord);
+            }
+            continue;
+          }
+          if (MeshService->HasDrawableGreedyMesh(coord))
+          {
+            schedule_remesh_after_lit_apply(coord);
+          }
+        }
+        if (finalize_pending_gate)
+        {
+          SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
         }
         continue;
       }
@@ -1254,6 +1309,11 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     }
     if (PendingLightBeforeMesh.count(key) != 0 ||
         !IsColumnLitReady(ground))
+    {
+      continue;
+    }
+    // Era47 P1: neighbor seamed Dirty refeeds GPU under enter lit-quiesce.
+    if (enter_quiesce)
     {
       continue;
     }
@@ -5428,6 +5488,12 @@ void UWorld::BeginEnterLitGate()
   StreamingEnabledBeforeEnterLitGate = IsStreamingEnabled();
   SetStreamingEnabled(false);
   EnterLitGateActive = true;
+  EnterLitQuiesceLatched = false;
+  if (MeshService)
+  {
+    MeshService->SetEnterGpuQuiesceDrain(true);
+    MeshService->SetEnterLitQuiesce(false);
+  }
   if (URuntimeTuning::Get().EnterLitUseSnapshotDebt)
   {
     CaptureEnterLitDebtSnapshot();
@@ -5443,7 +5509,13 @@ void UWorld::EndEnterLitGate()
   }
   EnterLitGateActive = false;
   EnterLitSnapshotCaptured = false;
+  EnterLitQuiesceLatched = false;
   EnterLitDebtSnapshot.clear();
+  if (MeshService)
+  {
+    MeshService->SetEnterGpuQuiesceDrain(false);
+    MeshService->SetEnterLitQuiesce(false);
+  }
   SetStreamingEnabled(StreamingEnabledBeforeEnterLitGate);
 }
 
@@ -5828,6 +5900,15 @@ void UWorld::TickEnterGateMeshDrain(int iteration_budget)
   const int iterations = std::max(1, iteration_budget);
   for (int i = 0; i < iterations; ++i)
   {
+    if (MeshService && IsEnterLitGateActive())
+    {
+      if (CountEnterFovLitDebt() <= 0)
+      {
+        EnterLitQuiesceLatched = true;
+      }
+      MeshService->SetEnterGpuQuiesceDrain(true);
+      MeshService->SetEnterLitQuiesce(EnterLitQuiesceLatched);
+    }
     TickAsyncChunkSystems();
     TickMeshEmerge();
   }
@@ -5838,6 +5919,23 @@ void UWorld::TickEnterWarmupDrainFrame(int mesh_budget, int gate_iterations)
   // Era46: same path for coop PrepareView and Application gpu_warmup —
   // DrainEnterGameMeshWarmup owns explicit DrainPendingGpuMeshes; gate drain
   // runs TickMeshEmerge (ConsumeGpuApplyBacklog) for iterations.
+  // Era47: GPU admission boost while gate active; lit-quiesce latched after
+  // snapshot debt=0 (fifo residual blips must not block producer suppress —
+  // World_174 verify never saw stable fifo=0 while debt already 0).
+  if (MeshService)
+  {
+    const bool gate = IsEnterLitGateActive();
+    if (gate && CountEnterFovLitDebt() <= 0)
+    {
+      EnterLitQuiesceLatched = true;
+    }
+    if (!gate)
+    {
+      EnterLitQuiesceLatched = false;
+    }
+    MeshService->SetEnterGpuQuiesceDrain(gate);
+    MeshService->SetEnterLitQuiesce(EnterLitQuiesceLatched);
+  }
   if (NeedsEnterGameMeshWarmup())
   {
     DrainEnterGameMeshWarmup(std::max(1, mesh_budget));

@@ -1943,30 +1943,21 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         const auto &phys_before = world.GetPhysicsTelemetry();
         const int relight_completed_before = phys_before.RelightCompletedN;
         const int gpu_finish_before = phys_before.GpuFinishN;
-        // Era46: parity with Application gpu_warmup — explicit GPU drain +
-        // EnterGateMeshDrainIterations (not budget/2 halving).
+        // Era46/47: shared enter drain frame (sets EnterLitQuiesce latch +
+        // DrainEnterGameMeshWarmup + TickEnterGateMeshDrain).
         constexpr int kCoopEnterMeshBudget = EnterWarmupMeshBudgetDefault();
         const int gate_iters =
             std::max(1, URuntimeTuning::Get().EnterGateMeshDrainIterations);
         {
           const auto t0 = std::chrono::high_resolution_clock::now();
-          if (EnterWarmupDrainUsesGpuExplicitPath(
-                  world.NeedsEnterGameMeshWarmup()))
-          {
-            world.DrainEnterGameMeshWarmup(kCoopEnterMeshBudget);
-            step_sample.drain_mesh_ms =
-                std::chrono::duration<double, std::milli>(
-                    std::chrono::high_resolution_clock::now() - t0)
-                    .count();
-          }
-        }
-        {
-          const auto t0 = std::chrono::high_resolution_clock::now();
-          world.TickEnterGateMeshDrain(gate_iters);
-          step_sample.gate_drain_ms =
+          world.TickEnterWarmupDrainFrame(kCoopEnterMeshBudget, gate_iters);
+          const double drain_frame_ms =
               std::chrono::duration<double, std::milli>(
                   std::chrono::high_resolution_clock::now() - t0)
                   .count();
+          // Approximate split for profile (gate iters dominate when lit).
+          step_sample.drain_mesh_ms = drain_frame_ms * 0.35;
+          step_sample.gate_drain_ms = drain_frame_ms * 0.65;
         }
         {
           const auto t0 = std::chrono::high_resolution_clock::now();
