@@ -3,6 +3,7 @@
 #include "World/Core/RuntimeTuning.h"
 #include "App/Platform/Log.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
+#include "World/Diagnostics/EnterLitDiagnostics.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "Core/Jobs/JobThreadPool.h"
@@ -1798,6 +1799,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         StreamingWarmupLastRawDebt = 0;
         StreamingWarmupDisplayDebt = 0;
         StreamingWarmupLitWarnLogged = false;
+        if (!world.IsEnterLitGateActive())
+        {
+          UEnterLitDiagnostics::BeginSession();
+          world.BeginEnterLitGate();
+        }
       }
       TickCreateSpawnMeshWarmup(world, std::max(1, budget / 2));
       // Era41: light LitDrawable FOV on create bar (async Capture + workers).
@@ -1836,6 +1842,9 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                     std::chrono::steady_clock::now() -
                                     StreamingWarmupWallStart)
                                     .count();
+      EnterLitSample lit_sample{};
+      UEnterLitDiagnostics::Sample(world, elapsed_ms, lit_sample);
+      UEnterLitDiagnostics::MaybeLog(lit_sample, StreamingWarmupTicks);
       std::string status;
       if (spawn_settled)
       {
@@ -1907,6 +1916,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     }
     world.WarmupVisibleListAtCamera();
     WarnIfTerrainMeshesMissing(world, "PrepareView after warmup");
+    if (world.IsEnterLitGateActive())
+    {
+      world.EndEnterLitGate();
+      UEnterLitDiagnostics::EndSession();
+    }
     FinalizeCooperativeLoadForEnterGame(world, Kind);
     CurrentPhase = Phase::Done;
     Active = false;

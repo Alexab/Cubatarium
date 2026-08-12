@@ -382,6 +382,15 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
     t.EnterLitRequireZero =
         j.value("enter_lit_require_zero", t.EnterLitRequireZero);
   }
+  if (j.contains("enter_lit_debt_mode"))
+  {
+    const std::string mode = j.value("enter_lit_debt_mode", std::string("snapshot_rd"));
+    t.EnterLitUseSnapshotDebt = (mode != "live_global");
+  }
+  if (j.contains("enter_lit_abort_ms"))
+  {
+    t.EnterLitAbortMs = j.value("enter_lit_abort_ms", t.EnterLitAbortMs);
+  }
   last_path = path;
   last_mtime = mtime;
   have_mtime = true;

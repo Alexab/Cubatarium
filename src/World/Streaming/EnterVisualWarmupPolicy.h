@@ -307,6 +307,19 @@ inline bool ShouldHoldEnterBarForFovLit(int fov_lit_debt, double elapsed_ms,
   return elapsed_ms < static_cast<double>(hard_wall_ms);
 }
 
+/// Era43: skip streaming warmup while enter lit gate drains snapshot.
+inline bool ShouldSkipEnterStreamingWarmup(bool enter_lit_gate_active)
+{
+  return enter_lit_gate_active;
+}
+
+/// Era43: block NotePending outside frozen snapshot.
+inline bool ShouldBlockNotePendingOutsideSnapshot(bool gate_active,
+                                                  bool in_snapshot)
+{
+  return gate_active && !in_snapshot;
+}
+
 /// Era35 P1: SoftDefer empty scan cy-window for near-FOV columns (horiz<=2)
 /// covers full column (0..max_cy) so air chunks with trees/leaves above
 /// preferred_cy+2 are not permanently stuck as SoftDefer empty.

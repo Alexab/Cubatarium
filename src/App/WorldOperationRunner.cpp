@@ -1,4 +1,5 @@
 #include "App/WorldOperationRunner.h"
+#include "World/Diagnostics/EnterLitDiagnostics.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Core/RuntimeTuning.h"
@@ -243,6 +244,17 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
               << EnterGameGpuWarmupElapsedMs << "ms, lit=" << fov_debt
               << ")\n";
   }
+  if (!EnterGameForceLitAbort && tune.EnterLitRequireZero && fov_debt > 0 &&
+      tune.EnterLitAbortMs > 0 &&
+      EnterGameGpuWarmupElapsedMs >= static_cast<double>(tune.EnterLitAbortMs) &&
+      World.IsEnterLitGateActive())
+  {
+    EnterGameForceLitAbort = true;
+    std::cerr << "[Era43] enter lit abort after " << EnterGameGpuWarmupElapsedMs
+              << "ms, residual=" << fov_debt << "\n";
+    World.EndEnterLitGate();
+    UEnterLitDiagnostics::EndSession();
+  }
   const float lit_prog =
       EnterFovLitProgressFraction(fov_debt, EnterGameFovLitPeakDebt);
   const float frac = 0.94f + 0.05f * lit_prog;
@@ -250,6 +262,11 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   if (fov_debt > 0)
   {
     status = "Lighting… " + std::to_string(fov_debt) + " left";
+    if (EnterGameGpuWarmupElapsedMs >=
+        static_cast<double>(tune.EnterFovLitHardWallMs))
+    {
+      status += " (slow)";
+    }
   }
   else if (!mesh_ready)
   {
@@ -266,6 +283,9 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   }
   const int frame_index =
       kEnterGameGpuWarmupMaxFrames - EnterGameGpuWarmupFramesLeft;
+  EnterLitSample lit_sample{};
+  UEnterLitDiagnostics::Sample(World, EnterGameGpuWarmupElapsedMs, lit_sample);
+  UEnterLitDiagnostics::MaybeLog(lit_sample, frame_index);
   const bool min_frames_done =
       frame_index >= kEnterGameGpuWarmupMinFrames;
   if (!mesh_ready)
@@ -273,9 +293,14 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
     World.SetEnterGameWarmupMissingGreedy(World.CountPostLoadRingNotReady());
   }
   // Stay on bar until min frames + FOV/mesh ready, unless hard-wall.
-  if ((!min_frames_done || !soft_ready) && !cap_reached)
+  if ((!min_frames_done || !soft_ready) && !cap_reached && !EnterGameForceLitAbort)
   {
     return false;
+  }
+  if (World.IsEnterLitGateActive())
+  {
+    World.EndEnterLitGate();
+    UEnterLitDiagnostics::EndSession();
   }
   CurrentStage = Stage::EnterGameFinalize;
   return false;
@@ -383,6 +408,7 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
       EnterGameGpuWarmupElapsedMs = 0.0;
       EnterGameFovLitPeakDebt = 0;
       EnterGameLitWarnLogged = false;
+      EnterGameForceLitAbort = false;
       EnterGameColdCreate = false;
       return false;
     }
@@ -447,6 +473,11 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
     return false;
 
   case Stage::EnterGameFinalize:
+    if (World.IsEnterLitGateActive())
+    {
+      World.EndEnterLitGate();
+      UEnterLitDiagnostics::EndSession();
+    }
     Core.FinalizeEnterGameSession();
     Core.SaveConfigFile();
     Success = true;

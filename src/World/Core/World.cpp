@@ -1876,6 +1876,12 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
     return;
   }
   const glm::ivec2 key(ground.x, ground.z);
+  if (EnterLitGateActive && EnterLitSnapshotCaptured &&
+      URuntimeTuning::Get().EnterLitUseSnapshotDebt &&
+      EnterLitDebtSnapshot.count(key) == 0)
+  {
+    return;
+  }
   SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
   auto [it, inserted] = PendingLightBeforeMesh.try_emplace(key);
   if (inserted)
@@ -5178,8 +5184,225 @@ bool UWorld::NeedsEnterGameVisualWarmup() const
   return false;
 }
 
+int UWorld::GetPendingTerrainRelightFifoCount() const
+{
+  return Persistence ? Persistence->GetPendingTerrainColumnRelightCount() : 0;
+}
+
+int UWorld::EnterLitGateLitRadiusChunks() const
+{
+  return std::max(EnterVisualWarmupRadiusChunks(), GetRenderDistanceChunks() + 1);
+}
+
+bool UWorld::ColumnFullyDarkSolidDrawable(glm::ivec2 col_chunk_xz) const
+{
+  if (!MeshService || !BlockRegistry)
+  {
+    return false;
+  }
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  for (int cy = 0; cy <= max_cy; ++cy)
+  {
+    const glm::ivec3 coord(col_chunk_xz.x, cy, col_chunk_xz.y);
+    const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+    if (!chunk || !MeshService->HasDrawableGreedyMesh(coord))
+    {
+      continue;
+    }
+    bool any_solid = false;
+    for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+    {
+      for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+      {
+        for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+        {
+          if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+          {
+            any_solid = true;
+          }
+        }
+      }
+    }
+    if (!any_solid)
+    {
+      continue;
+    }
+    if (MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool UWorld::IsEnterLitSnapshotColumnResolved(glm::ivec2 col_chunk_xz) const
+{
+  if (IsPendingLightBeforeMesh(col_chunk_xz))
+  {
+    return false;
+  }
+  if (ColumnFullyDarkSolidDrawable(col_chunk_xz))
+  {
+    return false;
+  }
+  if (!IsColumnLitReady(glm::ivec3(col_chunk_xz.x, 0, col_chunk_xz.y)))
+  {
+    return false;
+  }
+  return true;
+}
+
+int UWorld::CountEnterLitSnapshotDebt() const
+{
+  int debt = 0;
+  for (const glm::ivec2 &col : EnterLitDebtSnapshot)
+  {
+    if (!IsEnterLitSnapshotColumnResolved(col))
+    {
+      ++debt;
+    }
+  }
+  return debt;
+}
+
+void UWorld::CaptureEnterLitDebtSnapshot()
+{
+  EnterLitDebtSnapshot.clear();
+  if (!MeshService || !BlockRegistry)
+  {
+    return;
+  }
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
+  const int lit_r = EnterLitGateLitRadiusChunks();
+  for (int dx = -lit_r; dx <= lit_r; ++dx)
+  {
+    for (int dz = -lit_r; dz <= lit_r; ++dz)
+    {
+      const glm::ivec2 col(center.x + dx, center.z + dz);
+      if (IsPendingLightBeforeMesh(col) || ColumnFullyDarkSolidDrawable(col))
+      {
+        EnterLitDebtSnapshot.insert(col);
+      }
+    }
+  }
+  EnterLitSnapshotCaptured = true;
+}
+
+void UWorld::EnqueueEnterLitSnapshotRelight()
+{
+  if (!Persistence || !EnterLitSnapshotCaptured)
+  {
+    return;
+  }
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
+  const int fov_r = EnterVisualWarmupRadiusChunks();
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const int band_min = 0;
+  const int band_max = max_y;
+
+  auto try_enqueue = [&](glm::ivec2 col, bool priority)
+  {
+    if (!EnterLitDebtSnapshot.count(col))
+    {
+      return;
+    }
+    const glm::ivec2 world_key(col.x * CHUNK_SIZE, col.y * CHUNK_SIZE);
+    if (Persistence->IsTerrainColumnRelightQueued(world_key) ||
+        IsAsyncRelightColumnInFlight(col))
+    {
+      return;
+    }
+    Persistence->EnqueueTerrainColumnRelight(world_key.x, world_key.y, priority,
+                                             band_min, band_max);
+  };
+
+  for (int dx = -fov_r; dx <= fov_r; ++dx)
+  {
+    for (int dz = -fov_r; dz <= fov_r; ++dz)
+    {
+      try_enqueue(glm::ivec2(center.x + dx, center.z + dz), /*priority=*/true);
+    }
+  }
+  for (const glm::ivec2 &col : EnterLitDebtSnapshot)
+  {
+    const int horiz =
+        std::max(std::abs(col.x - center.x), std::abs(col.y - center.z));
+    if (horiz <= fov_r)
+    {
+      continue;
+    }
+    try_enqueue(col, /*priority=*/false);
+  }
+}
+
+void UWorld::RepairEnterLitSnapshotFifoGhosts()
+{
+  if (!Persistence || !EnterLitSnapshotCaptured)
+  {
+    return;
+  }
+  const int max_y = ProceduralTemplate.MaxHeight;
+  const int band_min = 0;
+  const int band_max = max_y;
+  for (const glm::ivec2 &col : EnterLitDebtSnapshot)
+  {
+    if (IsEnterLitSnapshotColumnResolved(col))
+    {
+      continue;
+    }
+    const glm::ivec2 world_key(col.x * CHUNK_SIZE, col.y * CHUNK_SIZE);
+    if (Persistence->IsTerrainColumnRelightQueued(world_key) ||
+        IsAsyncRelightColumnInFlight(col))
+    {
+      continue;
+    }
+    const int horiz = std::max(
+        std::abs(col.x - UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock()).x),
+        std::abs(col.y - UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock()).z));
+    const bool priority = horiz <= EnterVisualWarmupRadiusChunks();
+    Persistence->EnqueueTerrainColumnRelight(world_key.x, world_key.y, priority,
+                                             band_min, band_max);
+  }
+}
+
+void UWorld::BeginEnterLitGate()
+{
+  if (EnterLitGateActive)
+  {
+    return;
+  }
+  StreamingEnabledBeforeEnterLitGate = IsStreamingEnabled();
+  SetStreamingEnabled(false);
+  EnterLitGateActive = true;
+  if (URuntimeTuning::Get().EnterLitUseSnapshotDebt)
+  {
+    CaptureEnterLitDebtSnapshot();
+    EnqueueEnterLitSnapshotRelight();
+  }
+}
+
+void UWorld::EndEnterLitGate()
+{
+  if (!EnterLitGateActive)
+  {
+    return;
+  }
+  EnterLitGateActive = false;
+  EnterLitSnapshotCaptured = false;
+  EnterLitDebtSnapshot.clear();
+  SetStreamingEnabled(StreamingEnabledBeforeEnterLitGate);
+}
+
 int UWorld::CountEnterFovLitDebt() const
 {
+  if (EnterLitGateActive && EnterLitSnapshotCaptured &&
+      URuntimeTuning::Get().EnterLitUseSnapshotDebt)
+  {
+    return CountEnterLitSnapshotDebt();
+  }
   if (!MeshService || !BlockRegistry)
   {
     return 0;
@@ -5187,13 +5410,10 @@ int UWorld::CountEnterFovLitDebt() const
   const UWorldMeshService &mesh = *MeshService;
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
   const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
-  // Era42: full enter volume = RD+1 (same as coop spawn/load), not FOV ring=4.
-  const int lit_r =
-      std::max(EnterVisualWarmupRadiusChunks(), GetRenderDistanceChunks() + 1);
+  const int lit_r = EnterLitGateLitRadiusChunks();
   const int max_cy =
       std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
 
-  // All PendingLight tickets (including hinterland beyond RD) count as debt.
   int debt = static_cast<int>(PendingLightBeforeMesh.size());
 
   for (int dx = -lit_r; dx <= lit_r; ++dx)
@@ -5205,43 +5425,7 @@ int UWorld::CountEnterFovLitDebt() const
       {
         continue;
       }
-      bool fully_dark_solid = false;
-      for (int cy = 0; cy <= max_cy && !fully_dark_solid; ++cy)
-      {
-        const glm::ivec3 coord(col.x, cy, col.y);
-        const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-        if (!chunk)
-        {
-          continue;
-        }
-        if (!mesh.HasDrawableGreedyMesh(coord))
-        {
-          continue;
-        }
-        bool any_solid = false;
-        for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
-        {
-          for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
-          {
-            for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
-            {
-              if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
-              {
-                any_solid = true;
-              }
-            }
-          }
-        }
-        if (!any_solid)
-        {
-          continue;
-        }
-        if (mesh.GetCache().ChunkHasFullyDarkFace(coord))
-        {
-          fully_dark_solid = true;
-        }
-      }
-      if (fully_dark_solid)
+      if (ColumnFullyDarkSolidDrawable(col))
       {
         ++debt;
       }
@@ -5272,14 +5456,24 @@ int UWorld::TickEnterFovLitPass(int capture_budget)
           : std::max(1, URuntimeTuning::Get().EnterFovLitCaptureBudget);
   const int apply_budget =
       std::max(1, URuntimeTuning::Get().EnterFovLitApplyBudget);
+
+  if (EnterLitGateActive && EnterLitSnapshotCaptured)
+  {
+    RepairEnterLitSnapshotFifoGhosts();
+    DrainRelightQueuesBudget(/*max_player_jobs=*/0, cap_budget);
+    DrainAsyncRelightResults(apply_budget, /*priority_mesh=*/true,
+                             /*enqueue_background_frontier=*/false);
+    DrainAsyncRelightResults(apply_budget, /*priority_mesh=*/true,
+                             /*enqueue_background_frontier=*/false);
+    return static_cast<int>(EnterLitDebtSnapshot.size());
+  }
+
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
   const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
   const int fov_r = EnterVisualWarmupRadiusChunks();
-  const int lit_r =
-      std::max(fov_r, GetRenderDistanceChunks() + 1);
+  const int lit_r = std::max(fov_r, GetRenderDistanceChunks() + 1);
   const int max_y = ProceduralTemplate.MaxHeight;
   const int max_cy = std::max(0, FloorDiv(max_y, CHUNK_SIZE));
-  // Era42: full-column band so cy above/below surface cannot remain dark.
   const int band_min = 0;
   const int band_max = max_y;
 
@@ -5288,45 +5482,20 @@ int UWorld::TickEnterFovLitPass(int capture_budget)
     {
       return true;
     }
-    for (int cy = 0; cy <= max_cy; ++cy)
-    {
-      const glm::ivec3 coord(col.x, cy, col.y);
-      const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-      if (!chunk || !MeshService->HasDrawableGreedyMesh(coord))
-      {
-        continue;
-      }
-      bool any_solid = false;
-      for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
-      {
-        for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
-        {
-          for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
-          {
-            if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
-            {
-              any_solid = true;
-            }
-          }
-        }
-      }
-      if (any_solid && MeshService->GetCache().ChunkHasFullyDarkFace(coord))
-      {
-        NotePendingLightBeforeMesh(glm::ivec3(col.x, 0, col.y), band_min,
-                                   band_max);
-        return true;
-      }
-    }
-    return false;
+    return ColumnFullyDarkSolidDrawable(col);
   };
 
   auto enqueue_col = [&](glm::ivec2 col, bool priority) {
-    Persistence->EnqueueTerrainColumnRelight(col.x * CHUNK_SIZE,
-                                             col.y * CHUNK_SIZE, priority,
+    const glm::ivec2 world_key(col.x * CHUNK_SIZE, col.y * CHUNK_SIZE);
+    if (Persistence->IsTerrainColumnRelightQueued(world_key) ||
+        IsAsyncRelightColumnInFlight(col))
+    {
+      return;
+    }
+    Persistence->EnqueueTerrainColumnRelight(world_key.x, world_key.y, priority,
                                              band_min, band_max);
   };
 
-  // Priority-enqueue FOV first, then remaining RD / hinterland PendingLight.
   int enqueued = 0;
   for (int dx = -fov_r; dx <= fov_r; ++dx)
   {
@@ -5367,12 +5536,15 @@ int UWorld::TickEnterFovLitPass(int capture_budget)
     {
       continue;
     }
+    if (!column_needs_light(col))
+    {
+      continue;
+    }
     enqueue_col(col, /*priority=*/false);
     ++enqueued;
   }
 
   DrainRelightQueuesBudget(/*max_player_jobs=*/0, cap_budget);
-  // Second apply pass — workers may finish Captures from this frame.
   DrainAsyncRelightResults(apply_budget, /*priority_mesh=*/true,
                            /*enqueue_background_frontier=*/false);
   DrainAsyncRelightResults(apply_budget, /*priority_mesh=*/true,
@@ -5602,6 +5774,10 @@ bool UWorld::IsEnterStreamingWarmupSettled() const
 
 void UWorld::TickEnterStreamingWarmup(int iteration_budget)
 {
+  if (EnterLitGateActive)
+  {
+    return;
+  }
   if (!IsStreamingEnabled() || !Streaming->HasStreamer())
   {
     return;

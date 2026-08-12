@@ -1,6 +1,7 @@
 #include "App/Application.h"
 #include "Game/Inventory/HotbarInput.h"
 #include "Game/Inventory/SlotInteraction.h"
+#include "World/Diagnostics/EnterLitDiagnostics.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Core/RuntimeTuning.h"
 
@@ -1936,6 +1937,11 @@ void UApplication::Update(double dt)
           {
             Geometry->ResetWorldRenderState();
             LogWorldLoadDiag("gpu_warmup_reset", *World);
+            if (!World->IsEnterLitGateActive())
+            {
+              UEnterLitDiagnostics::BeginSession();
+              World->BeginEnterLitGate();
+            }
           }
           else
           {
@@ -1943,15 +1949,12 @@ void UApplication::Update(double dt)
             {
               World->DrainEnterGameMeshWarmup(kGpuWarmupMeshBudget);
             }
-            // Era29 I-E2: always budgeted streaming/emerge on bar — coop prepare
-            // must not skip SoftDefer/PendingLight heal (manual 091332 ENTER blink).
-            // Still no MarkAllDirtyFromWorld inside TickEnterStreamingWarmup.
-            if (ShouldRunEnterStreamingWarmupDespiteSpawnPrepared(
+            if (!ShouldSkipEnterStreamingWarmup(World->IsEnterLitGateActive()) &&
+                ShouldRunEnterStreamingWarmupDespiteSpawnPrepared(
                     World->IsSpawnAreaPreparedByCooperativeLoad()))
             {
               World->TickEnterStreamingWarmup(kGpuWarmupStreamingBudget);
             }
-            // Era41: drain LitDrawable FOV Relight on the progress bar.
             World->TickEnterFovLitPass(
                 std::max(1, URuntimeTuning::Get().EnterFovLitCaptureBudget));
           }

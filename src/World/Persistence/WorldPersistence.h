@@ -70,6 +70,7 @@ public:
   void DrainRelightQueues(UWorld &world, int max_player_jobs, int max_bg_columns);
   void DrainTerrainColumnRelights(UWorld &world, int max_columns);
   int GetPendingTerrainColumnRelightCount() const;
+  bool IsTerrainColumnRelightQueued(glm::ivec2 world_block_key) const;
   int GetPendingPlayerRelightCount() const;
   /// Drop farthest far-FIFO columns until size <= soft_cap (priority untouched).
   int TrimFarRelightFifoFarthest(glm::ivec3 focus_ground, int soft_cap);

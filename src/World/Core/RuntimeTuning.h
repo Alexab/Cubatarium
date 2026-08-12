@@ -123,6 +123,10 @@ struct URuntimeTuning
   int EnterFovLitInflightMult{12};
   /// Era42: hold progress bar until lit debt==0 (hard-wall does not abort).
   bool EnterLitRequireZero{true};
+  /// Era43: debt = RD snapshot at gate begin (not global PendingLight.size).
+  bool EnterLitUseSnapshotDebt{true};
+  /// Era43: force enter after ms if ingress frozen (0 = disabled).
+  int EnterLitAbortMs{600000};
 
   static URuntimeTuning &Get();
   static void ResetToDefaults();

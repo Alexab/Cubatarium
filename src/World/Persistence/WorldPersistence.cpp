@@ -918,6 +918,12 @@ int UWorldPersistence::GetPendingTerrainColumnRelightCount() const
                           PendingTerrainColumnRelightsPriority.size());
 }
 
+bool UWorldPersistence::IsTerrainColumnRelightQueued(
+    glm::ivec2 world_block_key) const
+{
+  return PendingTerrainColumnRelightKeys.count(world_block_key) != 0;
+}
+
 int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
                                                   int soft_cap)
 {

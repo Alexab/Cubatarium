@@ -280,6 +280,7 @@ set(SOURCES
     src/World/Physics/Replay/ReplayWorldFixture.cpp
     src/World/Diagnostics/MovementDiagnosticsRecorder.cpp
     src/World/Diagnostics/FramePerfMonitor.cpp
+    src/World/Diagnostics/EnterLitDiagnostics.cpp
     src/World/Diagnostics/BlockInspectDiagnostics.cpp
     src/World/Diagnostics/CreatureMovementDiagnostics.cpp
     src/World/Mesh/WorldMeshService.cpp

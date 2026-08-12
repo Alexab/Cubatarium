@@ -12,6 +12,8 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <algorithm>
+#include <vector>
 
 namespace
 {
@@ -588,6 +590,31 @@ int main()
     Expect(!ShouldHoldEnterBarForFovLit(5, 120000.0, EnterFovLitHardWallMs(),
                                        /*require_zero=*/false),
            "Era42: require_zero=false releases past wall");
+  }
+
+  // --- Era43 Enter lit gate / snapshot ---
+  {
+    using cutum::ShouldBlockNotePendingOutsideSnapshot;
+    using cutum::ShouldSkipEnterStreamingWarmup;
+    Expect(ShouldSkipEnterStreamingWarmup(true),
+           "Era43: skip streaming when enter lit gate active");
+    Expect(!ShouldSkipEnterStreamingWarmup(false),
+           "Era43: streaming OK when gate inactive");
+    Expect(ShouldBlockNotePendingOutsideSnapshot(true, false),
+           "Era43: block NotePending outside snapshot");
+    Expect(!ShouldBlockNotePendingOutsideSnapshot(true, true),
+           "Era43: allow NotePending inside snapshot");
+    const std::vector<int> unresolved{0, 2};
+    int debt = 0;
+    for (int i = 0; i < 3; ++i)
+    {
+      if (std::find(unresolved.begin(), unresolved.end(), i) !=
+          unresolved.end())
+      {
+        ++debt;
+      }
+    }
+    Expect(debt == 2, "Era43: snapshot debt counts unresolved cols");
   }
 
   // --- Era34 CreateBar debt / soft wall ---

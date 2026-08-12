@@ -122,6 +122,8 @@ private:
   int EnterGameFovLitPeakDebt{0};
   /// Era42: one-shot warn when lit drain exceeds hard_wall_ms while holding.
   bool EnterGameLitWarnLogged{false};
+  /// Era43: force enter after abort_ms while ingress frozen.
+  bool EnterGameForceLitAbort{false};
   UBackgroundQuiesceState ShutdownQuiesceState{};
 };
 

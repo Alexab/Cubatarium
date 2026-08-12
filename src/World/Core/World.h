@@ -426,6 +426,14 @@ public:
     return EnterGameWarmupMissingGreedy;
   }
   bool IsEnterFovLitPassActive() const { return EnterFovLitPassActive; }
+  /// Era43: frozen enter lit gate (snapshot debt + no streaming ingress).
+  void BeginEnterLitGate();
+  void EndEnterLitGate();
+  bool IsEnterLitGateActive() const { return EnterLitGateActive; }
+  int GetEnterLitSnapshotSize() const
+  {
+    return static_cast<int>(EnterLitDebtSnapshot.size());
+  }
   bool IsCreateSpawnWarmupSettled() const;
   /// Era34 P0: near-FOV (r≤2) create-bar debt; sets underfeet LitDrawable ready.
   int CountCreateNearFovWarmupDebt(bool *out_underfeet_lit_ready) const;
@@ -1049,6 +1057,7 @@ public:
   {
     return PendingLightBeforeMesh.size();
   }
+  int GetPendingTerrainRelightFifoCount() const;
   /// Drop farthest PendingLight columns that already have mesh (not cold holes).
   int TrimPendingLightBeforeMesh(glm::ivec3 focus_ground_horiz, int soft_cap);
   int TrimFarRelightFifoFarthest(glm::ivec3 focus_ground_horiz, int soft_cap);
@@ -1330,6 +1339,17 @@ private:
   int EnterGameWarmupMissingGreedy{0};
   /// Era41b: DrainRelightQueues uses elevated Capture/inflight while true.
   bool EnterFovLitPassActive{false};
+  /// Era43: enter lit gate — snapshot columns + frozen streaming until debt==0.
+  bool EnterLitGateActive{false};
+  bool EnterLitSnapshotCaptured{false};
+  bool StreamingEnabledBeforeEnterLitGate{true};
+  int EnterLitGateLitRadiusChunks() const;
+  bool ColumnFullyDarkSolidDrawable(glm::ivec2 col_chunk_xz) const;
+  void CaptureEnterLitDebtSnapshot();
+  void EnqueueEnterLitSnapshotRelight();
+  void RepairEnterLitSnapshotFifoGhosts();
+  int CountEnterLitSnapshotDebt() const;
+  bool IsEnterLitSnapshotColumnResolved(glm::ivec2 col_chunk_xz) const;
   struct PendingRelightMeshColumnRange
   {
     int min_y{0};
@@ -1343,6 +1363,7 @@ private:
                                   static_cast<uint32_t>(v.y));
     }
   };
+  std::unordered_set<glm::ivec2, GroundColumnHash> EnterLitDebtSnapshot;
   std::unordered_map<glm::ivec2, PendingRelightMeshColumnRange, GroundColumnHash>
       PendingRelightMeshColumns;
   /// Near columns: light must apply before first mesh dirty.

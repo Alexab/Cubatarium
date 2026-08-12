@@ -122,17 +122,14 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-067 | Era38 | Near-FOV Work Priority + Resume Parity | SoftDefer ownership row-major+cap starves near; Unlit hinterland + rear slots; autofly≠manual | **partial 2026-08-11** A0–A3 + B harness; gate=`land-cruise-resume`; CLOSED only within 2× manual + eye |
 | TD-ARCH-068 | Era39 | SoftDefer Anti-Flicker + Hidden-Neighbor Seam | SoftDefer empty publish/withdraw flicker; ready-chunk faces X-ray when SoftDefer-hidden neighbor; FIFO residual | **partial 2026-08-11** P0–P2 + A4 (floor 12 + unlit telem split); wait manual eye |
 | TD-ARCH-069 | Era40 | Relight FIFO Unfreeze (miss rim) | SoftDefer pin horiz≤2 misses rim 3–4; floors silent at pendf≈15; fifo≈96 completed≈0 | **partial 2026-08-11** P0–P3 landed; resume fifo still ~95; wait manual rim eye |
-| TD-ARCH-070 | Era41/42 | Enter full lit on progress bar | Load aborted early; FOV/RD PendingLight spilled into streaming | **partial 2026-08-11** Era42: RD+PendingLight debt=0 gate, no hard-wall abort; wait manual eye |
+| TD-ARCH-070 | Era41/42/43 | Enter full lit on progress bar | Era42 stall 1h+ (global debt + ingress on bar) | **partial 2026-08-12** Era43 snapshot+freeze; wait manual eye |
 
-> **Era42 Enter Full Lit (2026-08-11):** Progress bar holds until **all**
-> PendingLight + FullyDark in RD+1 clear (`enter_lit_require_zero`, default true).
-> Hard-wall is warn-only. `TickEnterFovLitPass` enqueues FOV→RD→hinterland with
-> full-column band; Capture16/apply64/drain80ms/inflight12; no PendingLight trim
-> during enter pass. Knobs: `enter_fov_lit_*`, `enter_lit_require_zero`.
-> Reject: enter with lit debt>0; Unlit void at spawn; CLOSED without manual eye.
+> **Era43 Enter Lit Gate (2026-08-12):** `BeginEnterLitGate` freezes streaming, captures
+> RD+1 snapshot debt; drain-only tick + one-shot enqueue; `enter_lit_debt_mode=snapshot_rd`;
+> `EnterLitDiagnostics` on bar; `enter_lit_abort_ms` safety. Fixes 1h42m stall (`073621`).
 
-> **Era41 Enter FOV Lit (2026-08-11):** Held LitDrawable ring=4 only; 45s hard-wall
-> still entered with residual FOV debt (`214054` / 80→50+). Superseded by Era42.
+> **Era42 Enter Full Lit (2026-08-11):** Global PendingLight debt — superseded by Era43
+> snapshot. Knobs: `enter_fov_lit_*`, `enter_lit_require_zero`.
 
 > **Era40 Relight FIFO Unfreeze (2026-08-11):** Miss/SoftDefer Relight pin covers
 > LitDrawable ring (`horiz≤4`); force Enqueue miss∧(PendingLight∨undrawn); miss
