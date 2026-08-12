@@ -1,10 +1,12 @@
 #include "World/Diagnostics/EnterLitDiagnostics.h"
 
+#include "App/Core.h"
 #include "App/Platform/Log.h"
 #include "World/Core/World.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Persistence/WorldPersistence.h"
+#include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "glog/logging.h"
 
 #include <algorithm>
@@ -93,9 +95,9 @@ std::string MakeSessionPath()
   localtime_r(&t, &tm_buf);
 #endif
   std::ostringstream oss;
-  oss << "logs/enter_lit_"
-      << std::put_time(&tm_buf, "%Y%m%d-%H%M%S") << ".jsonl";
-  return oss.str();
+  oss << "enter_lit_" << std::put_time(&tm_buf, "%Y%m%d-%H%M%S") << ".jsonl";
+  const auto logs_dir = GetExecutableDirectory() / "logs";
+  return (logs_dir / oss.str()).string();
 }
 
 void WriteJsonlLine(const EnterLitSample &s, const char *kind = nullptr)
@@ -127,7 +129,11 @@ void WriteJsonlLine(const EnterLitSample &s, const char *kind = nullptr)
           << ",\"stuck_dirty_cy\":" << s.stuck_dirty_cy
           << ",\"stuck_dirty_cz\":" << s.stuck_dirty_cz
           << ",\"suppress_relight_seam\":" << (s.suppress_relight_seam ? 1 : 0)
-          << ",\"mark_relit_raa_total\":" << s.mark_relit_raa_total;
+          << ",\"mark_relit_raa_total\":" << s.mark_relit_raa_total
+          << ",\"ring_blocker\":\"" << (s.ring_blocker ? s.ring_blocker : "none")
+          << "\""
+          << ",\"raa_commit_mark_dirty_n\":" << s.raa_commit_mark_dirty_n
+          << ",\"markdirty_to_raa_n\":" << s.markdirty_to_raa_n;
   if (kind != nullptr)
   {
     g_jsonl << ",\"kind\":\"" << kind << "\"";
@@ -167,7 +173,7 @@ void UEnterLitDiagnostics::BeginSession()
   g_profile_logged = false;
   g_steps = {};
   std::error_code ec;
-  std::filesystem::create_directories("logs", ec);
+  std::filesystem::create_directories(GetExecutableDirectory() / "logs", ec);
   g_jsonl.open(MakeSessionPath(), std::ios::out | std::ios::trunc);
   g_session_open = g_jsonl.is_open();
 }
@@ -223,6 +229,11 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
   }
   out.suppress_relight_seam = world.IsSuppressRelightSeamDirty();
   out.mark_relit_raa_total = phys.MarkRelitRemeshAfterApplyN;
+  out.ring_blocker = EnterWarmupRingBlockerLabel(
+      out.mesh_dirty, out.mesh_gpu_pending_near, out.mesh_async_pending,
+      out.mesh_missing_greedy);
+  out.raa_commit_mark_dirty_n = mesh.GetCache().GetRaaCommitMarkDirtyCount();
+  out.markdirty_to_raa_n = mesh.GetCache().GetMarkDirtyToRaaCount();
 }
 
 void UEnterLitDiagnostics::MaybeLog(const EnterLitSample &sample,
@@ -275,6 +286,10 @@ void UEnterLitDiagnostics::MaybeLogHeartbeat(const EnterLitSample &sample,
             << (sample.suppress_relight_seam ? 1 : 0)
             << " remesh_after_apply_n=" << sample.remesh_after_apply_n
             << " mark_relit_raa_total=" << sample.mark_relit_raa_total
+            << " ring_blocker="
+            << (sample.ring_blocker ? sample.ring_blocker : "none")
+            << " raa_commit_md=" << sample.raa_commit_mark_dirty_n
+            << " md_to_raa=" << sample.markdirty_to_raa_n
             << " top_dirty=(" << sample.top_dirty_cx << ","
             << sample.top_dirty_cz << ")"
             << " stuck_dirty=(" << sample.stuck_dirty_cx << ","

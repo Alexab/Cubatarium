@@ -1052,6 +1052,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetMeshService().GetMeshApplyStaleCount();
     world.PhysicsTelemetryData.MeshReplaceHoleAvoided =
         world.GetMeshService().GetMeshReplaceHoleAvoidedCount();
+    world.PhysicsTelemetryData.RaaCommitMarkDirtyN =
+        world.GetMeshService().GetCache().GetRaaCommitMarkDirtyCount();
+    world.PhysicsTelemetryData.MarkDirtyToRaaN =
+        world.GetMeshService().GetCache().GetMarkDirtyToRaaCount();
     world.PhysicsTelemetryData.SoftDeferEmptyPublishAvoided =
         world.GetMeshService().GetSoftDeferEmptyPublishAvoidedCount();
     world.PhysicsTelemetryData.PendingGpuAppliesN = static_cast<int>(

@@ -1939,9 +1939,44 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
           StreamingWarmupAbortDrainMode = false;
           StreamingWarmupAbortLogged = false;
         }
-        TickCreateSpawnMeshWarmup(world, std::max(1, budget / 2));
-        world.TickEnterFovLitPass(
-            std::max(1, URuntimeTuning::Get().EnterFovLitCaptureBudget));
+        EnterWarmupStepSample step_sample{};
+        const auto &phys_before = world.GetPhysicsTelemetry();
+        const int relight_completed_before = phys_before.RelightCompletedN;
+        const int gpu_finish_before = phys_before.GpuFinishN;
+        // Era46: parity with Application gpu_warmup — explicit GPU drain +
+        // EnterGateMeshDrainIterations (not budget/2 halving).
+        constexpr int kCoopEnterMeshBudget = EnterWarmupMeshBudgetDefault();
+        const int gate_iters =
+            std::max(1, URuntimeTuning::Get().EnterGateMeshDrainIterations);
+        {
+          const auto t0 = std::chrono::high_resolution_clock::now();
+          if (EnterWarmupDrainUsesGpuExplicitPath(
+                  world.NeedsEnterGameMeshWarmup()))
+          {
+            world.DrainEnterGameMeshWarmup(kCoopEnterMeshBudget);
+            step_sample.drain_mesh_ms =
+                std::chrono::duration<double, std::milli>(
+                    std::chrono::high_resolution_clock::now() - t0)
+                    .count();
+          }
+        }
+        {
+          const auto t0 = std::chrono::high_resolution_clock::now();
+          world.TickEnterGateMeshDrain(gate_iters);
+          step_sample.gate_drain_ms =
+              std::chrono::duration<double, std::milli>(
+                  std::chrono::high_resolution_clock::now() - t0)
+                  .count();
+        }
+        {
+          const auto t0 = std::chrono::high_resolution_clock::now();
+          world.TickEnterFovLitPass(
+              std::max(1, URuntimeTuning::Get().EnterFovLitCaptureBudget));
+          step_sample.lit_pass_ms =
+              std::chrono::duration<double, std::milli>(
+                  std::chrono::high_resolution_clock::now() - t0)
+                  .count();
+        }
         ++StreamingWarmupTicks;
         const int fov_debt = world.CountEnterFovLitDebt();
         const double elapsed_ms = std::chrono::duration<double, std::milli>(
@@ -1952,6 +1987,15 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         UEnterLitDiagnostics::Sample(world, elapsed_ms, lit_sample);
         UEnterLitDiagnostics::MaybeLog(lit_sample, StreamingWarmupTicks);
         UEnterLitDiagnostics::MaybeLogHeartbeat(lit_sample, 2000.0);
+        const auto &phys_after = world.GetPhysicsTelemetry();
+        step_sample.relight_drain_ms = phys_after.RelightDrainMs;
+        step_sample.mesh_emerge_ms = phys_after.MeshEmergeMs;
+        step_sample.mesh_immediate_ms = phys_after.MeshImmediateMs;
+        step_sample.relight_completed_delta =
+            phys_after.RelightCompletedN - relight_completed_before;
+        step_sample.gpu_finish_delta =
+            phys_after.GpuFinishN - gpu_finish_before;
+        UEnterLitDiagnostics::RecordFrameSteps(step_sample);
         const int combined_debt =
             EnterWarmupCombinedDebt(lit_sample, fov_debt);
         if (combined_debt > StreamingWarmupPeakDebt)
@@ -1993,6 +2037,14 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                       << (ring_ready ? 1 : 0);
             CubatariumFlushLogs();
           }
+        }
+        // Era46 C: escalate GPU drain only after abort_drain ≥3 min — same
+        // pipeline, higher budget; does not weaken gate.
+        if (ShouldEscalateEnterWarmupGpuDrain(StreamingWarmupAbortDrainMode,
+                                              elapsed_ms) &&
+            world.NeedsEnterGameMeshWarmup())
+        {
+          world.DrainEnterGameMeshWarmup(kCoopEnterMeshBudget * 2);
         }
         const float stream_inner =
             load_settled

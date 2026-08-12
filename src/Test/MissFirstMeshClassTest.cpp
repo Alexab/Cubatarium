@@ -704,6 +704,42 @@ int main()
            "Era45 B5: ring ready ⇒ keep base suppress");
   }
 
+  // --- Era46 enter warmup drain parity / RAA commit coalesce ---
+  {
+    using cutum::EnterWarmupDrainUsesGpuExplicitPath;
+    using cutum::EnterWarmupMeshBudgetDefault;
+    using cutum::EnterWarmupRingBlockerLabel;
+    using cutum::ShouldEscalateEnterWarmupGpuDrain;
+    using cutum::ShouldMarkDirtyAfterRemeshAfterApplyCommit;
+    using cutum::ShouldPreferKickAfterRemeshAfterApplyCommit;
+    Expect(EnterWarmupMeshBudgetDefault() == 8,
+           "Era46: default mesh budget matches Application");
+    Expect(EnterWarmupDrainUsesGpuExplicitPath(true),
+           "Era46: explicit GPU path when mesh warmup needed");
+    Expect(!EnterWarmupDrainUsesGpuExplicitPath(false),
+           "Era46: no explicit GPU path when blockers clear");
+    Expect(ShouldPreferKickAfterRemeshAfterApplyCommit(true),
+           "Era46: PreferKick when gpu pending after RAA erase");
+    Expect(!ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, true),
+           "Era46: no MarkDirty when gpu pending after RAA erase");
+    Expect(ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false),
+           "Era46: MarkDirty when clear after RAA erase");
+    Expect(!ShouldMarkDirtyAfterRemeshAfterApplyCommit(true, false),
+           "Era46: skip MarkDirty if already dirty");
+    Expect(!ShouldEscalateEnterWarmupGpuDrain(false, 200000.0),
+           "Era46: no escalate without abort_drain");
+    Expect(!ShouldEscalateEnterWarmupGpuDrain(true, 100000.0),
+           "Era46: no escalate before 3 min");
+    Expect(ShouldEscalateEnterWarmupGpuDrain(true, 180000.0),
+           "Era46: escalate after abort_drain ≥3 min");
+    Expect(std::string(EnterWarmupRingBlockerLabel(true, 5, true, false)) ==
+               "dirty",
+           "Era46: ring_blocker prefers dirty");
+    Expect(std::string(EnterWarmupRingBlockerLabel(false, 5, true, false)) ==
+               "gpu",
+           "Era46: ring_blocker gpu when no dirty");
+  }
+
   // --- Era34 CreateBar debt / soft wall ---
   {
     using cutum::CreateBarDebtFraction;

@@ -400,6 +400,8 @@ public:
   void TickEnterStreamingWarmup(int iteration_budget);
   /// Era43: mesh emerge drain while ingress frozen (no UpdateStreaming).
   void TickEnterGateMeshDrain(int iteration_budget);
+  /// Era46: shared enter drain frame (explicit GPU + gate emerge iterations).
+  void TickEnterWarmupDrainFrame(int mesh_budget, int gate_iterations);
   void WarmupVisibleListAtCamera();
   /// Build pending terrain meshes before GPU upload (returns true when ready).
   bool DrainEnterGameMeshWarmup(int budget);

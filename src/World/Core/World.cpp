@@ -5833,6 +5833,21 @@ void UWorld::TickEnterGateMeshDrain(int iteration_budget)
   }
 }
 
+void UWorld::TickEnterWarmupDrainFrame(int mesh_budget, int gate_iterations)
+{
+  // Era46: same path for coop PrepareView and Application gpu_warmup —
+  // DrainEnterGameMeshWarmup owns explicit DrainPendingGpuMeshes; gate drain
+  // runs TickMeshEmerge (ConsumeGpuApplyBacklog) for iterations.
+  if (NeedsEnterGameMeshWarmup())
+  {
+    DrainEnterGameMeshWarmup(std::max(1, mesh_budget));
+  }
+  if (IsEnterLitGateActive())
+  {
+    TickEnterGateMeshDrain(std::max(1, gate_iterations));
+  }
+}
+
 void UWorld::TickEnterStreamingWarmup(int iteration_budget)
 {
   if (EnterLitGateActive)

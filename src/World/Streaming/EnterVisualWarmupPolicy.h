@@ -330,6 +330,39 @@ inline bool ShouldContinueEnterMeshWarmupDrain(bool spawn_meshes_pending,
   return spawn_meshes_pending || async_mesh_pending || gpu_pending_near > 0;
 }
 
+/// Era46: default mesh budget for enter warmup drain (matches Application).
+constexpr int EnterWarmupMeshBudgetDefault()
+{
+  return 8;
+}
+
+/// Era46: coop/gpu_warmup shared drain must call explicit GPU path when blockers.
+inline bool EnterWarmupDrainUsesGpuExplicitPath(bool needs_mesh_warmup)
+{
+  return needs_mesh_warmup;
+}
+
+/// Era46 B: after RAA erase on commit — PreferKick if GPU still pending.
+inline bool ShouldPreferKickAfterRemeshAfterApplyCommit(bool gpu_pending)
+{
+  return gpu_pending;
+}
+
+/// Era46 B: MarkDirty after RAA commit only when not already dirty and not GPU.
+inline bool ShouldMarkDirtyAfterRemeshAfterApplyCommit(bool already_dirty,
+                                                      bool gpu_pending)
+{
+  return !already_dirty && !gpu_pending;
+}
+
+/// Era46 C: escalate GPU drain after abort_drain wall (ms).
+inline bool ShouldEscalateEnterWarmupGpuDrain(bool abort_drain, double elapsed_ms,
+                                              int escalate_ms = 180000)
+{
+  return abort_drain && escalate_ms > 0 &&
+         elapsed_ms >= static_cast<double>(escalate_ms);
+}
+
 /// Era43f/Era44: safety valve when mesh blockers persist after lighting done.
 /// Era44: triggers abort-drain mode only — does not permit InGame with holes.
 inline bool ShouldForceEnterMeshAbort(int fov_debt, bool ring_ready,
@@ -594,6 +627,31 @@ inline bool ShouldScheduleRemeshAfterLitApply(bool is_dirty, bool raa_pending,
   return ClassifyRemeshAfterLitApply(is_dirty, raa_pending, gpu_pending,
                                      inflight) ==
          RemeshAfterLitApplyDecision::Schedule;
+}
+
+/// Era46 C: ring blocker label for heartbeat (mesh gate honesty).
+inline const char *EnterWarmupRingBlockerLabel(bool mesh_dirty,
+                                               int gpu_pending_near,
+                                               bool async_pending,
+                                               bool missing_greedy)
+{
+  if (mesh_dirty)
+  {
+    return "dirty";
+  }
+  if (gpu_pending_near > 0)
+  {
+    return "gpu";
+  }
+  if (async_pending)
+  {
+    return "async";
+  }
+  if (missing_greedy)
+  {
+    return "missing";
+  }
+  return "none";
 }
 
 } // namespace cutum

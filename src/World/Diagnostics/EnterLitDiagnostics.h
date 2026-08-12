@@ -37,6 +37,10 @@ struct EnterLitSample
   int stuck_dirty_cz{0};
   bool suppress_relight_seam{false};
   uint64_t mark_relit_raa_total{0};
+  /// Era46: ring blocker label (dirty|gpu|async|missing|none).
+  const char *ring_blocker{"none"};
+  uint64_t raa_commit_mark_dirty_n{0};
+  uint64_t markdirty_to_raa_n{0};
 };
 
 /// Era44: per-frame step timings (deltas) inside gpu_warmup.

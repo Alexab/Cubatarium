@@ -9,6 +9,7 @@
 #include "Render/Mesh/CrossMeshEmitter.h"
 #include "Render/Mesh/MeshApplyPolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
+#include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/MeshLitGate.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
@@ -1474,11 +1475,17 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
   if (ActiveMeshSourceRevision.find(chunkCoord) !=
       ActiveMeshSourceRevision.end())
   {
+    if (IsPendingGpuApply(chunkCoord))
+    {
+      PreferKickPendingGpuQueued(chunkCoord);
+      return;
+    }
     if (RemeshAfterApply.count(chunkCoord) > 0 || Dirty.Contains(chunkCoord))
     {
       return;
     }
     RemeshAfterApply.insert(chunkCoord);
+    ++MarkDirtyToRaaN;
     return;
   }
   const size_t before = Dirty.GetCount();
@@ -1521,12 +1528,18 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
           ShouldHoldInflightSupersedeUnderMissUndrawn(
               soft_undrawn, /*has_inflight=*/true, /*has_drawable=*/false))
       {
+        if (pending_gpu_apply)
+        {
+          PreferKickPendingGpuQueued(chunkCoord);
+          return;
+        }
         if (RemeshAfterApply.count(chunkCoord) > 0 ||
             Dirty.Contains(chunkCoord))
         {
           return;
         }
         RemeshAfterApply.insert(chunkCoord);
+        ++MarkDirtyToRaaN;
         return;
       }
       InvalidateInFlightMeshBuild(chunkCoord);
@@ -1537,11 +1550,17 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
     }
     else
     {
+      if (IsPendingGpuApply(chunkCoord))
+      {
+        PreferKickPendingGpuQueued(chunkCoord);
+        return;
+      }
       if (RemeshAfterApply.count(chunkCoord) > 0 || Dirty.Contains(chunkCoord))
       {
         return;
       }
       RemeshAfterApply.insert(chunkCoord);
+      ++MarkDirtyToRaaN;
       return;
     }
   }
@@ -2140,9 +2159,16 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   }
   if (RemeshAfterApply.erase(coord) > 0)
   {
-    if (!Dirty.Contains(coord))
+    const bool gpu_pending = IsPendingGpuApply(coord);
+    if (ShouldPreferKickAfterRemeshAfterApplyCommit(gpu_pending))
+    {
+      PreferKickPendingGpuQueued(coord);
+    }
+    else if (ShouldMarkDirtyAfterRemeshAfterApplyCommit(Dirty.Contains(coord),
+                                                        gpu_pending))
     {
       MarkDirtyPriority(coord);
+      ++RaaCommitMarkDirtyN;
     }
   }
   (void)source_revision;
@@ -2855,9 +2881,16 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     }
     if (RemeshAfterApply.erase(result.coord) > 0)
     {
-      if (!Dirty.Contains(result.coord))
+      const bool gpu_pending = IsPendingGpuApply(result.coord);
+      if (ShouldPreferKickAfterRemeshAfterApplyCommit(gpu_pending))
+      {
+        PreferKickPendingGpuQueued(result.coord);
+      }
+      else if (ShouldMarkDirtyAfterRemeshAfterApplyCommit(
+                   Dirty.Contains(result.coord), gpu_pending))
       {
         MarkDirtyPriority(result.coord);
+        ++RaaCommitMarkDirtyN;
       }
     }
     return;
@@ -2901,9 +2934,16 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   // fresh Capture (avoids MarkDirty mid-flight Dirty plateau).
   if (RemeshAfterApply.erase(result.coord) > 0)
   {
-    if (!Dirty.Contains(result.coord))
+    const bool gpu_pending = IsPendingGpuApply(result.coord);
+    if (ShouldPreferKickAfterRemeshAfterApplyCommit(gpu_pending))
+    {
+      PreferKickPendingGpuQueued(result.coord);
+    }
+    else if (ShouldMarkDirtyAfterRemeshAfterApplyCommit(
+                 Dirty.Contains(result.coord), gpu_pending))
     {
       MarkDirtyPriority(result.coord);
+      ++RaaCommitMarkDirtyN;
     }
   }
 }

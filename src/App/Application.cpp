@@ -1932,7 +1932,7 @@ void UApplication::Update(double dt)
         // Era20: smaller per-frame mesh budget; GPU upload only on last ready
         // frame so EnterGameAfterWorldChange ≠ mega WarmupGreedy spike.
         // Era29: slightly higher streaming budget — SoftDefer/PendingLight on bar.
-        constexpr int kGpuWarmupMeshBudget = 8;
+        constexpr int kGpuWarmupMeshBudget = EnterWarmupMeshBudgetDefault();
         const int gate_iterations =
             std::max(1, URuntimeTuning::Get().EnterGateMeshDrainIterations);
         const int remaining = WorldOpRunner->EnterGameGpuWarmupFramesRemaining();
@@ -1953,29 +1953,33 @@ void UApplication::Update(double dt)
               World->BeginEnterLitGate();
             }
           }
-          if (World->NeedsEnterGameMeshWarmup())
+          if (World->IsEnterLitGateActive())
           {
-            const auto t0 = std::chrono::high_resolution_clock::now();
-            World->DrainEnterGameMeshWarmup(kGpuWarmupMeshBudget);
-            step_sample.drain_mesh_ms =
-                std::chrono::duration<double, std::milli>(
-                    std::chrono::high_resolution_clock::now() - t0)
-                    .count();
+            // Era46: shared drain path with coop PrepareView.
+            const bool need_mesh = World->NeedsEnterGameMeshWarmup();
+            if (EnterWarmupDrainUsesGpuExplicitPath(need_mesh))
+            {
+              const auto t0 = std::chrono::high_resolution_clock::now();
+              World->DrainEnterGameMeshWarmup(kGpuWarmupMeshBudget);
+              step_sample.drain_mesh_ms =
+                  std::chrono::duration<double, std::milli>(
+                      std::chrono::high_resolution_clock::now() - t0)
+                      .count();
+            }
+            {
+              const auto t0 = std::chrono::high_resolution_clock::now();
+              World->TickEnterGateMeshDrain(gate_iterations);
+              step_sample.gate_drain_ms =
+                  std::chrono::duration<double, std::milli>(
+                      std::chrono::high_resolution_clock::now() - t0)
+                      .count();
+            }
             if (step_sample.drain_mesh_ms > 100.0)
             {
               CubatariumLogInfo("EnterWarmup",
                                 "DrainEnterGameMeshWarmup ms=" +
                                     std::to_string(step_sample.drain_mesh_ms));
             }
-          }
-          if (World->IsEnterLitGateActive())
-          {
-            const auto t0 = std::chrono::high_resolution_clock::now();
-            World->TickEnterGateMeshDrain(gate_iterations);
-            step_sample.gate_drain_ms =
-                std::chrono::duration<double, std::milli>(
-                    std::chrono::high_resolution_clock::now() - t0)
-                    .count();
             if (step_sample.gate_drain_ms > 100.0)
             {
               CubatariumLogInfo("EnterWarmup",
@@ -1986,6 +1990,10 @@ void UApplication::Update(double dt)
           else if (ShouldRunEnterStreamingWarmupDespiteSpawnPrepared(
                        World->IsSpawnAreaPreparedByCooperativeLoad()))
           {
+            if (World->NeedsEnterGameMeshWarmup())
+            {
+              World->DrainEnterGameMeshWarmup(kGpuWarmupMeshBudget);
+            }
             World->TickEnterStreamingWarmup(gate_iterations);
           }
           {

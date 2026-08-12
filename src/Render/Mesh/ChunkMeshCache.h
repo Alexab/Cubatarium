@@ -123,6 +123,9 @@ public:
   {
     return MeshReplaceHoleAvoided;
   }
+  /// Era46: RAA commit → MarkDirty vs PreferKick telemetry.
+  uint64_t GetRaaCommitMarkDirtyCount() const { return RaaCommitMarkDirtyN; }
+  uint64_t GetMarkDirtyToRaaCount() const { return MarkDirtyToRaaN; }
   uint64_t GetSoftDeferEmptyPublishAvoidedCount() const
   {
     return SoftDeferEmptyPublishAvoided;
@@ -558,6 +561,10 @@ private:
   uint64_t MeshApplyStaleCount{0};
   uint64_t MeshApplySupersededCount{0};
   uint64_t MeshReplaceHoleAvoided{0};
+  /// Era46: RemeshAfterApply erase → MarkDirtyPriority (not PreferKick).
+  uint64_t RaaCommitMarkDirtyN{0};
+  /// Era46: MarkDirty*/Active → RemeshAfterApply insert.
+  uint64_t MarkDirtyToRaaN{0};
   /// Era24 I-E1: SoftDefer undrawn publish avoided (Hide⇒Ticket).
   uint64_t SoftDeferEmptyPublishAvoided{0};
   /// Era39: frames since SoftDeferEmptyPublishAvoided (Dirty damp).
