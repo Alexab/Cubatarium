@@ -14,6 +14,18 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths);
 /// Hidden-window GUI smoke: Enter Game with default_world, exit after N in-game frames.
 int RunEnterGameSmoke(IUPlatformPaths &paths, int in_game_frames = 5);
 
+struct AutoloadLastWorldOptions
+{
+  std::string WorldName;
+  bool VisibleWindow{false};
+  double TimeoutSec{600.0};
+  int InGameFrames{5};
+};
+
+/// Era43f: visible/hidden GUI autoload of config default_world (or --world).
+int RunAutoloadLastWorld(IUPlatformPaths &paths,
+                         const AutoloadLastWorldOptions &options);
+
 /// Agent flight simulation: load world, fly forward, quit, write JSON report.
 /// Manual World_164 ocean pass (perf_20260720-024756): idle ~50s at focus
 /// (-35,6), then fly west (−X) ~11 chunks with holes/wall spikes. Autopilot

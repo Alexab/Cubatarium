@@ -391,6 +391,10 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   {
     t.EnterLitAbortMs = j.value("enter_lit_abort_ms", t.EnterLitAbortMs);
   }
+  if (j.contains("enter_mesh_abort_ms"))
+  {
+    t.EnterMeshAbortMs = j.value("enter_mesh_abort_ms", t.EnterMeshAbortMs);
+  }
   last_path = path;
   last_mtime = mtime;
   have_mtime = true;

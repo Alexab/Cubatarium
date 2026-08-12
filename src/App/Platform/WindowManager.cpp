@@ -321,7 +321,9 @@ void UWindowManager::Run()
   ApplyPresentSettings();
   UFramePerfMonitor::EnsureSession();
 
-  while (!glfwWindowShouldClose(Window) && IsRunning)
+  while ((!glfwWindowShouldClose(Window) &&
+          !(Application && Application->IsQuitRequested())) &&
+         IsRunning)
   {
     const auto frame_begin = std::chrono::high_resolution_clock::now();
     DeltaTime =

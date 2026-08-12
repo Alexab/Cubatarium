@@ -127,6 +127,8 @@ struct URuntimeTuning
   bool EnterLitUseSnapshotDebt{true};
   /// Era43: force enter after ms if ingress frozen (0 = disabled).
   int EnterLitAbortMs{600000};
+  /// Era43f: force enter when mesh warmup stuck with fov_debt==0 (0 = disabled).
+  int EnterMeshAbortMs{120000};
 
   static URuntimeTuning &Get();
   static void ResetToDefaults();

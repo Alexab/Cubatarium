@@ -617,6 +617,24 @@ int main()
     Expect(debt == 2, "Era43: snapshot debt counts unresolved cols");
   }
 
+  // --- Era43f Enter mesh warmup drain / abort ---
+  {
+    using cutum::ShouldContinueEnterMeshWarmupDrain;
+    using cutum::ShouldForceEnterMeshAbort;
+    Expect(!ShouldContinueEnterMeshWarmupDrain(false, false, 0),
+           "Era43f: no drain work when all clear");
+    Expect(ShouldContinueEnterMeshWarmupDrain(false, false, 3),
+           "Era43f: drain when gpu_pending remains");
+    Expect(ShouldContinueEnterMeshWarmupDrain(true, false, 0),
+           "Era43f: drain when spawn meshes pending");
+    Expect(ShouldForceEnterMeshAbort(0, false, 120000.0, 120000),
+           "Era43f: mesh abort when lit done and mesh stuck");
+    Expect(!ShouldForceEnterMeshAbort(5, false, 120000.0, 120000),
+           "Era43f: no mesh abort while lit debt remains");
+    Expect(!ShouldForceEnterMeshAbort(0, true, 120000.0, 120000),
+           "Era43f: no mesh abort when mesh ready");
+  }
+
   // --- Era34 CreateBar debt / soft wall ---
   {
     using cutum::CreateBarDebtFraction;

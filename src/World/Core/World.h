@@ -404,6 +404,15 @@ public:
   /// Build pending terrain meshes before GPU upload (returns true when ready).
   bool DrainEnterGameMeshWarmup(int budget);
   bool NeedsEnterGameMeshWarmup() const;
+  struct EnterGameMeshWarmupBlockers
+  {
+    bool dirty{false};
+    bool missing_greedy{false};
+    int gpu_pending_near{0};
+    bool async_mesh_pending{false};
+    bool visual_warmup{false};
+  };
+  void SampleEnterGameMeshWarmupBlockers(EnterGameMeshWarmupBlockers &out) const;
   /// Era29: underfeet LitDrawable / SoftDefer empty / PendingLight still owed.
   bool NeedsEnterGameVisualWarmup() const;
   /// Era42: PendingLight (global) + FullyDark in RD+1 around spawn focus.
@@ -432,6 +441,7 @@ public:
   void BeginEnterLitGate();
   void EndEnterLitGate();
   bool IsEnterLitGateActive() const { return EnterLitGateActive; }
+  bool IsEnterLitSnapshotCaptured() const { return EnterLitSnapshotCaptured; }
   int GetEnterLitSnapshotSize() const
   {
     return static_cast<int>(EnterLitDebtSnapshot.size());

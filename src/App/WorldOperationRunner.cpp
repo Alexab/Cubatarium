@@ -255,6 +255,24 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
     World.EndEnterLitGate();
     UEnterLitDiagnostics::EndSession();
   }
+  if (!EnterGameForceMeshAbort &&
+      ShouldForceEnterMeshAbort(fov_debt, mesh_ready, EnterGameGpuWarmupElapsedMs,
+                                tune.EnterMeshAbortMs))
+  {
+    EnterGameForceMeshAbort = true;
+    UWorld::EnterGameMeshWarmupBlockers blockers{};
+    World.SampleEnterGameMeshWarmupBlockers(blockers);
+    std::cerr << "[Era43f] enter mesh abort after "
+              << EnterGameGpuWarmupElapsedMs << "ms dirty=" << blockers.dirty
+              << " missing=" << blockers.missing_greedy
+              << " gpu_pending=" << blockers.gpu_pending_near
+              << " async=" << blockers.async_mesh_pending << "\n";
+    if (World.IsEnterLitGateActive())
+    {
+      World.EndEnterLitGate();
+      UEnterLitDiagnostics::EndSession();
+    }
+  }
   const float lit_prog =
       EnterFovLitProgressFraction(fov_debt, EnterGameFovLitPeakDebt);
   const float frac = 0.94f + 0.05f * lit_prog;
@@ -286,14 +304,16 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   EnterLitSample lit_sample{};
   UEnterLitDiagnostics::Sample(World, EnterGameGpuWarmupElapsedMs, lit_sample);
   UEnterLitDiagnostics::MaybeLog(lit_sample, frame_index);
+  UEnterLitDiagnostics::MaybeLogHeartbeat(lit_sample, 2000.0);
   const bool min_frames_done =
       frame_index >= kEnterGameGpuWarmupMinFrames;
   if (!mesh_ready)
   {
     World.SetEnterGameWarmupMissingGreedy(World.CountPostLoadRingNotReady());
   }
-  // Stay on bar until min frames + FOV/mesh ready, unless hard-wall.
-  if ((!min_frames_done || !soft_ready) && !cap_reached && !EnterGameForceLitAbort)
+  // Stay on bar until min frames + FOV/mesh ready, unless hard-wall/abort.
+  if ((!min_frames_done || !soft_ready) && !cap_reached &&
+      !EnterGameForceLitAbort && !EnterGameForceMeshAbort)
   {
     return false;
   }

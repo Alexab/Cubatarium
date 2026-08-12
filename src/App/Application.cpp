@@ -400,7 +400,7 @@ bool UApplication::TryBeginShutdownFromWindowClose()
   if (State == AppState::Loading)
   {
     RequestQuit();
-    return true;
+    return false;
   }
   BeginShutdownOperation(HasWorldSession(), true);
   return true;
@@ -1950,19 +1950,54 @@ void UApplication::Update(double dt)
           }
           if (World->NeedsEnterGameMeshWarmup())
           {
+            const auto t0 = std::chrono::high_resolution_clock::now();
             World->DrainEnterGameMeshWarmup(kGpuWarmupMeshBudget);
+            const double drain_mesh_ms =
+                std::chrono::duration<double, std::milli>(
+                    std::chrono::high_resolution_clock::now() - t0)
+                    .count();
+            if (drain_mesh_ms > 100.0)
+            {
+              CubatariumLogInfo("EnterWarmup",
+                                "DrainEnterGameMeshWarmup ms=" +
+                                    std::to_string(drain_mesh_ms));
+            }
           }
           if (World->IsEnterLitGateActive())
           {
+            const auto t0 = std::chrono::high_resolution_clock::now();
             World->TickEnterGateMeshDrain(kGpuWarmupStreamingBudget);
+            const double gate_drain_ms =
+                std::chrono::duration<double, std::milli>(
+                    std::chrono::high_resolution_clock::now() - t0)
+                    .count();
+            if (gate_drain_ms > 100.0)
+            {
+              CubatariumLogInfo("EnterWarmup",
+                                "TickEnterGateMeshDrain ms=" +
+                                    std::to_string(gate_drain_ms));
+            }
           }
           else if (ShouldRunEnterStreamingWarmupDespiteSpawnPrepared(
                        World->IsSpawnAreaPreparedByCooperativeLoad()))
           {
             World->TickEnterStreamingWarmup(kGpuWarmupStreamingBudget);
           }
-          World->TickEnterFovLitPass(
-              std::max(1, URuntimeTuning::Get().EnterFovLitCaptureBudget));
+          {
+            const auto t0 = std::chrono::high_resolution_clock::now();
+            World->TickEnterFovLitPass(
+                std::max(1, URuntimeTuning::Get().EnterFovLitCaptureBudget));
+            const double lit_pass_ms =
+                std::chrono::duration<double, std::milli>(
+                    std::chrono::high_resolution_clock::now() - t0)
+                    .count();
+            if (lit_pass_ms > 100.0)
+            {
+              CubatariumLogInfo("EnterWarmup",
+                                "TickEnterFovLitPass ms=" +
+                                    std::to_string(lit_pass_ms));
+            }
+          }
           const bool upload_ready =
               frame >= kGpuWarmupMinFrames - 1 &&
               !World->NeedsEnterGameMeshWarmup();

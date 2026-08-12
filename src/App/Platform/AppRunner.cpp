@@ -165,6 +165,12 @@ int RunEnterGameSmoke(IUPlatformPaths &, int)
   return 1;
 }
 
+int RunAutoloadLastWorld(IUPlatformPaths &, const AutoloadLastWorldOptions &)
+{
+  CubatariumLogError("App", "autoload-last-world is desktop-only");
+  return 1;
+}
+
 int RunFlightSim(IUPlatformPaths &, const FlightSimOptions &)
 {
   CubatariumLogError("App", "flight-sim is desktop-only");
@@ -321,6 +327,194 @@ int RunEnterGameSmoke(IUPlatformPaths &paths, int in_game_frames)
   catch (const std::exception &e)
   {
     std::cerr << "enter-game-smoke: exception: " << e.what() << std::endl;
+    return 1;
+  }
+}
+
+int RunAutoloadLastWorld(IUPlatformPaths &paths,
+                         const AutoloadLastWorldOptions &options)
+{
+  AutoloadLastWorldOptions opt = options;
+  if (opt.InGameFrames < 1)
+  {
+    opt.InGameFrames = 5;
+  }
+  if (opt.TimeoutSec <= 0.0)
+  {
+    opt.TimeoutSec = 600.0;
+  }
+
+  UDesktopPlatformWindow window;
+  const bool window_ok =
+      opt.VisibleWindow
+          ? window.Initialize(1280, 720, "Cubatarium autoload")
+          : window.InitializeHidden(1280, 720, "Cubatarium autoload");
+  if (!window_ok)
+  {
+    std::cerr << "autoload-last-world: failed to initialize window" << std::endl;
+    return 1;
+  }
+
+  std::string exit_reason = "unknown";
+  try
+  {
+    IUPlatformPaths::SetGlobal(
+        std::shared_ptr<IUPlatformPaths>(&paths, [](IUPlatformPaths *) {}));
+
+    auto texture_base_instance = std::make_shared<UTextureBaseStorage>();
+    auto texture_cube_instance =
+        std::make_shared<UTextureCubeStorage>(texture_base_instance);
+    auto block_definitions = std::make_shared<UBlockDefinitionStorage>();
+    auto object_library = std::make_shared<UObjectLibrary>();
+    auto item_definitions = std::make_shared<UItemDefinitionStorage>();
+    auto view_engine = std::make_shared<UViewEngine>();
+    auto world = std::make_shared<UWorld>(texture_cube_instance, view_engine);
+    auto text_renderer = std::make_shared<UTextRenderer>();
+    if (!text_renderer->Initialize(16))
+    {
+      std::cerr << "autoload-last-world: text renderer init failed" << std::endl;
+      return 1;
+    }
+    text_renderer->SetWindowSize(1280, 720);
+
+    auto geometry_engine = std::make_shared<UGeometryEngine>(
+        world, texture_base_instance, texture_cube_instance, text_renderer);
+    if (!geometry_engine->InitEngine())
+    {
+      std::cerr << "autoload-last-world: geometry engine init failed" << std::endl;
+      return 1;
+    }
+
+    auto core = std::make_shared<UCore>(
+        texture_base_instance, texture_cube_instance, object_library,
+        item_definitions, world, geometry_engine, view_engine);
+    geometry_engine->SetGameContent(core.get());
+    texture_cube_instance->SetBlockDefinitions(block_definitions);
+    world->SetBlockDefinitionStorage(block_definitions);
+
+    window.SetInstances(core, world, geometry_engine, view_engine);
+    window.SetTextRenderer(text_renderer);
+
+    auto application = std::make_shared<UApplication>(
+        core, world, geometry_engine, view_engine, text_renderer,
+        geometry_engine->GetShaderManager(), block_definitions);
+    window.SetApplication(application);
+
+    application->Startup(paths.ResolveWritable("config.json").string());
+    if (!application->StartupSucceeded())
+    {
+      std::cerr << "autoload-last-world: startup failed" << std::endl;
+      return 1;
+    }
+
+    if (!opt.WorldName.empty())
+    {
+      AppSettingsSnapshot settings = core->GetAppSettings();
+      settings.DefaultWorld = opt.WorldName;
+      core->ApplyAppSettings(settings);
+    }
+
+    UFramePerfMonitor::EnsureSession();
+    application->ScheduleEnterGame();
+
+    const auto started = std::chrono::steady_clock::now();
+    int ingame_frames_seen = 0;
+    bool loading_seen = false;
+    window.SetStopPredicate(
+        [&]()
+        {
+          const double elapsed_sec =
+              std::chrono::duration<double>(std::chrono::steady_clock::now() -
+                                            started)
+                  .count();
+          if (elapsed_sec >= opt.TimeoutSec)
+          {
+            exit_reason = "timeout";
+            return true;
+          }
+          if (application->GetState() == AppState::Loading)
+          {
+            loading_seen = true;
+          }
+          if (application->GetState() == AppState::InGame)
+          {
+            ++ingame_frames_seen;
+            if (ingame_frames_seen >= opt.InGameFrames)
+            {
+              exit_reason = "ingame_ok";
+              return true;
+            }
+          }
+          return false;
+        });
+
+    window.Run();
+
+    world->PrepareForShutdown();
+    LogWorldLoadDiag("autoload_last_world_end", *world);
+
+    UWorld::EnterGameMeshWarmupBlockers blockers{};
+    world->SampleEnterGameMeshWarmupBlockers(blockers);
+
+    int exit_code = 0;
+    if (!loading_seen)
+    {
+      exit_reason = "no_loading_screen";
+      exit_code = 1;
+    }
+    else if (ingame_frames_seen < opt.InGameFrames)
+    {
+      if (exit_reason == "unknown")
+      {
+        exit_reason = "stuck_loading";
+      }
+      exit_code = 1;
+    }
+
+    const std::filesystem::path report_path =
+        GetExecutableDirectory() / "logs" / "autoload_report.txt";
+    std::error_code ec;
+    std::filesystem::create_directories(report_path.parent_path(), ec);
+    std::ofstream report(report_path);
+    if (report)
+    {
+      const double elapsed_sec =
+          std::chrono::duration<double>(std::chrono::steady_clock::now() -
+                                        started)
+              .count();
+      report << "exit_code=" << exit_code << '\n'
+             << "exit_reason=" << exit_reason << '\n'
+             << "elapsed_sec=" << elapsed_sec << '\n'
+             << "loading_seen=" << (loading_seen ? 1 : 0) << '\n'
+             << "ingame_frames=" << ingame_frames_seen << '\n'
+             << "default_world=" << core->GetAppSettings().DefaultWorld << '\n'
+             << "mesh_dirty=" << (blockers.dirty ? 1 : 0) << '\n'
+             << "mesh_missing_greedy=" << (blockers.missing_greedy ? 1 : 0)
+             << '\n'
+             << "mesh_gpu_pending_near=" << blockers.gpu_pending_near << '\n'
+             << "mesh_async_pending=" << (blockers.async_mesh_pending ? 1 : 0)
+             << '\n'
+             << "mesh_visual_warmup=" << (blockers.visual_warmup ? 1 : 0)
+             << '\n';
+    }
+
+    if (exit_code == 0)
+    {
+      std::cout << "autoload-last-world: PASS ingame_frames="
+                << ingame_frames_seen << std::endl;
+    }
+    else
+    {
+      std::cerr << "autoload-last-world: FAIL reason=" << exit_reason
+                << " ingame_frames=" << ingame_frames_seen << std::endl;
+    }
+
+    UFramePerfMonitor::Shutdown();
+    return exit_code;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "autoload-last-world: exception: " << e.what() << std::endl;
     return 1;
   }
 }

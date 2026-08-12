@@ -320,6 +320,22 @@ inline bool ShouldBlockNotePendingOutsideSnapshot(bool gate_active,
   return gate_active && !in_snapshot;
 }
 
+/// Era43f: DrainEnterGameMeshWarmup must continue while GPU uploads remain.
+inline bool ShouldContinueEnterMeshWarmupDrain(bool spawn_meshes_pending,
+                                               bool async_mesh_pending,
+                                               int gpu_pending_near)
+{
+  return spawn_meshes_pending || async_mesh_pending || gpu_pending_near > 0;
+}
+
+/// Era43f: abort gpu_warmup when mesh blockers persist after lighting done.
+inline bool ShouldForceEnterMeshAbort(int fov_debt, bool mesh_ready,
+                                      double elapsed_ms, int abort_ms)
+{
+  return fov_debt <= 0 && !mesh_ready && abort_ms > 0 &&
+         elapsed_ms >= static_cast<double>(abort_ms);
+}
+
 /// Era35 P1: SoftDefer empty scan cy-window for near-FOV columns (horiz<=2)
 /// covers full column (0..max_cy) so air chunks with trees/leaves above
 /// preferred_cy+2 are not permanently stuck as SoftDefer empty.

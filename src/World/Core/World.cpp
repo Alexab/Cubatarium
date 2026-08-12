@@ -1877,10 +1877,18 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
   }
   const glm::ivec2 key(ground.x, ground.z);
   if (EnterLitGateActive && EnterLitSnapshotCaptured &&
-      URuntimeTuning::Get().EnterLitUseSnapshotDebt &&
-      EnterLitDebtSnapshot.count(key) == 0)
+      URuntimeTuning::Get().EnterLitUseSnapshotDebt)
   {
-    return;
+    if (EnterLitDebtSnapshot.count(key) == 0)
+    {
+      return;
+    }
+    // Column already resolved (relit) — do not re-add to PendingLight and
+    // restart the relight cycle; mesh emerge should proceed without re-gate.
+    if (IsColumnLitReady(ground))
+    {
+      return;
+    }
   }
   SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
   auto [it, inserted] = PendingLightBeforeMesh.try_emplace(key);
@@ -4960,7 +4968,12 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
   const bool spawn_meshes_pending =
       mesh.HasDirtyWithinHorizontalRadius(center, radius) ||
       HasMissingGreedyMeshesNearFocus(*this);
-  if (!spawn_meshes_pending && !mesh.HasPendingAsyncMeshWork())
+  const bool async_mesh_pending = mesh.HasPendingAsyncMeshWork();
+  const int gpu_pending_near =
+      mesh.CountPendingGpuAppliesInHorizontalRadius(center, radius);
+  // Era43e/43f: must not return early while GPU uploads remain.
+  if (!ShouldContinueEnterMeshWarmupDrain(spawn_meshes_pending, async_mesh_pending,
+                                          gpu_pending_near))
   {
     return true;
   }
@@ -4968,9 +4981,11 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
   {
     return mesh.GetGreedyCacheSize() > 0;
   }
+  const UChunkEmergeCoordinator::FrameBudget mesh_budget =
+      UChunkEmergeCoordinator::CooperativeWarmupBudget(std::max(budget, 16));
   // Never MarkAllDirtyFromWorld here: ForEachChunk races with streamer workers
   // and re-dirties the entire load radius every frame (hang / crash).
-  if (HasMissingGreedyMeshesNearFocus(*this))
+  if (spawn_meshes_pending && HasMissingGreedyMeshesNearFocus(*this))
   {
     for (int dx = -radius; dx <= radius; ++dx)
     {
@@ -4988,13 +5003,14 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
       }
     }
   }
-  const UChunkEmergeCoordinator::FrameBudget mesh_budget =
-      UChunkEmergeCoordinator::CooperativeWarmupBudget(std::max(budget, 16));
-  mesh.RebuildDirtyChunks(BlockWorld, *BlockRegistry, mesh_budget.MaxMeshDrain,
-                          mesh_budget.MaxMeshSchedule);
-  mesh.DrainAsyncMeshResults(BlockWorld, *BlockRegistry,
-                             mesh_budget.MaxMeshDrain);
-  if (BlockRegistry && mesh.GetPendingGpuAppliesCount() > 0)
+  if (spawn_meshes_pending || async_mesh_pending)
+  {
+    mesh.RebuildDirtyChunks(BlockWorld, *BlockRegistry, mesh_budget.MaxMeshDrain,
+                            mesh_budget.MaxMeshSchedule);
+    mesh.DrainAsyncMeshResults(BlockWorld, *BlockRegistry,
+                               mesh_budget.MaxMeshDrain);
+  }
+  if (gpu_pending_near > 0 || mesh.GetPendingGpuAppliesCount() > 0)
   {
     mesh.DrainPendingGpuMeshes(BlockWorld, *BlockRegistry,
                                mesh_budget.MaxMeshDrain,
@@ -5058,6 +5074,31 @@ void UWorld::SetEnterGameWarmupMissingGreedy(int n)
   PhysicsTelemetryData.EnterGameWarmupMissingGreedy = EnterGameWarmupMissingGreedy;
 }
 
+void UWorld::SampleEnterGameMeshWarmupBlockers(EnterGameMeshWarmupBlockers &out) const
+{
+  out = {};
+  if (!MeshService || (!BlockWorldReady && CachedBlockCount == 0 &&
+                       MeshService->GetGreedyCacheSize() == 0))
+  {
+    return;
+  }
+  const UWorldMeshService &mesh = *MeshService;
+  const glm::ivec3 center =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const int radius = EnterGameMeshRadiusChunks(*this);
+  out.dirty = mesh.HasDirtyWithinHorizontalRadius(center, radius);
+  out.missing_greedy = HasMissingGreedyMeshesNearFocus(*this);
+  out.gpu_pending_near =
+      mesh.CountPendingGpuAppliesInHorizontalRadius(center, radius);
+  out.async_mesh_pending = mesh.HasPendingAsyncMeshWork();
+  if (EnterLitGateActive && EnterLitSnapshotCaptured)
+  {
+    out.visual_warmup = false;
+    return;
+  }
+  out.visual_warmup = NeedsEnterGameVisualWarmup();
+}
+
 bool UWorld::NeedsEnterGameMeshWarmup() const
 {
   if (!BlockWorldReady && CachedBlockCount == 0 &&
@@ -5065,25 +5106,17 @@ bool UWorld::NeedsEnterGameMeshWarmup() const
   {
     return false;
   }
-  const UWorldMeshService &mesh = *MeshService;
-  const glm::ivec3 center =
-      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
-  const int radius = EnterGameMeshRadiusChunks(*this);
-  // Era20: do not wait global async / full RD+1 — only enter underfeet ring.
-  if (mesh.HasDirtyWithinHorizontalRadius(center, radius))
+  EnterGameMeshWarmupBlockers blockers{};
+  SampleEnterGameMeshWarmupBlockers(blockers);
+  if (blockers.dirty || blockers.missing_greedy || blockers.gpu_pending_near > 0)
   {
     return true;
   }
-  if (HasMissingGreedyMeshesNearFocus(*this))
+  if (EnterLitGateActive && EnterLitSnapshotCaptured)
   {
-    return true;
+    return false;
   }
-  if (mesh.CountPendingGpuAppliesInHorizontalRadius(center, radius) > 0)
-  {
-    return true;
-  }
-  // Era29 I-E1/I-E3/I-E4: underfeet visual stage (lit / SoftDefer / PendingLight).
-  return NeedsEnterGameVisualWarmup();
+  return blockers.visual_warmup;
 }
 
 bool UWorld::NeedsEnterGameVisualWarmup() const
