@@ -617,9 +617,13 @@ int main()
     Expect(debt == 2, "Era43: snapshot debt counts unresolved cols");
   }
 
-  // --- Era43f Enter mesh warmup drain / abort ---
+  // --- Era43f/Era44 Enter mesh warmup drain / abort ---
   {
+    using cutum::EnterGpuWarmupMonotonicProgress;
+    using cutum::EnterGpuWarmupProgressFraction;
+    using cutum::IsEnterGpuWarmupReady;
     using cutum::ShouldContinueEnterMeshWarmupDrain;
+    using cutum::ShouldForceEnterInGameAfterAbortDrain;
     using cutum::ShouldForceEnterMeshAbort;
     Expect(!ShouldContinueEnterMeshWarmupDrain(false, false, 0),
            "Era43f: no drain work when all clear");
@@ -628,11 +632,29 @@ int main()
     Expect(ShouldContinueEnterMeshWarmupDrain(true, false, 0),
            "Era43f: drain when spawn meshes pending");
     Expect(ShouldForceEnterMeshAbort(0, false, 120000.0, 120000),
-           "Era43f: mesh abort when lit done and mesh stuck");
+           "Era44: mesh abort when lit done and ring not ready");
     Expect(!ShouldForceEnterMeshAbort(5, false, 120000.0, 120000),
-           "Era43f: no mesh abort while lit debt remains");
+           "Era44: no mesh abort while lit debt remains");
     Expect(!ShouldForceEnterMeshAbort(0, true, 120000.0, 120000),
-           "Era43f: no mesh abort when mesh ready");
+           "Era44: no mesh abort when ring ready");
+    Expect(EnterGpuWarmupProgressFraction(0, 10, 0, 10, 0, 10, 0, 10) == 1.0f,
+           "Era44: zero debt ⇒ progress 1");
+    Expect(EnterGpuWarmupProgressFraction(10, 10, 10, 10, 10, 10, 10, 10) ==
+               0.0f,
+           "Era44: full debt ⇒ progress 0");
+    float display = 0.0f;
+    Expect(EnterGpuWarmupMonotonicProgress(0.2f, display) == 0.2f,
+           "Era44: monotonic progress increases");
+    Expect(EnterGpuWarmupMonotonicProgress(0.1f, display) == 0.2f,
+           "Era44: monotonic progress never regresses");
+    Expect(!IsEnterGpuWarmupReady(false, 0, true, true),
+           "Era44: not ready without ring");
+    Expect(IsEnterGpuWarmupReady(true, 0, true, true),
+           "Era44: ready when ring+mesh+lit+min frames");
+    Expect(!ShouldForceEnterInGameAfterAbortDrain(100000.0, 300000),
+           "Era44: force_ingame not before wall");
+    Expect(ShouldForceEnterInGameAfterAbortDrain(300000.0, 300000),
+           "Era44: force_ingame at wall");
   }
 
   // --- Era34 CreateBar debt / soft wall ---

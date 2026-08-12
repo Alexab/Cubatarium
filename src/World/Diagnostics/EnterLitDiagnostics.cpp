@@ -5,6 +5,7 @@
 #include "World/Persistence/WorldPersistence.h"
 #include "glog/logging.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <filesystem>
@@ -12,6 +13,7 @@
 #include <iomanip>
 #include <mutex>
 #include <sstream>
+#include <vector>
 
 namespace cutum
 {
@@ -24,6 +26,59 @@ std::ofstream g_jsonl;
 bool g_session_open{false};
 std::chrono::steady_clock::time_point g_session_start{};
 double g_last_heartbeat_elapsed_ms{-1.0};
+bool g_profile_logged{false};
+
+struct StepAccumulator
+{
+  int frame_count{0};
+  double drain_mesh_sum{0.0};
+  double gate_drain_sum{0.0};
+  double lit_pass_sum{0.0};
+  double relight_drain_sum{0.0};
+  double mesh_emerge_sum{0.0};
+  double mesh_immediate_sum{0.0};
+  double drain_mesh_max{0.0};
+  double gate_drain_max{0.0};
+  double lit_pass_max{0.0};
+  double relight_drain_max{0.0};
+  double mesh_emerge_max{0.0};
+  std::vector<double> wall_samples;
+
+  void Add(const EnterWarmupStepSample &s)
+  {
+    ++frame_count;
+    drain_mesh_sum += s.drain_mesh_ms;
+    gate_drain_sum += s.gate_drain_ms;
+    lit_pass_sum += s.lit_pass_ms;
+    relight_drain_sum += s.relight_drain_ms;
+    mesh_emerge_sum += s.mesh_emerge_ms;
+    mesh_immediate_sum += s.mesh_immediate_ms;
+    drain_mesh_max = std::max(drain_mesh_max, s.drain_mesh_ms);
+    gate_drain_max = std::max(gate_drain_max, s.gate_drain_ms);
+    lit_pass_max = std::max(lit_pass_max, s.lit_pass_ms);
+    relight_drain_max = std::max(relight_drain_max, s.relight_drain_ms);
+    mesh_emerge_max = std::max(mesh_emerge_max, s.mesh_emerge_ms);
+    const double wall =
+        s.drain_mesh_ms + s.gate_drain_ms + s.lit_pass_ms;
+    wall_samples.push_back(wall);
+  }
+
+  double P95Wall() const
+  {
+    if (wall_samples.empty())
+    {
+      return 0.0;
+    }
+    std::vector<double> sorted = wall_samples;
+    std::sort(sorted.begin(), sorted.end());
+    const size_t idx =
+        std::min(sorted.size() - 1,
+                 static_cast<size_t>(static_cast<double>(sorted.size()) * 0.95));
+    return sorted[idx];
+  }
+};
+
+StepAccumulator g_steps;
 
 std::string MakeSessionPath()
 {
@@ -41,7 +96,7 @@ std::string MakeSessionPath()
   return oss.str();
 }
 
-void WriteJsonlLine(const EnterLitSample &s)
+void WriteJsonlLine(const EnterLitSample &s, const char *kind = nullptr)
 {
   if (!g_jsonl.is_open())
   {
@@ -58,7 +113,18 @@ void WriteJsonlLine(const EnterLitSample &s)
           << ",\"mesh_gpu_pending_near\":" << s.mesh_gpu_pending_near
           << ",\"mesh_async_pending\":" << (s.mesh_async_pending ? 1 : 0)
           << ",\"mesh_visual_warmup\":" << (s.mesh_visual_warmup ? 1 : 0)
-          << "}\n";
+          << ",\"ring_not_ready\":" << s.ring_not_ready
+          << ",\"relight_completed_n\":" << s.relight_completed_n
+          << ",\"stage_skip_remesh_pending_light\":"
+          << s.stage_skip_remesh_pending_light
+          << ",\"relight_fifo_dropped\":" << s.relight_fifo_dropped
+          << ",\"top_dirty_cx\":" << s.top_dirty_cx
+          << ",\"top_dirty_cz\":" << s.top_dirty_cz;
+  if (kind != nullptr)
+  {
+    g_jsonl << ",\"kind\":\"" << kind << "\"";
+  }
+  g_jsonl << "}\n";
   g_jsonl.flush();
 }
 
@@ -76,7 +142,9 @@ void LogSampleGlog(const EnterLitSample &sample, int frame_index)
             << " mesh_missing=" << (sample.mesh_missing_greedy ? 1 : 0)
             << " gpu_pending=" << sample.mesh_gpu_pending_near
             << " mesh_async=" << (sample.mesh_async_pending ? 1 : 0)
-            << " visual_warmup=" << (sample.mesh_visual_warmup ? 1 : 0);
+            << " visual_warmup=" << (sample.mesh_visual_warmup ? 1 : 0)
+            << " ring=" << sample.ring_not_ready
+            << " relight_completed=" << sample.relight_completed_n;
   CubatariumFlushLogs();
 }
 
@@ -88,6 +156,8 @@ void UEnterLitDiagnostics::BeginSession()
   EndSession();
   g_session_start = std::chrono::steady_clock::now();
   g_last_heartbeat_elapsed_ms = -1.0;
+  g_profile_logged = false;
+  g_steps = {};
   std::error_code ec;
   std::filesystem::create_directories("logs", ec);
   g_jsonl.open(MakeSessionPath(), std::ios::out | std::ios::trunc);
@@ -102,6 +172,8 @@ void UEnterLitDiagnostics::EndSession()
   }
   g_session_open = false;
   g_last_heartbeat_elapsed_ms = -1.0;
+  g_profile_logged = false;
+  g_steps = {};
 }
 
 void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
@@ -123,6 +195,13 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
   out.mesh_gpu_pending_near = blockers.gpu_pending_near;
   out.mesh_async_pending = blockers.async_mesh_pending;
   out.mesh_visual_warmup = blockers.visual_warmup;
+  out.ring_not_ready = world.CountPostLoadRingNotReady();
+  const auto &phys = world.GetPhysicsTelemetry();
+  out.relight_completed_n = phys.RelightCompletedN;
+  out.stage_skip_remesh_pending_light = phys.StageSkipRemeshPendingLight;
+  out.relight_fifo_dropped = phys.RelightFifoDropped;
+  out.top_dirty_cx = phys.MissCx;
+  out.top_dirty_cz = phys.MissCz;
 }
 
 void UEnterLitDiagnostics::MaybeLog(const EnterLitSample &sample,
@@ -161,17 +240,81 @@ void UEnterLitDiagnostics::MaybeLogHeartbeat(const EnterLitSample &sample,
   }
   g_last_heartbeat_elapsed_ms = sample.elapsed_ms;
   LOG(INFO) << "[EnterWarmup] heartbeat elapsed_ms=" << sample.elapsed_ms
+            << " fifo=" << sample.fifo_n << " inflight=" << sample.inflight
             << " debt=" << sample.snapshot_debt
             << " mesh_dirty=" << (sample.mesh_dirty ? 1 : 0)
             << " mesh_missing=" << (sample.mesh_missing_greedy ? 1 : 0)
             << " gpu_pending=" << sample.mesh_gpu_pending_near
             << " mesh_async=" << (sample.mesh_async_pending ? 1 : 0)
-            << " visual_warmup=" << (sample.mesh_visual_warmup ? 1 : 0);
+            << " visual_warmup=" << (sample.mesh_visual_warmup ? 1 : 0)
+            << " ring=" << sample.ring_not_ready
+            << " relight_completed=" << sample.relight_completed_n
+            << " stage_skip_remesh=" << sample.stage_skip_remesh_pending_light
+            << " top_dirty=(" << sample.top_dirty_cx << ","
+            << sample.top_dirty_cz << ")";
   CubatariumFlushLogs();
   std::lock_guard<std::mutex> lock(g_session_mutex);
   if (g_session_open)
   {
-    WriteJsonlLine(sample);
+    WriteJsonlLine(sample, "heartbeat");
+  }
+}
+
+void UEnterLitDiagnostics::RecordFrameSteps(const EnterWarmupStepSample &steps)
+{
+  std::lock_guard<std::mutex> lock(g_session_mutex);
+  g_steps.Add(steps);
+}
+
+void UEnterLitDiagnostics::MaybeLogProfileSummary(const EnterLitSample &sample)
+{
+  std::lock_guard<std::mutex> lock(g_session_mutex);
+  if (g_profile_logged || g_steps.frame_count <= 0)
+  {
+    return;
+  }
+  g_profile_logged = true;
+  const int n = g_steps.frame_count;
+  const double avg_drain = g_steps.drain_mesh_sum / n;
+  const double avg_gate = g_steps.gate_drain_sum / n;
+  const double avg_lit = g_steps.lit_pass_sum / n;
+  const double avg_relight = g_steps.relight_drain_sum / n;
+  const double avg_emerge = g_steps.mesh_emerge_sum / n;
+  const double wall_avg =
+      (g_steps.drain_mesh_sum + g_steps.gate_drain_sum + g_steps.lit_pass_sum) /
+      n;
+  const double p95 = g_steps.P95Wall();
+  double dominant = avg_gate;
+  const char *dominant_name = "gate_drain";
+  if (avg_drain > dominant)
+  {
+    dominant = avg_drain;
+    dominant_name = "drain_mesh";
+  }
+  if (avg_lit > dominant)
+  {
+    dominant = avg_lit;
+    dominant_name = "lit_pass";
+  }
+  const double dominant_pct =
+      wall_avg > 0.0 ? (dominant / wall_avg) * 100.0 : 0.0;
+  LOG(INFO) << "[EnterWarmup] profile frames=" << n
+            << " elapsed_ms=" << sample.elapsed_ms
+            << " drain_mesh_avg=" << avg_drain << " max=" << g_steps.drain_mesh_max
+            << " gate_drain_avg=" << avg_gate << " max=" << g_steps.gate_drain_max
+            << " lit_pass_avg=" << avg_lit << " max=" << g_steps.lit_pass_max
+            << " relight_drain_avg=" << avg_relight
+            << " max=" << g_steps.relight_drain_max
+            << " mesh_emerge_avg=" << avg_emerge
+            << " max=" << g_steps.mesh_emerge_max
+            << " wall_avg=" << wall_avg << " wall_p95=" << p95
+            << " dominant=" << dominant_name << " pct=" << dominant_pct
+            << " fifo=" << sample.fifo_n << " gpu_pending="
+            << sample.mesh_gpu_pending_near << " ring=" << sample.ring_not_ready;
+  CubatariumFlushLogs();
+  if (g_session_open)
+  {
+    WriteJsonlLine(sample, "profile");
   }
 }
 

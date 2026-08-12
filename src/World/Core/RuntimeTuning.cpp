@@ -395,6 +395,17 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   {
     t.EnterMeshAbortMs = j.value("enter_mesh_abort_ms", t.EnterMeshAbortMs);
   }
+  if (j.contains("enter_gate_mesh_drain_iterations"))
+  {
+    t.EnterGateMeshDrainIterations =
+        j.value("enter_gate_mesh_drain_iterations",
+                t.EnterGateMeshDrainIterations);
+  }
+  if (j.contains("enter_force_ingame_ms"))
+  {
+    t.EnterForceInGameMs =
+        j.value("enter_force_ingame_ms", t.EnterForceInGameMs);
+  }
   last_path = path;
   last_mtime = mtime;
   have_mtime = true;

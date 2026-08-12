@@ -129,6 +129,10 @@ struct URuntimeTuning
   int EnterLitAbortMs{600000};
   /// Era43f: force enter when mesh warmup stuck with fov_debt==0 (0 = disabled).
   int EnterMeshAbortMs{120000};
+  /// Era44: TickEnterGateMeshDrain iterations per gpu_warmup frame.
+  int EnterGateMeshDrainIterations{6};
+  /// Era44: last-resort InGame after abort-drain (0 = disabled; default 300s).
+  int EnterForceInGameMs{300000};
 
   static URuntimeTuning &Get();
   static void ResetToDefaults();

@@ -1933,9 +1933,14 @@ void UApplication::Update(double dt)
         // frame so EnterGameAfterWorldChange ≠ mega WarmupGreedy spike.
         // Era29: slightly higher streaming budget — SoftDefer/PendingLight on bar.
         constexpr int kGpuWarmupMeshBudget = 8;
-        constexpr int kGpuWarmupStreamingBudget = 6;
+        const int gate_iterations =
+            std::max(1, URuntimeTuning::Get().EnterGateMeshDrainIterations);
         const int remaining = WorldOpRunner->EnterGameGpuWarmupFramesRemaining();
         const int frame = kGpuWarmupMaxFrames - remaining;
+        EnterWarmupStepSample step_sample{};
+        const auto &phys_before = World->GetPhysicsTelemetry();
+        const int relight_completed_before = phys_before.RelightCompletedN;
+        const int gpu_finish_before = phys_before.GpuFinishN;
         if (Geometry && World)
         {
           if (frame == 0)
@@ -1952,52 +1957,67 @@ void UApplication::Update(double dt)
           {
             const auto t0 = std::chrono::high_resolution_clock::now();
             World->DrainEnterGameMeshWarmup(kGpuWarmupMeshBudget);
-            const double drain_mesh_ms =
+            step_sample.drain_mesh_ms =
                 std::chrono::duration<double, std::milli>(
                     std::chrono::high_resolution_clock::now() - t0)
                     .count();
-            if (drain_mesh_ms > 100.0)
+            if (step_sample.drain_mesh_ms > 100.0)
             {
               CubatariumLogInfo("EnterWarmup",
                                 "DrainEnterGameMeshWarmup ms=" +
-                                    std::to_string(drain_mesh_ms));
+                                    std::to_string(step_sample.drain_mesh_ms));
             }
           }
           if (World->IsEnterLitGateActive())
           {
             const auto t0 = std::chrono::high_resolution_clock::now();
-            World->TickEnterGateMeshDrain(kGpuWarmupStreamingBudget);
-            const double gate_drain_ms =
+            World->TickEnterGateMeshDrain(gate_iterations);
+            step_sample.gate_drain_ms =
                 std::chrono::duration<double, std::milli>(
                     std::chrono::high_resolution_clock::now() - t0)
                     .count();
-            if (gate_drain_ms > 100.0)
+            if (step_sample.gate_drain_ms > 100.0)
             {
               CubatariumLogInfo("EnterWarmup",
                                 "TickEnterGateMeshDrain ms=" +
-                                    std::to_string(gate_drain_ms));
+                                    std::to_string(step_sample.gate_drain_ms));
             }
           }
           else if (ShouldRunEnterStreamingWarmupDespiteSpawnPrepared(
                        World->IsSpawnAreaPreparedByCooperativeLoad()))
           {
-            World->TickEnterStreamingWarmup(kGpuWarmupStreamingBudget);
+            World->TickEnterStreamingWarmup(gate_iterations);
           }
           {
             const auto t0 = std::chrono::high_resolution_clock::now();
             World->TickEnterFovLitPass(
                 std::max(1, URuntimeTuning::Get().EnterFovLitCaptureBudget));
-            const double lit_pass_ms =
+            step_sample.lit_pass_ms =
                 std::chrono::duration<double, std::milli>(
                     std::chrono::high_resolution_clock::now() - t0)
                     .count();
-            if (lit_pass_ms > 100.0)
+            if (step_sample.lit_pass_ms > 100.0)
             {
               CubatariumLogInfo("EnterWarmup",
                                 "TickEnterFovLitPass ms=" +
-                                    std::to_string(lit_pass_ms));
+                                    std::to_string(step_sample.lit_pass_ms));
             }
           }
+          const auto &phys_after = World->GetPhysicsTelemetry();
+          step_sample.relight_drain_ms = phys_after.RelightDrainMs;
+          step_sample.mesh_emerge_ms = phys_after.MeshEmergeMs;
+          step_sample.mesh_immediate_ms = phys_after.MeshImmediateMs;
+          step_sample.mesh_emerge_prep_missing_ms =
+              phys_after.MeshEmergePrepMissingMs;
+          step_sample.mesh_emerge_prep_sticky_ms =
+              phys_after.MeshEmergePrepStickyMs;
+          step_sample.mesh_emerge_prep_drop_dirty_ms =
+              phys_after.MeshEmergePrepDropDirtyMs;
+          step_sample.relight_completed_delta =
+              phys_after.RelightCompletedN - relight_completed_before;
+          step_sample.gpu_finish_delta =
+              phys_after.GpuFinishN - gpu_finish_before;
+          UEnterLitDiagnostics::RecordFrameSteps(step_sample);
           const bool upload_ready =
               frame >= kGpuWarmupMinFrames - 1 &&
               !World->NeedsEnterGameMeshWarmup();

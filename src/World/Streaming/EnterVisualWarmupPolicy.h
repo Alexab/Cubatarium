@@ -328,12 +328,79 @@ inline bool ShouldContinueEnterMeshWarmupDrain(bool spawn_meshes_pending,
   return spawn_meshes_pending || async_mesh_pending || gpu_pending_near > 0;
 }
 
-/// Era43f: abort gpu_warmup when mesh blockers persist after lighting done.
-inline bool ShouldForceEnterMeshAbort(int fov_debt, bool mesh_ready,
+/// Era43f/Era44: safety valve when mesh blockers persist after lighting done.
+/// Era44: triggers abort-drain mode only — does not permit InGame with holes.
+inline bool ShouldForceEnterMeshAbort(int fov_debt, bool ring_ready,
                                       double elapsed_ms, int abort_ms)
 {
-  return fov_debt <= 0 && !mesh_ready && abort_ms > 0 &&
+  return fov_debt <= 0 && !ring_ready && abort_ms > 0 &&
          elapsed_ms >= static_cast<double>(abort_ms);
+}
+
+/// Era44: combined gpu_warmup debt (fifo/gpu/ring/lit) for honest 93→100% bar.
+inline float EnterGpuWarmupDebtFraction(int fifo_n, int fifo_peak, int gpu_n,
+                                        int gpu_peak, int ring_n, int ring_peak,
+                                        int fov_debt, int fov_peak)
+{
+  float sum = 0.0f;
+  int n = 0;
+  if (fifo_peak > 0)
+  {
+    sum += CreateBarDebtFraction(fifo_n, fifo_peak);
+    ++n;
+  }
+  if (gpu_peak > 0)
+  {
+    sum += CreateBarDebtFraction(gpu_n, gpu_peak);
+    ++n;
+  }
+  if (ring_peak > 0)
+  {
+    sum += CreateBarDebtFraction(ring_n, ring_peak);
+    ++n;
+  }
+  if (fov_peak > 0)
+  {
+    sum += CreateBarDebtFraction(fov_debt, fov_peak);
+    ++n;
+  }
+  if (n == 0)
+  {
+    return 0.0f;
+  }
+  return sum / static_cast<float>(n);
+}
+
+/// Era44: 1 - weighted debt fraction (monotonic when peaks fixed).
+inline float EnterGpuWarmupProgressFraction(int fifo_n, int fifo_peak, int gpu_n,
+                                            int gpu_peak, int ring_n,
+                                            int ring_peak, int fov_debt,
+                                            int fov_peak)
+{
+  return 1.0f - EnterGpuWarmupDebtFraction(fifo_n, fifo_peak, gpu_n, gpu_peak,
+                                           ring_n, ring_peak, fov_debt, fov_peak);
+}
+
+/// Era44: clamp display progress so bar never regresses (Era34 pattern).
+inline float EnterGpuWarmupMonotonicProgress(float raw_prog, float &display_prog)
+{
+  display_prog = std::max(display_prog, raw_prog);
+  return display_prog;
+}
+
+/// Era44: InGame only when ring + mesh blockers + lit debt cleared.
+inline bool IsEnterGpuWarmupReady(bool ring_ready, int fov_debt,
+                                  bool mesh_blockers_clear, bool min_frames_done)
+{
+  return min_frames_done && ring_ready && fov_debt <= 0 && mesh_blockers_clear;
+}
+
+/// Era44: documented last-resort after abort-drain (default ≥300s).
+inline bool ShouldForceEnterInGameAfterAbortDrain(double elapsed_ms,
+                                                  int force_ingame_ms)
+{
+  return force_ingame_ms > 0 &&
+         elapsed_ms >= static_cast<double>(force_ingame_ms);
 }
 
 /// Era35 P1: SoftDefer empty scan cy-window for near-FOV columns (horiz<=2)

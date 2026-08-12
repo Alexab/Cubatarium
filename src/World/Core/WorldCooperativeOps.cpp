@@ -1649,6 +1649,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       }
       else
       {
+        if (!world.IsEnterLitGateActive())
+        {
+          UEnterLitDiagnostics::BeginSession();
+          world.BeginEnterLitGate();
+        }
         CurrentPhase = Phase::PostLoadAnalysis;
       }
     }
@@ -1921,6 +1926,96 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     else
     {
       WarnIfTerrainMeshesMissing(world, "PrepareView before warmup");
+      if (world.IsEnterLitGateActive())
+      {
+        if (StreamingWarmupTicks == 0)
+        {
+          StreamingWarmupWallStart = std::chrono::steady_clock::now();
+          StreamingWarmupPeakDebt = 0;
+          StreamingWarmupLastRawDebt = 0;
+          StreamingWarmupDisplayDebt = 0;
+          StreamingWarmupLitWarnLogged = false;
+        }
+        TickCreateSpawnMeshWarmup(world, std::max(1, budget / 2));
+        world.TickEnterFovLitPass(
+            std::max(1, URuntimeTuning::Get().EnterFovLitCaptureBudget));
+        ++StreamingWarmupTicks;
+        const int fov_debt = world.CountEnterFovLitDebt();
+        const double elapsed_ms = std::chrono::duration<double, std::milli>(
+                                      std::chrono::steady_clock::now() -
+                                      StreamingWarmupWallStart)
+                                      .count();
+        EnterLitSample lit_sample{};
+        UEnterLitDiagnostics::Sample(world, elapsed_ms, lit_sample);
+        UEnterLitDiagnostics::MaybeLog(lit_sample, StreamingWarmupTicks);
+        const int combined_debt = lit_sample.fifo_n +
+                                  lit_sample.mesh_gpu_pending_near +
+                                  lit_sample.ring_not_ready + fov_debt;
+        if (combined_debt > StreamingWarmupPeakDebt)
+        {
+          StreamingWarmupPeakDebt = combined_debt;
+        }
+        if (StreamingWarmupTicks == 1)
+        {
+          StreamingWarmupDisplayDebt = combined_debt;
+        }
+        else
+        {
+          StreamingWarmupDisplayDebt =
+              std::min(StreamingWarmupDisplayDebt, combined_debt);
+        }
+        StreamingWarmupLastRawDebt = combined_debt;
+        const float prepare_view_base =
+            ProceduralFillLoadPath
+                ? (ProceduralFillMeshProgressBase() +
+                   kProceduralFillWeightMeshWarmup)
+                : CooperativeLoadProgressAfterMesh();
+        const int denom = std::max(1, StreamingWarmupPeakDebt);
+        const bool load_settled =
+            world.IsSpawnMeshRingReady() && fov_debt <= 0 &&
+            lit_sample.ring_not_ready == 0;
+        const float stream_inner =
+            load_settled
+                ? 1.0f
+                : (1.0f - CreateBarDebtFraction(StreamingWarmupDisplayDebt,
+                                                denom));
+        std::string status;
+        if (fov_debt > 0 || lit_sample.fifo_n > 0 || lit_sample.inflight > 0)
+        {
+          status = "Lighting queue… fifo=" + std::to_string(lit_sample.fifo_n) +
+                   " inflight=" + std::to_string(lit_sample.inflight);
+          if (fov_debt > 0)
+          {
+            status += " debt=" + std::to_string(fov_debt);
+          }
+        }
+        else if (!world.IsSpawnMeshRingReady())
+        {
+          status = "Building terrain… gpu=" +
+                   std::to_string(lit_sample.mesh_gpu_pending_near);
+          if (lit_sample.mesh_async_pending)
+          {
+            status += " async=1";
+          }
+        }
+        else if (lit_sample.ring_not_ready > 0)
+        {
+          status = "Finishing view… ring=" +
+                   std::to_string(lit_sample.ring_not_ready) + " left";
+        }
+        else
+        {
+          status = "Preparing view...";
+        }
+        Report(sink, "prepare_view",
+               prepare_view_base + kPhaseWeightPrepareView * stream_inner,
+               status);
+        if (!load_settled)
+        {
+          break;
+        }
+        UEnterLitDiagnostics::MaybeLogProfileSummary(lit_sample);
+      }
     }
     world.WarmupVisibleListAtCamera();
     WarnIfTerrainMeshesMissing(world, "PrepareView after warmup");

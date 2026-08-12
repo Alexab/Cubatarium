@@ -495,7 +495,10 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
              << "mesh_async_pending=" << (blockers.async_mesh_pending ? 1 : 0)
              << '\n'
              << "mesh_visual_warmup=" << (blockers.visual_warmup ? 1 : 0)
-             << '\n';
+             << '\n'
+             << "ring_not_ready=" << world->CountPostLoadRingNotReady() << '\n'
+             << "spawn_mesh_ring_ready="
+             << (world->IsSpawnMeshRingReady() ? 1 : 0) << '\n';
     }
 
     if (exit_code == 0)

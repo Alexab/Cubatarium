@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cstdint>
+#include <string>
+
 namespace cutum
 {
 
@@ -20,6 +23,29 @@ struct EnterLitSample
   int mesh_gpu_pending_near{0};
   bool mesh_async_pending{false};
   bool mesh_visual_warmup{false};
+  /// Era44: visual ring debt (CountPostLoadRingNotReady).
+  int ring_not_ready{0};
+  int relight_completed_n{0};
+  uint64_t stage_skip_remesh_pending_light{0};
+  int relight_fifo_dropped{0};
+  int top_dirty_cx{0};
+  int top_dirty_cz{0};
+};
+
+/// Era44: per-frame step timings (deltas) inside gpu_warmup.
+struct EnterWarmupStepSample
+{
+  double drain_mesh_ms{0.0};
+  double gate_drain_ms{0.0};
+  double lit_pass_ms{0.0};
+  double relight_drain_ms{0.0};
+  double mesh_emerge_ms{0.0};
+  double mesh_immediate_ms{0.0};
+  double mesh_emerge_prep_missing_ms{0.0};
+  double mesh_emerge_prep_sticky_ms{0.0};
+  double mesh_emerge_prep_drop_dirty_ms{0.0};
+  int relight_completed_delta{0};
+  int gpu_finish_delta{0};
 };
 
 class UEnterLitDiagnostics
@@ -33,6 +59,10 @@ public:
   /// Heartbeat by elapsed_ms (default every 2s) for long gpu_warmup stalls.
   static void MaybeLogHeartbeat(const EnterLitSample &sample,
                                 double heartbeat_ms = 2000.0);
+  /// Era44: accumulate per-step timings for profile summary.
+  static void RecordFrameSteps(const EnterWarmupStepSample &steps);
+  /// Era44: emit [EnterWarmup] profile when ring becomes ready.
+  static void MaybeLogProfileSummary(const EnterLitSample &sample);
 };
 
 } // namespace cutum

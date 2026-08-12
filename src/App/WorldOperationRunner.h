@@ -76,6 +76,7 @@ public:
     return Request.op == WorldRunnerOp::EnterGame;
   }
   bool EnterVisualCapReached() const;
+  bool IsEnterGameAbortDrainMode() const { return EnterGameAbortDrainMode; }
 
 private:
   enum class Stage
@@ -124,8 +125,17 @@ private:
   bool EnterGameLitWarnLogged{false};
   /// Era43: force enter after abort_ms while ingress frozen.
   bool EnterGameForceLitAbort{false};
-  /// Era43f: force enter after mesh warmup abort_ms (fov_debt==0, mesh stuck).
+  /// Era43f: mesh abort wall reached — Era44: continues unified drain.
   bool EnterGameForceMeshAbort{false};
+  /// Era44: abort-drain mode (gate stays active until ring ready).
+  bool EnterGameAbortDrainMode{false};
+  bool EnterGameAbortDrainLogged{false};
+  bool EnterGameForceInGameLogged{false};
+  /// Era44: peak debt for honest combined progress bar.
+  int EnterGameFifoPeak{0};
+  int EnterGameGpuPeak{0};
+  int EnterGameRingPeak{0};
+  float EnterGameDisplayProgress{0.0f};
   UBackgroundQuiesceState ShutdownQuiesceState{};
 };
 
