@@ -163,7 +163,15 @@ bool IsCreateSpawnWarmupSettled(const UWorld &world)
 void TickCreateSpawnMeshWarmup(UWorld &world, int budget)
 {
   world.DrainSpawnRadiusMeshWarmup(budget);
-  world.TickEnterStreamingWarmup(std::max(1, budget / 2));
+  const int emerge_budget = std::max(1, budget / 2);
+  if (world.IsEnterLitGateActive())
+  {
+    world.TickEnterGateMeshDrain(emerge_budget);
+  }
+  else
+  {
+    world.TickEnterStreamingWarmup(emerge_budget);
+  }
 }
 
 static_assert(kPhaseWeightMetadata + kPhaseWeightEntities + kPhaseWeightChunks +

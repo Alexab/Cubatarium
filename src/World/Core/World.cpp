@@ -5766,6 +5766,16 @@ bool UWorld::IsEnterStreamingWarmupSettled() const
   return true;
 }
 
+void UWorld::TickEnterGateMeshDrain(int iteration_budget)
+{
+  const int iterations = std::max(1, iteration_budget);
+  for (int i = 0; i < iterations; ++i)
+  {
+    TickAsyncChunkSystems();
+    TickMeshEmerge();
+  }
+}
+
 void UWorld::TickEnterStreamingWarmup(int iteration_budget)
 {
   if (EnterLitGateActive)

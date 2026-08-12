@@ -398,6 +398,8 @@ public:
   void PrepareEnterGameSession();
   bool IsEnterStreamingWarmupSettled() const;
   void TickEnterStreamingWarmup(int iteration_budget);
+  /// Era43: mesh emerge drain while ingress frozen (no UpdateStreaming).
+  void TickEnterGateMeshDrain(int iteration_budget);
   void WarmupVisibleListAtCamera();
   /// Build pending terrain meshes before GPU upload (returns true when ready).
   bool DrainEnterGameMeshWarmup(int budget);

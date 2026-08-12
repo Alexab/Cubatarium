@@ -1948,22 +1948,21 @@ void UApplication::Update(double dt)
               World->BeginEnterLitGate();
             }
           }
-          if (frame > 0 && World->NeedsEnterGameMeshWarmup())
+          if (World->NeedsEnterGameMeshWarmup())
           {
             World->DrainEnterGameMeshWarmup(kGpuWarmupMeshBudget);
           }
-          if (frame > 0 &&
-              !ShouldSkipEnterStreamingWarmup(World->IsEnterLitGateActive()) &&
-              ShouldRunEnterStreamingWarmupDespiteSpawnPrepared(
-                  World->IsSpawnAreaPreparedByCooperativeLoad()))
+          if (World->IsEnterLitGateActive())
+          {
+            World->TickEnterGateMeshDrain(kGpuWarmupStreamingBudget);
+          }
+          else if (ShouldRunEnterStreamingWarmupDespiteSpawnPrepared(
+                       World->IsSpawnAreaPreparedByCooperativeLoad()))
           {
             World->TickEnterStreamingWarmup(kGpuWarmupStreamingBudget);
           }
-          if (frame >= 0)
-          {
-            World->TickEnterFovLitPass(
-                std::max(1, URuntimeTuning::Get().EnterFovLitCaptureBudget));
-          }
+          World->TickEnterFovLitPass(
+              std::max(1, URuntimeTuning::Get().EnterFovLitCaptureBudget));
           const bool upload_ready =
               frame >= kGpuWarmupMinFrames - 1 &&
               !World->NeedsEnterGameMeshWarmup();
