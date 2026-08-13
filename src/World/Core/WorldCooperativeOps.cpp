@@ -257,7 +257,8 @@ void MarkSpawnAreaPreparedAfterCooperativeLoad(UWorld &world,
   {
     return;
   }
-  if (world.IsSpawnMeshRingReady())
+  // Era49: prepared only when ring + VisualReady (not ring alone).
+  if (world.IsSpawnMeshRingReady() && world.IsEnterVisibilityReady())
   {
     world.MarkSpawnAreaPreparedByCooperativeLoad();
   }
@@ -2012,9 +2013,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         const bool ring_ready = world.IsSpawnMeshRingReady();
         const bool visibility_ready = world.IsEnterVisibilityReady();
         const int visibility_debt = lit_sample.visibility_debt;
+        const bool mesh_blockers_clear = !world.NeedsEnterGameMeshWarmup();
+        // Era49: same exit contract as Runner soft_ready / IsEnterGpuWarmupReady.
         const bool load_settled = ring_ready && fov_debt <= 0 &&
                                   lit_sample.ring_not_ready == 0 &&
-                                  visibility_ready;
+                                  visibility_ready && mesh_blockers_clear;
         if (!StreamingWarmupAbortDrainMode &&
             ShouldForceEnterMeshAbort(fov_debt, ring_ready, elapsed_ms,
                                       URuntimeTuning::Get().EnterMeshAbortMs))

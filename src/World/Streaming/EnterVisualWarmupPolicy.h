@@ -462,7 +462,8 @@ inline float EnterGpuWarmupMonotonicProgress(float raw_prog, float &display_prog
   return display_prog;
 }
 
-/// Era44/48: InGame only when ring + mesh blockers + lit debt + visibility ready.
+/// Era44/48/49: InGame only when ring + mesh blockers + lit debt + visibility
+/// ready (visibility includes unready==0, void≤200, stale==0 when Strict).
 inline bool IsEnterGpuWarmupReady(bool ring_ready, int fov_debt,
                                   bool mesh_blockers_clear, bool min_frames_done,
                                   bool visibility_ready = true)

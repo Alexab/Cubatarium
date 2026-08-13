@@ -351,7 +351,8 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
     CubatariumFlushLogs();
   }
 
-  // Era48: InGame only when visibility ready — abort/force/cap do not bypass.
+  // Era48/49: InGame only when visibility ready — abort/force/cap do not bypass.
+  // visibility_ready = unready==0 ∧ void≤200 ∧ stale==0 (StrictEnterVisualReady).
   if (!enter_ready)
   {
     return false;
