@@ -817,6 +817,15 @@ int main()
            "Era53: skip MarkRelit after stale attempt owned");
     Expect(!ShouldSkipMarkRelitAfterEnterStaleAttempt(true, false),
            "Era53: first stale MarkRelit still allowed");
+    using cutum::EnterFullyDarkDrawableAcceptedForWarmupExit;
+    Expect(EnterFullyDarkDrawableAcceptedForWarmupExit(true, true, false),
+           "Era54: terminal FullyDark satisfies visual warmup");
+    Expect(EnterFullyDarkDrawableAcceptedForWarmupExit(true, false, true),
+           "Era54: gate-Done column FullyDark satisfies visual warmup");
+    Expect(!EnterFullyDarkDrawableAcceptedForWarmupExit(true, false, false),
+           "Era54: non-terminal FullyDark still blocks warmup");
+    Expect(!EnterFullyDarkDrawableAcceptedForWarmupExit(false, true, true),
+           "Era54: lit drawable path unchanged");
     Expect(EnterVisibilityReadyRadiusChunks(8) == 8,
            "Era48: visibility radius = RD");
     Expect(IsEnterGpuWarmupReady(true, 0, true, true, true),

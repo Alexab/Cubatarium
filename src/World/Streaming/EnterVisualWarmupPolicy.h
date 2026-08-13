@@ -418,6 +418,18 @@ inline bool ShouldSkipMarkRelitAfterEnterStaleAttempt(bool enter_gate_active,
   return enter_gate_active && stale_attempt_owned;
 }
 
+/// Era54: gate-accepted FullyDark drawable (terminal / column Done) satisfies
+/// visual warmup — Relight cannot invent rim light on void-edge (Era50).
+inline bool EnterFullyDarkDrawableAcceptedForWarmupExit(
+    bool fully_dark_drawable, bool enter_terminal_held, bool gate_column_done)
+{
+  if (!fully_dark_drawable)
+  {
+    return false;
+  }
+  return enter_terminal_held || gate_column_done;
+}
+
 /// Alias kept for ocean/cruise policy readers.
 inline int OceanHealVoidBias()
 {
@@ -632,6 +644,15 @@ inline std::string BuildEnterWarmupStatus(const EnterLitSample &sample,
       status += " void=" + std::to_string(sample.dark_face_void_near_n);
     }
     status += elapsed_suffix;
+    if (slow)
+    {
+      status += " (slow)";
+    }
+    return status;
+  }
+  if (sample.mesh_visual_warmup)
+  {
+    std::string status = "Finishing view… visual" + elapsed_suffix;
     if (slow)
     {
       status += " (slow)";

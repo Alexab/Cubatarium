@@ -297,8 +297,12 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
     }
     else
     {
-      out.dark_face_near_n = phys.DarkFaceNearN;
-      out.dark_face_void_near_n = phys.DarkFaceVoidNearN;
+      out.dark_face_near_n = near_n;
+      out.dark_face_void_near_n = void_n;
+      auto &mut = world.GetPhysicsTelemetryMutable();
+      mut.DarkFaceNearN = near_n;
+      mut.DarkFaceVoidNearN = void_n;
+      mut.DarkFaceStaleNearN = stale_n;
     }
   }
 }

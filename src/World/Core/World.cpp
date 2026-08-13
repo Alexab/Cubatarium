@@ -5387,6 +5387,15 @@ bool UWorld::NeedsEnterGameVisualWarmup() const
         const bool fully_dark =
             has_drawable && mesh.GetCache().ChunkHasFullyDarkFace(coord);
         const bool lit_drawable = has_drawable && !fully_dark;
+        const glm::ivec2 col_xz(coord.x, coord.z);
+        const bool gate_col_done =
+            EnterLitGateActive &&
+            EnterVisualGateCtrl.GetState(col_xz) == EnterVisualItemState::Done;
+        if (EnterFullyDarkDrawableAcceptedForWarmupExit(
+                fully_dark, mesh.IsEnterTerminalHeld(coord), gate_col_done))
+        {
+          continue;
+        }
         // Era33: never treat FullyDark keep-prior as enter-ready (hole > plug).
         if (EnterUnderfeetNeedsLitDrawable(lit_drawable, /*keep_prior_gpu=*/false))
         {
@@ -6563,6 +6572,16 @@ int UWorld::CountCreateNearFovWarmupDebt(bool *out_underfeet_lit_ready) const
           const bool fully_dark =
               has_drawable && mesh.GetCache().ChunkHasFullyDarkFace(coord);
           const bool lit_drawable = has_drawable && !fully_dark;
+          const glm::ivec2 col_xz(coord.x, coord.z);
+          const bool gate_col_done =
+              EnterLitGateActive &&
+              EnterVisualGateCtrl.GetState(col_xz) ==
+                  EnterVisualItemState::Done;
+          if (EnterFullyDarkDrawableAcceptedForWarmupExit(
+                  fully_dark, mesh.IsEnterTerminalHeld(coord), gate_col_done))
+          {
+            continue;
+          }
           if (EnterUnderfeetNeedsLitDrawable(lit_drawable,
                                              /*keep_prior_gpu=*/false))
           {
