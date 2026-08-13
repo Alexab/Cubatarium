@@ -26,9 +26,10 @@ inline bool ColumnVisualReadyFromFlags(bool terrain_in_band, bool pending_light,
                                        bool /*sticky_scheduled*/ = false,
                                        bool /*quiesce_latched*/ = false)
 {
+  // No terrain in band: N/A for enter visibility (do not treat as unready).
   if (!terrain_in_band)
   {
-    return false;
+    return true;
   }
   if (pending_light || !lit_ready)
   {

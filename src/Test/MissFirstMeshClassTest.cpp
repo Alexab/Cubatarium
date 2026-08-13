@@ -811,7 +811,9 @@ int main()
     using cutum::ColumnQuiesceLatchAloneIsVisualReady;
     using cutum::ColumnScheduleAloneIsVisualReady;
     using cutum::ColumnVisualReadyFromFlags;
+    using cutum::EnterGateBlocksRaaMarkDirty;
     using cutum::ShouldHideFullyDarkUntilLitInRing;
+    using cutum::ShouldMarkDirtyAfterRemeshAfterApplyCommit;
     using cutum::StrictEnterVisualReadyDefault;
     Expect(StrictEnterVisualReadyDefault(),
            "Era49 P0: StrictEnterVisualReady default on");
@@ -829,13 +831,19 @@ int main()
     Expect(!ColumnVisualReadyFromFlags(true, false, true, false, false,
                                        /*soft_no_ticket*/ true),
            "Era49 P0: SoftDeferHeld without ticket ⇏ ready");
-    Expect(!ColumnVisualReadyFromFlags(/*terrain*/ false, false, true, false,
+    Expect(ColumnVisualReadyFromFlags(/*terrain*/ false, false, true, false,
                                        false, false),
-           "Era49 P0: missing terrain band ⇏ ready");
+           "Era49b: missing terrain band = N/A ready (not debt)");
     Expect(ShouldHideFullyDarkUntilLitInRing(8, true, false, 8),
            "Era49 P5: enter RD hide FullyDark at horiz==RD");
     Expect(!ShouldHideFullyDarkUntilLitInRing(5, true, false, 4),
            "Era49 P5: cruise hide ring stays 4 (horiz 5 not hidden)");
+    Expect(!EnterGateBlocksRaaMarkDirty(false, false),
+           "Era49b: no enter ⇒ RAA MarkDirty allowed");
+    Expect(EnterGateBlocksRaaMarkDirty(false, true),
+           "Era49b: EnterGpuQuiesceDrain blocks RAA MarkDirty");
+    Expect(!ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, true),
+           "Era49b: enter gate ⇒ no RAA MarkDirty");
   }
 
   // --- Era34 CreateBar debt / soft wall ---

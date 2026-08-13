@@ -1376,12 +1376,16 @@ private:
   /// Era48: FullyDark mesh but light field already non-zero (stale bake).
   bool ColumnFullyDarkLooksStaleWithLitField(glm::ivec2 col_chunk_xz) const;
   void CaptureEnterLitDebtSnapshot();
+  /// Era49b: precompute RD visual work set at gate begin (monotonic debt).
+  void CaptureEnterVisualWorkSnapshot();
   void EnqueueEnterLitSnapshotRelight();
   void RepairEnterLitSnapshotFifoGhosts();
   /// Era48: schedule remesh-after-lit for FullyDark snapshot columns.
   int RepairEnterLitSnapshotFullyDarkRemesh();
   int CountEnterLitSnapshotDebt() const;
   bool IsEnterLitSnapshotColumnResolved(glm::ivec2 col_chunk_xz) const;
+  /// True if column has any chunk in enter visibility cy-band.
+  bool ColumnHasTerrainInEnterVisualBand(glm::ivec2 col_chunk_xz) const;
   struct PendingRelightMeshColumnRange
   {
     int min_y{0};
@@ -1396,6 +1400,10 @@ private:
     }
   };
   std::unordered_set<glm::ivec2, GroundColumnHash> EnterLitDebtSnapshot;
+  /// Era49b: frozen set of RD columns that need VisualReady at gate begin.
+  std::unordered_set<glm::ivec2, GroundColumnHash> EnterVisualWorkSnapshot;
+  bool EnterVisualWorkSnapshotCaptured{false};
+  int EnterVisualWorkPeak{0};
   std::unordered_map<glm::ivec2, PendingRelightMeshColumnRange, GroundColumnHash>
       PendingRelightMeshColumns;
   /// Near columns: light must apply before first mesh dirty.

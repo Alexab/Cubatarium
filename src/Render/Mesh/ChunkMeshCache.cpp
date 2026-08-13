@@ -2183,8 +2183,9 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   if (RemeshAfterApply.erase(coord) > 0)
   {
     const bool gpu_pending = IsPendingGpuApply(coord);
-    if (ShouldPreferKickAfterRemeshAfterApplyCommit(gpu_pending) ||
-        EnterLitQuiesce)
+    const bool enter_gate =
+        EnterGateBlocksRaaMarkDirty(EnterLitQuiesce, EnterGpuQuiesceDrain);
+    if (ShouldPreferKickAfterRemeshAfterApplyCommit(gpu_pending) || enter_gate)
     {
       if (gpu_pending)
       {
@@ -2193,7 +2194,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     }
     else if (ShouldMarkDirtyAfterRemeshAfterApplyCommit(Dirty.Contains(coord),
                                                         gpu_pending,
-                                                        EnterLitQuiesce))
+                                                        enter_gate))
     {
       MarkDirtyPriority(coord);
       ++RaaCommitMarkDirtyN;
@@ -2923,8 +2924,10 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     if (RemeshAfterApply.erase(result.coord) > 0)
     {
       const bool gpu_pending = IsPendingGpuApply(result.coord);
+      const bool enter_gate =
+          EnterGateBlocksRaaMarkDirty(EnterLitQuiesce, EnterGpuQuiesceDrain);
       if (ShouldPreferKickAfterRemeshAfterApplyCommit(gpu_pending) ||
-          EnterLitQuiesce)
+          enter_gate)
       {
         if (gpu_pending)
         {
@@ -2932,8 +2935,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
         }
       }
       else if (ShouldMarkDirtyAfterRemeshAfterApplyCommit(
-                   Dirty.Contains(result.coord), gpu_pending,
-                   EnterLitQuiesce))
+                   Dirty.Contains(result.coord), gpu_pending, enter_gate))
       {
         MarkDirtyPriority(result.coord);
         ++RaaCommitMarkDirtyN;
@@ -2986,8 +2988,9 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   if (RemeshAfterApply.erase(result.coord) > 0)
   {
     const bool gpu_pending = IsPendingGpuApply(result.coord);
-    if (ShouldPreferKickAfterRemeshAfterApplyCommit(gpu_pending) ||
-        EnterLitQuiesce)
+    const bool enter_gate =
+        EnterGateBlocksRaaMarkDirty(EnterLitQuiesce, EnterGpuQuiesceDrain);
+    if (ShouldPreferKickAfterRemeshAfterApplyCommit(gpu_pending) || enter_gate)
     {
       if (gpu_pending)
       {
@@ -2995,8 +2998,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       }
     }
     else if (ShouldMarkDirtyAfterRemeshAfterApplyCommit(
-                 Dirty.Contains(result.coord), gpu_pending,
-                 EnterLitQuiesce))
+                 Dirty.Contains(result.coord), gpu_pending, enter_gate))
     {
       MarkDirtyPriority(result.coord);
       ++RaaCommitMarkDirtyN;

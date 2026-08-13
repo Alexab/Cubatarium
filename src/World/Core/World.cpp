@@ -886,18 +886,23 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                                     const std::vector<glm::ivec2> &primary_grounds,
                                     bool finalize_pending_gate)
 {
-  const bool enter_quiesce =
+  // Era49b: under enter gate always suppress MarkRelit remesh storm
+  // (PreferKick/Skip + FullyDark idle Schedule only). Quiesce latch still
+  // tracks unready==0 for telem; mesh cache EnterLitQuiesce follows gate.
+  const bool enter_gate = EnterLitGateActive;
+  const bool enter_visual_quiesce =
       EnterLitQuiesceLatched ||
       (ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(
-           EnterLitGateActive, CountEnterVisibilityDebt(),
+           enter_gate, CountEnterVisibilityDebt(),
            GetPendingTerrainRelightFifoCount()) &&
        PhysicsTelemetryData.DarkFaceNearN > 0 &&
        PhysicsTelemetryData.DarkFaceStaleNearN <= 0);
-  if (enter_quiesce && EnterLitGateActive)
+  const bool enter_quiesce = enter_gate || enter_visual_quiesce;
+  if (enter_visual_quiesce && enter_gate)
   {
     EnterLitQuiesceLatched = true;
   }
-  else if (EnterLitGateActive &&
+  else if (enter_gate &&
            (PhysicsTelemetryData.DarkFaceStaleNearN > 0 ||
             CountEnterVisibilityDebt() > 0))
   {
@@ -5573,10 +5578,28 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
 
   auto schedule_col = [&](glm::ivec2 col)
   {
+    // Era49b: SoftDeferHeld undrawn without FirstMesh → Hide⇒Ticket under enter.
+    if (MeshService->HasSoftDeferHeldInColumn(col) &&
+        !GetColumnFlowExecutor().Scheduler().Contains(
+            col, ColumnWorkKind::FirstMesh))
+    {
+      GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::FirstMesh,
+                                      /*priority=*/100);
+    }
     if (IsPendingLightBeforeMesh(col) ||
         !IsColumnLitReady(glm::ivec3(col.x, 0, col.y)) ||
         !ColumnFullyDarkSolidDrawable(col))
     {
+      return;
+    }
+    // Era49b: void-edge FullyDark needs RelightThenMesh (RemeshSeam alone left
+    // void_near≈985 plateau on World_174). Stale bake → remesh-after-lit.
+    if (!ColumnFullyDarkLooksStaleWithLitField(col))
+    {
+      EnqueueVoidDarkColumnRelightNote(col);
+      GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::RelightThenMesh,
+                                      /*priority=*/80);
+      StickyRemeshAfterLight.insert(col);
       return;
     }
     bool touched = StickyRemeshAfterLight.count(col) > 0;
@@ -5646,13 +5669,14 @@ void UWorld::BeginEnterLitGate()
   if (MeshService)
   {
     MeshService->SetEnterGpuQuiesceDrain(true);
-    MeshService->SetEnterLitQuiesce(false);
+    MeshService->SetEnterLitQuiesce(true);
   }
   if (URuntimeTuning::Get().EnterLitUseSnapshotDebt)
   {
     CaptureEnterLitDebtSnapshot();
     EnqueueEnterLitSnapshotRelight();
   }
+  CaptureEnterVisualWorkSnapshot();
 }
 
 void UWorld::EndEnterLitGate()
@@ -5665,6 +5689,9 @@ void UWorld::EndEnterLitGate()
   EnterLitSnapshotCaptured = false;
   EnterLitQuiesceLatched = false;
   EnterLitDebtSnapshot.clear();
+  EnterVisualWorkSnapshot.clear();
+  EnterVisualWorkSnapshotCaptured = false;
+  EnterVisualWorkPeak = 0;
   if (MeshService)
   {
     MeshService->SetEnterGpuQuiesceDrain(false);
@@ -5720,11 +5747,88 @@ int UWorld::CountEnterVisibilityDebt() const
   {
     return 0;
   }
+  // Era49b: monotonic remaining of precomputed work set (counter cannot grow).
+  if (EnterLitGateActive && EnterVisualWorkSnapshotCaptured)
+  {
+    int debt = 0;
+    for (const glm::ivec2 &col : EnterVisualWorkSnapshot)
+    {
+      if (!IsColumnVisualReady(col))
+      {
+        ++debt;
+      }
+    }
+    return debt;
+  }
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
   const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
   const int vis_r =
       EnterVisibilityReadyRadiusChunks(GetRenderDistanceChunks());
   return CountUnreadyColumns(center, vis_r);
+}
+
+bool UWorld::ColumnHasTerrainInEnterVisualBand(glm::ivec2 col_chunk_xz) const
+{
+  if (!BlockRegistry)
+  {
+    return false;
+  }
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
+  const int sea_cy =
+      FloorDiv(std::max(0, ProceduralTemplate.SeaLevel), CHUNK_SIZE);
+  int cy0 = 0;
+  int cy1 = std::min(max_cy, std::max(focus_cy + 2, sea_cy + 1));
+  if (ProceduralTemplate.FillWater)
+  {
+    cy0 = std::min(cy0, std::max(0, sea_cy - 1));
+  }
+  cy0 = std::min(cy0, std::max(0, focus_cy - 1));
+  for (int cy = cy0; cy <= cy1; ++cy)
+  {
+    if (BlockWorld.GetChunkManager().HasChunk(
+            glm::ivec3(col_chunk_xz.x, cy, col_chunk_xz.y)))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+void UWorld::CaptureEnterVisualWorkSnapshot()
+{
+  EnterVisualWorkSnapshot.clear();
+  EnterVisualWorkSnapshotCaptured = false;
+  EnterVisualWorkPeak = 0;
+  if (!MeshService || !BlockRegistry)
+  {
+    return;
+  }
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
+  const int vis_r =
+      EnterVisibilityReadyRadiusChunks(GetRenderDistanceChunks());
+  for (int dx = -vis_r; dx <= vis_r; ++dx)
+  {
+    for (int dz = -vis_r; dz <= vis_r; ++dz)
+    {
+      const glm::ivec2 col(center.x + dx, center.z + dz);
+      // Only columns with terrain (or pending light) — no-chunk N/A excluded.
+      if (!ColumnHasTerrainInEnterVisualBand(col) &&
+          !IsPendingLightBeforeMesh(col))
+      {
+        continue;
+      }
+      if (!IsColumnVisualReady(col))
+      {
+        EnterVisualWorkSnapshot.insert(col);
+      }
+    }
+  }
+  EnterVisualWorkPeak = static_cast<int>(EnterVisualWorkSnapshot.size());
+  EnterVisualWorkSnapshotCaptured = true;
 }
 
 bool UWorld::IsColumnVisualReady(glm::ivec2 col_chunk_xz) const
@@ -5815,9 +5919,16 @@ bool UWorld::IsColumnVisualReady(glm::ivec2 col_chunk_xz) const
     }
   }
 
-  return ColumnVisualReadyFromFlags(any_chunk, /*pending*/ false, /*lit*/ true,
-                                    fully_dark_solid, missing_greedy,
-                                    soft_no_ticket);
+  // Era49b: no terrain in band under frozen enter streaming = N/A (not debt).
+  // Era48 counted debt only when any_chunk && (missing|soft_stuck).
+  if (!any_chunk)
+  {
+    return true;
+  }
+
+  return ColumnVisualReadyFromFlags(/*terrain*/ true, /*pending*/ false,
+                                    /*lit*/ true, fully_dark_solid,
+                                    missing_greedy, soft_no_ticket);
 }
 
 int UWorld::CountUnreadyColumns(glm::ivec3 center_chunk,
@@ -6212,8 +6323,8 @@ void UWorld::TickEnterGateMeshDrain(int iteration_budget)
   {
     if (MeshService && IsEnterLitGateActive())
     {
-      // Era49: latch quiesce only after enter VisualReady unready==0 and
-      // stale==0 (not FOV debt alone — that froze Dirty while FullyDark remained).
+      // Era49b: EnterLitQuiesce follows gate (PreferKick / no RAA MarkDirty /
+      // prune lit Dirty). Latch telem when unready==0.
       if (CountEnterVisibilityDebt() <= 0 &&
           PhysicsTelemetryData.DarkFaceNearN > 0 &&
           PhysicsTelemetryData.DarkFaceStaleNearN <= 0)
@@ -6226,7 +6337,7 @@ void UWorld::TickEnterGateMeshDrain(int iteration_budget)
         EnterLitQuiesceLatched = false;
       }
       MeshService->SetEnterGpuQuiesceDrain(true);
-      MeshService->SetEnterLitQuiesce(EnterLitQuiesceLatched);
+      MeshService->SetEnterLitQuiesce(true);
     }
     TickAsyncChunkSystems();
     TickMeshEmerge();
@@ -6238,7 +6349,7 @@ void UWorld::TickEnterWarmupDrainFrame(int mesh_budget, int gate_iterations)
   // Era46: same path for coop PrepareView and Application gpu_warmup —
   // DrainEnterGameMeshWarmup owns explicit DrainPendingGpuMeshes; gate drain
   // runs TickMeshEmerge (ConsumeGpuApplyBacklog) for iterations.
-  // Era49: lit-quiesce latched after enter unready==0 (VisualReady SoT).
+  // Era49b: EnterLitQuiesce active for whole enter gate (not only unready==0).
   if (MeshService)
   {
     const bool gate = IsEnterLitGateActive();
@@ -6258,7 +6369,7 @@ void UWorld::TickEnterWarmupDrainFrame(int mesh_budget, int gate_iterations)
       EnterLitQuiesceLatched = false;
     }
     MeshService->SetEnterGpuQuiesceDrain(gate);
-    MeshService->SetEnterLitQuiesce(EnterLitQuiesceLatched);
+    MeshService->SetEnterLitQuiesce(gate);
   }
   if (NeedsEnterGameMeshWarmup())
   {
