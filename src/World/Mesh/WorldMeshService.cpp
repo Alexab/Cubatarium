@@ -113,6 +113,21 @@ bool UWorldMeshService::IsEnterLitQuiesce() const
   return Cache.IsEnterLitQuiesce();
 }
 
+void UWorldMeshService::HoldEnterTerminal(glm::ivec3 chunk_coord)
+{
+  Cache.HoldEnterTerminal(chunk_coord);
+}
+
+void UWorldMeshService::ClearEnterTerminalHeld()
+{
+  Cache.ClearEnterTerminalHeld();
+}
+
+bool UWorldMeshService::IsEnterTerminalHeld(glm::ivec3 chunk_coord) const
+{
+  return Cache.IsEnterTerminalHeld(chunk_coord);
+}
+
 const MeshWorkAdmission &UWorldMeshService::GetMeshWorkAdmission() const
 {
   return Cache.GetMeshWorkAdmission();

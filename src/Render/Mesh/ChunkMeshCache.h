@@ -163,6 +163,13 @@ public:
   }
   /// Era50: enter void-edge terminal placeholder (Hide⇒Ticket).
   void HoldSoftDeferFirstMesh(glm::ivec3 chunk_coord);
+  /// Era51: latch SoftDefer so MarkDirty under enter gate cannot wipe it.
+  void HoldEnterTerminal(glm::ivec3 chunk_coord);
+  bool IsEnterTerminalHeld(glm::ivec3 chunk_coord) const
+  {
+    return EnterTerminalHeld.count(chunk_coord) > 0;
+  }
+  void ClearEnterTerminalHeld();
   /// Era22 I-S2: any SoftDeferHeld slice in column (xz).
   bool HasSoftDeferHeldInColumn(glm::ivec2 ground_xz) const;
   /// Prefetch immutable Capture into store (MarkRelit / commit). Main only.
@@ -591,6 +598,8 @@ private:
   bool EnterGpuQuiesceDrain{false};
   /// Era47: EnterLitGate + fifo/debt=0 producer suppress.
   bool EnterLitQuiesce{false};
+  /// Era51: enter SoftDefer terminal — MarkDirty must not erase SoftDeferHeld.
+  std::unordered_set<glm::ivec3, IVec3Hash> EnterTerminalHeld;
   /// Era24 I-E1: SoftDefer undrawn publish avoided (Hide⇒Ticket).
   uint64_t SoftDeferEmptyPublishAvoided{0};
   /// Era39: frames since SoftDeferEmptyPublishAvoided (Dirty damp).

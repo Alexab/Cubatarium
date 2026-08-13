@@ -378,10 +378,22 @@ inline bool ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(
   return enter_lit_gate_active && enter_unready <= 0;
 }
 
-/// Era48: void-edge aggregate gate (matches ocean SoftDefer threshold).
+/// Era48: cruise/ocean void bias threshold (heal budgets — not enter exit).
 inline int EnterVisibilityVoidNearMax()
 {
   return 200;
+}
+
+/// Era51: enter exit unfinished void must be exactly 0.
+inline int EnterVoidExitMax()
+{
+  return 0;
+}
+
+/// Alias kept for ocean/cruise policy readers.
+inline int OceanHealVoidBias()
+{
+  return EnterVisibilityVoidNearMax();
 }
 
 /// Era48 DoD radius for visibility-ready = render distance (caller supplies RD).
@@ -390,10 +402,11 @@ inline int EnterVisibilityReadyRadiusChunks(int render_distance_chunks)
   return std::max(0, render_distance_chunks);
 }
 
-/// Era48: void telem gate — ignore until first dark-face sample exists.
+/// Era48/Era51: void telem gate — ignore until first dark-face sample exists.
+/// Default void_max is EnterVoidExitMax (0). Cruise callers pass OceanHealVoidBias.
 inline bool EnterVisibilityVoidReady(int dark_face_near_n,
                                      int dark_face_void_near_n,
-                                     int void_max = EnterVisibilityVoidNearMax())
+                                     int void_max = EnterVoidExitMax())
 {
   if (dark_face_near_n <= 0)
   {

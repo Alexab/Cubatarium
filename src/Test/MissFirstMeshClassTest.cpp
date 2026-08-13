@@ -747,7 +747,9 @@ int main()
     using cutum::ClassifyRemeshAfterLitApply;
     using cutum::ComputeMeshWorkAdmission;
     using cutum::EnterVisibilityReadyRadiusChunks;
+    using cutum::EnterVisibilityVoidNearMax;
     using cutum::EnterVisibilityVoidReady;
+    using cutum::EnterVoidExitMax;
     using cutum::IsEnterGpuWarmupReady;
     using cutum::MeshWorkAdmission;
     using cutum::MeshWorkAdmissionInput;
@@ -783,10 +785,15 @@ int main()
            "Era47: clear without quiesce ⇒ Schedule");
     Expect(EnterVisibilityVoidReady(0, 999),
            "Era48: no dark-face sample ⇒ void gate open");
-    Expect(EnterVisibilityVoidReady(100, 150),
-           "Era48: void under threshold ⇒ ready");
-    Expect(!EnterVisibilityVoidReady(100, 201),
-           "Era48: void over threshold ⇒ not ready");
+    Expect(EnterVisibilityVoidReady(100, 0),
+           "Era51: unfinished void==0 ⇒ ready");
+    Expect(!EnterVisibilityVoidReady(100, 1),
+           "Era51: unfinished void>0 ⇒ not ready");
+    Expect(EnterVisibilityVoidReady(100, 150, EnterVisibilityVoidNearMax()),
+           "Era51: cruise OceanHealVoidBias 200 still allows 150");
+    Expect(!EnterVisibilityVoidReady(100, 201, EnterVisibilityVoidNearMax()),
+           "Era51: cruise bias still rejects >200");
+    Expect(EnterVoidExitMax() == 0, "Era51: enter void exit max is 0");
     Expect(EnterVisibilityReadyRadiusChunks(8) == 8,
            "Era48: visibility radius = RD");
     Expect(IsEnterGpuWarmupReady(true, 0, true, true, true),
@@ -859,6 +866,7 @@ int main()
     using cutum::EnterVisualVoidEdgeAcceptsSoftDefer;
     using cutum::EnterVoidEdgeAction;
     using cutum::ShouldEscalateEnterWorklistGpuDrain;
+    using cutum::ShouldTreatMissingNeighborAsOpenSky;
     Expect(EnterGpuQuiesceDrainAllowed(true),
            "Era50: GpuQuiesceDrain on for whole gate");
     Expect(!EnterLitQuiesceAllowed(true, 5),
@@ -901,6 +909,12 @@ int main()
            "Era50: escalate GPU when worklist stall + pending");
     Expect(!ShouldEscalateEnterWorklistGpuDrain(true, 10, 3, 10),
            "Era50: no escalate before stall frames");
+    Expect(ShouldTreatMissingNeighborAsOpenSky(false, true, true),
+           "Era51: missing neighbor under enter ⇒ OpenSky");
+    Expect(!ShouldTreatMissingNeighborAsOpenSky(false, false, true),
+           "Era51: OpenSky off outside enter gate");
+    Expect(!ShouldTreatMissingNeighborAsOpenSky(true, true, true),
+           "Era51: loaded neighbor ⇒ no OpenSky inject");
   }
 
   // --- Era34 CreateBar debt / soft wall ---

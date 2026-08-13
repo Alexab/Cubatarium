@@ -7,6 +7,7 @@ void EnterVisualGate::Reset()
 {
   items_.clear();
   void_relight_probed_.clear();
+  open_sky_applied_.clear();
   captured_ = false;
   peak_ = 0;
   phase_ = EnterVisualGatePhase::Idle;
@@ -17,6 +18,7 @@ void EnterVisualGate::BeginCapture()
 {
   items_.clear();
   void_relight_probed_.clear();
+  open_sky_applied_.clear();
   captured_ = false;
   peak_ = 0;
   phase_ = EnterVisualGatePhase::Capture;
@@ -106,6 +108,16 @@ void EnterVisualGate::NoteVoidRelightProbed(glm::ivec2 col)
 bool EnterVisualGate::WasVoidRelightProbed(glm::ivec2 col) const
 {
   return void_relight_probed_.find(col) != void_relight_probed_.end();
+}
+
+void EnterVisualGate::NoteOpenSkyApplied(glm::ivec2 col)
+{
+  open_sky_applied_[col] = 1;
+}
+
+bool EnterVisualGate::WasOpenSkyApplied(glm::ivec2 col) const
+{
+  return open_sky_applied_.find(col) != open_sky_applied_.end();
 }
 
 } // namespace cutum

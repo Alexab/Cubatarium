@@ -2518,6 +2518,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           // until remeshed after this hole FirstMesh lands (manual 191432).
           // Cap 4; HoleDrain-safe. Always under miss — wall cost is async Dirty
           // (p2c holes=0.2 with hot-skip; p2 full seam holes≈0.045).
+          // Era51 P3 skip: this path + CanSeedSkylightAtCommit already cover
+          // InGame missing→loaded seam; no extra OpenSky/relight ring (enter-only).
           if (missing_visible_mesh)
           {
             int seamed = 0;

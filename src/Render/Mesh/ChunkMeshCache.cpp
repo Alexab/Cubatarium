@@ -1370,8 +1370,26 @@ void UChunkMeshCache::HoldSoftDeferFirstMesh(glm::ivec3 chunk_coord)
     return;
   }
   // Drop an arbitrary far entry so the side-set cannot grow unboundedly.
-  auto drop = SoftDeferHeld.begin();
-  SoftDeferHeld.erase(drop);
+  // Era51: never drop EnterTerminalHeld SoftDefer under enter gate.
+  for (auto it = SoftDeferHeld.begin(); it != SoftDeferHeld.end(); ++it)
+  {
+    if (EnterTerminalHeld.count(*it) == 0)
+    {
+      SoftDeferHeld.erase(it);
+      return;
+    }
+  }
+}
+
+void UChunkMeshCache::HoldEnterTerminal(glm::ivec3 chunk_coord)
+{
+  HoldSoftDeferFirstMesh(chunk_coord);
+  EnterTerminalHeld.insert(chunk_coord);
+}
+
+void UChunkMeshCache::ClearEnterTerminalHeld()
+{
+  EnterTerminalHeld.clear();
 }
 
 void UChunkMeshCache::NoteSoftDeferEmptyPublishAvoided(glm::ivec3 coord)
@@ -1481,6 +1499,18 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
 
 void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 {
+  // Era51: EnterTerminalHeld SoftDefer survives MarkDirty under enter gate.
+  const bool keep_terminal =
+      EnterGpuQuiesceDrain && EnterTerminalHeld.count(chunkCoord) > 0;
+  if (keep_terminal)
+  {
+    // PreferKick only — do not re-Dirty FullyDark terminal remesh churn.
+    if (IsPendingGpuApply(chunkCoord))
+    {
+      PreferKickPendingGpuQueued(chunkCoord);
+    }
+    return;
+  }
   SoftDeferHeld.erase(chunkCoord);
   // Mid-flight MarkDirty used to re-insert Dirty while Active stayed set —
   // Apply then immediately rescheduled forever (standing Dirty≈535 async=42).
@@ -1532,6 +1562,16 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 }
 void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
 {
+  const bool keep_terminal =
+      EnterGpuQuiesceDrain && EnterTerminalHeld.count(chunkCoord) > 0;
+  if (keep_terminal)
+  {
+    if (IsPendingGpuApply(chunkCoord))
+    {
+      PreferKickPendingGpuQueued(chunkCoord);
+    }
+    return;
+  }
   const bool was_soft_held = SoftDeferHeld.count(chunkCoord) > 0;
   SoftDeferHeld.erase(chunkCoord);
   if (ActiveMeshSourceRevision.find(chunkCoord) !=
@@ -1686,6 +1726,7 @@ void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
   ActiveMeshSourceRevision.erase(chunkCoord);
   CaptureStore.Invalidate(chunkCoord);
   SoftDeferHeld.erase(chunkCoord);
+  EnterTerminalHeld.erase(chunkCoord);
   GreedyBatchesDirty = true;
   if (chunkCoord.y == 0)
   {

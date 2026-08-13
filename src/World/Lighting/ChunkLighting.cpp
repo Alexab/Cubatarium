@@ -1039,6 +1039,73 @@ void RelightColumnWithFrontier(UBlockWorld &world, UBlockRegistry &registry,
   out_relit_chunks->assign(relit.begin(), relit.end());
 }
 
+void ApplyEnterOpenSkyBoundary(UBlockWorld &world, UBlockRegistry &registry,
+                               int world_x, int world_z, int min_y, int max_y)
+{
+  // Era51: enter frozen rim — missing neighbor faces get open daytime sky
+  // (no block-light invent). Then horizontal sky BFS within loaded chunks.
+  std::unordered_set<glm::ivec3, IVec3Hash> coords;
+  CollectColumnChunkCoords(world, world_x, world_z, min_y, max_y, coords);
+  if (coords.empty())
+  {
+    return;
+  }
+  for (const glm::ivec3 &chunk_coord : coords)
+  {
+    UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord);
+    if (!chunk)
+    {
+      continue;
+    }
+    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
+    {
+      // Only horizontal open sky — vertical seed already treats unloaded as AIR.
+      if (offset.y != 0)
+      {
+        continue;
+      }
+      const glm::ivec3 neighbor_chunk = chunk_coord + offset;
+      if (world.GetChunkManager().HasChunk(neighbor_chunk))
+      {
+        continue;
+      }
+      // Face toward missing neighbor: seed transparent border voxels at max sky.
+      const int face_axis = offset.x != 0 ? 0 : 2;
+      const int face_local =
+          offset.x > 0 || offset.z > 0 ? (CHUNK_SIZE - 1) : 0;
+      for (int a = 0; a < CHUNK_SIZE; ++a)
+      {
+        for (int b = 0; b < CHUNK_SIZE; ++b)
+        {
+          glm::ivec3 local(0);
+          if (face_axis == 0)
+          {
+            local = glm::ivec3(face_local, a, b);
+          }
+          else
+          {
+            local = glm::ivec3(a, b, face_local);
+          }
+          const BlockId id = chunk->GetBlockLocal(local);
+          if (!IsLightTransparent(registry, id))
+          {
+            continue;
+          }
+          if (chunk->GetSkyLightLocal(local) >= kMaxLightLevel)
+          {
+            continue;
+          }
+          WriteSkyLight(*chunk, local, kMaxLightLevel);
+        }
+      }
+    }
+  }
+  for (const glm::ivec3 &coord : coords)
+  {
+    PropagateSkylightHorizontal(world, registry, coord);
+  }
+}
+
 void RelightColumn(UBlockWorld &world, UBlockRegistry &registry, int world_x,
                    int world_z, int min_y, int max_y, bool include_block_light,
                    bool include_skylight)

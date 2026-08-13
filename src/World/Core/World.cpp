@@ -819,6 +819,16 @@ void UWorld::RelightTerrainColumn(int world_x, int world_z, int min_y,
   GetLightingPipeline().RelightColumnWithFrontier(
       BlockWorld, *BlockRegistry, world_x, world_z, min_y, max_y,
       include_block_light, include_skylight, &relit_chunks);
+  // Era51: enter rim OpenSky — missing neighbors inject daytime sky (enter only).
+  if (EnterLitGateActive && include_skylight)
+  {
+    ApplyEnterOpenSkyBoundary(BlockWorld, *BlockRegistry, world_x, world_z,
+                              min_y, max_y);
+    const glm::ivec3 primary =
+        UChunkManager::WorldToChunk(glm::ivec3(world_x, 0, world_z));
+    EnterVisualGateCtrl.NoteOpenSkyApplied(
+        glm::ivec2(primary.x, primary.z));
+  }
   const glm::ivec3 primary_chunk =
       UChunkManager::WorldToChunk(glm::ivec3(world_x, 0, world_z));
   MarkRelitChunksForMesh(relit_chunks, priority_mesh,
@@ -5406,6 +5416,19 @@ bool UWorld::IsEnterLitSnapshotColumnResolved(glm::ivec2 col_chunk_xz) const
   {
     return false;
   }
+  // Era51: Gate Done / SoftDefer terminal aligns snapshot debt with visibility.
+  if (EnterVisualGateCtrl.IsCaptured() &&
+      EnterVisualGateCtrl.GetState(col_chunk_xz) == EnterVisualItemState::Done)
+  {
+    return true;
+  }
+  if (MeshService && MeshService->HasSoftDeferHeldInColumn(col_chunk_xz) &&
+      GetColumnFlowExecutor().Scheduler().Contains(col_chunk_xz,
+                                                   ColumnWorkKind::FirstMesh) &&
+      !ColumnFullyDarkLooksStaleWithLitField(col_chunk_xz))
+  {
+    return true;
+  }
   // Era49: FullyDark solid drawable is unresolved until lit GPU commit clears
   // dark faces — StickyRemesh insert alone is not outcome-ready.
   if (ColumnFullyDarkSolidDrawable(col_chunk_xz))
@@ -5624,7 +5647,37 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
     if (action == EnterVoidEdgeAction::SoftDeferTicket ||
         (action == EnterVoidEdgeAction::None && soft_ticket))
     {
-      // Era50: void-edge terminal — SoftDefer + FirstMesh (no Relight invent).
+      // Era51: try OpenSky inject once → remesh (void→stale path) before SoftDefer.
+      if (!soft_ticket && !EnterVisualGateCtrl.WasOpenSkyApplied(col))
+      {
+        const int sea = ProceduralTemplate.SeaLevel;
+        const int max_h = ProceduralTemplate.MaxHeight;
+        const int dirty_min = std::max(0, sea - CHUNK_SIZE);
+        const int dirty_max = std::min(max_h, sea + CHUNK_SIZE * 2);
+        ApplyEnterOpenSkyBoundary(BlockWorld, *BlockRegistry, col.x * CHUNK_SIZE,
+                                  col.y * CHUNK_SIZE, dirty_min, dirty_max);
+        EnterVisualGateCtrl.NoteOpenSkyApplied(col);
+        for (int cy = 0; cy <= max_cy; ++cy)
+        {
+          const glm::ivec3 coord(col.x, cy, col.y);
+          if (!MeshService->HasDrawableGreedyMesh(coord) ||
+              !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+          {
+            continue;
+          }
+          if (MeshService->IsPendingGpuApply(coord))
+          {
+            MeshService->PreferKickPendingGpuQueued(coord);
+            continue;
+          }
+          MeshService->MarkDirtyPriority(coord);
+          MeshService->RequestRemeshAfterApply(coord);
+          ++scheduled;
+        }
+        StickyRemeshAfterLight.insert(col);
+        return;
+      }
+      // SoftDefer terminal — SoftDefer + FirstMesh (OpenSky already tried).
       for (int cy = 0; cy <= max_cy; ++cy)
       {
         const glm::ivec3 coord(col.x, cy, col.y);
@@ -5633,7 +5686,7 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
         {
           continue;
         }
-        MeshService->GetCache().HoldSoftDeferFirstMesh(coord);
+        MeshService->HoldEnterTerminal(coord);
       }
       if (!has_fm_ticket)
       {
@@ -5852,6 +5905,7 @@ void UWorld::EndEnterLitGate()
   {
     MeshService->SetEnterGpuQuiesceDrain(false);
     MeshService->SetEnterLitQuiesce(false);
+    MeshService->ClearEnterTerminalHeld();
   }
   SetStreamingEnabled(StreamingEnabledBeforeEnterLitGate);
 }

@@ -70,6 +70,9 @@ public:
   bool IsEnterGpuQuiesceDrain() const;
   void SetEnterLitQuiesce(bool active);
   bool IsEnterLitQuiesce() const;
+  void HoldEnterTerminal(glm::ivec3 chunk_coord);
+  void ClearEnterTerminalHeld();
+  bool IsEnterTerminalHeld(glm::ivec3 chunk_coord) const;
   /// Consume one Dirty-admit slot for FirstMesh/Held/neighbor (false = deny).
   bool TryConsumeDirtyAdmit();
   int DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk, int keep_radius,

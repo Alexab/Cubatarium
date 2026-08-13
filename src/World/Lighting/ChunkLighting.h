@@ -50,6 +50,10 @@ void RelightColumnWithFrontier(UBlockWorld &world, UBlockRegistry &registry,
                                int world_x, int world_z, int min_y, int max_y,
                                bool include_block_light, bool include_skylight,
                                std::vector<glm::ivec3> *out_relit_chunks);
+/// Era51 enter-only: inject max skylight on faces toward missing neighbors,
+/// then horizontal sky propagate. Does not invent block-light.
+void ApplyEnterOpenSkyBoundary(UBlockWorld &world, UBlockRegistry &registry,
+                               int world_x, int world_z, int min_y, int max_y);
 void RelightAllLoadedChunks(UBlockWorld &world, UBlockRegistry &registry);
 
 /// After ApplyGpuSkylightSeedToChunk: clear was done by caller; run horizontal
