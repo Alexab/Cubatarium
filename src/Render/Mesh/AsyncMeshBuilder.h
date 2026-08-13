@@ -50,6 +50,9 @@ public:
     return WorkerCount * kPipelineSlotsPerWorker;
   }
   bool HasPendingWork() const;
+  /// Era53: enter ring checks async only near spawn (not global pool depth).
+  bool HasInflightInHorizontalRadius(glm::ivec3 center_ground_chunk,
+                                     int radius_chunks) const;
   void WaitIdle();
   bool WaitIdleFor(std::chrono::milliseconds timeout);
   void CancelPending();

@@ -232,6 +232,31 @@ bool UAsyncMeshBuilder::HasPendingWork() const
   return !InFlight.empty();
 }
 
+bool UAsyncMeshBuilder::HasInflightInHorizontalRadius(
+    glm::ivec3 center_ground_chunk, int radius_chunks) const
+{
+  if (radius_chunks < 0)
+  {
+    return false;
+  }
+  if (!Completed.Empty())
+  {
+    return true;
+  }
+  std::lock_guard<std::mutex> lock(InFlightMutex);
+  for (const auto &kv : InFlight)
+  {
+    const glm::ivec3 &coord = kv.first;
+    const int horiz = std::max(std::abs(coord.x - center_ground_chunk.x),
+                               std::abs(coord.z - center_ground_chunk.z));
+    if (horiz <= radius_chunks)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 void UAsyncMeshBuilder::WaitIdle() { Pool.WaitIdle(); }
 
 bool UAsyncMeshBuilder::WaitIdleFor(const std::chrono::milliseconds timeout)

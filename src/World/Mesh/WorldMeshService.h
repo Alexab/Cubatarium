@@ -73,6 +73,12 @@ public:
   void HoldEnterTerminal(glm::ivec3 chunk_coord);
   void ClearEnterTerminalHeld();
   bool IsEnterTerminalHeld(glm::ivec3 chunk_coord) const;
+  size_t GetEnterTerminalHeldCount() const;
+  void SyncEnterGateDoneColumns(const std::vector<glm::ivec2> &done_cols);
+  size_t GetEnterGateDoneColumnCount() const;
+  void SetEnterVoidTelemLitReadyFn(std::function<bool(glm::ivec2)> fn);
+  int PruneEnterPhantomDirty(const UBlockWorld &world);
+  uint64_t GetEnterPhantomDirtyPrunedTotal() const;
   /// Consume one Dirty-admit slot for FirstMesh/Held/neighbor (false = deny).
   bool TryConsumeDirtyAdmit();
   int DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk, int keep_radius,
@@ -163,6 +169,8 @@ public:
                                        int radius_chunks) const;
   bool HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y, int max_y) const;
   bool HasPendingAsyncMeshWork() const;
+  bool HasAsyncInflightInHorizontalRadius(glm::ivec3 center_ground_chunk,
+                                          int radius_chunks) const;
   size_t GetDirtyCount() const;
   void ReserveDirtyCapacity(size_t n);
   int MaybeDropFarthestDirty(glm::ivec3 focus_ground_chunk, size_t soft_cap,

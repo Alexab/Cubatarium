@@ -128,6 +128,38 @@ bool UWorldMeshService::IsEnterTerminalHeld(glm::ivec3 chunk_coord) const
   return Cache.IsEnterTerminalHeld(chunk_coord);
 }
 
+size_t UWorldMeshService::GetEnterTerminalHeldCount() const
+{
+  return Cache.GetEnterTerminalHeldCount();
+}
+
+void UWorldMeshService::SyncEnterGateDoneColumns(
+    const std::vector<glm::ivec2> &done_cols)
+{
+  Cache.SyncEnterGateDoneColumns(done_cols);
+}
+
+size_t UWorldMeshService::GetEnterGateDoneColumnCount() const
+{
+  return Cache.GetEnterGateDoneColumnCount();
+}
+
+void UWorldMeshService::SetEnterVoidTelemLitReadyFn(
+    std::function<bool(glm::ivec2)> fn)
+{
+  Cache.SetEnterVoidTelemLitReadyFn(std::move(fn));
+}
+
+int UWorldMeshService::PruneEnterPhantomDirty(const UBlockWorld &world)
+{
+  return Cache.PruneEnterPhantomDirty(world);
+}
+
+uint64_t UWorldMeshService::GetEnterPhantomDirtyPrunedTotal() const
+{
+  return Cache.GetEnterPhantomDirtyPrunedTotal();
+}
+
 const MeshWorkAdmission &UWorldMeshService::GetMeshWorkAdmission() const
 {
   return Cache.GetMeshWorkAdmission();
@@ -667,6 +699,13 @@ bool UWorldMeshService::HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y,
 bool UWorldMeshService::HasPendingAsyncMeshWork() const
 {
   return Cache.HasPendingAsyncMeshWork();
+}
+
+bool UWorldMeshService::HasAsyncInflightInHorizontalRadius(
+    glm::ivec3 center_ground_chunk, int radius_chunks) const
+{
+  return Cache.HasAsyncInflightInHorizontalRadius(center_ground_chunk,
+                                                  radius_chunks);
 }
 
 size_t UWorldMeshService::GetDirtyCount() const

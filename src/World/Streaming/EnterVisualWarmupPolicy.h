@@ -390,6 +390,34 @@ inline int EnterVoidExitMax()
   return 0;
 }
 
+/// Era52: void telem excludes terminal / LitReady void-edge faces under enter.
+inline bool EnterVoidTelemFaceExcluded(bool chunk_terminal, bool col_done,
+                                       bool void_edge, bool enter_gate,
+                                       bool col_lit_ready)
+{
+  if (chunk_terminal || col_done)
+  {
+    return true;
+  }
+  return enter_gate && void_edge && col_lit_ready;
+}
+
+/// Era53: stale FullyDark GPU commit under enter gate — latch terminal, no re-Dirty.
+inline bool ShouldLatchStaleFullyDarkAfterEnterGpuCommit(
+    bool enter_gpu_quiesce_drain, bool has_fully_dark_face,
+    bool stale_lit_field, bool already_terminal)
+{
+  return enter_gpu_quiesce_drain && has_fully_dark_face && stale_lit_field &&
+         !already_terminal;
+}
+
+/// Era53: skip MarkRelit remesh churn after one stale attempt owns the column.
+inline bool ShouldSkipMarkRelitAfterEnterStaleAttempt(bool enter_gate_active,
+                                                      bool stale_attempt_owned)
+{
+  return enter_gate_active && stale_attempt_owned;
+}
+
 /// Alias kept for ocean/cruise policy readers.
 inline int OceanHealVoidBias()
 {

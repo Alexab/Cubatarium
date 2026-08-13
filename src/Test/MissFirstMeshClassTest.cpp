@@ -794,6 +794,29 @@ int main()
     Expect(!EnterVisibilityVoidReady(100, 201, EnterVisibilityVoidNearMax()),
            "Era51: cruise bias still rejects >200");
     Expect(EnterVoidExitMax() == 0, "Era51: enter void exit max is 0");
+    using cutum::EnterVoidTelemFaceExcluded;
+    Expect(EnterVoidTelemFaceExcluded(true, false, true, true, true),
+           "Era52: terminal chunk excluded from void telem");
+    Expect(EnterVoidTelemFaceExcluded(false, true, true, true, false),
+           "Era52: gate Done column excluded from void telem");
+    Expect(EnterVoidTelemFaceExcluded(false, false, true, true, true),
+           "Era52: LitReady void-edge excluded under enter gate");
+    Expect(!EnterVoidTelemFaceExcluded(false, false, true, true, false),
+           "Era52: unlit void-edge still counts");
+    Expect(!EnterVoidTelemFaceExcluded(false, false, false, true, true),
+           "Era52: stale face not excluded by void-edge rule");
+    using cutum::ShouldLatchStaleFullyDarkAfterEnterGpuCommit;
+    using cutum::ShouldSkipMarkRelitAfterEnterStaleAttempt;
+    Expect(ShouldLatchStaleFullyDarkAfterEnterGpuCommit(true, true, true, false),
+           "Era53: stale FullyDark GPU commit ⇒ terminal latch");
+    Expect(!ShouldLatchStaleFullyDarkAfterEnterGpuCommit(true, true, true, true),
+           "Era53: already terminal ⇒ no relatch");
+    Expect(!ShouldLatchStaleFullyDarkAfterEnterGpuCommit(true, true, false, false),
+           "Era53: void-edge GPU commit keeps re-Dirty path");
+    Expect(ShouldSkipMarkRelitAfterEnterStaleAttempt(true, true),
+           "Era53: skip MarkRelit after stale attempt owned");
+    Expect(!ShouldSkipMarkRelitAfterEnterStaleAttempt(true, false),
+           "Era53: first stale MarkRelit still allowed");
     Expect(EnterVisibilityReadyRadiusChunks(8) == 8,
            "Era48: visibility radius = RD");
     Expect(IsEnterGpuWarmupReady(true, 0, true, true, true),

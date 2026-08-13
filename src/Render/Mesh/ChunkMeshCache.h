@@ -93,6 +93,8 @@ public:
                                        int radius_chunks) const;
   bool HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y, int max_y) const;
   bool HasPendingAsyncMeshWork() const;
+  bool HasAsyncInflightInHorizontalRadius(glm::ivec3 center_ground_chunk,
+                                          int radius_chunks) const;
   void WaitForAsyncMeshIdle();
   bool WaitForAsyncMeshIdleFor(std::chrono::milliseconds timeout);
   void CancelAsyncMeshWork();
@@ -170,6 +172,25 @@ public:
     return EnterTerminalHeld.count(chunk_coord) > 0;
   }
   void ClearEnterTerminalHeld();
+  size_t GetEnterTerminalHeldCount() const { return EnterTerminalHeld.size(); }
+  /// Era52: gate Done columns — void telem skips terminal void-edge faces.
+  void SyncEnterGateDoneColumns(const std::vector<glm::ivec2> &done_cols);
+  void ClearEnterGateDoneColumns();
+  size_t GetEnterGateDoneColumnCount() const
+  {
+    return EnterGateDoneColumns.size();
+  }
+  void SetEnterVoidTelemLitReadyFn(std::function<bool(glm::ivec2)> fn)
+  {
+    EnterVoidTelemLitReadyFn = std::move(fn);
+  }
+  void ClearEnterVoidTelemLitReadyFn() { EnterVoidTelemLitReadyFn = {}; }
+  /// Era52: drop orphan Dirty under enter gate (no chunk / no mesh pipeline).
+  int PruneEnterPhantomDirty(const UBlockWorld &world);
+  uint64_t GetEnterPhantomDirtyPrunedTotal() const
+  {
+    return EnterPhantomDirtyPrunedTotal;
+  }
   /// Era22 I-S2: any SoftDeferHeld slice in column (xz).
   bool HasSoftDeferHeldInColumn(glm::ivec2 ground_xz) const;
   /// Era51b: drop Dirty + RemeshAfterApply for enter SoftDefer terminal (ring clear).
@@ -602,6 +623,18 @@ private:
   bool EnterLitQuiesce{false};
   /// Era51: enter SoftDefer terminal — MarkDirty must not erase SoftDeferHeld.
   std::unordered_set<glm::ivec3, IVec3Hash> EnterTerminalHeld;
+  struct ColumnGroundHash
+  {
+    std::size_t operator()(const glm::ivec2 &v) const noexcept
+    {
+      return static_cast<std::size_t>(
+          (static_cast<uint64_t>(static_cast<uint32_t>(v.x)) << 32) ^
+          static_cast<uint32_t>(v.y));
+    }
+  };
+  std::unordered_set<glm::ivec2, ColumnGroundHash> EnterGateDoneColumns;
+  std::function<bool(glm::ivec2)> EnterVoidTelemLitReadyFn;
+  uint64_t EnterPhantomDirtyPrunedTotal{0};
   /// Era24 I-E1: SoftDefer undrawn publish avoided (Hide⇒Ticket).
   uint64_t SoftDeferEmptyPublishAvoided{0};
   /// Era39: frames since SoftDeferEmptyPublishAvoided (Dirty damp).

@@ -147,7 +147,11 @@ void WriteJsonlLine(const EnterLitSample &s, const char *kind = nullptr)
           << ",\"stuck_has_drawable\":" << s.stuck_has_drawable
           << ",\"visibility_debt\":" << s.visibility_debt
           << ",\"dark_face_near_n\":" << s.dark_face_near_n
-          << ",\"dark_face_void_near_n\":" << s.dark_face_void_near_n;
+          << ",\"dark_face_void_near_n\":" << s.dark_face_void_near_n
+          << ",\"enter_terminal_held_n\":" << s.enter_terminal_held_n
+          << ",\"gate_done_n\":" << s.gate_done_n
+          << ",\"enter_phantom_dirty_pruned_n\":"
+          << s.enter_phantom_dirty_pruned_n;
   if (kind != nullptr)
   {
     g_jsonl << ",\"kind\":\"" << kind << "\"";
@@ -262,6 +266,11 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
       world.IsEnterLitQuiesceLatched() || mesh.IsEnterLitQuiesce();
   out.dirty_n = static_cast<int>(mesh.GetDirtyCount());
   out.visibility_debt = world.CountEnterVisibilityDebt();
+  out.enter_terminal_held_n =
+      static_cast<int>(mesh.GetEnterTerminalHeldCount());
+  out.gate_done_n = static_cast<int>(mesh.GetEnterGateDoneColumnCount());
+  out.enter_phantom_dirty_pruned_n =
+      static_cast<int>(mesh.GetEnterPhantomDirtyPrunedTotal());
   // Era48: sample void-dark during enter so IsEnterVisibilityReady sees telem.
   {
     UChunkMeshCache::DarkFaceHit hit{};

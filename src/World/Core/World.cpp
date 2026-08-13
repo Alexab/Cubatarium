@@ -980,6 +980,11 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       if (enter_gate)
       {
         const glm::ivec2 col(coord.x, coord.z);
+        if (ShouldSkipMarkRelitAfterEnterStaleAttempt(
+                enter_gate, StickyRemeshAfterLight.count(col) > 0))
+        {
+          break;
+        }
         if (EnterVisualGateCtrl.IsCaptured() &&
             EnterVisualGateCtrl.GetState(col) == EnterVisualItemState::Done)
         {
@@ -2283,6 +2288,12 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
     // hole-free; after EndEnterLitGate keep cruise ring=4 (perf).
     if (MeshService->GetCache().ChunkHasFullyDarkFace(chunk_coord))
     {
+      if (EnterLitGateActive &&
+          (MeshService->IsEnterTerminalHeld(chunk_coord) ||
+           MeshService->IsSoftDeferHeld(chunk_coord)))
+      {
+        return false;
+      }
       const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
       const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
       const int horiz =
@@ -5079,6 +5090,19 @@ int EnterGameMeshRadiusChunks(const UWorld &world)
   return 2;
 }
 
+bool EnterMeshAsyncBlocksRing(const UWorld &world,
+                              const UWorldMeshService &mesh,
+                              glm::ivec3 center_ground_chunk, int radius_chunks)
+{
+  // Era53: under enter gate only near async blocks ring (global pool churn).
+  if (world.IsEnterLitGateActive())
+  {
+    return mesh.HasAsyncInflightInHorizontalRadius(center_ground_chunk,
+                                                   radius_chunks);
+  }
+  return mesh.HasPendingAsyncMeshWork();
+}
+
 bool HasMissingGreedyMeshesNearFocus(const UWorld &world)
 {
   // Do not CountNonAir here: under streamer contention it can stall for minutes.
@@ -5120,7 +5144,8 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
   const bool spawn_meshes_pending =
       mesh.HasDirtyWithinHorizontalRadius(center, radius) ||
       HasMissingGreedyMeshesNearFocus(*this);
-  const bool async_mesh_pending = mesh.HasPendingAsyncMeshWork();
+  const bool async_mesh_pending =
+      EnterMeshAsyncBlocksRing(*this, mesh, center, radius);
   const int gpu_pending_near =
       mesh.CountPendingGpuAppliesInHorizontalRadius(center, radius);
   // Era43e/43f: must not return early while GPU uploads remain.
@@ -5170,7 +5195,7 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
   }
   return !HasMissingGreedyMeshesNearFocus(*this) &&
          !mesh.HasDirtyWithinHorizontalRadius(center, radius) &&
-         !mesh.HasPendingAsyncMeshWork() &&
+         !EnterMeshAsyncBlocksRing(*this, mesh, center, radius) &&
          mesh.CountPendingGpuAppliesInHorizontalRadius(center, radius) == 0;
 }
 
@@ -5193,7 +5218,7 @@ bool UWorld::IsSpawnMeshRingReady() const
   {
     return false;
   }
-  if (MeshService->HasPendingAsyncMeshWork())
+  if (EnterMeshAsyncBlocksRing(*this, *MeshService, center, radius))
   {
     return false;
   }
@@ -5244,7 +5269,8 @@ void UWorld::SampleEnterGameMeshWarmupBlockers(EnterGameMeshWarmupBlockers &out)
   out.missing_greedy = HasMissingGreedyMeshesNearFocus(*this);
   out.gpu_pending_near =
       mesh.CountPendingGpuAppliesInHorizontalRadius(center, radius);
-  out.async_mesh_pending = mesh.HasPendingAsyncMeshWork();
+  out.async_mesh_pending =
+      EnterMeshAsyncBlocksRing(*this, mesh, center, radius);
   out.visual_warmup = NeedsEnterGameVisualWarmup();
 }
 
@@ -5713,6 +5739,12 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
         ApplyEnterOpenSkyBoundary(BlockWorld, *BlockRegistry, col.x * CHUNK_SIZE,
                                   col.y * CHUNK_SIZE, dirty_min, dirty_max);
         EnterVisualGateCtrl.NoteOpenSkyApplied(col);
+        // Era52: void-edge remesh cannot invent rim light — latch terminal now.
+        if (!stale)
+        {
+          latch_soft_defer_terminal();
+          return;
+        }
         for (int cy = 0; cy <= max_cy; ++cy)
         {
           const glm::ivec3 coord(col.x, cy, col.y);
@@ -5750,10 +5782,20 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
     {
       return;
     }
-    bool touched = StickyRemeshAfterLight.count(col) > 0;
+    // Era53: one stale remesh attempt per column — then terminal latch.
+    if (StickyRemeshAfterLight.count(col) > 0)
+    {
+      latch_soft_defer_terminal();
+      return;
+    }
+    bool touched = false;
     for (int cy = 0; cy <= max_cy; ++cy)
     {
       const glm::ivec3 coord(col.x, cy, col.y);
+      if (MeshService->IsEnterTerminalHeld(coord))
+      {
+        continue;
+      }
       if (!MeshService->HasDrawableGreedyMesh(coord) ||
           !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
       {
@@ -5823,6 +5865,33 @@ void UWorld::SyncEnterVisualGateQuiesceFlags()
   }
   const bool gate = EnterLitGateActive;
   const int remaining = CountEnterVisibilityDebt();
+  if (gate && EnterVisualGateCtrl.IsCaptured())
+  {
+    std::vector<glm::ivec2> done_cols;
+    done_cols.reserve(static_cast<size_t>(EnterVisualGateCtrl.Peak()));
+    for (const auto &kv : EnterVisualGateCtrl.Items())
+    {
+      if (kv.second == EnterVisualItemState::Done)
+      {
+        done_cols.push_back(kv.first);
+      }
+    }
+    MeshService->SyncEnterGateDoneColumns(done_cols);
+  }
+  else if (!gate)
+  {
+    MeshService->SyncEnterGateDoneColumns({});
+  }
+  if (gate)
+  {
+    MeshService->SetEnterVoidTelemLitReadyFn(
+        [this](glm::ivec2 col)
+        { return IsColumnLitReady(glm::ivec3(col.x, 0, col.y)); });
+  }
+  else
+  {
+    MeshService->SetEnterVoidTelemLitReadyFn({});
+  }
   if (gate && EnterLitQuiesceAllowed(gate, remaining) &&
       PhysicsTelemetryData.DarkFaceNearN > 0 &&
       PhysicsTelemetryData.DarkFaceStaleNearN <= 0)
@@ -6644,6 +6713,7 @@ void UWorld::TickEnterWarmupDrainFrame(int mesh_budget, int gate_iterations)
   }
   if (IsEnterLitGateActive())
   {
+    MeshService->PruneEnterPhantomDirty(BlockWorld);
     // Gate Tick: Repair is drain helper, not SoT — worklist Done is SoT.
     RepairEnterLitSnapshotFullyDarkRemesh();
     TickEnterGateMeshDrain(std::max(1, gate_iterations));

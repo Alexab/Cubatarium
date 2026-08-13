@@ -425,6 +425,17 @@ bool UChunkMeshCache::HasPendingAsyncMeshWork() const
   return AsyncBuilder->HasPendingWork();
 }
 
+bool UChunkMeshCache::HasAsyncInflightInHorizontalRadius(
+    glm::ivec3 center_ground_chunk, int radius_chunks) const
+{
+  if (!Render.AsyncMeshing || !Render.GreedyMeshing || !AsyncBuilder)
+  {
+    return false;
+  }
+  return AsyncBuilder->HasInflightInHorizontalRadius(center_ground_chunk,
+                                                     radius_chunks);
+}
+
 void UChunkMeshCache::WaitForAsyncMeshIdle()
 {
   if (Render.AsyncMeshing && Render.GreedyMeshing && AsyncBuilder)
@@ -843,13 +854,10 @@ bool UChunkMeshCache::FindNearestDarkFaceNear(const glm::vec3 &camera_pos,
   for (const auto &entry : GreedyCache)
   {
     const glm::ivec3 &cc = entry.first;
-    // Era50: SoftDeferHeld placeholders are Hide⇒Ticket — exclude from unfinished
-    // void telem (exit must not invent light for deferred faces).
-    // Era51b: EnterTerminalHeld same (drawable FullyDark SoftDefer terminal).
-    if (SoftDeferHeld.count(cc) > 0 || EnterTerminalHeld.count(cc) > 0)
-    {
-      continue;
-    }
+    const glm::ivec2 col_xz(cc.x, cc.z);
+    const bool chunk_terminal = SoftDeferHeld.count(cc) > 0 ||
+                                EnterTerminalHeld.count(cc) > 0;
+    const bool col_done = EnterGateDoneColumns.count(col_xz) > 0;
     const int dx = std::abs(cc.x - cam_chunk.x);
     const int dy = std::abs(cc.y - cam_chunk.y);
     const int dz = std::abs(cc.z - cam_chunk.z);
@@ -878,7 +886,8 @@ bool UChunkMeshCache::FindNearestDarkFaceNear(const glm::vec3 &camera_pos,
         {
           continue;
         }
-        ++count;
+        bool is_void_edge = false;
+        bool is_stale = false;
         if (world)
         {
           const int fi = static_cast<int>(v.faceIndex + 0.5f);
@@ -891,12 +900,29 @@ bool UChunkMeshCache::FindNearestDarkFaceNear(const glm::vec3 &camera_pos,
           if (SampleLightPacked(*world, air) != 0 ||
               SampleLightPacked(*world, solid) != 0)
           {
-            ++stale_n;
+            is_stale = true;
           }
           else
           {
-            ++void_n;
+            is_void_edge = true;
           }
+        }
+        // Era52: terminal / gate-Done / LitReady void-edge — not unfinished void.
+        if (EnterVoidTelemFaceExcluded(chunk_terminal, col_done, is_void_edge,
+                                       EnterGpuQuiesceDrain,
+                                       EnterVoidTelemLitReadyFn &&
+                                           EnterVoidTelemLitReadyFn(col_xz)))
+        {
+          continue;
+        }
+        ++count;
+        if (is_stale)
+        {
+          ++stale_n;
+        }
+        else if (is_void_edge)
+        {
+          ++void_n;
         }
         if (d2 < best_d2)
         {
@@ -1391,6 +1417,60 @@ void UChunkMeshCache::HoldEnterTerminal(glm::ivec3 chunk_coord)
 void UChunkMeshCache::ClearEnterTerminalHeld()
 {
   EnterTerminalHeld.clear();
+  ClearEnterGateDoneColumns();
+  ClearEnterVoidTelemLitReadyFn();
+  EnterPhantomDirtyPrunedTotal = 0;
+}
+
+void UChunkMeshCache::SyncEnterGateDoneColumns(
+    const std::vector<glm::ivec2> &done_cols)
+{
+  EnterGateDoneColumns.clear();
+  EnterGateDoneColumns.insert(done_cols.begin(), done_cols.end());
+}
+
+void UChunkMeshCache::ClearEnterGateDoneColumns()
+{
+  EnterGateDoneColumns.clear();
+}
+
+int UChunkMeshCache::PruneEnterPhantomDirty(const UBlockWorld &world)
+{
+  if (!EnterGpuQuiesceDrain)
+  {
+    return 0;
+  }
+  int pruned = 0;
+  for (auto it = Dirty.begin(); it != Dirty.end();)
+  {
+    const glm::ivec3 &c = *it;
+    if (EnterTerminalHeld.count(c) > 0)
+    {
+      RemeshAfterApply.erase(c);
+      it = Dirty.RemoveAt(it);
+      ++pruned;
+      continue;
+    }
+    if (!world.GetChunkManager().HasChunk(c))
+    {
+      RemeshAfterApply.erase(c);
+      it = Dirty.RemoveAt(it);
+      ++pruned;
+      continue;
+    }
+    if (!HasDrawableGreedyMesh(c) && !HasGreedyMesh(c) &&
+        !HasInflightMeshBuild(c) && !IsPendingGpuApply(c) &&
+        SoftDeferHeld.count(c) == 0)
+    {
+      RemeshAfterApply.erase(c);
+      it = Dirty.RemoveAt(it);
+      ++pruned;
+      continue;
+    }
+    ++it;
+  }
+  EnterPhantomDirtyPrunedTotal += static_cast<uint64_t>(pruned);
+  return pruned;
 }
 
 void UChunkMeshCache::ClearDirtyAndRemeshAfterApply(glm::ivec3 chunk_coord)
@@ -2261,10 +2341,24 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   }
   // Era49c: under enter gate, FullyDark commit must stay Dirty so remesh can
   // retry with updated light (RAA-only left gpu/async sticky forever).
+  // Era53: stale (lit field, dark mesh) — latch terminal, stop gpu=0→N pump.
   if (EnterGateBlocksRaaMarkDirty(EnterLitQuiesce, EnterGpuQuiesceDrain) &&
       gpu_result.hasFullyDarkFace && !Dirty.Contains(coord))
   {
-    MarkDirtyPriority(coord);
+    const bool already_terminal = EnterTerminalHeld.count(coord) > 0;
+    const bool stale_lit_field =
+        ChunkHasStaleDarkFaces(coord, world);
+    if (ShouldLatchStaleFullyDarkAfterEnterGpuCommit(
+            EnterGpuQuiesceDrain, gpu_result.hasFullyDarkFace, stale_lit_field,
+            already_terminal))
+    {
+      HoldEnterTerminal(coord);
+      RemeshAfterApply.erase(coord);
+    }
+    else if (!already_terminal)
+    {
+      MarkDirtyPriority(coord);
+    }
   }
   // Era15 TD-050: Unlit FirstMesh publish → LitPending (not every dark remesh).
   if (OnLitPendingNeeded && !had_mesh &&
@@ -3527,8 +3621,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (!world.GetChunkManager().HasChunk(*it))
       {
-        // Era47: orphan Dirty under streaming freeze must not sticky-block ring.
-        if (EnterLitQuiesce)
+        // Era47/Era52: orphan Dirty under streaming freeze must not sticky-block ring.
+        if (EnterLitQuiesce || EnterGpuQuiesceDrain)
         {
           return Dirty.RemoveAt(it);
         }
