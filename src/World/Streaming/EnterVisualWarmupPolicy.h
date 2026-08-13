@@ -430,6 +430,23 @@ inline bool EnterFullyDarkDrawableAcceptedForWarmupExit(
   return enter_terminal_held || gate_column_done;
 }
 
+/// Era55: HoldEnterTerminal also HoldSoftDeferFirstMesh — SoftDefer underfeet
+/// must not reopen Era29 FirstMesh while the slice is already terminal.
+inline bool EnterSoftDeferBlocksWarmupExit(bool empty_or_held, bool underfeet,
+                                           bool enter_terminal_held)
+{
+  return EnterSoftDeferEmptyNeedsFirstMesh(empty_or_held, underfeet) &&
+         !enter_terminal_held;
+}
+
+/// Era55: Gate remaining==0 is the enter visual SoT. Era29 underfeet
+/// lit-drawable / SoftDefer must not keep mesh_visual_warmup after that.
+inline bool EnterVisualWarmupYieldsToGateRemaining(bool enter_gate_active,
+                                                   int visibility_debt)
+{
+  return enter_gate_active && visibility_debt <= 0;
+}
+
 /// Alias kept for ocean/cruise policy readers.
 inline int OceanHealVoidBias()
 {

@@ -826,6 +826,20 @@ int main()
            "Era54: non-terminal FullyDark still blocks warmup");
     Expect(!EnterFullyDarkDrawableAcceptedForWarmupExit(false, true, true),
            "Era54: lit drawable path unchanged");
+    using cutum::EnterSoftDeferBlocksWarmupExit;
+    using cutum::EnterVisualWarmupYieldsToGateRemaining;
+    Expect(EnterSoftDeferBlocksWarmupExit(true, true, false),
+           "Era55: SoftDefer underfeet still blocks without terminal");
+    Expect(!EnterSoftDeferBlocksWarmupExit(true, true, true),
+           "Era55: terminal SoftDefer underfeet does not block warmup");
+    Expect(!EnterSoftDeferBlocksWarmupExit(true, false, false),
+           "Era55: far SoftDefer still not enter FirstMesh");
+    Expect(EnterVisualWarmupYieldsToGateRemaining(true, 0),
+           "Era55: remaining==0 yields Era29 visual warmup");
+    Expect(!EnterVisualWarmupYieldsToGateRemaining(true, 3),
+           "Era55: remaining>0 keeps visual warmup");
+    Expect(!EnterVisualWarmupYieldsToGateRemaining(false, 0),
+           "Era55: no enter gate keeps visual warmup");
     Expect(EnterVisibilityReadyRadiusChunks(8) == 8,
            "Era48: visibility radius = RD");
     Expect(IsEnterGpuWarmupReady(true, 0, true, true, true),

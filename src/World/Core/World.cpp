@@ -5306,6 +5306,13 @@ bool UWorld::NeedsEnterGameVisualWarmup() const
   {
     return false;
   }
+  // Era55: visibility remaining==0 already accepted SoftDefer/FullyDark
+  // terminal placeholders. Era29 underfeet lit-drawable must not reopen.
+  if (EnterVisualWarmupYieldsToGateRemaining(EnterLitGateActive,
+                                            CountEnterVisibilityDebt()))
+  {
+    return false;
+  }
   const UWorldMeshService &mesh = *MeshService;
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
   const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
@@ -5352,7 +5359,8 @@ bool UWorld::NeedsEnterGameVisualWarmup() const
         const bool soft_held = mesh.IsSoftDeferHeld(coord);
         const bool empty_or_held =
             (!has_drawable && has_greedy) || soft_held;
-        if (EnterSoftDeferEmptyNeedsFirstMesh(empty_or_held, soft_underfeet))
+        if (EnterSoftDeferBlocksWarmupExit(empty_or_held, soft_underfeet,
+                                           mesh.IsEnterTerminalHeld(coord)))
         {
           return true;
         }
@@ -6489,6 +6497,9 @@ int UWorld::CountCreateNearFovWarmupDebt(bool *out_underfeet_lit_ready) const
   const glm::ivec3 focus_ground(center.x, 0, center.z);
   const int near_r = CreateNearFovSoftDeferRadiusChunks();
   int debt = 0;
+  const int vis_debt = CountEnterVisibilityDebt();
+  const bool gate_visual_done =
+      EnterVisualWarmupYieldsToGateRemaining(EnterLitGateActive, vis_debt);
   if (HasPendingLightBeforeMeshNear(focus_ground, near_r))
   {
     ++debt;
@@ -6524,7 +6535,8 @@ int UWorld::CountCreateNearFovWarmupDebt(bool *out_underfeet_lit_ready) const
         const bool soft_held = mesh.IsSoftDeferHeld(coord);
         const bool empty_or_held =
             (!has_drawable && has_greedy) || soft_held;
-        if (empty_or_held)
+        if (empty_or_held && !mesh.IsEnterTerminalHeld(coord) &&
+            !gate_visual_done)
         {
           ++debt;
           if (underfeet)
