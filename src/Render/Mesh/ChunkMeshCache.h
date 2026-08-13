@@ -156,11 +156,13 @@ public:
   bool HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const;
   /// SoftDeferHeld side-set size (outside-focus !Drawable FirstMesh).
   size_t GetSoftDeferHeldCount() const { return SoftDeferHeld.size(); }
-  /// Era24: SoftDeferHeld membership for Hide⇒Ticket ownership.
+  /// Era24 / Era50: SoftDeferHeld membership for Hide⇒Ticket ownership.
   bool IsSoftDeferHeld(glm::ivec3 chunk_coord) const
   {
     return SoftDeferHeld.count(chunk_coord) > 0;
   }
+  /// Era50: enter void-edge terminal placeholder (Hide⇒Ticket).
+  void HoldSoftDeferFirstMesh(glm::ivec3 chunk_coord);
   /// Era22 I-S2: any SoftDeferHeld slice in column (xz).
   bool HasSoftDeferHeldInColumn(glm::ivec2 ground_xz) const;
   /// Prefetch immutable Capture into store (MarkRelit / commit). Main only.
@@ -646,7 +648,6 @@ private:
   /// SoftDefer dropped !Drawable FirstMesh outside focus — requeue when
   /// MayMesh / focus admits (rim plan B4; avoid forever-RemoveAt).
   std::unordered_set<glm::ivec3, IVec3Hash> SoftDeferHeld;
-  void HoldSoftDeferFirstMesh(glm::ivec3 chunk_coord);
   void RequeueSoftDeferHeld();
   /// GPU pool incremental upload: chunks mutated since last Consume.
   mutable std::unordered_set<glm::ivec3, IVec3Hash> GeometryDirtyChunks;

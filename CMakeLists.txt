@@ -246,6 +246,7 @@ set(SOURCES
     src/World/Streaming/ChunkEmergeCoordinator.cpp
     src/World/Streaming/ColumnFlowScheduler.cpp
     src/World/Streaming/ColumnFlowExecutor.cpp
+    src/World/Streaming/EnterVisualGate.cpp
     src/World/Physics/WorldPhysicsScheduler.cpp
     src/World/Physics/WorldMovementPhysicsService.cpp
     src/World/Physics/WorldBlockPhysicsService.cpp
@@ -1319,6 +1320,7 @@ add_executable(miss_first_mesh_class_test
     src/Test/MissFirstMeshClassTest.cpp)
 target_include_directories(miss_first_mesh_class_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(miss_first_mesh_class_test glm::glm)
 
 add_executable(focus_ingress_policy_test
     src/Test/FocusIngressPolicyTest.cpp)
@@ -2186,6 +2188,7 @@ set(PHYSICS_UWORLD_TEST_SOURCES
     src/World/Streaming/ChunkEmergeCoordinator.cpp
     src/World/Streaming/ColumnFlowScheduler.cpp
     src/World/Streaming/ColumnFlowExecutor.cpp
+    src/World/Streaming/EnterVisualGate.cpp
     src/World/Lighting/CpuLightingSeedBackend.cpp
     src/World/Lighting/GpuLightingSeedBackend.cpp
     src/World/Lighting/LightingSeedBackendFactory.cpp

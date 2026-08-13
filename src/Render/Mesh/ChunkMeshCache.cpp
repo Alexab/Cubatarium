@@ -843,6 +843,12 @@ bool UChunkMeshCache::FindNearestDarkFaceNear(const glm::vec3 &camera_pos,
   for (const auto &entry : GreedyCache)
   {
     const glm::ivec3 &cc = entry.first;
+    // Era50: SoftDeferHeld placeholders are Hide⇒Ticket — exclude from unfinished
+    // void telem (exit must not invent light for deferred faces).
+    if (SoftDeferHeld.count(cc) > 0)
+    {
+      continue;
+    }
     const int dx = std::abs(cc.x - cam_chunk.x);
     const int dy = std::abs(cc.y - cam_chunk.y);
     const int dz = std::abs(cc.z - cam_chunk.z);
@@ -1487,20 +1493,29 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
       PreferKickPendingGpuQueued(chunkCoord);
       return;
     }
-    // Era47 P3: under enter lit-quiesce do not park RAA for drawable remesh —
-    // RAA→Apply churn keeps gpu_pending plateau while gate waits Dirty=0.
-    if (EnterLitQuiesce && HasDrawableGreedyMesh(chunkCoord))
+    // Era50: FullyDark under enter drain → Dirty (not RAA PreferKick loop).
+    if (ChunkHasFullyDarkFace(chunkCoord) && HasDrawableGreedyMesh(chunkCoord) &&
+        !EnterLitQuiesce)
     {
+      // fall through to Dirty.MarkDirty below (erase Active gate via Dirty)
+    }
+    else
+    {
+      // Era47 P3 / Era50: EnterLitQuiesce only when worklist remaining==0.
+      if (EnterLitQuiesce && HasDrawableGreedyMesh(chunkCoord))
+      {
+        return;
+      }
+      if (RemeshAfterApply.count(chunkCoord) > 0 || Dirty.Contains(chunkCoord))
+      {
+        return;
+      }
+      RemeshAfterApply.insert(chunkCoord);
+      ++MarkDirtyToRaaN;
       return;
     }
-    if (RemeshAfterApply.count(chunkCoord) > 0 || Dirty.Contains(chunkCoord))
-    {
-      return;
-    }
-    RemeshAfterApply.insert(chunkCoord);
-    ++MarkDirtyToRaaN;
-    return;
   }
+  SoftDeferHeld.erase(chunkCoord);
   const size_t before = Dirty.GetCount();
   Dirty.MarkDirty(chunkCoord);
   if (Dirty.GetCount() == before)
@@ -1568,7 +1583,22 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
         PreferKickPendingGpuQueued(chunkCoord);
         return;
       }
-      // Era47 P3: enter lit-quiesce — no RAA park for already-drawable remesh.
+      // Era50: FullyDark remesh under enter drain must enter Dirty (async→GPU).
+      // RAA park + EnterGpuQuiesceDrain PreferKick-only = remesh no-op loop.
+      if (ChunkHasFullyDarkFace(chunkCoord) && !EnterLitQuiesce)
+      {
+        const bool existed_dark = Dirty.Contains(chunkCoord);
+        Dirty.MarkDirtyPriority(chunkCoord);
+        if (!existed_dark)
+        {
+          BumpChunkMeshRevision(chunkCoord);
+        }
+        InstancesDirty = true;
+        GreedyBatchesDirty = true;
+        CrossBatchesDirty = true;
+        return;
+      }
+      // Era47 P3 / Era50: EnterLitQuiesce only when worklist remaining==0.
       if (EnterLitQuiesce)
       {
         return;

@@ -28,6 +28,7 @@
 #include "World/Math/CollisionVolume.h"
 #include "World/Physics/PhysicsProfile.h"
 #include "World/Physics/PhysicsTelemetry.h"
+#include "World/Streaming/EnterVisualGate.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenSets.h"
@@ -1378,6 +1379,10 @@ private:
   void CaptureEnterLitDebtSnapshot();
   /// Era49b: precompute RD visual work set at gate begin (monotonic debt).
   void CaptureEnterVisualWorkSnapshot();
+  /// Era50: sync EnterGpuQuiesceDrain vs EnterLitQuiesce (remaining==0 only).
+  void SyncEnterVisualGateQuiesceFlags();
+  /// Era50: refresh worklist item states from live column evidence.
+  void RefreshEnterVisualWorklistStates();
   void EnqueueEnterLitSnapshotRelight();
   void RepairEnterLitSnapshotFifoGhosts();
   /// Era48: schedule remesh-after-lit for FullyDark snapshot columns.
@@ -1400,10 +1405,11 @@ private:
     }
   };
   std::unordered_set<glm::ivec2, GroundColumnHash> EnterLitDebtSnapshot;
-  /// Era49b: frozen set of RD columns that need VisualReady at gate begin.
+  /// Era49b/Era50: frozen RD columns + FSM worklist (Gate is SoT for debt).
   std::unordered_set<glm::ivec2, GroundColumnHash> EnterVisualWorkSnapshot;
   bool EnterVisualWorkSnapshotCaptured{false};
   int EnterVisualWorkPeak{0};
+  EnterVisualGate EnterVisualGateCtrl;
   std::unordered_map<glm::ivec2, PendingRelightMeshColumnRange, GroundColumnHash>
       PendingRelightMeshColumns;
   /// Near columns: light must apply before first mesh dirty.

@@ -3,6 +3,7 @@
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/CyOrderPolicy.h"
+#include "World/Streaming/EnterVisualGate.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/ColumnVisualReadyPolicy.h"
 #include "World/Diagnostics/EnterLitDiagnostics.h"
@@ -844,6 +845,62 @@ int main()
            "Era49b: EnterGpuQuiesceDrain blocks RAA MarkDirty");
     Expect(!ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, true),
            "Era49b: enter gate ⇒ no RAA MarkDirty");
+  }
+
+  // --- Era50 EnterVisualGate completion FSM (pure) ---
+  {
+    using cutum::AdvanceEnterVisualItemStateMonotonic;
+    using cutum::ClassifyEnterVoidEdgeAction;
+    using cutum::ClassifyEnterVisualItemState;
+    using cutum::EnterLitQuiesceAllowed;
+    using cutum::EnterGpuQuiesceDrainAllowed;
+    using cutum::EnterVisibilityUnfinishedVoid;
+    using cutum::EnterVisualItemState;
+    using cutum::EnterVisualVoidEdgeAcceptsSoftDefer;
+    using cutum::EnterVoidEdgeAction;
+    using cutum::ShouldEscalateEnterWorklistGpuDrain;
+    Expect(EnterGpuQuiesceDrainAllowed(true),
+           "Era50: GpuQuiesceDrain on for whole gate");
+    Expect(!EnterLitQuiesceAllowed(true, 5),
+           "Era50: LitQuiesce off while remaining>0");
+    Expect(EnterLitQuiesceAllowed(true, 0),
+           "Era50: LitQuiesce only when remaining==0");
+    Expect(!EnterLitQuiesceAllowed(false, 0),
+           "Era50: LitQuiesce off without gate");
+    Expect(EnterVisibilityUnfinishedVoid(985, 800) == 185,
+           "Era50: unfinished void excludes SoftDefer placeholders");
+    Expect(EnterVisibilityUnfinishedVoid(100, 200) == 0,
+           "Era50: unfinished void floors at 0");
+    Expect(EnterVisualVoidEdgeAcceptsSoftDefer(true, false, true, false, true),
+           "Era50: void-edge SoftDefer+ticket accepted");
+    Expect(!EnterVisualVoidEdgeAcceptsSoftDefer(true, false, true, true, true),
+           "Era50: stale FullyDark not SoftDefer terminal");
+    Expect(ClassifyEnterVoidEdgeAction(true, true, false, false, false) ==
+               EnterVoidEdgeAction::RemeshStale,
+           "Era50: stale FullyDark ⇒ remesh");
+    Expect(ClassifyEnterVoidEdgeAction(true, false, false, false, true) ==
+               EnterVoidEdgeAction::SoftDeferTicket,
+           "Era50: void-edge ⇒ SoftDefer (no Relight invent)");
+    Expect(ClassifyEnterVisualItemState(true, false, false, false) ==
+               EnterVisualItemState::NeedLight,
+           "Era50: pending ⇒ NeedLight");
+    Expect(ClassifyEnterVisualItemState(false, true, false, false) ==
+               EnterVisualItemState::NeedRemesh,
+           "Era50: stale dark ⇒ NeedRemesh");
+    Expect(ClassifyEnterVisualItemState(false, false, true, false) ==
+               EnterVisualItemState::NeedGpu,
+           "Era50: gpu busy ⇒ NeedGpu");
+    Expect(ClassifyEnterVisualItemState(false, false, false, true) ==
+               EnterVisualItemState::Done,
+           "Era50: terminal ⇒ Done");
+    Expect(AdvanceEnterVisualItemStateMonotonic(EnterVisualItemState::Done,
+                                                EnterVisualItemState::NeedLight) ==
+               EnterVisualItemState::Done,
+           "Era50: Done sticky (monotonic debt)");
+    Expect(ShouldEscalateEnterWorklistGpuDrain(true, 10, 3, 90),
+           "Era50: escalate GPU when worklist stall + pending");
+    Expect(!ShouldEscalateEnterWorklistGpuDrain(true, 10, 3, 10),
+           "Era50: no escalate before stall frames");
   }
 
   // --- Era34 CreateBar debt / soft wall ---

@@ -72,6 +72,7 @@
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
+#include "World/Streaming/EnterVisualGate.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/ColumnVisualReadyPolicy.h"
 #include "World/Streaming/OceanCruisePolicy.h"
@@ -886,28 +887,26 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                                     const std::vector<glm::ivec2> &primary_grounds,
                                     bool finalize_pending_gate)
 {
-  // Era49b: under enter gate always suppress MarkRelit remesh storm
-  // (PreferKick/Skip + FullyDark idle Schedule only). Quiesce latch still
-  // tracks unready==0 for telem; mesh cache EnterLitQuiesce follows gate.
+  // Era50: EnterLitQuiesce only when worklist remaining==0 — not whole gate.
+  // EnterGpuQuiesceDrain (PreferKick RAA) stays on for the gate separately.
   const bool enter_gate = EnterLitGateActive;
+  const int vis_remaining = CountEnterVisibilityDebt();
   const bool enter_visual_quiesce =
-      EnterLitQuiesceLatched ||
+      EnterLitQuiesceAllowed(enter_gate, vis_remaining) ||
       (ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(
-           enter_gate, CountEnterVisibilityDebt(),
-           GetPendingTerrainRelightFifoCount()) &&
+           enter_gate, vis_remaining, GetPendingTerrainRelightFifoCount()) &&
        PhysicsTelemetryData.DarkFaceNearN > 0 &&
        PhysicsTelemetryData.DarkFaceStaleNearN <= 0);
-  const bool enter_quiesce = enter_gate || enter_visual_quiesce;
   if (enter_visual_quiesce && enter_gate)
   {
     EnterLitQuiesceLatched = true;
   }
   else if (enter_gate &&
-           (PhysicsTelemetryData.DarkFaceStaleNearN > 0 ||
-            CountEnterVisibilityDebt() > 0))
+           (PhysicsTelemetryData.DarkFaceStaleNearN > 0 || vis_remaining > 0))
   {
     EnterLitQuiesceLatched = false;
   }
+  const bool enter_quiesce = enter_visual_quiesce;
   if (relit_chunks.empty())
   {
     // Job finished with nothing to apply (empty capture / unloaded). Still
@@ -5570,7 +5569,11 @@ bool UWorld::ColumnFullyDarkLooksStaleWithLitField(glm::ivec2 col_chunk_xz) cons
 
 int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
 {
-  if (!MeshService || !EnterLitSnapshotCaptured || !EnterLitGateActive)
+  if (!MeshService || !EnterLitGateActive)
+  {
+    return 0;
+  }
+  if (!EnterVisualGateCtrl.IsCaptured() && !EnterLitSnapshotCaptured)
   {
     return 0;
   }
@@ -5584,7 +5587,7 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
 
   auto schedule_col = [&](glm::ivec2 col)
   {
-    // Era49b/c: SoftDeferHeld undrawn without FirstMesh → one Hide⇒Ticket.
+    // SoftDeferHeld undrawn without FirstMesh → one Hide⇒Ticket.
     if (MeshService->HasSoftDeferHeldInColumn(col) &&
         !GetColumnFlowExecutor().Scheduler().Contains(
             col, ColumnWorkKind::FirstMesh))
@@ -5593,30 +5596,66 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
                                       /*priority=*/100);
     }
     if (IsPendingLightBeforeMesh(col) ||
-        !IsColumnLitReady(glm::ivec3(col.x, 0, col.y)) ||
-        !ColumnFullyDarkSolidDrawable(col))
+        !IsColumnLitReady(glm::ivec3(col.x, 0, col.y)))
     {
       return;
     }
-    // Era49c: void-edge FullyDark → RelightThenMesh once (not every Repair
-    // frame — FIFO storm left fifo≈70 / void plateau 985).
-    if (!ColumnFullyDarkLooksStaleWithLitField(col))
+    if (!ColumnFullyDarkSolidDrawable(col))
     {
-      const bool relight_owned =
-          IsPendingLightBeforeMesh(col) ||
-          AsyncRelightColumnsInFlight.count(col) > 0 ||
-          GetColumnFlowExecutor().Scheduler().Contains(
-              col, ColumnWorkKind::RelightThenMesh) ||
-          GetColumnFlowExecutor().Scheduler().Contains(
-              col, ColumnWorkKind::PromoteRelight);
-      if (!relight_owned)
+      return;
+    }
+    const bool stale = ColumnFullyDarkLooksStaleWithLitField(col);
+    const bool has_fm_ticket = GetColumnFlowExecutor().Scheduler().Contains(
+        col, ColumnWorkKind::FirstMesh);
+    const bool soft_ticket =
+        MeshService->HasSoftDeferHeldInColumn(col) && has_fm_ticket;
+    const bool relight_owned =
+        IsPendingLightBeforeMesh(col) ||
+        AsyncRelightColumnsInFlight.count(col) > 0 ||
+        GetColumnFlowExecutor().Scheduler().Contains(
+            col, ColumnWorkKind::RelightThenMesh) ||
+        GetColumnFlowExecutor().Scheduler().Contains(
+            col, ColumnWorkKind::PromoteRelight);
+    const bool probed = EnterVisualGateCtrl.WasVoidRelightProbed(col);
+    const EnterVoidEdgeAction action = ClassifyEnterVoidEdgeAction(
+        /*fully_dark=*/true, stale, soft_ticket, relight_owned,
+        /*allow_one_relight_probe=*/!probed);
+
+    if (action == EnterVoidEdgeAction::SoftDeferTicket ||
+        (action == EnterVoidEdgeAction::None && soft_ticket))
+    {
+      // Era50: void-edge terminal — SoftDefer + FirstMesh (no Relight invent).
+      for (int cy = 0; cy <= max_cy; ++cy)
       {
-        EnqueueVoidDarkColumnRelightNote(col);
-        GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::RelightThenMesh,
-                                        /*priority=*/80);
-        ++scheduled;
+        const glm::ivec3 coord(col.x, cy, col.y);
+        if (!MeshService->HasDrawableGreedyMesh(coord) ||
+            !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+        {
+          continue;
+        }
+        MeshService->GetCache().HoldSoftDeferFirstMesh(coord);
       }
+      if (!has_fm_ticket)
+      {
+        GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::FirstMesh,
+                                        /*priority=*/100);
+      }
+      EnterVisualGateCtrl.MarkDone(col);
+      ++scheduled;
+      return;
+    }
+    if (action == EnterVoidEdgeAction::RelightOnce)
+    {
+      EnterVisualGateCtrl.NoteVoidRelightProbed(col);
+      EnqueueVoidDarkColumnRelightNote(col);
+      GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::RelightThenMesh,
+                                      /*priority=*/80);
       StickyRemeshAfterLight.insert(col);
+      ++scheduled;
+      return;
+    }
+    if (action != EnterVoidEdgeAction::RemeshStale)
+    {
       return;
     }
     bool touched = StickyRemeshAfterLight.count(col) > 0;
@@ -5654,23 +5693,120 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
       touched = true;
       ++scheduled;
     }
-    // FullyDark with no remeshable cy this frame: PreferKick/Dirty already set
-    // above when possible. Do not Sticky-insert alone — Era49 ready ≠ schedule.
     (void)touched;
   };
 
-  for (const glm::ivec2 &col : EnterLitDebtSnapshot)
+  if (EnterVisualGateCtrl.IsCaptured())
   {
-    schedule_col(col);
-  }
-  for (int dx = -vis_r; dx <= vis_r; ++dx)
-  {
-    for (int dz = -vis_r; dz <= vis_r; ++dz)
+    for (const auto &kv : EnterVisualGateCtrl.Items())
     {
-      schedule_col(glm::ivec2(center.x + dx, center.z + dz));
+      if (kv.second != EnterVisualItemState::Done)
+      {
+        schedule_col(kv.first);
+      }
+    }
+  }
+  else
+  {
+    for (const glm::ivec2 &col : EnterLitDebtSnapshot)
+    {
+      schedule_col(col);
+    }
+    for (int dx = -vis_r; dx <= vis_r; ++dx)
+    {
+      for (int dz = -vis_r; dz <= vis_r; ++dz)
+      {
+        schedule_col(glm::ivec2(center.x + dx, center.z + dz));
+      }
     }
   }
   return scheduled;
+}
+
+void UWorld::SyncEnterVisualGateQuiesceFlags()
+{
+  if (!MeshService)
+  {
+    return;
+  }
+  const bool gate = EnterLitGateActive;
+  const int remaining = CountEnterVisibilityDebt();
+  if (gate && EnterLitQuiesceAllowed(gate, remaining) &&
+      PhysicsTelemetryData.DarkFaceNearN > 0 &&
+      PhysicsTelemetryData.DarkFaceStaleNearN <= 0)
+  {
+    EnterLitQuiesceLatched = true;
+  }
+  else if (gate && (PhysicsTelemetryData.DarkFaceStaleNearN > 0 ||
+                    remaining > 0))
+  {
+    EnterLitQuiesceLatched = false;
+  }
+  if (!gate)
+  {
+    EnterLitQuiesceLatched = false;
+  }
+  MeshService->SetEnterGpuQuiesceDrain(EnterGpuQuiesceDrainAllowed(gate));
+  // Era50: lit quiesce only when worklist remaining==0.
+  MeshService->SetEnterLitQuiesce(EnterLitQuiesceAllowed(gate, remaining));
+}
+
+void UWorld::RefreshEnterVisualWorklistStates()
+{
+  if (!EnterVisualGateCtrl.IsCaptured() || !MeshService)
+  {
+    return;
+  }
+  for (const auto &kv : EnterVisualGateCtrl.Items())
+  {
+    const glm::ivec2 col = kv.first;
+    if (kv.second == EnterVisualItemState::Done)
+    {
+      continue;
+    }
+    const bool pending = IsPendingLightBeforeMesh(col);
+    const bool lit_ready =
+        IsColumnLitReady(glm::ivec3(col.x, 0, col.y));
+    const bool fully_dark = ColumnFullyDarkSolidDrawable(col);
+    const bool stale =
+        fully_dark && ColumnFullyDarkLooksStaleWithLitField(col);
+    const bool has_fm = GetColumnFlowExecutor().Scheduler().Contains(
+        col, ColumnWorkKind::FirstMesh);
+    const bool soft_ticket =
+        MeshService->HasSoftDeferHeldInColumn(col) && has_fm;
+    const bool void_placeholder = EnterVisualVoidEdgeAcceptsSoftDefer(
+        lit_ready, pending, fully_dark, stale, soft_ticket);
+    const bool terminal =
+        IsColumnVisualReady(col) || void_placeholder;
+    bool gpu_busy = false;
+    if (!terminal && MeshService)
+    {
+      const int max_cy =
+          std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+      for (int cy = 0; cy <= max_cy && !gpu_busy; ++cy)
+      {
+        const glm::ivec3 coord(col.x, cy, col.y);
+        if (MeshService->IsPendingGpuApply(coord) ||
+            MeshService->HasInflightMeshBuild(coord))
+        {
+          gpu_busy = true;
+        }
+      }
+    }
+    const EnterVisualItemState observed = ClassifyEnterVisualItemState(
+        pending || !lit_ready, stale, gpu_busy, terminal);
+    EnterVisualGateCtrl.ObserveColumn(col, observed);
+  }
+  const int rem = EnterVisualGateCtrl.Remaining();
+  if (rem <= 0)
+  {
+    EnterVisualGateCtrl.SetPhase(EnterVisualGatePhase::Verify);
+  }
+  else if (EnterVisualGateCtrl.Phase() == EnterVisualGatePhase::Capture ||
+           EnterVisualGateCtrl.Phase() == EnterVisualGatePhase::Idle)
+  {
+    EnterVisualGateCtrl.SetPhase(EnterVisualGatePhase::DrainLight);
+  }
 }
 
 void UWorld::BeginEnterLitGate()
@@ -5683,10 +5819,12 @@ void UWorld::BeginEnterLitGate()
   SetStreamingEnabled(false);
   EnterLitGateActive = true;
   EnterLitQuiesceLatched = false;
+  EnterVisualGateCtrl.Reset();
   if (MeshService)
   {
+    // Era50: GPU quiesce for whole gate; lit quiesce only after remaining==0.
     MeshService->SetEnterGpuQuiesceDrain(true);
-    MeshService->SetEnterLitQuiesce(true);
+    MeshService->SetEnterLitQuiesce(false);
   }
   if (URuntimeTuning::Get().EnterLitUseSnapshotDebt)
   {
@@ -5709,6 +5847,7 @@ void UWorld::EndEnterLitGate()
   EnterVisualWorkSnapshot.clear();
   EnterVisualWorkSnapshotCaptured = false;
   EnterVisualWorkPeak = 0;
+  EnterVisualGateCtrl.Reset();
   if (MeshService)
   {
     MeshService->SetEnterGpuQuiesceDrain(false);
@@ -5764,7 +5903,12 @@ int UWorld::CountEnterVisibilityDebt() const
   {
     return 0;
   }
-  // Era49b: monotonic remaining of precomputed work set (counter cannot grow).
+  // Era50: monotonic remaining of Gate worklist (Done sticky).
+  if (EnterLitGateActive && EnterVisualGateCtrl.IsCaptured())
+  {
+    return EnterVisualGateCtrl.Remaining();
+  }
+  // Era49b fallback: live snapshot set if Gate not yet captured.
   if (EnterLitGateActive && EnterVisualWorkSnapshotCaptured)
   {
     int debt = 0;
@@ -5819,8 +5963,10 @@ void UWorld::CaptureEnterVisualWorkSnapshot()
   EnterVisualWorkSnapshot.clear();
   EnterVisualWorkSnapshotCaptured = false;
   EnterVisualWorkPeak = 0;
+  EnterVisualGateCtrl.BeginCapture();
   if (!MeshService || !BlockRegistry)
   {
+    EnterVisualGateCtrl.EndCapture();
     return;
   }
   const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
@@ -5841,11 +5987,22 @@ void UWorld::CaptureEnterVisualWorkSnapshot()
       if (!IsColumnVisualReady(col))
       {
         EnterVisualWorkSnapshot.insert(col);
+        const bool pending = IsPendingLightBeforeMesh(col);
+        const bool lit_ready =
+            IsColumnLitReady(glm::ivec3(col.x, 0, col.y));
+        const bool fully_dark = ColumnFullyDarkSolidDrawable(col);
+        const bool stale =
+            fully_dark && ColumnFullyDarkLooksStaleWithLitField(col);
+        const EnterVisualItemState initial = ClassifyEnterVisualItemState(
+            pending || !lit_ready, stale,
+            /*gpu*/ false, /*terminal*/ false);
+        EnterVisualGateCtrl.AddCapturedColumn(col, initial);
       }
     }
   }
-  EnterVisualWorkPeak = static_cast<int>(EnterVisualWorkSnapshot.size());
-  EnterVisualWorkSnapshotCaptured = true;
+  EnterVisualGateCtrl.EndCapture();
+  EnterVisualWorkPeak = EnterVisualGateCtrl.Peak();
+  EnterVisualWorkSnapshotCaptured = EnterVisualGateCtrl.IsCaptured();
 }
 
 bool UWorld::IsColumnVisualReady(glm::ivec2 col_chunk_xz) const
@@ -5884,6 +6041,7 @@ bool UWorld::IsColumnVisualReady(glm::ivec2 col_chunk_xz) const
   bool fully_dark_solid = false;
   bool missing_greedy = false;
   bool soft_no_ticket = false;
+  bool any_soft_held = false;
 
   for (int cy = cy0; cy <= cy1; ++cy)
   {
@@ -5915,6 +6073,10 @@ bool UWorld::IsColumnVisualReady(glm::ivec2 col_chunk_xz) const
     {
       continue;
     }
+    if (MeshService->IsSoftDeferHeld(coord))
+    {
+      any_soft_held = true;
+    }
     if (MeshService->HasDrawableGreedyMesh(coord) &&
         MeshService->GetCache().ChunkHasFullyDarkFace(coord))
     {
@@ -5937,8 +6099,15 @@ bool UWorld::IsColumnVisualReady(glm::ivec2 col_chunk_xz) const
   }
 
   // Era49b: no terrain in band under frozen enter streaming = N/A (not debt).
-  // Era48 counted debt only when any_chunk && (missing|soft_stuck).
   if (!any_chunk)
+  {
+    return true;
+  }
+
+  // Era50: void-edge FullyDark + SoftDefer + FirstMesh = terminal placeholder
+  // (Relight cannot invent light; void telem excludes SoftDeferHeld faces).
+  if (fully_dark_solid && has_fm_ticket && any_soft_held &&
+      !ColumnFullyDarkLooksStaleWithLitField(col_chunk_xz))
   {
     return true;
   }
@@ -5979,8 +6148,11 @@ bool UWorld::IsEnterVisibilityReady() const
     {
       return false;
     }
+    const int unfinished_void = EnterVisibilityUnfinishedVoid(
+        PhysicsTelemetryData.DarkFaceVoidNearN,
+        PhysicsTelemetryData.SoftDeferEmptyPlaceholderN);
     return EnterVisibilityVoidReady(PhysicsTelemetryData.DarkFaceNearN,
-                                    PhysicsTelemetryData.DarkFaceVoidNearN);
+                                    unfinished_void);
   }
   if (CountEnterVisibilityDebt() > 0)
   {
@@ -5990,8 +6162,12 @@ bool UWorld::IsEnterVisibilityReady() const
   {
     return false;
   }
+  // Era50: SoftDefer/placeholder faces excluded from unfinished void.
+  const int unfinished_void = EnterVisibilityUnfinishedVoid(
+      PhysicsTelemetryData.DarkFaceVoidNearN,
+      PhysicsTelemetryData.SoftDeferEmptyPlaceholderN);
   return EnterVisibilityVoidReady(PhysicsTelemetryData.DarkFaceNearN,
-                                  PhysicsTelemetryData.DarkFaceVoidNearN);
+                                  unfinished_void);
 }
 
 int UWorld::TickEnterFovLitPass(int capture_budget)
@@ -6340,21 +6516,7 @@ void UWorld::TickEnterGateMeshDrain(int iteration_budget)
   {
     if (MeshService && IsEnterLitGateActive())
     {
-      // Era49b: EnterLitQuiesce follows gate (PreferKick / no RAA MarkDirty /
-      // prune lit Dirty). Latch telem when unready==0.
-      if (CountEnterVisibilityDebt() <= 0 &&
-          PhysicsTelemetryData.DarkFaceNearN > 0 &&
-          PhysicsTelemetryData.DarkFaceStaleNearN <= 0)
-      {
-        EnterLitQuiesceLatched = true;
-      }
-      else if (PhysicsTelemetryData.DarkFaceStaleNearN > 0 ||
-               CountEnterVisibilityDebt() > 0)
-      {
-        EnterLitQuiesceLatched = false;
-      }
-      MeshService->SetEnterGpuQuiesceDrain(true);
-      MeshService->SetEnterLitQuiesce(true);
+      SyncEnterVisualGateQuiesceFlags();
     }
     TickAsyncChunkSystems();
     TickMeshEmerge();
@@ -6363,39 +6525,44 @@ void UWorld::TickEnterGateMeshDrain(int iteration_budget)
 
 void UWorld::TickEnterWarmupDrainFrame(int mesh_budget, int gate_iterations)
 {
-  // Era46: same path for coop PrepareView and Application gpu_warmup —
+  // Era50: EnterVisualGate owns enter drain — quiesce split + worklist FSM.
   // DrainEnterGameMeshWarmup owns explicit DrainPendingGpuMeshes; gate drain
   // runs TickMeshEmerge (ConsumeGpuApplyBacklog) for iterations.
-  // Era49b: EnterLitQuiesce active for whole enter gate (not only unready==0).
-  if (MeshService)
+  SyncEnterVisualGateQuiesceFlags();
+  if (IsEnterLitGateActive())
   {
-    const bool gate = IsEnterLitGateActive();
-    if (gate && CountEnterVisibilityDebt() <= 0 &&
-        PhysicsTelemetryData.DarkFaceNearN > 0 &&
-        PhysicsTelemetryData.DarkFaceStaleNearN <= 0)
-    {
-      EnterLitQuiesceLatched = true;
-    }
-    else if (gate && (PhysicsTelemetryData.DarkFaceStaleNearN > 0 ||
-                      CountEnterVisibilityDebt() > 0))
-    {
-      EnterLitQuiesceLatched = false;
-    }
-    if (!gate)
-    {
-      EnterLitQuiesceLatched = false;
-    }
-    MeshService->SetEnterGpuQuiesceDrain(gate);
-    MeshService->SetEnterLitQuiesce(gate);
+    RefreshEnterVisualWorklistStates();
   }
+  const int gpu_finish_before = PhysicsTelemetryData.GpuFinishN;
   if (NeedsEnterGameMeshWarmup())
   {
-    DrainEnterGameMeshWarmup(std::max(1, mesh_budget));
+    int budget = std::max(1, mesh_budget);
+    // Era50: escalate GPU drain when worklist stuck with pending GPU.
+    if (IsEnterLitGateActive() &&
+        ShouldEscalateEnterWorklistGpuDrain(
+            true, CountEnterVisibilityDebt(),
+            PhysicsTelemetryData.PendingGpuAppliesN +
+                PhysicsTelemetryData.PendingGpuQueuedN,
+            EnterVisualGateCtrl.FramesWithoutGpuFinish()))
+    {
+      budget = std::max(budget, mesh_budget * 2);
+    }
+    DrainEnterGameMeshWarmup(budget);
   }
   if (IsEnterLitGateActive())
   {
+    // Gate Tick: Repair is drain helper, not SoT — worklist Done is SoT.
     RepairEnterLitSnapshotFullyDarkRemesh();
     TickEnterGateMeshDrain(std::max(1, gate_iterations));
+    RefreshEnterVisualWorklistStates();
+    SyncEnterVisualGateQuiesceFlags();
+    const bool any_finish =
+        PhysicsTelemetryData.GpuFinishN > gpu_finish_before;
+    EnterVisualGateCtrl.NoteGpuFinishProgress(any_finish);
+    if (EnterVisualGateCtrl.Remaining() <= 0)
+    {
+      EnterVisualGateCtrl.SetPhase(EnterVisualGatePhase::Verify);
+    }
   }
 }
 
