@@ -915,6 +915,9 @@ int main()
            "Era51: OpenSky off outside enter gate");
     Expect(!ShouldTreatMissingNeighborAsOpenSky(true, true, true),
            "Era51: loaded neighbor ⇒ no OpenSky inject");
+    Expect(ClassifyEnterVoidEdgeAction(true, true, false, false, false) ==
+               EnterVoidEdgeAction::RemeshStale,
+           "Era51b: stale still RemeshStale before OpenSky latch");
   }
 
   // --- Era34 CreateBar debt / soft wall ---

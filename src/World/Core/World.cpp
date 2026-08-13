@@ -976,6 +976,24 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     {
     case RemeshAfterLitApplyDecision::Schedule:
       ++PhysicsTelemetryData.MarkRelitRemeshAfterApplyN;
+      // Era51b: never re-Dirty Gate Done / EnterTerminalHeld under enter.
+      if (enter_gate)
+      {
+        const glm::ivec2 col(coord.x, coord.z);
+        if (EnterVisualGateCtrl.IsCaptured() &&
+            EnterVisualGateCtrl.GetState(col) == EnterVisualItemState::Done)
+        {
+          break;
+        }
+        if (MeshService->IsEnterTerminalHeld(coord))
+        {
+          if (gpu_pending)
+          {
+            MeshService->PreferKickPendingGpuQueued(coord);
+          }
+          break;
+        }
+      }
       // Era49c: under enter gate FullyDark must MarkDirty — RAA alone +
       // no MarkDirty-on-commit was a no-op loop (raa_total↑, mesh never rebuilds).
       if (enter_gate && fully_dark)
@@ -5610,6 +5628,12 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
 
   auto schedule_col = [&](glm::ivec2 col)
   {
+    // Era51b: Gate Done — no remesh/Dirty churn (terminal sticky).
+    if (EnterVisualGateCtrl.IsCaptured() &&
+        EnterVisualGateCtrl.GetState(col) == EnterVisualItemState::Done)
+    {
+      return;
+    }
     // SoftDeferHeld undrawn without FirstMesh → one Hide⇒Ticket.
     if (MeshService->HasSoftDeferHeldInColumn(col) &&
         !GetColumnFlowExecutor().Scheduler().Contains(
@@ -5632,6 +5656,7 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
         col, ColumnWorkKind::FirstMesh);
     const bool soft_ticket =
         MeshService->HasSoftDeferHeldInColumn(col) && has_fm_ticket;
+    const bool open_sky_done = EnterVisualGateCtrl.WasOpenSkyApplied(col);
     const bool relight_owned =
         IsPendingLightBeforeMesh(col) ||
         AsyncRelightColumnsInFlight.count(col) > 0 ||
@@ -5640,15 +5665,46 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
         GetColumnFlowExecutor().Scheduler().Contains(
             col, ColumnWorkKind::PromoteRelight);
     const bool probed = EnterVisualGateCtrl.WasVoidRelightProbed(col);
-    const EnterVoidEdgeAction action = ClassifyEnterVoidEdgeAction(
+    EnterVoidEdgeAction action = ClassifyEnterVoidEdgeAction(
         /*fully_dark=*/true, stale, soft_ticket, relight_owned,
         /*allow_one_relight_probe=*/!probed);
+    // Era51b: after OpenSky, FullyDark remesh cannot invent rim light — SoftDefer.
+    if (open_sky_done && !soft_ticket &&
+        (action == EnterVoidEdgeAction::RemeshStale ||
+         action == EnterVoidEdgeAction::SoftDeferTicket))
+    {
+      action = EnterVoidEdgeAction::SoftDeferTicket;
+    }
+
+    auto latch_soft_defer_terminal = [&]()
+    {
+      for (int cy = 0; cy <= max_cy; ++cy)
+      {
+        const glm::ivec3 coord(col.x, cy, col.y);
+        if (!MeshService->HasDrawableGreedyMesh(coord) ||
+            !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+        {
+          continue;
+        }
+        MeshService->HoldEnterTerminal(coord);
+        // Drop sticky Dirty/RAA so ring_blocker=dirty can clear.
+        MeshService->GetCache().ClearDirtyAndRemeshAfterApply(coord);
+      }
+      if (!has_fm_ticket)
+      {
+        GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::FirstMesh,
+                                        /*priority=*/100);
+      }
+      EnterVisualGateCtrl.MarkDone(col);
+      StickyRemeshAfterLight.erase(col);
+      ++scheduled;
+    };
 
     if (action == EnterVoidEdgeAction::SoftDeferTicket ||
         (action == EnterVoidEdgeAction::None && soft_ticket))
     {
       // Era51: try OpenSky inject once → remesh (void→stale path) before SoftDefer.
-      if (!soft_ticket && !EnterVisualGateCtrl.WasOpenSkyApplied(col))
+      if (!soft_ticket && !open_sky_done)
       {
         const int sea = ProceduralTemplate.SeaLevel;
         const int max_h = ProceduralTemplate.MaxHeight;
@@ -5677,24 +5733,7 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
         StickyRemeshAfterLight.insert(col);
         return;
       }
-      // SoftDefer terminal — SoftDefer + FirstMesh (OpenSky already tried).
-      for (int cy = 0; cy <= max_cy; ++cy)
-      {
-        const glm::ivec3 coord(col.x, cy, col.y);
-        if (!MeshService->HasDrawableGreedyMesh(coord) ||
-            !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
-        {
-          continue;
-        }
-        MeshService->HoldEnterTerminal(coord);
-      }
-      if (!has_fm_ticket)
-      {
-        GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::FirstMesh,
-                                        /*priority=*/100);
-      }
-      EnterVisualGateCtrl.MarkDone(col);
-      ++scheduled;
+      latch_soft_defer_terminal();
       return;
     }
     if (action == EnterVoidEdgeAction::RelightOnce)

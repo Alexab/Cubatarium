@@ -172,6 +172,8 @@ public:
   void ClearEnterTerminalHeld();
   /// Era22 I-S2: any SoftDeferHeld slice in column (xz).
   bool HasSoftDeferHeldInColumn(glm::ivec2 ground_xz) const;
+  /// Era51b: drop Dirty + RemeshAfterApply for enter SoftDefer terminal (ring clear).
+  void ClearDirtyAndRemeshAfterApply(glm::ivec3 chunk_coord);
   /// Prefetch immutable Capture into store (MarkRelit / commit). Main only.
   void PrefetchMeshCapture(const UBlockWorld &world, glm::ivec3 chunk_coord);
   void InvalidateMeshCapture(glm::ivec3 chunk_coord);

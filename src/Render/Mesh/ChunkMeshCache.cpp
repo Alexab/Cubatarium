@@ -845,7 +845,8 @@ bool UChunkMeshCache::FindNearestDarkFaceNear(const glm::vec3 &camera_pos,
     const glm::ivec3 &cc = entry.first;
     // Era50: SoftDeferHeld placeholders are Hide⇒Ticket — exclude from unfinished
     // void telem (exit must not invent light for deferred faces).
-    if (SoftDeferHeld.count(cc) > 0)
+    // Era51b: EnterTerminalHeld same (drawable FullyDark SoftDefer terminal).
+    if (SoftDeferHeld.count(cc) > 0 || EnterTerminalHeld.count(cc) > 0)
     {
       continue;
     }
@@ -1392,6 +1393,12 @@ void UChunkMeshCache::ClearEnterTerminalHeld()
   EnterTerminalHeld.clear();
 }
 
+void UChunkMeshCache::ClearDirtyAndRemeshAfterApply(glm::ivec3 chunk_coord)
+{
+  Dirty.Erase(chunk_coord);
+  RemeshAfterApply.erase(chunk_coord);
+}
+
 void UChunkMeshCache::NoteSoftDeferEmptyPublishAvoided(glm::ivec3 coord)
 {
   ++SoftDeferEmptyPublishAvoided;
@@ -1445,6 +1452,13 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
   for (auto it = SoftDeferHeld.begin(); it != SoftDeferHeld.end();)
   {
     const glm::ivec3 coord = *it;
+    // Era51b: enter SoftDefer terminal keeps SoftDeferHeld even if drawable FullyDark
+    // (Hide⇒Ticket — exclude from void telem / no Dirty requeue).
+    if (EnterGpuQuiesceDrain && EnterTerminalHeld.count(coord) > 0)
+    {
+      ++it;
+      continue;
+    }
     if (HasDrawableGreedyMesh(coord) || IsPendingGpuApply(coord) ||
         HasInflightMeshBuild(coord) || Dirty.Contains(coord) ||
         HasMeshSatisfyingColumnReady(coord))
@@ -3483,6 +3497,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           return Dirty.end();
         }
       }
+      if (EnterGpuQuiesceDrain && EnterTerminalHeld.count(*it) > 0)
+      {
+        return Dirty.RemoveAt(it);
+      }
       if (EnterLitQuiesce && HasDrawableGreedyMesh(*it))
       {
         // Era49: keep FullyDark remesh Dirty under enter quiesce.
@@ -3682,6 +3700,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       // Era47: enter lit-quiesce — drop lit drawable remesh Dirty (gate blocker).
       // Era49: keep FullyDark drawable Dirty until lit GPU commit.
+      if (EnterGpuQuiesceDrain && EnterTerminalHeld.count(*it) > 0)
+      {
+        it = Dirty.RemoveAt(it);
+        continue;
+      }
       if (EnterLitQuiesce && HasDrawableGreedyMesh(*it) &&
           !ChunkHasFullyDarkFace(*it))
       {
