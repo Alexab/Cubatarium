@@ -2010,8 +2010,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                 : CooperativeLoadProgressAfterMesh();
         const int denom = std::max(1, StreamingWarmupPeakDebt);
         const bool ring_ready = world.IsSpawnMeshRingReady();
-        const bool load_settled =
-            ring_ready && fov_debt <= 0 && lit_sample.ring_not_ready == 0;
+        const bool visibility_ready = world.IsEnterVisibilityReady();
+        const int visibility_debt = lit_sample.visibility_debt;
+        const bool load_settled = ring_ready && fov_debt <= 0 &&
+                                  lit_sample.ring_not_ready == 0 &&
+                                  visibility_ready;
         if (!StreamingWarmupAbortDrainMode &&
             ShouldForceEnterMeshAbort(fov_debt, ring_ready, elapsed_ms,
                                       URuntimeTuning::Get().EnterMeshAbortMs))
@@ -2025,7 +2028,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                       << (lit_sample.mesh_dirty ? 1 : 0)
                       << " gpu_pending=" << lit_sample.mesh_gpu_pending_near
                       << " fifo=" << lit_sample.fifo_n << " ring="
-                      << (ring_ready ? 1 : 0);
+                      << (ring_ready ? 1 : 0)
+                      << " visibility_debt=" << visibility_debt;
             CubatariumFlushLogs();
           }
         }
@@ -2044,7 +2048,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                                 denom));
         const std::string status = BuildEnterWarmupStatus(
             lit_sample, fov_debt, ring_ready, StreamingWarmupAbortDrainMode,
-            elapsed_ms, URuntimeTuning::Get().EnterFovLitHardWallMs);
+            elapsed_ms, URuntimeTuning::Get().EnterFovLitHardWallMs,
+            visibility_debt);
         Report(sink, "prepare_view",
                prepare_view_base + kPhaseWeightPrepareView * stream_inner,
                status);

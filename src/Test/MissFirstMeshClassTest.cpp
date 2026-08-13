@@ -744,6 +744,9 @@ int main()
   {
     using cutum::ClassifyRemeshAfterLitApply;
     using cutum::ComputeMeshWorkAdmission;
+    using cutum::EnterVisibilityReadyRadiusChunks;
+    using cutum::EnterVisibilityVoidReady;
+    using cutum::IsEnterGpuWarmupReady;
     using cutum::MeshWorkAdmission;
     using cutum::MeshWorkAdmissionInput;
     using cutum::RemeshAfterLitApplyDecision;
@@ -761,12 +764,29 @@ int main()
     Expect(ClassifyRemeshAfterLitApply(false, false, false, false, true) ==
                RemeshAfterLitApplyDecision::SkipEnterLitQuiesce,
            "Era47: clear under quiesce ⇒ Skip (no Schedule)");
+    Expect(ClassifyRemeshAfterLitApply(false, false, false, false, true,
+                                       /*fully_dark=*/true) ==
+               RemeshAfterLitApplyDecision::Schedule,
+           "Era48: FullyDark under quiesce ⇒ Schedule remesh-after-lit");
     Expect(ClassifyRemeshAfterLitApply(false, false, true, false, true) ==
                RemeshAfterLitApplyDecision::PreferKickGpu,
            "Era47: gpu under quiesce ⇒ PreferKick");
     Expect(ClassifyRemeshAfterLitApply(false, false, false, false, false) ==
                RemeshAfterLitApplyDecision::Schedule,
            "Era47: clear without quiesce ⇒ Schedule");
+    Expect(EnterVisibilityVoidReady(0, 999),
+           "Era48: no dark-face sample ⇒ void gate open");
+    Expect(EnterVisibilityVoidReady(100, 150),
+           "Era48: void under threshold ⇒ ready");
+    Expect(!EnterVisibilityVoidReady(100, 201),
+           "Era48: void over threshold ⇒ not ready");
+    Expect(EnterVisibilityReadyRadiusChunks(8) == 8,
+           "Era48: visibility radius = RD");
+    Expect(IsEnterGpuWarmupReady(true, 0, true, true, true),
+           "Era48: ready when visibility ok");
+    Expect(!IsEnterGpuWarmupReady(true, 0, true, true, false),
+           "Era48: not ready while visibility debt");
+    // Latch semantics covered in World EnterLitQuiesceLatched (fifo blips).
     Expect(!ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, true),
            "Era47 P3: enter gate ⇒ no RAA MarkDirty");
     Expect(ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, false),

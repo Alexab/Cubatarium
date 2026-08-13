@@ -361,13 +361,38 @@ inline bool ShouldMarkDirtyAfterRemeshAfterApplyCommit(bool already_dirty,
   return !already_dirty && !gpu_pending;
 }
 
-/// Era47 P1: after lit snapshot debt clear under enter gate, MarkRelit must not
-/// feed new Dirty/RAA/RemeshSeam — PreferKick/Skip only. Fifo residual alone
-/// does not keep remesh producers open (latch uses debt).
+/// Era47 P1 / Era48: after lit+mesh snapshot debt clear under enter gate,
+/// MarkRelit must not feed new Dirty/RAA/RemeshSeam — PreferKick/Skip only.
+/// Snapshot debt includes FullyDark remesh (Era48); fifo residual alone does
+/// not keep remesh producers open (latch uses debt).
 inline bool ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(
     bool enter_lit_gate_active, int snapshot_debt, int /*fifo_n*/ = 0)
 {
   return enter_lit_gate_active && snapshot_debt <= 0;
+}
+
+/// Era48: void-edge aggregate gate (matches ocean SoftDefer threshold).
+inline int EnterVisibilityVoidNearMax()
+{
+  return 200;
+}
+
+/// Era48 DoD radius for visibility-ready = render distance (caller supplies RD).
+inline int EnterVisibilityReadyRadiusChunks(int render_distance_chunks)
+{
+  return std::max(0, render_distance_chunks);
+}
+
+/// Era48: void telem gate — ignore until first dark-face sample exists.
+inline bool EnterVisibilityVoidReady(int dark_face_near_n,
+                                     int dark_face_void_near_n,
+                                     int void_max = EnterVisibilityVoidNearMax())
+{
+  if (dark_face_near_n <= 0)
+  {
+    return true;
+  }
+  return dark_face_void_near_n <= void_max;
 }
 
 /// Era46 C: escalate GPU drain after abort_drain wall (ms).
@@ -438,11 +463,13 @@ inline float EnterGpuWarmupMonotonicProgress(float raw_prog, float &display_prog
   return display_prog;
 }
 
-/// Era44: InGame only when ring + mesh blockers + lit debt cleared.
+/// Era44/48: InGame only when ring + mesh blockers + lit debt + visibility ready.
 inline bool IsEnterGpuWarmupReady(bool ring_ready, int fov_debt,
-                                  bool mesh_blockers_clear, bool min_frames_done)
+                                  bool mesh_blockers_clear, bool min_frames_done,
+                                  bool visibility_ready = true)
 {
-  return min_frames_done && ring_ready && fov_debt <= 0 && mesh_blockers_clear;
+  return min_frames_done && ring_ready && fov_debt <= 0 && mesh_blockers_clear &&
+         visibility_ready;
 }
 
 /// Era44: documented last-resort after abort-drain (default ≥300s).
@@ -502,11 +529,12 @@ inline std::string FormatEnterWarmupElapsed(double elapsed_ms)
   return " (" + std::to_string(sec) + "s)";
 }
 
-/// Era44b: shared enter warmup status — mesh/gpu blockers beat fifo/lit queue.
+/// Era44b/48: shared enter warmup status — mesh/gpu blockers beat fifo/lit queue.
 inline std::string BuildEnterWarmupStatus(const EnterLitSample &sample,
                                           int fov_debt, bool ring_ready,
                                           bool abort_drain, double elapsed_ms,
-                                          int hard_wall_ms)
+                                          int hard_wall_ms,
+                                          int visibility_debt = 0)
 {
   const bool slow = elapsed_ms >= static_cast<double>(hard_wall_ms);
   const std::string elapsed_suffix = FormatEnterWarmupElapsed(elapsed_ms);
@@ -546,6 +574,21 @@ inline std::string BuildEnterWarmupStatus(const EnterLitSample &sample,
     }
     return status;
   }
+  if (visibility_debt > 0)
+  {
+    std::string status =
+        "Finishing view… " + std::to_string(visibility_debt) + " left";
+    if (sample.dark_face_void_near_n > EnterVisibilityVoidNearMax())
+    {
+      status += " void=" + std::to_string(sample.dark_face_void_near_n);
+    }
+    status += elapsed_suffix;
+    if (slow)
+    {
+      status += " (slow)";
+    }
+    return status;
+  }
   if (fov_debt > 0 || sample.fifo_n > 0 || sample.inflight > 0)
   {
     std::string status = "Lighting queue… fifo=" + std::to_string(sample.fifo_n) +
@@ -575,11 +618,11 @@ inline std::string BuildEnterWarmupStatus(const EnterLitSample &sample,
   return "Preparing view..." + elapsed_suffix;
 }
 
-/// Era44b: combined debt for coop/gpu_warmup progress (mesh_dirty weighted).
+/// Era44b/48: combined debt for coop/gpu_warmup progress (mesh_dirty weighted).
 inline int EnterWarmupCombinedDebt(const EnterLitSample &sample, int fov_debt)
 {
   return sample.fifo_n + sample.mesh_gpu_pending_near + sample.ring_not_ready +
-         fov_debt + (sample.mesh_dirty ? 8 : 0);
+         fov_debt + sample.visibility_debt + (sample.mesh_dirty ? 8 : 0);
 }
 
 /// Era44b: status prefers mesh/gpu over fifo when both are active.
@@ -615,9 +658,11 @@ enum class RemeshAfterLitApplyDecision
   SkipEnterLitQuiesce,
 };
 
+/// Era48: fully_dark_drawable carves out quiesce — remesh-after-lit required
+/// until mesh light matches field (void-dark first_paint fix).
 inline RemeshAfterLitApplyDecision ClassifyRemeshAfterLitApply(
     bool is_dirty, bool raa_pending, bool gpu_pending, bool inflight,
-    bool enter_lit_quiesce = false)
+    bool enter_lit_quiesce = false, bool fully_dark_drawable = false)
 {
   if (is_dirty)
   {
@@ -635,7 +680,7 @@ inline RemeshAfterLitApplyDecision ClassifyRemeshAfterLitApply(
   {
     return RemeshAfterLitApplyDecision::SkipInflight;
   }
-  if (enter_lit_quiesce)
+  if (enter_lit_quiesce && !fully_dark_drawable)
   {
     return RemeshAfterLitApplyDecision::SkipEnterLitQuiesce;
   }
@@ -644,10 +689,12 @@ inline RemeshAfterLitApplyDecision ClassifyRemeshAfterLitApply(
 
 inline bool ShouldScheduleRemeshAfterLitApply(bool is_dirty, bool raa_pending,
                                               bool gpu_pending, bool inflight,
-                                              bool enter_lit_quiesce = false)
+                                              bool enter_lit_quiesce = false,
+                                              bool fully_dark_drawable = false)
 {
   return ClassifyRemeshAfterLitApply(is_dirty, raa_pending, gpu_pending,
-                                     inflight, enter_lit_quiesce) ==
+                                     inflight, enter_lit_quiesce,
+                                     fully_dark_drawable) ==
          RemeshAfterLitApplyDecision::Schedule;
 }
 

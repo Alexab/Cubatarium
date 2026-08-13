@@ -52,6 +52,10 @@ struct EnterLitSample
   int dirty_n{0};
   int stuck_has_chunk{0};
   int stuck_has_drawable{0};
+  /// Era48: full-RD visibility debt (missing/FullyDark/pending light).
+  int visibility_debt{0};
+  int dark_face_near_n{0};
+  int dark_face_void_near_n{0};
 };
 
 /// Era44: per-frame step timings (deltas) inside gpu_warmup.

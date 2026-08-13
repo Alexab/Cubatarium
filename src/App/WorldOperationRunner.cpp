@@ -211,7 +211,8 @@ bool UWorldOperationRunner::EnterVisualCapReached() const
   // Soft-ready only: do NOT key off EnterLoadElapsedMs here — that timer
   // includes cooperative terrain load (seconds) and would abort/skip warmup
   // after 200ms with an unfinished world (stuck on "World loaded" 100%).
-  return !World.NeedsEnterGameMeshWarmup() && World.IsSpawnMeshRingReady();
+  return !World.NeedsEnterGameMeshWarmup() && World.IsSpawnMeshRingReady() &&
+         World.IsEnterVisibilityReady();
 }
 
 bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
@@ -242,31 +243,36 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   const bool ring_ready = World.IsSpawnMeshRingReady();
   const bool mesh_blockers_clear = !World.NeedsEnterGameMeshWarmup();
   const bool fov_ready = fov_debt <= 0;
-  const bool soft_ready = mesh_blockers_clear && fov_ready && ring_ready;
+  const bool visibility_ready = World.IsEnterVisibilityReady();
+  const int visibility_debt = lit_sample.visibility_debt;
+  const bool soft_ready =
+      mesh_blockers_clear && fov_ready && ring_ready && visibility_ready;
 
   const bool cap_reached = ShouldForceEnterVisualCap(
       EnterGameGpuWarmupElapsedMs, soft_ready, EnterGameColdCreate,
       tune.EnterFovLitHardWallMs, tune.EnterLitRequireZero);
-  if (!cap_reached && fov_debt > 0 &&
+  if (!cap_reached && (fov_debt > 0 || visibility_debt > 0) &&
       EnterGameGpuWarmupElapsedMs >=
           static_cast<double>(tune.EnterFovLitHardWallMs) &&
       !EnterGameLitWarnLogged)
   {
     EnterGameLitWarnLogged = true;
-    std::cerr << "[Era42] enter lit still draining past warn wall ("
+    std::cerr << "[Era42/48] enter lit/visibility still draining past warn wall ("
               << EnterGameGpuWarmupElapsedMs << "ms, lit=" << fov_debt
-              << ")\n";
+              << " vis=" << visibility_debt << ")\n";
   }
+  // Era48: never EndEnterLitGate on lit abort while visibility debt remains —
+  // keep unified drain (log only).
   if (!EnterGameForceLitAbort && tune.EnterLitRequireZero && fov_debt > 0 &&
       tune.EnterLitAbortMs > 0 &&
       EnterGameGpuWarmupElapsedMs >= static_cast<double>(tune.EnterLitAbortMs) &&
       World.IsEnterLitGateActive())
   {
     EnterGameForceLitAbort = true;
-    std::cerr << "[Era43] enter lit abort after " << EnterGameGpuWarmupElapsedMs
-              << "ms, residual=" << fov_debt << "\n";
-    World.EndEnterLitGate();
-    UEnterLitDiagnostics::EndSession();
+    std::cerr << "[Era43/48] enter lit abort wall after "
+              << EnterGameGpuWarmupElapsedMs << "ms, residual_lit=" << fov_debt
+              << " vis=" << visibility_debt
+              << " (continuing drain; no force InGame)\n";
   }
   if (!EnterGameAbortDrainMode &&
       ShouldForceEnterMeshAbort(fov_debt, ring_ready, EnterGameGpuWarmupElapsedMs,
@@ -284,20 +290,25 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
                 << " gpu_pending=" << lit_sample.mesh_gpu_pending_near
                 << " async=" << (lit_sample.mesh_async_pending ? 1 : 0)
                 << " ring_not_ready=" << lit_sample.ring_not_ready
-                << " fifo=" << lit_sample.fifo_n;
+                << " fifo=" << lit_sample.fifo_n
+                << " visibility_debt=" << visibility_debt;
       CubatariumFlushLogs();
     }
   }
 
   const float raw_prog = EnterGpuWarmupProgressFraction(
       lit_sample.fifo_n, fifo_peak, lit_sample.mesh_gpu_pending_near, gpu_peak,
-      lit_sample.ring_not_ready, ring_peak, fov_debt, fov_peak);
+      lit_sample.ring_not_ready, ring_peak,
+      fov_debt + visibility_debt, std::max(fov_peak, 1));
   const float enter_prog =
       EnterGpuWarmupMonotonicProgress(raw_prog, EnterGameDisplayProgress);
-  const float frac = 0.93f + 0.07f * enter_prog;
+  // Era48: hold bar under 100% until visibility ready.
+  const float capped_prog =
+      visibility_ready ? enter_prog : std::min(enter_prog, 0.99f);
+  const float frac = 0.93f + 0.07f * capped_prog;
   const std::string status = BuildEnterWarmupStatus(
       lit_sample, fov_debt, ring_ready, EnterGameAbortDrainMode,
-      EnterGameGpuWarmupElapsedMs, tune.EnterFovLitHardWallMs);
+      EnterGameGpuWarmupElapsedMs, tune.EnterFovLitHardWallMs, visibility_debt);
   sink.Report("prepare_view", frac, status);
 
   if (EnterGameGpuWarmupFramesLeft > 0)
@@ -314,13 +325,14 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   {
     World.SetEnterGameWarmupMissingGreedy(lit_sample.ring_not_ready);
   }
-  if (ring_ready && mesh_blockers_clear && fov_ready)
+  if (ring_ready && mesh_blockers_clear && fov_ready && visibility_ready)
   {
     UEnterLitDiagnostics::MaybeLogProfileSummary(lit_sample);
   }
 
   const bool enter_ready = IsEnterGpuWarmupReady(
-      ring_ready, fov_debt, mesh_blockers_clear, min_frames_done);
+      ring_ready, fov_debt, mesh_blockers_clear, min_frames_done,
+      visibility_ready);
   const bool force_ingame =
       EnterGameAbortDrainMode &&
       ShouldForceEnterInGameAfterAbortDrain(EnterGameGpuWarmupElapsedMs,
@@ -328,17 +340,19 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   if (force_ingame && !enter_ready && !EnterGameForceInGameLogged)
   {
     EnterGameForceInGameLogged = true;
-    LOG(WARNING) << "[EnterWarmup] force_ingame elapsed_ms="
+    LOG(WARNING) << "[EnterWarmup] force_ingame wall elapsed_ms="
                  << EnterGameGpuWarmupElapsedMs << " ring_ready="
                  << (ring_ready ? 1 : 0) << " mesh_dirty="
                  << (lit_sample.mesh_dirty ? 1 : 0) << " gpu_pending="
                  << lit_sample.mesh_gpu_pending_near << " ring="
-                 << lit_sample.ring_not_ready << " fifo=" << lit_sample.fifo_n;
+                 << lit_sample.ring_not_ready << " fifo=" << lit_sample.fifo_n
+                 << " visibility_debt=" << visibility_debt
+                 << " (Era48: ignored until visibility ready)";
     CubatariumFlushLogs();
   }
 
-  // Era44: mesh abort continues unified drain; gate stays until ring ready.
-  if (!enter_ready && !cap_reached && !EnterGameForceLitAbort && !force_ingame)
+  // Era48: InGame only when visibility ready — abort/force/cap do not bypass.
+  if (!enter_ready)
   {
     return false;
   }

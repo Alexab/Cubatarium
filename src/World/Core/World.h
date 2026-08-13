@@ -419,6 +419,10 @@ public:
   bool NeedsEnterGameVisualWarmup() const;
   /// Era42: PendingLight (global) + FullyDark in RD+1 around spawn focus.
   int CountEnterFovLitDebt() const;
+  /// Era48: missing mesh / FullyDark / pending light within render distance.
+  int CountEnterVisibilityDebt() const;
+  /// Era48: visibility debt clear + void-near under threshold.
+  bool IsEnterVisibilityReady() const;
   /// Era42: priority-enqueue RD/PendingLight + elevated Capture/apply on bar.
   int TickEnterFovLitPass(int capture_budget = -1);
   /// Spawn ring has greedy mesh committed (no missing, no pending GPU apply).
@@ -1363,9 +1367,13 @@ private:
   bool StreamingEnabledBeforeEnterLitGate{true};
   int EnterLitGateLitRadiusChunks() const;
   bool ColumnFullyDarkSolidDrawable(glm::ivec2 col_chunk_xz) const;
+  /// Era48: FullyDark mesh but light field already non-zero (stale bake).
+  bool ColumnFullyDarkLooksStaleWithLitField(glm::ivec2 col_chunk_xz) const;
   void CaptureEnterLitDebtSnapshot();
   void EnqueueEnterLitSnapshotRelight();
   void RepairEnterLitSnapshotFifoGhosts();
+  /// Era48: schedule remesh-after-lit for FullyDark snapshot columns.
+  int RepairEnterLitSnapshotFullyDarkRemesh();
   int CountEnterLitSnapshotDebt() const;
   bool IsEnterLitSnapshotColumnResolved(glm::ivec2 col_chunk_xz) const;
   struct PendingRelightMeshColumnRange

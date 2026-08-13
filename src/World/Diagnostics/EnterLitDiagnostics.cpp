@@ -2,6 +2,7 @@
 
 #include "App/Core.h"
 #include "App/Platform/Log.h"
+#include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Mesh/WorldMeshService.h"
@@ -143,7 +144,10 @@ void WriteJsonlLine(const EnterLitSample &s, const char *kind = nullptr)
           << ",\"enter_lit_quiesce\":" << (s.enter_lit_quiesce ? 1 : 0)
           << ",\"dirty_n\":" << s.dirty_n
           << ",\"stuck_has_chunk\":" << s.stuck_has_chunk
-          << ",\"stuck_has_drawable\":" << s.stuck_has_drawable;
+          << ",\"stuck_has_drawable\":" << s.stuck_has_drawable
+          << ",\"visibility_debt\":" << s.visibility_debt
+          << ",\"dark_face_near_n\":" << s.dark_face_near_n
+          << ",\"dark_face_void_near_n\":" << s.dark_face_void_near_n;
   if (kind != nullptr)
   {
     g_jsonl << ",\"kind\":\"" << kind << "\"";
@@ -257,6 +261,37 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
   out.enter_lit_quiesce =
       world.IsEnterLitQuiesceLatched() || mesh.IsEnterLitQuiesce();
   out.dirty_n = static_cast<int>(mesh.GetDirtyCount());
+  out.visibility_debt = world.CountEnterVisibilityDebt();
+  // Era48: sample void-dark during enter so IsEnterVisibilityReady sees telem.
+  {
+    UChunkMeshCache::DarkFaceHit hit{};
+    int near_n = 0;
+    int stale_n = 0;
+    int void_n = 0;
+    glm::vec3 cam_pos(static_cast<float>(focus.x) + 0.5f,
+                      static_cast<float>(focus.y) + 1.5f,
+                      static_cast<float>(focus.z) + 0.5f);
+    if (const auto camera = world.GetCurrentUserCamera())
+    {
+      cam_pos = camera->GetPosition();
+    }
+    if (mesh.GetCache().FindNearestDarkFaceNear(
+            cam_pos, /*max_dist=*/24.0f, /*chunk_radius=*/2, hit, &near_n,
+            &world.GetBlockWorld(), &stale_n, &void_n))
+    {
+      out.dark_face_near_n = near_n;
+      out.dark_face_void_near_n = void_n;
+      auto &mut = world.GetPhysicsTelemetryMutable();
+      mut.DarkFaceNearN = near_n;
+      mut.DarkFaceVoidNearN = void_n;
+      mut.DarkFaceStaleNearN = stale_n;
+    }
+    else
+    {
+      out.dark_face_near_n = phys.DarkFaceNearN;
+      out.dark_face_void_near_n = phys.DarkFaceVoidNearN;
+    }
+  }
 }
 
 void UEnterLitDiagnostics::MaybeLog(const EnterLitSample &sample,
