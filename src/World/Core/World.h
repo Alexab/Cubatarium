@@ -421,6 +421,10 @@ public:
   int CountEnterFovLitDebt() const;
   /// Era48: missing mesh / FullyDark / pending light within render distance.
   int CountEnterVisibilityDebt() const;
+  /// Era49: pure column VisualReady outcome (not Sticky/schedule/quiesce).
+  bool IsColumnVisualReady(glm::ivec2 col_chunk_xz) const;
+  /// Era49: count columns in radius that are not VisualReady.
+  int CountUnreadyColumns(glm::ivec3 center_chunk, int radius_chunks) const;
   /// Era48: visibility debt clear + void-near under threshold.
   bool IsEnterVisibilityReady() const;
   /// Era42: priority-enqueue RD/PendingLight + elevated Capture/apply on bar.

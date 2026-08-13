@@ -73,6 +73,7 @@
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include "World/Streaming/ColumnVisualReadyPolicy.h"
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Streaming/WorldStreaming.h"
@@ -5389,14 +5390,13 @@ bool UWorld::IsEnterLitSnapshotColumnResolved(glm::ivec2 col_chunk_xz) const
   {
     return false;
   }
-  // Era48: any FullyDark solid drawable needs remesh-after-lit once. Classifying
-  // void vs stale too early (before light finishes) zeroed debt and latched
-  // quiesce while meshes stayed dark — first_paint void_near spiked.
-  if (!ColumnFullyDarkSolidDrawable(col_chunk_xz))
+  // Era49: FullyDark solid drawable is unresolved until lit GPU commit clears
+  // dark faces — StickyRemesh insert alone is not outcome-ready.
+  if (ColumnFullyDarkSolidDrawable(col_chunk_xz))
   {
-    return true;
+    return false;
   }
-  return StickyRemeshAfterLight.count(col_chunk_xz) > 0;
+  return true;
 }
 
 int UWorld::CountEnterLitSnapshotDebt() const
@@ -5721,6 +5721,24 @@ int UWorld::CountEnterVisibilityDebt() const
   const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
   const int vis_r =
       EnterVisibilityReadyRadiusChunks(GetRenderDistanceChunks());
+  return CountUnreadyColumns(center, vis_r);
+}
+
+bool UWorld::IsColumnVisualReady(glm::ivec2 col_chunk_xz) const
+{
+  if (!MeshService || !BlockRegistry)
+  {
+    return false;
+  }
+  const bool pending = IsPendingLightBeforeMesh(col_chunk_xz);
+  const bool lit_ready =
+      IsColumnLitReady(glm::ivec3(col_chunk_xz.x, 0, col_chunk_xz.y));
+  if (pending || !lit_ready)
+  {
+    return false;
+  }
+
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
   const int max_cy =
       std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
   const int focus_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
@@ -5734,75 +5752,85 @@ int UWorld::CountEnterVisibilityDebt() const
   }
   cy0 = std::min(cy0, std::max(0, focus_cy - 1));
 
-  int debt = 0;
-  for (int dx = -vis_r; dx <= vis_r; ++dx)
+  const bool has_fm_ticket =
+      GetColumnFlowExecutor().Scheduler().Contains(col_chunk_xz,
+                                                   ColumnWorkKind::FirstMesh);
+
+  bool any_chunk = false;
+  bool fully_dark_solid = false;
+  bool missing_greedy = false;
+  bool soft_no_ticket = false;
+
+  for (int cy = cy0; cy <= cy1; ++cy)
   {
-    for (int dz = -vis_r; dz <= vis_r; ++dz)
+    const glm::ivec3 coord(col_chunk_xz.x, cy, col_chunk_xz.y);
+    if (!BlockWorld.GetChunkManager().HasChunk(coord))
     {
-      const glm::ivec2 col(center.x + dx, center.z + dz);
-      if (IsPendingLightBeforeMesh(col))
+      continue;
+    }
+    any_chunk = true;
+    const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+    bool any_solid = false;
+    if (chunk)
+    {
+      for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
       {
-        ++debt;
-        continue;
-      }
-      if (ColumnFullyDarkSolidDrawable(col))
-      {
-        if (IsPendingLightBeforeMesh(col) ||
-            !IsColumnLitReady(glm::ivec3(col.x, 0, col.y)) ||
-            StickyRemeshAfterLight.count(col) == 0)
+        for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
         {
-          ++debt;
-        }
-        continue;
-      }
-      bool any_chunk = false;
-      bool missing_mesh = false;
-      bool soft_stuck = false;
-      for (int cy = cy0; cy <= cy1; ++cy)
-      {
-        const glm::ivec3 coord(col.x, cy, col.y);
-        if (!BlockWorld.GetChunkManager().HasChunk(coord))
-        {
-          continue;
-        }
-        any_chunk = true;
-        const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-        bool any_solid = false;
-        if (chunk)
-        {
-          for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+          for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
           {
-            for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+            if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
             {
-              for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
-              {
-                if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
-                {
-                  any_solid = true;
-                }
-              }
+              any_solid = true;
             }
           }
         }
-        if (!any_solid)
-        {
-          continue;
-        }
-        if (!MeshService->HasGreedyMesh(coord))
-        {
-          missing_mesh = true;
-          break;
-        }
-        if (MeshService->IsSoftDeferHeld(coord) &&
-            !MeshService->HasDrawableGreedyMesh(coord))
-        {
-          soft_stuck = true;
-          break;
-        }
-        // Era48: dirty/gpu/inflight alone are not visibility debt once a
-        // non-FullyDark greedy mesh exists — avoid sticky Dirty livelock.
       }
-      if (any_chunk && (missing_mesh || soft_stuck))
+    }
+    if (!any_solid)
+    {
+      continue;
+    }
+    if (MeshService->HasDrawableGreedyMesh(coord) &&
+        MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+    {
+      fully_dark_solid = true;
+      break;
+    }
+    if (!MeshService->HasGreedyMesh(coord))
+    {
+      missing_greedy = true;
+      break;
+    }
+    // SoftDeferEmpty/Held without FirstMesh ticket = Hide⇒Ticket violation.
+    // With ticket: valid VisualReady placeholder (not a black plug).
+    if (MeshService->IsSoftDeferHeld(coord) &&
+        !MeshService->HasDrawableGreedyMesh(coord) && !has_fm_ticket)
+    {
+      soft_no_ticket = true;
+      break;
+    }
+  }
+
+  return ColumnVisualReadyFromFlags(any_chunk, /*pending*/ false, /*lit*/ true,
+                                    fully_dark_solid, missing_greedy,
+                                    soft_no_ticket);
+}
+
+int UWorld::CountUnreadyColumns(glm::ivec3 center_chunk,
+                                int radius_chunks) const
+{
+  if (!MeshService || !BlockRegistry || radius_chunks < 0)
+  {
+    return 0;
+  }
+  int debt = 0;
+  for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
+  {
+    for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
+    {
+      const glm::ivec2 col(center_chunk.x + dx, center_chunk.z + dz);
+      if (!IsColumnVisualReady(col))
       {
         ++debt;
       }
@@ -5813,27 +5841,26 @@ int UWorld::CountEnterVisibilityDebt() const
 
 bool UWorld::IsEnterVisibilityReady() const
 {
+  if (!URuntimeTuning::Get().StrictEnterVisualReady)
+  {
+    // Legacy soft path kept only when flag explicitly disabled.
+    if (CountEnterVisibilityDebt() > 0)
+    {
+      return false;
+    }
+    return EnterVisibilityVoidReady(PhysicsTelemetryData.DarkFaceNearN,
+                                    PhysicsTelemetryData.DarkFaceVoidNearN);
+  }
   if (CountEnterVisibilityDebt() > 0)
   {
     return false;
   }
-  if (EnterVisibilityVoidReady(PhysicsTelemetryData.DarkFaceNearN,
-                               PhysicsTelemetryData.DarkFaceVoidNearN))
+  if (PhysicsTelemetryData.DarkFaceStaleNearN > 0)
   {
-    return true;
+    return false;
   }
-  // Era48: after remesh-after-lit Sticky, accept SoftDefer/ocean residual once
-  // void has dropped under the remesh plateau (~856 on World_174) — not at the
-  // first Sticky insert while void is still 1.1k+.
-  constexpr int kEnterVisibilityVoidPlateauMax = 900;
-  if (StickyRemeshAfterLight.size() > 0 &&
-      PhysicsTelemetryData.DarkFaceNearN > 0 &&
-      PhysicsTelemetryData.DarkFaceVoidNearN > 0 &&
-      PhysicsTelemetryData.DarkFaceVoidNearN <= kEnterVisibilityVoidPlateauMax)
-  {
-    return true;
-  }
-  return EnterLitQuiesceLatched;
+  return EnterVisibilityVoidReady(PhysicsTelemetryData.DarkFaceNearN,
+                                  PhysicsTelemetryData.DarkFaceVoidNearN);
 }
 
 int UWorld::TickEnterFovLitPass(int capture_budget)
