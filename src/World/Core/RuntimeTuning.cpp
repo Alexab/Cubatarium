@@ -406,6 +406,11 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
     t.EnterForceInGameMs =
         j.value("enter_force_ingame_ms", t.EnterForceInGameMs);
   }
+  if (j.contains("strict_enter_visual_ready"))
+  {
+    t.StrictEnterVisualReady =
+        j.value("strict_enter_visual_ready", t.StrictEnterVisualReady);
+  }
   last_path = path;
   last_mtime = mtime;
   have_mtime = true;

@@ -361,14 +361,13 @@ inline bool ShouldMarkDirtyAfterRemeshAfterApplyCommit(bool already_dirty,
   return !already_dirty && !gpu_pending;
 }
 
-/// Era47 P1 / Era48: after lit+mesh snapshot debt clear under enter gate,
-/// MarkRelit must not feed new Dirty/RAA/RemeshSeam — PreferKick/Skip only.
-/// Snapshot debt includes FullyDark remesh (Era48); fifo residual alone does
-/// not keep remesh producers open (latch uses debt).
+/// Era47 P1 / Era49: after enter unready==0 under gate, MarkRelit must not
+/// feed new Dirty/RAA/RemeshSeam — PreferKick/Skip only.
+/// Era49: suppress uses enter VisualReady unready count (not snapshot debt alone).
 inline bool ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(
-    bool enter_lit_gate_active, int snapshot_debt, int /*fifo_n*/ = 0)
+    bool enter_lit_gate_active, int enter_unready, int /*fifo_n*/ = 0)
 {
-  return enter_lit_gate_active && snapshot_debt <= 0;
+  return enter_lit_gate_active && enter_unready <= 0;
 }
 
 /// Era48: void-edge aggregate gate (matches ocean SoftDefer threshold).
@@ -658,11 +657,13 @@ enum class RemeshAfterLitApplyDecision
   SkipEnterLitQuiesce,
 };
 
-/// Era48: fully_dark_drawable carves out quiesce — remesh-after-lit required
-/// until mesh light matches field (void-dark first_paint fix).
+/// Era48/49: fully_dark_drawable carves out quiesce — remesh-after-lit required.
+/// Era49: under quiesce, Skip only when column already VisualReady; otherwise
+/// Schedule so remesh can finish (no Sticky-as-ready).
 inline RemeshAfterLitApplyDecision ClassifyRemeshAfterLitApply(
     bool is_dirty, bool raa_pending, bool gpu_pending, bool inflight,
-    bool enter_lit_quiesce = false, bool fully_dark_drawable = false)
+    bool enter_lit_quiesce = false, bool fully_dark_drawable = false,
+    bool column_visual_ready = false)
 {
   if (is_dirty)
   {
@@ -680,9 +681,17 @@ inline RemeshAfterLitApplyDecision ClassifyRemeshAfterLitApply(
   {
     return RemeshAfterLitApplyDecision::SkipInflight;
   }
-  if (enter_lit_quiesce && !fully_dark_drawable)
+  if (enter_lit_quiesce && fully_dark_drawable)
+  {
+    return RemeshAfterLitApplyDecision::Schedule;
+  }
+  if (enter_lit_quiesce && column_visual_ready)
   {
     return RemeshAfterLitApplyDecision::SkipEnterLitQuiesce;
+  }
+  if (enter_lit_quiesce)
+  {
+    return RemeshAfterLitApplyDecision::Schedule;
   }
   return RemeshAfterLitApplyDecision::Schedule;
 }
@@ -690,11 +699,13 @@ inline RemeshAfterLitApplyDecision ClassifyRemeshAfterLitApply(
 inline bool ShouldScheduleRemeshAfterLitApply(bool is_dirty, bool raa_pending,
                                               bool gpu_pending, bool inflight,
                                               bool enter_lit_quiesce = false,
-                                              bool fully_dark_drawable = false)
+                                              bool fully_dark_drawable = false,
+                                              bool column_visual_ready = false)
 {
   return ClassifyRemeshAfterLitApply(is_dirty, raa_pending, gpu_pending,
                                      inflight, enter_lit_quiesce,
-                                     fully_dark_drawable) ==
+                                     fully_dark_drawable,
+                                     column_visual_ready) ==
          RemeshAfterLitApplyDecision::Schedule;
 }
 

@@ -133,6 +133,9 @@ struct URuntimeTuning
   int EnterGateMeshDrainIterations{6};
   /// Era44: last-resort InGame after abort-drain (0 = disabled; default 300s).
   int EnterForceInGameMs{300000};
+  /// Era49: strict Enter VisualReady (outcome gate; no Sticky/plateau shortcuts).
+  /// Enter blocking ≠ Cruise progressive — flag only affects enter exit path.
+  bool StrictEnterVisualReady{true};
 
   static URuntimeTuning &Get();
   static void ResetToDefaults();

@@ -4,6 +4,7 @@
 #include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/CyOrderPolicy.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include "World/Streaming/ColumnVisualReadyPolicy.h"
 #include "World/Diagnostics/EnterLitDiagnostics.h"
 #include "World/Streaming/NearFovWorkPriority.h"
 #include "World/Streaming/OceanCruisePolicy.h"
@@ -755,15 +756,20 @@ int main()
     Expect(!ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(false, 0, 0),
            "Era47: no suppress without enter gate");
     Expect(!ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(true, 1, 0),
-           "Era47: no suppress while snapshot debt");
+           "Era49: no suppress while enter unready>0");
     Expect(ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(true, 0, 3),
-           "Era47: fifo residual does not block suppress when debt=0");
+           "Era49: fifo residual does not block suppress when unready=0");
     Expect(ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(true, 0, 0),
-           "Era47: suppress MarkRelit remesh at lit quiesce");
+           "Era49: suppress MarkRelit remesh when enter unready=0");
     // Latch semantics covered in World EnterLitQuiesceLatched (fifo blips).
-    Expect(ClassifyRemeshAfterLitApply(false, false, false, false, true) ==
+    Expect(ClassifyRemeshAfterLitApply(false, false, false, false, true, false,
+                                       /*visual_ready=*/true) ==
                RemeshAfterLitApplyDecision::SkipEnterLitQuiesce,
-           "Era47: clear under quiesce ⇒ Skip (no Schedule)");
+           "Era49: VisualReady under quiesce ⇒ Skip");
+    Expect(ClassifyRemeshAfterLitApply(false, false, false, false, true, false,
+                                       /*visual_ready=*/false) ==
+               RemeshAfterLitApplyDecision::Schedule,
+           "Era49: not VisualReady under quiesce ⇒ Schedule");
     Expect(ClassifyRemeshAfterLitApply(false, false, false, false, true,
                                        /*fully_dark=*/true) ==
                RemeshAfterLitApplyDecision::Schedule,
@@ -798,6 +804,33 @@ int main()
     const auto enter_adm = ComputeMeshWorkAdmission(enter_in);
     Expect(enter_adm.mode != MeshWorkAdmission::Mode::Normal,
            "Era47 P2: enter gate never Normal admission");
+  }
+
+  // --- Era49 Strict Enter VisualReady invariants (pure) ---
+  {
+    using cutum::ColumnQuiesceLatchAloneIsVisualReady;
+    using cutum::ColumnScheduleAloneIsVisualReady;
+    using cutum::ColumnVisualReadyFromFlags;
+    using cutum::StrictEnterVisualReadyDefault;
+    Expect(StrictEnterVisualReadyDefault(),
+           "Era49 P0: StrictEnterVisualReady default on");
+    Expect(!ColumnScheduleAloneIsVisualReady(true),
+           "Era49 P0: Sticky/schedule alone ⇏ VisualReady");
+    Expect(!ColumnQuiesceLatchAloneIsVisualReady(true),
+           "Era49 P0: Quiesce latch alone ⇏ VisualReady");
+    Expect(ColumnVisualReadyFromFlags(/*terrain*/ true, /*pending*/ false,
+                                      /*lit*/ true, /*fully_dark*/ false,
+                                      /*missing*/ false, /*soft_no_ticket*/ false),
+           "Era49 P0: lit terrain column ready");
+    Expect(!ColumnVisualReadyFromFlags(true, false, true, /*fully_dark*/ true,
+                                       false, false, /*sticky*/ true),
+           "Era49 P0: FullyDark + Sticky ⇏ ready");
+    Expect(!ColumnVisualReadyFromFlags(true, false, true, false, false,
+                                       /*soft_no_ticket*/ true),
+           "Era49 P0: SoftDeferHeld without ticket ⇏ ready");
+    Expect(!ColumnVisualReadyFromFlags(/*terrain*/ false, false, true, false,
+                                       false, false),
+           "Era49 P0: missing terrain band ⇏ ready");
   }
 
   // --- Era34 CreateBar debt / soft wall ---
