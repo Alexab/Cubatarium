@@ -59,6 +59,7 @@ public:
   void SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn);
   void SetOnLitPendingNeededFn(std::function<void(glm::ivec3)> fn);
   void SetOnSoftDeferHeldFn(std::function<void(glm::ivec3)> fn);
+  void SetOnLitDrawableCommittedFn(std::function<void(glm::ivec3)> fn);
   void SetStarveOutsideFocusMesh(bool starve);
   void SetStarveRemeshForHoles(bool starve);
   void SetStarveRemeshKeepHoriz(int keep_h);

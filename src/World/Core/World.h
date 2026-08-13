@@ -1068,6 +1068,8 @@ public:
                                const glm::ivec2 *only_column = nullptr,
                                int only_cy = -1);
   bool IsColumnStickyRemesh(glm::ivec2 ground_xz) const;
+  /// Era49: lit GPU commit clears remesh-after-lit work-set for column.
+  void ClearStickyRemeshAfterLightColumn(glm::ivec2 ground_xz);
 
   /// Near-focus columns waiting for first light before first mesh (plan A).
   void NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y);

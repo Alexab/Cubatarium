@@ -67,6 +67,12 @@ void UWorldMeshService::SetOnSoftDeferHeldFn(std::function<void(glm::ivec3)> fn)
   Cache.SetOnSoftDeferHeldFn(std::move(fn));
 }
 
+void UWorldMeshService::SetOnLitDrawableCommittedFn(
+    std::function<void(glm::ivec3)> fn)
+{
+  Cache.SetOnLitDrawableCommittedFn(std::move(fn));
+}
+
 void UWorldMeshService::SetStarveOutsideFocusMesh(bool starve)
 {
   Cache.SetStarveOutsideFocusMesh(starve);

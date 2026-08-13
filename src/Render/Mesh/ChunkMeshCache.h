@@ -300,6 +300,11 @@ public:
   {
     OnSoftDeferHeld = std::move(fn);
   }
+  /// Era49: lit GPU commit (!FullyDark) → clear StickyRemesh work-set.
+  void SetOnLitDrawableCommittedFn(std::function<void(glm::ivec3)> fn)
+  {
+    OnLitDrawableCommitted = std::move(fn);
+  }
   /// When true, skip outside-focus dirty trickle (near holes / pending light).
   void SetStarveOutsideFocusMesh(bool starve) { StarveOutsideFocusMesh = starve; }
   /// When true, skip remesh (already has greedy) until holes clear.
@@ -655,6 +660,7 @@ private:
   std::function<bool(glm::ivec3)> DeferMeshUntilLit;
   std::function<void(glm::ivec3)> OnLitPendingNeeded;
   std::function<void(glm::ivec3)> OnSoftDeferHeld;
+  std::function<void(glm::ivec3)> OnLitDrawableCommitted;
   // Per-DoMovement memo: HasMissing/FindNearest are called many times/frame.
   mutable uint64_t HoleQueryEpoch{0};
   struct MissingQueryMemo

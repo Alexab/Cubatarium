@@ -889,7 +889,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
   const bool enter_quiesce =
       EnterLitQuiesceLatched ||
       (ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(
-           EnterLitGateActive, CountEnterFovLitDebt(),
+           EnterLitGateActive, CountEnterVisibilityDebt(),
            GetPendingTerrainRelightFifoCount()) &&
        PhysicsTelemetryData.DarkFaceNearN > 0 &&
        PhysicsTelemetryData.DarkFaceStaleNearN <= 0);
@@ -897,7 +897,9 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
   {
     EnterLitQuiesceLatched = true;
   }
-  else if (EnterLitGateActive && PhysicsTelemetryData.DarkFaceStaleNearN > 0)
+  else if (EnterLitGateActive &&
+           (PhysicsTelemetryData.DarkFaceStaleNearN > 0 ||
+            CountEnterVisibilityDebt() > 0))
   {
     EnterLitQuiesceLatched = false;
   }
@@ -952,8 +954,11 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     const bool fully_dark =
         MeshService->HasDrawableGreedyMesh(coord) &&
         MeshService->GetCache().ChunkHasFullyDarkFace(coord);
+    const bool column_visual_ready =
+        IsColumnVisualReady(glm::ivec2(coord.x, coord.z));
     switch (ClassifyRemeshAfterLitApply(is_dirty, raa_pending, gpu_pending,
-                                        inflight, enter_quiesce, fully_dark))
+                                        inflight, enter_quiesce, fully_dark,
+                                        column_visual_ready))
     {
     case RemeshAfterLitApplyDecision::Schedule:
       ++PhysicsTelemetryData.MarkRelitRemeshAfterApplyN;
@@ -1097,14 +1102,18 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         (void)sticky_r;
         (void)horiz;
         // Era47 P1: after lit quiesce do not enqueue RemeshSeam (refeeds Dirty/GPU).
+        // Era49: bound Sticky — do not re-insert storm when already tracked and
+        // Dirty/GPU/inflight already owns the remesh.
         if (!enter_quiesce)
         {
+          const bool already_sticky = StickyRemeshAfterLight.count(key) > 0;
           StickyRemeshAfterLight.insert(key);
-          // Era14 TD-ARCH-045 / Era15 P2a: UnlitFirstMesh → guaranteed RemeshSeam
-          // when light arrives (no wall-gated Imm; sticky_r ≠ gate).
-          NoteColumnRepairNeeded(key);
-          GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RemeshSeam,
-                                          /*priority=*/70);
+          if (!already_sticky)
+          {
+            NoteColumnRepairNeeded(key);
+            GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RemeshSeam,
+                                            /*priority=*/70);
+          }
         }
       }
       AsyncRelightColumnsInFlight.erase(key);
@@ -3523,6 +3532,11 @@ bool UWorld::IsColumnStickyRemesh(glm::ivec2 ground_xz) const
   return StickyRemeshAfterLight.find(ground_xz) != StickyRemeshAfterLight.end();
 }
 
+void UWorld::ClearStickyRemeshAfterLightColumn(glm::ivec2 ground_xz)
+{
+  StickyRemeshAfterLight.erase(ground_xz);
+}
+
 int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
 {
   if (!MeshService || !BlockRegistry || max_columns <= 0)
@@ -5129,21 +5143,8 @@ bool UWorld::IsSpawnMeshRingReady() const
   {
     return false;
   }
-  // Era48: after snapshot remesh-after-lit, sticky Dirty in r≤2 must not block
-  // ring_ready forever (PreferKick/MarkDirty leave Dirty=1 under enter gate).
-  // Era48: after remesh-after-lit Sticky wave, ring must not wait on sticky
-  // Dirty / residual GPU (PreferKick under enter can leave pending forever).
-  const bool enter_mesh_ok =
-      EnterLitGateActive && EnterLitSnapshotCaptured &&
-      CountEnterLitSnapshotDebt() <= 0 &&
-      (EnterLitQuiesceLatched ||
-       (StickyRemeshAfterLight.size() > 0 &&
-        PhysicsTelemetryData.DarkFaceVoidNearN > 0 &&
-        PhysicsTelemetryData.DarkFaceVoidNearN <= 900));
-  if (enter_mesh_ok)
-  {
-    return !HasMissingGreedyMeshesNearFocus(*this);
-  }
+  // Era49: always require Dirty/async/GPU clear — no Sticky/void-plateau /
+  // quiesce short-circuit that ignored remesh completion.
   if (MeshService->HasDirtyWithinHorizontalRadius(center, radius))
   {
     return false;
@@ -5200,11 +5201,6 @@ void UWorld::SampleEnterGameMeshWarmupBlockers(EnterGameMeshWarmupBlockers &out)
   out.gpu_pending_near =
       mesh.CountPendingGpuAppliesInHorizontalRadius(center, radius);
   out.async_mesh_pending = mesh.HasPendingAsyncMeshWork();
-  if (EnterLitGateActive && EnterLitSnapshotCaptured)
-  {
-    out.visual_warmup = false;
-    return;
-  }
   out.visual_warmup = NeedsEnterGameVisualWarmup();
 }
 
@@ -5215,15 +5211,19 @@ bool UWorld::NeedsEnterGameMeshWarmup() const
   {
     return false;
   }
-  // Era48: under enter lit gate, mesh readiness is snapshot + visibility debt
-  // — not sticky Dirty/gpu (MarkDirty remesh-after-lit can leave Dirty=1).
+  // Era49: under enter gate still drain Dirty/async/GPU — snapshot/visibility
+  // alone must not clear mesh blockers while remesh PreferKick is in flight.
   if (EnterLitGateActive && EnterLitSnapshotCaptured)
   {
-    return CountEnterLitSnapshotDebt() > 0 || CountEnterVisibilityDebt() > 0;
+    if (CountEnterLitSnapshotDebt() > 0 || CountEnterVisibilityDebt() > 0)
+    {
+      return true;
+    }
   }
   EnterGameMeshWarmupBlockers blockers{};
   SampleEnterGameMeshWarmupBlockers(blockers);
-  if (blockers.dirty || blockers.missing_greedy || blockers.gpu_pending_near > 0)
+  if (blockers.dirty || blockers.missing_greedy || blockers.gpu_pending_near > 0 ||
+      blockers.async_mesh_pending)
   {
     return true;
   }
@@ -5608,12 +5608,9 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
       touched = true;
       ++scheduled;
     }
-    // FullyDark with no remeshable cy this frame (GPU flag race): still count
-    // as attempted so visibility debt cannot stick at 1 forever.
-    if (!touched && ColumnFullyDarkSolidDrawable(col))
-    {
-      StickyRemeshAfterLight.insert(col);
-    }
+    // FullyDark with no remeshable cy this frame: PreferKick/Dirty already set
+    // above when possible. Do not Sticky-insert alone — Era49 ready ≠ schedule.
+    (void)touched;
   };
 
   for (const glm::ivec2 &col : EnterLitDebtSnapshot)
@@ -6209,15 +6206,16 @@ void UWorld::TickEnterGateMeshDrain(int iteration_budget)
   {
     if (MeshService && IsEnterLitGateActive())
     {
-      // Era48: latch only after a dark-face sample with stale==0. Unlatch while
-      // stale remesh remains (EnterLitQuiesce freezes Dirty for drawable).
-      if (CountEnterFovLitDebt() <= 0 &&
+      // Era49: latch quiesce only after enter VisualReady unready==0 and
+      // stale==0 (not FOV debt alone — that froze Dirty while FullyDark remained).
+      if (CountEnterVisibilityDebt() <= 0 &&
           PhysicsTelemetryData.DarkFaceNearN > 0 &&
           PhysicsTelemetryData.DarkFaceStaleNearN <= 0)
       {
         EnterLitQuiesceLatched = true;
       }
-      else if (PhysicsTelemetryData.DarkFaceStaleNearN > 0)
+      else if (PhysicsTelemetryData.DarkFaceStaleNearN > 0 ||
+               CountEnterVisibilityDebt() > 0)
       {
         EnterLitQuiesceLatched = false;
       }
@@ -6234,19 +6232,18 @@ void UWorld::TickEnterWarmupDrainFrame(int mesh_budget, int gate_iterations)
   // Era46: same path for coop PrepareView and Application gpu_warmup —
   // DrainEnterGameMeshWarmup owns explicit DrainPendingGpuMeshes; gate drain
   // runs TickMeshEmerge (ConsumeGpuApplyBacklog) for iterations.
-  // Era47: GPU admission boost while gate active; lit-quiesce latched after
-  // snapshot debt=0 (fifo residual blips must not block producer suppress —
-  // World_174 verify never saw stable fifo=0 while debt already 0).
+  // Era49: lit-quiesce latched after enter unready==0 (VisualReady SoT).
   if (MeshService)
   {
     const bool gate = IsEnterLitGateActive();
-    if (gate && CountEnterFovLitDebt() <= 0 &&
+    if (gate && CountEnterVisibilityDebt() <= 0 &&
         PhysicsTelemetryData.DarkFaceNearN > 0 &&
         PhysicsTelemetryData.DarkFaceStaleNearN <= 0)
     {
       EnterLitQuiesceLatched = true;
     }
-    else if (gate && PhysicsTelemetryData.DarkFaceStaleNearN > 0)
+    else if (gate && (PhysicsTelemetryData.DarkFaceStaleNearN > 0 ||
+                      CountEnterVisibilityDebt() > 0))
     {
       EnterLitQuiesceLatched = false;
     }

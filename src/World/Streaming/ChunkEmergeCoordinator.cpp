@@ -280,6 +280,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         item.cy = chunk_coord.y;
         GetColumnFlowExecutor().Enqueue(item);
       });
+  // Era49: lit GPU commit clears StickyRemeshAfterLight work-set.
+  mesh_service.SetOnLitDrawableCommittedFn(
+      [&world](glm::ivec3 chunk_coord)
+      {
+        world.ClearStickyRemeshAfterLightColumn(
+            glm::ivec2(chunk_coord.x, chunk_coord.z));
+      });
 
   const bool near_mesh_backlog =
       mesh_service.HasDirtyWithinHorizontalRadius(focus_ground_horiz,

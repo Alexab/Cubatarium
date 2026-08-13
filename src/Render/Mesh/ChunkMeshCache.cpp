@@ -2169,6 +2169,11 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   InstancesDirty = true;
   CrossBatchesDirty = true;
   GreedyBatchesDirty = true;
+  // Era49: lit GPU outcome clears StickyRemesh work-set (ready ≠ schedule).
+  if (!gpu_result.hasFullyDarkFace && OnLitDrawableCommitted)
+  {
+    OnLitDrawableCommitted(coord);
+  }
   // Era15 TD-050: Unlit FirstMesh publish → LitPending (not every dark remesh).
   if (OnLitPendingNeeded && !had_mesh &&
       (defer_until_lit || gpu_result.hasFullyDarkFace))
@@ -2966,6 +2971,11 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   InstancesDirty = true;
   CrossBatchesDirty = true;
   GreedyBatchesDirty = true;
+  // Era49: lit CPU mesh outcome clears StickyRemesh work-set.
+  if (!new_dark && OnLitDrawableCommitted)
+  {
+    OnLitDrawableCommitted(result.coord);
+  }
   // Era15 TD-050: Unlit FirstMesh CPU publish → LitPending.
   if (OnLitPendingNeeded && !had_mesh && (defer_until_lit || new_dark))
   {
@@ -3033,8 +3043,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   RequeueSoftDeferHeld();
 
   // Era47: lit-quiesce Dirty prune runs before sort/schedule — sticky
-  // drawable/SoftDefer/orphan (!HasChunk) otherwise block IsSpawnMeshRingReady
+  // SoftDefer/orphan (!HasChunk) otherwise block IsSpawnMeshRingReady
   // forever while gpu/async already 0 (World_174 stuck_dirty y=4).
+  // Era49: do NOT RemoveAt FullyDark drawable Dirty — remesh-after-lit must
+  // finish to VisualReady (PreferKick/RAA alone left void≈856).
   if (EnterLitQuiesce && !Dirty.empty())
   {
     for (auto it = Dirty.begin(); it != Dirty.end();)
@@ -3042,6 +3054,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (!world.GetChunkManager().HasChunk(*it))
       {
         it = Dirty.RemoveAt(it);
+        continue;
+      }
+      if (HasDrawableGreedyMesh(*it) && ChunkHasFullyDarkFace(*it))
+      {
+        ++it;
         continue;
       }
       const bool soft_empty =
@@ -3388,11 +3405,20 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (EnterLitQuiesce && HasDrawableGreedyMesh(*it))
       {
-        return Dirty.RemoveAt(it);
+        // Era49: keep FullyDark remesh Dirty under enter quiesce.
+        if (ChunkHasFullyDarkFace(*it))
+        {
+          // fall through to schedule / PreferKick path
+        }
+        else
+        {
+          return Dirty.RemoveAt(it);
+        }
       }
       // Era47: SoftDeferHeld owned by ColumnFlow FirstMesh — Dirty remesh under
       // lit-quiesce only blocks IsSpawnMeshRingReady without helping holes.
-      if (EnterLitQuiesce && SoftDeferHeld.count(*it) > 0)
+      if (EnterLitQuiesce && SoftDeferHeld.count(*it) > 0 &&
+          !ChunkHasFullyDarkFace(*it))
       {
         return Dirty.RemoveAt(it);
       }
@@ -3574,14 +3600,16 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         break;
       }
-      // Era47: enter lit-quiesce — drop drawable remesh Dirty (gate blocker),
-      // even if still InFlight (otherwise sticky Dirty forever).
-      if (EnterLitQuiesce && HasDrawableGreedyMesh(*it))
+      // Era47: enter lit-quiesce — drop lit drawable remesh Dirty (gate blocker).
+      // Era49: keep FullyDark drawable Dirty until lit GPU commit.
+      if (EnterLitQuiesce && HasDrawableGreedyMesh(*it) &&
+          !ChunkHasFullyDarkFace(*it))
       {
         it = Dirty.RemoveAt(it);
         continue;
       }
-      if (EnterLitQuiesce && SoftDeferHeld.count(*it) > 0)
+      if (EnterLitQuiesce && SoftDeferHeld.count(*it) > 0 &&
+          !ChunkHasFullyDarkFace(*it))
       {
         it = Dirty.RemoveAt(it);
         continue;
