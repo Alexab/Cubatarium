@@ -946,7 +946,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     primary_set.insert(g);
   }
   auto schedule_remesh_after_lit_apply =
-      [this, enter_quiesce](const glm::ivec3 &coord)
+      [this, enter_quiesce, enter_gate](const glm::ivec3 &coord)
   {
     if (!MeshService)
     {
@@ -967,6 +967,12 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     {
     case RemeshAfterLitApplyDecision::Schedule:
       ++PhysicsTelemetryData.MarkRelitRemeshAfterApplyN;
+      // Era49c: under enter gate FullyDark must MarkDirty — RAA alone +
+      // no MarkDirty-on-commit was a no-op loop (raa_total↑, mesh never rebuilds).
+      if (enter_gate && fully_dark)
+      {
+        MeshService->MarkDirtyPriority(coord);
+      }
       MeshService->RequestRemeshAfterApply(coord);
       break;
     case RemeshAfterLitApplyDecision::PreferKickGpu:
@@ -5578,7 +5584,7 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
 
   auto schedule_col = [&](glm::ivec2 col)
   {
-    // Era49b: SoftDeferHeld undrawn without FirstMesh → Hide⇒Ticket under enter.
+    // Era49b/c: SoftDeferHeld undrawn without FirstMesh → one Hide⇒Ticket.
     if (MeshService->HasSoftDeferHeldInColumn(col) &&
         !GetColumnFlowExecutor().Scheduler().Contains(
             col, ColumnWorkKind::FirstMesh))
@@ -5592,13 +5598,24 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
     {
       return;
     }
-    // Era49b: void-edge FullyDark needs RelightThenMesh (RemeshSeam alone left
-    // void_near≈985 plateau on World_174). Stale bake → remesh-after-lit.
+    // Era49c: void-edge FullyDark → RelightThenMesh once (not every Repair
+    // frame — FIFO storm left fifo≈70 / void plateau 985).
     if (!ColumnFullyDarkLooksStaleWithLitField(col))
     {
-      EnqueueVoidDarkColumnRelightNote(col);
-      GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::RelightThenMesh,
-                                      /*priority=*/80);
+      const bool relight_owned =
+          IsPendingLightBeforeMesh(col) ||
+          AsyncRelightColumnsInFlight.count(col) > 0 ||
+          GetColumnFlowExecutor().Scheduler().Contains(
+              col, ColumnWorkKind::RelightThenMesh) ||
+          GetColumnFlowExecutor().Scheduler().Contains(
+              col, ColumnWorkKind::PromoteRelight);
+      if (!relight_owned)
+      {
+        EnqueueVoidDarkColumnRelightNote(col);
+        GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::RelightThenMesh,
+                                        /*priority=*/80);
+        ++scheduled;
+      }
       StickyRemeshAfterLight.insert(col);
       return;
     }

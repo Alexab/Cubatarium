@@ -2174,6 +2174,13 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   {
     OnLitDrawableCommitted(coord);
   }
+  // Era49c: under enter gate, FullyDark commit must stay Dirty so remesh can
+  // retry with updated light (RAA-only left gpu/async sticky forever).
+  if (EnterGateBlocksRaaMarkDirty(EnterLitQuiesce, EnterGpuQuiesceDrain) &&
+      gpu_result.hasFullyDarkFace && !Dirty.Contains(coord))
+  {
+    MarkDirtyPriority(coord);
+  }
   // Era15 TD-050: Unlit FirstMesh publish → LitPending (not every dark remesh).
   if (OnLitPendingNeeded && !had_mesh &&
       (defer_until_lit || gpu_result.hasFullyDarkFace))
