@@ -2241,6 +2241,8 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
     // Check before PendingGpu keep-prior (manual 183525 black surface).
     // StaleDark is heal-only (not hide) — hiding it remesh-thrashed ocean
     // (discarded_late≈50, void spiral hide3).
+    // Era49: under EnterLitGate expand hide to RD so progress-bar view is
+    // hole-free; after EndEnterLitGate keep cruise ring=4 (perf).
     if (MeshService->GetCache().ChunkHasFullyDarkFace(chunk_coord))
     {
       const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
@@ -2248,7 +2250,11 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
       const int horiz =
           std::max(std::abs(chunk_coord.x - focus_chunk.x),
                    std::abs(chunk_coord.z - focus_chunk.z));
-      if (ShouldHideFullyDarkUntilLitInRing(horiz, true, false))
+      const int hide_ring =
+          EnterLitGateActive
+              ? EnterVisibilityReadyRadiusChunks(GetRenderDistanceChunks())
+              : kVisualStageLitDrawableHoriz;
+      if (ShouldHideFullyDarkUntilLitInRing(horiz, true, false, hide_ring))
       {
         return false;
       }

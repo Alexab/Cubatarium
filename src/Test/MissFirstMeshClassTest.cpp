@@ -811,6 +811,7 @@ int main()
     using cutum::ColumnQuiesceLatchAloneIsVisualReady;
     using cutum::ColumnScheduleAloneIsVisualReady;
     using cutum::ColumnVisualReadyFromFlags;
+    using cutum::ShouldHideFullyDarkUntilLitInRing;
     using cutum::StrictEnterVisualReadyDefault;
     Expect(StrictEnterVisualReadyDefault(),
            "Era49 P0: StrictEnterVisualReady default on");
@@ -831,6 +832,10 @@ int main()
     Expect(!ColumnVisualReadyFromFlags(/*terrain*/ false, false, true, false,
                                        false, false),
            "Era49 P0: missing terrain band ⇏ ready");
+    Expect(ShouldHideFullyDarkUntilLitInRing(8, true, false, 8),
+           "Era49 P5: enter RD hide FullyDark at horiz==RD");
+    Expect(!ShouldHideFullyDarkUntilLitInRing(5, true, false, 4),
+           "Era49 P5: cruise hide ring stays 4 (horiz 5 not hidden)");
   }
 
   // --- Era34 CreateBar debt / soft wall ---
