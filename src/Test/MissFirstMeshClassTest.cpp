@@ -680,6 +680,18 @@ int main()
            "Era51: cruise needs mesh drain");
     Expect(!IsEnterGpuWarmupReady(true, 0, true, true, true, false),
            "Era51: not ingame until cruise stabilized");
+    using cutum::ShouldResetRenderStateForGpuWarmup;
+    using cutum::ShouldWarmupGreedyGpuDuringEnter;
+    Expect(!ShouldResetRenderStateForGpuWarmup(true),
+           "Era51: skip GPU reset when coop prepared spawn");
+    Expect(ShouldResetRenderStateForGpuWarmup(false),
+           "Era51: reset GPU when spawn not coop-prepared");
+    Expect(!ShouldWarmupGreedyGpuDuringEnter(10, true, 0, 3),
+           "Era51: no early GPU draw before min frames");
+    Expect(ShouldWarmupGreedyGpuDuringEnter(10, true, 2, 3),
+           "Era51: early GPU draw when coop exits warmup early");
+    Expect(ShouldWarmupGreedyGpuDuringEnter(1, false, 23, 3),
+           "Era51: legacy last-frame GPU draw");
   }
 
   // --- Era44b/Era45 enter warmup status + R4 ownership ---

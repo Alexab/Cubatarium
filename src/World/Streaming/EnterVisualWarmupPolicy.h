@@ -675,6 +675,27 @@ inline bool IsEnterGpuWarmupReady(bool ring_ready, int fov_debt,
          visibility_ready && cruise_stabilized;
 }
 
+/// Era51: skip GPU destroy when coop PrepareView already settled spawn ring.
+inline bool ShouldResetRenderStateForGpuWarmup(bool spawn_prepared_by_coop)
+{
+  return !spawn_prepared_by_coop;
+}
+
+/// Era51: coop load can exit GpuWarmup after min frames — upload meshes before
+/// InGame, not only on the last warmup frame (ResetWorldRenderState otherwise
+/// leaves an empty world).
+inline bool ShouldWarmupGreedyGpuDuringEnter(int gpu_warmup_frames_remaining,
+                                             bool spawn_prepared_by_coop,
+                                             int frame_index,
+                                             int min_warmup_frames)
+{
+  if (gpu_warmup_frames_remaining == 1)
+  {
+    return true;
+  }
+  return spawn_prepared_by_coop && frame_index >= min_warmup_frames - 1;
+}
+
 /// Era44: documented last-resort after abort-drain (default ≥300s).
 inline bool ShouldForceEnterInGameAfterAbortDrain(double elapsed_ms,
                                                   int force_ingame_ms)

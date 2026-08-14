@@ -1945,8 +1945,13 @@ void UApplication::Update(double dt)
         {
           if (frame == 0)
           {
-            Geometry->ResetWorldRenderState();
-            LogWorldLoadDiag("gpu_warmup_reset", *World);
+            // Era51: coop PrepareView already warmed spawn — avoid GPU wipe.
+            if (ShouldResetRenderStateForGpuWarmup(
+                    World->IsSpawnAreaPreparedByCooperativeLoad()))
+            {
+              Geometry->ResetWorldRenderState();
+              LogWorldLoadDiag("gpu_warmup_reset", *World);
+            }
             // Era51: coop PrepareView already drained gate — do not re-arm.
             if (!World->IsEnterLitGateActive() &&
                 !World->IsSpawnAreaPreparedByCooperativeLoad())
@@ -2019,9 +2024,10 @@ void UApplication::Update(double dt)
           if (upload_ready)
           {
             World->WarmupVisibleListAtCamera();
-            // Era20/Era31: single GPU greedy warmup on last remaining frame —
-            // remaining<=2 was stacking WarmupGreedy into enter_app hitch.
-            if (remaining == 1)
+            if (ShouldWarmupGreedyGpuDuringEnter(
+                    remaining,
+                    World->IsSpawnAreaPreparedByCooperativeLoad(), frame,
+                    kGpuWarmupMinFrames))
             {
               Geometry->WarmupGreedyGpuFromWorld();
               LogWorldLoadDiag("gpu_warmup_draw", *World);
