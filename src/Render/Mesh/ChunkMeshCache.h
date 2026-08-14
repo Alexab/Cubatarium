@@ -91,6 +91,8 @@ public:
   /// Dirty chunk count inside Chebyshev radius (lit-but-dirty debt metric).
   int CountDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
                                        int radius_chunks) const;
+  /// Drop Dirty entries inside Chebyshev radius (spawn park while relight deferred).
+  int ParkDirtyWithinHorizontalRadius(glm::ivec3 center_chunk, int radius_chunks);
   bool HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y, int max_y) const;
   bool HasPendingAsyncMeshWork() const;
   bool HasAsyncInflightInHorizontalRadius(glm::ivec3 center_ground_chunk,
@@ -216,7 +218,11 @@ public:
   /// True if any non-bottom greedy vertex has sky+block light == 0.
   /// −Y bottoms are ignored (normally unlit).
   bool ChunkHasFullyDarkFace(glm::ivec3 chunk_coord) const;
+  /// True if any non-bottom greedy vertex has sky or block light > 0.
+  bool ChunkHasLitDrawableFace(glm::ivec3 chunk_coord) const;
   static bool BatchesHaveFullyDarkFace(
+      const std::vector<GreedyMeshBatch> &batches);
+  static bool BatchesHaveLitDrawableFace(
       const std::vector<GreedyMeshBatch> &batches);
   /// Mesh vertex light=0 but current world light at the face air neighbor
   /// is non-zero — stale bake (empty lightmap / missed MarkRelit remesh).
@@ -355,7 +361,18 @@ public:
   }
   /// Era47: under EnterLitGate — PreferKick-only RAA commit + no Normal
   /// drain_cap/schedule throttles that stall GPU quiescence.
-  void SetEnterGpuQuiesceDrain(bool active) { EnterGpuQuiesceDrain = active; }
+  void SetEnterGpuQuiesceDrain(bool active)
+  {
+    if (active && !EnterGpuQuiesceDrain)
+    {
+      EnterFullyDarkStaleRemeshOnce.clear();
+    }
+    if (!active)
+    {
+      EnterFullyDarkStaleRemeshOnce.clear();
+    }
+    EnterGpuQuiesceDrain = active;
+  }
   bool IsEnterGpuQuiesceDrain() const { return EnterGpuQuiesceDrain; }
   /// Era47: lit SoT quiesce (debt=0, fifo=0) — drop drawable remesh Dirty /
   /// no mid-flight RAA park that refeeds GPU.
@@ -619,6 +636,8 @@ private:
   uint64_t DirtyScheduleSkipInflightN{0};
   /// Era47: EnterLitGate mesh/GPU quiesce drain mode.
   bool EnterGpuQuiesceDrain{false};
+  /// Enter SoT: at most one FullyDark+stale MarkDirty per chunk under gate.
+  std::unordered_set<glm::ivec3, IVec3Hash> EnterFullyDarkStaleRemeshOnce;
   /// Era47: EnterLitGate + fifo/debt=0 producer suppress.
   bool EnterLitQuiesce{false};
   /// Era51: enter SoftDefer terminal — MarkDirty must not erase SoftDeferHeld.

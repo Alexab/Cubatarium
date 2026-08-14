@@ -426,8 +426,10 @@ public:
   bool IsColumnVisualReady(glm::ivec2 col_chunk_xz) const;
   /// Era49: count columns in radius that are not VisualReady.
   int CountUnreadyColumns(glm::ivec3 center_chunk, int radius_chunks) const;
-  /// Era48: visibility debt clear + void-near under threshold.
+  /// Era48: visibility debt clear + no stale FullyDark in ring + underfeet present.
   bool IsEnterVisibilityReady() const;
+  /// Enter underfeet r≤1: lit/true-dark slice AND opaque-ready draw (not SoftDefer hole).
+  bool IsEnterUnderfeetPresentReady() const;
   /// Era42: priority-enqueue RD/PendingLight + elevated Capture/apply on bar.
   int TickEnterFovLitPass(int capture_budget = -1);
   /// Spawn ring has greedy mesh committed (no missing, no pending GPU apply).
@@ -1374,6 +1376,7 @@ private:
   bool StreamingEnabledBeforeEnterLitGate{true};
   int EnterLitGateLitRadiusChunks() const;
   bool ColumnFullyDarkSolidDrawable(glm::ivec2 col_chunk_xz) const;
+  bool ColumnHasLitDrawableFace(glm::ivec2 col_chunk_xz) const;
   /// Era48: FullyDark mesh but light field already non-zero (stale bake).
   bool ColumnFullyDarkLooksStaleWithLitField(glm::ivec2 col_chunk_xz) const;
   void CaptureEnterLitDebtSnapshot();

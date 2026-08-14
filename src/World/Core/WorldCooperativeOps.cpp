@@ -39,6 +39,23 @@
 namespace cutum
 {
 
+namespace
+{
+
+void ParkSpawnRingMeshWhileRelightDeferred(UWorld &world)
+{
+  if (!world.IsLightingRelightDeferred())
+  {
+    return;
+  }
+  const glm::ivec3 focus =
+      UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+  world.GetMeshService().ParkDirtyWithinHorizontalRadius(
+      focus, EnterVisualWorkRadiusChunks());
+}
+
+} // namespace
+
 struct CooperativeParallelGenState
 {
   CooperativeParallelGenState()
@@ -472,6 +489,10 @@ void UWorldCooperativeSession::BeginMeshWarmupInner(UWorld &world)
         }
       }
     }
+  }
+  if (Kind == WorldCoopKind::Load)
+  {
+    ParkSpawnRingMeshWhileRelightDeferred(world);
   }
   MeshWarmupTicks = 0;
   MeshWarmupStartedAt = {};
@@ -1542,6 +1563,10 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     const int pass_limit = create_mesh_warmup ? 8 : 1;
     const int sync_mesh_budget =
         force_sync_mesh ? std::max(8, budget * 4) : mesh_budget.MaxMeshDrain;
+    if (Kind == WorldCoopKind::Load)
+    {
+      ParkSpawnRingMeshWhileRelightDeferred(world);
+    }
     MeshRebuildTickStats tick_stats;
     for (int pass = 0; pass < pass_limit; ++pass)
     {

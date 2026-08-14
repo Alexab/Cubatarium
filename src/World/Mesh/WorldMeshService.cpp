@@ -178,6 +178,12 @@ int UWorldMeshService::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
                                            remesh_only);
 }
 
+int UWorldMeshService::ParkDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
+                                                       int radius_chunks)
+{
+  return Cache.ParkDirtyWithinHorizontalRadius(center_chunk, radius_chunks);
+}
+
 void UWorldMeshService::SetSyncHoleFillRadius(int radius_chunks)
 {
   Cache.SetSyncHoleFillRadius(radius_chunks);
@@ -904,6 +910,11 @@ bool UWorldMeshService::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
                                               const UBlockWorld &world) const
 {
   return Cache.ChunkHasStaleDarkFaces(chunk_coord, world);
+}
+
+bool UWorldMeshService::ChunkHasLitDrawableFace(glm::ivec3 chunk_coord) const
+{
+  return Cache.ChunkHasLitDrawableFace(chunk_coord);
 }
 
 bool UWorldMeshService::IsChunkMeshDirty(glm::ivec3 chunk_coord) const

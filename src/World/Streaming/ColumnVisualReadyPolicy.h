@@ -16,13 +16,13 @@ inline bool StrictEnterVisualReadyDefault()
 }
 
 /// Pure composition used by unit tests and World::IsColumnVisualReady.
-/// SoftDeferEmpty+ticket is a valid ready placeholder (Hide⇒Ticket).
+/// SoftDefer empty (!drawable) is never enter VisualReady — hole until bake.
 /// Sticky / Dirty queued / quiesce alone must not flip ready.
 inline bool ColumnVisualReadyFromFlags(bool terrain_in_band, bool pending_light,
                                        bool lit_ready,
                                        bool fully_dark_solid_drawable,
                                        bool solid_missing_greedy,
-                                       bool soft_defer_held_without_ticket,
+                                       bool soft_defer_empty,
                                        bool /*sticky_scheduled*/ = false,
                                        bool /*quiesce_latched*/ = false)
 {
@@ -43,7 +43,7 @@ inline bool ColumnVisualReadyFromFlags(bool terrain_in_band, bool pending_light,
   {
     return false;
   }
-  if (soft_defer_held_without_ticket)
+  if (soft_defer_empty)
   {
     return false;
   }

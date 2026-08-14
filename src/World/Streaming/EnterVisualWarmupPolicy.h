@@ -17,6 +17,88 @@ inline int EnterVisualWarmupRadiusChunks()
   return kVisualStageLitDrawableHoriz;
 }
 
+/// Enter worklist / hide / snapshot lit debt share this ring (not RD).
+inline int EnterVisualWorkRadiusChunks()
+{
+  return kVisualStageLitDrawableHoriz;
+}
+
+/// Remesh only when lightmap or voxels actually changed.
+inline bool ShouldRemeshAfterLightApply(bool light_or_voxel_delta)
+{
+  return light_or_voxel_delta;
+}
+
+/// No-op FullyDark spin: field already 0 and this tick has no light delta.
+inline bool ShouldSpinFullyDarkRemesh(bool fully_dark, bool stale_field,
+                                      bool light_delta)
+{
+  return fully_dark && !stale_field && !light_delta;
+}
+
+/// Underfeet slice may exit when lit-bound or true-dark (field 0, not pending).
+inline bool EnterUnderfeetSliceReady(bool has_lit_drawable, bool pending_light,
+                                     bool true_dark_field_zero)
+{
+  if (pending_light)
+  {
+    return false;
+  }
+  return has_lit_drawable || true_dark_field_zero;
+}
+
+/// Underfeet present: slice ready AND focus column is in opaque draw.
+/// Do not treat underfeet_need==0 as "no hole".
+inline bool EnterUnderfeetPresentReady(bool slice_ready, bool opaque_present)
+{
+  return slice_ready && opaque_present;
+}
+
+/// FullyDark column is enter-resolved only after bake outcome (lit or true-dark).
+/// OpenSky / RelightThenMesh alone is never settled.
+inline bool EnterFullyDarkColumnSettled(bool open_sky_applied, bool pending,
+                                        bool lit_ready, bool stale_field,
+                                        bool has_lit_drawable)
+{
+  if (pending || !lit_ready)
+  {
+    return false;
+  }
+  if (has_lit_drawable)
+  {
+    return true;
+  }
+  // true-dark: OpenSky/relight owned, light field 0 (not stale).
+  return open_sky_applied && !stale_field;
+}
+
+/// Hide FullyDark in enter ring until lit drawable or true-dark.
+/// After OpenSky, stale (field≠0, dark verts) stays hidden until bake.
+inline bool ShouldHideEnterFullyDark(bool fully_dark, bool pending,
+                                     bool stale_field, bool has_lit_drawable,
+                                     bool true_dark)
+{
+  if (!fully_dark)
+  {
+    return false;
+  }
+  if (has_lit_drawable || true_dark)
+  {
+    return false;
+  }
+  (void)pending;
+  (void)stale_field;
+  // Unbaked FullyDark (pending, stale, or pre-OpenSky) always hidden in ring.
+  return true;
+}
+
+/// Load MeshWarmup must not FirstMesh/Dirty spawn ring while relight is deferred.
+inline bool ShouldSkipSpawnMeshWhileRelightDeferred(bool lighting_relight_deferred,
+                                                    int horiz)
+{
+  return lighting_relight_deferred && horiz <= kVisualStageLitDrawableHoriz;
+}
+
 /// Era34 P0: create-bar SoftDefer settle radius (near FOV); ring 3–4 InGame.
 inline int CreateNearFovSoftDeferRadiusChunks()
 {
@@ -369,13 +451,13 @@ inline bool EnterGateBlocksRaaMarkDirty(bool enter_lit_quiesce,
   return enter_lit_quiesce || enter_gpu_quiesce_drain;
 }
 
-/// Era47 P1 / Era49: after enter unready==0 under gate, MarkRelit must not
-/// feed new Dirty/RAA/RemeshSeam — PreferKick/Skip only.
-/// Era49: suppress uses enter VisualReady unready count (not snapshot debt alone).
+/// Suppress MarkRelit remesh only when the column is already enter-settled
+/// (lit drawable or true-dark). remaining==0 / OpenSky alone must not suppress.
 inline bool ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(
-    bool enter_lit_gate_active, int enter_unready, int /*fifo_n*/ = 0)
+    bool enter_lit_gate_active, bool column_enter_settled,
+    int /*fifo_n*/ = 0)
 {
-  return enter_lit_gate_active && enter_unready <= 0;
+  return enter_lit_gate_active && column_enter_settled;
 }
 
 /// Era48: cruise/ocean void bias threshold (heal budgets — not enter exit).
@@ -411,11 +493,12 @@ inline bool ShouldLatchStaleFullyDarkAfterEnterGpuCommit(
          !already_terminal;
 }
 
-/// Era53: skip MarkRelit remesh churn after one stale attempt owns the column.
+/// Skip MarkRelit only after the column already remeshed and is no longer stale.
 inline bool ShouldSkipMarkRelitAfterEnterStaleAttempt(bool enter_gate_active,
-                                                      bool stale_attempt_owned)
+                                                      bool stale_attempt_owned,
+                                                      bool still_stale)
 {
-  return enter_gate_active && stale_attempt_owned;
+  return enter_gate_active && stale_attempt_owned && !still_stale;
 }
 
 /// Era54: gate-accepted FullyDark drawable (terminal / column Done) satisfies
@@ -439,12 +522,13 @@ inline bool EnterSoftDeferBlocksWarmupExit(bool empty_or_held, bool underfeet,
          !enter_terminal_held;
 }
 
-/// Era55: Gate remaining==0 is the enter visual SoT. Era29 underfeet
-/// lit-drawable / SoftDefer must not keep mesh_visual_warmup after that.
+/// Yield visual warmup only when gate remaining==0 AND underfeet present
+/// (slice lit/true-dark + opaque draw). remaining alone is not SoT.
 inline bool EnterVisualWarmupYieldsToGateRemaining(bool enter_gate_active,
-                                                   int visibility_debt)
+                                                   int visibility_debt,
+                                                   bool underfeet_present_ready)
 {
-  return enter_gate_active && visibility_debt <= 0;
+  return enter_gate_active && visibility_debt <= 0 && underfeet_present_ready;
 }
 
 /// Alias kept for ocean/cruise policy readers.
@@ -540,8 +624,9 @@ inline float EnterGpuWarmupMonotonicProgress(float raw_prog, float &display_prog
   return display_prog;
 }
 
-/// Era44/48/49: InGame only when ring + mesh blockers + lit debt + visibility
-/// ready (visibility includes unready==0, void≤200, stale==0 when Strict).
+/// InGame when spawn ring + mesh blockers + lit snapshot debt + visibility
+/// ready. Visibility is the r=4 worklist (remaining==0 and no stale dark), not
+/// void telem / fifo / terminal-held.
 inline bool IsEnterGpuWarmupReady(bool ring_ready, int fov_debt,
                                   bool mesh_blockers_clear, bool min_frames_done,
                                   bool visibility_ready = true)
@@ -656,20 +741,7 @@ inline std::string BuildEnterWarmupStatus(const EnterLitSample &sample,
   {
     std::string status =
         "Finishing view… " + std::to_string(visibility_debt) + " left";
-    if (sample.dark_face_void_near_n > EnterVisibilityVoidNearMax())
-    {
-      status += " void=" + std::to_string(sample.dark_face_void_near_n);
-    }
     status += elapsed_suffix;
-    if (slow)
-    {
-      status += " (slow)";
-    }
-    return status;
-  }
-  if (sample.mesh_visual_warmup)
-  {
-    std::string status = "Finishing view… visual" + elapsed_suffix;
     if (slow)
     {
       status += " (slow)";
@@ -745,13 +817,12 @@ enum class RemeshAfterLitApplyDecision
   SkipEnterLitQuiesce,
 };
 
-/// Era48/49: fully_dark_drawable carves out quiesce — remesh-after-lit required.
-/// Era49: under quiesce, Skip only when column already VisualReady; otherwise
-/// Schedule so remesh can finish (no Sticky-as-ready).
+/// FullyDark under quiesce remeshes only when this apply had a light/voxel delta.
 inline RemeshAfterLitApplyDecision ClassifyRemeshAfterLitApply(
     bool is_dirty, bool raa_pending, bool gpu_pending, bool inflight,
     bool enter_lit_quiesce = false, bool fully_dark_drawable = false,
-    bool column_visual_ready = false)
+    bool column_visual_ready = false, bool light_or_voxel_delta = false,
+    bool stale_field = false)
 {
   if (is_dirty)
   {
@@ -771,7 +842,15 @@ inline RemeshAfterLitApplyDecision ClassifyRemeshAfterLitApply(
   }
   if (enter_lit_quiesce && fully_dark_drawable)
   {
-    return RemeshAfterLitApplyDecision::Schedule;
+    if (ShouldSpinFullyDarkRemesh(true, stale_field, light_or_voxel_delta))
+    {
+      return RemeshAfterLitApplyDecision::SkipEnterLitQuiesce;
+    }
+    if (ShouldRemeshAfterLightApply(light_or_voxel_delta) || stale_field)
+    {
+      return RemeshAfterLitApplyDecision::Schedule;
+    }
+    return RemeshAfterLitApplyDecision::SkipEnterLitQuiesce;
   }
   if (enter_lit_quiesce && column_visual_ready)
   {
@@ -788,12 +867,13 @@ inline bool ShouldScheduleRemeshAfterLitApply(bool is_dirty, bool raa_pending,
                                               bool gpu_pending, bool inflight,
                                               bool enter_lit_quiesce = false,
                                               bool fully_dark_drawable = false,
-                                              bool column_visual_ready = false)
+                                              bool column_visual_ready = false,
+                                              bool light_or_voxel_delta = false)
 {
   return ClassifyRemeshAfterLitApply(is_dirty, raa_pending, gpu_pending,
                                      inflight, enter_lit_quiesce,
-                                     fully_dark_drawable,
-                                     column_visual_ready) ==
+                                     fully_dark_drawable, column_visual_ready,
+                                     light_or_voxel_delta) ==
          RemeshAfterLitApplyDecision::Schedule;
 }
 

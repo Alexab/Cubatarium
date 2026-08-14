@@ -222,6 +222,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const int horiz =
             std::max(std::abs(chunk_coord.x - focus_ground_horiz.x),
                      std::abs(chunk_coord.z - focus_ground_horiz.z));
+        if (ShouldSkipSpawnMeshWhileRelightDeferred(
+                world.IsLightingRelightDeferred(), horiz))
+        {
+          return true;
+        }
         const bool underfeet = horiz <= 1;
         const bool pending = world.IsPendingLightBeforeMesh(
             glm::ivec2(chunk_coord.x, chunk_coord.z));
@@ -271,8 +276,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       });
   // Era15 TD-050 / Era22 I-S2: SoftDeferHeld → ColumnFlow FirstMesh with cy.
   mesh_service.SetOnSoftDeferHeldFn(
-      [](glm::ivec3 chunk_coord)
+      [&world, focus_ground_horiz](glm::ivec3 chunk_coord)
       {
+        const int horiz =
+            std::max(std::abs(chunk_coord.x - focus_ground_horiz.x),
+                     std::abs(chunk_coord.z - focus_ground_horiz.z));
+        if (ShouldSkipSpawnMeshWhileRelightDeferred(
+                world.IsLightingRelightDeferred(), horiz))
+        {
+          return;
+        }
         ColumnWorkItem item{};
         item.column = glm::ivec2(chunk_coord.x, chunk_coord.z);
         item.kind = ColumnWorkKind::FirstMesh;

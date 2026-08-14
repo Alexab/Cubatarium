@@ -60,6 +60,9 @@ struct EnterLitSample
   int enter_terminal_held_n{0};
   int gate_done_n{0};
   int enter_phantom_dirty_pruned_n{0};
+  /// Enter SoT: underfeet present (opaque draw), not underfeet_need.
+  int underfeet_present_ready{0};
+  int spawn_mesh_ring_ready{0};
 };
 
 /// Era44: per-frame step timings (deltas) inside gpu_warmup.

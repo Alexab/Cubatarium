@@ -169,6 +169,24 @@ public:
     return Count;
   }
 
+  /// Peek without drain — e.g. near-radius enter ring vs far Completed.
+  template <typename Pred> bool Any(Pred &&pred) const
+  {
+    std::lock_guard<std::mutex> lock(Mutex);
+    if (Count == 0 || Items.empty())
+    {
+      return false;
+    }
+    for (std::size_t i = 0; i < Count; ++i)
+    {
+      if (pred(Items[(Head + i) % Items.size()]))
+      {
+        return true;
+      }
+    }
+    return false;
+  }
+
 private:
   bool PushUnlocked(T &&item, T *dropped_out)
   {

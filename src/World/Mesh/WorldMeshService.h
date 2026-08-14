@@ -83,6 +83,7 @@ public:
   bool TryConsumeDirtyAdmit();
   int DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk, int keep_radius,
                                   int keep_cy = -1, bool remesh_only = false);
+  int ParkDirtyWithinHorizontalRadius(glm::ivec3 center_chunk, int radius_chunks);
   void SetSyncHoleFillRadius(int radius_chunks);
   void SetMaxOutsideFocusMeshPerFrame(int count);
   void SetMaxRearFocusMeshPerFrame(int count);
@@ -217,7 +218,8 @@ public:
   bool PreferKickPendingGpuQueued(glm::ivec3 chunk_coord);
   bool DropQueuedPendingGpuApply(glm::ivec3 chunk_coord);
   bool ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
-                             const UBlockWorld &world) const;
+                              const UBlockWorld &world) const;
+  bool ChunkHasLitDrawableFace(glm::ivec3 chunk_coord) const;
   bool IsChunkMeshDirty(glm::ivec3 chunk_coord) const;
   uint64_t GetChunkMeshRevision(glm::ivec3 chunk_coord) const;
   bool HasInflightMeshBuild(glm::ivec3 chunk_coord) const;

@@ -301,6 +301,8 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
           dirty_min = 0;
           dirty_max = settings.MaxHeight;
         }
+        // Spawn r=4 stays voxels-only until first relight; MeshWarmup hinterland
+        // still drains via MarkAllDirtyFromWorld.
         if (!world.IsLightingRelightDeferred())
         {
           // Relight Y: sea∪occupied∪player up to sky (not 0..floor). Full

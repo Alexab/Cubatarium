@@ -151,7 +151,9 @@ void WriteJsonlLine(const EnterLitSample &s, const char *kind = nullptr)
           << ",\"enter_terminal_held_n\":" << s.enter_terminal_held_n
           << ",\"gate_done_n\":" << s.gate_done_n
           << ",\"enter_phantom_dirty_pruned_n\":"
-          << s.enter_phantom_dirty_pruned_n;
+          << s.enter_phantom_dirty_pruned_n
+          << ",\"underfeet_present_ready\":" << s.underfeet_present_ready
+          << ",\"spawn_mesh_ring_ready\":" << s.spawn_mesh_ring_ready;
   if (kind != nullptr)
   {
     g_jsonl << ",\"kind\":\"" << kind << "\"";
@@ -271,6 +273,8 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
   out.gate_done_n = static_cast<int>(mesh.GetEnterGateDoneColumnCount());
   out.enter_phantom_dirty_pruned_n =
       static_cast<int>(mesh.GetEnterPhantomDirtyPrunedTotal());
+  out.underfeet_present_ready = world.IsEnterUnderfeetPresentReady() ? 1 : 0;
+  out.spawn_mesh_ring_ready = world.IsSpawnMeshRingReady() ? 1 : 0;
   // Era48: sample void-dark during enter so IsEnterVisibilityReady sees telem.
   {
     UChunkMeshCache::DarkFaceHit hit{};

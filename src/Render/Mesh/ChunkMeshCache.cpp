@@ -729,6 +729,26 @@ bool UChunkMeshCache::BatchesHaveFullyDarkFace(
   return false;
 }
 
+bool UChunkMeshCache::BatchesHaveLitDrawableFace(
+    const std::vector<GreedyMeshBatch> &batches)
+{
+  for (const GreedyMeshBatch &batch : batches)
+  {
+    for (const GreedyMeshVertex &v : batch.vertices)
+    {
+      if (v.faceIndex >= 4.5f && v.faceIndex < 5.5f)
+      {
+        continue;
+      }
+      if (v.skyLight > 0.0f || v.blockLight > 0.0f)
+      {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 bool UChunkMeshCache::ChunkHasFullyDarkFace(glm::ivec3 chunk_coord) const
 {
   const auto it = GreedyCache.find(chunk_coord);
@@ -741,6 +761,23 @@ bool UChunkMeshCache::ChunkHasFullyDarkFace(glm::ivec3 chunk_coord) const
     return it->second.GpuHasDarkFace;
   }
   return BatchesHaveFullyDarkFace(it->second.batches);
+}
+
+bool UChunkMeshCache::ChunkHasLitDrawableFace(glm::ivec3 chunk_coord) const
+{
+  const auto it = GreedyCache.find(chunk_coord);
+  if (it == GreedyCache.end())
+  {
+    return false;
+  }
+  // Gpu path stores only FullyDark flag — scan CPU batches when present.
+  if (!it->second.batches.empty())
+  {
+    return BatchesHaveLitDrawableFace(it->second.batches);
+  }
+  // Gpu-resident without CPU batches: lit if not marked FullyDark.
+  return it->second.GpuResident && it->second.GpuQuadCount > 0 &&
+         !it->second.GpuHasDarkFace;
 }
 
 bool UChunkMeshCache::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
@@ -769,6 +806,46 @@ bool UChunkMeshCache::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
       return {0, -1, 0};
     }
   };
+  // GPU-resident meshes clear CPU batches — probe sky light on solids / +Y air.
+  // Any-light was too aggressive (caves + surface mixed → remesh forever).
+  if (it->second.batches.empty())
+  {
+    if (!(it->second.GpuResident && it->second.GpuHasDarkFace))
+    {
+      return false;
+    }
+    const UChunk *chunk = world.GetChunkManager().GetChunk(chunk_coord);
+    if (!chunk)
+    {
+      return false;
+    }
+    const glm::ivec3 base = chunk_coord * CHUNK_SIZE;
+    for (int z = 0; z < CHUNK_SIZE; z += 2)
+    {
+      for (int y = 0; y < CHUNK_SIZE; y += 2)
+      {
+        for (int x = 0; x < CHUNK_SIZE; x += 2)
+        {
+          const glm::ivec3 local(x, y, z);
+          if (chunk->GetBlockLocal(local) == BLOCK_AIR)
+          {
+            continue;
+          }
+          const glm::ivec3 solid = base + local;
+          if (UnpackSky(SampleLightPacked(world, solid)) > 0)
+          {
+            return true;
+          }
+          const glm::ivec3 above = solid + glm::ivec3(0, 1, 0);
+          if (UnpackSky(SampleLightPacked(world, above)) > 0)
+          {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
   for (const GreedyMeshBatch &batch : it->second.batches)
   {
     for (const GreedyMeshVertex &v : batch.vertices)
@@ -935,6 +1012,48 @@ bool UChunkMeshCache::FindNearestDarkFaceNear(const glm::vec3 &camera_pos,
           best.faceIndex = static_cast<int>(v.faceIndex);
           best.dist = std::sqrt(d2);
           found = true;
+        }
+      }
+    }
+    // GPU-resident FullyDark (no CPU batches): count near dark chunks.
+    if (entry.second.batches.empty() && entry.second.GpuResident &&
+        entry.second.GpuHasDarkFace && entry.second.GpuQuadCount > 0)
+    {
+      const glm::vec3 center(static_cast<float>(cc.x * CHUNK_SIZE + CHUNK_SIZE / 2),
+                             static_cast<float>(cc.y * CHUNK_SIZE + CHUNK_SIZE / 2),
+                             static_cast<float>(cc.z * CHUNK_SIZE + CHUNK_SIZE / 2));
+      const float ddx = center.x - camera_pos.x;
+      const float ddy = center.y - camera_pos.y;
+      const float ddz = center.z - camera_pos.z;
+      const float d2 = ddx * ddx + ddy * ddy + ddz * ddz;
+      if (d2 <= max_dist2)
+      {
+        const bool is_stale =
+            world && ChunkHasStaleDarkFaces(cc, *world);
+        const bool is_void_edge = !is_stale;
+        if (!EnterVoidTelemFaceExcluded(chunk_terminal, col_done, is_void_edge,
+                                        EnterGpuQuiesceDrain,
+                                        EnterVoidTelemLitReadyFn &&
+                                            EnterVoidTelemLitReadyFn(col_xz)))
+        {
+          ++count;
+          if (is_stale)
+          {
+            ++stale_n;
+          }
+          else
+          {
+            ++void_n;
+          }
+          if (d2 < best_d2)
+          {
+            best_d2 = d2;
+            best.chunk = cc;
+            best.block = glm::ivec3(cc.x * CHUNK_SIZE, cc.y * CHUNK_SIZE,
+                                    cc.z * CHUNK_SIZE);
+            best.dist = std::sqrt(d2);
+            found = true;
+          }
         }
       }
     }
@@ -1229,6 +1348,31 @@ int UChunkMeshCache::CountDirtyWithinHorizontalRadius(
     }
   }
   return count;
+}
+
+int UChunkMeshCache::ParkDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
+                                                     int radius_chunks)
+{
+  if (radius_chunks < 0)
+  {
+    return 0;
+  }
+  int parked = 0;
+  for (auto it = Dirty.begin(); it != Dirty.end();)
+  {
+    const int dx = std::abs(it->x - center_chunk.x);
+    const int dz = std::abs(it->z - center_chunk.z);
+    if (std::max(dx, dz) <= radius_chunks)
+    {
+      it = Dirty.RemoveAt(it);
+      ++parked;
+    }
+    else
+    {
+      ++it;
+    }
+  }
+  return parked;
 }
 
 bool UChunkMeshCache::FindFirstDirtyInHorizontalRadius(
@@ -2339,23 +2483,16 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   {
     OnLitDrawableCommitted(coord);
   }
-  // Era49c: under enter gate, FullyDark commit must stay Dirty so remesh can
-  // retry with updated light (RAA-only left gpu/async sticky forever).
-  // Era53: stale (lit field, dark mesh) — latch terminal, stop gpu=0→N pump.
-  if (EnterGateBlocksRaaMarkDirty(EnterLitQuiesce, EnterGpuQuiesceDrain) &&
+  // While enter worklist still draining, FullyDark+stale gets one Dirty.
+  // After lit quiesce (remaining==0) stop the commit→Dirty pump — cruise heals.
+  if (EnterGpuQuiesceDrain && !EnterLitQuiesce &&
       gpu_result.hasFullyDarkFace && !Dirty.Contains(coord))
   {
-    const bool already_terminal = EnterTerminalHeld.count(coord) > 0;
-    const bool stale_lit_field =
-        ChunkHasStaleDarkFaces(coord, world);
-    if (ShouldLatchStaleFullyDarkAfterEnterGpuCommit(
-            EnterGpuQuiesceDrain, gpu_result.hasFullyDarkFace, stale_lit_field,
-            already_terminal))
-    {
-      HoldEnterTerminal(coord);
-      RemeshAfterApply.erase(coord);
-    }
-    else if (!already_terminal)
+    const bool stale_lit_field = ChunkHasStaleDarkFaces(coord, world);
+    // One remesh after light under enter gate — further FullyDark+sky is
+    // residual cave dark (no-op Dirty spin forbidden by Enter SoT).
+    if (stale_lit_field &&
+        EnterFullyDarkStaleRemeshOnce.insert(coord).second)
     {
       MarkDirtyPriority(coord);
     }

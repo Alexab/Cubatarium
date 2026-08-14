@@ -756,14 +756,14 @@ int main()
     using cutum::RemeshAfterLitApplyDecision;
     using cutum::ShouldMarkDirtyAfterRemeshAfterApplyCommit;
     using cutum::ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce;
-    Expect(!ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(false, 0, 0),
-           "Era47: no suppress without enter gate");
-    Expect(!ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(true, 1, 0),
-           "Era49: no suppress while enter unready>0");
-    Expect(ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(true, 0, 3),
-           "Era49: fifo residual does not block suppress when unready=0");
-    Expect(ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(true, 0, 0),
-           "Era49: suppress MarkRelit remesh when enter unready=0");
+    Expect(!ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(false, true),
+           "no suppress without enter gate");
+    Expect(!ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(true, false),
+           "no suppress while column not enter-settled");
+    Expect(ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(true, true, 3),
+           "fifo residual does not block suppress when column settled");
+    Expect(ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(true, true),
+           "suppress MarkRelit remesh only when column enter-settled");
     // Latch semantics covered in World EnterLitQuiesceLatched (fifo blips).
     Expect(ClassifyRemeshAfterLitApply(false, false, false, false, true, false,
                                        /*visual_ready=*/true) ==
@@ -774,9 +774,15 @@ int main()
                RemeshAfterLitApplyDecision::Schedule,
            "Era49: not VisualReady under quiesce ⇒ Schedule");
     Expect(ClassifyRemeshAfterLitApply(false, false, false, false, true,
-                                       /*fully_dark=*/true) ==
+                                       /*fully_dark=*/true, false,
+                                       /*light_delta=*/true) ==
                RemeshAfterLitApplyDecision::Schedule,
-           "Era48: FullyDark under quiesce ⇒ Schedule remesh-after-lit");
+           "FullyDark under quiesce + light delta ⇒ Schedule");
+    Expect(ClassifyRemeshAfterLitApply(false, false, false, false, true,
+                                       /*fully_dark=*/true, false,
+                                       /*light_delta=*/false) ==
+               RemeshAfterLitApplyDecision::SkipEnterLitQuiesce,
+           "FullyDark under quiesce without delta ⇒ no spin remesh");
     Expect(ClassifyRemeshAfterLitApply(false, false, true, false, true) ==
                RemeshAfterLitApplyDecision::PreferKickGpu,
            "Era47: gpu under quiesce ⇒ PreferKick");
@@ -808,38 +814,42 @@ int main()
     using cutum::ShouldLatchStaleFullyDarkAfterEnterGpuCommit;
     using cutum::ShouldSkipMarkRelitAfterEnterStaleAttempt;
     Expect(ShouldLatchStaleFullyDarkAfterEnterGpuCommit(true, true, true, false),
-           "Era53: stale FullyDark GPU commit ⇒ terminal latch");
+           "legacy latch helper exists — not SoT for GPU commit/exit");
     Expect(!ShouldLatchStaleFullyDarkAfterEnterGpuCommit(true, true, true, true),
-           "Era53: already terminal ⇒ no relatch");
+           "legacy latch helper: already terminal");
     Expect(!ShouldLatchStaleFullyDarkAfterEnterGpuCommit(true, true, false, false),
-           "Era53: void-edge GPU commit keeps re-Dirty path");
-    Expect(ShouldSkipMarkRelitAfterEnterStaleAttempt(true, true),
-           "Era53: skip MarkRelit after stale attempt owned");
-    Expect(!ShouldSkipMarkRelitAfterEnterStaleAttempt(true, false),
-           "Era53: first stale MarkRelit still allowed");
+           "legacy latch helper: void-edge not latched");
+    Expect(ShouldSkipMarkRelitAfterEnterStaleAttempt(true, true, false),
+           "skip MarkRelit after attempt when mesh is no longer stale");
+    Expect(!ShouldSkipMarkRelitAfterEnterStaleAttempt(true, true, true),
+           "still-stale after attempt ⇒ another Dirty (delta)");
+    Expect(!ShouldSkipMarkRelitAfterEnterStaleAttempt(true, false, false),
+           "first stale MarkRelit still allowed");
     using cutum::EnterFullyDarkDrawableAcceptedForWarmupExit;
     Expect(EnterFullyDarkDrawableAcceptedForWarmupExit(true, true, false),
-           "Era54: terminal FullyDark satisfies visual warmup");
+           "legacy FullyDark-accept helper is not enter SoT (unused for exit)");
     Expect(EnterFullyDarkDrawableAcceptedForWarmupExit(true, false, true),
-           "Era54: gate-Done column FullyDark satisfies visual warmup");
+           "legacy FullyDark-accept helper is not enter SoT (unused for exit)");
     Expect(!EnterFullyDarkDrawableAcceptedForWarmupExit(true, false, false),
-           "Era54: non-terminal FullyDark still blocks warmup");
+           "legacy helper: non-terminal FullyDark not accepted");
     Expect(!EnterFullyDarkDrawableAcceptedForWarmupExit(false, true, true),
-           "Era54: lit drawable path unchanged");
+           "legacy helper: lit drawable path unchanged");
     using cutum::EnterSoftDeferBlocksWarmupExit;
     using cutum::EnterVisualWarmupYieldsToGateRemaining;
     Expect(EnterSoftDeferBlocksWarmupExit(true, true, false),
-           "Era55: SoftDefer underfeet still blocks without terminal");
+           "SoftDefer underfeet still blocks without terminal");
     Expect(!EnterSoftDeferBlocksWarmupExit(true, true, true),
-           "Era55: terminal SoftDefer underfeet does not block warmup");
+           "legacy terminal SoftDefer bypass exists — unused for exit");
     Expect(!EnterSoftDeferBlocksWarmupExit(true, false, false),
-           "Era55: far SoftDefer still not enter FirstMesh");
-    Expect(EnterVisualWarmupYieldsToGateRemaining(true, 0),
-           "Era55: remaining==0 yields Era29 visual warmup");
-    Expect(!EnterVisualWarmupYieldsToGateRemaining(true, 3),
-           "Era55: remaining>0 keeps visual warmup");
-    Expect(!EnterVisualWarmupYieldsToGateRemaining(false, 0),
-           "Era55: no enter gate keeps visual warmup");
+           "far SoftDefer still not enter FirstMesh");
+    Expect(EnterVisualWarmupYieldsToGateRemaining(true, 0, true),
+           "remaining==0 + underfeet present yields visual warmup");
+    Expect(!EnterVisualWarmupYieldsToGateRemaining(true, 0, false),
+           "remaining==0 alone does not yield without underfeet");
+    Expect(!EnterVisualWarmupYieldsToGateRemaining(true, 3, true),
+           "remaining>0 keeps visual warmup");
+    Expect(!EnterVisualWarmupYieldsToGateRemaining(false, 0, true),
+           "no enter gate keeps visual warmup");
     Expect(EnterVisibilityReadyRadiusChunks(8) == 8,
            "Era48: visibility radius = RD");
     Expect(IsEnterGpuWarmupReady(true, 0, true, true, true),
@@ -883,15 +893,15 @@ int main()
                                        false, false, /*sticky*/ true),
            "Era49 P0: FullyDark + Sticky ⇏ ready");
     Expect(!ColumnVisualReadyFromFlags(true, false, true, false, false,
-                                       /*soft_no_ticket*/ true),
-           "Era49 P0: SoftDeferHeld without ticket ⇏ ready");
+                                       /*soft_defer_empty*/ true),
+           "SoftDefer empty ⇏ VisualReady");
     Expect(ColumnVisualReadyFromFlags(/*terrain*/ false, false, true, false,
                                        false, false),
            "Era49b: missing terrain band = N/A ready (not debt)");
     Expect(ShouldHideFullyDarkUntilLitInRing(8, true, false, 8),
-           "Era49 P5: enter RD hide FullyDark at horiz==RD");
+           "legacy hide helper at horiz==ring");
     Expect(!ShouldHideFullyDarkUntilLitInRing(5, true, false, 4),
-           "Era49 P5: cruise hide ring stays 4 (horiz 5 not hidden)");
+           "hide ring stays 4 (horiz 5 not hidden)");
     Expect(!EnterGateBlocksRaaMarkDirty(false, false),
            "Era49b: no enter ⇒ RAA MarkDirty allowed");
     Expect(EnterGateBlocksRaaMarkDirty(false, true),
@@ -930,11 +940,20 @@ int main()
     Expect(!EnterVisualVoidEdgeAcceptsSoftDefer(true, false, true, true, true),
            "Era50: stale FullyDark not SoftDefer terminal");
     Expect(ClassifyEnterVoidEdgeAction(true, true, false, false, false) ==
+               EnterVoidEdgeAction::RelightOnce,
+           "stale FullyDark without OpenSky ⇒ RelightOnce first");
+    Expect(ClassifyEnterVoidEdgeAction(true, false, false, false, false) ==
+               EnterVoidEdgeAction::RelightOnce,
+           "void-edge without OpenSky ⇒ RelightOnce (not SoftDefer/Done)");
+    Expect(ClassifyEnterVoidEdgeAction(true, true, false, false, true) ==
                EnterVoidEdgeAction::RemeshStale,
-           "Era50: stale FullyDark ⇒ remesh");
-    Expect(ClassifyEnterVoidEdgeAction(true, false, false, false, true) ==
-               EnterVoidEdgeAction::SoftDeferTicket,
-           "Era50: void-edge ⇒ SoftDefer (no Relight invent)");
+           "stale after OpenSky ⇒ remesh once");
+    Expect(ClassifyEnterVoidEdgeAction(true, false, false, true, true) ==
+               EnterVoidEdgeAction::None,
+           "void-edge relight inflight ⇒ wait Apply");
+    Expect(ClassifyEnterVoidEdgeAction(true, false, false, true, false) ==
+               EnterVoidEdgeAction::RelightOnce,
+           "OpenSky still required while relight is already owned");
     Expect(ClassifyEnterVisualItemState(true, false, false, false) ==
                EnterVisualItemState::NeedLight,
            "Era50: pending ⇒ NeedLight");
@@ -946,11 +965,18 @@ int main()
            "Era50: gpu busy ⇒ NeedGpu");
     Expect(ClassifyEnterVisualItemState(false, false, false, true) ==
                EnterVisualItemState::Done,
-           "Era50: terminal ⇒ Done");
+           "terminal_ready (lit or true-dark) ⇒ Done");
+    Expect(ClassifyEnterVisualItemState(false, false, false, false) ==
+               EnterVisualItemState::NeedRemesh,
+           "SoftDefer is not Done");
     Expect(AdvanceEnterVisualItemStateMonotonic(EnterVisualItemState::Done,
                                                 EnterVisualItemState::NeedLight) ==
                EnterVisualItemState::Done,
            "Era50: Done sticky (monotonic debt)");
+    Expect(AdvanceEnterVisualItemStateMonotonic(EnterVisualItemState::Done,
+                                                EnterVisualItemState::Done) ==
+               EnterVisualItemState::Done,
+           "SoT: Done stays Done when still settled");
     Expect(ShouldEscalateEnterWorklistGpuDrain(true, 10, 3, 90),
            "Era50: escalate GPU when worklist stall + pending");
     Expect(!ShouldEscalateEnterWorklistGpuDrain(true, 10, 3, 10),
@@ -962,8 +988,84 @@ int main()
     Expect(!ShouldTreatMissingNeighborAsOpenSky(true, true, true),
            "Era51: loaded neighbor ⇒ no OpenSky inject");
     Expect(ClassifyEnterVoidEdgeAction(true, true, false, false, false) ==
-               EnterVoidEdgeAction::RemeshStale,
-           "Era51b: stale still RemeshStale before OpenSky latch");
+               EnterVoidEdgeAction::RelightOnce,
+           "Era51b: stale without OpenSky ⇒ RelightOnce");
+  }
+
+  // --- Enter column pipeline SoT (worklist r=4, remesh-if-delta) ---
+  {
+    using cutum::ClassifyEnterVisualItemState;
+    using cutum::EnterFullyDarkColumnSettled;
+    using cutum::EnterUnderfeetPresentReady;
+    using cutum::EnterUnderfeetSliceReady;
+    using cutum::EnterVisualItemState;
+    using cutum::EnterVisualWorkRadiusChunks;
+    using cutum::IsEnterGpuWarmupReady;
+    using cutum::ShouldHideEnterFullyDark;
+    using cutum::ShouldHideFullyDarkUntilLitInRing;
+    using cutum::ShouldHideUncomputedFullyDarkInRing;
+    using cutum::ShouldRemeshAfterLightApply;
+    using cutum::ShouldSkipSpawnMeshWhileRelightDeferred;
+    using cutum::ShouldSpinFullyDarkRemesh;
+    Expect(EnterVisualWorkRadiusChunks() == 4, "enter work radius is 4");
+    Expect(ShouldSpinFullyDarkRemesh(true, false, false),
+           "FullyDark + no stale + no delta ⇒ spin (do not Schedule)");
+    Expect(!ShouldSpinFullyDarkRemesh(true, false, true),
+           "light delta ⇒ not a FullyDark spin");
+    Expect(ShouldRemeshAfterLightApply(true), "remesh after light apply");
+    Expect(!ShouldRemeshAfterLightApply(false), "no remesh without delta");
+    Expect(!EnterFullyDarkColumnSettled(false, false, true, false, false),
+           "OpenSky alone ≠ settled");
+    Expect(!EnterFullyDarkColumnSettled(true, false, true, true, false),
+           "OpenSky + stale ≠ settled");
+    Expect(EnterFullyDarkColumnSettled(true, false, true, false, false),
+           "OpenSky + !stale (true-dark) = settled");
+    Expect(EnterFullyDarkColumnSettled(false, false, true, true, true),
+           "lit drawable = settled");
+    Expect(!EnterFullyDarkColumnSettled(true, true, true, false, false),
+           "pending ⇒ not settled");
+    Expect(ShouldHideEnterFullyDark(true, false, true, false, false),
+           "hide: FullyDark+stale after OpenSky still hidden");
+    Expect(!ShouldHideEnterFullyDark(true, false, false, false, true),
+           "true-dark not hidden");
+    Expect(!ShouldHideEnterFullyDark(true, false, false, true, false),
+           "lit drawable not hidden");
+    Expect(EnterUnderfeetSliceReady(false, false, true),
+           "cave true-dark underfeet is ready");
+    Expect(!EnterUnderfeetSliceReady(false, true, true),
+           "pending light ⇒ underfeet not ready");
+    Expect(EnterUnderfeetSliceReady(true, false, false),
+           "lit drawable underfeet is ready");
+    Expect(EnterUnderfeetPresentReady(true, true),
+           "underfeet present needs opaque draw");
+    Expect(!EnterUnderfeetPresentReady(true, false),
+           "slice ready without opaque ≠ present");
+    Expect(IsEnterGpuWarmupReady(true, 0, true, true, true),
+           "exit ready without void==0 in the predicate");
+    Expect(!ShouldHideFullyDarkUntilLitInRing(5, true, false, 4),
+           "hide r=4 does not hide horiz 5");
+    Expect(ShouldHideUncomputedFullyDarkInRing(4, true, true, false),
+           "pending light FullyDark hidden in r=4");
+    Expect(ShouldHideUncomputedFullyDarkInRing(4, true, false, true),
+           "stale FullyDark hidden in r=4");
+    Expect(ShouldHideUncomputedFullyDarkInRing(4, true, false, false),
+           "FullyDark without true_dark flag stays hidden");
+    Expect(!ShouldHideUncomputedFullyDarkInRing(4, true, false, false, 4, true),
+           "baked true-dark draws (not hidden)");
+    Expect(!ShouldHideUncomputedFullyDarkInRing(5, true, true, true),
+           "uncomputed hide stays r=4");
+    Expect(ClassifyEnterVisualItemState(false, false, false, true) ==
+               EnterVisualItemState::Done,
+           "OpenSky≠Done: terminal_ready only for lit/true-dark");
+    Expect(ClassifyEnterVisualItemState(false, false, false, false) !=
+               EnterVisualItemState::Done,
+           "OpenSky≠Done: SoftDefer is not Done");
+    Expect(ShouldSkipSpawnMeshWhileRelightDeferred(true, 4),
+           "deferred relight parks spawn r=4 mesh");
+    Expect(!ShouldSkipSpawnMeshWhileRelightDeferred(true, 5),
+           "hinterland MeshWarmup continues while deferred");
+    Expect(!ShouldSkipSpawnMeshWhileRelightDeferred(false, 1),
+           "after deferred=false spawn may mesh");
   }
 
   // --- Era34 CreateBar debt / soft wall ---

@@ -73,6 +73,28 @@ inline bool ShouldHideFullyDarkUntilLitInRing(int horiz, bool fully_dark,
   return true;
 }
 
+/// Hide FullyDark in the LitDrawable ring until lit drawable or true-dark.
+/// true_dark = field 0 after OpenSky/relight apply (caller passes it).
+/// After OpenSky, stale (field≠0) stays hidden until bake.
+inline bool ShouldHideUncomputedFullyDarkInRing(
+    int horiz, bool fully_dark, bool pending_light, bool stale_field,
+    int ring = kVisualStageLitDrawableHoriz, bool true_dark = false,
+    bool has_lit_drawable = false)
+{
+  if (horiz > ring || !fully_dark)
+  {
+    return false;
+  }
+  if (has_lit_drawable || true_dark)
+  {
+    return false;
+  }
+  (void)pending_light;
+  (void)stale_field;
+  // Unbaked FullyDark always hidden in ring (pending, stale, or pre-OpenSky).
+  return true;
+}
+
 /// Era28 I-V4: near void/VB needs Relight before first draw (not Unlit preview).
 /// Era32: near_fov means inside LitDrawable ring.
 inline bool ShouldRelightBeforeDrawNear(bool near_fov, bool void_or_vb,

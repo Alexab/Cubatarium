@@ -48,6 +48,13 @@ int main()
   Expect(q.Size() == 0, "empty after drain");
   Expect(q.Empty(), "Empty()");
 
+  Expect(!q.Any([](int) { return true; }), "Any empty false");
+  Expect(!q.PushDropOldest(10), "push for Any");
+  Expect(!q.PushDropOldest(20), "push for Any 2");
+  Expect(q.Any([](int v) { return v == 20; }), "Any finds 20");
+  Expect(!q.Any([](int v) { return v == 99; }), "Any misses 99");
+  (void)q.DrainAll();
+
   std::cout << kTestName << " OK\n";
   return 0;
 }

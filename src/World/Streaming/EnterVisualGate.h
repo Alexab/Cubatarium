@@ -130,7 +130,7 @@ inline bool ShouldEscalateEnterWorklistGpuDrain(bool gate_active, int remaining,
          frames_without_gpu_finish >= stall_frames;
 }
 
-/// Pure void-edge repair decision (unit-testable).
+/// Pure void-edge repair: OpenSky+relight first; remesh only after OpenSky.
 enum class EnterVoidEdgeAction : uint8_t
 {
   None = 0,
@@ -140,10 +140,18 @@ enum class EnterVoidEdgeAction : uint8_t
 };
 
 inline EnterVoidEdgeAction ClassifyEnterVoidEdgeAction(
-    bool fully_dark, bool stale_lit_field, bool soft_defer_with_ticket,
-    bool /*relight_already_owned*/, bool /*allow_one_relight_probe*/)
+    bool fully_dark, bool stale_lit_field, bool /*soft_defer_with_ticket*/,
+    bool relight_already_owned, bool open_sky_done)
 {
   if (!fully_dark)
+  {
+    return EnterVoidEdgeAction::None;
+  }
+  if (!open_sky_done)
+  {
+    return EnterVoidEdgeAction::RelightOnce;
+  }
+  if (relight_already_owned)
   {
     return EnterVoidEdgeAction::None;
   }
@@ -151,13 +159,7 @@ inline EnterVoidEdgeAction ClassifyEnterVoidEdgeAction(
   {
     return EnterVoidEdgeAction::RemeshStale;
   }
-  if (soft_defer_with_ticket)
-  {
-    return EnterVoidEdgeAction::None;
-  }
-  // Era50: void-edge (LitReady, zero field) → SoftDefer+ticket. Never Relight
-  // invent (REJECT void Relight storm).
-  return EnterVoidEdgeAction::SoftDeferTicket;
+  return EnterVoidEdgeAction::None;
 }
 
 /// Era51: missing neighbor under enter gate ⇒ treat as open daytime sky.

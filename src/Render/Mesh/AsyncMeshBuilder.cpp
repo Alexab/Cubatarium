@@ -239,7 +239,16 @@ bool UAsyncMeshBuilder::HasInflightInHorizontalRadius(
   {
     return false;
   }
-  if (!Completed.Empty())
+  // Era53 / Enter SoT: only near Completed blocks spawn ring — far pool depth
+  // must not sticky-block IsSpawnMeshRingReady / mesh warmup forever.
+  if (Completed.Any(
+          [&](const MeshBuildResult &result)
+          {
+            const int horiz =
+                std::max(std::abs(result.coord.x - center_ground_chunk.x),
+                         std::abs(result.coord.z - center_ground_chunk.z));
+            return horiz <= radius_chunks;
+          }))
   {
     return true;
   }
