@@ -678,8 +678,8 @@ int main()
     sample.mesh_dirty = true;
     Expect(NeedsCruiseStabilize(sample, 0, false, 0),
            "Era51: cruise needs mesh drain");
-    Expect(!IsEnterGpuWarmupReady(true, 0, true, true, true, false),
-           "Era51: not ingame until cruise stabilized");
+    Expect(IsEnterGpuWarmupReady(true, 0, true, true, true),
+           "SOTA: enter ready is ring+lit+mesh+vis (no cruise extra gate)");
     using cutum::ShouldResetRenderStateForGpuWarmup;
     using cutum::ShouldWarmupGreedyGpuDuringEnter;
     Expect(!ShouldResetRenderStateForGpuWarmup(true),

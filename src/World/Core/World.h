@@ -28,6 +28,7 @@
 #include "World/Math/CollisionVolume.h"
 #include "World/Physics/PhysicsProfile.h"
 #include "World/Physics/PhysicsTelemetry.h"
+#include "World/Streaming/ColumnEmergeState.h"
 #include "World/Streaming/EnterVisualGate.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
@@ -55,18 +56,6 @@ namespace cutum
 {
 
 struct RuntimeOverlayFlushResult;
-
-/// Ground-column visual emerge lifecycle (Minecraft/Sodium-style ready gate).
-enum class ColumnEmergeState : uint8_t
-{
-  Empty = 0,
-  Generating,
-  VoxelsReady,
-  Lighting,
-  LitReady,
-  Meshing,
-  RenderReady,
-};
 
 /// Draw readiness SoT (TD-ARCH-028). Telemetry unfinished/holes derive from this.
 struct ColumnRenderableState
@@ -1148,6 +1137,8 @@ public:
   void SetColumnEmergeState(glm::ivec3 ground, ColumnEmergeState state);
   ColumnEmergeState GetColumnEmergeState(glm::ivec3 ground) const;
   void ClearColumnEmergeState(glm::ivec2 ground_xz);
+  /// Count Lighting / Meshing / RenderReady columns into PhysicsTelemetry.
+  void SampleColumnEmergeStageTelemetry();
   /// True when column has left the light gate (LitReady / Meshing / RenderReady).
   bool IsColumnLitReady(glm::ivec3 ground) const;
   /// True when column may unlock outer streaming rings (LitReady+).

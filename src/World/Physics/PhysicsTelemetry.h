@@ -173,6 +173,12 @@ struct PhysicsTelemetry
   int ColumnAbsentInRdN{0};
   /// Era51: columns in RD loaded but not render-ready (mesh/light debt).
   int ColumnLoadedNoMeshN{0};
+  /// Exclusive ColumnEmergeState bump denials this frame (competing producer).
+  int ColumnBumpDenied{0};
+  /// Live ColumnEmergeState counts (Lighting / Meshing / RenderReady).
+  int ColumnLightingN{0};
+  int ColumnMeshingN{0};
+  int ColumnRenderReadyN{0};
   int PendingLightCount{0};
   int FocusChunkX{0};
   int FocusChunkZ{0};

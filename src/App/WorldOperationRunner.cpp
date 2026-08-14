@@ -240,15 +240,15 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   const int ring_peak = std::max(1, EnterGameRingPeak);
   const int fov_peak = std::max(1, EnterGameFovLitPeakDebt);
 
-  const bool ring_ready = World.IsSpawnMeshRingReady();
-  const bool mesh_blockers_clear = !World.NeedsEnterGameMeshWarmup();
-  const bool fov_ready = fov_debt <= 0;
-  const bool visibility_ready = World.IsEnterVisibilityReady();
+  const bool coop_prepared = World.IsSpawnAreaPreparedByCooperativeLoad();
+  const bool ring_ready =
+      coop_prepared || World.IsSpawnMeshRingReady();
+  const bool mesh_blockers_clear =
+      coop_prepared || !World.NeedsEnterGameMeshWarmup();
+  const bool fov_ready = coop_prepared || fov_debt <= 0;
+  const bool visibility_ready =
+      coop_prepared || World.IsEnterVisibilityReady();
   const int visibility_debt = lit_sample.visibility_debt;
-  const auto &phys = World.GetPhysicsTelemetry();
-  const bool cruise_stabilized =
-      !NeedsCruiseStabilize(lit_sample, phys.PendingLightFocus,
-                            phys.VisualHoles != 0, phys.FocusNotRenderReady);
   const bool soft_ready =
       mesh_blockers_clear && fov_ready && ring_ready && visibility_ready;
 
@@ -335,8 +335,8 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   }
 
   const bool enter_ready = IsEnterGpuWarmupReady(
-      ring_ready, fov_debt, mesh_blockers_clear, min_frames_done,
-      visibility_ready, cruise_stabilized);
+      ring_ready, fov_ready ? 0 : fov_debt, mesh_blockers_clear, min_frames_done,
+      visibility_ready);
   const bool force_ingame =
       EnterGameAbortDrainMode &&
       ShouldForceEnterInGameAfterAbortDrain(EnterGameGpuWarmupElapsedMs,

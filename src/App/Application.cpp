@@ -1943,24 +1943,25 @@ void UApplication::Update(double dt)
         const int gpu_finish_before = phys_before.GpuFinishN;
         if (Geometry && World)
         {
+          const bool coop_prepared =
+              World->IsSpawnAreaPreparedByCooperativeLoad();
           if (frame == 0)
           {
             // Era51: coop PrepareView already warmed spawn — avoid GPU wipe.
-            if (ShouldResetRenderStateForGpuWarmup(
-                    World->IsSpawnAreaPreparedByCooperativeLoad()))
+            if (ShouldResetRenderStateForGpuWarmup(coop_prepared))
             {
               Geometry->ResetWorldRenderState();
               LogWorldLoadDiag("gpu_warmup_reset", *World);
             }
-            // Era51: coop PrepareView already drained gate — do not re-arm.
-            if (!World->IsEnterLitGateActive() &&
-                !World->IsSpawnAreaPreparedByCooperativeLoad())
+            // SOTA: coop already drained ColumnFlow to Presentable — GPU upload
+            // only. Do not re-arm gate or run a second mesh/relight drain.
+            if (!World->IsEnterLitGateActive() && !coop_prepared)
             {
               UEnterLitDiagnostics::BeginSession();
               World->BeginEnterLitGate();
             }
           }
-          if (World->IsEnterLitGateActive())
+          if (!coop_prepared && World->IsEnterLitGateActive())
           {
             // Era46/47: shared enter drain frame — time-sliced per tick.
             const auto t0 = std::chrono::high_resolution_clock::now();
@@ -1979,8 +1980,9 @@ void UApplication::Update(double dt)
                                     std::to_string(drain_frame_ms));
             }
           }
-          else if (ShouldRunEnterStreamingWarmupDespiteSpawnPrepared(
-                       World->IsSpawnAreaPreparedByCooperativeLoad()))
+          else if (!coop_prepared &&
+                   ShouldRunEnterStreamingWarmupDespiteSpawnPrepared(
+                       coop_prepared))
           {
             if (World->NeedsEnterGameMeshWarmup())
             {
@@ -1988,6 +1990,7 @@ void UApplication::Update(double dt)
             }
             World->TickEnterStreamingWarmup(gate_iterations);
           }
+          if (!coop_prepared)
           {
             const auto t0 = std::chrono::high_resolution_clock::now();
             World->TickEnterFovLitPass(
@@ -2020,7 +2023,7 @@ void UApplication::Update(double dt)
           UEnterLitDiagnostics::RecordFrameSteps(step_sample);
           const bool upload_ready =
               frame >= kGpuWarmupMinFrames - 1 &&
-              !World->NeedsEnterGameMeshWarmup();
+              (coop_prepared || !World->NeedsEnterGameMeshWarmup());
           if (upload_ready)
           {
             World->WarmupVisibleListAtCamera();

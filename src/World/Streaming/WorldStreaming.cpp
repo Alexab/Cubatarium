@@ -402,7 +402,6 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               }
               auto &exec = GetColumnFlowExecutor();
               const glm::ivec2 col(ground.x, ground.z);
-              // I-F2: light ticket residency while PendingLight on near column.
               const bool any_drawable = [&]()
               {
                 const int cy0 = FloorDiv(dirty_min, CHUNK_SIZE);
@@ -417,30 +416,25 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                 }
                 return false;
               }();
+              // SOTA: one ticket per column. Light debt → Relight; else FirstMesh.
               if (FrontierColumnNeedsLightTicket(near_focus, pending_light_now,
                                                  any_drawable,
                                                  /*fully_dark=*/!any_drawable))
               {
-                if (!exec.Scheduler().Contains(col,
-                                               ColumnWorkKind::RelightThenMesh))
-                {
-                  ColumnWorkItem relight{};
-                  relight.column = col;
-                  relight.kind = ColumnWorkKind::RelightThenMesh;
-                  relight.priority = 95;
-                  relight.scan_full_focus = false;
-                  relight.cy = -1;
-                  exec.Enqueue(relight);
-                }
-                // Note under void pressure only (KEEP Era23 cap discipline).
+                ColumnWorkItem relight{};
+                relight.column = col;
+                relight.kind = ColumnWorkKind::RelightThenMesh;
+                relight.priority = 95;
+                relight.scan_full_focus = false;
+                relight.cy = -1;
+                exec.Enqueue(relight);
                 if (world.PhysicsTelemetryData.DarkFaceVoidNearN > 200 ||
                     world.PhysicsTelemetryData.FocusMissingMesh != 0)
                 {
                   world.EnqueueVoidDarkColumnRelightNote(col);
                 }
+                return;
               }
-              // I-F3: FirstMesh-until-Drawable after LitReady (or while
-              // pending — schedule early so Capture/admit can pin cy).
               if (FrontierColumnNeedsFirstMeshAfterLit(
                       near_focus, lit_ready_now || pending_light_now,
                       any_drawable, /*solid=*/true))
@@ -458,22 +452,6 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                 fm.scan_full_focus = world.PhysicsTelemetryData.FocusMissingMesh != 0;
                 fm.cy = pin_cy;
                 exec.Enqueue(fm);
-                // Era26 I-O4: near SoftDefer-class undrawn + pending/void ⇒
-                // keep Relight parallel (I-F2 may already have enqueued).
-                if (SoftDeferEmptyNeedsParallelVoidRelight(
-                        !any_drawable, pending_light_now || !any_drawable))
-                {
-                  if (!exec.Scheduler().Contains(
-                          col, ColumnWorkKind::RelightThenMesh))
-                  {
-                    ColumnWorkItem relight{};
-                    relight.column = col;
-                    relight.kind = ColumnWorkKind::RelightThenMesh;
-                    relight.priority = 95;
-                    relight.cy = pin_cy;
-                    exec.Enqueue(relight);
-                  }
-                }
               }
             };
             if (seed_decision.try_sync_seed)
@@ -750,6 +728,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   }
   world.PhysicsTelemetryData.FocusMissingMesh = missing_near ? 1 : 0;
   world.PhysicsTelemetryData.VisualHoles = missing_near ? 1 : 0;
+  world.PhysicsTelemetryData.ColumnBumpDenied = 0;
   // SoT unfinished (held sample while cruise); not pending-proxy.
   world.PhysicsTelemetryData.UnfinishedVisual = unfinished_visual;
   world.PhysicsTelemetryData.LightDebt = pending_light_focus > 0 ? 1 : 0;
@@ -1098,6 +1077,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           static_cast<int>(world.GetMeshService().GetDirtyCount());
       world.PhysicsTelemetryData.PendingLightN =
           static_cast<int>(world.GetPendingLightBeforeMeshCount());
+      world.SampleColumnEmergeStageTelemetry();
       world.PhysicsTelemetryData.RelightFifoN =
           world.Persistence
               ? world.Persistence->GetPendingTerrainColumnRelightCount()
@@ -1570,7 +1550,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     const glm::ivec2 focus_xz(focus_horiz.x, focus_horiz.z);
     const glm::ivec2 repair_xz = RepairColumnFromMissWitness(
         world.PhysicsTelemetryData, focus_xz);
-    // Rim SLA: FirstMesh Drain before any promote Capture.
+    // SOTA: enqueue only — TickMeshEmerge DrainBudget is the single owner.
     if (rim_first_mesh_sla && ingress.first_mesh_admit > 0)
     {
       if (repair_xz != focus_xz)
@@ -1580,26 +1560,20 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             world.PhysicsTelemetryData.MissHoriz;
       }
       exec.Enqueue(repair_xz, ColumnWorkKind::FirstMesh, 100);
-      exec.DrainBudget(world, moving_now ? 2 : 3, focus_horiz, focus_radius,
-                       ingress.first_mesh_admit);
-      // Underfeet promote only (r=1) — no full-focus promote while missing.
-      exec.RunPromoteRelightNow(world, focus_horiz, /*focus_radius=*/1);
     }
-    else
+    else if (ingress.first_mesh_admit > 0)
     {
-      exec.RunPromoteRelightNow(world, focus_horiz, focus_radius);
-      if (ingress.first_mesh_admit > 0)
+      if (repair_xz != focus_xz)
       {
-        if (repair_xz != focus_xz)
-        {
-          ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
-          world.PhysicsTelemetryData.SoftDeferWitnessHoriz =
-              world.PhysicsTelemetryData.MissHoriz;
-        }
-        exec.Enqueue(repair_xz, ColumnWorkKind::FirstMesh, 80);
-        exec.DrainBudget(world, 1, focus_horiz, focus_radius,
-                         ingress.first_mesh_admit);
+        ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
+        world.PhysicsTelemetryData.SoftDeferWitnessHoriz =
+            world.PhysicsTelemetryData.MissHoriz;
       }
+      exec.Enqueue(repair_xz, ColumnWorkKind::FirstMesh, 80);
+    }
+    if (!rim_first_mesh_sla)
+    {
+      exec.RequestPromoteRelight(focus_xz, 40);
     }
   }
   // TD-ARCH-030 / Era19: SoftDefer Capture floor via FrameStreamingBudget SoT.
@@ -1737,8 +1711,6 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         item.scan_full_focus = missing_focus_mesh;
         item.cy = repair_cy;
         exec.Enqueue(item);
-        exec.DrainBudget(world, 1, focus_horiz, focus_radius,
-                         /*admit_batch=*/1);
       }
     }
     else if (!missing_focus_mesh)
@@ -1792,24 +1764,18 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       }
     }
   }
-  // Two-tier promote via ColumnFlow only (underfeet then focus). Streaming
-  // must not call Promote* directly (Era13 anti-zoo). RunPromoteRelightNow
-  // Dispatches immediately so DrainBudget cannot steal FirstMesh/Remesh tickets.
+  // Promote via ColumnFlow queue only — TickMeshEmerge DrainBudget owns bump.
   {
     auto &exec = GetColumnFlowExecutor();
+    const glm::ivec2 focus_xz(focus_horiz.x, focus_horiz.z);
     if (pending_bg > 0 || underfeet_pending_light)
     {
-      exec.RunPromoteRelightNow(world, focus_horiz, /*focus_radius=*/1);
+      exec.RequestPromoteRelight(focus_xz, 50);
     }
-    // While missing: underfeet-only promote (r=1). Full focus after miss clears.
     if (!rim_first_mesh_sla &&
         (pending_bg > 0 || near_pending_light || pending_light_focus_n > 0))
     {
-      const int promo_r =
-          (pending_light_focus_n > 0 && dark_face_near_n > 500)
-              ? focus_radius + 1
-              : focus_radius;
-      exec.RunPromoteRelightNow(world, focus_horiz, promo_r);
+      exec.RequestPromoteRelight(focus_xz, 40);
     }
   }
 
@@ -1834,8 +1800,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
        world.GetAsyncRelightInFlightCount() == 0))
   {
     auto &exec = GetColumnFlowExecutor();
-    exec.RunPromoteRelightNow(world, focus_horiz,
-                              rim_first_mesh_sla ? 1 : focus_radius);
+    exec.RequestPromoteRelight(
+        glm::ivec2(focus_horiz.x, focus_horiz.z),
+        rim_first_mesh_sla ? 45 : 40);
     world.ClearPendingLightAfterMeshCommitted(12);
     // Capture is main-thread: never burst 48–56 idle (manual 220018).
     // While missing: paced 1–2 (priority SLA / manual 170154 softd=4 thrash).
@@ -2013,6 +1980,7 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
     world.PhysicsTelemetryData.MeshDrainFinal = budget.MaxMeshDrain;
     world.PhysicsTelemetryData.MeshAdmissionMode = budget.AdmissionMode;
   }
+  world.SampleColumnEmergeStageTelemetry();
   world.PhysicsTelemetryData.PendingGpuAppliesN = static_cast<int>(
       world.GetMeshService().GetPendingGpuAppliesCount());
   world.PhysicsTelemetryData.PendingGpuQueuedN = static_cast<int>(
@@ -2922,7 +2890,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         Streamer->SetMaxLoadOpsPerFrame(ApplyPressureCap(
             world.MaxLoadOpsPerFrame, pressure.max_load_ops_cap));
       }
-      else if (visual_holes || pressure.focus_pressure_mode)
+      else if (pressure.focus_pressure_mode)
       {
         Streamer->SetNearLoadRadius(focus_radius);
         Streamer->SetMaxLoadOpsPerFrame(ApplyPressureCap(

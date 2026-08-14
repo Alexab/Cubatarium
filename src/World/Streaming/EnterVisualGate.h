@@ -43,7 +43,8 @@ struct EnterVisualGroundHash
   }
 };
 
-/// Era50: EnterLitQuiesce only when worklist remaining==0 (not whole gate).
+/// Era47/SOTA: EnterLitQuiesce when LIGHT remaining==0 (snapshot/FOV debt).
+/// Do not wait for Dirty/vis — that refeeds remesh and never settles.
 inline bool EnterLitQuiesceAllowed(bool enter_gate_active,
                                    int worklist_remaining)
 {

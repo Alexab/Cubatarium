@@ -1347,6 +1347,12 @@ add_executable(column_desired_stage_test
 target_include_directories(column_desired_stage_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
+add_executable(column_emerge_bump_test
+    src/Test/ColumnEmergeBumpTest.cpp)
+target_include_directories(column_emerge_bump_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(column_emerge_bump_test glm::glm)
+
 add_executable(visual_ready_for_ring_policy_test
     src/Test/VisualReadyForRingPolicyTest.cpp)
 target_include_directories(visual_ready_for_ring_policy_test PRIVATE

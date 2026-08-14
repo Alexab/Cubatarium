@@ -376,7 +376,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       }
       {
         auto &exec = GetColumnFlowExecutor();
-        exec.RunPromoteRelightNow(world, focus_ground_horiz, focus_radius);
+        exec.RequestPromoteRelight(
+            glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 40);
       }
       // Holes (V2a normal): still promote often — 120-frame gap left FIFO cold
       // while pending sat with relight_drain≈0.
@@ -1175,24 +1176,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     async_relief_cooldown = 0;
   }
 
-  // Starve keep-shell remesh when focus MISSING mesh, or light debt on outer ring
-  // (dark preview strip while dirty~500 starves async relight — manual 161327).
-  // Era51: never starve outside focus while visual holes — mesh emerge first.
-  const bool cruise_light_debt =
-      moving && pending_near_light && !visual_holes &&
-      pending_focus_count > 4;
-  mesh_service.SetStarveOutsideFocusMesh(
-      !visual_holes &&
-      (missing_underfeet || cruise_light_debt || idle_remesh_debt ||
-       idle_focus_dirty_debt));
-  // If hole pressure is high but async mesh is still near-zero, fully starving
-  // remesh can deadlock focus in pending-light + missing-mesh state. Only relax
-  // while moving — stop/idle must keep remesh starved to avoid post_stop_pending
-  // and wall_ms spikes from aggressive hole-fill remesh.
-  const bool relax_hole_starve =
-      moving && (pending_focus_count > 16) && (pending_async <= 4);
-  mesh_service.SetStarveRemeshForHoles((visual_holes || missing_underfeet) &&
-                                       !relax_hole_starve);
+  // SOTA: FirstMesh > Relight > Remesh via queue priority — no starve forks.
+  mesh_service.SetStarveOutsideFocusMesh(false);
+  mesh_service.SetStarveRemeshForHoles(false);
   // Keep remesh within 2 (or 3 when stale-dark debt) so neighbor black faces
   // repair while FirstMesh fills the hole.
   {
@@ -1276,7 +1262,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   else if (moving &&
            (visual_holes || missing_underfeet || underfeet_undrawn ||
-            pending_dirty > 450 || cruise_light_debt))
+            pending_dirty > 450))
   {
     if (visual_holes || underfeet_undrawn || missing_underfeet)
     {
@@ -1620,24 +1606,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     else if (idle_pending_sync_cd > 0)
     {
       --idle_pending_sync_cd;
-    }
-  }
-  if (cruise_light_debt)
-  {
-    mesh_service.SetStarveOutsideFocusMesh(true);
-    mesh_drain = std::min(mesh_drain, last_frame_ms <= 16.0 ? 14 : 10);
-    mesh_schedule = std::min(mesh_schedule, 10);
-    static int cruise_promote_cd = 0;
-    if (cruise_promote_cd <= 0 && last_frame_ms <= 24.0)
-    {
-      GetColumnFlowExecutor().DrainIdlePendingLight(
-          world, focus_ground_horiz, focus_radius, 5, false, last_frame_ms,
-          pending_focus_count, missing_visible_mesh);
-      cruise_promote_cd = 3;
-    }
-    else if (cruise_promote_cd > 0)
-    {
-      --cruise_promote_cd;
     }
   }
   // Era31 I-T1: ocean void heal moving drain floor (even without miss).
@@ -2052,23 +2020,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         (pending_focus_count > 0 || missing_visible_mesh))
     {
       auto &exec = GetColumnFlowExecutor();
-      exec.RunPromoteRelightNow(world, focus_ground_horiz, focus_radius);
+      exec.RequestPromoteRelight(
+          glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 40);
       if (cold.first_mesh_admit > 0)
       {
         exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
                      ColumnWorkKind::FirstMesh, 80);
-        exec.DrainBudget(world, 1, focus_ground_horiz, focus_radius,
-                         cold.first_mesh_admit);
       }
     }
     else if (!moving && missing_visible_mesh && pending_focus_count > 0 &&
              last_frame_ms <= 20.0)
     {
       auto &exec = GetColumnFlowExecutor();
-      exec.RunPromoteRelightNow(world, focus_ground_horiz, focus_radius);
+      exec.RequestPromoteRelight(
+          glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 40);
       exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
                    ColumnWorkKind::FirstMesh, 60);
-      exec.DrainBudget(world, 2, focus_ground_horiz, focus_radius, 2);
     }
     else if (!moving &&
              (missing_visible_mesh || black_sticky > 0 ||
@@ -2076,8 +2043,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
              last_frame_ms <= 28.0)
     {
       auto &exec = GetColumnFlowExecutor();
-      exec.RunPromoteRelightNow(world, focus_ground_horiz, focus_radius);
-      exec.DrainBudget(world, 2, focus_ground_horiz, focus_radius, 2);
+      exec.RequestPromoteRelight(
+          glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 40);
       // TD-ARCH-026/027: scale sticky remesh via ColumnFlow (no direct SyncIdle).
       const int sticky_sync =
           std::clamp(4 + black_sticky * 2 + (focus_not_render_ready > 16 ? 4 : 0),
@@ -2429,7 +2396,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       {
         auto &exec = GetColumnFlowExecutor();
-        exec.RunPromoteRelightNow(world, focus_ground_horiz, focus_radius);
+        exec.RequestPromoteRelight(
+            glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 40);
       }
       glm::ivec3 hole{};
       if (mesh_service.FindNearestMissingGreedyMesh(

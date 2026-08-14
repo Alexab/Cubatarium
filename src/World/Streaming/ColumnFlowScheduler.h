@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <glm/glm.hpp>
 #include <queue>
 #include <unordered_set>
@@ -27,7 +28,7 @@ struct ColumnWorkItem
   int cy{-1};
 };
 
-/// Single-owner focus column work queue (V4 MVP).
+/// Single-owner focus column work queue (V4). One ticket per column.
 class UColumnFlowScheduler
 {
 public:
@@ -39,6 +40,10 @@ public:
   bool Contains(glm::ivec2 column, ColumnWorkKind kind) const;
   bool Contains(glm::ivec2 column, ColumnWorkKind kind,
                 bool scan_full_focus) const;
+  /// True if any kind is queued for this column (exclusive mutex).
+  bool ContainsColumn(glm::ivec2 column) const;
+  uint64_t DeniedCount() const { return denied_n_; }
+  void ClearDeniedCount() { denied_n_ = 0; }
 
 private:
   struct Compare
@@ -52,6 +57,8 @@ private:
   std::priority_queue<ColumnWorkItem, std::vector<ColumnWorkItem>, Compare>
       queue_;
   std::unordered_set<int64_t> inflight_;
+  std::unordered_set<int64_t> occupied_columns_;
+  uint64_t denied_n_{0};
 };
 
 } // namespace cutum

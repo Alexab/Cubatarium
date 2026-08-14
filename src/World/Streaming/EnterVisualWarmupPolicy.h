@@ -645,7 +645,8 @@ inline std::string FormatMeshWarmupProgress(size_t start_pending,
          " pending)";
 }
 
-/// Era51: cruise stabilize on progress bar — mesh/light holes before InGame.
+/// Diagnostic: mesh/light holes remaining. Not an enter InGame gate (SOTA:
+/// IsEnterGpuWarmupReady = spawn-ring Presentable + lit + vis).
 inline bool NeedsCruiseStabilize(const EnterLitSample &sample,
                                  int pending_light_focus,
                                  bool visual_holes, int focus_not_render_ready)
@@ -665,14 +666,13 @@ inline bool NeedsCruiseStabilize(const EnterLitSample &sample,
 
 /// InGame when spawn ring + mesh blockers + lit snapshot debt + visibility
 /// ready. Visibility is the r=4 worklist (remaining==0 and no stale dark), not
-/// void telem / fifo / terminal-held.
+/// void telem / fifo / terminal-held. No extra cruise-stabilize gate.
 inline bool IsEnterGpuWarmupReady(bool ring_ready, int fov_debt,
                                   bool mesh_blockers_clear, bool min_frames_done,
-                                  bool visibility_ready = true,
-                                  bool cruise_stabilized = true)
+                                  bool visibility_ready = true)
 {
   return min_frames_done && ring_ready && fov_debt <= 0 && mesh_blockers_clear &&
-         visibility_ready && cruise_stabilized;
+         visibility_ready;
 }
 
 /// Era51: skip GPU destroy when coop PrepareView already settled spawn ring.

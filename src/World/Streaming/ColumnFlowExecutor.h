@@ -45,7 +45,7 @@ public:
                    int pending_focus_n, int recover_n, int admit_n,
                    double last_frame_ms = 0.0, int pending_async = 0);
 
-  /// Drain up to n queued items; dispatch uses item.column.
+  /// Drain up to n queued items; AdvanceColumn uses item.column.
   int DrainBudget(UWorld &world, int n, glm::ivec3 focus_ground_horiz,
                   int focus_radius, int admit_batch = 1);
 
@@ -56,11 +56,10 @@ public:
                              bool missing_visible_mesh);
 
   /// Promote path: enqueue PromoteRelight then drain (no direct World promote
-  /// from emerge except via Dispatch).
+  /// from emerge except via AdvanceColumn).
   void RequestPromoteRelight(glm::ivec2 near_column, int priority);
 
-  /// Synchronous ColumnFlow promote (Dispatch only — does not steal DrainBudget
-  /// from FirstMesh/Remesh tickets already queued).
+  /// Enqueue PromoteRelight (DrainBudget is the exclusive bump owner).
   void RunPromoteRelightNow(UWorld &world, glm::ivec3 focus_ground_horiz,
                             int focus_radius);
 
@@ -72,8 +71,9 @@ public:
   void DrainRemeshSeamBudget(UWorld &world, int max_columns);
 
 private:
-  void Dispatch(UWorld &world, const ColumnWorkItem &work,
-                glm::ivec3 focus_ground_horiz, int focus_radius, int admit_batch);
+  void AdvanceColumn(UWorld &world, const ColumnWorkItem &work,
+                     glm::ivec3 focus_ground_horiz, int focus_radius,
+                     int admit_batch);
   static int64_t CooldownKey(glm::ivec2 column, ColumnWorkKind kind);
 
   UColumnFlowScheduler scheduler_;

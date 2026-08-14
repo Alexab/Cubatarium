@@ -31,15 +31,14 @@ int main()
   s.Enqueue({1, 2}, ColumnWorkKind::FirstMesh, 99); // dedupe
   Expect(s.Size() == 1, "dedupe same column+kind");
   s.Enqueue({1, 2}, ColumnWorkKind::RelightThenMesh, 5);
-  Expect(s.Size() == 2, "different kind not deduped");
-  ColumnWorkItem a{}, b{};
+  Expect(s.Size() == 1, "competing kind on same column denied");
+  Expect(s.ContainsColumn({1, 2}), "column occupied");
+  Expect(s.DeniedCount() >= 1, "denied competing producer");
+  ColumnWorkItem a{};
   Expect(s.DrainOne(a), "drain first");
-  Expect(a.priority == 10, "higher priority first (10 > 5)");
-  Expect(a.column.x == 1 && a.column.y == 2, "column coords preserved");
+  Expect(a.priority == 10, "kept first ticket");
   Expect(a.kind == ColumnWorkKind::FirstMesh, "kind FirstMesh");
-  Expect(s.DrainOne(b), "drain second");
-  Expect(b.kind == ColumnWorkKind::RelightThenMesh, "kind Relight");
-  Expect(b.column.x == 1 && b.column.y == 2, "column on second item");
+  Expect(!s.ContainsColumn({1, 2}), "column free after drain");
   Expect(!s.DrainOne(a), "empty");
 
   // TD-ARCH-026: RemeshSeam is the hide=>repair ticket kind.
@@ -61,11 +60,11 @@ int main()
     UColumnFlowScheduler t;
     EnqueueStickyStaleRepairTickets(t, {0, 0}, {{1, 0}}, {{5, 0}});
     Expect(t.Contains({1, 0}, ColumnWorkKind::RemeshSeam), "sticky RemeshSeam");
-    Expect(t.Contains({1, 0}, ColumnWorkKind::RelightThenMesh),
-           "near sticky RelightThenMesh");
+    Expect(!t.Contains({1, 0}, ColumnWorkKind::RelightThenMesh),
+           "exclusive: sticky not dual Relight");
     Expect(t.Contains({5, 0}, ColumnWorkKind::RemeshSeam), "stale RemeshSeam");
-    Expect(t.Contains({5, 0}, ColumnWorkKind::RelightThenMesh),
-           "stale RelightThenMesh");
+    Expect(!t.Contains({5, 0}, ColumnWorkKind::RelightThenMesh),
+           "stale RelightThenMesh denied");
   }
 
   if (gFails != 0)

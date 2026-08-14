@@ -168,15 +168,14 @@ int main()
     EnqueueStickyStaleRepairTickets(sched, focus, sticky, stale);
     Expect(sched.Contains(sticky[0], ColumnWorkKind::RemeshSeam),
            "sticky → RemeshSeam ticket");
-    Expect(sched.Contains(sticky[0], ColumnWorkKind::RelightThenMesh),
-           "near sticky → RelightThenMesh");
+    Expect(!sched.Contains(sticky[0], ColumnWorkKind::RelightThenMesh),
+           "exclusive: near sticky not dual RelightThenMesh");
     Expect(sched.Contains(stale[0], ColumnWorkKind::RemeshSeam),
            "stale-dark → RemeshSeam");
     Expect(!sched.Contains(stale[0], ColumnWorkKind::RelightThenMesh),
            "Era19: stale must not dual RelightThenMesh");
-    Expect(sched.Contains(sticky[0], ColumnWorkKind::PromoteRelight) ||
-               sched.Contains(sticky[0], ColumnWorkKind::RemeshSeam),
-           "sticky near → live repair ticket kinds");
+    Expect(sched.Contains(sticky[0], ColumnWorkKind::RemeshSeam),
+           "sticky near → live RemeshSeam ticket");
   }
 
   // Era18/32: void + VisibleBlack tickets are RelightThenMesh (+Promote), never
@@ -188,8 +187,8 @@ int main()
     EnqueueVoidDarkRelightTickets(sched, focus, void_cols);
     Expect(sched.Contains(void_cols[0], ColumnWorkKind::RelightThenMesh),
            "Era18: void near → RelightThenMesh");
-    Expect(sched.Contains(void_cols[0], ColumnWorkKind::PromoteRelight),
-           "Era18: void near → PromoteRelight");
+    Expect(!sched.Contains(void_cols[0], ColumnWorkKind::PromoteRelight),
+           "exclusive: void not dual PromoteRelight");
     Expect(!sched.Contains(void_cols[0], ColumnWorkKind::RemeshSeam),
            "Era18: void must not RemeshSeam-only");
     Expect(sched.Contains(void_cols[1], ColumnWorkKind::RelightThenMesh),

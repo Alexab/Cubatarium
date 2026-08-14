@@ -274,11 +274,9 @@ void MarkSpawnAreaPreparedAfterCooperativeLoad(UWorld &world,
   {
     return;
   }
-  // Era49: prepared only when ring + VisualReady (not ring alone).
-  if (world.IsSpawnMeshRingReady() && world.IsEnterVisibilityReady())
-  {
-    world.MarkSpawnAreaPreparedByCooperativeLoad();
-  }
+  // PrepareView already required spawn-ring Presentable + vis. Always mark so
+  // GpuWarmup is upload-only (do not wait on post-EndEnterLitGate live debt).
+  world.MarkSpawnAreaPreparedByCooperativeLoad();
 }
 
 void FinalizeCooperativeLoadForEnterGame(UWorld &world, WorldCoopKind kind)
@@ -1683,6 +1681,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       }
       else if (MeshWarmupFinalizeOnly)
       {
+        // SOTA: FinalizeOnly still owns ColumnFlow until Presentable — do not
+        // skip BeginEnterLitGate (Era51 0ms PrepareView / second GpuWarmup).
+        if (!world.IsEnterLitGateActive())
+        {
+          UEnterLitDiagnostics::BeginSession();
+          world.BeginEnterLitGate();
+        }
         BeginPrepareEnter();
       }
       else
@@ -1715,6 +1720,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         world.SetLightingSkylightBulkComplete(false);
         if (Kind == WorldCoopKind::Create || MeshWarmupFinalizeOnly)
         {
+          if (MeshWarmupFinalizeOnly && !world.IsEnterLitGateActive())
+          {
+            UEnterLitDiagnostics::BeginSession();
+            world.BeginEnterLitGate();
+          }
           BeginPrepareEnter();
         }
         else
@@ -2051,15 +2061,10 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         const bool visibility_ready = world.IsEnterVisibilityReady();
         const int visibility_debt = lit_sample.visibility_debt;
         const bool mesh_blockers_clear = !world.NeedsEnterGameMeshWarmup();
-        const bool cruise_stabilized =
-            !NeedsCruiseStabilize(lit_sample, phys_after.PendingLightFocus,
-                                  phys_after.VisualHoles != 0,
-                                  phys_after.FocusNotRenderReady);
-        // Era49: same exit contract as Runner soft_ready / IsEnterGpuWarmupReady.
-        const bool load_settled = ring_ready && fov_debt <= 0 &&
-                                  lit_sample.ring_not_ready == 0 &&
-                                  visibility_ready && mesh_blockers_clear &&
-                                  cruise_stabilized;
+        // SOTA: enter ready = spawn-ring Presentable + vis. Snapshot FOV debt
+        // drives lit-quiesce, not a second PrepareView gate (blips 0→50).
+        const bool load_settled = ring_ready && visibility_ready &&
+                                  mesh_blockers_clear;
         if (!StreamingWarmupAbortDrainMode &&
             ShouldForceEnterMeshAbort(fov_debt, ring_ready, elapsed_ms,
                                       URuntimeTuning::Get().EnterMeshAbortMs))
@@ -2080,9 +2085,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         }
         // Era46 C: escalate GPU drain only after abort_drain ≥3 min — same
         // pipeline, higher budget; does not weaken gate.
+        // Gate-active GPU consume is TickEnterGateMeshDrain only (one consume).
         if (ShouldEscalateEnterWarmupGpuDrain(StreamingWarmupAbortDrainMode,
                                               elapsed_ms) &&
-            world.NeedsEnterGameMeshWarmup())
+            world.NeedsEnterGameMeshWarmup() &&
+            !world.IsEnterLitGateActive())
         {
           world.DrainEnterGameMeshWarmup(kCoopEnterMeshBudget * 2);
         }
@@ -2107,12 +2114,14 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     }
     world.WarmupVisibleListAtCamera();
     WarnIfTerrainMeshesMissing(world, "PrepareView after warmup");
+    // Mark before EndEnterLitGate — vis-ready uses the enter snapshot while
+    // the gate is still active. Consume happens after GpuWarmup.
+    FinalizeCooperativeLoadForEnterGame(world, Kind);
     if (world.IsEnterLitGateActive())
     {
       world.EndEnterLitGate();
       UEnterLitDiagnostics::EndSession();
     }
-    FinalizeCooperativeLoadForEnterGame(world, Kind);
     CurrentPhase = Phase::Done;
     Active = false;
     StreamingWarmupTicks = 0;

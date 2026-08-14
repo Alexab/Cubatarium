@@ -87,7 +87,6 @@ inline void EnqueueVoidDarkRelightTickets(
     const int d = near_dist(col);
     const int prio_boost = d <= 2 ? 25 : 0;
     scheduler.Enqueue(col, ColumnWorkKind::RelightThenMesh, 50 + prio_boost);
-    scheduler.Enqueue(col, ColumnWorkKind::PromoteRelight, 45 + prio_boost);
   }
 }
 
@@ -114,22 +113,12 @@ inline void EnqueueStickyStaleRepairTickets(
   for (const glm::ivec2 &col : sticky_cols)
   {
     scheduler.Enqueue(col, ColumnWorkKind::RemeshSeam, 30);
-    if (near_dist(col) <= 2)
-    {
-      scheduler.Enqueue(col, ColumnWorkKind::RelightThenMesh, 45);
-      scheduler.Enqueue(col, ColumnWorkKind::PromoteRelight, 40);
-    }
   }
-  for (const glm::ivec2 &col : stale_dark_cols)
+  for (const glm::ivec2 &stale_col : stale_dark_cols)
   {
-    const int d = near_dist(col);
+    const int d = near_dist(stale_col);
     const int prio_boost = d <= 2 ? 20 : 0;
-    // Non-fully-dark stale seam mismatch with light present → Remesh.
-    scheduler.Enqueue(col, ColumnWorkKind::RemeshSeam, 28 + prio_boost);
-    if (d <= 2)
-    {
-      scheduler.Enqueue(col, ColumnWorkKind::PromoteRelight, 35 + prio_boost);
-    }
+    scheduler.Enqueue(stale_col, ColumnWorkKind::RemeshSeam, 28 + prio_boost);
   }
 }
 

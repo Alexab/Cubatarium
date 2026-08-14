@@ -3,6 +3,7 @@
 #include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
 #include "World/Streaming/ColumnDesiredStage.h"
+#include "World/Streaming/ColumnEmergeState.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/OceanCruisePolicy.h"
@@ -61,14 +62,11 @@ int64_t UColumnFlowExecutor::CooldownKey(glm::ivec2 column,
 
 void UColumnFlowExecutor::RunPromoteRelightNow(UWorld &world,
                                                glm::ivec3 focus_ground_horiz,
-                                               int focus_radius)
+                                               int /*focus_radius*/)
 {
-  ColumnWorkItem work{};
-  work.column = glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z);
-  work.kind = ColumnWorkKind::PromoteRelight;
-  work.priority = 100;
-  work.scan_full_focus = false;
-  Dispatch(world, work, focus_ground_horiz, focus_radius, /*admit_batch=*/1);
+  (void)world;
+  RequestPromoteRelight(
+      glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 40);
 }
 
 bool UColumnFlowExecutor::HasRepairTicket(glm::ivec2 column) const
@@ -76,15 +74,12 @@ bool UColumnFlowExecutor::HasRepairTicket(glm::ivec2 column) const
   // Era17 I-H1: ticket SoT = live Flow queue membership only (not live-window).
   // Progress (Dirty/Inflight/PendingLight) is tracked separately via
   // UWorld::ColumnHasRepairProgress for NoTicket / Collect skip.
-  return scheduler_.Contains(column, ColumnWorkKind::RemeshSeam) ||
-         scheduler_.Contains(column, ColumnWorkKind::RelightThenMesh) ||
-         scheduler_.Contains(column, ColumnWorkKind::PromoteRelight) ||
-         scheduler_.Contains(column, ColumnWorkKind::FirstMesh);
+  return scheduler_.ContainsColumn(column);
 }
 
 void UColumnFlowExecutor::DrainRemeshSeamBudget(UWorld &world, int max_columns)
 {
-  // One Dispatch(RemeshSeam) == SyncIdle(1); budget N needs a single SyncIdle(N)
+  // One AdvanceColumn(RemeshSeam) == SyncIdle(1); budget N needs a single SyncIdle(N)
   // because Enqueue dedupes (column,kind) and cannot queue N identical seams.
   if (max_columns > 0)
   {
@@ -92,11 +87,25 @@ void UColumnFlowExecutor::DrainRemeshSeamBudget(UWorld &world, int max_columns)
   }
 }
 
-void UColumnFlowExecutor::Dispatch(UWorld &world, const ColumnWorkItem &work,
+void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &work,
                                    glm::ivec3 focus_ground_horiz,
                                    int focus_radius, int admit_batch)
 {
   last_dispatch_frame_[CooldownKey(work.column, work.kind)] = frame_counter_;
+  ColumnEmergeState requested = ColumnEmergeState::Meshing;
+  switch (work.kind)
+  {
+  case ColumnWorkKind::RelightThenMesh:
+  case ColumnWorkKind::PromoteRelight:
+    requested = ColumnEmergeState::Lighting;
+    break;
+  case ColumnWorkKind::FirstMesh:
+  case ColumnWorkKind::RemeshSeam:
+    requested = ColumnEmergeState::Meshing;
+    break;
+  }
+  const glm::ivec3 ground(work.column.x, 0, work.column.y);
+  world.SetColumnEmergeState(ground, requested);
   const glm::ivec2 *only =
       work.scan_full_focus ? nullptr : &work.column;
   glm::vec2 forward_xz = world.GetLastMovementDirXz();
@@ -116,7 +125,6 @@ void UColumnFlowExecutor::Dispatch(UWorld &world, const ColumnWorkItem &work,
   {
   case ColumnWorkKind::FirstMesh:
     world.AdmitFocusVisibleMissing(admit_batch, forward_xz, only, work.cy);
-    world.AdmitFocusMeshIngress(1);
     break;
   case ColumnWorkKind::RelightThenMesh:
     world.RecoverUnlitFocusMeshes(1, only);
@@ -138,8 +146,6 @@ void UColumnFlowExecutor::Dispatch(UWorld &world, const ColumnWorkItem &work,
     }
     break;
   case ColumnWorkKind::PromoteRelight:
-    // Sole promote owner: terrain FIFO + PendingLight (no direct Streaming
-    // Promote* calls outside ColumnFlow).
     world.PromoteNearTerrainColumnRelights(focus_ground_horiz, focus_radius);
     world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
     break;
@@ -155,9 +161,12 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
   ColumnWorkItem work{};
   while (drained < n && scheduler_.DrainOne(work))
   {
-    Dispatch(world, work, focus_ground_horiz, focus_radius, admit_batch);
+    AdvanceColumn(world, work, focus_ground_horiz, focus_radius, admit_batch);
     ++drained;
   }
+  world.GetPhysicsTelemetryMutable().ColumnBumpDenied +=
+      static_cast<int>(scheduler_.DeniedCount());
+  scheduler_.ClearDeniedCount();
   return drained;
 }
 
