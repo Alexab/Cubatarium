@@ -167,6 +167,12 @@ struct PhysicsTelemetry
   int StreamRingBlocked{0};
   int StreamNearSkipped{0};
   int StreamLoadCandidates{0};
+  /// Era51: procedural fill enabled (saved world + streaming).
+  int AllowProcFill{0};
+  /// Era51: columns in RD with terrain absent from BlockWorld (load backlog).
+  int ColumnAbsentInRdN{0};
+  /// Era51: columns in RD loaded but not render-ready (mesh/light debt).
+  int ColumnLoadedNoMeshN{0};
   int PendingLightCount{0};
   int FocusChunkX{0};
   int FocusChunkZ{0};

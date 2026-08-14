@@ -1947,7 +1947,9 @@ void UApplication::Update(double dt)
           {
             Geometry->ResetWorldRenderState();
             LogWorldLoadDiag("gpu_warmup_reset", *World);
-            if (!World->IsEnterLitGateActive())
+            // Era51: coop PrepareView already drained gate — do not re-arm.
+            if (!World->IsEnterLitGateActive() &&
+                !World->IsSpawnAreaPreparedByCooperativeLoad())
             {
               UEnterLitDiagnostics::BeginSession();
               World->BeginEnterLitGate();
@@ -1955,11 +1957,10 @@ void UApplication::Update(double dt)
           }
           if (World->IsEnterLitGateActive())
           {
-            // Era46/47: same TickEnterWarmupDrainFrame as coop PrepareView —
-            // sets EnterLitQuiesce latch + GPU quiesce drain before Rebuild.
+            // Era46/47: shared enter drain frame — time-sliced per tick.
             const auto t0 = std::chrono::high_resolution_clock::now();
             World->TickEnterWarmupDrainFrame(kGpuWarmupMeshBudget,
-                                             gate_iterations);
+                                             gate_iterations, 12.0);
             const double drain_frame_ms =
                 std::chrono::duration<double, std::milli>(
                     std::chrono::high_resolution_clock::now() - t0)

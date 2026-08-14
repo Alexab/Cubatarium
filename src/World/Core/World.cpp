@@ -6908,11 +6908,23 @@ bool UWorld::IsEnterStreamingWarmupSettled() const
   return true;
 }
 
-void UWorld::TickEnterGateMeshDrain(int iteration_budget)
+void UWorld::TickEnterGateMeshDrain(int iteration_budget, double max_wall_ms)
 {
   const int iterations = std::max(1, iteration_budget);
+  const auto t0 = std::chrono::steady_clock::now();
   for (int i = 0; i < iterations; ++i)
   {
+    if (max_wall_ms > 0.0 && i > 0)
+    {
+      const double elapsed_ms =
+          std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - t0)
+              .count();
+      if (elapsed_ms >= max_wall_ms)
+      {
+        break;
+      }
+    }
     if (MeshService && IsEnterLitGateActive())
     {
       SyncEnterVisualGateQuiesceFlags();
@@ -6922,7 +6934,8 @@ void UWorld::TickEnterGateMeshDrain(int iteration_budget)
   }
 }
 
-void UWorld::TickEnterWarmupDrainFrame(int mesh_budget, int gate_iterations)
+void UWorld::TickEnterWarmupDrainFrame(int mesh_budget, int gate_iterations,
+                                       double max_gate_wall_ms)
 {
   // Era50: EnterVisualGate owns enter drain — quiesce split + worklist FSM.
   // DrainEnterGameMeshWarmup owns explicit DrainPendingGpuMeshes; gate drain
@@ -6953,7 +6966,7 @@ void UWorld::TickEnterWarmupDrainFrame(int mesh_budget, int gate_iterations)
     MeshService->PruneEnterPhantomDirty(BlockWorld);
     // Gate Tick: Repair is drain helper, not SoT — worklist Done is SoT.
     RepairEnterLitSnapshotFullyDarkRemesh();
-    TickEnterGateMeshDrain(std::max(1, gate_iterations));
+    TickEnterGateMeshDrain(std::max(1, gate_iterations), max_gate_wall_ms);
     RefreshEnterVisualWorklistStates();
     SyncEnterVisualGateQuiesceFlags();
     const bool any_finish =

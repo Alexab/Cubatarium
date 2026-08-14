@@ -2903,7 +2903,9 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         {
           load_ops = procedural.MaxLoadOpsPerFrameBoost;
         }
-        if (visual_holes || underfeet_need || frame_ms > kBadFrameMs)
+        // Era51: mesh-only holes must not throttle column load — holes are
+        // emerge debt; load_ops=2 with stream_loads=0 was a deadlock.
+        if (underfeet_need || frame_ms > kBadFrameMs)
         {
           load_ops = std::min(load_ops, 2);
         }
@@ -3011,7 +3013,11 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       world.PhysicsTelemetryData.StreamRingBlocked = st->ringGateBlocked;
       world.PhysicsTelemetryData.StreamNearSkipped = st->nearLoadSkipped;
       world.PhysicsTelemetryData.StreamLoadCandidates = st->loadCandidates;
+      world.PhysicsTelemetryData.ColumnAbsentInRdN = st->loadCandidates;
     }
+    world.PhysicsTelemetryData.AllowProcFill = world.AllowProceduralFill ? 1 : 0;
+    world.PhysicsTelemetryData.ColumnLoadedNoMeshN =
+        world.PhysicsTelemetryData.FocusNotRenderReady;
     if (ChunkScheduler)
     {
       world.PhysicsTelemetryData.StreamGenCommitN =

@@ -209,6 +209,9 @@ struct FrameNumbers
   int stream_ring_blocked{0};
   int stream_near_skipped{0};
   int stream_load_candidates{0};
+  int allow_proc_fill{0};
+  int column_absent_in_rd_n{0};
+  int column_loaded_no_mesh_n{0};
   int pending_light{0};
   int stream_pressure{0};
   int pending_light_focus{0};
@@ -480,6 +483,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.stream_ring_blocked = phys.StreamRingBlocked;
   n.stream_near_skipped = phys.StreamNearSkipped;
   n.stream_load_candidates = phys.StreamLoadCandidates;
+  n.allow_proc_fill = phys.AllowProcFill;
+  n.column_absent_in_rd_n = phys.ColumnAbsentInRdN;
+  n.column_loaded_no_mesh_n = phys.ColumnLoadedNoMeshN;
   n.pending_light = phys.PendingLightCount;
   n.stream_pressure = phys.StreamPressure;
   n.pending_light_focus = phys.PendingLightFocus;
@@ -761,6 +767,9 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"stream_ring_blocked\":" << n.stream_ring_blocked
           << ",\"stream_near_skipped\":" << n.stream_near_skipped
           << ",\"stream_load_candidates\":" << n.stream_load_candidates
+          << ",\"allow_proc_fill\":" << n.allow_proc_fill
+          << ",\"column_absent_in_rd_n\":" << n.column_absent_in_rd_n
+          << ",\"column_loaded_no_mesh_n\":" << n.column_loaded_no_mesh_n
           << ",\"pending_light\":" << n.pending_light
           << ",\"stream_pressure\":" << n.stream_pressure
           << ",\"pending_light_focus\":" << n.pending_light_focus

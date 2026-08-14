@@ -463,6 +463,24 @@ void UWorldCooperativeSession::BeginMeshWarmupInner(UWorld &world)
 {
   // Skylight-only bulk relight ends here; gameplay edits/streaming need block light.
   world.SetLightingSkylightBulkComplete(false);
+  const size_t pending_now =
+      world.MeshService->GetDirtyCount() +
+      static_cast<size_t>(world.MeshService->GetAsyncInFlightCount());
+  if (MeshWarmupFinalizeOnly)
+  {
+    // Era51: continue residual drain — do not MarkAllDirty the whole world again.
+    if (MeshWarmupTicks == 0)
+    {
+      MeshWarmupStartedAt = std::chrono::steady_clock::now();
+      MeshWarmupStartPending = std::max<size_t>(1, pending_now);
+      MeshWarmupCompletedTotal = 0;
+      MeshWarmupProcessedMax = 0;
+      std::cout << "[WorldLoad] MeshWarmup finalize: pending=" << pending_now
+                << std::endl;
+    }
+    CurrentPhase = Phase::MeshWarmup;
+    return;
+  }
   world.BlockCounter.MarkNeedsRecount();
   world.MeshService->CancelAsyncInFlightKeepDirty();
   bool has_chunks = false;
@@ -1638,11 +1656,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       MeshWarmupProcessedMax = MeshWarmupCompletedTotal;
     }
     const float completed_frac =
-        MeshWarmupStartPending > 0
-            ? std::min(1.0f,
-                       static_cast<float>(MeshWarmupCompletedTotal) /
-                           static_cast<float>(MeshWarmupStartPending))
-            : 1.0f;
+        MeshWarmupResolvedFraction(MeshWarmupStartPending, pending_now);
     const float mesh_base =
         Kind == WorldCoopKind::Create
             ? CooperativeCreateMeshProgressBase()
@@ -1655,13 +1669,10 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                       : kPhaseWeightMeshWarmup);
     const float mesh_frac =
         mesh_base + mesh_weight * (mesh_done ? 1.0f : completed_frac);
-    const size_t done_count = MeshWarmupCompletedTotal;
-    const size_t total_count = MeshWarmupStartPending;
     Report(sink, "mesh_warmup", mesh_frac,
            mesh_done ? "Terrain meshes ready."
-                     : "Building meshes... " + std::to_string(done_count) +
-                           "/" + std::to_string(total_count) +
-                           " (" + std::to_string(pending_now) + " pending)");
+                     : FormatMeshWarmupProgress(MeshWarmupStartPending,
+                                                pending_now));
     if (mesh_done)
     {
       world.SetLightingRelightDeferred(false);
@@ -1976,7 +1987,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
             std::max(1, URuntimeTuning::Get().EnterGateMeshDrainIterations);
         {
           const auto t0 = std::chrono::high_resolution_clock::now();
-          world.TickEnterWarmupDrainFrame(kCoopEnterMeshBudget, gate_iters);
+          world.TickEnterWarmupDrainFrame(kCoopEnterMeshBudget, gate_iters,
+                                          12.0);
           const double drain_frame_ms =
               std::chrono::duration<double, std::milli>(
                   std::chrono::high_resolution_clock::now() - t0)
@@ -2039,10 +2051,15 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         const bool visibility_ready = world.IsEnterVisibilityReady();
         const int visibility_debt = lit_sample.visibility_debt;
         const bool mesh_blockers_clear = !world.NeedsEnterGameMeshWarmup();
+        const bool cruise_stabilized =
+            !NeedsCruiseStabilize(lit_sample, phys_after.PendingLightFocus,
+                                  phys_after.VisualHoles != 0,
+                                  phys_after.FocusNotRenderReady);
         // Era49: same exit contract as Runner soft_ready / IsEnterGpuWarmupReady.
         const bool load_settled = ring_ready && fov_debt <= 0 &&
                                   lit_sample.ring_not_ready == 0 &&
-                                  visibility_ready && mesh_blockers_clear;
+                                  visibility_ready && mesh_blockers_clear &&
+                                  cruise_stabilized;
         if (!StreamingWarmupAbortDrainMode &&
             ShouldForceEnterMeshAbort(fov_debt, ring_ready, elapsed_ms,
                                       URuntimeTuning::Get().EnterMeshAbortMs))

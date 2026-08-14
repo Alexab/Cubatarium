@@ -660,6 +660,28 @@ int main()
            "Era44: force_ingame at wall");
   }
 
+  // --- Era51 mesh warmup progress + cruise stabilize ---
+  {
+    using cutum::EnterLitSample;
+    using cutum::FormatMeshWarmupProgress;
+    using cutum::IsEnterGpuWarmupReady;
+    using cutum::MeshWarmupResolvedFraction;
+    using cutum::NeedsCruiseStabilize;
+    Expect(FormatMeshWarmupProgress(465, 100) ==
+               std::string("Building meshes... 365/465 (100 pending)"),
+           "Era51: progress uses queue depth");
+    Expect(MeshWarmupResolvedFraction(465, 100) > 0.78f,
+           "Era51: resolved fraction from pending");
+    EnterLitSample sample{};
+    Expect(!NeedsCruiseStabilize(sample, 0, false, 0),
+           "Era51: cruise ready when clean");
+    sample.mesh_dirty = true;
+    Expect(NeedsCruiseStabilize(sample, 0, false, 0),
+           "Era51: cruise needs mesh drain");
+    Expect(!IsEnterGpuWarmupReady(true, 0, true, true, true, false),
+           "Era51: not ingame until cruise stabilized");
+  }
+
   // --- Era44b/Era45 enter warmup status + R4 ownership ---
   {
     using cutum::BuildEnterWarmupStatus;

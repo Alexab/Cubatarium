@@ -624,15 +624,55 @@ inline float EnterGpuWarmupMonotonicProgress(float raw_prog, float &display_prog
   return display_prog;
 }
 
+/// Era51: mesh warmup bar — resolved/total from queue depth (not cumulative
+/// rebuild ops).
+inline float MeshWarmupResolvedFraction(size_t start_pending, size_t pending_now)
+{
+  const size_t total = std::max<size_t>(1, start_pending);
+  const size_t resolved =
+      pending_now >= total ? total : total - pending_now;
+  return static_cast<float>(resolved) / static_cast<float>(total);
+}
+
+inline std::string FormatMeshWarmupProgress(size_t start_pending,
+                                            size_t pending_now)
+{
+  const size_t total = std::max<size_t>(1, start_pending);
+  const size_t resolved =
+      pending_now >= total ? total : total - pending_now;
+  return "Building meshes... " + std::to_string(resolved) + "/" +
+         std::to_string(total) + " (" + std::to_string(pending_now) +
+         " pending)";
+}
+
+/// Era51: cruise stabilize on progress bar — mesh/light holes before InGame.
+inline bool NeedsCruiseStabilize(const EnterLitSample &sample,
+                                 int pending_light_focus,
+                                 bool visual_holes, int focus_not_render_ready)
+{
+  if (sample.mesh_dirty || sample.mesh_gpu_pending_near > 0 ||
+      sample.mesh_async_pending || sample.ring_not_ready > 0 ||
+      sample.mesh_visual_warmup)
+  {
+    return true;
+  }
+  if (visual_holes || focus_not_render_ready > 0 || pending_light_focus > 0)
+  {
+    return true;
+  }
+  return false;
+}
+
 /// InGame when spawn ring + mesh blockers + lit snapshot debt + visibility
 /// ready. Visibility is the r=4 worklist (remaining==0 and no stale dark), not
 /// void telem / fifo / terminal-held.
 inline bool IsEnterGpuWarmupReady(bool ring_ready, int fov_debt,
                                   bool mesh_blockers_clear, bool min_frames_done,
-                                  bool visibility_ready = true)
+                                  bool visibility_ready = true,
+                                  bool cruise_stabilized = true)
 {
   return min_frames_done && ring_ready && fov_debt <= 0 && mesh_blockers_clear &&
-         visibility_ready;
+         visibility_ready && cruise_stabilized;
 }
 
 /// Era44: documented last-resort after abort-drain (default ≥300s).

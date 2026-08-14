@@ -1177,12 +1177,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
 
   // Starve keep-shell remesh when focus MISSING mesh, or light debt on outer ring
   // (dark preview strip while dirty~500 starves async relight — manual 161327).
+  // Era51: never starve outside focus while visual holes — mesh emerge first.
   const bool cruise_light_debt =
       moving && pending_near_light && !visual_holes &&
       pending_focus_count > 4;
-  mesh_service.SetStarveOutsideFocusMesh(visual_holes || missing_underfeet ||
-                                         cruise_light_debt || idle_remesh_debt ||
-                                         idle_focus_dirty_debt);
+  mesh_service.SetStarveOutsideFocusMesh(
+      !visual_holes &&
+      (missing_underfeet || cruise_light_debt || idle_remesh_debt ||
+       idle_focus_dirty_debt));
   // If hole pressure is high but async mesh is still near-zero, fully starving
   // remesh can deadlock focus in pending-light + missing-mesh state. Only relax
   // while moving — stop/idle must keep remesh starved to avoid post_stop_pending
