@@ -1169,7 +1169,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         // Era47 P1: after lit quiesce do not enqueue RemeshSeam (refeeds Dirty/GPU).
         // Era49: bound Sticky — do not re-insert storm when already tracked and
         // Dirty/GPU/inflight already owns the remesh.
-        // Cruise SOTA: drawable remesh = RAA/PreferKick only (no dual RemeshSeam).
+        // Cruise SOTA: skip RemeshSeam when RAA/GPU/Dirty already owns the column.
         if (!enter_quiesce)
         {
           bool column_remesh_owned = false;
@@ -1182,9 +1182,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                 MeshService->IsPendingGpuApply(coord),
                 MeshService->HasInflightMeshBuild(coord));
           }
-          if (ShouldEnqueueRemeshSeamAfterLit(had_mesh, enter_quiesce,
-                                             any_drawable,
-                                             column_remesh_owned))
+          if (!column_remesh_owned)
           {
             const bool already_sticky = StickyRemeshAfterLight.count(key) > 0;
             StickyRemeshAfterLight.insert(key);
@@ -1195,18 +1193,15 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                                               /*priority=*/70);
             }
           }
-          else if (any_drawable && !column_remesh_owned)
-          {
-            // Track sticky for heal telemetry; remesh owner is RAA below.
-            StickyRemeshAfterLight.insert(key);
-          }
         }
       }
       AsyncRelightColumnsInFlight.erase(key);
       if (finalize_pending_gate)
       {
         SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
-        if (Persistence)
+        // Persist light_complete only when column has drawable mesh (not bare
+        // LitReady during enter SoftDefer) — premature flags starved enter.
+        if (Persistence && any_drawable)
         {
           Persistence->SetColumnLightComplete(key, true);
         }

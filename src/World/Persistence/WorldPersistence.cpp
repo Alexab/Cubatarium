@@ -1273,22 +1273,22 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
       world.MarkTerrainChunkMeshDirtySeamed(ground_coord, dirty_min, dirty_max,
                                             near_focus);
       world.SetColumnEmergeState(ground_coord, ColumnEmergeState::LitReady);
-      // Seam: incomplete neighbors need RelightThenMesh via ColumnFlow.
-      for (int dz = -1; dz <= 1; ++dz)
+      // Seam repair: at most one incomplete cardinal neighbor near focus.
+      if (near_focus)
       {
-        for (int dx = -1; dx <= 1; ++dx)
+        static const glm::ivec2 kCardinals[] = {
+            {1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        for (const glm::ivec2 &d : kCardinals)
         {
-          if (dx == 0 && dz == 0)
+          const glm::ivec2 n(ground_coord.x + d.x, ground_coord.z + d.y);
+          if (IsColumnLightComplete(n))
           {
             continue;
           }
-          const glm::ivec2 n(ground_coord.x + dx, ground_coord.z + dz);
-          if (!IsColumnLightComplete(n))
-          {
-            GetColumnFlowExecutor().Enqueue(n, ColumnWorkKind::RelightThenMesh,
-                                            /*priority=*/50);
-            ++world.GetPhysicsTelemetryMutable().DiskLightRepairedN;
-          }
+          GetColumnFlowExecutor().Enqueue(n, ColumnWorkKind::RelightThenMesh,
+                                          /*priority=*/50);
+          ++world.GetPhysicsTelemetryMutable().DiskLightRepairedN;
+          break;
         }
       }
     }
