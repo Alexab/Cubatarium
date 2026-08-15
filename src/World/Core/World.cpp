@@ -1494,122 +1494,6 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
   }
 }
 
-void UWorld::AccumulateRelightMeshColumns(
-    const std::vector<glm::ivec3> &relit_chunks)
-{
-  if (relit_chunks.empty())
-  {
-    return;
-  }
-  for (const glm::ivec3 &coord : relit_chunks)
-  {
-    const glm::ivec2 ground(coord.x, coord.z);
-    const int chunk_base_y = coord.y * CHUNK_SIZE;
-    const int chunk_top_y = chunk_base_y + CHUNK_SIZE - 1;
-    auto [it, inserted] = PendingRelightMeshColumns.try_emplace(ground);
-    if (inserted)
-    {
-      it->second.min_y = std::max(0, chunk_base_y - 1);
-      it->second.max_y = chunk_top_y + 1;
-    }
-    else
-    {
-      it->second.min_y =
-          std::min(it->second.min_y, std::max(0, chunk_base_y - 1));
-      it->second.max_y = std::max(it->second.max_y, chunk_top_y + 1);
-    }
-  }
-}
-
-void UWorld::FlushPendingRelightMeshColumns(int max_columns_per_flush)
-{
-  if (PendingRelightMeshColumns.empty() || max_columns_per_flush <= 0 ||
-      !MeshService)
-  {
-    return;
-  }
-  const glm::ivec3 focus =
-      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
-  std::vector<std::pair<int, glm::ivec2>> ordered;
-  ordered.reserve(PendingRelightMeshColumns.size());
-  for (const auto &entry : PendingRelightMeshColumns)
-  {
-    const int dist = std::max(std::abs(entry.first.x - focus.x),
-                              std::abs(entry.first.y - focus.z));
-    ordered.push_back({dist, entry.first});
-  }
-  std::sort(ordered.begin(), ordered.end(),
-            [](const auto &a, const auto &b) { return a.first < b.first; });
-  int flushed = 0;
-  for (const auto &item : ordered)
-  {
-    if (flushed >= max_columns_per_flush)
-    {
-      break;
-    }
-    const auto it = PendingRelightMeshColumns.find(item.second);
-    if (it == PendingRelightMeshColumns.end())
-    {
-      continue;
-    }
-    const glm::ivec3 ground(it->first.x, 0, it->first.y);
-    const int cy0 = FloorDiv(it->second.min_y, CHUNK_SIZE);
-    const int cy1 = FloorDiv(it->second.max_y, CHUNK_SIZE);
-    bool any_drawable = false;
-    bool remesh_owned = false;
-    for (int cy = cy0; cy <= cy1; ++cy)
-    {
-      const glm::ivec3 coord(ground.x, cy, ground.z);
-      if (MeshService->HasDrawableGreedyMesh(coord))
-      {
-        any_drawable = true;
-      }
-      if (ColumnHasRemeshOwner(MeshService->IsChunkMeshDirty(coord),
-                               MeshService->IsRemeshAfterApplyPending(coord),
-                               MeshService->IsPendingGpuApply(coord),
-                               MeshService->HasInflightMeshBuild(coord)))
-      {
-        remesh_owned = true;
-      }
-    }
-    // Sodium PreferKick: skip seamed Dirty when RAA/GPU owns; undrawn holes
-    // get seamed Dirty; drawable without owner gets PreferKick/RAA (do not drop).
-    if (remesh_owned)
-    {
-      PendingRelightMeshColumns.erase(it);
-      continue;
-    }
-    if (any_drawable)
-    {
-      for (int cy = cy0; cy <= cy1; ++cy)
-      {
-        const glm::ivec3 coord(ground.x, cy, ground.z);
-        if (!MeshService->HasDrawableGreedyMesh(coord))
-        {
-          continue;
-        }
-        if (MeshService->IsPendingGpuApply(coord))
-        {
-          MeshService->PreferKickPendingGpuQueued(coord);
-        }
-        else if (!MeshService->IsChunkMeshDirty(coord) &&
-                 !MeshService->IsRemeshAfterApplyPending(coord) &&
-                 !MeshService->HasInflightMeshBuild(coord))
-        {
-          MeshService->RequestRemeshAfterApply(coord);
-        }
-      }
-      PendingRelightMeshColumns.erase(it);
-      ++flushed;
-      continue;
-    }
-    MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-        ground, it->second.min_y, it->second.max_y, true);
-    PendingRelightMeshColumns.erase(it);
-    ++flushed;
-  }
-}
-
 int UWorld::RecoverUnlitFocusMeshes(int max_columns,
                                     const glm::ivec2 *only_column)
 {
@@ -3374,11 +3258,19 @@ int UWorld::RemeshColumnSeamTicket(glm::ivec2 ground_xz)
   // Skip if column no longer VisibleBlack — avoid idle emerge churn after heal.
   // Fully-dark (void) remesh cannot invent light — PromoteRelight owns that path.
   bool stale_dark = false;
+  bool remesh_owned = false;
   const int max_cy =
       std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
   for (int cy = 0; cy <= max_cy; ++cy)
   {
     const glm::ivec3 coord(ground_xz.x, cy, ground_xz.y);
+    if (ColumnHasRemeshOwner(MeshService->IsChunkMeshDirty(coord),
+                             MeshService->IsRemeshAfterApplyPending(coord),
+                             MeshService->IsPendingGpuApply(coord),
+                             MeshService->HasInflightMeshBuild(coord)))
+    {
+      remesh_owned = true;
+    }
     if (!MeshService->HasDrawableGreedyMesh(coord))
     {
       continue;
@@ -3386,8 +3278,12 @@ int UWorld::RemeshColumnSeamTicket(glm::ivec2 ground_xz)
     if (MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
     {
       stale_dark = true;
-      break;
     }
+  }
+  // RAA/GPU already owns remesh — do not dual MarkDirty (DrainRemeshSeam).
+  if (remesh_owned)
+  {
+    return 0;
   }
   if (!stale_dark)
   {
@@ -3790,6 +3686,19 @@ int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
         GetColumnEmergeState(ground) != ColumnEmergeState::Meshing)
     {
       return;
+    }
+    // DrainRemeshSeam must not MarkDirty when RAA/GPU already owns remesh.
+    for (int cy = FloorDiv(band_min, CHUNK_SIZE);
+         cy <= FloorDiv(band_max, CHUNK_SIZE); ++cy)
+    {
+      const glm::ivec3 coord(key.x, cy, key.y);
+      if (ColumnHasRemeshOwner(MeshService->IsChunkMeshDirty(coord),
+                               MeshService->IsRemeshAfterApplyPending(coord),
+                               MeshService->IsPendingGpuApply(coord),
+                               MeshService->HasInflightMeshBuild(coord)))
+      {
+        return;
+      }
     }
     int remesh_min = band_min;
     int remesh_max = band_max;

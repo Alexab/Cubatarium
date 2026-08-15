@@ -1750,28 +1750,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
   }
 
-  // Remesh after light: Flush deferred until after ColumnFlow DrainBudget so
-  // Promote/FirstMesh AdvanceColumn runs first (enter GPU PreferKick SoT).
-  int pending_relight_flush_n = 0;
-  {
-    const int pending_focus =
-        world.CountPendingLightBeforeMeshNear(focus_ground_horiz, focus_radius);
-    int flush_n =
-        pending_dirty < 16 ? 64 : (pending_dirty < 48 ? 32 : 24);
-    if (pending_dirty > 600)
-    {
-      flush_n = std::min(flush_n, 8);
-    }
-    if (pending_focus > 0)
-    {
-      flush_n = std::max(flush_n, pending_focus > 15 ? 48 : 32);
-    }
-    if (!idle_remesh_debt && !idle_focus_dirty_debt)
-    {
-      pending_relight_flush_n = flush_n;
-    }
-  }
-
   // Hitch: cap *schedule* (snapshot cost). Keep drain higher when holes so
   // completed async frees pipeline slots for reserved focus-missing work.
   // Lit-but-dirty catch-up must not be killed by soft hitch (wall~50–60 from
@@ -3086,8 +3064,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       sync_budget_ms = std::min(sync_budget_ms, calm_cap.sync_budget_ms);
     }
   }
-  // F0: drain-first — Finish/Kick before Finalize so admission sees post-consume
-  // pending (avoids mode=0/sch=12 thrash while telem pending stays high).
+  // F0: drain-first — ColumnFlow DrainBudget before GPU consume so PreferKick
+  // from MarkRelit/tickets lands in the same frame (Sodium one-owner).
+  {
+    auto &exec = GetColumnFlowExecutor();
+    exec.DrainBudget(world, std::max(1, column_flow_drain_n),
+                     focus_ground_horiz, focus_radius,
+                     column_flow_admit_batch);
+  }
   int gpu_consume_done = 0;
   {
     const MeshWorkAdmission &early_adm = mesh_service.GetMeshWorkAdmission();
@@ -3237,17 +3221,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // RebuildChunkImmediate (PlayerRelightMeshBurst); SyncRebuild was still
   // burning 100–200ms whenever burst frames were non-zero on cruise.
   sync_cap = 0;
-  // Cruise SOTA: single ColumnFlow DrainBudget after all Enqueue sites.
-  {
-    auto &exec = GetColumnFlowExecutor();
-    exec.DrainBudget(world, std::max(1, column_flow_drain_n),
-                     focus_ground_horiz, focus_radius,
-                     column_flow_admit_batch);
-  }
-  if (pending_relight_flush_n > 0)
-  {
-    world.FlushPendingRelightMeshColumns(pending_relight_flush_n);
-  }
   MeshRebuildTickStats tick_stats{};
   {
     const MeshWorkAdmission &adm = mesh_service.GetMeshWorkAdmission();

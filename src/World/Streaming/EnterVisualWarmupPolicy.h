@@ -1008,13 +1008,6 @@ inline bool ShouldEnqueueRemeshSeamAfterLit(bool had_mesh, bool enter_quiesce,
   return !any_drawable;
 }
 
-/// FlushPendingRelight seamed Dirty only for undrawn FirstMesh holes.
-inline bool ShouldFlushRelightMeshColumnSeamed(bool any_drawable_in_band,
-                                               bool column_has_remesh_owner)
-{
-  return !any_drawable_in_band && !column_has_remesh_owner;
-}
-
 /// Era46 C: ring blocker label for heartbeat (mesh gate honesty).
 inline const char *EnterWarmupRingBlockerLabel(bool mesh_dirty,
                                                int gpu_pending_near,

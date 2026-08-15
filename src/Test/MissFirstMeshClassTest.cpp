@@ -740,7 +740,6 @@ int main()
            "Era45 B5: ring ready ⇒ keep base suppress");
     using cutum::ColumnHasRemeshOwner;
     using cutum::ShouldEnqueueRemeshSeamAfterLit;
-    using cutum::ShouldFlushRelightMeshColumnSeamed;
     Expect(ColumnHasRemeshOwner(false, true, false, false),
            "cruise: RAA owns remesh");
     Expect(!ShouldEnqueueRemeshSeamAfterLit(true, false, true, false),
@@ -749,10 +748,6 @@ int main()
            "cruise: undrawn hole may RemeshSeam");
     Expect(!ShouldEnqueueRemeshSeamAfterLit(true, false, false, true),
            "cruise: owned ⇒ no RemeshSeam");
-    Expect(!ShouldFlushRelightMeshColumnSeamed(true, false),
-           "cruise: drawable flush skip");
-    Expect(ShouldFlushRelightMeshColumnSeamed(false, false),
-           "cruise: undrawn flush seamed");
     using cutum::ClampCaptureMovingBgCapWithHoles;
     using cutum::EffectiveRelightCaptureBandCy;
     Expect(ClampCaptureMovingBgCapWithHoles(8, true, true, 2) == 2,

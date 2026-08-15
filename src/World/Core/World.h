@@ -1040,7 +1040,6 @@ public:
     return PlayerRelightMeshBurstFrames;
   }
   void TickPlayerRelightMeshBurst();
-  void FlushPendingRelightMeshColumns(int max_columns_per_flush = 8);
   /// Re-enqueue skylight for focus columns that already have a mesh but no sky.
   /// If only_column is set, prefer that column (V4 ColumnFlowExecutor).
   int RecoverUnlitFocusMeshes(int max_columns = 4,
@@ -1265,8 +1264,6 @@ private:
                               bool priority_mesh,
                               const std::vector<glm::ivec2> &primary_grounds,
                               bool finalize_pending_gate = true);
-  void AccumulateRelightMeshColumns(
-      const std::vector<glm::ivec3> &relit_chunks);
   void EnsurePlayerOnGround();
   void MarkBlockChunkDirty(glm::ivec3 blockPos,
                            bool sync_neighbor_chunks = false,
@@ -1409,8 +1406,6 @@ private:
   bool EnterVisualWorkSnapshotCaptured{false};
   int EnterVisualWorkPeak{0};
   EnterVisualGate EnterVisualGateCtrl;
-  std::unordered_map<glm::ivec2, PendingRelightMeshColumnRange, GroundColumnHash>
-      PendingRelightMeshColumns;
   /// Near columns: light must apply before first mesh dirty.
   std::unordered_map<glm::ivec2, PendingRelightMeshColumnRange, GroundColumnHash>
       PendingLightBeforeMesh;
