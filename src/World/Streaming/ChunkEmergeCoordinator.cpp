@@ -198,6 +198,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool missing_visible_mesh =
       mesh_service.HasMissingGreedyMeshInHorizontalRadius(
           world.GetBlockWorld(), focus_ground_horiz, focus_radius);
+  ++world.GetPhysicsTelemetryMutable().PrepUnfinishedCallsN;
   // Era22 I-M8: track miss witness age (~120 frames ≈ 1 period ≈2s).
   if (missing_visible_mesh)
   {
@@ -332,6 +333,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const int not_ready_early =
       moving ? 0
              : world.CountUnfinishedVisualNear(focus_ground_horiz, focus_radius);
+  if (!moving)
+  {
+    ++world.GetPhysicsTelemetryMutable().PrepUnfinishedCallsN;
+  }
   const int focus_dirty_early =
       mesh_service.CountDirtyWithinHorizontalRadius(focus_ground_horiz,
                                                     focus_radius);
@@ -527,9 +532,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       visual_holes || focus_not_render_ready > 0;
   const bool near_focus_holes = visual_holes || pending_near_light;
   const bool missing_underfeet =
-      visual_holes &&
-      mesh_service.HasMissingGreedyMeshInHorizontalRadius(
-          world.GetBlockWorld(), focus_ground_horiz, /*radius=*/1);
+      have_nearest_missing &&
+      std::max(std::abs(nearest_missing_hole.x - focus_ground_horiz.x),
+               std::abs(nearest_missing_hole.z - focus_ground_horiz.z)) <= 1;
+  // B3: do not re-scan HasMissing(r=1) — nearest witness already covers underfeet.
   const bool pending_underfeet =
       world.HasPendingLightBeforeMeshNear(focus_ground_horiz, /*radius=*/1);
   prep_unfinished_ms += prep_ms_since(prep_t);

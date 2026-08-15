@@ -2022,6 +2022,34 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
           (std::max)(0, world.PhysicsTelemetryData.FocusDarkMeshPreview));
   world.PhysicsTelemetryData.MeshDirtyTickMs =
       world.GetMeshService().GetLastMeshDirtyTickMs();
+  world.PhysicsTelemetryData.MeshDirtyPruneMs =
+      world.GetMeshService().GetLastMeshDirtyPruneMs();
+  world.PhysicsTelemetryData.MeshDirtyPruneN =
+      world.GetMeshService().GetLastMeshDirtyPruneN();
+  world.PhysicsTelemetryData.MeshDirtySortMs =
+      world.GetMeshService().GetLastMeshDirtySortMs();
+  world.PhysicsTelemetryData.MeshDirtyDrainMs =
+      world.GetMeshService().GetLastMeshDirtyDrainMs();
+  world.PhysicsTelemetryData.MeshDirtyDrainN =
+      world.GetMeshService().GetLastMeshDirtyDrainN();
+  world.PhysicsTelemetryData.MeshDirtyScheduleMs =
+      world.GetMeshService().GetLastMeshDirtyScheduleMs();
+  world.PhysicsTelemetryData.MeshDirtyScheduleOkN =
+      world.GetMeshService().GetLastMeshDirtyScheduleOkN();
+  world.PhysicsTelemetryData.MeshDirtyScheduleSkipN =
+      world.GetMeshService().GetLastMeshDirtyScheduleSkipN();
+  world.PhysicsTelemetryData.MeshDirtyGpuMs =
+      world.GetMeshService().GetLastMeshDirtyGpuMs();
+  world.PhysicsTelemetryData.MeshDirtyGpuN =
+      world.GetMeshService().GetLastMeshDirtyGpuN();
+  world.PhysicsTelemetryData.MeshDirtySyncMs =
+      world.GetMeshService().GetLastMeshDirtySyncMs();
+  world.PhysicsTelemetryData.MeshDirtySyncN =
+      world.GetMeshService().GetLastMeshDirtySyncN();
+  world.PhysicsTelemetryData.DirtyTouchN =
+      world.GetMeshService().GetLastDirtyTouchN();
+  world.PhysicsTelemetryData.DirtyRevisitSameN =
+      world.GetMeshService().GetLastDirtyRevisitSameN();
 }
 
 void UWorldStreaming::InitStreamerCallbacks(UWorld &world)

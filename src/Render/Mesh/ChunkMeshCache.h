@@ -110,6 +110,24 @@ public:
   double GetLastMeshSyncMs() const { return LastMeshSyncMs; }
   double GetLastMeshSnapshotMs() const { return LastMeshSnapshotMs; }
   double GetLastMeshDirtyTickMs() const { return LastMeshDirtyTickMs; }
+  /// Cruise wall A1: substages inside RebuildDirtyChunksWithStats (ms / ops).
+  double GetLastMeshDirtyPruneMs() const { return LastMeshDirtyPruneMs; }
+  int GetLastMeshDirtyPruneN() const { return LastMeshDirtyPruneN; }
+  double GetLastMeshDirtySortMs() const { return LastMeshDirtySortMs; }
+  double GetLastMeshDirtyDrainMs() const { return LastMeshDirtyDrainMs; }
+  int GetLastMeshDirtyDrainN() const { return LastMeshDirtyDrainN; }
+  double GetLastMeshDirtyScheduleMs() const { return LastMeshDirtyScheduleMs; }
+  int GetLastMeshDirtyScheduleOkN() const { return LastMeshDirtyScheduleOkN; }
+  int GetLastMeshDirtyScheduleSkipN() const
+  {
+    return LastMeshDirtyScheduleSkipN;
+  }
+  double GetLastMeshDirtyGpuMs() const { return LastMeshDirtyGpuMs; }
+  int GetLastMeshDirtyGpuN() const { return LastMeshDirtyGpuN; }
+  double GetLastMeshDirtySyncMs() const { return LastMeshDirtySyncMs; }
+  int GetLastMeshDirtySyncN() const { return LastMeshDirtySyncN; }
+  int GetLastDirtyTouchN() const { return LastDirtyTouchN; }
+  int GetLastDirtyRevisitSameN() const { return LastDirtyRevisitSameN; }
   int GetAsyncInFlightCount() const;
   size_t GetMeshCompletedSize() const;
   size_t GetMeshCompletedCapacity() const;
@@ -623,6 +641,22 @@ private:
   double LastMeshSyncMs{0.0};
   double LastMeshSnapshotMs{0.0};
   double LastMeshDirtyTickMs{0.0};
+  double LastMeshDirtyPruneMs{0.0};
+  int LastMeshDirtyPruneN{0};
+  double LastMeshDirtySortMs{0.0};
+  double LastMeshDirtyDrainMs{0.0};
+  int LastMeshDirtyDrainN{0};
+  double LastMeshDirtyScheduleMs{0.0};
+  int LastMeshDirtyScheduleOkN{0};
+  int LastMeshDirtyScheduleSkipN{0};
+  double LastMeshDirtyGpuMs{0.0};
+  int LastMeshDirtyGpuN{0};
+  double LastMeshDirtySyncMs{0.0};
+  int LastMeshDirtySyncN{0};
+  int LastDirtyTouchN{0};
+  int LastDirtyRevisitSameN{0};
+  /// Prior-frame Dirty coords (capped) for dirty_revisit_same_n.
+  std::unordered_set<glm::ivec3, IVec3Hash> PrevDirtyForRevisit;
   double LastMeshImmediateMs{0.0};
   int LastMeshImmediateCount{0};
   uint64_t MeshApplyStaleCount{0};

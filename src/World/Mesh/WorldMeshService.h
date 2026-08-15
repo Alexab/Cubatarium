@@ -199,6 +199,20 @@ public:
   double GetLastMeshSyncMs() const;
   double GetLastMeshSnapshotMs() const;
   double GetLastMeshDirtyTickMs() const;
+  double GetLastMeshDirtyPruneMs() const;
+  int GetLastMeshDirtyPruneN() const;
+  double GetLastMeshDirtySortMs() const;
+  double GetLastMeshDirtyDrainMs() const;
+  int GetLastMeshDirtyDrainN() const;
+  double GetLastMeshDirtyScheduleMs() const;
+  int GetLastMeshDirtyScheduleOkN() const;
+  int GetLastMeshDirtyScheduleSkipN() const;
+  double GetLastMeshDirtyGpuMs() const;
+  int GetLastMeshDirtyGpuN() const;
+  double GetLastMeshDirtySyncMs() const;
+  int GetLastMeshDirtySyncN() const;
+  int GetLastDirtyTouchN() const;
+  int GetLastDirtyRevisitSameN() const;
   size_t GetGreedyCacheSize() const;
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
   /// True only when cache has GPU quads or non-empty CPU batches (not empty

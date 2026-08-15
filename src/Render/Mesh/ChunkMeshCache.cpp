@@ -3344,6 +3344,15 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     double max_sync_ms, bool skip_gpu_consume)
 {
   const auto dirty_tick_t0 = std::chrono::high_resolution_clock::now();
+  auto seg_t0 = dirty_tick_t0;
+  auto take_seg_ms = [&seg_t0]() -> double
+  {
+    const auto now = std::chrono::high_resolution_clock::now();
+    const double ms =
+        std::chrono::duration<double, std::milli>(now - seg_t0).count();
+    seg_t0 = now;
+    return ms;
+  };
   MeshRebuildTickStats stats;
   CaptureRefreshBudgetLeft =
       // Era14 TD-ARCH-046: prefer store hit; live Capture refresh is the hitch.
@@ -3353,6 +3362,30 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastMeshSyncMs = 0.0;
   LastMeshSnapshotMs = 0.0;
   LastMeshDirtyTickMs = 0.0;
+  LastMeshDirtyPruneMs = 0.0;
+  LastMeshDirtyPruneN = 0;
+  LastMeshDirtySortMs = 0.0;
+  LastMeshDirtyDrainMs = 0.0;
+  LastMeshDirtyDrainN = 0;
+  LastMeshDirtyScheduleMs = 0.0;
+  LastMeshDirtyScheduleOkN = 0;
+  LastMeshDirtyScheduleSkipN = 0;
+  LastMeshDirtyGpuMs = 0.0;
+  LastMeshDirtyGpuN = 0;
+  LastMeshDirtySyncMs = 0.0;
+  LastMeshDirtySyncN = 0;
+  LastDirtyTouchN = static_cast<int>(Dirty.GetCount());
+  LastDirtyRevisitSameN = 0;
+  if (!PrevDirtyForRevisit.empty() && !Dirty.empty())
+  {
+    for (const glm::ivec3 &coord : Dirty)
+    {
+      if (PrevDirtyForRevisit.count(coord) > 0)
+      {
+        ++LastDirtyRevisitSameN;
+      }
+    }
+  }
   // F0 drain-first: ConsumeGpuApplyBacklog owns Kick/Finish before Rebuild.
   // Do not wipe those counters when skip_gpu_consume (SoT gpu_kick_n telem).
   if (!skip_gpu_consume)
@@ -3379,6 +3412,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (!world.GetChunkManager().HasChunk(*it))
       {
         it = Dirty.RemoveAt(it);
+        ++LastMeshDirtyPruneN;
         continue;
       }
       if (HasDrawableGreedyMesh(*it) && ChunkHasFullyDarkFace(*it))
@@ -3392,6 +3426,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           soft_empty)
       {
         it = Dirty.RemoveAt(it);
+        ++LastMeshDirtyPruneN;
         continue;
       }
       // Pending-light park: SoftDeferHeld owns FirstMesh; keep Dirty only when
@@ -3416,6 +3451,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             HoldSoftDeferFirstMesh(*it);
           }
           it = Dirty.RemoveAt(it);
+          ++LastMeshDirtyPruneN;
           continue;
         }
       }
@@ -3429,7 +3465,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     // fully sorted on the main thread only to drop most remesh entries later in
     // try_schedule(). Prune obviously unschedulable remesh work before the sort
     // so mesh_dirty_tick_ms cannot dominate the frame at Dirty~400-900.
-    if (MeshFocusValid && Dirty.GetCount() > 256)
+    // B1: align remesh SoftDefer prune with partial-sort threshold (was 256) so
+    // Dirty~96–256 cannot burn sort before schedule under miss pressure.
+    if (MeshFocusValid && Dirty.GetCount() > 96)
     {
       for (auto it = Dirty.begin(); it != Dirty.end();)
       {
@@ -3459,6 +3497,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             HoldSoftDeferFirstMesh(*it);
           }
           it = Dirty.RemoveAt(it);
+          ++LastMeshDirtyPruneN;
           continue;
         }
         const bool has_drawable = HasDrawableGreedyMesh(*it);
@@ -3483,6 +3522,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             }
           }
           it = Dirty.RemoveAt(it);
+          ++LastMeshDirtyPruneN;
           continue;
         }
         if (StarveOutsideFocusMesh)
@@ -3492,12 +3532,28 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           if (horiz > MeshFocusRadiusChunks)
           {
             it = Dirty.RemoveAt(it);
+            ++LastMeshDirtyPruneN;
             continue;
           }
         }
         ++it;
       }
     }
+    LastMeshDirtyPruneMs += take_seg_ms();
+    // B4: if prune already blew emerge budget and FOV has no missing mesh,
+    // skip sort so schedule/GPU can still run under the remaining wall.
+    const double tick_so_far =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - dirty_tick_t0)
+            .count();
+    const bool memo_holes =
+        MissingMemo.epoch == HoleQueryEpoch && MissingMemo.result;
+    const bool skip_sort_for_budget =
+        !memo_holes && !StarveRemeshForHoles &&
+        MeshEmergeTotalBudgetMs > 0.0 &&
+        tick_so_far >= MeshEmergeTotalBudgetMs;
+    if (!skip_sort_for_budget)
+    {
     // Precompute missing-mesh set once — SortByDistanceKey compares O(n log n)
     // times; per-compare GreedyCache.find was burning wall during flight.
     std::unordered_set<glm::ivec3, IVec3Hash> missing_set;
@@ -3541,6 +3597,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     {
       Dirty.PrioritizeChunksWithoutMesh(missing_mesh);
     }
+    }
+    LastMeshDirtySortMs += take_seg_ms();
+  }
+  else
+  {
+    LastMeshDirtyPruneMs += take_seg_ms();
   }
   if (!force_sync && Render.AsyncMeshing && Render.GreedyMeshing)
   {
@@ -3560,11 +3622,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       LastMeshSyncMs = std::chrono::duration<double, std::milli>(
                            std::chrono::high_resolution_clock::now() - sync_t0)
                            .count();
+      LastMeshDirtySyncMs += LastMeshSyncMs;
+      LastMeshDirtySyncN += sync_filled;
       stats.SyncRebuilt += sync_filled;
       stats.Completed += sync_filled;
       mesh_data_changed = sync_filled > 0;
     }
   }
+  seg_t0 = std::chrono::high_resolution_clock::now();
   if (!force_sync && Render.AsyncMeshing && Render.GreedyMeshing)
   {
     EnsureAsyncBuilder();
@@ -3588,6 +3653,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
               !Dirty.IsFirstMesh(*it))
           {
             it = Dirty.RemoveAt(it);
+            ++LastMeshDirtyPruneN;
           }
           else
           {
@@ -3626,13 +3692,17 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         // Healed Normal path: prefer Finish over flooding Queued.
         drain_cap = std::min(drain_cap, 4);
       }
+      int drained = 0;
       for (MeshBuildResult &result : AsyncBuilder->DrainCompleted(drain_cap))
       {
         ApplyMeshResult(world, registry, std::move(result));
         mesh_data_changed = true;
         ++stats.Completed;
+        ++drained;
       }
+      LastMeshDirtyDrainN += drained;
     }
+    LastMeshDirtyDrainMs += take_seg_ms();
 
     if (!skip_gpu_consume && Render.GpuPackedMeshing &&
         !PendingGpuApplies.empty())
@@ -3663,6 +3733,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       (void)pending_n;
       const int gpu_done = ProcessPendingGpuMeshes(world, registry, gpu_max,
                                                  gpu_budget, stats);
+      LastMeshDirtyGpuN += gpu_done;
       if (gpu_done > 0)
       {
         mesh_data_changed = true;
@@ -3676,6 +3747,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       max_schedule_per_frame = std::min(max_schedule_per_frame,
                                         std::max(1, WorkAdmission.max_schedule));
     }
+    LastMeshDirtyGpuMs += take_seg_ms();
 
     // Era47: after lit-quiesce prune, remaining Dirty are FirstMesh holes —
     // never sit at max_schedule=0 (sticky ring forever).
@@ -3712,10 +3784,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     {
       if (AsyncBuilder->GetInFlightCount() >= max_pipeline)
       {
+        ++LastMeshDirtyScheduleSkipN;
         return Dirty.end();
       }
       if (LastMeshSnapshotMs >= kSnapshotBudgetMs)
       {
+        ++LastMeshDirtyScheduleSkipN;
         return Dirty.end();
       }
       {
@@ -3725,11 +3799,13 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                 .count();
         if (total_elapsed > MeshEmergeTotalBudgetMs)
         {
+          ++LastMeshDirtyScheduleSkipN;
           return Dirty.end();
         }
       }
       if (EnterGpuQuiesceDrain && EnterTerminalHeld.count(*it) > 0)
       {
+        ++LastMeshDirtyScheduleSkipN;
         return Dirty.RemoveAt(it);
       }
       if (EnterLitQuiesce && HasDrawableGreedyMesh(*it))
@@ -3741,6 +3817,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         }
         else
         {
+          ++LastMeshDirtyScheduleSkipN;
           return Dirty.RemoveAt(it);
         }
       }
@@ -3749,11 +3826,13 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (EnterLitQuiesce && SoftDeferHeld.count(*it) > 0 &&
           !ChunkHasFullyDarkFace(*it))
       {
+        ++LastMeshDirtyScheduleSkipN;
         return Dirty.RemoveAt(it);
       }
       if (AsyncBuilder->IsInFlight(*it))
       {
         ++DirtyScheduleSkipInflightN;
+        ++LastMeshDirtyScheduleSkipN;
         return std::next(it);
       }
       if (!world.GetChunkManager().HasChunk(*it))
@@ -3761,8 +3840,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         // Era47/Era52: orphan Dirty under streaming freeze must not sticky-block ring.
         if (EnterLitQuiesce || EnterGpuQuiesceDrain)
         {
+          ++LastMeshDirtyScheduleSkipN;
           return Dirty.RemoveAt(it);
         }
+        ++LastMeshDirtyScheduleSkipN;
         return std::next(it);
       }
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
@@ -3788,6 +3869,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           {
             HoldSoftDeferFirstMesh(*it);
           }
+          ++LastMeshDirtyScheduleSkipN;
           return Dirty.RemoveAt(it);
         }
       }
@@ -3805,11 +3887,13 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           }
           else
           {
+            ++LastMeshDirtyScheduleSkipN;
             return Dirty.RemoveAt(it);
           }
         }
         else
         {
+          ++LastMeshDirtyScheduleSkipN;
           return Dirty.RemoveAt(it);
         }
       }
@@ -3842,6 +3926,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     };
 
     // Pass 1: reserved slots for focus missing (highest priority).
+    seg_t0 = std::chrono::high_resolution_clock::now();
     const bool focus_missing_for_schedule =
         MeshFocusValid &&
         HasMissingGreedyMeshInHorizontalRadius(world, MeshFocusGroundChunk,
@@ -4110,6 +4195,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         ++outside_focus_scheduled;
       }
     }
+    LastMeshDirtyScheduleOkN = scheduled;
+    LastMeshDirtyScheduleMs += take_seg_ms();
     if (InstancesDirty)
     {
       InstancesDirty = false;
@@ -4151,6 +4238,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         }
         const int gpu_done = ProcessPendingGpuMeshes(world, registry, gpu_max,
                                                    gpu_budget, stats);
+        LastMeshDirtyGpuN += gpu_done;
         if (gpu_done > 0)
         {
           mesh_data_changed = true;
@@ -4159,11 +4247,22 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         }
       }
     }
+    LastMeshDirtyGpuMs += take_seg_ms();
     LastRebuildTickStats = stats;
     LastMeshDirtyTickMs = std::chrono::duration<double, std::milli>(
                               std::chrono::high_resolution_clock::now() -
                               dirty_tick_t0)
                               .count();
+    PrevDirtyForRevisit.clear();
+    constexpr size_t kRevisitCap = 512;
+    for (const glm::ivec3 &coord : Dirty)
+    {
+      if (PrevDirtyForRevisit.size() >= kRevisitCap)
+      {
+        break;
+      }
+      PrevDirtyForRevisit.insert(coord);
+    }
     return stats;
   }
 
@@ -4177,6 +4276,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     ++stats.SyncRebuilt;
     ++stats.Completed;
   }
+  LastMeshDirtySyncN += rebuilt;
+  LastMeshDirtySyncMs += take_seg_ms();
   if (InstancesDirty)
   {
     InstancesDirty = false;
@@ -4192,6 +4293,16 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                             std::chrono::high_resolution_clock::now() -
                             dirty_tick_t0)
                             .count();
+  PrevDirtyForRevisit.clear();
+  constexpr size_t kRevisitCapSync = 512;
+  for (const glm::ivec3 &coord : Dirty)
+  {
+    if (PrevDirtyForRevisit.size() >= kRevisitCapSync)
+    {
+      break;
+    }
+    PrevDirtyForRevisit.insert(coord);
+  }
   return stats;
 }
 

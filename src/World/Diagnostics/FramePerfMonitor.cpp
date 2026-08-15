@@ -186,6 +186,25 @@ struct FrameNumbers
   double mesh_immediate_ms{0.0};
   int mesh_immediate_count{0};
   double mesh_dirty_tick_ms{0.0};
+  double mesh_dirty_prune_ms{0.0};
+  int mesh_dirty_prune_n{0};
+  double mesh_dirty_sort_ms{0.0};
+  double mesh_dirty_drain_ms{0.0};
+  int mesh_dirty_drain_n{0};
+  double mesh_dirty_schedule_ms{0.0};
+  int mesh_dirty_schedule_ok_n{0};
+  int mesh_dirty_schedule_skip_n{0};
+  double mesh_dirty_gpu_ms{0.0};
+  int mesh_dirty_gpu_n{0};
+  double mesh_dirty_sync_ms{0.0};
+  int mesh_dirty_sync_n{0};
+  int dirty_touch_n{0};
+  int dirty_revisit_same_n{0};
+  int prep_unfinished_calls_n{0};
+  int phase_budget_over{0};
+  int phase_miss_carve_out{0};
+  int render_preset{0};
+  int async_meshing{0};
   double mesh_emerge_prep_ms{0.0};
   double mesh_emerge_prep_missing_ms{0.0};
   double mesh_emerge_prep_unfinished_ms{0.0};
@@ -462,6 +481,28 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_immediate_ms = phys.MeshImmediateMs;
   n.mesh_immediate_count = phys.MeshImmediateCount;
   n.mesh_dirty_tick_ms = phys.MeshDirtyTickMs;
+  n.mesh_dirty_prune_ms = phys.MeshDirtyPruneMs;
+  n.mesh_dirty_prune_n = phys.MeshDirtyPruneN;
+  n.mesh_dirty_sort_ms = phys.MeshDirtySortMs;
+  n.mesh_dirty_drain_ms = phys.MeshDirtyDrainMs;
+  n.mesh_dirty_drain_n = phys.MeshDirtyDrainN;
+  n.mesh_dirty_schedule_ms = phys.MeshDirtyScheduleMs;
+  n.mesh_dirty_schedule_ok_n = phys.MeshDirtyScheduleOkN;
+  n.mesh_dirty_schedule_skip_n = phys.MeshDirtyScheduleSkipN;
+  n.mesh_dirty_gpu_ms = phys.MeshDirtyGpuMs;
+  n.mesh_dirty_gpu_n = phys.MeshDirtyGpuN;
+  n.mesh_dirty_sync_ms = phys.MeshDirtySyncMs;
+  n.mesh_dirty_sync_n = phys.MeshDirtySyncN;
+  n.dirty_touch_n = phys.DirtyTouchN;
+  n.dirty_revisit_same_n = phys.DirtyRevisitSameN;
+  n.prep_unfinished_calls_n = phys.PrepUnfinishedCallsN;
+  n.phase_budget_over = phys.PhaseBudgetOver;
+  n.phase_miss_carve_out = phys.PhaseMissCarveOut;
+  {
+    const auto &rs = world.GetRenderSettings();
+    n.render_preset = static_cast<int>(rs.Preset);
+    n.async_meshing = rs.AsyncMeshing ? 1 : 0;
+  }
   n.mesh_emerge_prep_ms = phys.MeshEmergePrepMs;
   n.mesh_emerge_prep_missing_ms = phys.MeshEmergePrepMissingMs;
   n.mesh_emerge_prep_unfinished_ms = phys.MeshEmergePrepUnfinishedMs;
@@ -747,6 +788,25 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_immediate_ms\":" << n.mesh_immediate_ms
           << ",\"mesh_immediate_count\":" << n.mesh_immediate_count
           << ",\"mesh_dirty_tick_ms\":" << n.mesh_dirty_tick_ms
+          << ",\"mesh_dirty_prune_ms\":" << n.mesh_dirty_prune_ms
+          << ",\"mesh_dirty_prune_n\":" << n.mesh_dirty_prune_n
+          << ",\"mesh_dirty_sort_ms\":" << n.mesh_dirty_sort_ms
+          << ",\"mesh_dirty_drain_ms\":" << n.mesh_dirty_drain_ms
+          << ",\"mesh_dirty_drain_n\":" << n.mesh_dirty_drain_n
+          << ",\"mesh_dirty_schedule_ms\":" << n.mesh_dirty_schedule_ms
+          << ",\"mesh_dirty_schedule_ok_n\":" << n.mesh_dirty_schedule_ok_n
+          << ",\"mesh_dirty_schedule_skip_n\":" << n.mesh_dirty_schedule_skip_n
+          << ",\"mesh_dirty_gpu_ms\":" << n.mesh_dirty_gpu_ms
+          << ",\"mesh_dirty_gpu_n\":" << n.mesh_dirty_gpu_n
+          << ",\"mesh_dirty_sync_ms\":" << n.mesh_dirty_sync_ms
+          << ",\"mesh_dirty_sync_n\":" << n.mesh_dirty_sync_n
+          << ",\"dirty_touch_n\":" << n.dirty_touch_n
+          << ",\"dirty_revisit_same_n\":" << n.dirty_revisit_same_n
+          << ",\"prep_unfinished_calls_n\":" << n.prep_unfinished_calls_n
+          << ",\"phase_budget_over\":" << n.phase_budget_over
+          << ",\"phase_miss_carve_out\":" << n.phase_miss_carve_out
+          << ",\"render_preset\":" << n.render_preset
+          << ",\"async_meshing\":" << n.async_meshing
           << ",\"mesh_emerge_prep_ms\":" << n.mesh_emerge_prep_ms
           << ",\"mesh_emerge_prep_missing_ms\":" << n.mesh_emerge_prep_missing_ms
           << ",\"mesh_emerge_prep_unfinished_ms\":"

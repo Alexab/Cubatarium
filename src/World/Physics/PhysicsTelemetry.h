@@ -141,6 +141,26 @@ struct PhysicsTelemetry
   int EditLightEmission{0};
   /// RebuildDirtyChunksWithStats wall (sync fill + schedule + apply drain).
   double MeshDirtyTickMs{0.0};
+  /// Cruise wall A1: mesh_dirty_tick substages.
+  double MeshDirtyPruneMs{0.0};
+  int MeshDirtyPruneN{0};
+  double MeshDirtySortMs{0.0};
+  double MeshDirtyDrainMs{0.0};
+  int MeshDirtyDrainN{0};
+  double MeshDirtyScheduleMs{0.0};
+  int MeshDirtyScheduleOkN{0};
+  int MeshDirtyScheduleSkipN{0};
+  double MeshDirtyGpuMs{0.0};
+  int MeshDirtyGpuN{0};
+  double MeshDirtySyncMs{0.0};
+  int MeshDirtySyncN{0};
+  int DirtyTouchN{0};
+  int DirtyRevisitSameN{0};
+  /// Cruise wall A2: unfinished/missing scan call count in emerge prep.
+  int PrepUnfinishedCallsN{0};
+  /// Era14.1 phase budget: stream already over budget; miss carve-out active.
+  int PhaseBudgetOver{0};
+  int PhaseMissCarveOut{0};
   /// TickMeshEmerge wall before RebuildDirtyChunksWithStats (prep/idle/cold).
   double MeshEmergePrepMs{0.0};
   /// I5 prep sub-timers (ms) inside MeshEmergePrepMs.

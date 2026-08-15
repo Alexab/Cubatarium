@@ -841,6 +841,76 @@ double UWorldMeshService::GetLastMeshDirtyTickMs() const
   return Cache.GetLastMeshDirtyTickMs();
 }
 
+double UWorldMeshService::GetLastMeshDirtyPruneMs() const
+{
+  return Cache.GetLastMeshDirtyPruneMs();
+}
+
+int UWorldMeshService::GetLastMeshDirtyPruneN() const
+{
+  return Cache.GetLastMeshDirtyPruneN();
+}
+
+double UWorldMeshService::GetLastMeshDirtySortMs() const
+{
+  return Cache.GetLastMeshDirtySortMs();
+}
+
+double UWorldMeshService::GetLastMeshDirtyDrainMs() const
+{
+  return Cache.GetLastMeshDirtyDrainMs();
+}
+
+int UWorldMeshService::GetLastMeshDirtyDrainN() const
+{
+  return Cache.GetLastMeshDirtyDrainN();
+}
+
+double UWorldMeshService::GetLastMeshDirtyScheduleMs() const
+{
+  return Cache.GetLastMeshDirtyScheduleMs();
+}
+
+int UWorldMeshService::GetLastMeshDirtyScheduleOkN() const
+{
+  return Cache.GetLastMeshDirtyScheduleOkN();
+}
+
+int UWorldMeshService::GetLastMeshDirtyScheduleSkipN() const
+{
+  return Cache.GetLastMeshDirtyScheduleSkipN();
+}
+
+double UWorldMeshService::GetLastMeshDirtyGpuMs() const
+{
+  return Cache.GetLastMeshDirtyGpuMs();
+}
+
+int UWorldMeshService::GetLastMeshDirtyGpuN() const
+{
+  return Cache.GetLastMeshDirtyGpuN();
+}
+
+double UWorldMeshService::GetLastMeshDirtySyncMs() const
+{
+  return Cache.GetLastMeshDirtySyncMs();
+}
+
+int UWorldMeshService::GetLastMeshDirtySyncN() const
+{
+  return Cache.GetLastMeshDirtySyncN();
+}
+
+int UWorldMeshService::GetLastDirtyTouchN() const
+{
+  return Cache.GetLastDirtyTouchN();
+}
+
+int UWorldMeshService::GetLastDirtyRevisitSameN() const
+{
+  return Cache.GetLastDirtyRevisitSameN();
+}
+
 size_t UWorldMeshService::GetGreedyCacheSize() const
 {
   return Cache.GetGreedyCacheSize();

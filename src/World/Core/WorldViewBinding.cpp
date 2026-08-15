@@ -682,6 +682,23 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.MeshEmergePrepStickyMs = 0.0;
   PhysicsTelemetryData.MeshEmergePrepDropDirtyMs = 0.0;
   PhysicsTelemetryData.MeshEmergePrepOtherMs = 0.0;
+  PhysicsTelemetryData.MeshDirtyPruneMs = 0.0;
+  PhysicsTelemetryData.MeshDirtyPruneN = 0;
+  PhysicsTelemetryData.MeshDirtySortMs = 0.0;
+  PhysicsTelemetryData.MeshDirtyDrainMs = 0.0;
+  PhysicsTelemetryData.MeshDirtyDrainN = 0;
+  PhysicsTelemetryData.MeshDirtyScheduleMs = 0.0;
+  PhysicsTelemetryData.MeshDirtyScheduleOkN = 0;
+  PhysicsTelemetryData.MeshDirtyScheduleSkipN = 0;
+  PhysicsTelemetryData.MeshDirtyGpuMs = 0.0;
+  PhysicsTelemetryData.MeshDirtyGpuN = 0;
+  PhysicsTelemetryData.MeshDirtySyncMs = 0.0;
+  PhysicsTelemetryData.MeshDirtySyncN = 0;
+  PhysicsTelemetryData.DirtyTouchN = 0;
+  PhysicsTelemetryData.DirtyRevisitSameN = 0;
+  PhysicsTelemetryData.PrepUnfinishedCallsN = 0;
+  PhysicsTelemetryData.PhaseBudgetOver = 0;
+  PhysicsTelemetryData.PhaseMissCarveOut = 0;
 
   const auto t_before_stream = std::chrono::high_resolution_clock::now();
   GetMeshService().BeginHoleQueryFrame();
@@ -703,6 +720,8 @@ void UWorld::TickWorldStreamingPhase()
       URuntimeTuning::Get().StreamingPhaseBudgetMs;
   const bool over_phase_budget =
       phase_budget > 0.0f && stream_elapsed_ms >= static_cast<double>(phase_budget);
+  PhysicsTelemetryData.PhaseBudgetOver = over_phase_budget ? 1 : 0;
+  PhysicsTelemetryData.PhaseMissCarveOut = miss_carve_out ? 1 : 0;
   if (!over_phase_budget || miss_carve_out)
   {
     TickEnterGameMeshBurst();
@@ -726,6 +745,33 @@ void UWorld::TickWorldStreamingPhase()
       GetMeshService().GetLastMeshImmediateCount();
   PhysicsTelemetryData.MeshDirtyTickMs =
       GetMeshService().GetLastMeshDirtyTickMs();
+  PhysicsTelemetryData.MeshDirtyPruneMs =
+      GetMeshService().GetLastMeshDirtyPruneMs();
+  PhysicsTelemetryData.MeshDirtyPruneN =
+      GetMeshService().GetLastMeshDirtyPruneN();
+  PhysicsTelemetryData.MeshDirtySortMs =
+      GetMeshService().GetLastMeshDirtySortMs();
+  PhysicsTelemetryData.MeshDirtyDrainMs =
+      GetMeshService().GetLastMeshDirtyDrainMs();
+  PhysicsTelemetryData.MeshDirtyDrainN =
+      GetMeshService().GetLastMeshDirtyDrainN();
+  PhysicsTelemetryData.MeshDirtyScheduleMs =
+      GetMeshService().GetLastMeshDirtyScheduleMs();
+  PhysicsTelemetryData.MeshDirtyScheduleOkN =
+      GetMeshService().GetLastMeshDirtyScheduleOkN();
+  PhysicsTelemetryData.MeshDirtyScheduleSkipN =
+      GetMeshService().GetLastMeshDirtyScheduleSkipN();
+  PhysicsTelemetryData.MeshDirtyGpuMs =
+      GetMeshService().GetLastMeshDirtyGpuMs();
+  PhysicsTelemetryData.MeshDirtyGpuN =
+      GetMeshService().GetLastMeshDirtyGpuN();
+  PhysicsTelemetryData.MeshDirtySyncMs =
+      GetMeshService().GetLastMeshDirtySyncMs();
+  PhysicsTelemetryData.MeshDirtySyncN =
+      GetMeshService().GetLastMeshDirtySyncN();
+  PhysicsTelemetryData.DirtyTouchN = GetMeshService().GetLastDirtyTouchN();
+  PhysicsTelemetryData.DirtyRevisitSameN =
+      GetMeshService().GetLastDirtyRevisitSameN();
 
   // Hitch for streaming speed clamp / budgets: prefer wall, else stream+emerge.
   const double stream_hitch =
