@@ -679,18 +679,27 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   // S2 step A: cruise ≤CaptureMovingBgCap (worker Capture hung — TD-ARCH-015).
   // Era36 B2: dynamic cap based on pending light pressure.
   // Era41b: enter FOV lit keeps caller Capture budget (feed async workers).
+  // Cruise SOTA: moving+holes never raise bg above dynamic cap; narrow band_cy.
+  int band_cy = std::max(0, tune.RelightCaptureBandCy);
   if (moving && !enter_fov_lit)
   {
     const int dynamic_cap =
         DynamicCaptureMovingBgCap(pending_light_focus_n, tune.CaptureMovingBgCap);
-    bg_cap = std::min(bg_cap, std::max(1, dynamic_cap));
+    bg_cap = ClampCaptureMovingBgCapWithHoles(bg_cap, moving, visual_holes,
+                                              dynamic_cap);
   }
   if (!enter_fov_lit && frame_ms_so_far >= capture_hot_skip_ms &&
       visual_holes && focus_pending_mid)
   {
     bg_cap = std::min(bg_cap, 1);
   }
-  const int band_cy = std::max(0, tune.RelightCaptureBandCy);
+  band_cy = EffectiveRelightCaptureBandCy(band_cy, moving && !enter_fov_lit,
+                                          visual_holes);
+  {
+    auto &telem = world.GetPhysicsTelemetryMutable();
+    telem.CaptureBgCapN = bg_cap;
+    telem.CaptureBandCy = band_cy;
+  }
   const auto drain_loop_t0 = std::chrono::high_resolution_clock::now();
   auto drain_one = [&]()
   {

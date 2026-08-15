@@ -253,6 +253,35 @@ inline int DynamicCaptureMovingBgCap(int pending_light_focus,
   return std::min(4, pending_light_focus / 10 + 1);
 }
 
+/// Cruise SOTA: moving + visual holes — never raise bg above dynamic cap.
+inline int ClampCaptureMovingBgCapWithHoles(int bg_cap, bool moving,
+                                            bool visual_holes,
+                                            int dynamic_cap)
+{
+  if (!moving)
+  {
+    return bg_cap;
+  }
+  const int capped = std::min(bg_cap, std::max(1, dynamic_cap));
+  if (visual_holes)
+  {
+    return std::min(capped, std::max(1, dynamic_cap));
+  }
+  return capped;
+}
+
+/// Cruise SOTA: moving + holes — narrow Capture Y-band (hot surface only).
+inline int EffectiveRelightCaptureBandCy(int band_cy, bool moving,
+                                         bool visual_holes)
+{
+  const int base = std::max(0, band_cy);
+  if (moving && visual_holes && base > 1)
+  {
+    return std::max(1, base - 1);
+  }
+  return base;
+}
+
 /// Era36 B3 / Era40: land moving drain when pendf>15 (was 30).
 inline bool ShouldDrainPendingLightLandMoving(int pending_light_focus,
                                               int threshold = 15)

@@ -259,6 +259,9 @@ struct PhysicsTelemetry
   /// Era37 P1c: underground relight skip / false-clear counters.
   uint64_t RelightSkippedUndergroundN{0};
   uint64_t RelightFalseClearN{0};
+  /// Cruise Capture SoT: effective bg cap / Y-band cy this DrainRelightQueues.
+  int CaptureBgCapN{0};
+  int CaptureBandCy{0};
   int RelightFifoN{0};
   /// Era45: MarkRelit RequestRemeshAfterApply calls (cumulative).
   uint64_t MarkRelitRemeshAfterApplyN{0};

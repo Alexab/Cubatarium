@@ -753,6 +753,14 @@ int main()
            "cruise: drawable flush skip");
     Expect(ShouldFlushRelightMeshColumnSeamed(false, false),
            "cruise: undrawn flush seamed");
+    using cutum::ClampCaptureMovingBgCapWithHoles;
+    using cutum::EffectiveRelightCaptureBandCy;
+    Expect(ClampCaptureMovingBgCapWithHoles(8, true, true, 2) == 2,
+           "cruise B: holes clamp bg to dynamic");
+    Expect(EffectiveRelightCaptureBandCy(4, true, true) == 3,
+           "cruise B: moving holes narrow band");
+    Expect(EffectiveRelightCaptureBandCy(1, true, true) == 1,
+           "cruise B: band floor 1");
   }
 
   // --- Era46 enter warmup drain parity / RAA commit coalesce ---
