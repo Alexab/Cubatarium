@@ -1167,9 +1167,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         (void)sticky_r;
         (void)horiz;
         // Era47 P1: after lit quiesce do not enqueue RemeshSeam (refeeds Dirty/GPU).
-        // Era49: bound Sticky — do not re-insert storm when already tracked and
-        // Dirty/GPU/inflight already owns the remesh.
-        // Cruise SOTA: skip RemeshSeam when RAA/GPU/Dirty already owns the column.
+        // Cruise SOTA: drawable remesh = RAA/PreferKick only (no dual RemeshSeam).
         if (!enter_quiesce)
         {
           bool column_remesh_owned = false;
@@ -1182,7 +1180,9 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                 MeshService->IsPendingGpuApply(coord),
                 MeshService->HasInflightMeshBuild(coord));
           }
-          if (!column_remesh_owned)
+          if (ShouldEnqueueRemeshSeamAfterLit(had_mesh, enter_quiesce,
+                                             any_drawable,
+                                             column_remesh_owned))
           {
             const bool already_sticky = StickyRemeshAfterLight.count(key) > 0;
             StickyRemeshAfterLight.insert(key);
@@ -1192,6 +1192,12 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
               GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RemeshSeam,
                                               /*priority=*/70);
             }
+          }
+          else if (any_drawable)
+          {
+            // RAA/PreferKick owns remesh — drop sticky so TickDerived cannot
+            // refeed RemeshSeam (black-face flicker / revision bump).
+            StickyRemeshAfterLight.erase(key);
           }
         }
       }
@@ -3674,7 +3680,8 @@ bool UWorld::ColumnHasRepairProgress(glm::ivec2 ground_xz) const
   for (int cy = 0; cy <= max_cy; ++cy)
   {
     const glm::ivec3 coord(ground_xz.x, cy, ground_xz.y);
-    if (MeshService->IsPendingGpuApply(coord) ||
+    if (MeshService->IsRemeshAfterApplyPending(coord) ||
+        MeshService->IsPendingGpuApply(coord) ||
         MeshService->IsPendingGpuQueued(coord) ||
         MeshService->IsPendingGpuKickedOrDispatched(coord) ||
         MeshService->HasInflightMeshBuild(coord))
@@ -5950,9 +5957,7 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
       MeshService->MarkDirtyPriority(coord);
       MeshService->RequestRemeshAfterApply(coord);
       StickyRemeshAfterLight.insert(col);
-      NoteColumnRepairNeeded(col);
-      GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::RemeshSeam,
-                                      /*priority=*/70);
+      // Sodium PreferKick: RAA owns drawable remesh — no dual RemeshSeam.
       touched = true;
       ++scheduled;
     }

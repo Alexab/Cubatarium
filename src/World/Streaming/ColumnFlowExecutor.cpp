@@ -474,7 +474,9 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   }
   if (!nearest_vb_heal)
   {
-    // Sticky maintenance: RemeshSeam only. Skip columns still in PendingLight.
+    // Sticky maintenance: RemeshSeam only for undrawn seam-repair.
+    // Skip when PendingLight or remesh already owned (RAA/Dirty/GPU) so sticky
+    // cannot dual-feed RemeshSeam on drawable PreferKick columns.
     for (const glm::ivec2 &col : sticky_cols)
     {
       if (world.IsPendingLightBeforeMesh(col))
@@ -482,10 +484,11 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
         ++world.GetPhysicsTelemetryMutable().StageSkipRemeshPendingLight;
         continue;
       }
-      if (!HasRepairTicket(col) && !world.ColumnHasRepairProgress(col))
+      if (HasRepairTicket(col) || world.ColumnHasRepairProgress(col))
       {
-        Enqueue(col, ColumnWorkKind::RemeshSeam, 30);
+        continue;
       }
+      Enqueue(col, ColumnWorkKind::RemeshSeam, 30);
     }
     if (!stale_dark_cols.empty())
     {
