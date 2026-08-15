@@ -279,6 +279,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       [&world](glm::ivec3 chunk_coord)
       {
         const glm::ivec2 key(chunk_coord.x, chunk_coord.z);
+        // Sodium PreferKick: skip RemeshSeam when Dirty/RAA/GPU already owns.
+        if (world.GetMeshService().IsChunkMeshDirty(chunk_coord) ||
+            world.GetMeshService().IsRemeshAfterApplyPending(chunk_coord) ||
+            world.GetMeshService().IsPendingGpuApply(chunk_coord) ||
+            world.GetMeshService().HasInflightMeshBuild(chunk_coord))
+        {
+          return;
+        }
         world.NoteColumnRepairNeeded(key);
         GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RemeshSeam,
                                         /*priority=*/70);
@@ -462,7 +470,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         StickyRemeshDrainInput{black_sticky, last_frame_ms});
     if (sticky_drain.run_drain)
     {
-      GetColumnFlowExecutor().DrainRemeshSeamBudget(world, sticky_drain.budget);
+      // Enqueue only — MarkDirty happens in DrainBudget/Seam window before GPU.
+      auto &exec = GetColumnFlowExecutor();
+      exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+                   ColumnWorkKind::RemeshSeam, 30);
+      note_column_flow_drain(std::max(1, sticky_drain.budget), 1);
     }
     // I6: after sticky drain, drop lit remesh sticky that no longer has stale-dark
     // (Dirty-only leftover was pinning autofly sticky 2–6).
@@ -1685,7 +1697,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
                  ColumnWorkKind::FirstMesh, 80);
     note_column_flow_drain(4, 4);
-    exec.DrainRemeshSeamBudget(world, 8);
+    // Enqueue RemeshSeam only — MarkDirty in Drain-before-GPU window.
+    exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+                 ColumnWorkKind::RemeshSeam, 70);
   }
 
   // Near dirty must keep MeshAsync draining even under hitch frames.
@@ -1951,7 +1965,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       {
         const int seam_n = std::clamp(
             3 + (dark_n > 800 ? 4 : 0) + black_sticky * 2, 3, 10);
-        exec.DrainRemeshSeamBudget(world, seam_n);
+        // Enqueue only — single MarkDirty Seam drain before ConsumeGpu.
+        exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+                     ColumnWorkKind::RemeshSeam, 50);
+        note_column_flow_drain(seam_n, 1);
       }
       recover_watchdog_frames = 0;
     }
@@ -2034,7 +2051,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const int sticky_sync =
           std::clamp(4 + black_sticky * 2 + (focus_not_render_ready > 16 ? 4 : 0),
                      4, 12);
-      exec.DrainRemeshSeamBudget(world, sticky_sync);
+      // Enqueue only — MarkDirty in Drain-before-GPU Seam window.
+      exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+                   ColumnWorkKind::RemeshSeam, 40);
+      note_column_flow_drain(sticky_sync, 1);
     }
   }
 
@@ -3066,11 +3086,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   // F0: drain-first — ColumnFlow DrainBudget before GPU consume so PreferKick
   // from MarkRelit/tickets lands in the same frame (Sodium one-owner).
+  // Single Seam MarkDirty window: DrainRemeshSeamBudget here only (mid-frame
+  // sites Enqueue RemeshSeam without SyncIdle MarkDirty).
   {
     auto &exec = GetColumnFlowExecutor();
     exec.DrainBudget(world, std::max(1, column_flow_drain_n),
                      focus_ground_horiz, focus_radius,
                      column_flow_admit_batch);
+    const int seam_budget =
+        std::clamp(2 + (black_sticky > 0 ? black_sticky : 0) +
+                       (world.GetPhysicsTelemetry().DarkFaceNearN > 200 ? 2 : 0),
+                   1, 8);
+    exec.DrainRemeshSeamBudget(world, seam_budget);
   }
   int gpu_consume_done = 0;
   {

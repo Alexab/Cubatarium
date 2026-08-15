@@ -766,11 +766,11 @@ int main()
            "cruise D: skip enqueue when trusted");
     using cutum::ShouldSetLitReadyOnTrustedDisk;
     Expect(!ShouldSetLitReadyOnTrustedDisk(false, false),
-           "flicker: no LitReady without drawable");
+           "flicker: no LitReady without lit drawable");
     Expect(!ShouldSetLitReadyOnTrustedDisk(true, true),
            "flicker: no LitReady while remesh in flight");
     Expect(ShouldSetLitReadyOnTrustedDisk(true, false),
-           "flicker: LitReady after remesh drawable settle");
+           "flicker: LitReady after non-FullyDark drawable settle");
   }
 
   // --- Era46 enter warmup drain parity / RAA commit coalesce ---

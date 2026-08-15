@@ -1257,9 +1257,9 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
                  world.IsLightingRelightDeferred()))
     {
       // Trusted disk lightmap: remesh only — no Capture FIFO refeed.
-      // Bake-before-present for hinterland: Dirty without LitReady until remesh
-      // drawable. Near focus: LitReady with Dirty so enter ring cannot wedge on
-      // residual FullyDark after trust remesh (manual enter hang / mesh_dirty=1).
+      // Bake-before-present: Dirty without LitReady until non-FullyDark
+      // drawable settle (no near_focus LitReady bypass — that caused VB/flicker).
+      // Seamed neighbors off: avoid 3x3 Dirty dual with neighbor FirstMesh/RAA.
       ++world.GetPhysicsTelemetryMutable().DiskLightTrustedN;
       const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
       int dirty_min = std::max(0, focus_block.y - CHUNK_SIZE);
@@ -1274,17 +1274,19 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
             std::min(settings.MaxHeight, settings.SeaLevel + CHUNK_SIZE * 2));
       }
       world.MarkTerrainChunkMeshDirtySeamed(ground_coord, dirty_min, dirty_max,
-                                            near_focus);
+                                            /*include_horizontal_neighbors=*/
+                                            false);
       const int cy0 = FloorDiv(dirty_min, CHUNK_SIZE);
       const int cy1 = FloorDiv(dirty_max, CHUNK_SIZE);
-      bool has_drawable = false;
+      bool has_lit_drawable = false;
       bool remesh_in_flight = false;
       for (int cy = cy0; cy <= cy1; ++cy)
       {
         const glm::ivec3 coord(ground_coord.x, cy, ground_coord.z);
-        if (world.GetMeshService().HasDrawableGreedyMesh(coord))
+        if (world.GetMeshService().HasDrawableGreedyMesh(coord) &&
+            !world.GetMeshService().GetCache().ChunkHasFullyDarkFace(coord))
         {
-          has_drawable = true;
+          has_lit_drawable = true;
         }
         if (ColumnHasRemeshOwner(
                 world.GetMeshService().IsChunkMeshDirty(coord),
@@ -1295,8 +1297,7 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
           remesh_in_flight = true;
         }
       }
-      if (near_focus ||
-          ShouldSetLitReadyOnTrustedDisk(has_drawable, remesh_in_flight))
+      if (ShouldSetLitReadyOnTrustedDisk(has_lit_drawable, remesh_in_flight))
       {
         world.SetColumnEmergeState(ground_coord, ColumnEmergeState::LitReady);
       }

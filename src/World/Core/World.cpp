@@ -3921,20 +3921,21 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
         break;
       }
     }
-    // Trusted disk bake-before-present: promote LitReady once remesh produced
-    // drawable (even residual FullyDark) so enter cannot wedge on stale faces.
+    // Trusted disk bake-before-present: promote LitReady only when remesh left
+    // non-FullyDark drawable (residual void → RelightThenMesh, not LitReady).
     if (!IsColumnLitReady(ground))
     {
       const bool trusted =
           Persistence && Persistence->IsColumnLightComplete(key);
-      bool has_drawable = false;
+      bool has_lit_drawable = false;
       bool remesh_in_flight = false;
       for (int cy = cy0; cy <= cy1; ++cy)
       {
         const glm::ivec3 coord(key.x, cy, key.y);
-        if (MeshService->HasDrawableGreedyMesh(coord))
+        if (MeshService->HasDrawableGreedyMesh(coord) &&
+            !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
         {
-          has_drawable = true;
+          has_lit_drawable = true;
         }
         if (ColumnHasRemeshOwner(MeshService->IsChunkMeshDirty(coord),
                                  MeshService->IsRemeshAfterApplyPending(coord),
@@ -3945,8 +3946,27 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
         }
       }
       if (!trusted ||
-          !ShouldSetLitReadyOnTrustedDisk(has_drawable, remesh_in_flight))
+          !ShouldSetLitReadyOnTrustedDisk(has_lit_drawable, remesh_in_flight))
       {
+        // Residual FullyDark after remesh: RelightThenMesh owns heal, not LitReady.
+        if (trusted && !remesh_in_flight)
+        {
+          bool any_drawable = false;
+          for (int cy = cy0; cy <= cy1; ++cy)
+          {
+            if (MeshService->HasDrawableGreedyMesh(
+                    glm::ivec3(key.x, cy, key.y)))
+            {
+              any_drawable = true;
+              break;
+            }
+          }
+          if (any_drawable && !has_lit_drawable)
+          {
+            GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RelightThenMesh,
+                                            /*priority=*/80);
+          }
+        }
         ++it;
         continue;
       }
