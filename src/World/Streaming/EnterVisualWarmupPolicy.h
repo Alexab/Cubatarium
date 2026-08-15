@@ -242,6 +242,19 @@ inline int RelightSurfaceBandMaxY(int surface_block_y, int chunk_size,
   return std::min(original_max_y, surface_max);
 }
 
+/// Cruise SOTA / Minetest: trust disk light when had_disk_light && complete.
+inline bool ShouldTrustDiskLightmap(bool had_disk_light, bool light_complete,
+                                    bool lighting_deferred)
+{
+  return !lighting_deferred && had_disk_light && light_complete;
+}
+
+/// Skip full EnqueueTerrainColumnRelight when disk light is trusted.
+inline bool ShouldSkipRelightOnTrustedDiskLight(bool trust_disk_light)
+{
+  return trust_disk_light;
+}
+
 /// Era36 B2 / Era40: dynamic CaptureMovingBgCap — fire at pendf>15 (was 20).
 inline int DynamicCaptureMovingBgCap(int pending_light_focus,
                                      int base_cap = 1)

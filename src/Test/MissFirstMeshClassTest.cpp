@@ -761,6 +761,14 @@ int main()
            "cruise B: moving holes narrow band");
     Expect(EffectiveRelightCaptureBandCy(1, true, true) == 1,
            "cruise B: band floor 1");
+    using cutum::ShouldSkipRelightOnTrustedDiskLight;
+    using cutum::ShouldTrustDiskLightmap;
+    Expect(ShouldTrustDiskLightmap(true, true, false),
+           "cruise D: disk light trusted");
+    Expect(!ShouldTrustDiskLightmap(true, false, false),
+           "cruise D: incomplete not trusted");
+    Expect(ShouldSkipRelightOnTrustedDiskLight(true),
+           "cruise D: skip enqueue when trusted");
   }
 
   // --- Era46 enter warmup drain parity / RAA commit coalesce ---

@@ -27,6 +27,11 @@
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Lighting/ChunkLighting.h"
+#include "World/Streaming/ColumnEmergeState.h"
+#include "World/Streaming/ColumnFlowExecutor.h"
+#include "World/Streaming/ColumnFlowScheduler.h"
+#include "World/Math/GridMath.h"
+#include "World/Math/BlockTypes.h"
 #include "World/Environment/EnvironmentConfig.h"
 #include "World/Math/GridMath.h"
 #include "World/View/WorldViewSettings.h"
@@ -174,11 +179,114 @@ ChunkWriteFormat UWorldPersistence::GetChunkWriteFormat() const
                       : ChunkWriteFormat::Binary;
 }
 
+bool UWorldPersistence::IsColumnLightComplete(glm::ivec2 ground_xz) const
+{
+  return LightCompleteColumns.count(ground_xz) != 0;
+}
+
+void UWorldPersistence::SetColumnLightComplete(glm::ivec2 ground_xz,
+                                               bool complete)
+{
+  if (complete)
+  {
+    if (LightCompleteColumns.insert(ground_xz).second)
+    {
+      LightCompleteDirty = true;
+    }
+  }
+  else
+  {
+    ClearColumnLightComplete(ground_xz);
+  }
+}
+
+void UWorldPersistence::ClearColumnLightComplete(glm::ivec2 ground_xz)
+{
+  if (LightCompleteColumns.erase(ground_xz) > 0)
+  {
+    LightCompleteDirty = true;
+  }
+}
+
+void UWorldPersistence::LoadColumnLightFlags()
+{
+  LightCompleteColumns.clear();
+  LightCompleteDirty = false;
+  LightCompleteLoaded = true;
+  if (WorldFolderPath.empty())
+  {
+    return;
+  }
+  const std::string path = WorldFolderPath + "/column_light.json";
+  if (!std::filesystem::exists(path))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(path);
+    if (!file.is_open())
+    {
+      return;
+    }
+    const json data = json::parse(file);
+    if (!data.contains("complete") || !data["complete"].is_array())
+    {
+      return;
+    }
+    for (const auto &entry : data["complete"])
+    {
+      if (!entry.is_array() || entry.size() < 2)
+      {
+        continue;
+      }
+      LightCompleteColumns.emplace(entry[0].get<int>(), entry[1].get<int>());
+    }
+  }
+  catch (const json::exception &)
+  {
+  }
+}
+
+void UWorldPersistence::SaveColumnLightFlagsIfDirty()
+{
+  if (!LightCompleteDirty || WorldFolderPath.empty())
+  {
+    return;
+  }
+  try
+  {
+    std::filesystem::create_directories(WorldFolderPath);
+    json data;
+    data["format_version"] = 1;
+    json complete = json::array();
+    for (const glm::ivec2 &col : LightCompleteColumns)
+    {
+      complete.push_back(json::array({col.x, col.y}));
+    }
+    data["complete"] = std::move(complete);
+    const std::string path = WorldFolderPath + "/column_light.json";
+    std::ofstream file(path, std::ios::trunc);
+    if (file.is_open())
+    {
+      file << data.dump();
+      LightCompleteDirty = false;
+    }
+  }
+  catch (const json::exception &)
+  {
+  }
+}
+
 void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z,
                                                     const bool priority,
                                                     int min_y, int max_y)
 {
   const glm::ivec2 key(world_x, world_z);
+  // Block-space key → column xz for light_complete invalidation.
+  const glm::ivec2 ground_xz(FloorDiv(world_x, CHUNK_SIZE),
+                             FloorDiv(world_z, CHUNK_SIZE));
+  ClearColumnLightComplete(ground_xz);
   if (max_y >= min_y)
   {
     auto &band = PendingTerrainColumnRelightYBands[key];
@@ -1143,9 +1251,50 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
             world.GetBlockWorld(), ground_coord, dirty_min, dirty_max);
       }
     }
+    else if (ShouldTrustDiskLightmap(
+                 state.had_disk_light,
+                 IsColumnLightComplete(glm::ivec2(ground_coord.x, ground_coord.z)),
+                 world.IsLightingRelightDeferred()))
+    {
+      // Trusted disk lightmap: remesh only — no Capture FIFO refeed.
+      ++world.GetPhysicsTelemetryMutable().DiskLightTrustedN;
+      const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
+      int dirty_min = std::max(0, focus_block.y - CHUNK_SIZE);
+      int dirty_max =
+          std::min(settings.MaxHeight, focus_block.y + CHUNK_SIZE * 2);
+      if (settings.FillWater)
+      {
+        dirty_min =
+            std::min(dirty_min, std::max(0, settings.SeaLevel - CHUNK_SIZE));
+        dirty_max = std::max(
+            dirty_max,
+            std::min(settings.MaxHeight, settings.SeaLevel + CHUNK_SIZE * 2));
+      }
+      world.MarkTerrainChunkMeshDirtySeamed(ground_coord, dirty_min, dirty_max,
+                                            near_focus);
+      world.SetColumnEmergeState(ground_coord, ColumnEmergeState::LitReady);
+      // Seam: incomplete neighbors need RelightThenMesh via ColumnFlow.
+      for (int dz = -1; dz <= 1; ++dz)
+      {
+        for (int dx = -1; dx <= 1; ++dx)
+        {
+          if (dx == 0 && dz == 0)
+          {
+            continue;
+          }
+          const glm::ivec2 n(ground_coord.x + dx, ground_coord.z + dz);
+          if (!IsColumnLightComplete(n))
+          {
+            GetColumnFlowExecutor().Enqueue(n, ColumnWorkKind::RelightThenMesh,
+                                            /*priority=*/50);
+            ++world.GetPhysicsTelemetryMutable().DiskLightRepairedN;
+          }
+        }
+      }
+    }
     else
     {
-      // Disk already lit or relight deferred: keep previous wide relight range.
+      // Disk light present but not complete, or relight deferred: Capture path.
       EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
                                   ground_coord.z * CHUNK_SIZE, near_focus,
                                   relight_min_full, relight_max_full);
@@ -1276,6 +1425,7 @@ void UWorldPersistence::TickAsyncChunkIo(UWorld &world)
       }
     }
   }
+  SaveColumnLightFlagsIfDirty();
 }
 
 bool UWorldPersistence::IsAsyncChunkIoQuiescent() const
@@ -1330,6 +1480,7 @@ void UWorldPersistence::FlushAsyncChunkIo(UWorld &world)
       }
     }
   }
+  SaveColumnLightFlagsIfDirty();
 }
 
 void UWorldPersistence::AbortAsyncChunkIo()

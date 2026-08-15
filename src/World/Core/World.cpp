@@ -1206,6 +1206,10 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       if (finalize_pending_gate)
       {
         SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
+        if (Persistence)
+        {
+          Persistence->SetColumnLightComplete(key, true);
+        }
       }
       if (damp_soft_empty_remesh)
       {

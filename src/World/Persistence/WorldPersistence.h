@@ -45,7 +45,22 @@ public:
   const UChunkStorageService &GetChunkStorage() const { return *ChunkStorage; }
 
   const std::string &GetWorldFolderPath() const { return WorldFolderPath; }
-  void SetWorldFolderPath(const std::string &path) { WorldFolderPath = path; }
+  void SetWorldFolderPath(const std::string &path)
+  {
+    if (WorldFolderPath == path)
+    {
+      return;
+    }
+    SaveColumnLightFlagsIfDirty();
+    WorldFolderPath = path;
+    LightCompleteColumns.clear();
+    LightCompleteDirty = false;
+    LightCompleteLoaded = false;
+    if (!WorldFolderPath.empty())
+    {
+      LoadColumnLightFlags();
+    }
+  }
 
   void LoadUsers(UWorld &world, const std::string &file_name);
   void SaveUsers(UWorld &world, const std::string &file_name);
@@ -93,6 +108,13 @@ public:
   void LoadInitialTerrainColumns(UWorld &world, glm::vec3 spawn_point,
                                  int render_distance_chunks);
 
+  /// Minetest-style lighting_complete: disk lightmap trusted for this column.
+  bool IsColumnLightComplete(glm::ivec2 ground_xz) const;
+  void SetColumnLightComplete(glm::ivec2 ground_xz, bool complete);
+  void ClearColumnLightComplete(glm::ivec2 ground_xz);
+  void LoadColumnLightFlags();
+  void SaveColumnLightFlagsIfDirty();
+
 private:
   struct PendingAsyncColumnLoadState
   {
@@ -126,6 +148,10 @@ private:
   /// Optional Y band per pending column (min,max); missing => full 0..MaxHeight.
   std::unordered_map<glm::ivec2, glm::ivec2, IVec2Hash>
       PendingTerrainColumnRelightYBands;
+  /// Columns whose disk lightmap is trusted (lighting_complete).
+  std::unordered_set<glm::ivec2, IVec2Hash> LightCompleteColumns;
+  bool LightCompleteDirty{false};
+  bool LightCompleteLoaded{false};
   std::string WorldFolderPath;
 };
 

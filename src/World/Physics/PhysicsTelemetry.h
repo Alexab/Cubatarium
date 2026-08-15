@@ -262,6 +262,9 @@ struct PhysicsTelemetry
   /// Cruise Capture SoT: effective bg cap / Y-band cy this DrainRelightQueues.
   int CaptureBgCapN{0};
   int CaptureBandCy{0};
+  /// Disk lightmap trust (light_complete).
+  int DiskLightTrustedN{0};
+  int DiskLightRepairedN{0};
   int RelightFifoN{0};
   /// Era45: MarkRelit RequestRemeshAfterApply calls (cumulative).
   uint64_t MarkRelitRemeshAfterApplyN{0};
