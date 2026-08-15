@@ -17,8 +17,7 @@ int HorizDist(glm::ivec3 coord, glm::ivec3 focus)
 float EffectiveHorizDist(glm::ivec3 coord, glm::ivec3 focus,
                          float forward_bias_k, glm::vec2 forward_xz)
 {
-  const float base =
-      static_cast<float>(HorizDist(coord, focus));
+  const float base = static_cast<float>(HorizDist(coord, focus));
   if (forward_bias_k <= 0.0f)
   {
     return base;
@@ -42,78 +41,14 @@ float EffectiveHorizDist(glm::ivec3 coord, glm::ivec3 focus,
   return base - forward_bias_k * bias;
 }
 
-} // namespace
-
-void UChunkDirtySet::MarkDirty(glm::ivec3 coord)
-{
-  if (!Set.insert(coord).second)
-  {
-    return;
-  }
-  Queue.push_back(coord);
-  // Remesh-only: do not promote to FirstMesh class.
-}
-
-void UChunkDirtySet::MarkDirtyPriority(glm::ivec3 coord)
-{
-  if (Set.count(coord))
-  {
-    Queue.erase(std::remove(Queue.begin(), Queue.end(), coord), Queue.end());
-  }
-  else
-  {
-    Set.insert(coord);
-  }
-  FirstMeshSet.insert(coord);
-  Queue.insert(Queue.begin(), coord);
-}
-
-void UChunkDirtySet::Erase(glm::ivec3 coord)
-{
-  if (!Set.erase(coord))
-  {
-    return;
-  }
-  FirstMeshSet.erase(coord);
-  Queue.erase(std::remove(Queue.begin(), Queue.end(), coord), Queue.end());
-}
-
-void UChunkDirtySet::Clear()
-{
-  Queue.clear();
-  Set.clear();
-  FirstMeshSet.clear();
-}
-
-UChunkDirtySet::iterator UChunkDirtySet::RemoveAt(iterator it)
-{
-  FirstMeshSet.erase(*it);
-  Set.erase(*it);
-  return Queue.erase(it);
-}
-
-namespace
-{
-
 auto MakeDistanceKeyLess(glm::ivec3 focus_ground_chunk, int preferred_cy,
                          bool prefer_lower_cy, bool vertical_valid,
                          const std::function<bool(glm::ivec3)> &missing_mesh,
-                         const std::function<bool(glm::ivec3)> &first_mesh_class,
                          float forward_bias_k, glm::vec2 forward_xz,
                          int focus_radius_for_tail)
 {
   return [=](const glm::ivec3 &a, const glm::ivec3 &b)
   {
-    // TD-ARCH-029: FirstMesh class before remesh; missing before remesh.
-    if (first_mesh_class)
-    {
-      const bool fa = first_mesh_class(a);
-      const bool fb = first_mesh_class(b);
-      if (fa != fb)
-      {
-        return fa;
-      }
-    }
     if (missing_mesh)
     {
       const bool ma = missing_mesh(a);
@@ -130,14 +65,14 @@ auto MakeDistanceKeyLess(glm::ivec3 focus_ground_chunk, int preferred_cy,
         const bool ob = hb > focus_radius_for_tail;
         if (oa != ob)
         {
-          return ob; // in-focus remesh before outside-focus remesh
+          return ob;
         }
       }
     }
     const float ea = EffectiveHorizDist(a, focus_ground_chunk, forward_bias_k,
-                                       forward_xz);
+                                        forward_xz);
     const float eb = EffectiveHorizDist(b, focus_ground_chunk, forward_bias_k,
-                                       forward_xz);
+                                        forward_xz);
     if (ea != eb)
     {
       return ea < eb;
@@ -165,7 +100,150 @@ auto MakeDistanceKeyLess(glm::ivec3 focus_ground_chunk, int preferred_cy,
   };
 }
 
+void SortQueue(std::vector<glm::ivec3> &q, glm::ivec3 focus_ground_chunk,
+               int preferred_cy, bool prefer_lower_cy, bool vertical_valid,
+               const std::function<bool(glm::ivec3)> &missing_mesh,
+               float forward_bias_k, glm::vec2 forward_xz,
+               int focus_radius_for_tail)
+{
+  if (q.size() < 2)
+  {
+    return;
+  }
+  std::stable_sort(q.begin(), q.end(),
+                   MakeDistanceKeyLess(focus_ground_chunk, preferred_cy,
+                                       prefer_lower_cy, vertical_valid,
+                                       missing_mesh, forward_bias_k, forward_xz,
+                                       focus_radius_for_tail));
+}
+
+void PartialSortQueue(std::vector<glm::ivec3> &q, glm::ivec3 focus_ground_chunk,
+                      int preferred_cy, bool prefer_lower_cy,
+                      bool vertical_valid,
+                      const std::function<bool(glm::ivec3)> &missing_mesh,
+                      size_t keep_front, float forward_bias_k,
+                      glm::vec2 forward_xz, int focus_radius_for_tail)
+{
+  if (q.size() < 2 || keep_front == 0)
+  {
+    return;
+  }
+  if (keep_front >= q.size())
+  {
+    SortQueue(q, focus_ground_chunk, preferred_cy, prefer_lower_cy,
+              vertical_valid, missing_mesh, forward_bias_k, forward_xz,
+              focus_radius_for_tail);
+    return;
+  }
+  auto less = MakeDistanceKeyLess(focus_ground_chunk, preferred_cy,
+                                  prefer_lower_cy, vertical_valid, missing_mesh,
+                                  forward_bias_k, forward_xz,
+                                  focus_radius_for_tail);
+  std::partial_sort(q.begin(),
+                    q.begin() + static_cast<std::ptrdiff_t>(keep_front),
+                    q.end(), less);
+}
+
 } // namespace
+
+void UChunkDirtySet::EnsureUnified() const
+{
+  if (!UnifiedDirty)
+  {
+    return;
+  }
+  Queue.clear();
+  Queue.reserve(FirstMeshQ.size() + RemeshQ.size());
+  Queue.insert(Queue.end(), FirstMeshQ.begin(), FirstMeshQ.end());
+  Queue.insert(Queue.end(), RemeshQ.begin(), RemeshQ.end());
+  UnifiedDirty = false;
+}
+
+void UChunkDirtySet::MarkDirty(glm::ivec3 coord)
+{
+  // Already FirstMesh debt — do not demote.
+  if (FirstMeshSet.count(coord) > 0)
+  {
+    return;
+  }
+  if (!RemeshSet.insert(coord).second)
+  {
+    return;
+  }
+  RemeshQ.push_back(coord);
+  InvalidateUnified();
+}
+
+void UChunkDirtySet::MarkDirtyPriority(glm::ivec3 coord)
+{
+  if (RemeshSet.erase(coord) > 0)
+  {
+    RemeshQ.erase(std::remove(RemeshQ.begin(), RemeshQ.end(), coord),
+                  RemeshQ.end());
+  }
+  if (FirstMeshSet.count(coord) > 0)
+  {
+    FirstMeshQ.erase(std::remove(FirstMeshQ.begin(), FirstMeshQ.end(), coord),
+                     FirstMeshQ.end());
+  }
+  else
+  {
+    FirstMeshSet.insert(coord);
+  }
+  FirstMeshQ.insert(FirstMeshQ.begin(), coord);
+  InvalidateUnified();
+}
+
+void UChunkDirtySet::Erase(glm::ivec3 coord)
+{
+  bool erased = false;
+  if (FirstMeshSet.erase(coord) > 0)
+  {
+    FirstMeshQ.erase(std::remove(FirstMeshQ.begin(), FirstMeshQ.end(), coord),
+                     FirstMeshQ.end());
+    erased = true;
+  }
+  if (RemeshSet.erase(coord) > 0)
+  {
+    RemeshQ.erase(std::remove(RemeshQ.begin(), RemeshQ.end(), coord),
+                  RemeshQ.end());
+    erased = true;
+  }
+  if (erased)
+  {
+    InvalidateUnified();
+  }
+}
+
+void UChunkDirtySet::Clear()
+{
+  FirstMeshQ.clear();
+  RemeshQ.clear();
+  FirstMeshSet.clear();
+  RemeshSet.clear();
+  Queue.clear();
+  UnifiedDirty = false;
+}
+
+UChunkDirtySet::iterator UChunkDirtySet::RemoveAt(iterator it)
+{
+  EnsureUnified();
+  const glm::ivec3 coord = *it;
+  // Erase from owning queue without Invalidate mid-erase of unified.
+  if (FirstMeshSet.erase(coord) > 0)
+  {
+    FirstMeshQ.erase(std::remove(FirstMeshQ.begin(), FirstMeshQ.end(), coord),
+                     FirstMeshQ.end());
+  }
+  if (RemeshSet.erase(coord) > 0)
+  {
+    RemeshQ.erase(std::remove(RemeshQ.begin(), RemeshQ.end(), coord),
+                  RemeshQ.end());
+  }
+  auto next = Queue.erase(it);
+  // Unified still matches except removed element — keep valid.
+  return next;
+}
 
 void UChunkDirtySet::SortByDistanceKey(
     glm::ivec3 focus_ground_chunk, int preferred_cy, bool prefer_lower_cy,
@@ -173,16 +251,13 @@ void UChunkDirtySet::SortByDistanceKey(
     const std::function<bool(glm::ivec3)> &missing_mesh, float forward_bias_k,
     glm::vec2 forward_xz, int focus_radius_for_tail)
 {
-  if (Queue.size() < 2)
-  {
-    return;
-  }
-  auto first_mesh = [this](glm::ivec3 c) { return IsFirstMesh(c); };
-  std::stable_sort(Queue.begin(), Queue.end(),
-                   MakeDistanceKeyLess(focus_ground_chunk, preferred_cy,
-                                       prefer_lower_cy, vertical_valid,
-                                       missing_mesh, first_mesh, forward_bias_k,
-                                       forward_xz, focus_radius_for_tail));
+  SortQueue(FirstMeshQ, focus_ground_chunk, preferred_cy, prefer_lower_cy,
+            vertical_valid, missing_mesh, forward_bias_k, forward_xz,
+            focus_radius_for_tail);
+  SortQueue(RemeshQ, focus_ground_chunk, preferred_cy, prefer_lower_cy,
+            vertical_valid, missing_mesh, forward_bias_k, forward_xz,
+            focus_radius_for_tail);
+  InvalidateUnified();
 }
 
 void UChunkDirtySet::PartialSortByDistanceKey(
@@ -191,25 +266,18 @@ void UChunkDirtySet::PartialSortByDistanceKey(
     const std::function<bool(glm::ivec3)> &missing_mesh, size_t keep_front,
     float forward_bias_k, glm::vec2 forward_xz, int focus_radius_for_tail)
 {
-  if (Queue.size() < 2 || keep_front == 0)
-  {
-    return;
-  }
-  if (keep_front >= Queue.size())
-  {
-    SortByDistanceKey(focus_ground_chunk, preferred_cy, prefer_lower_cy,
-                      vertical_valid, missing_mesh, forward_bias_k, forward_xz,
-                      focus_radius_for_tail);
-    return;
-  }
-  auto first_mesh = [this](glm::ivec3 c) { return IsFirstMesh(c); };
-  auto less = MakeDistanceKeyLess(focus_ground_chunk, preferred_cy,
-                                  prefer_lower_cy, vertical_valid, missing_mesh,
-                                  first_mesh, forward_bias_k, forward_xz,
-                                  focus_radius_for_tail);
-  std::partial_sort(Queue.begin(),
-                    Queue.begin() + static_cast<std::ptrdiff_t>(keep_front),
-                    Queue.end(), less);
+  // Split keep_front across queues: prefer FirstMesh front.
+  const size_t fm_front =
+      std::min(keep_front, FirstMeshQ.empty() ? size_t{0} : FirstMeshQ.size());
+  const size_t rem_front =
+      keep_front > fm_front ? keep_front - fm_front : size_t{0};
+  PartialSortQueue(FirstMeshQ, focus_ground_chunk, preferred_cy, prefer_lower_cy,
+                   vertical_valid, missing_mesh, fm_front, forward_bias_k,
+                   forward_xz, focus_radius_for_tail);
+  PartialSortQueue(RemeshQ, focus_ground_chunk, preferred_cy, prefer_lower_cy,
+                   vertical_valid, missing_mesh, rem_front, forward_bias_k,
+                   forward_xz, focus_radius_for_tail);
+  InvalidateUnified();
 }
 
 void UChunkDirtySet::PrioritizeNearHorizontal(glm::ivec3 focus_ground_chunk,
@@ -231,39 +299,43 @@ void UChunkDirtySet::PrioritizeVerticalCy(glm::ivec3 focus_ground_chunk,
 void UChunkDirtySet::PrioritizeChunksWithoutMesh(
     const std::function<bool(glm::ivec3)> &missing_mesh)
 {
-  if (Queue.size() < 2 || !missing_mesh)
+  if (!missing_mesh)
   {
     return;
   }
-  std::stable_sort(Queue.begin(), Queue.end(),
-                   [&](const glm::ivec3 &a, const glm::ivec3 &b)
-                   {
-                     const bool ma = missing_mesh(a);
-                     const bool mb = missing_mesh(b);
-                     if (ma != mb)
-                     {
-                       return ma;
-                     }
-                     return false;
-                   });
+  auto by_missing = [&](const glm::ivec3 &a, const glm::ivec3 &b)
+  {
+    const bool ma = missing_mesh(a);
+    const bool mb = missing_mesh(b);
+    return ma != mb ? ma : false;
+  };
+  if (FirstMeshQ.size() >= 2)
+  {
+    std::stable_sort(FirstMeshQ.begin(), FirstMeshQ.end(), by_missing);
+  }
+  if (RemeshQ.size() >= 2)
+  {
+    std::stable_sort(RemeshQ.begin(), RemeshQ.end(), by_missing);
+  }
+  InvalidateUnified();
 }
 
 int UChunkDirtySet::MaybeDropFarthest(
     glm::ivec3 focus_ground_chunk, size_t soft_cap, int min_keep_horiz,
     const std::function<bool(glm::ivec3)> &missing_mesh)
 {
-  if (soft_cap == 0 || Queue.size() <= soft_cap)
+  if (soft_cap == 0 || GetCount() <= soft_cap)
   {
     return 0;
   }
   int dropped = 0;
-  while (Queue.size() > soft_cap)
+  while (GetCount() > soft_cap)
   {
     int best_i = -1;
     int best_dist = -1;
-    for (size_t i = 0; i < Queue.size(); ++i)
+    for (size_t i = 0; i < RemeshQ.size(); ++i)
     {
-      const glm::ivec3 &c = Queue[i];
+      const glm::ivec3 &c = RemeshQ[i];
       const int d = HorizDist(c, focus_ground_chunk);
       if (d <= min_keep_horiz)
       {
@@ -272,10 +344,6 @@ int UChunkDirtySet::MaybeDropFarthest(
       if (missing_mesh && missing_mesh(c))
       {
         continue;
-      }
-      if (IsFirstMesh(c))
-      {
-        continue; // TD-ARCH-029: never drop first-mesh debt
       }
       if (d > best_dist)
       {
@@ -287,7 +355,7 @@ int UChunkDirtySet::MaybeDropFarthest(
     {
       break;
     }
-    const glm::ivec3 victim = Queue[static_cast<size_t>(best_i)];
+    const glm::ivec3 victim = RemeshQ[static_cast<size_t>(best_i)];
     Erase(victim);
     ++dropped;
   }

@@ -594,8 +594,18 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
                                                               focus_radius);
   static int unfinished_sample_cd = 0;
   static int last_unfinished_visual = 0;
+  static glm::ivec3 last_unfinished_focus{0};
+  static int last_unfinished_radius = -1;
   int unfinished_visual = 0;
   int focus_pressure = 0;
+  if (focus_horiz != last_unfinished_focus ||
+      focus_radius != last_unfinished_radius)
+  {
+    world.InvalidateUnfinishedVisualCache();
+    last_unfinished_focus = focus_horiz;
+    last_unfinished_radius = focus_radius;
+    unfinished_sample_cd = 0;
+  }
   if (!moving_for_telemetry)
   {
     last_unfinished_visual =
@@ -1543,6 +1553,16 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     {
       bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 2 : 3);
     }
+    const auto &rt = URuntimeTuning::Get();
+    if (ShouldCruiseRedFifoLightDrain(
+            world.PhysicsTelemetryData.StreamPressure, fifo_n, soft_cap,
+            rt.RelightFifoAdmitFrac,
+            missing_focus_mesh ||
+                world.PhysicsTelemetryData.VisualHoles != 0,
+            world.PhysicsTelemetryData.PendingLightFocus))
+    {
+      bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 3 : 4);
+    }
   }
   if (ingress.active && ingress.promote_once)
   {
@@ -1866,6 +1886,16 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       {
         bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 2 : 3);
       }
+      const auto &rt = URuntimeTuning::Get();
+      if (ShouldCruiseRedFifoLightDrain(
+              world.PhysicsTelemetryData.StreamPressure, fifo_n, soft_cap,
+              rt.RelightFifoAdmitFrac,
+              missing_focus_mesh ||
+                  world.PhysicsTelemetryData.VisualHoles != 0,
+              world.PhysicsTelemetryData.PendingLightFocus))
+      {
+        bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 3 : 4);
+      }
     }
     if (LastMemoryDecision.capture_hard_cap >= 0)
     {
@@ -2050,6 +2080,10 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
       world.GetMeshService().GetLastDirtyTouchN();
   world.PhysicsTelemetryData.DirtyRevisitSameN =
       world.GetMeshService().GetLastDirtyRevisitSameN();
+  world.PhysicsTelemetryData.DirtyFmN =
+      world.GetMeshService().GetLastDirtyFmN();
+  world.PhysicsTelemetryData.DirtyRemeshN =
+      world.GetMeshService().GetLastDirtyRemeshN();
 }
 
 void UWorldStreaming::InitStreamerCallbacks(UWorld &world)

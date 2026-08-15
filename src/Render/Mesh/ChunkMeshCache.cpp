@@ -3375,6 +3375,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastMeshDirtySyncMs = 0.0;
   LastMeshDirtySyncN = 0;
   LastDirtyTouchN = static_cast<int>(Dirty.GetCount());
+  LastDirtyFmN = static_cast<int>(Dirty.GetFirstMeshCount());
+  LastDirtyRemeshN = static_cast<int>(Dirty.GetRemeshCount());
   LastDirtyRevisitSameN = 0;
   if (!PrevDirtyForRevisit.empty() && !Dirty.empty())
   {
@@ -3773,7 +3775,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         sched_adm.first_mesh_schedule > 0
             ? sched_adm.first_mesh_schedule
             : kReservedFocusMissingSlots;
-    const int remesh_cap =
+    int remesh_cap =
         sched_adm.remesh_schedule > 0 ? sched_adm.remesh_schedule
                                       : max_schedule_per_frame;
     const int rear_focus_cap = std::max(0, MaxRearFocusMeshPerFrame);
@@ -3925,18 +3927,29 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       return it;
     };
 
-    // Pass 1: reserved slots for focus missing (highest priority).
+    // Pass 1: FirstMeshQ prefix only (dual-queue: remesh never scanned here).
     seg_t0 = std::chrono::high_resolution_clock::now();
     const bool focus_missing_for_schedule =
         MeshFocusValid &&
         HasMissingGreedyMeshInHorizontalRadius(world, MeshFocusGroundChunk,
                                                MeshFocusRadiusChunks);
+    // P4: under holes, finish focus-missing GPU before admitting remesh.
+    if ((StarveRemeshForHoles || focus_missing_for_schedule) &&
+        CountPendingGpuAppliesInHorizontalRadius(MeshFocusGroundChunk,
+                                                 MeshFocusRadiusChunks) > 0)
+    {
+      remesh_cap = 0;
+    }
     if (MeshFocusValid && first_mesh_cap > 0)
     {
       for (auto it = Dirty.begin();
            it != Dirty.end() && scheduled < max_schedule_per_frame &&
            reserved_focus_scheduled < first_mesh_cap;)
       {
+        if (!Dirty.IsFirstMesh(*it))
+        {
+          break;
+        }
         const int dx = std::abs(it->x - MeshFocusGroundChunk.x);
         const int dz = std::abs(it->z - MeshFocusGroundChunk.z);
         const int horiz = std::max(dx, dz);
@@ -3946,7 +3959,6 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           continue;
         }
         auto next = try_schedule(it, false, false, true);
-        // try_schedule may RemoveAt(it); never compare/use it afterward.
         if (next == Dirty.end())
         {
           break;
@@ -4050,6 +4062,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       const bool is_remesh = HasDrawableGreedyMesh(*it);
       if (is_remesh && remesh_scheduled >= remesh_cap)
       {
+        // Dual-queue: remesh suffix is contiguous after FirstMesh — stop walk.
+        if (!Dirty.IsFirstMesh(*it))
+        {
+          break;
+        }
         ++it;
         continue;
       }

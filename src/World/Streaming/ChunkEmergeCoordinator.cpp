@@ -11,6 +11,7 @@
 #include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Streaming/OceanCruisePolicy.h"
+#include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/CyOrderPolicy.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/NearFovWorkPriority.h"
@@ -316,6 +317,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       [&world](glm::ivec3 chunk_coord)
       {
         world.ClearStickyRemeshAfterLightColumn(
+            glm::ivec2(chunk_coord.x, chunk_coord.z));
+        world.NoteUnfinishedColumnDirty(
+            glm::ivec2(chunk_coord.x, chunk_coord.z));
+      });
+  mesh_service.SetOnMeshColumnDirtyFn(
+      [&world](glm::ivec3 chunk_coord)
+      {
+        world.NoteUnfinishedColumnDirty(
             glm::ivec2(chunk_coord.x, chunk_coord.z));
       });
 
@@ -1178,6 +1187,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const int dropped = world.TrimFarRelightFifoFarthest(
           focus_ground_horiz, mtune.RelightFifoSoftCap);
       phys.RelightFifoDropped += static_cast<uint64_t>(std::max(0, dropped));
+      // P4: under Red+holes+fifo pressure, trim again toward soft-cap aggressively.
+      const int fifo_live = world.GetPendingTerrainRelightFifoCount();
+      if (ShouldCruiseRedFifoLightDrain(
+              pressure, fifo_live, mtune.RelightFifoSoftCap,
+              mtune.RelightFifoAdmitFrac,
+              visual_holes || missing_visible_mesh || missing_underfeet,
+              pending_focus_count))
+      {
+        const int drop2 = world.TrimFarRelightFifoFarthest(
+            focus_ground_horiz, std::max(8, mtune.RelightFifoSoftCap * 3 / 4));
+        phys.RelightFifoDropped += static_cast<uint64_t>(std::max(0, drop2));
+      }
     }
   }
 
@@ -1367,6 +1388,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
              : (healed_idle_emerge
                     ? (idle_focus_dirty_debt ? 28.0 : 14.0)
                     : 60.0));
+  auto clamp_emerge_to_phase = [&]()
+  {
+    const double cap = world.GetPhysicsTelemetry().EmergeBudgetCapMs;
+    if (cap <= 0.0)
+    {
+      return;
+    }
+    mesh_service.SetMeshEmergeTotalBudgetMs(static_cast<float>(
+        std::min(static_cast<double>(mesh_service.GetMeshEmergeTotalBudgetMs()),
+                 cap)));
+  };
+  clamp_emerge_to_phase();
   // Era31 I-T2: cap emerge + defer far stale remesh under ocean heal pressure.
   {
     auto &phys_ocean = world.GetPhysicsTelemetryMutable();
@@ -1378,6 +1411,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       if (moving)
       {
         mesh_service.SetMeshEmergeTotalBudgetMs(OceanHealMeshEmergeBudgetMs());
+        clamp_emerge_to_phase();
       }
       if (phys_ocean.DarkFaceVoidNearN > 200)
       {
@@ -1398,6 +1432,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           moving);
       mesh_service.SetMeshEmergeTotalBudgetMs(std::min(
           mesh_service.GetMeshEmergeTotalBudgetMs(), cruise_budget));
+      clamp_emerge_to_phase();
       mesh_service.SetStarveRemeshForHoles(true);
       mesh_drain = std::max(mesh_drain, 14);
       mesh_schedule = std::max(mesh_schedule, 12);
@@ -1560,7 +1595,23 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           std::abs(nearest_missing_hole.z - focus_ground_horiz.z));
       ain.nearest_miss_cy = nearest_missing_hole.y;
     }
-    mesh_service.SetMeshWorkAdmission(ComputeMeshWorkAdmission(ain));
+    {
+      MeshWorkAdmission early_adm = ComputeMeshWorkAdmission(ain);
+      const auto &tune = URuntimeTuning::Get();
+      const auto &pt = world.GetPhysicsTelemetry();
+      RemeshAdmitBackpressureInput bin{};
+      bin.stream_pressure = pt.StreamPressure;
+      bin.fifo_n = pt.RelightFifoN;
+      bin.dirty_n = static_cast<int>(pending_dirty_early);
+      bin.relight_fifo_soft_cap = tune.RelightFifoSoftCap;
+      bin.dirty_thrash_soft_cap = tune.DirtyThrashSoftCap;
+      bin.fifo_admit_frac = tune.RelightFifoAdmitFrac;
+      bin.admit_cap_red = tune.DirtyAdmitCapRed;
+      bin.admit_cap_yellow = tune.DirtyAdmitCapYellow;
+      bin.miss_active = visual_holes || missing_visible_mesh || missing_underfeet;
+      ApplyRemeshAdmitBackpressure(early_adm, bin);
+      mesh_service.SetMeshWorkAdmission(early_adm);
+    }
   }
   if (focus_not_render_ready > 12 && pending_async_early < 10)
   {
@@ -3085,6 +3136,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       if (calm_cap.emerge_total_budget_ms > 0.0)
       {
         mesh_service.SetMeshEmergeTotalBudgetMs(calm_cap.emerge_total_budget_ms);
+        clamp_emerge_to_phase();
       }
       sync_cap = std::min(sync_cap < 0 ? 0 : sync_cap, calm_cap.sync_cap);
       sync_budget_ms = std::min(sync_budget_ms, calm_cap.sync_budget_ms);
@@ -3151,7 +3203,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       ain.nearest_miss_cy = world.GetPhysicsTelemetry().MissCy;
     }
     ain.enter_lit_gate = world.IsEnterLitGateActive();
-    const MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
+    MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
+    {
+      const auto &tune = URuntimeTuning::Get();
+      const auto &pt = world.GetPhysicsTelemetry();
+      RemeshAdmitBackpressureInput bin{};
+      bin.stream_pressure = pt.StreamPressure;
+      bin.fifo_n = pt.RelightFifoN;
+      bin.dirty_n = static_cast<int>(pending_dirty);
+      bin.relight_fifo_soft_cap = tune.RelightFifoSoftCap;
+      bin.dirty_thrash_soft_cap = tune.DirtyThrashSoftCap;
+      bin.fifo_admit_frac = tune.RelightFifoAdmitFrac;
+      bin.admit_cap_red = tune.DirtyAdmitCapRed;
+      bin.admit_cap_yellow = tune.DirtyAdmitCapYellow;
+      bin.miss_active = visual_holes || missing_visible_mesh || missing_underfeet;
+      ApplyRemeshAdmitBackpressure(adm, bin);
+    }
     mesh_service.SetMeshWorkAdmission(adm);
     mesh_schedule = FinalizeSchedule(mesh_schedule, adm);
     mesh_drain = FinalizeDrain(mesh_drain, adm);
@@ -3175,6 +3242,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         bumped.softdefer_requeue = std::max(bumped.softdefer_requeue, 1);
         bumped.first_mesh_schedule =
             std::max(bumped.first_mesh_schedule, 4);
+        {
+          const auto &tune = URuntimeTuning::Get();
+          const auto &pt = world.GetPhysicsTelemetry();
+          RemeshAdmitBackpressureInput bin{};
+          bin.stream_pressure = pt.StreamPressure;
+          bin.fifo_n = pt.RelightFifoN;
+          bin.dirty_n = static_cast<int>(pending_dirty);
+          bin.relight_fifo_soft_cap = tune.RelightFifoSoftCap;
+          bin.dirty_thrash_soft_cap = tune.DirtyThrashSoftCap;
+          bin.fifo_admit_frac = tune.RelightFifoAdmitFrac;
+          bin.admit_cap_red = tune.DirtyAdmitCapRed;
+          bin.admit_cap_yellow = tune.DirtyAdmitCapYellow;
+          bin.miss_active =
+              visual_holes || missing_visible_mesh || missing_underfeet;
+          ApplyRemeshAdmitBackpressure(bumped, bin);
+        }
         mesh_service.SetMeshWorkAdmission(bumped);
         mesh_schedule = std::max(mesh_schedule, 12);
       }
@@ -3245,6 +3328,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       if (calm_cap.emerge_total_budget_ms > 0.0)
       {
         mesh_service.SetMeshEmergeTotalBudgetMs(calm_cap.emerge_total_budget_ms);
+        clamp_emerge_to_phase();
       }
       sync_cap = std::min(sync_cap < 0 ? 0 : sync_cap, calm_cap.sync_cap);
       sync_budget_ms = std::min(sync_budget_ms, calm_cap.sync_budget_ms);

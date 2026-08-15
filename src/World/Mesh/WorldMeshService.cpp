@@ -73,6 +73,12 @@ void UWorldMeshService::SetOnLitDrawableCommittedFn(
   Cache.SetOnLitDrawableCommittedFn(std::move(fn));
 }
 
+void UWorldMeshService::SetOnMeshColumnDirtyFn(
+    std::function<void(glm::ivec3)> fn)
+{
+  OnMeshColumnDirtyFn = std::move(fn);
+}
+
 void UWorldMeshService::SetStarveOutsideFocusMesh(bool starve)
 {
   Cache.SetStarveOutsideFocusMesh(starve);
@@ -250,12 +256,20 @@ void UWorldMeshService::MarkDirty(glm::ivec3 chunk_coord)
 {
   Cache.MarkDirty(chunk_coord);
   NotifyChunkBlocksChanged(chunk_coord);
+  if (OnMeshColumnDirtyFn)
+  {
+    OnMeshColumnDirtyFn(chunk_coord);
+  }
 }
 
 void UWorldMeshService::MarkDirtyPriority(glm::ivec3 chunk_coord)
 {
   Cache.MarkDirtyPriority(chunk_coord);
   NotifyChunkBlocksChanged(chunk_coord);
+  if (OnMeshColumnDirtyFn)
+  {
+    OnMeshColumnDirtyFn(chunk_coord);
+  }
 }
 
 void UWorldMeshService::PrefetchMeshCapture(const UBlockWorld &world,
@@ -909,6 +923,16 @@ int UWorldMeshService::GetLastDirtyTouchN() const
 int UWorldMeshService::GetLastDirtyRevisitSameN() const
 {
   return Cache.GetLastDirtyRevisitSameN();
+}
+
+int UWorldMeshService::GetLastDirtyFmN() const
+{
+  return Cache.GetLastDirtyFmN();
+}
+
+int UWorldMeshService::GetLastDirtyRemeshN() const
+{
+  return Cache.GetLastDirtyRemeshN();
 }
 
 size_t UWorldMeshService::GetGreedyCacheSize() const

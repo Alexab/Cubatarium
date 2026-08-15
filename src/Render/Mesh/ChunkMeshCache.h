@@ -128,6 +128,8 @@ public:
   int GetLastMeshDirtySyncN() const { return LastMeshDirtySyncN; }
   int GetLastDirtyTouchN() const { return LastDirtyTouchN; }
   int GetLastDirtyRevisitSameN() const { return LastDirtyRevisitSameN; }
+  int GetLastDirtyFmN() const { return LastDirtyFmN; }
+  int GetLastDirtyRemeshN() const { return LastDirtyRemeshN; }
   int GetAsyncInFlightCount() const;
   size_t GetMeshCompletedSize() const;
   size_t GetMeshCompletedCapacity() const;
@@ -655,6 +657,8 @@ private:
   int LastMeshDirtySyncN{0};
   int LastDirtyTouchN{0};
   int LastDirtyRevisitSameN{0};
+  int LastDirtyFmN{0};
+  int LastDirtyRemeshN{0};
   /// Prior-frame Dirty coords (capped) for dirty_revisit_same_n.
   std::unordered_set<glm::ivec3, IVec3Hash> PrevDirtyForRevisit;
   double LastMeshImmediateMs{0.0};

@@ -10,8 +10,9 @@
 namespace cutum
 {
 
-/// Deduped queue of chunk coords pending mesh rebuild (used by UChunkMeshCache).
-/// Ordered each tick: missing-mesh class → effective horiz dist → preferred cy.
+/// Deduped dual queue of chunk coords pending mesh rebuild.
+/// FirstMeshQ ← MarkDirtyPriority; RemeshQ ← MarkDirty (Cruise wall P1).
+/// Unified Queue is rebuilt lazily for legacy begin()/end() iteration.
 class UChunkDirtySet
 {
 public:
@@ -24,21 +25,41 @@ public:
     return FirstMeshSet.find(coord) != FirstMeshSet.end();
   }
 
-  size_t GetCount() const { return Queue.size(); }
-  bool empty() const { return Queue.empty(); }
-  bool Contains(glm::ivec3 coord) const { return Set.find(coord) != Set.end(); }
+  size_t GetCount() const { return FirstMeshQ.size() + RemeshQ.size(); }
+  size_t GetFirstMeshCount() const { return FirstMeshQ.size(); }
+  size_t GetRemeshCount() const { return RemeshQ.size(); }
+  bool empty() const { return FirstMeshQ.empty() && RemeshQ.empty(); }
+  bool Contains(glm::ivec3 coord) const
+  {
+    return FirstMeshSet.count(coord) > 0 || RemeshSet.count(coord) > 0;
+  }
 
   using iterator = std::vector<glm::ivec3>::iterator;
   using const_iterator = std::vector<glm::ivec3>::const_iterator;
-  iterator begin() { return Queue.begin(); }
-  iterator end() { return Queue.end(); }
-  const_iterator begin() const { return Queue.begin(); }
-  const_iterator end() const { return Queue.end(); }
+  iterator begin()
+  {
+    EnsureUnified();
+    return Queue.begin();
+  }
+  iterator end()
+  {
+    EnsureUnified();
+    return Queue.end();
+  }
+  const_iterator begin() const
+  {
+    EnsureUnified();
+    return Queue.begin();
+  }
+  const_iterator end() const
+  {
+    EnsureUnified();
+    return Queue.end();
+  }
 
   iterator RemoveAt(iterator it);
 
-  /// Order: missing mesh first, then Chebyshev−forward_bias, then |cy−prefer|.
-  /// forward_bias_k / forward_xz: weak motion/view bias (0 = distance only).
+  /// Sort FirstMeshQ then RemeshQ independently, then refresh unified view.
   void SortByDistanceKey(glm::ivec3 focus_ground_chunk, int preferred_cy,
                          bool prefer_lower_cy, bool vertical_valid,
                          const std::function<bool(glm::ivec3)> &missing_mesh,
@@ -46,9 +67,6 @@ public:
                          glm::vec2 forward_xz = glm::vec2(0.0f),
                          int focus_radius_for_tail = -1);
 
-  /// Same key as SortByDistanceKey, but only the first `keep_front` entries are
-  /// ordered. Use when Dirty ≫ schedule budget so mesh_dirty_tick cannot pay
-  /// full O(n log n) every frame (manual: Dirty~650 → dirty_tick~100ms).
   void PartialSortByDistanceKey(
       glm::ivec3 focus_ground_chunk, int preferred_cy, bool prefer_lower_cy,
       bool vertical_valid,
@@ -62,24 +80,45 @@ public:
   void PrioritizeVerticalCy(glm::ivec3 focus_ground_chunk, int radius_chunks,
                             int preferred_cy, bool prefer_lower_cy);
 
-  /// Drop farthest remesh entries until Size <= soft_cap. Never drops underfeet
-  /// (horiz <= min_keep_horiz) or missing-mesh entries when missing_mesh is set.
-  /// Returns number of dropped coords.
+  /// Drop farthest remesh entries until total Size <= soft_cap. Never drops
+  /// FirstMeshQ or underfeet / missing when missing_mesh is set.
   int MaybeDropFarthest(glm::ivec3 focus_ground_chunk, size_t soft_cap,
                         int min_keep_horiz = 1,
                         const std::function<bool(glm::ivec3)> &missing_mesh = {});
 
   void ReserveCapacity(size_t n)
   {
+    FirstMeshQ.reserve(n);
+    RemeshQ.reserve(n);
+    FirstMeshSet.reserve(n);
+    RemeshSet.reserve(n);
     Queue.reserve(n);
-    Set.reserve(n);
+  }
+
+  const std::vector<glm::ivec3> &FirstMeshQueue() const { return FirstMeshQ; }
+  const std::vector<glm::ivec3> &RemeshQueue() const { return RemeshQ; }
+  std::vector<glm::ivec3> &FirstMeshQueueMutable()
+  {
+    InvalidateUnified();
+    return FirstMeshQ;
+  }
+  std::vector<glm::ivec3> &RemeshQueueMutable()
+  {
+    InvalidateUnified();
+    return RemeshQ;
   }
 
 private:
-  std::vector<glm::ivec3> Queue;
-  std::unordered_set<glm::ivec3, IVec3Hash> Set;
-  /// TD-ARCH-029: first-mesh debt (MarkDirtyPriority); remesh uses MarkDirty.
+  void InvalidateUnified() const { UnifiedDirty = true; }
+  void EnsureUnified() const;
+
+  std::vector<glm::ivec3> FirstMeshQ;
+  std::vector<glm::ivec3> RemeshQ;
   std::unordered_set<glm::ivec3, IVec3Hash> FirstMeshSet;
+  std::unordered_set<glm::ivec3, IVec3Hash> RemeshSet;
+  /// Lazy concat FirstMeshQ + RemeshQ for legacy iterators.
+  mutable std::vector<glm::ivec3> Queue;
+  mutable bool UnifiedDirty{true};
 };
 
 } // namespace cutum

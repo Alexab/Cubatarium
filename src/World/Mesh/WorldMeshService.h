@@ -60,6 +60,8 @@ public:
   void SetOnLitPendingNeededFn(std::function<void(glm::ivec3)> fn);
   void SetOnSoftDeferHeldFn(std::function<void(glm::ivec3)> fn);
   void SetOnLitDrawableCommittedFn(std::function<void(glm::ivec3)> fn);
+  /// Cruise wall P3: MarkDirty / MarkDirtyPriority notify unfinished cache.
+  void SetOnMeshColumnDirtyFn(std::function<void(glm::ivec3)> fn);
   void SetStarveOutsideFocusMesh(bool starve);
   void SetStarveRemeshForHoles(bool starve);
   void SetStarveRemeshKeepHoriz(int keep_h);
@@ -213,6 +215,8 @@ public:
   int GetLastMeshDirtySyncN() const;
   int GetLastDirtyTouchN() const;
   int GetLastDirtyRevisitSameN() const;
+  int GetLastDirtyFmN() const;
+  int GetLastDirtyRemeshN() const;
   size_t GetGreedyCacheSize() const;
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;
   /// True only when cache has GPU quads or non-empty CPU batches (not empty
@@ -324,6 +328,7 @@ private:
   DigSeamQueue DigSeam;
   int LastDigSeamRemeshN{0};
   int LastDigSeamPendingN{0};
+  std::function<void(glm::ivec3)> OnMeshColumnDirtyFn;
 };
 
 } // namespace cutum

@@ -1155,6 +1155,11 @@ public:
   /// Focus columns that are loaded but not yet safe to render.
   int CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
                                 int radius_chunks) const;
+  /// Cruise wall P3: invalidate unfinished ring cache (focus shift / mesh events).
+  void InvalidateUnfinishedVisualCache() const;
+  void NoteUnfinishedColumnDirty(glm::ivec2 col) const;
+  /// Harvest per-frame prep_unfinished_full_n / incremental_n into telem.
+  void HarvestUnfinishedPrepTelem(PhysicsTelemetry &tele) const;
   /// Split unfinished focus by movement/view forward (dot>=0 ahead, else behind).
   void CountUnfinishedVisualByFacing(glm::ivec3 focus_ground_chunk,
                                      int radius_chunks, glm::vec2 forward_xz,
@@ -1482,6 +1487,20 @@ private:
   PhysicsFeatureFlags PhysicsFlags;
   PhysicsBudgets PhysicsBudgetConfig;
   PhysicsTelemetry PhysicsTelemetryData;
+  /// Cruise wall P3: unfinished visual ring cache (not HoleQueryEpoch).
+  mutable struct UnfinishedVisualCacheState
+  {
+    bool valid{false};
+    glm::ivec3 focus{0};
+    int radius{-1};
+    int count{0};
+    /// Packed xz of columns currently counted unfinished in the ring.
+    std::unordered_set<uint64_t> unfinished_keys;
+    /// Columns needing ±1 recheck (MarkDirty / mesh-ready / load).
+    std::vector<glm::ivec2> dirty_cols;
+    int prep_full_n{0};
+    int prep_incremental_n{0};
+  } UnfinishedVisualCache;
   uint64_t PhysicsTickCounter{0};
   double WallFrameDeltaSec{0.0};
   uint64_t PhysicsEventOrderCounter{0};

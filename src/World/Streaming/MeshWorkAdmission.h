@@ -344,6 +344,58 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   return out;
 }
 
+/// Cruise wall P0: remesh DirtyAdmit backpressure when Pressure/fifo/Dirty thrash.
+/// FirstMesh / !Drawable paths do not consume DirtyAdmit (enforced in Cache).
+struct RemeshAdmitBackpressureInput
+{
+  int stream_pressure{0}; // 0 Green / 1 Yellow / 2 Red
+  int fifo_n{0};
+  int dirty_n{0};
+  int relight_fifo_soft_cap{96};
+  int dirty_thrash_soft_cap{320};
+  float fifo_admit_frac{0.75f};
+  int admit_cap_red{0};
+  int admit_cap_yellow{1};
+  bool miss_active{false};
+};
+
+inline bool ShouldApplyRemeshAdmitBackpressure(
+    const RemeshAdmitBackpressureInput &in)
+{
+  if (in.stream_pressure >= 2)
+  {
+    return true;
+  }
+  const int fifo_thresh = static_cast<int>(
+      static_cast<float>(std::max(1, in.relight_fifo_soft_cap)) *
+      std::max(0.1f, in.fifo_admit_frac));
+  if (in.fifo_n >= fifo_thresh)
+  {
+    return true;
+  }
+  return in.dirty_n > std::max(0, in.dirty_thrash_soft_cap);
+}
+
+inline void ApplyRemeshAdmitBackpressure(MeshWorkAdmission &adm,
+                                         const RemeshAdmitBackpressureInput &in)
+{
+  if (!ShouldApplyRemeshAdmitBackpressure(in))
+  {
+    return;
+  }
+  const int admit_cap =
+      in.stream_pressure >= 2 ? in.admit_cap_red : in.admit_cap_yellow;
+  adm.dirty_admit_budget = std::min(adm.dirty_admit_budget, std::max(0, admit_cap));
+  adm.remesh_schedule =
+      std::min(adm.remesh_schedule, in.miss_active ? 0 : 1);
+  adm.allow_neighbor_dirty = false;
+  if (adm.first_mesh_schedule > 0 && adm.max_schedule > 0)
+  {
+    adm.max_schedule =
+        std::max(adm.max_schedule, adm.first_mesh_schedule + adm.remesh_schedule);
+  }
+}
+
 inline int FinalizeSchedule(int proposed_schedule, const MeshWorkAdmission &adm)
 {
   proposed_schedule = std::max(0, proposed_schedule);

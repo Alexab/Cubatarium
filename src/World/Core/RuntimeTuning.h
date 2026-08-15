@@ -90,6 +90,12 @@ struct URuntimeTuning
   int DirtyThrashAsyncMin{12};
   int PendingLightSoftCap{80};
   int RelightFifoSoftCap{96};
+  /// Cruise wall P0: remesh DirtyAdmit caps under Pressure/fifo thrash.
+  int DirtyAdmitCapRed{0};
+  int DirtyAdmitCapYellow{1};
+  float RelightFifoAdmitFrac{0.75f};
+  /// Cruise wall P2: miss FirstMesh/GPU reserved ms inside StreamingPhaseBudget.
+  float MissReservedMs{8.0f};
   /// Era19 kill-switch: SoftDefer Capture floor while VisibleBlack (Era18).
   /// Default true = current Era18 behavior until miss-first budget owns it.
   bool Era18VbCaptureFloor{true};

@@ -2571,6 +2571,27 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
   return out;
 }
 
+namespace
+{
+uint64_t PackUnfinishedColKey(int x, int z)
+{
+  return (static_cast<uint64_t>(static_cast<uint32_t>(x)) << 32) |
+         static_cast<uint32_t>(z);
+}
+
+bool ColumnUnfinishedVisual(const UWorld &world, glm::ivec3 focus_ground,
+                            int dx, int dz)
+{
+  const glm::ivec3 ground(focus_ground.x + dx, 0, focus_ground.z + dz);
+  if (!IsTerrainChunkComplete(world.GetBlockWorld(), ground,
+                              world.GetProceduralSettings().MaxHeight))
+  {
+    return false;
+  }
+  return !world.IsColumnRenderReady(ground);
+}
+} // namespace
+
 int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
                                       int radius_chunks) const
 {
@@ -2578,24 +2599,136 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   {
     return 0;
   }
+  auto &cache = UnfinishedVisualCache;
+  if (cache.valid && cache.focus == focus_ground_chunk &&
+      cache.radius == radius_chunks && cache.dirty_cols.empty())
+  {
+    ++cache.prep_incremental_n;
+    return cache.count;
+  }
+  // Incremental: recheck dirty columns ∪ rim±1 and adjust cached count/set.
+  constexpr int kIncrementalDirtyMax = 48;
+  if (cache.valid && cache.focus == focus_ground_chunk &&
+      cache.radius == radius_chunks && !cache.dirty_cols.empty() &&
+      static_cast<int>(cache.dirty_cols.size()) <= kIncrementalDirtyMax)
+  {
+    std::unordered_set<uint64_t> recheck;
+    recheck.reserve(cache.dirty_cols.size() * 9u);
+    for (const glm::ivec2 &col : cache.dirty_cols)
+    {
+      for (int dz = -1; dz <= 1; ++dz)
+      {
+        for (int dx = -1; dx <= 1; ++dx)
+        {
+          const int cx = col.x + dx;
+          const int cz = col.y + dz;
+          const int rdx = cx - focus_ground_chunk.x;
+          const int rdz = cz - focus_ground_chunk.z;
+          if (std::max(std::abs(rdx), std::abs(rdz)) > radius_chunks)
+          {
+            continue;
+          }
+          recheck.insert(PackUnfinishedColKey(cx, cz));
+        }
+      }
+    }
+    int count = cache.count;
+    for (uint64_t key : recheck)
+    {
+      const int cx = static_cast<int>(static_cast<uint32_t>(key >> 32));
+      const int cz = static_cast<int>(static_cast<uint32_t>(key));
+      const int rdx = cx - focus_ground_chunk.x;
+      const int rdz = cz - focus_ground_chunk.z;
+      const bool now =
+          ColumnUnfinishedVisual(*this, focus_ground_chunk, rdx, rdz);
+      const bool was = cache.unfinished_keys.count(key) != 0;
+      if (now == was)
+      {
+        continue;
+      }
+      if (now)
+      {
+        cache.unfinished_keys.insert(key);
+        ++count;
+      }
+      else
+      {
+        cache.unfinished_keys.erase(key);
+        --count;
+      }
+    }
+    cache.count = std::max(0, count);
+    cache.dirty_cols.clear();
+    ++cache.prep_incremental_n;
+    return cache.count;
+  }
   int unfinished = 0;
+  cache.unfinished_keys.clear();
+  cache.unfinished_keys.reserve(static_cast<size_t>((2 * radius_chunks + 1) *
+                                                    (2 * radius_chunks + 1) /
+                                                    4));
   for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
   {
     for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
     {
-      const glm::ivec3 ground(focus_ground_chunk.x + dx, 0,
-                              focus_ground_chunk.z + dz);
-      if (!IsTerrainChunkComplete(BlockWorld, ground, ProceduralTemplate.MaxHeight))
+      if (!ColumnUnfinishedVisual(*this, focus_ground_chunk, dx, dz))
       {
         continue;
       }
-      if (!IsColumnRenderReady(ground))
-      {
-        ++unfinished;
-      }
+      ++unfinished;
+      cache.unfinished_keys.insert(PackUnfinishedColKey(
+          focus_ground_chunk.x + dx, focus_ground_chunk.z + dz));
     }
   }
+  cache.valid = true;
+  cache.focus = focus_ground_chunk;
+  cache.radius = radius_chunks;
+  cache.count = unfinished;
+  cache.dirty_cols.clear();
+  ++cache.prep_full_n;
   return unfinished;
+}
+
+void UWorld::InvalidateUnfinishedVisualCache() const
+{
+  UnfinishedVisualCache.valid = false;
+  UnfinishedVisualCache.dirty_cols.clear();
+  UnfinishedVisualCache.unfinished_keys.clear();
+  UnfinishedVisualCache.count = 0;
+}
+
+void UWorld::NoteUnfinishedColumnDirty(glm::ivec2 col) const
+{
+  if (!UnfinishedVisualCache.valid)
+  {
+    return;
+  }
+  auto &dirty = UnfinishedVisualCache.dirty_cols;
+  constexpr size_t kDirtyCap = 64;
+  if (dirty.size() >= kDirtyCap)
+  {
+    // Overflow → next CountUnfinished forces full rescan.
+    UnfinishedVisualCache.valid = false;
+    dirty.clear();
+    UnfinishedVisualCache.unfinished_keys.clear();
+    return;
+  }
+  for (const glm::ivec2 &existing : dirty)
+  {
+    if (existing.x == col.x && existing.y == col.y)
+    {
+      return;
+    }
+  }
+  dirty.push_back(col);
+}
+
+void UWorld::HarvestUnfinishedPrepTelem(PhysicsTelemetry &tele) const
+{
+  tele.PrepUnfinishedFullN = UnfinishedVisualCache.prep_full_n;
+  tele.PrepUnfinishedIncrementalN = UnfinishedVisualCache.prep_incremental_n;
+  UnfinishedVisualCache.prep_full_n = 0;
+  UnfinishedVisualCache.prep_incremental_n = 0;
 }
 
 void UWorld::CountUnfinishedVisualByFacing(glm::ivec3 focus_ground_chunk,

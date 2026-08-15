@@ -1441,6 +1441,63 @@ int main()
            "Era40: no soft-fail when completed>0");
   }
 
+  // Cruise wall P0: remesh DirtyAdmit backpressure.
+  {
+    using cutum::ApplyRemeshAdmitBackpressure;
+    using cutum::RemeshAdmitBackpressureInput;
+    using cutum::ShouldApplyRemeshAdmitBackpressure;
+    RemeshAdmitBackpressureInput green{};
+    green.stream_pressure = 0;
+    green.fifo_n = 10;
+    green.dirty_n = 50;
+    Expect(!ShouldApplyRemeshAdmitBackpressure(green),
+           "P0: green low fifo/dirty -> no BP");
+    RemeshAdmitBackpressureInput red{};
+    red.stream_pressure = 2;
+    red.fifo_n = 10;
+    red.dirty_n = 50;
+    Expect(ShouldApplyRemeshAdmitBackpressure(red), "P0: Red -> BP");
+    MeshWorkAdmission adm{};
+    adm.dirty_admit_budget = 8;
+    adm.remesh_schedule = 3;
+    adm.allow_neighbor_dirty = true;
+    adm.first_mesh_schedule = 6;
+    adm.max_schedule = 9;
+    red.miss_active = true;
+    red.admit_cap_red = 0;
+    ApplyRemeshAdmitBackpressure(adm, red);
+    Expect(adm.dirty_admit_budget == 0, "P0: Red admit cap 0");
+    Expect(adm.remesh_schedule == 0, "P0: miss + BP remesh_schedule 0");
+    Expect(!adm.allow_neighbor_dirty, "P0: neighbor dirty off");
+    RemeshAdmitBackpressureInput fifo{};
+    fifo.stream_pressure = 1;
+    fifo.fifo_n = 72;
+    fifo.relight_fifo_soft_cap = 96;
+    fifo.fifo_admit_frac = 0.75f;
+    fifo.dirty_n = 10;
+    fifo.admit_cap_yellow = 1;
+    fifo.miss_active = false;
+    Expect(ShouldApplyRemeshAdmitBackpressure(fifo),
+           "P0: fifo>=0.75 soft-cap -> BP");
+    MeshWorkAdmission adm_y{};
+    adm_y.dirty_admit_budget = 8;
+    adm_y.remesh_schedule = 3;
+    ApplyRemeshAdmitBackpressure(adm_y, fifo);
+    Expect(adm_y.dirty_admit_budget == 1, "P0: Yellow admit cap 1");
+    Expect(adm_y.remesh_schedule == 1, "P0: no-miss remesh_schedule min 1");
+  }
+
+  // Cruise wall P4: Red fifo light-drain predicate.
+  {
+    using cutum::ShouldCruiseRedFifoLightDrain;
+    Expect(ShouldCruiseRedFifoLightDrain(2, 72, 96, 0.75f, true, 5),
+           "P4: Red+fifo+holes+pendf -> drain");
+    Expect(!ShouldCruiseRedFifoLightDrain(1, 72, 96, 0.75f, true, 5),
+           "P4: Yellow no Red drain");
+    Expect(!ShouldCruiseRedFifoLightDrain(2, 72, 96, 0.75f, true, 0),
+           "P4: no pendf -> no drain");
+  }
+
   if (gFails != 0)
   {
     std::cerr << gFails << " failures\n";

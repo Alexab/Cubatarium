@@ -2,6 +2,8 @@
 
 #include "World/Streaming/VisualStagePolicy.h"
 
+#include <algorithm>
+
 namespace cutum
 {
 
@@ -41,6 +43,22 @@ inline bool ShouldBoostRelightDrainUnderFifoMissStarve(int fifo_n, int soft_cap,
     return false;
   }
   return fifo_n >= soft_cap && completed_n <= 0;
+}
+
+/// Cruise wall P4: Red + fifo≥frac*cap + holes + focus light debt → Capture/trim SLA.
+inline bool ShouldCruiseRedFifoLightDrain(int stream_pressure, int fifo_n,
+                                          int soft_cap, float fifo_frac,
+                                          bool holes_or_miss,
+                                          int pending_light_focus)
+{
+  if (stream_pressure < 2 || !holes_or_miss || pending_light_focus <= 0 ||
+      soft_cap <= 0)
+  {
+    return false;
+  }
+  const int thresh = static_cast<int>(
+      static_cast<float>(soft_cap) * std::max(0.1f, fifo_frac));
+  return fifo_n >= thresh;
 }
 
 /// Era40 P3: analyze soft-fail when FIFO stuck + dropped churn + no completed.

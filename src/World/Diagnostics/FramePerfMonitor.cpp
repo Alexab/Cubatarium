@@ -200,9 +200,15 @@ struct FrameNumbers
   int mesh_dirty_sync_n{0};
   int dirty_touch_n{0};
   int dirty_revisit_same_n{0};
+  int dirty_fm_n{0};
+  int dirty_remesh_n{0};
   int prep_unfinished_calls_n{0};
+  int prep_unfinished_full_n{0};
+  int prep_unfinished_incremental_n{0};
   int phase_budget_over{0};
   int phase_miss_carve_out{0};
+  double miss_reserved_ms{0.0};
+  double emerge_budget_ms{0.0};
   int render_preset{0};
   int async_meshing{0};
   double mesh_emerge_prep_ms{0.0};
@@ -495,9 +501,15 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_dirty_sync_n = phys.MeshDirtySyncN;
   n.dirty_touch_n = phys.DirtyTouchN;
   n.dirty_revisit_same_n = phys.DirtyRevisitSameN;
+  n.dirty_fm_n = phys.DirtyFmN;
+  n.dirty_remesh_n = phys.DirtyRemeshN;
   n.prep_unfinished_calls_n = phys.PrepUnfinishedCallsN;
+  n.prep_unfinished_full_n = phys.PrepUnfinishedFullN;
+  n.prep_unfinished_incremental_n = phys.PrepUnfinishedIncrementalN;
   n.phase_budget_over = phys.PhaseBudgetOver;
   n.phase_miss_carve_out = phys.PhaseMissCarveOut;
+  n.miss_reserved_ms = phys.MissReservedMs;
+  n.emerge_budget_ms = phys.EmergeBudgetCapMs;
   {
     const auto &rs = world.GetRenderSettings();
     n.render_preset = static_cast<int>(rs.Preset);
@@ -802,9 +814,16 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_dirty_sync_n\":" << n.mesh_dirty_sync_n
           << ",\"dirty_touch_n\":" << n.dirty_touch_n
           << ",\"dirty_revisit_same_n\":" << n.dirty_revisit_same_n
+          << ",\"dirty_fm_n\":" << n.dirty_fm_n
+          << ",\"dirty_remesh_n\":" << n.dirty_remesh_n
           << ",\"prep_unfinished_calls_n\":" << n.prep_unfinished_calls_n
+          << ",\"prep_unfinished_full_n\":" << n.prep_unfinished_full_n
+          << ",\"prep_unfinished_incremental_n\":"
+          << n.prep_unfinished_incremental_n
           << ",\"phase_budget_over\":" << n.phase_budget_over
           << ",\"phase_miss_carve_out\":" << n.phase_miss_carve_out
+          << ",\"miss_reserved_ms\":" << n.miss_reserved_ms
+          << ",\"emerge_budget_ms\":" << n.emerge_budget_ms
           << ",\"render_preset\":" << n.render_preset
           << ",\"async_meshing\":" << n.async_meshing
           << ",\"mesh_emerge_prep_ms\":" << n.mesh_emerge_prep_ms

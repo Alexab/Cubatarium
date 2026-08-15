@@ -156,11 +156,19 @@ struct PhysicsTelemetry
   int MeshDirtySyncN{0};
   int DirtyTouchN{0};
   int DirtyRevisitSameN{0};
+  int DirtyFmN{0};
+  int DirtyRemeshN{0};
   /// Cruise wall A2: unfinished/missing scan call count in emerge prep.
   int PrepUnfinishedCallsN{0};
+  /// Cruise wall P3: full O(R²) unfinished rescans vs incremental hits.
+  int PrepUnfinishedFullN{0};
+  int PrepUnfinishedIncrementalN{0};
   /// Era14.1 phase budget: stream already over budget; miss carve-out active.
   int PhaseBudgetOver{0};
   int PhaseMissCarveOut{0};
+  /// Cruise wall P2: miss reserved / emerge cap from phase time-slice (ms).
+  double MissReservedMs{0.0};
+  double EmergeBudgetCapMs{0.0};
   /// TickMeshEmerge wall before RebuildDirtyChunksWithStats (prep/idle/cold).
   double MeshEmergePrepMs{0.0};
   /// I5 prep sub-timers (ms) inside MeshEmergePrepMs.

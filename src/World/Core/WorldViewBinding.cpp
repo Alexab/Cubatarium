@@ -697,17 +697,22 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.DirtyTouchN = 0;
   PhysicsTelemetryData.DirtyRevisitSameN = 0;
   PhysicsTelemetryData.PrepUnfinishedCallsN = 0;
+  PhysicsTelemetryData.PrepUnfinishedFullN = 0;
+  PhysicsTelemetryData.PrepUnfinishedIncrementalN = 0;
   PhysicsTelemetryData.PhaseBudgetOver = 0;
   PhysicsTelemetryData.PhaseMissCarveOut = 0;
+  PhysicsTelemetryData.MissReservedMs = 0.0;
+  PhysicsTelemetryData.EmergeBudgetCapMs = 0.0;
+  PhysicsTelemetryData.DirtyFmN = 0;
+  PhysicsTelemetryData.DirtyRemeshN = 0;
 
   const auto t_before_stream = std::chrono::high_resolution_clock::now();
   GetMeshService().BeginHoleQueryFrame();
   UpdateStreaming();
   TickAsyncChunkSystems();
   const auto t_after_stream = std::chrono::high_resolution_clock::now();
-  // Era14.1 B: UE-style phase time budget. Miss/UV carve-out — always emerge.
-  // When stream already spent the budget on a clean frame, skip EnterGame burst
-  // (non-miss prep) but still TickMeshEmerge for SoftDefer/Dirty heal.
+  // Cruise wall P2: real phase time-slice with miss reserved ms.
+  // Stream spends general_budget; emerge gets reserved + remain(general).
   const double stream_elapsed_ms =
       std::chrono::duration<double, std::milli>(t_after_stream - t_before_stream)
           .count();
@@ -716,13 +721,33 @@ void UWorld::TickWorldStreamingPhase()
       PhysicsTelemetryData.VisualHoles != 0 ||
       PhysicsTelemetryData.UnfinishedVisual >= 8 ||
       PhysicsTelemetryData.FocusStickyRemesh > 0;
-  const float phase_budget =
-      URuntimeTuning::Get().StreamingPhaseBudgetMs;
-  const bool over_phase_budget =
-      phase_budget > 0.0f && stream_elapsed_ms >= static_cast<double>(phase_budget);
-  PhysicsTelemetryData.PhaseBudgetOver = over_phase_budget ? 1 : 0;
+  const auto &tune = URuntimeTuning::Get();
+  const float phase_budget = tune.StreamingPhaseBudgetMs;
+  const float reserved =
+      miss_carve_out ? std::max(0.0f, tune.MissReservedMs) : 0.0f;
+  const float general_budget =
+      phase_budget > 0.0f ? std::max(0.0f, phase_budget - reserved) : 0.0f;
+  const double remain_general =
+      general_budget > 0.0f
+          ? std::max(0.0, static_cast<double>(general_budget) - stream_elapsed_ms)
+          : 0.0;
+  const double emerge_cap =
+      static_cast<double>(reserved) + remain_general;
+  PhysicsTelemetryData.PhaseBudgetOver =
+      (phase_budget > 0.0f &&
+       stream_elapsed_ms >= static_cast<double>(general_budget))
+          ? 1
+          : 0;
   PhysicsTelemetryData.PhaseMissCarveOut = miss_carve_out ? 1 : 0;
-  if (!over_phase_budget || miss_carve_out)
+  PhysicsTelemetryData.MissReservedMs = static_cast<double>(reserved);
+  PhysicsTelemetryData.EmergeBudgetCapMs = emerge_cap;
+  if (emerge_cap > 0.0)
+  {
+    GetMeshService().SetMeshEmergeTotalBudgetMs(
+        static_cast<float>(emerge_cap));
+  }
+  // Burst when general remain > 0 or miss (reserved still feeds emerge).
+  if (remain_general > 0.0 || miss_carve_out)
   {
     TickEnterGameMeshBurst();
   }
@@ -772,6 +797,9 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.DirtyTouchN = GetMeshService().GetLastDirtyTouchN();
   PhysicsTelemetryData.DirtyRevisitSameN =
       GetMeshService().GetLastDirtyRevisitSameN();
+  PhysicsTelemetryData.DirtyFmN = GetMeshService().GetLastDirtyFmN();
+  PhysicsTelemetryData.DirtyRemeshN = GetMeshService().GetLastDirtyRemeshN();
+  HarvestUnfinishedPrepTelem(PhysicsTelemetryData);
 
   // Hitch for streaming speed clamp / budgets: prefer wall, else stream+emerge.
   const double stream_hitch =

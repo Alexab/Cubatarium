@@ -188,6 +188,29 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
     t.PendingLightSoftCap =
         j.value("pending_light_soft_cap", t.PendingLightSoftCap);
   }
+  if (j.contains("dirty_admit_cap_red"))
+  {
+    t.DirtyAdmitCapRed = j.value("dirty_admit_cap_red", t.DirtyAdmitCapRed);
+  }
+  if (j.contains("dirty_admit_cap_yellow"))
+  {
+    t.DirtyAdmitCapYellow =
+        j.value("dirty_admit_cap_yellow", t.DirtyAdmitCapYellow);
+  }
+  if (j.contains("relight_fifo_admit_frac"))
+  {
+    t.RelightFifoAdmitFrac =
+        j.value("relight_fifo_admit_frac", t.RelightFifoAdmitFrac);
+  }
+  if (j.contains("miss_reserved_ms"))
+  {
+    t.MissReservedMs = j.value("miss_reserved_ms", t.MissReservedMs);
+  }
+  if (j.contains("streaming_phase_budget_ms"))
+  {
+    t.StreamingPhaseBudgetMs =
+        j.value("streaming_phase_budget_ms", t.StreamingPhaseBudgetMs);
+  }
   if (j.contains("relight_fifo_soft_cap"))
   {
     t.RelightFifoSoftCap =
