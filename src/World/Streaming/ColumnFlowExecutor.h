@@ -35,7 +35,13 @@ public:
   {
     scheduler_.Clear();
     last_dispatch_frame_.clear();
+    promote_pending_ = false;
+    promote_enqueued_ = false;
+    promote_priority_ = 0;
   }
+
+  /// Clear per-frame Promote coalesce (call at UpdateStreaming BeginFrame).
+  void BeginFrame();
 
   /// Scan focus truth and enqueue derived work (uses real column coords).
   /// last_frame_ms / pending_async gate stand stale-wave under miss (manual 131827).
@@ -55,9 +61,15 @@ public:
                              double last_frame_ms, int pending_focus_count,
                              bool missing_visible_mesh);
 
-  /// Promote path: enqueue PromoteRelight then drain (no direct World promote
-  /// from emerge except via AdvanceColumn).
+  /// Coalesce PromoteRelight to one ticket/frame (max priority). Flushed in
+  /// DrainBudget — no direct World promote from emerge except via AdvanceColumn.
   void RequestPromoteRelight(glm::ivec2 near_column, int priority);
+
+  /// True when RequestPromoteRelight ran this frame and Flush not yet done.
+  bool HasPendingPromoteRequest() const
+  {
+    return promote_pending_ && !promote_enqueued_;
+  }
 
   /// Enqueue PromoteRelight (DrainBudget is the exclusive bump owner).
   void RunPromoteRelightNow(UWorld &world, glm::ivec3 focus_ground_horiz,
@@ -74,6 +86,7 @@ private:
   void AdvanceColumn(UWorld &world, const ColumnWorkItem &work,
                      glm::ivec3 focus_ground_horiz, int focus_radius,
                      int admit_batch);
+  void FlushPromoteRequest();
   static int64_t CooldownKey(glm::ivec2 column, ColumnWorkKind kind);
 
   UColumnFlowScheduler scheduler_;
@@ -83,6 +96,11 @@ private:
   /// column+kind → frame when last Dispatched (cooldown 3 frames).
   std::unordered_map<int64_t, int> last_dispatch_frame_;
   static constexpr int kEnqueueCooldownFrames = 3;
+  /// One PromoteRelight enqueue per streaming+emerge frame (max priority).
+  bool promote_pending_{false};
+  bool promote_enqueued_{false};
+  glm::ivec2 promote_column_{0};
+  int promote_priority_{0};
 };
 
 UColumnFlowExecutor &GetColumnFlowExecutor();

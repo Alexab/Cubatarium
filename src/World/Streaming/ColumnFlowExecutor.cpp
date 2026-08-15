@@ -32,10 +32,39 @@ UColumnFlowExecutor &GetColumnFlowExecutor()
   return gExecutor;
 }
 
+void UColumnFlowExecutor::BeginFrame()
+{
+  promote_pending_ = false;
+  promote_enqueued_ = false;
+  promote_priority_ = 0;
+  promote_column_ = glm::ivec2(0);
+}
+
 void UColumnFlowExecutor::RequestPromoteRelight(glm::ivec2 near_column,
                                                 int priority)
 {
-  Enqueue(near_column, ColumnWorkKind::PromoteRelight, priority);
+  if (!promote_pending_)
+  {
+    promote_pending_ = true;
+    promote_column_ = near_column;
+    promote_priority_ = priority;
+    return;
+  }
+  if (priority > promote_priority_)
+  {
+    promote_priority_ = priority;
+    promote_column_ = near_column;
+  }
+}
+
+void UColumnFlowExecutor::FlushPromoteRequest()
+{
+  if (!promote_pending_ || promote_enqueued_)
+  {
+    return;
+  }
+  Enqueue(promote_column_, ColumnWorkKind::PromoteRelight, promote_priority_);
+  promote_enqueued_ = true;
 }
 
 void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
@@ -146,8 +175,13 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &wor
     }
     break;
   case ColumnWorkKind::PromoteRelight:
+    // NearTerrain: far FIFO → priority. PendingLight pass only when focus has
+    // light debt (ghost / Keys repair) — skip second O(n) scan otherwise.
     world.PromoteNearTerrainColumnRelights(focus_ground_horiz, focus_radius);
-    world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
+    if (world.HasPendingLightBeforeMeshNear(focus_ground_horiz, focus_radius))
+    {
+      world.PromotePendingLightRelightsNear(focus_ground_horiz, focus_radius);
+    }
     break;
   }
 }
@@ -156,6 +190,7 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
                                      glm::ivec3 focus_ground_horiz,
                                      int focus_radius, int admit_batch)
 {
+  FlushPromoteRequest();
   ++frame_counter_;
   int drained = 0;
   ColumnWorkItem work{};
@@ -228,9 +263,10 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
               ColumnFlowRelightPriorityUnderMiss(relight_hi - enq, horiz,
                                                  focus_radius,
                                                  missing_visible_mesh));
-      Enqueue(col, ColumnWorkKind::PromoteRelight, promote_hi - enq);
       ++enq;
     }
+    // One Promote/frame via coalesce — AdvanceColumn promotes focus radius.
+    RequestPromoteRelight(focus, promote_hi);
     if (enq == 0)
     {
       Enqueue(focus, ColumnWorkKind::RelightThenMesh,

@@ -1169,15 +1169,36 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         // Era47 P1: after lit quiesce do not enqueue RemeshSeam (refeeds Dirty/GPU).
         // Era49: bound Sticky — do not re-insert storm when already tracked and
         // Dirty/GPU/inflight already owns the remesh.
+        // Cruise SOTA: drawable remesh = RAA/PreferKick only (no dual RemeshSeam).
         if (!enter_quiesce)
         {
-          const bool already_sticky = StickyRemeshAfterLight.count(key) > 0;
-          StickyRemeshAfterLight.insert(key);
-          if (!already_sticky)
+          bool column_remesh_owned = false;
+          for (int cy = cy0; cy <= cy1 && !column_remesh_owned; ++cy)
           {
-            NoteColumnRepairNeeded(key);
-            GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RemeshSeam,
-                                            /*priority=*/70);
+            const glm::ivec3 coord(key.x, cy, key.y);
+            column_remesh_owned = ColumnHasRemeshOwner(
+                MeshService->IsChunkMeshDirty(coord),
+                MeshService->IsRemeshAfterApplyPending(coord),
+                MeshService->IsPendingGpuApply(coord),
+                MeshService->HasInflightMeshBuild(coord));
+          }
+          if (ShouldEnqueueRemeshSeamAfterLit(had_mesh, enter_quiesce,
+                                             any_drawable,
+                                             column_remesh_owned))
+          {
+            const bool already_sticky = StickyRemeshAfterLight.count(key) > 0;
+            StickyRemeshAfterLight.insert(key);
+            if (!already_sticky)
+            {
+              NoteColumnRepairNeeded(key);
+              GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RemeshSeam,
+                                              /*priority=*/70);
+            }
+          }
+          else if (any_drawable && !column_remesh_owned)
+          {
+            // Track sticky for heal telemetry; remesh owner is RAA below.
+            StickyRemeshAfterLight.insert(key);
           }
         }
       }
@@ -1497,7 +1518,8 @@ void UWorld::AccumulateRelightMeshColumns(
 
 void UWorld::FlushPendingRelightMeshColumns(int max_columns_per_flush)
 {
-  if (PendingRelightMeshColumns.empty() || max_columns_per_flush <= 0)
+  if (PendingRelightMeshColumns.empty() || max_columns_per_flush <= 0 ||
+      !MeshService)
   {
     return;
   }
@@ -1526,6 +1548,31 @@ void UWorld::FlushPendingRelightMeshColumns(int max_columns_per_flush)
       continue;
     }
     const glm::ivec3 ground(it->first.x, 0, it->first.y);
+    const int cy0 = FloorDiv(it->second.min_y, CHUNK_SIZE);
+    const int cy1 = FloorDiv(it->second.max_y, CHUNK_SIZE);
+    bool any_drawable = false;
+    bool remesh_owned = false;
+    for (int cy = cy0; cy <= cy1; ++cy)
+    {
+      const glm::ivec3 coord(ground.x, cy, ground.z);
+      if (MeshService->HasDrawableGreedyMesh(coord))
+      {
+        any_drawable = true;
+      }
+      if (ColumnHasRemeshOwner(MeshService->IsChunkMeshDirty(coord),
+                               MeshService->IsRemeshAfterApplyPending(coord),
+                               MeshService->IsPendingGpuApply(coord),
+                               MeshService->HasInflightMeshBuild(coord)))
+      {
+        remesh_owned = true;
+      }
+    }
+    // Sodium PreferKick: skip seamed Dirty when RAA/GPU owns; undrawn holes only.
+    if (!ShouldFlushRelightMeshColumnSeamed(any_drawable, remesh_owned))
+    {
+      PendingRelightMeshColumns.erase(it);
+      continue;
+    }
     MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
         ground, it->second.min_y, it->second.max_y, true);
     PendingRelightMeshColumns.erase(it);

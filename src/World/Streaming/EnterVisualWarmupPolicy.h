@@ -938,6 +938,33 @@ inline bool ShouldScheduleRemeshAfterLitApply(bool is_dirty, bool raa_pending,
          RemeshAfterLitApplyDecision::Schedule;
 }
 
+/// True when Dirty/RAA/GPU/inflight already owns remesh for this column.
+inline bool ColumnHasRemeshOwner(bool is_dirty, bool raa_pending,
+                                 bool gpu_pending, bool inflight)
+{
+  return is_dirty || raa_pending || gpu_pending || inflight;
+}
+
+/// After lit apply: RemeshSeam only when no RAA/GPU owner (Sodium PreferKick).
+inline bool ShouldEnqueueRemeshSeamAfterLit(bool had_mesh, bool enter_quiesce,
+                                           bool any_drawable,
+                                           bool column_has_remesh_owner)
+{
+  if (!had_mesh || enter_quiesce || column_has_remesh_owner)
+  {
+    return false;
+  }
+  // Drawable remesh is owned by RemeshAfterApply / PreferKick — not RemeshSeam.
+  return !any_drawable;
+}
+
+/// FlushPendingRelight seamed Dirty only for undrawn FirstMesh holes.
+inline bool ShouldFlushRelightMeshColumnSeamed(bool any_drawable_in_band,
+                                               bool column_has_remesh_owner)
+{
+  return !any_drawable_in_band && !column_has_remesh_owner;
+}
+
 /// Era46 C: ring blocker label for heartbeat (mesh gate honesty).
 inline const char *EnterWarmupRingBlockerLabel(bool mesh_dirty,
                                                int gpu_pending_near,

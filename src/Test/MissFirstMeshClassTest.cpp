@@ -738,6 +738,21 @@ int main()
            "Era45 B5: enter gate !ring ⇒ no suppress");
     Expect(ShouldSuppressRelightSeamDirtyForEnterGate(true, true, true),
            "Era45 B5: ring ready ⇒ keep base suppress");
+    using cutum::ColumnHasRemeshOwner;
+    using cutum::ShouldEnqueueRemeshSeamAfterLit;
+    using cutum::ShouldFlushRelightMeshColumnSeamed;
+    Expect(ColumnHasRemeshOwner(false, true, false, false),
+           "cruise: RAA owns remesh");
+    Expect(!ShouldEnqueueRemeshSeamAfterLit(true, false, true, false),
+           "cruise: drawable ⇒ no RemeshSeam");
+    Expect(ShouldEnqueueRemeshSeamAfterLit(true, false, false, false),
+           "cruise: undrawn hole may RemeshSeam");
+    Expect(!ShouldEnqueueRemeshSeamAfterLit(true, false, false, true),
+           "cruise: owned ⇒ no RemeshSeam");
+    Expect(!ShouldFlushRelightMeshColumnSeamed(true, false),
+           "cruise: drawable flush skip");
+    Expect(ShouldFlushRelightMeshColumnSeamed(false, false),
+           "cruise: undrawn flush seamed");
   }
 
   // --- Era46 enter warmup drain parity / RAA commit coalesce ---

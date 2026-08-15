@@ -136,6 +136,7 @@ void UChunkEmergeCoordinator::BeginFrame(const ProceduralSettings &procedural,
 {
   LastBudget =
       ComputeBudget(procedural, movement_speed, default_load_ops, last_frame_ms);
+  GetColumnFlowExecutor().BeginFrame();
 }
 
 void UChunkEmergeCoordinator::TickMeshEmerge(
@@ -158,6 +159,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   UWorldMeshService &mesh_service = world.GetMeshService();
   // Count any Immediate this tick (including early idle paths).
   mesh_service.ResetImmediateMeshStats();
+  // Cruise SOTA: early ColumnFlow sites only Enqueue; one DrainBudget at end.
+  int column_flow_drain_n = 0;
+  int column_flow_admit_batch = 1;
+  auto note_column_flow_drain = [&](int drain_n, int admit_batch)
+  {
+    column_flow_drain_n = std::max(column_flow_drain_n, drain_n);
+    column_flow_admit_batch = std::max(column_flow_admit_batch, admit_batch);
+  };
   const ProceduralSettings &procedural = world.GetProceduralSettings();
   const float movement_speed = world.GetLastMovementSpeed();
   // Mesh-while-moving uses prefetch threshold so cruise flight drains Dirty.
@@ -432,7 +441,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         auto &exec = GetColumnFlowExecutor();
         exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
                      ColumnWorkKind::FirstMesh, 40 + admit_n);
-        exec.DrainBudget(world, 4, focus_ground_horiz, focus_radius, admit_n);
+        note_column_flow_drain(4, admit_n);
       }
       // F2: after stop, clear committed pending more aggressively.
       const int clear_n =
@@ -952,8 +961,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             exec.Enqueue(item);
             if (!age_drain_done)
             {
-              exec.DrainBudget(world, 1, focus_ground_horiz, focus_radius,
-                               /*admit_batch=*/1);
+              note_column_flow_drain(1, 1);
               age_drain_done = true;
             }
           }
@@ -1676,7 +1684,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     auto &exec = GetColumnFlowExecutor();
     exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
                  ColumnWorkKind::FirstMesh, 80);
-    exec.DrainBudget(world, 4, focus_ground_horiz, focus_radius, 4);
+    note_column_flow_drain(4, 4);
     exec.DrainRemeshSeamBudget(world, 8);
   }
 
@@ -1954,7 +1962,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           world.GetPhysicsTelemetry().VisibleBlackNoTicketN > 0,
           world.GetPhysicsTelemetry().VisibleBlackFocusN > 0, hitch_drain,
           moving, URuntimeTuning::Get().MissFirstFrameBudget);
-      exec.DrainBudget(world, drain_n, focus_ground_horiz, focus_radius, 1);
+      note_column_flow_drain(drain_n, 1);
       // Edge stale-dark / post-miss sticky: raise seam drain near sticky
       // (land_fix P3 — keep_h already 2–3 via StarveRemeshKeepHoriz).
       // Era19 miss-first: do not Seam-storm on hitch while missing tops.
@@ -2834,8 +2842,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       drain_steps = std::max(drain_steps, moving ? 3 : 4);
     }
-    exec.DrainBudget(world, drain_steps, focus_ground_horiz, focus_radius,
-                     /*admit_batch=*/admit_n);
+    note_column_flow_drain(drain_steps, admit_n);
     // Idle sticky: force Immediate on nearest hole within underfeet when it is
     // not already in the mesh pipeline (HasMissing skips Pending/InFlight).
     if (!moving && found_nearest_missing)
@@ -3018,8 +3025,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     focus_scan.scan_full_focus = true;
     focus_scan.cy = -1;
     exec.Enqueue(focus_scan);
-    exec.DrainBudget(world, moving ? 2 : 3, focus_ground_horiz, focus_radius,
-                     /*admit_batch=*/moving ? 2 : 3);
+    note_column_flow_drain(moving ? 2 : 3, moving ? 2 : 3);
   }
   // P3: soft cruise clamp — underfeet (or nh<=1 ahead under HoleDrain/Deep).
   // Applied next movement tick via PhysicsTelemetry.StreamSpeedClampScale.
@@ -3232,6 +3238,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // RebuildChunkImmediate (PlayerRelightMeshBurst); SyncRebuild was still
   // burning 100–200ms whenever burst frames were non-zero on cruise.
   sync_cap = 0;
+  // Cruise SOTA: single ColumnFlow DrainBudget after all Enqueue sites.
+  // Always run when promote coalesce is pending (Flush lives inside DrainBudget).
+  {
+    auto &exec = GetColumnFlowExecutor();
+    if (column_flow_drain_n > 0 || exec.Scheduler().Size() > 0 ||
+        exec.HasPendingPromoteRequest())
+    {
+      exec.DrainBudget(world, std::max(1, column_flow_drain_n),
+                       focus_ground_horiz, focus_radius,
+                       column_flow_admit_batch);
+    }
+  }
   MeshRebuildTickStats tick_stats{};
   {
     const MeshWorkAdmission &adm = mesh_service.GetMeshWorkAdmission();

@@ -67,6 +67,24 @@ int main()
            "stale RelightThenMesh denied");
   }
 
+  // Cruise SOTA: PromoteRelight coalesce = one ticket (scheduler exclusive +
+  // executor RequestPromote max-prio flush). Scheduler side:
+  {
+    UColumnFlowScheduler flush_s;
+    flush_s.Enqueue({2, 2}, ColumnWorkKind::PromoteRelight, 95);
+    flush_s.Enqueue({2, 2}, ColumnWorkKind::PromoteRelight, 40);
+    Expect(flush_s.Size() == 1, "PromoteRelight dedupe one ticket");
+    flush_s.Enqueue({3, 3}, ColumnWorkKind::FirstMesh, 100);
+    flush_s.Enqueue({3, 3}, ColumnWorkKind::PromoteRelight, 50);
+    Expect(flush_s.Size() == 2, "other column can hold FirstMesh");
+    Expect(flush_s.DeniedCount() >= 1, "Promote on occupied column denied");
+    ColumnWorkItem p{};
+    Expect(flush_s.DrainOne(p), "drain highest prio");
+    Expect(p.kind == ColumnWorkKind::FirstMesh ||
+               p.kind == ColumnWorkKind::PromoteRelight,
+           "drained a ticket");
+  }
+
   if (gFails != 0)
   {
     std::cerr << gFails << " failures\n";
