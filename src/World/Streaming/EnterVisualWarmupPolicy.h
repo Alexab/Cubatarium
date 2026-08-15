@@ -255,6 +255,14 @@ inline bool ShouldSkipRelightOnTrustedDiskLight(bool trust_disk_light)
   return trust_disk_light;
 }
 
+/// Bake-before-present: LitReady on trusted disk only after lit drawable settle
+/// (light_complete ≠ mesh ready / Minetest lighting_complete).
+inline bool ShouldSetLitReadyOnTrustedDisk(bool has_lit_drawable,
+                                           bool remesh_in_flight)
+{
+  return has_lit_drawable && !remesh_in_flight;
+}
+
 /// Era36 B2 / Era40: dynamic CaptureMovingBgCap — fire at pendf>15 (was 20).
 inline int DynamicCaptureMovingBgCap(int pending_light_focus,
                                      int base_cap = 1)

@@ -477,6 +477,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     // Sticky maintenance: RemeshSeam only for undrawn seam-repair.
     // Skip when PendingLight or remesh already owned (RAA/Dirty/GPU) so sticky
     // cannot dual-feed RemeshSeam on drawable PreferKick columns.
+    // Trusted-disk sticky tracks LitReady settle — Dirty already owns remesh.
     for (const glm::ivec2 &col : sticky_cols)
     {
       if (world.IsPendingLightBeforeMesh(col))
@@ -485,6 +486,11 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
         continue;
       }
       if (HasRepairTicket(col) || world.ColumnHasRepairProgress(col))
+      {
+        continue;
+      }
+      if (world.IsColumnDiskLightComplete(col) &&
+          !world.IsColumnLitReady(glm::ivec3(col.x, 0, col.y)))
       {
         continue;
       }

@@ -3747,6 +3747,16 @@ void UWorld::ClearStickyRemeshAfterLightColumn(glm::ivec2 ground_xz)
   StickyRemeshAfterLight.erase(ground_xz);
 }
 
+void UWorld::NoteStickyRemeshAfterLight(glm::ivec2 ground_xz)
+{
+  StickyRemeshAfterLight.insert(ground_xz);
+}
+
+bool UWorld::IsColumnDiskLightComplete(glm::ivec2 ground_xz) const
+{
+  return Persistence && Persistence->IsColumnLightComplete(ground_xz);
+}
+
 int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
 {
   if (!MeshService || !BlockRegistry || max_columns <= 0)
@@ -3974,11 +3984,6 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
       continue;
     }
     const glm::ivec3 ground(key.x, 0, key.y);
-    if (!IsColumnLitReady(ground))
-    {
-      ++it;
-      continue;
-    }
     bool has_mesh = false;
     for (int cy = cy0; cy <= cy1; ++cy)
     {
@@ -4011,6 +4016,37 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
     {
       ++it;
       continue;
+    }
+    // Trusted disk bake-before-present: promote LitReady once remesh settled.
+    if (!IsColumnLitReady(ground))
+    {
+      const bool trusted =
+          Persistence && Persistence->IsColumnLightComplete(key);
+      bool has_lit_drawable = false;
+      bool remesh_in_flight = false;
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(key.x, cy, key.y);
+        if (MeshService->HasDrawableGreedyMesh(coord) &&
+            !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+        {
+          has_lit_drawable = true;
+        }
+        if (ColumnHasRemeshOwner(MeshService->IsChunkMeshDirty(coord),
+                                 MeshService->IsRemeshAfterApplyPending(coord),
+                                 MeshService->IsPendingGpuApply(coord),
+                                 MeshService->HasInflightMeshBuild(coord)))
+        {
+          remesh_in_flight = true;
+        }
+      }
+      if (!trusted ||
+          !ShouldSetLitReadyOnTrustedDisk(has_lit_drawable, remesh_in_flight))
+      {
+        ++it;
+        continue;
+      }
+      SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
     }
     if (MeshService->HasDirtyInColumnBand(key, band_min, band_max))
     {

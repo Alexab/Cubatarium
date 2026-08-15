@@ -1063,6 +1063,10 @@ public:
   bool IsColumnStickyRemesh(glm::ivec2 ground_xz) const;
   /// Era49: lit GPU commit clears remesh-after-lit work-set for column.
   void ClearStickyRemeshAfterLightColumn(glm::ivec2 ground_xz);
+  /// Track remesh-after-lit / trusted-disk settle until mesh is presentable.
+  void NoteStickyRemeshAfterLight(glm::ivec2 ground_xz);
+  /// Disk light_complete flag (trusted lightmap without Capture).
+  bool IsColumnDiskLightComplete(glm::ivec2 ground_xz) const;
 
   /// Near-focus columns waiting for first light before first mesh (plan A).
   void NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y);

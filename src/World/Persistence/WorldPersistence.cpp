@@ -1257,6 +1257,8 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
                  world.IsLightingRelightDeferred()))
     {
       // Trusted disk lightmap: remesh only — no Capture FIFO refeed.
+      // Bake-before-present: Dirty without immediate LitReady (light_complete ≠
+      // mesh settle). Sticky tracks settle → ClearPendingLight promotes LitReady.
       ++world.GetPhysicsTelemetryMutable().DiskLightTrustedN;
       const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
       int dirty_min = std::max(0, focus_block.y - CHUNK_SIZE);
@@ -1272,7 +1274,37 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
       }
       world.MarkTerrainChunkMeshDirtySeamed(ground_coord, dirty_min, dirty_max,
                                             near_focus);
-      world.SetColumnEmergeState(ground_coord, ColumnEmergeState::LitReady);
+      world.SetColumnEmergeState(ground_coord, ColumnEmergeState::Meshing);
+      const int cy0 = FloorDiv(dirty_min, CHUNK_SIZE);
+      const int cy1 = FloorDiv(dirty_max, CHUNK_SIZE);
+      bool has_lit_drawable = false;
+      bool remesh_in_flight = false;
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(ground_coord.x, cy, ground_coord.z);
+        if (world.GetMeshService().HasDrawableGreedyMesh(coord) &&
+            !world.GetMeshService().GetCache().ChunkHasFullyDarkFace(coord))
+        {
+          has_lit_drawable = true;
+        }
+        if (ColumnHasRemeshOwner(
+                world.GetMeshService().IsChunkMeshDirty(coord),
+                world.GetMeshService().IsRemeshAfterApplyPending(coord),
+                world.GetMeshService().IsPendingGpuApply(coord),
+                world.GetMeshService().HasInflightMeshBuild(coord)))
+        {
+          remesh_in_flight = true;
+        }
+      }
+      if (ShouldSetLitReadyOnTrustedDisk(has_lit_drawable, remesh_in_flight))
+      {
+        world.SetColumnEmergeState(ground_coord, ColumnEmergeState::LitReady);
+      }
+      else
+      {
+        world.NoteStickyRemeshAfterLight(
+            glm::ivec2(ground_coord.x, ground_coord.z));
+      }
       // Seam repair: at most one incomplete cardinal neighbor near focus.
       if (near_focus)
       {
