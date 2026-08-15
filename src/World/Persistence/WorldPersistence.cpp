@@ -1257,8 +1257,9 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
                  world.IsLightingRelightDeferred()))
     {
       // Trusted disk lightmap: remesh only — no Capture FIFO refeed.
-      // Bake-before-present: Dirty without immediate LitReady (light_complete ≠
-      // mesh settle). Sticky tracks settle → ClearPendingLight promotes LitReady.
+      // Bake-before-present for hinterland: Dirty without LitReady until remesh
+      // drawable. Near focus: LitReady with Dirty so enter ring cannot wedge on
+      // residual FullyDark after trust remesh (manual enter hang / mesh_dirty=1).
       ++world.GetPhysicsTelemetryMutable().DiskLightTrustedN;
       const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
       int dirty_min = std::max(0, focus_block.y - CHUNK_SIZE);
@@ -1274,7 +1275,6 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
       }
       world.MarkTerrainChunkMeshDirtySeamed(ground_coord, dirty_min, dirty_max,
                                             near_focus);
-      world.SetColumnEmergeState(ground_coord, ColumnEmergeState::Meshing);
       const int cy0 = FloorDiv(dirty_min, CHUNK_SIZE);
       const int cy1 = FloorDiv(dirty_max, CHUNK_SIZE);
       bool has_drawable = false;
@@ -1295,12 +1295,14 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
           remesh_in_flight = true;
         }
       }
-      if (ShouldSetLitReadyOnTrustedDisk(has_drawable, remesh_in_flight))
+      if (near_focus ||
+          ShouldSetLitReadyOnTrustedDisk(has_drawable, remesh_in_flight))
       {
         world.SetColumnEmergeState(ground_coord, ColumnEmergeState::LitReady);
       }
       else
       {
+        world.SetColumnEmergeState(ground_coord, ColumnEmergeState::Meshing);
         world.NoteStickyRemeshAfterLight(
             glm::ivec2(ground_coord.x, ground_coord.z));
       }
