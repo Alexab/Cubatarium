@@ -12,11 +12,21 @@ enum class PerformancePreset
   Quality
 };
 
+enum class LightingMode
+{
+  Full,
+  Flat
+};
+
 /// Runtime Render toggles (config.json "Render" section). Use to bisect FPS
 /// optimizations.
 struct RenderSettings
 {
   PerformancePreset Preset{PerformancePreset::Balanced};
+  /// Explicit lighting backend; preset seeds this, config/GUI may override.
+  LightingMode Lighting{LightingMode::Full};
+  /// True when config/GUI set lighting_mode independently of preset.
+  bool LightingModeExplicit{false};
   bool GreedyMeshing{true};
   bool AsyncMeshing{true};
   bool FaceQuads{true};

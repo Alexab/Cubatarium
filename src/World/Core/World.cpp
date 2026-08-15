@@ -779,7 +779,7 @@ IULightingPipeline &UWorld::GetLightingPipeline()
   if (!LightingPipeline)
   {
     LightingMode mode =
-        GraphicsQualityProfile::FromPreset(Render.Preset).GetLightingMode();
+        GraphicsQualityProfile::ResolveLightingMode(Render);
     const RenderBackendCaps caps = GetActiveRenderBackendCaps();
     const RenderBackendSelection sel = URenderBackendFactory::Select(caps);
     if (sel.Mesher == MesherBackendKind::GpuGreedy ||
@@ -8578,7 +8578,7 @@ void UWorld::InvalidateBlockMesh()
 void UWorld::SetRenderSettings(const RenderSettings &settings)
 {
   LightingMode new_mode =
-      GraphicsQualityProfile::FromPreset(settings.Preset).GetLightingMode();
+      GraphicsQualityProfile::ResolveLightingMode(settings);
   // D1.4: Desktop GPU stack must not consume Flat lighting results.
   {
     const RenderBackendCaps caps = GetActiveRenderBackendCaps();

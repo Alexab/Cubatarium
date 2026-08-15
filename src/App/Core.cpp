@@ -402,6 +402,18 @@ void UCore::LoadConfig(const std::string &config_file_name)
         }
         Render.GreedyMeshing = r.value("greedy_meshing", Render.GreedyMeshing);
         Render.AsyncMeshing = r.value("async_meshing", Render.AsyncMeshing);
+        if (r.contains("lighting_mode") && r["lighting_mode"].is_string())
+        {
+          Render.Lighting = GraphicsQualityProfile::ParseLightingModeString(
+              r["lighting_mode"].get<std::string>());
+          Render.LightingModeExplicit = true;
+        }
+        else
+        {
+          Render.Lighting =
+              GraphicsQualityProfile::FromPreset(Render.Preset).GetLightingMode();
+          Render.LightingModeExplicit = false;
+        }
         Render.GpuPackedMeshing =
             r.value("gpu_packed_meshing", Render.GpuPackedMeshing);
         Render.FaceQuads = r.value("face_quads", Render.FaceQuads);
@@ -737,6 +749,8 @@ void UCore::SaveConfigFile()
   json render_json;
   render_json["performance_preset"] =
       GraphicsQualityProfile::ToConfigString(Render.Preset);
+  render_json["lighting_mode"] =
+      GraphicsQualityProfile::ToLightingModeString(Render.Lighting);
   render_json["greedy_meshing"] = Render.GreedyMeshing;
   render_json["async_meshing"] = Render.AsyncMeshing;
   render_json["gpu_packed_meshing"] = Render.GpuPackedMeshing;

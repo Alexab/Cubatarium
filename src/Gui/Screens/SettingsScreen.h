@@ -70,6 +70,11 @@ private:
   UGuiLabel *GraphicsQualityLabel{nullptr};
   UGuiButton *GraphicsQualityButton{nullptr};
   PerformancePreset SelectedGraphicsQuality{PerformancePreset::Balanced};
+  UGuiLabel *LightingModeLabel{nullptr};
+  UGuiButton *LightingModeButton{nullptr};
+  LightingMode SelectedLightingMode{LightingMode::Full};
+  UGuiCheckbox *AsyncMeshingBox{nullptr};
+  UGuiCheckbox *AsyncRelightBox{nullptr};
   UGuiCheckbox *AndroidGpuBox{nullptr};
   bool SelectedAndroidGpuEnabled{true};
 

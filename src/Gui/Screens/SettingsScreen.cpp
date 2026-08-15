@@ -104,19 +104,24 @@ void USettingsScreen::OnSave()
   {
     app.Render.BatchCache = BatchCacheBox->IsChecked();
   }
-  // Reseed fog/sky/async from quality preset, then re-apply meshing toggles.
+  // Reseed fog/sky from quality preset, then re-apply meshing / lighting toggles.
   {
     const bool greedy = app.Render.GreedyMeshing;
     const bool face = app.Render.FaceQuads;
     const bool frustum = app.Render.FrustumCulling;
     const bool batch = app.Render.BatchCache;
     const bool android_gpu = SelectedAndroidGpuEnabled;
+    const bool async_mesh =
+        AsyncMeshingBox ? AsyncMeshingBox->IsChecked() : app.Render.AsyncMeshing;
     app.Render = RenderSettings::FromPreset(SelectedGraphicsQuality);
     app.Render.GreedyMeshing = greedy;
     app.Render.FaceQuads = face;
     app.Render.FrustumCulling = frustum;
     app.Render.BatchCache = batch;
     app.Render.AndroidGpuEnabled = android_gpu;
+    app.Render.AsyncMeshing = async_mesh;
+    app.Render.Lighting = SelectedLightingMode;
+    app.Render.LightingModeExplicit = true;
   }
   if (AndroidGpuBox)
   {
@@ -157,11 +162,22 @@ void USettingsScreen::OnSave()
   }
 
   ProceduralSettings proc =
-      WorldForm ? WorldForm->ReadSettings() : Host->LoadProceduralTemplate();
-  ProceduralSettings templateOnly;
-  templateOnly.Generator = proc.Generator;
-  templateOnly.Seed = proc.Seed;
-  Host->SaveAppAndTemplateSettings(app, templateOnly);
+      Host ? Host->LoadProceduralTemplate() : ProceduralSettings{};
+  if (WorldForm)
+  {
+    const ProceduralSettings from_form = WorldForm->ReadSettings();
+    proc.Generator = from_form.Generator;
+    proc.Seed = from_form.Seed;
+  }
+  if (SelectedLightingMode == LightingMode::Flat)
+  {
+    proc.AsyncRelight = false;
+  }
+  else if (AsyncRelightBox)
+  {
+    proc.AsyncRelight = AsyncRelightBox->IsChecked();
+  }
+  Host->SaveAppAndTemplateSettings(app, proc);
   Host->ReturnToMainMenu();
 }
 
@@ -193,6 +209,8 @@ void USettingsScreen::Build(UGuiContext &ctx)
       std::clamp(appSnap.Ui.UiScaleUser, kGuiMinUserScale, kGuiMaxUserScale);
   SelectedControlScheme = appSnap.Ui.ControlScheme;
   SelectedGraphicsQuality = appSnap.Render.Preset;
+  SelectedLightingMode =
+      GraphicsQualityProfile::ResolveLightingMode(appSnap.Render);
   SelectedAndroidGpuEnabled = appSnap.Render.AndroidGpuEnabled;
 
   auto backdrop = std::make_unique<UGuiPanel>(&theme);
@@ -406,6 +424,47 @@ void USettingsScreen::Build(UGuiContext &ctx)
   GraphicsQualityButton = graphicsQualityBtn.get();
   app.AddChild(std::move(graphicsQualityBtn));
 
+  auto lightingLbl = std::make_unique<UGuiLabel>(&theme, "Lighting:");
+  LightingModeLabel = lightingLbl.get();
+  app.AddChild(std::move(lightingLbl));
+  auto lightingBtn = std::make_unique<UGuiButton>(
+      &theme, GraphicsQualityProfile::LightingDisplayName(SelectedLightingMode));
+  lightingBtn->SetOnClick(
+      [this]()
+      {
+        SelectedLightingMode =
+            GraphicsQualityProfile::NextLightingMode(SelectedLightingMode);
+        if (LightingModeButton)
+        {
+          LightingModeButton->SetLabel(
+              GraphicsQualityProfile::LightingDisplayName(SelectedLightingMode));
+        }
+        if (AsyncRelightBox)
+        {
+          AsyncRelightBox->SetEnabled(SelectedLightingMode ==
+                                      LightingMode::Full);
+          if (SelectedLightingMode == LightingMode::Flat)
+          {
+            AsyncRelightBox->SetChecked(false);
+          }
+        }
+      });
+  LightingModeButton = lightingBtn.get();
+  app.AddChild(std::move(lightingBtn));
+
+  auto asyncMesh = std::make_unique<UGuiCheckbox>(&theme, "Async meshing");
+  asyncMesh->SetChecked(appSnap.Render.AsyncMeshing);
+  AsyncMeshingBox = asyncMesh.get();
+  app.AddChild(std::move(asyncMesh));
+
+  auto asyncRelight =
+      std::make_unique<UGuiCheckbox>(&theme, "Async relight (Full only)");
+  asyncRelight->SetChecked(procSnap.AsyncRelight &&
+                           SelectedLightingMode == LightingMode::Full);
+  asyncRelight->SetEnabled(SelectedLightingMode == LightingMode::Full);
+  AsyncRelightBox = asyncRelight.get();
+  app.AddChild(std::move(asyncRelight));
+
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
   auto androidGpuBox = std::make_unique<UGuiCheckbox>(
       &theme, "GPU render (restart world)");
@@ -577,6 +636,8 @@ USettingsScreen::BuildAppGridItems(const GuiGridSpec &spec) const
   }
   addLabeledField(ControlSchemeLabel, ControlSchemeButton);
   addLabeledField(GraphicsQualityLabel, GraphicsQualityButton);
+  addLabeledField(LightingModeLabel, LightingModeButton);
+  addCheckPair(AsyncMeshingBox, AsyncRelightBox);
   if (AndroidGpuBox)
   {
     items.push_back({AndroidGpuBox, row, 0, 1, cols, checkH});
