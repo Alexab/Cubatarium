@@ -255,12 +255,13 @@ inline bool ShouldSkipRelightOnTrustedDiskLight(bool trust_disk_light)
   return trust_disk_light;
 }
 
-/// Bake-before-present: LitReady on trusted disk only after lit drawable settle
-/// (light_complete ≠ mesh ready / Minetest lighting_complete).
-inline bool ShouldSetLitReadyOnTrustedDisk(bool has_lit_drawable,
+/// Bake-before-present: LitReady on trusted disk after remesh leaves drawable
+/// (light_complete ≠ mesh ready). FullyDark drawable still unlocks FSM so enter
+/// cannot wedge on residual void faces after the Dirty remesh attempt.
+inline bool ShouldSetLitReadyOnTrustedDisk(bool has_drawable,
                                            bool remesh_in_flight)
 {
-  return has_lit_drawable && !remesh_in_flight;
+  return has_drawable && !remesh_in_flight;
 }
 
 /// Era36 B2 / Era40: dynamic CaptureMovingBgCap — fire at pendf>15 (was 20).

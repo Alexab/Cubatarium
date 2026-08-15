@@ -1277,15 +1277,14 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
       world.SetColumnEmergeState(ground_coord, ColumnEmergeState::Meshing);
       const int cy0 = FloorDiv(dirty_min, CHUNK_SIZE);
       const int cy1 = FloorDiv(dirty_max, CHUNK_SIZE);
-      bool has_lit_drawable = false;
+      bool has_drawable = false;
       bool remesh_in_flight = false;
       for (int cy = cy0; cy <= cy1; ++cy)
       {
         const glm::ivec3 coord(ground_coord.x, cy, ground_coord.z);
-        if (world.GetMeshService().HasDrawableGreedyMesh(coord) &&
-            !world.GetMeshService().GetCache().ChunkHasFullyDarkFace(coord))
+        if (world.GetMeshService().HasDrawableGreedyMesh(coord))
         {
-          has_lit_drawable = true;
+          has_drawable = true;
         }
         if (ColumnHasRemeshOwner(
                 world.GetMeshService().IsChunkMeshDirty(coord),
@@ -1296,7 +1295,7 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
           remesh_in_flight = true;
         }
       }
-      if (ShouldSetLitReadyOnTrustedDisk(has_lit_drawable, remesh_in_flight))
+      if (ShouldSetLitReadyOnTrustedDisk(has_drawable, remesh_in_flight))
       {
         world.SetColumnEmergeState(ground_coord, ColumnEmergeState::LitReady);
       }

@@ -770,7 +770,7 @@ int main()
     Expect(!ShouldSetLitReadyOnTrustedDisk(true, true),
            "flicker: no LitReady while remesh in flight");
     Expect(ShouldSetLitReadyOnTrustedDisk(true, false),
-           "flicker: LitReady after lit drawable settle");
+           "flicker: LitReady after remesh drawable settle");
   }
 
   // --- Era46 enter warmup drain parity / RAA commit coalesce ---
