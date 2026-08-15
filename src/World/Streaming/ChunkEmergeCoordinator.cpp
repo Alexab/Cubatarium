@@ -1750,8 +1750,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
   }
 
-  // Remesh after light before consuming other dirty work so black (light=0)
-  // meshes do not stick for many frames under ocean stream backlog.
+  // Remesh after light: Flush deferred until after ColumnFlow DrainBudget so
+  // Promote/FirstMesh AdvanceColumn runs first (enter GPU PreferKick SoT).
+  int pending_relight_flush_n = 0;
   {
     const int pending_focus =
         world.CountPendingLightBeforeMeshNear(focus_ground_horiz, focus_radius);
@@ -1765,11 +1766,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       flush_n = std::max(flush_n, pending_focus > 15 ? 48 : 32);
     }
-    // Idle remesh catch-up: FlushPendingRelight re-MarksDirty and bumps
-    // revisions under saturated async → stale Apply → Dirty plateau.
     if (!idle_remesh_debt && !idle_focus_dirty_debt)
     {
-      world.FlushPendingRelightMeshColumns(flush_n);
+      pending_relight_flush_n = flush_n;
     }
   }
 
@@ -3239,16 +3238,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // burning 100–200ms whenever burst frames were non-zero on cruise.
   sync_cap = 0;
   // Cruise SOTA: single ColumnFlow DrainBudget after all Enqueue sites.
-  // Always run when promote coalesce is pending (Flush lives inside DrainBudget).
   {
     auto &exec = GetColumnFlowExecutor();
-    if (column_flow_drain_n > 0 || exec.Scheduler().Size() > 0 ||
-        exec.HasPendingPromoteRequest())
-    {
-      exec.DrainBudget(world, std::max(1, column_flow_drain_n),
-                       focus_ground_horiz, focus_radius,
-                       column_flow_admit_batch);
-    }
+    exec.DrainBudget(world, std::max(1, column_flow_drain_n),
+                     focus_ground_horiz, focus_radius,
+                     column_flow_admit_batch);
+  }
+  if (pending_relight_flush_n > 0)
+  {
+    world.FlushPendingRelightMeshColumns(pending_relight_flush_n);
   }
   MeshRebuildTickStats tick_stats{};
   {

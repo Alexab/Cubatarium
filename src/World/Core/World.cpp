@@ -1571,10 +1571,35 @@ void UWorld::FlushPendingRelightMeshColumns(int max_columns_per_flush)
         remesh_owned = true;
       }
     }
-    // Sodium PreferKick: skip seamed Dirty when RAA/GPU owns; undrawn holes only.
-    if (!ShouldFlushRelightMeshColumnSeamed(any_drawable, remesh_owned))
+    // Sodium PreferKick: skip seamed Dirty when RAA/GPU owns; undrawn holes
+    // get seamed Dirty; drawable without owner gets PreferKick/RAA (do not drop).
+    if (remesh_owned)
     {
       PendingRelightMeshColumns.erase(it);
+      continue;
+    }
+    if (any_drawable)
+    {
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(ground.x, cy, ground.z);
+        if (!MeshService->HasDrawableGreedyMesh(coord))
+        {
+          continue;
+        }
+        if (MeshService->IsPendingGpuApply(coord))
+        {
+          MeshService->PreferKickPendingGpuQueued(coord);
+        }
+        else if (!MeshService->IsChunkMeshDirty(coord) &&
+                 !MeshService->IsRemeshAfterApplyPending(coord) &&
+                 !MeshService->HasInflightMeshBuild(coord))
+        {
+          MeshService->RequestRemeshAfterApply(coord);
+        }
+      }
+      PendingRelightMeshColumns.erase(it);
+      ++flushed;
       continue;
     }
     MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
