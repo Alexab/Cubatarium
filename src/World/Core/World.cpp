@@ -5359,6 +5359,7 @@ bool EnterMeshAsyncBlocksRing(const UWorld &world,
 bool HasMissingGreedyMeshesNearFocus(const UWorld &world)
 {
   // Do not CountNonAir here: under streamer contention it can stall for minutes.
+  // SoftDefer empty has HasGreedy but !Drawable — treat as missing (sky-only).
   const glm::ivec3 center =
       UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
   const int radius = EnterGameMeshRadiusChunks(world);
@@ -5372,7 +5373,7 @@ bool HasMissingGreedyMeshesNearFocus(const UWorld &world)
       {
         continue;
       }
-      if (!mesh.HasGreedyMesh(coord))
+      if (!mesh.HasMeshSatisfyingColumnReady(coord))
       {
         return true;
       }

@@ -5,15 +5,17 @@
 namespace cutum
 {
 
-/// Era25 I-F4 + Era30 I-O1: frontier pressure — gen/async ingress under miss or
-/// void; ocean heal pressure without gen/async backlog.
+/// Era25 I-F4 + Era30 I-O1 + sky-fix: frontier pressure — gen/async under miss
+/// or void; ocean heal without backlog; moving absent columns (no mesh telem).
 inline bool IsFrontierPressure(int gen_backlog, int async_queued, bool miss,
-                               int void_n, int void_T = 200, int vb_n = 0)
+                               int void_n, int void_T = 200, int vb_n = 0,
+                               int absent_columns = 0)
 {
   const bool ocean_heal =
       IsOceanHealPressure(miss, void_n, vb_n, void_T);
+  const bool absent_heal = absent_columns > 0;
   if (ShouldFrontierPressureDespiteEmptyGen(gen_backlog <= 0, async_queued <= 0,
-                                            ocean_heal))
+                                            ocean_heal || absent_heal))
   {
     return true;
   }
@@ -21,7 +23,7 @@ inline bool IsFrontierPressure(int gen_backlog, int async_queued, bool miss,
   {
     return false;
   }
-  return miss || void_n > void_T;
+  return miss || void_n > void_T || absent_heal;
 }
 
 /// Era25 I-F2: MC-style light ticket residency for near-focus frontier column.

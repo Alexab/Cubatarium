@@ -2902,10 +2902,14 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       const int vb_n_load = world.PhysicsTelemetryData.VisibleBlackFocusN;
       const bool miss_load = world.PhysicsTelemetryData.FocusMissingMesh != 0;
       const int async_q_load = world.PhysicsTelemetryData.StreamAsyncQueued;
+      const int absent_load =
+          (moving_fast || moving_any)
+              ? world.PhysicsTelemetryData.ColumnAbsentInRdN
+              : 0;
       const bool frontier_moving =
           (moving_fast || moving_any) &&
           IsFrontierPressure(gen_backlog_total, async_q_load, miss_load,
-                             void_n_load, 200, vb_n_load);
+                             void_n_load, 200, vb_n_load, absent_load);
       Streamer->SetFrontierLoadAhead(frontier_moving);
       if (moving_fast || moving_any)
       {
@@ -2982,11 +2986,15 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     // with holes (budgeted; still gated by calm wall ≤20ms — no hitch Capture).
     const bool frontier_prefetch =
         Streamer &&
-        IsFrontierPressure(gen_backlog_total,
-                           world.PhysicsTelemetryData.StreamAsyncQueued,
-                           world.PhysicsTelemetryData.FocusMissingMesh != 0,
-                           world.PhysicsTelemetryData.DarkFaceVoidNearN, 200,
-                           world.PhysicsTelemetryData.VisibleBlackFocusN);
+        IsFrontierPressure(
+            gen_backlog_total,
+            world.PhysicsTelemetryData.StreamAsyncQueued,
+            world.PhysicsTelemetryData.FocusMissingMesh != 0,
+            world.PhysicsTelemetryData.DarkFaceVoidNearN, 200,
+            world.PhysicsTelemetryData.VisibleBlackFocusN,
+            (moving_fast || moving_any)
+                ? world.PhysicsTelemetryData.ColumnAbsentInRdN
+                : 0);
     if (frame_ms <= 20.0 && pressure.allow_prefetch &&
         (((!visual_holes && !underfeet_need) || frontier_prefetch)))
     {
@@ -3058,9 +3066,13 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       const int vb_n = world.PhysicsTelemetryData.VisibleBlackFocusN;
       const bool miss = world.PhysicsTelemetryData.FocusMissingMesh != 0;
       world.PhysicsTelemetryData.FrontierPressure =
-          IsFrontierPressure(gen_backlog_total,
-                             world.PhysicsTelemetryData.StreamAsyncQueued, miss,
-                             void_n, 200, vb_n)
+          IsFrontierPressure(
+              gen_backlog_total,
+              world.PhysicsTelemetryData.StreamAsyncQueued, miss, void_n, 200,
+              vb_n,
+              (moving_fast || moving_any)
+                  ? world.PhysicsTelemetryData.ColumnAbsentInRdN
+                  : 0)
               ? 1
               : 0;
     }

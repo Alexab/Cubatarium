@@ -480,18 +480,23 @@ inline bool ShouldPreferKickAfterRemeshAfterApplyCommit(bool gpu_pending)
   return gpu_pending;
 }
 
-/// Era46 B / Era47 P3 / Era49b: MarkDirty after RAA commit only when not already
-/// dirty and not GPU. Under enter lit gate / GPU quiesce drain — never MarkDirty
-/// (PreferKick-only; RepairEnterLit owns FullyDark reschedule).
-inline bool ShouldMarkDirtyAfterRemeshAfterApplyCommit(bool already_dirty,
-                                                      bool gpu_pending,
-                                                      bool enter_lit_gate = false)
+/// Era46 B / Era47 P3 / Era49b / sky-fix: MarkDirty after RAA commit when not
+/// already dirty and not GPU. Under enter lit gate / GPU quiesce — PreferKick
+/// for drawable remesh only; !Drawable (FirstMesh / SoftDefer empty) must still
+/// MarkDirty or RAA is erased into a no-op (manual 093222 sky-only).
+inline bool ShouldMarkDirtyAfterRemeshAfterApplyCommit(
+    bool already_dirty, bool gpu_pending, bool enter_lit_gate = false,
+    bool needs_first_mesh = false)
 {
-  if (enter_lit_gate)
+  if (already_dirty || gpu_pending)
   {
     return false;
   }
-  return !already_dirty && !gpu_pending;
+  if (enter_lit_gate)
+  {
+    return needs_first_mesh;
+  }
+  return true;
 }
 
 /// Era49b: enter gate active ⇒ treat as enter_lit_gate for RAA commit policy.

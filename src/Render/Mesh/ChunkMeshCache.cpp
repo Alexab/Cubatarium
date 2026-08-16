@@ -2508,16 +2508,14 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     const bool gpu_pending = IsPendingGpuApply(coord);
     const bool enter_gate =
         EnterGateBlocksRaaMarkDirty(EnterLitQuiesce, EnterGpuQuiesceDrain);
-    if (ShouldPreferKickAfterRemeshAfterApplyCommit(gpu_pending) || enter_gate)
+    const bool needs_first_mesh = !HasDrawableGreedyMesh(coord);
+    if (gpu_pending)
     {
-      if (gpu_pending)
-      {
-        PreferKickPendingGpuQueued(coord);
-      }
+      PreferKickPendingGpuQueued(coord);
     }
-    else if (ShouldMarkDirtyAfterRemeshAfterApplyCommit(Dirty.Contains(coord),
-                                                        gpu_pending,
-                                                        enter_gate))
+    else if (ShouldMarkDirtyAfterRemeshAfterApplyCommit(
+                 Dirty.Contains(coord), gpu_pending, enter_gate,
+                 needs_first_mesh))
     {
       MarkDirtyPriority(coord);
       ++RaaCommitMarkDirtyN;
@@ -3249,16 +3247,14 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       const bool gpu_pending = IsPendingGpuApply(result.coord);
       const bool enter_gate =
           EnterGateBlocksRaaMarkDirty(EnterLitQuiesce, EnterGpuQuiesceDrain);
-      if (ShouldPreferKickAfterRemeshAfterApplyCommit(gpu_pending) ||
-          enter_gate)
+      const bool needs_first_mesh = !HasDrawableGreedyMesh(result.coord);
+      if (gpu_pending)
       {
-        if (gpu_pending)
-        {
-          PreferKickPendingGpuQueued(result.coord);
-        }
+        PreferKickPendingGpuQueued(result.coord);
       }
       else if (ShouldMarkDirtyAfterRemeshAfterApplyCommit(
-                   Dirty.Contains(result.coord), gpu_pending, enter_gate))
+                   Dirty.Contains(result.coord), gpu_pending, enter_gate,
+                   needs_first_mesh))
       {
         MarkDirtyPriority(result.coord);
         ++RaaCommitMarkDirtyN;
@@ -3313,15 +3309,14 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     const bool gpu_pending = IsPendingGpuApply(result.coord);
     const bool enter_gate =
         EnterGateBlocksRaaMarkDirty(EnterLitQuiesce, EnterGpuQuiesceDrain);
-    if (ShouldPreferKickAfterRemeshAfterApplyCommit(gpu_pending) || enter_gate)
+    const bool needs_first_mesh = !HasDrawableGreedyMesh(result.coord);
+    if (gpu_pending)
     {
-      if (gpu_pending)
-      {
-        PreferKickPendingGpuQueued(result.coord);
-      }
+      PreferKickPendingGpuQueued(result.coord);
     }
     else if (ShouldMarkDirtyAfterRemeshAfterApplyCommit(
-                 Dirty.Contains(result.coord), gpu_pending, enter_gate))
+                 Dirty.Contains(result.coord), gpu_pending, enter_gate,
+                 needs_first_mesh))
     {
       MarkDirtyPriority(result.coord);
       ++RaaCommitMarkDirtyN;
@@ -3378,6 +3373,37 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastDirtyFmN = static_cast<int>(Dirty.GetFirstMeshCount());
   LastDirtyRemeshN = static_cast<int>(Dirty.GetRemeshCount());
   LastDirtyRevisitSameN = 0;
+  // Sky-fix: orphan RemeshAfterApply (no Dirty/Active/GPU) never commits under
+  // enter PreferKick-only — promote to FirstMesh Dirty so bake can proceed.
+  {
+    constexpr int kOrphanRaaPromote = 12;
+    int promoted = 0;
+    for (auto it = RemeshAfterApply.begin();
+         it != RemeshAfterApply.end() && promoted < kOrphanRaaPromote;)
+    {
+      const glm::ivec3 c = *it;
+      const bool owned =
+          Dirty.Contains(c) || IsPendingGpuApply(c) ||
+          (AsyncBuilder && AsyncBuilder->IsInFlight(c)) ||
+          ActiveMeshSourceRevision.count(c) > 0;
+      if (owned)
+      {
+        ++it;
+        continue;
+      }
+      it = RemeshAfterApply.erase(it);
+      Dirty.MarkDirtyPriority(c);
+      BumpChunkMeshRevision(c);
+      ++RaaCommitMarkDirtyN;
+      ++promoted;
+    }
+    if (promoted > 0)
+    {
+      InstancesDirty = true;
+      GreedyBatchesDirty = true;
+      CrossBatchesDirty = true;
+    }
+  }
   if (!PrevDirtyForRevisit.empty() && !Dirty.empty())
   {
     for (const glm::ivec3 &coord : Dirty)

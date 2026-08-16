@@ -211,6 +211,10 @@ int main()
          "Era30 I-O1: VB without gen/async ⇒ ocean heal pressure");
   Expect(!IsFrontierPressure(3, 0, false, 50),
          "Era25 I-F4: gen without miss/void → no pressure");
+  Expect(IsFrontierPressure(0, 0, false, 0, 200, 0, 5),
+         "sky-fix: moving absent columns ⇒ frontier pressure");
+  Expect(!IsFrontierPressure(0, 0, false, 0, 200, 0, 0),
+         "sky-fix: no absent/miss/void → no empty-gen pressure");
   Expect(FrontierColumnNeedsLightTicket(true, true, false, false),
          "Era25 I-F2: near + pending + !drawable ⇒ light ticket");
   Expect(FrontierColumnNeedsLightTicket(true, true, true, true),
@@ -924,8 +928,12 @@ int main()
     Expect(!IsEnterGpuWarmupReady(true, 0, true, true, false),
            "Era48: not ready while visibility debt");
     // Latch semantics covered in World EnterLitQuiesceLatched (fifo blips).
-    Expect(!ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, true),
-           "Era47 P3: enter gate ⇒ no RAA MarkDirty");
+    Expect(!ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, true,
+                                                       /*needs_first_mesh=*/false),
+           "Era47 P3: enter gate drawable ⇒ no RAA MarkDirty");
+    Expect(ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, true,
+                                                      /*needs_first_mesh=*/true),
+           "sky-fix: enter gate !Drawable ⇒ RAA MarkDirty FirstMesh");
     Expect(ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, false),
            "Era47: outside enter MarkDirty still allowed when clear");
     MeshWorkAdmissionInput enter_in{};
@@ -973,8 +981,12 @@ int main()
            "Era49b: no enter ⇒ RAA MarkDirty allowed");
     Expect(EnterGateBlocksRaaMarkDirty(false, true),
            "Era49b: EnterGpuQuiesceDrain blocks RAA MarkDirty");
-    Expect(!ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, true),
-           "Era49b: enter gate ⇒ no RAA MarkDirty");
+    Expect(!ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, true,
+                                                       /*needs_first_mesh=*/false),
+           "Era49b: enter gate drawable ⇒ no RAA MarkDirty");
+    Expect(ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, true,
+                                                      /*needs_first_mesh=*/true),
+           "sky-fix: enter !Drawable still MarkDirty");
   }
 
   // --- Era50 EnterVisualGate completion FSM (pure) ---
