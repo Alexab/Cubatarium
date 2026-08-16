@@ -386,8 +386,9 @@ inline void ApplyRemeshAdmitBackpressure(MeshWorkAdmission &adm,
   const int admit_cap =
       in.stream_pressure >= 2 ? in.admit_cap_red : in.admit_cap_yellow;
   adm.dirty_admit_budget = std::min(adm.dirty_admit_budget, std::max(0, admit_cap));
-  adm.remesh_schedule =
-      std::min(adm.remesh_schedule, in.miss_active ? 0 : 1);
+  // Keep at least 1 remesh slot under miss: dual-Q already prefers FirstMesh;
+  // remesh_schedule=0 starved lit settle and caused flicker / late light updates.
+  adm.remesh_schedule = std::min(adm.remesh_schedule, 1);
   adm.allow_neighbor_dirty = false;
   if (adm.first_mesh_schedule > 0 && adm.max_schedule > 0)
   {

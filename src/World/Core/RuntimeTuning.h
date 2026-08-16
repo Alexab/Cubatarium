@@ -96,6 +96,8 @@ struct URuntimeTuning
   float RelightFifoAdmitFrac{0.75f};
   /// Cruise wall P2: miss FirstMesh/GPU reserved ms inside StreamingPhaseBudget.
   float MissReservedMs{8.0f};
+  /// Under miss/holes, never starve emerge below this when stream overruns general.
+  float MissEmergeFloorMs{18.0f};
   /// Era19 kill-switch: SoftDefer Capture floor while VisibleBlack (Era18).
   /// Default true = current Era18 behavior until miss-first budget owns it.
   bool Era18VbCaptureFloor{true};

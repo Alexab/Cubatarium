@@ -3933,12 +3933,13 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         MeshFocusValid &&
         HasMissingGreedyMeshInHorizontalRadius(world, MeshFocusGroundChunk,
                                                MeshFocusRadiusChunks);
-    // P4: under holes, finish focus-missing GPU before admitting remesh.
+    // P4: under holes, prefer GPU Finish for focus-missing but keep 1 remesh
+    // slot so lit settle is not deferred indefinitely (manual 222059 flicker).
     if ((StarveRemeshForHoles || focus_missing_for_schedule) &&
         CountPendingGpuAppliesInHorizontalRadius(MeshFocusGroundChunk,
                                                  MeshFocusRadiusChunks) > 0)
     {
-      remesh_cap = 0;
+      remesh_cap = std::min(remesh_cap, 1);
     }
     if (MeshFocusValid && first_mesh_cap > 0)
     {

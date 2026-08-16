@@ -731,8 +731,15 @@ void UWorld::TickWorldStreamingPhase()
       general_budget > 0.0f
           ? std::max(0.0, static_cast<double>(general_budget) - stream_elapsed_ms)
           : 0.0;
-  const double emerge_cap =
-      static_cast<double>(reserved) + remain_general;
+  double emerge_cap = static_cast<double>(reserved) + remain_general;
+  if (miss_carve_out)
+  {
+    // Stream overrun must not collapse heal to MissReservedMs alone (manual
+    // 222059: emerge_budget med=8, void p90~1k, remesh starved).
+    const float miss_floor =
+        std::max(reserved, std::max(0.0f, tune.MissEmergeFloorMs));
+    emerge_cap = std::max(emerge_cap, static_cast<double>(miss_floor));
+  }
   PhysicsTelemetryData.PhaseBudgetOver =
       (phase_budget > 0.0f &&
        stream_elapsed_ms >= static_cast<double>(general_budget))

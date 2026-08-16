@@ -1467,7 +1467,7 @@ int main()
     red.admit_cap_red = 0;
     ApplyRemeshAdmitBackpressure(adm, red);
     Expect(adm.dirty_admit_budget == 0, "P0: Red admit cap 0");
-    Expect(adm.remesh_schedule == 0, "P0: miss + BP remesh_schedule 0");
+    Expect(adm.remesh_schedule == 1, "P0: BP keeps remesh_schedule >= 1");
     Expect(!adm.allow_neighbor_dirty, "P0: neighbor dirty off");
     RemeshAdmitBackpressureInput fifo{};
     fifo.stream_pressure = 1;

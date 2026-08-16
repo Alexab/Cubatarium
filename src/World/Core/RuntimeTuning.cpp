@@ -206,6 +206,11 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   {
     t.MissReservedMs = j.value("miss_reserved_ms", t.MissReservedMs);
   }
+  if (j.contains("miss_emerge_floor_ms"))
+  {
+    t.MissEmergeFloorMs =
+        j.value("miss_emerge_floor_ms", t.MissEmergeFloorMs);
+  }
   if (j.contains("streaming_phase_budget_ms"))
   {
     t.StreamingPhaseBudgetMs =
