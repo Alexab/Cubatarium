@@ -54,9 +54,9 @@ int main()
   Expect(TicketLevelForRing(5) == ColumnTicketLevel::MeshDeferred, "ring5 deferred");
   WorkPoolBudget base = DefaultCruisePools();
   WorkPoolBudget hole = HoleDrainPools(base);
-  Expect(hole.remesh_slots == 0, "hole drain remesh→0");
-  Expect(hole.first_mesh_slots == base.first_mesh_slots + base.remesh_slots,
-         "hole drain FM gets remesh slots");
+  Expect(hole.remesh_slots == 1, "hole drain keeps 1 remesh reservation");
+  Expect(hole.first_mesh_slots == base.first_mesh_slots + base.remesh_slots - 1,
+         "hole drain FM gets stolen remesh slots");
 
   // --- ColumnRecord store ---
   UColumnRecordStore store;

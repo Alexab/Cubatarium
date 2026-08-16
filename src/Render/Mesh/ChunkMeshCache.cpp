@@ -581,16 +581,11 @@ bool UChunkMeshCache::HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const
 
 bool UChunkMeshCache::HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const
 {
-  if (HasDrawableGreedyMesh(chunk_coord))
-  {
-    return true;
-  }
-  // Intentional occluded GPU commit: resident slot with 0 quads. Distinguishes
-  // SoftDefer wrong-empty (usually !GpuResident) so FogPullIn/miss do not latch
-  // (manual 222446) while rim SoftDefer holes stay visible to hole SoT.
-  const auto it = GreedyCache.find(chunk_coord);
-  return it != GreedyCache.end() && it->second.GpuResident &&
-         it->second.GpuQuadCount == 0;
+  // Drawable only. GpuResident 0-quad used to fake "ready" after SoftDefer empty
+  // publish cleared SoftDeferHeld (manual 171636 sky-only: holes=0 while
+  // underfeet_has_mesh=0). Occluded true-empty still remeshes once; FogPullIn
+  // prefers a brief hole over permanent invisible underfeet.
+  return HasDrawableGreedyMesh(chunk_coord);
 }
 
 bool UChunkMeshCache::IsGpuExtractInFlight(glm::ivec3 chunk_coord) const
@@ -638,6 +633,7 @@ void UChunkMeshCache::EnsurePendingGpuIndex() const
 
 bool UChunkMeshCache::PreferKickPendingGpuQueued(glm::ivec3 chunk_coord)
 {
+  // Closeout F: cancel-stale / reorder GPU apply only — not a remesh owner.
   // Era15 TD-051: also promote Kicked/Dispatched to front so Finish drains
   // nearest tops stall (API was Queued-only → PreferKick no-op under Kick).
   auto promote = [&](PendingGpuApply::Phase want) -> bool {
@@ -1710,10 +1706,24 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
       OnSoftDeferHeld(coord);
       ++ticket_refresh;
     }
-    // Era47: lit-quiesce — keep SoftDeferHeld tickets, do not re-Dirty
-    // (sticky Dirty blocks IsSpawnMeshRingReady).
+    // Era47: lit-quiesce — do not sticky-reDirty SoftDeferHeld globally.
+    // Convergence: undrawn spawn-ring (r≤2) may re-Dirty once so FirstMesh
+    // can schedule after SoftDefer-empty park (manual 173849).
     if (EnterLitQuiesce)
     {
+      const int spawn_horiz =
+          MeshFocusValid
+              ? std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
+                         std::abs(coord.z - MeshFocusGroundChunk.z))
+              : 999;
+      if (spawn_horiz <= 2 && !HasDrawableGreedyMesh(coord) &&
+          requeued < kRequeueBudget && TryConsumeDirtyAdmit())
+      {
+        it = SoftDeferHeld.erase(it);
+        MarkDirtyPriority(coord);
+        ++requeued;
+        continue;
+      }
       ++it;
       continue;
     }
@@ -1831,15 +1841,32 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
       // PendingReplace — hold supersede (no Forget → discarded_late hole).
       const bool soft_undrawn =
           was_soft_held || HasGreedyMesh(chunkCoord);
-      if (inflight || gpu_pending || pending_gpu_apply ||
-          ShouldHoldInflightSupersedeUnderMissUndrawn(
-              soft_undrawn, /*has_inflight=*/true, /*has_drawable=*/false))
+      if (pending_gpu_apply)
       {
-        if (pending_gpu_apply)
+        PreferKickPendingGpuQueued(chunkCoord);
+        return;
+      }
+      // Convergence (manual 180247): SoftDefer empty under EnterLitQuiesce must
+      // enter Dirty for FirstMesh. Hardcoded has_inflight=true + RAA park left
+      // dirty=0 missing=1 forever (RAA↔SoftDeferHeld, never schedule).
+      const bool live_flight = inflight || gpu_pending;
+      if (EnterLitQuiesce && soft_undrawn)
+      {
+        if (live_flight)
         {
-          PreferKickPendingGpuQueued(chunkCoord);
-          return;
+          InvalidateInFlightMeshBuild(chunkCoord);
+          if (AsyncBuilder)
+          {
+            AsyncBuilder->ForgetInflight(chunkCoord);
+          }
         }
+        RemeshAfterApply.erase(chunkCoord);
+        // fall through to Dirty.MarkDirtyPriority below
+      }
+      else if (live_flight ||
+               ShouldHoldInflightSupersedeUnderMissUndrawn(
+                   soft_undrawn, live_flight, /*has_drawable=*/false))
+      {
         if (RemeshAfterApply.count(chunkCoord) > 0 ||
             Dirty.Contains(chunkCoord))
         {
@@ -1849,10 +1876,13 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
         ++MarkDirtyToRaaN;
         return;
       }
-      InvalidateInFlightMeshBuild(chunkCoord);
-      if (AsyncBuilder)
+      else
       {
-        AsyncBuilder->ForgetInflight(chunkCoord);
+        InvalidateInFlightMeshBuild(chunkCoord);
+        if (AsyncBuilder)
+        {
+          AsyncBuilder->ForgetInflight(chunkCoord);
+        }
       }
     }
     else
@@ -2520,7 +2550,15 @@ bool UChunkMeshCache::CommitGpuMeshResult(
                  Dirty.Contains(coord), gpu_pending, enter_gate,
                  needs_first_mesh, fully_dark_drawable))
     {
-      MarkDirtyPriority(coord);
+      // Closeout C: lit remesh → RemeshQ; missing/FullyDark → FirstMeshQ.
+      if (needs_first_mesh || fully_dark_drawable)
+      {
+        MarkDirtyPriority(coord);
+      }
+      else
+      {
+        MarkDirty(coord);
+      }
       ++RaaCommitMarkDirtyN;
     }
   }
@@ -3194,21 +3232,33 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   if ((defer_until_lit || SoftDeferHeld.count(result.coord) > 0) &&
       !new_cpu_drawable)
   {
-    NoteSoftDeferEmptyPublishAvoided(result.coord);
-    HoldSoftDeferFirstMesh(result.coord);
-    if (IsPendingGpuApply(result.coord))
+    // EnterLitQuiesce: SoftDeferHeld empty avoid looped async forever while
+    // SoftDefer still true on PendingLight (manual 181421 async=1 missing=1).
+    // SoftDefer already lifted for spawn — drop Held and publish state.
+    if (EnterLitQuiesce && !defer_until_lit)
     {
-      PreferKickPendingGpuQueued(result.coord);
+      SoftDeferHeld.erase(result.coord);
+      RemeshAfterApply.erase(result.coord);
+      // fall through to publish / FreeChunk path
     }
-    if (had_gpu_resident)
+    else
     {
-      ++MeshReplaceHoleAvoided;
+      NoteSoftDeferEmptyPublishAvoided(result.coord);
+      HoldSoftDeferFirstMesh(result.coord);
+      if (IsPendingGpuApply(result.coord))
+      {
+        PreferKickPendingGpuQueued(result.coord);
+      }
+      if (had_gpu_resident)
+      {
+        ++MeshReplaceHoleAvoided;
+        MaybeMarkDirtyAfterSoftDeferEmptyAvoid(result.coord);
+        return;
+      }
+      // Era39: keep HasGreedy sticky — do not erase GreedyCache (flash).
       MaybeMarkDirtyAfterSoftDeferEmptyAvoid(result.coord);
       return;
     }
-    // Era39: keep HasGreedy sticky — do not erase GreedyCache (flash).
-    MaybeMarkDirtyAfterSoftDeferEmptyAvoid(result.coord);
-    return;
   }
   const auto oldIt = GreedyVertexCountByChunk.find(result.coord);
   if (oldIt != GreedyVertexCountByChunk.end())
@@ -3327,7 +3377,14 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
                  Dirty.Contains(result.coord), gpu_pending, enter_gate,
                  needs_first_mesh, fully_dark_drawable))
     {
-      MarkDirtyPriority(result.coord);
+      if (needs_first_mesh || fully_dark_drawable)
+      {
+        MarkDirtyPriority(result.coord);
+      }
+      else
+      {
+        MarkDirty(result.coord);
+      }
       ++RaaCommitMarkDirtyN;
     }
   }
@@ -3448,8 +3505,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   // Era47: lit-quiesce Dirty prune runs before sort/schedule — sticky
   // SoftDefer/orphan (!HasChunk) otherwise block IsSpawnMeshRingReady
   // forever while gpu/async already 0 (World_174 stuck_dirty y=4).
-  // Era49: do NOT RemoveAt FullyDark drawable Dirty — remesh-after-lit must
+  // Era49: do NOT RemoveAt unfinished FullyDark drawable Dirty — remesh must
   // finish to VisualReady (PreferKick/RAA alone left void≈856).
+  // Convergence (manual 173849/180247): SoftDefer empty outside spawn parks to
+  // SoftDeferHeld; spawn r≤2 undrawn KEEPS Dirty so FirstMesh can schedule
+  // (park+Requeue cancelled Dirty every frame → missing=1 forever).
   if (EnterLitQuiesce && !Dirty.empty())
   {
     for (auto it = Dirty.begin(); it != Dirty.end();)
@@ -3460,31 +3520,60 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         ++LastMeshDirtyPruneN;
         continue;
       }
+      int horiz = 999;
+      if (MeshFocusValid)
+      {
+        horiz = std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                         std::abs(it->z - MeshFocusGroundChunk.z));
+      }
       if (HasDrawableGreedyMesh(*it) && ChunkHasFullyDarkFace(*it))
       {
+        const glm::ivec2 col(it->x, it->z);
+        if (EnterGateDoneColumns.count(col) > 0)
+        {
+          RemeshAfterApply.erase(*it);
+          it = Dirty.RemoveAt(it);
+          ++LastMeshDirtyPruneN;
+          continue;
+        }
         ++it;
         continue;
       }
       const bool soft_empty =
           HasGreedyMesh(*it) && !HasDrawableGreedyMesh(*it);
-      if (HasDrawableGreedyMesh(*it) || SoftDeferHeld.count(*it) > 0 ||
-          soft_empty)
+      if (soft_empty)
+      {
+        if (EnterLitQuiesceKeepSpawnUndrawnDirty(true, /*has_drawable=*/false,
+                                                 horiz))
+        {
+          ++it;
+          continue;
+        }
+        HoldSoftDeferFirstMesh(*it);
+        RemeshAfterApply.erase(*it);
+        it = Dirty.RemoveAt(it);
+        ++LastMeshDirtyPruneN;
+        continue;
+      }
+      if (HasDrawableGreedyMesh(*it) || SoftDeferHeld.count(*it) > 0)
       {
         it = Dirty.RemoveAt(it);
         ++LastMeshDirtyPruneN;
         continue;
       }
       // Pending-light park: SoftDeferHeld owns FirstMesh; keep Dirty only when
-      // we will schedule FirstMesh this frame.
+      // we will schedule FirstMesh this frame — or spawn undrawn (180247).
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
       {
         const bool has_drawable = HasDrawableGreedyMesh(*it);
+        if (EnterLitQuiesceKeepSpawnUndrawnDirty(true, has_drawable, horiz))
+        {
+          ++it;
+          continue;
+        }
         bool in_focus = false;
         if (MeshFocusValid)
         {
-          const int horiz =
-              std::max(std::abs(it->x - MeshFocusGroundChunk.x),
-                       std::abs(it->z - MeshFocusGroundChunk.z));
           in_focus = horiz <= MeshFocusRadiusChunks;
         }
         const bool miss_or_focus = StarveRemeshForHoles || in_focus;

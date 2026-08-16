@@ -1026,7 +1026,15 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           StickyRemeshAfterLight.insert(col);
         }
       }
-      MeshService->MarkDirtyPriority(coord);
+      // Closeout C: FullyDark/missing → FirstMeshQ; lit drawable remesh → RemeshQ.
+      if (fully_dark || !MeshService->HasDrawableGreedyMesh(coord))
+      {
+        MeshService->MarkDirtyPriority(coord);
+      }
+      else
+      {
+        MeshService->MarkDirty(coord);
+      }
       MeshService->RequestRemeshAfterApply(coord);
       break;
     case RemeshAfterLitApplyDecision::PreferKickGpu:
@@ -2180,6 +2188,10 @@ void UWorld::SetColumnEmergeState(glm::ivec3 ground, ColumnEmergeState state)
   ColumnEmergeStates[glm::ivec2(ground.x, ground.z)] = state;
   // Phase 2 dual-write: ColumnRecord mirrors emerge SoT.
   ColumnRecords.SetEmerge(glm::ivec2(ground.x, ground.z), state);
+  if (state == ColumnEmergeState::RenderReady)
+  {
+    ColumnRecords.GetOrCreate(glm::ivec2(ground.x, ground.z)).inflight_job = 0;
+  }
 }
 
 void UWorld::SampleColumnEmergeStageTelemetry()
@@ -2215,12 +2227,18 @@ ColumnEmergeState UWorld::GetColumnEmergeState(glm::ivec3 ground) const
   {
     ground.y = 0;
   }
+  // Map remains bump SoT; ColumnRecord mirrors (SetDesired must not win Empty).
   const auto it = ColumnEmergeStates.find(glm::ivec2(ground.x, ground.z));
-  if (it == ColumnEmergeStates.end())
+  if (it != ColumnEmergeStates.end())
   {
-    return ColumnEmergeState::Empty;
+    return it->second;
   }
-  return it->second;
+  if (const ColumnRecord *rec =
+          ColumnRecords.Find(glm::ivec2(ground.x, ground.z)))
+  {
+    return rec->emerge;
+  }
+  return ColumnEmergeState::Empty;
 }
 
 void UWorld::ClearColumnEmergeState(glm::ivec2 ground_xz)
@@ -2798,6 +2816,16 @@ void UWorld::SetLastUnfinishedVisualSample(int count) const
 {
   LastUnfinishedVisualSample = count;
   LastUnfinishedVisualSampleValid = true;
+}
+
+const UWorld::FocusRingVisualSample &UWorld::GetFocusRingVisualSample() const
+{
+  return LastFocusRingVisualSample;
+}
+
+void UWorld::SetFocusRingVisualSample(const FocusRingVisualSample &sample) const
+{
+  LastFocusRingVisualSample = sample;
 }
 
 void UWorld::CountUnfinishedVisualByFacing(glm::ivec3 focus_ground_chunk,
@@ -5431,25 +5459,88 @@ bool EnterMeshAsyncBlocksRing(const UWorld &world,
   return mesh.HasPendingAsyncMeshWork();
 }
 
-bool HasMissingGreedyMeshesNearFocus(const UWorld &world)
+bool HasDirtyWithinHorizontalRadiusBand(const UWorldMeshService &mesh,
+                                        glm::ivec3 center, int radius, int cy0,
+                                        int cy1)
 {
-  // Do not CountNonAir here: under streamer contention it can stall for minutes.
-  // SoftDefer empty has HasGreedy but !Drawable — treat as missing (sky-only).
-  const glm::ivec3 center =
-      UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
-  const int radius = EnterGameMeshRadiusChunks(world);
-  const UWorldMeshService &mesh = world.GetMeshService();
+  // HasDirtyInColumnBand takes block-Y and FloorDivs to cy.
+  const int band_min = cy0 * CHUNK_SIZE;
+  const int band_max = cy1 * CHUNK_SIZE + (CHUNK_SIZE - 1);
   for (int dx = -radius; dx <= radius; ++dx)
   {
     for (int dz = -radius; dz <= radius; ++dz)
     {
-      const glm::ivec3 coord(center.x + dx, 0, center.z + dz);
-      if (!world.GetBlockWorld().GetChunkManager().HasChunk(coord))
+      if (mesh.HasDirtyInColumnBand(glm::ivec2(center.x + dx, center.z + dz),
+                                    band_min, band_max))
       {
-        continue;
+        return true;
       }
-      if (!mesh.HasMeshSatisfyingColumnReady(coord))
+    }
+  }
+  return false;
+}
+
+bool HasMissingGreedyMeshesNearFocus(const UWorld &world)
+{
+  // Do not CountNonAir here: under streamer contention it can stall for minutes.
+  // SoftDefer empty has HasGreedy but !Drawable — treat as missing (sky-only)
+  // only when the slice still has solid. True-empty 0-quad is ready.
+  // Presentable cy band (not cy=0 only): underfeet can be ready while bedrock
+  // SoftDefer empty kept missing=1 forever (manual 182802).
+  const glm::ivec3 focus = world.GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus);
+  const int radius = EnterGameMeshRadiusChunks(world);
+  const UWorldMeshService &mesh = world.GetMeshService();
+  const auto &proc = world.GetProceduralSettings();
+  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
+  const int player_cy = FloorDiv(std::max(0, focus.y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
+  int cy0 = 0;
+  int cy1 = 0;
+  EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
+                               cy1);
+  auto sample_solid = [](const UChunk *chunk) -> bool
+  {
+    if (!chunk)
+    {
+      return false;
+    }
+    for (int z = 0; z < CHUNK_SIZE; z += 4)
+    {
+      for (int x = 0; x < CHUNK_SIZE; x += 4)
       {
+        for (int y = 0; y < CHUNK_SIZE; y += 4)
+        {
+          if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+          {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  };
+  for (int dx = -radius; dx <= radius; ++dx)
+  {
+    for (int dz = -radius; dz <= radius; ++dz)
+    {
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(center.x + dx, cy, center.z + dz);
+        if (!world.GetBlockWorld().GetChunkManager().HasChunk(coord))
+        {
+          continue;
+        }
+        if (mesh.HasMeshSatisfyingColumnReady(coord))
+        {
+          continue;
+        }
+        if (mesh.HasGreedyMesh(coord) &&
+            !sample_solid(
+                world.GetBlockWorld().GetChunkManager().GetChunk(coord)))
+        {
+          continue;
+        }
         return true;
       }
     }
@@ -5493,18 +5584,30 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
   // and re-dirties the entire load radius every frame (hang / crash).
   if (spawn_meshes_pending && HasMissingGreedyMeshesNearFocus(*this))
   {
+    const auto &proc = GetProceduralSettings();
+    const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
+    const int player_cy =
+        FloorDiv(std::max(0, GetPreferredLoadFocusBlock().y), CHUNK_SIZE);
+    const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
+    int cy0 = 0;
+    int cy1 = 0;
+    EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
+                                 cy1);
     for (int dx = -radius; dx <= radius; ++dx)
     {
       for (int dz = -radius; dz <= radius; ++dz)
       {
-        const glm::ivec3 coord(center.x + dx, 0, center.z + dz);
-        if (!BlockWorld.GetChunkManager().HasChunk(coord))
+        for (int cy = cy0; cy <= cy1; ++cy)
         {
-          continue;
-        }
-        if (!mesh.HasGreedyMesh(coord))
-        {
-          mesh.MarkDirtyPriority(coord);
+          const glm::ivec3 coord(center.x + dx, cy, center.z + dz);
+          if (!BlockWorld.GetChunkManager().HasChunk(coord))
+          {
+            continue;
+          }
+          if (!mesh.HasGreedyMesh(coord))
+          {
+            mesh.MarkDirtyPriority(coord);
+          }
         }
       }
     }
@@ -5534,15 +5637,30 @@ bool UWorld::IsSpawnMeshRingReady() const
   {
     return false;
   }
-  const glm::ivec3 center =
-      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const glm::ivec3 focus = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus);
   const int radius = EnterGameMeshRadiusChunks(*this);
   if (HasMissingGreedyMeshesNearFocus(*this))
   {
     return false;
   }
-  // Era49: Dirty must clear. Residual async/GPU may be ignored after worklist
-  // Done + underfeet present (see below).
+  const auto &proc = GetProceduralSettings();
+  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
+  const int player_cy = FloorDiv(std::max(0, focus.y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
+  int cy0 = 0;
+  int cy1 = 0;
+  EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
+                               cy1);
+  // Era49 / manual 182802: after worklist Done + underfeet, only presentable
+  // cy-band Dirty blocks — residual deep SoftDefer empty GPU/async is cruise.
+  if (EnterSpawnRingIgnoresHinterlandMeshDebt(EnterLitGateActive,
+                                              CountEnterVisibilityDebt(),
+                                              IsEnterUnderfeetPresentReady()))
+  {
+    return !HasDirtyWithinHorizontalRadiusBand(*MeshService, center, radius,
+                                               cy0, cy1);
+  }
   if (MeshService->HasDirtyWithinHorizontalRadius(center, radius))
   {
     return false;
@@ -5551,11 +5669,7 @@ bool UWorld::IsSpawnMeshRingReady() const
       EnterMeshAsyncBlocksRing(*this, *MeshService, center, radius);
   const int gpu_pending =
       MeshService->CountPendingGpuAppliesInHorizontalRadius(center, radius);
-  if (gpu_pending <= 0 && !async_pending)
-  {
-    return true;
-  }
-  return false;
+  return gpu_pending <= 0 && !async_pending;
 }
 
 int UWorld::CountPostLoadRingNotReady() const
@@ -5594,16 +5708,35 @@ void UWorld::SampleEnterGameMeshWarmupBlockers(EnterGameMeshWarmupBlockers &out)
     return;
   }
   const UWorldMeshService &mesh = *MeshService;
-  const glm::ivec3 center =
-      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const glm::ivec3 focus = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus);
   const int radius = EnterGameMeshRadiusChunks(*this);
-  out.dirty = mesh.HasDirtyWithinHorizontalRadius(center, radius);
+  const auto &proc = GetProceduralSettings();
+  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
+  const int player_cy = FloorDiv(std::max(0, focus.y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
+  int cy0 = 0;
+  int cy1 = 0;
+  EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
+                               cy1);
   out.missing_greedy = HasMissingGreedyMeshesNearFocus(*this);
+  out.visual_warmup = NeedsEnterGameVisualWarmup();
+  if (EnterSpawnRingIgnoresHinterlandMeshDebt(EnterLitGateActive,
+                                              CountEnterVisibilityDebt(),
+                                              IsEnterUnderfeetPresentReady()))
+  {
+    out.dirty = HasDirtyWithinHorizontalRadiusBand(mesh, center, radius, cy0,
+                                                   cy1);
+    // Residual deep SoftDefer empty GPU/async is not an enter blocker.
+    out.gpu_pending_near = 0;
+    out.async_mesh_pending = false;
+    return;
+  }
+  out.dirty = mesh.HasDirtyWithinHorizontalRadius(center, radius);
   out.gpu_pending_near =
       mesh.CountPendingGpuAppliesInHorizontalRadius(center, radius);
   out.async_mesh_pending =
       EnterMeshAsyncBlocksRing(*this, mesh, center, radius);
-  out.visual_warmup = NeedsEnterGameVisualWarmup();
 }
 
 bool UWorld::NeedsEnterGameMeshWarmup() const
@@ -5825,13 +5958,28 @@ bool UWorld::ColumnHasLitDrawableFace(glm::ivec2 col_chunk_xz) const
 
 bool UWorld::IsEnterLitSnapshotColumnResolved(glm::ivec2 col_chunk_xz) const
 {
+  // Worklist Done is enter SoT — do not keep snapshot debt after Remaining=0.
+  if (EnterLitSnapshotResolvedByWorklistDone(
+          EnterVisualGateCtrl.IsCaptured(),
+          EnterVisualGateCtrl.Contains(col_chunk_xz),
+          EnterVisualGateCtrl.GetState(col_chunk_xz) ==
+              EnterVisualItemState::Done))
+  {
+    return true;
+  }
   const bool pending = IsPendingLightBeforeMesh(col_chunk_xz);
+  const bool lit_ready =
+      IsColumnLitReady(glm::ivec3(col_chunk_xz.x, 0, col_chunk_xz.y));
+  if (EnterLitSnapshotResolvedByStickyRemesh(
+          EnterLitGateActive, StickyRemeshAfterLight.count(col_chunk_xz) > 0,
+          pending, lit_ready))
+  {
+    return true;
+  }
   if (pending)
   {
     return false;
   }
-  const bool lit_ready =
-      IsColumnLitReady(glm::ivec3(col_chunk_xz.x, 0, col_chunk_xz.y));
   if (!lit_ready)
   {
     return false;
@@ -6152,6 +6300,12 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
   for (const glm::ivec2 &col : EnterLitDebtSnapshot)
   {
     schedule_col(col);
+  }
+  // Convergence: when worklist Remaining==0, do not re-sweep full LitDrawable
+  // ring every frame (refeeds Dirty forever; manual 173849 dirty≈50–80).
+  if (EnterVisualGateCtrl.IsCaptured() && EnterVisualGateCtrl.Remaining() <= 0)
+  {
+    return scheduled;
   }
   for (int dx = -vis_r; dx <= vis_r; ++dx)
   {

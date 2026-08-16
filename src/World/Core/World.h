@@ -1168,6 +1168,20 @@ public:
   /// Cached unfinished sample from UpdateStreaming (avoid dual full scans).
   int GetLastUnfinishedVisualSample(bool *out_valid = nullptr) const;
   void SetLastUnfinishedVisualSample(int count) const;
+  /// Closeout Phase B: same-frame focus-ring visual sample (epoch-gated).
+  struct FocusRingVisualSample
+  {
+    uint64_t frame_epoch{0};
+    int pending_light{0};
+    int dirty_n{0};
+    int black_sticky{0};
+    int unfinished{0};
+    bool valid{false};
+  };
+  const FocusRingVisualSample &GetFocusRingVisualSample() const;
+  void SetFocusRingVisualSample(const FocusRingVisualSample &sample) const;
+  uint64_t GetStreamingFrameEpoch() const { return StreamingFrameEpoch; }
+  void AdvanceStreamingFrameEpoch() { ++StreamingFrameEpoch; }
   /// Split unfinished focus by movement/view forward (dot>=0 ahead, else behind).
   void CountUnfinishedVisualByFacing(glm::ivec3 focus_ground_chunk,
                                      int radius_chunks, glm::vec2 forward_xz,
@@ -1519,6 +1533,9 @@ private:
   /// Last unfinished count produced by Streaming (Coordinator reuses — no 2nd O(R²)).
   mutable int LastUnfinishedVisualSample{0};
   mutable bool LastUnfinishedVisualSampleValid{false};
+  /// Same-frame focus-ring sample for Coordinator (Phase B).
+  mutable FocusRingVisualSample LastFocusRingVisualSample{};
+  uint64_t StreamingFrameEpoch{0};
   uint64_t PhysicsTickCounter{0};
   double WallFrameDeltaSec{0.0};
   uint64_t PhysicsEventOrderCounter{0};

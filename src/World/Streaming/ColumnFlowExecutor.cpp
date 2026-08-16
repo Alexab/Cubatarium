@@ -138,6 +138,22 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &wor
   }
   const glm::ivec3 ground(work.column.x, 0, work.column.y);
   world.SetColumnEmergeState(ground, requested);
+  // Closeout E0/E: TicketMap desire + one-inflight mirror on ColumnRecord.
+  {
+    const int horiz =
+        std::max(std::abs(work.column.x - focus_ground_horiz.x),
+                 std::abs(work.column.y - focus_ground_horiz.z));
+    const ColumnTicketLevel ticket = TicketLevelForRing(horiz);
+    const bool missing = work.kind == ColumnWorkKind::FirstMesh;
+    const bool pending = work.kind == ColumnWorkKind::RelightThenMesh ||
+                         work.kind == ColumnWorkKind::PromoteRelight;
+    const bool dark = work.kind == ColumnWorkKind::RemeshSeam;
+    const ColumnDesiredStage desired = DesiredStageFromTicket(
+        ticket, world.GetColumnEmergeState(ground), missing, pending, dark);
+    auto &rec = world.GetColumnRecords().GetOrCreate(work.column);
+    rec.desired = desired;
+    rec.inflight_job = frame_counter_ == 0 ? 1 : frame_counter_;
+  }
   const glm::ivec2 *only =
       work.scan_full_focus ? nullptr : &work.column;
   glm::vec2 forward_xz = world.GetLastMovementDirXz();

@@ -104,10 +104,10 @@ int main()
          "Era22 I-M8: age < SLA → no PreferKick storm");
   Expect(!ShouldMissTimeSlaKick(false, 10),
          "Era22 I-M8: no miss → no time SLA");
-  Expect(AsyncScheduleFloorUnderMiss(true) == 12,
-         "Era22 I-A1: miss|UV async floor ≥12");
+  Expect(AsyncScheduleFloorUnderMiss(true) == 0,
+         "Closeout F: AsyncScheduleFloor folded into pools");
   Expect(AsyncScheduleFloorUnderMiss(false) == 0,
-         "Era22 I-A1: calm → no floor");
+         "Closeout F: AsyncScheduleFloor off when calm");
 
   // --- Era23 Void Relight / rim miss / place-hole predicates ---
   using cutum::ShouldForceFirstMeshOnPlaceHole;
@@ -1110,6 +1110,55 @@ int main()
            "lit drawable = settled");
     Expect(!EnterFullyDarkColumnSettled(true, true, true, false, false),
            "pending ⇒ not settled");
+    using cutum::EnterLitSnapshotResolvedByWorklistDone;
+    using cutum::EnterLitSnapshotResolvedByStickyRemesh;
+    using cutum::ShouldForceUnderfeetSolidFirstMeshDirty;
+    Expect(EnterLitSnapshotResolvedByWorklistDone(true, true, true),
+           "worklist Done resolves snapshot debt");
+    Expect(!EnterLitSnapshotResolvedByWorklistDone(true, true, false),
+           "unfinished worklist ≠ snapshot resolved");
+    Expect(EnterLitSnapshotResolvedByStickyRemesh(true, true, false, true),
+           "sticky remesh + lit resolves snapshot");
+    Expect(!EnterLitSnapshotResolvedByStickyRemesh(true, true, true, true),
+           "sticky + pending ≠ resolved");
+    Expect(ShouldForceUnderfeetSolidFirstMeshDirty(false, true, false, false,
+                                                   false, false, false),
+           "orphan solid SoftDefer empty may force Dirty");
+    Expect(!ShouldForceUnderfeetSolidFirstMeshDirty(false, true, true, false,
+                                                    false, false, false),
+           "already Dirty ⇒ no underfeet force");
+    Expect(!ShouldForceUnderfeetSolidFirstMeshDirty(false, true, false, true,
+                                                    false, false, false),
+           "SoftDeferHeld ⇒ no underfeet force");
+    using cutum::EnterLitQuiesceKeepSpawnUndrawnDirty;
+    Expect(EnterLitQuiesceKeepSpawnUndrawnDirty(true, false, 0),
+           "spawn SoftDefer empty keeps Dirty under quiesce");
+    Expect(EnterLitQuiesceKeepSpawnUndrawnDirty(true, false, 2),
+           "spawn r=2 undrawn keeps Dirty");
+    Expect(!EnterLitQuiesceKeepSpawnUndrawnDirty(true, false, 3),
+           "outside spawn parks SoftDefer empty");
+    Expect(!EnterLitQuiesceKeepSpawnUndrawnDirty(true, true, 0),
+           "drawable not kept as undrawn Dirty");
+    using cutum::EnterLitQuiesceLiftSpawnSoftDefer;
+    Expect(EnterLitQuiesceLiftSpawnSoftDefer(true, 0),
+           "quiesce lifts SoftDefer underfeet");
+    Expect(EnterLitQuiesceLiftSpawnSoftDefer(true, 2),
+           "quiesce lifts SoftDefer spawn r=2");
+    Expect(!EnterLitQuiesceLiftSpawnSoftDefer(true, 3),
+           "quiesce keeps SoftDefer outside spawn");
+    Expect(!EnterLitQuiesceLiftSpawnSoftDefer(false, 0),
+           "no quiesce ⇒ SoftDefer policy unchanged");
+    using cutum::EnterSpawnPresentableCyRange;
+    using cutum::EnterSpawnRingIgnoresHinterlandMeshDebt;
+    int cy0 = 0;
+    int cy1 = 0;
+    EnterSpawnPresentableCyRange(/*player*/ 6, /*sea*/ 4, true, 16, cy0, cy1);
+    Expect(cy0 <= 6 && cy1 >= 6, "presentable band covers player cy");
+    Expect(cy0 < 6 || cy0 == 5, "band includes below player");
+    Expect(EnterSpawnRingIgnoresHinterlandMeshDebt(true, 0, true),
+           "Done+underfeet ignores hinterland mesh debt");
+    Expect(!EnterSpawnRingIgnoresHinterlandMeshDebt(true, 1, true),
+           "visibility debt keeps full ring");
     Expect(ShouldHideEnterFullyDark(true, false, true, false, false),
            "hide: FullyDark+stale after OpenSky still hidden");
     Expect(!ShouldHideEnterFullyDark(true, false, false, false, true),
@@ -1243,11 +1292,11 @@ int main()
     Expect(ShouldDrainPendingLightLandMoving(50),
            "Era40: high pending -> drain");
     Expect(LandMovingRelightDrainFloor(true, 10) == 0,
-           "Era40: floor 0 when pending low");
-    Expect(LandMovingRelightDrainFloor(true, 16) == 1,
-           "Era40: floor 1 when pending>15");
+           "Closeout F: land drain floor folded away");
+    Expect(LandMovingRelightDrainFloor(true, 16) == 0,
+           "Closeout F: land drain floor always 0");
     Expect(LandMovingRelightDrainFloor(false, 50) == 0,
-           "Era40: floor 0 when idle");
+           "Closeout F: land drain floor 0 when idle");
   }
 
   // --- Era38 A0 near-FOV work score ---

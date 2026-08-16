@@ -669,6 +669,7 @@ void UWorld::TickWorldStreamingPhase()
     return;
   }
 
+  AdvanceStreamingFrameEpoch();
   Streaming->ResetFrameTiming();
 
   PhysicsTelemetryData.StreamMs = 0.0;
@@ -682,6 +683,10 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.MeshEmergePrepStickyMs = 0.0;
   PhysicsTelemetryData.MeshEmergePrepDropDirtyMs = 0.0;
   PhysicsTelemetryData.MeshEmergePrepOtherMs = 0.0;
+  PhysicsTelemetryData.PrepPendingLightMs = 0.0;
+  PhysicsTelemetryData.PrepBlackStickyMs = 0.0;
+  PhysicsTelemetryData.PrepDirtyCountMs = 0.0;
+  PhysicsTelemetryData.PrepSoftdeferSetupMs = 0.0;
   PhysicsTelemetryData.MeshDirtyPruneMs = 0.0;
   PhysicsTelemetryData.MeshDirtyPruneN = 0;
   PhysicsTelemetryData.MeshDirtySortMs = 0.0;

@@ -218,10 +218,31 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           nearest_missing_hole);
   prep_missing_ms = prep_ms_since(prep_t);
   prep_t = std::chrono::high_resolution_clock::now();
-  const bool pending_near_light =
-      world.HasPendingLightBeforeMeshNear(focus_ground_horiz, focus_radius);
-  const int pending_focus_count =
-      world.CountPendingLightBeforeMeshNear(focus_ground_horiz, focus_radius);
+  double prep_pending_light_ms = 0.0;
+  double prep_softdefer_setup_ms = 0.0;
+  double prep_dirty_count_ms = 0.0;
+  double prep_black_sticky_ms = 0.0;
+  const auto &ring_sample = world.GetFocusRingVisualSample();
+  const bool ring_sample_ok =
+      ring_sample.valid &&
+      ring_sample.frame_epoch == world.GetStreamingFrameEpoch();
+  bool pending_near_light = false;
+  int pending_focus_count = 0;
+  if (ring_sample_ok)
+  {
+    pending_focus_count = ring_sample.pending_light;
+    pending_near_light = pending_focus_count > 0;
+    prep_pending_light_ms = prep_ms_since(prep_t);
+  }
+  else
+  {
+    pending_near_light =
+        world.HasPendingLightBeforeMeshNear(focus_ground_horiz, focus_radius);
+    pending_focus_count =
+        world.CountPendingLightBeforeMeshNear(focus_ground_horiz, focus_radius);
+    prep_pending_light_ms = prep_ms_since(prep_t);
+  }
+  prep_t = std::chrono::high_resolution_clock::now();
   const int unlit_near_count = world.GetPhysicsTelemetry().FocusDarkMesh;
   const bool enter_warmup_active = !world.IsCreateSpawnWarmupSettled();
   mesh_service.SetDeferMeshUntilLitFn(
@@ -237,6 +258,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 world.IsLightingRelightDeferred(), horiz))
         {
           return true;
+        }
+        // Convergence (manual 181421): after lit quiesce, sticky PendingLight
+        // must not SoftDefer spawn-ring FirstMesh forever (missing+async).
+        if (EnterLitQuiesceLiftSpawnSoftDefer(world.IsEnterLitQuiesceLatched(),
+                                             horiz))
+        {
+          return false;
         }
         const bool underfeet = horiz <= 1;
         const bool pending = world.IsPendingLightBeforeMesh(
@@ -313,13 +341,26 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         GetColumnFlowExecutor().Enqueue(item);
       });
   // Era49: lit GPU commit clears StickyRemeshAfterLight work-set.
+  // Closeout Phase D: promote RenderReady when lit drawable settles.
   mesh_service.SetOnLitDrawableCommittedFn(
       [&world](glm::ivec3 chunk_coord)
       {
-        world.ClearStickyRemeshAfterLightColumn(
-            glm::ivec2(chunk_coord.x, chunk_coord.z));
-        world.NoteUnfinishedColumnDirty(
-            glm::ivec2(chunk_coord.x, chunk_coord.z));
+        const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
+        world.ClearStickyRemeshAfterLightColumn(col);
+        world.NoteUnfinishedColumnDirty(col);
+        if (!world.IsPendingLightBeforeMesh(col))
+        {
+          const glm::ivec3 ground(col.x, 0, col.y);
+          if (world.IsColumnLitReady(ground) ||
+              world.GetColumnEmergeState(ground) ==
+                  ColumnEmergeState::Meshing ||
+              world.GetColumnEmergeState(ground) ==
+                  ColumnEmergeState::LitReady)
+          {
+            world.SetColumnEmergeState(ground,
+                                       ColumnEmergeState::RenderReady);
+          }
+        }
       });
   mesh_service.SetOnMeshColumnDirtyFn(
       [&world](glm::ivec3 chunk_coord)
@@ -327,24 +368,46 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         world.NoteUnfinishedColumnDirty(
             glm::ivec2(chunk_coord.x, chunk_coord.z));
       });
+  prep_softdefer_setup_ms = prep_ms_since(prep_t);
+  prep_t = std::chrono::high_resolution_clock::now();
 
   const size_t pending_dirty_early = mesh_service.GetDirtyCount();
   const int pending_async_early = mesh_service.GetAsyncInFlightCount();
   // Phase 1a: never second O(R²) CountUnfinished here — reuse Streaming sample.
-  // Idle remesh debt uses sample + focus_dirty_early (not a fresh full scan).
   bool sample_valid = false;
   const int not_ready_early =
       world.GetLastUnfinishedVisualSample(&sample_valid);
-  const int focus_dirty_early =
-      mesh_service.CountDirtyWithinHorizontalRadius(focus_ground_horiz,
-                                                    focus_radius);
-  // One dirty pass: HasDirty is redundant with Count>0.
+  int focus_dirty_early = 0;
+  if (ring_sample_ok)
+  {
+    focus_dirty_early = ring_sample.dirty_n;
+    prep_dirty_count_ms = prep_ms_since(prep_t);
+  }
+  else
+  {
+    focus_dirty_early =
+        mesh_service.CountDirtyWithinHorizontalRadius(focus_ground_horiz,
+                                                      focus_radius);
+    prep_dirty_count_ms = prep_ms_since(prep_t);
+  }
+  prep_t = std::chrono::high_resolution_clock::now();
   const bool near_mesh_backlog =
       focus_dirty_early > 0 || missing_visible_mesh;
   (void)pending_near_light;
-  const int black_sticky = world.CountBlackStickyFocusMeshes(focus_ground,
-                                                             focus_radius);
-  prep_unfinished_ms += prep_ms_since(prep_t);
+  int black_sticky = 0;
+  if (ring_sample_ok)
+  {
+    black_sticky = ring_sample.black_sticky;
+    prep_black_sticky_ms = prep_ms_since(prep_t);
+  }
+  else
+  {
+    black_sticky =
+        world.CountBlackStickyFocusMeshes(focus_ground, focus_radius);
+    prep_black_sticky_ms = prep_ms_since(prep_t);
+  }
+  prep_unfinished_ms = prep_pending_light_ms + prep_softdefer_setup_ms +
+                       prep_dirty_count_ms + prep_black_sticky_ms;
   prep_t = std::chrono::high_resolution_clock::now();
   // Lit-but-dirty catch-up: only when focus still has *missing* mesh pressure.
   // Remesh-of-existing (fd high, nr from Dirty/Active) must not latch forever —
@@ -1083,6 +1146,64 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
                  ColumnWorkKind::FirstMesh, 110);
   }
+  // Sky-only regress: holes SoT false while underfeet has solid without
+  // drawable (0-quad fake-ready / SoftDefer empty pruned). Force FirstMesh
+  // only when no Dirty/Held/inflight/GPU/RAA owner already holds the slice.
+  {
+    const glm::ivec2 uf(focus_ground_horiz.x, focus_ground_horiz.z);
+    const int player_cy = FloorDiv(focus_block.y, CHUNK_SIZE);
+    const int cy0 = std::max(0, player_cy - 2);
+    const int cy1 = player_cy + 1;
+    bool forced = false;
+    for (int cy = cy0; cy <= cy1; ++cy)
+    {
+      const glm::ivec3 coord(uf.x, cy, uf.y);
+      if (mesh_service.HasDrawableGreedyMesh(coord))
+      {
+        continue;
+      }
+      const UChunk *chunk =
+          world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+      if (!chunk)
+      {
+        continue;
+      }
+      bool solid = false;
+      for (int z = 0; z < CHUNK_SIZE && !solid; z += 4)
+      {
+        for (int x = 0; x < CHUNK_SIZE && !solid; x += 4)
+        {
+          for (int y = 0; y < CHUNK_SIZE && !solid; y += 4)
+          {
+            if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+            {
+              solid = true;
+            }
+          }
+        }
+      }
+      if (!ShouldForceUnderfeetSolidFirstMeshDirty(
+              /*has_drawable=*/false, solid,
+              mesh_service.IsChunkMeshDirty(coord),
+              mesh_service.IsSoftDeferHeld(coord),
+              mesh_service.HasInflightMeshBuild(coord),
+              mesh_service.IsPendingGpuApply(coord),
+              mesh_service.IsRemeshAfterApplyPending(coord)))
+      {
+        if (solid && mesh_service.IsSoftDeferHeld(coord))
+        {
+          forced = true;
+        }
+        continue;
+      }
+      mesh_service.MarkDirtyPriority(coord);
+      forced = true;
+    }
+    if (forced)
+    {
+      GetColumnFlowExecutor().Enqueue(uf, ColumnWorkKind::FirstMesh, 120);
+    }
+  }
 
   mesh_service.SetMeshVerticalPriority(preferred_cy, prefer_lower_cy);
   // Lit-but-dirty catch-up: vertical priority left deep Dirty cy forever, so
@@ -1596,6 +1717,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.nearest_miss_horiz = world.GetPhysicsTelemetry().MissHoriz;
     ain.nearest_miss_cy = world.GetPhysicsTelemetry().MissCy;
     ain.enter_lit_gate = world.IsEnterLitGateActive();
+    ain.remesh_queue_n = mesh_service.GetLastDirtyRemeshN();
     if (have_nearest_missing)
     {
       ain.nearest_miss_horiz = std::max(
@@ -2678,6 +2800,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     pt.MeshEmergePrepUnfinishedMs = prep_unfinished_ms;
     pt.MeshEmergePrepStickyMs = prep_sticky_ms;
     pt.MeshEmergePrepDropDirtyMs = prep_drop_dirty_ms;
+    pt.PrepPendingLightMs = prep_pending_light_ms;
+    pt.PrepBlackStickyMs = prep_black_sticky_ms;
+    pt.PrepDirtyCountMs = prep_dirty_count_ms;
+    pt.PrepSoftdeferSetupMs = prep_softdefer_setup_ms;
     const double accounted = prep_missing_ms + prep_unfinished_ms +
                              prep_sticky_ms + prep_drop_dirty_ms;
     pt.MeshEmergePrepOtherMs =
@@ -3217,6 +3343,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       ain.nearest_miss_cy = world.GetPhysicsTelemetry().MissCy;
     }
     ain.enter_lit_gate = world.IsEnterLitGateActive();
+    ain.remesh_queue_n = mesh_service.GetLastDirtyRemeshN();
     MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
     {
       const auto &tune = URuntimeTuning::Get();

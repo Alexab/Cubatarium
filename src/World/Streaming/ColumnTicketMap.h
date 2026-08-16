@@ -102,9 +102,10 @@ inline WorkPoolBudget DefaultCruisePools()
 inline WorkPoolBudget HoleDrainPools(const WorkPoolBudget &base)
 {
   WorkPoolBudget out = base;
-  // Redistribute remesh → FirstMesh under holes (no new floor knobs).
-  out.first_mesh_slots += out.remesh_slots;
-  out.remesh_slots = 0;
+  // Closeout C: keep 1 remesh reservation; steal the rest into FirstMesh.
+  const int steal = std::max(0, out.remesh_slots - 1);
+  out.first_mesh_slots += steal;
+  out.remesh_slots = std::min(1, out.remesh_slots);
   out.light_slots = std::max(out.light_slots, 3);
   return out;
 }

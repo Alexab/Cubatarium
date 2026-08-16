@@ -226,6 +226,10 @@ struct FrameNumbers
   double mesh_emerge_prep_sticky_ms{0.0};
   double mesh_emerge_prep_drop_dirty_ms{0.0};
   double mesh_emerge_prep_other_ms{0.0};
+  double prep_pending_light_ms{0.0};
+  double prep_black_sticky_ms{0.0};
+  double prep_dirty_count_ms{0.0};
+  double prep_softdefer_setup_ms{0.0};
   int keep_cols{0};
   int visual_cols{0};
   double idle_prefetch_ms{0.0};
@@ -539,6 +543,10 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_emerge_prep_sticky_ms = phys.MeshEmergePrepStickyMs;
   n.mesh_emerge_prep_drop_dirty_ms = phys.MeshEmergePrepDropDirtyMs;
   n.mesh_emerge_prep_other_ms = phys.MeshEmergePrepOtherMs;
+  n.prep_pending_light_ms = phys.PrepPendingLightMs;
+  n.prep_black_sticky_ms = phys.PrepBlackStickyMs;
+  n.prep_dirty_count_ms = phys.PrepDirtyCountMs;
+  n.prep_softdefer_setup_ms = phys.PrepSoftdeferSetupMs;
   n.keep_cols = phys.KeepCols;
   n.visual_cols = phys.VisualCols;
   n.idle_prefetch_ms = phys.IdlePrefetchMs;
@@ -860,6 +868,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_emerge_prep_drop_dirty_ms\":"
           << n.mesh_emerge_prep_drop_dirty_ms
           << ",\"mesh_emerge_prep_other_ms\":" << n.mesh_emerge_prep_other_ms
+          << ",\"prep_pending_light_ms\":" << n.prep_pending_light_ms
+          << ",\"prep_black_sticky_ms\":" << n.prep_black_sticky_ms
+          << ",\"prep_dirty_count_ms\":" << n.prep_dirty_count_ms
+          << ",\"prep_softdefer_setup_ms\":" << n.prep_softdefer_setup_ms
           << ",\"keep_cols\":" << n.keep_cols
           << ",\"visual_cols\":" << n.visual_cols
           << ",\"idle_prefetch_ms\":" << n.idle_prefetch_ms

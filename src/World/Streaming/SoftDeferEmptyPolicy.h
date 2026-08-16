@@ -88,10 +88,10 @@ inline bool ShouldMissTimeSlaKick(bool missing_visible_mesh,
   return missing_visible_mesh && miss_age_periods >= sla_periods;
 }
 
-/// Era22 I-A1: post-Finalize async schedule floor under miss|UV (TD-027).
-inline int AsyncScheduleFloorUnderMiss(bool miss_or_unfinished_visual)
+/// Closeout F: schedule floor folded into pools — always 0.
+inline int AsyncScheduleFloorUnderMiss(bool /*miss_or_unfinished_visual*/)
 {
-  return miss_or_unfinished_visual ? 12 : 0;
+  return 0;
 }
 
 /// Era23 I-V6: SoftDeferHeld must not count as void-heal progress while the

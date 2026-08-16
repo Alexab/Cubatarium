@@ -186,10 +186,17 @@ struct PhysicsTelemetry
   double MeshEmergePrepMs{0.0};
   /// I5 prep sub-timers (ms) inside MeshEmergePrepMs.
   double MeshEmergePrepMissingMs{0.0};
+  /// Legacy bucket name: SoftDefer setup + pending/dirty/black scans in emerge.
+  /// Prefer PrepPendingLightMs / PrepBlackStickyMs / PrepDirtyCountMs.
   double MeshEmergePrepUnfinishedMs{0.0};
   double MeshEmergePrepStickyMs{0.0};
   double MeshEmergePrepDropDirtyMs{0.0};
   double MeshEmergePrepOtherMs{0.0};
+  /// Closeout Phase A: split of former MeshEmergePrepUnfinishedMs.
+  double PrepPendingLightMs{0.0};
+  double PrepBlackStickyMs{0.0};
+  double PrepDirtyCountMs{0.0};
+  double PrepSoftdeferSetupMs{0.0};
   int PrefetchVisualOps{0};
   int PrefetchKeepOps{0};
   int GenBacklogTotal{0};

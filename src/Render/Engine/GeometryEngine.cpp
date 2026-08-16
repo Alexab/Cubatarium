@@ -1650,8 +1650,9 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
   IUMeshGpuStore &store = MeshStore();
   const bool mdi_indirect_cull = store.SupportsMultiDrawIndirect();
 
-  // V2 draw gate: always use caller-filtered RenderReady refs. CollectAll
-  // bypassed IsColumnRenderReady (E1 hole) and drew lit-but-not-ready columns.
+  // V2 / Closeout D hard lock: always use caller-filtered slice-ready refs.
+  // CollectAll must not bypass IsChunkSliceRenderReady. Opaque must NEVER
+  // gate on ColumnEmergeState::RenderReady (settle telem ≠ draw residency).
   // Empty refs means nothing ready — do not re-expand from the pool.
   // Frustum cull still runs via ApplyGpuCompactCull on this gated set.
   std::vector<GreedyBatchRef> upload_refs = opaqueCutoutRefs;

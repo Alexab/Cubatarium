@@ -72,6 +72,87 @@ inline bool EnterFullyDarkColumnSettled(bool open_sky_applied, bool pending,
   return open_sky_applied && !stale_field;
 }
 
+/// Worklist Done is enter SoT — snapshot debt must not outlive it (manual
+/// 173849: Remaining=0 while snapshot_debt stuck 3–10 blocked enter_ready).
+inline bool EnterLitSnapshotResolvedByWorklistDone(bool gate_captured,
+                                                   bool col_in_worklist,
+                                                   bool col_done)
+{
+  return gate_captured && col_in_worklist && col_done;
+}
+
+/// One Sticky remesh attempt under enter gate exhausts snapshot remesh debt
+/// for that column (still FullyDark void-edge is accepted after the attempt).
+inline bool EnterLitSnapshotResolvedByStickyRemesh(bool enter_gate_active,
+                                                   bool sticky_owned,
+                                                   bool pending,
+                                                   bool lit_ready)
+{
+  return enter_gate_active && sticky_owned && !pending && lit_ready;
+}
+
+/// Underfeet solid-without-drawable force: only when no owner already holds
+/// FirstMesh/remesh (else every-frame MarkDirtyPriority livelocks Dirty).
+inline bool ShouldForceUnderfeetSolidFirstMeshDirty(
+    bool has_drawable, bool has_solid, bool already_dirty, bool soft_held,
+    bool inflight, bool pending_gpu, bool raa_pending)
+{
+  if (has_drawable || !has_solid)
+  {
+    return false;
+  }
+  if (already_dirty || soft_held || inflight || pending_gpu || raa_pending)
+  {
+    return false;
+  }
+  return true;
+}
+
+/// EnterLitQuiesce: SoftDefer empty / undrawn in spawn r≤2 must stay Dirty so
+/// FirstMesh can schedule. Parking to SoftDeferHeld then Requeue→prune cancelled
+/// Dirty every frame (manual 180247: dirty=0 gpu=0 missing=1 forever).
+inline bool EnterLitQuiesceKeepSpawnUndrawnDirty(bool enter_lit_quiesce,
+                                                bool has_drawable, int horiz,
+                                                int spawn_radius = 2)
+{
+  return enter_lit_quiesce && !has_drawable && horiz >= 0 &&
+         horiz <= spawn_radius;
+}
+
+/// EnterLitQuiesce + spawn ring: do not SoftDefer mesh while sticky
+/// PendingLight remains (manual 181421: missing=1 async flicker, pending≈25).
+/// Light snapshot/worklist already Done — allow unlit/dark FirstMesh to finish.
+inline bool EnterLitQuiesceLiftSpawnSoftDefer(bool enter_lit_quiesce, int horiz,
+                                             int spawn_radius = 2)
+{
+  return enter_lit_quiesce && horiz >= 0 && horiz <= spawn_radius;
+}
+
+/// Presentable cy band for enter spawn-ring SoT (not bedrock cy=0 alone).
+/// Matches underfeet/enter visual band — manual 182802: missing stuck on cy=0
+/// SoftDefer empty while underfeet_present_ready=1 at y≈96.
+inline void EnterSpawnPresentableCyRange(int player_cy, int sea_cy,
+                                         bool fill_water, int max_cy,
+                                         int &out_cy0, int &out_cy1)
+{
+  out_cy0 = std::max(0, player_cy - 1);
+  out_cy1 = std::min(max_cy, std::max(player_cy + 1,
+                                      fill_water ? sea_cy + 1 : player_cy + 1));
+  if (fill_water)
+  {
+    out_cy0 = std::min(out_cy0, std::max(0, sea_cy - 1));
+  }
+}
+
+/// Dirty/GPU/async outside the presentable band must not block enter exit
+/// after worklist Done + underfeet present (Era49 comment / manual 182802).
+inline bool EnterSpawnRingIgnoresHinterlandMeshDebt(bool enter_gate_active,
+                                                    int visibility_debt,
+                                                    bool underfeet_present)
+{
+  return enter_gate_active && visibility_debt <= 0 && underfeet_present;
+}
+
 /// Hide FullyDark in enter ring until lit drawable or true-dark.
 /// After OpenSky, stale (field≠0, dark verts) stays hidden until bake.
 inline bool ShouldHideEnterFullyDark(bool fully_dark, bool pending,
@@ -310,16 +391,11 @@ inline bool ShouldDrainPendingLightLandMoving(int pending_light_focus,
   return pending_light_focus > threshold;
 }
 
-/// Era36 B3 / Era40: moving drain floor for land cruise light debt.
-inline int LandMovingRelightDrainFloor(bool moving, int pending_light_focus,
-                                       int threshold = 15)
+/// Closeout F: floors folded into WorkPoolBudget — always 0 (no *FloorMs).
+inline int LandMovingRelightDrainFloor(bool /*moving*/, int /*pending_light_focus*/,
+                                       int /*threshold*/ = 15)
 {
-  if (!moving || !ShouldDrainPendingLightLandMoving(pending_light_focus,
-                                                    threshold))
-  {
-    return 0;
-  }
-  return 1;
+  return 0;
 }
 
 /// Era37 P5: per-column surface Y for relight band (fallback to focus Y).

@@ -33,6 +33,8 @@ struct MeshWorkAdmissionInput
   int nearest_miss_cy{-1};
   /// Era47 P2: EnterLitGate — never Normal; force HoleDrain/WarmBacklog.
   bool enter_lit_gate{false};
+  /// Closeout C: RemeshQ depth — keep remesh_schedule≥1 when nonempty.
+  int remesh_queue_n{0};
 };
 
 /// Era20 I-M1: FirstMesh priority class while FOV holes (manual 214034).
@@ -316,13 +318,24 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
       (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
        out.mode == MeshWorkAdmission::Mode::DeepBacklog))
   {
-    // Phase 1b: redistribute remesh slots into FirstMesh (no new floor).
+    // Closeout C: steal remesh→FM only when RemeshQ empty (or far-only later).
+    // Keep remesh_schedule≥1 when RemeshQ has work (pool reservation, not FloorMs).
     const int remesh_was = std::max(0, out.remesh_schedule);
-    out.remesh_schedule = 0;
-    out.first_mesh_schedule =
-        std::max(out.first_mesh_schedule, 6) + remesh_was;
+    if (in.remesh_queue_n <= 0)
+    {
+      out.remesh_schedule = 0;
+      out.first_mesh_schedule =
+          std::max(out.first_mesh_schedule, 6) + remesh_was;
+    }
+    else
+    {
+      out.remesh_schedule = std::max(1, std::min(remesh_was, 2));
+      const int steal = std::max(0, remesh_was - out.remesh_schedule);
+      out.first_mesh_schedule =
+          std::max(out.first_mesh_schedule, 6) + steal;
+    }
     out.max_schedule =
-        std::max(out.max_schedule, out.first_mesh_schedule);
+        std::max(out.max_schedule, out.first_mesh_schedule + out.remesh_schedule);
   }
 
   // J1/K2/M2: under HoleDrain/Deep miss backlog, give Finish more wall budget
@@ -343,7 +356,9 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     // Manual 153832: UV≥8 crushed first_mesh to 3 and max_schedule to 3, nulling
     // G2 FM bump and starving rim while remesh keep_h=1 let stale explode.
     // Prefer FirstMesh slots; keep a small remesh band (horiz≤2) for stale.
-    out.remesh_schedule = miss_tops ? 0 : std::min(out.remesh_schedule, 1);
+    out.remesh_schedule = miss_tops && in.remesh_queue_n <= 0
+                              ? 0
+                              : std::min(std::max(out.remesh_schedule, 1), 1);
     out.starve_remesh_horiz = std::max(out.starve_remesh_horiz, 2);
     const int fm = std::max(0, out.first_mesh_schedule);
     const int need = fm + std::max(0, out.remesh_schedule);

@@ -638,6 +638,16 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     }
   }
   world.SetLastUnfinishedVisualSample(unfinished_visual);
+  {
+    UWorld::FocusRingVisualSample sample{};
+    sample.frame_epoch = world.GetStreamingFrameEpoch();
+    sample.pending_light = pending_light_focus;
+    sample.dirty_n = focus_dirty_chunks;
+    sample.black_sticky = sticky_remesh;
+    sample.unfinished = unfinished_visual;
+    sample.valid = true;
+    world.SetFocusRingVisualSample(sample);
+  }
   world.PhysicsTelemetryData.FocusStickyRemesh = sticky_remesh;
   world.PhysicsTelemetryData.FocusPendingDark = pending_dark;
   world.PhysicsTelemetryData.FocusDarkMesh = dark_preview;
