@@ -1347,6 +1347,12 @@ add_executable(column_desired_stage_test
 target_include_directories(column_desired_stage_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
+add_executable(cruise_sot_phase_test
+    src/Test/CruiseSoTPhaseTest.cpp)
+target_include_directories(cruise_sot_phase_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(cruise_sot_phase_test glm::glm)
+
 add_executable(column_emerge_bump_test
     src/Test/ColumnEmergeBumpTest.cpp)
 target_include_directories(column_emerge_bump_test PRIVATE

@@ -699,6 +699,12 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.PrepUnfinishedCallsN = 0;
   PhysicsTelemetryData.PrepUnfinishedFullN = 0;
   PhysicsTelemetryData.PrepUnfinishedIncrementalN = 0;
+  PhysicsTelemetryData.UnfinishedCacheHitN = 0;
+  PhysicsTelemetryData.UnfinishedCacheOverflowN = 0;
+  PhysicsTelemetryData.DirtyAdmitBudgetEnd = 0;
+  PhysicsTelemetryData.FirstMeshScheduleCap = 0;
+  PhysicsTelemetryData.RemeshScheduleCap = 0;
+  PhysicsTelemetryData.RelightTrimFarN = 0;
   PhysicsTelemetryData.PhaseBudgetOver = 0;
   PhysicsTelemetryData.PhaseMissCarveOut = 0;
   PhysicsTelemetryData.MissReservedMs = 0.0;

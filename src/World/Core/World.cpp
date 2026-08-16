@@ -2178,6 +2178,8 @@ void UWorld::SetColumnEmergeState(glm::ivec3 ground, ColumnEmergeState state)
     return;
   }
   ColumnEmergeStates[glm::ivec2(ground.x, ground.z)] = state;
+  // Phase 2 dual-write: ColumnRecord mirrors emerge SoT.
+  ColumnRecords.SetEmerge(glm::ivec2(ground.x, ground.z), state);
 }
 
 void UWorld::SampleColumnEmergeStageTelemetry()
@@ -2224,6 +2226,7 @@ ColumnEmergeState UWorld::GetColumnEmergeState(glm::ivec3 ground) const
 void UWorld::ClearColumnEmergeState(glm::ivec2 ground_xz)
 {
   ColumnEmergeStates.erase(ground_xz);
+  ColumnRecords.Erase(ground_xz);
 }
 
 bool UWorld::IsColumnLitReady(glm::ivec3 ground) const
@@ -2579,8 +2582,10 @@ uint64_t PackUnfinishedColKey(int x, int z)
          static_cast<uint32_t>(z);
 }
 
-bool ColumnUnfinishedVisual(const UWorld &world, glm::ivec3 focus_ground,
-                            int dx, int dz)
+/// Cheap unfinished probe for ring cache: terrain complete + any slice missing
+/// mesh/GPU ready. Full GetColumnRenderableState stays for idle gates / draw.
+bool ColumnUnfinishedVisualCheap(const UWorld &world, glm::ivec3 focus_ground,
+                                 int dx, int dz)
 {
   const glm::ivec3 ground(focus_ground.x + dx, 0, focus_ground.z + dz);
   if (!IsTerrainChunkComplete(world.GetBlockWorld(), ground,
@@ -2588,7 +2593,41 @@ bool ColumnUnfinishedVisual(const UWorld &world, glm::ivec3 focus_ground,
   {
     return false;
   }
-  return !world.IsColumnRenderReady(ground);
+  if (world.IsPendingLightBeforeMesh(glm::ivec2(ground.x, ground.z)))
+  {
+    return true;
+  }
+  const auto &mesh = world.GetMeshService();
+  const int cy0 = 0;
+  const int cy1 =
+      std::max(0, (world.GetProceduralSettings().MaxHeight - 1) / CHUNK_SIZE);
+  for (int cy = cy0; cy <= cy1; ++cy)
+  {
+    const glm::ivec3 coord(ground.x, cy, ground.z);
+    if (!world.GetBlockWorld().GetChunkManager().HasChunk(coord))
+    {
+      continue;
+    }
+    if (mesh.HasMeshSatisfyingColumnReady(coord) ||
+        mesh.IsPendingGpuApply(coord))
+    {
+      continue;
+    }
+    const UChunk *chunk =
+        world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+    if (!chunk)
+    {
+      continue;
+    }
+    for (const BlockId block : chunk->GetData())
+    {
+      if (block != BLOCK_AIR)
+      {
+        return true; // solid without ready mesh
+      }
+    }
+  }
+  return false;
 }
 } // namespace
 
@@ -2599,19 +2638,29 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   {
     return 0;
   }
+  ++UnfinishedVisualCache.prep_calls_n;
   auto &cache = UnfinishedVisualCache;
   if (cache.valid && cache.focus == focus_ground_chunk &&
       cache.radius == radius_chunks && cache.dirty_cols.empty())
   {
+    ++cache.prep_hit_n;
     ++cache.prep_incremental_n;
     return cache.count;
   }
   // Incremental: recheck dirty columns ∪ rim±1 and adjust cached count/set.
-  constexpr int kIncrementalDirtyMax = 48;
+  // No hard wipe on overflow — always incremental when focus/radius match.
+  constexpr int kIncrementalDirtyMax = 96;
   if (cache.valid && cache.focus == focus_ground_chunk &&
-      cache.radius == radius_chunks && !cache.dirty_cols.empty() &&
-      static_cast<int>(cache.dirty_cols.size()) <= kIncrementalDirtyMax)
+      cache.radius == radius_chunks && !cache.dirty_cols.empty())
   {
+    if (static_cast<int>(cache.dirty_cols.size()) > kIncrementalDirtyMax)
+    {
+      // Truncate oldest dirty; keep cache.valid (Phase 1a: no full wipe).
+      const size_t keep = static_cast<size_t>(kIncrementalDirtyMax / 2);
+      cache.dirty_cols.erase(cache.dirty_cols.begin(),
+                             cache.dirty_cols.end() - static_cast<std::ptrdiff_t>(keep));
+      ++cache.prep_overflow_n;
+    }
     std::unordered_set<uint64_t> recheck;
     recheck.reserve(cache.dirty_cols.size() * 9u);
     for (const glm::ivec2 &col : cache.dirty_cols)
@@ -2640,7 +2689,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
       const int rdx = cx - focus_ground_chunk.x;
       const int rdz = cz - focus_ground_chunk.z;
       const bool now =
-          ColumnUnfinishedVisual(*this, focus_ground_chunk, rdx, rdz);
+          ColumnUnfinishedVisualCheap(*this, focus_ground_chunk, rdx, rdz);
       const bool was = cache.unfinished_keys.count(key) != 0;
       if (now == was)
       {
@@ -2671,7 +2720,7 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   {
     for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
     {
-      if (!ColumnUnfinishedVisual(*this, focus_ground_chunk, dx, dz))
+      if (!ColumnUnfinishedVisualCheap(*this, focus_ground_chunk, dx, dz))
       {
         continue;
       }
@@ -2695,6 +2744,7 @@ void UWorld::InvalidateUnfinishedVisualCache() const
   UnfinishedVisualCache.dirty_cols.clear();
   UnfinishedVisualCache.unfinished_keys.clear();
   UnfinishedVisualCache.count = 0;
+  LastUnfinishedVisualSampleValid = false;
 }
 
 void UWorld::NoteUnfinishedColumnDirty(glm::ivec2 col) const
@@ -2704,15 +2754,7 @@ void UWorld::NoteUnfinishedColumnDirty(glm::ivec2 col) const
     return;
   }
   auto &dirty = UnfinishedVisualCache.dirty_cols;
-  constexpr size_t kDirtyCap = 64;
-  if (dirty.size() >= kDirtyCap)
-  {
-    // Overflow → next CountUnfinished forces full rescan.
-    UnfinishedVisualCache.valid = false;
-    dirty.clear();
-    UnfinishedVisualCache.unfinished_keys.clear();
-    return;
-  }
+  constexpr size_t kDirtyCap = 96;
   for (const glm::ivec2 &existing : dirty)
   {
     if (existing.x == col.x && existing.y == col.y)
@@ -2720,15 +2762,42 @@ void UWorld::NoteUnfinishedColumnDirty(glm::ivec2 col) const
       return;
     }
   }
+  if (dirty.size() >= kDirtyCap)
+  {
+    // Ring-buffer: drop oldest, keep cache.valid (no full O(R²) next frame).
+    dirty.erase(dirty.begin());
+    ++UnfinishedVisualCache.prep_overflow_n;
+  }
   dirty.push_back(col);
 }
 
 void UWorld::HarvestUnfinishedPrepTelem(PhysicsTelemetry &tele) const
 {
+  tele.PrepUnfinishedCallsN = UnfinishedVisualCache.prep_calls_n;
   tele.PrepUnfinishedFullN = UnfinishedVisualCache.prep_full_n;
   tele.PrepUnfinishedIncrementalN = UnfinishedVisualCache.prep_incremental_n;
+  tele.UnfinishedCacheHitN = UnfinishedVisualCache.prep_hit_n;
+  tele.UnfinishedCacheOverflowN = UnfinishedVisualCache.prep_overflow_n;
+  UnfinishedVisualCache.prep_calls_n = 0;
   UnfinishedVisualCache.prep_full_n = 0;
   UnfinishedVisualCache.prep_incremental_n = 0;
+  UnfinishedVisualCache.prep_hit_n = 0;
+  UnfinishedVisualCache.prep_overflow_n = 0;
+}
+
+int UWorld::GetLastUnfinishedVisualSample(bool *out_valid) const
+{
+  if (out_valid)
+  {
+    *out_valid = LastUnfinishedVisualSampleValid;
+  }
+  return LastUnfinishedVisualSample;
+}
+
+void UWorld::SetLastUnfinishedVisualSample(int count) const
+{
+  LastUnfinishedVisualSample = count;
+  LastUnfinishedVisualSampleValid = true;
 }
 
 void UWorld::CountUnfinishedVisualByFacing(glm::ivec3 focus_ground_chunk,
@@ -5269,7 +5338,7 @@ bool UWorld::IsReasonablePlayerPosition(const glm::vec3 &position) const
   {
     return false;
   }
-  if (std::abs(position.x) > 100000.0f || std::abs(position.z) > 100000.0f)
+  if (!IsInsideHardWorldBorder(position, WorldBorder))
   {
     return false;
   }
@@ -5281,6 +5350,12 @@ void UWorld::SanitizeUserPosition(const std::shared_ptr<UUser> &user)
   if (!user)
   {
     return;
+  }
+  glm::vec3 pos = user->GetPosition();
+  // Phase 4: soft border clamp before hard sanitize teleport.
+  if (ClampToSoftWorldBorder(pos, WorldBorder))
+  {
+    user->SetPosition(pos);
   }
   if (!IsReasonablePlayerPosition(user->GetPosition()))
   {

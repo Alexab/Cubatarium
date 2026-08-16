@@ -21,13 +21,20 @@ glm::ivec3 UChunkManager::WorldToLocal(glm::ivec3 worldPos)
 
 BlockId UChunkManager::GetBlock(glm::ivec3 worldPos) const
 {
+  // Legacy SoT: missing chunk still reports AIR for worldgen/light probes.
+  // Prefer QueryBlock for interaction/raycast (Unloaded ≠ AIR).
+  return QueryBlock(worldPos).id;
+}
+
+BlockQueryResult UChunkManager::QueryBlock(glm::ivec3 worldPos) const
+{
   const glm::ivec3 chunkCoord = WorldToChunk(worldPos);
   auto it = Chunks.find(chunkCoord);
   if (it == Chunks.end())
   {
-    return BLOCK_AIR;
+    return MakeUnloadedQuery();
   }
-  return it->second->GetBlockLocal(WorldToLocal(worldPos));
+  return MakeSolidQuery(it->second->GetBlockLocal(WorldToLocal(worldPos)));
 }
 
 FluidCellState UChunkManager::GetFluidState(glm::ivec3 worldPos) const

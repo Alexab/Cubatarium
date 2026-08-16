@@ -27,6 +27,7 @@ public:
   UChunkBuffer *GetCaptureBuffer() const { return CaptureBuffer; }
 
   BlockId GetBlock(glm::ivec3 pos) const;
+  BlockQueryResult QueryBlock(glm::ivec3 pos) const;
   FluidCellState GetFluidState(glm::ivec3 pos) const;
   void SetBlock(glm::ivec3 pos, BlockId Id);
   void SetFluidState(glm::ivec3 pos, FluidCellState state);

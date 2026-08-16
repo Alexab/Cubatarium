@@ -158,11 +158,24 @@ struct PhysicsTelemetry
   int DirtyRevisitSameN{0};
   int DirtyFmN{0};
   int DirtyRemeshN{0};
-  /// Cruise wall A2: unfinished/missing scan call count in emerge prep.
+  /// Real CountUnfinishedVisualNear invocations this frame (not prep hooks).
   int PrepUnfinishedCallsN{0};
   /// Cruise wall P3: full O(R²) unfinished rescans vs incremental hits.
   int PrepUnfinishedFullN{0};
   int PrepUnfinishedIncrementalN{0};
+  /// UnfinishedVisualCache: pure hit (no dirty recheck) vs NoteDirty overflow.
+  int UnfinishedCacheHitN{0};
+  int UnfinishedCacheOverflowN{0};
+  /// MeshWorkAdmission caps after Finalize (pool util SoT).
+  int DirtyAdmitBudgetEnd{0};
+  int FirstMeshScheduleCap{0};
+  int RemeshScheduleCap{0};
+  /// Per-frame TrimFarRelightFifo drops (not cumulative RelightFifoDropped).
+  int RelightTrimFarN{0};
+  /// Player block/world position for cruise SLA (perf jsonl).
+  float PlayerX{0.0f};
+  float PlayerY{0.0f};
+  float PlayerZ{0.0f};
   /// Era14.1 phase budget: stream already over budget; miss carve-out active.
   int PhaseBudgetOver{0};
   int PhaseMissCarveOut{0};

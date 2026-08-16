@@ -1,5 +1,6 @@
 #pragma once
 
+#include "World/Streaming/ColumnTicketMap.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -281,6 +282,27 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
 
   MeshWorkFillModeDefaults(out, mode, in, queued, holes, light_debt);
 
+  // Phase 3: fixed pools — HoleDrain redistributes remesh → FirstMesh.
+  {
+    WorkPoolBudget pools = DefaultCruisePools();
+    if (mode == MeshWorkAdmission::Mode::HoleDrain ||
+        mode == MeshWorkAdmission::Mode::DeepBacklog)
+    {
+      pools = HoleDrainPools(pools);
+    }
+    int fm = 0;
+    int remesh = 0;
+    int gpu = 0;
+    ApplyPoolsToAdmissionCaps(pools, fm, remesh, gpu);
+    out.first_mesh_schedule = std::max(out.first_mesh_schedule, fm);
+    if (mode == MeshWorkAdmission::Mode::HoleDrain ||
+        mode == MeshWorkAdmission::Mode::DeepBacklog)
+    {
+      out.remesh_schedule = remesh;
+    }
+    out.gpu_apply_max = std::max(out.gpu_apply_max, gpu);
+  }
+
   // Era17/20: FirstMesh priority class while FOV holes — remesh_schedule=0.
   // Era20: cy≤3 OR mh≤4 (manual 214034 miss_cy=3 mh=4 outside old cy≤1).
   // Era18 P3: unfinished climb under dirty storm — same class when UV>0.
@@ -294,8 +316,11 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
       (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
        out.mode == MeshWorkAdmission::Mode::DeepBacklog))
   {
+    // Phase 1b: redistribute remesh slots into FirstMesh (no new floor).
+    const int remesh_was = std::max(0, out.remesh_schedule);
     out.remesh_schedule = 0;
-    out.first_mesh_schedule = std::max(out.first_mesh_schedule, 6);
+    out.first_mesh_schedule =
+        std::max(out.first_mesh_schedule, 6) + remesh_was;
     out.max_schedule =
         std::max(out.max_schedule, out.first_mesh_schedule);
   }

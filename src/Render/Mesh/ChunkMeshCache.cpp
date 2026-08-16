@@ -12,6 +12,7 @@
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/MeshLitGate.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
+#include "World/Streaming/VisualStagePolicy.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
 #include "Render/Mesh/GpuGreedyFaceExtract.h"
@@ -2509,13 +2510,15 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     const bool enter_gate =
         EnterGateBlocksRaaMarkDirty(EnterLitQuiesce, EnterGpuQuiesceDrain);
     const bool needs_first_mesh = !HasDrawableGreedyMesh(coord);
+    const bool fully_dark_drawable =
+        HasDrawableGreedyMesh(coord) && ChunkHasFullyDarkFace(coord);
     if (gpu_pending)
     {
       PreferKickPendingGpuQueued(coord);
     }
     else if (ShouldMarkDirtyAfterRemeshAfterApplyCommit(
                  Dirty.Contains(coord), gpu_pending, enter_gate,
-                 needs_first_mesh))
+                 needs_first_mesh, fully_dark_drawable))
     {
       MarkDirtyPriority(coord);
       ++RaaCommitMarkDirtyN;
@@ -3248,13 +3251,16 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       const bool enter_gate =
           EnterGateBlocksRaaMarkDirty(EnterLitQuiesce, EnterGpuQuiesceDrain);
       const bool needs_first_mesh = !HasDrawableGreedyMesh(result.coord);
+      const bool fully_dark_drawable =
+          HasDrawableGreedyMesh(result.coord) &&
+          ChunkHasFullyDarkFace(result.coord);
       if (gpu_pending)
       {
         PreferKickPendingGpuQueued(result.coord);
       }
       else if (ShouldMarkDirtyAfterRemeshAfterApplyCommit(
                    Dirty.Contains(result.coord), gpu_pending, enter_gate,
-                   needs_first_mesh))
+                   needs_first_mesh, fully_dark_drawable))
       {
         MarkDirtyPriority(result.coord);
         ++RaaCommitMarkDirtyN;
@@ -3310,13 +3316,16 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     const bool enter_gate =
         EnterGateBlocksRaaMarkDirty(EnterLitQuiesce, EnterGpuQuiesceDrain);
     const bool needs_first_mesh = !HasDrawableGreedyMesh(result.coord);
+    const bool fully_dark_drawable =
+        HasDrawableGreedyMesh(result.coord) &&
+        ChunkHasFullyDarkFace(result.coord);
     if (gpu_pending)
     {
       PreferKickPendingGpuQueued(result.coord);
     }
     else if (ShouldMarkDirtyAfterRemeshAfterApplyCommit(
                  Dirty.Contains(result.coord), gpu_pending, enter_gate,
-                 needs_first_mesh))
+                 needs_first_mesh, fully_dark_drawable))
     {
       MarkDirtyPriority(result.coord);
       ++RaaCommitMarkDirtyN;
@@ -3373,13 +3382,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastDirtyFmN = static_cast<int>(Dirty.GetFirstMeshCount());
   LastDirtyRemeshN = static_cast<int>(Dirty.GetRemeshCount());
   LastDirtyRevisitSameN = 0;
-  // Sky-fix: orphan RemeshAfterApply (no Dirty/Active/GPU) never commits under
-  // enter PreferKick-only — promote to FirstMesh Dirty so bake can proceed.
+  // Sky-only / enter: orphan RemeshAfterApply with no Dirty/Active/GPU owner must
+  // become Dirty. FullyDark drawable is NOT "owned" — enter PreferKick-only left
+  // remesh_after_apply=32 with raa_commit=0 (manual 123647).
   {
-    constexpr int kOrphanRaaPromote = 12;
+    constexpr int kOrphanRaaReconcile = 12;
     int promoted = 0;
     for (auto it = RemeshAfterApply.begin();
-         it != RemeshAfterApply.end() && promoted < kOrphanRaaPromote;)
+         it != RemeshAfterApply.end() && promoted < kOrphanRaaReconcile;)
     {
       const glm::ivec3 c = *it;
       const bool owned =
@@ -3392,8 +3402,15 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         continue;
       }
       it = RemeshAfterApply.erase(it);
-      Dirty.MarkDirtyPriority(c);
-      BumpChunkMeshRevision(c);
+      // FullyDark / !Drawable → FirstMesh class; lit remesh → RemeshQ.
+      if (!HasDrawableGreedyMesh(c) || ChunkHasFullyDarkFace(c))
+      {
+        Dirty.MarkDirtyPriority(c);
+      }
+      else
+      {
+        Dirty.MarkDirty(c);
+      }
       ++RaaCommitMarkDirtyN;
       ++promoted;
     }
@@ -3877,17 +3894,20 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
       {
         const bool has_drawable = HasDrawableGreedyMesh(*it);
+        int horiz = 999;
         bool in_focus = false;
         if (MeshFocusValid)
         {
-          const int horiz =
-              std::max(std::abs(it->x - MeshFocusGroundChunk.x),
-                       std::abs(it->z - MeshFocusGroundChunk.z));
+          horiz = std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                           std::abs(it->z - MeshFocusGroundChunk.z));
           in_focus = horiz <= MeshFocusRadiusChunks;
         }
+        // Phase 1b: ring≤2 FirstMesh is non-stealable under SoftDefer.
+        const bool near_ring_first_mesh =
+            !has_drawable && horiz <= kVisualStageNearFovHoriz;
         const bool miss_or_focus = StarveRemeshForHoles || in_focus;
-        // Era22 I-S1: schedule FirstMesh under SoftDefer for !Drawable.
-        if (ShouldScheduleFirstMeshUnderSoftDefer(has_drawable, miss_or_focus))
+        if (near_ring_first_mesh ||
+            ShouldScheduleFirstMeshUnderSoftDefer(has_drawable, miss_or_focus))
         {
           // fall through to Capture/Enqueue
         }
@@ -3898,6 +3918,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             HoldSoftDeferFirstMesh(*it);
           }
           ++LastMeshDirtyScheduleSkipN;
+          // Outer SoftDefer: leave coord in Dirty (std::next) so revisit can
+          // rotate after near-ring drains — do not RemoveAt-steal slots.
+          if (!has_drawable && horiz > kVisualStageNearFovHoriz)
+          {
+            return std::next(it);
+          }
           return Dirty.RemoveAt(it);
         }
       }
@@ -3969,13 +3995,15 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     }
     if (MeshFocusValid && first_mesh_cap > 0)
     {
+      int outer_soft_defer_skips = 0;
+      constexpr int kMaxOuterSoftDeferSkips = 32;
       for (auto it = Dirty.begin();
            it != Dirty.end() && scheduled < max_schedule_per_frame &&
            reserved_focus_scheduled < first_mesh_cap;)
       {
         if (!Dirty.IsFirstMesh(*it))
         {
-          break;
+          break; // Dual-Q: remesh suffix — stop Pass1 walk (Phase 1b early-stop)
         }
         const int dx = std::abs(it->x - MeshFocusGroundChunk.x);
         const int dz = std::abs(it->z - MeshFocusGroundChunk.z);
@@ -3985,10 +4013,22 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           ++it;
           continue;
         }
+        const int scheduled_before = scheduled;
+        const int skip_before = LastMeshDirtyScheduleSkipN;
         auto next = try_schedule(it, false, false, true);
         if (next == Dirty.end())
         {
           break;
+        }
+        if (scheduled == scheduled_before &&
+            LastMeshDirtyScheduleSkipN > skip_before &&
+            horiz > kVisualStageNearFovHoriz)
+        {
+          ++outer_soft_defer_skips;
+          if (outer_soft_defer_skips >= kMaxOuterSoftDeferSkips)
+          {
+            break; // avoid thrash-walking entire FirstMeshQ for skip telem
+          }
         }
         it = next;
       }

@@ -9,6 +9,7 @@
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
+#include "World/Streaming/WorldBorderPolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/RelightFifoPolicy.h"
@@ -199,7 +200,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool missing_visible_mesh =
       mesh_service.HasMissingGreedyMeshInHorizontalRadius(
           world.GetBlockWorld(), focus_ground_horiz, focus_radius);
-  ++world.GetPhysicsTelemetryMutable().PrepUnfinishedCallsN;
   // Era22 I-M8: track miss witness age (~120 frames ≈ 1 period ≈2s).
   if (missing_visible_mesh)
   {
@@ -328,27 +328,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             glm::ivec2(chunk_coord.x, chunk_coord.z));
       });
 
-  const bool near_mesh_backlog =
-      mesh_service.HasDirtyWithinHorizontalRadius(focus_ground_horiz,
-                                                 focus_radius) ||
-      missing_visible_mesh;
-  (void)pending_near_light;
-  const int black_sticky = world.CountBlackStickyFocusMeshes(focus_ground,
-                                                             focus_radius);
   const size_t pending_dirty_early = mesh_service.GetDirtyCount();
   const int pending_async_early = mesh_service.GetAsyncInFlightCount();
-  // Idle-only: CountUnfinishedVisualNear is O(focus²) complete+ready scans.
-  // Moving paths never use not_ready_early (idle_remesh_debt requires !moving).
+  // Phase 1a: never second O(R²) CountUnfinished here — reuse Streaming sample.
+  // Idle remesh debt uses sample + focus_dirty_early (not a fresh full scan).
+  bool sample_valid = false;
   const int not_ready_early =
-      moving ? 0
-             : world.CountUnfinishedVisualNear(focus_ground_horiz, focus_radius);
-  if (!moving)
-  {
-    ++world.GetPhysicsTelemetryMutable().PrepUnfinishedCallsN;
-  }
+      world.GetLastUnfinishedVisualSample(&sample_valid);
   const int focus_dirty_early =
       mesh_service.CountDirtyWithinHorizontalRadius(focus_ground_horiz,
                                                     focus_radius);
+  // One dirty pass: HasDirty is redundant with Count>0.
+  const bool near_mesh_backlog =
+      focus_dirty_early > 0 || missing_visible_mesh;
+  (void)pending_near_light;
+  const int black_sticky = world.CountBlackStickyFocusMeshes(focus_ground,
+                                                             focus_radius);
   prep_unfinished_ms += prep_ms_since(prep_t);
   prep_t = std::chrono::high_resolution_clock::now();
   // Lit-but-dirty catch-up: only when focus still has *missing* mesh pressure.
@@ -356,7 +351,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // IsColumnRenderReady no longer counts Dirty; keep debt off for remesh-only.
   const bool idle_remesh_debt =
       !moving && pending_focus_count == 0 && black_sticky == 0 &&
-      !missing_visible_mesh && not_ready_early > 32;
+      !missing_visible_mesh && sample_valid && not_ready_early > 32;
   // Focus lit-but-dirty backlog with nr≈0 still fails F2 fd_end≤280. Use a
   // small persistence latch: activate debt only when dirty is high for several
   // consecutive idle frames and does not improve.
@@ -1187,7 +1182,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const int dropped = world.TrimFarRelightFifoFarthest(
           focus_ground_horiz, mtune.RelightFifoSoftCap);
       phys.RelightFifoDropped += static_cast<uint64_t>(std::max(0, dropped));
+      phys.RelightTrimFarN += std::max(0, dropped);
       // P4: under Red+holes+fifo pressure, trim again toward soft-cap aggressively.
+      // Phase 1c: trim = truncate outer tickets alarm, not silent heal.
       const int fifo_live = world.GetPendingTerrainRelightFifoCount();
       if (ShouldCruiseRedFifoLightDrain(
               pressure, fifo_live, mtune.RelightFifoSoftCap,
@@ -1198,6 +1195,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const int drop2 = world.TrimFarRelightFifoFarthest(
             focus_ground_horiz, std::max(8, mtune.RelightFifoSoftCap * 3 / 4));
         phys.RelightFifoDropped += static_cast<uint64_t>(std::max(0, drop2));
+        phys.RelightTrimFarN += std::max(0, drop2);
+      }
+      // Phase 1c: after trim, drain light from MissReserved carve — not silent heal.
+      if (phys.RelightTrimFarN > 0 &&
+          (visual_holes || missing_visible_mesh || pending_focus_count > 0))
+      {
+        const int boost = std::min(8, 2 + phys.RelightTrimFarN / 8);
+        GetColumnFlowExecutor().DrainIdlePendingLight(
+            world, focus_ground_horiz, focus_radius, boost,
+            /*allow_sync=*/false, last_frame_ms, pending_focus_count,
+            missing_visible_mesh);
       }
     }
   }
@@ -3089,6 +3097,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     float clamp_scale = 1.0f;
     if (moving)
     {
+      const glm::ivec3 fb = world.GetPreferredLoadFocusBlock();
+      const glm::vec3 focus_pos(static_cast<float>(fb.x),
+                                static_cast<float>(fb.y),
+                                static_cast<float>(fb.z));
+      clamp_scale = std::min(
+          clamp_scale, SoftBorderSpeedScale(focus_pos, world.GetWorldBorder()));
       if (missing_underfeet)
       {
         clamp_scale = 0.85f;
@@ -3308,6 +3322,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     LastBudget.AdmissionMode = static_cast<int>(adm.mode);
     LastBudget.DirtyAdmitBudget = adm.dirty_admit_budget;
     LastBudget.GpuApplyMax = adm.gpu_apply_max;
+    {
+      auto &pt = world.GetPhysicsTelemetryMutable();
+      pt.DirtyAdmitBudgetEnd = adm.dirty_admit_budget;
+      pt.FirstMeshScheduleCap = adm.first_mesh_schedule;
+      pt.RemeshScheduleCap = adm.remesh_schedule;
+    }
   }
   // I4b: re-assert calm dirty_tick caps after Finalize — admission floors must
   // not restore drain/schedule/emerge budget on clean stand.

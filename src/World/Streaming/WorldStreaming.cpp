@@ -637,6 +637,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       focus_pressure = unfinished_visual;
     }
   }
+  world.SetLastUnfinishedVisualSample(unfinished_visual);
   world.PhysicsTelemetryData.FocusStickyRemesh = sticky_remesh;
   world.PhysicsTelemetryData.FocusPendingDark = pending_dark;
   world.PhysicsTelemetryData.FocusDarkMesh = dark_preview;
@@ -3080,6 +3081,12 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         static_cast<int>(world.GetPendingLightBeforeMeshCount());
     world.PhysicsTelemetryData.FocusChunkX = focus_horiz.x;
     world.PhysicsTelemetryData.FocusChunkZ = focus_horiz.z;
+    {
+      const glm::ivec3 fb = world.GetPreferredLoadFocusBlock();
+      world.PhysicsTelemetryData.PlayerX = static_cast<float>(fb.x);
+      world.PhysicsTelemetryData.PlayerY = static_cast<float>(fb.y);
+      world.PhysicsTelemetryData.PlayerZ = static_cast<float>(fb.z);
+    }
     world.PhysicsTelemetryData.UnderfeetNeed = underfeet_need ? 1 : 0;
     world.PhysicsTelemetryData.VisualHoles = visual_holes ? 1 : 0;
     world.PhysicsTelemetryData.LightDebt =

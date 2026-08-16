@@ -4,6 +4,7 @@
 #include <limits>
 
 #include "Blocks/BlockRegistry.h"
+#include "World/Chunks/BlockQuery.h"
 #include "World/Collision/VoxelDdaTraversal.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/GridMath.h"
@@ -35,8 +36,13 @@ float NextBoundaryT(const glm::vec3 &origin, const glm::vec3 &direction,
 bool IsRaycastTarget(const UBlockWorld &world, const UBlockRegistry &registry,
                      glm::ivec3 pos)
 {
-  const BlockId Id = world.GetBlock(pos);
-  return registry.BlocksMovement(Id);
+  // Phase 4: Unloaded is not a place/break target (and not AIR).
+  const BlockQueryResult q = world.QueryBlock(pos);
+  if (q.IsUnloaded() || q.IsAir())
+  {
+    return false;
+  }
+  return registry.BlocksMovement(q.id);
 }
 
 bool IsAirPocketCell(const UBlockWorld &world, const UBlockRegistry &registry,

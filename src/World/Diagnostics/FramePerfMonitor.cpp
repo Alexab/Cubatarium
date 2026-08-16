@@ -205,6 +205,15 @@ struct FrameNumbers
   int prep_unfinished_calls_n{0};
   int prep_unfinished_full_n{0};
   int prep_unfinished_incremental_n{0};
+  int unfinished_cache_hit_n{0};
+  int unfinished_cache_overflow_n{0};
+  int dirty_admit_budget_end{0};
+  int first_mesh_schedule_cap{0};
+  int remesh_schedule_cap{0};
+  int relight_trim_far_n{0};
+  float player_x{0.0f};
+  float player_y{0.0f};
+  float player_z{0.0f};
   int phase_budget_over{0};
   int phase_miss_carve_out{0};
   double miss_reserved_ms{0.0};
@@ -506,6 +515,15 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.prep_unfinished_calls_n = phys.PrepUnfinishedCallsN;
   n.prep_unfinished_full_n = phys.PrepUnfinishedFullN;
   n.prep_unfinished_incremental_n = phys.PrepUnfinishedIncrementalN;
+  n.unfinished_cache_hit_n = phys.UnfinishedCacheHitN;
+  n.unfinished_cache_overflow_n = phys.UnfinishedCacheOverflowN;
+  n.dirty_admit_budget_end = phys.DirtyAdmitBudgetEnd;
+  n.first_mesh_schedule_cap = phys.FirstMeshScheduleCap;
+  n.remesh_schedule_cap = phys.RemeshScheduleCap;
+  n.relight_trim_far_n = phys.RelightTrimFarN;
+  n.player_x = phys.PlayerX;
+  n.player_y = phys.PlayerY;
+  n.player_z = phys.PlayerZ;
   n.phase_budget_over = phys.PhaseBudgetOver;
   n.phase_miss_carve_out = phys.PhaseMissCarveOut;
   n.miss_reserved_ms = phys.MissReservedMs;
@@ -820,6 +838,14 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"prep_unfinished_full_n\":" << n.prep_unfinished_full_n
           << ",\"prep_unfinished_incremental_n\":"
           << n.prep_unfinished_incremental_n
+          << ",\"unfinished_cache_hit_n\":" << n.unfinished_cache_hit_n
+          << ",\"unfinished_cache_overflow_n\":" << n.unfinished_cache_overflow_n
+          << ",\"dirty_admit_budget_end\":" << n.dirty_admit_budget_end
+          << ",\"first_mesh_schedule_cap\":" << n.first_mesh_schedule_cap
+          << ",\"remesh_schedule_cap\":" << n.remesh_schedule_cap
+          << ",\"relight_trim_far_n\":" << n.relight_trim_far_n
+          << ",\"player_x\":" << n.player_x << ",\"player_y\":" << n.player_y
+          << ",\"player_z\":" << n.player_z
           << ",\"phase_budget_over\":" << n.phase_budget_over
           << ",\"phase_miss_carve_out\":" << n.phase_miss_carve_out
           << ",\"miss_reserved_ms\":" << n.miss_reserved_ms

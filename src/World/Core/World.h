@@ -29,6 +29,8 @@
 #include "World/Physics/PhysicsProfile.h"
 #include "World/Physics/PhysicsTelemetry.h"
 #include "World/Streaming/ColumnEmergeState.h"
+#include "World/Streaming/ColumnRecord.h"
+#include "World/Streaming/WorldBorderPolicy.h"
 #include "World/Streaming/EnterVisualGate.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
@@ -843,6 +845,9 @@ public:
   {
     return std::max(1, EffectiveRenderDistance) + 1;
   }
+  const WorldBorderConfig &GetWorldBorder() const { return WorldBorder; }
+  UColumnRecordStore &GetColumnRecords() { return ColumnRecords; }
+  const UColumnRecordStore &GetColumnRecords() const { return ColumnRecords; }
   float GetEffectiveFogStartRatio() const { return EffectiveFogStartRatio; }
   /// Fog horizon RD (may be tighter than mesh/visual EffectiveRenderDistance).
   int GetEffectiveFogRenderDistance() const
@@ -1158,8 +1163,11 @@ public:
   /// Cruise wall P3: invalidate unfinished ring cache (focus shift / mesh events).
   void InvalidateUnfinishedVisualCache() const;
   void NoteUnfinishedColumnDirty(glm::ivec2 col) const;
-  /// Harvest per-frame prep_unfinished_full_n / incremental_n into telem.
+  /// Harvest per-frame unfinished cache counters into telem.
   void HarvestUnfinishedPrepTelem(PhysicsTelemetry &tele) const;
+  /// Cached unfinished sample from UpdateStreaming (avoid dual full scans).
+  int GetLastUnfinishedVisualSample(bool *out_valid = nullptr) const;
+  void SetLastUnfinishedVisualSample(int count) const;
   /// Split unfinished focus by movement/view forward (dot>=0 ahead, else behind).
   void CountUnfinishedVisualByFacing(glm::ivec3 focus_ground_chunk,
                                      int radius_chunks, glm::vec2 forward_xz,
@@ -1420,6 +1428,9 @@ private:
   std::unordered_set<glm::ivec2, GroundColumnHash> AsyncRelightColumnsInFlight;
   std::unordered_map<glm::ivec2, ColumnEmergeState, GroundColumnHash>
       ColumnEmergeStates;
+  /// Phase 2: dual-write SoT store (mirrors emerge / desired / revs).
+  UColumnRecordStore ColumnRecords;
+  WorldBorderConfig WorldBorder;
   bool SpawnAreaPreparedByCooperativeLoad{false};
   bool ShutdownPrepared{false};
   bool BackgroundQuiesceFinished{false};
@@ -1487,7 +1498,8 @@ private:
   PhysicsFeatureFlags PhysicsFlags;
   PhysicsBudgets PhysicsBudgetConfig;
   PhysicsTelemetry PhysicsTelemetryData;
-  /// Cruise wall P3: unfinished visual ring cache (not HoleQueryEpoch).
+  /// Cruise wall P3 / SoT Phase 1a: unfinished visual ring cache.
+  /// Overflow of dirty_cols never wipes the ring — ring-buffer oldest dirty.
   mutable struct UnfinishedVisualCacheState
   {
     bool valid{false};
@@ -1500,7 +1512,13 @@ private:
     std::vector<glm::ivec2> dirty_cols;
     int prep_full_n{0};
     int prep_incremental_n{0};
+    int prep_hit_n{0};
+    int prep_overflow_n{0};
+    int prep_calls_n{0};
   } UnfinishedVisualCache;
+  /// Last unfinished count produced by Streaming (Coordinator reuses — no 2nd O(R²)).
+  mutable int LastUnfinishedVisualSample{0};
+  mutable bool LastUnfinishedVisualSampleValid{false};
   uint64_t PhysicsTickCounter{0};
   double WallFrameDeltaSec{0.0};
   uint64_t PhysicsEventOrderCounter{0};

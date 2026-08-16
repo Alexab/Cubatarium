@@ -2,6 +2,7 @@
 #define CHUNKMANAGER_H
 
 #include "World/Chunks/Chunk.h"
+#include "World/Chunks/BlockQuery.h"
 #include "World/Math/BlockTypes.h"
 #include <functional>
 #include <glm/glm.hpp>
@@ -27,6 +28,8 @@ class UChunkManager
 {
 public:
   BlockId GetBlock(glm::ivec3 worldPos) const;
+  /// Phase 4: Unloaded ≠ AIR for raycast/place contracts.
+  BlockQueryResult QueryBlock(glm::ivec3 worldPos) const;
   FluidCellState GetFluidState(glm::ivec3 worldPos) const;
   void SetBlock(glm::ivec3 worldPos, BlockId Id);
   void SetFluidState(glm::ivec3 worldPos, FluidCellState state);

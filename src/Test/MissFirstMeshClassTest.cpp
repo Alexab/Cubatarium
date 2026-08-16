@@ -934,6 +934,10 @@ int main()
     Expect(ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, true,
                                                       /*needs_first_mesh=*/true),
            "sky-fix: enter gate !Drawable ⇒ RAA MarkDirty FirstMesh");
+    Expect(ShouldMarkDirtyAfterRemeshAfterApplyCommit(
+               false, false, true, /*needs_first_mesh=*/false,
+               /*fully_dark_drawable=*/true),
+           "123647: enter FullyDark drawable ⇒ RAA MarkDirty");
     Expect(ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, false),
            "Era47: outside enter MarkDirty still allowed when clear");
     MeshWorkAdmissionInput enter_in{};
@@ -987,6 +991,9 @@ int main()
     Expect(ShouldMarkDirtyAfterRemeshAfterApplyCommit(false, false, true,
                                                       /*needs_first_mesh=*/true),
            "sky-fix: enter !Drawable still MarkDirty");
+    Expect(ShouldMarkDirtyAfterRemeshAfterApplyCommit(
+               false, false, true, false, /*fully_dark_drawable=*/true),
+           "123647: enter FullyDark still MarkDirty");
   }
 
   // --- Era50 EnterVisualGate completion FSM (pure) ---

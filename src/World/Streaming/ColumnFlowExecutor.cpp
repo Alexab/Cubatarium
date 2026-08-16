@@ -1,4 +1,7 @@
 #include "World/Streaming/ColumnFlowExecutor.h"
+#include "World/Streaming/ColumnDesiredStage.h"
+#include "World/Streaming/ColumnTicketMap.h"
+#include "World/Streaming/ColumnEmergeState.h"
 
 #include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
@@ -240,6 +243,12 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     item.scan_full_focus = true;
     item.cy = -1;
     Enqueue(item);
+    // Phase 3: ticket → ColumnRecord.desired dual-write.
+    const ColumnTicketLevel ticket = TicketLevelForRing(0);
+    const ColumnDesiredStage desired = DesiredStageFromTicket(
+        ticket, world.GetColumnEmergeState(glm::ivec3(focus.x, 0, focus.y)),
+        true, false, false);
+    world.GetColumnRecords().SetDesired(focus, desired);
   }
 
   // should_relight_then_mesh / should_promote_relight: real pending columns.
