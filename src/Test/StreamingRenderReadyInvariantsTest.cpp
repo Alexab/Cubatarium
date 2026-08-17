@@ -2,6 +2,7 @@
 #include "World/Streaming/MeshWorkAdmission.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
 #include "World/Streaming/ColumnFlowScheduler.h"
+#include "World/Streaming/VisualStagePolicy.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -15,6 +16,9 @@ using cutum::AllowUnlitHoleFillFirstMesh;
 using cutum::ClassifyStickyStaleDarkSoT;
 using cutum::ColumnSoTKind;
 using cutum::EnqueueStickyStaleRepairTickets;
+using cutum::FirstMeshPruneKeepHoriz;
+using cutum::kVisualStageLitDrawableHoriz;
+using cutum::ShouldHideUncomputedFullyDarkInRing;
 using cutum::UColumnFlowScheduler;
 using cutum::ColumnWorkKind;
 using cutum::ComputeMeshWorkAdmission;
@@ -115,10 +119,27 @@ int main()
          "163559: nearest nh1 hole fill allowed");
   Expect(AllowUnlitHoleFillFirstMesh(false, 2, 0, true, false),
          "witness nh2 cy0 hole fill allowed");
+  Expect(!AllowUnlitHoleFillFirstMesh(false, 4, 0, true, false),
+         "183918: nh4 ring is Relight-before-draw, not unlit fill");
   Expect(!AllowUnlitHoleFillFirstMesh(false, 5, 5, true, false),
          "rim nh5 cy5 hole fill denied");
   Expect(!AllowUnlitHoleFillFirstMesh(true, 1, 0, true, true),
          "has_mesh no hole fill");
+  {
+    const bool fill =
+        AllowUnlitHoleFillFirstMesh(false, 1, 0, true, true);
+    Expect(fill, "compose: nh1 fill armed");
+    Expect(!ShouldHideUncomputedFullyDarkInRing(1, true, true, false,
+                                               kVisualStageLitDrawableHoriz,
+                                               false, false, fill),
+           "183918: hole-fill FirstMesh must be drawable, not hidden FullyDark");
+    Expect(ShouldHideUncomputedFullyDarkInRing(4, true, true, false),
+           "mid-ring FullyDark without fill still hidden");
+  }
+  Expect(FirstMeshPruneKeepHoriz(8) == kVisualStageLitDrawableHoriz,
+         "183918: FM prune keeps LitDrawable ring, not nh<=2");
+  Expect(FirstMeshPruneKeepHoriz(2) == 2,
+         "prune keep cannot exceed focus radius");
   Expect(!SoftDeferMeshUntilLitPolicy(false, false, true, true, true, true),
          "policy: pending+focus+allow_unlit allows first mesh");
   Expect(SoftDeferMeshUntilLitPolicy(false, false, true, true, true, false),

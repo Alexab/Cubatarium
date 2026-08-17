@@ -1127,6 +1127,7 @@ int main()
     using cutum::IsEnterGpuWarmupReady;
     using cutum::ShouldHideEnterFullyDark;
     using cutum::ShouldHideFullyDarkUntilLitInRing;
+    using cutum::FirstMeshPruneKeepHoriz;
     using cutum::ShouldHideUncomputedFullyDarkInRing;
     using cutum::ShouldRemeshAfterLightApply;
     using cutum::ShouldSkipSpawnMeshWhileRelightDeferred;
@@ -1227,6 +1228,11 @@ int main()
            "baked true-dark draws (not hidden)");
     Expect(!ShouldHideUncomputedFullyDarkInRing(5, true, true, true),
            "uncomputed hide stays r=4");
+    Expect(!ShouldHideUncomputedFullyDarkInRing(1, true, true, false, 4, false,
+                                               false, true),
+           "183918: nh1 hole-fill preview draws");
+    Expect(FirstMeshPruneKeepHoriz(5) >= 4,
+           "183918: never prune FirstMesh inside LitDrawable ring");
     Expect(ClassifyEnterVisualItemState(false, false, false, true) ==
                EnterVisualItemState::Done,
            "OpenSky≠Done: terminal_ready only for lit/true-dark");

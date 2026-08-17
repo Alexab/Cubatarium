@@ -76,16 +76,18 @@ inline bool ShouldHideFullyDarkUntilLitInRing(int horiz, bool fully_dark,
 /// Hide FullyDark in the LitDrawable ring until lit drawable or true-dark.
 /// true_dark = field 0 after OpenSky/relight apply (caller passes it).
 /// After OpenSky, stale (field≠0) stays hidden until bake.
+/// hole_fill_preview: first-mesh in near FOV — draw unlit geometry until Relight.
+/// 183918: AllowUnlitHoleFill + hide=true published GPU FullyDark that never drew.
 inline bool ShouldHideUncomputedFullyDarkInRing(
     int horiz, bool fully_dark, bool pending_light, bool stale_field,
     int ring = kVisualStageLitDrawableHoriz, bool true_dark = false,
-    bool has_lit_drawable = false)
+    bool has_lit_drawable = false, bool hole_fill_preview = false)
 {
   if (horiz > ring || !fully_dark)
   {
     return false;
   }
-  if (has_lit_drawable || true_dark)
+  if (has_lit_drawable || true_dark || hole_fill_preview)
   {
     return false;
   }
@@ -93,6 +95,16 @@ inline bool ShouldHideUncomputedFullyDarkInRing(
   (void)stale_field;
   // Unbaked FullyDark always hidden in ring (pending, stale, or pre-OpenSky).
   return true;
+}
+
+/// FirstMesh Dirty prune must keep the LitDrawable ring (and not the nh≤2
+/// shell). 183918 keep_h=2 dropped cruise-frontier FM → opaque 882→472.
+inline int FirstMeshPruneKeepHoriz(int focus_radius,
+                                   int lit_ring = kVisualStageLitDrawableHoriz)
+{
+  const int ring = lit_ring < 1 ? 1 : lit_ring;
+  const int focus = focus_radius < 1 ? 1 : focus_radius;
+  return ring < focus ? ring : focus;
 }
 
 /// Era28 I-V4: near void/VB needs Relight before first draw (not Unlit preview).

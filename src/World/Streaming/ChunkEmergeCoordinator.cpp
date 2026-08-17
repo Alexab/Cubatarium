@@ -2988,15 +2988,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           focus_ground_horiz, /*keep_h=*/2, /*keep_cy=*/-1,
           /*remesh_only=*/true);
     }
-    // Near miss: drop rim FirstMesh Dirty so witness nh≤2 drains first.
+    // Near miss: drop hinterland FirstMesh Dirty only — never inside the
+    // LitDrawable ring (183918 keep_h=2 starved cruise frontier / opaque).
     if (near_miss_urgent && pending_dirty_early > 96)
     {
-      const int fm_keep_h =
-          missing_underfeet ? 1 : std::min(2, focus_radius);
+      const int fm_keep_h = FirstMeshPruneKeepHoriz(focus_radius);
       world.GetPhysicsTelemetryMutable().DirtyDropped +=
           static_cast<uint64_t>(std::max(
               0, mesh_service.DropFarFirstMeshDirtyBeyondRadius(
-                     focus_ground_horiz, fm_keep_h, /*keep_cy=*/2)));
+                     focus_ground_horiz, fm_keep_h, /*keep_cy=*/-1)));
     }
     // Admit floor before remesh — Finalize MeshWorkAdmission caps schedule.
     mesh_schedule = std::max(mesh_schedule, moving ? 12 : 16);

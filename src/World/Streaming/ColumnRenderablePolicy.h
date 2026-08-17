@@ -73,28 +73,20 @@ inline bool AllowUnlitFirstMesh(bool has_mesh, int horiz_from_focus,
   return horiz_from_focus > near_r;
 }
 
-/// FOV hole in LitDrawable ring / FirstMesh witness band: schedule FirstMesh
-/// under PendingLight. Lit gate stays at commit; Relight upgrades after.
-/// 163559: nh≤2 miss sticky 87% while SoftDefer blocked in_focus+pending.
+/// Near-FOV hole (horiz ≤ near FOV): schedule FirstMesh under PendingLight.
+/// Must match hole_fill_preview in ShouldHide — otherwise GPU publishes
+/// FullyDark that draw hides (183918: skip↓ miss↑ opaque collapse).
+/// Mid-ring (nh 3–4) stays Relight-before-draw.
 inline bool AllowUnlitHoleFillFirstMesh(bool has_mesh, int horiz_from_focus,
-                                        int chunk_cy, bool missing_visible_mesh,
-                                        bool is_nearest_hole,
-                                        int lit_ring = kVisualStageLitDrawableHoriz)
+                                        int /*chunk_cy*/, bool missing_visible_mesh,
+                                        bool /*is_nearest_hole*/,
+                                        int near_h = kVisualStageNearFovHoriz)
 {
-  if (has_mesh || !missing_visible_mesh || horiz_from_focus > lit_ring)
+  if (has_mesh || !missing_visible_mesh)
   {
     return false;
   }
-  if (is_nearest_hole)
-  {
-    return true;
-  }
-  // Era20 I-M1 witness band — same as IsMissFirstMeshClass per column.
-  if (chunk_cy >= 0 && chunk_cy <= 3)
-  {
-    return true;
-  }
-  return horiz_from_focus <= 4;
+  return horiz_from_focus >= 0 && horiz_from_focus <= near_h;
 }
 
 /// Void-edge / VisibleBlack debt: Relight-first (mesh dark + light field 0).
