@@ -57,6 +57,16 @@ public:
                              bool clear_existing_caches = false);
   void MarkDirty(glm::ivec3 chunkCoord);
   void MarkDirtyPriority(glm::ivec3 chunkCoord);
+  /// P3: next Dirty sort boosts this column's nh≤2 / underfeet FirstMesh.
+  void SetJustRelitFirstMeshColumn(glm::ivec2 column, bool valid)
+  {
+    JustRelitFirstMeshValid_ = valid;
+    JustRelitFirstMeshColumn_ = column;
+  }
+  bool HasLiveGpuDraw(glm::ivec3 chunk_coord) const
+  {
+    return ChunkHasLiveGpuDraw(chunk_coord);
+  }
   /// Fluid column cache invalidation — call on fluid voxel changes only, not
   /// on every mesh remesh.
   void InvalidateFluidSurfaceForChunk(glm::ivec3 chunkCoord);
@@ -743,6 +753,8 @@ private:
   glm::ivec3 MeshFocusGroundChunk{0};
   int MeshFocusRadiusChunks{6};
   bool MeshFocusValid{false};
+  bool JustRelitFirstMeshValid_{false};
+  glm::ivec2 JustRelitFirstMeshColumn_{0};
   int MeshVerticalPreferredCy{0};
   bool MeshPreferLowerCy{false};
   bool MeshVerticalPriorityValid{false};

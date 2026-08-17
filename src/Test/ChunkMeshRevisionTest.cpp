@@ -103,6 +103,15 @@ int main()
          "hinterland intentional empty may FreeChunk");
   Expect(!ShouldRetainUnderfeetGpuOnEmptyReplace(true, true, false),
          "non-empty replace uses PendingReplace path");
+  using cutum::ShouldKeepGpuSlotUntilBindInRing;
+  Expect(ShouldKeepGpuSlotUntilBindInRing(true, 2, 6, false),
+         "P4: vis/keep ring keeps GPU until Bind");
+  Expect(!ShouldKeepGpuSlotUntilBindInRing(true, 8, 6, false),
+         "P4: hinterland still evicts");
+  Expect(!ShouldKeepGpuSlotUntilBindInRing(true, 2, 6, true),
+         "P4: replacement bound may FreeChunk");
+  Expect(!ShouldKeepGpuSlotUntilBindInRing(false, 0, 6, false),
+         "P4: no GPU slot to keep");
   Expect(ShouldRouteRemeshToFirstMeshQueue(false, false),
          "Closeout C: missing → FirstMeshQ");
   Expect(ShouldRouteRemeshToFirstMeshQueue(true, true),

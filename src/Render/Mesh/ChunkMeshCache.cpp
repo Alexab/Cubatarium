@@ -3466,13 +3466,23 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       MeshFocusValid &&
       std::max(std::abs(result.coord.x - MeshFocusGroundChunk.x),
                std::abs(result.coord.z - MeshFocusGroundChunk.z)) <= 1;
+  const int gpu_keep_horiz =
+      MeshFocusValid
+          ? std::max(std::abs(result.coord.x - MeshFocusGroundChunk.x),
+                     std::abs(result.coord.z - MeshFocusGroundChunk.z))
+          : 999;
+  const int gpu_keep_ring =
+      std::max(MeshFocusRadiusChunks, kVisualStageLitDrawableHoriz);
   // Era21 I-R1: keep live GPU SSBO until BindCommitted (PendingReplace).
   // Underfeet: also retain on intentional empty (no PreferKick storm).
+  // P4: vis/keep ring also keeps until Bind (cruise pool 13.8→2 MB).
   if (ShouldDeferFreeChunkUntilPackedReplace(had_gpu_drawable,
                                              new_cpu_drawable) &&
       (!intentional_empty ||
        ShouldRetainUnderfeetGpuOnEmptyReplace(underfeet_lease, had_gpu_drawable,
-                                              intentional_empty)))
+                                              intentional_empty) ||
+       ShouldKeepGpuSlotUntilBindInRing(had_gpu_drawable, gpu_keep_horiz,
+                                        gpu_keep_ring, false)))
   {
     ++MeshReplaceHoleAvoided;
     // Keep same live SSBO — do not mark GreedyBatchesDirty/ForceFlat (refs OK).
@@ -3928,6 +3938,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                                 MeshPreferLowerCy, MeshVerticalPriorityValid,
                                 missing_mesh, MeshForwardBiasK, MeshForwardXz,
                                 MeshFocusRadiusChunks);
+      }
+      if (JustRelitFirstMeshValid_)
+      {
+        Dirty.BoostJustRelitNear(MeshFocusGroundChunk, JustRelitFirstMeshColumn_,
+                                 kVisualStageNearFovHoriz);
       }
     }
     else
@@ -4921,13 +4936,23 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
         MeshFocusValid &&
         std::max(std::abs(chunkCoord.x - MeshFocusGroundChunk.x),
                  std::abs(chunkCoord.z - MeshFocusGroundChunk.z)) <= 1;
+    const int gpu_keep_horiz =
+        MeshFocusValid
+            ? std::max(std::abs(chunkCoord.x - MeshFocusGroundChunk.x),
+                       std::abs(chunkCoord.z - MeshFocusGroundChunk.z))
+            : 999;
+    const int gpu_keep_ring =
+        std::max(MeshFocusRadiusChunks, kVisualStageLitDrawableHoriz);
     // Era21 I-R1: keep live GPU until BindCommitted (PendingReplace).
     // Underfeet: retain on intentional empty (no PreferKick).
+    // P4: vis/keep ring also keeps until Bind.
     if (ShouldDeferFreeChunkUntilPackedReplace(had_gpu_drawable,
                                                new_cpu_drawable) &&
         (!intentional_empty ||
          ShouldRetainUnderfeetGpuOnEmptyReplace(underfeet_lease, had_gpu_drawable,
-                                                intentional_empty)))
+                                                intentional_empty) ||
+         ShouldKeepGpuSlotUntilBindInRing(had_gpu_drawable, gpu_keep_horiz,
+                                          gpu_keep_ring, false)))
     {
       ++MeshReplaceHoleAvoided;
       // Same live SSBO — do not ForceFlatRebuild / GreedyBatchesDirty (refs OK).

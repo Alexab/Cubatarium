@@ -527,6 +527,9 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   const bool missing_near =
       world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
           world.GetBlockWorld(), focus_horiz, focus_radius);
+  const int prev_miss_cx = world.PhysicsTelemetryData.MissCx;
+  const int prev_miss_cz = world.PhysicsTelemetryData.MissCz;
+  const int prev_hold_n = world.PhysicsTelemetryData.RelightWitnessHoldN;
   if (missing_near)
   {
     glm::ivec3 miss_coord{0};
@@ -539,6 +542,25 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       world.PhysicsTelemetryData.MissHoriz =
           std::max(std::abs(miss_coord.x - focus_horiz.x),
                    std::abs(miss_coord.z - focus_horiz.z));
+      auto &exec = GetColumnFlowExecutor();
+      const glm::ivec2 miss_xz(miss_coord.x, miss_coord.z);
+      const bool hold = ShouldHoldPinnedRelightWitness(
+          world.PhysicsTelemetryData.MissHoriz,
+          world.IsPendingLightBeforeMesh(miss_xz));
+      if (hold && miss_coord.x == prev_miss_cx &&
+          miss_coord.z == prev_miss_cz)
+      {
+        world.PhysicsTelemetryData.RelightWitnessHoldN = prev_hold_n + 1;
+      }
+      else if (hold)
+      {
+        world.PhysicsTelemetryData.RelightWitnessHoldN = 1;
+      }
+      else
+      {
+        world.PhysicsTelemetryData.RelightWitnessHoldN = 0;
+      }
+      exec.SetPromoteRelightHold(miss_xz, hold);
     }
   }
   else
@@ -547,6 +569,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     world.PhysicsTelemetryData.MissCy = 0;
     world.PhysicsTelemetryData.MissCz = 0;
     world.PhysicsTelemetryData.MissHoriz = 0;
+    world.PhysicsTelemetryData.RelightWitnessHoldN = 0;
+    GetColumnFlowExecutor().SetPromoteRelightHold(glm::ivec2(0), false);
   }
   // Underfeet is a subset of focus — skip second full resident scan when focus
   // already reports no missing mesh (CB stream_ms on no-hole fly).
@@ -1724,9 +1748,16 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                 ? OceanCaptureWitnessPinFrames()
                 : (SoftDeferCapturePinMaxAge > 0 ? SoftDeferCapturePinMaxAge
                                                  : kSoftDeferCaptureWitnessPinFrames);
-        const bool retarget = ShouldRetargetSoftDeferCaptureWitness(
-            SoftDeferCapturePinValid, SoftDeferCapturePinAge, pin_T,
-            better_horiz, pinned_still);
+        const bool hold_nh2 = ShouldHoldPinnedRelightWitness(
+            SoftDeferCapturePinHoriz,
+            world.IsPendingLightBeforeMesh(
+                glm::ivec2(SoftDeferCapturePinCx, SoftDeferCapturePinCz)) &&
+                missing_focus_mesh);
+        const bool retarget = ShouldRetargetRelightWitness(
+            ShouldRetargetSoftDeferCaptureWitness(
+                SoftDeferCapturePinValid, SoftDeferCapturePinAge, pin_T,
+                better_horiz, pinned_still),
+            hold_nh2);
         if (retarget)
         {
           SoftDeferCapturePinValid = true;

@@ -73,6 +73,7 @@
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
+#include "Render/Mesh/MeshApplyPolicy.h"
 #include "World/Streaming/EnterVisualGate.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/ColumnVisualReadyPolicy.h"
@@ -946,6 +947,11 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
   {
     primary_set.insert(g);
   }
+  if (finalize_pending_gate && MeshService && !primary_grounds.empty())
+  {
+    MeshService->GetCache().SetJustRelitFirstMeshColumn(primary_grounds.front(),
+                                                        true);
+  }
   auto schedule_remesh_after_lit_apply =
       [this, enter_quiesce, enter_gate, &primary_set](const glm::ivec3 &coord)
   {
@@ -1661,6 +1667,12 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
             }
             if (MeshService->GetCache().ChunkHasFullyDarkFace(coord))
             {
+              const bool had_gpu =
+                  MeshService->GetCache().HasLiveGpuDraw(coord);
+              if (ShouldKeepGpuSlotUntilBindInRing(had_gpu, r, radius, false))
+              {
+                continue;
+              }
               MeshService->RemoveChunk(coord);
               dropped = true;
             }
@@ -4616,6 +4628,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     }
     MarkRelitChunksForMesh(relit_coords, /*priority_mesh=*/true, primary_grounds,
                            result.finalize_pending_gate);
+    ++PhysicsTelemetryData.RelightApplyN;
     // Ensure inflight tracking clears even when MarkRelit only remeshed
     // neighbors (primary already erased inside MarkRelit).
     for (const glm::ivec2 &g : primary_grounds)

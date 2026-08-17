@@ -83,6 +83,20 @@ inline bool ShouldRetainUnderfeetGpuOnEmptyReplace(bool underfeet_lease,
   return underfeet_lease && had_gpu_drawable && intentional_empty;
 }
 
+/// P4: keep live GPU in visual/keep ring until BindCommitted replacement.
+/// Hinterland (horiz > keep) still evicts. Hide-until-lit covers FullyDark —
+/// RemoveChunk dark GPU «ради дыр» collapses packed/pool on cruise (195810).
+inline bool ShouldKeepGpuSlotUntilBindInRing(bool had_gpu_drawable, int horiz,
+                                            int keep_horiz,
+                                            bool has_replacement_bound)
+{
+  if (!had_gpu_drawable || has_replacement_bound || keep_horiz < 0)
+  {
+    return false;
+  }
+  return horiz >= 0 && horiz <= keep_horiz;
+}
+
 /// Closeout C dual-Q: lit drawable remesh → RemeshQ; missing/FullyDark → FM.
 inline bool ShouldRouteRemeshToFirstMeshQueue(bool has_drawable,
                                              bool fully_dark_drawable)

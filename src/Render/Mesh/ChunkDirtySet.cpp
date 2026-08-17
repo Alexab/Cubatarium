@@ -1,5 +1,7 @@
 #include "Render/Mesh/ChunkDirtySet.h"
 
+#include "World/Streaming/RelightFifoPolicy.h"
+
 #include <algorithm>
 #include <cmath>
 #include <utility>
@@ -257,6 +259,24 @@ void UChunkDirtySet::SortByDistanceKey(
   SortQueue(RemeshQ, focus_ground_chunk, preferred_cy, prefer_lower_cy,
             vertical_valid, missing_mesh, forward_bias_k, forward_xz,
             focus_radius_for_tail);
+  InvalidateUnified();
+}
+
+void UChunkDirtySet::BoostJustRelitNear(glm::ivec3 focus_ground_chunk,
+                                        glm::ivec2 relit_xz, int max_horiz)
+{
+  (void)max_horiz;
+  if (FirstMeshQ.size() < 2)
+  {
+    return;
+  }
+  auto boosted = [&](const glm::ivec3 &c)
+  {
+    const int h = HorizDist(c, focus_ground_chunk);
+    const bool just = c.x == relit_xz.x && c.z == relit_xz.y;
+    return ShouldFirstMeshSortBoost(h, just);
+  };
+  std::stable_partition(FirstMeshQ.begin(), FirstMeshQ.end(), boosted);
   InvalidateUnified();
 }
 

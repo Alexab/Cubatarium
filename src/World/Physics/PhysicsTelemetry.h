@@ -306,6 +306,14 @@ struct PhysicsTelemetry
   int RelightCompletedN{0};
   int RelightCompletedCap{0};
   uint64_t RelightCompletedDiscarded{0};
+  /// P0: last DrainRelightQueues Capture (horiz of drained column, 0/1 finalize,
+  /// Y-span in chunk layers). RelightApplyN = DrainCompleted count this frame
+  /// (throughput; RelightCompletedN is ring occupancy at sample).
+  int RelightCaptureColHoriz{-1};
+  int RelightCaptureFinalize{0};
+  int RelightCaptureBandCySpan{0};
+  int RelightWitnessHoldN{0};
+  int RelightApplyN{0};
   int DirtyN{0};
   int PendingLightN{0};
   /// Era37 P1c: underground relight skip / false-clear counters.

@@ -676,6 +676,10 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.StreamerUpdateMs = 0.0;
   PhysicsTelemetryData.AsyncIoMs = 0.0;
   PhysicsTelemetryData.RelightDrainMs = 0.0;
+  PhysicsTelemetryData.RelightCaptureColHoriz = -1;
+  PhysicsTelemetryData.RelightCaptureFinalize = 0;
+  PhysicsTelemetryData.RelightCaptureBandCySpan = 0;
+  PhysicsTelemetryData.RelightApplyN = 0;
   PhysicsTelemetryData.MeshEmergeMs = 0.0;
   PhysicsTelemetryData.MeshEmergePrepMs = 0.0;
   PhysicsTelemetryData.MeshEmergePrepMissingMs = 0.0;

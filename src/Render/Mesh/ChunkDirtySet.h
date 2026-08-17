@@ -67,6 +67,10 @@ public:
                          glm::vec2 forward_xz = glm::vec2(0.0f),
                          int focus_radius_for_tail = -1);
 
+  /// P3: stable-partition FirstMeshQ so underfeet / just-relit nh≤2 sit first.
+  void BoostJustRelitNear(glm::ivec3 focus_ground_chunk, glm::ivec2 relit_xz,
+                          int max_horiz);
+
   void PartialSortByDistanceKey(
       glm::ivec3 focus_ground_chunk, int preferred_cy, bool prefer_lower_cy,
       bool vertical_valid,

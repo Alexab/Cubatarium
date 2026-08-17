@@ -338,6 +338,11 @@ struct FrameNumbers
   int relight_completed_n{0};
   int relight_completed_cap{0};
   uint64_t relight_completed_discarded{0};
+  int relight_capture_col_horiz{-1};
+  int relight_capture_finalize{0};
+  int relight_capture_band_cy_span{0};
+  int relight_witness_hold_n{0};
+  int relight_apply_n{0};
   int dirty_n{0};
   int pending_light_n{0};
   int relight_fifo_n{0};
@@ -678,6 +683,11 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.relight_completed_n = phys.RelightCompletedN;
   n.relight_completed_cap = phys.RelightCompletedCap;
   n.relight_completed_discarded = phys.RelightCompletedDiscarded;
+  n.relight_capture_col_horiz = phys.RelightCaptureColHoriz;
+  n.relight_capture_finalize = phys.RelightCaptureFinalize;
+  n.relight_capture_band_cy_span = phys.RelightCaptureBandCySpan;
+  n.relight_witness_hold_n = phys.RelightWitnessHoldN;
+  n.relight_apply_n = phys.RelightApplyN;
   n.dirty_n = phys.DirtyN;
   n.pending_light_n = phys.PendingLightN;
   n.relight_fifo_n = phys.RelightFifoN;
@@ -998,6 +1008,11 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"relight_completed_n\":" << n.relight_completed_n
           << ",\"relight_completed_cap\":" << n.relight_completed_cap
           << ",\"relight_completed_discarded\":" << n.relight_completed_discarded
+          << ",\"relight_capture_col_horiz\":" << n.relight_capture_col_horiz
+          << ",\"relight_capture_finalize\":" << n.relight_capture_finalize
+          << ",\"relight_capture_band_cy_span\":" << n.relight_capture_band_cy_span
+          << ",\"relight_witness_hold_n\":" << n.relight_witness_hold_n
+          << ",\"relight_apply_n\":" << n.relight_apply_n
           << ",\"dirty_n\":" << n.dirty_n
           << ",\"pending_light_n\":" << n.pending_light_n
           << ",\"relight_fifo_n\":" << n.relight_fifo_n

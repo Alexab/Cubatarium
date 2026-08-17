@@ -507,9 +507,21 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   // SoftDefer hole: pin nearest missing column to front so the hot-frame
   // Capture bypass clears the lit gate for the visible hole first. If the hole
   // is PendingLight but missing from FIFO (Keys ghost / far-only), enqueue it.
+  // P1: nh≤2 pending witness hold — do not hop to a new nearest miss.
   glm::ivec3 soft_defer_hole{};
   bool soft_defer_hole_valid = false;
-  if (visual_holes && world.MeshService)
+  const auto &phys_pin = world.GetPhysicsTelemetry();
+  const glm::ivec2 miss_xz(phys_pin.MissCx, phys_pin.MissCz);
+  const bool hold_nh2 =
+      visual_holes && phys_pin.FocusMissingMesh > 0 &&
+      ShouldHoldPinnedRelightWitness(
+          phys_pin.MissHoriz, world.IsPendingLightBeforeMesh(miss_xz));
+  if (hold_nh2)
+  {
+    soft_defer_hole = glm::ivec3(miss_xz.x, 0, miss_xz.y);
+    soft_defer_hole_valid = true;
+  }
+  else if (visual_holes && world.MeshService)
   {
     soft_defer_hole_valid = world.MeshService->FindNearestMissingGreedyMesh(
         world.GetBlockWorld(), focus_horiz, focus_radius, soft_defer_hole);
@@ -699,6 +711,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                      [](const auto &a, const auto &b)
                      { return a.first > b.first; });
     // Pin farthest first so nearest ends at front after push_front.
+    if (!hold_nh2)
+    {
     for (const auto &entry : near_empty)
     {
       if (pinned >= 4)
@@ -710,11 +724,12 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       pin_key(key);
       ++pinned;
     }
-    // Era40: always pin FOV miss witness (PendingLight / SoftDefer-empty /
-    // missing mesh), even when not SoftDefer-empty and not already in FIFO.
+    }
+    // Era40 / P1: pin FOV miss witness. Hold nh≤2 pending until MarkRelit.
     const auto &phys = world.GetPhysicsTelemetry();
     if (phys.FocusMissingMesh > 0 &&
-        ShouldPreferMissFinalizeBand(phys.MissHoriz))
+        (hold_nh2 || ShouldPreferMissFinalizeBand(phys.MissHoriz) ||
+         phys.MissHoriz <= RelightMissPinMaxHoriz()))
     {
       const glm::ivec2 miss_col(phys.MissCx, phys.MissCz);
       bool undrawn = false;
@@ -927,8 +942,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     int remainder_min = -1;
     int remainder_max = -1;
     bool finalize_gate = true;
-    // Era40: miss rim pin prefers one full finalize Capture (no partial Y-band).
-    // Era41b: enter FOV lit pass always finalizes — Completed ring must advance.
+    // P2: miss nh≤2 prefers one surface finalize Capture (no partial Y-band).
+    // Rim nh=3–4 keeps split. Era41b: enter FOV lit always finalizes.
     const bool miss_finalize_band =
         enter_fov_lit ||
         (visual_holes && ShouldPreferMissFinalizeBand(horiz_dist));
@@ -948,6 +963,14 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
           finalize_gate = false;
         }
       }
+    }
+    {
+      auto &telem = world.GetPhysicsTelemetryMutable();
+      telem.RelightCaptureColHoriz = horiz_dist;
+      telem.RelightCaptureFinalize = finalize_gate ? 1 : 0;
+      const int span_y = std::max(0, relight_max - relight_min + 1);
+      telem.RelightCaptureBandCySpan =
+          (span_y + CHUNK_SIZE - 1) / CHUNK_SIZE;
     }
     if (async_bg && world.IsAsyncRelightColumnInFlight(ground_xz))
     {

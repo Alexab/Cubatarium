@@ -26,11 +26,44 @@ inline bool ShouldForceMissColumnFifoEnqueue(bool miss_or_visual_hole,
   return !already_in_fifo;
 }
 
-/// Era40: prefer full finalize band on miss rim pin (horiz<=ring).
+/// P2: unsplit finalize (`finalize_gate=true`) only for near-FOV witness
+/// (nh≤2). Rim nh=3–4 stays Y-band split so cruise Capture cannot hitch like
+/// Era40 full-ring finalize (drain max 597 ms on 195810).
 inline bool ShouldPreferMissFinalizeBand(int miss_horiz,
-                                         int ring = kVisualStageLitDrawableHoriz)
+                                         int ring = kVisualStageNearFovHoriz)
 {
   return miss_horiz >= 0 && miss_horiz <= ring;
+}
+
+/// P1: hold nh≤2 pending witness until MarkRelit — no hop to rim/hinterland.
+inline bool ShouldHoldPinnedRelightWitness(int pinned_horiz,
+                                          bool pinned_still_pending)
+{
+  return pinned_still_pending && pinned_horiz >= 0 &&
+         pinned_horiz <= kVisualStageNearFovHoriz;
+}
+
+/// Overlay on Era27 SoftDefer retarget: nh≤2 pending hold wins over pin_T /
+/// better_horiz hop (`softdefer_witness_retarget` 0→192 on 195810).
+inline bool ShouldRetargetRelightWitness(bool era27_retarget,
+                                         bool hold_nh2_pending)
+{
+  if (hold_nh2_pending)
+  {
+    return false;
+  }
+  return era27_retarget;
+}
+
+/// P3: FirstMeshQ head = underfeet or just-MarkRelit nh≤2 (not a quota bump).
+inline bool ShouldFirstMeshSortBoost(int horiz, bool just_relit_column)
+{
+  if (horiz == 0)
+  {
+    return true;
+  }
+  return just_relit_column && horiz >= 0 &&
+         horiz <= kVisualStageNearFovHoriz;
 }
 
 /// Era40: soft-cap FIFO stuck with empty Completed under FOV miss ⇒ raise drain.

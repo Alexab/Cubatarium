@@ -75,6 +75,9 @@ public:
   void RunPromoteRelightNow(UWorld &world, glm::ivec3 focus_ground_horiz,
                             int focus_radius);
 
+  /// P1: while true, RequestPromoteRelight ignores other columns.
+  void SetPromoteRelightHold(glm::ivec2 column, bool hold);
+
   /// True if column has a live ColumnFlow repair/admit/promote ticket queued
   /// or is inside post-dispatch cooldown.
   bool HasRepairTicket(glm::ivec2 column) const;
@@ -101,6 +104,8 @@ private:
   bool promote_enqueued_{false};
   glm::ivec2 promote_column_{0};
   int promote_priority_{0};
+  bool promote_hold_valid_{false};
+  glm::ivec2 promote_hold_col_{0};
 };
 
 UColumnFlowExecutor &GetColumnFlowExecutor();

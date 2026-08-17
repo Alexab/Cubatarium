@@ -1561,11 +1561,34 @@ int main()
     Expect(!ShouldForceMissColumnFifoEnqueue(true, false, false),
            "Era40: no force without pending/void");
     Expect(ShouldPreferMissFinalizeBand(0),
-           "Era40: underfeet prefer finalize");
-    Expect(ShouldPreferMissFinalizeBand(4),
-           "Era40: rim horiz4 prefer finalize");
+           "P2: underfeet prefer finalize");
+    Expect(ShouldPreferMissFinalizeBand(2),
+           "P2: nh2 prefer surface finalize");
+    Expect(!ShouldPreferMissFinalizeBand(4),
+           "P2: rim horiz4 keeps Y-band split");
     Expect(!ShouldPreferMissFinalizeBand(5),
-           "Era40: beyond ring no finalize prefer");
+           "P2: beyond near FOV no finalize prefer");
+    using cutum::ShouldHoldPinnedRelightWitness;
+    using cutum::ShouldRetargetRelightWitness;
+    using cutum::ShouldFirstMeshSortBoost;
+    Expect(ShouldHoldPinnedRelightWitness(2, true),
+           "P1: hold nh2 pending witness");
+    Expect(!ShouldHoldPinnedRelightWitness(2, false),
+           "P1: release hold after MarkRelit");
+    Expect(!ShouldHoldPinnedRelightWitness(3, true),
+           "P1: rim nh3 is not the hold");
+    Expect(!ShouldRetargetRelightWitness(true, true),
+           "P1: hold blocks Era27 retarget");
+    Expect(ShouldRetargetRelightWitness(true, false),
+           "P1: without hold Era27 retarget stands");
+    Expect(ShouldFirstMeshSortBoost(0, false),
+           "P3: underfeet always boosted");
+    Expect(ShouldFirstMeshSortBoost(2, true),
+           "P3: just-relit nh2 boosted");
+    Expect(!ShouldFirstMeshSortBoost(3, true),
+           "P3: just-relit rim not boosted");
+    Expect(!ShouldFirstMeshSortBoost(2, false),
+           "P3: nh2 without just-relit not boosted");
     Expect(ShouldBoostRelightDrainUnderFifoMissStarve(96, 96, 0, true),
            "Era40: soft-cap + completed0 + miss -> boost");
     Expect(!ShouldBoostRelightDrainUnderFifoMissStarve(96, 96, 0, false),

@@ -46,6 +46,10 @@ void UColumnFlowExecutor::BeginFrame()
 void UColumnFlowExecutor::RequestPromoteRelight(glm::ivec2 near_column,
                                                 int priority)
 {
+  if (promote_hold_valid_ && near_column != promote_hold_col_)
+  {
+    return;
+  }
   if (!promote_pending_)
   {
     promote_pending_ = true;
@@ -58,6 +62,12 @@ void UColumnFlowExecutor::RequestPromoteRelight(glm::ivec2 near_column,
     promote_priority_ = priority;
     promote_column_ = near_column;
   }
+}
+
+void UColumnFlowExecutor::SetPromoteRelightHold(glm::ivec2 column, bool hold)
+{
+  promote_hold_valid_ = hold;
+  promote_hold_col_ = column;
 }
 
 void UColumnFlowExecutor::FlushPromoteRequest()
