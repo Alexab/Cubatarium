@@ -37,6 +37,23 @@ struct MeshWorkAdmissionInput
   int remesh_queue_n{0};
 };
 
+/// Near-focus miss that blocks view / needs urgent HoleDrain (horiz≤2 or underfeet).
+/// Rim miss (horiz≥3) must not latch fog, carve stream, or DeepBacklog forever
+/// (manual 152933: nh=4–5 standing → wall med 265 / fog_debt 97%).
+inline bool IsNearFocusMissUrgent(bool visual_holes, bool missing_underfeet,
+                                  int nearest_miss_horiz)
+{
+  if (missing_underfeet)
+  {
+    return true;
+  }
+  if (!visual_holes)
+  {
+    return false;
+  }
+  return nearest_miss_horiz >= 0 && nearest_miss_horiz <= 2;
+}
+
 /// Era20 I-M1: FirstMesh priority class while FOV holes (manual 214034).
 inline bool IsMissFirstMeshClass(bool holes, int nearest_miss_cy,
                                  int nearest_miss_horiz)
@@ -200,8 +217,16 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
 inline MeshWorkAdmission::Mode
 MeshWorkPickRawMode(const MeshWorkAdmissionInput &in, bool holes)
 {
+  const bool near_miss_urgent =
+      IsNearFocusMissUrgent(in.visual_holes, in.missing_underfeet,
+                            in.nearest_miss_horiz);
   if (in.pending_gpu >= 24)
   {
+    // Near witness must not sit in DeepBacklog max_schedule=2 (163559 sch≈5).
+    if (near_miss_urgent && holes)
+    {
+      return MeshWorkAdmission::Mode::HoleDrain;
+    }
     return MeshWorkAdmission::Mode::DeepBacklog;
   }
   if (in.pending_gpu >= 12 && holes)
@@ -219,10 +244,14 @@ inline MeshWorkAdmission
 ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
 {
   MeshWorkAdmission out;
-  // Visual miss OR underfeet OR unfinished FOV debt (manual 160240 thrash:
-  // UV=14 while visual_holes latch lagged → Normal/sch=12 with telem pending≥12).
-  const bool holes = in.visual_holes || in.missing_underfeet ||
-                     in.unfinished_visual >= 8;
+  // Rim-only miss (nh≥5): UV debt alone must not trap HoleDrain; visual_holes still
+  // drives admission (K3 remesh band). Crisis carve/fog use IsNearFocusMissUrgent.
+  const bool rim_only_miss =
+      in.visual_holes && !in.missing_underfeet &&
+      in.nearest_miss_horiz >= 5;
+  const bool holes =
+      in.visual_holes || in.missing_underfeet ||
+      (in.unfinished_visual >= 8 && !rim_only_miss);
   const size_t queued = MeshWorkQueuedApprox(in);
   const bool light_debt =
       holes && (in.pending_light_near >= 16 || in.unfinished_visual >= 8);
@@ -263,9 +292,12 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   {
     const bool can_exit =
         !holes && in.pending_gpu <= 8 && queued <= queued_exit_cap;
+    const bool near_miss_urgent =
+        IsNearFocusMissUrgent(in.visual_holes, in.missing_underfeet,
+                              in.nearest_miss_horiz);
     if (!can_exit)
     {
-      if (in.pending_gpu >= 24)
+      if (in.pending_gpu >= 24 && !(near_miss_urgent && holes))
       {
         mode = MeshWorkAdmission::Mode::DeepBacklog;
       }
@@ -285,6 +317,7 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   MeshWorkFillModeDefaults(out, mode, in, queued, holes, light_debt);
 
   // Phase 3: fixed pools — HoleDrain redistributes remesh → FirstMesh.
+  // Warm/Normal keep mode defaults; pool fm floor on Warm blew max_schedule (9 vs 6).
   {
     WorkPoolBudget pools = DefaultCruisePools();
     if (mode == MeshWorkAdmission::Mode::HoleDrain ||
@@ -296,13 +329,19 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     int remesh = 0;
     int gpu = 0;
     ApplyPoolsToAdmissionCaps(pools, fm, remesh, gpu);
-    out.first_mesh_schedule = std::max(out.first_mesh_schedule, fm);
     if (mode == MeshWorkAdmission::Mode::HoleDrain ||
         mode == MeshWorkAdmission::Mode::DeepBacklog)
     {
       out.remesh_schedule = remesh;
+      if (out.first_mesh_schedule > 0 && out.max_schedule > 0)
+      {
+        out.max_schedule = std::max(
+            out.max_schedule,
+            out.first_mesh_schedule + std::max(0, out.remesh_schedule));
+      }
     }
     out.gpu_apply_max = std::max(out.gpu_apply_max, gpu);
+    (void)fm;
   }
 
   // Era17/20: FirstMesh priority class while FOV holes — remesh_schedule=0.
@@ -361,18 +400,39 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
 
   if (light_debt && out.mode != MeshWorkAdmission::Mode::Normal)
   {
-    // Manual 153832: UV≥8 crushed first_mesh to 3 and max_schedule to 3, nulling
-    // G2 FM bump and starving rim while remesh keep_h=1 let stale explode.
-    // Prefer FirstMesh slots; keep a small remesh band (horiz≤2) for stale.
-    out.remesh_schedule = miss_tops && in.remesh_queue_n <= 0
-                              ? 0
-                              : std::min(std::max(out.remesh_schedule, 1), 1);
+    // Manual 153832: UV≥8 crushed first_mesh; 152933: deep RemeshQ~37 + cap=1
+    // starved remesh drain (relight+mesh_emerge wall). Keep FM headroom; drain Q.
+    const int remesh_floor =
+        in.remesh_queue_n >= 32 ? 2 : (in.remesh_queue_n >= 16 ? 1 : 0);
+    const int remesh_ceil = in.remesh_queue_n >= 32 ? 3 : 1;
+    if (miss_tops && in.remesh_queue_n <= 0)
+    {
+      out.remesh_schedule = 0;
+    }
+    else
+    {
+      out.remesh_schedule =
+          std::min(std::max(out.remesh_schedule, remesh_floor), remesh_ceil);
+    }
     out.starve_remesh_horiz = std::max(out.starve_remesh_horiz, 2);
     const int fm = std::max(0, out.first_mesh_schedule);
     const int need = fm + std::max(0, out.remesh_schedule);
     out.max_schedule = std::max(out.max_schedule, need);
     const int max_cap = in.remesh_queue_n >= 32 ? 7 : 5;
     out.max_schedule = std::min(out.max_schedule, std::max(need, max_cap));
+  }
+
+  // Near-focus miss must keep HoleDrain schedule (FM6+remesh), not DeepBacklog=2.
+  // 163559: pending_gpu≥24 → Deep max=5 while miss_horiz=1 / schedule_ok med=5.
+  if (IsNearFocusMissUrgent(in.visual_holes, in.missing_underfeet,
+                            in.nearest_miss_horiz) &&
+      (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
+       out.mode == MeshWorkAdmission::Mode::DeepBacklog))
+  {
+    out.first_mesh_schedule = std::max(out.first_mesh_schedule, 6);
+    const int need =
+        out.first_mesh_schedule + std::max(0, out.remesh_schedule);
+    out.max_schedule = std::max(out.max_schedule, std::max(need, 8));
   }
 
   // K3/M3: rim miss outside FirstMesh class with cooled-ish GPU pending — +1
@@ -438,8 +498,10 @@ inline void ApplyRemeshAdmitBackpressure(MeshWorkAdmission &adm,
   adm.dirty_admit_budget = std::min(adm.dirty_admit_budget, std::max(0, admit_cap));
   // Keep at least 1 remesh slot under miss: dual-Q already prefers FirstMesh;
   // remesh_schedule=0 starved lit settle and caused flicker / late light updates.
-  const int remesh_cap =
-      in.miss_active && in.remesh_queue_n >= 32 ? 2 : 1;
+  const int remesh_cap = in.remesh_queue_n >= 32
+                             ? (in.miss_active ? 3 : 2)
+                             : (in.miss_active && in.remesh_queue_n >= 16 ? 2
+                                                                          : 1);
   adm.remesh_schedule = std::min(adm.remesh_schedule, remesh_cap);
   adm.allow_neighbor_dirty = false;
   if (adm.first_mesh_schedule > 0 && adm.max_schedule > 0)

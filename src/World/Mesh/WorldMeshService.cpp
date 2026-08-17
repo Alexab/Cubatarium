@@ -184,6 +184,13 @@ int UWorldMeshService::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
                                            remesh_only);
 }
 
+int UWorldMeshService::DropFarFirstMeshDirtyBeyondRadius(
+    glm::ivec3 center_chunk, int keep_radius, int keep_cy)
+{
+  return Cache.DropFarFirstMeshDirtyBeyondRadius(center_chunk, keep_radius,
+                                                 keep_cy);
+}
+
 int UWorldMeshService::ParkDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
                                                        int radius_chunks)
 {

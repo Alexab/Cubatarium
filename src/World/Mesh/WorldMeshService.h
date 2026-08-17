@@ -85,6 +85,8 @@ public:
   bool TryConsumeDirtyAdmit();
   int DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk, int keep_radius,
                                   int keep_cy = -1, bool remesh_only = false);
+  int DropFarFirstMeshDirtyBeyondRadius(glm::ivec3 center_chunk,
+                                        int keep_radius, int keep_cy = -1);
   int ParkDirtyWithinHorizontalRadius(glm::ivec3 center_chunk, int radius_chunks);
   void SetSyncHoleFillRadius(int radius_chunks);
   void SetMaxOutsideFocusMeshPerFrame(int count);

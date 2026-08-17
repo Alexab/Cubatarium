@@ -97,6 +97,18 @@ int main()
     Expect(d.cheap_seed, "cruise cheap_seed");
   }
 
+  {
+    // Visual holes: cruise seed cap widens to 40ms (163559 light_debt trail).
+    SeedDecisionInput in;
+    in.near_focus = true;
+    in.can_seed = true;
+    in.moving_cruise = true;
+    in.frame_ms = 36.0;
+    in.visual_holes = 1;
+    const auto d = EvaluateSeedDecision(in);
+    Expect(d.try_sync_seed, "holes cruise frame≤40 try_sync cheap");
+  }
+
   if (gFails != 0)
   {
     std::cerr << gFails << " failures\n";

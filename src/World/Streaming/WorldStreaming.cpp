@@ -570,8 +570,10 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       static_cast<int>(world.GetPendingLightBeforeMeshCount());
   in.dirty = static_cast<int>(world.GetMeshService().GetDirtyCount());
   in.frame_ms = world.GetLastMovementFrameMs();
-  // Pressure focus mode: visual holes only (pending light is light_debt).
-  in.visual_holes = missing_near;
+  // Pressure focus mode: near miss / underfeet only — rim backlog is not crisis.
+  const int miss_horiz = world.PhysicsTelemetryData.MissHoriz;
+  in.visual_holes =
+      missing_near && (missing_underfeet || miss_horiz <= 2);
   in.underfeet_need = missing_underfeet || pending_underfeet;
   in.pending_light_focus = pending_light_focus;
   LastPendingLightFocus = pending_light_focus;
@@ -2708,11 +2710,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         const int unfinished = phys.UnfinishedVisual;
         const int unfinished_ahead = phys.FocusUnfinishedAhead;
         const int gpu_pending = phys.PendingGpuAppliesN;
-        // Latch on visual holes or focus missing mesh only — UnfinishedVisual
-        // alone (dark/culled SoftDeferHeld) must not refresh hold (manual
-        // 171310: miss=0 holes=0 still fog_debt≈94% / opaque~327).
+        // Latch on near visual holes only — rim miss (nh≥3) must not refresh
+        // hold forever while standing (152933: fog_hole_debt≈97%, nh=4–5).
         const bool hole_debt_now =
-            phys.VisualHoles > 0 || phys.FocusMissingMesh > 0;
+            (phys.FocusMissingMesh > 0 && phys.MissHoriz <= 2);
         if (hole_debt_now)
         {
           FogPullInHoleHoldFrames = kFogHoleHoldFrames;

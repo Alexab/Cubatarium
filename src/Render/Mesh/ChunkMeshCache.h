@@ -428,6 +428,10 @@ public:
   /// to also clear first-mesh/air Dirty outside the eye shell.
   int DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk, int keep_radius,
                                   int keep_cy = -1, bool remesh_only = false);
+  /// Drop FirstMesh Dirty beyond keep shell — frees schedule for nearest hole
+  /// (163559: dirty_fm≈192 starved nh≤2 witness while rim FM flooded queue).
+  int DropFarFirstMeshDirtyBeyondRadius(glm::ivec3 center_chunk,
+                                        int keep_radius, int keep_cy = -1);
   /// Chebyshev radius for SyncRebuildVisibleMissing hole-fill (1=underfeet).
   void SetSyncHoleFillRadius(int radius_chunks)
   {

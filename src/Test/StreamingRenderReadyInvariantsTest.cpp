@@ -11,6 +11,7 @@ using cutum::ShouldRejectDarkMeshCommit;
 using cutum::ShouldMarkDirtyAfterDarkSoftDeferReject;
 using cutum::SoftDeferMeshUntilLitPolicy;
 using cutum::AllowUnlitFirstMesh;
+using cutum::AllowUnlitHoleFillFirstMesh;
 using cutum::ClassifyStickyStaleDarkSoT;
 using cutum::ColumnSoTKind;
 using cutum::EnqueueStickyStaleRepairTickets;
@@ -110,6 +111,14 @@ int main()
          "hinterland FOV missing → AllowUnlitFirstMesh");
   Expect(!AllowUnlitFirstMesh(false, 5, false, false),
          "outside focus → no AllowUnlitFirstMesh");
+  Expect(AllowUnlitHoleFillFirstMesh(false, 1, 0, true, true),
+         "163559: nearest nh1 hole fill allowed");
+  Expect(AllowUnlitHoleFillFirstMesh(false, 2, 0, true, false),
+         "witness nh2 cy0 hole fill allowed");
+  Expect(!AllowUnlitHoleFillFirstMesh(false, 5, 5, true, false),
+         "rim nh5 cy5 hole fill denied");
+  Expect(!AllowUnlitHoleFillFirstMesh(true, 1, 0, true, true),
+         "has_mesh no hole fill");
   Expect(!SoftDeferMeshUntilLitPolicy(false, false, true, true, true, true),
          "policy: pending+focus+allow_unlit allows first mesh");
   Expect(SoftDeferMeshUntilLitPolicy(false, false, true, true, true, false),

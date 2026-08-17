@@ -301,10 +301,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           const bool starve_hinterland = StarveHinterlandUnlit(
               world_ref.GetPhysicsTelemetry().SoftDeferEmptyNearN,
               pol.pending_focus_count);
+          const bool allow_unlit_hole_fill = AllowUnlitHoleFillFirstMesh(
+              has_mesh, horiz, chunk_coord.y, pol.missing_visible_mesh,
+              is_nearest_hole);
           const bool allow_unlit =
-              !starve_hinterland &&
-              AllowUnlitFirstMesh(has_mesh, horiz, is_nearest_hole, in_focus,
-                                  kVisualStageLitDrawableHoriz);
+              allow_unlit_hole_fill ||
+              (!starve_hinterland &&
+               AllowUnlitFirstMesh(has_mesh, horiz, is_nearest_hole, in_focus,
+                                   kVisualStageLitDrawableHoriz));
           const bool allow_unlit_hole = AllowUnlitDrawableUnderLightDebt(
               pol.pending_focus_count, pol.unlit_near_count, horiz, fully_dark,
               has_greedy, underfeet);
@@ -635,6 +639,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       have_nearest_missing &&
       std::max(std::abs(nearest_missing_hole.x - focus_ground_horiz.x),
                std::abs(nearest_missing_hole.z - focus_ground_horiz.z)) <= 1;
+  const int nearest_miss_h =
+      have_nearest_missing
+          ? std::max(std::abs(nearest_missing_hole.x - focus_ground_horiz.x),
+                     std::abs(nearest_missing_hole.z - focus_ground_horiz.z))
+          : 99;
+  const bool near_miss_urgent = missing_underfeet || nearest_miss_h <= 2;
   // B3: do not re-scan HasMissing(r=1) — nearest witness already covers underfeet.
   const bool pending_underfeet =
       world.HasPendingLightBeforeMeshNear(focus_ground_horiz, /*radius=*/1);
@@ -690,8 +700,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     const int max_cy = std::max(
         0, FloorDiv(procedural.MaxHeight, CHUNK_SIZE));
-    int cy0 =
-        missing_visible_mesh ? 0 : std::max(0, preferred_cy - 1);
+    // Rim-only miss: scan ground band, not cy=0..top (152933: scan spikes 41ms).
+    int cy0 = (missing_visible_mesh && near_miss_urgent)
+                  ? 0
+                  : std::max(0, preferred_cy - 1);
     const int cy1_base = std::min(max_cy, preferred_cy + 2);
     int cy1 = cy1_base;
     if (procedural.FillWater)
@@ -750,7 +762,26 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const int diam = 2 * heal_r + 1;
     const int cells = std::max(1, diam * diam);
     int empty_near_n = 0;
+    static int SoftDeferRimScanCd = 0;
+    const bool skip_softdefer_disk_scan =
+        !near_miss_urgent && prev_softdefer_empty == 0 &&
+        SoftDeferEmptyOwned.empty() && SoftDeferRimScanCd > 0;
+    if (skip_softdefer_disk_scan)
+    {
+      --SoftDeferRimScanCd;
+    }
+    else if (!near_miss_urgent && prev_softdefer_empty == 0 &&
+             SoftDeferEmptyOwned.empty())
+    {
+      SoftDeferRimScanCd = 6;
+    }
+    else
+    {
+      SoftDeferRimScanCd = 0;
+    }
     const auto softdefer_scan_t0 = std::chrono::high_resolution_clock::now();
+    if (!skip_softdefer_disk_scan)
+    {
     for (int idx = 0; idx < cells; ++idx)
     {
       const int dx = (idx % diam) - heal_r;
@@ -870,6 +901,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         cand.empty_placeholder = empty_placeholder;
         cands.push_back(cand);
       }
+    }
     }
     phys_telem.SoftdeferEmptyScanMs =
         std::chrono::duration<double, std::milli>(
@@ -1597,7 +1629,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     // Era34 P2: SoftDefer empty / holes while moving — clamp emerge + bias FM.
     if (ShouldBiasFirstMeshOverRemesh(phys_ocean.SoftDeferEmptyPlaceholderN,
                                       visual_holes || missing_visible_mesh,
-                                      moving))
+                                      moving) &&
+        near_miss_urgent)
     {
       // Era35 P4: boost emerge budget when SoftDefer empty lag during cruise.
       const double cruise_budget = CruiseCatchUpEmergeBudgetMs(
@@ -2631,20 +2664,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         world.GetPhysicsTelemetry().SoftDeferEmptyPlaceholderN});
     if (force_hole_cd <= 0)
     {
-      {
-        auto &exec = GetColumnFlowExecutor();
-        exec.RequestPromoteRelight(
-            glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 40);
-      }
       glm::ivec3 hole{};
       if (mesh_service.FindNearestMissingGreedyMesh(
               world.GetBlockWorld(), focus_ground_horiz, focus_radius, hole))
       {
+        auto &exec = GetColumnFlowExecutor();
+        exec.RequestPromoteRelight(
+            glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 40);
+        exec.RequestPromoteRelight(glm::ivec2(hole.x, hole.z), 90);
         // Orphan Active (HasInflight) without builder flight: still MarkDirty —
         // skipping left miss=1 sticky while FindNearest kept returning the hole.
         if (mesh_service.HasInflightMeshBuild(hole))
         {
-          mesh_service.MarkDirtyPriority(hole);
+          if (!mesh_service.IsChunkMeshDirty(hole))
+          {
+            mesh_service.MarkDirtyPriority(hole);
+          }
         }
         else
       {
@@ -2705,7 +2740,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         {
           // Always Dirty-queue the nearest FOV hole — SoftDefer FOV first-mesh
           // bypass covers pending; skipping MarkDirty left async=0 for periods.
-          mesh_service.MarkDirtyPriority(hole);
+          if (!mesh_service.IsChunkMeshDirty(hole) &&
+              !mesh_service.HasInflightMeshBuild(hole))
+          {
+            mesh_service.MarkDirtyPriority(hole);
+          }
           // Nudge only *missing* underfeet-ring slices. Remesh-dirtying already
           // meshed neighbors caused RemeshAfterApply storms + discarded_late
           // (manual 213546 discards 0→111, opaque churn 925).
@@ -2948,6 +2987,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       mesh_service.DropRemeshDirtyBeyondRadius(
           focus_ground_horiz, /*keep_h=*/2, /*keep_cy=*/-1,
           /*remesh_only=*/true);
+    }
+    // Near miss: drop rim FirstMesh Dirty so witness nh≤2 drains first.
+    if (near_miss_urgent && pending_dirty_early > 96)
+    {
+      const int fm_keep_h =
+          missing_underfeet ? 1 : std::min(2, focus_radius);
+      world.GetPhysicsTelemetryMutable().DirtyDropped +=
+          static_cast<uint64_t>(std::max(
+              0, mesh_service.DropFarFirstMeshDirtyBeyondRadius(
+                     focus_ground_horiz, fm_keep_h, /*keep_cy=*/2)));
     }
     // Admit floor before remesh — Finalize MeshWorkAdmission caps schedule.
     mesh_schedule = std::max(mesh_schedule, moving ? 12 : 16);

@@ -39,6 +39,7 @@ int main()
 {
   using cutum::ComputeMeshWorkAdmission;
   using cutum::IsMissFirstMeshClass;
+  using cutum::IsNearFocusMissUrgent;
   using cutum::IsSoftDeferEmptyPlaceholder;
   using cutum::MeshWorkAdmission;
   using cutum::MeshWorkAdmissionInput;
@@ -50,6 +51,42 @@ int main()
   Expect(IsMissFirstMeshClass(true, 5, 4), "Era20: mh4 tops class");
   Expect(!IsMissFirstMeshClass(true, 5, 5), "cy5 mh5 outside class");
   Expect(!IsMissFirstMeshClass(false, 0, 0), "no holes → no class");
+
+  Expect(IsNearFocusMissUrgent(true, false, 2), "nh2 near urgent");
+  Expect(!IsNearFocusMissUrgent(true, false, 4), "nh4 rim not urgent");
+  Expect(IsNearFocusMissUrgent(true, true, 5), "underfeet urgent");
+  Expect(!IsNearFocusMissUrgent(false, false, 0), "no miss not urgent");
+
+  {
+    MeshWorkAdmissionInput near{};
+    near.visual_holes = true;
+    near.nearest_miss_horiz = 1;
+    near.nearest_miss_cy = 0;
+    near.pending_gpu = 28;
+    const MeshWorkAdmission a = ComputeMeshWorkAdmission(near);
+    Expect(a.mode == MeshWorkAdmission::Mode::HoleDrain,
+           "near miss pending=28 stays HoleDrain not DeepBacklog");
+    Expect(a.max_schedule >= 8, "near miss keeps max_schedule≥8");
+    near.prev_mode =
+        static_cast<uint8_t>(MeshWorkAdmission::Mode::DeepBacklog);
+    const MeshWorkAdmission b = ComputeMeshWorkAdmission(near);
+    Expect(b.mode == MeshWorkAdmission::Mode::HoleDrain,
+           "hysteresis does not force DeepBacklog on near miss");
+  }
+
+  {
+    MeshWorkAdmissionInput rim{};
+    rim.visual_holes = true;
+    rim.nearest_miss_horiz = 5;
+    rim.nearest_miss_cy = 5;
+    rim.unfinished_visual = 12;
+    rim.pending_gpu = 16;
+    const MeshWorkAdmission a = ComputeMeshWorkAdmission(rim);
+    Expect(a.mode == MeshWorkAdmission::Mode::HoleDrain,
+           "rim visual_holes stays HoleDrain for K3 band");
+    Expect(a.mode != MeshWorkAdmission::Mode::DeepBacklog,
+           "rim-only pending=16 not DeepBacklog");
+  }
 
   Expect(ShouldColdAsyncImmEscape(true, 0), "miss+async0 escape");
   Expect(ShouldColdAsyncImmEscape(true, 1), "miss+async1 escape");
@@ -1568,8 +1605,8 @@ int main()
     MeshWorkAdmission adm_deep = adm;
     adm_deep.remesh_schedule = 3;
     ApplyRemeshAdmitBackpressure(adm_deep, red);
-    Expect(adm_deep.remesh_schedule == 2,
-           "100319 tail: deep RemeshQ + miss -> remesh cap 2");
+    Expect(adm_deep.remesh_schedule == 3,
+           "100319 tail: deep RemeshQ + miss -> remesh cap 3");
     RemeshAdmitBackpressureInput fifo{};
     fifo.stream_pressure = 1;
     fifo.fifo_n = 72;

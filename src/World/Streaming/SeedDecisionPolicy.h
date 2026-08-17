@@ -37,12 +37,13 @@ inline SeedDecision EvaluateSeedDecision(const SeedDecisionInput &in)
       (in.near_focus && in.can_seed);
 
   // Era14 TD-ARCH-044: widen cheap commit seed so PendingLight trail shrinks.
-  // Still cheap_seed only on cruise — never full RelightTerrainColumn under load.
-  // Keep 32/28 (p2b 28/24 regress miss_stuck 2→12 / holes↑).
+  // Visual holes: allow slightly hotter frame budget for near sync seed.
+  const double cruise_seed_frame_cap =
+      in.visual_holes > 0 ? 40.0 : 32.0;
   if (in.moving_cruise)
   {
     if (in.can_seed && (in.underfeet || in.near_focus) &&
-        in.frame_ms <= 32.0)
+        in.frame_ms <= cruise_seed_frame_cap)
     {
       out.try_sync_seed = true;
       out.cheap_seed = true;

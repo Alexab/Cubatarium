@@ -730,9 +730,8 @@ void UWorld::TickWorldStreamingPhase()
       std::chrono::duration<double, std::milli>(t_after_stream - t_before_stream)
           .count();
   const bool miss_carve_out =
-      PhysicsTelemetryData.FocusMissingMesh != 0 ||
-      PhysicsTelemetryData.VisualHoles != 0 ||
-      PhysicsTelemetryData.UnfinishedVisual >= 8 ||
+      (PhysicsTelemetryData.FocusMissingMesh != 0 &&
+       PhysicsTelemetryData.MissHoriz <= 2) ||
       PhysicsTelemetryData.FocusStickyRemesh > 0;
   const auto &tune = URuntimeTuning::Get();
   const float phase_budget = tune.StreamingPhaseBudgetMs;
