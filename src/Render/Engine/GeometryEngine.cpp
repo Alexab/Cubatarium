@@ -1792,11 +1792,18 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     }
   }
 
-  DrawPackedGpuMeshes(cache, cache.GetGpuPackedOpaqueRefs(), vp, textures, false,
-                      GreedyShaderMode::TransparentColor, 0.0f);
+  const size_t packed_opaque_drawn =
+      DrawPackedGpuMeshes(cache, cache.GetGpuPackedOpaqueRefs(), vp, textures, false,
+                          GreedyShaderMode::TransparentColor, 0.0f);
+  if (WorldInstance)
+  {
+    auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+    phys.OpaqueGpuPackedN = static_cast<uint64_t>(packed_opaque_drawn);
+    phys.OpaqueDrawN = phys.OpaqueCmdOn + phys.OpaqueGpuPackedN;
+  }
 }
 
-void UGeometryEngine::DrawPackedGpuMeshes(
+size_t UGeometryEngine::DrawPackedGpuMeshes(
     const UChunkMeshCache &cache,
     const std::vector<GpuPackedChunkRef> &chunk_refs, const glm::mat4 &vp,
     const std::map<size_t, UTextureCube> &textures, bool transparent_pass,
@@ -1805,15 +1812,15 @@ void UGeometryEngine::DrawPackedGpuMeshes(
   const UGpuMeshPipeline *pipeline = cache.GetGpuMeshPipeline();
   if (!pipeline || !pipeline->IsReady() || chunk_refs.empty())
   {
-    return;
+    return 0;
   }
   if (!packedGreedyShader || !packedGreedyShader->IsValid())
   {
-    return;
+    return 0;
   }
   if (greedyMeshVAO == 0 && !InitGreedyMeshBuffers())
   {
-    return;
+    return 0;
   }
 
   packedGreedyShader->Use();
@@ -1843,6 +1850,7 @@ void UGeometryEngine::DrawPackedGpuMeshes(
                    pipeline->GetAllocator().GetQuadSsbo());
   glBindVertexArray(greedyMeshVAO);
 
+  size_t packed_draw_chunks = 0;
   for (const GpuPackedChunkRef &chunk : chunk_refs)
   {
     const GpuMeshSlot *slot =
@@ -1851,6 +1859,7 @@ void UGeometryEngine::DrawPackedGpuMeshes(
     {
       continue;
     }
+    ++packed_draw_chunks;
     const glm::vec3 origin =
         glm::vec3(chunk.chunkCoord * CHUNK_SIZE);
     packedGreedyShader->SetVec3("chunkOrigin", origin);
@@ -1885,6 +1894,7 @@ void UGeometryEngine::DrawPackedGpuMeshes(
 
   glBindVertexArray(0);
   packedGreedyShader->Unuse();
+  return packed_draw_chunks;
 }
 
 namespace

@@ -687,6 +687,8 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.PrepBlackStickyMs = 0.0;
   PhysicsTelemetryData.PrepDirtyCountMs = 0.0;
   PhysicsTelemetryData.PrepSoftdeferSetupMs = 0.0;
+  PhysicsTelemetryData.SoftdeferEmptyScanMs = 0.0;
+  PhysicsTelemetryData.SoftdeferEmptyOwnMs = 0.0;
   PhysicsTelemetryData.MeshDirtyPruneMs = 0.0;
   PhysicsTelemetryData.MeshDirtyPruneN = 0;
   PhysicsTelemetryData.MeshDirtySortMs = 0.0;

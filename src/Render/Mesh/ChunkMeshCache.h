@@ -100,10 +100,15 @@ public:
   void WaitForAsyncMeshIdle();
   bool WaitForAsyncMeshIdleFor(std::chrono::milliseconds timeout);
   void CancelAsyncMeshWork();
+  /// Cancel in-flight async mesh; coords stay in Dirty (except underfeet lease).
   void CancelAsyncInFlightKeepDirty();
-  /// Cancel in-flight async mesh outside focus; coords stay in Dirty.
+  void CancelAsyncInFlightKeepDirty(glm::ivec3 focus_ground_chunk,
+                                    int keep_horiz_lease);
+  /// Drop Active/PendingGpu outside radius. Never touch horiz≤keep_horiz_lease
+  /// (underfeet residency lease).
   void CancelInFlightOutsideHorizontalRadius(glm::ivec3 focus_ground_chunk,
-                                             int radius_chunks);
+                                             int radius_chunks,
+                                             int keep_horiz_lease = 1);
   void DrainAsyncMeshResults(UBlockWorld &world, UBlockRegistry &registry,
                              int max_per_frame);
   double GetLastFlatRebuildMs() const { return LastFlatRebuildMs; }
@@ -718,6 +723,10 @@ private:
   std::unordered_set<glm::ivec3, IVec3Hash> FluidSurfaceDirty;
   void BumpMeshRevisionIfNeeded();
   void BumpChunkMeshRevision(glm::ivec3 chunk_coord);
+  /// Draw SoT: GreedyCache GpuResident flags must match live allocator slot.
+  bool ChunkHasLiveGpuDraw(glm::ivec3 chunk_coord) const;
+  void ClearStaleGpuResidentFlags(glm::ivec3 chunk_coord);
+  bool HasAnyValidatedDrawRefs() const;
   void RebuildFluidSurfaceSlice(const UBlockWorld &world,
                                 UBlockRegistry &registry,
                                 glm::ivec3 groundChunkCoord, int scanHintY);

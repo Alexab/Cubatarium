@@ -230,6 +230,8 @@ struct FrameNumbers
   double prep_black_sticky_ms{0.0};
   double prep_dirty_count_ms{0.0};
   double prep_softdefer_setup_ms{0.0};
+  double softdefer_empty_scan_ms{0.0};
+  double softdefer_empty_own_ms{0.0};
   int keep_cols{0};
   int visual_cols{0};
   double idle_prefetch_ms{0.0};
@@ -351,6 +353,8 @@ struct FrameNumbers
   double gpu_cull_indirect{0.0};
   uint64_t opaque_cmd_total{0};
   uint64_t opaque_cmd_on{0};
+  uint64_t opaque_gpu_packed_n{0};
+  uint64_t opaque_draw_n{0};
   uint64_t opaque_refs_cpu_vis{0};
   uint64_t opaque_refs_render_ready{0};
   uint64_t opaque_mdi_eligible{0};
@@ -547,6 +551,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.prep_black_sticky_ms = phys.PrepBlackStickyMs;
   n.prep_dirty_count_ms = phys.PrepDirtyCountMs;
   n.prep_softdefer_setup_ms = phys.PrepSoftdeferSetupMs;
+  n.softdefer_empty_scan_ms = phys.SoftdeferEmptyScanMs;
+  n.softdefer_empty_own_ms = phys.SoftdeferEmptyOwnMs;
   n.keep_cols = phys.KeepCols;
   n.visual_cols = phys.VisualCols;
   n.idle_prefetch_ms = phys.IdlePrefetchMs;
@@ -689,6 +695,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.gpu_cull_indirect = phys.GpuCullIndirect;
   n.opaque_cmd_total = phys.OpaqueCmdTotal;
   n.opaque_cmd_on = phys.OpaqueCmdOn;
+  n.opaque_gpu_packed_n = phys.OpaqueGpuPackedN;
+  n.opaque_draw_n = phys.OpaqueDrawN;
   n.opaque_refs_cpu_vis = phys.OpaqueRefsCpuVis;
   n.opaque_refs_render_ready = phys.OpaqueRefsRenderReady;
   n.opaque_mdi_eligible = phys.OpaqueMdiEligible;
@@ -872,6 +880,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"prep_black_sticky_ms\":" << n.prep_black_sticky_ms
           << ",\"prep_dirty_count_ms\":" << n.prep_dirty_count_ms
           << ",\"prep_softdefer_setup_ms\":" << n.prep_softdefer_setup_ms
+          << ",\"softdefer_empty_scan_ms\":" << n.softdefer_empty_scan_ms
+          << ",\"softdefer_empty_own_ms\":" << n.softdefer_empty_own_ms
           << ",\"keep_cols\":" << n.keep_cols
           << ",\"visual_cols\":" << n.visual_cols
           << ",\"idle_prefetch_ms\":" << n.idle_prefetch_ms
@@ -1005,6 +1015,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"gpu_cull_indirect\":" << n.gpu_cull_indirect
           << ",\"opaque_cmd_total\":" << n.opaque_cmd_total
           << ",\"opaque_cmd_on\":" << n.opaque_cmd_on
+          << ",\"opaque_gpu_packed_n\":" << n.opaque_gpu_packed_n
+          << ",\"opaque_draw_n\":" << n.opaque_draw_n
           << ",\"opaque_refs_cpu_vis\":" << n.opaque_refs_cpu_vis
           << ",\"opaque_refs_render_ready\":" << n.opaque_refs_render_ready
           << ",\"opaque_mdi_eligible\":" << n.opaque_mdi_eligible

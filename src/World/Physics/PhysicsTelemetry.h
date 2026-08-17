@@ -197,6 +197,10 @@ struct PhysicsTelemetry
   double PrepBlackStickyMs{0.0};
   double PrepDirtyCountMs{0.0};
   double PrepSoftdeferSetupMs{0.0};
+  /// SoftDefer empty candidate collect (after prep_softdefer_setup).
+  double SoftdeferEmptyScanMs{0.0};
+  /// SoftDefer empty seam remesh + ownership apply.
+  double SoftdeferEmptyOwnMs{0.0};
   int PrefetchVisualOps{0};
   int PrefetchKeepOps{0};
   int GenBacklogTotal{0};
@@ -343,6 +347,10 @@ struct PhysicsTelemetry
   /// Visual-debug: opaque MDI cmds after compact cull.
   uint64_t OpaqueCmdTotal{0};
   uint64_t OpaqueCmdOn{0};
+  /// GpuPacked opaque refs drawn this frame (separate from MDI).
+  uint64_t OpaqueGpuPackedN{0};
+  /// Draw SoT: OpaqueCmdOn + OpaqueGpuPackedN (honest opaque presence).
+  uint64_t OpaqueDrawN{0};
   /// Stage sizes before compact cull (diag for opaque collapse).
   uint64_t OpaqueRefsCpuVis{0};
   uint64_t OpaqueRefsRenderReady{0};

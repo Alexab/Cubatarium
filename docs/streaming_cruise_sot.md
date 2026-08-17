@@ -21,11 +21,14 @@ Ticket(level by Chebyshev ring)
 | Invariant | Rule |
 |-----------|------|
 | Draw ≠ Ready | Opaque gate = `IsChunkSliceRenderReady` / `draw_ok`. Never gate draw on `RenderReady`. |
+| GpuPacked draw SoT | `GreedyCache.GpuResident` counts only with live `GpuMeshPipeline::HasGpuMesh`; stale flags reconcile + CPU fallback / `MarkDirty`. Skip/rate-limit uses validated refs, not list size. |
 | Same-frame sample | `FocusRingVisualSample.frame_epoch` must match `StreamingFrameEpoch`; else recount. |
 | Remesh reservation | When RemeshQ ≠ ∅, `remesh_schedule ≥ 1` (pool slot, not `*FloorMs`). |
-| Lit remesh class | Drawable lit remesh → RemeshQ (`MarkDirty`); missing/FullyDark → FirstMeshQ (`MarkDirtyPriority`). |
+| Lit remesh class | Drawable lit remesh → RemeshQ (`MarkDirty`); missing/FullyDark → FirstMeshQ (`MarkDirtyPriority`). SoftDefer-hidden neighbor seam remesh uses `MarkDirty`. |
 | PreferKick | Cancel-stale GPU promote only (`PreferKickPendingGpuQueued`); not a parallel remesh owner. |
 | Floors | `MissEmergeFloorMs`, `LandMovingRelightDrainFloor`, `AsyncScheduleFloorUnderMiss` = 0; use pools. |
+| Underfeet lease | `CancelInFlightOutsideHorizontalRadius` / `CancelAsyncInFlightKeepDirty` never drop Active/PendingGpu for Chebyshev `horiz≤1`. GPU backlog finishes underfeet first. |
+| SoftDefer callbacks | `SetDeferMeshUntilLitFn` / On* installed once; per-frame POD `SoftDeferFramePolicy` on Coordinator. |
 
 ## ColumnRecord
 
@@ -38,25 +41,40 @@ Ticket(level by Chebyshev ring)
 
 - `ColumnTicketMap.h`: `TicketLevelForRing`, `DesiredStageFromTicket`.
 - Rings: `kVisualStageNearFovHoriz` (2) / `kVisualStageLitDrawableHoriz` (4).
-- `HoleDrainPools`: steal remesh→FM but **keep 1 remesh slot**.
+- `HoleDrainPools`: steal remesh→FM but **keep 1 remesh slot** when RemeshQ ≠ ∅.
 
-## Hot-path prep (closeout A/B)
+## Hot-path prep (closeout A/B + SoftDefer split)
 
-- `mesh_emerge_prep_unfinished_ms` is a **legacy sum** of SoftDefer setup + pending/dirty/black scans — **not** `CountUnfinishedVisualNear`.
-- Split telem: `prep_pending_light_ms`, `prep_black_sticky_ms`, `prep_dirty_count_ms`, `prep_softdefer_setup_ms`.
+- `mesh_emerge_prep_unfinished_ms` is a **legacy sum** — prefer split fields.
+- Split telem: `prep_pending_light_ms`, `prep_black_sticky_ms`, `prep_dirty_count_ms`, `prep_softdefer_setup_ms` (POD update / Set* once).
+- SoftDefer empty (after setup): `softdefer_empty_scan_ms` (full focus disk), `softdefer_empty_own_ms` (seam + ownership).
+- SoftDefer empty scan: full `heal_r=focus_radius` every frame (rim-slice reverted — caused hide/show flicker).
+- `prep_softdefer_setup_ms`: POD update + Set*Fn once only. `IsCreateSpawnWarmupSettled` is **outside** this bucket and latches after first true (`CreateSpawnWarmupSettledLatched`).
 - Streaming writes `FocusRingVisualSample`; Coordinator reuses when epoch matches.
-- UnfinishedVisualCache: ring-buffer dirty; never wipe on overflow.
 
 ## Draw / heal telem (do not confuse)
 
 | Metric | Meaning |
 |--------|---------|
-| `opaque_cmd_on` | MDI batches that passed slice-ready + cull (**draw SoT**) |
+| `opaque_cmd_on` | MDI batches that passed slice-ready + cull |
+| `opaque_gpu_packed_n` | GpuPacked opaque refs **drawn** this frame (live slot, not list size) |
+| `opaque_draw_n` | **Draw SoT** = `opaque_cmd_on` + `opaque_gpu_packed_n` |
 | `visible_black_focus_n` | Drawable FullyDark/StaleDark in focus, **even if hide-until-lit hid them** (**heal SoT**) |
 | `column_render_ready_n` | FSM `RenderReady` count only — **not** draw proxy |
 | `column_lighting_n` / `column_meshing_n` | Other emerge stages |
+| `underfeet_reason` | `ColumnRenderableState::BlockReason`: 0 None, 1 PendingLight, 2 StickyRemesh, 3 StaleDark, 4 MissingMesh, 5 GpuInFlight, **6 NotLoaded**, 7 NotReadyState |
 
-Hide-until-lit (`ShouldHideUncomputedFullyDarkInRing`) stays for quality.
+Hide-until-lit (`ShouldHideUncomputedFullyDarkInRing`) stays for quality (far ring). Underfeet remains presentable (full-column band + GpuPacked/PendingGpu; lease retains GPU until replacement).
+
+## Dirty-class call sites (Closeout RemeshQ)
+
+| Site | Lit drawable | Missing / FullyDark |
+|------|--------------|---------------------|
+| Q2 hole neighbor seam | `MarkDirty` | (neighbors only when drawable) |
+| SoftDefer-hidden face seam | `MarkDirty` | — |
+| RemeshColumnSeamTicket / SyncIdle VB | `MarkDirty` / Seamed | Priority / SeamedPriority |
+| Relight `priority_mesh` / RAA commit | `MarkDirty` | `MarkDirtyPriority` |
+| SoftDefer empty ownership | no re-Mark if sticky Owned / already Dirty | FirstMesh enqueue if `!Contains` |
 
 ## Contracts
 
@@ -69,18 +87,39 @@ Hide-until-lit (`ShouldHideUncomputedFullyDarkInRing`) stays for quality.
 - New `*FloorMs` knobs (use pool redistribution).
 - Wall-gated enqueue for FirstMesh desire.
 - Gating opaque on `ColumnEmergeState::RenderReady`.
+- Expanding enter SoftDefer lift beyond spawn **r≤2**.
 
 ## SLA inland cruise (−485/50, restore −7752/96/808)
 
-| Metric | Target (vs 203518 / fail 102747 / 145451) |
+| Metric | Target (vs 203518 / fail 102747 / 145451 / enter-fix cruise 184340) |
 |--------|------------------------------------------|
 | wall_ms med / p90 | ≤130 / ≤220 |
 | prep hot (sum prep_*) med | ≤20 |
+| softdefer_empty_scan_ms | diagnose vs prep_softdefer_setup (setup should be ≪ scan) |
 | schedule_ok under holes | ≥8 (proxy) |
-| dirty_remesh when lit dirty | >0 |
+| dirty_remesh when lit dirty / seam | >0 |
 | fifo_drop as heal | not primary |
-| opaque_cmd_on | not <200 at Δfocus≤6 |
+| opaque_cmd_on / opaque_draw_n | not <200 at Δfocus≤6; late cz≥55 med ≥200 (prefer `opaque_draw_n`) |
+| underfeet_missing% | ≤15 |
 | visible_black_focus med | ≤25 orient |
 | sky-only regress | raa_commit>0 on FullyDark enter; opaque not stuck |
 
-A/B logs: `203518`, `102747`, `145451` via `bin/tmp_cruise_wall_summary.py`.
+### A/B closeout (perf_opt10 RemeshQ opaque fix)
+
+Fresh inland **`perf_20260817-100319`** (−485/50→−484/55, enter `enter_lit_20260817-100351`):
+
+| Metric | 100319 | 201626 (pre-fix) | 184340 (baseline) | Verdict |
+|--------|--------|------------------|-------------------|---------|
+| prep hot med | **0.0016** | 0.002 | 54.8 | **done** |
+| dirty_remesh med | **36** | 0 | 0 | **done** (RemeshQ truth) |
+| schedule_ok med | **8** | 8 | 5 | **done** |
+| opaque_draw med | **727** | collapse | n/a | **done** early/mid |
+| late cz≥55 opaque_draw | 47 | 226→50 | 10 | **tail** (fog+load+remesh cap) |
+| underfeet_missing% | 32 | 45 | 42 | improved; tail NotLoaded/stream |
+| visible_black med | 59 | 55 | 69 | tail (heal SoT, cruise sample/4) |
+| miss/holes frame% | ~92 | ~93 | ~91 | frontier hole proxy (holes=1) |
+| wall med / p90 | 182 / 295 | 191 / 297 | 233 / 397 | improved vs 184340 |
+
+**Post-100319 tail fixes (same branch):** deep RemeshQ (`≥32`) → `remesh_schedule` 2–3 + backpressure cap 2; `keep_h=2` prune; underfeet NotLoaded→NotReadyState while column streaming; `underfeet_need` excludes incomplete camera column; load_ops not clamped during terrain load; `underfeet_has_mesh` includes GpuPacked/pending.
+
+A/B: `python bin/audit_cruise_sot.py perf_20260817-100319_6148.jsonl perf_20260816-184340_26004.jsonl perf_20260816-201626_4992.jsonl`

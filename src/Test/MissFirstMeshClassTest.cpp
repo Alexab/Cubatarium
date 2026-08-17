@@ -1,5 +1,6 @@
 #include "World/Streaming/MeshWorkAdmission.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
+#include "World/Streaming/SoftDeferFramePolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/CyOrderPolicy.h"
@@ -1392,6 +1393,24 @@ int main()
            "Era37 P5: hill column band uses column surface");
   }
 
+  // --- SoftDefer empty incremental rim probe ---
+  {
+    using cutum::SoftDeferEmptyRimCellsPerFrame;
+    using cutum::SoftDeferEmptyShouldProbeCell;
+    Expect(SoftDeferEmptyShouldProbeCell(1, 2, 0, 100, 0, 48),
+           "near horiz always probed");
+    Expect(SoftDeferEmptyShouldProbeCell(2, 2, 99, 100, 0, 48),
+           "near-r=2 always probed");
+    Expect(SoftDeferEmptyShouldProbeCell(5, 2, 10, 100, 0, 48),
+           "rim idx in budget probed");
+    Expect(!SoftDeferEmptyShouldProbeCell(5, 2, 60, 100, 0, 48),
+           "rim idx outside budget skipped");
+    Expect(SoftDeferEmptyShouldProbeCell(5, 2, 60, 100, 50, 48),
+           "rim rotates with scan_offset");
+    Expect(SoftDeferEmptyRimCellsPerFrame(12, 25) >= 48,
+           "rim budget at least 48");
+  }
+
   // --- Era35 P1 cy-window ---
   {
     using cutum::SoftDeferCyWindowNearTop;
@@ -1472,6 +1491,14 @@ int main()
     // P0 harness: predicate true; full remesh=0 wire lands in P1.
     Expect(IsMissFirstMeshClass(true, in.nearest_miss_cy, in.nearest_miss_horiz),
            "214034 witness is FirstMesh class");
+    in.remesh_queue_n = 0;
+    auto out0 = ComputeMeshWorkAdmission(in);
+    Expect(out0.remesh_schedule == 0,
+           "HoleDrain miss class + empty RemeshQ ⇒ remesh_schedule=0");
+    in.remesh_queue_n = 4;
+    auto out1 = ComputeMeshWorkAdmission(in);
+    Expect(out1.remesh_schedule >= 1,
+           "HoleDrain miss class + RemeshQ≠∅ ⇒ remesh_schedule≥1");
   }
 
   // --- Era40 Relight FIFO miss-rim pin ---
@@ -1537,6 +1564,12 @@ int main()
     Expect(adm.dirty_admit_budget == 0, "P0: Red admit cap 0");
     Expect(adm.remesh_schedule == 1, "P0: BP keeps remesh_schedule >= 1");
     Expect(!adm.allow_neighbor_dirty, "P0: neighbor dirty off");
+    red.remesh_queue_n = 40;
+    MeshWorkAdmission adm_deep = adm;
+    adm_deep.remesh_schedule = 3;
+    ApplyRemeshAdmitBackpressure(adm_deep, red);
+    Expect(adm_deep.remesh_schedule == 2,
+           "100319 tail: deep RemeshQ + miss -> remesh cap 2");
     RemeshAdmitBackpressureInput fifo{};
     fifo.stream_pressure = 1;
     fifo.fifo_n = 72;

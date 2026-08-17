@@ -329,7 +329,15 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     }
     else
     {
-      out.remesh_schedule = std::max(1, std::min(remesh_was, 2));
+      // Deep RemeshQ (manual 100319 late): one remesh slot cannot drain med~60.
+      if (in.remesh_queue_n >= 32)
+      {
+        out.remesh_schedule = std::max(2, std::min(remesh_was, 3));
+      }
+      else
+      {
+        out.remesh_schedule = std::max(1, std::min(remesh_was, 2));
+      }
       const int steal = std::max(0, remesh_was - out.remesh_schedule);
       out.first_mesh_schedule =
           std::max(out.first_mesh_schedule, 6) + steal;
@@ -363,7 +371,8 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     const int fm = std::max(0, out.first_mesh_schedule);
     const int need = fm + std::max(0, out.remesh_schedule);
     out.max_schedule = std::max(out.max_schedule, need);
-    out.max_schedule = std::min(out.max_schedule, std::max(need, 5));
+    const int max_cap = in.remesh_queue_n >= 32 ? 7 : 5;
+    out.max_schedule = std::min(out.max_schedule, std::max(need, max_cap));
   }
 
   // K3/M3: rim miss outside FirstMesh class with cooled-ish GPU pending — +1
@@ -397,6 +406,7 @@ struct RemeshAdmitBackpressureInput
   int admit_cap_red{0};
   int admit_cap_yellow{1};
   bool miss_active{false};
+  int remesh_queue_n{0};
 };
 
 inline bool ShouldApplyRemeshAdmitBackpressure(
@@ -428,7 +438,9 @@ inline void ApplyRemeshAdmitBackpressure(MeshWorkAdmission &adm,
   adm.dirty_admit_budget = std::min(adm.dirty_admit_budget, std::max(0, admit_cap));
   // Keep at least 1 remesh slot under miss: dual-Q already prefers FirstMesh;
   // remesh_schedule=0 starved lit settle and caused flicker / late light updates.
-  adm.remesh_schedule = std::min(adm.remesh_schedule, 1);
+  const int remesh_cap =
+      in.miss_active && in.remesh_queue_n >= 32 ? 2 : 1;
+  adm.remesh_schedule = std::min(adm.remesh_schedule, remesh_cap);
   adm.allow_neighbor_dirty = false;
   if (adm.first_mesh_schedule > 0 && adm.max_schedule > 0)
   {

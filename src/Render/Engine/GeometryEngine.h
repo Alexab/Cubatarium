@@ -351,12 +351,12 @@ private:
                             const std::map<size_t, UTextureCube> &textures,
                             bool alphaCutout, bool transparentPass,
                             GreedyShaderMode mode, float shellAlphaThreshold);
-  void DrawPackedGpuMeshes(const UChunkMeshCache &cache,
-                           const std::vector<GpuPackedChunkRef> &chunk_refs,
-                           const glm::mat4 &vp,
-                           const std::map<size_t, UTextureCube> &textures,
-                           bool transparent_pass, GreedyShaderMode mode,
-                           float shell_alpha);
+  size_t DrawPackedGpuMeshes(const UChunkMeshCache &cache,
+                             const std::vector<GpuPackedChunkRef> &chunk_refs,
+                             const glm::mat4 &vp,
+                             const std::map<size_t, UTextureCube> &textures,
+                             bool transparent_pass, GreedyShaderMode mode,
+                             float shell_alpha);
 
   const UChunkMeshCache *PreparedTransparentCache{nullptr};
 

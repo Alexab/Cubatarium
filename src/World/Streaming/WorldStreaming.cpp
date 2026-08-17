@@ -550,10 +550,16 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   }
   // Underfeet is a subset of focus — skip second full resident scan when focus
   // already reports no missing mesh (CB stream_ms on no-hole fly).
-  const bool missing_underfeet =
+  const glm::ivec3 camera_ground(focus_horiz.x, 0, focus_horiz.z);
+  const bool incomplete_camera_column =
+      !IsTerrainChunkComplete(world.GetBlockWorld(), camera_ground,
+                              world.GetProceduralSettings().MaxHeight);
+  const bool missing_underfeet_mesh =
       missing_near &&
       world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
           world.GetBlockWorld(), focus_horiz, /*radius=*/1);
+  const bool missing_underfeet =
+      missing_underfeet_mesh && !incomplete_camera_column;
   const int pending_light_focus =
       world.CountPendingLightBeforeMeshNear(focus_horiz, focus_radius);
   const bool pending_underfeet =
@@ -728,21 +734,40 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     }
   }
   {
+    static int facing_sample_cd = 0;
+    static int last_ahead = 0;
+    static int last_behind = 0;
     int ahead = 0;
     int behind = 0;
+    glm::vec2 fwd = world.GetLastMovementDirXz();
+    if (glm::length(fwd) < 0.01f)
+    {
+      if (const auto camera = world.GetCurrentUserCamera())
+      {
+        const glm::vec3 front = camera->GetFront();
+        fwd = glm::vec2(front.x, front.z);
+      }
+    }
     if (!moving_for_telemetry)
     {
-      glm::vec2 fwd = world.GetLastMovementDirXz();
-      if (glm::length(fwd) < 0.01f)
-      {
-        if (const auto camera = world.GetCurrentUserCamera())
-        {
-          const glm::vec3 front = camera->GetFront();
-          fwd = glm::vec2(front.x, front.z);
-        }
-      }
       world.CountUnfinishedVisualByFacing(focus_horiz, focus_radius, fwd, ahead,
                                           behind);
+      last_ahead = ahead;
+      last_behind = behind;
+      facing_sample_cd = 4;
+    }
+    else if (--facing_sample_cd <= 0)
+    {
+      world.CountUnfinishedVisualByFacing(focus_horiz, focus_radius, fwd, ahead,
+                                          behind);
+      last_ahead = ahead;
+      last_behind = behind;
+      facing_sample_cd = 4;
+    }
+    else
+    {
+      ahead = last_ahead;
+      behind = last_behind;
     }
     world.PhysicsTelemetryData.FocusUnfinishedAhead = ahead;
     world.PhysicsTelemetryData.FocusUnfinishedBehind = behind;
@@ -770,8 +795,10 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
         0, FloorDiv(world.GetProceduralSettings().MaxHeight, CHUNK_SIZE));
     for (int cy = 0; cy <= max_cy; ++cy)
     {
-      if (world.GetMeshService().HasDrawableGreedyMesh(
-              glm::ivec3(under_xz.x, cy, under_xz.y)))
+      const glm::ivec3 coord(under_xz.x, cy, under_xz.y);
+      if (world.GetMeshService().HasMeshSatisfyingColumnReady(coord) ||
+          world.GetMeshService().IsPendingGpuApply(coord) ||
+          world.GetMeshService().IsGpuExtractInFlight(coord))
       {
         has_mesh = true;
         break;
@@ -2535,7 +2562,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         meshService.CancelInFlightOutsideHorizontalRadius(
             glm::ivec3(world.PhysicsTelemetryData.FocusChunkX, 0,
                        world.PhysicsTelemetryData.FocusChunkZ),
-            Streamer->GetVisualRenderDistance());
+            Streamer->GetVisualRenderDistance(), /*keep_horiz_lease=*/1);
       }
       // TD-ARCH-009: soft-cap Dirty/Pending under MemoryBudget pressure.
       // Era42: never trim PendingLight while enter lit pass is draining.
@@ -2890,11 +2917,16 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const bool visual_holes =
         meshService.HasMissingGreedyMeshInHorizontalRadius(
             world.GetBlockWorld(), focus_horiz, focus_radius);
+    const glm::ivec3 camera_ground(focus_horiz.x, 0, focus_horiz.z);
+    const bool incomplete_camera_column =
+        !IsTerrainChunkComplete(world.GetBlockWorld(), camera_ground,
+                                procedural.MaxHeight);
     // Cached via HoleQuery memo when args match; underfeet subset of focus.
     const bool underfeet_need =
         (visual_holes &&
          meshService.HasMissingGreedyMeshInHorizontalRadius(
-             world.GetBlockWorld(), focus_horiz, /*radius=*/1)) ||
+             world.GetBlockWorld(), focus_horiz, /*radius=*/1) &&
+         !incomplete_camera_column) ||
         world.HasPendingLightBeforeMeshNear(focus_horiz, /*radius=*/1);
     const KeepPrewarmGate keep_gate = EvaluateKeepPrewarmGate(
         frame_ms, gen_backlog_total, mesh_async, dirty, near_mesh_backlog);
@@ -2950,7 +2982,8 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         }
         // Era51: mesh-only holes must not throttle column load — holes are
         // emerge debt; load_ops=2 with stream_loads=0 was a deadlock.
-        if (underfeet_need || frame_ms > kBadFrameMs)
+        if ((underfeet_need && !incomplete_camera_column) ||
+            frame_ms > kBadFrameMs)
         {
           load_ops = std::min(load_ops, 2);
         }

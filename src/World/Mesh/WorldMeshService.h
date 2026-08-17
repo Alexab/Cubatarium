@@ -162,8 +162,11 @@ public:
   bool WaitForAsyncMeshIdleFor(std::chrono::milliseconds timeout);
   void CancelAsyncMeshWork();
   void CancelAsyncInFlightKeepDirty();
+  void CancelAsyncInFlightKeepDirty(glm::ivec3 focus_ground_chunk,
+                                    int keep_horiz_lease);
   void CancelInFlightOutsideHorizontalRadius(glm::ivec3 focus_ground_chunk,
-                                             int radius_chunks);
+                                             int radius_chunks,
+                                             int keep_horiz_lease = 1);
 
   bool HasPendingDirty() const;
   bool HasDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,

@@ -1393,6 +1393,9 @@ private:
   bool EnterLitSnapshotCaptured{false};
   /// Era47: once snapshot debt=0 under gate, stay quiesced despite fifo blips.
   bool EnterLitQuiesceLatched{false};
+  /// Latch IsCreateSpawnWarmupSettled after first true — avoid O(FOV) debt
+  /// recount every cruise frame (prep_softdefer_setup was ~33–55ms).
+  mutable bool CreateSpawnWarmupSettledLatched{false};
   bool StreamingEnabledBeforeEnterLitGate{true};
   int EnterLitGateLitRadiusChunks() const;
   bool ColumnFullyDarkSolidDrawable(glm::ivec2 col_chunk_xz) const;

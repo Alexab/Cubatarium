@@ -23,6 +23,8 @@ int main()
   using cutum::MeshApplyRevDecision;
   using cutum::ShouldDeferFreeChunkUntilPackedReplace;
   using cutum::ShouldKeepPriorGpuOnEmptyCpuReplace;
+  using cutum::ShouldRetainUnderfeetGpuOnEmptyReplace;
+  using cutum::ShouldRouteRemeshToFirstMeshQueue;
   using cutum::ShouldPublishCpuBatchesBeforeFreeGpu;
   using cutum::SoftDeferCaptureBlockedByRepairTicket;
   using cutum::UChunkMeshRevisionRegistry;
@@ -95,6 +97,18 @@ int main()
          "Era21: GPU drawable + empty CPU also defers FreeChunk");
   Expect(!ShouldDeferFreeChunkUntilPackedReplace(false, true),
          "Era21: no prior GPU → FreeChunk N/A");
+  Expect(ShouldRetainUnderfeetGpuOnEmptyReplace(true, true, true),
+         "underfeet lease retains GPU on intentional empty");
+  Expect(!ShouldRetainUnderfeetGpuOnEmptyReplace(false, true, true),
+         "hinterland intentional empty may FreeChunk");
+  Expect(!ShouldRetainUnderfeetGpuOnEmptyReplace(true, true, false),
+         "non-empty replace uses PendingReplace path");
+  Expect(ShouldRouteRemeshToFirstMeshQueue(false, false),
+         "Closeout C: missing → FirstMeshQ");
+  Expect(ShouldRouteRemeshToFirstMeshQueue(true, true),
+         "Closeout C: FullyDark drawable → FirstMeshQ");
+  Expect(!ShouldRouteRemeshToFirstMeshQueue(true, false),
+         "Closeout C: lit drawable → RemeshQ");
 
   // --- Era21 I-M6 miss Capture ticket SoT ---
   Expect(!SoftDeferCaptureBlockedByRepairTicket(/*miss=*/true,

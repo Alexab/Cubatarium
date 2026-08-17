@@ -73,6 +73,23 @@ inline bool ShouldDeferFreeChunkUntilPackedReplace(bool had_gpu_drawable,
   return had_gpu_drawable;
 }
 
+/// Underfeet lease: never FreeChunk a live GPU drawable on intentional empty
+/// CPU replace (one-frame NotLoaded/hole under camera). Hinterland still
+/// FreeChunks intentional occluded empty → 0-quad ready.
+inline bool ShouldRetainUnderfeetGpuOnEmptyReplace(bool underfeet_lease,
+                                                   bool had_gpu_drawable,
+                                                   bool intentional_empty)
+{
+  return underfeet_lease && had_gpu_drawable && intentional_empty;
+}
+
+/// Closeout C dual-Q: lit drawable remesh → RemeshQ; missing/FullyDark → FM.
+inline bool ShouldRouteRemeshToFirstMeshQueue(bool has_drawable,
+                                             bool fully_dark_drawable)
+{
+  return !has_drawable || fully_dark_drawable;
+}
+
 /// Era21 I-M6: under FOV miss, SoftDefer Capture is blocked only by a live
 /// FirstMesh ticket — Relight/Remesh alone must not starve rim FirstMesh.
 inline bool SoftDeferCaptureBlockedByRepairTicket(bool missing_visible_mesh,

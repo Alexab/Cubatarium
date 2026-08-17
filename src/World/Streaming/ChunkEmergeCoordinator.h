@@ -2,6 +2,7 @@
 #define CHUNKEMERGECOORDINATOR_H
 
 #include "World/Chunks/ChunkManager.h"
+#include "World/Streaming/SoftDeferFramePolicy.h"
 #include "World/Streaming/StreamingPressure.h"
 
 #include <unordered_map>
@@ -71,6 +72,9 @@ private:
   std::unordered_set<glm::ivec3, IVec3Hash> SoftDeferEmptyPrevSeen;
   /// Era34 P1: rotate SoftDefer empty ownership when cap saturates.
   int SoftDeferEmptyScanOffset{0};
+  /// Stable SoftDefer policy POD; Set*Fn installed once against this.
+  SoftDeferFramePolicy SoftDeferPolicy{};
+  bool SoftDeferCallbacksInstalled{false};
 };
 
 } // namespace cutum

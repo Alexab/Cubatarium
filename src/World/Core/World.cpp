@@ -1385,7 +1385,18 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           }
           if (priority_mesh)
           {
-            MeshService->MarkDirtyPriority(coord);
+            // Closeout C: missing/FullyDark → FirstMeshQ; lit drawable → RemeshQ.
+            const bool needs_fm =
+                !has_drawable ||
+                MeshService->GetCache().ChunkHasFullyDarkFace(coord);
+            if (needs_fm)
+            {
+              MeshService->MarkDirtyPriority(coord);
+            }
+            else
+            {
+              MeshService->MarkDirty(coord);
+            }
           }
           else
           {
@@ -1395,8 +1406,25 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       }
       else if (priority_mesh)
       {
-        MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-            ground, dirty_min, dirty_max, seam_ok || focus_ring_seam);
+        // Near first-light: Priority only when column still missing drawable.
+        bool any_drawable = false;
+        const int cy0 = FloorDiv(dirty_min, CHUNK_SIZE);
+        const int cy1 = FloorDiv(dirty_max, CHUNK_SIZE);
+        for (int cy = cy0; cy <= cy1 && !any_drawable; ++cy)
+        {
+          any_drawable = MeshService->HasDrawableGreedyMesh(
+              glm::ivec3(key.x, cy, key.y));
+        }
+        if (any_drawable)
+        {
+          MeshService->MarkTerrainChunkMeshDirtySeamed(
+              ground, dirty_min, dirty_max, seam_ok || focus_ring_seam);
+        }
+        else
+        {
+          MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+              ground, dirty_min, dirty_max, seam_ok || focus_ring_seam);
+        }
       }
       else
       {
@@ -2417,15 +2445,31 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
         std::max(band_max, std::min(ProceduralTemplate.MaxHeight,
                                     sea + CHUNK_SIZE * 2));
   }
-  const int cy0 = std::max(0, FloorDiv(band_min, CHUNK_SIZE));
-  const int cy1 = std::min(max_cy, FloorDiv(band_max, CHUNK_SIZE));
+  // Underfeet: full column — camera±1 band alone falsely reports NotLoaded(6)
+  // when surface mesh sits below the player band (manual 201626).
+  int cy0 = std::max(0, FloorDiv(band_min, CHUNK_SIZE));
+  int cy1 = std::min(max_cy, FloorDiv(band_max, CHUNK_SIZE));
+  if (horiz_from_focus <= 1)
+  {
+    cy0 = 0;
+    cy1 = max_cy;
+  }
+  auto column_mesh_or_gpu = [&](glm::ivec3 coord) -> bool
+  {
+    if (MeshService->HasMeshSatisfyingColumnReady(coord))
+    {
+      return true;
+    }
+    return MeshService->IsPendingGpuApply(coord) ||
+           MeshService->IsGpuExtractInFlight(coord);
+  };
 
   if (IsPendingLightBeforeMesh(ground_xz))
   {
     for (int cy = cy0; cy <= cy1; ++cy)
     {
       const glm::ivec3 coord(ground.x, cy, ground.z);
-      // SoT draw_ok: drawable mesh OR queued GPU apply. Empty SoftDefer
+      // SoT draw_ok: drawable / GpuPacked / queued GPU. Empty SoftDefer
       // placeholders (HasGreedy, !Drawable) must not look ready (manual 101824).
       if (MeshService->HasMeshSatisfyingColumnReady(coord))
       {
@@ -2453,9 +2497,7 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     for (int cy = cy0; cy <= cy1; ++cy)
     {
       const glm::ivec3 coord(ground.x, cy, ground.z);
-      if (MeshService->HasMeshSatisfyingColumnReady(coord) ||
-          MeshService->IsPendingGpuApply(coord) ||
-          MeshService->IsGpuExtractInFlight(coord))
+      if (column_mesh_or_gpu(coord))
       {
         has_mesh_or_gpu = true;
       }
@@ -2509,11 +2551,15 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     {
       has_mesh_or_gpu = true;
     }
-    if (MeshService->IsPendingGpuApply(coord) ||
-        MeshService->IsGpuExtractInFlight(coord))
+    else if (MeshService->IsPendingGpuApply(coord) ||
+             MeshService->IsGpuExtractInFlight(coord))
     {
       has_mesh_or_gpu = true;
       saw_gpu_inflight_early = true;
+    }
+    else if (column_mesh_or_gpu(coord))
+    {
+      has_mesh_or_gpu = true;
     }
   }
   if (out.stage != ColumnEmergeState::RenderReady &&
@@ -2541,6 +2587,13 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
     if (!chunk)
     {
+      if (horiz_from_focus <= 1 &&
+          (MeshService->IsPendingGpuApply(coord) ||
+           MeshService->IsGpuExtractInFlight(coord)))
+      {
+        saw_loaded_meshable = true;
+        saw_gpu_inflight = true;
+      }
       continue;
     }
     if (MeshService->HasMeshSatisfyingColumnReady(coord))
@@ -2586,6 +2639,14 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
   if (saw_missing_solid)
   {
     out.reason = ColumnRenderableState::BlockReason::MissingMesh;
+    return out;
+  }
+  if (horiz_from_focus <= 1 &&
+      !IsTerrainChunkComplete(BlockWorld,
+                              glm::ivec3(ground.x, 0, ground.z),
+                              ProceduralTemplate.MaxHeight))
+  {
+    out.reason = ColumnRenderableState::BlockReason::NotReadyState;
     return out;
   }
   out.reason = ColumnRenderableState::BlockReason::NotLoaded;
@@ -3528,7 +3589,7 @@ int UWorld::RemeshColumnSeamTicket(glm::ivec2 ground_xz)
   const int remesh_min = (preferred_cy - 1) * CHUNK_SIZE;
   const int remesh_max =
       (preferred_cy + 1) * CHUNK_SIZE + CHUNK_SIZE - 1;
-  MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+  MeshService->MarkTerrainChunkMeshDirtySeamed(
       glm::ivec3(ground_xz.x, 0, ground_xz.y), remesh_min, remesh_max,
       /*include_horizontal_neighbors=*/false);
   StickyRemeshAfterLight.erase(ground_xz);
@@ -3999,7 +4060,7 @@ int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
       break;
     }
     const glm::ivec3 ground(c.key.x, 0, c.key.y);
-    MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+    MeshService->MarkTerrainChunkMeshDirtySeamed(
         ground, c.min_y, c.max_y, /*include_horizontal_neighbors=*/false);
     SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
     synced_keys.push_back(c.key);
@@ -4028,9 +4089,8 @@ int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
     const int cy1 = FloorDiv(found->max_y, CHUNK_SIZE);
     for (int cy = cy0; cy <= cy1; ++cy)
     {
-      // MarkDirty→async only. RebuildChunkImmediate here caused seconds-scale
-      // mesh_emerge (manual 190126: emerge~3.7s with imm wiped by later Reset).
-      MeshService->MarkDirtyPriority(glm::ivec3(key.x, cy, key.y));
+      // Closeout C: idle VB/stale drawable remesh → RemeshQ.
+      MeshService->MarkDirty(glm::ivec3(key.x, cy, key.y));
     }
     StickyRemeshAfterLight.erase(key);
     PendingLightBeforeMesh.erase(key);
@@ -6432,6 +6492,7 @@ void UWorld::BeginEnterLitGate()
   SetStreamingEnabled(false);
   EnterLitGateActive = true;
   EnterLitQuiesceLatched = false;
+  CreateSpawnWarmupSettledLatched = false;
   EnterVisualGateCtrl.Reset();
   if (MeshService)
   {
@@ -7055,14 +7116,29 @@ int UWorld::TickEnterFovLitPass(int capture_budget)
 
 bool UWorld::IsCreateSpawnWarmupSettled() const
 {
+  if (CreateSpawnWarmupSettledLatched)
+  {
+    return true;
+  }
   if (GetBlockWorld().CountNonAir() == 0)
   {
     return true;
   }
+  // Cruise: after enter gate quiesced, spawn-warmup debt recount is redundant.
+  if (!EnterLitGateActive && EnterLitQuiesceLatched)
+  {
+    CreateSpawnWarmupSettledLatched = true;
+    return true;
+  }
   // Era34 P0: near-FOV settle; Era41: also LitDrawable FOV lit debt ring=4.
   bool underfeet_lit = false;
-  return CountCreateNearFovWarmupDebt(&underfeet_lit) == 0 &&
-         CountEnterFovLitDebt() == 0;
+  const bool settled = CountCreateNearFovWarmupDebt(&underfeet_lit) == 0 &&
+                       CountEnterFovLitDebt() == 0;
+  if (settled)
+  {
+    CreateSpawnWarmupSettledLatched = true;
+  }
+  return settled;
 }
 
 int UWorld::CountCreateNearFovWarmupDebt(bool *out_underfeet_lit_ready) const

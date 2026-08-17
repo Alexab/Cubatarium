@@ -469,14 +469,37 @@ void UChunkMeshCache::CancelAsyncMeshWork()
 
 void UChunkMeshCache::CancelAsyncInFlightKeepDirty()
 {
+  CancelAsyncInFlightKeepDirty(glm::ivec3(0), /*keep_horiz_lease=*/-1);
+}
+
+void UChunkMeshCache::CancelAsyncInFlightKeepDirty(glm::ivec3 focus_ground_chunk,
+                                                   int keep_horiz_lease)
+{
   if (!Render.AsyncMeshing || !Render.GreedyMeshing || !AsyncBuilder)
   {
     return;
   }
   // Dirty is removed at schedule time — re-queue Active coords before drop so
   // "KeepDirty" is real (otherwise cancel orphans remesh debt).
+  // Underfeet lease: keep Active tracking for horiz≤keep (no MarkDirty storm).
+  std::vector<std::pair<glm::ivec3, uint64_t>> keep_active;
+  if (keep_horiz_lease >= 0)
+  {
+    keep_active.reserve(8);
+  }
   for (const auto &entry : ActiveMeshSourceRevision)
   {
+    if (keep_horiz_lease >= 0)
+    {
+      const int horiz =
+          std::max(std::abs(entry.first.x - focus_ground_chunk.x),
+                   std::abs(entry.first.z - focus_ground_chunk.z));
+      if (horiz <= keep_horiz_lease)
+      {
+        keep_active.push_back(entry);
+        continue;
+      }
+    }
     Dirty.MarkDirtyPriority(entry.first);
   }
   AsyncBuilder->CancelPending();
@@ -485,10 +508,14 @@ void UChunkMeshCache::CancelAsyncInFlightKeepDirty()
   // async count (builder-only) looks drained.
   ActiveMeshSourceRevision.clear();
   RemeshAfterApply.clear();
+  for (const auto &entry : keep_active)
+  {
+    ActiveMeshSourceRevision.insert(entry);
+  }
 }
 
 void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
-    glm::ivec3 focus_ground_chunk, int radius_chunks)
+    glm::ivec3 focus_ground_chunk, int radius_chunks, int keep_horiz_lease)
 {
   if (!Render.AsyncMeshing || !Render.GreedyMeshing || !AsyncBuilder ||
       radius_chunks < 0)
@@ -502,6 +529,10 @@ void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
     const glm::ivec3 &coord = entry.first;
     const int horiz = std::max(std::abs(coord.x - focus_ground_chunk.x),
                                std::abs(coord.z - focus_ground_chunk.z));
+    if (horiz <= keep_horiz_lease)
+    {
+      continue;
+    }
     if (horiz > radius_chunks)
     {
       outside.push_back(coord);
@@ -522,7 +553,7 @@ void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
   {
     const int horiz = std::max(std::abs(it->coord.x - focus_ground_chunk.x),
                                std::abs(it->coord.z - focus_ground_chunk.z));
-    if (horiz <= radius_chunks)
+    if (horiz <= keep_horiz_lease || horiz <= radius_chunks)
     {
       ++it;
       continue;
@@ -558,6 +589,76 @@ bool UChunkMeshCache::HasGreedyMesh(glm::ivec3 chunk_coord) const
   return GreedyCache.find(chunk_coord) != GreedyCache.end();
 }
 
+bool UChunkMeshCache::ChunkHasLiveGpuDraw(glm::ivec3 chunk_coord) const
+{
+  const auto it = GreedyCache.find(chunk_coord);
+  if (it == GreedyCache.end() || !it->second.GpuResident ||
+      it->second.GpuQuadCount == 0)
+  {
+    return false;
+  }
+  const UGpuMeshPipeline *pipe = GetGpuMeshPipeline();
+  return pipe && pipe->HasGpuMesh(chunk_coord);
+}
+
+void UChunkMeshCache::ClearStaleGpuResidentFlags(glm::ivec3 chunk_coord)
+{
+  auto it = GreedyCache.find(chunk_coord);
+  if (it == GreedyCache.end())
+  {
+    return;
+  }
+  if (!it->second.GpuResident || it->second.GpuQuadCount == 0)
+  {
+    return;
+  }
+  it->second.GpuResident = false;
+  it->second.GpuSlotIndex = -1;
+  it->second.GpuQuadCount = 0;
+  it->second.GpuHasDarkFace = false;
+  it->second.GpuBlockRanges.clear();
+  it->second.GpuTransparent = false;
+}
+
+bool UChunkMeshCache::HasAnyValidatedDrawRefs() const
+{
+  for (const GreedyBatchRef &ref : GreedyOpaqueCutoutRefs)
+  {
+    const GreedyMeshBatch *batch = TryGetGreedyBatch(ref);
+    if (batch && !batch->vertices.empty() && !batch->indices.empty())
+    {
+      return true;
+    }
+  }
+  for (const GreedyBatchRef &ref : GreedyTransparentRefs)
+  {
+    const GreedyMeshBatch *batch = TryGetGreedyBatch(ref);
+    if (batch && !batch->vertices.empty() && !batch->indices.empty())
+    {
+      return true;
+    }
+  }
+  const UGpuMeshPipeline *pipe = GetGpuMeshPipeline();
+  if (pipe)
+  {
+    for (const GpuPackedChunkRef &ref : GpuPackedOpaqueRefs)
+    {
+      if (pipe->HasGpuMesh(ref.chunkCoord))
+      {
+        return true;
+      }
+    }
+    for (const GpuPackedChunkRef &ref : GpuPackedTransparentRefs)
+    {
+      if (pipe->HasGpuMesh(ref.chunkCoord))
+      {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 bool UChunkMeshCache::HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const
 {
   const auto it = GreedyCache.find(chunk_coord);
@@ -567,7 +668,7 @@ bool UChunkMeshCache::HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const
   }
   if (it->second.GpuResident && it->second.GpuQuadCount > 0)
   {
-    return true;
+    return ChunkHasLiveGpuDraw(chunk_coord);
   }
   for (const GreedyMeshBatch &batch : it->second.batches)
   {
@@ -772,9 +873,8 @@ bool UChunkMeshCache::ChunkHasLitDrawableFace(glm::ivec3 chunk_coord) const
   {
     return BatchesHaveLitDrawableFace(it->second.batches);
   }
-  // Gpu-resident without CPU batches: lit if not marked FullyDark.
-  return it->second.GpuResident && it->second.GpuQuadCount > 0 &&
-         !it->second.GpuHasDarkFace;
+  // Gpu-resident without CPU batches: lit if live slot and not FullyDark.
+  return ChunkHasLiveGpuDraw(chunk_coord) && !it->second.GpuHasDarkFace;
 }
 
 bool UChunkMeshCache::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
@@ -2098,7 +2198,7 @@ bool UChunkMeshCache::TrySkipFlatRebuildForVisibleChunks(
                          look.ipitch == LastCullIPitch;
   if (cam_chunk == LastCullCameraChunk &&
       MeshRevision == LastVisibleMeshRevision && view_same &&
-      !LastVisibleChunks.empty())
+      !LastVisibleChunks.empty() && HasAnyValidatedDrawRefs())
   {
     return true;
   }
@@ -2128,7 +2228,12 @@ bool UChunkMeshCache::TrySkipFlatRebuildForVisibleChunks(
               }
               return a.z < b.z;
             });
-  if (visible == LastVisibleChunks && MeshRevision == LastVisibleMeshRevision)
+  const bool have_draw_refs = HasAnyValidatedDrawRefs();
+  // Empty==empty + unchanged revision would lock a sky hole forever
+  // (manual 083819: first frustum miss, then skip until look/revision moved).
+  // Stale GpuPacked refs (cache GpuResident but slot freed) must not count.
+  if (visible == LastVisibleChunks && MeshRevision == LastVisibleMeshRevision &&
+      (have_draw_refs || !visible.empty()))
   {
     LastCullCameraChunk = cam_chunk;
     LastCullPlanes = frustum->planes;
@@ -2159,7 +2264,11 @@ void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
   if (GreedyBatchesDirty)
   {
     const auto now = std::chrono::steady_clock::now();
-    if (!ForceFlatRebuildNext &&
+    const bool have_draw_refs = HasAnyValidatedDrawRefs();
+    // Empty refs + live cache is a sky hole — do not keep the last empty
+    // rebuild across the 50ms rate limit (manual 083819: 265k verts, opaque=0).
+    // Stale GpuPacked list (non-empty but no live slots) is the same class.
+    if (!ForceFlatRebuildNext && have_draw_refs &&
         LastFlatRebuildAt != std::chrono::steady_clock::time_point{} &&
         now - LastFlatRebuildAt < std::chrono::milliseconds(50))
     {
@@ -2198,19 +2307,39 @@ void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
     }
     if (entry.second.GpuResident && entry.second.GpuQuadCount > 0)
     {
-      GpuPackedChunkRef pref;
-      pref.chunkCoord = entry.first;
-      pref.slotIndex = entry.second.GpuSlotIndex;
-      pref.blockRanges = entry.second.GpuBlockRanges;
-      if (entry.second.GpuTransparent)
+      EnsureGpuPipeline();
+      if (GpuPipeline && GpuPipeline->HasGpuMesh(entry.first))
       {
-        GpuPackedTransparentRefs.push_back(std::move(pref));
+        GpuPackedChunkRef pref;
+        pref.chunkCoord = entry.first;
+        pref.slotIndex = entry.second.GpuSlotIndex;
+        pref.blockRanges = entry.second.GpuBlockRanges;
+        if (entry.second.GpuTransparent)
+        {
+          GpuPackedTransparentRefs.push_back(std::move(pref));
+        }
+        else
+        {
+          GpuPackedOpaqueRefs.push_back(std::move(pref));
+        }
+        continue;
       }
-      else
+      // Stale residency: GreedyCache flags without live SSBO slot (manual
+      // 105307: opaque_gpu_packed_n>0 but DrawPackedGpuMeshes no-op).
+      ClearStaleGpuResidentFlags(entry.first);
+      bool has_cpu_drawable = false;
+      for (const GreedyMeshBatch &batch : entry.second.batches)
       {
-        GpuPackedOpaqueRefs.push_back(std::move(pref));
+        if (!batch.vertices.empty() && !batch.indices.empty())
+        {
+          has_cpu_drawable = true;
+          break;
+        }
       }
-      continue;
+      if (!has_cpu_drawable)
+      {
+        MarkDirty(entry.first);
+      }
     }
     const std::vector<GreedyMeshBatch> &batches = entry.second.batches;
     for (size_t i = 0; i < batches.size(); ++i)
@@ -2230,6 +2359,16 @@ void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
         GreedyOpaqueCutoutRefs.push_back(ref);
       }
     }
+  }
+
+  // Same fallback as RebuildFlatCrossInstances: a bad/empty frustum must not
+  // leave GreedyCache undrawn (sky-only while greedy_vertices stay high).
+  if (frustum && cameraPos && GreedyOpaqueCutoutRefs.empty() &&
+      GreedyTransparentRefs.empty() && GpuPackedOpaqueRefs.empty() &&
+      GpuPackedTransparentRefs.empty() && !GreedyCache.empty())
+  {
+    RebuildFlatGreedyBatches(nullptr, nullptr, 0.0f);
+    return;
   }
 
   GreedyBatchesDirty = false;
@@ -2369,10 +2508,11 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
   const float maxCullDistance = MaxCullDistance();
   const glm::ivec3 camera_chunk =
       UChunkManager::WorldToChunk(WorldPosToBlock(cameraPos));
+  const bool greedy_refs_empty =
+      GreedyOpaqueCutoutRefs.empty() && GreedyTransparentRefs.empty() &&
+      GpuPackedOpaqueRefs.empty() && GpuPackedTransparentRefs.empty();
   const bool needs_greedy_rebuild =
-      GreedyBatchesDirty ||
-      ((GreedyOpaqueCutoutRefs.empty() && GreedyTransparentRefs.empty()) &&
-       !GreedyCache.empty());
+      GreedyBatchesDirty || (greedy_refs_empty && !GreedyCache.empty());
   const bool needs_cross_rebuild =
       CrossBatchesDirty ||
       (CrossBatches.empty() && TotalCrossCenterCount() > 0);
@@ -2657,6 +2797,20 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   auto budget_left = [&]() {
     return budget_ms < 0.0 || elapsed_ms() < budget_ms;
   };
+
+  // Underfeet lease: finish/kick horiz≤1 before hinterland GPU backlog.
+  {
+    const glm::ivec3 focus = MeshFocusGroundChunk;
+    std::stable_partition(
+        PendingGpuApplies.begin(), PendingGpuApplies.end(),
+        [&](const PendingGpuApply &p)
+        {
+          const int horiz =
+              std::max(std::abs(p.coord.x - focus.x),
+                       std::abs(p.coord.z - focus.z));
+          return horiz <= 1;
+        });
+  }
 
   // Phase A (174511): ring PBO → up to 4 Kick/Finish per tick; no shared-PBO
   // single-apply bottleneck. Prefer Finish over Kick when budget tight.
@@ -3273,11 +3427,17 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   const bool intentional_empty =
       new_vertex_count == 0 && !defer_until_lit &&
       SoftDeferHeld.count(result.coord) == 0;
+  const bool underfeet_lease =
+      MeshFocusValid &&
+      std::max(std::abs(result.coord.x - MeshFocusGroundChunk.x),
+               std::abs(result.coord.z - MeshFocusGroundChunk.z)) <= 1;
   // Era21 I-R1: keep live GPU SSBO until BindCommitted (PendingReplace).
-  // Intentional occluded empty still FreeChunks → 0-quad ready.
+  // Underfeet: also retain on intentional empty (no PreferKick storm).
   if (ShouldDeferFreeChunkUntilPackedReplace(had_gpu_drawable,
                                              new_cpu_drawable) &&
-      !intentional_empty)
+      (!intentional_empty ||
+       ShouldRetainUnderfeetGpuOnEmptyReplace(underfeet_lease, had_gpu_drawable,
+                                              intentional_empty)))
   {
     ++MeshReplaceHoleAvoided;
     // Keep same live SSBO — do not mark GreedyBatchesDirty/ForceFlat (refs OK).
@@ -3312,7 +3472,15 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
                    Dirty.Contains(result.coord), gpu_pending, enter_gate,
                    needs_first_mesh, fully_dark_drawable))
       {
-        MarkDirtyPriority(result.coord);
+        // Closeout C: lit remesh → RemeshQ; missing/FullyDark → FirstMeshQ.
+        if (needs_first_mesh || fully_dark_drawable)
+        {
+          MarkDirtyPriority(result.coord);
+        }
+        else
+        {
+          MarkDirty(result.coord);
+        }
         ++RaaCommitMarkDirtyN;
       }
     }
@@ -4078,7 +4246,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     // slot so lit settle is not deferred indefinitely (manual 222059 flicker).
     if ((StarveRemeshForHoles || focus_missing_for_schedule) &&
         CountPendingGpuAppliesInHorizontalRadius(MeshFocusGroundChunk,
-                                                 MeshFocusRadiusChunks) > 0)
+                                                 MeshFocusRadiusChunks) > 4)
     {
       remesh_cap = std::min(remesh_cap, 1);
     }
@@ -4714,10 +4882,17 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     const bool intentional_empty =
         new_vertex_count == 0 && !defer_until_lit &&
         SoftDeferHeld.count(chunkCoord) == 0;
+    const bool underfeet_lease =
+        MeshFocusValid &&
+        std::max(std::abs(chunkCoord.x - MeshFocusGroundChunk.x),
+                 std::abs(chunkCoord.z - MeshFocusGroundChunk.z)) <= 1;
     // Era21 I-R1: keep live GPU until BindCommitted (PendingReplace).
+    // Underfeet: retain on intentional empty (no PreferKick).
     if (ShouldDeferFreeChunkUntilPackedReplace(had_gpu_drawable,
                                                new_cpu_drawable) &&
-        !intentional_empty)
+        (!intentional_empty ||
+         ShouldRetainUnderfeetGpuOnEmptyReplace(underfeet_lease, had_gpu_drawable,
+                                                intentional_empty)))
     {
       ++MeshReplaceHoleAvoided;
       // Same live SSBO — do not ForceFlatRebuild / GreedyBatchesDirty (refs OK).
