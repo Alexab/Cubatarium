@@ -125,3 +125,8 @@ Do measure / change Relight FIFO complete path (why `relight_completed_n=0`
 with fifo≥42), witness pin so PromoteRelight actually finalizes nh≤2,
 and GpuPacked keep-until-bind on cruise (existing residency SoT,
 `ae0c75b0`). Re-run inland −485/50 with the same audit keys.
+
+Cost-aware phases (P0 telem → P1 pin-hold → P2 surface-finalize nh≤2 →
+P3 FirstMesh order → P4 keep-until-bind): 
+`docs/streaming/relight_then_mesh_industrial.md`. Do not raise Capture /
+FM quotas before P0 names the bottleneck.

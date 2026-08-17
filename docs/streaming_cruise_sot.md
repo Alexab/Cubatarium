@@ -128,4 +128,4 @@ Fresh inland **`perf_20260817-100319`** (−485/50→−484/55, enter `enter_lit
 
 A/B: `python bin/audit_cruise_sot.py perf_20260817-100319_6148.jsonl perf_20260816-184340_26004.jsonl perf_20260816-201626_4992.jsonl`
 
-Red inland after Unlit-near rollback: `docs/streaming/cruise_column_gen_diag.md` (`195810`). Diagnose Relight/FM/residency — do not add a second draw SoT.
+Red inland after Unlit-near rollback: `docs/streaming/cruise_column_gen_diag.md` (`195810`). Diagnose Relight/FM/residency — do not add a second draw SoT. Cost-aware complete/apply path: `docs/streaming/relight_then_mesh_industrial.md`.
