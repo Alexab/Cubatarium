@@ -1228,11 +1228,10 @@ int main()
            "baked true-dark draws (not hidden)");
     Expect(!ShouldHideUncomputedFullyDarkInRing(5, true, true, true),
            "uncomputed hide stays r=4");
-    Expect(!ShouldHideUncomputedFullyDarkInRing(1, true, true, false, 4, false,
-                                               false, true),
-           "183918: nh1 hole-fill preview draws");
+    Expect(ShouldHideUncomputedFullyDarkInRing(1, true, true, false),
+           "Era28: nh1 FullyDark hidden until lit (no Unlit-near preview)");
     Expect(FirstMeshPruneKeepHoriz(5) >= 4,
-           "183918: never prune FirstMesh inside LitDrawable ring");
+           "never prune FirstMesh inside LitDrawable ring");
     Expect(ClassifyEnterVisualItemState(false, false, false, true) ==
                EnterVisualItemState::Done,
            "OpenSky≠Done: terminal_ready only for lit/true-dark");

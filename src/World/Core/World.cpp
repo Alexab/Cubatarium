@@ -2387,15 +2387,10 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
       const bool open_sky_done = EnterVisualGateCtrl.WasOpenSkyApplied(col_xz);
       const bool true_dark =
           open_sky_done && !pending_light && !stale_field;
-      const bool hole_fill_preview =
-          AllowUnlitHoleFillFirstMesh(/*has_mesh=*/false, horiz, chunk_coord.y,
-                                      /*missing_visible_mesh=*/true,
-                                      /*is_nearest_hole=*/true);
       if (ShouldHideUncomputedFullyDarkInRing(horiz, true, pending_light,
                                               stale_field,
                                               kVisualStageLitDrawableHoriz,
-                                              true_dark, false,
-                                              hole_fill_preview))
+                                              true_dark))
       {
         return false;
       }

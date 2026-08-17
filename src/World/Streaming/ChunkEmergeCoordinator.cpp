@@ -301,14 +301,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           const bool starve_hinterland = StarveHinterlandUnlit(
               world_ref.GetPhysicsTelemetry().SoftDeferEmptyNearN,
               pol.pending_focus_count);
-          const bool allow_unlit_hole_fill = AllowUnlitHoleFillFirstMesh(
-              has_mesh, horiz, chunk_coord.y, pol.missing_visible_mesh,
-              is_nearest_hole);
           const bool allow_unlit =
-              allow_unlit_hole_fill ||
-              (!starve_hinterland &&
-               AllowUnlitFirstMesh(has_mesh, horiz, is_nearest_hole, in_focus,
-                                   kVisualStageLitDrawableHoriz));
+              !starve_hinterland &&
+              AllowUnlitFirstMesh(has_mesh, horiz, is_nearest_hole, in_focus,
+                                  kVisualStageLitDrawableHoriz);
           const bool allow_unlit_hole = AllowUnlitDrawableUnderLightDebt(
               pol.pending_focus_count, pol.unlit_near_count, horiz, fully_dark,
               has_greedy, underfeet);

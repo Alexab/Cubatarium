@@ -29,6 +29,9 @@ Ticket(level by Chebyshev ring)
 | Floors | `MissEmergeFloorMs`, `LandMovingRelightDrainFloor`, `AsyncScheduleFloorUnderMiss` = 0; use pools. |
 | Underfeet lease | `CancelInFlightOutsideHorizontalRadius` / `CancelAsyncInFlightKeepDirty` never drop Active/PendingGpu for Chebyshev `horiz≤1`. GPU backlog finishes underfeet first. |
 | SoftDefer callbacks | `SetDeferMeshUntilLitFn` / On* installed once; per-frame POD `SoftDeferFramePolicy` on Coordinator. |
+| Publication | One SoT: lit drawable or keep-prior GPU. **Reject Unlit near «ради дыр»** (Era28/29). `AllowUnlitFirstMesh` only hinterland (`horiz >` LitDrawable ring). Hide FullyDark in ring until lit / true-dark. |
+| ColumnFlow miss+pending | `DeriveColumnDesiredStage`: **PendingLight owns** the column → `RelightThenMesh` before FirstMesh. FirstMesh only after light debt clears. |
+| FirstMesh prune | `FirstMeshPruneKeepHoriz` = LitDrawable ring (drop hinterland FM only; never nh≤2 shell). |
 
 ## ColumnRecord
 
@@ -83,6 +86,7 @@ Hide-until-lit (`ShouldHideUncomputedFullyDarkInRing`) stays for quality (far ri
 
 ## Forbidden
 
+- Unlit FirstMesh / FullyDark preview in LitDrawable ring «ради дыр» (Era28/29).
 - New PreferKick exception owners / orphan PreferKick loops.
 - New `*FloorMs` knobs (use pool redistribution).
 - Wall-gated enqueue for FirstMesh desire.

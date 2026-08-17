@@ -31,16 +31,16 @@ inline ColumnDesiredDecision DeriveColumnDesiredStage(
     bool unlit_published = false, bool dark_drawable = false)
 {
   ColumnDesiredDecision out;
-  if (missing_visible)
-  {
-    out.stage = ColumnDesiredStage::FirstMesh;
-    return out;
-  }
-  // Era19 P2 I-B3/exclusivity: PendingLight owns the column — no RemeshSeam
-  // dual with Relight in the same TickDerived decision.
+  // Era19 exclusivity + Era28 Relight-before-draw: PendingLight owns the
+  // column even when mesh is missing. FirstMesh under pending is Unlit near.
   if (pending_light)
   {
     out.stage = ColumnDesiredStage::RelightThenMesh;
+    return out;
+  }
+  if (missing_visible)
+  {
+    out.stage = ColumnDesiredStage::FirstMesh;
     return out;
   }
   // Void / dark drawable needs RelightThenMesh so mesh follows light.

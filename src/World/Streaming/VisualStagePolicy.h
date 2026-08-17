@@ -76,18 +76,16 @@ inline bool ShouldHideFullyDarkUntilLitInRing(int horiz, bool fully_dark,
 /// Hide FullyDark in the LitDrawable ring until lit drawable or true-dark.
 /// true_dark = field 0 after OpenSky/relight apply (caller passes it).
 /// After OpenSky, stale (field≠0) stays hidden until bake.
-/// hole_fill_preview: first-mesh in near FOV — draw unlit geometry until Relight.
-/// 183918: AllowUnlitHoleFill + hide=true published GPU FullyDark that never drew.
 inline bool ShouldHideUncomputedFullyDarkInRing(
     int horiz, bool fully_dark, bool pending_light, bool stale_field,
     int ring = kVisualStageLitDrawableHoriz, bool true_dark = false,
-    bool has_lit_drawable = false, bool hole_fill_preview = false)
+    bool has_lit_drawable = false)
 {
   if (horiz > ring || !fully_dark)
   {
     return false;
   }
-  if (has_lit_drawable || true_dark || hole_fill_preview)
+  if (has_lit_drawable || true_dark)
   {
     return false;
   }

@@ -26,8 +26,14 @@ int main()
 
   {
     const auto d = DeriveColumnDesiredStage(true, true, true, true);
-    Expect(d.stage == ColumnDesiredStage::FirstMesh, "miss beats stale/void");
-    Expect(d.enqueue_without_wall_gate, "FirstMesh no wall gate");
+    Expect(d.stage == ColumnDesiredStage::RelightThenMesh,
+           "pending owns miss (Era28 Relight-before-draw)");
+    Expect(d.enqueue_without_wall_gate, "RelightThenMesh no wall gate");
+  }
+  {
+    const auto d = DeriveColumnDesiredStage(true, false, false, false);
+    Expect(d.stage == ColumnDesiredStage::FirstMesh,
+           "miss without pending → FirstMesh");
   }
   {
     const auto d = DeriveColumnDesiredStage(false, true, false, true);

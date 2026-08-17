@@ -12,7 +12,6 @@ using cutum::ShouldRejectDarkMeshCommit;
 using cutum::ShouldMarkDirtyAfterDarkSoftDeferReject;
 using cutum::SoftDeferMeshUntilLitPolicy;
 using cutum::AllowUnlitFirstMesh;
-using cutum::AllowUnlitHoleFillFirstMesh;
 using cutum::ClassifyStickyStaleDarkSoT;
 using cutum::ColumnSoTKind;
 using cutum::EnqueueStickyStaleRepairTickets;
@@ -115,29 +114,21 @@ int main()
          "hinterland FOV missing → AllowUnlitFirstMesh");
   Expect(!AllowUnlitFirstMesh(false, 5, false, false),
          "outside focus → no AllowUnlitFirstMesh");
-  Expect(AllowUnlitHoleFillFirstMesh(false, 1, 0, true, true),
-         "163559: nearest nh1 hole fill allowed");
-  Expect(AllowUnlitHoleFillFirstMesh(false, 2, 0, true, false),
-         "witness nh2 cy0 hole fill allowed");
-  Expect(!AllowUnlitHoleFillFirstMesh(false, 4, 0, true, false),
-         "183918: nh4 ring is Relight-before-draw, not unlit fill");
-  Expect(!AllowUnlitHoleFillFirstMesh(false, 5, 5, true, false),
-         "rim nh5 cy5 hole fill denied");
-  Expect(!AllowUnlitHoleFillFirstMesh(true, 1, 0, true, true),
-         "has_mesh no hole fill");
+  Expect(!AllowUnlitFirstMesh(false, 1, true, true),
+         "Era28: near FOV never Unlit FirstMesh");
+  Expect(!AllowUnlitFirstMesh(false, 4, false, true),
+         "Era32: lit-ring missing waits Relight-before-draw");
   {
-    const bool fill =
-        AllowUnlitHoleFillFirstMesh(false, 1, 0, true, true);
-    Expect(fill, "compose: nh1 fill armed");
-    Expect(!ShouldHideUncomputedFullyDarkInRing(1, true, true, false,
-                                               kVisualStageLitDrawableHoriz,
-                                               false, false, fill),
-           "183918: hole-fill FirstMesh must be drawable, not hidden FullyDark");
-    Expect(ShouldHideUncomputedFullyDarkInRing(4, true, true, false),
-           "mid-ring FullyDark without fill still hidden");
+    Expect(ShouldHideUncomputedFullyDarkInRing(1, true, true, false),
+           "Era28: nh1 FullyDark hidden until lit");
+    Expect(SoftDeferMeshUntilLitPolicy(false, false, true, true, true, false),
+           "Era28: near missing+pending SoftDefer (no Unlit-near)");
+    Expect(!AllowUnlitFirstMesh(false, 1, true, true) &&
+               ShouldHideUncomputedFullyDarkInRing(1, true, true, false),
+           "compose: Unlit-near and hide must not fork (Reject Unlit near)");
   }
   Expect(FirstMeshPruneKeepHoriz(8) == kVisualStageLitDrawableHoriz,
-         "183918: FM prune keeps LitDrawable ring, not nh<=2");
+         "FM prune keeps LitDrawable ring, not nh<=2");
   Expect(FirstMeshPruneKeepHoriz(2) == 2,
          "prune keep cannot exceed focus radius");
   Expect(!SoftDeferMeshUntilLitPolicy(false, false, true, true, true, true),
