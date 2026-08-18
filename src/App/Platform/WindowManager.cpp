@@ -511,6 +511,14 @@ void UWindowManager::Update()
     tele.CameraLocomotionMs = 0.0;
     tele.CameraHorizMoveMs = 0.0;
     tele.CameraSyncMs = 0.0;
+    tele.EnvironmentTickMs = 0.0;
+    tele.NpcIntentExecuteMs = 0.0;
+    tele.ControlledInfluenceMs = 0.0;
+    tele.VitalsTickMs = 0.0;
+    tele.StatusEffectsTickMs = 0.0;
+    tele.CreaturesTotal = 0;
+    tele.CreaturesAiTicked = 0;
+    tele.WorldCreaturesSkipped = 0;
     tele.WorldStreamingPhaseMs = 0.0;
     tele.BlockInputMs = 0.0;
     tele.TickEnvMs = 0.0;

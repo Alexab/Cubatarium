@@ -439,6 +439,15 @@ struct PhysicsTelemetry
   std::string AndroidGpuDenyReason{"n/a"};
   std::string GlVersion;
   std::string GlRenderer;
+  /// CreatureTick split (appended so existing offsets stay stable).
+  double EnvironmentTickMs{0.0};
+  double NpcIntentExecuteMs{0.0};
+  double ControlledInfluenceMs{0.0};
+  double VitalsTickMs{0.0};
+  double StatusEffectsTickMs{0.0};
+  int CreaturesTotal{0};
+  int CreaturesAiTicked{0};
+  int WorldCreaturesSkipped{0};
 };
 
 } // namespace cutum

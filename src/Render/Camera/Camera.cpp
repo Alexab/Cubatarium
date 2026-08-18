@@ -989,7 +989,7 @@ bool UCamera::DoMovement(const UWorld *world)
   {
     const PhysicsTelemetry &phys = world->GetPhysicsTelemetry();
     substep_cap = std::min(kMaxPhysicsSubsteps,
-                           PhysicsSubstepCap(IsStreamingPhysicsRed(
+                           PlayerPhysicsSubstepCap(IsStreamingPhysicsRed(
                                phys.PhaseBudgetOver != 0,
                                phys.FocusMissingMesh != 0,
                                world->GetWallFrameDelta() * 1000.0)));
@@ -1105,7 +1105,8 @@ bool UCamera::DoMovement(const UWorld *world)
   if (LastPhysicsSubsteps >= substep_cap &&
       PhysicsAccumulator >= kFixedPhysicsDt)
   {
-    PhysicsAccumulator = 0.0f;
+    PhysicsAccumulator =
+        ClampPlayerPhysicsCarry(PhysicsAccumulator, kFixedPhysicsDt);
   }
 
   return is_moved;

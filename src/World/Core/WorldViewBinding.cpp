@@ -21,6 +21,7 @@
 #include "World/Diagnostics/MovementDiagnosticsRecorder.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
+#include "World/Streaming/PhysicsStepPolicy.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Core/RuntimeTuning.h"
 
@@ -455,12 +456,30 @@ void UWorld::RunLegacyPhysicsFrame()
   }
 
   const auto t_creature = clock_t::now();
+  const bool streaming_red = IsStreamingPhysicsRed(
+      PhysicsTelemetryData.PhaseBudgetOver != 0,
+      PhysicsTelemetryData.FocusMissingMesh != 0,
+      GetWallFrameDelta() * 1000.0);
+  // World AI skip is computed for telemetry/policy tests; runtime still ticks
+  // so spatial index + agents stay consistent on hitch/teleport frames.
+  const bool tick_world_ai =
+      ShouldTickWorldCreatures(streaming_red, GetWallFrameDelta() * 1000.0);
+  (void)tick_world_ai;
+  PhysicsTelemetryData.WorldCreaturesSkipped = 0;
+
+  const auto t_env = clock_t::now();
   UWorldCreatureActivitySink activitySink(*this);
   Environment.TickActivity(*this, activitySink, dt);
+  PhysicsTelemetryData.EnvironmentTickMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_env).count();
 
+  int creatures_total = 0;
+  int creatures_ai_ticked = 0;
+  const auto t_npc = clock_t::now();
   ForEachCreature(
       [&](UCreature &creature)
       {
+        ++creatures_total;
         creature.AdvanceInfluenceCooldown(dt);
         creature.TickHitFlash(dt);
         creature.TickHealthBar(dt);
@@ -473,6 +492,7 @@ void UWorld::RunLegacyPhysicsFrame()
         {
           return;
         }
+        ++creatures_ai_ticked;
         const CreatureIntent &intent = creature.GetIntent();
         if (intent.Influence.Channel == InfluenceChannel::Melee &&
             intent.Influence.TargetId != 0)
@@ -481,10 +501,15 @@ void UWorld::RunLegacyPhysicsFrame()
         }
         creature.ExecuteIntent(*this, dt);
       });
+  PhysicsTelemetryData.NpcIntentExecuteMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_npc).count();
+  PhysicsTelemetryData.CreaturesTotal = creatures_total;
+  PhysicsTelemetryData.CreaturesAiTicked = creatures_ai_ticked;
 
   // Controlled / possessed player: resolve Influence after agents (input may
   // have set Melee / Dig via PlayerInteractionRouter). Dig Intent is not
   // player-gated in Resolver; session tick uses the world DigSession.
+  const auto t_infl = clock_t::now();
   if (Environment.GetControlledCreatureId() != 0)
   {
     if (UCreature *controlled =
@@ -536,6 +561,9 @@ void UWorld::RunLegacyPhysicsFrame()
       }
     }
   }
+  PhysicsTelemetryData.ControlledInfluenceMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_infl)
+          .count();
 
   PhysicsTelemetryData.CreatureTickMs =
       std::chrono::duration<double, std::milli>(clock_t::now() - t_creature)
@@ -638,8 +666,16 @@ void UWorld::RunLegacyPhysicsFrame()
   }
 
   // After player facts sync so sprint/swim fatigue sees this frame's state.
+  const auto t_vitals = clock_t::now();
   CreatureVitalsSystem::Tick(*this, GetGameMode(), GetDifficulty(), dt);
+  PhysicsTelemetryData.VitalsTickMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_vitals)
+          .count();
+  const auto t_status = clock_t::now();
   StatusEffectSystem::Tick(*this, GetGameMode(), dt);
+  PhysicsTelemetryData.StatusEffectsTickMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_status)
+          .count();
 
   const auto t_after_move = std::chrono::high_resolution_clock::now();
   // Era14 TD-ARCH-040: UpdateStreaming / TickMeshEmerge run in

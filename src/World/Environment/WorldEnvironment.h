@@ -99,6 +99,7 @@ public:
 
   void TickActivity(class IUWorldPerception &perception,
                     class UWorldCreatureActivitySink &sink, float dt);
+  void SyncCreatureSpatialIndex();
 
   bool CheckCreatureCollisionVolume(const CollisionVolume &vol,
                                     CreatureId skipCreatureId) const;
@@ -123,7 +124,6 @@ public:
   }
 
 private:
-  void SyncCreatureSpatialIndex();
 
   UWorld &Owner;
 

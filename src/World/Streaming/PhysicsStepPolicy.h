@@ -21,6 +21,27 @@ inline int PhysicsSubstepCap(bool streaming_red)
   return streaming_red ? kPhysicsSubstepCapRed : kPhysicsSubstepCapCalm;
 }
 
+/// Player locomotion never drops to the world/red cap — input stays consistent
+/// while NPC/world work is the one that yields under hitch (input-first A).
+inline int PlayerPhysicsSubstepCap(bool streaming_red)
+{
+  (void)streaming_red;
+  return kPhysicsSubstepCapCalm;
+}
+
+/// Max leftover player steps kept across a hitch (not a spiral-of-death dump).
+constexpr int kPhysicsPlayerCarryMaxSteps = 4;
+
+/// Skip world/NPC AI on red hitch frames; player still runs full substeps.
+inline bool ShouldTickWorldCreatures(bool streaming_red, double prev_wall_ms)
+{
+  if (!streaming_red)
+  {
+    return true;
+  }
+  return prev_wall_ms <= 40.0;
+}
+
 struct PhysicsAccumulatorDrain
 {
   int steps{0};
@@ -63,6 +84,36 @@ inline PhysicsAccumulatorDrain DrainPhysicsAccumulator(float accumulator,
   if (out.steps >= cap && out.leftover >= dt)
   {
     out.leftover = 0.0f;
+  }
+  return out;
+}
+
+/// Clamp leftover player debt so the next frames catch up instead of dumping
+/// the accumulator (Gaffer leftover / Unity maximumDeltaTime carry).
+inline float ClampPlayerPhysicsCarry(float leftover, float dt)
+{
+  if (dt <= 0.0f)
+  {
+    return 0.0f;
+  }
+  if (leftover < 0.0f)
+  {
+    return 0.0f;
+  }
+  const float max_carry =
+      dt * static_cast<float>(kPhysicsPlayerCarryMaxSteps);
+  return leftover > max_carry ? max_carry : leftover;
+}
+
+/// Same drain as world, but leftover is clamped rather than dropped.
+inline PhysicsAccumulatorDrain DrainPlayerPhysicsAccumulator(float accumulator,
+                                                             float dt, int cap)
+{
+  PhysicsAccumulatorDrain out = DrainPhysicsAccumulator(accumulator, dt, cap);
+  if (out.steps >= cap)
+  {
+    const float raw = accumulator - static_cast<float>(out.steps) * dt;
+    out.leftover = ClampPlayerPhysicsCarry(raw > 0.0f ? raw : 0.0f, dt);
   }
   return out;
 }

@@ -149,6 +149,15 @@ struct FrameNumbers
   double camera_locomotion_ms{0.0};
   double camera_horiz_move_ms{0.0};
   double camera_sync_ms{0.0};
+  double environment_tick_ms{0.0};
+  double npc_intent_ms{0.0};
+  double controlled_influence_ms{0.0};
+  double vitals_tick_ms{0.0};
+  double status_effects_tick_ms{0.0};
+  int creatures_total{0};
+  int creatures_ai_ticked{0};
+  int world_creatures_skipped{0};
+  float stream_speed_clamp_scale{1.0f};
   double world_streaming_phase_ms{0.0};
   double block_input_ms{0.0};
   double tick_env_ms{0.0};
@@ -467,6 +476,15 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.camera_locomotion_ms = phys.CameraLocomotionMs;
   n.camera_horiz_move_ms = phys.CameraHorizMoveMs;
   n.camera_sync_ms = phys.CameraSyncMs;
+  n.environment_tick_ms = phys.EnvironmentTickMs;
+  n.npc_intent_ms = phys.NpcIntentExecuteMs;
+  n.controlled_influence_ms = phys.ControlledInfluenceMs;
+  n.vitals_tick_ms = phys.VitalsTickMs;
+  n.status_effects_tick_ms = phys.StatusEffectsTickMs;
+  n.creatures_total = phys.CreaturesTotal;
+  n.creatures_ai_ticked = phys.CreaturesAiTicked;
+  n.world_creatures_skipped = phys.WorldCreaturesSkipped;
+  n.stream_speed_clamp_scale = phys.StreamSpeedClampScale;
   n.world_streaming_phase_ms = phys.WorldStreamingPhaseMs;
   n.input_ms = world.GetLastInputMs();
   n.app_update_ms = world.GetLastAppUpdateMs();
@@ -839,6 +857,15 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"camera_locomotion_ms\":" << n.camera_locomotion_ms
           << ",\"camera_horiz_move_ms\":" << n.camera_horiz_move_ms
           << ",\"camera_sync_ms\":" << n.camera_sync_ms
+          << ",\"environment_tick_ms\":" << n.environment_tick_ms
+          << ",\"npc_intent_ms\":" << n.npc_intent_ms
+          << ",\"controlled_influence_ms\":" << n.controlled_influence_ms
+          << ",\"vitals_tick_ms\":" << n.vitals_tick_ms
+          << ",\"status_effects_tick_ms\":" << n.status_effects_tick_ms
+          << ",\"creatures_total\":" << n.creatures_total
+          << ",\"creatures_ai_ticked\":" << n.creatures_ai_ticked
+          << ",\"world_creatures_skipped\":" << n.world_creatures_skipped
+          << ",\"stream_speed_clamp_scale\":" << n.stream_speed_clamp_scale
           << ",\"world_streaming_phase_ms\":" << n.world_streaming_phase_ms
           << ",\"block_input_ms\":" << n.block_input_ms
           << ",\"tick_env_ms\":" << n.tick_env_ms
@@ -1353,6 +1380,14 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
               << " sticky=" << n.underfeet_sticky
               << " pending_light=" << n.underfeet_pending_light
               << " lighting_deferred=" << n.lighting_relight_deferred
+              << " env_ms=" << n.environment_tick_ms
+              << " npc_ms=" << n.npc_intent_ms
+              << " infl_ms=" << n.controlled_influence_ms
+              << " vitals_ms=" << n.vitals_tick_ms
+              << " creatures=" << n.creatures_total
+              << "/" << n.creatures_ai_ticked
+              << " world_skip=" << n.world_creatures_skipped
+              << " clamp=" << n.stream_speed_clamp_scale
               << " opaque_present=" << n.underfeet_opaque_present
               << " opaque_cmd_total=" << n.opaque_cmd_total
               << " opaque_cmd_on=" << n.opaque_cmd_on

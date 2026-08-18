@@ -12,6 +12,7 @@
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/PhysicsStepPolicy.h"
+#include "World/Streaming/InputFirstPolicy.h"
 #include "World/Streaming/FrontierStagePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 
@@ -1342,6 +1343,27 @@ int main()
     Expect(PhysicsSubstepCap(true) == kPhysicsSubstepCapRed,
            "A: red cap is 3");
     Expect(PhysicsSubstepCap(false) == 4, "A: calm cap is 4");
+    using cutum::PlayerPhysicsSubstepCap;
+    using cutum::ShouldTickWorldCreatures;
+    using cutum::DrainPlayerPhysicsAccumulator;
+    using cutum::kPhysicsPlayerCarryMaxSteps;
+    Expect(PlayerPhysicsSubstepCap(true) == 4,
+           "input-first: player cap stays 4 in red");
+    Expect(PlayerPhysicsSubstepCap(false) == 4,
+           "input-first: player cap stays 4 in calm");
+    Expect(!ShouldTickWorldCreatures(true, 150.0),
+           "input-first: skip world AI on red hitch");
+    Expect(ShouldTickWorldCreatures(true, 20.0),
+           "input-first: still tick world AI on red but calm wall");
+    Expect(ShouldTickWorldCreatures(false, 200.0),
+           "input-first: tick world AI when not red");
+    const auto player_drain = DrainPlayerPhysicsAccumulator(0.200f, dt, 3);
+    Expect(player_drain.steps == 3, "input-first: player still caps steps");
+    Expect(player_drain.leftover > dt,
+           "input-first: player leftover is carried");
+    Expect(player_drain.leftover <=
+               dt * static_cast<float>(kPhysicsPlayerCarryMaxSteps) + 1.0e-5f,
+           "input-first: player leftover clamped");
     using cutum::MovementSpeedFromDisplacement;
     const float dist = 3.0f * 4.3f / 60.0f;
     const float slow_mo_speed =
@@ -1752,6 +1774,49 @@ int main()
            "P5: drain>8 blocks dynamic cap");
     Expect(ShouldAllowDynamicCaptureMovingBgCap(0, 0, 7.0),
            "P5: stable allows dynamic cap");
+  }
+
+  // --- Input-first: underfeet reservation + speed clamp ---
+  {
+    using cutum::ApplyUnderfeetReservationFloors;
+    using cutum::ComputeStreamSpeedClampScale;
+    using cutum::EvaluateUnderfeetReservation;
+    using cutum::IsInputFirstSlaBroken;
+    using cutum::StreamSpeedClampInput;
+    Expect(!IsInputFirstSlaBroken(100.0, 10.0),
+           "input-first: wall/phys under SLA");
+    Expect(IsInputFirstSlaBroken(140.0, 10.0),
+           "input-first: wall over SLA");
+    Expect(IsInputFirstSlaBroken(100.0, 20.0),
+           "input-first: do_movement over SLA");
+    const auto idle = EvaluateUnderfeetReservation(false, false, 0);
+    Expect(!idle.active, "input-first: no reserve without underfeet_need");
+    const auto lit = EvaluateUnderfeetReservation(true, false, 4);
+    Expect(!lit.active, "input-first: no mesh reserve while pending_light");
+    const auto ready = EvaluateUnderfeetReservation(true, true, 0);
+    Expect(!ready.active, "input-first: no reserve when has_mesh");
+    const auto mesh = EvaluateUnderfeetReservation(true, false, 0);
+    Expect(mesh.active && mesh.mesh_drain_floor >= 8,
+           "input-first: reserve drain when mesh missing and lit");
+    int drain = 2;
+    int sched = 1;
+    ApplyUnderfeetReservationFloors(drain, sched, mesh);
+    Expect(drain >= 8 && sched >= 6, "input-first: floors applied");
+    StreamSpeedClampInput cin{};
+    cin.moving = true;
+    cin.missing_underfeet = true;
+    Expect(ComputeStreamSpeedClampScale(cin) == 0.85f,
+           "input-first: ground underfeet clamp 0.85");
+    cin.airborne = true;
+    Expect(ComputeStreamSpeedClampScale(cin) == 0.95f,
+           "input-first: flight clamp softer");
+    cin.player_sla_broken = true;
+    Expect(ComputeStreamSpeedClampScale(cin) == 1.0f,
+           "input-first: SLA-broken disables clamp");
+    cin.player_sla_broken = false;
+    cin.moving = false;
+    Expect(ComputeStreamSpeedClampScale(cin) == 1.0f,
+           "input-first: idle no clamp");
   }
 
   if (gFails != 0)

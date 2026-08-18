@@ -4,6 +4,7 @@
 #include "World/Streaming/ColumnRenderablePolicy.h"
 #include "World/Streaming/FocusIngressPolicy.h"
 #include "World/Streaming/IdleRecoveryPolicy.h"
+#include "World/Streaming/InputFirstPolicy.h"
 #include "World/Streaming/MeshLitGate.h"
 #include "World/Streaming/MeshWorkAdmission.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
@@ -3320,23 +3321,25 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   // P3: soft cruise clamp — underfeet (or nh<=1 ahead under HoleDrain/Deep).
   // Applied next movement tick via PhysicsTelemetry.StreamSpeedClampScale.
-  // Scale 0.85: land-south keeps underfeet≈1 all cruise; ×0.6–0.7 starved
-  // miss_end (chunks/miss_stuck regress vs P2). Soft integrity, not hard brake.
+  // Input-first: do not brake player when SLA is already broken; flight clamp
+  // is softer than ground.
   {
-    float clamp_scale = 1.0f;
+    StreamSpeedClampInput cin{};
+    cin.moving = moving;
+    cin.missing_underfeet = missing_underfeet;
+    cin.border_scale = 1.0f;
+    cin.player_sla_broken = IsInputFirstSlaBroken(
+        world.GetLastMovementFrameMs(),
+        world.GetPhysicsTelemetry().MovementStepMs);
     if (moving)
     {
       const glm::ivec3 fb = world.GetPreferredLoadFocusBlock();
       const glm::vec3 focus_pos(static_cast<float>(fb.x),
                                 static_cast<float>(fb.y),
                                 static_cast<float>(fb.z));
-      clamp_scale = std::min(
-          clamp_scale, SoftBorderSpeedScale(focus_pos, world.GetWorldBorder()));
-      if (missing_underfeet)
-      {
-        clamp_scale = 0.85f;
-      }
-      else if (found_nearest_missing)
+      cin.border_scale =
+          SoftBorderSpeedScale(focus_pos, world.GetWorldBorder());
+      if (!missing_underfeet && found_nearest_missing)
       {
         const MeshWorkAdmission &adm_now =
             mesh_service.GetMeshWorkAdmission();
@@ -3357,12 +3360,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           if (vel_len > 0.01f && hole_len > 0.01f &&
               glm::dot(vel / vel_len, to_hole / hole_len) > 0.5f)
           {
-            clamp_scale = 0.85f;
+            cin.hole_towards = true;
           }
         }
       }
     }
-    world.GetPhysicsTelemetryMutable().StreamSpeedClampScale = clamp_scale;
+    world.GetPhysicsTelemetryMutable().StreamSpeedClampScale =
+        ComputeStreamSpeedClampScale(cin);
   }
   {
     const auto calm_cap = EvaluateIdleMeshDrainCap(IdleMeshDrainCapInput{
@@ -3384,6 +3388,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       sync_cap = std::min(sync_cap < 0 ? 0 : sync_cap, calm_cap.sync_cap);
       sync_budget_ms = std::min(sync_budget_ms, calm_cap.sync_budget_ms);
     }
+  }
+  {
+    const UnderfeetReservation uf_res = EvaluateUnderfeetReservation(
+        underfeet_need,
+        !(missing_underfeet || underfeet_undrawn),
+        world.GetPhysicsTelemetry().UnderfeetPendingLight);
+    ApplyUnderfeetReservationFloors(mesh_drain, mesh_schedule, uf_res);
   }
   // F0: drain-first — ColumnFlow DrainBudget before GPU consume so PreferKick
   // from MarkRelit/tickets lands in the same frame (Sodium one-owner).
