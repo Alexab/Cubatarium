@@ -14,6 +14,7 @@
 #include "Creatures/Stats/CreatureVitalsSystem.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include "Render/Camera/Camera.h"
+#include "Navigation/NavigationPathBudget.h"
 #include "Render/Engine/ViewEngine.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/TerrainColumnUtil.h"
@@ -455,131 +456,14 @@ void UWorld::RunLegacyPhysicsFrame()
     }
   }
 
-  const auto t_creature = clock_t::now();
   const bool streaming_red = IsStreamingPhysicsRed(
       PhysicsTelemetryData.PhaseBudgetOver != 0,
       PhysicsTelemetryData.FocusMissingMesh != 0,
       GetWallFrameDelta() * 1000.0);
   const bool tick_world_ai =
       ShouldTickWorldCreatures(streaming_red, GetWallFrameDelta() * 1000.0);
+  const auto t_player = clock_t::now();
 
-  const auto t_env = clock_t::now();
-  // Always refresh the spatial index (teleport/hitch). Skip agent brains on
-  // red hitch so player fixed-step is not waiting on world AI.
-  if (tick_world_ai)
-  {
-    UWorldCreatureActivitySink activitySink(*this);
-    Environment.TickActivity(*this, activitySink, dt);
-  }
-  else
-  {
-    Environment.SyncCreatureSpatialIndex();
-  }
-  PhysicsTelemetryData.EnvironmentTickMs =
-      std::chrono::duration<double, std::milli>(clock_t::now() - t_env).count();
-
-  int creatures_total = 0;
-  int creatures_ai_ticked = 0;
-  int world_creatures_skipped = 0;
-  const auto t_npc = clock_t::now();
-  ForEachCreature(
-      [&](UCreature &creature)
-      {
-        ++creatures_total;
-        creature.AdvanceInfluenceCooldown(dt);
-        creature.TickHitFlash(dt);
-        creature.TickHealthBar(dt);
-        if (Environment.GetControlledCreatureId() != 0 &&
-            creature.GetId() == Environment.GetControlledCreatureId())
-        {
-          return;
-        }
-        if (creature.IsPossessed())
-        {
-          return;
-        }
-        if (!tick_world_ai)
-        {
-          ++world_creatures_skipped;
-          return;
-        }
-        ++creatures_ai_ticked;
-        const CreatureIntent &intent = creature.GetIntent();
-        if (intent.Influence.Channel == InfluenceChannel::Melee &&
-            intent.Influence.TargetId != 0)
-        {
-          CreatureCombat::TryMeleeStrike(*this, creature, GetGameMode());
-        }
-        creature.ExecuteIntent(*this, dt);
-      });
-  PhysicsTelemetryData.NpcIntentExecuteMs =
-      std::chrono::duration<double, std::milli>(clock_t::now() - t_npc).count();
-  PhysicsTelemetryData.CreaturesTotal = creatures_total;
-  PhysicsTelemetryData.CreaturesAiTicked = creatures_ai_ticked;
-  PhysicsTelemetryData.WorldCreaturesSkipped = world_creatures_skipped;
-
-  // Controlled / possessed player: resolve Influence after agents (input may
-  // have set Melee / Dig via PlayerInteractionRouter). Dig Intent is not
-  // player-gated in Resolver; session tick uses the world DigSession.
-  const auto t_infl = clock_t::now();
-  if (Environment.GetControlledCreatureId() != 0)
-  {
-    if (UCreature *controlled =
-            GetCreature(Environment.GetControlledCreatureId()))
-    {
-      const CreatureIntent &intent = controlled->GetIntent();
-      if (intent.Influence.Channel == InfluenceChannel::Dig)
-      {
-        InfluencePrediction pred =
-            InfluenceResolver::Resolve(*this, *controlled, GetGameMode(),
-                                       nullptr);
-        InfluenceApplier::Apply(*this, pred, GetGameMode(), dt);
-        if (!HasBreakSession())
-        {
-          CreatureIntent cleared = controlled->GetIntent();
-          cleared.Influence = InfluenceIntent{};
-          controlled->SetIntent(cleared);
-        }
-      }
-      else if (intent.Influence.Channel == InfluenceChannel::Melee &&
-               intent.Influence.TargetId != 0)
-      {
-        CreatureCombat::TryMeleeStrike(*this, *controlled, GetGameMode());
-        // One-shot: clear Melee Intent after resolve attempt so hold-LMB dig
-        // does not spam; cooldown still gates actual hits.
-        CreatureIntent cleared = intent;
-        cleared.attackTargetId = 0;
-        cleared.Influence = InfluenceIntent{};
-        controlled->SetIntent(cleared);
-      }
-      else if (intent.Influence.Channel == InfluenceChannel::Ranged &&
-               intent.Influence.TargetId != 0)
-      {
-        CreatureCombat::TryRangedStrike(*this, *controlled, GetGameMode());
-        CreatureIntent cleared = intent;
-        cleared.attackTargetId = 0;
-        cleared.Influence = InfluenceIntent{};
-        controlled->SetIntent(cleared);
-      }
-      else if (intent.Influence.Channel == InfluenceChannel::Use)
-      {
-        InfluencePrediction pred =
-            InfluenceResolver::Resolve(*this, *controlled, GetGameMode(),
-                                       nullptr);
-        InfluenceApplier::Apply(*this, pred, GetGameMode(), dt);
-        CreatureIntent cleared = intent;
-        cleared.Influence = InfluenceIntent{};
-        controlled->SetIntent(cleared);
-      }
-    }
-  }
-  PhysicsTelemetryData.ControlledInfluenceMs =
-      std::chrono::duration<double, std::milli>(clock_t::now() - t_infl)
-          .count();
-
-  PhysicsTelemetryData.CreatureTickMs =
-      std::chrono::duration<double, std::milli>(clock_t::now() - t_creature)
-          .count();
   const auto t_cam = clock_t::now();
   bool is_moved = camera && camera->DoMovement(this);
   PhysicsTelemetryData.CameraDoMovementMs =
@@ -608,7 +492,8 @@ void UWorld::RunLegacyPhysicsFrame()
     was_collision_ready = collision_ready;
   }
   prev_collision_ring_ready = collision_ready;
-  if (camera && hasFeetBlockForReadiness && !collision_ready)
+  if (camera && hasFeetBlockForReadiness &&
+      (!collision_ready || PhysicsTelemetryData.UnderfeetHasMesh == 0))
   {
     camera->SuspendFallThroughUnloadedChunks();
   }
@@ -677,6 +562,147 @@ void UWorld::RunLegacyPhysicsFrame()
     is_moved = true;
   }
 
+  PhysicsTelemetryData.CameraSyncMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_sync).count();
+  PhysicsTelemetryData.PlayerLocomotionBlockMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_player)
+          .count();
+
+  const auto t_ai = clock_t::now();
+  UNavigationPathBudget::SetExpandsPerTick(streaming_red ? 100 : 256);
+
+  const auto t_env = clock_t::now();
+  // Input-first A1: world AI runs after player locomotion. Skip agent brains on
+  // red hitch so fixed-step input is not waiting on environment work.
+  if (tick_world_ai)
+  {
+    const bool stress_tick =
+        streaming_red || GetWallFrameDelta() * 1000.0 > 28.0;
+    UWorldCreatureActivitySink activitySink(*this);
+    Environment.TickActivity(*this, activitySink, dt, stress_tick);
+  }
+  else
+  {
+    Environment.SyncCreatureSpatialIndex();
+  }
+  PhysicsTelemetryData.EnvironmentTickMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_env).count();
+
+  int creatures_total = 0;
+  int creatures_ai_ticked = 0;
+  int world_creatures_skipped = 0;
+  const auto t_npc = clock_t::now();
+  ForEachCreature(
+      [&](UCreature &creature)
+      {
+        ++creatures_total;
+        creature.AdvanceInfluenceCooldown(dt);
+        creature.TickHitFlash(dt);
+        creature.TickHealthBar(dt);
+        if (Environment.GetControlledCreatureId() != 0 &&
+            creature.GetId() == Environment.GetControlledCreatureId())
+        {
+          return;
+        }
+        if (creature.IsPossessed())
+        {
+          return;
+        }
+        if (!tick_world_ai)
+        {
+          ++world_creatures_skipped;
+          return;
+        }
+        ++creatures_ai_ticked;
+        const CreatureIntent &intent = creature.GetIntent();
+        if (intent.Influence.Channel == InfluenceChannel::Melee &&
+            intent.Influence.TargetId != 0)
+        {
+          CreatureCombat::TryMeleeStrike(*this, creature, GetGameMode());
+        }
+        creature.ExecuteIntent(*this, dt);
+      });
+  PhysicsTelemetryData.NpcIntentExecuteMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_npc).count();
+  PhysicsTelemetryData.CreaturesTotal = creatures_total;
+  PhysicsTelemetryData.CreaturesAiTicked = creatures_ai_ticked;
+  PhysicsTelemetryData.WorldCreaturesSkipped = world_creatures_skipped;
+  if (tick_world_ai)
+  {
+    PhysicsTelemetryData.CreaturesAiBudget =
+        Environment.GetLastActivityAgentsTicked();
+    PhysicsTelemetryData.CreaturesAiDeferred =
+        Environment.GetLastActivityAgentsDeferred();
+  }
+  else
+  {
+    PhysicsTelemetryData.CreaturesAiBudget = 0;
+    PhysicsTelemetryData.CreaturesAiDeferred = 0;
+  }
+
+  // Controlled / possessed player: resolve Influence after agents (input may
+  // have set Melee / Dig via PlayerInteractionRouter). Dig Intent is not
+  // player-gated in Resolver; session tick uses the world DigSession.
+  const auto t_infl = clock_t::now();
+  if (Environment.GetControlledCreatureId() != 0)
+  {
+    if (UCreature *controlled_creature =
+            GetCreature(Environment.GetControlledCreatureId()))
+    {
+      const CreatureIntent &intent = controlled_creature->GetIntent();
+      if (intent.Influence.Channel == InfluenceChannel::Dig)
+      {
+        InfluencePrediction pred =
+            InfluenceResolver::Resolve(*this, *controlled_creature, GetGameMode(),
+                                       nullptr);
+        InfluenceApplier::Apply(*this, pred, GetGameMode(), dt);
+        if (!HasBreakSession())
+        {
+          CreatureIntent cleared = controlled_creature->GetIntent();
+          cleared.Influence = InfluenceIntent{};
+          controlled_creature->SetIntent(cleared);
+        }
+      }
+      else if (intent.Influence.Channel == InfluenceChannel::Melee &&
+               intent.Influence.TargetId != 0)
+      {
+        CreatureCombat::TryMeleeStrike(*this, *controlled_creature, GetGameMode());
+        // One-shot: clear Melee Intent after resolve attempt so hold-LMB dig
+        // does not spam; cooldown still gates actual hits.
+        CreatureIntent cleared = intent;
+        cleared.attackTargetId = 0;
+        cleared.Influence = InfluenceIntent{};
+        controlled_creature->SetIntent(cleared);
+      }
+      else if (intent.Influence.Channel == InfluenceChannel::Ranged &&
+               intent.Influence.TargetId != 0)
+      {
+        CreatureCombat::TryRangedStrike(*this, *controlled_creature, GetGameMode());
+        CreatureIntent cleared = intent;
+        cleared.attackTargetId = 0;
+        cleared.Influence = InfluenceIntent{};
+        controlled_creature->SetIntent(cleared);
+      }
+      else if (intent.Influence.Channel == InfluenceChannel::Use)
+      {
+        InfluencePrediction pred =
+            InfluenceResolver::Resolve(*this, *controlled_creature, GetGameMode(),
+                                       nullptr);
+        InfluenceApplier::Apply(*this, pred, GetGameMode(), dt);
+        CreatureIntent cleared = intent;
+        cleared.Influence = InfluenceIntent{};
+        controlled_creature->SetIntent(cleared);
+      }
+    }
+  }
+  PhysicsTelemetryData.ControlledInfluenceMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_infl)
+          .count();
+
+  PhysicsTelemetryData.WorldAiAfterPlayerMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_ai).count();
+  PhysicsTelemetryData.CreatureTickMs = PhysicsTelemetryData.WorldAiAfterPlayerMs;
+
   // After player facts sync so sprint/swim fatigue sees this frame's state.
   const auto t_vitals = clock_t::now();
   CreatureVitalsSystem::Tick(*this, GetGameMode(), GetDifficulty(), dt);
@@ -707,8 +733,6 @@ void UWorld::RunLegacyPhysicsFrame()
     }
   }
 
-  PhysicsTelemetryData.CameraSyncMs =
-      std::chrono::duration<double, std::milli>(clock_t::now() - t_sync).count();
   auto t_end = clock_t::now();
   DurationDoMovementMks = static_cast<uint64_t>(
       std::chrono::duration<double, std::micro>(t_end - t_begin).count());
@@ -818,7 +842,8 @@ void UWorld::TickWorldStreamingPhase()
   const bool miss_carve_out =
       (PhysicsTelemetryData.FocusMissingMesh != 0 &&
        PhysicsTelemetryData.MissHoriz <= 2) ||
-      PhysicsTelemetryData.FocusStickyRemesh > 0;
+      PhysicsTelemetryData.FocusStickyRemesh > 0 ||
+      PhysicsTelemetryData.UnderfeetHasMesh == 0;
   const auto &tune = URuntimeTuning::Get();
   const float phase_budget = tune.StreamingPhaseBudgetMs;
   const float reserved =

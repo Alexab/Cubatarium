@@ -476,6 +476,17 @@ inline int LandRelightGpuApplyFloor(int relight_fifo_n, int pending_focus,
   return std::max(base_gpu_apply, 12);
 }
 
+/// B2: near underfeet nh≤1 miss — guarantee at least one GPU apply per frame.
+inline int NearUnderfeetGpuApplyFloor(bool missing_underfeet, int nh,
+                                      int pending_light, int base_gpu_apply)
+{
+  if (missing_underfeet && nh <= 1 && pending_light <= 0)
+  {
+    return std::max(base_gpu_apply, 1);
+  }
+  return base_gpu_apply;
+}
+
 /// Era37 P4: enter warmup SoftDefer empty ownership boost.
 inline int EnterWarmupSoftDeferOwnershipCap(int base_cap, int softdefer_empty_n,
                                             bool enter_warmup_active)
@@ -669,11 +680,14 @@ inline bool EnterSoftDeferBlocksWarmupExit(bool empty_or_held, bool underfeet,
 
 /// Yield visual warmup only when gate remaining==0 AND underfeet present
 /// (slice lit/true-dark + opaque draw). remaining alone is not SoT.
+/// Underfeet GPU pending must not be ignored — CPU drawable ≠ first paint.
 inline bool EnterVisualWarmupYieldsToGateRemaining(bool enter_gate_active,
                                                    int visibility_debt,
-                                                   bool underfeet_present_ready)
+                                                   bool underfeet_present_ready,
+                                                   int underfeet_gpu_pending = 0)
 {
-  return enter_gate_active && visibility_debt <= 0 && underfeet_present_ready;
+  return enter_gate_active && visibility_debt <= 0 &&
+         underfeet_present_ready && underfeet_gpu_pending <= 0;
 }
 
 /// Alias kept for ocean/cruise policy readers.

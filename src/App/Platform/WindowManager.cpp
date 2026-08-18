@@ -519,6 +519,10 @@ void UWindowManager::Update()
     tele.CreaturesTotal = 0;
     tele.CreaturesAiTicked = 0;
     tele.WorldCreaturesSkipped = 0;
+    tele.PlayerLocomotionBlockMs = 0.0;
+    tele.WorldAiAfterPlayerMs = 0.0;
+    tele.CreaturesAiBudget = 0;
+    tele.CreaturesAiDeferred = 0;
     tele.WorldStreamingPhaseMs = 0.0;
     tele.BlockInputMs = 0.0;
     tele.TickEnvMs = 0.0;

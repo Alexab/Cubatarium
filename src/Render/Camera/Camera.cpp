@@ -343,9 +343,17 @@ void UCamera::ClearShiftKeyState()
 
 bool UCamera::OnSpacePressed()
 {
+  SpacePressedThisFrame = true;
   const bool toggled = Locomotion.OnSpacePressed();
   SyncFreeMoveFromController();
   return toggled;
+}
+
+bool UCamera::ConsumeSpacePressedThisFrame()
+{
+  const bool pressed = SpacePressedThisFrame;
+  SpacePressedThisFrame = false;
+  return pressed;
 }
 
 bool UCamera::TryToggleFlightOnDoubleSpace() { return OnSpacePressed(); }
@@ -847,6 +855,14 @@ void UCamera::UpdatePose()
 
 void UCamera::UpdateKeyStatus(size_t key_index, bool is_pressed)
 {
+  if (key_index == GLFW_KEY_SPACE && is_pressed)
+  {
+    const auto it = KeysStatus.find(key_index);
+    if (it == KeysStatus.end() || !it->second)
+    {
+      SpacePressedThisFrame = true;
+    }
+  }
   KeysStatus[key_index] = is_pressed;
 }
 
@@ -976,7 +992,7 @@ bool UCamera::DoMovement(const UWorld *world)
   {
     ClearShiftKeyState();
   }
-  const PlayerInput input = BuildPlayerInput(false);
+  const PlayerInput input = BuildPlayerInput(ConsumeSpacePressedThisFrame());
 
   bool is_moved(false);
   SyncFreeMoveFromController();

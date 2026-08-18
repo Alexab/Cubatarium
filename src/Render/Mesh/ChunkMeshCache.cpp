@@ -668,7 +668,10 @@ bool UChunkMeshCache::HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const
   }
   if (it->second.GpuResident && it->second.GpuQuadCount > 0)
   {
-    return ChunkHasLiveGpuDraw(chunk_coord);
+    // Quads on GPU are a mesh even if compact cull hid the draw this frame.
+    // Requiring live instance count made underfeet_has_mesh=0 / reason=7
+    // after enter warmup uploaded geometry (manual 191142 blue screen).
+    return true;
   }
   for (const GreedyMeshBatch &batch : it->second.batches)
   {

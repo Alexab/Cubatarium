@@ -448,6 +448,11 @@ struct PhysicsTelemetry
   int CreaturesTotal{0};
   int CreaturesAiTicked{0};
   int WorldCreaturesSkipped{0};
+  /// Input-first A1: player locomotion before world AI tail.
+  double PlayerLocomotionBlockMs{0.0};
+  double WorldAiAfterPlayerMs{0.0};
+  int CreaturesAiBudget{0};
+  int CreaturesAiDeferred{0};
 };
 
 } // namespace cutum

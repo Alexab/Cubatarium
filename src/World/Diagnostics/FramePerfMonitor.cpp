@@ -157,6 +157,10 @@ struct FrameNumbers
   int creatures_total{0};
   int creatures_ai_ticked{0};
   int world_creatures_skipped{0};
+  double player_locomotion_block_ms{0.0};
+  double world_ai_after_player_ms{0.0};
+  int creatures_ai_budget{0};
+  int creatures_ai_deferred{0};
   float stream_speed_clamp_scale{1.0f};
   double world_streaming_phase_ms{0.0};
   double block_input_ms{0.0};
@@ -484,6 +488,10 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.creatures_total = phys.CreaturesTotal;
   n.creatures_ai_ticked = phys.CreaturesAiTicked;
   n.world_creatures_skipped = phys.WorldCreaturesSkipped;
+  n.player_locomotion_block_ms = phys.PlayerLocomotionBlockMs;
+  n.world_ai_after_player_ms = phys.WorldAiAfterPlayerMs;
+  n.creatures_ai_budget = phys.CreaturesAiBudget;
+  n.creatures_ai_deferred = phys.CreaturesAiDeferred;
   n.stream_speed_clamp_scale = phys.StreamSpeedClampScale;
   n.world_streaming_phase_ms = phys.WorldStreamingPhaseMs;
   n.input_ms = world.GetLastInputMs();
@@ -865,6 +873,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"creatures_total\":" << n.creatures_total
           << ",\"creatures_ai_ticked\":" << n.creatures_ai_ticked
           << ",\"world_creatures_skipped\":" << n.world_creatures_skipped
+          << ",\"player_locomotion_block_ms\":" << n.player_locomotion_block_ms
+          << ",\"world_ai_after_player_ms\":" << n.world_ai_after_player_ms
+          << ",\"creatures_ai_budget\":" << n.creatures_ai_budget
+          << ",\"creatures_ai_deferred\":" << n.creatures_ai_deferred
           << ",\"stream_speed_clamp_scale\":" << n.stream_speed_clamp_scale
           << ",\"world_streaming_phase_ms\":" << n.world_streaming_phase_ms
           << ",\"block_input_ms\":" << n.block_input_ms

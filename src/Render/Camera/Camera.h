@@ -161,6 +161,8 @@ public:
   void ClearShiftKeyState();
   void SetSprintActive(bool active) { SprintActive = active; }
   PlayerInput GetMovementInput() const;
+  /// One-shot jump edge for fixed-step substeps (Unity FixedInputEvent).
+  bool ConsumeSpacePressedThisFrame();
 
 private:
   glm::vec3 ComputeHorizontalShift(float deltaTime);
@@ -241,6 +243,7 @@ private:
   StepUpAnimation StepUpAnim;
 
   bool SprintActive{false};
+  bool SpacePressedThisFrame{false};
 
   CameraPerspective Perspective{CameraPerspective::FirstPerson};
   float ThirdPersonDistance{4.0f};

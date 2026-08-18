@@ -5824,8 +5824,10 @@ void UWorld::SampleEnterGameMeshWarmupBlockers(EnterGameMeshWarmupBlockers &out)
   {
     out.dirty = HasDirtyWithinHorizontalRadiusBand(mesh, center, radius, cy0,
                                                    cy1);
-    // Residual deep SoftDefer empty GPU/async is not an enter blocker.
-    out.gpu_pending_near = 0;
+    // Hinterland GPU/async is not an enter blocker; underfeet GPU still is
+    // (remaining==0 + CPU drawable used to drop the bar while gpu_finish=0).
+    out.gpu_pending_near =
+        mesh.CountPendingGpuAppliesInHorizontalRadius(center, 1);
     out.async_mesh_pending = false;
     return;
   }
@@ -5868,16 +5870,19 @@ bool UWorld::NeedsEnterGameVisualWarmup() const
     return false;
   }
   const bool underfeet_present = IsEnterUnderfeetPresentReady();
+  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+  const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
+  const int underfeet_gpu_pending =
+      MeshService->CountPendingGpuAppliesInHorizontalRadius(center, 1);
   // Yield when LitDrawable r=4 is VisualReady (not r=2 Dirty-clear).
   if (EnterVisualWarmupYieldsToGateRemaining(EnterLitGateActive,
                                             CountEnterVisibilityDebt(),
-                                            underfeet_present))
+                                            underfeet_present,
+                                            underfeet_gpu_pending))
   {
     return false;
   }
   const UWorldMeshService &mesh = *MeshService;
-  const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
-  const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
   const glm::ivec3 focus_ground(center.x, 0, center.z);
   const int visual_r = EnterVisualWarmupRadiusChunks();
   if (HasPendingLightBeforeMeshNear(focus_ground, visual_r))
@@ -6598,6 +6603,8 @@ void UWorld::EndEnterLitGate()
     MeshService->ClearEnterTerminalHeld();
   }
   SetStreamingEnabled(StreamingEnabledBeforeEnterLitGate);
+  EnsurePlayerOnGround();
+  PhysicsSuspendFrames = std::max(PhysicsSuspendFrames, 2);
 }
 
 int UWorld::CountEnterFovLitDebt() const
@@ -7197,7 +7204,8 @@ int UWorld::CountCreateNearFovWarmupDebt(bool *out_underfeet_lit_ready) const
   int debt = 0;
   const int vis_debt = CountEnterVisibilityDebt();
   const bool gate_visual_done = EnterVisualWarmupYieldsToGateRemaining(
-      EnterLitGateActive, vis_debt, IsEnterUnderfeetPresentReady());
+      EnterLitGateActive, vis_debt, IsEnterUnderfeetPresentReady(),
+      mesh.CountPendingGpuAppliesInHorizontalRadius(center, 1));
   if (HasPendingLightBeforeMeshNear(focus_ground, near_r))
   {
     ++debt;

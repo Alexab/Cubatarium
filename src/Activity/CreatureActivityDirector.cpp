@@ -66,19 +66,45 @@ void UCreatureActivityDirector::OnCreatureRemoved(CreatureId Id)
 
 void UCreatureActivityDirector::TickAgents(IUWorldPerception &perception,
                                            IUCreatureActivitySink &sink,
-                                           float dt)
+                                           float dt, bool stress_tick)
 {
+  LastAgentsTicked = 0;
+  LastAgentsDeferred = 0;
   AccumulatedTickDt += dt;
   if (AccumulatedTickDt < ActivityTickInterval)
   {
     return;
   }
-  const float cognitive_dt = AccumulatedTickDt;
-  AccumulatedTickDt = 0.0f;
+  const float cognitive_dt =
+      std::min(AccumulatedTickDt, kMaxCognitiveDt);
+  AccumulatedTickDt -= cognitive_dt;
   UNavigationPathBudget::BeginActivityTick();
+  const size_t agent_count = Agents.size();
+  if (agent_count == 0)
+  {
+    return;
+  }
+  if (stress_tick && agent_count > 1)
+  {
+    const size_t max_per_tick = std::max(
+        size_t{1},
+        std::min(size_t{kStressAgentsPerTickCap}, agent_count / 4));
+    LastAgentsDeferred =
+        static_cast<int>(agent_count > max_per_tick ? agent_count - max_per_tick
+                                                    : 0);
+    for (size_t i = 0; i < max_per_tick; ++i)
+    {
+      const size_t idx = (AgentRoundRobinCursor + i) % agent_count;
+      Agents[idx]->Tick(perception, sink, cognitive_dt);
+      ++LastAgentsTicked;
+    }
+    AgentRoundRobinCursor = (AgentRoundRobinCursor + max_per_tick) % agent_count;
+    return;
+  }
   for (const auto &agent : Agents)
   {
     agent->Tick(perception, sink, cognitive_dt);
+    ++LastAgentsTicked;
   }
 }
 

@@ -2,6 +2,7 @@
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Engine/GreedyVertexPool.h"
 #include "Render/Camera/Frustum.h"
+#include "Render/Camera/GpuPassRefreshPolicy.h"
 #include "Render/GlIncludes.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/RuntimeTuning.h"
@@ -105,21 +106,9 @@ void UGreedyGpuBackend::ReleasePooledBatch(GreedyGpuBatch &batch,
 void UGreedyGpuBackend::FillBatchCull(GreedyGpuBatch &dst,
                                       const GreedyBatchRef &ref)
 {
-  const glm::vec3 bmin = ChunkAABBMin(ref.chunkCoord);
-  const glm::vec3 bmax = ChunkAABBMax(ref.chunkCoord);
-  const glm::vec3 center = (bmin + bmax) * 0.5f;
-  const float radius = glm::length(bmax - center);
   dst.chunkCoord = ref.chunkCoord;
-  dst.cullSphere[0] = center.x;
-  dst.cullSphere[1] = center.y;
-  dst.cullSphere[2] = center.z;
-  dst.cullSphere[3] = radius > 0.0f ? radius : 0.5f;
-  dst.cullAabbMin[0] = bmin.x;
-  dst.cullAabbMin[1] = bmin.y;
-  dst.cullAabbMin[2] = bmin.z;
-  dst.cullAabbMax[0] = bmax.x;
-  dst.cullAabbMax[1] = bmax.y;
-  dst.cullAabbMax[2] = bmax.z;
+  FillChunkCullFields(ref.chunkCoord, dst.cullSphere, dst.cullAabbMin,
+                      dst.cullAabbMax);
   dst.drawInstanceCount = 1;
 }
 
@@ -222,11 +211,63 @@ void UGreedyGpuBackend::RefreshPassRefs(
     uint64_t mesh_revision, uint64_t cull_revision, uint64_t sort_revision)
 {
   // P2: CullRevision only invalidates draw instance counts, not geometry.
-  if (mesh_revision == cache.meshRevision &&
-      sort_revision == cache.sortRevision)
+  // Exception: degenerate AABB (warmup upload skipped FillBatchCull) or a
+  // disjoint visible set after teleport / first paint — rebuild or repair.
   {
-    cache.cullRevision = cull_revision;
-    return;
+    std::unordered_set<glm::ivec3, IVec3Hash> gpu_chunks;
+    gpu_chunks.reserve(cache.batches.size());
+    bool degenerate = false;
+    for (const GreedyGpuBatch &b : cache.batches)
+    {
+      if (!b.pooled || b.indexCountGl <= 0)
+      {
+        continue;
+      }
+      gpu_chunks.insert(b.chunkCoord);
+      if (BatchCullAabbDegenerate(b.cullAabbMin, b.cullAabbMax))
+      {
+        degenerate = true;
+      }
+    }
+    size_t visible_refs = 0;
+    size_t overlap = 0;
+    for (const GreedyBatchRef &ref : refs)
+    {
+      ++visible_refs;
+      if (gpu_chunks.count(ref.chunkCoord) > 0)
+      {
+        ++overlap;
+      }
+    }
+    const bool need_rebuild = GpuPassVisibleSetNeedsRebuild(
+        overlap, visible_refs, cache.batches.size());
+    if (mesh_revision == cache.meshRevision &&
+        sort_revision == cache.sortRevision && !need_rebuild)
+    {
+      if (degenerate)
+      {
+        size_t write_index = 0;
+        for (const GreedyBatchRef &ref : refs)
+        {
+          const GreedyMeshBatch *batch = meshCache.TryGetGreedyBatch(ref);
+          if (!batch || batch->vertices.empty() || batch->indices.empty())
+          {
+            continue;
+          }
+          if (write_index < cache.batches.size())
+          {
+            FillBatchCull(cache.batches[write_index], ref);
+          }
+          ++write_index;
+        }
+        cache.cullRevision = cull_revision;
+        cache.IndirectCullReady = false;
+        cache.GpuCompactActive = false;
+        return;
+      }
+      cache.cullRevision = cull_revision;
+      return;
+    }
   }
 
   std::unordered_set<glm::ivec3, IVec3Hash> dirty;

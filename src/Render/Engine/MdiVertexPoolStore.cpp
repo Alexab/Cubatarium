@@ -1,5 +1,6 @@
 #include "Render/Engine/MdiVertexPoolStore.h"
 #include "Render/Backend/GpuHotPathFallback.h"
+#include "Render/Camera/GpuPassRefreshPolicy.h"
 #include "Render/GlIncludes.h"
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
@@ -569,7 +570,10 @@ void UMdiVertexPoolStore::RefreshPassRefs(
   // (glMapBufferRange). Do not stage a second MappedVbo copy (draw uses pool).
   UCpuStagingGpuStore::RefreshPassRefs(cache, meshCache, refs, mesh_revision,
                                        cull_revision, sort_revision);
-  if (geometry_refresh && cache.usesVertexPool && !refs.empty())
+  const bool cull_ssbo_stale =
+      cache.usesVertexPool && !refs.empty() && !cache.GpuCompactActive;
+  if ((geometry_refresh || cull_ssbo_stale) && cache.usesVertexPool &&
+      !refs.empty())
   {
     ++MappedUploadFrames;
     RebuildIndirectCmdTable(cache);
@@ -650,6 +654,7 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
 
   uint64_t aabb_on = 0;
   uint64_t eligible = 0;
+  bool any_degenerate = false;
   for (const GreedyGpuBatch &b : cache.batches)
   {
     if (!b.pooled || b.indexCountGl <= 0)
@@ -657,6 +662,10 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
       continue;
     }
     ++eligible;
+    if (BatchCullAabbDegenerate(b.cullAabbMin, b.cullAabbMax))
+    {
+      any_degenerate = true;
+    }
     const glm::vec3 bmin(b.cullAabbMin[0], b.cullAabbMin[1], b.cullAabbMin[2]);
     const glm::vec3 bmax(b.cullAabbMax[0], b.cullAabbMax[1], b.cullAabbMax[2]);
     if (frustum.IntersectsChunkAABB(bmin, bmax, camera_pos, max_cull_distance,
@@ -667,6 +676,71 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   }
   LastCpuAabbWouldOn_ = aabb_on;
   LastCullOpaqueTotal_ = eligible;
+
+  if (ShouldFailOpenGpuCompactCull(aabb_on, eligible, any_degenerate))
+  {
+    bool repaired = false;
+    for (GreedyGpuBatch &b : cache.batches)
+    {
+      if (!b.pooled || b.indexCountGl <= 0)
+      {
+        continue;
+      }
+      if (BatchCullAabbDegenerate(b.cullAabbMin, b.cullAabbMax))
+      {
+        FillChunkCullFields(b.chunkCoord, b.cullSphere, b.cullAabbMin,
+                            b.cullAabbMax);
+        repaired = true;
+      }
+    }
+    if (repaired)
+    {
+      aabb_on = 0;
+      any_degenerate = false;
+      for (const GreedyGpuBatch &b : cache.batches)
+      {
+        if (!b.pooled || b.indexCountGl <= 0)
+        {
+          continue;
+        }
+        if (BatchCullAabbDegenerate(b.cullAabbMin, b.cullAabbMax))
+        {
+          any_degenerate = true;
+        }
+        const glm::vec3 bmin(b.cullAabbMin[0], b.cullAabbMin[1],
+                             b.cullAabbMin[2]);
+        const glm::vec3 bmax(b.cullAabbMax[0], b.cullAabbMax[1],
+                             b.cullAabbMax[2]);
+        if (frustum.IntersectsChunkAABB(bmin, bmax, camera_pos,
+                                        max_cull_distance, horizontal_distance))
+        {
+          ++aabb_on;
+        }
+      }
+      LastCpuAabbWouldOn_ = aabb_on;
+      cache.GpuCompactActive = false;
+    }
+  }
+  if (ShouldFailOpenGpuCompactCull(aabb_on, eligible, any_degenerate))
+  {
+    ApplyFrustumInstanceCull(cache, frustum, camera_pos, max_cull_distance,
+                             horizontal_distance);
+    if (LastCullOpaqueOn_ == 0 && eligible > 0)
+    {
+      for (GreedyGpuBatch &b : cache.batches)
+      {
+        if (b.pooled && b.indexCountGl > 0)
+        {
+          b.drawInstanceCount = 1;
+        }
+      }
+      LastCullOpaqueOn_ = eligible;
+      LastCpuAabbWouldOn_ = eligible;
+      cache.IndirectCullReady = true;
+      cache.GpuCompactActive = false;
+    }
+    return false;
+  }
 
   if (ResolveGpuCullMode() == GpuCullMode::Cpu)
   {

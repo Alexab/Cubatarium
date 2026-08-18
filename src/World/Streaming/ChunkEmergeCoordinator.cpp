@@ -1591,21 +1591,35 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool healed_idle_emerge =
       !moving && !visual_holes && !missing_underfeet &&
       !missing_visible_mesh && pending_focus_count == 0;
+  {
+    constexpr double kWallEmaAlpha = 0.1;
+    if (WallEmaMs <= 0.0)
+    {
+      WallEmaMs = last_frame_wall_ms;
+    }
+    else
+    {
+      WallEmaMs = WallEmaMs * (1.0 - kWallEmaAlpha) +
+                  last_frame_wall_ms * kWallEmaAlpha;
+    }
+  }
+  const double adaptive_moving_emerge =
+      std::clamp(0.12 * WallEmaMs, 8.0, 20.0);
   mesh_service.SetMeshEmergeTotalBudgetMs(
-      moving ? 25.0
+      moving ? adaptive_moving_emerge
              : (healed_idle_emerge
                     ? (idle_focus_dirty_debt ? 28.0 : 14.0)
                     : 60.0));
   auto clamp_emerge_to_phase = [&]()
   {
     const double cap = world.GetPhysicsTelemetry().EmergeBudgetCapMs;
-    if (cap <= 0.0)
-    {
-      return;
-    }
+    const bool protect_near = ShouldProtectNearEmergeFromPhaseClamp(
+        missing_underfeet, nearest_miss_h,
+        world.GetPhysicsTelemetry().UnderfeetHasMesh != 0);
     mesh_service.SetMeshEmergeTotalBudgetMs(static_cast<float>(
-        std::min(static_cast<double>(mesh_service.GetMeshEmergeTotalBudgetMs()),
-                 cap)));
+        ApplyPhaseEmergeClamp(
+            static_cast<double>(mesh_service.GetMeshEmergeTotalBudgetMs()), cap,
+            protect_near)));
   };
   clamp_emerge_to_phase();
   // Era31 I-T2: cap emerge + defer far stale remesh under ocean heal pressure.
@@ -3328,9 +3342,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     cin.moving = moving;
     cin.missing_underfeet = missing_underfeet;
     cin.border_scale = 1.0f;
-    cin.player_sla_broken = IsInputFirstSlaBroken(
+    cin.player_sla_broken = IsInputFirstPlayerSlaBroken(
         world.GetLastMovementFrameMs(),
-        world.GetPhysicsTelemetry().MovementStepMs);
+        world.GetPhysicsTelemetry().PlayerLocomotionBlockMs);
     if (moving)
     {
       const glm::ivec3 fb = world.GetPreferredLoadFocusBlock();
@@ -3368,6 +3382,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     world.GetPhysicsTelemetryMutable().StreamSpeedClampScale =
         ComputeStreamSpeedClampScale(cin);
   }
+  const UnderfeetReservation uf_res = EvaluateUnderfeetReservation(
+      underfeet_need, !(missing_underfeet || underfeet_undrawn),
+      world.GetPhysicsTelemetry().UnderfeetPendingLight);
   {
     const auto calm_cap = EvaluateIdleMeshDrainCap(IdleMeshDrainCapInput{
         moving, missing_visible_mesh, pending_focus_count, black_sticky,
@@ -3389,13 +3406,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       sync_budget_ms = std::min(sync_budget_ms, calm_cap.sync_budget_ms);
     }
   }
-  {
-    const UnderfeetReservation uf_res = EvaluateUnderfeetReservation(
-        underfeet_need,
-        !(missing_underfeet || underfeet_undrawn),
-        world.GetPhysicsTelemetry().UnderfeetPendingLight);
-    ApplyUnderfeetReservationFloors(mesh_drain, mesh_schedule, uf_res);
-  }
+  ApplyUnderfeetReservationFloors(mesh_drain, mesh_schedule, uf_res);
   // F0: drain-first — ColumnFlow DrainBudget before GPU consume so PreferKick
   // from MarkRelit/tickets lands in the same frame (Sodium one-owner).
   // Single Seam MarkDirty window: DrainRemeshSeamBudget here only (mid-frame
@@ -3419,8 +3430,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const int consume_gpu_base =
         std::max(early_adm.gpu_apply_max,
                  std::max(3, std::max(mesh_drain, mesh_schedule)));
-    const int consume_gpu = LandRelightGpuApplyFloor(
+    const int underfeet_apply_nh = missing_underfeet ? 0 : 99;
+    int consume_gpu = LandRelightGpuApplyFloor(
         relight_fifo_n, pending_focus_count, consume_gpu_base);
+    consume_gpu = NearUnderfeetGpuApplyFloor(
+        missing_underfeet, underfeet_apply_nh,
+        world.GetPhysicsTelemetry().UnderfeetPendingLight, consume_gpu);
     const double consume_budget =
         std::max(6.0, mesh_service.GetMeshEmergeTotalBudgetMs() *
                           early_adm.gpu_budget_frac);
@@ -3599,6 +3614,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       sync_budget_ms = std::min(sync_budget_ms, calm_cap.sync_budget_ms);
     }
   }
+  ApplyUnderfeetReservationFloors(mesh_drain, mesh_schedule, uf_res);
   // F0: SyncRebuild always off in TickMeshEmerge. Dig/edit uses
   // RebuildChunkImmediate (PlayerRelightMeshBurst); SyncRebuild was still
   // burning 100–200ms whenever burst frames were non-zero on cruise.

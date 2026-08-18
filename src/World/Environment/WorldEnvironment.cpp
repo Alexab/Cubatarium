@@ -947,10 +947,10 @@ void UWorldEnvironment::ReloadAllCreatureVisuals()
 
 void UWorldEnvironment::TickActivity(IUWorldPerception &perception,
                                      UWorldCreatureActivitySink &sink,
-                                     float dt)
+                                     float dt, bool stress_tick)
 {
   SyncCreatureSpatialIndex();
-  ActivityDirector.TickAgents(perception, sink, dt);
+  ActivityDirector.TickAgents(perception, sink, dt, stress_tick);
 }
 
 bool UWorldEnvironment::CheckCreatureCollisionVolume(

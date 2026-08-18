@@ -8,7 +8,7 @@ namespace cutum
 class UNavigationPathBudget
 {
 public:
-  static constexpr int kDefaultExpandsPerTick = 800;
+  static constexpr int kDefaultExpandsPerTick = 256;
 
   static void BeginActivityTick();
   static void SetExpandsPerTick(int expands);

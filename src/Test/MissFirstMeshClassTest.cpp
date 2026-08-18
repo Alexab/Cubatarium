@@ -13,8 +13,10 @@
 #include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/PhysicsStepPolicy.h"
 #include "World/Streaming/InputFirstPolicy.h"
+#include "World/Streaming/IdleRecoveryPolicy.h"
 #include "World/Streaming/FrontierStagePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
+#include "Render/Camera/GpuPassRefreshPolicy.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -955,6 +957,8 @@ int main()
            "far SoftDefer still not enter FirstMesh");
     Expect(EnterVisualWarmupYieldsToGateRemaining(true, 0, true),
            "remaining==0 + underfeet present yields visual warmup");
+    Expect(!EnterVisualWarmupYieldsToGateRemaining(true, 0, true, 8),
+           "remaining==0 still holds while underfeet GPU pending");
     Expect(!EnterVisualWarmupYieldsToGateRemaining(true, 0, false),
            "remaining==0 alone does not yield without underfeet");
     Expect(!EnterVisualWarmupYieldsToGateRemaining(true, 3, true),
@@ -1782,9 +1786,17 @@ int main()
     using cutum::ComputeStreamSpeedClampScale;
     using cutum::EvaluateUnderfeetReservation;
     using cutum::IsInputFirstSlaBroken;
+    using cutum::IsInputFirstPlayerSlaBroken;
+    using cutum::NearUnderfeetGpuApplyFloor;
+    using cutum::EvaluateIdleMeshDrainCap;
+    using cutum::IdleMeshDrainCapInput;
     using cutum::StreamSpeedClampInput;
     Expect(!IsInputFirstSlaBroken(100.0, 10.0),
            "input-first: wall/phys under SLA");
+    Expect(!IsInputFirstPlayerSlaBroken(100.0, 10.0),
+           "input-first: player block under SLA");
+    Expect(IsInputFirstPlayerSlaBroken(100.0, 20.0),
+           "input-first: player block over SLA");
     Expect(IsInputFirstSlaBroken(140.0, 10.0),
            "input-first: wall over SLA");
     Expect(IsInputFirstSlaBroken(100.0, 20.0),
@@ -1802,6 +1814,59 @@ int main()
     int sched = 1;
     ApplyUnderfeetReservationFloors(drain, sched, mesh);
     Expect(drain >= 8 && sched >= 6, "input-first: floors applied");
+    IdleMeshDrainCapInput idle_in{};
+    idle_in.last_frame_ms = 60.0;
+    idle_in.mesh_drain = 2;
+    idle_in.mesh_schedule = 1;
+    const auto idle_cap = EvaluateIdleMeshDrainCap(idle_in);
+    int idle_drain = idle_cap.active ? idle_cap.mesh_drain : idle_in.mesh_drain;
+    int idle_sched =
+        idle_cap.active ? idle_cap.mesh_schedule : idle_in.mesh_schedule;
+    ApplyUnderfeetReservationFloors(idle_drain, idle_sched, mesh);
+    Expect(idle_drain >= 8 && idle_sched >= 6,
+           "input-first: reservation wins idle-cap");
+    Expect(NearUnderfeetGpuApplyFloor(true, 0, 0, 0) >= 1,
+           "B2: near underfeet apply floor");
+    Expect(NearUnderfeetGpuApplyFloor(true, 0, 4, 0) == 0,
+           "B2: no apply floor while pending_light");
+    using cutum::ApplyPhaseEmergeClamp;
+    using cutum::ShouldProtectNearEmergeFromPhaseClamp;
+    Expect(ShouldProtectNearEmergeFromPhaseClamp(true, 0, true),
+           "C: missing underfeet protects emerge");
+    Expect(ShouldProtectNearEmergeFromPhaseClamp(false, 1, true),
+           "C: nh<=1 protects emerge");
+    Expect(ShouldProtectNearEmergeFromPhaseClamp(false, 4, false),
+           "C: no underfeet mesh protects emerge");
+    Expect(!ShouldProtectNearEmergeFromPhaseClamp(false, 4, true),
+           "C: healed far miss may clamp emerge");
+    Expect(ApplyPhaseEmergeClamp(12.0, 1.47, true) == 12.0,
+           "C: protect skips leftover phase clamp");
+    Expect(ApplyPhaseEmergeClamp(12.0, 1.47, false) == 1.47,
+           "C: leftover clamp applies when not near");
+    Expect(ApplyPhaseEmergeClamp(12.0, 0.0, false) == 12.0,
+           "C: no phase cap leaves emerge");
+    using cutum::BatchCullAabbDegenerate;
+    using cutum::GpuPassVisibleSetNeedsRebuild;
+    using cutum::ShouldFailOpenGpuCompactCull;
+    const float zmin[3]{0.f, 0.f, 0.f};
+    const float zmax[3]{0.f, 0.f, 0.f};
+    const float okmax[3]{16.f, 16.f, 16.f};
+    Expect(BatchCullAabbDegenerate(zmin, zmax),
+           "cull: zero AABB is degenerate");
+    Expect(!BatchCullAabbDegenerate(zmin, okmax),
+           "cull: chunk AABB is not degenerate");
+    Expect(GpuPassVisibleSetNeedsRebuild(0, 551, 0),
+           "cull: empty GPU cache needs rebuild");
+    Expect(GpuPassVisibleSetNeedsRebuild(0, 551, 551),
+           "cull: disjoint visible set needs rebuild");
+    Expect(!GpuPassVisibleSetNeedsRebuild(500, 551, 551),
+           "cull: high overlap keeps GPU pass");
+    Expect(ShouldFailOpenGpuCompactCull(0, 551, true),
+           "cull: degenerate AABB fail-opens");
+    Expect(!ShouldFailOpenGpuCompactCull(0, 551, false),
+           "cull: valid far AABB after teleport does not fail-open");
+    Expect(!ShouldFailOpenGpuCompactCull(12, 551, true),
+           "cull: some on keeps compact");
     StreamSpeedClampInput cin{};
     cin.moving = true;
     cin.missing_underfeet = true;

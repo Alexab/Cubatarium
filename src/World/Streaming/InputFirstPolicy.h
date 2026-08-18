@@ -15,6 +15,12 @@ inline bool IsInputFirstSlaBroken(double wall_ms, double do_movement_ms)
          do_movement_ms > kInputFirstDoMovementSlaMs;
 }
 
+/// Input-first A1: SLA uses player locomotion block, not full do_movement.
+inline bool IsInputFirstPlayerSlaBroken(double wall_ms, double player_block_ms)
+{
+  return IsInputFirstSlaBroken(wall_ms, player_block_ms);
+}
+
 /// Underfeet reservation: guaranteed mesh drain/schedule when feet need a mesh
 /// and light is already done. Does not raise Immediate or Capture.
 struct UnderfeetReservation
@@ -52,6 +58,28 @@ inline void ApplyUnderfeetReservationFloors(int &mesh_drain, int &mesh_schedule,
   }
   mesh_drain = std::max(mesh_drain, res.mesh_drain_floor);
   mesh_schedule = std::max(mesh_schedule, res.mesh_schedule_floor);
+}
+
+/// Leftover phase cap (~1.5 ms after stream overrun) must not starve nh≤1 apply.
+inline bool ShouldProtectNearEmergeFromPhaseClamp(bool missing_underfeet,
+                                                  int miss_horiz,
+                                                  bool underfeet_has_mesh)
+{
+  return missing_underfeet || !underfeet_has_mesh || miss_horiz <= 1;
+}
+
+inline double ApplyPhaseEmergeClamp(double emerge_ms, double phase_cap_ms,
+                                    bool protect_near)
+{
+  if (phase_cap_ms <= 0.0)
+  {
+    return emerge_ms;
+  }
+  if (protect_near)
+  {
+    return emerge_ms;
+  }
+  return std::min(emerge_ms, phase_cap_ms);
 }
 
 struct StreamSpeedClampInput
