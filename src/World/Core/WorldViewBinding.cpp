@@ -460,21 +460,27 @@ void UWorld::RunLegacyPhysicsFrame()
       PhysicsTelemetryData.PhaseBudgetOver != 0,
       PhysicsTelemetryData.FocusMissingMesh != 0,
       GetWallFrameDelta() * 1000.0);
-  // World AI skip is computed for telemetry/policy tests; runtime still ticks
-  // so spatial index + agents stay consistent on hitch/teleport frames.
   const bool tick_world_ai =
       ShouldTickWorldCreatures(streaming_red, GetWallFrameDelta() * 1000.0);
-  (void)tick_world_ai;
-  PhysicsTelemetryData.WorldCreaturesSkipped = 0;
 
   const auto t_env = clock_t::now();
-  UWorldCreatureActivitySink activitySink(*this);
-  Environment.TickActivity(*this, activitySink, dt);
+  // Always refresh the spatial index (teleport/hitch). Skip agent brains on
+  // red hitch so player fixed-step is not waiting on world AI.
+  if (tick_world_ai)
+  {
+    UWorldCreatureActivitySink activitySink(*this);
+    Environment.TickActivity(*this, activitySink, dt);
+  }
+  else
+  {
+    Environment.SyncCreatureSpatialIndex();
+  }
   PhysicsTelemetryData.EnvironmentTickMs =
       std::chrono::duration<double, std::milli>(clock_t::now() - t_env).count();
 
   int creatures_total = 0;
   int creatures_ai_ticked = 0;
+  int world_creatures_skipped = 0;
   const auto t_npc = clock_t::now();
   ForEachCreature(
       [&](UCreature &creature)
@@ -492,6 +498,11 @@ void UWorld::RunLegacyPhysicsFrame()
         {
           return;
         }
+        if (!tick_world_ai)
+        {
+          ++world_creatures_skipped;
+          return;
+        }
         ++creatures_ai_ticked;
         const CreatureIntent &intent = creature.GetIntent();
         if (intent.Influence.Channel == InfluenceChannel::Melee &&
@@ -505,6 +516,7 @@ void UWorld::RunLegacyPhysicsFrame()
       std::chrono::duration<double, std::milli>(clock_t::now() - t_npc).count();
   PhysicsTelemetryData.CreaturesTotal = creatures_total;
   PhysicsTelemetryData.CreaturesAiTicked = creatures_ai_ticked;
+  PhysicsTelemetryData.WorldCreaturesSkipped = world_creatures_skipped;
 
   // Controlled / possessed player: resolve Influence after agents (input may
   // have set Melee / Dig via PlayerInteractionRouter). Dig Intent is not
