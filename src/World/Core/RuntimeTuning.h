@@ -45,6 +45,8 @@ struct URuntimeTuning
   float CaptureSyncSkipWallMs{110.0f};
   float CaptureIdlePendingMaxWallMs{160.0f};
   /// Cruise max Captures/frame (TD-ARCH-015: worker Capture still backlog).
+  /// Keep at 1. Throughput 2–3 is DynamicCaptureMovingBgCap after cheap
+  /// center+edge Capture (drain med ≤8); do not raise this base.
   int CaptureMovingBgCap{1};
 
   /// Era14.1 B: hard wall budget for TickWorldStreamingPhase (ms). Miss / UV

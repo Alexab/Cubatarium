@@ -3,6 +3,7 @@
 #include "World/Chunks/Chunk.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Lighting/ChunkLighting.h"
+#include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/LightUtil.h"
 
 #include <cstdlib>
@@ -275,6 +276,54 @@ int main()
                                 kMaxWorldY);
   Expect(SkyAt(world, glm::ivec3(12, 5, 8)) > 0,
          "offset cave lit after shaft and tunnel open");
+
+  {
+    cutum::UBlockWorld neigh_world;
+    for (int x = 0; x < 32; ++x)
+    {
+      for (int z = 0; z < 16; ++z)
+      {
+        neigh_world.SetBlock(glm::ivec3(x, 0, z), kStone);
+      }
+    }
+    neigh_world.SetBlock(glm::ivec3(20, 4, 8), kTorch);
+    cutum::RelightChunk(neigh_world, *registry, glm::ivec3(0, 0, 0));
+    cutum::RelightChunk(neigh_world, *registry, glm::ivec3(1, 0, 0));
+    cutum::RelightJobSpec spec;
+    spec.block_positions = {glm::ivec3(8, 0, 8)};
+    spec.min_world_y = 0;
+    spec.max_world_y = 15;
+    spec.column_center_only = true;
+    spec.frontier_iterations = 0;
+    auto snap = cutum::UChunkRelightSnapshot::Capture(neigh_world, spec);
+    Expect(snap.GetCapturedFullChunks() == 1,
+           "D: center-only copies one full chunk");
+    Expect(snap.HasChunk(glm::ivec3(0, 0, 0)),
+           "D: center chunk has blocks");
+    Expect(!snap.HasChunk(glm::ivec3(1, 0, 0)),
+           "D: neighbor not in Blocks");
+    Expect(snap.HasLight(glm::ivec3(1, 0, 0)),
+           "D: neighbor light copied as seed");
+    Expect(snap.GetCapturedNeighborLightChunks() >= 1,
+           "D: neighbor light count >= 1");
+    auto result = snap.Compute(*registry);
+    Expect(result.chunks.size() == 1,
+           "D: apply only center light");
+    bool center_edge_lit = false;
+    for (const auto &chunk_data : result.chunks)
+    {
+      if (chunk_data.coord != glm::ivec3(0, 0, 0))
+      {
+        continue;
+      }
+      const glm::ivec3 local(15, 4, 8);
+      const int idx = local.x + cutum::CHUNK_SIZE *
+                                    (local.y + cutum::CHUNK_SIZE * local.z);
+      const int block_light = (chunk_data.light_packed[idx] >> 4) & 0x0F;
+      center_edge_lit = block_light > 0;
+    }
+    Expect(center_edge_lit, "D: neighbor torch seeds center face");
+  }
 
   std::cout << "chunk_lighting_propagation_test: OK" << std::endl;
   return 0;

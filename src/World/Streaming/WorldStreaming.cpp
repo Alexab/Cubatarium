@@ -20,6 +20,7 @@
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Streaming/RelightFifoPolicy.h"
+#include "World/Streaming/PhysicsStepPolicy.h"
 #include "App/Settings/RenderSettings.h"
 #include "Blocks/BlockRegistry.h"
 #include "Creatures/Player/PlayerCapsule.h"
@@ -546,7 +547,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       const glm::ivec2 miss_xz(miss_coord.x, miss_coord.z);
       const bool hold = ShouldHoldPinnedRelightWitness(
           world.PhysicsTelemetryData.MissHoriz,
-          world.IsPendingLightBeforeMesh(miss_xz));
+          world.IsPendingLightBeforeMesh(miss_xz),
+          /*pinned_still_missing=*/true);
       if (hold && miss_coord.x == prev_miss_cx &&
           miss_coord.z == prev_miss_cz)
       {
@@ -1751,8 +1753,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         const bool hold_nh2 = ShouldHoldPinnedRelightWitness(
             SoftDeferCapturePinHoriz,
             world.IsPendingLightBeforeMesh(
-                glm::ivec2(SoftDeferCapturePinCx, SoftDeferCapturePinCz)) &&
-                missing_focus_mesh);
+                glm::ivec2(SoftDeferCapturePinCx, SoftDeferCapturePinCz)),
+            missing_focus_mesh);
         const bool retarget = ShouldRetargetRelightWitness(
             ShouldRetargetSoftDeferCaptureWitness(
                 SoftDeferCapturePinValid, SoftDeferCapturePinAge, pin_T,
@@ -2892,7 +2894,9 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
 
     const float dt = std::max(0.0001f, camera->GetDeltaTime());
     const glm::vec3 delta = eye - lastCameraPosition;
-    lastMovementSpeed = glm::length(glm::vec3(delta.x, 0.0f, delta.z)) / dt;
+    lastMovementSpeed = MovementSpeedFromDisplacement(
+        glm::length(glm::vec3(delta.x, 0.0f, delta.z)), dt,
+        camera->GetLastPhysicsSubsteps(), kPhysicsFixedDt);
     world.UpdateMotionState(lastMovementSpeed, dt);
     {
       const ProceduralSettings &proc_for_dir = world.GetProceduralSettings();

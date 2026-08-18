@@ -2352,6 +2352,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           std::max(std::abs(hole.x - focus_ground_horiz.x),
                    std::abs(hole.z - focus_ground_horiz.z));
       const bool allow_uf_imm =
+          ShouldAllowImmediateMesh(moving, world.IsPendingLightBeforeMesh(
+                                               glm::ivec2(hole.x, hole.z))) &&
           underfeet_need && hole_horiz <= 1 &&
           underfeet_immediate_cd <= 0 &&
           underfeet_immediate_this_frame < kMaxUnderfeetImmediate &&
@@ -2520,11 +2522,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             GetColumnFlowExecutor().Enqueue(
                 glm::ivec2(coord.x, coord.z), ColumnWorkKind::FirstMesh, 110);
             const bool allow_underfeet_immediate =
+                ShouldAllowImmediateMesh(
+                    moving, world.IsPendingLightBeforeMesh(
+                                glm::ivec2(coord.x, coord.z))) &&
                 underfeet_immediate_cd <= 0 &&
                 underfeet_immediate_this_frame < kMaxUnderfeetImmediate &&
-                immediate_ms_used() < 8.0 &&
-                ((!moving && immediate_budget_ok()) ||
-                 (moving && pending_async < 2 && immediate_ms_used() < 8.0));
+                immediate_ms_used() < 8.0 && immediate_budget_ok();
             if (allow_underfeet_immediate &&
                 std::max(std::abs(dx), std::abs(dz)) <= 1)
             {
@@ -2702,19 +2705,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             ShouldColdAsyncImmEscape(missing_visible_mesh, pending_async) &&
             is_nearest_hole && !hole_pending;
         const bool want_immediate =
+            ShouldAllowImmediateMesh(moving, hole_pending) &&
             (calm_enough_for_imm || cold_async_escape) && sync_ok &&
-            !hole_pending &&
             (!hole_underfeet ||
              (underfeet_immediate_cd <= 0 &&
               underfeet_immediate_this_frame < kMaxUnderfeetImmediate)) &&
             (cold_async_escape
                  ? (immediate_ms_used() < 12.0)
-                 : (moving
-                        ? ((hole_underfeet ||
-                            (is_nearest_hole && pending_async < 2)) &&
-                           pending_async < 4 && immediate_ms_used() < 8.0)
-                        : (last_frame_ms <= force_frame_cap &&
-                           immediate_budget_ok())));
+                 : (last_frame_ms <= force_frame_cap &&
+                    immediate_budget_ok()));
         if (want_immediate)
         {
           mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,

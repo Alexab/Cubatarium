@@ -50,6 +50,12 @@ public:
   /// Source block positions from Completed overflow drops (re-enqueue relight).
   std::vector<glm::ivec3> TakeOverflowSourcePositions();
 
+  int GetLastCaptureFullChunks() const { return LastCaptureFullN; }
+  int GetLastCaptureNeighborLightChunks() const
+  {
+    return LastCaptureNeighborLightN;
+  }
+
 private:
   void NoteCompletedOverflow(RelightComputeResult &&dropped);
 
@@ -68,6 +74,8 @@ private:
   std::vector<glm::ivec3> DiscardedSources;
   mutable std::mutex OverflowMutex;
   std::vector<glm::ivec3> OverflowSources;
+  int LastCaptureFullN{0};
+  int LastCaptureNeighborLightN{0};
 };
 
 } // namespace cutum

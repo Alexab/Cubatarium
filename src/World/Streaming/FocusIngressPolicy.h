@@ -122,4 +122,15 @@ inline bool AllowSyncHoleFillForColumn(const FocusIngressDecision &d,
   return hole_underfeet || d.allow_sync_hole_fill;
 }
 
+/// Cruise time-budget B: never RebuildChunkImmediate while moving (Luanti:
+/// mesh off the main thread). Idle Imm still gated on pending light.
+inline bool ShouldAllowImmediateMesh(bool moving, bool pending_light)
+{
+  if (moving || pending_light)
+  {
+    return false;
+  }
+  return true;
+}
+
 } // namespace cutum

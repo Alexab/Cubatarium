@@ -95,6 +95,15 @@ def summarize(label, rows, min_chunks=80):
         "opaque_gpu_packed_n",
         "opaque_draw_n",
         "underfeet_has_mesh",
+        "relight_drain_ms",
+        "do_movement_ms",
+        "mesh_immediate_count",
+        "relight_witness_hold_n",
+        "relight_capture_full_n",
+        "relight_capture_neighbor_light_n",
+        "pending_light_n",
+        "softdefer_witness_retarget",
+        "phase_budget_over",
     ]
     for k in keys:
         vals = num(cruise, k)
@@ -128,6 +137,18 @@ def sla_check(cruise):
     ok_n = num(cruise, "mesh_dirty_schedule_ok_n")
     remesh = num(cruise, "dirty_remesh_n")
     print(f"  wall med/p90 target <=130/220 => {pct(wall,0.5)}/{pct(wall,0.9)}")
+    drain = num(cruise, "relight_drain_ms")
+    phys = num(cruise, "do_movement_ms")
+    imm = num(cruise, "mesh_immediate_count")
+    hold = num(cruise, "relight_witness_hold_n")
+    full = num(cruise, "relight_capture_full_n")
+    neigh = num(cruise, "relight_capture_neighbor_light_n")
+    print(f"  relight_drain med/p90 target <=8/25 => {pct(drain,0.5)}/{pct(drain,0.9)}")
+    print(f"  do_movement med target <=16 => {pct(phys,0.5)}")
+    print(f"  mesh_immediate_count sum/max (moving cruise 0) => {sum(imm) if imm else 0}/{max(imm) if imm else None}")
+    print(f"  relight_witness_hold_n med/max => {pct(hold,0.5)}/{max(hold) if hold else None}")
+    print(f"  relight_capture_full_n med (~span_cy, not 9x span) => {pct(full,0.5)}")
+    print(f"  relight_capture_neighbor_light_n med => {pct(neigh,0.5)}")
     print(f"  prep hot med target <=20 => {pct(ph,0.5) if ph else None}")
     print(f"  schedule_ok med (holes proxy >=8) => {pct(ok_n,0.5)}")
     print(f"  dirty_remesh med => {pct(remesh,0.5)}")

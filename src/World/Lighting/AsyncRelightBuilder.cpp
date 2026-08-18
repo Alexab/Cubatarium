@@ -77,6 +77,8 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
     std::lock_guard<std::mutex> capture_lock(gRelightCaptureMutex);
     snapshot = UChunkRelightSnapshot::Capture(world, spec);
   }
+  LastCaptureFullN = snapshot.GetCapturedFullChunks();
+  LastCaptureNeighborLightN = snapshot.GetCapturedNeighborLightChunks();
 
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);

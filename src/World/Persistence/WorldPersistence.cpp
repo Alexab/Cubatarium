@@ -515,7 +515,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   const bool hold_nh2 =
       visual_holes && phys_pin.FocusMissingMesh > 0 &&
       ShouldHoldPinnedRelightWitness(
-          phys_pin.MissHoriz, world.IsPendingLightBeforeMesh(miss_xz));
+          phys_pin.MissHoriz, world.IsPendingLightBeforeMesh(miss_xz),
+          phys_pin.FocusMissingMesh > 0);
   if (hold_nh2)
   {
     soft_defer_hole = glm::ivec3(miss_xz.x, 0, miss_xz.y);
@@ -808,6 +809,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   {
     const int dynamic_cap =
         DynamicCaptureMovingBgCap(pending_light_focus_n, tune.CaptureMovingBgCap);
+    // Center+edge Capture (cruise time-budget D) makes dynamic 2–3 safe;
+    // do not raise RuntimeTuning.CaptureMovingBgCap above 1.
     bg_cap = ClampCaptureMovingBgCapWithHoles(bg_cap, moving, visual_holes,
                                               dynamic_cap);
   }

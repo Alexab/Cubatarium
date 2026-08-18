@@ -127,6 +127,11 @@ and GpuPacked keep-until-bind on cruise (existing residency SoT,
 `ae0c75b0`). Re-run inland −485/50 with the same audit keys.
 
 Cost-aware phases (P0 telem → P1 pin-hold → P2 surface-finalize nh≤2 →
-P3 FirstMesh order → P4 keep-until-bind): 
+P3 FirstMesh order → P4 keep-until-bind):
 `docs/streaming/relight_then_mesh_industrial.md`. Do not raise Capture /
 FM quotas before P0 names the bottleneck.
+
+Inland after P0–P4 (`215411`):
+`docs/streaming/cruise_215411_diag.md`. P0 class = hop; P1 hold never
+armed (miss ≠ pending on that key); P4 mid-cruise win, late cz=55 still
+dumps.

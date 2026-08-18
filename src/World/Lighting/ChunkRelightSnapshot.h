@@ -26,6 +26,8 @@ struct RelightJobSpec
   uint64_t job_id{0};
   /// False while more Y-bands remain for this column (SoftDefer keeps Pending).
   bool finalize_pending_gate{true};
+  /// Terrain column FIFO: copy center column full + neighbor shell/light only.
+  bool column_center_only{false};
 };
 
 struct RelightChunkLightData
@@ -53,11 +55,17 @@ public:
   static UChunkRelightSnapshot Capture(const UBlockWorld &world,
                                        const RelightJobSpec &spec);
 
-  RelightComputeResult Compute(const UBlockRegistry &registry) const;
+  RelightComputeResult Compute(const UBlockRegistry &registry);
   uint64_t GetJobId() const { return Spec.job_id; }
+  int GetCapturedFullChunks() const { return CapturedFullChunks; }
+  int GetCapturedNeighborLightChunks() const
+  {
+    return CapturedNeighborLightChunks;
+  }
 
   BlockId GetBlock(glm::ivec3 world_pos) const;
   bool HasChunk(glm::ivec3 chunk_coord) const;
+  bool HasLight(glm::ivec3 chunk_coord) const;
   int GetSkyLight(glm::ivec3 world_pos) const;
   int GetBlockLight(glm::ivec3 world_pos) const;
   void WriteSkyLight(glm::ivec3 world_pos, int level);
@@ -75,6 +83,8 @@ private:
       Light;
   std::unordered_map<glm::ivec3, BlockId, IVec3Hash> ShellBlocks;
   RelightJobSpec Spec;
+  int CapturedFullChunks{0};
+  int CapturedNeighborLightChunks{0};
 };
 
 } // namespace cutum

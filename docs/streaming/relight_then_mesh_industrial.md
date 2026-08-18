@@ -4,7 +4,9 @@ Inland cruise after Era28 publication rollback (`5edc709c`, flight
 `195810`). This is the working SoT for **complete/apply Relight FIFO →
 FirstMesh after light → keep-until-bind**. It is not a bypass list.
 
-Evidence: [`cruise_column_gen_diag.md`](cruise_column_gen_diag.md).
+Evidence: [`cruise_column_gen_diag.md`](cruise_column_gen_diag.md)
+(`195810` rollback). After P0–P4:
+[`cruise_215411_diag.md`](cruise_215411_diag.md).
 SLA: [`streaming_cruise_sot.md`](../streaming_cruise_sot.md).
 
 Do **not**: Unlit near, `hole_fill_preview`, prune `keep_h=2`, Imm, new
@@ -154,3 +156,15 @@ produced at least one lit mesh underfoot.
 Units: pin-hold, surface-finalize nh≤2 vs nh=4 split, FM sort boost,
 defer FreeChunk in-ring. Inland World_164 −485/50 after each behavior
 phase. Audit: `python bin/audit_cruise_sot.py <log>`.
+
+## After P0–P4 (`215411`)
+
+P0 class: **hop**, not apply-starve, not hitch>600. Hold never
+accumulates (`hold_n` max 1) because `ShouldHoldPinnedRelightWitness`
+requires pending **on the miss column**; miss is often cy=2 missing-mesh
+while pending sits elsewhere. SoftDefer retarget 2→208. P4 keeps packed
+~252 / pool ~14–16 MB through cz=54; cz=55 still dumps to ~2 MB / opaque
+~111. Do not raise Capture/FM quotas — wall p90 already 355 vs 279.
+Next: pin the miss key while `focus_missing_mesh` nh≤2 even without
+pending on that key; keep GPU across the last +Z step. Details:
+[`cruise_215411_diag.md`](cruise_215411_diag.md).

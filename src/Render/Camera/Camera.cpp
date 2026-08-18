@@ -7,6 +7,7 @@
 #include "World/View/ViewRayMath.h"
 #include "Render/GlIncludes.h"
 #include "World/Core/World.h"
+#include "World/Streaming/PhysicsStepPolicy.h"
 #include <algorithm>
 #include <cmath>
 #if defined(__ANDROID__)
@@ -980,12 +981,22 @@ bool UCamera::DoMovement(const UWorld *world)
   bool is_moved(false);
   SyncFreeMoveFromController();
   LastPhysicsSubsteps = 0;
+  int substep_cap = kMaxPhysicsSubsteps;
+  if (world)
+  {
+    const PhysicsTelemetry &phys = world->GetPhysicsTelemetry();
+    substep_cap = std::min(kMaxPhysicsSubsteps,
+                           PhysicsSubstepCap(IsStreamingPhysicsRed(
+                               phys.PhaseBudgetOver != 0,
+                               phys.FocusMissingMesh != 0,
+                               world->GetWallFrameDelta() * 1000.0)));
+  }
 
   if (GetFreeMove())
   {
     PhysicsAccumulator += frameDt;
     while (PhysicsAccumulator >= kFixedPhysicsDt &&
-           LastPhysicsSubsteps < kMaxPhysicsSubsteps)
+           LastPhysicsSubsteps < substep_cap)
     {
       PhysicsAccumulator -= kFixedPhysicsDt;
       ++LastPhysicsSubsteps;
@@ -1043,7 +1054,7 @@ bool UCamera::DoMovement(const UWorld *world)
   {
     PhysicsAccumulator += frameDt;
     while (PhysicsAccumulator >= kFixedPhysicsDt &&
-           LastPhysicsSubsteps < kMaxPhysicsSubsteps)
+           LastPhysicsSubsteps < substep_cap)
     {
       PhysicsAccumulator -= kFixedPhysicsDt;
       ++LastPhysicsSubsteps;
@@ -1073,6 +1084,12 @@ bool UCamera::DoMovement(const UWorld *world)
       is_moved = true;
       UpdatePose();
     }
+  }
+
+  if (LastPhysicsSubsteps >= substep_cap &&
+      PhysicsAccumulator >= kFixedPhysicsDt)
+  {
+    PhysicsAccumulator = 0.0f;
   }
 
   return is_moved;

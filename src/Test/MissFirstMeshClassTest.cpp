@@ -11,6 +11,7 @@
 #include "World/Streaming/NearFovWorkPriority.h"
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/RelightFifoPolicy.h"
+#include "World/Streaming/PhysicsStepPolicy.h"
 #include "World/Streaming/FrontierStagePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 
@@ -1320,6 +1321,37 @@ int main()
            "Era40: pending=15 (threshold) -> base cap");
     Expect(DynamicCaptureMovingBgCap(16) == 2,
            "Era40: pending=16 -> cap 2");
+    Expect(DynamicCaptureMovingBgCap(16, 1) == 2,
+           "F: base CaptureMovingBgCap stays 1; dynamic may be 2 after cheap Capture");
+  }
+
+  // --- Cruise time-budget A: physics debt drop ---
+  {
+    using cutum::DrainPhysicsAccumulator;
+    using cutum::IsStreamingPhysicsRed;
+    using cutum::PhysicsSubstepCap;
+    using cutum::kPhysicsSubstepCapRed;
+    const float dt = 1.0f / 60.0f;
+    const auto drained = DrainPhysicsAccumulator(0.200f, dt, 3);
+    Expect(drained.steps == 3, "A: 200ms + cap 3 -> exactly 3 steps");
+    Expect(drained.leftover < dt, "A: leftover debt dropped below dt");
+    Expect(IsStreamingPhysicsRed(true, false, 20.0), "A: phase over is red");
+    Expect(IsStreamingPhysicsRed(false, true, 20.0), "A: miss is red");
+    Expect(IsStreamingPhysicsRed(false, false, 150.0), "A: wall>100 is red");
+    Expect(!IsStreamingPhysicsRed(false, false, 50.0), "A: calm frame not red");
+    Expect(PhysicsSubstepCap(true) == kPhysicsSubstepCapRed,
+           "A: red cap is 3");
+    Expect(PhysicsSubstepCap(false) == 4, "A: calm cap is 4");
+    using cutum::MovementSpeedFromDisplacement;
+    const float dist = 3.0f * 4.3f / 60.0f;
+    const float slow_mo_speed =
+        MovementSpeedFromDisplacement(dist, 0.250f, 3, dt);
+    Expect(slow_mo_speed > 1.5f,
+           "B: 3-step hitch still reports walk speed above prefetch");
+    const float wall_speed =
+        MovementSpeedFromDisplacement(dist, 0.250f, 0, dt);
+    Expect(wall_speed < 1.5f,
+           "B: wall-dt fallback without substeps looks idle");
   }
 
   // --- Era36 B3 / Era40 land moving drain (threshold 15) ---
@@ -1574,8 +1606,10 @@ int main()
     Expect(ShouldHoldPinnedRelightWitness(2, true),
            "P1: hold nh2 pending witness");
     Expect(!ShouldHoldPinnedRelightWitness(2, false),
-           "P1: release hold after MarkRelit");
-    Expect(!ShouldHoldPinnedRelightWitness(3, true),
+           "P1: release hold after lit+meshed");
+    Expect(ShouldHoldPinnedRelightWitness(2, false, true),
+           "C: hold nh2 missing even without pending");
+    Expect(!ShouldHoldPinnedRelightWitness(3, true, true),
            "P1: rim nh3 is not the hold");
     Expect(!ShouldRetargetRelightWitness(true, true),
            "P1: hold blocks Era27 retarget");

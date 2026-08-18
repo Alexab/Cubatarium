@@ -129,6 +129,16 @@ int main()
     Expect(d.relight_floor <= 3, "rim SLA caps Capture floor");
   }
 
+  {
+    using cutum::ShouldAllowImmediateMesh;
+    Expect(!ShouldAllowImmediateMesh(true, false),
+           "B: moving never Immediate");
+    Expect(!ShouldAllowImmediateMesh(false, true),
+           "B: pending never Immediate");
+    Expect(ShouldAllowImmediateMesh(false, false),
+           "B: idle without pending may Immediate");
+  }
+
   if (gFails != 0)
   {
     std::cerr << gFails << " failures\n";

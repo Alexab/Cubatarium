@@ -13,6 +13,8 @@ class UBlockWorld;
 constexpr int kRelightFrontierIterationsFull = 4;
 constexpr int kRelightFrontierIterationsEdit = 2;
 constexpr int kRelightFrontierIterationsBulk = 1;
+/// Terrain column async job: light the center column only (Starlight edge).
+constexpr int kRelightFrontierIterationsColumn = 0;
 
 struct RelightFrontierOutcome
 {

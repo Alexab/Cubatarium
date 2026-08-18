@@ -312,6 +312,8 @@ struct PhysicsTelemetry
   int RelightCaptureColHoriz{-1};
   int RelightCaptureFinalize{0};
   int RelightCaptureBandCySpan{0};
+  int RelightCaptureFullN{0};
+  int RelightCaptureNeighborLightN{0};
   int RelightWitnessHoldN{0};
   int RelightApplyN{0};
   int DirtyN{0};

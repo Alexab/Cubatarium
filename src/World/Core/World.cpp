@@ -4534,10 +4534,15 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(int world_x, int world_z,
   spec.max_world_y = max_y;
   spec.include_skylight = include_skylight;
   spec.include_block_light = include_block_light;
-  spec.frontier_iterations = kRelightFrontierIterationsFull;
+  spec.frontier_iterations = kRelightFrontierIterationsColumn;
   spec.job_id = ++NextAsyncRelightJobId;
   spec.finalize_pending_gate = finalize_pending_gate;
+  spec.column_center_only = true;
   AsyncRelight->EnqueueJob(BlockWorld, std::move(spec), *BlockRegistry);
+  PhysicsTelemetryData.RelightCaptureFullN =
+      AsyncRelight->GetLastCaptureFullChunks();
+  PhysicsTelemetryData.RelightCaptureNeighborLightN =
+      AsyncRelight->GetLastCaptureNeighborLightChunks();
 }
 
 void UWorld::EnqueueAsyncChunkSkylightRelight(glm::ivec3 chunk_coord,

@@ -35,12 +35,17 @@ inline bool ShouldPreferMissFinalizeBand(int miss_horiz,
   return miss_horiz >= 0 && miss_horiz <= ring;
 }
 
-/// P1: hold nh≤2 pending witness until MarkRelit — no hop to rim/hinterland.
+/// Hold nh≤2 witness until MarkRelit or greedy appears — pending OR missing.
+/// 215411: miss was often cy=2 without pending on that key, so hold never armed.
 inline bool ShouldHoldPinnedRelightWitness(int pinned_horiz,
-                                          bool pinned_still_pending)
+                                          bool pinned_still_pending,
+                                          bool pinned_still_missing = false)
 {
-  return pinned_still_pending && pinned_horiz >= 0 &&
-         pinned_horiz <= kVisualStageNearFovHoriz;
+  if (pinned_horiz < 0 || pinned_horiz > kVisualStageNearFovHoriz)
+  {
+    return false;
+  }
+  return pinned_still_pending || pinned_still_missing;
 }
 
 /// Overlay on Era27 SoftDefer retarget: nh≤2 pending hold wins over pin_T /
