@@ -137,6 +137,12 @@ int main()
            "B: pending never Immediate");
     Expect(ShouldAllowImmediateMesh(false, false),
            "B: idle without pending may Immediate");
+    Expect(!ShouldAllowImmediateMesh(false, false, 32, 0, 0, false),
+           "P3: gpu_queued>=32 blocks Immediate");
+    Expect(!ShouldAllowImmediateMesh(false, false, 0, 96, 96, false),
+           "P3: fifo at soft-cap blocks Immediate");
+    Expect(ShouldAllowImmediateMesh(false, false, 4, 10, 96, false),
+           "P3: idle low gpuq low fifo allows Immediate");
   }
 
   if (gFails != 0)

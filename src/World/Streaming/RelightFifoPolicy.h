@@ -14,6 +14,45 @@ inline int RelightMissPinMaxHoriz(int ring = kVisualStageLitDrawableHoriz)
   return ring;
 }
 
+/// P1: far FIFO overflow must not pop the pinned miss / PromoteRelightHold key.
+inline bool ShouldProtectRelightFifoPinKey(int victim_cx, int victim_cz,
+                                           bool pin_valid, int pin_cx,
+                                           int pin_cz)
+{
+  return pin_valid && victim_cx == pin_cx && victim_cz == pin_cz;
+}
+
+/// P1: nh≤2 pin always lives in the priority deque (not far overflow).
+inline bool ShouldForcePinColumnPriority(bool is_pin_key, int miss_horiz)
+{
+  return is_pin_key && miss_horiz >= 0 &&
+         miss_horiz <= kVisualStageNearFovHoriz;
+}
+
+/// P2: cruise Apply count — at least 1; second only if last apply was cheap.
+/// Near-pending hint is accepted for callsite compatibility, but moving apply
+/// remains capped at 2 to keep Apply cheap and predictable under cruise load.
+inline int CruiseRelightApplyBudget(bool moving, double last_apply_ms,
+                                    int requested, bool fifo_pin_stable,
+                                    bool near_pending_light = false)
+{
+  (void)near_pending_light;
+  if (requested <= 0)
+  {
+    return 0;
+  }
+  if (!moving)
+  {
+    return requested;
+  }
+  int cap = 1;
+  if (fifo_pin_stable && last_apply_ms >= 0.0 && last_apply_ms < 5.0)
+  {
+    cap = 2;
+  }
+  return requested < cap ? requested : cap;
+}
+
 /// Era40: force FIFO Enqueue for FOV miss even when Keys/FIFO ghost-empty.
 inline bool ShouldForceMissColumnFifoEnqueue(bool miss_or_visual_hole,
                                              bool pending_or_void_or_undrawn,

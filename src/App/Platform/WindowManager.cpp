@@ -504,6 +504,13 @@ void UWindowManager::Update()
     PhysicsTelemetry &tele = World->GetPhysicsTelemetryMutable();
     tele.ViewsMs = 0.0;
     tele.DoMovementMs = 0.0;
+    tele.EnsureCollisionMs = 0.0;
+    tele.CreatureTickMs = 0.0;
+    tele.CameraDoMovementMs = 0.0;
+    tele.CameraGroundSupportMs = 0.0;
+    tele.CameraLocomotionMs = 0.0;
+    tele.CameraHorizMoveMs = 0.0;
+    tele.CameraSyncMs = 0.0;
     tele.WorldStreamingPhaseMs = 0.0;
     tele.BlockInputMs = 0.0;
     tele.TickEnvMs = 0.0;

@@ -563,6 +563,10 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
         world.PhysicsTelemetryData.RelightWitnessHoldN = 0;
       }
       exec.SetPromoteRelightHold(miss_xz, hold);
+      if (world.Persistence)
+      {
+        world.Persistence->SetRelightFifoPin(miss_xz, true);
+      }
     }
   }
   else
@@ -573,6 +577,10 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     world.PhysicsTelemetryData.MissHoriz = 0;
     world.PhysicsTelemetryData.RelightWitnessHoldN = 0;
     GetColumnFlowExecutor().SetPromoteRelightHold(glm::ivec2(0), false);
+    if (world.Persistence)
+    {
+      world.Persistence->SetRelightFifoPin(glm::ivec2(0), false);
+    }
   }
   // Underfeet is a subset of focus — skip second full resident scan when focus
   // already reports no missing mesh (CB stream_ms on no-hole fly).
@@ -840,6 +848,10 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
         world.IsPendingLightBeforeMesh(under_xz) ? 1 : 0;
     world.PhysicsTelemetryData.UnderfeetReason =
         static_cast<int>(uf.reason);
+    world.PhysicsTelemetryData.UnderfeetStage =
+        static_cast<int>(uf.stage);
+    world.PhysicsTelemetryData.LightingRelightDeferred =
+        world.IsLightingRelightDeferred() ? 1 : 0;
   }
 }
 
@@ -1979,10 +1991,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     const auto relight_t0 = std::chrono::high_resolution_clock::now();
     world.Persistence->DrainRelightQueues(world, player_budget, bg_budget);
-    world.PhysicsTelemetryData.RelightDrainMs +=
+    const double capture_ms =
         std::chrono::duration<double, std::milli>(
             std::chrono::high_resolution_clock::now() - relight_t0)
             .count();
+    world.PhysicsTelemetryData.RelightCaptureMs += capture_ms;
+    world.PhysicsTelemetryData.RelightDrainMs += capture_ms;
   }
   finish_telemetry();
 }
@@ -2958,11 +2972,14 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         !IsTerrainChunkComplete(world.GetBlockWorld(), camera_ground,
                                 procedural.MaxHeight);
     // Cached via HoleQuery memo when args match; underfeet subset of focus.
+    // P2-fix: incomplete camera column itself is underfeet_need — without it
+    // the emerge coordinator never prioritises underfeet FirstMesh and the
+    // column stays in NotReadyState(7) for the whole cruise.
     const bool underfeet_need =
+        incomplete_camera_column ||
         (visual_holes &&
          meshService.HasMissingGreedyMeshInHorizontalRadius(
-             world.GetBlockWorld(), focus_horiz, /*radius=*/1) &&
-         !incomplete_camera_column) ||
+             world.GetBlockWorld(), focus_horiz, /*radius=*/1)) ||
         world.HasPendingLightBeforeMeshNear(focus_horiz, /*radius=*/1);
     const KeepPrewarmGate keep_gate = EvaluateKeepPrewarmGate(
         frame_ms, gen_backlog_total, mesh_async, dirty, near_mesh_backlog);

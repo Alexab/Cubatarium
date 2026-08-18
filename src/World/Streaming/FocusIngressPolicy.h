@@ -124,9 +124,25 @@ inline bool AllowSyncHoleFillForColumn(const FocusIngressDecision &d,
 
 /// Cruise time-budget B: never RebuildChunkImmediate while moving (Luanti:
 /// mesh off the main thread). Idle Imm still gated on pending light.
-inline bool ShouldAllowImmediateMesh(bool moving, bool pending_light)
+/// P3: idle Imm also backs off when GPU apply queue or FIFO is already full.
+inline bool ShouldAllowImmediateMesh(bool moving, bool pending_light,
+                                     int pending_gpu_queued = 0, int fifo_n = 0,
+                                     int fifo_soft_cap = 0,
+                                     bool visual_holes = false)
 {
   if (moving || pending_light)
+  {
+    return false;
+  }
+  if (pending_gpu_queued >= 32)
+  {
+    return false;
+  }
+  if (fifo_soft_cap > 0 && fifo_n >= fifo_soft_cap)
+  {
+    return false;
+  }
+  if (visual_holes && fifo_soft_cap > 0 && fifo_n >= (fifo_soft_cap * 3) / 4)
   {
     return false;
   }

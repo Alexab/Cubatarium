@@ -142,6 +142,19 @@ int main()
   Expect(!ShouldHoldInflightSupersedeUnderMissUndrawn(false, true, false),
          "Era27: !SoftDefer undrawn → no hold");
 
+  // P4: ShouldKeepPackedDrawUntilBind
+  {
+    using cutum::ShouldKeepPackedDrawUntilBind;
+    Expect(ShouldKeepPackedDrawUntilBind(true, 2, 4, false),
+           "P4: live GPU in keep ring kept");
+    Expect(!ShouldKeepPackedDrawUntilBind(true, 2, 4, true),
+           "P4: replacement bound releases");
+    Expect(!ShouldKeepPackedDrawUntilBind(true, 5, 4, false),
+           "P4: beyond keep ring not kept");
+    Expect(!ShouldKeepPackedDrawUntilBind(false, 2, 4, false),
+           "P4: no prior GPU nothing to keep");
+  }
+
   if (failures != 0)
   {
     std::cerr << failures << " failure(s)" << std::endl;

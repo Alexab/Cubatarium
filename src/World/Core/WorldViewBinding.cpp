@@ -410,7 +410,8 @@ void UWorld::RunLegacyPhysicsFrame()
     return;
   }
 
-  auto t_begin = std::chrono::high_resolution_clock::now();
+  using clock_t = std::chrono::high_resolution_clock;
+  auto t_begin = clock_t::now();
   Streaming->ResetFrameTiming();
 
   auto camera = GetCurrentUserCamera();
@@ -445,10 +446,15 @@ void UWorld::RunLegacyPhysicsFrame()
     forward.y = 0.0f;
     if (prev_collision_ring_ready || (PhysicsTickCounter % 2) == 0)
     {
+      const auto t_ec = clock_t::now();
       Streaming->EnsureCollisionChunks(feetBlock, forward);
+      PhysicsTelemetryData.EnsureCollisionMs =
+          std::chrono::duration<double, std::milli>(clock_t::now() - t_ec)
+              .count();
     }
   }
 
+  const auto t_creature = clock_t::now();
   UWorldCreatureActivitySink activitySink(*this);
   Environment.TickActivity(*this, activitySink, dt);
 
@@ -531,7 +537,21 @@ void UWorld::RunLegacyPhysicsFrame()
     }
   }
 
+  PhysicsTelemetryData.CreatureTickMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_creature)
+          .count();
+  const auto t_cam = clock_t::now();
   bool is_moved = camera && camera->DoMovement(this);
+  PhysicsTelemetryData.CameraDoMovementMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_cam).count();
+  if (camera)
+  {
+    PhysicsTelemetryData.CameraGroundSupportMs =
+        camera->GetLastGroundSupportMs();
+    PhysicsTelemetryData.CameraLocomotionMs = camera->GetLastLocomotionMs();
+    PhysicsTelemetryData.CameraHorizMoveMs = camera->GetLastHorizMoveMs();
+  }
+  const auto t_sync = clock_t::now();
   static bool was_collision_ready = true;
   const bool collision_ready =
       !hasFeetBlockForReadiness ||
@@ -639,7 +659,9 @@ void UWorld::RunLegacyPhysicsFrame()
     }
   }
 
-  auto t_end = std::chrono::high_resolution_clock::now();
+  PhysicsTelemetryData.CameraSyncMs =
+      std::chrono::duration<double, std::milli>(clock_t::now() - t_sync).count();
+  auto t_end = clock_t::now();
   DurationDoMovementMks = static_cast<uint64_t>(
       std::chrono::duration<double, std::micro>(t_end - t_begin).count());
   PhysicsTelemetryData.MovementStepMs =
@@ -675,7 +697,14 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.StreamMs = 0.0;
   PhysicsTelemetryData.StreamerUpdateMs = 0.0;
   PhysicsTelemetryData.AsyncIoMs = 0.0;
+  PhysicsTelemetryData.RelightDrainMsPrev = PhysicsTelemetryData.RelightDrainMs;
+  PhysicsTelemetryData.RelightApplyMsPrev = PhysicsTelemetryData.RelightApplyMs;
+  PhysicsTelemetryData.RelightFifoDropNPrev = PhysicsTelemetryData.RelightFifoDropN;
+  PhysicsTelemetryData.RelightFifoPinDropNPrev =
+      PhysicsTelemetryData.RelightFifoPinDropN;
   PhysicsTelemetryData.RelightDrainMs = 0.0;
+  PhysicsTelemetryData.RelightCaptureMs = 0.0;
+  PhysicsTelemetryData.RelightApplyMs = 0.0;
   PhysicsTelemetryData.RelightCaptureColHoriz = -1;
   PhysicsTelemetryData.RelightCaptureFinalize = 0;
   PhysicsTelemetryData.RelightCaptureBandCySpan = 0;
@@ -718,6 +747,9 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.FirstMeshScheduleCap = 0;
   PhysicsTelemetryData.RemeshScheduleCap = 0;
   PhysicsTelemetryData.RelightTrimFarN = 0;
+  PhysicsTelemetryData.RelightFifoDropN = 0;
+  PhysicsTelemetryData.RelightFifoPinSavedN = 0;
+  PhysicsTelemetryData.RelightFifoPinDropN = 0;
   PhysicsTelemetryData.PhaseBudgetOver = 0;
   PhysicsTelemetryData.PhaseMissCarveOut = 0;
   PhysicsTelemetryData.MissReservedMs = 0.0;

@@ -252,6 +252,13 @@ private:
   static constexpr int kMaxPhysicsSubsteps = 12;
   float PhysicsAccumulator{0.0f};
   int LastPhysicsSubsteps{0};
+  double LastGroundSupportMs{0.0};
+  double LastLocomotionMs{0.0};
+  double LastHorizMoveMs{0.0};
+public:
+  double GetLastGroundSupportMs() const { return LastGroundSupportMs; }
+  double GetLastLocomotionMs() const { return LastLocomotionMs; }
+  double GetLastHorizMoveMs() const { return LastHorizMoveMs; }
 };
 
 } // namespace cutum

@@ -97,6 +97,16 @@ inline bool ShouldKeepGpuSlotUntilBindInRing(bool had_gpu_drawable, int horiz,
   return horiz >= 0 && horiz <= keep_horiz;
 }
 
+/// P4: keep packed/slice-ready draw (not just the SSBO) until BindCommitted.
+/// Pool can survive a cruise step while GpuPacked refs dump — same keep ring.
+inline bool ShouldKeepPackedDrawUntilBind(bool had_live_gpu_draw, int horiz,
+                                         int keep_horiz,
+                                         bool has_replacement_bound)
+{
+  return ShouldKeepGpuSlotUntilBindInRing(had_live_gpu_draw, horiz, keep_horiz,
+                                          has_replacement_bound);
+}
+
 /// Closeout C dual-Q: lit drawable remesh → RemeshQ; missing/FullyDark → FM.
 inline bool ShouldRouteRemeshToFirstMeshQueue(bool has_drawable,
                                              bool fully_dark_drawable)

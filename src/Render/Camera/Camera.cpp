@@ -981,6 +981,9 @@ bool UCamera::DoMovement(const UWorld *world)
   bool is_moved(false);
   SyncFreeMoveFromController();
   LastPhysicsSubsteps = 0;
+  LastGroundSupportMs = 0.0;
+  LastLocomotionMs = 0.0;
+  LastHorizMoveMs = 0.0;
   int substep_cap = kMaxPhysicsSubsteps;
   if (world)
   {
@@ -1001,8 +1004,11 @@ bool UCamera::DoMovement(const UWorld *world)
       PhysicsAccumulator -= kFixedPhysicsDt;
       ++LastPhysicsSubsteps;
       const float dt = kFixedPhysicsDt;
+      const auto tgs0 = std::chrono::high_resolution_clock::now();
       const bool groundedInFlight =
           world && world->HasGroundSupport(Position, flightCap);
+      LastGroundSupportMs += std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - tgs0).count();
       if (groundedInFlight)
       {
         if (IsShiftDown())
@@ -1069,9 +1075,14 @@ bool UCamera::DoMovement(const UWorld *world)
         continue;
       }
 
-      if (ApplyHorizontalMovement(world, kFixedPhysicsDt))
       {
-        is_moved = true;
+        const auto th0 = std::chrono::high_resolution_clock::now();
+        if (ApplyHorizontalMovement(world, kFixedPhysicsDt))
+        {
+          is_moved = true;
+        }
+        LastHorizMoveMs += std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - th0).count();
       }
 
       if (Position.y < kMinReasonablePlayerY)
@@ -1079,8 +1090,13 @@ bool UCamera::DoMovement(const UWorld *world)
         break;
       }
 
-      Locomotion.UpdateLocomotion(world, Position, input, kFixedPhysicsDt,
-                                  world->GetMovementCollisionSkipId());
+      {
+        const auto tl0 = std::chrono::high_resolution_clock::now();
+        Locomotion.UpdateLocomotion(world, Position, input, kFixedPhysicsDt,
+                                    world->GetMovementCollisionSkipId());
+        LastLocomotionMs += std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - tl0).count();
+      }
       is_moved = true;
       UpdatePose();
     }

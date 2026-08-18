@@ -1324,6 +1324,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   int mesh_schedule = LastBudget.MaxMeshSchedule;
   const size_t pending_dirty = mesh_service.GetDirtyCount();
   const int pending_async = mesh_service.GetAsyncInFlightCount();
+  const int pending_gpu_queued_n =
+      static_cast<int>(mesh_service.GetPendingGpuQueuedCount());
+  const int fifo_n_imm = world.GetPendingTerrainRelightFifoCount();
+  const int fifo_cap_imm = URuntimeTuning::Get().RelightFifoSoftCap;
 
   // Soft-cap Dirty under Yellow/Red: drop farthest remesh (not holes).
   // Manual 091724: Dirty~400–590 with SoftCap 1200 and async≤29 — thrash never
@@ -1376,6 +1380,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           focus_ground_horiz, mtune.RelightFifoSoftCap);
       phys.RelightFifoDropped += static_cast<uint64_t>(std::max(0, dropped));
       phys.RelightTrimFarN += std::max(0, dropped);
+      phys.RelightFifoDropN += std::max(0, dropped);
       // P4: under Red+holes+fifo pressure, trim again toward soft-cap aggressively.
       // Phase 1c: trim = truncate outer tickets alarm, not silent heal.
       const int fifo_live = world.GetPendingTerrainRelightFifoCount();
@@ -1389,6 +1394,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             focus_ground_horiz, std::max(8, mtune.RelightFifoSoftCap * 3 / 4));
         phys.RelightFifoDropped += static_cast<uint64_t>(std::max(0, drop2));
         phys.RelightTrimFarN += std::max(0, drop2);
+        phys.RelightFifoDropN += std::max(0, drop2);
       }
       // Phase 1c: after trim, drain light from MissReserved carve — not silent heal.
       if (phys.RelightTrimFarN > 0 &&
@@ -2352,8 +2358,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           std::max(std::abs(hole.x - focus_ground_horiz.x),
                    std::abs(hole.z - focus_ground_horiz.z));
       const bool allow_uf_imm =
-          ShouldAllowImmediateMesh(moving, world.IsPendingLightBeforeMesh(
-                                               glm::ivec2(hole.x, hole.z))) &&
+          ShouldAllowImmediateMesh(
+              moving,
+              world.IsPendingLightBeforeMesh(glm::ivec2(hole.x, hole.z)),
+              pending_gpu_queued_n, fifo_n_imm, fifo_cap_imm, visual_holes) &&
           underfeet_need && hole_horiz <= 1 &&
           underfeet_immediate_cd <= 0 &&
           underfeet_immediate_this_frame < kMaxUnderfeetImmediate &&
@@ -2523,8 +2531,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 glm::ivec2(coord.x, coord.z), ColumnWorkKind::FirstMesh, 110);
             const bool allow_underfeet_immediate =
                 ShouldAllowImmediateMesh(
-                    moving, world.IsPendingLightBeforeMesh(
-                                glm::ivec2(coord.x, coord.z))) &&
+                    moving,
+                    world.IsPendingLightBeforeMesh(
+                        glm::ivec2(coord.x, coord.z)),
+                    pending_gpu_queued_n, fifo_n_imm, fifo_cap_imm,
+                    visual_holes) &&
                 underfeet_immediate_cd <= 0 &&
                 underfeet_immediate_this_frame < kMaxUnderfeetImmediate &&
                 immediate_ms_used() < 8.0 && immediate_budget_ok();
@@ -2705,7 +2716,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             ShouldColdAsyncImmEscape(missing_visible_mesh, pending_async) &&
             is_nearest_hole && !hole_pending;
         const bool want_immediate =
-            ShouldAllowImmediateMesh(moving, hole_pending) &&
+            ShouldAllowImmediateMesh(moving, hole_pending, pending_gpu_queued_n,
+                                     fifo_n_imm, fifo_cap_imm, visual_holes) &&
             (calm_enough_for_imm || cold_async_escape) && sync_ok &&
             (!hole_underfeet ||
              (underfeet_immediate_cd <= 0 &&

@@ -344,7 +344,8 @@ inline bool ShouldSetLitReadyOnTrustedDisk(bool has_lit_drawable,
   return has_lit_drawable && !remesh_in_flight;
 }
 
-/// Era36 B2 / Era40: dynamic CaptureMovingBgCap — fire at pendf>15 (was 20).
+/// P5: dynamic moving Capture cap can rise from 1 to 2 only after FIFO/apply
+/// stability gates pass (checked by ShouldAllowDynamicCaptureMovingBgCap).
 inline int DynamicCaptureMovingBgCap(int pending_light_focus,
                                      int base_cap = 1)
 {
@@ -352,7 +353,20 @@ inline int DynamicCaptureMovingBgCap(int pending_light_focus,
   {
     return base_cap;
   }
-  return std::min(4, pending_light_focus / 10 + 1);
+  return std::max(base_cap, 2);
+}
+
+/// P5: raise CaptureMovingBgCap above 1 only after FIFO stops dropping the pin
+/// and Apply/drain is already cheap. Per-frame proxies of those gates.
+inline bool ShouldAllowDynamicCaptureMovingBgCap(int fifo_drop_delta,
+                                                int fifo_pin_drop_n,
+                                                double drain_ms)
+{
+  if (fifo_pin_drop_n > 0 || fifo_drop_delta > 0)
+  {
+    return false;
+  }
+  return drain_ms <= 8.0;
 }
 
 /// Cruise SOTA: moving + visual holes — never raise bg above dynamic cap.

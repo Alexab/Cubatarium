@@ -77,6 +77,8 @@ public:
 
   /// P1: while true, RequestPromoteRelight ignores other columns.
   void SetPromoteRelightHold(glm::ivec2 column, bool hold);
+  bool HasPromoteRelightHold() const { return promote_hold_valid_; }
+  glm::ivec2 GetPromoteRelightHoldColumn() const { return promote_hold_col_; }
 
   /// True if column has a live ColumnFlow repair/admit/promote ticket queued
   /// or is inside post-dispatch cooldown.

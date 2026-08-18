@@ -107,6 +107,12 @@ struct PhysicsTelemetry
   double StreamerUpdateMs{0.0};
   double AsyncIoMs{0.0};
   double RelightDrainMs{0.0};
+  /// P2: Capture (DrainRelightQueues) vs Apply (DrainAsyncRelightResults).
+  double RelightCaptureMs{0.0};
+  double RelightApplyMs{0.0};
+  /// Previous frame (P2 apply budget / P5 dynamic bg_cap).
+  double RelightDrainMsPrev{0.0};
+  double RelightApplyMsPrev{0.0};
   double MeshSyncMs{0.0};
   double MeshSnapshotMs{0.0};
   /// Wall time spent in RebuildChunkImmediate this frame (inside MeshEmergeMs).
@@ -115,6 +121,13 @@ struct PhysicsTelemetry
   /// WindowManager::Update split (outside PhysicsStepMs).
   double ViewsMs{0.0};
   double DoMovementMs{0.0};
+  double EnsureCollisionMs{0.0};
+  double CreatureTickMs{0.0};
+  double CameraDoMovementMs{0.0};
+  double CameraGroundSupportMs{0.0};
+  double CameraLocomotionMs{0.0};
+  double CameraHorizMoveMs{0.0};
+  double CameraSyncMs{0.0};
   /// Era14: TickWorldStreamingPhase wall (stream+emerge); outside DoMovementMs.
   double WorldStreamingPhaseMs{0.0};
   double BlockInputMs{0.0};
@@ -172,6 +185,11 @@ struct PhysicsTelemetry
   int RemeshScheduleCap{0};
   /// Per-frame TrimFarRelightFifo drops (not cumulative RelightFifoDropped).
   int RelightTrimFarN{0};
+  /// P1: per-frame FIFO drops (overflow + trim) and pin keys skipped.
+  int RelightFifoDropN{0};
+  int RelightFifoPinSavedN{0};
+  int RelightFifoDropNPrev{0};
+  int RelightFifoPinDropNPrev{0};
   /// Player block/world position for cruise SLA (perf jsonl).
   float PlayerX{0.0f};
   float PlayerY{0.0f};
@@ -242,6 +260,10 @@ struct PhysicsTelemetry
   int UnderfeetPendingLight{0};
   /// ColumnRenderableState::BlockReason as int.
   int UnderfeetReason{0};
+  /// ColumnEmergeState as int for underfeet column.
+  int UnderfeetStage{0};
+  /// 1 if world LightingRelightDeferred is enabled this frame.
+  int LightingRelightDeferred{0};
   /// 1 when underfeet xz appears in filtered opaque draw refs this frame.
   int UnderfeetOpaquePresent{0};
   /// FogPullIn effective state (0 = disabled / unset).
@@ -341,6 +363,8 @@ struct PhysicsTelemetry
   uint64_t DirtyDropped{0};
   uint64_t PendingLightDropped{0};
   uint64_t RelightFifoDropped{0};
+  /// P1: pin-key drops this frame (gate: stay 0).
+  int RelightFifoPinDropN{0};
   double GpuPoolUsedMb{0.0};
   double GpuPoolCapMb{0.0};
   /// Init-bound backend names (mesher/store/cull).

@@ -142,12 +142,20 @@ struct FrameNumbers
   double world_extra_ms{0.0};
   double views_ms{0.0};
   double do_movement_ms{0.0};
+  double ensure_collision_ms{0.0};
+  double creature_tick_ms{0.0};
+  double camera_move_ms{0.0};
+  double camera_ground_support_ms{0.0};
+  double camera_locomotion_ms{0.0};
+  double camera_horiz_move_ms{0.0};
+  double camera_sync_ms{0.0};
   double world_streaming_phase_ms{0.0};
   double block_input_ms{0.0};
   double tick_env_ms{0.0};
   double physics_block_ms{0.0};
   double physics_drain_ms{0.0};
   double physics_movement_ms{0.0};
+  int physics_substeps{0};
   int break_complete_n{0};
   int break_inflight_race_n{0};
   int break_dark_face_n{0};
@@ -181,6 +189,10 @@ struct FrameNumbers
   double streamer_update_ms{0.0};
   double async_io_ms{0.0};
   double relight_drain_ms{0.0};
+  double relight_capture_ms{0.0};
+  double relight_apply_ms{0.0};
+  int relight_fifo_drop_n{0};
+  int relight_fifo_pin_saved_n{0};
   double mesh_sync_ms{0.0};
   double mesh_snapshot_ms{0.0};
   double mesh_immediate_ms{0.0};
@@ -267,7 +279,9 @@ struct FrameNumbers
   int underfeet_sticky{0};
   int underfeet_pending_light{0};
   int underfeet_reason{0};
+  int underfeet_stage{0};
   int underfeet_opaque_present{0};
+  int lighting_relight_deferred{0};
   int fog_pull_in_rd{0};
   int fog_pull_in_margin{0};
   float fog_pull_in_start_ratio{0.0f};
@@ -446,6 +460,13 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   // Era14: DoMovement is locomotion-only; stream/emerge live in
   // TickWorldStreamingPhase (WorldStreamingPhaseMs / stream_ms+mesh_emerge_ms).
   n.do_movement_ms = phys.DoMovementMs;
+  n.ensure_collision_ms = phys.EnsureCollisionMs;
+  n.creature_tick_ms = phys.CreatureTickMs;
+  n.camera_move_ms = phys.CameraDoMovementMs;
+  n.camera_ground_support_ms = phys.CameraGroundSupportMs;
+  n.camera_locomotion_ms = phys.CameraLocomotionMs;
+  n.camera_horiz_move_ms = phys.CameraHorizMoveMs;
+  n.camera_sync_ms = phys.CameraSyncMs;
   n.world_streaming_phase_ms = phys.WorldStreamingPhaseMs;
   n.input_ms = world.GetLastInputMs();
   n.app_update_ms = world.GetLastAppUpdateMs();
@@ -456,6 +477,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.physics_block_ms = phys.BlockStepMs;
   n.physics_drain_ms = phys.DrainStepMs;
   n.physics_movement_ms = phys.MovementStepMs;
+  n.physics_substeps = phys.PhysicsSubsteps;
   n.break_complete_n = phys.BreakCompleteN;
   n.break_inflight_race_n = phys.BreakInflightRaceN;
   n.break_dark_face_n = phys.BreakDarkFaceN;
@@ -506,6 +528,10 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.streamer_update_ms = phys.StreamerUpdateMs;
   n.async_io_ms = phys.AsyncIoMs;
   n.relight_drain_ms = phys.RelightDrainMs;
+  n.relight_capture_ms = phys.RelightCaptureMs;
+  n.relight_apply_ms = phys.RelightApplyMs;
+  n.relight_fifo_drop_n = phys.RelightFifoDropN;
+  n.relight_fifo_pin_saved_n = phys.RelightFifoPinSavedN;
   n.mesh_sync_ms = phys.MeshSyncMs;
   n.mesh_snapshot_ms = phys.MeshSnapshotMs;
   n.mesh_immediate_ms = phys.MeshImmediateMs;
@@ -597,7 +623,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.underfeet_sticky = phys.UnderfeetSticky;
   n.underfeet_pending_light = phys.UnderfeetPendingLight;
   n.underfeet_reason = phys.UnderfeetReason;
+  n.underfeet_stage = phys.UnderfeetStage;
   n.underfeet_opaque_present = phys.UnderfeetOpaquePresent;
+  n.lighting_relight_deferred = phys.LightingRelightDeferred;
   n.fog_pull_in_rd = phys.FogPullInRd;
   n.fog_pull_in_margin = phys.FogPullInMargin;
   n.fog_pull_in_start_ratio = phys.FogPullInStartRatio;
@@ -804,12 +832,20 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"world_extra_ms\":" << n.world_extra_ms
           << ",\"views_ms\":" << n.views_ms
           << ",\"do_movement_ms\":" << n.do_movement_ms
+          << ",\"ensure_collision_ms\":" << n.ensure_collision_ms
+          << ",\"creature_tick_ms\":" << n.creature_tick_ms
+          << ",\"camera_move_ms\":" << n.camera_move_ms
+          << ",\"camera_ground_support_ms\":" << n.camera_ground_support_ms
+          << ",\"camera_locomotion_ms\":" << n.camera_locomotion_ms
+          << ",\"camera_horiz_move_ms\":" << n.camera_horiz_move_ms
+          << ",\"camera_sync_ms\":" << n.camera_sync_ms
           << ",\"world_streaming_phase_ms\":" << n.world_streaming_phase_ms
           << ",\"block_input_ms\":" << n.block_input_ms
           << ",\"tick_env_ms\":" << n.tick_env_ms
           << ",\"physics_block_ms\":" << n.physics_block_ms
           << ",\"physics_drain_ms\":" << n.physics_drain_ms
           << ",\"physics_movement_ms\":" << n.physics_movement_ms
+          << ",\"physics_substeps\":" << n.physics_substeps
           << ",\"break_complete_n\":" << n.break_complete_n
           << ",\"break_inflight_race_n\":" << n.break_inflight_race_n
           << ",\"break_dark_face_n\":" << n.break_dark_face_n
@@ -843,6 +879,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"streamer_update_ms\":" << n.streamer_update_ms
           << ",\"async_io_ms\":" << n.async_io_ms
           << ",\"relight_drain_ms\":" << n.relight_drain_ms
+          << ",\"relight_capture_ms\":" << n.relight_capture_ms
+          << ",\"relight_apply_ms\":" << n.relight_apply_ms
+          << ",\"relight_fifo_drop_n\":" << n.relight_fifo_drop_n
+          << ",\"relight_fifo_pin_saved_n\":" << n.relight_fifo_pin_saved_n
           << ",\"mesh_sync_ms\":" << n.mesh_sync_ms
           << ",\"mesh_snapshot_ms\":" << n.mesh_snapshot_ms
           << ",\"mesh_immediate_ms\":" << n.mesh_immediate_ms
@@ -933,7 +973,9 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"underfeet_sticky\":" << n.underfeet_sticky
           << ",\"underfeet_pending_light\":" << n.underfeet_pending_light
           << ",\"underfeet_reason\":" << n.underfeet_reason
+          << ",\"underfeet_stage\":" << n.underfeet_stage
           << ",\"underfeet_opaque_present\":" << n.underfeet_opaque_present
+          << ",\"lighting_relight_deferred\":" << n.lighting_relight_deferred
           << ",\"fog_pull_in_rd\":" << n.fog_pull_in_rd
           << ",\"fog_pull_in_margin\":" << n.fog_pull_in_margin
           << ",\"fog_pull_in_start_ratio\":" << n.fog_pull_in_start_ratio
@@ -1300,6 +1342,27 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
     {
       LogLine(n, "spike", 1, n.wall_ms);
     }
+  }
+
+  if (n.underfeet_reason == 7 || (n.opaque_cmd_total > 0 && n.opaque_cmd_on == 0))
+  {
+    LOG(INFO) << "[Perf] underfeet_diag reason=" << n.underfeet_reason
+              << " stage=" << n.underfeet_stage
+              << " draw_ok=" << n.underfeet_draw_ok
+              << " has_mesh=" << n.underfeet_has_mesh
+              << " sticky=" << n.underfeet_sticky
+              << " pending_light=" << n.underfeet_pending_light
+              << " lighting_deferred=" << n.lighting_relight_deferred
+              << " opaque_present=" << n.underfeet_opaque_present
+              << " opaque_cmd_total=" << n.opaque_cmd_total
+              << " opaque_cmd_on=" << n.opaque_cmd_on
+              << " opaque_packed=" << n.opaque_gpu_packed_n
+              << " opaque_draw=" << n.opaque_draw_n
+              << " focus=(" << n.focus_cx << "," << n.focus_cz << ")"
+              << " player=(" << n.player_x << "," << n.player_y << ","
+              << n.player_z << ")"
+              << " chunk_count=" << n.chunk_count
+              << " gpu_pool_mb=" << n.gpu_pool_used_mb;
   }
 
   const double interval = interval_sec > 0.05 ? interval_sec : 2.0;

@@ -76,6 +76,7 @@
 #include "Render/Mesh/MeshApplyPolicy.h"
 #include "World/Streaming/EnterVisualGate.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/ColumnVisualReadyPolicy.h"
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
@@ -2198,7 +2199,15 @@ int UWorld::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground_horiz,
   {
     return 0;
   }
-  return Persistence->TrimFarRelightFifoFarthest(focus_ground_horiz, soft_cap);
+  const int dropped =
+      Persistence->TrimFarRelightFifoFarthest(focus_ground_horiz, soft_cap);
+  const int overflow = Persistence->TakeRelightFifoOverflowDropped();
+  const int saved = Persistence->TakeRelightFifoPinSaved();
+  PhysicsTelemetryData.RelightFifoDropN += overflow;
+  PhysicsTelemetryData.RelightFifoPinSavedN += saved;
+  PhysicsTelemetryData.RelightFifoDropped +=
+      static_cast<uint64_t>(std::max(0, overflow));
+  return dropped;
 }
 
 bool UWorld::IsPendingLightBeforeMesh(glm::ivec2 ground_xz) const
@@ -3009,10 +3018,12 @@ void UWorld::DrainRelightQueuesBudget(int max_player_jobs, int max_bg_columns)
   }
   const auto t0 = std::chrono::high_resolution_clock::now();
   Persistence->DrainRelightQueues(*this, max_player_jobs, max_bg_columns);
-  PhysicsTelemetryData.RelightDrainMs +=
+  const double capture_ms =
       std::chrono::duration<double, std::milli>(
           std::chrono::high_resolution_clock::now() - t0)
           .count();
+  PhysicsTelemetryData.RelightCaptureMs += capture_ms;
+  PhysicsTelemetryData.RelightDrainMs += capture_ms;
 }
 
 bool UWorld::CanSeedSkylightAtCommit(glm::ivec3 ground) const
@@ -4976,6 +4987,12 @@ void UWorld::TickAsyncChunkSystems()
   {
     drain_budget = std::max(drain_budget, 8);
   }
+  const bool moving =
+      LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold;
+  drain_budget = CruiseRelightApplyBudget(
+      moving, PhysicsTelemetryData.RelightApplyMsPrev, drain_budget,
+      PhysicsTelemetryData.RelightFifoPinDropNPrev == 0,
+      near_pending_light || underfeet_pending_light);
   // Player edits and near first-light columns remesh immediately.
   const bool priority_mesh =
       pending_player > 0 || near_pending_light || underfeet_pending_light ||
@@ -4983,10 +5000,12 @@ void UWorld::TickAsyncChunkSystems()
   const auto relight_t0 = std::chrono::high_resolution_clock::now();
   const int applied =
       DrainAsyncRelightResults(drain_budget, priority_mesh, true);
-  PhysicsTelemetryData.RelightDrainMs +=
+  const double apply_ms =
       std::chrono::duration<double, std::milli>(
           std::chrono::high_resolution_clock::now() - relight_t0)
           .count();
+  PhysicsTelemetryData.RelightApplyMs += apply_ms;
+  PhysicsTelemetryData.RelightDrainMs += apply_ms;
   if (applied > 0)
   {
     const double dt = WallFrameDeltaSec > 0.0 ? WallFrameDeltaSec : (1.0 / 60.0);

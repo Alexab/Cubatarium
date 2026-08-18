@@ -308,7 +308,13 @@ void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z,
     PromoteTerrainColumnRelight(key);
     return;
   }
-  if (priority)
+  const int pin_cx = RelightFifoPinCx;
+  const int pin_cz = RelightFifoPinCz;
+  const bool is_pin = ShouldProtectRelightFifoPinKey(
+      ground_xz.x, ground_xz.y, RelightFifoPinValid, pin_cx, pin_cz);
+  const bool force_priority =
+      priority || ShouldForcePinColumnPriority(is_pin, /*miss_horiz=*/0);
+  if (force_priority)
   {
     PendingTerrainColumnRelightsPriority.push_back(key);
   }
@@ -318,14 +324,56 @@ void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z,
   }
   const int soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
   // Bound far FIFO growth: drop oldest far entries (priority deque untouched).
+  // P1: never pop the pinned miss / hold key — scan for the next victim.
   while (soft_cap > 0 &&
          static_cast<int>(PendingTerrainColumnRelights.size()) > soft_cap)
   {
-    const glm::ivec2 victim = PendingTerrainColumnRelights.front();
-    PendingTerrainColumnRelights.pop_front();
+    auto victim_it = PendingTerrainColumnRelights.end();
+    for (auto it = PendingTerrainColumnRelights.begin();
+         it != PendingTerrainColumnRelights.end(); ++it)
+    {
+      const int cx = FloorDiv(it->x, CHUNK_SIZE);
+      const int cz = FloorDiv(it->y, CHUNK_SIZE);
+      if (ShouldProtectRelightFifoPinKey(cx, cz, RelightFifoPinValid, pin_cx,
+                                         pin_cz))
+      {
+        ++RelightFifoPinSavedN;
+        continue;
+      }
+      victim_it = it;
+      break;
+    }
+    if (victim_it == PendingTerrainColumnRelights.end())
+    {
+      break;
+    }
+    const glm::ivec2 victim = *victim_it;
+    PendingTerrainColumnRelights.erase(victim_it);
     PendingTerrainColumnRelightKeys.erase(victim);
     PendingTerrainColumnRelightYBands.erase(victim);
+    ++RelightFifoOverflowDroppedN;
   }
+}
+
+void UWorldPersistence::SetRelightFifoPin(glm::ivec2 chunk_xz, bool valid)
+{
+  RelightFifoPinValid = valid;
+  RelightFifoPinCx = chunk_xz.x;
+  RelightFifoPinCz = chunk_xz.y;
+}
+
+int UWorldPersistence::TakeRelightFifoOverflowDropped()
+{
+  const int n = RelightFifoOverflowDroppedN;
+  RelightFifoOverflowDroppedN = 0;
+  return n;
+}
+
+int UWorldPersistence::TakeRelightFifoPinSaved()
+{
+  const int n = RelightFifoPinSavedN;
+  RelightFifoPinSavedN = 0;
+  return n;
 }
 
 void UWorldPersistence::PromoteTerrainColumnRelight(glm::ivec2 key)
@@ -405,6 +453,30 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   {
     return;
   }
+  {
+    const auto &phys = world.GetPhysicsTelemetry();
+    const auto &exec = GetColumnFlowExecutor();
+    if (exec.HasPromoteRelightHold())
+    {
+      SetRelightFifoPin(exec.GetPromoteRelightHoldColumn(), true);
+    }
+    else
+    {
+      SetRelightFifoPin(glm::ivec2(phys.MissCx, phys.MissCz),
+                        phys.FocusMissingMesh > 0 &&
+                            ShouldHoldPinnedRelightWitness(
+                                phys.MissHoriz, true, true));
+    }
+  }
+  auto harvest_fifo_overflow = [&world, this]()
+  {
+    auto &telem = world.GetPhysicsTelemetryMutable();
+    const int overflow = TakeRelightFifoOverflowDropped();
+    const int saved = TakeRelightFifoPinSaved();
+    telem.RelightFifoDropN += overflow;
+    telem.RelightFifoPinSavedN += saved;
+    telem.RelightFifoDropped += static_cast<uint64_t>(std::max(0, overflow));
+  };
   int drained_player = 0;
   while (!PendingPlayerRelights.empty() && drained_player < max_player_jobs)
   {
@@ -416,6 +488,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
 
   if (max_bg_columns <= 0)
   {
+    harvest_fifo_overflow();
     return;
   }
   world.ReconcileAsyncRelightColumnInFlight();
@@ -807,10 +880,17 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   int band_cy = std::max(0, tune.RelightCaptureBandCy);
   if (moving && !enter_fov_lit)
   {
-    const int dynamic_cap =
-        DynamicCaptureMovingBgCap(pending_light_focus_n, tune.CaptureMovingBgCap);
-    // Center+edge Capture (cruise time-budget D) makes dynamic 2–3 safe;
-    // do not raise RuntimeTuning.CaptureMovingBgCap above 1.
+    const auto &telem = world.GetPhysicsTelemetry();
+    int dynamic_cap = tune.CaptureMovingBgCap;
+    // P5: raise above base 1 only when last frame did not drop FIFO/pin and
+    // drain was already ≤8. Do not lift RuntimeTuning.CaptureMovingBgCap.
+    if (ShouldAllowDynamicCaptureMovingBgCap(telem.RelightFifoDropNPrev,
+                                             telem.RelightFifoPinDropNPrev,
+                                             telem.RelightDrainMsPrev))
+    {
+      dynamic_cap =
+          DynamicCaptureMovingBgCap(pending_light_focus_n, tune.CaptureMovingBgCap);
+    }
     bg_cap = ClampCaptureMovingBgCapWithHoles(bg_cap, moving, visual_holes,
                                               dynamic_cap);
   }
@@ -1048,6 +1128,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   while (drain_one())
   {
   }
+  harvest_fifo_overflow();
 }
 
 void UWorldPersistence::DrainTerrainColumnRelights(UWorld &world, int max_columns)
@@ -1092,8 +1173,10 @@ int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
       const int cz = FloorDiv(it->y, CHUNK_SIZE);
       const int dist =
           std::max(std::abs(cx - focus_ground.x), std::abs(cz - focus_ground.z));
-      // Era40: never Trim/drop LitDrawable-ring miss pin columns.
-      if (dist <= RelightMissPinMaxHoriz())
+      // Era40 / P1: never Trim/drop LitDrawable-ring or pinned miss columns.
+      if (ShouldProtectRelightFifoPinKey(cx, cz, RelightFifoPinValid,
+                                         RelightFifoPinCx, RelightFifoPinCz) ||
+          dist <= RelightMissPinMaxHoriz())
       {
         continue;
       }

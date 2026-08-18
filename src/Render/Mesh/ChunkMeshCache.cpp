@@ -3481,8 +3481,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       (!intentional_empty ||
        ShouldRetainUnderfeetGpuOnEmptyReplace(underfeet_lease, had_gpu_drawable,
                                               intentional_empty) ||
-       ShouldKeepGpuSlotUntilBindInRing(had_gpu_drawable, gpu_keep_horiz,
-                                        gpu_keep_ring, false)))
+      ShouldKeepPackedDrawUntilBind(had_gpu_drawable, gpu_keep_horiz,
+                                    gpu_keep_ring, false)))
   {
     ++MeshReplaceHoleAvoided;
     // Keep same live SSBO — do not mark GreedyBatchesDirty/ForceFlat (refs OK).
@@ -4951,8 +4951,8 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
         (!intentional_empty ||
          ShouldRetainUnderfeetGpuOnEmptyReplace(underfeet_lease, had_gpu_drawable,
                                                 intentional_empty) ||
-         ShouldKeepGpuSlotUntilBindInRing(had_gpu_drawable, gpu_keep_horiz,
-                                          gpu_keep_ring, false)))
+         ShouldKeepPackedDrawUntilBind(had_gpu_drawable, gpu_keep_horiz,
+                                       gpu_keep_ring, false)))
     {
       ++MeshReplaceHoleAvoided;
       // Same live SSBO — do not ForceFlatRebuild / GreedyBatchesDirty (refs OK).

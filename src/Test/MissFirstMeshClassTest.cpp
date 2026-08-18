@@ -1308,21 +1308,21 @@ int main()
            "Era36 B1: surface cy=4 -> band 3..7");
   }
 
-  // --- Era36 B2 / Era40 dynamic capture cap (threshold 15) ---
+  // --- P5 dynamic capture cap (threshold 15, cap <= 2) ---
   {
     using cutum::DynamicCaptureMovingBgCap;
     Expect(DynamicCaptureMovingBgCap(5) == 1,
-           "Era36 B2: low pending -> base cap 1");
-    Expect(DynamicCaptureMovingBgCap(25) == 3,
-           "Era36 B2: pending=25 -> cap 3");
-    Expect(DynamicCaptureMovingBgCap(50) == 4,
-           "Era36 B2: pending=50 -> cap clamped to 4");
+           "P5: low pending -> base cap 1");
+    Expect(DynamicCaptureMovingBgCap(25) == 2,
+           "P5: pending=25 -> cap 2");
+    Expect(DynamicCaptureMovingBgCap(50) == 2,
+           "P5: pending=50 still capped at 2");
     Expect(DynamicCaptureMovingBgCap(15) == 1,
            "Era40: pending=15 (threshold) -> base cap");
     Expect(DynamicCaptureMovingBgCap(16) == 2,
            "Era40: pending=16 -> cap 2");
     Expect(DynamicCaptureMovingBgCap(16, 1) == 2,
-           "F: base CaptureMovingBgCap stays 1; dynamic may be 2 after cheap Capture");
+           "P5: base cap stays 1; dynamic may rise to 2");
   }
 
   // --- Cruise time-budget A: physics debt drop ---
@@ -1696,6 +1696,62 @@ int main()
            "P4: Yellow no Red drain");
     Expect(!ShouldCruiseRedFifoLightDrain(2, 72, 96, 0.75f, true, 0),
            "P4: no pendf -> no drain");
+  }
+
+  // P1: ShouldProtectRelightFifoPinKey
+  {
+    using cutum::ShouldProtectRelightFifoPinKey;
+    Expect(ShouldProtectRelightFifoPinKey(10, 20, true, 10, 20),
+           "P1: valid pin protects matching victim");
+    Expect(!ShouldProtectRelightFifoPinKey(10, 20, true, 11, 20),
+           "P1: pin mismatch does not protect");
+    Expect(!ShouldProtectRelightFifoPinKey(10, 20, false, 10, 20),
+           "P1: invalid pin does not protect");
+  }
+
+  // P1: ShouldForcePinColumnPriority
+  {
+    using cutum::ShouldForcePinColumnPriority;
+    Expect(ShouldForcePinColumnPriority(true, 2),
+           "P1: pin key nh<=2 forces priority");
+    Expect(ShouldForcePinColumnPriority(true, 0),
+           "P1: pin key nh=0 forces priority");
+    Expect(!ShouldForcePinColumnPriority(true, 3),
+           "P1: pin key nh=3 does not force priority");
+    Expect(!ShouldForcePinColumnPriority(false, 1),
+           "P1: non-pin key does not force priority");
+  }
+
+  // P2: CruiseRelightApplyBudget
+  {
+    using cutum::CruiseRelightApplyBudget;
+    Expect(CruiseRelightApplyBudget(true, 10.0, 4, false) == 1,
+           "P2: moving caps to 1");
+    Expect(CruiseRelightApplyBudget(true, 3.0, 4, true) == 2,
+           "P2: moving cheap+stable allows 2");
+    Expect(CruiseRelightApplyBudget(false, 10.0, 4, false) == 4,
+           "P2: idle returns requested");
+    Expect(CruiseRelightApplyBudget(true, 10.0, 0, true) == 0,
+           "P2: requested 0 returns 0");
+    Expect(CruiseRelightApplyBudget(true, 10.0, 8, false, true) == 1,
+           "P2: near pending does not bypass moving cap");
+    Expect(CruiseRelightApplyBudget(true, 2.0, 12, true, true) == 2,
+           "P2: near pending still allows only cheap second apply");
+    Expect(CruiseRelightApplyBudget(true, 10.0, 3, true, true) == 1,
+           "P2: expensive apply keeps moving cap at 1");
+  }
+
+  // P5: ShouldAllowDynamicCaptureMovingBgCap
+  {
+    using cutum::ShouldAllowDynamicCaptureMovingBgCap;
+    Expect(!ShouldAllowDynamicCaptureMovingBgCap(1, 0, 5.0),
+           "P5: drop>0 blocks dynamic cap");
+    Expect(!ShouldAllowDynamicCaptureMovingBgCap(0, 1, 5.0),
+           "P5: pin_drop>0 blocks dynamic cap");
+    Expect(!ShouldAllowDynamicCaptureMovingBgCap(0, 0, 9.0),
+           "P5: drain>8 blocks dynamic cap");
+    Expect(ShouldAllowDynamicCaptureMovingBgCap(0, 0, 7.0),
+           "P5: stable allows dynamic cap");
   }
 
   if (gFails != 0)
