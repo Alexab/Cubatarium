@@ -3278,6 +3278,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         }
       }
 
+      const bool stop_tail_ownership_mode =
+          !moving && missing_visible_mesh && MissWitnessAgeFrames > 240 &&
+          world.GetTimeSinceMotionSec() > 4.0 && pending_focus_count <= 2;
       // Era23 I-M9: FirstMesh-class PreferKick every miss-frame (age SLA backup).
       // PreferKick only when GPU queue stuck — Dirty alone starts idle pipeline.
       {
@@ -3308,8 +3311,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           ColumnWorkItem pin{};
           pin.column = glm::ivec2(isolated_hole.x, isolated_hole.z);
           pin.kind = ColumnWorkKind::FirstMesh;
-          pin.priority = 108;
-          pin.scan_full_focus = true;
+          pin.priority = stop_tail_ownership_mode ? 116 : 108;
+          // B3: in stop-tail ownership mode we target only pinned column to
+          // avoid losing FirstMesh ownership to full-ring admission churn.
+          pin.scan_full_focus = !stop_tail_ownership_mode;
           pin.cy = isolated_hole.y;
           // Era22 F2c: when we're about to do a full-column pin, don't enqueue
           // the slice-pin first (scheduler is single-ticket-per-column).
@@ -3339,7 +3344,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       }
 
       // Era22 F2b/F2c: periodic re-enqueue to avoid stuck-hole starvation.
-      // Every new 120f "miss period" → full-focus FirstMesh scan.
+      // Every new 120f "miss period" → FirstMesh scan.
       // After age threshold → additionally pin FirstMesh on the isolated hole.
       if (!moving && !pending_near_light)
       {
@@ -3350,11 +3355,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         {
           MissStuckSelfHealPeriod = miss_age_periods;
           ColumnWorkItem heal_scan{};
-          heal_scan.column =
-              glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z);
+          heal_scan.column = stop_tail_ownership_mode
+                                 ? glm::ivec2(isolated_hole.x, isolated_hole.z)
+                                 : glm::ivec2(focus_ground_horiz.x,
+                                              focus_ground_horiz.z);
           heal_scan.kind = ColumnWorkKind::FirstMesh;
-          heal_scan.priority = 90;
-          heal_scan.scan_full_focus = true;
+          heal_scan.priority = stop_tail_ownership_mode ? 104 : 90;
+          // B3: during stop-tail stuck we switch from ring heal-scan to
+          // column ownership so pin ticket is not starved by broad admission.
+          heal_scan.scan_full_focus = !stop_tail_ownership_mode;
           // Era22 F2b: use full-height missing slice dirtying, not only
           // remesh-band. This targets stuck unfinished_visual that can span
           // above remesh_max.
@@ -3370,12 +3379,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           ColumnWorkItem pin{};
           pin.column = glm::ivec2(isolated_hole.x, isolated_hole.z);
           pin.kind = ColumnWorkKind::FirstMesh;
-          pin.priority = 112;
-          pin.scan_full_focus = true;
+          pin.priority = stop_tail_ownership_mode ? 124 : 112;
+          // B3: full-column pin must keep ownership on isolated hole in
+          // stop-tail stuck mode instead of rescanning full focus ring.
+          pin.scan_full_focus = !stop_tail_ownership_mode;
           // Full column pin: prevent "single-slice" rebuild that doesn't
           // eliminate focus_missing_mesh for stuck holes.
           pin.cy = -2; // Era22 F2c: whole-column missing slices (full height).
           exec.Enqueue(pin);
+          if (stop_tail_ownership_mode)
+          {
+            note_column_flow_drain(4, 4);
+          }
           if (queued_stuck || kicked_stuck)
           {
             mesh_service.PreferKickPendingGpuQueued(isolated_hole);
