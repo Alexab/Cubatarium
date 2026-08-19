@@ -210,6 +210,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   else
   {
     MissWitnessAgeFrames = 0;
+    MissStuckSelfHealPeriod = 0;
+    MissStuckForcePinPeriod = 0;
   }
   glm::ivec3 nearest_missing_hole{};
   const bool have_nearest_missing =
@@ -1582,11 +1584,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Holes / underfeet / light-debt idle: allow more snapshot captures.
   // Focus lit-but-dirty catch-up also needs budget — 6ms left async≈4 and
   // fd flat ~415 for the whole stop (f2_fd_golden). Cap below hole 48ms.
-  mesh_service.SetMeshSnapshotBudgetMs(
+  // Era51 F1a: snapshot budget tracks emerge decay — was blanket 48ms.
+  const double snapshot_budget =
       (visual_holes || missing_underfeet ||
        (idle_recovery && pending_focus_count > 0))
-          ? 48.0
-          : (idle_focus_dirty_debt ? 28.0 : 6.0));
+          ? std::min(StopIdleEmergeMs + 4.0, 48.0)
+          : (idle_focus_dirty_debt ? 28.0 : 6.0);
+  mesh_service.SetMeshSnapshotBudgetMs(snapshot_budget);
   // Healed idle (miss=0, no pending/holes): default idle emerge 60ms ate wall.
   // Keep 60 only while recovering holes/light. Sticky remesh is async — do not
   // hold the 60ms SyncRebuild band just because black_sticky>0 (I4e: sticky=8
@@ -1608,11 +1612,25 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   const double adaptive_moving_emerge =
       std::clamp(0.12 * WallEmaMs, 8.0, 20.0);
+  // Era51 F1a: adaptive stop-phase emerge budget with decay.
+  // Industry standard (Cubyz): 12ms/frame hard cap.  Previous blanket 60ms
+  // when visual_holes=1 caused stop_wall_med ~110ms.  Now: start at 20ms on
+  // stop, decay toward 8ms over ~5s.  Underfeet miss keeps 28ms floor.
+  if (moving)
+  {
+    StopIdleEmergeMs = 20.0; // reset on next stop
+  }
+  else
+  {
+    constexpr double kDecay = 0.97; // ~5s to reach 8 from 20 at 30fps
+    StopIdleEmergeMs = std::max(8.0, StopIdleEmergeMs * kDecay);
+  }
+  const double stop_emerge =
+      healed_idle_emerge ? (idle_focus_dirty_debt ? 28.0 : 14.0)
+      : missing_underfeet ? std::max(StopIdleEmergeMs, 28.0)
+                          : StopIdleEmergeMs;
   mesh_service.SetMeshEmergeTotalBudgetMs(
-      moving ? adaptive_moving_emerge
-             : (healed_idle_emerge
-                    ? (idle_focus_dirty_debt ? 28.0 : 14.0)
-                    : 60.0));
+      moving ? adaptive_moving_emerge : stop_emerge);
   auto clamp_emerge_to_phase = [&]()
   {
     const double cap = world.GetPhysicsTelemetry().EmergeBudgetCapMs;
@@ -1789,9 +1807,45 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Feed async harder so unfinished_visual / not_render_ready can clear.
   if ((visual_holes || missing_visible_mesh) && pending_async_early < 8)
   {
-    const int gpu_cap = moving ? 12 : 16;
-    mesh_schedule = std::max(mesh_schedule, gpu_cap);
-    mesh_drain = std::max(mesh_drain, gpu_cap);
+    // Era51 F1v: Stop-phase with visual_holes is a "persistent hole heal"
+    // regime; don't blindly raise drain/schedule to 16 (it inflates wall).
+    // Tie drain/schedule cap to the same stop-phase budget decay.
+    const int stop_cap =
+        std::clamp(static_cast<int>(StopIdleEmergeMs * 0.5), 6, 10);
+    const int gpu_cap = moving ? 12 : stop_cap;
+    if (moving)
+    {
+      mesh_schedule = std::max(mesh_schedule, gpu_cap);
+      mesh_drain = std::max(mesh_drain, gpu_cap);
+    }
+    else
+    {
+      mesh_schedule = std::min(mesh_schedule, gpu_cap);
+      mesh_drain = std::min(mesh_drain, gpu_cap);
+    }
+  }
+  // F2(B): targeted drain/schedule boost only for proven stuck focus-miss.
+  // Keep it wall-aware so we do not inflate already-hot stop frames.
+  if (!moving && missing_visible_mesh && MissWitnessAgeFrames > 150)
+  {
+    const int stuck_drain = last_frame_ms <= 90.0 ? 16 : 12;
+    const int stuck_schedule = last_frame_ms <= 90.0 ? 12 : 8;
+    mesh_drain = std::max(mesh_drain, stuck_drain);
+    mesh_schedule = std::max(mesh_schedule, stuck_schedule);
+  }
+  // F2(B2): stop-tail stuck miss escalation.
+  // When miss persists deep into stop (not early settle window), boost
+  // drain/schedule harder to finish missing-column emergence by tail.
+  const bool stop_tail_stuck =
+      !moving && missing_visible_mesh && MissWitnessAgeFrames > 240 &&
+      world.GetTimeSinceMotionSec() > 4.0 && pending_focus_count <= 2;
+  if (stop_tail_stuck)
+  {
+    mesh_service.SetStarveOutsideFocusMesh(true);
+    const int tail_drain = last_frame_ms <= 90.0 ? 20 : 14;
+    const int tail_schedule = last_frame_ms <= 90.0 ? 16 : 10;
+    mesh_drain = std::max(mesh_drain, tail_drain);
+    mesh_schedule = std::max(mesh_schedule, tail_schedule);
   }
   // Early pending_gpu read — MeshWorkAdmission for producers; Finalize after
   // drain-first consume so schedule sees post-Finish pending (F0).
@@ -2269,8 +2323,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Phase B: budgets from RuntimeTuning (streaming_tune.json overlay).
   const auto immediate_budget_t0 = std::chrono::high_resolution_clock::now();
   const URuntimeTuning &imm_tune = URuntimeTuning::Get();
+  // Era51 F1b: tighter Immediate cap on stop-phase (was 3/5ms → accum 44ms).
+  // On stop: cap per-frame at 2ms so period total stays < 20ms at ~15fps.
   const double hard_immediate_ms =
-      last_frame_ms > static_cast<double>(imm_tune.ImmediateHotWallMs)
+      !moving ? 2.0
+      : last_frame_ms > static_cast<double>(imm_tune.ImmediateHotWallMs)
           ? static_cast<double>(imm_tune.ImmediateBudgetHotMs)
           : static_cast<double>(imm_tune.ImmediateBudgetOkMs);
   auto immediate_ms_used = [&]() -> double
@@ -3242,6 +3299,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         }
         // Era24 P3 / I-E5: miss_cy>1 residual — pin FirstMesh on witness cy
         // (SoftDefer empty heal must not leave higher-cy hole orphaned).
+        const int miss_age_periods_now = MissWitnessAgeFrames / 120;
+        const bool force_full_column_pin =
+            !moving && !pending_near_light && MissWitnessAgeFrames > 150 &&
+            miss_age_periods_now > MissStuckForcePinPeriod;
         if (missing_visible_mesh && isolated_hole.y > 1 && miss_fm_class)
         {
           ColumnWorkItem pin{};
@@ -3250,7 +3311,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           pin.priority = 108;
           pin.scan_full_focus = true;
           pin.cy = isolated_hole.y;
-          exec.Enqueue(pin);
+          // Era22 F2c: when we're about to do a full-column pin, don't enqueue
+          // the slice-pin first (scheduler is single-ticket-per-column).
+          if (!force_full_column_pin)
+          {
+            exec.Enqueue(pin);
+          }
           if (queued_stuck || kicked_stuck)
           {
             mesh_service.PreferKickPendingGpuQueued(isolated_hole);
@@ -3269,6 +3335,51 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
           mesh_service.PreferKickPendingGpuQueued(isolated_hole);
           mesh_schedule = std::max(mesh_schedule, 12);
+        }
+      }
+
+      // Era22 F2b/F2c: periodic re-enqueue to avoid stuck-hole starvation.
+      // Every new 120f "miss period" → full-focus FirstMesh scan.
+      // After age threshold → additionally pin FirstMesh on the isolated hole.
+      if (!moving && !pending_near_light)
+      {
+        const int miss_age_periods = MissWitnessAgeFrames / 120;
+
+        if (miss_age_periods > 0 &&
+            miss_age_periods > MissStuckSelfHealPeriod)
+        {
+          MissStuckSelfHealPeriod = miss_age_periods;
+          ColumnWorkItem heal_scan{};
+          heal_scan.column =
+              glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z);
+          heal_scan.kind = ColumnWorkKind::FirstMesh;
+          heal_scan.priority = 90;
+          heal_scan.scan_full_focus = true;
+          // Era22 F2b: use full-height missing slice dirtying, not only
+          // remesh-band. This targets stuck unfinished_visual that can span
+          // above remesh_max.
+          heal_scan.cy = -2;
+          exec.Enqueue(heal_scan);
+          note_column_flow_drain(3, 3);
+        }
+
+        if (MissWitnessAgeFrames > 150 &&
+            miss_age_periods > MissStuckForcePinPeriod)
+        {
+          MissStuckForcePinPeriod = miss_age_periods;
+          ColumnWorkItem pin{};
+          pin.column = glm::ivec2(isolated_hole.x, isolated_hole.z);
+          pin.kind = ColumnWorkKind::FirstMesh;
+          pin.priority = 112;
+          pin.scan_full_focus = true;
+          // Full column pin: prevent "single-slice" rebuild that doesn't
+          // eliminate focus_missing_mesh for stuck holes.
+          pin.cy = -2; // Era22 F2c: whole-column missing slices (full height).
+          exec.Enqueue(pin);
+          if (queued_stuck || kicked_stuck)
+          {
+            mesh_service.PreferKickPendingGpuQueued(isolated_hole);
+          }
         }
       }
 

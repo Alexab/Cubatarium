@@ -1902,6 +1902,11 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
   remesh_max = std::max(remesh_max, player_max);
   const int cy0 = FloorDiv(remesh_min, CHUNK_SIZE);
   const int cy1 = FloorDiv(remesh_max, CHUNK_SIZE);
+  // Era22 F2c/F2: special whole-column mode.
+  // - only_cy == -1: whole remesh band (0..remesh_max).
+  // - only_cy == -2: whole column up to procedural MaxHeight.
+  const bool full_column_only = only_cy == -2;
+  const int scan_cy1 = full_column_only ? FloorDiv(max_y, CHUNK_SIZE) : cy1;
   const glm::vec2 fwd_norm =
       glm::length(forward_xz) > 0.01f ? glm::normalize(forward_xz) : glm::vec2(0.0f);
 
@@ -1934,7 +1939,7 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
         bool missing = false;
         // Scan full column for missing solid slices — player-altitude band alone
         // missed cy=0..2 at exit (manual 110751: miss_cy=0–3, underfeet OK).
-        for (int cy = 0; cy <= cy1 && !missing; ++cy)
+        for (int cy = 0; cy <= scan_cy1 && !missing; ++cy)
         {
           const glm::ivec3 coord(ground.x, cy, ground.z);
           const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
@@ -2027,6 +2032,11 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
       const int y0 = only_cy * CHUNK_SIZE;
       const int y1 = y0 + CHUNK_SIZE - 1;
       MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground, y0, y1);
+    }
+    else if (full_column_only)
+    {
+      MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground, 0,
+                                                  max_y);
     }
     else
     {

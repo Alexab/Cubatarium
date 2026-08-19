@@ -64,8 +64,14 @@ private:
   int StandRimStickyCz{0};
   /// Era22 I-M8: consecutive frames with FOV miss (~120f ≈ 1 period ≈2s).
   int MissWitnessAgeFrames{0};
+  /// Era22 F2b: once-per-period self-heal scan for long miss witnesses.
+  int MissStuckSelfHealPeriod{0};
+  /// Era22 F2c: once-per-period FirstMesh pin after stuck age threshold.
+  int MissStuckForcePinPeriod{0};
   /// Phase C: wall EMA for adaptive emerge cap on cruise.
   double WallEmaMs{0.0};
+  /// Era51 F1a: adaptive stop-phase emerge budget with decay.
+  double StopIdleEmergeMs{20.0};
   /// Era24 I-E4: SoftDefer empty / Hide⇒Ticket age (frames since first seen).
   std::unordered_map<glm::ivec3, int, IVec3Hash> SoftDeferEmptyAgeFrames;
   /// Era39: sticky SoftDefer empty ownership until healed.

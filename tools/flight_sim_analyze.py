@@ -501,10 +501,17 @@ def analyze(
     )
     miss_stuck_run = 0
     miss_stuck_max = 0
+    miss_stuck_frames = 0
+    miss_stuck_cx = 0
+    miss_stuck_cz = 0
     for r in steady:
         if float(r.get(miss_key) or 0) > 0:
             miss_stuck_run += 1
-            miss_stuck_max = max(miss_stuck_max, miss_stuck_run)
+            if miss_stuck_run > miss_stuck_max:
+                miss_stuck_max = miss_stuck_run
+                miss_stuck_frames = miss_stuck_run
+                miss_stuck_cx = int(r.get("focus_cx") or 0)
+                miss_stuck_cz = int(r.get("focus_cz") or 0)
         else:
             miss_stuck_run = 0
     miss_stuck_max_run_sec = miss_stuck_max * 2.0
@@ -1346,6 +1353,9 @@ def analyze(
             "enter_app_update_max": enter_app_update_max,
             "dirty_high_sec": dirty_high_sec,
             "miss_stuck_max_run_sec": miss_stuck_max_run_sec,
+            "miss_stuck_frames": miss_stuck_frames,
+            "miss_stuck_cx": miss_stuck_cx,
+            "miss_stuck_cz": miss_stuck_cz,
             "miss_end": miss_end,
             "miss_end_stop": miss_end_stop,
             "post_stop_focus_miss_max": post_stop_focus_miss_max,

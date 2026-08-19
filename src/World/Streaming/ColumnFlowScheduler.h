@@ -24,7 +24,9 @@ struct ColumnWorkItem
   int priority{0};
   /// True: Admit scans full focus ring (only=nullptr). False: filter to column.
   bool scan_full_focus{false};
-  /// >=0 prefer this slice when admitting; -1 = whole remesh band missing slices.
+  /// >=0 prefer this slice when admitting.
+  /// -1 = whole remesh band missing slices (0..remesh_max).
+  /// -2 = whole column missing slices (0..procedural MaxHeight).
   int cy{-1};
 };
 
