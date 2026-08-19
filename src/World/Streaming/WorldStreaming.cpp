@@ -1697,7 +1697,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             LandFrontierCaptureWitnessPinFrames(void_n_budget))
     {
       repair_xz = glm::ivec2(SoftDeferCapturePinCx, SoftDeferCapturePinCz);
-      ++SoftDeferCapturePinAge;
+        // Single-owner for pin age:
+        // SoftDeferCapturePinAge is advanced in the "SoftDefer Capture floor"
+        // retarget section. Incrementing here would double-tick and shorten
+        // pin lifetime, causing witness retarget thrash.
     }
     else if (witness_xz != focus_xz)
     {
