@@ -1213,6 +1213,42 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             std::chrono::high_resolution_clock::now() - softdefer_own_t0)
             .count();
   }
+  // B5: SoftDefer-empty stuck witness must not starve under rim ownership cap.
+  // Force column-targeted full-height FirstMesh when miss persists in stop.
+  if (!moving && missing_visible_mesh && phys_telem.SoftDeferEmptyStuckN > 0)
+  {
+    const bool stop_tail_stuck =
+        MissWitnessAgeFrames > 240 && world.GetTimeSinceMotionSec() > 4.0 &&
+        pending_focus_count <= 2;
+    if (stop_tail_stuck || MissWitnessAgeFrames > 120)
+    {
+      const glm::ivec3 stuck(phys_telem.SoftDeferEmptyStuckCx,
+                             phys_telem.SoftDeferEmptyStuckCy,
+                             phys_telem.SoftDeferEmptyStuckCz);
+      const glm::ivec2 stuck_col(stuck.x, stuck.z);
+      auto &exec = GetColumnFlowExecutor();
+      mesh_service.MarkDirtyPriority(stuck);
+      mesh_service.GetCache().InvalidateMeshCapture(stuck);
+      mesh_service.MarkMissingSlicesDirtyPriority(
+          world.GetBlockWorld(), glm::ivec3(stuck.x, 0, stuck.z), 0,
+          procedural.MaxHeight);
+      ColumnWorkItem pin{};
+      pin.column = stuck_col;
+      pin.kind = ColumnWorkKind::FirstMesh;
+      pin.priority = stop_tail_stuck ? 126 : 115;
+      pin.scan_full_focus = false;
+      pin.cy = -2;
+      exec.Enqueue(pin);
+      if (mesh_service.IsPendingGpuApply(stuck) ||
+          mesh_service.IsPendingGpuQueued(stuck) ||
+          mesh_service.IsPendingGpuKickedOrDispatched(stuck))
+      {
+        mesh_service.PreferKickPendingGpuQueued(stuck);
+      }
+      SoftDeferEmptyOwned.insert(stuck);
+      note_column_flow_drain(2, 2);
+    }
+  }
 
   phys_telem.SoftDeferHeldN =
       static_cast<int>(mesh_service.GetSoftDeferHeldCount());
