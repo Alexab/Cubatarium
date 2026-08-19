@@ -398,6 +398,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           world_ptr->NoteUnfinishedColumnDirty(
               glm::ivec2(chunk_coord.x, chunk_coord.z));
         });
+    mesh_service.SetColumnFlowContainsFn(
+        [this](glm::ivec2 col)
+        { return GetColumnFlowExecutor().HasRepairTicket(col); });
     SoftDeferCallbacksInstalled = true;
   }
   prep_softdefer_setup_ms = prep_ms_since(prep_t);
@@ -2299,7 +2302,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             moving, missing_visible_mesh, pending_focus_count, pending_async,
             last_frame_ms, world.GetPhysicsTelemetry().UnfinishedVisual,
             world.GetPhysicsTelemetry().DarkFaceStaleNearN,
-            world.GetPhysicsTelemetry().SoftDeferEmptyPlaceholderN});
+            world.GetPhysicsTelemetry().SoftDeferEmptyPlaceholderN,
+            world.GetPhysicsTelemetry().DarkFaceVoidNearN});
     if (cold.active && cold.promote_once &&
         (pending_focus_count > 0 || missing_visible_mesh))
     {
@@ -2686,7 +2690,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         moving, missing_visible_mesh, pending_focus_count, pending_async,
         last_frame_ms, world.GetPhysicsTelemetry().UnfinishedVisual,
         world.GetPhysicsTelemetry().DarkFaceStaleNearN,
-        world.GetPhysicsTelemetry().SoftDeferEmptyPlaceholderN});
+        world.GetPhysicsTelemetry().SoftDeferEmptyPlaceholderN,
+        world.GetPhysicsTelemetry().DarkFaceVoidNearN});
     if (force_hole_cd <= 0)
     {
       glm::ivec3 hole{};
@@ -2697,13 +2702,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         exec.RequestPromoteRelight(
             glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 40);
         exec.RequestPromoteRelight(glm::ivec2(hole.x, hole.z), 90);
-        // Orphan Active (HasInflight) without builder flight: still MarkDirty —
-        // skipping left miss=1 sticky while FindNearest kept returning the hole.
+        if (moving && ingress.first_mesh_admit > 0)
+        {
+          exec.Enqueue(glm::ivec2(hole.x, hole.z), ColumnWorkKind::FirstMesh,
+                       70 + ingress.first_mesh_admit * 10);
+        }
+        // Orphan Active (HasInflight) without builder flight — ColumnFlow only.
         if (mesh_service.HasInflightMeshBuild(hole))
         {
-          if (!mesh_service.IsChunkMeshDirty(hole))
+          const glm::ivec2 hole_xz(hole.x, hole.z);
+          if (!exec.Scheduler().Contains(hole_xz, ColumnWorkKind::FirstMesh) &&
+              !exec.Scheduler().Contains(hole_xz,
+                                         ColumnWorkKind::RelightThenMesh))
           {
-            mesh_service.MarkDirtyPriority(hole);
+            exec.Enqueue(hole_xz, ColumnWorkKind::FirstMesh, 85);
           }
         }
         else
@@ -2760,17 +2772,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         }
         else
         {
-          // Always Dirty-queue the nearest FOV hole — SoftDefer FOV first-mesh
-          // bypass covers pending; skipping MarkDirty left async=0 for periods.
+          // ColumnFlow FirstMesh for nearest FOV hole — no MarkDirty bypass.
           if (!mesh_service.IsChunkMeshDirty(hole) &&
               !mesh_service.HasInflightMeshBuild(hole))
           {
-            mesh_service.MarkDirtyPriority(hole);
+            exec.Enqueue(glm::ivec2(hole.x, hole.z), ColumnWorkKind::FirstMesh,
+                         75);
           }
-          // Nudge only *missing* underfeet-ring slices. Remesh-dirtying already
-          // meshed neighbors caused RemeshAfterApply storms + discarded_late
-          // (manual 213546 discards 0→111, opaque churn 925).
-          // HoleDrain: ColumnFlow FirstMesh only — no neighbor Dirty bypass.
+          // Nudge only *missing* underfeet-ring slices via ColumnFlow FirstMesh.
           if (missing_visible_mesh &&
               mesh_service.GetMeshWorkAdmission().allow_neighbor_dirty)
           {
@@ -2787,7 +2796,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                     !mesh_service.IsPendingGpuApply(neighbor) &&
                     mesh_service.TryConsumeDirtyAdmit())
                 {
-                  mesh_service.MarkDirtyPriority(neighbor);
+                  exec.Enqueue(glm::ivec2(neighbor.x, neighbor.z),
+                               ColumnWorkKind::FirstMesh, 65);
                 }
               }
             }
@@ -3353,6 +3363,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                                 static_cast<float>(fb.z));
       cin.border_scale =
           SoftBorderSpeedScale(focus_pos, world.GetWorldBorder());
+      const int void_near = world.GetPhysicsTelemetry().DarkFaceVoidNearN;
+      const std::optional<int> terrain_top =
+          world.FindHighestSolidY(fb.x, fb.z);
+      const float terrain_y =
+          terrain_top.has_value() ? static_cast<float>(*terrain_top) : 0.0f;
+      cin.airborne = fb.y > terrain_y + 4.0f;
+      cin.low_alt_frontier = void_near > 50 && fb.y < terrain_y + 24.0f;
       if (!missing_underfeet && found_nearest_missing)
       {
         const MeshWorkAdmission &adm_now =

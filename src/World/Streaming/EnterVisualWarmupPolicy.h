@@ -855,12 +855,25 @@ inline bool ShouldWarmupGreedyGpuDuringEnter(int gpu_warmup_frames_remaining,
   return spawn_prepared_by_coop && frame_index >= min_warmup_frames - 1;
 }
 
-/// Era44: documented last-resort after abort-drain (default ≥300s).
+/// Era44: documented last-resort after abort-drain (default ≥150s post-stabilize).
 inline bool ShouldForceEnterInGameAfterAbortDrain(double elapsed_ms,
                                                   int force_ingame_ms)
 {
   return force_ingame_ms > 0 &&
          elapsed_ms >= static_cast<double>(force_ingame_ms);
+}
+
+/// Stabilize P0: release enter after abort-drain wall when underfeet is lit/true-dark
+/// present — does not bypass full visibility (residual FOV debt may remain).
+inline bool ShouldReleaseEnterAfterAbortUnderfeetCap(
+    bool abort_drain, double elapsed_ms, int force_ingame_ms,
+    bool underfeet_present_ready, int underfeet_gpu_pending)
+{
+  if (!abort_drain || !underfeet_present_ready || underfeet_gpu_pending > 0)
+  {
+    return false;
+  }
+  return ShouldForceEnterInGameAfterAbortDrain(elapsed_ms, force_ingame_ms);
 }
 
 /// Era35 P1: SoftDefer empty scan cy-window for near-FOV columns (horiz<=2)

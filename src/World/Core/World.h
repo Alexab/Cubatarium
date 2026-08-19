@@ -216,6 +216,8 @@ public:
   bool IsPlayerDead() const { return PlayerDead; }
   void SetPlayerDead(bool dead) { PlayerDead = dead; }
   glm::ivec3 GetPreferredLoadFocusBlock() const;
+  glm::ivec3 GetEnterWarmupFocusBlock() const;
+  bool UsesEnterWarmupFocus() const;
 
   void SetTerrainParams(uint32_t Seed, const std::string &terrainType);
   void SetProceduralSettings(const ProceduralSettings &settings,

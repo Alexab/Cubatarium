@@ -90,6 +90,8 @@ struct StreamSpeedClampInput
   bool airborne{false};
   bool player_sla_broken{false};
   float border_scale{1.0f};
+  /// Low-alt frontier: y below cruise band with void pressure.
+  bool low_alt_frontier{false};
 };
 
 /// Flight clamp is softer than ground. If player SLA is already broken, do not
@@ -101,12 +103,25 @@ inline float ComputeStreamSpeedClampScale(const StreamSpeedClampInput &in)
     return 1.0f;
   }
   float scale = in.border_scale > 0.0f ? std::min(1.0f, in.border_scale) : 1.0f;
+  if (in.low_alt_frontier)
+  {
+    const float low_alt = in.airborne ? 0.85f : 0.7f;
+    scale = std::min(scale, low_alt);
+  }
   if (in.missing_underfeet || in.hole_towards)
   {
     const float integrity = in.airborne ? 0.95f : 0.85f;
     scale = std::min(scale, integrity);
   }
   return scale;
+}
+
+/// Enter burst: defer far Capture first N frames after gate (underfeet nh≤2 win).
+inline bool ShouldDeferFarRelightDuringEnterBurst(int frames_since_enter_lit,
+                                                  int burst_frames = 90)
+{
+  return frames_since_enter_lit >= 0 &&
+         frames_since_enter_lit < burst_frames;
 }
 
 } // namespace cutum

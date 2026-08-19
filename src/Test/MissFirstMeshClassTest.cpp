@@ -13,6 +13,7 @@
 #include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/PhysicsStepPolicy.h"
 #include "World/Streaming/InputFirstPolicy.h"
+#include "World/Streaming/UnderfeetTelemetryPolicy.h"
 #include "World/Streaming/IdleRecoveryPolicy.h"
 #include "World/Streaming/FrontierStagePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
@@ -558,6 +559,20 @@ int main()
   Expect(ShouldDrainPendingLightUnderOceanVoid(true, 250, 0),
          "Era30 I-O3: moving void drain without miss");
 
+  // --- Land frontier witness damp ---
+  using cutum::IsLandFrontierPressure;
+  using cutum::LandFrontierCaptureWitnessPinFrames;
+  using cutum::ShouldDampLandFrontierWitnessRetarget;
+
+  Expect(IsLandFrontierPressure(true, 250), "Land frontier: moving + void>T");
+  Expect(!IsLandFrontierPressure(false, 250), "Land frontier: idle");
+  Expect(LandFrontierCaptureWitnessPinFrames(600) == 18,
+         "Land frontier pin 18 @ void>500");
+  Expect(!ShouldDampLandFrontierWitnessRetarget(true, 3, true),
+         "Land frontier: damp nh≥2 retarget");
+  Expect(ShouldDampLandFrontierWitnessRetarget(true, 1, true),
+         "Land frontier: nh≤1 retarget OK");
+
   // --- Era31 Ocean Heal Throughput ---
   using cutum::OceanHealMeshEmergeBudgetMs;
   using cutum::OceanHealMovingRelightDrainFloor;
@@ -700,10 +715,17 @@ int main()
            "Era44: not ready without ring");
     Expect(IsEnterGpuWarmupReady(true, 0, true, true),
            "Era44: ready when ring+mesh+lit+min frames");
-    Expect(!ShouldForceEnterInGameAfterAbortDrain(100000.0, 300000),
+    Expect(!ShouldForceEnterInGameAfterAbortDrain(100000.0, 150000),
            "Era44: force_ingame not before wall");
-    Expect(ShouldForceEnterInGameAfterAbortDrain(300000.0, 300000),
+    Expect(ShouldForceEnterInGameAfterAbortDrain(150000.0, 150000),
            "Era44: force_ingame at wall");
+    using cutum::ShouldReleaseEnterAfterAbortUnderfeetCap;
+    Expect(ShouldReleaseEnterAfterAbortUnderfeetCap(true, 150000.0, 150000,
+                                                    true, 0),
+           "stabilize: abort underfeet cap when feet ready");
+    Expect(!ShouldReleaseEnterAfterAbortUnderfeetCap(true, 150000.0, 150000,
+                                                     false, 0),
+           "stabilize: abort cap blocked without underfeet");
   }
 
   // --- Era51 mesh warmup progress + cruise stabilize ---
@@ -1882,6 +1904,43 @@ int main()
     cin.moving = false;
     Expect(ComputeStreamSpeedClampScale(cin) == 1.0f,
            "input-first: idle no clamp");
+  }
+
+  {
+    using cutum::ColumnRenderableState;
+    using cutum::ReconcileUnderfeetBlockReason;
+    using cutum::UnderfeetColumnHasDrawable;
+    Expect(UnderfeetColumnHasDrawable(true, false, false, false),
+           "underfeet: slice drawable");
+    Expect(UnderfeetColumnHasDrawable(false, false, false, true),
+           "underfeet: opaque in pass");
+    Expect(
+        ReconcileUnderfeetBlockReason(
+            ColumnRenderableState::BlockReason::NotReadyState, true, true,
+            false) == ColumnRenderableState::BlockReason::None,
+        "underfeet: NotReadyState→None when drawable");
+    Expect(
+        ReconcileUnderfeetBlockReason(
+            ColumnRenderableState::BlockReason::NotReadyState, false, false,
+            true) == ColumnRenderableState::BlockReason::GpuInFlight,
+        "underfeet: pending gpu→GpuInFlight");
+  }
+
+  {
+    using cutum::CruiseRelightApplyBudget;
+    Expect(CruiseRelightApplyBudget(true, 9.0, 4, true, false) == 1,
+           "apply budget capped when last apply >8");
+  }
+
+  {
+    using cutum::ComputeStreamSpeedClampScale;
+    using cutum::StreamSpeedClampInput;
+    StreamSpeedClampInput cin{};
+    cin.moving = true;
+    cin.low_alt_frontier = true;
+    cin.airborne = false;
+    Expect(ComputeStreamSpeedClampScale(cin) == 0.7f,
+           "low-alt frontier ground clamp");
   }
 
   if (gFails != 0)

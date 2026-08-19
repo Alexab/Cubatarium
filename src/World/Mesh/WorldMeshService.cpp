@@ -8,6 +8,8 @@
 #include "World/Math/GridMath.h"
 #include "World/Mesh/EditMeshRemeshPolicy.h"
 #include "World/Physics/PhysicsTelemetry.h"
+#include "App/Platform/Log.h"
+#include "glog/logging.h"
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
@@ -77,6 +79,12 @@ void UWorldMeshService::SetOnMeshColumnDirtyFn(
     std::function<void(glm::ivec3)> fn)
 {
   OnMeshColumnDirtyFn = std::move(fn);
+}
+
+void UWorldMeshService::SetColumnFlowContainsFn(
+    std::function<bool(glm::ivec2)> fn)
+{
+  ColumnFlowContainsFn = std::move(fn);
 }
 
 void UWorldMeshService::SetStarveOutsideFocusMesh(bool starve)
@@ -271,6 +279,17 @@ void UWorldMeshService::MarkDirty(glm::ivec3 chunk_coord)
 
 void UWorldMeshService::MarkDirtyPriority(glm::ivec3 chunk_coord)
 {
+#ifndef NDEBUG
+  if (ColumnFlowContainsFn)
+  {
+    const glm::ivec2 col(chunk_coord.x, chunk_coord.z);
+    if (!ColumnFlowContainsFn(col))
+    {
+      LOG(WARNING) << "[OWNERSHIP_VIOLATION] MarkDirtyPriority outside ColumnFlow col="
+                   << col.x << "," << col.y << " cy=" << chunk_coord.y;
+    }
+  }
+#endif
   Cache.MarkDirtyPriority(chunk_coord);
   NotifyChunkBlocksChanged(chunk_coord);
   if (OnMeshColumnDirtyFn)

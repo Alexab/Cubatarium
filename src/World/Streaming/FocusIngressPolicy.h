@@ -20,6 +20,8 @@ struct FocusIngressInput
   int stale_dark_near{0};
   /// Era34 P1: SoftDefer empty placeholders in focus (FirstMesh admit floor).
   int soft_defer_empty_n{0};
+  /// Dark void faces near camera — frontier gen/light imbalance.
+  int void_near{0};
 };
 
 struct FocusIngressDecision
@@ -112,6 +114,14 @@ inline FocusIngressDecision EvaluateFocusIngress(const FocusIngressInput &in)
   // Spike guard: cold async + hole → no non-underfeet sync fill — except when
   // missing mesh (land rim: cold_pool alone left miss_stuck 16–24s).
   out.allow_sync_hole_fill = !cold_pool || in.missing_mesh;
+
+  // Frontier admission: gen must not outpace relight when void debt is high.
+  if (in.moving && in.void_near > 200 && in.pending_focus > 24)
+  {
+    out.first_mesh_admit = std::min(out.first_mesh_admit, 1);
+    out.relight_floor =
+        std::max(out.relight_floor, in.pending_focus > 48 ? 4 : 3);
+  }
   return out;
 }
 

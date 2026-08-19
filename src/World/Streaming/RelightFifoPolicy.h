@@ -45,12 +45,22 @@ inline int CruiseRelightApplyBudget(bool moving, double last_apply_ms,
   {
     return requested;
   }
+  if (last_apply_ms > 8.0)
+  {
+    return 1;
+  }
   int cap = 1;
   if (fifo_pin_stable && last_apply_ms >= 0.0 && last_apply_ms < 5.0)
   {
     cap = 2;
   }
   return requested < cap ? requested : cap;
+}
+
+/// P3: skip heavy apply side-effects when prior apply already blew SLA.
+inline bool ShouldDeferHeavyApplySideEffects(double last_apply_ms)
+{
+  return last_apply_ms > 8.0;
 }
 
 /// Era40: force FIFO Enqueue for FOV miss even when Keys/FIFO ghost-empty.

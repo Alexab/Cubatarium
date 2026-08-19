@@ -62,6 +62,8 @@ public:
   void SetOnLitDrawableCommittedFn(std::function<void(glm::ivec3)> fn);
   /// Cruise wall P3: MarkDirty / MarkDirtyPriority notify unfinished cache.
   void SetOnMeshColumnDirtyFn(std::function<void(glm::ivec3)> fn);
+  /// P1: debug ownership — log MarkDirtyPriority outside ColumnFlow Contains.
+  void SetColumnFlowContainsFn(std::function<bool(glm::ivec2)> fn);
   void SetStarveOutsideFocusMesh(bool starve);
   void SetStarveRemeshForHoles(bool starve);
   void SetStarveRemeshKeepHoriz(int keep_h);
@@ -334,6 +336,7 @@ private:
   int LastDigSeamRemeshN{0};
   int LastDigSeamPendingN{0};
   std::function<void(glm::ivec3)> OnMeshColumnDirtyFn;
+  std::function<bool(glm::ivec2)> ColumnFlowContainsFn;
 };
 
 } // namespace cutum

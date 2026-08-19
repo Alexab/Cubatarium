@@ -4651,12 +4651,14 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     {
       AsyncRelightColumnsInFlight.erase(g);
     }
-    if (priority_mesh)
+    const bool defer_side =
+        ShouldDeferHeavyApplySideEffects(PhysicsTelemetryData.RelightApplyMsPrev);
+    if (priority_mesh && !defer_side)
     {
       PlayerRelightMeshBurstFrames = 3;
     }
     if (enqueue_background_frontier && result.frontier_unfinished &&
-        Persistence)
+        Persistence && !defer_side)
     {
       for (const glm::ivec3 &pos : result.source_block_positions)
       {
@@ -4793,8 +4795,30 @@ void UWorld::SetWorldName(const std::string &value) { WorldName = value; }
 
 glm::vec3 UWorld::GetSpawnPoint() const { return SpawnPoint; }
 
+glm::ivec3 UWorld::GetEnterWarmupFocusBlock() const
+{
+  return WorldPosToBlock(SpawnPoint);
+}
+
+bool UWorld::UsesEnterWarmupFocus() const
+{
+  if (EnterLitGateActive)
+  {
+    return true;
+  }
+  if (CoopSession && CoopSession->IsEnterVisualWarmupActive())
+  {
+    return true;
+  }
+  return false;
+}
+
 glm::ivec3 UWorld::GetPreferredLoadFocusBlock() const
 {
+  if (UsesEnterWarmupFocus())
+  {
+    return GetEnterWarmupFocusBlock();
+  }
   if (auto user = GetCurrentUser())
   {
     return WorldPosToBlock(user->GetPosition());
@@ -6531,7 +6555,6 @@ void UWorld::BeginEnterLitGate()
     return;
   }
   StreamingEnabledBeforeEnterLitGate = IsStreamingEnabled();
-  SetStreamingEnabled(false);
   EnterLitGateActive = true;
   EnterLitQuiesceLatched = false;
   CreateSpawnWarmupSettledLatched = false;
@@ -6553,8 +6576,6 @@ void UWorld::BeginEnterLitGate()
     const int max_h = ProceduralTemplate.MaxHeight;
     const int dirty_min = std::max(0, sea - CHUNK_SIZE);
     const int dirty_max = std::min(max_h, sea + CHUNK_SIZE * 2);
-    const int max_cy =
-        std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
     for (const glm::ivec2 &col : EnterLitDebtSnapshot)
     {
       ApplyEnterOpenSkyBoundary(BlockWorld, *BlockRegistry, col.x * CHUNK_SIZE,
@@ -6562,20 +6583,12 @@ void UWorld::BeginEnterLitGate()
       EnterVisualGateCtrl.NoteOpenSkyApplied(col);
       GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::RelightThenMesh,
                                       /*priority=*/80);
-      // OpenSky inject is a light delta — bake must follow (not OpenSky-as-Done).
+      // OpenSky inject is a light delta — remesh via ColumnFlow (not direct MarkDirty).
       if (MeshService && ColumnFullyDarkSolidDrawable(col))
       {
         StickyRemeshAfterLight.erase(col);
-        for (int cy = 0; cy <= max_cy; ++cy)
-        {
-          const glm::ivec3 coord(col.x, cy, col.y);
-          if (!MeshService->HasDrawableGreedyMesh(coord) ||
-              !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
-          {
-            continue;
-          }
-          MeshService->MarkDirtyPriority(coord);
-        }
+        GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::FirstMesh,
+                                        /*priority=*/85);
       }
     }
     EnqueueEnterLitSnapshotRelight();
@@ -7481,12 +7494,13 @@ void UWorld::TickEnterWarmupDrainFrame(int mesh_budget, int gate_iterations,
 
 void UWorld::TickEnterStreamingWarmup(int iteration_budget)
 {
-  if (EnterLitGateActive)
+  if (!IsStreamingEnabled() || !Streaming->HasStreamer())
   {
     return;
   }
-  if (!IsStreamingEnabled() || !Streaming->HasStreamer())
+  if (EnterLitGateActive)
   {
+    TickEnterGateMeshDrain(std::max(1, iteration_budget));
     return;
   }
   const int iterations = std::max(1, iteration_budget);

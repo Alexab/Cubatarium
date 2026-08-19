@@ -1673,6 +1673,21 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     }
     WorldInstance->GetPhysicsTelemetryMutable().UnderfeetOpaquePresent =
         underfeet_in_draw ? 1 : 0;
+    // Post-draw reconcile: streaming sampled underfeet before opaque pass.
+    if (underfeet_in_draw)
+    {
+      auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+      phys.UnderfeetHasMesh = 1;
+      if (phys.UnderfeetReason ==
+              static_cast<int>(
+                  ColumnRenderableState::BlockReason::NotReadyState) ||
+          phys.UnderfeetReason ==
+              static_cast<int>(ColumnRenderableState::BlockReason::NotLoaded))
+      {
+        phys.UnderfeetReason =
+            static_cast<int>(ColumnRenderableState::BlockReason::None);
+      }
+    }
   }
 
   std::vector<GreedyBatchRef> solid;

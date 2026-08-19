@@ -63,8 +63,73 @@ def prep_hot(r):
     return None
 
 
+def fifo_drop_deltas(cruise):
+    """Per-period relight_fifo_drop delta (cumulative jsonl is misleading)."""
+    out = []
+    prev = None
+    for r in cruise:
+        cur = r.get("relight_fifo_dropped")
+        if cur is None:
+            continue
+        cur = int(cur)
+        if prev is not None and cur >= prev:
+            out.append(cur - prev)
+        prev = cur
+    return out
+
+
+def segment_cruise(cruise, linger_cz=50, moving_lo=51, moving_hi=54, late_cz=55):
+    linger = [r for r in cruise if (r.get("focus_cz") or -999) == linger_cz]
+    moving = [
+        r
+        for r in cruise
+        if moving_lo <= (r.get("focus_cz") or -999) <= moving_hi
+    ]
+    late = [r for r in cruise if (r.get("focus_cz") or -999) >= late_cz]
+    return {"linger": linger, "moving": moving, "late": late}
+
+
+def summarize_segment(name, seg):
+    if not seg:
+        print(f"    [{name}] n=0")
+        return
+    wall = num(seg, "wall_ms")
+    opaque = num(seg, "opaque_draw_n") or num(seg, "opaque_cmd_on")
+    holes = num(seg, "unfinished_visual") or num(seg, "visual_holes")
+    void = num(seg, "dark_face_void_near_n")
+    miss_pct = 100.0 * sum(1 for r in seg if r.get("focus_missing_mesh")) / len(seg)
+    apply_ms = num(seg, "relight_apply_ms")
+    capture_ms = num(seg, "relight_capture_ms")
+    pin_saved = num(seg, "relight_fifo_pin_saved_n")
+    fifo_d = fifo_drop_deltas(seg)
+    print(
+        f"    [{name}] n={len(seg)} "
+        f"wall med/p90={pct(wall, 0.5)}/{pct(wall, 0.9)} "
+        f"opaque med/min={pct(opaque, 0.5)}/{min(opaque) if opaque else None} "
+        f"holes med={pct(holes, 0.5) if holes else None} "
+        f"void max={max(void) if void else None} "
+        f"miss%={miss_pct:.0f}"
+    )
+    if apply_ms or capture_ms:
+        print(
+            f"      relight apply/capture med="
+            f"{pct(apply_ms, 0.5) if apply_ms else None}/"
+            f"{pct(capture_ms, 0.5) if capture_ms else None}"
+        )
+    if pin_saved:
+        print(
+            f"      fifo_pin_saved sum={sum(int(v) for v in pin_saved)} "
+            f"fifo_drop_delta med={pct(fifo_d, 0.5) if fifo_d else 0}"
+        )
+
+
 def summarize(label, rows, min_chunks=80):
-    cruise = [r for r in rows if (r.get("chunk_count") or 0) >= min_chunks]
+    cruise = [
+        r
+        for r in rows
+        if (r.get("chunk_count") or 0) >= min_chunks
+        and (r.get("kind") in (None, "period"))
+    ]
     print(f"\n===== {label} raw={len(rows)} cruise={len(cruise)} =====")
     if not cruise:
         print("  (empty)")
@@ -75,6 +140,27 @@ def summarize(label, rows, min_chunks=80):
         f"({r1.get('focus_cx')},{r1.get('focus_cz')}) "
         f"chunks {r0.get('chunk_count')}->{r1.get('chunk_count')}"
     )
+    segs = segment_cruise(cruise)
+    print("  segments (linger cz=50 / moving 51-54 / late cz>=55):")
+    summarize_segment("linger", segs["linger"])
+    summarize_segment("moving", segs["moving"])
+    summarize_segment("late", segs["late"])
+    fifo_d = fifo_drop_deltas(cruise)
+    if fifo_d:
+        print(
+            f"  relight_fifo_drop_delta: med={pct(fifo_d, 0.5)} "
+            f"p90={pct(fifo_d, 0.9)} max={max(fifo_d)}"
+        )
+    pin_saved = num(cruise, "relight_fifo_pin_saved_n")
+    if pin_saved:
+        print(f"  relight_fifo_pin_saved_n sum={sum(int(v) for v in pin_saved)}")
+    apply_ms = num(cruise, "relight_apply_ms")
+    capture_ms = num(cruise, "relight_capture_ms")
+    if apply_ms or capture_ms:
+        print(
+            f"  relight_apply_ms med/p90={pct(apply_ms, 0.5)}/{pct(apply_ms, 0.9)} "
+            f"capture med/p90={pct(capture_ms, 0.5)}/{pct(capture_ms, 0.9)}"
+        )
     keys = [
         "wall_ms",
         "mesh_emerge_ms",

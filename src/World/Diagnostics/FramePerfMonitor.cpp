@@ -70,6 +70,7 @@ struct Session
   int SpikesWrittenThisPeriod{0};
   int FrameCount{0};
   uint64_t MeshApplyStaleAtPeriodStart{0};
+  uint64_t MeshCompletedDiscardedAtPeriodStart{0};
   uint64_t SoftDeferCaptureFloorHitsAtPeriodStart{0};
   uint64_t SoftDeferWitnessRetargetAtPeriodStart{0};
   std::chrono::steady_clock::time_point LastEmit{
@@ -319,6 +320,7 @@ struct FrameNumbers
   uint64_t mesh_discarded_late{0};
   uint64_t mesh_apply_stale{0};
   uint64_t mesh_apply_stale_delta{0};
+  uint64_t mesh_completed_discarded_delta{0};
   uint64_t mesh_replace_hole_avoided{0};
   int pending_gpu_applies_n{0};
   int pending_gpu_queued_n{0};
@@ -1090,6 +1092,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_completed_n\":" << n.mesh_completed_n
           << ",\"mesh_completed_cap\":" << n.mesh_completed_cap
           << ",\"mesh_completed_discarded\":" << n.mesh_completed_discarded
+          << ",\"mesh_completed_discarded_delta\":"
+          << n.mesh_completed_discarded_delta
           << ",\"relight_completed_n\":" << n.relight_completed_n
           << ",\"relight_completed_cap\":" << n.relight_completed_cap
           << ",\"relight_completed_discarded\":" << n.relight_completed_discarded
@@ -1430,6 +1434,11 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
       n.mesh_apply_stale >= s.MeshApplyStaleAtPeriodStart
           ? n.mesh_apply_stale - s.MeshApplyStaleAtPeriodStart
           : 0;
+  period.mesh_completed_discarded_delta =
+      n.mesh_completed_discarded >= s.MeshCompletedDiscardedAtPeriodStart
+          ? n.mesh_completed_discarded -
+                s.MeshCompletedDiscardedAtPeriodStart
+          : 0;
   period.softdefer_capture_floor_hits_delta =
       n.softdefer_capture_floor_hits >= s.SoftDeferCaptureFloorHitsAtPeriodStart
           ? n.softdefer_capture_floor_hits -
@@ -1448,6 +1457,7 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
           .count();
   LogLine(period, "period", s.FrameCount, s.MaxWallMs);
   s.MeshApplyStaleAtPeriodStart = n.mesh_apply_stale;
+  s.MeshCompletedDiscardedAtPeriodStart = n.mesh_completed_discarded;
   s.SoftDeferCaptureFloorHitsAtPeriodStart = n.softdefer_capture_floor_hits;
   s.SoftDeferWitnessRetargetAtPeriodStart = n.softdefer_witness_retarget;
   // CullStats SubData only when ShowPerformance enables readback — not every

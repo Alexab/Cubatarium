@@ -45,6 +45,8 @@ public:
 
   /// When true, main-thread TickAsyncChunkSystems should not run (coop owns or quiesces workers).
   bool BlocksStreamingTick() const;
+  /// Load/create bar-side enter visual warmup (MeshWarmup..PrepareView).
+  bool IsEnterVisualWarmupActive() const;
 
 private:
   enum class Phase
@@ -131,6 +133,7 @@ private:
   /// Era44b: abort-drain after enter_mesh_abort_ms (gate stays active).
   bool StreamingWarmupAbortDrainMode{false};
   bool StreamingWarmupAbortLogged{false};
+  bool StreamingWarmupAbortCapLogged{false};
 
   void BeginDeferredRelightQueue(UWorld &world);
   void BeginBulkChunkRelightQueue(UWorld &world);

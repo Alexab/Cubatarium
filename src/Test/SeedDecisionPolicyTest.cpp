@@ -109,6 +109,18 @@ int main()
     Expect(d.try_sync_seed, "holes cruise frame≤40 try_sync cheap");
   }
 
+  {
+    SeedDecisionInput in;
+    in.near_focus = true;
+    in.can_seed = true;
+    in.moving_cruise = true;
+    in.pending_light_focus = 30;
+    in.frame_ms = 36.0;
+    const auto d = EvaluateSeedDecision(in);
+    Expect(d.try_sync_seed, "high pending cruise → cheap sync seed");
+    Expect(d.cheap_seed, "high pending uses cheap seed");
+  }
+
   if (gFails != 0)
   {
     std::cerr << gFails << " failures\n";

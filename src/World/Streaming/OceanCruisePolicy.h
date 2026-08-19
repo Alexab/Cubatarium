@@ -194,4 +194,36 @@ inline bool ShouldForceEnterVisualCap(double elapsed_ms, bool visual_soft_ready,
   return elapsed_ms >= static_cast<double>(wall);
 }
 
+/// Land cruise frontier: gen ahead of light while moving (void_near debt).
+inline bool IsLandFrontierPressure(bool moving, int void_near_n, int void_T = 200)
+{
+  return moving && void_near_n > void_T;
+}
+
+/// Witness pin length under land frontier (longer than default 8).
+inline int LandFrontierCaptureWitnessPinFrames(int void_near_n)
+{
+  if (void_near_n > 2000)
+  {
+    return 24;
+  }
+  if (void_near_n > 500)
+  {
+    return 18;
+  }
+  return 14;
+}
+
+/// Damp nh≥2 witness hops while land frontier heals (schedule thrash).
+inline bool ShouldDampLandFrontierWitnessRetarget(bool land_frontier_pressure,
+                                                  int horiz,
+                                                  bool new_witness_better_horiz)
+{
+  if (!land_frontier_pressure || horiz < 2)
+  {
+    return new_witness_better_horiz;
+  }
+  return false;
+}
+
 } // namespace cutum

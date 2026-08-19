@@ -684,6 +684,16 @@ bool UWorldCooperativeSession::BlocksStreamingTick() const
   }
 }
 
+bool UWorldCooperativeSession::IsEnterVisualWarmupActive() const
+{
+  if (!Active || Kind != WorldCoopKind::Load)
+  {
+    return false;
+  }
+  return CurrentPhase >= Phase::MeshWarmup &&
+         CurrentPhase <= Phase::PrepareView;
+}
+
 void UWorldCooperativeSession::BeginLoad(UWorld &world,
                                          const std::string &world_folder_path)
 {
@@ -1985,6 +1995,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
           StreamingWarmupLitWarnLogged = false;
           StreamingWarmupAbortDrainMode = false;
           StreamingWarmupAbortLogged = false;
+          StreamingWarmupAbortCapLogged = false;
         }
         EnterWarmupStepSample step_sample{};
         const auto &phys_before = world.GetPhysicsTelemetry();
@@ -2061,10 +2072,30 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         const bool visibility_ready = world.IsEnterVisibilityReady();
         const int visibility_debt = lit_sample.visibility_debt;
         const bool mesh_blockers_clear = !world.NeedsEnterGameMeshWarmup();
+        const bool underfeet_present = world.IsEnterUnderfeetPresentReady();
+        const glm::ivec3 underfeet_center =
+            UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+        const int underfeet_gpu_pending =
+            world.GetMeshService().CountPendingGpuAppliesInHorizontalRadius(
+                underfeet_center, 1);
+        const bool abort_underfeet_cap = ShouldReleaseEnterAfterAbortUnderfeetCap(
+            StreamingWarmupAbortDrainMode, elapsed_ms,
+            URuntimeTuning::Get().EnterForceInGameMs, underfeet_present,
+            underfeet_gpu_pending);
         // SOTA: enter ready = spawn-ring Presentable + vis. Snapshot FOV debt
         // drives lit-quiesce, not a second PrepareView gate (blips 0→50).
-        const bool load_settled = ring_ready && visibility_ready &&
-                                  mesh_blockers_clear;
+        const bool load_settled =
+            (ring_ready && visibility_ready && mesh_blockers_clear) ||
+            (abort_underfeet_cap && underfeet_present &&
+             underfeet_gpu_pending <= 0 && fov_debt <= 0);
+        if (abort_underfeet_cap && load_settled && !StreamingWarmupAbortCapLogged)
+        {
+          StreamingWarmupAbortCapLogged = true;
+          LOG(WARNING) << "[EnterWarmup] coop_abort_underfeet_cap elapsed_ms="
+                       << elapsed_ms << " ring_ready=" << (ring_ready ? 1 : 0)
+                       << " visibility_debt=" << visibility_debt;
+          CubatariumFlushLogs();
+        }
         if (!StreamingWarmupAbortDrainMode &&
             ShouldForceEnterMeshAbort(fov_debt, ring_ready, elapsed_ms,
                                       URuntimeTuning::Get().EnterMeshAbortMs))

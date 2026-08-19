@@ -42,6 +42,15 @@ inline SeedDecision EvaluateSeedDecision(const SeedDecisionInput &in)
       in.visual_holes > 0 ? 40.0 : 32.0;
   if (in.moving_cruise)
   {
+    // V3 optional: cheap sync seed under high pending_light to shrink FIFO trail.
+    if (in.can_seed && in.near_focus && in.pending_light_focus > 24 &&
+        in.frame_ms <= cruise_seed_frame_cap + 6.0)
+    {
+      out.try_sync_seed = true;
+      out.cheap_seed = true;
+      out.budget_ms = 2.0;
+      return out;
+    }
     if (in.can_seed && (in.underfeet || in.near_focus) &&
         in.frame_ms <= cruise_seed_frame_cap)
     {

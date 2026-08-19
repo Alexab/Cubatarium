@@ -8,6 +8,8 @@
 #include "App/Platform/Log.h"
 #include "Core/Progress/ProgressTypes.h"
 #include "World/Core/World.h"
+#include "World/Chunks/ChunkManager.h"
+#include "World/Mesh/WorldMeshService.h"
 #include "glog/logging.h"
 #include <chrono>
 #include <iostream>
@@ -334,9 +336,34 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
     UEnterLitDiagnostics::MaybeLogProfileSummary(lit_sample);
   }
 
-  const bool enter_ready = IsEnterGpuWarmupReady(
+  const bool underfeet_present = World.IsEnterUnderfeetPresentReady();
+  const glm::ivec3 underfeet_center =
+      UChunkManager::WorldToChunk(World.GetPreferredLoadFocusBlock());
+  const int underfeet_gpu_pending =
+      World.GetMeshService().CountPendingGpuAppliesInHorizontalRadius(
+          underfeet_center, 1);
+  const bool abort_underfeet_cap = ShouldReleaseEnterAfterAbortUnderfeetCap(
+      EnterGameAbortDrainMode, EnterGameGpuWarmupElapsedMs,
+      tune.EnterForceInGameMs, underfeet_present, underfeet_gpu_pending);
+
+  bool enter_ready = IsEnterGpuWarmupReady(
       ring_ready, fov_ready ? 0 : fov_debt, mesh_blockers_clear, min_frames_done,
       visibility_ready);
+  if (!enter_ready && abort_underfeet_cap)
+  {
+    enter_ready = min_frames_done && fov_ready && underfeet_present &&
+                  underfeet_gpu_pending <= 0;
+    if (enter_ready && !EnterGameForceInGameLogged)
+    {
+      EnterGameForceInGameLogged = true;
+      LOG(WARNING) << "[EnterWarmup] abort_underfeet_cap elapsed_ms="
+                   << EnterGameGpuWarmupElapsedMs << " ring_ready="
+                   << (ring_ready ? 1 : 0) << " visibility_debt="
+                   << visibility_debt << " residual_fov=" << fov_debt
+                   << " (underfeet present; residual vis may remain)";
+      CubatariumFlushLogs();
+    }
+  }
   const bool force_ingame =
       EnterGameAbortDrainMode &&
       ShouldForceEnterInGameAfterAbortDrain(EnterGameGpuWarmupElapsedMs,
@@ -351,12 +378,12 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
                  << lit_sample.mesh_gpu_pending_near << " ring="
                  << lit_sample.ring_not_ready << " fifo=" << lit_sample.fifo_n
                  << " visibility_debt=" << visibility_debt
-                 << " (Era48: ignored until visibility ready)";
+                 << " underfeet=" << (underfeet_present ? 1 : 0)
+                 << " (waiting for underfeet cap)";
     CubatariumFlushLogs();
   }
 
-  // Era48/49: InGame only when visibility ready — abort/force/cap do not bypass.
-  // visibility_ready = unready==0 ∧ void≤200 ∧ stale==0 (StrictEnterVisualReady).
+  // Era48/49: InGame when visibility ready, or abort underfeet cap (residual vis OK).
   if (!enter_ready)
   {
     return false;

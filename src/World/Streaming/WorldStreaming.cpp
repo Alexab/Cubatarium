@@ -1,7 +1,9 @@
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/FocusIngressPolicy.h"
+#include "World/Streaming/UnderfeetTelemetryPolicy.h"
 #include "World/Streaming/FrameStreamingBudget.h"
+#include "World/Streaming/InputFirstPolicy.h"
 #include "World/Streaming/IdleRecoveryPolicy.h"
 #include "World/Streaming/SeedDecisionPolicy.h"
 #include "World/Streaming/MemoryBudgetController.h"
@@ -566,6 +568,17 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       if (world.Persistence)
       {
         world.Persistence->SetRelightFifoPin(miss_xz, true);
+        if (world.PhysicsTelemetryData.MissHoriz <= 2)
+        {
+          const glm::ivec2 world_key(miss_xz.x * CHUNK_SIZE,
+                                     miss_xz.y * CHUNK_SIZE);
+          if (!world.Persistence->IsTerrainColumnRelightQueued(world_key))
+          {
+            world.Persistence->EnqueueTerrainColumnRelight(
+                miss_coord.x, miss_coord.z, /*priority=*/true);
+          }
+          world.Persistence->PromoteTerrainColumnRelight(miss_xz);
+        }
       }
     }
   }
@@ -827,27 +840,39 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     const ColumnRenderableState uf =
         world.GetColumnRenderableState(under_xz);
     bool has_mesh = false;
+    bool pending_gpu = false;
     const int max_cy = std::max(
         0, FloorDiv(world.GetProceduralSettings().MaxHeight, CHUNK_SIZE));
     for (int cy = 0; cy <= max_cy; ++cy)
     {
       const glm::ivec3 coord(under_xz.x, cy, under_xz.y);
       if (world.GetMeshService().HasMeshSatisfyingColumnReady(coord) ||
-          world.GetMeshService().IsPendingGpuApply(coord) ||
-          world.GetMeshService().IsGpuExtractInFlight(coord))
+          world.GetMeshService().HasDrawableGreedyMesh(coord))
       {
         has_mesh = true;
         break;
       }
+      if (world.GetMeshService().IsPendingGpuApply(coord) ||
+          world.GetMeshService().IsGpuExtractInFlight(coord))
+      {
+        has_mesh = true;
+        pending_gpu = true;
+        break;
+      }
     }
+    const bool opaque_present =
+        world.PhysicsTelemetryData.UnderfeetOpaquePresent != 0;
+    has_mesh = UnderfeetColumnHasDrawable(has_mesh, pending_gpu, uf.draw_ok,
+                                          opaque_present);
     world.PhysicsTelemetryData.UnderfeetDrawOk = uf.draw_ok ? 1 : 0;
     world.PhysicsTelemetryData.UnderfeetHasMesh = has_mesh ? 1 : 0;
     world.PhysicsTelemetryData.UnderfeetSticky =
         world.IsColumnStickyRemesh(under_xz) ? 1 : 0;
     world.PhysicsTelemetryData.UnderfeetPendingLight =
         world.IsPendingLightBeforeMesh(under_xz) ? 1 : 0;
-    world.PhysicsTelemetryData.UnderfeetReason =
-        static_cast<int>(uf.reason);
+    world.PhysicsTelemetryData.UnderfeetReason = static_cast<int>(
+        ReconcileUnderfeetBlockReason(uf.reason, has_mesh, uf.draw_ok,
+                                      pending_gpu));
     world.PhysicsTelemetryData.UnderfeetStage =
         static_cast<int>(uf.stage);
     world.PhysicsTelemetryData.LightingRelightDeferred =
@@ -1606,10 +1631,26 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       moving_now, missing_focus_mesh, pending_light_focus_n, mesh_async_n,
       frame_ms, world.PhysicsTelemetryData.UnfinishedVisual,
       world.PhysicsTelemetryData.DarkFaceStaleNearN,
-      world.PhysicsTelemetryData.SoftDeferEmptyPlaceholderN});
+      world.PhysicsTelemetryData.SoftDeferEmptyPlaceholderN, void_n_budget});
   if (ingress.relight_floor > 0)
   {
     bg_budget = std::max(bg_budget, ingress.relight_floor);
+  }
+  {
+    static int enter_post_lit_frames = 999;
+    if (world.IsEnterLitGateActive())
+    {
+      enter_post_lit_frames = 0;
+    }
+    else if (enter_post_lit_frames < 120)
+    {
+      ++enter_post_lit_frames;
+    }
+    if (ShouldDeferFarRelightDuringEnterBurst(enter_post_lit_frames) &&
+        world.PhysicsTelemetryData.MissHoriz > 2)
+    {
+      bg_budget = std::min(bg_budget, 1);
+    }
   }
   // Priority SLA (Cubyz-style): while missing, do not let Capture steal FirstMesh.
   // Paced 1–2 (not 0 — land_fix_P1; not 4–6 — manual 170154 softd=4 thrash).
@@ -1646,27 +1687,44 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     auto &exec = GetColumnFlowExecutor();
     const glm::ivec2 focus_xz(focus_horiz.x, focus_horiz.z);
-    const glm::ivec2 repair_xz = RepairColumnFromMissWitness(
+    const glm::ivec2 witness_xz = RepairColumnFromMissWitness(
         world.PhysicsTelemetryData, focus_xz);
-    // SOTA: enqueue only — TickMeshEmerge DrainBudget is the single owner.
-    if (rim_first_mesh_sla && ingress.first_mesh_admit > 0)
+    const bool land_frontier =
+        IsLandFrontierPressure(moving_now, void_n_budget);
+    glm::ivec2 repair_xz = witness_xz;
+    if (land_frontier && SoftDeferCapturePinValid &&
+        SoftDeferCapturePinAge <
+            LandFrontierCaptureWitnessPinFrames(void_n_budget))
     {
-      if (repair_xz != focus_xz)
+      repair_xz = glm::ivec2(SoftDeferCapturePinCx, SoftDeferCapturePinCz);
+      ++SoftDeferCapturePinAge;
+    }
+    else if (witness_xz != focus_xz)
+    {
+      if (!land_frontier)
       {
         ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
         world.PhysicsTelemetryData.SoftDeferWitnessHoriz =
             world.PhysicsTelemetryData.MissHoriz;
       }
+      else
+      {
+        SoftDeferCapturePinValid = true;
+        SoftDeferCapturePinCx = witness_xz.x;
+        SoftDeferCapturePinCz = witness_xz.y;
+        SoftDeferCapturePinHoriz = world.PhysicsTelemetryData.MissHoriz;
+        SoftDeferCapturePinAge = 0;
+        SoftDeferCapturePinMaxAge =
+            LandFrontierCaptureWitnessPinFrames(void_n_budget);
+      }
+    }
+    // SOTA: enqueue only — TickMeshEmerge DrainBudget is the single owner.
+    if (rim_first_mesh_sla && ingress.first_mesh_admit > 0)
+    {
       exec.Enqueue(repair_xz, ColumnWorkKind::FirstMesh, 100);
     }
     else if (ingress.first_mesh_admit > 0)
     {
-      if (repair_xz != focus_xz)
-      {
-        ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
-        world.PhysicsTelemetryData.SoftDeferWitnessHoriz =
-            world.PhysicsTelemetryData.MissHoriz;
-      }
       exec.Enqueue(repair_xz, ColumnWorkKind::FirstMesh, 80);
     }
     if (!rim_first_mesh_sla)
@@ -1751,17 +1809,23 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         const bool ocean_heal = IsOceanHealPressure(
             missing_focus_mesh, world.PhysicsTelemetryData.DarkFaceVoidNearN,
             world.PhysicsTelemetryData.VisibleBlackFocusN);
+        const bool land_frontier =
+            IsLandFrontierPressure(moving_now, void_n_budget);
         const bool better_horiz_raw =
             SoftDeferCapturePinValid && cand_horiz > 0 &&
             SoftDeferCapturePinHoriz > 0 &&
             cand_horiz < SoftDeferCapturePinHoriz;
-        const bool better_horiz = ShouldDampOceanCaptureRetarget(
-            ocean_heal, cand_horiz, better_horiz_raw);
+        const bool better_horiz = ShouldDampLandFrontierWitnessRetarget(
+            land_frontier && !ocean_heal, cand_horiz,
+            ShouldDampOceanCaptureRetarget(ocean_heal, cand_horiz,
+                                           better_horiz_raw));
         const int pin_T =
             ocean_heal
                 ? OceanCaptureWitnessPinFrames()
-                : (SoftDeferCapturePinMaxAge > 0 ? SoftDeferCapturePinMaxAge
-                                                 : kSoftDeferCaptureWitnessPinFrames);
+                : land_frontier
+                      ? LandFrontierCaptureWitnessPinFrames(void_n_budget)
+                      : (SoftDeferCapturePinMaxAge > 0 ? SoftDeferCapturePinMaxAge
+                                                       : kSoftDeferCaptureWitnessPinFrames);
         const bool hold_nh2 = ShouldHoldPinnedRelightWitness(
             SoftDeferCapturePinHoriz,
             world.IsPendingLightBeforeMesh(

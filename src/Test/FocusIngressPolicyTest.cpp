@@ -130,6 +130,19 @@ int main()
   }
 
   {
+    FocusIngressInput in;
+    in.moving = true;
+    in.missing_mesh = true;
+    in.pending_focus = 50;
+    in.void_near = 500;
+    in.mesh_async = 0;
+    in.frame_ms = 22.0;
+    const auto d = EvaluateFocusIngress(in);
+    Expect(d.first_mesh_admit <= 1, "void frontier caps first_mesh admit");
+    Expect(d.relight_floor >= 4, "void frontier raises relight floor");
+  }
+
+  {
     using cutum::ShouldAllowImmediateMesh;
     Expect(!ShouldAllowImmediateMesh(true, false),
            "B: moving never Immediate");
