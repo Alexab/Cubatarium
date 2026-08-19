@@ -3105,6 +3105,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       --StandWitnessColumnDirtyCd;
     }
+    const bool stop_tail_ownership_mode =
+        !moving && missing_visible_mesh && MissWitnessAgeFrames > 240 &&
+        world.GetTimeSinceMotionSec() > 4.0 && pending_focus_count <= 2;
     if (found_nearest_missing)
     {
       nearest_miss_nh = std::max(
@@ -3120,7 +3123,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             std::min(max_y, focus_ground.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
         const int hole_max =
             (isolated_hole.y + 1) * CHUNK_SIZE - 1;
-        const int remesh_max = std::max(player_max, hole_max);
+        const int remesh_max =
+            stop_tail_ownership_mode ? max_y : std::max(player_max, hole_max);
         const glm::ivec3 ground(isolated_hole.x, 0, isolated_hole.z);
         const int marked = mesh_service.MarkMissingSlicesDirtyPriority(
             world.GetBlockWorld(), ground, 0, remesh_max);
@@ -3128,7 +3132,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         {
           world.GetPhysicsTelemetryMutable().StandRimDirtyN += marked;
         }
-        StandWitnessColumnDirtyCd = 12;
+        // B4: in stop-tail ownership mode re-mark more frequently so full-height
+        // missing slices cannot fall out between FirstMesh admissions.
+        StandWitnessColumnDirtyCd = stop_tail_ownership_mode ? 2 : 12;
       }
       // N0c: Admit skips Pending/InFlight — promote Relight instead of no-op
       // FirstMesh enqueue (far-rim sticky mh=5 under dual backlog, 215629).
@@ -3145,9 +3151,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         ColumnWorkItem hole{};
         hole.column = hole_col;
         hole.kind = ColumnWorkKind::FirstMesh;
-        hole.priority = 100;
+        hole.priority = stop_tail_ownership_mode ? 118 : 100;
         hole.scan_full_focus = false;
-        hole.cy = isolated_hole.y;
+        hole.cy = stop_tail_ownership_mode ? -2 : isolated_hole.y;
         exec.Enqueue(hole);
       }
     }
@@ -3278,9 +3284,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         }
       }
 
-      const bool stop_tail_ownership_mode =
-          !moving && missing_visible_mesh && MissWitnessAgeFrames > 240 &&
-          world.GetTimeSinceMotionSec() > 4.0 && pending_focus_count <= 2;
       // Era23 I-M9: FirstMesh-class PreferKick every miss-frame (age SLA backup).
       // PreferKick only when GPU queue stuck — Dirty alone starts idle pipeline.
       {
