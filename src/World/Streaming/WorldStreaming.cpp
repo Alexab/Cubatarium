@@ -1681,6 +1681,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             world.PhysicsTelemetryData.PendingLightFocus))
     {
       bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 3 : 4);
+      // Era22 F3c: ocean relight debt needs stronger capture floor while moving.
+      const int pl_focus = world.PhysicsTelemetryData.PendingLightFocus;
+      if (moving_now && pl_focus > 20 && soft_cap > 0 &&
+          fifo_n >= (soft_cap / 2))
+      {
+        bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 4 : 6);
+      }
     }
   }
   if (ingress.active && ingress.promote_once)
@@ -2047,6 +2054,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
               world.PhysicsTelemetryData.PendingLightFocus))
       {
         bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 3 : 4);
+        // Era22 F3c: ocean relight debt needs stronger capture floor while moving.
+        const int pl_focus = world.PhysicsTelemetryData.PendingLightFocus;
+        if (moving_now && pl_focus > 20 && soft_cap > 0 &&
+            fifo_n >= (soft_cap / 2))
+        {
+          bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 4 : 6);
+        }
       }
     }
     if (LastMemoryDecision.capture_hard_cap >= 0)

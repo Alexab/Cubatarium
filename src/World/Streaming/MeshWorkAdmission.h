@@ -493,9 +493,22 @@ inline void ApplyRemeshAdmitBackpressure(MeshWorkAdmission &adm,
   {
     return;
   }
+  const int dirty_over_soft =
+      in.dirty_n - static_cast<int>(static_cast<float>(
+                       std::max(0, in.dirty_thrash_soft_cap)) *
+                   1.1f);
+  const bool hard_dirty_pressure =
+      in.stream_pressure >= 2 && dirty_over_soft > 0;
   const int admit_cap =
       in.stream_pressure >= 2 ? in.admit_cap_red : in.admit_cap_yellow;
-  adm.dirty_admit_budget = std::min(adm.dirty_admit_budget, std::max(0, admit_cap));
+  adm.dirty_admit_budget =
+      std::min(adm.dirty_admit_budget, std::max(0, admit_cap));
+  if (hard_dirty_pressure)
+  {
+    // F4a-v2: keep minimal progress (1 admit) to avoid full relight/mesh stall
+    // observed in cruise while still reducing dirty flood on red pressure.
+    adm.dirty_admit_budget = std::min(adm.dirty_admit_budget, 1);
+  }
   // Keep at least 1 remesh slot under miss: dual-Q already prefers FirstMesh;
   // remesh_schedule=0 starved lit settle and caused flicker / late light updates.
   const int remesh_cap = in.remesh_queue_n >= 32
