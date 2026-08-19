@@ -1660,11 +1660,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     constexpr double kDecay = 0.97; // ~5s to reach 8 from 20 at 30fps
     StopIdleEmergeMs = std::max(8.0, StopIdleEmergeMs * kDecay);
+    // B6: persistent stop miss must not decay emerge budget to starvation.
+    if (missing_visible_mesh && MissWitnessAgeFrames > 120)
+    {
+      StopIdleEmergeMs = std::max(StopIdleEmergeMs, 14.0);
+    }
   }
-  const double stop_emerge =
+  double stop_emerge =
       healed_idle_emerge ? (idle_focus_dirty_debt ? 28.0 : 14.0)
       : missing_underfeet ? std::max(StopIdleEmergeMs, 28.0)
                           : StopIdleEmergeMs;
+  if (!moving && missing_visible_mesh && MissWitnessAgeFrames > 120)
+  {
+    stop_emerge = std::max(stop_emerge, pending_focus_count <= 2 ? 18.0 : 14.0);
+  }
   mesh_service.SetMeshEmergeTotalBudgetMs(
       moving ? adaptive_moving_emerge : stop_emerge);
   auto clamp_emerge_to_phase = [&]()
@@ -3230,7 +3239,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         far_rim_force_scan ||
         (!skip_full_scan_rim_close &&
          (adm.mode == MeshWorkAdmission::Mode::Normal || FocusScanCd <= 0));
-    if (full_scan)
+    const bool stop_tail_ring_heal =
+        !moving && missing_visible_mesh && MissWitnessAgeFrames > 180 &&
+        world.GetTimeSinceMotionSec() > 3.0;
+    if (stop_tail_ring_heal)
+    {
+      ColumnWorkItem tail_scan{};
+      tail_scan.column =
+          glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z);
+      tail_scan.kind = ColumnWorkKind::FirstMesh;
+      tail_scan.priority = 104;
+      tail_scan.scan_full_focus = true;
+      tail_scan.cy = -2;
+      exec.Enqueue(tail_scan);
+      note_column_flow_drain(5, 4);
+    }
+    else if (full_scan)
     {
       ColumnWorkItem focus_scan{};
       focus_scan.column =
@@ -3342,8 +3366,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         // Era24 P3 / I-E5: miss_cy>1 residual — pin FirstMesh on witness cy
         // (SoftDefer empty heal must not leave higher-cy hole orphaned).
         const int miss_age_periods_now = MissWitnessAgeFrames / 120;
+        const bool stop_miss_heal_ok =
+            !pending_near_light ||
+            (pending_focus_count <= 2 && MissWitnessAgeFrames > 120);
         const bool force_full_column_pin =
-            !moving && !pending_near_light && MissWitnessAgeFrames > 150 &&
+            !moving && stop_miss_heal_ok && MissWitnessAgeFrames > 150 &&
             miss_age_periods_now > MissStuckForcePinPeriod;
         if (missing_visible_mesh && isolated_hole.y > 1 && miss_fm_class)
         {
@@ -3385,7 +3412,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       // Era22 F2b/F2c: periodic re-enqueue to avoid stuck-hole starvation.
       // Every new 120f "miss period" → FirstMesh scan.
       // After age threshold → additionally pin FirstMesh on the isolated hole.
-      if (!moving && !pending_near_light)
+      const bool stop_miss_heal_ok =
+          !pending_near_light ||
+          (pending_focus_count <= 2 && MissWitnessAgeFrames > 120);
+      if (!moving && stop_miss_heal_ok)
       {
         const int miss_age_periods = MissWitnessAgeFrames / 120;
 
