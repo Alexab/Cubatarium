@@ -378,6 +378,72 @@ bool UWorldPersistence::TryEnqueueTerrainColumnRelight(UWorld &world, int world_
   return true;
 }
 
+void UWorldPersistence::DeferFarRelightColumn(glm::ivec2 ground_xz, int min_y,
+                                              int max_y, bool priority)
+{
+  auto it = DeferredFarRelightColumns.find(ground_xz);
+  if (it == DeferredFarRelightColumns.end())
+  {
+    DeferredFarRelightEntry entry{};
+    entry.y_band = glm::ivec2(min_y, max_y);
+    entry.priority = priority;
+    DeferredFarRelightColumns.emplace(ground_xz, entry);
+    return;
+  }
+  it->second.y_band.x = std::min(it->second.y_band.x, min_y);
+  it->second.y_band.y = std::max(it->second.y_band.y, max_y);
+  it->second.priority = it->second.priority || priority;
+}
+
+int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
+                                                      glm::ivec3 focus_ground,
+                                                      int pin_horiz)
+{
+  if (DeferredFarRelightColumns.empty())
+  {
+    world.GetPhysicsTelemetryMutable().RelightDeferredFarPendingN = 0;
+    return 0;
+  }
+  const URuntimeTuning &tune = URuntimeTuning::Get();
+  const int soft_cap = tune.RelightFifoSoftCap;
+  const float frac = tune.RelightFifoAdmitFrac;
+  int admitted = 0;
+  std::vector<glm::ivec2> to_erase;
+  to_erase.reserve(DeferredFarRelightColumns.size());
+  for (const auto &kv : DeferredFarRelightColumns)
+  {
+    const glm::ivec2 ground_xz = kv.first;
+    const int horiz = std::max(std::abs(ground_xz.x - focus_ground.x),
+                               std::abs(ground_xz.y - focus_ground.z));
+    if (horiz > pin_horiz)
+    {
+      continue;
+    }
+    const int fifo_n = GetPendingTerrainColumnRelightCount();
+    if (ShouldDeferFarRelightEnqueueOnFifoPressure(horiz, pin_horiz, fifo_n,
+                                                   soft_cap, frac))
+    {
+      break;
+    }
+    const glm::ivec2 band = kv.second.y_band;
+    EnqueueTerrainColumnRelight(ground_xz.x * CHUNK_SIZE,
+                                ground_xz.y * CHUNK_SIZE, kv.second.priority,
+                                band.x, band.y);
+    world.NotePendingLightBeforeMesh(glm::ivec3(ground_xz.x, 0, ground_xz.y),
+                                     band.x, band.y);
+    to_erase.push_back(ground_xz);
+    ++admitted;
+  }
+  for (const glm::ivec2 &key : to_erase)
+  {
+    DeferredFarRelightColumns.erase(key);
+  }
+  auto &telem = world.GetPhysicsTelemetryMutable();
+  telem.RelightDeferredFarPendingN =
+      static_cast<int>(DeferredFarRelightColumns.size());
+  return admitted;
+}
+
 void UWorldPersistence::SetRelightFifoPin(glm::ivec2 chunk_xz, bool valid)
 {
   RelightFifoPinValid = valid;
@@ -475,6 +541,13 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   if (world.BlocksAsyncRelightDrain())
   {
     return;
+  }
+  {
+    const glm::ivec3 focus_chunk =
+        UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+    const glm::ivec3 focus_horiz(focus_chunk.x, 0, focus_chunk.z);
+    AdmitDeferredFarRelightColumns(world, focus_horiz,
+                                   RelightMissPinMaxHoriz());
   }
   {
     const auto &phys = world.GetPhysicsTelemetry();
@@ -1366,12 +1439,27 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
             std::min(settings.MaxHeight, focus_block.y + CHUNK_SIZE * 2));
       }
 
-      // SoftDefer: finalize_pending_gate must line up with the mesh-gate
-      // band, otherwise PendingLightBeforeMesh can stay "pending forever".
-      EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
-                                  ground_coord.z * CHUNK_SIZE, near_focus,
-                                  dirty_min, dirty_max);
-      world.NotePendingLightBeforeMesh(ground_coord, dirty_min, dirty_max);
+      // SoftDefer: finalize_pending_gate must line up with the mesh-gate band.
+      const int horiz =
+          std::max(std::abs(ground_coord.x - focus_ground.x),
+                   std::abs(ground_coord.z - focus_ground.z));
+      const int fifo_n = GetPendingTerrainColumnRelightCount();
+      const int soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
+      const float fifo_frac = URuntimeTuning::Get().RelightFifoAdmitFrac;
+      if (ShouldDeferFarRelightEnqueueOnFifoPressure(
+              horiz, RelightMissPinMaxHoriz(), fifo_n, soft_cap, fifo_frac))
+      {
+        DeferFarRelightColumn(glm::ivec2(ground_coord.x, ground_coord.z),
+                              dirty_min, dirty_max, near_focus);
+        ++world.GetPhysicsTelemetryMutable().RelightDeferredFarEnqueueN;
+      }
+      else
+      {
+        EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
+                                    ground_coord.z * CHUNK_SIZE, near_focus,
+                                    dirty_min, dirty_max);
+        world.NotePendingLightBeforeMesh(ground_coord, dirty_min, dirty_max);
+      }
       // Focus: first-mesh Dirty immediately (preview). Far waits MarkRelit
       // under Yellow/Red via commit path; disk-load always Dirty near.
       if (near_focus)

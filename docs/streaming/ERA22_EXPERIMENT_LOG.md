@@ -29,6 +29,7 @@ Track iterative experiments for land/ocean streaming stabilization with reproduc
 | F3a+F3c | `Era22_F3ac_focusProtect_apply2x_v1` | Trim protect full focus radius; overflow drop farthest; 2x cheap apply when PL>20 | Regression: `land-cruise 8/23` `PL=34` `red_rate=1.0` `fifo_dropped=556`; `ocean-cruise 7/23` `PL=38`; `completed_med` still 0. **Reverted.** Protecting the whole focus ring stops FIFO from shedding; Red-lock like F4b. |
 | Capture audit | `tmp_capture_audit.py` on F4a/F3ac ocean+land | Perf jsonl: Capture vs Apply timing, fifo drops, completed ring | **Capture OK** (~0.4ms med, 100% cruise frames). **No Capture perf regression** vs pre-F4. Bottleneck = **Apply ~1 col/frame** + **FIFO overflow drops ~560/cruise**. `cruise_relight_completed_med=0` is **misleading** (ring occupancy, drained same frame). |
 | F3b+starve | `Era22_F3b_starveFix_v1` | Fix starve gate (apply_ms_prev+inflight); TryEnqueue skip lit-settled; analyzer uses apply_ms | `land-cruise 9/23` **PL med=1** (was 34); `fly-clean 10/23`; `ocean-cruise 7/23` PL=39 fifo_drop=566 unchanged. **Keep starve+F3b.** |
+| F3d | `Era22_F3d_deferFarEnqueue_v1` | Defer far relight enqueue when fifo≥admit_frac×cap; admit on pin-ring entry | `ocean-cruise 7/23` **PL med=22** (was 39) **fifo_drop=286** (was 566); `land-cruise 9/23` PL=3 fifo_drop=15. **Keep F3d.** |
 
 ## Capture / Apply Audit (2026-08-20)
 
@@ -60,7 +61,7 @@ Findings:
 - Not solved:
   - `miss_end` remains `1.0` in key stop-tail cases.
   - `unfinished_visual` remains non-zero at tail despite ownership/escalation.
-  - `ocean-cruise` relight debt remains high (`pending_light_focus_med` far above target).
+  - `ocean-cruise` relight debt improved (PL med 39→22) but still above target ≤10.
   - F3a full-focus FIFO protect (reverted): cannot shed in-ring tickets, `red_rate=1`, drops rise, `completed_med` stays 0.
   - F5a remesh skip without a real light-diff metric (reverted).
   - F4b far-populate skip under Red created a generation/relight death spiral (always-Red).
@@ -72,5 +73,5 @@ Findings:
 
 ## Next Planned Steps
 
-1. Ocean: reduce terrain-load enqueue flood (beyond F3b frontier skip) — PL still ~39.
-2. Keep F3b starve fix + TryEnqueue on settled columns.
+1. Ocean: PL med=22 — tune defer/admit or cheap Apply batch when PL 15–25.
+2. Keep F3b+F3d+F4a-v2 stack.

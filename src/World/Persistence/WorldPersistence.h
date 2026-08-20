@@ -80,6 +80,10 @@ public:
   bool TryEnqueueTerrainColumnRelight(UWorld &world, int world_x, int world_z,
                                       bool priority = false, int min_y = 0,
                                       int max_y = -1);
+  void DeferFarRelightColumn(glm::ivec2 ground_xz, int min_y, int max_y,
+                             bool priority);
+  int AdmitDeferredFarRelightColumns(UWorld &world, glm::ivec3 focus_ground,
+                                     int pin_horiz);
   /// Move an already-queued column from the far FIFO into the priority deque.
   void PromoteTerrainColumnRelight(glm::ivec2 key);
   /// Promote all pending far-FIFO columns within focus radius (block keys).
@@ -156,6 +160,13 @@ private:
   /// Optional Y band per pending column (min,max); missing => full 0..MaxHeight.
   std::unordered_map<glm::ivec2, glm::ivec2, IVec2Hash>
       PendingTerrainColumnRelightYBands;
+  struct DeferredFarRelightEntry
+  {
+    glm::ivec2 y_band;
+    bool priority{false};
+  };
+  std::unordered_map<glm::ivec2, DeferredFarRelightEntry, IVec2Hash>
+      DeferredFarRelightColumns;
   /// Columns whose disk lightmap is trusted (lighting_complete).
   std::unordered_set<glm::ivec2, IVec2Hash> LightCompleteColumns;
   bool LightCompleteDirty{false};

@@ -133,6 +133,21 @@ inline bool ShouldSkipNoOpTerrainRelightEnqueue(bool pending_light_before_mesh,
   return !surface_band_needs_relight;
 }
 
+/// F3d: under FIFO pressure, defer relight enqueue outside LitDrawable pin ring.
+inline bool ShouldDeferFarRelightEnqueueOnFifoPressure(int horiz_from_focus,
+                                                       int pin_horiz, int fifo_n,
+                                                       int soft_cap,
+                                                       float fifo_admit_frac)
+{
+  if (soft_cap <= 0 || horiz_from_focus <= pin_horiz)
+  {
+    return false;
+  }
+  const int thresh = static_cast<int>(
+      static_cast<float>(soft_cap) * std::max(0.1f, fifo_admit_frac));
+  return fifo_n >= thresh;
+}
+
 /// Era40: FIFO full under FOV miss but no apply/inflight progress ⇒ raise Capture.
 /// Do not use RelightCompletedN (ring occupancy) — Apply drains it same frame.
 inline bool ShouldBoostRelightDrainUnderFifoMissStarve(int fifo_n, int soft_cap,

@@ -1692,6 +1692,13 @@ int main()
            "F3b: pending light -> no skip");
     Expect(!ShouldSkipNoOpTerrainRelightEnqueue(false, false, false),
            "F3b: not lit ready -> no skip");
+    using cutum::ShouldDeferFarRelightEnqueueOnFifoPressure;
+    Expect(ShouldDeferFarRelightEnqueueOnFifoPressure(6, 4, 80, 96, 0.75f),
+           "F3d: far + fifo pressure -> defer");
+    Expect(!ShouldDeferFarRelightEnqueueOnFifoPressure(3, 4, 80, 96, 0.75f),
+           "F3d: pin ring -> no defer");
+    Expect(!ShouldDeferFarRelightEnqueueOnFifoPressure(6, 4, 40, 96, 0.75f),
+           "F3d: fifo below threshold -> no defer");
   }
 
   // Cruise wall P0: remesh DirtyAdmit backpressure.

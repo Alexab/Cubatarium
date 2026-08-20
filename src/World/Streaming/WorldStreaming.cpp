@@ -370,6 +370,12 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                     LastPendingLightFocus});
             const bool relight_priority = seed_decision.priority_fifo;
             auto enqueue_pending_light = [&]() {
+              const int fifo_n =
+                  world.Persistence
+                      ? world.Persistence->GetPendingTerrainColumnRelightCount()
+                      : 0;
+              const int soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
+              const float fifo_frac = URuntimeTuning::Get().RelightFifoAdmitFrac;
               // PendingLightBeforeMesh gate must match the async relight range.
               // If relight_min/max is wider than dirty_min/max, SoftDefer can
               // keep finalize_pending_gate=false for too long → pending stuck.
@@ -377,6 +383,18 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                   std::max(0, dirty_min - 1 /* air-neighbor pad */);
               const int enqueue_relight_max =
                   std::min(settings.MaxHeight, dirty_max + 1 /* air-neighbor pad */);
+              if (world.Persistence &&
+                  ShouldDeferFarRelightEnqueueOnFifoPressure(
+                      horiz, RelightMissPinMaxHoriz(), fifo_n, soft_cap,
+                      fifo_frac))
+              {
+                world.Persistence->DeferFarRelightColumn(
+                    glm::ivec2(ground.x, ground.z), enqueue_relight_min,
+                    enqueue_relight_max, relight_priority);
+                ++world.PhysicsTelemetryData.RelightDeferredFarEnqueueN;
+                world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
+                return;
+              }
               world.Persistence->EnqueueTerrainColumnRelight(
                   ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, relight_priority,
                   enqueue_relight_min, enqueue_relight_max);
@@ -2482,8 +2500,31 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         const bool near_focus =
             std::max(std::abs(ground.x - focus_ground.x),
                      std::abs(ground.z - focus_ground.z)) <= focus_radius;
-        world.Persistence->EnqueueTerrainColumnRelight(
-            ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, near_focus);
+        const int horiz =
+            std::max(std::abs(ground.x - focus_ground.x),
+                     std::abs(ground.z - focus_ground.z));
+        const int fifo_n =
+            world.Persistence
+                ? world.Persistence->GetPendingTerrainColumnRelightCount()
+                : 0;
+        const int soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
+        const float fifo_frac = URuntimeTuning::Get().RelightFifoAdmitFrac;
+        const int relight_min = std::max(0, settings.SeaLevel - CHUNK_SIZE * 2);
+        const int relight_max = settings.MaxHeight;
+        if (world.Persistence &&
+            ShouldDeferFarRelightEnqueueOnFifoPressure(
+                horiz, RelightMissPinMaxHoriz(), fifo_n, soft_cap, fifo_frac))
+        {
+          world.Persistence->DeferFarRelightColumn(glm::ivec2(ground.x, ground.z),
+                                                   relight_min, relight_max,
+                                                   near_focus);
+          ++world.PhysicsTelemetryData.RelightDeferredFarEnqueueN;
+        }
+        else
+        {
+          world.Persistence->EnqueueTerrainColumnRelight(
+              ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, near_focus);
+        }
       });
 }
 

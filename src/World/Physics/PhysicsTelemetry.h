@@ -344,6 +344,8 @@ struct PhysicsTelemetry
   uint64_t RelightSkippedUndergroundN{0};
   uint64_t RelightFalseClearN{0};
   uint64_t RelightSkippedNoOpEnqueueN{0};
+  uint64_t RelightDeferredFarEnqueueN{0};
+  int RelightDeferredFarPendingN{0};
   /// Cruise Capture SoT: effective bg cap / Y-band cy this DrainRelightQueues.
   int CaptureBgCapN{0};
   int CaptureBandCy{0};
