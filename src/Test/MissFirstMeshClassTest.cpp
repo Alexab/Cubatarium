@@ -1671,16 +1671,27 @@ int main()
            "P3: just-relit rim not boosted");
     Expect(!ShouldFirstMeshSortBoost(2, false),
            "P3: nh2 without just-relit not boosted");
-    Expect(ShouldBoostRelightDrainUnderFifoMissStarve(96, 96, 0, true),
-           "Era40: soft-cap + completed0 + miss -> boost");
-    Expect(!ShouldBoostRelightDrainUnderFifoMissStarve(96, 96, 0, false),
+    Expect(ShouldBoostRelightDrainUnderFifoMissStarve(96, 96, 0, true, 0.0),
+           "Era40: fifo full + no inflight/apply -> boost");
+    Expect(!ShouldBoostRelightDrainUnderFifoMissStarve(96, 96, 0, true, 2.0),
+           "Era22: no boost when apply ran last frame");
+    Expect(!ShouldBoostRelightDrainUnderFifoMissStarve(96, 96, 2, true, 0.0),
+           "Era22: no boost when workers in flight");
+    Expect(!ShouldBoostRelightDrainUnderFifoMissStarve(96, 96, 0, false, 0.0),
            "Era40: no boost without miss");
-    Expect(!ShouldBoostRelightDrainUnderFifoMissStarve(40, 96, 0, true),
+    Expect(!ShouldBoostRelightDrainUnderFifoMissStarve(40, 96, 0, true, 0.0),
            "Era40: no boost below soft-cap");
-    Expect(RelightFifoStuckSoftFail(96, 96, 0, 5, true),
-           "Era40: fifo stuck soft-fail when completed=0");
-    Expect(!RelightFifoStuckSoftFail(96, 96, 2, 5, true),
-           "Era40: no soft-fail when completed>0");
+    Expect(RelightFifoStuckSoftFail(96, 96, 0.0, 5, true),
+           "Era40: fifo stuck soft-fail when apply=0");
+    Expect(!RelightFifoStuckSoftFail(96, 96, 2.0, 5, true),
+           "Era40: no soft-fail when apply active");
+    using cutum::ShouldSkipNoOpTerrainRelightEnqueue;
+    Expect(ShouldSkipNoOpTerrainRelightEnqueue(false, true, false),
+           "F3b: lit settled + no dark surface -> skip");
+    Expect(!ShouldSkipNoOpTerrainRelightEnqueue(true, true, false),
+           "F3b: pending light -> no skip");
+    Expect(!ShouldSkipNoOpTerrainRelightEnqueue(false, false, false),
+           "F3b: not lit ready -> no skip");
   }
 
   // Cruise wall P0: remesh DirtyAdmit backpressure.

@@ -4672,7 +4672,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     {
       for (const glm::ivec3 &pos : result.source_block_positions)
       {
-        Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z);
+        Persistence->TryEnqueueTerrainColumnRelight(*this, pos.x, pos.z);
       }
     }
   }

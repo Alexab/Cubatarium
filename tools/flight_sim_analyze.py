@@ -909,6 +909,7 @@ def analyze(
         col(cruise_src, "softdefer_empty_placeholder_n")
     )
     cruise_relight_completed_med = median(col(cruise_src, "relight_completed_n"))
+    cruise_relight_apply_ms_med = median(col(cruise_src, "relight_apply_ms"))
     cruise_fifo_dropped_vals = col(cruise_src, "relight_fifo_dropped")
     cruise_fifo_dropped_delta = None
     if len(cruise_fifo_dropped_vals) >= 2:
@@ -921,13 +922,16 @@ def analyze(
         cruise_false_clear_delta = (
             cruise_false_clear_vals[-1] - cruise_false_clear_vals[0]
         )
-    # Era40 P3: FIFO stuck soft-fail (soft-cap + completed~0 + dropped churn).
+    # Era40 P3: FIFO stuck soft-fail (soft-cap + no apply + dropped churn).
     fifo_soft_cap = 96
     miss_end_or_stuck = (miss_end > 0.0) or (miss_stuck_max_run_sec > 4.0)
     relight_fifo_stuck_soft_fail = (
         cruise_fifo_med is not None
         and cruise_fifo_med >= fifo_soft_cap - 1
-        and (cruise_relight_completed_med is None or cruise_relight_completed_med <= 0)
+        and (
+            cruise_relight_apply_ms_med is None
+            or cruise_relight_apply_ms_med < 0.5
+        )
         and cruise_fifo_dropped_delta is not None
         and cruise_fifo_dropped_delta > 0
         and miss_end_or_stuck
@@ -936,7 +940,10 @@ def analyze(
         cruise_false_clear_delta is not None
         and cruise_false_clear_delta > 8
         and miss_end_or_stuck
-        and (cruise_relight_completed_med is None or cruise_relight_completed_med <= 0)
+        and (
+            cruise_relight_apply_ms_med is None
+            or cruise_relight_apply_ms_med < 0.5
+        )
     )
     # When dirty>100 AND unfinished_visual, mesh_async should stay fed.
     # visual_holes alone can latch without unfinished (legacy) and SoftDefer

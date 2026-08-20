@@ -76,6 +76,10 @@ public:
   void EnqueueTerrainColumnRelight(int world_x, int world_z,
                                    bool priority = false, int min_y = 0,
                                    int max_y = -1);
+  /// F3b: enqueue only when column surface still needs relight.
+  bool TryEnqueueTerrainColumnRelight(UWorld &world, int world_x, int world_z,
+                                      bool priority = false, int min_y = 0,
+                                      int max_y = -1);
   /// Move an already-queued column from the far FIFO into the priority deque.
   void PromoteTerrainColumnRelight(glm::ivec2 key);
   /// Promote all pending far-FIFO columns within focus radius (block keys).

@@ -355,6 +355,29 @@ void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z,
   }
 }
 
+bool UWorldPersistence::TryEnqueueTerrainColumnRelight(UWorld &world, int world_x,
+                                                       int world_z,
+                                                       const bool priority,
+                                                       int min_y, int max_y)
+{
+  const glm::ivec2 ground_xz(FloorDiv(world_x, CHUNK_SIZE),
+                               FloorDiv(world_z, CHUNK_SIZE));
+  const int max_y_eff =
+      max_y >= 0 ? max_y : world.ProceduralTemplate.MaxHeight;
+  const int band_min = std::max(0, min_y);
+  const int band_max = std::max(band_min, max_y_eff);
+  if (ShouldSkipNoOpTerrainRelightEnqueue(
+          world.IsPendingLightBeforeMesh(ground_xz),
+          world.IsColumnLitReady(glm::ivec3(ground_xz.x, 0, ground_xz.y)),
+          ColumnSurfaceBandNeedsRelight(world, ground_xz, band_min, band_max)))
+  {
+    ++world.GetPhysicsTelemetryMutable().RelightSkippedNoOpEnqueueN;
+    return false;
+  }
+  EnqueueTerrainColumnRelight(world_x, world_z, priority, min_y, max_y);
+  return true;
+}
+
 void UWorldPersistence::SetRelightFifoPin(glm::ivec2 chunk_xz, bool valid)
 {
   RelightFifoPinValid = valid;
@@ -1438,9 +1461,9 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     else
     {
       // Disk light present but not complete, or relight deferred: Capture path.
-      EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
-                                  ground_coord.z * CHUNK_SIZE, near_focus,
-                                  relight_min_full, relight_max_full);
+      TryEnqueueTerrainColumnRelight(world, ground_coord.x * CHUNK_SIZE,
+                                     ground_coord.z * CHUNK_SIZE, near_focus,
+                                     relight_min_full, relight_max_full);
 
       // Disk already lit: remesh visible band only (player ∪ sea), not full
       // 0..MaxHeight (that flooded Dirty on every column load).

@@ -27,6 +27,29 @@ Track iterative experiments for land/ocean streaming stabilization with reproduc
 | F4b-v2 | `Era22_F4b_v2_skipOuterRdRings_v1` | Red: skip only outer 2 VisualRD rings | Still Red-lock: `land-cruise 7/23` `PL med=33`; `ocean-cruise 7/23`. **Reverted.** |
 | F5a | `Era22_F5a_skipNoLightDeltaRemesh_v1` | Skip remesh-after-lit when drawable + no delta | `land-stand 6/23` `PL=33`, `idle-clean 9/23` opaque=192, `fly-clean 9/23` opaque=152. Target `opaque<=120` missed. **Reverted:** `light_or_voxel_delta` is FullyDark settle proxy, not a real light delta — skip was too broad. |
 | F3a+F3c | `Era22_F3ac_focusProtect_apply2x_v1` | Trim protect full focus radius; overflow drop farthest; 2x cheap apply when PL>20 | Regression: `land-cruise 8/23` `PL=34` `red_rate=1.0` `fifo_dropped=556`; `ocean-cruise 7/23` `PL=38`; `completed_med` still 0. **Reverted.** Protecting the whole focus ring stops FIFO from shedding; Red-lock like F4b. |
+| Capture audit | `tmp_capture_audit.py` on F4a/F3ac ocean+land | Perf jsonl: Capture vs Apply timing, fifo drops, completed ring | **Capture OK** (~0.4ms med, 100% cruise frames). **No Capture perf regression** vs pre-F4. Bottleneck = **Apply ~1 col/frame** + **FIFO overflow drops ~560/cruise**. `cruise_relight_completed_med=0` is **misleading** (ring occupancy, drained same frame). |
+| F3b+starve | `Era22_F3b_starveFix_v1` | Fix starve gate (apply_ms_prev+inflight); TryEnqueue skip lit-settled; analyzer uses apply_ms | `land-cruise 9/23` **PL med=1** (was 34); `fly-clean 10/23`; `ocean-cruise 7/23` PL=39 fifo_drop=566 unchanged. **Keep starve+F3b.** |
+
+## Capture / Apply Audit (2026-08-20)
+
+Perf source: `bin/logs/perf_20260820-073931_22444.jsonl` (F4a ocean), tool `bin/tmp_capture_audit.py`.
+
+| Metric | F4a ocean | F3ac ocean | pre-F4 072930 |
+| --- | --- | --- | --- |
+| capture_ms med/p90 | 0.39 / 0.54 | 0.41 / 0.63 | 0.39 / 0.50 |
+| apply_ms med/p90 | 3.97 / 6.91 | 3.50 / 5.68 | 5.57 / 7.53 |
+| drain_ms med | 4.38 | 3.91 | 5.98 |
+| capture>0 frames | 100% | 100% | 100% |
+| relight_apply_n/frame | ~1 (max 3) | ~1 (max 3) | ~1 (max 2) |
+| fifo_drop sum/cruise | 564 | 561 | 607 |
+| async_inflight med | 0 | 0 | 0 |
+
+Findings:
+- Capture is **not starved**: runs every cruise frame, ~0.4ms (budget 3–6ms moving).
+- **No Capture slowdown** from recent ERA22 patches; Apply med actually improved vs pre-F4.
+- Debt driver: **enqueue rate >> apply rate** → FIFO at soft_cap (~72), ~550 drops/cruise, PL~33.
+- Telemetry trap: `RelightCompletedN` = completed **ring occupancy** at sample (Apply drains immediately) → `cruise_relight_completed_med=0` does **not** mean Capture broken.
+- Suspect bug: `ShouldBoostRelightDrainUnderFifoMissStarve(..., completed_n)` treats ring occupancy as throughput; `completed_n<=0` is almost always true → boost fires whenever fifo full + holes.
 
 ## Interim Findings
 
@@ -41,15 +64,13 @@ Track iterative experiments for land/ocean streaming stabilization with reproduc
   - F3a full-focus FIFO protect (reverted): cannot shed in-ring tickets, `red_rate=1`, drops rise, `completed_med` stays 0.
   - F5a remesh skip without a real light-diff metric (reverted).
   - F4b far-populate skip under Red created a generation/relight death spiral (always-Red).
-- Throughput note: `cruise_relight_completed_med=0` on ocean/land cruise means Capture is not finishing columns. Apply-batch and capture-floor did not move this. Next useful F3 is skip-noop Capture / why completed stays 0, not more FIFO protect.
+  - Throughput note: `cruise_relight_completed_med=0` is ring occupancy, not Capture failure (see Capture audit).
+  - Real debt driver: Apply ~1 col/frame vs terrain enqueue flood + FIFO overflow drops.
 - SOTA vs zoo:
   - SOTA-ish: ColumnFlow single ticket, pressure caps, SoftDefer ownership, adaptive stop emerge.
   - Zoo: stacked miss-heal pins (F2 B3–B7) + capture-floor overrides + dirty-admit clamps that fight each other.
 
 ## Next Planned Steps
 
-1. Diagnose `cruise_relight_completed_med=0` (Capture finish path) before more FIFO policy.
-2. F3b: skip no-op relight BFS / no-op Capture if lighting already matches.
-3. Do not re-land: Red NearLoadRadius clamp, Red far-populate skip, full-focus FIFO protect, remesh skip via FullyDark proxy.
-4. Keep F4a-v2 dirty admit=1.
-5. Full-plan audit from this log (planned vs done, SOTA vs zoo).
+1. Ocean: reduce terrain-load enqueue flood (beyond F3b frontier skip) — PL still ~39.
+2. Keep F3b starve fix + TryEnqueue on settled columns.

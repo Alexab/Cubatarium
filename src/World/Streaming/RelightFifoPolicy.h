@@ -120,16 +120,35 @@ inline bool ShouldFirstMeshSortBoost(int horiz, bool just_relit_column)
          horiz <= kVisualStageNearFovHoriz;
 }
 
-/// Era40: soft-cap FIFO stuck with empty Completed under FOV miss ⇒ raise drain.
-inline bool ShouldBoostRelightDrainUnderFifoMissStarve(int fifo_n, int soft_cap,
-                                                       int completed_n,
-                                                       bool miss_or_visual_hole)
+/// F3b: skip terrain relight FIFO when column is lit-settled and surface has
+/// no FullyDark drawable faces in the requested band.
+inline bool ShouldSkipNoOpTerrainRelightEnqueue(bool pending_light_before_mesh,
+                                                bool column_lit_ready,
+                                                bool surface_band_needs_relight)
 {
-  if (!miss_or_visual_hole || soft_cap <= 0)
+  if (pending_light_before_mesh || !column_lit_ready)
   {
     return false;
   }
-  return fifo_n >= soft_cap && completed_n <= 0;
+  return !surface_band_needs_relight;
+}
+
+/// Era40: FIFO full under FOV miss but no apply/inflight progress ⇒ raise Capture.
+/// Do not use RelightCompletedN (ring occupancy) — Apply drains it same frame.
+inline bool ShouldBoostRelightDrainUnderFifoMissStarve(int fifo_n, int soft_cap,
+                                                       int async_inflight,
+                                                       bool miss_or_visual_hole,
+                                                       double relight_apply_ms_prev)
+{
+  if (!miss_or_visual_hole || soft_cap <= 0 || fifo_n < soft_cap)
+  {
+    return false;
+  }
+  if (async_inflight > 0)
+  {
+    return false;
+  }
+  return relight_apply_ms_prev < 0.5;
 }
 
 /// Cruise wall P4: Red + fifo≥frac*cap + holes + focus light debt → Capture/trim SLA.
@@ -148,16 +167,17 @@ inline bool ShouldCruiseRedFifoLightDrain(int stream_pressure, int fifo_n,
   return fifo_n >= thresh;
 }
 
-/// Era40 P3: analyze soft-fail when FIFO stuck + dropped churn + no completed.
+/// Era40 P3: analyze soft-fail when FIFO stuck + dropped churn + no apply.
 inline bool RelightFifoStuckSoftFail(int fifo_med, int soft_cap,
-                                     int completed_med, int fifo_dropped_delta,
+                                     double relight_apply_ms_med,
+                                     int fifo_dropped_delta,
                                      bool miss_end_or_stuck)
 {
   if (!miss_end_or_stuck || soft_cap <= 0)
   {
     return false;
   }
-  return fifo_med >= soft_cap - 1 && completed_med <= 0 &&
+  return fifo_med >= soft_cap - 1 && relight_apply_ms_med < 0.5 &&
          fifo_dropped_delta > 0;
 }
 

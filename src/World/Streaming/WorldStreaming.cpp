@@ -1667,8 +1667,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             : 0;
     const int soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
     if (ShouldBoostRelightDrainUnderFifoMissStarve(
-            fifo_n, soft_cap, world.PhysicsTelemetryData.RelightCompletedN,
-            missing_focus_mesh))
+            fifo_n, soft_cap, world.GetAsyncRelightInFlightCount(),
+            missing_focus_mesh,
+            world.PhysicsTelemetryData.RelightApplyMsPrev))
     {
       bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 2 : 3);
     }
@@ -2040,8 +2041,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
               : 0;
       const int soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
       if (ShouldBoostRelightDrainUnderFifoMissStarve(
-              fifo_n, soft_cap, world.PhysicsTelemetryData.RelightCompletedN,
-              missing_focus_mesh))
+              fifo_n, soft_cap, world.GetAsyncRelightInFlightCount(),
+              missing_focus_mesh,
+              world.PhysicsTelemetryData.RelightApplyMsPrev))
       {
         bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 2 : 3);
       }
@@ -2305,8 +2307,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
                     .count();
             return false;
           }
-          persistence.EnqueueTerrainColumnRelight(coord.x * CHUNK_SIZE,
-                                                  coord.z * CHUNK_SIZE);
+          persistence.TryEnqueueTerrainColumnRelight(
+              world, coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE);
         }
         FrameStreamingIoMs +=
             std::chrono::duration<double, std::milli>(
