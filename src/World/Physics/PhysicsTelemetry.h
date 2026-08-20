@@ -361,6 +361,23 @@ struct PhysicsTelemetry
   uint64_t MarkRelitRemeshAfterApplyN{0};
   /// Era47 P0: MarkRelit PreferKickGpu decisions (cumulative).
   uint64_t MarkRelitPreferKickN{0};
+  /// Era22 sticky-settle: per-frame MarkRelit ClassifyRemeshAfterLitApply decisions.
+  int MarkRelitSkipAlreadyDirtyN{0};
+  int MarkRelitSkipAlreadyRaaN{0};
+  int MarkRelitSkipInflightN{0};
+  int MarkRelitSkipEnterLitQuiesceN{0};
+  int MarkRelitScheduleN{0};
+  /// Schedule path suppressed by enter-settled gate (still classified Schedule).
+  int MarkRelitSuppressEnterSettledN{0};
+  /// StickyRemeshAfterLight insert/erase reasons (per frame).
+  int StickyInsertStaleAfterApplyN{0};
+  int StickyInsertSeamN{0};
+  int StickyInsertOtherN{0};
+  int StickyEraseDrawableN{0};
+  int StickyErasePendingClearN{0};
+  int StickyErasePrunedFarN{0};
+  int StickyEraseRemeshCommitN{0};
+  int StickyEraseOtherN{0};
   /// Era46: RAA commit scheduled MarkDirty (not PreferKick).
   uint64_t RaaCommitMarkDirtyN{0};
   /// Era46: MarkDirty mid-flight deferred into RemeshAfterApply.

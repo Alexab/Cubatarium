@@ -979,27 +979,64 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         IsColumnLitReady(glm::ivec3(col.x, 0, col.y));
     const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col);
     const bool column_settled =
-        column_visual_ready ||
+        (column_visual_ready && !(fully_dark && still_stale)) ||
         EnterFullyDarkColumnSettled(open_sky, pending_col, lit_ready,
                                     still_stale,
                                     /*has_lit_drawable=*/!fully_dark);
+    const bool sticky_owned = StickyRemeshAfterLight.count(col) > 0;
     // Primary light apply must bake FullyDark until settled (not OpenSky-Done).
     const bool light_or_voxel_delta =
         still_stale || (is_primary && fully_dark && !column_settled);
-    switch (ClassifyRemeshAfterLitApply(is_dirty, raa_pending, gpu_pending,
-                                        inflight, enter_quiesce, fully_dark,
-                                        column_visual_ready,
-                                        light_or_voxel_delta, still_stale))
+    const auto decision = ClassifyRemeshAfterLitApply(
+        is_dirty, raa_pending, gpu_pending, inflight, enter_quiesce, fully_dark,
+        column_visual_ready, light_or_voxel_delta, still_stale);
+    switch (decision)
     {
+    case RemeshAfterLitApplyDecision::SkipAlreadyDirty:
+      ++PhysicsTelemetryData.MarkRelitSkipAlreadyDirtyN;
+      if (ShouldLatchRemeshAfterApplyWhileOwned(decision,
+                                               fully_dark || still_stale))
+      {
+        MeshService->RequestRemeshAfterApply(coord);
+        ++PhysicsTelemetryData.MarkRelitRemeshAfterApplyN;
+      }
+      break;
+    case RemeshAfterLitApplyDecision::SkipAlreadyRaa:
+      ++PhysicsTelemetryData.MarkRelitSkipAlreadyRaaN;
+      break;
+    case RemeshAfterLitApplyDecision::SkipInflight:
+      ++PhysicsTelemetryData.MarkRelitSkipInflightN;
+      if (ShouldLatchRemeshAfterApplyWhileOwned(decision,
+                                               fully_dark || still_stale))
+      {
+        MeshService->RequestRemeshAfterApply(coord);
+        ++PhysicsTelemetryData.MarkRelitRemeshAfterApplyN;
+      }
+      break;
+    case RemeshAfterLitApplyDecision::SkipEnterLitQuiesce:
+      ++PhysicsTelemetryData.MarkRelitSkipEnterLitQuiesceN;
+      break;
+    case RemeshAfterLitApplyDecision::PreferKickGpu:
+      ++PhysicsTelemetryData.MarkRelitPreferKickN;
+      MeshService->PreferKickPendingGpuQueued(coord);
+      if (ShouldLatchRemeshAfterApplyWhileOwned(decision,
+                                               fully_dark || still_stale))
+      {
+        MeshService->RequestRemeshAfterApply(coord);
+        ++PhysicsTelemetryData.MarkRelitRemeshAfterApplyN;
+      }
+      break;
     case RemeshAfterLitApplyDecision::Schedule:
-      ++PhysicsTelemetryData.MarkRelitRemeshAfterApplyN;
+      ++PhysicsTelemetryData.MarkRelitScheduleN;
       if (enter_gate)
       {
         // Suppress only when this column is already lit/true-dark settled.
-        if (ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(
+        if (!sticky_owned &&
+            ShouldSuppressMarkRelitRemeshOnEnterLitQuiesce(
                 enter_gate, column_settled,
                 GetPendingTerrainRelightFifoCount()))
         {
+          ++PhysicsTelemetryData.MarkRelitSuppressEnterSettledN;
           if (gpu_pending)
           {
             MeshService->PreferKickPendingGpuQueued(coord);
@@ -1008,8 +1045,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         }
         // Sticky owns one remesh attempt — allow again while still stale.
         if (ShouldSkipMarkRelitAfterEnterStaleAttempt(
-                enter_gate, StickyRemeshAfterLight.count(col) > 0,
-                still_stale))
+                enter_gate, sticky_owned, still_stale))
         {
           break;
         }
@@ -1030,7 +1066,10 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         }
         if (fully_dark && still_stale)
         {
-          StickyRemeshAfterLight.insert(col);
+          if (StickyRemeshAfterLight.insert(col).second)
+          {
+            ++PhysicsTelemetryData.StickyInsertStaleAfterApplyN;
+          }
         }
       }
       // Closeout C: FullyDark/missing → FirstMeshQ; lit drawable remesh → RemeshQ.
@@ -1043,12 +1082,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         MeshService->MarkDirty(coord);
       }
       MeshService->RequestRemeshAfterApply(coord);
-      break;
-    case RemeshAfterLitApplyDecision::PreferKickGpu:
-      ++PhysicsTelemetryData.MarkRelitPreferKickN;
-      MeshService->PreferKickPendingGpuQueued(coord);
-      break;
-    default:
+      ++PhysicsTelemetryData.MarkRelitRemeshAfterApplyN;
       break;
     }
   };
@@ -1162,6 +1196,25 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       if (finalize_pending_gate)
       {
         PendingLightBeforeMesh.erase(key);
+        // Era22 sticky-settle v2/v3: latch remesh for FullyDark/stale drawable
+        // only — remeshing every lit face on each finalize + idle Relight storm
+        // caused perpetual opaque flicker while standing (manual 160656).
+        for (int cy = cy0; cy <= cy1; ++cy)
+        {
+          const glm::ivec3 coord(key.x, cy, key.y);
+          if (!MeshService->HasDrawableGreedyMesh(coord))
+          {
+            continue;
+          }
+          const bool dark =
+              MeshService->GetCache().ChunkHasFullyDarkFace(coord);
+          const bool stale =
+              dark && MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld);
+          if (dark || stale)
+          {
+            schedule_remesh_after_lit_apply(coord);
+          }
+        }
       }
       if (finalize_pending_gate && had_mesh && !damp_soft_empty_remesh)
       {
@@ -1203,6 +1256,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
             StickyRemeshAfterLight.insert(key);
             if (!already_sticky)
             {
+              ++PhysicsTelemetryData.StickyInsertSeamN;
               NoteColumnRepairNeeded(key);
               GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RemeshSeam,
                                               /*priority=*/70);
@@ -1212,7 +1266,10 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           {
             // RAA/PreferKick owns remesh — drop sticky so TickDerived cannot
             // refeed RemeshSeam (black-face flicker / revision bump).
-            StickyRemeshAfterLight.erase(key);
+            if (StickyRemeshAfterLight.erase(key))
+            {
+              ++PhysicsTelemetryData.StickyEraseDrawableN;
+            }
           }
         }
       }
@@ -2392,8 +2449,8 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
   {
     // Era32 I-L1: never draw fully-dark plugs in LitDrawable ring.
     // Check before PendingGpu keep-prior (manual 183525 black surface).
-    // StaleDark is heal-only (not hide) — hiding it remesh-thrashed ocean
-    // (discarded_late≈50, void spiral hide3).
+    // StaleDark / underfeet nh≤1: heal-in-place plug (not hide) — hiding
+    // remesh-thrashed ocean and underfeet opaque_present (manual 175310).
     // Era49: under EnterLitGate expand hide to RD so progress-bar view is
     // hole-free; after EndEnterLitGate keep cruise ring=4 (perf).
     if (MeshService->GetCache().ChunkHasFullyDarkFace(chunk_coord) &&
@@ -3964,12 +4021,18 @@ bool UWorld::IsColumnStickyRemesh(glm::ivec2 ground_xz) const
 
 void UWorld::ClearStickyRemeshAfterLightColumn(glm::ivec2 ground_xz)
 {
-  StickyRemeshAfterLight.erase(ground_xz);
+  if (StickyRemeshAfterLight.erase(ground_xz))
+  {
+    ++PhysicsTelemetryData.StickyEraseRemeshCommitN;
+  }
 }
 
 void UWorld::NoteStickyRemeshAfterLight(glm::ivec2 ground_xz)
 {
-  StickyRemeshAfterLight.insert(ground_xz);
+  if (StickyRemeshAfterLight.insert(ground_xz).second)
+  {
+    ++PhysicsTelemetryData.StickyInsertOtherN;
+  }
 }
 
 bool UWorld::IsColumnDiskLightComplete(glm::ivec2 ground_xz) const
@@ -4065,17 +4128,10 @@ int UWorld::SyncIdleFocusGreedyRemesh(int max_columns)
     }
     try_add(key, dist);
   }
-  if (candidates.empty())
-  {
-    for (int dz = -radius; dz <= radius; ++dz)
-    {
-      for (int dx = -radius; dx <= radius; ++dx)
-      {
-        try_add(glm::ivec2(focus.x + dx, focus.z + dz),
-                std::max(std::abs(dx), std::abs(dz)));
-      }
-    }
-  }
+  // Era22: NEVER fall back to remeshing the focus ring when sticky is empty
+  // or all remesh-owned. That sorted dist=0 first and forever remeshed the
+  // column under the player (manual 172208: only underfeet flickers; fly to
+  // next chunk → that one flickers). Sticky/TickDerived owns true debt.
   if (candidates.empty())
   {
     return 0;

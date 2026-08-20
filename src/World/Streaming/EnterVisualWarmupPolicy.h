@@ -236,6 +236,16 @@ inline bool EnterUnderfeetNeedsLitDrawable(bool has_lit_drawable,
   return !has_lit_drawable && !keep_prior_gpu;
 }
 
+/// Era22: underfeet_need drives Immediate/schedule boost. Neighbor hole or
+/// PendingLight in r≤1 must NOT latch need when the feet column itself is OK —
+/// that remeshed player+nearest neighbor forever (manual 175310 two-chunk
+/// flicker; underfeet telem = horiz≤1 lease).
+inline bool UnderfeetNeedUrgent(bool missing_feet_column, bool pending_feet,
+                                bool underfeet_undrawn)
+{
+  return missing_feet_column || pending_feet || underfeet_undrawn;
+}
+
 /// Era29 I-E4: SoftDefer empty underfeet needs FirstMesh ownership on bar.
 inline bool EnterSoftDeferEmptyNeedsFirstMesh(bool empty_or_held, bool underfeet)
 {
@@ -1067,6 +1077,12 @@ inline RemeshAfterLitApplyDecision ClassifyRemeshAfterLitApply(
   }
   if (gpu_pending)
   {
+    // Stale FullyDark under enter quiesce must MarkDirty/RAA — PreferKick alone
+    // left black_sticky flicker with pending≈45 (manual 20260820).
+    if (enter_lit_quiesce && fully_dark_drawable && stale_field)
+    {
+      return RemeshAfterLitApplyDecision::Schedule;
+    }
     return RemeshAfterLitApplyDecision::PreferKickGpu;
   }
   if (inflight)
@@ -1085,7 +1101,7 @@ inline RemeshAfterLitApplyDecision ClassifyRemeshAfterLitApply(
     }
     return RemeshAfterLitApplyDecision::SkipEnterLitQuiesce;
   }
-  if (enter_lit_quiesce && column_visual_ready)
+  if (enter_lit_quiesce && column_visual_ready && !stale_field)
   {
     return RemeshAfterLitApplyDecision::SkipEnterLitQuiesce;
   }
@@ -1108,6 +1124,58 @@ inline bool ShouldScheduleRemeshAfterLitApply(bool is_dirty, bool raa_pending,
                                      fully_dark_drawable, column_visual_ready,
                                      light_or_voxel_delta) ==
          RemeshAfterLitApplyDecision::Schedule;
+}
+
+/// When Dirty/GPU/Inflight already owns the chunk, still latch RemeshAfterApply
+/// so the post-light rebuild cannot be skipped (manual 151735: cruise apply
+/// with dirty_n high left VB stuck because SkipAlreadyDirty dropped RAA).
+/// Only for FullyDark/stale debt — latching every lit drawable refeeds remesh
+/// forever under idle Relight/RemeshSeam storm (manual 160656).
+inline bool ShouldLatchRemeshAfterApplyWhileOwned(
+    RemeshAfterLitApplyDecision decision, bool fully_dark_or_stale = true)
+{
+  if (!fully_dark_or_stale)
+  {
+    return false;
+  }
+  return decision == RemeshAfterLitApplyDecision::SkipAlreadyDirty ||
+         decision == RemeshAfterLitApplyDecision::SkipInflight ||
+         decision == RemeshAfterLitApplyDecision::PreferKickGpu;
+}
+
+/// Idle stand: chronic DarkFaceNearN must not reopen recover every 2 frames
+/// (manual 160656: dark≈4000 forever → RelightThenMesh+RemeshSeam flicker).
+inline int RecoverWatchdogFramesForDarkNear(bool moving)
+{
+  return moving ? 2 : 45;
+}
+
+/// Idle RemeshSeam storm: raw dark_n stays high in caves; only sticky debt
+/// or moving dark pressure should refeed Seam (manual 160656 stand flicker).
+inline bool ShouldEnqueueRecoverRemeshSeamStorm(bool moving, int dark_n,
+                                               int black_sticky)
+{
+  if (black_sticky > 0)
+  {
+    return true;
+  }
+  if (!moving)
+  {
+    return false;
+  }
+  return dark_n > 200;
+}
+
+/// Do not re-Enqueue RelightThenMesh when the column already owns light work.
+inline bool ShouldEnqueueUrgentDarkRelight(bool pending_dark_preview,
+                                           bool urgent_dark_pending,
+                                           bool already_owns_light_work)
+{
+  if (already_owns_light_work)
+  {
+    return false;
+  }
+  return pending_dark_preview || urgent_dark_pending;
 }
 
 /// True when Dirty/RAA/GPU/inflight already owns remesh for this column.

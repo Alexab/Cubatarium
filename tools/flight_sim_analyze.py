@@ -1055,6 +1055,13 @@ def analyze(
             or cruise_relight_apply_ms_med < 0.5
         )
     )
+    # Era22 sticky-settle: stable holes (EH high, no blink) + sticky flicker regress.
+    stable_holes_soft_fail = (
+        effective_holes_rate > 0.50 and effective_holes_blink_rate < 0.05
+    )
+    black_sticky_flicker_soft_fail = black_sticky_blink_rate >= 0.15
+    visual_instability_soft_fail = visual_instability_blink_rate >= 0.20
+    pending_partial_capture_soft_fail = pending_partial_capture_sec >= 12.0
     # When dirty>100 AND unfinished_visual, mesh_async should stay fed.
     # visual_holes alone can latch without unfinished (legacy) and SoftDefer
     # not_render_ready must not demand mesh workers.
@@ -1319,6 +1326,10 @@ def analyze(
         ),
         "relight_fifo_stuck_soft_fail": relight_fifo_stuck_soft_fail,
         "relight_false_clear_soft_fail": relight_false_clear_soft_fail,
+        "stable_holes_soft_fail": stable_holes_soft_fail,
+        "black_sticky_flicker_soft_fail": black_sticky_flicker_soft_fail,
+        "visual_instability_soft_fail": visual_instability_soft_fail,
+        "pending_partial_capture_soft_fail": pending_partial_capture_soft_fail,
         "cruise_relight_completed_med": cruise_relight_completed_med,
         "cruise_fifo_dropped_delta": cruise_fifo_dropped_delta,
         "cruise_false_clear_delta": cruise_false_clear_delta,

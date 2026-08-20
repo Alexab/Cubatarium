@@ -109,6 +109,8 @@ struct StickyRemeshDrainInput
 {
   int black_sticky{0};
   double last_frame_ms{0.0};
+  bool moving{false};
+  int frames_since_last_drain{999};
 };
 
 struct StickyRemeshDrainDecision
@@ -128,6 +130,11 @@ inline StickyRemeshDrainDecision EvaluateStickyRemeshDrain(
   // Era14 TD-ARCH-041/047: never skip FOV sticky remesh solely for wall —
   // throttle budget (async ticket drain). Old `ms>80` skip left sticky=1
   // plateau while stop wall sat ~150–170 (era14_p2_land).
+  // Era22 idle: every-frame SyncIdle remeshed underfeet forever (manual 172208).
+  if (!in.moving && in.frames_since_last_drain < 30)
+  {
+    return out;
+  }
   out.run_drain = true;
   if (in.last_frame_ms > 80.0)
   {

@@ -378,6 +378,20 @@ struct FrameNumbers
   int relight_apply_final_n{0};
   int relight_deferred_far_pending{0};
   uint64_t relight_deferred_far_enqueue_n{0};
+  int mark_relit_skip_already_dirty_n{0};
+  int mark_relit_skip_already_raa_n{0};
+  int mark_relit_skip_inflight_n{0};
+  int mark_relit_skip_enter_lit_quiesce_n{0};
+  int mark_relit_schedule_n{0};
+  int mark_relit_suppress_enter_settled_n{0};
+  int sticky_insert_stale_after_apply_n{0};
+  int sticky_insert_seam_n{0};
+  int sticky_insert_other_n{0};
+  int sticky_erase_drawable_n{0};
+  int sticky_erase_pending_clear_n{0};
+  int sticky_erase_pruned_far_n{0};
+  int sticky_erase_remesh_commit_n{0};
+  int sticky_erase_other_n{0};
   int dirty_n{0};
   int pending_light_n{0};
   int relight_fifo_n{0};
@@ -756,6 +770,20 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.relight_apply_final_n = phys.RelightApplyFinalN;
   n.relight_deferred_far_pending = phys.RelightDeferredFarPendingN;
   n.relight_deferred_far_enqueue_n = phys.RelightDeferredFarEnqueueN;
+  n.mark_relit_skip_already_dirty_n = phys.MarkRelitSkipAlreadyDirtyN;
+  n.mark_relit_skip_already_raa_n = phys.MarkRelitSkipAlreadyRaaN;
+  n.mark_relit_skip_inflight_n = phys.MarkRelitSkipInflightN;
+  n.mark_relit_skip_enter_lit_quiesce_n = phys.MarkRelitSkipEnterLitQuiesceN;
+  n.mark_relit_schedule_n = phys.MarkRelitScheduleN;
+  n.mark_relit_suppress_enter_settled_n = phys.MarkRelitSuppressEnterSettledN;
+  n.sticky_insert_stale_after_apply_n = phys.StickyInsertStaleAfterApplyN;
+  n.sticky_insert_seam_n = phys.StickyInsertSeamN;
+  n.sticky_insert_other_n = phys.StickyInsertOtherN;
+  n.sticky_erase_drawable_n = phys.StickyEraseDrawableN;
+  n.sticky_erase_pending_clear_n = phys.StickyErasePendingClearN;
+  n.sticky_erase_pruned_far_n = phys.StickyErasePrunedFarN;
+  n.sticky_erase_remesh_commit_n = phys.StickyEraseRemeshCommitN;
+  n.sticky_erase_other_n = phys.StickyEraseOtherN;
   n.dirty_n = phys.DirtyN;
   n.pending_light_n = phys.PendingLightN;
   n.relight_fifo_n = phys.RelightFifoN;
@@ -1117,6 +1145,25 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"relight_apply_final_n\":" << n.relight_apply_final_n
           << ",\"relight_deferred_far_pending\":" << n.relight_deferred_far_pending
           << ",\"relight_deferred_far_enqueue_n\":" << n.relight_deferred_far_enqueue_n
+          << ",\"mark_relit_skip_already_dirty_n\":"
+          << n.mark_relit_skip_already_dirty_n
+          << ",\"mark_relit_skip_already_raa_n\":"
+          << n.mark_relit_skip_already_raa_n
+          << ",\"mark_relit_skip_inflight_n\":" << n.mark_relit_skip_inflight_n
+          << ",\"mark_relit_skip_enter_lit_quiesce_n\":"
+          << n.mark_relit_skip_enter_lit_quiesce_n
+          << ",\"mark_relit_schedule_n\":" << n.mark_relit_schedule_n
+          << ",\"mark_relit_suppress_enter_settled_n\":"
+          << n.mark_relit_suppress_enter_settled_n
+          << ",\"sticky_insert_stale_after_apply_n\":"
+          << n.sticky_insert_stale_after_apply_n
+          << ",\"sticky_insert_seam_n\":" << n.sticky_insert_seam_n
+          << ",\"sticky_insert_other_n\":" << n.sticky_insert_other_n
+          << ",\"sticky_erase_drawable_n\":" << n.sticky_erase_drawable_n
+          << ",\"sticky_erase_pending_clear_n\":" << n.sticky_erase_pending_clear_n
+          << ",\"sticky_erase_pruned_far_n\":" << n.sticky_erase_pruned_far_n
+          << ",\"sticky_erase_remesh_commit_n\":" << n.sticky_erase_remesh_commit_n
+          << ",\"sticky_erase_other_n\":" << n.sticky_erase_other_n
           << ",\"dirty_n\":" << n.dirty_n
           << ",\"pending_light_n\":" << n.pending_light_n
           << ",\"relight_fifo_n\":" << n.relight_fifo_n

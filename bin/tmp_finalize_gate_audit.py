@@ -85,6 +85,27 @@ def audit(label: str, path: Path, warmup: int = 5) -> None:
     else:
         print("  deferred_far_pending: n/a (old perf log)")
     print(f"  pending+partial_capture+vb longest run={stuck * 2.0}s")
+    skip_quiesce = [float(r.get("mark_relit_skip_enter_lit_quiesce_n") or 0) for r in steady]
+    suppress_settled = [
+        float(r.get("mark_relit_suppress_enter_settled_n") or 0) for r in steady
+    ]
+    schedule_n = [float(r.get("mark_relit_schedule_n") or 0) for r in steady]
+    sticky_ins = [float(r.get("sticky_insert_stale_after_apply_n") or 0) for r in steady]
+    if skip_quiesce or suppress_settled or schedule_n:
+        print(
+            f"  mark_relit skip_quiesce med/max={pct(skip_quiesce, 0.5)}/"
+            f"{max(skip_quiesce) if skip_quiesce else None} "
+            f"suppress_settled med/max={pct(suppress_settled, 0.5)}/"
+            f"{max(suppress_settled) if suppress_settled else None} "
+            f"schedule med/max={pct(schedule_n, 0.5)}/"
+            f"{max(schedule_n) if schedule_n else None}"
+        )
+        print(
+            f"  sticky_insert_stale_after_apply sum="
+            f"{sum(sticky_ins) if sticky_ins else 0}"
+        )
+    else:
+        print("  mark_relit settle telemetry: n/a (needs Era22 build)")
     print()
 
 

@@ -143,6 +143,27 @@ int main()
   }
 
   {
+    // Era22: idle underfeet flicker — do not drain every frame.
+    StickyRemeshDrainInput in;
+    in.black_sticky = 2;
+    in.last_frame_ms = 40.0;
+    in.moving = false;
+    in.frames_since_last_drain = 5;
+    const auto d = EvaluateStickyRemeshDrain(in);
+    Expect(!d.run_drain, "idle sticky must not drain every frame");
+  }
+
+  {
+    StickyRemeshDrainInput in;
+    in.black_sticky = 2;
+    in.last_frame_ms = 40.0;
+    in.moving = true;
+    in.frames_since_last_drain = 0;
+    const auto d = EvaluateStickyRemeshDrain(in);
+    Expect(d.run_drain, "moving sticky drain ignores idle cadence");
+  }
+
+  {
     IdleMeshDrainCapInput in;
     in.moving = false;
     in.last_frame_ms = 86.0;

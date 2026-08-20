@@ -142,7 +142,8 @@ def print_summary(results: list[dict]) -> None:
 
     hdr = (
         f"{'Scenario':<22s} {'Pass':>6s} {'Gates':>7s} {'Wall':>7s} "
-        f"{'PL med':>7s} {'EH%':>6s} {'VB%':>6s} {'Inst%':>6s} {'Chunks':>7s} {'Time':>7s}"
+        f"{'PL med':>7s} {'EH%':>6s} {'VB%':>6s} {'BS%':>6s} {'Inst%':>6s} "
+        f"{'Chunks':>7s} {'Time':>7s}"
     )
     print(hdr, flush=True)
     print("-" * len(hdr), flush=True)
@@ -162,6 +163,11 @@ def print_summary(results: list[dict]) -> None:
             if m.get("visible_black_blink_rate") is not None
             else "—"
         )
+        bs = (
+            f"{100.0 * m['black_sticky_blink_rate']:.0f}"
+            if m.get("black_sticky_blink_rate") is not None
+            else "—"
+        )
         inst = (
             f"{100.0 * m['visual_instability_blink_rate']:.0f}"
             if m.get("visual_instability_blink_rate") is not None
@@ -172,7 +178,7 @@ def print_summary(results: list[dict]) -> None:
         t = f"{r['elapsed_sec']:.0f}s"
         print(
             f"{r['scenario']:<22s} {status:>6s} {gates:>7s} {wall:>7s} "
-            f"{pl:>7s} {eh:>6s} {vb:>6s} {inst:>6s} {ch:>7s} {t:>7s}",
+            f"{pl:>7s} {eh:>6s} {vb:>6s} {bs:>6s} {inst:>6s} {ch:>7s} {t:>7s}",
             flush=True,
         )
 

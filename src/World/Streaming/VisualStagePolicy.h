@@ -75,7 +75,10 @@ inline bool ShouldHideFullyDarkUntilLitInRing(int horiz, bool fully_dark,
 
 /// Hide FullyDark in the LitDrawable ring until lit drawable or true-dark.
 /// true_dark = field 0 after OpenSky/relight apply (caller passes it).
-/// After OpenSky, stale (field≠0) stays hidden until bake.
+/// StaleDark is heal-in-place (not hide) — hiding remesh-thrashed ocean and
+/// underfeet (manual 175310: opaque_present flip with pending/stale thrash).
+/// Underfeet nh≤1: keep dark plug over hole flicker (player + nearest neighbor
+/// share underfeet lease; PendingLight flip must not blank Satisfying meshes).
 inline bool ShouldHideUncomputedFullyDarkInRing(
     int horiz, bool fully_dark, bool pending_light, bool stale_field,
     int ring = kVisualStageLitDrawableHoriz, bool true_dark = false,
@@ -89,9 +92,19 @@ inline bool ShouldHideUncomputedFullyDarkInRing(
   {
     return false;
   }
+  // Heal-in-place: remesh may keep FullyDark until light arrives.
+  if (stale_field)
+  {
+    return false;
+  }
+  // Feet + r=1 neighbor: never blank a published FullyDark plug.
+  if (horiz <= 1)
+  {
+    (void)pending_light;
+    return false;
+  }
   (void)pending_light;
-  (void)stale_field;
-  // Unbaked FullyDark always hidden in ring (pending, stale, or pre-OpenSky).
+  // Mid LitDrawable ring: hide unbaked FullyDark (pending / pre-OpenSky).
   return true;
 }
 

@@ -904,6 +904,11 @@ int main()
                                        /*visual_ready=*/true) ==
                RemeshAfterLitApplyDecision::SkipEnterLitQuiesce,
            "Era49: VisualReady under quiesce ⇒ Skip");
+    Expect(ClassifyRemeshAfterLitApply(false, false, false, false, true, true,
+                                       /*visual_ready=*/true, false,
+                                       /*stale_field=*/true) ==
+               RemeshAfterLitApplyDecision::Schedule,
+           "Era22: VisualReady + stale field under quiesce ⇒ Schedule");
     Expect(ClassifyRemeshAfterLitApply(false, false, false, false, true, false,
                                        /*visual_ready=*/false) ==
                RemeshAfterLitApplyDecision::Schedule,
@@ -918,12 +923,57 @@ int main()
                                        /*light_delta=*/false) ==
                RemeshAfterLitApplyDecision::SkipEnterLitQuiesce,
            "FullyDark under quiesce without delta ⇒ no spin remesh");
+    Expect(ClassifyRemeshAfterLitApply(false, false, true, false, true,
+                                       /*fully_dark=*/true, false, false,
+                                       /*stale_field=*/true) ==
+               RemeshAfterLitApplyDecision::Schedule,
+           "Era22: stale FullyDark + gpu under quiesce ⇒ Schedule not PreferKick");
     Expect(ClassifyRemeshAfterLitApply(false, false, true, false, true) ==
                RemeshAfterLitApplyDecision::PreferKickGpu,
            "Era47: gpu under quiesce ⇒ PreferKick");
     Expect(ClassifyRemeshAfterLitApply(false, false, false, false, false) ==
                RemeshAfterLitApplyDecision::Schedule,
            "Era47: clear without quiesce ⇒ Schedule");
+    {
+      using cutum::ShouldLatchRemeshAfterApplyWhileOwned;
+      Expect(ShouldLatchRemeshAfterApplyWhileOwned(
+                 RemeshAfterLitApplyDecision::SkipAlreadyDirty, true),
+             "Era22: Dirty+FullyDark still latches RAA after lit apply");
+      Expect(!ShouldLatchRemeshAfterApplyWhileOwned(
+                  RemeshAfterLitApplyDecision::SkipAlreadyDirty, false),
+             "Era22: lit drawable Dirty does not latch RAA (idle flicker)");
+      Expect(ShouldLatchRemeshAfterApplyWhileOwned(
+                 RemeshAfterLitApplyDecision::SkipInflight, true),
+             "Era22: Inflight+dark still latches RAA after lit apply");
+      Expect(ShouldLatchRemeshAfterApplyWhileOwned(
+                 RemeshAfterLitApplyDecision::PreferKickGpu, true),
+             "Era22: PreferKick+dark still latches RAA after lit apply");
+      Expect(!ShouldLatchRemeshAfterApplyWhileOwned(
+                  RemeshAfterLitApplyDecision::SkipAlreadyRaa, true),
+             "Era22: already-RAA does not re-latch");
+      Expect(!ShouldLatchRemeshAfterApplyWhileOwned(
+                  RemeshAfterLitApplyDecision::SkipEnterLitQuiesce, true),
+             "Era22: quiesce skip does not latch RAA");
+    }
+    {
+      using cutum::RecoverWatchdogFramesForDarkNear;
+      using cutum::ShouldEnqueueRecoverRemeshSeamStorm;
+      using cutum::ShouldEnqueueUrgentDarkRelight;
+      Expect(RecoverWatchdogFramesForDarkNear(true) == 2,
+             "moving dark recover stays fast");
+      Expect(RecoverWatchdogFramesForDarkNear(false) >= 30,
+             "idle dark recover must not fire every 2 frames");
+      Expect(ShouldEnqueueRecoverRemeshSeamStorm(true, 500, 0),
+             "moving dark_n seam storm allowed");
+      Expect(!ShouldEnqueueRecoverRemeshSeamStorm(false, 5000, 0),
+             "idle dark_n alone must not RemeshSeam storm");
+      Expect(ShouldEnqueueRecoverRemeshSeamStorm(false, 0, 1),
+             "idle sticky still allows RemeshSeam");
+      Expect(!ShouldEnqueueUrgentDarkRelight(true, true, true),
+             "no RelightThenMesh re-enqueue when light already owned");
+      Expect(ShouldEnqueueUrgentDarkRelight(true, false, false),
+             "pending dark preview enqueues RelightThenMesh");
+    }
     Expect(EnterVisibilityVoidReady(0, 999),
            "Era48: no dark-face sample ⇒ void gate open");
     Expect(EnterVisibilityVoidReady(100, 0),
@@ -1157,6 +1207,7 @@ int main()
     using cutum::ShouldHideFullyDarkUntilLitInRing;
     using cutum::FirstMeshPruneKeepHoriz;
     using cutum::ShouldHideUncomputedFullyDarkInRing;
+    using cutum::UnderfeetNeedUrgent;
     using cutum::ShouldRemeshAfterLightApply;
     using cutum::ShouldSkipSpawnMeshWhileRelightDeferred;
     using cutum::ShouldSpinFullyDarkRemesh;
@@ -1248,16 +1299,22 @@ int main()
            "hide r=4 does not hide horiz 5");
     Expect(ShouldHideUncomputedFullyDarkInRing(4, true, true, false),
            "pending light FullyDark hidden in r=4");
-    Expect(ShouldHideUncomputedFullyDarkInRing(4, true, false, true),
-           "stale FullyDark hidden in r=4");
+    Expect(!ShouldHideUncomputedFullyDarkInRing(4, true, false, true),
+           "Era22: stale FullyDark heal-in-place (not hide)");
     Expect(ShouldHideUncomputedFullyDarkInRing(4, true, false, false),
            "FullyDark without true_dark flag stays hidden");
     Expect(!ShouldHideUncomputedFullyDarkInRing(4, true, false, false, 4, true),
            "baked true-dark draws (not hidden)");
     Expect(!ShouldHideUncomputedFullyDarkInRing(5, true, true, true),
            "uncomputed hide stays r=4");
-    Expect(ShouldHideUncomputedFullyDarkInRing(1, true, true, false),
-           "Era28: nh1 FullyDark hidden until lit (no Unlit-near preview)");
+    Expect(!ShouldHideUncomputedFullyDarkInRing(1, true, true, false),
+           "Era22: nh1 FullyDark plug kept (no hole flicker underfeet)");
+    Expect(UnderfeetNeedUrgent(true, false, false),
+           "missing feet column ⇒ underfeet need");
+    Expect(UnderfeetNeedUrgent(false, true, false),
+           "pending feet ⇒ underfeet need");
+    Expect(!UnderfeetNeedUrgent(false, false, false),
+           "neighbor-only debt must not latch underfeet need");
     Expect(FirstMeshPruneKeepHoriz(5) >= 4,
            "never prune FirstMesh inside LitDrawable ring");
     Expect(ClassifyEnterVisualItemState(false, false, false, true) ==

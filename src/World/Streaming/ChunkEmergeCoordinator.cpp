@@ -165,6 +165,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Cruise SOTA: early ColumnFlow sites only Enqueue; one DrainBudget at end.
   int column_flow_drain_n = 0;
   int column_flow_admit_batch = 1;
+  int idle_seam_budget_this_frame = 0;
   auto note_column_flow_drain = [&](int drain_n, int admit_batch)
   {
     column_flow_drain_n = std::max(column_flow_drain_n, drain_n);
@@ -577,15 +578,35 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     // Sticky remesh outside the wall≤28 visual-drain gate: stop-tail wall is
     // often 40–55ms (F2 sticky grew while SyncIdle never ran). ColumnFlow only.
-    const auto sticky_drain = EvaluateStickyRemeshDrain(
-        StickyRemeshDrainInput{black_sticky, last_frame_ms});
+    static int sticky_remesh_drain_cd = 0;
+    if (sticky_remesh_drain_cd > 0)
+    {
+      --sticky_remesh_drain_cd;
+    }
+    const auto sticky_drain = EvaluateStickyRemeshDrain(StickyRemeshDrainInput{
+        black_sticky, last_frame_ms, moving,
+        /*frames_since_last_drain=*/
+        sticky_remesh_drain_cd > 0
+            ? 0
+            : 999});
     if (sticky_drain.run_drain)
     {
-      // Enqueue only — MarkDirty happens in DrainBudget/Seam window before GPU.
+      // Enqueue RemeshSeam only when the FOCUS column itself is sticky — never
+      // use player column as proxy for ring sticky (manual 172208 underfeet
+      // flicker). SyncIdle drains the sticky set via DrainRemeshSeamBudget.
       auto &exec = GetColumnFlowExecutor();
-      exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
-                   ColumnWorkKind::RemeshSeam, 30);
+      const glm::ivec2 focus_xz(focus_ground_horiz.x, focus_ground_horiz.z);
+      if (world.IsColumnStickyRemesh(focus_xz))
+      {
+        exec.Enqueue(focus_xz, ColumnWorkKind::RemeshSeam, 30);
+      }
       note_column_flow_drain(std::max(1, sticky_drain.budget), 1);
+      sticky_remesh_drain_cd = moving ? 0 : 30;
+      if (!moving)
+      {
+        idle_seam_budget_this_frame =
+            std::max(idle_seam_budget_this_frame, sticky_drain.budget);
+      }
     }
     // I6: after sticky drain, drop lit remesh sticky that no longer has stale-dark
     // (Dirty-only leftover was pinning autofly sticky 2–6).
@@ -1252,8 +1273,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
 
   phys_telem.SoftDeferHeldN =
       static_cast<int>(mesh_service.GetSoftDeferHeldCount());
-  const bool underfeet_need =
-      missing_underfeet || pending_underfeet || underfeet_undrawn;
+  // Feet-column need only — missing/pending in r=1 neighbors must not boost
+  // Immediate/schedule on the player column (manual 175310 two-chunk flicker).
+  const bool missing_feet_column =
+      have_nearest_missing && nearest_missing_hole.x == focus_ground_horiz.x &&
+      nearest_missing_hole.z == focus_ground_horiz.z;
+  const bool pending_feet = world.IsPendingLightBeforeMesh(
+      glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z));
+  const bool underfeet_need = UnderfeetNeedUrgent(
+      missing_feet_column, pending_feet, underfeet_undrawn);
   if (underfeet_undrawn)
   {
     auto &exec = GetColumnFlowExecutor();
@@ -2281,14 +2309,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         ((visual_holes || missing_underfeet) && recover_watchdog_frames >= 4) ||
         (pending_near_light && pending_focus_n > 12 &&
          recover_watchdog_frames >= 4) ||
-        (black_sticky > 0 && !moving && recover_watchdog_frames >= 4) ||
+        (black_sticky > 0 && !moving &&
+         recover_watchdog_frames >= RecoverWatchdogFramesForDarkNear(false)) ||
         (!moving && pending_focus_n > 15 && recover_watchdog_frames >= 2) ||
         (world.GetPhysicsTelemetry().DarkFaceNearN > 500 &&
-         recover_watchdog_frames >= 2) ||
+         recover_watchdog_frames >=
+             RecoverWatchdogFramesForDarkNear(moving)) ||
         // Era16: ticket orphans; Era17: also while VisibleBlackFocusN>0 (heal-until).
+        // Idle: slower cadence — VB=81 stick forever otherwise (manual 160656).
         ((world.GetPhysicsTelemetry().VisibleBlackNoTicketN > 0 ||
           world.GetPhysicsTelemetry().VisibleBlackFocusN > 0) &&
-         recover_watchdog_frames >= 4);
+         recover_watchdog_frames >= (moving ? 4 : 30));
     if (recover_now && recover_n > 0)
     {
       auto &exec = GetColumnFlowExecutor();
@@ -2319,14 +2350,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const bool urgent_dark_pending =
             pending_focus_n > 0 &&
             world.GetPhysicsTelemetry().DarkFaceNearN > 500;
-        if (pending_dark_preview > 0 || urgent_dark_pending)
+        const glm::ivec2 focus_xz(focus_ground_horiz.x, focus_ground_horiz.z);
+        const bool already_owns_light =
+            world.IsPendingLightBeforeMesh(focus_xz) ||
+            exec.Scheduler().Contains(focus_xz,
+                                      ColumnWorkKind::RelightThenMesh) ||
+            exec.Scheduler().Contains(focus_xz,
+                                      ColumnWorkKind::PromoteRelight);
+        if (ShouldEnqueueUrgentDarkRelight(pending_dark_preview > 0,
+                                           urgent_dark_pending,
+                                           already_owns_light))
         {
           // Must stay below FirstMesh (100+admit). recover_n+100 starved rim
           // admit (land-cruise miss_stuck 6–12s).
           const int relight_prio =
               missing_visible_mesh ? 55 : (recover_n + 100);
-          exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
-                       ColumnWorkKind::RelightThenMesh, relight_prio);
+          exec.Enqueue(focus_xz, ColumnWorkKind::RelightThenMesh, relight_prio);
         }
       }
       // Era19: hitch drain via FrameStreamingBudget — FirstMesh/no_ticket only
@@ -2345,7 +2384,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const bool skip_seam_storm =
           URuntimeTuning::Get().MissFirstFrameBudget && hitch_drain &&
           missing_visible_mesh;
-      if (!skip_seam_storm && (dark_n > 200 || black_sticky > 0))
+      if (!skip_seam_storm &&
+          ShouldEnqueueRecoverRemeshSeamStorm(moving, dark_n, black_sticky))
       {
         const int seam_n = std::clamp(
             3 + (dark_n > 800 ? 4 : 0) + black_sticky * 2, 3, 10);
@@ -2428,21 +2468,23 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                    ColumnWorkKind::FirstMesh, 60);
     }
     else if (!moving &&
-             (missing_visible_mesh || black_sticky > 0 ||
-              focus_not_render_ready > 0) &&
+             (missing_visible_mesh || focus_not_render_ready > 0) &&
              last_frame_ms <= 28.0)
     {
       auto &exec = GetColumnFlowExecutor();
       exec.RequestPromoteRelight(
           glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 40);
-      // TD-ARCH-026/027: scale sticky remesh via ColumnFlow (no direct SyncIdle).
-      const int sticky_sync =
-          std::clamp(4 + black_sticky * 2 + (focus_not_render_ready > 16 ? 4 : 0),
-                     4, 12);
-      // Enqueue only — MarkDirty in Drain-before-GPU Seam window.
-      exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
-                   ColumnWorkKind::RemeshSeam, 40);
-      note_column_flow_drain(sticky_sync, 1);
+      // Era22: do not RemeshSeam the player column for black_sticky ring debt —
+      // that remeshed underfeet forever (manual 172208). Sticky drain + SyncIdle
+      // own sticky columns.
+      if (missing_visible_mesh)
+      {
+        const int sticky_sync =
+            std::clamp(4 + (focus_not_render_ready > 16 ? 4 : 0), 4, 12);
+        exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+                     ColumnWorkKind::FirstMesh, 40);
+        note_column_flow_drain(sticky_sync, 1);
+      }
     }
   }
 
@@ -3629,10 +3671,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                      focus_ground_horiz, focus_radius,
                      column_flow_admit_batch);
     const int seam_budget =
-        std::clamp(2 + (black_sticky > 0 ? black_sticky : 0) +
-                       (world.GetPhysicsTelemetry().DarkFaceNearN > 200 ? 2 : 0),
-                   1, 8);
-    exec.DrainRemeshSeamBudget(world, seam_budget);
+        !moving
+            ? idle_seam_budget_this_frame
+            : std::clamp(2 + (black_sticky > 0 ? black_sticky : 0) +
+                             (world.GetPhysicsTelemetry().DarkFaceNearN > 200
+                                  ? 2
+                                  : 0),
+                         1, 8);
+    if (seam_budget > 0)
+    {
+      exec.DrainRemeshSeamBudget(world, seam_budget);
+    }
   }
   int gpu_consume_done = 0;
   {
