@@ -622,16 +622,17 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   const bool incomplete_camera_column =
       !IsTerrainChunkComplete(world.GetBlockWorld(), camera_ground,
                               world.GetProceduralSettings().MaxHeight);
+  // ColPipe: feet column only (r=0) — neighbor r=1 must not latch underfeet_need.
   const bool missing_underfeet_mesh =
       missing_near &&
       world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
-          world.GetBlockWorld(), focus_horiz, /*radius=*/1);
+          world.GetBlockWorld(), focus_horiz, /*radius=*/0);
   const bool missing_underfeet =
       missing_underfeet_mesh && !incomplete_camera_column;
   const int pending_light_focus =
       world.CountPendingLightBeforeMeshNear(focus_horiz, focus_radius);
-  const bool pending_underfeet =
-      world.HasPendingLightBeforeMeshNear(focus_horiz, /*radius=*/1);
+  const bool pending_underfeet = world.IsPendingLightBeforeMesh(
+      glm::ivec2(focus_horiz.x, focus_horiz.z));
 
   StreamingPressureInput in;
   in.pending_light =
@@ -642,7 +643,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   const int miss_horiz = world.PhysicsTelemetryData.MissHoriz;
   in.visual_holes =
       missing_near && (missing_underfeet || miss_horiz <= 2);
-  in.underfeet_need = missing_underfeet || pending_underfeet;
+  in.underfeet_need = FeetColumnUnderfeetNeed(
+      incomplete_camera_column, missing_underfeet_mesh, pending_underfeet);
   in.pending_light_focus = pending_light_focus;
   LastPendingLightFocus = pending_light_focus;
   LastPressureCaps = EvaluateStreamingPressure(in, PressureState);
@@ -990,17 +992,15 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     const bool missing_near_mesh =
         world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
             world.GetBlockWorld(), focus_horiz, focus_radius);
+    // ColPipe: feet r=0 only — neighbor pending/missing must not starve commits.
     const bool missing_underfeet =
         world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
-            world.GetBlockWorld(), focus_horiz, /*radius=*/1);
-    const bool pending_underfeet =
-        world.HasPendingLightBeforeMeshNear(focus_horiz, /*radius=*/1);
-    const bool underfeet_need = missing_underfeet || pending_underfeet;
+            world.GetBlockWorld(), focus_horiz, /*radius=*/0);
+    const bool pending_underfeet = world.IsPendingLightBeforeMesh(
+        glm::ivec2(focus_horiz.x, focus_horiz.z));
     bool incomplete_camera_column = false;
     {
       // Only the camera column completeness gates underfeet commit pressure.
-      // Scanning ±1 kept MaxChunkCommits=1 forever while any neighbor was
-      // still generating — empty underfeet at 100 FPS.
       const int max_y = procedural.MaxHeight;
       const glm::ivec3 camera_ground(focus_horiz.x, 0, focus_horiz.z);
       if (!IsTerrainChunkComplete(world.BlockWorld, camera_ground, max_y))
@@ -1008,13 +1008,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         incomplete_camera_column = true;
       }
     }
+    const bool underfeet_need = FeetColumnUnderfeetNeed(
+        incomplete_camera_column, missing_underfeet, pending_underfeet);
     const bool near_focus_holes =
         missing_near_mesh ||
         world.HasPendingLightBeforeMeshNear(focus_horiz, focus_radius);
-    // Commit pressure: missing/pending mesh underfeet OR camera column not
-    // in RAM yet. Neighbor incompleteness must not starve commits.
-    const bool underfeet_pressure =
-        underfeet_need || incomplete_camera_column;
+    const bool underfeet_pressure = underfeet_need;
     if (near_focus_holes || underfeet_pressure)
     {
       keep_prewarm_surplus = false;
@@ -3100,16 +3099,15 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const bool incomplete_camera_column =
         !IsTerrainChunkComplete(world.GetBlockWorld(), camera_ground,
                                 procedural.MaxHeight);
-    // Cached via HoleQuery memo when args match; underfeet subset of focus.
-    // P2-fix: incomplete camera column itself is underfeet_need — without it
-    // the emerge coordinator never prioritises underfeet FirstMesh and the
-    // column stays in NotReadyState(7) for the whole cruise.
-    const bool underfeet_need =
-        incomplete_camera_column ||
-        (visual_holes &&
-         meshService.HasMissingGreedyMeshInHorizontalRadius(
-             world.GetBlockWorld(), focus_horiz, /*radius=*/1)) ||
-        world.HasPendingLightBeforeMeshNear(focus_horiz, /*radius=*/1);
+    // ColPipe: feet column only (r=0 mesh + feet pending). Neighbor r=1 must
+    // not latch underfeet_need (manual 205129 need=1 forever on cold enter).
+    const bool missing_feet_mesh =
+        meshService.HasMissingGreedyMeshInHorizontalRadius(
+            world.GetBlockWorld(), focus_horiz, /*radius=*/0);
+    const bool pending_feet = world.IsPendingLightBeforeMesh(
+        glm::ivec2(focus_horiz.x, focus_horiz.z));
+    const bool underfeet_need = FeetColumnUnderfeetNeed(
+        incomplete_camera_column, missing_feet_mesh, pending_feet);
     const KeepPrewarmGate keep_gate = EvaluateKeepPrewarmGate(
         frame_ms, gen_backlog_total, mesh_async, dirty, near_mesh_backlog);
     const bool near_focus_holes =

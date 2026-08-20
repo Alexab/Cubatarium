@@ -3232,21 +3232,36 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       drain_steps = std::max(drain_steps, moving ? 3 : 4);
     }
     note_column_flow_drain(drain_steps, admit_n);
-    // ColPipe P4: idle sticky hole → FirstMesh Dirty, not Immediate.
+    // ColPipe P4: one miss owner — Dirty only if not already Dirty/RAA/inflight;
+    // FirstMesh ticket (FIFO pin stays in WorldStreaming miss path).
+    auto pin_isolated_miss = [&](int first_mesh_prio) {
+      if (!found_nearest_missing)
+      {
+        return;
+      }
+      const bool already_owned =
+          mesh_service.IsChunkMeshDirty(isolated_hole) ||
+          mesh_service.IsRemeshAfterApplyPending(isolated_hole) ||
+          mesh_service.HasInflightMeshBuild(isolated_hole);
+      if (!already_owned &&
+          !mesh_service.HasMeshSatisfyingColumnReady(isolated_hole) &&
+          !mesh_service.IsPendingGpuApply(isolated_hole))
+      {
+        mesh_service.MarkDirtyPriority(isolated_hole);
+        ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
+      }
+      GetColumnFlowExecutor().Enqueue(
+          glm::ivec2(isolated_hole.x, isolated_hole.z),
+          ColumnWorkKind::FirstMesh, first_mesh_prio);
+    };
     if (!moving && found_nearest_missing)
     {
       const int nh = std::max(
           std::abs(isolated_hole.x - focus_ground_horiz.x),
           std::abs(isolated_hole.z - focus_ground_horiz.z));
-      if (nh <= 1 &&
-          !mesh_service.HasMeshSatisfyingColumnReady(isolated_hole) &&
-          !mesh_service.IsPendingGpuApply(isolated_hole) &&
-          !mesh_service.HasInflightMeshBuild(isolated_hole))
+      if (nh <= 1)
       {
-        mesh_service.MarkDirtyPriority(isolated_hole);
-        GetColumnFlowExecutor().Enqueue(
-            glm::ivec2(isolated_hole.x, isolated_hole.z),
-            ColumnWorkKind::FirstMesh, 110);
+        pin_isolated_miss(110);
       }
     }
     // Era14 TD-ARCH-042 / Era14.1 A1: DesiredStage Dirty FirstMesh — no Imm
@@ -3279,11 +3294,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const bool tops_firstmesh_class =
           missing_visible_mesh && isolated_hole.y <= 1 && no_drawable;
 
-      // A1 HP quota: every miss-frame Dirty + PreferKick nearest tops column.
+      // A1 HP quota: PreferKick when GPU stuck; Dirty only via pin_isolated_miss.
       if (tops_hp || tops_firstmesh_class)
       {
-        mesh_service.MarkDirtyPriority(isolated_hole);
-        ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
+        pin_isolated_miss(112);
         if (queued_stuck || kicked_stuck ||
             mesh_service.IsPendingGpuApply(isolated_hole))
         {
@@ -3292,7 +3306,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       }
 
       // Era23 I-M9: FirstMesh-class PreferKick every miss-frame (age SLA backup).
-      // PreferKick only when GPU queue stuck — Dirty alone starts idle pipeline.
       {
         const bool miss_fm_class = IsMissFirstMeshClass(
             missing_visible_mesh, isolated_hole.y, nh);
@@ -3301,8 +3314,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         {
           if (!(tops_hp || tops_firstmesh_class))
           {
-            mesh_service.MarkDirtyPriority(isolated_hole);
-            ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
+            pin_isolated_miss(110);
           }
           if (queued_stuck || kicked_stuck ||
               mesh_service.IsPendingGpuApply(isolated_hole))
@@ -3349,8 +3361,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const int miss_age_periods = MissWitnessAgeFrames / 120;
         if (ShouldMissTimeSlaKick(missing_visible_mesh, miss_age_periods))
         {
-          mesh_service.MarkDirtyPriority(isolated_hole);
-          ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
+          pin_isolated_miss(114);
           mesh_service.PreferKickPendingGpuQueued(isolated_hole);
           mesh_schedule = std::max(mesh_schedule, 12);
         }
@@ -3435,10 +3446,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           StandRimStickyFrames = 1;
         }
         stand_frames = StandRimStickyFrames;
+        // ColPipe P4: PreferKick if GPU stuck; Dirty only once via pin (not every
+        // stand frame).
         if (!tops_hp && stand_frames >= 1)
         {
-          mesh_service.MarkDirtyPriority(isolated_hole);
-          ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
+          pin_isolated_miss(108);
         }
         if (!tops_hp && stand_frames >= 1 &&
             (queued_stuck || kicked_stuck))
@@ -3462,7 +3474,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       if (!tops_hp && !stand_rim && nh <= 3 && sticky_frames >= 2 &&
           pipeline_idle)
       {
-        mesh_service.MarkDirtyPriority(isolated_hole);
+        pin_isolated_miss(106);
       }
     }
     else

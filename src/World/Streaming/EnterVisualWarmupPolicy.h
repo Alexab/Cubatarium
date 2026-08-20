@@ -225,14 +225,22 @@ inline bool EnterUnderfeetNeedsLitDrawable(bool has_lit_drawable,
   return !has_lit_drawable && !keep_prior_gpu;
 }
 
-/// Era22: underfeet_need drives Immediate/schedule boost. Neighbor hole or
-/// PendingLight in r≤1 must NOT latch need when the feet column itself is OK —
-/// that remeshed player+nearest neighbor forever (manual 175310 two-chunk
-/// flicker; underfeet telem = horiz≤1 lease).
+/// Era22 / ColPipe: underfeet_need = feet column only (priority/lease).
+/// Neighbor hole or PendingLight in r≤1 must NOT latch need when the feet
+/// column itself is OK — that remeshed player+nearest forever (manual 175310).
 inline bool UnderfeetNeedUrgent(bool missing_feet_column, bool pending_feet,
                                 bool underfeet_undrawn)
 {
   return missing_feet_column || pending_feet || underfeet_undrawn;
+}
+
+/// Streaming pressure / load caps: feet column only (Chebyshev r=0 mesh +
+/// pending on focus xz). incomplete_camera_column is the feet ground column.
+inline bool FeetColumnUnderfeetNeed(bool incomplete_camera_column,
+                                    bool missing_feet_mesh,
+                                    bool pending_feet_light)
+{
+  return incomplete_camera_column || missing_feet_mesh || pending_feet_light;
 }
 
 /// Era29 I-E4: SoftDefer empty underfeet needs FirstMesh ownership on bar.

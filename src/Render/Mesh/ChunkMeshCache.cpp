@@ -1844,43 +1844,22 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
       OnSoftDeferHeld(coord);
       ++ticket_refresh;
     }
-    // Era47: lit-quiesce — do not sticky-reDirty SoftDeferHeld globally.
-    // Convergence: undrawn spawn-ring (r≤2) may re-Dirty once so FirstMesh
-    // can schedule after SoftDefer-empty park (manual 173849).
-    if (EnterLitQuiesce)
+    // ColPipe P5: while SoftDefer still holds publication, ticket-only —
+    // MarkDirty every tick refeeds dirty_revisit + remesh thrash.
+    if (still_deferred)
     {
-      const int spawn_horiz =
-          MeshFocusValid
-              ? std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
-                         std::abs(coord.z - MeshFocusGroundChunk.z))
-              : 999;
-      if (spawn_horiz <= 2 && !HasDrawableGreedyMesh(coord) &&
-          requeued < kRequeueBudget && TryConsumeDirtyAdmit())
-      {
-        it = SoftDeferHeld.erase(it);
-        MarkDirtyPriority(coord);
-        ++requeued;
-        continue;
-      }
       ++it;
       continue;
     }
-    // Era22 I-S1: under miss/focus (or SoftDefer lifted) → Dirty schedule.
-    if (ShouldScheduleFirstMeshUnderSoftDefer(/*has_drawable=*/false,
-                                              miss_or_focus) ||
-        !still_deferred || in_focus)
+    // SoftDefer lifted: one Dirty admit then drop Held (FirstMesh owns heal).
+    if (requeued >= kRequeueBudget || !TryConsumeDirtyAdmit())
     {
-      if (requeued >= kRequeueBudget || !TryConsumeDirtyAdmit())
-      {
-        ++it;
-        continue;
-      }
-      it = SoftDeferHeld.erase(it);
-      MarkDirtyPriority(coord);
-      ++requeued;
+      ++it;
       continue;
     }
-    ++it;
+    it = SoftDeferHeld.erase(it);
+    MarkDirtyPriority(coord);
+    ++requeued;
   }
 }
 

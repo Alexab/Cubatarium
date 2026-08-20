@@ -1318,6 +1318,19 @@ int main()
            "pending feet ⇒ underfeet need");
     Expect(!UnderfeetNeedUrgent(false, false, false),
            "neighbor-only debt must not latch underfeet need");
+    Expect(UnderfeetNeedUrgent(false, false, true),
+           "undrawn feet ⇒ underfeet need");
+    {
+      using cutum::FeetColumnUnderfeetNeed;
+      Expect(FeetColumnUnderfeetNeed(true, false, false),
+             "feet need: incomplete camera column");
+      Expect(FeetColumnUnderfeetNeed(false, true, false),
+             "feet need: missing feet mesh");
+      Expect(FeetColumnUnderfeetNeed(false, false, true),
+             "feet need: pending feet light");
+      Expect(!FeetColumnUnderfeetNeed(false, false, false),
+             "feet need: all clear");
+    }
     Expect(FirstMeshPruneKeepHoriz(5) >= 4,
            "never prune FirstMesh inside LitDrawable ring");
     Expect(ClassifyEnterVisualItemState(false, false, false, true) ==
