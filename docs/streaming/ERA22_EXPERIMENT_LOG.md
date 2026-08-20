@@ -30,6 +30,7 @@ Track iterative experiments for land/ocean streaming stabilization with reproduc
 | Capture audit | `tmp_capture_audit.py` on F4a/F3ac ocean+land | Perf jsonl: Capture vs Apply timing, fifo drops, completed ring | **Capture OK** (~0.4ms med, 100% cruise frames). **No Capture perf regression** vs pre-F4. Bottleneck = **Apply ~1 col/frame** + **FIFO overflow drops ~560/cruise**. `cruise_relight_completed_med=0` is **misleading** (ring occupancy, drained same frame). |
 | F3b+starve | `Era22_F3b_starveFix_v1` | Fix starve gate (apply_ms_prev+inflight); TryEnqueue skip lit-settled; analyzer uses apply_ms | `land-cruise 9/23` **PL med=1** (was 34); `fly-clean 10/23`; `ocean-cruise 7/23` PL=39 fifo_drop=566 unchanged. **Keep starve+F3b.** |
 | F3d | `Era22_F3d_deferFarEnqueue_v1` | Defer far relight enqueue when fifo≥admit_frac×cap; admit on pin-ring entry | `ocean-cruise 7/23` **PL med=22** (was 39) **fifo_drop=286** (was 566); `land-cruise 9/23` PL=3 fifo_drop=15. **Keep F3d.** |
+| F3d-pending | `Era22_F3dPendingNoteFix_v1` | F3d defer branch: `NotePendingLightBeforeMesh` before return; suite/analyzer add `effective_holes_rate` + blinkiness | Suite `0/4` `EH%=100` all scenarios; `land-cruise PL=3` `ocean PL=33`; **Capture med still sub-ms** (land 0.60, ocean 0.73) but **wall_med regressed** (land 119 vs 104, ocean 135 vs 108). Manual `perf_20260820-09*` confirms `EH%=100` + high visible_black — matches user flicker/holes report. **Keep invariant fix**; visual recovery needs follow-up (not blink, stable holes). |
 
 ## Capture / Apply Audit (2026-08-20)
 

@@ -109,6 +109,10 @@ def run_scenario(
                     "wall_ms_med",
                     "wall_ms_fly_med",
                     "pending_light_focus_med",
+                    "effective_holes_rate",
+                    "post_stop_effective_holes_rate",
+                    "effective_holes_blink_rate",
+                    "post_stop_effective_holes_blink_rate",
                     "chunks_traveled",
                     "post_stop_black_sticky_max",
                     "stop_wall_med",
@@ -131,7 +135,10 @@ def print_summary(results: list[dict]) -> None:
     print("  SUITE SUMMARY", flush=True)
     print(f"{'='*72}", flush=True)
 
-    hdr = f"{'Scenario':<22s} {'Pass':>6s} {'Gates':>7s} {'Wall':>7s} {'PL med':>7s} {'Chunks':>7s} {'Time':>7s}"
+    hdr = (
+        f"{'Scenario':<22s} {'Pass':>6s} {'Gates':>7s} {'Wall':>7s} "
+        f"{'PL med':>7s} {'EH%':>6s} {'PSH%':>6s} {'Chunks':>7s} {'Time':>7s}"
+    )
     print(hdr, flush=True)
     print("-" * len(hdr), flush=True)
 
@@ -140,10 +147,24 @@ def print_summary(results: list[dict]) -> None:
         status = "PASS" if r.get("pass") else ("HANG" if r.get("hang_killed") else "FAIL")
         wall = f"{m['wall_ms_med']:.0f}" if m.get("wall_ms_med") is not None else "—"
         pl = f"{m['pending_light_focus_med']:.0f}" if m.get("pending_light_focus_med") is not None else "—"
+        eh = (
+            f"{100.0 * m['effective_holes_rate']:.0f}"
+            if m.get("effective_holes_rate") is not None
+            else "—"
+        )
+        psh = (
+            f"{100.0 * m['post_stop_effective_holes_rate']:.0f}"
+            if m.get("post_stop_effective_holes_rate") is not None
+            else "—"
+        )
         ch = f"{m['chunks_traveled']:.0f}" if m.get("chunks_traveled") is not None else "—"
         gates = r.get("gates_pass", "—")
         t = f"{r['elapsed_sec']:.0f}s"
-        print(f"{r['scenario']:<22s} {status:>6s} {gates:>7s} {wall:>7s} {pl:>7s} {ch:>7s} {t:>7s}", flush=True)
+        print(
+            f"{r['scenario']:<22s} {status:>6s} {gates:>7s} {wall:>7s} "
+            f"{pl:>7s} {eh:>6s} {psh:>6s} {ch:>7s} {t:>7s}",
+            flush=True,
+        )
 
     total_time = sum(r.get("elapsed_sec", 0) for r in results)
     passed = sum(1 for r in results if r.get("pass"))

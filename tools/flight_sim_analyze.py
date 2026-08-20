@@ -32,6 +32,35 @@ def p95(xs: list[float]) -> float | None:
     return float(s[idx])
 
 
+def binary_transition_stats(xs: list[float]) -> tuple[int, float, int, int]:
+    """For 0/1-like samples: transitions, transition_rate, max1run, max0run."""
+    if not xs:
+        return 0, 0.0, 0, 0
+    states = [1 if float(v) > 0.5 else 0 for v in xs]
+    transitions = 0
+    max_one_run = 0
+    max_zero_run = 0
+    cur_state = states[0]
+    cur_run = 1
+    for s in states[1:]:
+        if s == cur_state:
+            cur_run += 1
+            continue
+        transitions += 1
+        if cur_state == 1:
+            max_one_run = max(max_one_run, cur_run)
+        else:
+            max_zero_run = max(max_zero_run, cur_run)
+        cur_state = s
+        cur_run = 1
+    if cur_state == 1:
+        max_one_run = max(max_one_run, cur_run)
+    else:
+        max_zero_run = max(max_zero_run, cur_run)
+    denom = max(1, len(states) - 1)
+    return transitions, transitions / denom, max_one_run, max_zero_run
+
+
 def spike_dominant_bucket(row: dict) -> str:
     """Pick the largest known contributor on a spike row."""
     candidates = {
@@ -219,6 +248,12 @@ def analyze(
     effective_holes_rate = (
         sum(effective_holes) / len(effective_holes) if effective_holes else 1.0
     )
+    (
+        effective_holes_blink_transitions,
+        effective_holes_blink_rate,
+        effective_holes_longest_hole_run,
+        effective_holes_longest_clear_run,
+    ) = binary_transition_stats(effective_holes)
     mesh_async_stuck_idle = 0
     run = 0
     for r in steady:
@@ -827,6 +862,12 @@ def analyze(
     post_stop_effective_holes_rate = (
         sum(stop_effective) / len(stop_effective) if stop_effective else 1.0
     )
+    (
+        post_stop_effective_holes_blink_transitions,
+        post_stop_effective_holes_blink_rate,
+        post_stop_longest_hole_run,
+        post_stop_longest_clear_run,
+    ) = binary_transition_stats(stop_effective)
     post_stop_relight_med = median(relight_stop)
     post_stop_not_ready_med = median(not_ready_stop) if not_ready_stop else None
     post_stop_not_ready_end = (
@@ -1283,6 +1324,10 @@ def analyze(
         "metrics": {
             "holes_rate": holes_rate,
             "effective_holes_rate": effective_holes_rate,
+            "effective_holes_blink_rate": effective_holes_blink_rate,
+            "effective_holes_blink_transitions": effective_holes_blink_transitions,
+            "effective_holes_longest_hole_run": effective_holes_longest_hole_run,
+            "effective_holes_longest_clear_run": effective_holes_longest_clear_run,
             "mesh_async_stuck_sec": mesh_async_stuck_sec,
             "dirty_med": median(dirty),
             "dirty_max": max(dirty) if dirty else None,
@@ -1386,6 +1431,10 @@ def analyze(
             "post_stop_visible_black_stalled_max": post_stop_visible_black_stalled_max,
             "post_stop_missing_max": post_stop_missing_max,
             "post_stop_effective_holes_rate": post_stop_effective_holes_rate,
+            "post_stop_effective_holes_blink_rate": post_stop_effective_holes_blink_rate,
+            "post_stop_effective_holes_blink_transitions": post_stop_effective_holes_blink_transitions,
+            "post_stop_longest_hole_run": post_stop_longest_hole_run,
+            "post_stop_longest_clear_run": post_stop_longest_clear_run,
             "gates_stop_pass_count": gates_stop_pass_count,
             "gates_stop_total": len(gates_stop),
             "post_stop_relight_med": post_stop_relight_med,
