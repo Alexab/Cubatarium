@@ -936,24 +936,24 @@ int main()
            "Era47: clear without quiesce ⇒ Schedule");
     {
       using cutum::ShouldLatchRemeshAfterApplyWhileOwned;
-      Expect(ShouldLatchRemeshAfterApplyWhileOwned(
+      Expect(!ShouldLatchRemeshAfterApplyWhileOwned(
                  RemeshAfterLitApplyDecision::SkipAlreadyDirty, true),
-             "Era22: Dirty+FullyDark still latches RAA after lit apply");
+             "ColPipe P2: Dirty already owns — no RAA latch");
       Expect(!ShouldLatchRemeshAfterApplyWhileOwned(
                   RemeshAfterLitApplyDecision::SkipAlreadyDirty, false),
-             "Era22: lit drawable Dirty does not latch RAA (idle flicker)");
-      Expect(ShouldLatchRemeshAfterApplyWhileOwned(
+             "ColPipe P2: lit Dirty does not latch RAA");
+      Expect(!ShouldLatchRemeshAfterApplyWhileOwned(
                  RemeshAfterLitApplyDecision::SkipInflight, true),
-             "Era22: Inflight+dark still latches RAA after lit apply");
-      Expect(ShouldLatchRemeshAfterApplyWhileOwned(
+             "ColPipe P2: Inflight owns — no RAA latch");
+      Expect(!ShouldLatchRemeshAfterApplyWhileOwned(
                  RemeshAfterLitApplyDecision::PreferKickGpu, true),
-             "Era22: PreferKick+dark still latches RAA after lit apply");
+             "ColPipe P2: PreferKick owns GPU — no RAA latch");
       Expect(!ShouldLatchRemeshAfterApplyWhileOwned(
                   RemeshAfterLitApplyDecision::SkipAlreadyRaa, true),
-             "Era22: already-RAA does not re-latch");
+             "already-RAA does not re-latch");
       Expect(!ShouldLatchRemeshAfterApplyWhileOwned(
                   RemeshAfterLitApplyDecision::SkipEnterLitQuiesce, true),
-             "Era22: quiesce skip does not latch RAA");
+             "quiesce skip does not latch RAA");
     }
     {
       using cutum::RecoverWatchdogFramesForDarkNear;
@@ -1277,8 +1277,8 @@ int main()
            "Done+underfeet ignores hinterland mesh debt");
     Expect(!EnterSpawnRingIgnoresHinterlandMeshDebt(true, 1, true),
            "visibility debt keeps full ring");
-    Expect(ShouldHideEnterFullyDark(true, false, true, false, false),
-           "hide: FullyDark+stale after OpenSky still hidden");
+    Expect(!ShouldHideEnterFullyDark(true, false, true, false, false),
+           "ColPipe P7: enter FullyDark not hidden (keep-until-replace)");
     Expect(!ShouldHideEnterFullyDark(true, false, false, false, true),
            "true-dark not hidden");
     Expect(!ShouldHideEnterFullyDark(true, false, false, true, false),
@@ -1298,17 +1298,20 @@ int main()
     Expect(!ShouldHideFullyDarkUntilLitInRing(5, true, false, 4),
            "hide r=4 does not hide horiz 5");
     Expect(ShouldHideUncomputedFullyDarkInRing(4, true, true, false),
-           "pending light FullyDark hidden in r=4");
+           "pending light FullyDark hidden in r=4 when unpublished");
     Expect(!ShouldHideUncomputedFullyDarkInRing(4, true, false, true),
            "Era22: stale FullyDark heal-in-place (not hide)");
     Expect(ShouldHideUncomputedFullyDarkInRing(4, true, false, false),
-           "FullyDark without true_dark flag stays hidden");
+           "FullyDark without true_dark flag stays hidden when unpublished");
     Expect(!ShouldHideUncomputedFullyDarkInRing(4, true, false, false, 4, true),
            "baked true-dark draws (not hidden)");
     Expect(!ShouldHideUncomputedFullyDarkInRing(5, true, true, true),
            "uncomputed hide stays r=4");
     Expect(!ShouldHideUncomputedFullyDarkInRing(1, true, true, false),
            "Era22: nh1 FullyDark plug kept (no hole flicker underfeet)");
+    Expect(!ShouldHideUncomputedFullyDarkInRing(4, true, true, false, 4, false,
+                                                false, true),
+           "ColPipe P3: published mesh never hidden");
     Expect(UnderfeetNeedUrgent(true, false, false),
            "missing feet column ⇒ underfeet need");
     Expect(UnderfeetNeedUrgent(false, true, false),
@@ -1850,16 +1853,16 @@ int main()
     using cutum::CruiseRelightApplyBudget;
     Expect(CruiseRelightApplyBudget(true, 10.0, 4, false) == 1,
            "P2: moving caps to 1");
-    Expect(CruiseRelightApplyBudget(true, 3.0, 4, true) == 2,
-           "P2: moving cheap+stable allows 2");
+    Expect(CruiseRelightApplyBudget(true, 3.0, 4, true) == 3,
+           "ColPipe P6: moving cheap+stable allows 3");
     Expect(CruiseRelightApplyBudget(false, 10.0, 4, false) == 4,
            "P2: idle returns requested");
     Expect(CruiseRelightApplyBudget(true, 10.0, 0, true) == 0,
            "P2: requested 0 returns 0");
     Expect(CruiseRelightApplyBudget(true, 10.0, 8, false, true) == 1,
            "P2: near pending does not bypass moving cap");
-    Expect(CruiseRelightApplyBudget(true, 2.0, 12, true, true) == 2,
-           "P2: near pending still allows only cheap second apply");
+    Expect(CruiseRelightApplyBudget(true, 2.0, 12, true, true) == 3,
+           "ColPipe P6: pin+apply<4 ⇒ cap 3");
     Expect(CruiseRelightApplyBudget(true, 10.0, 3, true, true) == 1,
            "P2: expensive apply keeps moving cap at 1");
   }

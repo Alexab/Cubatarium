@@ -80,5 +80,5 @@ Findings:
 
 ## Next Planned Steps
 
-1. Ocean: PL med=22 — tune defer/admit or cheap Apply batch when PL 15–25.
-2. Keep F3b+F3d+F4a-v2 stack.
+1. **Superseded by Column Pipeline** (`docs/streaming/COLUMN_PIPELINE_EXPERIMENT_LOG.md`): ERA22 zoo overlays (Imm underfeet, RemeshSeam sticky producer, hide FullyDark draw gate, dual MarkRelit Dirty+RAA) replaced by single-owner ColumnFlow + MarkRelit + keep-until-replace. Keep F3b+F3d; do not return F4b/F5a/F3ac.
+2. Ocean: PL med still above ≤10 — Apply/FIFO throughput only (ColPipe P6), not new knobs.

@@ -845,6 +845,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   world.PhysicsTelemetryData.FocusMissingMesh = missing_near ? 1 : 0;
   world.PhysicsTelemetryData.VisualHoles = missing_near ? 1 : 0;
   world.PhysicsTelemetryData.ColumnBumpDenied = 0;
+  world.PhysicsTelemetryData.ColumnFlowUpgradeN = 0;
   // SoT unfinished (held sample while cruise); not pending-proxy.
   world.PhysicsTelemetryData.UnfinishedVisual = unfinished_visual;
   world.PhysicsTelemetryData.LightDebt = pending_light_focus > 0 ? 1 : 0;

@@ -3675,17 +3675,29 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         continue;
       }
       it = RemeshAfterApply.erase(it);
-      // FullyDark / !Drawable → FirstMesh class; lit remesh → RemeshQ.
-      if (!HasDrawableGreedyMesh(c) || ChunkHasFullyDarkFace(c))
+      // ColPipe P2: !Drawable → FirstMeshQ; FullyDark only if stale field;
+      // lit remesh → RemeshQ. True-dark FullyDark drops RAA without Dirty.
+      if (!HasDrawableGreedyMesh(c))
       {
         Dirty.MarkDirtyPriority(c);
+        ++RaaCommitMarkDirtyN;
+        ++promoted;
+      }
+      else if (ChunkHasFullyDarkFace(c))
+      {
+        if (ChunkHasStaleDarkFaces(c, world))
+        {
+          Dirty.MarkDirtyPriority(c);
+          ++RaaCommitMarkDirtyN;
+          ++promoted;
+        }
       }
       else
       {
         Dirty.MarkDirty(c);
+        ++RaaCommitMarkDirtyN;
+        ++promoted;
       }
-      ++RaaCommitMarkDirtyN;
-      ++promoted;
     }
     if (promoted > 0)
     {

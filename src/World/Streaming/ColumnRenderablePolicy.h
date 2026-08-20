@@ -99,10 +99,8 @@ inline void EnqueueVisibleBlackRepairTickets(
   EnqueueVoidDarkRelightTickets(scheduler, focus, cols);
 }
 
-/// Enqueue RemeshSeam / RelightThenMesh tickets for sticky + stale-dark columns
-/// (mirrors UColumnFlowExecutor::TickDerived repair section).
-/// Era32: fully-dark / void-class stale must not use RemeshSeam-as-heal —
-/// caller routes those through EnqueueVoidDarkRelightTickets.
+/// Enqueue FirstMesh / RelightThenMesh for sticky + stale-dark columns
+/// (ColPipe P1: no RemeshSeam proxy spam; void-class uses EnqueueVoidDark*).
 inline void EnqueueStickyStaleRepairTickets(
     UColumnFlowScheduler &scheduler, glm::ivec2 focus,
     const std::vector<glm::ivec2> &sticky_cols,
@@ -113,13 +111,14 @@ inline void EnqueueStickyStaleRepairTickets(
   };
   for (const glm::ivec2 &col : sticky_cols)
   {
-    scheduler.Enqueue(col, ColumnWorkKind::RemeshSeam, 30);
+    scheduler.Enqueue(col, ColumnWorkKind::FirstMesh, 30);
   }
   for (const glm::ivec2 &stale_col : stale_dark_cols)
   {
     const int d = near_dist(stale_col);
     const int prio_boost = d <= 2 ? 20 : 0;
-    scheduler.Enqueue(stale_col, ColumnWorkKind::RemeshSeam, 28 + prio_boost);
+    scheduler.Enqueue(stale_col, ColumnWorkKind::RelightThenMesh,
+                      28 + prio_boost);
   }
 }
 

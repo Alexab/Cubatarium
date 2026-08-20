@@ -153,24 +153,13 @@ inline bool EnterSpawnRingIgnoresHinterlandMeshDebt(bool enter_gate_active,
   return enter_gate_active && visibility_debt <= 0 && underfeet_present;
 }
 
-/// Hide FullyDark in enter ring until lit drawable or true-dark.
-/// After OpenSky, stale (field≠0, dark verts) stays hidden until bake.
-inline bool ShouldHideEnterFullyDark(bool fully_dark, bool pending,
-                                     bool stale_field, bool has_lit_drawable,
-                                     bool true_dark)
+/// Hide FullyDark in enter ring — ColPipe P7: keep-until-replace; never blank.
+inline bool ShouldHideEnterFullyDark(bool /*fully_dark*/, bool /*pending*/,
+                                     bool /*stale_field*/,
+                                     bool /*has_lit_drawable*/,
+                                     bool /*true_dark*/)
 {
-  if (!fully_dark)
-  {
-    return false;
-  }
-  if (has_lit_drawable || true_dark)
-  {
-    return false;
-  }
-  (void)pending;
-  (void)stale_field;
-  // Unbaked FullyDark (pending, stale, or pre-OpenSky) always hidden in ring.
-  return true;
+  return false;
 }
 
 /// Load MeshWarmup must not FirstMesh/Dirty spawn ring while relight is deferred.
@@ -1126,21 +1115,13 @@ inline bool ShouldScheduleRemeshAfterLitApply(bool is_dirty, bool raa_pending,
          RemeshAfterLitApplyDecision::Schedule;
 }
 
-/// When Dirty/GPU/Inflight already owns the chunk, still latch RemeshAfterApply
-/// so the post-light rebuild cannot be skipped (manual 151735: cruise apply
-/// with dirty_n high left VB stuck because SkipAlreadyDirty dropped RAA).
-/// Only for FullyDark/stale debt — latching every lit drawable refeeds remesh
-/// forever under idle Relight/RemeshSeam storm (manual 160656).
+/// When Dirty/GPU/Inflight already owns the chunk, do not latch a second
+/// RemeshAfterApply (ColPipe P2: dual Dirty+RAA refeed dirty_revisit forever).
 inline bool ShouldLatchRemeshAfterApplyWhileOwned(
-    RemeshAfterLitApplyDecision decision, bool fully_dark_or_stale = true)
+    RemeshAfterLitApplyDecision /*decision*/,
+    bool /*fully_dark_or_stale*/ = true)
 {
-  if (!fully_dark_or_stale)
-  {
-    return false;
-  }
-  return decision == RemeshAfterLitApplyDecision::SkipAlreadyDirty ||
-         decision == RemeshAfterLitApplyDecision::SkipInflight ||
-         decision == RemeshAfterLitApplyDecision::PreferKickGpu;
+  return false;
 }
 
 /// Idle stand: chronic DarkFaceNearN must not reopen recover every 2 frames

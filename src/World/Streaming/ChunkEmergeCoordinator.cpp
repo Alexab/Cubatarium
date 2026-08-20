@@ -328,15 +328,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           }
           UWorld &world_ref = *world_ptr;
           const glm::ivec2 key(chunk_coord.x, chunk_coord.z);
-          if (world_ref.GetMeshService().IsChunkMeshDirty(chunk_coord) ||
+          // ColPipe P5: drawable remesh is MarkRelit/Dirty — not RemeshSeam+sticky.
+          if (world_ref.GetMeshService().HasDrawableGreedyMesh(chunk_coord) ||
+              world_ref.GetMeshService().IsChunkMeshDirty(chunk_coord) ||
               world_ref.GetMeshService().IsRemeshAfterApplyPending(chunk_coord) ||
               world_ref.GetMeshService().IsPendingGpuApply(chunk_coord) ||
               world_ref.GetMeshService().HasInflightMeshBuild(chunk_coord))
           {
             return;
           }
-          world_ref.NoteColumnRepairNeeded(key);
-          GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RemeshSeam,
+          if (!world_ref.IsPendingLightBeforeMesh(key))
+          {
+            world_ref.NotePendingLightBeforeMesh(
+                glm::ivec3(key.x, 0, key.y), 0,
+                world_ref.GetProceduralSettings().MaxHeight);
+          }
+          GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RelightThenMesh,
                                           /*priority=*/70);
         });
     mesh_service.SetOnSoftDeferHeldFn(
@@ -591,15 +598,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             : 999});
     if (sticky_drain.run_drain)
     {
-      // Enqueue RemeshSeam only when the FOCUS column itself is sticky — never
-      // use player column as proxy for ring sticky (manual 172208 underfeet
-      // flicker). SyncIdle drains the sticky set via DrainRemeshSeamBudget.
-      auto &exec = GetColumnFlowExecutor();
-      const glm::ivec2 focus_xz(focus_ground_horiz.x, focus_ground_horiz.z);
-      if (world.IsColumnStickyRemesh(focus_xz))
-      {
-        exec.Enqueue(focus_xz, ColumnWorkKind::RemeshSeam, 30);
-      }
+      // ColPipe P1: no RemeshSeam focus proxy — DrainRemeshSeamBudget/SyncIdle
+      // drains the sticky set; FirstMesh only if feet column has no mesh owner.
       note_column_flow_drain(std::max(1, sticky_drain.budget), 1);
       sticky_remesh_drain_cd = moving ? 0 : 30;
       if (!moving)
@@ -1234,8 +1234,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             std::chrono::high_resolution_clock::now() - softdefer_own_t0)
             .count();
   }
-  // B5: SoftDefer-empty stuck witness must not starve under rim ownership cap.
-  // Force column-targeted full-height FirstMesh when miss persists in stop.
+  // B5: SoftDefer-empty stuck — ColPipe P4: FirstMesh only if not already owned
+  // (no MarkDirtyPriority / full-column Dirty storm).
   if (!moving && missing_visible_mesh && phys_telem.SoftDeferEmptyStuckN > 0)
   {
     const bool stop_tail_stuck =
@@ -1248,26 +1248,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                              phys_telem.SoftDeferEmptyStuckCz);
       const glm::ivec2 stuck_col(stuck.x, stuck.z);
       auto &exec = GetColumnFlowExecutor();
-      mesh_service.MarkDirtyPriority(stuck);
-      mesh_service.GetCache().InvalidateMeshCapture(stuck);
-      mesh_service.MarkMissingSlicesDirtyPriority(
-          world.GetBlockWorld(), glm::ivec3(stuck.x, 0, stuck.z), 0,
-          procedural.MaxHeight);
-      ColumnWorkItem pin{};
-      pin.column = stuck_col;
-      pin.kind = ColumnWorkKind::FirstMesh;
-      pin.priority = stop_tail_stuck ? 126 : 115;
-      pin.scan_full_focus = false;
-      pin.cy = -2;
-      exec.Enqueue(pin);
-      if (mesh_service.IsPendingGpuApply(stuck) ||
-          mesh_service.IsPendingGpuQueued(stuck) ||
-          mesh_service.IsPendingGpuKickedOrDispatched(stuck))
+      if (!exec.Scheduler().Contains(stuck_col, ColumnWorkKind::FirstMesh) &&
+          SoftDeferEmptyOwned.count(stuck) == 0)
       {
-        mesh_service.PreferKickPendingGpuQueued(stuck);
+        ColumnWorkItem pin{};
+        pin.column = stuck_col;
+        pin.kind = ColumnWorkKind::FirstMesh;
+        pin.priority = stop_tail_stuck ? 126 : 115;
+        pin.scan_full_focus = false;
+        pin.cy = stuck.y;
+        exec.Enqueue(pin);
+        SoftDeferEmptyOwned.insert(stuck);
+        note_column_flow_drain(2, 2);
       }
-      SoftDeferEmptyOwned.insert(stuck);
-      note_column_flow_drain(2, 2);
     }
   }
 
@@ -2109,9 +2102,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
                  ColumnWorkKind::FirstMesh, 80);
     note_column_flow_drain(4, 4);
-    // Enqueue RemeshSeam only — MarkDirty in Drain-before-GPU window.
-    exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
-                 ColumnWorkKind::RemeshSeam, 70);
+    // ColPipe P1: no RemeshSeam on spawn catch-up (FirstMesh owns hole).
   }
 
   // Near dirty must keep MeshAsync draining even under hitch frames.
@@ -2377,23 +2368,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           world.GetPhysicsTelemetry().VisibleBlackFocusN > 0, hitch_drain,
           moving, URuntimeTuning::Get().MissFirstFrameBudget);
       note_column_flow_drain(drain_n, 1);
-      // Edge stale-dark / post-miss sticky: raise seam drain near sticky
-      // (land_fix P3 — keep_h already 2–3 via StarveRemeshKeepHoriz).
-      // Era19 miss-first: do not Seam-storm on hitch while missing tops.
-      const int dark_n = world.GetPhysicsTelemetry().DarkFaceNearN;
-      const bool skip_seam_storm =
-          URuntimeTuning::Get().MissFirstFrameBudget && hitch_drain &&
-          missing_visible_mesh;
-      if (!skip_seam_storm &&
-          ShouldEnqueueRecoverRemeshSeamStorm(moving, dark_n, black_sticky))
-      {
-        const int seam_n = std::clamp(
-            3 + (dark_n > 800 ? 4 : 0) + black_sticky * 2, 3, 10);
-        // Enqueue only — single MarkDirty Seam drain before ConsumeGpu.
-        exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
-                     ColumnWorkKind::RemeshSeam, 50);
-        note_column_flow_drain(seam_n, 1);
-      }
+      // ColPipe P1: kill recover RemeshSeam storm (DarkFaceNearN forever).
+      // Dark debt → RelightThenMesh only when not already owned (above).
       recover_watchdog_frames = 0;
     }
   }
@@ -2520,27 +2496,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const int hole_horiz =
           std::max(std::abs(hole.x - focus_ground_horiz.x),
                    std::abs(hole.z - focus_ground_horiz.z));
-      const bool allow_uf_imm =
-          ShouldAllowImmediateMesh(
-              moving,
-              world.IsPendingLightBeforeMesh(glm::ivec2(hole.x, hole.z)),
-              pending_gpu_queued_n, fifo_n_imm, fifo_cap_imm, visual_holes) &&
-          underfeet_need && hole_horiz <= 1 &&
-          underfeet_immediate_cd <= 0 &&
-          underfeet_immediate_this_frame < kMaxUnderfeetImmediate &&
-          pending_async < 2 && immediate_ms_used() < 8.0;
-      if (allow_uf_imm)
-      {
-        mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
-                                           hole);
-        ++underfeet_immediate_this_frame;
-        underfeet_immediate_cd = 1;
-        GetColumnFlowExecutor().Enqueue(glm::ivec2(hole.x, hole.z),
-                                        ColumnWorkKind::FirstMesh, 110);
-      }
-      else if (!mesh_service.HasMeshSatisfyingColumnReady(hole) &&
-               !mesh_service.IsPendingGpuApply(hole) &&
-               !mesh_service.HasInflightMeshBuild(hole))
+      // ColPipe P4: no underfeet Immediate — DirtyPriority + FirstMesh + lease.
+      if (!mesh_service.HasMeshSatisfyingColumnReady(hole) &&
+          !mesh_service.IsPendingGpuApply(hole) &&
+          !mesh_service.HasInflightMeshBuild(hole))
       {
         mesh_service.MarkDirtyPriority(hole);
         GetColumnFlowExecutor().Enqueue(glm::ivec2(hole.x, hole.z),
@@ -2688,34 +2647,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                   glm::ivec2(coord.x, coord.z),
                   ColumnWorkKind::PromoteRelight, 100);
             }
-            // Phase B (174511): narrow underfeet Immediate r≤1 only — breaks
-            // sticky miss without reopening focus-ring Immediate zoo.
+            // ColPipe P4: no underfeet Immediate — DirtyPriority + FirstMesh.
             GetColumnFlowExecutor().Enqueue(
                 glm::ivec2(coord.x, coord.z), ColumnWorkKind::FirstMesh, 110);
-            const bool allow_underfeet_immediate =
-                ShouldAllowImmediateMesh(
-                    moving,
-                    world.IsPendingLightBeforeMesh(
-                        glm::ivec2(coord.x, coord.z)),
-                    pending_gpu_queued_n, fifo_n_imm, fifo_cap_imm,
-                    visual_holes) &&
-                underfeet_immediate_cd <= 0 &&
-                underfeet_immediate_this_frame < kMaxUnderfeetImmediate &&
-                immediate_ms_used() < 8.0 && immediate_budget_ok();
-            if (allow_underfeet_immediate &&
-                std::max(std::abs(dx), std::abs(dz)) <= 1)
-            {
-              mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
-                                                 coord);
-              ++immediate;
-              ++underfeet_immediate_this_frame;
-              underfeet_immediate_cd = last_frame_ms > 20.0 ? 1 : 0;
-            }
-            else
-            {
-              mesh_service.MarkDirtyPriority(coord);
-              ++immediate;
-            }
+            mesh_service.MarkDirtyPriority(coord);
+            ++immediate;
             continue;
           }
         }
@@ -2886,35 +2822,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const bool cold_async_escape =
             ShouldColdAsyncImmEscape(missing_visible_mesh, pending_async) &&
             is_nearest_hole && !hole_pending;
-        const bool want_immediate =
-            ShouldAllowImmediateMesh(moving, hole_pending, pending_gpu_queued_n,
-                                     fifo_n_imm, fifo_cap_imm, visual_holes) &&
-            (calm_enough_for_imm || cold_async_escape) && sync_ok &&
-            (!hole_underfeet ||
-             (underfeet_immediate_cd <= 0 &&
-              underfeet_immediate_this_frame < kMaxUnderfeetImmediate)) &&
-            (cold_async_escape
-                 ? (immediate_ms_used() < 12.0)
-                 : (last_frame_ms <= force_frame_cap &&
-                    immediate_budget_ok()));
-        if (want_immediate)
-        {
-          mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
-                                             hole);
-          if (hole_underfeet)
-          {
-            ++underfeet_immediate_this_frame;
-            underfeet_immediate_cd = 1;
-          }
-          // One Immediate per ~2 frames while moving — enough to break cold
-          // 2s periods without mesh_emerge hitch storms.
-          // Cold-async escape: always rate-limit 1/tick nearest only.
-          if (moving || cold_async_escape)
-          {
-            force_hole_cd = 1;
-          }
-        }
-        else
+        // ColPipe P4: never RebuildChunkImmediate for FOV holes — FirstMesh only.
         {
           // ColumnFlow FirstMesh for nearest FOV hole — no MarkDirty bypass.
           if (!mesh_service.IsChunkMeshDirty(hole) &&
@@ -3324,24 +3232,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       drain_steps = std::max(drain_steps, moving ? 3 : 4);
     }
     note_column_flow_drain(drain_steps, admit_n);
-    // Idle sticky: force Immediate on nearest hole within underfeet when it is
-    // not already in the mesh pipeline (HasMissing skips Pending/InFlight).
+    // ColPipe P4: idle sticky hole → FirstMesh Dirty, not Immediate.
     if (!moving && found_nearest_missing)
     {
       const int nh = std::max(
           std::abs(isolated_hole.x - focus_ground_horiz.x),
           std::abs(isolated_hole.z - focus_ground_horiz.z));
-      if (nh <= 1 && underfeet_immediate_cd <= 0 &&
-          underfeet_immediate_this_frame < kMaxUnderfeetImmediate &&
+      if (nh <= 1 &&
           !mesh_service.HasMeshSatisfyingColumnReady(isolated_hole) &&
           !mesh_service.IsPendingGpuApply(isolated_hole) &&
-          !mesh_service.HasInflightMeshBuild(isolated_hole) &&
-          immediate_ms_used() < 8.0)
+          !mesh_service.HasInflightMeshBuild(isolated_hole))
       {
-        mesh_service.RebuildChunkImmediate(world.GetBlockWorld(), registry,
-                                           isolated_hole);
-        ++underfeet_immediate_this_frame;
-        underfeet_immediate_cd = 1;
+        mesh_service.MarkDirtyPriority(isolated_hole);
+        GetColumnFlowExecutor().Enqueue(
+            glm::ivec2(isolated_hole.x, isolated_hole.z),
+            ColumnWorkKind::FirstMesh, 110);
       }
     }
     // Era14 TD-ARCH-042 / Era14.1 A1: DesiredStage Dirty FirstMesh — no Imm

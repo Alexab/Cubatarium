@@ -1072,7 +1072,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           }
         }
       }
-      // Closeout C: FullyDark/missing → FirstMeshQ; lit drawable remesh → RemeshQ.
+      // Closeout C / ColPipe P2: FullyDark/missing → FirstMeshQ; lit → RemeshQ.
+      // Dirty alone owns remesh — do not also RequestRemeshAfterApply.
       if (fully_dark || !MeshService->HasDrawableGreedyMesh(coord))
       {
         MeshService->MarkDirtyPriority(coord);
@@ -1081,8 +1082,6 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       {
         MeshService->MarkDirty(coord);
       }
-      MeshService->RequestRemeshAfterApply(coord);
-      ++PhysicsTelemetryData.MarkRelitRemeshAfterApplyN;
       break;
     }
   };
@@ -1252,15 +1251,17 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                                              any_drawable,
                                              column_remesh_owned))
           {
-            const bool already_sticky = StickyRemeshAfterLight.count(key) > 0;
-            StickyRemeshAfterLight.insert(key);
-            if (!already_sticky)
+            // ColPipe P2: undrawn after lit → FirstMesh Dirty, not RemeshSeam+sticky.
+            for (int cy = cy0; cy <= cy1; ++cy)
             {
-              ++PhysicsTelemetryData.StickyInsertSeamN;
-              NoteColumnRepairNeeded(key);
-              GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RemeshSeam,
-                                              /*priority=*/70);
+              const glm::ivec3 coord(key.x, cy, key.y);
+              if (!MeshService->HasDrawableGreedyMesh(coord))
+              {
+                MeshService->MarkDirtyPriority(coord);
+              }
             }
+            GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::FirstMesh,
+                                            /*priority=*/70);
           }
           else if (any_drawable)
           {
@@ -2447,42 +2448,8 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
   }
   if (MeshService->HasMeshSatisfyingColumnReady(chunk_coord))
   {
-    // Era32 I-L1: never draw fully-dark plugs in LitDrawable ring.
-    // Check before PendingGpu keep-prior (manual 183525 black surface).
-    // StaleDark / underfeet nh≤1: heal-in-place plug (not hide) — hiding
-    // remesh-thrashed ocean and underfeet opaque_present (manual 175310).
-    // Era49: under EnterLitGate expand hide to RD so progress-bar view is
-    // hole-free; after EndEnterLitGate keep cruise ring=4 (perf).
-    if (MeshService->GetCache().ChunkHasFullyDarkFace(chunk_coord) &&
-        !MeshService->ChunkHasLitDrawableFace(chunk_coord))
-    {
-      const glm::ivec2 col_xz(chunk_coord.x, chunk_coord.z);
-      // Worklist Done is sticky; GPU commit may clear CPU lit-face bits. Do not
-      // hide a settled column (would zero underfeet_opaque forever).
-      if (EnterVisualGateCtrl.IsCaptured() &&
-          EnterVisualGateCtrl.GetState(col_xz) == EnterVisualItemState::Done)
-      {
-        return true;
-      }
-      const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
-      const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
-      const int horiz =
-          std::max(std::abs(chunk_coord.x - focus_chunk.x),
-                   std::abs(chunk_coord.z - focus_chunk.z));
-      const bool pending_light = IsPendingLightBeforeMesh(col_xz);
-      const bool stale_field =
-          MeshService->ChunkHasStaleDarkFaces(chunk_coord, BlockWorld);
-      const bool open_sky_done = EnterVisualGateCtrl.WasOpenSkyApplied(col_xz);
-      const bool true_dark =
-          open_sky_done && !pending_light && !stale_field;
-      if (ShouldHideUncomputedFullyDarkInRing(horiz, true, pending_light,
-                                              stale_field,
-                                              kVisualStageLitDrawableHoriz,
-                                              true_dark))
-      {
-        return false;
-      }
-    }
+    // ColPipe P3: published Satisfying mesh always draws (keep-until-replace).
+    // FullyDark heal is Dirty remesh — never blank opaque underfeet/ring.
     return true;
   }
   const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);
@@ -6475,11 +6442,8 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
         ++scheduled;
         continue;
       }
-      ++PhysicsTelemetryData.MarkRelitRemeshAfterApplyN;
+      // ColPipe P7/P2: one remesh owner — Dirty only (no dual RAA + sticky producer).
       MeshService->MarkDirtyPriority(coord);
-      MeshService->RequestRemeshAfterApply(coord);
-      StickyRemeshAfterLight.insert(col);
-      // Sodium PreferKick: RAA owns drawable remesh — no dual RemeshSeam.
       touched = true;
       ++scheduled;
     }

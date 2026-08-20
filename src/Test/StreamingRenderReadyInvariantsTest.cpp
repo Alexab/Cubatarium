@@ -94,8 +94,8 @@ int main()
          "Era32: SoftDefer reject + had_mesh → no Dirty storm");
   Expect(ShouldMarkDirtyAfterDarkSoftDeferReject(false, /*had_mesh=*/false),
          "Era32: SoftDefer reject FirstMesh → MarkDirty");
-  Expect(ShouldMarkDirtyAfterDarkSoftDeferReject(true, true),
-         "Era32: RemeshAfterApply → MarkDirty even with had_mesh");
+  Expect(!ShouldMarkDirtyAfterDarkSoftDeferReject(true, true),
+         "ColPipe P5: RemeshAfterApply+had_mesh → no Dirty (MarkRelit owns)");
 
   // Era28 AllowUnlitFirstMesh: LitDrawable ring (default 4) no Unlit; hinterland OK.
   Expect(!AllowUnlitFirstMesh(false, 2, false, true),
@@ -179,24 +179,21 @@ int main()
            "near ring uses other path (SoT sticky classifier idle)");
   }
 
-  // Hide/sticky/stale without mesh ⇒ RemeshSeam; near sticky may Relight.
-  // Era19 P2: stale → Remesh only (no RelightThenMesh dual).
+  // ColPipe P1: sticky → FirstMesh; stale-dark → RelightThenMesh (no RemeshSeam).
   {
     UColumnFlowScheduler sched;
     const glm::ivec2 focus{10, 20};
-    std::vector<glm::ivec2> sticky{{12, 20}};      // horiz=2 → near Relight
-    std::vector<glm::ivec2> stale{{15, 20}};       // horiz=5 → Remesh only
+    std::vector<glm::ivec2> sticky{{12, 20}};
+    std::vector<glm::ivec2> stale{{15, 20}};
     EnqueueStickyStaleRepairTickets(sched, focus, sticky, stale);
-    Expect(sched.Contains(sticky[0], ColumnWorkKind::RemeshSeam),
-           "sticky → RemeshSeam ticket");
-    Expect(!sched.Contains(sticky[0], ColumnWorkKind::RelightThenMesh),
-           "exclusive: near sticky not dual RelightThenMesh");
-    Expect(sched.Contains(stale[0], ColumnWorkKind::RemeshSeam),
-           "stale-dark → RemeshSeam");
-    Expect(!sched.Contains(stale[0], ColumnWorkKind::RelightThenMesh),
-           "Era19: stale must not dual RelightThenMesh");
-    Expect(sched.Contains(sticky[0], ColumnWorkKind::RemeshSeam),
-           "sticky near → live RemeshSeam ticket");
+    Expect(sched.Contains(sticky[0], ColumnWorkKind::FirstMesh),
+           "sticky → FirstMesh ticket");
+    Expect(!sched.Contains(sticky[0], ColumnWorkKind::RemeshSeam),
+           "ColPipe: sticky must not RemeshSeam proxy");
+    Expect(sched.Contains(stale[0], ColumnWorkKind::RelightThenMesh),
+           "stale-dark → RelightThenMesh");
+    Expect(!sched.Contains(stale[0], ColumnWorkKind::RemeshSeam),
+           "ColPipe: stale must not RemeshSeam proxy");
   }
 
   // Era18/32: void + VisibleBlack tickets are RelightThenMesh (+Promote), never

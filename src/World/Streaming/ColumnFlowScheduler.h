@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <queue>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -31,6 +32,7 @@ struct ColumnWorkItem
 };
 
 /// Single-owner focus column work queue (V4). One ticket per column.
+/// Higher ColumnWorkKindExclusiveRank may upgrade an occupied column.
 class UColumnFlowScheduler
 {
 public:
@@ -46,6 +48,8 @@ public:
   bool ContainsColumn(glm::ivec2 column) const;
   uint64_t DeniedCount() const { return denied_n_; }
   void ClearDeniedCount() { denied_n_ = 0; }
+  uint64_t UpgradeCount() const { return upgrade_n_; }
+  void ClearUpgradeCount() { upgrade_n_ = 0; }
 
 private:
   struct Compare
@@ -60,7 +64,12 @@ private:
       queue_;
   std::unordered_set<int64_t> inflight_;
   std::unordered_set<int64_t> occupied_columns_;
+  /// Live kind for occupied column (for ExclusiveRank upgrade).
+  std::unordered_map<int64_t, ColumnWorkKind> occupied_kind_;
+  /// Superseded ColumnKey entries still sitting in the priority_queue.
+  std::unordered_set<int64_t> cancelled_keys_;
   uint64_t denied_n_{0};
+  uint64_t upgrade_n_{0};
 };
 
 } // namespace cutum

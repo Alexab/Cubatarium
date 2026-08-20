@@ -29,9 +29,7 @@ inline bool ShouldForcePinColumnPriority(bool is_pin_key, int miss_horiz)
          miss_horiz <= kVisualStageNearFovHoriz;
 }
 
-/// P2: cruise Apply count — at least 1; second only if last apply was cheap.
-/// Near-pending hint is accepted for callsite compatibility, but moving apply
-/// remains capped at 2 to keep Apply cheap and predictable under cruise load.
+/// P2/P6: cruise Apply count — at least 1; up to 3 when last apply cheap + pin stable.
 inline int CruiseRelightApplyBudget(bool moving, double last_apply_ms,
                                     int requested, bool fifo_pin_stable,
                                     bool near_pending_light = false)
@@ -50,7 +48,12 @@ inline int CruiseRelightApplyBudget(bool moving, double last_apply_ms,
     return 1;
   }
   int cap = 1;
-  if (fifo_pin_stable && last_apply_ms >= 0.0 && last_apply_ms < 5.0)
+  // ColPipe P6: cheap Apply under stable pin — up to 3 (was 2).
+  if (fifo_pin_stable && last_apply_ms >= 0.0 && last_apply_ms < 4.0)
+  {
+    cap = 3;
+  }
+  else if (fifo_pin_stable && last_apply_ms < 5.0)
   {
     cap = 2;
   }

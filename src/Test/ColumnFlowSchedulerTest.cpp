@@ -31,9 +31,24 @@ int main()
   s.Enqueue({1, 2}, ColumnWorkKind::FirstMesh, 99); // dedupe
   Expect(s.Size() == 1, "dedupe same column+kind");
   s.Enqueue({1, 2}, ColumnWorkKind::RelightThenMesh, 5);
-  Expect(s.Size() == 1, "competing kind on same column denied");
+  Expect(s.Size() == 1, "lower-rank RelightThenMesh on FirstMesh denied");
   Expect(s.ContainsColumn({1, 2}), "column occupied");
-  Expect(s.DeniedCount() >= 1, "denied competing producer");
+  Expect(s.DeniedCount() >= 1, "denied competing lower producer");
+  // ColPipe P1: higher ExclusiveRank upgrades occupied column.
+  {
+    UColumnFlowScheduler u;
+    u.Enqueue({9, 9}, ColumnWorkKind::RemeshSeam, 30);
+    u.Enqueue({9, 9}, ColumnWorkKind::FirstMesh, 80);
+    Expect(u.UpgradeCount() >= 1, "RemeshSeam→FirstMesh upgrades");
+    Expect(u.Contains({9, 9}, ColumnWorkKind::FirstMesh),
+           "upgraded to FirstMesh");
+    Expect(!u.Contains({9, 9}, ColumnWorkKind::RemeshSeam),
+           "old RemeshSeam cancelled");
+    ColumnWorkItem up{};
+    Expect(u.DrainOne(up), "drain upgraded");
+    Expect(up.kind == ColumnWorkKind::FirstMesh, "drained FirstMesh");
+    Expect(!u.DrainOne(up), "no stale RemeshSeam after upgrade");
+  }
   ColumnWorkItem a{};
   Expect(s.DrainOne(a), "drain first");
   Expect(a.priority == 10, "kept first ticket");
@@ -54,17 +69,18 @@ int main()
   Expect(!s.Contains({3, 4}, ColumnWorkKind::RemeshSeam),
          "Contains false after drain");
 
-  // Sticky without mesh + far stale ⇒ RemeshSeam|RelightThenMesh in scheduler.
+  // Sticky without mesh + far stale ⇒ FirstMesh / RelightThenMesh (ColPipe P1).
   {
     using cutum::EnqueueStickyStaleRepairTickets;
     UColumnFlowScheduler t;
     EnqueueStickyStaleRepairTickets(t, {0, 0}, {{1, 0}}, {{5, 0}});
-    Expect(t.Contains({1, 0}, ColumnWorkKind::RemeshSeam), "sticky RemeshSeam");
-    Expect(!t.Contains({1, 0}, ColumnWorkKind::RelightThenMesh),
-           "exclusive: sticky not dual Relight");
-    Expect(t.Contains({5, 0}, ColumnWorkKind::RemeshSeam), "stale RemeshSeam");
-    Expect(!t.Contains({5, 0}, ColumnWorkKind::RelightThenMesh),
-           "stale RelightThenMesh denied");
+    Expect(t.Contains({1, 0}, ColumnWorkKind::FirstMesh), "sticky FirstMesh");
+    Expect(!t.Contains({1, 0}, ColumnWorkKind::RemeshSeam),
+           "exclusive: sticky not RemeshSeam proxy");
+    Expect(t.Contains({5, 0}, ColumnWorkKind::RelightThenMesh),
+           "stale RelightThenMesh");
+    Expect(!t.Contains({5, 0}, ColumnWorkKind::RemeshSeam),
+           "stale RemeshSeam denied");
   }
 
   // Cruise SOTA: PromoteRelight coalesce = one ticket (scheduler exclusive +
@@ -76,13 +92,20 @@ int main()
     Expect(flush_s.Size() == 1, "PromoteRelight dedupe one ticket");
     flush_s.Enqueue({3, 3}, ColumnWorkKind::FirstMesh, 100);
     flush_s.Enqueue({3, 3}, ColumnWorkKind::PromoteRelight, 50);
-    Expect(flush_s.Size() == 2, "other column can hold FirstMesh");
+    Expect(flush_s.Size() == 2, "Promote on FirstMesh denied (lower rank)");
     Expect(flush_s.DeniedCount() >= 1, "Promote on occupied column denied");
+    Expect(flush_s.Contains({3, 3}, ColumnWorkKind::FirstMesh),
+           "FirstMesh remains after denied Promote");
+    Expect(!flush_s.Contains({3, 3}, ColumnWorkKind::PromoteRelight),
+           "Promote did not replace FirstMesh");
+    // FirstMesh upgrades Promote if Promote was first:
+    UColumnFlowScheduler up_s;
+    up_s.Enqueue({4, 4}, ColumnWorkKind::PromoteRelight, 50);
+    up_s.Enqueue({4, 4}, ColumnWorkKind::FirstMesh, 100);
+    Expect(up_s.UpgradeCount() >= 1, "Promote→FirstMesh upgrade");
     ColumnWorkItem p{};
-    Expect(flush_s.DrainOne(p), "drain highest prio");
-    Expect(p.kind == ColumnWorkKind::FirstMesh ||
-               p.kind == ColumnWorkKind::PromoteRelight,
-           "drained a ticket");
+    Expect(up_s.DrainOne(p), "drain upgraded FirstMesh");
+    Expect(p.kind == ColumnWorkKind::FirstMesh, "FirstMesh after upgrade");
   }
 
   if (gFails != 0)

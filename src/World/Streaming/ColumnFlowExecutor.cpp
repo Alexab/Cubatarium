@@ -231,6 +231,9 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
   world.GetPhysicsTelemetryMutable().ColumnBumpDenied +=
       static_cast<int>(scheduler_.DeniedCount());
   scheduler_.ClearDeniedCount();
+  world.GetPhysicsTelemetryMutable().ColumnFlowUpgradeN +=
+      static_cast<int>(scheduler_.UpgradeCount());
+  scheduler_.ClearUpgradeCount();
   return drained;
 }
 
@@ -509,10 +512,8 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   }
   if (!nearest_vb_heal)
   {
-    // Sticky maintenance: RemeshSeam only for undrawn seam-repair.
-    // Skip when PendingLight or remesh already owned (RAA/Dirty/GPU) so sticky
-    // cannot dual-feed RemeshSeam on drawable PreferKick columns.
-    // Trusted-disk sticky tracks LitReady settle — Dirty already owns remesh.
+    // Sticky maintenance: FirstMesh for undrawn; clear sticky if repair owned.
+    // ColPipe P1: no RemeshSeam dual-feed on PreferKick drawables.
     for (const glm::ivec2 &col : sticky_cols)
     {
       if (world.IsPendingLightBeforeMesh(col))
@@ -529,7 +530,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       {
         continue;
       }
-      Enqueue(col, ColumnWorkKind::RemeshSeam, 30);
+      Enqueue(col, ColumnWorkKind::FirstMesh, 40);
     }
     if (!stale_dark_cols.empty())
     {

@@ -1,4 +1,5 @@
 #include "World/Streaming/ColumnFlowScheduler.h"
+#include "World/Streaming/ColumnEmergeBump.h"
 
 namespace cutum
 {
@@ -37,39 +38,63 @@ void UColumnFlowScheduler::Enqueue(glm::ivec2 column, ColumnWorkKind kind,
 void UColumnFlowScheduler::Enqueue(const ColumnWorkItem &item)
 {
   const int64_t col_key = ColumnOnlyKey(item.column);
+  const int64_t key =
+      ColumnKey(item.column, item.kind, item.scan_full_focus);
   if (occupied_columns_.count(col_key) != 0)
   {
-    const int64_t key =
-        ColumnKey(item.column, item.kind, item.scan_full_focus);
     if (inflight_.count(key) != 0)
     {
+      return; // same kind already queued
+    }
+    const auto kit = occupied_kind_.find(col_key);
+    const ColumnWorkKind old_kind =
+        kit != occupied_kind_.end() ? kit->second : ColumnWorkKind::RemeshSeam;
+    if (ColumnWorkKindExclusiveRank(item.kind) >
+        ColumnWorkKindExclusiveRank(old_kind))
+    {
+      // Cancel both scan_full_focus variants of the old kind.
+      cancelled_keys_.insert(ColumnKey(item.column, old_kind, false));
+      cancelled_keys_.insert(ColumnKey(item.column, old_kind, true));
+      inflight_.erase(ColumnKey(item.column, old_kind, false));
+      inflight_.erase(ColumnKey(item.column, old_kind, true));
+      occupied_kind_[col_key] = item.kind;
+      inflight_.insert(key);
+      queue_.push(item);
+      ++upgrade_n_;
       return;
     }
     ++denied_n_;
     return;
   }
-  const int64_t key =
-      ColumnKey(item.column, item.kind, item.scan_full_focus);
   if (inflight_.count(key) != 0)
   {
     return;
   }
   inflight_.insert(key);
   occupied_columns_.insert(col_key);
+  occupied_kind_[col_key] = item.kind;
   queue_.push(item);
 }
 
 bool UColumnFlowScheduler::DrainOne(ColumnWorkItem &out)
 {
-  if (queue_.empty())
+  while (!queue_.empty())
   {
-    return false;
+    out = queue_.top();
+    queue_.pop();
+    const int64_t key =
+        ColumnKey(out.column, out.kind, out.scan_full_focus);
+    if (cancelled_keys_.erase(key) > 0)
+    {
+      continue; // superseded by rank upgrade
+    }
+    inflight_.erase(key);
+    const int64_t col_key = ColumnOnlyKey(out.column);
+    occupied_columns_.erase(col_key);
+    occupied_kind_.erase(col_key);
+    return true;
   }
-  out = queue_.top();
-  queue_.pop();
-  inflight_.erase(ColumnKey(out.column, out.kind, out.scan_full_focus));
-  occupied_columns_.erase(ColumnOnlyKey(out.column));
-  return true;
+  return false;
 }
 
 void UColumnFlowScheduler::Clear()
@@ -80,6 +105,8 @@ void UColumnFlowScheduler::Clear()
   }
   inflight_.clear();
   occupied_columns_.clear();
+  occupied_kind_.clear();
+  cancelled_keys_.clear();
 }
 
 bool UColumnFlowScheduler::Contains(glm::ivec2 column,
@@ -91,7 +118,12 @@ bool UColumnFlowScheduler::Contains(glm::ivec2 column,
 bool UColumnFlowScheduler::Contains(glm::ivec2 column, ColumnWorkKind kind,
                                     bool scan_full_focus) const
 {
-  return inflight_.count(ColumnKey(column, kind, scan_full_focus)) != 0;
+  const int64_t key = ColumnKey(column, kind, scan_full_focus);
+  if (cancelled_keys_.count(key) > 0)
+  {
+    return false;
+  }
+  return inflight_.count(key) != 0;
 }
 
 bool UColumnFlowScheduler::ContainsColumn(glm::ivec2 column) const

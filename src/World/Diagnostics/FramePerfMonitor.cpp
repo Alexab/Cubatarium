@@ -279,6 +279,7 @@ struct FrameNumbers
   int column_absent_in_rd_n{0};
   int column_loaded_no_mesh_n{0};
   int column_bump_denied{0};
+  int column_flow_upgrade_n{0};
   int column_lighting_n{0};
   int column_meshing_n{0};
   int column_render_ready_n{0};
@@ -655,6 +656,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.column_absent_in_rd_n = phys.ColumnAbsentInRdN;
   n.column_loaded_no_mesh_n = phys.ColumnLoadedNoMeshN;
   n.column_bump_denied = phys.ColumnBumpDenied;
+  n.column_flow_upgrade_n = phys.ColumnFlowUpgradeN;
   n.column_lighting_n = phys.ColumnLightingN;
   n.column_meshing_n = phys.ColumnMeshingN;
   n.column_render_ready_n = phys.ColumnRenderReadyN;
@@ -1037,6 +1039,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"column_absent_in_rd_n\":" << n.column_absent_in_rd_n
           << ",\"column_loaded_no_mesh_n\":" << n.column_loaded_no_mesh_n
           << ",\"column_bump_denied\":" << n.column_bump_denied
+          << ",\"column_flow_upgrade_n\":" << n.column_flow_upgrade_n
           << ",\"column_lighting_n\":" << n.column_lighting_n
           << ",\"column_meshing_n\":" << n.column_meshing_n
           << ",\"column_render_ready_n\":" << n.column_render_ready_n

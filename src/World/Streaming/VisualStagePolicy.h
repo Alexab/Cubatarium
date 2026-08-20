@@ -73,38 +73,22 @@ inline bool ShouldHideFullyDarkUntilLitInRing(int horiz, bool fully_dark,
   return true;
 }
 
-/// Hide FullyDark in the LitDrawable ring until lit drawable or true-dark.
-/// true_dark = field 0 after OpenSky/relight apply (caller passes it).
-/// StaleDark is heal-in-place (not hide) — hiding remesh-thrashed ocean and
-/// underfeet (manual 175310: opaque_present flip with pending/stale thrash).
-/// Underfeet nh≤1: keep dark plug over hole flicker (player + nearest neighbor
-/// share underfeet lease; PendingLight flip must not blank Satisfying meshes).
+/// Hide FullyDark only when there is no published mesh (caller must pass
+/// has_published_mesh=false). ColPipe P3: Satisfying/drawable never blanked.
 inline bool ShouldHideUncomputedFullyDarkInRing(
     int horiz, bool fully_dark, bool pending_light, bool stale_field,
     int ring = kVisualStageLitDrawableHoriz, bool true_dark = false,
-    bool has_lit_drawable = false)
+    bool has_lit_drawable = false, bool has_published_mesh = false)
 {
-  if (horiz > ring || !fully_dark)
+  if (has_published_mesh || horiz > ring || !fully_dark)
   {
     return false;
   }
-  if (has_lit_drawable || true_dark)
+  if (has_lit_drawable || true_dark || stale_field || horiz <= 1)
   {
-    return false;
-  }
-  // Heal-in-place: remesh may keep FullyDark until light arrives.
-  if (stale_field)
-  {
-    return false;
-  }
-  // Feet + r=1 neighbor: never blank a published FullyDark plug.
-  if (horiz <= 1)
-  {
-    (void)pending_light;
     return false;
   }
   (void)pending_light;
-  // Mid LitDrawable ring: hide unbaked FullyDark (pending / pre-OpenSky).
   return true;
 }
 

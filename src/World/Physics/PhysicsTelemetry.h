@@ -245,6 +245,8 @@ struct PhysicsTelemetry
   int ColumnLoadedNoMeshN{0};
   /// Exclusive ColumnEmergeState bump denials this frame (competing producer).
   int ColumnBumpDenied{0};
+  /// ColPipe P1: ColumnFlow ExclusiveRank upgrades this frame.
+  int ColumnFlowUpgradeN{0};
   /// Live ColumnEmergeState counts (Lighting / Meshing / RenderReady).
   int ColumnLightingN{0};
   int ColumnMeshingN{0};
