@@ -28,10 +28,13 @@ Ticket(level by Chebyshev ring)
 | PreferKick | Cancel-stale GPU promote only (`PreferKickPendingGpuQueued`); not a parallel remesh owner. |
 | Floors | `MissEmergeFloorMs`, `LandMovingRelightDrainFloor`, `AsyncScheduleFloorUnderMiss` = 0; use pools. |
 | Underfeet lease | `CancelInFlightOutsideHorizontalRadius` / `CancelAsyncInFlightKeepDirty` never drop Active/PendingGpu for Chebyshev `horiz≤1`. GPU backlog finishes underfeet first. |
-| SoftDefer callbacks | `SetDeferMeshUntilLitFn` / On* installed once; per-frame POD `SoftDeferFramePolicy` on Coordinator. |
-| Publication | One SoT: lit drawable or keep-prior GPU. **Reject Unlit near «ради дыр»** (Era28/29). `AllowUnlitFirstMesh` only hinterland (`horiz >` LitDrawable ring). Hide FullyDark in ring until lit / true-dark. |
-| ColumnFlow miss+pending | `DeriveColumnDesiredStage`: **PendingLight owns** the column → `RelightThenMesh` before FirstMesh. FirstMesh only after light debt clears. |
+| SoftDefer callbacks | `SetDeferMeshUntilLitFn` / On* installed once; per-frame POD `SoftDeferFramePolicy` on Coordinator. SoftDefer = **gate only** (no ForceDirty / Immediate / RemeshSeam storm). |
+| Publication | **Keep-until-replace:** published GpuPacked/CPU drawable stays drawn until BindCommitted replacement. **Reject Unlit near «ради дыр»**. `AllowUnlitFirstMesh` only hinterland (`horiz >` LitDrawable ring). FullyDark heal via Dirty — **not** by blanking Satisfying meshes (hide FullyDark is not draw SoT). |
+| Sticky | Telem / lease flag only — **not** a remesh producer. Repair via ColumnFlow + Dirty class. |
+| Underfeet | Priority + lease (Chebyshev≤1) only — **no** Immediate / RemeshSeam / hide special codepath. |
+| ColumnFlow miss+pending | `DeriveColumnDesiredStage`: **PendingLight owns** the column → `RelightThenMesh` before FirstMesh. FirstMesh only after light debt clears. Rank upgrade: FirstMesh > RelightThenMesh > Promote > RemeshSeam. |
 | FirstMesh prune | `FirstMeshPruneKeepHoriz` = LitDrawable ring (drop hinterland FM only; never nh≤2 shell). |
+| MarkRelit | One post-light remesh owner: class MarkDirty **or** RemeshAfterApply — not dual + RemeshSeam + sticky insert. |
 
 ## ColumnRecord
 
@@ -67,7 +70,7 @@ Ticket(level by Chebyshev ring)
 | `column_lighting_n` / `column_meshing_n` | Other emerge stages |
 | `underfeet_reason` | `ColumnRenderableState::BlockReason`: 0 None, 1 PendingLight, 2 StickyRemesh, 3 StaleDark, 4 MissingMesh, 5 GpuInFlight, **6 NotLoaded**, 7 NotReadyState |
 
-Hide-until-lit (`ShouldHideUncomputedFullyDarkInRing`) stays for quality (far ring). Underfeet remains presentable (full-column band + GpuPacked/PendingGpu; lease retains GPU until replacement).
+Publication SoT = keep-until-replace (see SOTA table). Missing mesh = hole; published FullyDark = drawable plug until lit remesh. Underfeet: full-column band + GpuPacked/PendingGpu; lease retains GPU until replacement.
 
 ## Dirty-class call sites (Closeout RemeshQ)
 
