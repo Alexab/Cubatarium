@@ -4655,6 +4655,14 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     MarkRelitChunksForMesh(relit_coords, /*priority_mesh=*/true, primary_grounds,
                            result.finalize_pending_gate);
     ++PhysicsTelemetryData.RelightApplyN;
+    if (result.finalize_pending_gate)
+    {
+      ++PhysicsTelemetryData.RelightApplyFinalN;
+    }
+    else
+    {
+      ++PhysicsTelemetryData.RelightApplyPartialN;
+    }
     // Ensure inflight tracking clears even when MarkRelit only remeshed
     // neighbors (primary already erased inside MarkRelit).
     for (const glm::ivec2 &g : primary_grounds)

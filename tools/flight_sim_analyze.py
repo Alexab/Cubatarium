@@ -254,6 +254,75 @@ def analyze(
         effective_holes_longest_hole_run,
         effective_holes_longest_clear_run,
     ) = binary_transition_stats(effective_holes)
+    visible_black = col(steady, "visible_black_focus_n")
+    black_sticky_vals = dark_sticky
+    visible_black_binary = [1.0 if v > 0.5 else 0.0 for v in visible_black]
+    black_sticky_binary = [1.0 if v > 0.5 else 0.0 for v in black_sticky_vals]
+    (
+        visible_black_blink_transitions,
+        visible_black_blink_rate,
+        visible_black_longest_run,
+        visible_black_longest_clear_run,
+    ) = binary_transition_stats(visible_black_binary)
+    (
+        black_sticky_blink_transitions,
+        black_sticky_blink_rate,
+        black_sticky_longest_run,
+        black_sticky_longest_clear_run,
+    ) = binary_transition_stats(black_sticky_binary)
+    visual_instability = []
+    for i, r in enumerate(steady):
+        bad = effective_holes[i] > 0.5 if i < len(effective_holes) else False
+        if i < len(visible_black) and visible_black[i] > 0.5:
+            bad = True
+        if i < len(black_sticky_vals) and black_sticky_vals[i] > 0.5:
+            bad = True
+        visual_instability.append(1.0 if bad else 0.0)
+    (
+        visual_instability_blink_transitions,
+        visual_instability_blink_rate,
+        visual_instability_longest_bad_run,
+        visual_instability_longest_clear_run,
+    ) = binary_transition_stats(visual_instability)
+    capture_periods = [
+        r for r in steady if float(r.get("relight_capture_ms") or 0) > 0.01
+    ]
+    capture_partial_n = sum(
+        1
+        for r in capture_periods
+        if int(r.get("relight_capture_finalize") or 0) == 0
+    )
+    capture_final_n = sum(
+        1
+        for r in capture_periods
+        if int(r.get("relight_capture_finalize") or 0) == 1
+    )
+    relight_capture_partial_rate = (
+        capture_partial_n / len(capture_periods) if capture_periods else None
+    )
+    relight_apply_partial_frames = sum(
+        int(r.get("relight_apply_partial_n") or 0) for r in steady
+    )
+    relight_apply_final_frames = sum(
+        int(r.get("relight_apply_final_n") or 0) for r in steady
+    )
+    pending_partial_capture_sec = 0.0
+    run = 0
+    for r in steady:
+        pending = float(r.get("pending_light_focus") or 0)
+        captured = float(r.get("relight_capture_ms") or 0) > 0.01
+        partial = int(r.get("relight_capture_finalize") or 0) == 0
+        vb = float(r.get("visible_black_focus_n") or 0) > 0
+        if pending >= 5 and captured and partial and vb:
+            run += 1
+            pending_partial_capture_sec = max(pending_partial_capture_sec, run * 2.0)
+        else:
+            run = 0
+    deferred_far_pending_max = None
+    if any("relight_deferred_far_pending" in r for r in steady):
+        deferred_far_pending_max = max(
+            col(steady, "relight_deferred_far_pending") or [0.0]
+        )
     mesh_async_stuck_idle = 0
     run = 0
     for r in steady:
@@ -1328,6 +1397,20 @@ def analyze(
             "effective_holes_blink_transitions": effective_holes_blink_transitions,
             "effective_holes_longest_hole_run": effective_holes_longest_hole_run,
             "effective_holes_longest_clear_run": effective_holes_longest_clear_run,
+            "visible_black_blink_rate": visible_black_blink_rate,
+            "visible_black_blink_transitions": visible_black_blink_transitions,
+            "visible_black_longest_run": visible_black_longest_run,
+            "black_sticky_blink_rate": black_sticky_blink_rate,
+            "black_sticky_blink_transitions": black_sticky_blink_transitions,
+            "black_sticky_longest_run": black_sticky_longest_run,
+            "visual_instability_blink_rate": visual_instability_blink_rate,
+            "visual_instability_blink_transitions": visual_instability_blink_transitions,
+            "visual_instability_longest_bad_run": visual_instability_longest_bad_run,
+            "relight_capture_partial_rate": relight_capture_partial_rate,
+            "relight_apply_partial_frames": relight_apply_partial_frames,
+            "relight_apply_final_frames": relight_apply_final_frames,
+            "pending_partial_capture_sec": pending_partial_capture_sec,
+            "relight_deferred_far_pending_max": deferred_far_pending_max,
             "mesh_async_stuck_sec": mesh_async_stuck_sec,
             "dirty_med": median(dirty),
             "dirty_max": max(dirty) if dirty else None,

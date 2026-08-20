@@ -374,6 +374,10 @@ struct FrameNumbers
   int relight_capture_neighbor_light_n{0};
   int relight_witness_hold_n{0};
   int relight_apply_n{0};
+  int relight_apply_partial_n{0};
+  int relight_apply_final_n{0};
+  int relight_deferred_far_pending{0};
+  uint64_t relight_deferred_far_enqueue_n{0};
   int dirty_n{0};
   int pending_light_n{0};
   int relight_fifo_n{0};
@@ -748,6 +752,10 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.relight_capture_neighbor_light_n = phys.RelightCaptureNeighborLightN;
   n.relight_witness_hold_n = phys.RelightWitnessHoldN;
   n.relight_apply_n = phys.RelightApplyN;
+  n.relight_apply_partial_n = phys.RelightApplyPartialN;
+  n.relight_apply_final_n = phys.RelightApplyFinalN;
+  n.relight_deferred_far_pending = phys.RelightDeferredFarPendingN;
+  n.relight_deferred_far_enqueue_n = phys.RelightDeferredFarEnqueueN;
   n.dirty_n = phys.DirtyN;
   n.pending_light_n = phys.PendingLightN;
   n.relight_fifo_n = phys.RelightFifoN;
@@ -1105,6 +1113,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.relight_capture_neighbor_light_n
           << ",\"relight_witness_hold_n\":" << n.relight_witness_hold_n
           << ",\"relight_apply_n\":" << n.relight_apply_n
+          << ",\"relight_apply_partial_n\":" << n.relight_apply_partial_n
+          << ",\"relight_apply_final_n\":" << n.relight_apply_final_n
+          << ",\"relight_deferred_far_pending\":" << n.relight_deferred_far_pending
+          << ",\"relight_deferred_far_enqueue_n\":" << n.relight_deferred_far_enqueue_n
           << ",\"dirty_n\":" << n.dirty_n
           << ",\"pending_light_n\":" << n.pending_light_n
           << ",\"relight_fifo_n\":" << n.relight_fifo_n

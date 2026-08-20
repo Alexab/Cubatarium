@@ -1451,6 +1451,7 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
       {
         DeferFarRelightColumn(glm::ivec2(ground_coord.x, ground_coord.z),
                               dirty_min, dirty_max, near_focus);
+        world.NotePendingLightBeforeMesh(ground_coord, dirty_min, dirty_max);
         ++world.GetPhysicsTelemetryMutable().RelightDeferredFarEnqueueN;
       }
       else

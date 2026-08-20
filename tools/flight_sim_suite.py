@@ -113,6 +113,11 @@ def run_scenario(
                     "post_stop_effective_holes_rate",
                     "effective_holes_blink_rate",
                     "post_stop_effective_holes_blink_rate",
+                    "visible_black_blink_rate",
+                    "black_sticky_blink_rate",
+                    "visual_instability_blink_rate",
+                    "relight_capture_partial_rate",
+                    "pending_partial_capture_sec",
                     "chunks_traveled",
                     "post_stop_black_sticky_max",
                     "stop_wall_med",
@@ -137,7 +142,7 @@ def print_summary(results: list[dict]) -> None:
 
     hdr = (
         f"{'Scenario':<22s} {'Pass':>6s} {'Gates':>7s} {'Wall':>7s} "
-        f"{'PL med':>7s} {'EH%':>6s} {'PSH%':>6s} {'Chunks':>7s} {'Time':>7s}"
+        f"{'PL med':>7s} {'EH%':>6s} {'VB%':>6s} {'Inst%':>6s} {'Chunks':>7s} {'Time':>7s}"
     )
     print(hdr, flush=True)
     print("-" * len(hdr), flush=True)
@@ -152,9 +157,14 @@ def print_summary(results: list[dict]) -> None:
             if m.get("effective_holes_rate") is not None
             else "—"
         )
-        psh = (
-            f"{100.0 * m['post_stop_effective_holes_rate']:.0f}"
-            if m.get("post_stop_effective_holes_rate") is not None
+        vb = (
+            f"{100.0 * m['visible_black_blink_rate']:.0f}"
+            if m.get("visible_black_blink_rate") is not None
+            else "—"
+        )
+        inst = (
+            f"{100.0 * m['visual_instability_blink_rate']:.0f}"
+            if m.get("visual_instability_blink_rate") is not None
             else "—"
         )
         ch = f"{m['chunks_traveled']:.0f}" if m.get("chunks_traveled") is not None else "—"
@@ -162,7 +172,7 @@ def print_summary(results: list[dict]) -> None:
         t = f"{r['elapsed_sec']:.0f}s"
         print(
             f"{r['scenario']:<22s} {status:>6s} {gates:>7s} {wall:>7s} "
-            f"{pl:>7s} {eh:>6s} {psh:>6s} {ch:>7s} {t:>7s}",
+            f"{pl:>7s} {eh:>6s} {vb:>6s} {inst:>6s} {ch:>7s} {t:>7s}",
             flush=True,
         )
 

@@ -338,6 +338,10 @@ struct PhysicsTelemetry
   int RelightCaptureNeighborLightN{0};
   int RelightWitnessHoldN{0};
   int RelightApplyN{0};
+  /// Apply with finalize_pending_gate=false (partial Y-band; pending kept).
+  int RelightApplyPartialN{0};
+  /// Apply with finalize_pending_gate=true (pending gate may clear).
+  int RelightApplyFinalN{0};
   int DirtyN{0};
   int PendingLightN{0};
   /// Era37 P1c: underground relight skip / false-clear counters.
