@@ -215,9 +215,25 @@ full neighbor light memcpy; SoftDefer dual FirstMesh+Dirty; keep-lit required re
 
 ### Deferred
 
-- Rebuild + cold re-eye after C0b (expect revisit↓ further).
 - emerge≪42 / unlit_hidden≪29 / VB↓ still open vs eye targets.
+- wall med / apply_ms regress on cold (stream-dominated).
+
+### Cold manual `220205` (~70s, post-C0b rebuild) vs `214657` / `195128`
+
+| Metric | `195128` | `214657` | `220205` |
+| --- | --- | --- | --- |
+| dirty med | 172 | 142 | **118** |
+| dirty_revisit | 132 | 98 | **85** |
+| PL med/end | 43/45 | 37/31 | **14**/47 |
+| emerge med | 50.5 | 46.6 | **42.2** |
+| wall med/p90 | 116/288 | 127/202 | 145/265 |
+| apply_ms med | 10.2 | 13.8 | **20.2** |
+| stream med | 33 | 52 | **74** |
+| unlit_hidden | 29 | 28 | **14** (shorter run) |
+| vb med | 81 | 81 | **121** |
+
+C0b: revisit 98→85. Dirty/PL/emerge continue down; wall/stream/apply_ms and VB worse — not closed on eye.
 
 ### Go vs `195128`
 
-Autofly land PL≪20 / wall_fly ≤ RateMatch. Cold: dirty/PL improved; wall med and blink/дыры not closed.
+Autofly land PL≪20 / wall_fly ≤ RateMatch. Cold: dirty/revisit/PL/emerge↓; wall/VB/apply_ms regress.
