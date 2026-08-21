@@ -4191,9 +4191,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (AsyncBuilder->IsInFlight(*it))
       {
+        // CheapRemesh C0: Inflight owns the chunk — erase Dirty so schedule
+        // does not revisit every frame (dirty_revisit thrash). Supersede
+        // mid-flight only via Active→RAA latch, not via leave-in-Dirty.
         ++DirtyScheduleSkipInflightN;
         ++LastMeshDirtyScheduleSkipN;
-        return std::next(it);
+        return Dirty.RemoveAt(it);
       }
       if (!world.GetChunkManager().HasChunk(*it))
       {

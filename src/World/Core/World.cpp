@@ -1131,9 +1131,21 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           dirty_max = std::max(dirty_max, pit->second.max_y);
         }
       }
+      // CheapRemesh C1: sea/lateral inflate only for first publish (!drawable).
+      // Already-lit columns remesh only written cy (relit_chunks), not sea±CHUNK.
+      bool column_has_drawable = false;
+      {
+        const int cy0e = FloorDiv(band.min_y, CHUNK_SIZE);
+        const int cy1e = FloorDiv(band.max_y, CHUNK_SIZE);
+        for (int cy = cy0e; cy <= cy1e && !column_has_drawable; ++cy)
+        {
+          column_has_drawable = MeshService->HasDrawableGreedyMesh(
+              glm::ivec3(key.x, cy, key.y));
+        }
+      }
       // ColdApply A4: primary_only (moving cruise) skips sea±CHUNK / FillWater
       // lateral inflate — keep lit band + pending + underfeet only.
-      if (!primary_only && ProceduralTemplate.FillWater)
+      if (!primary_only && ProceduralTemplate.FillWater && !column_has_drawable)
       {
         dirty_min =
             std::min(dirty_min, std::max(0, sea - CHUNK_SIZE));
@@ -1153,7 +1165,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
               dirty_max,
               std::min(column_max_y, focus_block.y + CHUNK_SIZE * 2));
         }
-        if (!primary_only)
+        if (!primary_only && !column_has_drawable)
         {
           // Era26 I-O5: FillWater lateral (horiz 2–5) remesh sea±CHUNK band.
           FillWaterLateralRemeshBand(ProceduralTemplate.FillWater, horiz, sea,
@@ -1487,32 +1499,51 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           }
         }
       }
-      else if (priority_mesh)
-      {
-        // Near first-light: Priority only when column still missing drawable.
-        bool any_drawable = false;
-        const int cy0 = FloorDiv(dirty_min, CHUNK_SIZE);
-        const int cy1 = FloorDiv(dirty_max, CHUNK_SIZE);
-        for (int cy = cy0; cy <= cy1 && !any_drawable; ++cy)
-        {
-          any_drawable = MeshService->HasDrawableGreedyMesh(
-              glm::ivec3(key.x, cy, key.y));
-        }
-        if (any_drawable)
-        {
-          MeshService->MarkTerrainChunkMeshDirtySeamed(
-              ground, dirty_min, dirty_max, allow_primary_seam);
-        }
-        else
-        {
-          MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-              ground, dirty_min, dirty_max, allow_primary_seam);
-        }
-      }
       else
       {
-        MeshService->MarkTerrainChunkMeshDirtySeamed(
-            ground, dirty_min, dirty_max, allow_primary_seam);
+        // CheapRemesh C1: Dirty only written (relit) cy — not inflated sea band.
+        // SkipAlreadyDirty / Inflight owned by schedule_remesh classify.
+        for (const glm::ivec3 &coord : relit_chunks)
+        {
+          if (coord.x != key.x || coord.z != key.y)
+          {
+            continue;
+          }
+          if (MeshService->IsChunkMeshDirty(coord) ||
+              MeshService->HasInflightMeshBuild(coord) ||
+              MeshService->IsRemeshAfterApplyPending(coord))
+          {
+            continue;
+          }
+          const bool needs_fm =
+              !MeshService->HasDrawableGreedyMesh(coord) ||
+              MeshService->GetCache().ChunkHasFullyDarkFace(coord);
+          if (priority_mesh && needs_fm)
+          {
+            MeshService->MarkDirtyPriority(coord);
+          }
+          else
+          {
+            MeshService->MarkDirty(coord);
+          }
+        }
+        // Seamed neighbors: missing slices only (not full 3×3 band).
+        if (allow_primary_seam)
+        {
+          for (int dx = -1; dx <= 1; ++dx)
+          {
+            for (int dz = -1; dz <= 1; ++dz)
+            {
+              if (dx == 0 && dz == 0)
+              {
+                continue;
+              }
+              MeshService->MarkMissingSlicesDirtyPriority(
+                  BlockWorld, glm::ivec3(key.x + dx, 0, key.y + dz), dirty_min,
+                  dirty_max);
+            }
+          }
+        }
       }
       if (finalize_pending_gate)
       {
@@ -1561,18 +1592,9 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     {
       continue;
     }
-    // Flicker P2: neighbor remesh never fans another 3×3 (underfeet only).
-    const bool neighbor_seam = false;
-    if (priority_mesh)
-    {
-      MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-          ground, dirty_min, dirty_max, neighbor_seam);
-    }
-    else
-    {
-      MeshService->MarkTerrainChunkMeshDirtySeamed(ground, dirty_min, dirty_max,
-                                                   neighbor_seam);
-    }
+    // CheapRemesh C1: neighbor = missing slices only (not full seamed band).
+    MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground, dirty_min,
+                                                dirty_max);
   }
   // Primary may be absent from relit_chunks (chunk unload / empty apply slice).
   // Still drop SoftDefer gate — otherwise PendingLight waits forever
@@ -2477,8 +2499,8 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
   {
     return true;
   }
-  // ColdFix P3 / RateMatch R2: LitDrawable keep live GPU opaque while FullyDark
-  // flag + repair in progress (VB / ring blink hide↔show).
+  // ColdFix P3 / CheapRemesh C5: LitDrawable keep live GPU opaque while
+  // FullyDark — repair ticket optional (anti blink hide↔show).
   if (MeshService->GetCache().HasLiveGpuDraw(chunk_coord))
   {
     const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
@@ -2486,11 +2508,8 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
     const int horiz =
         std::max(std::abs(chunk_coord.x - focus_chunk.x),
                  std::abs(chunk_coord.z - focus_chunk.z));
-    const glm::ivec2 col_xz(chunk_coord.x, chunk_coord.z);
-    if (ShouldKeepLiveGpuOpaqueDespiteFullyDark(
-            true, horiz, ColumnHasRepairProgress(col_xz) ||
-                             IsColumnStickyRemesh(col_xz) ||
-                             GetColumnFlowExecutor().HasRepairTicket(col_xz)))
+    if (ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, horiz,
+                                                /*has_repair_progress=*/false))
     {
       return true;
     }
@@ -4733,6 +4752,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     ++applied;
     std::vector<glm::ivec3> relit_coords;
     relit_coords.reserve(result.chunks.size());
+    bool any_light_changed = false;
     for (const RelightChunkLightData &chunk_data : result.chunks)
     {
       if (UChunk *chunk =
@@ -4745,16 +4765,18 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
           {
             MergeBlockLightKeepingGpuSky(*chunk, chunk_data.light_packed);
           }
+          any_light_changed = true;
+          relit_coords.push_back(chunk_data.coord);
         }
-        else
+        else if (!PrimaryLightUnchanged(chunk->GetLightData(),
+                                        chunk_data.light_packed))
         {
           chunk->GetLightDataMutable() = chunk_data.light_packed;
+          any_light_changed = true;
+          relit_coords.push_back(chunk_data.coord);
         }
-        relit_coords.push_back(chunk_data.coord);
       }
     }
-    // Always remesh after light apply. Deferring via Accumulate/Flush left
-    // light=0 meshes stuck black under Dirty backlog (especially while flying).
     std::vector<glm::ivec2> primary_grounds;
     primary_grounds.reserve(result.source_block_positions.size());
     for (const glm::ivec3 &pos : result.source_block_positions)
@@ -4765,10 +4787,27 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     const bool defer_side = ShouldDeferHeavyApplySideEffects(
         PhysicsTelemetryData.RelightApplyMsPrev,
         PhysicsTelemetryData.RelightApplyNPrev);
-    // ColdFix P0: primary_only only under defer (not forever on moving).
-    MarkRelitChunksForMesh(relit_coords, /*priority_mesh=*/true, primary_grounds,
-                           result.finalize_pending_gate,
-                           /*primary_only=*/defer_side);
+    // CheapRemesh C3: noop light → clear InFlight/Pending without Dirty/Prefetch.
+    if (!any_light_changed)
+    {
+      for (const glm::ivec2 &g : primary_grounds)
+      {
+        AsyncRelightColumnsInFlight.erase(g);
+        if (result.finalize_pending_gate)
+        {
+          PendingLightBeforeMesh.erase(g);
+          SetColumnEmergeState(glm::ivec3(g.x, 0, g.y),
+                               ColumnEmergeState::LitReady);
+        }
+      }
+    }
+    else
+    {
+      // ColdFix P0: primary_only only under defer (not forever on moving).
+      MarkRelitChunksForMesh(relit_coords, /*priority_mesh=*/true, primary_grounds,
+                             result.finalize_pending_gate,
+                             /*primary_only=*/defer_side);
+    }
     ++PhysicsTelemetryData.RelightApplyN;
     if (result.finalize_pending_gate)
     {

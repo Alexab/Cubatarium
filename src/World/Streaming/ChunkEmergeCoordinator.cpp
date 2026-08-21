@@ -1049,13 +1049,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             mesh_service.IsPendingGpuKickedOrDispatched(coord);
         const bool already_dirty = mesh_service.IsChunkMeshDirty(coord);
         const bool sticky_owned = SoftDeferEmptyOwned.count(coord) > 0;
+        // CheapRemesh C4: FirstMesh enqueue XOR MarkDirty — not both same frame.
+        const bool will_enqueue_fm =
+            allow_own && !has_fm && empty_fm_enqueue_n < kEmptyOwnershipCap;
         // Do not re-MarkDirtyPriority every scan on sticky Owned / already Dirty.
-        if (allow_own && !sticky_owned && !already_dirty &&
+        if (allow_own && !sticky_owned && !already_dirty && !will_enqueue_fm &&
             SoftDeferEmptyShouldMarkDirty(true, has_fm, inflight_or_pending))
         {
           mesh_service.MarkDirtyPriority(coord);
         }
-        if (allow_own && !has_fm && empty_fm_enqueue_n < kEmptyOwnershipCap)
+        if (will_enqueue_fm)
         {
           ++empty_fm_enqueue_n;
           ColumnWorkItem item{};
@@ -1766,30 +1769,34 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Lit-but-dirty catch-up: after light gate clears, flush focus remesh hard
   // (outside flush previously ate the budget — dirty↑ while nr plateau ~40).
   // Drop Dirty outside eye shell even when wall is hot (stop wall 80–200).
-  // keep_h=1 + keep_cy=2 ≈ 45 max; also drops first-mesh/air Dirty that remesh-
-  // only prune left behind (fd_end plateau ~410).
+  // CheapRemesh C6: one coalesced DropRemesh pass (was keep_h=1/2/1 same tick).
   const glm::ivec3 focus_dirty_keep(focus_ground.x, preferred_cy,
                                     focus_ground.z);
-  if (idle_focus_dirty_debt)
   {
-    mesh_service.DropRemeshDirtyBeyondRadius(focus_dirty_keep, /*keep_h=*/1,
-                                            /*keep_cy=*/2);
-  }
-  // S3: stop Dirty plateau — drop remesh outside wider FOV shell.
-  if (!moving && !visual_holes && !pending_near_light &&
-      focus_dirty_early > 160)
-  {
-    mesh_service.DropRemeshDirtyBeyondRadius(focus_dirty_keep, /*keep_h=*/2,
-                                            /*keep_cy=*/2);
-  }
-  // Idle opaque stability (manual 131234 p23: opaque_cmd_on 209→1021 while
-  // nh/miss=0). Far unlit↔lit remesh churns the opaque draw list; fluid is a
-  // separate pass so sea stays steady. keep_h=1 (was 2) — land_fix_P2 churn
-  // 326 with focus+2 still too wide.
-  if (!moving && !visual_holes && !missing_visible_mesh)
-  {
-    mesh_service.DropRemeshDirtyBeyondRadius(focus_dirty_keep, /*keep_h=*/1,
-                                            /*keep_cy=*/2);
+    int drop_keep_h = 0;
+    bool do_drop = false;
+    if (idle_focus_dirty_debt)
+    {
+      do_drop = true;
+      drop_keep_h = std::max(drop_keep_h, 1);
+    }
+    if (!moving && !visual_holes && !pending_near_light &&
+        focus_dirty_early > 160)
+    {
+      do_drop = true;
+      drop_keep_h = std::max(drop_keep_h, 2);
+    }
+    // Idle opaque stability (manual 131234): far unlit↔lit remesh churns opaque.
+    if (!moving && !visual_holes && !missing_visible_mesh)
+    {
+      do_drop = true;
+      drop_keep_h = std::max(drop_keep_h, 1);
+    }
+    if (do_drop)
+    {
+      mesh_service.DropRemeshDirtyBeyondRadius(focus_dirty_keep, drop_keep_h,
+                                              /*keep_cy=*/2);
+    }
   }
   if ((idle_remesh_debt || idle_focus_dirty_debt) && last_frame_ms <= 55.0)
   {

@@ -88,14 +88,15 @@ inline int SoftDeferCaptureFloorWhenDepthFull(bool soft_defer_or_miss_hole,
   return bg_cap < 1 ? 1 : bg_cap;
 }
 
-/// Keep live GPU draw even if FullyDark face flag is set while repair is in
-/// progress. RateMatch R2: LitDrawable ring (default), not underfeet-only.
+/// Keep live GPU draw even if FullyDark face flag is set. CheapRemesh C5:
+/// repair ticket optional — already-published LitDrawable slot stays opaque
+/// (anti blink hide↔show). Horiz still gated to LitDrawable ring.
 inline bool ShouldKeepLiveGpuOpaqueDespiteFullyDark(
     bool has_live_gpu_draw, int horiz, bool has_repair_progress,
     int keep_horiz = kVisualStageLitDrawableHoriz)
 {
-  return has_live_gpu_draw && has_repair_progress && horiz >= 0 &&
-         horiz <= keep_horiz;
+  (void)has_repair_progress;
+  return has_live_gpu_draw && horiz >= 0 && horiz <= keep_horiz;
 }
 
 /// P2/P6/LitRing/Flicker: cruise Apply — caps from per-column unit cost, not

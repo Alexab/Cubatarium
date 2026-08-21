@@ -179,3 +179,28 @@ PL≈60; blink↑; holes forever. Capture=2 > Apply=1; Enter×64 double Drain hi
 ### Go vs `190534`
 
 Autofly land PL≪20, idle settled, wall_fly stable. Cold eye is the gate for blink/holes.
+
+## CheapRemesh — coalesce Dirty/remesh + face-light Capture (2026-08-21)
+
+Manual `195128` after RateMatch: emerge≈42, dirty≈170, Apply≈10, PL≈43, unlit_hidden≈29;
+black/blink still present. Inflight leave-in-Dirty revisit; MarkRelit sea overmark;
+full neighbor light memcpy; SoftDefer dual FirstMesh+Dirty; keep-lit required repair.
+
+| Step | Phase ID | Change | Result |
+| --- | --- | --- | --- |
+| C0 | (batch) | Inflight schedule → Dirty.RemoveAt | units OK |
+| C1 | (batch) | MarkRelit lit-cy-only; sea inflate iff !drawable; neighbor MarkMissingSlices | units OK |
+| C2 | (batch) | column_center_only face-shell neighbor light | units OK |
+| C3 | (batch) | PrimaryLightUnchanged skip MarkRelit Dirty | units OK |
+| C4 | (batch) | SoftDefer FirstMesh XOR MarkDirty; sticky witness (no better_horiz hop) | units OK |
+| C5 | (batch) | keep-lit LiveGpu without repair | units OK |
+| C6 | (batch) | coalesce idle DropRemesh keep_h max | units OK |
+| DoD | `CheapRemesh_DoD` | suite land+ocean + journal + SHA | stamp `20260821-212845`. SHA256 `4CAFA31024DD245715BDB011455357B3AC5F568B4E1BA8F420704D3B3CFAB26A`. cruise PL=1 fly≈78 wall≈60 dirty_med=108; stand PL=1 fly≈78; **idle PL=0**; ocean PL=27 gates 9/23 (was 7). vs RateMatch cruise wall↓ PL↓. |
+
+### Deferred
+
+- Cold manual ≥60s vs SHA (target vs `195128`: emerge≪42, dirty≪170, PL≤40, unlit_hidden≪29, blink/дыры↓).
+
+### Go vs `195128`
+
+Autofly land PL≪20 / wall_fly ≤ RateMatch. Cold eye is the gate for blink/holes.

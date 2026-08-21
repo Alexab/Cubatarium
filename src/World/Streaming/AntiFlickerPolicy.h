@@ -6,21 +6,20 @@ namespace cutum
 /// Era27 I-A1: SoftDefer Capture witness pin length (frames).
 constexpr int kSoftDeferCaptureWitnessPinFrames = 8;
 
-/// Era27 I-A1: retarget Capture witness only when pin invalid/expired, horiz
-/// improved, or pinned column no longer SoftDefer-empty/miss.
+/// Era27 I-A1: retarget Capture witness only when pin invalid/expired, or
+/// pinned column no longer SoftDefer-empty/miss. CheapRemesh C4: sticky —
+/// better_horiz alone must not hop while pin age < SLA (hold_nh2 still wins
+/// via ShouldRetargetRelightWitness).
 inline bool ShouldRetargetSoftDeferCaptureWitness(
     bool pin_valid, int pin_age_frames, int pin_T,
     bool new_witness_better_horiz, bool pinned_still_empty_or_miss)
 {
+  (void)new_witness_better_horiz;
   if (!pin_valid)
   {
     return true;
   }
   if (pin_age_frames >= pin_T)
-  {
-    return true;
-  }
-  if (new_witness_better_horiz)
   {
     return true;
   }

@@ -679,7 +679,25 @@ UChunkRelightSnapshot UChunkRelightSnapshot::Capture(const UBlockWorld &world,
       if (spec.column_center_only &&
           snapshot.Light.find(neighbor_coord) == snapshot.Light.end())
       {
-        snapshot.Light[neighbor_coord] = neighbor->GetLightData();
+        // CheapRemesh C2: face-shell neighbor light (BC for center flood), not
+        // full CHUNK_VOLUME memcpy — Apply writes primary only.
+        std::array<uint8_t, CHUNK_VOLUME> face_light{};
+        face_light.fill(0);
+        const auto &src = neighbor->GetLightData();
+        for (int u = 0; u < CHUNK_SIZE; ++u)
+        {
+          for (int v = 0; v < CHUNK_SIZE; ++v)
+          {
+            glm::ivec3 local(0);
+            local[axis] = face_local;
+            local[u_axis] = u;
+            local[v_axis] = v;
+            const int idx =
+                local.x + CHUNK_SIZE * (local.y + CHUNK_SIZE * local.z);
+            face_light[idx] = src[idx];
+          }
+        }
+        snapshot.Light[neighbor_coord] = face_light;
         ++snapshot.CapturedNeighborLightChunks;
       }
     }

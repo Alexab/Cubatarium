@@ -2,6 +2,7 @@
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/SoftDeferFramePolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
+#include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/CyOrderPolicy.h"
 #include "World/Streaming/EnterVisualGate.h"
@@ -22,6 +23,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <algorithm>
+#include <array>
 #include <vector>
 
 namespace
@@ -348,8 +350,8 @@ int main()
          "Era27 I-A1: pin live + still empty ⇒ hold");
   Expect(ShouldRetargetSoftDeferCaptureWitness(true, 8, 8, false, true),
          "Era27 I-A1: pin_age ≥ T ⇒ retarget");
-  Expect(ShouldRetargetSoftDeferCaptureWitness(true, 2, 8, true, true),
-         "Era27 I-A1: better horiz ⇒ retarget");
+  Expect(!ShouldRetargetSoftDeferCaptureWitness(true, 2, 8, true, true),
+         "CheapRemesh C4: better_horiz alone does not hop while age<T");
   Expect(ShouldRetargetSoftDeferCaptureWitness(true, 2, 8, false, false),
          "Era27 I-A1: pinned healed ⇒ retarget");
   Expect(!SoftDeferEmptyAgeShouldReset(true, false),
@@ -1922,21 +1924,34 @@ int main()
            "ColdFix P1: no SoftDefer → bg_cap stays 0");
   }
 
-  // RateMatch R2: live GPU opaque across LitDrawable ring
+  // CheapRemesh C5: live GPU opaque across LitDrawable ring (repair optional)
   {
     using cutum::ShouldKeepLiveGpuOpaqueDespiteFullyDark;
     Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 0, true),
-           "R2: underfeet+live+progress → keep opaque");
+           "C5: underfeet+live → keep opaque");
     Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 3, true),
-           "R2: LitDrawable nh=3 + progress → keep");
+           "C5: LitDrawable nh=3 → keep");
     Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 4, true),
-           "R2: LitDrawable edge nh=4 + progress → keep");
+           "C5: LitDrawable edge nh=4 → keep");
     Expect(!ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 5, true),
-           "R2: beyond LitDrawable → no keep");
-    Expect(!ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 0, false),
-           "R2: no repair progress → no keep");
+           "C5: beyond LitDrawable → no keep");
+    Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 0, false),
+           "C5: no repair progress still keep when live GPU");
     Expect(!ShouldKeepLiveGpuOpaqueDespiteFullyDark(false, 0, true),
-           "R2: no live GPU → no keep");
+           "C5: no live GPU → no keep");
+  }
+
+  // CheapRemesh C3: PrimaryLightUnchanged
+  {
+    using cutum::PrimaryLightUnchanged;
+    using cutum::CHUNK_VOLUME;
+    std::array<uint8_t, CHUNK_VOLUME> a{};
+    std::array<uint8_t, CHUNK_VOLUME> b{};
+    a.fill(0);
+    b.fill(0);
+    Expect(PrimaryLightUnchanged(a, b), "C3: equal packed → unchanged");
+    b[0] = 1;
+    Expect(!PrimaryLightUnchanged(a, b), "C3: differ → changed");
   }
 
   // P2: CruiseRelightApplyBudget (unit-cost; NPrev=0 ⇒ batch≈unit)

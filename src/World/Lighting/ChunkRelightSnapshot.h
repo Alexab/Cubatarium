@@ -36,6 +36,14 @@ struct RelightChunkLightData
   std::array<uint8_t, CHUNK_VOLUME> light_packed{};
 };
 
+/// CheapRemesh C3: skip MarkRelit Dirty when Apply light equals current chunk.
+inline bool PrimaryLightUnchanged(
+    const std::array<uint8_t, CHUNK_VOLUME> &before,
+    const std::array<uint8_t, CHUNK_VOLUME> &after)
+{
+  return before == after;
+}
+
 struct RelightComputeResult
 {
   uint64_t job_id{0};
