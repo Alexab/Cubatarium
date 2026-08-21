@@ -4432,8 +4432,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (AsyncBuilder->IsInFlight(*it))
       {
+        // CheapRemesh C0: Inflight owns the chunk — erase Dirty (same as
+        // FirstMesh schedule path). Leave-in-Dirty caused dirty_revisit thrash.
         ++DirtyScheduleSkipInflightN;
-        ++it;
+        it = Dirty.RemoveAt(it);
         continue;
       }
       // D1c: when drain-first left schedule=1 under miss, never spend it on remesh.

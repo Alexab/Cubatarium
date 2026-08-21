@@ -196,11 +196,28 @@ full neighbor light memcpy; SoftDefer dual FirstMesh+Dirty; keep-lit required re
 | C5 | (batch) | keep-lit LiveGpu without repair | units OK |
 | C6 | (batch) | coalesce idle DropRemesh keep_h max | units OK |
 | DoD | `CheapRemesh_DoD` | suite land+ocean + journal + SHA | stamp `20260821-212845`. SHA256 `4CAFA31024DD245715BDB011455357B3AC5F568B4E1BA8F420704D3B3CFAB26A`. cruise PL=1 fly≈78 wall≈60 dirty_med=108; stand PL=1 fly≈78; **idle PL=0**; ocean PL=27 gates 9/23 (was 7). vs RateMatch cruise wall↓ PL↓. |
+| C0b | follow-up | second Dirty schedule Inflight leave→RemoveAt (remesh loop ~4433) | after cold `214657` still revisit≈98 |
+
+### Cold manual `214657` (~138s) vs `195128`
+
+| Metric | `195128` | `214657` | Note |
+| --- | --- | --- | --- |
+| wall med/p90 | 116 / 288 | 127 / **202** | med↑ p90↓ |
+| emerge med | 50.5 | **46.6** | still >42 |
+| dirty med | 172 | **142** | target ≪170 ✓ |
+| dirty_revisit | 132 | **98** | ↓; C0b for remesh path |
+| PL med/end | 43 / 45 | **37 / 31** | ≤40 ✓ |
+| apply_ms med | 10.2 | 13.8 | slight↑ |
+| unlit_hidden med | 29 | **28** | flat |
+| vb med | 81 | 81 | flat |
+| uf_flips / rate | 10 / 0.20 | **8 / 0.12** | slight↓ |
+| nbr_light_n | 9 | 9 | count chunks; C2 is face memcpy |
 
 ### Deferred
 
-- Cold manual ≥60s vs SHA (target vs `195128`: emerge≪42, dirty≪170, PL≤40, unlit_hidden≪29, blink/дыры↓).
+- Rebuild + cold re-eye after C0b (expect revisit↓ further).
+- emerge≪42 / unlit_hidden≪29 / VB↓ still open vs eye targets.
 
 ### Go vs `195128`
 
-Autofly land PL≪20 / wall_fly ≤ RateMatch. Cold eye is the gate for blink/holes.
+Autofly land PL≪20 / wall_fly ≤ RateMatch. Cold: dirty/PL improved; wall med and blink/дыры not closed.
