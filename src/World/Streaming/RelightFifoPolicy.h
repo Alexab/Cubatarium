@@ -29,6 +29,58 @@ inline bool ShouldForcePinColumnPriority(bool is_pin_key, int miss_horiz)
          miss_horiz <= kVisualStageNearFovHoriz;
 }
 
+/// Cold cruise: PL focus debt uses Enter Apply SoT (no Cruise ladder).
+/// Thresh 30 matches TickAsyncChunkSystems pending_light_focus_n > 30 floor.
+inline bool ShouldUseEnterApplyBudgetOnCruise(bool moving,
+                                              int pending_light_focus_n,
+                                              int enter_pl_thresh = 30)
+{
+  return moving && pending_light_focus_n > enter_pl_thresh;
+}
+
+/// S0: Apply drain count = min(budget, ready). Budget ≤0 → 0.
+inline int ClampRelightDrainN(int budget, int ready_n)
+{
+  if (budget <= 0 || ready_n <= 0)
+  {
+    return 0;
+  }
+  return budget < ready_n ? budget : ready_n;
+}
+
+/// Admit Capture iff pipeline depth below worker-fed buffer (not apply_ms).
+inline bool ShouldAdmitRelightCapture(int completed_n, int inflight_n,
+                                      int depth_cap)
+{
+  if (depth_cap <= 0)
+  {
+    return true;
+  }
+  return (completed_n + inflight_n) < depth_cap;
+}
+
+/// SoftDefer/miss may keep one Capture slot even when depth admit is false.
+inline int SoftDeferCaptureFloorWhenDepthFull(bool soft_defer_or_miss_hole,
+                                              int bg_cap)
+{
+  if (!soft_defer_or_miss_hole)
+  {
+    return bg_cap;
+  }
+  return bg_cap < 1 ? 1 : bg_cap;
+}
+
+/// Underfeet/focus: keep live GPU draw even if FullyDark face flag is set
+/// while repair is in progress (stall flip hide↔show).
+inline bool ShouldKeepLiveGpuOpaqueDespiteFullyDark(bool has_live_gpu_draw,
+                                                    int horiz,
+                                                    bool has_repair_progress,
+                                                    int underfeet_horiz = 1)
+{
+  return has_live_gpu_draw && has_repair_progress && horiz >= 0 &&
+         horiz <= underfeet_horiz;
+}
+
 /// P2/P6/LitRing/Flicker: cruise Apply — caps from per-column unit cost, not
 /// batch wall. Near-PL floor preserved. Early-out cap=1 only when unit_ms>8
 /// (or NPrev≤1 with batch>8).

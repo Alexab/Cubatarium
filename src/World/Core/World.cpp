@@ -955,7 +955,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                                                         true);
   }
   auto schedule_remesh_after_lit_apply =
-      [this, enter_quiesce, enter_gate, &primary_set](const glm::ivec3 &coord)
+      [this, enter_quiesce, enter_gate, primary_only,
+       &primary_set](const glm::ivec3 &coord)
   {
     if (!MeshService)
     {
@@ -995,7 +996,10 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     {
     case RemeshAfterLitApplyDecision::SkipAlreadyDirty:
       ++PhysicsTelemetryData.MarkRelitSkipAlreadyDirtyN;
-      if (ShouldLatchRemeshAfterApplyWhileOwned(decision,
+      // ColdSupply S2: primary_only (defer) — Dirty already owns remesh; do not
+      // dual-feed RemeshAfterApply (Dirty+RAA churn → emerge≈53 / dirty≈149).
+      if (!primary_only &&
+          ShouldLatchRemeshAfterApplyWhileOwned(decision,
                                                fully_dark || still_stale))
       {
         MeshService->RequestRemeshAfterApply(coord);
@@ -1007,7 +1011,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       break;
     case RemeshAfterLitApplyDecision::SkipInflight:
       ++PhysicsTelemetryData.MarkRelitSkipInflightN;
-      if (ShouldLatchRemeshAfterApplyWhileOwned(decision,
+      if (!primary_only &&
+          ShouldLatchRemeshAfterApplyWhileOwned(decision,
                                                fully_dark || still_stale))
       {
         MeshService->RequestRemeshAfterApply(coord);
@@ -1126,7 +1131,9 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           dirty_max = std::max(dirty_max, pit->second.max_y);
         }
       }
-      if (ProceduralTemplate.FillWater)
+      // ColdApply A4: primary_only (moving cruise) skips sea±CHUNK / FillWater
+      // lateral inflate — keep lit band + pending + underfeet only.
+      if (!primary_only && ProceduralTemplate.FillWater)
       {
         dirty_min =
             std::min(dirty_min, std::max(0, sea - CHUNK_SIZE));
@@ -1146,10 +1153,13 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
               dirty_max,
               std::min(column_max_y, focus_block.y + CHUNK_SIZE * 2));
         }
-        // Era26 I-O5: FillWater lateral (horiz 2–5) remesh sea±CHUNK band.
-        FillWaterLateralRemeshBand(ProceduralTemplate.FillWater, horiz, sea,
-                                   column_max_y, dirty_min, dirty_max,
-                                   CHUNK_SIZE);
+        if (!primary_only)
+        {
+          // Era26 I-O5: FillWater lateral (horiz 2–5) remesh sea±CHUNK band.
+          FillWaterLateralRemeshBand(ProceduralTemplate.FillWater, horiz, sea,
+                                     column_max_y, dirty_min, dirty_max,
+                                     CHUNK_SIZE);
+        }
       }
       // Partial relight results must not feed Dirty while the first-light gate
       // is still closed. Those remeshes are soft-deferred anyway and were a big
@@ -2466,6 +2476,24 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
       !MeshService->GetCache().ChunkHasFullyDarkFace(chunk_coord))
   {
     return true;
+  }
+  // ColdFix P3: underfeet keep live GPU opaque while FullyDark flag + repair
+  // in progress (VB stalled flip hide↔show).
+  if (MeshService->GetCache().HasLiveGpuDraw(chunk_coord))
+  {
+    const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+    const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
+    const int horiz =
+        std::max(std::abs(chunk_coord.x - focus_chunk.x),
+                 std::abs(chunk_coord.z - focus_chunk.z));
+    const glm::ivec2 col_xz(chunk_coord.x, chunk_coord.z);
+    if (ShouldKeepLiveGpuOpaqueDespiteFullyDark(
+            true, horiz, ColumnHasRepairProgress(col_xz) ||
+                             IsColumnStickyRemesh(col_xz) ||
+                             GetColumnFlowExecutor().HasRepairTicket(col_xz)))
+    {
+      return true;
+    }
   }
   if (MeshService->HasMeshSatisfyingColumnReady(chunk_coord))
   {
@@ -4726,6 +4754,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     const bool defer_side = ShouldDeferHeavyApplySideEffects(
         PhysicsTelemetryData.RelightApplyMsPrev,
         PhysicsTelemetryData.RelightApplyNPrev);
+    // ColdFix P0: primary_only only under defer (not forever on moving).
     MarkRelitChunksForMesh(relit_coords, /*priority_mesh=*/true, primary_grounds,
                            result.finalize_pending_gate,
                            /*primary_only=*/defer_side);
@@ -5104,18 +5133,36 @@ void UWorld::TickAsyncChunkSystems()
   }
   const bool moving =
       LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold;
-  drain_budget = CruiseRelightApplyBudget(
-      moving, PhysicsTelemetryData.RelightApplyMsPrev, drain_budget,
-      PhysicsTelemetryData.RelightFifoPinDropNPrev == 0,
-      near_pending_light || underfeet_pending_light,
-      PhysicsTelemetryData.RelightApplyNPrev);
+  // Cold high-PL: reuse Enter Apply budget (64) — Cruise ladder caps at 1
+  // when unit_ms≈12 and starves PL≈60 (manual 123613).
+  const bool enter_apply_cruise =
+      ShouldUseEnterApplyBudgetOnCruise(moving, pending_light_focus_n);
+  if (enter_apply_cruise)
+  {
+    drain_budget =
+        std::max(drain_budget, EnterFovRelightApplyBudget());
+  }
+  else
+  {
+    drain_budget = CruiseRelightApplyBudget(
+        moving, PhysicsTelemetryData.RelightApplyMsPrev, drain_budget,
+        PhysicsTelemetryData.RelightFifoPinDropNPrev == 0,
+        near_pending_light || underfeet_pending_light,
+        PhysicsTelemetryData.RelightApplyNPrev);
+  }
   // Player edits and near first-light columns remesh immediately.
   const bool priority_mesh =
       pending_player > 0 || near_pending_light || underfeet_pending_light ||
       (MeshService && MeshService->GetDirtyCount() < 48);
   const auto relight_t0 = std::chrono::high_resolution_clock::now();
-  const int applied =
+  // ColdFix P2: Enter-style double Drain on high-PL cruise (SoT TickEnterFovLitPass).
+  int applied =
       DrainAsyncRelightResults(drain_budget, priority_mesh, true);
+  if (enter_apply_cruise)
+  {
+    applied +=
+        DrainAsyncRelightResults(drain_budget, priority_mesh, true);
+  }
   const double apply_ms =
       std::chrono::duration<double, std::milli>(
           std::chrono::high_resolution_clock::now() - relight_t0)

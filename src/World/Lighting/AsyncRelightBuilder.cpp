@@ -106,10 +106,14 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
 std::vector<RelightComputeResult>
 UAsyncRelightBuilder::DrainCompleted(int max_per_frame)
 {
-  (void)max_per_frame;
-  // DrainAll so stale epoch results free light arrays immediately instead of
-  // peeling DrainUpTo while new Captures keep enqueueing.
-  std::vector<RelightComputeResult> drained = Completed.DrainAll();
+  // ColdSupply S0: honor Apply budget (Enter/Cruise). DrainAll made Enter×64
+  // and Cruise ladder no-ops while MarkRelit hitch still scaled with ready N.
+  if (max_per_frame <= 0)
+  {
+    return {};
+  }
+  std::vector<RelightComputeResult> drained =
+      Completed.DrainUpTo(static_cast<std::size_t>(max_per_frame));
   const uint64_t current_epoch = Epoch.load(std::memory_order_acquire);
   std::vector<RelightComputeResult> accepted;
   accepted.reserve(drained.size());

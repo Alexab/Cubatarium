@@ -367,17 +367,35 @@ inline int DynamicCaptureMovingBgCap(int pending_light_focus,
   return std::max(base_cap, 2);
 }
 
-/// P5: raise CaptureMovingBgCap above 1 only after FIFO stops dropping the pin
-/// and Apply/drain is already cheap. Per-frame proxies of those gates.
+/// P5 / ColdSupply S1: raise CaptureMovingBgCap above 1 when Apply unit is
+/// cheap. Use apply unit_ms (not batch drain) — double-Drain inflated batch.
+/// High PL (>30) + pin stable: fifo_drop alone must not lock cap=1 forever
+/// (manual 142000 self-blocked Capture while PL≈73 / drops 607).
 inline bool ShouldAllowDynamicCaptureMovingBgCap(int fifo_drop_delta,
-                                                int fifo_pin_drop_n,
-                                                double drain_ms)
+                                                 int fifo_pin_drop_n,
+                                                 double apply_ms,
+                                                 int apply_n = 0,
+                                                 int pending_light_focus = 0)
 {
-  if (fifo_pin_drop_n > 0 || fifo_drop_delta > 0)
+  if (fifo_pin_drop_n > 0)
   {
     return false;
   }
-  return drain_ms <= 8.0;
+  const double unit_ms =
+      (apply_n > 0) ? (apply_ms / static_cast<double>(apply_n)) : apply_ms;
+  if (unit_ms > 8.0)
+  {
+    return false;
+  }
+  if (pending_light_focus > 30)
+  {
+    return true;
+  }
+  if (fifo_drop_delta > 0)
+  {
+    return false;
+  }
+  return true;
 }
 
 /// Cruise SOTA: moving + visual holes — never raise bg above dynamic cap.

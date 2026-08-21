@@ -978,17 +978,35 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   {
     const auto &telem = world.GetPhysicsTelemetry();
     int dynamic_cap = tune.CaptureMovingBgCap;
-    // P5: raise above base 1 only when last frame did not drop FIFO/pin and
-    // drain was already ≤8. Do not lift RuntimeTuning.CaptureMovingBgCap.
-    if (ShouldAllowDynamicCaptureMovingBgCap(telem.RelightFifoDropNPrev,
-                                             telem.RelightFifoPinDropNPrev,
-                                             telem.RelightDrainMsPrev))
+    // P5 / ColdSupply S1: raise above base 1 when Apply unit cheap; high PL
+    // ignores one-frame fifo_drop if pin stable. Do not lift RuntimeTuning base.
+    if (ShouldAllowDynamicCaptureMovingBgCap(
+            telem.RelightFifoDropNPrev, telem.RelightFifoPinDropNPrev,
+            telem.RelightApplyMsPrev, telem.RelightApplyNPrev,
+            pending_light_focus_n))
     {
       dynamic_cap =
           DynamicCaptureMovingBgCap(pending_light_focus_n, tune.CaptureMovingBgCap);
     }
     bg_cap = ClampCaptureMovingBgCapWithHoles(bg_cap, moving, visual_holes,
                                               dynamic_cap);
+  }
+  // ColdFix P1: queue-depth admit (completed+inflight < max_inflight). SoftDefer
+  // / miss keep a floor of 1 so depth-full cannot kill catastrophic Capture.
+  if (!enter_fov_lit && max_inflight > 0)
+  {
+    const int completed_n =
+        static_cast<int>(world.GetRelightCompletedSize());
+    const int inflight_n = world.GetAsyncRelightInFlightCount();
+    if (!ShouldAdmitRelightCapture(completed_n, inflight_n, max_inflight))
+    {
+      const bool soft_defer_or_miss =
+          (visual_holes && focus_pending_mid) ||
+          (visual_holes &&
+           ShouldPreferMissFinalizeBand(
+               world.GetPhysicsTelemetry().MissHoriz));
+      bg_cap = SoftDeferCaptureFloorWhenDepthFull(soft_defer_or_miss, 0);
+    }
   }
   if (!enter_fov_lit && frame_ms_so_far >= capture_hot_skip_ms &&
       visual_holes && focus_pending_mid)
@@ -1170,8 +1188,15 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
           PendingTerrainColumnRelightYBands[col] =
               glm::ivec2(relight_min, relight_max);
         }
-        PendingTerrainColumnRelightsPriority.push_back(col);
-        PendingTerrainColumnRelightKeys.insert(col);
+        // ColdApply A5: do not push_back a second deque entry if already keyed.
+        if (PendingTerrainColumnRelightKeys.insert(col).second)
+        {
+          PendingTerrainColumnRelightsPriority.push_back(col);
+        }
+        else
+        {
+          PromoteTerrainColumnRelight(col);
+        }
         ++skipped_inflight;
         return skipped_inflight < std::max(8, max_bg_columns * 4);
       }
@@ -1206,8 +1231,38 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       // finalize_pending_gate=true can be starved and PendingLight keeps
       // rising while mesh_async stays at 0.
       const bool remainder_priority = horiz_dist <= focus_radius;
-      EnqueueTerrainColumnRelight(col.x, col.y, remainder_priority,
-                                  remainder_min, remainder_max);
+      // ColdFix: when pipeline depth is full, stash YBand once (no Enqueue
+      // ClearColumnLightComplete storm / duplicate far push).
+      const bool depth_full =
+          max_inflight > 0 &&
+          !ShouldAdmitRelightCapture(
+              static_cast<int>(world.GetRelightCompletedSize()),
+              world.GetAsyncRelightInFlightCount(), max_inflight);
+      if (depth_full)
+      {
+        PendingTerrainColumnRelightYBands[col] =
+            glm::ivec2(remainder_min, remainder_max);
+        if (PendingTerrainColumnRelightKeys.insert(col).second)
+        {
+          if (remainder_priority)
+          {
+            PendingTerrainColumnRelightsPriority.push_back(col);
+          }
+          else
+          {
+            PendingTerrainColumnRelights.push_back(col);
+          }
+        }
+        else
+        {
+          PromoteTerrainColumnRelight(col);
+        }
+      }
+      else
+      {
+        EnqueueTerrainColumnRelight(col.x, col.y, remainder_priority,
+                                    remainder_min, remainder_max);
+      }
     }
     const double capture_ms =
         std::chrono::duration<double, std::milli>(

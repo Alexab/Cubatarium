@@ -1877,6 +1877,55 @@ int main()
            "P1: non-pin key does not force priority");
   }
 
+  // ColdApply A1: Enter Apply budget on cruise high PL
+  {
+    using cutum::ShouldUseEnterApplyBudgetOnCruise;
+    Expect(ShouldUseEnterApplyBudgetOnCruise(true, 31),
+           "ColdApply A1: moving+PL>30 → enter Apply budget");
+    Expect(!ShouldUseEnterApplyBudgetOnCruise(true, 30),
+           "ColdApply A1: PL==30 does not trigger");
+    Expect(!ShouldUseEnterApplyBudgetOnCruise(false, 100),
+           "ColdApply A1: idle never uses enter Apply budget");
+  }
+
+  // ColdSupply S0: ClampRelightDrainN
+  {
+    using cutum::ClampRelightDrainN;
+    Expect(ClampRelightDrainN(64, 3) == 3, "S0: drain min(budget,ready)");
+    Expect(ClampRelightDrainN(2, 10) == 2, "S0: budget caps ready");
+    Expect(ClampRelightDrainN(0, 5) == 0, "S0: budget 0 → 0");
+    Expect(ClampRelightDrainN(8, 0) == 0, "S0: ready 0 → 0");
+  }
+
+  // ColdFix P1: queue-depth Capture admit
+  {
+    using cutum::ShouldAdmitRelightCapture;
+    using cutum::SoftDeferCaptureFloorWhenDepthFull;
+    Expect(ShouldAdmitRelightCapture(0, 0, 4),
+           "ColdFix P1: empty pipeline admits Capture");
+    Expect(!ShouldAdmitRelightCapture(3, 1, 4),
+           "ColdFix P1: completed+inflight >= cap → deny");
+    Expect(ShouldAdmitRelightCapture(2, 1, 4),
+           "ColdFix P1: depth under cap → admit");
+    Expect(SoftDeferCaptureFloorWhenDepthFull(true, 0) == 1,
+           "ColdFix P1: SoftDefer floor keeps 1 when depth-full");
+    Expect(SoftDeferCaptureFloorWhenDepthFull(false, 0) == 0,
+           "ColdFix P1: no SoftDefer → bg_cap stays 0");
+  }
+
+  // ColdFix P3: live GPU opaque despite FullyDark underfeet
+  {
+    using cutum::ShouldKeepLiveGpuOpaqueDespiteFullyDark;
+    Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 0, true),
+           "ColdFix P3: underfeet+live+progress → keep opaque");
+    Expect(!ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 0, false),
+           "ColdFix P3: no repair progress → no keep");
+    Expect(!ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 3, true),
+           "ColdFix P3: beyond underfeet → no keep");
+    Expect(!ShouldKeepLiveGpuOpaqueDespiteFullyDark(false, 0, true),
+           "ColdFix P3: no live GPU → no keep");
+  }
+
   // P2: CruiseRelightApplyBudget (unit-cost; NPrev=0 ⇒ batch≈unit)
   {
     using cutum::CruiseRelightApplyBudget;
@@ -1914,17 +1963,23 @@ int main()
            "Flicker P1: near-PL floor with unit_ms=4");
   }
 
-  // P5: ShouldAllowDynamicCaptureMovingBgCap
+  // P5 / ColdSupply S1: ShouldAllowDynamicCaptureMovingBgCap (unit_ms + high PL)
   {
     using cutum::ShouldAllowDynamicCaptureMovingBgCap;
-    Expect(!ShouldAllowDynamicCaptureMovingBgCap(1, 0, 5.0),
-           "P5: drop>0 blocks dynamic cap");
-    Expect(!ShouldAllowDynamicCaptureMovingBgCap(0, 1, 5.0),
+    Expect(!ShouldAllowDynamicCaptureMovingBgCap(0, 1, 5.0, 1, 0),
            "P5: pin_drop>0 blocks dynamic cap");
-    Expect(!ShouldAllowDynamicCaptureMovingBgCap(0, 0, 9.0),
-           "P5: drain>8 blocks dynamic cap");
-    Expect(ShouldAllowDynamicCaptureMovingBgCap(0, 0, 7.0),
-           "P5: stable allows dynamic cap");
+    Expect(!ShouldAllowDynamicCaptureMovingBgCap(0, 0, 9.0, 1, 0),
+           "S1: unit_ms>8 blocks dynamic cap");
+    Expect(ShouldAllowDynamicCaptureMovingBgCap(0, 0, 7.0, 1, 0),
+           "P5: stable cheap unit allows dynamic cap");
+    Expect(!ShouldAllowDynamicCaptureMovingBgCap(1, 0, 5.0, 1, 0),
+           "P5: drop>0 blocks when PL low");
+    Expect(ShouldAllowDynamicCaptureMovingBgCap(1, 0, 6.0, 1, 31),
+           "S1: high PL + pin stable ignores fifo_drop");
+    Expect(ShouldAllowDynamicCaptureMovingBgCap(0, 0, 12.0, 2, 31),
+           "S1: unit_ms=6 from batch/N allows high PL");
+    Expect(!ShouldAllowDynamicCaptureMovingBgCap(0, 0, 20.0, 2, 31),
+           "S1: unit_ms=10 blocks even high PL");
   }
 
   // --- Input-first: underfeet reservation + speed clamp ---

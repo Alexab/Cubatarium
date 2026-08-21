@@ -1573,15 +1573,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Idle lit-but-dirty: never open outside cap — that regressed not_ready.
   // C2: while focus has undrawn / visual holes, keep a trickle of outside
   // FirstMesh (MaxOutside=0 starved rim behind sticky miss).
+  // ColdSupply S2: under Dirty soft pressure prefer focus±LitDrawable — do not
+  // open outside 8–12 while PL debt / holes (manual 142000 emerge≈53 dirty≈149).
   if (idle_recovery || idle_remesh_debt)
   {
     mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
   }
   else if (moving &&
            (visual_holes || missing_underfeet || underfeet_undrawn ||
-            pending_dirty > 450))
+            pending_dirty > 200 || pending_focus_count > 30))
   {
-    if (visual_holes || underfeet_undrawn || missing_underfeet)
+    if ((underfeet_undrawn || missing_underfeet) && pending_dirty <= 450)
+    {
+      mesh_service.SetMaxOutsideFocusMeshPerFrame(1);
+    }
+    else if (visual_holes && pending_dirty <= 200 && pending_focus_count <= 30)
     {
       mesh_service.SetMaxOutsideFocusMeshPerFrame(1);
     }
@@ -1594,8 +1600,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
   }
-  else if (!visual_holes && !missing_underfeet && pending_dirty > 200 &&
-      last_frame_ms <= 28.0)
+  else if (!visual_holes && !missing_underfeet && pending_focus_count == 0 &&
+           pending_dirty > 200 && last_frame_ms <= 28.0)
   {
     mesh_service.SetMaxOutsideFocusMeshPerFrame(pending_dirty > 400 ? 12 : 8);
   }
