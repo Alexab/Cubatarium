@@ -160,3 +160,22 @@ Root cause: `DrainCompleted` ignored budget (`DrainAll`); DynamicCapture locked 
 ### Go vs `142000`
 
 Autofly land PL≪20 / wall_fly ≤ ColdFix. Cold supply unlock is the eye gate.
+
+## RateMatch — time-slice Apply + Capture≤Apply + LitDrawable keep-lit (2026-08-21)
+
+Manual `190534` after ColdSupply: FPS↑ but unstable (sim 80→160); apply burst max12;
+PL≈60; blink↑; holes forever. Capture=2 > Apply=1; Enter×64 double Drain hitch.
+
+| Step | Phase ID | Change | Result |
+| --- | --- | --- | --- |
+| R0–R2 | (batch) | single Drain; high-PL floor=4 (not Enter64); MissReservedMs slice; DynamicCapture only if apply_n≥2; admit depth=apply_cap; keep-lit LitDrawable | units OK |
+| R3 | skip | autofly PL/idle healthy — no remesh follow-on | skipped |
+| DoD | `RateMatch_DoD` | suite land+ocean + journal + SHA | stamp `20260821-193630`. SHA256 `E471682EF0F13A8DA4A8629714986E42858AD016A6F8E5E7EF63C3716CE29561`. cruise PL=2 fly≈90 BS%=0; stand PL≈2 fly≈73; **idle PL=0**; ocean PL=25. |
+
+### Deferred
+
+- Cold manual ≥60s vs SHA (target vs `190534`: sim p90↓, apply max≤4, PL≪60, blink/holes↓).
+
+### Go vs `190534`
+
+Autofly land PL≪20, idle settled, wall_fly stable. Cold eye is the gate for blink/holes.

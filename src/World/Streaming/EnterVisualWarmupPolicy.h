@@ -367,10 +367,9 @@ inline int DynamicCaptureMovingBgCap(int pending_light_focus,
   return std::max(base_cap, 2);
 }
 
-/// P5 / ColdSupply S1: raise CaptureMovingBgCap above 1 when Apply unit is
-/// cheap. Use apply unit_ms (not batch drain) — double-Drain inflated batch.
-/// High PL (>30) + pin stable: fifo_drop alone must not lock cap=1 forever
-/// (manual 142000 self-blocked Capture while PL≈73 / drops 607).
+/// P5 / ColdSupply / RateMatch R1: raise CaptureMovingBgCap above 1 when Apply
+/// unit is cheap. High PL (>30): only if apply_n_prev ≥ 2 (Capture≤Apply), not
+/// PL alone (manual 190534 Capture=2 Apply=1 → PL plateau).
 inline bool ShouldAllowDynamicCaptureMovingBgCap(int fifo_drop_delta,
                                                  int fifo_pin_drop_n,
                                                  double apply_ms,
@@ -389,7 +388,7 @@ inline bool ShouldAllowDynamicCaptureMovingBgCap(int fifo_drop_delta,
   }
   if (pending_light_focus > 30)
   {
-    return true;
+    return apply_n >= 2;
   }
   if (fifo_drop_delta > 0)
   {

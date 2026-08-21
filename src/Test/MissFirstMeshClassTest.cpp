@@ -1877,15 +1877,24 @@ int main()
            "P1: non-pin key does not force priority");
   }
 
-  // ColdApply A1: Enter Apply budget on cruise high PL
+  // RateMatch R0: high-PL Apply floor (not Enter×64)
   {
-    using cutum::ShouldUseEnterApplyBudgetOnCruise;
-    Expect(ShouldUseEnterApplyBudgetOnCruise(true, 31),
-           "ColdApply A1: moving+PL>30 → enter Apply budget");
-    Expect(!ShouldUseEnterApplyBudgetOnCruise(true, 30),
-           "ColdApply A1: PL==30 does not trigger");
-    Expect(!ShouldUseEnterApplyBudgetOnCruise(false, 100),
-           "ColdApply A1: idle never uses enter Apply budget");
+    using cutum::ShouldUseHighPlCruiseApplyFloor;
+    using cutum::HighPlCruiseApplyFloorN;
+    using cutum::ShouldStopRelightApplySlice;
+    Expect(ShouldUseHighPlCruiseApplyFloor(true, 31),
+           "R0: moving+PL>30 → high-PL Apply floor");
+    Expect(!ShouldUseHighPlCruiseApplyFloor(true, 30),
+           "R0: PL==30 does not trigger");
+    Expect(!ShouldUseHighPlCruiseApplyFloor(false, 100),
+           "R0: idle never uses high-PL floor");
+    Expect(HighPlCruiseApplyFloorN() == 4, "R0: floor N=4");
+    Expect(ShouldStopRelightApplySlice(8.0, 1, 8.0, false),
+           "R0: slice stop after ≥1 at MissReservedMs");
+    Expect(!ShouldStopRelightApplySlice(8.0, 0, 8.0, false),
+           "R0: no stop before first applied");
+    Expect(!ShouldStopRelightApplySlice(20.0, 2, 8.0, true),
+           "R0: enter pass exempt from slice");
   }
 
   // ColdSupply S0: ClampRelightDrainN
@@ -1913,17 +1922,21 @@ int main()
            "ColdFix P1: no SoftDefer → bg_cap stays 0");
   }
 
-  // ColdFix P3: live GPU opaque despite FullyDark underfeet
+  // RateMatch R2: live GPU opaque across LitDrawable ring
   {
     using cutum::ShouldKeepLiveGpuOpaqueDespiteFullyDark;
     Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 0, true),
-           "ColdFix P3: underfeet+live+progress → keep opaque");
+           "R2: underfeet+live+progress → keep opaque");
+    Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 3, true),
+           "R2: LitDrawable nh=3 + progress → keep");
+    Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 4, true),
+           "R2: LitDrawable edge nh=4 + progress → keep");
+    Expect(!ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 5, true),
+           "R2: beyond LitDrawable → no keep");
     Expect(!ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 0, false),
-           "ColdFix P3: no repair progress → no keep");
-    Expect(!ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 3, true),
-           "ColdFix P3: beyond underfeet → no keep");
+           "R2: no repair progress → no keep");
     Expect(!ShouldKeepLiveGpuOpaqueDespiteFullyDark(false, 0, true),
-           "ColdFix P3: no live GPU → no keep");
+           "R2: no live GPU → no keep");
   }
 
   // P2: CruiseRelightApplyBudget (unit-cost; NPrev=0 ⇒ batch≈unit)
@@ -1963,7 +1976,7 @@ int main()
            "Flicker P1: near-PL floor with unit_ms=4");
   }
 
-  // P5 / ColdSupply S1: ShouldAllowDynamicCaptureMovingBgCap (unit_ms + high PL)
+  // P5 / RateMatch R1: DynamicCapture unit_ms + apply pace
   {
     using cutum::ShouldAllowDynamicCaptureMovingBgCap;
     Expect(!ShouldAllowDynamicCaptureMovingBgCap(0, 1, 5.0, 1, 0),
@@ -1974,12 +1987,14 @@ int main()
            "P5: stable cheap unit allows dynamic cap");
     Expect(!ShouldAllowDynamicCaptureMovingBgCap(1, 0, 5.0, 1, 0),
            "P5: drop>0 blocks when PL low");
-    Expect(ShouldAllowDynamicCaptureMovingBgCap(1, 0, 6.0, 1, 31),
-           "S1: high PL + pin stable ignores fifo_drop");
+    Expect(!ShouldAllowDynamicCaptureMovingBgCap(1, 0, 6.0, 1, 31),
+           "R1: high PL + apply_n=1 does not raise Capture");
+    Expect(ShouldAllowDynamicCaptureMovingBgCap(1, 0, 6.0, 2, 31),
+           "R1: high PL + apply_n≥2 allows DynamicCapture");
     Expect(ShouldAllowDynamicCaptureMovingBgCap(0, 0, 12.0, 2, 31),
-           "S1: unit_ms=6 from batch/N allows high PL");
+           "R1: unit_ms=6 from batch/N allows high PL");
     Expect(!ShouldAllowDynamicCaptureMovingBgCap(0, 0, 20.0, 2, 31),
-           "S1: unit_ms=10 blocks even high PL");
+           "R1: unit_ms=10 blocks even high PL");
   }
 
   // --- Input-first: underfeet reservation + speed clamp ---

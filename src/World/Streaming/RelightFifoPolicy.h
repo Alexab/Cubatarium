@@ -29,13 +29,31 @@ inline bool ShouldForcePinColumnPriority(bool is_pin_key, int miss_horiz)
          miss_horiz <= kVisualStageNearFovHoriz;
 }
 
-/// Cold cruise: PL focus debt uses Enter Apply SoT (no Cruise ladder).
-/// Thresh 30 matches TickAsyncChunkSystems pending_light_focus_n > 30 floor.
-inline bool ShouldUseEnterApplyBudgetOnCruise(bool moving,
-                                              int pending_light_focus_n,
-                                              int enter_pl_thresh = 30)
+/// Cold cruise high PL: use Apply floor matching Capture rate (not Enter×64).
+/// Thresh 30 matches TickAsyncChunkSystems pending_light_focus_n > 30.
+inline bool ShouldUseHighPlCruiseApplyFloor(bool moving,
+                                            int pending_light_focus_n,
+                                            int enter_pl_thresh = 30)
 {
   return moving && pending_light_focus_n > enter_pl_thresh;
+}
+
+/// Floor so Apply can keep pace with DynamicCaptureMovingBgCap (≤2).
+inline int HighPlCruiseApplyFloorN()
+{
+  return 4;
+}
+
+/// RateMatch R0: stop Apply slice after ≥1 column when wall ≥ MissReservedMs.
+/// Enter FOV lit pass is exempt (full Enter budget).
+inline bool ShouldStopRelightApplySlice(double elapsed_ms, int applied_n,
+                                        double slice_ms, bool enter_pass)
+{
+  if (enter_pass || applied_n < 1)
+  {
+    return false;
+  }
+  return elapsed_ms >= slice_ms;
 }
 
 /// S0: Apply drain count = min(budget, ready). Budget ≤0 → 0.
@@ -48,7 +66,7 @@ inline int ClampRelightDrainN(int budget, int ready_n)
   return budget < ready_n ? budget : ready_n;
 }
 
-/// Admit Capture iff pipeline depth below worker-fed buffer (not apply_ms).
+/// Admit Capture iff pipeline depth below Apply capacity (not worker max alone).
 inline bool ShouldAdmitRelightCapture(int completed_n, int inflight_n,
                                       int depth_cap)
 {
@@ -70,15 +88,14 @@ inline int SoftDeferCaptureFloorWhenDepthFull(bool soft_defer_or_miss_hole,
   return bg_cap < 1 ? 1 : bg_cap;
 }
 
-/// Underfeet/focus: keep live GPU draw even if FullyDark face flag is set
-/// while repair is in progress (stall flip hide↔show).
-inline bool ShouldKeepLiveGpuOpaqueDespiteFullyDark(bool has_live_gpu_draw,
-                                                    int horiz,
-                                                    bool has_repair_progress,
-                                                    int underfeet_horiz = 1)
+/// Keep live GPU draw even if FullyDark face flag is set while repair is in
+/// progress. RateMatch R2: LitDrawable ring (default), not underfeet-only.
+inline bool ShouldKeepLiveGpuOpaqueDespiteFullyDark(
+    bool has_live_gpu_draw, int horiz, bool has_repair_progress,
+    int keep_horiz = kVisualStageLitDrawableHoriz)
 {
   return has_live_gpu_draw && has_repair_progress && horiz >= 0 &&
-         horiz <= underfeet_horiz;
+         horiz <= keep_horiz;
 }
 
 /// P2/P6/LitRing/Flicker: cruise Apply — caps from per-column unit cost, not

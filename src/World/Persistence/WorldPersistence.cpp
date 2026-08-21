@@ -991,14 +991,19 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     bg_cap = ClampCaptureMovingBgCapWithHoles(bg_cap, moving, visual_holes,
                                               dynamic_cap);
   }
-  // ColdFix P1: queue-depth admit (completed+inflight < max_inflight). SoftDefer
-  // / miss keep a floor of 1 so depth-full cannot kill catastrophic Capture.
-  if (!enter_fov_lit && max_inflight > 0)
+  // ColdFix P1 / RateMatch R1: admit depth = Apply capacity (apply_n_prev+1),
+  // not raw worker max_inflight — SoftDefer/miss keep floor of 1.
+  if (!enter_fov_lit)
   {
+    const auto &telem = world.GetPhysicsTelemetry();
     const int completed_n =
         static_cast<int>(world.GetRelightCompletedSize());
     const int inflight_n = world.GetAsyncRelightInFlightCount();
-    if (!ShouldAdmitRelightCapture(completed_n, inflight_n, max_inflight))
+    const int apply_cap =
+        std::max(1, telem.RelightApplyNPrev) + 1;
+    const int depth_cap =
+        max_inflight > 0 ? std::min(max_inflight, apply_cap) : apply_cap;
+    if (!ShouldAdmitRelightCapture(completed_n, inflight_n, depth_cap))
     {
       const bool soft_defer_or_miss =
           (visual_holes && focus_pending_mid) ||
@@ -1231,13 +1236,14 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       // finalize_pending_gate=true can be starved and PendingLight keeps
       // rising while mesh_async stays at 0.
       const bool remainder_priority = horiz_dist <= focus_radius;
-      // ColdFix: when pipeline depth is full, stash YBand once (no Enqueue
-      // ClearColumnLightComplete storm / duplicate far push).
-      const bool depth_full =
-          max_inflight > 0 &&
-          !ShouldAdmitRelightCapture(
-              static_cast<int>(world.GetRelightCompletedSize()),
-              world.GetAsyncRelightInFlightCount(), max_inflight);
+      // ColdFix / RateMatch R1: stash when Apply-capacity depth is full.
+      const auto &telem = world.GetPhysicsTelemetry();
+      const int apply_cap = std::max(1, telem.RelightApplyNPrev) + 1;
+      const int depth_cap =
+          max_inflight > 0 ? std::min(max_inflight, apply_cap) : apply_cap;
+      const bool depth_full = !ShouldAdmitRelightCapture(
+          static_cast<int>(world.GetRelightCompletedSize()),
+          world.GetAsyncRelightInFlightCount(), depth_cap);
       if (depth_full)
       {
         PendingTerrainColumnRelightYBands[col] =

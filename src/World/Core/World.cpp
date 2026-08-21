@@ -2477,8 +2477,8 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
   {
     return true;
   }
-  // ColdFix P3: underfeet keep live GPU opaque while FullyDark flag + repair
-  // in progress (VB stalled flip hide↔show).
+  // ColdFix P3 / RateMatch R2: LitDrawable keep live GPU opaque while FullyDark
+  // flag + repair in progress (VB / ring blink hide↔show).
   if (MeshService->GetCache().HasLiveGpuDraw(chunk_coord))
   {
     const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
@@ -4716,9 +4716,20 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       AsyncRelightColumnsInFlight.erase(glm::ivec2(chunk.x, chunk.z));
     }
   }
-  for (RelightComputeResult &result :
-       AsyncRelight->DrainCompleted(max_per_frame))
+  const double slice_ms =
+      static_cast<double>(URuntimeTuning::Get().MissReservedMs);
+  const bool enter_pass = EnterFovLitPassActive;
+  // RateMatch R0: DrainUpTo(1) loop so MissReservedMs slice can stop mid-budget
+  // (DrainCompleted(N) would MarkRelit all N before any early-out).
+  while (applied < max_per_frame)
   {
+    std::vector<RelightComputeResult> batch =
+        AsyncRelight->DrainCompleted(/*max_per_frame=*/1);
+    if (batch.empty())
+    {
+      break;
+    }
+    RelightComputeResult &result = batch.front();
     ++applied;
     std::vector<glm::ivec3> relit_coords;
     relit_coords.reserve(result.chunks.size());
@@ -4784,6 +4795,14 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       {
         Persistence->TryEnqueueTerrainColumnRelight(*this, pos.x, pos.z);
       }
+    }
+    const double elapsed_ms =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - t0)
+            .count();
+    if (ShouldStopRelightApplySlice(elapsed_ms, applied, slice_ms, enter_pass))
+    {
+      break;
     }
   }
   const auto t1 = std::chrono::high_resolution_clock::now();
@@ -5133,36 +5152,26 @@ void UWorld::TickAsyncChunkSystems()
   }
   const bool moving =
       LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold;
-  // Cold high-PL: reuse Enter Apply budget (64) — Cruise ladder caps at 1
-  // when unit_ms≈12 and starves PL≈60 (manual 123613).
-  const bool enter_apply_cruise =
-      ShouldUseEnterApplyBudgetOnCruise(moving, pending_light_focus_n);
-  if (enter_apply_cruise)
+  // RateMatch R0: high-PL cruise floors Apply at 4 (pace DynamicCapture≤2),
+  // not Enter×64 + double Drain (manual 190534 hitch apply_n=12 / wall≈1s).
+  const bool high_pl_cruise =
+      ShouldUseHighPlCruiseApplyFloor(moving, pending_light_focus_n);
+  drain_budget = CruiseRelightApplyBudget(
+      moving, PhysicsTelemetryData.RelightApplyMsPrev, drain_budget,
+      PhysicsTelemetryData.RelightFifoPinDropNPrev == 0,
+      near_pending_light || underfeet_pending_light,
+      PhysicsTelemetryData.RelightApplyNPrev);
+  if (high_pl_cruise)
   {
-    drain_budget =
-        std::max(drain_budget, EnterFovRelightApplyBudget());
-  }
-  else
-  {
-    drain_budget = CruiseRelightApplyBudget(
-        moving, PhysicsTelemetryData.RelightApplyMsPrev, drain_budget,
-        PhysicsTelemetryData.RelightFifoPinDropNPrev == 0,
-        near_pending_light || underfeet_pending_light,
-        PhysicsTelemetryData.RelightApplyNPrev);
+    drain_budget = std::max(drain_budget, HighPlCruiseApplyFloorN());
   }
   // Player edits and near first-light columns remesh immediately.
   const bool priority_mesh =
       pending_player > 0 || near_pending_light || underfeet_pending_light ||
       (MeshService && MeshService->GetDirtyCount() < 48);
   const auto relight_t0 = std::chrono::high_resolution_clock::now();
-  // ColdFix P2: Enter-style double Drain on high-PL cruise (SoT TickEnterFovLitPass).
-  int applied =
+  const int applied =
       DrainAsyncRelightResults(drain_budget, priority_mesh, true);
-  if (enter_apply_cruise)
-  {
-    applied +=
-        DrainAsyncRelightResults(drain_budget, priority_mesh, true);
-  }
   const double apply_ms =
       std::chrono::duration<double, std::milli>(
           std::chrono::high_resolution_clock::now() - relight_t0)
