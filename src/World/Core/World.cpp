@@ -2448,8 +2448,31 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
   }
   if (MeshService->HasMeshSatisfyingColumnReady(chunk_coord))
   {
-    // ColPipe P3: published Satisfying mesh always draws (keep-until-replace).
-    // FullyDark heal is Dirty remesh — never blank opaque underfeet/ring.
+    // LitRing: published FullyDark in LitDrawable/underfeet → hole until lit
+    // or settled true-dark (stable hole > blank↔dark flicker).
+    const bool fully_dark =
+        MeshService->GetCache().ChunkHasFullyDarkFace(chunk_coord) &&
+        !MeshService->ChunkHasLitDrawableFace(chunk_coord);
+    if (fully_dark)
+    {
+      const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+      const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
+      const int horiz =
+          std::max(std::abs(chunk_coord.x - focus_chunk.x),
+                   std::abs(chunk_coord.z - focus_chunk.z));
+      const glm::ivec2 col_xz(chunk_coord.x, chunk_coord.z);
+      const bool pending = IsPendingLightBeforeMesh(col_xz);
+      const bool stale =
+          MeshService->ChunkHasStaleDarkFaces(chunk_coord, BlockWorld);
+      const bool lit_ready =
+          IsColumnLitReady(glm::ivec3(col_xz.x, 0, col_xz.y));
+      const bool settled_dark = !pending && lit_ready && !stale;
+      if (!settled_dark &&
+          ShouldHideFullyDarkUntilLitInRing(horiz, true, pending))
+      {
+        return false;
+      }
+    }
     return true;
   }
   const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);

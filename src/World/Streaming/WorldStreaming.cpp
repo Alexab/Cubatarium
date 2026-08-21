@@ -22,6 +22,7 @@
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Streaming/RelightFifoPolicy.h"
+#include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/PhysicsStepPolicy.h"
 #include "App/Settings/RenderSettings.h"
 #include "Blocks/BlockRegistry.h"
@@ -329,6 +330,9 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               std::max(std::abs(coord.x - focus_ground.x),
                        std::abs(coord.z - focus_ground.z));
           const bool underfeet = horiz <= 1;
+          // LitRing B3: commit-time seed admits LitDrawable ring (not only
+          // streamer focus radius) so cold enter avoids full async backlog.
+          const bool lit_ring = horiz <= kVisualStageLitDrawableHoriz;
           const bool admit_far_dirty =
               LastPressureCaps.level == StreamingPressureLevel::Green;
           // Flat / no lit-gate: mesh immediately (no PendingLight contract).
@@ -365,8 +369,9 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                 settings.MovementPrefetchThreshold;
             const SeedDecision seed_decision =
                 EvaluateSeedDecision(SeedDecisionInput{
-                    underfeet, near_focus, neighborhood_ok, moving_cruise,
-                    commit_frame_ms, world.PhysicsTelemetryData.VisualHoles,
+                    underfeet, near_focus || lit_ring, neighborhood_ok,
+                    moving_cruise, commit_frame_ms,
+                    world.PhysicsTelemetryData.VisualHoles,
                     LastPendingLightFocus});
             const bool relight_priority = seed_decision.priority_fifo;
             auto enqueue_pending_light = [&]() {

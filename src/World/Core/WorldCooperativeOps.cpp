@@ -30,6 +30,7 @@
 #include "WorldGen/Stages/WorldGenStages.h"
 #include <algorithm>
 #include <chrono>
+#include <climits>
 #include <cmath>
 #include <iostream>
 #include <string>
@@ -1870,6 +1871,9 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         StreamingWarmupLastRawDebt = 0;
         StreamingWarmupDisplayDebt = 0;
         StreamingWarmupLitWarnLogged = false;
+        StreamingWarmupBestFovDebt = INT_MAX;
+        StreamingWarmupLitProgressAt = StreamingWarmupWallStart;
+        StreamingWarmupLitStallLogged = false;
         if (!world.IsEnterLitGateActive())
         {
           UEnterLitDiagnostics::BeginSession();
@@ -1884,6 +1888,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       bool underfeet_lit = false;
       const int raw_debt = world.CountCreateNearFovWarmupDebt(&underfeet_lit);
       const int fov_debt = world.CountEnterFovLitDebt();
+      if (fov_debt < StreamingWarmupBestFovDebt)
+      {
+        StreamingWarmupBestFovDebt = fov_debt;
+        StreamingWarmupLitProgressAt = std::chrono::steady_clock::now();
+      }
       const auto &phys = world.GetPhysicsTelemetry();
       const int debt = raw_debt + fov_debt + phys.FocusDarkMesh +
                        phys.SoftDeferEmptyPlaceholderN;
@@ -1913,6 +1922,22 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                     std::chrono::steady_clock::now() -
                                     StreamingWarmupWallStart)
                                     .count();
+      const double ms_since_lit_progress =
+          std::chrono::duration<double, std::milli>(
+              std::chrono::steady_clock::now() - StreamingWarmupLitProgressAt)
+              .count();
+      const bool lit_progress_stalled = EnterLitDebtProgressStalled(
+          fov_debt, StreamingWarmupBestFovDebt, underfeet_lit,
+          ms_since_lit_progress,
+          static_cast<double>(EnterLitProgressStallMs()), elapsed_ms,
+          static_cast<double>(CreateSpawnWarmupSoftWallMs()));
+      if (lit_progress_stalled && !StreamingWarmupLitStallLogged)
+      {
+        StreamingWarmupLitStallLogged = true;
+        std::cerr << "[LitRing] create lit progress-stall abort (" << elapsed_ms
+                  << "ms, lit=" << fov_debt
+                  << ", best=" << StreamingWarmupBestFovDebt << ")\n";
+      }
       EnterLitSample lit_sample{};
       UEnterLitDiagnostics::Sample(world, elapsed_ms, lit_sample);
       UEnterLitDiagnostics::MaybeLog(lit_sample, StreamingWarmupTicks);
@@ -1932,8 +1957,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       }
       Report(sink, "prepare_view",
              prepare_view_base + kCreateWeightPrepare * stream_inner, status);
-      // Era42: never leave create bar while lit debt remains (require_zero).
-      // Soft/hard create walls apply only after lit debt clears.
+      // LitRing C: RequireZero holds until debt clears OR progress stall / wall.
       const bool require_zero = URuntimeTuning::Get().EnterLitRequireZero;
       if (spawn_settled)
       {
@@ -1941,14 +1965,14 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
       }
       else if (fov_debt > 0)
       {
-        if (!require_zero &&
-            !ShouldHoldEnterBarForFovLit(
+        if (!ShouldHoldEnterBarForFovLit(
                 fov_debt, elapsed_ms,
-                URuntimeTuning::Get().EnterFovLitHardWallMs,
-                /*require_zero=*/false))
+                URuntimeTuning::Get().EnterFovLitHardWallMs, require_zero,
+                lit_progress_stalled))
         {
-          std::cerr << "[Era42] create lit hard-wall abort (" << elapsed_ms
-                    << "ms, lit=" << fov_debt << ")\n";
+          std::cerr << "[LitRing] create lit leave (" << elapsed_ms
+                    << "ms, lit=" << fov_debt
+                    << ", stall=" << (lit_progress_stalled ? 1 : 0) << ")\n";
         }
         else
         {
@@ -1996,6 +2020,9 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
           StreamingWarmupAbortDrainMode = false;
           StreamingWarmupAbortLogged = false;
           StreamingWarmupAbortCapLogged = false;
+          StreamingWarmupBestFovDebt = INT_MAX;
+          StreamingWarmupLitProgressAt = StreamingWarmupWallStart;
+          StreamingWarmupLitStallLogged = false;
         }
         EnterWarmupStepSample step_sample{};
         const auto &phys_before = world.GetPhysicsTelemetry();
@@ -2029,10 +2056,19 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         }
         ++StreamingWarmupTicks;
         const int fov_debt = world.CountEnterFovLitDebt();
+        if (fov_debt < StreamingWarmupBestFovDebt)
+        {
+          StreamingWarmupBestFovDebt = fov_debt;
+          StreamingWarmupLitProgressAt = std::chrono::steady_clock::now();
+        }
         const double elapsed_ms = std::chrono::duration<double, std::milli>(
                                       std::chrono::steady_clock::now() -
                                       StreamingWarmupWallStart)
                                       .count();
+        const double ms_since_lit_progress =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - StreamingWarmupLitProgressAt)
+                .count();
         EnterLitSample lit_sample{};
         UEnterLitDiagnostics::Sample(world, elapsed_ms, lit_sample);
         UEnterLitDiagnostics::MaybeLog(lit_sample, StreamingWarmupTicks);
@@ -2073,6 +2109,23 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         const int visibility_debt = lit_sample.visibility_debt;
         const bool mesh_blockers_clear = !world.NeedsEnterGameMeshWarmup();
         const bool underfeet_present = world.IsEnterUnderfeetPresentReady();
+        const bool lit_progress_stalled = EnterLitDebtProgressStalled(
+            fov_debt, StreamingWarmupBestFovDebt, underfeet_present,
+            ms_since_lit_progress,
+            static_cast<double>(EnterLitProgressStallMs()), elapsed_ms,
+            static_cast<double>(CreateSpawnWarmupSoftWallMs()));
+        if (lit_progress_stalled && !StreamingWarmupLitStallLogged)
+        {
+          StreamingWarmupLitStallLogged = true;
+          LOG(WARNING) << "[LitRing] load lit progress-stall abort elapsed_ms="
+                       << elapsed_ms << " lit=" << fov_debt
+                       << " best=" << StreamingWarmupBestFovDebt;
+          CubatariumFlushLogs();
+        }
+        if (lit_progress_stalled)
+        {
+          StreamingWarmupAbortDrainMode = true;
+        }
         const glm::ivec3 underfeet_center =
             UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
         const int underfeet_gpu_pending =
@@ -2082,18 +2135,22 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
             StreamingWarmupAbortDrainMode, elapsed_ms,
             URuntimeTuning::Get().EnterForceInGameMs, underfeet_present,
             underfeet_gpu_pending);
-        // SOTA: enter ready = spawn-ring Presentable + vis. Snapshot FOV debt
-        // drives lit-quiesce, not a second PrepareView gate (blips 0→50).
+        // LitRing C: stall with underfeet → settle with FOV holes OK (finite load).
         const bool load_settled =
             (ring_ready && visibility_ready && mesh_blockers_clear) ||
+            (lit_progress_stalled && underfeet_present &&
+             underfeet_gpu_pending <= 0) ||
             (abort_underfeet_cap && underfeet_present &&
-             underfeet_gpu_pending <= 0 && fov_debt <= 0);
-        if (abort_underfeet_cap && load_settled && !StreamingWarmupAbortCapLogged)
+             underfeet_gpu_pending <= 0 &&
+             (fov_debt <= 0 || lit_progress_stalled));
+        if ((abort_underfeet_cap || lit_progress_stalled) && load_settled &&
+            !StreamingWarmupAbortCapLogged)
         {
           StreamingWarmupAbortCapLogged = true;
           LOG(WARNING) << "[EnterWarmup] coop_abort_underfeet_cap elapsed_ms="
                        << elapsed_ms << " ring_ready=" << (ring_ready ? 1 : 0)
-                       << " visibility_debt=" << visibility_debt;
+                       << " visibility_debt=" << visibility_debt
+                       << " lit_stall=" << (lit_progress_stalled ? 1 : 0);
           CubatariumFlushLogs();
         }
         if (!StreamingWarmupAbortDrainMode &&
@@ -2162,6 +2219,8 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     StreamingWarmupLitWarnLogged = false;
     StreamingWarmupAbortDrainMode = false;
     StreamingWarmupAbortLogged = false;
+    StreamingWarmupBestFovDebt = INT_MAX;
+    StreamingWarmupLitStallLogged = false;
     const float prepare_view_base =
         Kind == WorldCoopKind::Create
             ? (CooperativeCreateMeshProgressBase() + kCreateWeightMeshWarmup)

@@ -654,6 +654,22 @@ int main()
     Expect(!ShouldHoldEnterBarForFovLit(5, 120000.0, EnterFovLitHardWallMs(),
                                        /*require_zero=*/false),
            "Era42: require_zero=false releases past wall");
+    Expect(!ShouldHoldEnterBarForFovLit(5, 1000.0, EnterFovLitHardWallMs(),
+                                       /*require_zero=*/true,
+                                       /*progress_stalled=*/true),
+           "LitRing C: progress stall releases RequireZero");
+    using cutum::EnterLitDebtProgressStalled;
+    using cutum::EnterLitProgressStallMs;
+    Expect(EnterLitProgressStallMs() == 20000, "LitRing C: stall wall 20s");
+    Expect(EnterLitDebtProgressStalled(10, 10, true, 20000.0, 20000.0, 25000.0,
+                                       12000.0),
+           "LitRing C: stalled debt with underfeet → abort");
+    Expect(!EnterLitDebtProgressStalled(10, 10, false, 20000.0, 20000.0, 5000.0,
+                                        12000.0),
+           "LitRing C: no abort before soft wall without underfeet");
+    Expect(!EnterLitDebtProgressStalled(8, 10, true, 20000.0, 20000.0, 25000.0,
+                                        12000.0),
+           "LitRing C: debt improved below best ⇒ not stalled");
   }
 
   // --- Era43 Enter lit gate / snapshot ---
@@ -1277,8 +1293,8 @@ int main()
            "Done+underfeet ignores hinterland mesh debt");
     Expect(!EnterSpawnRingIgnoresHinterlandMeshDebt(true, 1, true),
            "visibility debt keeps full ring");
-    Expect(!ShouldHideEnterFullyDark(true, false, true, false, false),
-           "ColPipe P7: enter FullyDark not hidden (keep-until-replace)");
+    Expect(ShouldHideEnterFullyDark(true, false, true, false, false),
+           "LitRing: enter FullyDark hidden until lit/true-dark");
     Expect(!ShouldHideEnterFullyDark(true, false, false, false, true),
            "true-dark not hidden");
     Expect(!ShouldHideEnterFullyDark(true, false, false, true, false),
@@ -1299,19 +1315,19 @@ int main()
            "hide r=4 does not hide horiz 5");
     Expect(ShouldHideUncomputedFullyDarkInRing(4, true, true, false),
            "pending light FullyDark hidden in r=4 when unpublished");
-    Expect(!ShouldHideUncomputedFullyDarkInRing(4, true, false, true),
-           "Era22: stale FullyDark heal-in-place (not hide)");
+    Expect(ShouldHideUncomputedFullyDarkInRing(4, true, false, true),
+           "LitRing: stale FullyDark → hole until lit remesh");
     Expect(ShouldHideUncomputedFullyDarkInRing(4, true, false, false),
            "FullyDark without true_dark flag stays hidden when unpublished");
     Expect(!ShouldHideUncomputedFullyDarkInRing(4, true, false, false, 4, true),
            "baked true-dark draws (not hidden)");
     Expect(!ShouldHideUncomputedFullyDarkInRing(5, true, true, true),
            "uncomputed hide stays r=4");
-    Expect(!ShouldHideUncomputedFullyDarkInRing(1, true, true, false),
-           "Era22: nh1 FullyDark plug kept (no hole flicker underfeet)");
-    Expect(!ShouldHideUncomputedFullyDarkInRing(4, true, true, false, 4, false,
-                                                false, true),
-           "ColPipe P3: published mesh never hidden");
+    Expect(ShouldHideUncomputedFullyDarkInRing(1, true, true, false),
+           "LitRing: nh1 FullyDark → hole (no dark plug)");
+    Expect(ShouldHideUncomputedFullyDarkInRing(4, true, true, false, 4, false,
+                                               false, true),
+           "LitRing: published FullyDark still hole until lit");
     Expect(UnderfeetNeedUrgent(true, false, false),
            "missing feet column ⇒ underfeet need");
     Expect(UnderfeetNeedUrgent(false, true, false),
@@ -1866,16 +1882,16 @@ int main()
     using cutum::CruiseRelightApplyBudget;
     Expect(CruiseRelightApplyBudget(true, 10.0, 4, false) == 1,
            "P2: moving caps to 1");
-    Expect(CruiseRelightApplyBudget(true, 3.0, 4, true) == 3,
-           "ColPipe P6: moving cheap+stable allows 3");
+    Expect(CruiseRelightApplyBudget(true, 3.0, 4, true) == 4,
+           "LitRing B1: moving cheap+stable allows 4");
     Expect(CruiseRelightApplyBudget(false, 10.0, 4, false) == 4,
            "P2: idle returns requested");
     Expect(CruiseRelightApplyBudget(true, 10.0, 0, true) == 0,
            "P2: requested 0 returns 0");
     Expect(CruiseRelightApplyBudget(true, 10.0, 8, false, true) == 1,
            "P2: near pending does not bypass moving cap");
-    Expect(CruiseRelightApplyBudget(true, 2.0, 12, true, true) == 3,
-           "ColPipe P6: pin+apply<4 ⇒ cap 3");
+    Expect(CruiseRelightApplyBudget(true, 2.0, 12, true, true) == 5,
+           "LitRing B1: pin+apply<3 ⇒ cap 5");
     Expect(CruiseRelightApplyBudget(true, 10.0, 3, true, true) == 1,
            "P2: expensive apply keeps moving cap at 1");
   }

@@ -154,12 +154,16 @@ inline bool EnterSpawnRingIgnoresHinterlandMeshDebt(bool enter_gate_active,
 }
 
 /// Hide FullyDark in enter ring — ColPipe P7: keep-until-replace; never blank.
-inline bool ShouldHideEnterFullyDark(bool /*fully_dark*/, bool /*pending*/,
+/// LitRing: enter FullyDark → hole until lit drawable or settled true-dark.
+inline bool ShouldHideEnterFullyDark(bool fully_dark, bool /*pending*/,
                                      bool /*stale_field*/,
-                                     bool /*has_lit_drawable*/,
-                                     bool /*true_dark*/)
+                                     bool has_lit_drawable, bool true_dark)
 {
-  return false;
+  if (!fully_dark || has_lit_drawable || true_dark)
+  {
+    return false;
+  }
+  return true;
 }
 
 /// Load MeshWarmup must not FirstMesh/Dirty spawn ring while relight is deferred.
@@ -536,9 +540,15 @@ inline float EnterFovLitProgressFraction(int debt, int peak_debt)
 /// When require_zero (default), hard-wall does not release the bar.
 inline bool ShouldHoldEnterBarForFovLit(int fov_lit_debt, double elapsed_ms,
                                         int hard_wall_ms = EnterFovLitHardWallMs(),
-                                        bool require_zero = true)
+                                        bool require_zero = true,
+                                        bool progress_stalled = false)
 {
   if (fov_lit_debt <= 0)
+  {
+    return false;
+  }
+  // LitRing C: progress stall exits RequireZero (holes OK, no MarkAllDirty).
+  if (progress_stalled)
   {
     return false;
   }
@@ -547,6 +557,36 @@ inline bool ShouldHoldEnterBarForFovLit(int fov_lit_debt, double elapsed_ms,
     return true;
   }
   return elapsed_ms < static_cast<double>(hard_wall_ms);
+}
+
+/// LitRing C: no FOV-lit progress for stall_ms while underfeet already lit
+/// (or soft wall elapsed) → abort drain / force InGame with holes OK.
+inline int EnterLitProgressStallMs()
+{
+  return 20000;
+}
+
+inline bool EnterLitDebtProgressStalled(int fov_debt, int best_fov_debt,
+                                        bool underfeet_present_or_lit,
+                                        double ms_since_progress,
+                                        double stall_limit_ms,
+                                        double elapsed_ms,
+                                        double soft_wall_ms)
+{
+  if (fov_debt <= 0)
+  {
+    return false;
+  }
+  if (ms_since_progress < stall_limit_ms)
+  {
+    return false;
+  }
+  // Require underfeet present OR soft wall so we never abort mid first paint.
+  if (!underfeet_present_or_lit && elapsed_ms < soft_wall_ms)
+  {
+    return false;
+  }
+  return fov_debt >= best_fov_debt;
 }
 
 /// Era43: skip streaming warmup while enter lit gate drains snapshot.

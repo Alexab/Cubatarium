@@ -3458,13 +3458,16 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   // Era21 I-R1: keep live GPU SSBO until BindCommitted (PendingReplace).
   // Underfeet: also retain on intentional empty (no PreferKick storm).
   // P4: vis/keep ring also keeps until Bind (cruise pool 13.8→2 MB).
+  // LitRing: lit GpuPacked keep-until-replace (never free into dark plug).
   if (ShouldDeferFreeChunkUntilPackedReplace(had_gpu_drawable,
                                              new_cpu_drawable) &&
       (!intentional_empty ||
        ShouldRetainUnderfeetGpuOnEmptyReplace(underfeet_lease, had_gpu_drawable,
                                               intentional_empty) ||
-      ShouldKeepPackedDrawUntilBind(had_gpu_drawable, gpu_keep_horiz,
-                                    gpu_keep_ring, false)))
+       ShouldKeepPackedDrawUntilBind(had_gpu_drawable, gpu_keep_horiz,
+                                     gpu_keep_ring, false) ||
+       ShouldKeepLitPackedUntilBind(had_lit_mesh && had_gpu_drawable,
+                                    gpu_keep_horiz, gpu_keep_ring, false)))
   {
     ++MeshReplaceHoleAvoided;
     // Keep same live SSBO — do not mark GreedyBatchesDirty/ForceFlat (refs OK).
@@ -4940,13 +4943,16 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     // Era21 I-R1: keep live GPU until BindCommitted (PendingReplace).
     // Underfeet: retain on intentional empty (no PreferKick).
     // P4: vis/keep ring also keeps until Bind.
+    // LitRing: lit GpuPacked keep-until-replace.
     if (ShouldDeferFreeChunkUntilPackedReplace(had_gpu_drawable,
                                                new_cpu_drawable) &&
         (!intentional_empty ||
          ShouldRetainUnderfeetGpuOnEmptyReplace(underfeet_lease, had_gpu_drawable,
                                                 intentional_empty) ||
          ShouldKeepPackedDrawUntilBind(had_gpu_drawable, gpu_keep_horiz,
-                                       gpu_keep_ring, false)))
+                                       gpu_keep_ring, false) ||
+         ShouldKeepLitPackedUntilBind(had_lit_mesh && had_gpu_drawable,
+                                      gpu_keep_horiz, gpu_keep_ring, false)))
     {
       ++MeshReplaceHoleAvoided;
       // Same live SSBO — do not ForceFlatRebuild / GreedyBatchesDirty (refs OK).

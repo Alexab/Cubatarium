@@ -42,6 +42,24 @@ Process: code → unit → build → suite → journal → commit per phase.
 
 \*P8 land-stand full-suite row is an outlier (recheck recovers).
 
+## LitRing — light speed + no dark frames (2026-08-20)
+
+Plan: lit ring + ускорение light (без тёмных кадров). Invariants: hole > FullyDark
+plug; ColPipe owner kept; enter finite (soft/stall walls, no infinite RequireZero).
+
+| Step | Phase ID | Change | Result |
+| --- | --- | --- | --- |
+| A | `LitRing_A_no_dark` | `IsChunkSliceRenderReady` hides FullyDark in LitDrawable until lit/true-dark; lit keep-until-replace; policy hide nh1/published dark | units OK (`miss_first`, `streaming_render_ready`) |
+| B1 | `LitRing_B1_apply` | `CruiseRelightApplyBudget` cheap pin cap 3→5 (`apply_ms<3`) / 4 (`<4`) | units OK |
+| C | `LitRing_C_enter_stall` | Enter FOV lit progress-stall (20s) releases RequireZero; underfeet+stall → settle with holes OK | units OK |
+| B2/B3 | `LitRing_B3_seed` | Commit seed admits LitDrawable ring; cruise pending sync trigger 24→16 | units OK |
+| D | `LitRing_D` | Suite idle/stand/cruise/ocean + Release `bin/Cubatarium.exe` | stamp `20260820-224246`. SHA256 `388B543B09CAD87F00320AFA245F7EE32AD3C030A1576FCC5D875079A57B4308`. land-cruise **PL med=0** wall=67 fly≈79 BS%=5 gates 9/23; idle PL=4 BS%=0; stand PL=32 BS%=2; ocean PL=30 BS%=3. **VB% blink=0** all four (no dark flicker telem). EH%=100 expected (stable holes > FullyDark plugs). vs P0 cruise wall_fly 80.8 → ~79 (within +15%). |
+
+Cold-enter manual DoD (≥60s after load): verify underfeet FullyDark draw≈0,
+`uf_flips`≈0 after settle, PL med↓ vs `220431`, `relight_apply_n`↑ — run against
+Release `bin/Cubatarium.exe` matching the SHA above. Suite enter telem
+(`enter_pending_max`≈8 on land-cruise) already << cold `220431` PL≈50–60.
+
 ## Verdict
 
 Column Pipeline ownership landed: single admission (ColumnFlow rank upgrade),
@@ -49,3 +67,6 @@ single post-light remesh (MarkRelit Dirty XOR path), keep-until-replace draw,
 SoftDefer gate-only, underfeet Imm removed from emerge. dirty_revisit on stand
 cut ~355→170 on recheck; cruise BS% down vs P0; wall_fly within +15%. ERA22 zoo
 superseded — see `ERA22_EXPERIMENT_LOG.md` Next Planned Steps.
+
+**LitRing follow-on:** presentation no-dark + Apply/seed throughput + finite enter
+stall; suite DoD under `LitRing_D`.

@@ -38,12 +38,15 @@ inline SeedDecision EvaluateSeedDecision(const SeedDecisionInput &in)
 
   // Era14 TD-ARCH-044: widen cheap commit seed so PendingLight trail shrinks.
   // Visual holes: allow slightly hotter frame budget for near sync seed.
+  // LitRing B3: lower pending trigger so LitDrawable ring seeds without FIFO.
   const double cruise_seed_frame_cap =
       in.visual_holes > 0 ? 40.0 : 32.0;
+  const int sync_pending_trigger = in.near_focus ? 16 : 24;
   if (in.moving_cruise)
   {
     // V3 optional: cheap sync seed under high pending_light to shrink FIFO trail.
-    if (in.can_seed && in.near_focus && in.pending_light_focus > 24 &&
+    if (in.can_seed && in.near_focus &&
+        in.pending_light_focus > sync_pending_trigger &&
         in.frame_ms <= cruise_seed_frame_cap + 6.0)
     {
       out.try_sync_seed = true;

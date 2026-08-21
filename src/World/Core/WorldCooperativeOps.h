@@ -2,6 +2,7 @@
 
 #include "Core/Progress/IUProgressSink.h"
 #include <chrono>
+#include <climits>
 #include <filesystem>
 #include <glm/glm.hpp>
 #include <string>
@@ -134,6 +135,10 @@ private:
   bool StreamingWarmupAbortDrainMode{false};
   bool StreamingWarmupAbortLogged{false};
   bool StreamingWarmupAbortCapLogged{false};
+  /// LitRing C: best (lowest) FOV lit debt seen; stall abort when no progress.
+  int StreamingWarmupBestFovDebt{INT_MAX};
+  std::chrono::steady_clock::time_point StreamingWarmupLitProgressAt{};
+  bool StreamingWarmupLitStallLogged{false};
 
   void BeginDeferredRelightQueue(UWorld &world);
   void BeginBulkChunkRelightQueue(UWorld &world);

@@ -119,13 +119,13 @@ int main()
   Expect(!AllowUnlitFirstMesh(false, 4, false, true),
          "Era32: lit-ring missing waits Relight-before-draw");
   {
-    Expect(!ShouldHideUncomputedFullyDarkInRing(1, true, true, false),
-           "Era22: nh1 FullyDark plug kept (no underfeet hole flicker)");
+    Expect(ShouldHideUncomputedFullyDarkInRing(1, true, true, false),
+           "LitRing: nh1 FullyDark → hole (no dark plug)");
     Expect(SoftDeferMeshUntilLitPolicy(false, false, true, true, true, false),
            "Era28: near missing+pending SoftDefer (no Unlit-near)");
     Expect(!AllowUnlitFirstMesh(false, 1, true, true) &&
-               !ShouldHideUncomputedFullyDarkInRing(1, true, true, false),
-           "compose: Unlit-near rejected; nh1 FullyDark still draws as plug");
+               ShouldHideUncomputedFullyDarkInRing(1, true, true, false),
+           "compose: Unlit-near rejected; nh1 FullyDark hole until lit");
   }
   Expect(FirstMeshPruneKeepHoriz(8) == kVisualStageLitDrawableHoriz,
          "FM prune keeps LitDrawable ring, not nh<=2");

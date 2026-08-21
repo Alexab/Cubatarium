@@ -107,6 +107,15 @@ inline bool ShouldKeepPackedDrawUntilBind(bool had_live_gpu_draw, int horiz,
                                           has_replacement_bound);
 }
 
+/// LitRing: lit GpuPacked stays until BindCommitted (never free into dark plug).
+inline bool ShouldKeepLitPackedUntilBind(bool had_lit_drawable, int horiz,
+                                         int keep_horiz,
+                                         bool has_replacement_bound)
+{
+  return ShouldKeepGpuSlotUntilBindInRing(had_lit_drawable, horiz, keep_horiz,
+                                          has_replacement_bound);
+}
+
 /// Closeout C dual-Q: lit drawable remesh → RemeshQ; missing/FullyDark → FM.
 inline bool ShouldRouteRemeshToFirstMeshQueue(bool has_drawable,
                                              bool fully_dark_drawable)

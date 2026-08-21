@@ -121,6 +121,18 @@ int main()
     Expect(d.cheap_seed, "high pending uses cheap seed");
   }
 
+  {
+    SeedDecisionInput in;
+    in.near_focus = true;
+    in.can_seed = true;
+    in.moving_cruise = true;
+    in.pending_light_focus = 18;
+    in.frame_ms = 36.0;
+    const auto d = EvaluateSeedDecision(in);
+    Expect(d.try_sync_seed, "LitRing B3: pending>16 cruise → cheap sync");
+    Expect(d.cheap_seed, "LitRing B3 pending path uses cheap seed");
+  }
+
   if (gFails != 0)
   {
     std::cerr << gFails << " failures\n";
