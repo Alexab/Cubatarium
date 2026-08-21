@@ -2632,8 +2632,11 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   const bool defer_until_lit = DeferMeshUntilLit && DeferMeshUntilLit(coord);
   const bool had_mesh = HasDrawableGreedyMesh(coord);
   const bool had_lit_mesh = had_mesh && !ChunkHasFullyDarkFace(coord);
+  const bool had_live_lit_gpu =
+      ChunkHasLiveGpuDraw(coord) && !ChunkHasFullyDarkFace(coord);
   if (ShouldRejectDarkMeshCommit(gpu_result.hasFullyDarkFace,
-                                 defer_until_lit && had_mesh, had_lit_mesh))
+                                 defer_until_lit && had_mesh, had_lit_mesh,
+                                 had_live_lit_gpu))
   {
     // Free staging only — FreeChunk(coord) would drop the live lit mesh that
     // ProcessSnapshot used to overwrite in-place (opaque collapse 213543).
@@ -3360,9 +3363,11 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   // Empty SoftDefer placeholders must not count as had_lit (keep dark forever).
   const bool had_mesh = HasDrawableGreedyMesh(result.coord);
   const bool had_lit_mesh = had_mesh && !ChunkHasFullyDarkFace(result.coord);
+  const bool had_live_lit_gpu =
+      ChunkHasLiveGpuDraw(result.coord) && !ChunkHasFullyDarkFace(result.coord);
   const bool new_dark = BatchesHaveFullyDarkFace(result.batches);
   if (ShouldRejectDarkMeshCommit(new_dark, defer_until_lit && had_mesh,
-                                 had_lit_mesh))
+                                 had_lit_mesh, had_live_lit_gpu))
   {
     // Keep prior lit mesh (or hole). MarkRelit owns requeue when SoftDefer+had_mesh.
     const bool remesh_after = RemeshAfterApply.erase(result.coord) > 0;
@@ -3477,10 +3482,10 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     // CPU batches still update for Satisfying / seam queries.
     PendingMeshRevisionBump = true;
     CrossBatchesDirty = true;
-    // Do not MarkDirty here — that re-enters CPU remesh → churn storm
-    // (era21_p1_land opaque_idle_churn≈1323). Live SSBO stays until a later
-    // GpuExtract BindCommitted or intentional unload; PreferKick if already queued.
-    if (IsPendingGpuApply(result.coord))
+    // PreferKick only for lit (or non-dark) pending replacement — not dark-over-lit.
+    if (IsPendingGpuApply(result.coord) &&
+        ShouldPreferKickPendingGpuAfterLitKeep(
+            had_lit_mesh && had_gpu_drawable, new_dark))
     {
       PreferKickPendingGpuQueued(result.coord);
     }
@@ -3497,11 +3502,14 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       const bool fully_dark_drawable =
           HasDrawableGreedyMesh(result.coord) &&
           ChunkHasFullyDarkFace(result.coord);
-      if (gpu_pending)
+      if (gpu_pending &&
+          ShouldPreferKickPendingGpuAfterLitKeep(
+              had_lit_mesh && had_gpu_drawable, new_dark))
       {
         PreferKickPendingGpuQueued(result.coord);
       }
-      else if (ShouldMarkDirtyAfterRemeshAfterApplyCommit(
+      else if (!gpu_pending &&
+               ShouldMarkDirtyAfterRemeshAfterApplyCommit(
                    Dirty.Contains(result.coord), gpu_pending, enter_gate,
                    needs_first_mesh, fully_dark_drawable))
       {
@@ -4870,11 +4878,13 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     // place Immediate rejects dark rebuild and forever keeps undrawn (184035).
     const bool had_mesh = HasDrawableGreedyMesh(chunkCoord);
     const bool had_lit_mesh = had_mesh && !ChunkHasFullyDarkFace(chunkCoord);
+    const bool had_live_lit_gpu =
+        ChunkHasLiveGpuDraw(chunkCoord) && !ChunkHasFullyDarkFace(chunkCoord);
     const bool new_dark = BatchesHaveFullyDarkFace(new_batches);
     // First mesh (!had_mesh): never SoftDefer-reject dark place — otherwise
     // side-wall / far-focus edits stay invisible until Capture clears the gate.
     if (ShouldRejectDarkMeshCommit(new_dark, defer_until_lit && had_mesh,
-                                   had_lit_mesh))
+                                   had_lit_mesh, had_live_lit_gpu))
     {
       // SoftDefer+had_mesh: wait MarkRelit (no Dirty thrash — manual 195432).
       if (ShouldMarkDirtyAfterDarkSoftDeferReject(/*remesh_after_apply=*/false,
@@ -4914,7 +4924,9 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     {
       NoteSoftDeferEmptyPublishAvoided(chunkCoord);
       HoldSoftDeferFirstMesh(chunkCoord);
-      if (IsPendingGpuApply(chunkCoord))
+      if (IsPendingGpuApply(chunkCoord) &&
+          ShouldPreferKickPendingGpuAfterLitKeep(
+              had_lit_mesh && had_gpu_drawable, /*new_mesh_fully_dark=*/true))
       {
         PreferKickPendingGpuQueued(chunkCoord);
       }
@@ -4971,7 +4983,9 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
                                   chunkMesh.crossCenters);
       PendingMeshRevisionBump = true;
       CrossBatchesDirty = true;
-      if (IsPendingGpuApply(chunkCoord))
+      if (IsPendingGpuApply(chunkCoord) &&
+          ShouldPreferKickPendingGpuAfterLitKeep(
+              had_lit_mesh && had_gpu_drawable, new_dark))
       {
         PreferKickPendingGpuQueued(chunkCoord);
       }

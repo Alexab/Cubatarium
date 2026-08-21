@@ -898,7 +898,8 @@ void UWorld::RelightPlayerEdit(const std::vector<glm::ivec3> &block_positions,
 void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                                     bool priority_mesh,
                                     const std::vector<glm::ivec2> &primary_grounds,
-                                    bool finalize_pending_gate)
+                                    bool finalize_pending_gate,
+                                    bool primary_only)
 {
   // Era47 KEEP: silence MarkRelit after LIGHT snapshot is done. Do not wait
   // for Dirty/vis remaining — that refeeds remesh and never settles.
@@ -1397,20 +1398,27 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         dirty_max = std::min(column_max_y, band.max_y + 1);
       }
       const bool seam_ok =
-          finalize_pending_gate && !SuppressRelightSeamDirty;
+          finalize_pending_gate && !SuppressRelightSeamDirty && !primary_only;
       // Standing Dirty churn suppresses global seam fanout, but empty-shell
       // border faces in the focus ring stick forever without a remesh. Keep
       // underfeet (±1) seam remesh even while SuppressRelightSeamDirty.
+      // Flicker P1: primary_only (heavy Apply defer) never fans out neighbors.
+      // Flicker P2: even without suppress, seam only in focus±1 (cut emerge churn).
       bool focus_ring_seam = false;
-      if (finalize_pending_gate && SuppressRelightSeamDirty)
+      int focus_horiz = 999;
       {
         const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
         const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
-        const int focus_horiz =
+        focus_horiz =
             std::max(std::abs(key.x - focus_chunk.x),
                      std::abs(key.y - focus_chunk.z));
+      }
+      if (finalize_pending_gate && SuppressRelightSeamDirty && !primary_only)
+      {
         focus_ring_seam = focus_horiz <= 1;
       }
+      const bool allow_primary_seam =
+          (seam_ok || focus_ring_seam) && focus_horiz <= 1 && !primary_only;
       if (SuppressRelightSeamDirty && had_mesh && !focus_ring_seam)
       {
         // Idle remesh: do not MarkDirty Inflight (re-Dirty after Apply froze
@@ -1483,18 +1491,18 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         if (any_drawable)
         {
           MeshService->MarkTerrainChunkMeshDirtySeamed(
-              ground, dirty_min, dirty_max, seam_ok || focus_ring_seam);
+              ground, dirty_min, dirty_max, allow_primary_seam);
         }
         else
         {
           MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-              ground, dirty_min, dirty_max, seam_ok || focus_ring_seam);
+              ground, dirty_min, dirty_max, allow_primary_seam);
         }
       }
       else
       {
         MeshService->MarkTerrainChunkMeshDirtySeamed(
-            ground, dirty_min, dirty_max, seam_ok || focus_ring_seam);
+            ground, dirty_min, dirty_max, allow_primary_seam);
       }
       if (finalize_pending_gate)
       {
@@ -1506,7 +1514,12 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     // Idle lit-but-dirty catch-up: skip far neighbor Dirty — seam cascade
     // kept focus_dirty≈400 while async remeshed in place. Focus-ring (±1)
     // neighbors that actually received light still remesh (no further seam).
-    if (SuppressRelightSeamDirty)
+    // Flicker P1: primary_only — light write + remesh primary column only.
+    // Flicker P2: always skip neighbors outside focus±1 (not only suppress).
+    if (primary_only)
+    {
+      continue;
+    }
     {
       const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
       const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
@@ -1538,8 +1551,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     {
       continue;
     }
-    // Under standing suppress: remesh this lit neighbor only (no seam fanout).
-    const bool neighbor_seam = !SuppressRelightSeamDirty;
+    // Flicker P2: neighbor remesh never fans another 3×3 (underfeet only).
+    const bool neighbor_seam = false;
     if (priority_mesh)
     {
       MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
@@ -1556,7 +1569,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
   // (manual 220951: pf/fdm stuck at 1 while other columns drained).
   // TD-ARCH-015: warm Capture store after Dirty revisions so schedule skips
   // live GetChunk shell Capture in the hot tick.
-  if (MeshService && !relit_chunks.empty())
+  // Flicker P1: primary_only skips PrefetchCapture (cheap Apply path).
+  if (MeshService && !relit_chunks.empty() && !primary_only)
   {
     for (const glm::ivec3 &coord : relit_chunks)
     {
@@ -2446,11 +2460,17 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
   {
     return false;
   }
+  // P0 sticky: live lit GPU always draws until a lit replacement binds —
+  // must win even when CPU SoftDefer/empty left Satisfying false.
+  if (MeshService->GetCache().HasLiveGpuDraw(chunk_coord) &&
+      !MeshService->GetCache().ChunkHasFullyDarkFace(chunk_coord))
+  {
+    return true;
+  }
   if (MeshService->HasMeshSatisfyingColumnReady(chunk_coord))
   {
     // LitRing: FullyDark in LitDrawable/underfeet → hole until lit drawable.
-    // Do NOT treat lit_ready alone as true-dark (Apply-before-remesh drew black
-    // plugs and thrash uf_opaque). Cave true-dark only via OpenSky settle.
+    // Cave true-dark only via OpenSky settle.
     const bool fully_dark =
         MeshService->GetCache().ChunkHasFullyDarkFace(chunk_coord) &&
         !MeshService->ChunkHasLitDrawableFace(chunk_coord);
@@ -4703,8 +4723,12 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       const glm::ivec3 chunk = UChunkManager::WorldToChunk(pos);
       primary_grounds.push_back(glm::ivec2(chunk.x, chunk.z));
     }
+    const bool defer_side = ShouldDeferHeavyApplySideEffects(
+        PhysicsTelemetryData.RelightApplyMsPrev,
+        PhysicsTelemetryData.RelightApplyNPrev);
     MarkRelitChunksForMesh(relit_coords, /*priority_mesh=*/true, primary_grounds,
-                           result.finalize_pending_gate);
+                           result.finalize_pending_gate,
+                           /*primary_only=*/defer_side);
     ++PhysicsTelemetryData.RelightApplyN;
     if (result.finalize_pending_gate)
     {
@@ -4720,8 +4744,6 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     {
       AsyncRelightColumnsInFlight.erase(g);
     }
-    const bool defer_side =
-        ShouldDeferHeavyApplySideEffects(PhysicsTelemetryData.RelightApplyMsPrev);
     if (priority_mesh && !defer_side)
     {
       PlayerRelightMeshBurstFrames = 3;
@@ -5085,7 +5107,8 @@ void UWorld::TickAsyncChunkSystems()
   drain_budget = CruiseRelightApplyBudget(
       moving, PhysicsTelemetryData.RelightApplyMsPrev, drain_budget,
       PhysicsTelemetryData.RelightFifoPinDropNPrev == 0,
-      near_pending_light || underfeet_pending_light);
+      near_pending_light || underfeet_pending_light,
+      PhysicsTelemetryData.RelightApplyNPrev);
   // Player edits and near first-light columns remesh immediately.
   const bool priority_mesh =
       pending_player > 0 || near_pending_light || underfeet_pending_light ||

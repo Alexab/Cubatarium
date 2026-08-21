@@ -1292,7 +1292,8 @@ private:
   void MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                               bool priority_mesh,
                               const std::vector<glm::ivec2> &primary_grounds,
-                              bool finalize_pending_gate = true);
+                              bool finalize_pending_gate = true,
+                              bool primary_only = false);
   void EnsurePlayerOnGround();
   void MarkBlockChunkDirty(glm::ivec3 blockPos,
                            bool sync_neighbor_chunks = false,

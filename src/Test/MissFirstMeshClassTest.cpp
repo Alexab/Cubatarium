@@ -1877,7 +1877,7 @@ int main()
            "P1: non-pin key does not force priority");
   }
 
-  // P2: CruiseRelightApplyBudget
+  // P2: CruiseRelightApplyBudget (unit-cost; NPrev=0 ⇒ batch≈unit)
   {
     using cutum::CruiseRelightApplyBudget;
     Expect(CruiseRelightApplyBudget(true, 10.0, 4, false) == 1,
@@ -1898,8 +1898,20 @@ int main()
            "LitRing: near PL floor keeps cap≥4 at apply_ms≈4.8");
     Expect(CruiseRelightApplyBudget(true, 6.0, 12, true, true) == 4,
            "LitRing: near PL floor at apply_ms≈6");
-    Expect(CruiseRelightApplyBudget(true, 10.0, 3, true, true) == 1,
-           "P2: expensive apply keeps moving cap at 1");
+    Expect(CruiseRelightApplyBudget(true, 10.0, 3, true, true) == 3,
+           "Flicker P1: N=1+batch≈10 pin+near-PL probe cap 3");
+    Expect(CruiseRelightApplyBudget(true, 10.0, 12, true, false, 1) == 2,
+           "Flicker P1: NPrev=1 + batch≈10 pin probe cap 2");
+    Expect(CruiseRelightApplyBudget(true, 16.0, 12, true, false, 1) == 1,
+           "Flicker P1: hot batch>12 keeps cap 1 even with pin");
+    Expect(CruiseRelightApplyBudget(true, 10.0, 12, false, false, 1) == 1,
+           "Flicker P1: unstable pin keeps cap 1");
+    Expect(CruiseRelightApplyBudget(true, 40.0, 12, true, true, 4) == 1,
+           "Flicker P1: unit_ms=10 with N>=2 ⇒ cap 1");
+    Expect(CruiseRelightApplyBudget(true, 16.0, 12, true, false, 4) == 4,
+           "Flicker P1: unit_ms=4 from batch/N ⇒ cap 4");
+    Expect(CruiseRelightApplyBudget(true, 16.0, 12, true, true, 4) == 4,
+           "Flicker P1: near-PL floor with unit_ms=4");
   }
 
   // P5: ShouldAllowDynamicCaptureMovingBgCap
@@ -2041,8 +2053,10 @@ int main()
 
   {
     using cutum::CruiseRelightApplyBudget;
-    Expect(CruiseRelightApplyBudget(true, 9.0, 4, true, false) == 1,
-           "apply budget capped when last apply >8");
+    Expect(CruiseRelightApplyBudget(true, 9.0, 4, true, false) == 2,
+           "apply budget probes 2 when last apply ~9 and pin stable");
+    Expect(CruiseRelightApplyBudget(true, 16.0, 4, true, false) == 1,
+           "apply budget stays 1 when last apply hot >12");
   }
 
   {

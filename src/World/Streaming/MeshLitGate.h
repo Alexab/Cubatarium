@@ -50,10 +50,13 @@ inline bool SoftDeferMeshUntilLitPolicy(bool underfeet, bool has_mesh,
 
 /// Reject committing a mesh that has fully-dark faces when light is still
 /// pending, or when it would replace an already-lit mesh (dig/async race).
+/// Also reject dark over a live lit GPU SSBO (PendingReplace / SoftDefer empty
+/// with GpuResident lit — had_lit_mesh alone can miss that case).
 /// Cave / far UnlitFirstMesh first-mesh with light=0 is allowed (no lit predecessor).
 inline bool ShouldRejectDarkMeshCommit(bool new_has_dark_face,
                                        bool defer_until_lit,
-                                       bool had_lit_mesh)
+                                       bool had_lit_mesh,
+                                       bool had_live_lit_gpu = false)
 {
   if (!new_has_dark_face)
   {
@@ -63,7 +66,19 @@ inline bool ShouldRejectDarkMeshCommit(bool new_has_dark_face,
   {
     return true;
   }
-  return had_lit_mesh;
+  return had_lit_mesh || had_live_lit_gpu;
+}
+
+/// After keeping lit SSBO under dark CPU replace: do not PreferKick a pending
+/// dark/unknown GPU job over the live lit draw (ring thrash).
+inline bool ShouldPreferKickPendingGpuAfterLitKeep(bool kept_lit_gpu,
+                                                   bool new_mesh_fully_dark)
+{
+  if (!kept_lit_gpu)
+  {
+    return true;
+  }
+  return !new_mesh_fully_dark;
 }
 
 /// Era32: after SoftDefer-reject of a dark remesh, do not MarkDirty when a

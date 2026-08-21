@@ -29,10 +29,13 @@ inline bool ShouldForcePinColumnPriority(bool is_pin_key, int miss_horiz)
          miss_horiz <= kVisualStageNearFovHoriz;
 }
 
-/// P2/P6/LitRing: cruise Apply — raise caps under stable pin; near-PL floor.
+/// P2/P6/LitRing/Flicker: cruise Apply — caps from per-column unit cost, not
+/// batch wall. Near-PL floor preserved. Early-out cap=1 only when unit_ms>8
+/// (or NPrev≤1 with batch>8).
 inline int CruiseRelightApplyBudget(bool moving, double last_apply_ms,
                                     int requested, bool fifo_pin_stable,
-                                    bool near_pending_light = false)
+                                    bool near_pending_light = false,
+                                    int last_apply_n = 0)
 {
   if (requested <= 0)
   {
@@ -42,39 +45,58 @@ inline int CruiseRelightApplyBudget(bool moving, double last_apply_ms,
   {
     return requested;
   }
-  if (last_apply_ms > 8.0)
+  const double unit_ms =
+      (last_apply_n > 0)
+          ? (last_apply_ms / static_cast<double>(last_apply_n))
+          : last_apply_ms;
+  const bool unit_blow =
+      unit_ms > 8.0 || (last_apply_n <= 1 && last_apply_ms > 8.0);
+  if (unit_blow)
   {
+    // Probe only while prior batch was near the 8ms edge (manual ~8.2).
+    // Hot batches (>12) stay cap=1 so wall_fly does not explode.
+    if (fifo_pin_stable && last_apply_n <= 1 && last_apply_ms <= 12.0)
+    {
+      const int probe = near_pending_light ? 3 : 2;
+      return requested < probe ? requested : probe;
+    }
     return 1;
   }
   int cap = 1;
   // Manual 093804: apply_ms med≈4.8 kept cap at 1–2 and PL stuck ~57.
-  if (fifo_pin_stable && last_apply_ms >= 0.0 && last_apply_ms < 3.0)
+  // With unit-cost, same thresholds apply to per-column ms.
+  if (fifo_pin_stable && unit_ms >= 0.0 && unit_ms < 3.0)
   {
     cap = 6;
   }
-  else if (fifo_pin_stable && last_apply_ms < 5.0)
+  else if (fifo_pin_stable && unit_ms < 5.0)
   {
     cap = 4;
   }
-  else if (fifo_pin_stable && last_apply_ms < 6.5)
+  else if (fifo_pin_stable && unit_ms < 6.5)
   {
     cap = 3;
   }
-  else if (fifo_pin_stable && last_apply_ms < 8.0)
+  else if (fifo_pin_stable && unit_ms < 8.0)
   {
     cap = 2;
   }
-  if (near_pending_light && fifo_pin_stable && last_apply_ms < 8.0)
+  if (near_pending_light && fifo_pin_stable && unit_ms < 8.0)
   {
     cap = cap < 4 ? 4 : cap;
   }
   return requested < cap ? requested : cap;
 }
 
-/// P3: skip heavy apply side-effects when prior apply already blew SLA.
-inline bool ShouldDeferHeavyApplySideEffects(double last_apply_ms)
+/// P3: skip heavy apply side-effects when prior per-column apply blew SLA.
+inline bool ShouldDeferHeavyApplySideEffects(double last_apply_ms,
+                                             int last_apply_n = 0)
 {
-  return last_apply_ms > 8.0;
+  const double unit_ms =
+      (last_apply_n > 0)
+          ? (last_apply_ms / static_cast<double>(last_apply_n))
+          : last_apply_ms;
+  return unit_ms > 8.0 || (last_apply_n <= 1 && last_apply_ms > 8.0);
 }
 
 /// Era40: force FIFO Enqueue for FOV miss even when Keys/FIFO ghost-empty.

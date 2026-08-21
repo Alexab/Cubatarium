@@ -113,6 +113,8 @@ struct PhysicsTelemetry
   /// Previous frame (P2 apply budget / P5 dynamic bg_cap).
   double RelightDrainMsPrev{0.0};
   double RelightApplyMsPrev{0.0};
+  /// Previous-frame Apply count (unit-cost estimator for cruise Apply budget).
+  int RelightApplyNPrev{0};
   double MeshSyncMs{0.0};
   double MeshSnapshotMs{0.0};
   /// Wall time spent in RebuildChunkImmediate this frame (inside MeshEmergeMs).

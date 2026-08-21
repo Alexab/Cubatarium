@@ -771,6 +771,7 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.AsyncIoMs = 0.0;
   PhysicsTelemetryData.RelightDrainMsPrev = PhysicsTelemetryData.RelightDrainMs;
   PhysicsTelemetryData.RelightApplyMsPrev = PhysicsTelemetryData.RelightApplyMs;
+  PhysicsTelemetryData.RelightApplyNPrev = PhysicsTelemetryData.RelightApplyN;
   PhysicsTelemetryData.RelightFifoDropNPrev = PhysicsTelemetryData.RelightFifoDropN;
   PhysicsTelemetryData.RelightFifoPinDropNPrev =
       PhysicsTelemetryData.RelightFifoPinDropN;

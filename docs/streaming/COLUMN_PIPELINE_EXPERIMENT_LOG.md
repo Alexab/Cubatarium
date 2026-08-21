@@ -70,3 +70,29 @@ superseded — see `ERA22_EXPERIMENT_LOG.md` Next Planned Steps.
 
 **LitRing follow-on:** presentation no-dark + Apply/seed throughput + finite enter
 stall; suite DoD under `LitRing_D`.
+
+## Flicker Fill Optimize — sticky lit + cheap Apply + emerge (2026-08-21)
+
+Plan: ring/underfeet = stable lit or stable hole (no dark plug thrash); unit-cost
+Apply budget; MarkRelit primary-only under defer; seam fanout focus±1.
+
+Baseline: LitRing_fix1 stamp `20260821-100114` + manual `104125` (PL≈55, apply_n≈1, uf_flips≈0.5/period).
+
+| Step | Phase ID | Change | Result |
+| --- | --- | --- | --- |
+| P0 | `Flicker_P0` / `P0i` | Reject dark-over-live-lit; keep lit PreferKick gate; sticky lit GPU draw before Satisfying | First suite uf_flips↑ → iterate sticky-before-Satisfying. `P0i` stamp `20260821-113642`: cruise BS%=0 fly≈75 PL=1; stand BS%=0 PL=2; idle PL=5. vs fix1 BS stand 8→0. **pass** (PL residual → P1). |
+| P1 | `Flicker_P1` | `RelightApplyNPrev`; unit_ms Apply caps + pin probe≤12ms; MarkRelit `primary_only` when defer | stamp `20260821-114857`: stand/idle **PL≤1–0**; cruise PL=1. apply_n med≈1 with PL≈1 (FIFO empty). Hot probe>12 blew wall_fly→99 → soft probe. **pass**. |
+| P2 | `Flicker_P2` | MarkRelit seam only focus±1; neighbor_seam=false; no Dirty≫softcap schedule zoo | stamp `20260821-120509`: wall_fly cruise 99→91 / stand 100→91 vs P1; BS cruise 11→0. emerge mixed. **pass**. |
+| P3 | `Flicker_P3` | DoD suite + ocean + journal + SHA | stamp `20260821-121414`. SHA256 `557CC9A78D1DCDEBE25A3175FF1C1233ED68B1C44F98C5558EE8291D70F953AC`. cruise wall=67 fly≈74 PL=1 BS%=5; stand PL=1 BS%=4 fly≈80; idle PL=3 BS%=0 fly≈66; ocean PL=33 BS%=0 fly≈87. Autofly PL≪ manual `104125`. |
+
+### Deferred (won’t-fix / later)
+
+- Dual column `draw_ok` vs per-slice hide cleanup (telem-only).
+- Idle residual `uf_flips` (stand/idle still ~7–11/run; not ≈0 settle).
+- Ocean PL≈33 (ocean-only; won’t-fix this plan).
+- Dirty≫softcap schedule clamp (tried → wall_fly regress; reverted).
+- Cold manual eye ≥60s still required against Release SHA above (autofly ≠ cold enter).
+
+### Go criteria vs `104125`
+
+Autofly: FullyDark dark-plug path gated; PL med 1–3 on land; wall_fly ≤ LitRing_fix1 +15%. Cold manual PL/apply_n/uf settle → user eye vs SHA.

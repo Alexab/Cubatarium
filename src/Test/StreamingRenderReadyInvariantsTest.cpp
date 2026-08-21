@@ -9,6 +9,7 @@
 #include <vector>
 
 using cutum::ShouldRejectDarkMeshCommit;
+using cutum::ShouldPreferKickPendingGpuAfterLitKeep;
 using cutum::ShouldMarkDirtyAfterDarkSoftDeferReject;
 using cutum::SoftDeferMeshUntilLitPolicy;
 using cutum::AllowUnlitFirstMesh;
@@ -83,6 +84,14 @@ int main()
          "pending-light dark first mesh rejected when defer_until_lit");
   Expect(ShouldRejectDarkMeshCommit(true, false, true),
          "dark remesh must not replace lit mesh");
+  Expect(ShouldRejectDarkMeshCommit(true, false, false, true),
+         "dark must not replace live lit GPU even if had_lit_mesh false");
+  Expect(!ShouldPreferKickPendingGpuAfterLitKeep(true, true),
+         "no PreferKick dark over kept lit GPU");
+  Expect(ShouldPreferKickPendingGpuAfterLitKeep(true, false),
+         "PreferKick OK when pending replacement is lit");
+  Expect(ShouldPreferKickPendingGpuAfterLitKeep(false, true),
+         "PreferKick OK when not keeping lit");
   Expect(!ShouldRejectDarkMeshCommit(true, false, false),
          "cave/unlit/empty-placeholder first mesh allowed when not deferred");
   // Empty SoftDefer placeholder: HasGreedy but !Drawable ⇒ had_lit_mesh=false
