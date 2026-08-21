@@ -29,12 +29,11 @@ inline bool ShouldForcePinColumnPriority(bool is_pin_key, int miss_horiz)
          miss_horiz <= kVisualStageNearFovHoriz;
 }
 
-/// P2/P6/LitRing B1: cruise Apply — at least 1; up to 5 when last apply cheap.
+/// P2/P6/LitRing: cruise Apply — raise caps under stable pin; near-PL floor.
 inline int CruiseRelightApplyBudget(bool moving, double last_apply_ms,
                                     int requested, bool fifo_pin_stable,
                                     bool near_pending_light = false)
 {
-  (void)near_pending_light;
   if (requested <= 0)
   {
     return 0;
@@ -48,18 +47,26 @@ inline int CruiseRelightApplyBudget(bool moving, double last_apply_ms,
     return 1;
   }
   int cap = 1;
-  // LitRing B1: cheap Apply under stable pin — up to 5 (was 3).
+  // Manual 093804: apply_ms med≈4.8 kept cap at 1–2 and PL stuck ~57.
   if (fifo_pin_stable && last_apply_ms >= 0.0 && last_apply_ms < 3.0)
   {
-    cap = 5;
-  }
-  else if (fifo_pin_stable && last_apply_ms < 4.0)
-  {
-    cap = 4;
+    cap = 6;
   }
   else if (fifo_pin_stable && last_apply_ms < 5.0)
   {
+    cap = 4;
+  }
+  else if (fifo_pin_stable && last_apply_ms < 6.5)
+  {
+    cap = 3;
+  }
+  else if (fifo_pin_stable && last_apply_ms < 8.0)
+  {
     cap = 2;
+  }
+  if (near_pending_light && fifo_pin_stable && last_apply_ms < 8.0)
+  {
+    cap = cap < 4 ? 4 : cap;
   }
   return requested < cap ? requested : cap;
 }

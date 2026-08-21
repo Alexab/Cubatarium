@@ -871,13 +871,16 @@ bool UChunkMeshCache::ChunkHasLitDrawableFace(glm::ivec3 chunk_coord) const
   {
     return false;
   }
-  // Gpu path stores only FullyDark flag — scan CPU batches when present.
+  // Keep-until-replace: live lit GPU wins over dark CPU batches (PendingReplace).
+  if (ChunkHasLiveGpuDraw(chunk_coord) && !it->second.GpuHasDarkFace)
+  {
+    return true;
+  }
   if (!it->second.batches.empty())
   {
     return BatchesHaveLitDrawableFace(it->second.batches);
   }
-  // Gpu-resident without CPU batches: lit if live slot and not FullyDark.
-  return ChunkHasLiveGpuDraw(chunk_coord) && !it->second.GpuHasDarkFace;
+  return false;
 }
 
 bool UChunkMeshCache::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,

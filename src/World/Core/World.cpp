@@ -2448,8 +2448,9 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
   }
   if (MeshService->HasMeshSatisfyingColumnReady(chunk_coord))
   {
-    // LitRing: published FullyDark in LitDrawable/underfeet → hole until lit
-    // or settled true-dark (stable hole > blank↔dark flicker).
+    // LitRing: FullyDark in LitDrawable/underfeet → hole until lit drawable.
+    // Do NOT treat lit_ready alone as true-dark (Apply-before-remesh drew black
+    // plugs and thrash uf_opaque). Cave true-dark only via OpenSky settle.
     const bool fully_dark =
         MeshService->GetCache().ChunkHasFullyDarkFace(chunk_coord) &&
         !MeshService->ChunkHasLitDrawableFace(chunk_coord);
@@ -2462,15 +2463,19 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
                    std::abs(chunk_coord.z - focus_chunk.z));
       const glm::ivec2 col_xz(chunk_coord.x, chunk_coord.z);
       const bool pending = IsPendingLightBeforeMesh(col_xz);
-      const bool stale =
-          MeshService->ChunkHasStaleDarkFaces(chunk_coord, BlockWorld);
-      const bool lit_ready =
-          IsColumnLitReady(glm::ivec3(col_xz.x, 0, col_xz.y));
-      const bool settled_dark = !pending && lit_ready && !stale;
-      if (!settled_dark &&
-          ShouldHideFullyDarkUntilLitInRing(horiz, true, pending))
+      if (ShouldHideFullyDarkUntilLitInRing(horiz, true, pending))
       {
-        return false;
+        const bool stale =
+            MeshService->ChunkHasStaleDarkFaces(chunk_coord, BlockWorld);
+        const bool lit_ready =
+            IsColumnLitReady(glm::ivec3(col_xz.x, 0, col_xz.y));
+        const bool open_sky = EnterVisualGateCtrl.WasOpenSkyApplied(col_xz);
+        const bool true_dark = EnterFullyDarkColumnSettled(
+            open_sky, pending, lit_ready, stale, /*has_lit_drawable=*/false);
+        if (!true_dark)
+        {
+          return false;
+        }
       }
     }
     return true;

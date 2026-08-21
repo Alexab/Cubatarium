@@ -1883,15 +1883,21 @@ int main()
     Expect(CruiseRelightApplyBudget(true, 10.0, 4, false) == 1,
            "P2: moving caps to 1");
     Expect(CruiseRelightApplyBudget(true, 3.0, 4, true) == 4,
-           "LitRing B1: moving cheap+stable allows 4");
+           "LitRing: pin+apply<5 ⇒ cap 4 (requested 4)");
     Expect(CruiseRelightApplyBudget(false, 10.0, 4, false) == 4,
            "P2: idle returns requested");
     Expect(CruiseRelightApplyBudget(true, 10.0, 0, true) == 0,
            "P2: requested 0 returns 0");
     Expect(CruiseRelightApplyBudget(true, 10.0, 8, false, true) == 1,
-           "P2: near pending does not bypass moving cap");
-    Expect(CruiseRelightApplyBudget(true, 2.0, 12, true, true) == 5,
-           "LitRing B1: pin+apply<3 ⇒ cap 5");
+           "P2: near pending does not bypass heavy apply");
+    Expect(CruiseRelightApplyBudget(true, 2.0, 12, true, true) == 6,
+           "LitRing: pin+apply<3 ⇒ cap 6");
+    Expect(CruiseRelightApplyBudget(true, 4.8, 12, true, false) == 4,
+           "LitRing: apply_ms≈4.8 ⇒ cap 4 (manual 093804)");
+    Expect(CruiseRelightApplyBudget(true, 4.8, 12, true, true) == 4,
+           "LitRing: near PL floor keeps cap≥4 at apply_ms≈4.8");
+    Expect(CruiseRelightApplyBudget(true, 6.0, 12, true, true) == 4,
+           "LitRing: near PL floor at apply_ms≈6");
     Expect(CruiseRelightApplyBudget(true, 10.0, 3, true, true) == 1,
            "P2: expensive apply keeps moving cap at 1");
   }
