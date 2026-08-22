@@ -552,6 +552,12 @@ int main()
          "Era30 I-O4: cruise throttle under void heal");
   Expect(!FluidMapShouldThrottleCruise(40, 35.0, false, 250, 0),
          "Era30 I-O4: idle → no cruise throttle");
+  Expect(FluidMapShouldThrottleCruise(0, 55.0, true, 0, 0),
+         "ColdWall S4: moving wall>50 throttles without VB heal");
+  Expect(!FluidMapShouldThrottleCruise(20, 35.0, true, 0, 0),
+         "ColdWall S4: no heal + wall≤50 + pending≤24 → no throttle");
+  Expect(FluidMapShouldThrottleCruise(30, 35.0, true, 0, 5),
+         "ColdWall S4: VB heal + pending>24 → throttle");
   Expect(EnterVisualWarmupHardCapMs() == 120000,
          "Era42: enter lit warn wall default 120s");
   Expect(OceanCaptureWitnessPinFrames() == 12,

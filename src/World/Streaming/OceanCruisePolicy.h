@@ -43,7 +43,8 @@ inline bool ShouldSkipStaleRemeshForPendingVoid(bool pending_light,
   return !void_column;
 }
 
-/// Era30 I-O4: throttle fluid_map rebuild during moving cruise heal pressure.
+/// Era30 I-O4 / ColdWall S4: throttle fluid_map rebuild during moving cruise
+/// heal pressure, or on hot wall (≥50ms) without requiring VB heal.
 inline bool FluidMapShouldThrottleCruise(int pending, double wall_ms,
                                            bool moving, int void_n, int vb_n,
                                            int void_T = 200)
@@ -52,11 +53,15 @@ inline bool FluidMapShouldThrottleCruise(int pending, double wall_ms,
   {
     return false;
   }
+  if (wall_ms > 50.0)
+  {
+    return true;
+  }
   if (!IsOceanHealPressure(false, void_n, vb_n, void_T))
   {
     return false;
   }
-  return pending > 32 || wall_ms > 30.0;
+  return pending > 24 || wall_ms > 30.0;
 }
 
 /// Era30 I-O6 / Era41/Era42: legacy soft enter_app name kept; lit warn wall

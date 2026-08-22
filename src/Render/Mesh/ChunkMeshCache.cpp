@@ -4198,6 +4198,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         ++LastMeshDirtyScheduleSkipN;
         return Dirty.RemoveAt(it);
       }
+      // ColdWall S0a: PendingGpu owns the chunk — mirror Inflight RemoveAt.
+      if (IsPendingGpuApply(*it) || IsPendingGpuQueued(*it) ||
+          IsPendingGpuKickedOrDispatched(*it))
+      {
+        ++DirtyScheduleSkipInflightN;
+        ++LastMeshDirtyScheduleSkipN;
+        return Dirty.RemoveAt(it);
+      }
       if (!world.GetChunkManager().HasChunk(*it))
       {
         // Era47/Era52: orphan Dirty under streaming freeze must not sticky-block ring.
@@ -4438,11 +4446,20 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         it = Dirty.RemoveAt(it);
         continue;
       }
+      // ColdWall S0a: PendingGpu owns the chunk — mirror Inflight RemoveAt.
+      if (IsPendingGpuApply(*it) || IsPendingGpuQueued(*it) ||
+          IsPendingGpuKickedOrDispatched(*it))
+      {
+        ++DirtyScheduleSkipInflightN;
+        it = Dirty.RemoveAt(it);
+        continue;
+      }
       // D1c: when drain-first left schedule=1 under miss, never spend it on remesh.
       if (focus_missing_for_schedule && max_schedule_per_frame <= 1 &&
           HasDrawableGreedyMesh(*it))
       {
-        ++it;
+        // ColdWall S0c: remesh starve under miss — erase Dirty (not leave-in).
+        it = Dirty.RemoveAt(it);
         continue;
       }
       // F2: remesh quota separate from FirstMesh under HoleDrain/Deep.
@@ -4450,9 +4467,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (is_remesh && remesh_scheduled >= remesh_cap)
       {
         // Dual-queue: remesh suffix is contiguous after FirstMesh — stop walk.
+        // ColdWall S0c: remesh over-cap → RemoveAt; FirstMesh leave-in (++it).
         if (!Dirty.IsFirstMesh(*it))
         {
-          break;
+          it = Dirty.RemoveAt(it);
+          continue;
         }
         ++it;
         continue;

@@ -234,6 +234,67 @@ full neighbor light memcpy; SoftDefer dual FirstMesh+Dirty; keep-lit required re
 
 C0b: revisit 98→85. Dirty/PL/emerge continue down; wall/stream/apply_ms and VB worse — not closed on eye.
 
-### Go vs `195128`
+## ColdWall — stream cut + Dirty leave-in (2026-08-21)
 
-Autofly land PL≪20 / wall_fly ≤ RateMatch. Cold: dirty/revisit/PL/emerge↓; wall/VB/apply_ms regress.
+After CheapRemesh cold `220205`: wall↑ via stream≈74 (Apply nested ≈20); revisit residual;
+VB Capture floor without PL; SoftDefer disk scan; fluid_map spikes.
+
+| Step | Phase ID | Change | Result |
+| --- | --- | --- | --- |
+| S0 | (batch) | PendingGpu RemoveAt; no RAA latch when moving; remesh over-cap RemoveAt | units OK |
+| S1 | (batch) | SoftDefer scan CD if Owned ticketed; stride 8; FirstMesh short-circuit | units OK |
+| S2 | (batch) | VB bg floor only if PL\|\|miss; CountVisibleBlack narrow band moving | units OK |
+| S3 | (batch) | Prefetch skip moving; underfeet inflate iff !drawable; face cache MarkRelit | units OK |
+| S4 | (batch) | FluidMapShouldThrottleCruise wall>50 / pending>24 | units OK |
+| DoD | `ColdWall_DoD` | suite land+ocean + journal + SHA | stamp `20260821-223622`. SHA256 `5AEA79A9CFD44F356DE5FEDF691474E679874A3BD68D74F6DDAD72AF23E5DB09`. cruise PL=1 wall≈69 fly≈102; stand PL≈0.5 wall≈79; **idle PL=0**; ocean PL=33; fly-clean PL=1 wall≈89. vs CheapRemesh cruise wall 60→69 / fly 78→102 (soft regress); idle PL held 0. |
+
+### Deferred
+
+- Cold manual ≥60s vs `220205` (target: wall≪145, stream≪74, revisit≪85, apply_ms≤14).
+
+### Go vs `220205`
+
+Autofly land PL≪20 / idle PL=0. Cold eye is the gate for stream/VB.
+
+### Cold manual `093018` (~11 min / 338 spikes, ColdWall uncommitted) vs `091818` / `220205` / `195128`
+
+Build: ColdWall S0–S4 local (HEAD `723ed751`). Route slow cruise: chunks 479→599, fill≈0.18/s.
+
+| Metric | `195128` | `220205` | `091818` (~46s) | **`093018`** (~676s) |
+| --- | --- | --- | --- | --- |
+| wall med / p90 | 116 / 288 | 145 / 265 | 118 / 199 | **113 / 141** |
+| stream med | 33 | 74 | 39 | **38** |
+| emerge med | 50.5 | 42.2 | 30.5 | **58.2** |
+| dirty med | 172 | 118 | 151 | **153** |
+| revisit med | 132 | 85 | 97 | **106** |
+| PL med / end | 43 / 45 | 14 / 47 | 36 / 38 | **45 / 43** |
+| apply_ms med | 10.2 | 20.2 | 11.1 | **9.7** |
+| vb med | 81 | 121 | 63 | **58** |
+| unlit_hidden med | 29 | 14 | 31 | **43** |
+| uf_flips / rate | 10 / 0.20 | 8 / 0.23 | 4 / 0.17 | 16 / **0.05** |
+
+**Segments (`093018`):**
+
+| Window | wall med | stream med | PL med | vb med | notes |
+| --- | --- | --- | --- | --- | --- |
+| first ~60s (enter) | 146 | 74 | 10 | 119 | stream≈220205; fluid spikes |
+| 60–180s (ramp) | 118 | 28 | 40 | 54 | PL climbs, VB falls |
+| 180s+ (steady cruise) | **110–113** | **38** | **45–46** | **58–60** | flat plateau |
+| last ~60s | 108 | 39 | 45 | 60 | no cooldown |
+
+PL buckets: 278/338 spikes ≥41 — **steady-state PL≈45, not transient**.
+
+**Gate vs `220205` (steady cruise, 180s+):**
+
+| Criterion | Status |
+| --- | --- |
+| wall ≪ 145 | ✓ med 110–113 |
+| stream ≪ 74 | ✓ med 38 |
+| apply_ms ≤ 14 | ✓ med 8–10 |
+| revisit ≪ 85 | ✗ med 106–110 |
+| PL | ✗ med 45 (vs 14) |
+| VB | ✓ med 58 (vs 121) |
+| unlit_hidden | ✗ med 43 (vs 14) |
+| duration ≥60s | ✓ |
+
+**Verdict:** ColdWall **closes stream/wall/apply/VB** on long cold manual. **PL/revisit/dirty/emerge/unlit_hidden** remain open vs `220205`; short `091818` underestimated PL (ramp ended early). Top spikes: enter-load + `fluid_map_cpu` (p90=0 in cruise, max≈221 at start). Next eye work: PL steady ≈45 + revisit≈106 + unlit_hidden≈43, not stream.

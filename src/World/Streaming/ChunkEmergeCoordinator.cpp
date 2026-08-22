@@ -786,15 +786,35 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const int cells = std::max(1, diam * diam);
     int empty_near_n = 0;
     static int SoftDeferRimScanCd = 0;
+    // ColdWall S1: skip disk scan when Owned is empty OR every Owned already
+    // has FirstMesh ticket / Dirty / PendingGpu / Inflight (no new empties).
+    bool owned_all_ticketed = SoftDeferEmptyOwned.empty();
+    if (!owned_all_ticketed)
+    {
+      owned_all_ticketed = true;
+      for (const glm::ivec3 &o : SoftDeferEmptyOwned)
+      {
+        const glm::ivec2 col(o.x, o.z);
+        if (exec.Scheduler().Contains(col, ColumnWorkKind::FirstMesh) ||
+            mesh_service.IsChunkMeshDirty(o) ||
+            mesh_service.IsPendingGpuApply(o) ||
+            mesh_service.HasInflightMeshBuild(o))
+        {
+          continue;
+        }
+        owned_all_ticketed = false;
+        break;
+      }
+    }
     const bool skip_softdefer_disk_scan =
         !near_miss_urgent && prev_softdefer_empty == 0 &&
-        SoftDeferEmptyOwned.empty() && SoftDeferRimScanCd > 0;
+        owned_all_ticketed && SoftDeferRimScanCd > 0;
     if (skip_softdefer_disk_scan)
     {
       --SoftDeferRimScanCd;
     }
     else if (!near_miss_urgent && prev_softdefer_empty == 0 &&
-             SoftDeferEmptyOwned.empty())
+             owned_all_ticketed)
     {
       SoftDeferRimScanCd = 6;
     }
@@ -831,6 +851,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         {
           continue;
         }
+        // ColdWall S1: FirstMesh ticket already owns — skip voxel probe.
+        const glm::ivec2 col_xz(coord.x, coord.z);
+        if (soft_held &&
+            exec.Scheduler().Contains(col_xz, ColumnWorkKind::FirstMesh))
+        {
+          continue;
+        }
         const UChunk *chunk =
             world.GetBlockWorld().GetChunkManager().GetChunk(coord);
         if (!chunk)
@@ -838,7 +865,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           continue;
         }
         bool any_solid = false;
-        const int probe_stride = (horiz <= 2) ? 2 : 4;
+        // ColdWall S1: stride 8 beyond LitDrawable rim (horiz>4).
+        const int probe_stride =
+            (horiz <= 2) ? 2 : ((horiz <= 4) ? 4 : 8);
         for (int z = 0; z < CHUNK_SIZE && !any_solid; z += probe_stride)
         {
           for (int x = 0; x < CHUNK_SIZE && !any_solid; x += probe_stride)

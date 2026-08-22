@@ -64,7 +64,22 @@ int main()
     in.era18_vb_bg_budget_floor = true;
     const auto d = EvaluateFrameStreamingBudget(in);
     Expect(d.soft_defer_capture_budget == 2, "mid idle VB: keep Capture floor");
-    Expect(d.apply_vb_bg_floor, "mid idle VB: keep bg floor");
+    // ColdWall S2a: VB alone without PL → no bg Capture floor.
+    Expect(!d.apply_vb_bg_floor, "ColdWall S2a: VB without PL → no bg floor");
+  }
+
+  {
+    FrameStreamingBudgetInput in;
+    in.missing_visible_mesh = false;
+    in.visible_black_n = 10;
+    in.pending_light_focus_n = 4;
+    in.frame_ms = 45.0;
+    in.hot_frame_ms = 80.0;
+    in.miss_first_budget = true;
+    in.era18_vb_capture_floor = true;
+    in.era18_vb_bg_budget_floor = true;
+    const auto d = EvaluateFrameStreamingBudget(in);
+    Expect(d.apply_vb_bg_floor, "ColdWall S2a: VB+PL → keep bg floor");
   }
 
   {
@@ -78,9 +93,24 @@ int main()
     in.era18_vb_bg_budget_floor = true;
     const auto d = EvaluateFrameStreamingBudget(in);
     Expect(d.soft_defer_capture_budget == 1, "Era20: hot VB !miss keeps Relight=1");
+    Expect(!d.apply_vb_bg_floor,
+           "ColdWall S2a: hot VB without PL → no bg floor");
+    // Frontier pressure (VB heal + empty gen) forces FirstMesh Capture kind.
+  }
+
+  {
+    FrameStreamingBudgetInput in;
+    in.missing_visible_mesh = false;
+    in.visible_black_n = 10;
+    in.pending_light_focus_n = 2;
+    in.frame_ms = 300.0;
+    in.hot_frame_ms = 80.0;
+    in.miss_first_budget = true;
+    in.era18_vb_capture_floor = true;
+    in.era18_vb_bg_budget_floor = true;
+    const auto d = EvaluateFrameStreamingBudget(in);
     Expect(d.apply_vb_bg_floor && d.vb_bg_budget_floor == 1,
-           "Era20: hot VB !miss keeps bg floor 1");
-    Expect(!d.capture_first_mesh_only, "hot VB !miss: Relight kind");
+           "ColdWall S2a: hot VB+PL keeps bg floor 1");
   }
 
   {

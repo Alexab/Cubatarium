@@ -954,25 +954,46 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     MeshService->GetCache().SetJustRelitFirstMeshColumn(primary_grounds.front(),
                                                         true);
   }
+  // ColdWall S3c: cache drawable/dark/stale per coord across MarkRelit loops.
+  struct LitApplyFaceCache
+  {
+    bool has_drawable{false};
+    bool fully_dark{false};
+    bool still_stale{false};
+    bool filled{false};
+  };
+  std::unordered_map<glm::ivec3, LitApplyFaceCache, IVec3Hash> face_cache;
+  face_cache.reserve(relit_chunks.size() * 2 + 8);
   auto schedule_remesh_after_lit_apply =
-      [this, enter_quiesce, enter_gate, primary_only,
-       &primary_set](const glm::ivec3 &coord)
+      [this, enter_quiesce, enter_gate, primary_only, &primary_set,
+       &face_cache](const glm::ivec3 &coord)
   {
     if (!MeshService)
     {
       return;
     }
+    const bool moving =
+        LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold;
+    LitApplyFaceCache &fc = face_cache[coord];
+    if (!fc.filled)
+    {
+      fc.has_drawable = MeshService->HasDrawableGreedyMesh(coord);
+      fc.fully_dark =
+          fc.has_drawable &&
+          MeshService->GetCache().ChunkHasFullyDarkFace(coord);
+      fc.still_stale =
+          fc.fully_dark &&
+          MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld);
+      fc.filled = true;
+    }
     const bool is_dirty = MeshService->IsChunkMeshDirty(coord);
     const bool raa_pending = MeshService->IsRemeshAfterApplyPending(coord);
     const bool gpu_pending = MeshService->IsPendingGpuApply(coord);
     const bool inflight = MeshService->HasInflightMeshBuild(coord);
-    const bool fully_dark =
-        MeshService->HasDrawableGreedyMesh(coord) &&
-        MeshService->GetCache().ChunkHasFullyDarkFace(coord);
+    const bool fully_dark = fc.fully_dark;
     const bool column_visual_ready =
         IsColumnVisualReady(glm::ivec2(coord.x, coord.z));
-    const bool still_stale =
-        fully_dark && MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld);
+    const bool still_stale = fc.still_stale;
     const bool is_primary =
         primary_set.count(glm::ivec2(coord.x, coord.z)) != 0;
     const glm::ivec2 col(coord.x, coord.z);
@@ -996,9 +1017,9 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     {
     case RemeshAfterLitApplyDecision::SkipAlreadyDirty:
       ++PhysicsTelemetryData.MarkRelitSkipAlreadyDirtyN;
-      // ColdSupply S2: primary_only (defer) — Dirty already owns remesh; do not
-      // dual-feed RemeshAfterApply (Dirty+RAA churn → emerge≈53 / dirty≈149).
-      if (!primary_only &&
+      // ColdWall S0b / ColdSupply S2: Dirty already owns remesh — no dual RAA
+      // while moving or primary_only defer (Dirty+RAA churn).
+      if (!moving && !primary_only &&
           ShouldLatchRemeshAfterApplyWhileOwned(decision,
                                                fully_dark || still_stale))
       {
@@ -1011,7 +1032,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       break;
     case RemeshAfterLitApplyDecision::SkipInflight:
       ++PhysicsTelemetryData.MarkRelitSkipInflightN;
-      if (!primary_only &&
+      if (!moving && !primary_only &&
           ShouldLatchRemeshAfterApplyWhileOwned(decision,
                                                fully_dark || still_stale))
       {
@@ -1080,7 +1101,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       }
       // Closeout C / ColPipe P2: FullyDark/missing → FirstMeshQ; lit → RemeshQ.
       // Dirty alone owns remesh — do not also RequestRemeshAfterApply.
-      if (fully_dark || !MeshService->HasDrawableGreedyMesh(coord))
+      if (fully_dark || !fc.has_drawable)
       {
         MeshService->MarkDirtyPriority(coord);
       }
@@ -1157,7 +1178,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
         const int horiz = std::max(std::abs(key.x - focus_chunk.x),
                                    std::abs(key.y - focus_chunk.z));
-        if (horiz <= 1)
+        if (horiz <= 1 && !column_has_drawable)
         {
           dirty_min =
               std::min(dirty_min, std::max(0, focus_block.y - CHUNK_SIZE));
@@ -1601,12 +1622,16 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
   // (manual 220951: pf/fdm stuck at 1 while other columns drained).
   // TD-ARCH-015: warm Capture store after Dirty revisions so schedule skips
   // live GetChunk shell Capture in the hot tick.
-  // Flicker P1: primary_only skips PrefetchCapture (cheap Apply path).
-  if (MeshService && !relit_chunks.empty() && !primary_only)
+  // Flicker P1 / ColdWall S3a: primary_only or moving skips PrefetchCapture.
   {
-    for (const glm::ivec3 &coord : relit_chunks)
+    const bool moving =
+        LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold;
+    if (MeshService && !relit_chunks.empty() && !primary_only && !moving)
     {
-      MeshService->PrefetchMeshCapture(GetBlockWorld(), coord);
+      for (const glm::ivec3 &coord : relit_chunks)
+      {
+        MeshService->PrefetchMeshCapture(GetBlockWorld(), coord);
+      }
     }
   }
   if (!finalize_pending_gate || !MeshService)
@@ -3888,11 +3913,25 @@ int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
   }
   const int max_y = ProceduralTemplate.MaxHeight;
   const int sea = ProceduralTemplate.SeaLevel;
+  const bool moving =
+      LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold;
   int band_min =
       std::max(0, focus_ground_chunk.y * CHUNK_SIZE - CHUNK_SIZE);
   int band_max = std::min(max_y, focus_ground_chunk.y * CHUNK_SIZE +
                                       CHUNK_SIZE * 3 - 1);
-  if (ProceduralTemplate.FillWater)
+  if (moving)
+  {
+    // ColdWall S2b: cruise — eye ±1 cy ∪ sea±CHUNK (not sea±4*CHUNK).
+    const int eye_y = focus_ground_chunk.y * CHUNK_SIZE;
+    band_min = std::max(0, eye_y - CHUNK_SIZE);
+    band_max = std::min(max_y, eye_y + CHUNK_SIZE * 2);
+    if (ProceduralTemplate.FillWater)
+    {
+      band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE));
+      band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE));
+    }
+  }
+  else if (ProceduralTemplate.FillWater)
   {
     band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
     band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE * 2));

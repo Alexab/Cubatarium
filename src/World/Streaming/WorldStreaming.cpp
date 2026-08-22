@@ -1610,7 +1610,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     bg_budget = std::max(bg_budget, early_budget.vb_bg_budget_floor);
   }
   // Era31 I-T2: Relight carve-out under ocean heal (not stolen by emerge cap).
-  if (IsOceanHealPressure(missing_focus_mesh, void_n_budget, visible_black_n))
+  // ColdWall S2a: VB-alone without PL/miss must not raise Capture floor.
+  if (IsOceanHealPressure(missing_focus_mesh, void_n_budget, visible_black_n) &&
+      (missing_focus_mesh || pending_light_focus_n > 0 || void_n_budget > 200))
   {
     bg_budget = std::max(bg_budget, 2);
   }

@@ -145,8 +145,10 @@ inline FrameStreamingBudgetDecision EvaluateFrameStreamingBudget(
       }
     }
 
-    // VB bg_budget floor — off on hot under miss; when !miss keep mid-floor 1.
-    if (in.era18_vb_bg_budget_floor && in.visible_black_n > 0 && !miss)
+    // VB bg_budget floor — ColdWall S2a: only when PL>0 or miss (dark remesh
+    // via Dirty, not Capture storm when PL=0).
+    if (in.era18_vb_bg_budget_floor && in.visible_black_n > 0 && !miss &&
+        in.pending_light_focus_n > 0)
     {
       if (hot)
       {
@@ -194,9 +196,10 @@ inline FrameStreamingBudgetDecision EvaluateFrameStreamingBudget(
 
     // Era31 I-T1/I-T2: ocean heal throughput — stronger void Relight floors.
     // Era32: keep floors modest — aggressive vb_bg (3–4) worsened void drain.
+    // ColdWall S2a: VB-alone ocean heal does not raise Capture floor without PL.
     const bool ocean_heal =
         IsOceanHealPressure(miss, in.void_n, in.visible_black_n, 200);
-    if (ocean_heal)
+    if (ocean_heal && (miss || in.pending_light_focus_n > 0 || in.void_n > 200))
     {
       out.apply_vb_bg_floor = true;
       out.vb_bg_budget_floor =
@@ -227,7 +230,8 @@ inline FrameStreamingBudgetDecision EvaluateFrameStreamingBudget(
     }
 
     if (in.era18_vb_bg_budget_floor &&
-        (in.visible_black_n > 0 /* dark_face gated by caller */))
+        (in.visible_black_n > 0 /* dark_face gated by caller */) &&
+        (in.pending_light_focus_n > 0 || miss))
     {
       out.apply_vb_bg_floor = true;
       out.vb_bg_budget_floor = hitch ? 1 : 2;
