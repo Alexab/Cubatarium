@@ -24,7 +24,7 @@ inline bool UnderfeetOpaquePresentPredicted(bool opaque_in_pass, bool draw_ok,
   return draw_ok && (pending_gpu || inflight);
 }
 
-/// FZ2-R3 / FZ2.1-B6: perf spike SoT — monotonic present when drawable.
+/// FZ2-R3 / FZ2.1-B6 / FZ2.2-C6b: perf spike SoT — monotonic present when drawable.
 inline int UnderfeetOpaquePresentForPerf(bool draw_ok, bool latched,
                                          bool predicted)
 {
@@ -33,6 +33,30 @@ inline int UnderfeetOpaquePresentForPerf(bool draw_ok, bool latched,
     return latched ? 1 : 0;
   }
   return (latched || predicted) ? 1 : 0;
+}
+
+/// FZ2.2-C6b: hold predicted present 2–3 frames at draw_ok to damp telem flips.
+inline bool UnderfeetOpaquePresentPredictedHeld(
+    bool opaque_in_pass, bool draw_ok, bool pending_gpu, bool inflight,
+    bool &latched_predicted, int &hold_frames)
+{
+  const bool raw =
+      UnderfeetOpaquePresentPredicted(opaque_in_pass, draw_ok, pending_gpu,
+                                      inflight);
+  if (raw)
+  {
+    latched_predicted = true;
+    hold_frames = 3;
+    return true;
+  }
+  if (draw_ok && latched_predicted && hold_frames > 0)
+  {
+    --hold_frames;
+    return true;
+  }
+  latched_predicted = false;
+  hold_frames = 0;
+  return false;
 }
 
 inline ColumnRenderableState::BlockReason ReconcileUnderfeetBlockReason(

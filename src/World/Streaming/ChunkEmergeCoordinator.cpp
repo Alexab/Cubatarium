@@ -3838,6 +3838,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   mesh_service.SetPendingLightFocusPressure(pending_focus_count);
   mesh_service.SetVisibleBlackNoTicketPressure(
       world.GetPhysicsTelemetry().VisibleBlackNoTicketN);
+  mesh_service.SetVisibleBlackFocusPressure(
+      world.GetPhysicsTelemetry().VisibleBlackFocusN);
   mesh_service.SetEnterFovLitPressure(world.IsEnterFovLitPassActive());
   mesh_service.SetFz2DeferGated(URuntimeTuning::Get().Fz2DeferGated);
   // F0: SyncRebuild always off in TickMeshEmerge. Dig/edit uses

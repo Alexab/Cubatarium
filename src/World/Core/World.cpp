@@ -2229,6 +2229,22 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
   it->second.max_y = std::max(it->second.max_y, max_y);
 }
 
+bool UWorld::TryNotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
+{
+  if (ground.y != 0)
+  {
+    ground.y = 0;
+  }
+  const glm::ivec2 col(ground.x, ground.z);
+  if (IsAsyncRelightColumnInFlight(col) || IsPendingLightBeforeMesh(col))
+  {
+    ++PhysicsTelemetryData.RelightNoteSkippedDupN;
+    return false;
+  }
+  NotePendingLightBeforeMesh(ground, min_y, max_y);
+  return true;
+}
+
 void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
 {
   if (!Persistence || !ShouldNotePendingLightOnVoidEnqueue(true))
@@ -5285,10 +5301,10 @@ void UWorld::TickAsyncChunkSystems()
   {
     drain_budget = std::max(drain_budget, moving ? 10 : 12);
   }
-  else if (vb_focus_n > 50)
+  else if (vb_focus_n > 45)
   {
-    // FZ2.1-B4c: idle VB steady debt — faster Apply drain.
-    drain_budget = std::max(drain_budget, moving ? 10 : 14);
+    // FZ2.2-C4a: idle VB steady debt — faster Apply drain.
+    drain_budget = std::max(drain_budget, moving ? 10 : 16);
   }
   else if (vb_focus_n > 40)
   {
@@ -5298,7 +5314,7 @@ void UWorld::TickAsyncChunkSystems()
   // not Enter×64 + double Drain (manual 190534 hitch apply_n=12 / wall≈1s).
   const bool high_pl_cruise =
       ShouldUseHighPlCruiseApplyFloor(moving, pending_light_focus_n) &&
-      vb_focus_n <= 40;
+      vb_focus_n <= 50;
   drain_budget = CruiseRelightApplyBudget(
       moving, PhysicsTelemetryData.RelightApplyMsPrev, drain_budget,
       PhysicsTelemetryData.RelightFifoPinDropNPrev == 0,

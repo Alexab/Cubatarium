@@ -1523,15 +1523,23 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
       const int horiz =
           std::max(std::abs(ground_coord.x - focus_ground.x),
                    std::abs(ground_coord.z - focus_ground.z));
+      const glm::ivec2 col_xz(ground_coord.x, ground_coord.z);
+      const auto note_commit_pl = [&](int dmin, int dmax) {
+        // FZ2.2-C1b/C1c: FullyDark-only + idempotent Note.
+        if (!world.ColumnFullyDarkSolidDrawable(col_xz))
+        {
+          return;
+        }
+        world.TryNotePendingLightBeforeMesh(ground_coord, dmin, dmax);
+      };
       const int fifo_n = GetPendingTerrainColumnRelightCount();
       const int soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
       const float fifo_frac = URuntimeTuning::Get().RelightFifoAdmitFrac;
       if (ShouldDeferFarRelightEnqueueOnFifoPressure(
               horiz, RelightMissPinMaxHoriz(), fifo_n, soft_cap, fifo_frac))
       {
-        DeferFarRelightColumn(glm::ivec2(ground_coord.x, ground_coord.z),
-                              dirty_min, dirty_max, near_focus);
-        world.NotePendingLightBeforeMesh(ground_coord, dirty_min, dirty_max);
+        DeferFarRelightColumn(col_xz, dirty_min, dirty_max, near_focus);
+        note_commit_pl(dirty_min, dirty_max);
         ++world.GetPhysicsTelemetryMutable().RelightDeferredFarEnqueueN;
       }
       else
@@ -1539,13 +1547,12 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
         EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
                                     ground_coord.z * CHUNK_SIZE, near_focus,
                                     dirty_min, dirty_max);
-        world.NotePendingLightBeforeMesh(ground_coord, dirty_min, dirty_max);
+        note_commit_pl(dirty_min, dirty_max);
       }
-      // FZ2-T2 / FZ2.1-B1d: lit-ring seed — FullyDark only (no partial-light PL flood).
-      if (near_focus && horiz <= kVisualStageLitDrawableHoriz &&
-          world.IsEnterLitGateActive())
+      // FZ2-T2 / FZ2.2-C1a: lit-ring seed — off by default (Fz2LitRingSeed).
+      if (URuntimeTuning::Get().Fz2LitRingSeed && near_focus &&
+          horiz <= kVisualStageLitDrawableHoriz && world.IsEnterLitGateActive())
       {
-        const glm::ivec2 col_xz(ground_coord.x, ground_coord.z);
         const glm::ivec2 world_key(col_xz.x * CHUNK_SIZE, col_xz.y * CHUNK_SIZE);
         if (!IsTerrainColumnRelightQueued(world_key) &&
             !world.IsAsyncRelightColumnInFlight(col_xz) &&
@@ -1555,7 +1562,8 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
           EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
                                       ground_coord.z * CHUNK_SIZE,
                                       /*priority=*/true, dirty_min, dirty_max);
-          world.NotePendingLightBeforeMesh(ground_coord, dirty_min, dirty_max);
+          world.TryNotePendingLightBeforeMesh(ground_coord, dirty_min,
+                                              dirty_max);
         }
       }
       // Focus: first-mesh Dirty immediately (preview). Far waits MarkRelit

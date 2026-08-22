@@ -360,6 +360,8 @@ struct PhysicsTelemetry
   uint64_t RelightSkippedNoOpEnqueueN{0};
   uint64_t RelightDeferredFarEnqueueN{0};
   int RelightDeferredFarPendingN{0};
+  /// FZ2.2-O1: NotePendingLight skipped (inflight or already pending).
+  uint64_t RelightNoteSkippedDupN{0};
   /// Cruise Capture SoT: effective bg cap / Y-band cy this DrainRelightQueues.
   int CaptureBgCapN{0};
   int CaptureBandCy{0};

@@ -891,6 +891,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     }
     const bool opaque_present =
         world.PhysicsTelemetryData.UnderfeetOpaquePresentLatched != 0;
+    static bool uf_predicted_latched = false;
+    static int uf_predicted_hold = 0;
     bool inflight = false;
     for (int cy = 0; cy <= max_cy; ++cy)
     {
@@ -901,8 +903,9 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
         break;
       }
     }
-    const bool opaque_predicted = UnderfeetOpaquePresentPredicted(
-        opaque_present, uf.draw_ok, pending_gpu, inflight);
+    const bool opaque_predicted = UnderfeetOpaquePresentPredictedHeld(
+        opaque_present, uf.draw_ok, pending_gpu, inflight, uf_predicted_latched,
+        uf_predicted_hold);
     has_mesh = UnderfeetColumnHasDrawable(has_mesh, pending_gpu, uf.draw_ok,
                                           opaque_present || opaque_predicted);
     world.PhysicsTelemetryData.UnderfeetDrawOk = uf.draw_ok ? 1 : 0;

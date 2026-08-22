@@ -219,11 +219,18 @@ inline bool ShouldSkipDeferRemeshForLitRingFullyDark(
 /// FZ2-R1: skip defer only under active VB heal pressure (enter or no_ticket).
 inline bool ShouldSkipDeferRemeshUnderVbHealPressure(
     int horiz, bool fully_dark, bool enter_fov_lit, int vb_no_ticket_n,
-    int ring = kVisualStageLitDrawableHoriz, int no_ticket_thresh = 12)
+    int ring = kVisualStageLitDrawableHoriz, int no_ticket_thresh = 12,
+    int visible_black_focus_n = 0, int vb_focus_stable_frames = 0)
 {
   if (!fully_dark || horiz < 0 || horiz > ring)
   {
     return false;
+  }
+  // FZ2.2-C3b/O3: steady VB debt — force schedule (skip defer) to break blink.
+  if (!enter_fov_lit && visible_black_focus_n > 50 &&
+      vb_focus_stable_frames >= 3)
+  {
+    return true;
   }
   return enter_fov_lit || vb_no_ticket_n > no_ticket_thresh;
 }
@@ -231,16 +238,18 @@ inline bool ShouldSkipDeferRemeshUnderVbHealPressure(
 /// FZ2-R1: PL leave-in RemoveAt carve-out — only under VB heal pressure.
 inline bool ShouldRemoveAtRemeshDespitePlPressure(
     int horiz, bool fully_dark, bool enter_fov_lit, int vb_no_ticket_n,
-    int ring = kVisualStageLitDrawableHoriz, int no_ticket_thresh = 12)
+    int ring = kVisualStageLitDrawableHoriz, int no_ticket_thresh = 12,
+    int visible_black_focus_n = 0, int vb_focus_stable_frames = 0)
 {
   return ShouldSkipDeferRemeshUnderVbHealPressure(
-      horiz, fully_dark, enter_fov_lit, vb_no_ticket_n, ring, no_ticket_thresh);
+      horiz, fully_dark, enter_fov_lit, vb_no_ticket_n, ring, no_ticket_thresh,
+      visible_black_focus_n, vb_focus_stable_frames);
 }
 
 /// FZ2-R4 / FZ2.1-B4: finalize Capture on lit ring when VB steady debt.
 inline bool ShouldFinalizeRelightUnderVbSteadyPressure(
     int visible_black_focus_n, int pending_light_focus_n, int horiz_dist,
-    int vb_thresh = 35, int pl_thresh = 12,
+    int vb_thresh = 30, int pl_thresh = 10,
     int ring = kVisualStageLitDrawableHoriz)
 {
   return visible_black_focus_n > vb_thresh &&

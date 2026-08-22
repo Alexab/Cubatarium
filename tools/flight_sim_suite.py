@@ -59,6 +59,11 @@ SCENARIOS: list[tuple[str, list[str], str]] = [
         ["--scenario", "fly-clean"],
         "Moving cruise stress: fly >=40s, judge move-segment sync/wall",
     ),
+    (
+        "fz-validate",
+        ["--scenario", "fz-validate"],
+        "FZ2.2 manual parity: land-south corridor, fly 90s + stop 90s",
+    ),
 ]
 
 

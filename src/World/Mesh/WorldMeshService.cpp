@@ -698,6 +698,11 @@ void UWorldMeshService::SetVisibleBlackNoTicketPressure(int n)
   Cache.SetVisibleBlackNoTicketPressure(n);
 }
 
+void UWorldMeshService::SetVisibleBlackFocusPressure(int n)
+{
+  Cache.SetVisibleBlackFocusPressure(n);
+}
+
 void UWorldMeshService::SetEnterFovLitPressure(bool v)
 {
   Cache.SetEnterFovLitPressure(v);

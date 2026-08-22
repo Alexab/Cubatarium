@@ -476,22 +476,41 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     {
       EnqueueVisibleBlackRepairTickets(scheduler_, focus, stale_dark_cols);
     }
-    // FZ2-R6 / FZ2.1-B2b: second collect when backlog remains (idle or enter).
-    const bool second_pass_ok =
-        nearest_vb_no_ticket && async_ok &&
-        ((!moving && visible_black_no_ticket_n > 20) ||
-         (enter_fov_lit && visible_black_no_ticket_n > 10));
-    if (second_pass_ok &&
+    // FZ2-R6 / FZ2.2-C2a: second collect idle-only; C2c enter peak one-shot.
+    const bool second_pass_idle =
+        nearest_vb_no_ticket && async_ok && !moving &&
+        visible_black_no_ticket_n > 20;
+    const bool second_pass_enter_peak =
+        enter_fov_lit && async_ok && visible_black_no_ticket_n > 80 &&
+        static_cast<int>(stale_dark_cols.size()) < stale_cap;
+    if (second_pass_idle &&
         static_cast<int>(stale_dark_cols.size()) < stale_cap)
     {
       const int remain =
           stale_cap - static_cast<int>(stale_dark_cols.size());
+      // FZ2.2-O5: narrower ring on second pass (incremental vs full rescan).
+      const int second_radius = std::max(1, vb_radius - 1);
       std::vector<glm::ivec2> extra;
-      world.CollectStaleDarkFocusColumns(focus_ground_horiz, vb_radius, extra,
-                                         remain);
+      world.CollectStaleDarkFocusColumns(focus_ground_horiz, second_radius,
+                                         extra, remain);
       if (!extra.empty())
       {
         EnqueueVisibleBlackRepairTickets(scheduler_, focus, extra);
+      }
+    }
+    else if (second_pass_enter_peak)
+    {
+      const int remain =
+          stale_cap - static_cast<int>(stale_dark_cols.size());
+      if (remain > 0)
+      {
+        std::vector<glm::ivec2> extra;
+        world.CollectStaleDarkFocusColumns(focus_ground_horiz, vb_radius, extra,
+                                           remain);
+        if (!extra.empty())
+        {
+          EnqueueVisibleBlackRepairTickets(scheduler_, focus, extra);
+        }
       }
     }
     if (!void_dark_cols.empty())

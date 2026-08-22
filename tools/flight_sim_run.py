@@ -378,8 +378,9 @@ def main() -> int:
             "ocean-cruise-enter",
             "ocean-cruise-stress",
             "ocean-cruise-short",
+            "fz-validate",
         ],
-        help="named scenario (break-stand / visual-* / land-* / idle-* / fly-clean / ocean-cruise*)",
+        help="named scenario (break-stand / visual-* / land-* / idle-* / fly-clean / ocean-cruise* / fz-validate)",
     )
     ap.add_argument("--break-phase-sec", type=float, default=20.0)
     ap.add_argument("--break-interval-sec", type=float, default=1.0)
@@ -848,6 +849,39 @@ def main() -> int:
         )
         args.warmup_sec = max(args.warmup_sec, 16.0)
 
+    if args.scenario == "fz-validate":
+        # FZ2.2 manual parity: land-south corridor, extended fly+stop (~195s).
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.resume = False
+        args.teleport_cruise = True
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 270.0
+        if args.cruise_cx is None:
+            args.cruise_cx = -483.0
+        if args.cruise_cz is None:
+            args.cruise_cz = 54.0
+        if args.cruise_eye_y is None:
+            args.cruise_eye_y = 96.0
+        args.idle_sec = max(args.idle_sec, 15.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 90.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 90.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 90.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 90.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 20.0)
+
     if args.replay_edge:
         args.world = "World_164"
         args.fly_stop = True
@@ -1042,7 +1076,14 @@ def main() -> int:
             or args.land_south
             or args.land_south_short
             or args.scenario
-            in ("idle-clean", "idle-warm", "idle-edit-smoke", "fly-clean", "ocean-cruise")
+            in (
+                "idle-clean",
+                "idle-warm",
+                "idle-edit-smoke",
+                "fly-clean",
+                "ocean-cruise",
+                "fz-validate",
+            )
             or (args.scenario or "").startswith("ocean-cruise")
         ):
             analyze_cmd.append("--manual-idle")

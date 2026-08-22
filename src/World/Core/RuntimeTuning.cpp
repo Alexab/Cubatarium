@@ -439,6 +439,14 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
     t.StrictEnterVisualReady =
         j.value("strict_enter_visual_ready", t.StrictEnterVisualReady);
   }
+  if (j.contains("fz2_defer_gated"))
+  {
+    t.Fz2DeferGated = j.value("fz2_defer_gated", t.Fz2DeferGated);
+  }
+  if (j.contains("fz2_lit_ring_seed"))
+  {
+    t.Fz2LitRingSeed = j.value("fz2_lit_ring_seed", t.Fz2LitRingSeed);
+  }
   last_path = path;
   last_mtime = mtime;
   have_mtime = true;

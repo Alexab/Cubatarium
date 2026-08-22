@@ -162,6 +162,7 @@ public:
   void BeginHoleQueryFrame(glm::ivec3 focus_ground_chunk);
   void SetPendingLightFocusPressure(int n);
   void SetVisibleBlackNoTicketPressure(int n);
+  void SetVisibleBlackFocusPressure(int n);
   void SetEnterFovLitPressure(bool v);
   void SetFz2DeferGated(bool v);
   double GetLastMeshImmediateMs() const;

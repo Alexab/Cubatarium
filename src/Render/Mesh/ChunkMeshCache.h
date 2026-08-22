@@ -299,6 +299,29 @@ public:
   {
     VisibleBlackNoTicketPressure_ = n;
   }
+  void SetVisibleBlackFocusPressure(int n)
+  {
+    if (LastVisibleBlackFocusPressure_ >= 0)
+    {
+      VbFocusBlinkDelta_ = std::abs(n - LastVisibleBlackFocusPressure_);
+    }
+    else
+    {
+      VbFocusBlinkDelta_ = 0;
+    }
+    if (n == LastVisibleBlackFocusPressure_)
+    {
+      ++VbFocusStableFrames_;
+    }
+    else
+    {
+      VbFocusStableFrames_ = 0;
+    }
+    LastVisibleBlackFocusPressure_ = n;
+    VisibleBlackFocusPressure_ = n;
+  }
+  int GetVbFocusStableFrames() const { return VbFocusStableFrames_; }
+  int GetVbFocusBlinkDelta() const { return VbFocusBlinkDelta_; }
   void SetEnterFovLitPressure(bool v) { EnterFovLitPressure_ = v; }
   void SetFz2DeferGated(bool v) { Fz2DeferGated_ = v; }
   const MeshRebuildTickStats &GetLastRebuildTickStats() const
@@ -817,6 +840,11 @@ private:
   glm::ivec3 LastHoleQueryFocus_{0};
   int PendingLightFocusPressure_{0};
   int VisibleBlackNoTicketPressure_{0};
+  int VisibleBlackFocusPressure_{0};
+  int LastVisibleBlackFocusPressure_{-1};
+  int VbFocusStableFrames_{0};
+  int VbFocusBlinkDelta_{0};
+  int DirtySortFrameCounter_{0};
   bool EnterFovLitPressure_{false};
   bool Fz2DeferGated_{true};
   std::deque<glm::ivec3> RemeshDeferredRing_;

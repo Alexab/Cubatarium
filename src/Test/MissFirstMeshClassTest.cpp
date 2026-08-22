@@ -662,8 +662,8 @@ int main()
          "FlickerZero: VB finalize skips far ring");
   Expect(ShouldFinalizeRelightUnderVbSteadyPressure(55, 20, 3),
          "FZ2: steady VB+PL finalize lit ring");
-  Expect(!ShouldFinalizeRelightUnderVbSteadyPressure(30, 20, 3),
-         "FZ2: steady VB below thresh skips finalize");
+  Expect(!ShouldFinalizeRelightUnderVbSteadyPressure(29, 20, 3),
+         "FZ2.2-C4b: steady VB below thresh skips finalize");
   Expect(ShouldSkipDeferRemeshForLitRingFullyDark(2, true),
          "FlickerZero: lit-ring FullyDark skip defer (legacy)");
   Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 0),
@@ -680,12 +680,18 @@ int main()
          "FZ2: PL leave-in RemoveAt under VB heal");
   Expect(!ShouldRemoveAtRemeshDespitePlPressure(2, true, false, 0),
          "FZ2: steady PL leave-in allowed");
-  Expect(VisibleBlackNoTicketRepairCap(108, 6, false, true) <= 4,
-         "FZ2.1-B2a: enter idle repair cap≤4");
-  Expect(ShouldFinalizeRelightUnderVbSteadyPressure(36, 13, 3),
-         "FZ2.1-B4a: steady finalize vb=36 pl=13");
-  Expect(!ShouldFinalizeRelightUnderVbSteadyPressure(34, 13, 3),
-         "FZ2.1-B4a: vb≤35 skips finalize");
+  Expect(ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 0, 12, 12, 55,
+                                                  3),
+         "FZ2.2-C3b: steady VB>50 stable → skip defer");
+  Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 0, 12, 12, 55,
+                                                   1),
+         "FZ2.2-C3b: VB stable<3 frames → defer allowed");
+  Expect(VisibleBlackNoTicketRepairCap(108, 6, false, true) <= 2,
+         "FZ2.2-C2b: enter idle repair cap≤2");
+  Expect(ShouldFinalizeRelightUnderVbSteadyPressure(31, 11, 3),
+         "FZ2.2-C4b: steady finalize vb=31 pl=11");
+  Expect(!ShouldFinalizeRelightUnderVbSteadyPressure(29, 11, 3),
+         "FZ2.2-C4b: vb≤29 skips finalize");
   Expect(FluidMapShouldThrottleEnter(true, false, false, 0, 0),
          "FlickerZero: enter_fov_lit throttles fluid");
   Expect(FluidMapShouldThrottleEnter(false, true, false, 0, 0),

@@ -148,6 +148,8 @@ struct URuntimeTuning
   bool StrictEnterVisualReady{true};
   /// FZ2.1-B3: gated lit-ring defer (false → legacy unconditional FullyDark skip).
   bool Fz2DeferGated{true};
+  /// FZ2.2-C1a: lit-ring seed duplicate Enqueue+Note on terrain commit (false = off).
+  bool Fz2LitRingSeed{false};
 
   static URuntimeTuning &Get();
   static void ResetToDefaults();

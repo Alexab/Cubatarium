@@ -3958,8 +3958,17 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         static_cast<double>(LastDirtyRevisitSameN) >=
             0.92 * static_cast<double>(Dirty.GetCount());
     const bool skip_sort_vb_heal =
-        VisibleBlackNoTicketPressure_ > 0 && PendingLightFocusPressure_ <= 30;
-    if (!skip_sort_for_budget && !skip_sort_high_revisit && !skip_sort_vb_heal)
+        (VisibleBlackNoTicketPressure_ > 0 && PendingLightFocusPressure_ <= 30) ||
+        VbFocusBlinkDelta_ > 10;
+    ++DirtySortFrameCounter_;
+    const bool skip_sort_o4_throttle =
+        PendingLightFocusPressure_ <= 30 && Dirty.GetCount() > 0 &&
+        LastDirtyRevisitSameN > 0 &&
+        static_cast<double>(LastDirtyRevisitSameN) >=
+            0.80 * static_cast<double>(Dirty.GetCount()) &&
+        (DirtySortFrameCounter_ % 3) != 0;
+    if (!skip_sort_for_budget && !skip_sort_high_revisit &&
+        !skip_sort_vb_heal && !skip_sort_o4_throttle)
     {
     // Precompute missing-mesh set once — SortByDistanceKey compares O(n log n)
     // times; per-compare GreedyCache.find was burning wall during flight.
@@ -4207,7 +4216,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       return !ShouldRemoveAtRemeshDespitePlPressure(
           horiz, ChunkHasFullyDarkFace(c), EnterFovLitPressure_,
-          VisibleBlackNoTicketPressure_);
+          VisibleBlackNoTicketPressure_, kVisualStageLitDrawableHoriz, 12,
+          VisibleBlackFocusPressure_, VbFocusStableFrames_);
     };
 
     auto try_schedule = [&](auto it, bool count_outside, bool count_overflow,
@@ -4506,7 +4516,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       return ShouldSkipDeferRemeshUnderVbHealPressure(
           coord_horiz(c), ChunkHasFullyDarkFace(c), EnterFovLitPressure_,
-          VisibleBlackNoTicketPressure_);
+          VisibleBlackNoTicketPressure_, kVisualStageLitDrawableHoriz, 12,
+          VisibleBlackFocusPressure_, VbFocusStableFrames_);
     };
     for (auto it = Dirty.begin();
          it != Dirty.end() && scheduled < max_schedule_per_frame;)

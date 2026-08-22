@@ -472,3 +472,47 @@ Log: `bin/logs/perf_20260822-183257_18792.jsonl` (119 spikes). Post-FZ2.1 bisect
 - Autofly guard: cruise PL≤5, VB blink=0.
 - Bisect B2b off on enter if revisit stays >65 after B1b flight.
 - `Fz2DeferGated=false` flight for revisit steady root cause.
+
+## FlickerZero-2.2 — PL bisect + revisit/VB drain (2026-08-22)
+
+Baseline: manual `184927` (B1b `4a8ee2d4`). Target: close remaining FZ2 gates.
+
+| Track | Change |
+| --- | --- |
+| C1a | `Fz2LitRingSeed` default **false** — lit-ring seed off |
+| C1b | terrain commit Note **FullyDark-only** via `TryNotePendingLightBeforeMesh` |
+| C1c / O1 | idempotent `TryNotePendingLightBeforeMesh` + `RelightNoteSkippedDupN` |
+| C2a | enter second collect pass **removed** (idle-only second pass) |
+| C2b | enter idle `VisibleBlackNoTicketRepairCap` **≤2** |
+| C2c | enter peak second collect when `no_ticket>80` |
+| C3b / O3 | VB focus >50 stable 3f → skip defer; vb_blink sort skip |
+| C4a | drain tier `vb>45` → idle **16** |
+| C4b | finalize steady vb/pl **30/10** |
+| C4c | `HighPlCruiseApplyFloor` when vb≤**50** |
+| C6b | `UnderfeetOpaquePresentPredictedHeld` 3-frame hold |
+| O4 | dirty sort throttle 1/3 frames when revisit≥80% |
+| O5 | second pass narrower ring (`vb_radius-1`) |
+| infra | `fz-validate` scenario + `bin/tmp_fz2_step_validate.py` (P-OPT) |
+
+**Validation:** `python bin/tmp_fz2_step_validate.py --step FZ22-shipped --skip-build`
+
+### Results — autofly `193650` (FZ2.2 shipped build, ~287 spikes)
+
+Log: `bin/logs/perf_20260822-193650_6352.jsonl`. Autofly `fz-validate`.
+
+| Gate | Target | `193650` | `184927` | Status |
+| --- | --- | --- | --- | --- |
+| PL enter med | <25 | **5.5** | 41.5 | **PASS** |
+| PL steady med | <15 | **1.0** | 45.0 | **PASS** |
+| enter no_ticket med | <30 | **0.0** | 1.0 | PASS |
+| VB steady med | <40 | **11.0** | 65.0 | PASS |
+| unlit_h steady med | <20 | **1.0** | 44.0 | PASS |
+| stream steady med | ≤35 | **19.7** | 42.7 | PASS |
+| uf_flips rate | <0.05 | **0.035** | 0.021 | PASS |
+| revisit steady med | <95 | **157.0** | 172.0 | FAIL (−15) |
+| revisit enter med | ≤65 | **82.0** | 69.0 | FAIL |
+| no_ticket peak | <80 | **102** | 116 | FAIL |
+| enter wall p90 | <250 ms | **409** | 205 | FAIL (autofly teleport) |
+| black_sticky | 0 | **0** | 0 | PASS |
+
+**Verdict:** autofly закрыл **PL enter/steady**, **VB/unlit/stream** — основной debt снят. Open: revisit steady, enter wall p90 (autofly cold), no_ticket peak. **Manual ≥240s** — gate of record для M4.
