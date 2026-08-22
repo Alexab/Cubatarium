@@ -431,3 +431,44 @@ Commit after `e3efb9d8`. Tracks B1–B7 from [bisect plan](../../.cursor/plans/f
 | B7 | (secondary — follows B3/B4 drain) |
 
 **Awaiting manual flight** for gate verification vs `173621`.
+
+### Results — manual `183257` (commit `dfa9a637`, ~238s)
+
+Log: `bin/logs/perf_20260822-183257_18792.jsonl` (119 spikes). Post-FZ2.1 bisect build.
+
+| Gate | Target | `183257` | `173621` | Δ | Status |
+| --- | --- | --- | --- | --- | --- |
+| enter no_ticket med | <30 | **5.0** | 3.0 | +2 | PASS |
+| PL enter med | <25 | **43.0** | 51.0 | −8 | FAIL |
+| PL steady med | <15 | **30.0** | 29.0 | +1 | FAIL |
+| revisit steady med | <95 | **169.0** | 175.0 | −6 | FAIL |
+| revisit enter med | ≤65 | **81.0** | 63.0 | +18 | FAIL (регресс) |
+| uf_flips rate | <0.05 | **0.067** | 0.076 | −12% | FAIL |
+| enter wall p90 | <250 ms | **225** | 209 | +16 ms | PASS |
+| enter fluid p90 | <200 ms | **62** | 45 | +17 ms | PASS |
+| VB steady med | <40 | **62.0** | 62.0 | 0 | FAIL |
+| unlit_hidden steady | <20 | **25.0** | 29.0 | −4 | FAIL |
+| no_ticket peak | <80 | **98** | 114 | −16 | FAIL |
+| stream steady med | ≤35 | **48.6** | 42.8 | +6 | FAIL |
+| black_sticky | 0 | **0** | 0 | 0 | PASS |
+
+**Segments (`183257`):**
+
+| Segment | wall med | PL | VB | no_ticket | revisit | fluid p90 |
+| --- | --- | --- | --- | --- | --- | --- |
+| enter 0–60s | 128.1 | 43.0 | 80.0 | 5.0 | 81.0 | 61.8 |
+| steady 120s+ | 110.5 | 30.0 | 62.0 | 0.0 | 169.0 | 0.0 |
+
+**Forensics:** vb_blink **0.378**; no_ticket_blink **0.244**; uf_flips **8** (0.067); opaque_gap med **11** (was 39). first15 no_ticket slope **+2.3/frame** (was +9.3). PL buckets: 72% frames PL>25.
+
+**FZ2.1 track verdict:** код B1–B7 shipped; метрики — частичный прогресс (PL enter −8, peak −16, uf −12%), но **0/8 DoD gates closed**. Регрессия: enter revisit 63→81 (trade-off B2b enter second pass?). Must-keep wall/fluid/no_ticket/black_sticky сохранены.
+
+### FZ2.1-B1b — Note removed from TickEnterFovLitPass enqueue_col
+
+`NotePendingLightBeforeMesh` убран из `enqueue_col` (`World.cpp`); PL только через ColumnFlow + terrain commit. **Awaiting manual ≥180s** vs `183257`.
+
+### Deferred (post-183257)
+
+- Autofly guard: cruise PL≤5, VB blink=0.
+- Bisect B2b off on enter if revisit stays >65 after B1b flight.
+- `Fz2DeferGated=false` flight for revisit steady root cause.

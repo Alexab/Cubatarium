@@ -7401,34 +7401,12 @@ int UWorld::TickEnterFovLitPass(int capture_budget)
     }
     Persistence->EnqueueTerrainColumnRelight(world_key.x, world_key.y, priority,
                                              band_min, band_max);
-    // FZ2.1-B1c: skip Note if Enqueue put column in flight this frame.
+    // FZ2.1-B1c: skip follow-up if Enqueue put column in flight this frame.
     if (IsAsyncRelightColumnInFlight(col))
     {
       return;
     }
-    const int horiz =
-        std::max(std::abs(col.x - center.x), std::abs(col.y - center.z));
-    if (horiz > kVisualStageLitDrawableHoriz)
-    {
-      return;
-    }
-    if (IsPendingLightBeforeMesh(col))
-    {
-      return;
-    }
-    const auto &sched = GetColumnFlowExecutor().Scheduler();
-    if (sched.Contains(col, ColumnWorkKind::RelightThenMesh) ||
-        sched.Contains(col, ColumnWorkKind::FirstMesh) ||
-        sched.Contains(col, ColumnWorkKind::PromoteRelight) ||
-        GetColumnFlowExecutor().HasRepairTicket(col))
-    {
-      return;
-    }
-    if (!ColumnFullyDarkSolidDrawable(col))
-    {
-      return;
-    }
-    NotePendingLightBeforeMesh(glm::ivec3(col.x, 0, col.y), band_min, band_max);
+    // FZ2.1-B1b: no NotePendingLight here — ColumnFlow + terrain commit own PL.
   };
 
   int enqueued = 0;
