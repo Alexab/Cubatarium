@@ -891,8 +891,20 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     }
     const bool opaque_present =
         world.PhysicsTelemetryData.UnderfeetOpaquePresent != 0;
+    bool inflight = false;
+    for (int cy = 0; cy <= max_cy; ++cy)
+    {
+      const glm::ivec3 coord(under_xz.x, cy, under_xz.y);
+      if (world.GetMeshService().HasInflightMeshBuild(coord))
+      {
+        inflight = true;
+        break;
+      }
+    }
+    const bool opaque_predicted = UnderfeetOpaquePresentPredicted(
+        opaque_present, uf.draw_ok, pending_gpu, inflight);
     has_mesh = UnderfeetColumnHasDrawable(has_mesh, pending_gpu, uf.draw_ok,
-                                          opaque_present);
+                                          opaque_present || opaque_predicted);
     world.PhysicsTelemetryData.UnderfeetDrawOk = uf.draw_ok ? 1 : 0;
     world.PhysicsTelemetryData.UnderfeetHasMesh = has_mesh ? 1 : 0;
     world.PhysicsTelemetryData.UnderfeetSticky =

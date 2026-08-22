@@ -1186,6 +1186,15 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
               dirty_max,
               std::min(column_max_y, focus_block.y + CHUNK_SIZE * 2));
         }
+        // ColdPL-1B: underfeet remesh band even when primary_only defers lateral.
+        if (primary_only && horiz <= 1)
+        {
+          dirty_min =
+              std::min(dirty_min, std::max(0, focus_block.y - CHUNK_SIZE));
+          dirty_max = std::max(
+              dirty_max,
+              std::min(column_max_y, focus_block.y + CHUNK_SIZE * 2));
+        }
         if (!primary_only && !column_has_drawable)
         {
           // Era26 I-O5: FillWater lateral (horiz 2–5) remesh sea±CHUNK band.
@@ -2541,6 +2550,21 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
   }
   if (MeshService->HasMeshSatisfyingColumnReady(chunk_coord))
   {
+    const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
+    const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
+    const int horiz =
+        std::max(std::abs(chunk_coord.x - focus_chunk.x),
+                 std::abs(chunk_coord.z - focus_chunk.z));
+    const glm::ivec2 col_xz(chunk_coord.x, chunk_coord.z);
+    const bool pending = IsPendingLightBeforeMesh(col_xz);
+    // ColdPL F4: underfeet keep drawing during pending_light remesh window.
+    if (horiz <= 1 && pending &&
+        (MeshService->GetCache().HasLiveGpuDraw(chunk_coord) ||
+         MeshService->IsPendingGpuApply(chunk_coord) ||
+         MeshService->HasInflightMeshBuild(chunk_coord)))
+    {
+      return true;
+    }
     // LitRing: FullyDark in LitDrawable/underfeet → hole until lit drawable.
     // Cave true-dark only via OpenSky settle.
     const bool fully_dark =
@@ -2548,13 +2572,6 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
         !MeshService->ChunkHasLitDrawableFace(chunk_coord);
     if (fully_dark)
     {
-      const glm::ivec3 focus_block = GetPreferredLoadFocusBlock();
-      const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus_block);
-      const int horiz =
-          std::max(std::abs(chunk_coord.x - focus_chunk.x),
-                   std::abs(chunk_coord.z - focus_chunk.z));
-      const glm::ivec2 col_xz(chunk_coord.x, chunk_coord.z);
-      const bool pending = IsPendingLightBeforeMesh(col_xz);
       if (ShouldHideFullyDarkUntilLitInRing(horiz, true, pending))
       {
         const bool stale =
@@ -3949,6 +3966,7 @@ int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
       const glm::ivec2 key(focus_ground_chunk.x + dx,
                            focus_ground_chunk.z + dz);
       bool is_black = false;
+      bool column_fully_dark = false;
       for (int cy = cy0; cy <= cy1; ++cy)
       {
         const glm::ivec3 coord(key.x, cy, key.y);
@@ -3956,14 +3974,18 @@ int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
         {
           continue;
         }
-        // Count drawable dark for Relight heal tickets even when LitDrawable
-        // draw gate hides them (IsChunkSliceRenderReady=false). Drawn-only
-        // counting starved EnqueueVisibleBlackRepairTickets → void spiral
-        // (era32_hide2_ocean void≈3.2k).
-        if (MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld) ||
-            MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+        const bool fully_dark =
+            MeshService->GetCache().ChunkHasFullyDarkFace(coord);
+        if (MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld) || fully_dark)
         {
           is_black = true;
+        }
+        if (fully_dark)
+        {
+          column_fully_dark = true;
+        }
+        if (is_black && column_fully_dark)
+        {
           break;
         }
       }
@@ -3975,17 +3997,6 @@ int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
       const bool contains = GetColumnFlowExecutor().HasRepairTicket(key);
       const bool progress = ColumnHasRepairProgress(key);
       const bool sticky = IsColumnStickyRemesh(key);
-      bool column_fully_dark = false;
-      for (int cy = cy0; cy <= cy1; ++cy)
-      {
-        const glm::ivec3 coord(key.x, cy, key.y);
-        if (MeshService->HasDrawableGreedyMesh(coord) &&
-            MeshService->GetCache().ChunkHasFullyDarkFace(coord))
-        {
-          column_fully_dark = true;
-          break;
-        }
-      }
       const bool pending_replace = IsPendingLightBeforeMesh(key);
       const bool counts_progress = ShouldCountVisibleBlackProgress(
           contains || progress || sticky, column_fully_dark, pending_replace);
@@ -4347,8 +4358,26 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
     }
     if (MeshService->HasDirtyInColumnBand(key, it->second.min_y, it->second.max_y))
     {
-      ++it;
-      continue;
+      bool only_gpu_inflight = true;
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(key.x, cy, key.y);
+        if (!MeshService->IsChunkMeshDirty(coord))
+        {
+          continue;
+        }
+        if (!MeshService->IsPendingGpuApply(coord) &&
+            !MeshService->HasInflightMeshBuild(coord))
+        {
+          only_gpu_inflight = false;
+          break;
+        }
+      }
+      if (!only_gpu_inflight)
+      {
+        ++it;
+        continue;
+      }
     }
     AsyncRelightColumnsInFlight.erase(key);
     it = PendingLightBeforeMesh.erase(it);
@@ -4777,6 +4806,11 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   const double slice_ms =
       static_cast<double>(URuntimeTuning::Get().MissReservedMs);
   const bool enter_pass = EnterFovLitPassActive;
+  const glm::ivec3 pl_focus_chunk =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const int pl_focus_n = CountPendingLightBeforeMeshNear(
+      glm::ivec3(pl_focus_chunk.x, 0, pl_focus_chunk.z),
+      GetStreamingFocusRadius());
   // RateMatch R0: DrainUpTo(1) loop so MissReservedMs slice can stop mid-budget
   // (DrainCompleted(N) would MarkRelit all N before any early-out).
   while (applied < max_per_frame)
@@ -4823,9 +4857,11 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       const glm::ivec3 chunk = UChunkManager::WorldToChunk(pos);
       primary_grounds.push_back(glm::ivec2(chunk.x, chunk.z));
     }
-    const bool defer_side = ShouldDeferHeavyApplySideEffects(
-        PhysicsTelemetryData.RelightApplyMsPrev,
-        PhysicsTelemetryData.RelightApplyNPrev);
+    const bool defer_side =
+        ShouldDeferHeavyApplySideEffects(
+            PhysicsTelemetryData.RelightApplyMsPrev,
+            PhysicsTelemetryData.RelightApplyNPrev) &&
+        !ShouldSkipDeferHeavyApplyUnderPl(pl_focus_n);
     // CheapRemesh C3: noop light → clear InFlight/Pending without Dirty/Prefetch.
     if (!any_light_changed)
     {

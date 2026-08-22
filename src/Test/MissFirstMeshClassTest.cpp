@@ -1745,6 +1745,23 @@ int main()
            "P2: rim horiz4 keeps Y-band split");
     Expect(!ShouldPreferMissFinalizeBand(5),
            "P2: beyond near FOV no finalize prefer");
+    using cutum::ShouldFinalizeRelightUnderPlPressure;
+    using cutum::ShouldLeaveInDirtyUnderPlPressure;
+    using cutum::ShouldSkipDeferHeavyApplyUnderPl;
+    Expect(ShouldFinalizeRelightUnderPlPressure(30, 3, 6),
+           "ColdPL: PL>24 finalize focus ring");
+    Expect(!ShouldFinalizeRelightUnderPlPressure(20, 3, 6),
+           "ColdPL: low PL keeps split");
+    Expect(!ShouldFinalizeRelightUnderPlPressure(30, 8, 6),
+           "ColdPL: outside focus keeps split");
+    Expect(ShouldLeaveInDirtyUnderPlPressure(35),
+           "ColdPL: PL>30 leave-in remesh ownership");
+    Expect(!ShouldLeaveInDirtyUnderPlPressure(20),
+           "ColdPL: low PL RemoveAt path");
+    Expect(ShouldSkipDeferHeavyApplyUnderPl(35),
+           "ColdPL: skip defer side-effects when PL high");
+    Expect(!ShouldSkipDeferHeavyApplyUnderPl(20),
+           "ColdPL: allow defer when PL low");
     using cutum::ShouldHoldPinnedRelightWitness;
     using cutum::ShouldRetargetRelightWitness;
     using cutum::ShouldFirstMeshSortBoost;

@@ -847,7 +847,9 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.DirtyRemeshN = 0;
 
   const auto t_before_stream = std::chrono::high_resolution_clock::now();
-  GetMeshService().BeginHoleQueryFrame();
+  const glm::ivec3 hole_focus =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  GetMeshService().BeginHoleQueryFrame(hole_focus);
   UpdateStreaming();
   TickAsyncChunkSystems();
   const auto t_after_stream = std::chrono::high_resolution_clock::now();

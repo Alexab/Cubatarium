@@ -13,6 +13,17 @@ inline bool UnderfeetColumnHasDrawable(bool slice_drawable, bool pending_gpu,
          (draw_ok && slice_drawable);
 }
 
+/// ColdPL F4: telem reconcile — draw_ok + GPU/inflight ⇒ visually present.
+inline bool UnderfeetOpaquePresentPredicted(bool opaque_in_pass, bool draw_ok,
+                                            bool pending_gpu, bool inflight)
+{
+  if (opaque_in_pass)
+  {
+    return true;
+  }
+  return draw_ok && (pending_gpu || inflight);
+}
+
 inline ColumnRenderableState::BlockReason ReconcileUnderfeetBlockReason(
     ColumnRenderableState::BlockReason reason, bool has_drawable, bool draw_ok,
     bool pending_gpu)

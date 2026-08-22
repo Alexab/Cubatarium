@@ -298,3 +298,25 @@ PL buckets: 278/338 spikes ≥41 — **steady-state PL≈45, not transient**.
 | duration ≥60s | ✓ |
 
 **Verdict:** ColdWall **closes stream/wall/apply/VB** on long cold manual. **PL/revisit/dirty/emerge/unlit_hidden** remain open vs `220205`; short `091818` underestimated PL (ramp ended early). Top spikes: enter-load + `fluid_map_cpu` (p90=0 in cruise, max≈221 at start). Next eye work: PL steady ≈45 + revisit≈106 + unlit_hidden≈43, not stream.
+
+## ColdPL — PL drain + revisit cut (2026-08-22)
+
+After ColdWall `1ede5165` / manual `093018`: stream/wall closed; **PL≈45**, **revisit≈106** open.
+
+| Step | Phase ID | Change | Result |
+| --- | --- | --- | --- |
+| 1A | `ColdPL-1A` | `ShouldFinalizeRelightUnderPlPressure` — focus ring finalize when PL>24 | policy + units |
+| 1B | `ColdPL-1B` | PL>30: PendingGpu/Inflight leave-in; defer side-effects off; underfeet band on primary_only; ClearPendingLight iff GPU/inflight-only Dirty | code |
+| 2A | `ColdPL-2A` | `RemeshDeferredRing` — over-cap/outside remesh defer vs leave-in revisit | code |
+| 2B | `ColdPL-2B` | Skip dirty sort when revisit>80% dirty | code |
+| 3 | `ColdPL-3` | Hole-query memo on focus move; SoftDefer rim CD 12 when PL>40; VB single-pass cy scan | code |
+| 4 | `ColdPL-F4` | Underfeet `IsChunkSliceRenderReady` keep GPU/inflight during pending; telem `UnderfeetOpaquePresentPredicted` | code |
+
+### Deferred
+
+- Cold manual ≥180s post-ColdPL vs `093018` (target: PL med <20, revisit <85, stream ≤45).
+- Autofly guard: cruise PL≤5, wall_fly no +15% vs LitRing.
+
+### Diagnostics
+
+- `bin/tmp_cold_pl_forensics.py` — partial/final apply, PL buckets, uf_flip vs draw_ok.

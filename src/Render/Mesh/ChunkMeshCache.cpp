@@ -1284,9 +1284,37 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
   return missing;
 }
 
-void UChunkMeshCache::BeginHoleQueryFrame()
+void UChunkMeshCache::BeginHoleQueryFrame(glm::ivec3 focus_ground_chunk)
 {
-  ++HoleQueryEpoch;
+  if (focus_ground_chunk != LastHoleQueryFocus_)
+  {
+    ++HoleQueryEpoch;
+    LastHoleQueryFocus_ = focus_ground_chunk;
+  }
+}
+
+void UChunkMeshCache::DeferRemeshCoord(const glm::ivec3 &coord)
+{
+  if (RemeshDeferredSet_.count(coord) > 0)
+  {
+    return;
+  }
+  RemeshDeferredSet_.insert(coord);
+  RemeshDeferredRing_.push_back(coord);
+}
+
+void UChunkMeshCache::RequeueDeferredRemesh(int max_n)
+{
+  for (int i = 0; i < max_n && !RemeshDeferredRing_.empty(); ++i)
+  {
+    const glm::ivec3 c = RemeshDeferredRing_.front();
+    RemeshDeferredRing_.pop_front();
+    RemeshDeferredSet_.erase(c);
+    if (!Dirty.Contains(c))
+    {
+      Dirty.MarkDirty(c);
+    }
+  }
 }
 
 bool UChunkMeshCache::FindNearestMissingGreedyMesh(
@@ -3907,7 +3935,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         !memo_holes && !StarveRemeshForHoles &&
         MeshEmergeTotalBudgetMs > 0.0 &&
         tick_so_far >= MeshEmergeTotalBudgetMs;
-    if (!skip_sort_for_budget)
+    const bool skip_sort_high_revisit =
+        Dirty.GetCount() > 0 && LastDirtyRevisitSameN > 0 &&
+        static_cast<double>(LastDirtyRevisitSameN) >=
+            0.8 * static_cast<double>(Dirty.GetCount());
+    if (!skip_sort_for_budget && !skip_sort_high_revisit)
     {
     // Precompute missing-mesh set once — SortByDistanceKey compares O(n log n)
     // times; per-compare GreedyCache.find was burning wall during flight.
@@ -4196,6 +4228,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         // mid-flight only via Active→RAA latch, not via leave-in-Dirty.
         ++DirtyScheduleSkipInflightN;
         ++LastMeshDirtyScheduleSkipN;
+        if (ShouldLeaveInRemeshUnderPlPressure())
+        {
+          return std::next(it);
+        }
         return Dirty.RemoveAt(it);
       }
       // ColdWall S0a: PendingGpu owns the chunk — mirror Inflight RemoveAt.
@@ -4204,6 +4240,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         ++DirtyScheduleSkipInflightN;
         ++LastMeshDirtyScheduleSkipN;
+        if (ShouldLeaveInRemeshUnderPlPressure())
+        {
+          return std::next(it);
+        }
         return Dirty.RemoveAt(it);
       }
       if (!world.GetChunkManager().HasChunk(*it))
@@ -4408,6 +4448,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
     }
 
+    RequeueDeferredRemesh(remesh_cap);
     for (auto it = Dirty.begin();
          it != Dirty.end() && scheduled < max_schedule_per_frame;)
     {
@@ -4443,6 +4484,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         // CheapRemesh C0: Inflight owns the chunk — erase Dirty (same as
         // FirstMesh schedule path). Leave-in-Dirty caused dirty_revisit thrash.
         ++DirtyScheduleSkipInflightN;
+        if (ShouldLeaveInRemeshUnderPlPressure())
+        {
+          ++it;
+          continue;
+        }
         it = Dirty.RemoveAt(it);
         continue;
       }
@@ -4451,6 +4497,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           IsPendingGpuKickedOrDispatched(*it))
       {
         ++DirtyScheduleSkipInflightN;
+        if (ShouldLeaveInRemeshUnderPlPressure())
+        {
+          ++it;
+          continue;
+        }
         it = Dirty.RemoveAt(it);
         continue;
       }
@@ -4467,9 +4518,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (is_remesh && remesh_scheduled >= remesh_cap)
       {
         // Dual-queue: remesh suffix is contiguous after FirstMesh — stop walk.
-        // ColdWall S0c: remesh over-cap → RemoveAt; FirstMesh leave-in (++it).
+        // ColdPL-2A: defer over-cap remesh (not leave-in revisit churn).
         if (!Dirty.IsFirstMesh(*it))
         {
+          DeferRemeshCoord(*it);
           it = Dirty.RemoveAt(it);
           continue;
         }
@@ -4522,7 +4574,15 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           }
           if (outside_focus_scheduled >= outside_cap)
           {
-            ++it;
+            if (is_remesh && HasDrawableGreedyMesh(*it))
+            {
+              DeferRemeshCoord(*it);
+              it = Dirty.RemoveAt(it);
+            }
+            else
+            {
+              ++it;
+            }
             continue;
           }
         }

@@ -683,9 +683,14 @@ void UWorldMeshService::ResetImmediateMeshStats()
   Cache.ResetImmediateMeshStats();
 }
 
-void UWorldMeshService::BeginHoleQueryFrame()
+void UWorldMeshService::BeginHoleQueryFrame(glm::ivec3 focus_ground_chunk)
 {
-  Cache.BeginHoleQueryFrame();
+  Cache.BeginHoleQueryFrame(focus_ground_chunk);
+}
+
+void UWorldMeshService::SetPendingLightFocusPressure(int n)
+{
+  Cache.SetPendingLightFocusPressure(n);
 }
 
 double UWorldMeshService::GetLastMeshImmediateMs() const

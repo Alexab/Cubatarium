@@ -1148,7 +1148,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     // Rim nh=3–4 keeps split. Era41b: enter FOV lit always finalizes.
     const bool miss_finalize_band =
         enter_fov_lit ||
-        (visual_holes && ShouldPreferMissFinalizeBand(horiz_dist));
+        (visual_holes && ShouldPreferMissFinalizeBand(horiz_dist)) ||
+        ShouldFinalizeRelightUnderPlPressure(pending_light_focus_n, horiz_dist,
+                                           focus_radius);
     if (async_bg && band_cy > 0 && !miss_finalize_band)
     {
       const int band_h = band_cy * CHUNK_SIZE;

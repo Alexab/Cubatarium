@@ -816,7 +816,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     else if (!near_miss_urgent && prev_softdefer_empty == 0 &&
              owned_all_ticketed)
     {
-      SoftDeferRimScanCd = 6;
+      SoftDeferRimScanCd = pending_focus_count > 40 ? 12 : 6;
     }
     else
     {
@@ -3835,6 +3835,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
   }
   ApplyUnderfeetReservationFloors(mesh_drain, mesh_schedule, uf_res);
+  mesh_service.SetPendingLightFocusPressure(pending_focus_count);
   // F0: SyncRebuild always off in TickMeshEmerge. Dig/edit uses
   // RebuildChunkImmediate (PlayerRelightMeshBurst); SyncRebuild was still
   // burning 100–200ms whenever burst frames were non-zero on cruise.

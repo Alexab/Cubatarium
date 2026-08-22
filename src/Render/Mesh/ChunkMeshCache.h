@@ -292,8 +292,9 @@ public:
                                     glm::ivec3 center_ground_chunk,
                                     int radius_chunks,
                                     glm::ivec3 &out_coord) const;
-  /// Invalidate per-frame hole-query memo (call once before streaming/mesh).
-  void BeginHoleQueryFrame();
+  /// Invalidate per-frame hole-query memo when focus moves (ColdPL-3D).
+  void BeginHoleQueryFrame(glm::ivec3 focus_ground_chunk);
+  void SetPendingLightFocusPressure(int n) { PendingLightFocusPressure_ = n; }
   const MeshRebuildTickStats &GetLastRebuildTickStats() const
   {
     return LastRebuildTickStats;
@@ -807,6 +808,16 @@ private:
     glm::ivec3 coord{0};
   };
   mutable NearestQueryMemo NearestMemo{};
+  glm::ivec3 LastHoleQueryFocus_{0};
+  int PendingLightFocusPressure_{0};
+  std::deque<glm::ivec3> RemeshDeferredRing_;
+  std::unordered_set<glm::ivec3, IVec3Hash> RemeshDeferredSet_;
+  void DeferRemeshCoord(const glm::ivec3 &coord);
+  void RequeueDeferredRemesh(int max_n);
+  bool ShouldLeaveInRemeshUnderPlPressure() const
+  {
+    return PendingLightFocusPressure_ > 30;
+  }
 };
 } // namespace cutum
 #endif

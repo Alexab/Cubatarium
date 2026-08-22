@@ -190,6 +190,30 @@ inline bool ShouldPreferMissFinalizeBand(int miss_horiz,
   return miss_horiz >= 0 && miss_horiz <= ring;
 }
 
+/// ColdPL-1A: under high PL, finalize focus-ring Capture (no partial Y-band).
+inline bool ShouldFinalizeRelightUnderPlPressure(int pending_light_focus_n,
+                                                 int horiz_dist,
+                                                 int focus_radius,
+                                                 int pl_thresh = 24)
+{
+  return pending_light_focus_n > pl_thresh && horiz_dist >= 0 &&
+         horiz_dist <= focus_radius;
+}
+
+/// ColdPL-1B: remesh ownership leave-in when PL backlog is high.
+inline bool ShouldLeaveInDirtyUnderPlPressure(int pending_light_focus_n,
+                                              int pl_thresh = 30)
+{
+  return pending_light_focus_n > pl_thresh;
+}
+
+/// ColdPL-1B: do not defer MarkRelit side-effects while PL is elevated.
+inline bool ShouldSkipDeferHeavyApplyUnderPl(int pending_light_focus_n,
+                                             int pl_thresh = 30)
+{
+  return pending_light_focus_n > pl_thresh;
+}
+
 /// Hold nh≤2 witness until MarkRelit or greedy appears — pending OR missing.
 /// 215411: miss was often cy=2 without pending on that key, so hold never armed.
 inline bool ShouldHoldPinnedRelightWitness(int pinned_horiz,

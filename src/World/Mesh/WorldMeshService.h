@@ -159,7 +159,8 @@ public:
   void InvalidateEditMeshNeighborhood(
       const std::vector<glm::ivec3> &block_positions);
   void ResetImmediateMeshStats();
-  void BeginHoleQueryFrame();
+  void BeginHoleQueryFrame(glm::ivec3 focus_ground_chunk);
+  void SetPendingLightFocusPressure(int n);
   double GetLastMeshImmediateMs() const;
   int GetLastMeshImmediateCount() const;
   void WaitForAsyncMeshIdle();
