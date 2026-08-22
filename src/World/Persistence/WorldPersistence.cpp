@@ -970,9 +970,13 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   // Hot SoftDefer bypass: at most one Capture so cruise hitch stays bounded.
   // Async SoftDefer hole may enqueue even when wall is high (see drain_one).
   int bg_cap = max_bg_columns;
-  if (enter_fov_lit && vb_no_ticket_n > 8)
+  if (enter_fov_lit && vb_no_ticket_n >= 10)
   {
     bg_cap = std::max(bg_cap, 2);
+  }
+  else if (enter_fov_lit && vb_no_ticket_n > 0)
+  {
+    bg_cap = std::max(bg_cap, 1);
   }
   // S2 step A: cruise ≤CaptureMovingBgCap (worker Capture hung — TD-ARCH-015).
   // Era36 B2: dynamic cap based on pending light pressure.
@@ -1022,6 +1026,10 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       visual_holes && focus_pending_mid)
   {
     bg_cap = std::min(bg_cap, 1);
+  }
+  if (enter_fov_lit && vb_no_ticket_n >= 10)
+  {
+    bg_cap = std::max(bg_cap, 2);
   }
   band_cy = EffectiveRelightCaptureBandCy(band_cy, moving && !enter_fov_lit,
                                           visual_holes);
@@ -1151,12 +1159,15 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     bool finalize_gate = true;
     // P2: miss nh≤2 prefers one surface finalize Capture (no partial Y-band).
     // Rim nh=3–4 keeps split. Era41b: enter FOV lit always finalizes.
+    const int vb_focus_n = world.GetPhysicsTelemetry().VisibleBlackFocusN;
     const bool miss_finalize_band =
         enter_fov_lit ||
         (visual_holes && ShouldPreferMissFinalizeBand(horiz_dist)) ||
         ShouldFinalizeRelightUnderPlPressure(pending_light_focus_n, horiz_dist,
                                              focus_radius) ||
-        ShouldFinalizeRelightUnderVbPressure(vb_no_ticket_n, horiz_dist);
+        ShouldFinalizeRelightUnderVbPressure(vb_no_ticket_n, horiz_dist) ||
+        ShouldFinalizeRelightUnderVbSteadyPressure(
+            vb_focus_n, pending_light_focus_n, horiz_dist);
     if (async_bg && band_cy > 0 && !miss_finalize_band)
     {
       const int band_h = band_cy * CHUNK_SIZE;
@@ -1529,6 +1540,26 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
                                     ground_coord.z * CHUNK_SIZE, near_focus,
                                     dirty_min, dirty_max);
         world.NotePendingLightBeforeMesh(ground_coord, dirty_min, dirty_max);
+      }
+      // FZ2-T2: lit-ring synchronous relight seed during enter gate.
+      if (near_focus && horiz <= kVisualStageLitDrawableHoriz &&
+          world.IsEnterLitGateActive())
+      {
+        const glm::ivec2 col_xz(ground_coord.x, ground_coord.z);
+        const glm::ivec2 world_key(col_xz.x * CHUNK_SIZE, col_xz.y * CHUNK_SIZE);
+        if (!IsTerrainColumnRelightQueued(world_key) &&
+            !world.IsAsyncRelightColumnInFlight(col_xz) &&
+            !world.IsPendingLightBeforeMesh(col_xz))
+        {
+          if (world.ColumnFullyDarkSolidDrawable(col_xz) ||
+              !IsColumnLightComplete(col_xz))
+          {
+            EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
+                                        ground_coord.z * CHUNK_SIZE,
+                                        /*priority=*/true, dirty_min, dirty_max);
+            world.NotePendingLightBeforeMesh(ground_coord, dirty_min, dirty_max);
+          }
+        }
       }
       // Focus: first-mesh Dirty immediately (preview). Far waits MarkRelit
       // under Yellow/Red via commit path; disk-load always Dirty near.

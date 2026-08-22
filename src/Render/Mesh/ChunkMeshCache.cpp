@@ -3957,7 +3957,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         LastDirtyRevisitSameN > 0 &&
         static_cast<double>(LastDirtyRevisitSameN) >=
             0.92 * static_cast<double>(Dirty.GetCount());
-    if (!skip_sort_for_budget && !skip_sort_high_revisit)
+    const bool skip_sort_vb_heal =
+        VisibleBlackNoTicketPressure_ > 0 && PendingLightFocusPressure_ <= 30;
+    if (!skip_sort_for_budget && !skip_sort_high_revisit && !skip_sort_vb_heal)
     {
     // Precompute missing-mesh set once — SortByDistanceKey compares O(n log n)
     // times; per-compare GreedyCache.find was burning wall during flight.
@@ -4198,7 +4200,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                          std::abs(c.z - MeshFocusGroundChunk.z));
       }
       return !ShouldRemoveAtRemeshDespitePlPressure(
-          horiz, ChunkHasFullyDarkFace(c));
+          horiz, ChunkHasFullyDarkFace(c), EnterFovLitPressure_,
+          VisibleBlackNoTicketPressure_);
     };
 
     auto try_schedule = [&](auto it, bool count_outside, bool count_overflow,
@@ -4488,10 +4491,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       return std::max(std::abs(c.x - MeshFocusGroundChunk.x),
                       std::abs(c.z - MeshFocusGroundChunk.z));
     };
-    const auto lit_ring_fully_dark = [this, &coord_horiz](const glm::ivec3 &c) -> bool
+    const auto skip_defer_lit_ring = [this, &coord_horiz](const glm::ivec3 &c) -> bool
     {
-      return ShouldSkipDeferRemeshForLitRingFullyDark(
-          coord_horiz(c), ChunkHasFullyDarkFace(c));
+      return ShouldSkipDeferRemeshUnderVbHealPressure(
+          coord_horiz(c), ChunkHasFullyDarkFace(c), EnterFovLitPressure_,
+          VisibleBlackNoTicketPressure_);
     };
     for (auto it = Dirty.begin();
          it != Dirty.end() && scheduled < max_schedule_per_frame;)
@@ -4565,7 +4569,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         // ColdPL-2A: defer over-cap remesh (not leave-in revisit churn).
         if (!Dirty.IsFirstMesh(*it))
         {
-          if (!lit_ring_fully_dark(*it))
+          if (!skip_defer_lit_ring(*it))
           {
             DeferRemeshCoord(*it);
           }
@@ -4623,15 +4627,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           {
             if (is_remesh && HasDrawableGreedyMesh(*it))
             {
-              const int horiz_out =
-                  MeshFocusValid
-                      ? std::max(std::abs(it->x - MeshFocusGroundChunk.x),
-                                 std::abs(it->z - MeshFocusGroundChunk.z))
-                      : 999;
-              const bool lit_ring_out =
-                  ShouldSkipDeferRemeshForLitRingFullyDark(horiz_out,
-                                                           ChunkHasFullyDarkFace(*it));
-              if (!lit_ring_out)
+              if (!skip_defer_lit_ring(*it))
               {
                 DeferRemeshCoord(*it);
                 it = Dirty.RemoveAt(it);

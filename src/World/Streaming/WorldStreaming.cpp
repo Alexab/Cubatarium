@@ -907,6 +907,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
                                           opaque_present || opaque_predicted);
     world.PhysicsTelemetryData.UnderfeetDrawOk = uf.draw_ok ? 1 : 0;
     world.PhysicsTelemetryData.UnderfeetHasMesh = has_mesh ? 1 : 0;
+    world.PhysicsTelemetryData.UnderfeetOpaquePresentPredicted =
+        opaque_predicted ? 1 : 0;
     world.PhysicsTelemetryData.UnderfeetSticky =
         world.IsColumnStickyRemesh(under_xz) ? 1 : 0;
     world.PhysicsTelemetryData.UnderfeetPendingLight =

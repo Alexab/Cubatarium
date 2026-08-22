@@ -50,6 +50,38 @@ bool GroundChunkIntersectsWindow(glm::ivec3 groundChunk, glm::ivec2 originBlock,
          chunkMaxZ > originBlock.y && chunkMinZ < windowMaxZ;
 }
 
+int AppendColdSeedChunks(std::vector<glm::ivec3> &pending, int cx, int cz,
+                         int render_dist, int &seed_gz, int &seed_gx, int max_n)
+{
+  if (max_n <= 0 || seed_gz == INT32_MAX)
+  {
+    return 0;
+  }
+  int added = 0;
+  const int gz_end = cz + render_dist;
+  const int gx_end = cx + render_dist;
+  while (seed_gz <= gz_end && added < max_n)
+  {
+    while (seed_gx <= gx_end && added < max_n)
+    {
+      pending.emplace_back(seed_gx, 0, seed_gz);
+      ++added;
+      ++seed_gx;
+    }
+    if (seed_gx > gx_end)
+    {
+      ++seed_gz;
+      seed_gx = cx - render_dist;
+    }
+  }
+  if (seed_gz > gz_end)
+  {
+    seed_gz = INT32_MAX;
+    seed_gx = INT32_MAX;
+  }
+  return added;
+}
+
 void ExtractChunkTexels(const std::vector<float> &surfaceStaging,
                         const std::vector<uint8_t> &fluidIndexStaging,
                         const std::vector<float> &fluidBottomStaging,
@@ -345,6 +377,13 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
   if (!PendingRebuildGroundChunks.empty() && !sizeChanged && !windowMoved &&
       SizeBlocks == sizeBlocks)
   {
+    if (ColdSeedGz_ != INT32_MAX)
+    {
+      AppendColdSeedChunks(PendingRebuildGroundChunks, ColdSeedCx_, ColdSeedCz_,
+                           ColdSeedRenderDist_, ColdSeedGz_, ColdSeedGx_,
+                           ChunkUpdateBudget(0, lastWallMs, cruise_throttle,
+                                             enter_throttle));
+    }
     const int pending = static_cast<int>(PendingRebuildGroundChunks.size()) +
                         static_cast<int>(fluidSurfaceDirty.size());
     const int near_dirty =
@@ -368,6 +407,8 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
   if (sizeChanged || windowMoved)
   {
     PendingRebuildGroundChunks.clear();
+    ColdSeedGz_ = INT32_MAX;
+    ColdSeedGx_ = INT32_MAX;
   }
 
   if (!sizeChanged && !windowMoved && Valid)
@@ -455,13 +496,16 @@ bool UFluidSurfaceMap::RefreshStaging(UBlockWorld &world, UBlockRegistry &regist
   PendingGpuGroundChunks.clear();
   PendingRebuildGroundChunks.clear();
   PendingRebuildScanHintY = scanHintY;
-  for (int gz = cz - renderDistChunks; gz <= cz + renderDistChunks; ++gz)
-  {
-    for (int gx = cx - renderDistChunks; gx <= cx + renderDistChunks; ++gx)
-    {
-      PendingRebuildGroundChunks.emplace_back(gx, 0, gz);
-    }
-  }
+  // FZ2-R5: seed at most budget chunks on first cold frame — rest multi-frame.
+  ColdSeedCx_ = cx;
+  ColdSeedCz_ = cz;
+  ColdSeedRenderDist_ = renderDistChunks;
+  ColdSeedGz_ = cz - renderDistChunks;
+  ColdSeedGx_ = cx - renderDistChunks;
+  const int seed_budget =
+      ChunkUpdateBudget(0, lastWallMs, cruise_throttle, enter_throttle);
+  AppendColdSeedChunks(PendingRebuildGroundChunks, cx, cz, renderDistChunks,
+                       ColdSeedGz_, ColdSeedGx_, seed_budget);
   const int budget = ChunkUpdateBudget(
       static_cast<int>(PendingRebuildGroundChunks.size()), lastWallMs,
       cruise_throttle, enter_throttle);

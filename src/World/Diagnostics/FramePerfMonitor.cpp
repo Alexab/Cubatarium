@@ -12,6 +12,7 @@
 #include "World/Lighting/GpuSkylightColumnSeed.h"
 #include "Render/Mesh/GpuGreedyMesher.h"
 #include "World/Physics/PhysicsTelemetry.h"
+#include "World/Streaming/UnderfeetTelemetryPolicy.h"
 #include "glog/logging.h"
 #include <chrono>
 #include <cmath>
@@ -296,6 +297,8 @@ struct FrameNumbers
   int underfeet_reason{0};
   int underfeet_stage{0};
   int underfeet_opaque_present{0};
+  int underfeet_opaque_present_raw{0};
+  int underfeet_opaque_present_predicted{0};
   int lighting_relight_deferred{0};
   int fog_pull_in_rd{0};
   int fog_pull_in_margin{0};
@@ -672,7 +675,11 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.underfeet_pending_light = phys.UnderfeetPendingLight;
   n.underfeet_reason = phys.UnderfeetReason;
   n.underfeet_stage = phys.UnderfeetStage;
-  n.underfeet_opaque_present = phys.UnderfeetOpaquePresentLatched;
+  n.underfeet_opaque_present_raw = phys.UnderfeetOpaquePresentRaw;
+  n.underfeet_opaque_present_predicted = phys.UnderfeetOpaquePresentPredicted;
+  n.underfeet_opaque_present = UnderfeetOpaquePresentForPerf(
+      phys.UnderfeetDrawOk != 0, phys.UnderfeetOpaquePresentLatched != 0,
+      phys.UnderfeetOpaquePresentPredicted != 0);
   n.lighting_relight_deferred = phys.LightingRelightDeferred;
   n.fog_pull_in_rd = phys.FogPullInRd;
   n.fog_pull_in_margin = phys.FogPullInMargin;
@@ -1055,6 +1062,9 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"underfeet_reason\":" << n.underfeet_reason
           << ",\"underfeet_stage\":" << n.underfeet_stage
           << ",\"underfeet_opaque_present\":" << n.underfeet_opaque_present
+          << ",\"underfeet_opaque_present_raw\":" << n.underfeet_opaque_present_raw
+          << ",\"underfeet_opaque_present_predicted\":"
+          << n.underfeet_opaque_present_predicted
           << ",\"lighting_relight_deferred\":" << n.lighting_relight_deferred
           << ",\"fog_pull_in_rd\":" << n.fog_pull_in_rd
           << ",\"fog_pull_in_margin\":" << n.fog_pull_in_margin

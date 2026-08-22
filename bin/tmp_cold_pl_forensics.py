@@ -110,6 +110,13 @@ def analyze(path: Path):
     uf_pl = [int(x) for x in col(u, "underfeet_pending_light")]
     print(f"  uf_flips={flips(uf)} rate={flips(uf) / max(1, n):.3f}")
 
+    uf_pred = [int(x) for x in col(u, "underfeet_opaque_present_predicted")]
+    if uf_pred:
+        print(
+            f"  uf_predicted_flips={flips(uf_pred)} "
+            f"rate={flips(uf_pred) / max(1, n):.3f}"
+        )
+
     telem_only = 0
     for i in range(1, n):
         if uf[i] != uf[i - 1]:

@@ -636,11 +636,13 @@ int main()
   Expect(ShouldForceEnterVisualCap(250.0, true, /*cold_create=*/true),
          "Era41: soft-ready ⇒ force regardless of create/load");
 
-  // --- FlickerZero V1/V4 ---
+  // --- FlickerZero V1/V4 / FZ2 ---
   using cutum::FluidMapShouldThrottleEnter;
   using cutum::ShouldFinalizeRelightUnderVbPressure;
+  using cutum::ShouldFinalizeRelightUnderVbSteadyPressure;
   using cutum::ShouldRemoveAtRemeshDespitePlPressure;
   using cutum::ShouldSkipDeferRemeshForLitRingFullyDark;
+  using cutum::ShouldSkipDeferRemeshUnderVbHealPressure;
   using cutum::VisibleBlackNoTicketRepairCap;
   using cutum::VisibleBlackNoTicketVoidCap;
 
@@ -650,20 +652,40 @@ int main()
          "FlickerZero: enter idle no_ticket scales cap");
   Expect(VisibleBlackNoTicketRepairCap(108, 6, true) >= 4,
          "FlickerZero: cruise no_ticket scales cap");
+  Expect(VisibleBlackNoTicketRepairCap(6, 6, false) == 6,
+         "FZ2: no_ticket≤8 idle ⇒ repair_cap decay");
   Expect(VisibleBlackNoTicketVoidCap(20, 2, false) >= 2,
          "FlickerZero: void cap scales under no_ticket");
   Expect(ShouldFinalizeRelightUnderVbPressure(12, 3),
          "FlickerZero: VB finalize horiz≤4");
   Expect(!ShouldFinalizeRelightUnderVbPressure(5, 5),
          "FlickerZero: VB finalize skips far ring");
+  Expect(ShouldFinalizeRelightUnderVbSteadyPressure(55, 20, 3),
+         "FZ2: steady VB+PL finalize lit ring");
+  Expect(!ShouldFinalizeRelightUnderVbSteadyPressure(30, 20, 3),
+         "FZ2: steady VB below thresh skips finalize");
   Expect(ShouldSkipDeferRemeshForLitRingFullyDark(2, true),
-         "FlickerZero: lit-ring FullyDark skip defer");
-  Expect(ShouldRemoveAtRemeshDespitePlPressure(2, true),
-         "FlickerZero: PL leave-in carve-out RemoveAt");
-  Expect(FluidMapShouldThrottleEnter(true, false, 0, 0),
+         "FlickerZero: lit-ring FullyDark skip defer (legacy)");
+  Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 0),
+         "FZ2: steady no_ticket=0 → defer allowed");
+  Expect(ShouldSkipDeferRemeshUnderVbHealPressure(2, true, true, 0),
+         "FZ2: enter_fov_lit → skip defer");
+  Expect(ShouldSkipDeferRemeshUnderVbHealPressure(3, true, false, 12),
+         "FZ2: no_ticket>8 → skip defer");
+  Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(5, true, false, 0),
+         "FZ2: hinterland no skip");
+  Expect(ShouldRemoveAtRemeshDespitePlPressure(2, true, true, 12),
+         "FZ2: PL leave-in RemoveAt under VB heal");
+  Expect(!ShouldRemoveAtRemeshDespitePlPressure(2, true, false, 0),
+         "FZ2: steady PL leave-in allowed");
+  Expect(FluidMapShouldThrottleEnter(true, false, false, 0, 0),
          "FlickerZero: enter_fov_lit throttles fluid");
-  Expect(FluidMapShouldThrottleEnter(false, true, 0, 0),
-         "FlickerZero: post_load throttles fluid");
+  Expect(FluidMapShouldThrottleEnter(false, true, false, 0, 0),
+         "FlickerZero: enter_lit_gate throttles fluid");
+  Expect(FluidMapShouldThrottleEnter(false, false, false, 50, 0),
+         "FZ2: VB>40 throttles fluid enter");
+  Expect(!FluidMapShouldThrottleEnter(false, false, false, 20, 100),
+         "FZ2: calm VB does not throttle fluid");
 
   // --- Era41/Era42 Enter lit budgets / progress ---
   {

@@ -272,6 +272,10 @@ struct PhysicsTelemetry
   int UnderfeetOpaquePresent{0};
   /// FlickerZero V3: post-draw latch for streaming/perf SoT (prior frame).
   int UnderfeetOpaquePresentLatched{0};
+  /// FZ2-R3: reconcile SoT for perf when draw_ok (streaming sample).
+  int UnderfeetOpaquePresentPredicted{0};
+  /// FZ2-R3: raw post-draw opaque pass witness (debug).
+  int UnderfeetOpaquePresentRaw{0};
   /// FogPullIn effective state (0 = disabled / unset).
   int FogPullInRd{0};
   int FogPullInMargin{0};

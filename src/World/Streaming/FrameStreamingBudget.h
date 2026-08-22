@@ -271,6 +271,21 @@ inline FrameStreamingBudgetDecision EvaluateFrameStreamingBudget(
     out.capture_first_mesh_only = false;
   }
 
+  // FZ2-R4: steady VB+PL heal (ticketed cols), not only no_ticket orphans.
+  if (!miss && in.pending_light_focus_n > 0 && in.visible_black_n > 40 &&
+      in.era18_vb_bg_budget_floor)
+  {
+    out.apply_vb_bg_floor = true;
+    out.vb_bg_budget_floor =
+        std::max(out.vb_bg_budget_floor, in.moving ? 1 : 2);
+    if (in.era18_vb_capture_floor)
+    {
+      out.soft_defer_capture_budget =
+          std::max(out.soft_defer_capture_budget, 1);
+      out.capture_first_mesh_only = false;
+    }
+  }
+
   return out;
 }
 

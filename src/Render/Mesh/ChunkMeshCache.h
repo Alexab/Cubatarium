@@ -295,6 +295,11 @@ public:
   /// Invalidate per-frame hole-query memo when focus moves (ColdPL-3D).
   void BeginHoleQueryFrame(glm::ivec3 focus_ground_chunk);
   void SetPendingLightFocusPressure(int n) { PendingLightFocusPressure_ = n; }
+  void SetVisibleBlackNoTicketPressure(int n)
+  {
+    VisibleBlackNoTicketPressure_ = n;
+  }
+  void SetEnterFovLitPressure(bool v) { EnterFovLitPressure_ = v; }
   const MeshRebuildTickStats &GetLastRebuildTickStats() const
   {
     return LastRebuildTickStats;
@@ -810,6 +815,8 @@ private:
   mutable NearestQueryMemo NearestMemo{};
   glm::ivec3 LastHoleQueryFocus_{0};
   int PendingLightFocusPressure_{0};
+  int VisibleBlackNoTicketPressure_{0};
+  bool EnterFovLitPressure_{false};
   std::deque<glm::ivec3> RemeshDeferredRing_;
   std::unordered_set<glm::ivec3, IVec3Hash> RemeshDeferredSet_;
   void DeferRemeshCoord(const glm::ivec3 &coord);

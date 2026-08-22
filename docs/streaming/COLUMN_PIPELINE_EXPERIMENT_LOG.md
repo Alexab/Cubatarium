@@ -337,6 +337,40 @@ Baseline manual `151946` (ColdPL `00dffb3f`): PL med 32, revisit 133, enter VB/n
 - Manual ≥180s post-FlickerZero vs `093018` / `151946`.
 - Autofly: cruise PL≤5, VB blink=0.
 
+## FlickerZero-2 — revisit bisect + PL damp + perf SoT (2026-08-22)
+
+Baseline manual `164441` (FZ Phase 1, commit `33b3bebb`): enter no_ticket **7** OK; regressions PL enter **48**, revisit steady **157**, uf_flips **0.34**, fluid p90 **246**.
+
+| Step | ID | Change | Target |
+| --- | --- | --- | --- |
+| R1 | revisit-bisect | `ShouldSkipDeferRemeshUnderVbHealPressure` gated defer/RemoveAt; cache pressure setters | revisit steady <95 |
+| R2 | pl-damp-t2 | `TickEnterFovLitPass` NotePendingLight guards; terrain lit-ring seed; Capture bg≥2 enter | PL enter <25 |
+| R3 | perf-sot | `UnderfeetOpaquePresentForPerf` in FramePerfMonitor; raw/predicted JSON | uf_flips <0.05 |
+| R4 | vb-steady | `ShouldFinalizeRelightUnderVbSteadyPressure`; FrameStreamingBudget steady floor; drain tiers | VB steady <40 |
+| R5 | fluid-tail | `FluidMapShouldThrottleEnter` VB>40; incremental cold seed cursor | fluid p90 <200 |
+| R6 | v1-second-pass | ColumnFlowExecutor 2nd stale collect when idle no_ticket>20 | no_ticket peak <80 |
+| R7 | dirty-sort-vb | skip dirty sort when `VisibleBlackNoTicketPressure_>0` | revisit enter ≤65 |
+| R8 | validation | `tmp_flickerzero_compare.py` gates; forensics predicted flips | manual ≥180s |
+
+### Gate table vs `164441`
+
+| Gate | Target | `164441` |
+| --- | --- | --- |
+| enter no_ticket med | <30 | 7 |
+| PL enter med | <25 | 48 |
+| PL steady med | <15 | 30 |
+| revisit steady med | <95 | 157 |
+| uf_flips rate | <0.05 | 0.34 |
+| enter wall p90 | <250 ms | 344 |
+| enter fluid p90 | <200 ms | 246 |
+| VB steady med | <40 | ~55 |
+
+### Deferred
+
+- Manual ≥180s post-FZ2 vs `164441` / `151946`.
+- Autofly guard: cruise PL≤5, VB blink=0, wall_fly ≤ LitRing_D +15%.
+
 ### Diagnostics
 
-- `bin/tmp_cold_pl_forensics.py` — default log `151946`; no_ticket_blink, opaque_gap, segment PL/VB.
+- `bin/tmp_flickerzero_compare.py` — segment metrics + gate PASS/FAIL.
+- `bin/tmp_cold_pl_forensics.py` — default log `151946`; no_ticket_blink, opaque_gap, segment PL/VB; `underfeet_opaque_present_predicted` flip rate when present.

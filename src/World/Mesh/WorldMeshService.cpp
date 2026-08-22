@@ -693,6 +693,16 @@ void UWorldMeshService::SetPendingLightFocusPressure(int n)
   Cache.SetPendingLightFocusPressure(n);
 }
 
+void UWorldMeshService::SetVisibleBlackNoTicketPressure(int n)
+{
+  Cache.SetVisibleBlackNoTicketPressure(n);
+}
+
+void UWorldMeshService::SetEnterFovLitPressure(bool v)
+{
+  Cache.SetEnterFovLitPressure(v);
+}
+
 double UWorldMeshService::GetLastMeshImmediateMs() const
 {
   return Cache.GetLastMeshImmediateMs();

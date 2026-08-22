@@ -3836,6 +3836,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   ApplyUnderfeetReservationFloors(mesh_drain, mesh_schedule, uf_res);
   mesh_service.SetPendingLightFocusPressure(pending_focus_count);
+  mesh_service.SetVisibleBlackNoTicketPressure(
+      world.GetPhysicsTelemetry().VisibleBlackNoTicketN);
+  mesh_service.SetEnterFovLitPressure(world.IsEnterFovLitPassActive());
   // F0: SyncRebuild always off in TickMeshEmerge. Dig/edit uses
   // RebuildChunkImmediate (PlayerRelightMeshBurst); SyncRebuild was still
   // burning 100–200ms whenever burst frames were non-zero on cruise.

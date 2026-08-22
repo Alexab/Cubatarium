@@ -1673,6 +1673,8 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     }
     WorldInstance->GetPhysicsTelemetryMutable().UnderfeetOpaquePresent =
         underfeet_in_draw ? 1 : 0;
+    WorldInstance->GetPhysicsTelemetryMutable().UnderfeetOpaquePresentRaw =
+        underfeet_in_draw ? 1 : 0;
     WorldInstance->GetPhysicsTelemetryMutable().UnderfeetOpaquePresentLatched =
         underfeet_in_draw ? 1 : 0;
     // Post-draw reconcile: streaming sampled underfeet before opaque pass.

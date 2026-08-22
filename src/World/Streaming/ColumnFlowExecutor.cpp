@@ -470,6 +470,21 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     {
       EnqueueVisibleBlackRepairTickets(scheduler_, focus, stale_dark_cols);
     }
+    // FZ2-R6: second collect pass when idle enter no_ticket backlog remains.
+    if (nearest_vb_no_ticket && async_ok && !moving &&
+        visible_black_no_ticket_n > 20 &&
+        static_cast<int>(stale_dark_cols.size()) < stale_cap)
+    {
+      const int remain =
+          stale_cap - static_cast<int>(stale_dark_cols.size());
+      std::vector<glm::ivec2> extra;
+      world.CollectStaleDarkFocusColumns(focus_ground_horiz, vb_radius, extra,
+                                         remain);
+      if (!extra.empty())
+      {
+        EnqueueVisibleBlackRepairTickets(scheduler_, focus, extra);
+      }
+    }
     if (!void_dark_cols.empty())
     {
       EnqueueVoidDarkRelightTickets(scheduler_, focus, void_dark_cols);

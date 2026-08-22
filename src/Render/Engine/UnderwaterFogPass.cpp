@@ -54,7 +54,7 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
         world.GetLastMovementSpeed() >
         world.GetProceduralSettings().MovementPrefetchThreshold;
     const bool enter_throttle = FluidMapShouldThrottleEnter(
-        world.IsEnterFovLitPassActive(),
+        world.IsEnterFovLitPassActive(), world.IsEnterLitGateActive(),
         world.GetPhysicsTelemetry().PostLoadRingNotReady > 0,
         world.GetPhysicsTelemetry().VisibleBlackFocusN,
         world.GetLastFluidMapDirtyChunks());

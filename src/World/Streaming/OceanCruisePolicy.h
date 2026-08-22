@@ -65,11 +65,15 @@ inline bool FluidMapShouldThrottleCruise(int pending, double wall_ms,
 }
 
 /// FlickerZero T1: throttle fluid_map full rebuild during enter / post-load heal.
-inline bool FluidMapShouldThrottleEnter(bool enter_fov_lit,
+inline bool FluidMapShouldThrottleEnter(bool enter_fov_lit, bool enter_lit_gate,
                                         bool post_load_ring_not_ready,
                                         int visible_black_n, int fluid_pending)
 {
-  if (enter_fov_lit || post_load_ring_not_ready)
+  if (enter_fov_lit || enter_lit_gate || post_load_ring_not_ready)
+  {
+    return true;
+  }
+  if (visible_black_n > 40)
   {
     return true;
   }
@@ -87,6 +91,10 @@ inline int VisibleBlackNoTicketRepairCap(int no_ticket_n, int repair_cap,
   }
   if (no_ticket_n <= 8)
   {
+    if (!moving)
+    {
+      return base;
+    }
     return std::min(base, std::max(2, no_ticket_n / 2));
   }
   if (!moving)

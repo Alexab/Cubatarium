@@ -51,6 +51,7 @@
 #include "World/Math/GridMath.h"
 #include "World/Streaming/ColumnEmergeBump.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
+#include "World/Streaming/ColumnFlowScheduler.h"
 #include "World/Mesh/WorldMeshDirtyPolicy.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Objects/ObjectLibrary.h"
@@ -5279,6 +5280,15 @@ void UWorld::TickAsyncChunkSystems()
   {
     drain_budget = std::max(drain_budget, moving ? 6 : 8);
   }
+  const int vb_focus_n = PhysicsTelemetryData.VisibleBlackFocusN;
+  if (vb_focus_n > 60)
+  {
+    drain_budget = std::max(drain_budget, moving ? 10 : 12);
+  }
+  else if (vb_focus_n > 40)
+  {
+    drain_budget = std::max(drain_budget, moving ? 8 : 10);
+  }
   // RateMatch R0: high-PL cruise floors Apply at 4 (pace DynamicCapture≤2),
   // not Enter×64 + double Drain (manual 190534 hitch apply_n=12 / wall≈1s).
   const bool high_pl_cruise =
@@ -7387,11 +7397,27 @@ int UWorld::TickEnterFovLitPass(int capture_budget)
                                              band_min, band_max);
     const int horiz =
         std::max(std::abs(col.x - center.x), std::abs(col.y - center.z));
-    if (horiz <= kVisualStageLitDrawableHoriz)
+    if (horiz > kVisualStageLitDrawableHoriz)
     {
-      NotePendingLightBeforeMesh(glm::ivec3(col.x, 0, col.y), band_min,
-                                 band_max);
+      return;
     }
+    if (IsPendingLightBeforeMesh(col))
+    {
+      return;
+    }
+    const auto &sched = GetColumnFlowExecutor().Scheduler();
+    if (sched.Contains(col, ColumnWorkKind::RelightThenMesh) ||
+        sched.Contains(col, ColumnWorkKind::FirstMesh) ||
+        sched.Contains(col, ColumnWorkKind::PromoteRelight) ||
+        GetColumnFlowExecutor().HasRepairTicket(col))
+    {
+      return;
+    }
+    if (!ColumnFullyDarkSolidDrawable(col))
+    {
+      return;
+    }
+    NotePendingLightBeforeMesh(glm::ivec3(col.x, 0, col.y), band_min, band_max);
   };
 
   int enqueued = 0;

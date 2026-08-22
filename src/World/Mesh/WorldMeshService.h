@@ -161,6 +161,8 @@ public:
   void ResetImmediateMeshStats();
   void BeginHoleQueryFrame(glm::ivec3 focus_ground_chunk);
   void SetPendingLightFocusPressure(int n);
+  void SetVisibleBlackNoTicketPressure(int n);
+  void SetEnterFovLitPressure(bool v);
   double GetLastMeshImmediateMs() const;
   int GetLastMeshImmediateCount() const;
   void WaitForAsyncMeshIdle();

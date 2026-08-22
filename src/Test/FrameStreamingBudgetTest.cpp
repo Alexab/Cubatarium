@@ -203,6 +203,24 @@ int main()
            "FlickerZero: no_ticket Capture floor at PL=0");
   }
 
+  {
+    // FZ2-R4: steady VB+PL ticketed heal floors when no_ticket=0.
+    FrameStreamingBudgetInput in;
+    in.visible_black_n = 55;
+    in.pending_light_focus_n = 20;
+    in.visible_black_no_ticket_n = 0;
+    in.miss_first_budget = true;
+    in.era18_vb_bg_budget_floor = true;
+    in.era18_vb_capture_floor = true;
+    in.frame_ms = 45.0;
+    in.hot_frame_ms = 80.0;
+    const auto d = EvaluateFrameStreamingBudget(in);
+    Expect(d.apply_vb_bg_floor && d.vb_bg_budget_floor >= 2,
+           "FZ2: steady VB+PL bg floor≥2");
+    Expect(d.soft_defer_capture_budget >= 1,
+           "FZ2: steady VB+PL Capture floor≥1");
+  }
+
   if (gFails != 0)
   {
     std::cerr << gFails << " failures\n";
