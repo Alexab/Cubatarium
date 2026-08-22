@@ -4199,6 +4199,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         horiz = std::max(std::abs(c.x - MeshFocusGroundChunk.x),
                          std::abs(c.z - MeshFocusGroundChunk.z));
       }
+      if (!Fz2DeferGated_ &&
+          ShouldSkipDeferRemeshForLitRingFullyDark(horiz,
+                                                   ChunkHasFullyDarkFace(c)))
+      {
+        return false;
+      }
       return !ShouldRemoveAtRemeshDespitePlPressure(
           horiz, ChunkHasFullyDarkFace(c), EnterFovLitPressure_,
           VisibleBlackNoTicketPressure_);
@@ -4493,6 +4499,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     };
     const auto skip_defer_lit_ring = [this, &coord_horiz](const glm::ivec3 &c) -> bool
     {
+      if (!Fz2DeferGated_)
+      {
+        return ShouldSkipDeferRemeshForLitRingFullyDark(
+            coord_horiz(c), ChunkHasFullyDarkFace(c));
+      }
       return ShouldSkipDeferRemeshUnderVbHealPressure(
           coord_horiz(c), ChunkHasFullyDarkFace(c), EnterFovLitPressure_,
           VisibleBlackNoTicketPressure_);

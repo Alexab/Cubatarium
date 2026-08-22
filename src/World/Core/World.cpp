@@ -5285,6 +5285,11 @@ void UWorld::TickAsyncChunkSystems()
   {
     drain_budget = std::max(drain_budget, moving ? 10 : 12);
   }
+  else if (vb_focus_n > 50)
+  {
+    // FZ2.1-B4c: idle VB steady debt — faster Apply drain.
+    drain_budget = std::max(drain_budget, moving ? 10 : 14);
+  }
   else if (vb_focus_n > 40)
   {
     drain_budget = std::max(drain_budget, moving ? 8 : 10);
@@ -5292,7 +5297,8 @@ void UWorld::TickAsyncChunkSystems()
   // RateMatch R0: high-PL cruise floors Apply at 4 (pace DynamicCapture≤2),
   // not Enter×64 + double Drain (manual 190534 hitch apply_n=12 / wall≈1s).
   const bool high_pl_cruise =
-      ShouldUseHighPlCruiseApplyFloor(moving, pending_light_focus_n);
+      ShouldUseHighPlCruiseApplyFloor(moving, pending_light_focus_n) &&
+      vb_focus_n <= 40;
   drain_budget = CruiseRelightApplyBudget(
       moving, PhysicsTelemetryData.RelightApplyMsPrev, drain_budget,
       PhysicsTelemetryData.RelightFifoPinDropNPrev == 0,
@@ -7395,6 +7401,11 @@ int UWorld::TickEnterFovLitPass(int capture_budget)
     }
     Persistence->EnqueueTerrainColumnRelight(world_key.x, world_key.y, priority,
                                              band_min, band_max);
+    // FZ2.1-B1c: skip Note if Enqueue put column in flight this frame.
+    if (IsAsyncRelightColumnInFlight(col))
+    {
+      return;
+    }
     const int horiz =
         std::max(std::abs(col.x - center.x), std::abs(col.y - center.z));
     if (horiz > kVisualStageLitDrawableHoriz)

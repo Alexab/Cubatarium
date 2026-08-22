@@ -221,6 +221,21 @@ int main()
            "FZ2: steady VB+PL Capture floor≥1");
   }
 
+  {
+    // FZ2.1-B4b: elevated VB+PL steady bg floor 3 idle.
+    FrameStreamingBudgetInput in;
+    in.visible_black_n = 55;
+    in.pending_light_focus_n = 25;
+    in.miss_first_budget = true;
+    in.era18_vb_bg_budget_floor = true;
+    in.era18_vb_capture_floor = true;
+    in.frame_ms = 45.0;
+    in.hot_frame_ms = 80.0;
+    const auto d = EvaluateFrameStreamingBudget(in);
+    Expect(d.apply_vb_bg_floor && d.vb_bg_budget_floor >= 3,
+           "FZ2.1-B4b: VB>50 PL>20 idle bg floor≥3");
+  }
+
   if (gFails != 0)
   {
     std::cerr << gFails << " failures\n";

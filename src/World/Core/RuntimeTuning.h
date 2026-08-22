@@ -146,6 +146,8 @@ struct URuntimeTuning
   /// Era49: strict Enter VisualReady (outcome gate; no Sticky/plateau shortcuts).
   /// Enter blocking ≠ Cruise progressive — flag only affects enter exit path.
   bool StrictEnterVisualReady{true};
+  /// FZ2.1-B3: gated lit-ring defer (false → legacy unconditional FullyDark skip).
+  bool Fz2DeferGated{true};
 
   static URuntimeTuning &Get();
   static void ResetToDefaults();

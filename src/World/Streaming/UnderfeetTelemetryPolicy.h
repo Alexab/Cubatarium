@@ -24,11 +24,15 @@ inline bool UnderfeetOpaquePresentPredicted(bool opaque_in_pass, bool draw_ok,
   return draw_ok && (pending_gpu || inflight);
 }
 
-/// FZ2-R3: perf spike SoT — predicted when drawable, else latched.
+/// FZ2-R3 / FZ2.1-B6: perf spike SoT — monotonic present when drawable.
 inline int UnderfeetOpaquePresentForPerf(bool draw_ok, bool latched,
                                          bool predicted)
 {
-  return draw_ok ? (predicted ? 1 : 0) : (latched ? 1 : 0);
+  if (!draw_ok)
+  {
+    return latched ? 1 : 0;
+  }
+  return (latched || predicted) ? 1 : 0;
 }
 
 inline ColumnRenderableState::BlockReason ReconcileUnderfeetBlockReason(

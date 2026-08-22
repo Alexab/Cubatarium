@@ -300,6 +300,7 @@ public:
     VisibleBlackNoTicketPressure_ = n;
   }
   void SetEnterFovLitPressure(bool v) { EnterFovLitPressure_ = v; }
+  void SetFz2DeferGated(bool v) { Fz2DeferGated_ = v; }
   const MeshRebuildTickStats &GetLastRebuildTickStats() const
   {
     return LastRebuildTickStats;
@@ -817,6 +818,7 @@ private:
   int PendingLightFocusPressure_{0};
   int VisibleBlackNoTicketPressure_{0};
   bool EnterFovLitPressure_{false};
+  bool Fz2DeferGated_{true};
   std::deque<glm::ivec3> RemeshDeferredRing_;
   std::unordered_set<glm::ivec3, IVec3Hash> RemeshDeferredSet_;
   void DeferRemeshCoord(const glm::ivec3 &coord);

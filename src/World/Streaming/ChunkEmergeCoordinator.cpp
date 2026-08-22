@@ -3839,6 +3839,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   mesh_service.SetVisibleBlackNoTicketPressure(
       world.GetPhysicsTelemetry().VisibleBlackNoTicketN);
   mesh_service.SetEnterFovLitPressure(world.IsEnterFovLitPassActive());
+  mesh_service.SetFz2DeferGated(URuntimeTuning::Get().Fz2DeferGated);
   // F0: SyncRebuild always off in TickMeshEmerge. Dig/edit uses
   // RebuildChunkImmediate (PlayerRelightMeshBurst); SyncRebuild was still
   // burning 100–200ms whenever burst frames were non-zero on cruise.

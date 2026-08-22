@@ -276,8 +276,13 @@ inline FrameStreamingBudgetDecision EvaluateFrameStreamingBudget(
       in.era18_vb_bg_budget_floor)
   {
     out.apply_vb_bg_floor = true;
-    out.vb_bg_budget_floor =
-        std::max(out.vb_bg_budget_floor, in.moving ? 1 : 2);
+    int steady_floor = in.moving ? 1 : 2;
+    // FZ2.1-B4b: stronger floor when VB+PL both elevated.
+    if (in.visible_black_n > 50 && in.pending_light_focus_n > 20)
+    {
+      steady_floor = std::max(steady_floor, in.moving ? 2 : 3);
+    }
+    out.vb_bg_budget_floor = std::max(out.vb_bg_budget_floor, steady_floor);
     if (in.era18_vb_capture_floor)
     {
       out.soft_defer_capture_budget =

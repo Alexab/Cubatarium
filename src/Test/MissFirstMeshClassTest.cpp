@@ -670,14 +670,22 @@ int main()
          "FZ2: steady no_ticket=0 → defer allowed");
   Expect(ShouldSkipDeferRemeshUnderVbHealPressure(2, true, true, 0),
          "FZ2: enter_fov_lit → skip defer");
-  Expect(ShouldSkipDeferRemeshUnderVbHealPressure(3, true, false, 12),
-         "FZ2: no_ticket>8 → skip defer");
+  Expect(ShouldSkipDeferRemeshUnderVbHealPressure(3, true, false, 13),
+         "FZ2: no_ticket>12 → skip defer");
+  Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(3, true, false, 11),
+         "FZ2.1: no_ticket≤12 steady → defer allowed");
   Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(5, true, false, 0),
          "FZ2: hinterland no skip");
-  Expect(ShouldRemoveAtRemeshDespitePlPressure(2, true, true, 12),
+  Expect(ShouldRemoveAtRemeshDespitePlPressure(2, true, true, 13),
          "FZ2: PL leave-in RemoveAt under VB heal");
   Expect(!ShouldRemoveAtRemeshDespitePlPressure(2, true, false, 0),
          "FZ2: steady PL leave-in allowed");
+  Expect(VisibleBlackNoTicketRepairCap(108, 6, false, true) <= 4,
+         "FZ2.1-B2a: enter idle repair cap≤4");
+  Expect(ShouldFinalizeRelightUnderVbSteadyPressure(36, 13, 3),
+         "FZ2.1-B4a: steady finalize vb=36 pl=13");
+  Expect(!ShouldFinalizeRelightUnderVbSteadyPressure(34, 13, 3),
+         "FZ2.1-B4a: vb≤35 skips finalize");
   Expect(FluidMapShouldThrottleEnter(true, false, false, 0, 0),
          "FlickerZero: enter_fov_lit throttles fluid");
   Expect(FluidMapShouldThrottleEnter(false, true, false, 0, 0),
@@ -2194,8 +2202,15 @@ int main()
     using cutum::ColumnRenderableState;
     using cutum::ReconcileUnderfeetBlockReason;
     using cutum::UnderfeetColumnHasDrawable;
+    using cutum::UnderfeetOpaquePresentForPerf;
     Expect(UnderfeetColumnHasDrawable(true, false, false, false),
            "underfeet: slice drawable");
+    Expect(UnderfeetOpaquePresentForPerf(true, false, true) == 1,
+           "FZ2.1-B6: draw_ok monotonic max(latched,predicted)");
+    Expect(UnderfeetOpaquePresentForPerf(true, true, false) == 1,
+           "FZ2.1-B6: latched holds when predicted clears");
+    Expect(UnderfeetOpaquePresentForPerf(false, true, false) == 1,
+           "underfeet: !draw_ok uses latched");
     Expect(UnderfeetColumnHasDrawable(false, false, false, true),
            "underfeet: opaque in pass");
     Expect(

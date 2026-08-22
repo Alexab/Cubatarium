@@ -365,7 +365,7 @@ Baseline manual `164441` (FZ Phase 1, commit `33b3bebb`): enter no_ticket **7** 
 | enter fluid p90 | <200 ms | 246 |
 | VB steady med | <40 | ~55 |
 
-### Deferred
+### Deferred (pre-flight)
 
 - Manual ≥180s post-FZ2 vs `164441` / `151946`.
 - Autofly guard: cruise PL≤5, VB blink=0, wall_fly ≤ LitRing_D +15%.
@@ -374,3 +374,60 @@ Baseline manual `164441` (FZ Phase 1, commit `33b3bebb`): enter no_ticket **7** 
 
 - `bin/tmp_flickerzero_compare.py` — segment metrics + gate PASS/FAIL.
 - `bin/tmp_cold_pl_forensics.py` — default log `151946`; no_ticket_blink, opaque_gap, segment PL/VB; `underfeet_opaque_present_predicted` flip rate when present.
+- `bin/tmp_fz2_gate_check.py` — extended gate table (no_ticket_peak, stream steady, revisit enter).
+
+### Results — manual `173621` (commit `e3efb9d8`, ~262s)
+
+Log: `bin/logs/perf_20260822-173621_33656.jsonl` (131 spikes). Protocol: cold load + manual fly ≥180s post-FZ2 build.
+
+| Gate | Target | `173621` | `164441` | Δ | Status |
+| --- | --- | --- | --- | --- | --- |
+| enter no_ticket med | <30 | **3.0** | 7.0 | −4 | PASS |
+| PL enter med | <25 | **51.0** | 48.0 | +3 | FAIL |
+| PL steady med | <15 | **29.0** | 30.0 | −1 | FAIL |
+| revisit steady med | <95 | **175.0** | 157.5 | +18 | FAIL (регресс) |
+| revisit enter med | ≤65 | **63.0** | 61.0 | +2 | PASS |
+| uf_flips rate | <0.05 | **0.076** | 0.340 | −78% | FAIL |
+| enter wall p90 | <250 ms | **209** | 344 | −135 ms | PASS |
+| enter fluid p90 | <200 ms | **45** | 246 | −201 ms | PASS |
+| VB steady med | <40 | **62.0** | 54.5 | +8 | FAIL |
+| unlit_hidden steady | <20 | **29.0** | 22.5 | +6 | FAIL |
+| no_ticket peak | <80 | **114** | 97 | +17 | FAIL |
+| stream steady med | ≤35 | **42.8** | 41.2 | +2 | FAIL |
+| black_sticky | 0 | **0** | 0 | 0 | PASS |
+
+**Segments (`173621`):**
+
+| Segment | wall med | PL | VB | no_ticket | revisit | fluid p90 |
+| --- | --- | --- | --- | --- | --- | --- |
+| enter 0–60s | 129.7 | 51.0 | 81.0 | 3.0 | 63.0 | 45.4 |
+| steady 120s+ | 113.3 | 29.0 | 62.0 | 0.0 | 175.0 | 0.0 |
+
+**Forensics:** vb_blink rate **0.405**; no_ticket_blink **0.252**; uf_flips **10** (rate 0.076); all flips with `draw_ok=1`. first15 no_ticket `[111→114→95→86…]` slope **+9.3/frame** (target ≤−8). PL buckets: 48% frames PL>40.
+
+**Track verdict (code `e3efb9d8`, metrics `173621`):** R5/R7/R8 PASS on metrics; R1/R2/R3/R4/R6 partial or FAIL. **5/13 gates PASS.** Wins: enter wall/fluid, uf_flips −78%, enter no_ticket. Open: PL, steady revisit (регресс vs 164441), VB/unlit steady, no_ticket peak.
+
+### Bisect plan (failing gates)
+
+See [`.cursor/plans/flickerzero_phase_2_bisect.plan.md`](../../.cursor/plans/flickerzero_phase_2_bisect.plan.md) — Phase 2.1 bisect order (B1–B8), kill-switches, per-gate DoD.
+
+### Deferred (post-173621)
+
+- Autofly guard post-FZ2: cruise PL≤5, VB blink=0, wall_fly ≤ LitRing_D +15%.
+- Manual ≥180s post-FZ2.1 (commit after `e3efb9d8`) vs `173621` / `164441`.
+
+### FlickerZero-2.1 — code shipped (bisect fixes)
+
+Commit after `e3efb9d8`. Tracks B1–B7 from [bisect plan](../../.cursor/plans/flickerzero_phase_2_bisect.plan.md):
+
+| Track | Change |
+| --- | --- |
+| B1 | `TickEnterFovLitPass` inflight guard post-Enqueue; terrain seed FullyDark-only |
+| B2 | enter repair cap≤4; vb_radius clamp 2 on enter; R6 second pass when enter+no_ticket>10 |
+| B3 | defer threshold 8→12; `RuntimeTuning.Fz2DeferGated` kill-switch |
+| B4 | steady finalize vb/pl 35/12; bg floor 3 when VB>50+PL>20; drain 14 idle vb>50 |
+| B5 | skip `HighPlCruiseApplyFloor` when VB>40 |
+| B6 | `UnderfeetOpaquePresentForPerf` monotonic max(latched,predicted) |
+| B7 | (secondary — follows B3/B4 drain) |
+
+**Awaiting manual flight** for gate verification vs `173621`.

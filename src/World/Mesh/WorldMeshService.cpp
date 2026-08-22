@@ -703,6 +703,11 @@ void UWorldMeshService::SetEnterFovLitPressure(bool v)
   Cache.SetEnterFovLitPressure(v);
 }
 
+void UWorldMeshService::SetFz2DeferGated(bool v)
+{
+  Cache.SetFz2DeferGated(v);
+}
+
 double UWorldMeshService::GetLastMeshImmediateMs() const
 {
   return Cache.GetLastMeshImmediateMs();

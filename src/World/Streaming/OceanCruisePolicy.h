@@ -82,9 +82,14 @@ inline bool FluidMapShouldThrottleEnter(bool enter_fov_lit, bool enter_lit_gate,
 
 /// FlickerZero V1: scale VB no_ticket repair collect cap (was hard min(2)).
 inline int VisibleBlackNoTicketRepairCap(int no_ticket_n, int repair_cap,
-                                          bool moving)
+                                          bool moving, bool enter_fov_lit = false)
 {
   const int base = std::max(1, repair_cap);
+  // FZ2.1-B2a: throttle enter idle enqueue storm (peak no_ticket / PL flood).
+  if (enter_fov_lit && !moving)
+  {
+    return std::min(base, 4);
+  }
   if (no_ticket_n <= 0)
   {
     return base;

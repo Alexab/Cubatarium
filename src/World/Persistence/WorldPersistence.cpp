@@ -1541,7 +1541,7 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
                                     dirty_min, dirty_max);
         world.NotePendingLightBeforeMesh(ground_coord, dirty_min, dirty_max);
       }
-      // FZ2-T2: lit-ring synchronous relight seed during enter gate.
+      // FZ2-T2 / FZ2.1-B1d: lit-ring seed — FullyDark only (no partial-light PL flood).
       if (near_focus && horiz <= kVisualStageLitDrawableHoriz &&
           world.IsEnterLitGateActive())
       {
@@ -1549,16 +1549,13 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
         const glm::ivec2 world_key(col_xz.x * CHUNK_SIZE, col_xz.y * CHUNK_SIZE);
         if (!IsTerrainColumnRelightQueued(world_key) &&
             !world.IsAsyncRelightColumnInFlight(col_xz) &&
-            !world.IsPendingLightBeforeMesh(col_xz))
+            !world.IsPendingLightBeforeMesh(col_xz) &&
+            world.ColumnFullyDarkSolidDrawable(col_xz))
         {
-          if (world.ColumnFullyDarkSolidDrawable(col_xz) ||
-              !IsColumnLightComplete(col_xz))
-          {
-            EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
-                                        ground_coord.z * CHUNK_SIZE,
-                                        /*priority=*/true, dirty_min, dirty_max);
-            world.NotePendingLightBeforeMesh(ground_coord, dirty_min, dirty_max);
-          }
+          EnqueueTerrainColumnRelight(ground_coord.x * CHUNK_SIZE,
+                                      ground_coord.z * CHUNK_SIZE,
+                                      /*priority=*/true, dirty_min, dirty_max);
+          world.NotePendingLightBeforeMesh(ground_coord, dirty_min, dirty_max);
         }
       }
       // Focus: first-mesh Dirty immediately (preview). Far waits MarkRelit

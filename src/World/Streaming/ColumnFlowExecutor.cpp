@@ -378,14 +378,20 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   // Era23 I-V4/I-V7: void pressure keeps void_cap≥2 even when no_ticket=0.
   if (nearest_vb_heal || nearest_vb_no_ticket || void_pressure)
   {
+    const bool enter_fov_lit = world.IsEnterFovLitPassActive();
     // Era26 I-O1: under void_pressure use full focus radius (not VB clamp≤2).
-    const int vb_radius = VoidRelightCollectRadius(
+    int vb_radius = VoidRelightCollectRadius(
         focus_radius, missing_visible_mesh, void_pressure,
         visible_black_no_ticket_n > 0);
+    // FZ2.1-B2c: narrow enter collect ring to reduce no_ticket peak.
+    if (enter_fov_lit)
+    {
+      vb_radius = std::min(vb_radius, 2);
+    }
     const int stale_cap =
         nearest_vb_no_ticket
             ? VisibleBlackNoTicketRepairCap(visible_black_no_ticket_n,
-                                            repair_cap, moving)
+                                            repair_cap, moving, enter_fov_lit)
             : repair_cap;
     const int void_base =
         VoidRelightCollectCap(repair_cap, void_pressure);
@@ -470,9 +476,12 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     {
       EnqueueVisibleBlackRepairTickets(scheduler_, focus, stale_dark_cols);
     }
-    // FZ2-R6: second collect pass when idle enter no_ticket backlog remains.
-    if (nearest_vb_no_ticket && async_ok && !moving &&
-        visible_black_no_ticket_n > 20 &&
+    // FZ2-R6 / FZ2.1-B2b: second collect when backlog remains (idle or enter).
+    const bool second_pass_ok =
+        nearest_vb_no_ticket && async_ok &&
+        ((!moving && visible_black_no_ticket_n > 20) ||
+         (enter_fov_lit && visible_black_no_ticket_n > 10));
+    if (second_pass_ok &&
         static_cast<int>(stale_dark_cols.size()) < stale_cap)
     {
       const int remain =

@@ -163,6 +163,7 @@ public:
   void SetPendingLightFocusPressure(int n);
   void SetVisibleBlackNoTicketPressure(int n);
   void SetEnterFovLitPressure(bool v);
+  void SetFz2DeferGated(bool v);
   double GetLastMeshImmediateMs() const;
   int GetLastMeshImmediateCount() const;
   void WaitForAsyncMeshIdle();
