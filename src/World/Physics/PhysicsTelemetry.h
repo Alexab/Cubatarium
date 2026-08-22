@@ -270,6 +270,8 @@ struct PhysicsTelemetry
   int LightingRelightDeferred{0};
   /// 1 when underfeet xz appears in filtered opaque draw refs this frame.
   int UnderfeetOpaquePresent{0};
+  /// FlickerZero V3: post-draw latch for streaming/perf SoT (prior frame).
+  int UnderfeetOpaquePresentLatched{0};
   /// FogPullIn effective state (0 = disabled / unset).
   int FogPullInRd{0};
   int FogPullInMargin{0};

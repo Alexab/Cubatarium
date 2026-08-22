@@ -317,6 +317,26 @@ After ColdWall `1ede5165` / manual `093018`: stream/wall closed; **PL≈45**, **
 - Cold manual ≥180s post-ColdPL vs `093018` (target: PL med <20, revisit <85, stream ≤45).
 - Autofly guard: cruise PL≤5, wall_fly no +15% vs LitRing.
 
+## FlickerZero — VB drain + enter wall (2026-08-22)
+
+Baseline manual `151946` (ColdPL `00dffb3f`): PL med 32, revisit 133, enter VB/no_ticket 117/108, uf_flips 0.32 (telem), black_sticky 0.
+
+| Step | ID | Change | Target |
+| --- | --- | --- | --- |
+| V0 | forensics | `bin/tmp_cold_pl_forensics.py` — VB/no_ticket timeline, vb_blink, opaque gap, segments | audit |
+| V1 | ticket cap | `VisibleBlackNoTicketRepairCap` / `VoidCap` — lift stale_cap min(2) | enter no_ticket <30 @60s |
+| V2 | VB budget | `FrameStreamingBudget` no_ticket floor at PL=0; drain bump; `ShouldFinalizeRelightUnderVbPressure` | PL med <15 steady |
+| V3 | uf latch | `UnderfeetOpaquePresentLatched` post-draw; perf/stream read latched | uf_flips <0.05 |
+| V4 | remesh | lit-ring FullyDark defer skip; PL leave-in carve-out; deferred ring max 64 | revisit <95 |
+| T1 | fluid enter | `FluidMapShouldThrottleEnter` baseline 8 / burst 12 | enter wall p90 <250ms |
+| T2 | enter burst | `TickEnterFovLitPass` NotePendingLight horiz≤4; Capture bg≥2 when no_ticket>8 | VB slope −5/frame |
+| T3 | revisit | dirty sort skip 92%; requeue cap size/4 | revisit med <95 |
+
+### Deferred
+
+- Manual ≥180s post-FlickerZero vs `093018` / `151946`.
+- Autofly: cruise PL≤5, VB blink=0.
+
 ### Diagnostics
 
-- `bin/tmp_cold_pl_forensics.py` — partial/final apply, PL buckets, uf_flip vs draw_ok.
+- `bin/tmp_cold_pl_forensics.py` — default log `151946`; no_ticket_blink, opaque_gap, segment PL/VB.

@@ -44,7 +44,8 @@ public:
 
   bool Update(UBlockWorld &world, UBlockRegistry &registry, UChunkMeshCache &cache,
               glm::ivec3 cameraBlockXZ, int scanHintY, uint64_t meshRevision,
-              double lastWallMs = 0.0, bool cruise_throttle = false);
+              double lastWallMs = 0.0, bool cruise_throttle = false,
+              bool enter_throttle = false);
 
   void Bind(int surfaceYUnit, int fluidIndexUnit, int fluidBottomUnit) const;
 
@@ -60,7 +61,8 @@ public:
 private:
   bool RefreshStaging(UBlockWorld &world, UBlockRegistry &registry,
                       UChunkMeshCache &cache, glm::ivec3 cameraBlockXZ,
-                      int scanHintY, double lastWallMs, bool cruise_throttle);
+                      int scanHintY, double lastWallMs, bool cruise_throttle,
+                      bool enter_throttle = false);
   void UploadFullGpu();
   void UploadDirtyChunkGpu(glm::ivec3 groundChunk);
   void QueueGpuChunk(glm::ivec3 groundChunk);

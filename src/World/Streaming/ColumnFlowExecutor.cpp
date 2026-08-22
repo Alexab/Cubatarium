@@ -383,10 +383,19 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
         focus_radius, missing_visible_mesh, void_pressure,
         visible_black_no_ticket_n > 0);
     const int stale_cap =
-        nearest_vb_no_ticket ? std::min(2, std::max(1, repair_cap))
-                             : repair_cap;
-    const int void_cap = OceanVoidRelightDrainCapMoving(
-        void_pressure, VoidRelightCollectCap(repair_cap, void_pressure));
+        nearest_vb_no_ticket
+            ? VisibleBlackNoTicketRepairCap(visible_black_no_ticket_n,
+                                            repair_cap, moving)
+            : repair_cap;
+    const int void_base =
+        VoidRelightCollectCap(repair_cap, void_pressure);
+    const int void_cap =
+        nearest_vb_no_ticket
+            ? VisibleBlackNoTicketVoidCap(
+                  visible_black_no_ticket_n,
+                  OceanVoidRelightDrainCapMoving(void_pressure, void_base),
+                  moving)
+            : OceanVoidRelightDrainCapMoving(void_pressure, void_base);
     world.CollectFullyDarkFocusColumns(focus_ground_horiz, vb_radius,
                                        void_dark_cols, void_cap);
     world.CollectStaleDarkFocusColumns(focus_ground_horiz, vb_radius,

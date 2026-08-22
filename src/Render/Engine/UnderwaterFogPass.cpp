@@ -53,14 +53,21 @@ void UUnderwaterFogPass::Update(UWorld &world, const RenderSettings &render,
     const bool moving =
         world.GetLastMovementSpeed() >
         world.GetProceduralSettings().MovementPrefetchThreshold;
-    const bool cruise_throttle = FluidMapShouldThrottleCruise(
-        world.GetLastFluidMapDirtyChunks(), world.GetLastMovementFrameMs(),
-        moving, world.GetPhysicsTelemetry().DarkFaceVoidNearN,
-        world.GetPhysicsTelemetry().VisibleBlackFocusN);
+    const bool enter_throttle = FluidMapShouldThrottleEnter(
+        world.IsEnterFovLitPassActive(),
+        world.GetPhysicsTelemetry().PostLoadRingNotReady > 0,
+        world.GetPhysicsTelemetry().VisibleBlackFocusN,
+        world.GetLastFluidMapDirtyChunks());
+    const bool cruise_throttle =
+        FluidMapShouldThrottleCruise(
+            world.GetLastFluidMapDirtyChunks(), world.GetLastMovementFrameMs(),
+            moving, world.GetPhysicsTelemetry().DarkFaceVoidNearN,
+            world.GetPhysicsTelemetry().VisibleBlackFocusN) ||
+        enter_throttle;
     map_ready = surface_map.Update(
         world.GetBlockWorld(), registry, mesh_service.GetCache(),
         camera_block_xz, eye_block_y, mesh_service.GetMeshRevision(),
-        world.GetLastMovementFrameMs(), cruise_throttle);
+        world.GetLastMovementFrameMs(), cruise_throttle, enter_throttle);
   }
 
   const bool partial_submerge =

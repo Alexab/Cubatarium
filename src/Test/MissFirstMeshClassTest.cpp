@@ -636,6 +636,35 @@ int main()
   Expect(ShouldForceEnterVisualCap(250.0, true, /*cold_create=*/true),
          "Era41: soft-ready ⇒ force regardless of create/load");
 
+  // --- FlickerZero V1/V4 ---
+  using cutum::FluidMapShouldThrottleEnter;
+  using cutum::ShouldFinalizeRelightUnderVbPressure;
+  using cutum::ShouldRemoveAtRemeshDespitePlPressure;
+  using cutum::ShouldSkipDeferRemeshForLitRingFullyDark;
+  using cutum::VisibleBlackNoTicketRepairCap;
+  using cutum::VisibleBlackNoTicketVoidCap;
+
+  Expect(VisibleBlackNoTicketRepairCap(0, 6, false) == 6,
+         "FlickerZero: zero no_ticket ⇒ repair_cap");
+  Expect(VisibleBlackNoTicketRepairCap(108, 6, false) >= 6,
+         "FlickerZero: enter idle no_ticket scales cap");
+  Expect(VisibleBlackNoTicketRepairCap(108, 6, true) >= 4,
+         "FlickerZero: cruise no_ticket scales cap");
+  Expect(VisibleBlackNoTicketVoidCap(20, 2, false) >= 2,
+         "FlickerZero: void cap scales under no_ticket");
+  Expect(ShouldFinalizeRelightUnderVbPressure(12, 3),
+         "FlickerZero: VB finalize horiz≤4");
+  Expect(!ShouldFinalizeRelightUnderVbPressure(5, 5),
+         "FlickerZero: VB finalize skips far ring");
+  Expect(ShouldSkipDeferRemeshForLitRingFullyDark(2, true),
+         "FlickerZero: lit-ring FullyDark skip defer");
+  Expect(ShouldRemoveAtRemeshDespitePlPressure(2, true),
+         "FlickerZero: PL leave-in carve-out RemoveAt");
+  Expect(FluidMapShouldThrottleEnter(true, false, 0, 0),
+         "FlickerZero: enter_fov_lit throttles fluid");
+  Expect(FluidMapShouldThrottleEnter(false, true, 0, 0),
+         "FlickerZero: post_load throttles fluid");
+
   // --- Era41/Era42 Enter lit budgets / progress ---
   {
     using cutum::EnterFovLitHardWallMs;

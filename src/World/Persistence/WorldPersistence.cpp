@@ -615,6 +615,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       (focus_pending_mid || visual_holes);
   const URuntimeTuning &tune = URuntimeTuning::Get();
   const bool enter_fov_lit = world.IsEnterFovLitPassActive();
+  const int vb_no_ticket_n = world.GetPhysicsTelemetry().VisibleBlackNoTicketN;
   // MultHigh was loaded from tune but unused — use it for idle/mid pending so
   // stop can drain light debt without waiting for holes.
   int inflight_mult = 2;
@@ -969,6 +970,10 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   // Hot SoftDefer bypass: at most one Capture so cruise hitch stays bounded.
   // Async SoftDefer hole may enqueue even when wall is high (see drain_one).
   int bg_cap = max_bg_columns;
+  if (enter_fov_lit && vb_no_ticket_n > 8)
+  {
+    bg_cap = std::max(bg_cap, 2);
+  }
   // S2 step A: cruise ≤CaptureMovingBgCap (worker Capture hung — TD-ARCH-015).
   // Era36 B2: dynamic cap based on pending light pressure.
   // Era41b: enter FOV lit keeps caller Capture budget (feed async workers).
@@ -1150,7 +1155,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         enter_fov_lit ||
         (visual_holes && ShouldPreferMissFinalizeBand(horiz_dist)) ||
         ShouldFinalizeRelightUnderPlPressure(pending_light_focus_n, horiz_dist,
-                                           focus_radius);
+                                             focus_radius) ||
+        ShouldFinalizeRelightUnderVbPressure(vb_no_ticket_n, horiz_dist);
     if (async_bg && band_cy > 0 && !miss_finalize_band)
     {
       const int band_h = band_cy * CHUNK_SIZE;

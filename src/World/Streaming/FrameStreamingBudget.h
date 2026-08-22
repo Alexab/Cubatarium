@@ -30,6 +30,10 @@ struct FrameStreamingBudgetInput
   int gen_backlog{0};
   int async_queued{0};
   int void_n{0};
+  /// FlickerZero V2: VB orphans without ColumnFlow ticket.
+  int visible_black_no_ticket_n{0};
+  bool enter_fov_lit{false};
+  bool post_load_ring_not_ready{false};
 };
 
 struct FrameStreamingBudgetDecision
@@ -242,6 +246,29 @@ inline FrameStreamingBudgetDecision EvaluateFrameStreamingBudget(
     {
       out.capture_over_budget = true;
     }
+  }
+
+  // FlickerZero V2: VB no_ticket orphans need Capture/Apply even when PL=0.
+  if (in.visible_black_no_ticket_n > 0 && in.era18_vb_bg_budget_floor &&
+      !miss)
+  {
+    out.apply_vb_bg_floor = true;
+    const int floor =
+        in.enter_fov_lit || !in.moving
+            ? (in.visible_black_no_ticket_n > 20 ? 3 : 2)
+            : (in.visible_black_no_ticket_n > 20 ? 2 : 1);
+    out.vb_bg_budget_floor = std::max(out.vb_bg_budget_floor, floor);
+    if (hot)
+    {
+      out.heal_deferred_for_miss = true;
+    }
+  }
+  if (in.visible_black_no_ticket_n > 0 && in.era18_vb_capture_floor && !miss)
+  {
+    const int cap_floor = in.enter_fov_lit ? 2 : 1;
+    out.soft_defer_capture_budget =
+        std::max(out.soft_defer_capture_budget, cap_floor);
+    out.capture_first_mesh_only = false;
   }
 
   return out;

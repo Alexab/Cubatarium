@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ColdPL Phase 0: PL plateau + underfeet telem forensics."""
+"""ColdPL / FlickerZero forensics: PL, VB, underfeet, opaque gap."""
 from __future__ import annotations
 
 import json
@@ -46,6 +46,17 @@ def col(rows, k):
     return [r.get(k) for r in rows if k in r]
 
 
+def blink_rate(rows, key):
+    xs = [int(x) for x in col(rows, key) if x is not None]
+    return flips(xs) / max(1, len(xs))
+
+
+def segment(rows, start_s, end_s):
+    i0 = max(0, start_s // 2)
+    i1 = min(len(rows), end_s // 2)
+    return rows[i0:i1]
+
+
 def analyze(path: Path):
     u = load_spikes(path)
     n = len(u)
@@ -73,6 +84,27 @@ def analyze(path: Path):
             buckets["41+"] += 1
     print(f"  PL med={med(pl):.1f} buckets={dict(buckets)}")
 
+    vb = [float(x) for x in col(u, "visible_black_focus_n") if x is not None]
+    nt = [float(x) for x in col(u, "visible_black_no_ticket_n") if x is not None]
+    if vb:
+        print(
+            f"  VB med={med(vb):.1f} p90={p90(vb):.1f} "
+            f"no_ticket med={med(nt):.1f} p90={p90(nt):.1f}"
+        )
+        print(f"  vb_blink rate={blink_rate(u, 'visible_black_focus_n'):.3f}")
+        print(f"  no_ticket_blink rate={blink_rate(u, 'visible_black_no_ticket_n'):.3f}")
+
+    cpu_vis = col(u, "opaque_refs_cpu_vis")
+    rr = col(u, "opaque_refs_render_ready")
+    if cpu_vis and rr:
+        gaps = [
+            float(a) - float(b)
+            for a, b in zip(cpu_vis, rr)
+            if a is not None and b is not None
+        ]
+        if gaps:
+            print(f"  opaque_gap med={med(gaps):.1f} p90={p90(gaps):.1f}")
+
     uf = [int(x) for x in col(u, "underfeet_opaque_present")]
     draw_ok = [int(x) for x in col(u, "underfeet_draw_ok")]
     uf_pl = [int(x) for x in col(u, "underfeet_pending_light")]
@@ -85,17 +117,23 @@ def analyze(path: Path):
                 telem_only += 1
     print(f"  uf_flip with draw_ok=1 (telem-ish): {telem_only}/{max(1, flips(uf))}")
 
-    for i in range(1, min(n, 200)):
-        if uf[i] != uf[i - 1]:
-            print(
-                f"  flip@{i}: opaque {uf[i - 1]}->{uf[i]} "
-                f"draw_ok={draw_ok[i]} pl_feet={uf_pl[i]} "
-                f"PL={pl[i] if i < len(pl) else '?'}"
-            )
-            if telem_only > 0 and sum(1 for j in range(1, n) if uf[j] != uf[j - 1]) > 5:
-                break
+    for label, seg in [
+        ("enter_0-60s", segment(u, 0, 60)),
+        ("mid_60-120s", segment(u, 60, 120)),
+        ("steady_120s+", segment(u, 120, n * 2)),
+    ]:
+        if not seg:
+            continue
+        print(
+            f"  [{label}] wall={med(col(seg, 'wall_ms')):.1f} "
+            f"PL={med(col(seg, 'pending_light_focus')):.1f} "
+            f"VB={med(col(seg, 'visible_black_focus_n')):.1f} "
+            f"no_ticket={med(col(seg, 'visible_black_no_ticket_n')):.1f} "
+            f"revisit={med(col(seg, 'dirty_revisit_same_n')):.1f} "
+            f"fluid={med(col(seg, 'fluid_map_cpu_ms')):.1f}"
+        )
 
-    steady = u[90:] if len(u) > 120 else u[n // 2 :]
+    steady = u[60:] if len(u) > 90 else u[n // 2 :]
     print(
         f"  steady: wall={med(col(steady, 'wall_ms')):.1f} "
         f"stream={med(col(steady, 'stream_ms')):.1f} "
@@ -105,7 +143,7 @@ def analyze(path: Path):
 
 
 if __name__ == "__main__":
-    default = Path(r"E:/Work/Home/Cubatarium/bin/logs/perf_20260822-093018_25864.jsonl")
+    default = Path(r"E:/Work/Home/Cubatarium/bin/logs/perf_20260822-151946_3628.jsonl")
     for p in sys.argv[1:] or [str(default)]:
         analyze(Path(p))
         print()

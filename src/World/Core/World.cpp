@@ -5266,6 +5266,19 @@ void UWorld::TickAsyncChunkSystems()
   }
   const bool moving =
       LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold;
+  const int vb_no_ticket_n = PhysicsTelemetryData.VisibleBlackNoTicketN;
+  if (vb_no_ticket_n > 20)
+  {
+    drain_budget = std::max(drain_budget, moving ? 10 : 14);
+  }
+  else if (vb_no_ticket_n > 8)
+  {
+    drain_budget = std::max(drain_budget, moving ? 8 : 10);
+  }
+  else if (vb_no_ticket_n > 0)
+  {
+    drain_budget = std::max(drain_budget, moving ? 6 : 8);
+  }
   // RateMatch R0: high-PL cruise floors Apply at 4 (pace DynamicCapture≤2),
   // not Enter×64 + double Drain (manual 190534 hitch apply_n=12 / wall≈1s).
   const bool high_pl_cruise =
@@ -7372,6 +7385,13 @@ int UWorld::TickEnterFovLitPass(int capture_budget)
     }
     Persistence->EnqueueTerrainColumnRelight(world_key.x, world_key.y, priority,
                                              band_min, band_max);
+    const int horiz =
+        std::max(std::abs(col.x - center.x), std::abs(col.y - center.z));
+    if (horiz <= kVisualStageLitDrawableHoriz)
+    {
+      NotePendingLightBeforeMesh(glm::ivec3(col.x, 0, col.y), band_min,
+                                 band_max);
+    }
   };
 
   int enqueued = 0;

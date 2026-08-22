@@ -11,6 +11,7 @@
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/MeshLitGate.h"
+#include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
@@ -37,6 +38,8 @@ namespace cutum
 
 namespace
 {
+
+constexpr int kRemeshDeferredRingMax = 64;
 
 bool CacheNeighborVisuallyDrawable(void *ctx, glm::ivec3 neighbor_chunk)
 {
@@ -1290,6 +1293,7 @@ void UChunkMeshCache::BeginHoleQueryFrame(glm::ivec3 focus_ground_chunk)
   {
     ++HoleQueryEpoch;
     LastHoleQueryFocus_ = focus_ground_chunk;
+    RequeueDeferredRemesh(static_cast<int>(RemeshDeferredRing_.size()));
   }
 }
 
@@ -1299,13 +1303,26 @@ void UChunkMeshCache::DeferRemeshCoord(const glm::ivec3 &coord)
   {
     return;
   }
+  while (static_cast<int>(RemeshDeferredRing_.size()) >= kRemeshDeferredRingMax &&
+         !RemeshDeferredRing_.empty())
+  {
+    const glm::ivec3 evict = RemeshDeferredRing_.front();
+    RemeshDeferredRing_.pop_front();
+    RemeshDeferredSet_.erase(evict);
+  }
   RemeshDeferredSet_.insert(coord);
   RemeshDeferredRing_.push_back(coord);
 }
 
 void UChunkMeshCache::RequeueDeferredRemesh(int max_n)
 {
-  for (int i = 0; i < max_n && !RemeshDeferredRing_.empty(); ++i)
+  if (max_n <= 0 || RemeshDeferredRing_.empty())
+  {
+    return;
+  }
+  const int capped = std::min(
+      max_n, std::max(1, static_cast<int>(RemeshDeferredRing_.size()) / 4));
+  for (int i = 0; i < capped && !RemeshDeferredRing_.empty(); ++i)
   {
     const glm::ivec3 c = RemeshDeferredRing_.front();
     RemeshDeferredRing_.pop_front();
@@ -3936,9 +3953,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         MeshEmergeTotalBudgetMs > 0.0 &&
         tick_so_far >= MeshEmergeTotalBudgetMs;
     const bool skip_sort_high_revisit =
-        Dirty.GetCount() > 0 && LastDirtyRevisitSameN > 0 &&
+        PendingLightFocusPressure_ <= 30 && Dirty.GetCount() > 0 &&
+        LastDirtyRevisitSameN > 0 &&
         static_cast<double>(LastDirtyRevisitSameN) >=
-            0.8 * static_cast<double>(Dirty.GetCount());
+            0.92 * static_cast<double>(Dirty.GetCount());
     if (!skip_sort_for_budget && !skip_sort_high_revisit)
     {
     // Precompute missing-mesh set once — SortByDistanceKey compares O(n log n)
@@ -4170,6 +4188,18 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                                       : max_schedule_per_frame;
     const int rear_focus_cap = std::max(0, MaxRearFocusMeshPerFrame);
     int rear_focus_scheduled = 0;
+    const auto leave_in_under_pl = [&](const glm::ivec3 &c) {
+      if (!ShouldLeaveInRemeshUnderPlPressure())
+        return false;
+      int horiz = 999;
+      if (MeshFocusValid)
+      {
+        horiz = std::max(std::abs(c.x - MeshFocusGroundChunk.x),
+                         std::abs(c.z - MeshFocusGroundChunk.z));
+      }
+      return !ShouldRemoveAtRemeshDespitePlPressure(
+          horiz, ChunkHasFullyDarkFace(c));
+    };
 
     auto try_schedule = [&](auto it, bool count_outside, bool count_overflow,
                             bool count_reserved) -> decltype(it)
@@ -4228,7 +4258,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         // mid-flight only via Active→RAA latch, not via leave-in-Dirty.
         ++DirtyScheduleSkipInflightN;
         ++LastMeshDirtyScheduleSkipN;
-        if (ShouldLeaveInRemeshUnderPlPressure())
+        if (leave_in_under_pl(*it))
         {
           return std::next(it);
         }
@@ -4240,7 +4270,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         ++DirtyScheduleSkipInflightN;
         ++LastMeshDirtyScheduleSkipN;
-        if (ShouldLeaveInRemeshUnderPlPressure())
+        if (leave_in_under_pl(*it))
         {
           return std::next(it);
         }
@@ -4449,6 +4479,20 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     }
 
     RequeueDeferredRemesh(remesh_cap);
+    const auto coord_horiz = [this](const glm::ivec3 &c) -> int
+    {
+      if (!MeshFocusValid)
+      {
+        return 999;
+      }
+      return std::max(std::abs(c.x - MeshFocusGroundChunk.x),
+                      std::abs(c.z - MeshFocusGroundChunk.z));
+    };
+    const auto lit_ring_fully_dark = [this, &coord_horiz](const glm::ivec3 &c) -> bool
+    {
+      return ShouldSkipDeferRemeshForLitRingFullyDark(
+          coord_horiz(c), ChunkHasFullyDarkFace(c));
+    };
     for (auto it = Dirty.begin();
          it != Dirty.end() && scheduled < max_schedule_per_frame;)
     {
@@ -4484,7 +4528,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         // CheapRemesh C0: Inflight owns the chunk — erase Dirty (same as
         // FirstMesh schedule path). Leave-in-Dirty caused dirty_revisit thrash.
         ++DirtyScheduleSkipInflightN;
-        if (ShouldLeaveInRemeshUnderPlPressure())
+        if (leave_in_under_pl(*it))
         {
           ++it;
           continue;
@@ -4497,7 +4541,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           IsPendingGpuKickedOrDispatched(*it))
       {
         ++DirtyScheduleSkipInflightN;
-        if (ShouldLeaveInRemeshUnderPlPressure())
+        if (leave_in_under_pl(*it))
         {
           ++it;
           continue;
@@ -4521,7 +4565,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         // ColdPL-2A: defer over-cap remesh (not leave-in revisit churn).
         if (!Dirty.IsFirstMesh(*it))
         {
-          DeferRemeshCoord(*it);
+          if (!lit_ring_fully_dark(*it))
+          {
+            DeferRemeshCoord(*it);
+          }
           it = Dirty.RemoveAt(it);
           continue;
         }
@@ -4576,8 +4623,23 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           {
             if (is_remesh && HasDrawableGreedyMesh(*it))
             {
-              DeferRemeshCoord(*it);
-              it = Dirty.RemoveAt(it);
+              const int horiz_out =
+                  MeshFocusValid
+                      ? std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                                 std::abs(it->z - MeshFocusGroundChunk.z))
+                      : 999;
+              const bool lit_ring_out =
+                  ShouldSkipDeferRemeshForLitRingFullyDark(horiz_out,
+                                                           ChunkHasFullyDarkFace(*it));
+              if (!lit_ring_out)
+              {
+                DeferRemeshCoord(*it);
+                it = Dirty.RemoveAt(it);
+              }
+              else
+              {
+                ++it;
+              }
             }
             else
             {

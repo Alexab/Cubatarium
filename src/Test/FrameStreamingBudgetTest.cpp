@@ -185,6 +185,24 @@ int main()
            "Era25: frontier void Relight bg floor≥1 (no starve under miss)");
   }
 
+  {
+    // FlickerZero V2: VB no_ticket raises Apply/Capture floor even when PL=0.
+    FrameStreamingBudgetInput in;
+    in.visible_black_no_ticket_n = 12;
+    in.pending_light_focus_n = 0;
+    in.visible_black_n = 20;
+    in.enter_fov_lit = true;
+    in.era18_vb_bg_budget_floor = true;
+    in.era18_vb_capture_floor = true;
+    in.frame_ms = 40.0;
+    in.hot_frame_ms = 80.0;
+    const auto d = EvaluateFrameStreamingBudget(in);
+    Expect(d.apply_vb_bg_floor && d.vb_bg_budget_floor >= 2,
+           "FlickerZero: enter no_ticket Apply floor≥2 at PL=0");
+    Expect(d.soft_defer_capture_budget >= 1,
+           "FlickerZero: no_ticket Capture floor at PL=0");
+  }
+
   if (gFails != 0)
   {
     std::cerr << gFails << " failures\n";

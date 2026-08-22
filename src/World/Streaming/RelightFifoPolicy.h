@@ -200,6 +200,30 @@ inline bool ShouldFinalizeRelightUnderPlPressure(int pending_light_focus_n,
          horiz_dist <= focus_radius;
 }
 
+/// FlickerZero V2: finalize Capture on lit ring when VB orphans backlog.
+inline bool ShouldFinalizeRelightUnderVbPressure(
+    int visible_black_no_ticket_n, int horiz_dist,
+    int ring = kVisualStageLitDrawableHoriz, int no_ticket_thresh = 8)
+{
+  return visible_black_no_ticket_n > no_ticket_thresh && horiz_dist >= 0 &&
+         horiz_dist <= ring;
+}
+
+/// FlickerZero V4: do not defer lit-ring FullyDark remesh (clears VB debt).
+inline bool ShouldSkipDeferRemeshForLitRingFullyDark(
+    int horiz, bool fully_dark, int ring = kVisualStageLitDrawableHoriz)
+{
+  return fully_dark && horiz >= 0 && horiz <= ring;
+}
+
+/// FlickerZero V4: PL leave-in carve-out — lit-ring FullyDark always RemoveAt.
+inline bool ShouldRemoveAtRemeshDespitePlPressure(int horiz, bool fully_dark,
+                                                  int ring =
+                                                      kVisualStageLitDrawableHoriz)
+{
+  return ShouldSkipDeferRemeshForLitRingFullyDark(horiz, fully_dark, ring);
+}
+
 /// ColdPL-1B: remesh ownership leave-in when PL backlog is high.
 inline bool ShouldLeaveInDirtyUnderPlPressure(int pending_light_focus_n,
                                               int pl_thresh = 30)

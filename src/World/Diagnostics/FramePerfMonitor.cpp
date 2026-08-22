@@ -672,7 +672,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.underfeet_pending_light = phys.UnderfeetPendingLight;
   n.underfeet_reason = phys.UnderfeetReason;
   n.underfeet_stage = phys.UnderfeetStage;
-  n.underfeet_opaque_present = phys.UnderfeetOpaquePresent;
+  n.underfeet_opaque_present = phys.UnderfeetOpaquePresentLatched;
   n.lighting_relight_deferred = phys.LightingRelightDeferred;
   n.fog_pull_in_rd = phys.FogPullInRd;
   n.fog_pull_in_margin = phys.FogPullInMargin;

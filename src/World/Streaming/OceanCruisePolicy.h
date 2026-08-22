@@ -64,6 +64,50 @@ inline bool FluidMapShouldThrottleCruise(int pending, double wall_ms,
   return pending > 24 || wall_ms > 30.0;
 }
 
+/// FlickerZero T1: throttle fluid_map full rebuild during enter / post-load heal.
+inline bool FluidMapShouldThrottleEnter(bool enter_fov_lit,
+                                        bool post_load_ring_not_ready,
+                                        int visible_black_n, int fluid_pending)
+{
+  if (enter_fov_lit || post_load_ring_not_ready)
+  {
+    return true;
+  }
+  return visible_black_n > 40 && fluid_pending > 32;
+}
+
+/// FlickerZero V1: scale VB no_ticket repair collect cap (was hard min(2)).
+inline int VisibleBlackNoTicketRepairCap(int no_ticket_n, int repair_cap,
+                                          bool moving)
+{
+  const int base = std::max(1, repair_cap);
+  if (no_ticket_n <= 0)
+  {
+    return base;
+  }
+  if (no_ticket_n <= 8)
+  {
+    return std::min(base, std::max(2, no_ticket_n / 2));
+  }
+  if (!moving)
+  {
+    return std::min(base, std::max(6, no_ticket_n / 4));
+  }
+  return std::min(base, std::max(4, no_ticket_n / 8));
+}
+
+/// FlickerZero V1: void Relight collect cap under no_ticket pressure.
+inline int VisibleBlackNoTicketVoidCap(int no_ticket_n, int void_cap, bool moving)
+{
+  if (no_ticket_n <= 8)
+  {
+    return void_cap;
+  }
+  const int boosted =
+      VisibleBlackNoTicketRepairCap(no_ticket_n, void_cap, moving);
+  return std::max(void_cap, std::min(boosted, 8));
+}
+
 /// Era30 I-O6 / Era41/Era42: legacy soft enter_app name kept; lit warn wall
 /// uses EnterFovLitHardWallMs. Do not abort load at 200ms.
 inline int EnterVisualWarmupHardCapMs()

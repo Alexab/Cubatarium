@@ -890,7 +890,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       }
     }
     const bool opaque_present =
-        world.PhysicsTelemetryData.UnderfeetOpaquePresent != 0;
+        world.PhysicsTelemetryData.UnderfeetOpaquePresentLatched != 0;
     bool inflight = false;
     for (int cy = 0; cy <= max_cy; ++cy)
     {
@@ -1609,6 +1609,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       Streamer ? Streamer->GetLastFrameStats().asyncQueuedThisFrame
                : world.PhysicsTelemetryData.StreamAsyncQueued;
   const int void_n_budget = world.PhysicsTelemetryData.DarkFaceVoidNearN;
+  const int vb_no_ticket_n =
+      world.GetPhysicsTelemetry().VisibleBlackNoTicketN;
   const FrameStreamingBudgetDecision early_budget =
       EvaluateFrameStreamingBudget(FrameStreamingBudgetInput{
           frame_ms, kBadFrameMs, kHotFrameMs, missing_focus_mesh,
@@ -1616,7 +1618,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           pending_light_focus_n, moving_now_early,
           tune_budget.Era18VbCaptureFloor, tune_budget.Era18VbBgBudgetFloor,
           tune_budget.MissFirstFrameBudget, gen_backlog_total,
-          async_queued_budget, void_n_budget});
+          async_queued_budget, void_n_budget, vb_no_ticket_n,
+          world.IsEnterFovLitPassActive(),
+          world.PhysicsTelemetryData.PostLoadRingNotReady > 0});
   if (early_budget.apply_vb_bg_floor)
   {
     bg_budget = std::max(bg_budget, early_budget.vb_bg_budget_floor);
@@ -1789,6 +1793,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     const int unfinished = world.PhysicsTelemetryData.UnfinishedVisual;
     const int visible_black_n_cap =
         world.GetPhysicsTelemetry().VisibleBlackFocusN;
+    const int vb_no_ticket_cap =
+        world.GetPhysicsTelemetry().VisibleBlackNoTicketN;
     const auto &tune = URuntimeTuning::Get();
     const FrameStreamingBudgetDecision budget =
         EvaluateFrameStreamingBudget(FrameStreamingBudgetInput{
@@ -1796,7 +1802,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             unfinished, visible_black_n_cap, pending_light_focus_n, moving_now,
             tune.Era18VbCaptureFloor, tune.Era18VbBgBudgetFloor,
             tune.MissFirstFrameBudget, gen_backlog_total, async_queued_budget,
-            void_n_budget});
+            void_n_budget, vb_no_ticket_cap, world.IsEnterFovLitPassActive(),
+            world.PhysicsTelemetryData.PostLoadRingNotReady > 0});
     world.PhysicsTelemetryData.SoftDeferCaptureBudget =
         budget.soft_defer_capture_budget;
     world.PhysicsTelemetryData.FrameBudgetMs = budget.frame_budget_ms;
