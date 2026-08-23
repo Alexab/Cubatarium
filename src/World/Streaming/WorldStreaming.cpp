@@ -745,26 +745,60 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     static int last_visible_black_no_ticket = 0;
     static int last_visible_black_progress = 0;
     static int last_visible_black_stalled = 0;
+    static int vb_focus_stable_frames = 0;
     int no_ticket = 0;
     int progress_n = 0;
     int stalled_n = 0;
+    const auto &vb_telem = world.GetPhysicsTelemetry();
+    const bool consume_mode = ShouldConsumeTicketedVbDebt(
+        vb_telem.VisibleBlackNoTicketN, vb_telem.VisibleBlackFocusN,
+        vb_telem.VisibleBlackStalledN);
+    const bool ticketed_scan =
+        consume_mode && vb_telem.VisibleBlackNoTicketN <= 0;
     if (!moving_for_telemetry)
     {
+      const int prev_vb = last_visible_black;
       last_visible_black = world.CountVisibleBlackFocusMeshes(
-          focus_ground, focus_radius, &no_ticket, &progress_n, &stalled_n);
+          focus_ground, focus_radius, &no_ticket, &progress_n, &stalled_n,
+          ticketed_scan, vb_focus_stable_frames);
+      if (prev_vb > 0 && last_visible_black == prev_vb)
+      {
+        ++vb_focus_stable_frames;
+      }
+      else
+      {
+        vb_focus_stable_frames = 0;
+      }
       last_visible_black_no_ticket = no_ticket;
       last_visible_black_progress = progress_n;
       last_visible_black_stalled = stalled_n;
       visible_black_sample_cd = 0;
+      UWorld::VisibleBlackFocusSample vb_sample{};
+      vb_sample.frame_epoch = world.GetStreamingFrameEpoch();
+      vb_sample.focus_n = last_visible_black;
+      vb_sample.no_ticket_n = last_visible_black_no_ticket;
+      vb_sample.progress_n = last_visible_black_progress;
+      vb_sample.stalled_n = last_visible_black_stalled;
+      vb_sample.valid = true;
+      world.SetVisibleBlackFocusSample(vb_sample);
     }
     else if (--visible_black_sample_cd <= 0)
     {
       last_visible_black = world.CountVisibleBlackFocusMeshes(
-          focus_ground, focus_radius, &no_ticket, &progress_n, &stalled_n);
+          focus_ground, focus_radius, &no_ticket, &progress_n, &stalled_n,
+          ticketed_scan, vb_focus_stable_frames);
       last_visible_black_no_ticket = no_ticket;
       last_visible_black_progress = progress_n;
       last_visible_black_stalled = stalled_n;
       visible_black_sample_cd = 4;
+      UWorld::VisibleBlackFocusSample vb_sample{};
+      vb_sample.frame_epoch = world.GetStreamingFrameEpoch();
+      vb_sample.focus_n = last_visible_black;
+      vb_sample.no_ticket_n = last_visible_black_no_ticket;
+      vb_sample.progress_n = last_visible_black_progress;
+      vb_sample.stalled_n = last_visible_black_stalled;
+      vb_sample.valid = true;
+      world.SetVisibleBlackFocusSample(vb_sample);
     }
     world.PhysicsTelemetryData.VisibleBlackFocusN = last_visible_black;
     world.PhysicsTelemetryData.VisibleBlackNoTicketN =

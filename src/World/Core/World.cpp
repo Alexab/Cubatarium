@@ -913,6 +913,13 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
   const bool enter_visual_quiesce =
       enter_gate && EnterLitQuiesceLatched;
   const bool enter_quiesce = enter_visual_quiesce;
+  const glm::ivec3 focus_chunk =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const int vb_no_ticket_n = PhysicsTelemetryData.VisibleBlackNoTicketN;
+  const int vb_focus_n = PhysicsTelemetryData.VisibleBlackFocusN;
+  const int vb_stalled_n = PhysicsTelemetryData.VisibleBlackStalledN;
+  const bool consume_mode =
+      ShouldConsumeTicketedVbDebt(vb_no_ticket_n, vb_focus_n, vb_stalled_n);
   if (relit_chunks.empty())
   {
     // Job finished with nothing to apply (empty capture / unloaded). Still
@@ -967,7 +974,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
   face_cache.reserve(relit_chunks.size() * 2 + 8);
   auto schedule_remesh_after_lit_apply =
       [this, enter_quiesce, enter_gate, primary_only, &primary_set,
-       &face_cache](const glm::ivec3 &coord)
+       &face_cache, consume_mode, focus_chunk](const glm::ivec3 &coord)
   {
     if (!MeshService)
     {
@@ -1056,7 +1063,15 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       break;
     case RemeshAfterLitApplyDecision::Schedule:
       ++PhysicsTelemetryData.MarkRelitScheduleN;
-      if (enter_gate)
+      {
+        const int horiz =
+            std::max(std::abs(coord.x - focus_chunk.x),
+                     std::abs(coord.z - focus_chunk.z));
+        const bool force_stale = ShouldForceMarkRelitForTicketedStale(
+            consume_mode,
+            GetColumnFlowExecutor().HasRepairTicket(glm::ivec2(coord.x, coord.z)),
+            fully_dark, still_stale, horiz);
+      if (enter_gate && !force_stale)
       {
         // Suppress only when this column is already lit/true-dark settled.
         if (!sticky_owned &&
@@ -1084,7 +1099,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           break;
         }
         if (MeshService->IsEnterTerminalHeld(coord) &&
-            !(fully_dark && still_stale))
+            !(fully_dark && still_stale) && !force_stale)
         {
           if (gpu_pending)
           {
@@ -1099,6 +1114,14 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
             ++PhysicsTelemetryData.StickyInsertStaleAfterApplyN;
           }
         }
+      }
+      else if (enter_gate && force_stale && fully_dark && still_stale)
+      {
+        if (StickyRemeshAfterLight.insert(col).second)
+        {
+          ++PhysicsTelemetryData.StickyInsertStaleAfterApplyN;
+        }
+      }
       }
       // Closeout C / ColPipe P2: FullyDark/missing → FirstMeshQ; lit → RemeshQ.
       // Dirty alone owns remesh — do not also RequestRemeshAfterApply.
@@ -3098,6 +3121,17 @@ void UWorld::SetLastUnfinishedVisualSample(int count) const
   LastUnfinishedVisualSampleValid = true;
 }
 
+void UWorld::SetVisibleBlackFocusSample(
+    const VisibleBlackFocusSample &sample) const
+{
+  LastVisibleBlackFocusSample = sample;
+}
+
+UWorld::VisibleBlackFocusSample UWorld::GetVisibleBlackFocusSample() const
+{
+  return LastVisibleBlackFocusSample;
+}
+
 const UWorld::FocusRingVisualSample &UWorld::GetFocusRingVisualSample() const
 {
   return LastFocusRingVisualSample;
@@ -3937,7 +3971,9 @@ int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
                                          int radius_chunks,
                                          int *out_no_ticket,
                                          int *out_progress,
-                                         int *out_stalled) const
+                                         int *out_stalled,
+                                         bool ticketed_consume_scan,
+                                         int vb_stable_frames) const
 {
   if (out_no_ticket)
   {
@@ -3980,64 +4016,119 @@ int UWorld::CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
     band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE * 4));
     band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE * 2));
   }
+  // FZ2.5-Perf3: standing VB stable 3+ frames — narrow cy band (eye±1).
+  if (!moving && vb_stable_frames >= 3)
+  {
+    const int eye_y = focus_ground_chunk.y * CHUNK_SIZE;
+    band_min = std::max(0, eye_y - CHUNK_SIZE);
+    band_max = std::min(max_y, eye_y + CHUNK_SIZE * 2);
+    if (ProceduralTemplate.FillWater)
+    {
+      band_min = std::min(band_min, std::max(0, sea - CHUNK_SIZE));
+      band_max = std::max(band_max, std::min(max_y, sea + CHUNK_SIZE));
+    }
+  }
   const int cy0 = FloorDiv(band_min, CHUNK_SIZE);
   const int cy1 = FloorDiv(band_max, CHUNK_SIZE);
   int visible_black = 0;
   int no_ticket = 0;
   int progress_n = 0;
   int stalled_n = 0;
-  for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
+  auto count_column =
+      [&](glm::ivec2 key)
   {
-    for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
+    bool is_black = false;
+    bool column_fully_dark = false;
+    for (int cy = cy0; cy <= cy1; ++cy)
     {
-      const glm::ivec2 key(focus_ground_chunk.x + dx,
-                           focus_ground_chunk.z + dz);
-      bool is_black = false;
-      bool column_fully_dark = false;
-      for (int cy = cy0; cy <= cy1; ++cy)
-      {
-        const glm::ivec3 coord(key.x, cy, key.y);
-        if (!MeshService->HasDrawableGreedyMesh(coord))
-        {
-          continue;
-        }
-        const bool fully_dark =
-            MeshService->GetCache().ChunkHasFullyDarkFace(coord);
-        if (MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld) || fully_dark)
-        {
-          is_black = true;
-        }
-        if (fully_dark)
-        {
-          column_fully_dark = true;
-        }
-        if (is_black && column_fully_dark)
-        {
-          break;
-        }
-      }
-      if (!is_black)
+      const glm::ivec3 coord(key.x, cy, key.y);
+      if (!MeshService->HasDrawableGreedyMesh(coord))
       {
         continue;
       }
-      ++visible_black;
-      const bool contains = GetColumnFlowExecutor().HasRepairTicket(key);
-      const bool progress = ColumnHasRepairProgress(key);
-      const bool sticky = IsColumnStickyRemesh(key);
-      const bool pending_replace = IsPendingLightBeforeMesh(key);
-      const bool counts_progress = ShouldCountVisibleBlackProgress(
-          contains || progress || sticky, column_fully_dark, pending_replace);
-      if (counts_progress)
+      const bool fully_dark =
+          MeshService->GetCache().ChunkHasFullyDarkFace(coord);
+      if (MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld) || fully_dark)
       {
-        ++progress_n;
+        is_black = true;
       }
-      if (contains && !progress && !sticky)
+      if (fully_dark)
       {
-        ++stalled_n;
+        column_fully_dark = true;
       }
-      if (!contains && !progress && !sticky)
+      if (is_black && column_fully_dark)
       {
-        ++no_ticket;
+        break;
+      }
+    }
+    if (!is_black)
+    {
+      return;
+    }
+    ++visible_black;
+    const bool contains = GetColumnFlowExecutor().HasRepairTicket(key);
+    const bool progress = ColumnHasRepairProgress(key);
+    const bool sticky = IsColumnStickyRemesh(key);
+    const bool pending_replace = IsPendingLightBeforeMesh(key);
+    const bool counts_progress = ShouldCountVisibleBlackProgress(
+        contains || progress || sticky, column_fully_dark, pending_replace);
+    if (counts_progress)
+    {
+      ++progress_n;
+    }
+    if (contains && !progress && !sticky)
+    {
+      ++stalled_n;
+    }
+    if (!contains && !progress && !sticky)
+    {
+      ++no_ticket;
+    }
+  };
+  std::unordered_set<uint64_t> counted_cols;
+  counted_cols.reserve(static_cast<size_t>((radius_chunks * 2 + 1) *
+                                          (radius_chunks * 2 + 1)));
+  auto count_column_once =
+      [&](glm::ivec2 key)
+  {
+    const uint64_t col_key =
+        (static_cast<uint64_t>(static_cast<uint32_t>(key.x)) << 32) |
+        static_cast<uint32_t>(key.y);
+    if (!counted_cols.insert(col_key).second)
+    {
+      return;
+    }
+    count_column(key);
+  };
+  if (ticketed_consume_scan)
+  {
+    GetColumnFlowExecutor().Scheduler().ForEachOccupiedColumn(count_column_once);
+    for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
+    {
+      for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
+      {
+        const glm::ivec2 key(focus_ground_chunk.x + dx,
+                             focus_ground_chunk.z + dz);
+        if (GetColumnFlowExecutor().HasRepairTicket(key))
+        {
+          continue;
+        }
+        if (!ColumnHasRepairProgress(key) && !IsColumnStickyRemesh(key))
+        {
+          continue;
+        }
+        count_column_once(key);
+      }
+    }
+  }
+  else
+  {
+    for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
+    {
+      for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
+      {
+        count_column_once(
+            glm::ivec2(focus_ground_chunk.x + dx, focus_ground_chunk.z + dz));
       }
     }
   }
@@ -4833,6 +4924,18 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   const double slice_ms =
       static_cast<double>(URuntimeTuning::Get().MissReservedMs);
   const bool enter_pass = EnterFovLitPassActive;
+  const int vb_no_ticket_n = PhysicsTelemetryData.VisibleBlackNoTicketN;
+  const int vb_focus_n = PhysicsTelemetryData.VisibleBlackFocusN;
+  const int vb_stalled_n = PhysicsTelemetryData.VisibleBlackStalledN;
+  const bool consume_mode =
+      ShouldConsumeTicketedVbDebt(vb_no_ticket_n, vb_focus_n, vb_stalled_n);
+  const double unit_ms_prev =
+      PhysicsTelemetryData.RelightApplyNPrev > 0
+          ? (PhysicsTelemetryData.RelightApplyMsPrev /
+             static_cast<double>(PhysicsTelemetryData.RelightApplyNPrev))
+          : PhysicsTelemetryData.RelightApplyMsPrev;
+  const int earned_cap = EarnedRelightApplyCap(
+      max_per_frame, slice_ms, 0.0, unit_ms_prev, consume_mode, vb_stalled_n);
   const glm::ivec3 pl_focus_chunk =
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
   const int pl_focus_n = CountPendingLightBeforeMeshNear(
@@ -4888,7 +4991,8 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
         ShouldDeferHeavyApplySideEffects(
             PhysicsTelemetryData.RelightApplyMsPrev,
             PhysicsTelemetryData.RelightApplyNPrev) &&
-        !ShouldSkipDeferHeavyApplyUnderPl(pl_focus_n);
+        !ShouldSkipDeferHeavyApplyUnderPl(pl_focus_n) && !consume_mode;
+    const bool primary_only_apply = consume_mode || defer_side;
     // CheapRemesh C3: noop light → clear InFlight/Pending without Dirty/Prefetch.
     if (!any_light_changed)
     {
@@ -4908,7 +5012,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       // ColdFix P0: primary_only only under defer (not forever on moving).
       MarkRelitChunksForMesh(relit_coords, /*priority_mesh=*/true, primary_grounds,
                              result.finalize_pending_gate,
-                             /*primary_only=*/defer_side);
+                             /*primary_only=*/primary_only_apply);
     }
     ++PhysicsTelemetryData.RelightApplyN;
     if (result.finalize_pending_gate)
@@ -4925,12 +5029,12 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     {
       AsyncRelightColumnsInFlight.erase(g);
     }
-    if (priority_mesh && !defer_side)
+    if (priority_mesh && !defer_side && !consume_mode)
     {
       PlayerRelightMeshBurstFrames = 3;
     }
     if (enqueue_background_frontier && result.frontier_unfinished &&
-        Persistence && !defer_side)
+        Persistence && !defer_side && !consume_mode)
     {
       for (const glm::ivec3 &pos : result.source_block_positions)
       {
@@ -4941,7 +5045,9 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
         std::chrono::duration<double, std::milli>(
             std::chrono::high_resolution_clock::now() - t0)
             .count();
-    if (ShouldStopRelightApplySlice(elapsed_ms, applied, slice_ms, enter_pass))
+    if (ShouldStopRelightApplySlice(elapsed_ms, applied, slice_ms, enter_pass,
+                                    consume_mode, earned_cap, unit_ms_prev,
+                                    vb_stalled_n))
     {
       break;
     }

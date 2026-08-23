@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""FZ2 gate check for a perf log vs plan targets (FZ2.4 segment gates)."""
+"""FZ2 gate check for a perf log vs plan targets (FZ2.5 segment gates)."""
 import json
 import statistics as st
 import sys
@@ -22,7 +22,12 @@ GATES = {
     "no_ticket_peak": ("visible_black_no_ticket_n", "all", "max", 80),
     "black_sticky": ("black_sticky_blink", "all", "sum", 0),
     "stream_steady_med": ("stream_ms", "steady_120_plus", "med", 35),
+    "relight_apply_n_steady": ("relight_apply_n", "steady_120_plus", "med_min", 2),
+    "apply_util_steady": ("relight_apply_n", "steady_120_plus", "apply_util", 0.15),
+    "stalled_tail_max": ("visible_black_stalled_n", "tail30", "max", 10),
 }
+
+INFERRED_DRAIN_BUDGET = 20
 
 
 def load(p):
@@ -59,6 +64,32 @@ def col(rows, k):
     return [r.get(k) for r in rows]
 
 
+def vb_ticketed_med(rows):
+    vals = []
+    for r in rows:
+        vb = r.get("visible_black_focus_n")
+        nt = r.get("visible_black_no_ticket_n")
+        if vb is not None and nt is not None:
+            vals.append(float(vb) - float(nt))
+    return med(vals) if vals else None
+
+
+def apply_util(rows, budget=INFERRED_DRAIN_BUDGET):
+    apply_n = [int(r.get("relight_apply_n") or 0) for r in rows]
+    m = med(apply_n)
+    return m / budget if m is not None and budget > 0 else None
+
+
+def unit_apply_ms(rows):
+    units = []
+    for r in rows:
+        n = int(r.get("relight_apply_n") or 0)
+        ms = float(r.get("relight_apply_ms") or 0)
+        if n > 0:
+            units.append(ms / n)
+    return med(units) if units else None
+
+
 def gate_val(rows, key, segment, stat):
     n = len(rows)
     if segment == "enter_0_60":
@@ -67,6 +98,8 @@ def gate_val(rows, key, segment, stat):
         part = seg_by_time(rows, 60, 120)
     elif segment == "steady_120_plus":
         part = seg_by_time(rows, 120, 99999)
+    elif segment == "tail30":
+        part = seg_by_time(rows, max(0, n * 2 - 60), n * 2)
     elif segment == "enter":
         part = seg_by_time(rows, 0, 60)
     elif segment == "steady":
@@ -75,14 +108,18 @@ def gate_val(rows, key, segment, stat):
         part = rows
     if stat == "med":
         return med(col(part, key))
+    if stat == "med_min":
+        return med(col(part, key))
     if stat == "p90":
         return p90(col(part, key))
     if stat == "flip_rate":
         return flip_rate(part if segment != "all" else rows, key)
     if stat == "max":
-        return max((r.get(key) or 0) for r in rows)
+        return max((r.get(key) or 0) for r in part) if part else 0
     if stat == "sum":
         return sum(1 for r in rows if r.get(key))
+    if stat == "apply_util":
+        return apply_util(part)
     return None
 
 
@@ -112,7 +149,12 @@ def analyze(name, path):
             f"PL={med(col(part, 'pending_light_focus')):.1f} "
             f"VB={med(col(part, 'visible_black_focus_n')):.1f} "
             f"no_ticket={med(col(part, 'visible_black_no_ticket_n')):.1f} "
+            f"vb_ticketed={vb_ticketed_med(part):.1f} "
+            f"apply_n={med(col(part, 'relight_apply_n')):.1f} "
+            f"apply_util={apply_util(part):.3f} "
+            f"unit_apply_ms={unit_apply_ms(part):.2f} "
             f"revisit={med(col(part, 'dirty_revisit_same_n')):.1f} "
+            f"mark_relit={med(col(part, 'mark_relit_schedule_n')):.1f} "
             f"unlit_h={med(col(part, 'chunk_meshed_unlit_hidden')):.1f} "
             f"fluid_p90={p90(col(part, 'fluid_map_cpu_ms')):.1f}"
         )
@@ -141,28 +183,38 @@ def analyze(name, path):
         if segment == "mid_60_120" and len(mid_60_120) < 3:
             print(f"    {gname}: (skip: mid n={len(mid_60_120)} < 3)")
             continue
+        if segment == "tail30" and n < 15:
+            print(f"    {gname}: (skip: tail n={n} < 15)")
+            continue
         val = gate_val(u, key, segment, stat)
         if stat == "sum":
             ok = val == target
+        elif stat == "med_min":
+            ok = val is not None and val >= target
+        elif stat == "apply_util":
+            ok = val is not None and val >= target
         else:
             ok = val is not None and val < target
         status = "PASS" if ok else "FAIL"
+        if stat == "med_min":
+            tgt = f">={target}"
+        elif stat == "apply_util":
+            tgt = f">={target}"
+        else:
+            tgt = f"<{target}"
         val_s = f"{val:.2f}" if isinstance(val, float) else str(val)
-        print(f"    {gname}: {val_s} (target<{target}) {status}")
+        print(f"    {gname}: {val_s} (target{tgt}) {status}")
     print()
 
 
 def main():
-    root = Path(__file__).resolve().parent / "logs"
-    files = sys.argv[1:] or [
-        "perf_20260822-173621_33656.jsonl",
-        "perf_20260822-164441_33596.jsonl",
-        "perf_20260822-151946_3628.jsonl",
-    ]
-    labels = ["FZ2_173621", "FZ1_164441", "ColdPL_151946"]
+    files = sys.argv[1:]
+    if not files:
+        root = Path(__file__).resolve().parent / "logs"
+        files = [str(root / "perf_20260823-114401_15212.jsonl")]
     for i, f in enumerate(files):
-        label = labels[i] if i < len(labels) else f
-        analyze(label, root / Path(f).name)
+        p = Path(f)
+        analyze(p.stem, p)
 
 
 if __name__ == "__main__":

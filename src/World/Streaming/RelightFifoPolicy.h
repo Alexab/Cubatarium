@@ -44,16 +44,92 @@ inline int HighPlCruiseApplyFloorN()
   return 4;
 }
 
+/// FZ2.5-Perf1: ticketed VB debt — all focus black faces have repair tickets.
+inline bool ShouldConsumeTicketedVbDebt(int vb_no_ticket_n,
+                                        int visible_black_focus_n,
+                                        int visible_black_stalled_n,
+                                        int vb_thresh = 40)
+{
+  (void)visible_black_stalled_n;
+  return vb_no_ticket_n <= 0 && visible_black_focus_n > vb_thresh;
+}
+
+/// FZ2.5-Perf1: Transvoxel-style earned cap — fill time slice when unit cheap.
+inline int EarnedRelightApplyCap(int drain_budget, double slice_ms,
+                                 double /*elapsed_ms*/,
+                                 double last_unit_apply_ms, bool consume_mode,
+                                 int visible_black_stalled_n = 0)
+{
+  if (!consume_mode)
+  {
+    return drain_budget;
+  }
+  const int min_cap = visible_black_stalled_n > 0 ? 3 : 2;
+  const int time_cap =
+      (last_unit_apply_ms > 0.1)
+          ? static_cast<int>(slice_ms / last_unit_apply_ms)
+          : 2;
+  return std::min(drain_budget, std::max(min_cap, time_cap));
+}
+
 /// RateMatch R0: stop Apply slice after ≥1 column when wall ≥ MissReservedMs.
+/// FZ2.5-Perf1 consume: stop at earned cap OR slice_ms (not 1@8ms when cheap).
 /// Enter FOV lit pass is exempt (full Enter budget).
 inline bool ShouldStopRelightApplySlice(double elapsed_ms, int applied_n,
-                                        double slice_ms, bool enter_pass)
+                                        double slice_ms, bool enter_pass,
+                                        bool consume_mode = false,
+                                        int earned_cap = 0,
+                                        double last_unit_apply_ms = 0.0,
+                                        int visible_black_stalled_n = 0)
 {
   if (enter_pass || applied_n < 1)
   {
     return false;
   }
+  if (consume_mode)
+  {
+    const int cap =
+        earned_cap > 0
+            ? earned_cap
+            : EarnedRelightApplyCap(
+                  applied_n + 1, slice_ms, elapsed_ms, last_unit_apply_ms,
+                  true, visible_black_stalled_n);
+    if (applied_n >= cap)
+    {
+      return true;
+    }
+    if (last_unit_apply_ms > 0.1)
+    {
+      const int likely_cap =
+          static_cast<int>(slice_ms / last_unit_apply_ms);
+      if (applied_n >= likely_cap)
+      {
+        return true;
+      }
+      return false;
+    }
+    return elapsed_ms >= slice_ms;
+  }
   return elapsed_ms >= slice_ms;
+}
+
+/// FZ2.5-P0b: stalled ticket on lit ring — force MarkRelit schedule path.
+inline bool ShouldForceMarkRelitForTicketedStale(
+    bool consume_mode, bool has_repair_ticket, bool fully_dark,
+    bool still_stale, int horiz,
+    int ring = kVisualStageLitDrawableHoriz)
+{
+  return consume_mode && has_repair_ticket && fully_dark && still_stale &&
+         horiz >= 0 && horiz <= ring;
+}
+
+/// FZ2.5-Perf2: ticketed consume needs mesh_schedule, not relight starvation.
+inline bool ShouldPrioritizeMeshScheduleForTicketedConsume(
+    bool consume_mode, int visible_black_focus_n,
+    int visible_black_stalled_n, int vb_thresh = 40)
+{
+  return consume_mode && visible_black_focus_n > vb_thresh &&
+         visible_black_stalled_n > 0;
 }
 
 /// S0: Apply drain count = min(budget, ready). Budget ≤0 → 0.
@@ -258,7 +334,7 @@ inline bool ShouldRemoveAtRemeshDespitePlPressure(
 /// FZ2-R4 / FZ2.1-B4: finalize Capture on lit ring when VB steady debt.
 inline bool ShouldFinalizeRelightUnderVbSteadyPressure(
     int visible_black_focus_n, int pending_light_focus_n, int horiz_dist,
-    int vb_thresh = 30, int pl_thresh = 10,
+    int vb_thresh = 25, int pl_thresh = 10,
     int ring = kVisualStageLitDrawableHoriz)
 {
   return visible_black_focus_n > vb_thresh &&

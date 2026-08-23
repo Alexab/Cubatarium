@@ -119,6 +119,33 @@ def metrics(path: Path) -> dict:
     finalize_rate = (
         sum(1 for x in finalize if x) / max(1, len(finalize)) if finalize else 0.0
     )
+    inferred_budget = 20
+    apply_steady = col(steady, "relight_apply_n")
+    apply_util_steady = (
+        (med(apply_steady) / inferred_budget)
+        if med(apply_steady) is not None
+        else None
+    )
+    unit_pairs = [
+        (float(r.get("relight_apply_ms") or 0), int(r.get("relight_apply_n") or 0))
+        for r in steady
+        if r.get("relight_apply_n")
+    ]
+    unit_apply_ms_steady = (
+        med([ms / max(1, n) for ms, n in unit_pairs if n > 0])
+        if unit_pairs
+        else None
+    )
+    vb_ticketed_steady = med(
+        [
+            float(r.get("visible_black_focus_n") or 0)
+            - float(r.get("visible_black_no_ticket_n") or 0)
+            for r in steady
+            if r.get("visible_black_focus_n") is not None
+        ]
+    )
+    tail = u[-15:] if len(u) >= 15 else u
+    stalled_tail_max = max((r.get("visible_black_stalled_n") or 0) for r in tail)
     last = u[-1] if u else {}
     return {
         "spikes": n,
@@ -132,6 +159,12 @@ def metrics(path: Path) -> dict:
         "stream_steady_med": med(col(steady, "stream_ms")),
         "VB_steady_med": med(col(steady, "visible_black_focus_n")),
         "VB_mid_med": med(col(mid_60_120, "visible_black_focus_n")),
+        "vb_ticketed_steady_med": vb_ticketed_steady,
+        "relight_apply_n_steady_med": med(col(steady, "relight_apply_n")),
+        "apply_util_steady": apply_util_steady,
+        "unit_apply_ms_steady": unit_apply_ms_steady,
+        "mark_relit_schedule_steady_med": med(col(steady, "mark_relit_schedule_n")),
+        "stalled_tail_max": stalled_tail_max,
         "no_ticket_peak": max((r.get("visible_black_no_ticket_n") or 0) for r in u),
         "enter_no_ticket_med": med(col(enter, "visible_black_no_ticket_n")),
         "enter_wall_p90": p90(col(enter, "wall_ms")),
@@ -212,8 +245,8 @@ def main() -> int:
     )
     ap.add_argument(
         "--baseline-manual",
-        default=str(BIN / "logs" / "perf_20260823-093406_25440.jsonl"),
-        help="manual resume baseline for plateau parity (default: 093406)",
+        default=str(BIN / "logs" / "perf_20260823-114401_15212.jsonl"),
+        help="manual resume baseline for plateau parity (default: 114401 post-FZ2.4)",
     )
     ap.add_argument("--build", action="store_true")
     ap.add_argument("--skip-autofly", action="store_true")
@@ -271,10 +304,11 @@ def main() -> int:
         report.parent.mkdir(parents=True, exist_ok=True)
         phase_id = (
             args.step
-            if args.step.startswith("FZ24")
+            if args.step.startswith("FZ25")
+            or args.step.startswith("FZ24")
             or args.step.startswith("FZ23")
             or args.step.startswith("FZ22")
-            else f"FZ24-{args.step}"
+            else f"FZ25-{args.step}"
         )
         rc = run(
             [
@@ -312,12 +346,14 @@ def main() -> int:
         print(gate_proc.stderr, file=sys.stderr, end="")
 
     forensics_proc = subprocess.run(
-        [sys.executable, str(BIN / "tmp_cold_pl_forensics.py"), str(perf_path)],
+        [sys.executable, str(BIN / "tmp_fz25_bottleneck.py"), str(perf_path)],
         cwd=ROOT,
         capture_output=True,
         text=True,
     )
     print(forensics_proc.stdout, end="")
+    if forensics_proc.stderr:
+        print(forensics_proc.stderr, file=sys.stderr, end="")
 
     base_m = metrics(baseline_path)
     cur_m = metrics(perf_path)
@@ -337,6 +373,12 @@ def main() -> int:
         "PL_steady_med",
         "relight_note_suppressed_plateau_n",
         "relight_apply_plateau_boost_n",
+        "apply_util_steady",
+        "unit_apply_ms_steady",
+        "relight_apply_n_steady_med",
+        "vb_ticketed_steady_med",
+        "mark_relit_schedule_steady_med",
+        "stalled_tail_max",
     ):
         b = base_m.get(k)
         c = cur_m.get(k)

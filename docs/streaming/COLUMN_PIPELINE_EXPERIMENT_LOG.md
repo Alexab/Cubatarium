@@ -709,3 +709,65 @@ Log: `bin/logs/perf_20260823-112612_31228.jsonl` (`fz-manual-plateau`, run exten
 | wall/fluid/uf/sticky | PASS | PASS | PASS |
 
 \*Short manual ≠ steady acceptance; compare enter + plateau mid only.
+
+---
+
+## FZ2.5 — Perf-first ticketed VB consumption
+
+**Baseline:** `perf_20260823-114401_15212.jsonl` (~586s manual post-FZ2.4)
+
+### Perf-0 bottleneck table (114401)
+
+| Hypothesis | Signal | Value | Verdict |
+| --- | --- | --- | --- |
+| B1 Apply/time misaligned | apply_util steady | **0.05** | CONFIRMED — count budget 20, med apply_n=1 |
+| B1 slice early-out | unit_apply_ms steady | **19.1** | CONFIRMED — 1 apply @~19ms fills 8ms slice |
+| B2 Install starved | mark_relit_schedule steady | **0** | CONFIRMED |
+| B4 mesh_schedule tax | stream steady | **63.5** | CONFIRMED — dominates p90 |
+| B5 All ticketed debt | vb_ticketed / no_ticket | **81 / 0** | CONFIRMED |
+
+**Bottleneck rank (steady):** mesh_schedule (69ms p90) > capture (24ms) > apply (22ms)
+
+Script: `python bin/tmp_fz25_bottleneck.py bin/logs/perf_20260823-114401_15212.jsonl`
+
+### Tracks shipped
+
+| Track | Change |
+| --- | --- |
+| Perf-1 | `ShouldConsumeTicketedVbDebt`, `EarnedRelightApplyCap`, consume `primary_only`, adaptive multi-drain |
+| P0-B | `ShouldForceMarkRelitForTicketedStale` — bypass enter quiesce/terminal for stalled tickets |
+| P0-C | Finalize dedup carve-out + Capture depth ∝ earned Apply cap |
+| Perf-2 | `ShouldPrioritizeMeshScheduleForTicketedConsume` — idle mesh_schedule floor 12 |
+| Perf-3 | VB SoT cache/frame, stable-band cy tighten, ticketed early-out scan |
+| P1 fallback | vb_thresh 25, idle bg_floor 4 (114401 VB=81 — perf insufficient alone) |
+
+### P1-B enter peak audit
+
+- FZ2.4 enter collect ring clamp `vb_radius ≤ 2` active (`ColumnFlowExecutor.cpp:387`)
+- `VisibleBlackNoTicketRepairCap` enter idle cap=4 shipped
+- Peak 110 on 114401 likely from first-pass collect + repair enqueue burst, not cap-only
+- No additional radius tighten (would starve enter heal)
+
+### FZ2.5 close gates (target vs 114401)
+
+| Gate | Target | 114401 | Track |
+| --- | --- | --- | --- |
+| apply_util idle | ≥0.15 | 0.05 | Perf-1 |
+| relight_apply_n med | ≥2 | 1 | Perf-1 |
+| VB steady | <40 | 81 | P0+Perf+P1 |
+| stream steady | ≤35 | 63.5 | Perf-2/3 |
+| revisit steady | <95 | 116 | Perf-2 |
+| stalled tail max | <10 | 17 peak | P0-B |
+| mark_relit steady | >0 | 0 | P0-B |
+
+### Industry checklist (C8)
+
+- [x] Dual budget aligned (EarnedRelightApplyCap + consume slice)
+- [x] Apply/Install separated (primary_only on consume)
+- [x] No duplicate O(n) VB scan (SoT cache + ColumnFlow reads cache)
+- [x] Stalled ticketed → control-plane MarkRelit force
+- [x] mesh_schedule anti-starvation under ticketed consume
+- [ ] wall p90 enter within +10% of 114401 (validate on next manual)
+- [ ] VB steady <40 visual DoD (validate ≥240s manual)
+
+**Validate:** `python bin/tmp_fz2_step_validate.py --step FZ25-C8 --build --scenario fz-manual-plateau --baseline-manual bin/logs/perf_20260823-114401_15212.jsonl`

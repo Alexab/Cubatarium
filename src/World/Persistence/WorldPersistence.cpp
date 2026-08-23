@@ -1008,8 +1008,20 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     const int completed_n =
         static_cast<int>(world.GetRelightCompletedSize());
     const int inflight_n = world.GetAsyncRelightInFlightCount();
+    const int apply_cap_base = std::max(1, telem.RelightApplyNPrev) + 1;
+    const bool consume_mode = ShouldConsumeTicketedVbDebt(
+        vb_no_ticket_n, telem.VisibleBlackFocusN,
+        telem.VisibleBlackStalledN);
+    const double unit_ms_prev =
+        telem.RelightApplyNPrev > 0
+            ? (telem.RelightApplyMsPrev /
+               static_cast<double>(telem.RelightApplyNPrev))
+            : telem.RelightApplyMsPrev;
+    const int earned_apply_cap = EarnedRelightApplyCap(
+        apply_cap_base, static_cast<double>(tune.MissReservedMs), 0.0,
+        unit_ms_prev, consume_mode, telem.VisibleBlackStalledN);
     const int apply_cap =
-        std::max(1, telem.RelightApplyNPrev) + 1;
+        consume_mode ? std::max(apply_cap_base, earned_apply_cap) : apply_cap_base;
     const int depth_cap =
         max_inflight > 0 ? std::min(max_inflight, apply_cap) : apply_cap;
     if (!ShouldAdmitRelightCapture(completed_n, inflight_n, depth_cap))
@@ -1203,19 +1215,25 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
             ColumnSurfaceBandNeedsRelight(world, ground_xz, relight_min,
                                           relight_max);
         const auto &cap_telem = world.GetPhysicsTelemetry();
+        const bool consume_mode = ShouldConsumeTicketedVbDebt(
+            cap_telem.VisibleBlackNoTicketN, cap_telem.VisibleBlackFocusN,
+            cap_telem.VisibleBlackStalledN);
         const bool plateau_suppress =
             ShouldSuppressPendingLightNote(
                 cap_telem.VisibleBlackNoTicketN, pending_light_focus_n,
                 cap_telem.VisibleBlackFocusN);
+        const bool consume_finalize_carve = consume_mode && band_needs;
         if (plateau_suppress && cap_telem.RelightApplyNPrev == 0 &&
-            world.IsAsyncRelightColumnInFlight(ground_xz))
+            world.IsAsyncRelightColumnInFlight(ground_xz) &&
+            !consume_finalize_carve)
         {
           finalize_gate = false;
           ++telem.RelightFinalizeDedupN;
         }
         else if (fit != RelightLastFinalizeEpoch_.end() && epoch >= fit->second &&
                  (epoch - fit->second) < 4 &&
-                 world.IsPendingLightBeforeMesh(ground_xz) && !band_needs)
+                 world.IsPendingLightBeforeMesh(ground_xz) && !band_needs &&
+                 !consume_finalize_carve)
         {
           finalize_gate = false;
           ++telem.RelightFinalizeDedupN;
@@ -1294,7 +1312,21 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       const bool remainder_priority = horiz_dist <= focus_radius;
       // ColdFix / RateMatch R1: stash when Apply-capacity depth is full.
       const auto &telem = world.GetPhysicsTelemetry();
-      const int apply_cap = std::max(1, telem.RelightApplyNPrev) + 1;
+      const int apply_cap_base = std::max(1, telem.RelightApplyNPrev) + 1;
+      const bool consume_mode = ShouldConsumeTicketedVbDebt(
+          telem.VisibleBlackNoTicketN, telem.VisibleBlackFocusN,
+          telem.VisibleBlackStalledN);
+      const double unit_ms_prev =
+          telem.RelightApplyNPrev > 0
+              ? (telem.RelightApplyMsPrev /
+                 static_cast<double>(telem.RelightApplyNPrev))
+              : telem.RelightApplyMsPrev;
+      const int earned_apply_cap = EarnedRelightApplyCap(
+          apply_cap_base, static_cast<double>(tune.MissReservedMs), 0.0,
+          unit_ms_prev, consume_mode, telem.VisibleBlackStalledN);
+      const int apply_cap =
+          consume_mode ? std::max(apply_cap_base, earned_apply_cap)
+                       : apply_cap_base;
       const int depth_cap =
           max_inflight > 0 ? std::min(max_inflight, apply_cap) : apply_cap;
       const bool depth_full = !ShouldAdmitRelightCapture(

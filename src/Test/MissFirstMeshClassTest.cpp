@@ -663,8 +663,10 @@ int main()
          "FlickerZero: VB finalize skips far ring");
   Expect(ShouldFinalizeRelightUnderVbSteadyPressure(55, 20, 3),
          "FZ2: steady VB+PL finalize lit ring");
-  Expect(!ShouldFinalizeRelightUnderVbSteadyPressure(29, 20, 3),
-         "FZ2.2-C4b: steady VB below thresh skips finalize");
+  Expect(!ShouldFinalizeRelightUnderVbSteadyPressure(24, 20, 3),
+         "FZ2.5-P1: steady VB below thresh 25 skips finalize");
+  Expect(ShouldFinalizeRelightUnderVbSteadyPressure(26, 20, 3),
+         "FZ2.5-P1: steady VB>25 finalize lit ring");
   Expect(ShouldSkipDeferRemeshForLitRingFullyDark(2, true),
          "FlickerZero: lit-ring FullyDark skip defer (legacy)");
   Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 0),
@@ -705,8 +707,8 @@ int main()
          "FZ2.3-D3: enter idle repair cap≤4");
   Expect(ShouldFinalizeRelightUnderVbSteadyPressure(31, 11, 3),
          "FZ2.2-C4b: steady finalize vb=31 pl=11");
-  Expect(!ShouldFinalizeRelightUnderVbSteadyPressure(29, 11, 3),
-         "FZ2.2-C4b: vb≤29 skips finalize");
+  Expect(!ShouldFinalizeRelightUnderVbSteadyPressure(24, 11, 3),
+         "FZ2.5-P1: vb≤24 skips finalize");
   Expect(FluidMapShouldThrottleEnter(true, false, false, 0, 0),
          "FlickerZero: enter_fov_lit throttles fluid");
   Expect(FluidMapShouldThrottleEnter(false, true, false, 0, 0),
@@ -2000,6 +2002,34 @@ int main()
            "R0: no stop before first applied");
     Expect(!ShouldStopRelightApplySlice(20.0, 2, 8.0, true),
            "R0: enter pass exempt from slice");
+  }
+
+  // FZ2.5-Perf1: earned Apply cap + consume slice
+  {
+    using cutum::EarnedRelightApplyCap;
+    using cutum::ShouldConsumeTicketedVbDebt;
+    using cutum::ShouldStopRelightApplySlice;
+    Expect(EarnedRelightApplyCap(20, 8.0, 0.0, 2.5, true) >= 3,
+           "FZ25: earned cap >=3 at unit 2.5ms");
+    Expect(ShouldConsumeTicketedVbDebt(0, 81, 5),
+           "FZ25: ticketed debt when nt=0 VB>40");
+    Expect(!ShouldConsumeTicketedVbDebt(10, 81, 0),
+           "FZ25: orphan nt>0 is not ticketed consume");
+    Expect(!ShouldStopRelightApplySlice(8.0, 1, 8.0, false, true, 3, 2.5),
+           "FZ25: consume mode continues past 1@8ms when cap>=3");
+    Expect(ShouldStopRelightApplySlice(8.0, 3, 8.0, false, true, 3, 2.5),
+           "FZ25: consume mode stops at earned cap");
+    Expect(ShouldStopRelightApplySlice(8.0, 1, 8.0, false),
+           "FZ25: non-consume unchanged stop at 8ms");
+  }
+
+  // FZ2.5-P0b: force MarkRelit for stalled ticketed stale
+  {
+    using cutum::ShouldForceMarkRelitForTicketedStale;
+    Expect(ShouldForceMarkRelitForTicketedStale(true, true, true, true, 2),
+           "FZ25-P0b: force stale ticket on lit ring");
+    Expect(!ShouldForceMarkRelitForTicketedStale(true, true, true, true, 5),
+           "FZ25-P0b: rim outside lit ring");
   }
 
   // ColdSupply S0: ClampRelightDrainN

@@ -12,6 +12,7 @@
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Streaming/NearFovWorkPriority.h"
+#include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Math/GridMath.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 
@@ -613,16 +614,37 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   }
   if (nearest_vb_heal || !stale_dark_cols.empty() || !void_dark_cols.empty())
   {
-    int no_ticket = 0;
-    int progress_n = 0;
-    int stalled_n = 0;
-    const int vb = world.CountVisibleBlackFocusMeshes(
-        focus_ground_horiz, focus_radius, &no_ticket, &progress_n, &stalled_n);
-    auto &telem = world.GetPhysicsTelemetryMutable();
-    telem.VisibleBlackFocusN = vb;
-    telem.VisibleBlackNoTicketN = no_ticket;
-    telem.VisibleBlackProgressN = progress_n;
-    telem.VisibleBlackStalledN = stalled_n;
+    const UWorld::VisibleBlackFocusSample cached =
+        world.GetVisibleBlackFocusSample();
+    if (cached.valid &&
+        cached.frame_epoch == world.GetStreamingFrameEpoch())
+    {
+      auto &telem = world.GetPhysicsTelemetryMutable();
+      telem.VisibleBlackFocusN = cached.focus_n;
+      telem.VisibleBlackNoTicketN = cached.no_ticket_n;
+      telem.VisibleBlackProgressN = cached.progress_n;
+      telem.VisibleBlackStalledN = cached.stalled_n;
+    }
+    else
+    {
+      int no_ticket = 0;
+      int progress_n = 0;
+      int stalled_n = 0;
+      const auto &vb_telem = world.GetPhysicsTelemetry();
+      const bool consume_mode = ShouldConsumeTicketedVbDebt(
+          vb_telem.VisibleBlackNoTicketN, vb_telem.VisibleBlackFocusN,
+          vb_telem.VisibleBlackStalledN);
+      const bool ticketed_scan =
+          consume_mode && vb_telem.VisibleBlackNoTicketN <= 0;
+      const int vb = world.CountVisibleBlackFocusMeshes(
+          focus_ground_horiz, focus_radius, &no_ticket, &progress_n, &stalled_n,
+          ticketed_scan);
+      auto &telem = world.GetPhysicsTelemetryMutable();
+      telem.VisibleBlackFocusN = vb;
+      telem.VisibleBlackNoTicketN = no_ticket;
+      telem.VisibleBlackProgressN = progress_n;
+      telem.VisibleBlackStalledN = stalled_n;
+    }
   }
 }
 

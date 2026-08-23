@@ -46,6 +46,17 @@ public:
                 bool scan_full_focus) const;
   /// True if any kind is queued for this column (exclusive mutex).
   bool ContainsColumn(glm::ivec2 column) const;
+  /// FZ2.5-Perf3: ticketed VB early-out — iterate live repair tickets only.
+  template <typename Fn>
+  void ForEachOccupiedColumn(Fn &&fn) const
+  {
+    for (int64_t col_key : occupied_columns_)
+    {
+      const int x = static_cast<int>(col_key >> 32);
+      const int y = static_cast<int>(static_cast<uint32_t>(col_key));
+      fn(glm::ivec2(x, y));
+    }
+  }
   uint64_t DeniedCount() const { return denied_n_; }
   void ClearDeniedCount() { denied_n_ = 0; }
   uint64_t UpgradeCount() const { return upgrade_n_; }

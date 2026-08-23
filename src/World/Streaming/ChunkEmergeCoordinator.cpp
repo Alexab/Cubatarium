@@ -1871,7 +1871,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       // Standing: drain Completed only — schedule=22 latched async=42 forever.
       mesh_drain = std::max(mesh_drain, 24);
-      mesh_schedule = std::min(mesh_schedule, 4);
+      const auto &telem = world.GetPhysicsTelemetry();
+      const bool consume_mode = ShouldConsumeTicketedVbDebt(
+          telem.VisibleBlackNoTicketN, telem.VisibleBlackFocusN,
+          telem.VisibleBlackStalledN);
+      if (ShouldPrioritizeMeshScheduleForTicketedConsume(
+              consume_mode, telem.VisibleBlackFocusN,
+              telem.VisibleBlackStalledN))
+      {
+        mesh_schedule = std::max(mesh_schedule, mesh_drain);
+      }
+      else
+      {
+        mesh_schedule = std::min(mesh_schedule, 4);
+      }
     }
   }
   if (!moving && !visual_holes && !pending_near_light && pending_dirty > 400 &&
@@ -2756,11 +2769,25 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   else if (pending_near_light)
   {
+    const auto &telem = world.GetPhysicsTelemetry();
+    const bool consume_mode = ShouldConsumeTicketedVbDebt(
+        telem.VisibleBlackNoTicketN, telem.VisibleBlackFocusN,
+        telem.VisibleBlackStalledN);
+    const bool prioritize_mesh = ShouldPrioritizeMeshScheduleForTicketedConsume(
+        consume_mode, telem.VisibleBlackFocusN, telem.VisibleBlackStalledN);
     if (!moving)
     {
-      // Idle light debt: starve remesh so relight/MarkRelit can finish.
-      mesh_schedule = std::min(mesh_schedule, 8);
-      mesh_drain = std::min(mesh_drain, last_frame_ms <= 16.0 ? 10 : 6);
+      if (prioritize_mesh)
+      {
+        mesh_schedule = std::max(mesh_schedule, 12);
+        mesh_drain = std::max(mesh_drain, last_frame_ms <= 16.0 ? 10 : 6);
+      }
+      else
+      {
+        // Idle light debt: starve remesh so relight/MarkRelit can finish.
+        mesh_schedule = std::min(mesh_schedule, 8);
+        mesh_drain = std::min(mesh_drain, last_frame_ms <= 16.0 ? 10 : 6);
+      }
     }
     else
     {

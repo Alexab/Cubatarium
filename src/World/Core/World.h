@@ -1127,11 +1127,14 @@ public:
   /// out_no_ticket = VB ∧ ¬Contains ∧ ¬Progress ∧ ¬Sticky.
   /// out_progress = VB ∧ (Contains ∨ Progress ∨ Sticky).
   /// out_stalled = VB ∧ Contains ∧ ¬Progress ∧ ¬Sticky (queued, no mesh/light work yet).
+  /// ticketed_consume_scan: skip columns without ticket/progress/sticky (FZ2.5-Perf3).
   int CountVisibleBlackFocusMeshes(glm::ivec3 focus_ground_chunk,
                                    int radius_chunks,
                                    int *out_no_ticket = nullptr,
                                    int *out_progress = nullptr,
-                                   int *out_stalled = nullptr) const;
+                                   int *out_stalled = nullptr,
+                                   bool ticketed_consume_scan = false,
+                                   int vb_stable_frames = 0) const;
   /// Era17: Dirty / Inflight|Queued|Kicked / PendingLight for a column.
   bool ColumnHasRepairProgress(glm::ivec2 ground_xz) const;
   /// PendingLight columns that already have a greedy mesh (dark preview).
@@ -1172,6 +1175,17 @@ public:
   /// Cached unfinished sample from UpdateStreaming (avoid dual full scans).
   int GetLastUnfinishedVisualSample(bool *out_valid = nullptr) const;
   void SetLastUnfinishedVisualSample(int count) const;
+  struct VisibleBlackFocusSample
+  {
+    uint64_t frame_epoch{0};
+    int focus_n{0};
+    int no_ticket_n{0};
+    int progress_n{0};
+    int stalled_n{0};
+    bool valid{false};
+  };
+  void SetVisibleBlackFocusSample(const VisibleBlackFocusSample &sample) const;
+  VisibleBlackFocusSample GetVisibleBlackFocusSample() const;
   /// Closeout Phase B: same-frame focus-ring visual sample (epoch-gated).
   struct FocusRingVisualSample
   {
@@ -1541,6 +1555,7 @@ private:
   /// Last unfinished count produced by Streaming (Coordinator reuses — no 2nd O(R²)).
   mutable int LastUnfinishedVisualSample{0};
   mutable bool LastUnfinishedVisualSampleValid{false};
+  mutable VisibleBlackFocusSample LastVisibleBlackFocusSample{};
   /// Same-frame focus-ring sample for Coordinator (Phase B).
   mutable FocusRingVisualSample LastFocusRingVisualSample{};
   uint64_t StreamingFrameEpoch{0};
