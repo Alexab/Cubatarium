@@ -172,10 +172,79 @@ inline bool ShouldFilterMarkRelitBandsToPrimary(bool primary_only_or_slim)
   return primary_only_or_slim;
 }
 
-/// FZ2.7-B2b: earned multi-apply when consume OR primary_only defer.
-inline bool ShouldUseThroughputApplyCap(bool consume_mode, bool primary_only)
+/// FZ2.7-B5: per-column cost for earned-cap math (light+install when both known).
+inline double RelightApplyCapUnitMs(double last_unit_apply_ms,
+                                    double last_light_unit_ms,
+                                    double last_install_unit_ms)
 {
-  return consume_mode || primary_only;
+  if (last_light_unit_ms > 0.1 && last_install_unit_ms > 0.1)
+  {
+    return last_light_unit_ms + last_install_unit_ms;
+  }
+  if (last_light_unit_ms > 0.1)
+  {
+    return last_light_unit_ms;
+  }
+  return last_unit_apply_ms;
+}
+
+/// FZ2.7-B2c: cruise slice wide enough for ≥2 cheap applies per drain.
+inline double RelightThroughputSliceMs(double miss_reserved_ms, bool consume_mode,
+                                       bool moving, bool throughput_mode,
+                                       double cap_unit_ms)
+{
+  double slice_ms = RelightConsumeSliceMs(miss_reserved_ms, consume_mode, moving);
+  if (!throughput_mode || consume_mode)
+  {
+    return slice_ms;
+  }
+  if (cap_unit_ms > 0.1 && cap_unit_ms <= slice_ms * 0.5)
+  {
+    slice_ms = std::max(slice_ms, 12.0);
+  }
+  else
+  {
+    slice_ms = std::max(slice_ms, 12.0);
+  }
+  return slice_ms;
+}
+
+/// FZ2.7-B2b: earned multi-apply when consume OR primary_only defer.
+/// FZ2.7-B2c: latch when cheap unit / FIFO backlog / PL pressure (not only fat defer).
+inline bool ShouldUseThroughputApplyCap(
+    bool consume_mode, bool defer_side, bool enter_pass, double slice_ms,
+    double last_unit_apply_ms, double last_light_unit_ms,
+    double last_install_unit_ms, int ready_at_start, int fifo_n,
+    int fifo_soft_cap, int pending_light_focus_n, int pending_light_n)
+{
+  if (enter_pass)
+  {
+    return false;
+  }
+  if (consume_mode || defer_side)
+  {
+    return true;
+  }
+  const double cap_unit =
+      RelightApplyCapUnitMs(last_unit_apply_ms, last_light_unit_ms,
+                            last_install_unit_ms);
+  if (cap_unit > 0.1 && cap_unit <= slice_ms * 0.5)
+  {
+    return true;
+  }
+  if (ready_at_start >= 2)
+  {
+    return true;
+  }
+  if (fifo_soft_cap > 0 && fifo_n >= (fifo_soft_cap * 2) / 3)
+  {
+    return true;
+  }
+  if (pending_light_focus_n > 24 || pending_light_n > 45)
+  {
+    return true;
+  }
+  return false;
 }
 
 /// FZ2.5-Perf1: Transvoxel-style earned cap — fill time slice when unit cheap.
@@ -381,6 +450,11 @@ inline int CruiseRelightApplyBudget(bool moving, double last_apply_ms,
   if (near_pending_light && fifo_pin_stable && unit_ms < 8.0)
   {
     cap = cap < 4 ? 4 : cap;
+  }
+  // FZ2.7-B2c: cheap unit keeps multi-apply budget even if pin wobbled.
+  if (unit_ms > 0.1 && unit_ms < 4.0)
+  {
+    cap = std::max(cap, 2);
   }
   return requested < cap ? requested : cap;
 }

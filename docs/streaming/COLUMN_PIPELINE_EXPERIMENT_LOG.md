@@ -951,3 +951,26 @@ python bin/tmp_fz2_gate_check.py bin/logs/perf_<new>.jsonl
 
 **Verdict:** Tier-1 install **closed** (B1e root cause fixed). Throughput still blocked: cheap units disable `defer_side` → `throughput_mode` off → 1@8ms TimeSlice. Slim path side effect: `opaque_refs` +705 (skipped orphan/seam).
 
+---
+
+## FZ2.7-B2c — cheap-unit throughput latch (2026-08-23)
+
+**Parent:** gate `220902` — install PASS but apply_n steady med=1.
+
+### Shipped
+
+| Change | Detail |
+| --- | --- |
+| Throughput latch | `ShouldUseThroughputApplyCap` — cheap unit (≤slice/2), ready≥2, fifo≥2/3 cap, PL pressure |
+| Cruise slice | `RelightThroughputSliceMs` — ≥12ms when throughput on cruise |
+| Apply budget | `CruiseRelightApplyBudget` — cap≥2 for unit<4ms even without fifo_pin_stable |
+
+### Validate
+
+```text
+python bin/tmp_fz27_b_test_smoke.py   # ALL PASS
+python bin/tmp_fz2_gate_check.py bin/logs/perf_<new>.jsonl
+```
+
+**Target:** apply_n steady med≥2, apply_util≥0.15, apply_binding CountCap≥80%.
+

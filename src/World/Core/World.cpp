@@ -4161,14 +4161,6 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       ShouldDeferHeavyApplySideEffects(PhysicsTelemetryData.RelightApplyMsPrev,
                                        PhysicsTelemetryData.RelightApplyNPrev) &&
       !ShouldSkipDeferHeavyApplyUnderPl(pl_focus_n) && !consume_mode;
-  const bool throughput_mode =
-      ShouldUseThroughputApplyCap(consume_mode, defer_side);
-  double slice_ms =
-      RelightConsumeSliceMs(miss_reserved_ms, consume_mode, moving);
-  if (throughput_mode && !consume_mode)
-  {
-    slice_ms = std::max(slice_ms, 12.0);
-  }
   const double unit_ms_prev =
       PhysicsTelemetryData.RelightApplyNPrev > 0
           ? (PhysicsTelemetryData.RelightApplyMsPrev /
@@ -4188,6 +4180,16 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
           : 0.0;
   const int ready_at_start =
       AsyncRelight ? static_cast<int>(AsyncRelight->GetCompletedSize()) : 0;
+  const int fifo_soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
+  const double cap_unit_prev = RelightApplyCapUnitMs(
+      unit_ms_prev, light_unit_ms_prev, install_unit_ms_prev);
+  const bool throughput_mode = ShouldUseThroughputApplyCap(
+      consume_mode, defer_side, enter_pass, miss_reserved_ms, unit_ms_prev,
+      light_unit_ms_prev, install_unit_ms_prev, ready_at_start,
+      PhysicsTelemetryData.RelightFifoN, fifo_soft_cap,
+      PhysicsTelemetryData.PendingLightFocus, PhysicsTelemetryData.PendingLightN);
+  const double slice_ms = RelightThroughputSliceMs(
+      miss_reserved_ms, consume_mode, moving, throughput_mode, cap_unit_prev);
   const int earned_cap = EarnedRelightApplyCap(
       max_per_frame, slice_ms, 0.0, unit_ms_prev, throughput_mode, vb_stalled_n,
       light_unit_ms_prev, install_unit_ms_prev);

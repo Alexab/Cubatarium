@@ -2079,6 +2079,38 @@ int main()
            "FZ27-B2: fat unit consume allows 2nd apply when earned_cap=2");
   }
 
+  // FZ2.7-B2c: cheap-unit throughput latch (no defer_side hysteresis)
+  {
+    using cutum::CruiseRelightApplyBudget;
+    using cutum::EarnedRelightApplyCap;
+    using cutum::RelightApplyCapUnitMs;
+    using cutum::RelightThroughputSliceMs;
+    using cutum::ShouldUseThroughputApplyCap;
+    Expect(RelightApplyCapUnitMs(2.0, 1.0, 1.0) == 2.0,
+           "B2c: cap unit light+install");
+    Expect(ShouldUseThroughputApplyCap(false, false, false, 8.0, 2.0, 1.0, 1.0,
+                                       0, 50, 96, 10, 30),
+           "B2c: cheap unit latches throughput");
+    Expect(!ShouldUseThroughputApplyCap(false, false, false, 8.0, 12.0, 6.0, 6.0,
+                                        0, 10, 96, 10, 30),
+           "B2c: fat unit no latch without defer");
+    Expect(ShouldUseThroughputApplyCap(false, false, false, 8.0, 12.0, 6.0, 6.0,
+                                       2, 10, 96, 10, 30),
+           "B2c: ready>=2 latches throughput");
+    Expect(ShouldUseThroughputApplyCap(false, false, false, 8.0, 12.0, 6.0, 6.0,
+                                       0, 70, 96, 10, 30),
+           "B2c: fifo backlog latches throughput");
+    Expect(!ShouldUseThroughputApplyCap(false, false, true, 8.0, 1.0, 0.5, 0.5,
+                                        5, 70, 96, 10, 30),
+           "B2c: enter pass disables throughput");
+    Expect(RelightThroughputSliceMs(8.0, false, true, true, 2.0) >= 12.0,
+           "B2c: cruise throughput slice >=12ms");
+    Expect(EarnedRelightApplyCap(20, 12.0, 0.0, 2.0, true, 0, 1.0, 1.0) >= 2,
+           "B2c: earned cap >=2 for 2ms unit in 12ms slice");
+    Expect(CruiseRelightApplyBudget(true, 2.0, 6, false, false, 1) >= 2,
+           "B2c: cheap unit budget >=2 without fifo_pin_stable");
+  }
+
   // ColdSupply S0: ClampRelightDrainN
   {
     using cutum::ClampRelightDrainN;
