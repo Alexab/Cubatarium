@@ -364,6 +364,10 @@ struct PhysicsTelemetry
   uint64_t RelightNoteSkippedDupN{0};
   /// FZ2.3-O2: Capture finalize skipped (same-column epoch dedup).
   uint64_t RelightFinalizeDedupN{0};
+  /// FZ2.4-P0a: TryNote suppressed under PL plateau after nt=0.
+  uint64_t RelightNoteSuppressedPlateauN{0};
+  /// FZ2.4-P0b: Apply drain boosted under PL plateau after nt=0.
+  uint64_t RelightApplyPlateauBoostN{0};
   /// Cruise Capture SoT: effective bg cap / Y-band cy this DrainRelightQueues.
   int CaptureBgCapN{0};
   int CaptureBandCy{0};

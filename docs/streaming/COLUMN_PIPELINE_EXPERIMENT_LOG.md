@@ -628,3 +628,84 @@ Log: `bin/logs/perf_20260822-220907_30924.jsonl` (idle45+fly100+stop100).
 | wall/fluid/uf/black_sticky | PASS | PASS (parity) | PASS |
 
 **Phase 2.3 code tracks complete.** Full M4 DoD not closed (revisit/peak/resume PL enter). Operator: manual ≥240s on Release `bin/Cubatarium.exe`, then `python bin/tmp_fz2_gate_check.py <perf>`.
+
+---
+
+## FlickerZero Phase 2.4 (2026-08-23)
+
+### Manual short resume `093406` — plateau driver (not C8)
+
+Log: `bin/logs/perf_20260823-093406_25440.jsonl` (~50s, manual resume World_164).
+
+| Window | PL med | VB med | revisit med | no_ticket |
+| --- | --- | --- | --- | --- |
+| enter 0–30s | ~24–37 | — | — | peak 94 |
+| plateau 16–50s (after nt→0) | **54–68** | **51–81** | **108→176** | **0** |
+| «steady» (n=25, spikes 12–24) | 50* | 63* | 104* | 0 |
+
+\*Short flight (&lt;120s wall): **steady gates are invalid** — second half is still plateau, not cruise drain. Do not compare manual steady to autofly steady PASS on `215535` (PL=1 at 120s+).
+
+Telem: `relight_note_skipped_dup_n`→237; `relight_finalize_dedup_n`→8; frequent `relight_capture_finalize=1` with `relight_apply_n=0`.
+
+**Verdict:** Resume PL plateau after `no_ticket=0` is Phase 2.4 primary bug. `fz-cold-enter` (PL enter 22.5) is **not** a proxy for resume plateau. Autofly parity audit: segment gates + `fz-manual-plateau` (~105s) required before P0 code.
+
+### Autofly parity audit (Release)
+
+| Log | Role | Dur | PL enter | PL mid 60–120s | PL steady 120s+ |
+| --- | --- | --- | --- | --- | --- |
+| `093406` | manual short | ~50s | 37 | 50–68 (16–50s) | n/a |
+| `215535` | `fz-manual-parity` | ~230s | 39.5 | ~38 | **1** |
+| `220031` | `fz-cold-enter` | ~230s | 22.5 | — | 0 |
+
+**False read:** long parity steady PASS masks mid-phase plateau (PL≈38–67 after nt=0). Primary DoD after infra = **`fz-manual-plateau`**; parity = steady regression only.
+
+### Phase 2.4 tracks (in order)
+
+0. Infra autofly — segment gates, `fz-manual-plateau`, `fz-manual-long`, parity compare vs `093406`
+1. P0-A — `ShouldSuppressPendingLightNote` in `TryNotePendingLightBeforeMesh`
+2. P0-B — plateau apply/capture boost when nt=0
+3. P0-C — MarkDirty inflight+revision dedup; C3b VB&gt;30 / nt_thresh 8
+4. P1 — finalize epoch window 2→4 + band carve-out; enter peak thresh 60 remain≤1
+5. C7/C8 — suite Release + manual ≥240s gate table
+
+**Hard nos unchanged:** LitRing unlit preview, Imm primary, DrainAll, fog hide, dark plug. **DoD exe:** Release only → `bin/Cubatarium.exe`.
+
+### FZ2.4 closeout — Release autofly (post-implementation)
+
+Log: `bin/logs/perf_20260823-112612_31228.jsonl` (`fz-manual-plateau`, run extended by fly_stop 420s cap — infra fix: plateau uses `seconds+120` timeout only).
+
+| Gate | Target | FZ2.4 plateau | vs `215535` | vs manual `093406` |
+| --- | --- | --- | --- | --- |
+| PL enter | <25 | 34.5 FAIL | 39.5 | 37.0 |
+| **PL mid 60–120s** | **<30** | **30.0** (border) | 38.0 (−21%) | n/a (short) |
+| PL steady 120s+ | <15 | 3.5 PASS | 1.0 | n/a |
+| revisit steady | <95 | 187 FAIL | 146 | — |
+| no_ticket peak | <80 | 116 FAIL | 97 | 94 |
+| note_suppressed_plateau | >0 | **305** | — | — |
+| apply_plateau_boost | >0 | **79** | — | — |
+| finalize_apply_ratio | ↑ | **0.96** | 0.87 | — |
+
+**Verdict:** P0-A/B telem active; PL mid improved 38→30 (plateau gate borderline). Revisit/peak/VB steady still open. Operator C8: manual ≥240s on Release recommended.
+
+### C7 suite matrix (FZ2.4)
+
+| Scenario | Role | Duration |
+| --- | --- | --- |
+| `fz-manual-plateau` | **Primary DoD** — resume plateau window | ~105s |
+| `fz-manual-parity` | Steady regression | ~230s |
+| `fz-manual-long` | C8 proxy drain | ≥270s |
+| `fz-cold-enter` | Cold enter stress only | ~230s |
+| `idle-clean` | smoke | — |
+| `land-cruise` | teleport smoke | not DoD |
+
+### C8 manual gate table (≥240s)
+
+| Gate | Target | `215535` | `093406` short |
+| --- | --- | --- | --- |
+| PL enter / steady | <25 / <15 | 39.5 / 1 | 37 / 50* |
+| revisit steady / enter | <95 / ≤65 | 146 / 87 | 104 / 95 |
+| no_ticket peak | <80 | 97 | 94 |
+| VB / unlit_h / stream | <40 / <20 / ≤35 | PASS | FAIL* |
+| wall/fluid/uf/sticky | PASS | PASS | PASS |
+
+\*Short manual ≠ steady acceptance; compare enter + plateau mid only.

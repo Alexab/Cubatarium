@@ -380,9 +380,11 @@ def main() -> int:
             "ocean-cruise-short",
             "fz-validate",
             "fz-manual-parity",
+            "fz-manual-plateau",
+            "fz-manual-long",
             "fz-cold-enter",
         ],
-        help="named scenario (... / fz-validate teleport smoke / fz-manual-parity / fz-cold-enter)",
+        help="named scenario (... / fz-manual-parity / fz-manual-plateau / fz-manual-long / fz-cold-enter)",
     )
     ap.add_argument("--break-phase-sec", type=float, default=20.0)
     ap.add_argument("--break-interval-sec", type=float, default=1.0)
@@ -911,6 +913,60 @@ def main() -> int:
         )
         args.warmup_sec = max(args.warmup_sec, 20.0)
 
+    if args.scenario == "fz-manual-plateau":
+        # FZ2.4 DoD: resume no-teleport; stop before steady drain masks PL plateau.
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.resume = True
+        args.teleport_cruise = False
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 270.0
+        args.idle_sec = max(args.idle_sec, 45.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 45.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 45.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 15.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 15.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 20.0)
+
+    if args.scenario == "fz-manual-long":
+        # FZ2.4 C8 proxy: resume no-teleport; long fly+stop for drain + steady gates.
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.resume = True
+        args.teleport_cruise = False
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 270.0
+        args.idle_sec = max(args.idle_sec, 45.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 100.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 100.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 120.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 120.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 20.0)
+
     if args.scenario == "fz-cold-enter":
         # FZ2.3 PL enter stress: cold load, NO teleport (ocean-cruise-enter model).
         args.world = args.world or "World_164"
@@ -1074,7 +1130,7 @@ def main() -> int:
         process_timeout = args.process_timeout
         if process_timeout <= 0.0:
             process_timeout = args.seconds + 120.0
-        if args.fly_stop:
+        if args.fly_stop and args.scenario not in ("fz-manual-plateau",):
             process_timeout = max(process_timeout, 420.0)
         if args.scenario in (
             "break-stand",
@@ -1144,6 +1200,8 @@ def main() -> int:
                 "ocean-cruise",
                 "fz-validate",
                 "fz-manual-parity",
+                "fz-manual-plateau",
+                "fz-manual-long",
                 "fz-cold-enter",
             )
             or (args.scenario or "").startswith("ocean-cruise")

@@ -73,6 +73,10 @@ def flip_rate(rows: list[dict], key: str) -> float:
     )
 
 
+def seg_by_time(rows: list[dict], t0: int, t1: int) -> list[dict]:
+    return rows[t0 // 2 : t1 // 2]
+
+
 def seg(rows: list[dict], end_s: int) -> list[dict]:
     return rows[: end_s // 2]
 
@@ -90,20 +94,44 @@ def blink_rate(rows: list[dict], key: str) -> float:
 def metrics(path: Path) -> dict:
     u = load_spikes(path)
     n = len(u)
-    enter = seg(u, 60)
-    steady = u[60:] if n > 90 else u[n // 2 :]
+    short_flight = n < 60
+    enter_0_60 = seg_by_time(u, 0, 60)
+    mid_60_120 = seg_by_time(u, 60, 120)
+    steady_120_plus = seg_by_time(u, 120, 99999)
+    enter = enter_0_60
+    steady = steady_120_plus if len(steady_120_plus) >= 3 else (
+        u[60:] if n > 90 else u[n // 2 :]
+    )
     finalize = col(u, "relight_capture_finalize")
+    apply_n = col(u, "relight_apply_n")
+    finalize_apply_pairs = [
+        (bool(f), int(a or 0))
+        for f, a in zip(finalize, apply_n)
+        if f is not None
+    ]
+    finalize_with_apply = sum(
+        1 for f, a in finalize_apply_pairs if f and a > 0
+    )
+    finalize_count = sum(1 for f, _ in finalize_apply_pairs if f)
+    finalize_apply_ratio = (
+        finalize_with_apply / max(1, finalize_count) if finalize_count else 0.0
+    )
     finalize_rate = (
         sum(1 for x in finalize if x) / max(1, len(finalize)) if finalize else 0.0
     )
+    last = u[-1] if u else {}
     return {
         "spikes": n,
+        "short_flight": short_flight,
         "PL_enter_med": med(col(enter, "pending_light_focus")),
+        "PL_mid_med": med(col(mid_60_120, "pending_light_focus")),
         "PL_steady_med": med(col(steady, "pending_light_focus")),
         "revisit_steady_med": med(col(steady, "dirty_revisit_same_n")),
+        "revisit_mid_med": med(col(mid_60_120, "dirty_revisit_same_n")),
         "revisit_enter_med": med(col(enter, "dirty_revisit_same_n")),
         "stream_steady_med": med(col(steady, "stream_ms")),
         "VB_steady_med": med(col(steady, "visible_black_focus_n")),
+        "VB_mid_med": med(col(mid_60_120, "visible_black_focus_n")),
         "no_ticket_peak": max((r.get("visible_black_no_ticket_n") or 0) for r in u),
         "enter_no_ticket_med": med(col(enter, "visible_black_no_ticket_n")),
         "enter_wall_p90": p90(col(enter, "wall_ms")),
@@ -113,6 +141,12 @@ def metrics(path: Path) -> dict:
         "vb_blink_rate": blink_rate(u, "visible_black_focus_n"),
         "no_ticket_blink_rate": blink_rate(u, "visible_black_no_ticket_n"),
         "finalize_rate": finalize_rate,
+        "finalize_apply_ratio": finalize_apply_ratio,
+        "relight_note_suppressed_plateau_n": last.get(
+            "relight_note_suppressed_plateau_n"
+        ),
+        "relight_apply_plateau_boost_n": last.get("relight_apply_plateau_boost_n"),
+        "relight_finalize_dedup_n": last.get("relight_finalize_dedup_n"),
     }
 
 
@@ -161,13 +195,25 @@ def main() -> int:
     ap.add_argument("--step", required=True, help="e.g. D1, FZ23-D1")
     ap.add_argument(
         "--scenario",
-        default="fz-manual-parity",
-        choices=["fz-manual-parity", "fz-cold-enter", "fz-validate"],
-        help="autofly scenario (default: fz-manual-parity no-teleport DoD)",
+        default="fz-manual-plateau",
+        choices=[
+            "fz-manual-parity",
+            "fz-manual-plateau",
+            "fz-manual-long",
+            "fz-cold-enter",
+            "fz-validate",
+        ],
+        help="autofly scenario (default: fz-manual-plateau no-teleport DoD)",
     )
     ap.add_argument(
         "--baseline",
-        default=str(BIN / "logs" / "perf_20260822-201207_20824.jsonl"),
+        default=str(BIN / "logs" / "perf_20260822-215535_30124.jsonl"),
+        help="Release autofly ship baseline (default: 215535 parity)",
+    )
+    ap.add_argument(
+        "--baseline-manual",
+        default=str(BIN / "logs" / "perf_20260823-093406_25440.jsonl"),
+        help="manual resume baseline for plateau parity (default: 093406)",
     )
     ap.add_argument("--build", action="store_true")
     ap.add_argument("--skip-autofly", action="store_true")
@@ -175,15 +221,23 @@ def main() -> int:
     args = ap.parse_args()
 
     baseline_path = Path(args.baseline)
+    baseline_manual_path = Path(args.baseline_manual)
     if not baseline_path.is_file():
-        # Fall back to B1b if 201207 missing.
-        alt = BIN / "logs" / "perf_20260822-184927_8256.jsonl"
+        alt = BIN / "logs" / "perf_20260822-201207_20824.jsonl"
         if alt.is_file():
             print(f"baseline missing {baseline_path}; using {alt}", flush=True)
             baseline_path = alt
         else:
             print(f"baseline missing: {baseline_path}", file=sys.stderr)
             return 2
+    manual_m: dict | None = None
+    if baseline_manual_path.is_file():
+        manual_m = metrics(baseline_manual_path)
+    else:
+        print(
+            f"warning: baseline-manual missing: {baseline_manual_path}",
+            flush=True,
+        )
 
     if args.build and not args.skip_build:
         # Release → bin/Cubatarium.exe (Debug stays under build/*/Debug).
@@ -217,8 +271,10 @@ def main() -> int:
         report.parent.mkdir(parents=True, exist_ok=True)
         phase_id = (
             args.step
-            if args.step.startswith("FZ23") or args.step.startswith("FZ22")
-            else f"FZ23-{args.step}"
+            if args.step.startswith("FZ24")
+            or args.step.startswith("FZ23")
+            or args.step.startswith("FZ22")
+            else f"FZ24-{args.step}"
         )
         rc = run(
             [
@@ -272,25 +328,56 @@ def main() -> int:
         "vb_blink_rate",
         "no_ticket_blink_rate",
         "revisit_steady_med",
+        "revisit_mid_med",
         "finalize_rate",
+        "finalize_apply_ratio",
         "stream_steady_med",
         "PL_enter_med",
+        "PL_mid_med",
         "PL_steady_med",
+        "relight_note_suppressed_plateau_n",
+        "relight_apply_plateau_boost_n",
     ):
         b = base_m.get(k)
         c = cur_m.get(k)
-        d = pct_delta(c, b)
+        d = pct_delta(c, b) if isinstance(c, (int, float)) and isinstance(
+            b, (int, float)
+        ) else None
         ds = f" ({d:+.1f}%)" if d is not None else ""
         print(f"  {k}: {c}{ds} vs baseline {b}")
+    if manual_m:
+        print("=== Parity vs manual baseline ===")
+        for k in ("PL_enter_med", "PL_mid_med", "revisit_enter_med", "revisit_mid_med"):
+            m = manual_m.get(k)
+            c = cur_m.get(k)
+            d = pct_delta(c, m) if isinstance(c, (int, float)) and isinstance(
+                m, (int, float)
+            ) else None
+            ds = f" ({d:+.1f}% vs manual)" if d is not None else ""
+            print(f"  {k}: auto={c} manual={m}{ds}")
+        pl_mid = cur_m.get("PL_mid_med")
+        if pl_mid is not None and pl_mid >= 30:
+            print(
+                "  HINT: PL mid still open — P0-A/B before P0-C",
+                flush=True,
+            )
     if triggers:
         print(f"  suggested O-tracks: {', '.join(triggers)}")
     else:
         print("  suggested O-tracks: (none)")
     pl_enter = cur_m.get("PL_enter_med")
-    if pl_enter is not None and pl_enter >= 25 and args.scenario != "fz-cold-enter":
+    if pl_enter is not None and pl_enter >= 25 and args.scenario not in (
+        "fz-cold-enter",
+        "fz-manual-plateau",
+    ):
         print(
             "  HINT: PL enter still open — also run "
             "`--scenario fz-cold-enter`",
+            flush=True,
+        )
+    if args.scenario == "fz-cold-enter" and cur_m.get("PL_mid_med", 0) or 0 >= 30:
+        print(
+            "  HINT: cold PASS but plateau FAIL — do not treat cold-enter as sufficient",
             flush=True,
         )
 
@@ -300,6 +387,8 @@ def main() -> int:
         "scenario": args.scenario,
         "perf": str(perf_path),
         "baseline": str(baseline_path),
+        "baseline_manual": str(baseline_manual_path) if manual_m else None,
+        "baseline_manual_metrics": manual_m,
         "metrics": cur_m,
         "baseline_metrics": base_m,
         "gates": parse_gate_check(gate_proc.stdout),

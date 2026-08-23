@@ -643,6 +643,7 @@ int main()
   using cutum::ShouldRemoveAtRemeshDespitePlPressure;
   using cutum::ShouldSkipDeferRemeshForLitRingFullyDark;
   using cutum::ShouldSkipDeferRemeshUnderVbHealPressure;
+  using cutum::ShouldSuppressPendingLightNote;
   using cutum::VisibleBlackNoTicketRepairCap;
   using cutum::VisibleBlackNoTicketVoidCap;
 
@@ -670,16 +671,30 @@ int main()
          "FZ2: steady no_ticket=0 → defer allowed");
   Expect(ShouldSkipDeferRemeshUnderVbHealPressure(2, true, true, 0),
          "FZ2: enter_fov_lit → skip defer");
-  Expect(ShouldSkipDeferRemeshUnderVbHealPressure(3, true, false, 13),
-         "FZ2: no_ticket>12 → skip defer");
-  Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(3, true, false, 11),
-         "FZ2.1: no_ticket≤12 steady → defer allowed");
+  Expect(ShouldSkipDeferRemeshUnderVbHealPressure(3, true, false, 9),
+         "FZ2.4: no_ticket=9 → skip defer");
+  Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(3, true, false, 8),
+         "FZ2.4: no_ticket≤8 steady → defer allowed");
   Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(5, true, false, 0),
          "FZ2: hinterland no skip");
   Expect(ShouldRemoveAtRemeshDespitePlPressure(2, true, true, 13),
          "FZ2: PL leave-in RemoveAt under VB heal");
   Expect(!ShouldRemoveAtRemeshDespitePlPressure(2, true, false, 0),
          "FZ2: steady PL leave-in allowed");
+  Expect(ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 0, 12, 12, 31,
+                                                  2),
+         "FZ2.4-C3b: steady VB>30 stable2 → skip defer");
+  Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 0, 12, 12, 30,
+                                                   2),
+         "FZ2.4-C3b: VB=30 stable2 → defer allowed");
+  Expect(ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 9, 12, 8, 0, 0),
+         "FZ2.4-C3b: no_ticket=9 → skip defer");
+  Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 8, 12, 8, 0, 0),
+         "FZ2.4-C3b: no_ticket=8 → defer allowed");
+  Expect(ShouldSuppressPendingLightNote(0, 15, 41), "FZ24: nt0 PL15 VB41 suppress");
+  Expect(!ShouldSuppressPendingLightNote(0, 14, 41), "FZ24: PL below thresh");
+  Expect(!ShouldSuppressPendingLightNote(1, 20, 50), "FZ24: nt>0 no suppress");
+  Expect(!ShouldSuppressPendingLightNote(0, 20, 40), "FZ24: VB<=40 no suppress");
   Expect(ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 0, 12, 12, 41,
                                                   2),
          "FZ2.3-C3a: steady VB>40 stable2 → skip defer");

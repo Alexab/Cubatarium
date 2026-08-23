@@ -1031,6 +1031,13 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   {
     bg_cap = std::max(bg_cap, 2);
   }
+  // FZ2.4-P0b: plateau after nt=0 — raise Capture admit to feed Apply.
+  if (!enter_fov_lit &&
+      ShouldSuppressPendingLightNote(vb_no_ticket_n, pending_light_focus_n,
+                                     world.GetPhysicsTelemetry().VisibleBlackFocusN))
+  {
+    bg_cap = std::max(bg_cap, std::max(2, EnterFovRelightCaptureBudget() / 2));
+  }
   band_cy = EffectiveRelightCaptureBandCy(band_cy, moving && !enter_fov_lit,
                                           visual_holes);
   {
@@ -1192,14 +1199,28 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       {
         const uint64_t epoch = world.GetStreamingFrameEpoch();
         const auto fit = RelightLastFinalizeEpoch_.find(ground_xz);
-        if (fit != RelightLastFinalizeEpoch_.end() && epoch >= fit->second &&
-            (epoch - fit->second) < 2 &&
-            world.IsPendingLightBeforeMesh(ground_xz))
+        const bool band_needs =
+            ColumnSurfaceBandNeedsRelight(world, ground_xz, relight_min,
+                                          relight_max);
+        const auto &cap_telem = world.GetPhysicsTelemetry();
+        const bool plateau_suppress =
+            ShouldSuppressPendingLightNote(
+                cap_telem.VisibleBlackNoTicketN, pending_light_focus_n,
+                cap_telem.VisibleBlackFocusN);
+        if (plateau_suppress && cap_telem.RelightApplyNPrev == 0 &&
+            world.IsAsyncRelightColumnInFlight(ground_xz))
         {
           finalize_gate = false;
           ++telem.RelightFinalizeDedupN;
         }
-        else
+        else if (fit != RelightLastFinalizeEpoch_.end() && epoch >= fit->second &&
+                 (epoch - fit->second) < 4 &&
+                 world.IsPendingLightBeforeMesh(ground_xz) && !band_needs)
+        {
+          finalize_gate = false;
+          ++telem.RelightFinalizeDedupN;
+        }
+        else if (finalize_gate)
         {
           RelightLastFinalizeEpoch_[ground_xz] = epoch;
         }

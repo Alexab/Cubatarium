@@ -384,6 +384,8 @@ struct FrameNumbers
   uint64_t relight_deferred_far_enqueue_n{0};
   uint64_t relight_note_skipped_dup_n{0};
   uint64_t relight_finalize_dedup_n{0};
+  uint64_t relight_note_suppressed_plateau_n{0};
+  uint64_t relight_apply_plateau_boost_n{0};
   int mark_relit_skip_already_dirty_n{0};
   int mark_relit_skip_already_raa_n{0};
   int mark_relit_skip_inflight_n{0};
@@ -783,6 +785,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.relight_deferred_far_enqueue_n = phys.RelightDeferredFarEnqueueN;
   n.relight_note_skipped_dup_n = phys.RelightNoteSkippedDupN;
   n.relight_finalize_dedup_n = phys.RelightFinalizeDedupN;
+  n.relight_note_suppressed_plateau_n = phys.RelightNoteSuppressedPlateauN;
+  n.relight_apply_plateau_boost_n = phys.RelightApplyPlateauBoostN;
   n.mark_relit_skip_already_dirty_n = phys.MarkRelitSkipAlreadyDirtyN;
   n.mark_relit_skip_already_raa_n = phys.MarkRelitSkipAlreadyRaaN;
   n.mark_relit_skip_inflight_n = phys.MarkRelitSkipInflightN;
@@ -1164,6 +1168,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"relight_deferred_far_enqueue_n\":" << n.relight_deferred_far_enqueue_n
           << ",\"relight_note_skipped_dup_n\":" << n.relight_note_skipped_dup_n
           << ",\"relight_finalize_dedup_n\":" << n.relight_finalize_dedup_n
+          << ",\"relight_note_suppressed_plateau_n\":"
+          << n.relight_note_suppressed_plateau_n
+          << ",\"relight_apply_plateau_boost_n\":"
+          << n.relight_apply_plateau_boost_n
           << ",\"mark_relit_skip_already_dirty_n\":"
           << n.mark_relit_skip_already_dirty_n
           << ",\"mark_relit_skip_already_raa_n\":"

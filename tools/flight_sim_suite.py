@@ -74,6 +74,16 @@ SCENARIOS: list[tuple[str, list[str], str]] = [
         ["--scenario", "fz-cold-enter"],
         "FZ2.3 PL enter: cold load, no teleport, idle45+fly90+stop90",
     ),
+    (
+        "fz-manual-plateau",
+        ["--scenario", "fz-manual-plateau"],
+        "FZ2.4 DoD: resume no-teleport, idle45+fly45+stop15 (~105s plateau window)",
+    ),
+    (
+        "fz-manual-long",
+        ["--scenario", "fz-manual-long"],
+        "FZ2.4 C8 proxy: resume no-teleport, idle45+fly100+stop120 (≥270s)",
+    ),
 ]
 
 

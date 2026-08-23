@@ -1931,6 +1931,14 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
     ++LastDirtyScheduleDedupN;
     return;
   }
+  // FZ2.4-P0c: live build + Active revision — skip Dirty re-insert (revisit).
+  if (ActiveMeshSourceRevision.count(chunkCoord) > 0 &&
+      AsyncBuilder && AsyncBuilder->IsInFlight(chunkCoord) &&
+      !ChunkHasFullyDarkFace(chunkCoord))
+  {
+    ++LastDirtyScheduleDedupN;
+    return;
+  }
   SoftDeferHeld.erase(chunkCoord);
   // Mid-flight MarkDirty used to re-insert Dirty while Active stayed set —
   // Apply then immediately rescheduled forever (standing Dirty≈535 async=42).
@@ -1993,6 +2001,14 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
     return;
   }
   if (ScheduledThisFrame_.count(chunkCoord) > 0)
+  {
+    ++LastDirtyScheduleDedupN;
+    return;
+  }
+  // FZ2.4-P0c: live build + Active revision — skip Dirty re-insert (revisit).
+  if (ActiveMeshSourceRevision.count(chunkCoord) > 0 &&
+      AsyncBuilder && AsyncBuilder->IsInFlight(chunkCoord) &&
+      !ChunkHasFullyDarkFace(chunkCoord))
   {
     ++LastDirtyScheduleDedupN;
     return;

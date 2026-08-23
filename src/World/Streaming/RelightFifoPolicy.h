@@ -219,17 +219,15 @@ inline bool ShouldSkipDeferRemeshForLitRingFullyDark(
 /// FZ2-R1: skip defer only under active VB heal pressure (enter or no_ticket).
 inline bool ShouldSkipDeferRemeshUnderVbHealPressure(
     int horiz, bool fully_dark, bool enter_fov_lit, int vb_no_ticket_n,
-    int ring = kVisualStageLitDrawableHoriz, int no_ticket_thresh = 12,
+    int ring = kVisualStageLitDrawableHoriz, int no_ticket_thresh = 8,
     int visible_black_focus_n = 0, int vb_focus_stable_frames = 0)
 {
   if (!fully_dark || horiz < 0 || horiz > ring)
   {
     return false;
   }
-  // FZ2.2-C3b/O3 / FZ2.3-C3a: steady VB debt — force schedule (skip defer).
-  // C3a diagnostic (defer off) cut revisit 157→101; keep gated=true but
-  // lower VB/stable thresholds so heal still breaks blink without PL flood.
-  if (!enter_fov_lit && visible_black_focus_n > 40 &&
+  // FZ2.2-C3b/O3 / FZ2.3-C3a / FZ2.4-P0c: steady VB debt — force schedule.
+  if (!enter_fov_lit && visible_black_focus_n > 30 &&
       vb_focus_stable_frames >= 2)
   {
     return true;
@@ -237,10 +235,19 @@ inline bool ShouldSkipDeferRemeshUnderVbHealPressure(
   return enter_fov_lit || vb_no_ticket_n > no_ticket_thresh;
 }
 
+/// FZ2.4-P0a: tickets cleared but focus still dark+pending — stop feeding Note.
+inline bool ShouldSuppressPendingLightNote(
+    int vb_no_ticket_n, int pending_light_focus_n, int visible_black_focus_n,
+    int pl_thresh = 15, int vb_thresh = 40)
+{
+  return vb_no_ticket_n <= 0 && pending_light_focus_n >= pl_thresh &&
+         visible_black_focus_n > vb_thresh;
+}
+
 /// FZ2-R1: PL leave-in RemoveAt carve-out — only under VB heal pressure.
 inline bool ShouldRemoveAtRemeshDespitePlPressure(
     int horiz, bool fully_dark, bool enter_fov_lit, int vb_no_ticket_n,
-    int ring = kVisualStageLitDrawableHoriz, int no_ticket_thresh = 12,
+    int ring = kVisualStageLitDrawableHoriz, int no_ticket_thresh = 8,
     int visible_black_focus_n = 0, int vb_focus_stable_frames = 0)
 {
   return ShouldSkipDeferRemeshUnderVbHealPressure(

@@ -2241,6 +2241,16 @@ bool UWorld::TryNotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max
     ++PhysicsTelemetryData.RelightNoteSkippedDupN;
     return false;
   }
+  // FZ2.4-P0a: do not grow PL after nt cleared while VB/PL debt open.
+  // Enter FOV lit pass exempt — still seed during enter heal.
+  const auto &t = PhysicsTelemetryData;
+  if (!EnterFovLitPassActive &&
+      ShouldSuppressPendingLightNote(t.VisibleBlackNoTicketN, t.PendingLightFocus,
+                                     t.VisibleBlackFocusN))
+  {
+    ++PhysicsTelemetryData.RelightNoteSuppressedPlateauN;
+    return false;
+  }
   NotePendingLightBeforeMesh(ground, min_y, max_y);
   return true;
 }
@@ -5309,6 +5319,13 @@ void UWorld::TickAsyncChunkSystems()
   else if (vb_focus_n > 40)
   {
     drain_budget = std::max(drain_budget, moving ? 8 : 10);
+  }
+  // FZ2.4-P0b: standing plateau — raise Apply drain when nt=0 but PL/VB debt.
+  if (ShouldSuppressPendingLightNote(vb_no_ticket_n, pending_light_focus_n,
+                                   vb_focus_n))
+  {
+    drain_budget = std::max(drain_budget, moving ? 12 : 20);
+    ++PhysicsTelemetryData.RelightApplyPlateauBoostN;
   }
   // RateMatch R0: high-PL cruise floors Apply at 4 (pace DynamicCapture≤2),
   // not Enter×64 + double Drain (manual 190534 hitch apply_n=12 / wall≈1s).
