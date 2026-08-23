@@ -226,9 +226,11 @@ inline bool ShouldSkipDeferRemeshUnderVbHealPressure(
   {
     return false;
   }
-  // FZ2.2-C3b/O3: steady VB debt — force schedule (skip defer) to break blink.
-  if (!enter_fov_lit && visible_black_focus_n > 50 &&
-      vb_focus_stable_frames >= 3)
+  // FZ2.2-C3b/O3 / FZ2.3-C3a: steady VB debt — force schedule (skip defer).
+  // C3a diagnostic (defer off) cut revisit 157→101; keep gated=true but
+  // lower VB/stable thresholds so heal still breaks blink without PL flood.
+  if (!enter_fov_lit && visible_black_focus_n > 40 &&
+      vb_focus_stable_frames >= 2)
   {
     return true;
   }

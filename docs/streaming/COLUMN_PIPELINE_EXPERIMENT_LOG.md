@@ -516,3 +516,115 @@ Log: `bin/logs/perf_20260822-193650_6352.jsonl`. Autofly `fz-validate`.
 | black_sticky | 0 | **0** | 0 | PASS |
 
 **Verdict:** autofly закрыл **PL enter/steady**, **VB/unlit/stream** — основной debt снят. Open: revisit steady, enter wall p90 (autofly cold), no_ticket peak. **Manual ≥240s** — gate of record для M4.
+
+### Results — manual `201207` (commit `584255f3`, ~150s)
+
+Log: `bin/logs/perf_20260822-201207_20824.jsonl` (75 spikes). Gate of record for FZ2.2 — **not closed**.
+
+| Gate | Target | `201207` | `184927` | autofly `193650` | Status |
+| --- | --- | --- | --- | --- | --- |
+| enter no_ticket med | <30 | **0.0** | 1.0 | 0.0 | PASS |
+| PL enter med | <25 | **54.5** | 41.5 | 5.5 | FAIL (хуже B1b; teleport autofly ≠ manual) |
+| PL steady med | <15 | **44.0** | 45.0 | 1.0 | FAIL |
+| revisit steady med | <95 | **124.0** | 172.0 | 157.0 | FAIL (−48 vs B1b) |
+| revisit enter med | ≤65 | **75.5** | 69.0 | 82.0 | FAIL |
+| uf_flips rate | <0.05 | **0.000** | 0.021 | 0.035 | PASS |
+| enter wall p90 | <250 ms | **194** | 205 | 409 | PASS |
+| enter fluid p90 | <200 ms | **70** | 0 | 0 | PASS |
+| VB steady med | <40 | **70.0** | 65.0 | 11.0 | FAIL |
+| unlit_h steady med | <20 | **43.0** | 44.0 | 1.0 | FAIL |
+| no_ticket peak | <80 | **103** | 116 | 102 | FAIL |
+| stream steady med | ≤35 | **46.6** | 42.7 | 19.7 | FAIL |
+| black_sticky | 0 | **0** | 0 | 0 | PASS |
+
+**Forensics:** finalize_rate **0.96**; vb_blink **0.373**; no_ticket_blink **0.360**; PL buckets 41+ = **67/75**. first15 no_ticket slope **+9.9/frame**.
+
+**Verdict:** FZ2.2 **not closed** (5/13 PASS). Teleport `fz-validate` invalid for PL/VB DoD. Revisit −48 vs B1b — sole durable win. Raw `NotePendingLightBeforeMesh` still feeds PL from WorldStreaming / DeferFar / Capture / ChunkEmerge / RecoverUnlit (see Phase 2.3 D1).
+
+## FlickerZero-2.3 — PL parity + no-teleport autofly (2026-08-22)
+
+Baseline manual `201207`. Gate of record: **`fz-manual-parity`** / **`fz-cold-enter`** (no teleport). Teleport `fz-validate` = smoke only.
+
+| Track | Change |
+| --- | --- |
+| infra | `fz-manual-parity` (resume), `fz-cold-enter` (cold); step_validate default no-teleport |
+| D1 | TryNote all RAW Note sites + `relight_note_skipped_dup_n` in perf |
+| D3 | RepairCap enter **≤4** (bisect ship) |
+| C3a | `fz2_defer_gated=false` diagnostic flight |
+| O2 | Capture finalize epoch dedup (`RelightFinalizeDedupN`) |
+| O3 | Dirty `ScheduledThisFrame_` dedup |
+| D4 | enter peak second pass thresh 70, remain≤2 |
+| C7/C8 | suite + manual ≥240s M4 |
+
+### Shipped code (`FZ23` batch on `584255f3`+)
+
+D1 R1–R8 TryNote; FramePerfMonitor `relight_note_skipped_dup_n` / `relight_finalize_dedup_n`; D3 RepairCap≤4; O2 finalize epoch; O3 schedule-frame set; D4 peak remain≤2; C3b VB>40/stable≥2; flight_sim/`tmp_fz2_step_validate` **`--config Release`** (bin/ exe).
+
+**Infra note:** early autofly `210519`–`213255` ran against **stale** `bin/Cubatarium.exe` (Debug build not copied to bin/). **Invalid for DoD.** Gate of record below = Release ship.
+
+### Results — Release ship `fz-manual-parity` `215535` (DoD)
+
+Log: `bin/logs/perf_20260822-215535_30124.jsonl` (no teleport, resume, **Release**).
+
+| Gate | Target | `215535` | `201207` | Status |
+| --- | --- | --- | --- | --- |
+| PL enter / steady | <25 / <15 | 39.5 / **1** | 54.5 / 44 | FAIL (−27%) / **PASS** |
+| revisit steady / enter | <95 / ≤65 | 146 / 87 | 124 / 75.5 | FAIL / FAIL |
+| no_ticket peak | <80 | 97 | 103 | FAIL |
+| VB / unlit_h / stream | <40 / <20 / ≤35 | **12** / **1** / **27** | 70 / 43 / 47 | **PASS** |
+| wall/fluid/uf/black_sticky | PASS | PASS | PASS | PASS |
+| vb_blink | ≤0.25 | **0.227** | 0.373 | **PASS** |
+| finalize_rate | ≤0.85 | 0.94 | 0.96 | slight ↓ |
+| `relight_note_skipped_dup_n` | grows | max **741** | — | OK |
+| `relight_finalize_dedup_n` | grows | max **200** | — | OK |
+
+### Results — Release ship `fz-cold-enter` `220031`
+
+Log: `bin/logs/perf_20260822-220031_17392.jsonl`.
+
+| Gate | Target | `220031` | vs `201207` | Status |
+| --- | --- | --- | --- | --- |
+| PL enter | ≤32 (−≥40%) / DoD <25 | **22.5** | 54.5 (−59%) | **PASS** |
+| PL / VB / stream steady | <15 / <40 / ≤35 | **0 / 13 / 29** | — | **PASS** |
+| revisit steady | <95 | 128 | 124 | FAIL |
+| no_ticket peak | <80 | 97 | 103 | FAIL |
+| note_skipped / finalize_dedup | | max **894** / **99** | — | OK |
+
+**Verdict (Release):** D1 cold PL enter closed; PL/VB/stream steady closed; vb_blink ≤0.25. Still open: revisit, peak, resume PL enter (39.5). C3a kept gated=true + C3b VB>40/stable2 shipped. **D2** = this Release rebaseline (≥230s wall phases); **C8** operator M4 ≥240s still recommended for visual stamp. Deferred guard: cruise PL≤5 on `fz-manual-parity` when revisit closed.
+
+### Stale autofly (pre-Release bin) — do not use
+
+`210519`, `211016`, `211505`, `212538`, `212123`, `213255` — stale exe. C3a decision (keep gated) still stands qualitatively; numbers superseded by `215535`/`220031`.
+
+### C7 suite (Release)
+
+| Scenario | Log / report | Role |
+| --- | --- | --- |
+| `fz-manual-parity` | `215535` | **DoD** |
+| `fz-cold-enter` | `220031` | PL enter stress |
+| `idle-clean` | `fz23_idle-clean-rel.json` | smoke |
+| `land-cruise` | teleport smoke only | not DoD |
+
+### D2 rebaseline ≥240s Release `220907`
+
+Log: `bin/logs/perf_20260822-220907_30924.jsonl` (idle45+fly100+stop100).
+
+| Gate | `220907` | `201207` | Notes |
+| --- | --- | --- | --- |
+| PL enter / steady | 39.5 / **1** | 54.5 / 44 | steady closed |
+| revisit enter / steady | **55.5** / 132 | 75.5 / 124 | enter **PASS** ≤65 |
+| peak / first15 slope | 95 / **−1.6** | 103 / +9.9 | slope flipped (D4) |
+| VB / stream | **11** / 41 | 70 / 47 | stream soft open on long stop |
+
+### C8 closeout (autofly; operator M4 still recommended)
+
+| Gate | Target | Release DoD (`215535` / cold `220031`) | `201207` |
+| --- | --- | --- | --- |
+| PL enter / steady | <25 / <15 | 39.5 FAIL / **1 PASS**; cold **22.5 PASS** | 54.5 / 44 |
+| revisit steady / enter | <95 / ≤65 | 146 FAIL / 87 FAIL; D2 enter **55.5 PASS** | 124 / 75.5 |
+| no_ticket peak | <80 | 97 FAIL | 103 |
+| VB / unlit_h | <40 / <20 | **PASS** | 70 / 43 |
+| stream steady | ≤35 | **27 PASS** (parity) | 46.6 |
+| wall/fluid/uf/black_sticky | PASS | PASS (parity) | PASS |
+
+**Phase 2.3 code tracks complete.** Full M4 DoD not closed (revisit/peak/resume PL enter). Operator: manual ≥240s on Release `bin/Cubatarium.exe`, then `python bin/tmp_fz2_gate_check.py <perf>`.

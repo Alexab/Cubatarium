@@ -62,7 +62,17 @@ SCENARIOS: list[tuple[str, list[str], str]] = [
     (
         "fz-validate",
         ["--scenario", "fz-validate"],
-        "FZ2.2 manual parity: land-south corridor, fly 90s + stop 90s",
+        "FZ2.2 teleport smoke: land-south corridor (not DoD)",
+    ),
+    (
+        "fz-manual-parity",
+        ["--scenario", "fz-manual-parity"],
+        "FZ2.3 DoD: World_164 resume, no teleport, yaw 270, idle45+fly90+stop90",
+    ),
+    (
+        "fz-cold-enter",
+        ["--scenario", "fz-cold-enter"],
+        "FZ2.3 PL enter: cold load, no teleport, idle45+fly90+stop90",
     ),
 ]
 

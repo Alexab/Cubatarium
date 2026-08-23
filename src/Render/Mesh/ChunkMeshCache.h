@@ -710,6 +710,9 @@ private:
   int LastDirtyRemeshN{0};
   /// Prior-frame Dirty coords (capped) for dirty_revisit_same_n.
   std::unordered_set<glm::ivec3, IVec3Hash> PrevDirtyForRevisit;
+  /// FZ2.3-O3: coords successfully scheduled this RebuildDirtyChunksWithStats.
+  std::unordered_set<glm::ivec3, IVec3Hash> ScheduledThisFrame_;
+  int LastDirtyScheduleDedupN{0};
   double LastMeshImmediateMs{0.0};
   int LastMeshImmediateCount{0};
   uint64_t MeshApplyStaleCount{0};

@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BIN = ROOT / "bin"
 LOGS = BIN / "logs"
-BUILD = ROOT / "build" / "desktop-msvc" / "Debug"
+BUILD = ROOT / "build" / "desktop-msvc" / "Release"
 RESULTS = BIN / "fz22_step_results.jsonl"
 
 MUST_NOT_REGRESS = {
@@ -158,10 +158,16 @@ def pct_delta(cur: float | None, base: float | None) -> float | None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--step", required=True, help="e.g. C1a, FZ22-C1a")
+    ap.add_argument("--step", required=True, help="e.g. D1, FZ23-D1")
+    ap.add_argument(
+        "--scenario",
+        default="fz-manual-parity",
+        choices=["fz-manual-parity", "fz-cold-enter", "fz-validate"],
+        help="autofly scenario (default: fz-manual-parity no-teleport DoD)",
+    )
     ap.add_argument(
         "--baseline",
-        default=str(BIN / "logs" / "perf_20260822-184927_8256.jsonl"),
+        default=str(BIN / "logs" / "perf_20260822-201207_20824.jsonl"),
     )
     ap.add_argument("--build", action="store_true")
     ap.add_argument("--skip-autofly", action="store_true")
@@ -170,15 +176,24 @@ def main() -> int:
 
     baseline_path = Path(args.baseline)
     if not baseline_path.is_file():
-        print(f"baseline missing: {baseline_path}", file=sys.stderr)
-        return 2
+        # Fall back to B1b if 201207 missing.
+        alt = BIN / "logs" / "perf_20260822-184927_8256.jsonl"
+        if alt.is_file():
+            print(f"baseline missing {baseline_path}; using {alt}", flush=True)
+            baseline_path = alt
+        else:
+            print(f"baseline missing: {baseline_path}", file=sys.stderr)
+            return 2
 
     if args.build and not args.skip_build:
+        # Release → bin/Cubatarium.exe (Debug stays under build/*/Debug).
         rc = run(
             [
                 "cmake",
                 "--build",
                 "build/desktop-msvc",
+                "--config",
+                "Release",
                 "--target",
                 "Cubatarium",
                 "miss_first_mesh_class_test",
@@ -198,15 +213,19 @@ def main() -> int:
     if not args.skip_autofly:
         t0 = time.time()
         stamp = time.strftime("%Y%m%d-%H%M%S")
-        report = BIN / "suite_reports" / f"{stamp}_fz-validate.json"
+        report = BIN / "suite_reports" / f"{stamp}_{args.scenario}.json"
         report.parent.mkdir(parents=True, exist_ok=True)
-        phase_id = args.step if args.step.startswith("FZ22") else f"FZ22-{args.step}"
+        phase_id = (
+            args.step
+            if args.step.startswith("FZ23") or args.step.startswith("FZ22")
+            else f"FZ23-{args.step}"
+        )
         rc = run(
             [
                 sys.executable,
                 str(ROOT / "tools" / "flight_sim_run.py"),
                 "--scenario",
-                "fz-validate",
+                args.scenario,
                 "--phase-id",
                 phase_id,
                 "--report",
@@ -267,10 +286,18 @@ def main() -> int:
         print(f"  suggested O-tracks: {', '.join(triggers)}")
     else:
         print("  suggested O-tracks: (none)")
+    pl_enter = cur_m.get("PL_enter_med")
+    if pl_enter is not None and pl_enter >= 25 and args.scenario != "fz-cold-enter":
+        print(
+            "  HINT: PL enter still open — also run "
+            "`--scenario fz-cold-enter`",
+            flush=True,
+        )
 
     record = {
         "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "step": args.step,
+        "scenario": args.scenario,
         "perf": str(perf_path),
         "baseline": str(baseline_path),
         "metrics": cur_m,

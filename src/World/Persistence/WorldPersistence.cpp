@@ -429,7 +429,7 @@ int UWorldPersistence::AdmitDeferredFarRelightColumns(UWorld &world,
     EnqueueTerrainColumnRelight(ground_xz.x * CHUNK_SIZE,
                                 ground_xz.y * CHUNK_SIZE, kv.second.priority,
                                 band.x, band.y);
-    world.NotePendingLightBeforeMesh(glm::ivec3(ground_xz.x, 0, ground_xz.y),
+    world.TryNotePendingLightBeforeMesh(glm::ivec3(ground_xz.x, 0, ground_xz.y),
                                      band.x, band.y);
     to_erase.push_back(ground_xz);
     ++admitted;
@@ -1137,7 +1137,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         relight_min = surface_band_min;
         relight_max = surface_band_max;
         ++telem.RelightSkippedUndergroundN;
-        world.NotePendingLightBeforeMesh(glm::ivec3(ground_xz.x, 0, ground_xz.y),
+        world.TryNotePendingLightBeforeMesh(glm::ivec3(ground_xz.x, 0, ground_xz.y),
                                          relight_min, relight_max);
       }
       else
@@ -1188,6 +1188,22 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     {
       auto &telem = world.GetPhysicsTelemetryMutable();
       telem.RelightCaptureColHoriz = horiz_dist;
+      if (finalize_gate)
+      {
+        const uint64_t epoch = world.GetStreamingFrameEpoch();
+        const auto fit = RelightLastFinalizeEpoch_.find(ground_xz);
+        if (fit != RelightLastFinalizeEpoch_.end() && epoch >= fit->second &&
+            (epoch - fit->second) < 2 &&
+            world.IsPendingLightBeforeMesh(ground_xz))
+        {
+          finalize_gate = false;
+          ++telem.RelightFinalizeDedupN;
+        }
+        else
+        {
+          RelightLastFinalizeEpoch_[ground_xz] = epoch;
+        }
+      }
       telem.RelightCaptureFinalize = finalize_gate ? 1 : 0;
       const int span_y = std::max(0, relight_max - relight_min + 1);
       telem.RelightCaptureBandCySpan =

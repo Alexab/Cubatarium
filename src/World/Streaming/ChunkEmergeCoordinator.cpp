@@ -339,7 +339,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           }
           if (!world_ref.IsPendingLightBeforeMesh(key))
           {
-            world_ref.NotePendingLightBeforeMesh(
+            world_ref.TryNotePendingLightBeforeMesh(
                 glm::ivec3(key.x, 0, key.y), 0,
                 world_ref.GetProceduralSettings().MaxHeight);
           }

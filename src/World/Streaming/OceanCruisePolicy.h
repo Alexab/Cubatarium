@@ -85,10 +85,10 @@ inline int VisibleBlackNoTicketRepairCap(int no_ticket_n, int repair_cap,
                                           bool moving, bool enter_fov_lit = false)
 {
   const int base = std::max(1, repair_cap);
-  // FZ2.1-B2a / FZ2.2-C2b: throttle enter idle enqueue storm.
+  // FZ2.1-B2a / FZ2.3-D3: enter idle repair cap (bisect 2→4 after FZ2.2-C2b).
   if (enter_fov_lit && !moving)
   {
-    return std::min(base, 2);
+    return std::min(base, 4);
   }
   if (no_ticket_n <= 0)
   {

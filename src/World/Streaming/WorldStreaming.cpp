@@ -396,7 +396,7 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                 world.Persistence->DeferFarRelightColumn(
                     glm::ivec2(ground.x, ground.z), enqueue_relight_min,
                     enqueue_relight_max, relight_priority);
-                world.NotePendingLightBeforeMesh(
+                world.TryNotePendingLightBeforeMesh(
                     ground, enqueue_relight_min, enqueue_relight_max);
                 ++world.PhysicsTelemetryData.RelightDeferredFarEnqueueN;
                 world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
@@ -405,7 +405,7 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               world.Persistence->EnqueueTerrainColumnRelight(
                   ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, relight_priority,
                   enqueue_relight_min, enqueue_relight_max);
-              world.NotePendingLightBeforeMesh(
+              world.TryNotePendingLightBeforeMesh(
                   ground, enqueue_relight_min, enqueue_relight_max);
               if (near_focus)
               {
@@ -2552,7 +2552,7 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
           world.Persistence->DeferFarRelightColumn(glm::ivec2(ground.x, ground.z),
                                                    relight_min, relight_max,
                                                    near_focus);
-          world.NotePendingLightBeforeMesh(ground, relight_min, relight_max);
+          world.TryNotePendingLightBeforeMesh(ground, relight_min, relight_max);
           ++world.PhysicsTelemetryData.RelightDeferredFarEnqueueN;
         }
         else

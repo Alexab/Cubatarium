@@ -680,14 +680,14 @@ int main()
          "FZ2: PL leave-in RemoveAt under VB heal");
   Expect(!ShouldRemoveAtRemeshDespitePlPressure(2, true, false, 0),
          "FZ2: steady PL leave-in allowed");
-  Expect(ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 0, 12, 12, 55,
-                                                  3),
-         "FZ2.2-C3b: steady VB>50 stable → skip defer");
+  Expect(ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 0, 12, 12, 41,
+                                                  2),
+         "FZ2.3-C3a: steady VB>40 stable2 → skip defer");
   Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 0, 12, 12, 55,
                                                    1),
-         "FZ2.2-C3b: VB stable<3 frames → defer allowed");
-  Expect(VisibleBlackNoTicketRepairCap(108, 6, false, true) <= 2,
-         "FZ2.2-C2b: enter idle repair cap≤2");
+         "FZ2.2-C3b: VB stable<2 frames → defer allowed");
+  Expect(VisibleBlackNoTicketRepairCap(108, 6, false, true) <= 4,
+         "FZ2.3-D3: enter idle repair cap≤4");
   Expect(ShouldFinalizeRelightUnderVbSteadyPressure(31, 11, 3),
          "FZ2.2-C4b: steady finalize vb=31 pl=11");
   Expect(!ShouldFinalizeRelightUnderVbSteadyPressure(29, 11, 3),

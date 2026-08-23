@@ -1908,7 +1908,7 @@ int UWorld::RecoverUnlitFocusMeshes(int max_columns,
           // Streaming drain/idle_recovery see focus PendingLight.
           if (!any_sky || fully_dark)
           {
-            NotePendingLightBeforeMesh(ground, remesh_min, remesh_max);
+            TryNotePendingLightBeforeMesh(ground, remesh_min, remesh_max);
             // Light path owns heal — do not leave StickyRemesh ghost (IDLE
             // black_sticky=1 with faces already 0; manual/autofly false sticky).
             StickyRemeshAfterLight.erase(glm::ivec2(ground.x, ground.z));
@@ -2283,7 +2283,7 @@ void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
   {
     return;
   }
-  NotePendingLightBeforeMesh(ground, surface_band.first, surface_band.second);
+  TryNotePendingLightBeforeMesh(ground, surface_band.first, surface_band.second);
   Persistence->EnqueueTerrainColumnRelight(col_xz.x * CHUNK_SIZE,
                                            col_xz.y * CHUNK_SIZE,
                                            /*priority=*/true,

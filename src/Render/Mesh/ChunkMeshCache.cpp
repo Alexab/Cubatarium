@@ -1925,6 +1925,12 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
     }
     return;
   }
+  // FZ2.3-O3: already scheduled this emerge tick — skip re-Dirty ping-pong.
+  if (ScheduledThisFrame_.count(chunkCoord) > 0)
+  {
+    ++LastDirtyScheduleDedupN;
+    return;
+  }
   SoftDeferHeld.erase(chunkCoord);
   // Mid-flight MarkDirty used to re-insert Dirty while Active stayed set —
   // Apply then immediately rescheduled forever (standing Dirty≈535 async=42).
@@ -1984,6 +1990,11 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
     {
       PreferKickPendingGpuQueued(chunkCoord);
     }
+    return;
+  }
+  if (ScheduledThisFrame_.count(chunkCoord) > 0)
+  {
+    ++LastDirtyScheduleDedupN;
     return;
   }
   const bool was_soft_held = SoftDeferHeld.count(chunkCoord) > 0;
@@ -3693,6 +3704,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastDirtyFmN = static_cast<int>(Dirty.GetFirstMeshCount());
   LastDirtyRemeshN = static_cast<int>(Dirty.GetRemeshCount());
   LastDirtyRevisitSameN = 0;
+  LastDirtyScheduleDedupN = 0;
+  ScheduledThisFrame_.clear();
   // Sky-only / enter: orphan RemeshAfterApply with no Dirty/Active/GPU owner must
   // become Dirty. FullyDark drawable is NOT "owned" — enter PreferKick-only left
   // remesh_after_apply=32 with raa_commit=0 (manual 123647).
@@ -4376,6 +4389,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                                 .count();
       ActiveMeshSourceRevision[*it] = snapshot.sourceRevision;
       AsyncBuilder->Enqueue(std::move(snapshot), registry);
+      ScheduledThisFrame_.insert(*it);
       it = Dirty.RemoveAt(it);
       ++scheduled;
       ++stats.Scheduled;
@@ -4742,6 +4756,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                                 .count();
       ActiveMeshSourceRevision[*it] = snapshot.sourceRevision;
       AsyncBuilder->Enqueue(std::move(snapshot), registry);
+      ScheduledThisFrame_.insert(*it);
       it = Dirty.RemoveAt(it);
       ++scheduled;
       ++stats.Scheduled;
