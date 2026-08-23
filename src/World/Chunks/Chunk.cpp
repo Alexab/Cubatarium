@@ -19,6 +19,7 @@ void UChunk::ResetForReuse(glm::ivec3 chunkCoord)
   Data.fill(BLOCK_AIR);
   FluidData.fill(0);
   LightData.fill(0);
+  LightFieldRevision = 0;
   Dirty = true;
 }
 

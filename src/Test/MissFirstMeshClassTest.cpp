@@ -2062,6 +2062,20 @@ int main()
            "FZ26: fat unit binding");
   }
 
+  // FZ2.7-B5: cap math uses light+install unit on consume
+  {
+    using cutum::EarnedRelightApplyCap;
+    using cutum::ShouldStopRelightApplySlice;
+    Expect(EarnedRelightApplyCap(20, 16.0, 0.0, 20.0, true, 0, 3.0, 5.0) >= 2,
+           "FZ27: light+install cap >=2 in 16ms slice");
+    Expect(!ShouldStopRelightApplySlice(10.0, 1, 16.0, false, true, 3, 9.0, 0,
+                                        3.0, 5.0),
+           "FZ27: continue past 1 unit when slim install");
+    Expect(ShouldStopRelightApplySlice(10.0, 2, 16.0, false, true, 2, 9.0, 0,
+                                       3.0, 5.0),
+           "FZ27: stop at earned cap 2");
+  }
+
   // ColdSupply S0: ClampRelightDrainN
   {
     using cutum::ClampRelightDrainN;

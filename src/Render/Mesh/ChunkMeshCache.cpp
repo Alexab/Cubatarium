@@ -886,6 +886,16 @@ bool UChunkMeshCache::ChunkHasLitDrawableFace(glm::ivec3 chunk_coord) const
   return false;
 }
 
+uint64_t UChunkMeshCache::GetMeshedLightRevision(glm::ivec3 chunk_coord) const
+{
+  const auto it = GreedyCache.find(chunk_coord);
+  if (it == GreedyCache.end())
+  {
+    return 0;
+  }
+  return it->second.MeshedLightRevision;
+}
+
 bool UChunkMeshCache::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
                                              const UBlockWorld &world) const
 {
@@ -2736,6 +2746,10 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   chunkMesh.GpuTransparent = gpu_result.transparent;
   chunkMesh.GpuHasDarkFace = gpu_result.hasFullyDarkFace;
   chunkMesh.GpuBlockRanges = std::move(gpu_result.blockRanges);
+  if (const UChunk *chunk = world.GetChunkManager().GetChunk(coord))
+  {
+    chunkMesh.MeshedLightRevision = chunk->GetLightFieldRevision();
+  }
   chunkMesh.batches.clear();
   chunkMesh.crossCenters = std::move(cross_centers);
   GreedyVertexCountByChunk[coord] = 0;
@@ -3521,6 +3535,10 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   // Write-first: CPU drawable before FreeChunk (ShouldPublishCpuBatchesBeforeFreeGpu).
   chunkMesh.batches = std::move(result.batches);
   chunkMesh.crossCenters = std::move(result.crossCenters);
+  if (const UChunk *chunk = world.GetChunkManager().GetChunk(result.coord))
+  {
+    chunkMesh.MeshedLightRevision = chunk->GetLightFieldRevision();
+  }
   const bool intentional_empty =
       new_vertex_count == 0 && !defer_until_lit &&
       SoftDeferHeld.count(result.coord) == 0;

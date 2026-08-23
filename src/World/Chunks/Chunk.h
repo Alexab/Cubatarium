@@ -47,6 +47,10 @@ public:
   }
   std::array<uint8_t, CHUNK_VOLUME> &GetLightDataMutable() { return LightData; }
 
+  /// FZ2.7-B1: bumped on any light-field mutation (Apply merge, relight seed).
+  uint64_t GetLightFieldRevision() const { return LightFieldRevision; }
+  void BumpLightFieldRevision() { ++LightFieldRevision; }
+
   static int LocalIndex(glm::ivec3 local);
 
 private:
@@ -54,6 +58,7 @@ private:
   std::array<BlockId, CHUNK_VOLUME> Data{};
   std::array<uint8_t, CHUNK_VOLUME> FluidData{};
   std::array<uint8_t, CHUNK_VOLUME> LightData{};
+  uint64_t LightFieldRevision{0};
   bool Dirty{true};
 };
 

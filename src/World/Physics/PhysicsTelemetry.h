@@ -396,6 +396,10 @@ struct PhysicsTelemetry
   int MarkRelitSkipInflightN{0};
   int MarkRelitSkipEnterLitQuiesceN{0};
   int MarkRelitScheduleN{0};
+  /// FZ2.7-B5: PrimaryConsume path frames (MarkRelit refactor).
+  int MarkRelitPathPrimaryConsumeN{0};
+  /// FZ2.7-B5: ChunkHasStaleDarkFaces calls during Apply (target 0).
+  int StaleProbeCallsN{0};
   /// Schedule path suppressed by enter-settled gate (still classified Schedule).
   int MarkRelitSuppressEnterSettledN{0};
   /// StickyRemeshAfterLight insert/erase reasons (per frame).

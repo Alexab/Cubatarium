@@ -815,3 +815,46 @@ python bin/tmp_fz26_step_validate.py --step FZ26-C8 --build --scenario fz-manual
 python tools/flight_sim_suite.py --only fz-manual-plateau fz-manual-long fz-manual-parity --phase-id FZ26-C8
 ```
 
+---
+
+## FZ2.7-B — MarkRelit refactor + O(1) light revision (2026-08-23)
+
+**Baseline:** `perf_20260823-160343_792.jsonl` (post-FZ2.6)  
+**Strategy:** Plan B full refactor (slim fast-path rejected)
+
+### Architecture shipped
+
+| Module | Role |
+| --- | --- |
+| `MeshLightStalePolicy.h` | O(1) `IsMeshLightStale` / GPU variant |
+| `UChunk.LightFieldRevision` | bump on Apply light merge |
+| `ChunkGreedyMesh.MeshedLightRevision` | set at mesh CPU/GPU commit |
+| `RelightInstallPlanner.h` | pure `PlanColumnInstall` + path enum |
+| `MarkRelitInstall.cpp` | orchestrator + `ExecuteLitApplyPlan` |
+| `RelightFifoPolicy` B5 | cap math `light_ms + install_ms` |
+
+### Tests (51+)
+
+| Target | File |
+| --- | --- |
+| `mark_relit_characterization_test` | C01–C16 policy/path golden |
+| `mesh_light_stale_policy_test` | revision stale O(1) |
+| `relight_install_planner_test` | PrimaryConsume + FakeMesh |
+| `mark_relit_integration_test` | I01/I04 cap simulation |
+
+**Smoke:** `python bin/tmp_fz27_b_test_smoke.py`
+
+### Tier 1 gates (validate on next fz-manual-long)
+
+| Gate | 160343 | Target |
+| --- | --- | --- |
+| unit_apply_install_ms | 18.52 | **< 8** |
+| relight_apply_n_steady | 1 | **≥ 2** |
+| apply_util_steady | 0.05 | **≥ 0.15** |
+| sim_steady | 129 | ≤ 135 |
+
+```text
+python bin/tmp_fz2_gate_check.py bin/logs/perf_<new>.jsonl
+python bin/tmp_fz26_step_validate.py --step FZ27-B6 --build --scenario fz-manual-long
+```
+

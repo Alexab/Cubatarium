@@ -214,6 +214,7 @@ set(SOURCES
     src/Creatures/Player/User.cpp
     src/Render/Engine/ViewEngine.cpp
     src/World/Core/World.cpp
+    src/World/Core/MarkRelitInstall.cpp
     src/World/Adapters/WorldRenderReadAdapter.cpp
     src/World/Core/WorldViewBinding.cpp
     src/World/Core/RuntimeTuning.cpp
@@ -1322,6 +1323,29 @@ add_executable(miss_first_mesh_class_test
 target_include_directories(miss_first_mesh_class_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(miss_first_mesh_class_test glm::glm)
+
+add_executable(mark_relit_characterization_test
+    src/Test/MarkRelitCharacterizationTest.cpp)
+target_include_directories(mark_relit_characterization_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(mark_relit_characterization_test glm::glm)
+
+add_executable(mesh_light_stale_policy_test
+    src/Test/MeshLightStalePolicyTest.cpp)
+target_include_directories(mesh_light_stale_policy_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(relight_install_planner_test
+    src/Test/RelightInstallPlannerTest.cpp)
+target_include_directories(relight_install_planner_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(relight_install_planner_test glm::glm)
+
+add_executable(mark_relit_integration_test
+    src/Test/MarkRelitIntegrationTest.cpp)
+target_include_directories(mark_relit_integration_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(mark_relit_integration_test glm::glm)
 
 add_executable(focus_ingress_policy_test
     src/Test/FocusIngressPolicyTest.cpp)

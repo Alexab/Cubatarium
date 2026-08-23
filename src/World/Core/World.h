@@ -29,6 +29,7 @@
 #include "World/Physics/PhysicsProfile.h"
 #include "World/Physics/PhysicsTelemetry.h"
 #include "World/Streaming/ColumnEmergeState.h"
+#include "World/Streaming/RelightInstallPlanner.h"
 #include "World/Streaming/ColumnRecord.h"
 #include "World/Streaming/WorldBorderPolicy.h"
 #include "World/Streaming/EnterVisualGate.h"
@@ -1312,6 +1313,9 @@ private:
                               const std::vector<glm::ivec2> &primary_grounds,
                               bool finalize_pending_gate = true,
                               bool primary_only = false);
+  /// FZ2.7-B3: apply planner output (MarkRelit refactor).
+  void ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &column,
+                             const glm::ivec3 &ground, bool finalize_gate);
   void EnsurePlayerOnGround();
   void MarkBlockChunkDirty(glm::ivec3 blockPos,
                            bool sync_neighbor_chunks = false,

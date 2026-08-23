@@ -141,18 +141,27 @@ inline bool ShouldConsumeTicketedVbDebt(int vb_no_ticket_n,
 
 /// FZ2.5-Perf1: Transvoxel-style earned cap — fill time slice when unit cheap.
 /// FZ2.6: prefer light-only unit for cap math when available.
+/// FZ2.7-B5: use light+install when both available.
 inline int EarnedRelightApplyCap(int drain_budget, double slice_ms,
                                  double /*elapsed_ms*/,
                                  double last_unit_apply_ms, bool consume_mode,
                                  int visible_black_stalled_n = 0,
-                                 double last_light_unit_ms = 0.0)
+                                 double last_light_unit_ms = 0.0,
+                                 double last_install_unit_ms = 0.0)
 {
   if (!consume_mode)
   {
     return drain_budget;
   }
-  const double cap_unit =
-      last_light_unit_ms > 0.1 ? last_light_unit_ms : last_unit_apply_ms;
+  double cap_unit = last_unit_apply_ms;
+  if (last_light_unit_ms > 0.1 && last_install_unit_ms > 0.1)
+  {
+    cap_unit = last_light_unit_ms + last_install_unit_ms;
+  }
+  else if (last_light_unit_ms > 0.1)
+  {
+    cap_unit = last_light_unit_ms;
+  }
   const int min_cap = visible_black_stalled_n > 0 ? 3 : 2;
   const int time_cap =
       (cap_unit > 0.1) ? static_cast<int>(slice_ms / cap_unit) : 2;
@@ -168,15 +177,22 @@ inline bool ShouldStopRelightApplySlice(double elapsed_ms, int applied_n,
                                         int earned_cap = 0,
                                         double last_unit_apply_ms = 0.0,
                                         int visible_black_stalled_n = 0,
-                                        double last_light_unit_ms = 0.0)
+                                        double last_light_unit_ms = 0.0,
+                                        double last_install_unit_ms = 0.0)
 {
   if (enter_pass || applied_n < 1)
   {
     return false;
   }
-  const double cap_unit =
-      (consume_mode && last_light_unit_ms > 0.1) ? last_light_unit_ms
-                                                 : last_unit_apply_ms;
+  double cap_unit = last_unit_apply_ms;
+  if (consume_mode && last_light_unit_ms > 0.1 && last_install_unit_ms > 0.1)
+  {
+    cap_unit = last_light_unit_ms + last_install_unit_ms;
+  }
+  else if (consume_mode && last_light_unit_ms > 0.1)
+  {
+    cap_unit = last_light_unit_ms;
+  }
   if (consume_mode)
   {
     const int cap =
@@ -184,7 +200,8 @@ inline bool ShouldStopRelightApplySlice(double elapsed_ms, int applied_n,
             ? earned_cap
             : EarnedRelightApplyCap(
                   applied_n + 1, slice_ms, elapsed_ms, last_unit_apply_ms,
-                  true, visible_black_stalled_n, last_light_unit_ms);
+                  true, visible_black_stalled_n, last_light_unit_ms,
+                  last_install_unit_ms);
     if (applied_n >= cap)
     {
       return true;

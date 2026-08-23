@@ -263,6 +263,8 @@ public:
   /// is non-zero — stale bake (empty lightmap / missed MarkRelit remesh).
   bool ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
                               const UBlockWorld &world) const;
+  /// FZ2.7-B1: light revision baked into mesh at last commit (O(1) stale).
+  uint64_t GetMeshedLightRevision(glm::ivec3 chunk_coord) const;
 
   struct DarkFaceHit
   {
@@ -601,6 +603,7 @@ private:
     uint32_t GpuQuadCount{0};
     bool GpuTransparent{false};
     bool GpuHasDarkFace{false};
+    uint64_t MeshedLightRevision{0};
     std::vector<GpuBlockDrawRange> GpuBlockRanges;
   };
   struct PendingGpuApply
