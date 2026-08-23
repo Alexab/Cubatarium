@@ -932,3 +932,22 @@ python bin/tmp_fz2_gate_check.py bin/logs/perf_<new>.jsonl
 
 **Next gate:** manual ≥600s — expect `mark_relit_setup_ms ≈ 0` on cruise, install <12ms, apply_n ≥2.
 
+**Gate-of-record:** `perf_20260823-220902_34572` (~754s, commit `b280bfae`).
+
+| Metric | 211810 | 220902 | Gate |
+| --- | --- | --- | --- |
+| unit_apply_install_ms | 16.7 | **1.14** | PASS |
+| unit_apply_light_ms | 1.03 | **1.09** | PASS |
+| mark_relit_setup_ms | 0 | **≈0** | confirm B1e |
+| relight_apply_n steady med | 1 | **1** (p90=3, max=6) | FAIL |
+| apply_util steady | 0.05 | 0.05 | FAIL |
+| apply_binding CountCap% | ~82% FatUnit | **67% CountCap** but gate 19% | FAIL |
+| opaque_refs steady | 264 | **705** | FAIL (regression) |
+| sim_steady | 147 | **116** | PASS |
+| wall steady med | 142 | **117** | improved |
+| stream steady | 61 | 50 | FAIL |
+| revisit steady | 152 | 205 | FAIL |
+| VB steady | 81 | 81 | FAIL |
+
+**Verdict:** Tier-1 install **closed** (B1e root cause fixed). Throughput still blocked: cheap units disable `defer_side` → `throughput_mode` off → 1@8ms TimeSlice. Slim path side effect: `opaque_refs` +705 (skipped orphan/seam).
+
