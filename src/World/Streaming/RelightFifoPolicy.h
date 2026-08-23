@@ -189,6 +189,7 @@ inline double RelightApplyCapUnitMs(double last_unit_apply_ms,
 }
 
 /// FZ2.7-B2c: cruise slice wide enough for ≥2 cheap applies per drain.
+/// FZ2.7-B2d: widen to cap_unit×3 (≤16ms moving) so min_cap=3 fits in slice.
 inline double RelightThroughputSliceMs(double miss_reserved_ms, bool consume_mode,
                                        bool moving, bool throughput_mode,
                                        double cap_unit_ms)
@@ -198,19 +199,50 @@ inline double RelightThroughputSliceMs(double miss_reserved_ms, bool consume_mod
   {
     return slice_ms;
   }
-  if (cap_unit_ms > 0.1 && cap_unit_ms <= slice_ms * 0.5)
+  slice_ms = std::max(slice_ms, 12.0);
+  if (cap_unit_ms > 0.1)
   {
-    slice_ms = std::max(slice_ms, 12.0);
-  }
-  else
-  {
-    slice_ms = std::max(slice_ms, 12.0);
+    slice_ms = std::max(slice_ms, cap_unit_ms * 3.0);
+    const double cruise_max = moving ? 16.0 : 20.0;
+    slice_ms = std::min(slice_ms, cruise_max);
   }
   return slice_ms;
 }
 
-/// FZ2.7-B2b: earned multi-apply when consume OR primary_only defer.
-/// FZ2.7-B2c: latch when cheap unit / FIFO backlog / PL pressure (not only fat defer).
+/// FZ2.7-B2d: completed queue / fifo / PL depth — consumer should batch harder.
+inline bool RelightThroughputHasBacklog(int ready_at_start, int fifo_n,
+                                        int fifo_soft_cap, int pending_light_n)
+{
+  return ready_at_start >= 2 ||
+         (fifo_soft_cap > 0 && fifo_n >= (fifo_soft_cap * 2) / 3) ||
+         pending_light_n > 45;
+}
+
+/// FZ2.7-B2d: min applies before stop (apply_util≥0.15 ⇒ med≥3 when cheap+backlog).
+inline int RelightThroughputMinApplyCap(
+    bool throughput_mode, double cap_unit_ms, double slice_ms,
+    int visible_black_stalled_n, int ready_at_start, int fifo_n,
+    int fifo_soft_cap, int pending_light_n)
+{
+  if (!throughput_mode)
+  {
+    return 1;
+  }
+  if (visible_black_stalled_n > 0)
+  {
+    return 3;
+  }
+  const bool cheap = cap_unit_ms > 0.1 && cap_unit_ms <= slice_ms * 0.5;
+  if (cheap && RelightThroughputHasBacklog(ready_at_start, fifo_n, fifo_soft_cap,
+                                           pending_light_n))
+  {
+    return 3;
+  }
+  return 2;
+}
+
+/// FZ2.7-B2b: throughput_mode = consume OR primary_only defer.
+/// FZ2.7-B2d: backlog uses shared RelightThroughputHasBacklog helper.
 inline bool ShouldUseThroughputApplyCap(
     bool consume_mode, bool defer_side, bool enter_pass, double slice_ms,
     double last_unit_apply_ms, double last_light_unit_ms,
@@ -236,44 +268,40 @@ inline bool ShouldUseThroughputApplyCap(
   {
     return true;
   }
-  if (fifo_soft_cap > 0 && fifo_n >= (fifo_soft_cap * 2) / 3)
+  if (RelightThroughputHasBacklog(ready_at_start, fifo_n, fifo_soft_cap,
+                                  pending_light_n))
   {
     return true;
   }
-  if (pending_light_focus_n > 24 || pending_light_n > 45)
+  if (pending_light_focus_n > 24)
   {
     return true;
   }
   return false;
 }
 
-/// FZ2.5-Perf1: Transvoxel-style earned cap — fill time slice when unit cheap.
-/// FZ2.6: prefer light-only unit for cap math when available.
-/// FZ2.7-B5: use light+install when both available.
-/// FZ2.7-B2b: throughput_mode = consume OR primary_only.
+/// FZ2.7-B2b: throughput_mode = consume OR primary_only defer.
+/// FZ2.7-B2d: min_cap=3 when cheap unit + consumer backlog.
 inline int EarnedRelightApplyCap(int drain_budget, double slice_ms,
                                  double /*elapsed_ms*/,
                                  double last_unit_apply_ms, bool throughput_mode,
                                  int visible_black_stalled_n = 0,
                                  double last_light_unit_ms = 0.0,
-                                 double last_install_unit_ms = 0.0)
+                                 double last_install_unit_ms = 0.0,
+                                 int ready_at_start = 0, int fifo_n = 0,
+                                 int fifo_soft_cap = 0, int pending_light_n = 0)
 {
   if (!throughput_mode)
   {
     return drain_budget;
   }
-  double cap_unit = last_unit_apply_ms;
-  if (last_light_unit_ms > 0.1 && last_install_unit_ms > 0.1)
-  {
-    cap_unit = last_light_unit_ms + last_install_unit_ms;
-  }
-  else if (last_light_unit_ms > 0.1)
-  {
-    cap_unit = last_light_unit_ms;
-  }
-  const int min_cap = visible_black_stalled_n > 0 ? 3 : 2;
+  const double cap_unit = RelightApplyCapUnitMs(
+      last_unit_apply_ms, last_light_unit_ms, last_install_unit_ms);
+  const int min_cap = RelightThroughputMinApplyCap(
+      throughput_mode, cap_unit, slice_ms, visible_black_stalled_n,
+      ready_at_start, fifo_n, fifo_soft_cap, pending_light_n);
   const int time_cap =
-      (cap_unit > 0.1) ? static_cast<int>(slice_ms / cap_unit) : 2;
+      (cap_unit > 0.1) ? static_cast<int>(slice_ms / cap_unit) : min_cap;
   return std::min(drain_budget, std::max(min_cap, time_cap));
 }
 
@@ -288,32 +316,30 @@ inline bool ShouldStopRelightApplySlice(double elapsed_ms, int applied_n,
                                         double last_unit_apply_ms = 0.0,
                                         int visible_black_stalled_n = 0,
                                         double last_light_unit_ms = 0.0,
-                                        double last_install_unit_ms = 0.0)
+                                        double last_install_unit_ms = 0.0,
+                                        int ready_at_start = 0, int fifo_n = 0,
+                                        int fifo_soft_cap = 0,
+                                        int pending_light_n = 0)
 {
   if (enter_pass || applied_n < 1)
   {
     return false;
   }
-  double cap_unit = last_unit_apply_ms;
-  if (throughput_mode && last_light_unit_ms > 0.1 &&
-      last_install_unit_ms > 0.1)
-  {
-    cap_unit = last_light_unit_ms + last_install_unit_ms;
-  }
-  else if (throughput_mode && last_light_unit_ms > 0.1)
-  {
-    cap_unit = last_light_unit_ms;
-  }
+  const double cap_unit = RelightApplyCapUnitMs(
+      last_unit_apply_ms, last_light_unit_ms, last_install_unit_ms);
   if (throughput_mode)
   {
-    const int min_cap = visible_black_stalled_n > 0 ? 3 : 2;
+    const int min_cap = RelightThroughputMinApplyCap(
+        throughput_mode, cap_unit, slice_ms, visible_black_stalled_n,
+        ready_at_start, fifo_n, fifo_soft_cap, pending_light_n);
     const int cap =
         earned_cap > 0
             ? earned_cap
             : EarnedRelightApplyCap(
-                  applied_n + 1, slice_ms, elapsed_ms, last_unit_apply_ms,
-                  true, visible_black_stalled_n, last_light_unit_ms,
-                  last_install_unit_ms);
+                  applied_n + 1, slice_ms, elapsed_ms, last_unit_apply_ms, true,
+                  visible_black_stalled_n, last_light_unit_ms,
+                  last_install_unit_ms, ready_at_start, fifo_n, fifo_soft_cap,
+                  pending_light_n);
     if (applied_n >= cap)
     {
       return true;
@@ -451,10 +477,10 @@ inline int CruiseRelightApplyBudget(bool moving, double last_apply_ms,
   {
     cap = cap < 4 ? 4 : cap;
   }
-  // FZ2.7-B2c: cheap unit keeps multi-apply budget even if pin wobbled.
-  if (unit_ms > 0.1 && unit_ms < 4.0)
+  // FZ2.7-B2c/B2d: cheap unit keeps multi-apply budget even if pin wobbled.
+  if (unit_ms > 0.1 && unit_ms < 5.0)
   {
-    cap = std::max(cap, 2);
+    cap = std::max(cap, 3);
   }
   return requested < cap ? requested : cap;
 }

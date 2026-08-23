@@ -2107,8 +2107,33 @@ int main()
            "B2c: cruise throughput slice >=12ms");
     Expect(EarnedRelightApplyCap(20, 12.0, 0.0, 2.0, true, 0, 1.0, 1.0) >= 2,
            "B2c: earned cap >=2 for 2ms unit in 12ms slice");
-    Expect(CruiseRelightApplyBudget(true, 2.0, 6, false, false, 1) >= 2,
-           "B2c: cheap unit budget >=2 without fifo_pin_stable");
+    Expect(CruiseRelightApplyBudget(true, 2.0, 6, false, false, 1) >= 3,
+           "B2d: cheap unit budget >=3 without fifo_pin_stable");
+  }
+
+  // FZ2.7-B2d: min earned cap=3 when cheap unit + fifo backlog
+  {
+    using cutum::EarnedRelightApplyCap;
+    using cutum::RelightThroughputHasBacklog;
+    using cutum::RelightThroughputMinApplyCap;
+    using cutum::RelightThroughputSliceMs;
+    using cutum::ShouldStopRelightApplySlice;
+    Expect(RelightThroughputHasBacklog(0, 70, 96, 30),
+           "B2d: fifo 70/96 is backlog");
+    Expect(RelightThroughputMinApplyCap(true, 3.0, 16.0, 0, 0, 70, 96, 30) == 3,
+           "B2d: min_cap=3 cheap+backlog");
+    Expect(RelightThroughputMinApplyCap(true, 3.0, 16.0, 0, 0, 10, 96, 30) == 2,
+           "B2d: min_cap=2 cheap no backlog");
+    Expect(EarnedRelightApplyCap(20, 16.0, 0.0, 3.0, true, 0, 2.5, 0.1, 0, 70,
+                                 96, 55) >= 3,
+           "B2d: earned cap >=3 for 2.6ms unit+backlog");
+    Expect(RelightThroughputSliceMs(8.0, false, true, true, 5.0) >= 15.0,
+           "B2d: slice widens to cap_unit*3");
+    Expect(RelightThroughputSliceMs(8.0, false, true, true, 5.0) <= 16.0,
+           "B2d: moving cruise slice capped at 16ms");
+    Expect(!ShouldStopRelightApplySlice(10.0, 2, 16.0, false, true, 4, 3.0, 0,
+                                        2.5, 0.1, 0, 70, 96, 55),
+           "B2d: continue past 2 when min_cap=3");
   }
 
   // ColdSupply S0: ClampRelightDrainN

@@ -4192,7 +4192,9 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       miss_reserved_ms, consume_mode, moving, throughput_mode, cap_unit_prev);
   const int earned_cap = EarnedRelightApplyCap(
       max_per_frame, slice_ms, 0.0, unit_ms_prev, throughput_mode, vb_stalled_n,
-      light_unit_ms_prev, install_unit_ms_prev);
+      light_unit_ms_prev, install_unit_ms_prev, ready_at_start,
+      PhysicsTelemetryData.RelightFifoN, fifo_soft_cap,
+      PhysicsTelemetryData.PendingLightN);
   // RateMatch R0: DrainUpTo(1) loop so MissReservedMs slice can stop mid-budget
   // (DrainCompleted(N) would MarkRelit all N before any early-out).
   bool stopped_by_time = false;
@@ -4311,7 +4313,10 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     if (ShouldStopRelightApplySlice(elapsed_ms, applied, slice_ms, enter_pass,
                                     throughput_mode, earned_cap, unit_ms_prev,
                                     vb_stalled_n, light_unit_ms_prev,
-                                    install_unit_ms_prev))
+                                    install_unit_ms_prev, ready_at_start,
+                                    PhysicsTelemetryData.RelightFifoN,
+                                    fifo_soft_cap,
+                                    PhysicsTelemetryData.PendingLightN))
     {
       stopped_by_time = elapsed_ms >= slice_ms || applied >= earned_cap;
       stopped_by_cap = applied >= earned_cap;

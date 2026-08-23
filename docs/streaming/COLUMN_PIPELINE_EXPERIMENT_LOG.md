@@ -974,3 +974,27 @@ python bin/tmp_fz2_gate_check.py bin/logs/perf_<new>.jsonl
 
 **Target:** apply_n steady med≥2, apply_util≥0.15, apply_binding CountCap≥80%.
 
+---
+
+## FZ2.7-B2d — min cap=3 + slice×3 for apply_util (2026-08-23)
+
+**Parent:** gate `225006` — apply_n=2 PASS but apply_util=0.10 (need≥0.15).
+
+### Shipped
+
+| Change | Detail |
+| --- | --- |
+| Min cap 3 | `RelightThroughputMinApplyCap` — cheap unit + fifo/PL backlog → min 3 applies |
+| Slice widen | `RelightThroughputSliceMs` — max(12, cap_unit×3), cap 16ms moving |
+| Apply budget | `CruiseRelightApplyBudget` — unit<5ms → budget≥3 |
+| Backlog helper | `RelightThroughputHasBacklog` shared by latch + min cap |
+
+### Validate
+
+```text
+python bin/tmp_fz27_b_test_smoke.py
+python bin/tmp_fz2_gate_check.py bin/logs/perf_<new>.jsonl
+```
+
+**Target:** apply_util steady ≥0.15 (med apply_n≥3).
+
