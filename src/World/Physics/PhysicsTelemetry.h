@@ -110,11 +110,22 @@ struct PhysicsTelemetry
   /// P2: Capture (DrainRelightQueues) vs Apply (DrainAsyncRelightResults).
   double RelightCaptureMs{0.0};
   double RelightApplyMs{0.0};
+  /// FZ2.6-Perf0: light merge only (telem for budget math).
+  double RelightApplyLightMs{0.0};
+  /// FZ2.6-Perf0: MarkRelit+Dirty within same atomic iteration.
+  double RelightApplyInstallMs{0.0};
+  double RelightApplyLightMsPrev{0.0};
+  double RelightApplyInstallMsPrev{0.0};
   /// Previous frame (P2 apply budget / P5 dynamic bg_cap).
   double RelightDrainMsPrev{0.0};
   double RelightApplyMsPrev{0.0};
   /// Previous-frame Apply count (unit-cost estimator for cruise Apply budget).
   int RelightApplyNPrev{0};
+  /// FZ2.6-Perf0: binding constraint driver (ApplyBinding enum).
+  int ApplyBinding{0};
+  int ApplyBindingPrev{0};
+  /// FZ2.6-P0-A: raw VB before hysteresis publish.
+  int VisibleBlackFocusRawN{0};
   double MeshSyncMs{0.0};
   double MeshSnapshotMs{0.0};
   /// Wall time spent in RebuildChunkImmediate this frame (inside MeshEmergeMs).

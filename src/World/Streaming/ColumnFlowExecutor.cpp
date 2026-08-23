@@ -601,6 +601,10 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   {
     for (const glm::ivec2 &col : stale_dark_cols)
     {
+      if (world.ShouldDeferRepairReticketUntilGpuApplied(col))
+      {
+        continue;
+      }
       world.NoteColumnRepairNeeded(col);
     }
     LastStaleRepairWave = now;
@@ -630,15 +634,9 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       int no_ticket = 0;
       int progress_n = 0;
       int stalled_n = 0;
-      const auto &vb_telem = world.GetPhysicsTelemetry();
-      const bool consume_mode = ShouldConsumeTicketedVbDebt(
-          vb_telem.VisibleBlackNoTicketN, vb_telem.VisibleBlackFocusN,
-          vb_telem.VisibleBlackStalledN);
-      const bool ticketed_scan =
-          consume_mode && vb_telem.VisibleBlackNoTicketN <= 0;
       const int vb = world.CountVisibleBlackFocusMeshes(
           focus_ground_horiz, focus_radius, &no_ticket, &progress_n, &stalled_n,
-          ticketed_scan);
+          /*ticketed_consume_scan=*/false);
       auto &telem = world.GetPhysicsTelemetryMutable();
       telem.VisibleBlackFocusN = vb;
       telem.VisibleBlackNoTicketN = no_ticket;

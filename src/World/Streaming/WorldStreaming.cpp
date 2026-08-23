@@ -741,7 +741,9 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   // Idle: every frame. Cruise: every 4 frames (mirror unfinished sample).
   {
     static int visible_black_sample_cd = 0;
-    static int last_visible_black = 0;
+    static int vb_published = 0;
+    static int vb_pending_raw = 0;
+    static int vb_pending_stable = 0;
     static int last_visible_black_no_ticket = 0;
     static int last_visible_black_progress = 0;
     static int last_visible_black_stalled = 0;
@@ -749,19 +751,16 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     int no_ticket = 0;
     int progress_n = 0;
     int stalled_n = 0;
-    const auto &vb_telem = world.GetPhysicsTelemetry();
-    const bool consume_mode = ShouldConsumeTicketedVbDebt(
-        vb_telem.VisibleBlackNoTicketN, vb_telem.VisibleBlackFocusN,
-        vb_telem.VisibleBlackStalledN);
-    const bool ticketed_scan =
-        consume_mode && vb_telem.VisibleBlackNoTicketN <= 0;
-    if (!moving_for_telemetry)
+    const bool do_full_scan =
+        !moving_for_telemetry || visible_black_sample_cd <= 0;
+    if (do_full_scan)
     {
-      const int prev_vb = last_visible_black;
-      last_visible_black = world.CountVisibleBlackFocusMeshes(
+      const int prev_raw = vb_pending_raw;
+      const int raw_vb = world.CountVisibleBlackFocusMeshes(
           focus_ground, focus_radius, &no_ticket, &progress_n, &stalled_n,
-          ticketed_scan, vb_focus_stable_frames);
-      if (prev_vb > 0 && last_visible_black == prev_vb)
+          /*ticketed_consume_scan=*/false, vb_focus_stable_frames);
+      world.PhysicsTelemetryData.VisibleBlackFocusRawN = raw_vb;
+      if (prev_raw > 0 && raw_vb == prev_raw)
       {
         ++vb_focus_stable_frames;
       }
@@ -772,35 +771,40 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       last_visible_black_no_ticket = no_ticket;
       last_visible_black_progress = progress_n;
       last_visible_black_stalled = stalled_n;
-      visible_black_sample_cd = 0;
+      if (std::abs(raw_vb - vb_published) > 2)
+      {
+        vb_published = raw_vb;
+        vb_pending_raw = raw_vb;
+        vb_pending_stable = 0;
+      }
+      else if (raw_vb == vb_pending_raw)
+      {
+        ++vb_pending_stable;
+        if (vb_pending_stable >= 4)
+        {
+          vb_published = raw_vb;
+        }
+      }
+      else
+      {
+        vb_pending_raw = raw_vb;
+        vb_pending_stable = 1;
+      }
+      visible_black_sample_cd = moving_for_telemetry ? 4 : 0;
       UWorld::VisibleBlackFocusSample vb_sample{};
       vb_sample.frame_epoch = world.GetStreamingFrameEpoch();
-      vb_sample.focus_n = last_visible_black;
+      vb_sample.focus_n = vb_published;
       vb_sample.no_ticket_n = last_visible_black_no_ticket;
       vb_sample.progress_n = last_visible_black_progress;
       vb_sample.stalled_n = last_visible_black_stalled;
       vb_sample.valid = true;
       world.SetVisibleBlackFocusSample(vb_sample);
     }
-    else if (--visible_black_sample_cd <= 0)
+    else if (moving_for_telemetry)
     {
-      last_visible_black = world.CountVisibleBlackFocusMeshes(
-          focus_ground, focus_radius, &no_ticket, &progress_n, &stalled_n,
-          ticketed_scan, vb_focus_stable_frames);
-      last_visible_black_no_ticket = no_ticket;
-      last_visible_black_progress = progress_n;
-      last_visible_black_stalled = stalled_n;
-      visible_black_sample_cd = 4;
-      UWorld::VisibleBlackFocusSample vb_sample{};
-      vb_sample.frame_epoch = world.GetStreamingFrameEpoch();
-      vb_sample.focus_n = last_visible_black;
-      vb_sample.no_ticket_n = last_visible_black_no_ticket;
-      vb_sample.progress_n = last_visible_black_progress;
-      vb_sample.stalled_n = last_visible_black_stalled;
-      vb_sample.valid = true;
-      world.SetVisibleBlackFocusSample(vb_sample);
+      --visible_black_sample_cd;
     }
-    world.PhysicsTelemetryData.VisibleBlackFocusN = last_visible_black;
+    world.PhysicsTelemetryData.VisibleBlackFocusN = vb_published;
     world.PhysicsTelemetryData.VisibleBlackNoTicketN =
         last_visible_black_no_ticket;
     world.PhysicsTelemetryData.VisibleBlackProgressN =
@@ -1662,7 +1666,14 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           world.PhysicsTelemetryData.PostLoadRingNotReady > 0});
   if (early_budget.apply_vb_bg_floor)
   {
-    bg_budget = std::max(bg_budget, early_budget.vb_bg_budget_floor);
+    const auto &telem_bp = world.GetPhysicsTelemetry();
+    const int fifo_soft = tune_budget.RelightFifoSoftCap;
+    if (!ShouldSuppressProducerBoostWhenConsumerBound(
+            telem_bp.RelightApplyNPrev, telem_bp.RelightFifoN, fifo_soft,
+            static_cast<ApplyBinding>(telem_bp.ApplyBindingPrev)))
+    {
+      bg_budget = std::max(bg_budget, early_budget.vb_bg_budget_floor);
+    }
   }
   // Era31 I-T2: Relight carve-out under ocean heal (not stolen by emerge cap).
   // ColdWall S2a: VB-alone without PL/miss must not raise Capture floor.

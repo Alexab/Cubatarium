@@ -1137,6 +1137,8 @@ public:
                                    int vb_stable_frames = 0) const;
   /// Era17: Dirty / Inflight|Queued|Kicked / PendingLight for a column.
   bool ColumnHasRepairProgress(glm::ivec2 ground_xz) const;
+  /// FZ2.6-P1: do not re-ticket until GPU mesh applied for column.
+  bool ShouldDeferRepairReticketUntilGpuApplied(glm::ivec2 ground_xz) const;
   /// PendingLight columns that already have a greedy mesh (dark preview).
   int CountPendingDarkFocusMeshes(glm::ivec3 focus_ground_chunk,
                                   int radius_chunks) const;

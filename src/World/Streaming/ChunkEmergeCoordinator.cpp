@@ -1875,9 +1875,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const bool consume_mode = ShouldConsumeTicketedVbDebt(
           telem.VisibleBlackNoTicketN, telem.VisibleBlackFocusN,
           telem.VisibleBlackStalledN);
-      if (ShouldPrioritizeMeshScheduleForTicketedConsume(
+      const bool prioritize_drain =
+          ShouldPrioritizeMeshDrainForTicketedConsume(
+              consume_mode, telem.MarkRelitScheduleN,
+              telem.VisibleBlackStalledN);
+      const bool prioritize_schedule =
+          ShouldPrioritizeMeshScheduleForTicketedConsume(
               consume_mode, telem.VisibleBlackFocusN,
-              telem.VisibleBlackStalledN))
+              telem.VisibleBlackStalledN, telem.MarkRelitScheduleN);
+      if (prioritize_drain)
+      {
+        mesh_drain = std::max(mesh_drain, 16);
+        mesh_schedule = std::min(mesh_schedule, mesh_drain);
+      }
+      else if (prioritize_schedule && telem.RelightApplyNPrev >= 2)
       {
         mesh_schedule = std::max(mesh_schedule, mesh_drain);
       }
@@ -2773,11 +2784,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const bool consume_mode = ShouldConsumeTicketedVbDebt(
         telem.VisibleBlackNoTicketN, telem.VisibleBlackFocusN,
         telem.VisibleBlackStalledN);
-    const bool prioritize_mesh = ShouldPrioritizeMeshScheduleForTicketedConsume(
-        consume_mode, telem.VisibleBlackFocusN, telem.VisibleBlackStalledN);
+    const bool prioritize_drain = ShouldPrioritizeMeshDrainForTicketedConsume(
+        consume_mode, telem.MarkRelitScheduleN, telem.VisibleBlackStalledN);
+    const bool prioritize_schedule =
+        ShouldPrioritizeMeshScheduleForTicketedConsume(
+            consume_mode, telem.VisibleBlackFocusN, telem.VisibleBlackStalledN,
+            telem.MarkRelitScheduleN);
     if (!moving)
     {
-      if (prioritize_mesh)
+      if (prioritize_drain)
+      {
+        mesh_drain = std::max(mesh_drain, 16);
+        mesh_schedule = std::min(mesh_schedule, mesh_drain);
+      }
+      else if (prioritize_schedule && telem.RelightApplyNPrev >= 2)
       {
         mesh_schedule = std::max(mesh_schedule, 12);
         mesh_drain = std::max(mesh_drain, last_frame_ms <= 16.0 ? 10 : 6);

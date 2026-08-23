@@ -7,6 +7,91 @@
 namespace cutum
 {
 
+/// FZ2.6-Perf0: why Apply loop stopped (binding constraint SoT).
+enum class ApplyBinding : uint8_t
+{
+  QueueEmpty = 0,
+  TimeSlice = 1,
+  CountCap = 2,
+  FatUnit = 3,
+};
+
+/// FZ2.6-Perf1: consume idle slice (not defer stage).
+inline double RelightConsumeSliceMs(double miss_reserved_ms, bool consume_mode,
+                                    bool moving)
+{
+  if (consume_mode && !moving)
+  {
+    return std::max(miss_reserved_ms, 16.0);
+  }
+  return miss_reserved_ms;
+}
+
+/// FZ2.6-Perf2: do not boost Capture/mesh when consumer-bound.
+inline bool ShouldSuppressProducerBoostWhenConsumerBound(
+    int apply_n_prev, int fifo_n, int soft_cap, ApplyBinding binding)
+{
+  if (soft_cap <= 0 || fifo_n < soft_cap - 1)
+  {
+    return false;
+  }
+  if (apply_n_prev >= 2)
+  {
+    return false;
+  }
+  return binding == ApplyBinding::TimeSlice || binding == ApplyBinding::FatUnit;
+}
+
+/// FZ2.6-P0b: stalled ticket completion prefers mesh_drain over schedule.
+inline bool ShouldPrioritizeMeshDrainForTicketedConsume(
+    bool consume_mode, int mark_relit_schedule_n,
+    int visible_black_stalled_n, int vb_thresh = 40)
+{
+  return consume_mode && mark_relit_schedule_n > 0 &&
+         visible_black_stalled_n > 0;
+}
+
+/// FZ2.6-P0b: schedule boost only when drain path not sufficient.
+inline bool ShouldPrioritizeMeshScheduleForTicketedConsume(
+    bool consume_mode, int visible_black_focus_n,
+    int visible_black_stalled_n, int mark_relit_schedule_n,
+    int vb_thresh = 40)
+{
+  if (ShouldPrioritizeMeshDrainForTicketedConsume(
+          consume_mode, mark_relit_schedule_n, visible_black_stalled_n,
+          vb_thresh))
+  {
+    return false;
+  }
+  return consume_mode && visible_black_focus_n > vb_thresh &&
+         visible_black_stalled_n > 0;
+}
+
+/// FZ2.6-Perf0: classify binding driver from drain outcome.
+inline ApplyBinding ClassifyApplyBinding(int applied_n, int ready_at_start,
+                                         bool stopped_by_time,
+                                         bool stopped_by_cap, double unit_ms,
+                                         double slice_ms)
+{
+  if (applied_n <= 0 && ready_at_start <= 0)
+  {
+    return ApplyBinding::QueueEmpty;
+  }
+  if (stopped_by_cap && !stopped_by_time)
+  {
+    return ApplyBinding::CountCap;
+  }
+  if (applied_n == 1 && unit_ms > slice_ms * 0.9)
+  {
+    return ApplyBinding::FatUnit;
+  }
+  if (stopped_by_time)
+  {
+    return ApplyBinding::TimeSlice;
+  }
+  return ApplyBinding::CountCap;
+}
+
 /// Era40: miss / SoftDefer-empty Relight pin covers LitDrawable ring (not only
 /// near horiz<=2). Matches hide-until-lit publication radius.
 inline int RelightMissPinMaxHoriz(int ring = kVisualStageLitDrawableHoriz)
@@ -55,20 +140,22 @@ inline bool ShouldConsumeTicketedVbDebt(int vb_no_ticket_n,
 }
 
 /// FZ2.5-Perf1: Transvoxel-style earned cap — fill time slice when unit cheap.
+/// FZ2.6: prefer light-only unit for cap math when available.
 inline int EarnedRelightApplyCap(int drain_budget, double slice_ms,
                                  double /*elapsed_ms*/,
                                  double last_unit_apply_ms, bool consume_mode,
-                                 int visible_black_stalled_n = 0)
+                                 int visible_black_stalled_n = 0,
+                                 double last_light_unit_ms = 0.0)
 {
   if (!consume_mode)
   {
     return drain_budget;
   }
+  const double cap_unit =
+      last_light_unit_ms > 0.1 ? last_light_unit_ms : last_unit_apply_ms;
   const int min_cap = visible_black_stalled_n > 0 ? 3 : 2;
   const int time_cap =
-      (last_unit_apply_ms > 0.1)
-          ? static_cast<int>(slice_ms / last_unit_apply_ms)
-          : 2;
+      (cap_unit > 0.1) ? static_cast<int>(slice_ms / cap_unit) : 2;
   return std::min(drain_budget, std::max(min_cap, time_cap));
 }
 
@@ -80,12 +167,16 @@ inline bool ShouldStopRelightApplySlice(double elapsed_ms, int applied_n,
                                         bool consume_mode = false,
                                         int earned_cap = 0,
                                         double last_unit_apply_ms = 0.0,
-                                        int visible_black_stalled_n = 0)
+                                        int visible_black_stalled_n = 0,
+                                        double last_light_unit_ms = 0.0)
 {
   if (enter_pass || applied_n < 1)
   {
     return false;
   }
+  const double cap_unit =
+      (consume_mode && last_light_unit_ms > 0.1) ? last_light_unit_ms
+                                                 : last_unit_apply_ms;
   if (consume_mode)
   {
     const int cap =
@@ -93,15 +184,14 @@ inline bool ShouldStopRelightApplySlice(double elapsed_ms, int applied_n,
             ? earned_cap
             : EarnedRelightApplyCap(
                   applied_n + 1, slice_ms, elapsed_ms, last_unit_apply_ms,
-                  true, visible_black_stalled_n);
+                  true, visible_black_stalled_n, last_light_unit_ms);
     if (applied_n >= cap)
     {
       return true;
     }
-    if (last_unit_apply_ms > 0.1)
+    if (cap_unit > 0.1)
     {
-      const int likely_cap =
-          static_cast<int>(slice_ms / last_unit_apply_ms);
+      const int likely_cap = static_cast<int>(slice_ms / cap_unit);
       if (applied_n >= likely_cap)
       {
         return true;
@@ -113,6 +203,15 @@ inline bool ShouldStopRelightApplySlice(double elapsed_ms, int applied_n,
   return elapsed_ms >= slice_ms;
 }
 
+// Legacy name kept for FZ2.5-Perf2 mesh_schedule (superseded by FZ2.6 split).
+inline bool ShouldPrioritizeMeshScheduleForTicketedConsumeLegacy(
+    bool consume_mode, int visible_black_focus_n,
+    int visible_black_stalled_n, int vb_thresh = 40)
+{
+  return consume_mode && visible_black_focus_n > vb_thresh &&
+         visible_black_stalled_n > 0;
+}
+
 /// FZ2.5-P0b: stalled ticket on lit ring — force MarkRelit schedule path.
 inline bool ShouldForceMarkRelitForTicketedStale(
     bool consume_mode, bool has_repair_ticket, bool fully_dark,
@@ -121,15 +220,6 @@ inline bool ShouldForceMarkRelitForTicketedStale(
 {
   return consume_mode && has_repair_ticket && fully_dark && still_stale &&
          horiz >= 0 && horiz <= ring;
-}
-
-/// FZ2.5-Perf2: ticketed consume needs mesh_schedule, not relight starvation.
-inline bool ShouldPrioritizeMeshScheduleForTicketedConsume(
-    bool consume_mode, int visible_black_focus_n,
-    int visible_black_stalled_n, int vb_thresh = 40)
-{
-  return consume_mode && visible_black_focus_n > vb_thresh &&
-         visible_black_stalled_n > 0;
 }
 
 /// S0: Apply drain count = min(budget, ready). Budget ≤0 → 0.

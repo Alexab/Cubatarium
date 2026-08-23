@@ -771,3 +771,47 @@ Script: `python bin/tmp_fz25_bottleneck.py bin/logs/perf_20260823-114401_15212.j
 - [ ] VB steady <40 visual DoD (validate ≥240s manual)
 
 **Validate:** `python bin/tmp_fz2_step_validate.py --step FZ25-C8 --build --scenario fz-manual-plateau --baseline-manual bin/logs/perf_20260823-114401_15212.jsonl`
+
+---
+
+## FZ2.6 — Budget reality + validation loop (2026-08-23)
+
+**Baseline:** `perf_20260823-125933_8084.jsonl` (post-FZ2.5)  
+**Regression guard:** `perf_20260823-114401_15212.jsonl` (FZ2.4)
+
+### BRM summary
+
+| BRM | Finding |
+| --- | --- |
+| BRM-1 | Count budget (20) not binding; time budget (8ms) binds at unit~19ms |
+| BRM-2 | Phantom 3ms unit cost invalidated EarnedRelightApplyCap |
+| BRM-3 | Producer ≫ consumer (fifo~62, apply_n=1) |
+| BRM-4 | stream_ms~65 vs phase budget 24ms |
+| BRM-5 | FZ2.5 producer floors increased opaque_refs without consume gain |
+
+### Tracks shipped
+
+| Track | Change |
+| --- | --- |
+| Perf-0 | `ApplyBinding` telem, light/install ms split, `visible_black_focus_raw_n` |
+| Perf-1 | Idle consume slice 16ms, light-unit earned cap, atomic timing split |
+| Perf-2 | Consumer-bound suppress bg_floor/mesh_schedule when apply_n≤1 |
+| Perf-3 | Stream hitch EMA for movement clamp |
+| P0-A | VB SoT full scan + hysteresis (no telem ticketed early-out) |
+| P0-B | Stalled → mesh_drain priority over mesh_schedule |
+| P1 | `ShouldDeferRepairReticketUntilGpuApplied` |
+
+### Validation infra
+
+- `bin/tmp_fz26_step_validate.py` — per-track gates + no-teleport autofly
+- `bin/tmp_fz26_delta.py` — segment delta vs 125933
+- `bin/tmp_fz26_metric_audit.py` — post-PASS metric validity
+- Extended `bin/tmp_fz2_gate_check.py` FZ26 gates
+
+**Validate C8:**
+
+```text
+python bin/tmp_fz26_step_validate.py --step FZ26-C8 --build --scenario fz-manual-long
+python tools/flight_sim_suite.py --only fz-manual-plateau fz-manual-long fz-manual-parity --phase-id FZ26-C8
+```
+

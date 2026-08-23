@@ -771,13 +771,21 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.AsyncIoMs = 0.0;
   PhysicsTelemetryData.RelightDrainMsPrev = PhysicsTelemetryData.RelightDrainMs;
   PhysicsTelemetryData.RelightApplyMsPrev = PhysicsTelemetryData.RelightApplyMs;
+  PhysicsTelemetryData.RelightApplyLightMsPrev =
+      PhysicsTelemetryData.RelightApplyLightMs;
+  PhysicsTelemetryData.RelightApplyInstallMsPrev =
+      PhysicsTelemetryData.RelightApplyInstallMs;
   PhysicsTelemetryData.RelightApplyNPrev = PhysicsTelemetryData.RelightApplyN;
+  PhysicsTelemetryData.ApplyBindingPrev = PhysicsTelemetryData.ApplyBinding;
   PhysicsTelemetryData.RelightFifoDropNPrev = PhysicsTelemetryData.RelightFifoDropN;
   PhysicsTelemetryData.RelightFifoPinDropNPrev =
       PhysicsTelemetryData.RelightFifoPinDropN;
   PhysicsTelemetryData.RelightDrainMs = 0.0;
   PhysicsTelemetryData.RelightCaptureMs = 0.0;
   PhysicsTelemetryData.RelightApplyMs = 0.0;
+  PhysicsTelemetryData.RelightApplyLightMs = 0.0;
+  PhysicsTelemetryData.RelightApplyInstallMs = 0.0;
+  PhysicsTelemetryData.ApplyBinding = 0;
   PhysicsTelemetryData.RelightCaptureColHoriz = -1;
   PhysicsTelemetryData.RelightCaptureFinalize = 0;
   PhysicsTelemetryData.RelightCaptureBandCySpan = 0;
@@ -950,12 +958,21 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.DirtyRemeshN = GetMeshService().GetLastDirtyRemeshN();
   HarvestUnfinishedPrepTelem(PhysicsTelemetryData);
 
-  // Hitch for streaming speed clamp / budgets: prefer wall, else stream+emerge.
+  // Hitch for streaming speed clamp / budgets: EMA stream+emerge (FZ2.6-Perf3).
   const double stream_hitch =
       PhysicsTelemetryData.StreamMs + PhysicsTelemetryData.MeshEmergeMs;
-  if (stream_hitch > GetLastMovementFrameMs())
+  static double stream_hitch_ema = 0.0;
+  if (stream_hitch_ema <= 0.0)
   {
-    SetLastMovementFrameMs(stream_hitch);
+    stream_hitch_ema = stream_hitch;
+  }
+  else
+  {
+    stream_hitch_ema = 0.2 * stream_hitch + 0.8 * stream_hitch_ema;
+  }
+  if (stream_hitch_ema > GetLastMovementFrameMs())
+  {
+    SetLastMovementFrameMs(stream_hitch_ema);
   }
 }
 

@@ -4199,6 +4199,27 @@ bool UWorld::ColumnHasRepairProgress(glm::ivec2 ground_xz) const
   return false;
 }
 
+bool UWorld::ShouldDeferRepairReticketUntilGpuApplied(
+    glm::ivec2 ground_xz) const
+{
+  if (!MeshService)
+  {
+    return false;
+  }
+  const int max_cy =
+      std::max(0, FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE));
+  for (int cy = 0; cy <= max_cy; ++cy)
+  {
+    const glm::ivec3 coord(ground_xz.x, cy, ground_xz.y);
+    if (MeshService->IsPendingGpuApply(coord) ||
+        MeshService->IsGpuExtractInFlight(coord))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 int UWorld::CountPendingDarkFocusMeshes(glm::ivec3 focus_ground_chunk,
                                         int radius_chunks) const
 {
@@ -4921,21 +4942,34 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       AsyncRelightColumnsInFlight.erase(glm::ivec2(chunk.x, chunk.z));
     }
   }
-  const double slice_ms =
+  const double miss_reserved_ms =
       static_cast<double>(URuntimeTuning::Get().MissReservedMs);
+  const bool moving =
+      LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold;
   const bool enter_pass = EnterFovLitPassActive;
   const int vb_no_ticket_n = PhysicsTelemetryData.VisibleBlackNoTicketN;
   const int vb_focus_n = PhysicsTelemetryData.VisibleBlackFocusN;
   const int vb_stalled_n = PhysicsTelemetryData.VisibleBlackStalledN;
   const bool consume_mode =
       ShouldConsumeTicketedVbDebt(vb_no_ticket_n, vb_focus_n, vb_stalled_n);
+  const double slice_ms =
+      RelightConsumeSliceMs(miss_reserved_ms, consume_mode, moving);
   const double unit_ms_prev =
       PhysicsTelemetryData.RelightApplyNPrev > 0
           ? (PhysicsTelemetryData.RelightApplyMsPrev /
              static_cast<double>(PhysicsTelemetryData.RelightApplyNPrev))
           : PhysicsTelemetryData.RelightApplyMsPrev;
+  const double light_unit_ms_prev =
+      PhysicsTelemetryData.RelightApplyNPrev > 0 &&
+              PhysicsTelemetryData.RelightApplyLightMsPrev > 0.0
+          ? (PhysicsTelemetryData.RelightApplyLightMsPrev /
+             static_cast<double>(PhysicsTelemetryData.RelightApplyNPrev))
+          : 0.0;
+  const int ready_at_start =
+      AsyncRelight ? static_cast<int>(AsyncRelight->GetCompletedSize()) : 0;
   const int earned_cap = EarnedRelightApplyCap(
-      max_per_frame, slice_ms, 0.0, unit_ms_prev, consume_mode, vb_stalled_n);
+      max_per_frame, slice_ms, 0.0, unit_ms_prev, consume_mode, vb_stalled_n,
+      light_unit_ms_prev);
   const glm::ivec3 pl_focus_chunk =
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
   const int pl_focus_n = CountPendingLightBeforeMeshNear(
@@ -4943,8 +4977,11 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       GetStreamingFocusRadius());
   // RateMatch R0: DrainUpTo(1) loop so MissReservedMs slice can stop mid-budget
   // (DrainCompleted(N) would MarkRelit all N before any early-out).
+  bool stopped_by_time = false;
+  bool stopped_by_cap = false;
   while (applied < max_per_frame)
   {
+    const auto iter_t0 = std::chrono::high_resolution_clock::now();
     std::vector<RelightComputeResult> batch =
         AsyncRelight->DrainCompleted(/*max_per_frame=*/1);
     if (batch.empty())
@@ -4980,6 +5017,10 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
         }
       }
     }
+    const auto light_t1 = std::chrono::high_resolution_clock::now();
+    const double light_ms =
+        std::chrono::duration<double, std::milli>(light_t1 - iter_t0).count();
+    PhysicsTelemetryData.RelightApplyLightMs += light_ms;
     std::vector<glm::ivec2> primary_grounds;
     primary_grounds.reserve(result.source_block_positions.size());
     for (const glm::ivec3 &pos : result.source_block_positions)
@@ -5014,6 +5055,9 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                              result.finalize_pending_gate,
                              /*primary_only=*/primary_only_apply);
     }
+    const auto install_t1 = std::chrono::high_resolution_clock::now();
+    PhysicsTelemetryData.RelightApplyInstallMs +=
+        std::chrono::duration<double, std::milli>(install_t1 - light_t1).count();
     ++PhysicsTelemetryData.RelightApplyN;
     if (result.finalize_pending_gate)
     {
@@ -5047,8 +5091,10 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
             .count();
     if (ShouldStopRelightApplySlice(elapsed_ms, applied, slice_ms, enter_pass,
                                     consume_mode, earned_cap, unit_ms_prev,
-                                    vb_stalled_n))
+                                    vb_stalled_n, light_unit_ms_prev))
     {
+      stopped_by_time = elapsed_ms >= slice_ms || applied >= earned_cap;
+      stopped_by_cap = applied >= earned_cap;
       break;
     }
   }
@@ -5058,6 +5104,13 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     PhysicsTelemetryData.FullRelightMs =
         std::chrono::duration<double, std::milli>(t1 - t0).count();
   }
+  const double frame_unit_ms =
+      applied > 0
+          ? PhysicsTelemetryData.FullRelightMs / static_cast<double>(applied)
+          : unit_ms_prev;
+  PhysicsTelemetryData.ApplyBinding = static_cast<int>(ClassifyApplyBinding(
+      applied, ready_at_start, stopped_by_time, stopped_by_cap, frame_unit_ms,
+      slice_ms));
   PhysicsTelemetryData.AsyncRelightInflight =
       static_cast<uint64_t>(AsyncRelight->GetInFlightCount());
   PhysicsTelemetryData.RelightDiscardedLate =

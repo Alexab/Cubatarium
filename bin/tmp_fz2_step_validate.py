@@ -305,6 +305,7 @@ def main() -> int:
         phase_id = (
             args.step
             if args.step.startswith("FZ25")
+            or args.step.startswith("FZ26")
             or args.step.startswith("FZ24")
             or args.step.startswith("FZ23")
             or args.step.startswith("FZ22")

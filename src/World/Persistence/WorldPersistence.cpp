@@ -1048,7 +1048,14 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       ShouldSuppressPendingLightNote(vb_no_ticket_n, pending_light_focus_n,
                                      world.GetPhysicsTelemetry().VisibleBlackFocusN))
   {
-    bg_cap = std::max(bg_cap, std::max(2, EnterFovRelightCaptureBudget() / 2));
+    const auto &telem_pl = world.GetPhysicsTelemetry();
+    const int fifo_soft = tune.RelightFifoSoftCap;
+    if (!ShouldSuppressProducerBoostWhenConsumerBound(
+            telem_pl.RelightApplyNPrev, telem_pl.RelightFifoN, fifo_soft,
+            static_cast<ApplyBinding>(telem_pl.ApplyBindingPrev)))
+    {
+      bg_cap = std::max(bg_cap, std::max(2, EnterFovRelightCaptureBudget() / 2));
+    }
   }
   band_cy = EffectiveRelightCaptureBandCy(band_cy, moving && !enter_fov_lit,
                                           visual_holes);

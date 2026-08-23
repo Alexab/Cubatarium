@@ -25,9 +25,20 @@ GATES = {
     "relight_apply_n_steady": ("relight_apply_n", "steady_120_plus", "med_min", 2),
     "apply_util_steady": ("relight_apply_n", "steady_120_plus", "apply_util", 0.15),
     "stalled_tail_max": ("visible_black_stalled_n", "tail30", "max", 10),
+    # FZ2.6 gates
+    "sim_steady_med": ("sim_ms", "steady_120_plus", "med", 135),
+    "vb_blink_steady": ("visible_black_focus_n", "steady_120_plus", "flip_rate", 0.15),
+    "phase_budget_over_pct": ("phase_budget_over", "steady_120_plus", "pct_true", 0.50),
+    "unit_apply_light_ms": ("relight_apply_light_ms", "steady_120_plus", "unit_med", 5),
+    "unit_apply_install_ms": ("relight_apply_install_ms", "steady_120_plus", "unit_med", 8),
+    "apply_binding_time_pct": ("apply_binding", "steady_120_plus", "pct_binding_min", 0.80),
+    "opaque_refs_steady": ("opaque_refs_cpu_vis", "steady_120_plus", "med", 400),
+    "mark_relit_steady": ("mark_relit_schedule_n", "steady_120_plus", "med_min", 0.5),
 }
 
 INFERRED_DRAIN_BUDGET = 20
+APPLY_BINDING_TIME_SLICE = 1
+APPLY_BINDING_FAT_UNIT = 3
 
 
 def load(p):
@@ -90,6 +101,35 @@ def unit_apply_ms(rows):
     return med(units) if units else None
 
 
+def unit_field_ms(rows, key):
+    units = []
+    for r in rows:
+        n = int(r.get("relight_apply_n") or 0)
+        ms = float(r.get(key) or 0)
+        if n > 0 and ms > 0:
+            units.append(ms / n)
+    return med(units) if units else None
+
+
+def pct_true(rows, key):
+    if not rows:
+        return None
+    xs = [int(r.get(key) or 0) for r in rows]
+    return sum(1 for x in xs if x) / len(xs)
+
+
+def pct_binding_time(rows):
+    if not rows:
+        return None
+    xs = [int(r.get("apply_binding") or 0) for r in rows if r.get("apply_binding") is not None]
+    if not xs:
+        return None
+    time_like = sum(
+        1 for x in xs if x in (APPLY_BINDING_TIME_SLICE, APPLY_BINDING_FAT_UNIT)
+    )
+    return time_like / len(xs)
+
+
 def gate_val(rows, key, segment, stat):
     n = len(rows)
     if segment == "enter_0_60":
@@ -120,6 +160,14 @@ def gate_val(rows, key, segment, stat):
         return sum(1 for r in rows if r.get(key))
     if stat == "apply_util":
         return apply_util(part)
+    if stat == "unit_med":
+        return unit_field_ms(part, key)
+    if stat == "pct_true":
+        return pct_true(part, key)
+    if stat == "pct_binding_time":
+        return pct_binding_time(part)
+    if stat == "pct_binding_min":
+        return pct_binding_time(part)
     return None
 
 
@@ -187,11 +235,23 @@ def analyze(name, path):
             print(f"    {gname}: (skip: tail n={n} < 15)")
             continue
         val = gate_val(u, key, segment, stat)
+        if val is None and stat in (
+            "unit_med",
+            "pct_true",
+            "pct_binding_time",
+            "pct_binding_min",
+        ):
+            print(f"    {gname}: (skip: field missing in log)")
+            continue
         if stat == "sum":
             ok = val == target
         elif stat == "med_min":
             ok = val is not None and val >= target
         elif stat == "apply_util":
+            ok = val is not None and val >= target
+        elif stat in ("pct_true",):
+            ok = val is not None and val < target
+        elif stat == "pct_binding_min":
             ok = val is not None and val >= target
         else:
             ok = val is not None and val < target
@@ -200,6 +260,10 @@ def analyze(name, path):
             tgt = f">={target}"
         elif stat == "apply_util":
             tgt = f">={target}"
+        elif stat == "pct_binding_min":
+            tgt = f">={target}"
+        elif stat in ("pct_true",):
+            tgt = f"<{target}"
         else:
             tgt = f"<{target}"
         val_s = f"{val:.2f}" if isinstance(val, float) else str(val)

@@ -2032,6 +2032,36 @@ int main()
            "FZ25-P0b: rim outside lit ring");
   }
 
+  // FZ2.6: budget reality + consumer backpressure + mesh drain split
+  {
+    using cutum::ApplyBinding;
+    using cutum::ClassifyApplyBinding;
+    using cutum::EarnedRelightApplyCap;
+    using cutum::RelightConsumeSliceMs;
+    using cutum::ShouldPrioritizeMeshDrainForTicketedConsume;
+    using cutum::ShouldPrioritizeMeshScheduleForTicketedConsume;
+    using cutum::ShouldSuppressProducerBoostWhenConsumerBound;
+    Expect(RelightConsumeSliceMs(8.0, true, false) >= 16.0,
+           "FZ26: idle consume slice >=16ms");
+    Expect(RelightConsumeSliceMs(8.0, true, true) == 8.0,
+           "FZ26: moving consume keeps MissReservedMs");
+    Expect(EarnedRelightApplyCap(20, 16.0, 0.0, 19.0, true, 0, 3.0) >= 5,
+           "FZ26: light-unit cap >> bundled cap");
+    Expect(ShouldSuppressProducerBoostWhenConsumerBound(
+               1, 63, 64, ApplyBinding::TimeSlice),
+           "FZ26: suppress producer when consumer-bound");
+    Expect(!ShouldSuppressProducerBoostWhenConsumerBound(
+               2, 63, 64, ApplyBinding::TimeSlice),
+           "FZ26: no suppress when apply_n>=2");
+    Expect(ShouldPrioritizeMeshDrainForTicketedConsume(true, 1, 5),
+           "FZ26-P0b: drain when mark_relit+stalled");
+    Expect(!ShouldPrioritizeMeshScheduleForTicketedConsume(true, 81, 5, 1),
+           "FZ26-P0b: schedule off when drain active");
+    Expect(ClassifyApplyBinding(1, 5, true, false, 19.0, 8.0) ==
+               ApplyBinding::FatUnit,
+           "FZ26: fat unit binding");
+  }
+
   // ColdSupply S0: ClampRelightDrainN
   {
     using cutum::ClampRelightDrainN;
