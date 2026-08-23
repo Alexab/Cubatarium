@@ -402,6 +402,8 @@ struct PhysicsTelemetry
   int StaleProbeCallsN{0};
   /// FZ2.7-B1b: MarkRelit install sub-breakdown (spike telem).
   double MarkRelitTotalMs{0.0};
+  double MarkRelitSetupMs{0.0};
+  double MarkRelitPrimaryColumnMs{0.0};
   double MarkRelitSnapshotMs{0.0};
   double MarkRelitPlanMs{0.0};
   double MarkRelitExecMs{0.0};
@@ -412,6 +414,7 @@ struct PhysicsTelemetry
   double MarkRelitPrefetchMs{0.0};
   double MarkRelitOrphanGroundMs{0.0};
   double MarkRelitEmptyRelitMs{0.0};
+  int MarkRelitBandsN{0};
   /// Schedule path suppressed by enter-settled gate (still classified Schedule).
   int MarkRelitSuppressEnterSettledN{0};
   /// StickyRemeshAfterLight insert/erase reasons (per frame).

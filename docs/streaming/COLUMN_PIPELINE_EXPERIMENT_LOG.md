@@ -906,3 +906,29 @@ python bin/tmp_fz2_gate_check.py bin/logs/perf_<new>.jsonl
 
 **Gate-of-record:** fz-manual-long ≥600s required for B6 closeout.
 
+**Manual gate-of-record:** `perf_20260823-211810_10940` (~780s). install med **16.7ms** (↓ from 19), apply_n max=3 med=1, orphan=0, opaque_refs **264 PASS**. Forensic: ~16.9ms mark_relit_total with sub-timers ~0.04ms → blind cost = `CountEnterFovLitDebt` on cruise.
+
+---
+
+## FZ2.7-B1e/f + B2b + B3 — setup gate + band filter + defer throughput (2026-08-23)
+
+**Parent:** B1c/d gate `211810` — install still >8ms on steady cruise.
+
+### Shipped
+
+| Change | Detail |
+| --- | --- |
+| B1e setup gate | `CountEnterFovLitDebt` only when `enter_gate`; telem `mark_relit_setup_ms`, `mark_relit_primary_column_ms`, `mark_relit_bands_n` |
+| B1f band filter | `ShouldFilterMarkRelitBandsToPrimary` — skip neighbor bands on primary_only/slim |
+| B2b defer throughput | `ShouldUseThroughputApplyCap(consume, defer_side)`; slice ≥12ms on defer; `throughput_mode` in earned_cap/stop |
+| B3 enter slim | `ShouldUseEnterSlimInstallPath` — enter+primary_only → `PlanPrimaryConsume` |
+
+### Validate
+
+```text
+python bin/tmp_fz27_b_test_smoke.py   # ALL PASS
+python bin/tmp_fz2_gate_check.py bin/logs/perf_<new>.jsonl
+```
+
+**Next gate:** manual ≥600s — expect `mark_relit_setup_ms ≈ 0` on cruise, install <12ms, apply_n ≥2.
+

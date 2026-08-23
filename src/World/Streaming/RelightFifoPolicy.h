@@ -146,6 +146,13 @@ inline bool ShouldUsePrimarySlimInstallPath(bool primary_only, bool enter_gate,
   return primary_only && !enter_gate && !enter_quiesce;
 }
 
+/// FZ2.7-B3: enter primary_only also uses slim install (no orphan seamed).
+inline bool ShouldUseEnterSlimInstallPath(bool enter_gate, bool enter_quiesce,
+                                          bool primary_only)
+{
+  return enter_gate && !enter_quiesce && primary_only;
+}
+
 /// FZ2.7-B1d: orphan ground MarkTerrain is expensive — skip on slim paths.
 inline bool ShouldSkipMarkRelitOrphanGround(bool primary_only,
                                             bool consume_mode)
@@ -153,17 +160,36 @@ inline bool ShouldSkipMarkRelitOrphanGround(bool primary_only,
   return primary_only || consume_mode;
 }
 
+/// FZ2.7-B1e: FOV lit-debt scan only while enter gate is active.
+inline bool ShouldCountEnterFovLitDebtForMarkRelit(bool enter_gate)
+{
+  return enter_gate;
+}
+
+/// FZ2.7-B1f: primary_only / slim — do not materialize neighbor bands.
+inline bool ShouldFilterMarkRelitBandsToPrimary(bool primary_only_or_slim)
+{
+  return primary_only_or_slim;
+}
+
+/// FZ2.7-B2b: earned multi-apply when consume OR primary_only defer.
+inline bool ShouldUseThroughputApplyCap(bool consume_mode, bool primary_only)
+{
+  return consume_mode || primary_only;
+}
+
 /// FZ2.5-Perf1: Transvoxel-style earned cap — fill time slice when unit cheap.
 /// FZ2.6: prefer light-only unit for cap math when available.
 /// FZ2.7-B5: use light+install when both available.
+/// FZ2.7-B2b: throughput_mode = consume OR primary_only.
 inline int EarnedRelightApplyCap(int drain_budget, double slice_ms,
                                  double /*elapsed_ms*/,
-                                 double last_unit_apply_ms, bool consume_mode,
+                                 double last_unit_apply_ms, bool throughput_mode,
                                  int visible_black_stalled_n = 0,
                                  double last_light_unit_ms = 0.0,
                                  double last_install_unit_ms = 0.0)
 {
-  if (!consume_mode)
+  if (!throughput_mode)
   {
     return drain_budget;
   }
@@ -185,9 +211,10 @@ inline int EarnedRelightApplyCap(int drain_budget, double slice_ms,
 /// RateMatch R0: stop Apply slice after ≥1 column when wall ≥ MissReservedMs.
 /// FZ2.5-Perf1 consume: stop at earned cap OR slice_ms (not 1@8ms when cheap).
 /// Enter FOV lit pass is exempt (full Enter budget).
+/// FZ2.7-B2b: throughput_mode covers primary_only defer as well as consume.
 inline bool ShouldStopRelightApplySlice(double elapsed_ms, int applied_n,
                                         double slice_ms, bool enter_pass,
-                                        bool consume_mode = false,
+                                        bool throughput_mode = false,
                                         int earned_cap = 0,
                                         double last_unit_apply_ms = 0.0,
                                         int visible_black_stalled_n = 0,
@@ -199,15 +226,16 @@ inline bool ShouldStopRelightApplySlice(double elapsed_ms, int applied_n,
     return false;
   }
   double cap_unit = last_unit_apply_ms;
-  if (consume_mode && last_light_unit_ms > 0.1 && last_install_unit_ms > 0.1)
+  if (throughput_mode && last_light_unit_ms > 0.1 &&
+      last_install_unit_ms > 0.1)
   {
     cap_unit = last_light_unit_ms + last_install_unit_ms;
   }
-  else if (consume_mode && last_light_unit_ms > 0.1)
+  else if (throughput_mode && last_light_unit_ms > 0.1)
   {
     cap_unit = last_light_unit_ms;
   }
-  if (consume_mode)
+  if (throughput_mode)
   {
     const int min_cap = visible_black_stalled_n > 0 ? 3 : 2;
     const int cap =

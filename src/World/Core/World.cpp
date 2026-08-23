@@ -4152,8 +4152,23 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   const int vb_stalled_n = PhysicsTelemetryData.VisibleBlackStalledN;
   const bool consume_mode =
       ShouldConsumeTicketedVbDebt(vb_no_ticket_n, vb_focus_n, vb_stalled_n);
-  const double slice_ms =
+  const glm::ivec3 pl_focus_chunk =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const int pl_focus_n = CountPendingLightBeforeMeshNear(
+      glm::ivec3(pl_focus_chunk.x, 0, pl_focus_chunk.z),
+      GetStreamingFocusRadius());
+  const bool defer_side =
+      ShouldDeferHeavyApplySideEffects(PhysicsTelemetryData.RelightApplyMsPrev,
+                                       PhysicsTelemetryData.RelightApplyNPrev) &&
+      !ShouldSkipDeferHeavyApplyUnderPl(pl_focus_n) && !consume_mode;
+  const bool throughput_mode =
+      ShouldUseThroughputApplyCap(consume_mode, defer_side);
+  double slice_ms =
       RelightConsumeSliceMs(miss_reserved_ms, consume_mode, moving);
+  if (throughput_mode && !consume_mode)
+  {
+    slice_ms = std::max(slice_ms, 12.0);
+  }
   const double unit_ms_prev =
       PhysicsTelemetryData.RelightApplyNPrev > 0
           ? (PhysicsTelemetryData.RelightApplyMsPrev /
@@ -4174,13 +4189,8 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   const int ready_at_start =
       AsyncRelight ? static_cast<int>(AsyncRelight->GetCompletedSize()) : 0;
   const int earned_cap = EarnedRelightApplyCap(
-      max_per_frame, slice_ms, 0.0, unit_ms_prev, consume_mode, vb_stalled_n,
+      max_per_frame, slice_ms, 0.0, unit_ms_prev, throughput_mode, vb_stalled_n,
       light_unit_ms_prev, install_unit_ms_prev);
-  const glm::ivec3 pl_focus_chunk =
-      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
-  const int pl_focus_n = CountPendingLightBeforeMeshNear(
-      glm::ivec3(pl_focus_chunk.x, 0, pl_focus_chunk.z),
-      GetStreamingFocusRadius());
   // RateMatch R0: DrainUpTo(1) loop so MissReservedMs slice can stop mid-budget
   // (DrainCompleted(N) would MarkRelit all N before any early-out).
   bool stopped_by_time = false;
@@ -4235,12 +4245,12 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       const glm::ivec3 chunk = UChunkManager::WorldToChunk(pos);
       primary_grounds.push_back(glm::ivec2(chunk.x, chunk.z));
     }
-    const bool defer_side =
+    const bool defer_side_iter =
         ShouldDeferHeavyApplySideEffects(
             PhysicsTelemetryData.RelightApplyMsPrev,
             PhysicsTelemetryData.RelightApplyNPrev) &&
         !ShouldSkipDeferHeavyApplyUnderPl(pl_focus_n) && !consume_mode;
-    const bool primary_only_apply = consume_mode || defer_side;
+    const bool primary_only_apply = consume_mode || defer_side_iter;
     // CheapRemesh C3: noop light → clear InFlight/Pending without Dirty/Prefetch.
     if (!any_light_changed)
     {
@@ -4280,12 +4290,12 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     {
       AsyncRelightColumnsInFlight.erase(g);
     }
-    if (priority_mesh && !defer_side && !consume_mode)
+    if (priority_mesh && !defer_side_iter && !consume_mode)
     {
       PlayerRelightMeshBurstFrames = 3;
     }
     if (enqueue_background_frontier && result.frontier_unfinished &&
-        Persistence && !defer_side && !consume_mode)
+        Persistence && !defer_side_iter && !consume_mode)
     {
       for (const glm::ivec3 &pos : result.source_block_positions)
       {
@@ -4297,7 +4307,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
             std::chrono::high_resolution_clock::now() - t0)
             .count();
     if (ShouldStopRelightApplySlice(elapsed_ms, applied, slice_ms, enter_pass,
-                                    consume_mode, earned_cap, unit_ms_prev,
+                                    throughput_mode, earned_cap, unit_ms_prev,
                                     vb_stalled_n, light_unit_ms_prev,
                                     install_unit_ms_prev))
     {

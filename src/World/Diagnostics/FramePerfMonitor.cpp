@@ -398,6 +398,8 @@ struct FrameNumbers
   int mark_relit_path_primary_consume_n{0};
   int stale_probe_n{0};
   double mark_relit_total_ms{0.0};
+  double mark_relit_setup_ms{0.0};
+  double mark_relit_primary_column_ms{0.0};
   double mark_relit_snapshot_ms{0.0};
   double mark_relit_plan_ms{0.0};
   double mark_relit_exec_ms{0.0};
@@ -408,6 +410,7 @@ struct FrameNumbers
   double mark_relit_prefetch_ms{0.0};
   double mark_relit_orphan_ground_ms{0.0};
   double mark_relit_empty_relit_ms{0.0};
+  int mark_relit_bands_n{0};
   int mark_relit_suppress_enter_settled_n{0};
   int sticky_insert_stale_after_apply_n{0};
   int sticky_insert_seam_n{0};
@@ -816,6 +819,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mark_relit_path_primary_consume_n = phys.MarkRelitPathPrimaryConsumeN;
   n.stale_probe_n = phys.StaleProbeCallsN;
   n.mark_relit_total_ms = phys.MarkRelitTotalMs;
+  n.mark_relit_setup_ms = phys.MarkRelitSetupMs;
+  n.mark_relit_primary_column_ms = phys.MarkRelitPrimaryColumnMs;
   n.mark_relit_snapshot_ms = phys.MarkRelitSnapshotMs;
   n.mark_relit_plan_ms = phys.MarkRelitPlanMs;
   n.mark_relit_exec_ms = phys.MarkRelitExecMs;
@@ -826,6 +831,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mark_relit_prefetch_ms = phys.MarkRelitPrefetchMs;
   n.mark_relit_orphan_ground_ms = phys.MarkRelitOrphanGroundMs;
   n.mark_relit_empty_relit_ms = phys.MarkRelitEmptyRelitMs;
+  n.mark_relit_bands_n = phys.MarkRelitBandsN;
   n.mark_relit_suppress_enter_settled_n = phys.MarkRelitSuppressEnterSettledN;
   n.sticky_insert_stale_after_apply_n = phys.StickyInsertStaleAfterApplyN;
   n.sticky_insert_seam_n = phys.StickyInsertSeamN;
@@ -1222,6 +1228,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.mark_relit_path_primary_consume_n
           << ",\"stale_probe_n\":" << n.stale_probe_n
           << ",\"mark_relit_total_ms\":" << n.mark_relit_total_ms
+          << ",\"mark_relit_setup_ms\":" << n.mark_relit_setup_ms
+          << ",\"mark_relit_primary_column_ms\":" << n.mark_relit_primary_column_ms
           << ",\"mark_relit_snapshot_ms\":" << n.mark_relit_snapshot_ms
           << ",\"mark_relit_plan_ms\":" << n.mark_relit_plan_ms
           << ",\"mark_relit_exec_ms\":" << n.mark_relit_exec_ms
@@ -1232,6 +1240,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mark_relit_prefetch_ms\":" << n.mark_relit_prefetch_ms
           << ",\"mark_relit_orphan_ground_ms\":" << n.mark_relit_orphan_ground_ms
           << ",\"mark_relit_empty_relit_ms\":" << n.mark_relit_empty_relit_ms
+          << ",\"mark_relit_bands_n\":" << n.mark_relit_bands_n
           << ",\"mark_relit_suppress_enter_settled_n\":"
           << n.mark_relit_suppress_enter_settled_n
           << ",\"sticky_insert_stale_after_apply_n\":"

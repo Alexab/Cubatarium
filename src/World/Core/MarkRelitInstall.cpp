@@ -152,10 +152,20 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
 {
   const auto total_t0 = Clock::now();
   const bool enter_gate = EnterLitGateActive;
-  const int lit_remaining = CountEnterFovLitDebt();
-  if (enter_gate && EnterLitQuiesceAllowed(enter_gate, lit_remaining))
+  // FZ2.7-B1e: CountEnterFovLitDebt is O(R²)×stale-probe — only needed for
+  // enter quiesce latch. Cruise MarkRelit was paying ~17ms here every Apply.
+  int lit_remaining = 0;
   {
-    EnterLitQuiesceLatched = true;
+    const auto setup_t0 = Clock::now();
+    if (ShouldCountEnterFovLitDebtForMarkRelit(enter_gate))
+    {
+      lit_remaining = CountEnterFovLitDebt();
+    }
+    if (enter_gate && EnterLitQuiesceAllowed(enter_gate, lit_remaining))
+    {
+      EnterLitQuiesceLatched = true;
+    }
+    PhysicsTelemetryData.MarkRelitSetupMs += ElapsedMs(setup_t0, Clock::now());
   }
   const bool enter_quiesce = enter_gate && EnterLitQuiesceLatched;
   const glm::ivec3 focus_chunk =
@@ -167,7 +177,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       ShouldConsumeTicketedVbDebt(vb_no_ticket_n, vb_focus_n, vb_stalled_n);
   const bool slim_install =
       ShouldUsePrimarySlimInstallPath(primary_only, enter_gate, enter_quiesce) ||
-      consume_mode;
+      consume_mode ||
+      ShouldUseEnterSlimInstallPath(enter_gate, enter_quiesce, primary_only);
 
   if (relit_chunks.empty())
   {
@@ -234,12 +245,20 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     const auto band_t0 = Clock::now();
     for (const glm::ivec3 &coord : relit_chunks)
     {
-      YBand &band = bands[glm::ivec2(coord.x, coord.z)];
+      const glm::ivec2 col(coord.x, coord.z);
+      // FZ2.7-B1f: primary_only / slim — only primary columns enter bands.
+      if (ShouldFilterMarkRelitBandsToPrimary(primary_only || slim_install) &&
+          primary_set.count(col) == 0)
+      {
+        continue;
+      }
+      YBand &band = bands[col];
       const int chunk_base_y = coord.y * CHUNK_SIZE;
       band.min_y = std::min(band.min_y, chunk_base_y);
       band.max_y = std::max(band.max_y, chunk_base_y + CHUNK_SIZE - 1);
     }
     PhysicsTelemetryData.MarkRelitBandMs += ElapsedMs(band_t0, Clock::now());
+    PhysicsTelemetryData.MarkRelitBandsN += static_cast<int>(bands.size());
   }
 
   const int column_max_y = ProceduralTemplate.MaxHeight;
@@ -263,6 +282,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         continue;
       }
 
+      const auto primary_t0 = Clock::now();
       LitApplyColumnInput in{};
       in.column = key;
       in.is_primary = true;
@@ -287,7 +307,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       }
 
       const bool revision_stale = slim_install && primary_only;
-      in.relit_chunks.reserve(relit_chunks.size());
+      in.relit_chunks.reserve(4);
       const auto snap_t0 = Clock::now();
       for (const glm::ivec3 &coord : relit_chunks)
       {
@@ -340,6 +360,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       const auto exec_t0 = Clock::now();
       ExecuteLitApplyPlan(plan, key, ground, finalize_pending_gate);
       PhysicsTelemetryData.MarkRelitExecMs += ElapsedMs(exec_t0, Clock::now());
+      PhysicsTelemetryData.MarkRelitPrimaryColumnMs +=
+          ElapsedMs(primary_t0, Clock::now());
       continue;
     }
 

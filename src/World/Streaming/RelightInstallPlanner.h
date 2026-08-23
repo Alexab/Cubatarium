@@ -115,6 +115,12 @@ inline ColumnInstallPath ClassifyColumnInstallPath(
     {
       return ColumnInstallPath::PrimaryConsume;
     }
+    // FZ2.7-B3: enter primary_only → Consume planner (no RemeshSeam enqueue).
+    if (ShouldUseEnterSlimInstallPath(in.enter_gate, in.enter_quiesce,
+                                      in.primary_only))
+    {
+      return ColumnInstallPath::PrimaryConsume;
+    }
     if (in.primary_only && in.defer_side)
     {
       return ColumnInstallPath::PrimaryDefer;
