@@ -858,3 +858,51 @@ python bin/tmp_fz2_gate_check.py bin/logs/perf_<new>.jsonl
 python bin/tmp_fz26_step_validate.py --step FZ27-B6 --build --scenario fz-manual-long
 ```
 
+---
+
+## FZ2.7-B1b — snapshot diet + stale probe zero + install telem (2026-08-23)
+
+**Parent:** `cf31d209` (FZ2.7-B refactor)
+
+### Shipped
+
+| Change | Detail |
+| --- | --- |
+| `FillLitApplyMeshProbe` | Single GreedyCache lookup per chunk (was 8–10 MeshService calls) |
+| Stale O(1) | `ChunkHasStaleDarkFaces` removed from MarkRelit hot path; `IsMeshLightStale` / `IsMeshLightStaleGpu` |
+| Spike telem | `stale_probe_n`, `mark_relit_path_primary_consume_n`, `mark_relit_snapshot_ms`, `mark_relit_plan_ms`, `mark_relit_exec_ms` |
+| Interim log | `perf_20260823-180432_20576` (~410s): install 19.65ms FAIL, enter_no_ticket 4 PASS |
+
+### Validate
+
+```text
+python bin/tmp_fz27_b_test_smoke.py
+python bin/tmp_fz2_gate_check.py bin/logs/perf_<new>.jsonl
+```
+
+**Next:** fz-manual-long ≥600s; target `unit_apply_install_ms < 14` interim, then `< 8` (B6).
+
+---
+
+## FZ2.7-B1c/d — install forensics + slim path + apply_n fix (2026-08-23)
+
+**Interim log:** `perf_20260823-195843_35224` (~304s) — install 19ms, exec 0.02ms → fat outside snapshot/exec.
+
+### Shipped
+
+| Change | Detail |
+| --- | --- |
+| Install sub-timers | `mark_relit_total/orphan_ground/neighbor_seam/prefetch/mark_dirty/...` in spike JSON |
+| Primary slim path | `primary_only && !enter` → `PlanPrimaryConsume` (not full Standard) |
+| Skip orphan ground | `MarkTerrainChunkMeshDirtySeamed*` skipped on `primary_only \|\| consume` |
+| apply_n bugfix | `ShouldStopRelightApplySlice`: `likely_cap = max(min_cap, slice/unit)` — was 0 when unit > slice |
+
+### Validate
+
+```text
+python bin/tmp_fz27_b_test_smoke.py
+python bin/tmp_fz2_gate_check.py bin/logs/perf_<new>.jsonl
+```
+
+**Gate-of-record:** fz-manual-long ≥600s required for B6 closeout.
+

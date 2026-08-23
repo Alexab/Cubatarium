@@ -266,6 +266,24 @@ public:
   /// FZ2.7-B1: light revision baked into mesh at last commit (O(1) stale).
   uint64_t GetMeshedLightRevision(glm::ivec3 chunk_coord) const;
 
+  /// FZ2.7-B1b: single-pass mesh state for MarkRelit snapshot (one GreedyCache lookup).
+  struct LitApplyMeshProbe
+  {
+    bool has_greedy{false};
+    bool has_drawable{false};
+    bool is_dirty{false};
+    bool raa_pending{false};
+    bool gpu_pending{false};
+    bool inflight{false};
+    bool soft_defer{false};
+    bool fully_dark{false};
+    bool gpu_resident{false};
+    bool gpu_has_dark_face{false};
+    uint64_t meshed_light_rev{0};
+  };
+  void FillLitApplyMeshProbe(glm::ivec3 chunk_coord,
+                             LitApplyMeshProbe &out) const;
+
   struct DarkFaceHit
   {
     glm::ivec3 block{0};

@@ -400,6 +400,18 @@ struct PhysicsTelemetry
   int MarkRelitPathPrimaryConsumeN{0};
   /// FZ2.7-B5: ChunkHasStaleDarkFaces calls during Apply (target 0).
   int StaleProbeCallsN{0};
+  /// FZ2.7-B1b: MarkRelit install sub-breakdown (spike telem).
+  double MarkRelitTotalMs{0.0};
+  double MarkRelitSnapshotMs{0.0};
+  double MarkRelitPlanMs{0.0};
+  double MarkRelitExecMs{0.0};
+  double MarkRelitMarkDirtyMs{0.0};
+  double MarkRelitBandMs{0.0};
+  double MarkRelitFlowQueryMs{0.0};
+  double MarkRelitNeighborSeamMs{0.0};
+  double MarkRelitPrefetchMs{0.0};
+  double MarkRelitOrphanGroundMs{0.0};
+  double MarkRelitEmptyRelitMs{0.0};
   /// Schedule path suppressed by enter-settled gate (still classified Schedule).
   int MarkRelitSuppressEnterSettledN{0};
   /// StickyRemeshAfterLight insert/erase reasons (per frame).

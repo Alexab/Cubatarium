@@ -110,6 +110,11 @@ inline ColumnInstallPath ClassifyColumnInstallPath(
     {
       return ColumnInstallPath::PrimaryConsume;
     }
+    if (ShouldUsePrimarySlimInstallPath(in.primary_only, in.enter_gate,
+                                        in.enter_quiesce))
+    {
+      return ColumnInstallPath::PrimaryConsume;
+    }
     if (in.primary_only && in.defer_side)
     {
       return ColumnInstallPath::PrimaryDefer;

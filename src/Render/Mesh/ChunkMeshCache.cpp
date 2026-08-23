@@ -896,6 +896,55 @@ uint64_t UChunkMeshCache::GetMeshedLightRevision(glm::ivec3 chunk_coord) const
   return it->second.MeshedLightRevision;
 }
 
+void UChunkMeshCache::FillLitApplyMeshProbe(glm::ivec3 chunk_coord,
+                                            LitApplyMeshProbe &out) const
+{
+  out = LitApplyMeshProbe{};
+  const auto it = GreedyCache.find(chunk_coord);
+  if (it != GreedyCache.end())
+  {
+    out.has_greedy = true;
+    const ChunkGreedyMesh &mesh = it->second;
+    out.meshed_light_rev = mesh.MeshedLightRevision;
+    out.gpu_resident = mesh.GpuResident;
+    out.gpu_has_dark_face = mesh.GpuHasDarkFace;
+    if (mesh.GpuResident && mesh.GpuQuadCount > 0)
+    {
+      out.has_drawable = true;
+    }
+    else
+    {
+      for (const GreedyMeshBatch &batch : mesh.batches)
+      {
+        if (!batch.vertices.empty() && !batch.indices.empty())
+        {
+          out.has_drawable = true;
+          break;
+        }
+      }
+    }
+    if (out.has_drawable)
+    {
+      if (mesh.GpuResident)
+      {
+        out.fully_dark = mesh.GpuHasDarkFace;
+      }
+      else
+      {
+        out.fully_dark = BatchesHaveFullyDarkFace(mesh.batches);
+      }
+    }
+  }
+  out.is_dirty = Dirty.Contains(chunk_coord);
+  out.raa_pending = RemeshAfterApply.count(chunk_coord) > 0;
+  out.inflight =
+      ActiveMeshSourceRevision.find(chunk_coord) !=
+      ActiveMeshSourceRevision.end();
+  out.soft_defer = SoftDeferHeld.count(chunk_coord) > 0;
+  EnsurePendingGpuIndex();
+  out.gpu_pending = PendingGpuIndex.find(chunk_coord) != PendingGpuIndex.end();
+}
+
 bool UChunkMeshCache::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
                                              const UBlockWorld &world) const
 {

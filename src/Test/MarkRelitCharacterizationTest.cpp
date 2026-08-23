@@ -103,6 +103,19 @@ int main()
            "C16 neighbor skip");
   }
 
+  // C17 primary_only cruise slim (defer without enter)
+  {
+    LitApplyColumnInput in{};
+    in.is_primary = true;
+    in.finalize_gate = true;
+    in.primary_only = true;
+    in.consume_mode = false;
+    in.enter_gate = false;
+    in.enter_quiesce = false;
+    Expect(ClassifyColumnInstallPath(in) == ColumnInstallPath::PrimaryConsume,
+           "C17 primary_only cruise slim");
+  }
+
   Expect(ShouldConsumeTicketedVbDebt(0, 81, 0), "consume VB debt");
   Expect(!ShouldConsumeTicketedVbDebt(10, 81, 0), "orphan nt blocks consume");
 

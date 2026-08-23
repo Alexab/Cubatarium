@@ -11,6 +11,7 @@
 #include "World/Streaming/RelightInstallPlanner.h"
 #include "World/Streaming/VisualStagePolicy.h"
 
+#include <chrono>
 #include <climits>
 #include <unordered_map>
 #include <unordered_set>
@@ -26,6 +27,13 @@ struct YBand
   int max_y{INT32_MIN};
 };
 
+using Clock = std::chrono::high_resolution_clock;
+
+double ElapsedMs(Clock::time_point t0, Clock::time_point t1)
+{
+  return std::chrono::duration<double, std::milli>(t1 - t0).count();
+}
+
 ColumnChunkSnapshot BuildLitApplyChunkSnapshot(
     UWorldMeshService *mesh, const UBlockWorld &block_world, glm::ivec3 coord,
     bool revision_stale_only)
@@ -36,16 +44,17 @@ ColumnChunkSnapshot BuildLitApplyChunkSnapshot(
   {
     return snap;
   }
-  snap.has_drawable = mesh->HasDrawableGreedyMesh(coord);
-  snap.has_greedy = mesh->HasGreedyMesh(coord);
-  snap.is_dirty = mesh->IsChunkMeshDirty(coord);
-  snap.raa_pending = mesh->IsRemeshAfterApplyPending(coord);
-  snap.gpu_pending = mesh->IsPendingGpuApply(coord);
-  snap.inflight = mesh->HasInflightMeshBuild(coord);
-  snap.soft_defer = mesh->IsSoftDeferHeld(coord);
-  snap.fully_dark =
-      snap.has_drawable && mesh->GetCache().ChunkHasFullyDarkFace(coord);
-  snap.meshed_light_rev = mesh->GetCache().GetMeshedLightRevision(coord);
+  UChunkMeshCache::LitApplyMeshProbe probe{};
+  mesh->FillLitApplyMeshProbe(coord, probe);
+  snap.has_drawable = probe.has_drawable;
+  snap.has_greedy = probe.has_greedy;
+  snap.is_dirty = probe.is_dirty;
+  snap.raa_pending = probe.raa_pending;
+  snap.gpu_pending = probe.gpu_pending;
+  snap.inflight = probe.inflight;
+  snap.soft_defer = probe.soft_defer;
+  snap.fully_dark = probe.fully_dark;
+  snap.meshed_light_rev = probe.meshed_light_rev;
   if (const UChunk *chunk = block_world.GetChunkManager().GetChunk(coord))
   {
     snap.light_field_rev = chunk->GetLightFieldRevision();
@@ -57,7 +66,9 @@ ColumnChunkSnapshot BuildLitApplyChunkSnapshot(
   }
   else if (snap.fully_dark)
   {
-    snap.still_stale = mesh->ChunkHasStaleDarkFaces(coord, block_world);
+    snap.still_stale = IsMeshLightStaleGpu(
+        probe.gpu_resident, probe.gpu_has_dark_face, snap.meshed_light_rev,
+        snap.light_field_rev);
   }
   return snap;
 }
@@ -82,15 +93,21 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
     mesh->RequestRemeshAfterApply(coord);
     ++PhysicsTelemetryData.MarkRelitRemeshAfterApplyN;
   }
-  for (const glm::ivec3 &coord : plan.mark_dirty_priority)
+  if (!plan.mark_dirty_priority.empty() || !plan.mark_dirty.empty())
   {
-    mesh->MarkDirtyPriority(coord);
-    ++PhysicsTelemetryData.MarkRelitScheduleN;
-  }
-  for (const glm::ivec3 &coord : plan.mark_dirty)
-  {
-    mesh->MarkDirty(coord);
-    ++PhysicsTelemetryData.MarkRelitScheduleN;
+    const auto dirty_t0 = Clock::now();
+    for (const glm::ivec3 &coord : plan.mark_dirty_priority)
+    {
+      mesh->MarkDirtyPriority(coord);
+      ++PhysicsTelemetryData.MarkRelitScheduleN;
+    }
+    for (const glm::ivec3 &coord : plan.mark_dirty)
+    {
+      mesh->MarkDirty(coord);
+      ++PhysicsTelemetryData.MarkRelitScheduleN;
+    }
+    PhysicsTelemetryData.MarkRelitMarkDirtyMs +=
+        ElapsedMs(dirty_t0, Clock::now());
   }
   PhysicsTelemetryData.MarkRelitSkipAlreadyDirtyN += plan.skip_already_dirty_n;
   PhysicsTelemetryData.MarkRelitSkipInflightN += plan.skip_inflight_n;
@@ -133,6 +150,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                                     bool finalize_pending_gate,
                                     bool primary_only)
 {
+  const auto total_t0 = Clock::now();
   const bool enter_gate = EnterLitGateActive;
   const int lit_remaining = CountEnterFovLitDebt();
   if (enter_gate && EnterLitQuiesceAllowed(enter_gate, lit_remaining))
@@ -147,30 +165,53 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
   const int vb_stalled_n = PhysicsTelemetryData.VisibleBlackStalledN;
   const bool consume_mode =
       ShouldConsumeTicketedVbDebt(vb_no_ticket_n, vb_focus_n, vb_stalled_n);
+  const bool slim_install =
+      ShouldUsePrimarySlimInstallPath(primary_only, enter_gate, enter_quiesce) ||
+      consume_mode;
 
   if (relit_chunks.empty())
   {
-    for (const glm::ivec2 &g : primary_grounds)
+    if (!slim_install)
     {
-      AsyncRelightColumnsInFlight.erase(g);
-      if (!finalize_pending_gate)
+      const auto empty_t0 = Clock::now();
+      for (const glm::ivec2 &g : primary_grounds)
       {
-        continue;
+        AsyncRelightColumnsInFlight.erase(g);
+        if (!finalize_pending_gate)
+        {
+          continue;
+        }
+        PendingLightBeforeMesh.erase(g);
+        SetColumnEmergeState(glm::ivec3(g.x, 0, g.y), ColumnEmergeState::LitReady);
+        if (MeshService && !enter_quiesce)
+        {
+          const glm::ivec3 ground(g.x, 0, g.y);
+          const int sea = ProceduralTemplate.SeaLevel;
+          const int max_y = ProceduralTemplate.MaxHeight;
+          const int dirty_min = std::max(0, sea - CHUNK_SIZE);
+          const int dirty_max = std::min(max_y, sea + CHUNK_SIZE * 2);
+          MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+              ground, dirty_min, dirty_max,
+              /*include_horizontal_neighbors=*/false);
+        }
       }
-      PendingLightBeforeMesh.erase(g);
-      SetColumnEmergeState(glm::ivec3(g.x, 0, g.y), ColumnEmergeState::LitReady);
-      if (MeshService && !enter_quiesce)
+      PhysicsTelemetryData.MarkRelitEmptyRelitMs +=
+          ElapsedMs(empty_t0, Clock::now());
+    }
+    else
+    {
+      for (const glm::ivec2 &g : primary_grounds)
       {
-        const glm::ivec3 ground(g.x, 0, g.y);
-        const int sea = ProceduralTemplate.SeaLevel;
-        const int max_y = ProceduralTemplate.MaxHeight;
-        const int dirty_min = std::max(0, sea - CHUNK_SIZE);
-        const int dirty_max = std::min(max_y, sea + CHUNK_SIZE * 2);
-        MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-            ground, dirty_min, dirty_max,
-            /*include_horizontal_neighbors=*/false);
+        AsyncRelightColumnsInFlight.erase(g);
+        if (finalize_pending_gate)
+        {
+          PendingLightBeforeMesh.erase(g);
+          SetColumnEmergeState(glm::ivec3(g.x, 0, g.y),
+                               ColumnEmergeState::LitReady);
+        }
       }
     }
+    PhysicsTelemetryData.MarkRelitTotalMs += ElapsedMs(total_t0, Clock::now());
     return;
   }
 
@@ -180,7 +221,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
   {
     primary_set.insert(g);
   }
-  if (finalize_pending_gate && MeshService && !primary_grounds.empty())
+  if (finalize_pending_gate && MeshService && !primary_grounds.empty() &&
+      !slim_install)
   {
     MeshService->GetCache().SetJustRelitFirstMeshColumn(primary_grounds.front(),
                                                         true);
@@ -188,12 +230,16 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
 
   std::unordered_map<glm::ivec2, YBand, GroundColumnHash> bands;
   bands.reserve(relit_chunks.size());
-  for (const glm::ivec3 &coord : relit_chunks)
   {
-    YBand &band = bands[glm::ivec2(coord.x, coord.z)];
-    const int chunk_base_y = coord.y * CHUNK_SIZE;
-    band.min_y = std::min(band.min_y, chunk_base_y);
-    band.max_y = std::max(band.max_y, chunk_base_y + CHUNK_SIZE - 1);
+    const auto band_t0 = Clock::now();
+    for (const glm::ivec3 &coord : relit_chunks)
+    {
+      YBand &band = bands[glm::ivec2(coord.x, coord.z)];
+      const int chunk_base_y = coord.y * CHUNK_SIZE;
+      band.min_y = std::min(band.min_y, chunk_base_y);
+      band.max_y = std::max(band.max_y, chunk_base_y + CHUNK_SIZE - 1);
+    }
+    PhysicsTelemetryData.MarkRelitBandMs += ElapsedMs(band_t0, Clock::now());
   }
 
   const int column_max_y = ProceduralTemplate.MaxHeight;
@@ -231,12 +277,18 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       in.focus_horiz = focus_horiz;
       in.lit_band.min_y = band.min_y;
       in.lit_band.max_y = band.max_y;
-      in.has_fm_ticket = GetColumnFlowExecutor().Scheduler().Contains(
-          key, ColumnWorkKind::FirstMesh);
-      in.has_repair_ticket = GetColumnFlowExecutor().HasRepairTicket(key);
+      {
+        const auto flow_t0 = Clock::now();
+        in.has_fm_ticket = GetColumnFlowExecutor().Scheduler().Contains(
+            key, ColumnWorkKind::FirstMesh);
+        in.has_repair_ticket = GetColumnFlowExecutor().HasRepairTicket(key);
+        PhysicsTelemetryData.MarkRelitFlowQueryMs +=
+            ElapsedMs(flow_t0, Clock::now());
+      }
 
-      const bool revision_stale = consume_mode && primary_only;
+      const bool revision_stale = slim_install && primary_only;
       in.relit_chunks.reserve(relit_chunks.size());
+      const auto snap_t0 = Clock::now();
       for (const glm::ivec3 &coord : relit_chunks)
       {
         if (coord.x != key.x || coord.z != key.y)
@@ -261,6 +313,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           in.soft_defer_empty_owned = true;
         }
       }
+      PhysicsTelemetryData.MarkRelitSnapshotMs +=
+          ElapsedMs(snap_t0, Clock::now());
       in.damp_soft_empty_remesh = ShouldDampMarkRelitRemeshOnSoftDeferEmpty(
           in.soft_defer_empty_owned, in.any_drawable);
       bool any_fully_dark = false;
@@ -280,8 +334,12 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           consume_mode, in.has_repair_ticket, any_fully_dark, any_still_stale,
           focus_horiz);
 
+      const auto plan_t0 = Clock::now();
       const LitApplyPlan plan = PlanColumnInstall(in);
+      PhysicsTelemetryData.MarkRelitPlanMs += ElapsedMs(plan_t0, Clock::now());
+      const auto exec_t0 = Clock::now();
       ExecuteLitApplyPlan(plan, key, ground, finalize_pending_gate);
+      PhysicsTelemetryData.MarkRelitExecMs += ElapsedMs(exec_t0, Clock::now());
       continue;
     }
 
@@ -307,48 +365,62 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     {
       continue;
     }
+    const auto seam_t0 = Clock::now();
     MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground, dirty_min,
                                                 dirty_max);
+    PhysicsTelemetryData.MarkRelitNeighborSeamMs +=
+        ElapsedMs(seam_t0, Clock::now());
   }
 
   if (MeshService && !relit_chunks.empty() && !primary_only && !moving)
   {
+    const auto prefetch_t0 = Clock::now();
     for (const glm::ivec3 &coord : relit_chunks)
     {
       MeshService->PrefetchMeshCapture(GetBlockWorld(), coord);
     }
+    PhysicsTelemetryData.MarkRelitPrefetchMs +=
+        ElapsedMs(prefetch_t0, Clock::now());
   }
 
-  if (!finalize_pending_gate || !MeshService)
+  if (!finalize_pending_gate || !MeshService ||
+      ShouldSkipMarkRelitOrphanGround(primary_only, consume_mode))
   {
+    PhysicsTelemetryData.MarkRelitTotalMs += ElapsedMs(total_t0, Clock::now());
     return;
   }
-  for (const glm::ivec2 &g : primary_grounds)
   {
-    if (bands.count(g) != 0)
+    const auto orphan_t0 = Clock::now();
+    for (const glm::ivec2 &g : primary_grounds)
     {
-      continue;
+      if (bands.count(g) != 0)
+      {
+        continue;
+      }
+      AsyncRelightColumnsInFlight.erase(g);
+      PendingLightBeforeMesh.erase(g);
+      const glm::ivec3 ground(g.x, 0, g.y);
+      SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
+      const int dirty_min = std::max(0, sea - CHUNK_SIZE);
+      const int dirty_max = std::min(column_max_y, sea + CHUNK_SIZE * 2);
+      if (priority_mesh)
+      {
+        MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
+            ground, dirty_min, dirty_max,
+            /*include_horizontal_neighbors=*/false);
+      }
+      else
+      {
+        MeshService->MarkTerrainChunkMeshDirtySeamed(
+            ground, dirty_min, dirty_max,
+            /*include_horizontal_neighbors=*/false);
+      }
+      SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
     }
-    AsyncRelightColumnsInFlight.erase(g);
-    PendingLightBeforeMesh.erase(g);
-    const glm::ivec3 ground(g.x, 0, g.y);
-    SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
-    const int dirty_min = std::max(0, sea - CHUNK_SIZE);
-    const int dirty_max = std::min(column_max_y, sea + CHUNK_SIZE * 2);
-    if (priority_mesh)
-    {
-      MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
-          ground, dirty_min, dirty_max,
-          /*include_horizontal_neighbors=*/false);
-    }
-    else
-    {
-      MeshService->MarkTerrainChunkMeshDirtySeamed(
-          ground, dirty_min, dirty_max,
-          /*include_horizontal_neighbors=*/false);
-    }
-    SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+    PhysicsTelemetryData.MarkRelitOrphanGroundMs +=
+        ElapsedMs(orphan_t0, Clock::now());
   }
+  PhysicsTelemetryData.MarkRelitTotalMs += ElapsedMs(total_t0, Clock::now());
 }
 
 } // namespace cutum

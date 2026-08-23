@@ -139,6 +139,20 @@ inline bool ShouldConsumeTicketedVbDebt(int vb_no_ticket_n,
   return vb_no_ticket_n <= 0 && visible_black_focus_n > vb_thresh;
 }
 
+/// FZ2.7-B1d: cruise/defer primary_only uses slim install (no orphan/seam).
+inline bool ShouldUsePrimarySlimInstallPath(bool primary_only, bool enter_gate,
+                                            bool enter_quiesce)
+{
+  return primary_only && !enter_gate && !enter_quiesce;
+}
+
+/// FZ2.7-B1d: orphan ground MarkTerrain is expensive — skip on slim paths.
+inline bool ShouldSkipMarkRelitOrphanGround(bool primary_only,
+                                            bool consume_mode)
+{
+  return primary_only || consume_mode;
+}
+
 /// FZ2.5-Perf1: Transvoxel-style earned cap — fill time slice when unit cheap.
 /// FZ2.6: prefer light-only unit for cap math when available.
 /// FZ2.7-B5: use light+install when both available.
@@ -195,6 +209,7 @@ inline bool ShouldStopRelightApplySlice(double elapsed_ms, int applied_n,
   }
   if (consume_mode)
   {
+    const int min_cap = visible_black_stalled_n > 0 ? 3 : 2;
     const int cap =
         earned_cap > 0
             ? earned_cap
@@ -208,7 +223,8 @@ inline bool ShouldStopRelightApplySlice(double elapsed_ms, int applied_n,
     }
     if (cap_unit > 0.1)
     {
-      const int likely_cap = static_cast<int>(slice_ms / cap_unit);
+      const int likely_cap =
+          std::max(min_cap, static_cast<int>(slice_ms / cap_unit));
       if (applied_n >= likely_cap)
       {
         return true;

@@ -2074,6 +2074,9 @@ int main()
     Expect(ShouldStopRelightApplySlice(10.0, 2, 16.0, false, true, 2, 9.0, 0,
                                        3.0, 5.0),
            "FZ27: stop at earned cap 2");
+    Expect(!ShouldStopRelightApplySlice(10.0, 1, 16.0, false, true, 2, 19.0, 0,
+                                        1.0, 18.0),
+           "FZ27-B2: fat unit consume allows 2nd apply when earned_cap=2");
   }
 
   // ColdSupply S0: ClampRelightDrainN

@@ -1059,9 +1059,15 @@ bool UWorldMeshService::DropQueuedPendingGpuApply(glm::ivec3 chunk_coord)
 }
 
 bool UWorldMeshService::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
-                                              const UBlockWorld &world) const
+                                             const UBlockWorld &world) const
 {
   return Cache.ChunkHasStaleDarkFaces(chunk_coord, world);
+}
+
+void UWorldMeshService::FillLitApplyMeshProbe(
+    glm::ivec3 chunk_coord, UChunkMeshCache::LitApplyMeshProbe &out) const
+{
+  Cache.FillLitApplyMeshProbe(chunk_coord, out);
 }
 
 bool UWorldMeshService::ChunkHasLitDrawableFace(glm::ivec3 chunk_coord) const

@@ -249,6 +249,8 @@ public:
   bool DropQueuedPendingGpuApply(glm::ivec3 chunk_coord);
   bool ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
                               const UBlockWorld &world) const;
+  void FillLitApplyMeshProbe(glm::ivec3 chunk_coord,
+                             UChunkMeshCache::LitApplyMeshProbe &out) const;
   bool ChunkHasLitDrawableFace(glm::ivec3 chunk_coord) const;
   bool IsChunkMeshDirty(glm::ivec3 chunk_coord) const;
   uint64_t GetChunkMeshRevision(glm::ivec3 chunk_coord) const;
