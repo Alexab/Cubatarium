@@ -998,3 +998,38 @@ python bin/tmp_fz2_gate_check.py bin/logs/perf_<new>.jsonl
 
 **Target:** apply_util steady ≥0.15 (med apply_n≥3).
 
+---
+
+## FZ2.7-P0 — SoT after B2d gate-of-record `101316` (2026-08-24)
+
+**Parent:** `a07eb8db` (B2d). **Gate-of-record:** `bin/logs/perf_20260824-101316_32932.jsonl` (~520s, no-teleport).
+
+### Compare (steady 120+)
+
+| Metric | 220902 (B1e) | 225006 (B2c) | **101316 (B2d)** |
+| --- | --- | --- | --- |
+| apply_n med | 1 | **2 PASS** | **2 PASS** |
+| unit install | **1.14 PASS** | hold | **0.05 PASS** |
+| unit light | — | **2.7** | **6.50 FAIL** (&lt;5) |
+| apply_util n/20 | — | 0.10 | 0.10 FAIL |
+| sim med | — | — | **134 PASS** (kill 135) |
+| opaque_refs | 705 FAIL | 555 | **255 PASS** |
+| mark_relit | — | — | **2 PASS** |
+| binding | — | — | TimeSlice+Fat 0.64 (old BRM ≥0.80) |
+| VB / blink | — | — | 96.5 / 0.57 FAIL |
+| stream / revisit | — | — | 51 / 231 FAIL |
+
+### Forensic (not a code bug in light engine)
+
+- Bimodal apply_n {1 vs 3}: `min_cap=3` beats `time_cap=2` when unit≈6.5ms in 16ms slice.
+- Drain flags: `stopped_by_time |= applied>=earned` → cap-stop classified TimeSlice.
+- `RelightApplyLightMs` billed `DrainCompleted` + merge (`iter_t0` before pop).
+- PL backlog thresh 45 vs 101316 PL med≈32 → `RelightThroughputHasBacklog` often false on PL.
+
+### Gate script (this phase)
+
+- `apply_binding_countcap_pct`: CountCap share among `apply_n≥1` ≥ **0.50** (replaces TimeSlice+Fat ≥0.80).
+- Diagnostic: TimeSlice/Fat print + honest util `n/min(ready,20)` when ready fields exist.
+
+Autofly: none (docs/gates only). Next: P0b harness, then A time_cap wins.
+

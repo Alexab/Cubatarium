@@ -31,13 +31,15 @@ GATES = {
     "phase_budget_over_pct": ("phase_budget_over", "steady_120_plus", "pct_true", 0.50),
     "unit_apply_light_ms": ("relight_apply_light_ms", "steady_120_plus", "unit_med", 5),
     "unit_apply_install_ms": ("relight_apply_install_ms", "steady_120_plus", "unit_med", 8),
-    "apply_binding_time_pct": ("apply_binding", "steady_120_plus", "pct_binding_min", 0.80),
+    # FZ2.7 post-B2d: CountCap share (not FZ2.6 TimeSlice/FatUnit BRM).
+    "apply_binding_countcap_pct": ("apply_binding", "steady_120_plus", "pct_countcap_min", 0.50),
     "opaque_refs_steady": ("opaque_refs_cpu_vis", "steady_120_plus", "med", 400),
     "mark_relit_steady": ("mark_relit_schedule_n", "steady_120_plus", "med_min", 0.5),
 }
 
 INFERRED_DRAIN_BUDGET = 20
 APPLY_BINDING_TIME_SLICE = 1
+APPLY_BINDING_COUNT_CAP = 2
 APPLY_BINDING_FAT_UNIT = 3
 
 
@@ -118,6 +120,35 @@ def pct_true(rows, key):
     return sum(1 for x in xs if x) / len(xs)
 
 
+def pct_binding_countcap(rows):
+    """Share of CountCap among frames that applied at least one column."""
+    xs = []
+    for r in rows:
+        if r.get("apply_binding") is None:
+            continue
+        if int(r.get("relight_apply_n") or 0) < 1:
+            continue
+        xs.append(int(r.get("apply_binding") or 0))
+    if not xs:
+        return None
+    return sum(1 for x in xs if x == APPLY_BINDING_COUNT_CAP) / len(xs)
+
+
+def honest_apply_util(rows):
+    """apply_n / min(ready, budget) when ready is present; else None."""
+    vals = []
+    for r in rows:
+        n = int(r.get("relight_apply_n") or 0)
+        ready = r.get("relight_completed_n")
+        if ready is None:
+            ready = r.get("relight_ready_n")
+        if ready is None:
+            continue
+        denom = max(1, min(int(ready) or 0, INFERRED_DRAIN_BUDGET))
+        vals.append(n / denom)
+    return med(vals) if vals else None
+
+
 def pct_binding_time(rows):
     if not rows:
         return None
@@ -168,6 +199,8 @@ def gate_val(rows, key, segment, stat):
         return pct_binding_time(part)
     if stat == "pct_binding_min":
         return pct_binding_time(part)
+    if stat == "pct_countcap_min":
+        return pct_binding_countcap(part)
     return None
 
 
@@ -204,7 +237,9 @@ def analyze(name, path):
             f"revisit={med(col(part, 'dirty_revisit_same_n')):.1f} "
             f"mark_relit={med(col(part, 'mark_relit_schedule_n')):.1f} "
             f"unlit_h={med(col(part, 'chunk_meshed_unlit_hidden')):.1f} "
-            f"fluid_p90={p90(col(part, 'fluid_map_cpu_ms')):.1f}"
+            f"fluid_p90={p90(col(part, 'fluid_map_cpu_ms')):.1f} "
+            f"countcap={pct_binding_countcap(part)} "
+            f"honest_util={honest_apply_util(part)}"
         )
     first15 = u[:8]
     mx_nt = max((r.get("visible_black_no_ticket_n") or 0) for r in u)
@@ -240,6 +275,7 @@ def analyze(name, path):
             "pct_true",
             "pct_binding_time",
             "pct_binding_min",
+            "pct_countcap_min",
         ):
             print(f"    {gname}: (skip: field missing in log)")
             continue
@@ -253,6 +289,8 @@ def analyze(name, path):
             ok = val is not None and val < target
         elif stat == "pct_binding_min":
             ok = val is not None and val >= target
+        elif stat == "pct_countcap_min":
+            ok = val is not None and val >= target
         else:
             ok = val is not None and val < target
         status = "PASS" if ok else "FAIL"
@@ -261,6 +299,8 @@ def analyze(name, path):
         elif stat == "apply_util":
             tgt = f">={target}"
         elif stat == "pct_binding_min":
+            tgt = f">={target}"
+        elif stat == "pct_countcap_min":
             tgt = f">={target}"
         elif stat in ("pct_true",):
             tgt = f"<{target}"
