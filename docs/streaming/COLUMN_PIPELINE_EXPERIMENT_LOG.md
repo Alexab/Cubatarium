@@ -1153,5 +1153,7 @@ Forensic: Capture `depth_cap = min(inflight, apply_n_prev+1)` even in consume �
 
 Slice moving still ≤16. min_cap=3 not restored as force when time_cap&lt;3.
 
+**Plateau C2** `perf_20260824-144630_11460.jsonl`: sim **120 PASS**, CountCap **1.0**, light **0.59**, install med **0.00** (noop GPU MarkRelit), opaque 530 (лучше 704). apply_n med still 1 on drained plateau (PL=1) — rate-match needs другой ручной ≥600s.
+
 ---
 
