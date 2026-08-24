@@ -24,6 +24,7 @@ int main()
   using cutum::ColumnInstallPath;
   using cutum::LitApplyColumnInput;
   using cutum::PlanColumnInstall;
+  using cutum::ColumnChunkSnapshot;
   using cutum::ShouldConsumeTicketedVbDebt;
   using cutum::ShouldForceMarkRelitForTicketedStale;
   using cutum::IsMeshLightStale;
@@ -114,6 +115,25 @@ int main()
     in.enter_quiesce = false;
     Expect(ClassifyColumnInstallPath(in) == ColumnInstallPath::PrimaryConsume,
            "C17 primary_only cruise slim");
+  }
+
+  {
+    LitApplyColumnInput in{};
+    in.is_primary = true;
+    in.finalize_gate = true;
+    in.primary_only = true;
+    in.consume_mode = true;
+    in.focus_horiz = 5;
+    ColumnChunkSnapshot ch{};
+    ch.coord = {1, 0, 0};
+    ch.is_dirty = true;
+    ch.fully_dark = true;
+    ch.has_drawable = true;
+    in.relit_chunks.push_back(ch);
+    const auto plan = PlanColumnInstall(in);
+    Expect(!plan.mark_dirty_priority.empty(),
+           "P6: consume FullyDark already-dirty still priority Dirty");
+    Expect(plan.schedule_n >= 1, "P6: consume hole schedules");
   }
 
   Expect(ShouldConsumeTicketedVbDebt(0, 81, 0), "consume VB debt");

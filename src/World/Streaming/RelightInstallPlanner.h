@@ -170,6 +170,27 @@ inline bool ShouldScheduleChunkRemesh(
   return false;
 }
 
+/// FZ2.7: already-Dirty FullyDark / missing mesh must bump FirstMeshQ head.
+inline bool ShouldBumpDirtyHeadForVisualHole(bool is_dirty, bool fully_dark,
+                                             bool has_drawable, int focus_horiz,
+                                             bool consume_mode,
+                                             int ring = RelightFifoTrimProtectHoriz())
+{
+  if (!is_dirty)
+  {
+    return false;
+  }
+  if (has_drawable && !fully_dark)
+  {
+    return false;
+  }
+  if (consume_mode)
+  {
+    return true;
+  }
+  return focus_horiz >= 0 && focus_horiz <= ring;
+}
+
 inline void AppendUniqueCoord(std::vector<glm::ivec3> &vec,
                               const glm::ivec3 &coord)
 {
@@ -195,6 +216,22 @@ inline LitApplyPlan PlanPrimaryConsume(const LitApplyColumnInput &in)
   {
     if (chunk.is_dirty || chunk.inflight || chunk.raa_pending)
     {
+      if (!chunk.inflight &&
+          ShouldBumpDirtyHeadForVisualHole(chunk.is_dirty, chunk.fully_dark,
+                                           chunk.has_drawable, in.focus_horiz,
+                                           in.consume_mode))
+      {
+        AppendUniqueCoord(plan.mark_dirty_priority, chunk.coord);
+        ++plan.schedule_n;
+      }
+      else if (chunk.is_dirty)
+      {
+        ++plan.skip_already_dirty_n;
+      }
+      else if (chunk.inflight)
+      {
+        ++plan.skip_inflight_n;
+      }
       continue;
     }
     const bool needs_fm = !chunk.has_drawable || chunk.fully_dark;
@@ -252,7 +289,15 @@ inline LitApplyPlan PlanPrimaryStandard(const LitApplyColumnInput &in)
   {
     if (chunk.is_dirty || chunk.inflight || chunk.raa_pending)
     {
-      if (chunk.is_dirty)
+      if (!chunk.inflight &&
+          ShouldBumpDirtyHeadForVisualHole(chunk.is_dirty, chunk.fully_dark,
+                                           chunk.has_drawable, in.focus_horiz,
+                                           in.consume_mode))
+      {
+        AppendUniqueCoord(plan.mark_dirty_priority, chunk.coord);
+        ++plan.schedule_n;
+      }
+      else if (chunk.is_dirty)
       {
         ++plan.skip_already_dirty_n;
       }

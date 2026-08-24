@@ -177,6 +177,9 @@ private:
   bool RelightFifoPinValid{false};
   int RelightFifoPinCx{0};
   int RelightFifoPinCz{0};
+  bool RelightFifoTrimFocusValid{false};
+  int RelightFifoTrimFocusCx{0};
+  int RelightFifoTrimFocusCz{0};
   int RelightFifoOverflowDroppedN{0};
   int RelightFifoPinSavedN{0};
 };

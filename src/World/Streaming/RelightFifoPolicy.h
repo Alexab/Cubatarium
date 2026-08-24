@@ -116,6 +116,32 @@ inline bool ShouldProtectRelightFifoPinKey(int victim_cx, int victim_cz,
   return pin_valid && victim_cx == pin_cx && victim_cz == pin_cz;
 }
 
+/// FZ2.7: TrimFar LitDrawable=4 dropped in-view ocean (154945 fifo_drop 467).
+inline int RelightFifoTrimProtectHoriz()
+{
+  return kVisualStageLitDrawableHoriz + 4;
+}
+
+inline bool ShouldProtectRelightFifoTrimVictim(
+    int victim_cx, int victim_cz, bool pin_valid, int pin_cx, int pin_cz,
+    bool focus_valid, int focus_cx, int focus_cz,
+    int protect_horiz = RelightFifoTrimProtectHoriz())
+{
+  if (ShouldProtectRelightFifoPinKey(victim_cx, victim_cz, pin_valid, pin_cx,
+                                     pin_cz))
+  {
+    return true;
+  }
+  if (!focus_valid)
+  {
+    return false;
+  }
+  const int dx = victim_cx < focus_cx ? focus_cx - victim_cx : victim_cx - focus_cx;
+  const int dz = victim_cz < focus_cz ? focus_cz - victim_cz : victim_cz - focus_cz;
+  const int dist = dx > dz ? dx : dz;
+  return dist <= protect_horiz;
+}
+
 /// P1: nh≤2 pin always lives in the priority deque (not far overflow).
 inline bool ShouldForcePinColumnPriority(bool is_pin_key, int miss_horiz)
 {
@@ -500,11 +526,40 @@ inline int RelightCapturePipelineDepthCap(
         fifo_soft_cap, pending_light_n);
     cap = std::max(base, std::min(6, earned));
   }
+  // FZ2.7: fifo piled, Drain emptied ready — still keep worker depth 4–6.
+  if (cheap && fifo_n >= 50 && ready_n <= 1)
+  {
+    cap = std::max(cap, 4);
+  }
   if (max_inflight > 0)
   {
     cap = std::min(max_inflight, cap);
   }
   return std::max(1, cap);
+}
+
+/// FZ2.7: fifo starve after Apply must not clamp Capture to 1 (154945 completed=0).
+inline int RelightCaptureBgFloorForFifoStarve(int bg_cap, int fifo_n,
+                                              int fifo_soft_cap, int completed_n,
+                                              int inflight_n, double cap_unit_ms)
+{
+  const bool fifo_starve =
+      fifo_n >= 50 || (fifo_soft_cap > 0 && fifo_n >= fifo_soft_cap / 2);
+  if (!fifo_starve)
+  {
+    return bg_cap;
+  }
+  const bool cheap = cap_unit_ms > 0.1 && cap_unit_ms <= 16.0 / 3.0;
+  if (!cheap)
+  {
+    return bg_cap;
+  }
+  if (completed_n + inflight_n >= 4)
+  {
+    return bg_cap;
+  }
+  const int floor_n = 3;
+  return bg_cap > floor_n ? bg_cap : floor_n;
 }
 
 /// SoftDefer/miss may keep one Capture slot even when depth admit is false.

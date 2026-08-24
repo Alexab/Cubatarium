@@ -4523,7 +4523,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         CountPendingGpuAppliesInHorizontalRadius(MeshFocusGroundChunk,
                                                  MeshFocusRadiusChunks) > 4)
     {
-      remesh_cap = std::min(remesh_cap, 1);
+      remesh_cap = 2;
     }
     if (MeshFocusValid && first_mesh_cap > 0)
     {

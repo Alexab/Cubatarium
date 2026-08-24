@@ -12,6 +12,7 @@
 #include "World/Streaming/NearFovWorkPriority.h"
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/RelightFifoPolicy.h"
+#include "World/Streaming/RelightInstallPlanner.h"
 #include "World/Streaming/PhysicsStepPolicy.h"
 #include "World/Streaming/InputFirstPolicy.h"
 #include "World/Streaming/UnderfeetTelemetryPolicy.h"
@@ -1969,6 +1970,16 @@ int main()
            "P1: pin mismatch does not protect");
     Expect(!ShouldProtectRelightFifoPinKey(10, 20, false, 10, 20),
            "P1: invalid pin does not protect");
+    using cutum::RelightFifoTrimProtectHoriz;
+    using cutum::ShouldProtectRelightFifoTrimVictim;
+    Expect(RelightFifoTrimProtectHoriz() == 8,
+           "P6: trim protect horiz 8");
+    Expect(ShouldProtectRelightFifoTrimVictim(5, 0, false, 0, 0, true, 0, 0),
+           "P6: nh=5 ocean-in-view not dropped");
+    Expect(!ShouldProtectRelightFifoTrimVictim(9, 0, false, 0, 0, true, 0, 0),
+           "P6: nh=9 hinterland may trim");
+    Expect(ShouldProtectRelightFifoTrimVictim(9, 0, true, 9, 0, true, 0, 0),
+           "P6: pin key still protected far");
   }
 
   // P1: ShouldForcePinColumnPriority
@@ -2193,6 +2204,16 @@ int main()
     Expect(RelightCapturePipelineDepthCap(1, 8, 8.0, 12.0, 6.5, 0.5, 0, 10, 96,
                                           10, false) == 2,
            "C: fat unit keeps base depth 2");
+    Expect(RelightCapturePipelineDepthCap(1, 8, 8.0, 1.0, 0.4, 0.5, 0, 59, 96,
+                                          78, true) >= 4,
+           "P6: fifo 59 ready 0 still depth>=4");
+    using cutum::RelightCaptureBgFloorForFifoStarve;
+    Expect(RelightCaptureBgFloorForFifoStarve(1, 59, 96, 0, 0, 0.5) == 3,
+           "P6: cheap fifo starve lifts bg_cap 1→3");
+    Expect(RelightCaptureBgFloorForFifoStarve(1, 10, 96, 0, 0, 0.5) == 1,
+           "P6: no fifo starve keeps bg_cap");
+    Expect(RelightCaptureBgFloorForFifoStarve(1, 59, 96, 0, 0, 6.5) == 1,
+           "P6: fat unit does not lift Capture");
   }
 
   // CheapRemesh C5: live GPU opaque across LitDrawable ring (repair optional)
@@ -2264,6 +2285,22 @@ int main()
            "P3: live remesh in-flight coalesces");
     Expect(!ShouldSkipInFlightDirtyReschedule(false, true, 8, false),
            "P3: not in-flight → no skip");
+  }
+
+  {
+    using cutum::ShouldBumpDirtyHeadForVisualHole;
+    Expect(ShouldBumpDirtyHeadForVisualHole(true, true, true, 5, true),
+           "P6: consume FullyDark dirty bumps head");
+    Expect(ShouldBumpDirtyHeadForVisualHole(true, false, false, 9, true),
+           "P6: consume missing mesh bumps even far");
+    Expect(!ShouldBumpDirtyHeadForVisualHole(true, false, true, 2, true),
+           "P6: lit drawable dirty does not bump");
+    Expect(ShouldBumpDirtyHeadForVisualHole(true, true, true, 8, false),
+           "P6: cruise FullyDark nh=8 bumps");
+    Expect(!ShouldBumpDirtyHeadForVisualHole(true, true, true, 9, false),
+           "P6: hinterland FullyDark may skip");
+    Expect(!ShouldBumpDirtyHeadForVisualHole(false, true, false, 1, true),
+           "P6: not dirty → no bump");
   }
 
   // CheapRemesh C3: PrimaryLightUnchanged

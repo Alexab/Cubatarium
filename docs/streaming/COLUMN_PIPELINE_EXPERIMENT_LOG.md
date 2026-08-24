@@ -1173,3 +1173,18 @@ Hold: sim&lt;135, moving slice ≤16, CountCap, no Starlight rewrite, no neighbo
 
 ---
 
+## FZ2.7-P6 tails (post-154945 flicker / ocean never-close)
+
+Eye: blink + empty chunks + ocean planes that never close. SoT `154945` (~376s): MarkRelit partial (37/128), **89 apply frames SkipAlreadyDirty**, Dirty FM ~150, **fifo_drop 117→467**, unfinished 15–33 plateau.
+
+| Tail | Change |
+| --- | --- |
+| Dirty bump | `ShouldBumpDirtyHeadForVisualHole` — FullyDark / missing mesh already-Dirty still `MarkDirtyPriority` (FirstMeshQ head) on consume or horiz≤8 |
+| FIFO protect | `ShouldProtectRelightFifoTrimVictim` protect horiz **8** (was LitDrawable 4) on TrimFar + enqueue overflow |
+| Capture refill | `RelightCaptureBgFloorForFifoStarve` bg≥3 when fifo≥50/2 and cheap; depth≥4 when fifo≥50 & ready≤1 |
+| Remesh under holes | GPU pending>4 keeps remesh_cap **2** (was 1) so FullyDark remesh is not starved |
+
+Hold: sim&lt;135, moving slice ≤16, no min_cap=3 over fat time_cap. Closeout still manual ≥600s.
+
+---
+

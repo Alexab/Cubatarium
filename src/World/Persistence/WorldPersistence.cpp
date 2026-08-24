@@ -334,8 +334,10 @@ void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z,
     {
       const int cx = FloorDiv(it->x, CHUNK_SIZE);
       const int cz = FloorDiv(it->y, CHUNK_SIZE);
-      if (ShouldProtectRelightFifoPinKey(cx, cz, RelightFifoPinValid, pin_cx,
-                                         pin_cz))
+      if (ShouldProtectRelightFifoTrimVictim(
+              cx, cz, RelightFifoPinValid, pin_cx, pin_cz,
+              RelightFifoTrimFocusValid, RelightFifoTrimFocusCx,
+              RelightFifoTrimFocusCz))
       {
         ++RelightFifoPinSavedN;
         continue;
@@ -545,6 +547,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   {
     const glm::ivec3 focus_chunk =
         UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+    RelightFifoTrimFocusValid = true;
+    RelightFifoTrimFocusCx = focus_chunk.x;
+    RelightFifoTrimFocusCz = focus_chunk.z;
     const glm::ivec3 focus_horiz(focus_chunk.x, 0, focus_chunk.z);
     AdmitDeferredFarRelightColumns(world, focus_horiz,
                                    RelightMissPinMaxHoriz());
@@ -1058,6 +1063,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         bg_cap = std::min(bg_cap, 1);
       }
     }
+    bg_cap = RelightCaptureBgFloorForFifoStarve(
+        bg_cap, telem.RelightFifoN, fifo_soft_cap, completed_n, inflight_n,
+        RelightApplyCapUnitMs(unit_ms_prev, light_unit, install_unit));
   }
   if (!enter_fov_lit && frame_ms_so_far >= capture_hot_skip_ms &&
       visual_holes && focus_pending_mid)
@@ -1440,6 +1448,9 @@ bool UWorldPersistence::IsTerrainColumnRelightQueued(
 int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
                                                   int soft_cap)
 {
+  RelightFifoTrimFocusValid = true;
+  RelightFifoTrimFocusCx = focus_ground.x;
+  RelightFifoTrimFocusCz = focus_ground.z;
   auto total_fifo = [this]()
   {
     return static_cast<int>(PendingTerrainColumnRelights.size() +
@@ -1463,8 +1474,9 @@ int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
       const int dist =
           std::max(std::abs(cx - focus_ground.x), std::abs(cz - focus_ground.z));
       // Era40 / P1: never Trim/drop LitDrawable-ring or pinned miss columns.
-      if (ShouldProtectRelightFifoPinKey(cx, cz, RelightFifoPinValid,
-                                         RelightFifoPinCx, RelightFifoPinCz) ||
+      if (ShouldProtectRelightFifoTrimVictim(
+              cx, cz, RelightFifoPinValid, RelightFifoPinCx, RelightFifoPinCz,
+              true, focus_ground.x, focus_ground.z) ||
           dist <= RelightMissPinMaxHoriz())
       {
         continue;
