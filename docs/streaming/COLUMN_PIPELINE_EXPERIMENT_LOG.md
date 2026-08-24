@@ -1033,3 +1033,89 @@ python bin/tmp_fz2_gate_check.py bin/logs/perf_<new>.jsonl
 
 Autofly: none (docs/gates only). Next: P0b harness, then A time_cap wins.
 
+---
+
+## FZ2.7-A — time_cap wins (autofly plateau `132116`)
+
+**SHA:** `1086e568`. **Autofly:** `perf_20260824-132116_4276.jsonl` (~224s wall, plateau).
+
+| Gate | 101316 | 132116 plateau | Notes |
+| --- | --- | --- | --- |
+| CountCap share | 0.32 FAIL | **0.97 PASS** | A in-scope |
+| unit light | 6.50 | **1.44 PASS** | B timers+skip (shipped same SHA) |
+| unit install | 0.05 | **0.02 PASS** | hold |
+| sim | 134 | **121 PASS** | hold |
+| apply_n steady | 2 | 1 | late plateau drain (PL=1); not A FAIL |
+
+No Classify commit-2 (CountCap already ≥50%). Light FAIL of 101316 is **out of A scope** but already green on this log.
+
+---
+
+## FZ2.7-B — light diet (same SHA as A, telem split)
+
+`RelightDrainCompletedMs` / `RelightMergeLightMs`; `RelightApplyLightMs` = merge only. GPU-sky path skips `MergeBlockLightKeepingGpuSky` when block nibbles match (`BlockLightUnchanged`).
+
+**Long A2:** `perf_20260824-134553_23644.jsonl` — unit light **0.55 PASS** (vs 6.50). Install **0.02**.
+
+---
+
+## FZ2.7-C — rate match
+
+Producer suppress gains `light_unit > slice/3`. Capture `bg_cap` clamped when fifo ≥2/3 cap and completed&lt;2. **Do not** restore min_cap=3.
+
+Long 134553: apply_n med **1**, util **0.05**, honest_util **1.0** (ready≈1). C DoD util≥0.15 **FAIL** — completed queue empty, not Drain min_cap. Light&lt;5 so C was in scope; no second min_cap revert.
+
+---
+
+## FZ2.7-D — VB / blink
+
+Published VB deadband hold. `RepairReticketDeferredN` when GPU apply in flight. Extra inflight-GPU keep **reverted in A2** (opaque 771 on first long).
+
+Long 134553: VB **6 PASS**, blink **0.47 FAIL**, opaque **732 FAIL**. Autofly residency ≠ 101316 manual.
+
+---
+
+## FZ2.7-E — Dirty coalesce
+
+Far Dirty 1–2 frame delay **reverted in A2** (sim kill-switch). Inflight `RemoveAt` / schedule dedup unchanged. Revisit **103** (target&lt;95) FAIL. Stream **43** FAIL.
+
+---
+
+## FZ2.7-F — enter ticket seed
+
+Enter Capture `bg_cap` 2/3 when no_ticket; enter-peak second pass remain≤4. **Not** `CountEnterFovLitDebt` on cruise.
+
+**Parity:** `perf_20260824-135901_19400.jsonl` — enter_wall_p90 **156 PASS**, no_ticket_peak **113 FAIL**, PL_enter **36.5 FAIL**.
+
+---
+
+## FZ2.7-G — closeout (autofly long, kill-switch)
+
+**SHA:** `7f045332` (A2 after `1086e568`).
+**Long:** `bin/logs/perf_20260824-134553_23644.jsonl` (~650s scenario, ~1538s wall).
+**Plateau:** `132116`. **Parity:** `135901`. First long (pre-A2): `132611` sim 144 / opaque 771.
+
+### vs 101316 (delta)
+
+| Metric | 101316 | 134553 A2 |
+| --- | --- | --- |
+| CountCap | 0.32 | **1.00 PASS** |
+| unit light | 6.50 | **0.55 PASS** |
+| unit install | 0.05 | **0.02 PASS** |
+| VB | 96.5 | **6 PASS** |
+| sim | 134 | **142 FAIL** kill-switch &gt;135 |
+| apply_n | 2 | 1 |
+| opaque | 255 | 732 FAIL |
+| blink | 0.57 | 0.47 FAIL |
+| sticky | 0 | **0 PASS** |
+| enter_wall_p90 | 183 | long 257 FAIL / parity 156 PASS |
+| uf_flips | 0 | **0 PASS** |
+
+vs `114401`: sticky 0 hold; uf 0 hold; enter_wall parity better, long enter_p90 hitch.
+
+**Kill-switch:** two long autofly iterations; sim_steady still &gt;135. No further slice grow. **Autofly GO is not G closeout** — one **manual ≥600s** still required.
+
+Smoke: `python bin/tmp_fz27_b_test_smoke.py` ALL PASS at A ship.
+
+---
+
