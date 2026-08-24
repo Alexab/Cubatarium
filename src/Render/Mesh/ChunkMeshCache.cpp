@@ -1990,13 +1990,22 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
     ++LastDirtyScheduleDedupN;
     return;
   }
-  // FZ2.4-P0c: live build + Active revision — skip Dirty re-insert (revisit).
+  // FZ2.4-P0c / FZ2.7-E: in-flight skip; far FullyDark also (revisit 227).
   if (ActiveMeshSourceRevision.count(chunkCoord) > 0 &&
-      AsyncBuilder && AsyncBuilder->IsInFlight(chunkCoord) &&
-      !ChunkHasFullyDarkFace(chunkCoord))
+      AsyncBuilder && AsyncBuilder->IsInFlight(chunkCoord))
   {
-    ++LastDirtyScheduleDedupN;
-    return;
+    int horiz = 999;
+    if (MeshFocusValid)
+    {
+      horiz = std::max(std::abs(chunkCoord.x - MeshFocusGroundChunk.x),
+                       std::abs(chunkCoord.z - MeshFocusGroundChunk.z));
+    }
+    if (!ChunkHasFullyDarkFace(chunkCoord) ||
+        horiz > kVisualStageNearFovHoriz)
+    {
+      ++LastDirtyScheduleDedupN;
+      return;
+    }
   }
   SoftDeferHeld.erase(chunkCoord);
   // Mid-flight MarkDirty used to re-insert Dirty while Active stayed set —
@@ -2064,13 +2073,22 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
     ++LastDirtyScheduleDedupN;
     return;
   }
-  // FZ2.4-P0c: live build + Active revision — skip Dirty re-insert (revisit).
+  // FZ2.4-P0c / FZ2.7-E: in-flight skip; far FullyDark also (revisit 227).
   if (ActiveMeshSourceRevision.count(chunkCoord) > 0 &&
-      AsyncBuilder && AsyncBuilder->IsInFlight(chunkCoord) &&
-      !ChunkHasFullyDarkFace(chunkCoord))
+      AsyncBuilder && AsyncBuilder->IsInFlight(chunkCoord))
   {
-    ++LastDirtyScheduleDedupN;
-    return;
+    int horiz = 999;
+    if (MeshFocusValid)
+    {
+      horiz = std::max(std::abs(chunkCoord.x - MeshFocusGroundChunk.x),
+                       std::abs(chunkCoord.z - MeshFocusGroundChunk.z));
+    }
+    if (!ChunkHasFullyDarkFace(chunkCoord) ||
+        horiz > kVisualStageNearFovHoriz)
+    {
+      ++LastDirtyScheduleDedupN;
+      return;
+    }
   }
   const bool was_soft_held = SoftDeferHeld.count(chunkCoord) > 0;
   SoftDeferHeld.erase(chunkCoord);

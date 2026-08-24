@@ -85,10 +85,10 @@ inline int VisibleBlackNoTicketRepairCap(int no_ticket_n, int repair_cap,
                                           bool moving, bool enter_fov_lit = false)
 {
   const int base = std::max(1, repair_cap);
-  // FZ2.1-B2a / FZ2.3-D3: enter idle repair cap (bisect 2→4 after FZ2.2-C2b).
-  if (enter_fov_lit && !moving)
+  // FZ2.7-F: enter seed — do not clamp to 4 (manual 141417 peak 108).
+  if (enter_fov_lit)
   {
-    return std::min(base, 4);
+    return std::min(12, std::max(base, std::max(6, no_ticket_n / 8)));
   }
   if (no_ticket_n <= 0)
   {

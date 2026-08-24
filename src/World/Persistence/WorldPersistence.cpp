@@ -1008,7 +1008,6 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     const int completed_n =
         static_cast<int>(world.GetRelightCompletedSize());
     const int inflight_n = world.GetAsyncRelightInFlightCount();
-    const int apply_cap_base = std::max(1, telem.RelightApplyNPrev) + 1;
     const bool consume_mode = ShouldConsumeTicketedVbDebt(
         vb_no_ticket_n, telem.VisibleBlackFocusN,
         telem.VisibleBlackStalledN);
@@ -1017,13 +1016,21 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
             ? (telem.RelightApplyMsPrev /
                static_cast<double>(telem.RelightApplyNPrev))
             : telem.RelightApplyMsPrev;
-    const int earned_apply_cap = EarnedRelightApplyCap(
-        apply_cap_base, static_cast<double>(tune.MissReservedMs), 0.0,
-        unit_ms_prev, consume_mode, telem.VisibleBlackStalledN);
-    const int apply_cap =
-        consume_mode ? std::max(apply_cap_base, earned_apply_cap) : apply_cap_base;
-    const int depth_cap =
-        max_inflight > 0 ? std::min(max_inflight, apply_cap) : apply_cap;
+    const double light_unit =
+        telem.RelightApplyNPrev > 0
+            ? telem.RelightApplyLightMsPrev /
+                  static_cast<double>(telem.RelightApplyNPrev)
+            : 0.0;
+    const double install_unit =
+        telem.RelightApplyNPrev > 0
+            ? telem.RelightApplyInstallMsPrev /
+                  static_cast<double>(telem.RelightApplyNPrev)
+            : 0.0;
+    const int depth_cap = RelightCapturePipelineDepthCap(
+        telem.RelightApplyNPrev, max_inflight,
+        static_cast<double>(tune.MissReservedMs), unit_ms_prev, light_unit,
+        install_unit, completed_n, telem.RelightFifoN, tune.RelightFifoSoftCap,
+        telem.PendingLightN, consume_mode);
     if (!ShouldAdmitRelightCapture(completed_n, inflight_n, depth_cap))
     {
       const bool soft_defer_or_miss =
@@ -1342,7 +1349,6 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       const bool remainder_priority = horiz_dist <= focus_radius;
       // ColdFix / RateMatch R1: stash when Apply-capacity depth is full.
       const auto &telem = world.GetPhysicsTelemetry();
-      const int apply_cap_base = std::max(1, telem.RelightApplyNPrev) + 1;
       const bool consume_mode = ShouldConsumeTicketedVbDebt(
           telem.VisibleBlackNoTicketN, telem.VisibleBlackFocusN,
           telem.VisibleBlackStalledN);
@@ -1351,14 +1357,22 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
               ? (telem.RelightApplyMsPrev /
                  static_cast<double>(telem.RelightApplyNPrev))
               : telem.RelightApplyMsPrev;
-      const int earned_apply_cap = EarnedRelightApplyCap(
-          apply_cap_base, static_cast<double>(tune.MissReservedMs), 0.0,
-          unit_ms_prev, consume_mode, telem.VisibleBlackStalledN);
-      const int apply_cap =
-          consume_mode ? std::max(apply_cap_base, earned_apply_cap)
-                       : apply_cap_base;
-      const int depth_cap =
-          max_inflight > 0 ? std::min(max_inflight, apply_cap) : apply_cap;
+      const double light_unit =
+          telem.RelightApplyNPrev > 0
+              ? telem.RelightApplyLightMsPrev /
+                    static_cast<double>(telem.RelightApplyNPrev)
+              : 0.0;
+      const double install_unit =
+          telem.RelightApplyNPrev > 0
+              ? telem.RelightApplyInstallMsPrev /
+                    static_cast<double>(telem.RelightApplyNPrev)
+              : 0.0;
+      const int depth_cap = RelightCapturePipelineDepthCap(
+          telem.RelightApplyNPrev, max_inflight,
+          static_cast<double>(tune.MissReservedMs), unit_ms_prev, light_unit,
+          install_unit, static_cast<int>(world.GetRelightCompletedSize()),
+          telem.RelightFifoN, tune.RelightFifoSoftCap, telem.PendingLightN,
+          consume_mode);
       const bool depth_full = !ShouldAdmitRelightCapture(
           static_cast<int>(world.GetRelightCompletedSize()),
           world.GetAsyncRelightInFlightCount(), depth_cap);

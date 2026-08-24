@@ -703,8 +703,8 @@ int main()
   Expect(!ShouldSkipDeferRemeshUnderVbHealPressure(2, true, false, 0, 12, 12, 55,
                                                    1),
          "FZ2.2-C3b: VB stable<2 frames → defer allowed");
-  Expect(VisibleBlackNoTicketRepairCap(108, 6, false, true) <= 4,
-         "FZ2.3-D3: enter idle repair cap≤4");
+  Expect(VisibleBlackNoTicketRepairCap(108, 6, false, true) >= 6,
+         "FZ27-F: enter repair seed >=6");
   Expect(ShouldFinalizeRelightUnderVbSteadyPressure(31, 11, 3),
          "FZ2.2-C4b: steady finalize vb=31 pl=11");
   Expect(!ShouldFinalizeRelightUnderVbSteadyPressure(24, 11, 3),
@@ -2170,6 +2170,23 @@ int main()
            "ColdFix P1: SoftDefer floor keeps 1 when depth-full");
     Expect(SoftDeferCaptureFloorWhenDepthFull(false, 0) == 0,
            "ColdFix P1: no SoftDefer → bg_cap stays 0");
+  }
+
+  // FZ2.7-C: Capture depth follows earned apply (manual 141417 fifo=55 ready=0)
+  {
+    using cutum::RelightCapturePipelineDepthCap;
+    using cutum::RelightThroughputHasBacklog;
+    Expect(RelightThroughputHasBacklog(0, 55, 96, 17),
+           "C: fifo 55/96 is backlog");
+    Expect(RelightCapturePipelineDepthCap(1, 8, 8.0, 1.0, 0.4, 0.5, 0, 55, 96,
+                                          17, false) >= 4,
+           "C: cheap+fifo depth >=4 not apply_n+1=2");
+    Expect(RelightCapturePipelineDepthCap(1, 8, 8.0, 1.0, 0.4, 0.5, 0, 55, 96,
+                                          17, false) <= 6,
+           "C: depth capped at 6");
+    Expect(RelightCapturePipelineDepthCap(1, 8, 8.0, 12.0, 6.5, 0.5, 0, 10, 96,
+                                          10, false) == 2,
+           "C: fat unit keeps base depth 2");
   }
 
   // CheapRemesh C5: live GPU opaque across LitDrawable ring (repair optional)

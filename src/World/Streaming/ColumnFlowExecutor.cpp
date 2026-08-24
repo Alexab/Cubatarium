@@ -387,7 +387,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     // FZ2.1-B2c: narrow enter collect ring to reduce no_ticket peak.
     if (enter_fov_lit)
     {
-      vb_radius = std::min(vb_radius, 2);
+      vb_radius = std::min(vb_radius, 3);
     }
     const int stale_cap =
         nearest_vb_no_ticket

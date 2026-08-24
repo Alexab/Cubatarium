@@ -4233,12 +4233,12 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       if (UChunk *chunk =
               BlockWorld.GetChunkManager().GetChunk(chunk_data.coord))
       {
+        const auto light_before = chunk->GetLightData();
         if (result.include_skylight &&
             ApplyGpuSkylightSeedToChunk(*chunk, *BlockRegistry))
         {
           if (result.include_block_light &&
-              !BlockLightUnchanged(chunk->GetLightData(),
-                                   chunk_data.light_packed))
+              !BlockLightUnchanged(light_before, chunk_data.light_packed))
           {
             MergeBlockLightKeepingGpuSky(*chunk, chunk_data.light_packed);
           }
@@ -4246,9 +4246,12 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
           {
             ++PhysicsTelemetryData.RelightLightSkipN;
           }
-          chunk->BumpLightFieldRevision();
-          any_light_changed = true;
-          relit_coords.push_back(chunk_data.coord);
+          if (!PrimaryLightUnchanged(light_before, chunk->GetLightData()))
+          {
+            chunk->BumpLightFieldRevision();
+            any_light_changed = true;
+            relit_coords.push_back(chunk_data.coord);
+          }
         }
         else if (!PrimaryLightUnchanged(chunk->GetLightData(),
                                         chunk_data.light_packed))

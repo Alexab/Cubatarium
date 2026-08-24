@@ -1119,3 +1119,39 @@ Smoke: `python bin/tmp_fz27_b_test_smoke.py` ALL PASS at A ship.
 
 ---
 
+## Manual `141417` (~594s) — true G gate vs autofly
+
+`bin/logs/perf_20260824-141417_11404.jsonl` after `7f045332`.
+
+| Gate | 101316 | autofly 134553 | **manual 141417** |
+| --- | --- | --- | --- |
+| sim | 134 | 142 FAIL | **134.8 PASS** |
+| stream | 51 | 43 | **23.9 PASS** |
+| light unit | 6.50 | 0.55 | **0.40 PASS** (p90≈5) |
+| CountCap | 0.32 | 1.00 | **1.00 PASS** |
+| apply_n / util | 2 / 0.10 | 1 / 0.05 | **1 / 0.05 FAIL** |
+| completed med | 1 | 0 | **0** (fifo 55) |
+| VB / blink | 96.5 / 0.57 | 6 / 0.47 | **98 / 0.52 FAIL** |
+| opaque | 255 | 732 | **704 FAIL** |
+| revisit | 231 | 103 | **227 FAIL** |
+| PL enter | 31 | 30 | **22 PASS** |
+| sticky | 0 | 0 | **0** |
+
+Forensic: Capture `depth_cap = min(inflight, apply_n_prev+1)` even in consume — earned budget was 2 so completed never filled. GPU-sky skip still `Bump+MarkRelit`. Far FullyDark bypassed in-flight Dirty skip.
+
+---
+
+## FZ2.7-C2/E2/F2 tails (post-141417)
+
+| Tail | Change |
+| --- | --- |
+| C | `RelightCapturePipelineDepthCap` — cheap+backlog depth 4–6, not `n_prev+1`. Backlog fifo≥cap/2 or fifo≥24@ready≤1, PL>30 |
+| B hold | GPU-sky: MarkRelit only if light bytes changed vs pre-seed snapshot |
+| E | far in-flight FullyDark skip re-Dirty (near FullyDark still immediate) |
+| D | published VB deadband 2→3 |
+| F | enter repair cap seed ≤12, collect ring 3 (not clamp 4 / ring 2) |
+
+Slice moving still ≤16. min_cap=3 not restored as force when time_cap&lt;3.
+
+---
+

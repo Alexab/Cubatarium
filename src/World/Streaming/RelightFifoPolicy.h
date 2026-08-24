@@ -238,8 +238,9 @@ inline bool RelightThroughputHasBacklog(int ready_at_start, int fifo_n,
                                         int fifo_soft_cap, int pending_light_n)
 {
   return ready_at_start >= 2 ||
-         (fifo_soft_cap > 0 && fifo_n >= (fifo_soft_cap * 2) / 3) ||
-         pending_light_n > 45;
+         (fifo_soft_cap > 0 && fifo_n >= fifo_soft_cap / 2) ||
+         pending_light_n > 30 ||
+         (ready_at_start <= 1 && fifo_n >= 24);
 }
 
 /// FZ2.7-B2d: min applies before stop (apply_util≥0.15 ⇒ med≥3 when cheap+backlog).
@@ -429,6 +430,35 @@ inline bool ShouldAdmitRelightCapture(int completed_n, int inflight_n,
     return true;
   }
   return (completed_n + inflight_n) < depth_cap;
+}
+
+/// FZ2.7-C: Capture pipeline depth from earned apply, not apply_n_prev+1.
+/// Manual 141417: consume earned(budget=2) stayed 2 → completed med 0, fifo 55.
+inline int RelightCapturePipelineDepthCap(
+    int apply_n_prev, int max_inflight, double slice_ms, double last_unit_ms,
+    double last_light_unit_ms, double last_install_unit_ms, int ready_n,
+    int fifo_n, int fifo_soft_cap, int pending_light_n, bool consume_mode)
+{
+  const int base = std::max(1, apply_n_prev) + 1;
+  const double cap_unit = RelightApplyCapUnitMs(
+      last_unit_ms, last_light_unit_ms, last_install_unit_ms);
+  const bool cheap = cap_unit > 0.1 && cap_unit <= slice_ms / 3.0;
+  const bool backlog = RelightThroughputHasBacklog(
+      ready_n, fifo_n, fifo_soft_cap, pending_light_n);
+  int cap = base;
+  if (cheap && (consume_mode || backlog))
+  {
+    const int earned = EarnedRelightApplyCap(
+        /*drain_budget=*/8, slice_ms, 0.0, last_unit_ms, true, 0,
+        last_light_unit_ms, last_install_unit_ms, ready_n, fifo_n,
+        fifo_soft_cap, pending_light_n);
+    cap = std::max(base, std::min(6, earned));
+  }
+  if (max_inflight > 0)
+  {
+    cap = std::min(max_inflight, cap);
+  }
+  return std::max(1, cap);
 }
 
 /// SoftDefer/miss may keep one Capture slot even when depth admit is false.

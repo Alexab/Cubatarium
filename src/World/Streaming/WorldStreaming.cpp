@@ -771,7 +771,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       last_visible_black_no_ticket = no_ticket;
       last_visible_black_progress = progress_n;
       last_visible_black_stalled = stalled_n;
-      if (std::abs(raw_vb - vb_published) > 2)
+      if (std::abs(raw_vb - vb_published) > 3)
       {
         vb_published = raw_vb;
         vb_pending_raw = raw_vb;
