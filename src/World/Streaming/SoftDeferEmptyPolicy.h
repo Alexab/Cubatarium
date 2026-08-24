@@ -47,9 +47,19 @@ inline bool ShouldColdAsyncImmEscape(bool missing_visible_mesh, int mesh_async)
 /// Era22 I-S1: SoftDefer must not drop/park !Drawable FirstMesh without a
 /// schedule under miss-class or in-focus (place-to-reveal / SoftDeferHeld SLA).
 inline bool ShouldScheduleFirstMeshUnderSoftDefer(bool has_drawable,
-                                                  bool miss_or_in_focus)
+                                                  bool miss_or_in_focus,
+                                                  int horiz = -1,
+                                                  int protect_horiz = 8)
 {
-  return !has_drawable && miss_or_in_focus;
+  if (has_drawable)
+  {
+    return false;
+  }
+  if (miss_or_in_focus)
+  {
+    return true;
+  }
+  return horiz >= 0 && horiz <= protect_horiz;
 }
 
 /// Era22 I-S2: SoftDeferHeld side-set counts as repair progress for no_ticket

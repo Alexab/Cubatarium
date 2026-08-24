@@ -3959,8 +3959,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           in_focus = horiz <= MeshFocusRadiusChunks;
         }
         const bool miss_or_focus = StarveRemeshForHoles || in_focus;
-        if (!ShouldScheduleFirstMeshUnderSoftDefer(has_drawable,
-                                                   miss_or_focus))
+        if (!ShouldScheduleFirstMeshUnderSoftDefer(
+                has_drawable, miss_or_focus, horiz,
+                RelightFifoTrimProtectHoriz()))
         {
           if (!has_drawable)
           {
@@ -3994,16 +3995,17 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         {
           const bool has_drawable = HasDrawableGreedyMesh(*it);
           bool in_focus = false;
+          int horiz = 999;
           if (MeshFocusValid)
           {
-            const int horiz =
-                std::max(std::abs(it->x - MeshFocusGroundChunk.x),
-                         std::abs(it->z - MeshFocusGroundChunk.z));
+            horiz = std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                             std::abs(it->z - MeshFocusGroundChunk.z));
             in_focus = horiz <= MeshFocusRadiusChunks;
           }
           const bool miss_or_focus = StarveRemeshForHoles || in_focus;
-          if (ShouldScheduleFirstMeshUnderSoftDefer(has_drawable,
-                                                    miss_or_focus))
+          if (ShouldScheduleFirstMeshUnderSoftDefer(
+                  has_drawable, miss_or_focus, horiz,
+                  RelightFifoTrimProtectHoriz()))
           {
             ++it;
             continue;
@@ -4435,10 +4437,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         }
         // Phase 1b: ring≤2 FirstMesh is non-stealable under SoftDefer.
         const bool near_ring_first_mesh =
-            !has_drawable && horiz <= kVisualStageNearFovHoriz;
+            !has_drawable && horiz <= RelightFifoTrimProtectHoriz();
         const bool miss_or_focus = StarveRemeshForHoles || in_focus;
         if (near_ring_first_mesh ||
-            ShouldScheduleFirstMeshUnderSoftDefer(has_drawable, miss_or_focus))
+            ShouldScheduleFirstMeshUnderSoftDefer(has_drawable, miss_or_focus,
+                                                  horiz,
+                                                  RelightFifoTrimProtectHoriz()))
         {
           // fall through to Capture/Enqueue
         }
@@ -4806,15 +4810,17 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         const bool has_drawable = HasDrawableGreedyMesh(*it);
         bool in_focus = false;
+        int horiz = 999;
         if (MeshFocusValid)
         {
-          const int horiz =
-              std::max(std::abs(it->x - MeshFocusGroundChunk.x),
-                       std::abs(it->z - MeshFocusGroundChunk.z));
+          horiz = std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                           std::abs(it->z - MeshFocusGroundChunk.z));
           in_focus = horiz <= MeshFocusRadiusChunks;
         }
         const bool miss_or_focus = StarveRemeshForHoles || in_focus;
-        if (ShouldScheduleFirstMeshUnderSoftDefer(has_drawable, miss_or_focus))
+        if (ShouldScheduleFirstMeshUnderSoftDefer(
+                has_drawable, miss_or_focus, horiz,
+                RelightFifoTrimProtectHoriz()))
         {
           // Era22 I-S1: fall through to schedule FirstMesh.
         }

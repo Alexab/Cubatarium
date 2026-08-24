@@ -10,6 +10,9 @@ constexpr int kVisualStageNearFovHoriz = 2;
 /// hinterland (horiz > ring); fully-dark drawable in ring is unfinished.
 constexpr int kVisualStageLitDrawableHoriz = 4;
 
+/// Ocean / cruise protect ring (FIFO trim + live-GPU keep). LitDrawable+4.
+constexpr int kVisualStageProtectHoriz = kVisualStageLitDrawableHoriz + 4;
+
 /// Era28 I-V1: UnlitFirstMesh allowed only outside near FOV (hide-until-lit near).
 /// has_mesh or !in_focus → never; near horiz ≤ near_r → false; far → true.
 /// Era32: pass kVisualStageLitDrawableHoriz as near_r for FOV publication.

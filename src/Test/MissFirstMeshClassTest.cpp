@@ -128,6 +128,10 @@ int main()
          "Era22 I-S1: drawable remesh stays SoftDefer-drop");
   Expect(!ShouldScheduleFirstMeshUnderSoftDefer(false, false),
          "Era22 I-S1: outside miss/focus → Held path, not force schedule");
+  Expect(ShouldScheduleFirstMeshUnderSoftDefer(false, false, 5, 8),
+         "P7: missing mesh nh=5 in protect ring schedules FirstMesh");
+  Expect(!ShouldScheduleFirstMeshUnderSoftDefer(false, false, 9, 8),
+         "P7: missing mesh beyond protect stays Held");
   Expect(SoftDeferHeldCountsAsRepairProgress(true),
          "Era22 I-S2: SoftDeferHeld ∈ repair progress");
   Expect(!SoftDeferHeldCountsAsRepairProgress(false),
@@ -2210,10 +2214,17 @@ int main()
     using cutum::RelightCaptureBgFloorForFifoStarve;
     Expect(RelightCaptureBgFloorForFifoStarve(1, 59, 96, 0, 0, 0.5) == 3,
            "P6: cheap fifo starve lifts bg_cap 1→3");
+    Expect(RelightCaptureBgFloorForFifoStarve(1, 59, 96, 0, 0, 0.07) == 3,
+           "P7: GPU-sky unit 0.07 still lifts Capture");
+    Expect(RelightCaptureBgFloorForFifoStarve(1, 59, 96, 0, 0, 0.0) == 3,
+           "P7: unknown unit 0 still lifts fifo starve Capture");
     Expect(RelightCaptureBgFloorForFifoStarve(1, 10, 96, 0, 0, 0.5) == 1,
            "P6: no fifo starve keeps bg_cap");
     Expect(RelightCaptureBgFloorForFifoStarve(1, 59, 96, 0, 0, 6.5) == 1,
            "P6: fat unit does not lift Capture");
+    Expect(RelightCapturePipelineDepthCap(1, 8, 8.0, 0.0, 0.0, 0.0, 0, 71, 96,
+                                          80, true) >= 4,
+           "P7: fifo 71 ready 0 unknown unit still depth>=4");
   }
 
   // CheapRemesh C5: live GPU opaque across LitDrawable ring (repair optional)
@@ -2225,8 +2236,12 @@ int main()
            "C5: LitDrawable nh=3 → keep");
     Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 4, true),
            "C5: LitDrawable edge nh=4 → keep");
-    Expect(!ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 5, true),
-           "C5: beyond LitDrawable → no keep");
+    Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 5, true),
+           "P7: protect nh=5 live GPU keep");
+    Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 8, true),
+           "P7: protect nh=8 live GPU keep");
+    Expect(!ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 9, true),
+           "P7: beyond protect ring → no keep");
     Expect(ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, 0, false),
            "C5: no repair progress still keep when live GPU");
     Expect(!ShouldKeepLiveGpuOpaqueDespiteFullyDark(false, 0, true),
@@ -2234,6 +2249,10 @@ int main()
     using cutum::ShouldHideFullyDarkOverLiveGpu;
     Expect(!ShouldHideFullyDarkOverLiveGpu(true, 4, true),
            "P4: live GPU nh=4 not hidden");
+    Expect(!ShouldHideFullyDarkOverLiveGpu(true, 8, true),
+           "P7: live GPU nh=8 not hidden");
+    Expect(ShouldHideFullyDarkOverLiveGpu(true, 9, true),
+           "P7: beyond protect may hide FullyDark");
     Expect(ShouldHideFullyDarkOverLiveGpu(false, 2, true),
            "P4: no live GPU may hide FullyDark");
     Expect(!ShouldHideFullyDarkOverLiveGpu(true, 0, false),
@@ -2263,6 +2282,10 @@ int main()
     using cutum::EarnedRelightApplyCap;
     Expect(ClampCruiseDrainToReadyCheap(1, 3, 2.0) == 3,
            "P2: cheap ready=3 lifts cruise budget 1");
+    Expect(ClampCruiseDrainToReadyCheap(1, 3, 0.07) == 3,
+           "P7: GPU-sky unit 0.07 lifts Drain");
+    Expect(ClampCruiseDrainToReadyCheap(1, 3, 0.0) == 3,
+           "P7: unknown unit + ready>=2 lifts Drain");
     Expect(ClampCruiseDrainToReadyCheap(1, 3, 6.5) == 1,
            "P2: fat unit does not lift budget");
     Expect(ClampCruiseDrainToReadyCheap(1, 1, 2.0) == 1,
@@ -2289,18 +2312,36 @@ int main()
 
   {
     using cutum::ShouldBumpDirtyHeadForVisualHole;
-    Expect(ShouldBumpDirtyHeadForVisualHole(true, true, true, 5, true),
-           "P6: consume FullyDark dirty bumps head");
-    Expect(ShouldBumpDirtyHeadForVisualHole(true, false, false, 9, true),
+    Expect(ShouldBumpDirtyHeadForVisualHole(true, true, true, 5, true, true),
+           "P6: consume FullyDark dirty bumps when light rev ahead");
+    Expect(!ShouldBumpDirtyHeadForVisualHole(true, true, true, 5, true, false),
+           "P7: consume FullyDark matching revs does not bump");
+    Expect(ShouldBumpDirtyHeadForVisualHole(true, false, false, 9, true, false),
            "P6: consume missing mesh bumps even far");
     Expect(!ShouldBumpDirtyHeadForVisualHole(true, false, true, 2, true),
            "P6: lit drawable dirty does not bump");
-    Expect(ShouldBumpDirtyHeadForVisualHole(true, true, true, 8, false),
-           "P6: cruise FullyDark nh=8 bumps");
-    Expect(!ShouldBumpDirtyHeadForVisualHole(true, true, true, 9, false),
+    Expect(ShouldBumpDirtyHeadForVisualHole(true, true, true, 8, false, true),
+           "P6: cruise FullyDark nh=8 bumps when light changed");
+    Expect(!ShouldBumpDirtyHeadForVisualHole(true, true, true, 9, false, true),
            "P6: hinterland FullyDark may skip");
     Expect(!ShouldBumpDirtyHeadForVisualHole(false, true, false, 1, true),
            "P6: not dirty → no bump");
+    using cutum::ColumnChunkSnapshot;
+    using cutum::ShouldRemeshAfterLitApplyForHole;
+    ColumnChunkSnapshot dark{};
+    dark.has_drawable = true;
+    dark.fully_dark = true;
+    dark.meshed_light_rev = 3;
+    dark.light_field_rev = 3;
+    Expect(!ShouldRemeshAfterLitApplyForHole(dark, false),
+           "P7: FullyDark matching revs skip remesh");
+    dark.light_field_rev = 4;
+    Expect(ShouldRemeshAfterLitApplyForHole(dark, false),
+           "P7: light rev ahead remeshes FullyDark");
+    dark.light_field_rev = 3;
+    dark.has_drawable = false;
+    Expect(ShouldRemeshAfterLitApplyForHole(dark, false),
+           "P7: missing mesh still FirstMesh");
   }
 
   // CheapRemesh C3: PrimaryLightUnchanged
@@ -2321,6 +2362,8 @@ int main()
     using cutum::CruiseRelightApplyBudget;
     Expect(CruiseRelightApplyBudget(true, 10.0, 4, false) == 1,
            "P2: moving caps to 1");
+    Expect(CruiseRelightApplyBudget(true, 0.07, 4, false, false, 1) >= 3,
+           "P7: GPU-sky unit 0.07 cruise floor 3");
     Expect(CruiseRelightApplyBudget(true, 3.0, 4, true) == 4,
            "LitRing: pin+apply<5 ⇒ cap 4 (requested 4)");
     Expect(CruiseRelightApplyBudget(false, 10.0, 4, false) == 4,

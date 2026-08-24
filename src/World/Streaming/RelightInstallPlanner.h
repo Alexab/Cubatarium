@@ -170,10 +170,34 @@ inline bool ShouldScheduleChunkRemesh(
   return false;
 }
 
-/// FZ2.7: already-Dirty FullyDark / missing mesh must bump FirstMeshQ head.
+/// Light field moved past the baked mesh — remesh can pick up new bytes.
+inline bool ChunkLightRevAhead(const ColumnChunkSnapshot &chunk)
+{
+  return IsMeshLightStale(chunk.meshed_light_rev, chunk.light_field_rev);
+}
+
+/// FZ2.7-P7: do not remesh FullyDark when light rev matches (GPU-sky noop).
+/// Missing mesh still needs FirstMesh. GPU dark-face still_stale is not a delta.
+inline bool ShouldRemeshAfterLitApplyForHole(const ColumnChunkSnapshot &chunk,
+                                             bool force_stale_ticket)
+{
+  if (!chunk.has_drawable)
+  {
+    return true;
+  }
+  if (ChunkLightRevAhead(chunk))
+  {
+    return true;
+  }
+  return force_stale_ticket && chunk.fully_dark;
+}
+
+/// FZ2.7: already-Dirty missing mesh / FullyDark-with-light-delta bump Q head.
+/// FullyDark + matching revs must not bump (162715 remesh blink).
 inline bool ShouldBumpDirtyHeadForVisualHole(bool is_dirty, bool fully_dark,
                                              bool has_drawable, int focus_horiz,
                                              bool consume_mode,
+                                             bool light_rev_ahead = true,
                                              int ring = RelightFifoTrimProtectHoriz())
 {
   if (!is_dirty)
@@ -181,6 +205,10 @@ inline bool ShouldBumpDirtyHeadForVisualHole(bool is_dirty, bool fully_dark,
     return false;
   }
   if (has_drawable && !fully_dark)
+  {
+    return false;
+  }
+  if (has_drawable && fully_dark && !light_rev_ahead)
   {
     return false;
   }
@@ -217,9 +245,10 @@ inline LitApplyPlan PlanPrimaryConsume(const LitApplyColumnInput &in)
     if (chunk.is_dirty || chunk.inflight || chunk.raa_pending)
     {
       if (!chunk.inflight &&
-          ShouldBumpDirtyHeadForVisualHole(chunk.is_dirty, chunk.fully_dark,
-                                           chunk.has_drawable, in.focus_horiz,
-                                           in.consume_mode))
+          ShouldBumpDirtyHeadForVisualHole(
+              chunk.is_dirty, chunk.fully_dark, chunk.has_drawable,
+              in.focus_horiz, in.consume_mode,
+              ShouldRemeshAfterLitApplyForHole(chunk, in.force_stale_ticket)))
       {
         AppendUniqueCoord(plan.mark_dirty_priority, chunk.coord);
         ++plan.schedule_n;
@@ -234,10 +263,13 @@ inline LitApplyPlan PlanPrimaryConsume(const LitApplyColumnInput &in)
       }
       continue;
     }
-    const bool needs_fm = !chunk.has_drawable || chunk.fully_dark;
-    const bool stale = chunk.still_stale;
-    const bool force = in.force_stale_ticket && chunk.fully_dark;
-    if (needs_fm || stale || force)
+    const bool needs_remesh =
+        ShouldRemeshAfterLitApplyForHole(chunk, in.force_stale_ticket);
+    if (!needs_remesh && chunk.has_drawable)
+    {
+      continue;
+    }
+    if (needs_remesh)
     {
       AppendUniqueCoord(plan.mark_dirty_priority, chunk.coord);
       ++plan.schedule_n;
@@ -290,9 +322,10 @@ inline LitApplyPlan PlanPrimaryStandard(const LitApplyColumnInput &in)
     if (chunk.is_dirty || chunk.inflight || chunk.raa_pending)
     {
       if (!chunk.inflight &&
-          ShouldBumpDirtyHeadForVisualHole(chunk.is_dirty, chunk.fully_dark,
-                                           chunk.has_drawable, in.focus_horiz,
-                                           in.consume_mode))
+          ShouldBumpDirtyHeadForVisualHole(
+              chunk.is_dirty, chunk.fully_dark, chunk.has_drawable,
+              in.focus_horiz, in.consume_mode,
+              ShouldRemeshAfterLitApplyForHole(chunk, in.force_stale_ticket)))
       {
         AppendUniqueCoord(plan.mark_dirty_priority, chunk.coord);
         ++plan.schedule_n;
@@ -333,8 +366,13 @@ inline LitApplyPlan PlanPrimaryStandard(const LitApplyColumnInput &in)
       }
       continue;
     }
-    const bool needs_fm = !chunk.has_drawable || chunk.fully_dark;
-    if (in.priority_mesh && needs_fm)
+    const bool needs_remesh =
+        ShouldRemeshAfterLitApplyForHole(chunk, in.force_stale_ticket);
+    if (!needs_remesh && chunk.has_drawable)
+    {
+      continue;
+    }
+    if (in.priority_mesh && needs_remesh)
     {
       AppendUniqueCoord(plan.mark_dirty_priority, chunk.coord);
     }

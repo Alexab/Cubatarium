@@ -50,14 +50,24 @@ int main()
   Expect(out.erased_pending && out.erased_inflight, "FSM clears gates");
   Expect(out.fsm == cutum::ColumnEmergeState::Meshing, "Meshing FSM");
 
-  // Skip already dirty
+  // Already dirty + light rev ahead → still bump (P6).
   mesh.ClearCalls();
   mesh.Mut(coord).is_dirty = true;
   in.relit_chunks.clear();
   in.relit_chunks.push_back(SnapshotFromFake(mesh, coord));
-  const auto plan2 = PlanColumnInstall(in);
-  Expect(plan2.mark_dirty.empty() && plan2.mark_dirty_priority.empty(),
-         "skip dirty chunk");
+  const auto plan_stale = PlanColumnInstall(in);
+  Expect(!plan_stale.mark_dirty_priority.empty(),
+         "P6: dirty FullyDark with light delta still priority");
+
+  // Already dirty + matching revs → skip remesh (P7 GPU-sky noop).
+  mesh.ClearCalls();
+  mesh.Mut(coord).meshed_light_rev = 3;
+  mesh.Mut(coord).light_field_rev = 3;
+  in.relit_chunks.clear();
+  in.relit_chunks.push_back(SnapshotFromFake(mesh, coord));
+  const auto plan_noop = PlanColumnInstall(in);
+  Expect(plan_noop.mark_dirty.empty() && plan_noop.mark_dirty_priority.empty(),
+         "P7: skip remesh when FullyDark light rev matches");
 
   if (failures != 0)
   {

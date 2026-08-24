@@ -129,11 +129,19 @@ int main()
     ch.is_dirty = true;
     ch.fully_dark = true;
     ch.has_drawable = true;
+    ch.meshed_light_rev = 1;
+    ch.light_field_rev = 3;
     in.relit_chunks.push_back(ch);
     const auto plan = PlanColumnInstall(in);
     Expect(!plan.mark_dirty_priority.empty(),
            "P6: consume FullyDark already-dirty still priority Dirty");
     Expect(plan.schedule_n >= 1, "P6: consume hole schedules");
+    ch.light_field_rev = 1;
+    in.relit_chunks.clear();
+    in.relit_chunks.push_back(ch);
+    const auto plan_noop = PlanColumnInstall(in);
+    Expect(plan_noop.mark_dirty_priority.empty(),
+           "P7: matching light rev does not bump FullyDark remesh");
   }
 
   Expect(ShouldConsumeTicketedVbDebt(0, 81, 0), "consume VB debt");

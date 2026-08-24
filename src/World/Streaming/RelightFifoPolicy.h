@@ -119,7 +119,7 @@ inline bool ShouldProtectRelightFifoPinKey(int victim_cx, int victim_cz,
 /// FZ2.7: TrimFar LitDrawable=4 dropped in-view ocean (154945 fifo_drop 467).
 inline int RelightFifoTrimProtectHoriz()
 {
-  return kVisualStageLitDrawableHoriz + 4;
+  return kVisualStageProtectHoriz;
 }
 
 inline bool ShouldProtectRelightFifoTrimVictim(
@@ -238,6 +238,18 @@ inline double RelightApplyCapUnitMs(double last_unit_apply_ms,
   return last_unit_apply_ms;
 }
 
+/// GPU-sky noop unit is ~0.07ms — still cheap. 0.0 is unknown (no prior sample).
+inline bool RelightApplyUnitIsCheap(double cap_unit_ms, double slice_ms = 16.0)
+{
+  return cap_unit_ms > 0.0 && cap_unit_ms <= slice_ms / 3.0;
+}
+
+inline bool RelightApplyUnitIsExpensive(double cap_unit_ms,
+                                        double slice_ms = 16.0)
+{
+  return cap_unit_ms > slice_ms / 3.0;
+}
+
 /// FZ2.7-B2c: cruise slice wide enough for ≥2 cheap applies per drain.
 /// FZ2.7-B2d: widen to cap_unit×3 (≤16ms moving) so min_cap=3 fits in slice.
 inline double RelightThroughputSliceMs(double miss_reserved_ms, bool consume_mode,
@@ -246,8 +258,7 @@ inline double RelightThroughputSliceMs(double miss_reserved_ms, bool consume_mod
                                        int ready_at_start = 0)
 {
   double slice_ms = RelightConsumeSliceMs(miss_reserved_ms, consume_mode, moving);
-  const bool cheap_cruise =
-      cap_unit_ms > 0.1 && cap_unit_ms <= 16.0 / 3.0;
+  const bool cheap_cruise = RelightApplyUnitIsCheap(cap_unit_ms);
   // FZ2.7-P2: cheap completed queue — widen consume moving 8ms so Drain can
   // take min(ready,4). Still hard-capped at 16ms moving.
   if (throughput_mode && consume_mode && cheap_cruise && ready_at_start >= 2)
@@ -294,7 +305,7 @@ inline int RelightThroughputMinApplyCap(
   {
     return 3;
   }
-  const bool cheap = cap_unit_ms > 0.1 && cap_unit_ms <= slice_ms / 3.0;
+  const bool cheap = RelightApplyUnitIsCheap(cap_unit_ms, slice_ms);
   if (cheap && RelightThroughputHasBacklog(ready_at_start, fifo_n, fifo_soft_cap,
                                            pending_light_n))
   {
@@ -514,7 +525,7 @@ inline int RelightCapturePipelineDepthCap(
   const int base = std::max(1, apply_n_prev) + 1;
   const double cap_unit = RelightApplyCapUnitMs(
       last_unit_ms, last_light_unit_ms, last_install_unit_ms);
-  const bool cheap = cap_unit > 0.1 && cap_unit <= slice_ms / 3.0;
+  const bool cheap = RelightApplyUnitIsCheap(cap_unit, slice_ms);
   const bool backlog = RelightThroughputHasBacklog(
       ready_n, fifo_n, fifo_soft_cap, pending_light_n);
   int cap = base;
@@ -526,8 +537,9 @@ inline int RelightCapturePipelineDepthCap(
         fifo_soft_cap, pending_light_n);
     cap = std::max(base, std::min(6, earned));
   }
-  // FZ2.7: fifo piled, Drain emptied ready — still keep worker depth 4–6.
-  if (cheap && fifo_n >= 50 && ready_n <= 1)
+  // FZ2.7-P7: fifo piled, ready empty — refill even if prior unit unknown (0).
+  if (!RelightApplyUnitIsExpensive(cap_unit, slice_ms) && fifo_n >= 50 &&
+      ready_n <= 1)
   {
     cap = std::max(cap, 4);
   }
@@ -549,8 +561,7 @@ inline int RelightCaptureBgFloorForFifoStarve(int bg_cap, int fifo_n,
   {
     return bg_cap;
   }
-  const bool cheap = cap_unit_ms > 0.1 && cap_unit_ms <= 16.0 / 3.0;
-  if (!cheap)
+  if (RelightApplyUnitIsExpensive(cap_unit_ms))
   {
     return bg_cap;
   }
@@ -578,7 +589,7 @@ inline int SoftDeferCaptureFloorWhenDepthFull(bool soft_defer_or_miss_hole,
 /// (anti blink hide↔show). Horiz still gated to LitDrawable ring.
 inline bool ShouldKeepLiveGpuOpaqueDespiteFullyDark(
     bool has_live_gpu_draw, int horiz, bool has_repair_progress,
-    int keep_horiz = kVisualStageLitDrawableHoriz)
+    int keep_horiz = RelightFifoTrimProtectHoriz())
 {
   (void)has_repair_progress;
   return has_live_gpu_draw && horiz >= 0 && horiz <= keep_horiz;
@@ -657,7 +668,7 @@ inline int CruiseRelightApplyBudget(bool moving, double last_apply_ms,
   }
   // FZ2.7-A: do not raise cruise budget to 3 when unit > slice/3 (16ms moving).
   constexpr double kCruiseSliceMs = 16.0;
-  if (unit_ms > 0.1 && unit_ms <= kCruiseSliceMs / 3.0)
+  if (RelightApplyUnitIsCheap(unit_ms, kCruiseSliceMs))
   {
     cap = std::max(cap, 3);
   }
@@ -678,7 +689,7 @@ inline int ClampCruiseDrainToReadyCheap(int cruise_budget, int ready_n,
   {
     return cruise_budget;
   }
-  if (!(cap_unit_ms > 0.1 && cap_unit_ms <= cruise_slice_ms / 3.0))
+  if (RelightApplyUnitIsExpensive(cap_unit_ms, cruise_slice_ms))
   {
     return cruise_budget;
   }

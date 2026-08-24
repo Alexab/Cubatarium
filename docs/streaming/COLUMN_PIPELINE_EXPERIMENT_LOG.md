@@ -1188,3 +1188,18 @@ Hold: sim&lt;135, moving slice ≤16, no min_cap=3 over fat time_cap. Closeout s
 
 ---
 
+## FZ2.7-P7 tails (post-162715 same flicker / unclosed holes)
+
+Eye: P6 telem moved, picture did not. Manual `162715` (~628s): blink **0.57** (worse), unfinished 9–31 oscillating, Dirty FM ~196, skip=76 locked, apply=1 / completed=0, unlit_hidden 8–27 vs no_mesh 10–31 anti-correlated. fifo_drop plateau 241.
+
+| Tail | Change |
+| --- | --- |
+| Noop remesh | `ShouldRemeshAfterLitApplyForHole` / bump only if missing mesh or light **rev ahead**. FullyDark + matching revs skip remesh (GPU-sky noop blink). |
+| Cheap unit | `RelightApplyUnitIsCheap`: (0, slice/3] including 0.07ms. Capture fifo-starve floor and depth≥4 also when unit **unknown 0**. Drain lifts when ready≥2 unless expensive. |
+| Live GPU keep | `ShouldKeepLiveGpuOpaqueDespiteFullyDark` horiz **8** (`kVisualStageProtectHoriz`), not LitDrawable 4. |
+| FirstMesh SoftDefer | missing mesh nh≤8 schedules despite SoftDefer (ocean planes). |
+
+Hold: sim&lt;135, moving slice ≤16, min_cap=3 still does not beat fat time_cap. Closeout: one **manual ≥600s**.
+
+---
+
