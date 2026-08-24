@@ -1797,12 +1797,6 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
     {
       return true;
     }
-    if (horiz <= kVisualStageLitDrawableHoriz &&
-        (MeshService->IsPendingGpuApply(chunk_coord) ||
-         MeshService->HasInflightMeshBuild(chunk_coord)))
-    {
-      return true;
-    }
   }
   if (MeshService->HasMeshSatisfyingColumnReady(chunk_coord))
   {

@@ -731,8 +731,6 @@ private:
   int LastDirtyRemeshN{0};
   /// Prior-frame Dirty coords (capped) for dirty_revisit_same_n.
   std::unordered_set<glm::ivec3, IVec3Hash> PrevDirtyForRevisit;
-  /// FZ2.7-E: far Dirty delay 1–2 frames (near/underfeet skip delay).
-  std::unordered_map<glm::ivec3, int, IVec3Hash> FarDirtyHoldFrames;
   /// FZ2.3-O3: coords successfully scheduled this RebuildDirtyChunksWithStats.
   std::unordered_set<glm::ivec3, IVec3Hash> ScheduledThisFrame_;
   int LastDirtyScheduleDedupN{0};

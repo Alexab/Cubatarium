@@ -4343,28 +4343,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (EnterGpuQuiesceDrain && EnterTerminalHeld.count(*it) > 0)
       {
         ++LastMeshDirtyScheduleSkipN;
-        FarDirtyHoldFrames.erase(*it);
         return Dirty.RemoveAt(it);
-      }
-      if (MeshFocusValid)
-      {
-        const int horiz =
-            std::max(std::abs(it->x - MeshFocusGroundChunk.x),
-                     std::abs(it->z - MeshFocusGroundChunk.z));
-        if (horiz > kVisualStageNearFovHoriz)
-        {
-          int &hold = FarDirtyHoldFrames[*it];
-          ++hold;
-          if (hold < 2)
-          {
-            ++LastMeshDirtyScheduleSkipN;
-            return std::next(it);
-          }
-        }
-        else
-        {
-          FarDirtyHoldFrames.erase(*it);
-        }
       }
       if (EnterLitQuiesce && HasDrawableGreedyMesh(*it))
       {
@@ -4494,7 +4473,6 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       ActiveMeshSourceRevision[*it] = snapshot.sourceRevision;
       AsyncBuilder->Enqueue(std::move(snapshot), registry);
       ScheduledThisFrame_.insert(*it);
-      FarDirtyHoldFrames.erase(*it);
       it = Dirty.RemoveAt(it);
       ++scheduled;
       ++stats.Scheduled;
@@ -4862,7 +4840,6 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       ActiveMeshSourceRevision[*it] = snapshot.sourceRevision;
       AsyncBuilder->Enqueue(std::move(snapshot), registry);
       ScheduledThisFrame_.insert(*it);
-      FarDirtyHoldFrames.erase(*it);
       it = Dirty.RemoveAt(it);
       ++scheduled;
       ++stats.Scheduled;
