@@ -482,7 +482,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
         nearest_vb_no_ticket && async_ok && !moving &&
         visible_black_no_ticket_n > 20;
     const bool second_pass_enter_peak =
-        enter_fov_lit && async_ok && visible_black_no_ticket_n > 60 &&
+        enter_fov_lit && async_ok && visible_black_no_ticket_n > 40 &&
         static_cast<int>(stale_dark_cols.size()) < stale_cap;
     if (second_pass_idle &&
         static_cast<int>(stale_dark_cols.size()) < stale_cap)
@@ -503,7 +503,8 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     {
       // FZ2.4-P1: enter peak second pass — cap remain≤1 (no full O(n) flood).
       const int remain = std::min(
-          1, stale_cap - static_cast<int>(stale_dark_cols.size()));
+          enter_fov_lit ? 4 : 1,
+          stale_cap - static_cast<int>(stale_dark_cols.size()));
       if (remain > 0)
       {
         std::vector<glm::ivec2> extra;
@@ -603,6 +604,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     {
       if (world.ShouldDeferRepairReticketUntilGpuApplied(col))
       {
+        ++world.GetPhysicsTelemetryMutable().RepairReticketDeferredN;
         continue;
       }
       world.NoteColumnRepairNeeded(col);

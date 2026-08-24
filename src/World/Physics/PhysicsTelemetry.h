@@ -116,6 +116,15 @@ struct PhysicsTelemetry
   double RelightApplyInstallMs{0.0};
   double RelightApplyLightMsPrev{0.0};
   double RelightApplyInstallMsPrev{0.0};
+  /// FZ2.7-B: DrainCompleted pop vs light merge (not billed as one light unit).
+  double RelightDrainCompletedMs{0.0};
+  double RelightMergeLightMs{0.0};
+  int RelightLightChunksN{0};
+  int RelightLightSkipN{0};
+  /// FZ2.7-A: smoothed cap_unit (not reset per frame).
+  double RelightCapUnitEma{0.0};
+  int RelightThroughputHoldN{0};
+  int RepairReticketDeferredN{0};
   /// Previous frame (P2 apply budget / P5 dynamic bg_cap).
   double RelightDrainMsPrev{0.0};
   double RelightApplyMsPrev{0.0};

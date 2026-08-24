@@ -2,9 +2,11 @@
 
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Lighting/LightUtil.h"
 #include "World/Math/BlockTypes.h"
 #include <array>
 #include <cstdint>
+#include <cstring>
 #include <glm/glm.hpp>
 #include <unordered_map>
 #include <vector>
@@ -41,7 +43,23 @@ inline bool PrimaryLightUnchanged(
     const std::array<uint8_t, CHUNK_VOLUME> &before,
     const std::array<uint8_t, CHUNK_VOLUME> &after)
 {
-  return before == after;
+  return std::memcmp(before.data(), after.data(), CHUNK_VOLUME) == 0;
+}
+
+/// FZ2.7-B: after GPU sky seed, skip packed merge when block nibbles match.
+inline bool BlockLightUnchanged(
+    const std::array<uint8_t, CHUNK_VOLUME> &before,
+    const std::array<uint8_t, CHUNK_VOLUME> &after)
+{
+  for (int i = 0; i < CHUNK_VOLUME; ++i)
+  {
+    if (UnpackBlock(before[static_cast<size_t>(i)]) !=
+        UnpackBlock(after[static_cast<size_t>(i)]))
+    {
+      return false;
+    }
+  }
+  return true;
 }
 
 struct RelightComputeResult

@@ -1670,7 +1670,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     const int fifo_soft = tune_budget.RelightFifoSoftCap;
     if (!ShouldSuppressProducerBoostWhenConsumerBound(
             telem_bp.RelightApplyNPrev, telem_bp.RelightFifoN, fifo_soft,
-            static_cast<ApplyBinding>(telem_bp.ApplyBindingPrev)))
+            static_cast<ApplyBinding>(telem_bp.ApplyBindingPrev),
+            telem_bp.RelightApplyNPrev > 0
+                ? telem_bp.RelightApplyLightMsPrev /
+                      static_cast<double>(telem_bp.RelightApplyNPrev)
+                : 0.0,
+            static_cast<double>(tune_budget.MissReservedMs)))
     {
       bg_budget = std::max(bg_budget, early_budget.vb_bg_budget_floor);
     }

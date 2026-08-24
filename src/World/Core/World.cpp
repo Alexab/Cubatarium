@@ -1797,6 +1797,12 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
     {
       return true;
     }
+    if (horiz <= kVisualStageLitDrawableHoriz &&
+        (MeshService->IsPendingGpuApply(chunk_coord) ||
+         MeshService->HasInflightMeshBuild(chunk_coord)))
+    {
+      return true;
+    }
   }
   if (MeshService->HasMeshSatisfyingColumnReady(chunk_coord))
   {
@@ -4181,13 +4187,24 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   const int ready_at_start =
       AsyncRelight ? static_cast<int>(AsyncRelight->GetCompletedSize()) : 0;
   const int fifo_soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
-  const double cap_unit_prev = RelightApplyCapUnitMs(
+  const double cap_unit_raw = RelightApplyCapUnitMs(
       unit_ms_prev, light_unit_ms_prev, install_unit_ms_prev);
-  const bool throughput_mode = ShouldUseThroughputApplyCap(
+  const double cap_unit_prev = RelightSmoothCapUnitMs(
+      PhysicsTelemetryData.RelightCapUnitEma, cap_unit_raw);
+  bool throughput_mode = ShouldUseThroughputApplyCap(
       consume_mode, defer_side, enter_pass, miss_reserved_ms, unit_ms_prev,
       light_unit_ms_prev, install_unit_ms_prev, ready_at_start,
       PhysicsTelemetryData.RelightFifoN, fifo_soft_cap,
       PhysicsTelemetryData.PendingLightFocus, PhysicsTelemetryData.PendingLightN);
+  if (throughput_mode)
+  {
+    PhysicsTelemetryData.RelightThroughputHoldN = 5;
+  }
+  else if (!enter_pass && PhysicsTelemetryData.RelightThroughputHoldN > 0)
+  {
+    throughput_mode = true;
+    --PhysicsTelemetryData.RelightThroughputHoldN;
+  }
   const double slice_ms = RelightThroughputSliceMs(
       miss_reserved_ms, consume_mode, moving, throughput_mode, cap_unit_prev);
   const int earned_cap = EarnedRelightApplyCap(
@@ -4201,9 +4218,12 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   bool stopped_by_cap = false;
   while (applied < max_per_frame)
   {
-    const auto iter_t0 = std::chrono::high_resolution_clock::now();
+    const auto drain_t0 = std::chrono::high_resolution_clock::now();
     std::vector<RelightComputeResult> batch =
         AsyncRelight->DrainCompleted(/*max_per_frame=*/1);
+    const auto merge_t0 = std::chrono::high_resolution_clock::now();
+    PhysicsTelemetryData.RelightDrainCompletedMs +=
+        std::chrono::duration<double, std::milli>(merge_t0 - drain_t0).count();
     if (batch.empty())
     {
       break;
@@ -4215,15 +4235,22 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     bool any_light_changed = false;
     for (const RelightChunkLightData &chunk_data : result.chunks)
     {
+      ++PhysicsTelemetryData.RelightLightChunksN;
       if (UChunk *chunk =
               BlockWorld.GetChunkManager().GetChunk(chunk_data.coord))
       {
         if (result.include_skylight &&
             ApplyGpuSkylightSeedToChunk(*chunk, *BlockRegistry))
         {
-          if (result.include_block_light)
+          if (result.include_block_light &&
+              !BlockLightUnchanged(chunk->GetLightData(),
+                                   chunk_data.light_packed))
           {
             MergeBlockLightKeepingGpuSky(*chunk, chunk_data.light_packed);
+          }
+          else
+          {
+            ++PhysicsTelemetryData.RelightLightSkipN;
           }
           chunk->BumpLightFieldRevision();
           any_light_changed = true;
@@ -4236,12 +4263,17 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
           chunk->BumpLightFieldRevision();
           relit_coords.push_back(chunk_data.coord);
         }
+        else
+        {
+          ++PhysicsTelemetryData.RelightLightSkipN;
+        }
       }
     }
     const auto light_t1 = std::chrono::high_resolution_clock::now();
-    const double light_ms =
-        std::chrono::duration<double, std::milli>(light_t1 - iter_t0).count();
-    PhysicsTelemetryData.RelightApplyLightMs += light_ms;
+    const double merge_ms =
+        std::chrono::duration<double, std::milli>(light_t1 - merge_t0).count();
+    PhysicsTelemetryData.RelightMergeLightMs += merge_ms;
+    PhysicsTelemetryData.RelightApplyLightMs += merge_ms;
     std::vector<glm::ivec2> primary_grounds;
     primary_grounds.reserve(result.source_block_positions.size());
     for (const glm::ivec3 &pos : result.source_block_positions)
@@ -4318,8 +4350,8 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                                     fifo_soft_cap,
                                     PhysicsTelemetryData.PendingLightN))
     {
-      stopped_by_time = elapsed_ms >= slice_ms || applied >= earned_cap;
       stopped_by_cap = applied >= earned_cap;
+      stopped_by_time = elapsed_ms >= slice_ms && !stopped_by_cap;
       break;
     }
   }
@@ -4335,7 +4367,18 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
           : unit_ms_prev;
   PhysicsTelemetryData.ApplyBinding = static_cast<int>(ClassifyApplyBinding(
       applied, ready_at_start, stopped_by_time, stopped_by_cap, frame_unit_ms,
-      slice_ms));
+      slice_ms, earned_cap));
+  if (applied > 0)
+  {
+    const double sample = RelightApplyCapUnitMs(
+        frame_unit_ms,
+        PhysicsTelemetryData.RelightApplyLightMs /
+            static_cast<double>(applied),
+        PhysicsTelemetryData.RelightApplyInstallMs /
+            static_cast<double>(applied));
+    PhysicsTelemetryData.RelightCapUnitEma =
+        RelightSmoothCapUnitMs(PhysicsTelemetryData.RelightCapUnitEma, sample);
+  }
   PhysicsTelemetryData.AsyncRelightInflight =
       static_cast<uint64_t>(AsyncRelight->GetInFlightCount());
   PhysicsTelemetryData.RelightDiscardedLate =

@@ -2068,12 +2068,9 @@ int main()
     using cutum::ShouldStopRelightApplySlice;
     Expect(EarnedRelightApplyCap(20, 16.0, 0.0, 20.0, true, 0, 3.0, 5.0) >= 2,
            "FZ27: light+install cap >=2 in 16ms slice");
-    Expect(!ShouldStopRelightApplySlice(10.0, 1, 16.0, false, true, 3, 9.0, 0,
-                                        3.0, 5.0),
-           "FZ27: continue past 1 unit when slim install");
     Expect(ShouldStopRelightApplySlice(10.0, 2, 16.0, false, true, 2, 9.0, 0,
-                                       3.0, 5.0),
-           "FZ27: stop at earned cap 2");
+                                        3.0, 5.0),
+           "FZ27-A: stop at time_cap when unit fills slice");
     Expect(!ShouldStopRelightApplySlice(10.0, 1, 16.0, false, true, 2, 19.0, 0,
                                         1.0, 18.0),
            "FZ27-B2: fat unit consume allows 2nd apply when earned_cap=2");
@@ -2113,11 +2110,15 @@ int main()
 
   // FZ2.7-B2d: min earned cap=3 when cheap unit + fifo backlog
   {
+    using cutum::ApplyBinding;
+    using cutum::ClassifyApplyBinding;
+    using cutum::CruiseRelightApplyBudget;
     using cutum::EarnedRelightApplyCap;
     using cutum::RelightThroughputHasBacklog;
     using cutum::RelightThroughputMinApplyCap;
     using cutum::RelightThroughputSliceMs;
     using cutum::ShouldStopRelightApplySlice;
+    using cutum::ShouldSuppressProducerBoostWhenConsumerBound;
     Expect(RelightThroughputHasBacklog(0, 70, 96, 30),
            "B2d: fifo 70/96 is backlog");
     Expect(RelightThroughputMinApplyCap(true, 3.0, 16.0, 0, 0, 70, 96, 30) == 3,
@@ -2131,9 +2132,19 @@ int main()
            "B2d: slice widens to cap_unit*3");
     Expect(RelightThroughputSliceMs(8.0, false, true, true, 5.0) <= 16.0,
            "B2d: moving cruise slice capped at 16ms");
-    Expect(!ShouldStopRelightApplySlice(10.0, 2, 16.0, false, true, 4, 3.0, 0,
-                                        2.5, 0.1, 0, 70, 96, 55),
-           "B2d: continue past 2 when min_cap=3");
+    Expect(RelightThroughputMinApplyCap(true, 6.5, 16.0, 0, 0, 70, 96, 30) == 2,
+           "FZ27-A: 6.5ms unit is not cheap at slice/3");
+    Expect(EarnedRelightApplyCap(20, 16.0, 0.0, 6.5, true, 1, 6.5, 0.05, 0, 70,
+                                 96, 32) == 2,
+           "FZ27-A: time_cap 2 wins over min_cap 3");
+    Expect(ClassifyApplyBinding(2, 5, true, true, 8.0, 16.0, 2) ==
+               ApplyBinding::CountCap,
+           "FZ27-A: cap-stop is CountCap even if wall≈slice");
+    Expect(CruiseRelightApplyBudget(true, 6.5, 6, false, false, 1) < 3,
+           "FZ27-A: unit>slice/3 does not force budget 3");
+    Expect(ShouldSuppressProducerBoostWhenConsumerBound(
+               1, 40, 96, ApplyBinding::CountCap, 6.5, 16.0),
+           "FZ27-C: suppress when light_unit > slice/3");
   }
 
   // ColdSupply S0: ClampRelightDrainN

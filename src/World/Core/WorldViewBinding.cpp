@@ -785,6 +785,11 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.RelightApplyMs = 0.0;
   PhysicsTelemetryData.RelightApplyLightMs = 0.0;
   PhysicsTelemetryData.RelightApplyInstallMs = 0.0;
+  PhysicsTelemetryData.RelightDrainCompletedMs = 0.0;
+  PhysicsTelemetryData.RelightMergeLightMs = 0.0;
+  PhysicsTelemetryData.RelightLightChunksN = 0;
+  PhysicsTelemetryData.RelightLightSkipN = 0;
+  PhysicsTelemetryData.RepairReticketDeferredN = 0;
   PhysicsTelemetryData.ApplyBinding = 0;
   PhysicsTelemetryData.RelightCaptureColHoriz = -1;
   PhysicsTelemetryData.RelightCaptureFinalize = 0;

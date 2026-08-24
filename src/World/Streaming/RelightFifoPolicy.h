@@ -27,17 +27,26 @@ inline double RelightConsumeSliceMs(double miss_reserved_ms, bool consume_mode,
   return miss_reserved_ms;
 }
 
-/// FZ2.6-Perf2: do not boost Capture/mesh when consumer-bound.
+/// FZ2.6-Perf2 / FZ2.7-C: do not boost Capture/mesh when consumer-bound.
+/// Cost-bound: light_unit > slice/3 even if fifo is not at cap.
 inline bool ShouldSuppressProducerBoostWhenConsumerBound(
-    int apply_n_prev, int fifo_n, int soft_cap, ApplyBinding binding)
+    int apply_n_prev, int fifo_n, int soft_cap, ApplyBinding binding,
+    double last_light_unit_ms = 0.0, double slice_ms = 0.0)
 {
-  if (soft_cap <= 0 || fifo_n < soft_cap - 1)
-  {
-    return false;
-  }
   if (apply_n_prev >= 2)
   {
     return false;
+  }
+  const bool fifo_bound = soft_cap > 0 && fifo_n >= soft_cap - 1;
+  const bool cost_bound =
+      slice_ms > 0.1 && last_light_unit_ms > slice_ms / 3.0;
+  if (!fifo_bound && !cost_bound)
+  {
+    return false;
+  }
+  if (cost_bound)
+  {
+    return true;
   }
   return binding == ApplyBinding::TimeSlice || binding == ApplyBinding::FatUnit;
 }
@@ -67,17 +76,17 @@ inline bool ShouldPrioritizeMeshScheduleForTicketedConsume(
          visible_black_stalled_n > 0;
 }
 
-/// FZ2.6-Perf0: classify binding driver from drain outcome.
+/// FZ2.6-Perf0 / FZ2.7-A: classify binding. Cap-stop wins over wall≈slice.
 inline ApplyBinding ClassifyApplyBinding(int applied_n, int ready_at_start,
                                          bool stopped_by_time,
                                          bool stopped_by_cap, double unit_ms,
-                                         double slice_ms)
+                                         double slice_ms, int earned_cap = 0)
 {
   if (applied_n <= 0 && ready_at_start <= 0)
   {
     return ApplyBinding::QueueEmpty;
   }
-  if (stopped_by_cap && !stopped_by_time)
+  if ((earned_cap >= 2 && applied_n >= earned_cap) || stopped_by_cap)
   {
     return ApplyBinding::CountCap;
   }
@@ -172,6 +181,21 @@ inline bool ShouldFilterMarkRelitBandsToPrimary(bool primary_only_or_slim)
   return primary_only_or_slim;
 }
 
+/// FZ2.7-A: EMA on cap_unit so one fat frame does not flip throughput_mode.
+inline double RelightSmoothCapUnitMs(double prev_ema, double sample,
+                                     double alpha = 0.3)
+{
+  if (sample <= 0.1)
+  {
+    return prev_ema;
+  }
+  if (prev_ema <= 0.1)
+  {
+    return sample;
+  }
+  return alpha * sample + (1.0 - alpha) * prev_ema;
+}
+
 /// FZ2.7-B5: per-column cost for earned-cap math (light+install when both known).
 inline double RelightApplyCapUnitMs(double last_unit_apply_ms,
                                     double last_light_unit_ms,
@@ -232,7 +256,7 @@ inline int RelightThroughputMinApplyCap(
   {
     return 3;
   }
-  const bool cheap = cap_unit_ms > 0.1 && cap_unit_ms <= slice_ms * 0.5;
+  const bool cheap = cap_unit_ms > 0.1 && cap_unit_ms <= slice_ms / 3.0;
   if (cheap && RelightThroughputHasBacklog(ready_at_start, fifo_n, fifo_soft_cap,
                                            pending_light_n))
   {
@@ -301,7 +325,14 @@ inline int EarnedRelightApplyCap(int drain_budget, double slice_ms,
       throughput_mode, cap_unit, slice_ms, visible_black_stalled_n,
       ready_at_start, fifo_n, fifo_soft_cap, pending_light_n);
   const int time_cap =
-      (cap_unit > 0.1) ? static_cast<int>(slice_ms / cap_unit) : min_cap;
+      (cap_unit > 0.1)
+          ? std::max(1, static_cast<int>(slice_ms / cap_unit))
+          : min_cap;
+  // FZ2.7-A: time_cap wins — do not force min_cap when the slice cannot fit it.
+  if (time_cap < min_cap)
+  {
+    return std::min(drain_budget, time_cap);
+  }
   return std::min(drain_budget, std::max(min_cap, time_cap));
 }
 
@@ -346,12 +377,13 @@ inline bool ShouldStopRelightApplySlice(double elapsed_ms, int applied_n,
     }
     if (cap_unit > 0.1)
     {
-      const int likely_cap =
-          std::max(min_cap, static_cast<int>(slice_ms / cap_unit));
-      if (applied_n >= likely_cap)
+      const int time_cap =
+          std::max(1, static_cast<int>(slice_ms / cap_unit));
+      if (time_cap >= 2 && applied_n >= time_cap)
       {
         return true;
       }
+      (void)min_cap;
       return false;
     }
     return elapsed_ms >= slice_ms;
@@ -477,8 +509,9 @@ inline int CruiseRelightApplyBudget(bool moving, double last_apply_ms,
   {
     cap = cap < 4 ? 4 : cap;
   }
-  // FZ2.7-B2c/B2d: cheap unit keeps multi-apply budget even if pin wobbled.
-  if (unit_ms > 0.1 && unit_ms < 5.0)
+  // FZ2.7-A: do not raise cruise budget to 3 when unit > slice/3 (16ms moving).
+  constexpr double kCruiseSliceMs = 16.0;
+  if (unit_ms > 0.1 && unit_ms <= kCruiseSliceMs / 3.0)
   {
     cap = std::max(cap, 3);
   }

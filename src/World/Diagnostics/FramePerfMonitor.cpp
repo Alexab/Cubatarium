@@ -208,6 +208,11 @@ struct FrameNumbers
   double relight_apply_ms{0.0};
   double relight_apply_light_ms{0.0};
   double relight_apply_install_ms{0.0};
+  double relight_drain_completed_ms{0.0};
+  double relight_merge_light_ms{0.0};
+  int relight_light_chunks_n{0};
+  int relight_light_skip_n{0};
+  int repair_reticket_deferred_n{0};
   int apply_binding{0};
   int visible_black_focus_raw_n{0};
   int relight_fifo_drop_n{0};
@@ -606,6 +611,11 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.relight_apply_ms = phys.RelightApplyMs;
   n.relight_apply_light_ms = phys.RelightApplyLightMs;
   n.relight_apply_install_ms = phys.RelightApplyInstallMs;
+  n.relight_drain_completed_ms = phys.RelightDrainCompletedMs;
+  n.relight_merge_light_ms = phys.RelightMergeLightMs;
+  n.relight_light_chunks_n = phys.RelightLightChunksN;
+  n.relight_light_skip_n = phys.RelightLightSkipN;
+  n.repair_reticket_deferred_n = phys.RepairReticketDeferredN;
   n.apply_binding = phys.ApplyBinding;
   n.visible_black_focus_raw_n = phys.VisibleBlackFocusRawN;
   n.relight_fifo_drop_n = phys.RelightFifoDropN;
@@ -1017,6 +1027,11 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"relight_apply_ms\":" << n.relight_apply_ms
           << ",\"relight_apply_light_ms\":" << n.relight_apply_light_ms
           << ",\"relight_apply_install_ms\":" << n.relight_apply_install_ms
+          << ",\"relight_drain_completed_ms\":" << n.relight_drain_completed_ms
+          << ",\"relight_merge_light_ms\":" << n.relight_merge_light_ms
+          << ",\"relight_light_chunks_n\":" << n.relight_light_chunks_n
+          << ",\"relight_light_skip_n\":" << n.relight_light_skip_n
+          << ",\"repair_reticket_deferred_n\":" << n.repair_reticket_deferred_n
           << ",\"apply_binding\":" << n.apply_binding
           << ",\"visible_black_focus_raw_n\":" << n.visible_black_focus_raw_n
           << ",\"relight_fifo_drop_n\":" << n.relight_fifo_drop_n

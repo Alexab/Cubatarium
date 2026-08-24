@@ -972,11 +972,11 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   int bg_cap = max_bg_columns;
   if (enter_fov_lit && vb_no_ticket_n >= 10)
   {
-    bg_cap = std::max(bg_cap, 2);
+    bg_cap = std::max(bg_cap, 3);
   }
   else if (enter_fov_lit && vb_no_ticket_n > 0)
   {
-    bg_cap = std::max(bg_cap, 1);
+    bg_cap = std::max(bg_cap, 2);
   }
   // S2 step A: cruise ≤CaptureMovingBgCap (worker Capture hung — TD-ARCH-015).
   // Era36 B2: dynamic cap based on pending light pressure.
@@ -1033,6 +1033,24 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
                world.GetPhysicsTelemetry().MissHoriz));
       bg_cap = SoftDeferCaptureFloorWhenDepthFull(soft_defer_or_miss, 0);
     }
+    const int fifo_soft_cap = tune.RelightFifoSoftCap;
+    if (fifo_soft_cap > 0 &&
+        telem.RelightFifoN >= (fifo_soft_cap * 2) / 3 &&
+        completed_n < 2)
+    {
+      const double light_unit =
+          telem.RelightApplyNPrev > 0
+              ? telem.RelightApplyLightMsPrev /
+                    static_cast<double>(telem.RelightApplyNPrev)
+              : 0.0;
+      if (ShouldSuppressProducerBoostWhenConsumerBound(
+              telem.RelightApplyNPrev, telem.RelightFifoN, fifo_soft_cap,
+              static_cast<ApplyBinding>(telem.ApplyBindingPrev), light_unit,
+              static_cast<double>(tune.MissReservedMs)))
+      {
+        bg_cap = std::min(bg_cap, 1);
+      }
+    }
   }
   if (!enter_fov_lit && frame_ms_so_far >= capture_hot_skip_ms &&
       visual_holes && focus_pending_mid)
@@ -1052,7 +1070,12 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     const int fifo_soft = tune.RelightFifoSoftCap;
     if (!ShouldSuppressProducerBoostWhenConsumerBound(
             telem_pl.RelightApplyNPrev, telem_pl.RelightFifoN, fifo_soft,
-            static_cast<ApplyBinding>(telem_pl.ApplyBindingPrev)))
+            static_cast<ApplyBinding>(telem_pl.ApplyBindingPrev),
+            telem_pl.RelightApplyNPrev > 0
+                ? telem_pl.RelightApplyLightMsPrev /
+                      static_cast<double>(telem_pl.RelightApplyNPrev)
+                : 0.0,
+            static_cast<double>(tune.MissReservedMs)))
     {
       bg_cap = std::max(bg_cap, std::max(2, EnterFovRelightCaptureBudget() / 2));
     }
