@@ -1990,7 +1990,7 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
     ++LastDirtyScheduleDedupN;
     return;
   }
-  // FZ2.4-P0c / FZ2.7-E: in-flight skip; far FullyDark also (revisit 227).
+  // FZ2.4-P0c / FZ2.7-P3: in-flight coalesce remesh; FirstMesh holes never skip.
   if (ActiveMeshSourceRevision.count(chunkCoord) > 0 &&
       AsyncBuilder && AsyncBuilder->IsInFlight(chunkCoord))
   {
@@ -2000,8 +2000,9 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
       horiz = std::max(std::abs(chunkCoord.x - MeshFocusGroundChunk.x),
                        std::abs(chunkCoord.z - MeshFocusGroundChunk.z));
     }
-    if (!ChunkHasFullyDarkFace(chunkCoord) ||
-        horiz > kVisualStageNearFovHoriz)
+    const bool first_mesh_missing = !HasDrawableGreedyMesh(chunkCoord);
+    if (ShouldSkipInFlightDirtyReschedule(
+            true, ChunkHasFullyDarkFace(chunkCoord), horiz, first_mesh_missing))
     {
       ++LastDirtyScheduleDedupN;
       return;
@@ -2073,7 +2074,7 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
     ++LastDirtyScheduleDedupN;
     return;
   }
-  // FZ2.4-P0c / FZ2.7-E: in-flight skip; far FullyDark also (revisit 227).
+  // FZ2.4-P0c / FZ2.7-P3: in-flight coalesce remesh; FirstMesh holes never skip.
   if (ActiveMeshSourceRevision.count(chunkCoord) > 0 &&
       AsyncBuilder && AsyncBuilder->IsInFlight(chunkCoord))
   {
@@ -2083,8 +2084,9 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
       horiz = std::max(std::abs(chunkCoord.x - MeshFocusGroundChunk.x),
                        std::abs(chunkCoord.z - MeshFocusGroundChunk.z));
     }
-    if (!ChunkHasFullyDarkFace(chunkCoord) ||
-        horiz > kVisualStageNearFovHoriz)
+    const bool first_mesh_missing = !HasDrawableGreedyMesh(chunkCoord);
+    if (ShouldSkipInFlightDirtyReschedule(
+            true, ChunkHasFullyDarkFace(chunkCoord), horiz, first_mesh_missing))
     {
       ++LastDirtyScheduleDedupN;
       return;

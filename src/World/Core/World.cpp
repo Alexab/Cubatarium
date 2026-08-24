@@ -1822,6 +1822,11 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
         !MeshService->ChunkHasLitDrawableFace(chunk_coord);
     if (fully_dark)
     {
+      if (!ShouldHideFullyDarkOverLiveGpu(
+              MeshService->GetCache().HasLiveGpuDraw(chunk_coord), horiz, true))
+      {
+        return true;
+      }
       if (ShouldHideFullyDarkUntilLitInRing(horiz, true, pending))
       {
         const bool stale =
@@ -4200,7 +4205,8 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     --PhysicsTelemetryData.RelightThroughputHoldN;
   }
   const double slice_ms = RelightThroughputSliceMs(
-      miss_reserved_ms, consume_mode, moving, throughput_mode, cap_unit_prev);
+      miss_reserved_ms, consume_mode, moving, throughput_mode, cap_unit_prev,
+      ready_at_start);
   const int earned_cap = EarnedRelightApplyCap(
       max_per_frame, slice_ms, 0.0, unit_ms_prev, throughput_mode, vb_stalled_n,
       light_unit_ms_prev, install_unit_ms_prev, ready_at_start,
@@ -4284,8 +4290,42 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
             PhysicsTelemetryData.RelightApplyNPrev) &&
         !ShouldSkipDeferHeavyApplyUnderPl(pl_focus_n) && !consume_mode;
     const bool primary_only_apply = consume_mode || defer_side_iter;
-    // CheapRemesh C3: noop light → clear InFlight/Pending without Dirty/Prefetch.
-    if (!any_light_changed)
+    bool force_unchanged_relit = ShouldForceMarkRelitOnUnchangedLight(
+        consume_mode, vb_focus_n, false, false, -1);
+    if (!any_light_changed && !force_unchanged_relit)
+    {
+      for (const glm::ivec2 &g : primary_grounds)
+      {
+        const int horiz =
+            std::max(std::abs(g.x - pl_focus_chunk.x),
+                     std::abs(g.y - pl_focus_chunk.z));
+        const bool ticket = GetColumnFlowExecutor().HasRepairTicket(g) ||
+                            IsColumnStickyRemesh(g) ||
+                            ColumnHasRepairProgress(g);
+        bool fully_dark = false;
+        if (MeshService)
+        {
+          for (const RelightChunkLightData &cd : result.chunks)
+          {
+            if (cd.coord.x == g.x && cd.coord.z == g.y &&
+                MeshService->GetCache().ChunkHasFullyDarkFace(cd.coord))
+            {
+              fully_dark = true;
+              break;
+            }
+          }
+        }
+        if (ShouldForceMarkRelitOnUnchangedLight(false, 0, ticket, fully_dark,
+                                                 horiz))
+        {
+          force_unchanged_relit = true;
+          break;
+        }
+      }
+    }
+    // CheapRemesh C3: noop light → clear InFlight/Pending without Dirty/Prefetch
+    // unless P1 repair debt (VB / ticket / FullyDark ring).
+    if (!any_light_changed && !force_unchanged_relit)
     {
       for (const glm::ivec2 &g : primary_grounds)
       {
@@ -4300,6 +4340,16 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     }
     else
     {
+      if (!any_light_changed && relit_coords.empty())
+      {
+        for (const RelightChunkLightData &chunk_data : result.chunks)
+        {
+          if (BlockWorld.GetChunkManager().GetChunk(chunk_data.coord))
+          {
+            relit_coords.push_back(chunk_data.coord);
+          }
+        }
+      }
       // ColdFix P0: primary_only only under defer (not forever on moving).
       MarkRelitChunksForMesh(relit_coords, /*priority_mesh=*/true, primary_grounds,
                              result.finalize_pending_gate,
@@ -4764,6 +4814,31 @@ void UWorld::TickAsyncChunkSystems()
   if (high_pl_cruise)
   {
     drain_budget = std::max(drain_budget, HighPlCruiseApplyFloorN());
+  }
+  {
+    const double apply_unit_prev =
+        PhysicsTelemetryData.RelightApplyNPrev > 0
+            ? (PhysicsTelemetryData.RelightApplyMsPrev /
+               static_cast<double>(PhysicsTelemetryData.RelightApplyNPrev))
+            : PhysicsTelemetryData.RelightApplyMsPrev;
+    const double light_unit_prev =
+        PhysicsTelemetryData.RelightApplyNPrev > 0 &&
+                PhysicsTelemetryData.RelightApplyLightMsPrev > 0.0
+            ? (PhysicsTelemetryData.RelightApplyLightMsPrev /
+               static_cast<double>(PhysicsTelemetryData.RelightApplyNPrev))
+            : 0.0;
+    const double install_unit_prev =
+        PhysicsTelemetryData.RelightApplyNPrev > 0 &&
+                PhysicsTelemetryData.RelightApplyInstallMsPrev > 0.0
+            ? (PhysicsTelemetryData.RelightApplyInstallMsPrev /
+               static_cast<double>(PhysicsTelemetryData.RelightApplyNPrev))
+            : 0.0;
+    const int ready_n =
+        AsyncRelight ? static_cast<int>(AsyncRelight->GetCompletedSize()) : 0;
+    drain_budget = ClampCruiseDrainToReadyCheap(
+        drain_budget, ready_n,
+        RelightApplyCapUnitMs(apply_unit_prev, light_unit_prev,
+                              install_unit_prev));
   }
   // Player edits and near first-light columns remesh immediately.
   const bool priority_mesh =

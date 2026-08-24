@@ -2102,6 +2102,12 @@ int main()
            "B2c: enter pass disables throughput");
     Expect(RelightThroughputSliceMs(8.0, false, true, true, 2.0) >= 12.0,
            "B2c: cruise throughput slice >=12ms");
+    Expect(RelightThroughputSliceMs(8.0, true, true, true, 2.0, 3) == 16.0,
+           "P2: cheap consume+ready widens moving slice to 16");
+    Expect(RelightThroughputSliceMs(8.0, true, true, true, 2.0, 1) == 8.0,
+           "P2: consume without ready stays MissReservedMs");
+    Expect(RelightThroughputSliceMs(8.0, true, true, true, 6.5, 3) == 8.0,
+           "P2: fat unit does not widen consume slice");
     Expect(EarnedRelightApplyCap(20, 12.0, 0.0, 2.0, true, 0, 1.0, 1.0) >= 2,
            "B2c: earned cap >=2 for 2ms unit in 12ms slice");
     Expect(CruiseRelightApplyBudget(true, 2.0, 6, false, false, 1) >= 3,
@@ -2204,6 +2210,60 @@ int main()
            "C5: no repair progress still keep when live GPU");
     Expect(!ShouldKeepLiveGpuOpaqueDespiteFullyDark(false, 0, true),
            "C5: no live GPU → no keep");
+    using cutum::ShouldHideFullyDarkOverLiveGpu;
+    Expect(!ShouldHideFullyDarkOverLiveGpu(true, 4, true),
+           "P4: live GPU nh=4 not hidden");
+    Expect(ShouldHideFullyDarkOverLiveGpu(false, 2, true),
+           "P4: no live GPU may hide FullyDark");
+    Expect(!ShouldHideFullyDarkOverLiveGpu(true, 0, false),
+           "P4: not FullyDark → no hide");
+  }
+
+  // FZ2.7-P1: noop GPU apply still MarkRelit under repair debt
+  {
+    using cutum::ShouldForceMarkRelitOnUnchangedLight;
+    Expect(ShouldForceMarkRelitOnUnchangedLight(true, 0, false, false, 8),
+           "P1: ticketed consume forces MarkRelit");
+    Expect(ShouldForceMarkRelitOnUnchangedLight(false, 104, false, false, 8),
+           "P1: VB>40 forces MarkRelit");
+    Expect(ShouldForceMarkRelitOnUnchangedLight(false, 0, true, false, 5),
+           "P1: repair ticket forces MarkRelit");
+    Expect(ShouldForceMarkRelitOnUnchangedLight(false, 0, false, true, 4),
+           "P1: FullyDark LitDrawable forces MarkRelit");
+    Expect(!ShouldForceMarkRelitOnUnchangedLight(false, 10, false, false, 8),
+           "P1: hinterland noop may skip");
+    Expect(!ShouldForceMarkRelitOnUnchangedLight(false, 0, false, true, 5),
+           "P1: far FullyDark without ticket is not ring force");
+  }
+
+  // FZ2.7-P2: Drain min(ready,4) when cheap
+  {
+    using cutum::ClampCruiseDrainToReadyCheap;
+    using cutum::EarnedRelightApplyCap;
+    Expect(ClampCruiseDrainToReadyCheap(1, 3, 2.0) == 3,
+           "P2: cheap ready=3 lifts cruise budget 1");
+    Expect(ClampCruiseDrainToReadyCheap(1, 3, 6.5) == 1,
+           "P2: fat unit does not lift budget");
+    Expect(ClampCruiseDrainToReadyCheap(1, 1, 2.0) == 1,
+           "P2: ready<2 no lift");
+    Expect(EarnedRelightApplyCap(20, 8.0, 0.0, 2.0, true, 0, 2.0, 0.1, 3, 70,
+                                 96, 55) >= 3,
+           "P2: earned >= min(ready,4) when cheap");
+  }
+
+  // FZ2.7-P3: FirstMesh never skip in-flight; far remesh coalesces
+  {
+    using cutum::ShouldSkipInFlightDirtyReschedule;
+    Expect(!ShouldSkipInFlightDirtyReschedule(true, true, 8, true),
+           "P3: FirstMesh hole never skip");
+    Expect(!ShouldSkipInFlightDirtyReschedule(true, true, 1, false),
+           "P3: near FullyDark remesh not skipped");
+    Expect(ShouldSkipInFlightDirtyReschedule(true, true, 8, false),
+           "P3: far remesh in-flight coalesces");
+    Expect(ShouldSkipInFlightDirtyReschedule(true, false, 1, false),
+           "P3: live remesh in-flight coalesces");
+    Expect(!ShouldSkipInFlightDirtyReschedule(false, true, 8, false),
+           "P3: not in-flight → no skip");
   }
 
   // CheapRemesh C3: PrimaryLightUnchanged

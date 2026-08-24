@@ -128,6 +128,27 @@ inline bool ShouldRemeshAfterApplyOnlyWhileBuilding(bool building_owned,
   return building_owned;
 }
 
+/// FZ2.7-P3: coalesce in-flight remesh. Never skip FirstMesh holes. Near
+/// FullyDark (nh≤2) may re-Dirty immediately.
+inline bool ShouldSkipInFlightDirtyReschedule(bool inflight, bool fully_dark,
+                                              int horiz,
+                                              bool first_mesh_missing)
+{
+  if (!inflight)
+  {
+    return false;
+  }
+  if (first_mesh_missing)
+  {
+    return false;
+  }
+  if (fully_dark && horiz >= 0 && horiz <= kVisualStageNearFovHoriz)
+  {
+    return false;
+  }
+  return true;
+}
+
 /// Era32 P2: live drawable remesh → RemeshAfterApply only (land+ocean), not
 /// MarkDirty storm. pressure = suppress seam / void|VB / idle drawable.
 inline bool ShouldRemeshAfterApplyOnlyOnLiveDrawable(bool has_drawable,

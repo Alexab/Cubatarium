@@ -1157,3 +1157,19 @@ Slice moving still ≤16. min_cap=3 not restored as force when time_cap&lt;3.
 
 ---
 
+## FZ2.7-P1–P4 (post-145926 flicker / far holes)
+
+Eye: chunk blink + holes on long cruise. Steady `145926`: `mark_relit=0` every frame, VB 104, blink 0.61, `schedule_skip` 80 vs ok 5.5.
+
+| Track | Change |
+| --- | --- |
+| P1 | `ShouldForceMarkRelitOnUnchangedLight` — GPU-sky packed noop still MarkRelit on consume / VB>40 / ticket / FullyDark LitDrawable. Slim empty-relit path no longer swallows repair. |
+| P2 | `ClampCruiseDrainToReadyCheap` + consume slice 8→16 when cheap+ready≥2. Earned `min(ready,4)` vs 16ms time_cap. `min_cap=3` still does not beat fat time_cap. |
+| P3 | `ShouldSkipInFlightDirtyReschedule` — FirstMesh holes never skip; near FullyDark nh≤2 re-Dirty; far remesh coalesces. |
+| P4 | `ShouldHideFullyDarkOverLiveGpu` — hide-until-lit cannot drop live GPU nh≤4 (C5). Published VB deadband stays 3. |
+| P5 | Closeout: one **manual ≥600s** World_164 far cruise. Autofly VB is not SoT. Compare `101316` / `145926`. |
+
+Hold: sim&lt;135, moving slice ≤16, CountCap, no Starlight rewrite, no neighbor fanout in hot MarkRelit.
+
+---
+

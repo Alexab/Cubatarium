@@ -216,9 +216,20 @@ inline double RelightApplyCapUnitMs(double last_unit_apply_ms,
 /// FZ2.7-B2d: widen to cap_unit×3 (≤16ms moving) so min_cap=3 fits in slice.
 inline double RelightThroughputSliceMs(double miss_reserved_ms, bool consume_mode,
                                        bool moving, bool throughput_mode,
-                                       double cap_unit_ms)
+                                       double cap_unit_ms,
+                                       int ready_at_start = 0)
 {
   double slice_ms = RelightConsumeSliceMs(miss_reserved_ms, consume_mode, moving);
+  const bool cheap_cruise =
+      cap_unit_ms > 0.1 && cap_unit_ms <= 16.0 / 3.0;
+  // FZ2.7-P2: cheap completed queue — widen consume moving 8ms so Drain can
+  // take min(ready,4). Still hard-capped at 16ms moving.
+  if (throughput_mode && consume_mode && cheap_cruise && ready_at_start >= 2)
+  {
+    const double cruise_max = moving ? 16.0 : 20.0;
+    slice_ms = std::min(cruise_max, std::max(slice_ms, 16.0));
+    return slice_ms;
+  }
   if (!throughput_mode || consume_mode)
   {
     return slice_ms;
@@ -330,11 +341,22 @@ inline int EarnedRelightApplyCap(int drain_budget, double slice_ms,
           ? std::max(1, static_cast<int>(slice_ms / cap_unit))
           : min_cap;
   // FZ2.7-A: time_cap wins — do not force min_cap when the slice cannot fit it.
-  if (time_cap < min_cap)
+  int earned = (time_cap < min_cap) ? time_cap : std::max(min_cap, time_cap);
+  // FZ2.7-P2: cheap light+install + ready queue → Drain min(ready,4) without
+  // restoring min_cap=3 over a fat time_cap.
+  const bool cheap_16 = cap_unit > 0.1 && cap_unit <= 16.0 / 3.0;
+  if (cheap_16 && ready_at_start >= 2)
   {
-    return std::min(drain_budget, time_cap);
+    const int time_cap_16 =
+        std::max(1, static_cast<int>(16.0 / cap_unit));
+    const int ready_n = ready_at_start < 4 ? ready_at_start : 4;
+    const int boost = time_cap_16 < ready_n ? time_cap_16 : ready_n;
+    if (boost > earned)
+    {
+      earned = boost;
+    }
   }
-  return std::min(drain_budget, std::max(min_cap, time_cap));
+  return std::min(drain_budget, earned);
 }
 
 /// RateMatch R0: stop Apply slice after ≥1 column when wall ≥ MissReservedMs.
@@ -399,6 +421,30 @@ inline bool ShouldPrioritizeMeshScheduleForTicketedConsumeLegacy(
 {
   return consume_mode && visible_black_focus_n > vb_thresh &&
          visible_black_stalled_n > 0;
+}
+
+/// FZ2.7-P1: GPU-sky / packed noop must still MarkRelit when repair is owed.
+inline bool ShouldForceMarkRelitOnUnchangedLight(
+    bool consume_mode, int visible_black_focus_n, bool has_repair_ticket,
+    bool fully_dark, int horiz, int vb_thresh = 40)
+{
+  if (consume_mode)
+  {
+    return true;
+  }
+  if (visible_black_focus_n > vb_thresh)
+  {
+    return true;
+  }
+  if (has_repair_ticket)
+  {
+    return true;
+  }
+  if (fully_dark && horiz >= 0 && horiz <= kVisualStageLitDrawableHoriz)
+  {
+    return true;
+  }
+  return false;
 }
 
 /// FZ2.5-P0b: stalled ticket on lit ring — force MarkRelit schedule path.
@@ -483,6 +529,21 @@ inline bool ShouldKeepLiveGpuOpaqueDespiteFullyDark(
   return has_live_gpu_draw && horiz >= 0 && horiz <= keep_horiz;
 }
 
+/// FZ2.7-P4: hide-until-lit must not toggle a live GPU slot in LitDrawable.
+inline bool ShouldHideFullyDarkOverLiveGpu(
+    bool has_live_gpu_draw, int horiz, bool fully_dark)
+{
+  if (!fully_dark)
+  {
+    return false;
+  }
+  if (ShouldKeepLiveGpuOpaqueDespiteFullyDark(has_live_gpu_draw, horiz, false))
+  {
+    return false;
+  }
+  return true;
+}
+
 /// P2/P6/LitRing/Flicker: cruise Apply — caps from per-column unit cost, not
 /// batch wall. Near-PL floor preserved. Early-out cap=1 only when unit_ms>8
 /// (or NPrev≤1 with batch>8).
@@ -546,6 +607,28 @@ inline int CruiseRelightApplyBudget(bool moving, double last_apply_ms,
     cap = std::max(cap, 3);
   }
   return requested < cap ? requested : cap;
+}
+
+/// FZ2.7-P2: cruise budget may be 1 from fat FullRelight; Drain still takes
+/// min(ready,4) when light+install cap_unit is cheap vs 16ms.
+inline int ClampCruiseDrainToReadyCheap(int cruise_budget, int ready_n,
+                                        double cap_unit_ms,
+                                        double cruise_slice_ms = 16.0)
+{
+  if (cruise_budget < 0)
+  {
+    cruise_budget = 0;
+  }
+  if (ready_n < 2)
+  {
+    return cruise_budget;
+  }
+  if (!(cap_unit_ms > 0.1 && cap_unit_ms <= cruise_slice_ms / 3.0))
+  {
+    return cruise_budget;
+  }
+  const int want = ready_n < 4 ? ready_n : 4;
+  return cruise_budget > want ? cruise_budget : want;
 }
 
 /// P3: skip heavy apply side-effects when prior per-column apply blew SLA.
