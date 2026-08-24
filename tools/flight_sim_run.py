@@ -954,9 +954,9 @@ def main() -> int:
             args.yaw = 270.0
         args.idle_sec = max(args.idle_sec, 45.0)
         if "--fly-phase-sec" not in sys.argv:
-            args.fly_phase_sec = 100.0
+            args.fly_phase_sec = 480.0
         else:
-            args.fly_phase_sec = max(args.fly_phase_sec, 100.0)
+            args.fly_phase_sec = max(args.fly_phase_sec, 480.0)
         if "--stop-phase-sec" not in sys.argv:
             args.stop_phase_sec = 120.0
         else:
