@@ -749,6 +749,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     static int vb_pending_raw = 0;
     static int vb_pending_stable = 0;
     static int last_visible_black_no_ticket = 0;
+    static int vb_nt_pending_raw = 0;
+    static int vb_nt_pending_stable = 0;
     static int last_visible_black_progress = 0;
     static int last_visible_black_stalled = 0;
     static int vb_focus_stable_frames = 0;
@@ -764,6 +766,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
           focus_ground, focus_radius, &no_ticket, &progress_n, &stalled_n,
           /*ticketed_consume_scan=*/false, vb_focus_stable_frames);
       world.PhysicsTelemetryData.VisibleBlackFocusRawN = raw_vb;
+      world.PhysicsTelemetryData.VisibleBlackNoTicketRawN = no_ticket;
       if (prev_raw > 0 && raw_vb == prev_raw)
       {
         ++vb_focus_stable_frames;
@@ -772,7 +775,9 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       {
         vb_focus_stable_frames = 0;
       }
-      last_visible_black_no_ticket = no_ticket;
+      last_visible_black_no_ticket = PublishVisibleBlackNoTicketN(
+          no_ticket, last_visible_black_no_ticket, vb_nt_pending_raw,
+          vb_nt_pending_stable, &vb_nt_pending_raw, &vb_nt_pending_stable);
       last_visible_black_progress = progress_n;
       last_visible_black_stalled = stalled_n;
       if (std::abs(raw_vb - vb_published) > 3)
@@ -1819,9 +1824,18 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     {
       if (!land_frontier)
       {
-        ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
-        world.PhysicsTelemetryData.SoftDeferWitnessHoriz =
-            world.PhysicsTelemetryData.MissHoriz;
+        const bool same_pin =
+            SoftDeferCapturePinValid && SoftDeferCapturePinCx == witness_xz.x &&
+            SoftDeferCapturePinCz == witness_xz.y;
+        const bool damp_cruise = ShouldDampWitnessRetargetOnUnfinishedCruise(
+            moving_now, world.PhysicsTelemetryData.UnfinishedVisual);
+        if (ShouldCountIngressSoftDeferWitnessRetarget(land_frontier,
+                                                       damp_cruise, same_pin))
+        {
+          ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
+          world.PhysicsTelemetryData.SoftDeferWitnessHoriz =
+              world.PhysicsTelemetryData.MissHoriz;
+        }
       }
       else
       {
@@ -1989,7 +2003,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           SoftDeferCapturePinCy = cand_cy;
           SoftDeferCapturePinHoriz = cand_horiz;
           SoftDeferCapturePinAge = 0;
-          SoftDeferCapturePinMaxAge = kSoftDeferCaptureWitnessPinFrames;
+          SoftDeferCapturePinMaxAge = SoftDeferCapturePinMaxAgeAfterRetarget(
+              SoftDeferCapturePinMaxAge, pin_T);
           did_retarget = (cand_xz != focus_xz);
         }
         else
@@ -2374,9 +2389,16 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
   world.PhysicsTelemetryData.ChunkMeshedUnlit =
       static_cast<uint64_t>(
           (std::max)(0, world.PhysicsTelemetryData.FocusDarkMesh));
-  world.PhysicsTelemetryData.ChunkMeshedUnlitHidden =
-      static_cast<uint64_t>(
-          (std::max)(0, world.PhysicsTelemetryData.FocusDarkMeshHidden));
+  {
+    static int unlit_hidden_published = 0;
+    static int unlit_hidden_hold = 0;
+    const int raw_hidden =
+        (std::max)(0, world.PhysicsTelemetryData.FocusDarkMeshHidden);
+    unlit_hidden_published = HoldChunkMeshedUnlitHiddenPublish(
+        raw_hidden, unlit_hidden_published, &unlit_hidden_hold);
+    world.PhysicsTelemetryData.ChunkMeshedUnlitHidden =
+        static_cast<uint64_t>(unlit_hidden_published);
+  }
   world.PhysicsTelemetryData.ChunkMeshedUnlitPreview =
       static_cast<uint64_t>(
           (std::max)(0, world.PhysicsTelemetryData.FocusDarkMeshPreview));

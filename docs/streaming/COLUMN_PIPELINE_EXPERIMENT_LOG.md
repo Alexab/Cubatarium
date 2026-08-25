@@ -1411,3 +1411,29 @@ Code land complete (A1–A6, B0–B4, C1–C5). Capture untouched. **Final gate*
 
 ---
 
+## FZ27-P14 Frontier flicker closeout
+
+**SoT:** manual `170807` after P13 — keep-up/stale OK; remaining eye flicker from `vb_no_ticket~39`, SoftDefer retarget ~4.2/spike, unlit ±1 frontier.
+
+### Landed
+
+| Step | Change |
+| --- | --- |
+| F1 | Capture pin MaxAge preserve on retarget (`SoftDeferCapturePinMaxAgeAfterRetarget`) |
+| F2 | Ingress SoftDeferWitnessRetarget damp under unfinished cruise / same-pin |
+| F3 | `VisibleBlackNoTicketRepairCap` moving floor 4→6/8 |
+| F4 | moving vb_no_ticket>20: repair_cap+2 + second Collect pass |
+| F5 | publish deadband for `VisibleBlackNoTicketN`; raw for heal Collect |
+| F6 | hold `ChunkMeshedUnlitHidden` publish 2 frames when \|Δ\|≤2 |
+
+**KEEP:** P12 PL trim, P13 remesh protect, Capture.
+
+### Verification
+
+- Unit: `miss_first_mesh_class_test` OK (P14 F1–F6 predicates)
+- Smoke: `python bin/tmp_fz27_b_test_smoke.py` → **ALL PASS**
+- Release: `Cubatarium.exe` built (static verify PASS)
+- Manual DoD vs `170807`: vb_no_ticket med≤15; witness_retarget ≤3/spike; unfinished≤30; unlit≤25; KEEP capture/PL/stale/keep
+
+---
+

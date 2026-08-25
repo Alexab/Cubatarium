@@ -323,8 +323,9 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   const int void_n = world.GetPhysicsTelemetry().DarkFaceVoidNearN;
   const int visible_black_n =
       world.GetPhysicsTelemetry().VisibleBlackFocusN;
-  const int visible_black_no_ticket_n =
-      world.GetPhysicsTelemetry().VisibleBlackNoTicketN;
+  const int visible_black_no_ticket_n = std::max(
+      world.GetPhysicsTelemetry().VisibleBlackNoTicketRawN,
+      world.GetPhysicsTelemetry().VisibleBlackNoTicketN);
   constexpr double kStaleRepairCooldownSec = 2.0;
   const auto now = std::chrono::steady_clock::now();
   const bool cooldown_ok =
@@ -369,9 +370,14 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       desired.stage == ColumnDesiredStage::RelightThenMesh ||
       (!missing_visible_mesh && !moving && cooldown_ok &&
        (void_n > 200 || (void_n > 40 && stale_n > 40)));
-  const int repair_cap =
+  const int repair_cap_base =
       !moving ? std::min(12, std::max(4, recover_n))
               : std::min(6, std::max(2, recover_n / 2));
+  // FZ2.7-P14 F4: moving VB orphan pressure — +2 RelightThenMesh collect budget.
+  const int repair_cap =
+      (moving && visible_black_no_ticket_n > 20)
+          ? std::min(8, repair_cap_base + 2)
+          : repair_cap_base;
 
   // Era17 P1: continuous heal while VisibleBlackFocusN>0 (not only NoTicket).
   // Era19 P2: void→Relight only; stale→Remesh only; PendingLight skips Remesh.
@@ -478,13 +484,18 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       EnqueueVisibleBlackRepairTickets(scheduler_, focus, stale_dark_cols);
     }
     // FZ2-R6 / FZ2.2-C2a: second collect idle-only; C2c enter peak one-shot.
+    // FZ2.7-P14 F4: also one moving second pass under no_ticket orphan pressure.
     const bool second_pass_idle =
         nearest_vb_no_ticket && async_ok && !moving &&
         visible_black_no_ticket_n > 20;
+    const bool second_pass_moving =
+        nearest_vb_no_ticket && async_ok && moving &&
+        visible_black_no_ticket_n > 20 &&
+        static_cast<int>(stale_dark_cols.size()) < stale_cap;
     const bool second_pass_enter_peak =
         enter_fov_lit && async_ok && visible_black_no_ticket_n > 40 &&
         static_cast<int>(stale_dark_cols.size()) < stale_cap;
-    if (second_pass_idle &&
+    if ((second_pass_idle || second_pass_moving) &&
         static_cast<int>(stale_dark_cols.size()) < stale_cap)
     {
       const int remain =

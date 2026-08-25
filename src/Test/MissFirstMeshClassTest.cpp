@@ -658,8 +658,12 @@ int main()
          "FlickerZero: zero no_ticket ⇒ repair_cap");
   Expect(VisibleBlackNoTicketRepairCap(108, 6, false) >= 6,
          "FlickerZero: enter idle no_ticket scales cap");
-  Expect(VisibleBlackNoTicketRepairCap(108, 6, true) >= 4,
-         "FlickerZero: cruise no_ticket scales cap");
+  Expect(VisibleBlackNoTicketRepairCap(108, 6, true) >= 6,
+         "P14 F3: cruise no_ticket scales cap floor≥6");
+  Expect(VisibleBlackNoTicketRepairCap(30, 6, true) >= 6,
+         "P14 F3: cruise no_ticket>24 floor≥6");
+  Expect(VisibleBlackNoTicketRepairCap(40, 8, true) >= 8,
+         "P14 F3: cruise no_ticket>24 floor 8 when base allows");
   Expect(VisibleBlackNoTicketRepairCap(6, 6, false) == 6,
          "FZ2: no_ticket≤8 idle ⇒ repair_cap decay");
   Expect(VisibleBlackNoTicketVoidCap(20, 2, false) >= 2,
@@ -2136,6 +2140,42 @@ int main()
     auto steal_only = ComputeMeshWorkAdmission(in);
     Expect(steal_only.remesh_schedule == 0,
            "P13 R2: steal without stale still remesh=0");
+  }
+
+  // FZ2.7-P14: frontier flicker closeout predicates
+  {
+    using cutum::SoftDeferCapturePinMaxAgeAfterRetarget;
+    using cutum::ShouldCountIngressSoftDeferWitnessRetarget;
+    using cutum::PublishVisibleBlackNoTicketN;
+    using cutum::HoldChunkMeshedUnlitHiddenPublish;
+    using cutum::kSoftDeferCaptureWitnessPinFrames;
+    Expect(SoftDeferCapturePinMaxAgeAfterRetarget(24, 24) == 24,
+           "P14 F1: retarget keeps extended MaxAge 24");
+    Expect(SoftDeferCapturePinMaxAgeAfterRetarget(8, 24) == 24,
+           "P14 F1: retarget raises MaxAge to pin_T");
+    Expect(SoftDeferCapturePinMaxAgeAfterRetarget(0, 8) ==
+               kSoftDeferCaptureWitnessPinFrames,
+           "P14 F1: unset seeds default pin frames");
+    Expect(!ShouldCountIngressSoftDeferWitnessRetarget(false, true, false),
+           "P14 F2: unfinished cruise damp skips ingress count");
+    Expect(!ShouldCountIngressSoftDeferWitnessRetarget(false, false, true),
+           "P14 F2: same Capture pin skips ingress count");
+    Expect(ShouldCountIngressSoftDeferWitnessRetarget(false, false, false),
+           "P14 F2: normal ingress still counts");
+    int pend = 0;
+    int stab = 0;
+    int pub = PublishVisibleBlackNoTicketN(39, 40, 40, 1, &pend, &stab);
+    Expect(pub == 40, "P14 F5: |Δ|≤3 holds published no_ticket");
+    pub = PublishVisibleBlackNoTicketN(50, 40, 40, 0, &pend, &stab);
+    Expect(pub == 50, "P14 F5: |Δ|>3 publishes immediately");
+    int hold = 0;
+    Expect(HoldChunkMeshedUnlitHiddenPublish(21, 20, &hold) == 20,
+           "P14 F6: |Δ|≤2 holds unlit publish");
+    Expect(hold == 1, "P14 F6: hold frame advances");
+    Expect(HoldChunkMeshedUnlitHiddenPublish(21, 20, &hold) == 20,
+           "P14 F6: second hold frame");
+    Expect(HoldChunkMeshedUnlitHiddenPublish(21, 20, &hold) == 21,
+           "P14 F6: after max_hold publishes raw");
   }
 
   // P1: ShouldForcePinColumnPriority

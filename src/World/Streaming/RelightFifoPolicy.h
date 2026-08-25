@@ -3,6 +3,7 @@
 #include "World/Streaming/VisualStagePolicy.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace cutum
 {
@@ -147,6 +148,82 @@ inline bool ShouldDampWitnessRetargetOnUnfinishedCruise(bool moving,
                                                         int thresh = 40)
 {
   return moving && unfinished > thresh;
+}
+
+/// FZ2.7-P14 F2: ingress SoftDeferWitnessRetarget count — skip under unfinished
+/// cruise damp or same Capture-pin column hop.
+inline bool ShouldCountIngressSoftDeferWitnessRetarget(
+    bool land_frontier, bool damp_unfinished_cruise, bool same_capture_pin)
+{
+  if (land_frontier || damp_unfinished_cruise || same_capture_pin)
+  {
+    return false;
+  }
+  return true;
+}
+
+/// FZ2.7-P14 F5: publish deadband for VB no_ticket (mirror focus_n).
+inline int PublishVisibleBlackNoTicketN(int raw_no_ticket, int published,
+                                        int pending_raw, int pending_stable,
+                                        int *out_pending_raw,
+                                        int *out_pending_stable,
+                                        int deadband = 3, int stable_need = 4)
+{
+  int next_published = published;
+  int next_pending = pending_raw;
+  int next_stable = pending_stable;
+  if (std::abs(raw_no_ticket - published) > deadband)
+  {
+    next_published = raw_no_ticket;
+    next_pending = raw_no_ticket;
+    next_stable = 0;
+  }
+  else if (raw_no_ticket == pending_raw)
+  {
+    ++next_stable;
+    if (next_stable >= stable_need)
+    {
+      next_published = raw_no_ticket;
+    }
+  }
+  else
+  {
+    next_pending = raw_no_ticket;
+    next_stable = 1;
+  }
+  if (out_pending_raw)
+  {
+    *out_pending_raw = next_pending;
+  }
+  if (out_pending_stable)
+  {
+    *out_pending_stable = next_stable;
+  }
+  return next_published;
+}
+
+/// FZ2.7-P14 F6: hold unlit_hidden publish when tiny frontier Δ.
+inline int HoldChunkMeshedUnlitHiddenPublish(int raw, int published,
+                                             int *hold_frames,
+                                             int max_hold = 2, int delta_max = 2)
+{
+  if (!hold_frames)
+  {
+    return raw;
+  }
+  const int d = raw > published ? raw - published : published - raw;
+  if (d == 0)
+  {
+    *hold_frames = 0;
+    return published;
+  }
+  if (d <= delta_max && *hold_frames < max_hold)
+  {
+    ++(*hold_frames);
+    return published;
+  }
+  *hold_frames = 0;
+  return raw;
 }
 
 /// FZ2.6-P0b: stalled ticket completion prefers mesh_drain over schedule.
