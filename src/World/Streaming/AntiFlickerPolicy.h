@@ -35,6 +35,20 @@ inline bool ShouldRetargetSoftDeferCaptureWitness(
   return false;
 }
 
+/// FZ2.7-P15c: Capture pin MaxAge after retarget — never ratchet on prev.
+/// Frontier/stuck may raise to pin_T (hard cap 24); otherwise decay to default 8.
+inline int SoftDeferCapturePinMaxAgeAfterRetarget(
+    int /*prev_max_age*/, int pin_T, bool land_frontier_or_stuck,
+    int default_pin_frames = kSoftDeferCaptureWitnessPinFrames)
+{
+  if (!land_frontier_or_stuck)
+  {
+    return default_pin_frames;
+  }
+  const int raised = pin_T > default_pin_frames ? pin_T : default_pin_frames;
+  return raised > 24 ? 24 : raised;
+}
+
 /// Era27 I-A2: SoftDefer empty age resets only when healed or real progress —
 /// capped rim scan must not erase sticky ages for skipped empties.
 inline bool SoftDeferEmptyAgeShouldReset(bool still_empty, bool had_progress)

@@ -65,7 +65,12 @@ struct PhysicsTelemetry
   /// Frames where SoftDefer FOV+pending applied a Capture budget floor (cumulative).
   uint64_t SoftDeferCaptureFloorHits{0};
   /// SoftDefer/rim FirstMesh ticket retargeted from focus to MissCx/Cz (cumulative).
+  /// Legacy total = SoftDeferIngressWitnessN + SoftDeferCaptureRetargetN.
   uint64_t SoftDeferWitnessRetarget{0};
+  /// FZ2.7-P15a: ingress Site A (witness≠focus enqueue) — observe only.
+  uint64_t SoftDeferIngressWitnessN{0};
+  /// FZ2.7-P15a: Capture floor real pin retarget (Site B) — observe only.
+  uint64_t SoftDeferCaptureRetargetN{0};
   /// Last witness MissHoriz when SoftDeferWitnessRetarget fired (0 if focus).
   int SoftDeferWitnessHoriz{0};
   /// FZ2.7-P12 C0: SoftDefer Capture pin age (frames).

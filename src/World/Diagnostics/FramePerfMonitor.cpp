@@ -368,6 +368,8 @@ struct FrameNumbers
   uint64_t softdefer_capture_floor_hits_delta{0};
   uint64_t softdefer_witness_retarget{0};
   uint64_t softdefer_witness_retarget_delta{0};
+  uint64_t softdefer_ingress_witness_n{0};
+  uint64_t softdefer_capture_retarget_n{0};
   int softdefer_witness_horiz{0};
   int softdefer_capture_pin_age{0};
   int softdefer_capture_budget{0};
@@ -795,6 +797,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.enter_game_warmup_missing_greedy = phys.EnterGameWarmupMissingGreedy;
   n.softdefer_capture_floor_hits = phys.SoftDeferCaptureFloorHits;
   n.softdefer_witness_retarget = phys.SoftDeferWitnessRetarget;
+  n.softdefer_ingress_witness_n = phys.SoftDeferIngressWitnessN;
+  n.softdefer_capture_retarget_n = phys.SoftDeferCaptureRetargetN;
   n.softdefer_witness_horiz = phys.SoftDeferWitnessHoriz;
   n.softdefer_capture_pin_age = phys.SoftDeferCapturePinAge;
   n.softdefer_capture_budget = phys.SoftDeferCaptureBudget;
@@ -1245,6 +1249,9 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"softdefer_witness_retarget\":" << n.softdefer_witness_retarget
           << ",\"softdefer_witness_retarget_delta\":"
           << n.softdefer_witness_retarget_delta
+          << ",\"softdefer_ingress_witness_n\":" << n.softdefer_ingress_witness_n
+          << ",\"softdefer_capture_retarget_n\":"
+          << n.softdefer_capture_retarget_n
           << ",\"softdefer_witness_horiz\":" << n.softdefer_witness_horiz
           << ",\"softdefer_capture_pin_age\":" << n.softdefer_capture_pin_age
           << ",\"softdefer_capture_budget\":" << n.softdefer_capture_budget

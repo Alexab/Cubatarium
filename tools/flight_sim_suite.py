@@ -84,6 +84,16 @@ SCENARIOS: list[tuple[str, list[str], str]] = [
         ["--scenario", "fz-manual-long"],
         "FZ2.4 C8 proxy: resume no-teleport, idle45+fly100+stop120 (≥270s)",
     ),
+    (
+        "fz-ne-frontier-stand",
+        ["--scenario", "fz-ne-frontier-stand"],
+        "P14 SoftDefer repro: World_164 cold ~(118,86), idle30+fly0+stop120",
+    ),
+    (
+        "fz-frontier-stand-resume",
+        ["--scenario", "fz-frontier-stand-resume"],
+        "SoftDefer standstill isolate: resume near frontier, idle15+fly10+stop90",
+    ),
 ]
 
 

@@ -106,7 +106,8 @@ inline int VisibleBlackNoTicketRepairCap(int no_ticket_n, int repair_cap,
   {
     return std::min(base, std::max(6, no_ticket_n / 4));
   }
-  return std::min(base, std::max(4, no_ticket_n / 8));
+  // FZ2.7-P15b (ex-P14 F3): moving floor 6; no_ticket>24 → floor 8.
+  return std::min(base, std::max(no_ticket_n > 24 ? 8 : 6, no_ticket_n / 8));
 }
 
 /// FlickerZero V1: void Relight collect cap under no_ticket pressure.

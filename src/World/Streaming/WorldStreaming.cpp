@@ -1819,6 +1819,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     {
       if (!land_frontier)
       {
+        // FZ2.7-P15a: Site A ingress count (also bumps legacy total).
+        ++world.PhysicsTelemetryData.SoftDeferIngressWitnessN;
         ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
         world.PhysicsTelemetryData.SoftDeferWitnessHoriz =
             world.PhysicsTelemetryData.MissHoriz;
@@ -1989,7 +1991,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           SoftDeferCapturePinCy = cand_cy;
           SoftDeferCapturePinHoriz = cand_horiz;
           SoftDeferCapturePinAge = 0;
-          SoftDeferCapturePinMaxAge = kSoftDeferCaptureWitnessPinFrames;
+          SoftDeferCapturePinMaxAge = SoftDeferCapturePinMaxAgeAfterRetarget(
+              SoftDeferCapturePinMaxAge, pin_T,
+              land_frontier || (stuck_n && pinned_still));
           did_retarget = (cand_xz != focus_xz);
         }
         else
@@ -2011,6 +2015,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         ++world.PhysicsTelemetryData.SoftDeferCaptureFloorHits;
         if (did_retarget)
         {
+          // FZ2.7-P15a: Site B Capture retarget (also bumps legacy total).
+          ++world.PhysicsTelemetryData.SoftDeferCaptureRetargetN;
           ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
           world.PhysicsTelemetryData.SoftDeferWitnessHoriz = repair_horiz;
         }

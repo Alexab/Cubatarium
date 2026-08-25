@@ -658,8 +658,10 @@ int main()
          "FlickerZero: zero no_ticket ⇒ repair_cap");
   Expect(VisibleBlackNoTicketRepairCap(108, 6, false) >= 6,
          "FlickerZero: enter idle no_ticket scales cap");
-  Expect(VisibleBlackNoTicketRepairCap(108, 6, true) >= 4,
-         "FlickerZero: cruise no_ticket scales cap");
+  Expect(VisibleBlackNoTicketRepairCap(108, 6, true) >= 6,
+         "P15b: cruise no_ticket scales cap floor≥6");
+  Expect(VisibleBlackNoTicketRepairCap(30, 8, true) >= 8,
+         "P15b: moving no_ticket>24 floor≥8");
   Expect(VisibleBlackNoTicketRepairCap(6, 6, false) == 6,
          "FZ2: no_ticket≤8 idle ⇒ repair_cap decay");
   Expect(VisibleBlackNoTicketVoidCap(20, 2, false) >= 2,
@@ -2136,6 +2138,19 @@ int main()
     auto steal_only = ComputeMeshWorkAdmission(in);
     Expect(steal_only.remesh_schedule == 0,
            "P13 R2: steal without stale still remesh=0");
+  }
+
+  // FZ2.7-P15c: MaxAge after retarget — decay, never ratchet on prev
+  {
+    using cutum::SoftDeferCapturePinMaxAgeAfterRetarget;
+    Expect(SoftDeferCapturePinMaxAgeAfterRetarget(24, 8, false) == 8,
+           "P15c: !frontier decays to default 8 (no ratchet)");
+    Expect(SoftDeferCapturePinMaxAgeAfterRetarget(8, 24, true) == 24,
+           "P15c: frontier/stuck raises to pin_T");
+    Expect(SoftDeferCapturePinMaxAgeAfterRetarget(8, 40, true) == 24,
+           "P15c: hard cap 24");
+    Expect(SoftDeferCapturePinMaxAgeAfterRetarget(24, 14, false) == 8,
+           "P15c: leaving frontier decays even if prev was 24");
   }
 
   // P1: ShouldForcePinColumnPriority

@@ -1411,3 +1411,87 @@ Code land complete (A1–A6, B0–B4, C1–C5). Capture untouched. **Final gate*
 
 ---
 
+## FZ27-P14 Frontier flicker closeout
+
+**SoT:** manual `170807` after P13 — keep-up/stale OK; remaining eye flicker from `vb_no_ticket~39`, SoftDefer retarget ~4.2/spike, unlit ±1 frontier.
+
+### Landed (then FAIL)
+
+| Step | Change |
+| --- | --- |
+| F1 | Capture pin MaxAge preserve on retarget (`SoftDeferCapturePinMaxAgeAfterRetarget`) |
+| F2 | Ingress SoftDeferWitnessRetarget damp under unfinished cruise / same-pin |
+| F3 | `VisibleBlackNoTicketRepairCap` moving floor 4→6/8 |
+| F4 | moving vb_no_ticket>20: repair_cap+2 + second Collect pass |
+| F5 | publish deadband for `VisibleBlackNoTicketN`; raw for heal Collect |
+| F6 | hold `ChunkMeshedUnlitHidden` publish 2 frames when \|Δ\|≤2 |
+
+**KEEP:** P12 PL trim, P13 remesh protect, Capture.
+
+### Verification (code)
+
+- Unit: `miss_first_mesh_class_test` OK (P14 F1–F6 predicates)
+- Smoke: `python bin/tmp_fz27_b_test_smoke.py` → **ALL PASS**
+- Release: `Cubatarium.exe` built (static verify PASS)
+
+### Results — manual `205739` (commit `07f6d745`, ~186 spikes) vs `170807`
+
+| Metric (rest/late) | P14 `205739` | P13 `170807` | Gate |
+| --- | ---: | ---: | --- |
+| softdefer_capture_floor /spike | **19.6** | 6.7 | FAIL (truthful Site B) |
+| softdefer_witness_retarget /spike | **11.4** | 4.2 | FAIL (↑ despite F2) |
+| softdefer_empty_stuck med | **9–11** | ~4 | FAIL |
+| dark_face_stale late | **41 sticky** | 5 | FAIL |
+| vb_no_ticket late med | 23.5 | 40.5 | FAIL DoD ≤15 |
+| unfinished late | 19 | 27 | PASS |
+| capture / PL drop / keep | 3 / 0 / 169 | 3 / 0 / 169 | KEEP OK |
+
+Eye: black chunks + SoftDefer thrash + flicker worse; player NE to ~(118,86) then standstill.
+
+**Root cause:** F1 MaxAge ratchet feeds `pin_T` (`MaxAge → pin_T → max(prev,…)`) after land_frontier/stuck elevates MaxAge — sticky wrong Capture pin → floor/stuck storm. F5 deadband bleeds published `VisibleBlackNoTicketN` into budgets. F3/F4 are moving-only (cannot explain standstill). F2 only gates Site A count (poisons SLA).
+
+### Decision
+
+**FAIL — full revert** of `07f6d745` → `02f537ce` (back to P13 `9f502dd5` behavior). Repro: no-teleport `fz-ne-frontier-stand` / `fz-frontier-stand-resume` (audit `bin/tmp_audit_ne_frontier_stand.py`). P15: split SoftDefer metrics; optional F3+F4 re-land; F1 only with decay (no ratchet); never F5 in control.
+
+### Repro scenarios (no-teleport)
+
+| Scenario | Timing | Purpose |
+| --- | --- | --- |
+| `fz-ne-frontier-stand` | cold World_164 @~(118,86), idle30+fly0+stop120 | SoftDefer standstill at P14 fail locus |
+| `fz-frontier-stand-resume` | resume near frontier, idle15+fly10+stop90 | standstill-only isolate |
+
+Gates (stand window): floor/spike ≤8; witness/spike ≤5; stuck med ≤5; stale ≤20; KEEP capture≥3 / PL drop≈0 / keep≥160.
+
+### A/B post-revert
+
+| Run | floor/spike | witness/spike | stuck | SoftDefer gates |
+| --- | ---: | ---: | ---: | --- |
+| P14 manual `205739` @ (118,86) | 19.6 | 11.4 | 9 | **FAIL** |
+| P13 manual `170807` | 6.7 | 4.2 | 4 | PASS |
+| post-revert autofly `215042` @ (118,86) | **6.5** | 4.8 | 2 | **PASS** (≈P13) |
+
+Operator: manual eye ≥180s vs `170807` still recommended (autofly ≠ visual merge).
+
+---
+
+## FZ27-P15 SoftDefer observe + moving repair (post P14 revert)
+
+**SoT:** SoftDefer gates green on post-revert `215042` / P13 `170807`.
+
+### Landed
+
+| Step | Change |
+| --- | --- |
+| P15a | Split telem `SoftDeferIngressWitnessN` / `SoftDeferCaptureRetargetN` (legacy total kept); no count-gating |
+| P15b | Re-land moving F3/F4 only (`VisibleBlackNoTicketRepairCap` floor 6/8 + repair_cap+2 + second Collect) |
+| P15c | `SoftDeferCapturePinMaxAgeAfterRetarget` with decay to 8 / hard cap 24 — **no ratchet on prev** |
+| — | **Never** F5 deadband in control; **never** F2 count-gating |
+
+### Verification
+
+- Unit: `miss_first_mesh_class_test` (P15c + P15b caps)
+- Smoke: `python bin/tmp_fz27_b_test_smoke.py`
+- SoftDefer: `fz-ne-frontier-stand` + `bin/tmp_audit_ne_frontier_stand.py` must stay PASS vs `215042` band
+
+---

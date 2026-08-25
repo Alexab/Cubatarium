@@ -383,8 +383,10 @@ def main() -> int:
             "fz-manual-plateau",
             "fz-manual-long",
             "fz-cold-enter",
+            "fz-ne-frontier-stand",
+            "fz-frontier-stand-resume",
         ],
-        help="named scenario (... / fz-manual-parity / fz-manual-plateau / fz-manual-long / fz-cold-enter)",
+        help="named scenario (... / fz-ne-frontier-stand / fz-frontier-stand-resume)",
     )
     ap.add_argument("--break-phase-sec", type=float, default=20.0)
     ap.add_argument("--break-interval-sec", type=float, default=1.0)
@@ -994,6 +996,64 @@ def main() -> int:
         )
         args.warmup_sec = max(args.warmup_sec, 20.0)
 
+    if args.scenario == "fz-ne-frontier-stand":
+        # P14 SoftDefer thrash repro: World_164 cold spawn ~(118,86) (manual
+        # 205739 stand locus, keep=169). fly_phase=0 + long stop — any NE fly
+        # walks into ocean (keep~49) and invalidates SoftDefer standstill gates.
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.resume = False
+        args.teleport_cruise = False
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 270.0
+        if "--idle-sec" not in sys.argv:
+            args.idle_sec = 30.0
+        else:
+            args.idle_sec = max(args.idle_sec, 15.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 0.0
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 120.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 90.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 20.0)
+
+    if args.scenario == "fz-frontier-stand-resume":
+        # Isolate SoftDefer standstill: resume save should already be near
+        # dense frontier (~118,86); short/no fly + long stop. Operator places
+        # save or chains after fz-ne-frontier-stand.
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.resume = True
+        args.teleport_cruise = False
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 10.0
+        if "--idle-sec" not in sys.argv:
+            args.idle_sec = 15.0
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 10.0
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 90.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 90.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 20.0)
+
     if args.replay_edge:
         args.world = "World_164"
         args.fly_stop = True
@@ -1203,6 +1263,8 @@ def main() -> int:
                 "fz-manual-plateau",
                 "fz-manual-long",
                 "fz-cold-enter",
+                "fz-ne-frontier-stand",
+                "fz-frontier-stand-resume",
             )
             or (args.scenario or "").startswith("ocean-cruise")
         ):
