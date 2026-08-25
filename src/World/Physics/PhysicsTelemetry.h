@@ -222,6 +222,8 @@ struct PhysicsTelemetry
   int RelightTrimFarN{0};
   /// P1: per-frame FIFO drops (overflow + trim) and pin keys skipped.
   int RelightFifoDropN{0};
+  int RelightFifoOverflowDropN{0};
+  int RelightFifoProtectBlockN{0};
   int RelightFifoPinSavedN{0};
   int RelightFifoDropNPrev{0};
   int RelightFifoPinDropNPrev{0};

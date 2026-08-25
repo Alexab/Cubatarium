@@ -1244,3 +1244,20 @@ Closeout: smoke + Release; manual ≥600s vs `091745` / `194347`.
 
 ---
 
+## FZ2.7-P11 (post-110448 Capture refill + fifo trim)
+
+Root from `110448`: opaque/keep/FM OK; **Capture cap med still 1** (hot SoftDefer clamp after floor); `fifo_drop Δ=64`; `completed med 0`.
+
+| Track | Change |
+| --- | --- |
+| A1 | `ShouldBypassCaptureHotSoftDeferClamp` — fifo starve + Completed empty skips hot clamp to 1 |
+| A2 | Final `RelightCaptureBgFloorForFifoStarve` after all late clamps in DrainRelightQueues |
+| A3 | MemoryBudget hard_cap **3** on completed_starve even under memory_pressure 1/2 and dirty>600 |
+| B1 | `RelightFifoEffectiveTrimProtectHoriz` — consumer starved → trim protect nh=4 not 8 |
+| B2 | `ShouldCruiseRedFifoSecondTrim` — no aggressive 3/4-cap trim when Completed empty |
+| B3 | Telem: `relight_fifo_overflow_drop_n`, `relight_fifo_protect_block_n` (overflow vs trim_far vs protect stall) |
+
+Closeout: smoke + Release; manual ≥600s vs `110448` / `194347`.
+
+---
+

@@ -1597,12 +1597,19 @@ int UWorld::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground_horiz,
   {
     return 0;
   }
-  const int dropped =
-      Persistence->TrimFarRelightFifoFarthest(focus_ground_horiz, soft_cap);
+  const int fifo_n = Persistence->GetPendingTerrainColumnRelightCount();
+  const int completed_n = static_cast<int>(GetRelightCompletedSize());
+  const int protect =
+      RelightFifoEffectiveTrimProtectHoriz(fifo_n, soft_cap, completed_n);
+  const int dropped = Persistence->TrimFarRelightFifoFarthest(
+      focus_ground_horiz, soft_cap, protect);
   const int overflow = Persistence->TakeRelightFifoOverflowDropped();
   const int saved = Persistence->TakeRelightFifoPinSaved();
+  const int protect_block = Persistence->TakeRelightFifoProtectBlock();
   PhysicsTelemetryData.RelightFifoDropN += overflow;
+  PhysicsTelemetryData.RelightFifoOverflowDropN += overflow;
   PhysicsTelemetryData.RelightFifoPinSavedN += saved;
+  PhysicsTelemetryData.RelightFifoProtectBlockN += protect_block;
   PhysicsTelemetryData.RelightFifoDropped +=
       static_cast<uint64_t>(std::max(0, overflow));
   return dropped;

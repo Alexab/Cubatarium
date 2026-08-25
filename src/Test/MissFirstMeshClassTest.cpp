@@ -1986,6 +1986,27 @@ int main()
            "P6: pin key still protected far");
   }
 
+  // P11: Capture hot bypass + fifo trim under consumer starve
+  {
+    using cutum::RelightFifoEffectiveTrimProtectHoriz;
+    using cutum::ShouldBypassCaptureHotSoftDeferClamp;
+    using cutum::ShouldCruiseRedFifoSecondTrim;
+    using cutum::kVisualStageLitDrawableHoriz;
+    Expect(ShouldBypassCaptureHotSoftDeferClamp(72, 96, 0),
+           "P11: fifo starve + completed=0 bypasses hot clamp");
+    Expect(!ShouldBypassCaptureHotSoftDeferClamp(72, 96, 2),
+           "P11: completed>0 keeps hot clamp path");
+    Expect(RelightFifoEffectiveTrimProtectHoriz(96, 96, 0) ==
+               kVisualStageLitDrawableHoriz,
+           "P11: starved consumer narrows trim protect to LitDrawable");
+    Expect(RelightFifoEffectiveTrimProtectHoriz(96, 96, 2) == 8,
+           "P11: completed>0 keeps full protect horiz");
+    Expect(!ShouldCruiseRedFifoSecondTrim(2, 72, 96, 0.75f, true, 5, 0),
+           "P11: no second trim when completed=0");
+    Expect(ShouldCruiseRedFifoSecondTrim(2, 72, 96, 0.75f, true, 5, 2),
+           "P11: second trim when completed>0");
+  }
+
   // P1: ShouldForcePinColumnPriority
   {
     using cutum::ShouldForcePinColumnPriority;

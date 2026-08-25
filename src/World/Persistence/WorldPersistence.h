@@ -96,11 +96,13 @@ public:
   bool IsTerrainColumnRelightQueued(glm::ivec2 world_block_key) const;
   int GetPendingPlayerRelightCount() const;
   /// Drop farthest far-FIFO columns until size <= soft_cap (priority untouched).
-  int TrimFarRelightFifoFarthest(glm::ivec3 focus_ground, int soft_cap);
+  int TrimFarRelightFifoFarthest(glm::ivec3 focus_ground, int soft_cap,
+                                 int protect_horiz = -1);
   /// P1: miss / PromoteRelightHold column that far overflow must not pop.
   void SetRelightFifoPin(glm::ivec2 chunk_xz, bool valid);
   int TakeRelightFifoOverflowDropped();
   int TakeRelightFifoPinSaved();
+  int TakeRelightFifoProtectBlock();
   void ClearPendingRelights();
   void RequestAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord);
   void RequestAsyncTerrainColumnSave(UWorld &world, glm::ivec3 ground_coord);
@@ -182,6 +184,7 @@ private:
   int RelightFifoTrimFocusCz{0};
   int RelightFifoOverflowDroppedN{0};
   int RelightFifoPinSavedN{0};
+  int RelightFifoProtectBlockN{0};
 };
 
 } // namespace cutum

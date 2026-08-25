@@ -347,6 +347,7 @@ void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z,
     }
     if (victim_it == PendingTerrainColumnRelights.end())
     {
+      ++RelightFifoProtectBlockN;
       break;
     }
     const glm::ivec2 victim = *victim_it;
@@ -467,6 +468,13 @@ int UWorldPersistence::TakeRelightFifoPinSaved()
   return n;
 }
 
+int UWorldPersistence::TakeRelightFifoProtectBlock()
+{
+  const int n = RelightFifoProtectBlockN;
+  RelightFifoProtectBlockN = 0;
+  return n;
+}
+
 void UWorldPersistence::PromoteTerrainColumnRelight(glm::ivec2 key)
 {
   for (const glm::ivec2 &queued : PendingTerrainColumnRelightsPriority)
@@ -574,8 +582,11 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     auto &telem = world.GetPhysicsTelemetryMutable();
     const int overflow = TakeRelightFifoOverflowDropped();
     const int saved = TakeRelightFifoPinSaved();
+    const int protect_block = TakeRelightFifoProtectBlock();
     telem.RelightFifoDropN += overflow;
+    telem.RelightFifoOverflowDropN += overflow;
     telem.RelightFifoPinSavedN += saved;
+    telem.RelightFifoProtectBlockN += protect_block;
     telem.RelightFifoDropped += static_cast<uint64_t>(std::max(0, overflow));
   };
   int drained_player = 0;
@@ -1078,7 +1089,15 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   if (!enter_fov_lit && frame_ms_so_far >= capture_hot_skip_ms &&
       visual_holes && focus_pending_mid)
   {
-    bg_cap = std::min(bg_cap, 1);
+    const auto &telem_hot = world.GetPhysicsTelemetry();
+    const int fifo_soft = tune.RelightFifoSoftCap;
+    const int completed_hot =
+        static_cast<int>(world.GetRelightCompletedSize());
+    if (!ShouldBypassCaptureHotSoftDeferClamp(telem_hot.RelightFifoN, fifo_soft,
+                                              completed_hot))
+    {
+      bg_cap = std::min(bg_cap, 1);
+    }
   }
   if (enter_fov_lit && vb_no_ticket_n >= 10)
   {
@@ -1104,6 +1123,37 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     {
       bg_cap = std::max(bg_cap, std::max(2, EnterFovRelightCaptureBudget() / 2));
     }
+  }
+  // P11: final floor after all late clamps (hot SoftDefer / plateau).
+  if (!enter_fov_lit)
+  {
+    const auto &telem_final = world.GetPhysicsTelemetry();
+    const int completed_final =
+        static_cast<int>(world.GetRelightCompletedSize());
+    const int fifo_soft_final = tune.RelightFifoSoftCap;
+    const double unit_ms_final =
+        telem_final.RelightApplyNPrev > 0
+            ? (telem_final.RelightApplyMsPrev /
+               static_cast<double>(telem_final.RelightApplyNPrev))
+            : telem_final.RelightApplyMsPrev;
+    const double light_unit_final =
+        telem_final.RelightApplyNPrev > 0
+            ? telem_final.RelightApplyLightMsPrev /
+                  static_cast<double>(telem_final.RelightApplyNPrev)
+            : 0.0;
+    const double install_unit_final =
+        telem_final.RelightApplyNPrev > 0
+            ? telem_final.RelightApplyInstallMsPrev /
+                  static_cast<double>(telem_final.RelightApplyNPrev)
+            : 0.0;
+    bg_cap = RelightCaptureBgFloorForFifoStarve(
+        bg_cap, telem_final.RelightFifoN, fifo_soft_final, completed_final,
+        world.GetAsyncRelightInFlightCount(),
+        RelightApplyCapUnitMs(unit_ms_final, light_unit_final,
+                              install_unit_final));
+    bg_cap = ClampCaptureBgAfterSimKill(
+        bg_cap, ShouldKillProducerBoostOnSimHot(telem_final.SimMsPrev),
+        completed_final, telem_final.RelightFifoN);
   }
   band_cy = EffectiveRelightCaptureBandCy(band_cy, moving && !enter_fov_lit,
                                           visual_holes);
@@ -1456,11 +1506,14 @@ bool UWorldPersistence::IsTerrainColumnRelightQueued(
 }
 
 int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
-                                                  int soft_cap)
+                                                  int soft_cap,
+                                                  int protect_horiz)
 {
   RelightFifoTrimFocusValid = true;
   RelightFifoTrimFocusCx = focus_ground.x;
   RelightFifoTrimFocusCz = focus_ground.z;
+  const int protect =
+      protect_horiz >= 0 ? protect_horiz : RelightFifoTrimProtectHoriz();
   auto total_fifo = [this]()
   {
     return static_cast<int>(PendingTerrainColumnRelights.size() +
@@ -1486,7 +1539,7 @@ int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
       // Era40 / P1: never Trim/drop LitDrawable-ring or pinned miss columns.
       if (ShouldProtectRelightFifoTrimVictim(
               cx, cz, RelightFifoPinValid, RelightFifoPinCx, RelightFifoPinCz,
-              true, focus_ground.x, focus_ground.z) ||
+              true, focus_ground.x, focus_ground.z, protect) ||
           dist <= RelightMissPinMaxHoriz())
       {
         continue;
@@ -1520,6 +1573,7 @@ int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
     {
       continue;
     }
+    ++RelightFifoProtectBlockN;
     break;
   }
   return dropped;

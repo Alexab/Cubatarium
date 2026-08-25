@@ -216,6 +216,8 @@ struct FrameNumbers
   int apply_binding{0};
   int visible_black_focus_raw_n{0};
   int relight_fifo_drop_n{0};
+  int relight_fifo_overflow_drop_n{0};
+  int relight_fifo_protect_block_n{0};
   int relight_fifo_pin_saved_n{0};
   double mesh_sync_ms{0.0};
   double mesh_snapshot_ms{0.0};
@@ -632,6 +634,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.apply_binding = phys.ApplyBinding;
   n.visible_black_focus_raw_n = phys.VisibleBlackFocusRawN;
   n.relight_fifo_drop_n = phys.RelightFifoDropN;
+  n.relight_fifo_overflow_drop_n = phys.RelightFifoOverflowDropN;
+  n.relight_fifo_protect_block_n = phys.RelightFifoProtectBlockN;
   n.relight_fifo_pin_saved_n = phys.RelightFifoPinSavedN;
   n.mesh_sync_ms = phys.MeshSyncMs;
   n.mesh_snapshot_ms = phys.MeshSnapshotMs;
@@ -1062,6 +1066,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"apply_binding\":" << n.apply_binding
           << ",\"visible_black_focus_raw_n\":" << n.visible_black_focus_raw_n
           << ",\"relight_fifo_drop_n\":" << n.relight_fifo_drop_n
+          << ",\"relight_fifo_overflow_drop_n\":"
+          << n.relight_fifo_overflow_drop_n
+          << ",\"relight_fifo_protect_block_n\":"
+          << n.relight_fifo_protect_block_n
           << ",\"relight_fifo_pin_saved_n\":" << n.relight_fifo_pin_saved_n
           << ",\"mesh_sync_ms\":" << n.mesh_sync_ms
           << ",\"mesh_snapshot_ms\":" << n.mesh_snapshot_ms

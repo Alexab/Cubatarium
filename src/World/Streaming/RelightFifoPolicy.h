@@ -649,6 +649,35 @@ inline int SoftDeferCaptureFloorWhenDepthFull(bool soft_defer_or_miss_hole,
   return bg_cap < 1 ? 1 : bg_cap;
 }
 
+/// FZ2.7-P11: fifo starve + Completed empty — hot SoftDefer must not clamp to 1.
+inline bool RelightFifoIsConsumerStarved(int fifo_n, int fifo_soft_cap,
+                                         int completed_n)
+{
+  if (completed_n > 0)
+  {
+    return false;
+  }
+  return fifo_n >= 50 ||
+         (fifo_soft_cap > 0 && fifo_n >= fifo_soft_cap / 2);
+}
+
+inline bool ShouldBypassCaptureHotSoftDeferClamp(int fifo_n, int fifo_soft_cap,
+                                                 int completed_n)
+{
+  return RelightFifoIsConsumerStarved(fifo_n, fifo_soft_cap, completed_n);
+}
+
+/// P11: when consumer starved and fifo at cap, trim outside LitDrawable only.
+inline int RelightFifoEffectiveTrimProtectHoriz(int fifo_n, int soft_cap,
+                                                int completed_n)
+{
+  if (completed_n <= 0 && soft_cap > 0 && fifo_n >= soft_cap)
+  {
+    return kVisualStageLitDrawableHoriz;
+  }
+  return RelightFifoTrimProtectHoriz();
+}
+
 /// FZ2.7-P10: sim kill clamps boosts, not Completed-empty refill floor.
 inline int ClampCaptureBgAfterSimKill(int bg_cap, bool sim_hot, int completed_n,
                                       int fifo_n)
@@ -998,6 +1027,22 @@ inline bool ShouldCruiseRedFifoLightDrain(int stream_pressure, int fifo_n,
   const int thresh = static_cast<int>(
       static_cast<float>(soft_cap) * std::max(0.1f, fifo_frac));
   return fifo_n >= thresh;
+}
+
+/// P11: second aggressive trim while Completed empty drops needed fifo work.
+inline bool ShouldCruiseRedFifoSecondTrim(int stream_pressure, int fifo_n,
+                                          int soft_cap, float fifo_frac,
+                                          bool holes_or_miss,
+                                          int pending_light_focus,
+                                          int completed_n)
+{
+  if (completed_n <= 0)
+  {
+    return false;
+  }
+  return ShouldCruiseRedFifoLightDrain(stream_pressure, fifo_n, soft_cap,
+                                       fifo_frac, holes_or_miss,
+                                       pending_light_focus);
 }
 
 /// Era40 P3: analyze soft-fail when FIFO stuck + dropped churn + no apply.

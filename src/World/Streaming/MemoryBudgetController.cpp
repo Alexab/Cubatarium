@@ -19,6 +19,8 @@ UMemoryBudgetController::Evaluate(const MemoryBudgetSample &sample,
   const double budget = static_cast<double>(tuning.MemoryBudgetMb);
   const double soft = static_cast<double>(tuning.MemorySoftMb);
   const double expand = static_cast<double>(tuning.MemoryExpandKeepMb);
+  const bool completed_starve =
+      sample.relight_completed_n <= 0 && sample.relight_fifo_n >= 50;
 
   if (sample.private_mb >= budget)
   {
@@ -58,21 +60,19 @@ UMemoryBudgetController::Evaluate(const MemoryBudgetSample &sample,
     d.max_effective_rd = sample.visual_rd;
     d.allow_keep_prewarm = false;
     d.emergency_cancel_outside = true;
-    d.capture_hard_cap = 1;
+    d.capture_hard_cap = completed_starve ? 3 : 1;
   }
   else if (d.memory_pressure >= 1)
   {
     d.keep_margin = sample.baseline_keep_margin;
     d.max_effective_rd = sample.visual_rd;
     d.allow_keep_prewarm = false;
-    d.capture_hard_cap = 2;
+    d.capture_hard_cap = completed_starve ? 3 : 2;
   }
 
   // Hitch gate (manual 085228): seconds-scale Capture while holes=1 and
   // memory_pressure stayed 0 — tighten Capture even under byte-budget Green.
   // FZ2.7-P10 / 091745: holes+hard_cap=1 zeroed Completed refill (cap med 1).
-  const bool completed_starve =
-      sample.relight_completed_n <= 0 && sample.relight_fifo_n >= 50;
   if (d.capture_hard_cap < 0 && sample.visual_holes > 0)
   {
     d.capture_hard_cap = completed_starve ? 3 : 1;
@@ -122,7 +122,7 @@ UMemoryBudgetController::Evaluate(const MemoryBudgetSample &sample,
     d.allow_keep_prewarm = false;
     if (d.capture_hard_cap < 0)
     {
-      d.capture_hard_cap = 1;
+      d.capture_hard_cap = completed_starve ? 3 : 1;
     }
   }
 

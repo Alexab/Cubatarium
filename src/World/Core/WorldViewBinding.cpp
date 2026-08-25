@@ -877,6 +877,8 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.RemeshScheduleCap = 0;
   PhysicsTelemetryData.RelightTrimFarN = 0;
   PhysicsTelemetryData.RelightFifoDropN = 0;
+  PhysicsTelemetryData.RelightFifoOverflowDropN = 0;
+  PhysicsTelemetryData.RelightFifoProtectBlockN = 0;
   PhysicsTelemetryData.RelightFifoPinSavedN = 0;
   PhysicsTelemetryData.RelightFifoPinDropN = 0;
   PhysicsTelemetryData.PhaseBudgetOver = 0;

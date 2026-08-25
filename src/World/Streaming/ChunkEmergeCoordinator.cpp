@@ -1479,11 +1479,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       // P4: under Red+holes+fifo pressure, trim again toward soft-cap aggressively.
       // Phase 1c: trim = truncate outer tickets alarm, not silent heal.
       const int fifo_live = world.GetPendingTerrainRelightFifoCount();
-      if (ShouldCruiseRedFifoLightDrain(
+      const int completed_n = static_cast<int>(world.GetRelightCompletedSize());
+      if (ShouldCruiseRedFifoSecondTrim(
               pressure, fifo_live, mtune.RelightFifoSoftCap,
               mtune.RelightFifoAdmitFrac,
               visual_holes || missing_visible_mesh || missing_underfeet,
-              pending_focus_count))
+              pending_focus_count, completed_n))
       {
         const int drop2 = world.TrimFarRelightFifoFarthest(
             focus_ground_horiz, std::max(8, mtune.RelightFifoSoftCap * 3 / 4));
