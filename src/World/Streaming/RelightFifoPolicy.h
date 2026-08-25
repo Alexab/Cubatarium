@@ -104,6 +104,51 @@ inline bool ShouldLeaveInDirtyUnderPlForSchedule(bool leave_in_pl_policy,
   return leave_in_pl_policy && has_drawable;
 }
 
+/// FZ2.7-P12 B1/B2: do not trim PendingLight while holes + unfinished/PL debt.
+inline bool ShouldTrimPendingLightUnderHoles(bool visual_holes, int unfinished,
+                                             int pending_light_focus)
+{
+  if (!visual_holes)
+  {
+    return true;
+  }
+  if (unfinished > 20 || pending_light_focus > 15)
+  {
+    return false;
+  }
+  return true;
+}
+
+/// FZ2.7-P12 B4: already-Noted hole — do not expand PL bands (churn).
+inline bool ShouldSuppressDuplicatePendingLightWithoutMeshProgress(
+    bool already_pending, bool has_greedy_mesh)
+{
+  return already_pending && !has_greedy_mesh;
+}
+
+/// FZ2.7-P12 C2: better_horiz hop only if Δhoriz≥2 under unfinished storm.
+inline bool ShouldAllowBetterHorizWitnessRetarget(int unfinished, int cand_horiz,
+                                                  int pin_horiz)
+{
+  if (pin_horiz <= 0 || cand_horiz <= 0)
+  {
+    return false;
+  }
+  if (unfinished > 30)
+  {
+    return cand_horiz + 1 < pin_horiz;
+  }
+  return cand_horiz < pin_horiz;
+}
+
+/// FZ2.7-P12 C5: damp land-frontier hops while cruise unfinished is high.
+inline bool ShouldDampWitnessRetargetOnUnfinishedCruise(bool moving,
+                                                        int unfinished,
+                                                        int thresh = 40)
+{
+  return moving && unfinished > thresh;
+}
+
 /// FZ2.6-P0b: stalled ticket completion prefers mesh_drain over schedule.
 inline bool ShouldPrioritizeMeshDrainForTicketedConsume(
     bool consume_mode, int mark_relit_schedule_n,
@@ -933,11 +978,15 @@ inline bool ShouldSkipDeferHeavyApplyUnderPl(int pending_light_focus_n,
 
 /// Hold nh≤2 witness until MarkRelit or greedy appears — pending OR missing.
 /// 215411: miss was often cy=2 without pending on that key, so hold never armed.
+/// FZ2.7-P12 C4: SoftDefer empty stuck extends hold to LitDrawable (nh≤4).
 inline bool ShouldHoldPinnedRelightWitness(int pinned_horiz,
                                           bool pinned_still_pending,
-                                          bool pinned_still_missing = false)
+                                          bool pinned_still_missing = false,
+                                          bool empty_stuck = false)
 {
-  if (pinned_horiz < 0 || pinned_horiz > kVisualStageNearFovHoriz)
+  const int max_h =
+      empty_stuck ? kVisualStageLitDrawableHoriz : kVisualStageNearFovHoriz;
+  if (pinned_horiz < 0 || pinned_horiz > max_h)
   {
     return false;
   }

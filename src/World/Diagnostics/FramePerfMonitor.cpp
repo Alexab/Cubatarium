@@ -368,6 +368,7 @@ struct FrameNumbers
   uint64_t softdefer_witness_retarget{0};
   uint64_t softdefer_witness_retarget_delta{0};
   int softdefer_witness_horiz{0};
+  int softdefer_capture_pin_age{0};
   int softdefer_capture_budget{0};
   int frame_budget_ms{0};
   int capture_over_budget{0};
@@ -413,6 +414,7 @@ struct FrameNumbers
   int mark_relit_skip_inflight_n{0};
   int mark_relit_skip_enter_lit_quiesce_n{0};
   int mark_relit_schedule_n{0};
+  int mark_relit_enqueue_first_mesh_n{0};
   int mark_relit_invoked_n{0};
   int mark_missing_primary_n{0};
   int mark_relit_path_primary_consume_n{0};
@@ -445,6 +447,8 @@ struct FrameNumbers
   int relight_fifo_n{0};
   uint64_t dirty_dropped{0};
   uint64_t pending_light_dropped{0};
+  int pending_light_trim_emerge_n{0};
+  int pending_light_trim_memory_n{0};
   uint64_t relight_fifo_dropped{0};
   uint64_t relight_false_clear_n{0};
   double gpu_pool_used_mb{0.0};
@@ -790,6 +794,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.softdefer_capture_floor_hits = phys.SoftDeferCaptureFloorHits;
   n.softdefer_witness_retarget = phys.SoftDeferWitnessRetarget;
   n.softdefer_witness_horiz = phys.SoftDeferWitnessHoriz;
+  n.softdefer_capture_pin_age = phys.SoftDeferCapturePinAge;
   n.softdefer_capture_budget = phys.SoftDeferCaptureBudget;
   n.frame_budget_ms = phys.FrameBudgetMs;
   n.capture_over_budget = phys.CaptureOverBudget;
@@ -855,6 +860,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mark_relit_skip_inflight_n = phys.MarkRelitSkipInflightN;
   n.mark_relit_skip_enter_lit_quiesce_n = phys.MarkRelitSkipEnterLitQuiesceN;
   n.mark_relit_schedule_n = phys.MarkRelitScheduleN;
+  n.mark_relit_enqueue_first_mesh_n = phys.MarkRelitEnqueueFirstMeshN;
   n.mark_relit_invoked_n = phys.MarkRelitInvokedN;
   n.mark_missing_primary_n = phys.MarkMissingPrimaryN;
   n.mark_relit_path_primary_consume_n = phys.MarkRelitPathPrimaryConsumeN;
@@ -887,6 +893,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.relight_fifo_n = phys.RelightFifoN;
   n.dirty_dropped = phys.DirtyDropped;
   n.pending_light_dropped = phys.PendingLightDropped;
+  n.pending_light_trim_emerge_n = phys.PendingLightTrimEmergeN;
+  n.pending_light_trim_memory_n = phys.PendingLightTrimMemoryN;
   n.relight_fifo_dropped = phys.RelightFifoDropped;
   n.relight_false_clear_n = phys.RelightFalseClearN;
   n.gpu_pool_used_mb = phys.GpuPoolUsedMb;
@@ -1235,6 +1243,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"softdefer_witness_retarget_delta\":"
           << n.softdefer_witness_retarget_delta
           << ",\"softdefer_witness_horiz\":" << n.softdefer_witness_horiz
+          << ",\"softdefer_capture_pin_age\":" << n.softdefer_capture_pin_age
           << ",\"softdefer_capture_budget\":" << n.softdefer_capture_budget
           << ",\"frame_budget_ms\":" << n.frame_budget_ms
           << ",\"capture_over_budget\":" << n.capture_over_budget
@@ -1292,6 +1301,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mark_relit_skip_enter_lit_quiesce_n\":"
           << n.mark_relit_skip_enter_lit_quiesce_n
           << ",\"mark_relit_schedule_n\":" << n.mark_relit_schedule_n
+          << ",\"mark_relit_enqueue_first_mesh_n\":"
+          << n.mark_relit_enqueue_first_mesh_n
           << ",\"mark_relit_invoked_n\":" << n.mark_relit_invoked_n
           << ",\"mark_missing_primary_n\":" << n.mark_missing_primary_n
           << ",\"mark_relit_path_primary_consume_n\":"
@@ -1327,6 +1338,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"relight_fifo_n\":" << n.relight_fifo_n
           << ",\"dirty_dropped\":" << n.dirty_dropped
           << ",\"pending_light_dropped\":" << n.pending_light_dropped
+          << ",\"pending_light_trim_emerge_n\":" << n.pending_light_trim_emerge_n
+          << ",\"pending_light_trim_memory_n\":" << n.pending_light_trim_memory_n
           << ",\"relight_fifo_dropped\":" << n.relight_fifo_dropped
           << ",\"relight_false_clear_n\":" << n.relight_false_clear_n
           << ",\"gpu_pool_used_mb\":" << n.gpu_pool_used_mb

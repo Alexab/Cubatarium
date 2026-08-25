@@ -141,6 +141,7 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
                                   : column;
     GetColumnFlowExecutor().Enqueue(fm_col, ColumnWorkKind::FirstMesh,
                                     /*priority=*/70);
+    ++PhysicsTelemetryData.MarkRelitEnqueueFirstMeshN;
   }
 }
 

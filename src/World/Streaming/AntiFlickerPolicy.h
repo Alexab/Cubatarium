@@ -15,7 +15,12 @@ inline bool ShouldRetargetSoftDeferCaptureWitness(
     bool new_witness_better_horiz, bool pinned_still_empty_or_miss)
 {
   (void)new_witness_better_horiz;
+  constexpr int kHardExpireFrames = 48;
   if (!pin_valid)
+  {
+    return true;
+  }
+  if (pin_age_frames >= kHardExpireFrames)
   {
     return true;
   }

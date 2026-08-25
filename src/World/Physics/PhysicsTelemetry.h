@@ -68,6 +68,8 @@ struct PhysicsTelemetry
   uint64_t SoftDeferWitnessRetarget{0};
   /// Last witness MissHoriz when SoftDeferWitnessRetarget fired (0 if focus).
   int SoftDeferWitnessHoriz{0};
+  /// FZ2.7-P12 C0: SoftDefer Capture pin age (frames).
+  int SoftDeferCapturePinAge{0};
   /// Capture/relight bg budget requested by SoftDefer floor this frame (0 if idle).
   int SoftDeferCaptureBudget{0};
   /// Era19 FrameStreamingBudget soft ms SoT (bad-frame threshold).
@@ -420,6 +422,8 @@ struct PhysicsTelemetry
   int MarkRelitSkipInflightN{0};
   int MarkRelitSkipEnterLitQuiesceN{0};
   int MarkRelitScheduleN{0};
+  /// FZ2.7-P12 A1: ColumnFlow FirstMesh enqueue from LitApply plan.
+  int MarkRelitEnqueueFirstMeshN{0};
   /// FZ2.7-P9: MarkRelitChunksForMesh entered (vs schedule Dirty count).
   int MarkRelitInvokedN{0};
   /// FZ2.7-P9: one-shot MarkMissing on LitReady slim path.
@@ -462,6 +466,9 @@ struct PhysicsTelemetry
   uint64_t DirtyScheduleSkipInflightN{0};
   uint64_t DirtyDropped{0};
   uint64_t PendingLightDropped{0};
+  /// FZ2.7-P12 B0: PendingLight trim source breakdown (per-frame).
+  int PendingLightTrimEmergeN{0};
+  int PendingLightTrimMemoryN{0};
   uint64_t RelightFifoDropped{0};
   /// P1: pin-key drops this frame (gate: stay 0).
   int RelightFifoPinDropN{0};

@@ -1268,12 +1268,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   // B5: SoftDefer-empty stuck — ColPipe P4: FirstMesh only if not already owned
   // (no MarkDirtyPriority / full-column Dirty storm).
-  if (!moving && missing_visible_mesh && phys_telem.SoftDeferEmptyStuckN > 0)
+  // FZ2.7-P12 A6: also pin under moving cruise when unfinished storm.
+  const int unf_stuck = world.GetPhysicsTelemetry().UnfinishedVisual;
+  if (missing_visible_mesh && phys_telem.SoftDeferEmptyStuckN > 0 &&
+      (!moving || unf_stuck > 30))
   {
     const bool stop_tail_stuck =
         MissWitnessAgeFrames > 240 && world.GetTimeSinceMotionSec() > 4.0 &&
         pending_focus_count <= 2;
-    if (stop_tail_stuck || MissWitnessAgeFrames > 120)
+    const bool cruise_stuck = moving && unf_stuck > 30 &&
+                              MissWitnessAgeFrames > 15;
+    if (stop_tail_stuck || MissWitnessAgeFrames > 120 || cruise_stuck)
     {
       const glm::ivec3 stuck(phys_telem.SoftDeferEmptyStuckCx,
                              phys_telem.SoftDeferEmptyStuckCy,
@@ -1463,11 +1468,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     if (!world.IsEnterFovLitPassActive() && mtune.PendingLightSoftCap > 0 &&
         world.GetPendingLightBeforeMeshCount() >
-            static_cast<size_t>(mtune.PendingLightSoftCap))
+            static_cast<size_t>(mtune.PendingLightSoftCap) &&
+        ShouldTrimPendingLightUnderHoles(
+            visual_holes, world.GetPhysicsTelemetry().UnfinishedVisual,
+            pending_focus_count))
     {
       const int dropped = world.TrimPendingLightBeforeMesh(
           focus_ground_horiz, mtune.PendingLightSoftCap);
       phys.PendingLightDropped += static_cast<uint64_t>(std::max(0, dropped));
+      phys.PendingLightTrimEmergeN += std::max(0, dropped);
     }
     if (!world.IsEnterFovLitPassActive() && mtune.RelightFifoSoftCap > 0)
     {
@@ -1528,7 +1537,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
 
   // SOTA: FirstMesh > Relight > Remesh via queue priority — no starve forks.
   mesh_service.SetStarveOutsideFocusMesh(false);
-  mesh_service.SetStarveRemeshForHoles(false);
+  {
+    const int unf = world.GetPhysicsTelemetry().UnfinishedVisual;
+    if (visual_holes && unf > 30)
+    {
+      mesh_service.SetStarveRemeshForHoles(true);
+    }
+    else
+    {
+      mesh_service.SetStarveRemeshForHoles(false);
+    }
+  }
   // Keep remesh within 2 (or 3 when stale-dark debt) so neighbor black faces
   // repair while FirstMesh fills the hole.
   {
@@ -1831,7 +1850,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   if ((idle_remesh_debt || idle_focus_dirty_debt) && last_frame_ms <= 55.0)
   {
     mesh_service.SetStarveOutsideFocusMesh(true);
-    mesh_service.SetStarveRemeshForHoles(false);
+    if (!(visual_holes && world.GetPhysicsTelemetry().UnfinishedVisual > 30))
+    {
+      mesh_service.SetStarveRemeshForHoles(false);
+    }
     mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
     if (idle_focus_dirty_debt)
     {
@@ -2002,6 +2024,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.nearest_miss_cy = world.GetPhysicsTelemetry().MissCy;
     ain.enter_lit_gate = world.IsEnterLitGateActive();
     ain.remesh_queue_n = mesh_service.GetLastDirtyRemeshN();
+    ain.dirty_fm_n = mesh_service.GetLastDirtyFmN();
+    ain.no_mesh_n = ain.unfinished_visual;
     if (have_nearest_missing)
     {
       ain.nearest_miss_horiz = std::max(
@@ -3741,6 +3765,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     ain.enter_lit_gate = world.IsEnterLitGateActive();
     ain.remesh_queue_n = mesh_service.GetLastDirtyRemeshN();
+    ain.dirty_fm_n = mesh_service.GetLastDirtyFmN();
+    ain.no_mesh_n = ain.unfinished_visual;
     MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
     {
       const auto &tune = URuntimeTuning::Get();

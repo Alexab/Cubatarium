@@ -804,6 +804,7 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.MarkRelitSkipInflightN = 0;
   PhysicsTelemetryData.MarkRelitSkipEnterLitQuiesceN = 0;
   PhysicsTelemetryData.MarkRelitScheduleN = 0;
+  PhysicsTelemetryData.MarkRelitEnqueueFirstMeshN = 0;
   PhysicsTelemetryData.MarkRelitInvokedN = 0;
   PhysicsTelemetryData.MarkMissingPrimaryN = 0;
   PhysicsTelemetryData.MarkRelitPathPrimaryConsumeN = 0;
@@ -881,6 +882,8 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.RelightFifoProtectBlockN = 0;
   PhysicsTelemetryData.RelightFifoPinSavedN = 0;
   PhysicsTelemetryData.RelightFifoPinDropN = 0;
+  PhysicsTelemetryData.PendingLightTrimEmergeN = 0;
+  PhysicsTelemetryData.PendingLightTrimMemoryN = 0;
   PhysicsTelemetryData.PhaseBudgetOver = 0;
   PhysicsTelemetryData.PhaseMissCarveOut = 0;
   PhysicsTelemetryData.MissReservedMs = 0.0;

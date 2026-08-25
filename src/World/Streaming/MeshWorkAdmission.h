@@ -35,6 +35,10 @@ struct MeshWorkAdmissionInput
   bool enter_lit_gate{false};
   /// Closeout C: RemeshQ depth — keep remesh_schedule≥1 when nonempty.
   int remesh_queue_n{0};
+  /// FZ2.7-P12 A2: Dirty FirstMeshQ depth (prior tick).
+  int dirty_fm_n{0};
+  /// FZ2.7-P12 A2: no-mesh hole count (phase1: alias unfinished_visual).
+  int no_mesh_n{0};
 };
 
 /// Near-focus miss that blocks view / needs urgent HoleDrain (horiz≤2 or underfeet).
@@ -98,6 +102,8 @@ struct MeshWorkAdmission
   int remesh_schedule{0};
   /// Max new Queued GPU applies this frame (Apply enqueue throttle).
   int enqueue_gpu_budget{4};
+  /// FZ2.7-P12 A2: full Remesh→FM steal applied (skip remesh floor backpressure).
+  bool steal_remesh_to_fm{false};
   Mode mode{Mode::Normal};
 };
 
@@ -112,6 +118,17 @@ inline size_t MeshWorkQueuedApprox(const MeshWorkAdmissionInput &in)
     return 0;
   }
   return in.pending_gpu - in.pending_gpu_kicked;
+}
+
+/// FZ2.7-P12 A2: unfinished storm + FM starved vs no_mesh → full Remesh steal.
+inline bool ShouldStealRemeshToFirstMesh(bool holes, int unfinished, int dirty_fm,
+                                         int no_mesh)
+{
+  if (!holes || unfinished <= 30 || no_mesh <= 0)
+  {
+    return false;
+  }
+  return dirty_fm * 2 < no_mesh;
 }
 
 inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
@@ -353,18 +370,25 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
       holes && in.unfinished_visual > 0 &&
       IsMissFirstMeshClass(true, in.nearest_miss_cy, in.nearest_miss_horiz) &&
       in.pending_gpu >= 12;
-  if ((miss_tops || unfinished_storm) &&
+  const int no_mesh =
+      in.no_mesh_n > 0 ? in.no_mesh_n : in.unfinished_visual;
+  const bool steal_fm =
+      ShouldStealRemeshToFirstMesh(holes, in.unfinished_visual, in.dirty_fm_n,
+                                   no_mesh);
+  if ((miss_tops || unfinished_storm || steal_fm) &&
       (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
        out.mode == MeshWorkAdmission::Mode::DeepBacklog))
   {
     // Closeout C: steal remesh→FM only when RemeshQ empty (or far-only later).
     // Keep remesh_schedule≥1 when RemeshQ has work (pool reservation, not FloorMs).
+    // FZ2.7-P12 A2: unfinished storm + fm/no_mesh<0.5 → full steal even if RemeshQ.
     const int remesh_was = std::max(0, out.remesh_schedule);
-    if (in.remesh_queue_n <= 0)
+    if (steal_fm || in.remesh_queue_n <= 0)
     {
       out.remesh_schedule = 0;
       out.first_mesh_schedule =
           std::max(out.first_mesh_schedule, 6) + remesh_was;
+      out.steal_remesh_to_fm = steal_fm;
     }
     else
     {
@@ -402,17 +426,20 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   {
     // Manual 153832: UV≥8 crushed first_mesh; 152933: deep RemeshQ~37 + cap=1
     // starved remesh drain (relight+mesh_emerge wall). Keep FM headroom; drain Q.
-    const int remesh_floor =
-        in.remesh_queue_n >= 32 ? 2 : (in.remesh_queue_n >= 16 ? 1 : 0);
-    const int remesh_ceil = in.remesh_queue_n >= 32 ? 3 : 1;
-    if (miss_tops && in.remesh_queue_n <= 0)
+    if (!out.steal_remesh_to_fm)
     {
-      out.remesh_schedule = 0;
-    }
-    else
-    {
-      out.remesh_schedule =
-          std::min(std::max(out.remesh_schedule, remesh_floor), remesh_ceil);
+      const int remesh_floor =
+          in.remesh_queue_n >= 32 ? 2 : (in.remesh_queue_n >= 16 ? 1 : 0);
+      const int remesh_ceil = in.remesh_queue_n >= 32 ? 3 : 1;
+      if (miss_tops && in.remesh_queue_n <= 0)
+      {
+        out.remesh_schedule = 0;
+      }
+      else
+      {
+        out.remesh_schedule =
+            std::min(std::max(out.remesh_schedule, remesh_floor), remesh_ceil);
+      }
     }
     out.starve_remesh_horiz = std::max(out.starve_remesh_horiz, 2);
     const int fm = std::max(0, out.first_mesh_schedule);
@@ -511,11 +538,15 @@ inline void ApplyRemeshAdmitBackpressure(MeshWorkAdmission &adm,
   }
   // Keep at least 1 remesh slot under miss: dual-Q already prefers FirstMesh;
   // remesh_schedule=0 starved lit settle and caused flicker / late light updates.
-  const int remesh_cap = in.remesh_queue_n >= 32
-                             ? (in.miss_active ? 3 : 2)
-                             : (in.miss_active && in.remesh_queue_n >= 16 ? 2
-                                                                          : 1);
-  adm.remesh_schedule = std::min(adm.remesh_schedule, remesh_cap);
+  // FZ2.7-P12 A2: unfinished FM-starve steal keeps remesh at 0.
+  if (!adm.steal_remesh_to_fm)
+  {
+    const int remesh_cap = in.remesh_queue_n >= 32
+                               ? (in.miss_active ? 3 : 2)
+                               : (in.miss_active && in.remesh_queue_n >= 16 ? 2
+                                                                            : 1);
+    adm.remesh_schedule = std::min(adm.remesh_schedule, remesh_cap);
+  }
   adm.allow_neighbor_dirty = false;
   if (adm.first_mesh_schedule > 0 && adm.max_schedule > 0)
   {

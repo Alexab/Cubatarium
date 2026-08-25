@@ -162,9 +162,19 @@ inline bool ShouldPreferKickMissWitnessEarly(bool missing_visible_mesh,
 /// same coord (not empty placeholder apply storm).
 inline bool ShouldPreferKickSoftDeferEmptyStuck(bool soft_defer_empty,
                                                 bool missing_visible_mesh,
-                                                bool queued_or_kicked_stuck)
+                                                bool queued_or_kicked_stuck,
+                                                int age_frames = 0,
+                                                bool has_drawable = false)
 {
-  return soft_defer_empty && missing_visible_mesh && queued_or_kicked_stuck;
+  if (has_drawable)
+  {
+    return false;
+  }
+  if (soft_defer_empty && missing_visible_mesh && queued_or_kicked_stuck)
+  {
+    return true;
+  }
+  return soft_defer_empty && missing_visible_mesh && age_frames >= 15;
 }
 
 /// Era23 I-P1: SoftDefer empty / !Drawable place column needs FirstMesh SLA.

@@ -208,6 +208,8 @@ int main()
          "Era23 P2: SoftDefer empty + Queued/Kicked ⇒ PreferKick");
   Expect(!ShouldPreferKickSoftDeferEmptyStuck(true, true, false),
          "Era23 P2: empty without GPU stuck → no PreferKick");
+  Expect(ShouldPreferKickSoftDeferEmptyStuck(true, true, false, 15),
+         "P12 A3: empty age≥15 PreferKick even without GPU queue");
   Expect(!ShouldPreferKickSoftDeferEmptyStuck(true, false, true),
          "Era23 P2: no miss → no SoftDefer PreferKick");
 
@@ -1860,6 +1862,10 @@ int main()
            "C: hold nh2 missing even without pending");
     Expect(!ShouldHoldPinnedRelightWitness(3, true, true),
            "P1: rim nh3 is not the hold");
+    Expect(ShouldHoldPinnedRelightWitness(4, false, true, true),
+           "P12 C4: empty stuck holds LitDrawable nh≤4");
+    Expect(!ShouldHoldPinnedRelightWitness(5, false, true, true),
+           "P12 C4: nh>4 still not hold");
     Expect(!ShouldRetargetRelightWitness(true, true),
            "P1: hold blocks Era27 retarget");
     Expect(ShouldRetargetRelightWitness(true, false),
@@ -2005,6 +2011,76 @@ int main()
            "P11: no second trim when completed=0");
     Expect(ShouldCruiseRedFifoSecondTrim(2, 72, 96, 0.75f, true, 5, 2),
            "P11: second trim when completed>0");
+  }
+
+  // FZ2.7-P12: publication debt predicates + steal
+  {
+    using cutum::ShouldForceFirstMeshOnSkipAlreadyDirty;
+    using cutum::ShouldStealRemeshToFirstMesh;
+    using cutum::ShouldTrimPendingLightUnderHoles;
+    using cutum::ShouldSuppressDuplicatePendingLightWithoutMeshProgress;
+    using cutum::ShouldAllowBetterHorizWitnessRetarget;
+    using cutum::ShouldDampWitnessRetargetOnUnfinishedCruise;
+    using cutum::ShouldRetargetSoftDeferCaptureWitness;
+    using cutum::ApplyRemeshAdmitBackpressure;
+    using cutum::RemeshAdmitBackpressureInput;
+    Expect(ShouldForceFirstMeshOnSkipAlreadyDirty(true, false, false, false),
+           "P12 A1: dirty !drawable !greedy → force FM");
+    Expect(!ShouldForceFirstMeshOnSkipAlreadyDirty(true, true, false, false),
+           "P12 A1: drawable lit → skip not FM");
+    Expect(ShouldForceFirstMeshOnSkipAlreadyDirty(true, false, true, true),
+           "P12 A1: dirty greedy SoftDefer-empty → force FM");
+    Expect(ShouldStealRemeshToFirstMesh(true, 68, 16, 68),
+           "P12 A2: unfinished storm + fm/no_mesh<0.5 → steal");
+    Expect(!ShouldStealRemeshToFirstMesh(true, 20, 16, 68),
+           "P12 A2: unfinished≤30 no steal");
+    Expect(!ShouldTrimPendingLightUnderHoles(true, 68, 60),
+           "P12 B1: holes+unf → no PL trim");
+    Expect(ShouldTrimPendingLightUnderHoles(false, 68, 60),
+           "P12 B1: no holes → trim allowed");
+    Expect(ShouldSuppressDuplicatePendingLightWithoutMeshProgress(true, false),
+           "P12 B4: duplicate PL without mesh → suppress");
+    Expect(!ShouldAllowBetterHorizWitnessRetarget(40, 3, 4),
+           "P12 C2: Δhoriz=1 under unfinished storm blocked");
+    Expect(ShouldAllowBetterHorizWitnessRetarget(40, 2, 4),
+           "P12 C2: Δhoriz≥2 allowed");
+    Expect(ShouldDampWitnessRetargetOnUnfinishedCruise(true, 41),
+           "P12 C5: moving+unf>40 damps retarget");
+    Expect(ShouldRetargetSoftDeferCaptureWitness(true, 48, 24, false, true),
+           "P12 C1: hard expire age≥48");
+    Expect(!ShouldRetargetSoftDeferCaptureWitness(true, 10, 24, false, true),
+           "P12 C1: pin live age<T holds");
+
+    MeshWorkAdmissionInput in;
+    in.pending_gpu = 6;
+    in.pending_gpu_queued = 0;
+    in.pending_gpu_kicked = 6;
+    in.visual_holes = true;
+    in.moving = true;
+    in.nearest_miss_cy = 3;
+    in.nearest_miss_horiz = 4;
+    in.ring_depth = 8;
+    in.prev_mode = static_cast<uint8_t>(MeshWorkAdmission::Mode::HoleDrain);
+    in.unfinished_visual = 68;
+    in.dirty_fm_n = 16;
+    in.no_mesh_n = 68;
+    in.remesh_queue_n = 98;
+    auto steal = ComputeMeshWorkAdmission(in);
+    Expect(steal.remesh_schedule == 0, "P12 A2: steal remesh_schedule==0");
+    Expect(steal.first_mesh_schedule >= 6, "P12 A2: FM cap ≥6 after steal");
+    Expect(steal.steal_remesh_to_fm, "P12 A2: steal flag set");
+    RemeshAdmitBackpressureInput bp{};
+    bp.stream_pressure = 2;
+    bp.fifo_n = 96;
+    bp.dirty_n = 500;
+    bp.relight_fifo_soft_cap = 96;
+    bp.dirty_thrash_soft_cap = 400;
+    bp.fifo_admit_frac = 0.75f;
+    bp.miss_active = true;
+    bp.remesh_queue_n = 98;
+    ApplyRemeshAdmitBackpressure(steal, bp);
+    Expect(steal.remesh_schedule == 0,
+           "P12 A2: backpressure does not restore remesh floor");
   }
 
   // P1: ShouldForcePinColumnPriority

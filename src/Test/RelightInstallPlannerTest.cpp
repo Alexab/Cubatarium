@@ -69,6 +69,41 @@ int main()
   Expect(plan_noop.mark_dirty.empty() && plan_noop.mark_dirty_priority.empty(),
          "P7: skip remesh when FullyDark light rev matches");
 
+  // P12 A1: skip_already_dirty on a hole → FirstMesh, not remesh skip.
+  {
+    FakeMeshServiceForLitApply hole;
+    const glm::ivec3 hole_coord{2, 0, 3};
+    hole.Mut(hole_coord).is_dirty = true;
+    hole.Mut(hole_coord).has_drawable = false;
+    hole.Mut(hole_coord).has_greedy = false;
+    hole.Mut(hole_coord).fully_dark = false;
+    LitApplyColumnInput hole_in{};
+    hole_in.column = {2, 3};
+    hole_in.is_primary = true;
+    hole_in.finalize_gate = true;
+    hole_in.primary_only = false;
+    hole_in.consume_mode = false;
+    hole_in.focus_horiz = 12;
+    hole_in.relit_chunks.push_back(SnapshotFromFake(hole, hole_coord));
+    const auto plan_fm = PlanColumnInstall(hole_in);
+    Expect(plan_fm.path == ColumnInstallPath::PrimaryStandard,
+           "P12 A1: Standard path for skip-dirty hole");
+    Expect(plan_fm.enqueue_first_mesh, "P12 A1: skip-dirty hole enqueues FM");
+    Expect(!plan_fm.mark_dirty_priority.empty(),
+           "P12 A1: skip-dirty hole MarkDirtyPriority");
+    Expect(plan_fm.skip_already_dirty_n == 0,
+           "P12 A1: hole is not skip_already_dirty");
+
+    hole.Mut(hole_coord).has_drawable = true;
+    hole.Mut(hole_coord).has_greedy = true;
+    hole_in.relit_chunks.clear();
+    hole_in.any_drawable = true;
+    hole_in.relit_chunks.push_back(SnapshotFromFake(hole, hole_coord));
+    const auto plan_lit = PlanColumnInstall(hole_in);
+    Expect(!plan_lit.enqueue_first_mesh,
+           "P12 A1: drawable lit dirty stays skip (no FM storm)");
+  }
+
   if (failures != 0)
   {
     return EXIT_FAILURE;

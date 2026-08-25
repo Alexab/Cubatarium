@@ -1442,6 +1442,26 @@ void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)
   }
   SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
   auto [it, inserted] = PendingLightBeforeMesh.try_emplace(key);
+  bool has_mesh = false;
+  if (MeshService)
+  {
+    const int max_cy =
+        std::max(0, (ProceduralTemplate.MaxHeight - 1) / CHUNK_SIZE);
+    for (int cy = 0; cy <= max_cy; ++cy)
+    {
+      if (MeshService->HasGreedyMesh(glm::ivec3(ground.x, cy, ground.z)))
+      {
+        has_mesh = true;
+        break;
+      }
+    }
+  }
+  if (!inserted &&
+      ShouldSuppressDuplicatePendingLightWithoutMeshProgress(true, has_mesh))
+  {
+    ++PhysicsTelemetryData.RelightNoteSuppressedPlateauN;
+    return;
+  }
   if (inserted)
   {
     it->second.min_y = std::max(0, min_y);
@@ -1551,7 +1571,7 @@ int UWorld::TrimPendingLightBeforeMesh(glm::ivec3 focus_ground_horiz,
     const glm::ivec2 &key = entry.first;
     const int dist = std::max(std::abs(key.x - focus_ground_horiz.x),
                               std::abs(key.y - focus_ground_horiz.z));
-    if (dist <= 1)
+    if (dist <= RelightFifoTrimProtectHoriz())
     {
       continue;
     }

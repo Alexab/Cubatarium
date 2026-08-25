@@ -219,6 +219,19 @@ inline bool ShouldBumpDirtyHeadForVisualHole(bool is_dirty, bool fully_dark,
   return focus_horiz >= 0 && focus_horiz <= ring;
 }
 
+/// FZ2.7-P12 A1: skip_already_dirty on a hole must still force FirstMesh class.
+inline bool ShouldForceFirstMeshOnSkipAlreadyDirty(bool is_dirty,
+                                                   bool has_drawable,
+                                                   bool has_greedy,
+                                                   bool soft_defer_empty_or_held)
+{
+  if (!is_dirty || has_drawable)
+  {
+    return false;
+  }
+  return !has_greedy || soft_defer_empty_or_held;
+}
+
 inline void AppendUniqueCoord(std::vector<glm::ivec3> &vec,
                               const glm::ivec3 &coord)
 {
@@ -230,6 +243,16 @@ inline void AppendUniqueCoord(std::vector<glm::ivec3> &vec,
     }
   }
   vec.push_back(coord);
+}
+
+inline void ForceFirstMeshFromSkipDirty(LitApplyPlan &plan,
+                                        const LitApplyColumnInput &in,
+                                        const glm::ivec3 &coord)
+{
+  AppendUniqueCoord(plan.mark_dirty_priority, coord);
+  ++plan.schedule_n;
+  plan.enqueue_first_mesh = true;
+  plan.first_mesh_column = in.column;
 }
 
 inline LitApplyPlan PlanPrimaryConsume(const LitApplyColumnInput &in)
@@ -252,6 +275,13 @@ inline LitApplyPlan PlanPrimaryConsume(const LitApplyColumnInput &in)
       {
         AppendUniqueCoord(plan.mark_dirty_priority, chunk.coord);
         ++plan.schedule_n;
+      }
+      else if (chunk.is_dirty &&
+               ShouldForceFirstMeshOnSkipAlreadyDirty(
+                   chunk.is_dirty, chunk.has_drawable, chunk.has_greedy,
+                   chunk.soft_defer || in.soft_defer_empty_owned))
+      {
+        ForceFirstMeshFromSkipDirty(plan, in, chunk.coord);
       }
       else if (chunk.is_dirty)
       {
@@ -313,6 +343,8 @@ inline LitApplyPlan PlanPrimaryStandard(const LitApplyColumnInput &in)
       if (!chunk.has_drawable && (chunk.has_greedy || chunk.soft_defer))
       {
         AppendUniqueCoord(plan.mark_dirty_priority, chunk.coord);
+        plan.enqueue_first_mesh = true;
+        plan.first_mesh_column = in.column;
       }
     }
     return plan;
@@ -329,6 +361,13 @@ inline LitApplyPlan PlanPrimaryStandard(const LitApplyColumnInput &in)
       {
         AppendUniqueCoord(plan.mark_dirty_priority, chunk.coord);
         ++plan.schedule_n;
+      }
+      else if (chunk.is_dirty &&
+               ShouldForceFirstMeshOnSkipAlreadyDirty(
+                   chunk.is_dirty, chunk.has_drawable, chunk.has_greedy,
+                   chunk.soft_defer || in.soft_defer_empty_owned))
+      {
+        ForceFirstMeshFromSkipDirty(plan, in, chunk.coord);
       }
       else if (chunk.is_dirty)
       {
@@ -354,7 +393,16 @@ inline LitApplyPlan PlanPrimaryStandard(const LitApplyColumnInput &in)
       }
       else if (decision == RemeshAfterLitApplyDecision::SkipAlreadyDirty)
       {
-        ++plan.skip_already_dirty_n;
+        if (ShouldForceFirstMeshOnSkipAlreadyDirty(
+                chunk.is_dirty, chunk.has_drawable, chunk.has_greedy,
+                chunk.soft_defer || in.soft_defer_empty_owned))
+        {
+          ForceFirstMeshFromSkipDirty(plan, in, chunk.coord);
+        }
+        else
+        {
+          ++plan.skip_already_dirty_n;
+        }
       }
       else if (decision == RemeshAfterLitApplyDecision::SkipInflight)
       {

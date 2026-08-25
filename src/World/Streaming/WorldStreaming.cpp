@@ -573,10 +573,14 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
                    std::abs(miss_coord.z - focus_horiz.z));
       auto &exec = GetColumnFlowExecutor();
       const glm::ivec2 miss_xz(miss_coord.x, miss_coord.z);
+      const bool empty_stuck =
+          world.PhysicsTelemetryData.SoftDeferEmptyStuckN > 0 &&
+          miss_coord.x == world.PhysicsTelemetryData.SoftDeferEmptyStuckCx &&
+          miss_coord.z == world.PhysicsTelemetryData.SoftDeferEmptyStuckCz;
       const bool hold = ShouldHoldPinnedRelightWitness(
           world.PhysicsTelemetryData.MissHoriz,
           world.IsPendingLightBeforeMesh(miss_xz),
-          /*pinned_still_missing=*/true);
+          /*pinned_still_missing=*/true, empty_stuck);
       if (hold && miss_coord.x == prev_miss_cx &&
           miss_coord.z == prev_miss_cz)
       {
@@ -1900,6 +1904,16 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       int repair_horiz = cand_horiz;
       bool did_retarget = false;
       {
+        const int unf = world.PhysicsTelemetryData.UnfinishedVisual;
+        const bool stuck_n =
+            world.PhysicsTelemetryData.SoftDeferEmptyStuckN > 0;
+        const glm::ivec2 stuck_xz(
+            world.PhysicsTelemetryData.SoftDeferEmptyStuckCx,
+            world.PhysicsTelemetryData.SoftDeferEmptyStuckCz);
+        const bool pin_is_stuck =
+            SoftDeferCapturePinValid && stuck_n &&
+            SoftDeferCapturePinCx == stuck_xz.x &&
+            SoftDeferCapturePinCz == stuck_xz.y;
         bool pinned_still = false;
         if (SoftDeferCapturePinValid)
         {
@@ -1920,37 +1934,53 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           {
             pinned_still = missing_focus_mesh;
           }
+          if (pin_is_stuck && !pin_drawable)
+          {
+            pinned_still = true;
+          }
+        }
+        if (pin_is_stuck)
+        {
+          cand_xz = stuck_xz;
+          cand_cy = world.PhysicsTelemetryData.SoftDeferEmptyStuckCy;
+          cand_horiz = world.PhysicsTelemetryData.SoftDeferEmptyStuckHoriz;
         }
         const bool ocean_heal = IsOceanHealPressure(
             missing_focus_mesh, world.PhysicsTelemetryData.DarkFaceVoidNearN,
             world.PhysicsTelemetryData.VisibleBlackFocusN);
         const bool land_frontier =
             IsLandFrontierPressure(moving_now, void_n_budget);
-        const bool better_horiz_raw =
-            SoftDeferCapturePinValid && cand_horiz > 0 &&
-            SoftDeferCapturePinHoriz > 0 &&
-            cand_horiz < SoftDeferCapturePinHoriz;
-        const bool better_horiz = ShouldDampLandFrontierWitnessRetarget(
+        const bool better_horiz_raw = ShouldAllowBetterHorizWitnessRetarget(
+            unf, cand_horiz, SoftDeferCapturePinHoriz);
+        bool better_horiz = ShouldDampLandFrontierWitnessRetarget(
             land_frontier && !ocean_heal, cand_horiz,
             ShouldDampOceanCaptureRetarget(ocean_heal, cand_horiz,
                                            better_horiz_raw));
-        const int pin_T =
+        if (ShouldDampWitnessRetargetOnUnfinishedCruise(moving_now, unf))
+        {
+          better_horiz = false;
+        }
+        int pin_T =
             ocean_heal
                 ? OceanCaptureWitnessPinFrames()
                 : land_frontier
                       ? LandFrontierCaptureWitnessPinFrames(void_n_budget)
                       : (SoftDeferCapturePinMaxAge > 0 ? SoftDeferCapturePinMaxAge
                                                        : kSoftDeferCaptureWitnessPinFrames);
+        if (stuck_n && pinned_still)
+        {
+          pin_T = std::max(pin_T, 24);
+        }
         const bool hold_nh2 = ShouldHoldPinnedRelightWitness(
             SoftDeferCapturePinHoriz,
             world.IsPendingLightBeforeMesh(
                 glm::ivec2(SoftDeferCapturePinCx, SoftDeferCapturePinCz)),
-            missing_focus_mesh);
+            missing_focus_mesh, pin_is_stuck);
         const bool retarget = ShouldRetargetRelightWitness(
             ShouldRetargetSoftDeferCaptureWitness(
                 SoftDeferCapturePinValid, SoftDeferCapturePinAge, pin_T,
                 better_horiz, pinned_still),
-            hold_nh2);
+            hold_nh2 && SoftDeferCapturePinAge < 48);
         if (retarget)
         {
           SoftDeferCapturePinValid = true;
@@ -2002,6 +2032,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       SoftDeferCapturePinValid = false;
       SoftDeferCapturePinAge = 0;
     }
+    world.PhysicsTelemetryData.SoftDeferCapturePinAge = SoftDeferCapturePinAge;
     // Era22 P2 / Era23 I-V4 / Era26 I-O2: Capture FirstMesh KEEP under miss;
     // drain Relight when no_ticket OR void pressure; do not clamp away void
     // bg slots under rim_first_mesh_sla.
@@ -2857,14 +2888,21 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       // TD-ARCH-009: soft-cap Dirty/Pending under MemoryBudget pressure.
       // Era42: never trim PendingLight while enter lit pass is draining.
       if (!world.IsEnterFovLitPassActive() && sample.dirty_chunks > 400 &&
-          sample.pending_light_focus > 8)
+          sample.pending_light_focus > 8 &&
+          ShouldTrimPendingLightUnderHoles(
+              sample.visual_holes > 0, sample.unfinished_visual,
+              sample.pending_light_focus))
       {
         const int soft =
             std::max(16, URuntimeTuning::Get().PendingLightSoftCap);
-        world.TrimPendingLightBeforeMesh(
+        const int dropped = world.TrimPendingLightBeforeMesh(
             glm::ivec3(world.PhysicsTelemetryData.FocusChunkX, 0,
                        world.PhysicsTelemetryData.FocusChunkZ),
             soft);
+        world.PhysicsTelemetryData.PendingLightDropped +=
+            static_cast<uint64_t>(std::max(0, dropped));
+        world.PhysicsTelemetryData.PendingLightTrimMemoryN +=
+            std::max(0, dropped);
       }
       // Free-list size tracks Keep footprint (MaxResidentChunks caps pool).
       {

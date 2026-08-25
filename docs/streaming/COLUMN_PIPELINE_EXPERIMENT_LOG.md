@@ -1261,3 +1261,128 @@ Closeout: smoke + Release; manual ≥600s vs `110448` / `194347`.
 
 ---
 
+## FZ2.7-P12 (post-120512 publication debt — plan)
+
+Root from `120512`: Capture/Apply OK (cap med **3**, apply med **3**); **unfinished/no_mesh/unlit/plf** plateau **~70–88** (P10 late **18/3**, P7 **~15/8**). Chain break: Apply→MarkRelit **skip_already_dirty** → **no FM schedule**; Dirty **Remesh-dominated** (fm med **16** vs remesh **98**); SoftDefer empty **age_max ~3227**; `pending_light_dropped Δ=2882`; meshing−ready gap med **63**.
+
+**Non-goals:** Capture++ / fifo cap++ / hide policy / MarkMissing storm / keep demote.
+
+### Gate manual (≥600 s vs `120512` / `110448`)
+
+| Metric | P11 `120512` | P12 target |
+| --- | --- | --- |
+| late `unfinished_visual` | ~80+ | **≤25** (P10-like) |
+| late `chunk_meshed_unlit_hidden` | ~70 | **≤15** |
+| late `pending_light_focus` | ~70 | **≤20** |
+| `column_meshing_n − column_render_ready_n` med | 63 | **≤35** |
+| `dirty_fm_n / column_loaded_no_mesh_n` | 0.25 | **≥0.8** |
+| `mark_relit_schedule_n` med | ~0 | **≥1** when apply≥2 |
+| `pending_light_dropped` Δ/spike | ~6 | **≤2** |
+| `softdefer_witness_retarget` Δ/spike | ~10 | **≤3** |
+| opaque med | 687 | **≥650** hold |
+| capture_bg med | 3 | hold (no Capture++) |
+
+---
+
+### Track A — FM admission for no_mesh / SoftDefer-empty
+
+**Hypothesis:** lit Apply clears PL tickets on columns already in Dirty as **Remesh**, not **FirstMesh**; no_mesh holes never enter FM Pass1 at sufficient rate.
+
+| Step | Where | Change |
+| --- | --- | --- |
+| A0 | telem | Per-frame: `mark_relit_skip_already_dirty_n`, `mark_relit_enqueue_first_mesh_n`, `dirty_fm_n`, `dirty_remesh_n`, `softdefer_empty_stuck_n` already in jsonl — add audit script gate rows |
+| A1 | `RelightInstallPlanner.h` / `MarkRelitInstall.cpp` | When `skip_already_dirty` **and** column **!HasGreedyMesh** (or SoftDefer-empty owned): **force `enqueue_first_mesh`** or `MarkDirtyPriority` as **FirstMesh class** (not remesh suffix). Unit: skip_dirty + no_mesh → schedule FM |
+| A2 | `MeshWorkAdmission.h` | New guard `ShouldStealRemeshToFirstMesh(unfinished_visual, no_mesh_n, remesh_queue_n)`: when `holes && unfinished>30 && fm/no_mesh<0.5` → `remesh_schedule=0`, `first_mesh_schedule+=steal` even if `remesh_queue_n>0` (inverse of current Era18 branch that keeps remesh≥1) |
+| A3 | `ChunkMeshCache.cpp` Pass1 | Extend P10 PreferKick loop: for `SoftDeferEmptyStuck` coords from telem / `IsSoftDeferHeld && !HasDrawableGreedyMesh`, call `PreferKickPendingGpuQueued` **or** `MaybeMarkDirtyAfterSoftDeferEmptyAvoid` with **cd=0** under `unfinished>40` |
+| A4 | `SoftDeferEmptyPolicy.h` | Widen `ShouldPreferKickSoftDeferEmptyStuck`: allow kick when `softdefer_empty_stuck_n>0 && !HasDrawableGreedyMesh` even if GPU not queued (age≥`ShouldEscalateSoftDeferEmptyAge`) — cap **2/frame** |
+| A5 | `ChunkMeshCache.cpp` Dirty dual-Q | Under `StarveRemeshForHoles`: if chunk **!HasGreedyMesh** in LitDrawable ring, **promote to FirstMesh prefix** (not remesh suffix) on MarkRelit / SoftDefer heal |
+| A6 | `ChunkEmergeCoordinator.cpp` | When `visual_holes && unfinished>30`: ensure `SetStarveRemeshForHoles(true)` for full emerge tick (verify not cleared early at L1531/L1834) |
+
+**DoD A:** `dirty_fm_n` med **≥40** OR `fm/no_mesh ≥0.8`; `mark_relit_schedule` sum/spike **>0** steady; meshing−ready gap **shrinking** in timeline after ~300 s.
+
+---
+
+### Track B — PL trim / churn under holes
+
+**Hypothesis:** `TrimPendingLightBeforeMesh` + MemoryBudget trim drop **LitReady+has_mesh far** tickets while Capture keeps re-noting PL; focus no_mesh tickets survive but system churns (`relight_note_skipped_dup`, `pending_light_dropped`) without clearing focus debt.
+
+| Step | Where | Change |
+| --- | --- | --- |
+| B0 | telem | Split cumulative: `pending_light_trim_emerge_n`, `pending_light_trim_memory_n` (per-frame counters) |
+| B1 | `ChunkEmergeCoordinator.cpp` ~1464 | Gate trim: `ShouldTrimPendingLightUnderHoles(visual_holes, unfinished, pl_focus)` → **false** when `holes && (unfinished>20 \|\| pl_focus>15)` |
+| B2 | `WorldStreaming.cpp` ~2859 | Same gate for MemoryBudget `dirty>400` trim path |
+| B3 | `World.cpp` `TrimPendingLightBeforeMesh` | Never drop within `LitDrawable+4` protect ring (not just dist≤1); align with FIFO trim protect |
+| B4 | Capture/Apply | Audit `NotePendingLight` on void enqueue / finalize — if duplicate with existing PL on **same column without mesh progress**, increment suppress counter (extend `relight_note_suppressed_plateau`) |
+| B5 | optional | Raise effective soft_cap under holes only for **global** PL (not focus) — **last resort** if B1–B4 insufficient |
+
+**DoD B:** `pending_light_dropped` Δ/spike **≤2**; late `pending_light_focus` **≤20**; no regression `relight_fifo_drop`.
+
+---
+
+### Track C — SoftDefer witness pin / retarget thrash
+
+**Hypothesis:** `softdefer_witness_retarget Δ≈10/spike` + `empty_age_max≈3227` → Capture witness hops before FirstMesh completes; `SoftDeferCapturePinAge` resets stall heal.
+
+| Step | Where | Change |
+| --- | --- | --- |
+| C0 | telem | Log `softdefer_capture_pin_age`, `softdefer_witness_horiz` per spike (if missing) |
+| C1 | `AntiFlickerPolicy.h` | `ShouldRetargetSoftDeferCaptureWitness`: if `softdefer_empty_stuck_n≥1` at pin coord → **extend pin_T** to `max(pin_T, 24)` while `!HasDrawableGreedyMesh` |
+| C2 | `WorldStreaming.cpp` ~1929 | `better_horiz` retarget: require **Δhoriz≥2** (not 1) when `unfinished_visual>30` |
+| C3 | `WorldStreaming.cpp` | When `SoftDeferEmptyStuckN>0`, **prefer stuck witness** over miss witness for pin — do not retarget away until drawable or age>extended_T |
+| C4 | `RelightFifoPolicy.h` | `ShouldHoldPinnedRelightWitness`: extend to nh≤**4** (LitDrawable) when `softdefer_empty_stuck` at pin |
+| C5 | land frontier | `ShouldDampLandFrontierWitnessRetarget`: also damp when `player_z` moving (P11 z 52→80 cruise) and `unfinished>40` |
+
+**DoD C:** `softdefer_witness_retarget` Δ/spike **≤3**; `softdefer_empty_age_max` p90 **<1500** in late steady; stuck_n med **≤3** at tail.
+
+---
+
+### Implementation order
+
+1. **A1 + A2** (MarkRelit→FM + admission steal) — highest leverage, smallest behavioral surface  
+2. **B1 + B2** (stop PL trim under holes) — quick, reversible  
+3. **C1 + C3** (pin stability) — pairs with A3/A4  
+4. **A3–A6, B3–B5, C2/C4/C5** — tune from first manual  
+5. Smoke + Release + journal closeout
+
+### Risks / guards
+
+- A1 FM storm: cap `enqueue_first_mesh` **≤ apply_n** per frame; no MarkMissing  
+- A2 remesh=0: only when `remesh_queue` far-only or `unfinished storm`; keep remesh≥1 nh≤2 stale-dark  
+- B1 PL backlog RAM: monitor `pending_light` max; B5 fallback  
+- C1 long pin: expire on `HasDrawableGreedyMesh` or `pin_age>48`
+
+---
+
+## FZ27-P12 Implementation (code land)
+
+**Stamp:** implementation on `perf_opt11` (post-P11 `120512` SoT). Manual ≥600 s gate pending human run; unit + smoke + Release below.
+
+### Landed
+
+| Track | Change |
+| --- | --- |
+| A1 | `ShouldForceFirstMeshOnSkipAlreadyDirty` + skip branches → `MarkDirtyPriority` + `enqueue_first_mesh`; telem `mark_relit_enqueue_first_mesh_n` |
+| A2 | `dirty_fm_n`/`no_mesh_n` → `ShouldStealRemeshToFirstMesh`; remesh=0 + FM steal; backpressure/light_debt skip remesh floor when steal |
+| A3 | Pass1 PreferKick SoftDeferEmptyStuck / Held; age≥15 without GPU; MarkDirty avoid under unf>40; cap 2 |
+| A4 | `MarkDirty` under StarveRemesh + !greedy LitDrawable → `MarkDirtyPriority` |
+| A5 | StarveRemesh held while holes+unf>30 (idle remesh debt cannot clear mid-tick) |
+| A6 | SoftDefer stuck FM enqueue under moving cruise when unf>30 + age>15 |
+| B0 | `pending_light_trim_emerge_n` / `pending_light_trim_memory_n` per-frame + jsonl |
+| B1/B2 | `ShouldTrimPendingLightUnderHoles` at emerge + MemoryBudget |
+| B3 | Trim protect `RelightFifoTrimProtectHoriz()` (8) |
+| B4 | duplicate NotePendingLight without mesh → `relight_note_suppressed_plateau` |
+| C1–C5 | pin_T≥24 stuck; hard expire 48; better_horiz Δ≥2; stuck prefer; hold nh≤4; damp moving+unf>40 |
+
+### Verification
+
+- Unit: `miss_first_mesh_class_test` OK; `relight_install_planner_test` OK (P12 A1 hole→FM)
+- Smoke: `python bin/tmp_fz27_b_test_smoke.py` → **ALL PASS**
+- Release: `Cubatarium.exe` built (static verify PASS)
+- Audit: `bin/tmp_forensic_120512.py` — DoD table helper (`dod_gate`); fill after manual ≥600 s
+
+### Partial DoD (code) / Final gate (manual)
+
+Code land complete (A1–A6, B0–B4, C1–C5). Capture untouched. **Final gate** metrics remain human manual ≥600 s vs `120512`/`110448`; journal metrics fill after that run.
+
+---
+

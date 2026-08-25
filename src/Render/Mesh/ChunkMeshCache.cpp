@@ -2043,6 +2043,17 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
     }
   }
   SoftDeferHeld.erase(chunkCoord);
+  if (StarveRemeshForHoles && MeshFocusValid && !HasGreedyMesh(chunkCoord))
+  {
+    const int horiz =
+        std::max(std::abs(chunkCoord.x - MeshFocusGroundChunk.x),
+                 std::abs(chunkCoord.z - MeshFocusGroundChunk.z));
+    if (horiz <= kVisualStageLitDrawableHoriz)
+    {
+      MarkDirtyPriority(chunkCoord);
+      return;
+    }
+  }
   const size_t before = Dirty.GetCount();
   Dirty.MarkDirty(chunkCoord);
   if (Dirty.GetCount() == before)
@@ -4575,6 +4586,58 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           {
             ++kicked;
           }
+        }
+      }
+      constexpr int kMaxEmptyStuckKick = 2;
+      int empty_kicked = 0;
+      // FZ2.7-P12 A3: PreferKick SoftDeferHeld / empty placeholders in protect
+      // ring (no UWorld telem — Cache only has UBlockWorld).
+      for (const glm::ivec3 &stuck : SoftDeferHeld)
+      {
+        if (empty_kicked >= kMaxEmptyStuckKick)
+        {
+          break;
+        }
+        if (HasDrawableGreedyMesh(stuck))
+        {
+          continue;
+        }
+        const int horiz =
+            std::max(std::abs(stuck.x - MeshFocusGroundChunk.x),
+                     std::abs(stuck.z - MeshFocusGroundChunk.z));
+        if (horiz > RelightFifoTrimProtectHoriz())
+        {
+          continue;
+        }
+        int age_frames = 15;
+        const auto age_it = SoftDeferEmptyAvoidFrames.find(stuck);
+        if (age_it != SoftDeferEmptyAvoidFrames.end())
+        {
+          age_frames = age_it->second;
+        }
+        const bool empty_placeholder = IsSoftDeferEmptyPlaceholder(
+            HasGreedyMesh(stuck), HasDrawableGreedyMesh(stuck),
+            Dirty.Contains(stuck),
+            IsPendingGpuApply(stuck) || IsPendingGpuQueued(stuck),
+            AsyncBuilder && AsyncBuilder->IsInFlight(stuck), true);
+        if (!ShouldPreferKickSoftDeferEmptyStuck(
+                empty_placeholder || IsSoftDeferHeld(stuck),
+                focus_missing_for_schedule, IsPendingGpuQueued(stuck),
+                age_frames, HasDrawableGreedyMesh(stuck)))
+        {
+          continue;
+        }
+        if (IsPendingGpuApply(stuck) || IsPendingGpuQueued(stuck))
+        {
+          if (PreferKickPendingGpuQueued(stuck))
+          {
+            ++empty_kicked;
+          }
+        }
+        else if (StarveRemeshForHoles)
+        {
+          MaybeMarkDirtyAfterSoftDeferEmptyAvoid(stuck);
+          ++empty_kicked;
         }
       }
     }
