@@ -2173,6 +2173,31 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     {
       bg_budget = std::min(bg_budget, LastMemoryDecision.capture_hard_cap);
     }
+    // P10: after hard_cap, restore Completed-empty fifo refill floor.
+    {
+      const int fifo_n =
+          world.Persistence
+              ? world.Persistence->GetPendingTerrainColumnRelightCount()
+              : 0;
+      const int completed_n =
+          static_cast<int>(world.GetRelightCompletedSize());
+      const int inflight_n = world.GetAsyncRelightInFlightCount();
+      const auto &rt = URuntimeTuning::Get();
+      const double unit =
+          world.PhysicsTelemetryData.RelightApplyNPrev > 0
+              ? world.PhysicsTelemetryData.RelightApplyMsPrev /
+                    static_cast<double>(
+                        world.PhysicsTelemetryData.RelightApplyNPrev)
+              : world.PhysicsTelemetryData.RelightApplyMsPrev;
+      bg_budget = RelightCaptureBgFloorForFifoStarve(
+          bg_budget, fifo_n, rt.RelightFifoSoftCap, completed_n, inflight_n,
+          unit);
+      bg_budget = ClampCaptureBgAfterSimKill(
+          bg_budget,
+          ShouldKillProducerBoostOnSimHot(
+              world.PhysicsTelemetryData.SimMsPrev),
+          completed_n, fifo_n);
+    }
   }
 
   {
@@ -2772,6 +2797,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       sample.dirty_chunks = world.PhysicsTelemetryData.FocusDirtyChunks;
       sample.baseline_keep_margin = URuntimeTuning::Get().KeepPrefetchMargin;
       sample.visual_rd = effectiveRenderDistance;
+      sample.relight_fifo_n = world.PhysicsTelemetryData.RelightFifoN;
+      sample.relight_completed_n =
+          static_cast<int>(world.GetRelightCompletedSize());
+      sample.unfinished_visual = world.PhysicsTelemetryData.UnfinishedVisual;
       // Prefer FramePerf cached sample (every ~30 frames) — avoid per-tick
       // GetProcessMemoryInfo on the streaming hot path (P0b).
       sample.private_mb = UFramePerfMonitor::GetLastPrivateMb();
@@ -2802,6 +2831,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       }
       if (decision.max_effective_rd < effectiveRenderDistance)
       {
+        ++world.PhysicsTelemetryData.KeepRingShrinkN;
         effectiveRenderDistance = decision.max_effective_rd;
         if (AdaptiveEffectiveRd >= 0)
         {

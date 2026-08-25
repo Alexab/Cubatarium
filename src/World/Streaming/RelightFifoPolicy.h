@@ -604,6 +604,8 @@ inline int RelightCapturePipelineDepthCap(
 }
 
 /// FZ2.7: fifo starve after Apply must not clamp Capture to 1 (154945 completed=0).
+/// FZ2.7-P10: completed==0 means no consumer progress — inflight alone must not
+/// block the refill floor (workers busy ≠ Completed fed).
 inline int RelightCaptureBgFloorForFifoStarve(int bg_cap, int fifo_n,
                                               int fifo_soft_cap, int completed_n,
                                               int inflight_n, double cap_unit_ms)
@@ -618,23 +620,51 @@ inline int RelightCaptureBgFloorForFifoStarve(int bg_cap, int fifo_n,
   {
     return bg_cap;
   }
+  constexpr int kFloorN = 3;
+  if (completed_n <= 0)
+  {
+    return bg_cap > kFloorN ? bg_cap : kFloorN;
+  }
   if (completed_n + inflight_n >= 4)
   {
     return bg_cap;
   }
-  const int floor_n = 3;
-  return bg_cap > floor_n ? bg_cap : floor_n;
+  return bg_cap > kFloorN ? bg_cap : kFloorN;
 }
 
-/// SoftDefer/miss may keep one Capture slot even when depth admit is false.
+/// FZ2.7-P10: depth-full SoftDefer floor — keep refill when Completed empty.
 inline int SoftDeferCaptureFloorWhenDepthFull(bool soft_defer_or_miss_hole,
-                                              int bg_cap)
+                                              int bg_cap,
+                                              int completed_n = -1,
+                                              bool fifo_starve = false)
 {
+  if (fifo_starve && completed_n <= 0)
+  {
+    return bg_cap < 3 ? 3 : bg_cap;
+  }
   if (!soft_defer_or_miss_hole)
   {
     return bg_cap;
   }
   return bg_cap < 1 ? 1 : bg_cap;
+}
+
+/// FZ2.7-P10: sim kill clamps boosts, not Completed-empty refill floor.
+inline int ClampCaptureBgAfterSimKill(int bg_cap, bool sim_hot, int completed_n,
+                                      int fifo_n)
+{
+  if (!sim_hot)
+  {
+    return bg_cap;
+  }
+  const bool refill =
+      completed_n <= 0 &&
+      (fifo_n >= 50);
+  if (refill)
+  {
+    return bg_cap < 1 ? 1 : (bg_cap > 3 ? 3 : bg_cap);
+  }
+  return bg_cap < 1 ? bg_cap : 1;
 }
 
 /// Keep live GPU draw even if FullyDark face flag is set. CheapRemesh C5:

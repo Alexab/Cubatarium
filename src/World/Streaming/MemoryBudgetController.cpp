@@ -70,22 +70,26 @@ UMemoryBudgetController::Evaluate(const MemoryBudgetSample &sample,
 
   // Hitch gate (manual 085228): seconds-scale Capture while holes=1 and
   // memory_pressure stayed 0 — tighten Capture even under byte-budget Green.
+  // FZ2.7-P10 / 091745: holes+hard_cap=1 zeroed Completed refill (cap med 1).
+  const bool completed_starve =
+      sample.relight_completed_n <= 0 && sample.relight_fifo_n >= 50;
   if (d.capture_hard_cap < 0 && sample.visual_holes > 0)
   {
-    d.capture_hard_cap = 1;
+    d.capture_hard_cap = completed_starve ? 3 : 1;
   }
   else if (d.capture_hard_cap < 0 &&
            sample.last_wall_ms >
                static_cast<double>(tuning.MemoryHitchCaptureWallMs))
   {
-    d.capture_hard_cap = 1;
+    d.capture_hard_cap = completed_starve ? 3 : 1;
   }
   // V5 ring SLA: focus relight debt — cap capture when pending trail high.
   // Keep at least 1 so FIFO cannot freeze under permanent holes (edge: fifo=34
   // with capture_hard_cap=2 + hitch starved completed_n=0).
   if (d.capture_hard_cap < 0 && sample.pending_light_focus > 15)
   {
-    d.capture_hard_cap = sample.visual_holes > 0 ? 1 : 2;
+    d.capture_hard_cap =
+        completed_starve ? 3 : (sample.visual_holes > 0 ? 1 : 2);
   }
   // Ring SLA guard: block keep expand under focus debt; do not shrink RD on
   // every hole frame (RD thrash → stream reload spikes / hang).
@@ -93,9 +97,14 @@ UMemoryBudgetController::Evaluate(const MemoryBudgetSample &sample,
   {
     d.allow_keep_prewarm = false;
   }
+  // FZ2.7-P10: do not shrink RD under holes — keep 169↔121 demoted opaque.
   if (sample.pending_light_focus > 20 && sample.visual_holes > 0)
   {
-    d.max_effective_rd = std::max(3, sample.visual_rd - 1);
+    d.max_effective_rd = sample.visual_rd;
+  }
+  if (sample.unfinished_visual > 0)
+  {
+    d.max_effective_rd = std::max(d.max_effective_rd, sample.visual_rd);
   }
   // Soft-cap: dirty plateau under focus pending — shrink keep/prewarm so
   // remesh DropRemesh/TrimPending can catch up (TD-ARCH-009).

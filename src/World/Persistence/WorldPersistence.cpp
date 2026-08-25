@@ -1036,6 +1036,10 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         static_cast<double>(tune.MissReservedMs), unit_ms_prev, light_unit,
         install_unit, completed_n, telem.RelightFifoN, tune.RelightFifoSoftCap,
         telem.PendingLightN, consume_mode);
+    const int fifo_soft_cap = tune.RelightFifoSoftCap;
+    const bool fifo_starve =
+        telem.RelightFifoN >= 50 ||
+        (fifo_soft_cap > 0 && telem.RelightFifoN >= fifo_soft_cap / 2);
     if (!ShouldAdmitRelightCapture(completed_n, inflight_n, depth_cap))
     {
       const bool soft_defer_or_miss =
@@ -1043,9 +1047,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
           (visual_holes &&
            ShouldPreferMissFinalizeBand(
                world.GetPhysicsTelemetry().MissHoriz));
-      bg_cap = SoftDeferCaptureFloorWhenDepthFull(soft_defer_or_miss, 0);
+      bg_cap = SoftDeferCaptureFloorWhenDepthFull(soft_defer_or_miss, 0,
+                                                  completed_n, fifo_starve);
     }
-    const int fifo_soft_cap = tune.RelightFifoSoftCap;
     if (fifo_soft_cap > 0 &&
         telem.RelightFifoN >= (fifo_soft_cap * 2) / 3 &&
         completed_n < 2)
@@ -1058,8 +1062,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       if (ShouldSuppressProducerBoostWhenConsumerBoundP9(
               telem.RelightApplyNPrev, telem.RelightFifoN, fifo_soft_cap,
               static_cast<ApplyBinding>(telem.ApplyBindingPrev), light_unit,
-              static_cast<double>(tune.MissReservedMs), completed_n) ||
-          ShouldKillProducerBoostOnSimHot(telem.SimMsPrev))
+              static_cast<double>(tune.MissReservedMs), completed_n))
       {
         bg_cap = std::min(bg_cap, 1);
       }
@@ -1067,11 +1070,10 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     bg_cap = RelightCaptureBgFloorForFifoStarve(
         bg_cap, telem.RelightFifoN, fifo_soft_cap, completed_n, inflight_n,
         RelightApplyCapUnitMs(unit_ms_prev, light_unit, install_unit));
-    if (ShouldKillProducerBoostOnSimHot(telem.SimMsPrev))
-    {
-      // Kill-switch: do not keep fifo-starve Capture floor under hot sim.
-      bg_cap = std::min(bg_cap, 1);
-    }
+    // P10: sim kill clamps boosts only — keep Completed-empty refill ≤3.
+    bg_cap = ClampCaptureBgAfterSimKill(
+        bg_cap, ShouldKillProducerBoostOnSimHot(telem.SimMsPrev), completed_n,
+        telem.RelightFifoN);
   }
   if (!enter_fov_lit && frame_ms_so_far >= capture_hot_skip_ms &&
       visual_holes && focus_pending_mid)

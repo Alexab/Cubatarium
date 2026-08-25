@@ -225,6 +225,10 @@ public:
   int GetLastMeshDirtyScheduleSkipSnapshotN() const;
   int GetLastMeshDirtyScheduleSkipSoftDeferN() const;
   int GetLastMeshDirtyScheduleSkipLockedN() const;
+  int GetLastMeshDirtyScheduleSkipOrphanN() const;
+  int GetLastMeshDirtyScheduleSkipRemeshStarveN() const;
+  int GetLastMeshDirtyScheduleSkipOtherN() const;
+  uint64_t GetFreeChunkLiveN() const;
   double GetLastMeshDirtyGpuMs() const;
   int GetLastMeshDirtyGpuN() const;
   double GetLastMeshDirtySyncMs() const;

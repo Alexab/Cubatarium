@@ -192,6 +192,12 @@ struct PhysicsTelemetry
   int MeshDirtyScheduleSkipSnapshotN{0};
   int MeshDirtyScheduleSkipSoftDeferN{0};
   int MeshDirtyScheduleSkipLockedN{0};
+  int MeshDirtyScheduleSkipOrphanN{0};
+  int MeshDirtyScheduleSkipRemeshStarveN{0};
+  int MeshDirtyScheduleSkipOtherN{0};
+  /// FZ2.7-P10: keep-ring shrink / FreeChunk-while-live.
+  int KeepRingShrinkN{0};
+  uint64_t FreeChunkLiveN{0};
   double MeshDirtyGpuMs{0.0};
   int MeshDirtyGpuN{0};
   double MeshDirtySyncMs{0.0};

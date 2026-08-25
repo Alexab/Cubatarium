@@ -234,6 +234,11 @@ struct FrameNumbers
   int mesh_dirty_schedule_skip_snapshot_n{0};
   int mesh_dirty_schedule_skip_softdefer_n{0};
   int mesh_dirty_schedule_skip_locked_n{0};
+  int mesh_dirty_schedule_skip_orphan_n{0};
+  int mesh_dirty_schedule_skip_remesh_starve_n{0};
+  int mesh_dirty_schedule_skip_other_n{0};
+  int keep_ring_shrink_n{0};
+  uint64_t freechunk_live_n{0};
   int capture_bg_cap_n{-1};
   int capture_band_cy{-1};
   double mesh_dirty_gpu_ms{0.0};
@@ -645,6 +650,12 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_dirty_schedule_skip_snapshot_n = phys.MeshDirtyScheduleSkipSnapshotN;
   n.mesh_dirty_schedule_skip_softdefer_n = phys.MeshDirtyScheduleSkipSoftDeferN;
   n.mesh_dirty_schedule_skip_locked_n = phys.MeshDirtyScheduleSkipLockedN;
+  n.mesh_dirty_schedule_skip_orphan_n = phys.MeshDirtyScheduleSkipOrphanN;
+  n.mesh_dirty_schedule_skip_remesh_starve_n =
+      phys.MeshDirtyScheduleSkipRemeshStarveN;
+  n.mesh_dirty_schedule_skip_other_n = phys.MeshDirtyScheduleSkipOtherN;
+  n.keep_ring_shrink_n = phys.KeepRingShrinkN;
+  n.freechunk_live_n = phys.FreeChunkLiveN;
   n.capture_bg_cap_n = phys.CaptureBgCapN;
   n.capture_band_cy = phys.CaptureBandCy;
   n.mesh_dirty_gpu_ms = phys.MeshDirtyGpuMs;
@@ -1073,6 +1084,14 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.mesh_dirty_schedule_skip_softdefer_n
           << ",\"mesh_dirty_schedule_skip_locked_n\":"
           << n.mesh_dirty_schedule_skip_locked_n
+          << ",\"mesh_dirty_schedule_skip_orphan_n\":"
+          << n.mesh_dirty_schedule_skip_orphan_n
+          << ",\"mesh_dirty_schedule_skip_remesh_starve_n\":"
+          << n.mesh_dirty_schedule_skip_remesh_starve_n
+          << ",\"mesh_dirty_schedule_skip_other_n\":"
+          << n.mesh_dirty_schedule_skip_other_n
+          << ",\"keep_ring_shrink_n\":" << n.keep_ring_shrink_n
+          << ",\"freechunk_live_n\":" << n.freechunk_live_n
           << ",\"capture_bg_cap_n\":" << n.capture_bg_cap_n
           << ",\"capture_band_cy\":" << n.capture_band_cy
           << ",\"mesh_dirty_gpu_ms\":" << n.mesh_dirty_gpu_ms

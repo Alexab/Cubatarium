@@ -1229,3 +1229,18 @@ Hold: P7 noop-remesh + keep GPU nh=8. Autofly ≠ SoT; sim&lt;135 hard.
 
 ---
 
+## FZ2.7-P10 (post-091745 Capture/keep/FM)
+
+Root from `091745`: `capture_hard_cap=1` under holes killed Completed refill; keep RD shrink 169↔121 demoted opaque (not hide); Dirty FM skip mostly unattributed.
+
+| Track | Change |
+| --- | --- |
+| A1–A3 | `RelightCaptureBgFloorForFifoStarve` floors when `completed=0` even if inflight high; SoftDefer depth-full refill; `ClampCaptureBgAfterSimKill` keeps refill≤3; MemoryBudget holes hard_cap **3** when fifo starve+completed empty; restore floor after hard_cap in WorldStreaming |
+| C1 | no RD shrink under holes (`max_effective_rd = visual_rd`); hold RD while unfinished&gt;0 |
+| B0–B2 | skip orphan/remesh_starve/other telem; orphan RemoveAt; PreferKick pending GPU for FM protect before Pass1 |
+| C2 | GPU keep ring → protect horiz 8; `freechunk_live_n` / `keep_ring_shrink_n` telem |
+
+Closeout: smoke + Release; manual ≥600s vs `091745` / `194347`.
+
+---
+

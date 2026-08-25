@@ -3621,7 +3621,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
                      std::abs(result.coord.z - MeshFocusGroundChunk.z))
           : 999;
   const int gpu_keep_ring =
-      std::max(MeshFocusRadiusChunks, kVisualStageLitDrawableHoriz);
+      std::max({MeshFocusRadiusChunks, kVisualStageLitDrawableHoriz,
+                RelightFifoTrimProtectHoriz()});
   // Era21 I-R1: keep live GPU SSBO until BindCommitted (PendingReplace).
   // Underfeet: also retain on intentional empty (no PreferKick storm).
   // P4: vis/keep ring also keeps until Bind (cruise pool 13.8→2 MB).
@@ -3692,6 +3693,10 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     if (CpuReplaceFreeFirstWouldHole(had_gpu_drawable, new_cpu_drawable))
     {
       ++MeshReplaceHoleAvoided;
+    }
+    if (had_gpu_drawable)
+    {
+      ++FreeChunkLiveN;
     }
     GpuPipeline->FreeChunk(result.coord);
     ForceFlatRebuildNext = true;
@@ -3803,6 +3808,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastMeshDirtyScheduleSkipSnapshotN = 0;
   LastMeshDirtyScheduleSkipSoftDeferN = 0;
   LastMeshDirtyScheduleSkipLockedN = 0;
+  LastMeshDirtyScheduleSkipOrphanN = 0;
+  LastMeshDirtyScheduleSkipRemeshStarveN = 0;
+  LastMeshDirtyScheduleSkipOtherN = 0;
   LastMeshDirtyGpuMs = 0.0;
   LastMeshDirtyGpuN = 0;
   LastMeshDirtySyncMs = 0.0;
@@ -4372,6 +4380,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (EnterGpuQuiesceDrain && EnterTerminalHeld.count(*it) > 0)
       {
         ++LastMeshDirtyScheduleSkipN;
+        ++LastMeshDirtyScheduleSkipOtherN;
         return Dirty.RemoveAt(it);
       }
       if (EnterLitQuiesce && HasDrawableGreedyMesh(*it))
@@ -4384,6 +4393,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         else
         {
           ++LastMeshDirtyScheduleSkipN;
+          ++LastMeshDirtyScheduleSkipOtherN;
           return Dirty.RemoveAt(it);
         }
       }
@@ -4428,13 +4438,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (!world.GetChunkManager().HasChunk(*it))
       {
         // Era47/Era52: orphan Dirty under streaming freeze must not sticky-block ring.
-        if (EnterLitQuiesce || EnterGpuQuiesceDrain)
+        // FZ2.7-P10: under holes RemoveAt — leave-in thrash inflated skip without drain.
+        ++LastMeshDirtyScheduleSkipN;
+        ++LastMeshDirtyScheduleSkipOrphanN;
+        if (EnterLitQuiesce || EnterGpuQuiesceDrain || StarveRemeshForHoles)
         {
-          ++LastMeshDirtyScheduleSkipN;
           return Dirty.RemoveAt(it);
         }
-        ++LastMeshDirtyScheduleSkipN;
-        return std::next(it);
+        return Dirty.RemoveAt(it);
       }
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
       {
@@ -4492,12 +4503,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           else
           {
             ++LastMeshDirtyScheduleSkipN;
+            ++LastMeshDirtyScheduleSkipRemeshStarveN;
             return Dirty.RemoveAt(it);
           }
         }
         else
         {
           ++LastMeshDirtyScheduleSkipN;
+          ++LastMeshDirtyScheduleSkipRemeshStarveN;
           return Dirty.RemoveAt(it);
         }
       }
@@ -4536,6 +4549,35 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         MeshFocusValid &&
         HasMissingGreedyMeshInHorizontalRadius(world, MeshFocusGroundChunk,
                                                MeshFocusRadiusChunks);
+    // FZ2.7-P10: under holes PreferKick pending GPU in protect ring before new
+    // FM Capture — finish slots, don't raise first_mesh_cap.
+    if ((StarveRemeshForHoles || focus_missing_for_schedule) && MeshFocusValid)
+    {
+      int kicked = 0;
+      constexpr int kMaxPreferKickFm = 4;
+      for (auto it = Dirty.begin();
+           it != Dirty.end() && kicked < kMaxPreferKickFm; ++it)
+      {
+        if (!Dirty.IsFirstMesh(*it))
+        {
+          break;
+        }
+        const int horiz =
+            std::max(std::abs(it->x - MeshFocusGroundChunk.x),
+                     std::abs(it->z - MeshFocusGroundChunk.z));
+        if (horiz > RelightFifoTrimProtectHoriz())
+        {
+          continue;
+        }
+        if (IsPendingGpuApply(*it) || IsPendingGpuQueued(*it))
+        {
+          if (PreferKickPendingGpuQueued(*it))
+          {
+            ++kicked;
+          }
+        }
+      }
+    }
     // P4: under holes, prefer GPU Finish for focus-missing but keep 1 remesh
     // slot so lit settle is not deferred indefinitely (manual 222059 flicker).
     if ((StarveRemeshForHoles || focus_missing_for_schedule) &&
@@ -5256,8 +5298,9 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
             ? std::max(std::abs(chunkCoord.x - MeshFocusGroundChunk.x),
                        std::abs(chunkCoord.z - MeshFocusGroundChunk.z))
             : 999;
-    const int gpu_keep_ring =
-        std::max(MeshFocusRadiusChunks, kVisualStageLitDrawableHoriz);
+  const int gpu_keep_ring =
+      std::max({MeshFocusRadiusChunks, kVisualStageLitDrawableHoriz,
+                RelightFifoTrimProtectHoriz()});
     // Era21 I-R1: keep live GPU until BindCommitted (PendingReplace).
     // Underfeet: retain on intentional empty (no PreferKick).
     // P4: vis/keep ring also keeps until Bind.
@@ -5303,6 +5346,10 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       if (CpuReplaceFreeFirstWouldHole(had_gpu_drawable, new_cpu_drawable))
       {
         ++MeshReplaceHoleAvoided;
+      }
+      if (had_gpu_drawable)
+      {
+        ++FreeChunkLiveN;
       }
       GpuPipeline->FreeChunk(chunkCoord);
       ForceFlatRebuildNext = true;

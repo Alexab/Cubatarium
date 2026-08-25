@@ -2252,6 +2252,16 @@ int main()
            "P6: no fifo starve keeps bg_cap");
     Expect(RelightCaptureBgFloorForFifoStarve(1, 59, 96, 0, 0, 6.5) == 1,
            "P6: fat unit does not lift Capture");
+    Expect(RelightCaptureBgFloorForFifoStarve(1, 59, 96, 0, 8, 0.5) == 3,
+           "P10: completed=0 floors even if inflight high");
+    using cutum::ClampCaptureBgAfterSimKill;
+    using cutum::SoftDeferCaptureFloorWhenDepthFull;
+    Expect(ClampCaptureBgAfterSimKill(8, true, 0, 70) == 3,
+           "P10: sim kill keeps Completed-empty refill ≤3");
+    Expect(ClampCaptureBgAfterSimKill(8, true, 2, 70) == 1,
+           "P10: sim kill clamps boost when completed>0");
+    Expect(SoftDeferCaptureFloorWhenDepthFull(false, 0, 0, true) == 3,
+           "P10: depth-full SoftDefer refill when completed empty");
     Expect(RelightCapturePipelineDepthCap(1, 8, 8.0, 0.0, 0.0, 0.0, 0, 71, 96,
                                           80, true) >= 4,
            "P7: fifo 71 ready 0 unknown unit still depth>=4");

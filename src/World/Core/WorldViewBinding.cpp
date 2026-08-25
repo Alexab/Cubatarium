@@ -856,6 +856,11 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.MeshDirtyScheduleSkipSnapshotN = 0;
   PhysicsTelemetryData.MeshDirtyScheduleSkipSoftDeferN = 0;
   PhysicsTelemetryData.MeshDirtyScheduleSkipLockedN = 0;
+  PhysicsTelemetryData.MeshDirtyScheduleSkipOrphanN = 0;
+  PhysicsTelemetryData.MeshDirtyScheduleSkipRemeshStarveN = 0;
+  PhysicsTelemetryData.MeshDirtyScheduleSkipOtherN = 0;
+  PhysicsTelemetryData.KeepRingShrinkN = 0;
+  PhysicsTelemetryData.FreeChunkLiveN = 0;
   PhysicsTelemetryData.MeshDirtyGpuMs = 0.0;
   PhysicsTelemetryData.MeshDirtyGpuN = 0;
   PhysicsTelemetryData.MeshDirtySyncMs = 0.0;
@@ -978,6 +983,14 @@ void UWorld::TickWorldStreamingPhase()
       GetMeshService().GetLastMeshDirtyScheduleSkipSoftDeferN();
   PhysicsTelemetryData.MeshDirtyScheduleSkipLockedN =
       GetMeshService().GetLastMeshDirtyScheduleSkipLockedN();
+  PhysicsTelemetryData.MeshDirtyScheduleSkipOrphanN =
+      GetMeshService().GetLastMeshDirtyScheduleSkipOrphanN();
+  PhysicsTelemetryData.MeshDirtyScheduleSkipRemeshStarveN =
+      GetMeshService().GetLastMeshDirtyScheduleSkipRemeshStarveN();
+  PhysicsTelemetryData.MeshDirtyScheduleSkipOtherN =
+      GetMeshService().GetLastMeshDirtyScheduleSkipOtherN();
+  PhysicsTelemetryData.FreeChunkLiveN =
+      GetMeshService().GetFreeChunkLiveN();
   PhysicsTelemetryData.MeshDirtyGpuMs =
       GetMeshService().GetLastMeshDirtyGpuMs();
   PhysicsTelemetryData.MeshDirtyGpuN =

@@ -15,6 +15,10 @@ struct MemoryBudgetSample
   int dirty_chunks{0};
   int baseline_keep_margin{2};
   int visual_rd{4};
+  /// FZ2.7-P10: Capture hard-cap must not starve Completed refill.
+  int relight_fifo_n{0};
+  int relight_completed_n{0};
+  int unfinished_visual{0};
 };
 
 struct MemoryBudgetDecision
