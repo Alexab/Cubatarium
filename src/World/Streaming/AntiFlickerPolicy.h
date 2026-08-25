@@ -1,7 +1,5 @@
 #pragma once
 
-#include <algorithm>
-
 namespace cutum
 {
 
@@ -35,16 +33,6 @@ inline bool ShouldRetargetSoftDeferCaptureWitness(
     return true;
   }
   return false;
-}
-
-/// FZ2.7-P14 F1: after Capture witness retarget, keep extended pin_T (land/
-/// stuck) — do not collapse MaxAge back to default 8.
-inline int SoftDeferCapturePinMaxAgeAfterRetarget(int prev_max_age, int pin_T,
-                                                  int default_pin_frames =
-                                                      kSoftDeferCaptureWitnessPinFrames)
-{
-  const int seed = std::max(default_pin_frames, pin_T);
-  return std::max(prev_max_age, seed);
 }
 
 /// Era27 I-A2: SoftDefer empty age resets only when healed or real progress —

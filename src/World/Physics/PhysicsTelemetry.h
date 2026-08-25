@@ -347,8 +347,6 @@ struct PhysicsTelemetry
   int VisibleBlackFocusN{0};
   /// Subset of VisibleBlackFocusN without Flow Contains / Progress / Sticky.
   int VisibleBlackNoTicketN{0};
-  /// FZ2.7-P14 F5: undamped scan for heal Collect (publish may deadband).
-  int VisibleBlackNoTicketRawN{0};
   /// Era17: VB with Contains ∨ Dirty/Inflight/PendingLight ∨ Sticky.
   int VisibleBlackProgressN{0};
   /// Era17: VB with Contains but no Dirty/Inflight/PendingLight (queued stall).
