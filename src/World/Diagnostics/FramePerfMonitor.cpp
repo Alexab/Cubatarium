@@ -230,6 +230,12 @@ struct FrameNumbers
   double mesh_dirty_schedule_ms{0.0};
   int mesh_dirty_schedule_ok_n{0};
   int mesh_dirty_schedule_skip_n{0};
+  int mesh_dirty_schedule_skip_pipeline_n{0};
+  int mesh_dirty_schedule_skip_snapshot_n{0};
+  int mesh_dirty_schedule_skip_softdefer_n{0};
+  int mesh_dirty_schedule_skip_locked_n{0};
+  int capture_bg_cap_n{-1};
+  int capture_band_cy{-1};
   double mesh_dirty_gpu_ms{0.0};
   int mesh_dirty_gpu_n{0};
   double mesh_dirty_sync_ms{0.0};
@@ -400,6 +406,8 @@ struct FrameNumbers
   int mark_relit_skip_inflight_n{0};
   int mark_relit_skip_enter_lit_quiesce_n{0};
   int mark_relit_schedule_n{0};
+  int mark_relit_invoked_n{0};
+  int mark_missing_primary_n{0};
   int mark_relit_path_primary_consume_n{0};
   int stale_probe_n{0};
   double mark_relit_total_ms{0.0};
@@ -633,6 +641,12 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_dirty_schedule_ms = phys.MeshDirtyScheduleMs;
   n.mesh_dirty_schedule_ok_n = phys.MeshDirtyScheduleOkN;
   n.mesh_dirty_schedule_skip_n = phys.MeshDirtyScheduleSkipN;
+  n.mesh_dirty_schedule_skip_pipeline_n = phys.MeshDirtyScheduleSkipPipelineN;
+  n.mesh_dirty_schedule_skip_snapshot_n = phys.MeshDirtyScheduleSkipSnapshotN;
+  n.mesh_dirty_schedule_skip_softdefer_n = phys.MeshDirtyScheduleSkipSoftDeferN;
+  n.mesh_dirty_schedule_skip_locked_n = phys.MeshDirtyScheduleSkipLockedN;
+  n.capture_bg_cap_n = phys.CaptureBgCapN;
+  n.capture_band_cy = phys.CaptureBandCy;
   n.mesh_dirty_gpu_ms = phys.MeshDirtyGpuMs;
   n.mesh_dirty_gpu_n = phys.MeshDirtyGpuN;
   n.mesh_dirty_sync_ms = phys.MeshDirtySyncMs;
@@ -826,6 +840,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mark_relit_skip_inflight_n = phys.MarkRelitSkipInflightN;
   n.mark_relit_skip_enter_lit_quiesce_n = phys.MarkRelitSkipEnterLitQuiesceN;
   n.mark_relit_schedule_n = phys.MarkRelitScheduleN;
+  n.mark_relit_invoked_n = phys.MarkRelitInvokedN;
+  n.mark_missing_primary_n = phys.MarkMissingPrimaryN;
   n.mark_relit_path_primary_consume_n = phys.MarkRelitPathPrimaryConsumeN;
   n.stale_probe_n = phys.StaleProbeCallsN;
   n.mark_relit_total_ms = phys.MarkRelitTotalMs;
@@ -1049,6 +1065,16 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_dirty_schedule_ms\":" << n.mesh_dirty_schedule_ms
           << ",\"mesh_dirty_schedule_ok_n\":" << n.mesh_dirty_schedule_ok_n
           << ",\"mesh_dirty_schedule_skip_n\":" << n.mesh_dirty_schedule_skip_n
+          << ",\"mesh_dirty_schedule_skip_pipeline_n\":"
+          << n.mesh_dirty_schedule_skip_pipeline_n
+          << ",\"mesh_dirty_schedule_skip_snapshot_n\":"
+          << n.mesh_dirty_schedule_skip_snapshot_n
+          << ",\"mesh_dirty_schedule_skip_softdefer_n\":"
+          << n.mesh_dirty_schedule_skip_softdefer_n
+          << ",\"mesh_dirty_schedule_skip_locked_n\":"
+          << n.mesh_dirty_schedule_skip_locked_n
+          << ",\"capture_bg_cap_n\":" << n.capture_bg_cap_n
+          << ",\"capture_band_cy\":" << n.capture_band_cy
           << ",\"mesh_dirty_gpu_ms\":" << n.mesh_dirty_gpu_ms
           << ",\"mesh_dirty_gpu_n\":" << n.mesh_dirty_gpu_n
           << ",\"mesh_dirty_sync_ms\":" << n.mesh_dirty_sync_ms
@@ -1239,6 +1265,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mark_relit_skip_enter_lit_quiesce_n\":"
           << n.mark_relit_skip_enter_lit_quiesce_n
           << ",\"mark_relit_schedule_n\":" << n.mark_relit_schedule_n
+          << ",\"mark_relit_invoked_n\":" << n.mark_relit_invoked_n
+          << ",\"mark_missing_primary_n\":" << n.mark_missing_primary_n
           << ",\"mark_relit_path_primary_consume_n\":"
           << n.mark_relit_path_primary_consume_n
           << ",\"stale_probe_n\":" << n.stale_probe_n

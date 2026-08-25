@@ -51,6 +51,59 @@ inline bool ShouldSuppressProducerBoostWhenConsumerBound(
   return binding == ApplyBinding::TimeSlice || binding == ApplyBinding::FatUnit;
 }
 
+/// FZ2.7-P9: never suppress Capture refill while Completed is empty and fifo piled.
+inline bool ShouldSuppressProducerBoostWhenConsumerBoundP9(
+    int apply_n_prev, int fifo_n, int soft_cap, ApplyBinding binding,
+    double last_light_unit_ms, double slice_ms, int completed_n)
+{
+  if (completed_n <= 0 &&
+      (fifo_n >= 50 || (soft_cap > 0 && fifo_n >= soft_cap / 2)))
+  {
+    return false;
+  }
+  return ShouldSuppressProducerBoostWhenConsumerBound(
+      apply_n_prev, fifo_n, soft_cap, binding, last_light_unit_ms, slice_ms);
+}
+
+/// FZ2.7-P9: sim kill-switch — no Capture/Apply producer boost.
+inline bool ShouldKillProducerBoostOnSimHot(double sim_ms_prev,
+                                            double kill_ms = 135.0)
+{
+  return sim_ms_prev > kill_ms;
+}
+
+/// FZ2.7-P9: Apply floor/budget raise only when Completed has work.
+inline bool ShouldRaiseApplyBudgetOnlyWhenReady(int ready_n)
+{
+  return ready_n >= 1;
+}
+
+/// FZ2.7-P9: one-shot MarkMissing on LitReady slim — not every Apply.
+inline bool ShouldMarkMissingOnceOnLitReady(bool finalize_gate,
+                                            bool slim_or_consume, int schedule_n,
+                                            int focus_horiz,
+                                            bool focus_has_no_mesh_debt,
+                                            int protect_horiz =
+                                                kVisualStageProtectHoriz)
+{
+  if (!finalize_gate || !slim_or_consume || schedule_n > 0)
+  {
+    return false;
+  }
+  if (!focus_has_no_mesh_debt)
+  {
+    return false;
+  }
+  return focus_horiz >= 0 && focus_horiz <= protect_horiz;
+}
+
+/// FZ2.7-P9: !drawable protect ring must not leave-in SoftDefer thrash.
+inline bool ShouldLeaveInDirtyUnderPlForSchedule(bool leave_in_pl_policy,
+                                                 bool has_drawable)
+{
+  return leave_in_pl_policy && has_drawable;
+}
+
 /// FZ2.6-P0b: stalled ticket completion prefers mesh_drain over schedule.
 inline bool ShouldPrioritizeMeshDrainForTicketedConsume(
     bool consume_mode, int mark_relit_schedule_n,

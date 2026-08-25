@@ -128,6 +128,8 @@ struct PhysicsTelemetry
   /// Previous frame (P2 apply budget / P5 dynamic bg_cap).
   double RelightDrainMsPrev{0.0};
   double RelightApplyMsPrev{0.0};
+  /// Prior-frame main-loop sim_ms (kill-switch for Capture/Apply boost).
+  double SimMsPrev{0.0};
   /// Previous-frame Apply count (unit-cost estimator for cruise Apply budget).
   int RelightApplyNPrev{0};
   /// FZ2.6-Perf0: binding constraint driver (ApplyBinding enum).
@@ -185,6 +187,11 @@ struct PhysicsTelemetry
   double MeshDirtyScheduleMs{0.0};
   int MeshDirtyScheduleOkN{0};
   int MeshDirtyScheduleSkipN{0};
+  /// FZ2.7-P9: Dirty schedule skip breakdown (locked ≈ inflight/gpu).
+  int MeshDirtyScheduleSkipPipelineN{0};
+  int MeshDirtyScheduleSkipSnapshotN{0};
+  int MeshDirtyScheduleSkipSoftDeferN{0};
+  int MeshDirtyScheduleSkipLockedN{0};
   double MeshDirtyGpuMs{0.0};
   int MeshDirtyGpuN{0};
   double MeshDirtySyncMs{0.0};
@@ -405,6 +412,10 @@ struct PhysicsTelemetry
   int MarkRelitSkipInflightN{0};
   int MarkRelitSkipEnterLitQuiesceN{0};
   int MarkRelitScheduleN{0};
+  /// FZ2.7-P9: MarkRelitChunksForMesh entered (vs schedule Dirty count).
+  int MarkRelitInvokedN{0};
+  /// FZ2.7-P9: one-shot MarkMissing on LitReady slim path.
+  int MarkMissingPrimaryN{0};
   /// FZ2.7-B5: PrimaryConsume path frames (MarkRelit refactor).
   int MarkRelitPathPrimaryConsumeN{0};
   /// FZ2.7-B5: ChunkHasStaleDarkFaces calls during Apply (target 0).

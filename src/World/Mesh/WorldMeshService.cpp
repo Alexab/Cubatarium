@@ -953,6 +953,26 @@ int UWorldMeshService::GetLastMeshDirtyScheduleSkipN() const
   return Cache.GetLastMeshDirtyScheduleSkipN();
 }
 
+int UWorldMeshService::GetLastMeshDirtyScheduleSkipPipelineN() const
+{
+  return Cache.GetLastMeshDirtyScheduleSkipPipelineN();
+}
+
+int UWorldMeshService::GetLastMeshDirtyScheduleSkipSnapshotN() const
+{
+  return Cache.GetLastMeshDirtyScheduleSkipSnapshotN();
+}
+
+int UWorldMeshService::GetLastMeshDirtyScheduleSkipSoftDeferN() const
+{
+  return Cache.GetLastMeshDirtyScheduleSkipSoftDeferN();
+}
+
+int UWorldMeshService::GetLastMeshDirtyScheduleSkipLockedN() const
+{
+  return Cache.GetLastMeshDirtyScheduleSkipLockedN();
+}
+
 double UWorldMeshService::GetLastMeshDirtyGpuMs() const
 {
   return Cache.GetLastMeshDirtyGpuMs();

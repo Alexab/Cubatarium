@@ -3799,6 +3799,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastMeshDirtyScheduleMs = 0.0;
   LastMeshDirtyScheduleOkN = 0;
   LastMeshDirtyScheduleSkipN = 0;
+  LastMeshDirtyScheduleSkipPipelineN = 0;
+  LastMeshDirtyScheduleSkipSnapshotN = 0;
+  LastMeshDirtyScheduleSkipSoftDeferN = 0;
+  LastMeshDirtyScheduleSkipLockedN = 0;
   LastMeshDirtyGpuMs = 0.0;
   LastMeshDirtyGpuN = 0;
   LastMeshDirtySyncMs = 0.0;
@@ -4344,11 +4348,13 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (AsyncBuilder->GetInFlightCount() >= max_pipeline)
       {
         ++LastMeshDirtyScheduleSkipN;
+        ++LastMeshDirtyScheduleSkipPipelineN;
         return Dirty.end();
       }
       if (LastMeshSnapshotMs >= kSnapshotBudgetMs)
       {
         ++LastMeshDirtyScheduleSkipN;
+        ++LastMeshDirtyScheduleSkipSnapshotN;
         return Dirty.end();
       }
       {
@@ -4359,6 +4365,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         if (total_elapsed > MeshEmergeTotalBudgetMs)
         {
           ++LastMeshDirtyScheduleSkipN;
+          ++LastMeshDirtyScheduleSkipPipelineN;
           return Dirty.end();
         }
       }
@@ -4386,6 +4393,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           !ChunkHasFullyDarkFace(*it))
       {
         ++LastMeshDirtyScheduleSkipN;
+        ++LastMeshDirtyScheduleSkipSoftDeferN;
         return Dirty.RemoveAt(it);
       }
       if (AsyncBuilder->IsInFlight(*it))
@@ -4395,7 +4403,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         // mid-flight only via Active→RAA latch, not via leave-in-Dirty.
         ++DirtyScheduleSkipInflightN;
         ++LastMeshDirtyScheduleSkipN;
-        if (leave_in_under_pl(*it))
+        ++LastMeshDirtyScheduleSkipLockedN;
+        if (ShouldLeaveInDirtyUnderPlForSchedule(leave_in_under_pl(*it),
+                                                 HasDrawableGreedyMesh(*it)))
         {
           return std::next(it);
         }
@@ -4407,7 +4417,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         ++DirtyScheduleSkipInflightN;
         ++LastMeshDirtyScheduleSkipN;
-        if (leave_in_under_pl(*it))
+        ++LastMeshDirtyScheduleSkipLockedN;
+        if (ShouldLeaveInDirtyUnderPlForSchedule(leave_in_under_pl(*it),
+                                                 HasDrawableGreedyMesh(*it)))
         {
           return std::next(it);
         }
@@ -4453,8 +4465,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             HoldSoftDeferFirstMesh(*it);
           }
           ++LastMeshDirtyScheduleSkipN;
+          ++LastMeshDirtyScheduleSkipSoftDeferN;
           // Outer SoftDefer: leave coord in Dirty (std::next) so revisit can
           // rotate after near-ring drains — do not RemoveAt-steal slots.
+          // FZ2.7-P9: !drawable protect ring never leave-in (already scheduled
+          // above); outer !drawable remesh coalesce via RemoveAt when drawable.
           if (!has_drawable && horiz > kVisualStageNearFovHoriz)
           {
             return std::next(it);

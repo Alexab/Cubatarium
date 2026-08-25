@@ -137,6 +137,22 @@ public:
   {
     return LastMeshDirtyScheduleSkipN;
   }
+  int GetLastMeshDirtyScheduleSkipPipelineN() const
+  {
+    return LastMeshDirtyScheduleSkipPipelineN;
+  }
+  int GetLastMeshDirtyScheduleSkipSnapshotN() const
+  {
+    return LastMeshDirtyScheduleSkipSnapshotN;
+  }
+  int GetLastMeshDirtyScheduleSkipSoftDeferN() const
+  {
+    return LastMeshDirtyScheduleSkipSoftDeferN;
+  }
+  int GetLastMeshDirtyScheduleSkipLockedN() const
+  {
+    return LastMeshDirtyScheduleSkipLockedN;
+  }
   double GetLastMeshDirtyGpuMs() const { return LastMeshDirtyGpuMs; }
   int GetLastMeshDirtyGpuN() const { return LastMeshDirtyGpuN; }
   double GetLastMeshDirtySyncMs() const { return LastMeshDirtySyncMs; }
@@ -721,6 +737,10 @@ private:
   double LastMeshDirtyScheduleMs{0.0};
   int LastMeshDirtyScheduleOkN{0};
   int LastMeshDirtyScheduleSkipN{0};
+  int LastMeshDirtyScheduleSkipPipelineN{0};
+  int LastMeshDirtyScheduleSkipSnapshotN{0};
+  int LastMeshDirtyScheduleSkipSoftDeferN{0};
+  int LastMeshDirtyScheduleSkipLockedN{0};
   double LastMeshDirtyGpuMs{0.0};
   int LastMeshDirtyGpuN{0};
   double LastMeshDirtySyncMs{0.0};

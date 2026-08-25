@@ -1203,3 +1203,29 @@ Hold: sim&lt;135, moving slice ≤16, min_cap=3 still does not beat fat time_cap
 
 ---
 
+## FZ2.7-P8 REJECTED (manual `213856`)
+
+Uncommitted P8 (MarkMissing every slim Apply + fifo Apply floor without ready):
+opaque **660→279**, unfinished 15→19, unlit 8→16, **sim&gt;135 on 32%** frames (max 654).
+Violates BEST_PRACTICES / industrial RelightThenMesh (producer boost without Completed).
+**Reverted to P7 `8b16a492`.** Follow-on: FZ2.7-P9.
+
+---
+
+## FZ2.7-P9 (post-P8 reject / RelightThenMesh repair)
+
+| Track | Change |
+| --- | --- |
+| R0 | WT = P7; P8 discarded |
+| P9-0 | `mark_relit_invoked_n` vs schedule; emit `capture_bg_cap_n` / `capture_band_cy`; Dirty skip pipeline/snapshot/softdefer/locked |
+| P9-A | `ShouldSuppressProducerBoostWhenConsumerBoundP9` (no suppress when completed=0 + fifo starve); HighPl Apply floor only if ready≥1; `sim>135` kills Capture/Apply boost (`SimMsPrev`) |
+| P9-B | `ShouldMarkMissingOnceOnLitReady` — one-shot MarkMissing / FirstMesh when schedule_n=0 + no_mesh debt; keep PL if still !drawable without FM |
+| P9-C | SoftDefer leave-in only for drawable under PL (`ShouldLeaveInDirtyUnderPlForSchedule`); FM cap untouched |
+
+Smoke: `bin/tmp_fz27_b_test_smoke.py` ALL PASS. Release `Cubatarium.exe` rebuilt.
+**Manual SoT:** `091745` (~300 s, short of ≥600). Verdict: **not gate**. opaque med **212** (FAIL vs P7 660 / DoD &lt;400); sim med 112, sim&gt;135 **20%** (better than P8 32%); unfinished tail 4–7 but Dirty FM plateau ~170; Capture cap often 1 under fifo starve; `mark_missing_primary=0` (no storm). See canvas `manual-091745-p9`.
+
+Hold: P7 noop-remesh + keep GPU nh=8. Autofly ≠ SoT; sim&lt;135 hard.
+
+---
+

@@ -221,6 +221,10 @@ public:
   double GetLastMeshDirtyScheduleMs() const;
   int GetLastMeshDirtyScheduleOkN() const;
   int GetLastMeshDirtyScheduleSkipN() const;
+  int GetLastMeshDirtyScheduleSkipPipelineN() const;
+  int GetLastMeshDirtyScheduleSkipSnapshotN() const;
+  int GetLastMeshDirtyScheduleSkipSoftDeferN() const;
+  int GetLastMeshDirtyScheduleSkipLockedN() const;
   double GetLastMeshDirtyGpuMs() const;
   int GetLastMeshDirtyGpuN() const;
   double GetLastMeshDirtySyncMs() const;

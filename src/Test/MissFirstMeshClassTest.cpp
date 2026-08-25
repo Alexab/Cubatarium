@@ -2077,6 +2077,36 @@ int main()
            "FZ26: fat unit binding");
   }
 
+  // FZ2.7-P9: Completed-empty must not suppress Capture; Apply floor gated
+  {
+    using cutum::ApplyBinding;
+    using cutum::ShouldKillProducerBoostOnSimHot;
+    using cutum::ShouldLeaveInDirtyUnderPlForSchedule;
+    using cutum::ShouldMarkMissingOnceOnLitReady;
+    using cutum::ShouldRaiseApplyBudgetOnlyWhenReady;
+    using cutum::ShouldSuppressProducerBoostWhenConsumerBoundP9;
+    Expect(!ShouldSuppressProducerBoostWhenConsumerBoundP9(
+               1, 95, 96, ApplyBinding::TimeSlice, 2.0, 16.0, 0),
+           "P9: no suppress when completed empty + fifo starve");
+    Expect(ShouldSuppressProducerBoostWhenConsumerBoundP9(
+               1, 95, 96, ApplyBinding::TimeSlice, 2.0, 16.0, 3),
+           "P9: suppress still when completed has work");
+    Expect(ShouldKillProducerBoostOnSimHot(136.0), "P9: sim kill >135");
+    Expect(!ShouldKillProducerBoostOnSimHot(135.0), "P9: sim kill edge");
+    Expect(ShouldRaiseApplyBudgetOnlyWhenReady(1), "P9: ready≥1 raises");
+    Expect(!ShouldRaiseApplyBudgetOnlyWhenReady(0), "P9: ready=0 no raise");
+    Expect(ShouldMarkMissingOnceOnLitReady(true, true, 0, 4, true),
+           "P9: one-shot MarkMissing when schedule=0 + debt");
+    Expect(!ShouldMarkMissingOnceOnLitReady(true, true, 2, 4, true),
+           "P9: no MarkMissing when schedule>0");
+    Expect(!ShouldMarkMissingOnceOnLitReady(true, true, 0, 4, false),
+           "P9: no MarkMissing without no_mesh debt");
+    Expect(ShouldLeaveInDirtyUnderPlForSchedule(true, true),
+           "P9: leave-in only drawable");
+    Expect(!ShouldLeaveInDirtyUnderPlForSchedule(true, false),
+           "P9: !drawable never leave-in under PL");
+  }
+
   // FZ2.7-B5: cap math uses light+install unit on consume
   {
     using cutum::EarnedRelightApplyCap;

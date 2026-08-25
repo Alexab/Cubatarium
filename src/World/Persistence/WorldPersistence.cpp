@@ -1055,10 +1055,11 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
               ? telem.RelightApplyLightMsPrev /
                     static_cast<double>(telem.RelightApplyNPrev)
               : 0.0;
-      if (ShouldSuppressProducerBoostWhenConsumerBound(
+      if (ShouldSuppressProducerBoostWhenConsumerBoundP9(
               telem.RelightApplyNPrev, telem.RelightFifoN, fifo_soft_cap,
               static_cast<ApplyBinding>(telem.ApplyBindingPrev), light_unit,
-              static_cast<double>(tune.MissReservedMs)))
+              static_cast<double>(tune.MissReservedMs), completed_n) ||
+          ShouldKillProducerBoostOnSimHot(telem.SimMsPrev))
       {
         bg_cap = std::min(bg_cap, 1);
       }
@@ -1066,6 +1067,11 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     bg_cap = RelightCaptureBgFloorForFifoStarve(
         bg_cap, telem.RelightFifoN, fifo_soft_cap, completed_n, inflight_n,
         RelightApplyCapUnitMs(unit_ms_prev, light_unit, install_unit));
+    if (ShouldKillProducerBoostOnSimHot(telem.SimMsPrev))
+    {
+      // Kill-switch: do not keep fifo-starve Capture floor under hot sim.
+      bg_cap = std::min(bg_cap, 1);
+    }
   }
   if (!enter_fov_lit && frame_ms_so_far >= capture_hot_skip_ms &&
       visual_holes && focus_pending_mid)
@@ -1083,14 +1089,16 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   {
     const auto &telem_pl = world.GetPhysicsTelemetry();
     const int fifo_soft = tune.RelightFifoSoftCap;
-    if (!ShouldSuppressProducerBoostWhenConsumerBound(
+    if (!ShouldSuppressProducerBoostWhenConsumerBoundP9(
             telem_pl.RelightApplyNPrev, telem_pl.RelightFifoN, fifo_soft,
             static_cast<ApplyBinding>(telem_pl.ApplyBindingPrev),
             telem_pl.RelightApplyNPrev > 0
                 ? telem_pl.RelightApplyLightMsPrev /
                       static_cast<double>(telem_pl.RelightApplyNPrev)
                 : 0.0,
-            static_cast<double>(tune.MissReservedMs)))
+            static_cast<double>(tune.MissReservedMs),
+            static_cast<int>(world.GetRelightCompletedSize())) &&
+        !ShouldKillProducerBoostOnSimHot(telem_pl.SimMsPrev))
     {
       bg_cap = std::max(bg_cap, std::max(2, EnterFovRelightCaptureBudget() / 2));
     }

@@ -150,6 +150,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
                                     bool finalize_pending_gate,
                                     bool primary_only)
 {
+  ++PhysicsTelemetryData.MarkRelitInvokedN;
   const auto total_t0 = Clock::now();
   const bool enter_gate = EnterLitGateActive;
   // FZ2.7-B1e: CountEnterFovLitDebt is O(R²)×stale-probe — only needed for
@@ -355,8 +356,42 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           focus_horiz);
 
       const auto plan_t0 = Clock::now();
-      const LitApplyPlan plan = PlanColumnInstall(in);
+      LitApplyPlan plan = PlanColumnInstall(in);
       PhysicsTelemetryData.MarkRelitPlanMs += ElapsedMs(plan_t0, Clock::now());
+      const bool focus_no_mesh_debt =
+          PhysicsTelemetryData.ColumnLoadedNoMeshN > 0 ||
+          PhysicsTelemetryData.UnfinishedVisual > 0;
+      if (ShouldMarkMissingOnceOnLitReady(
+              finalize_pending_gate, slim_install || consume_mode,
+              plan.schedule_n, focus_horiz, focus_no_mesh_debt))
+      {
+        const int dirty_min = std::max(0, sea - CHUNK_SIZE);
+        const int dirty_max =
+            std::min(column_max_y, sea + CHUNK_SIZE * 2);
+        const int marked = MeshService->MarkMissingSlicesDirtyPriority(
+            BlockWorld, ground, dirty_min, dirty_max);
+        PhysicsTelemetryData.MarkMissingPrimaryN += marked;
+        PhysicsTelemetryData.MarkRelitScheduleN += marked;
+        if (marked > 0)
+        {
+          plan.schedule_n += marked;
+          plan.fsm_after = ColumnEmergeState::Meshing;
+          if (!in.has_fm_ticket)
+          {
+            plan.enqueue_first_mesh = true;
+            plan.first_mesh_column = key;
+          }
+        }
+        else if (plan.schedule_n == 0 && !in.has_fm_ticket &&
+                 !in.column_has_drawable)
+        {
+          // Keep PendingLight gate until FirstMesh ticket exists.
+          plan.erase_pending_light = false;
+          plan.enqueue_first_mesh = true;
+          plan.first_mesh_column = key;
+          plan.fsm_after = ColumnEmergeState::Meshing;
+        }
+      }
       const auto exec_t0 = Clock::now();
       ExecuteLitApplyPlan(plan, key, ground, finalize_pending_gate);
       PhysicsTelemetryData.MarkRelitExecMs += ElapsedMs(exec_t0, Clock::now());

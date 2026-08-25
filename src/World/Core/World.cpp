@@ -4806,12 +4806,15 @@ void UWorld::TickAsyncChunkSystems()
   const bool high_pl_cruise =
       ShouldUseHighPlCruiseApplyFloor(moving, pending_light_focus_n) &&
       vb_focus_n <= 50;
+  const int ready_for_floor =
+      AsyncRelight ? static_cast<int>(AsyncRelight->GetCompletedSize()) : 0;
   drain_budget = CruiseRelightApplyBudget(
       moving, PhysicsTelemetryData.RelightApplyMsPrev, drain_budget,
       PhysicsTelemetryData.RelightFifoPinDropNPrev == 0,
       near_pending_light || underfeet_pending_light,
       PhysicsTelemetryData.RelightApplyNPrev);
-  if (high_pl_cruise)
+  if (high_pl_cruise && ShouldRaiseApplyBudgetOnlyWhenReady(ready_for_floor) &&
+      !ShouldKillProducerBoostOnSimHot(PhysicsTelemetryData.SimMsPrev))
   {
     drain_budget = std::max(drain_budget, HighPlCruiseApplyFloorN());
   }
@@ -4833,10 +4836,8 @@ void UWorld::TickAsyncChunkSystems()
             ? (PhysicsTelemetryData.RelightApplyInstallMsPrev /
                static_cast<double>(PhysicsTelemetryData.RelightApplyNPrev))
             : 0.0;
-    const int ready_n =
-        AsyncRelight ? static_cast<int>(AsyncRelight->GetCompletedSize()) : 0;
     drain_budget = ClampCruiseDrainToReadyCheap(
-        drain_budget, ready_n,
+        drain_budget, ready_for_floor,
         RelightApplyCapUnitMs(apply_unit_prev, light_unit_prev,
                               install_unit_prev));
   }
@@ -8817,6 +8818,7 @@ void UWorld::UpdateFrameHitchDiagnostics(double draw_scene_mks,
                                PhysicsTelemetryData.PhysicsStepMs > 50.0 ||
                                MovementDiag.deltaTime > 0.1f;
   MovementDiag.simMs = sim_ms;
+  PhysicsTelemetryData.SimMsPrev = sim_ms;
   MovementDiag.swapWaitMs = LastSwapWaitMs;
   MovementDiag.unaccountedMs = wall_ms - sim_ms - LastSwapWaitMs;
 }
