@@ -4051,12 +4051,15 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         {
           // Keep near-ring remesh so black faces on neighbors of a hole repair
           // while FirstMesh runs (manual 090713: miss=1 + dark_stale≈2700).
+          // FZ2.7-P13 R4: stale FullyDark in protect ring must not be pruned.
           if (MeshFocusValid)
           {
             const int horiz =
                 std::max(std::abs(it->x - MeshFocusGroundChunk.x),
                          std::abs(it->z - MeshFocusGroundChunk.z));
-            if (horiz <= StarveRemeshKeepHoriz)
+            if (horiz <= StarveRemeshKeepHoriz ||
+                (horiz <= RelightFifoTrimProtectHoriz() &&
+                 ChunkHasStaleDarkFaces(*it, world)))
             {
               ++it;
               continue;
@@ -4502,12 +4505,15 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (StarveRemeshForHoles && HasDrawableGreedyMesh(*it))
       {
         // Keep near-ring remesh for neighbor black-face repair beside holes.
+        // FZ2.7-P13 R4: stale FullyDark within FIFO protect ring always schedules.
         if (MeshFocusValid)
         {
           const int horiz =
               std::max(std::abs(it->x - MeshFocusGroundChunk.x),
                        std::abs(it->z - MeshFocusGroundChunk.z));
-          if (horiz <= StarveRemeshKeepHoriz)
+          if (horiz <= StarveRemeshKeepHoriz ||
+              (horiz <= RelightFifoTrimProtectHoriz() &&
+               ChunkHasStaleDarkFaces(*it, world)))
           {
             // fall through to schedule
           }
@@ -4957,12 +4963,15 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (StarveRemeshForHoles && HasDrawableGreedyMesh(*it))
       {
         // Keep near-ring remesh for neighbor black-face repair beside holes.
+        // FZ2.7-P13 R4: stale FullyDark within FIFO protect ring always schedules.
         if (MeshFocusValid)
         {
           const int horiz =
               std::max(std::abs(it->x - MeshFocusGroundChunk.x),
                        std::abs(it->z - MeshFocusGroundChunk.z));
-          if (horiz > StarveRemeshKeepHoriz)
+          if (horiz > StarveRemeshKeepHoriz &&
+              !(horiz <= RelightFifoTrimProtectHoriz() &&
+                ChunkHasStaleDarkFaces(*it, world)))
           {
             it = Dirty.RemoveAt(it);
             continue;

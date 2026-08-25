@@ -220,6 +220,8 @@ struct PhysicsTelemetry
   int DirtyAdmitBudgetEnd{0};
   int FirstMeshScheduleCap{0};
   int RemeshScheduleCap{0};
+  /// FZ2.7-P13 R5: lit-settle remesh protect armed this frame (0/1).
+  int RemeshProtectLitSettleN{0};
   /// Per-frame TrimFarRelightFifo drops (not cumulative RelightFifoDropped).
   int RelightTrimFarN{0};
   /// P1: per-frame FIFO drops (overflow + trim) and pin keys skipped.

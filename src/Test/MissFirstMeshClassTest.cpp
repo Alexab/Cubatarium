@@ -2083,6 +2083,61 @@ int main()
            "P12 A2: backpressure does not restore remesh floor");
   }
 
+  // FZ2.7-P13: lit-settle remesh protect over steal
+  {
+    using cutum::ShouldProtectLitSettleRemesh;
+    using cutum::ApplyRemeshAdmitBackpressure;
+    using cutum::RemeshAdmitBackpressureInput;
+    Expect(ShouldProtectLitSettleRemesh(true, 3200, 23),
+           "P13 R1: holes+stale+RemeshQ → protect");
+    Expect(!ShouldProtectLitSettleRemesh(true, 100, 23),
+           "P13 R1: stale≤200 → no protect");
+    Expect(!ShouldProtectLitSettleRemesh(false, 3200, 23),
+           "P13 R1: !holes → no protect");
+    Expect(!ShouldProtectLitSettleRemesh(true, 3200, 0),
+           "P13 R1: empty RemeshQ → no protect");
+
+    MeshWorkAdmissionInput in;
+    in.pending_gpu = 6;
+    in.pending_gpu_queued = 0;
+    in.pending_gpu_kicked = 6;
+    in.visual_holes = true;
+    in.moving = true;
+    in.nearest_miss_cy = 3;
+    in.nearest_miss_horiz = 4;
+    in.ring_depth = 8;
+    in.prev_mode = static_cast<uint8_t>(MeshWorkAdmission::Mode::HoleDrain);
+    in.unfinished_visual = 68;
+    in.dirty_fm_n = 16;
+    in.no_mesh_n = 68;
+    in.remesh_queue_n = 23;
+    in.dark_face_stale_near_n = 3200;
+    auto prot = ComputeMeshWorkAdmission(in);
+    Expect(prot.steal_remesh_to_fm, "P13 R2: steal still arms FM boost");
+    Expect(prot.protect_lit_settle_remesh, "P13 R2: protect flag set");
+    Expect(prot.remesh_schedule >= 2,
+           "P13 R2: steal+stale → remesh_schedule≥2");
+    Expect(prot.first_mesh_schedule >= 6, "P13 R2: FM cap retained");
+    RemeshAdmitBackpressureInput bp{};
+    bp.stream_pressure = 2;
+    bp.fifo_n = 96;
+    bp.dirty_n = 500;
+    bp.relight_fifo_soft_cap = 96;
+    bp.dirty_thrash_soft_cap = 400;
+    bp.fifo_admit_frac = 0.75f;
+    bp.miss_active = true;
+    bp.remesh_queue_n = 23;
+    bp.protect_lit_settle_remesh = prot.protect_lit_settle_remesh;
+    ApplyRemeshAdmitBackpressure(prot, bp);
+    Expect(prot.remesh_schedule >= 2,
+           "P13 R2: backpressure keeps lit-settle remesh floor");
+
+    in.dark_face_stale_near_n = 0;
+    auto steal_only = ComputeMeshWorkAdmission(in);
+    Expect(steal_only.remesh_schedule == 0,
+           "P13 R2: steal without stale still remesh=0");
+  }
+
   // P1: ShouldForcePinColumnPriority
   {
     using cutum::ShouldForcePinColumnPriority;

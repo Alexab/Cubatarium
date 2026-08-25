@@ -1386,3 +1386,28 @@ Code land complete (A1–A6, B0–B4, C1–C5). Capture untouched. **Final gate*
 
 ---
 
+## FZ27-P13 Lit-settle remesh protect
+
+**SoT:** manual `154246` after P12 — PL/FM/Capture KEEP, but `dark_face_stale~3200`, `remesh_cap` sticky=1, unlit~76 (drawable FullyDark starved).
+
+### Landed (Phase1 + Phase2 preempt from SoT sticky)
+
+| Step | Change |
+| --- | --- |
+| R1 | `ShouldProtectLitSettleRemesh(holes, stale>200, remesh_q>0)` + `dark_face_stale_near_n` input |
+| R2 | remesh floor≥2 over A2 steal / light_debt ceil; backpressure keeps floor |
+| R3 | Finalize `StarveRemeshKeepHoriz = max(adm, stale_keep 2\|3)` |
+| R4 | Cache prune/Pass2: stale FullyDark ≤ protect horiz=8 not starved |
+| R5 | telem `remesh_protect_lit_settle_n` + jsonl |
+
+**KEEP:** PL trim gate, A1 FM-on-skip-dirty, Capture, SoftDefer pin, A2 FM schedule boost.
+
+### Verification
+
+- Unit: `miss_first_mesh_class_test` OK (P13 protect + P12 steal without stale)
+- Smoke: `python bin/tmp_fz27_b_test_smoke.py` → **ALL PASS**
+- Release: `Cubatarium.exe` built (static verify PASS)
+- Manual DoD vs `154246`: remesh_cap med≥2 when stale>200; dark_face_stale ↓; unlit ≤69 (better ≤40); PL drop≈0; capture≥3; dirty_fm≥40
+
+---
+

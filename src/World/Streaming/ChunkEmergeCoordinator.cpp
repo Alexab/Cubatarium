@@ -2026,6 +2026,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.remesh_queue_n = mesh_service.GetLastDirtyRemeshN();
     ain.dirty_fm_n = mesh_service.GetLastDirtyFmN();
     ain.no_mesh_n = ain.unfinished_visual;
+    ain.dark_face_stale_near_n =
+        world.GetPhysicsTelemetry().DarkFaceStaleNearN;
     if (have_nearest_missing)
     {
       ain.nearest_miss_horiz = std::max(
@@ -2048,6 +2050,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       bin.admit_cap_yellow = tune.DirtyAdmitCapYellow;
       bin.miss_active = visual_holes || missing_visible_mesh || missing_underfeet;
       bin.remesh_queue_n = mesh_service.GetLastDirtyRemeshN();
+      bin.protect_lit_settle_remesh = early_adm.protect_lit_settle_remesh;
       ApplyRemeshAdmitBackpressure(early_adm, bin);
       mesh_service.SetMeshWorkAdmission(early_adm);
     }
@@ -3767,6 +3770,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.remesh_queue_n = mesh_service.GetLastDirtyRemeshN();
     ain.dirty_fm_n = mesh_service.GetLastDirtyFmN();
     ain.no_mesh_n = ain.unfinished_visual;
+    ain.dark_face_stale_near_n =
+        world.GetPhysicsTelemetry().DarkFaceStaleNearN;
     MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
     {
       const auto &tune = URuntimeTuning::Get();
@@ -3782,6 +3787,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       bin.admit_cap_yellow = tune.DirtyAdmitCapYellow;
       bin.miss_active = visual_holes || missing_visible_mesh || missing_underfeet;
       bin.remesh_queue_n = mesh_service.GetLastDirtyRemeshN();
+      bin.protect_lit_settle_remesh = adm.protect_lit_settle_remesh;
       ApplyRemeshAdmitBackpressure(adm, bin);
     }
     mesh_service.SetMeshWorkAdmission(adm);
@@ -3822,13 +3828,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           bin.miss_active =
               visual_holes || missing_visible_mesh || missing_underfeet;
           bin.remesh_queue_n = mesh_service.GetLastDirtyRemeshN();
+          bin.protect_lit_settle_remesh = bumped.protect_lit_settle_remesh;
           ApplyRemeshAdmitBackpressure(bumped, bin);
         }
         mesh_service.SetMeshWorkAdmission(bumped);
         mesh_schedule = std::max(mesh_schedule, 12);
       }
     }
-    mesh_service.SetStarveRemeshKeepHoriz(adm.starve_remesh_horiz);
+    {
+      const auto &pt = world.GetPhysicsTelemetry();
+      const int stale_keep = pt.DarkFaceStaleNearN > 200 ? 3 : 2;
+      mesh_service.SetStarveRemeshKeepHoriz(
+          std::max(adm.starve_remesh_horiz, stale_keep));
+    }
     if ((visual_holes || missing_underfeet || missing_visible_mesh) &&
         adm.mode != MeshWorkAdmission::Mode::Normal)
     {
@@ -3881,6 +3893,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       pt.DirtyAdmitBudgetEnd = adm.dirty_admit_budget;
       pt.FirstMeshScheduleCap = adm.first_mesh_schedule;
       pt.RemeshScheduleCap = adm.remesh_schedule;
+      pt.RemeshProtectLitSettleN = adm.protect_lit_settle_remesh ? 1 : 0;
     }
   }
   // I4b: re-assert calm dirty_tick caps after Finalize — admission floors must

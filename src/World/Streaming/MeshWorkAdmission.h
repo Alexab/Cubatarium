@@ -39,6 +39,8 @@ struct MeshWorkAdmissionInput
   int dirty_fm_n{0};
   /// FZ2.7-P12 A2: no-mesh hole count (phase1: alias unfinished_visual).
   int no_mesh_n{0};
+  /// FZ2.7-P13 R1: repairable dark faces (mesh dark, field lit).
+  int dark_face_stale_near_n{0};
 };
 
 /// Near-focus miss that blocks view / needs urgent HoleDrain (horiz≤2 or underfeet).
@@ -104,6 +106,8 @@ struct MeshWorkAdmission
   int enqueue_gpu_budget{4};
   /// FZ2.7-P12 A2: full Remesh→FM steal applied (skip remesh floor backpressure).
   bool steal_remesh_to_fm{false};
+  /// FZ2.7-P13 R1: lit-settle remesh floor armed (stale dark faces).
+  bool protect_lit_settle_remesh{false};
   Mode mode{Mode::Normal};
 };
 
@@ -129,6 +133,15 @@ inline bool ShouldStealRemeshToFirstMesh(bool holes, int unfinished, int dirty_f
     return false;
   }
   return dirty_fm * 2 < no_mesh;
+}
+
+/// FZ2.7-P13 R1: drawable FullyDark / stale faces need Remesh floor even under
+/// FM steal (manual 154246: remesh_cap sticky=1, dark_face_stale~3200).
+inline bool ShouldProtectLitSettleRemesh(bool holes, int dark_face_stale_near,
+                                         int remesh_queue_n,
+                                         int stale_thresh = 200)
+{
+  return holes && dark_face_stale_near > stale_thresh && remesh_queue_n > 0;
 }
 
 inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
@@ -409,6 +422,20 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
         std::max(out.max_schedule, out.first_mesh_schedule + out.remesh_schedule);
   }
 
+  // FZ2.7-P13 R2: keep Remesh floor under stale lit-settle even if A2 stole.
+  // FM schedule boost from steal is retained; only remesh is restored.
+  const bool protect_lit = ShouldProtectLitSettleRemesh(
+      holes, in.dark_face_stale_near_n, in.remesh_queue_n);
+  if (protect_lit &&
+      (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
+       out.mode == MeshWorkAdmission::Mode::DeepBacklog))
+  {
+    out.protect_lit_settle_remesh = true;
+    out.remesh_schedule = std::max(out.remesh_schedule, 2);
+    out.max_schedule =
+        std::max(out.max_schedule, out.first_mesh_schedule + out.remesh_schedule);
+  }
+
   // J1/K2/M2: under HoleDrain/Deep miss backlog, give Finish more wall budget
   // (Kick bias is in ChunkMeshCache kick_cut/finish_cap — keep enqueue capped).
   // M2: pending≥12 already gets Finish wall share 0.85 (was 0.82 at 12 / 0.85 at 16).
@@ -426,12 +453,19 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   {
     // Manual 153832: UV≥8 crushed first_mesh; 152933: deep RemeshQ~37 + cap=1
     // starved remesh drain (relight+mesh_emerge wall). Keep FM headroom; drain Q.
-    if (!out.steal_remesh_to_fm)
+    // FZ2.7-P13: stale protect → ceil≥2 even when RemeshQ collapsed (<32).
+    if (!out.steal_remesh_to_fm || out.protect_lit_settle_remesh)
     {
       const int remesh_floor =
-          in.remesh_queue_n >= 32 ? 2 : (in.remesh_queue_n >= 16 ? 1 : 0);
-      const int remesh_ceil = in.remesh_queue_n >= 32 ? 3 : 1;
-      if (miss_tops && in.remesh_queue_n <= 0)
+          out.protect_lit_settle_remesh
+              ? 2
+              : (in.remesh_queue_n >= 32 ? 2
+                                         : (in.remesh_queue_n >= 16 ? 1 : 0));
+      const int remesh_ceil =
+          out.protect_lit_settle_remesh
+              ? (in.remesh_queue_n >= 32 ? 3 : 2)
+              : (in.remesh_queue_n >= 32 ? 3 : 1);
+      if (miss_tops && in.remesh_queue_n <= 0 && !out.protect_lit_settle_remesh)
       {
         out.remesh_schedule = 0;
       }
@@ -494,6 +528,8 @@ struct RemeshAdmitBackpressureInput
   int admit_cap_yellow{1};
   bool miss_active{false};
   int remesh_queue_n{0};
+  /// FZ2.7-P13: do not clamp remesh below lit-settle floor.
+  bool protect_lit_settle_remesh{false};
 };
 
 inline bool ShouldApplyRemeshAdmitBackpressure(
@@ -539,7 +575,15 @@ inline void ApplyRemeshAdmitBackpressure(MeshWorkAdmission &adm,
   // Keep at least 1 remesh slot under miss: dual-Q already prefers FirstMesh;
   // remesh_schedule=0 starved lit settle and caused flicker / late light updates.
   // FZ2.7-P12 A2: unfinished FM-starve steal keeps remesh at 0.
-  if (!adm.steal_remesh_to_fm)
+  // FZ2.7-P13: lit-settle protect restores floor≥2 even under steal.
+  if (adm.protect_lit_settle_remesh || in.protect_lit_settle_remesh)
+  {
+    adm.protect_lit_settle_remesh = true;
+    adm.remesh_schedule = std::max(adm.remesh_schedule, 2);
+    const int remesh_cap = in.remesh_queue_n >= 32 ? 3 : 2;
+    adm.remesh_schedule = std::min(adm.remesh_schedule, remesh_cap);
+  }
+  else if (!adm.steal_remesh_to_fm)
   {
     const int remesh_cap = in.remesh_queue_n >= 32
                                ? (in.miss_active ? 3 : 2)
