@@ -178,6 +178,25 @@ inline bool ShouldEnqueueWitnessOwnedFirstMesh(bool focus_missing_mesh,
   return miss_horiz >= 0 && miss_horiz <= 4;
 }
 
+/// SRBR-P0: Dirty only for resident chunks (!HasChunk = ghost thrash, 112418).
+inline bool ShouldAdmitResidentDirty(bool has_chunk) { return has_chunk; }
+
+inline bool ShouldPruneGhostDirtyCoord(bool has_chunk) { return !has_chunk; }
+
+/// Bulk prune per emerge/rebuild tick (schedule RemoveAt×54/frame is the tax).
+inline int GhostDirtyPruneCapPerTick(bool visual_holes)
+{
+  return visual_holes ? 64 : 24;
+}
+
+/// SRBR-P0: sticky underfeet/near miss FirstMesh only when the slice is loaded.
+inline bool ShouldGuaranteeResidentWitnessFirstMesh(bool has_chunk,
+                                                    bool no_drawable,
+                                                    int miss_horiz)
+{
+  return has_chunk && no_drawable && miss_horiz >= 0 && miss_horiz <= 1;
+}
+
 /// Era23 P2: SoftDefer empty PreferKick only when GPU queue is stuck on the
 /// same coord (not empty placeholder apply storm).
 inline bool ShouldPreferKickSoftDeferEmptyStuck(bool soft_defer_empty,

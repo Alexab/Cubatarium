@@ -1740,6 +1740,52 @@ int UChunkMeshCache::DropFarFirstMeshDirtyBeyondRadius(
   return dropped;
 }
 
+int UChunkMeshCache::PruneGhostDirty(UBlockWorld &world, int cap)
+{
+  if (cap <= 0)
+  {
+    return 0;
+  }
+  int n = 0;
+  auto prune_coord = [&](glm::ivec3 coord) {
+    return ShouldPruneGhostDirtyCoord(!world.GetChunkManager().HasChunk(coord));
+  };
+  for (auto it = Dirty.begin(); it != Dirty.end() && n < cap;)
+  {
+    if (!prune_coord(*it))
+    {
+      ++it;
+      continue;
+    }
+    RemeshAfterApply.erase(*it);
+    SoftDeferHeld.erase(*it);
+    it = Dirty.RemoveAt(it);
+    ++n;
+  }
+  for (auto it = RemeshAfterApply.begin();
+       it != RemeshAfterApply.end() && n < cap;)
+  {
+    if (!prune_coord(*it))
+    {
+      ++it;
+      continue;
+    }
+    it = RemeshAfterApply.erase(it);
+    ++n;
+  }
+  for (auto it = SoftDeferHeld.begin(); it != SoftDeferHeld.end() && n < cap;)
+  {
+    if (!prune_coord(*it))
+    {
+      ++it;
+      continue;
+    }
+    it = SoftDeferHeld.erase(it);
+    ++n;
+  }
+  return n;
+}
+
 bool UChunkMeshCache::HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y,
                                            int max_y) const
 {
@@ -1932,6 +1978,11 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
       it = SoftDeferHeld.erase(it);
       continue;
     }
+    if (!ShouldAdmitDirtyCoord(coord))
+    {
+      it = SoftDeferHeld.erase(it);
+      continue;
+    }
     const bool still_deferred =
         DeferMeshUntilLit && DeferMeshUntilLit(coord);
     bool in_focus = false;
@@ -1972,6 +2023,10 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
 
 void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 {
+  if (!ShouldAdmitDirtyCoord(chunkCoord))
+  {
+    return;
+  }
   // Era51: EnterTerminalHeld SoftDefer survives MarkDirty under enter gate.
   const bool keep_terminal =
       EnterGpuQuiesceDrain && EnterTerminalHeld.count(chunkCoord) > 0;
@@ -2070,6 +2125,10 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 }
 void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
 {
+  if (!ShouldAdmitDirtyCoord(chunkCoord))
+  {
+    return;
+  }
   const bool keep_terminal =
       EnterGpuQuiesceDrain && EnterTerminalHeld.count(chunkCoord) > 0;
   if (keep_terminal)
@@ -3829,6 +3888,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastMeshDirtyGpuN = 0;
   LastMeshDirtySyncMs = 0.0;
   LastMeshDirtySyncN = 0;
+  LastMeshDirtyPruneN += PruneGhostDirty(
+      world, GhostDirtyPruneCapPerTick(StarveRemeshForHoles));
   LastDirtyTouchN = static_cast<int>(Dirty.GetCount());
   LastDirtyFmN = static_cast<int>(Dirty.GetFirstMeshCount());
   LastDirtyRemeshN = static_cast<int>(Dirty.GetRemeshCount());

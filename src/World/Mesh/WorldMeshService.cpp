@@ -58,6 +58,16 @@ void UWorldMeshService::SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> f
   Cache.SetDeferMeshUntilLitFn(std::move(fn));
 }
 
+void UWorldMeshService::SetChunkResidentFn(std::function<bool(glm::ivec3)> fn)
+{
+  Cache.SetChunkResidentFn(std::move(fn));
+}
+
+int UWorldMeshService::PruneGhostDirty(UBlockWorld &world, int cap)
+{
+  return Cache.PruneGhostDirty(world, cap);
+}
+
 void UWorldMeshService::SetOnLitPendingNeededFn(
     std::function<void(glm::ivec3)> fn)
 {
@@ -269,6 +279,10 @@ void UWorldMeshService::NotifyChunkUnloaded(glm::ivec3 chunk_coord)
 
 void UWorldMeshService::MarkDirty(glm::ivec3 chunk_coord)
 {
+  if (!Cache.ShouldAdmitDirtyCoord(chunk_coord))
+  {
+    return;
+  }
   Cache.MarkDirty(chunk_coord);
   NotifyChunkBlocksChanged(chunk_coord);
   if (OnMeshColumnDirtyFn)
@@ -290,6 +304,10 @@ void UWorldMeshService::MarkDirtyPriority(glm::ivec3 chunk_coord)
     }
   }
 #endif
+  if (!Cache.ShouldAdmitDirtyCoord(chunk_coord))
+  {
+    return;
+  }
   Cache.MarkDirtyPriority(chunk_coord);
   NotifyChunkBlocksChanged(chunk_coord);
   if (OnMeshColumnDirtyFn)

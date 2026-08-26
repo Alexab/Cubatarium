@@ -442,6 +442,19 @@ public:
   {
     DeferMeshUntilLit = std::move(fn);
   }
+  /// SRBR-P0: optional HasChunk gate for MarkDirty* (unset = admit, tests).
+  void SetChunkResidentFn(std::function<bool(glm::ivec3)> fn)
+  {
+    ChunkResidentFn = std::move(fn);
+  }
+  bool ShouldAdmitDirtyCoord(glm::ivec3 coord) const
+  {
+    if (!ChunkResidentFn)
+    {
+      return true;
+    }
+    return ChunkResidentFn(coord);
+  }
   /// Era15 TD-050: Unlit/dark publish → LitPending (Note+RemeshSeam in World).
   void SetOnLitPendingNeededFn(std::function<void(glm::ivec3)> fn)
   {
@@ -521,6 +534,8 @@ public:
   /// (163559: dirty_fm≈192 starved nh≤2 witness while rim FM flooded queue).
   int DropFarFirstMeshDirtyBeyondRadius(glm::ivec3 center_chunk,
                                         int keep_radius, int keep_cy = -1);
+  /// SRBR-P0: Remove Dirty / RemeshAfterApply coords without a resident chunk.
+  int PruneGhostDirty(UBlockWorld &world, int cap);
   /// Chebyshev radius for SyncRebuildVisibleMissing hole-fill (1=underfeet).
   void SetSyncHoleFillRadius(int radius_chunks)
   {
@@ -877,6 +892,7 @@ private:
   /// When MaxHorizontalDist >= 0, allow this many farther schedules/frame.
   int MeshScheduleOverflowPerFrame{0};
   std::function<bool(glm::ivec3)> DeferMeshUntilLit;
+  std::function<bool(glm::ivec3)> ChunkResidentFn;
   std::function<void(glm::ivec3)> OnLitPendingNeeded;
   std::function<void(glm::ivec3)> OnSoftDeferHeld;
   std::function<void(glm::ivec3)> OnLitDrawableCommitted;

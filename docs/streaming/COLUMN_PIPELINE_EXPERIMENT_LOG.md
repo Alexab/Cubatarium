@@ -1589,3 +1589,49 @@ Operator: manual eye ≥180s vs `170807` still recommended (autofly ≠ visual m
 **Bisect:** code-path forensics (not full binary A/B): MarkDirtyPriority Forgot when !soft_undrawn on !Drawable+inflight; 100413 discard frames 100%% remesh_protect + dirty_touch thrash.
 
 ---
+
+## SRBR-P0 Ghost Dirty drain + underfeet miss ownership (post `112418`)
+
+**SoT:** manual `perf_20260826-112418_14164.jsonl` after P17 SoftDefer KEEP — discard/stale cured; long land stand: `skip_orphan` med~54, `dirty_n` plateau~99, sticky miss `(-2,0,4)` nh=0, stream~41 (dirty_tick~27).
+
+### Root cause
+
+| Finding | Evidence |
+| --- | --- |
+| Ghost Dirty flood | schedule RemoveAt×~54/frame for `!HasChunk` |
+| Re-admit without resident | MarkDirty* / pin_isolated_miss without HasChunk |
+| Underfeet miss ownership | sticky nh≤1 !drawable without guaranteed FM when loaded |
+
+### Landed
+
+| Step | Change |
+| --- | --- |
+| A | `ShouldAdmitResidentDirty` + `SetChunkResidentFn(HasChunk)` on MarkDirty* |
+| B | `PruneGhostDirty` bulk cap (64 holes / 24 else) before Dirty touch sample |
+| C | `ShouldGuaranteeResidentWitnessFirstMesh` nh≤1 + P17 age>300 require HasChunk |
+| D | Units in `MissFirstMeshClassTest` |
+
+**KEEP:** SoftDefer Site B / floor; P13 remesh protect; miss_undrawn; MaxAge decay; no Capture++.
+
+### Verification
+
+- Unit + `tmp_fz27_b_test_smoke.py`
+- SoftDefer: `fz-ne-frontier-stand` + `tmp_audit_ne_frontier_stand.py` vs `104722`
+- Plateau: `fz-manual-plateau` (no stream/VB regress)
+- Manual ≥180s land stand keep≥160: skip_orphan≤10, miss_frac≤0.5, unf late≤40, VB≤70, stream≤30, discard≤0.05
+
+### Results
+
+| Gate | Result | Evidence |
+| --- | --- | --- |
+| Unit + smoke | **PASS** | `miss_first_mesh_class_test` OK; smoke ALL PASS |
+| Autofly SoftDefer | **PASS** (retry) | `134508` SoftDefer audit **OVERALL PASS** (floor 1.26, SiteB 0.03, stuck 4, keep 169); first `133715` stuck_med=9 flaky FAIL |
+| Autofly plateau | **ABORT** | hang-kill 230s + truncated jsonl |
+| Ghost Dirty metric | **PASS** | skip_orphan med **0** (112418 **54**); prune_n med **61–64**; dirty_tick **0.7–2ms** (was ~24) |
+| Miss/VB heal | **FAIL** | miss sticky; VB late **109–111**; schedule_ok med **1–2** (was ~6) — expected residual → P1 |
+| flight_sim gates | FAIL | wall/PL/EH fail (prep dominate); SoftDefer KEEP is SoT for this package |
+| Manual stand DoD | pending | need ≥180s land stand keep≥160 vs `112418` |
+
+**Verdict: SRBR-P0 PARTIAL PASS** — ghost Dirty drain + SoftDefer KEEP green; VB/miss/stream residual for **P1**. Working tree atop `1f3f7675`. Logs: SoftDefer `perf_20260826-134508_20740.jsonl` (PASS), first `133715` (stuck flaky).
+
+---

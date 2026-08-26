@@ -411,6 +411,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_service.SetColumnFlowContainsFn(
         [this](glm::ivec2 col)
         { return GetColumnFlowExecutor().HasRepairTicket(col); });
+    mesh_service.SetChunkResidentFn(
+        [this](glm::ivec3 chunk_coord)
+        {
+          UWorld *world_ptr = SoftDeferPolicy.world;
+          if (!world_ptr)
+          {
+            return true;
+          }
+          return world_ptr->GetBlockWorld().GetChunkManager().HasChunk(
+              chunk_coord);
+        });
     SoftDeferCallbacksInstalled = true;
   }
   prep_softdefer_setup_ms = prep_ms_since(prep_t);
@@ -3356,11 +3367,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       {
         return;
       }
+      const bool resident =
+          world.GetBlockWorld().GetChunkManager().HasChunk(isolated_hole);
       const bool already_owned =
           mesh_service.IsChunkMeshDirty(isolated_hole) ||
           mesh_service.IsRemeshAfterApplyPending(isolated_hole) ||
           mesh_service.HasInflightMeshBuild(isolated_hole);
-      if (!already_owned &&
+      // SRBR-P0: never re-admit Dirty for ghosts; FirstMesh ticket still OK.
+      if (ShouldAdmitResidentDirty(resident) && !already_owned &&
           !mesh_service.HasMeshSatisfyingColumnReady(isolated_hole) &&
           !mesh_service.IsPendingGpuApply(isolated_hole))
       {
@@ -3488,8 +3502,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         }
         // FZ2.7-P17: long stand + sticky miss — column-owned FirstMesh even for
         // cy<=1 when heal_deferred left underfeet orphaned (manual 100413).
+        // SRBR-P0: only if the slice is resident (112418 ghost Dirty).
+        const bool miss_resident =
+            world.GetBlockWorld().GetChunkManager().HasChunk(isolated_hole);
         if (!moving && missing_visible_mesh && no_drawable &&
-            MissWitnessAgeFrames > 300)
+            MissWitnessAgeFrames > 300 && miss_resident)
         {
           const glm::ivec2 miss_xz(isolated_hole.x, isolated_hole.z);
           if (!exec.Scheduler().Contains(miss_xz, ColumnWorkKind::FirstMesh))
@@ -3502,6 +3519,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             owned.cy = isolated_hole.y;
             exec.Enqueue(owned);
           }
+        }
+        if (ShouldGuaranteeResidentWitnessFirstMesh(miss_resident, no_drawable,
+                                                    nh))
+        {
+          pin_isolated_miss(116);
         }
       }
 

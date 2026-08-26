@@ -57,6 +57,8 @@ public:
   void ClearMeshVerticalPriority();
   void SetMeshForwardBias(float bias_k, glm::vec2 forward_xz);
   void SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn);
+  void SetChunkResidentFn(std::function<bool(glm::ivec3)> fn);
+  int PruneGhostDirty(UBlockWorld &world, int cap);
   void SetOnLitPendingNeededFn(std::function<void(glm::ivec3)> fn);
   void SetOnSoftDeferHeldFn(std::function<void(glm::ivec3)> fn);
   void SetOnLitDrawableCommittedFn(std::function<void(glm::ivec3)> fn);

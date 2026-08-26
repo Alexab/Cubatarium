@@ -2191,6 +2191,33 @@ int main()
            "P17: low VB → no stand heal hint");
   }
 
+  // SRBR-P0: ghost Dirty gate + resident underfeet FirstMesh
+  {
+    using cutum::ShouldAdmitResidentDirty;
+    using cutum::ShouldPruneGhostDirtyCoord;
+    using cutum::GhostDirtyPruneCapPerTick;
+    using cutum::ShouldGuaranteeResidentWitnessFirstMesh;
+    using cutum::ShouldEnqueueWitnessOwnedFirstMesh;
+    Expect(ShouldAdmitResidentDirty(true), "P0: resident admits Dirty");
+    Expect(!ShouldAdmitResidentDirty(false), "P0: ghost does not admit Dirty");
+    Expect(ShouldPruneGhostDirtyCoord(false), "P0: !HasChunk prune");
+    Expect(!ShouldPruneGhostDirtyCoord(true), "P0: HasChunk keep Dirty");
+    Expect(GhostDirtyPruneCapPerTick(true) == 64, "P0: holes prune cap 64");
+    Expect(GhostDirtyPruneCapPerTick(false) == 24, "P0: no-holes prune cap 24");
+    Expect(ShouldGuaranteeResidentWitnessFirstMesh(true, true, 0),
+           "P0: nh=0 resident !drawable FM");
+    Expect(ShouldGuaranteeResidentWitnessFirstMesh(true, true, 1),
+           "P0: nh=1 resident !drawable FM");
+    Expect(!ShouldGuaranteeResidentWitnessFirstMesh(false, true, 0),
+           "P0: ghost miss no FM guarantee");
+    Expect(!ShouldGuaranteeResidentWitnessFirstMesh(true, false, 0),
+           "P0: drawable no FM guarantee");
+    Expect(!ShouldGuaranteeResidentWitnessFirstMesh(true, true, 2),
+           "P0: nh=2 not underfeet guarantee");
+    Expect(ShouldEnqueueWitnessOwnedFirstMesh(true, 2, true),
+           "P0 KEEP: U2 nh=2 still owned FM");
+  }
+
   // P1: ShouldForcePinColumnPriority
   {
     using cutum::ShouldForcePinColumnPriority;
