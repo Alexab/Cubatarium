@@ -60,10 +60,11 @@ int main()
   Expect(!IsMissFirstMeshClass(true, 5, 5), "cy5 mh5 outside class");
   Expect(!IsMissFirstMeshClass(false, 0, 0), "no holes → no class");
 
-  Expect(IsNearFocusMissUrgent(true, false, 2), "nh2 near urgent");
-  Expect(!IsNearFocusMissUrgent(true, false, 4), "nh4 rim not urgent");
-  Expect(IsNearFocusMissUrgent(true, true, 5), "underfeet urgent");
-  Expect(!IsNearFocusMissUrgent(false, false, 0), "no miss not urgent");
+    Expect(IsNearFocusMissUrgent(true, false, 2), "nh2 near urgent");
+    Expect(IsNearFocusMissUrgent(true, false, 4), "P17: nh4 mid-rim urgent");
+    Expect(!IsNearFocusMissUrgent(true, false, 5), "nh5 rim not urgent");
+    Expect(IsNearFocusMissUrgent(true, true, 5), "underfeet urgent");
+    Expect(!IsNearFocusMissUrgent(false, false, 0), "no miss not urgent");
 
   {
     MeshWorkAdmissionInput near{};
@@ -2169,12 +2170,25 @@ int main()
            "P16 U2: miss nh=0 !drawable → owned FM");
     Expect(ShouldEnqueueWitnessOwnedFirstMesh(true, 2, true),
            "P16 U2: miss nh=2 !drawable → owned FM");
-    Expect(!ShouldEnqueueWitnessOwnedFirstMesh(true, 3, true),
-           "P16 U2: nh=3 no owned FM");
+    Expect(ShouldEnqueueWitnessOwnedFirstMesh(true, 4, true),
+           "P17: miss nh=4 !drawable → owned FM");
+    Expect(!ShouldEnqueueWitnessOwnedFirstMesh(true, 5, true),
+           "P17: nh=5 no owned FM");
     Expect(!ShouldEnqueueWitnessOwnedFirstMesh(false, 1, true),
            "P16 U2: !miss → no owned FM");
     Expect(!ShouldEnqueueWitnessOwnedFirstMesh(true, 1, false),
            "P16 U2: drawable → no owned FM");
+  }
+
+  // FZ2.7-P17: stand VB heal ownership hint
+  {
+    using cutum::ShouldPreferStandVbHealOwnership;
+    Expect(ShouldPreferStandVbHealOwnership(false, 99, 200, 1755),
+           "P17: stand VB+stale → heal ownership");
+    Expect(!ShouldPreferStandVbHealOwnership(true, 99, 200, 1755),
+           "P17: moving → no stand heal hint");
+    Expect(!ShouldPreferStandVbHealOwnership(false, 10, 200, 1755),
+           "P17: low VB → no stand heal hint");
   }
 
   // P1: ShouldForcePinColumnPriority

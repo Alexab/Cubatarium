@@ -57,7 +57,8 @@ inline bool IsNearFocusMissUrgent(bool visual_holes, bool missing_underfeet,
   {
     return false;
   }
-  return nearest_miss_horiz >= 0 && nearest_miss_horiz <= 2;
+  // FZ2.7-P17: mid-rim mh<=4 (was <=2) — sticky miss on cruise 100413/221516.
+  return nearest_miss_horiz >= 0 && nearest_miss_horiz <= 4;
 }
 
 /// Era20 I-M1: FirstMesh priority class while FOV holes (manual 214034).
@@ -142,6 +143,21 @@ inline bool ShouldProtectLitSettleRemesh(bool holes, int dark_face_stale_near,
                                          int stale_thresh = 200)
 {
   return holes && dark_face_stale_near > stale_thresh && remesh_queue_n > 0;
+}
+
+/// FZ2.7-P17: on long stand with sticky VB + stale plateau, keep remesh
+/// protect (floor) but signal callers to prefer column-owned heal over
+/// full-ring Dirty thrash. True when idle long enough that eye-black is stuck.
+inline bool ShouldPreferStandVbHealOwnership(bool moving,
+                                             int visible_black_focus_n,
+                                             int stand_age_frames,
+                                             int dark_face_stale_near)
+{
+  if (moving || visible_black_focus_n < 40 || dark_face_stale_near < 200)
+  {
+    return false;
+  }
+  return stand_age_frames >= 180;
 }
 
 inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,

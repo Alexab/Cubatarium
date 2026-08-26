@@ -1538,6 +1538,54 @@ Operator: manual eye ≥180s vs `170807` still recommended (autofly ≠ visual m
 
 **Scenario note:** cold World_164 save was at `(-31,58)` after manuals; yaw 270 = south → ocean keep~49. `fz-inring-cruise` pins SoT via `--teleport-cruise --cruise-cx 118 --cruise-cz 86 --yaw 180` (west).
 
-**SHA (working tree, uncommitted P16):** base `4b7ec652` (P15); Release build used for autofly above.
+**SHA:** `ea854043` (P16 landed). Manual SoT residual: `100413` (see P17).
+
+---
+
+## FZ27-P17 Stand discard / VB never-heal / mid-rim miss (post `100413`)
+
+**SoT:** manual `perf_20260826-100413_20156.jsonl` after P16 — SoftDefer OK; long cruise+stand: wall~132, `stream_ms`~40, VB_focus **99 sticky**, `mesh_discarded_late` ~0.47/spike, unf↑ on stand, miss sticky nh~2–3.
+
+### Root cause (forensics)
+
+| Finding | Evidence |
+| --- | --- |
+| Discard = Forgot inflight | `MarkDirtyPriority` !Drawable Forgot when `!soft_undrawn` |
+| Dirty thrash on stand | discard frames: dirty_touch 67–143, remesh_protect=1, orphan~45 |
+| SoftDefer not root | Site B retarget/sp 0.05, floor 2.2 |
+| Bisect note | Path pre-P16; long cruise left VB=99 → storm on `100413` stand (`221516` late discard rate 0) |
+
+### Landed
+
+| Step | Change |
+| --- | --- |
+| A | Hold supersede for FirstMesh miss undrawn (`miss_undrawn`) — stop Forget/discard |
+| B | Stand VB full-scan cadence after raw stable (cut idle every-frame scan) |
+| C | `IsNearFocusMissUrgent` / U2 nh≤4; stand column-owned FirstMesh when miss age>300 |
+
+**KEEP:** SoftDefer Site B / floor ≈ `215042`; P13 remesh protect; Capture; P15c MaxAge decay.
+
+### Verification
+
+- Unit + `tmp_fz27_b_test_smoke.py`
+- SoftDefer: `fz-ne-frontier-stand` + `tmp_audit_ne_frontier_stand.py`
+- Stand: `fz-inring-cruise` stop≥120 + `tmp_audit_100413_stand.py` vs `100413`
+- Manual ≥180s inside keep
+
+### Results — autofly DoD
+
+| Gate | Result | Evidence |
+| --- | --- | --- |
+| Unit + smoke | **PASS** | ALL PASS |
+| SoftDefer KEEP | **PASS** | 104722 floor **2.08**, SiteB **0.03**, stuck 1, keep 169 |
+| P0 discard stand | **PASS** | 104722 discard/spike **0.035** (SoT 100413 **0.47**); stop discard Δ **0** |
+| P0 stale stand | **PASS** | late stale **0** (SoT **1755**) |
+| P1 stream_ms | **PARTIAL** | SoftDefer stand stream med **58** (target ≤25); ocean-abort cruise late stream 17 invalid |
+| P0 VB/unf falling | **FAIL** | SoftDefer stand vb late **116**, unf 67→85 (enter/stand residual) |
+| Cruise land long-stop | **ABORT** | 105100 yaw180 fly60 → keep **49** ocean; fly default cut to **35s** |
+
+**Verdict: P17 PARTIAL PASS** — discard/stale storm cured; SoftDefer KEEP; VB/unf/stream on long land stand still open (follow-up). SHA working tree atop ea854043.
+
+**Bisect:** code-path forensics (not full binary A/B): MarkDirtyPriority Forgot when !soft_undrawn on !Drawable+inflight; 100413 discard frames 100%% remesh_protect + dirty_touch thrash.
 
 ---

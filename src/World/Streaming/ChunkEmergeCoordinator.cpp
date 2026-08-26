@@ -3486,6 +3486,23 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             mesh_service.PreferKickPendingGpuQueued(isolated_hole);
           }
         }
+        // FZ2.7-P17: long stand + sticky miss — column-owned FirstMesh even for
+        // cy<=1 when heal_deferred left underfeet orphaned (manual 100413).
+        if (!moving && missing_visible_mesh && no_drawable &&
+            MissWitnessAgeFrames > 300)
+        {
+          const glm::ivec2 miss_xz(isolated_hole.x, isolated_hole.z);
+          if (!exec.Scheduler().Contains(miss_xz, ColumnWorkKind::FirstMesh))
+          {
+            ColumnWorkItem owned{};
+            owned.column = miss_xz;
+            owned.kind = ColumnWorkKind::FirstMesh;
+            owned.priority = 116;
+            owned.scan_full_focus = false;
+            owned.cy = isolated_hole.y;
+            exec.Enqueue(owned);
+          }
+        }
       }
 
       // Era22 I-M8: miss witness age >T (~2 periods / ~4s) → PreferKick witness.

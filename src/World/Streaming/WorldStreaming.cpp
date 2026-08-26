@@ -742,7 +742,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   world.PhysicsTelemetryData.FocusDarkMeshHidden = pending_dark;
   world.PhysicsTelemetryData.FocusDarkMeshPreview = sticky_remesh;
   // Era16 TD-052: VisibleBlack column SoT (independent of StickyRemesh set).
-  // Idle: every frame. Cruise: every 4 frames (mirror unfinished sample).
+  // Cruise: every 4 frames. Stand: every frame until VB raw stable, then
+  // cadence 4 (FZ2.7-P17: idle every-frame scan burned stream_ms on 100413).
   {
     static int visible_black_sample_cd = 0;
     static int vb_published = 0;
@@ -756,7 +757,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     int progress_n = 0;
     int stalled_n = 0;
     const bool do_full_scan =
-        !moving_for_telemetry || visible_black_sample_cd <= 0;
+        visible_black_sample_cd <= 0 ||
+        (!moving_for_telemetry && vb_focus_stable_frames < 8);
     if (do_full_scan)
     {
       const int prev_raw = vb_pending_raw;

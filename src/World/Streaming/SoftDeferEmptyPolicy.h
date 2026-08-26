@@ -175,7 +175,7 @@ inline bool ShouldEnqueueWitnessOwnedFirstMesh(bool focus_missing_mesh,
   {
     return false;
   }
-  return miss_horiz >= 0 && miss_horiz <= 2;
+  return miss_horiz >= 0 && miss_horiz <= 4;
 }
 
 /// Era23 P2: SoftDefer empty PreferKick only when GPU queue is stuck on the

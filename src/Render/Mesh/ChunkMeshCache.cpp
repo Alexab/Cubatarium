@@ -2119,10 +2119,12 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
       const bool gpu_pending =
           GpuExtractInFlight.find(chunkCoord) != GpuExtractInFlight.end();
       const bool pending_gpu_apply = IsPendingGpuApply(chunkCoord);
-      // Era27 I-A4: SoftDefer empty / Hide⇒Ticket undrawn with live Active or
-      // PendingReplace — hold supersede (no Forget → discarded_late hole).
+      // SoftDefer empty / Hide⇒Ticket undrawn (EnterLitQuiesce Invalidate below).
       const bool soft_undrawn =
           was_soft_held || HasGreedyMesh(chunkCoord);
+      // FZ2.7-P17: FirstMesh miss undrawn always holds supersede under live
+      // flight (manual 100413: !soft_undrawn Forgot → discarded_late storm).
+      const bool miss_undrawn = true;
       if (pending_gpu_apply)
       {
         PreferKickPendingGpuQueued(chunkCoord);
@@ -2147,7 +2149,8 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
       }
       else if (live_flight ||
                ShouldHoldInflightSupersedeUnderMissUndrawn(
-                   soft_undrawn, live_flight, /*has_drawable=*/false))
+                   soft_undrawn || miss_undrawn, live_flight,
+                   /*has_drawable=*/false))
       {
         if (RemeshAfterApply.count(chunkCoord) > 0 ||
             Dirty.Contains(chunkCoord))

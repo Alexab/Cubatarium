@@ -97,7 +97,7 @@ SCENARIOS: list[tuple[str, list[str], str]] = [
     (
         "fz-inring-cruise",
         ["--scenario", "fz-inring-cruise"],
-        "P16 in-ring holes: teleport (118,86) yaw180 west, idle15+fly60+stop60 vs 221516",
+        "P17 in-ring cruise: teleport (118,86) yaw180, idle15+fly35+stop120 vs 100413",
     ),
 ]
 

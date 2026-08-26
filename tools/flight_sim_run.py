@@ -1079,13 +1079,14 @@ def main() -> int:
         else:
             args.idle_sec = max(args.idle_sec, 10.0)
         if "--fly-phase-sec" not in sys.argv:
-            args.fly_phase_sec = 60.0
+            # Keep land corridor: 60s west from (118,86) often exits keep→49.
+            args.fly_phase_sec = 35.0
         else:
-            args.fly_phase_sec = max(args.fly_phase_sec, 30.0)
+            args.fly_phase_sec = max(args.fly_phase_sec, 20.0)
         if "--stop-phase-sec" not in sys.argv:
-            args.stop_phase_sec = 60.0
+            args.stop_phase_sec = 120.0
         else:
-            args.stop_phase_sec = max(args.stop_phase_sec, 45.0)
+            args.stop_phase_sec = max(args.stop_phase_sec, 90.0)
         args.seconds = max(
             args.seconds,
             args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
