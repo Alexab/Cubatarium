@@ -1634,4 +1634,48 @@ Operator: manual eye ≥180s vs `170807` still recommended (autofly ≠ visual m
 
 **Verdict: SRBR-P0 PARTIAL PASS** — ghost Dirty drain + SoftDefer KEEP green; VB/miss/stream residual for **P1**. Working tree atop `1f3f7675`. Logs: SoftDefer `perf_20260826-134508_20740.jsonl` (PASS), first `133715` (stuck flaky).
 
+**SHA landed:** `1a1a5bde`
+
+---
+
+## SRBR-P0.1 Enter stuck ~96% (manual `143303`)
+
+**Evidence:** `enter_lit_20260826-143303.jsonl` + INFO `…27884`; perf empty (never left warmup).
+
+| Finding | Evidence |
+| --- | --- |
+| Progress stuck | ring_not_ready=**42** sticky, debt=13, ready=0 ~61s |
+| Blocker | `ring_blocker=missing`, `mesh_missing_greedy=1`, **dirty_n=0** |
+| Contrast | Pre-P0 enter `112459` ready=1 in **55ms** |
+| Root | DrainEnter MarkDirty only `!HasGreedy`; SoftDeferHeld erased on !resident |
+
+### Fix (lands with P1)
+
+| Fix | Change |
+| --- | --- |
+| DrainEnter | MarkDirtyPriority for SoftDefer empty / !ColumnReady (+ solid) |
+| SoftDeferHeld | keep on !resident Requeue; do not prune Held in `PruneGhostDirty` |
+
+---
+
+## SRBR-P1 Ticketed VB / unlit consume on stand
+
+**Depends:** P0 skip_orphan↓; H3 ticketed VB (nt soft + unlit≈PL).
+
+### Landed
+
+| Step | Change |
+| --- | --- |
+| A | `ShouldConsumeTicketedVbDebt` soft **nt≤8** (was ==0; 112418 nt≈6 missed) |
+| B | `ShouldConsumeUnlitTicketedVbStand` when VB high + unlit≈PL |
+| C | `ShouldProtectRemeshUnderTicketedVbStand` remesh floor without stale |
+| D | Wire consume OR in emerge / MarkRelit / World Apply |
+| E | Enter SoftDefer-empty Dirty (P0.1) |
+
+**KEEP:** SoftDefer; P13 protect; no F5 deadband; no Capture++.
+
+### Verification pending
+
+- Unit + smoke; SoftDefer KEEP; **manual enter must clear 100%**, then stand ≥180s vs `112418`
+
 ---

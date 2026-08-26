@@ -41,6 +41,9 @@ struct MeshWorkAdmissionInput
   int no_mesh_n{0};
   /// FZ2.7-P13 R1: repairable dark faces (mesh dark, field lit).
   int dark_face_stale_near_n{0};
+  /// SRBR-P1: ticketed VB stand remesh protect (no stale required).
+  int visible_black_focus_n{0};
+  int visible_black_no_ticket_n{0};
 };
 
 /// Near-focus miss that blocks view / needs urgent HoleDrain (horiz≤2 or underfeet).
@@ -158,6 +161,22 @@ inline bool ShouldPreferStandVbHealOwnership(bool moving,
     return false;
   }
   return stand_age_frames >= 180;
+}
+
+/// SRBR-P1: remesh floor under ticketed VB stand (no stale required; P17 cured).
+inline bool ShouldProtectRemeshUnderTicketedVbStand(bool moving,
+                                                   int visible_black_focus_n,
+                                                   int vb_no_ticket_n,
+                                                   int remesh_queue_n,
+                                                   int vb_thresh = 50,
+                                                   int no_ticket_soft = 8)
+{
+  if (moving || remesh_queue_n <= 0)
+  {
+    return false;
+  }
+  return visible_black_focus_n >= vb_thresh && vb_no_ticket_n >= 0 &&
+         vb_no_ticket_n <= no_ticket_soft;
 }
 
 inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
@@ -442,7 +461,11 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   // FM schedule boost from steal is retained; only remesh is restored.
   const bool protect_lit = ShouldProtectLitSettleRemesh(
       holes, in.dark_face_stale_near_n, in.remesh_queue_n);
-  if (protect_lit &&
+  // SRBR-P1: ticketed VB stand also needs remesh floor (stale often 0 after P17).
+  const bool protect_ticketed_vb = ShouldProtectRemeshUnderTicketedVbStand(
+      in.moving, in.visible_black_focus_n, in.visible_black_no_ticket_n,
+      in.remesh_queue_n);
+  if ((protect_lit || protect_ticketed_vb) &&
       (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
        out.mode == MeshWorkAdmission::Mode::DeepBacklog))
   {

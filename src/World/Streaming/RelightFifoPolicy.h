@@ -262,14 +262,40 @@ inline int HighPlCruiseApplyFloorN()
   return 4;
 }
 
-/// FZ2.5-Perf1: ticketed VB debt — all focus black faces have repair tickets.
+/// FZ2.5-Perf1 / SRBR-P1: ticketed VB debt — focus black has repair tickets.
+/// Soft no_ticket≤8: 112418 stand no_ticket≈6 with VB≈107 never entered
+/// consume when gated on ==0 only.
 inline bool ShouldConsumeTicketedVbDebt(int vb_no_ticket_n,
                                         int visible_black_focus_n,
                                         int visible_black_stalled_n,
-                                        int vb_thresh = 40)
+                                        int vb_thresh = 40,
+                                        int no_ticket_soft = 8)
 {
   (void)visible_black_stalled_n;
-  return vb_no_ticket_n <= 0 && visible_black_focus_n > vb_thresh;
+  return vb_no_ticket_n <= no_ticket_soft &&
+         visible_black_focus_n > vb_thresh;
+}
+
+/// SRBR-P1: stand ticketed VB + unlit≈PL — remesh/MarkRelit must not starve.
+inline bool ShouldConsumeUnlitTicketedVbStand(bool moving,
+                                              int visible_black_focus_n,
+                                              int vb_no_ticket_n,
+                                              int unlit_hidden_n,
+                                              int pending_light_focus_n,
+                                              int vb_thresh = 50,
+                                              int no_ticket_soft = 8,
+                                              int unlit_pl_floor = 20)
+{
+  if (moving || visible_black_focus_n < vb_thresh)
+  {
+    return false;
+  }
+  if (vb_no_ticket_n < 0 || vb_no_ticket_n > no_ticket_soft)
+  {
+    return false;
+  }
+  return unlit_hidden_n >= unlit_pl_floor &&
+         pending_light_focus_n >= unlit_pl_floor;
 }
 
 /// FZ2.7-B1d: cruise/defer primary_only uses slim install (no orphan/seam).

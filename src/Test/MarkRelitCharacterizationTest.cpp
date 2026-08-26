@@ -145,7 +145,15 @@ int main()
   }
 
   Expect(ShouldConsumeTicketedVbDebt(0, 81, 0), "consume VB debt");
-  Expect(!ShouldConsumeTicketedVbDebt(10, 81, 0), "orphan nt blocks consume");
+  Expect(ShouldConsumeTicketedVbDebt(6, 107, 0), "P1 soft nt<=8 consume");
+  Expect(!ShouldConsumeTicketedVbDebt(10, 81, 0), "orphan nt>8 blocks consume");
+  {
+    using cutum::ShouldConsumeUnlitTicketedVbStand;
+    Expect(ShouldConsumeUnlitTicketedVbStand(false, 107, 6, 62, 61),
+           "P1 unlit≈PL stand consume");
+    Expect(!ShouldConsumeUnlitTicketedVbStand(false, 107, 20, 62, 61),
+           "P1 high no_ticket blocks unlit consume");
+  }
 
   if (failures != 0)
   {

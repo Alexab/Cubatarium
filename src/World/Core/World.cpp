@@ -4183,7 +4183,11 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   const int vb_focus_n = PhysicsTelemetryData.VisibleBlackFocusN;
   const int vb_stalled_n = PhysicsTelemetryData.VisibleBlackStalledN;
   const bool consume_mode =
-      ShouldConsumeTicketedVbDebt(vb_no_ticket_n, vb_focus_n, vb_stalled_n);
+      ShouldConsumeTicketedVbDebt(vb_no_ticket_n, vb_focus_n, vb_stalled_n) ||
+      ShouldConsumeUnlitTicketedVbStand(
+          moving, vb_focus_n, vb_no_ticket_n,
+          static_cast<int>(PhysicsTelemetryData.ChunkMeshedUnlitHidden),
+          PhysicsTelemetryData.PendingLightFocus);
   const glm::ivec3 pl_focus_chunk =
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
   const int pl_focus_n = CountPendingLightBeforeMeshNear(
@@ -5576,10 +5580,39 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
           {
             continue;
           }
-          if (!mesh.HasGreedyMesh(coord))
+          // Align with HasMissingGreedyMeshesNearFocus: SoftDefer empty
+          // (HasGreedy && !ready && solid) must Dirty — !HasGreedy-only left
+          // missing=1 dirty=0 forever (manual enter 143303 ~96% bar).
+          if (mesh.HasMeshSatisfyingColumnReady(coord))
           {
-            mesh.MarkDirtyPriority(coord);
+            continue;
           }
+          if (mesh.HasGreedyMesh(coord))
+          {
+            const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord);
+            bool any_solid = false;
+            if (ch)
+            {
+              for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+              {
+                for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+                {
+                  for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+                  {
+                    if (ch->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+                    {
+                      any_solid = true;
+                    }
+                  }
+                }
+              }
+            }
+            if (!any_solid)
+            {
+              continue;
+            }
+          }
+          mesh.MarkDirtyPriority(coord);
         }
       }
     }

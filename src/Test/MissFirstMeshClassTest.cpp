@@ -2260,8 +2260,20 @@ int main()
            "FZ25: earned cap >=3 at unit 2.5ms");
     Expect(ShouldConsumeTicketedVbDebt(0, 81, 5),
            "FZ25: ticketed debt when nt=0 VB>40");
+    Expect(ShouldConsumeTicketedVbDebt(6, 107, 0),
+           "SRBR-P1: soft nt≤8 still ticketed consume (112418)");
     Expect(!ShouldConsumeTicketedVbDebt(10, 81, 0),
-           "FZ25: orphan nt>0 is not ticketed consume");
+           "FZ25: orphan nt>8 is not ticketed consume");
+    using cutum::ShouldConsumeUnlitTicketedVbStand;
+    using cutum::ShouldProtectRemeshUnderTicketedVbStand;
+    Expect(ShouldConsumeUnlitTicketedVbStand(false, 107, 6, 62, 62),
+           "SRBR-P1: stand unlit≈PL consume");
+    Expect(!ShouldConsumeUnlitTicketedVbStand(true, 107, 6, 62, 62),
+           "SRBR-P1: moving skips unlit consume");
+    Expect(ShouldProtectRemeshUnderTicketedVbStand(false, 107, 6, 48),
+           "SRBR-P1: remesh protect ticketed VB stand");
+    Expect(!ShouldProtectRemeshUnderTicketedVbStand(false, 107, 6, 0),
+           "SRBR-P1: no remesh protect empty RemeshQ");
     Expect(!ShouldStopRelightApplySlice(8.0, 1, 8.0, false, true, 3, 2.5),
            "FZ25: consume mode continues past 1@8ms when cap>=3");
     Expect(ShouldStopRelightApplySlice(8.0, 3, 8.0, false, true, 3, 2.5),

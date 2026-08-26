@@ -1758,7 +1758,6 @@ int UChunkMeshCache::PruneGhostDirty(UBlockWorld &world, int cap)
       continue;
     }
     RemeshAfterApply.erase(*it);
-    SoftDeferHeld.erase(*it);
     it = Dirty.RemoveAt(it);
     ++n;
   }
@@ -1773,16 +1772,7 @@ int UChunkMeshCache::PruneGhostDirty(UBlockWorld &world, int cap)
     it = RemeshAfterApply.erase(it);
     ++n;
   }
-  for (auto it = SoftDeferHeld.begin(); it != SoftDeferHeld.end() && n < cap;)
-  {
-    if (!prune_coord(*it))
-    {
-      ++it;
-      continue;
-    }
-    it = SoftDeferHeld.erase(it);
-    ++n;
-  }
+  // SoftDeferHeld keeps spawn ownership across unload/reload — do not prune.
   return n;
 }
 
@@ -1978,9 +1968,11 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
       it = SoftDeferHeld.erase(it);
       continue;
     }
+    // SRBR-P0/enter: keep Held until resident — erase lost spawn ownership
+    // (manual 143303: missing=1 dirty=0 ring stuck ~96%).
     if (!ShouldAdmitDirtyCoord(coord))
     {
-      it = SoftDeferHeld.erase(it);
+      ++it;
       continue;
     }
     const bool still_deferred =

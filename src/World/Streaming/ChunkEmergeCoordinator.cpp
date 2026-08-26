@@ -1906,9 +1906,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       // Standing: drain Completed only — schedule=22 latched async=42 forever.
       mesh_drain = std::max(mesh_drain, 24);
       const auto &telem = world.GetPhysicsTelemetry();
-      const bool consume_mode = ShouldConsumeTicketedVbDebt(
-          telem.VisibleBlackNoTicketN, telem.VisibleBlackFocusN,
-          telem.VisibleBlackStalledN);
+      const bool consume_mode =
+          ShouldConsumeTicketedVbDebt(telem.VisibleBlackNoTicketN,
+                                      telem.VisibleBlackFocusN,
+                                      telem.VisibleBlackStalledN) ||
+          ShouldConsumeUnlitTicketedVbStand(
+              false, telem.VisibleBlackFocusN, telem.VisibleBlackNoTicketN,
+              static_cast<int>(telem.ChunkMeshedUnlitHidden),
+              telem.PendingLightFocus);
       const bool prioritize_drain =
           ShouldPrioritizeMeshDrainForTicketedConsume(
               consume_mode, telem.MarkRelitScheduleN,
@@ -2039,6 +2044,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.no_mesh_n = ain.unfinished_visual;
     ain.dark_face_stale_near_n =
         world.GetPhysicsTelemetry().DarkFaceStaleNearN;
+    ain.visible_black_focus_n =
+        world.GetPhysicsTelemetry().VisibleBlackFocusN;
+    ain.visible_black_no_ticket_n =
+        world.GetPhysicsTelemetry().VisibleBlackNoTicketN;
     if (have_nearest_missing)
     {
       ain.nearest_miss_horiz = std::max(
@@ -2820,9 +2829,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   else if (pending_near_light)
   {
     const auto &telem = world.GetPhysicsTelemetry();
-    const bool consume_mode = ShouldConsumeTicketedVbDebt(
-        telem.VisibleBlackNoTicketN, telem.VisibleBlackFocusN,
-        telem.VisibleBlackStalledN);
+    const bool consume_mode =
+        ShouldConsumeTicketedVbDebt(telem.VisibleBlackNoTicketN,
+                                    telem.VisibleBlackFocusN,
+                                    telem.VisibleBlackStalledN) ||
+        ShouldConsumeUnlitTicketedVbStand(
+            moving, telem.VisibleBlackFocusN, telem.VisibleBlackNoTicketN,
+            static_cast<int>(telem.ChunkMeshedUnlitHidden),
+            telem.PendingLightFocus);
     const bool prioritize_drain = ShouldPrioritizeMeshDrainForTicketedConsume(
         consume_mode, telem.MarkRelitScheduleN, telem.VisibleBlackStalledN);
     const bool prioritize_schedule =
@@ -3828,6 +3842,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.no_mesh_n = ain.unfinished_visual;
     ain.dark_face_stale_near_n =
         world.GetPhysicsTelemetry().DarkFaceStaleNearN;
+    ain.visible_black_focus_n =
+        world.GetPhysicsTelemetry().VisibleBlackFocusN;
+    ain.visible_black_no_ticket_n =
+        world.GetPhysicsTelemetry().VisibleBlackNoTicketN;
     MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
     {
       const auto &tune = URuntimeTuning::Get();
