@@ -158,6 +158,26 @@ inline bool ShouldPreferKickMissWitnessEarly(bool missing_visible_mesh,
   return missing_visible_mesh && miss_first_mesh_class;
 }
 
+/// FZ2.7-P16 U1: underfeet/near nh≤1 FirstMesh pin — cruise and idle (no
+/// !moving gate). miss_horiz is Chebyshev to focus ground.
+inline bool ShouldPinIsolatedMissUnderfeet(bool found_nearest_missing,
+                                           int miss_horiz)
+{
+  return found_nearest_missing && miss_horiz >= 0 && miss_horiz <= 1;
+}
+
+/// FZ2.7-P16 U2: column-owned FirstMesh on miss witness (nh≤2, !drawable).
+inline bool ShouldEnqueueWitnessOwnedFirstMesh(bool focus_missing_mesh,
+                                               int miss_horiz,
+                                               bool no_drawable_on_witness)
+{
+  if (!focus_missing_mesh || !no_drawable_on_witness)
+  {
+    return false;
+  }
+  return miss_horiz >= 0 && miss_horiz <= 2;
+}
+
 /// Era23 P2: SoftDefer empty PreferKick only when GPU queue is stuck on the
 /// same coord (not empty placeholder apply storm).
 inline bool ShouldPreferKickSoftDeferEmptyStuck(bool soft_defer_empty,

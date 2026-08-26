@@ -3371,12 +3371,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           glm::ivec2(isolated_hole.x, isolated_hole.z),
           ColumnWorkKind::FirstMesh, first_mesh_prio);
     };
-    if (!moving && found_nearest_missing)
+    // FZ2.7-P16 U1: nh≤1 underfeet pin in cruise (was idle-only !moving).
+    if (found_nearest_missing)
     {
-      const int nh = std::max(
+      const int nh_underfeet = std::max(
           std::abs(isolated_hole.x - focus_ground_horiz.x),
           std::abs(isolated_hole.z - focus_ground_horiz.z));
-      if (nh <= 1)
+      if (ShouldPinIsolatedMissUnderfeet(found_nearest_missing, nh_underfeet))
       {
         pin_isolated_miss(110);
       }
@@ -3437,6 +3438,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               mesh_service.IsPendingGpuApply(isolated_hole))
           {
             mesh_service.PreferKickPendingGpuQueued(isolated_hole);
+          }
+        }
+        // FZ2.7-P16 U2: column-owned FirstMesh on miss witness nh≤2.
+        if (ShouldEnqueueWitnessOwnedFirstMesh(missing_visible_mesh, nh,
+                                               no_drawable))
+        {
+          const glm::ivec2 miss_xz(isolated_hole.x, isolated_hole.z);
+          if (!exec.Scheduler().Contains(miss_xz, ColumnWorkKind::FirstMesh))
+          {
+            ColumnWorkItem owned{};
+            owned.column = miss_xz;
+            owned.kind = ColumnWorkKind::FirstMesh;
+            owned.priority = 110;
+            owned.scan_full_focus = false;
+            owned.cy = isolated_hole.y;
+            exec.Enqueue(owned);
           }
         }
         // Era24 P3 / I-E5: miss_cy>1 residual — pin FirstMesh on witness cy

@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""SoftDefer standstill gates for fz-ne-frontier-stand / manual 205739 vs 170807.
+"""SoftDefer standstill gates for fz-ne-frontier-stand / manual vs P13.
+
+Primary SoftDefer retarget gate is Site B (`softdefer_capture_retarget_n`).
+Legacy `softdefer_witness_retarget` and Site A ingress are informational.
 
 Usage:
   python bin/tmp_audit_ne_frontier_stand.py [perf.jsonl ...]
-  python bin/tmp_audit_ne_frontier_stand.py   # defaults: latest + 205739 + 170807
+  python bin/tmp_audit_ne_frontier_stand.py   # defaults: newest + 205739 + 170807
+  python bin/tmp_audit_ne_frontier_stand.py <new> bin/logs/perf_20260825-215042_1656.jsonl
 """
 from __future__ import annotations
 
@@ -52,7 +56,6 @@ def standstill_window(rows):
         return rows
     land = [r for r in rows if int(r.get("keep_cols") or 0) >= 160]
     if len(land) >= 15:
-        # longest trailing standstill inside land
         best = land
         for i in range(len(land) - 2, -1, -1):
             if (land[i].get("player_x"), land[i].get("player_z")) != (
@@ -96,7 +99,10 @@ def summ(label: str, path: Path) -> dict:
     print(f"  stand  xz ({sx0},{sz0}) n={len(stand)}")
 
     floor_r = rate(stand, "softdefer_capture_floor_hits")
-    wr_r = rate(stand, "softdefer_witness_retarget")
+    # Site B SoT (P15a/P16): Capture retarget — not legacy witness total.
+    site_b_r = rate(stand, "softdefer_capture_retarget_n")
+    wr_legacy = rate(stand, "softdefer_witness_retarget")
+    ingress_r = rate(stand, "softdefer_ingress_witness_n")
     stuck = med(g(stand, "softdefer_empty_stuck_n"))
     stale = med(g(late, "dark_face_stale_near_n"))
     capture = med(g(late, "capture_bg_cap_n"))
@@ -106,13 +112,35 @@ def summ(label: str, path: Path) -> dict:
     vbnt = med(g(late, "visible_black_no_ticket_n"))
 
     print(f"  floor/spike={floor_r:.2f}" if floor_r is not None else "  floor/spike=N/A")
-    print(f"  witness/spike={wr_r:.2f}" if wr_r is not None else "  witness/spike=N/A")
+    print(
+        f"  SiteB capture_retarget/spike={site_b_r:.2f}"
+        if site_b_r is not None
+        else "  SiteB capture_retarget/spike=N/A"
+    )
+    print(
+        f"  (info) legacy witness/spike={wr_legacy:.2f}"
+        if wr_legacy is not None
+        else "  (info) legacy witness/spike=N/A"
+    )
+    print(
+        f"  (info) SiteA ingress/spike={ingress_r:.2f}"
+        if ingress_r is not None
+        else "  (info) SiteA ingress/spike=N/A"
+    )
     print(f"  stuck_med={stuck} stale_late={stale} capture={capture} keep={keep}")
     print(f"  pl_drop/spike={pl_drop:.3f} unfinished={unf} vb_no_ticket={vbnt}")
 
+    # Prefer Site B when counter present; fall back to legacy for pre-P15 logs.
+    retarget_r = site_b_r if site_b_r is not None else wr_legacy
+    retarget_name = (
+        "SiteB retarget/spike <=5"
+        if site_b_r is not None
+        else "witness/spike <=5 (legacy)"
+    )
+
     gates = [
         ("floor/spike <=8", floor_r, 8.0, "<="),
-        ("witness/spike <=5", wr_r, 5.0, "<="),
+        (retarget_name, retarget_r, 5.0, "<="),
         ("stuck med <=5", stuck, 5.0, "<="),
         ("stale late <=20", stale, 20.0, "<="),
         ("capture >=3 KEEP", capture, 3.0, ">="),
@@ -132,7 +160,7 @@ def summ(label: str, path: Path) -> dict:
         else:
             stt = "PASS" if val >= tgt else "FAIL"
             ok = ok and stt == "PASS"
-        print(f"    {stt:7s} {name:28s} got={val} {op}{tgt}")
+        print(f"    {stt:7s} {name:32s} got={val} {op}{tgt}")
         results[name] = {"status": stt, "got": val, "tgt": tgt}
     print(f"  OVERALL {'PASS' if ok else 'FAIL'}")
     return {
@@ -140,7 +168,9 @@ def summ(label: str, path: Path) -> dict:
         "path": str(path),
         "pass": ok,
         "floor_per_spike": floor_r,
-        "witness_per_spike": wr_r,
+        "site_b_retarget_per_spike": site_b_r,
+        "witness_per_spike": wr_legacy,
+        "ingress_per_spike": ingress_r,
         "stuck_med": stuck,
         "stale_late": stale,
         "gates": results,
@@ -164,6 +194,7 @@ def main():
         for lab, name in [
             ("P14 FAIL 205739", "perf_20260825-205739_3064.jsonl"),
             ("P13 170807", "perf_20260825-170807_29680.jsonl"),
+            ("P15 SoftDefer 215042", "perf_20260825-215042_1656.jsonl"),
         ]:
             p = LOGS / name
             if p.is_file():
@@ -172,11 +203,19 @@ def main():
         print("no perf logs", file=sys.stderr)
         return 1
     outs = [summ(lab, p) for lab, p in paths]
-    # A/B: if first is post-revert and 205739 present, compare floor
     fail = next((o for o in outs if "205739" in o["label"] or "P14" in o["label"]), None)
-    good = next((o for o in outs if "170807" in o["label"] or "P13" in o["label"]), None)
+    good = next(
+        (
+            o
+            for o in outs
+            if "170807" in o["label"] or "P13" in o["label"] or "215042" in o["label"]
+        ),
+        None,
+    )
     cur = outs[0]
-    if fail and cur is not fail and cur.get("floor_per_spike") is not None and fail.get("floor_per_spike"):
+    if fail and cur is not fail and cur.get("floor_per_spike") is not None and fail.get(
+        "floor_per_spike"
+    ):
         print("\n=== A/B vs P14 FAIL 205739 ===")
         print(
             f"  floor/spike cur={cur['floor_per_spike']:.2f} "
@@ -185,10 +224,10 @@ def main():
         )
         if good and good.get("floor_per_spike") is not None:
             print(
-                f"  floor/spike p13={good['floor_per_spike']:.2f} "
-                f"(target band)"
+                f"  floor/spike keep_band={good['floor_per_spike']:.2f} "
+                f"(target ≈P13/215042)"
             )
-    return 0 if all(o.get("pass") for o in outs if o["label"] == "NEWEST" or "post" in o["label"].lower()) else 0
+    return 0
 
 
 if __name__ == "__main__":

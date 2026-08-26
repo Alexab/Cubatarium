@@ -2153,6 +2153,30 @@ int main()
            "P15c: leaving frontier decays even if prev was 24");
   }
 
+  // FZ2.7-P16: cruise underfeet pin + witness-owned FirstMesh
+  {
+    using cutum::ShouldPinIsolatedMissUnderfeet;
+    using cutum::ShouldEnqueueWitnessOwnedFirstMesh;
+    Expect(ShouldPinIsolatedMissUnderfeet(true, 0),
+           "P16 U1: nh=0 pin");
+    Expect(ShouldPinIsolatedMissUnderfeet(true, 1),
+           "P16 U1: nh=1 pin (cruise or idle)");
+    Expect(!ShouldPinIsolatedMissUnderfeet(true, 2),
+           "P16 U1: nh=2 no underfeet pin");
+    Expect(!ShouldPinIsolatedMissUnderfeet(false, 0),
+           "P16 U1: !found → no pin");
+    Expect(ShouldEnqueueWitnessOwnedFirstMesh(true, 0, true),
+           "P16 U2: miss nh=0 !drawable → owned FM");
+    Expect(ShouldEnqueueWitnessOwnedFirstMesh(true, 2, true),
+           "P16 U2: miss nh=2 !drawable → owned FM");
+    Expect(!ShouldEnqueueWitnessOwnedFirstMesh(true, 3, true),
+           "P16 U2: nh=3 no owned FM");
+    Expect(!ShouldEnqueueWitnessOwnedFirstMesh(false, 1, true),
+           "P16 U2: !miss → no owned FM");
+    Expect(!ShouldEnqueueWitnessOwnedFirstMesh(true, 1, false),
+           "P16 U2: drawable → no owned FM");
+  }
+
   // P1: ShouldForcePinColumnPriority
   {
     using cutum::ShouldForcePinColumnPriority;

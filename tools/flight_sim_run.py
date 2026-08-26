@@ -385,8 +385,9 @@ def main() -> int:
             "fz-cold-enter",
             "fz-ne-frontier-stand",
             "fz-frontier-stand-resume",
+            "fz-inring-cruise",
         ],
-        help="named scenario (... / fz-ne-frontier-stand / fz-frontier-stand-resume)",
+        help="named scenario (... / fz-ne-frontier-stand / fz-inring-cruise)",
     )
     ap.add_argument("--break-phase-sec", type=float, default=20.0)
     ap.add_argument("--break-interval-sec", type=float, default=1.0)
@@ -1054,6 +1055,43 @@ def main() -> int:
         )
         args.warmup_sec = max(args.warmup_sec, 20.0)
 
+    if args.scenario == "fz-inring-cruise":
+        # P16 in-ring holes vs manual 221516 corridor (118,86)->(-31,58).
+        # Cold World_164 save drifts after manuals; pin SoT locus via teleport.
+        # Engine yaw: 180=west (-X), 270=south (-Z) — south from (-31,58) hits
+        # ocean keep~49 (abort). Keep med must stay >=160 for hole audit.
+        args.world = args.world or "World_164"
+        args.fly_stop = True
+        args.resume = False
+        args.teleport_cruise = True
+        if args.cruise_cx is None:
+            args.cruise_cx = 118.0
+        if args.cruise_cz is None:
+            args.cruise_cz = 86.0
+        args.sprint = False
+        args.hold_space = True
+        if args.pitch is None:
+            args.pitch = 0.0
+        if args.yaw is None:
+            args.yaw = 180.0
+        if "--idle-sec" not in sys.argv:
+            args.idle_sec = 15.0
+        else:
+            args.idle_sec = max(args.idle_sec, 10.0)
+        if "--fly-phase-sec" not in sys.argv:
+            args.fly_phase_sec = 60.0
+        else:
+            args.fly_phase_sec = max(args.fly_phase_sec, 30.0)
+        if "--stop-phase-sec" not in sys.argv:
+            args.stop_phase_sec = 60.0
+        else:
+            args.stop_phase_sec = max(args.stop_phase_sec, 45.0)
+        args.seconds = max(
+            args.seconds,
+            args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
+        )
+        args.warmup_sec = max(args.warmup_sec, 20.0)
+
     if args.replay_edge:
         args.world = "World_164"
         args.fly_stop = True
@@ -1265,6 +1303,7 @@ def main() -> int:
                 "fz-cold-enter",
                 "fz-ne-frontier-stand",
                 "fz-frontier-stand-resume",
+                "fz-inring-cruise",
             )
             or (args.scenario or "").startswith("ocean-cruise")
         ):

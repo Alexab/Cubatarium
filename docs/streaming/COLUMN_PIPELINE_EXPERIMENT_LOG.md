@@ -1494,4 +1494,50 @@ Operator: manual eye ≥180s vs `170807` still recommended (autofly ≠ visual m
 - Smoke: `python bin/tmp_fz27_b_test_smoke.py`
 - SoftDefer: `fz-ne-frontier-stand` + `bin/tmp_audit_ne_frontier_stand.py` must stay PASS vs `215042` band
 
+### Results — SoftDefer + manual residual
+
+- SoftDefer A/B autofly `215042` @ (118,86): floor/spike **6.5**, stuck 2 → **PASS** ≈ P13
+- Manual `221516` (commit `4b7ec652`): unlit late med **3** (flicker rare); keep=169; SoftDefer Site B retarget/spike **0.83** OK
+- **Open:** sticky `focus_missing_mesh=1` almost entire cruise `(118,86)→(-31,58)`; transient unf/nm 30–75; rare in-ring holes (not SoftDefer carpet)
+
+---
+
+## FZ27-P16 In-ring focus holes (cruise underfeet / FirstMesh)
+
+**SoT:** manual `221516` after P15 — SoftDefer OK; sticky miss + rare holes inside keep=169.
+
+### Landed
+
+| Step | Change |
+| --- | --- |
+| U1 | `ShouldPinIsolatedMissUnderfeet` — nh≤1 pin in cruise (drop `!moving`) |
+| U2 | `ShouldEnqueueWitnessOwnedFirstMesh` — miss && nh≤2 && !drawable → FirstMesh `scan_full_focus=false` |
+| U3 | SoftDefer audit Site B SoT; `fz-inring-cruise` repro |
+
+**KEEP:** P13 remesh protect, Capture, P15c MaxAge decay, SoftDefer standstill gates ≈ `215042`.
+
+### Verification
+
+- Unit: `miss_first_mesh_class_test` (U1/U2 predicates)
+- Smoke: `python bin/tmp_fz27_b_test_smoke.py`
+- SoftDefer: `fz-ne-frontier-stand` KEEP vs `215042`
+- Cruise: `fz-inring-cruise` + hole audit vs `221516` (`miss_sticky_frac` ↓ ≥30%)
+- Manual ≥180s inside keep
+
+### Results — autofly DoD
+
+| Gate | Result | Evidence |
+| --- | --- | --- |
+| Unit + smoke | **PASS** | `miss_first_mesh_class_test` OK; `tmp_fz27_b_test_smoke.py` ALL PASS |
+| SoftDefer standstill | **PASS** KEEP | `224052` vs `215042`: floor/spike **2.38** (≤8), Site B retarget **0.04** (≤5), stuck 3, capture 3, keep 169, PL drop 0 |
+| Cruise hole `miss_sticky_frac` ↓≥30% | **FAIL** | `225326` (`fz-inring-cruise` teleport 118,86 yaw180): sticky **1.000** (same as `221516`) |
+| Cruise `moving_unf_p90` / `nm_p90` | **PASS** ↓ | unf 66→**32**, nm 66→**32**; keep_med 169; unlit_late 0 |
+| SoftDefer on cruise rest | OK | Site B retarget/spike **0.17** |
+
+**Verdict: P16 PARTIAL FAIL** — SoftDefer regress ban green; pulse holes (unf/nm) improved; **sticky `focus_missing_mesh` not cleared** (likely mid-rim mh>2 witness — outside U1 nh≤1 / U2 nh≤2 ownership). Follow-up **P17 admission** (`IsNearFocusMissUrgent` mh≤4), not expand P16 SoftDefer/Capture scope.
+
+**Scenario note:** cold World_164 save was at `(-31,58)` after manuals; yaw 270 = south → ocean keep~49. `fz-inring-cruise` pins SoT via `--teleport-cruise --cruise-cx 118 --cruise-cz 86 --yaw 180` (west).
+
+**SHA (working tree, uncommitted P16):** base `4b7ec652` (P15); Release build used for autofly above.
+
 ---
