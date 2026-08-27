@@ -1679,3 +1679,39 @@ Operator: manual eye ≥180s vs `170807` still recommended (autofly ≠ visual m
 - Unit + smoke; SoftDefer KEEP; **manual enter must clear 100%**, then stand ≥180s vs `112418`
 
 ---
+
+## SRBR-P0.2 Enter single-owner miss heal (post `183649`)
+
+**Bisect (SoT):** P17 `1f3f7675` enter `112459` ready~55ms OK; P0+ `143303`/`183649` missing sticky FAIL.
+
+**Root:** `pin_isolated_miss` dual Enqueue+Dirty; SoftDeferHeld not in already_owned; P0 guarantee re-pin nh<=1.
+
+### Landed (KEEP P0 ghost / P1 VB / P17 miss_undrawn)
+
+| Step | Change |
+| --- | --- |
+| A | `MissSliceAlreadyOwned` / SoftDeferOwns / PipelineOwns |
+| B | `pin_isolated_miss`: SoftDefer ticket-only; pipeline noop; else one Dirty |
+| C | Guarantee pin only if `!MissSliceAlreadyOwned` |
+| D | Enter SoftDefer OFF on gate; SoftDefer-empty keeps Dirty under quiesce |
+| E | `MarkEnterMissingMeshesDirty` transfer (no dual Enqueue) |
+| F | Enter hole force Dirty (`ShouldForceEnterHoleDirty`) — no RAA park under gate |
+| G | `PruneEnterPhantomDirty` KEEP FirstMesh hole Dirty (195344 phantom strip) |
+| H | MarkEnter + pin enter-transfer through sticky Inflight/Held (202613) |
+| I | Enter SoftDeferHeld→Dirty transfer before ScheduledThisFrame dedup |
+| J | SoftDefer empty under EnterLitQuiesce → Dirty (no Held park) |
+| K | try_schedule: keep Dirty on Inflight (no Invalidate storm) |
+| L | Enter SoftDeferHeld+Dirty → erase Held keep Dirty |
+
+**Gates:**
+
+| Gate | Result | Stamp |
+| --- | --- | --- |
+| Unit `miss_first_mesh_class_test` | **PASS** | local |
+| Bisect P17 vs P0 (journal) | **PASS** | `112459` OK / `143303`+`183649` FAIL |
+| `fz-cold-enter` World_164 | **FAIL** | `000708`/`001846` sticky `(-1,3,-1)` miss; ready never |
+| SoftDefer `fz-ne-frontier-stand` | **FAIL** stuck_med | `233042` stuck_med **11**, capture **1** (≤5 / ≥3) |
+| skip_orphan vs `112418` | **PASS** (stand) | orphan med **0** on SoftDefer stand |
+
+Landed single-owner + Inflight keep-Dirty + SoftDeferHeld→Dirty before dedup + P17 SoftDefer-empty publish on SoftDefer lift. **Enter DoD not met** — hole `(-1,3,-1)` still oscillates Dirty/missing without ring ready. SoftDefer KEEP regress (stuck_med). Next: isolate why `(-1,3,-1)` never gets drawable after SoftDefer lift (not more ownership churn).
+

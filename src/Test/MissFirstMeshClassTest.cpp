@@ -2216,6 +2216,65 @@ int main()
            "P0: nh=2 not underfeet guarantee");
     Expect(ShouldEnqueueWitnessOwnedFirstMesh(true, 2, true),
            "P0 KEEP: U2 nh=2 still owned FM");
+    using cutum::MissSliceAlreadyOwned;
+    using cutum::MissSliceSoftDeferOwns;
+    using cutum::MissSlicePipelineOwns;
+    using cutum::ShouldPinIsolatedMissMarkDirty;
+    Expect(MissSliceAlreadyOwned(true, false, false, false, false, false),
+           "P0.2: Dirty owns");
+    Expect(MissSliceAlreadyOwned(false, false, false, true, false, false),
+           "P0.2: SoftDeferHeld owns");
+    Expect(MissSliceAlreadyOwned(false, false, false, false, false, true),
+           "P0.2: FirstMesh ticket owns");
+    Expect(!MissSliceAlreadyOwned(false, false, false, false, false, false),
+           "P0.2: empty not owned");
+    Expect(MissSliceSoftDeferOwns(true), "P0.2: SoftDefer owns Hide⇒Ticket");
+    Expect(MissSlicePipelineOwns(true, false, false, false),
+           "P0.2: Dirty is pipeline");
+    using cutum::ShouldTransferSoftDeferHeldToDirty;
+    Expect(ShouldTransferSoftDeferHeldToDirty(true, false),
+           "P0.2: SoftDefer lifted ⇒ transfer Dirty");
+    Expect(!ShouldTransferSoftDeferHeldToDirty(true, true),
+           "P0.2: SoftDefer active ⇒ ticket-only");
+    Expect(!ShouldTransferSoftDeferHeldToDirty(false, false),
+           "P0.2: no Held ⇒ no transfer");
+    using cutum::ShouldEnterSoftDeferEmptyTransferDirty;
+    Expect(!ShouldEnterSoftDeferEmptyTransferDirty(true, false),
+           "P0.2: SoftDefer lifted ⇒ P17 publish fallthrough");
+    Expect(ShouldEnterSoftDeferEmptyTransferDirty(true, true),
+           "P0.2: EnterLitQuiesce + SoftDefer active ⇒ Dirty not Held");
+    Expect(!ShouldEnterSoftDeferEmptyTransferDirty(false, false),
+           "P0.2: cruise SoftDefer empty KEEP");
+    Expect(!ShouldEnterSoftDeferEmptyTransferDirty(false, true),
+           "P0.2: cruise SoftDefer active KEEP avoid");
+    Expect(!ShouldPinIsolatedMissMarkDirty(true, true, false),
+           "P0.2: already owned ⇒ no MarkDirty");
+    Expect(ShouldPinIsolatedMissMarkDirty(true, false, false),
+           "P0.2: unowned resident ⇒ MarkDirty");
+    Expect(!ShouldPinIsolatedMissMarkDirty(false, false, false),
+           "P0.2: ghost ⇒ no MarkDirty");
+    using cutum::ShouldForceEnterHoleDirty;
+    Expect(ShouldForceEnterHoleDirty(true, false),
+           "P0.2: EnterLitQuiesce forces hole Dirty");
+    Expect(ShouldForceEnterHoleDirty(false, true),
+           "P0.2: EnterGpuQuiesceDrain forces hole Dirty");
+    Expect(!ShouldForceEnterHoleDirty(false, false),
+           "P0.2: outside enter ⇒ miss_undrawn RAA KEEP");
+    using cutum::ShouldKeepEnterHoleDirtyDespiteInflight;
+    Expect(ShouldKeepEnterHoleDirtyDespiteInflight(true, false),
+           "P0.2: enter !drawable keeps Dirty vs Inflight");
+    Expect(!ShouldKeepEnterHoleDirtyDespiteInflight(true, true),
+           "P0.2: drawable Inflight may RemoveAt Dirty");
+    Expect(!ShouldKeepEnterHoleDirtyDespiteInflight(false, false),
+           "P0.2: cruise Inflight RemoveAt KEEP");
+    // Keep-Dirty means wait on Inflight — never schedule-tick Invalidate.
+    using cutum::ShouldPruneEnterPhantomDirtyCoord;
+    Expect(ShouldPruneEnterPhantomDirtyCoord(true, true),
+           "P0.2: terminal Held is phantom");
+    Expect(ShouldPruneEnterPhantomDirtyCoord(false, false),
+           "P0.2: unloaded chunk is phantom");
+    Expect(!ShouldPruneEnterPhantomDirtyCoord(false, true),
+           "P0.2: resident FirstMesh hole Dirty KEEP");
   }
 
   // P1: ShouldForcePinColumnPriority

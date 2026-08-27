@@ -401,6 +401,8 @@ public:
   void WarmupVisibleListAtCamera();
   /// Build pending terrain meshes before GPU upload (returns true when ready).
   bool DrainEnterGameMeshWarmup(int budget);
+  /// SRBR-P0.2: gate path SoftDefer-empty / !ready → one Dirty (transfer Held).
+  int MarkEnterMissingMeshesDirty();
   bool NeedsEnterGameMeshWarmup() const;
   struct EnterGameMeshWarmupBlockers
   {

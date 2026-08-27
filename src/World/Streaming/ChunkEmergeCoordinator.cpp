@@ -276,15 +276,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           const int horiz =
               std::max(std::abs(chunk_coord.x - pol.focus_ground.x),
                        std::abs(chunk_coord.z - pol.focus_ground.z));
+          // EnterLitQuiesce latched: lift SoftDefer in lit-drawable ring so
+          // SoftDefer empty neighbors of underfeet can FirstMesh (174530).
+          // Cruise SoftDefer KEEP unchanged (latch false after gate).
+          if (EnterLitQuiesceLiftSpawnSoftDefer(
+                  world_ref.IsEnterLitQuiesceLatched(), horiz,
+                  kVisualStageLitDrawableHoriz))
+          {
+            return false;
+          }
           if (ShouldSkipSpawnMeshWhileRelightDeferred(
                   world_ref.IsLightingRelightDeferred(), horiz))
           {
             return true;
-          }
-          if (EnterLitQuiesceLiftSpawnSoftDefer(
-                  world_ref.IsEnterLitQuiesceLatched(), horiz))
-          {
-            return false;
           }
           const bool underfeet = horiz <= 1;
           const bool pending = world_ref.IsPendingLightBeforeMesh(
@@ -3374,8 +3378,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       drain_steps = std::max(drain_steps, moving ? 3 : 4);
     }
     note_column_flow_drain(drain_steps, admit_n);
-    // ColPipe P4: one miss owner — Dirty only if not already Dirty/RAA/inflight;
-    // FirstMesh ticket (FIFO pin stays in WorldStreaming miss path).
+    // ColPipe P4 / SRBR-P0.2: one miss owner — transfer, never dual
+    // SoftDeferHeld+Dirty+Inflight+FirstMesh Enqueue (manual 183649).
     auto pin_isolated_miss = [&](int first_mesh_prio) {
       if (!found_nearest_missing)
       {
@@ -3383,21 +3387,59 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       }
       const bool resident =
           world.GetBlockWorld().GetChunkManager().HasChunk(isolated_hole);
-      const bool already_owned =
-          mesh_service.IsChunkMeshDirty(isolated_hole) ||
-          mesh_service.IsRemeshAfterApplyPending(isolated_hole) ||
-          mesh_service.HasInflightMeshBuild(isolated_hole);
-      // SRBR-P0: never re-admit Dirty for ghosts; FirstMesh ticket still OK.
-      if (ShouldAdmitResidentDirty(resident) && !already_owned &&
-          !mesh_service.HasMeshSatisfyingColumnReady(isolated_hole) &&
-          !mesh_service.IsPendingGpuApply(isolated_hole))
+      const glm::ivec2 miss_xz(isolated_hole.x, isolated_hole.z);
+      auto &exec = GetColumnFlowExecutor();
+      const bool soft_held = mesh_service.IsSoftDeferHeld(isolated_hole);
+      const bool dirty = mesh_service.IsChunkMeshDirty(isolated_hole);
+      const bool raa = mesh_service.IsRemeshAfterApplyPending(isolated_hole);
+      const bool inflight = mesh_service.HasInflightMeshBuild(isolated_hole);
+      const bool pending_gpu = mesh_service.IsPendingGpuApply(isolated_hole);
+      const bool fm_ticket =
+          exec.Scheduler().Contains(miss_xz, ColumnWorkKind::FirstMesh);
+      if (MissSliceSoftDeferOwns(soft_held))
       {
-        mesh_service.MarkDirtyPriority(isolated_hole);
-        ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
+        const bool soft_still =
+            mesh_service.GetCache().IsDeferMeshUntilLit(isolated_hole);
+        // SoftDefer lifted (e.g. EnterLitQuiesce spawn ring): transfer to one
+        // Dirty — ticket-only while Held left orphan miss+async (225948).
+        if (ShouldTransferSoftDeferHeldToDirty(soft_held, soft_still))
+        {
+          mesh_service.MarkDirtyPriority(isolated_hole);
+          ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
+          return;
+        }
+        // Hide⇒Ticket: SoftDefer owns — refresh ticket only (P17 SoftDefer KEEP).
+        if (!fm_ticket)
+        {
+          exec.Enqueue(miss_xz, ColumnWorkKind::FirstMesh, first_mesh_prio);
+        }
+        return;
       }
-      GetColumnFlowExecutor().Enqueue(
-          glm::ivec2(isolated_hole.x, isolated_hole.z),
-          ColumnWorkKind::FirstMesh, first_mesh_prio);
+      if (MissSlicePipelineOwns(dirty, raa, inflight, pending_gpu))
+      {
+        // Enter: sticky Inflight/RAA/Pending without Dirty → force transfer.
+        if (!dirty && (world.IsEnterLitGateActive() ||
+                       world.IsEnterLitQuiesceLatched()))
+        {
+          mesh_service.MarkDirtyPriority(isolated_hole);
+          ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
+        }
+        return;
+      }
+      // Ticket-only without Dirty is incomplete ownership — transfer to Dirty.
+      if (!ShouldPinIsolatedMissMarkDirty(
+              ShouldAdmitResidentDirty(resident),
+              /*already_owned=*/false,
+              mesh_service.HasMeshSatisfyingColumnReady(isolated_hole)))
+      {
+        return;
+      }
+      mesh_service.MarkDirtyPriority(isolated_hole);
+      ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
+      if (!exec.Scheduler().Contains(miss_xz, ColumnWorkKind::FirstMesh))
+      {
+        exec.Enqueue(miss_xz, ColumnWorkKind::FirstMesh, first_mesh_prio);
+      }
     };
     // FZ2.7-P16 U1: nh≤1 underfeet pin in cruise (was idle-only !moving).
     if (found_nearest_missing)
@@ -3537,7 +3579,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         if (ShouldGuaranteeResidentWitnessFirstMesh(miss_resident, no_drawable,
                                                     nh))
         {
-          pin_isolated_miss(116);
+          const glm::ivec2 gxz(isolated_hole.x, isolated_hole.z);
+          const bool owned = MissSliceAlreadyOwned(
+              mesh_service.IsChunkMeshDirty(isolated_hole),
+              mesh_service.IsRemeshAfterApplyPending(isolated_hole),
+              mesh_service.HasInflightMeshBuild(isolated_hole),
+              mesh_service.IsSoftDeferHeld(isolated_hole),
+              mesh_service.IsPendingGpuApply(isolated_hole),
+              GetColumnFlowExecutor().Scheduler().Contains(
+                  gxz, ColumnWorkKind::FirstMesh));
+          if (!owned)
+          {
+            pin_isolated_miss(116);
+          }
         }
       }
 

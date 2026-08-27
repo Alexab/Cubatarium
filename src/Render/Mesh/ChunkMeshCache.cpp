@@ -1866,29 +1866,15 @@ int UChunkMeshCache::PruneEnterPhantomDirty(const UBlockWorld &world)
   for (auto it = Dirty.begin(); it != Dirty.end();)
   {
     const glm::ivec3 &c = *it;
-    if (EnterTerminalHeld.count(c) > 0)
+    if (ShouldPruneEnterPhantomDirtyCoord(EnterTerminalHeld.count(c) > 0,
+                                          world.GetChunkManager().HasChunk(c)))
     {
       RemeshAfterApply.erase(c);
       it = Dirty.RemoveAt(it);
       ++pruned;
       continue;
     }
-    if (!world.GetChunkManager().HasChunk(c))
-    {
-      RemeshAfterApply.erase(c);
-      it = Dirty.RemoveAt(it);
-      ++pruned;
-      continue;
-    }
-    if (!HasDrawableGreedyMesh(c) && !HasGreedyMesh(c) &&
-        !HasInflightMeshBuild(c) && !IsPendingGpuApply(c) &&
-        SoftDeferHeld.count(c) == 0)
-    {
-      RemeshAfterApply.erase(c);
-      it = Dirty.RemoveAt(it);
-      ++pruned;
-      continue;
-    }
+    // Resident FirstMesh / SoftDefer-empty holes keep Dirty — MarkEnter owns.
     ++it;
   }
   EnterPhantomDirtyPrunedTotal += static_cast<uint64_t>(pruned);
@@ -1977,12 +1963,12 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
     }
     const bool still_deferred =
         DeferMeshUntilLit && DeferMeshUntilLit(coord);
+    int horiz = 999;
     bool in_focus = false;
     if (MeshFocusValid)
     {
-      const int horiz =
-          std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
-                   std::abs(coord.z - MeshFocusGroundChunk.z));
+      horiz = std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
+                       std::abs(coord.z - MeshFocusGroundChunk.z));
       in_focus = horiz <= MeshFocusRadiusChunks;
     }
     const bool miss_or_focus = StarveRemeshForHoles || in_focus;
@@ -2002,7 +1988,13 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
       continue;
     }
     // SoftDefer lifted: one Dirty admit then drop Held (FirstMesh owns heal).
-    if (requeued >= kRequeueBudget || !TryConsumeDirtyAdmit())
+    // EnterLitQuiesce spawn undrawn: force transfer even when Dirty admit is
+    // exhausted — otherwise Held+ticket orphan miss+async (225948).
+    const bool enter_spawn_transfer = EnterLitQuiesceKeepSpawnUndrawnDirty(
+        EnterLitQuiesce, HasDrawableGreedyMesh(coord), horiz,
+        kVisualStageLitDrawableHoriz);
+    if (!enter_spawn_transfer &&
+        (requeued >= kRequeueBudget || !TryConsumeDirtyAdmit()))
     {
       ++it;
       continue;
@@ -2131,6 +2123,44 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
     }
     return;
   }
+  // SRBR-P0.2: SoftDeferHeld under enter → transfer Dirty before ScheduledThisFrame
+  // dedup (MarkEnter was a no-op while SoftDeferHeld+ticket owned 000708).
+  if (ShouldForceEnterHoleDirty(EnterLitQuiesce, EnterGpuQuiesceDrain) &&
+      SoftDeferHeld.count(chunkCoord) > 0 &&
+      !HasDrawableGreedyMesh(chunkCoord))
+  {
+    SoftDeferHeld.erase(chunkCoord);
+    RemeshAfterApply.erase(chunkCoord);
+    const bool existed = Dirty.Contains(chunkCoord);
+    Dirty.MarkDirtyPriority(chunkCoord);
+    if (!existed)
+    {
+      BumpChunkMeshRevision(chunkCoord);
+    }
+    InstancesDirty = true;
+    GreedyBatchesDirty = true;
+    CrossBatchesDirty = true;
+    return;
+  }
+  // SRBR-P0.2: enter FirstMesh hole → one Dirty owner immediately. Bypass
+  // Active/RAA/PreferKick — SoftDeferHeld handled above.
+  // Do not Invalidate live Inflight here (try_schedule keep-Dirty owns wait).
+  if (ShouldForceEnterHoleDirty(EnterLitQuiesce, EnterGpuQuiesceDrain) &&
+      !HasDrawableGreedyMesh(chunkCoord) &&
+      SoftDeferHeld.count(chunkCoord) == 0)
+  {
+    RemeshAfterApply.erase(chunkCoord);
+    const bool existed = Dirty.Contains(chunkCoord);
+    Dirty.MarkDirtyPriority(chunkCoord);
+    if (!existed)
+    {
+      BumpChunkMeshRevision(chunkCoord);
+    }
+    InstancesDirty = true;
+    GreedyBatchesDirty = true;
+    CrossBatchesDirty = true;
+    return;
+  }
   if (ScheduledThisFrame_.count(chunkCoord) > 0)
   {
     ++LastDirtyScheduleDedupN;
@@ -2176,27 +2206,31 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
       // FZ2.7-P17: FirstMesh miss undrawn always holds supersede under live
       // flight (manual 100413: !soft_undrawn Forgot → discarded_late storm).
       const bool miss_undrawn = true;
-      if (pending_gpu_apply)
+      if (pending_gpu_apply &&
+          !ShouldForceEnterHoleDirty(EnterLitQuiesce, EnterGpuQuiesceDrain))
       {
         PreferKickPendingGpuQueued(chunkCoord);
         return;
       }
-      // Convergence (manual 180247): SoftDefer empty under EnterLitQuiesce must
-      // enter Dirty for FirstMesh. Hardcoded has_inflight=true + RAA park left
-      // dirty=0 missing=1 forever (RAA↔SoftDeferHeld, never schedule).
-      const bool live_flight = inflight || gpu_pending;
-      if (EnterLitQuiesce && soft_undrawn)
+      // SRBR-P0.2: enter gate/quiesce hole → one Dirty owner. Do not Invalidate
+      // live Inflight (aborts heal); PreferKick pending GPU. P17 miss_undrawn
+      // KEEP outside enter.
+      const bool live_flight = inflight || gpu_pending || pending_gpu_apply;
+      const bool enter_hole_force = ShouldForceEnterHoleDirty(
+          EnterLitQuiesce, EnterGpuQuiesceDrain);
+      if (enter_hole_force)
       {
-        if (live_flight)
+        if (pending_gpu_apply)
         {
-          InvalidateInFlightMeshBuild(chunkCoord);
-          if (AsyncBuilder)
-          {
-            AsyncBuilder->ForgetInflight(chunkCoord);
-          }
+          PreferKickPendingGpuQueued(chunkCoord);
         }
         RemeshAfterApply.erase(chunkCoord);
-        // fall through to Dirty.MarkDirtyPriority below
+        // fall through to Dirty.MarkDirtyPriority below (Inflight may finish)
+      }
+      else if (pending_gpu_apply)
+      {
+        PreferKickPendingGpuQueued(chunkCoord);
+        return;
       }
       else if (live_flight ||
                ShouldHoldInflightSupersedeUnderMissUndrawn(
@@ -3631,14 +3665,21 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   if ((defer_until_lit || SoftDeferHeld.count(result.coord) > 0) &&
       !new_cpu_drawable)
   {
-    // EnterLitQuiesce: SoftDeferHeld empty avoid looped async forever while
-    // SoftDefer still true on PendingLight (manual 181421 async=1 missing=1).
-    // SoftDefer already lifted for spawn — drop Held and publish state.
+    // P17 KEEP: EnterLitQuiesce + SoftDefer lifted → drop Held and publish
+    // (empty may free SoftDefer sticky; next remesh owns heal). SoftDefer
+    // still active under enter → one Dirty, never Held park (SRBR-P0.2).
     if (EnterLitQuiesce && !defer_until_lit)
     {
       SoftDeferHeld.erase(result.coord);
       RemeshAfterApply.erase(result.coord);
       // fall through to publish / FreeChunk path
+    }
+    else if (EnterLitQuiesce)
+    {
+      SoftDeferHeld.erase(result.coord);
+      RemeshAfterApply.erase(result.coord);
+      MarkDirtyPriority(result.coord);
+      return;
     }
     else
     {
@@ -4004,20 +4045,28 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           HasGreedyMesh(*it) && !HasDrawableGreedyMesh(*it);
       if (soft_empty)
       {
-        if (EnterLitQuiesceKeepSpawnUndrawnDirty(true, /*has_drawable=*/false,
-                                                 horiz))
-        {
-          ++it;
-          continue;
-        }
-        HoldSoftDeferFirstMesh(*it);
-        RemeshAfterApply.erase(*it);
+        // Under EnterLitQuiesce always keep SoftDefer-empty Dirty — parking to
+        // SoftDeferHeld dual-owned with pin tickets (SRBR-P0.2 / manual 183649).
+        SoftDeferHeld.erase(*it);
+        ++it;
+        continue;
+      }
+      if (HasDrawableGreedyMesh(*it))
+      {
         it = Dirty.RemoveAt(it);
         ++LastMeshDirtyPruneN;
         continue;
       }
-      if (HasDrawableGreedyMesh(*it) || SoftDeferHeld.count(*it) > 0)
+      // SoftDeferHeld+Dirty dual: under enter erase Held keep Dirty (one
+      // owner). Cruise: SoftDeferHeld owns — RemoveAt Dirty (Hide⇒Ticket).
+      if (SoftDeferHeld.count(*it) > 0)
       {
+        if (EnterLitQuiesce)
+        {
+          SoftDeferHeld.erase(*it);
+          ++it;
+          continue;
+        }
         it = Dirty.RemoveAt(it);
         ++LastMeshDirtyPruneN;
         continue;
@@ -4467,17 +4516,27 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           return Dirty.RemoveAt(it);
         }
       }
-      // Era47: SoftDeferHeld owned by ColumnFlow FirstMesh — Dirty remesh under
-      // lit-quiesce only blocks IsSpawnMeshRingReady without helping holes.
+      // Era47/P0.2: SoftDeferHeld under lit-quiesce — erase Held keep Dirty
+      // (one owner). Removing Dirty left miss sticky dirty=0 (234739).
       if (EnterLitQuiesce && SoftDeferHeld.count(*it) > 0 &&
           !ChunkHasFullyDarkFace(*it))
       {
-        ++LastMeshDirtyScheduleSkipN;
-        ++LastMeshDirtyScheduleSkipSoftDeferN;
-        return Dirty.RemoveAt(it);
+        SoftDeferHeld.erase(*it);
       }
       if (AsyncBuilder->IsInFlight(*it))
       {
+        // SRBR-P0.2: enter FirstMesh hole — keep Dirty while Inflight owns
+        // (do NOT Invalidate: that aborted heal every schedule tick → 233131
+        // sticky (-1,3,-1) dirty=1 async forever). Cruise: RemoveAt as before.
+        if (ShouldKeepEnterHoleDirtyDespiteInflight(
+                ShouldForceEnterHoleDirty(EnterLitQuiesce, EnterGpuQuiesceDrain),
+                HasDrawableGreedyMesh(*it)))
+        {
+          ++DirtyScheduleSkipInflightN;
+          ++LastMeshDirtyScheduleSkipN;
+          ++LastMeshDirtyScheduleSkipLockedN;
+          return std::next(it);
+        }
         // CheapRemesh C0: Inflight owns the chunk — erase Dirty so schedule
         // does not revisit every frame (dirty_revisit thrash). Supersede
         // mid-flight only via Active→RAA latch, not via leave-in-Dirty.
@@ -4495,6 +4554,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (IsPendingGpuApply(*it) || IsPendingGpuQueued(*it) ||
           IsPendingGpuKickedOrDispatched(*it))
       {
+        if ((EnterLitQuiesce || EnterGpuQuiesceDrain) &&
+            !HasDrawableGreedyMesh(*it))
+        {
+          PreferKickPendingGpuQueued(*it);
+          return std::next(it);
+        }
         ++DirtyScheduleSkipInflightN;
         ++LastMeshDirtyScheduleSkipN;
         ++LastMeshDirtyScheduleSkipLockedN;

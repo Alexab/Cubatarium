@@ -229,6 +229,11 @@ public:
   {
     return SoftDeferHeld.count(chunk_coord) > 0;
   }
+  /// SoftDefer policy still owns publication for this coord (callback).
+  bool IsDeferMeshUntilLit(glm::ivec3 chunk_coord) const
+  {
+    return DeferMeshUntilLit && DeferMeshUntilLit(chunk_coord);
+  }
   /// Era50: enter void-edge terminal placeholder (Hide⇒Ticket).
   void HoldSoftDeferFirstMesh(glm::ivec3 chunk_coord);
   /// Era51: latch SoftDefer so MarkDirty under enter gate cannot wipe it.

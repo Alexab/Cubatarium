@@ -5417,7 +5417,8 @@ namespace
 int EnterGameMeshRadiusChunks(const UWorld &world)
 {
   // Era20/33: Dirty/greedy underfeet r≤2 for enter mesh burst — not full FOV.
-  // LitDrawable ring=4 settle is NeedsEnterGameVisualWarmup (called below).
+  // LitDrawable ring=4 settle is NeedsEnterGameVisualWarmup. r=4 Dirty thrash
+  // left missing sticky while dirty_n≈30 (214138).
   (void)world;
   return 2;
 }
@@ -5634,6 +5635,85 @@ bool UWorld::DrainEnterGameMeshWarmup(int budget)
          !mesh.HasDirtyWithinHorizontalRadius(center, radius) &&
          !EnterMeshAsyncBlocksRing(*this, mesh, center, radius) &&
          mesh.CountPendingGpuAppliesInHorizontalRadius(center, radius) == 0;
+}
+
+int UWorld::MarkEnterMissingMeshesDirty()
+{
+  if (!MeshService || !BlockRegistry)
+  {
+    return 0;
+  }
+  UWorldMeshService &mesh = *MeshService;
+  if (!HasMissingGreedyMeshesNearFocus(*this))
+  {
+    return 0;
+  }
+  const glm::ivec3 center =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const int radius = EnterGameMeshRadiusChunks(*this);
+  const auto &proc = GetProceduralSettings();
+  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
+  const int player_cy =
+      FloorDiv(std::max(0, GetPreferredLoadFocusBlock().y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
+  int cy0 = 0;
+  int cy1 = 0;
+  EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
+                               cy1);
+  int marked = 0;
+  for (int dx = -radius; dx <= radius; ++dx)
+  {
+    for (int dz = -radius; dz <= radius; ++dz)
+    {
+      for (int cy = cy0; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 coord(center.x + dx, cy, center.z + dz);
+        if (!BlockWorld.GetChunkManager().HasChunk(coord))
+        {
+          continue;
+        }
+        if (mesh.HasMeshSatisfyingColumnReady(coord))
+        {
+          continue;
+        }
+        if (mesh.HasGreedyMesh(coord))
+        {
+          const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord);
+          bool any_solid = false;
+          if (ch)
+          {
+            for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+            {
+              for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+              {
+                for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+                {
+                  if (ch->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+                  {
+                    any_solid = true;
+                  }
+                }
+              }
+            }
+          }
+          if (!any_solid)
+          {
+            continue;
+          }
+        }
+        // Dirty already owns → skip. SoftDeferHeld → erase + one Dirty
+        // (transfer; no parallel FirstMesh Enqueue). Inflight/RAA/Pending →
+        // MarkDirtyPriority enter force (Invalidates).
+        if (mesh.IsChunkMeshDirty(coord))
+        {
+          continue;
+        }
+        mesh.MarkDirtyPriority(coord);
+        ++marked;
+      }
+    }
+  }
+  return marked;
 }
 
 bool UWorld::IsSpawnMeshRingReady() const
@@ -7354,6 +7434,9 @@ void UWorld::TickEnterWarmupDrainFrame(int mesh_budget, int gate_iterations,
   if (IsEnterLitGateActive())
   {
     MeshService->PruneEnterPhantomDirty(BlockWorld);
+    // Gate never runs DrainEnterGameMeshWarmup — transfer SoftDefer-empty /
+    // !ready to one Dirty (SRBR-P0.2 single owner).
+    MarkEnterMissingMeshesDirty();
     // Gate Tick: Repair is drain helper, not SoT — worklist Done is SoT.
     RepairEnterLitSnapshotFullyDarkRemesh();
     TickEnterGateMeshDrain(std::max(1, gate_iterations), max_gate_wall_ms);

@@ -197,6 +197,75 @@ inline bool ShouldGuaranteeResidentWitnessFirstMesh(bool has_chunk,
   return has_chunk && no_drawable && miss_horiz >= 0 && miss_horiz <= 1;
 }
 
+/// SRBR-P0.2 / ColPipe P4: one miss owner — Dirty, RAA, Inflight, SoftDeferHeld,
+/// PendingGpu, or FirstMesh ticket. Dual MarkDirty+Enqueue refeed forever.
+inline bool MissSliceAlreadyOwned(bool dirty, bool remesh_after_apply,
+                                  bool inflight, bool soft_defer_held,
+                                  bool pending_gpu, bool first_mesh_ticket)
+{
+  return dirty || remesh_after_apply || inflight || soft_defer_held ||
+         pending_gpu || first_mesh_ticket;
+}
+
+/// SoftDeferHeld owns Hide⇒Ticket — refresh ticket only, never MarkDirty.
+inline bool MissSliceSoftDeferOwns(bool soft_defer_held)
+{
+  return soft_defer_held;
+}
+
+/// SoftDeferHeld ticket-only while SoftDefer still owns publication.
+/// SoftDefer lifted → transfer to one Dirty (never Held+ticket orphan).
+inline bool ShouldTransferSoftDeferHeldToDirty(bool soft_defer_held,
+                                               bool soft_defer_still_active)
+{
+  return soft_defer_held && !soft_defer_still_active;
+}
+
+/// EnterLitQuiesce SoftDefer empty while SoftDefer still active: Dirty transfer
+/// (no Held park). SoftDefer lifted → P17 publish fallthrough (not this).
+inline bool ShouldEnterSoftDeferEmptyTransferDirty(bool enter_lit_quiesce,
+                                                   bool defer_until_lit)
+{
+  return enter_lit_quiesce && defer_until_lit;
+}
+
+/// Mesh pipeline owns the slice — no second Enqueue/MarkDirty.
+inline bool MissSlicePipelineOwns(bool dirty, bool remesh_after_apply,
+                                  bool inflight, bool pending_gpu)
+{
+  return dirty || remesh_after_apply || inflight || pending_gpu;
+}
+
+/// Pin may MarkDirty only when nothing owns the slice yet.
+inline bool ShouldPinIsolatedMissMarkDirty(bool resident, bool already_owned,
+                                           bool column_ready)
+{
+  return resident && !already_owned && !column_ready;
+}
+
+/// SRBR-P0.2: under enter gate/quiesce, miss_undrawn must not RAA-park holes
+/// (dirty=0 orphan). Force one Dirty owner instead.
+inline bool ShouldForceEnterHoleDirty(bool enter_lit_quiesce,
+                                      bool enter_gpu_quiesce_drain)
+{
+  return enter_lit_quiesce || enter_gpu_quiesce_drain;
+}
+
+/// SRBR-P0.2: under enter, sticky Inflight on !drawable must not RemoveAt Dirty.
+inline bool ShouldKeepEnterHoleDirtyDespiteInflight(bool enter_hole_force,
+                                                    bool has_drawable)
+{
+  return enter_hole_force && !has_drawable;
+}
+
+/// SRBR-P0.2: phantom enter Dirty is terminal-held or unloaded only —
+/// never strip FirstMesh hole Dirty (!HasGreedy).
+inline bool ShouldPruneEnterPhantomDirtyCoord(bool enter_terminal_held,
+                                             bool has_chunk)
+{
+  return enter_terminal_held || !has_chunk;
+}
+
 /// Era23 P2: SoftDefer empty PreferKick only when GPU queue is stuck on the
 /// same coord (not empty placeholder apply storm).
 inline bool ShouldPreferKickSoftDeferEmptyStuck(bool soft_defer_empty,
