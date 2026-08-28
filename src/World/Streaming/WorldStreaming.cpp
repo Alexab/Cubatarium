@@ -3460,20 +3460,23 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       Streamer->PrefetchKeepShell(feet_chunk, idle_hole_budget,
                                   &prefetch_keep_ops);
     }
-    if ((world.GetEnterGameMeshBurstFrames() > 0 ||
-         world.NeedsSpawnRingCatchUp()) &&
-        !moving_fast)
+    const bool spawn_catch_up = world.NeedsSpawnRingCatchUp();
+    const bool underfeet_miss_sla =
+        world.PhysicsTelemetryData.FocusMissingMesh != 0 &&
+        world.PhysicsTelemetryData.MissHoriz <= 1;
+    if ((world.GetEnterGameMeshBurstFrames() > 0 || spawn_catch_up) &&
+        ShouldRunSpawnRingCatchUpHeal(spawn_catch_up, moving_fast,
+                                      underfeet_miss_sla))
     {
       const int dirty_n =
           static_cast<int>(world.GetMeshService().GetDirtyCount());
       const int mark_budget =
-          dirty_n > 48 ? 2 : (world.NeedsSpawnRingCatchUp() ? 6 : 4);
+          dirty_n > 48 ? 2 : (spawn_catch_up ? 6 : 4);
       world.MarkSpawnRingUnfinishedDirty(mark_budget);
       if (ShouldBurstHealPinnedMiss(
               world.PhysicsTelemetryData.FocusMissingMesh != 0,
               world.PhysicsTelemetryData.MissHoriz,
-              world.GetEnterGameMeshBurstFrames() > 0,
-              world.NeedsSpawnRingCatchUp()))
+              world.GetEnterGameMeshBurstFrames() > 0, spawn_catch_up))
       {
         const glm::ivec3 pin(world.PhysicsTelemetryData.MissCx,
                              world.PhysicsTelemetryData.MissCy,

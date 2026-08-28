@@ -2216,11 +2216,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       mesh_schedule = std::max(mesh_schedule, 24);
     }
   }
-  // TD-ARCH-021: keep catch-up while Visual ring unfinished (not only 5 frames).
-  if (!moving && world.NeedsSpawnRingCatchUp())
+  // TD-ARCH-021: catch-up while visual ring unfinished — include enter fly.
+  if (world.NeedsSpawnRingCatchUp())
   {
-    mesh_drain = std::max(mesh_drain, 24);
-    mesh_schedule = std::max(mesh_schedule, 20);
+    mesh_drain = std::max(mesh_drain, moving ? 20 : 24);
+    mesh_schedule = std::max(mesh_schedule, moving ? 16 : 20);
+    if (missing_visible_mesh && world.GetPhysicsTelemetry().MissHoriz <= 1)
+    {
+      mesh_drain = std::max(mesh_drain, moving ? 24 : 28);
+      mesh_schedule = std::max(mesh_schedule, moving ? 20 : 24);
+    }
     // Hide⇒Ticket drain: sticky/stale-dark unfinished needs SyncIdle, not only
     // Dirty schedule (async can sit on remesh while draw_ok stays false).
     auto &exec = GetColumnFlowExecutor();

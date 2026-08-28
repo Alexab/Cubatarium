@@ -2182,6 +2182,13 @@ int main()
            "P0.2: nh=2 no burst heal");
     Expect(!ShouldBurstHealPinnedMiss(false, 0, true, true),
            "P0.2: !miss no burst heal");
+    using cutum::ShouldRunSpawnRingCatchUpHeal;
+    Expect(ShouldRunSpawnRingCatchUpHeal(true, true, false),
+           "P0.2: catch-up heal while moving fly");
+    Expect(!ShouldRunSpawnRingCatchUpHeal(false, true, false),
+           "P0.2: no catch-up while moving cruise");
+    Expect(ShouldRunSpawnRingCatchUpHeal(false, true, true),
+           "P0.2: underfeet miss heal while moving");
     Expect(ShouldEnqueueWitnessOwnedFirstMesh(true, 0, true),
            "P16 U2: miss nh=0 !drawable → owned FM");
     Expect(ShouldEnqueueWitnessOwnedFirstMesh(true, 2, true),

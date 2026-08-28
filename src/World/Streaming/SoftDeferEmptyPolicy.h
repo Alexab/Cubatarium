@@ -181,6 +181,17 @@ inline bool ShouldBurstHealPinnedMiss(bool focus_missing_mesh, int miss_horiz,
          (enter_burst || spawn_catch_up);
 }
 
+/// TD-ARCH-021: spawn-ring catch-up must run during enter fly (fz-cold-enter).
+inline bool ShouldRunSpawnRingCatchUpHeal(bool spawn_catch_up, bool moving_fast,
+                                          bool underfeet_miss)
+{
+  if (!spawn_catch_up && !underfeet_miss)
+  {
+    return false;
+  }
+  return !moving_fast || spawn_catch_up || underfeet_miss;
+}
+
 /// FZ2.7-P16 U2: column-owned FirstMesh on miss witness (nh≤2, !drawable).
 inline bool ShouldEnqueueWitnessOwnedFirstMesh(bool focus_missing_mesh,
                                                int miss_horiz,
