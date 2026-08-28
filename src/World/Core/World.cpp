@@ -2136,7 +2136,8 @@ uint64_t PackUnfinishedColKey(int x, int z)
 }
 
 /// Cheap unfinished probe for ring cache: terrain complete + any slice missing
-/// mesh/GPU ready. Full GetColumnRenderableState stays for idle gates / draw.
+/// mesh/GPU ready in the presentable cy band (not full column — bedrock cy=0
+/// SoftDefer empty must not pin post_load_ring; manual 100846 / 182802).
 bool ColumnUnfinishedVisualCheap(const UWorld &world, glm::ivec3 focus_ground,
                                  int dx, int dz)
 {
@@ -2150,10 +2151,16 @@ bool ColumnUnfinishedVisualCheap(const UWorld &world, glm::ivec3 focus_ground,
   {
     return true;
   }
+  const auto &proc = world.GetProceduralSettings();
+  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
+  const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
+  const int player_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
+  int cy0 = 0;
+  int cy1 = 0;
+  EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
+                               cy1);
   const auto &mesh = world.GetMeshService();
-  const int cy0 = 0;
-  const int cy1 =
-      std::max(0, (world.GetProceduralSettings().MaxHeight - 1) / CHUNK_SIZE);
   for (int cy = cy0; cy <= cy1; ++cy)
   {
     const glm::ivec3 coord(ground.x, cy, ground.z);
