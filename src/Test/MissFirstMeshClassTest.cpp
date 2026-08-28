@@ -7,6 +7,7 @@
 #include "World/Streaming/CyOrderPolicy.h"
 #include "World/Streaming/EnterVisualGate.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
+#include "World/Streaming/EnterSessionPhase.h"
 #include "World/Streaming/ColumnVisualReadyPolicy.h"
 #include "World/Diagnostics/EnterLitDiagnostics.h"
 #include "World/Streaming/NearFovWorkPriority.h"
@@ -2187,6 +2188,8 @@ int main()
            "P0.2: spawn ring pin nh=3");
     Expect(!ShouldPinIsolatedMissSpawnRing(false, true, 3),
            "P0.2: !catch-up no spawn ring pin");
+    Expect(!ShouldPinIsolatedMissSpawnRing(true, true, 3, true),
+           "F2: enter session blocks spawn ring pin");
     using cutum::ShouldUseEnterSpawnMissProbe;
     using cutum::ShouldSkipParkSpawnRingForMissHeal;
     Expect(ShouldUseEnterSpawnMissProbe(false, false, true, false),
@@ -2197,6 +2200,8 @@ int main()
            "P0.2: skip park during catch-up");
     Expect(ShouldSkipParkSpawnRingForMissHeal(false, true, 3),
            "P0.2: skip park on near miss");
+    Expect(!ShouldSkipParkSpawnRingForMissHeal(true, false, 0, true),
+           "F2: enter session does not skip park");
     using cutum::ShouldRunSpawnRingCatchUpHeal;
     Expect(ShouldRunSpawnRingCatchUpHeal(true, true, false),
            "P0.2: catch-up heal while moving fly");
@@ -2204,6 +2209,18 @@ int main()
            "P0.2: no catch-up while moving cruise");
     Expect(ShouldRunSpawnRingCatchUpHeal(false, true, true),
            "P0.2: underfeet miss heal while moving");
+    Expect(!ShouldRunSpawnRingCatchUpHeal(true, true, false, true),
+           "F2: enter session blocks catch-up heal");
+    using cutum::EnterSessionPhase;
+    using cutum::IsEnterSessionActive;
+    Expect(IsEnterSessionActive(EnterSessionPhase::CooperativeLoad),
+           "F2: CooperativeLoad is active enter session");
+    Expect(IsEnterSessionActive(EnterSessionPhase::GpuWarmup),
+           "F2: GpuWarmup is active enter session");
+    Expect(!IsEnterSessionActive(EnterSessionPhase::Done),
+           "F2: Done is not active enter session");
+    Expect(!IsEnterSessionActive(EnterSessionPhase::None),
+           "F2: None is not active enter session");
     Expect(ShouldEnqueueWitnessOwnedFirstMesh(true, 0, true),
            "P16 U2: miss nh=0 !drawable → owned FM");
     Expect(ShouldEnqueueWitnessOwnedFirstMesh(true, 2, true),
