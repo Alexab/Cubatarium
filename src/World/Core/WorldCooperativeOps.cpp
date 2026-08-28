@@ -49,6 +49,13 @@ void ParkSpawnRingMeshWhileRelightDeferred(UWorld &world)
   {
     return;
   }
+  const auto &phys = world.GetPhysicsTelemetry();
+  if (ShouldSkipParkSpawnRingForMissHeal(
+          world.NeedsSpawnRingCatchUp(), phys.FocusMissingMesh != 0,
+          phys.MissHoriz))
+  {
+    return;
+  }
   const glm::ivec3 focus =
       UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
   world.GetMeshService().ParkDirtyWithinHorizontalRadius(

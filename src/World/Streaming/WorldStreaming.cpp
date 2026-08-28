@@ -553,14 +553,23 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   const glm::ivec3 focus_ground = UChunkManager::WorldToChunk(focus_block);
   const glm::ivec3 focus_horiz(focus_ground.x, 0, focus_ground.z);
   const int focus_radius = world.GetStreamingFocusRadius();
+  const bool enter_miss_probe =
+      ShouldUseEnterSpawnMissProbe(world.IsEnterLitGateActive(),
+                                   world.NeedsEnterGameMeshWarmup(),
+                                   world.NeedsSpawnRingCatchUp(),
+                                   world.GetLastMovementSpeed() >
+                                       world.GetProceduralSettings()
+                                           .MovementPrefetchThreshold);
   const int pending_pl_radius =
       (world.IsEnterLitGateActive() || world.NeedsEnterGameMeshWarmup() ||
        world.NeedsSpawnRingCatchUp())
           ? EnterVisualWorkRadiusChunks()
           : focus_radius;
+  const int miss_probe_radius =
+      enter_miss_probe ? EnterVisualWorkRadiusChunks() : focus_radius;
   const bool missing_near =
       world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
-          world.GetBlockWorld(), focus_ground, focus_radius);
+          world.GetBlockWorld(), focus_ground, miss_probe_radius);
   const int prev_miss_cx = world.PhysicsTelemetryData.MissCx;
   const int prev_miss_cz = world.PhysicsTelemetryData.MissCz;
   const int prev_hold_n = world.PhysicsTelemetryData.RelightWitnessHoldN;
@@ -605,7 +614,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     }
     if (!found &&
         world.GetMeshService().FindNearestMissingGreedyMesh(
-            world.GetBlockWorld(), focus_ground, focus_radius, miss_coord))
+            world.GetBlockWorld(), focus_ground, miss_probe_radius, miss_coord))
     {
       found = true;
     }
@@ -3471,7 +3480,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       const int dirty_n =
           static_cast<int>(world.GetMeshService().GetDirtyCount());
       const int mark_budget =
-          dirty_n > 48 ? 2 : (spawn_catch_up ? 6 : 4);
+          dirty_n > 48 ? 2 : (spawn_catch_up ? (moving_fast ? 6 : 8) : 4);
       world.MarkSpawnRingUnfinishedDirty(mark_budget);
       if (ShouldBurstHealPinnedMiss(
               world.PhysicsTelemetryData.FocusMissingMesh != 0,

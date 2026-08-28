@@ -2219,8 +2219,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // TD-ARCH-021: catch-up while visual ring unfinished — include enter fly.
   if (world.NeedsSpawnRingCatchUp())
   {
-    mesh_drain = std::max(mesh_drain, moving ? 20 : 24);
-    mesh_schedule = std::max(mesh_schedule, moving ? 16 : 20);
+    mesh_drain = std::max(mesh_drain, moving ? 20 : 28);
+    mesh_schedule = std::max(mesh_schedule, moving ? 16 : 24);
     if (missing_visible_mesh && world.GetPhysicsTelemetry().MissHoriz <= 1)
     {
       mesh_drain = std::max(mesh_drain, moving ? 24 : 28);
@@ -3504,6 +3504,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       if (ShouldPinIsolatedMissUnderfeet(found_nearest_missing, nh_underfeet))
       {
         pin_isolated_miss(110);
+      }
+      else if (ShouldPinIsolatedMissSpawnRing(world.NeedsSpawnRingCatchUp(),
+                                              found_nearest_missing,
+                                              nh_underfeet))
+      {
+        pin_isolated_miss(108);
       }
     }
     // Era14 TD-ARCH-042 / Era14.1 A1: DesiredStage Dirty FirstMesh — no Imm

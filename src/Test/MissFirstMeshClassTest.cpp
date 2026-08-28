@@ -2182,6 +2182,21 @@ int main()
            "P0.2: nh=2 no burst heal");
     Expect(!ShouldBurstHealPinnedMiss(false, 0, true, true),
            "P0.2: !miss no burst heal");
+    using cutum::ShouldPinIsolatedMissSpawnRing;
+    Expect(ShouldPinIsolatedMissSpawnRing(true, true, 3),
+           "P0.2: spawn ring pin nh=3");
+    Expect(!ShouldPinIsolatedMissSpawnRing(false, true, 3),
+           "P0.2: !catch-up no spawn ring pin");
+    using cutum::ShouldUseEnterSpawnMissProbe;
+    using cutum::ShouldSkipParkSpawnRingForMissHeal;
+    Expect(ShouldUseEnterSpawnMissProbe(false, false, true, false),
+           "P0.2: idle catch-up uses enter miss probe");
+    Expect(!ShouldUseEnterSpawnMissProbe(false, false, true, true),
+           "P0.2: moving cruise keeps full-RD probe");
+    Expect(ShouldSkipParkSpawnRingForMissHeal(true, false, 0),
+           "P0.2: skip park during catch-up");
+    Expect(ShouldSkipParkSpawnRingForMissHeal(false, true, 3),
+           "P0.2: skip park on near miss");
     using cutum::ShouldRunSpawnRingCatchUpHeal;
     Expect(ShouldRunSpawnRingCatchUpHeal(true, true, false),
            "P0.2: catch-up heal while moving fly");

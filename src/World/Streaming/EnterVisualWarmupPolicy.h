@@ -25,6 +25,32 @@ inline int EnterVisualWorkRadiusChunks()
   return kVisualStageLitDrawableHoriz;
 }
 
+/// SRBR-P0.2: miss probe + pending_light share enter ring (not full RD).
+inline bool ShouldUseEnterSpawnMissProbe(bool enter_lit_gate,
+                                         bool enter_mesh_warmup,
+                                         bool spawn_catch_up, bool moving_fast)
+{
+  if (enter_lit_gate || enter_mesh_warmup)
+  {
+    return true;
+  }
+  // Idle/cooperative enter only — cruise fly must keep full-RD SoT.
+  return spawn_catch_up && !moving_fast;
+}
+
+/// Do not park spawn-ring Dirty while catch-up / near miss heal is active.
+inline bool ShouldSkipParkSpawnRingForMissHeal(bool spawn_catch_up,
+                                               bool focus_missing_mesh,
+                                               int miss_horiz)
+{
+  if (spawn_catch_up)
+  {
+    return true;
+  }
+  return focus_missing_mesh && miss_horiz >= 0 &&
+         miss_horiz <= kVisualStageLitDrawableHoriz;
+}
+
 /// Remesh only when lightmap or voxels actually changed.
 inline bool ShouldRemeshAfterLightApply(bool light_or_voxel_delta)
 {

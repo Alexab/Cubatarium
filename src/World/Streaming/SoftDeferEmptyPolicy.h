@@ -1,5 +1,7 @@
 #pragma once
 
+#include "World/Streaming/VisualStagePolicy.h"
+
 #include <algorithm>
 #include <cstdint>
 
@@ -164,6 +166,15 @@ inline bool ShouldPinIsolatedMissUnderfeet(bool found_nearest_missing,
                                            int miss_horiz)
 {
   return found_nearest_missing && miss_horiz >= 0 && miss_horiz <= 2;
+}
+
+/// SRBR-P0.2: spawn-ring catch-up pins nh≤enter work radius (fz-cold-enter).
+inline bool ShouldPinIsolatedMissSpawnRing(bool spawn_catch_up,
+                                           bool found_nearest_missing,
+                                           int miss_horiz)
+{
+  return spawn_catch_up && found_nearest_missing && miss_horiz >= 0 &&
+         miss_horiz <= kVisualStageLitDrawableHoriz;
 }
 
 /// Hold nh≤2 miss witness while the pinned slice is still greedy-missing.
