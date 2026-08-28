@@ -2210,6 +2210,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     mesh_drain = std::max(mesh_drain, 20);
     mesh_schedule = std::max(mesh_schedule, 16);
+    if (missing_visible_mesh && world.GetPhysicsTelemetry().MissHoriz <= 1)
+    {
+      mesh_drain = std::max(mesh_drain, 28);
+      mesh_schedule = std::max(mesh_schedule, 24);
+    }
   }
   // TD-ARCH-021: keep catch-up while Visual ring unfinished (not only 5 frames).
   if (!moving && world.NeedsSpawnRingCatchUp())

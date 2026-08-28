@@ -195,7 +195,7 @@ void UWorldStreaming::PrepareEnterGameSession(UWorld &world)
   world.ConsumeSpawnAreaPreparedByCooperativeLoad();
   // Era20: thinner enter gate (r≤2) — longer burst so SpawnRingCatchUp paints
   // the rest of RD without a multi-second enter hitch.
-  world.BeginEnterGameMeshBurst(12);
+  world.BeginEnterGameMeshBurst(18);
   // Era29 P3: pin Capture witness at spawn so first InGame frames don't retarget
   // SoftDefer empty thrash (manual 091332 ENTER retarget_d=15).
   {
@@ -3469,6 +3469,17 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       const int mark_budget =
           dirty_n > 48 ? 2 : (world.NeedsSpawnRingCatchUp() ? 6 : 4);
       world.MarkSpawnRingUnfinishedDirty(mark_budget);
+      if (ShouldBurstHealPinnedMiss(
+              world.PhysicsTelemetryData.FocusMissingMesh != 0,
+              world.PhysicsTelemetryData.MissHoriz,
+              world.GetEnterGameMeshBurstFrames() > 0,
+              world.NeedsSpawnRingCatchUp()))
+      {
+        const glm::ivec3 pin(world.PhysicsTelemetryData.MissCx,
+                             world.PhysicsTelemetryData.MissCy,
+                             world.PhysicsTelemetryData.MissCz);
+        world.HealPinnedMissSlice(pin);
+      }
     }
     world.PhysicsTelemetryData.IdlePrefetchMs =
         std::chrono::duration<double, std::milli>(

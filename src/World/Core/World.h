@@ -405,6 +405,8 @@ public:
   int MarkEnterMissingMeshesDirty();
   /// TD-ARCH-021: burst-mark unfinished spawn visual ring (budget per frame).
   int MarkSpawnRingUnfinishedDirty(int max_marks);
+  /// SRBR-P0.2: force Dirty/GPU kick on pinned miss slice (nh≤1 SLA).
+  bool HealPinnedMissSlice(glm::ivec3 coord);
   bool NeedsEnterGameMeshWarmup() const;
   struct EnterGameMeshWarmupBlockers
   {

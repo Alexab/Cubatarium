@@ -5866,61 +5866,117 @@ int UWorld::MarkSpawnRingUnfinishedDirty(int max_marks)
   EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
                                cy1);
   int marked = 0;
-  for (int dx = -vis_r; dx <= vis_r && marked < max_marks; ++dx)
+  auto try_mark_slice = [&](glm::ivec3 coord) -> bool
   {
-    for (int dz = -vis_r; dz <= vis_r && marked < max_marks; ++dz)
+    if (!BlockWorld.GetChunkManager().HasChunk(coord))
     {
-      if (!ColumnUnfinishedVisualCheap(*this, focus, dx, dz))
+      return false;
+    }
+    if (mesh.HasMeshSatisfyingColumnReady(coord) ||
+        mesh.IsPendingGpuApply(coord))
+    {
+      return false;
+    }
+    const bool soft_held = mesh.IsSoftDeferHeld(coord);
+    const bool dirty = mesh.IsChunkMeshDirty(coord);
+    const bool raa = mesh.IsRemeshAfterApplyPending(coord);
+    const bool inflight = mesh.HasInflightMeshBuild(coord);
+    const bool pending_gpu = mesh.IsPendingGpuApply(coord);
+    if (soft_held)
+    {
+      const bool soft_still = mesh.GetCache().IsDeferMeshUntilLit(coord);
+      if (ShouldTransferSoftDeferHeldToDirty(soft_held, soft_still))
       {
-        continue;
+        mesh.MarkDirtyPriority(coord);
+        return true;
       }
-      for (int cy = cy0; cy <= cy1 && marked < max_marks; ++cy)
+      return false;
+    }
+    const glm::ivec2 col_xz(coord.x, coord.z);
+    const bool fm_ticket = GetColumnFlowExecutor().Scheduler().Contains(
+        col_xz, ColumnWorkKind::FirstMesh);
+    if (fm_ticket && !dirty && !mesh.HasMeshSatisfyingColumnReady(coord))
+    {
+      mesh.MarkDirtyPriority(coord);
+      return true;
+    }
+    if (MissSliceAlreadyOwned(dirty, raa, inflight, false, pending_gpu,
+                              fm_ticket))
+    {
+      return false;
+    }
+    mesh.MarkDirtyPriority(coord);
+    return true;
+  };
+  // Underfeet-first ring order — nh=0 before rim backlog (miss_stuck SLA).
+  for (int horiz = 0; horiz <= vis_r && marked < max_marks; ++horiz)
+  {
+    for (int dx = -horiz; dx <= horiz && marked < max_marks; ++dx)
+    {
+      for (int dz = -horiz; dz <= horiz && marked < max_marks; ++dz)
       {
-        const glm::ivec3 coord(focus.x + dx, cy, focus.z + dz);
-        if (!BlockWorld.GetChunkManager().HasChunk(coord))
+        if (std::max(std::abs(dx), std::abs(dz)) != horiz)
         {
           continue;
         }
-        if (mesh.HasMeshSatisfyingColumnReady(coord) ||
-            mesh.IsPendingGpuApply(coord))
+        if (!ColumnUnfinishedVisualCheap(*this, focus, dx, dz))
         {
           continue;
         }
-        const bool soft_held = mesh.IsSoftDeferHeld(coord);
-        const bool dirty = mesh.IsChunkMeshDirty(coord);
-        const bool raa = mesh.IsRemeshAfterApplyPending(coord);
-        const bool inflight = mesh.HasInflightMeshBuild(coord);
-        const bool pending_gpu = mesh.IsPendingGpuApply(coord);
-        if (soft_held)
+        for (int cy = cy0; cy <= cy1 && marked < max_marks; ++cy)
         {
-          const bool soft_still = mesh.GetCache().IsDeferMeshUntilLit(coord);
-          if (ShouldTransferSoftDeferHeldToDirty(soft_held, soft_still))
+          if (try_mark_slice(glm::ivec3(focus.x + dx, cy, focus.z + dz)))
           {
-            mesh.MarkDirtyPriority(coord);
             ++marked;
           }
-          continue;
         }
-        const glm::ivec2 col_xz(coord.x, coord.z);
-        const bool fm_ticket = GetColumnFlowExecutor().Scheduler().Contains(
-            col_xz, ColumnWorkKind::FirstMesh);
-        if (fm_ticket && !dirty && !mesh.HasMeshSatisfyingColumnReady(coord))
-        {
-          mesh.MarkDirtyPriority(coord);
-          ++marked;
-          continue;
-        }
-        if (MissSliceAlreadyOwned(dirty, raa, inflight, false, pending_gpu,
-                                  fm_ticket))
-        {
-          continue;
-        }
-        mesh.MarkDirtyPriority(coord);
-        ++marked;
       }
     }
   }
   return marked;
+}
+
+bool UWorld::HealPinnedMissSlice(glm::ivec3 coord)
+{
+  if (!MeshService || !BlockRegistry)
+  {
+    return false;
+  }
+  if (!BlockWorld.GetChunkManager().HasChunk(coord))
+  {
+    return false;
+  }
+  UWorldMeshService &mesh = *MeshService;
+  if (mesh.HasMeshSatisfyingColumnReady(coord))
+  {
+    return true;
+  }
+  const glm::ivec2 col_xz(coord.x, coord.z);
+  const bool dirty = mesh.IsChunkMeshDirty(coord);
+  const bool soft_held = mesh.IsSoftDeferHeld(coord);
+  if (soft_held)
+  {
+    const bool soft_still = mesh.GetCache().IsDeferMeshUntilLit(coord);
+    if (ShouldTransferSoftDeferHeldToDirty(soft_held, soft_still))
+    {
+      mesh.MarkDirtyPriority(coord);
+    }
+  }
+  else
+  {
+    const bool fm_ticket = GetColumnFlowExecutor().Scheduler().Contains(
+        col_xz, ColumnWorkKind::FirstMesh);
+    if (!dirty || fm_ticket)
+    {
+      mesh.MarkDirtyPriority(coord);
+    }
+  }
+  if (mesh.IsPendingGpuApply(coord) || mesh.IsPendingGpuQueued(coord) ||
+      mesh.IsPendingGpuKickedOrDispatched(coord))
+  {
+    mesh.PreferKickPendingGpuQueued(coord);
+  }
+  return false;
 }
 
 void UWorld::TickEnterGameMeshBurst()

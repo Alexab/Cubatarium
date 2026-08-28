@@ -173,6 +173,14 @@ inline bool ShouldHoldNearMissWitness(int pinned_horiz, bool still_missing)
          pinned_horiz <= kVisualStageNearFovHoriz;
 }
 
+/// Enter burst: heal pinned underfeet/near miss every frame (miss_stuck SLA).
+inline bool ShouldBurstHealPinnedMiss(bool focus_missing_mesh, int miss_horiz,
+                                      bool enter_burst, bool spawn_catch_up)
+{
+  return focus_missing_mesh && miss_horiz >= 0 && miss_horiz <= 1 &&
+         (enter_burst || spawn_catch_up);
+}
+
 /// FZ2.7-P16 U2: column-owned FirstMesh on miss witness (nh≤2, !drawable).
 inline bool ShouldEnqueueWitnessOwnedFirstMesh(bool focus_missing_mesh,
                                                int miss_horiz,

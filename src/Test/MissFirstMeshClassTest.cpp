@@ -2175,6 +2175,13 @@ int main()
            "P16 U1: nh=3 no near pin");
     Expect(!ShouldPinIsolatedMissUnderfeet(false, 0),
            "P16 U1: !found → no pin");
+    using cutum::ShouldBurstHealPinnedMiss;
+    Expect(ShouldBurstHealPinnedMiss(true, 0, true, false),
+           "P0.2: burst heal nh=0");
+    Expect(!ShouldBurstHealPinnedMiss(true, 2, true, false),
+           "P0.2: nh=2 no burst heal");
+    Expect(!ShouldBurstHealPinnedMiss(false, 0, true, true),
+           "P0.2: !miss no burst heal");
     Expect(ShouldEnqueueWitnessOwnedFirstMesh(true, 0, true),
            "P16 U2: miss nh=0 !drawable → owned FM");
     Expect(ShouldEnqueueWitnessOwnedFirstMesh(true, 2, true),
