@@ -191,7 +191,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       UChunkManager::WorldToChunk(focus_block);
   const glm::ivec3 focus_ground_horiz(focus_ground.x, 0, focus_ground.z);
   const int focus_radius = world.GetStreamingFocusRadius();
-  mesh_service.SetMeshRebuildFocus(focus_ground_horiz, focus_radius);
+  mesh_service.SetMeshRebuildFocus(focus_ground, focus_radius);
   // Soft-defer / V2a: no first-mesh while PendingLight except underfeet; remesh
   // of existing mesh is deferred even underfeet (player dig dark overwrite).
   // Cold SoftDefer hole: also allow first-mesh for the single nearest missing
@@ -201,7 +201,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // even when there is no hole (CB mesh_emerge_prep ~5ms on no-hole fly).
   const bool missing_visible_mesh =
       mesh_service.HasMissingGreedyMeshInHorizontalRadius(
-          world.GetBlockWorld(), focus_ground_horiz, focus_radius);
+          world.GetBlockWorld(), focus_ground, focus_radius);
   // Era22 I-M8: track miss witness age (~120 frames ≈ 1 period ≈2s).
   if (missing_visible_mesh)
   {
@@ -2784,7 +2784,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // hole-fill this frame (same path place uses, without waiting Dirty drain).
   const bool underfeet_need_after =
       mesh_service.HasMissingGreedyMeshInHorizontalRadius(
-          world.GetBlockWorld(), focus_ground_horiz, /*radius=*/1) ||
+          world.GetBlockWorld(), focus_ground, /*radius=*/1) ||
       world.HasPendingLightBeforeMeshNear(focus_ground_horiz, /*radius=*/1);
 
   // Sync-fill holes: aggressive only for underfeet, not global Dirty flood.
@@ -3458,6 +3458,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
         }
         return;
+      }
+      // Column xz ticket without slice Dirty never builds cy-specific mesh.
+      if (fm_ticket && !dirty &&
+          !mesh_service.HasMeshSatisfyingColumnReady(isolated_hole))
+      {
+        mesh_service.MarkDirtyPriority(isolated_hole);
+        ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
       }
       // Ticket-only without Dirty is incomplete ownership — transfer to Dirty.
       if (!ShouldPinIsolatedMissMarkDirty(

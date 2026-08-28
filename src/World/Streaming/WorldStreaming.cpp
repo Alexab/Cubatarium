@@ -555,7 +555,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   const int focus_radius = world.GetStreamingFocusRadius();
   const bool missing_near =
       world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
-          world.GetBlockWorld(), focus_horiz, focus_radius);
+          world.GetBlockWorld(), focus_ground, focus_radius);
   const int prev_miss_cx = world.PhysicsTelemetryData.MissCx;
   const int prev_miss_cz = world.PhysicsTelemetryData.MissCz;
   const int prev_hold_n = world.PhysicsTelemetryData.RelightWitnessHoldN;
@@ -635,7 +635,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   const bool missing_underfeet_mesh =
       missing_near &&
       world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
-          world.GetBlockWorld(), focus_horiz, /*radius=*/0);
+          world.GetBlockWorld(), focus_ground, /*radius=*/0);
   const bool missing_underfeet =
       missing_underfeet_mesh && !incomplete_camera_column;
   const int pending_light_focus =
@@ -1013,7 +1013,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       world.GetMeshService().HasDirtyWithinHorizontalRadius(focus_horiz,
                                                            focus_radius) ||
       world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
-          world.GetBlockWorld(), focus_horiz, focus_radius);
+          world.GetBlockWorld(), focus_ground, focus_radius);
   const int gen_backlog_total =
       ChunkScheduler ? ChunkScheduler->GetGenBacklogTotal() : 0;
   const int mesh_async = world.GetMeshService().GetAsyncInFlightCount();
@@ -1057,11 +1057,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     // Near-complete first: do not starve commits when focus Dirty is high.
     const bool missing_near_mesh =
         world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
-            world.GetBlockWorld(), focus_horiz, focus_radius);
+            world.GetBlockWorld(), focus_ground, focus_radius);
     // ColPipe: feet r=0 only — neighbor pending/missing must not starve commits.
     const bool missing_underfeet =
         world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
-            world.GetBlockWorld(), focus_horiz, /*radius=*/0);
+            world.GetBlockWorld(), focus_ground, /*radius=*/0);
     const bool pending_underfeet = world.IsPendingLightBeforeMesh(
         glm::ivec2(focus_horiz.x, focus_horiz.z));
     bool incomplete_camera_column = false;
@@ -1406,7 +1406,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     const bool underfeet_pending =
         world.HasPendingLightBeforeMeshNear(focus_horiz, /*radius=*/1) ||
         world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
-            world.GetBlockWorld(), focus_horiz, /*radius=*/1);
+            world.GetBlockWorld(), focus_ground, /*radius=*/1);
     const bool shore_focus_holes =
         near_mesh_backlog ||
         world.HasPendingLightBeforeMeshNear(focus_horiz, focus_radius);
@@ -1649,7 +1649,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   const int mesh_async_n = world.GetMeshService().GetAsyncInFlightCount();
   const bool missing_focus_mesh =
       world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
-          world.GetBlockWorld(), focus_horiz, focus_radius);
+          world.GetBlockWorld(), focus_ground, focus_radius);
   const bool moving_now_early =
       world.GetLastMovementSpeed() > procedural.MovementPrefetchThreshold;
   const auto &tune_budget = URuntimeTuning::Get();
@@ -3249,11 +3249,11 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const bool near_mesh_backlog =
         meshService.HasDirtyWithinHorizontalRadius(focus_horiz, focus_radius) ||
         meshService.HasMissingGreedyMeshInHorizontalRadius(world.GetBlockWorld(),
-                                                         focus_horiz,
+                                                         feet_chunk,
                                                          focus_radius);
     const bool visual_holes =
         meshService.HasMissingGreedyMeshInHorizontalRadius(
-            world.GetBlockWorld(), focus_horiz, focus_radius);
+            world.GetBlockWorld(), feet_chunk, focus_radius);
     const glm::ivec3 camera_ground(focus_horiz.x, 0, focus_horiz.z);
     const bool incomplete_camera_column =
         !IsTerrainChunkComplete(world.GetBlockWorld(), camera_ground,
@@ -3262,7 +3262,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     // not latch underfeet_need (manual 205129 need=1 forever on cold enter).
     const bool missing_feet_mesh =
         meshService.HasMissingGreedyMeshInHorizontalRadius(
-            world.GetBlockWorld(), focus_horiz, /*radius=*/0);
+            world.GetBlockWorld(), feet_chunk, /*radius=*/0);
     const bool pending_feet = world.IsPendingLightBeforeMesh(
         glm::ivec2(focus_horiz.x, focus_horiz.z));
     const bool underfeet_need = FeetColumnUnderfeetNeed(

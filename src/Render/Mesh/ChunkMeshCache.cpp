@@ -1328,6 +1328,16 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
   {
     return MissingMemo.result;
   }
+  // Presentable cy band — align with FindNearestMissingGreedyMesh / enter SoT
+  // (manual 100846: y=0 bedrock kept focus_missing_mesh=1 forever).
+  constexpr int kMissingScanMaxCy = 48;
+  int cy_scan_lo = 0;
+  int cy_scan_hi = kMissingScanMaxCy;
+  if (center_ground_chunk.y > 0)
+  {
+    cy_scan_lo = std::max(0, center_ground_chunk.y - 1);
+    cy_scan_hi = std::min(kMissingScanMaxCy, center_ground_chunk.y + 1);
+  }
   bool missing = false;
   world.GetChunkManager().ForEachChunk(
       [&](const UChunk &chunk)
@@ -1337,6 +1347,10 @@ bool UChunkMeshCache::HasMissingGreedyMeshInHorizontalRadius(
           return;
         }
         const glm::ivec3 coord = chunk.GetCoord();
+        if (coord.y < cy_scan_lo || coord.y > cy_scan_hi)
+        {
+          return;
+        }
         const int dx = std::abs(coord.x - center_ground_chunk.x);
         const int dz = std::abs(coord.z - center_ground_chunk.z);
         if (std::max(dx, dz) > radius_chunks)
