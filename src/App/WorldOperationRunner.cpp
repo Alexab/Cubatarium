@@ -229,6 +229,11 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   EnterLitSample lit_sample{};
   UEnterLitDiagnostics::Sample(World, EnterGameGpuWarmupElapsedMs, lit_sample);
   const int fov_debt = lit_sample.snapshot_debt;
+  if (fov_debt <= 0 &&
+      World.GetEnterSessionPhase() == EnterSessionPhase::GpuWarmup)
+  {
+    World.SetEnterSessionPhase(EnterSessionPhase::Quiesce);
+  }
   if (fov_debt > EnterGameFovLitPeakDebt)
   {
     EnterGameFovLitPeakDebt = fov_debt;
@@ -251,8 +256,39 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   const bool visibility_ready =
       coop_prepared || World.IsEnterVisibilityReady();
   const int visibility_debt = lit_sample.visibility_debt;
+  const bool underfeet_present = World.IsEnterUnderfeetPresentReady();
+  const glm::ivec3 underfeet_center =
+      UChunkManager::WorldToChunk(World.GetPreferredLoadFocusBlock());
+  const int underfeet_gpu_pending =
+      World.GetMeshService().CountPendingGpuAppliesInHorizontalRadius(
+          underfeet_center, 1);
+  const bool visibility_ready_for_exit =
+      visibility_ready ||
+      (World.IsEnterSessionActive() && underfeet_present && fov_debt <= 0 &&
+       underfeet_gpu_pending <= 0 &&
+       (World.IsEnterLitQuiesceLatched() || EnterGameAbortDrainMode ||
+        EnterGameGpuWarmupElapsedMs >=
+            static_cast<double>(tune.EnterMeshAbortMs)));
+  const bool underfeet_mesh_ok =
+      underfeet_present ||
+      !World.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
+          World.GetBlockWorld(),
+          glm::ivec3(underfeet_center.x, 0, underfeet_center.z), 1);
+  const bool ring_ready_for_exit =
+      ring_ready ||
+      (World.IsEnterSessionActive() && underfeet_present && fov_debt <= 0 &&
+       underfeet_gpu_pending <= 0 && underfeet_mesh_ok &&
+       (visibility_debt <= 0 || World.IsEnterLitQuiesceLatched()));
+  const bool mesh_blockers_for_exit =
+      mesh_blockers_clear ||
+      (World.IsEnterSessionActive() && underfeet_present &&
+       underfeet_gpu_pending <= 0 && fov_debt <= 0 &&
+       (World.IsEnterLitQuiesceLatched() || EnterGameAbortDrainMode ||
+        EnterGameGpuWarmupElapsedMs >=
+            static_cast<double>(tune.EnterMeshAbortMs)));
   const bool soft_ready =
-      mesh_blockers_clear && fov_ready && ring_ready && visibility_ready;
+      mesh_blockers_for_exit && fov_ready && ring_ready_for_exit &&
+      visibility_ready_for_exit;
 
   const bool cap_reached = ShouldForceEnterVisualCap(
       EnterGameGpuWarmupElapsedMs, soft_ready, EnterGameColdCreate,
@@ -310,7 +346,7 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
       EnterGpuWarmupMonotonicProgress(raw_prog, EnterGameDisplayProgress);
   // Era48: hold bar under 100% until visibility ready.
   const float capped_prog =
-      visibility_ready ? enter_prog : std::min(enter_prog, 0.99f);
+      visibility_ready_for_exit ? enter_prog : std::min(enter_prog, 0.99f);
   const float frac = 0.93f + 0.07f * capped_prog;
   const std::string status = BuildEnterWarmupStatus(
       lit_sample, fov_debt, ring_ready, EnterGameAbortDrainMode,
@@ -327,32 +363,32 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   UEnterLitDiagnostics::MaybeLogHeartbeat(lit_sample, 2000.0);
   const bool min_frames_done =
       frame_index >= kEnterGameGpuWarmupMinFrames;
-  if (!mesh_blockers_clear || !ring_ready)
+  if (!mesh_blockers_for_exit || !ring_ready_for_exit)
   {
     World.SetEnterGameWarmupMissingGreedy(lit_sample.ring_not_ready);
   }
-  if (ring_ready && mesh_blockers_clear && fov_ready && visibility_ready)
+  if (ring_ready_for_exit && mesh_blockers_for_exit && fov_ready &&
+      visibility_ready_for_exit)
   {
     UEnterLitDiagnostics::MaybeLogProfileSummary(lit_sample);
   }
 
-  const bool underfeet_present = World.IsEnterUnderfeetPresentReady();
-  const glm::ivec3 underfeet_center =
+  const bool underfeet_present_cap = World.IsEnterUnderfeetPresentReady();
+  const glm::ivec3 underfeet_center_cap =
       UChunkManager::WorldToChunk(World.GetPreferredLoadFocusBlock());
-  const int underfeet_gpu_pending =
+  const int underfeet_gpu_pending_cap =
       World.GetMeshService().CountPendingGpuAppliesInHorizontalRadius(
-          underfeet_center, 1);
+          underfeet_center_cap, 1);
   const bool abort_underfeet_cap = ShouldReleaseEnterAfterAbortUnderfeetCap(
       EnterGameAbortDrainMode, EnterGameGpuWarmupElapsedMs,
-      tune.EnterForceInGameMs, underfeet_present, underfeet_gpu_pending);
-
+      tune.EnterForceInGameMs, underfeet_present_cap, underfeet_gpu_pending_cap);
   bool enter_ready = IsEnterGpuWarmupReady(
-      ring_ready, fov_ready ? 0 : fov_debt, mesh_blockers_clear, min_frames_done,
-      visibility_ready);
+      ring_ready_for_exit, fov_ready ? 0 : fov_debt, mesh_blockers_for_exit,
+      min_frames_done, visibility_ready_for_exit);
   if (!enter_ready && abort_underfeet_cap)
   {
-    enter_ready = min_frames_done && fov_ready && underfeet_present &&
-                  underfeet_gpu_pending <= 0;
+    enter_ready = min_frames_done && fov_ready && underfeet_present_cap &&
+                  underfeet_gpu_pending_cap <= 0;
     if (enter_ready && !EnterGameForceInGameLogged)
     {
       EnterGameForceInGameLogged = true;
@@ -495,6 +531,7 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
         return false;
       }
       CurrentStage = Stage::EnterGameGpuWarmup;
+      World.SetEnterSessionPhase(EnterSessionPhase::GpuWarmup);
       EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupMaxFrames;
       EnterGameGpuWarmupElapsedMs = 0.0;
       EnterGameFovLitPeakDebt = 0;
@@ -553,6 +590,7 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
         return false;
       }
       CurrentStage = Stage::EnterGameGpuWarmup;
+      World.SetEnterSessionPhase(EnterSessionPhase::GpuWarmup);
       EnterGameGpuWarmupFramesLeft = kEnterGameGpuWarmupMaxFrames;
       EnterGameGpuWarmupElapsedMs = 0.0;
       EnterGameFovLitPeakDebt = 0;

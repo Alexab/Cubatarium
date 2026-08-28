@@ -477,6 +477,10 @@ void UApplication::BeginWorldOperation(WorldRunnerRequest request,
   {
     ProgressScreen->ApplySnapshot(ProgressSink.Get());
   }
+  if (request.op == WorldRunnerOp::EnterGame)
+  {
+    World->SetEnterSessionPhase(EnterSessionPhase::CooperativeLoad);
+  }
   WorldOpRunner->Start(std::move(request));
 }
 
@@ -499,6 +503,10 @@ void UApplication::OnWorldOperationFinished()
   }
   if (!success)
   {
+    if (World)
+    {
+      World->SetEnterSessionPhase(EnterSessionPhase::None);
+    }
     ShowMainMenu();
     State = AppState::MainMenu;
     WorldOpOnComplete = nullptr;
@@ -668,6 +676,10 @@ void UApplication::EnterGameAfterWorldChange()
   RefreshBlockCatalog();
   ShowInGameHud();
   State = AppState::InGame;
+  if (World)
+  {
+    World->SetEnterSessionPhase(EnterSessionPhase::Done);
+  }
   EnterInGameInputState();
 }
 
