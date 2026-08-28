@@ -431,6 +431,8 @@ public:
   int TickEnterFovLitPass(int capture_budget = -1);
   /// Spawn ring has greedy mesh committed (no missing, no pending GPU apply).
   bool IsSpawnMeshRingReady() const;
+  /// SRBR-P0.2: first blocking miss in spawn ring presentable band (HasMissing SoT).
+  bool FindFirstSpawnRingMissingGreedy(glm::ivec3 &out_coord) const;
   int CountPostLoadRingNotReady() const;
   int GetEnterGameMeshBurstFrames() const { return EnterGameMeshBurstFrames; }
   void TickEnterGameMeshBurst();

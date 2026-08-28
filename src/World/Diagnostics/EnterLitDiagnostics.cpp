@@ -125,6 +125,12 @@ void WriteJsonlLine(const EnterLitSample &s, const char *kind = nullptr)
           << ",\"relight_fifo_dropped\":" << s.relight_fifo_dropped
           << ",\"top_dirty_cx\":" << s.top_dirty_cx
           << ",\"top_dirty_cz\":" << s.top_dirty_cz
+          << ",\"gate_miss_cx\":" << s.gate_miss_cx
+          << ",\"gate_miss_cy\":" << s.gate_miss_cy
+          << ",\"gate_miss_cz\":" << s.gate_miss_cz
+          << ",\"gate_miss_soft_held\":" << s.gate_miss_soft_held
+          << ",\"gate_miss_defer\":" << s.gate_miss_defer
+          << ",\"gate_miss_inflight\":" << s.gate_miss_inflight
           << ",\"remesh_after_apply_n\":" << s.remesh_after_apply_n
           << ",\"stuck_dirty_cx\":" << s.stuck_dirty_cx
           << ",\"stuck_dirty_cy\":" << s.stuck_dirty_cy
@@ -237,6 +243,17 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
   out.top_dirty_cx = phys.MissCx;
   out.top_dirty_cz = phys.MissCz;
   const UWorldMeshService &mesh = world.GetMeshService();
+  glm::ivec3 gate_miss{};
+  if (world.FindFirstSpawnRingMissingGreedy(gate_miss))
+  {
+    out.gate_miss_cx = gate_miss.x;
+    out.gate_miss_cy = gate_miss.y;
+    out.gate_miss_cz = gate_miss.z;
+    out.gate_miss_soft_held = mesh.IsSoftDeferHeld(gate_miss) ? 1 : 0;
+    out.gate_miss_defer =
+        mesh.GetCache().IsDeferMeshUntilLit(gate_miss) ? 1 : 0;
+    out.gate_miss_inflight = mesh.HasInflightMeshBuild(gate_miss) ? 1 : 0;
+  }
   out.remesh_after_apply_n = static_cast<int>(mesh.GetRemeshAfterApplyCount());
   const glm::ivec3 focus = world.GetPreferredLoadFocusBlock();
   const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus);

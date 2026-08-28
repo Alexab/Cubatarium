@@ -3207,10 +3207,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // focus missing — not only held UnfinishedVisual — and prefer admit over
   // remesh when Dirty is high on the rim.
   glm::ivec3 isolated_hole{};
-  const int miss_heal_radius =
-      world.IsEnterLitGateActive() ? kEnterSpawnMeshRingHoriz : focus_radius;
-  const bool found_nearest_missing = mesh_service.FindNearestMissingGreedyMesh(
-      world.GetBlockWorld(), focus_ground, miss_heal_radius, isolated_hole);
+  const bool found_nearest_missing =
+      world.IsEnterLitGateActive()
+          ? world.FindFirstSpawnRingMissingGreedy(isolated_hole)
+          : mesh_service.FindNearestMissingGreedyMesh(
+                world.GetBlockWorld(), focus_ground, focus_radius,
+                isolated_hole);
   const bool isolated_missing =
       visual_holes || missing_visible_mesh || missing_underfeet ||
       found_nearest_missing;
@@ -3412,6 +3414,33 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
           return;
         }
+        // Enter gate: pin exact spawn-ring slice (HasMissing SoT), not column
+        // ticket — FirstMesh xz enqueue missed cy-specific SoftDefer orphan.
+        if (world.IsEnterLitGateActive())
+        {
+          const int horiz = std::max(
+              std::abs(isolated_hole.x - focus_ground.x),
+              std::abs(isolated_hole.z - focus_ground.z));
+          const bool pending =
+              world.IsPendingLightBeforeMesh(miss_xz);
+          if (horiz <= kEnterSpawnMeshRingHoriz && pending)
+          {
+            if (!exec.Scheduler().Contains(miss_xz,
+                                           ColumnWorkKind::RelightThenMesh))
+            {
+              exec.Enqueue(miss_xz, ColumnWorkKind::RelightThenMesh,
+                           first_mesh_prio);
+            }
+            return;
+          }
+          if (EnterLitQuiesceMayLiftSpawnSoftDefer(
+                  world.IsEnterLitQuiesceLatched(), horiz, pending))
+          {
+            mesh_service.MarkDirtyPriority(isolated_hole);
+            ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
+            return;
+          }
+        }
         // Hide⇒Ticket: SoftDefer owns — refresh ticket only (P17 SoftDefer KEEP).
         if (!fm_ticket)
         {
@@ -3445,6 +3474,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         exec.Enqueue(miss_xz, ColumnWorkKind::FirstMesh, first_mesh_prio);
       }
     };
+    if (world.IsEnterLitGateActive() && found_nearest_missing)
+    {
+      pin_isolated_miss(128);
+    }
     // FZ2.7-P16 U1: nh≤1 underfeet pin in cruise (was idle-only !moving).
     if (found_nearest_missing)
     {

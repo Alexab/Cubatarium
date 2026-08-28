@@ -5457,7 +5457,7 @@ bool HasDirtyWithinHorizontalRadiusBand(const UWorldMeshService &mesh,
   return false;
 }
 
-bool HasMissingGreedyMeshesNearFocus(const UWorld &world)
+bool FindFirstSpawnRingMissingGreedyImpl(const UWorld &world, glm::ivec3 &out_coord)
 {
   // Do not CountNonAir here: under streamer contention it can stall for minutes.
   // SoftDefer empty has HasGreedy but !Drawable — treat as missing (sky-only)
@@ -5522,11 +5522,18 @@ bool HasMissingGreedyMeshesNearFocus(const UWorld &world)
         {
           continue;
         }
+        out_coord = coord;
         return true;
       }
     }
   }
   return false;
+}
+
+bool HasMissingGreedyMeshesNearFocus(const UWorld &world)
+{
+  glm::ivec3 unused{};
+  return FindFirstSpawnRingMissingGreedyImpl(world, unused);
 }
 
 } // namespace
@@ -5665,6 +5672,17 @@ int UWorld::MarkEnterMissingMeshesDirty()
   EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
                                cy1);
   int marked = 0;
+  // SRBR-P0.2: gate SoT slice — one Dirty owner even when ring scan/pin miss
+  // (manual 094507: (-5,3,0) orphan soft_held=0 defer=0 inflight=0).
+  glm::ivec3 gate_miss{};
+  if (FindFirstSpawnRingMissingGreedy(gate_miss) &&
+      !mesh.HasInflightMeshBuild(gate_miss) &&
+      !mesh.IsPendingGpuApply(gate_miss) &&
+      !mesh.HasMeshSatisfyingColumnReady(gate_miss))
+  {
+    mesh.MarkDirtyPriority(gate_miss);
+    marked = 1;
+  }
   for (int dx = -radius; dx <= radius; ++dx)
   {
     for (int dz = -radius; dz <= radius; ++dz)
@@ -5718,6 +5736,21 @@ int UWorld::MarkEnterMissingMeshesDirty()
           {
             mesh.MarkDirtyPriority(coord);
             ++marked;
+            continue;
+          }
+          if (IsEnterLitGateActive())
+          {
+            const int horiz =
+                std::max(std::abs(coord.x - center.x),
+                         std::abs(coord.z - center.z));
+            const bool pending =
+                IsPendingLightBeforeMesh(glm::ivec2(coord.x, coord.z));
+            if (EnterLitQuiesceMayLiftSpawnSoftDefer(IsEnterLitQuiesceLatched(),
+                                                     horiz, pending))
+            {
+              mesh.MarkDirtyPriority(coord);
+              ++marked;
+            }
           }
           continue;
         }
@@ -5732,6 +5765,11 @@ int UWorld::MarkEnterMissingMeshesDirty()
     }
   }
   return marked;
+}
+
+bool UWorld::FindFirstSpawnRingMissingGreedy(glm::ivec3 &out_coord) const
+{
+  return FindFirstSpawnRingMissingGreedyImpl(*this, out_coord);
 }
 
 bool UWorld::IsSpawnMeshRingReady() const

@@ -30,6 +30,13 @@ struct EnterLitSample
   int relight_fifo_dropped{0};
   int top_dirty_cx{0};
   int top_dirty_cz{0};
+  /// SRBR-P0.2: gate miss SoT (spawn ring presentable band).
+  int gate_miss_cx{0};
+  int gate_miss_cy{0};
+  int gate_miss_cz{0};
+  int gate_miss_soft_held{0};
+  int gate_miss_defer{0};
+  int gate_miss_inflight{0};
   /// Era45: R4 diagnostics.
   int remesh_after_apply_n{0};
   int stuck_dirty_cx{0};
