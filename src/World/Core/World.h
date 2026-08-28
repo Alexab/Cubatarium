@@ -33,6 +33,7 @@
 #include "World/Streaming/ColumnRecord.h"
 #include "World/Streaming/WorldBorderPolicy.h"
 #include "World/Streaming/EnterVisualGate.h"
+#include "World/Streaming/EnterSessionPhase.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenSets.h"
@@ -457,6 +458,16 @@ public:
   void BeginEnterLitGate();
   void EndEnterLitGate();
   bool IsEnterLitGateActive() const { return EnterLitGateActive; }
+  /// Enter-load session (Loading screen until InGame). Freezes cruise heal producers.
+  EnterSessionPhase GetEnterSessionPhase() const { return EnterSessionPhaseValue; }
+  void SetEnterSessionPhase(EnterSessionPhase phase)
+  {
+    EnterSessionPhaseValue = phase;
+  }
+  bool IsEnterSessionActive() const
+  {
+    return IsEnterSessionPhaseActive(EnterSessionPhaseValue);
+  }
   bool IsEnterLitSnapshotCaptured() const { return EnterLitSnapshotCaptured; }
   /// Era47: latched lit-quiesce (debt=0 and fifo hit 0 once under gate).
   bool IsEnterLitQuiesceLatched() const { return EnterLitQuiesceLatched; }
@@ -1423,6 +1434,7 @@ private:
   bool EnterFovLitPassActive{false};
   /// Era43: enter lit gate — snapshot columns + frozen streaming until debt==0.
   bool EnterLitGateActive{false};
+  EnterSessionPhase EnterSessionPhaseValue{EnterSessionPhase::None};
   bool EnterLitSnapshotCaptured{false};
   /// Era47: once snapshot debt=0 under gate, stay quiesced despite fifo blips.
   bool EnterLitQuiesceLatched{false};
