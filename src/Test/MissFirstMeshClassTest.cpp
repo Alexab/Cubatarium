@@ -2169,8 +2169,10 @@ int main()
            "P16 U1: nh=0 pin");
     Expect(ShouldPinIsolatedMissUnderfeet(true, 1),
            "P16 U1: nh=1 pin (cruise or idle)");
-    Expect(!ShouldPinIsolatedMissUnderfeet(true, 2),
-           "P16 U1: nh=2 no underfeet pin");
+    Expect(ShouldPinIsolatedMissUnderfeet(true, 2),
+           "P0.2: nh=2 near pin");
+    Expect(!ShouldPinIsolatedMissUnderfeet(true, 3),
+           "P16 U1: nh=3 no near pin");
     Expect(!ShouldPinIsolatedMissUnderfeet(false, 0),
            "P16 U1: !found → no pin");
     Expect(ShouldEnqueueWitnessOwnedFirstMesh(true, 0, true),

@@ -403,6 +403,8 @@ public:
   bool DrainEnterGameMeshWarmup(int budget);
   /// SRBR-P0.2: gate path SoftDefer-empty / !ready → one Dirty (transfer Held).
   int MarkEnterMissingMeshesDirty();
+  /// TD-ARCH-021: burst-mark unfinished spawn visual ring (budget per frame).
+  int MarkSpawnRingUnfinishedDirty(int max_marks);
   bool NeedsEnterGameMeshWarmup() const;
   struct EnterGameMeshWarmupBlockers
   {

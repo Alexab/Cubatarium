@@ -553,6 +553,11 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   const glm::ivec3 focus_ground = UChunkManager::WorldToChunk(focus_block);
   const glm::ivec3 focus_horiz(focus_ground.x, 0, focus_ground.z);
   const int focus_radius = world.GetStreamingFocusRadius();
+  const int pending_pl_radius =
+      (world.IsEnterLitGateActive() || world.NeedsEnterGameMeshWarmup() ||
+       world.NeedsSpawnRingCatchUp())
+          ? EnterVisualWorkRadiusChunks()
+          : focus_radius;
   const bool missing_near =
       world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
           world.GetBlockWorld(), focus_ground, focus_radius);
@@ -562,8 +567,49 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   if (missing_near)
   {
     glm::ivec3 miss_coord{0};
-    if (world.GetMeshService().FindNearestMissingGreedyMesh(
+    bool found = false;
+    const int prev_horiz = std::max(std::abs(prev_miss_cx - focus_ground.x),
+                                    std::abs(prev_miss_cz - focus_ground.z));
+    const glm::ivec3 pinned(prev_miss_cx, world.PhysicsTelemetryData.MissCy,
+                            prev_miss_cz);
+    auto slice_still_missing = [&](glm::ivec3 coord) -> bool
+    {
+      const UWorldMeshService &mesh = world.GetMeshService();
+      if (mesh.HasMeshSatisfyingColumnReady(coord))
+      {
+        return false;
+      }
+      if (!world.GetBlockWorld().GetChunkManager().HasChunk(coord))
+      {
+        return false;
+      }
+      const UChunk *ch =
+          world.GetBlockWorld().GetChunkManager().GetChunk(coord);
+      if (!ch)
+      {
+        return false;
+      }
+      for (const BlockId block : ch->GetData())
+      {
+        if (block != BLOCK_AIR)
+        {
+          return true;
+        }
+      }
+      return false;
+    };
+    if (ShouldHoldNearMissWitness(prev_horiz, slice_still_missing(pinned)))
+    {
+      miss_coord = pinned;
+      found = true;
+    }
+    if (!found &&
+        world.GetMeshService().FindNearestMissingGreedyMesh(
             world.GetBlockWorld(), focus_ground, focus_radius, miss_coord))
+    {
+      found = true;
+    }
+    if (found)
     {
       world.PhysicsTelemetryData.MissCx = miss_coord.x;
       world.PhysicsTelemetryData.MissCy = miss_coord.y;
@@ -639,7 +685,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   const bool missing_underfeet =
       missing_underfeet_mesh && !incomplete_camera_column;
   const int pending_light_focus =
-      world.CountPendingLightBeforeMeshNear(focus_horiz, focus_radius);
+      world.CountPendingLightBeforeMeshNear(focus_horiz, pending_pl_radius);
   const bool pending_underfeet = world.IsPendingLightBeforeMesh(
       glm::ivec2(focus_horiz.x, focus_horiz.z));
 
@@ -1008,6 +1054,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   const glm::ivec3 focus_ground = UChunkManager::WorldToChunk(focus_block);
   const glm::ivec3 focus_horiz(focus_ground.x, 0, focus_ground.z);
   const int focus_radius = world.GetStreamingFocusRadius();
+  const int pending_pl_radius =
+      (world.IsEnterLitGateActive() || world.NeedsEnterGameMeshWarmup() ||
+       world.NeedsSpawnRingCatchUp())
+          ? EnterVisualWorkRadiusChunks()
+          : focus_radius;
   const size_t mesh_dirty = world.GetMeshService().GetDirtyCount();
   const bool near_mesh_backlog =
       world.GetMeshService().HasDirtyWithinHorizontalRadius(focus_horiz,
@@ -1514,7 +1565,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             .count();
   }
   const int pending_player = world.Persistence->GetPendingPlayerRelightCount();
-  const int player_budget = pending_player > 0 ? 2 : 0;
+  int player_budget = pending_player > 0 ? 2 : 0;
   const bool async_bg =
       procedural.AsyncRelight && !world.IsLightingRelightDeferred() &&
       world.AllowsAsyncLighting();
@@ -1606,7 +1657,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   // Focus pending stuck while wall healthy: enqueue more async relight jobs
   // (DrainRelightQueues is cheap; MarkRelit is what clears PendingLight).
   const int pending_light_focus_n =
-      world.CountPendingLightBeforeMeshNear(focus_horiz, focus_radius);
+      world.CountPendingLightBeforeMeshNear(focus_horiz, pending_pl_radius);
   const int dark_face_near_n = world.GetPhysicsTelemetry().DarkFaceNearN;
   const int black_sticky_focus =
       world.CountBlackStickyFocusMeshes(focus_horiz, focus_radius);
@@ -2237,6 +2288,15 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
               world.PhysicsTelemetryData.SimMsPrev),
           completed_n, fifo_n);
     }
+  }
+  // Enter / spawn-ring SLA: drain pending before idle-head samples.
+  if ((world.IsEnterLitGateActive() || world.NeedsEnterGameMeshWarmup() ||
+       world.NeedsSpawnRingCatchUp() ||
+       world.GetEnterGameMeshBurstFrames() > 0) &&
+      pending_light_focus_n > 0 && frame_ms <= kBadFrameMs)
+  {
+    bg_budget = std::max(bg_budget, 6);
+    player_budget = std::max(player_budget, 4);
   }
 
   {
@@ -3404,14 +3464,11 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
          world.NeedsSpawnRingCatchUp()) &&
         !moving_fast)
     {
-      glm::ivec3 missing{};
-      const int keep_rd = Streamer ? Streamer->GetKeepRenderDistance() : 0;
-      if (keep_rd > 0 &&
-          meshService.FindNearestMissingGreedyMesh(
-              world.GetBlockWorld(), focus_horiz, keep_rd, missing))
-      {
-        meshService.MarkDirtyPriority(missing);
-      }
+      const int dirty_n =
+          static_cast<int>(world.GetMeshService().GetDirtyCount());
+      const int mark_budget =
+          dirty_n > 48 ? 2 : (world.NeedsSpawnRingCatchUp() ? 6 : 4);
+      world.MarkSpawnRingUnfinishedDirty(mark_budget);
     }
     world.PhysicsTelemetryData.IdlePrefetchMs =
         std::chrono::duration<double, std::milli>(

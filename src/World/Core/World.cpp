@@ -5687,8 +5687,15 @@ int UWorld::MarkEnterMissingMeshesDirty()
       !mesh.IsPendingGpuApply(gate_miss) &&
       !mesh.HasMeshSatisfyingColumnReady(gate_miss))
   {
-    mesh.MarkDirtyPriority(gate_miss);
-    marked = 1;
+    const glm::ivec2 miss_xz(gate_miss.x, gate_miss.z);
+    const bool gate_dirty = mesh.IsChunkMeshDirty(gate_miss);
+    const bool gate_fm_ticket = GetColumnFlowExecutor().Scheduler().Contains(
+        miss_xz, ColumnWorkKind::FirstMesh);
+    if (!gate_fm_ticket || !gate_dirty)
+    {
+      mesh.MarkDirtyPriority(gate_miss);
+      marked = 1;
+    }
   }
   for (int dx = -radius; dx <= radius; ++dx)
   {
@@ -5761,8 +5768,18 @@ int UWorld::MarkEnterMissingMeshesDirty()
           }
           continue;
         }
+        const glm::ivec2 col_xz(coord.x, coord.z);
+        const bool fm_ticket = GetColumnFlowExecutor().Scheduler().Contains(
+            col_xz, ColumnWorkKind::FirstMesh);
+        if (fm_ticket && !dirty &&
+            !mesh.HasMeshSatisfyingColumnReady(coord))
+        {
+          mesh.MarkDirtyPriority(coord);
+          ++marked;
+          continue;
+        }
         if (MissSliceAlreadyOwned(dirty, raa, inflight, false, pending_gpu,
-                                  /*first_mesh_ticket=*/false))
+                                  fm_ticket))
         {
           continue;
         }
@@ -5824,8 +5841,86 @@ int UWorld::CountPostLoadRingNotReady() const
 {
   const glm::ivec3 focus =
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
-  const glm::ivec3 focus_ground(focus.x, 0, focus.z);
-  return CountUnfinishedVisualNear(focus_ground, GetRenderDistanceChunks() + 1);
+  // Post-load ring SLA (TD-ARCH-021): spawn visual work radius, not render
+  // distance (~109). Gate samples idle_head after cooperative enter ends.
+  return CountUnfinishedVisualNear(focus, EnterVisualWorkRadiusChunks());
+}
+
+int UWorld::MarkSpawnRingUnfinishedDirty(int max_marks)
+{
+  if (!MeshService || !BlockRegistry || max_marks <= 0)
+  {
+    return 0;
+  }
+  UWorldMeshService &mesh = *MeshService;
+  const glm::ivec3 focus =
+      UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const int vis_r = EnterVisualWorkRadiusChunks();
+  const auto &proc = GetProceduralSettings();
+  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
+  const int player_cy =
+      FloorDiv(std::max(0, GetPreferredLoadFocusBlock().y), CHUNK_SIZE);
+  const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
+  int cy0 = 0;
+  int cy1 = 0;
+  EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
+                               cy1);
+  int marked = 0;
+  for (int dx = -vis_r; dx <= vis_r && marked < max_marks; ++dx)
+  {
+    for (int dz = -vis_r; dz <= vis_r && marked < max_marks; ++dz)
+    {
+      if (!ColumnUnfinishedVisualCheap(*this, focus, dx, dz))
+      {
+        continue;
+      }
+      for (int cy = cy0; cy <= cy1 && marked < max_marks; ++cy)
+      {
+        const glm::ivec3 coord(focus.x + dx, cy, focus.z + dz);
+        if (!BlockWorld.GetChunkManager().HasChunk(coord))
+        {
+          continue;
+        }
+        if (mesh.HasMeshSatisfyingColumnReady(coord) ||
+            mesh.IsPendingGpuApply(coord))
+        {
+          continue;
+        }
+        const bool soft_held = mesh.IsSoftDeferHeld(coord);
+        const bool dirty = mesh.IsChunkMeshDirty(coord);
+        const bool raa = mesh.IsRemeshAfterApplyPending(coord);
+        const bool inflight = mesh.HasInflightMeshBuild(coord);
+        const bool pending_gpu = mesh.IsPendingGpuApply(coord);
+        if (soft_held)
+        {
+          const bool soft_still = mesh.GetCache().IsDeferMeshUntilLit(coord);
+          if (ShouldTransferSoftDeferHeldToDirty(soft_held, soft_still))
+          {
+            mesh.MarkDirtyPriority(coord);
+            ++marked;
+          }
+          continue;
+        }
+        const glm::ivec2 col_xz(coord.x, coord.z);
+        const bool fm_ticket = GetColumnFlowExecutor().Scheduler().Contains(
+            col_xz, ColumnWorkKind::FirstMesh);
+        if (fm_ticket && !dirty && !mesh.HasMeshSatisfyingColumnReady(coord))
+        {
+          mesh.MarkDirtyPriority(coord);
+          ++marked;
+          continue;
+        }
+        if (MissSliceAlreadyOwned(dirty, raa, inflight, false, pending_gpu,
+                                  fm_ticket))
+        {
+          continue;
+        }
+        mesh.MarkDirtyPriority(coord);
+        ++marked;
+      }
+    }
+  }
+  return marked;
 }
 
 void UWorld::TickEnterGameMeshBurst()

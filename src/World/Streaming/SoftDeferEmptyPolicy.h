@@ -158,12 +158,19 @@ inline bool ShouldPreferKickMissWitnessEarly(bool missing_visible_mesh,
   return missing_visible_mesh && miss_first_mesh_class;
 }
 
-/// FZ2.7-P16 U1: underfeet/near nh≤1 FirstMesh pin — cruise and idle (no
-/// !moving gate). miss_horiz is Chebyshev to focus ground.
+/// FZ2.7-P16 U1 / SRBR-P0.2: underfeet/near nh≤2 FirstMesh pin — cruise and
+/// idle (no !moving gate). miss_horiz is Chebyshev to focus ground.
 inline bool ShouldPinIsolatedMissUnderfeet(bool found_nearest_missing,
                                            int miss_horiz)
 {
-  return found_nearest_missing && miss_horiz >= 0 && miss_horiz <= 1;
+  return found_nearest_missing && miss_horiz >= 0 && miss_horiz <= 2;
+}
+
+/// Hold nh≤2 miss witness while the pinned slice is still greedy-missing.
+inline bool ShouldHoldNearMissWitness(int pinned_horiz, bool still_missing)
+{
+  return still_missing && pinned_horiz >= 0 &&
+         pinned_horiz <= kVisualStageNearFovHoriz;
 }
 
 /// FZ2.7-P16 U2: column-owned FirstMesh on miss witness (nh≤2, !drawable).
