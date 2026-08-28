@@ -2135,9 +2135,8 @@ uint64_t PackUnfinishedColKey(int x, int z)
          static_cast<uint32_t>(z);
 }
 
-/// Cheap unfinished probe for ring cache: terrain complete + any slice missing
-/// mesh/GPU ready in the presentable cy band (not full column — bedrock cy=0
-/// SoftDefer empty must not pin post_load_ring; manual 100846 / 182802).
+/// Cheap unfinished probe for ring cache: terrain complete columns that are not
+/// visually render-ready (SoT: IsColumnRenderReady — Phase 1 unify).
 bool ColumnUnfinishedVisualCheap(const UWorld &world, glm::ivec3 focus_ground,
                                  int dx, int dz)
 {
@@ -2147,47 +2146,7 @@ bool ColumnUnfinishedVisualCheap(const UWorld &world, glm::ivec3 focus_ground,
   {
     return false;
   }
-  if (world.IsPendingLightBeforeMesh(glm::ivec2(ground.x, ground.z)))
-  {
-    return true;
-  }
-  const auto &proc = world.GetProceduralSettings();
-  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
-  const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
-  const int player_cy = FloorDiv(std::max(0, focus_block.y), CHUNK_SIZE);
-  const int sea_cy = FloorDiv(std::max(0, proc.SeaLevel), CHUNK_SIZE);
-  int cy0 = 0;
-  int cy1 = 0;
-  EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
-                               cy1);
-  const auto &mesh = world.GetMeshService();
-  for (int cy = cy0; cy <= cy1; ++cy)
-  {
-    const glm::ivec3 coord(ground.x, cy, ground.z);
-    if (!world.GetBlockWorld().GetChunkManager().HasChunk(coord))
-    {
-      continue;
-    }
-    if (mesh.HasMeshSatisfyingColumnReady(coord) ||
-        mesh.IsPendingGpuApply(coord))
-    {
-      continue;
-    }
-    const UChunk *chunk =
-        world.GetBlockWorld().GetChunkManager().GetChunk(coord);
-    if (!chunk)
-    {
-      continue;
-    }
-    for (const BlockId block : chunk->GetData())
-    {
-      if (block != BLOCK_AIR)
-      {
-        return true; // solid without ready mesh
-      }
-    }
-  }
-  return false;
+  return !world.IsColumnRenderReady(ground);
 }
 } // namespace
 
@@ -3095,6 +3054,10 @@ int UWorld::RemeshColumnSeamTicket(glm::ivec2 ground_xz)
 
 bool UWorld::NeedsSpawnRingCatchUp() const
 {
+  if (IsEnterSessionActive())
+  {
+    return false;
+  }
   return CountPostLoadRingNotReady() > 0;
 }
 
@@ -5805,10 +5768,6 @@ bool UWorld::IsSpawnMeshRingReady() const
   const glm::ivec3 focus = GetPreferredLoadFocusBlock();
   const glm::ivec3 center = UChunkManager::WorldToChunk(focus);
   const int radius = EnterGameMeshRadiusChunks(*this);
-  if (HasMissingGreedyMeshesNearFocus(*this))
-  {
-    return false;
-  }
   const auto &proc = GetProceduralSettings();
   const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
   const int player_cy = FloorDiv(std::max(0, focus.y), CHUNK_SIZE);
@@ -5817,12 +5776,26 @@ bool UWorld::IsSpawnMeshRingReady() const
   int cy1 = 0;
   EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
                                cy1);
+  const bool underfeet_present = IsEnterUnderfeetPresentReady();
+  const bool ignore_hinterland = EnterSpawnRingIgnoresHinterlandMeshDebt(
+      EnterLitGateActive || IsEnterSessionActive(), CountEnterVisibilityDebt(),
+      underfeet_present);
+  if (!ignore_hinterland && CountPostLoadRingNotReady() > 0)
+  {
+    return false;
+  }
   // Era49 / manual 182802: after worklist Done + underfeet, only presentable
   // cy-band Dirty blocks — residual deep SoftDefer empty GPU/async is cruise.
-  if (EnterSpawnRingIgnoresHinterlandMeshDebt(EnterLitGateActive,
-                                              CountEnterVisibilityDebt(),
-                                              IsEnterUnderfeetPresentReady()))
+  if (ignore_hinterland)
   {
+    const bool async_pending =
+        EnterMeshAsyncBlocksRing(*this, *MeshService, center, radius);
+    const int gpu_pending =
+        MeshService->CountPendingGpuAppliesInHorizontalRadius(center, radius);
+    if (gpu_pending > 0 || async_pending)
+    {
+      return false;
+    }
     return !HasDirtyWithinHorizontalRadiusBand(*MeshService, center, radius,
                                                cy0, cy1);
   }
@@ -6020,9 +5993,21 @@ void UWorld::SampleEnterGameMeshWarmupBlockers(EnterGameMeshWarmupBlockers &out)
                                cy1);
   out.missing_greedy = HasMissingGreedyMeshesNearFocus(*this);
   out.visual_warmup = NeedsEnterGameVisualWarmup();
-  if (EnterSpawnRingIgnoresHinterlandMeshDebt(EnterLitGateActive,
-                                              CountEnterVisibilityDebt(),
-                                              IsEnterUnderfeetPresentReady()))
+  const bool enter_warmup_gate =
+      EnterLitGateActive || IsEnterSessionActive();
+  const glm::ivec3 focus_ground(center.x, 0, center.z);
+  if (enter_warmup_gate)
+  {
+    // Enter exit: hinterland miss is post-InGame catch-up (SRBR enter convergence).
+    out.missing_greedy =
+        IsEnterUnderfeetPresentReady()
+            ? false
+            : mesh.HasMissingGreedyMeshInHorizontalRadius(
+                  BlockWorld, focus_ground, 1);
+  }
+  if (EnterSpawnRingIgnoresHinterlandMeshDebt(
+          enter_warmup_gate, CountEnterVisibilityDebt(),
+          IsEnterUnderfeetPresentReady()))
   {
     out.dirty = HasDirtyWithinHorizontalRadiusBand(mesh, center, radius, cy0,
                                                    cy1);
@@ -6076,11 +6061,17 @@ bool UWorld::NeedsEnterGameVisualWarmup() const
   const glm::ivec3 center = UChunkManager::WorldToChunk(focus_block);
   const int underfeet_gpu_pending =
       MeshService->CountPendingGpuAppliesInHorizontalRadius(center, 1);
+  // Enter north-star: underfeet present — hinterland vis/mesh debt is post-InGame.
+  if (IsEnterSessionActive() && underfeet_present &&
+      underfeet_gpu_pending <= 0 &&
+      (EnterVisualGateCtrl.IsCaptured() || EnterLitQuiesceLatched))
+  {
+    return false;
+  }
   // Yield when LitDrawable r=4 is VisualReady (not r=2 Dirty-clear).
-  if (EnterVisualWarmupYieldsToGateRemaining(EnterLitGateActive,
-                                            CountEnterVisibilityDebt(),
-                                            underfeet_present,
-                                            underfeet_gpu_pending))
+  if (EnterVisualWarmupYieldsToGateRemaining(
+          EnterLitGateActive || IsEnterSessionActive(),
+          CountEnterVisibilityDebt(), underfeet_present, underfeet_gpu_pending))
   {
     return false;
   }
@@ -7398,7 +7389,8 @@ int UWorld::CountCreateNearFovWarmupDebt(bool *out_underfeet_lit_ready) const
   int debt = 0;
   const int vis_debt = CountEnterVisibilityDebt();
   const bool gate_visual_done = EnterVisualWarmupYieldsToGateRemaining(
-      EnterLitGateActive, vis_debt, IsEnterUnderfeetPresentReady(),
+      EnterLitGateActive || IsEnterSessionActive(), vis_debt,
+      IsEnterUnderfeetPresentReady(),
       mesh.CountPendingGpuAppliesInHorizontalRadius(center, 1));
   if (HasPendingLightBeforeMeshNear(focus_ground, near_r))
   {
