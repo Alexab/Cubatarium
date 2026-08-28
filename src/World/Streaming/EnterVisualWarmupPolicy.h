@@ -10,7 +10,9 @@
 namespace cutum
 {
 
-/// Era33 P0: initial-area visual gate on progress bar = LitDrawable FOV ring.
+/// Era20/33: spawn mesh ring for enter warmup (HasMissing / gate SoT).
+inline constexpr int kEnterSpawnMeshRingHoriz = 2;
+
 /// (Era29 was underfeet r=1; cold create entered InGame with empty FOV.)
 inline int EnterVisualWarmupRadiusChunks()
 {
@@ -119,13 +121,24 @@ inline bool EnterLitQuiesceKeepSpawnUndrawnDirty(bool enter_lit_quiesce,
          horiz <= spawn_radius;
 }
 
-/// EnterLitQuiesce + spawn ring: do not SoftDefer mesh while sticky
-/// PendingLight remains (manual 181421: missing=1 async flicker, pending≈25).
-/// Light snapshot/worklist already Done — allow unlit/dark FirstMesh to finish.
+/// EnterLitQuiesce + spawn ring: candidate SoftDefer lift (r≤2).
+/// Call sites must also require !PendingLight — lift while pending published
+/// SoftDefer-empty as intentional empty → sticky miss dirty=0 (102235/094710).
 inline bool EnterLitQuiesceLiftSpawnSoftDefer(bool enter_lit_quiesce, int horiz,
                                              int spawn_radius = 2)
 {
   return enter_lit_quiesce && horiz >= 0 && horiz <= spawn_radius;
+}
+
+/// SoftDefer lift under enter only when spawn column light is not pending.
+inline bool EnterLitQuiesceMayLiftSpawnSoftDefer(bool enter_lit_quiesce,
+                                                 int horiz,
+                                                 bool pending_light,
+                                                 int spawn_radius = 2)
+{
+  return EnterLitQuiesceLiftSpawnSoftDefer(enter_lit_quiesce, horiz,
+                                           spawn_radius) &&
+         !pending_light;
 }
 
 /// Presentable cy band for enter spawn-ring SoT (not bedrock cy=0 alone).

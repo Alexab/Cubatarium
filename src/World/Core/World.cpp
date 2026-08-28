@@ -5508,6 +5508,10 @@ bool HasMissingGreedyMeshesNearFocus(const UWorld &world)
         {
           continue;
         }
+        if (mesh.HasInflightMeshBuild(coord) || mesh.IsPendingGpuApply(coord))
+        {
+          continue;
+        }
         if (mesh.HasMeshSatisfyingColumnReady(coord))
         {
           continue;
@@ -5701,10 +5705,24 @@ int UWorld::MarkEnterMissingMeshesDirty()
             continue;
           }
         }
-        // Dirty already owns → skip. SoftDeferHeld → erase + one Dirty
-        // (transfer; no parallel FirstMesh Enqueue). Inflight/RAA/Pending →
-        // MarkDirtyPriority enter force (Invalidates).
-        if (mesh.IsChunkMeshDirty(coord))
+        // SRBR-P0.2: one owner — skip slices already owned by pipeline/ticket.
+        const bool soft_held = mesh.IsSoftDeferHeld(coord);
+        const bool dirty = mesh.IsChunkMeshDirty(coord);
+        const bool raa = mesh.IsRemeshAfterApplyPending(coord);
+        const bool inflight = mesh.HasInflightMeshBuild(coord);
+        const bool pending_gpu = mesh.IsPendingGpuApply(coord);
+        if (soft_held)
+        {
+          const bool soft_still = mesh.GetCache().IsDeferMeshUntilLit(coord);
+          if (ShouldTransferSoftDeferHeldToDirty(soft_held, soft_still))
+          {
+            mesh.MarkDirtyPriority(coord);
+            ++marked;
+          }
+          continue;
+        }
+        if (MissSliceAlreadyOwned(dirty, raa, inflight, false, pending_gpu,
+                                  /*first_mesh_ticket=*/false))
         {
           continue;
         }

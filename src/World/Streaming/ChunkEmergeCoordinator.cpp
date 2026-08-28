@@ -215,10 +215,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     MissStuckForcePinPeriod = 0;
   }
   glm::ivec3 nearest_missing_hole{};
+  // Prefer player cy — y=0 stuck SoftDefer-empty bedrock forever while
+  // presentable band stayed missing (enter_lit 100846: miss=(-2,0,4),
+  // underfeet_ready=1). Horiz focus stays focus_ground_horiz elsewhere.
   const bool have_nearest_missing =
       missing_visible_mesh &&
       mesh_service.FindNearestMissingGreedyMesh(
-          world.GetBlockWorld(), focus_ground_horiz, focus_radius,
+          world.GetBlockWorld(), focus_ground, focus_radius,
           nearest_missing_hole);
   prep_missing_ms = prep_ms_since(prep_t);
   prep_t = std::chrono::high_resolution_clock::now();
@@ -276,15 +279,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           const int horiz =
               std::max(std::abs(chunk_coord.x - pol.focus_ground.x),
                        std::abs(chunk_coord.z - pol.focus_ground.z));
-          // EnterLitQuiesce latched: lift SoftDefer in lit-drawable ring so
-          // SoftDefer empty neighbors of underfeet can FirstMesh (174530).
-          // Cruise SoftDefer KEEP unchanged (latch false after gate).
-          if (EnterLitQuiesceLiftSpawnSoftDefer(
-                  world_ref.IsEnterLitQuiesceLatched(), horiz,
-                  kVisualStageLitDrawableHoriz))
-          {
-            return false;
-          }
+          // SoftDefer ON while RelightDeferred / PendingLight. Lift SoftDefer
+          // spawn r≤2 only when !pending — else empty remesh + MarkEnter Dirty
+          // storm (110413 hang) or SoftDefer-empty sticky (102235).
           if (ShouldSkipSpawnMeshWhileRelightDeferred(
                   world_ref.IsLightingRelightDeferred(), horiz))
           {
@@ -293,6 +290,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           const bool underfeet = horiz <= 1;
           const bool pending = world_ref.IsPendingLightBeforeMesh(
               glm::ivec2(chunk_coord.x, chunk_coord.z));
+          if (EnterLitQuiesceMayLiftSpawnSoftDefer(
+                  world_ref.IsEnterLitQuiesceLatched(), horiz, pending))
+          {
+            return false;
+          }
           const bool is_nearest_hole =
               pol.have_nearest_missing &&
               chunk_coord.x == pol.nearest_missing_hole.x &&
@@ -2607,7 +2609,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     if (!have_hole)
     {
       have_hole = mesh_service.FindNearestMissingGreedyMesh(
-          world.GetBlockWorld(), focus_ground_horiz, mark_r, hole);
+          world.GetBlockWorld(), focus_ground, mark_r, hole);
     }
     if (have_hole && !mesh_service.HasInflightMeshBuild(hole))
     {
@@ -2922,7 +2924,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       glm::ivec3 hole{};
       if (mesh_service.FindNearestMissingGreedyMesh(
-              world.GetBlockWorld(), focus_ground_horiz, focus_radius, hole))
+              world.GetBlockWorld(), focus_ground, focus_radius, hole))
       {
         auto &exec = GetColumnFlowExecutor();
         exec.RequestPromoteRelight(
@@ -3205,8 +3207,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // focus missing — not only held UnfinishedVisual — and prefer admit over
   // remesh when Dirty is high on the rim.
   glm::ivec3 isolated_hole{};
+  const int miss_heal_radius =
+      world.IsEnterLitGateActive() ? kEnterSpawnMeshRingHoriz : focus_radius;
   const bool found_nearest_missing = mesh_service.FindNearestMissingGreedyMesh(
-      world.GetBlockWorld(), focus_ground_horiz, focus_radius, isolated_hole);
+      world.GetBlockWorld(), focus_ground, miss_heal_radius, isolated_hole);
   const bool isolated_missing =
       visual_holes || missing_visible_mesh || missing_underfeet ||
       found_nearest_missing;

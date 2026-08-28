@@ -563,14 +563,14 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   {
     glm::ivec3 miss_coord{0};
     if (world.GetMeshService().FindNearestMissingGreedyMesh(
-            world.GetBlockWorld(), focus_horiz, focus_radius, miss_coord))
+            world.GetBlockWorld(), focus_ground, focus_radius, miss_coord))
     {
       world.PhysicsTelemetryData.MissCx = miss_coord.x;
       world.PhysicsTelemetryData.MissCy = miss_coord.y;
       world.PhysicsTelemetryData.MissCz = miss_coord.z;
       world.PhysicsTelemetryData.MissHoriz =
-          std::max(std::abs(miss_coord.x - focus_horiz.x),
-                   std::abs(miss_coord.z - focus_horiz.z));
+          std::max(std::abs(miss_coord.x - focus_ground.x),
+                   std::abs(miss_coord.z - focus_ground.z));
       auto &exec = GetColumnFlowExecutor();
       const glm::ivec2 miss_xz(miss_coord.x, miss_coord.z);
       const bool empty_stuck =

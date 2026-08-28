@@ -1382,6 +1382,13 @@ int main()
            "quiesce keeps SoftDefer outside spawn");
     Expect(!EnterLitQuiesceLiftSpawnSoftDefer(false, 0),
            "no quiesce ⇒ SoftDefer policy unchanged");
+    using cutum::EnterLitQuiesceMayLiftSpawnSoftDefer;
+    Expect(EnterLitQuiesceMayLiftSpawnSoftDefer(true, 0, false),
+           "lift SoftDefer when spawn !pending");
+    Expect(!EnterLitQuiesceMayLiftSpawnSoftDefer(true, 0, true),
+           "no SoftDefer lift while PendingLight");
+    Expect(!EnterLitQuiesceMayLiftSpawnSoftDefer(true, 3, false),
+           "outside spawn no SoftDefer lift");
     using cutum::EnterSpawnPresentableCyRange;
     using cutum::EnterSpawnRingIgnoresHinterlandMeshDebt;
     int cy0 = 0;
@@ -2239,14 +2246,25 @@ int main()
     Expect(!ShouldTransferSoftDeferHeldToDirty(false, false),
            "P0.2: no Held ⇒ no transfer");
     using cutum::ShouldEnterSoftDeferEmptyTransferDirty;
+    Expect(ShouldEnterSoftDeferEmptyTransferDirty(true, true),
+           "P0.2: SoftDefer ON under enter ⇒ Dirty not Held park");
     Expect(!ShouldEnterSoftDeferEmptyTransferDirty(true, false),
            "P0.2: SoftDefer lifted ⇒ P17 publish fallthrough");
-    Expect(ShouldEnterSoftDeferEmptyTransferDirty(true, true),
-           "P0.2: EnterLitQuiesce + SoftDefer active ⇒ Dirty not Held");
     Expect(!ShouldEnterSoftDeferEmptyTransferDirty(false, false),
            "P0.2: cruise SoftDefer empty KEEP");
     Expect(!ShouldEnterSoftDeferEmptyTransferDirty(false, true),
            "P0.2: cruise SoftDefer active KEEP avoid");
+    using cutum::IsIntentionalOccludedEmptyReady;
+    Expect(IsIntentionalOccludedEmptyReady(true, false, true, 0, false, false),
+           "intentional occluded empty ⇒ column ready");
+    Expect(!IsIntentionalOccludedEmptyReady(true, false, false, 0, false, false),
+           "SoftDefer empty !GpuResident ⇒ not ready");
+    Expect(!IsIntentionalOccludedEmptyReady(true, false, true, 0, true, false),
+           "SoftDeferHeld ⇒ not ready");
+    Expect(!IsIntentionalOccludedEmptyReady(true, false, true, 0, false, true),
+           "defer_until_lit ⇒ not ready");
+    Expect(!IsIntentionalOccludedEmptyReady(true, true, true, 0, false, false),
+           "drawable ⇒ not intentional-empty path");
     Expect(!ShouldPinIsolatedMissMarkDirty(true, true, false),
            "P0.2: already owned ⇒ no MarkDirty");
     Expect(ShouldPinIsolatedMissMarkDirty(true, false, false),

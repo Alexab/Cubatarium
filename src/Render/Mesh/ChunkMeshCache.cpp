@@ -688,11 +688,20 @@ bool UChunkMeshCache::HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const
 
 bool UChunkMeshCache::HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const
 {
-  // Drawable only. GpuResident 0-quad used to fake "ready" after SoftDefer empty
-  // publish cleared SoftDeferHeld (manual 171636 sky-only: holes=0 while
-  // underfeet_has_mesh=0). Occluded true-empty still remeshes once; FogPullIn
-  // prefers a brief hole over permanent invisible underfeet.
-  return HasDrawableGreedyMesh(chunk_coord);
+  if (HasDrawableGreedyMesh(chunk_coord))
+  {
+    return true;
+  }
+  const auto it = GreedyCache.find(chunk_coord);
+  if (it == GreedyCache.end())
+  {
+    return false;
+  }
+  const bool defer_active =
+      DeferMeshUntilLit && DeferMeshUntilLit(chunk_coord);
+  return IsIntentionalOccludedEmptyReady(
+      true, false, it->second.GpuResident, it->second.GpuQuadCount,
+      SoftDeferHeld.count(chunk_coord) > 0, defer_active);
 }
 
 bool UChunkMeshCache::IsGpuExtractInFlight(glm::ivec3 chunk_coord) const
@@ -1418,40 +1427,56 @@ bool UChunkMeshCache::FindNearestMissingGreedyMesh(
   // slices stay visible without walking every keep-shell chunk.
   constexpr int kMissingScanMaxCy = 48;
   const UChunkManager &chunks = world.GetChunkManager();
+  int cy_scan_lo = 0;
+  int cy_scan_hi = kMissingScanMaxCy;
+  if (center_ground_chunk.y > 0)
+  {
+    // Presentable band (player cy ±1) — align with HasMissingGreedyMeshesNearFocus
+    // so pin/heal targets the same slice SoT (not bedrock cy=0 alone).
+    cy_scan_lo = std::max(0, center_ground_chunk.y - 1);
+    cy_scan_hi = std::min(kMissingScanMaxCy, center_ground_chunk.y + 1);
+  }
   auto chunk_is_solid_missing = [&](glm::ivec3 coord) -> bool
   {
     if (HasMeshSatisfyingColumnReady(coord))
     {
       return false;
     }
-    // Empty SoftDefer placeholders remain missing until drawable/ready mesh.
-    if (IsPendingGpuApply(coord))
-    {
-      return false;
-    }
-    if (AsyncBuilder && AsyncBuilder->IsInFlight(coord))
-    {
-      return false;
-    }
+    // SRBR-P0.2: do not skip Inflight/PendingGpu — HasMissing still counts
+    // them; skipping left pin aiming rim while underfeet hole was Inflight
+    // (094710 dirty=0 miss=1). PipelineOwns/keep-Dirty handle dual feed.
     const UChunk *chunk = chunks.GetChunk(coord);
     if (!chunk)
     {
       return false;
     }
-    for (int z = 0; z < CHUNK_SIZE; z += 4)
+    bool any_solid = false;
+    for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
     {
-      for (int x = 0; x < CHUNK_SIZE; x += 4)
+      for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
       {
-        for (int y = 0; y < CHUNK_SIZE; y += 4)
+        for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
         {
           if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
           {
-            return true;
+            any_solid = true;
           }
         }
       }
     }
-    return false;
+    if (!any_solid)
+    {
+      return false;
+    }
+    // SoftDefer-empty far below focus cy must not win nearest (enter SoT is
+    // presentable band; 100846 pinned miss_cy=0 bedrock while uf_ready=1).
+    constexpr int kSoftDeferEmptyNearestCySlack = 1;
+    if (HasGreedyMesh(coord) && !HasDrawableGreedyMesh(coord) &&
+        std::abs(coord.y - center_ground_chunk.y) > kSoftDeferEmptyNearestCySlack)
+    {
+      return false;
+    }
+    return true;
   };
   bool found = false;
   glm::ivec3 best{0};
@@ -1468,7 +1493,7 @@ bool UChunkMeshCache::FindNearestMissingGreedyMesh(
         {
           continue;
         }
-        for (int cy = 0; cy <= kMissingScanMaxCy; ++cy)
+        for (int cy = cy_scan_lo; cy <= cy_scan_hi; ++cy)
         {
           const glm::ivec3 coord(center_ground_chunk.x + dx, cy,
                                  center_ground_chunk.z + dz);
@@ -3656,23 +3681,30 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   if (ShouldKeepPriorGpuOnEmptyCpuReplace(had_gpu_drawable, new_cpu_drawable) &&
       (defer_until_lit || SoftDeferHeld.count(result.coord) > 0))
   {
-    ++MeshReplaceHoleAvoided;
-    MarkDirtyPriority(result.coord);
-    return;
+    if (EnterLitQuiesce && !defer_until_lit)
+    {
+      SoftDeferHeld.erase(result.coord);
+      // fall through — publish intentional empty after SoftDefer lift
+    }
+    else
+    {
+      ++MeshReplaceHoleAvoided;
+      MarkDirtyPriority(result.coord);
+      return;
+    }
   }
   // Era24 I-E1 / Era32 I-L3: SoftDefer empty — never erase live GPU resident.
   // Keep prior slot + ticket; Absent+erase only when !GpuResident.
   if ((defer_until_lit || SoftDeferHeld.count(result.coord) > 0) &&
       !new_cpu_drawable)
   {
-    // P17 KEEP: EnterLitQuiesce + SoftDefer lifted → drop Held and publish
-    // (empty may free SoftDefer sticky; next remesh owns heal). SoftDefer
-    // still active under enter → one Dirty, never Held park (SRBR-P0.2).
+    // P17 KEEP: EnterLitQuiesce + SoftDefer lifted → publish intentional empty
+    // (HasMeshSatisfyingColumnReady). SoftDefer still ON → one Dirty (SRBR-P0.2).
     if (EnterLitQuiesce && !defer_until_lit)
     {
       SoftDeferHeld.erase(result.coord);
       RemeshAfterApply.erase(result.coord);
-      // fall through to publish / FreeChunk path
+      // fall through to publish / intentional empty
     }
     else if (EnterLitQuiesce)
     {
@@ -3683,21 +3715,21 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     }
     else
     {
-      NoteSoftDeferEmptyPublishAvoided(result.coord);
-      HoldSoftDeferFirstMesh(result.coord);
-      if (IsPendingGpuApply(result.coord))
-      {
-        PreferKickPendingGpuQueued(result.coord);
-      }
-      if (had_gpu_resident)
-      {
-        ++MeshReplaceHoleAvoided;
-        MaybeMarkDirtyAfterSoftDeferEmptyAvoid(result.coord);
-        return;
-      }
-      // Era39: keep HasGreedy sticky — do not erase GreedyCache (flash).
+    NoteSoftDeferEmptyPublishAvoided(result.coord);
+    HoldSoftDeferFirstMesh(result.coord);
+    if (IsPendingGpuApply(result.coord))
+    {
+      PreferKickPendingGpuQueued(result.coord);
+    }
+    if (had_gpu_resident)
+    {
+      ++MeshReplaceHoleAvoided;
       MaybeMarkDirtyAfterSoftDeferEmptyAvoid(result.coord);
       return;
+    }
+    // Era39: keep HasGreedy sticky — do not erase GreedyCache (flash).
+    MaybeMarkDirtyAfterSoftDeferEmptyAvoid(result.coord);
+    return;
     }
   }
   const auto oldIt = GreedyVertexCountByChunk.find(result.coord);
@@ -4045,8 +4077,15 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           HasGreedyMesh(*it) && !HasDrawableGreedyMesh(*it);
       if (soft_empty)
       {
-        // Under EnterLitQuiesce always keep SoftDefer-empty Dirty — parking to
-        // SoftDeferHeld dual-owned with pin tickets (SRBR-P0.2 / manual 183649).
+        const bool soft_still =
+            DeferMeshUntilLit && DeferMeshUntilLit(*it);
+        if (soft_still)
+        {
+          HoldSoftDeferFirstMesh(*it);
+          it = Dirty.RemoveAt(it);
+          ++LastMeshDirtyPruneN;
+          continue;
+        }
         SoftDeferHeld.erase(*it);
         ++it;
         continue;
@@ -4057,18 +4096,18 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         ++LastMeshDirtyPruneN;
         continue;
       }
-      // SoftDeferHeld+Dirty dual: under enter erase Held keep Dirty (one
-      // owner). Cruise: SoftDeferHeld owns — RemoveAt Dirty (Hide⇒Ticket).
       if (SoftDeferHeld.count(*it) > 0)
       {
-        if (EnterLitQuiesce)
+        const bool soft_still =
+            DeferMeshUntilLit && DeferMeshUntilLit(*it);
+        if (soft_still || !EnterLitQuiesce)
         {
-          SoftDeferHeld.erase(*it);
-          ++it;
+          it = Dirty.RemoveAt(it);
+          ++LastMeshDirtyPruneN;
           continue;
         }
-        it = Dirty.RemoveAt(it);
-        ++LastMeshDirtyPruneN;
+        SoftDeferHeld.erase(*it);
+        ++it;
         continue;
       }
       // Pending-light park: SoftDeferHeld owns FirstMesh; keep Dirty only when
@@ -4516,11 +4555,19 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           return Dirty.RemoveAt(it);
         }
       }
-      // Era47/P0.2: SoftDeferHeld under lit-quiesce — erase Held keep Dirty
-      // (one owner). Removing Dirty left miss sticky dirty=0 (234739).
+      // SoftDeferHeld: SoftDefer ON → SoftDefer owns (RemoveAt). SoftDefer
+      // lifted under enter → erase Held keep Dirty.
       if (EnterLitQuiesce && SoftDeferHeld.count(*it) > 0 &&
           !ChunkHasFullyDarkFace(*it))
       {
+        const bool soft_still =
+            DeferMeshUntilLit && DeferMeshUntilLit(*it);
+        if (soft_still)
+        {
+          ++LastMeshDirtyScheduleSkipN;
+          ++LastMeshDirtyScheduleSkipSoftDeferN;
+          return Dirty.RemoveAt(it);
+        }
         SoftDeferHeld.erase(*it);
       }
       if (AsyncBuilder->IsInFlight(*it))
@@ -5452,14 +5499,37 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     if (ShouldKeepPriorGpuOnEmptyCpuReplace(had_gpu_drawable, new_cpu_drawable) &&
         (defer_until_lit || SoftDeferHeld.count(chunkCoord) > 0))
     {
-      ++MeshReplaceHoleAvoided;
-      MarkDirtyPriority(chunkCoord);
-      return;
+      if (EnterLitQuiesce && !defer_until_lit)
+      {
+        SoftDeferHeld.erase(chunkCoord);
+        // fall through — publish intentional empty after SoftDefer lift
+      }
+      else
+      {
+        ++MeshReplaceHoleAvoided;
+        MarkDirtyPriority(chunkCoord);
+        return;
+      }
     }
     // Era24 I-E1 / Era32 I-L3: SoftDefer empty Immediate — keep GpuResident.
     if ((defer_until_lit || SoftDeferHeld.count(chunkCoord) > 0) &&
         !new_cpu_drawable)
     {
+      if (EnterLitQuiesce && !defer_until_lit)
+      {
+        SoftDeferHeld.erase(chunkCoord);
+        RemeshAfterApply.erase(chunkCoord);
+        // fall through to publish intentional empty
+      }
+      else if (EnterLitQuiesce)
+      {
+        SoftDeferHeld.erase(chunkCoord);
+        RemeshAfterApply.erase(chunkCoord);
+        MarkDirtyPriority(chunkCoord);
+        return;
+      }
+      else
+      {
       NoteSoftDeferEmptyPublishAvoided(chunkCoord);
       HoldSoftDeferFirstMesh(chunkCoord);
       if (IsPendingGpuApply(chunkCoord) &&
@@ -5477,6 +5547,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       // Era39: keep HasGreedy sticky — do not erase GreedyCache (flash).
       MaybeMarkDirtyAfterSoftDeferEmptyAvoid(chunkCoord);
       return;
+      }
     }
     chunkMesh.batches = std::move(new_batches);
     const bool intentional_empty =

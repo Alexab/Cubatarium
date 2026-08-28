@@ -221,8 +221,21 @@ inline bool ShouldTransferSoftDeferHeldToDirty(bool soft_defer_held,
   return soft_defer_held && !soft_defer_still_active;
 }
 
-/// EnterLitQuiesce SoftDefer empty while SoftDefer still active: Dirty transfer
-/// (no Held park). SoftDefer lifted → P17 publish fallthrough (not this).
+/// Intentional occluded empty: GpuResident 0-quad after SoftDefer lift publish.
+/// SoftDefer sticky empty (Held / defer still ON) must stay !ready (I-M3).
+inline bool IsIntentionalOccludedEmptyReady(bool has_greedy, bool has_drawable,
+                                            bool gpu_resident, int gpu_quad_count,
+                                            bool soft_defer_held,
+                                            bool defer_until_lit)
+{
+  if (!has_greedy || has_drawable || soft_defer_held || defer_until_lit)
+  {
+    return false;
+  }
+  return gpu_resident && gpu_quad_count == 0;
+}
+
+/// EnterLitQuiesce + SoftDefer still active: one Dirty owner (not Held park).
 inline bool ShouldEnterSoftDeferEmptyTransferDirty(bool enter_lit_quiesce,
                                                    bool defer_until_lit)
 {
