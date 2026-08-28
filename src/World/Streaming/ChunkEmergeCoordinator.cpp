@@ -3507,7 +3507,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       }
       else if (ShouldPinIsolatedMissSpawnRing(world.NeedsSpawnRingCatchUp(),
                                               found_nearest_missing,
-                                              nh_underfeet))
+                                              nh_underfeet,
+                                              world.IsEnterSessionActive()))
       {
         pin_isolated_miss(108);
       }

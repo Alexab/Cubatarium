@@ -3473,9 +3473,11 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const bool underfeet_miss_sla =
         world.PhysicsTelemetryData.FocusMissingMesh != 0 &&
         world.PhysicsTelemetryData.MissHoriz <= 1;
-    if ((world.GetEnterGameMeshBurstFrames() > 0 || spawn_catch_up) &&
+    if (!world.IsEnterSessionActive() &&
+        (world.GetEnterGameMeshBurstFrames() > 0 || spawn_catch_up) &&
         ShouldRunSpawnRingCatchUpHeal(spawn_catch_up, moving_fast,
-                                      underfeet_miss_sla))
+                                      underfeet_miss_sla,
+                                      world.IsEnterSessionActive()))
     {
       const int dirty_n =
           static_cast<int>(world.GetMeshService().GetDirtyCount());

@@ -52,7 +52,7 @@ void ParkSpawnRingMeshWhileRelightDeferred(UWorld &world)
   const auto &phys = world.GetPhysicsTelemetry();
   if (ShouldSkipParkSpawnRingForMissHeal(
           world.NeedsSpawnRingCatchUp(), phys.FocusMissingMesh != 0,
-          phys.MissHoriz))
+          phys.MissHoriz, world.IsEnterSessionActive()))
   {
     return;
   }
@@ -1600,6 +1600,10 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     if (Kind == WorldCoopKind::Load)
     {
       ParkSpawnRingMeshWhileRelightDeferred(world);
+      if (world.IsEnterSessionActive())
+      {
+        world.MarkEnterMissingMeshesDirty();
+      }
     }
     MeshRebuildTickStats tick_stats;
     for (int pass = 0; pass < pass_limit; ++pass)
@@ -2116,6 +2120,29 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         const int visibility_debt = lit_sample.visibility_debt;
         const bool mesh_blockers_clear = !world.NeedsEnterGameMeshWarmup();
         const bool underfeet_present = world.IsEnterUnderfeetPresentReady();
+        const glm::ivec3 underfeet_center =
+            UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+        const int underfeet_gpu_pending =
+            world.GetMeshService().CountPendingGpuAppliesInHorizontalRadius(
+                underfeet_center, 1);
+        const bool underfeet_mesh_ok =
+            underfeet_present ||
+            !world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
+                world.GetBlockWorld(),
+                glm::ivec3(underfeet_center.x, 0, underfeet_center.z), 1);
+        const bool ring_ready_for_exit =
+            ring_ready ||
+            (world.IsEnterSessionActive() && underfeet_present &&
+             underfeet_gpu_pending <= 0 && underfeet_mesh_ok &&
+             (visibility_debt <= 0 || world.IsEnterLitQuiesceLatched()));
+        const bool visibility_ready_for_exit =
+            visibility_ready ||
+            (world.IsEnterSessionActive() && underfeet_present &&
+             fov_debt <= 0 && underfeet_gpu_pending <= 0 &&
+             (world.IsEnterLitQuiesceLatched() ||
+              StreamingWarmupAbortDrainMode ||
+              elapsed_ms >= static_cast<double>(
+                  URuntimeTuning::Get().EnterMeshAbortMs)));
         const bool lit_progress_stalled = EnterLitDebtProgressStalled(
             fov_debt, StreamingWarmupBestFovDebt, underfeet_present,
             ms_since_lit_progress,
@@ -2133,18 +2160,16 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         {
           StreamingWarmupAbortDrainMode = true;
         }
-        const glm::ivec3 underfeet_center =
-            UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
-        const int underfeet_gpu_pending =
-            world.GetMeshService().CountPendingGpuAppliesInHorizontalRadius(
-                underfeet_center, 1);
         const bool abort_underfeet_cap = ShouldReleaseEnterAfterAbortUnderfeetCap(
             StreamingWarmupAbortDrainMode, elapsed_ms,
             URuntimeTuning::Get().EnterForceInGameMs, underfeet_present,
             underfeet_gpu_pending);
         // LitRing C: stall with underfeet → settle with FOV holes OK (finite load).
         const bool load_settled =
-            (ring_ready && visibility_ready && mesh_blockers_clear) ||
+            (ring_ready_for_exit && visibility_ready_for_exit &&
+             mesh_blockers_clear) ||
+            (StreamingWarmupAbortDrainMode && underfeet_present &&
+             underfeet_gpu_pending <= 0 && fov_debt <= 0) ||
             (lit_progress_stalled && underfeet_present &&
              underfeet_gpu_pending <= 0) ||
             (abort_underfeet_cap && underfeet_present &&

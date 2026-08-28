@@ -41,8 +41,13 @@ inline bool ShouldUseEnterSpawnMissProbe(bool enter_lit_gate,
 /// Do not park spawn-ring Dirty while catch-up / near miss heal is active.
 inline bool ShouldSkipParkSpawnRingForMissHeal(bool spawn_catch_up,
                                                bool focus_missing_mesh,
-                                               int miss_horiz)
+                                               int miss_horiz,
+                                               bool enter_session_active = false)
 {
+  if (enter_session_active)
+  {
+    return false;
+  }
   if (spawn_catch_up)
   {
     return true;

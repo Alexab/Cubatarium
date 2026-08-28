@@ -171,8 +171,13 @@ inline bool ShouldPinIsolatedMissUnderfeet(bool found_nearest_missing,
 /// SRBR-P0.2: spawn-ring catch-up pins nh≤enter work radius (fz-cold-enter).
 inline bool ShouldPinIsolatedMissSpawnRing(bool spawn_catch_up,
                                            bool found_nearest_missing,
-                                           int miss_horiz)
+                                           int miss_horiz,
+                                           bool enter_session_active = false)
 {
+  if (enter_session_active)
+  {
+    return false;
+  }
   return spawn_catch_up && found_nearest_missing && miss_horiz >= 0 &&
          miss_horiz <= kVisualStageLitDrawableHoriz;
 }
@@ -194,8 +199,13 @@ inline bool ShouldBurstHealPinnedMiss(bool focus_missing_mesh, int miss_horiz,
 
 /// TD-ARCH-021: spawn-ring catch-up must run during enter fly (fz-cold-enter).
 inline bool ShouldRunSpawnRingCatchUpHeal(bool spawn_catch_up, bool moving_fast,
-                                          bool underfeet_miss)
+                                          bool underfeet_miss,
+                                          bool enter_session_active = false)
 {
+  if (enter_session_active)
+  {
+    return false;
+  }
   if (!spawn_catch_up && !underfeet_miss)
   {
     return false;
