@@ -131,6 +131,10 @@ void WriteJsonlLine(const EnterLitSample &s, const char *kind = nullptr)
           << ",\"gate_miss_soft_held\":" << s.gate_miss_soft_held
           << ",\"gate_miss_defer\":" << s.gate_miss_defer
           << ",\"gate_miss_inflight\":" << s.gate_miss_inflight
+          << ",\"gate_miss_has_greedy\":" << s.gate_miss_has_greedy
+          << ",\"gate_miss_drawable\":" << s.gate_miss_drawable
+          << ",\"gate_miss_gpu_resident\":" << s.gate_miss_gpu_resident
+          << ",\"gate_miss_gpu_quad\":" << s.gate_miss_gpu_quad
           << ",\"remesh_after_apply_n\":" << s.remesh_after_apply_n
           << ",\"stuck_dirty_cx\":" << s.stuck_dirty_cx
           << ",\"stuck_dirty_cy\":" << s.stuck_dirty_cy
@@ -253,6 +257,11 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
     out.gate_miss_defer =
         mesh.GetCache().IsDeferMeshUntilLit(gate_miss) ? 1 : 0;
     out.gate_miss_inflight = mesh.HasInflightMeshBuild(gate_miss) ? 1 : 0;
+    out.gate_miss_has_greedy = mesh.HasGreedyMesh(gate_miss) ? 1 : 0;
+    out.gate_miss_drawable = mesh.HasDrawableGreedyMesh(gate_miss) ? 1 : 0;
+    const UChunkMeshCache &cache = mesh.GetCache();
+    out.gate_miss_gpu_resident = cache.QueryGreedyGpuResident(gate_miss) ? 1 : 0;
+    out.gate_miss_gpu_quad = cache.QueryGreedyGpuQuadCount(gate_miss);
   }
   out.remesh_after_apply_n = static_cast<int>(mesh.GetRemeshAfterApplyCount());
   const glm::ivec3 focus = world.GetPreferredLoadFocusBlock();

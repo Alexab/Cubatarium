@@ -235,6 +235,21 @@ inline bool IsIntentionalOccludedEmptyReady(bool has_greedy, bool has_drawable,
   return gpu_resident && gpu_quad_count == 0;
 }
 
+/// CPU-published occluded empty while I-R1 keeps live SSBO (!GpuResident or
+/// stale GpuQuadCount). SoftDefer sticky empty must stay !ready (I-M3).
+inline bool IsCpuPublishedOccludedEmptyReady(bool has_greedy, bool has_drawable,
+                                             bool cpu_batches_empty,
+                                             bool soft_defer_held,
+                                             bool defer_until_lit)
+{
+  if (!has_greedy || has_drawable || soft_defer_held || defer_until_lit ||
+      !cpu_batches_empty)
+  {
+    return false;
+  }
+  return true;
+}
+
 /// EnterLitQuiesce + SoftDefer still active: one Dirty owner (not Held park).
 inline bool ShouldEnterSoftDeferEmptyTransferDirty(bool enter_lit_quiesce,
                                                    bool defer_until_lit)

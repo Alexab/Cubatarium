@@ -2265,6 +2265,15 @@ int main()
            "defer_until_lit ⇒ not ready");
     Expect(!IsIntentionalOccludedEmptyReady(true, true, true, 0, false, false),
            "drawable ⇒ not intentional-empty path");
+    using cutum::IsCpuPublishedOccludedEmptyReady;
+    Expect(IsCpuPublishedOccludedEmptyReady(true, false, true, false, false),
+           "CPU-published occluded empty ⇒ column ready");
+    Expect(!IsCpuPublishedOccludedEmptyReady(true, false, false, false, false),
+           "CPU non-empty ⇒ not cpu-published empty");
+    Expect(!IsCpuPublishedOccludedEmptyReady(true, false, true, true, false),
+           "SoftDeferHeld blocks cpu-published empty");
+    Expect(!IsCpuPublishedOccludedEmptyReady(true, false, true, false, true),
+           "defer_until_lit blocks cpu-published empty");
     Expect(!ShouldPinIsolatedMissMarkDirty(true, true, false),
            "P0.2: already owned ⇒ no MarkDirty");
     Expect(ShouldPinIsolatedMissMarkDirty(true, false, false),

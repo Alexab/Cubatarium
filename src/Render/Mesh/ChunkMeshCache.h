@@ -222,6 +222,8 @@ public:
   /// Drawable OR intentional GPU 0-quad commit (occluded). SoftDefer empty
   /// (HasGreedy, !GpuResident) stays false — rim hole SoT (manual 101824).
   bool HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const;
+  bool QueryGreedyGpuResident(glm::ivec3 chunk_coord) const;
+  int QueryGreedyGpuQuadCount(glm::ivec3 chunk_coord) const;
   /// SoftDeferHeld side-set size (outside-focus !Drawable FirstMesh).
   size_t GetSoftDeferHeldCount() const { return SoftDeferHeld.size(); }
   /// Era24 / Era50: SoftDeferHeld membership for Hide⇒Ticket ownership.

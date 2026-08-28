@@ -699,9 +699,36 @@ bool UChunkMeshCache::HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const
   }
   const bool defer_active =
       DeferMeshUntilLit && DeferMeshUntilLit(chunk_coord);
-  return IsIntentionalOccludedEmptyReady(
-      true, false, it->second.GpuResident, it->second.GpuQuadCount,
-      SoftDeferHeld.count(chunk_coord) > 0, defer_active);
+  const bool soft_held = SoftDeferHeld.count(chunk_coord) > 0;
+  if (IsIntentionalOccludedEmptyReady(
+          true, false, it->second.GpuResident, it->second.GpuQuadCount,
+          soft_held, defer_active))
+  {
+    return true;
+  }
+  bool cpu_empty = true;
+  for (const GreedyMeshBatch &batch : it->second.batches)
+  {
+    if (!batch.vertices.empty())
+    {
+      cpu_empty = false;
+      break;
+    }
+  }
+  return IsCpuPublishedOccludedEmptyReady(true, false, cpu_empty, soft_held,
+                                          defer_active);
+}
+
+bool UChunkMeshCache::QueryGreedyGpuResident(glm::ivec3 chunk_coord) const
+{
+  const auto it = GreedyCache.find(chunk_coord);
+  return it != GreedyCache.end() && it->second.GpuResident;
+}
+
+int UChunkMeshCache::QueryGreedyGpuQuadCount(glm::ivec3 chunk_coord) const
+{
+  const auto it = GreedyCache.find(chunk_coord);
+  return it != GreedyCache.end() ? static_cast<int>(it->second.GpuQuadCount) : 0;
 }
 
 bool UChunkMeshCache::IsGpuExtractInFlight(glm::ivec3 chunk_coord) const
@@ -3823,6 +3850,14 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
         ++RaaCommitMarkDirtyN;
       }
     }
+    // I-R1 keep-until-bind: intentional empty CPU still satisfies column
+    // (spawn ring) — publish 0-quad residency without FreeChunk.
+    if (intentional_empty)
+    {
+      chunkMesh.GpuResident = true;
+      chunkMesh.GpuSlotIndex = -1;
+      chunkMesh.GpuQuadCount = 0;
+    }
     return;
   }
   if (had_gpu_resident)
@@ -5602,6 +5637,12 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       if (OnLitPendingNeeded && !had_mesh && (defer_until_lit || new_dark))
       {
         OnLitPendingNeeded(chunkCoord);
+      }
+      if (intentional_empty)
+      {
+        chunkMesh.GpuResident = true;
+        chunkMesh.GpuSlotIndex = -1;
+        chunkMesh.GpuQuadCount = 0;
       }
       return;
     }

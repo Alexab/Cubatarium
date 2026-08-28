@@ -37,6 +37,10 @@ struct EnterLitSample
   int gate_miss_soft_held{0};
   int gate_miss_defer{0};
   int gate_miss_inflight{0};
+  int gate_miss_has_greedy{0};
+  int gate_miss_drawable{0};
+  int gate_miss_gpu_resident{0};
+  int gate_miss_gpu_quad{0};
   /// Era45: R4 diagnostics.
   int remesh_after_apply_n{0};
   int stuck_dirty_cx{0};
