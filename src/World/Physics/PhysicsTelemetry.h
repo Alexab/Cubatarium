@@ -77,12 +77,16 @@ struct PhysicsTelemetry
   int FmDirtyEnqueueN{0};
   int FmDirtyEnqueueFromMarkRelitN{0};
   int FmDirtyEnqueueFromColumnFlowN{0};
+  /// FP-D1: FirstMesh dirty consumed by schedule this frame.
+  int FmDirtyDrainN{0};
   /// FP-B2: nh≤2 priority front-insert into relight FIFO.
   int RelightFifoPriorityInsertN{0};
   /// FP-B3: ColumnFlow ticketed VB consume enqueue count.
   int TicketedVbConsumeN{0};
   /// FP-A4: frames in cruise Warm carve-out from HoleDrain starvation.
   int AdmissionCarveOutFrames{0};
+  /// FP-G0: per-frame carve-out flag (0/1), not cumulative.
+  int AdmissionCarveOut{0};
   /// FP-C2: skylight seed at commit count.
   int SeedAtCommitN{0};
   /// FP-C2: StreamingPressure level 0=green 1=yellow 2=red.
@@ -240,6 +244,8 @@ struct PhysicsTelemetry
   /// MeshWorkAdmission caps after Finalize (pool util SoT).
   int DirtyAdmitBudgetEnd{0};
   int FirstMeshScheduleCap{0};
+  int FirstMeshScheduleEffectiveCap{0};
+  int FmDirtyEnqueueReserveN{0};
   int RemeshScheduleCap{0};
   /// FZ2.7-P13 R5: lit-settle remesh protect armed this frame (0/1).
   int RemeshProtectLitSettleN{0};
@@ -272,6 +278,12 @@ struct PhysicsTelemetry
   double MeshEmergePrepStickyMs{0.0};
   double MeshEmergePrepDropDirtyMs{0.0};
   double MeshEmergePrepOtherMs{0.0};
+  /// Arch roadmap: emerge prep sub-timers (inside prep_other breakdown).
+  double PrepAdmissionMs{0.0};
+  double PrepScheduleClampMs{0.0};
+  double PrepSoftdeferPolicyMs{0.0};
+  double PrepIsolatedMissMs{0.0};
+  double PrepRefreshPressureMs{0.0};
   /// Closeout Phase A: split of former MeshEmergePrepUnfinishedMs.
   double PrepPendingLightMs{0.0};
   double PrepBlackStickyMs{0.0};

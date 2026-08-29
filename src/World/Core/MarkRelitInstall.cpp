@@ -178,7 +178,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
   const int vb_focus_n = PhysicsTelemetryData.VisibleBlackFocusN;
   const int vb_stalled_n = PhysicsTelemetryData.VisibleBlackStalledN;
   const bool consume_mode =
-      ShouldConsumeTicketedVbDebt(vb_no_ticket_n, vb_focus_n, vb_stalled_n) ||
+      IsTicketedVbConsumeMode(vb_no_ticket_n, vb_focus_n, vb_stalled_n) ||
       ShouldConsumeUnlitTicketedVbStand(
           false, vb_focus_n, vb_no_ticket_n,
           static_cast<int>(PhysicsTelemetryData.ChunkMeshedUnlitHidden),
@@ -386,6 +386,8 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
             BlockWorld, ground, dirty_min, dirty_max);
         PhysicsTelemetryData.MarkMissingPrimaryN += marked;
         PhysicsTelemetryData.MarkRelitScheduleN += marked;
+        PhysicsTelemetryData.FmDirtyEnqueueN += marked;
+        PhysicsTelemetryData.FmDirtyEnqueueFromMarkRelitN += marked;
         if (marked > 0)
         {
           plan.schedule_n += marked;

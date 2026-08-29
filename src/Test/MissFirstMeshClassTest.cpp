@@ -1390,6 +1390,10 @@ int main()
            "lift SoftDefer when spawn !pending");
     Expect(!EnterLitQuiesceMayLiftSpawnSoftDefer(true, 0, true),
            "no SoftDefer lift while PendingLight");
+    Expect(EnterLitQuiesceMayLiftSpawnSoftDefer(true, 0, true, 2, true),
+           "FP-G1.2: underfeet exit lifts despite pending_light nh=0");
+    Expect(!EnterLitQuiesceMayLiftSpawnSoftDefer(true, 3, true, 2, true),
+           "FP-G1.2: underfeet override does not lift rim nh=3");
     Expect(!EnterLitQuiesceMayLiftSpawnSoftDefer(true, 3, false),
            "outside spawn no SoftDefer lift");
     using cutum::EnterSpawnPresentableCyRange;
@@ -1833,6 +1837,10 @@ int main()
            "Era40: miss pin max horiz = LitDrawable ring");
     Expect(ShouldForceMissColumnFifoEnqueue(true, true, false),
            "Era40: force enqueue miss+pending even if not in FIFO");
+    Expect(ShouldForceMissColumnFifoEnqueue(false, false, false, 12),
+           "FP-E1: miss_stuck>=10s force enqueue");
+    Expect(!ShouldForceMissColumnFifoEnqueue(true, true, true, 12),
+           "FP-E1: already in FIFO blocks miss_stuck force");
     Expect(!ShouldForceMissColumnFifoEnqueue(true, true, true),
            "Era40: already in FIFO -> force enqueue false");
     Expect(!ShouldForceMissColumnFifoEnqueue(false, true, false),
@@ -2283,8 +2291,8 @@ int main()
            "P0.2: SoftDeferHeld owns");
     Expect(MissSliceAlreadyOwned(false, false, false, false, false, true),
            "P0.2: FirstMesh ticket owns");
-    Expect(!MissSliceAlreadyOwned(false, false, false, false, false, false),
-           "P0.2: empty not owned");
+    Expect(!MissSliceAlreadyOwned(false, true, false, false, false, false, false),
+           "arch: undrawn RAA not owned without ticket");
     Expect(MissSliceSoftDeferOwns(true), "P0.2: SoftDefer owns Hide⇒Ticket");
     Expect(MissSlicePipelineOwns(true, false, false, false),
            "P0.2: Dirty is pipeline");
@@ -2426,6 +2434,57 @@ int main()
     using cutum::ShouldBypassRaAParkForCruiseFirstMesh;
     Expect(ShouldBypassRaAParkForCruiseFirstMesh(true, 3),
            "FP-A2: bypass RAA park HoleDrain nh=3");
+    Expect(ShouldBypassRaAParkForCruiseFirstMesh(false, 3, true),
+           "FP-D1: fm_starvation bypass RAA park nh=3");
+    Expect(ShouldBypassRaAParkForCruiseFirstMesh(false, 3, false, true),
+           "FP-G1: column_loaded_no_mesh bypass RAA park nh=3");
+    Expect(ShouldBypassRaAParkForCruiseFirstMesh(false, 3, false, false, 2),
+           "arch: schedule_ok<floor bypass RAA park");
+    using cutum::ComputeFmDirtyEnqueueReserve;
+    using cutum::ComputeFirstMeshScheduleEffectiveCap;
+    Expect(ComputeFmDirtyEnqueueReserve(2, 0) == 2,
+           "arch: prior-frame reserve enqueue-schedule");
+    Expect(ComputeFirstMeshScheduleEffectiveCap(7, 3, 2) >= 2,
+           "arch: effective_cap after reserve");
+    using cutum::IsTicketedVbConsumeMode;
+    Expect(IsTicketedVbConsumeMode(64, 98, 0),
+           "FP-E0: unified consume nt=64 vb=98");
+    using cutum::IsFmConsumerStarved;
+    Expect(IsFmConsumerStarved(3, 1), "arch: fm consumer starved");
+    Expect(!IsFmConsumerStarved(0, 0), "arch: no fm no starve");
+    using cutum::ShouldDeferFmDirtyEnqueueReserve;
+    Expect(ShouldDeferFmDirtyEnqueueReserve(true, false, false),
+           "FP-G1.1: defer reserve during enter_lit_gate");
+    Expect(ShouldDeferFmDirtyEnqueueReserve(false, true, false),
+           "FP-G1.1: defer reserve during enter_lit_quiesce");
+    Expect(ShouldDeferFmDirtyEnqueueReserve(false, false, true),
+           "FP-G1.1: defer reserve during enter_fov_lit");
+    Expect(!ShouldDeferFmDirtyEnqueueReserve(false, false, false),
+           "FP-G1.1: reserve active on cruise");
+    using cutum::ShouldSuppressFmAdmissionCarveOut;
+    Expect(ShouldSuppressFmAdmissionCarveOut(8, 2, 0),
+           "FP-G2: suppress carve when unfinished>=4");
+    Expect(ShouldSuppressFmAdmissionCarveOut(2, 5, 0),
+           "FP-G2: suppress carve when clnm>=4");
+    Expect(!ShouldSuppressFmAdmissionCarveOut(2, 2, 1),
+           "arch: mild schedule_ok=1 allows carve");
+    Expect(ShouldSuppressFmAdmissionCarveOut(2, 2, 4),
+           "arch: suppress carve when schedule_ok>=floor");
+    Expect(!ShouldSuppressFmAdmissionCarveOut(2, 2, 0),
+           "FP-G2: allow carve when mild holes + schedule_ok=0");
+    using cutum::ShouldBlockWitnessCaptureRetarget;
+    Expect(ShouldBlockWitnessCaptureRetarget(true, true, true),
+           "FP-D3: block witness retarget when pin+hold");
+    Expect(!ShouldBlockWitnessCaptureRetarget(true, true, true, true),
+           "arch: underfeet miss allows retarget");
+    using cutum::ShouldConsumeTicketedVbDebtHigh;
+    Expect(ShouldConsumeTicketedVbDebtHigh(12, 81),
+           "FP-E0: high VB debt consume when nt>=10");
+    using cutum::ShouldProtectRelightFifoMissRim;
+    Expect(ShouldProtectRelightFifoMissRim(5, 0, true, 7, 0),
+           "FP-E1: protect miss rim nh<=4 under pin");
+    Expect(!ShouldProtectRelightFifoMissRim(12, 0, true, 7, 0),
+           "FP-E1: rim nh=5 not protected");
     using cutum::ShouldPreferMissFinalizeBand;
     using cutum::kVisualStageLitDrawableHoriz;
     Expect(ShouldPreferMissFinalizeBand(4, kVisualStageLitDrawableHoriz),
@@ -2433,8 +2492,10 @@ int main()
     Expect(!ShouldPreferMissFinalizeBand(5, kVisualStageLitDrawableHoriz),
            "FP-B1: rim nh=5 split");
     using cutum::ShouldDampWitnessRetargetOnUnfinishedCruise;
-    Expect(ShouldDampWitnessRetargetOnUnfinishedCruise(true, 7),
-           "FP1: damp retarget when unf=7");
+    Expect(!ShouldDampWitnessRetargetOnUnfinishedCruise(true, 7),
+           "arch: no damp retarget when unf=7");
+    Expect(ShouldDampWitnessRetargetOnUnfinishedCruise(true, 8),
+           "arch: damp retarget when unf>=8");
     Expect(!ShouldStopRelightApplySlice(8.0, 1, 8.0, false, true, 3, 2.5),
            "FZ25: consume mode continues past 1@8ms when cap>=3");
     Expect(ShouldStopRelightApplySlice(8.0, 3, 8.0, false, true, 3, 2.5),

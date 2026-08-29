@@ -162,11 +162,20 @@ inline bool EnterLitQuiesceLiftSpawnSoftDefer(bool enter_lit_quiesce, int horiz,
 }
 
 /// SoftDefer lift under enter only when spawn column light is not pending.
+/// underfeet_exit_blocked: nh≤1 may lift despite pending_light — InGame exit
+/// SoT (manual 202127: missing=1 dirty=0 gpu=0 at 99% progress).
 inline bool EnterLitQuiesceMayLiftSpawnSoftDefer(bool enter_lit_quiesce,
                                                  int horiz,
                                                  bool pending_light,
-                                                 int spawn_radius = 2)
+                                                 int spawn_radius = 2,
+                                                 bool underfeet_exit_blocked =
+                                                     false)
 {
+  if (underfeet_exit_blocked && horiz >= 0 && horiz <= 1)
+  {
+    return EnterLitQuiesceLiftSpawnSoftDefer(enter_lit_quiesce, horiz,
+                                             spawn_radius);
+  }
   return EnterLitQuiesceLiftSpawnSoftDefer(enter_lit_quiesce, horiz,
                                            spawn_radius) &&
          !pending_light;

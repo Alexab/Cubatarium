@@ -246,10 +246,16 @@ inline bool ShouldGuaranteeResidentWitnessFirstMesh(bool has_chunk,
 
 /// SRBR-P0.2 / ColPipe P4: one miss owner — Dirty, RAA, Inflight, SoftDeferHeld,
 /// PendingGpu, or FirstMesh ticket. Dual MarkDirty+Enqueue refeed forever.
+/// has_drawable_greedy_mesh=false: RAA/Dirty without drawable is not owned.
 inline bool MissSliceAlreadyOwned(bool dirty, bool remesh_after_apply,
                                   bool inflight, bool soft_defer_held,
-                                  bool pending_gpu, bool first_mesh_ticket)
+                                  bool pending_gpu, bool first_mesh_ticket,
+                                  bool has_drawable_greedy_mesh = true)
 {
+  if (!has_drawable_greedy_mesh)
+  {
+    return first_mesh_ticket || inflight || pending_gpu;
+  }
   return dirty || remesh_after_apply || inflight || soft_defer_held ||
          pending_gpu || first_mesh_ticket;
 }

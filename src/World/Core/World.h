@@ -1216,6 +1216,9 @@ public:
     int dirty_n{0};
     int black_sticky{0};
     int unfinished{0};
+    int visible_black_focus_n{0};
+    int visible_black_no_ticket_n{0};
+    int column_loaded_no_mesh_n{0};
     bool valid{false};
   };
   const FocusRingVisualSample &GetFocusRingVisualSample() const;

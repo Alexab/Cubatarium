@@ -651,19 +651,30 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
         world.PhysicsTelemetryData.RelightWitnessHoldN = 0;
       }
       exec.SetPromoteRelightHold(miss_xz, hold);
-      if (world.Persistence)
+      if (world.Persistence && hold)
       {
         world.Persistence->SetRelightFifoPin(miss_xz, true);
-        if (world.PhysicsTelemetryData.MissHoriz <= 2)
+        if (world.PhysicsTelemetryData.MissHoriz <= 4)
         {
           const glm::ivec2 world_key(miss_xz.x * CHUNK_SIZE,
                                      miss_xz.y * CHUNK_SIZE);
-          if (!world.Persistence->IsTerrainColumnRelightQueued(world_key))
+          const bool already_in_fifo =
+              world.Persistence->IsTerrainColumnRelightQueued(world_key);
+          const bool pending_or_void =
+              world.IsPendingLightBeforeMesh(miss_xz) || hold;
+          if (ShouldForceMissColumnFifoEnqueue(true, pending_or_void,
+                                               already_in_fifo,
+                                               world.PhysicsTelemetryData
+                                                   .RelightWitnessHoldN /
+                                                   60))
           {
-            world.Persistence->EnqueueTerrainColumnRelight(
-                miss_coord.x, miss_coord.z, /*priority=*/true);
+            if (!already_in_fifo)
+            {
+              world.Persistence->EnqueueTerrainColumnRelight(
+                  miss_coord.x, miss_coord.z, /*priority=*/true);
+            }
+            GetColumnFlowExecutor().RequestPromoteRelight(miss_xz, 55);
           }
-          world.Persistence->PromoteTerrainColumnRelight(miss_xz);
         }
       }
     }
@@ -766,7 +777,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
         world.CountUnfinishedVisualNear(focus_horiz, focus_radius);
     unfinished_visual = last_unfinished_visual;
     focus_pressure = unfinished_visual;
-    unfinished_sample_cd = 8;
+    unfinished_sample_cd = unfinished_visual <= 1 ? 16 : 8;
   }
   else
   {
@@ -855,7 +866,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
         vb_pending_raw = raw_vb;
         vb_pending_stable = 1;
       }
-      visible_black_sample_cd = moving_for_telemetry ? 4 : 0;
+      visible_black_sample_cd =
+          moving_for_telemetry ? (vb_focus_stable_frames >= 8 ? 10 : 4) : 0;
       UWorld::VisibleBlackFocusSample vb_sample{};
       vb_sample.frame_epoch = world.GetStreamingFrameEpoch();
       vb_sample.focus_n = vb_published;
@@ -876,6 +888,17 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
         last_visible_black_progress;
     world.PhysicsTelemetryData.VisibleBlackStalledN =
         last_visible_black_stalled;
+    {
+      UWorld::FocusRingVisualSample ring_update =
+          world.GetFocusRingVisualSample();
+      ring_update.frame_epoch = world.GetStreamingFrameEpoch();
+      ring_update.visible_black_focus_n = vb_published;
+      ring_update.visible_black_no_ticket_n = last_visible_black_no_ticket;
+      ring_update.column_loaded_no_mesh_n =
+          world.PhysicsTelemetryData.ColumnLoadedNoMeshN;
+      ring_update.valid = true;
+      world.SetFocusRingVisualSample(ring_update);
+    }
   }
   world.PhysicsTelemetryData.FocusNotRenderReady = unfinished_visual;
   world.PhysicsTelemetryData.FocusPressure = focus_pressure;
@@ -2052,9 +2075,17 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                 SoftDeferCapturePinValid, SoftDeferCapturePinAge, pin_T,
                 better_horiz, pinned_still);
         const bool retarget_allowed = !world.IsEnterSessionActive();
-        const bool retarget = retarget_allowed &&
+        const bool miss_horiz_zero_no_drawable =
+            world.PhysicsTelemetryData.MissHoriz == 0 &&
+            world.PhysicsTelemetryData.FocusMissingMesh > 0;
+        const bool block_witness_retarget = ShouldBlockWitnessCaptureRetarget(
+            SoftDeferCapturePinValid, pinned_still, hold_witness_pin,
+            miss_horiz_zero_no_drawable);
+        const bool retarget =
+            retarget_allowed && !block_witness_retarget &&
             ShouldRetargetRelightWitness(era27_would_retarget, hold_witness_pin);
-        if (!retarget && era27_would_retarget && hold_witness_pin)
+        if (!retarget && era27_would_retarget &&
+            (hold_witness_pin || block_witness_retarget))
         {
           ++world.PhysicsTelemetryData.SoftDeferCaptureRetargetBlockedN;
         }
@@ -2167,14 +2198,16 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     auto &exec = GetColumnFlowExecutor();
     const glm::ivec2 focus_xz(focus_horiz.x, focus_horiz.z);
+    const glm::ivec2 promote_xz = exec.ResolveRelightPromoteColumn(
+        RepairColumnFromMissWitness(world.PhysicsTelemetryData, focus_xz));
     if (pending_bg > 0 || underfeet_pending_light)
     {
-      exec.RequestPromoteRelight(focus_xz, 50);
+      exec.RequestPromoteRelight(promote_xz, 50);
     }
     if (!rim_first_mesh_sla &&
         (pending_bg > 0 || near_pending_light || pending_light_focus_n > 0))
     {
-      exec.RequestPromoteRelight(focus_xz, 40);
+      exec.RequestPromoteRelight(promote_xz, 40);
     }
   }
 
@@ -2199,8 +2232,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
        world.GetAsyncRelightInFlightCount() == 0))
   {
     auto &exec = GetColumnFlowExecutor();
+    const glm::ivec2 focus_xz(focus_horiz.x, focus_horiz.z);
+    const glm::ivec2 promote_xz = exec.ResolveRelightPromoteColumn(
+        RepairColumnFromMissWitness(world.PhysicsTelemetryData, focus_xz));
     exec.RequestPromoteRelight(
-        glm::ivec2(focus_horiz.x, focus_horiz.z),
+        promote_xz,
         rim_first_mesh_sla ? 45 : 40);
     world.ClearPendingLightAfterMeshCommitted(12);
     // Capture is main-thread: never burst 48–56 idle (manual 220018).
@@ -2251,7 +2287,20 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             : (calm_fd_plateau
                    ? (frame_ms > kBadFrameMs ? 0 : 1)
                    : (frame_ms > kBadFrameMs ? 2 : 3));
-    bg_budget = std::min(bg_budget, hard_cap);
+    int capture_cap = hard_cap;
+    if (moving_now)
+    {
+      const int sched_ok =
+          world.GetMeshService().GetLastMeshDirtyScheduleOkN();
+      const int eff_cap =
+          world.GetMeshService().GetLastFirstMeshScheduleEffectiveCap();
+      const int consumer_floor = std::max(2, eff_cap > 0 ? eff_cap : 2);
+      if (sched_ok < consumer_floor)
+      {
+        capture_cap = std::min(capture_cap, 1);
+      }
+    }
+    bg_budget = std::min(bg_budget, capture_cap);
     // Era40 miss exception: do not let hard_cap squash soft-cap starve boost.
     {
       const int fifo_n =
@@ -2287,6 +2336,24 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     if (LastMemoryDecision.capture_hard_cap >= 0)
     {
       bg_budget = std::min(bg_budget, LastMemoryDecision.capture_hard_cap);
+    }
+    // FP-E0.3: stop-phase VB drain — dedicated Capture budget for 60s after stop.
+    if (!moving_now)
+    {
+      static int stop_vb_budget_frames = 0;
+      const int vb_nt = world.PhysicsTelemetryData.VisibleBlackNoTicketN;
+      if (vb_nt > 0)
+      {
+        ++stop_vb_budget_frames;
+      }
+      else
+      {
+        stop_vb_budget_frames = 0;
+      }
+      if (stop_vb_budget_frames > 0 && stop_vb_budget_frames <= 3600)
+      {
+        bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 3 : 5);
+      }
     }
     // P10: after hard_cap, restore Completed-empty fifo refill floor.
     {
@@ -2504,7 +2571,8 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
   world.PhysicsTelemetryData.DirtyRevisitSameN =
       world.GetMeshService().GetLastDirtyRevisitSameN();
   world.PhysicsTelemetryData.DirtyFmN =
-      world.GetMeshService().GetLastDirtyFmN();
+      std::max(world.GetMeshService().GetLastDirtyFmN(),
+               world.GetMeshService().GetLiveDirtyFirstMeshCount());
   world.PhysicsTelemetryData.DirtyRemeshN =
       world.GetMeshService().GetLastDirtyRemeshN();
 }

@@ -726,6 +726,21 @@ void UWorldMeshService::SetEnterFovLitPressure(bool v)
   Cache.SetEnterFovLitPressure(v);
 }
 
+void UWorldMeshService::SetColumnLoadedNoMeshPressure(int n)
+{
+  Cache.SetColumnLoadedNoMeshPressure(n);
+}
+
+void UWorldMeshService::SetEnterUnderfeetExitBlocked(bool v)
+{
+  Cache.SetEnterUnderfeetExitBlocked(v);
+}
+
+void UWorldMeshService::SetFmDirtyEnqueueReserve(int n)
+{
+  Cache.SetFmDirtyEnqueueReserve(n);
+}
+
 void UWorldMeshService::SetFz2DeferGated(bool v)
 {
   Cache.SetFz2DeferGated(v);
@@ -966,6 +981,11 @@ int UWorldMeshService::GetLastMeshDirtyScheduleOkN() const
   return Cache.GetLastMeshDirtyScheduleOkN();
 }
 
+int UWorldMeshService::GetLastFirstMeshScheduleEffectiveCap() const
+{
+  return Cache.GetLastFirstMeshScheduleEffectiveCap();
+}
+
 int UWorldMeshService::GetLastMeshDirtyScheduleSkipN() const
 {
   return Cache.GetLastMeshDirtyScheduleSkipN();
@@ -1044,6 +1064,11 @@ int UWorldMeshService::GetLastDirtyRevisitSameN() const
 int UWorldMeshService::GetLastDirtyFmN() const
 {
   return Cache.GetLastDirtyFmN();
+}
+
+int UWorldMeshService::GetLiveDirtyFirstMeshCount() const
+{
+  return Cache.GetLiveDirtyFirstMeshCount();
 }
 
 int UWorldMeshService::GetLastDirtyRemeshN() const

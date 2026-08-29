@@ -145,11 +145,55 @@ inline bool ShouldHoldInflightSupersedeUnderMissUndrawn(
   return soft_or_miss_undrawn && has_inflight_or_pending && !has_drawable;
 }
 
-/// FP-A2: HoleDrain cruise nh≤4 — do not park undrawn miss in RemeshAfterApply.
+/// FP-A2 / FP-D1: HoleDrain cruise nh≤4 — do not park undrawn miss in RemeshAfterApply.
+/// When fm_starvation, also bypass RAA park under pending_gpu / live flight.
+/// column_loaded_no_mesh: loaded column ring still missing drawable mesh.
+/// schedule_ok_n<first_mesh_floor: consumer-bound — never park to RAA.
 inline bool ShouldBypassRaAParkForCruiseFirstMesh(bool hole_drain_mode,
-                                                  int horiz)
+                                                    int horiz,
+                                                    bool fm_starvation = false,
+                                                    bool column_loaded_no_mesh =
+                                                        false,
+                                                    int schedule_ok_n = 999,
+                                                    int first_mesh_floor = 4)
 {
-  return hole_drain_mode && horiz >= 0 && horiz <= 4;
+  if (horiz < 0 || horiz > 4)
+  {
+    return false;
+  }
+  if (schedule_ok_n < first_mesh_floor)
+  {
+    return true;
+  }
+  return hole_drain_mode || fm_starvation || column_loaded_no_mesh;
+}
+
+/// FP-G1 arch: prior-frame enqueue minus prior-frame schedule drain (not same-frame).
+inline int ComputeFmDirtyEnqueueReserve(int enqueue_prior, int schedule_ok_prior)
+{
+  return std::max(0, enqueue_prior - schedule_ok_prior);
+}
+
+/// Effective FirstMesh schedule cap after drain-aware reserve.
+inline int ComputeFirstMeshScheduleEffectiveCap(int first_mesh_cap_base,
+                                                  int fm_q, int reserve_n,
+                                                  int first_mesh_floor = 4)
+{
+  if (reserve_n <= 0)
+  {
+    return first_mesh_cap_base;
+  }
+  const int reserved_cap = std::max(first_mesh_floor, fm_q - reserve_n);
+  return std::min(first_mesh_cap_base, reserved_cap);
+}
+
+/// FP-G1.1: FM enqueue reserve caps first_mesh schedule on cruise only.
+/// During enter lit / quiesce it zeros first_mesh_cap and stalls spawn ring.
+inline bool ShouldDeferFmDirtyEnqueueReserve(bool enter_lit_gate,
+                                             bool enter_lit_quiesce,
+                                             bool enter_fov_lit)
+{
+  return enter_lit_gate || enter_lit_quiesce || enter_fov_lit;
 }
 
 } // namespace cutum

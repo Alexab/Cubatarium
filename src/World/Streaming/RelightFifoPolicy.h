@@ -154,7 +154,7 @@ inline bool ShouldAllowBetterHorizWitnessRetarget(int unfinished, int cand_horiz
 /// FP1: lower thresh — 081522 unf med 7 still retargeted every frame.
 inline bool ShouldDampWitnessRetargetOnUnfinishedCruise(bool moving,
                                                         int unfinished,
-                                                        int thresh = 5)
+                                                        int thresh = 7)
 {
   return moving && unfinished > thresh;
 }
@@ -233,6 +233,23 @@ inline int RelightFifoTrimProtectHoriz()
   return kVisualStageProtectHoriz;
 }
 
+inline bool ShouldProtectRelightFifoMissRim(int victim_cx, int victim_cz,
+                                            bool pin_valid, int pin_cx,
+                                            int pin_cz,
+                                            int rim = RelightMissPinMaxHoriz())
+{
+  if (!pin_valid)
+  {
+    return false;
+  }
+  const int dx =
+      victim_cx < pin_cx ? pin_cx - victim_cx : victim_cx - pin_cx;
+  const int dz =
+      victim_cz < pin_cz ? pin_cz - victim_cz : victim_cz - pin_cz;
+  const int dist = dx > dz ? dx : dz;
+  return dist <= rim;
+}
+
 inline bool ShouldProtectRelightFifoTrimVictim(
     int victim_cx, int victim_cz, bool pin_valid, int pin_cx, int pin_cz,
     bool focus_valid, int focus_cx, int focus_cz,
@@ -240,6 +257,11 @@ inline bool ShouldProtectRelightFifoTrimVictim(
 {
   if (ShouldProtectRelightFifoPinKey(victim_cx, victim_cz, pin_valid, pin_cx,
                                      pin_cz))
+  {
+    return true;
+  }
+  if (ShouldProtectRelightFifoMissRim(victim_cx, victim_cz, pin_valid, pin_cx,
+                                      pin_cz))
   {
     return true;
   }
@@ -915,8 +937,13 @@ inline bool ShouldDeferHeavyApplySideEffects(double last_apply_ms,
 /// Era40: force FIFO Enqueue for FOV miss even when Keys/FIFO ghost-empty.
 inline bool ShouldForceMissColumnFifoEnqueue(bool miss_or_visual_hole,
                                              bool pending_or_void_or_undrawn,
-                                             bool already_in_fifo)
+                                             bool already_in_fifo,
+                                             int miss_stuck_sec = 0)
 {
+  if (miss_stuck_sec >= 10)
+  {
+    return !already_in_fifo;
+  }
   if (!miss_or_visual_hole || !pending_or_void_or_undrawn)
   {
     return false;
@@ -1049,6 +1076,41 @@ inline bool ShouldRetargetRelightWitness(bool era27_retarget,
     return false;
   }
   return era27_retarget;
+}
+
+/// FP-D3: hard-block Site B Capture retarget while witness pin is active.
+/// miss_horiz_zero_no_drawable: underfeet undrawn miss may retarget to heal.
+inline bool ShouldBlockWitnessCaptureRetarget(bool capture_pin_valid,
+                                              bool pinned_still,
+                                              bool hold_witness_pin,
+                                              bool miss_horiz_zero_no_drawable =
+                                                  false)
+{
+  if (miss_horiz_zero_no_drawable)
+  {
+    return false;
+  }
+  return capture_pin_valid && (hold_witness_pin || pinned_still);
+}
+
+/// FP-E0: consume ticketed VB when debt is high (invert B3 gate).
+inline bool ShouldConsumeTicketedVbDebtHigh(int vb_no_ticket_n,
+                                            int visible_black_focus_n,
+                                            int vb_thresh = 40,
+                                            int no_ticket_high = 10)
+{
+  return visible_black_focus_n > vb_thresh &&
+         vb_no_ticket_n >= no_ticket_high;
+}
+
+/// FP-E0 unified: low-nt OR high-nt consume (wire all Persistence/Emerge paths).
+inline bool IsTicketedVbConsumeMode(int vb_no_ticket_n,
+                                    int visible_black_focus_n,
+                                    int vb_stalled_n = 0)
+{
+  return ShouldConsumeTicketedVbDebt(vb_no_ticket_n, visible_black_focus_n,
+                                     vb_stalled_n) ||
+         ShouldConsumeTicketedVbDebtHigh(vb_no_ticket_n, visible_black_focus_n);
 }
 
 /// FP-A3: extend witness hold past RelightWitnessPinHoldFrames while pinned_still.

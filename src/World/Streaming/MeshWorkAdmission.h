@@ -37,8 +37,12 @@ struct MeshWorkAdmissionInput
   int remesh_queue_n{0};
   /// FZ2.7-P12 A2: Dirty FirstMeshQ depth (prior tick).
   int dirty_fm_n{0};
+  /// FP-D2: prior tick mesh_dirty_schedule_ok_n for carve-out trigger.
+  int mesh_schedule_ok_n{0};
   /// FZ2.7-P12 A2: no-mesh hole count (phase1: alias unfinished_visual).
   int no_mesh_n{0};
+  /// FP-G1/G2: loaded columns without drawable mesh (focus ring).
+  int column_loaded_no_mesh_n{0};
   /// FZ2.7-P13 R1: repairable dark faces (mesh dark, field lit).
   int dark_face_stale_near_n{0};
   /// SRBR-P1: ticketed VB stand remesh protect (no stale required).
@@ -116,6 +120,31 @@ struct MeshWorkAdmission
   /// FP-A4: this frame used Warm carve-out from HoleDrain FM starvation.
   bool admission_carve_out{false};
 };
+
+/// FP-G2: suppress FM carve-out when hole pressure is high — carved WarmBacklog
+/// starves FirstMesh vs sustained HoleDrain (manual 190202 holes_rate=1.0).
+inline bool ShouldSuppressFmAdmissionCarveOut(int unfinished_visual,
+                                              int column_loaded_no_mesh_n,
+                                              int mesh_schedule_ok_n,
+                                              int first_mesh_floor = 4)
+{
+  if (unfinished_visual >= 4 || column_loaded_no_mesh_n >= 4)
+  {
+    return true;
+  }
+  return mesh_schedule_ok_n >= first_mesh_floor;
+}
+
+/// FM consumer starved: dirty queue has work but schedule under floor.
+inline bool IsFmConsumerStarved(int dirty_fm_n, int mesh_schedule_ok_n,
+                                int first_mesh_floor = 4)
+{
+  if (dirty_fm_n <= 0)
+  {
+    return false;
+  }
+  return mesh_schedule_ok_n < std::min(first_mesh_floor, dirty_fm_n);
+}
 
 inline size_t MeshWorkQueuedApprox(const MeshWorkAdmissionInput &in)
 {
@@ -375,17 +404,71 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   const bool was_hole_backlog =
       prev == MeshWorkAdmission::Mode::HoleDrain ||
       prev == MeshWorkAdmission::Mode::DeepBacklog;
-  // FP-A4: cruise FM starvation carve-out — WarmBacklog when FM queue empty.
+  // FP-D2: cruise FM starvation carve-out — WarmBacklog when FM queue empty.
   static int admission_carve_remain = 0;
-  if (was_hole_backlog && holes && in.moving && in.pending_gpu <= 8 &&
-      in.dirty_fm_n == 0)
+  static int hole_drain_reenter_cd = 0;
+  const bool holes_moving = holes && in.moving;
+  const bool fm_starved = in.dirty_fm_n == 0;
+  const bool fm_consumer_starved =
+      IsFmConsumerStarved(in.dirty_fm_n, in.mesh_schedule_ok_n);
+  const bool schedule_starved = in.mesh_schedule_ok_n == 0;
+  const bool suppress_carve = ShouldSuppressFmAdmissionCarveOut(
+      in.unfinished_visual, in.column_loaded_no_mesh_n,
+      in.mesh_schedule_ok_n);
+  if (holes_moving && (fm_starved || fm_consumer_starved) && schedule_starved &&
+      !suppress_carve)
   {
-    admission_carve_remain = 30;
+    admission_carve_remain = 90;
+  }
+  // HoleDrain exit: FM queue fed and schedule at floor — leave HoleDrain.
+  static int hole_drain_fm_fed_frames = 0;
+  if (in.dirty_fm_n > 0 &&
+      in.mesh_schedule_ok_n >= std::min(4, in.dirty_fm_n))
+  {
+    ++hole_drain_fm_fed_frames;
+  }
+  else
+  {
+    hole_drain_fm_fed_frames = 0;
+  }
+  if (hole_drain_fm_fed_frames >= 8 &&
+      mode == MeshWorkAdmission::Mode::HoleDrain && !holes)
+  {
+    mode = MeshWorkAdmission::Mode::WarmBacklog;
+    hole_drain_fm_fed_frames = 0;
   }
   if (admission_carve_remain > 0 && mode == MeshWorkAdmission::Mode::HoleDrain)
   {
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     --admission_carve_remain;
+    out.admission_carve_out = true;
+    hole_drain_reenter_cd = 20;
+  }
+  else if (hole_drain_reenter_cd > 0)
+  {
+    --hole_drain_reenter_cd;
+    if (holes_moving && !in.missing_underfeet &&
+        mode == MeshWorkAdmission::Mode::HoleDrain)
+    {
+      mode = MeshWorkAdmission::Mode::WarmBacklog;
+      out.admission_carve_out = true;
+    }
+  }
+  // FP-E2: stop-phase VB drain — after 30s stand with VB orphans, exit HoleDrain.
+  static int stop_vb_drain_frames = 0;
+  if (!in.moving && in.visible_black_no_ticket_n > 0)
+  {
+    ++stop_vb_drain_frames;
+  }
+  else
+  {
+    stop_vb_drain_frames = 0;
+  }
+  if (!in.moving && stop_vb_drain_frames > 1800 &&
+      in.visible_black_focus_n > 0 &&
+      mode == MeshWorkAdmission::Mode::HoleDrain)
+  {
+    mode = MeshWorkAdmission::Mode::WarmBacklog;
     out.admission_carve_out = true;
   }
   // Exit HoleDrain/Deep only when holes cleared, pending cooled (≤8), and
@@ -417,6 +500,18 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   }
 
   MeshWorkFillModeDefaults(out, mode, in, queued, holes, light_debt);
+
+  // FP-D2 / FP-G2: carved WarmBacklog FM floor only when holes are mild.
+  if (out.admission_carve_out &&
+      out.mode == MeshWorkAdmission::Mode::WarmBacklog &&
+      in.unfinished_visual <= 2 && in.column_loaded_no_mesh_n < 4)
+  {
+    out.first_mesh_schedule = std::max(out.first_mesh_schedule, 6);
+    if (out.max_schedule > 0)
+    {
+      out.max_schedule = std::max(out.max_schedule, 6);
+    }
+  }
 
   // Phase 3: fixed pools — HoleDrain redistributes remesh → FirstMesh.
   // Warm/Normal keep mode defaults; pool fm floor on Warm blew max_schedule (9 vs 6).

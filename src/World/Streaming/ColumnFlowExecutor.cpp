@@ -53,6 +53,20 @@ void UColumnFlowExecutor::SetCaptureWitnessPin(glm::ivec2 column, bool valid,
   capture_pin_hold_ = hold;
 }
 
+glm::ivec2 UColumnFlowExecutor::ResolveRelightPromoteColumn(
+    glm::ivec2 fallback) const
+{
+  if (capture_pin_valid_ && capture_pin_hold_)
+  {
+    return capture_pin_col_;
+  }
+  if (promote_hold_valid_)
+  {
+    return promote_hold_col_;
+  }
+  return fallback;
+}
+
 ColumnJobStage UColumnFlowExecutor::GetColumnJobStage(glm::ivec2 column) const
 {
   const auto it = column_job_stage_.find(ColumnKey(column));
@@ -286,7 +300,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
                                       bool idle_focus_dirty_debt,
                                       int /*pending_focus_n*/, int recover_n,
                                       int admit_n, double /*last_frame_ms*/,
-                                      int pending_async)
+                                      int pending_async, bool prep_over_budget)
 {
   ++frame_counter_;
   const glm::ivec2 focus(focus_ground_horiz.x, focus_ground_horiz.z);
@@ -365,15 +379,43 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       world.GetPhysicsTelemetry().VisibleBlackFocusN;
   const int visible_black_no_ticket_n =
       world.GetPhysicsTelemetry().VisibleBlackNoTicketN;
-  // FP-B3: ticketed VB consume — RelightThenMesh for focus when VB backlog high.
-  if (moving && visible_black_n > 40 && visible_black_no_ticket_n < 10 &&
-      ShouldConsumeTicketedVbDebt(visible_black_no_ticket_n, visible_black_n,
-                                  0))
+  // FP-B3 / FP-E0: ticketed VB consume — ring RelightThenMesh when VB debt high.
+  const bool vb_consume =
+      IsTicketedVbConsumeMode(visible_black_no_ticket_n, visible_black_n, 0);
+  if (vb_consume)
   {
     if (!scheduler_.Contains(focus, ColumnWorkKind::RelightThenMesh))
     {
-      Enqueue(focus, ColumnWorkKind::RelightThenMesh, 92);
+      Enqueue(focus, ColumnWorkKind::RelightThenMesh, moving ? 92 : 95);
       world.GetPhysicsTelemetryMutable().TicketedVbConsumeN++;
+    }
+    if (visible_black_no_ticket_n >= 10)
+    {
+      const glm::ivec3 fg = focus_ground_horiz;
+      int ring_enq = 0;
+      constexpr int kRingTopK = 3;
+      for (int dz = -4; dz <= 4 && ring_enq < kRingTopK; ++dz)
+      {
+        for (int dx = -4; dx <= 4 && ring_enq < kRingTopK; ++dx)
+        {
+          if (std::max(std::abs(dx), std::abs(dz)) > 4)
+          {
+            continue;
+          }
+          const glm::ivec2 col(fg.x + dx, fg.z + dz);
+          if (col == focus)
+          {
+            continue;
+          }
+          if (scheduler_.Contains(col, ColumnWorkKind::RelightThenMesh))
+          {
+            continue;
+          }
+          Enqueue(col, ColumnWorkKind::RelightThenMesh, 88 - ring_enq);
+          world.GetPhysicsTelemetryMutable().TicketedVbConsumeN++;
+          ++ring_enq;
+        }
+      }
     }
   }
   constexpr double kStaleRepairCooldownSec = 2.0;
@@ -383,7 +425,8 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       std::chrono::duration<double>(now - LastStaleRepairWave).count() >=
           kStaleRepairCooldownSec;
   const bool allow_stale_wave_base =
-      cooldown_ok && (stale_n > 40 || (dark_n > 500 && stale_n > 0));
+      cooldown_ok && !prep_over_budget &&
+      (stale_n > 40 || (dark_n > 500 && stale_n > 0));
   const bool async_ok = pending_async < 48;
   const bool pending_light =
       world.GetPhysicsTelemetry().FocusPendingDark > 0;
@@ -683,28 +726,13 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   {
     const UWorld::VisibleBlackFocusSample cached =
         world.GetVisibleBlackFocusSample();
-    if (cached.valid &&
-        cached.frame_epoch == world.GetStreamingFrameEpoch())
+    if (cached.valid)
     {
       auto &telem = world.GetPhysicsTelemetryMutable();
       telem.VisibleBlackFocusN = cached.focus_n;
       telem.VisibleBlackNoTicketN = cached.no_ticket_n;
       telem.VisibleBlackProgressN = cached.progress_n;
       telem.VisibleBlackStalledN = cached.stalled_n;
-    }
-    else
-    {
-      int no_ticket = 0;
-      int progress_n = 0;
-      int stalled_n = 0;
-      const int vb = world.CountVisibleBlackFocusMeshes(
-          focus_ground_horiz, focus_radius, &no_ticket, &progress_n, &stalled_n,
-          /*ticketed_consume_scan=*/false);
-      auto &telem = world.GetPhysicsTelemetryMutable();
-      telem.VisibleBlackFocusN = vb;
-      telem.VisibleBlackNoTicketN = no_ticket;
-      telem.VisibleBlackProgressN = progress_n;
-      telem.VisibleBlackStalledN = stalled_n;
     }
   }
 }

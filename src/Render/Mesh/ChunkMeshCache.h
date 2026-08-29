@@ -173,6 +173,10 @@ public:
   int GetLastDirtyTouchN() const { return LastDirtyTouchN; }
   int GetLastDirtyRevisitSameN() const { return LastDirtyRevisitSameN; }
   int GetLastDirtyFmN() const { return LastDirtyFmN; }
+  int GetLiveDirtyFirstMeshCount() const
+  {
+    return static_cast<int>(Dirty.GetFirstMeshCount());
+  }
   int GetLastDirtyRemeshN() const { return LastDirtyRemeshN; }
   int GetAsyncInFlightCount() const;
   size_t GetMeshCompletedSize() const;
@@ -379,6 +383,16 @@ public:
   int GetVbFocusStableFrames() const { return VbFocusStableFrames_; }
   int GetVbFocusBlinkDelta() const { return VbFocusBlinkDelta_; }
   void SetEnterFovLitPressure(bool v) { EnterFovLitPressure_ = v; }
+  void SetColumnLoadedNoMeshPressure(int n)
+  {
+    ColumnLoadedNoMeshPressure_ = n;
+  }
+  void SetFmDirtyEnqueueReserve(int n) { FmDirtyEnqueueReserveN_ = n; }
+  int GetLastFirstMeshScheduleEffectiveCap() const
+  {
+    return LastFirstMeshScheduleEffectiveCap_;
+  }
+  void SetEnterUnderfeetExitBlocked(bool v) { EnterUnderfeetExitBlocked_ = v; }
   void SetFz2DeferGated(bool v) { Fz2DeferGated_ = v; }
   const MeshRebuildTickStats &GetLastRebuildTickStats() const
   {
@@ -931,6 +945,10 @@ private:
   int VbFocusBlinkDelta_{0};
   int DirtySortFrameCounter_{0};
   bool EnterFovLitPressure_{false};
+  int ColumnLoadedNoMeshPressure_{0};
+  int FmDirtyEnqueueReserveN_{0};
+  int LastFirstMeshScheduleEffectiveCap_{0};
+  bool EnterUnderfeetExitBlocked_{false};
   bool Fz2DeferGated_{true};
   std::deque<glm::ivec3> RemeshDeferredRing_;
   std::unordered_set<glm::ivec3, IVec3Hash> RemeshDeferredSet_;

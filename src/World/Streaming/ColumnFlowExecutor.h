@@ -51,7 +51,8 @@ public:
                    bool moving, bool missing_visible_mesh, bool visual_holes,
                    bool idle_remesh_debt, bool idle_focus_dirty_debt,
                    int pending_focus_n, int recover_n, int admit_n,
-                   double last_frame_ms = 0.0, int pending_async = 0);
+                   double last_frame_ms = 0.0, int pending_async = 0,
+                   bool prep_over_budget = false);
 
   /// Drain up to n queued items; AdvanceColumn uses item.column.
   int DrainBudget(UWorld &world, int n, glm::ivec3 focus_ground_horiz,
@@ -84,6 +85,9 @@ public:
 
   /// FP-A3: cruise capture witness pin — redirect PromoteRelight to pin column.
   void SetCaptureWitnessPin(glm::ivec2 column, bool valid, int age, bool hold);
+
+  /// FP-D3: promote target under witness / miss hold (else fallback).
+  glm::ivec2 ResolveRelightPromoteColumn(glm::ivec2 fallback) const;
 
   /// True if column has a live ColumnFlow repair/admit/promote ticket queued
   /// or is inside post-dispatch cooldown.

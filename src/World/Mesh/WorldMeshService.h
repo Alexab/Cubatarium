@@ -166,6 +166,9 @@ public:
   void SetVisibleBlackNoTicketPressure(int n);
   void SetVisibleBlackFocusPressure(int n);
   void SetEnterFovLitPressure(bool v);
+  void SetColumnLoadedNoMeshPressure(int n);
+  void SetEnterUnderfeetExitBlocked(bool v);
+  void SetFmDirtyEnqueueReserve(int n);
   void SetFz2DeferGated(bool v);
   double GetLastMeshImmediateMs() const;
   int GetLastMeshImmediateCount() const;
@@ -222,6 +225,7 @@ public:
   int GetLastMeshDirtyDrainN() const;
   double GetLastMeshDirtyScheduleMs() const;
   int GetLastMeshDirtyScheduleOkN() const;
+  int GetLastFirstMeshScheduleEffectiveCap() const;
   int GetLastMeshDirtyScheduleSkipN() const;
   int GetLastMeshDirtyScheduleSkipPipelineN() const;
   int GetLastMeshDirtyScheduleSkipSnapshotN() const;
@@ -238,6 +242,7 @@ public:
   int GetLastDirtyTouchN() const;
   int GetLastDirtyRevisitSameN() const;
   int GetLastDirtyFmN() const;
+  int GetLiveDirtyFirstMeshCount() const;
   int GetLastDirtyRemeshN() const;
   size_t GetGreedyCacheSize() const;
   bool HasGreedyMesh(glm::ivec3 chunk_coord) const;

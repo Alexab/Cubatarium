@@ -258,6 +258,8 @@ struct FrameNumbers
   int unfinished_cache_overflow_n{0};
   int dirty_admit_budget_end{0};
   int first_mesh_schedule_cap{0};
+  int first_mesh_schedule_effective_cap{0};
+  int fm_dirty_enqueue_reserve_n{0};
   int remesh_schedule_cap{0};
   int remesh_protect_lit_settle_n{0};
   int relight_trim_far_n{0};
@@ -276,6 +278,11 @@ struct FrameNumbers
   double mesh_emerge_prep_sticky_ms{0.0};
   double mesh_emerge_prep_drop_dirty_ms{0.0};
   double mesh_emerge_prep_other_ms{0.0};
+  double prep_admission_ms{0.0};
+  double prep_schedule_clamp_ms{0.0};
+  double prep_softdefer_policy_ms{0.0};
+  double prep_isolated_miss_ms{0.0};
+  double prep_refresh_pressure_ms{0.0};
   double prep_pending_light_ms{0.0};
   double prep_black_sticky_ms{0.0};
   double prep_dirty_count_ms{0.0};
@@ -374,9 +381,11 @@ struct FrameNumbers
   int fm_dirty_enqueue_n{0};
   int fm_dirty_enqueue_from_markrelit_n{0};
   int fm_dirty_enqueue_from_columnflow_n{0};
+  int fm_dirty_drain_n{0};
   int relight_fifo_priority_insert_n{0};
   int ticketed_vb_consume_n{0};
   int admission_carve_out_frames{0};
+  int admission_carve_out{0};
   int seed_at_commit_n{0};
   int backpressure_level{0};
   int softdefer_witness_horiz{0};
@@ -693,6 +702,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.unfinished_cache_overflow_n = phys.UnfinishedCacheOverflowN;
   n.dirty_admit_budget_end = phys.DirtyAdmitBudgetEnd;
   n.first_mesh_schedule_cap = phys.FirstMeshScheduleCap;
+  n.first_mesh_schedule_effective_cap = phys.FirstMeshScheduleEffectiveCap;
+  n.fm_dirty_enqueue_reserve_n = phys.FmDirtyEnqueueReserveN;
   n.remesh_schedule_cap = phys.RemeshScheduleCap;
   n.remesh_protect_lit_settle_n = phys.RemeshProtectLitSettleN;
   n.relight_trim_far_n = phys.RelightTrimFarN;
@@ -714,6 +725,11 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_emerge_prep_sticky_ms = phys.MeshEmergePrepStickyMs;
   n.mesh_emerge_prep_drop_dirty_ms = phys.MeshEmergePrepDropDirtyMs;
   n.mesh_emerge_prep_other_ms = phys.MeshEmergePrepOtherMs;
+  n.prep_admission_ms = phys.PrepAdmissionMs;
+  n.prep_schedule_clamp_ms = phys.PrepScheduleClampMs;
+  n.prep_softdefer_policy_ms = phys.PrepSoftdeferPolicyMs;
+  n.prep_isolated_miss_ms = phys.PrepIsolatedMissMs;
+  n.prep_refresh_pressure_ms = phys.PrepRefreshPressureMs;
   n.prep_pending_light_ms = phys.PrepPendingLightMs;
   n.prep_black_sticky_ms = phys.PrepBlackStickyMs;
   n.prep_dirty_count_ms = phys.PrepDirtyCountMs;
@@ -813,9 +829,11 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.fm_dirty_enqueue_n = phys.FmDirtyEnqueueN;
   n.fm_dirty_enqueue_from_markrelit_n = phys.FmDirtyEnqueueFromMarkRelitN;
   n.fm_dirty_enqueue_from_columnflow_n = phys.FmDirtyEnqueueFromColumnFlowN;
+  n.fm_dirty_drain_n = phys.FmDirtyDrainN;
   n.relight_fifo_priority_insert_n = phys.RelightFifoPriorityInsertN;
   n.ticketed_vb_consume_n = phys.TicketedVbConsumeN;
   n.admission_carve_out_frames = phys.AdmissionCarveOutFrames;
+  n.admission_carve_out = phys.AdmissionCarveOut;
   n.seed_at_commit_n = phys.SeedAtCommitN;
   n.backpressure_level = phys.BackpressureLevel;
   n.softdefer_witness_horiz = phys.SoftDeferWitnessHoriz;
@@ -1151,6 +1169,9 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"unfinished_cache_overflow_n\":" << n.unfinished_cache_overflow_n
           << ",\"dirty_admit_budget_end\":" << n.dirty_admit_budget_end
           << ",\"first_mesh_schedule_cap\":" << n.first_mesh_schedule_cap
+          << ",\"first_mesh_schedule_effective_cap\":"
+          << n.first_mesh_schedule_effective_cap
+          << ",\"fm_dirty_enqueue_reserve_n\":" << n.fm_dirty_enqueue_reserve_n
           << ",\"remesh_schedule_cap\":" << n.remesh_schedule_cap
           << ",\"remesh_protect_lit_settle_n\":" << n.remesh_protect_lit_settle_n
           << ",\"relight_trim_far_n\":" << n.relight_trim_far_n
@@ -1170,6 +1191,11 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_emerge_prep_drop_dirty_ms\":"
           << n.mesh_emerge_prep_drop_dirty_ms
           << ",\"mesh_emerge_prep_other_ms\":" << n.mesh_emerge_prep_other_ms
+          << ",\"prep_admission_ms\":" << n.prep_admission_ms
+          << ",\"prep_schedule_clamp_ms\":" << n.prep_schedule_clamp_ms
+          << ",\"prep_softdefer_policy_ms\":" << n.prep_softdefer_policy_ms
+          << ",\"prep_isolated_miss_ms\":" << n.prep_isolated_miss_ms
+          << ",\"prep_refresh_pressure_ms\":" << n.prep_refresh_pressure_ms
           << ",\"prep_pending_light_ms\":" << n.prep_pending_light_ms
           << ",\"prep_black_sticky_ms\":" << n.prep_black_sticky_ms
           << ",\"prep_dirty_count_ms\":" << n.prep_dirty_count_ms
@@ -1278,11 +1304,13 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.fm_dirty_enqueue_from_markrelit_n
           << ",\"fm_dirty_enqueue_from_columnflow_n\":"
           << n.fm_dirty_enqueue_from_columnflow_n
+          << ",\"fm_dirty_drain_n\":" << n.fm_dirty_drain_n
           << ",\"relight_fifo_priority_insert_n\":"
           << n.relight_fifo_priority_insert_n
           << ",\"ticketed_vb_consume_n\":" << n.ticketed_vb_consume_n
           << ",\"admission_carve_out_frames\":"
           << n.admission_carve_out_frames
+          << ",\"admission_carve_out\":" << n.admission_carve_out
           << ",\"seed_at_commit_n\":" << n.seed_at_commit_n
           << ",\"backpressure_level\":" << n.backpressure_level
           << ",\"softdefer_witness_horiz\":" << n.softdefer_witness_horiz

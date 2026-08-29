@@ -2309,8 +2309,13 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
                     soft_undrawn || miss_undrawn, live_flight,
                     /*has_drawable=*/false) &&
                 !ShouldBypassRaAParkForCruiseFirstMesh(
-                    WorkAdmission.mode == MeshWorkAdmission::Mode::HoleDrain,
-                    miss_horiz)))
+                    WorkAdmission.mode == MeshWorkAdmission::Mode::HoleDrain ||
+                        WorkAdmission.admission_carve_out,
+                    miss_horiz,
+                    !HasDrawableGreedyMesh(chunkCoord) &&
+                        LastDirtyFmN == 0,
+                    ColumnLoadedNoMeshPressure_ > 0,
+                    LastMeshDirtyScheduleOkN)))
       {
         if (RemeshAfterApply.count(chunkCoord) > 0 ||
             Dirty.Contains(chunkCoord))
@@ -4173,7 +4178,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
       {
         const bool has_drawable = HasDrawableGreedyMesh(*it);
-        if (EnterLitQuiesceKeepSpawnUndrawnDirty(true, has_drawable, horiz))
+        if (EnterLitQuiesceKeepSpawnUndrawnDirty(true, has_drawable, horiz) ||
+            (EnterUnderfeetExitBlocked_ && horiz >= 0 && horiz <= 1))
         {
           ++it;
           continue;
@@ -4536,10 +4542,20 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     constexpr int kReservedFocusMissingSlots = 16;
     const MeshWorkAdmission &sched_adm = WorkAdmission;
     // F2: under holes, Pass 1 uses first_mesh_schedule; remesh uses remesh_schedule.
-    const int first_mesh_cap =
+    const int first_mesh_cap_base =
         sched_adm.first_mesh_schedule > 0
             ? sched_adm.first_mesh_schedule
             : kReservedFocusMissingSlots;
+    int first_mesh_cap = first_mesh_cap_base;
+    if (FmDirtyEnqueueReserveN_ > 0 &&
+        !ShouldDeferFmDirtyEnqueueReserve(false, EnterLitQuiesce,
+                                          EnterFovLitPressure_))
+    {
+      const int fm_q = static_cast<int>(Dirty.GetFirstMeshCount());
+      first_mesh_cap = ComputeFirstMeshScheduleEffectiveCap(
+          first_mesh_cap_base, fm_q, FmDirtyEnqueueReserveN_);
+    }
+    LastFirstMeshScheduleEffectiveCap_ = first_mesh_cap;
     int remesh_cap =
         sched_adm.remesh_schedule > 0 ? sched_adm.remesh_schedule
                                       : max_schedule_per_frame;
@@ -4703,6 +4719,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             !has_drawable && horiz <= RelightFifoTrimProtectHoriz();
         const bool miss_or_focus = StarveRemeshForHoles || in_focus;
         if (near_ring_first_mesh ||
+            (EnterUnderfeetExitBlocked_ && horiz >= 0 && horiz <= 1) ||
             ShouldScheduleFirstMeshUnderSoftDefer(has_drawable, miss_or_focus,
                                                   horiz,
                                                   RelightFifoTrimProtectHoriz()))

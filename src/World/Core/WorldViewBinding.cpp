@@ -808,6 +808,8 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.FmDirtyEnqueueN = 0;
   PhysicsTelemetryData.FmDirtyEnqueueFromMarkRelitN = 0;
   PhysicsTelemetryData.FmDirtyEnqueueFromColumnFlowN = 0;
+  PhysicsTelemetryData.FmDirtyDrainN = 0;
+  PhysicsTelemetryData.AdmissionCarveOut = 0;
   PhysicsTelemetryData.SoftDeferCaptureRetargetBlockedN = 0;
   PhysicsTelemetryData.TicketedVbConsumeN = 0;
   PhysicsTelemetryData.SeedAtCommitN = 0;
@@ -845,6 +847,11 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.MeshEmergePrepStickyMs = 0.0;
   PhysicsTelemetryData.MeshEmergePrepDropDirtyMs = 0.0;
   PhysicsTelemetryData.MeshEmergePrepOtherMs = 0.0;
+  PhysicsTelemetryData.PrepAdmissionMs = 0.0;
+  PhysicsTelemetryData.PrepScheduleClampMs = 0.0;
+  PhysicsTelemetryData.PrepSoftdeferPolicyMs = 0.0;
+  PhysicsTelemetryData.PrepIsolatedMissMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshPressureMs = 0.0;
   PhysicsTelemetryData.PrepPendingLightMs = 0.0;
   PhysicsTelemetryData.PrepBlackStickyMs = 0.0;
   PhysicsTelemetryData.PrepDirtyCountMs = 0.0;
@@ -881,6 +888,8 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.UnfinishedCacheOverflowN = 0;
   PhysicsTelemetryData.DirtyAdmitBudgetEnd = 0;
   PhysicsTelemetryData.FirstMeshScheduleCap = 0;
+  PhysicsTelemetryData.FirstMeshScheduleEffectiveCap = 0;
+  PhysicsTelemetryData.FmDirtyEnqueueReserveN = 0;
   PhysicsTelemetryData.RemeshScheduleCap = 0;
   PhysicsTelemetryData.RemeshProtectLitSettleN = 0;
   PhysicsTelemetryData.RelightTrimFarN = 0;
@@ -1014,7 +1023,19 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.DirtyTouchN = GetMeshService().GetLastDirtyTouchN();
   PhysicsTelemetryData.DirtyRevisitSameN =
       GetMeshService().GetLastDirtyRevisitSameN();
-  PhysicsTelemetryData.DirtyFmN = GetMeshService().GetLastDirtyFmN();
+  PhysicsTelemetryData.DirtyFmN =
+      std::max(GetMeshService().GetLastDirtyFmN(),
+               GetMeshService().GetLiveDirtyFirstMeshCount());
+  if (PhysicsTelemetryData.FmDirtyEnqueueN > 0)
+  {
+    PhysicsTelemetryData.DirtyFmN =
+        std::max(PhysicsTelemetryData.DirtyFmN,
+                 PhysicsTelemetryData.FmDirtyEnqueueN);
+  }
+  PhysicsTelemetryData.FmDirtyDrainN =
+      PhysicsTelemetryData.FmDirtyEnqueueN > 0
+          ? PhysicsTelemetryData.MeshDirtyScheduleOkN
+          : 0;
   PhysicsTelemetryData.DirtyRemeshN = GetMeshService().GetLastDirtyRemeshN();
   HarvestUnfinishedPrepTelem(PhysicsTelemetryData);
 

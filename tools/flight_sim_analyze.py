@@ -1063,6 +1063,29 @@ def analyze(
     cruise_dirty_fm_med = (
         median(col(fly_spikes, "dirty_fm_n")) if fly_spikes else None
     )
+    cruise_admission_mode3_share = None
+    cruise_capture_retarget_blocked_ratio = None
+    if fly_spikes:
+        mode_vals = [float(r.get("mesh_admission_mode") or 0) for r in fly_spikes]
+        if mode_vals:
+            cruise_admission_mode3_share = sum(
+                1.0 for m in mode_vals if m == 3.0
+            ) / float(len(mode_vals))
+        retarget_vals = [
+            float(r.get("softdefer_capture_retarget_n") or 0) for r in fly_spikes
+        ]
+        blocked_vals = [
+            float(r.get("softdefer_capture_retarget_blocked_n") or 0)
+            for r in fly_spikes
+        ]
+        retarget_sum = sum(retarget_vals)
+        blocked_sum = sum(blocked_vals)
+        if retarget_sum + blocked_sum > 0:
+            cruise_capture_retarget_blocked_ratio = blocked_sum / (
+                retarget_sum + blocked_sum
+            )
+    mesh_emerge_ms_med = median(col(cruise_src, "mesh_emerge_ms"))
+    world_streaming_phase_ms_med = median(col(cruise_src, "world_streaming_phase_ms"))
 
     def classify_schedule_blocker(r: dict) -> str:
         ok = float(r.get("mesh_dirty_schedule_ok_n") or 0)
@@ -1531,6 +1554,12 @@ def analyze(
             "cruise_relight_apply_final_med": cruise_relight_apply_final_med,
             "cruise_fm_enqueue_med": cruise_fm_enqueue_med,
             "cruise_dirty_fm_med": cruise_dirty_fm_med,
+            "cruise_admission_mode3_share": cruise_admission_mode3_share,
+            "cruise_capture_retarget_blocked_ratio": (
+                cruise_capture_retarget_blocked_ratio
+            ),
+            "mesh_emerge_ms": mesh_emerge_ms_med,
+            "world_streaming_phase_ms": world_streaming_phase_ms_med,
             "dominant_schedule_blocker": dominant_schedule_blocker,
             "cruise_relight_completed_throughput": cruise_relight_completed_throughput,
             "unfinished_visual": unfinished_visual_med,

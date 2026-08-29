@@ -4153,7 +4153,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   const int vb_focus_n = PhysicsTelemetryData.VisibleBlackFocusN;
   const int vb_stalled_n = PhysicsTelemetryData.VisibleBlackStalledN;
   const bool consume_mode =
-      ShouldConsumeTicketedVbDebt(vb_no_ticket_n, vb_focus_n, vb_stalled_n) ||
+      IsTicketedVbConsumeMode(vb_no_ticket_n, vb_focus_n, vb_stalled_n) ||
       ShouldConsumeUnlitTicketedVbStand(
           moving, vb_focus_n, vb_no_ticket_n,
           static_cast<int>(PhysicsTelemetryData.ChunkMeshedUnlitHidden),
@@ -4208,11 +4208,16 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   const double slice_ms = RelightThroughputSliceMs(
       miss_reserved_ms, consume_mode, moving, throughput_mode, cap_unit_prev,
       ready_at_start);
-  const int earned_cap = EarnedRelightApplyCap(
+  const int earned_cap_base = EarnedRelightApplyCap(
       max_per_frame, slice_ms, 0.0, unit_ms_prev, throughput_mode, vb_stalled_n,
       light_unit_ms_prev, install_unit_ms_prev, ready_at_start,
       PhysicsTelemetryData.RelightFifoN, fifo_soft_cap,
       PhysicsTelemetryData.PendingLightN);
+  const int earned_cap =
+      (PhysicsTelemetryData.DirtyFmN == 0 &&
+       PhysicsTelemetryData.ColumnLoadedNoMeshN > 0)
+          ? std::max(earned_cap_base, 2)
+          : earned_cap_base;
   // RateMatch R0: DrainUpTo(1) loop so MissReservedMs slice can stop mid-budget
   // (DrainCompleted(N) would MarkRelit all N before any early-out).
   bool stopped_by_time = false;
@@ -5642,6 +5647,61 @@ int UWorld::MarkEnterMissingMeshesDirty()
   EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
                                cy1);
   int marked = 0;
+  const bool underfeet_exit_blocked =
+      IsEnterLitGateActive() && !IsEnterUnderfeetPresentReady();
+  // SRBR-P0.3 / manual 202127: underfeet nh≤1 before rim scan order — InGame
+  // exit SoT must not wait on hinterland gate_miss while nh=0 stays missing.
+  if (underfeet_exit_blocked)
+  {
+    for (int horiz = 0; horiz <= 1; ++horiz)
+    {
+      for (int dx = -horiz; dx <= horiz; ++dx)
+      {
+        for (int dz = -horiz; dz <= horiz; ++dz)
+        {
+          if (std::max(std::abs(dx), std::abs(dz)) != horiz)
+          {
+            continue;
+          }
+          for (int cy = cy0; cy <= cy1; ++cy)
+          {
+            const glm::ivec3 coord(center.x + dx, cy, center.z + dz);
+            if (!BlockWorld.GetChunkManager().HasChunk(coord) ||
+                mesh.HasMeshSatisfyingColumnReady(coord) ||
+                mesh.IsPendingGpuApply(coord) ||
+                mesh.HasInflightMeshBuild(coord))
+            {
+              continue;
+            }
+            const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord);
+            bool any_solid = false;
+            if (ch)
+            {
+              for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+              {
+                for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+                {
+                  for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+                  {
+                    if (ch->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+                    {
+                      any_solid = true;
+                    }
+                  }
+                }
+              }
+            }
+            if (!any_solid)
+            {
+              continue;
+            }
+            mesh.MarkDirtyPriority(coord);
+            ++marked;
+          }
+        }
+      }
+    }
+  }
   // SRBR-P0.2: gate SoT slice — one Dirty owner even when ring scan/pin miss
   // (manual 094507: (-5,3,0) orphan soft_held=0 defer=0 inflight=0).
   glm::ivec3 gate_miss{};
@@ -5723,7 +5783,9 @@ int UWorld::MarkEnterMissingMeshesDirty()
             const bool pending =
                 IsPendingLightBeforeMesh(glm::ivec2(coord.x, coord.z));
             if (EnterLitQuiesceMayLiftSpawnSoftDefer(IsEnterLitQuiesceLatched(),
-                                                     horiz, pending))
+                                                     horiz, pending,
+                                                     /*spawn_radius=*/2,
+                                                     underfeet_exit_blocked))
             {
               mesh.MarkDirtyPriority(coord);
               ++marked;
@@ -5742,7 +5804,7 @@ int UWorld::MarkEnterMissingMeshesDirty()
           continue;
         }
         if (MissSliceAlreadyOwned(dirty, raa, inflight, false, pending_gpu,
-                                  fm_ticket))
+                                  fm_ticket, mesh.HasDrawableGreedyMesh(coord)))
         {
           continue;
         }
@@ -5874,7 +5936,7 @@ int UWorld::MarkSpawnRingUnfinishedDirty(int max_marks)
       return true;
     }
     if (MissSliceAlreadyOwned(dirty, raa, inflight, false, pending_gpu,
-                              fm_ticket))
+                              fm_ticket, mesh.HasDrawableGreedyMesh(coord)))
     {
       return false;
     }

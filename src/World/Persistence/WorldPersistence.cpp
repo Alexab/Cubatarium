@@ -493,6 +493,12 @@ int UWorldPersistence::TakeRelightFifoProtectBlock()
 
 void UWorldPersistence::PromoteTerrainColumnRelight(glm::ivec2 key)
 {
+  if (RelightFifoPinValid &&
+      key != glm::ivec2(RelightFifoPinCx, RelightFifoPinCz))
+  {
+    ++RelightFifoProtectBlockN;
+    return;
+  }
   for (const glm::ivec2 &queued : PendingTerrainColumnRelightsPriority)
   {
     if (queued == key)
@@ -777,7 +783,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         const bool pending_or_void =
             world.IsPendingLightBeforeMesh(hole_xz) || undrawn;
         if (ShouldForceMissColumnFifoEnqueue(/*miss=*/true, pending_or_void,
-                                             /*already_in_fifo=*/false))
+                                             /*already_in_fifo=*/false,
+                                             phys_pin.RelightWitnessHoldN / 60))
         {
           EnqueueTerrainColumnRelight(hole_key.x, hole_key.y, /*priority=*/true,
                                       0, max_y);
@@ -957,7 +964,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       if (pending_or_void &&
           (already_in_fifo ||
            ShouldForceMissColumnFifoEnqueue(/*miss=*/true, pending_or_void,
-                                            already_in_fifo)))
+                                            already_in_fifo,
+                                            phys.RelightWitnessHoldN / 60)))
       {
         pin_key(miss_key);
       }
@@ -969,6 +977,41 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   const bool moving =
       world.GetLastMovementSpeed() >
       world.ProceduralTemplate.MovementPrefetchThreshold;
+  // FP-E2.3: post-stop VB stuck — escalate priority insert after 20s no progress.
+  if (!moving && vb_no_ticket_n > 0)
+  {
+    static int stop_vb_stuck_frames = 0;
+    static int last_stop_vb_no_ticket = -1;
+    if (last_stop_vb_no_ticket >= 0 && vb_no_ticket_n >= last_stop_vb_no_ticket)
+    {
+      ++stop_vb_stuck_frames;
+    }
+    else
+    {
+      stop_vb_stuck_frames = 0;
+    }
+    last_stop_vb_no_ticket = vb_no_ticket_n;
+    if (stop_vb_stuck_frames > 1200)
+    {
+      std::vector<glm::ivec2> stuck_cols;
+      world.CollectPendingLightFocusColumns(focus_horiz, focus_radius, stuck_cols,
+                                            /*max_cols=*/6);
+      for (const glm::ivec2 &col : stuck_cols)
+      {
+        const glm::ivec2 col_key(col.x * CHUNK_SIZE, col.y * CHUNK_SIZE);
+        if (!PendingTerrainColumnRelightKeys.count(col_key))
+        {
+          EnqueueTerrainColumnRelight(col_key.x, col_key.y, /*priority=*/true, 0,
+                                      max_y);
+        }
+        else
+        {
+          PromoteTerrainColumnRelight(col_key);
+        }
+        ++RelightFifoPriorityInsertN;
+      }
+    }
+  }
   // Capture() is main-thread and copies a 3x3 column band. Idle used to allow
   // 48–56 Captures/frame with no wall budget → 15–52s spikes and multi-GB
   // snapshot high-water (manual 220018). Always bound Capture wall time.
@@ -1042,7 +1085,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     const int completed_n =
         static_cast<int>(world.GetRelightCompletedSize());
     const int inflight_n = world.GetAsyncRelightInFlightCount();
-    const bool consume_mode = ShouldConsumeTicketedVbDebt(
+    const bool consume_mode = IsTicketedVbConsumeMode(
         vb_no_ticket_n, telem.VisibleBlackFocusN,
         telem.VisibleBlackStalledN);
     const double unit_ms_prev =
@@ -1208,7 +1251,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       const bool miss_rim_pin =
           visual_holes &&
           ShouldPreferMissFinalizeBand(
-              world.GetPhysicsTelemetry().MissHoriz);
+              world.GetPhysicsTelemetry().MissHoriz,
+              moving ? kVisualStageNearFovHoriz : kVisualStageLitDrawableHoriz);
       // Idle PendingLight progress (TD-ARCH-010): when holes=0 the SoftDefer
       // exception never fired and FIFO stalled. Allow one Capture/enqueue if
       // inflight is empty and wall is not catastrophic.
@@ -1302,11 +1346,12 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     // P2: miss nh≤2 prefers one surface finalize Capture (no partial Y-band).
     // Rim nh=3–4 keeps split. Era41b: enter FOV lit always finalizes.
     const int vb_focus_n = world.GetPhysicsTelemetry().VisibleBlackFocusN;
+    const int finalize_ring =
+        moving ? kVisualStageNearFovHoriz : kVisualStageLitDrawableHoriz;
     const bool miss_finalize_band =
         enter_fov_lit ||
         (visual_holes &&
-         ShouldPreferMissFinalizeBand(horiz_dist,
-                                      kVisualStageLitDrawableHoriz)) ||
+         ShouldPreferMissFinalizeBand(horiz_dist, finalize_ring)) ||
         ShouldFinalizeRelightUnderPlPressure(pending_light_focus_n, horiz_dist,
                                              focus_radius) ||
         ShouldFinalizeRelightUnderVbPressure(vb_no_ticket_n, horiz_dist) ||
@@ -1340,7 +1385,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
             ColumnSurfaceBandNeedsRelight(world, ground_xz, relight_min,
                                           relight_max);
         const auto &cap_telem = world.GetPhysicsTelemetry();
-        const bool consume_mode = ShouldConsumeTicketedVbDebt(
+        const bool consume_mode = IsTicketedVbConsumeMode(
             cap_telem.VisibleBlackNoTicketN, cap_telem.VisibleBlackFocusN,
             cap_telem.VisibleBlackStalledN);
         const bool plateau_suppress =
@@ -1437,7 +1482,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       const bool remainder_priority = horiz_dist <= focus_radius;
       // ColdFix / RateMatch R1: stash when Apply-capacity depth is full.
       const auto &telem = world.GetPhysicsTelemetry();
-      const bool consume_mode = ShouldConsumeTicketedVbDebt(
+      const bool consume_mode = IsTicketedVbConsumeMode(
           telem.VisibleBlackNoTicketN, telem.VisibleBlackFocusN,
           telem.VisibleBlackStalledN);
       const double unit_ms_prev =
