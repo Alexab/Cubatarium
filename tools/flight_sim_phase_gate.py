@@ -464,11 +464,64 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("physics_block_ms_p95", "le", 50.0),
         ("break_complete_sum", "ge", 1.0),
     ],
+    # Flight perf plan FP gates (no-teleport cruise/enter).
+    "FP-enter": [
+        ("enter_unfinished_max", "le", 10.0),
+        ("post_load_ring_idle_max", "le", 5.0),
+        ("chunks_traveled", "ge", 1.0),
+    ],
+    "FP0": [
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "FP1": [
+        ("cruise_capture_retarget_med", "le", 5.0),
+        ("cruise_relight_completed_spike_med", "gt", 0.0),
+        ("miss_stuck_max_run_sec", "le", 15.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "FP2": [
+        ("cruise_schedule_ok_med", "ge", 3.0),
+        ("unfinished_visual", "le", 5.0),
+        ("stream_ms", "le", 60.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "FP3": [
+        ("visible_black_focus_n", "le", 40.0),
+        ("dark_face_stale_near_n", "le", 80.0),
+        ("holes_rate", "le", 0.30),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "FP4": [
+        ("visible_black_focus_n", "le", 40.0),
+        ("holes_rate", "le", 0.30),
+        ("dirty_ghost_n", "le", 5.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "FP5": [
+        ("holes_rate", "le", 0.10),
+        ("visible_black_focus_n", "le", 25.0),
+        ("stream_ms", "le", 30.0),
+        ("miss_stuck_max_run_sec", "le", 4.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
 }
 
 
 # Informational soft gates (printed; do not fail hard GO).
 PHASE_SOFT_GATES: dict[str, list[tuple[str, str, float]]] = {
+    "FP1": [
+        ("cruise_fifo_dropped_delta", "le", 5.0),
+        ("effective_holes_blink_rate", "le", 0.10),
+    ],
+    "FP2": [
+        ("cruise_fifo_dropped_delta", "le", 8.0),
+    ],
+    "FP3": [
+        ("opaque_idle_churn_max", "le", 160.0),
+    ],
+    "FP5": [
+        ("cruise_fifo_dropped_delta", "le", 0.0),
+    ],
     "OCEAN_CRUISE": [
         ("relight_drain_near_zero_while_vb_sec", "le", 10.0),
         ("enter_app_update_max", "le", 200.0),

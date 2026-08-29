@@ -1032,6 +1032,43 @@ def analyze(
         cruise_false_clear_delta = (
             cruise_false_clear_vals[-1] - cruise_false_clear_vals[0]
         )
+    # FP flight-perf: cruise spike metrics (moving y>10).
+    fly_spikes = [
+        r for r in spikes if float(r.get("player_y") or 0) > 10.0
+    ]
+    cruise_schedule_ok_med = (
+        median(col(fly_spikes, "mesh_dirty_schedule_ok_n"))
+        if fly_spikes
+        else None
+    )
+    cruise_capture_retarget_med = (
+        median(col(fly_spikes, "softdefer_capture_retarget_n"))
+        if fly_spikes
+        else None
+    )
+    cruise_witness_pin_age_med = (
+        median(col(fly_spikes, "softdefer_capture_pin_age"))
+        if fly_spikes
+        else None
+    )
+    cruise_relight_completed_spike_med = (
+        median(col(fly_spikes, "relight_completed_n")) if fly_spikes else None
+    )
+    cruise_relight_completed_throughput = None
+    if len(fly_spikes) >= 2:
+        rc0 = float(fly_spikes[0].get("relight_completed_n") or 0)
+        rc1 = float(fly_spikes[-1].get("relight_completed_n") or 0)
+        cruise_relight_completed_throughput = max(
+            0.0, (rc1 - rc0) / max(1, len(fly_spikes) - 1)
+        )
+    unfinished_visual_med = (
+        median(unfinished_visual) if unfinished_visual else None
+    )
+    visible_black_focus_med = median(visible_black) if visible_black else None
+    stream_ms_med = median(col(cruise_src, "stream_ms"))
+    dark_face_stale_near_med = median(col(cruise_src, "dark_face_stale_near_n"))
+    orphan_vals = col(cruise_src, "mesh_dirty_schedule_skip_orphan_n")
+    dirty_ghost_n = max(orphan_vals) if orphan_vals else None
     # Era40 P3: FIFO stuck soft-fail (soft-cap + no apply + dropped churn).
     fifo_soft_cap = 96
     miss_end_or_stuck = (miss_end > 0.0) or (miss_stuck_max_run_sec > 4.0)
@@ -1447,6 +1484,16 @@ def analyze(
             "cruise_unlit_med": cruise_unlit_med,
             "cruise_softdefer_empty_med": cruise_softdefer_empty_med,
             "cruise_relight_completed_med": cruise_relight_completed_med,
+            "cruise_schedule_ok_med": cruise_schedule_ok_med,
+            "cruise_capture_retarget_med": cruise_capture_retarget_med,
+            "cruise_witness_pin_age_med": cruise_witness_pin_age_med,
+            "cruise_relight_completed_spike_med": cruise_relight_completed_spike_med,
+            "cruise_relight_completed_throughput": cruise_relight_completed_throughput,
+            "unfinished_visual": unfinished_visual_med,
+            "visible_black_focus_n": visible_black_focus_med,
+            "stream_ms": stream_ms_med,
+            "dark_face_stale_near_n": dark_face_stale_near_med,
+            "dirty_ghost_n": dirty_ghost_n,
             "cruise_fifo_dropped_delta": cruise_fifo_dropped_delta,
             "cruise_false_clear_delta": cruise_false_clear_delta,
             "mesh_sync_fly_med": mesh_sync_fly_med,
