@@ -8,6 +8,7 @@
 #include "World/Streaming/EnterVisualGate.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/EnterSessionPhase.h"
+#include "World/Streaming/ColumnJobGraph.h"
 #include "World/Streaming/ColumnVisualReadyPolicy.h"
 #include "World/Diagnostics/EnterLitDiagnostics.h"
 #include "World/Streaming/NearFovWorkPriority.h"
@@ -2408,6 +2409,16 @@ int main()
            "SRBR-P1: remesh protect ticketed VB stand");
     Expect(!ShouldProtectRemeshUnderTicketedVbStand(false, 107, 6, 0),
            "SRBR-P1: no remesh protect empty RemeshQ");
+    using cutum::ShouldProtectRemeshUnderTicketedVbCruise;
+    Expect(ShouldProtectRemeshUnderTicketedVbCruise(true, 73, 6, 12),
+           "FP3: cruise ticketed VB remesh protect");
+    Expect(!ShouldProtectRemeshUnderTicketedVbCruise(false, 73, 6, 12),
+           "FP3: stand skips cruise protect");
+    using cutum::RelightWitnessPinHoldFrames;
+    Expect(RelightWitnessPinHoldFrames >= 48, "FP1: witness hold age extended");
+    using cutum::ShouldDampWitnessRetargetOnUnfinishedCruise;
+    Expect(ShouldDampWitnessRetargetOnUnfinishedCruise(true, 7),
+           "FP1: damp retarget when unf=7");
     Expect(!ShouldStopRelightApplySlice(8.0, 1, 8.0, false, true, 3, 2.5),
            "FZ25: consume mode continues past 1@8ms when cap>=3");
     Expect(ShouldStopRelightApplySlice(8.0, 3, 8.0, false, true, 3, 2.5),
@@ -2983,6 +2994,20 @@ int main()
     cin.airborne = false;
     Expect(ComputeStreamSpeedClampScale(cin) == 0.7f,
            "low-alt frontier ground clamp");
+  }
+
+  {
+    using cutum::ColumnJobStage;
+    using cutum::DeriveColumnJobStage;
+    Expect(DeriveColumnJobStage(true, false, true, false, false, false) ==
+               ColumnJobStage::LitReady,
+           "FP4: lit ready stage");
+    Expect(DeriveColumnJobStage(true, true, false, false, false, false) ==
+               ColumnJobStage::PendingLight,
+           "FP4: pending light stage");
+    Expect(DeriveColumnJobStage(true, false, false, false, false, true) ==
+               ColumnJobStage::RenderReady,
+           "FP4: render ready stage");
   }
 
   if (gFails != 0)
