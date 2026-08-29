@@ -669,6 +669,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // visual_holes = missing mesh only; near_focus_holes kept for legacy paths
   // that still want light-debt urgency for relight (not starve).
   const bool visual_holes = missing_visible_mesh;
+  // FP2: under cruise holes, preserve near-focus mesh throughput vs flat cap-6.
+  if (moving && visual_holes)
+  {
+    LastBudget.MaxMeshSchedule = std::max(LastBudget.MaxMeshSchedule, 4);
+    LastBudget.MaxMeshDrain = std::max(LastBudget.MaxMeshDrain, 4);
+  }
   // Same cruise skip as not_ready_early — idle catch-up still counts fully.
   // I5: reuse not_ready_early — second CountUnfinishedVisualNear was duplicate.
   const int focus_not_render_ready = not_ready_early;

@@ -179,6 +179,22 @@ inline bool ShouldProtectRemeshUnderTicketedVbStand(bool moving,
          vb_no_ticket_n <= no_ticket_soft;
 }
 
+/// FP3: cruise ticketed VB — remesh floor while moving (081522 VB med 73).
+inline bool ShouldProtectRemeshUnderTicketedVbCruise(bool moving,
+                                                      int visible_black_focus_n,
+                                                      int vb_no_ticket_n,
+                                                      int remesh_queue_n,
+                                                      int vb_thresh = 40,
+                                                      int no_ticket_soft = 15)
+{
+  if (!moving || remesh_queue_n <= 0)
+  {
+    return false;
+  }
+  return visible_black_focus_n >= vb_thresh && vb_no_ticket_n >= 0 &&
+         vb_no_ticket_n <= no_ticket_soft;
+}
+
 inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
                                      MeshWorkAdmission::Mode mode,
                                      const MeshWorkAdmissionInput &in,
@@ -231,6 +247,12 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
       out.softdefer_requeue = std::max(out.softdefer_requeue, 1);
       out.first_mesh_schedule = std::max(out.first_mesh_schedule, 6);
       out.remesh_schedule = std::max(out.remesh_schedule, 1);
+    }
+    else if (holes)
+    {
+      // FP2: moving HoleDrain must schedule FM despite pending_gpu DeepBacklog cap.
+      out.first_mesh_schedule = std::max(out.first_mesh_schedule, 4);
+      out.max_schedule = std::max(out.max_schedule, 4);
     }
     break;
   case MeshWorkAdmission::Mode::WarmBacklog:
@@ -465,7 +487,10 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   const bool protect_ticketed_vb = ShouldProtectRemeshUnderTicketedVbStand(
       in.moving, in.visible_black_focus_n, in.visible_black_no_ticket_n,
       in.remesh_queue_n);
-  if ((protect_lit || protect_ticketed_vb) &&
+  const bool protect_ticketed_vb_cruise = ShouldProtectRemeshUnderTicketedVbCruise(
+      in.moving, in.visible_black_focus_n, in.visible_black_no_ticket_n,
+      in.remesh_queue_n);
+  if ((protect_lit || protect_ticketed_vb || protect_ticketed_vb_cruise) &&
       (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
        out.mode == MeshWorkAdmission::Mode::DeepBacklog))
   {
