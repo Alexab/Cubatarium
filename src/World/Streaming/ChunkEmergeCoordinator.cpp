@@ -4089,6 +4089,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       pt.FirstMeshScheduleCap = adm.first_mesh_schedule;
       pt.RemeshScheduleCap = adm.remesh_schedule;
       pt.RemeshProtectLitSettleN = adm.protect_lit_settle_remesh ? 1 : 0;
+      if (adm.admission_carve_out)
+      {
+        ++pt.AdmissionCarveOutFrames;
+      }
     }
   }
   // I4b: re-assert calm dirty_tick caps after Finalize — admission floors must

@@ -8,6 +8,7 @@
 #include "World/Streaming/EnterVisualGate.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/EnterSessionPhase.h"
+#include "Render/Mesh/MeshApplyPolicy.h"
 #include "World/Streaming/ColumnJobGraph.h"
 #include "World/Streaming/ColumnVisualReadyPolicy.h"
 #include "World/Diagnostics/EnterLitDiagnostics.h"
@@ -2416,6 +2417,21 @@ int main()
            "FP3: stand skips cruise protect");
     using cutum::RelightWitnessPinHoldFrames;
     Expect(RelightWitnessPinHoldFrames >= 48, "FP1: witness hold age extended");
+    using cutum::ShouldExtendWitnessPinHold;
+    Expect(ShouldExtendWitnessPinHold(200, true), "FP-A3: pinned_still extends hold");
+    Expect(!ShouldExtendWitnessPinHold(200, false), "FP-A3: age-only release");
+    using cutum::ShouldMarkMissingOnCruiseMovingHoles;
+    Expect(ShouldMarkMissingOnCruiseMovingHoles(true, true, 3, 4),
+           "FP-A2: cruise moving holes mark missing nh=3");
+    using cutum::ShouldBypassRaAParkForCruiseFirstMesh;
+    Expect(ShouldBypassRaAParkForCruiseFirstMesh(true, 3),
+           "FP-A2: bypass RAA park HoleDrain nh=3");
+    using cutum::ShouldPreferMissFinalizeBand;
+    using cutum::kVisualStageLitDrawableHoriz;
+    Expect(ShouldPreferMissFinalizeBand(4, kVisualStageLitDrawableHoriz),
+           "FP-B1: finalize band nh=4 with lit drawable ring");
+    Expect(!ShouldPreferMissFinalizeBand(5, kVisualStageLitDrawableHoriz),
+           "FP-B1: rim nh=5 split");
     using cutum::ShouldDampWitnessRetargetOnUnfinishedCruise;
     Expect(ShouldDampWitnessRetargetOnUnfinishedCruise(true, 7),
            "FP1: damp retarget when unf=7");

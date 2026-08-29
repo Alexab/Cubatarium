@@ -2252,6 +2252,12 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
   }
   const bool was_soft_held = SoftDeferHeld.count(chunkCoord) > 0;
   SoftDeferHeld.erase(chunkCoord);
+  int miss_horiz = 999;
+  if (MeshFocusValid)
+  {
+    miss_horiz = std::max(std::abs(chunkCoord.x - MeshFocusGroundChunk.x),
+                          std::abs(chunkCoord.z - MeshFocusGroundChunk.z));
+  }
   if (ActiveMeshSourceRevision.find(chunkCoord) !=
       ActiveMeshSourceRevision.end())
   {
@@ -2299,9 +2305,12 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
         return;
       }
       else if (live_flight ||
-               ShouldHoldInflightSupersedeUnderMissUndrawn(
-                   soft_undrawn || miss_undrawn, live_flight,
-                   /*has_drawable=*/false))
+               (ShouldHoldInflightSupersedeUnderMissUndrawn(
+                    soft_undrawn || miss_undrawn, live_flight,
+                    /*has_drawable=*/false) &&
+                !ShouldBypassRaAParkForCruiseFirstMesh(
+                    WorkAdmission.mode == MeshWorkAdmission::Mode::HoleDrain,
+                    miss_horiz)))
       {
         if (RemeshAfterApply.count(chunkCoord) > 0 ||
             Dirty.Contains(chunkCoord))

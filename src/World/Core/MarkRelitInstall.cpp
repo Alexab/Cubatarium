@@ -100,6 +100,8 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
     {
       mesh->MarkDirtyPriority(coord);
       ++PhysicsTelemetryData.MarkRelitScheduleN;
+      ++PhysicsTelemetryData.FmDirtyEnqueueN;
+      ++PhysicsTelemetryData.FmDirtyEnqueueFromMarkRelitN;
     }
     for (const glm::ivec3 &coord : plan.mark_dirty)
     {
@@ -366,9 +368,16 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       const bool focus_no_mesh_debt =
           PhysicsTelemetryData.ColumnLoadedNoMeshN > 0 ||
           PhysicsTelemetryData.UnfinishedVisual > 0;
-      if (ShouldMarkMissingOnceOnLitReady(
-              finalize_pending_gate, slim_install || consume_mode,
-              plan.schedule_n, focus_horiz, focus_no_mesh_debt))
+      const bool visual_holes = PhysicsTelemetryData.UnfinishedVisual > 0;
+      const bool mark_missing_once = ShouldMarkMissingOnceOnLitReady(
+          finalize_pending_gate, slim_install || consume_mode,
+          plan.schedule_n, focus_horiz, focus_no_mesh_debt);
+      const bool mark_missing_cruise =
+          !mark_missing_once &&
+          ShouldMarkMissingOnCruiseMovingHoles(moving, visual_holes,
+                                               focus_horiz, 4) &&
+          focus_no_mesh_debt && finalize_pending_gate && plan.schedule_n == 0;
+      if (mark_missing_once || mark_missing_cruise)
       {
         const int dirty_min = std::max(0, sea - CHUNK_SIZE);
         const int dirty_max =

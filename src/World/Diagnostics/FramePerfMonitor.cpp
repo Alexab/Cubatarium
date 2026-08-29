@@ -370,6 +370,15 @@ struct FrameNumbers
   uint64_t softdefer_witness_retarget_delta{0};
   uint64_t softdefer_ingress_witness_n{0};
   uint64_t softdefer_capture_retarget_n{0};
+  uint64_t softdefer_capture_retarget_blocked_n{0};
+  int fm_dirty_enqueue_n{0};
+  int fm_dirty_enqueue_from_markrelit_n{0};
+  int fm_dirty_enqueue_from_columnflow_n{0};
+  int relight_fifo_priority_insert_n{0};
+  int ticketed_vb_consume_n{0};
+  int admission_carve_out_frames{0};
+  int seed_at_commit_n{0};
+  int backpressure_level{0};
   int softdefer_witness_horiz{0};
   int softdefer_capture_pin_age{0};
   int softdefer_capture_budget{0};
@@ -799,6 +808,16 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.softdefer_witness_retarget = phys.SoftDeferWitnessRetarget;
   n.softdefer_ingress_witness_n = phys.SoftDeferIngressWitnessN;
   n.softdefer_capture_retarget_n = phys.SoftDeferCaptureRetargetN;
+  n.softdefer_capture_retarget_blocked_n =
+      phys.SoftDeferCaptureRetargetBlockedN;
+  n.fm_dirty_enqueue_n = phys.FmDirtyEnqueueN;
+  n.fm_dirty_enqueue_from_markrelit_n = phys.FmDirtyEnqueueFromMarkRelitN;
+  n.fm_dirty_enqueue_from_columnflow_n = phys.FmDirtyEnqueueFromColumnFlowN;
+  n.relight_fifo_priority_insert_n = phys.RelightFifoPriorityInsertN;
+  n.ticketed_vb_consume_n = phys.TicketedVbConsumeN;
+  n.admission_carve_out_frames = phys.AdmissionCarveOutFrames;
+  n.seed_at_commit_n = phys.SeedAtCommitN;
+  n.backpressure_level = phys.BackpressureLevel;
   n.softdefer_witness_horiz = phys.SoftDeferWitnessHoriz;
   n.softdefer_capture_pin_age = phys.SoftDeferCapturePinAge;
   n.softdefer_capture_budget = phys.SoftDeferCaptureBudget;
@@ -1252,6 +1271,20 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"softdefer_ingress_witness_n\":" << n.softdefer_ingress_witness_n
           << ",\"softdefer_capture_retarget_n\":"
           << n.softdefer_capture_retarget_n
+          << ",\"softdefer_capture_retarget_blocked_n\":"
+          << n.softdefer_capture_retarget_blocked_n
+          << ",\"fm_dirty_enqueue_n\":" << n.fm_dirty_enqueue_n
+          << ",\"fm_dirty_enqueue_from_markrelit_n\":"
+          << n.fm_dirty_enqueue_from_markrelit_n
+          << ",\"fm_dirty_enqueue_from_columnflow_n\":"
+          << n.fm_dirty_enqueue_from_columnflow_n
+          << ",\"relight_fifo_priority_insert_n\":"
+          << n.relight_fifo_priority_insert_n
+          << ",\"ticketed_vb_consume_n\":" << n.ticketed_vb_consume_n
+          << ",\"admission_carve_out_frames\":"
+          << n.admission_carve_out_frames
+          << ",\"seed_at_commit_n\":" << n.seed_at_commit_n
+          << ",\"backpressure_level\":" << n.backpressure_level
           << ",\"softdefer_witness_horiz\":" << n.softdefer_witness_horiz
           << ",\"softdefer_capture_pin_age\":" << n.softdefer_capture_pin_age
           << ",\"softdefer_capture_budget\":" << n.softdefer_capture_budget

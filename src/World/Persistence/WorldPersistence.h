@@ -102,6 +102,7 @@ public:
   void SetRelightFifoPin(glm::ivec2 chunk_xz, bool valid);
   int TakeRelightFifoOverflowDropped();
   int TakeRelightFifoPinSaved();
+  int TakeRelightFifoPriorityInsert();
   int TakeRelightFifoProtectBlock();
   void ClearPendingRelights();
   void RequestAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord);
@@ -184,6 +185,7 @@ private:
   int RelightFifoTrimFocusCz{0};
   int RelightFifoOverflowDroppedN{0};
   int RelightFifoPinSavedN{0};
+  int RelightFifoPriorityInsertN{0};
   int RelightFifoProtectBlockN{0};
 };
 

@@ -805,6 +805,12 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.MarkRelitSkipEnterLitQuiesceN = 0;
   PhysicsTelemetryData.MarkRelitScheduleN = 0;
   PhysicsTelemetryData.MarkRelitEnqueueFirstMeshN = 0;
+  PhysicsTelemetryData.FmDirtyEnqueueN = 0;
+  PhysicsTelemetryData.FmDirtyEnqueueFromMarkRelitN = 0;
+  PhysicsTelemetryData.FmDirtyEnqueueFromColumnFlowN = 0;
+  PhysicsTelemetryData.SoftDeferCaptureRetargetBlockedN = 0;
+  PhysicsTelemetryData.TicketedVbConsumeN = 0;
+  PhysicsTelemetryData.SeedAtCommitN = 0;
   PhysicsTelemetryData.MarkRelitInvokedN = 0;
   PhysicsTelemetryData.MarkMissingPrimaryN = 0;
   PhysicsTelemetryData.MarkRelitPathPrimaryConsumeN = 0;

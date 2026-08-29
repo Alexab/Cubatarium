@@ -44,9 +44,38 @@ void UColumnFlowExecutor::BeginFrame()
   promote_column_ = glm::ivec2(0);
 }
 
+void UColumnFlowExecutor::SetCaptureWitnessPin(glm::ivec2 column, bool valid,
+                                               int age, bool hold)
+{
+  capture_pin_valid_ = valid;
+  capture_pin_col_ = column;
+  capture_pin_age_ = age;
+  capture_pin_hold_ = hold;
+}
+
+ColumnJobStage UColumnFlowExecutor::GetColumnJobStage(glm::ivec2 column) const
+{
+  const auto it = column_job_stage_.find(ColumnKey(column));
+  if (it == column_job_stage_.end())
+  {
+    return ColumnJobStage::Absent;
+  }
+  return it->second;
+}
+
+void UColumnFlowExecutor::SetColumnJobStage(glm::ivec2 column,
+                                            ColumnJobStage stage)
+{
+  column_job_stage_[ColumnKey(column)] = stage;
+}
+
 void UColumnFlowExecutor::RequestPromoteRelight(glm::ivec2 near_column,
                                                 int priority)
 {
+  if (capture_pin_valid_ && capture_pin_hold_ && near_column != capture_pin_col_)
+  {
+    near_column = capture_pin_col_;
+  }
   if (promote_hold_valid_ && near_column != promote_hold_col_)
   {
     return;
@@ -141,10 +170,12 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &wor
   case ColumnWorkKind::RelightThenMesh:
   case ColumnWorkKind::PromoteRelight:
     requested = ColumnEmergeState::Lighting;
+    SetColumnJobStage(work.column, ColumnJobStage::PendingLight);
     break;
   case ColumnWorkKind::FirstMesh:
   case ColumnWorkKind::RemeshSeam:
     requested = ColumnEmergeState::Meshing;
+    SetColumnJobStage(work.column, ColumnJobStage::Meshing);
     break;
   }
   const glm::ivec3 ground(work.column.x, 0, work.column.y);
@@ -183,8 +214,17 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &wor
   switch (work.kind)
   {
   case ColumnWorkKind::FirstMesh:
-    world.AdmitFocusVisibleMissing(admit_batch, forward_xz, only, work.cy);
+  {
+    const int admitted =
+        world.AdmitFocusVisibleMissing(admit_batch, forward_xz, only, work.cy);
+    if (admitted > 0)
+    {
+      world.GetPhysicsTelemetryMutable().FmDirtyEnqueueFromColumnFlowN +=
+          admitted;
+      world.GetPhysicsTelemetryMutable().FmDirtyEnqueueN += admitted;
+    }
     break;
+  }
   case ColumnWorkKind::RelightThenMesh:
     world.RecoverUnlitFocusMeshes(1, only);
     break;
@@ -325,6 +365,17 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       world.GetPhysicsTelemetry().VisibleBlackFocusN;
   const int visible_black_no_ticket_n =
       world.GetPhysicsTelemetry().VisibleBlackNoTicketN;
+  // FP-B3: ticketed VB consume — RelightThenMesh for focus when VB backlog high.
+  if (moving && visible_black_n > 40 && visible_black_no_ticket_n < 10 &&
+      ShouldConsumeTicketedVbDebt(visible_black_no_ticket_n, visible_black_n,
+                                  0))
+  {
+    if (!scheduler_.Contains(focus, ColumnWorkKind::RelightThenMesh))
+    {
+      Enqueue(focus, ColumnWorkKind::RelightThenMesh, 92);
+      world.GetPhysicsTelemetryMutable().TicketedVbConsumeN++;
+    }
+  }
   constexpr double kStaleRepairCooldownSec = 2.0;
   const auto now = std::chrono::steady_clock::now();
   const bool cooldown_ok =

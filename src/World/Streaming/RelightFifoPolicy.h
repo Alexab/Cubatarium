@@ -97,6 +97,15 @@ inline bool ShouldMarkMissingOnceOnLitReady(bool finalize_gate,
   return focus_horiz >= 0 && focus_horiz <= protect_horiz;
 }
 
+/// FP-A2: cruise moving holes — MarkMissing even without consume_mode slim.
+inline bool ShouldMarkMissingOnCruiseMovingHoles(bool moving, bool visual_holes,
+                                                 int focus_horiz,
+                                                 int protect_horiz = 4)
+{
+  return moving && visual_holes && focus_horiz >= 0 &&
+         focus_horiz <= protect_horiz;
+}
+
 /// FZ2.7-P9: !drawable protect ring must not leave-in SoftDefer thrash.
 inline bool ShouldLeaveInDirtyUnderPlForSchedule(bool leave_in_pl_policy,
                                                  bool has_drawable)
@@ -782,6 +791,14 @@ inline bool ShouldKeepLiveGpuOpaqueDespiteFullyDark(
   return has_live_gpu_draw && horiz >= 0 && horiz <= keep_horiz;
 }
 
+/// FP-B4: nh≤2 keep-until-bind during pending relight repair.
+inline bool ShouldKeepLiveGpuOpaqueDuringPendingRelight(
+    bool has_live_gpu_draw, int horiz, bool has_repair_progress)
+{
+  return has_live_gpu_draw && has_repair_progress && horiz >= 0 &&
+         horiz <= kVisualStageNearFovHoriz;
+}
+
 /// FZ2.7-P4: hide-until-lit must not toggle a live GPU slot in LitDrawable.
 inline bool ShouldHideFullyDarkOverLiveGpu(
     bool has_live_gpu_draw, int horiz, bool fully_dark)
@@ -908,8 +925,7 @@ inline bool ShouldForceMissColumnFifoEnqueue(bool miss_or_visual_hole,
 }
 
 /// P2: unsplit finalize (`finalize_gate=true`) only for near-FOV witness
-/// (nh≤2). Rim nh=3–4 stays Y-band split so cruise Capture cannot hitch like
-/// Era40 full-ring finalize (drain max 597 ms on 195810).
+/// (nh≤2 default). FP-B1: pass ring=kVisualStageLitDrawableHoriz for nh≤4 cruise.
 inline bool ShouldPreferMissFinalizeBand(int miss_horiz,
                                          int ring = kVisualStageNearFovHoriz)
 {
@@ -1033,6 +1049,18 @@ inline bool ShouldRetargetRelightWitness(bool era27_retarget,
     return false;
   }
   return era27_retarget;
+}
+
+/// FP-A3: extend witness hold past RelightWitnessPinHoldFrames while pinned_still.
+inline bool ShouldExtendWitnessPinHold(int pin_age, bool pinned_still,
+                                       int hold_frames =
+                                           RelightWitnessPinHoldFrames)
+{
+  if (pinned_still)
+  {
+    return true;
+  }
+  return pin_age < hold_frames;
 }
 
 /// P3: FirstMeshQ head = underfeet or just-MarkRelit nh≤2 (not a quota bump).

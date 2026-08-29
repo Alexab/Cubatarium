@@ -316,7 +316,16 @@ void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z,
       priority || ShouldForcePinColumnPriority(is_pin, /*miss_horiz=*/0);
   if (force_priority)
   {
-    PendingTerrainColumnRelightsPriority.push_back(key);
+    if (is_pin)
+    {
+      PendingTerrainColumnRelightsPriority.insert(
+          PendingTerrainColumnRelightsPriority.begin(), key);
+      ++RelightFifoPriorityInsertN;
+    }
+    else
+    {
+      PendingTerrainColumnRelightsPriority.push_back(key);
+    }
   }
   else
   {
@@ -468,6 +477,13 @@ int UWorldPersistence::TakeRelightFifoPinSaved()
   return n;
 }
 
+int UWorldPersistence::TakeRelightFifoPriorityInsert()
+{
+  const int n = RelightFifoPriorityInsertN;
+  RelightFifoPriorityInsertN = 0;
+  return n;
+}
+
 int UWorldPersistence::TakeRelightFifoProtectBlock()
 {
   const int n = RelightFifoProtectBlockN;
@@ -582,10 +598,12 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     auto &telem = world.GetPhysicsTelemetryMutable();
     const int overflow = TakeRelightFifoOverflowDropped();
     const int saved = TakeRelightFifoPinSaved();
+    const int priority_insert = TakeRelightFifoPriorityInsert();
     const int protect_block = TakeRelightFifoProtectBlock();
     telem.RelightFifoDropN += overflow;
     telem.RelightFifoOverflowDropN += overflow;
     telem.RelightFifoPinSavedN += saved;
+    telem.RelightFifoPriorityInsertN += priority_insert;
     telem.RelightFifoProtectBlockN += protect_block;
     telem.RelightFifoDropped += static_cast<uint64_t>(std::max(0, overflow));
   };
@@ -1286,7 +1304,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     const int vb_focus_n = world.GetPhysicsTelemetry().VisibleBlackFocusN;
     const bool miss_finalize_band =
         enter_fov_lit ||
-        (visual_holes && ShouldPreferMissFinalizeBand(horiz_dist)) ||
+        (visual_holes &&
+         ShouldPreferMissFinalizeBand(horiz_dist,
+                                      kVisualStageLitDrawableHoriz)) ||
         ShouldFinalizeRelightUnderPlPressure(pending_light_focus_n, horiz_dist,
                                              focus_radius) ||
         ShouldFinalizeRelightUnderVbPressure(vb_no_ticket_n, horiz_dist) ||

@@ -1054,6 +1054,46 @@ def analyze(
     cruise_relight_completed_spike_med = (
         median(col(fly_spikes, "relight_completed_n")) if fly_spikes else None
     )
+    cruise_relight_apply_final_med = (
+        median(col(fly_spikes, "relight_apply_final_n")) if fly_spikes else None
+    )
+    cruise_fm_enqueue_med = (
+        median(col(fly_spikes, "fm_dirty_enqueue_n")) if fly_spikes else None
+    )
+    cruise_dirty_fm_med = (
+        median(col(fly_spikes, "dirty_fm_n")) if fly_spikes else None
+    )
+
+    def classify_schedule_blocker(r: dict) -> str:
+        ok = float(r.get("mesh_dirty_schedule_ok_n") or 0)
+        if ok > 0:
+            return "scheduled"
+        if float(r.get("dirty_fm_n") or 0) <= 0:
+            return "empty_fm_queue"
+        if float(r.get("first_mesh_schedule_cap") or 0) <= 0:
+            return "zero_fm_cap"
+        skips = {
+            "skip_locked": float(r.get("mesh_dirty_schedule_skip_locked_n") or 0),
+            "skip_softdefer": float(
+                r.get("mesh_dirty_schedule_skip_softdefer_n") or 0
+            ),
+            "skip_pipeline": float(
+                r.get("mesh_dirty_schedule_skip_pipeline_n") or 0
+            ),
+        }
+        top = max(skips, key=skips.get)
+        if skips[top] > 0:
+            return top
+        return "unknown_no_skip"
+
+    blocker_counts: dict[str, int] = {}
+    for r in fly_spikes:
+        if float(r.get("mesh_dirty_schedule_ok_n") or 0) == 0:
+            b = classify_schedule_blocker(r)
+            blocker_counts[b] = blocker_counts.get(b, 0) + 1
+    dominant_schedule_blocker = (
+        max(blocker_counts, key=blocker_counts.get) if blocker_counts else None
+    )
     cruise_relight_completed_throughput = None
     if len(fly_spikes) >= 2:
         rc0 = float(fly_spikes[0].get("relight_completed_n") or 0)
@@ -1488,6 +1528,10 @@ def analyze(
             "cruise_capture_retarget_med": cruise_capture_retarget_med,
             "cruise_witness_pin_age_med": cruise_witness_pin_age_med,
             "cruise_relight_completed_spike_med": cruise_relight_completed_spike_med,
+            "cruise_relight_apply_final_med": cruise_relight_apply_final_med,
+            "cruise_fm_enqueue_med": cruise_fm_enqueue_med,
+            "cruise_dirty_fm_med": cruise_dirty_fm_med,
+            "dominant_schedule_blocker": dominant_schedule_blocker,
             "cruise_relight_completed_throughput": cruise_relight_completed_throughput,
             "unfinished_visual": unfinished_visual_med,
             "visible_black_focus_n": visible_black_focus_med,

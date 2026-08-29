@@ -145,4 +145,11 @@ inline bool ShouldHoldInflightSupersedeUnderMissUndrawn(
   return soft_or_miss_undrawn && has_inflight_or_pending && !has_drawable;
 }
 
+/// FP-A2: HoleDrain cruise nh≤4 — do not park undrawn miss in RemeshAfterApply.
+inline bool ShouldBypassRaAParkForCruiseFirstMesh(bool hole_drain_mode,
+                                                  int horiz)
+{
+  return hole_drain_mode && horiz >= 0 && horiz <= 4;
+}
+
 } // namespace cutum

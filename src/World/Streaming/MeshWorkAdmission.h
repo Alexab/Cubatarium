@@ -113,6 +113,8 @@ struct MeshWorkAdmission
   /// FZ2.7-P13 R1: lit-settle remesh floor armed (stale dark faces).
   bool protect_lit_settle_remesh{false};
   Mode mode{Mode::Normal};
+  /// FP-A4: this frame used Warm carve-out from HoleDrain FM starvation.
+  bool admission_carve_out{false};
 };
 
 inline size_t MeshWorkQueuedApprox(const MeshWorkAdmissionInput &in)
@@ -373,6 +375,19 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   const bool was_hole_backlog =
       prev == MeshWorkAdmission::Mode::HoleDrain ||
       prev == MeshWorkAdmission::Mode::DeepBacklog;
+  // FP-A4: cruise FM starvation carve-out — WarmBacklog when FM queue empty.
+  static int admission_carve_remain = 0;
+  if (was_hole_backlog && holes && in.moving && in.pending_gpu <= 8 &&
+      in.dirty_fm_n == 0)
+  {
+    admission_carve_remain = 30;
+  }
+  if (admission_carve_remain > 0 && mode == MeshWorkAdmission::Mode::HoleDrain)
+  {
+    mode = MeshWorkAdmission::Mode::WarmBacklog;
+    --admission_carve_remain;
+    out.admission_carve_out = true;
+  }
   // Exit HoleDrain/Deep only when holes cleared, pending cooled (≤8), and
   // Queued drained below half-ring (avoid Immediate Normal refill).
   if (was_hole_backlog)

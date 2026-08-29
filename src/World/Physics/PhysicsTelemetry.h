@@ -71,6 +71,22 @@ struct PhysicsTelemetry
   uint64_t SoftDeferIngressWitnessN{0};
   /// FZ2.7-P15a: Capture floor real pin retarget (Site B) — observe only.
   uint64_t SoftDeferCaptureRetargetN{0};
+  /// FP-A3: Site B retarget blocked by witness pin hold (per frame).
+  uint64_t SoftDeferCaptureRetargetBlockedN{0};
+  /// FP-A1: FirstMesh dirty enqueue sources (per frame).
+  int FmDirtyEnqueueN{0};
+  int FmDirtyEnqueueFromMarkRelitN{0};
+  int FmDirtyEnqueueFromColumnFlowN{0};
+  /// FP-B2: nh≤2 priority front-insert into relight FIFO.
+  int RelightFifoPriorityInsertN{0};
+  /// FP-B3: ColumnFlow ticketed VB consume enqueue count.
+  int TicketedVbConsumeN{0};
+  /// FP-A4: frames in cruise Warm carve-out from HoleDrain starvation.
+  int AdmissionCarveOutFrames{0};
+  /// FP-C2: skylight seed at commit count.
+  int SeedAtCommitN{0};
+  /// FP-C2: StreamingPressure level 0=green 1=yellow 2=red.
+  int BackpressureLevel{0};
   /// Last witness MissHoriz when SoftDeferWitnessRetarget fired (0 if focus).
   int SoftDeferWitnessHoriz{0};
   /// FZ2.7-P12 C0: SoftDefer Capture pin age (frames).

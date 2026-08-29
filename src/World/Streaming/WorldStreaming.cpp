@@ -493,6 +493,7 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                                                  seed_decision.budget_ms);
               if (seed.applied)
               {
+                ++world.PhysicsTelemetryData.SeedAtCommitN;
                 world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
                 world.MeshService->MarkTerrainChunkMeshDirtySeamedPriority(
                     ground, dirty_min, dirty_max,
@@ -715,6 +716,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   LastPressureCaps = EvaluateStreamingPressure(in, PressureState);
 
   world.PhysicsTelemetryData.StreamPressure =
+      static_cast<int>(LastPressureCaps.level);
+  world.PhysicsTelemetryData.BackpressureLevel =
       static_cast<int>(LastPressureCaps.level);
   world.PhysicsTelemetryData.PendingLightFocus = pending_light_focus;
   const int sticky_remesh =
@@ -1910,7 +1913,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     }
     if (!rim_first_mesh_sla)
     {
-      exec.RequestPromoteRelight(focus_xz, 40);
+      exec.RequestPromoteRelight(repair_xz, 40);
     }
   }
   // TD-ARCH-030 / Era19: SoftDefer Capture floor via FrameStreamingBudget SoT.
@@ -2043,14 +2046,21 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             missing_focus_mesh, pin_is_stuck);
         const bool hold_witness_pin =
             hold_nh2 &&
-            SoftDeferCapturePinAge < RelightWitnessPinHoldFrames;
+            ShouldExtendWitnessPinHold(SoftDeferCapturePinAge, pinned_still);
+        const bool era27_would_retarget =
+            ShouldRetargetSoftDeferCaptureWitness(
+                SoftDeferCapturePinValid, SoftDeferCapturePinAge, pin_T,
+                better_horiz, pinned_still);
         const bool retarget_allowed = !world.IsEnterSessionActive();
         const bool retarget = retarget_allowed &&
-            ShouldRetargetRelightWitness(
-                ShouldRetargetSoftDeferCaptureWitness(
-                    SoftDeferCapturePinValid, SoftDeferCapturePinAge, pin_T,
-                    better_horiz, pinned_still),
-                hold_witness_pin);
+            ShouldRetargetRelightWitness(era27_would_retarget, hold_witness_pin);
+        if (!retarget && era27_would_retarget && hold_witness_pin)
+        {
+          ++world.PhysicsTelemetryData.SoftDeferCaptureRetargetBlockedN;
+        }
+        GetColumnFlowExecutor().SetCaptureWitnessPin(
+            glm::ivec2(SoftDeferCapturePinCx, SoftDeferCapturePinCz),
+            SoftDeferCapturePinValid, SoftDeferCapturePinAge, hold_witness_pin);
         if (retarget)
         {
           SoftDeferCapturePinValid = true;

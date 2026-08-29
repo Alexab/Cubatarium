@@ -475,7 +475,7 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
     ],
     "FP1": [
         ("cruise_capture_retarget_med", "le", 5.0),
-        ("cruise_relight_completed_spike_med", "gt", 0.0),
+        ("cruise_relight_apply_final_med", "gt", 0.0),
         ("miss_stuck_max_run_sec", "le", 15.0),
         ("chunks_traveled", "ge", 3.0),
     ],
@@ -504,6 +504,13 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("miss_stuck_max_run_sec", "le", 4.0),
         ("chunks_traveled", "ge", 3.0),
     ],
+    "FP-manual": [
+        ("cruise_schedule_ok_med", "ge", 3.0),
+        ("cruise_capture_retarget_med", "le", 5.0),
+        ("holes_rate", "le", 0.55),
+        ("miss_stuck_max_run_sec", "le", 30.0),
+        ("chunks_traveled", "ge", 5.0),
+    ],
 }
 
 
@@ -521,6 +528,10 @@ PHASE_SOFT_GATES: dict[str, list[tuple[str, str, float]]] = {
     ],
     "FP5": [
         ("cruise_fifo_dropped_delta", "le", 0.0),
+    ],
+    "FP-manual": [
+        ("cruise_dirty_fm_med", "gt", 0.0),
+        ("cruise_fifo_dropped_delta", "le", 10.0),
     ],
     "OCEAN_CRUISE": [
         ("relight_drain_near_zero_while_vb_sec", "le", 10.0),

@@ -2,6 +2,7 @@
 
 #include "World/Streaming/ColumnFlowScheduler.h"
 #include "World/Streaming/ColumnJobGraph.h"
+#include "World/Streaming/ColumnVisualSnapshot.h"
 
 #include <chrono>
 #include <glm/glm.hpp>
@@ -81,12 +82,18 @@ public:
   bool HasPromoteRelightHold() const { return promote_hold_valid_; }
   glm::ivec2 GetPromoteRelightHoldColumn() const { return promote_hold_col_; }
 
+  /// FP-A3: cruise capture witness pin — redirect PromoteRelight to pin column.
+  void SetCaptureWitnessPin(glm::ivec2 column, bool valid, int age, bool hold);
+
   /// True if column has a live ColumnFlow repair/admit/promote ticket queued
   /// or is inside post-dispatch cooldown.
   bool HasRepairTicket(glm::ivec2 column) const;
 
   /// Sticky/seam remesh budget (ColumnFlow-only; SyncIdle lives in Dispatch).
   void DrainRemeshSeamBudget(UWorld &world, int max_columns);
+
+  ColumnJobStage GetColumnJobStage(glm::ivec2 column) const;
+  void SetColumnJobStage(glm::ivec2 column, ColumnJobStage stage);
 
 private:
   void AdvanceColumn(UWorld &world, const ColumnWorkItem &work,
@@ -109,6 +116,17 @@ private:
   int promote_priority_{0};
   bool promote_hold_valid_{false};
   glm::ivec2 promote_hold_col_{0};
+  bool capture_pin_valid_{false};
+  bool capture_pin_hold_{false};
+  glm::ivec2 capture_pin_col_{0};
+  int capture_pin_age_{0};
+  std::unordered_map<int64_t, ColumnJobStage> column_job_stage_{};
+
+  static int64_t ColumnKey(glm::ivec2 column)
+  {
+    return (static_cast<int64_t>(column.x) << 32) ^
+           static_cast<uint32_t>(column.y);
+  }
 };
 
 UColumnFlowExecutor &GetColumnFlowExecutor();
