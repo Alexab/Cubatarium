@@ -21,6 +21,8 @@ struct StreamingPressureInput
   int pending_light{0};
   int dirty{0};
   double frame_ms{0.0};
+  /// FP5: world streaming phase wall (producer backpressure when >1.5× budget).
+  double stream_phase_ms{0.0};
   /// Missing GreedyCache in focus only (not pending light).
   bool visual_holes{false};
   bool underfeet_need{false};
@@ -80,6 +82,13 @@ inline StreamingPressureLevel
 RawStreamingPressureLevel(const StreamingPressureInput &in)
 {
   using namespace streaming_pressure;
+  // FP5: stream phase overrun → escalate (producer backpressure).
+  constexpr double kStreamPhaseYellowMs = 36.0; // 1.5 × 24ms frame budget
+  constexpr double kStreamPhaseRedMs = 60.0;
+  if (in.stream_phase_ms > kStreamPhaseRedMs)
+  {
+    return StreamingPressureLevel::Red;
+  }
   // Wall hitch alone must NOT enter Red — manual flight sat at wall~50–60ms
   // with Dirty~350 and locked Red forever (FPS death spiral).
   if (in.pending_light > kEnterPendingRed || in.dirty > kEnterDirtyRed)
@@ -87,7 +96,8 @@ RawStreamingPressureLevel(const StreamingPressureInput &in)
     return StreamingPressureLevel::Red;
   }
   if (in.pending_light > kEnterPendingYellow || in.dirty > kEnterDirtyYellow ||
-      in.frame_ms > kEnterWallYellowMs)
+      in.frame_ms > kEnterWallYellowMs ||
+      in.stream_phase_ms > kStreamPhaseYellowMs)
   {
     return StreamingPressureLevel::Yellow;
   }
