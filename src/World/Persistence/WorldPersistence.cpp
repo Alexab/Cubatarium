@@ -1087,7 +1087,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     const int inflight_n = world.GetAsyncRelightInFlightCount();
     const bool consume_mode = IsTicketedVbConsumeMode(
         vb_no_ticket_n, telem.VisibleBlackFocusN,
-        telem.VisibleBlackStalledN);
+        telem.VisibleBlackStalledN, moving);
     const double unit_ms_prev =
         telem.RelightApplyNPrev > 0
             ? (telem.RelightApplyMsPrev /
@@ -1484,7 +1484,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       const auto &telem = world.GetPhysicsTelemetry();
       const bool consume_mode = IsTicketedVbConsumeMode(
           telem.VisibleBlackNoTicketN, telem.VisibleBlackFocusN,
-          telem.VisibleBlackStalledN);
+          telem.VisibleBlackStalledN, moving);
       const double unit_ms_prev =
           telem.RelightApplyNPrev > 0
               ? (telem.RelightApplyMsPrev /

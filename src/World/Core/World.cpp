@@ -4153,7 +4153,8 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   const int vb_focus_n = PhysicsTelemetryData.VisibleBlackFocusN;
   const int vb_stalled_n = PhysicsTelemetryData.VisibleBlackStalledN;
   const bool consume_mode =
-      IsTicketedVbConsumeMode(vb_no_ticket_n, vb_focus_n, vb_stalled_n) ||
+      IsTicketedVbConsumeMode(vb_no_ticket_n, vb_focus_n, vb_stalled_n,
+                              moving) ||
       ShouldConsumeUnlitTicketedVbStand(
           moving, vb_focus_n, vb_no_ticket_n,
           static_cast<int>(PhysicsTelemetryData.ChunkMeshedUnlitHidden),

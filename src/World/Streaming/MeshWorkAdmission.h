@@ -415,8 +415,8 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   const bool suppress_carve = ShouldSuppressFmAdmissionCarveOut(
       in.unfinished_visual, in.column_loaded_no_mesh_n,
       in.mesh_schedule_ok_n);
-  if (holes_moving && (fm_starved || fm_consumer_starved) && schedule_starved &&
-      !suppress_carve)
+  // I8-A1: carve only when FM queue empty — consumer-starved must stay HoleDrain.
+  if (holes_moving && fm_starved && schedule_starved && !suppress_carve)
   {
     admission_carve_remain = 90;
   }
@@ -432,7 +432,8 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     hole_drain_fm_fed_frames = 0;
   }
   if (hole_drain_fm_fed_frames >= 8 &&
-      mode == MeshWorkAdmission::Mode::HoleDrain && !holes)
+      mode == MeshWorkAdmission::Mode::HoleDrain && !holes &&
+      in.unfinished_visual == 0)
   {
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     hole_drain_fm_fed_frames = 0;

@@ -165,6 +165,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   double prep_isolated_miss_ms = 0.0;
   static int s_fm_enqueue_prior = 0;
   static int s_schedule_ok_prior = 0;
+  static int s_dirty_fm_prior = 0;
+  static int s_cruise_clear_periods = 0;
   UBlockRegistry &registry = world.GetBlockRegistry();
   UWorldMeshService &mesh_service = world.GetMeshService();
   // Count any Immediate this tick (including early idle paths).
@@ -706,9 +708,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool near_miss_urgent = missing_underfeet || nearest_miss_h <= 2;
   const bool underfeet_has_mesh =
       world.GetPhysicsTelemetry().UnderfeetHasMesh != 0;
+  const bool cruise_clear_candidate =
+      moving && underfeet_has_mesh && !near_miss_urgent && !visual_holes;
+  if (cruise_clear_candidate)
+  {
+    ++s_cruise_clear_periods;
+  }
+  else
+  {
+    s_cruise_clear_periods = 0;
+  }
+  constexpr int kCruiseFastPathClearPeriods = 4;
   const bool cruise_fast_path =
-      moving && underfeet_has_mesh && !near_miss_urgent && !visual_holes &&
-      mesh_service.GetLastMeshDirtyScheduleOkN() >= 4;
+      cruise_clear_candidate &&
+      s_cruise_clear_periods >= kCruiseFastPathClearPeriods;
   // B3: do not re-scan HasMissing(r=1) — nearest witness already covers underfeet.
   const bool pending_underfeet =
       world.HasPendingLightBeforeMeshNear(focus_ground_horiz, /*radius=*/1);
@@ -1940,7 +1953,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const bool consume_mode =
           IsTicketedVbConsumeMode(telem.VisibleBlackNoTicketN,
                                   telem.VisibleBlackFocusN,
-                                  telem.VisibleBlackStalledN) ||
+                                  telem.VisibleBlackStalledN,
+                                  /*moving=*/false) ||
           ShouldConsumeUnlitTicketedVbStand(
               false, telem.VisibleBlackFocusN, telem.VisibleBlackNoTicketN,
               static_cast<int>(telem.ChunkMeshedUnlitHidden),
@@ -2890,7 +2904,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const bool consume_mode =
         IsTicketedVbConsumeMode(telem.VisibleBlackNoTicketN,
                                 telem.VisibleBlackFocusN,
-                                telem.VisibleBlackStalledN) ||
+                                telem.VisibleBlackStalledN, moving) ||
         ShouldConsumeUnlitTicketedVbStand(
             moving, telem.VisibleBlackFocusN, telem.VisibleBlackNoTicketN,
             static_cast<int>(telem.ChunkMeshedUnlitHidden),
@@ -3646,6 +3660,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             exec.Enqueue(owned);
           }
         }
+        // I8-D1: nh≤1 moving miss — bump FirstMesh priority even if ticketed.
+        if (ShouldRenewMovingNearMissFirstMesh(moving, missing_visible_mesh, nh,
+                                               no_drawable))
+        {
+          ColumnWorkItem renew{};
+          renew.column = glm::ivec2(isolated_hole.x, isolated_hole.z);
+          renew.kind = ColumnWorkKind::FirstMesh;
+          renew.priority = 118;
+          renew.scan_full_focus = false;
+          renew.cy = isolated_hole.y;
+          exec.Enqueue(renew);
+        }
         // Era24 P3 / I-E5: miss_cy>1 residual — pin FirstMesh on witness cy
         // (SoftDefer empty heal must not leave higher-cy hole orphaned).
         const int miss_age_periods_now = MissWitnessAgeFrames / 120;
@@ -4207,8 +4233,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                                        mesh_service.IsEnterLitQuiesce(),
                                        world.IsEnterFovLitPassActive())
             ? 0
-            : ComputeFmDirtyEnqueueReserve(s_fm_enqueue_prior,
-                                           s_schedule_ok_prior);
+            : ComputeFmDirtyEnqueueReserve(
+                  std::max(s_fm_enqueue_prior, s_dirty_fm_prior),
+                  s_schedule_ok_prior);
     mesh_service.SetFmDirtyEnqueueReserve(fm_reserve);
     world.GetPhysicsTelemetryMutable().FmDirtyEnqueueReserveN = fm_reserve;
   }
@@ -4246,6 +4273,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
 
   s_fm_enqueue_prior = world.GetPhysicsTelemetry().FmDirtyEnqueueN;
   s_schedule_ok_prior = mesh_service.GetLastMeshDirtyScheduleOkN();
+  s_dirty_fm_prior = mesh_service.GetLastDirtyFmN();
   world.GetPhysicsTelemetryMutable().FirstMeshScheduleEffectiveCap =
       mesh_service.GetLastFirstMeshScheduleEffectiveCap();
 

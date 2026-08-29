@@ -145,27 +145,41 @@ inline bool ShouldHoldInflightSupersedeUnderMissUndrawn(
   return soft_or_miss_undrawn && has_inflight_or_pending && !has_drawable;
 }
 
-/// FP-A2 / FP-D1: HoleDrain cruise nh≤4 — do not park undrawn miss in RemeshAfterApply.
-/// When fm_starvation, also bypass RAA park under pending_gpu / live flight.
-/// column_loaded_no_mesh: loaded column ring still missing drawable mesh.
-/// schedule_ok_n<first_mesh_floor: consumer-bound — never park to RAA.
+/// FP-A2 / FP-D1 / I8-A1: HoleDrain cruise nh≤4 — do not park undrawn miss in RAA.
+/// Bypass only under hole pressure or empty FM queue — never blanket on low
+/// schedule_ok (that flooded Dirty without mesh completion, holes_rate 0.72).
+/// fm_consumer_starved: dirty_fm>0 but schedule under floor — must bypass RAA.
 inline bool ShouldBypassRaAParkForCruiseFirstMesh(bool hole_drain_mode,
                                                     int horiz,
                                                     bool fm_starvation = false,
                                                     bool column_loaded_no_mesh =
                                                         false,
                                                     int schedule_ok_n = 999,
-                                                    int first_mesh_floor = 4)
+                                                    int first_mesh_floor = 4,
+                                                    bool fm_consumer_starved =
+                                                        false)
 {
   if (horiz < 0 || horiz > 4)
   {
     return false;
   }
-  if (schedule_ok_n < first_mesh_floor)
+  if (hole_drain_mode)
   {
     return true;
   }
-  return hole_drain_mode || fm_starvation || column_loaded_no_mesh;
+  if (column_loaded_no_mesh && schedule_ok_n < first_mesh_floor)
+  {
+    return true;
+  }
+  if (fm_starvation && schedule_ok_n < first_mesh_floor)
+  {
+    return true;
+  }
+  if (fm_consumer_starved && schedule_ok_n < first_mesh_floor)
+  {
+    return true;
+  }
+  return false;
 }
 
 /// FP-G1 arch: prior-frame enqueue minus prior-frame schedule drain (not same-frame).

@@ -550,6 +550,7 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
 
 void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
 {
+  const auto refresh_t0 = std::chrono::high_resolution_clock::now();
   const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
   const glm::ivec3 focus_ground = UChunkManager::WorldToChunk(focus_block);
   const glm::ivec3 focus_horiz(focus_ground.x, 0, focus_ground.z);
@@ -1050,6 +1051,10 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     world.PhysicsTelemetryData.LightingRelightDeferred =
         world.IsLightingRelightDeferred() ? 1 : 0;
   }
+  world.PhysicsTelemetryData.PrepRefreshPressureMs +=
+      std::chrono::duration<double, std::milli>(
+          std::chrono::high_resolution_clock::now() - refresh_t0)
+          .count();
 }
 
 void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)

@@ -213,6 +213,16 @@ inline bool ShouldRunSpawnRingCatchUpHeal(bool spawn_catch_up, bool moving_fast,
   return !moving_fast || spawn_catch_up || underfeet_miss;
 }
 
+/// I8-D1: moving nh≤1 miss — renew ColumnFlow FirstMesh every frame (budget axis).
+inline bool ShouldRenewMovingNearMissFirstMesh(bool moving,
+                                               bool focus_missing_mesh,
+                                               int miss_horiz,
+                                               bool no_drawable_on_witness)
+{
+  return moving && focus_missing_mesh && no_drawable_on_witness &&
+         miss_horiz >= 0 && miss_horiz <= 1;
+}
+
 /// FZ2.7-P16 U2: column-owned FirstMesh on miss witness (nh≤2, !drawable).
 inline bool ShouldEnqueueWitnessOwnedFirstMesh(bool focus_missing_mesh,
                                                int miss_horiz,

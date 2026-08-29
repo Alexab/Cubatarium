@@ -2315,7 +2315,10 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
                     !HasDrawableGreedyMesh(chunkCoord) &&
                         LastDirtyFmN == 0,
                     ColumnLoadedNoMeshPressure_ > 0,
-                    LastMeshDirtyScheduleOkN)))
+                    LastMeshDirtyScheduleOkN,
+                    /*first_mesh_floor=*/4,
+                    IsFmConsumerStarved(LastDirtyFmN,
+                                        LastMeshDirtyScheduleOkN))))
       {
         if (RemeshAfterApply.count(chunkCoord) > 0 ||
             Dirty.Contains(chunkCoord))

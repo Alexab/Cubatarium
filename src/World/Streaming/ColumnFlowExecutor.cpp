@@ -381,7 +381,8 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       world.GetPhysicsTelemetry().VisibleBlackNoTicketN;
   // FP-B3 / FP-E0: ticketed VB consume — ring RelightThenMesh when VB debt high.
   const bool vb_consume =
-      IsTicketedVbConsumeMode(visible_black_no_ticket_n, visible_black_n, 0);
+      IsTicketedVbConsumeMode(visible_black_no_ticket_n, visible_black_n, 0,
+                              moving);
   if (vb_consume)
   {
     if (!scheduler_.Contains(focus, ColumnWorkKind::RelightThenMesh))

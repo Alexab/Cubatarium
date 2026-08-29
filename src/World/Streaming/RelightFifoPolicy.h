@@ -1104,13 +1104,26 @@ inline bool ShouldConsumeTicketedVbDebtHigh(int vb_no_ticket_n,
 }
 
 /// FP-E0 unified: low-nt OR high-nt consume (wire all Persistence/Emerge paths).
+/// I8-D2: stop-phase VB drain — lower floor when standing with VB plateau.
+inline bool ShouldConsumeTicketedVbStopDrain(bool moving,
+                                              int visible_black_focus_n,
+                                              int vb_no_ticket_n,
+                                              int focus_floor = 25)
+{
+  return !moving && visible_black_focus_n >= focus_floor &&
+         vb_no_ticket_n >= 0;
+}
+
 inline bool IsTicketedVbConsumeMode(int vb_no_ticket_n,
                                     int visible_black_focus_n,
-                                    int vb_stalled_n = 0)
+                                    int vb_stalled_n = 0,
+                                    bool moving = true)
 {
   return ShouldConsumeTicketedVbDebt(vb_no_ticket_n, visible_black_focus_n,
                                      vb_stalled_n) ||
-         ShouldConsumeTicketedVbDebtHigh(vb_no_ticket_n, visible_black_focus_n);
+         ShouldConsumeTicketedVbDebtHigh(vb_no_ticket_n, visible_black_focus_n) ||
+         ShouldConsumeTicketedVbStopDrain(moving, visible_black_focus_n,
+                                          vb_no_ticket_n);
 }
 
 /// FP-A3: extend witness hold past RelightWitnessPinHoldFrames while pinned_still.

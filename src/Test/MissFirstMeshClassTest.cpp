@@ -2434,21 +2434,35 @@ int main()
     using cutum::ShouldBypassRaAParkForCruiseFirstMesh;
     Expect(ShouldBypassRaAParkForCruiseFirstMesh(true, 3),
            "FP-A2: bypass RAA park HoleDrain nh=3");
-    Expect(ShouldBypassRaAParkForCruiseFirstMesh(false, 3, true),
+    Expect(ShouldBypassRaAParkForCruiseFirstMesh(false, 3, true, false, 1),
            "FP-D1: fm_starvation bypass RAA park nh=3");
-    Expect(ShouldBypassRaAParkForCruiseFirstMesh(false, 3, false, true),
+    Expect(ShouldBypassRaAParkForCruiseFirstMesh(false, 3, false, true, 1),
            "FP-G1: column_loaded_no_mesh bypass RAA park nh=3");
-    Expect(ShouldBypassRaAParkForCruiseFirstMesh(false, 3, false, false, 2),
-           "arch: schedule_ok<floor bypass RAA park");
+    Expect(!ShouldBypassRaAParkForCruiseFirstMesh(false, 3, false, false, 2),
+           "I8-A1: schedule_ok<floor alone does not bypass RAA park");
+    Expect(ShouldBypassRaAParkForCruiseFirstMesh(false, 3, true, false, 1),
+           "I8-A1: fm_starvation + schedule_ok<floor bypass RAA park");
+    Expect(ShouldBypassRaAParkForCruiseFirstMesh(false, 3, false, false, 1, 4,
+                                                 true),
+           "I8-A1b: fm_consumer_starved bypass RAA park");
     using cutum::ComputeFmDirtyEnqueueReserve;
     using cutum::ComputeFirstMeshScheduleEffectiveCap;
     Expect(ComputeFmDirtyEnqueueReserve(2, 0) == 2,
            "arch: prior-frame reserve enqueue-schedule");
+    Expect(ComputeFmDirtyEnqueueReserve(4, 1) == 3,
+           "I8-C1: dirty_fm backlog reserve");
     Expect(ComputeFirstMeshScheduleEffectiveCap(7, 3, 2) >= 2,
            "arch: effective_cap after reserve");
+    using cutum::ShouldRenewMovingNearMissFirstMesh;
+    Expect(ShouldRenewMovingNearMissFirstMesh(true, true, 1, true),
+           "I8-D1: moving nh=1 renew FirstMesh");
+    Expect(!ShouldRenewMovingNearMissFirstMesh(false, true, 1, true),
+           "I8-D1: stand skips renew");
     using cutum::IsTicketedVbConsumeMode;
-    Expect(IsTicketedVbConsumeMode(64, 98, 0),
-           "FP-E0: unified consume nt=64 vb=98");
+    Expect(IsTicketedVbConsumeMode(64, 98, 0, false),
+           "FP-E0: unified consume nt=64 vb=98 stop");
+    Expect(IsTicketedVbConsumeMode(20, 30, 0, false),
+           "I8-D2: stop VB drain consume vb=30");
     using cutum::IsFmConsumerStarved;
     Expect(IsFmConsumerStarved(3, 1), "arch: fm consumer starved");
     Expect(!IsFmConsumerStarved(0, 0), "arch: no fm no starve");
