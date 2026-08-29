@@ -1,6 +1,7 @@
 #pragma once
 
 #include "World/Streaming/ColumnFlowScheduler.h"
+#include "World/Streaming/ColumnJobGraph.h"
 
 #include <chrono>
 #include <glm/glm.hpp>
