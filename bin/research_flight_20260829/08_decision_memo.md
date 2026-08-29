@@ -36,6 +36,14 @@
 | BackpressureLevel telem | DONE |
 | Full FP-SHIP suite | **pending verification** |
 
+## Autofly verification (2026-08-29 post A→C)
+
+| Run | Result | Highlights |
+| --- | --- | --- |
+| `fz-manual-plateau` | **FP-manual GO** | schedule_ok **4**, capture_retarget **0**, holes **0.51** |
+| FP1 | NO-GO | miss_stuck 16s (limit 15s) |
+| FP2 | NO-GO | stream_ms 104 (autofly overhead) |
+
 ## SHIP status
 
-**PARTIAL** — code landed; await autofly FP-enter + FP-manual + fz-manual-long for gate PASS.
+**PARTIAL** — FP-manual autofly PASS; manual hand-flight re-verify recommended; fz-manual-long pending.
