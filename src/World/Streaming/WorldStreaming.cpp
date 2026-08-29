@@ -703,6 +703,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       static_cast<int>(world.GetPendingLightBeforeMeshCount());
   in.dirty = static_cast<int>(world.GetMeshService().GetDirtyCount());
   in.frame_ms = world.GetLastMovementFrameMs();
+  in.stream_phase_ms = world.PhysicsTelemetryData.WorldStreamingPhaseMs;
   // Pressure focus mode: near miss / underfeet only — rim backlog is not crisis.
   const int miss_horiz = world.PhysicsTelemetryData.MissHoriz;
   in.visual_holes =
@@ -2040,11 +2041,16 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             world.IsPendingLightBeforeMesh(
                 glm::ivec2(SoftDeferCapturePinCx, SoftDeferCapturePinCz)),
             missing_focus_mesh, pin_is_stuck);
-        const bool retarget = ShouldRetargetRelightWitness(
-            ShouldRetargetSoftDeferCaptureWitness(
-                SoftDeferCapturePinValid, SoftDeferCapturePinAge, pin_T,
-                better_horiz, pinned_still),
-            hold_nh2 && SoftDeferCapturePinAge < 48);
+        const bool hold_witness_pin =
+            hold_nh2 &&
+            SoftDeferCapturePinAge < RelightWitnessPinHoldFrames;
+        const bool retarget_allowed = !world.IsEnterSessionActive();
+        const bool retarget = retarget_allowed &&
+            ShouldRetargetRelightWitness(
+                ShouldRetargetSoftDeferCaptureWitness(
+                    SoftDeferCapturePinValid, SoftDeferCapturePinAge, pin_T,
+                    better_horiz, pinned_still),
+                hold_witness_pin);
         if (retarget)
         {
           SoftDeferCapturePinValid = true;

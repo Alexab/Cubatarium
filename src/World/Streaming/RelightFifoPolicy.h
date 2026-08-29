@@ -142,12 +142,16 @@ inline bool ShouldAllowBetterHorizWitnessRetarget(int unfinished, int cand_horiz
 }
 
 /// FZ2.7-P12 C5: damp land-frontier hops while cruise unfinished is high.
+/// FP1: lower thresh — 081522 unf med 7 still retargeted every frame.
 inline bool ShouldDampWitnessRetargetOnUnfinishedCruise(bool moving,
                                                         int unfinished,
-                                                        int thresh = 40)
+                                                        int thresh = 5)
 {
   return moving && unfinished > thresh;
 }
+
+/// FP1: nh≤2 witness pin hold age (frames) before allowing capture retarget.
+inline constexpr int RelightWitnessPinHoldFrames = 120;
 
 /// FZ2.6-P0b: stalled ticket completion prefers mesh_drain over schedule.
 inline bool ShouldPrioritizeMeshDrainForTicketedConsume(
