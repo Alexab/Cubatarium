@@ -1,31 +1,41 @@
-# 08 — Decision memo (flight perf)
+# 08 — Decision memo (flight perf iteration A→C)
 
-## FP0 outcome — DONE
+## Iteration A — Manual parity (LANDED)
 
-- Research pack `bin/research_flight_20260829/` created.
-- FP0–FP5 gates in `flight_sim_phase_gate.py`; cruise metrics in analyzer.
+| Change | Files |
+| --- | --- |
+| FM refill forensics scripts | `scripts/fm_refill_forensics.py`, `witness_bypass_audit.py` |
+| FM enqueue telemetry | `PhysicsTelemetry`, `MarkRelitInstall`, `ColumnFlowExecutor` |
+| RAA bypass HoleDrain nh≤4 | `MeshApplyPolicy`, `ChunkMeshCache` |
+| Cruise MarkMissing on moving holes | `RelightFifoPolicy`, `MarkRelitInstall` |
+| Witness pin promote redirect | `ColumnFlowExecutor`, `WorldStreaming` |
+| HoleDrain Warm carve-out | `MeshWorkAdmission` |
+| FP-manual gate | `flight_sim_phase_gate.py`, `flight_sim_analyze.py` |
 
-## FP1–FP5 implementation — LANDED
+**Forensics root cause:** `schedule_ok=0` → 100% `empty_fm_queue` (not skip blocking).
 
-| Phase | Commit | Key change |
-| --- | --- | --- |
-| FP1 | `38b20e79` | witness pin 120f, damp retarget unf>5, enter blocks capture retarget |
-| FP2 | `7ef76f6a` | FM floor moving holes, emerge budget min 4 under visual holes |
-| FP3 | (in 7ef76f6a) | `ShouldProtectRemeshUnderTicketedVbCruise` |
-| FP4 | `8cd36477` | `ColumnJobGraph.h` stage model |
-| FP5 | `b5907e73` | stream phase backpressure in `StreamingPressure` |
+## Iteration B — Relight chain (LANDED)
 
-## Autofly verification (2026-08-29)
+| Change | Files |
+| --- | --- |
+| FP1 gate uses `relight_apply_final` | `flight_sim_phase_gate.py` |
+| Miss finalize nh≤4 (lit drawable ring) | `WorldPersistence` |
+| FIFO priority front-insert pin | `WorldPersistence` |
+| Ticketed VB consume enqueue | `ColumnFlowExecutor` |
+| keep-until-bind pending relight helper | `RelightFifoPolicy` |
 
-| Run | FP-enter | FP1 | FP2 highlights |
-| --- | --- | --- | --- |
-| `fz-cold-enter` | **PASS** (unfinished=4, ring=2) | capture_retarget med **3** (was 12) | enter non-regress OK |
-| `fz-manual-plateau` | — | — | schedule_ok **4**, unfinished **1**, holes_rate **0.55** (was 1.0) |
+## Iteration C — SHIP slice (PARTIAL)
 
-**Guardrail:** FP-enter PASS — enter-load fix preserved.
-
-**Remaining:** relight_completed spike still 0 on cold-enter cruise; miss_stuck 26s; stream_ms gate needs segment fix; VB 59→target 25.
+| Change | Status |
+| --- | --- |
+| Research 01/05/06/02_baseline_long | DONE (long autofly pending) |
+| ColumnJobGraph job stage map | DONE |
+| ColumnVisualSnapshot header | DONE |
+| MarkDirty lint script | DONE |
+| SeedAtCommit telem | DONE |
+| BackpressureLevel telem | DONE |
+| Full FP-SHIP suite | **pending verification** |
 
 ## SHIP status
 
-**PARTIAL** — architecture slice landed; iterate relight apply + stream budget before FP5 DoD.
+**PARTIAL** — code landed; await autofly FP-enter + FP-manual + fz-manual-long for gate PASS.
