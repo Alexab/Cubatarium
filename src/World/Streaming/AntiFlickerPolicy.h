@@ -10,6 +10,12 @@ constexpr int kSoftDeferCaptureWitnessPinFrames = 8;
 /// instant retarget caused frontier flicker (manual 150840: retarget every frame).
 constexpr int kIngressCaptureRetargetCooldownFrames = 4;
 
+/// I13-A1: allow witness hop only toward focus (smaller horiz), not lateral/back.
+inline bool ShouldAllowFrontierWitnessAdvance(int cand_horiz, int pin_horiz)
+{
+  return cand_horiz >= 0 && pin_horiz >= 0 && cand_horiz < pin_horiz;
+}
+
 /// Era27 I-A1: retarget Capture witness only when pin invalid/expired, or
 /// pinned column no longer SoftDefer-empty/miss. CheapRemesh C4: sticky —
 /// better_horiz alone must not hop while pin age < SLA (hold_nh2 still wins
@@ -19,7 +25,8 @@ inline bool ShouldRetargetSoftDeferCaptureWitness(
     bool pin_valid, int pin_age_frames, int pin_T,
     bool new_witness_better_horiz, bool pinned_still_empty_or_miss,
     bool visual_holes = false,
-    int healed_pin_cooldown_frames = kIngressCaptureRetargetCooldownFrames)
+    int healed_pin_cooldown_frames = kIngressCaptureRetargetCooldownFrames,
+    int cand_horiz = -1, int pin_horiz = -1)
 {
   (void)new_witness_better_horiz;
   constexpr int kHardExpireFrames = 48;
@@ -41,20 +48,30 @@ inline bool ShouldRetargetSoftDeferCaptureWitness(
     {
       return true;
     }
+    if (ShouldAllowFrontierWitnessAdvance(cand_horiz, pin_horiz))
+    {
+      return true;
+    }
     return pin_age_frames >= healed_pin_cooldown_frames;
   }
   return false;
 }
 
 /// I13-A3: hold witness pin while GPU mesh apply is in flight at frontier ingress.
+/// I13-A1: bypass when FM schedule starved or witness advances toward focus.
 inline bool ShouldBlockCaptureRetargetForIngressGpuPending(
-    bool pin_has_pending_or_inflight_gpu, int pin_horiz, bool visual_holes)
+    bool pin_has_pending_or_inflight_gpu, int pin_horiz, bool visual_holes,
+    int cand_horiz = -1, bool fm_schedule_starved = false)
 {
-  if (visual_holes)
+  if (visual_holes || fm_schedule_starved)
   {
     return false;
   }
   if (!pin_has_pending_or_inflight_gpu)
+  {
+    return false;
+  }
+  if (ShouldAllowFrontierWitnessAdvance(cand_horiz, pin_horiz))
   {
     return false;
   }

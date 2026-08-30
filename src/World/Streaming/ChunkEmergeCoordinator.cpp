@@ -2934,8 +2934,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       else if (telem.DarkFaceStaleNearN >= 40 &&
                telem.VisibleBlackProgressN > 0)
       {
-        // I12-E2: stop dark-face progress → mesh_drain floor.
-        mesh_drain = std::max(mesh_drain, 16);
+        // I12-E2 / I13-D1: stop dark-face progress → mesh_drain floor.
+        const int vb_floor =
+            telem.VisibleBlackFocusN > 40 ? 24 : 16;
+        mesh_drain = std::max(mesh_drain, vb_floor);
+      }
+      else if (!moving && telem.VisibleBlackFocusN >= 25 &&
+               telem.VisibleBlackNoTicketN >= 1)
+      {
+        // I13-D1: stop VB plateau without stalled tickets — keep drain alive.
+        mesh_drain = std::max(mesh_drain, 20);
       }
       else if (prioritize_schedule && telem.RelightApplyNPrev >= 2)
       {

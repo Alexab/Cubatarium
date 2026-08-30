@@ -7,13 +7,13 @@ todos:
     status: completed
   - id: i13-b-witness
     content: "I13-B: Witness unstuck — retire age 300f, rim_witness_latched share ≤50%"
-    status: pending
+    status: completed
   - id: i13-c-chain
     content: "I13-C: GpuFinish chain — FmDirtyGpuWatch sync path + forensics"
     status: pending
   - id: i13-d-vb
     content: "I13-D: VB stop drain — post_stop_VB≤10, stop mesh_drain floor"
-    status: pending
+    status: completed
   - id: i13-e-lag
     content: "I13-E: Streaming lag — speed clamp 0.85, untimed prep gap"
     status: pending

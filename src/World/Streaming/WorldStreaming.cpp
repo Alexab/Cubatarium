@@ -2318,9 +2318,15 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             land_frontier && !ocean_heal, cand_horiz,
             ShouldDampOceanCaptureRetarget(ocean_heal, cand_horiz,
                                            better_horiz_raw));
+        const int schedule_ok_now =
+            world.GetMeshService().GetLastMeshDirtyScheduleOkN();
+        const int dirty_fm_now = world.GetMeshService().GetLastDirtyFmN();
+        const bool fm_schedule_starved =
+            dirty_fm_now > 0 && schedule_ok_now < 2;
         if (ShouldDampWitnessRetargetOnUnfinishedCruise(moving_now, unf) ||
-            ShouldDampWitnessRetargetOnRimIdleCruise(rim_witness_idle,
-                                                       cand_horiz))
+            (ShouldDampWitnessRetargetOnRimIdleCruise(rim_witness_idle,
+                                                      cand_horiz) &&
+             !fm_schedule_starved))
         {
           better_horiz = false;
         }
@@ -2353,7 +2359,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         const bool era27_would_retarget =
             ShouldRetargetSoftDeferCaptureWitness(
                 SoftDeferCapturePinValid, SoftDeferCapturePinAge, pin_T,
-                better_horiz, pinned_still, visual_holes_cap);
+                better_horiz, pinned_still, visual_holes_cap,
+                kIngressCaptureRetargetCooldownFrames, cand_horiz,
+                SoftDeferCapturePinHoriz);
         const bool retarget_allowed = !world.IsEnterSessionActive();
         const bool miss_horiz_zero_no_drawable =
             world.PhysicsTelemetryData.MissHoriz == 0 &&
@@ -2376,7 +2384,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         const bool block_ingress_gpu_pending =
             ShouldBlockCaptureRetargetForIngressGpuPending(
                 pin_pending_or_inflight_gpu, SoftDeferCapturePinHoriz,
-                visual_holes_cap);
+                visual_holes_cap, cand_horiz, fm_schedule_starved);
         const bool retarget =
             retarget_allowed && !block_witness_retarget &&
             !block_ingress_gpu_pending &&

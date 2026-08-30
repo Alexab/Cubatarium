@@ -373,6 +373,9 @@ int main()
          "I13-A2: healed pin after cooldown retarget");
   Expect(ShouldRetargetSoftDeferCaptureWitness(true, 2, 8, false, false, true),
          "I13-A2: visual_holes bypass heal cooldown");
+  Expect(ShouldRetargetSoftDeferCaptureWitness(true, 1, 8, false, false, false,
+                                               4, 2, 3),
+         "I13-A1: frontier advance bypasses heal cooldown");
   Expect(!SoftDeferEmptyAgeShouldReset(true, false),
          "Era27 I-A2: still empty no progress ⇒ sticky age");
   Expect(SoftDeferEmptyAgeShouldReset(false, false),
@@ -2302,10 +2305,14 @@ int main()
     Expect(!ShouldEscalateMissWitnessCompletionDrain(true, 3, 0, true, 90),
            "I11-A1: no completion drain without schedule_ok");
     using cutum::ShouldRetireStaleRimMissWitness;
-    Expect(ShouldRetireStaleRimMissWitness(3, 0, false, 700, 0),
-           "I12-A4: retire stale rim witness");
-    Expect(!ShouldRetireStaleRimMissWitness(3, 1, false, 700, 0),
-           "I12-A4: no retire with unfinished");
+    Expect(ShouldRetireStaleRimMissWitness(3, 0, false, 350, 0),
+           "I13-B1: retire stale rim witness at 300f+");
+    Expect(ShouldRetireStaleRimMissWitness(3, 2, false, 350, 0),
+           "I13-B1: retire with rim unfinished<=3");
+    Expect(!ShouldRetireStaleRimMissWitness(3, 1, false, 200, 0),
+           "I13-B1: no retire before age SLA");
+    Expect(!ShouldRetireStaleRimMissWitness(3, 5, false, 700, 0),
+           "I13-B1: no retire when unfinished high");
     Expect(!ShouldRetireStaleRimMissWitness(2, 0, false, 700, 0),
            "I12-A4: no retire underfeet nh");
     Expect(ShouldSkipMissPinWhileGpuDrainOwns(true, true),
@@ -2561,6 +2568,11 @@ int main()
            "I13-A3: visual_holes bypass ingress GPU block");
     Expect(!ShouldBlockCaptureRetargetForIngressGpuPending(false, 2, false),
            "I13-A3: no GPU pending no block");
+    Expect(!ShouldBlockCaptureRetargetForIngressGpuPending(true, 3, false, 2, false),
+           "I13-A1: frontier advance bypasses ingress GPU block");
+    Expect(!ShouldBlockCaptureRetargetForIngressGpuPending(true, 2, false, 3,
+                                                            true),
+           "I13-A1: FM schedule starved bypasses ingress GPU block");
     Expect(!ShouldStopRelightApplySlice(8.0, 1, 8.0, false, true, 3, 2.5),
            "FZ25: consume mode continues past 1@8ms when cap>=3");
     Expect(ShouldStopRelightApplySlice(8.0, 3, 8.0, false, true, 3, 2.5),

@@ -282,13 +282,25 @@ inline bool ShouldGuaranteeResidentWitnessFirstMesh(bool has_chunk,
   return moving && miss_horiz <= 4;
 }
 
-/// I12-A4: retire stale rim witness when slice is healed but latch persists.
+/// I13-B1: rim witness retire age (frames) — was 600 in I12-A4.
+constexpr int kRimMissWitnessRetireAgeFrames = 300;
+
+/// I12-A4 / I13-B1: retire stale rim witness when latch persists past SLA.
+/// Rim unfinished≤3 is witness artifact (182310); do not require unfinished==0.
 inline bool ShouldRetireStaleRimMissWitness(
     int miss_horiz, int unfinished_visual, bool drawable_witness,
-    int miss_witness_age_frames, int column_loaded_no_mesh_n)
+    int miss_witness_age_frames, int column_loaded_no_mesh_n,
+    int max_unfinished_for_retire = 3)
 {
-  return miss_horiz >= 3 && unfinished_visual == 0 && !drawable_witness &&
-         miss_witness_age_frames > 600 && column_loaded_no_mesh_n == 0;
+  if (miss_horiz < 3 || drawable_witness || column_loaded_no_mesh_n > 0)
+  {
+    return false;
+  }
+  if (miss_witness_age_frames <= kRimMissWitnessRetireAgeFrames)
+  {
+    return false;
+  }
+  return unfinished_visual <= max_unfinished_for_retire;
 }
 
 /// I11-A1: schedule_ok positive but witness still !drawable — completion drain.
