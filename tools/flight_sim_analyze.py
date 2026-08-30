@@ -1089,12 +1089,20 @@ def analyze(
 
     def classify_schedule_blocker(r: dict) -> str:
         ok = float(r.get("mesh_dirty_schedule_ok_n") or 0)
+        floor = 4.0
         if ok > 0:
             return "scheduled"
+        if 0 < ok < floor:
+            return "underfloor_schedule"
         if float(r.get("dirty_fm_n") or 0) <= 0:
             return "empty_fm_queue"
         if float(r.get("first_mesh_schedule_cap") or 0) <= 0:
             return "zero_fm_cap"
+        skip_outside = float(
+            r.get("mesh_dirty_schedule_skip_outside_focus_n") or 0
+        )
+        if skip_outside > 0:
+            return "outside_focus_fm"
         skips = {
             "skip_locked": float(r.get("mesh_dirty_schedule_skip_locked_n") or 0),
             "skip_softdefer": float(
@@ -1102,6 +1110,18 @@ def analyze(
             ),
             "skip_pipeline": float(
                 r.get("mesh_dirty_schedule_skip_pipeline_n") or 0
+            ),
+            "skip_orphan": float(
+                r.get("mesh_dirty_schedule_skip_orphan_n") or 0
+            ),
+            "skip_remesh_starve": float(
+                r.get("mesh_dirty_schedule_skip_remesh_starve_n") or 0
+            ),
+            "skip_snapshot": float(
+                r.get("mesh_dirty_schedule_skip_snapshot_n") or 0
+            ),
+            "skip_other": float(
+                r.get("mesh_dirty_schedule_skip_other_n") or 0
             ),
         }
         top = max(skips, key=skips.get)

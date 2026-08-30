@@ -4015,6 +4015,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastMeshDirtyScheduleSkipOrphanN = 0;
   LastMeshDirtyScheduleSkipRemeshStarveN = 0;
   LastMeshDirtyScheduleSkipOtherN = 0;
+  LastMeshDirtyScheduleSkipOutsideFocusFmN = 0;
+  FmConsumerStarvedActive_ = 0;
   LastMeshDirtyGpuMs = 0.0;
   LastMeshDirtyGpuN = 0;
   LastMeshDirtySyncMs = 0.0;
@@ -4555,8 +4557,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                                           EnterFovLitPressure_))
     {
       const int fm_q = static_cast<int>(Dirty.GetFirstMeshCount());
+      const bool fm_consumer_starved =
+          IsFmConsumerStarved(fm_q, LastMeshDirtyScheduleOkN);
       first_mesh_cap = ComputeFirstMeshScheduleEffectiveCap(
-          first_mesh_cap_base, fm_q, FmDirtyEnqueueReserveN_);
+          first_mesh_cap_base, fm_q, FmDirtyEnqueueReserveN_, 4,
+          fm_consumer_starved, LastMeshDirtyScheduleOkN);
+      FmConsumerStarvedActive_ = fm_consumer_starved ? 1 : 0;
     }
     LastFirstMeshScheduleEffectiveCap_ = first_mesh_cap;
     int remesh_cap =
@@ -4918,6 +4924,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         const int horiz = std::max(dx, dz);
         if (horiz > MeshFocusRadiusChunks || HasDrawableGreedyMesh(*it))
         {
+          ++LastMeshDirtyScheduleSkipOutsideFocusFmN;
           ++it;
           continue;
         }

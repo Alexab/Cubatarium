@@ -379,10 +379,11 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
       world.GetPhysicsTelemetry().VisibleBlackFocusN;
   const int visible_black_no_ticket_n =
       world.GetPhysicsTelemetry().VisibleBlackNoTicketN;
+  const int vb_stalled_n = world.GetPhysicsTelemetry().VisibleBlackStalledN;
   // FP-B3 / FP-E0: ticketed VB consume — ring RelightThenMesh when VB debt high.
   const bool vb_consume =
-      IsTicketedVbConsumeMode(visible_black_no_ticket_n, visible_black_n, 0,
-                              moving);
+      IsTicketedVbConsumeMode(visible_black_no_ticket_n, visible_black_n,
+                              vb_stalled_n, moving);
   if (vb_consume)
   {
     if (!scheduler_.Contains(focus, ColumnWorkKind::RelightThenMesh))
@@ -394,7 +395,8 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     {
       const glm::ivec3 fg = focus_ground_horiz;
       int ring_enq = 0;
-      constexpr int kRingTopK = 3;
+      const int kRingTopK =
+          (!moving && visible_black_n >= 25) ? 6 : 3;
       for (int dz = -4; dz <= 4 && ring_enq < kRingTopK; ++dz)
       {
         for (int dx = -4; dx <= 4 && ring_enq < kRingTopK; ++dx)

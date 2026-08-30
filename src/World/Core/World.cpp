@@ -1925,8 +1925,19 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
   int cy1 = std::min(max_cy, FloorDiv(band_max, CHUNK_SIZE));
   if (horiz_from_focus <= 1)
   {
-    cy0 = 0;
-    cy1 = max_cy;
+    const bool moving =
+        LastMovementSpeed > ProceduralTemplate.MovementPrefetchThreshold;
+    const bool visual_holes = PhysicsTelemetryData.VisualHoles > 0;
+    const bool pending_uf = IsPendingLightBeforeMesh(ground_xz);
+    const int mh = PhysicsTelemetryData.MissHoriz;
+    const bool safety_full =
+        visual_holes || pending_uf || (mh >= 0 && mh <= 2);
+    // I10-F2: cruise clear uses camera band only; safety paths keep full column.
+    if (!moving || safety_full)
+    {
+      cy0 = 0;
+      cy1 = max_cy;
+    }
   }
   auto column_mesh_or_gpu = [&](glm::ivec3 coord) -> bool
   {
@@ -4133,6 +4144,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   {
     return 0;
   }
+  int relight_apply_cap = max_per_frame;
   const auto t0 = std::chrono::high_resolution_clock::now();
   int applied = 0;
   if (Persistence)
@@ -4159,6 +4171,10 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
           moving, vb_focus_n, vb_no_ticket_n,
           static_cast<int>(PhysicsTelemetryData.ChunkMeshedUnlitHidden),
           PhysicsTelemetryData.PendingLightFocus);
+  if (vb_no_ticket_n >= 20 && moving)
+  {
+    relight_apply_cap = std::max(relight_apply_cap, 3);
+  }
   const glm::ivec3 pl_focus_chunk =
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
   const int pl_focus_n = CountPendingLightBeforeMeshNear(
@@ -4206,11 +4222,15 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     throughput_mode = true;
     --PhysicsTelemetryData.RelightThroughputHoldN;
   }
-  const double slice_ms = RelightThroughputSliceMs(
+  double slice_ms = RelightThroughputSliceMs(
       miss_reserved_ms, consume_mode, moving, throughput_mode, cap_unit_prev,
       ready_at_start);
+  if (vb_no_ticket_n >= 20 && moving)
+  {
+    slice_ms = std::max(slice_ms, 6.0);
+  }
   const int earned_cap_base = EarnedRelightApplyCap(
-      max_per_frame, slice_ms, 0.0, unit_ms_prev, throughput_mode, vb_stalled_n,
+      relight_apply_cap, slice_ms, 0.0, unit_ms_prev, throughput_mode, vb_stalled_n,
       light_unit_ms_prev, install_unit_ms_prev, ready_at_start,
       PhysicsTelemetryData.RelightFifoN, fifo_soft_cap,
       PhysicsTelemetryData.PendingLightN);
@@ -4223,7 +4243,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   // (DrainCompleted(N) would MarkRelit all N before any early-out).
   bool stopped_by_time = false;
   bool stopped_by_cap = false;
-  while (applied < max_per_frame)
+  while (applied < relight_apply_cap)
   {
     const auto drain_t0 = std::chrono::high_resolution_clock::now();
     std::vector<RelightComputeResult> batch =

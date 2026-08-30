@@ -165,6 +165,14 @@ public:
   {
     return LastMeshDirtyScheduleSkipOtherN;
   }
+  int GetLastMeshDirtyScheduleSkipOutsideFocusFmN() const
+  {
+    return LastMeshDirtyScheduleSkipOutsideFocusFmN;
+  }
+  int GetLastFmConsumerStarvedActive() const
+  {
+    return FmConsumerStarvedActive_;
+  }
   uint64_t GetFreeChunkLiveN() const { return FreeChunkLiveN; }
   double GetLastMeshDirtyGpuMs() const { return LastMeshDirtyGpuMs; }
   int GetLastMeshDirtyGpuN() const { return LastMeshDirtyGpuN; }
@@ -793,6 +801,8 @@ private:
   int LastMeshDirtyScheduleSkipOrphanN{0};
   int LastMeshDirtyScheduleSkipRemeshStarveN{0};
   int LastMeshDirtyScheduleSkipOtherN{0};
+  int LastMeshDirtyScheduleSkipOutsideFocusFmN{0};
+  int FmConsumerStarvedActive_{0};
   /// FZ2.7-P10: publication loss attribution.
   uint64_t FreeChunkLiveN{0};
   double LastMeshDirtyGpuMs{0.0};

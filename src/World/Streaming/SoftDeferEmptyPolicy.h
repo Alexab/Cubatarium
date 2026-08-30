@@ -105,7 +105,7 @@ inline bool ShouldMissTimeSlaKick(bool missing_visible_mesh,
     return false;
   }
   const int sla =
-      (moving && miss_horiz >= 0 && miss_horiz <= 1) ? 1 : sla_periods;
+      (moving && miss_horiz >= 0 && miss_horiz <= 2) ? 1 : sla_periods;
   return miss_age_periods >= sla;
 }
 
@@ -230,6 +230,15 @@ inline bool ShouldRenewMovingNearMissFirstMesh(bool moving,
 {
   return moving && focus_missing_mesh && no_drawable_on_witness &&
          miss_horiz >= 0 && miss_horiz <= 1;
+}
+
+/// I10-C2: moving nh==0 undrawn miss — pin every frame (D1 completion).
+inline bool ShouldRenewMovingNearMissNh0EveryFrame(
+    bool moving, bool focus_missing_mesh, int miss_horiz,
+    bool no_drawable_on_witness)
+{
+  return moving && focus_missing_mesh && no_drawable_on_witness &&
+         miss_horiz == 0;
 }
 
 /// FZ2.7-P16 U2: column-owned FirstMesh on miss witness (nh≤2, !drawable).

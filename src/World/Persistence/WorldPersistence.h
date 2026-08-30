@@ -187,6 +187,9 @@ private:
   int RelightFifoPinSavedN{0};
   int RelightFifoPriorityInsertN{0};
   int RelightFifoProtectBlockN{0};
+  /// I10-B1: last-frame miss context for EnqueueTerrainColumnRelight pin boost.
+  int RelightEnqueueMissHoriz_{-1};
+  int RelightEnqueueWitnessHoldN_{0};
 };
 
 } // namespace cutum

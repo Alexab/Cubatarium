@@ -239,6 +239,8 @@ struct FrameNumbers
   int mesh_dirty_schedule_skip_orphan_n{0};
   int mesh_dirty_schedule_skip_remesh_starve_n{0};
   int mesh_dirty_schedule_skip_other_n{0};
+  int mesh_dirty_schedule_skip_outside_focus_n{0};
+  int fm_consumer_starved_active{0};
   int keep_ring_shrink_n{0};
   uint64_t freechunk_live_n{0};
   int capture_bg_cap_n{-1};
@@ -290,6 +292,13 @@ struct FrameNumbers
   double prep_refresh_vb_ms{0.0};
   double prep_refresh_darkface_ms{0.0};
   double prep_refresh_facing_ms{0.0};
+  double prep_refresh_underfeet_ms{0.0};
+  int stop_vb_drain_frames{0};
+  int stop_vb_budget_active{0};
+  int stop_vb_stuck_frames{0};
+  int miss_witness_age_frames{0};
+  int miss_stuck_run_frames{0};
+  int miss_sla_kick_n{0};
   double prep_pending_light_ms{0.0};
   double prep_black_sticky_ms{0.0};
   double prep_dirty_count_ms{0.0};
@@ -690,6 +699,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_dirty_schedule_skip_remesh_starve_n =
       phys.MeshDirtyScheduleSkipRemeshStarveN;
   n.mesh_dirty_schedule_skip_other_n = phys.MeshDirtyScheduleSkipOtherN;
+  n.mesh_dirty_schedule_skip_outside_focus_n =
+      phys.MeshDirtyScheduleSkipOutsideFocusFmN;
+  n.fm_consumer_starved_active = phys.FmConsumerStarvedActive;
   n.keep_ring_shrink_n = phys.KeepRingShrinkN;
   n.freechunk_live_n = phys.FreeChunkLiveN;
   n.capture_bg_cap_n = phys.CaptureBgCapN;
@@ -744,6 +756,13 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.prep_refresh_vb_ms = phys.PrepRefreshVbMs;
   n.prep_refresh_darkface_ms = phys.PrepRefreshDarkfaceMs;
   n.prep_refresh_facing_ms = phys.PrepRefreshFacingMs;
+  n.prep_refresh_underfeet_ms = phys.PrepRefreshUnderfeetMs;
+  n.stop_vb_drain_frames = phys.StopVbDrainFrames;
+  n.stop_vb_budget_active = phys.StopVbBudgetActive;
+  n.stop_vb_stuck_frames = phys.StopVbStuckFrames;
+  n.miss_witness_age_frames = phys.MissWitnessAgeFramesReport;
+  n.miss_stuck_run_frames = phys.MissStuckRunFrames;
+  n.miss_sla_kick_n = phys.MissSlaKickN;
   n.prep_pending_light_ms = phys.PrepPendingLightMs;
   n.prep_black_sticky_ms = phys.PrepBlackStickyMs;
   n.prep_dirty_count_ms = phys.PrepDirtyCountMs;
@@ -1163,6 +1182,9 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.mesh_dirty_schedule_skip_remesh_starve_n
           << ",\"mesh_dirty_schedule_skip_other_n\":"
           << n.mesh_dirty_schedule_skip_other_n
+          << ",\"mesh_dirty_schedule_skip_outside_focus_n\":"
+          << n.mesh_dirty_schedule_skip_outside_focus_n
+          << ",\"fm_consumer_starved_active\":" << n.fm_consumer_starved_active
           << ",\"keep_ring_shrink_n\":" << n.keep_ring_shrink_n
           << ",\"freechunk_live_n\":" << n.freechunk_live_n
           << ",\"capture_bg_cap_n\":" << n.capture_bg_cap_n
@@ -1217,6 +1239,13 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"prep_refresh_vb_ms\":" << n.prep_refresh_vb_ms
           << ",\"prep_refresh_darkface_ms\":" << n.prep_refresh_darkface_ms
           << ",\"prep_refresh_facing_ms\":" << n.prep_refresh_facing_ms
+          << ",\"prep_refresh_underfeet_ms\":" << n.prep_refresh_underfeet_ms
+          << ",\"stop_vb_drain_frames\":" << n.stop_vb_drain_frames
+          << ",\"stop_vb_budget_active\":" << n.stop_vb_budget_active
+          << ",\"stop_vb_stuck_frames\":" << n.stop_vb_stuck_frames
+          << ",\"miss_witness_age_frames\":" << n.miss_witness_age_frames
+          << ",\"miss_stuck_run_frames\":" << n.miss_stuck_run_frames
+          << ",\"miss_sla_kick_n\":" << n.miss_sla_kick_n
           << ",\"prep_pending_light_ms\":" << n.prep_pending_light_ms
           << ",\"prep_black_sticky_ms\":" << n.prep_black_sticky_ms
           << ",\"prep_dirty_count_ms\":" << n.prep_dirty_count_ms

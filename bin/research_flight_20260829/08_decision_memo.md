@@ -95,5 +95,23 @@ Forensics: sub-timer sum ≈11% of `prep_refresh` — dominant untimed cost is `
 
 **Next:** hand-flight World_164 ≥2 min (gate of record); tune FM admit path when `AdmitFocusVisibleMissing` returns 0 on cruise.
 
-## SHIP verdict: **NO-SHIP** (I9 autofly; hand re-verify pending)
+## Iteration I10 — Visual drain + schedule throughput + perf hold (2026-08-30)
+
+**Status: CODE LANDED, FP-manual hand-verify pending**
+
+| Phase | Delivered |
+| --- | --- |
+| I10-A | VB stop drain: stalled-aware consume, ring top-K=6, stop telem, `ticketed_consume_scan` on stop, `vb_stop_drain_audit.py` |
+| I10-B | Relight FIFO rim pin nh≤4, apply throughput floor under VB debt, witness pin stickiness |
+| I10-C | Miss SLA v2 telem, nh=0 fast path, SLA nh≤2, `miss_stuck_forensics.py` |
+| I10-D | `skip_outside_focus` telem, classifier fix, `fm_consumer_starved` eff_cap soften |
+| I10-E | HoleDrain rim-only WarmBacklog exit, mode3 schedule floor |
+| I10-F | `prep_refresh_underfeet_ms`, incremental underfeet cy-band, FocusRing sticky reuse |
+| I10-G | `10_i10_parity.md`, FP-manual gate protocol |
+
+**Build:** `miss_first_mesh_class_test` — run after merge.
+
+**Rollback trigger:** `holes_rate > 0.55` OR `stream_ms` med +20% vs manual `085951`.
+
+## SHIP verdict: **NO-SHIP** (I10 code landed; FP-manual hand flight pending)
 

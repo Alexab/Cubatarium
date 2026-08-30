@@ -234,6 +234,8 @@ public:
   int GetLastMeshDirtyScheduleSkipOrphanN() const;
   int GetLastMeshDirtyScheduleSkipRemeshStarveN() const;
   int GetLastMeshDirtyScheduleSkipOtherN() const;
+  int GetLastMeshDirtyScheduleSkipOutsideFocusFmN() const;
+  int GetLastFmConsumerStarvedActive() const;
   uint64_t GetFreeChunkLiveN() const;
   double GetLastMeshDirtyGpuMs() const;
   int GetLastMeshDirtyGpuN() const;

@@ -313,7 +313,9 @@ void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z,
   const bool is_pin = ShouldProtectRelightFifoPinKey(
       ground_xz.x, ground_xz.y, RelightFifoPinValid, pin_cx, pin_cz);
   const bool force_priority =
-      priority || ShouldForcePinColumnPriority(is_pin, /*miss_horiz=*/0);
+      priority ||
+      ShouldForcePinColumnPriority(is_pin, RelightEnqueueMissHoriz_,
+                                   RelightEnqueueWitnessHoldN_);
   if (force_priority)
   {
     if (is_pin)
@@ -721,6 +723,8 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   glm::ivec3 soft_defer_hole{};
   bool soft_defer_hole_valid = false;
   const auto &phys_pin = world.GetPhysicsTelemetry();
+  RelightEnqueueMissHoriz_ = phys_pin.MissHoriz;
+  RelightEnqueueWitnessHoldN_ = phys_pin.RelightWitnessHoldN;
   const glm::ivec2 miss_xz(phys_pin.MissCx, phys_pin.MissCz);
   const bool hold_nh2 =
       visual_holes && phys_pin.FocusMissingMesh > 0 &&
@@ -991,6 +995,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       stop_vb_stuck_frames = 0;
     }
     last_stop_vb_no_ticket = vb_no_ticket_n;
+    world.GetPhysicsTelemetryMutable().StopVbStuckFrames = stop_vb_stuck_frames;
     if (stop_vb_stuck_frames > 1200)
     {
       std::vector<glm::ivec2> stuck_cols;

@@ -68,6 +68,8 @@ private:
   int MissStuckSelfHealPeriod{0};
   /// Era22 F2c: once-per-period FirstMesh pin after stuck age threshold.
   int MissStuckForcePinPeriod{0};
+  /// I10-C1: consecutive frames miss stuck without schedule progress.
+  int MissStuckRunFrames{0};
   /// Phase C: wall EMA for adaptive emerge cap on cruise.
   double WallEmaMs{0.0};
   /// Era51 F1a: adaptive stop-phase emerge budget with decay.

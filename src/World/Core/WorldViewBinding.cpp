@@ -859,6 +859,15 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.PrepRefreshVbMs = 0.0;
   PhysicsTelemetryData.PrepRefreshDarkfaceMs = 0.0;
   PhysicsTelemetryData.PrepRefreshFacingMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshUnderfeetMs = 0.0;
+  PhysicsTelemetryData.StopVbDrainFrames = 0;
+  PhysicsTelemetryData.StopVbBudgetActive = 0;
+  PhysicsTelemetryData.StopVbStuckFrames = 0;
+  PhysicsTelemetryData.MissWitnessAgeFramesReport = 0;
+  PhysicsTelemetryData.MissStuckRunFrames = 0;
+  PhysicsTelemetryData.MissSlaKickN = 0;
+  PhysicsTelemetryData.MeshDirtyScheduleSkipOutsideFocusFmN = 0;
+  PhysicsTelemetryData.FmConsumerStarvedActive = 0;
   PhysicsTelemetryData.PrepPendingLightMs = 0.0;
   PhysicsTelemetryData.PrepBlackStickyMs = 0.0;
   PhysicsTelemetryData.PrepDirtyCountMs = 0.0;
@@ -1017,6 +1026,10 @@ void UWorld::TickWorldStreamingPhase()
       GetMeshService().GetLastMeshDirtyScheduleSkipRemeshStarveN();
   PhysicsTelemetryData.MeshDirtyScheduleSkipOtherN =
       GetMeshService().GetLastMeshDirtyScheduleSkipOtherN();
+  PhysicsTelemetryData.MeshDirtyScheduleSkipOutsideFocusFmN =
+      GetMeshService().GetLastMeshDirtyScheduleSkipOutsideFocusFmN();
+  PhysicsTelemetryData.FmConsumerStarvedActive =
+      GetMeshService().GetLastFmConsumerStarvedActive();
   PhysicsTelemetryData.FreeChunkLiveN =
       GetMeshService().GetFreeChunkLiveN();
   PhysicsTelemetryData.MeshDirtyGpuMs =

@@ -1966,7 +1966,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const bool prioritize_schedule =
           ShouldPrioritizeMeshScheduleForTicketedConsume(
               consume_mode, telem.VisibleBlackFocusN,
-              telem.VisibleBlackStalledN, telem.MarkRelitScheduleN);
+              telem.VisibleBlackStalledN, telem.MarkRelitScheduleN,
+              telem.VisibleBlackNoTicketN, /*moving=*/false);
       if (prioritize_drain)
       {
         mesh_drain = std::max(mesh_drain, 16);
@@ -2914,7 +2915,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const bool prioritize_schedule =
         ShouldPrioritizeMeshScheduleForTicketedConsume(
             consume_mode, telem.VisibleBlackFocusN, telem.VisibleBlackStalledN,
-            telem.MarkRelitScheduleN);
+            telem.MarkRelitScheduleN, telem.VisibleBlackNoTicketN, moving);
     if (!moving)
     {
       if (prioritize_drain)
@@ -3660,6 +3661,24 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             exec.Enqueue(owned);
           }
         }
+        // I10-C2: nh==0 moving undrawn miss — pin every frame.
+        if (ShouldRenewMovingNearMissNh0EveryFrame(moving, missing_visible_mesh,
+                                                   nh, no_drawable))
+        {
+          const bool owned = MissSliceAlreadyOwned(
+              mesh_service.IsChunkMeshDirty(isolated_hole),
+              mesh_service.IsRemeshAfterApplyPending(isolated_hole),
+              mesh_service.HasInflightMeshBuild(isolated_hole),
+              mesh_service.IsSoftDeferHeld(isolated_hole),
+              mesh_service.IsPendingGpuApply(isolated_hole),
+              exec.Scheduler().Contains(glm::ivec2(isolated_hole.x, isolated_hole.z),
+                                        ColumnWorkKind::FirstMesh),
+              mesh_service.HasDrawableGreedyMesh(isolated_hole));
+          if (!owned)
+          {
+            pin_isolated_miss(120);
+          }
+        }
         // I8-D1: nh≤1 moving miss — bump FirstMesh priority even if ticketed.
         if (ShouldRenewMovingNearMissFirstMesh(moving, missing_visible_mesh, nh,
                                                no_drawable))
@@ -3771,6 +3790,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           pin_isolated_miss(114);
           mesh_service.PreferKickPendingGpuQueued(isolated_hole);
           mesh_schedule = std::max(mesh_schedule, 12);
+          ++world.GetPhysicsTelemetryMutable().MissSlaKickN;
         }
       }
 
@@ -4132,7 +4152,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         bumped.dirty_admit_budget = std::max(bumped.dirty_admit_budget, 2);
         bumped.softdefer_requeue = std::max(bumped.softdefer_requeue, 1);
         bumped.first_mesh_schedule =
-            std::max(bumped.first_mesh_schedule, 4);
+            std::max(bumped.first_mesh_schedule, 6);
+        ++world.GetPhysicsTelemetryMutable().MissSlaKickN;
         {
           const auto &tune = URuntimeTuning::Get();
           const auto &pt = world.GetPhysicsTelemetry();
@@ -4223,6 +4244,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       {
         pt.AdmissionCarveOut = 0;
       }
+      pt.StopVbDrainFrames = adm.stop_vb_drain_frames_report;
+      pt.StopVbBudgetActive = adm.stop_vb_budget_active;
     }
   }
   // I4b: re-assert calm dirty_tick caps after Finalize — admission floors must
@@ -4327,6 +4350,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               << std::endl;
   }
 #endif
+  {
+    auto &pt = world.GetPhysicsTelemetryMutable();
+    pt.MissWitnessAgeFramesReport = MissWitnessAgeFrames;
+    if (missing_visible_mesh && pt.MeshDirtyScheduleOkN == 0)
+    {
+      ++MissStuckRunFrames;
+    }
+    else
+    {
+      MissStuckRunFrames = 0;
+    }
+    pt.MissStuckRunFrames = MissStuckRunFrames;
+  }
 }
 
 } // namespace cutum

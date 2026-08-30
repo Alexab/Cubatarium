@@ -158,6 +158,8 @@ int main()
          "Era22 I-M8: age < SLA → no PreferKick storm");
   Expect(ShouldMissTimeSlaKick(true, 1, 2, 1, true),
          "I9-D3: nh<=1 moving SLA at 1 period");
+  Expect(ShouldMissTimeSlaKick(true, 1, 2, 2, true),
+         "I10-C3: nh<=2 moving SLA at 1 period");
   Expect(!ShouldMissTimeSlaKick(false, 10),
          "Era22 I-M8: no miss → no time SLA");
   Expect(AsyncScheduleFloorUnderMiss(true) == 0,
@@ -2031,7 +2033,9 @@ int main()
     Expect(RelightFifoEffectiveTrimProtectHoriz(96, 96, 2) == 8,
            "P11: completed>0 keeps full protect horiz");
     Expect(!ShouldCruiseRedFifoSecondTrim(2, 72, 96, 0.75f, true, 5, 0),
-           "P11: no second trim when completed=0");
+           "P11: no second trim when fifo<90 and completed=0");
+    Expect(ShouldCruiseRedFifoSecondTrim(2, 92, 96, 0.75f, true, 5, 0),
+           "I10-B2: consumer-starved trim when fifo>=90 and completed=0");
     Expect(ShouldCruiseRedFifoSecondTrim(2, 72, 96, 0.75f, true, 5, 2),
            "P11: second trim when completed>0");
   }
@@ -2373,6 +2377,8 @@ int main()
            "P1: pin key nh=0 forces priority");
     Expect(!ShouldForcePinColumnPriority(true, 3),
            "P1: pin key nh=3 does not force priority");
+    Expect(ShouldForcePinColumnPriority(true, 3, 1),
+           "I10-B1: pin key nh=3 forces priority when witness hold");
     Expect(!ShouldForcePinColumnPriority(false, 1),
            "P1: non-pin key does not force priority");
   }
@@ -2430,6 +2436,8 @@ int main()
     using cutum::ShouldExtendWitnessPinHold;
     Expect(ShouldExtendWitnessPinHold(200, true), "FP-A3: pinned_still extends hold");
     Expect(!ShouldExtendWitnessPinHold(200, false), "FP-A3: age-only release");
+    Expect(ShouldExtendWitnessPinHold(200, false, RelightWitnessPinHoldFrames, 3, true),
+           "I10-B3: rim miss + rising VB extends hold");
     using cutum::ShouldMarkMissingOnCruiseMovingHoles;
     Expect(ShouldMarkMissingOnCruiseMovingHoles(true, true, 3, 4),
            "FP-A2: cruise moving holes mark missing nh=3");
@@ -2455,6 +2463,8 @@ int main()
            "I8-C1: dirty_fm backlog reserve");
     Expect(ComputeFirstMeshScheduleEffectiveCap(7, 3, 2) >= 2,
            "arch: effective_cap after reserve");
+    Expect(ComputeFirstMeshScheduleEffectiveCap(7, 3, 2, 4, true, 1) >= 2,
+           "I10-D3: consumer-starved soften keeps schedule_ok+1");
     using cutum::ShouldRenewMovingNearMissFirstMesh;
     Expect(ShouldRenewMovingNearMissFirstMesh(true, true, 1, true),
            "I8-D1: moving nh=1 renew FirstMesh");

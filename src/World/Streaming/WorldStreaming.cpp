@@ -565,6 +565,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   pt.PrepRefreshVbMs = 0.0;
   pt.PrepRefreshDarkfaceMs = 0.0;
   pt.PrepRefreshFacingMs = 0.0;
+  pt.PrepRefreshUnderfeetMs = 0.0;
 
   const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
   const glm::ivec3 focus_ground = UChunkManager::WorldToChunk(focus_block);
@@ -800,10 +801,25 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       static_cast<int>(LastPressureCaps.level);
   world.PhysicsTelemetryData.PendingLightFocus = pending_light_focus;
   const auto sticky_t0 = std::chrono::high_resolution_clock::now();
-  const int sticky_remesh =
-      world.CountBlackStickyFocusMeshes(focus_ground, focus_radius);
-  const int pending_dark =
-      world.CountPendingDarkFocusMeshes(focus_ground, focus_radius);
+  const UWorld::FocusRingVisualSample &ring_sample_prev =
+      world.GetFocusRingVisualSample();
+  const bool cruise_ring_reuse =
+      moving_for_telemetry && !missing_near && !pending_underfeet;
+  int sticky_remesh = 0;
+  int pending_dark = 0;
+  if (cruise_ring_reuse && ring_sample_prev.valid &&
+      ring_sample_prev.frame_epoch + 4 >= world.GetStreamingFrameEpoch())
+  {
+    sticky_remesh = ring_sample_prev.black_sticky;
+    pending_dark = ring_sample_prev.pending_light;
+  }
+  else
+  {
+    sticky_remesh =
+        world.CountBlackStickyFocusMeshes(focus_ground, focus_radius);
+    pending_dark =
+        world.CountPendingDarkFocusMeshes(focus_ground, focus_radius);
+  }
   pt.PrepRefreshStickyMs = lap_ms(sticky_t0);
   const int dark_preview = sticky_remesh + pending_dark;
   // Cruise: CountUnfinishedVisualNear/ByFacing walk the whole focus ring with
@@ -915,13 +931,15 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     const bool do_full_scan =
         visible_black_sample_cd <= 0 ||
         (!moving_for_telemetry && vb_focus_stable_frames < 4);
+    const bool ticketed_consume_scan =
+        !moving_for_telemetry || last_visible_black_no_ticket > 10;
     const auto vb_t0 = std::chrono::high_resolution_clock::now();
     if (do_full_scan)
     {
       const int prev_raw = vb_pending_raw;
       const int raw_vb = world.CountVisibleBlackFocusMeshes(
           focus_ground, focus_radius, &no_ticket, &progress_n, &stalled_n,
-          /*ticketed_consume_scan=*/false, vb_focus_stable_frames);
+          ticketed_consume_scan, vb_focus_stable_frames);
       world.PhysicsTelemetryData.VisibleBlackFocusRawN = raw_vb;
       if (prev_raw > 0 && raw_vb == prev_raw)
       {
@@ -1110,6 +1128,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
 
   // Underfeet column: catch draw_ok-but-invisible blind spot (manual 201621).
   {
+    const auto underfeet_t0 = std::chrono::high_resolution_clock::now();
     const glm::ivec2 under_xz(focus_horiz.x, focus_horiz.z);
     const ColumnRenderableState uf =
         world.GetColumnRenderableState(under_xz);
@@ -1168,6 +1187,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
         static_cast<int>(uf.stage);
     world.PhysicsTelemetryData.LightingRelightDeferred =
         world.IsLightingRelightDeferred() ? 1 : 0;
+    pt.PrepRefreshUnderfeetMs = lap_ms(underfeet_t0);
   }
   pt.PrepRefreshPressureMs = lap_ms(refresh_t0);
 }
@@ -2187,9 +2207,16 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             world.IsPendingLightBeforeMesh(
                 glm::ivec2(SoftDeferCapturePinCx, SoftDeferCapturePinCz)),
             missing_focus_mesh, pin_is_stuck);
+        static int last_witness_vb_no_ticket = 0;
+        const int vb_nt_now = world.PhysicsTelemetryData.VisibleBlackNoTicketN;
+        const bool vb_no_ticket_rising = vb_nt_now > last_witness_vb_no_ticket;
+        last_witness_vb_no_ticket = vb_nt_now;
         const bool hold_witness_pin =
             hold_nh2 &&
-            ShouldExtendWitnessPinHold(SoftDeferCapturePinAge, pinned_still);
+            ShouldExtendWitnessPinHold(SoftDeferCapturePinAge, pinned_still,
+                                       RelightWitnessPinHoldFrames,
+                                       world.PhysicsTelemetryData.MissHoriz,
+                                       vb_no_ticket_rising);
         const bool era27_would_retarget =
             ShouldRetargetSoftDeferCaptureWitness(
                 SoftDeferCapturePinValid, SoftDeferCapturePinAge, pin_T,
@@ -2200,7 +2227,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             world.PhysicsTelemetryData.FocusMissingMesh > 0;
         const bool block_witness_retarget = ShouldBlockWitnessCaptureRetarget(
             SoftDeferCapturePinValid, pinned_still, hold_witness_pin,
-            miss_horiz_zero_no_drawable);
+            miss_horiz_zero_no_drawable,
+            world.PhysicsTelemetryData.RelightFifoDropNPrev > 0);
         const bool retarget =
             retarget_allowed && !block_witness_retarget &&
             ShouldRetargetRelightWitness(era27_would_retarget, hold_witness_pin);
@@ -2473,6 +2501,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       if (stop_vb_budget_frames > 0 && stop_vb_budget_frames <= 3600)
       {
         bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 3 : 5);
+        world.PhysicsTelemetryData.StopVbBudgetActive = 1;
+        world.PhysicsTelemetryData.StopVbDrainFrames = stop_vb_budget_frames;
+      }
+      else
+      {
+        world.PhysicsTelemetryData.StopVbBudgetActive = 0;
       }
     }
     // P10: after hard_cap, restore Completed-empty fifo refill floor.

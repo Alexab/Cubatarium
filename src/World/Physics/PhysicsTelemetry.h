@@ -292,6 +292,20 @@ struct PhysicsTelemetry
   double PrepRefreshVbMs{0.0};
   double PrepRefreshDarkfaceMs{0.0};
   double PrepRefreshFacingMs{0.0};
+  /// I10-F1: underfeet block inside RefreshStreamingPressure.
+  double PrepRefreshUnderfeetMs{0.0};
+  /// I10-A2: stop-phase VB drain telemetry.
+  int StopVbDrainFrames{0};
+  int StopVbBudgetActive{0};
+  int StopVbStuckFrames{0};
+  /// I10-C1: miss witness stuck runtime telemetry.
+  int MissWitnessAgeFramesReport{0};
+  int MissStuckRunFrames{0};
+  int MissSlaKickN{0};
+  /// I10-D1: Pass1 skip outside focus FirstMesh walk.
+  int MeshDirtyScheduleSkipOutsideFocusFmN{0};
+  /// I10-D3: FM consumer starved soften active this frame.
+  int FmConsumerStarvedActive{0};
   /// Closeout Phase A: split of former MeshEmergePrepUnfinishedMs.
   double PrepPendingLightMs{0.0};
   double PrepBlackStickyMs{0.0};

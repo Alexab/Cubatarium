@@ -191,13 +191,21 @@ inline int ComputeFmDirtyEnqueueReserve(int enqueue_prior, int schedule_ok_prior
 /// Effective FirstMesh schedule cap after drain-aware reserve.
 inline int ComputeFirstMeshScheduleEffectiveCap(int first_mesh_cap_base,
                                                   int fm_q, int reserve_n,
-                                                  int first_mesh_floor = 4)
+                                                  int first_mesh_floor = 4,
+                                                  bool fm_consumer_starved = false,
+                                                  int schedule_ok_n = 0)
 {
   if (reserve_n <= 0)
   {
     return first_mesh_cap_base;
   }
-  const int reserved_cap = std::max(first_mesh_floor, fm_q - reserve_n);
+  int reserved_cap = std::max(first_mesh_floor, fm_q - reserve_n);
+  // I10-D3: soften consumer-starved clamp — keep schedule_ok+1 throughput.
+  if (fm_consumer_starved && schedule_ok_n >= 0)
+  {
+    reserved_cap =
+        std::max(reserved_cap, std::min(schedule_ok_n + 1, fm_q));
+  }
   return std::min(first_mesh_cap_base, reserved_cap);
 }
 

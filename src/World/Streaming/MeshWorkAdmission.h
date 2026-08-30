@@ -119,6 +119,9 @@ struct MeshWorkAdmission
   Mode mode{Mode::Normal};
   /// FP-A4: this frame used Warm carve-out from HoleDrain FM starvation.
   bool admission_carve_out{false};
+  /// I10-A2: stop VB drain frame counter snapshot (not cumulative).
+  int stop_vb_drain_frames_report{0};
+  int stop_vb_budget_active{0};
 };
 
 /// FP-G2: suppress FM carve-out when hole pressure is high — carved WarmBacklog
@@ -438,7 +441,29 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     hole_drain_fm_fed_frames = 0;
   }
-  if (admission_carve_remain > 0 && mode == MeshWorkAdmission::Mode::HoleDrain)
+  // I10-E1: rim-only HoleDrain exit when FM fed but rim holes persist.
+  static int hole_drain_rim_fed_frames = 0;
+  if (in.dirty_fm_n > 0 &&
+      in.mesh_schedule_ok_n >= std::min(4, in.dirty_fm_n) &&
+      in.nearest_miss_horiz > 2)
+  {
+    ++hole_drain_rim_fed_frames;
+  }
+  else
+  {
+    hole_drain_rim_fed_frames = 0;
+  }
+  if (hole_drain_rim_fed_frames >= 8 &&
+      mode == MeshWorkAdmission::Mode::HoleDrain)
+  {
+    mode = MeshWorkAdmission::Mode::WarmBacklog;
+    hole_drain_rim_fed_frames = 0;
+  }
+  const bool stop_vb_block_carve =
+      !in.moving && in.visible_black_focus_n > 20 &&
+      in.visible_black_no_ticket_n > 0;
+  if (admission_carve_remain > 0 && mode == MeshWorkAdmission::Mode::HoleDrain &&
+      !stop_vb_block_carve)
   {
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     --admission_carve_remain;
@@ -449,7 +474,7 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   {
     --hole_drain_reenter_cd;
     if (holes_moving && !in.missing_underfeet &&
-        mode == MeshWorkAdmission::Mode::HoleDrain)
+        mode == MeshWorkAdmission::Mode::HoleDrain && !stop_vb_block_carve)
     {
       mode = MeshWorkAdmission::Mode::WarmBacklog;
       out.admission_carve_out = true;
@@ -686,6 +711,20 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     out.max_schedule =
         std::max(out.max_schedule, fm + std::max(0, out.remesh_schedule));
   }
+  // I10-E2: HoleDrain schedule floor when FM queue has work but schedule starved.
+  if (out.mode == MeshWorkAdmission::Mode::HoleDrain && in.dirty_fm_n > 0 &&
+      in.mesh_schedule_ok_n < 2)
+  {
+    const int fm_floor = std::min(4, in.dirty_fm_n);
+    out.max_schedule = std::max(out.max_schedule, std::max(2, fm_floor));
+    if (out.first_mesh_schedule > 0)
+    {
+      out.first_mesh_schedule = std::max(out.first_mesh_schedule, fm_floor);
+    }
+  }
+  out.stop_vb_drain_frames_report = stop_vb_drain_frames;
+  out.stop_vb_budget_active =
+      (!in.moving && in.visible_black_no_ticket_n > 0) ? 1 : 0;
   return out;
 }
 

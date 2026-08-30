@@ -1026,6 +1026,16 @@ int UWorldMeshService::GetLastMeshDirtyScheduleSkipOtherN() const
   return Cache.GetLastMeshDirtyScheduleSkipOtherN();
 }
 
+int UWorldMeshService::GetLastMeshDirtyScheduleSkipOutsideFocusFmN() const
+{
+  return Cache.GetLastMeshDirtyScheduleSkipOutsideFocusFmN();
+}
+
+int UWorldMeshService::GetLastFmConsumerStarvedActive() const
+{
+  return Cache.GetLastFmConsumerStarvedActive();
+}
+
 uint64_t UWorldMeshService::GetFreeChunkLiveN() const
 {
   return Cache.GetFreeChunkLiveN();

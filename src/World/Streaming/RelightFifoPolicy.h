@@ -175,13 +175,19 @@ inline bool ShouldPrioritizeMeshDrainForTicketedConsume(
 inline bool ShouldPrioritizeMeshScheduleForTicketedConsume(
     bool consume_mode, int visible_black_focus_n,
     int visible_black_stalled_n, int mark_relit_schedule_n,
-    int vb_thresh = 40)
+    int vb_no_ticket_n = 0, bool moving = true, int vb_thresh = 40)
 {
   if (ShouldPrioritizeMeshDrainForTicketedConsume(
           consume_mode, mark_relit_schedule_n, visible_black_stalled_n,
           vb_thresh))
   {
     return false;
+  }
+  // I10-A1: stop drain schedule floor when VB debt without stalled tickets.
+  if (!moving && visible_black_focus_n >= 25 &&
+      (vb_no_ticket_n >= 1 || visible_black_stalled_n >= 1))
+  {
+    return consume_mode;
   }
   return consume_mode && visible_black_focus_n > vb_thresh &&
          visible_black_stalled_n > 0;
@@ -276,10 +282,19 @@ inline bool ShouldProtectRelightFifoTrimVictim(
 }
 
 /// P1: nh≤2 pin always lives in the priority deque (not far overflow).
-inline bool ShouldForcePinColumnPriority(bool is_pin_key, int miss_horiz)
+inline bool ShouldForcePinColumnPriority(bool is_pin_key, int miss_horiz,
+                                         int witness_hold_n = 0)
 {
-  return is_pin_key && miss_horiz >= 0 &&
-         miss_horiz <= kVisualStageNearFovHoriz;
+  if (!is_pin_key || miss_horiz < 0)
+  {
+    return false;
+  }
+  // I10-B1: LitDrawable ring witness pin when hold active.
+  if (witness_hold_n > 0 && miss_horiz <= RelightMissPinMaxHoriz())
+  {
+    return true;
+  }
+  return miss_horiz <= kVisualStageNearFovHoriz;
 }
 
 /// Cold cruise high PL: use Apply floor matching Capture rate (not Enter×64).
@@ -1084,11 +1099,18 @@ inline bool ShouldBlockWitnessCaptureRetarget(bool capture_pin_valid,
                                               bool pinned_still,
                                               bool hold_witness_pin,
                                               bool miss_horiz_zero_no_drawable =
+                                                  false,
+                                              bool fifo_drop_last_frame =
                                                   false)
 {
   if (miss_horiz_zero_no_drawable)
   {
     return false;
+  }
+  // I10-B3: block retarget after FIFO trim dropped rim witness work.
+  if (fifo_drop_last_frame)
+  {
+    return true;
   }
   return capture_pin_valid && (hold_witness_pin || pinned_still);
 }
@@ -1108,10 +1130,11 @@ inline bool ShouldConsumeTicketedVbDebtHigh(int vb_no_ticket_n,
 inline bool ShouldConsumeTicketedVbStopDrain(bool moving,
                                               int visible_black_focus_n,
                                               int vb_no_ticket_n,
+                                              int vb_stalled_n = 0,
                                               int focus_floor = 25)
 {
   return !moving && visible_black_focus_n >= focus_floor &&
-         vb_no_ticket_n >= 0;
+         (vb_no_ticket_n >= 1 || vb_stalled_n >= 1);
 }
 
 inline bool IsTicketedVbConsumeMode(int vb_no_ticket_n,
@@ -1123,15 +1146,22 @@ inline bool IsTicketedVbConsumeMode(int vb_no_ticket_n,
                                      vb_stalled_n) ||
          ShouldConsumeTicketedVbDebtHigh(vb_no_ticket_n, visible_black_focus_n) ||
          ShouldConsumeTicketedVbStopDrain(moving, visible_black_focus_n,
-                                          vb_no_ticket_n);
+                                          vb_no_ticket_n, vb_stalled_n);
 }
 
 /// FP-A3: extend witness hold past RelightWitnessPinHoldFrames while pinned_still.
 inline bool ShouldExtendWitnessPinHold(int pin_age, bool pinned_still,
                                        int hold_frames =
-                                           RelightWitnessPinHoldFrames)
+                                           RelightWitnessPinHoldFrames,
+                                       int miss_horiz = 99,
+                                       bool vb_no_ticket_rising = false)
 {
   if (pinned_still)
+  {
+    return true;
+  }
+  // I10-B3: rim miss witness stickiness while VB no_ticket debt rises.
+  if (miss_horiz >= 0 && miss_horiz <= 4 && vb_no_ticket_rising)
   {
     return true;
   }
@@ -1218,9 +1248,13 @@ inline bool ShouldCruiseRedFifoSecondTrim(int stream_pressure, int fifo_n,
                                           int pending_light_focus,
                                           int completed_n)
 {
+  // I10-B2: consumer-starved trim when fifo full and no apply throughput.
   if (completed_n <= 0)
   {
-    return false;
+    return fifo_n >= 90 &&
+           ShouldCruiseRedFifoLightDrain(stream_pressure, fifo_n, soft_cap,
+                                         fifo_frac, holes_or_miss,
+                                         pending_light_focus);
   }
   return ShouldCruiseRedFifoLightDrain(stream_pressure, fifo_n, soft_cap,
                                        fifo_frac, holes_or_miss,
