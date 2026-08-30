@@ -93,11 +93,20 @@ inline bool ShouldEnqueueNearestVbNoTicket(bool visible_black_no_ticket,
 }
 
 /// Era22 I-M8: miss witness age (periods ≈2s) ⇒ PreferKick + admit bump.
+/// I9-D3: nh≤1 moving — SLA at 1 period instead of 2.
 inline bool ShouldMissTimeSlaKick(bool missing_visible_mesh,
                                   int miss_age_periods,
-                                  int sla_periods = 2)
+                                  int sla_periods = 2,
+                                  int miss_horiz = 99,
+                                  bool moving = false)
 {
-  return missing_visible_mesh && miss_age_periods >= sla_periods;
+  if (!missing_visible_mesh)
+  {
+    return false;
+  }
+  const int sla =
+      (moving && miss_horiz >= 0 && miss_horiz <= 1) ? 1 : sla_periods;
+  return miss_age_periods >= sla;
 }
 
 /// Closeout F: schedule floor folded into pools — always 0.

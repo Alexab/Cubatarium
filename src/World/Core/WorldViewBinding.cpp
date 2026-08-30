@@ -852,6 +852,13 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.PrepSoftdeferPolicyMs = 0.0;
   PhysicsTelemetryData.PrepIsolatedMissMs = 0.0;
   PhysicsTelemetryData.PrepRefreshPressureMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshMissMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshPendingMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshStickyMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshUnfinishedMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshVbMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshDarkfaceMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshFacingMs = 0.0;
   PhysicsTelemetryData.PrepPendingLightMs = 0.0;
   PhysicsTelemetryData.PrepBlackStickyMs = 0.0;
   PhysicsTelemetryData.PrepDirtyCountMs = 0.0;

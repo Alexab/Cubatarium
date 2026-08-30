@@ -283,6 +283,13 @@ struct FrameNumbers
   double prep_softdefer_policy_ms{0.0};
   double prep_isolated_miss_ms{0.0};
   double prep_refresh_pressure_ms{0.0};
+  double prep_refresh_miss_ms{0.0};
+  double prep_refresh_pending_ms{0.0};
+  double prep_refresh_sticky_ms{0.0};
+  double prep_refresh_unfinished_ms{0.0};
+  double prep_refresh_vb_ms{0.0};
+  double prep_refresh_darkface_ms{0.0};
+  double prep_refresh_facing_ms{0.0};
   double prep_pending_light_ms{0.0};
   double prep_black_sticky_ms{0.0};
   double prep_dirty_count_ms{0.0};
@@ -730,6 +737,13 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.prep_softdefer_policy_ms = phys.PrepSoftdeferPolicyMs;
   n.prep_isolated_miss_ms = phys.PrepIsolatedMissMs;
   n.prep_refresh_pressure_ms = phys.PrepRefreshPressureMs;
+  n.prep_refresh_miss_ms = phys.PrepRefreshMissMs;
+  n.prep_refresh_pending_ms = phys.PrepRefreshPendingMs;
+  n.prep_refresh_sticky_ms = phys.PrepRefreshStickyMs;
+  n.prep_refresh_unfinished_ms = phys.PrepRefreshUnfinishedMs;
+  n.prep_refresh_vb_ms = phys.PrepRefreshVbMs;
+  n.prep_refresh_darkface_ms = phys.PrepRefreshDarkfaceMs;
+  n.prep_refresh_facing_ms = phys.PrepRefreshFacingMs;
   n.prep_pending_light_ms = phys.PrepPendingLightMs;
   n.prep_black_sticky_ms = phys.PrepBlackStickyMs;
   n.prep_dirty_count_ms = phys.PrepDirtyCountMs;
@@ -1196,6 +1210,13 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"prep_softdefer_policy_ms\":" << n.prep_softdefer_policy_ms
           << ",\"prep_isolated_miss_ms\":" << n.prep_isolated_miss_ms
           << ",\"prep_refresh_pressure_ms\":" << n.prep_refresh_pressure_ms
+          << ",\"prep_refresh_miss_ms\":" << n.prep_refresh_miss_ms
+          << ",\"prep_refresh_pending_ms\":" << n.prep_refresh_pending_ms
+          << ",\"prep_refresh_sticky_ms\":" << n.prep_refresh_sticky_ms
+          << ",\"prep_refresh_unfinished_ms\":" << n.prep_refresh_unfinished_ms
+          << ",\"prep_refresh_vb_ms\":" << n.prep_refresh_vb_ms
+          << ",\"prep_refresh_darkface_ms\":" << n.prep_refresh_darkface_ms
+          << ",\"prep_refresh_facing_ms\":" << n.prep_refresh_facing_ms
           << ",\"prep_pending_light_ms\":" << n.prep_pending_light_ms
           << ",\"prep_black_sticky_ms\":" << n.prep_black_sticky_ms
           << ",\"prep_dirty_count_ms\":" << n.prep_dirty_count_ms

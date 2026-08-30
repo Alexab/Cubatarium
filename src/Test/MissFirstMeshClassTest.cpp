@@ -156,6 +156,8 @@ int main()
          "Era22 I-M8: miss age ≥2 periods → PreferKick");
   Expect(!ShouldMissTimeSlaKick(true, 1),
          "Era22 I-M8: age < SLA → no PreferKick storm");
+  Expect(ShouldMissTimeSlaKick(true, 1, 2, 1, true),
+         "I9-D3: nh<=1 moving SLA at 1 period");
   Expect(!ShouldMissTimeSlaKick(false, 10),
          "Era22 I-M8: no miss → no time SLA");
   Expect(AsyncScheduleFloorUnderMiss(true) == 0,

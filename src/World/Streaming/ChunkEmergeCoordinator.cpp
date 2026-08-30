@@ -3672,6 +3672,24 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           renew.cy = isolated_hole.y;
           exec.Enqueue(renew);
         }
+        // I9-D1: nh≤1 stuck miss — pin when age>60 frames without owner.
+        if (moving && missing_visible_mesh && nh <= 1 && no_drawable &&
+            MissWitnessAgeFrames > 60)
+        {
+          const bool owned = MissSliceAlreadyOwned(
+              mesh_service.IsChunkMeshDirty(isolated_hole),
+              mesh_service.IsRemeshAfterApplyPending(isolated_hole),
+              mesh_service.HasInflightMeshBuild(isolated_hole),
+              mesh_service.IsSoftDeferHeld(isolated_hole),
+              mesh_service.IsPendingGpuApply(isolated_hole),
+              exec.Scheduler().Contains(glm::ivec2(isolated_hole.x, isolated_hole.z),
+                                        ColumnWorkKind::FirstMesh),
+              mesh_service.HasDrawableGreedyMesh(isolated_hole));
+          if (!owned)
+          {
+            pin_isolated_miss(120);
+          }
+        }
         // Era24 P3 / I-E5: miss_cy>1 residual — pin FirstMesh on witness cy
         // (SoftDefer empty heal must not leave higher-cy hole orphaned).
         const int miss_age_periods_now = MissWitnessAgeFrames / 120;
@@ -3747,7 +3765,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       // overwrite).
       {
         const int miss_age_periods = MissWitnessAgeFrames / 120;
-        if (ShouldMissTimeSlaKick(missing_visible_mesh, miss_age_periods))
+        if (ShouldMissTimeSlaKick(missing_visible_mesh, miss_age_periods, 2, nh,
+                                  moving))
         {
           pin_isolated_miss(114);
           mesh_service.PreferKickPendingGpuQueued(isolated_hole);
@@ -3967,6 +3986,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
   }
   ApplyUnderfeetReservationFloors(mesh_drain, mesh_schedule, uf_res);
+  // I9-C2: cruise FM starvation — ColumnFlow drain + underfeet FirstMesh nudge.
+  if (moving && !visual_holes && mesh_service.GetLastDirtyFmN() == 0 &&
+      mesh_service.GetLastMeshDirtyScheduleOkN() < 4)
+  {
+    note_column_flow_drain(std::max(column_flow_drain_n, 2), 2);
+    GetColumnFlowExecutor().Enqueue(
+        glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+        ColumnWorkKind::FirstMesh, 105);
+  }
   // F0: drain-first — ColumnFlow DrainBudget before GPU consume so PreferKick
   // from MarkRelit/tickets lands in the same frame (Sodium one-owner).
   // Single Seam MarkDirty window: DrainRemeshSeamBudget here only (mid-frame
@@ -4092,7 +4120,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     // Era22 I-M8: FocusIngress admit bump after Finalize (age SLA).
     {
       const int miss_age_periods = MissWitnessAgeFrames / 120;
-      if (ShouldMissTimeSlaKick(missing_visible_mesh, miss_age_periods))
+      const int nh_kick =
+          have_nearest_missing
+              ? std::max(std::abs(isolated_hole.x - focus_ground_horiz.x),
+                         std::abs(isolated_hole.z - focus_ground_horiz.z))
+              : 99;
+      if (ShouldMissTimeSlaKick(missing_visible_mesh, miss_age_periods, 2,
+                                nh_kick, moving))
       {
         MeshWorkAdmission bumped = adm;
         bumped.dirty_admit_budget = std::max(bumped.dirty_admit_budget, 2);
@@ -4228,13 +4262,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   mesh_service.SetEnterUnderfeetExitBlocked(
       world.IsEnterLitGateActive() && !world.IsEnterUnderfeetPresentReady());
   {
+    const int dirty_fm_pre_rebuild = mesh_service.GetLastDirtyFmN();
     const int fm_reserve =
         ShouldDeferFmDirtyEnqueueReserve(world.IsEnterLitGateActive(),
                                        mesh_service.IsEnterLitQuiesce(),
                                        world.IsEnterFovLitPassActive())
             ? 0
             : ComputeFmDirtyEnqueueReserve(
-                  std::max(s_fm_enqueue_prior, s_dirty_fm_prior),
+                  std::max(s_fm_enqueue_prior,
+                           std::max(s_dirty_fm_prior, dirty_fm_pre_rebuild)),
                   s_schedule_ok_prior);
     mesh_service.SetFmDirtyEnqueueReserve(fm_reserve);
     world.GetPhysicsTelemetryMutable().FmDirtyEnqueueReserveN = fm_reserve;

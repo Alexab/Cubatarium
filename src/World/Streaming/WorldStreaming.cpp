@@ -551,17 +551,32 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
 void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
 {
   const auto refresh_t0 = std::chrono::high_resolution_clock::now();
+  auto lap_ms = [&](const std::chrono::high_resolution_clock::time_point &t0)
+  {
+    return std::chrono::duration<double, std::milli>(
+               std::chrono::high_resolution_clock::now() - t0)
+        .count();
+  };
+  auto &pt = world.GetPhysicsTelemetryMutable();
+  pt.PrepRefreshMissMs = 0.0;
+  pt.PrepRefreshPendingMs = 0.0;
+  pt.PrepRefreshStickyMs = 0.0;
+  pt.PrepRefreshUnfinishedMs = 0.0;
+  pt.PrepRefreshVbMs = 0.0;
+  pt.PrepRefreshDarkfaceMs = 0.0;
+  pt.PrepRefreshFacingMs = 0.0;
+
   const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
   const glm::ivec3 focus_ground = UChunkManager::WorldToChunk(focus_block);
   const glm::ivec3 focus_horiz(focus_ground.x, 0, focus_ground.z);
   const int focus_radius = world.GetStreamingFocusRadius();
+  const bool moving_for_telemetry =
+      world.GetLastMovementSpeed() >
+      world.GetProceduralSettings().MovementPrefetchThreshold;
   const bool enter_miss_probe =
       ShouldUseEnterSpawnMissProbe(world.IsEnterLitGateActive(),
                                    world.NeedsEnterGameMeshWarmup(),
-                                   world.NeedsSpawnRingCatchUp(),
-                                   world.GetLastMovementSpeed() >
-                                       world.GetProceduralSettings()
-                                           .MovementPrefetchThreshold);
+                                   world.NeedsSpawnRingCatchUp(), moving_for_telemetry);
   const int pending_pl_radius =
       (world.IsEnterLitGateActive() || world.NeedsEnterGameMeshWarmup() ||
        world.NeedsSpawnRingCatchUp())
@@ -569,9 +584,42 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
           : focus_radius;
   const int miss_probe_radius =
       enter_miss_probe ? EnterVisualWorkRadiusChunks() : focus_radius;
-  const bool missing_near =
-      world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
-          world.GetBlockWorld(), focus_ground, miss_probe_radius);
+  const auto miss_t0 = std::chrono::high_resolution_clock::now();
+  // I9-B2: throttle miss probe on cruise — hold positive 8 frames.
+  static int miss_probe_cd = 0;
+  static bool last_missing_near = false;
+  static int miss_positive_hold = 0;
+  bool missing_near = last_missing_near;
+  const bool run_miss_probe =
+      enter_miss_probe || !moving_for_telemetry || miss_probe_cd <= 0 ||
+      last_missing_near;
+  if (run_miss_probe)
+  {
+    missing_near =
+        world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
+            world.GetBlockWorld(), focus_ground, miss_probe_radius);
+    if (moving_for_telemetry && !enter_miss_probe)
+    {
+      miss_probe_cd = missing_near ? 0 : 4;
+    }
+  }
+  else if (moving_for_telemetry)
+  {
+    --miss_probe_cd;
+  }
+  if (missing_near)
+  {
+    miss_positive_hold = 8;
+  }
+  else if (miss_positive_hold > 0)
+  {
+    --miss_positive_hold;
+    if (miss_positive_hold > 0)
+    {
+      missing_near = last_missing_near;
+    }
+  }
+  last_missing_near = missing_near;
   const int prev_miss_cx = world.PhysicsTelemetryData.MissCx;
   const int prev_miss_cz = world.PhysicsTelemetryData.MissCz;
   const int prev_hold_n = world.PhysicsTelemetryData.RelightWitnessHoldN;
@@ -678,6 +726,18 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
           }
         }
       }
+      // I9-D2: near miss witness — ColumnFlow FirstMesh owner in pressure path.
+      if (world.PhysicsTelemetryData.MissHoriz <= 1 &&
+          !world.GetMeshService().HasDrawableGreedyMesh(miss_coord))
+      {
+        ColumnWorkItem fm{};
+        fm.column = miss_xz;
+        fm.kind = ColumnWorkKind::FirstMesh;
+        fm.priority = 112;
+        fm.scan_full_focus = false;
+        fm.cy = miss_coord.y;
+        exec.Enqueue(fm);
+      }
     }
   }
   else
@@ -693,6 +753,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       world.Persistence->SetRelightFifoPin(glm::ivec2(0), false);
     }
   }
+  pt.PrepRefreshMissMs = lap_ms(miss_t0);
   // Underfeet is a subset of focus — skip second full resident scan when focus
   // already reports no missing mesh (CB stream_ms on no-hole fly).
   const glm::ivec3 camera_ground(focus_horiz.x, 0, focus_horiz.z);
@@ -706,8 +767,14 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
           world.GetBlockWorld(), focus_ground, /*radius=*/0);
   const bool missing_underfeet =
       missing_underfeet_mesh && !incomplete_camera_column;
+  const auto pending_t0 = std::chrono::high_resolution_clock::now();
+  const int effective_pl_radius =
+      (moving_for_telemetry && !missing_near)
+          ? std::min(pending_pl_radius, 2)
+          : pending_pl_radius;
   const int pending_light_focus =
-      world.CountPendingLightBeforeMeshNear(focus_horiz, pending_pl_radius);
+      world.CountPendingLightBeforeMeshNear(focus_horiz, effective_pl_radius);
+  pt.PrepRefreshPendingMs = lap_ms(pending_t0);
   const bool pending_underfeet = world.IsPendingLightBeforeMesh(
       glm::ivec2(focus_horiz.x, focus_horiz.z));
 
@@ -732,30 +799,47 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   world.PhysicsTelemetryData.BackpressureLevel =
       static_cast<int>(LastPressureCaps.level);
   world.PhysicsTelemetryData.PendingLightFocus = pending_light_focus;
+  const auto sticky_t0 = std::chrono::high_resolution_clock::now();
   const int sticky_remesh =
       world.CountBlackStickyFocusMeshes(focus_ground, focus_radius);
   const int pending_dark =
       world.CountPendingDarkFocusMeshes(focus_ground, focus_radius);
+  pt.PrepRefreshStickyMs = lap_ms(sticky_t0);
   const int dark_preview = sticky_remesh + pending_dark;
   // Cruise: CountUnfinishedVisualNear/ByFacing walk the whole focus ring with
   // IsTerrainChunkComplete + IsColumnRenderReady — ~5–9ms of stream_ms on
   // no-hole fly (CB wall_ms_no_holes). Idle/stop still needs the full count
   // for F2 fd_end / not_ready. Holes still use HasMissing above.
-  const bool moving_for_telemetry =
-      world.GetLastMovementSpeed() >
-      world.GetProceduralSettings().MovementPrefetchThreshold;
   // Cruise: sample unfinished every N frames. Hold last SoT count between
   // samples for UnfinishedVisual / FocusNotRenderReady (ARCH gates).
   // FocusPressure = pending+dirty proxy for scheduler pressure only.
-  const int focus_dirty_chunks =
-      world.GetMeshService().CountDirtyWithinHorizontalRadius(focus_horiz,
+  static int focus_dirty_sample_cd = 0;
+  static int last_focus_dirty = 0;
+  static glm::ivec3 last_dirty_focus{0};
+  static int last_dirty_radius = -1;
+  int focus_dirty_chunks = last_focus_dirty;
+  if (focus_horiz != last_dirty_focus || focus_radius != last_dirty_radius)
+  {
+    focus_dirty_sample_cd = 0;
+    last_dirty_focus = focus_horiz;
+    last_dirty_radius = focus_radius;
+  }
+  if (!moving_for_telemetry || in.visual_holes || --focus_dirty_sample_cd <= 0)
+  {
+    focus_dirty_chunks =
+        world.GetMeshService().CountDirtyWithinHorizontalRadius(focus_horiz,
                                                               focus_radius);
+    last_focus_dirty = focus_dirty_chunks;
+    focus_dirty_sample_cd =
+        (moving_for_telemetry && !in.visual_holes) ? 8 : 0;
+  }
   static int unfinished_sample_cd = 0;
   static int last_unfinished_visual = 0;
   static glm::ivec3 last_unfinished_focus{0};
   static int last_unfinished_radius = -1;
   int unfinished_visual = 0;
   int focus_pressure = 0;
+  const auto unfinished_t0 = std::chrono::high_resolution_clock::now();
   if (focus_horiz != last_unfinished_focus ||
       focus_radius != last_unfinished_radius)
   {
@@ -795,6 +879,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       focus_pressure = unfinished_visual;
     }
   }
+  pt.PrepRefreshUnfinishedMs = lap_ms(unfinished_t0);
   world.SetLastUnfinishedVisualSample(unfinished_visual);
   {
     UWorld::FocusRingVisualSample sample{};
@@ -829,7 +914,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     int stalled_n = 0;
     const bool do_full_scan =
         visible_black_sample_cd <= 0 ||
-        (!moving_for_telemetry && vb_focus_stable_frames < 8);
+        (!moving_for_telemetry && vb_focus_stable_frames < 4);
+    const auto vb_t0 = std::chrono::high_resolution_clock::now();
     if (do_full_scan)
     {
       const int prev_raw = vb_pending_raw;
@@ -868,7 +954,14 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
         vb_pending_stable = 1;
       }
       visible_black_sample_cd =
-          moving_for_telemetry ? (vb_focus_stable_frames >= 8 ? 10 : 4) : 0;
+          moving_for_telemetry
+              ? (vb_focus_stable_frames >= 4
+                     ? 10
+                     : (vb_published < 20 && last_visible_black_no_ticket == 0
+                            ? 8
+                            : 4))
+              : 0;
+      pt.PrepRefreshVbMs += lap_ms(vb_t0);
       UWorld::VisibleBlackFocusSample vb_sample{};
       vb_sample.frame_epoch = world.GetStreamingFrameEpoch();
       vb_sample.focus_n = vb_published;
@@ -904,9 +997,16 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   world.PhysicsTelemetryData.FocusNotRenderReady = unfinished_visual;
   world.PhysicsTelemetryData.FocusPressure = focus_pressure;
   world.PhysicsTelemetryData.FocusDirtyChunks = focus_dirty_chunks;
+  // I9-B1: cruise fast-path — skip expensive darkface/facing scans.
+  const bool pressure_cruise_fast =
+      moving_for_telemetry && !missing_near && !pending_underfeet &&
+      unfinished_visual <= 1 &&
+      world.PhysicsTelemetryData.VisibleBlackFocusN <= 8;
   // Actual baked-dark vertices near camera (not PendingLight proxy).
   // Split stale (mesh dark, field lit) vs void-edge (both 0) for ARCH_D3.
+  if (!pressure_cruise_fast)
   {
+    const auto darkface_t0 = std::chrono::high_resolution_clock::now();
     world.PhysicsTelemetryData.DarkFaceNearN = 0;
     world.PhysicsTelemetryData.DarkFaceStaleNearN = 0;
     world.PhysicsTelemetryData.DarkFaceVoidNearN = 0;
@@ -936,6 +1036,14 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
         world.PhysicsTelemetryData.DarkFaceDist = hit.dist;
       }
     }
+    pt.PrepRefreshDarkfaceMs = lap_ms(darkface_t0);
+  }
+  else
+  {
+    world.PhysicsTelemetryData.DarkFaceNearN = 0;
+    world.PhysicsTelemetryData.DarkFaceStaleNearN = 0;
+    world.PhysicsTelemetryData.DarkFaceVoidNearN = 0;
+    world.PhysicsTelemetryData.DarkFaceDist = 0.0;
   }
   {
     static int facing_sample_cd = 0;
@@ -954,22 +1062,32 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     }
     if (!moving_for_telemetry)
     {
+      const auto facing_t0 = std::chrono::high_resolution_clock::now();
       world.CountUnfinishedVisualByFacing(focus_horiz, focus_radius, fwd, ahead,
                                           behind);
+      pt.PrepRefreshFacingMs = lap_ms(facing_t0);
       last_ahead = ahead;
       last_behind = behind;
       facing_sample_cd = 4;
     }
-    else if (--facing_sample_cd <= 0)
+    else if (pressure_cruise_fast)
     {
+      ahead = last_ahead;
+      behind = last_behind;
+    }
+    else if (facing_sample_cd <= 0)
+    {
+      const auto facing_t0 = std::chrono::high_resolution_clock::now();
       world.CountUnfinishedVisualByFacing(focus_horiz, focus_radius, fwd, ahead,
                                           behind);
+      pt.PrepRefreshFacingMs = lap_ms(facing_t0);
       last_ahead = ahead;
       last_behind = behind;
       facing_sample_cd = 4;
     }
     else
     {
+      --facing_sample_cd;
       ahead = last_ahead;
       behind = last_behind;
     }
@@ -1051,10 +1169,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     world.PhysicsTelemetryData.LightingRelightDeferred =
         world.IsLightingRelightDeferred() ? 1 : 0;
   }
-  world.PhysicsTelemetryData.PrepRefreshPressureMs +=
-      std::chrono::duration<double, std::milli>(
-          std::chrono::high_resolution_clock::now() - refresh_t0)
-          .count();
+  pt.PrepRefreshPressureMs = lap_ms(refresh_t0);
 }
 
 void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)

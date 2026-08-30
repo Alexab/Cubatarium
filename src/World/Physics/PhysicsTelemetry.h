@@ -284,6 +284,14 @@ struct PhysicsTelemetry
   double PrepSoftdeferPolicyMs{0.0};
   double PrepIsolatedMissMs{0.0};
   double PrepRefreshPressureMs{0.0};
+  /// I9-A: RefreshStreamingPressure sub-timers (sum ≈ PrepRefreshPressureMs).
+  double PrepRefreshMissMs{0.0};
+  double PrepRefreshPendingMs{0.0};
+  double PrepRefreshStickyMs{0.0};
+  double PrepRefreshUnfinishedMs{0.0};
+  double PrepRefreshVbMs{0.0};
+  double PrepRefreshDarkfaceMs{0.0};
+  double PrepRefreshFacingMs{0.0};
   /// Closeout Phase A: split of former MeshEmergePrepUnfinishedMs.
   double PrepPendingLightMs{0.0};
   double PrepBlackStickyMs{0.0};
