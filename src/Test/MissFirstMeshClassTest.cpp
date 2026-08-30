@@ -2297,6 +2297,13 @@ int main()
            "I11-A1: completion drain when schedule_ok !drawable");
     Expect(!ShouldEscalateMissWitnessCompletionDrain(true, 3, 0, true, 90),
            "I11-A1: no completion drain without schedule_ok");
+    using cutum::ShouldRetireStaleRimMissWitness;
+    Expect(ShouldRetireStaleRimMissWitness(3, 0, false, 700, 0),
+           "I12-A4: retire stale rim witness");
+    Expect(!ShouldRetireStaleRimMissWitness(3, 1, false, 700, 0),
+           "I12-A4: no retire with unfinished");
+    Expect(!ShouldRetireStaleRimMissWitness(2, 0, false, 700, 0),
+           "I12-A4: no retire underfeet nh");
     Expect(ShouldSkipMissPinWhileGpuDrainOwns(true, true),
            "I11-A1: skip pin when GPU owns slice");
     Expect(!ShouldSkipMissPinWhileGpuDrainOwns(false, true),

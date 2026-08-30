@@ -187,6 +187,7 @@ public:
                                       int radius_chunks) const;
   int CountDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
                                        int radius_chunks) const;
+  int GetLastFocusDirtyReconcileDelta() const;
   bool HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y, int max_y) const;
   bool HasPendingAsyncMeshWork() const;
   bool HasAsyncInflightInHorizontalRadius(glm::ivec3 center_ground_chunk,

@@ -453,6 +453,23 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     hole_drain_fm_fed_frames = 0;
   }
+  // I12-C2: HoleDrain with empty FM queue — soften to WarmBacklog.
+  static int hole_drain_empty_fm_frames = 0;
+  if (mode == MeshWorkAdmission::Mode::HoleDrain && in.dirty_fm_n == 0)
+  {
+    ++hole_drain_empty_fm_frames;
+  }
+  else
+  {
+    hole_drain_empty_fm_frames = 0;
+  }
+  if (hole_drain_empty_fm_frames >= 4 &&
+      mode == MeshWorkAdmission::Mode::HoleDrain &&
+      !(in.nearest_miss_horiz <= 2 && in.missing_underfeet))
+  {
+    mode = MeshWorkAdmission::Mode::WarmBacklog;
+    hole_drain_empty_fm_frames = 0;
+  }
   // I10-E1: rim-only HoleDrain exit when FM fed but rim holes persist.
   static int hole_drain_rim_fed_frames = 0;
   if (in.dirty_fm_n > 0 &&

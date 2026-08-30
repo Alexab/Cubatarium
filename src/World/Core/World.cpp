@@ -4462,9 +4462,18 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       static_cast<uint64_t>(AsyncRelight->GetInFlightCount());
   PhysicsTelemetryData.MarkRelitToFmDirtyN =
       PhysicsTelemetryData.FmDirtyEnqueueFromMarkRelitN;
-  if (applied > 0 && vb_focus_n >= 20)
+  if (applied > 0 && vb_focus_n >= 20 &&
+      (PhysicsTelemetryData.GpuFinishN > 0 ||
+       PhysicsTelemetryData.MarkRelitToFmDirtyN > 0 ||
+       PhysicsTelemetryData.MarkRelitChainProgressFrames > 0))
   {
     PhysicsTelemetryData.PostRelightApplyMeshDrainFloor = 14;
+  }
+  if (PhysicsTelemetryData.MarkRelitToFmDirtyN > 0 &&
+      PhysicsTelemetryData.MissCompletionStuckFrames > 60)
+  {
+    PhysicsTelemetryData.PostRelightApplyMeshDrainFloor =
+        std::max(PhysicsTelemetryData.PostRelightApplyMeshDrainFloor, 14);
   }
   PhysicsTelemetryData.RelightDiscardedLate =
       AsyncRelight->GetDiscardedLateCount();

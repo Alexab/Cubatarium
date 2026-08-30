@@ -282,6 +282,15 @@ inline bool ShouldGuaranteeResidentWitnessFirstMesh(bool has_chunk,
   return moving && miss_horiz <= 4;
 }
 
+/// I12-A4: retire stale rim witness when slice is healed but latch persists.
+inline bool ShouldRetireStaleRimMissWitness(
+    int miss_horiz, int unfinished_visual, bool drawable_witness,
+    int miss_witness_age_frames, int column_loaded_no_mesh_n)
+{
+  return miss_horiz >= 3 && unfinished_visual == 0 && !drawable_witness &&
+         miss_witness_age_frames > 600 && column_loaded_no_mesh_n == 0;
+}
+
 /// I11-A1: schedule_ok positive but witness still !drawable — completion drain.
 inline bool ShouldEscalateMissWitnessCompletionDrain(
     bool focus_missing_mesh, int miss_horiz, int schedule_ok_n,

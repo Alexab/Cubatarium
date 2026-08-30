@@ -1610,6 +1610,17 @@ int UChunkMeshCache::CountDirtyWithinHorizontalRadius(
   {
     return 0;
   }
+  if (FocusDirtyCacheValid_ && center_chunk.x == FocusDirtyQueryCenter_.x &&
+      center_chunk.z == FocusDirtyQueryCenter_.z &&
+      radius_chunks == FocusDirtyQueryRadius_)
+  {
+    if (--FocusDirtyReconcileCd_ <= 0)
+    {
+      ReconcileFocusDirtyRingCache();
+      FocusDirtyReconcileCd_ = 32;
+    }
+    return FocusDirtyCachedCount_;
+  }
   int count = 0;
   for (const glm::ivec3 &coord : Dirty)
   {
@@ -1620,7 +1631,71 @@ int UChunkMeshCache::CountDirtyWithinHorizontalRadius(
       ++count;
     }
   }
+  SeedFocusDirtyRingCache(center_chunk, radius_chunks, count);
+  FocusDirtyReconcileCd_ = 32;
   return count;
+}
+
+void UChunkMeshCache::InvalidateFocusDirtyRingCache()
+{
+  FocusDirtyCacheValid_ = false;
+}
+
+bool UChunkMeshCache::CoordInFocusDirtyQuery(glm::ivec3 coord) const
+{
+  if (!FocusDirtyCacheValid_)
+  {
+    return false;
+  }
+  const int dx = std::abs(coord.x - FocusDirtyQueryCenter_.x);
+  const int dz = std::abs(coord.z - FocusDirtyQueryCenter_.z);
+  return std::max(dx, dz) <= FocusDirtyQueryRadius_;
+}
+
+void UChunkMeshCache::NoteFocusDirtyRingChange(glm::ivec3 coord, int delta)
+{
+  if (!FocusDirtyCacheValid_ || delta == 0)
+  {
+    return;
+  }
+  if (!CoordInFocusDirtyQuery(coord))
+  {
+    return;
+  }
+  FocusDirtyCachedCount_ += delta;
+  if (FocusDirtyCachedCount_ < 0)
+  {
+    FocusDirtyCacheValid_ = false;
+  }
+}
+
+void UChunkMeshCache::SeedFocusDirtyRingCache(glm::ivec3 center, int radius,
+                                              int count) const
+{
+  FocusDirtyQueryCenter_ = center;
+  FocusDirtyQueryRadius_ = radius;
+  FocusDirtyCachedCount_ = count;
+  FocusDirtyCacheValid_ = true;
+  LastFocusDirtyReconcileDelta_ = 0;
+}
+
+void UChunkMeshCache::ReconcileFocusDirtyRingCache() const
+{
+  if (!FocusDirtyCacheValid_)
+  {
+    return;
+  }
+  int count = 0;
+  for (const glm::ivec3 &coord : Dirty)
+  {
+    if (CoordInFocusDirtyQuery(coord))
+    {
+      ++count;
+    }
+  }
+  LastFocusDirtyReconcileDelta_ =
+      std::abs(count - FocusDirtyCachedCount_);
+  FocusDirtyCachedCount_ = count;
 }
 
 int UChunkMeshCache::ParkDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
@@ -1637,6 +1712,7 @@ int UChunkMeshCache::ParkDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
     const int dz = std::abs(it->z - center_chunk.z);
     if (std::max(dx, dz) <= radius_chunks)
     {
+      NoteFocusDirtyRingChange(*it, -1);
       it = Dirty.RemoveAt(it);
       ++parked;
     }
@@ -2165,6 +2241,7 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
   {
     return;
   }
+  NoteFocusDirtyRingChange(chunkCoord, 1);
   BumpChunkMeshRevision(chunkCoord);
   // Do not InvalidateFluidSurface here: full-column remesh calls MarkDirty for
   // every cy×seam and kept fluid_map_dirty permanently high (100+), burning
@@ -2380,6 +2457,7 @@ void UChunkMeshCache::MarkDirtyPriority(glm::ivec3 chunkCoord)
   if (!existed)
   {
     BumpChunkMeshRevision(chunkCoord);
+    NoteFocusDirtyRingChange(chunkCoord, 1);
   }
   InstancesDirty = true;
   GreedyBatchesDirty = true;
@@ -3529,6 +3607,10 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         ++processed;
         ++finished;
         ++stats.Completed;
+        if (FmDirtyGpuWatch_.erase(pending.coord) > 0)
+        {
+          ++FmDirtyToGpuFinishMatchN_;
+        }
       }
     }
   }
@@ -4029,6 +4111,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastDirtyRevisitSameN = 0;
   LastDirtyScheduleDedupN = 0;
   ScheduledThisFrame_.clear();
+  FmDirtyGpuWatch_.clear();
+  FmDirtyToGpuFinishMatchN_ = 0;
   // Sky-only / enter: orphan RemeshAfterApply with no Dirty/Active/GPU owner must
   // become Dirty. FullyDark drawable is NOT "owned" — enter PreferKick-only left
   // remesh_after_apply=32 with raa_commit=0 (manual 123647).
@@ -4794,6 +4878,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       ActiveMeshSourceRevision[*it] = snapshot.sourceRevision;
       AsyncBuilder->Enqueue(std::move(snapshot), registry);
       ScheduledThisFrame_.insert(*it);
+      if (Dirty.IsFirstMesh(*it))
+      {
+        FmDirtyGpuWatch_.insert(*it);
+      }
+      NoteFocusDirtyRingChange(*it, -1);
       it = Dirty.RemoveAt(it);
       ++scheduled;
       ++stats.Scheduled;
@@ -5248,6 +5337,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       ActiveMeshSourceRevision[*it] = snapshot.sourceRevision;
       AsyncBuilder->Enqueue(std::move(snapshot), registry);
       ScheduledThisFrame_.insert(*it);
+      if (Dirty.IsFirstMesh(*it))
+      {
+        FmDirtyGpuWatch_.insert(*it);
+      }
+      NoteFocusDirtyRingChange(*it, -1);
       it = Dirty.RemoveAt(it);
       ++scheduled;
       ++stats.Scheduled;

@@ -294,6 +294,16 @@ struct PhysicsTelemetry
   double PrepRefreshFacingMs{0.0};
   /// I10-F1: underfeet block inside RefreshStreamingPressure.
   double PrepRefreshUnderfeetMs{0.0};
+  /// I12-B1: RefreshStreamingPressure untimed sub-timers.
+  double PrepRefreshDirtyMs{0.0};
+  double PrepRefreshPressureEvalMs{0.0};
+  double PrepRefreshUnderfeetProbeMs{0.0};
+  /// I12-A7: focus dirty ring cache reconcile drift (audit).
+  int FocusDirtyReconcileDelta{0};
+  /// I12-A0: rim witness latched without visual holes.
+  int RimWitnessLatched{0};
+  /// I12-D3: witness re-probe when pinned schedule stalls.
+  int MissWitnessRetargetN{0};
   /// I10-A2: stop-phase VB drain telemetry.
   int StopVbDrainFrames{0};
   int StopVbBudgetActive{0};

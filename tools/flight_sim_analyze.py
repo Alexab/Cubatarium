@@ -1151,6 +1151,30 @@ def analyze(
     dominant_schedule_blocker = (
         max(blocker_counts, key=blocker_counts.get) if blocker_counts else None
     )
+    witness_latch_diet_frames = sum(
+        1
+        for r in fly_spikes
+        if float(r.get("rim_witness_latched") or 0) > 0
+        and float(
+            r.get("prep_refresh_pressure_ms") or r.get("prep_refresh_ms") or 0
+        )
+        > 40.0
+    )
+    empty_fm_completion_stuck_frames = sum(
+        1
+        for r in fly_spikes
+        if float(r.get("mesh_dirty_schedule_ok_n") or 0) == 0
+        and float(r.get("dirty_fm_n") or 0) == 0
+        and float(r.get("miss_completion_stuck_frames") or 0) > 60
+        and float(r.get("focus_missing_mesh") or 0) > 0
+    )
+    visual_holes_telemetry_mismatch_frames = sum(
+        1
+        for r in fly_spikes
+        if float(r.get("focus_missing_mesh") or 0) > 0
+        and float(r.get("visual_holes") or 0) == 0
+        and float(r.get("miss_horiz") or 0) >= 3
+    )
     cruise_relight_completed_throughput = None
     if len(fly_spikes) >= 2:
         rc0 = float(fly_spikes[0].get("relight_completed_n") or 0)
@@ -1595,6 +1619,11 @@ def analyze(
             "mesh_emerge_ms": mesh_emerge_ms_med,
             "world_streaming_phase_ms": world_streaming_phase_ms_med,
             "dominant_schedule_blocker": dominant_schedule_blocker,
+            "witness_latch_diet_frames": witness_latch_diet_frames,
+            "empty_fm_completion_stuck_frames": empty_fm_completion_stuck_frames,
+            "visual_holes_telemetry_mismatch_frames": (
+                visual_holes_telemetry_mismatch_frames
+            ),
             "cruise_relight_completed_throughput": cruise_relight_completed_throughput,
             "unfinished_visual": unfinished_visual_med,
             "visible_black_focus_n": visible_black_focus_med,

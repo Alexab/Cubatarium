@@ -801,6 +801,11 @@ int UWorldMeshService::CountDirtyWithinHorizontalRadius(
   return Cache.CountDirtyWithinHorizontalRadius(center_chunk, radius_chunks);
 }
 
+int UWorldMeshService::GetLastFocusDirtyReconcileDelta() const
+{
+  return Cache.GetLastFocusDirtyReconcileDelta();
+}
+
 bool UWorldMeshService::HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y,
                                              int max_y) const
 {

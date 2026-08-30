@@ -2931,6 +2931,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         mesh_drain = std::max(mesh_drain, 16);
         mesh_schedule = std::min(mesh_schedule, mesh_drain);
       }
+      else if (telem.DarkFaceStaleNearN >= 40 &&
+               telem.VisibleBlackProgressN > 0)
+      {
+        // I12-E2: stop dark-face progress → mesh_drain floor.
+        mesh_drain = std::max(mesh_drain, 16);
+      }
       else if (prioritize_schedule && telem.RelightApplyNPrev >= 2)
       {
         mesh_schedule = std::max(mesh_schedule, 12);
@@ -3810,6 +3816,40 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             }
             pin_isolated_miss(118);
           }
+          // I12-C1: completion stuck + empty FM → column-owned FirstMesh.
+          if (world.GetPhysicsTelemetry().MissCompletionStuckFrames > 60 &&
+              mesh_service.GetLastDirtyFmN() == 0 && schedule_ok < 4 &&
+              no_drawable && miss_resident)
+          {
+            const glm::ivec2 miss_xz(isolated_hole.x, isolated_hole.z);
+            if (!exec.Scheduler().Contains(miss_xz, ColumnWorkKind::FirstMesh))
+            {
+              ColumnWorkItem fm{};
+              fm.column = miss_xz;
+              fm.kind = ColumnWorkKind::FirstMesh;
+              fm.priority = 112;
+              fm.scan_full_focus = false;
+              fm.cy = isolated_hole.y;
+              exec.Enqueue(fm);
+              note_column_flow_drain(2, 1);
+              mesh_service.SetFmDirtyEnqueueReserve(1);
+            }
+          }
+        }
+        // I12-D3: stale pinned witness with schedule_ok=0 → re-probe nearest miss.
+        if (world.GetPhysicsTelemetry().MeshDirtyScheduleOkN == 0 &&
+            MissWitnessAgeFrames > 300 && nh >= 3)
+        {
+          glm::ivec3 reprobe{0};
+          if (mesh_service.FindNearestMissingGreedyMesh(
+                  world.GetBlockWorld(), focus_ground_horiz, focus_radius,
+                  reprobe))
+          {
+            world.GetPhysicsTelemetryMutable().MissCx = reprobe.x;
+            world.GetPhysicsTelemetryMutable().MissCy = reprobe.y;
+            world.GetPhysicsTelemetryMutable().MissCz = reprobe.z;
+            ++world.GetPhysicsTelemetryMutable().MissWitnessRetargetN;
+          }
         }
         // I11-A3: nh≤4 moving rim — column-owned FirstMesh every 120f.
         static int rim_ownership_cd = 0;
@@ -4436,7 +4476,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       MissCompletionStuckFrames = 0;
     }
     pt.MissCompletionStuckFrames = MissCompletionStuckFrames;
-    if (pt.FmDirtyDrainN > 0 && pt.GpuFinishN > 0)
+    const int fm_gpu_finish =
+        mesh_service.GetCache().GetFmDirtyToGpuFinishMatchN();
+    if (fm_gpu_finish > 0)
+    {
+      pt.FmDirtyToGpuFinishN = fm_gpu_finish;
+    }
+    else if (pt.FmDirtyDrainN > 0 && pt.GpuFinishN > 0)
     {
       pt.FmDirtyToGpuFinishN = std::min(pt.FmDirtyDrainN, pt.GpuFinishN);
     }

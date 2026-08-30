@@ -101,6 +101,10 @@ public:
   /// Dirty chunk count inside Chebyshev radius (lit-but-dirty debt metric).
   int CountDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
                                        int radius_chunks) const;
+  int GetLastFocusDirtyReconcileDelta() const
+  {
+    return LastFocusDirtyReconcileDelta_;
+  }
   /// Drop Dirty entries inside Chebyshev radius (spawn park while relight deferred).
   int ParkDirtyWithinHorizontalRadius(glm::ivec3 center_chunk, int radius_chunks);
   bool HasDirtyInColumnBand(glm::ivec2 ground_xz, int min_y, int max_y) const;
@@ -396,6 +400,7 @@ public:
     ColumnLoadedNoMeshPressure_ = n;
   }
   void SetFmDirtyEnqueueReserve(int n) { FmDirtyEnqueueReserveN_ = n; }
+  int GetFmDirtyToGpuFinishMatchN() const { return FmDirtyToGpuFinishMatchN_; }
   int GetLastFirstMeshScheduleEffectiveCap() const
   {
     return LastFirstMeshScheduleEffectiveCap_;
@@ -891,6 +896,18 @@ private:
   glm::ivec3 MeshFocusGroundChunk{0};
   int MeshFocusRadiusChunks{6};
   bool MeshFocusValid{false};
+  /// I12-A7: incremental focus-ring dirty count cache.
+  mutable glm::ivec3 FocusDirtyQueryCenter_{0};
+  mutable int FocusDirtyQueryRadius_{-1};
+  mutable int FocusDirtyCachedCount_{0};
+  mutable bool FocusDirtyCacheValid_{false};
+  mutable int FocusDirtyReconcileCd_{0};
+  mutable int LastFocusDirtyReconcileDelta_{0};
+  void InvalidateFocusDirtyRingCache();
+  bool CoordInFocusDirtyQuery(glm::ivec3 coord) const;
+  void NoteFocusDirtyRingChange(glm::ivec3 coord, int delta);
+  void SeedFocusDirtyRingCache(glm::ivec3 center, int radius, int count) const;
+  void ReconcileFocusDirtyRingCache() const;
   bool JustRelitFirstMeshValid_{false};
   glm::ivec2 JustRelitFirstMeshColumn_{0};
   int MeshVerticalPreferredCy{0};
@@ -957,6 +974,9 @@ private:
   bool EnterFovLitPressure_{false};
   int ColumnLoadedNoMeshPressure_{0};
   int FmDirtyEnqueueReserveN_{0};
+  /// I12-D1: FM dirty coords scheduled this emerge tick awaiting GpuFinish.
+  std::unordered_set<glm::ivec3, IVec3Hash> FmDirtyGpuWatch_;
+  int FmDirtyToGpuFinishMatchN_{0};
   int LastFirstMeshScheduleEffectiveCap_{0};
   bool EnterUnderfeetExitBlocked_{false};
   bool Fz2DeferGated_{true};

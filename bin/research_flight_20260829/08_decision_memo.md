@@ -130,5 +130,24 @@ Forensics: sub-timer sum ≈11% of `prep_refresh` — dominant untimed cost is `
 
 **Rollback trigger:** `holes_rate > 0.55` OR `stream_ms` med +20% vs baseline `100455`.
 
-## SHIP verdict: **NO-SHIP** (I11 code landed; FP-manual hand flight pending)
+## Iteration I12 — Witness stream diet + schedule recovery (2026-08-30)
+
+**Status: CODE LANDED, FP-manual hand-verify pending**
+
+| Phase | Delivered |
+| --- | --- |
+| I12-A0 | `visual_holes` SoT, `rim_witness_idle_diet`, miss probe throttle 8f, unfinished latch fix |
+| I12-A | Rim cruise fast-path, ring/unfinished reuse, `ShouldRetireStaleRimMissWitness`, underfeet column probe |
+| I12-A7 | Incremental focus_dirty ring cache, `focus_dirty_reconcile_delta` telem |
+| I12-B | `prep_refresh_dirty/eval/underfeet_probe_ms`, `refresh_pressure_audit.py` v2 |
+| I12-C | Completion-stuck FM enqueue, `hole_drain_empty_fm` WarmBacklog guard, classifier v4 |
+| I12-D | Coord-matched `FmDirtyToGpuFinish`, MarkRelit reserve under completion stuck, witness retarget |
+| I12-E | Relight apply boost gate (gpu/markrelit chain), stop dark-face mesh_drain bind |
+| I12-F | `12_i12_parity.md`, segment regression fields, FP-manual protocol |
+
+**Baseline manual I11:** `perf_20260830-134006_30332.jsonl` — stream 131ms, holes 0.41, schedule_ok 0.
+
+**Rollback trigger:** `holes_rate > 0.55` OR `stream_ms` med не падает ≥15% vs `134006` после I12-A0+A7.
+
+## SHIP verdict: **NO-SHIP** (I12 code landed; FP-manual hand flight pending)
 

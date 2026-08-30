@@ -16,6 +16,10 @@ REFRESH_FIELDS = [
     ("prep_refresh_vb_ms", "vb"),
     ("prep_refresh_darkface_ms", "darkface"),
     ("prep_refresh_facing_ms", "facing"),
+    ("prep_refresh_underfeet_ms", "underfeet_col"),
+    ("prep_refresh_underfeet_probe_ms", "underfeet_probe"),
+    ("prep_refresh_dirty_ms", "dirty"),
+    ("prep_refresh_pressure_eval_ms", "eval"),
 ]
 
 
@@ -64,7 +68,20 @@ def audit_one(path: Path, label: str) -> None:
     ]
     if totals and parts_sum:
         ratio = med(parts_sum) / max(med(totals), 0.001)
+        untimed = [max(0.0, t - p) for t, p in zip(totals, parts_sum)]
         print(f"  subtimer_sum/total med ratio = {ratio:.2f}")
+        print(f"  untimed med = {med(untimed):.2f}")
+    for seg_name, seg_rows in [
+        ("early", steady[: len(steady) // 3]),
+        ("mid", steady[len(steady) // 3 : 2 * len(steady) // 3]),
+        ("late", steady[2 * len(steady) // 3 :]),
+    ]:
+        if not seg_rows:
+            continue
+        print(
+            f"  seg {seg_name}: prep={med([r.get('prep_refresh_pressure_ms') for r in seg_rows]):.1f} "
+            f"stream={med([r.get('stream_ms') for r in seg_rows]):.1f}"
+        )
     top = max(REFRESH_FIELDS[1:], key=lambda kv: med([r.get(kv[0]) for r in steady]))
     print(f"  top hotspot: {top[1]}")
 
