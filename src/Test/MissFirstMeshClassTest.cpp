@@ -367,8 +367,12 @@ int main()
          "Era27 I-A1: pin_age ≥ T ⇒ retarget");
   Expect(!ShouldRetargetSoftDeferCaptureWitness(true, 2, 8, true, true),
          "CheapRemesh C4: better_horiz alone does not hop while age<T");
-  Expect(ShouldRetargetSoftDeferCaptureWitness(true, 2, 8, false, false),
-         "Era27 I-A1: pinned healed ⇒ retarget");
+  Expect(!ShouldRetargetSoftDeferCaptureWitness(true, 2, 8, false, false),
+         "I13-A2: healed pin cooldown before retarget");
+  Expect(ShouldRetargetSoftDeferCaptureWitness(true, 4, 8, false, false),
+         "I13-A2: healed pin after cooldown retarget");
+  Expect(ShouldRetargetSoftDeferCaptureWitness(true, 2, 8, false, false, true),
+         "I13-A2: visual_holes bypass heal cooldown");
   Expect(!SoftDeferEmptyAgeShouldReset(true, false),
          "Era27 I-A2: still empty no progress ⇒ sticky age");
   Expect(SoftDeferEmptyAgeShouldReset(false, false),
@@ -2545,6 +2549,18 @@ int main()
            "arch: no damp retarget when unf=7");
     Expect(ShouldDampWitnessRetargetOnUnfinishedCruise(true, 8),
            "arch: damp retarget when unf>=8");
+    using cutum::ShouldDampWitnessRetargetOnRimIdleCruise;
+    Expect(ShouldDampWitnessRetargetOnRimIdleCruise(true, 3),
+           "I13-A3: rim idle damp nh=3");
+    Expect(!ShouldDampWitnessRetargetOnRimIdleCruise(false, 3),
+           "I13-A3: moving no rim idle damp");
+    using cutum::ShouldBlockCaptureRetargetForIngressGpuPending;
+    Expect(ShouldBlockCaptureRetargetForIngressGpuPending(true, 2, false),
+           "I13-A3: block retarget during ingress GPU pending");
+    Expect(!ShouldBlockCaptureRetargetForIngressGpuPending(true, 2, true),
+           "I13-A3: visual_holes bypass ingress GPU block");
+    Expect(!ShouldBlockCaptureRetargetForIngressGpuPending(false, 2, false),
+           "I13-A3: no GPU pending no block");
     Expect(!ShouldStopRelightApplySlice(8.0, 1, 8.0, false, true, 3, 2.5),
            "FZ25: consume mode continues past 1@8ms when cap>=3");
     Expect(ShouldStopRelightApplySlice(8.0, 3, 8.0, false, true, 3, 2.5),

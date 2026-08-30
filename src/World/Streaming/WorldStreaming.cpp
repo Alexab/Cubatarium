@@ -2307,13 +2307,20 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             world.PhysicsTelemetryData.VisibleBlackFocusN);
         const bool land_frontier =
             IsLandFrontierPressure(moving_now, void_n_budget);
+        const bool visual_holes_cap =
+            world.PhysicsTelemetryData.VisualHoles > 0;
+        const bool rim_witness_idle =
+            !moving_now && missing_focus_mesh &&
+            world.PhysicsTelemetryData.MissHoriz >= 3 && !visual_holes_cap;
         const bool better_horiz_raw = ShouldAllowBetterHorizWitnessRetarget(
             unf, cand_horiz, SoftDeferCapturePinHoriz);
         bool better_horiz = ShouldDampLandFrontierWitnessRetarget(
             land_frontier && !ocean_heal, cand_horiz,
             ShouldDampOceanCaptureRetarget(ocean_heal, cand_horiz,
                                            better_horiz_raw));
-        if (ShouldDampWitnessRetargetOnUnfinishedCruise(moving_now, unf))
+        if (ShouldDampWitnessRetargetOnUnfinishedCruise(moving_now, unf) ||
+            ShouldDampWitnessRetargetOnRimIdleCruise(rim_witness_idle,
+                                                       cand_horiz))
         {
           better_horiz = false;
         }
@@ -2346,7 +2353,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         const bool era27_would_retarget =
             ShouldRetargetSoftDeferCaptureWitness(
                 SoftDeferCapturePinValid, SoftDeferCapturePinAge, pin_T,
-                better_horiz, pinned_still);
+                better_horiz, pinned_still, visual_holes_cap);
         const bool retarget_allowed = !world.IsEnterSessionActive();
         const bool miss_horiz_zero_no_drawable =
             world.PhysicsTelemetryData.MissHoriz == 0 &&
@@ -2355,11 +2362,28 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             SoftDeferCapturePinValid, pinned_still, hold_witness_pin,
             miss_horiz_zero_no_drawable,
             world.PhysicsTelemetryData.RelightFifoDropNPrev > 0);
+        bool pin_pending_or_inflight_gpu = false;
+        if (SoftDeferCapturePinValid)
+        {
+          const glm::ivec3 pin_coord(
+              SoftDeferCapturePinCx,
+              SoftDeferCapturePinCy >= 0 ? SoftDeferCapturePinCy : 0,
+              SoftDeferCapturePinCz);
+          pin_pending_or_inflight_gpu =
+              world.GetMeshService().IsPendingGpuApply(pin_coord) ||
+              world.GetMeshService().IsGpuExtractInFlight(pin_coord);
+        }
+        const bool block_ingress_gpu_pending =
+            ShouldBlockCaptureRetargetForIngressGpuPending(
+                pin_pending_or_inflight_gpu, SoftDeferCapturePinHoriz,
+                visual_holes_cap);
         const bool retarget =
             retarget_allowed && !block_witness_retarget &&
+            !block_ingress_gpu_pending &&
             ShouldRetargetRelightWitness(era27_would_retarget, hold_witness_pin);
         if (!retarget && era27_would_retarget &&
-            (hold_witness_pin || block_witness_retarget))
+            (hold_witness_pin || block_witness_retarget ||
+             block_ingress_gpu_pending))
         {
           ++world.PhysicsTelemetryData.SoftDeferCaptureRetargetBlockedN;
         }

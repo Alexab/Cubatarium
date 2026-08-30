@@ -159,6 +159,14 @@ inline bool ShouldDampWitnessRetargetOnUnfinishedCruise(bool moving,
   return moving && unfinished > thresh;
 }
 
+/// I13-A3: manual-idle rim witness — damp better_horiz hops (movement_speed=0
+/// bypasses unfinished cruise damp; 150840 retarget thrash on autofly path).
+inline bool ShouldDampWitnessRetargetOnRimIdleCruise(bool rim_witness_idle,
+                                                     int witness_horiz)
+{
+  return rim_witness_idle && witness_horiz >= 0 && witness_horiz <= 4;
+}
+
 /// FP1: nh≤2 witness pin hold age (frames) before allowing capture retarget.
 inline constexpr int RelightWitnessPinHoldFrames = 120;
 

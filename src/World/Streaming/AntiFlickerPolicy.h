@@ -6,13 +6,20 @@ namespace cutum
 /// Era27 I-A1: SoftDefer Capture witness pin length (frames).
 constexpr int kSoftDeferCaptureWitnessPinFrames = 8;
 
+/// I13-A2: after pin column heals (drawable), wait before hopping witness —
+/// instant retarget caused frontier flicker (manual 150840: retarget every frame).
+constexpr int kIngressCaptureRetargetCooldownFrames = 4;
+
 /// Era27 I-A1: retarget Capture witness only when pin invalid/expired, or
 /// pinned column no longer SoftDefer-empty/miss. CheapRemesh C4: sticky —
 /// better_horiz alone must not hop while pin age < SLA (hold_nh2 still wins
 /// via ShouldRetargetRelightWitness).
+/// I13-A2: healed pin requires cooldown unless visual_holes.
 inline bool ShouldRetargetSoftDeferCaptureWitness(
     bool pin_valid, int pin_age_frames, int pin_T,
-    bool new_witness_better_horiz, bool pinned_still_empty_or_miss)
+    bool new_witness_better_horiz, bool pinned_still_empty_or_miss,
+    bool visual_holes = false,
+    int healed_pin_cooldown_frames = kIngressCaptureRetargetCooldownFrames)
 {
   (void)new_witness_better_horiz;
   constexpr int kHardExpireFrames = 48;
@@ -30,9 +37,28 @@ inline bool ShouldRetargetSoftDeferCaptureWitness(
   }
   if (!pinned_still_empty_or_miss)
   {
-    return true;
+    if (visual_holes)
+    {
+      return true;
+    }
+    return pin_age_frames >= healed_pin_cooldown_frames;
   }
   return false;
+}
+
+/// I13-A3: hold witness pin while GPU mesh apply is in flight at frontier ingress.
+inline bool ShouldBlockCaptureRetargetForIngressGpuPending(
+    bool pin_has_pending_or_inflight_gpu, int pin_horiz, bool visual_holes)
+{
+  if (visual_holes)
+  {
+    return false;
+  }
+  if (!pin_has_pending_or_inflight_gpu)
+  {
+    return false;
+  }
+  return pin_horiz >= 0 && pin_horiz <= 4;
 }
 
 /// FZ2.7-P15c: Capture pin MaxAge after retarget — never ratchet on prev.
