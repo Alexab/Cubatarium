@@ -48,6 +48,8 @@ struct MeshWorkAdmissionInput
   /// SRBR-P1: ticketed VB stand remesh protect (no stale required).
   int visible_black_focus_n{0};
   int visible_black_no_ticket_n{0};
+  /// I11-C1: miss witness age for HoleDrain exit guard.
+  int miss_witness_age_frames{0};
 };
 
 /// Near-focus miss that blocks view / needs urgent HoleDrain (horiz≤2 or underfeet).
@@ -288,6 +290,16 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
       out.first_mesh_schedule = std::max(out.first_mesh_schedule, 4);
       out.max_schedule = std::max(out.max_schedule, 4);
     }
+    // I11-C2: rim miss — guarantee remesh, don't starve FM below floor.
+    if (holes && in.nearest_miss_horiz >= 0 && in.nearest_miss_horiz <= 4)
+    {
+      out.remesh_schedule = std::max(out.remesh_schedule, 1);
+      const int fm_floor = std::min(4, std::max(1, in.dirty_fm_n));
+      if (out.first_mesh_schedule < fm_floor)
+      {
+        out.first_mesh_schedule = fm_floor;
+      }
+    }
     break;
   case MeshWorkAdmission::Mode::WarmBacklog:
     out.max_schedule = 6;
@@ -458,6 +470,38 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   {
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     hole_drain_rim_fed_frames = 0;
+  }
+  // I11-C1: exit HoleDrain when column_loaded_no_mesh drains (clnm falling).
+  static int prev_column_loaded_no_mesh = 0;
+  static int hole_drain_clnm_drain_frames = 0;
+  static int prev_miss_witness_age = 0;
+  static int miss_witness_age_rising = 0;
+  if (in.dirty_fm_n > 0 &&
+      in.mesh_schedule_ok_n >= std::min(4, in.dirty_fm_n) &&
+      in.column_loaded_no_mesh_n < prev_column_loaded_no_mesh)
+  {
+    ++hole_drain_clnm_drain_frames;
+  }
+  else if (in.column_loaded_no_mesh_n >= prev_column_loaded_no_mesh)
+  {
+    hole_drain_clnm_drain_frames = 0;
+  }
+  prev_column_loaded_no_mesh = in.column_loaded_no_mesh_n;
+  if (in.miss_witness_age_frames > prev_miss_witness_age)
+  {
+    ++miss_witness_age_rising;
+  }
+  else
+  {
+    miss_witness_age_rising = 0;
+  }
+  prev_miss_witness_age = in.miss_witness_age_frames;
+  if (hole_drain_clnm_drain_frames >= 6 &&
+      mode == MeshWorkAdmission::Mode::HoleDrain &&
+      in.nearest_miss_horiz > 2 && miss_witness_age_rising < 4)
+  {
+    mode = MeshWorkAdmission::Mode::WarmBacklog;
+    hole_drain_clnm_drain_frames = 0;
   }
   const bool stop_vb_block_carve =
       !in.moving && in.visible_black_focus_n > 20 &&

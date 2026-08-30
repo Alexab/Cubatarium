@@ -2036,6 +2036,8 @@ int main()
            "P11: no second trim when fifo<90 and completed=0");
     Expect(ShouldCruiseRedFifoSecondTrim(2, 92, 96, 0.75f, true, 5, 0),
            "I10-B2: consumer-starved trim when fifo>=90 and completed=0");
+    Expect(!ShouldCruiseRedFifoSecondTrim(2, 92, 96, 0.75f, true, 5, 0, 0),
+           "I11-B3: chain stall blocks second trim");
     Expect(ShouldCruiseRedFifoSecondTrim(2, 72, 96, 0.75f, true, 5, 2),
            "P11: second trim when completed>0");
   }
@@ -2285,6 +2287,20 @@ int main()
            "P0: drawable no FM guarantee");
     Expect(!ShouldGuaranteeResidentWitnessFirstMesh(true, true, 2),
            "P0: nh=2 not underfeet guarantee");
+    Expect(ShouldGuaranteeResidentWitnessFirstMesh(true, true, 3, true),
+           "I11-A3: nh=3 moving resident !drawable FM");
+    Expect(!ShouldGuaranteeResidentWitnessFirstMesh(true, true, 3, false),
+           "I11-A3: nh=3 stand no rim FM guarantee");
+    using cutum::ShouldEscalateMissWitnessCompletionDrain;
+    using cutum::ShouldSkipMissPinWhileGpuDrainOwns;
+    Expect(ShouldEscalateMissWitnessCompletionDrain(true, 3, 5, true, 90),
+           "I11-A1: completion drain when schedule_ok !drawable");
+    Expect(!ShouldEscalateMissWitnessCompletionDrain(true, 3, 0, true, 90),
+           "I11-A1: no completion drain without schedule_ok");
+    Expect(ShouldSkipMissPinWhileGpuDrainOwns(true, true),
+           "I11-A1: skip pin when GPU owns slice");
+    Expect(!ShouldSkipMissPinWhileGpuDrainOwns(false, true),
+           "I11-A1: no skip when slice not owned");
     Expect(ShouldEnqueueWitnessOwnedFirstMesh(true, 2, true),
            "P0 KEEP: U2 nh=2 still owned FM");
     using cutum::MissSliceAlreadyOwned;
@@ -2562,6 +2578,11 @@ int main()
            "FZ26: no suppress when apply_n>=2");
     Expect(ShouldPrioritizeMeshDrainForTicketedConsume(true, 1, 5),
            "FZ26-P0b: drain when mark_relit+stalled");
+    Expect(ShouldPrioritizeMeshDrainForTicketedConsume(true, 0, 1),
+           "I11-D1: drain on stalled without mark_relit");
+    Expect(ShouldPrioritizeMeshDrainForTicketedConsume(
+               true, 0, 0, 40, 2, 1, false),
+           "I11-D1: stop drain on VB progress+void");
     Expect(!ShouldPrioritizeMeshScheduleForTicketedConsume(true, 81, 5, 1),
            "FZ26-P0b: schedule off when drain active");
     Expect(ClassifyApplyBinding(1, 5, true, false, 19.0, 8.0) ==

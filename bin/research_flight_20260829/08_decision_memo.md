@@ -113,5 +113,22 @@ Forensics: sub-timer sum ≈11% of `prep_refresh` — dominant untimed cost is `
 
 **Rollback trigger:** `holes_rate > 0.55` OR `stream_ms` med +20% vs manual `085951`.
 
-## SHIP verdict: **NO-SHIP** (I10 code landed; FP-manual hand flight pending)
+## Iteration I11 — Completion drain + lit settle (2026-08-30)
+
+**Status: CODE LANDED, FP-manual hand-verify pending**
+
+| Phase | Delivered |
+| --- | --- |
+| I11-A | `ShouldEscalateMissWitnessCompletionDrain`, `MissCompletionStuckFrames`, nh≤4 rim drain, GPU pin guard, forensics v2 |
+| I11-B | Chain telem (`relight_apply_to_markrelit_n`, `markrelit_to_fm_dirty_n`, `fm_dirty_to_gpu_finish_n`), VB apply floor≥3, post-apply mesh_drain, FIFO trim chain guard |
+| I11-C | HoleDrain clnm drain exit, rim remesh protect, classifier v3 (`schedule_ok_positive_no_drawable`, `completion_stuck`) |
+| I11-D | Stalled→mesh_drain without mark_relit, unified `StopVbDrainFrames`, vb audit v2 |
+| I11-E | Underfeet camera-band scan, unfinished FocusRing epoch reuse |
+| I11-F | `11_i11_parity.md`, FP-manual gate protocol |
+
+**Baseline manual I10:** `perf_20260830-100455_33852.jsonl` — schedule_ok=5, miss_stuck 88s, holes 100%, relight_completed=0.
+
+**Rollback trigger:** `holes_rate > 0.55` OR `stream_ms` med +20% vs baseline `100455`.
+
+## SHIP verdict: **NO-SHIP** (I11 code landed; FP-manual hand flight pending)
 

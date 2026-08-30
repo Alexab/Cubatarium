@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-DEFAULT = ROOT / "bin/logs/perf_20260830-085951_11484.jsonl"
+DEFAULT = ROOT / "bin/logs/perf_20260830-100455_33852.jsonl"
 
 
 def load(path: Path) -> list[dict]:
@@ -48,6 +48,7 @@ def main() -> int:
     nt = [float(r.get("visible_black_no_ticket_n") or 0) for r in stop]
     stalled = [float(r.get("visible_black_stalled_n") or 0) for r in stop]
     consume = [float(r.get("ticketed_vb_consume_n") or 0) for r in stop]
+    gpu_finish = [float(r.get("gpu_finish_n") or 0) for r in stop]
     drain_frames = [float(r.get("stop_vb_drain_frames") or 0) for r in stop]
 
     print(
@@ -57,13 +58,22 @@ def main() -> int:
     )
     vb_delta = vb[-1] - vb[0] if len(vb) >= 2 else 0.0
     consume_sum = sum(consume)
+    gpu_sum = sum(gpu_finish)
+    denom = consume_sum + gpu_sum
     print(
         f"stop tail VB delta: {vb_delta:.0f}  "
         f"ticketed_vb_consume sum: {consume_sum:.0f}  "
+        f"gpu_finish sum: {gpu_sum:.0f}  "
         f"stop_vb_drain_frames max: {max(drain_frames):.0f}"
     )
-    if consume_sum > 0:
-        print(f"drain rate (VB delta / consume): {vb_delta / consume_sum:.2f}")
+    if denom > 0:
+        print(f"drain efficiency (VB delta / (consume+gpu_finish)): {vb_delta / denom:.2f}")
+    stalled_seg = [r for r in stop if float(r.get("visible_black_stalled_n") or 0) > 0]
+    nt_seg = [r for r in stop if float(r.get("visible_black_no_ticket_n") or 0) > 0]
+    print(
+        f"stalled frames: {len(stalled_seg)}  no_ticket frames: {len(nt_seg)}  "
+        f"stalled VB med: {st.median([float(r.get('visible_black_focus_n') or 0) for r in stalled_seg]) if stalled_seg else 0:.0f}"
+    )
     return 0
 
 

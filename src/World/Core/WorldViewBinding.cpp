@@ -865,7 +865,12 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.StopVbStuckFrames = 0;
   PhysicsTelemetryData.MissWitnessAgeFramesReport = 0;
   PhysicsTelemetryData.MissStuckRunFrames = 0;
+  PhysicsTelemetryData.MissCompletionStuckFrames = 0;
   PhysicsTelemetryData.MissSlaKickN = 0;
+  PhysicsTelemetryData.RelightApplyToMarkRelitN = 0;
+  PhysicsTelemetryData.MarkRelitToFmDirtyN = 0;
+  PhysicsTelemetryData.FmDirtyToGpuFinishN = 0;
+  PhysicsTelemetryData.PostRelightApplyMeshDrainFloor = 0;
   PhysicsTelemetryData.MeshDirtyScheduleSkipOutsideFocusFmN = 0;
   PhysicsTelemetryData.FmConsumerStarvedActive = 0;
   PhysicsTelemetryData.PrepPendingLightMs = 0.0;

@@ -1090,6 +1090,20 @@ def analyze(
     def classify_schedule_blocker(r: dict) -> str:
         ok = float(r.get("mesh_dirty_schedule_ok_n") or 0)
         floor = 4.0
+        dirty_fm = float(r.get("dirty_fm_n") or 0)
+        clnm = float(r.get("column_loaded_no_mesh_n") or 0)
+        unfinished = float(r.get("unfinished_visual") or 0)
+        focus_miss = float(r.get("focus_missing_mesh") or 0) > 0
+        miss_age = float(r.get("miss_witness_age_frames") or 0)
+        if ok >= floor and focus_miss and miss_age > 120:
+            return "completion_stuck"
+        if (
+            ok > 0
+            and dirty_fm > 0
+            and clnm > 0
+            and unfinished > 0
+        ):
+            return "schedule_ok_positive_no_drawable"
         if ok > 0:
             return "scheduled"
         if 0 < ok < floor:

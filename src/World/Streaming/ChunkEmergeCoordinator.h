@@ -70,6 +70,8 @@ private:
   int MissStuckForcePinPeriod{0};
   /// I10-C1: consecutive frames miss stuck without schedule progress.
   int MissStuckRunFrames{0};
+  /// I11-A2: consecutive frames miss stuck without drawable completion.
+  int MissCompletionStuckFrames{0};
   /// Phase C: wall EMA for adaptive emerge cap on cruise.
   double WallEmaMs{0.0};
   /// Era51 F1a: adaptive stop-phase emerge budget with decay.

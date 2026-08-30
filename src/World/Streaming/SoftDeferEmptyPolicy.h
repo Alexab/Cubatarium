@@ -265,11 +265,38 @@ inline int GhostDirtyPruneCapPerTick(bool visual_holes)
 }
 
 /// SRBR-P0: sticky underfeet/near miss FirstMesh only when the slice is loaded.
+/// I11-A3: moving rim nh≤4 also gets column-owned witness FirstMesh.
 inline bool ShouldGuaranteeResidentWitnessFirstMesh(bool has_chunk,
                                                     bool no_drawable,
-                                                    int miss_horiz)
+                                                    int miss_horiz,
+                                                    bool moving = false)
 {
-  return has_chunk && no_drawable && miss_horiz >= 0 && miss_horiz <= 1;
+  if (!has_chunk || !no_drawable || miss_horiz < 0)
+  {
+    return false;
+  }
+  if (miss_horiz <= 1)
+  {
+    return true;
+  }
+  return moving && miss_horiz <= 4;
+}
+
+/// I11-A1: schedule_ok positive but witness still !drawable — completion drain.
+inline bool ShouldEscalateMissWitnessCompletionDrain(
+    bool focus_missing_mesh, int miss_horiz, int schedule_ok_n,
+    bool no_drawable_witness, int miss_witness_age_frames, int age_thresh = 60)
+{
+  return focus_missing_mesh && miss_horiz >= 0 && miss_horiz <= 4 &&
+         schedule_ok_n >= 1 && no_drawable_witness &&
+         miss_witness_age_frames > age_thresh;
+}
+
+/// I11-A1: skip re-pin when GPU drain already owns witness slice.
+inline bool ShouldSkipMissPinWhileGpuDrainOwns(bool already_owned,
+                                              bool gpu_extract_or_pending_apply)
+{
+  return already_owned && gpu_extract_or_pending_apply;
 }
 
 /// SRBR-P0.2 / ColPipe P4: one miss owner — Dirty, RAA, Inflight, SoftDeferHeld,

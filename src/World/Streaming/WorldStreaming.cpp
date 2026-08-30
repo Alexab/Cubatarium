@@ -853,6 +853,10 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   static int last_unfinished_visual = 0;
   static glm::ivec3 last_unfinished_focus{0};
   static int last_unfinished_radius = -1;
+  const bool cruise_unfinished_reuse =
+      moving_for_telemetry && !missing_near && !pending_underfeet &&
+      ring_sample_prev.valid &&
+      ring_sample_prev.frame_epoch + 4 >= world.GetStreamingFrameEpoch();
   int unfinished_visual = 0;
   int focus_pressure = 0;
   const auto unfinished_t0 = std::chrono::high_resolution_clock::now();
@@ -879,6 +883,19 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     unfinished_visual = last_unfinished_visual;
     focus_pressure = unfinished_visual;
     unfinished_sample_cd = unfinished_visual <= 1 ? 16 : 8;
+  }
+  else if (cruise_unfinished_reuse && last_unfinished_visual <= 3)
+  {
+    unfinished_visual = ring_sample_prev.unfinished;
+    last_unfinished_visual = unfinished_visual;
+    focus_pressure =
+        pending_light_focus +
+        (focus_dirty_chunks > 0 ? std::min(focus_dirty_chunks, 8) : 0);
+    if (focus_pressure < unfinished_visual)
+    {
+      focus_pressure = unfinished_visual;
+    }
+    unfinished_sample_cd = 16;
   }
   else
   {
@@ -1136,7 +1153,24 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     bool pending_gpu = false;
     const int max_cy = std::max(
         0, FloorDiv(world.GetProceduralSettings().MaxHeight, CHUNK_SIZE));
-    for (int cy = 0; cy <= max_cy; ++cy)
+    const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
+    int band_min = std::max(0, focus_block.y - CHUNK_SIZE);
+    int band_max = std::min(world.GetProceduralSettings().MaxHeight,
+                            focus_block.y + CHUNK_SIZE * 2);
+    int cy0 = std::max(0, FloorDiv(band_min, CHUNK_SIZE));
+    int cy1 = std::min(max_cy, FloorDiv(band_max, CHUNK_SIZE));
+    const bool cruise_clear =
+        !in.visual_holes && world.PhysicsTelemetryData.MissHoriz > 2;
+    const bool underfeet_safety_full =
+        in.visual_holes || pending_underfeet ||
+        (world.PhysicsTelemetryData.MissHoriz >= 0 &&
+         world.PhysicsTelemetryData.MissHoriz <= 2);
+    if (!cruise_clear || underfeet_safety_full)
+    {
+      cy0 = 0;
+      cy1 = max_cy;
+    }
+    for (int cy = cy0; cy <= cy1; ++cy)
     {
       const glm::ivec3 coord(under_xz.x, cy, under_xz.y);
       if (world.GetMeshService().HasMeshSatisfyingColumnReady(coord) ||
@@ -1158,7 +1192,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     static bool uf_predicted_latched = false;
     static int uf_predicted_hold = 0;
     bool inflight = false;
-    for (int cy = 0; cy <= max_cy; ++cy)
+    for (int cy = cy0; cy <= cy1; ++cy)
     {
       const glm::ivec3 coord(under_xz.x, cy, under_xz.y);
       if (world.GetMeshService().HasInflightMeshBuild(coord))
@@ -2502,7 +2536,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       {
         bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 3 : 5);
         world.PhysicsTelemetryData.StopVbBudgetActive = 1;
-        world.PhysicsTelemetryData.StopVbDrainFrames = stop_vb_budget_frames;
+        world.PhysicsTelemetryData.StopVbDrainFrames = std::max(
+            world.PhysicsTelemetryData.StopVbDrainFrames, stop_vb_budget_frames);
       }
       else
       {

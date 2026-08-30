@@ -165,10 +165,24 @@ inline constexpr int RelightWitnessPinHoldFrames = 120;
 /// FZ2.6-P0b: stalled ticket completion prefers mesh_drain over schedule.
 inline bool ShouldPrioritizeMeshDrainForTicketedConsume(
     bool consume_mode, int mark_relit_schedule_n,
-    int visible_black_stalled_n, int vb_thresh = 40)
+    int visible_black_stalled_n, int vb_thresh = 40,
+    int visible_black_progress_n = 0, int dark_face_void_near_n = 0,
+    bool moving = true)
 {
-  return consume_mode && mark_relit_schedule_n > 0 &&
-         visible_black_stalled_n > 0;
+  (void)vb_thresh;
+  if (!consume_mode)
+  {
+    return false;
+  }
+  if (visible_black_stalled_n >= 1)
+  {
+    return true;
+  }
+  if (!moving && visible_black_progress_n > 0 && dark_face_void_near_n > 0)
+  {
+    return true;
+  }
+  return mark_relit_schedule_n > 0 && visible_black_stalled_n > 0;
 }
 
 /// FZ2.6-P0b: schedule boost only when drain path not sufficient.
@@ -1246,8 +1260,14 @@ inline bool ShouldCruiseRedFifoSecondTrim(int stream_pressure, int fifo_n,
                                           int soft_cap, float fifo_frac,
                                           bool holes_or_miss,
                                           int pending_light_focus,
-                                          int completed_n)
+                                          int completed_n,
+                                          int markrelit_chain_progress_frames = 1)
 {
+  // I11-B3: no aggressive trim when relight→FM chain stalled.
+  if (completed_n <= 0 && markrelit_chain_progress_frames <= 0)
+  {
+    return false;
+  }
   // I10-B2: consumer-starved trim when fifo full and no apply throughput.
   if (completed_n <= 0)
   {

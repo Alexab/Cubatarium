@@ -301,7 +301,17 @@ struct PhysicsTelemetry
   /// I10-C1: miss witness stuck runtime telemetry.
   int MissWitnessAgeFramesReport{0};
   int MissStuckRunFrames{0};
+  /// I11-A2: miss stuck with schedule_ok but no drawable witness.
+  int MissCompletionStuckFrames{0};
   int MissSlaKickN{0};
+  /// I11-B1: relight→mesh completion chain (per-frame).
+  int RelightApplyToMarkRelitN{0};
+  int MarkRelitToFmDirtyN{0};
+  int FmDirtyToGpuFinishN{0};
+  /// I11-B3: EMA frames with MarkRelit→FM progress (for FIFO trim guard).
+  int MarkRelitChainProgressFrames{0};
+  /// I11-B2: post-apply mesh_drain floor for next emerge tick.
+  int PostRelightApplyMeshDrainFloor{0};
   /// I10-D1: Pass1 skip outside focus FirstMesh walk.
   int MeshDirtyScheduleSkipOutsideFocusFmN{0};
   /// I10-D3: FM consumer starved soften active this frame.
