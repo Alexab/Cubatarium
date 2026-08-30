@@ -974,9 +974,13 @@ private:
   bool EnterFovLitPressure_{false};
   int ColumnLoadedNoMeshPressure_{0};
   int FmDirtyEnqueueReserveN_{0};
-  /// I12-D1: FM dirty coords scheduled this emerge tick awaiting GpuFinish.
-  std::unordered_set<glm::ivec3, IVec3Hash> FmDirtyGpuWatch_;
+  /// I12-D1 / I13-C: FM dirty coords scheduled awaiting GpuFinish (age in frames).
+  std::unordered_map<glm::ivec3, int, IVec3Hash> FmDirtyGpuWatchAge_;
+  static constexpr int kFmDirtyGpuWatchMaxAgeFrames = 120;
   int FmDirtyToGpuFinishMatchN_{0};
+  void NoteFmDirtyGpuScheduled(glm::ivec3 coord);
+  void AgeFmDirtyGpuWatchFrames();
+  bool TryConsumeFmDirtyGpuWatch(glm::ivec3 coord);
   int LastFirstMeshScheduleEffectiveCap_{0};
   bool EnterUnderfeetExitBlocked_{false};
   bool Fz2DeferGated_{true};

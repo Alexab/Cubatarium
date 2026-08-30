@@ -3026,6 +3026,36 @@ void UChunkMeshCache::EnsureAsyncBuilder()
   }
 }
 
+void UChunkMeshCache::NoteFmDirtyGpuScheduled(glm::ivec3 coord)
+{
+  FmDirtyGpuWatchAge_[coord] = 0;
+}
+
+void UChunkMeshCache::AgeFmDirtyGpuWatchFrames()
+{
+  for (auto it = FmDirtyGpuWatchAge_.begin(); it != FmDirtyGpuWatchAge_.end();)
+  {
+    if (++it->second > kFmDirtyGpuWatchMaxAgeFrames)
+    {
+      it = FmDirtyGpuWatchAge_.erase(it);
+    }
+    else
+    {
+      ++it;
+    }
+  }
+}
+
+bool UChunkMeshCache::TryConsumeFmDirtyGpuWatch(glm::ivec3 coord)
+{
+  if (FmDirtyGpuWatchAge_.erase(coord) > 0)
+  {
+    ++FmDirtyToGpuFinishMatchN_;
+    return true;
+  }
+  return false;
+}
+
 bool UChunkMeshCache::CommitGpuMeshResult(
     const UBlockWorld &world, UBlockRegistry &registry, glm::ivec3 coord,
     uint64_t source_revision, GpuMeshProcessResult &&gpu_result,
@@ -3141,6 +3171,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     }
   }
   (void)source_revision;
+  TryConsumeFmDirtyGpuWatch(coord);
   return true;
 }
 
@@ -3607,7 +3638,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         ++processed;
         ++finished;
         ++stats.Completed;
-        if (FmDirtyGpuWatch_.erase(pending.coord) > 0)
+        if (FmDirtyGpuWatchAge_.erase(pending.coord) > 0)
         {
           ++FmDirtyToGpuFinishMatchN_;
         }
@@ -4047,6 +4078,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       ++RaaCommitMarkDirtyN;
     }
   }
+  TryConsumeFmDirtyGpuWatch(result.coord);
 }
 
 void UChunkMeshCache::RebuildDirtyChunks(UBlockWorld &world,
@@ -4111,7 +4143,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastDirtyRevisitSameN = 0;
   LastDirtyScheduleDedupN = 0;
   ScheduledThisFrame_.clear();
-  FmDirtyGpuWatch_.clear();
+  AgeFmDirtyGpuWatchFrames();
   FmDirtyToGpuFinishMatchN_ = 0;
   // Sky-only / enter: orphan RemeshAfterApply with no Dirty/Active/GPU owner must
   // become Dirty. FullyDark drawable is NOT "owned" — enter PreferKick-only left
@@ -4880,7 +4912,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       ScheduledThisFrame_.insert(*it);
       if (Dirty.IsFirstMesh(*it))
       {
-        FmDirtyGpuWatch_.insert(*it);
+        NoteFmDirtyGpuScheduled(*it);
       }
       NoteFocusDirtyRingChange(*it, -1);
       it = Dirty.RemoveAt(it);
@@ -5339,7 +5371,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       ScheduledThisFrame_.insert(*it);
       if (Dirty.IsFirstMesh(*it))
       {
-        FmDirtyGpuWatch_.insert(*it);
+        NoteFmDirtyGpuScheduled(*it);
       }
       NoteFocusDirtyRingChange(*it, -1);
       it = Dirty.RemoveAt(it);
