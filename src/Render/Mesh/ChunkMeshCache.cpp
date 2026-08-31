@@ -8,6 +8,7 @@
 #include "Render/Mesh/CrossInstanceCollector.h"
 #include "Render/Mesh/CrossMeshEmitter.h"
 #include "Render/Mesh/MeshApplyPolicy.h"
+#include "World/Streaming/StreamIngressPolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/MeshLitGate.h"
@@ -2242,7 +2243,18 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
     return;
   }
   NoteFocusDirtyRingChange(chunkCoord, 1);
-  BumpChunkMeshRevision(chunkCoord);
+  int horiz = 999;
+  if (MeshFocusValid)
+  {
+    horiz = std::max(std::abs(chunkCoord.x - MeshFocusGroundChunk.x),
+                     std::abs(chunkCoord.z - MeshFocusGroundChunk.z));
+  }
+  if (!ShouldDeferRimRevisionBumpForPendingGpu(
+          MeshFocusValid, horiz, IsPendingGpuApply(chunkCoord),
+          HasDrawableGreedyMesh(chunkCoord)))
+  {
+    BumpChunkMeshRevision(chunkCoord);
+  }
   // Do not InvalidateFluidSurface here: full-column remesh calls MarkDirty for
   // every cy×seam and kept fluid_map_dirty permanently high (100+), burning
   // 100–500ms/frame. Fluid map is invalidated once per column on gen/light.
@@ -3267,7 +3279,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     return budget_ms < 0.0 || elapsed_ms() < budget_ms;
   };
 
-  // Underfeet lease: finish/kick horiz≤1 before hinterland GPU backlog.
+  // Underfeet + rim ingress: finish/kick horiz≤4 before hinterland GPU backlog.
   {
     const glm::ivec3 focus = MeshFocusGroundChunk;
     std::stable_partition(
@@ -3277,7 +3289,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
           const int horiz =
               std::max(std::abs(p.coord.x - focus.x),
                        std::abs(p.coord.z - focus.z));
-          return horiz <= 1;
+          return horiz <= 4;
         });
   }
 

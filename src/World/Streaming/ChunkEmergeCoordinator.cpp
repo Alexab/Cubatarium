@@ -1564,7 +1564,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const auto &trim_telem = world.GetPhysicsTelemetry();
       const bool consume_trim = IsTicketedVbConsumeMode(
           trim_telem.VisibleBlackNoTicketN, trim_telem.VisibleBlackFocusN,
-          trim_telem.VisibleBlackStalledN, moving);
+          trim_telem.VisibleBlackStalledN, moving,
+          trim_telem.PendingLightFocus);
       if (ShouldCruiseRedFifoSecondTrim(
               pressure, fifo_live, mtune.RelightFifoSoftCap,
               mtune.RelightFifoAdmitFrac,
@@ -2129,6 +2130,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         world.GetPhysicsTelemetry().VisibleBlackFocusN;
     ain.visible_black_no_ticket_n =
         world.GetPhysicsTelemetry().VisibleBlackNoTicketN;
+    ain.visible_black_stalled_n =
+        world.GetPhysicsTelemetry().VisibleBlackStalledN;
     ain.miss_witness_age_frames = MissWitnessAgeFrames;
     if (have_nearest_missing)
     {
@@ -2935,7 +2938,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const bool consume_mode =
         IsTicketedVbConsumeMode(telem.VisibleBlackNoTicketN,
                                 telem.VisibleBlackFocusN,
-                                telem.VisibleBlackStalledN, moving) ||
+                                telem.VisibleBlackStalledN, moving,
+                                telem.PendingLightFocus) ||
         ShouldConsumeUnlitTicketedVbStand(
             moving, telem.VisibleBlackFocusN, telem.VisibleBlackNoTicketN,
             static_cast<int>(telem.ChunkMeshedUnlitHidden),
@@ -3952,6 +3956,30 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         }
       }
 
+      // I17-P2-3: rim ingress markrelit→fm→gpu chain stall → PreferKick + schedule.
+      {
+        static int rim_chain_stall_frames = 0;
+        const auto &chain_telem = world.GetPhysicsTelemetry();
+        if (moving && nh >= 2 && nh <= 4 &&
+            chain_telem.MarkRelitChainProgressFrames == 0 &&
+            chain_telem.DirtyFmN > 0 && chain_telem.FmDirtyToGpuFinishN == 0)
+        {
+          ++rim_chain_stall_frames;
+          if (rim_chain_stall_frames >= 8)
+          {
+            mesh_service.PreferKickPendingGpuQueued(isolated_hole);
+            mesh_drain = std::max(mesh_drain, 8);
+            mesh_schedule = std::max(mesh_schedule, 6);
+            ++world.GetPhysicsTelemetryMutable().MissSlaKickN;
+            rim_chain_stall_frames = 0;
+          }
+        }
+        else
+        {
+          rim_chain_stall_frames = 0;
+        }
+      }
+
       // Era22 F2b/F2c: periodic re-enqueue to avoid stuck-hole starvation.
       // Every new 120f "miss period" → FirstMesh scan.
       // After age threshold → additionally pin FirstMesh on the isolated hole.
@@ -4264,6 +4292,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         world.GetPhysicsTelemetry().VisibleBlackFocusN;
     ain.visible_black_no_ticket_n =
         world.GetPhysicsTelemetry().VisibleBlackNoTicketN;
+    ain.visible_black_stalled_n =
+        world.GetPhysicsTelemetry().VisibleBlackStalledN;
     ain.miss_witness_age_frames = MissWitnessAgeFrames;
     MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
     {

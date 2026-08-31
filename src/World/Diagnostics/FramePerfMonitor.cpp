@@ -12,6 +12,7 @@
 #include "World/Lighting/GpuSkylightColumnSeed.h"
 #include "Render/Mesh/GpuGreedyMesher.h"
 #include "World/Physics/PhysicsTelemetry.h"
+#include "World/Streaming/StreamIngressPolicy.h"
 #include "World/Streaming/UnderfeetTelemetryPolicy.h"
 #include "glog/logging.h"
 #include <chrono>
@@ -71,9 +72,11 @@ struct Session
   int SpikesWrittenThisPeriod{0};
   int FrameCount{0};
   uint64_t MeshApplyStaleAtPeriodStart{0};
+  uint64_t MeshDiscardedLateAtPeriodStart{0};
   uint64_t MeshCompletedDiscardedAtPeriodStart{0};
   uint64_t SoftDeferCaptureFloorHitsAtPeriodStart{0};
   uint64_t SoftDeferWitnessRetargetAtPeriodStart{0};
+  int LastPeriodUnfinishedVisual{0};
   std::chrono::steady_clock::time_point LastEmit{
       std::chrono::steady_clock::now()};
   double LastRssMb{0.0};
@@ -384,6 +387,7 @@ struct FrameNumbers
   uint64_t mesh_discarded_late{0};
   uint64_t mesh_apply_stale{0};
   uint64_t mesh_apply_stale_delta{0};
+  uint64_t mesh_discarded_late_delta{0};
   uint64_t mesh_completed_discarded_delta{0};
   uint64_t mesh_replace_hole_avoided{0};
   int pending_gpu_applies_n{0};
@@ -1370,6 +1374,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"focus_unfinished_ahead\":" << n.focus_unfinished_ahead
           << ",\"focus_unfinished_behind\":" << n.focus_unfinished_behind
           << ",\"mesh_discarded_late\":" << n.mesh_discarded_late
+          << ",\"mesh_discarded_late_delta\":" << n.mesh_discarded_late_delta
           << ",\"mesh_apply_stale\":" << n.mesh_apply_stale
           << ",\"mesh_apply_stale_delta\":" << n.mesh_apply_stale_delta
           << ",\"mesh_replace_hole_avoided\":" << n.mesh_replace_hole_avoided
@@ -1848,14 +1853,27 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
           ? n.softdefer_witness_retarget -
                 s.SoftDeferWitnessRetargetAtPeriodStart
           : 0;
+  period.mesh_discarded_late_delta =
+      n.mesh_discarded_late >= s.MeshDiscardedLateAtPeriodStart
+          ? n.mesh_discarded_late - s.MeshDiscardedLateAtPeriodStart
+          : 0;
+  const int period_unfinished = static_cast<int>(period.unfinished_visual);
+  const bool blink_window =
+      IsBlinkTransition(s.LastPeriodUnfinishedVisual, period_unfinished);
   const auto emit_begin = std::chrono::steady_clock::now();
   WriteJsonl(s, period, "period", /*flush=*/true);
+  if (blink_window)
+  {
+    WriteJsonl(s, period, "blink", /*flush=*/false);
+  }
   period.perf_emit_ms =
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - emit_begin)
           .count();
   LogLine(period, "period", s.FrameCount, s.MaxWallMs);
+  s.LastPeriodUnfinishedVisual = period_unfinished;
   s.MeshApplyStaleAtPeriodStart = n.mesh_apply_stale;
+  s.MeshDiscardedLateAtPeriodStart = n.mesh_discarded_late;
   s.MeshCompletedDiscardedAtPeriodStart = n.mesh_completed_discarded;
   s.SoftDeferCaptureFloorHitsAtPeriodStart = n.softdefer_capture_floor_hits;
   s.SoftDeferWitnessRetargetAtPeriodStart = n.softdefer_witness_retarget;

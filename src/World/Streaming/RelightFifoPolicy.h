@@ -1,5 +1,6 @@
 #pragma once
 
+#include "World/Streaming/StreamIngressPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
 
 #include <algorithm>
@@ -1177,13 +1178,17 @@ inline bool ShouldConsumeTicketedVbStopDrain(bool moving,
 inline bool IsTicketedVbConsumeMode(int vb_no_ticket_n,
                                     int visible_black_focus_n,
                                     int vb_stalled_n = 0,
-                                    bool moving = true)
+                                    bool moving = true,
+                                    int pending_light_focus_n = 0)
 {
   return ShouldConsumeTicketedVbDebt(vb_no_ticket_n, visible_black_focus_n,
                                      vb_stalled_n) ||
          ShouldConsumeTicketedVbDebtHigh(vb_no_ticket_n, visible_black_focus_n) ||
          ShouldConsumeTicketedVbStopDrain(moving, visible_black_focus_n,
-                                          vb_no_ticket_n, vb_stalled_n);
+                                          vb_no_ticket_n, vb_stalled_n) ||
+         ShouldConsumeTicketedVbStalledCruise(moving, vb_stalled_n,
+                                              pending_light_focus_n,
+                                              visible_black_focus_n);
 }
 
 /// FP-A3: extend witness hold past RelightWitnessPinHoldFrames while pinned_still.

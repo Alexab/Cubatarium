@@ -2883,6 +2883,34 @@ int main()
            "I15-D2: stand witness stuck kick");
   }
 
+  // I17 ingress throughput policy smoke
+  {
+    using cutum::IsBlinkTransition;
+    using cutum::RimIngressFmScheduleFloor;
+    using cutum::ShouldConsumeTicketedVbStalledCruise;
+    using cutum::ShouldDeferRimRevisionBumpForPendingGpu;
+    using cutum::ShouldRefreshRingResyncForFocusJump;
+    using cutum::UnfinishedSampleCooldownFrames;
+    using cutum::VbRawScanCadenceFrames;
+    Expect(IsBlinkTransition(0, 1), "I17-P0: 0→1 blink");
+    Expect(!IsBlinkTransition(1, 1), "I17-P0: stable not blink");
+    Expect(ShouldRefreshRingResyncForFocusJump(true, false, true, 0),
+           "I17-P1: focus jump resync");
+    Expect(!ShouldRefreshRingResyncForFocusJump(false, false, true, 2),
+           "I17-P1: reuse ring sample");
+    Expect(UnfinishedSampleCooldownFrames(1) >= UnfinishedSampleCooldownFrames(3),
+           "I17-P1: stable unfinished longer cadence");
+    Expect(VbRawScanCadenceFrames(true, 4, 20, 50) >=
+               VbRawScanCadenceFrames(true, 4, 5, 50),
+           "I17-P1: VB stalled plateau throttles scan");
+    Expect(RimIngressFmScheduleFloor(true, 3, 2) >= 2,
+           "I17-P2: rim FM floor");
+    Expect(ShouldDeferRimRevisionBumpForPendingGpu(true, 3, true, true),
+           "I17-P2: defer rim revision bump");
+    Expect(ShouldConsumeTicketedVbStalledCruise(true, 12, 0, 30),
+           "I17-P3: stalled cruise VB consume");
+  }
+
   // CheapRemesh C5: live GPU opaque across LitDrawable ring (repair optional)
   {
     using cutum::ShouldKeepLiveGpuOpaqueDespiteFullyDark;

@@ -2,6 +2,7 @@
 
 #include "World/Streaming/ColumnTicketMap.h"
 #include "World/Streaming/RelightFifoPolicy.h"
+#include "World/Streaming/StreamIngressPolicy.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -49,6 +50,7 @@ struct MeshWorkAdmissionInput
   /// SRBR-P1: ticketed VB stand remesh protect (no stale required).
   int visible_black_focus_n{0};
   int visible_black_no_ticket_n{0};
+  int visible_black_stalled_n{0};
   /// I11-C1: miss witness age for HoleDrain exit guard.
   int miss_witness_age_frames{0};
 };
@@ -320,6 +322,16 @@ inline void MeshWorkFillModeDefaults(MeshWorkAdmission &out,
       out.first_mesh_schedule = std::max(out.first_mesh_schedule, 4);
       out.max_schedule = std::max(out.max_schedule, 4);
     }
+    else if (in.moving)
+    {
+      const int rim_fm =
+          RimIngressFmScheduleFloor(true, in.nearest_miss_horiz, in.dirty_fm_n);
+      if (rim_fm > 0)
+      {
+        out.first_mesh_schedule = std::max(out.first_mesh_schedule, rim_fm);
+        out.max_schedule = std::max(out.max_schedule, rim_fm);
+      }
+    }
     // I11-C2: rim miss — guarantee remesh, don't starve FM below floor.
     if (holes && in.nearest_miss_horiz >= 0 && in.nearest_miss_horiz <= 4)
     {
@@ -554,7 +566,8 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   }
   const bool consume_mode = IsTicketedVbConsumeMode(
       in.visible_black_no_ticket_n, in.visible_black_focus_n,
-      /*vb_stalled_n=*/0, in.moving);
+      /*vb_stalled_n=*/in.visible_black_stalled_n, in.moving,
+      in.pending_light_near);
   const bool stop_vb_block_carve =
       !consume_mode && !in.moving && in.visible_black_focus_n > 20 &&
       in.visible_black_no_ticket_n > 0;
