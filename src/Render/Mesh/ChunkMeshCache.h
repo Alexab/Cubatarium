@@ -14,6 +14,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Streaming/MeshWorkAdmission.h"
+#include "World/Streaming/StreamIngressPolicy.h"
 #include <array>
 #include <algorithm>
 #include <chrono>
@@ -401,6 +402,20 @@ public:
   }
   void SetFmDirtyEnqueueReserve(int n) { FmDirtyEnqueueReserveN_ = n; }
   int GetFmDirtyToGpuFinishMatchN() const { return FmDirtyToGpuFinishMatchN_; }
+  int GetFmDirtyGpuWatchCount() const
+  {
+    return static_cast<int>(FmDirtyGpuWatchAge_.size());
+  }
+  int GetFmDirtyGpuWatchMaxAge() const;
+  int GetFmDirtyGpuWatchTimeoutDelta() const
+  {
+    return FmDirtyGpuWatchTimeoutDelta_;
+  }
+  void ResetFmDirtyGpuWatchTimeoutDelta() { FmDirtyGpuWatchTimeoutDelta_ = 0; }
+  int GetLastGpuFinishWatchRimN() const { return LastGpuFinishWatchRimN_; }
+  void SetWitnessSwapGrace(glm::ivec2 prior_xz, int frames);
+  void TickWitnessSwapGrace();
+  bool HasWitnessSwapGraceAt(glm::ivec2 coord_xz) const;
   int GetLastFirstMeshScheduleEffectiveCap() const
   {
     return LastFirstMeshScheduleEffectiveCap_;
@@ -978,6 +993,9 @@ private:
   std::unordered_map<glm::ivec3, int, IVec3Hash> FmDirtyGpuWatchAge_;
   static constexpr int kFmDirtyGpuWatchMaxAgeFrames = 120;
   int FmDirtyToGpuFinishMatchN_{0};
+  int FmDirtyGpuWatchTimeoutDelta_{0};
+  int LastGpuFinishWatchRimN_{0};
+  WitnessSwapGrace WitnessSwapGrace_{};
   void NoteFmDirtyGpuScheduled(glm::ivec3 coord);
   void AgeFmDirtyGpuWatchFrames();
   bool TryConsumeFmDirtyGpuWatch(glm::ivec3 coord);

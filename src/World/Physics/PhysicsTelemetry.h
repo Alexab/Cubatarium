@@ -324,6 +324,16 @@ struct PhysicsTelemetry
   int RelightApplyToMarkRelitN{0};
   int MarkRelitToFmDirtyN{0};
   int FmDirtyToGpuFinishN{0};
+  /// I18-A4/F1: FM dirty GPU watch chain telem.
+  int FmDirtyGpuWatchN{0};
+  int FmDirtyGpuWatchMaxAge{0};
+  int FmDirtyGpuWatchTimeoutDelta{0};
+  int GpuFinishWatchRimN{0};
+  /// I18-F1: ingress debt governor level (0=Ok..3=ShedRim).
+  int IngressDebtLevel{0};
+  int IngressDebtStreak{0};
+  /// I18-C1: ColumnFlow drain inside emerge prep.
+  double PrepColumnFlowDrainMs{0.0};
   /// I11-B3: EMA frames with MarkRelit→FM progress (for FIFO trim guard).
   int MarkRelitChainProgressFrames{0};
   /// I11-B2: post-apply mesh_drain floor for next emerge tick.

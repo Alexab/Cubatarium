@@ -34,6 +34,9 @@ struct FrameStreamingBudgetInput
   int visible_black_no_ticket_n{0};
   bool enter_fov_lit{false};
   bool post_load_ring_not_ready{false};
+  /// I18-F6: ingress debt sheds far Capture (nh>3).
+  int ingress_debt_level{0};
+  int miss_horiz{99};
 };
 
 struct FrameStreamingBudgetDecision
@@ -289,6 +292,13 @@ inline FrameStreamingBudgetDecision EvaluateFrameStreamingBudget(
           std::max(out.soft_defer_capture_budget, 1);
       out.capture_first_mesh_only = false;
     }
+  }
+
+  // I18-F6: under ingress debt, defer far Capture (nh>3 pseudo-LOD).
+  if (in.ingress_debt_level >= 2 && in.miss_horiz > 3)
+  {
+    out.soft_defer_capture_budget =
+        std::min(out.soft_defer_capture_budget, 1);
   }
 
   return out;

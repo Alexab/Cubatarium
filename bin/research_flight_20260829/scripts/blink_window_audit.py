@@ -27,6 +27,11 @@ BLINK_FIELDS = [
     "prep_refresh_gap_ms",
     "stream_ms",
     "wall_ms",
+    "fm_dirty_gpu_watch_n",
+    "fm_dirty_gpu_watch_max_age",
+    "fm_dirty_to_gpu_finish_n",
+    "gpu_finish_watch_rim_n",
+    "ingress_debt_level",
 ]
 
 
@@ -68,8 +73,17 @@ def classify_window(p: dict) -> str:
     witness = float(p.get("softdefer_witness_retarget_delta") or 0)
     discarded = float(p.get("mesh_discarded_late_delta") or 0)
     vb_stall = float(p.get("visible_black_stalled_n") or 0)
+    unf = float(p.get("unfinished_visual") or 0)
+    watch_n = float(p.get("fm_dirty_gpu_watch_n") or 0)
+    watch_age = float(p.get("fm_dirty_gpu_watch_max_age") or 0)
+    sched_ok = float(p.get("mesh_dirty_schedule_ok_n") or 99)
+    fm_finish = float(p.get("fm_dirty_to_gpu_finish_n") or 0)
     if stale > 0:
         return "stale_apply"
+    if watch_n > 0 and sched_ok < 2 and fm_finish == 0 and watch_age >= 8:
+        return "chain_stall"
+    if witness > 0 and unf <= 2:
+        return "short_hole"
     if witness > 0:
         return "witness_hop"
     if discarded > 0:

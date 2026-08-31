@@ -468,6 +468,12 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   const bool fm_starved = in.dirty_fm_n == 0;
   const bool fm_consumer_starved =
       IsFmConsumerStarved(in.dirty_fm_n, in.mesh_schedule_ok_n);
+  // I18-A3b: rim consumer-starved carve-out (nh 2–3 cruise).
+  if (fm_consumer_starved && in.moving && in.nearest_miss_horiz >= 2 &&
+      in.nearest_miss_horiz <= 3 && admission_carve_remain < 4)
+  {
+    admission_carve_remain = 4;
+  }
   const bool schedule_starved = in.mesh_schedule_ok_n == 0;
   const bool suppress_carve = ShouldSuppressFmAdmissionCarveOut(
       in.unfinished_visual, in.column_loaded_no_mesh_n,

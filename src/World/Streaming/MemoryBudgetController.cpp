@@ -1,5 +1,7 @@
 #include "World/Streaming/MemoryBudgetController.h"
 
+#include "World/Streaming/StreamIngressPolicy.h"
+
 #include <algorithm>
 
 namespace cutum
@@ -21,6 +23,13 @@ UMemoryBudgetController::Evaluate(const MemoryBudgetSample &sample,
   const double expand = static_cast<double>(tuning.MemoryExpandKeepMb);
   const bool completed_starve =
       sample.relight_completed_n <= 0 && sample.relight_fifo_n >= 50;
+
+  // I18-F2: chain debt — shed far capture before rim work.
+  if (sample.ingress_debt_level >=
+      static_cast<int>(IngressDebtLevel::ShedFar))
+  {
+    d.capture_hard_cap = 1;
+  }
 
   if (sample.private_mb >= budget)
   {

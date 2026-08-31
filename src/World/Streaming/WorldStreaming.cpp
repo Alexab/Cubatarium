@@ -859,7 +859,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       static_cast<int>(LastPressureCaps.level);
   world.PhysicsTelemetryData.PendingLightFocus = pending_light_focus;
   const bool rim_witness_idle_diet =
-      missing_near && !in.visual_holes && miss_horiz >= 3 &&
+      missing_near && !in.visual_holes && miss_horiz >= 2 && miss_horiz <= 4 &&
       !missing_underfeet && last_unfinished_hint <= 3;
   const bool diet_cruise_cadence_final =
       moving_for_telemetry || rim_witness_idle_diet;
@@ -868,6 +868,13 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       diet_cruise_cadence_final && !in.visual_holes && !pending_underfeet;
   static glm::ivec2 last_sticky_focus_xz{INT_MAX, INT_MAX};
   static int last_sticky_keep_cols = -1;
+  static uint64_t last_softdefer_witness_retarget = 0;
+  const int witness_retarget_delta = static_cast<int>(
+      world.PhysicsTelemetryData.SoftDeferWitnessRetarget >=
+              last_softdefer_witness_retarget
+          ? world.PhysicsTelemetryData.SoftDeferWitnessRetarget -
+                last_softdefer_witness_retarget
+          : 0);
   const int keep_cols_now = (2 * focus_radius + 1) * (2 * focus_radius + 1);
   const bool sticky_focus_jumped =
       focus_ground.x != last_sticky_focus_xz.x ||
@@ -879,7 +886,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
           : 999;
   const bool sticky_ring_resync = ShouldRefreshRingResyncForFocusJump(
       sticky_focus_jumped, sticky_keep_changed, ring_sample_prev.valid,
-      sticky_epoch_delta);
+      sticky_epoch_delta, witness_retarget_delta);
   int sticky_remesh = 0;
   int pending_dark = 0;
   if (cruise_ring_reuse && !sticky_ring_resync)
@@ -968,7 +975,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     unfinished_visual = last_unfinished_visual;
     focus_pressure = unfinished_visual;
     unfinished_sample_cd =
-        UnfinishedSampleCooldownFrames(unfinished_visual);
+        UnfinishedSampleCooldownFramesCruise(diet_cruise_cadence_final,
+                                             miss_horiz, unfinished_visual);
     pt.PrepRefreshRingResyncMs += lap_ms(unfinished_t0);
   }
   else if (ShouldReuseUnfinishedVisualSample(diet_cruise_cadence_final,
@@ -1002,6 +1010,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   }
   pt.PrepRefreshUnfinishedMs = lap_ms(unfinished_t0);
   world.SetLastUnfinishedVisualSample(unfinished_visual);
+  last_softdefer_witness_retarget =
+      world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
   {
     UWorld::FocusRingVisualSample sample{};
     sample.frame_epoch = world.GetStreamingFrameEpoch();
@@ -2062,7 +2072,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           tune_budget.MissFirstFrameBudget, gen_backlog_total,
           async_queued_budget, void_n_budget, vb_no_ticket_n,
           world.IsEnterFovLitPassActive(),
-          world.PhysicsTelemetryData.PostLoadRingNotReady > 0});
+          world.PhysicsTelemetryData.PostLoadRingNotReady > 0,
+          world.PhysicsTelemetryData.IngressDebtLevel,
+          world.PhysicsTelemetryData.MissHoriz});
   if (early_budget.apply_vb_bg_floor)
   {
     const auto &telem_bp = world.GetPhysicsTelemetry();
@@ -2214,11 +2226,56 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     {
       if (!land_frontier)
       {
-        // FZ2.7-P15a: Site A ingress count (also bumps legacy total).
-        ++world.PhysicsTelemetryData.SoftDeferIngressWitnessN;
-        ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
-        world.PhysicsTelemetryData.SoftDeferWitnessHoriz =
-            world.PhysicsTelemetryData.MissHoriz;
+        const bool visual_holes_site_a = world.PhysicsTelemetryData.VisualHoles > 0;
+        const int site_a_pin_horiz =
+            SoftDeferCapturePinValid ? SoftDeferCapturePinHoriz
+                                     : world.PhysicsTelemetryData.MissHoriz;
+        const int site_a_pin_age =
+            SoftDeferCapturePinValid ? SoftDeferCapturePinAge : 0;
+        bool site_a_pin_drawable = false;
+        bool site_a_pin_pending_gpu = false;
+        if (SoftDeferCapturePinValid)
+        {
+          const glm::ivec3 pin_coord(
+              SoftDeferCapturePinCx,
+              SoftDeferCapturePinCy >= 0 ? SoftDeferCapturePinCy : 0,
+              SoftDeferCapturePinCz);
+          site_a_pin_drawable =
+              world.GetMeshService().HasDrawableGreedyMesh(pin_coord);
+          site_a_pin_pending_gpu =
+              world.GetMeshService().IsPendingGpuApply(pin_coord) ||
+              world.GetMeshService().IsGpuExtractInFlight(pin_coord);
+        }
+        const int schedule_ok_site_a =
+            world.GetMeshService().GetLastMeshDirtyScheduleOkN();
+        const int dirty_fm_site_a = world.GetMeshService().GetLastDirtyFmN();
+        const bool fm_schedule_starved_site_a =
+            dirty_fm_site_a > 0 && schedule_ok_site_a < 2;
+        const bool block_pin_sla_site_a = ShouldBlockWitnessRetargetForPinSla(
+            site_a_pin_age, site_a_pin_horiz, visual_holes_site_a, moving_now);
+        const bool block_gpu_site_a =
+            ShouldBlockCaptureRetargetForIngressGpuPending(
+                site_a_pin_pending_gpu, site_a_pin_horiz, visual_holes_site_a,
+                world.PhysicsTelemetryData.MissHoriz, fm_schedule_starved_site_a,
+                site_a_pin_drawable);
+        if (!block_pin_sla_site_a && !block_gpu_site_a)
+        {
+          const glm::ivec2 prior_xz = SoftDeferCapturePinValid
+                                          ? glm::ivec2(SoftDeferCapturePinCx,
+                                                       SoftDeferCapturePinCz)
+                                          : focus_xz;
+          const glm::ivec3 prior_coord(prior_xz.x, focus_horiz.y, prior_xz.y);
+          if (world.GetMeshService().HasDrawableGreedyMesh(prior_coord))
+          {
+            WitnessColumnGrace = {prior_xz, 2};
+            world.GetMeshService().SetWitnessSwapGrace(prior_xz, 2);
+          }
+          // FZ2.7-P15a: Site A ingress count (also bumps legacy total).
+          ++world.PhysicsTelemetryData.SoftDeferIngressWitnessN;
+          ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
+          world.PhysicsTelemetryData.SoftDeferWitnessHoriz =
+              world.PhysicsTelemetryData.MissHoriz;
+        }
       }
       else
       {
@@ -2261,7 +2318,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             tune.Era18VbCaptureFloor, tune.Era18VbBgBudgetFloor,
             tune.MissFirstFrameBudget, gen_backlog_total, async_queued_budget,
             void_n_budget, vb_no_ticket_cap, world.IsEnterFovLitPassActive(),
-            world.PhysicsTelemetryData.PostLoadRingNotReady > 0});
+            world.PhysicsTelemetryData.PostLoadRingNotReady > 0,
+            world.PhysicsTelemetryData.IngressDebtLevel,
+            world.PhysicsTelemetryData.MissHoriz});
     world.PhysicsTelemetryData.SoftDeferCaptureBudget =
         budget.soft_defer_capture_budget;
     world.PhysicsTelemetryData.FrameBudgetMs = budget.frame_budget_ms;
@@ -2357,17 +2416,28 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         const bool rim_witness_idle =
             !moving_now && missing_focus_mesh &&
             world.PhysicsTelemetryData.MissHoriz >= 3 && !visual_holes_cap;
-        const bool better_horiz_raw = ShouldAllowBetterHorizWitnessRetarget(
-            unf, cand_horiz, SoftDeferCapturePinHoriz);
-        bool better_horiz = ShouldDampLandFrontierWitnessRetarget(
-            land_frontier && !ocean_heal, cand_horiz,
-            ShouldDampOceanCaptureRetarget(ocean_heal, cand_horiz,
-                                           better_horiz_raw));
         const int schedule_ok_now =
             world.GetMeshService().GetLastMeshDirtyScheduleOkN();
         const int dirty_fm_now = world.GetMeshService().GetLastDirtyFmN();
         const bool fm_schedule_starved =
             dirty_fm_now > 0 && schedule_ok_now < 2;
+        const IngressDebtLevel ingress_debt =
+            static_cast<IngressDebtLevel>(
+                world.PhysicsTelemetryData.IngressDebtLevel);
+        static int periods_since_witness_retarget = 999;
+        ++periods_since_witness_retarget;
+        const bool better_horiz_raw = ShouldAllowBetterHorizWitnessRetarget(
+            unf, cand_horiz, SoftDeferCapturePinHoriz, moving_now,
+            schedule_ok_now, dirty_fm_now, world.PhysicsTelemetryData.MissHoriz);
+        bool better_horiz = ShouldDampLandFrontierWitnessRetarget(
+            land_frontier && !ocean_heal, cand_horiz,
+            ShouldDampOceanCaptureRetarget(ocean_heal, cand_horiz,
+                                           better_horiz_raw));
+        if (ShouldRateLimitWitnessRetargetUnderDebt(
+                ingress_debt, periods_since_witness_retarget, visual_holes_cap))
+        {
+          better_horiz = false;
+        }
         if (ShouldDampWitnessRetargetOnUnfinishedCruise(moving_now, unf) ||
             (ShouldDampWitnessRetargetOnRimIdleCruise(rim_witness_idle,
                                                       cand_horiz) &&
@@ -2448,6 +2518,18 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             SoftDeferCapturePinValid, SoftDeferCapturePinAge, hold_witness_pin);
         if (retarget)
         {
+          const glm::ivec2 prior_pin_xz(SoftDeferCapturePinCx,
+                                        SoftDeferCapturePinCz);
+          const glm::ivec3 prior_pin_coord(
+              prior_pin_xz.x,
+              SoftDeferCapturePinCy >= 0 ? SoftDeferCapturePinCy : 0,
+              prior_pin_xz.y);
+          if (world.GetMeshService().HasDrawableGreedyMesh(prior_pin_coord))
+          {
+            WitnessColumnGrace = {prior_pin_xz, 2};
+            world.GetMeshService().SetWitnessSwapGrace(prior_pin_xz, 2);
+          }
+          periods_since_witness_retarget = 0;
           SoftDeferCapturePinValid = true;
           SoftDeferCapturePinCx = cand_xz.x;
           SoftDeferCapturePinCz = cand_xz.y;
@@ -3224,6 +3306,11 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
   {
     return;
   }
+  if (WitnessColumnGrace.frames_left > 0)
+  {
+    --WitnessColumnGrace.frames_left;
+  }
+  meshService.TickWitnessSwapGrace();
   URuntimeTuning::LoadStreamingTuneFile("streaming_tune.json");
   // Explicit Completed caps from tune (stress / low-mem). slots=0 keeps
   // constructor default and allows CompletedExpandEnabled growth.
@@ -3355,6 +3442,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
       sample.relight_completed_n =
           static_cast<int>(world.GetRelightCompletedSize());
       sample.unfinished_visual = world.PhysicsTelemetryData.UnfinishedVisual;
+      sample.ingress_debt_level = world.PhysicsTelemetryData.IngressDebtLevel;
       // Prefer FramePerf cached sample (every ~30 frames) — avoid per-tick
       // GetProcessMemoryInfo on the streaming hot path (P0b).
       sample.private_mb = UFramePerfMonitor::GetLastPrivateMb();
@@ -3562,7 +3650,9 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         // Latch on near visual holes only — rim miss (nh≥3) must not refresh
         // hold forever while standing (152933: fog_hole_debt≈97%, nh=4–5).
         const bool hole_debt_now =
-            (phys.FocusMissingMesh > 0 && phys.MissHoriz <= 2);
+            (phys.FocusMissingMesh > 0 && phys.MissHoriz <= 2) ||
+            phys.IngressDebtLevel >=
+                static_cast<int>(IngressDebtLevel::ShedFar);
         if (hole_debt_now)
         {
           FogPullInHoleHoldFrames = kFogHoleHoldFrames;
@@ -3893,7 +3983,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
             (moving_fast || moving_any)
                 ? world.PhysicsTelemetryData.ColumnAbsentInRdN
                 : 0);
-    if (frame_ms <= 20.0 && pressure.allow_prefetch &&
+    const bool ingress_debt_prefetch_ok =
+        world.PhysicsTelemetryData.IngressDebtLevel <
+        static_cast<int>(IngressDebtLevel::ShedFar);
+    if (frame_ms <= 20.0 && pressure.allow_prefetch && ingress_debt_prefetch_ok &&
         (((!visual_holes && !underfeet_need) || frontier_prefetch)))
     {
       Streamer->PrefetchAhead(feet_chunk, forward, lastMovementSpeed,

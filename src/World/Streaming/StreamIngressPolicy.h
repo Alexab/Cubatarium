@@ -1,7 +1,9 @@
 #pragma once
 
 #include <algorithm>
+#include <climits>
 #include <cstdint>
+#include <glm/glm.hpp>
 
 namespace cutum
 {
@@ -11,8 +13,13 @@ inline bool ShouldRefreshRingResyncForFocusJump(bool focus_ground_jumped,
                                                 bool keep_cols_changed,
                                                 bool ring_sample_valid,
                                                 int frame_epoch_delta,
+                                                int witness_retarget_delta = 0,
                                                 int max_epoch_reuse = 4)
 {
+  if (witness_retarget_delta > 0 && !focus_ground_jumped && !keep_cols_changed)
+  {
+    return false;
+  }
   if (focus_ground_jumped || keep_cols_changed || !ring_sample_valid)
   {
     return true;
@@ -24,6 +31,17 @@ inline bool ShouldRefreshRingResyncForFocusJump(bool focus_ground_jumped,
 inline int UnfinishedSampleCooldownFrames(int unfinished_visual)
 {
   return unfinished_visual <= 1 ? 24 : 12;
+}
+
+/// I18-B4: restore I12 rim fast-path cadence when stable cruise rim.
+inline int UnfinishedSampleCooldownFramesCruise(bool diet_cruise, int miss_horiz,
+                                                int unfinished_visual)
+{
+  if (diet_cruise && miss_horiz >= 2 && miss_horiz <= 4 && unfinished_visual <= 1)
+  {
+    return 32;
+  }
+  return UnfinishedSampleCooldownFrames(unfinished_visual);
 }
 
 /// I17-P1: reuse cached unfinished between sample ticks on cruise.
@@ -57,8 +75,14 @@ inline int VbRawScanCadenceFrames(bool diet_cruise, int vb_focus_stable_frames,
 /// I17-P2: defer revision bump on rim while GPU apply in flight (drawable held).
 inline bool ShouldDeferRimRevisionBumpForPendingGpu(bool focus_valid, int horiz,
                                                   bool pending_gpu,
-                                                  bool has_drawable)
+                                                  bool has_drawable,
+                                                  bool witness_hop_window = false)
 {
+  if (witness_hop_window && focus_valid && has_drawable && horiz >= 0 &&
+      horiz <= 4)
+  {
+    return true;
+  }
   return focus_valid && pending_gpu && has_drawable && horiz >= 0 && horiz <= 4;
 }
 
@@ -70,6 +94,33 @@ inline int RimIngressFmScheduleFloor(bool moving, int miss_horiz, int dirty_fm_n
     return 0;
   }
   return std::min(4, std::max(1, dirty_fm_n));
+}
+
+/// I18-A2: chain stall kick threshold (frames).
+inline int RimChainStallKickFrames(bool schedule_starved)
+{
+  return schedule_starved ? 2 : 4;
+}
+
+/// I18-A1: FM dirty GPU watch coord on rim ingress ring.
+inline bool IsRimIngressWatchCoord(glm::ivec3 coord, glm::ivec3 focus_ground,
+                                  int max_horiz = 4)
+{
+  const int horiz =
+      std::max(std::abs(coord.x - focus_ground.x),
+               std::abs(coord.z - focus_ground.z));
+  return horiz >= 0 && horiz <= max_horiz;
+}
+
+/// I18-F3: dynamic kick_cut bias from FM watch depth on rim.
+inline double DynamicKickCutBiasForFmWatch(int watch_rim_n, double base_kick_cut)
+{
+  if (watch_rim_n <= 0)
+  {
+    return base_kick_cut;
+  }
+  const int capped = std::min(watch_rim_n, 4);
+  return std::max(base_kick_cut, 0.70 + 0.05 * static_cast<double>(capped));
 }
 
 /// I17-P3: consume ticketed VB on cruise when stalled plateau without PL debt.
@@ -96,6 +147,97 @@ inline bool IsBlinkTransition(int prev_unfinished, int cur_unfinished)
     return true;
   }
   return cur_unfinished >= prev_unfinished + 2;
+}
+
+/// I18-F: ingress debt levels for coordinated load shedding.
+enum class IngressDebtLevel : uint8_t
+{
+  Ok = 0,
+  Watch = 1,
+  ShedFar = 2,
+  ShedRim = 3,
+};
+
+struct IngressDebtInput
+{
+  bool moving{false};
+  int chain_progress_frames{0};
+  int schedule_ok_n{0};
+  int dirty_fm_n{0};
+  int fm_dirty_gpu_watch_max_age{0};
+  int softdefer_witness_retarget_delta{0};
+  int miss_horiz{0};
+};
+
+inline IngressDebtLevel EvaluateIngressDebt(const IngressDebtInput &in,
+                                            int watch_streak_periods)
+{
+  if (!in.moving)
+  {
+    return IngressDebtLevel::Ok;
+  }
+  const bool chain_stall =
+      in.chain_progress_frames == 0 && in.dirty_fm_n > 0;
+  if (!chain_stall)
+  {
+    return IngressDebtLevel::Ok;
+  }
+  if (watch_streak_periods < 2)
+  {
+    return IngressDebtLevel::Watch;
+  }
+  if (in.schedule_ok_n < 2 || in.fm_dirty_gpu_watch_max_age > 30)
+  {
+    if (in.softdefer_witness_retarget_delta > 0 && in.miss_horiz >= 2 &&
+        in.miss_horiz <= 4)
+    {
+      return IngressDebtLevel::ShedRim;
+    }
+    return IngressDebtLevel::ShedFar;
+  }
+  if (in.softdefer_witness_retarget_delta > 0)
+  {
+    return IngressDebtLevel::ShedRim;
+  }
+  return IngressDebtLevel::ShedFar;
+}
+
+/// I18-F5: rate limit better_horiz hops under ingress debt.
+inline bool ShouldRateLimitWitnessRetargetUnderDebt(
+    IngressDebtLevel debt, int periods_since_last_retarget, bool visual_holes,
+    int rate_limit_periods = 48)
+{
+  if (visual_holes)
+  {
+    return false;
+  }
+  if (debt < IngressDebtLevel::ShedFar)
+  {
+    return false;
+  }
+  return periods_since_last_retarget < rate_limit_periods;
+}
+
+/// I18-D1: hold prior column drawable briefly on witness column swap.
+struct WitnessSwapGrace
+{
+  glm::ivec2 prior_xz{INT_MAX, INT_MAX};
+  int frames_left{0};
+};
+
+inline bool ShouldHoldPriorColumnDrawableOnWitnessSwap(bool had_drawable,
+                                                     bool new_column_ready,
+                                                     int nh, int frames_left)
+{
+  return had_drawable && !new_column_ready && nh >= 0 && nh <= 4 &&
+         frames_left > 0;
+}
+
+inline bool IsWitnessSwapGraceActive(const WitnessSwapGrace &grace,
+                                   glm::ivec2 coord_xz)
+{
+  return grace.frames_left > 0 && grace.prior_xz.x == coord_xz.x &&
+         grace.prior_xz.y == coord_xz.y;
 }
 
 } // namespace cutum

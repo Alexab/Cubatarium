@@ -851,6 +851,7 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.PrepScheduleClampMs = 0.0;
   PhysicsTelemetryData.PrepSoftdeferPolicyMs = 0.0;
   PhysicsTelemetryData.PrepIsolatedMissMs = 0.0;
+  PhysicsTelemetryData.PrepColumnFlowDrainMs = 0.0;
   PhysicsTelemetryData.PrepRefreshPressureMs = 0.0;
   PhysicsTelemetryData.PrepRefreshMissMs = 0.0;
   PhysicsTelemetryData.PrepRefreshPendingMs = 0.0;
@@ -876,6 +877,12 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.RelightApplyToMarkRelitN = 0;
   PhysicsTelemetryData.MarkRelitToFmDirtyN = 0;
   PhysicsTelemetryData.FmDirtyToGpuFinishN = 0;
+  PhysicsTelemetryData.FmDirtyGpuWatchN = 0;
+  PhysicsTelemetryData.FmDirtyGpuWatchMaxAge = 0;
+  PhysicsTelemetryData.FmDirtyGpuWatchTimeoutDelta = 0;
+  PhysicsTelemetryData.GpuFinishWatchRimN = 0;
+  PhysicsTelemetryData.IngressDebtLevel = 0;
+  PhysicsTelemetryData.IngressDebtStreak = 0;
   PhysicsTelemetryData.PostRelightApplyMeshDrainFloor = 0;
   PhysicsTelemetryData.MeshDirtyScheduleSkipOutsideFocusFmN = 0;
   PhysicsTelemetryData.FmConsumerStarvedActive = 0;

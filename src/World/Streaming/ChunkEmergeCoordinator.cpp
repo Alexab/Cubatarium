@@ -14,6 +14,7 @@
 #include "World/Streaming/OceanFrontierPolicy.h"
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/RelightFifoPolicy.h"
+#include "World/Streaming/StreamIngressPolicy.h"
 #include "World/Streaming/CyOrderPolicy.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/NearFovWorkPriority.h"
@@ -163,6 +164,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   double prep_schedule_clamp_ms = 0.0;
   double prep_softdefer_policy_ms = 0.0;
   double prep_isolated_miss_ms = 0.0;
+  double prep_column_flow_drain_ms = 0.0;
   static int s_fm_enqueue_prior = 0;
   static int s_schedule_ok_prior = 0;
   static int s_dirty_fm_prior = 0;
@@ -1835,6 +1837,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   mesh_service.SetMeshEmergeTotalBudgetMs(
       moving ? adaptive_moving_emerge : stop_emerge);
+  // I18-C2: tighten emerge when prior prep gap was low (pressure diet headroom).
+  {
+    static double s_last_prep_refresh_gap_ms = 999.0;
+    if (s_last_prep_refresh_gap_ms < 30.0 && moving && !visual_holes)
+    {
+      mesh_service.SetMeshEmergeTotalBudgetMs(
+          static_cast<float>(mesh_service.GetMeshEmergeTotalBudgetMs() * 0.85));
+    }
+    s_last_prep_refresh_gap_ms =
+        world.GetPhysicsTelemetry().PrepRefreshGapMs;
+  }
   auto clamp_emerge_to_phase = [&]()
   {
     const double cap = world.GetPhysicsTelemetry().EmergeBudgetCapMs;
@@ -3255,6 +3268,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     pt.PrepScheduleClampMs = prep_schedule_clamp_ms;
     pt.PrepSoftdeferPolicyMs = prep_softdefer_policy_ms;
     pt.PrepIsolatedMissMs = prep_isolated_miss_ms;
+    pt.PrepColumnFlowDrainMs = prep_column_flow_drain_ms;
   }
   // Moving + dirty backlog: ensure minimum async feed rate so dirty queue
   // drains steadily instead of starving.
@@ -3956,16 +3970,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         }
       }
 
-      // I17-P2-3: rim ingress markrelit→fm→gpu chain stall → PreferKick + schedule.
+      // I18-A2: rim ingress markrelit→fm→gpu chain stall → PreferKick + schedule.
       {
         static int rim_chain_stall_frames = 0;
         const auto &chain_telem = world.GetPhysicsTelemetry();
+        const bool schedule_starved = chain_telem.MeshDirtyScheduleOkN == 0;
         if (moving && nh >= 2 && nh <= 4 &&
             chain_telem.MarkRelitChainProgressFrames == 0 &&
             chain_telem.DirtyFmN > 0 && chain_telem.FmDirtyToGpuFinishN == 0)
         {
           ++rim_chain_stall_frames;
-          if (rim_chain_stall_frames >= 8)
+          const int kick_after =
+              RimChainStallKickFrames(schedule_starved);
+          if (rim_chain_stall_frames >= kick_after ||
+              (schedule_starved && rim_chain_stall_frames >= 2))
           {
             mesh_service.PreferKickPendingGpuQueued(isolated_hole);
             mesh_drain = std::max(mesh_drain, 8);
@@ -3977,6 +3995,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         else
         {
           rim_chain_stall_frames = 0;
+        }
+        // I18-A3c: consumer-starved rim ingress FM schedule floor.
+        if (moving && nh >= 2 && nh <= 3 &&
+            IsFmConsumerStarved(chain_telem.DirtyFmN,
+                                chain_telem.MeshDirtyScheduleOkN))
+        {
+          const int floor =
+              RimIngressFmScheduleFloor(true, nh, chain_telem.DirtyFmN);
+          if (floor > 0)
+          {
+            mesh_schedule = std::max(mesh_schedule, floor);
+          }
         }
       }
 
@@ -4207,6 +4237,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // sites Enqueue RemeshSeam without SyncIdle MarkDirty).
   {
     auto &exec = GetColumnFlowExecutor();
+    const auto column_flow_t0 = std::chrono::high_resolution_clock::now();
     exec.DrainBudget(world, std::max(1, column_flow_drain_n),
                      focus_ground_horiz, focus_radius,
                      column_flow_admit_batch);
@@ -4222,6 +4253,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       exec.DrainRemeshSeamBudget(world, seam_budget);
     }
+    prep_column_flow_drain_ms = prep_ms_since(column_flow_t0);
   }
   int gpu_consume_done = 0;
   {
@@ -4583,6 +4615,42 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     else if (pt.MarkRelitChainProgressFrames > 0)
     {
       --pt.MarkRelitChainProgressFrames;
+    }
+    // I18-F1: ingress debt governor (chain stall coordinated shed).
+    {
+      static int ingress_debt_streak = 0;
+      static int ingress_debt_ok_periods = 0;
+      const auto &cache = mesh_service.GetCache();
+      const IngressDebtInput debt_in{
+          moving,
+          pt.MarkRelitChainProgressFrames,
+          pt.MeshDirtyScheduleOkN,
+          pt.DirtyFmN,
+          cache.GetFmDirtyGpuWatchMaxAge(),
+          0,
+          nearest_miss_h};
+      const IngressDebtLevel debt =
+          EvaluateIngressDebt(debt_in, ingress_debt_streak);
+      if (debt == IngressDebtLevel::Ok)
+      {
+        ++ingress_debt_ok_periods;
+        ingress_debt_streak = 0;
+      }
+      else
+      {
+        ingress_debt_ok_periods = 0;
+        if (debt >= IngressDebtLevel::Watch)
+        {
+          ++ingress_debt_streak;
+        }
+      }
+      pt.IngressDebtLevel = static_cast<int>(debt);
+      pt.IngressDebtStreak = ingress_debt_streak;
+      pt.FmDirtyGpuWatchN = cache.GetFmDirtyGpuWatchCount();
+      pt.FmDirtyGpuWatchMaxAge = cache.GetFmDirtyGpuWatchMaxAge();
+      pt.FmDirtyGpuWatchTimeoutDelta = cache.GetFmDirtyGpuWatchTimeoutDelta();
+      pt.GpuFinishWatchRimN = cache.GetLastGpuFinishWatchRimN();
+      mesh_service.GetCache().ResetFmDirtyGpuWatchTimeoutDelta();
     }
   }
 }

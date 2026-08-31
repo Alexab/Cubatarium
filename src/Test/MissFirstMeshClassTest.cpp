@@ -15,6 +15,7 @@
 #include "World/Streaming/NearFovWorkPriority.h"
 #include "World/Streaming/OceanCruisePolicy.h"
 #include "World/Streaming/RelightFifoPolicy.h"
+#include "World/Streaming/StreamIngressPolicy.h"
 #include "World/Streaming/RelightInstallPlanner.h"
 #include "World/Streaming/PhysicsStepPolicy.h"
 #include "World/Streaming/InputFirstPolicy.h"
@@ -2909,6 +2910,49 @@ int main()
            "I17-P2: defer rim revision bump");
     Expect(ShouldConsumeTicketedVbStalledCruise(true, 12, 0, 30),
            "I17-P3: stalled cruise VB consume");
+  }
+
+  // I18 rim chain + witness comfort policy smoke
+  {
+    using cutum::DynamicKickCutBiasForFmWatch;
+    using cutum::EvaluateIngressDebt;
+    using cutum::IngressDebtInput;
+    using cutum::IngressDebtLevel;
+    using cutum::IsRimIngressWatchCoord;
+    using cutum::RimChainStallKickFrames;
+    using cutum::ShouldAllowBetterHorizWitnessRetarget;
+    using cutum::ShouldHoldPriorColumnDrawableOnWitnessSwap;
+    using cutum::ShouldRateLimitWitnessRetargetUnderDebt;
+    using cutum::ShouldRefreshRingResyncForFocusJump;
+    using cutum::UnfinishedSampleCooldownFramesCruise;
+    using cutum::WitnessSwapGrace;
+    Expect(RimChainStallKickFrames(true) < RimChainStallKickFrames(false),
+           "I18-A2: schedule-starved faster kick");
+    Expect(DynamicKickCutBiasForFmWatch(3, 0.55) > 0.55,
+           "I18-F3: watch rim raises kick_cut");
+    Expect(IsRimIngressWatchCoord({2, 0, 1}, {0, 0, 0}),
+           "I18-A1: rim watch coord");
+    Expect(!ShouldRefreshRingResyncForFocusJump(false, false, true, 2, 1),
+           "I18-B3: witness hop alone no resync");
+    Expect(UnfinishedSampleCooldownFramesCruise(true, 3, 0) >= 32,
+           "I18-B4: cruise rim longer cadence");
+    Expect(ShouldHoldPriorColumnDrawableOnWitnessSwap(true, false, 3, 2),
+           "I18-D1: witness swap grace");
+    Expect(!ShouldAllowBetterHorizWitnessRetarget(5, 3, 4, true, 0, 2, 3),
+           "I18-B2: sched gate blocks better_horiz");
+    IngressDebtInput debt_in{};
+    debt_in.moving = true;
+    debt_in.dirty_fm_n = 2;
+    debt_in.chain_progress_frames = 0;
+    Expect(EvaluateIngressDebt(debt_in, 0) == IngressDebtLevel::Watch,
+           "I18-F1: chain stall watch");
+    Expect(EvaluateIngressDebt(debt_in, 3) >= IngressDebtLevel::ShedFar,
+           "I18-F1: chain stall shed");
+    Expect(ShouldRateLimitWitnessRetargetUnderDebt(
+               IngressDebtLevel::ShedFar, 10, false),
+           "I18-F5: rate limit under debt");
+    WitnessSwapGrace grace{{1, 2}, 2};
+    Expect(IsWitnessSwapGraceActive(grace, {1, 2}), "I18-D1: grace active");
   }
 
   // CheapRemesh C5: live GPU opaque across LitDrawable ring (repair optional)

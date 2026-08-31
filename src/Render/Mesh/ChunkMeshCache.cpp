@@ -2251,7 +2251,10 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
   }
   if (!ShouldDeferRimRevisionBumpForPendingGpu(
           MeshFocusValid, horiz, IsPendingGpuApply(chunkCoord),
-          HasDrawableGreedyMesh(chunkCoord)))
+          HasDrawableGreedyMesh(chunkCoord),
+          WitnessSwapGrace_.frames_left > 0 &&
+              WitnessSwapGrace_.prior_xz.x == chunkCoord.x &&
+              WitnessSwapGrace_.prior_xz.y == chunkCoord.z))
   {
     BumpChunkMeshRevision(chunkCoord);
   }
@@ -3049,6 +3052,7 @@ void UChunkMeshCache::AgeFmDirtyGpuWatchFrames()
   {
     if (++it->second > kFmDirtyGpuWatchMaxAgeFrames)
     {
+      ++FmDirtyGpuWatchTimeoutDelta_;
       it = FmDirtyGpuWatchAge_.erase(it);
     }
     else
@@ -3056,6 +3060,39 @@ void UChunkMeshCache::AgeFmDirtyGpuWatchFrames()
       ++it;
     }
   }
+}
+
+int UChunkMeshCache::GetFmDirtyGpuWatchMaxAge() const
+{
+  int max_age = 0;
+  for (const auto &kv : FmDirtyGpuWatchAge_)
+  {
+    max_age = std::max(max_age, kv.second);
+  }
+  return max_age;
+}
+
+void UChunkMeshCache::SetWitnessSwapGrace(glm::ivec2 prior_xz, int frames)
+{
+  if (frames <= 0)
+  {
+    return;
+  }
+  WitnessSwapGrace_.prior_xz = prior_xz;
+  WitnessSwapGrace_.frames_left = frames;
+}
+
+void UChunkMeshCache::TickWitnessSwapGrace()
+{
+  if (WitnessSwapGrace_.frames_left > 0)
+  {
+    --WitnessSwapGrace_.frames_left;
+  }
+}
+
+bool UChunkMeshCache::HasWitnessSwapGraceAt(glm::ivec2 coord_xz) const
+{
+  return cutum::IsWitnessSwapGraceActive(WitnessSwapGrace_, coord_xz);
 }
 
 bool UChunkMeshCache::TryConsumeFmDirtyGpuWatch(glm::ivec3 coord)
@@ -3289,6 +3326,15 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
           const int horiz =
               std::max(std::abs(p.coord.x - focus.x),
                        std::abs(p.coord.z - focus.z));
+          return horiz <= 4 && FmDirtyGpuWatchAge_.count(p.coord) > 0;
+        });
+    std::stable_partition(
+        PendingGpuApplies.begin(), PendingGpuApplies.end(),
+        [&](const PendingGpuApply &p)
+        {
+          const int horiz =
+              std::max(std::abs(p.coord.x - focus.x),
+                       std::abs(p.coord.z - focus.z));
           return horiz <= 4;
         });
   }
@@ -3317,6 +3363,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   int finished = 0;
   int kicked = 0;
   int finish_attempts = 0;
+  int gpu_finish_watch_rim_n = 0;
 
   auto fail_ticket = [&](PendingGpuApply &pending) {
     if (pending.ticket.valid && pending.ticket.slotIndex >= 0)
@@ -3430,6 +3477,11 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         ++processed;
         ++finished;
         ++stats.Completed;
+        if (FmDirtyGpuWatchAge_.count(pending.coord) > 0 &&
+            IsRimIngressWatchCoord(pending.coord, MeshFocusGroundChunk))
+        {
+          ++gpu_finish_watch_rim_n;
+        }
       }
       continue;
     }
@@ -3495,6 +3547,11 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       ++processed;
       ++finished;
       ++stats.Completed;
+      if (FmDirtyGpuWatchAge_.count(pending.coord) > 0 &&
+          IsRimIngressWatchCoord(pending.coord, MeshFocusGroundChunk))
+      {
+        ++gpu_finish_watch_rim_n;
+      }
     }
   }
 
@@ -3505,7 +3562,16 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   // N0d: after hole clear, Normal + async refill still needs Finish share
   // (manual 215629 i=17/23 fin=0 wall~113); never use 0.55 under HoleDrain.
   const int async_inflight = GetAsyncInFlightCount();
-  const double kick_cut =
+  int watch_rim_n = 0;
+  for (const auto &pending : PendingGpuApplies)
+  {
+    if (FmDirtyGpuWatchAge_.count(pending.coord) > 0 &&
+        IsRimIngressWatchCoord(pending.coord, MeshFocusGroundChunk))
+    {
+      ++watch_rim_n;
+    }
+  }
+  const double base_kick_cut =
       (WorkAdmission.mode == MeshWorkAdmission::Mode::HoleDrain ||
        WorkAdmission.mode == MeshWorkAdmission::Mode::DeepBacklog)
           ? (hole_finish_deep ? 0.68 : (hole_finish_bias ? 0.70 : 0.90))
@@ -3513,6 +3579,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
               PendingGpuApplies.size() >= 12)
                  ? 0.75
                  : 0.55);
+  const double kick_cut =
+      DynamicKickCutBiasForFmWatch(watch_rim_n, base_kick_cut);
   auto find_prefer_queued = [&]() {
     auto missing_it = std::find_if(
         PendingGpuApplies.begin(), PendingGpuApplies.end(),
@@ -3660,6 +3728,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
 
   LastGpuKickN += kicked;
   LastGpuFinishN += finished;
+  LastGpuFinishWatchRimN_ = gpu_finish_watch_rim_n;
   return processed;
 }
 
@@ -4018,24 +4087,42 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   }
   if (had_gpu_resident)
   {
-    // Regress counter: free-first would have holed GPU-only drawable columns.
-    if (CpuReplaceFreeFirstWouldHole(had_gpu_drawable, new_cpu_drawable))
+    const bool grace_hold =
+        HasWitnessSwapGraceAt(glm::ivec2(result.coord.x, result.coord.z));
+    if (!grace_hold)
+    {
+      // Regress counter: free-first would have holed GPU-only drawable columns.
+      if (CpuReplaceFreeFirstWouldHole(had_gpu_drawable, new_cpu_drawable))
+      {
+        ++MeshReplaceHoleAvoided;
+      }
+      if (had_gpu_drawable)
+      {
+        ++FreeChunkLiveN;
+      }
+      GpuPipeline->FreeChunk(result.coord);
+      ForceFlatRebuildNext = true;
+      chunkMesh.GpuResident = false;
+      chunkMesh.GpuSlotIndex = -1;
+      chunkMesh.GpuQuadCount = 0;
+      chunkMesh.GpuHasDarkFace = false;
+      chunkMesh.GpuBlockRanges.clear();
+      chunkMesh.GpuTransparent = false;
+    }
+    else
     {
       ++MeshReplaceHoleAvoided;
     }
-    if (had_gpu_drawable)
-    {
-      ++FreeChunkLiveN;
-    }
-    GpuPipeline->FreeChunk(result.coord);
-    ForceFlatRebuildNext = true;
   }
-  chunkMesh.GpuResident = false;
-  chunkMesh.GpuSlotIndex = -1;
-  chunkMesh.GpuQuadCount = 0;
-  chunkMesh.GpuHasDarkFace = false;
-  chunkMesh.GpuBlockRanges.clear();
-  chunkMesh.GpuTransparent = false;
+  else
+  {
+    chunkMesh.GpuResident = false;
+    chunkMesh.GpuSlotIndex = -1;
+    chunkMesh.GpuQuadCount = 0;
+    chunkMesh.GpuHasDarkFace = false;
+    chunkMesh.GpuBlockRanges.clear();
+    chunkMesh.GpuTransparent = false;
+  }
   // Intentional empty: match Immediate / GPU 0-quad ready (HasMeshSatisfying).
   // SoftDefer empty placeholders must stay !ready (I-M3) — do not fake
   // GpuResident 0-quad or miss/holes latch on undrawn SoftDefer.

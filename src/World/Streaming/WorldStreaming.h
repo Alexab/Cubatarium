@@ -7,6 +7,7 @@
 #include "World/Chunks/StreamingAltitudePolicy.h"
 #include "World/Streaming/StreamingPressure.h"
 #include "World/Streaming/MemoryBudgetController.h"
+#include "World/Streaming/StreamIngressPolicy.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
 #include "World/Chunks/ChunkManager.h"
 #include <chrono>
@@ -153,6 +154,8 @@ private:
   int SoftDeferCapturePinAge{0};
   /// Pin length; Era29 enter sets EnterSpawnCapturePinFrames(), else Era27 T=8.
   int SoftDeferCapturePinMaxAge{8};
+  /// I18-D1: hold prior column drawable briefly on witness column swap.
+  WitnessSwapGrace WitnessColumnGrace{};
 };
 
 } // namespace cutum

@@ -261,6 +261,8 @@ public:
   bool IsGpuExtractInFlight(glm::ivec3 chunk_coord) const;
   /// Queued in PendingGpuApplies — orphaned GpuExtractInFlight alone is not.
   bool IsPendingGpuApply(glm::ivec3 chunk_coord) const;
+  void SetWitnessSwapGrace(glm::ivec2 prior_xz, int frames);
+  void TickWitnessSwapGrace();
   bool IsPendingGpuQueued(glm::ivec3 chunk_coord) const;
   bool IsPendingGpuKickedOrDispatched(glm::ivec3 chunk_coord) const;
   bool PreferKickPendingGpuQueued(glm::ivec3 chunk_coord);

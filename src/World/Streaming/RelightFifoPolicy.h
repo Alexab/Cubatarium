@@ -138,11 +138,23 @@ inline bool ShouldSuppressDuplicatePendingLightWithoutMeshProgress(
 
 /// FZ2.7-P12 C2: better_horiz hop only if Δhoriz≥2 under unfinished storm.
 inline bool ShouldAllowBetterHorizWitnessRetarget(int unfinished, int cand_horiz,
-                                                  int pin_horiz)
+                                                  int pin_horiz,
+                                                  bool moving = false,
+                                                  int schedule_ok_n = 99,
+                                                  int dirty_fm_n = 0,
+                                                  int miss_horiz = -1)
 {
   if (pin_horiz <= 0 || cand_horiz <= 0)
   {
     return false;
+  }
+  if (moving && miss_horiz >= 2 && miss_horiz <= 4)
+  {
+    const int floor = RimIngressFmScheduleFloor(true, miss_horiz, dirty_fm_n);
+    if (floor > 0 && schedule_ok_n < floor)
+    {
+      return false;
+    }
   }
   if (unfinished > 30)
   {

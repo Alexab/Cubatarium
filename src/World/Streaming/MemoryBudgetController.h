@@ -19,6 +19,8 @@ struct MemoryBudgetSample
   int relight_fifo_n{0};
   int relight_completed_n{0};
   int unfinished_visual{0};
+  /// I18-F2: ingress debt forces far capture shed.
+  int ingress_debt_level{0};
 };
 
 struct MemoryBudgetDecision

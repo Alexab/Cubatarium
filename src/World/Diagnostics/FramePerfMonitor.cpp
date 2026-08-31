@@ -314,6 +314,13 @@ struct FrameNumbers
   int relight_apply_to_markrelit_n{0};
   int markrelit_to_fm_dirty_n{0};
   int fm_dirty_to_gpu_finish_n{0};
+  int fm_dirty_gpu_watch_n{0};
+  int fm_dirty_gpu_watch_max_age{0};
+  int fm_dirty_gpu_watch_timeout_delta{0};
+  int gpu_finish_watch_rim_n{0};
+  int ingress_debt_level{0};
+  int ingress_debt_streak{0};
+  double prep_column_flow_drain_ms{0.0};
   int markrelit_chain_progress_frames{0};
   int miss_sla_kick_n{0};
   double prep_pending_light_ms{0.0};
@@ -793,6 +800,13 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.relight_apply_to_markrelit_n = phys.RelightApplyToMarkRelitN;
   n.markrelit_to_fm_dirty_n = phys.MarkRelitToFmDirtyN;
   n.fm_dirty_to_gpu_finish_n = phys.FmDirtyToGpuFinishN;
+  n.fm_dirty_gpu_watch_n = phys.FmDirtyGpuWatchN;
+  n.fm_dirty_gpu_watch_max_age = phys.FmDirtyGpuWatchMaxAge;
+  n.fm_dirty_gpu_watch_timeout_delta = phys.FmDirtyGpuWatchTimeoutDelta;
+  n.gpu_finish_watch_rim_n = phys.GpuFinishWatchRimN;
+  n.ingress_debt_level = phys.IngressDebtLevel;
+  n.ingress_debt_streak = phys.IngressDebtStreak;
+  n.prep_column_flow_drain_ms = phys.PrepColumnFlowDrainMs;
   n.markrelit_chain_progress_frames = phys.MarkRelitChainProgressFrames;
   n.miss_sla_kick_n = phys.MissSlaKickN;
   n.prep_pending_light_ms = phys.PrepPendingLightMs;
@@ -1295,6 +1309,14 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.relight_apply_to_markrelit_n
           << ",\"markrelit_to_fm_dirty_n\":" << n.markrelit_to_fm_dirty_n
           << ",\"fm_dirty_to_gpu_finish_n\":" << n.fm_dirty_to_gpu_finish_n
+          << ",\"fm_dirty_gpu_watch_n\":" << n.fm_dirty_gpu_watch_n
+          << ",\"fm_dirty_gpu_watch_max_age\":" << n.fm_dirty_gpu_watch_max_age
+          << ",\"fm_dirty_gpu_watch_timeout_delta\":"
+          << n.fm_dirty_gpu_watch_timeout_delta
+          << ",\"gpu_finish_watch_rim_n\":" << n.gpu_finish_watch_rim_n
+          << ",\"ingress_debt_level\":" << n.ingress_debt_level
+          << ",\"ingress_debt_streak\":" << n.ingress_debt_streak
+          << ",\"prep_column_flow_drain_ms\":" << n.prep_column_flow_drain_ms
           << ",\"markrelit_chain_progress_frames\":"
           << n.markrelit_chain_progress_frames
           << ",\"miss_sla_kick_n\":" << n.miss_sla_kick_n

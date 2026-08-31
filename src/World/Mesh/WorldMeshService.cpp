@@ -1136,6 +1136,16 @@ bool UWorldMeshService::IsPendingGpuApply(glm::ivec3 chunk_coord) const
   return Cache.IsPendingGpuApply(chunk_coord);
 }
 
+void UWorldMeshService::SetWitnessSwapGrace(glm::ivec2 prior_xz, int frames)
+{
+  Cache.SetWitnessSwapGrace(prior_xz, frames);
+}
+
+void UWorldMeshService::TickWitnessSwapGrace()
+{
+  Cache.TickWitnessSwapGrace();
+}
+
 bool UWorldMeshService::IsPendingGpuQueued(glm::ivec3 chunk_coord) const
 {
   return Cache.IsPendingGpuQueued(chunk_coord);
