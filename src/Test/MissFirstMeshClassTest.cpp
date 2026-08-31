@@ -2043,8 +2043,11 @@ int main()
            "P11: no second trim when fifo<90 and completed=0");
     Expect(ShouldCruiseRedFifoSecondTrim(2, 92, 96, 0.75f, true, 5, 0),
            "I10-B2: consumer-starved trim when fifo>=90 and completed=0");
-    Expect(!ShouldCruiseRedFifoSecondTrim(2, 92, 96, 0.75f, true, 5, 0, 0),
-           "I11-B3: chain stall blocks second trim");
+    Expect(!ShouldCruiseRedFifoSecondTrim(2, 92, 96, 0.75f, true, 5, 0, 2),
+           "I15-A3: chain progress blocks second trim");
+    Expect(!ShouldCruiseRedFifoSecondTrim(2, 92, 96, 0.75f, true, 5, 0, 0, true,
+                                          3),
+           "I15-A3: consume VB blocks second trim");
     Expect(ShouldCruiseRedFifoSecondTrim(2, 72, 96, 0.75f, true, 5, 2),
            "P11: second trim when completed>0");
   }
@@ -2456,7 +2459,7 @@ int main()
            "SRBR-P1: stand unlit≈PL consume");
     Expect(!ShouldConsumeUnlitTicketedVbStand(true, 107, 6, 62, 62),
            "SRBR-P1: moving skips unlit consume");
-    Expect(ShouldProtectRemeshUnderTicketedVbStand(false, 107, 6, 48),
+    Expect(ShouldProtectRemeshUnderTicketedVbStand(false, 107, 3, 48),
            "SRBR-P1: remesh protect ticketed VB stand");
     Expect(!ShouldProtectRemeshUnderTicketedVbStand(false, 107, 6, 0),
            "SRBR-P1: no remesh protect empty RemeshQ");
@@ -2838,6 +2841,33 @@ int main()
     Expect(RelightCapturePipelineDepthCap(1, 8, 8.0, 0.0, 0.0, 0.0, 0, 71, 96,
                                           80, true) >= 4,
            "P7: fifo 71 ready 0 unknown unit still depth>=4");
+    Expect(RelightCapturePipelineDepthCap(1, 8, 8.0, 1.0, 0.4, 0.5, 0, 10, 96,
+                                          10, true) >= 3,
+           "I15-A1: consume_mode depth boost");
+  }
+
+  // I15-B1 / I15-C1 / I15-D1 policy smoke
+  {
+    using cutum::ShouldExitStopVbHoleDrain;
+    using cutum::ShouldConsumeTicketedVbStopDrain;
+    using cutum::ShouldDampMarkRelitRemeshOnStandVbDebt;
+    using cutum::ShouldForceMissFinalizeOnTelemetryMismatch;
+    Expect(!ShouldExitStopVbHoleDrain(2000, 5, 80, true),
+           "I15-B1: consume keeps HoleDrain with vb_nt");
+    Expect(ShouldExitStopVbHoleDrain(2000, 0, 80, true),
+           "I15-B1: exit when vb_nt cleared");
+    Expect(ShouldConsumeTicketedVbStopDrain(false, 20, 6),
+           "I15-B2: stop drain at focus 20 when vb_nt>=5");
+    Expect(!ShouldConsumeTicketedVbStopDrain(false, 10, 6),
+           "I15-B2: focus 10 below floor 15");
+    Expect(ShouldDampMarkRelitRemeshOnStandVbDebt(false, 3, 20),
+           "I15-C1: stand VB damp");
+    Expect(!ShouldDampMarkRelitRemeshOnStandVbDebt(true, 3, 20),
+           "I15-C1: moving no damp");
+    Expect(ShouldForceMissFinalizeOnTelemetryMismatch(true, false, 3, 31),
+           "I15-D1: mismatch kick");
+    Expect(!ShouldForceMissFinalizeOnTelemetryMismatch(true, true, 3, 31),
+           "I15-D1: visual_holes blocks kick");
   }
 
   // CheapRemesh C5: live GPU opaque across LitDrawable ring (repair optional)

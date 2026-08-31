@@ -109,6 +109,15 @@ inline bool ShouldMissTimeSlaKick(bool missing_visible_mesh,
   return miss_age_periods >= sla;
 }
 
+/// I15-D1: rim witness latched (missing but not visual_holes) — force finalize.
+inline bool ShouldForceMissFinalizeOnTelemetryMismatch(
+    bool focus_missing_mesh, bool visual_holes, int miss_horiz,
+    int mismatch_frames, int mismatch_thresh = 30)
+{
+  return focus_missing_mesh && !visual_holes && miss_horiz >= 3 &&
+         miss_horiz <= 4 && mismatch_frames > mismatch_thresh;
+}
+
 /// Closeout F: schedule floor folded into pools — always 0.
 inline int AsyncScheduleFloorUnderMiss(bool /*miss_or_unfinished_visual*/)
 {

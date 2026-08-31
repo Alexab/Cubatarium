@@ -344,12 +344,27 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       }
       PhysicsTelemetryData.MarkRelitSnapshotMs +=
           ElapsedMs(snap_t0, Clock::now());
+      const bool damp_cruise_ingress =
+          PhysicsTelemetryData.EditImmediateN <= 0 &&
+          ShouldDampCruiseIngressSeamRemesh(
+              moving, PhysicsTelemetryData.VisualHoles > 0,
+              PhysicsTelemetryData.MissHoriz);
+      const bool damp_stand_vb = ShouldDampMarkRelitRemeshOnStandVbDebt(
+          moving, PhysicsTelemetryData.VisibleBlackNoTicketN,
+          PhysicsTelemetryData.VisibleBlackFocusN);
+      static int stand_seam_relit_frames = 0;
+      if (!moving && PhysicsTelemetryData.MarkRelitInvokedN > 0)
+      {
+        ++stand_seam_relit_frames;
+      }
+      else
+      {
+        stand_seam_relit_frames = 0;
+      }
+      const bool damp_stand_seam_burst = !moving && stand_seam_relit_frames > 4;
       in.damp_soft_empty_remesh = ShouldDampMarkRelitRemeshOnSoftDeferEmpty(
           in.soft_defer_empty_owned, in.any_drawable,
-          PhysicsTelemetryData.EditImmediateN <= 0 &&
-              ShouldDampCruiseIngressSeamRemesh(
-                  moving, PhysicsTelemetryData.VisualHoles > 0,
-                  PhysicsTelemetryData.MissHoriz));
+          damp_cruise_ingress || damp_stand_vb || damp_stand_seam_burst);
       bool any_fully_dark = false;
       bool any_still_stale = false;
       for (const ColumnChunkSnapshot &snap : in.relit_chunks)

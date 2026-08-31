@@ -160,6 +160,15 @@ inline bool ShouldDampMarkRelitRemeshOnSoftDeferEmpty(
   return soft_defer_empty_owned;
 }
 
+/// I15-C1: stand VB debt — damp seam remesh storm without cruise ingress.
+inline bool ShouldDampMarkRelitRemeshOnStandVbDebt(bool moving,
+                                                   int vb_no_ticket_n,
+                                                   int vb_focus_n,
+                                                   int focus_floor = 15)
+{
+  return !moving && vb_no_ticket_n > 0 && vb_focus_n >= focus_floor;
+}
+
 /// Era27 I-A4: under miss/undrawn, do not ForgetInflight / supersede a live
 /// FirstMesh Inflight or PendingReplace path that would leave a hole frame.
 inline bool ShouldHoldInflightSupersedeUnderMiss(bool miss_or_soft_undrawn,

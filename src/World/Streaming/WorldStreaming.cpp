@@ -921,7 +921,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   const bool cruise_unfinished_reuse =
       diet_cruise_cadence_final && !in.visual_holes && !pending_underfeet &&
       ring_sample_prev.valid &&
-      ring_sample_prev.frame_epoch + 4 >= world.GetStreamingFrameEpoch();
+      ring_sample_prev.frame_epoch + 8 >= world.GetStreamingFrameEpoch();
   int unfinished_visual = 0;
   int focus_pressure = 0;
   const auto unfinished_t0 = std::chrono::high_resolution_clock::now();
@@ -1217,7 +1217,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       pt.PrepRefreshFacingMs = lap_ms(facing_t0);
       last_ahead = ahead;
       last_behind = behind;
-      facing_sample_cd = rim_cruise_fast ? 16 : 4;
+      facing_sample_cd = rim_cruise_fast ? 24 : 4;
     }
     else
     {
@@ -1324,13 +1324,21 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     pt.PrepRefreshUnderfeetMs = lap_ms(underfeet_t0);
   }
   pt.PrepRefreshPressureMs = lap_ms(refresh_t0);
-  pt.PrepRefreshGapMs =
-      pt.PrepRefreshPressureMs -
-      (pt.PrepRefreshMissMs + pt.PrepRefreshPendingMs + pt.PrepRefreshStickyMs +
-       pt.PrepRefreshUnfinishedMs + pt.PrepRefreshVbMs +
-       pt.PrepRefreshDarkfaceMs + pt.PrepRefreshFacingMs +
-       pt.PrepRefreshUnderfeetMs + pt.PrepRefreshDirtyMs +
-       pt.PrepRefreshPressureEvalMs + pt.PrepRefreshUnderfeetProbeMs);
+  {
+    const double sticky_excl =
+        std::max(0.0, pt.PrepRefreshStickyMs - pt.PrepRefreshRingResyncMs);
+    const double vb_overhead =
+        std::max(0.0, pt.PrepRefreshVbMs - pt.PrepRefreshVbRawMs);
+    pt.PrepRefreshGapMs =
+        pt.PrepRefreshPressureMs -
+        (pt.PrepRefreshMissMs + pt.PrepRefreshPendingMs + sticky_excl +
+         pt.PrepRefreshUnfinishedMs + pt.PrepRefreshRingResyncMs +
+         pt.PrepRefreshVbRawMs + vb_overhead + pt.PrepRefreshDarkfaceMs +
+         pt.PrepRefreshFacingMs + pt.PrepRefreshUnderfeetMs +
+         pt.PrepRefreshDirtyMs + pt.PrepRefreshPressureEvalMs +
+         pt.PrepRefreshUnderfeetProbeMs);
+    pt.PrepRefreshGapMs = std::max(0.0, pt.PrepRefreshGapMs);
+  }
 }
 
 void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
@@ -2681,7 +2689,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       }
       if (stop_vb_budget_frames > 0 && stop_vb_budget_frames <= 3600)
       {
-        bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 3 : 5);
+        bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 4 : 6);
         world.PhysicsTelemetryData.StopVbBudgetActive = 1;
         world.PhysicsTelemetryData.StopVbDrainFrames = std::max(
             world.PhysicsTelemetryData.StopVbDrainFrames, stop_vb_budget_frames);

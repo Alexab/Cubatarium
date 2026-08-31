@@ -224,15 +224,23 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     MissStuckForcePinPeriod = 0;
   }
   glm::ivec3 nearest_missing_hole{};
-  // Prefer player cy — y=0 stuck SoftDefer-empty bedrock forever while
-  // presentable band stayed missing (enter_lit 100846: miss=(-2,0,4),
-  // underfeet_ready=1). Horiz focus stays focus_ground_horiz elsewhere.
-  const bool have_nearest_missing =
-      missing_visible_mesh &&
-      mesh_service.GetAsyncInFlightCount() < 32 &&
-      mesh_service.FindNearestMissingGreedyMesh(
+  bool have_nearest_missing = false;
+  if (missing_visible_mesh && mesh_service.GetAsyncInFlightCount() < 32)
+  {
+    const auto &miss_telem = world.GetPhysicsTelemetry();
+    if (MissWitnessAgeFrames > 0 && miss_telem.MissHoriz >= 0)
+    {
+      nearest_missing_hole =
+          glm::ivec3(miss_telem.MissCx, miss_telem.MissCy, miss_telem.MissCz);
+      have_nearest_missing = true;
+    }
+    else
+    {
+      have_nearest_missing = mesh_service.FindNearestMissingGreedyMesh(
           world.GetBlockWorld(), focus_ground, focus_radius,
           nearest_missing_hole);
+    }
+  }
   prep_missing_ms = prep_ms_since(prep_t);
   prep_t = std::chrono::high_resolution_clock::now();
   double prep_pending_light_ms = 0.0;
@@ -862,7 +870,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     const bool skip_softdefer_disk_scan =
         !near_miss_urgent && prev_softdefer_empty == 0 &&
-        owned_all_ticketed && SoftDeferRimScanCd > 0;
+        owned_all_ticketed &&
+        (SoftDeferRimScanCd > 0 ||
+         (cruise_fast_path && !visual_holes));
     if (skip_softdefer_disk_scan)
     {
       --SoftDeferRimScanCd;
@@ -1319,6 +1329,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         std::chrono::duration<double, std::milli>(
             std::chrono::high_resolution_clock::now() - softdefer_own_t0)
             .count();
+    prep_softdefer_policy_ms =
+        phys_telem.SoftdeferEmptyScanMs + phys_telem.SoftdeferEmptyOwnMs;
   }
   // B5: SoftDefer-empty stuck — ColPipe P4: FirstMesh only if not already owned
   // (no MarkDirtyPriority / full-column Dirty storm).
@@ -1549,12 +1561,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       // Phase 1c: trim = truncate outer tickets alarm, not silent heal.
       const int fifo_live = world.GetPendingTerrainRelightFifoCount();
       const int completed_n = static_cast<int>(world.GetRelightCompletedSize());
+      const auto &trim_telem = world.GetPhysicsTelemetry();
+      const bool consume_trim = IsTicketedVbConsumeMode(
+          trim_telem.VisibleBlackNoTicketN, trim_telem.VisibleBlackFocusN,
+          trim_telem.VisibleBlackStalledN, moving);
       if (ShouldCruiseRedFifoSecondTrim(
               pressure, fifo_live, mtune.RelightFifoSoftCap,
               mtune.RelightFifoAdmitFrac,
               visual_holes || missing_visible_mesh || missing_underfeet,
               pending_focus_count, completed_n,
-              world.GetPhysicsTelemetry().MarkRelitChainProgressFrames))
+              trim_telem.MarkRelitChainProgressFrames, consume_trim,
+              trim_telem.VisibleBlackNoTicketN))
       {
         const int drop2 = world.TrimFarRelightFifoFarthest(
             focus_ground_horiz, std::max(8, mtune.RelightFifoSoftCap * 3 / 4));
@@ -2136,6 +2153,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       bin.remesh_queue_n = mesh_service.GetLastDirtyRemeshN();
       bin.protect_lit_settle_remesh = early_adm.protect_lit_settle_remesh;
       ApplyRemeshAdmitBackpressure(early_adm, bin);
+      if (!moving && pt.VisibleBlackNoTicketN > 0 &&
+          pt.VisibleBlackFocusN >= 15)
+      {
+        early_adm.remesh_schedule = std::min(early_adm.remesh_schedule, 1);
+      }
       mesh_service.SetMeshWorkAdmission(early_adm);
     }
     prep_admission_ms = prep_ms_since(admission_t0);
@@ -3825,7 +3847,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             pin_isolated_miss(118);
           }
           // I12-C1: completion stuck + empty FM → column-owned FirstMesh.
-          if (world.GetPhysicsTelemetry().MissCompletionStuckFrames > 60 &&
+          if (world.GetPhysicsTelemetry().MissCompletionStuckFrames > 30 &&
               mesh_service.GetLastDirtyFmN() == 0 && schedule_ok < 4 &&
               no_drawable && miss_resident)
           {
@@ -3845,8 +3867,31 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           }
         }
         // I12-D3: stale pinned witness with schedule_ok=0 → re-probe nearest miss.
+        static int telemetry_mismatch_frames = 0;
+        const auto &stream_telem = world.GetPhysicsTelemetry();
+        if (stream_telem.FocusMissingMesh > 0 && stream_telem.VisualHoles == 0 &&
+            stream_telem.MissHoriz >= 3 && stream_telem.MissHoriz <= 4)
+        {
+          ++telemetry_mismatch_frames;
+        }
+        else
+        {
+          telemetry_mismatch_frames = 0;
+        }
+        if (ShouldForceMissFinalizeOnTelemetryMismatch(
+                stream_telem.FocusMissingMesh > 0, stream_telem.VisualHoles > 0,
+                stream_telem.MissHoriz, telemetry_mismatch_frames))
+        {
+          mesh_schedule = std::max(mesh_schedule, 6);
+          if (nh <= 2)
+          {
+            mesh_drain = std::max(mesh_drain, 8);
+          }
+        }
+        const int retire_age =
+            (no_drawable && MissWitnessAgeFrames > 180) ? 180 : 300;
         if (world.GetPhysicsTelemetry().MeshDirtyScheduleOkN == 0 &&
-            MissWitnessAgeFrames > 300 && nh >= 3)
+            MissWitnessAgeFrames > retire_age && nh >= 3)
         {
           glm::ivec3 reprobe{0};
           if (mesh_service.FindNearestMissingGreedyMesh(
@@ -4475,7 +4520,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         found_nearest_missing &&
         mesh_service.HasDrawableGreedyMesh(isolated_hole);
     if (missing_visible_mesh && !drawable_witness &&
-        MissWitnessAgeFrames > 60)
+        MissWitnessAgeFrames > 30)
     {
       ++MissCompletionStuckFrames;
     }

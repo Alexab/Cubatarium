@@ -1,6 +1,7 @@
 #pragma once
 
 #include "World/Streaming/ColumnTicketMap.h"
+#include "World/Streaming/RelightFifoPolicy.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -199,13 +200,29 @@ inline bool ShouldPreferStandVbHealOwnership(bool moving,
   return stand_age_frames >= 180;
 }
 
+/// I15-B1: do not exit HoleDrain while ticketed VB debt remains.
+inline bool ShouldExitStopVbHoleDrain(int stop_vb_drain_frames,
+                                      int vb_no_ticket_n, int vb_focus_n,
+                                      bool consume_mode)
+{
+  if (vb_no_ticket_n <= 0)
+  {
+    return true;
+  }
+  if (consume_mode && stop_vb_drain_frames < 3600)
+  {
+    return false;
+  }
+  return stop_vb_drain_frames > 1800 && vb_focus_n > 0;
+}
+
 /// SRBR-P1: remesh floor under ticketed VB stand (no stale required; P17 cured).
 inline bool ShouldProtectRemeshUnderTicketedVbStand(bool moving,
                                                    int visible_black_focus_n,
                                                    int vb_no_ticket_n,
                                                    int remesh_queue_n,
                                                    int vb_thresh = 50,
-                                                   int no_ticket_soft = 8)
+                                                   int no_ticket_soft = 4)
 {
   if (moving || remesh_queue_n <= 0)
   {
@@ -221,7 +238,7 @@ inline bool ShouldProtectRemeshUnderTicketedVbCruise(bool moving,
                                                       int vb_no_ticket_n,
                                                       int remesh_queue_n,
                                                       int vb_thresh = 40,
-                                                      int no_ticket_soft = 15)
+                                                      int no_ticket_soft = 8)
 {
   if (!moving || remesh_queue_n <= 0)
   {
@@ -520,8 +537,11 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     hole_drain_clnm_drain_frames = 0;
   }
+  const bool consume_mode = IsTicketedVbConsumeMode(
+      in.visible_black_no_ticket_n, in.visible_black_focus_n,
+      /*vb_stalled_n=*/0, in.moving);
   const bool stop_vb_block_carve =
-      !in.moving && in.visible_black_focus_n > 20 &&
+      !consume_mode && !in.moving && in.visible_black_focus_n > 20 &&
       in.visible_black_no_ticket_n > 0;
   if (admission_carve_remain > 0 && mode == MeshWorkAdmission::Mode::HoleDrain &&
       !stop_vb_block_carve)
@@ -553,7 +573,10 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   }
   if (!in.moving && stop_vb_drain_frames > 1800 &&
       in.visible_black_focus_n > 0 &&
-      mode == MeshWorkAdmission::Mode::HoleDrain)
+      mode == MeshWorkAdmission::Mode::HoleDrain &&
+      ShouldExitStopVbHoleDrain(stop_vb_drain_frames,
+                                in.visible_black_no_ticket_n,
+                                in.visible_black_focus_n, consume_mode))
   {
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     out.admission_carve_out = true;
@@ -681,12 +704,16 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   const bool protect_lit = ShouldProtectLitSettleRemesh(
       holes, in.dark_face_stale_near_n, in.remesh_queue_n);
   // SRBR-P1: ticketed VB stand also needs remesh floor (stale often 0 after P17).
-  const bool protect_ticketed_vb = ShouldProtectRemeshUnderTicketedVbStand(
-      in.moving, in.visible_black_focus_n, in.visible_black_no_ticket_n,
-      in.remesh_queue_n);
-  const bool protect_ticketed_vb_cruise = ShouldProtectRemeshUnderTicketedVbCruise(
-      in.moving, in.visible_black_focus_n, in.visible_black_no_ticket_n,
-      in.remesh_queue_n);
+  const bool protect_ticketed_vb =
+      !consume_mode &&
+      ShouldProtectRemeshUnderTicketedVbStand(
+          in.moving, in.visible_black_focus_n, in.visible_black_no_ticket_n,
+          in.remesh_queue_n);
+  const bool protect_ticketed_vb_cruise =
+      !consume_mode &&
+      ShouldProtectRemeshUnderTicketedVbCruise(
+          in.moving, in.visible_black_focus_n, in.visible_black_no_ticket_n,
+          in.remesh_queue_n);
   if ((protect_lit || protect_ticketed_vb || protect_ticketed_vb_cruise) &&
       (out.mode == MeshWorkAdmission::Mode::HoleDrain ||
        out.mode == MeshWorkAdmission::Mode::DeepBacklog))

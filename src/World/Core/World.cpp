@@ -4233,7 +4233,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       relight_apply_cap, slice_ms, 0.0, unit_ms_prev, throughput_mode, vb_stalled_n,
       light_unit_ms_prev, install_unit_ms_prev, ready_at_start,
       PhysicsTelemetryData.RelightFifoN, fifo_soft_cap,
-      PhysicsTelemetryData.PendingLightN);
+      PhysicsTelemetryData.PendingLightN, consume_mode, moving);
   int earned_cap =
       (PhysicsTelemetryData.DirtyFmN == 0 &&
        PhysicsTelemetryData.ColumnLoadedNoMeshN > 0)
@@ -4242,6 +4242,11 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   if (vb_focus_n >= 20 && PhysicsTelemetryData.DarkFaceStaleNearN >= 40)
   {
     earned_cap = std::max(earned_cap, 3);
+  }
+  // I15-A4: consume_mode earns +1 apply slice on cruise/stop drain.
+  if (consume_mode)
+  {
+    earned_cap = std::min(earned_cap + 1, relight_apply_cap);
   }
   // RateMatch R0: DrainUpTo(1) loop so MissReservedMs slice can stop mid-budget
   // (DrainCompleted(N) would MarkRelit all N before any early-out).
@@ -4470,7 +4475,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     PhysicsTelemetryData.PostRelightApplyMeshDrainFloor = 14;
   }
   if (PhysicsTelemetryData.MarkRelitToFmDirtyN > 0 &&
-      PhysicsTelemetryData.MissCompletionStuckFrames > 60)
+      PhysicsTelemetryData.MissCompletionStuckFrames > 30)
   {
     PhysicsTelemetryData.PostRelightApplyMeshDrainFloor =
         std::max(PhysicsTelemetryData.PostRelightApplyMeshDrainFloor, 14);

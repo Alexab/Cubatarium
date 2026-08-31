@@ -491,7 +491,8 @@ inline bool RelightThroughputHasBacklog(int ready_at_start, int fifo_n,
 inline int RelightThroughputMinApplyCap(
     bool throughput_mode, double cap_unit_ms, double slice_ms,
     int visible_black_stalled_n, int ready_at_start, int fifo_n,
-    int fifo_soft_cap, int pending_light_n)
+    int fifo_soft_cap, int pending_light_n, bool consume_mode = false,
+    bool moving = true)
 {
   if (!throughput_mode)
   {
@@ -505,7 +506,11 @@ inline int RelightThroughputMinApplyCap(
   if (cheap && RelightThroughputHasBacklog(ready_at_start, fifo_n, fifo_soft_cap,
                                            pending_light_n))
   {
-    return 3;
+    return consume_mode && !moving ? 4 : 3;
+  }
+  if (consume_mode && !moving)
+  {
+    return 4;
   }
   return 2;
 }
@@ -558,7 +563,8 @@ inline int EarnedRelightApplyCap(int drain_budget, double slice_ms,
                                  double last_light_unit_ms = 0.0,
                                  double last_install_unit_ms = 0.0,
                                  int ready_at_start = 0, int fifo_n = 0,
-                                 int fifo_soft_cap = 0, int pending_light_n = 0)
+                                 int fifo_soft_cap = 0, int pending_light_n = 0,
+                                 bool consume_mode = false, bool moving = true)
 {
   if (!throughput_mode)
   {
@@ -568,7 +574,8 @@ inline int EarnedRelightApplyCap(int drain_budget, double slice_ms,
       last_unit_apply_ms, last_light_unit_ms, last_install_unit_ms);
   const int min_cap = RelightThroughputMinApplyCap(
       throughput_mode, cap_unit, slice_ms, visible_black_stalled_n,
-      ready_at_start, fifo_n, fifo_soft_cap, pending_light_n);
+      ready_at_start, fifo_n, fifo_soft_cap, pending_light_n, consume_mode,
+      moving);
   const int time_cap =
       (cap_unit > 0.1)
           ? std::max(1, static_cast<int>(slice_ms / cap_unit))
@@ -738,6 +745,11 @@ inline int RelightCapturePipelineDepthCap(
       ready_n <= 1)
   {
     cap = std::max(cap, 4);
+  }
+  // I15-A1: consume_mode earns +2 depth (not blanket producer floor).
+  if (consume_mode)
+  {
+    cap = std::max(cap, std::min(base + 2, 6));
   }
   if (max_inflight > 0)
   {
@@ -1155,7 +1167,9 @@ inline bool ShouldConsumeTicketedVbStopDrain(bool moving,
                                               int vb_stalled_n = 0,
                                               int focus_floor = 25)
 {
-  return !moving && visible_black_focus_n >= focus_floor &&
+  const int floor =
+      vb_no_ticket_n >= 5 ? std::min(focus_floor, 15) : focus_floor;
+  return !moving && visible_black_focus_n >= floor &&
          (vb_no_ticket_n >= 1 || vb_stalled_n >= 1);
 }
 
@@ -1269,10 +1283,16 @@ inline bool ShouldCruiseRedFifoSecondTrim(int stream_pressure, int fifo_n,
                                           bool holes_or_miss,
                                           int pending_light_focus,
                                           int completed_n,
-                                          int markrelit_chain_progress_frames = 1)
+                                          int markrelit_chain_progress_frames = 0,
+                                          bool consume_mode = false,
+                                          int vb_no_ticket_n = 0)
 {
-  // I11-B3: no aggressive trim when relight→FM chain stalled.
-  if (completed_n <= 0 && markrelit_chain_progress_frames <= 0)
+  // I15-A3: protect tickets while chain progresses or VB consume drains.
+  if (markrelit_chain_progress_frames > 0)
+  {
+    return false;
+  }
+  if (consume_mode && vb_no_ticket_n > 0)
   {
     return false;
   }

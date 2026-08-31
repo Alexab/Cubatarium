@@ -21,6 +21,7 @@
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/NearFovWorkPriority.h"
 #include "World/Streaming/RelightFifoPolicy.h"
+#include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Core/World.h"
 #include "World/Mesh/WorldMeshService.h"
@@ -1113,6 +1114,11 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         static_cast<double>(tune.MissReservedMs), unit_ms_prev, light_unit,
         install_unit, completed_n, telem.RelightFifoN, tune.RelightFifoSoftCap,
         telem.PendingLightN, consume_mode);
+    // I15-A2: stop consume_mode keeps Capture refill floor.
+    if (consume_mode && !moving)
+    {
+      bg_cap = std::max(bg_cap, 3);
+    }
     const int fifo_soft_cap = tune.RelightFifoSoftCap;
     const bool fifo_starve =
         telem.RelightFifoN >= 50 ||
@@ -1351,10 +1357,25 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     // P2: miss nh≤2 prefers one surface finalize Capture (no partial Y-band).
     // Rim nh=3–4 keeps split. Era41b: enter FOV lit always finalizes.
     const int vb_focus_n = world.GetPhysicsTelemetry().VisibleBlackFocusN;
+    const auto &phys_miss = world.GetPhysicsTelemetry();
+    static int telemetry_mismatch_frames = 0;
+    if (phys_miss.FocusMissingMesh > 0 && phys_miss.VisualHoles == 0 &&
+        phys_miss.MissHoriz >= 3 && phys_miss.MissHoriz <= 4)
+    {
+      ++telemetry_mismatch_frames;
+    }
+    else
+    {
+      telemetry_mismatch_frames = 0;
+    }
+    const bool mismatch_finalize_kick = ShouldForceMissFinalizeOnTelemetryMismatch(
+        phys_miss.FocusMissingMesh > 0, phys_miss.VisualHoles > 0,
+        phys_miss.MissHoriz, telemetry_mismatch_frames);
     const int finalize_ring =
         moving ? kVisualStageNearFovHoriz : kVisualStageLitDrawableHoriz;
     const bool miss_finalize_band =
         enter_fov_lit ||
+        mismatch_finalize_kick ||
         (visual_holes &&
          ShouldPreferMissFinalizeBand(horiz_dist, finalize_ring)) ||
         ShouldFinalizeRelightUnderPlPressure(pending_light_focus_n, horiz_dist,

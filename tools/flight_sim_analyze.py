@@ -1193,6 +1193,63 @@ def analyze(
         if float(r.get("prep_refresh_gap_ms") or 0) > 0.0
     ]
     prep_untagged_gap_med = median(prep_gap_vals) if prep_gap_vals else None
+    prep_gap_honest_vals = []
+    for r in fly_spikes:
+        gap = float(r.get("prep_refresh_gap_ms") or 0)
+        ring = float(r.get("prep_refresh_ring_resync_ms") or 0)
+        vb_raw = float(r.get("prep_refresh_vb_raw_ms") or 0)
+        if gap > 0.0:
+            prep_gap_honest_vals.append(max(0.0, gap - ring - vb_raw))
+    prep_gap_honest_med = (
+        median(prep_gap_honest_vals) if prep_gap_honest_vals else None
+    )
+    chain_stall_sec = _max_run_sec(
+        lambda r: float(r.get("visible_black_focus_n") or 0) > 0
+        and float(r.get("relight_apply_ms") or 0) < 0.5
+        and float(r.get("mark_relit_invoked_n") or 0) == 0
+    )
+    relight_apply_to_markrelit_med = (
+        median(col(fly_spikes, "relight_apply_to_markrelit_n"))
+        if fly_spikes
+        else None
+    )
+    markrelit_to_fm_dirty_med = (
+        median(col(fly_spikes, "markrelit_to_fm_dirty_n")) if fly_spikes else None
+    )
+    fm_dirty_to_gpu_finish_med = (
+        median(col(fly_spikes, "fm_dirty_to_gpu_finish_n")) if fly_spikes else None
+    )
+    ticketed_vb_consume_total = sum(
+        int(r.get("ticketed_vb_consume_n") or 0) for r in cruise_src
+    )
+    stop_vb_budget_vals = col(stop_segment, "stop_vb_budget_active")
+    stop_vb_budget_active_share = (
+        sum(1 for v in stop_vb_budget_vals if float(v) > 0) / len(stop_vb_budget_vals)
+        if stop_vb_budget_vals
+        else None
+    )
+    stream_prep_share = None
+    stream_emerge_share = None
+    emerge_prep_other_share = None
+    if stream_ms_med and stream_ms_med > 0:
+        prep_pressure_med = median(col(cruise_src, "prep_refresh_pressure_ms"))
+        if prep_pressure_med is not None:
+            stream_prep_share = prep_pressure_med / stream_ms_med
+        if mesh_emerge_ms_med is not None:
+            stream_emerge_share = mesh_emerge_ms_med / stream_ms_med
+    mesh_prep_other_med = median(col(cruise_src, "mesh_emerge_prep_other_ms"))
+    mesh_prep_med = median(col(cruise_src, "mesh_emerge_prep_ms"))
+    if mesh_prep_other_med is not None and mesh_prep_med and mesh_prep_med > 0:
+        emerge_prep_other_share = mesh_prep_other_med / mesh_prep_med
+    schedule_ok_zero_rate = None
+    if fly_spikes:
+        sched_vals = [
+            float(r.get("mesh_dirty_schedule_ok_n") or 0) for r in fly_spikes
+        ]
+        schedule_ok_zero_rate = sum(1 for v in sched_vals if v == 0.0) / float(
+            len(sched_vals)
+        )
+    prep_refresh_pressure_ms_med = median(col(cruise_src, "prep_refresh_pressure_ms"))
     dark_face_stale_near_med = median(col(cruise_src, "dark_face_stale_near_n"))
     orphan_vals = col(cruise_src, "mesh_dirty_schedule_skip_orphan_n")
     dirty_ghost_n = max(orphan_vals) if orphan_vals else None
@@ -1500,6 +1557,11 @@ def analyze(
         # Era18 P0 report-only (hard floors land in P1/P2).
         "vb_without_pending_light_focus_sec": vb_without_pending_light_focus_sec,
         "relight_drain_near_zero_while_vb_sec": relight_drain_near_zero_while_vb_sec,
+        "chain_stall_sec": chain_stall_sec,
+        "stream_prep_share": stream_prep_share,
+        "stream_emerge_share": stream_emerge_share,
+        "emerge_prep_other_share": emerge_prep_other_share,
+        "schedule_ok_zero_rate": schedule_ok_zero_rate,
         "softdefer_capture_zero_while_vb_sec": softdefer_capture_zero_while_vb_sec,
         "heal_on_hot_sec": heal_on_hot_sec,
         "heal_on_hot_soft_fail": heal_on_hot_sec >= 20.0,
@@ -1673,6 +1735,18 @@ def analyze(
             "stream_ms": stream_ms_med,
             "prep_untagged_gap_med": prep_untagged_gap_med,
             "prep_refresh_gap_ms": prep_untagged_gap_med,
+            "prep_gap_honest_med": prep_gap_honest_med,
+            "prep_refresh_pressure_ms": prep_refresh_pressure_ms_med,
+            "chain_stall_sec": chain_stall_sec,
+            "relight_apply_to_markrelit_med": relight_apply_to_markrelit_med,
+            "markrelit_to_fm_dirty_med": markrelit_to_fm_dirty_med,
+            "fm_dirty_to_gpu_finish_med": fm_dirty_to_gpu_finish_med,
+            "ticketed_vb_consume_total": ticketed_vb_consume_total,
+            "stop_vb_budget_active_share": stop_vb_budget_active_share,
+            "stream_prep_share": stream_prep_share,
+            "stream_emerge_share": stream_emerge_share,
+            "emerge_prep_other_share": emerge_prep_other_share,
+            "schedule_ok_zero_rate": schedule_ok_zero_rate,
             "dark_face_stale_near_n": dark_face_stale_near_med,
             "dirty_ghost_n": dirty_ghost_n,
             "cruise_fifo_dropped_delta": cruise_fifo_dropped_delta,
