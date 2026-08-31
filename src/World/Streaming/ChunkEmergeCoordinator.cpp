@@ -1571,7 +1571,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               visual_holes || missing_visible_mesh || missing_underfeet,
               pending_focus_count, completed_n,
               trim_telem.MarkRelitChainProgressFrames, consume_trim,
-              trim_telem.VisibleBlackNoTicketN))
+              trim_telem.VisibleBlackNoTicketN,
+              trim_telem.VisibleBlackFocusN))
       {
         const int drop2 = world.TrimFarRelightFifoFarthest(
             focus_ground_horiz, std::max(8, mtune.RelightFifoSoftCap * 3 / 4));
@@ -3847,7 +3848,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             pin_isolated_miss(118);
           }
           // I12-C1: completion stuck + empty FM → column-owned FirstMesh.
-          if (world.GetPhysicsTelemetry().MissCompletionStuckFrames > 30 &&
+          const int miss_completion_thresh = moving ? 30 : 15;
+          if (world.GetPhysicsTelemetry().MissCompletionStuckFrames >
+                  miss_completion_thresh &&
               mesh_service.GetLastDirtyFmN() == 0 && schedule_ok < 4 &&
               no_drawable && miss_resident)
           {
@@ -3880,7 +3883,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         }
         if (ShouldForceMissFinalizeOnTelemetryMismatch(
                 stream_telem.FocusMissingMesh > 0, stream_telem.VisualHoles > 0,
-                stream_telem.MissHoriz, telemetry_mismatch_frames))
+                stream_telem.MissHoriz, telemetry_mismatch_frames) ||
+            ShouldForceMissFinalizeOnStandWitnessStuck(
+                !moving, stream_telem.FocusMissingMesh > 0,
+                MissWitnessAgeFrames))
         {
           mesh_schedule = std::max(mesh_schedule, 6);
           if (nh <= 2)

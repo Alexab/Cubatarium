@@ -1170,7 +1170,8 @@ inline bool ShouldConsumeTicketedVbStopDrain(bool moving,
   const int floor =
       vb_no_ticket_n >= 5 ? std::min(focus_floor, 15) : focus_floor;
   return !moving && visible_black_focus_n >= floor &&
-         (vb_no_ticket_n >= 1 || vb_stalled_n >= 1);
+         (vb_no_ticket_n >= 1 || vb_stalled_n >= 1 ||
+          visible_black_focus_n >= 40);
 }
 
 inline bool IsTicketedVbConsumeMode(int vb_no_ticket_n,
@@ -1285,14 +1286,15 @@ inline bool ShouldCruiseRedFifoSecondTrim(int stream_pressure, int fifo_n,
                                           int completed_n,
                                           int markrelit_chain_progress_frames = 0,
                                           bool consume_mode = false,
-                                          int vb_no_ticket_n = 0)
+                                          int vb_no_ticket_n = 0,
+                                          int vb_focus_n = 0)
 {
   // I15-A3: protect tickets while chain progresses or VB consume drains.
   if (markrelit_chain_progress_frames > 0)
   {
     return false;
   }
-  if (consume_mode && vb_no_ticket_n > 0)
+  if (consume_mode && (vb_no_ticket_n > 0 || vb_focus_n >= 25))
   {
     return false;
   }

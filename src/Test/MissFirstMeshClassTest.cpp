@@ -2048,6 +2048,9 @@ int main()
     Expect(!ShouldCruiseRedFifoSecondTrim(2, 92, 96, 0.75f, true, 5, 0, 0, true,
                                           3),
            "I15-A3: consume VB blocks second trim");
+    Expect(!ShouldCruiseRedFifoSecondTrim(2, 92, 96, 0.75f, true, 5, 0, 0, true,
+                                          0, 93),
+           "I15-B4: consume VB plateau blocks second trim");
     Expect(ShouldCruiseRedFifoSecondTrim(2, 72, 96, 0.75f, true, 5, 2),
            "P11: second trim when completed>0");
   }
@@ -2852,12 +2855,20 @@ int main()
     using cutum::ShouldConsumeTicketedVbStopDrain;
     using cutum::ShouldDampMarkRelitRemeshOnStandVbDebt;
     using cutum::ShouldForceMissFinalizeOnTelemetryMismatch;
+    using cutum::ShouldForceMissFinalizeOnStandWitnessStuck;
+    using cutum::ShouldHoldHoleDrainForStopVbPlateau;
     Expect(!ShouldExitStopVbHoleDrain(2000, 5, 80, true),
            "I15-B1: consume keeps HoleDrain with vb_nt");
-    Expect(ShouldExitStopVbHoleDrain(2000, 0, 80, true),
-           "I15-B1: exit when vb_nt cleared");
+    Expect(!ShouldExitStopVbHoleDrain(2000, 0, 80, true),
+           "I15-B4: ticketed plateau keeps HoleDrain when vb_focus high");
+    Expect(ShouldExitStopVbHoleDrain(2000, 0, 0, true),
+           "I15-B1: exit when VB cleared");
+    Expect(ShouldHoldHoleDrainForStopVbPlateau(false, 93, 0),
+           "I15-B4: stand VB plateau holds HoleDrain");
     Expect(ShouldConsumeTicketedVbStopDrain(false, 20, 6),
            "I15-B2: stop drain at focus 20 when vb_nt>=5");
+    Expect(ShouldConsumeTicketedVbStopDrain(false, 45, 0),
+           "I15-B4: stop drain at focus 45 without no_ticket");
     Expect(!ShouldConsumeTicketedVbStopDrain(false, 10, 6),
            "I15-B2: focus 10 below floor 15");
     Expect(ShouldDampMarkRelitRemeshOnStandVbDebt(false, 3, 20),
@@ -2868,6 +2879,8 @@ int main()
            "I15-D1: mismatch kick");
     Expect(!ShouldForceMissFinalizeOnTelemetryMismatch(true, true, 3, 31),
            "I15-D1: visual_holes blocks kick");
+    Expect(ShouldForceMissFinalizeOnStandWitnessStuck(false, true, 200),
+           "I15-D2: stand witness stuck kick");
   }
 
   // CheapRemesh C5: live GPU opaque across LitDrawable ring (repair optional)

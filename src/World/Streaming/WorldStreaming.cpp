@@ -2674,12 +2674,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     {
       bg_budget = std::min(bg_budget, LastMemoryDecision.capture_hard_cap);
     }
-    // FP-E0.3: stop-phase VB drain — dedicated Capture budget for 60s after stop.
+    // FP-E0.3: stop-phase VB drain — dedicated Capture budget while VB debt remains.
     if (!moving_now)
     {
       static int stop_vb_budget_frames = 0;
       const int vb_nt = world.PhysicsTelemetryData.VisibleBlackNoTicketN;
-      if (vb_nt > 0)
+      const int vb_focus = world.PhysicsTelemetryData.VisibleBlackFocusN;
+      if (vb_nt > 0 || vb_focus >= 20)
       {
         ++stop_vb_budget_frames;
       }
@@ -2687,7 +2688,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       {
         stop_vb_budget_frames = 0;
       }
-      if (stop_vb_budget_frames > 0 && stop_vb_budget_frames <= 3600)
+      if (stop_vb_budget_frames > 0)
       {
         bg_budget = std::max(bg_budget, frame_ms > kBadFrameMs ? 4 : 6);
         world.PhysicsTelemetryData.StopVbBudgetActive = 1;

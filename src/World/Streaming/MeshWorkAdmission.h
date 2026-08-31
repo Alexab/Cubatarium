@@ -205,15 +205,28 @@ inline bool ShouldExitStopVbHoleDrain(int stop_vb_drain_frames,
                                       int vb_no_ticket_n, int vb_focus_n,
                                       bool consume_mode)
 {
-  if (vb_no_ticket_n <= 0)
+  constexpr int kVbClearFloor = 5;
+  if (vb_focus_n <= kVbClearFloor && vb_no_ticket_n <= 0)
   {
     return true;
   }
-  if (consume_mode && stop_vb_drain_frames < 3600)
+  if (consume_mode || vb_focus_n >= 20)
+  {
+    (void)stop_vb_drain_frames;
+    return false;
+  }
+  return stop_vb_drain_frames > 1800 && vb_focus_n <= kVbClearFloor;
+}
+
+/// I15-B4: stand VB plateau — keep HoleDrain even when holes telemetry cleared.
+inline bool ShouldHoldHoleDrainForStopVbPlateau(bool moving, int vb_focus_n,
+                                                int vb_no_ticket_n)
+{
+  if (moving || vb_focus_n < 15)
   {
     return false;
   }
-  return stop_vb_drain_frames > 1800 && vb_focus_n > 0;
+  return vb_no_ticket_n > 0 || vb_focus_n >= 20;
 }
 
 /// SRBR-P1: remesh floor under ticketed VB stand (no stale required; P17 cured).
@@ -463,9 +476,11 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   {
     hole_drain_fm_fed_frames = 0;
   }
+  const bool stop_vb_hold = ShouldHoldHoleDrainForStopVbPlateau(
+      in.moving, in.visible_black_focus_n, in.visible_black_no_ticket_n);
   if (hole_drain_fm_fed_frames >= 8 &&
       mode == MeshWorkAdmission::Mode::HoleDrain && !holes &&
-      in.unfinished_visual == 0)
+      in.unfinished_visual == 0 && !stop_vb_hold)
   {
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     hole_drain_fm_fed_frames = 0;
@@ -482,7 +497,7 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   }
   if (hole_drain_empty_fm_frames >= 4 &&
       mode == MeshWorkAdmission::Mode::HoleDrain &&
-      !(in.nearest_miss_horiz <= 2 && in.missing_underfeet))
+      !(in.nearest_miss_horiz <= 2 && in.missing_underfeet) && !stop_vb_hold)
   {
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     hole_drain_empty_fm_frames = 0;
@@ -500,7 +515,7 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     hole_drain_rim_fed_frames = 0;
   }
   if (hole_drain_rim_fed_frames >= 8 &&
-      mode == MeshWorkAdmission::Mode::HoleDrain)
+      mode == MeshWorkAdmission::Mode::HoleDrain && !stop_vb_hold)
   {
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     hole_drain_rim_fed_frames = 0;
@@ -532,7 +547,7 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   prev_miss_witness_age = in.miss_witness_age_frames;
   if (hole_drain_clnm_drain_frames >= 6 &&
       mode == MeshWorkAdmission::Mode::HoleDrain &&
-      in.nearest_miss_horiz > 2 && miss_witness_age_rising < 4)
+      in.nearest_miss_horiz > 2 && miss_witness_age_rising < 4 && !stop_vb_hold)
   {
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     hole_drain_clnm_drain_frames = 0;
@@ -563,7 +578,8 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   }
   // FP-E2: stop-phase VB drain — after 30s stand with VB orphans, exit HoleDrain.
   static int stop_vb_drain_frames = 0;
-  if (!in.moving && in.visible_black_no_ticket_n > 0)
+  if (!in.moving &&
+      (in.visible_black_no_ticket_n > 0 || in.visible_black_focus_n >= 20))
   {
     ++stop_vb_drain_frames;
   }
@@ -586,7 +602,8 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   if (was_hole_backlog)
   {
     const bool can_exit =
-        !holes && in.pending_gpu <= 8 && queued <= queued_exit_cap;
+        !holes && in.pending_gpu <= 8 && queued <= queued_exit_cap &&
+        !stop_vb_hold;
     const bool near_miss_urgent =
         IsNearFocusMissUrgent(in.visual_holes, in.missing_underfeet,
                               in.nearest_miss_horiz);
@@ -606,6 +623,10 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
         // Pending cooled but Queued still high — stay Warm, not Normal.
         mode = MeshWorkAdmission::Mode::WarmBacklog;
       }
+    }
+    if (stop_vb_hold && holes == false)
+    {
+      mode = MeshWorkAdmission::Mode::HoleDrain;
     }
   }
 
@@ -812,7 +833,10 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   }
   out.stop_vb_drain_frames_report = stop_vb_drain_frames;
   out.stop_vb_budget_active =
-      (!in.moving && in.visible_black_no_ticket_n > 0) ? 1 : 0;
+      (!in.moving &&
+       (in.visible_black_no_ticket_n > 0 || in.visible_black_focus_n >= 20))
+          ? 1
+          : 0;
   return out;
 }
 

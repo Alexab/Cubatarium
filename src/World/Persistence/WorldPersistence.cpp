@@ -659,6 +659,7 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
   const URuntimeTuning &tune = URuntimeTuning::Get();
   const bool enter_fov_lit = world.IsEnterFovLitPassActive();
   const int vb_no_ticket_n = world.GetPhysicsTelemetry().VisibleBlackNoTicketN;
+  const int vb_focus_n = world.GetPhysicsTelemetry().VisibleBlackFocusN;
   // MultHigh was loaded from tune but unused — use it for idle/mid pending so
   // stop can drain light debt without waiting for holes.
   int inflight_mult = 2;
@@ -983,10 +984,12 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       world.GetLastMovementSpeed() >
       world.ProceduralTemplate.MovementPrefetchThreshold;
   // FP-E2.3: post-stop VB stuck — escalate priority insert after 20s no progress.
-  if (!moving && vb_no_ticket_n > 0)
+  if (!moving && (vb_no_ticket_n > 0 || vb_focus_n >= 20))
   {
     static int stop_vb_stuck_frames = 0;
     static int last_stop_vb_no_ticket = -1;
+    static int stop_vb_focus_plateau_frames = 0;
+    static int last_stop_vb_focus = -1;
     if (last_stop_vb_no_ticket >= 0 && vb_no_ticket_n >= last_stop_vb_no_ticket)
     {
       ++stop_vb_stuck_frames;
@@ -996,8 +999,19 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
       stop_vb_stuck_frames = 0;
     }
     last_stop_vb_no_ticket = vb_no_ticket_n;
-    world.GetPhysicsTelemetryMutable().StopVbStuckFrames = stop_vb_stuck_frames;
-    if (stop_vb_stuck_frames > 1200)
+    if (last_stop_vb_focus >= 0 &&
+        vb_focus_n >= std::max(20, last_stop_vb_focus - 2))
+    {
+      ++stop_vb_focus_plateau_frames;
+    }
+    else
+    {
+      stop_vb_focus_plateau_frames = 0;
+    }
+    last_stop_vb_focus = vb_focus_n;
+    world.GetPhysicsTelemetryMutable().StopVbStuckFrames =
+        std::max(stop_vb_stuck_frames, stop_vb_focus_plateau_frames);
+    if (stop_vb_stuck_frames > 1200 || stop_vb_focus_plateau_frames > 600)
     {
       std::vector<glm::ivec2> stuck_cols;
       world.CollectPendingLightFocusColumns(focus_horiz, focus_radius, stuck_cols,
@@ -1370,7 +1384,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
     }
     const bool mismatch_finalize_kick = ShouldForceMissFinalizeOnTelemetryMismatch(
         phys_miss.FocusMissingMesh > 0, phys_miss.VisualHoles > 0,
-        phys_miss.MissHoriz, telemetry_mismatch_frames);
+        phys_miss.MissHoriz, telemetry_mismatch_frames) ||
+        ShouldForceMissFinalizeOnStandWitnessStuck(
+            !moving, phys_miss.FocusMissingMesh > 0, phys_miss.MissWitnessAgeFramesReport);
     const int finalize_ring =
         moving ? kVisualStageNearFovHoriz : kVisualStageLitDrawableHoriz;
     const bool miss_finalize_band =

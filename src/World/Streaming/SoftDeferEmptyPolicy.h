@@ -118,6 +118,14 @@ inline bool ShouldForceMissFinalizeOnTelemetryMismatch(
          miss_horiz <= 4 && mismatch_frames > mismatch_thresh;
 }
 
+/// I15-D2: stand witness stuck — force finalize even when miss_horiz outside rim band.
+inline bool ShouldForceMissFinalizeOnStandWitnessStuck(
+    bool moving, bool focus_missing_mesh, int miss_witness_age_frames,
+    int age_thresh = 180)
+{
+  return !moving && focus_missing_mesh && miss_witness_age_frames > age_thresh;
+}
+
 /// Closeout F: schedule floor folded into pools — always 0.
 inline int AsyncScheduleFloorUnderMiss(bool /*miss_or_unfinished_visual*/)
 {
