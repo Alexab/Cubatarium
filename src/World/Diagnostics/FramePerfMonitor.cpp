@@ -296,6 +296,9 @@ struct FrameNumbers
   double prep_refresh_dirty_ms{0.0};
   double prep_refresh_pressure_eval_ms{0.0};
   double prep_refresh_underfeet_probe_ms{0.0};
+  double prep_refresh_ring_resync_ms{0.0};
+  double prep_refresh_vb_raw_ms{0.0};
+  double prep_refresh_gap_ms{0.0};
   int focus_dirty_reconcile_delta{0};
   int rim_witness_latched{0};
   int miss_witness_retarget_n{0};
@@ -771,6 +774,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.prep_refresh_dirty_ms = phys.PrepRefreshDirtyMs;
   n.prep_refresh_pressure_eval_ms = phys.PrepRefreshPressureEvalMs;
   n.prep_refresh_underfeet_probe_ms = phys.PrepRefreshUnderfeetProbeMs;
+  n.prep_refresh_ring_resync_ms = phys.PrepRefreshRingResyncMs;
+  n.prep_refresh_vb_raw_ms = phys.PrepRefreshVbRawMs;
+  n.prep_refresh_gap_ms = phys.PrepRefreshGapMs;
   n.focus_dirty_reconcile_delta = phys.FocusDirtyReconcileDelta;
   n.rim_witness_latched = phys.RimWitnessLatched;
   n.miss_witness_retarget_n = phys.MissWitnessRetargetN;
@@ -1267,6 +1273,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.prep_refresh_pressure_eval_ms
           << ",\"prep_refresh_underfeet_probe_ms\":"
           << n.prep_refresh_underfeet_probe_ms
+          << ",\"prep_refresh_ring_resync_ms\":"
+          << n.prep_refresh_ring_resync_ms
+          << ",\"prep_refresh_vb_raw_ms\":" << n.prep_refresh_vb_raw_ms
+          << ",\"prep_refresh_gap_ms\":" << n.prep_refresh_gap_ms
           << ",\"focus_dirty_reconcile_delta\":" << n.focus_dirty_reconcile_delta
           << ",\"rim_witness_latched\":" << n.rim_witness_latched
           << ",\"miss_witness_retarget_n\":" << n.miss_witness_retarget_n

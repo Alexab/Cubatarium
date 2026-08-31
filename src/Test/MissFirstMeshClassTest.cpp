@@ -2573,6 +2573,31 @@ int main()
     Expect(!ShouldBlockCaptureRetargetForIngressGpuPending(true, 2, false, 3,
                                                             true),
            "I13-A1: FM schedule starved bypasses ingress GPU block");
+    Expect(!ShouldBlockCaptureRetargetForIngressGpuPending(true, 2, false, -1,
+                                                            false, true),
+           "I14b-C: drawable bypasses ingress GPU block");
+    using cutum::ShouldDampWitnessRetargetOnIngressDrawable;
+    Expect(ShouldDampWitnessRetargetOnIngressDrawable(true, true, false, 3),
+           "I14b-C: damp ingress drawable nh=3");
+    Expect(!ShouldDampWitnessRetargetOnIngressDrawable(true, true, false, 5),
+           "I14b-C: no damp ingress drawable nh=5");
+    Expect(!ShouldDampWitnessRetargetOnIngressDrawable(true, false, false, 3),
+           "I14b-C: undrawn no ingress drawable damp");
+    using cutum::ShouldBlockWitnessRetargetForPinSla;
+    Expect(ShouldBlockWitnessRetargetForPinSla(10, 3, false, true),
+           "I14b-C: pin SLA blocks young pin");
+    Expect(!ShouldBlockWitnessRetargetForPinSla(50, 3, false, true),
+           "I14b-C: pin SLA allows aged pin");
+    using cutum::ShouldDampCruiseIngressSeamRemesh;
+    Expect(ShouldDampCruiseIngressSeamRemesh(true, false, 3),
+           "I14b-D: cruise ingress seam damp");
+    Expect(!ShouldDampCruiseIngressSeamRemesh(false, false, 3),
+           "I14b-D: idle no cruise ingress seam damp");
+    using cutum::ShouldDampMarkRelitRemeshOnSoftDeferEmpty;
+    Expect(ShouldDampMarkRelitRemeshOnSoftDeferEmpty(true, true, true),
+           "I14b-D: cruise ingress damp overrides drawable keep");
+    Expect(!ShouldDampMarkRelitRemeshOnSoftDeferEmpty(false, true, false),
+           "I14b-D: drawable keeps seam remesh without ingress damp");
     Expect(!ShouldStopRelightApplySlice(8.0, 1, 8.0, false, true, 3, 2.5),
            "FZ25: consume mode continues past 1@8ms when cap>=3");
     Expect(ShouldStopRelightApplySlice(8.0, 3, 8.0, false, true, 3, 2.5),

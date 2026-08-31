@@ -298,6 +298,12 @@ struct PhysicsTelemetry
   double PrepRefreshDirtyMs{0.0};
   double PrepRefreshPressureEvalMs{0.0};
   double PrepRefreshUnderfeetProbeMs{0.0};
+  /// I14b-A: ring sample miss (sticky/pending/unfinished full rescan).
+  double PrepRefreshRingResyncMs{0.0};
+  /// I14b-A: CountVisibleBlackFocusMeshes full scan only.
+  double PrepRefreshVbRawMs{0.0};
+  /// I14b-A: PrepRefreshPressureMs minus sum(sub-timers).
+  double PrepRefreshGapMs{0.0};
   /// I12-A7: focus dirty ring cache reconcile drift (audit).
   int FocusDirtyReconcileDelta{0};
   /// I12-A0: rim witness latched without visual holes.

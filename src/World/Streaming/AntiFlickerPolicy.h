@@ -57,17 +57,56 @@ inline bool ShouldRetargetSoftDeferCaptureWitness(
   return false;
 }
 
+/// I14b-C: minimum capture pin age on nh<=4 cruise (except visual_holes).
+constexpr int kIngressCaptureWitnessPinMinAgeFrames = 48;
+
+/// I14b-C: damp better_horiz retarget while drawable GPU apply in flight — not block.
+inline bool ShouldDampWitnessRetargetOnIngressDrawable(
+    bool pin_has_pending_or_inflight_gpu, bool pin_has_drawable, bool visual_holes,
+    int pin_horiz)
+{
+  if (visual_holes || !pin_has_pending_or_inflight_gpu || !pin_has_drawable)
+  {
+    return false;
+  }
+  return pin_horiz >= 0 && pin_horiz <= 4;
+}
+
+/// I14b-C: block witness column swap until min pin SLA on ingress cruise.
+inline bool ShouldBlockWitnessRetargetForPinSla(int pin_age_frames, int pin_horiz,
+                                              bool visual_holes, bool moving)
+{
+  if (visual_holes || !moving || pin_horiz < 0 || pin_horiz > 4)
+  {
+    return false;
+  }
+  return pin_age_frames < kIngressCaptureWitnessPinMinAgeFrames;
+}
+
+/// I14b-D: damp seam remesh on cruise ingress (block-level opaque churn).
+inline bool ShouldDampCruiseIngressSeamRemesh(bool moving, bool visual_holes,
+                                              int miss_horiz)
+{
+  return moving && !visual_holes && miss_horiz >= 3;
+}
+
 /// I13-A3: hold witness pin while GPU mesh apply is in flight at frontier ingress.
+/// I14b-C: drawable pins use damp path, not block (undrawn pins only).
 /// I13-A1: bypass when FM schedule starved or witness advances toward focus.
 inline bool ShouldBlockCaptureRetargetForIngressGpuPending(
     bool pin_has_pending_or_inflight_gpu, int pin_horiz, bool visual_holes,
-    int cand_horiz = -1, bool fm_schedule_starved = false)
+    int cand_horiz = -1, bool fm_schedule_starved = false,
+    bool pin_has_drawable = false)
 {
   if (visual_holes || fm_schedule_starved)
   {
     return false;
   }
   if (!pin_has_pending_or_inflight_gpu)
+  {
+    return false;
+  }
+  if (pin_has_drawable)
   {
     return false;
   }
@@ -105,10 +144,15 @@ inline bool SoftDeferEmptyAgeShouldReset(bool still_empty, bool had_progress)
 
 /// Era27 I-A3: MarkRelit must not RemeshSeam/Dirty-storm SoftDefer-empty
 /// undrawn columns that already have FirstMesh / PendingReplace ownership.
-/// Drawable lit→relit seam remesh stays KEEP.
+/// Drawable lit→relit seam remesh stays KEEP unless cruise ingress damp.
 inline bool ShouldDampMarkRelitRemeshOnSoftDeferEmpty(
-    bool soft_defer_empty_owned, bool has_drawable)
+    bool soft_defer_empty_owned, bool has_drawable,
+    bool damp_cruise_ingress = false)
 {
+  if (damp_cruise_ingress)
+  {
+    return true;
+  }
   if (has_drawable)
   {
     return false;

@@ -594,6 +594,9 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   pt.PrepRefreshDirtyMs = 0.0;
   pt.PrepRefreshPressureEvalMs = 0.0;
   pt.PrepRefreshUnderfeetProbeMs = 0.0;
+  pt.PrepRefreshRingResyncMs = 0.0;
+  pt.PrepRefreshVbRawMs = 0.0;
+  pt.PrepRefreshGapMs = 0.0;
   pt.RimWitnessLatched = 0;
   pt.FocusDirtyReconcileDelta = 0;
 
@@ -875,6 +878,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
         world.CountBlackStickyFocusMeshes(focus_ground, focus_radius);
     pending_dark =
         world.CountPendingDarkFocusMeshes(focus_ground, focus_radius);
+    pt.PrepRefreshRingResyncMs += lap_ms(sticky_t0);
   }
   pt.PrepRefreshStickyMs = lap_ms(sticky_t0);
   const int dark_preview = sticky_remesh + pending_dark;
@@ -936,6 +940,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     unfinished_visual = last_unfinished_visual;
     focus_pressure = unfinished_visual;
     unfinished_sample_cd = 0;
+    pt.PrepRefreshRingResyncMs += lap_ms(unfinished_t0);
   }
   else if (--unfinished_sample_cd <= 0)
   {
@@ -944,6 +949,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     unfinished_visual = last_unfinished_visual;
     focus_pressure = unfinished_visual;
     unfinished_sample_cd = unfinished_visual <= 1 ? 16 : 8;
+    pt.PrepRefreshRingResyncMs += lap_ms(unfinished_t0);
   }
   else if (cruise_unfinished_reuse && last_unfinished_visual <= 3)
   {
@@ -1014,10 +1020,12 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     const auto vb_t0 = std::chrono::high_resolution_clock::now();
     if (do_full_scan)
     {
+      const auto vb_raw_t0 = std::chrono::high_resolution_clock::now();
       const int prev_raw = vb_pending_raw;
       const int raw_vb = world.CountVisibleBlackFocusMeshes(
           focus_ground, focus_radius, &no_ticket, &progress_n, &stalled_n,
           ticketed_consume_scan, vb_focus_stable_frames);
+      pt.PrepRefreshVbRawMs += lap_ms(vb_raw_t0);
       world.PhysicsTelemetryData.VisibleBlackFocusRawN = raw_vb;
       if (prev_raw > 0 && raw_vb == prev_raw)
       {
@@ -1051,12 +1059,12 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       }
       visible_black_sample_cd =
           diet_cruise_cadence_final
-              ? (vb_focus_stable_frames >= 4
+              ? 8
+              : (vb_focus_stable_frames >= 4
                      ? 10
                      : (vb_published < 20 && last_visible_black_no_ticket == 0
                             ? 8
-                            : 4))
-              : 0;
+                            : 4));
       pt.PrepRefreshVbMs += lap_ms(vb_t0);
       UWorld::VisibleBlackFocusSample vb_sample{};
       vb_sample.frame_epoch = world.GetStreamingFrameEpoch();
@@ -1119,14 +1127,14 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     }
   }
   // I9-B1 / I12-A1: cruise fast-path — skip expensive darkface/facing scans.
+  // I14b-B: decouple diet fast-path from published VB — VB backlog must not
+  // disable facing/darkface skip on rim cruise (manual 204611 VB-spiral).
   const bool rim_cruise_fast =
       diet_cruise_cadence_final && !in.visual_holes && miss_horiz >= 3 &&
-      unfinished_visual <= 1 &&
-      world.PhysicsTelemetryData.VisibleBlackFocusN <= 20;
+      unfinished_visual <= 4;
   const bool pressure_cruise_fast =
       diet_cruise_cadence_final && !in.visual_holes && !pending_underfeet &&
-      unfinished_visual <= 1 &&
-      world.PhysicsTelemetryData.VisibleBlackFocusN <= 8;
+      miss_horiz >= 3 && unfinished_visual <= 4;
   const bool cruise_scan_fast = pressure_cruise_fast || rim_cruise_fast;
   // Actual baked-dark vertices near camera (not PendingLight proxy).
   // Split stale (mesh dark, field lit) vs void-edge (both 0) for ARCH_D3.
@@ -1316,6 +1324,13 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     pt.PrepRefreshUnderfeetMs = lap_ms(underfeet_t0);
   }
   pt.PrepRefreshPressureMs = lap_ms(refresh_t0);
+  pt.PrepRefreshGapMs =
+      pt.PrepRefreshPressureMs -
+      (pt.PrepRefreshMissMs + pt.PrepRefreshPendingMs + pt.PrepRefreshStickyMs +
+       pt.PrepRefreshUnfinishedMs + pt.PrepRefreshVbMs +
+       pt.PrepRefreshDarkfaceMs + pt.PrepRefreshFacingMs +
+       pt.PrepRefreshUnderfeetMs + pt.PrepRefreshDirtyMs +
+       pt.PrepRefreshPressureEvalMs + pt.PrepRefreshUnderfeetProbeMs);
 }
 
 void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
@@ -2272,6 +2287,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             SoftDeferCapturePinCx == stuck_xz.x &&
             SoftDeferCapturePinCz == stuck_xz.y;
         bool pinned_still = false;
+        bool pin_drawable = false;
+        bool pin_pending_or_inflight_gpu = false;
         if (SoftDeferCapturePinValid)
         {
           const glm::ivec3 pin_coord(SoftDeferCapturePinCx,
@@ -2279,8 +2296,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                                          ? SoftDeferCapturePinCy
                                          : 0,
                                      SoftDeferCapturePinCz);
-          const bool pin_drawable =
+          pin_drawable =
               world.GetMeshService().HasDrawableGreedyMesh(pin_coord);
+          pin_pending_or_inflight_gpu =
+              world.GetMeshService().IsPendingGpuApply(pin_coord) ||
+              world.GetMeshService().IsGpuExtractInFlight(pin_coord);
           const bool pin_greedy =
               world.GetMeshService().HasGreedyMesh(pin_coord);
           const bool pin_held =
@@ -2330,6 +2350,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         {
           better_horiz = false;
         }
+        if (ShouldDampWitnessRetargetOnIngressDrawable(
+                pin_pending_or_inflight_gpu, pin_drawable, visual_holes_cap,
+                SoftDeferCapturePinHoriz))
+        {
+          better_horiz = false;
+        }
         int pin_T =
             ocean_heal
                 ? OceanCaptureWitnessPinFrames()
@@ -2340,6 +2366,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         if (stuck_n && pinned_still)
         {
           pin_T = std::max(pin_T, 24);
+        }
+        if (!visual_holes_cap && moving_now && SoftDeferCapturePinHoriz >= 0 &&
+            SoftDeferCapturePinHoriz <= 4)
+        {
+          pin_T = std::max(pin_T, kIngressCaptureWitnessPinMinAgeFrames);
         }
         const bool hold_nh2 = ShouldHoldPinnedRelightWitness(
             SoftDeferCapturePinHoriz,
@@ -2370,27 +2401,19 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             SoftDeferCapturePinValid, pinned_still, hold_witness_pin,
             miss_horiz_zero_no_drawable,
             world.PhysicsTelemetryData.RelightFifoDropNPrev > 0);
-        bool pin_pending_or_inflight_gpu = false;
-        if (SoftDeferCapturePinValid)
-        {
-          const glm::ivec3 pin_coord(
-              SoftDeferCapturePinCx,
-              SoftDeferCapturePinCy >= 0 ? SoftDeferCapturePinCy : 0,
-              SoftDeferCapturePinCz);
-          pin_pending_or_inflight_gpu =
-              world.GetMeshService().IsPendingGpuApply(pin_coord) ||
-              world.GetMeshService().IsGpuExtractInFlight(pin_coord);
-        }
+        const bool block_pin_sla = ShouldBlockWitnessRetargetForPinSla(
+            SoftDeferCapturePinAge, SoftDeferCapturePinHoriz, visual_holes_cap,
+            moving_now);
         const bool block_ingress_gpu_pending =
             ShouldBlockCaptureRetargetForIngressGpuPending(
                 pin_pending_or_inflight_gpu, SoftDeferCapturePinHoriz,
-                visual_holes_cap, cand_horiz, fm_schedule_starved);
+                visual_holes_cap, cand_horiz, fm_schedule_starved, pin_drawable);
         const bool retarget =
-            retarget_allowed && !block_witness_retarget &&
+            retarget_allowed && !block_witness_retarget && !block_pin_sla &&
             !block_ingress_gpu_pending &&
             ShouldRetargetRelightWitness(era27_would_retarget, hold_witness_pin);
         if (!retarget && era27_would_retarget &&
-            (hold_witness_pin || block_witness_retarget ||
+            (hold_witness_pin || block_witness_retarget || block_pin_sla ||
              block_ingress_gpu_pending))
         {
           ++world.PhysicsTelemetryData.SoftDeferCaptureRetargetBlockedN;

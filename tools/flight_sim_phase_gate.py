@@ -511,6 +511,12 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("miss_stuck_max_run_sec", "le", 30.0),
         ("post_stop_visible_black_max", "le", 10.0),
         ("chunks_traveled", "ge", 5.0),
+        ("emerge_spike_frac", "le", 0.05),
+        ("opaque_idle_churn_max", "le", 120.0),
+        ("chunk_not_ready_med", "le", 4.0),
+        ("wall_ms_fly_med", "le", 120.0),
+        ("effective_holes_blink_rate", "le", 0.05),
+        ("stream_ms", "le", 90.0),
     ],
     "FP-perf-soft": [
         ("stream_ms", "le", 50.0),
@@ -541,6 +547,9 @@ PHASE_SOFT_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("cruise_admission_mode3_share", "le", 0.60),
         ("stop_dark_face_near_end", "lt", 500.0),
         ("post_stop_visible_black_no_ticket_max", "le", 0.0),
+        ("emerge_spike_frac", "le", 0.08),
+        ("mesh_emerge_ms", "le", 25.0),
+        ("prep_untagged_gap_med", "le", 35.0),
     ],
     "FP-perf-soft": [
         ("stream_ms", "le", 50.0),

@@ -1187,6 +1187,12 @@ def analyze(
     )
     visible_black_focus_med = median(visible_black) if visible_black else None
     stream_ms_med = median(col(cruise_src, "stream_ms"))
+    prep_gap_vals = [
+        float(r.get("prep_refresh_gap_ms") or 0)
+        for r in fly_spikes
+        if float(r.get("prep_refresh_gap_ms") or 0) > 0.0
+    ]
+    prep_untagged_gap_med = median(prep_gap_vals) if prep_gap_vals else None
     dark_face_stale_near_med = median(col(cruise_src, "dark_face_stale_near_n"))
     orphan_vals = col(cruise_src, "mesh_dirty_schedule_skip_orphan_n")
     dirty_ghost_n = max(orphan_vals) if orphan_vals else None
@@ -1307,6 +1313,34 @@ def analyze(
     gates["tail_miss_low_cy_zero"] = tail_miss_low_cy_n == 0
     gates["tail_underfeet_ok_miss_zero"] = tail_underfeet_ok_miss_n == 0
     gates["opaque_idle_churn_max_le_120"] = opaque_idle_churn_max <= 120.0
+    gates["emerge_spike_frac_le_0_05"] = (
+        emerge_spike_frac is not None and emerge_spike_frac <= 0.05
+    )
+    gates["chunk_not_ready_med_le_4"] = (
+        chunk_not_ready_med is not None and chunk_not_ready_med <= 4.0
+    )
+    witness_latch_diet_share = (
+        witness_latch_diet_frames / float(len(fly_spikes))
+        if fly_spikes
+        else None
+    )
+    gates["witness_latch_diet_share_ge_0_70"] = (
+        witness_latch_diet_share is not None
+        and witness_latch_diet_share >= 0.70
+    )
+    # I14b-E: hard perf/visual gates (baseline 194104 vs I14 regression 204611).
+    gates["wall_ms_fly_le_120"] = (
+        wall_fly_med is not None and wall_fly_med <= 120.0
+    )
+    gates["effective_holes_blink_rate_le_0_05"] = (
+        effective_holes_blink_rate <= 0.05
+    )
+    gates["stream_ms_le_90"] = (
+        stream_ms_med is not None and stream_ms_med <= 90.0
+    )
+    gates["prep_untagged_gap_le_35"] = (
+        prep_untagged_gap_med is None or prep_untagged_gap_med <= 35.0
+    )
     # Light-debt holes with miss=0 (land-cruise L1–L4 nh_no_miss 0.39–0.65).
     gates["nh_no_miss_rate_le_025"] = nh_no_miss_rate <= 0.25
     gates_pass_count = sum(1 for v in gates.values() if v)
@@ -1315,6 +1349,11 @@ def analyze(
     stop_wall = col(stop_segment, "wall_ms")
     stop_wall_med = median(stop_wall)
 
+    edit_burst_periods = sum(
+        1 for r in steady if float(r.get("edit_immediate_n") or 0) > 0
+    )
+    segment_fly_cruise_periods = max(0, len(steady) - edit_burst_periods)
+    segment_stop_idle_periods = len(stop_segment) if stop_segment else 0
     edit_immediate_max = max(
         (float(r.get("edit_immediate_n") or 0) for r in steady), default=0.0
     )
@@ -1620,6 +1659,10 @@ def analyze(
             "world_streaming_phase_ms": world_streaming_phase_ms_med,
             "dominant_schedule_blocker": dominant_schedule_blocker,
             "witness_latch_diet_frames": witness_latch_diet_frames,
+            "witness_latch_diet_share": witness_latch_diet_share,
+            "segment_fly_cruise_periods": segment_fly_cruise_periods,
+            "segment_edit_burst_periods": edit_burst_periods,
+            "segment_stop_idle_periods": segment_stop_idle_periods,
             "empty_fm_completion_stuck_frames": empty_fm_completion_stuck_frames,
             "visual_holes_telemetry_mismatch_frames": (
                 visual_holes_telemetry_mismatch_frames
@@ -1628,6 +1671,8 @@ def analyze(
             "unfinished_visual": unfinished_visual_med,
             "visible_black_focus_n": visible_black_focus_med,
             "stream_ms": stream_ms_med,
+            "prep_untagged_gap_med": prep_untagged_gap_med,
+            "prep_refresh_gap_ms": prep_untagged_gap_med,
             "dark_face_stale_near_n": dark_face_stale_near_med,
             "dirty_ghost_n": dirty_ghost_n,
             "cruise_fifo_dropped_delta": cruise_fifo_dropped_delta,

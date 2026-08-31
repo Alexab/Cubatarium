@@ -345,7 +345,11 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
       PhysicsTelemetryData.MarkRelitSnapshotMs +=
           ElapsedMs(snap_t0, Clock::now());
       in.damp_soft_empty_remesh = ShouldDampMarkRelitRemeshOnSoftDeferEmpty(
-          in.soft_defer_empty_owned, in.any_drawable);
+          in.soft_defer_empty_owned, in.any_drawable,
+          PhysicsTelemetryData.EditImmediateN <= 0 &&
+              ShouldDampCruiseIngressSeamRemesh(
+                  moving, PhysicsTelemetryData.VisualHoles > 0,
+                  PhysicsTelemetryData.MissHoriz));
       bool any_fully_dark = false;
       bool any_still_stale = false;
       for (const ColumnChunkSnapshot &snap : in.relit_chunks)
