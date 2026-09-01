@@ -537,14 +537,14 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("chunks_traveled", "ge", 3.0),
     ],
     "MESH-M0-waterfall": [
-        ("mesh_snapshot_ms", "gt", 0.0),
+        ("mesh_waterfall_drain_med", "gt", 0.0),
         ("mesh_gpu_kick_ms", "ge", 0.0),
         ("mesh_gpu_finish_ms", "ge", 0.0),
         ("chunks_traveled", "ge", 3.0),
     ],
     "MESH-M1-capture": [
         ("mesh_emerge_ms", "le", 35.0),
-        ("mesh_snapshot_ms", "gt", 0.0),
+        ("mesh_waterfall_drain_med", "gt", 0.0),
         ("holes_rate", "le", 0.50),
         ("chunks_traveled", "ge", 3.0),
     ],

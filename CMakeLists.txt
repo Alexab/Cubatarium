@@ -1638,6 +1638,7 @@ add_executable(decor_mesh_integration_test
     src/Render/Mesh/ChunkMeshRevisionRegistry.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/MeshCaptureStore.cpp
+    src/Render/Mesh/MeshCaptureWorker.cpp
     src/Render/Mesh/FluidSurfaceColumnSlice.cpp
     src/Render/Mesh/GpuGreedyOpaqueEmit.cpp
     src/Render/Mesh/GpuMeshPipeline.cpp

@@ -207,11 +207,15 @@ def analyze(
     baseline_manual: Path | None = None,
     segment_fly_only: bool = False,
 ) -> dict:
-    rows = [
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    ]
+    rows: list[dict] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            rows.append(json.loads(line))
+        except json.JSONDecodeError:
+            # Truncated tail when sim exits abruptly or concurrent writers collide.
+            break
     periods = [r for r in rows if r.get("kind") == "period"]
     spikes = [r for r in rows if r.get("kind") == "spike"]
     skip = max(2, int(warmup_sec / 2.0))

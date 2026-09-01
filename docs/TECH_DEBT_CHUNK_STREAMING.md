@@ -98,7 +98,7 @@ cruise rim still gate-residual (no SoftDefer zoo). DoD wall≤40 deferred.
 | TD-ARCH-043 | Era14 | Land tops miss sticky / `ARCH_D3_LAND` | Era16 `era16_p2_land` holes≈0.04 miss_stuck=2 sticky=0 no_ticket=0 wall≈52 | **done 2026-08-08** ARCH_D3_LAND GO |
 | TD-ARCH-044 | Era14 | Commit-time seed coverage / PendingLight trail | SeedDecision cruise≤32 / idle≤28 cheap seed | **done 2026-08-07** `f9af0c16`+iterate |
 | TD-ARCH-045 | Era14 | UnlitFirstMesh → guaranteed remesh-on-lit | MarkRelit → NoteColumnRepairNeeded + RemeshSeam | **done 2026-08-07** `f9af0c16` |
-| TD-ARCH-046 | Era14 | Worker Capture residual (TD-ARCH-015 store done) | Store refresh budget tightened; worker path still deferred (hang risk) | **partial** — worker deferred |
+| TD-ARCH-046 | Era14 | Worker Capture residual (TD-ARCH-015 store done) | `UMeshCaptureWorker` on hot path; main `TakeOrRefresh` fallback only when worker disabled | **done 2026-09-01** `f62041bc` mesh arch M2 |
 | TD-ARCH-047 | Era14 | IdleRecovery/Admission knobs duplicate DesiredStage | Sticky remesh wall-skip removed; IdleRecovery owns sync cost only | **done 2026-08-07** |
 | TD-ARCH-048 | Era14 | ARCH_D3 wall_med≤30 / gate DoD | Era17 ocean `era17_p3_ocean` wall≈126 holes≈0.48 (ARCH_D3 soft NO-GO); land ARCH_D3_LAND GO | **partial** — ocean wall/holes open |
 | TD-ARCH-049 | Era15 | MeshResidency: FreeChunk-before-replace flicker | CPU Apply/Immediate publish batches before FreeChunk; `mesh_replace_hole_avoided` telem; FLY_CLEAN GO `era15_p1_fly` | **done 2026-08-08** `327dd006`+ |

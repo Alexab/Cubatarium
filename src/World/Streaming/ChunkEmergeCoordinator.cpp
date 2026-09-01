@@ -1,6 +1,7 @@
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Streaming/ColumnFlowScheduler.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
+#include "World/Streaming/ColumnFlowMeshOwnership.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
 #include "World/Streaming/FocusIngressPolicy.h"
 #include "World/Streaming/IdleRecoveryPolicy.h"
@@ -1149,6 +1150,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             allow_own && !has_fm && empty_fm_enqueue_n < kEmptyOwnershipCap;
         // Do not re-MarkDirtyPriority every scan on sticky Owned / already Dirty.
         if (allow_own && !sticky_owned && !already_dirty && !will_enqueue_fm &&
+            !BlockParallelMarkDirtyForColumnFlow(
+                GetColumnFlowExecutor().GetColumnJobStage(col),
+                will_enqueue_fm || has_fm) &&
             SoftDeferEmptyShouldMarkDirty(true, has_fm, inflight_or_pending))
         {
           mesh_service.MarkDirtyPriority(coord);
