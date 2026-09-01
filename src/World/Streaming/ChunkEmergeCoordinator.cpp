@@ -1837,17 +1837,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   mesh_service.SetMeshEmergeTotalBudgetMs(
       moving ? adaptive_moving_emerge : stop_emerge);
-  // I18-C2: tighten emerge when prior prep gap was low (pressure diet headroom).
-  {
-    static double s_last_prep_refresh_gap_ms = 999.0;
-    if (s_last_prep_refresh_gap_ms < 30.0 && moving && !visual_holes)
-    {
-      mesh_service.SetMeshEmergeTotalBudgetMs(
-          static_cast<float>(mesh_service.GetMeshEmergeTotalBudgetMs() * 0.85));
-    }
-    s_last_prep_refresh_gap_ms =
-        world.GetPhysicsTelemetry().PrepRefreshGapMs;
-  }
   auto clamp_emerge_to_phase = [&]()
   {
     const double cap = world.GetPhysicsTelemetry().EmergeBudgetCapMs;
@@ -3982,8 +3971,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           ++rim_chain_stall_frames;
           const int kick_after =
               RimChainStallKickFrames(schedule_starved);
-          if (rim_chain_stall_frames >= kick_after ||
-              (schedule_starved && rim_chain_stall_frames >= 2))
+          if (rim_chain_stall_frames >= kick_after)
           {
             mesh_service.PreferKickPendingGpuQueued(isolated_hole);
             mesh_drain = std::max(mesh_drain, 8);
@@ -4620,6 +4608,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       static int ingress_debt_streak = 0;
       static int ingress_debt_ok_periods = 0;
+      static uint64_t s_prior_witness_retarget = 0;
+      const int wit_delta = static_cast<int>(
+          pt.SoftDeferWitnessRetarget >= s_prior_witness_retarget
+              ? pt.SoftDeferWitnessRetarget - s_prior_witness_retarget
+              : 0);
+      s_prior_witness_retarget = pt.SoftDeferWitnessRetarget;
       const auto &cache = mesh_service.GetCache();
       const IngressDebtInput debt_in{
           moving,
@@ -4627,8 +4621,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           pt.MeshDirtyScheduleOkN,
           pt.DirtyFmN,
           cache.GetFmDirtyGpuWatchMaxAge(),
-          0,
-          nearest_miss_h};
+          cache.GetFmDirtyGpuWatchCount(),
+          wit_delta,
+          nearest_miss_h,
+          pt.FmDirtyToGpuFinishN,
+          pt.VisibleBlackFocusN};
       const IngressDebtLevel debt =
           EvaluateIngressDebt(debt_in, ingress_debt_streak);
       if (debt == IngressDebtLevel::Ok)

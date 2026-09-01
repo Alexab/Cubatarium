@@ -2252,7 +2252,7 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
   if (!ShouldDeferRimRevisionBumpForPendingGpu(
           MeshFocusValid, horiz, IsPendingGpuApply(chunkCoord),
           HasDrawableGreedyMesh(chunkCoord),
-          WitnessSwapGrace_.frames_left > 0 &&
+          kI18WitnessComfortEnabled && WitnessSwapGrace_.frames_left > 0 &&
               WitnessSwapGrace_.prior_xz.x == chunkCoord.x &&
               WitnessSwapGrace_.prior_xz.y == chunkCoord.z))
   {
@@ -4088,6 +4088,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   if (had_gpu_resident)
   {
     const bool grace_hold =
+        kI18WitnessComfortEnabled &&
         HasWitnessSwapGraceAt(glm::ivec2(result.coord.x, result.coord.z));
     if (!grace_hold)
     {

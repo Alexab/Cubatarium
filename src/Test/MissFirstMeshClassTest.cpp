@@ -2918,6 +2918,7 @@ int main()
     using cutum::EvaluateIngressDebt;
     using cutum::IngressDebtInput;
     using cutum::IngressDebtLevel;
+    using cutum::IsIngressChainStalled;
     using cutum::IsRimIngressWatchCoord;
     using cutum::RimChainStallKickFrames;
     using cutum::ShouldAllowBetterHorizWitnessRetarget;
@@ -2928,6 +2929,12 @@ int main()
     using cutum::WitnessSwapGrace;
     Expect(RimChainStallKickFrames(true) < RimChainStallKickFrames(false),
            "I18-A2: schedule-starved faster kick");
+    Expect(RimChainStallKickFrames(false) >= 8, "I18 hotfix: default kick 8f");
+    IngressDebtInput stall_in{};
+    stall_in.dirty_fm_n = 2;
+    stall_in.fm_dirty_to_gpu_finish_n = 0;
+    stall_in.fm_dirty_gpu_watch_max_age = 12;
+    Expect(IsIngressChainStalled(stall_in), "I18-F1: watch stall predicate");
     Expect(DynamicKickCutBiasForFmWatch(3, 0.55) > 0.55,
            "I18-F3: watch rim raises kick_cut");
     Expect(IsRimIngressWatchCoord({2, 0, 1}, {0, 0, 0}),
@@ -2944,6 +2951,8 @@ int main()
     debt_in.moving = true;
     debt_in.dirty_fm_n = 2;
     debt_in.chain_progress_frames = 0;
+    debt_in.fm_dirty_to_gpu_finish_n = 0;
+    debt_in.fm_dirty_gpu_watch_max_age = 12;
     Expect(EvaluateIngressDebt(debt_in, 0) == IngressDebtLevel::Watch,
            "I18-F1: chain stall watch");
     Expect(EvaluateIngressDebt(debt_in, 3) >= IngressDebtLevel::ShedFar,

@@ -859,7 +859,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       static_cast<int>(LastPressureCaps.level);
   world.PhysicsTelemetryData.PendingLightFocus = pending_light_focus;
   const bool rim_witness_idle_diet =
-      missing_near && !in.visual_holes && miss_horiz >= 2 && miss_horiz <= 4 &&
+      missing_near && !in.visual_holes && miss_horiz >= 3 &&
       !missing_underfeet && last_unfinished_hint <= 3;
   const bool diet_cruise_cadence_final =
       moving_for_telemetry || rim_witness_idle_diet;
@@ -975,8 +975,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     unfinished_visual = last_unfinished_visual;
     focus_pressure = unfinished_visual;
     unfinished_sample_cd =
-        UnfinishedSampleCooldownFramesCruise(diet_cruise_cadence_final,
-                                             miss_horiz, unfinished_visual);
+        UnfinishedSampleCooldownFrames(unfinished_visual);
     pt.PrepRefreshRingResyncMs += lap_ms(unfinished_t0);
   }
   else if (ShouldReuseUnfinishedVisualSample(diet_cruise_cadence_final,
@@ -2260,15 +2259,18 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                 site_a_pin_drawable);
         if (!block_pin_sla_site_a && !block_gpu_site_a)
         {
-          const glm::ivec2 prior_xz = SoftDeferCapturePinValid
-                                          ? glm::ivec2(SoftDeferCapturePinCx,
-                                                       SoftDeferCapturePinCz)
-                                          : focus_xz;
-          const glm::ivec3 prior_coord(prior_xz.x, focus_horiz.y, prior_xz.y);
-          if (world.GetMeshService().HasDrawableGreedyMesh(prior_coord))
+          if (kI18WitnessComfortEnabled)
           {
-            WitnessColumnGrace = {prior_xz, 2};
-            world.GetMeshService().SetWitnessSwapGrace(prior_xz, 2);
+            const glm::ivec2 prior_xz = SoftDeferCapturePinValid
+                                            ? glm::ivec2(SoftDeferCapturePinCx,
+                                                         SoftDeferCapturePinCz)
+                                            : focus_xz;
+            const glm::ivec3 prior_coord(prior_xz.x, focus_horiz.y, prior_xz.y);
+            if (world.GetMeshService().HasDrawableGreedyMesh(prior_coord))
+            {
+              WitnessColumnGrace = {prior_xz, 2};
+              world.GetMeshService().SetWitnessSwapGrace(prior_xz, 2);
+            }
           }
           // FZ2.7-P15a: Site A ingress count (also bumps legacy total).
           ++world.PhysicsTelemetryData.SoftDeferIngressWitnessN;
@@ -2518,16 +2520,19 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             SoftDeferCapturePinValid, SoftDeferCapturePinAge, hold_witness_pin);
         if (retarget)
         {
-          const glm::ivec2 prior_pin_xz(SoftDeferCapturePinCx,
-                                        SoftDeferCapturePinCz);
-          const glm::ivec3 prior_pin_coord(
-              prior_pin_xz.x,
-              SoftDeferCapturePinCy >= 0 ? SoftDeferCapturePinCy : 0,
-              prior_pin_xz.y);
-          if (world.GetMeshService().HasDrawableGreedyMesh(prior_pin_coord))
+          if (kI18WitnessComfortEnabled)
           {
-            WitnessColumnGrace = {prior_pin_xz, 2};
-            world.GetMeshService().SetWitnessSwapGrace(prior_pin_xz, 2);
+            const glm::ivec2 prior_pin_xz(SoftDeferCapturePinCx,
+                                          SoftDeferCapturePinCz);
+            const glm::ivec3 prior_pin_coord(
+                prior_pin_xz.x,
+                SoftDeferCapturePinCy >= 0 ? SoftDeferCapturePinCy : 0,
+                prior_pin_xz.y);
+            if (world.GetMeshService().HasDrawableGreedyMesh(prior_pin_coord))
+            {
+              WitnessColumnGrace = {prior_pin_xz, 2};
+              world.GetMeshService().SetWitnessSwapGrace(prior_pin_xz, 2);
+            }
           }
           periods_since_witness_retarget = 0;
           SoftDeferCapturePinValid = true;
@@ -3306,11 +3311,14 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
   {
     return;
   }
-  if (WitnessColumnGrace.frames_left > 0)
+  if (kI18WitnessComfortEnabled && WitnessColumnGrace.frames_left > 0)
   {
     --WitnessColumnGrace.frames_left;
   }
-  meshService.TickWitnessSwapGrace();
+  if (kI18WitnessComfortEnabled)
+  {
+    meshService.TickWitnessSwapGrace();
+  }
   URuntimeTuning::LoadStreamingTuneFile("streaming_tune.json");
   // Explicit Completed caps from tune (stress / low-mem). slots=0 keeps
   // constructor default and allows CompletedExpandEnabled growth.
@@ -3650,9 +3658,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         // Latch on near visual holes only — rim miss (nh≥3) must not refresh
         // hold forever while standing (152933: fog_hole_debt≈97%, nh=4–5).
         const bool hole_debt_now =
-            (phys.FocusMissingMesh > 0 && phys.MissHoriz <= 2) ||
-            phys.IngressDebtLevel >=
-                static_cast<int>(IngressDebtLevel::ShedFar);
+            (phys.FocusMissingMesh > 0 && phys.MissHoriz <= 2);
         if (hole_debt_now)
         {
           FogPullInHoleHoldFrames = kFogHoleHoldFrames;

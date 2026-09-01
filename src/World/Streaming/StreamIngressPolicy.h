@@ -8,6 +8,9 @@
 namespace cutum
 {
 
+/// I18 hotfix: Tier-2 witness comfort gated until Gate A passes on clean cruise.
+inline constexpr bool kI18WitnessComfortEnabled = false;
+
 /// I17-P1: ring resync only when focus/keep ring actually changed.
 inline bool ShouldRefreshRingResyncForFocusJump(bool focus_ground_jumped,
                                                 bool keep_cols_changed,
@@ -96,10 +99,48 @@ inline int RimIngressFmScheduleFloor(bool moving, int miss_horiz, int dirty_fm_n
   return std::min(4, std::max(1, dirty_fm_n));
 }
 
-/// I18-A2: chain stall kick threshold (frames).
+/// I18-A2: chain stall kick threshold (frames). Hotfix: restore 8f default.
 inline int RimChainStallKickFrames(bool schedule_starved)
 {
-  return schedule_starved ? 2 : 4;
+  return schedule_starved ? 4 : 8;
+}
+
+/// I18-F: ingress debt levels for coordinated load shedding.
+enum class IngressDebtLevel : uint8_t
+{
+  Ok = 0,
+  Watch = 1,
+  ShedFar = 2,
+  ShedRim = 3,
+};
+
+struct IngressDebtInput
+{
+  bool moving{false};
+  int chain_progress_frames{0};
+  int schedule_ok_n{0};
+  int dirty_fm_n{0};
+  int fm_dirty_gpu_watch_max_age{0};
+  int fm_dirty_gpu_watch_n{0};
+  int softdefer_witness_retarget_delta{0};
+  int miss_horiz{0};
+  int fm_dirty_to_gpu_finish_n{0};
+  int visible_black_focus_n{0};
+};
+
+/// I18-F1: chain stall predicate (watch + zero FM→GPU finish).
+inline bool IsIngressChainStalled(const IngressDebtInput &in)
+{
+  if (in.dirty_fm_n <= 0)
+  {
+    return false;
+  }
+  if (in.fm_dirty_to_gpu_finish_n == 0 &&
+      (in.chain_progress_frames == 0 || in.fm_dirty_gpu_watch_max_age >= 8))
+  {
+    return true;
+  }
+  return in.chain_progress_frames == 0 && in.fm_dirty_gpu_watch_n > 0;
 }
 
 /// I18-A1: FM dirty GPU watch coord on rim ingress ring.
@@ -149,35 +190,17 @@ inline bool IsBlinkTransition(int prev_unfinished, int cur_unfinished)
   return cur_unfinished >= prev_unfinished + 2;
 }
 
-/// I18-F: ingress debt levels for coordinated load shedding.
-enum class IngressDebtLevel : uint8_t
-{
-  Ok = 0,
-  Watch = 1,
-  ShedFar = 2,
-  ShedRim = 3,
-};
-
-struct IngressDebtInput
-{
-  bool moving{false};
-  int chain_progress_frames{0};
-  int schedule_ok_n{0};
-  int dirty_fm_n{0};
-  int fm_dirty_gpu_watch_max_age{0};
-  int softdefer_witness_retarget_delta{0};
-  int miss_horiz{0};
-};
-
 inline IngressDebtLevel EvaluateIngressDebt(const IngressDebtInput &in,
                                             int watch_streak_periods)
 {
-  if (!in.moving)
+  const bool ingress_pressure =
+      in.moving ||
+      (in.visible_black_focus_n >= 20 && in.dirty_fm_n > 0);
+  if (!ingress_pressure)
   {
     return IngressDebtLevel::Ok;
   }
-  const bool chain_stall =
-      in.chain_progress_frames == 0 && in.dirty_fm_n > 0;
+  const bool chain_stall = IsIngressChainStalled(in);
   if (!chain_stall)
   {
     return IngressDebtLevel::Ok;
