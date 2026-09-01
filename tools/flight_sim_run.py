@@ -264,6 +264,17 @@ def main() -> int:
         "level pitch, hold-space altitude, fly-stop",
     )
     ap.add_argument(
+        "--replay-manual-fly-heavy",
+        action="store_true",
+        help="replay-manual with fly-heavy timing: idle 20s, fly 120s, stop 30s "
+        "(less stop share for mesh fly gates)",
+    )
+    ap.add_argument(
+        "--segment-fly-only-analyze",
+        action="store_true",
+        help="pass --segment-fly-only to analyzer (ignore stop tail for fly medians)",
+    )
+    ap.add_argument(
         "--replay-edge",
         action="store_true",
         help="replay World_164 edge autofly route (-47,5): teleport-cruise + fly-stop",
@@ -712,6 +723,9 @@ def main() -> int:
         )
         args.warmup_sec = max(args.warmup_sec, 16.0)
 
+    if args.replay_manual_fly_heavy:
+        args.replay_manual = True
+
     if args.replay_manual:
         args.world = "World_164"
         args.fly_stop = True
@@ -722,9 +736,14 @@ def main() -> int:
         args.hold_space = True
         if args.pitch is None:
             args.pitch = 0.0
-        args.idle_sec = max(args.idle_sec, 45.0)
-        args.fly_phase_sec = max(args.fly_phase_sec, 45.0)
-        args.stop_phase_sec = max(args.stop_phase_sec, 90.0)
+        if args.replay_manual_fly_heavy:
+            args.idle_sec = max(args.idle_sec, 20.0)
+            args.fly_phase_sec = max(args.fly_phase_sec, 120.0)
+            args.stop_phase_sec = max(args.stop_phase_sec, 30.0)
+        else:
+            args.idle_sec = max(args.idle_sec, 45.0)
+            args.fly_phase_sec = max(args.fly_phase_sec, 45.0)
+            args.stop_phase_sec = max(args.stop_phase_sec, 90.0)
 
     if args.land_cruise:
         # Inland corridor matching manual 084551…142306 (not ocean -47,5).
@@ -1110,6 +1129,13 @@ def main() -> int:
             args.idle_sec + args.fly_phase_sec + args.stop_phase_sec + 5.0,
         )
 
+    phase_id = (args.phase_id or "").strip()
+    if phase_id.startswith("mesh-") and args.teleport_cruise:
+        raise SystemExit(
+            "FAIL: teleport_cruise=true forbidden for mesh-* phase-id "
+            f"({phase_id!r}); use no-teleport replay-manual harness"
+        )
+
     if not args.skip_preflight:
         print("preflight: killing orphan Cubatarium.exe (if any)", flush=True)
         preflight_cleanup()
@@ -1283,6 +1309,8 @@ def main() -> int:
             "--report",
             str(report_path),
         ]
+        if getattr(args, "segment_fly_only_analyze", False):
+            analyze_cmd.append("--segment-fly-only")
         if (
             args.replay_manual
             or args.fly_stop

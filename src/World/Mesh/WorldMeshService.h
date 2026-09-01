@@ -242,6 +242,11 @@ public:
   int GetLastMeshDirtyGpuN() const;
   double GetLastMeshDirtySyncMs() const;
   int GetLastMeshDirtySyncN() const;
+  double GetLastMeshGpuKickMs() const;
+  double GetLastMeshGpuFinishMs() const;
+  double GetLastMeshAsyncDrainMs() const;
+  int GetLastMeshCaptureStoreHitN() const;
+  int GetLastMeshCaptureStoreMissN() const;
   int GetLastDirtyTouchN() const;
   int GetLastDirtyRevisitSameN() const;
   int GetLastDirtyFmN() const;

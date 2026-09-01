@@ -1749,6 +1749,9 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
 
   if (!opaque_draw.empty())
   {
+    GreedyGpuOpaque.VertexPool.BeginUploadFrame();
+    GreedyGpuCutout.VertexPool.BeginUploadFrame();
+    GreedyGpuTransparent.VertexPool.BeginUploadFrame();
     std::sort(opaque_draw.begin(), opaque_draw.end(), by_block_id);
     GLboolean cullWasEnabled = GL_TRUE;
     if (!cutout.empty())

@@ -252,6 +252,11 @@ struct FrameNumbers
   int mesh_dirty_gpu_n{0};
   double mesh_dirty_sync_ms{0.0};
   int mesh_dirty_sync_n{0};
+  double mesh_gpu_kick_ms{0.0};
+  double mesh_gpu_finish_ms{0.0};
+  double mesh_async_drain_ms{0.0};
+  int mesh_capture_store_hit_n{0};
+  int mesh_capture_store_miss_n{0};
   int dirty_touch_n{0};
   int dirty_revisit_same_n{0};
   int dirty_fm_n{0};
@@ -735,6 +740,11 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_dirty_gpu_n = phys.MeshDirtyGpuN;
   n.mesh_dirty_sync_ms = phys.MeshDirtySyncMs;
   n.mesh_dirty_sync_n = phys.MeshDirtySyncN;
+  n.mesh_gpu_kick_ms = phys.MeshGpuKickMs;
+  n.mesh_gpu_finish_ms = phys.MeshGpuFinishMs;
+  n.mesh_async_drain_ms = phys.MeshAsyncDrainMs;
+  n.mesh_capture_store_hit_n = phys.MeshCaptureStoreHitN;
+  n.mesh_capture_store_miss_n = phys.MeshCaptureStoreMissN;
   n.dirty_touch_n = phys.DirtyTouchN;
   n.dirty_revisit_same_n = phys.DirtyRevisitSameN;
   n.dirty_fm_n = phys.DirtyFmN;
@@ -1239,6 +1249,11 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_dirty_gpu_n\":" << n.mesh_dirty_gpu_n
           << ",\"mesh_dirty_sync_ms\":" << n.mesh_dirty_sync_ms
           << ",\"mesh_dirty_sync_n\":" << n.mesh_dirty_sync_n
+          << ",\"mesh_gpu_kick_ms\":" << n.mesh_gpu_kick_ms
+          << ",\"mesh_gpu_finish_ms\":" << n.mesh_gpu_finish_ms
+          << ",\"mesh_async_drain_ms\":" << n.mesh_async_drain_ms
+          << ",\"mesh_capture_store_hit_n\":" << n.mesh_capture_store_hit_n
+          << ",\"mesh_capture_store_miss_n\":" << n.mesh_capture_store_miss_n
           << ",\"dirty_touch_n\":" << n.dirty_touch_n
           << ",\"dirty_revisit_same_n\":" << n.dirty_revisit_same_n
           << ",\"dirty_fm_n\":" << n.dirty_fm_n

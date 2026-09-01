@@ -31,14 +31,32 @@ public:
   std::optional<ChunkMeshSnapshot> TryGet(glm::ivec3 coord,
                                           uint64_t source_revision) const;
 
+  /// Store worker/main capture result.
+  void Commit(glm::ivec3 coord, uint64_t source_revision,
+              ChunkMeshSnapshot snapshot);
+
   /// Capture from live world and store (main thread).
   ChunkMeshSnapshot CaptureAndStore(const UBlockWorld &world, glm::ivec3 coord,
                                     uint64_t source_revision);
 
   /// Prefer store; refresh via live Capture at most `refresh_budget` times.
-  ChunkMeshSnapshot TakeOrRefresh(const UBlockWorld &world, glm::ivec3 coord,
-                                  uint64_t source_revision,
-                                  int &refresh_budget);
+  /// M1-2: returns nullopt when budget exhausted (hard defer).
+  std::optional<ChunkMeshSnapshot> TakeOrRefresh(
+      const UBlockWorld &world, glm::ivec3 coord, uint64_t source_revision,
+      int &refresh_budget);
+
+  /// M1-3: partial shell refresh when only neighbor faces changed.
+  std::optional<ChunkMeshSnapshot> RefreshIncrementalShell(
+      const UBlockWorld &world, glm::ivec3 coord, uint64_t source_revision,
+      uint8_t face_mask);
+
+  int LastStoreHitN() const { return LastStoreHitN_; }
+  int LastStoreMissN() const { return LastStoreMissN_; }
+  void ResetStoreHitCounters()
+  {
+    LastStoreHitN_ = 0;
+    LastStoreMissN_ = 0;
+  }
 
   /// Era39: SoftDefer-hidden neighbors → Air shell (capture-time).
   void SetNeighborVisualDrawableFn(
@@ -49,6 +67,12 @@ public:
   }
 
   size_t Size() const { return Store_.size(); }
+
+  ChunkMeshSnapshot::NeighborVisualDrawableFn GetNeighborDrawableFn() const
+  {
+    return NeighborDrawableFn_;
+  }
+  void *GetNeighborDrawableCtx() const { return NeighborDrawableCtx_; }
 
 private:
   struct Entry
@@ -61,6 +85,8 @@ private:
   std::unordered_map<glm::ivec3, Entry, IVec3Hash> Store_;
   ChunkMeshSnapshot::NeighborVisualDrawableFn NeighborDrawableFn_{nullptr};
   void *NeighborDrawableCtx_{nullptr};
+  int LastStoreHitN_{0};
+  int LastStoreMissN_{0};
 };
 
 } // namespace cutum

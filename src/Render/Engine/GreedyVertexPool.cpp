@@ -199,12 +199,21 @@ UGreedyVertexPool::Allocate(const GreedyMeshBatch &batch)
   glBindBuffer(kArrayBuffer, VertexVbo);
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
   {
-    ++UnsyncUploads;
-    void *mapped = glMapBufferRange(
-        kArrayBuffer, static_cast<GLintptr>(alloc.vertexByteOffset),
-        static_cast<GLsizeiptr>(vertex_bytes),
-        GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT |
-            GL_MAP_UNSYNCHRONIZED_BIT);
+    const bool allow_unsync =
+        MaxUnsyncUploadsPerFrame <= 0 ||
+        FrameUnsyncUploads < MaxUnsyncUploadsPerFrame;
+    if (allow_unsync)
+    {
+      ++UnsyncUploads;
+      ++FrameUnsyncUploads;
+    }
+    void *mapped = allow_unsync
+                       ? glMapBufferRange(
+                             kArrayBuffer, static_cast<GLintptr>(alloc.vertexByteOffset),
+                             static_cast<GLsizeiptr>(vertex_bytes),
+                             GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT |
+                                 GL_MAP_UNSYNCHRONIZED_BIT)
+                       : nullptr;
     if (mapped)
     {
       std::memcpy(mapped, batch.vertices.data(), vertex_bytes);
@@ -225,12 +234,22 @@ UGreedyVertexPool::Allocate(const GreedyMeshBatch &batch)
   glBindBuffer(kElementArrayBuffer, IndexEbo);
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
   {
-    ++UnsyncUploads;
-    void *mapped = glMapBufferRange(
-        kElementArrayBuffer, static_cast<GLintptr>(alloc.indexByteOffset),
-        static_cast<GLsizeiptr>(index_bytes),
-        GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT |
-            GL_MAP_UNSYNCHRONIZED_BIT);
+    const bool allow_unsync =
+        MaxUnsyncUploadsPerFrame <= 0 ||
+        FrameUnsyncUploads < MaxUnsyncUploadsPerFrame;
+    if (allow_unsync)
+    {
+      ++UnsyncUploads;
+      ++FrameUnsyncUploads;
+    }
+    void *mapped = allow_unsync
+                       ? glMapBufferRange(
+                             kElementArrayBuffer,
+                             static_cast<GLintptr>(alloc.indexByteOffset),
+                             static_cast<GLsizeiptr>(index_bytes),
+                             GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT |
+                                 GL_MAP_UNSYNCHRONIZED_BIT)
+                       : nullptr;
     if (mapped)
     {
       std::memcpy(mapped, batch.indices.data(), index_bytes);

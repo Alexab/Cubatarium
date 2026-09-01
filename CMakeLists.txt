@@ -417,6 +417,7 @@ set(SOURCES
     src/Core/Progress/LatestProgressSink.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/MeshCaptureStore.cpp
+    src/Render/Mesh/MeshCaptureWorker.cpp
     src/Render/Mesh/AsyncMeshBuilder.cpp
     src/Render/Mesh/GreedyMesher.cpp
     src/App/Platform/InputManager.cpp

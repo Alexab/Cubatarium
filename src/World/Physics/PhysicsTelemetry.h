@@ -229,6 +229,12 @@ struct PhysicsTelemetry
   int MeshDirtyGpuN{0};
   double MeshDirtySyncMs{0.0};
   int MeshDirtySyncN{0};
+  /// M0 waterfall: GPU kick/finish wall inside ProcessPendingGpuMeshes.
+  double MeshGpuKickMs{0.0};
+  double MeshGpuFinishMs{0.0};
+  double MeshAsyncDrainMs{0.0};
+  int MeshCaptureStoreHitN{0};
+  int MeshCaptureStoreMissN{0};
   int DirtyTouchN{0};
   int DirtyRevisitSameN{0};
   int DirtyFmN{0};

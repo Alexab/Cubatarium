@@ -2,6 +2,7 @@
 #define CHUNKMESHCACHE_H
 #include "App/Settings/RenderSettings.h"
 #include "Render/Mesh/AsyncMeshBuilder.h"
+#include "Render/Mesh/MeshCaptureWorker.h"
 #include "Render/Mesh/ChunkDirtySet.h"
 #include "Render/Mesh/ChunkMeshRevisionRegistry.h"
 #include "Render/Mesh/CrossInstanceBatch.h"
@@ -183,6 +184,11 @@ public:
   int GetLastMeshDirtyGpuN() const { return LastMeshDirtyGpuN; }
   double GetLastMeshDirtySyncMs() const { return LastMeshDirtySyncMs; }
   int GetLastMeshDirtySyncN() const { return LastMeshDirtySyncN; }
+  double GetLastMeshGpuKickMs() const { return LastMeshGpuKickMs; }
+  double GetLastMeshGpuFinishMs() const { return LastMeshGpuFinishMs; }
+  double GetLastMeshAsyncDrainMs() const { return LastMeshAsyncDrainMs; }
+  int GetLastMeshCaptureStoreHitN() const { return LastMeshCaptureStoreHitN; }
+  int GetLastMeshCaptureStoreMissN() const { return LastMeshCaptureStoreMissN; }
   int GetLastDirtyTouchN() const { return LastDirtyTouchN; }
   int GetLastDirtyRevisitSameN() const { return LastDirtyRevisitSameN; }
   int GetLastDirtyFmN() const { return LastDirtyFmN; }
@@ -752,6 +758,7 @@ private:
   void ApplyMeshResult(const UBlockWorld &world, UBlockRegistry &registry,
                        MeshBuildResult &&result);
   void EnsureAsyncBuilder();
+  void EnsureCaptureWorker();
   void RebuildChunkLegacy(const UBlockWorld &world, UBlockRegistry &registry,
                           glm::ivec3 chunkCoord,
                           std::vector<FaceInstance> &chunkInstances);
@@ -835,6 +842,12 @@ private:
   int LastMeshDirtyGpuN{0};
   double LastMeshDirtySyncMs{0.0};
   int LastMeshDirtySyncN{0};
+  double LastMeshGpuKickMs{0.0};
+  double LastMeshGpuFinishMs{0.0};
+  double LastMeshAsyncDrainMs{0.0};
+  int LastMeshCaptureStoreHitN{0};
+  int LastMeshCaptureStoreMissN{0};
+  std::unique_ptr<UMeshCaptureWorker> CaptureWorker;
   int LastDirtyTouchN{0};
   int LastDirtyRevisitSameN{0};
   int LastDirtyFmN{0};

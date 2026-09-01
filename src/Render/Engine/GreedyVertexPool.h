@@ -60,6 +60,12 @@ public:
   /// Soft ceiling for vertex+index combined (0 = unbounded grow).
   void SetMaxCapacityBytes(size_t max_bytes) { MaxCapacityBytes = max_bytes; }
   size_t GetMaxCapacityBytes() const { return MaxCapacityBytes; }
+  /// M3: per-frame unsync upload budget (0 = unlimited).
+  void SetMaxUnsyncUploadsPerFrame(int n)
+  {
+    MaxUnsyncUploadsPerFrame = std::max(0, n);
+  }
+  void BeginUploadFrame() { FrameUnsyncUploads = 0; }
   /// Opt-in (CUBATARIUM_POOL_SYNC=1): fence after a full upload pass.
   void SignalUploadComplete();
   uint64_t ConsumeUnsyncUploads()
@@ -92,6 +98,8 @@ private:
   void *UploadFence{nullptr};
   uint64_t UnsyncUploads{0};
   double FenceWaitMs{0.0};
+  int MaxUnsyncUploadsPerFrame{64};
+  int FrameUnsyncUploads{0};
 };
 
 } // namespace cutum

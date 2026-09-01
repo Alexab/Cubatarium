@@ -3045,6 +3045,14 @@ void UChunkMeshCache::EnsureAsyncBuilder()
   }
 }
 
+void UChunkMeshCache::EnsureCaptureWorker()
+{
+  if (!CaptureWorker)
+  {
+    CaptureWorker = std::make_unique<UMeshCaptureWorker>(1);
+  }
+}
+
 void UChunkMeshCache::NoteFmDirtyGpuScheduled(glm::ivec3 coord)
 {
   FmDirtyGpuWatchAge_[coord] = 0;
@@ -3260,7 +3268,12 @@ int UChunkMeshCache::ConsumeGpuApplyBacklog(UBlockWorld &world,
     }
     for (MeshBuildResult &result : AsyncBuilder->DrainCompleted(drain_cap))
     {
+      const auto drain_t0 = std::chrono::high_resolution_clock::now();
       ApplyMeshResult(world, registry, std::move(result));
+      LastMeshAsyncDrainMs += std::chrono::duration<double, std::milli>(
+                                   std::chrono::high_resolution_clock::now() -
+                                   drain_t0)
+                                   .count();
       ++done;
       ++stats.Completed;
     }
@@ -3381,6 +3394,9 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   int kicked = 0;
   int finish_attempts = 0;
   int gpu_finish_watch_rim_n = 0;
+  double local_gpu_finish_ms = 0.0;
+  double local_gpu_kick_ms = 0.0;
+  const auto finish_pass_t0 = std::chrono::high_resolution_clock::now();
 
   auto fail_ticket = [&](PendingGpuApply &pending) {
     if (pending.ticket.valid && pending.ticket.slotIndex >= 0)
@@ -3614,6 +3630,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                           return p.phase == PendingGpuApply::Phase::Queued;
                         });
   };
+  const auto kick_pass_t0 = std::chrono::high_resolution_clock::now();
   while (kicked < kick_cap && processed < max_count && budget_left() &&
          pipeline->HasFreeReadbackSlot())
   {
@@ -3743,9 +3760,19 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     }
   }
 
+  local_gpu_finish_ms += std::chrono::duration<double, std::milli>(
+                             std::chrono::high_resolution_clock::now() -
+                             finish_pass_t0)
+                             .count();
   LastGpuKickN += kicked;
   LastGpuFinishN += finished;
   LastGpuFinishWatchRimN_ = gpu_finish_watch_rim_n;
+  local_gpu_kick_ms += std::chrono::duration<double, std::milli>(
+                           std::chrono::high_resolution_clock::now() -
+                           kick_pass_t0)
+                           .count();
+  LastMeshGpuKickMs += local_gpu_kick_ms;
+  LastMeshGpuFinishMs += local_gpu_finish_ms;
   return processed;
 }
 
@@ -4253,6 +4280,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastMeshDirtyGpuN = 0;
   LastMeshDirtySyncMs = 0.0;
   LastMeshDirtySyncN = 0;
+  LastMeshGpuKickMs = 0.0;
+  LastMeshGpuFinishMs = 0.0;
+  LastMeshAsyncDrainMs = 0.0;
+  LastMeshCaptureStoreHitN = 0;
+  LastMeshCaptureStoreMissN = 0;
+  CaptureStore.ResetStoreHitCounters();
   LastMeshDirtyPruneN += PruneGhostDirty(
       world, GhostDirtyPruneCapPerTick(StarveRemeshForHoles));
   LastDirtyTouchN = static_cast<int>(Dirty.GetCount());
@@ -4645,6 +4678,16 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   if (!force_sync && Render.AsyncMeshing && Render.GreedyMeshing)
   {
     EnsureAsyncBuilder();
+    EnsureCaptureWorker();
+    if (CaptureWorker && UMeshCaptureWorker::kWorkerCaptureEnabled)
+    {
+      for (auto done :
+           CaptureWorker->DrainCompleted(std::max(4, max_schedule_per_frame)))
+      {
+        CaptureStore.Commit(done.coord, done.source_revision,
+                            std::move(done.snapshot));
+      }
+    }
     // Compact far remesh when backlog starves focus missing (Dirty~800 / async~42).
     // After stale-apply fix: also compact when remesh plateau (dirty≫0, no holes).
     if (MeshFocusValid && Dirty.GetCount() > 200)
@@ -5019,8 +5062,38 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       const uint64_t source_revision = MeshRevisions.Current(*it);
       const auto snap_t0 = std::chrono::high_resolution_clock::now();
-      ChunkMeshSnapshot snapshot = CaptureStore.TakeOrRefresh(
-          world, *it, source_revision, CaptureRefreshBudgetLeft);
+      std::optional<ChunkMeshSnapshot> snapshot_opt;
+      if (auto hit = CaptureStore.TryGet(*it, source_revision))
+      {
+        snapshot_opt = std::move(*hit);
+      }
+      else if (UMeshCaptureWorker::kWorkerCaptureEnabled)
+      {
+        EnsureCaptureWorker();
+        if (!CaptureWorker->IsInFlight(*it))
+        {
+          CaptureWorker->Enqueue(
+              world, *it, source_revision,
+              CaptureStore.GetNeighborDrawableFn(),
+              CaptureStore.GetNeighborDrawableCtx());
+        }
+        ++LastMeshDirtyScheduleSkipN;
+        ++LastMeshDirtyScheduleSkipSnapshotN;
+        ++it;
+        return it;
+      }
+      else
+      {
+        snapshot_opt = CaptureStore.TakeOrRefresh(
+            world, *it, source_revision, CaptureRefreshBudgetLeft);
+        if (!snapshot_opt)
+        {
+          ++LastMeshDirtyScheduleSkipN;
+          ++LastMeshDirtyScheduleSkipSnapshotN;
+          return Dirty.end();
+        }
+      }
+      ChunkMeshSnapshot snapshot = std::move(*snapshot_opt);
       LastMeshSnapshotMs += std::chrono::duration<double, std::milli>(
                                 std::chrono::high_resolution_clock::now() -
                                 snap_t0)
@@ -5478,8 +5551,38 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       const uint64_t source_revision = MeshRevisions.Current(*it);
       const bool count_as_remesh = HasDrawableGreedyMesh(*it);
       const auto snap_t0 = std::chrono::high_resolution_clock::now();
-      ChunkMeshSnapshot snapshot = CaptureStore.TakeOrRefresh(
-          world, *it, source_revision, CaptureRefreshBudgetLeft);
+      std::optional<ChunkMeshSnapshot> snapshot_opt;
+      if (auto hit = CaptureStore.TryGet(*it, source_revision))
+      {
+        snapshot_opt = std::move(*hit);
+      }
+      else if (UMeshCaptureWorker::kWorkerCaptureEnabled)
+      {
+        EnsureCaptureWorker();
+        if (!CaptureWorker->IsInFlight(*it))
+        {
+          CaptureWorker->Enqueue(
+              world, *it, source_revision,
+              CaptureStore.GetNeighborDrawableFn(),
+              CaptureStore.GetNeighborDrawableCtx());
+        }
+        ++LastMeshDirtyScheduleSkipN;
+        ++LastMeshDirtyScheduleSkipSnapshotN;
+        ++it;
+        continue;
+      }
+      else
+      {
+        snapshot_opt = CaptureStore.TakeOrRefresh(
+            world, *it, source_revision, CaptureRefreshBudgetLeft);
+        if (!snapshot_opt)
+        {
+          ++LastMeshDirtyScheduleSkipN;
+          ++LastMeshDirtyScheduleSkipSnapshotN;
+          break;
+        }
+      }
+      ChunkMeshSnapshot snapshot = std::move(*snapshot_opt);
       LastMeshSnapshotMs += std::chrono::duration<double, std::milli>(
                                 std::chrono::high_resolution_clock::now() -
                                 snap_t0)
@@ -5576,6 +5679,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       PrevDirtyForRevisit.insert(coord);
     }
+    LastMeshCaptureStoreHitN += CaptureStore.LastStoreHitN();
+    LastMeshCaptureStoreMissN += CaptureStore.LastStoreMissN();
+    CaptureStore.ResetStoreHitCounters();
     return stats;
   }
 

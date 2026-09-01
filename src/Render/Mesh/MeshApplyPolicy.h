@@ -185,7 +185,13 @@ inline bool ShouldBypassRaAParkForCruiseFirstMesh(bool hole_drain_mode,
 /// FP-G1 arch: prior-frame enqueue minus prior-frame schedule drain (not same-frame).
 inline int ComputeFmDirtyEnqueueReserve(int enqueue_prior, int schedule_ok_prior)
 {
-  return std::max(0, enqueue_prior - schedule_ok_prior);
+  int reserve = std::max(0, enqueue_prior - schedule_ok_prior);
+  // M1-4: empty_fm_queue guard — keep FM enqueue path alive when both zero.
+  if (enqueue_prior <= 0 && schedule_ok_prior <= 0)
+  {
+    reserve = std::max(reserve, 2);
+  }
+  return reserve;
 }
 
 /// Effective FirstMesh schedule cap after drain-aware reserve.

@@ -2510,6 +2510,8 @@ int main()
            "arch: prior-frame reserve enqueue-schedule");
     Expect(ComputeFmDirtyEnqueueReserve(4, 1) == 3,
            "I8-C1: dirty_fm backlog reserve");
+    Expect(ComputeFmDirtyEnqueueReserve(0, 0) == 2,
+           "M1-4: empty_fm_queue guard reserve");
     Expect(ComputeFirstMeshScheduleEffectiveCap(7, 3, 2) >= 2,
            "arch: effective_cap after reserve");
     Expect(ComputeFirstMeshScheduleEffectiveCap(7, 3, 2, 4, true, 1) >= 2,

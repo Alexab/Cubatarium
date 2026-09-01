@@ -3031,6 +3031,16 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
       world.GetMeshService().GetLastMeshDirtySyncMs();
   world.PhysicsTelemetryData.MeshDirtySyncN =
       world.GetMeshService().GetLastMeshDirtySyncN();
+  world.PhysicsTelemetryData.MeshGpuKickMs =
+      world.GetMeshService().GetLastMeshGpuKickMs();
+  world.PhysicsTelemetryData.MeshGpuFinishMs =
+      world.GetMeshService().GetLastMeshGpuFinishMs();
+  world.PhysicsTelemetryData.MeshAsyncDrainMs =
+      world.GetMeshService().GetLastMeshAsyncDrainMs();
+  world.PhysicsTelemetryData.MeshCaptureStoreHitN =
+      world.GetMeshService().GetLastMeshCaptureStoreHitN();
+  world.PhysicsTelemetryData.MeshCaptureStoreMissN =
+      world.GetMeshService().GetLastMeshCaptureStoreMissN();
   world.PhysicsTelemetryData.DirtyTouchN =
       world.GetMeshService().GetLastDirtyTouchN();
   world.PhysicsTelemetryData.DirtyRevisitSameN =

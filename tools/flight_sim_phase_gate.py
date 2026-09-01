@@ -533,6 +533,38 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("mesh_emerge_ms", "le", 20.0),
         ("world_streaming_phase_ms", "le", 100.0),
     ],
+    "MESH-H0-baseline": [
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "MESH-M0-waterfall": [
+        ("mesh_snapshot_ms", "gt", 0.0),
+        ("mesh_gpu_kick_ms", "ge", 0.0),
+        ("mesh_gpu_finish_ms", "ge", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "MESH-M1-capture": [
+        ("mesh_emerge_ms", "le", 35.0),
+        ("mesh_snapshot_ms", "gt", 0.0),
+        ("holes_rate", "le", 0.50),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "MESH-M2-worker": [
+        ("mesh_snapshot_ms", "le", 0.5),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "MESH-M3-gpu": [
+        ("pool_unsync_uploads_med", "le", 50.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "MESH-M4-ownership": [
+        ("holes_rate", "le", 0.10),
+        ("witness_latch_diet_share", "ge", 0.70),
+        ("chunks_traveled", "ge", 3.0),
+    ],
+    "MESH-parity-manual": [
+        ("holes_rate", "le", 0.55),
+        ("chunks_traveled", "ge", 3.0),
+    ],
 }
 
 

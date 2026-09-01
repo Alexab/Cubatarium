@@ -205,6 +205,7 @@ def analyze(
     stop_tail_periods: int = 5,
     manual_idle: bool = False,
     baseline_manual: Path | None = None,
+    segment_fly_only: bool = False,
 ) -> dict:
     rows = [
         json.loads(line)
@@ -694,6 +695,18 @@ def analyze(
     fly_segment = (
         steady[: len(steady) - len(stop_segment)] if stop_segment else steady
     )
+    if segment_fly_only and spikes:
+        moving_spikes = []
+        for i, r in enumerate(spikes):
+            if i == 0:
+                continue
+            if (r.get("player_x"), r.get("player_z")) != (
+                spikes[i - 1].get("player_x"),
+                spikes[i - 1].get("player_z"),
+            ):
+                moving_spikes.append(r)
+        if moving_spikes:
+            fly_segment = moving_spikes
     if len(fly_segment) >= 2:
         d0 = float(fly_segment[0].get("mesh_discarded_late") or 0)
         d1 = float(fly_segment[-1].get("mesh_discarded_late") or 0)
@@ -1175,6 +1188,20 @@ def analyze(
         and float(r.get("visual_holes") or 0) == 0
         and float(r.get("miss_horiz") or 0) >= 3
     )
+    mesh_waterfall_snapshot_med = median(col(fly_spikes, "mesh_snapshot_ms"))
+    mesh_waterfall_schedule_med = median(col(fly_spikes, "mesh_dirty_schedule_ms"))
+    mesh_waterfall_drain_med = median(col(fly_spikes, "mesh_dirty_drain_ms"))
+    mesh_waterfall_gpu_med = median(col(fly_spikes, "mesh_dirty_gpu_ms"))
+    mesh_waterfall_kick_med = median(col(fly_spikes, "mesh_gpu_kick_ms"))
+    mesh_waterfall_finish_med = median(col(fly_spikes, "mesh_gpu_finish_ms"))
+    mesh_waterfall_async_drain_med = median(col(fly_spikes, "mesh_async_drain_ms"))
+    fly_only_wall_ms_med = median(col(fly_segment, "wall_ms")) if fly_segment else None
+    visual_holes_telemetry_mismatch_rate = (
+        visual_holes_telemetry_mismatch_frames / float(len(fly_spikes))
+        if fly_spikes
+        else None
+    )
+    dominant_schedule_blocker_mode = dominant_schedule_blocker
     cruise_relight_completed_throughput = None
     if len(fly_spikes) >= 2:
         rc0 = float(fly_spikes[0].get("relight_completed_n") or 0)
@@ -1619,7 +1646,10 @@ def analyze(
             cur_m = {
                 "fly_void_near_max": fly_void_near_max,
                 "effective_holes_rate": effective_holes_rate,
+                "holes_rate": effective_holes_rate,
                 "wall_ms_fly_med": wall_fly_med,
+                "stream_ms": stream_ms_med,
+                "mesh_emerge_ms": mesh_emerge_ms_med,
                 "chunk_count_end": chunk_count_end,
                 "cruise_pending_med": cruise_pending_med,
                 "cruise_fifo_med": cruise_fifo_med,
@@ -1719,6 +1749,21 @@ def analyze(
             ),
             "mesh_emerge_ms": mesh_emerge_ms_med,
             "world_streaming_phase_ms": world_streaming_phase_ms_med,
+            "mesh_waterfall_snapshot_med": mesh_waterfall_snapshot_med,
+            "mesh_waterfall_schedule_med": mesh_waterfall_schedule_med,
+            "mesh_waterfall_drain_med": mesh_waterfall_drain_med,
+            "mesh_waterfall_gpu_med": mesh_waterfall_gpu_med,
+            "mesh_waterfall_kick_med": mesh_waterfall_kick_med,
+            "mesh_waterfall_finish_med": mesh_waterfall_finish_med,
+            "mesh_waterfall_async_drain_med": mesh_waterfall_async_drain_med,
+            "fly_only_wall_ms_med": fly_only_wall_ms_med,
+            "visual_holes_telemetry_mismatch_rate": (
+                visual_holes_telemetry_mismatch_rate
+            ),
+            "dominant_schedule_blocker_mode": dominant_schedule_blocker_mode,
+            "mesh_snapshot_ms": mesh_waterfall_snapshot_med,
+            "mesh_gpu_kick_ms": mesh_waterfall_kick_med,
+            "mesh_gpu_finish_ms": mesh_waterfall_finish_med,
             "dominant_schedule_blocker": dominant_schedule_blocker,
             "witness_latch_diet_frames": witness_latch_diet_frames,
             "witness_latch_diet_share": witness_latch_diet_share,
@@ -1973,6 +2018,11 @@ def main() -> int:
         default=None,
         help="optional manual analyze JSON for parity ratios",
     )
+    ap.add_argument(
+        "--segment-fly-only",
+        action="store_true",
+        help="use movement-based fly segment for wall medians (mesh harness)",
+    )
     args = ap.parse_args()
     if not args.perf_jsonl.is_file():
         print(f"FAIL: missing {args.perf_jsonl}", file=sys.stderr)
@@ -1983,6 +2033,7 @@ def main() -> int:
         args.stop_tail_periods,
         manual_idle=args.manual_idle,
         baseline_manual=args.baseline_manual,
+        segment_fly_only=args.segment_fly_only,
     )
     text = json.dumps(result, indent=2)
     print(text)
