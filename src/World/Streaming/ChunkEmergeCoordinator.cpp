@@ -1835,6 +1835,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     stop_emerge = std::max(stop_emerge, pending_focus_count <= 2 ? 18.0 : 14.0);
   }
+  // I18-P1: rim-only stand miss — cap emerge/snapshot (calm_cap blocked by miss bit).
+  if (!moving && missing_visible_mesh && nearest_miss_h >= 3 && !visual_holes &&
+      !missing_underfeet)
+  {
+    stop_emerge = std::min(stop_emerge, 12.0);
+    mesh_service.SetMeshSnapshotBudgetMs(
+        std::min(snapshot_budget, 4.0));
+  }
   mesh_service.SetMeshEmergeTotalBudgetMs(
       moving ? adaptive_moving_emerge : stop_emerge);
   auto clamp_emerge_to_phase = [&]()
@@ -4188,10 +4196,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const UnderfeetReservation uf_res = EvaluateUnderfeetReservation(
       underfeet_need, !(missing_underfeet || underfeet_undrawn),
       world.GetPhysicsTelemetry().UnderfeetPendingLight);
+  const bool rim_only_visible_miss =
+      missing_visible_mesh && nearest_miss_h >= 3 && !visual_holes &&
+      !missing_underfeet;
   {
     const auto calm_cap = EvaluateIdleMeshDrainCap(IdleMeshDrainCapInput{
-        moving, missing_visible_mesh, pending_focus_count, black_sticky,
-        not_ready_early, last_frame_ms, mesh_drain, mesh_schedule});
+        moving, missing_visible_mesh, rim_only_visible_miss, pending_focus_count,
+        black_sticky, not_ready_early, last_frame_ms, mesh_drain, mesh_schedule});
     if (calm_cap.active)
     {
       mesh_drain = calm_cap.mesh_drain;
@@ -4257,9 +4268,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     consume_gpu = NearUnderfeetGpuApplyFloor(
         missing_underfeet, underfeet_apply_nh,
         world.GetPhysicsTelemetry().UnderfeetPendingLight, consume_gpu);
-    const double consume_budget =
+    double consume_budget =
         std::max(6.0, mesh_service.GetMeshEmergeTotalBudgetMs() *
                           early_adm.gpu_budget_frac);
+    // I18-P5: idle vertex-pool upload diet — cap GPU finish when stream calm.
+    if (!moving && !visual_holes && !missing_underfeet &&
+        world.GetPhysicsTelemetry().StreamPressure == 0)
+    {
+      consume_gpu = std::min(consume_gpu, 2);
+      consume_budget = std::min(consume_budget, 4.0);
+    }
     gpu_consume_done = mesh_service.ConsumeGpuApplyBacklog(
         world.GetBlockWorld(), registry, consume_drain, consume_gpu,
         consume_budget);
@@ -4462,8 +4480,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // not restore drain/schedule/emerge budget on clean stand.
   {
     const auto calm_cap = EvaluateIdleMeshDrainCap(IdleMeshDrainCapInput{
-        moving, missing_visible_mesh, pending_focus_count, black_sticky,
-        not_ready_early, last_frame_ms, mesh_drain, mesh_schedule});
+        moving, missing_visible_mesh, rim_only_visible_miss, pending_focus_count,
+        black_sticky, not_ready_early, last_frame_ms, mesh_drain, mesh_schedule});
     if (calm_cap.active)
     {
       mesh_drain = calm_cap.mesh_drain;

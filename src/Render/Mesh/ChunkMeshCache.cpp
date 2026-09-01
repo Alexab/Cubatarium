@@ -3363,12 +3363,18 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                           std::max(finish_cap, (max_count * 3 + 3) / 4));
     kick_cap = std::min(kick_cap, std::max(2, max_count / 2));
   }
-  // I18 hotfix.3: FM watch rim backlog — bias Finish over Kick.
-  if (!FmDirtyGpuWatchAge_.empty() && PendingGpuApplies.size() >= 4)
+  // I18-P0: FM watch finish bias only on real chain stall (not every watch entry).
   {
-    finish_cap = std::min(UGpuMeshPipeline::kReadbackRing,
+    const int watch_max_age = GetFmDirtyGpuWatchMaxAge();
+    const bool fm_chain_stall_finish_bias =
+        !FmDirtyGpuWatchAge_.empty() && PendingGpuApplies.size() >= 8 &&
+        LastMeshDirtyScheduleOkN < 2 && watch_max_age >= 12;
+    if (fm_chain_stall_finish_bias)
+    {
+      finish_cap = std::min(UGpuMeshPipeline::kReadbackRing,
                           std::max(finish_cap, 4));
-    kick_cap = std::min(kick_cap, std::max(2, max_count / 3));
+      kick_cap = std::min(kick_cap, std::max(2, max_count / 3));
+    }
   }
   int processed = 0;
   int finished = 0;

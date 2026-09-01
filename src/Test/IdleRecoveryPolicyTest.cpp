@@ -210,6 +210,19 @@ int main()
   {
     IdleMeshDrainCapInput in;
     in.moving = false;
+    in.missing_visible_mesh = true;
+    in.rim_only_visible_miss = true;
+    in.last_frame_ms = 86.0;
+    in.mesh_drain = 14;
+    in.mesh_schedule = 12;
+    const auto d = EvaluateIdleMeshDrainCap(in);
+    Expect(d.active, "rim-only miss still gets calm cap");
+    Expect(d.mesh_drain <= 2, "rim-only miss drain capped");
+  }
+
+  {
+    IdleMeshDrainCapInput in;
+    in.moving = false;
     in.black_sticky = kIdleCalmStickyRemnant + 1;
     in.pending_focus_count = 1;
     in.last_frame_ms = 86.0;

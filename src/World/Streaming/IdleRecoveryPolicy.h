@@ -221,6 +221,7 @@ struct IdleMeshDrainCapInput
 {
   bool moving{false};
   bool missing_visible_mesh{false};
+  bool rim_only_visible_miss{false};
   int pending_focus_count{0};
   int black_sticky{0};
   int not_ready_early{0};
@@ -253,8 +254,11 @@ inline IdleMeshDrainCapDecision EvaluateIdleMeshDrainCap(
   IdleMeshDrainCapDecision out;
   out.mesh_drain = in.mesh_drain;
   out.mesh_schedule = in.mesh_schedule;
-  if (in.moving || in.missing_visible_mesh || in.pending_focus_count > 0 ||
-      in.not_ready_early > 0)
+  if (in.moving || in.pending_focus_count > 0 || in.not_ready_early > 0)
+  {
+    return out;
+  }
+  if (in.missing_visible_mesh && !in.rim_only_visible_miss)
   {
     return out;
   }

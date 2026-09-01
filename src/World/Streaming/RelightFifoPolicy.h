@@ -1203,13 +1203,28 @@ inline bool IsTicketedVbConsumeMode(int vb_no_ticket_n,
                                               visible_black_focus_n);
 }
 
+/// I18-P2: release witness pin when miss schedule is stuck (sustained zero ok).
+inline bool ShouldKickMissWitnessPin(int miss_stuck_run_frames,
+                                     int schedule_ok_n, int pin_age,
+                                     int kick_frames = 180,
+                                     int min_pin_age = 120)
+{
+  return miss_stuck_run_frames >= kick_frames && schedule_ok_n < 2 &&
+         pin_age >= min_pin_age;
+}
+
 /// FP-A3: extend witness hold past RelightWitnessPinHoldFrames while pinned_still.
 inline bool ShouldExtendWitnessPinHold(int pin_age, bool pinned_still,
                                        int hold_frames =
                                            RelightWitnessPinHoldFrames,
                                        int miss_horiz = 99,
-                                       bool vb_no_ticket_rising = false)
+                                       bool vb_no_ticket_rising = false,
+                                       bool miss_witness_kick = false)
 {
+  if (miss_witness_kick)
+  {
+    return false;
+  }
   if (pinned_still)
   {
     return true;

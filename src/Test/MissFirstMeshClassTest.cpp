@@ -2475,10 +2475,15 @@ int main()
     using cutum::RelightWitnessPinHoldFrames;
     Expect(RelightWitnessPinHoldFrames >= 48, "FP1: witness hold age extended");
     using cutum::ShouldExtendWitnessPinHold;
+    using cutum::ShouldKickMissWitnessPin;
     Expect(ShouldExtendWitnessPinHold(200, true), "FP-A3: pinned_still extends hold");
     Expect(!ShouldExtendWitnessPinHold(200, false), "FP-A3: age-only release");
     Expect(ShouldExtendWitnessPinHold(200, false, RelightWitnessPinHoldFrames, 3, true),
-           "I10-B3: rim miss + rising VB extends hold");
+           "I10-B3: vb rising extends hold");
+    Expect(ShouldKickMissWitnessPin(200, 0, 150), "I18-P2: stuck miss kicks pin");
+    Expect(!ShouldExtendWitnessPinHold(200, true, RelightWitnessPinHoldFrames, 3,
+                                       false, true),
+           "I18-P2: kick overrides pinned_still");
     using cutum::ShouldMarkMissingOnCruiseMovingHoles;
     Expect(ShouldMarkMissingOnCruiseMovingHoles(true, true, 3, 4),
            "FP-A2: cruise moving holes mark missing nh=3");
@@ -2933,8 +2938,9 @@ int main()
     IngressDebtInput stall_in{};
     stall_in.dirty_fm_n = 2;
     stall_in.fm_dirty_to_gpu_finish_n = 0;
+    stall_in.fm_dirty_gpu_watch_n = 3;
     stall_in.fm_dirty_gpu_watch_max_age = 12;
-    Expect(IsIngressChainStalled(stall_in), "I18-F1: watch stall predicate");
+    Expect(IsIngressChainStalled(stall_in), "I18-P4: watch+no finish stall");
     Expect(DynamicKickCutBiasForFmWatch(3, 0.55) > 0.55,
            "I18-F3: watch rim raises kick_cut");
     Expect(IsRimIngressWatchCoord({2, 0, 1}, {0, 0, 0}),

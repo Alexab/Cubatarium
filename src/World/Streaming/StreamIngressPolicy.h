@@ -59,6 +59,18 @@ inline bool ShouldReuseUnfinishedVisualSample(bool diet_cruise, bool visual_hole
          sample_cd_remaining > 0;
 }
 
+/// I18-P1: stand stable rim miss — throttle full ring unfinished walks.
+inline bool ShouldUseStandStablePrepDiet(bool moving, bool visual_holes,
+                                         int miss_horiz, int unfinished_visual)
+{
+  return !moving && !visual_holes && miss_horiz >= 2 && unfinished_visual <= 4;
+}
+
+inline int UnfinishedSampleCooldownFramesStandStable(int unfinished_visual)
+{
+  return unfinished_visual <= 1 ? 48 : 36;
+}
+
 /// I17-P1: VB raw scan cadence — throttle when stalled plateau stable.
 inline int VbRawScanCadenceFrames(bool diet_cruise, int vb_focus_stable_frames,
                                   int vb_stalled_n, int vb_published)
@@ -131,19 +143,24 @@ struct IngressDebtInput
   int visible_black_focus_n{0};
 };
 
-/// I18-F1: chain stall predicate (watch + zero FM→GPU finish).
+/// I18-P4: chain stall predicate (watch + zero FM→GPU finish).
 inline bool IsIngressChainStalled(const IngressDebtInput &in)
 {
   if (in.dirty_fm_n <= 0)
   {
     return false;
   }
+  // MarkRelit progress frames are noisy — watch with no finish is the stall SoT.
+  if (in.fm_dirty_gpu_watch_n > 0 && in.fm_dirty_to_gpu_finish_n == 0)
+  {
+    return true;
+  }
   if (in.fm_dirty_to_gpu_finish_n == 0 &&
       (in.chain_progress_frames == 0 || in.fm_dirty_gpu_watch_max_age >= 8))
   {
     return true;
   }
-  return in.chain_progress_frames == 0 && in.fm_dirty_gpu_watch_n > 0;
+  return false;
 }
 
 /// I18-A1: FM dirty GPU watch coord on rim ingress ring.

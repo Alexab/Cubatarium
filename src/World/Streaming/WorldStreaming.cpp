@@ -863,6 +863,9 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       !missing_underfeet && last_unfinished_hint <= 3;
   const bool diet_cruise_cadence_final =
       moving_for_telemetry || rim_witness_idle_diet;
+  const bool stand_stable_prep_diet =
+      ShouldUseStandStablePrepDiet(moving_for_telemetry, in.visual_holes,
+                                   miss_horiz, last_unfinished_hint);
   const auto sticky_t0 = std::chrono::high_resolution_clock::now();
   const bool cruise_ring_reuse =
       diet_cruise_cadence_final && !in.visual_holes && !pending_underfeet;
@@ -956,8 +959,12 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     last_unfinished_radius = focus_radius;
     unfinished_sample_cd = 0;
   }
-  const bool force_full_unfinished =
+  bool force_full_unfinished =
       !diet_cruise_cadence_final || in.visual_holes || pending_underfeet;
+  if (stand_stable_prep_diet)
+  {
+    force_full_unfinished = false;
+  }
   const bool unfinished_sample_due = --unfinished_sample_cd <= 0;
   if (force_full_unfinished)
   {
@@ -975,7 +982,10 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     unfinished_visual = last_unfinished_visual;
     focus_pressure = unfinished_visual;
     unfinished_sample_cd =
-        UnfinishedSampleCooldownFrames(unfinished_visual);
+        ShouldUseStandStablePrepDiet(moving_for_telemetry, in.visual_holes,
+                                     miss_horiz, unfinished_visual)
+            ? UnfinishedSampleCooldownFramesStandStable(unfinished_visual)
+            : UnfinishedSampleCooldownFrames(unfinished_visual);
     pt.PrepRefreshRingResyncMs += lap_ms(unfinished_t0);
   }
   else if (ShouldReuseUnfinishedVisualSample(diet_cruise_cadence_final,
@@ -2481,12 +2491,16 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         const int vb_nt_now = world.PhysicsTelemetryData.VisibleBlackNoTicketN;
         const bool vb_no_ticket_rising = vb_nt_now > last_witness_vb_no_ticket;
         last_witness_vb_no_ticket = vb_nt_now;
+        const bool miss_witness_kick = ShouldKickMissWitnessPin(
+            world.PhysicsTelemetryData.MissStuckRunFrames,
+            world.PhysicsTelemetryData.MeshDirtyScheduleOkN,
+            SoftDeferCapturePinAge);
         const bool hold_witness_pin =
             hold_nh2 &&
             ShouldExtendWitnessPinHold(SoftDeferCapturePinAge, pinned_still,
                                        RelightWitnessPinHoldFrames,
                                        world.PhysicsTelemetryData.MissHoriz,
-                                       vb_no_ticket_rising);
+                                       vb_no_ticket_rising, miss_witness_kick);
         const bool era27_would_retarget =
             ShouldRetargetSoftDeferCaptureWitness(
                 SoftDeferCapturePinValid, SoftDeferCapturePinAge, pin_T,
