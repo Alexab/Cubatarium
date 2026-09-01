@@ -151,7 +151,8 @@ inline bool IsIngressChainStalled(const IngressDebtInput &in)
     return false;
   }
   // MarkRelit progress frames are noisy — watch with no finish is the stall SoT.
-  if (in.fm_dirty_gpu_watch_n > 0 && in.fm_dirty_to_gpu_finish_n == 0)
+  if (in.fm_dirty_gpu_watch_n > 0 && in.fm_dirty_to_gpu_finish_n == 0 &&
+      in.fm_dirty_gpu_watch_max_age >= 8)
   {
     return true;
   }

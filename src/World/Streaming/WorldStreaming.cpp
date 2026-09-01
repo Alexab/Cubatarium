@@ -961,10 +961,6 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   }
   bool force_full_unfinished =
       !diet_cruise_cadence_final || in.visual_holes || pending_underfeet;
-  if (stand_stable_prep_diet)
-  {
-    force_full_unfinished = false;
-  }
   const bool unfinished_sample_due = --unfinished_sample_cd <= 0;
   if (force_full_unfinished)
   {
@@ -2494,7 +2490,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         const bool miss_witness_kick = ShouldKickMissWitnessPin(
             world.PhysicsTelemetryData.MissStuckRunFrames,
             world.PhysicsTelemetryData.MeshDirtyScheduleOkN,
-            SoftDeferCapturePinAge);
+            SoftDeferCapturePinAge, moving_now);
         const bool hold_witness_pin =
             hold_nh2 &&
             ShouldExtendWitnessPinHold(SoftDeferCapturePinAge, pinned_still,

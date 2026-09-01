@@ -1835,9 +1835,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   {
     stop_emerge = std::max(stop_emerge, pending_focus_count <= 2 ? 18.0 : 14.0);
   }
-  // I18-P1: rim-only stand miss — cap emerge/snapshot (calm_cap blocked by miss bit).
+  // I18-P1: rim-only stand miss — cap emerge/snapshot after calm stand settle.
   if (!moving && missing_visible_mesh && nearest_miss_h >= 3 && !visual_holes &&
-      !missing_underfeet)
+      !missing_underfeet && world.GetTimeSinceMotionSec() > 4.0)
   {
     stop_emerge = std::min(stop_emerge, 12.0);
     mesh_service.SetMeshSnapshotBudgetMs(
@@ -4273,7 +4273,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                           early_adm.gpu_budget_frac);
     // I18-P5: idle vertex-pool upload diet — cap GPU finish when stream calm.
     if (!moving && !visual_holes && !missing_underfeet &&
-        world.GetPhysicsTelemetry().StreamPressure == 0)
+        world.GetPhysicsTelemetry().StreamPressure == 0 &&
+        world.GetTimeSinceMotionSec() > 3.0)
     {
       consume_gpu = std::min(consume_gpu, 2);
       consume_budget = std::min(consume_budget, 4.0);

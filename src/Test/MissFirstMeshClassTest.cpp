@@ -2480,7 +2480,10 @@ int main()
     Expect(!ShouldExtendWitnessPinHold(200, false), "FP-A3: age-only release");
     Expect(ShouldExtendWitnessPinHold(200, false, RelightWitnessPinHoldFrames, 3, true),
            "I10-B3: vb rising extends hold");
-    Expect(ShouldKickMissWitnessPin(200, 0, 150), "I18-P2: stuck miss kicks pin");
+    Expect(ShouldKickMissWitnessPin(200, 0, 150, false),
+           "I18-P2: stuck miss kicks pin on stand");
+    Expect(!ShouldKickMissWitnessPin(200, 0, 150, true),
+           "I18-P2 hotfix: no kick while moving");
     Expect(!ShouldExtendWitnessPinHold(200, true, RelightWitnessPinHoldFrames, 3,
                                        false, true),
            "I18-P2: kick overrides pinned_still");
@@ -2941,6 +2944,8 @@ int main()
     stall_in.fm_dirty_gpu_watch_n = 3;
     stall_in.fm_dirty_gpu_watch_max_age = 12;
     Expect(IsIngressChainStalled(stall_in), "I18-P4: watch+no finish stall");
+    stall_in.fm_dirty_gpu_watch_max_age = 4;
+    Expect(!IsIngressChainStalled(stall_in), "I18-P4: young watch not stall");
     Expect(DynamicKickCutBiasForFmWatch(3, 0.55) > 0.55,
            "I18-F3: watch rim raises kick_cut");
     Expect(IsRimIngressWatchCoord({2, 0, 1}, {0, 0, 0}),
