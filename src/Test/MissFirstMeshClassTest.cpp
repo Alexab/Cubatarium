@@ -2945,6 +2945,7 @@ int main()
     stall_in.fm_dirty_gpu_watch_max_age = 12;
     Expect(IsIngressChainStalled(stall_in), "I18-P4: watch+no finish stall");
     stall_in.fm_dirty_gpu_watch_max_age = 4;
+    stall_in.chain_progress_frames = 2;
     Expect(!IsIngressChainStalled(stall_in), "I18-P4: young watch not stall");
     Expect(DynamicKickCutBiasForFmWatch(3, 0.55) > 0.55,
            "I18-F3: watch rim raises kick_cut");
