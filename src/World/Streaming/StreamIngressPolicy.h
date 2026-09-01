@@ -10,6 +10,9 @@ namespace cutum
 
 /// I18 hotfix: Tier-2 witness comfort gated until Gate A passes on clean cruise.
 inline constexpr bool kI18WitnessComfortEnabled = false;
+/// I18 hotfix.4: narrow underfeet drawable hold (miss_horiz≤1) without full Tier-2.
+inline constexpr bool kI18UnderfeetGraceEnabled = true;
+inline constexpr int kI18UnderfeetGraceFrames = 2;
 
 /// I17-P1: ring resync only when focus/keep ring actually changed.
 inline bool ShouldRefreshRingResyncForFocusJump(bool focus_ground_jumped,

@@ -2259,7 +2259,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                 site_a_pin_drawable);
         if (!block_pin_sla_site_a && !block_gpu_site_a)
         {
-          if (kI18WitnessComfortEnabled)
+          if (kI18WitnessComfortEnabled ||
+              (kI18UnderfeetGraceEnabled &&
+               world.PhysicsTelemetryData.MissHoriz <= 1))
           {
             const glm::ivec2 prior_xz = SoftDeferCapturePinValid
                                             ? glm::ivec2(SoftDeferCapturePinCx,
@@ -2268,8 +2270,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             const glm::ivec3 prior_coord(prior_xz.x, focus_horiz.y, prior_xz.y);
             if (world.GetMeshService().HasDrawableGreedyMesh(prior_coord))
             {
-              WitnessColumnGrace = {prior_xz, 2};
-              world.GetMeshService().SetWitnessSwapGrace(prior_xz, 2);
+              WitnessColumnGrace = {prior_xz, kI18UnderfeetGraceFrames};
+              world.GetMeshService().SetWitnessSwapGrace(prior_xz,
+                                                         kI18UnderfeetGraceFrames);
             }
           }
           // FZ2.7-P15a: Site A ingress count (also bumps legacy total).
@@ -2520,7 +2523,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             SoftDeferCapturePinValid, SoftDeferCapturePinAge, hold_witness_pin);
         if (retarget)
         {
-          if (kI18WitnessComfortEnabled)
+          if (kI18WitnessComfortEnabled ||
+              (kI18UnderfeetGraceEnabled &&
+               world.PhysicsTelemetryData.MissHoriz <= 1))
           {
             const glm::ivec2 prior_pin_xz(SoftDeferCapturePinCx,
                                           SoftDeferCapturePinCz);
@@ -2530,8 +2535,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                 prior_pin_xz.y);
             if (world.GetMeshService().HasDrawableGreedyMesh(prior_pin_coord))
             {
-              WitnessColumnGrace = {prior_pin_xz, 2};
-              world.GetMeshService().SetWitnessSwapGrace(prior_pin_xz, 2);
+              WitnessColumnGrace = {prior_pin_xz, kI18UnderfeetGraceFrames};
+              world.GetMeshService().SetWitnessSwapGrace(
+                  prior_pin_xz, kI18UnderfeetGraceFrames);
             }
           }
           periods_since_witness_retarget = 0;
@@ -3315,7 +3321,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
   {
     --WitnessColumnGrace.frames_left;
   }
-  if (kI18WitnessComfortEnabled)
+  if (kI18WitnessComfortEnabled || kI18UnderfeetGraceEnabled)
   {
     meshService.TickWitnessSwapGrace();
   }

@@ -4585,15 +4585,23 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       MissCompletionStuckFrames = 0;
     }
     pt.MissCompletionStuckFrames = MissCompletionStuckFrames;
-    const int fm_gpu_finish =
-        mesh_service.GetCache().GetFmDirtyToGpuFinishMatchN();
+    const int fm_gpu_finish = mesh_service.GetCache().ConsumeFmDirtyToGpuFinishMatchN();
     if (fm_gpu_finish > 0)
     {
       pt.FmDirtyToGpuFinishN = fm_gpu_finish;
     }
     else if (pt.FmDirtyDrainN > 0 && pt.GpuFinishN > 0)
     {
-      pt.FmDirtyToGpuFinishN = std::min(pt.FmDirtyDrainN, pt.GpuFinishN);
+      const int watch_n = mesh_service.GetCache().GetFmDirtyGpuWatchCount();
+      if (watch_n > 0)
+      {
+        pt.FmDirtyToGpuFinishN =
+            std::min({pt.FmDirtyDrainN, pt.GpuFinishN, watch_n});
+      }
+      else
+      {
+        pt.FmDirtyToGpuFinishN = std::min(pt.FmDirtyDrainN, pt.GpuFinishN);
+      }
     }
     if (pt.MarkRelitToFmDirtyN > 0 || pt.FmDirtyEnqueueFromMarkRelitN > 0)
     {

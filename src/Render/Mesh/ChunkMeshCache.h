@@ -402,6 +402,12 @@ public:
   }
   void SetFmDirtyEnqueueReserve(int n) { FmDirtyEnqueueReserveN_ = n; }
   int GetFmDirtyToGpuFinishMatchN() const { return FmDirtyToGpuFinishMatchN_; }
+  int ConsumeFmDirtyToGpuFinishMatchN()
+  {
+    const int n = FmDirtyToGpuFinishMatchN_;
+    FmDirtyToGpuFinishMatchN_ = 0;
+    return n;
+  }
   int GetFmDirtyGpuWatchCount() const
   {
     return static_cast<int>(FmDirtyGpuWatchAge_.size());

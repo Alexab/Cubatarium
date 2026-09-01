@@ -881,8 +881,7 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.FmDirtyGpuWatchMaxAge = 0;
   PhysicsTelemetryData.FmDirtyGpuWatchTimeoutDelta = 0;
   PhysicsTelemetryData.GpuFinishWatchRimN = 0;
-  PhysicsTelemetryData.IngressDebtLevel = 0;
-  PhysicsTelemetryData.IngressDebtStreak = 0;
+  // I18 hotfix.2: IngressDebt* latched by ChunkEmergeCoordinator — do not zero here.
   PhysicsTelemetryData.PostRelightApplyMeshDrainFloor = 0;
   PhysicsTelemetryData.MeshDirtyScheduleSkipOutsideFocusFmN = 0;
   PhysicsTelemetryData.FmConsumerStarvedActive = 0;

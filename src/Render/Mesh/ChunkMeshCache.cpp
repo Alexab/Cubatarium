@@ -2254,7 +2254,11 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
           HasDrawableGreedyMesh(chunkCoord),
           kI18WitnessComfortEnabled && WitnessSwapGrace_.frames_left > 0 &&
               WitnessSwapGrace_.prior_xz.x == chunkCoord.x &&
-              WitnessSwapGrace_.prior_xz.y == chunkCoord.z))
+              WitnessSwapGrace_.prior_xz.y == chunkCoord.z) ||
+          (kI18UnderfeetGraceEnabled && horiz <= 1 &&
+           WitnessSwapGrace_.frames_left > 0 &&
+           WitnessSwapGrace_.prior_xz.x == chunkCoord.x &&
+           WitnessSwapGrace_.prior_xz.y == chunkCoord.z))
   {
     BumpChunkMeshRevision(chunkCoord);
   }
@@ -3359,6 +3363,13 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                           std::max(finish_cap, (max_count * 3 + 3) / 4));
     kick_cap = std::min(kick_cap, std::max(2, max_count / 2));
   }
+  // I18 hotfix.3: FM watch rim backlog — bias Finish over Kick.
+  if (!FmDirtyGpuWatchAge_.empty() && PendingGpuApplies.size() >= 4)
+  {
+    finish_cap = std::min(UGpuMeshPipeline::kReadbackRing,
+                          std::max(finish_cap, 4));
+    kick_cap = std::min(kick_cap, std::max(2, max_count / 3));
+  }
   int processed = 0;
   int finished = 0;
   int kicked = 0;
@@ -4088,7 +4099,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   if (had_gpu_resident)
   {
     const bool grace_hold =
-        kI18WitnessComfortEnabled &&
+        (kI18WitnessComfortEnabled ||
+         (kI18UnderfeetGraceEnabled && gpu_keep_horiz <= 1)) &&
         HasWitnessSwapGraceAt(glm::ivec2(result.coord.x, result.coord.z));
     if (!grace_hold)
     {
@@ -4244,7 +4256,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastDirtyScheduleDedupN = 0;
   ScheduledThisFrame_.clear();
   AgeFmDirtyGpuWatchFrames();
-  FmDirtyToGpuFinishMatchN_ = 0;
+  // FmDirtyToGpuFinishMatchN_ cleared after emerge telemetry latch (Consume*).
   // Sky-only / enter: orphan RemeshAfterApply with no Dirty/Active/GPU owner must
   // become Dirty. FullyDark drawable is NOT "owned" — enter PreferKick-only left
   // remesh_after_apply=32 with raa_commit=0 (manual 123647).
