@@ -742,7 +742,11 @@ def main() -> int:
             args.stop_phase_sec = max(args.stop_phase_sec, 30.0)
         else:
             args.idle_sec = max(args.idle_sec, 45.0)
-            args.fly_phase_sec = max(args.fly_phase_sec, 45.0)
+            # Argparse default fly-phase=50 is too short at ~3 FPS (travel<3 → exit 1).
+            if "--fly-phase-sec" not in sys.argv:
+                args.fly_phase_sec = 90.0
+            else:
+                args.fly_phase_sec = max(args.fly_phase_sec, 45.0)
             args.stop_phase_sec = max(args.stop_phase_sec, 90.0)
 
     if args.land_cruise:

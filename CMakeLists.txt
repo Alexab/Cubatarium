@@ -1694,6 +1694,11 @@ target_include_directories(mesh_schedule_retry_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(mesh_schedule_retry_test glm::glm)
 
+add_executable(column_job_graph_stage_test
+    src/Test/ColumnJobGraphStageTest.cpp)
+target_include_directories(column_job_graph_stage_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+
 add_executable(fluid_worldgen_seal_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/ResourcePacks/BlockNameUtil.cpp

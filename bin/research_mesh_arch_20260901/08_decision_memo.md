@@ -1,38 +1,36 @@
-# Decision memo — mesh architecture R1.5 → SHIP (2026-09-02)
+# Decision memo — mesh architecture post-R1.5 debt closure (2026-09-02)
 
-**Status: R1.5–R3 CODE LANDED — autofly trio PENDING**
+**Status: R2.6–R4.1 LANDED — SHIP NO-GO (manual gate-of-record pending)**
 
 ## Sprint verdict
 
 | Sprint | Verdict | Key evidence |
 | --- | --- | --- |
-| R1.5 capture loop | GO (code) | `PendingCaptureReady_`, end-of-tick `Drain`+`Retry`, `mesh_schedule_retry_test` |
-| R2 store diet | GO (code) | `RefreshIncrementalShell`, ring-enter prefetch, `IsWorkerCaptureSaturated` degraded path |
-| R2.5 completion | GO (code) | ProactiveFmRefill B/C, GPU budget raise, `fm_completion_chain_audit.py`, classifier v2 |
-| R3 M4 ownership | GO (code) | ColumnFlow-owned `MarkMissing`, `m4_ownership_lint` CI target, witness diet × capture backlog |
-| R4 harness | GO (code) | `movement_speed` cruise filter, parity `holes_cap` formula, `MESH-R15-capture` gate |
-| SHIP autofly | PENDING | Run sequential trio after rebuild |
+| R1.5 capture loop | **GO** | retry 74, schedule_ok 7 on manual `173028` |
+| R2.6 forensics | **GO** | completion_chain + wall_waterfall audits; analyzer stall/FPS metrics |
+| R2.7 ColumnJobGraph | **GO (code)** | SyncFocusRingColumnJobStages; `column_job_graph_stage_test` PASS |
+| R2.8 completion chain | **INTERIM** | `fm_finish=1` fly-heavy; 0 fz-long |
+| R3.1 M4 + witness | **PARTIAL** | stage guard; diet 1–15% autofly |
+| R3.0 frame budget | **INTERIM** | fz-long wall_fly 130ms (~7.7 FPS) vs 330ms manual |
+| R2.9 store diet | **GO (code)** | store hit on TryGet; `capture_incremental_test` PASS |
+| R4.1 harness | **GO** | trio + gates; replay teardown/travel fix |
+| SHIP | **NO-GO** | holes 84%, witness &lt;2%, manual 3min not re-run |
 
-## R1.5 changes
+## Manual SoT `173028` (pre-fix baseline)
 
-| Item | Status |
+| Metric | Value |
 | --- | --- |
-| PendingCaptureReady_ + age | `ChunkMeshCache.h/.cpp` |
-| End-of-tick drain/retry | `RebuildDirtyChunksWithStats` tail |
-| Cap + CancelCoord | `kMaxPendingCaptureSet`, `MeshCaptureWorker::CancelCoord` |
-| Telem | `mesh_pending_capture_ready_n`, stale/max age |
-| Unit test | `mesh_schedule_retry_test` |
+| wall_ms_fly | 330ms (~3 FPS) |
+| stream_ms | 199ms |
+| holes_rate | 70% |
+| witness_diet | 24% |
+| fm_to_gpu_finish | 0 |
 
-## Harness gates
+## Gates
 
 ```powershell
-cmake --build build/desktop-msvc --target mesh_schedule_retry_test capture_worker_integration_test -j 4
-python tools/flight_sim_run.py --scenario replay-manual --report bin/suite_reports/mesh_R15_replay_manual.json
-python tools/flight_sim_phase_gate.py --report bin/suite_reports/mesh_R15_replay_manual.json --phase-id MESH-R15-capture
+python tools/flight_sim_phase_gate.py --phase-id MESH-R26-completion --report bin/suite_reports/manual_*.json
+python tools/flight_sim_phase_gate.py --phase-id MESH-R30-fps --report bin/suite_reports/manual_*.json
+python tools/flight_sim_run.py --replay-manual --phase-id MESH-R15-capture --report bin/suite_reports/mesh_debt_trio_replay.json
 ```
 
-**Expected:** `cruise_schedule_ok_med ≥ 2`, `mesh_schedule_retry_max > 0`, `cruise_idle_spike_share` documents autofly idle exclusion.
-
-## Next (R5 post-SHIP)
-
-GPU mesh pipeline optimizations per `07_roadmap.md` §R5 — only after M4 ownership GO on manual flight.

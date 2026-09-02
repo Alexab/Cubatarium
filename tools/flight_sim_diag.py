@@ -50,6 +50,12 @@ def classify_run_outcome(
             return "no_perf"
         return "crash"
     if process_rc != 0:
+        tail_blob = "\n".join(info_tail or []).lower()
+        if "fatal" in tail_blob or "segmentation fault" in tail_blob:
+            return "crash"
+        # Harness exit 1 (travel gate, loading) with perf is not a runtime crash.
+        if process_rc == 1:
+            return "harness_fail"
         return "crash"
     tail_blob = "\n".join(info_tail or []).lower()
     if "fatal" in tail_blob or "segmentation fault" in tail_blob:

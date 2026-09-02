@@ -6,7 +6,6 @@
 #include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
 #include "World/Mesh/WorldMeshService.h"
-#include "World/Streaming/ColumnDesiredStage.h"
 #include "World/Streaming/ColumnEmergeState.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
@@ -82,6 +81,74 @@ void UColumnFlowExecutor::SetColumnJobStage(glm::ivec2 column,
                                             ColumnJobStage stage)
 {
   column_job_stage_[ColumnKey(column)] = stage;
+}
+
+void UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
+                                                      glm::ivec2 column)
+{
+  const glm::ivec3 ground(column.x, 0, column.y);
+  const auto &proc = world.GetProceduralSettings();
+  const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
+  const bool has_chunk =
+      world.GetBlockWorld().GetChunkManager().HasChunk(
+          glm::ivec3(column.x, 0, column.y));
+  if (!has_chunk)
+  {
+    SetColumnJobStage(column, ColumnJobStage::Absent);
+    return;
+  }
+
+  UWorldMeshService &mesh = world.GetMeshService();
+  bool gpu_pending = false;
+  bool meshing = false;
+  bool pending_light = false;
+  for (int cy = 0; cy <= max_cy; ++cy)
+  {
+    const glm::ivec3 coord(column.x, cy, column.y);
+    if (mesh.IsPendingGpuApply(coord) || mesh.IsGpuExtractInFlight(coord))
+    {
+      gpu_pending = true;
+    }
+    if (mesh.IsChunkMeshDirty(coord) || mesh.HasInflightMeshBuild(coord))
+    {
+      meshing = true;
+    }
+    if (mesh.GetCache().IsDeferMeshUntilLit(coord) || mesh.IsSoftDeferHeld(coord))
+    {
+      pending_light = true;
+    }
+  }
+
+  const ColumnEmergeState emerge = world.GetColumnEmergeState(ground);
+  if (emerge == ColumnEmergeState::Meshing)
+  {
+    meshing = true;
+  }
+  if (emerge == ColumnEmergeState::Lighting)
+  {
+    pending_light = true;
+  }
+
+  const bool render_ready = world.IsColumnRenderReady(ground);
+  const bool lit_ready =
+      !pending_light && !render_ready && has_chunk && !meshing && !gpu_pending;
+  const ColumnJobStage derived = DeriveColumnJobStage(
+      has_chunk, pending_light, lit_ready, meshing, gpu_pending, render_ready);
+  SetColumnJobStage(column, derived);
+}
+
+void UColumnFlowExecutor::SyncFocusRingColumnJobStages(UWorld &world,
+                                                       glm::ivec3 focus_ground,
+                                                       int focus_radius)
+{
+  for (int dz = -focus_radius; dz <= focus_radius; ++dz)
+  {
+    for (int dx = -focus_radius; dx <= focus_radius; ++dx)
+    {
+      SyncColumnJobStageFromWorld(
+          world, glm::ivec2(focus_ground.x + dx, focus_ground.z + dz));
+    }
+  }
 }
 
 void UColumnFlowExecutor::RequestPromoteRelight(glm::ivec2 near_column,

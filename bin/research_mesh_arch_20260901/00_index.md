@@ -1,41 +1,40 @@
-# Mesh Architecture Research — 20260901
+# Mesh R1.5 → SHIP debt closure — research index (2026-09-02)
 
 | Field | Value |
 | --- | --- |
-| Date | 2026-09-01 |
-| HEAD | `f62041bc` (+ CMake link fix uncommitted) |
+| Date | 2026-09-02 |
+| HEAD | `18cb5899` + R2.6–R4.1 debt closure |
 | Branch | `perf_opt17` |
-| Status | H0 trio captured · H1 harness landed · M0–M5 code landed · **GATE NO-GO** (holes/FM queue) |
+| Status | **R1.5 GO · R2.6–R4.1 LANDED · SHIP NO-GO** |
 
-## SoT logs (H0 baseline trio — post M0–M2)
+## SoT logs
 
 | ID | Report | Perf jsonl | Role |
 | --- | --- | --- | --- |
-| H0-autofly | `bin/suite_reports/mesh_H0_replay_manual.json` | `perf_20260901-214457_12548.jsonl` | `--replay-manual` no-teleport |
-| H0-fly-heavy | `bin/suite_reports/mesh_H1_fly_heavy.json` | `perf_20260901-215535_22828.jsonl` | `--replay-manual-fly-heavy` (H1) |
-| H0-long | `bin/suite_reports/mesh_H0_manual_long.json` | `perf_20260901-215953_18844.jsonl` | `fz-manual-long` debt exposure |
-| H0-manual | `bin/suite_reports/manual_20260901-124859_analyze.json` | `perf_20260901-124859_22296.jsonl` | ~9 min human fly (gate-of-record) |
+| Manual-R15 | `bin/suite_reports/manual_20260902-173028_analyze.json` | `perf_20260902-173028_25184.jsonl` | gate-of-record (pre-fix, ~3 min manual) |
+| Debt-replay | `bin/suite_reports/mesh_debt_trio_replay.json` | `perf_20260902-181922_30324.jsonl` | trio replay-manual (pre teardown fix) |
+| Debt-fly-heavy | `bin/suite_reports/mesh_debt_trio_fly_heavy.json` | `perf_20260902-190322_36808.jsonl` | trio fly-heavy |
+| Debt-fz-long | `bin/suite_reports/mesh_debt_trio_fz_long.json` | — | trio fz-manual-long |
+| Enter-guard | `bin/suite_reports/mesh_debt_fz_cold_enter.json` | `perf_20260902-181413_27212.jsonl` | fz-cold-enter regression |
 
-## Autofly policy (mesh gates)
+## Forensics raw (R2.6)
 
-**Whitelist (no-teleport):** `--replay-manual`, `--replay-manual-fly-heavy`, `fz-manual-long`, `fz-manual-plateau`, `fz-cold-enter`
+| File | Role |
+| --- | --- |
+| `raw/completion_chain_173028.txt` | FM completion chain manual |
+| `raw/wall_waterfall_173028.txt` | FPS/wall waterfall manual |
+| `raw/completion_chain_memo.md` | dominant stall summary |
 
-**Blacklist for M0–M6 gates:** `--teleport-cruise`, `fz-validate`, `fz-inring-cruise`
+## Phase gates
 
-## Phase status
+| Gate | Criteria | Latest |
+| --- | --- | --- |
+| MESH-R15-capture | retry>0, schedule_ok≥2 | **GO** (fly-heavy) |
+| MESH-R26-completion | fm_to_gpu_finish>0 | **GO** (fly-heavy) |
+| MESH-R30-fps | wall_fly≤120, stream≤90, fps≥8 | **NO-GO** (wall 130, fps 7.7) |
+| MESH-parity-manual | holes ≤ manual×1.15+5pp | **NO-GO** (84% vs cap 55%) |
+| fz-cold-enter | enter convergence | PASS |
 
-| Phase | Code | Gates (H0 replay) | Notes |
-| --- | --- | --- | --- |
-| H0 | DONE | GO baseline | trio + parity table in `02_baseline_H0.md` |
-| H1 | DONE | parity_within_2x OK | fly-heavy profile; holes still 100% |
-| M0 | DONE | GO waterfall | drain med ~100ms; snapshot main=0 (worker) |
-| M1 | PARTIAL | NO-GO | empty_fm_queue blocker; holes 100% |
-| M2 | PARTIAL | GO worker | main snapshot=0; M2c fallback remains |
-| M3 | PARTIAL | GO pool | pool_unsync ≤50; GpuExtract scope not full |
-| M4 | PARTIAL | NO-GO | guard on 1 path; holes 100% |
-| M5 | MINIMAL | — | existing SeedDecision only |
-| M6 | DEFERRED | — | `06_arch_options_M6.md` |
+## Verdict one-liner
 
-## One-line verdict
-
-Worker capture removed main-thread snapshot (M2 GO), waterfall telemetry live (M0 GO), but **empty_fm_queue + holes_rate=100%** block M1/M4 SHIP — autofly still diverges from manual on hole class despite parity_within_2x on wall/stream.
+Debt closure **LANDED** (ColumnJobGraph, completion chain, harness, frame budget interim). SHIP blocked: holes, witness diet, post-fix manual gate-of-record pending.

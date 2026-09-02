@@ -1,6 +1,7 @@
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Streaming/ColumnFlowScheduler.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
+#include "World/Streaming/ColumnJobGraph.h"
 #include "World/Streaming/ColumnFlowMeshOwnership.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
 #include "World/Streaming/FocusIngressPolicy.h"
@@ -426,6 +427,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             {
               world_ref.SetColumnEmergeState(ground,
                                              ColumnEmergeState::RenderReady);
+              GetColumnFlowExecutor().SetColumnJobStage(col,
+                                                        ColumnJobStage::RenderReady);
             }
           }
         });
@@ -3421,6 +3424,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           mesh_service.IsGpuExtractInFlight(isolated_hole);
       if (nearest_in_pipeline)
       {
+        const ColumnJobStage hole_stage = exec.GetColumnJobStage(hole_col);
+        if (hole_stage != ColumnJobStage::RenderReady &&
+            hole_stage != ColumnJobStage::GpuPending &&
+            !exec.HasRepairTicket(hole_col))
+        {
+          ColumnWorkItem hole_work{};
+          hole_work.column = hole_col;
+          hole_work.kind = ColumnWorkKind::FirstMesh;
+          hole_work.priority = stop_tail_ownership_mode ? 118 : 100;
+          hole_work.scan_full_focus = false;
+          hole_work.cy = stop_tail_ownership_mode ? -2 : isolated_hole.y;
+          exec.Enqueue(hole_work);
+        }
         exec.RequestPromoteRelight(hole_col, /*priority=*/55);
       }
       else
@@ -4749,19 +4765,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       pt.FmDirtyToGpuFinishN = fm_gpu_finish;
     }
-    else if (pt.FmDirtyDrainN > 0 && pt.GpuFinishN > 0)
-    {
-      const int watch_n = mesh_service.GetCache().GetFmDirtyGpuWatchCount();
-      if (watch_n > 0)
-      {
-        pt.FmDirtyToGpuFinishN =
-            std::min({pt.FmDirtyDrainN, pt.GpuFinishN, watch_n});
-      }
-      else
-      {
-        pt.FmDirtyToGpuFinishN = std::min(pt.FmDirtyDrainN, pt.GpuFinishN);
-      }
-    }
     if (pt.MarkRelitToFmDirtyN > 0 || pt.FmDirtyEnqueueFromMarkRelitN > 0)
     {
       pt.MarkRelitChainProgressFrames =
@@ -4816,6 +4819,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       pt.GpuFinishWatchRimN = cache.GetLastGpuFinishWatchRimN();
       mesh_service.GetCache().ResetFmDirtyGpuWatchTimeoutDelta();
     }
+    GetColumnFlowExecutor().SyncFocusRingColumnJobStages(
+        world, focus_ground_horiz, focus_radius);
   }
 }
 

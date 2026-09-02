@@ -1227,6 +1227,79 @@ def analyze(
     dominant_schedule_blocker = (
         max(blocker_counts, key=blocker_counts.get) if blocker_counts else None
     )
+
+    def classify_completion_stall(r: dict) -> str | None:
+        ok = float(r.get("mesh_dirty_schedule_ok_n") or 0)
+        unfinished = float(r.get("unfinished_visual") or 0)
+        if ok <= 0 or unfinished <= 0:
+            return None
+        dirty_fm = float(r.get("dirty_fm_n") or 0)
+        pending_capture = float(r.get("mesh_pending_capture_n") or 0)
+        watch_n = float(r.get("fm_dirty_gpu_watch_n") or 0)
+        watch_age = float(r.get("fm_dirty_gpu_watch_max_age") or 0)
+        gpu_finish = float(r.get("fm_dirty_to_gpu_finish_n") or 0)
+        gpu_not_ready = float(r.get("gpu_finish_not_ready_n") or 0)
+        pending_gpu = float(r.get("pending_gpu_n") or 0)
+        mesh_async = float(r.get("mesh_async_inflight_n") or 0)
+        mesh_apply_stale = float(r.get("mesh_apply_stale_n") or 0)
+        if dirty_fm <= 0:
+            return "empty_fm_queue"
+        if pending_capture > 0 and gpu_finish <= 0:
+            return "capture_pending"
+        if watch_n > 0 and gpu_finish <= 0 and watch_age >= 8:
+            return "watch_timeout"
+        if watch_n > 0 and gpu_finish <= 0 and mesh_async > 0:
+            return "async_inflight"
+        if gpu_not_ready > 0:
+            return "gpu_not_ready"
+        if pending_gpu > 0 and gpu_finish <= 0:
+            return "gpu_budget"
+        if mesh_apply_stale > 0:
+            return "dark_reject"
+        if gpu_finish > 0:
+            return "complete"
+        return "ticket_stuck"
+
+    completion_stall_counts: dict[str, int] = {}
+    for r in fly_spikes:
+        stall = classify_completion_stall(r)
+        if stall:
+            completion_stall_counts[stall] = (
+                completion_stall_counts.get(stall, 0) + 1
+            )
+    dominant_completion_stall = (
+        max(completion_stall_counts, key=completion_stall_counts.get)
+        if completion_stall_counts
+        else None
+    )
+
+    def classify_wall_stage(r: dict) -> str:
+        wall = float(r.get("wall_ms") or r.get("max_wall_ms") or 0)
+        if wall <= 0:
+            return "unknown"
+        stages = {
+            "stream": float(r.get("stream_ms") or 0),
+            "emerge": float(r.get("mesh_emerge_ms") or 0),
+            "prep": float(
+                r.get("prep_refresh_pressure_ms") or r.get("prep_refresh_ms") or 0
+            ),
+            "mesh_async": float(r.get("mesh_async_ms") or 0),
+            "swap": float(r.get("swap_wait_ms") or 0),
+            "block_input": float(r.get("block_input_ms") or 0),
+        }
+        return max(stages, key=stages.get)
+
+    wall_stage_counts: dict[str, int] = {}
+    for r in fly_spikes:
+        ws = classify_wall_stage(r)
+        wall_stage_counts[ws] = wall_stage_counts.get(ws, 0) + 1
+    dominant_wall_stage = (
+        max(wall_stage_counts, key=wall_stage_counts.get) if wall_stage_counts else None
+    )
+    effective_fps_fly = (
+        1000.0 / wall_fly_med if wall_fly_med and wall_fly_med > 0 else None
+    )
+
     mesh_schedule_retry_max = (
         max(
             float(r.get("mesh_schedule_retry_after_capture_n") or 0)
@@ -1349,6 +1422,20 @@ def analyze(
             len(sched_vals)
         )
     prep_refresh_pressure_ms_med = median(col(cruise_src, "prep_refresh_pressure_ms"))
+    wall_med_for_share = wall_fly_med or 1.0
+    wall_stream_share = (
+        (stream_ms_med or 0) / wall_med_for_share if stream_ms_med is not None else None
+    )
+    wall_emerge_share = (
+        (mesh_emerge_ms_med or 0) / wall_med_for_share
+        if mesh_emerge_ms_med is not None
+        else None
+    )
+    wall_prep_share = (
+        (prep_refresh_pressure_ms_med or 0) / wall_med_for_share
+        if prep_refresh_pressure_ms_med is not None
+        else None
+    )
     dark_face_stale_near_med = median(col(cruise_src, "dark_face_stale_near_n"))
     orphan_vals = col(cruise_src, "mesh_dirty_schedule_skip_orphan_n")
     dirty_ghost_n = max(orphan_vals) if orphan_vals else None
@@ -1848,6 +1935,12 @@ def analyze(
             "dominant_schedule_blocker_subreason": (
                 dominant_schedule_blocker_subreason
             ),
+            "dominant_completion_stall": dominant_completion_stall,
+            "dominant_wall_stage": dominant_wall_stage,
+            "effective_fps_fly": effective_fps_fly,
+            "wall_stream_share": wall_stream_share,
+            "wall_emerge_share": wall_emerge_share,
+            "wall_prep_share": wall_prep_share,
             "witness_latch_diet_frames": witness_latch_diet_frames,
             "witness_latch_diet_share": witness_latch_diet_share,
             "segment_fly_cruise_periods": segment_fly_cruise_periods,

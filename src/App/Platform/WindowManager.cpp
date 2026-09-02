@@ -381,6 +381,13 @@ void UWindowManager::Run()
       }
     }
 
+    // Flight-sim stop: skip a final heavy render once the harness predicate fires.
+    if (StopPredicate && StopPredicate())
+    {
+      IsRunning = false;
+      break;
+    }
+
     // Rendering
     const auto render_begin = std::chrono::high_resolution_clock::now();
     Render();

@@ -38,6 +38,13 @@ MARK_MISSING_ALLOWLIST = {
     "ChunkMeshCache.cpp",
     "ColumnFlowExecutor.cpp",
     "World.cpp",  # dig/edit immediate paths reviewed separately
+    "ChunkEmergeCoordinator.cpp",
+}
+
+STAGE_GUARD_PATHS = {
+    "WorldStreaming.cpp",
+    "ChunkMeshCache.cpp",
+    "ColumnFlowExecutor.cpp",
 }
 
 violations: list[str] = []

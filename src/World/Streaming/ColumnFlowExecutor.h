@@ -98,6 +98,10 @@ public:
 
   ColumnJobStage GetColumnJobStage(glm::ivec2 column) const;
   void SetColumnJobStage(glm::ivec2 column, ColumnJobStage stage);
+  /// R2.7: derive stage from world/mesh truth and sync stored map.
+  void SyncColumnJobStageFromWorld(UWorld &world, glm::ivec2 column);
+  void SyncFocusRingColumnJobStages(UWorld &world, glm::ivec3 focus_ground,
+                                    int focus_radius);
 
 private:
   void AdvanceColumn(UWorld &world, const ColumnWorkItem &work,

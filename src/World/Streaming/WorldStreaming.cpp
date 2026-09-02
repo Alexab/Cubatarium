@@ -1,5 +1,6 @@
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
+#include "World/Streaming/ColumnJobGraph.h"
 #include "World/Streaming/FocusIngressPolicy.h"
 #include "World/Streaming/UnderfeetTelemetryPolicy.h"
 #include "World/Streaming/FrameStreamingBudget.h"
@@ -826,7 +827,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       missing_near && (missing_underfeet || miss_horiz_early <= 2);
   const bool rim_witness_idle_diet_pre =
       missing_near && !visual_holes_early && miss_horiz_early >= 3 &&
-      !missing_underfeet && last_unfinished_hint <= 3 && capture_calm &&
+      !missing_underfeet && last_unfinished_hint <= 7 && capture_calm &&
       movement_speed > 50.0f;
   const bool diet_cruise_cadence =
       moving_for_telemetry || rim_witness_idle_diet_pre;
@@ -865,7 +866,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   world.PhysicsTelemetryData.PendingLightFocus = pending_light_focus;
   const bool rim_witness_idle_diet =
       missing_near && !in.visual_holes && miss_horiz >= 3 &&
-      !missing_underfeet && last_unfinished_hint <= 3 && capture_calm &&
+      !missing_underfeet && last_unfinished_hint <= 7 && capture_calm &&
       movement_speed > 50.0f;
   const bool diet_cruise_cadence_final =
       moving_for_telemetry || rim_witness_idle_diet;
@@ -988,7 +989,11 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
         ShouldUseStandStablePrepDiet(moving_for_telemetry, in.visual_holes,
                                      miss_horiz, unfinished_visual)
             ? UnfinishedSampleCooldownFramesStandStable(unfinished_visual)
-            : UnfinishedSampleCooldownFrames(unfinished_visual);
+            : (diet_cruise_cadence_final && miss_horiz >= 2
+                   ? UnfinishedSampleCooldownFramesCruise(
+                         diet_cruise_cadence_final, miss_horiz,
+                         unfinished_visual)
+                   : UnfinishedSampleCooldownFrames(unfinished_visual));
     pt.PrepRefreshRingResyncMs += lap_ms(unfinished_t0);
   }
   else if (ShouldReuseUnfinishedVisualSample(diet_cruise_cadence_final,
@@ -1168,12 +1173,15 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   // I9-B1 / I12-A1: cruise fast-path — skip expensive darkface/facing scans.
   // I14b-B: decouple diet fast-path from published VB — VB backlog must not
   // disable facing/darkface skip on rim cruise (manual 204611 VB-spiral).
+  const bool stream_phase_over_budget =
+      moving_for_telemetry && in.stream_phase_ms > 120.0;
   const bool rim_cruise_fast =
       diet_cruise_cadence_final && !in.visual_holes && miss_horiz >= 3 &&
-      unfinished_visual <= 4 && !capture_backlog;
+      (unfinished_visual <= 4 || stream_phase_over_budget) && !capture_backlog;
   const bool pressure_cruise_fast =
       diet_cruise_cadence_final && !in.visual_holes && !pending_underfeet &&
-      miss_horiz >= 3 && unfinished_visual <= 4 && !capture_backlog;
+      miss_horiz >= 3 &&
+      (unfinished_visual <= 4 || stream_phase_over_budget) && !capture_backlog;
   const bool cruise_scan_fast = pressure_cruise_fast || rim_cruise_fast;
   // Actual baked-dark vertices near camera (not PendingLight proxy).
   // Split stale (mesh dark, field lit) vs void-edge (both 0) for ARCH_D3.
@@ -2520,7 +2528,14 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         const bool block_witness_retarget = ShouldBlockWitnessCaptureRetarget(
             SoftDeferCapturePinValid, pinned_still, hold_witness_pin,
             miss_horiz_zero_no_drawable,
-            world.PhysicsTelemetryData.RelightFifoDropNPrev > 0);
+            world.PhysicsTelemetryData.RelightFifoDropNPrev > 0) ||
+            (SoftDeferCapturePinValid &&
+             (GetColumnFlowExecutor().GetColumnJobStage(
+                  glm::ivec2(SoftDeferCapturePinCx, SoftDeferCapturePinCz)) ==
+                  ColumnJobStage::Meshing ||
+              GetColumnFlowExecutor().GetColumnJobStage(
+                  glm::ivec2(SoftDeferCapturePinCx, SoftDeferCapturePinCz)) ==
+                  ColumnJobStage::GpuPending));
         const bool block_pin_sla = ShouldBlockWitnessRetargetForPinSla(
             SoftDeferCapturePinAge, SoftDeferCapturePinHoriz, visual_holes_cap,
             moving_now);
@@ -2543,9 +2558,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             SoftDeferCapturePinValid, SoftDeferCapturePinAge, hold_witness_pin);
         if (retarget)
         {
+          const int witness_grace_frames =
+              capture_backlog_witness ? 30 : kI18UnderfeetGraceFrames;
           if (kI18WitnessComfortEnabled ||
               (kI18UnderfeetGraceEnabled &&
-               world.PhysicsTelemetryData.MissHoriz <= 1))
+               world.PhysicsTelemetryData.MissHoriz <= 1) ||
+              capture_backlog_witness)
           {
             const glm::ivec2 prior_pin_xz(SoftDeferCapturePinCx,
                                           SoftDeferCapturePinCz);
@@ -2553,11 +2571,12 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                 prior_pin_xz.x,
                 SoftDeferCapturePinCy >= 0 ? SoftDeferCapturePinCy : 0,
                 prior_pin_xz.y);
-            if (world.GetMeshService().HasDrawableGreedyMesh(prior_pin_coord))
+            if (world.GetMeshService().HasDrawableGreedyMesh(prior_pin_coord) ||
+                capture_backlog_witness)
             {
-              WitnessColumnGrace = {prior_pin_xz, kI18UnderfeetGraceFrames};
-              world.GetMeshService().SetWitnessSwapGrace(
-                  prior_pin_xz, kI18UnderfeetGraceFrames);
+              WitnessColumnGrace = {prior_pin_xz, witness_grace_frames};
+              world.GetMeshService().SetWitnessSwapGrace(prior_pin_xz,
+                                                         witness_grace_frames);
             }
           }
           periods_since_witness_retarget = 0;

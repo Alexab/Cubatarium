@@ -3206,6 +3206,7 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
   SnapshotAcquireResult out;
   if (auto hit = CaptureStore.TryGet(coord, source_revision))
   {
+    ++LastMeshCaptureStoreHitN;
     if (!Dirty.IsFirstMesh(coord) && HasDrawableGreedyMesh(coord))
     {
       uint8_t face_mask = 0;
@@ -3301,6 +3302,11 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
     }
   }
   if (CaptureRefreshBudgetLeft <= 0)
+  {
+    out.kind = SnapshotAcquireKind::Deferred;
+    return out;
+  }
+  if (!IsWorkerCaptureSaturated())
   {
     out.kind = SnapshotAcquireKind::Deferred;
     return out;
@@ -3494,7 +3500,11 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
     }
     const bool remesh_after = RemeshAfterApply.erase(coord) > 0;
-    if (ShouldMarkDirtyAfterDarkSoftDeferReject(remesh_after, had_mesh))
+    if (!had_mesh && OnLitPendingNeeded)
+    {
+      OnLitPendingNeeded(coord);
+    }
+    else if (ShouldMarkDirtyAfterDarkSoftDeferReject(remesh_after, had_mesh))
     {
       MarkDirtyPriority(coord);
     }
@@ -3727,8 +3737,9 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   {
     const int watch_max_age = GetFmDirtyGpuWatchMaxAge();
     const bool fm_chain_stall_finish_bias =
-        !FmDirtyGpuWatchAge_.empty() && PendingGpuApplies.size() >= 8 &&
-        LastMeshDirtyScheduleOkN < 2 && watch_max_age >= 12;
+        !FmDirtyGpuWatchAge_.empty() && PendingGpuApplies.size() >= 6 &&
+        watch_max_age >= 6 &&
+        (LastMeshDirtyScheduleOkN < 4 || watch_max_age >= 12);
     if (fm_chain_stall_finish_bias)
     {
       finish_cap = std::min(UGpuMeshPipeline::kReadbackRing,
