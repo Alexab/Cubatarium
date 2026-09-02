@@ -1,4 +1,5 @@
 #include "Render/Mesh/ChunkMeshSnapshot.h"
+#include "Render/Mesh/MeshCaptureToken.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
@@ -227,6 +228,26 @@ NeighborLoadState ChunkMeshSnapshot::GetNeighborLoadState(
         shellNeighborState[static_cast<size_t>(ShellFlatIndex(face, cell))]);
   }
   return NeighborLoadState::Unknown;
+}
+
+std::optional<ChunkMeshSnapshot> UBlockWorld::ReadChunkBandForCapture(
+    glm::ivec3 coord, const MeshCaptureToken &token,
+    ChunkMeshSnapshot::NeighborVisualDrawableFn neighbor_drawable,
+    void *neighbor_drawable_ctx) const
+{
+  if (token.world_epoch == 0 || token.source_revision == 0)
+  {
+    return std::nullopt;
+  }
+  if (!GetChunkManager().GetChunk(coord))
+  {
+    return std::nullopt;
+  }
+  ChunkMeshSnapshot snap = ChunkMeshSnapshot::Capture(
+      *this, coord, token.source_revision, neighbor_drawable,
+      neighbor_drawable_ctx);
+  snap.sourceRevision = token.source_revision;
+  return snap;
 }
 
 } // namespace cutum

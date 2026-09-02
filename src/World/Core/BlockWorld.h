@@ -1,11 +1,14 @@
 #ifndef BLOCKWORLD_H
 #define BLOCKWORLD_H
 
+#include "Render/Mesh/ChunkMeshSnapshot.h"
+#include "Render/Mesh/MeshCaptureToken.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Math/FluidCellState.h"
 #include <functional>
 #include <glm/glm.hpp>
+#include <optional>
 
 namespace cutum
 {
@@ -39,6 +42,12 @@ public:
 
   UChunkManager &GetChunkManager() { return Chunks; }
   const UChunkManager &GetChunkManager() const { return Chunks; }
+
+  /// Main-thread immutable band for worker / store (§A.4).
+  std::optional<ChunkMeshSnapshot> ReadChunkBandForCapture(
+      glm::ivec3 coord, const MeshCaptureToken &token,
+      ChunkMeshSnapshot::NeighborVisualDrawableFn neighbor_drawable = nullptr,
+      void *neighbor_drawable_ctx = nullptr) const;
 
 private:
   UChunkManager Chunks;

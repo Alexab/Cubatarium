@@ -4566,6 +4566,34 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   s_fm_enqueue_prior = world.GetPhysicsTelemetry().FmDirtyEnqueueN;
   s_schedule_ok_prior = mesh_service.GetLastMeshDirtyScheduleOkN();
   s_dirty_fm_prior = mesh_service.GetLastDirtyFmN();
+  {
+    const int unfinished = world.GetPhysicsTelemetry().UnfinishedVisual;
+    if (mesh_service.GetLastDirtyFmN() == 0 && unfinished > 0 &&
+        mesh_service.HasMissingGreedyMeshInHorizontalRadius(
+            world.GetBlockWorld(), focus_ground_horiz, focus_radius))
+    {
+      auto &exec = GetColumnFlowExecutor();
+      const glm::ivec2 focus_xz(focus_ground_horiz.x, focus_ground_horiz.z);
+      if (exec.Scheduler().Contains(focus_xz, ColumnWorkKind::FirstMesh))
+      {
+        ColumnWorkItem bump{};
+        bump.column = focus_xz;
+        bump.kind = ColumnWorkKind::FirstMesh;
+        bump.priority = 110;
+        bump.scan_full_focus = true;
+        exec.Enqueue(bump);
+      }
+      else if (!exec.Scheduler().ContainsColumn(focus_xz))
+      {
+        ColumnWorkItem fm{};
+        fm.column = focus_xz;
+        fm.kind = ColumnWorkKind::FirstMesh;
+        fm.priority = 110;
+        fm.scan_full_focus = true;
+        exec.Enqueue(fm);
+      }
+    }
+  }
   world.GetPhysicsTelemetryMutable().FirstMeshScheduleEffectiveCap =
       mesh_service.GetLastFirstMeshScheduleEffectiveCap();
 

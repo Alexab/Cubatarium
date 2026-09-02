@@ -1364,6 +1364,7 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
             });
 
   int admitted = 0;
+  int marked_total = 0;
   for (const Candidate &candidate : candidates)
   {
     if (admitted >= max_columns)
@@ -1389,26 +1390,34 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
           ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, /*priority=*/true,
           enqueue_min, enqueue_max);
     }
+    int marked = 0;
     if (only_cy >= 0)
     {
       const int y0 = only_cy * CHUNK_SIZE;
       const int y1 = y0 + CHUNK_SIZE - 1;
-      MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground, y0, y1);
+      marked = MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground,
+                                                           y0, y1);
     }
     else if (full_column_only)
     {
-      MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground, 0,
-                                                  max_y);
+      marked = MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground, 0,
+                                                           max_y);
     }
     else
     {
-      MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground, 0,
-                                                  remesh_max);
+      marked = MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground,
+                                                             0, remesh_max);
     }
-    SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
-    ++admitted;
+    ++PhysicsTelemetryData.AdmitCandidatesN;
+    PhysicsTelemetryData.AdmitMarkedN += marked;
+    if (marked > 0)
+    {
+      SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+      marked_total += marked;
+      ++admitted;
+    }
   }
-  return admitted;
+  return marked_total;
 }
 
 void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)

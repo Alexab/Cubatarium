@@ -247,6 +247,10 @@ public:
   double GetLastMeshAsyncDrainMs() const;
   int GetLastMeshCaptureStoreHitN() const;
   int GetLastMeshCaptureStoreMissN() const;
+  int GetLastMeshPendingCaptureN() const;
+  int GetLastMeshScheduleRetryAfterCaptureN() const;
+  int GetLastMeshWorkerInflightN() const;
+  int GetLastMeshDegradedCaptureN() const;
   int GetLastDirtyTouchN() const;
   int GetLastDirtyRevisitSameN() const;
   int GetLastDirtyFmN() const;

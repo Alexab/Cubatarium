@@ -77,6 +77,16 @@ struct PhysicsTelemetry
   int FmDirtyEnqueueN{0};
   int FmDirtyEnqueueFromMarkRelitN{0};
   int FmDirtyEnqueueFromColumnFlowN{0};
+  /// R1-A: AdmitFocusVisibleMissing candidates vs slices marked dirty.
+  int AdmitCandidatesN{0};
+  int AdmitMarkedN{0};
+  /// R1-B: worker capture pipeline telem.
+  int MeshPendingCaptureN{0};
+  int MeshScheduleRetryAfterCaptureN{0};
+  int MeshWorkerInflightN{0};
+  int MeshDegradedCaptureN{0};
+  /// R4-H1: cruise movement speed for parity gates (blocks/s).
+  float MovementSpeed{0.0f};
   /// FP-D1: FirstMesh dirty consumed by schedule this frame.
   int FmDirtyDrainN{0};
   /// FP-B2: nh≤2 priority front-insert into relight FIFO.

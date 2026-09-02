@@ -13,11 +13,8 @@
 namespace cutum
 {
 
-class UBlockWorld;
-
-/// TD-ARCH-046: optional worker-side ChunkMeshSnapshot::Capture.
-/// M2a: API + tests with kWorkerCaptureEnabled=false (default off in M2a).
-/// M2b/M2c: enabled — main hot path uses TryGet + worker enqueue only.
+/// TD-ARCH-046: worker receives immutable bands from main (M2a).
+/// M2b/M2c: enabled — main ReadChunkBandForCapture → Enqueue by value.
 class UMeshCaptureWorker
 {
 public:
@@ -28,10 +25,9 @@ public:
 
   bool IsEnabled() const { return kWorkerCaptureEnabled; }
 
-  void Enqueue(const UBlockWorld &world, glm::ivec3 coord,
-               uint64_t source_revision,
-               ChunkMeshSnapshot::NeighborVisualDrawableFn neighbor_drawable,
-               void *neighbor_drawable_ctx);
+  /// Legacy path removed — bands must be captured on main thread.
+  void Enqueue(ChunkMeshSnapshot band, glm::ivec3 coord,
+               uint64_t source_revision);
 
   /// Completed captures ready for CaptureStore commit (main thread only).
   struct CompletedCapture

@@ -427,6 +427,13 @@ struct FrameNumbers
   int fm_dirty_enqueue_n{0};
   int fm_dirty_enqueue_from_markrelit_n{0};
   int fm_dirty_enqueue_from_columnflow_n{0};
+  int admit_candidates_n{0};
+  int admit_marked_n{0};
+  int mesh_pending_capture_n{0};
+  int mesh_schedule_retry_after_capture_n{0};
+  int mesh_worker_inflight_n{0};
+  int mesh_degraded_capture_n{0};
+  float movement_speed{0.0f};
   int fm_dirty_drain_n{0};
   int relight_fifo_priority_insert_n{0};
   int ticketed_vb_consume_n{0};
@@ -918,6 +925,13 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.fm_dirty_enqueue_n = phys.FmDirtyEnqueueN;
   n.fm_dirty_enqueue_from_markrelit_n = phys.FmDirtyEnqueueFromMarkRelitN;
   n.fm_dirty_enqueue_from_columnflow_n = phys.FmDirtyEnqueueFromColumnFlowN;
+  n.admit_candidates_n = phys.AdmitCandidatesN;
+  n.admit_marked_n = phys.AdmitMarkedN;
+  n.mesh_pending_capture_n = phys.MeshPendingCaptureN;
+  n.mesh_schedule_retry_after_capture_n = phys.MeshScheduleRetryAfterCaptureN;
+  n.mesh_worker_inflight_n = phys.MeshWorkerInflightN;
+  n.mesh_degraded_capture_n = phys.MeshDegradedCaptureN;
+  n.movement_speed = phys.MovementSpeed;
   n.fm_dirty_drain_n = phys.FmDirtyDrainN;
   n.relight_fifo_priority_insert_n = phys.RelightFifoPriorityInsertN;
   n.ticketed_vb_consume_n = phys.TicketedVbConsumeN;
@@ -1444,6 +1458,14 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.fm_dirty_enqueue_from_markrelit_n
           << ",\"fm_dirty_enqueue_from_columnflow_n\":"
           << n.fm_dirty_enqueue_from_columnflow_n
+          << ",\"admit_candidates_n\":" << n.admit_candidates_n
+          << ",\"admit_marked_n\":" << n.admit_marked_n
+          << ",\"mesh_pending_capture_n\":" << n.mesh_pending_capture_n
+          << ",\"mesh_schedule_retry_after_capture_n\":"
+          << n.mesh_schedule_retry_after_capture_n
+          << ",\"mesh_worker_inflight_n\":" << n.mesh_worker_inflight_n
+          << ",\"mesh_degraded_capture_n\":" << n.mesh_degraded_capture_n
+          << ",\"movement_speed\":" << n.movement_speed
           << ",\"fm_dirty_drain_n\":" << n.fm_dirty_drain_n
           << ",\"relight_fifo_priority_insert_n\":"
           << n.relight_fifo_priority_insert_n

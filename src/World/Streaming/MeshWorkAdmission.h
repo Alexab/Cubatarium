@@ -134,8 +134,13 @@ struct MeshWorkAdmission
 inline bool ShouldSuppressFmAdmissionCarveOut(int unfinished_visual,
                                               int column_loaded_no_mesh_n,
                                               int mesh_schedule_ok_n,
+                                              int dirty_fm_n = 0,
                                               int first_mesh_floor = 4)
 {
+  if (dirty_fm_n == 0 && mesh_schedule_ok_n == 0)
+  {
+    return false;
+  }
   if (unfinished_visual >= 4 || column_loaded_no_mesh_n >= 4)
   {
     return true;
@@ -477,7 +482,7 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   const bool schedule_starved = in.mesh_schedule_ok_n == 0;
   const bool suppress_carve = ShouldSuppressFmAdmissionCarveOut(
       in.unfinished_visual, in.column_loaded_no_mesh_n,
-      in.mesh_schedule_ok_n);
+      in.mesh_schedule_ok_n, in.dirty_fm_n);
   // I8-A1: carve only when FM queue empty — consumer-starved must stay HoleDrain.
   if (holes_moving && fm_starved && schedule_starved && !suppress_carve)
   {
@@ -505,6 +510,7 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   }
   // I12-C2: HoleDrain with empty FM queue — soften to WarmBacklog.
   static int hole_drain_empty_fm_frames = 0;
+  static int hole_drain_schedule_starved_frames = 0;
   if (mode == MeshWorkAdmission::Mode::HoleDrain && in.dirty_fm_n == 0)
   {
     ++hole_drain_empty_fm_frames;
@@ -513,9 +519,20 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   {
     hole_drain_empty_fm_frames = 0;
   }
+  if (mode == MeshWorkAdmission::Mode::HoleDrain && in.dirty_fm_n == 0 &&
+      in.mesh_schedule_ok_n == 0)
+  {
+    ++hole_drain_schedule_starved_frames;
+  }
+  else
+  {
+    hole_drain_schedule_starved_frames = 0;
+  }
   if (hole_drain_empty_fm_frames >= 4 &&
       mode == MeshWorkAdmission::Mode::HoleDrain &&
-      !(in.nearest_miss_horiz <= 2 && in.missing_underfeet) && !stop_vb_hold)
+      (hole_drain_schedule_starved_frames >= 8 ||
+       !(in.nearest_miss_horiz <= 2 && in.missing_underfeet)) &&
+      !stop_vb_hold)
   {
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     hole_drain_empty_fm_frames = 0;

@@ -189,6 +189,13 @@ public:
   double GetLastMeshAsyncDrainMs() const { return LastMeshAsyncDrainMs; }
   int GetLastMeshCaptureStoreHitN() const { return LastMeshCaptureStoreHitN; }
   int GetLastMeshCaptureStoreMissN() const { return LastMeshCaptureStoreMissN; }
+  int GetLastMeshPendingCaptureN() const { return LastMeshPendingCaptureN_; }
+  int GetLastMeshScheduleRetryAfterCaptureN() const
+  {
+    return LastMeshScheduleRetryAfterCaptureN_;
+  }
+  int GetLastMeshWorkerInflightN() const { return LastMeshWorkerInflightN_; }
+  int GetLastMeshDegradedCaptureN() const { return LastMeshDegradedCaptureN_; }
   int GetLastDirtyTouchN() const { return LastDirtyTouchN; }
   int GetLastDirtyRevisitSameN() const { return LastDirtyRevisitSameN; }
   int GetLastDirtyFmN() const { return LastDirtyFmN; }
@@ -759,6 +766,22 @@ private:
                        MeshBuildResult &&result);
   void EnsureAsyncBuilder();
   void EnsureCaptureWorker();
+  enum class SnapshotAcquireKind : uint8_t
+  {
+    Ready,
+    PendingCapture,
+    Deferred,
+  };
+  struct SnapshotAcquireResult
+  {
+    SnapshotAcquireKind kind{SnapshotAcquireKind::Deferred};
+    std::optional<ChunkMeshSnapshot> snapshot;
+  };
+  SnapshotAcquireResult TryAcquireSnapshotForSchedule(
+      const UBlockWorld &world, glm::ivec3 coord, uint64_t source_revision);
+  int RetryPendingCaptures(UBlockWorld &world, UBlockRegistry &registry,
+                           int max_per_frame, int &scheduled);
+  void DrainCaptureWorkerCommits();
   void RebuildChunkLegacy(const UBlockWorld &world, UBlockRegistry &registry,
                           glm::ivec3 chunkCoord,
                           std::vector<FaceInstance> &chunkInstances);
@@ -848,6 +871,12 @@ private:
   int LastMeshCaptureStoreHitN{0};
   int LastMeshCaptureStoreMissN{0};
   std::unique_ptr<UMeshCaptureWorker> CaptureWorker;
+  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> PendingCaptureSet_;
+  uint64_t NextCaptureId_{1};
+  int LastMeshPendingCaptureN_{0};
+  int LastMeshScheduleRetryAfterCaptureN_{0};
+  int LastMeshWorkerInflightN_{0};
+  int LastMeshDegradedCaptureN_{0};
   int LastDirtyTouchN{0};
   int LastDirtyRevisitSameN{0};
   int LastDirtyFmN{0};

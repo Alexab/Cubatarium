@@ -1091,6 +1091,26 @@ int UWorldMeshService::GetLastMeshCaptureStoreMissN() const
   return Cache.GetLastMeshCaptureStoreMissN();
 }
 
+int UWorldMeshService::GetLastMeshPendingCaptureN() const
+{
+  return Cache.GetLastMeshPendingCaptureN();
+}
+
+int UWorldMeshService::GetLastMeshScheduleRetryAfterCaptureN() const
+{
+  return Cache.GetLastMeshScheduleRetryAfterCaptureN();
+}
+
+int UWorldMeshService::GetLastMeshWorkerInflightN() const
+{
+  return Cache.GetLastMeshWorkerInflightN();
+}
+
+int UWorldMeshService::GetLastMeshDegradedCaptureN() const
+{
+  return Cache.GetLastMeshDegradedCaptureN();
+}
+
 int UWorldMeshService::GetLastDirtyTouchN() const
 {
   return Cache.GetLastDirtyTouchN();

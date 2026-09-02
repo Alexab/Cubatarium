@@ -972,6 +972,27 @@ set(PHYSICS_BLOCKWORLD_TEST_SOURCES
     src/Blocks/BlockDefinitionStorage.cpp
     src/Blocks/BlockDefinition.cpp)
 
+add_executable(capture_worker_integration_test
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/Core/Jobs/JobThreadPool.cpp
+    src/App/Platform/WorkerJobKind.cpp
+    src/Core/Jobs/JobThreadBudget.cpp
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/MeshCaptureWorker.cpp
+    src/Test/CaptureWorkerIntegrationTest.cpp)
+target_include_directories(capture_worker_integration_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(capture_worker_integration_test glm::glm)
+
+add_executable(capture_incremental_test
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/MeshCaptureStore.cpp
+    src/Test/CaptureIncrementalTest.cpp)
+target_include_directories(capture_incremental_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(capture_incremental_test glm::glm)
+
 set(PHYSICS_FLUID_SIM_SOURCES
     src/World/Core/RuntimeTuning.cpp
     src/World/Physics/FluidSpreadSystem.cpp

@@ -2539,15 +2539,19 @@ int main()
     Expect(!ShouldDeferFmDirtyEnqueueReserve(false, false, false),
            "FP-G1.1: reserve active on cruise");
     using cutum::ShouldSuppressFmAdmissionCarveOut;
-    Expect(ShouldSuppressFmAdmissionCarveOut(8, 2, 0),
-           "FP-G2: suppress carve when unfinished>=4");
-    Expect(ShouldSuppressFmAdmissionCarveOut(2, 5, 0),
-           "FP-G2: suppress carve when clnm>=4");
-    Expect(!ShouldSuppressFmAdmissionCarveOut(2, 2, 1),
+    Expect(!ShouldSuppressFmAdmissionCarveOut(8, 2, 0, 0),
+           "R1-D: FM-empty carve when unfinished>=4 + schedule_starved");
+    Expect(!ShouldSuppressFmAdmissionCarveOut(2, 5, 0, 0),
+           "R1-D: FM-empty carve when clnm>=4 + schedule_starved");
+    Expect(ShouldSuppressFmAdmissionCarveOut(8, 2, 0, 1),
+           "FP-G2: suppress carve when unfinished>=4 and dirty_fm fed");
+    Expect(ShouldSuppressFmAdmissionCarveOut(2, 5, 0, 1),
+           "FP-G2: suppress carve when clnm>=4 and dirty_fm fed");
+    Expect(!ShouldSuppressFmAdmissionCarveOut(2, 2, 1, 0),
            "arch: mild schedule_ok=1 allows carve");
-    Expect(ShouldSuppressFmAdmissionCarveOut(2, 2, 4),
+    Expect(ShouldSuppressFmAdmissionCarveOut(2, 2, 4, 0),
            "arch: suppress carve when schedule_ok>=floor");
-    Expect(!ShouldSuppressFmAdmissionCarveOut(2, 2, 0),
+    Expect(!ShouldSuppressFmAdmissionCarveOut(2, 2, 0, 0),
            "FP-G2: allow carve when mild holes + schedule_ok=0");
     using cutum::ShouldBlockWitnessCaptureRetarget;
     Expect(ShouldBlockWitnessCaptureRetarget(true, true, true),

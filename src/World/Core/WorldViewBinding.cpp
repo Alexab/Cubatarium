@@ -808,6 +808,12 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.FmDirtyEnqueueN = 0;
   PhysicsTelemetryData.FmDirtyEnqueueFromMarkRelitN = 0;
   PhysicsTelemetryData.FmDirtyEnqueueFromColumnFlowN = 0;
+  PhysicsTelemetryData.AdmitCandidatesN = 0;
+  PhysicsTelemetryData.AdmitMarkedN = 0;
+  PhysicsTelemetryData.MeshPendingCaptureN = 0;
+  PhysicsTelemetryData.MeshScheduleRetryAfterCaptureN = 0;
+  PhysicsTelemetryData.MeshWorkerInflightN = 0;
+  PhysicsTelemetryData.MeshDegradedCaptureN = 0;
   PhysicsTelemetryData.FmDirtyDrainN = 0;
   PhysicsTelemetryData.AdmissionCarveOut = 0;
   PhysicsTelemetryData.SoftDeferCaptureRetargetBlockedN = 0;
@@ -1063,6 +1069,14 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.DirtyFmN =
       std::max(GetMeshService().GetLastDirtyFmN(),
                GetMeshService().GetLiveDirtyFirstMeshCount());
+  PhysicsTelemetryData.MeshPendingCaptureN =
+      GetMeshService().GetLastMeshPendingCaptureN();
+  PhysicsTelemetryData.MeshScheduleRetryAfterCaptureN =
+      GetMeshService().GetLastMeshScheduleRetryAfterCaptureN();
+  PhysicsTelemetryData.MeshWorkerInflightN =
+      GetMeshService().GetLastMeshWorkerInflightN();
+  PhysicsTelemetryData.MeshDegradedCaptureN =
+      GetMeshService().GetLastMeshDegradedCaptureN();
   if (PhysicsTelemetryData.FmDirtyEnqueueN > 0)
   {
     PhysicsTelemetryData.DirtyFmN =
@@ -1074,6 +1088,7 @@ void UWorld::TickWorldStreamingPhase()
           ? PhysicsTelemetryData.MeshDirtyScheduleOkN
           : 0;
   PhysicsTelemetryData.DirtyRemeshN = GetMeshService().GetLastDirtyRemeshN();
+  PhysicsTelemetryData.MovementSpeed = GetLastMovementSpeed();
   HarvestUnfinishedPrepTelem(PhysicsTelemetryData);
 
   // Hitch for streaming speed clamp / budgets: EMA stream+emerge (FZ2.6-Perf3).
