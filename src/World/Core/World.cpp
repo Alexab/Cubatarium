@@ -108,6 +108,54 @@ using json = nlohmann::json;
 
 namespace cutum
 {
+namespace
+{
+
+int CountMissingSlicesInRange(const UBlockWorld &world,
+                            const UWorldMeshService *mesh_service,
+                            glm::ivec3 ground_chunk_coord, int min_y,
+                            int max_y)
+{
+  if (!mesh_service)
+  {
+    return 0;
+  }
+  const int cy0 = FloorDiv(min_y, CHUNK_SIZE);
+  const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
+  int marked = 0;
+  for (int cy = cy0; cy <= cy1; ++cy)
+  {
+    const glm::ivec3 coord(ground_chunk_coord.x, cy, ground_chunk_coord.z);
+    const UChunk *chunk = world.GetChunkManager().GetChunk(coord);
+    if (!chunk || mesh_service->HasMeshSatisfyingColumnReady(coord) ||
+        mesh_service->IsPendingGpuApply(coord) ||
+        mesh_service->HasInflightMeshBuild(coord))
+    {
+      continue;
+    }
+    bool solid = false;
+    for (int z = 0; z < CHUNK_SIZE && !solid; z += 4)
+    {
+      for (int x = 0; x < CHUNK_SIZE && !solid; x += 4)
+      {
+        for (int y = 0; y < CHUNK_SIZE && !solid; y += 4)
+        {
+          if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+          {
+            solid = true;
+          }
+        }
+      }
+    }
+    if (solid)
+    {
+      ++marked;
+    }
+  }
+  return marked;
+}
+
+} // namespace
 
 namespace
 {
@@ -1250,6 +1298,7 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
   {
     return 0;
   }
+  AdmitFocusMarkBuffer_.clear();
   const glm::ivec3 focus =
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
   const int radius = GetStreamingFocusRadius();
@@ -1391,33 +1440,35 @@ int UWorld::AdmitFocusVisibleMissing(int max_columns, glm::vec2 forward_xz,
           enqueue_min, enqueue_max);
     }
     int marked = 0;
+    int mark_min = 0;
+    int mark_max = remesh_max;
     if (only_cy >= 0)
     {
-      const int y0 = only_cy * CHUNK_SIZE;
-      const int y1 = y0 + CHUNK_SIZE - 1;
-      marked = MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground,
-                                                           y0, y1);
+      mark_min = only_cy * CHUNK_SIZE;
+      mark_max = mark_min + CHUNK_SIZE - 1;
     }
     else if (full_column_only)
     {
-      marked = MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground, 0,
-                                                           max_y);
+      mark_min = 0;
+      mark_max = max_y;
     }
-    else
-    {
-      marked = MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground,
-                                                             0, remesh_max);
-    }
+    marked = CountMissingSlicesInRange(BlockWorld, MeshService.get(), ground,
+                                       mark_min, mark_max);
     ++PhysicsTelemetryData.AdmitCandidatesN;
-    PhysicsTelemetryData.AdmitMarkedN += marked;
     if (marked > 0)
     {
-      SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+      AdmitFocusMarkBuffer_.push_back(
+          {candidate.key, mark_min, mark_max});
       marked_total += marked;
       ++admitted;
     }
   }
   return marked_total;
+}
+
+void UWorld::ClearAdmitFocusMarkBuffer()
+{
+  AdmitFocusMarkBuffer_.clear();
 }
 
 void UWorld::NotePendingLightBeforeMesh(glm::ivec3 ground, int min_y, int max_y)

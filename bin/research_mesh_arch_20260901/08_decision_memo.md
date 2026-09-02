@@ -1,44 +1,38 @@
-# Decision memo — mesh architecture R1 ship fix (2026-09-01)
+# Decision memo — mesh architecture R1.5 → SHIP (2026-09-02)
 
-**Status: R1 IMPLEMENTED — autofly gate PENDING rebuild**
+**Status: R1.5–R3 CODE LANDED — autofly trio PENDING**
 
-## R1 changes landed
+## Sprint verdict
+
+| Sprint | Verdict | Key evidence |
+| --- | --- | --- |
+| R1.5 capture loop | GO (code) | `PendingCaptureReady_`, end-of-tick `Drain`+`Retry`, `mesh_schedule_retry_test` |
+| R2 store diet | GO (code) | `RefreshIncrementalShell`, ring-enter prefetch, `IsWorkerCaptureSaturated` degraded path |
+| R2.5 completion | GO (code) | ProactiveFmRefill B/C, GPU budget raise, `fm_completion_chain_audit.py`, classifier v2 |
+| R3 M4 ownership | GO (code) | ColumnFlow-owned `MarkMissing`, `m4_ownership_lint` CI target, witness diet × capture backlog |
+| R4 harness | GO (code) | `movement_speed` cruise filter, parity `holes_cap` formula, `MESH-R15-capture` gate |
+| SHIP autofly | PENDING | Run sequential trio after rebuild |
+
+## R1.5 changes
 
 | Item | Status |
 | --- | --- |
-| R1-A Admit marked count | `AdmitFocusVisibleMissing` returns `marked_total`; telem `admit_candidates_n` / `admit_marked_n` |
-| R1-B Pending capture + retry | `TryAcquireSnapshotForSchedule`, `PendingCaptureSet`, `RetryPendingCaptures` same-tick |
-| R1-C M2a band API | `ReadChunkBandForCapture`, worker by-value `Enqueue`, `BumpWorldEpoch` on `MarkAllDirty` |
-| R1-D admission carve | `ShouldSuppressFmAdmissionCarveOut` FM-empty exception; I12-C2 schedule-starved extension |
-| R1-E FM refill | post-rebuild `ColumnFlow` FirstMesh enqueue when `dirty_fm==0` && holes |
-| R2-A prefetch | `PrefetchMeshCapture` async worker path (no sync `CaptureAndStore` when worker on) |
-| R4-H1 | `movement_speed` in perf jsonl |
+| PendingCaptureReady_ + age | `ChunkMeshCache.h/.cpp` |
+| End-of-tick drain/retry | `RebuildDirtyChunksWithStats` tail |
+| Cap + CancelCoord | `kMaxPendingCaptureSet`, `MeshCaptureWorker::CancelCoord` |
+| Telem | `mesh_pending_capture_ready_n`, stale/max age |
+| Unit test | `mesh_schedule_retry_test` |
 
-## Unit tests
-
-| Test | Result |
-| --- | --- |
-| `capture_worker_integration_test` | PASS |
-| `capture_incremental_test` | PASS |
-
-## Autofly gate (R1)
-
-**BLOCKED:** `Cubatarium.exe` rebuild blocked by `vc143.pdb` lock (parallel MSBuild / running sim). Re-run sequential trio after clean single-thread build:
+## Harness gates
 
 ```powershell
-cmake --build build/desktop-msvc --target Cubatarium -j 1
-python tools/flight_sim_run.py ...  # sequential, not parallel
+cmake --build build/desktop-msvc --target mesh_schedule_retry_test capture_worker_integration_test -j 4
+python tools/flight_sim_run.py --scenario replay-manual --report bin/suite_reports/mesh_R15_replay_manual.json
+python tools/flight_sim_phase_gate.py --report bin/suite_reports/mesh_R15_replay_manual.json --phase-id MESH-R15-capture
 ```
 
-**Expected post-R1:** `dirty_fm_med > 0`, `mesh_schedule_ok_n > 0`, `mesh_pending_capture_n` > 0 on miss ticks, `mesh_schedule_retry_after_capture_n` > 0.
+**Expected:** `cruise_schedule_ok_med ≥ 2`, `mesh_schedule_retry_max > 0`, `cruise_idle_spike_share` documents autofly idle exclusion.
 
-## Phase verdict (updated)
+## Next (R5 post-SHIP)
 
-| Phase | Verdict |
-| --- | --- |
-| R0 | GO — `04_hotspot_matrix.md` |
-| R1 code | GO — §A.3–A.7 implemented |
-| R1 gate | PENDING — autofly |
-| R2 M1-3 incremental shell | NOT WIRED — `RefreshIncrementalShell` uncalled in schedule |
-| R3 M4 lint | PARTIAL — `scripts/m4_ownership_lint.py` |
-| R5 M3 GPU | DEFERRED post-SHIP |
+GPU mesh pipeline optimizations per `07_roadmap.md` §R5 — only after M4 ownership GO on manual flight.

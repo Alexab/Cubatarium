@@ -38,9 +38,12 @@ public:
   };
 
   std::vector<CompletedCapture> DrainCompleted(int max_per_frame);
+  /// Brief wait so in-flight jobs can land in Completed_ before main-thread drain.
+  void PumpUntilIdle(std::chrono::milliseconds max_wait);
   bool IsInFlight(glm::ivec3 coord) const;
   int GetInFlightCount() const;
   void CancelPending();
+  void CancelCoord(glm::ivec3 coord);
 
 private:
   struct Inflight

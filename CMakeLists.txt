@@ -1682,6 +1682,18 @@ target_compile_definitions(decor_mesh_integration_test PRIVATE
 target_link_libraries(decor_mesh_integration_test glm::glm nlohmann_json::nlohmann_json
     glog::glog OpenGL::GL GLEW::GLEW)
 
+add_executable(mesh_schedule_retry_test
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/Core/Jobs/JobThreadPool.cpp
+    src/App/Platform/WorkerJobKind.cpp
+    src/Core/Jobs/JobThreadBudget.cpp
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/MeshCaptureWorker.cpp
+    src/Test/MeshScheduleRetryTest.cpp)
+target_include_directories(mesh_schedule_retry_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(mesh_schedule_retry_test glm::glm)
+
 add_executable(fluid_worldgen_seal_test
     ${PHYSICS_MATERIAL_UNIT_SOURCES}
     src/ResourcePacks/BlockNameUtil.cpp
@@ -2476,3 +2488,8 @@ if(WIN32)
         VERBATIM
     )
 endif()
+
+add_custom_target(m4_ownership_lint
+    COMMAND python "${CMAKE_SOURCE_DIR}/bin/research_mesh_arch_20260901/scripts/m4_ownership_lint.py"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    COMMENT "M4 mesh ownership lint")

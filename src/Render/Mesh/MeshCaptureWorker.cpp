@@ -33,13 +33,21 @@ void UMeshCaptureWorker::Enqueue(ChunkMeshSnapshot band, glm::ivec3 coord,
                   done.snapshot = std::move(band);
                   std::lock_guard<std::mutex> lock(Mutex);
                   const auto it = InFlight_.find(coord);
-                  if (it != InFlight_.end() && it->second.job_id == job_id &&
-                      it->second.source_revision == source_revision)
+                  if (it != InFlight_.end() && it->second.job_id == job_id)
                   {
                     InFlight_.erase(it);
-                    Completed_.push_back(std::move(done));
                   }
+                  Completed_.push_back(std::move(done));
                 });
+}
+
+void UMeshCaptureWorker::PumpUntilIdle(std::chrono::milliseconds max_wait)
+{
+  if (!Pool || max_wait.count() <= 0)
+  {
+    return;
+  }
+  (void)Pool->WaitIdleFor(max_wait);
 }
 
 std::vector<UMeshCaptureWorker::CompletedCapture>
@@ -74,6 +82,23 @@ void UMeshCaptureWorker::CancelPending()
   std::lock_guard<std::mutex> lock(Mutex);
   InFlight_.clear();
   Completed_.clear();
+}
+
+void UMeshCaptureWorker::CancelCoord(glm::ivec3 coord)
+{
+  std::lock_guard<std::mutex> lock(Mutex);
+  InFlight_.erase(coord);
+  for (auto it = Completed_.begin(); it != Completed_.end();)
+  {
+    if (it->coord == coord)
+    {
+      it = Completed_.erase(it);
+    }
+    else
+    {
+      ++it;
+    }
+  }
 }
 
 } // namespace cutum

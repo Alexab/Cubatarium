@@ -432,6 +432,9 @@ struct FrameNumbers
   int mesh_pending_capture_n{0};
   int mesh_schedule_retry_after_capture_n{0};
   int mesh_worker_inflight_n{0};
+  int mesh_pending_capture_ready_n{0};
+  int mesh_pending_capture_stale_n{0};
+  int mesh_pending_capture_max_age{0};
   int mesh_degraded_capture_n{0};
   float movement_speed{0.0f};
   int fm_dirty_drain_n{0};
@@ -930,6 +933,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_pending_capture_n = phys.MeshPendingCaptureN;
   n.mesh_schedule_retry_after_capture_n = phys.MeshScheduleRetryAfterCaptureN;
   n.mesh_worker_inflight_n = phys.MeshWorkerInflightN;
+  n.mesh_pending_capture_ready_n = phys.MeshPendingCaptureReadyN;
+  n.mesh_pending_capture_stale_n = phys.MeshPendingCaptureStaleN;
+  n.mesh_pending_capture_max_age = phys.MeshPendingCaptureMaxAge;
   n.mesh_degraded_capture_n = phys.MeshDegradedCaptureN;
   n.movement_speed = phys.MovementSpeed;
   n.fm_dirty_drain_n = phys.FmDirtyDrainN;
@@ -1464,6 +1470,12 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_schedule_retry_after_capture_n\":"
           << n.mesh_schedule_retry_after_capture_n
           << ",\"mesh_worker_inflight_n\":" << n.mesh_worker_inflight_n
+          << ",\"mesh_pending_capture_ready_n\":"
+          << n.mesh_pending_capture_ready_n
+          << ",\"mesh_pending_capture_stale_n\":"
+          << n.mesh_pending_capture_stale_n
+          << ",\"mesh_pending_capture_max_age\":"
+          << n.mesh_pending_capture_max_age
           << ",\"mesh_degraded_capture_n\":" << n.mesh_degraded_capture_n
           << ",\"movement_speed\":" << n.movement_speed
           << ",\"fm_dirty_drain_n\":" << n.fm_dirty_drain_n

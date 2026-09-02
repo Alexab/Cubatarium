@@ -391,6 +391,7 @@ void UChunkMeshCache::MarkAllDirty()
     CaptureWorker->CancelPending();
   }
   PendingCaptureSet_.clear();
+  PendingCaptureReady_.clear();
   ++MeshRevision;
   InstancesDirty = true;
   GreedyBatchesDirty = true;
@@ -1584,6 +1585,20 @@ void UChunkMeshCache::BumpChunkMeshRevision(glm::ivec3 chunk_coord)
   CaptureStore.Invalidate(chunk_coord);
 }
 
+void UChunkMeshCache::PumpCaptureWorkerCommits()
+{
+  if (!UMeshCaptureWorker::kWorkerCaptureEnabled)
+  {
+    return;
+  }
+  EnsureCaptureWorker();
+  if (CaptureWorker)
+  {
+    CaptureWorker->PumpUntilIdle(std::chrono::milliseconds(2));
+    DrainCaptureWorkerCommits();
+  }
+}
+
 void UChunkMeshCache::PrefetchMeshCapture(const UBlockWorld &world,
                                           glm::ivec3 chunk_coord)
 {
@@ -1608,6 +1623,7 @@ void UChunkMeshCache::PrefetchMeshCapture(const UBlockWorld &world,
     if (band)
     {
       CaptureWorker->Enqueue(std::move(*band), chunk_coord, rev);
+      PendingCaptureSet_[chunk_coord] = PendingCaptureEntry{rev, 0};
     }
     return;
   }
@@ -3090,16 +3106,96 @@ void UChunkMeshCache::DrainCaptureWorkerCommits()
   for (auto done :
        CaptureWorker->DrainCompleted(std::numeric_limits<int>::max()))
   {
-    if (done.source_revision != MeshRevisions.Current(done.coord))
-    {
-      PendingCaptureSet_.erase(done.coord);
-      continue;
-    }
     CaptureStore.Commit(done.coord, done.source_revision,
                         std::move(done.snapshot));
     PendingCaptureSet_.erase(done.coord);
+    // R1.5-2: always wake retry pass after worker commit; RetryPendingCaptures
+    // uses capture revision (may differ from Current after relight bumps).
+    PendingCaptureReady_[done.coord] = done.source_revision;
+    ++LastMeshScheduleRetryAfterCaptureN_;
   }
   LastMeshWorkerInflightN_ = CaptureWorker->GetInFlightCount();
+  LastMeshPendingCaptureReadyN_ =
+      static_cast<int>(PendingCaptureReady_.size());
+}
+
+bool UChunkMeshCache::IsWorkerCaptureSaturated() const
+{
+  if (!CaptureWorker || !UMeshCaptureWorker::kWorkerCaptureEnabled)
+  {
+    return false;
+  }
+  return CaptureWorker->GetInFlightCount() >= kWorkerInflightCap ||
+         static_cast<int>(PendingCaptureSet_.size()) >=
+             (kMaxPendingCaptureSet * 3) / 4;
+}
+
+int UChunkMeshCache::GetPendingCaptureCount() const
+{
+  return static_cast<int>(PendingCaptureSet_.size());
+}
+
+void UChunkMeshCache::AgePendingCaptureEntries()
+{
+  LastMeshPendingCaptureStaleN_ = 0;
+  LastMeshPendingCaptureMaxAge_ = 0;
+  for (auto it = PendingCaptureSet_.begin(); it != PendingCaptureSet_.end();)
+  {
+    ++it->second.age_frames;
+    LastMeshPendingCaptureMaxAge_ =
+        std::max(LastMeshPendingCaptureMaxAge_, it->second.age_frames);
+    int horiz = 999;
+    if (MeshFocusValid)
+    {
+      horiz = std::max(std::abs(it->first.x - MeshFocusGroundChunk.x),
+                       std::abs(it->first.z - MeshFocusGroundChunk.z));
+    }
+    if (it->second.age_frames > kPendingCaptureStaleFrames &&
+        horiz > MeshFocusRadiusChunks + 2)
+    {
+      if (CaptureWorker)
+      {
+        DrainCaptureWorkerCommits();
+        CaptureWorker->CancelCoord(it->first);
+      }
+      PendingCaptureReady_.erase(it->first);
+      ++LastMeshPendingCaptureStaleN_;
+      it = PendingCaptureSet_.erase(it);
+    }
+    else
+    {
+      ++it;
+    }
+  }
+  LastMeshPendingCaptureReadyN_ =
+      static_cast<int>(PendingCaptureReady_.size());
+}
+
+uint8_t UChunkMeshCache::ComputeNeighborShellFaceMask(
+    glm::ivec3 coord, glm::ivec3 neighbor_coord) const
+{
+  const glm::ivec3 delta = neighbor_coord - coord;
+  if (delta.y != 0)
+  {
+    return 0;
+  }
+  if (delta.x == 1 && delta.z == 0)
+  {
+    return 1u << 1;
+  }
+  if (delta.x == -1 && delta.z == 0)
+  {
+    return 1u << 0;
+  }
+  if (delta.z == 1 && delta.x == 0)
+  {
+    return 1u << 5;
+  }
+  if (delta.z == -1 && delta.x == 0)
+  {
+    return 1u << 4;
+  }
+  return 0;
 }
 
 UChunkMeshCache::SnapshotAcquireResult
@@ -3110,6 +3206,28 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
   SnapshotAcquireResult out;
   if (auto hit = CaptureStore.TryGet(coord, source_revision))
   {
+    if (!Dirty.IsFirstMesh(coord) && HasDrawableGreedyMesh(coord))
+    {
+      uint8_t face_mask = 0;
+      for (const glm::ivec3 &dirty_coord : Dirty)
+      {
+        if (dirty_coord == coord)
+        {
+          continue;
+        }
+        face_mask |= ComputeNeighborShellFaceMask(coord, dirty_coord);
+      }
+      if (face_mask != 0)
+      {
+        if (auto refreshed = CaptureStore.RefreshIncrementalShell(
+                world, coord, source_revision, face_mask))
+        {
+          out.kind = SnapshotAcquireKind::Ready;
+          out.snapshot = std::move(*refreshed);
+          return out;
+        }
+      }
+    }
     out.kind = SnapshotAcquireKind::Ready;
     out.snapshot = std::move(*hit);
     return out;
@@ -3117,11 +3235,43 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
   if (UMeshCaptureWorker::kWorkerCaptureEnabled)
   {
     EnsureCaptureWorker();
-    if (CaptureWorker->IsInFlight(coord) ||
-        PendingCaptureSet_.count(coord) > 0)
+    if (CaptureWorker->IsInFlight(coord))
     {
       out.kind = SnapshotAcquireKind::PendingCapture;
       return out;
+    }
+    if (PendingCaptureSet_.count(coord) > 0)
+    {
+      // Worker cancelled/evicted or commit drained — re-enqueue instead of
+      // spinning PendingCapture forever without inflight/completed.
+      PendingCaptureSet_.erase(coord);
+      PendingCaptureReady_.erase(coord);
+    }
+    if (static_cast<int>(PendingCaptureSet_.size()) >= kMaxPendingCaptureSet)
+    {
+      glm::ivec3 evict = coord;
+      int evict_horiz = -1;
+      for (const auto &entry : PendingCaptureSet_)
+      {
+        int horiz = 999;
+        if (MeshFocusValid)
+        {
+          horiz = std::max(std::abs(entry.first.x - MeshFocusGroundChunk.x),
+                           std::abs(entry.first.z - MeshFocusGroundChunk.z));
+        }
+        if (horiz > evict_horiz)
+        {
+          evict_horiz = horiz;
+          evict = entry.first;
+        }
+      }
+      if (evict_horiz >= 0 && CaptureWorker)
+      {
+        DrainCaptureWorkerCommits();
+        CaptureWorker->CancelCoord(evict);
+        PendingCaptureSet_.erase(evict);
+        PendingCaptureReady_.erase(evict);
+      }
     }
     const MeshCaptureToken token{CaptureStore.WorldEpoch(), source_revision,
                                  NextCaptureId_++};
@@ -3134,9 +3284,21 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
       return out;
     }
     CaptureWorker->Enqueue(std::move(*band), coord, source_revision);
-    PendingCaptureSet_[coord] = source_revision;
+    PendingCaptureSet_[coord] = PendingCaptureEntry{source_revision, 0};
     out.kind = SnapshotAcquireKind::PendingCapture;
     return out;
+  }
+  if (IsWorkerCaptureSaturated() && CaptureRefreshBudgetLeft > 0 &&
+      MeshSnapshotBudgetMs <= 1.0)
+  {
+    out.snapshot = CaptureStore.TakeOrRefresh(world, coord, source_revision,
+                                              CaptureRefreshBudgetLeft);
+    if (out.snapshot)
+    {
+      ++LastMeshDegradedCaptureN_;
+      out.kind = SnapshotAcquireKind::Ready;
+      return out;
+    }
   }
   if (CaptureRefreshBudgetLeft <= 0)
   {
@@ -3163,45 +3325,56 @@ int UChunkMeshCache::RetryPendingCaptures(UBlockWorld &world,
     return 0;
   }
   DrainCaptureWorkerCommits();
-  if (PendingCaptureSet_.empty() || max_per_frame <= 0)
+  if (PendingCaptureReady_.empty() || max_per_frame <= 0)
   {
     return 0;
   }
-  std::vector<glm::ivec3> pending;
-  pending.reserve(PendingCaptureSet_.size());
-  for (const auto &entry : PendingCaptureSet_)
+  std::vector<std::pair<glm::ivec3, uint64_t>> pending;
+  pending.reserve(PendingCaptureReady_.size());
+  for (const auto &entry : PendingCaptureReady_)
   {
-    pending.push_back(entry.first);
+    pending.emplace_back(entry.first, entry.second);
   }
   if (MeshFocusValid)
   {
     std::sort(pending.begin(), pending.end(),
-              [this](const glm::ivec3 &a, const glm::ivec3 &b)
+              [this](const auto &a, const auto &b)
               {
-                const int ha = std::max(std::abs(a.x - MeshFocusGroundChunk.x),
-                                        std::abs(a.z - MeshFocusGroundChunk.z));
-                const int hb = std::max(std::abs(b.x - MeshFocusGroundChunk.x),
-                                        std::abs(b.z - MeshFocusGroundChunk.z));
+                const int ha =
+                    std::max(std::abs(a.first.x - MeshFocusGroundChunk.x),
+                             std::abs(a.first.z - MeshFocusGroundChunk.z));
+                const int hb =
+                    std::max(std::abs(b.first.x - MeshFocusGroundChunk.x),
+                             std::abs(b.first.z - MeshFocusGroundChunk.z));
                 return ha < hb;
               });
   }
   int retried = 0;
-  for (const glm::ivec3 &coord : pending)
+  for (const auto &[coord, capture_revision] : pending)
   {
     if (retried >= max_per_frame)
     {
       break;
     }
-    if (!Dirty.Contains(coord) || AsyncBuilder->IsInFlight(coord) ||
+    if (AsyncBuilder->IsInFlight(coord) ||
         ScheduledThisFrame_.count(coord) > 0)
     {
       continue;
     }
-    const uint64_t source_revision = MeshRevisions.Current(coord);
-    auto hit = CaptureStore.TryGet(coord, source_revision);
+    auto hit = CaptureStore.TryGet(coord, capture_revision);
     if (!hit)
     {
+      PendingCaptureReady_.erase(coord);
       continue;
+    }
+    if (!Dirty.Contains(coord))
+    {
+      if (HasDrawableGreedyMesh(coord))
+      {
+        PendingCaptureReady_.erase(coord);
+        continue;
+      }
+      Dirty.MarkDirtyPriority(coord);
     }
     const auto snap_t0 = std::chrono::high_resolution_clock::now();
     ChunkMeshSnapshot snapshot = std::move(*hit);
@@ -3218,11 +3391,12 @@ int UChunkMeshCache::RetryPendingCaptures(UBlockWorld &world,
     }
     NoteFocusDirtyRingChange(coord, -1);
     Dirty.Erase(coord);
-    PendingCaptureSet_.erase(coord);
+    PendingCaptureReady_.erase(coord);
     ++scheduled;
     ++retried;
-    ++LastMeshScheduleRetryAfterCaptureN_;
   }
+  LastMeshPendingCaptureReadyN_ =
+      static_cast<int>(PendingCaptureReady_.size());
   return retried;
 }
 
@@ -4459,8 +4633,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   LastMeshCaptureStoreHitN = 0;
   LastMeshCaptureStoreMissN = 0;
   LastMeshPendingCaptureN_ = 0;
-  LastMeshScheduleRetryAfterCaptureN_ = 0;
   LastMeshWorkerInflightN_ = 0;
+  LastMeshPendingCaptureReadyN_ = 0;
+  LastMeshPendingCaptureStaleN_ = 0;
+  LastMeshPendingCaptureMaxAge_ = 0;
   LastMeshDegradedCaptureN_ = 0;
   CaptureStore.ResetStoreHitCounters();
   LastMeshDirtyPruneN += PruneGhostDirty(
@@ -5797,6 +5973,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                                                adm.gpu_budget_frac * 0.7));
         int gpu_max =
             std::max(2, std::max(max_drain_per_frame, max_schedule_per_frame) / 2);
+        if (!PendingCaptureReady_.empty() ||
+            GetFmDirtyGpuWatchMaxAge() > 6)
+        {
+          gpu_budget = std::max(gpu_budget, MeshEmergeTotalBudgetMs * 0.4);
+          gpu_max = std::max(gpu_max, 8);
+        }
         if (adm.mode != MeshWorkAdmission::Mode::Normal && remain > 1.0)
         {
           gpu_max = std::max(gpu_max, std::min(adm.gpu_apply_max, 16));
@@ -5839,6 +6021,17 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     LastMeshCaptureStoreHitN += CaptureStore.LastStoreHitN();
     LastMeshCaptureStoreMissN += CaptureStore.LastStoreMissN();
     CaptureStore.ResetStoreHitCounters();
+    if (CaptureWorker && UMeshCaptureWorker::kWorkerCaptureEnabled)
+    {
+      CaptureWorker->PumpUntilIdle(std::chrono::milliseconds(2));
+      DrainCaptureWorkerCommits();
+      int end_retry_scheduled = 0;
+      RetryPendingCaptures(world, registry, 2, end_retry_scheduled);
+      stats.Scheduled += end_retry_scheduled;
+      scheduled += end_retry_scheduled;
+      LastMeshDirtyScheduleOkN = scheduled;
+      AgePendingCaptureEntries();
+    }
     return stats;
   }
 

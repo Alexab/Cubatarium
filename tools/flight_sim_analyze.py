@@ -1049,14 +1049,57 @@ def analyze(
         cruise_false_clear_delta = (
             cruise_false_clear_vals[-1] - cruise_false_clear_vals[0]
         )
-    # FP flight-perf: cruise spike metrics (moving y>10).
-    fly_spikes = [
+    # FP flight-perf: cruise spike metrics (y>10). Autofly hold-forward rarely
+    # exceeds 50 blocks/s; mesh gates use moving spikes (>0.5), while
+    # cruise_idle_spike_share documents the stricter manual-cruise (>50) subset.
+    all_fly_spikes = [
         r for r in spikes if float(r.get("player_y") or 0) > 10.0
     ]
-    cruise_schedule_ok_med = (
-        median(col(fly_spikes, "mesh_dirty_schedule_ok_n"))
-        if fly_spikes
+    fly_spikes_fast = [
+        r
+        for r in all_fly_spikes
+        if float(r.get("movement_speed") or r.get("speed") or 0) > 50.0
+    ]
+    fly_spikes = [
+        r
+        for r in all_fly_spikes
+        if float(r.get("movement_speed") or r.get("speed") or 0) > 0.5
+    ]
+    if len(fly_spikes) < 3:
+        fly_spikes = all_fly_spikes
+    mesh_fly_spikes = fly_spikes
+    if manual_idle and len(spikes) > 1:
+        moving_mesh_spikes = []
+        for i, r in enumerate(spikes):
+            if i == 0 or float(r.get("player_y") or 0) <= 10.0:
+                continue
+            if (r.get("player_x"), r.get("player_z")) != (
+                spikes[i - 1].get("player_x"),
+                spikes[i - 1].get("player_z"),
+            ):
+                moving_mesh_spikes.append(r)
+        if len(moving_mesh_spikes) >= 3:
+            mesh_fly_spikes = moving_mesh_spikes
+    cruise_idle_spike_share = (
+        (len(all_fly_spikes) - len(fly_spikes_fast)) / float(len(all_fly_spikes))
+        if all_fly_spikes
         else None
+    )
+    cruise_schedule_ok_med = (
+        median(
+            [
+                float(v)
+                for v in col(mesh_fly_spikes, "mesh_dirty_schedule_ok_n")
+                if float(v or 0) > 0.0
+            ]
+        )
+        if mesh_fly_spikes
+        and any(float(v or 0) > 0.0 for v in col(mesh_fly_spikes, "mesh_dirty_schedule_ok_n"))
+        else (
+            median(col(mesh_fly_spikes, "mesh_dirty_schedule_ok_n"))
+            if mesh_fly_spikes
+            else None
+        )
     )
     cruise_capture_retarget_med = (
         median(col(fly_spikes, "softdefer_capture_retarget_n"))
@@ -1117,9 +1160,25 @@ def analyze(
         if (
             ok > 0
             and dirty_fm > 0
-            and clnm > 0
             and unfinished > 0
         ):
+            pending_capture = float(r.get("mesh_pending_capture_n") or 0)
+            watch_n = float(r.get("fm_dirty_gpu_watch_n") or 0)
+            gpu_finish = float(r.get("fm_dirty_to_gpu_finish_n") or 0)
+            gpu_not_ready = float(r.get("gpu_finish_not_ready_n") or 0)
+            pending_gpu_queued = float(r.get("pending_gpu_queued_n") or 0)
+            mesh_async = float(r.get("mesh_async_inflight_n") or 0)
+            if pending_capture > 0:
+                return "capture_pending_backlog"
+            if watch_n > 0 and gpu_finish == 0:
+                if gpu_not_ready > 0:
+                    return "gpu_not_ready"
+                if pending_gpu_queued > 0:
+                    return "gpu_apply_backlog"
+                if mesh_async > 0:
+                    return "async_inflight"
+            if clnm > unfinished:
+                return "lighting_not_ready"
             return "schedule_ok_positive_no_drawable"
         if ok > 0:
             return "scheduled"
@@ -1168,6 +1227,15 @@ def analyze(
     dominant_schedule_blocker = (
         max(blocker_counts, key=blocker_counts.get) if blocker_counts else None
     )
+    mesh_schedule_retry_max = (
+        max(
+            float(r.get("mesh_schedule_retry_after_capture_n") or 0)
+            for r in mesh_fly_spikes
+        )
+        if mesh_fly_spikes
+        else None
+    )
+    dominant_schedule_blocker_subreason = dominant_schedule_blocker
     witness_latch_diet_frames = sum(
         1
         for r in fly_spikes
@@ -1406,6 +1474,12 @@ def analyze(
     )
     gates["chunk_not_ready_med_le_4"] = (
         chunk_not_ready_med is not None and chunk_not_ready_med <= 4.0
+    )
+    gates["cruise_schedule_ok_med_ge_2"] = (
+        cruise_schedule_ok_med is not None and cruise_schedule_ok_med >= 2.0
+    )
+    gates["mesh_schedule_retry_after_capture_gt_0"] = (
+        mesh_schedule_retry_max is not None and mesh_schedule_retry_max > 0.0
     )
     witness_latch_diet_share = (
         witness_latch_diet_frames / float(len(fly_spikes))
@@ -1741,6 +1815,8 @@ def analyze(
             "cruise_softdefer_empty_med": cruise_softdefer_empty_med,
             "cruise_relight_completed_med": cruise_relight_completed_med,
             "cruise_schedule_ok_med": cruise_schedule_ok_med,
+            "cruise_idle_spike_share": cruise_idle_spike_share,
+            "mesh_schedule_retry_max": mesh_schedule_retry_max,
             "cruise_capture_retarget_med": cruise_capture_retarget_med,
             "cruise_witness_pin_age_med": cruise_witness_pin_age_med,
             "cruise_relight_completed_spike_med": cruise_relight_completed_spike_med,
@@ -1769,6 +1845,9 @@ def analyze(
             "mesh_gpu_kick_ms": mesh_waterfall_kick_med,
             "mesh_gpu_finish_ms": mesh_waterfall_finish_med,
             "dominant_schedule_blocker": dominant_schedule_blocker,
+            "dominant_schedule_blocker_subreason": (
+                dominant_schedule_blocker_subreason
+            ),
             "witness_latch_diet_frames": witness_latch_diet_frames,
             "witness_latch_diet_share": witness_latch_diet_share,
             "segment_fly_cruise_periods": segment_fly_cruise_periods,

@@ -610,8 +610,12 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       world.GetFocusRingVisualSample();
   const int last_unfinished_hint =
       ring_sample_prev.valid ? ring_sample_prev.unfinished : 0;
+  const float movement_speed = world.GetLastMovementSpeed();
+  const int pending_capture_n = world.GetMeshService().GetPendingCaptureCount();
+  const bool capture_backlog = pending_capture_n >= 8;
+  const bool capture_calm = pending_capture_n < 4;
   const bool moving_for_telemetry =
-      world.GetLastMovementSpeed() >
+      movement_speed >
       world.GetProceduralSettings().MovementPrefetchThreshold;
   const bool enter_miss_probe =
       ShouldUseEnterSpawnMissProbe(world.IsEnterLitGateActive(),
@@ -822,7 +826,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       missing_near && (missing_underfeet || miss_horiz_early <= 2);
   const bool rim_witness_idle_diet_pre =
       missing_near && !visual_holes_early && miss_horiz_early >= 3 &&
-      !missing_underfeet && last_unfinished_hint <= 3;
+      !missing_underfeet && last_unfinished_hint <= 3 && capture_calm &&
+      movement_speed > 50.0f;
   const bool diet_cruise_cadence =
       moving_for_telemetry || rim_witness_idle_diet_pre;
   const int effective_pl_radius =
@@ -860,7 +865,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   world.PhysicsTelemetryData.PendingLightFocus = pending_light_focus;
   const bool rim_witness_idle_diet =
       missing_near && !in.visual_holes && miss_horiz >= 3 &&
-      !missing_underfeet && last_unfinished_hint <= 3;
+      !missing_underfeet && last_unfinished_hint <= 3 && capture_calm &&
+      movement_speed > 50.0f;
   const bool diet_cruise_cadence_final =
       moving_for_telemetry || rim_witness_idle_diet;
   const bool stand_stable_prep_diet =
@@ -960,7 +966,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     unfinished_sample_cd = 0;
   }
   bool force_full_unfinished =
-      !diet_cruise_cadence_final || in.visual_holes || pending_underfeet;
+      !diet_cruise_cadence_final || in.visual_holes || pending_underfeet ||
+      capture_backlog;
   const bool unfinished_sample_due = --unfinished_sample_cd <= 0;
   if (force_full_unfinished)
   {
@@ -1163,10 +1170,10 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   // disable facing/darkface skip on rim cruise (manual 204611 VB-spiral).
   const bool rim_cruise_fast =
       diet_cruise_cadence_final && !in.visual_holes && miss_horiz >= 3 &&
-      unfinished_visual <= 4;
+      unfinished_visual <= 4 && !capture_backlog;
   const bool pressure_cruise_fast =
       diet_cruise_cadence_final && !in.visual_holes && !pending_underfeet &&
-      miss_horiz >= 3 && unfinished_visual <= 4;
+      miss_horiz >= 3 && unfinished_visual <= 4 && !capture_backlog;
   const bool cruise_scan_fast = pressure_cruise_fast || rim_cruise_fast;
   // Actual baked-dark vertices near camera (not PendingLight proxy).
   // Split stale (mesh dark, field lit) vs void-edge (both 0) for ARCH_D3.
@@ -2491,12 +2498,15 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             world.PhysicsTelemetryData.MissStuckRunFrames,
             world.PhysicsTelemetryData.MeshDirtyScheduleOkN,
             SoftDeferCapturePinAge, moving_now);
+        const bool capture_backlog_witness =
+            world.GetMeshService().GetPendingCaptureCount() >= 8;
         const bool hold_witness_pin =
             hold_nh2 &&
-            ShouldExtendWitnessPinHold(SoftDeferCapturePinAge, pinned_still,
-                                       RelightWitnessPinHoldFrames,
-                                       world.PhysicsTelemetryData.MissHoriz,
-                                       vb_no_ticket_rising, miss_witness_kick);
+            (ShouldExtendWitnessPinHold(SoftDeferCapturePinAge, pinned_still,
+                                        RelightWitnessPinHoldFrames,
+                                        world.PhysicsTelemetryData.MissHoriz,
+                                        vb_no_ticket_rising, miss_witness_kick) ||
+             (capture_backlog_witness && SoftDeferCapturePinValid));
         const bool era27_would_retarget =
             ShouldRetargetSoftDeferCaptureWitness(
                 SoftDeferCapturePinValid, SoftDeferCapturePinAge, pin_T,
@@ -3041,6 +3051,20 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
       world.GetMeshService().GetLastMeshCaptureStoreHitN();
   world.PhysicsTelemetryData.MeshCaptureStoreMissN =
       world.GetMeshService().GetLastMeshCaptureStoreMissN();
+  world.PhysicsTelemetryData.MeshPendingCaptureN =
+      world.GetMeshService().GetLastMeshPendingCaptureN();
+  world.PhysicsTelemetryData.MeshScheduleRetryAfterCaptureN =
+      world.GetMeshService().GetLastMeshScheduleRetryAfterCaptureN();
+  world.PhysicsTelemetryData.MeshWorkerInflightN =
+      world.GetMeshService().GetLastMeshWorkerInflightN();
+  world.PhysicsTelemetryData.MeshPendingCaptureReadyN =
+      world.GetMeshService().GetLastMeshPendingCaptureReadyN();
+  world.PhysicsTelemetryData.MeshPendingCaptureStaleN =
+      world.GetMeshService().GetLastMeshPendingCaptureStaleN();
+  world.PhysicsTelemetryData.MeshPendingCaptureMaxAge =
+      world.GetMeshService().GetLastMeshPendingCaptureMaxAge();
+  world.PhysicsTelemetryData.MeshDegradedCaptureN =
+      world.GetMeshService().GetLastMeshDegradedCaptureN();
   world.PhysicsTelemetryData.DirtyTouchN =
       world.GetMeshService().GetLastDirtyTouchN();
   world.PhysicsTelemetryData.DirtyRevisitSameN =

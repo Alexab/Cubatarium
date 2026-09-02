@@ -322,6 +322,11 @@ void UWorldMeshService::PrefetchMeshCapture(const UBlockWorld &world,
   Cache.PrefetchMeshCapture(world, chunk_coord);
 }
 
+void UWorldMeshService::PumpCaptureWorkerCommits()
+{
+  Cache.PumpCaptureWorkerCommits();
+}
+
 void UWorldMeshService::PrefetchMeshCaptureBand(const UBlockWorld &world,
                                                 glm::ivec3 ground_chunk_coord,
                                                 int min_y, int max_y)
@@ -1101,9 +1106,34 @@ int UWorldMeshService::GetLastMeshScheduleRetryAfterCaptureN() const
   return Cache.GetLastMeshScheduleRetryAfterCaptureN();
 }
 
+void UWorldMeshService::ResetFrameCaptureRetryTelemetry()
+{
+  Cache.ResetFrameCaptureRetryTelemetry();
+}
+
 int UWorldMeshService::GetLastMeshWorkerInflightN() const
 {
   return Cache.GetLastMeshWorkerInflightN();
+}
+
+int UWorldMeshService::GetLastMeshPendingCaptureReadyN() const
+{
+  return Cache.GetLastMeshPendingCaptureReadyN();
+}
+
+int UWorldMeshService::GetLastMeshPendingCaptureStaleN() const
+{
+  return Cache.GetLastMeshPendingCaptureStaleN();
+}
+
+int UWorldMeshService::GetLastMeshPendingCaptureMaxAge() const
+{
+  return Cache.GetLastMeshPendingCaptureMaxAge();
+}
+
+int UWorldMeshService::GetPendingCaptureCount() const
+{
+  return Cache.GetPendingCaptureCount();
 }
 
 int UWorldMeshService::GetLastMeshDegradedCaptureN() const

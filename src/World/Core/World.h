@@ -1077,6 +1077,12 @@ public:
   int ClearPendingLightAfterMeshCommitted(int max_columns = 8);
   /// Drop StickyRemeshAfterLight columns outside radius (cruise prune).
   int PruneStickyRemeshOutside(glm::ivec3 focus_ground_chunk, int radius_chunks);
+  struct AdmitFocusMarkRange
+  {
+    glm::ivec2 column;
+    int min_y{0};
+    int max_y{0};
+  };
   /// Focus ingress: Dirty + priority relight for Lighting columns without mesh.
   int AdmitFocusMeshIngress(int max_columns = 8);
   /// Ring-scan focus for solid slices missing GreedyCache; mark Dirty only.
@@ -1086,6 +1092,12 @@ public:
                                glm::vec2 forward_xz = glm::vec2(0.0f),
                                const glm::ivec2 *only_column = nullptr,
                                int only_cy = -1);
+  /// R3 M4: ColumnFlow-owned MarkDirty — scan only; marks applied in ColumnFlow.
+  void ClearAdmitFocusMarkBuffer();
+  const std::vector<AdmitFocusMarkRange> &GetAdmitFocusMarkBuffer() const
+  {
+    return AdmitFocusMarkBuffer_;
+  }
   bool IsColumnStickyRemesh(glm::ivec2 ground_xz) const;
   /// Era49: lit GPU commit clears remesh-after-lit work-set for column.
   void ClearStickyRemeshAfterLightColumn(glm::ivec2 ground_xz);
@@ -1587,6 +1599,7 @@ private:
   mutable VisibleBlackFocusSample LastVisibleBlackFocusSample{};
   /// Same-frame focus-ring sample for Coordinator (Phase B).
   mutable FocusRingVisualSample LastFocusRingVisualSample{};
+  std::vector<AdmitFocusMarkRange> AdmitFocusMarkBuffer_;
   uint64_t StreamingFrameEpoch{0};
   uint64_t PhysicsTickCounter{0};
   double WallFrameDeltaSec{0.0};

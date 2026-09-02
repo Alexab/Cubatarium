@@ -561,6 +561,11 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("witness_latch_diet_share", "ge", 0.70),
         ("chunks_traveled", "ge", 3.0),
     ],
+    "MESH-R15-capture": [
+        ("cruise_schedule_ok_med", "ge", 2.0),
+        ("mesh_schedule_retry_max", "gt", 0.0),
+        ("chunks_traveled", "ge", 3.0),
+    ],
     "MESH-parity-manual": [
         ("holes_rate", "le", 0.55),
         ("chunks_traveled", "ge", 3.0),
@@ -671,6 +676,16 @@ def main() -> int:
     soft_gates = PHASE_SOFT_GATES.get(args.phase_id, [])
     failed = []
     arch = args.phase_id.startswith("ARCH_")
+    if args.phase_id == "MESH-parity-manual" and args.baseline and args.baseline.is_file():
+        base = json.loads(args.baseline.read_text(encoding="utf-8"))
+        manual_holes = metric(base, "holes_rate")
+        if manual_holes is not None:
+            holes_cap = min(0.55, float(manual_holes) * 1.15 + 0.05)
+            gates = [
+                g if g[0] != "holes_rate" else ("holes_rate", "le", holes_cap)
+                for g in gates
+            ]
+            print(f"  parity holes_cap={holes_cap:.3f} (manual={manual_holes})")
     for key, op, limit in gates:
         val = metric(data, key)
         ok = check_arch(op, val, limit) if arch else check(op, val, limit)

@@ -21,6 +21,7 @@
 #include "World/Streaming/NearFovWorkPriority.h"
 #include "Blocks/BlockRegistry.h"
 #include "Render/Camera/Camera.h"
+#include "Render/Mesh/MeshCaptureWorker.h"
 #include "Render/Mesh/GpuMeshPipeline.h"
 #include "Render/Mesh/MeshApplyPolicy.h"
 #include "World/Chunks/ChunkManager.h"
@@ -174,6 +175,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   UWorldMeshService &mesh_service = world.GetMeshService();
   // Count any Immediate this tick (including early idle paths).
   mesh_service.ResetImmediateMeshStats();
+  mesh_service.ResetFrameCaptureRetryTelemetry();
   // Cruise SOTA: early ColumnFlow sites only Enqueue; one DrainBudget at end.
   int column_flow_drain_n = 0;
   int column_flow_admit_batch = 1;
@@ -1441,7 +1443,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         }
         continue;
       }
-      mesh_service.MarkDirtyPriority(coord);
       forced = true;
     }
     if (forced)
@@ -3410,22 +3411,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       // alongside exact FirstMesh (manual 131827 miss cy0–2). Cruise: exact cy.
       if (!moving && StandWitnessColumnDirtyCd <= 0)
       {
-        const int max_y = procedural.MaxHeight;
-        const int player_max =
-            std::min(max_y, focus_ground.y * CHUNK_SIZE + CHUNK_SIZE * 3 - 1);
-        const int hole_max =
-            (isolated_hole.y + 1) * CHUNK_SIZE - 1;
-        const int remesh_max =
-            stop_tail_ownership_mode ? max_y : std::max(player_max, hole_max);
-        const glm::ivec3 ground(isolated_hole.x, 0, isolated_hole.z);
-        const int marked = mesh_service.MarkMissingSlicesDirtyPriority(
-            world.GetBlockWorld(), ground, 0, remesh_max);
-        if (marked > 0)
-        {
-          world.GetPhysicsTelemetryMutable().StandRimDirtyN += marked;
-        }
-        // B4: in stop-tail ownership mode re-mark more frequently so full-height
-        // missing slices cannot fall out between FirstMesh admissions.
         StandWitnessColumnDirtyCd = stop_tail_ownership_mode ? 2 : 12;
       }
       // N0c: Admit skips Pending/InFlight — promote Relight instead of no-op
@@ -3565,8 +3550,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         // Dirty — ticket-only while Held left orphan miss+async (225948).
         if (ShouldTransferSoftDeferHeldToDirty(soft_held, soft_still))
         {
-          mesh_service.MarkDirtyPriority(isolated_hole);
-          ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
+          if (!fm_ticket)
+          {
+            ColumnWorkItem xfer{};
+            xfer.column = miss_xz;
+            xfer.kind = ColumnWorkKind::FirstMesh;
+            xfer.priority = first_mesh_prio;
+            xfer.cy = isolated_hole.y;
+            exec.Enqueue(xfer);
+          }
           return;
         }
         // Enter gate: pin exact spawn-ring slice (HasMissing SoT), not column
@@ -3594,8 +3586,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                   world.IsEnterLitGateActive() &&
                       !world.IsEnterUnderfeetPresentReady()))
           {
-            mesh_service.MarkDirtyPriority(isolated_hole);
-            ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
+            if (!fm_ticket)
+            {
+              ColumnWorkItem xfer{};
+              xfer.column = miss_xz;
+              xfer.kind = ColumnWorkKind::FirstMesh;
+              xfer.priority = first_mesh_prio;
+              xfer.cy = isolated_hole.y;
+              exec.Enqueue(xfer);
+            }
             return;
           }
         }
@@ -3612,8 +3611,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         if (!dirty && (world.IsEnterLitGateActive() ||
                        world.IsEnterLitQuiesceLatched()))
         {
-          mesh_service.MarkDirtyPriority(isolated_hole);
-          ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
+          if (!fm_ticket)
+          {
+            ColumnWorkItem xfer{};
+            xfer.column = miss_xz;
+            xfer.kind = ColumnWorkKind::FirstMesh;
+            xfer.priority = first_mesh_prio;
+            xfer.cy = isolated_hole.y;
+            exec.Enqueue(xfer);
+          }
         }
         return;
       }
@@ -3621,8 +3627,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       if (fm_ticket && !dirty &&
           !mesh_service.HasMeshSatisfyingColumnReady(isolated_hole))
       {
-        mesh_service.MarkDirtyPriority(isolated_hole);
-        ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
+        ColumnWorkItem xfer{};
+        xfer.column = miss_xz;
+        xfer.kind = ColumnWorkKind::FirstMesh;
+        xfer.priority = first_mesh_prio;
+        xfer.cy = isolated_hole.y;
+        exec.Enqueue(xfer);
       }
       // Ticket-only without Dirty is incomplete ownership — transfer to Dirty.
       if (!ShouldPinIsolatedMissMarkDirty(
@@ -3632,11 +3642,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       {
         return;
       }
-      mesh_service.MarkDirtyPriority(isolated_hole);
-      ++world.GetPhysicsTelemetryMutable().StandRimDirtyN;
       if (!exec.Scheduler().Contains(miss_xz, ColumnWorkKind::FirstMesh))
       {
-        exec.Enqueue(miss_xz, ColumnWorkKind::FirstMesh, first_mesh_prio);
+        ColumnWorkItem xfer{};
+        xfer.column = miss_xz;
+        xfer.kind = ColumnWorkKind::FirstMesh;
+        xfer.priority = first_mesh_prio;
+        xfer.cy = isolated_hole.y;
+        exec.Enqueue(xfer);
       }
     };
     if (world.IsEnterLitGateActive() && found_nearest_missing)
@@ -4283,6 +4296,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       consume_gpu = std::min(consume_gpu, 2);
       consume_budget = std::min(consume_budget, 4.0);
     }
+    if (mesh_service.GetPendingCaptureCount() > 8 ||
+        mesh_service.GetCache().GetFmDirtyGpuWatchCount() > 4)
+    {
+      consume_gpu = std::max(consume_gpu, 4);
+      consume_budget = std::max(consume_budget, 6.0);
+    }
     gpu_consume_done = mesh_service.ConsumeGpuApplyBacklog(
         world.GetBlockWorld(), registry, consume_drain, consume_gpu,
         consume_budget);
@@ -4568,31 +4587,120 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   s_dirty_fm_prior = mesh_service.GetLastDirtyFmN();
   {
     const int unfinished = world.GetPhysicsTelemetry().UnfinishedVisual;
-    if (mesh_service.GetLastDirtyFmN() == 0 && unfinished > 0 &&
-        mesh_service.HasMissingGreedyMeshInHorizontalRadius(
-            world.GetBlockWorld(), focus_ground_horiz, focus_radius))
+    const int dirty_fm = mesh_service.GetLastDirtyFmN();
+    const int schedule_ok = mesh_service.GetLastMeshDirtyScheduleOkN();
+    const int watch_n = mesh_service.GetCache().GetFmDirtyGpuWatchCount();
+    const int finish_n = world.GetPhysicsTelemetry().FmDirtyToGpuFinishN;
+    auto &exec = GetColumnFlowExecutor();
+
+    auto enqueue_first_mesh_column = [&](const glm::ivec2 col_xz)
     {
-      auto &exec = GetColumnFlowExecutor();
-      const glm::ivec2 focus_xz(focus_ground_horiz.x, focus_ground_horiz.z);
-      if (exec.Scheduler().Contains(focus_xz, ColumnWorkKind::FirstMesh))
+      if (exec.Scheduler().Contains(col_xz, ColumnWorkKind::FirstMesh))
       {
         ColumnWorkItem bump{};
-        bump.column = focus_xz;
+        bump.column = col_xz;
         bump.kind = ColumnWorkKind::FirstMesh;
         bump.priority = 110;
         bump.scan_full_focus = true;
         exec.Enqueue(bump);
       }
-      else if (!exec.Scheduler().ContainsColumn(focus_xz))
+      else if (!exec.Scheduler().ContainsColumn(col_xz))
       {
         ColumnWorkItem fm{};
-        fm.column = focus_xz;
+        fm.column = col_xz;
         fm.kind = ColumnWorkKind::FirstMesh;
         fm.priority = 110;
         fm.scan_full_focus = true;
         exec.Enqueue(fm);
       }
+    };
+
+    if (dirty_fm == 0 && unfinished > 0 &&
+        mesh_service.HasMissingGreedyMeshInHorizontalRadius(
+            world.GetBlockWorld(), focus_ground_horiz, focus_radius))
+    {
+      enqueue_first_mesh_column(
+          glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z));
     }
+    else if (dirty_fm > 0 && schedule_ok == 0 && watch_n == 0 &&
+             unfinished > 0 && found_nearest_missing)
+    {
+      enqueue_first_mesh_column(glm::ivec2(isolated_hole.x, isolated_hole.z));
+    }
+    else if (watch_n > 0 && finish_n == 0 &&
+             mesh_service.GetCache().GetFmDirtyGpuWatchMaxAge() > 30)
+    {
+      mesh_service.PreferKickPendingGpuQueued(focus_ground_horiz);
+    }
+  }
+  if (UMeshCaptureWorker::kWorkerCaptureEnabled)
+  {
+    static std::unordered_set<uint64_t> prev_focus_ring;
+    std::unordered_set<uint64_t> cur_focus_ring;
+    cur_focus_ring.reserve(static_cast<size_t>((focus_radius + 1) *
+                                               (focus_radius + 1)));
+    auto pack_xz = [](int x, int z) -> uint64_t
+    {
+      return (static_cast<uint64_t>(static_cast<uint32_t>(x)) << 32) |
+             static_cast<uint32_t>(z);
+    };
+    int prefetch_n = 0;
+    for (int r = 0; r <= focus_radius; ++r)
+    {
+      for (int dz = -r; dz <= r; ++dz)
+      {
+        for (int dx = -r; dx <= r; ++dx)
+        {
+          if (r > 0 && std::max(std::abs(dx), std::abs(dz)) != r)
+          {
+            continue;
+          }
+          const int cx = focus_ground_horiz.x + dx;
+          const int cz = focus_ground_horiz.z + dz;
+          const uint64_t key = pack_xz(cx, cz);
+          cur_focus_ring.insert(key);
+          if (prev_focus_ring.count(key) > 0 || prefetch_n >= 4)
+          {
+            continue;
+          }
+          const glm::ivec2 col_xz(cx, cz);
+          if (world.IsPendingLightBeforeMesh(col_xz))
+          {
+            continue;
+          }
+          bool has_mesh = false;
+          const int max_cy = std::max(
+              0, FloorDiv(procedural.MaxHeight, CHUNK_SIZE));
+          for (int cy = 0; cy <= max_cy && !has_mesh; ++cy)
+          {
+            const glm::ivec3 coord(cx, cy, cz);
+            if (mesh_service.HasDrawableGreedyMesh(coord) ||
+                mesh_service.HasMeshSatisfyingColumnReady(coord))
+            {
+              has_mesh = true;
+            }
+          }
+          if (has_mesh)
+          {
+            continue;
+          }
+          mesh_service.PrefetchMeshCapture(world.GetBlockWorld(),
+                                           glm::ivec3(cx, 0, cz));
+          ++prefetch_n;
+        }
+      }
+    }
+    prev_focus_ring = std::move(cur_focus_ring);
+  }
+  if (UMeshCaptureWorker::kWorkerCaptureEnabled)
+  {
+    mesh_service.PumpCaptureWorkerCommits();
+    world.GetPhysicsTelemetryMutable().MeshScheduleRetryAfterCaptureN =
+        mesh_service.GetLastMeshScheduleRetryAfterCaptureN();
+    world.GetPhysicsTelemetryMutable().MeshPendingCaptureReadyN =
+        mesh_service.GetLastMeshPendingCaptureReadyN();
+    world.GetPhysicsTelemetryMutable().MeshWorkerInflightN =
+        mesh_service.GetLastMeshWorkerInflightN();
   }
   world.GetPhysicsTelemetryMutable().FirstMeshScheduleEffectiveCap =
       mesh_service.GetLastFirstMeshScheduleEffectiveCap();

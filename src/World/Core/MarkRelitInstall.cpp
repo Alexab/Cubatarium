@@ -11,6 +11,8 @@
 #include "World/Streaming/RelightInstallPlanner.h"
 #include "World/Streaming/VisualStagePolicy.h"
 
+#include "Render/Mesh/MeshCaptureWorker.h"
+
 #include <chrono>
 #include <climits>
 #include <unordered_map>
@@ -399,33 +401,13 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
           focus_no_mesh_debt && finalize_pending_gate && plan.schedule_n == 0;
       if (mark_missing_once || mark_missing_cruise)
       {
-        const int dirty_min = std::max(0, sea - CHUNK_SIZE);
-        const int dirty_max =
-            std::min(column_max_y, sea + CHUNK_SIZE * 2);
-        const int marked = MeshService->MarkMissingSlicesDirtyPriority(
-            BlockWorld, ground, dirty_min, dirty_max);
-        PhysicsTelemetryData.MarkMissingPrimaryN += marked;
-        PhysicsTelemetryData.MarkRelitScheduleN += marked;
-        PhysicsTelemetryData.FmDirtyEnqueueN += marked;
-        PhysicsTelemetryData.FmDirtyEnqueueFromMarkRelitN += marked;
-        if (marked > 0)
+        plan.enqueue_first_mesh = true;
+        plan.first_mesh_column = key;
+        plan.fsm_after = ColumnEmergeState::Meshing;
+        ++PhysicsTelemetryData.AdmitCandidatesN;
+        if (!in.has_fm_ticket)
         {
-          plan.schedule_n += marked;
-          plan.fsm_after = ColumnEmergeState::Meshing;
-          if (!in.has_fm_ticket)
-          {
-            plan.enqueue_first_mesh = true;
-            plan.first_mesh_column = key;
-          }
-        }
-        else if (plan.schedule_n == 0 && !in.has_fm_ticket &&
-                 !in.column_has_drawable)
-        {
-          // Keep PendingLight gate until FirstMesh ticket exists.
           plan.erase_pending_light = false;
-          plan.enqueue_first_mesh = true;
-          plan.first_mesh_column = key;
-          plan.fsm_after = ColumnEmergeState::Meshing;
         }
       }
       const auto exec_t0 = Clock::now();
@@ -458,9 +440,19 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     {
       continue;
     }
+    (void)dirty_min;
+    (void)dirty_max;
     const auto seam_t0 = Clock::now();
-    MeshService->MarkMissingSlicesDirtyPriority(BlockWorld, ground, dirty_min,
-                                                dirty_max);
+    if (!GetColumnFlowExecutor().Scheduler().Contains(key,
+                                                     ColumnWorkKind::FirstMesh))
+    {
+      GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::FirstMesh,
+                                      /*priority=*/65);
+    }
+    if (UMeshCaptureWorker::kWorkerCaptureEnabled && MeshService)
+    {
+      MeshService->PrefetchMeshCapture(GetBlockWorld(), ground);
+    }
     PhysicsTelemetryData.MarkRelitNeighborSeamMs +=
         ElapsedMs(seam_t0, Clock::now());
   }

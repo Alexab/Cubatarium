@@ -105,6 +105,7 @@ public:
   void MarkDirty(glm::ivec3 chunk_coord);
   void MarkDirtyPriority(glm::ivec3 chunk_coord);
   void PrefetchMeshCapture(const UBlockWorld &world, glm::ivec3 chunk_coord);
+  void PumpCaptureWorkerCommits();
   void PrefetchMeshCaptureBand(const UBlockWorld &world,
                                glm::ivec3 ground_chunk_coord, int min_y,
                                int max_y);
@@ -249,7 +250,12 @@ public:
   int GetLastMeshCaptureStoreMissN() const;
   int GetLastMeshPendingCaptureN() const;
   int GetLastMeshScheduleRetryAfterCaptureN() const;
+  void ResetFrameCaptureRetryTelemetry();
   int GetLastMeshWorkerInflightN() const;
+  int GetLastMeshPendingCaptureReadyN() const;
+  int GetLastMeshPendingCaptureStaleN() const;
+  int GetLastMeshPendingCaptureMaxAge() const;
+  int GetPendingCaptureCount() const;
   int GetLastMeshDegradedCaptureN() const;
   int GetLastDirtyTouchN() const;
   int GetLastDirtyRevisitSameN() const;

@@ -813,6 +813,9 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.MeshPendingCaptureN = 0;
   PhysicsTelemetryData.MeshScheduleRetryAfterCaptureN = 0;
   PhysicsTelemetryData.MeshWorkerInflightN = 0;
+  PhysicsTelemetryData.MeshPendingCaptureReadyN = 0;
+  PhysicsTelemetryData.MeshPendingCaptureStaleN = 0;
+  PhysicsTelemetryData.MeshPendingCaptureMaxAge = 0;
   PhysicsTelemetryData.MeshDegradedCaptureN = 0;
   PhysicsTelemetryData.FmDirtyDrainN = 0;
   PhysicsTelemetryData.AdmissionCarveOut = 0;
@@ -1075,6 +1078,12 @@ void UWorld::TickWorldStreamingPhase()
       GetMeshService().GetLastMeshScheduleRetryAfterCaptureN();
   PhysicsTelemetryData.MeshWorkerInflightN =
       GetMeshService().GetLastMeshWorkerInflightN();
+  PhysicsTelemetryData.MeshPendingCaptureReadyN =
+      GetMeshService().GetLastMeshPendingCaptureReadyN();
+  PhysicsTelemetryData.MeshPendingCaptureStaleN =
+      GetMeshService().GetLastMeshPendingCaptureStaleN();
+  PhysicsTelemetryData.MeshPendingCaptureMaxAge =
+      GetMeshService().GetLastMeshPendingCaptureMaxAge();
   PhysicsTelemetryData.MeshDegradedCaptureN =
       GetMeshService().GetLastMeshDegradedCaptureN();
   if (PhysicsTelemetryData.FmDirtyEnqueueN > 0)

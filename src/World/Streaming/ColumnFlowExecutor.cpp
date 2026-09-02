@@ -5,6 +5,7 @@
 
 #include "Render/Camera/Camera.h"
 #include "World/Core/World.h"
+#include "World/Mesh/WorldMeshService.h"
 #include "World/Streaming/ColumnDesiredStage.h"
 #include "World/Streaming/ColumnEmergeState.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
@@ -229,8 +230,23 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world, const ColumnWorkItem &wor
   {
   case ColumnWorkKind::FirstMesh:
   {
-    const int admitted =
-        world.AdmitFocusVisibleMissing(admit_batch, forward_xz, only, work.cy);
+    world.AdmitFocusVisibleMissing(admit_batch, forward_xz, only, work.cy);
+    int admitted = 0;
+    for (const UWorld::AdmitFocusMarkRange &item :
+         world.GetAdmitFocusMarkBuffer())
+    {
+      const glm::ivec3 ground(item.column.x, 0, item.column.y);
+      const int marked =
+          world.GetMeshService().MarkMissingSlicesDirtyPriority(
+              world.GetBlockWorld(), ground, item.min_y, item.max_y);
+      world.GetPhysicsTelemetryMutable().AdmitMarkedN += marked;
+      if (marked > 0)
+      {
+        world.SetColumnEmergeState(ground, ColumnEmergeState::Meshing);
+        admitted += marked;
+      }
+    }
+    world.ClearAdmitFocusMarkBuffer();
     if (admitted > 0)
     {
       world.GetPhysicsTelemetryMutable().FmDirtyEnqueueFromColumnFlowN +=

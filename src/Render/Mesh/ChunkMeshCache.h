@@ -194,7 +194,21 @@ public:
   {
     return LastMeshScheduleRetryAfterCaptureN_;
   }
+  void ResetFrameCaptureRetryTelemetry() { LastMeshScheduleRetryAfterCaptureN_ = 0; }
   int GetLastMeshWorkerInflightN() const { return LastMeshWorkerInflightN_; }
+  int GetLastMeshPendingCaptureReadyN() const
+  {
+    return LastMeshPendingCaptureReadyN_;
+  }
+  int GetLastMeshPendingCaptureStaleN() const
+  {
+    return LastMeshPendingCaptureStaleN_;
+  }
+  int GetLastMeshPendingCaptureMaxAge() const
+  {
+    return LastMeshPendingCaptureMaxAge_;
+  }
+  int GetPendingCaptureCount() const;
   int GetLastMeshDegradedCaptureN() const { return LastMeshDegradedCaptureN_; }
   int GetLastDirtyTouchN() const { return LastDirtyTouchN; }
   int GetLastDirtyRevisitSameN() const { return LastDirtyRevisitSameN; }
@@ -300,6 +314,8 @@ public:
   void ClearDirtyAndRemeshAfterApply(glm::ivec3 chunk_coord);
   /// Prefetch immutable Capture into store (MarkRelit / commit). Main only.
   void PrefetchMeshCapture(const UBlockWorld &world, glm::ivec3 chunk_coord);
+  /// End-of-emerge pump: wait briefly for worker bands, then commit to store.
+  void PumpCaptureWorkerCommits();
   void InvalidateMeshCapture(glm::ivec3 chunk_coord);
   UMeshCaptureStore &GetCaptureStore() { return CaptureStore; }
   const UMeshCaptureStore &GetCaptureStore() const { return CaptureStore; }
@@ -782,6 +798,10 @@ private:
   int RetryPendingCaptures(UBlockWorld &world, UBlockRegistry &registry,
                            int max_per_frame, int &scheduled);
   void DrainCaptureWorkerCommits();
+  void AgePendingCaptureEntries();
+  bool IsWorkerCaptureSaturated() const;
+  uint8_t ComputeNeighborShellFaceMask(glm::ivec3 coord,
+                                       glm::ivec3 neighbor_coord) const;
   void RebuildChunkLegacy(const UBlockWorld &world, UBlockRegistry &registry,
                           glm::ivec3 chunkCoord,
                           std::vector<FaceInstance> &chunkInstances);
@@ -870,12 +890,26 @@ private:
   double LastMeshAsyncDrainMs{0.0};
   int LastMeshCaptureStoreHitN{0};
   int LastMeshCaptureStoreMissN{0};
+  struct PendingCaptureEntry
+  {
+    uint64_t source_revision{0};
+    int age_frames{0};
+  };
+  static constexpr int kMaxPendingCaptureSet = 64;
+  static constexpr int kPendingCaptureStaleFrames = 8;
+  static constexpr int kWorkerInflightCap = 8;
+
   std::unique_ptr<UMeshCaptureWorker> CaptureWorker;
-  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> PendingCaptureSet_;
+  std::unordered_map<glm::ivec3, PendingCaptureEntry, IVec3Hash>
+      PendingCaptureSet_;
+  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> PendingCaptureReady_;
   uint64_t NextCaptureId_{1};
   int LastMeshPendingCaptureN_{0};
   int LastMeshScheduleRetryAfterCaptureN_{0};
   int LastMeshWorkerInflightN_{0};
+  int LastMeshPendingCaptureReadyN_{0};
+  int LastMeshPendingCaptureStaleN_{0};
+  int LastMeshPendingCaptureMaxAge_{0};
   int LastMeshDegradedCaptureN_{0};
   int LastDirtyTouchN{0};
   int LastDirtyRevisitSameN{0};

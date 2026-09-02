@@ -84,6 +84,9 @@ struct PhysicsTelemetry
   int MeshPendingCaptureN{0};
   int MeshScheduleRetryAfterCaptureN{0};
   int MeshWorkerInflightN{0};
+  int MeshPendingCaptureReadyN{0};
+  int MeshPendingCaptureStaleN{0};
+  int MeshPendingCaptureMaxAge{0};
   int MeshDegradedCaptureN{0};
   /// R4-H1: cruise movement speed for parity gates (blocks/s).
   float MovementSpeed{0.0f};
