@@ -2109,6 +2109,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   // Early pending_gpu read — MeshWorkAdmission for producers; Finalize after
   // drain-first consume so schedule sees post-Finish pending (F0).
+  GetColumnFlowExecutor().SyncFocusRingColumnJobStages(
+      world, focus_ground_horiz, focus_radius);
   size_t pending_gpu_n = mesh_service.GetPendingGpuAppliesCount();
   {
     const auto admission_t0 = std::chrono::high_resolution_clock::now();
@@ -2118,6 +2120,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.pending_gpu_kicked = mesh_service.GetPendingGpuKickedCount();
     ain.visual_holes = visual_holes || missing_visible_mesh ||
                        world.GetPhysicsTelemetry().FocusMissingMesh > 0;
+    ain.rim_hole_pressure = world.GetPhysicsTelemetry().RimHolePressure > 0;
     ain.missing_underfeet = missing_underfeet;
     ain.moving = moving;
     ain.pending_light_near = pending_focus_count;
@@ -3425,6 +3428,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       if (nearest_in_pipeline)
       {
         const ColumnJobStage hole_stage = exec.GetColumnJobStage(hole_col);
+        if (hole_stage == ColumnJobStage::Meshing &&
+            MissWitnessAgeFrames > 240 &&
+            !exec.HasRepairTicket(hole_col))
+        {
+          exec.RequestPromoteRelight(hole_col, /*priority=*/60);
+          ColumnWorkItem escalate{};
+          escalate.column = hole_col;
+          escalate.kind = ColumnWorkKind::FirstMesh;
+          escalate.priority = 108;
+          escalate.scan_full_focus = false;
+          escalate.cy = isolated_hole.y;
+          exec.Enqueue(escalate);
+          ++world.GetPhysicsTelemetryMutable().MissSlaKickN;
+        }
         if (hole_stage != ColumnJobStage::RenderReady &&
             hole_stage != ColumnJobStage::GpuPending &&
             !exec.HasRepairTicket(hole_col))
@@ -3465,7 +3482,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         hole_backlog_mode && nearest_miss_nh >= 4;
     const bool rim_plateau_close =
         !far_rim_force_scan && hole_backlog_mode && found_nearest_missing &&
-        nearest_miss_nh >= 2 && nearest_miss_nh <= 3;
+        nearest_miss_nh >= 2 && nearest_miss_nh <= 3 &&
+        world.GetPhysicsTelemetry().RimHolePressure == 0;
     bool skip_full_scan_rim_close = false;
     if (rim_plateau_close)
     {
@@ -4331,6 +4349,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.pending_gpu_kicked = mesh_service.GetPendingGpuKickedCount();
     ain.visual_holes = visual_holes || missing_visible_mesh ||
                        world.GetPhysicsTelemetry().FocusMissingMesh > 0;
+    ain.rim_hole_pressure = world.GetPhysicsTelemetry().RimHolePressure > 0;
     ain.missing_underfeet = missing_underfeet;
     ain.moving = moving;
     ain.pending_light_near = pending_focus_count;

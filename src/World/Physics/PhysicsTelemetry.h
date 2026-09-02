@@ -327,6 +327,10 @@ struct PhysicsTelemetry
   int FocusDirtyReconcileDelta{0};
   /// I12-A0: rim witness latched without visual holes.
   int RimWitnessLatched{0};
+  /// R3.3: rim hole pressure SoT (separate from perf diet).
+  int RimHolePressure{0};
+  /// R3.3: rim perf diet active this frame.
+  int RimPerfDiet{0};
   /// I12-D3: witness re-probe when pinned schedule stalls.
   int MissWitnessRetargetN{0};
   /// I10-A2: stop-phase VB drain telemetry.

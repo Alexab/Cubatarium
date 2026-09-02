@@ -879,6 +879,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   static glm::ivec2 last_sticky_focus_xz{INT_MAX, INT_MAX};
   static int last_sticky_keep_cols = -1;
   static uint64_t last_softdefer_witness_retarget = 0;
+  static int unfinished_reuse_age = 0;
+  static int prev_focus_pressure = 0;
   const int witness_retarget_delta = static_cast<int>(
       world.PhysicsTelemetryData.SoftDeferWitnessRetarget >=
               last_softdefer_witness_retarget
@@ -928,13 +930,19 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   static glm::ivec3 last_dirty_focus{0};
   static int last_dirty_radius = -1;
   int focus_dirty_chunks = last_focus_dirty;
+  const auto &ring_prev_early = world.GetFocusRingVisualSample();
+  const int column_no_mesh_hint_early =
+      ring_prev_early.valid ? ring_prev_early.column_loaded_no_mesh_n : 0;
+  const bool rim_hole_pressure_early = ShouldComputeRimHolePressure(
+      miss_horiz, last_unfinished_hint, last_focus_dirty,
+      column_no_mesh_hint_early);
   if (focus_horiz != last_dirty_focus || focus_radius != last_dirty_radius)
   {
     focus_dirty_sample_cd = 0;
     last_dirty_focus = focus_horiz;
     last_dirty_radius = focus_radius;
   }
-  if (!diet_cruise_cadence_final || in.visual_holes ||
+  if (!diet_cruise_cadence_final || in.visual_holes || rim_hole_pressure_early ||
       --focus_dirty_sample_cd <= 0)
   {
     const auto dirty_t0 = std::chrono::high_resolution_clock::now();
@@ -946,7 +954,10 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
         world.GetMeshService().GetLastFocusDirtyReconcileDelta();
     last_focus_dirty = focus_dirty_chunks;
     focus_dirty_sample_cd =
-        (diet_cruise_cadence_final && !in.visual_holes) ? 8 : 0;
+        (diet_cruise_cadence_final && !in.visual_holes &&
+         !rim_hole_pressure_early)
+            ? 8
+            : 0;
   }
   static int unfinished_sample_cd = 0;
   static int last_unfinished_visual = 0;
@@ -966,9 +977,20 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     last_unfinished_radius = focus_radius;
     unfinished_sample_cd = 0;
   }
+  const auto &ring_prev = world.GetFocusRingVisualSample();
+  const int column_no_mesh_hint =
+      ring_prev.valid ? ring_prev.column_loaded_no_mesh_n : 0;
+  bool rim_hole_pressure = ShouldComputeRimHolePressure(
+      miss_horiz, last_unfinished_hint, focus_dirty_chunks, column_no_mesh_hint);
+  if (witness_retarget_delta > 0 || pt.FocusDirtyReconcileDelta > 0)
+  {
+    world.InvalidateUnfinishedVisualCache();
+    unfinished_sample_cd = 0;
+    unfinished_reuse_age = 0;
+  }
   bool force_full_unfinished =
       !diet_cruise_cadence_final || in.visual_holes || pending_underfeet ||
-      capture_backlog;
+      capture_backlog || rim_hole_pressure;
   const bool unfinished_sample_due = --unfinished_sample_cd <= 0;
   if (force_full_unfinished)
   {
@@ -977,6 +999,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     unfinished_visual = last_unfinished_visual;
     focus_pressure = unfinished_visual;
     unfinished_sample_cd = 0;
+    unfinished_reuse_age = 0;
     pt.PrepRefreshRingResyncMs += lap_ms(unfinished_t0);
   }
   else if (unfinished_sample_due)
@@ -985,6 +1008,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
         world.CountUnfinishedVisualNear(focus_horiz, focus_radius);
     unfinished_visual = last_unfinished_visual;
     focus_pressure = unfinished_visual;
+    unfinished_reuse_age = 0;
     unfinished_sample_cd =
         ShouldUseStandStablePrepDiet(moving_for_telemetry, in.visual_holes,
                                      miss_horiz, unfinished_visual)
@@ -997,11 +1021,12 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     pt.PrepRefreshRingResyncMs += lap_ms(unfinished_t0);
   }
   else if (ShouldReuseUnfinishedVisualSample(diet_cruise_cadence_final,
-                                             in.visual_holes,
+                                             in.visual_holes, rim_hole_pressure,
                                              pending_underfeet,
                                              unfinished_sample_cd))
   {
     unfinished_visual = last_unfinished_visual;
+    ++unfinished_reuse_age;
     focus_pressure =
         pending_light_focus +
         (focus_dirty_chunks > 0 ? std::min(focus_dirty_chunks, 8) : 0);
@@ -1025,6 +1050,15 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       focus_pressure = unfinished_visual;
     }
   }
+  rim_hole_pressure = ShouldComputeRimHolePressure(
+      miss_horiz, unfinished_visual, focus_dirty_chunks,
+      std::max(column_no_mesh_hint, unfinished_visual));
+  const bool focus_pressure_rising = focus_pressure > prev_focus_pressure + 1;
+  prev_focus_pressure = focus_pressure;
+  const bool rim_perf_diet =
+      diet_cruise_cadence_final && !in.visual_holes &&
+      !ShouldExitRimPerfDiet(rim_hole_pressure, unfinished_reuse_age,
+                             focus_pressure_rising);
   pt.PrepRefreshUnfinishedMs = lap_ms(unfinished_t0);
   world.SetLastUnfinishedVisualSample(unfinished_visual);
   last_softdefer_witness_retarget =
@@ -1174,13 +1208,13 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   // I14b-B: decouple diet fast-path from published VB — VB backlog must not
   // disable facing/darkface skip on rim cruise (manual 204611 VB-spiral).
   const bool stream_phase_over_budget =
-      moving_for_telemetry && in.stream_phase_ms > 120.0;
+      moving_for_telemetry && in.stream_phase_ms > 120.0 &&
+      !rim_hole_pressure && !pending_underfeet;
   const bool rim_cruise_fast =
-      diet_cruise_cadence_final && !in.visual_holes && miss_horiz >= 3 &&
+      rim_perf_diet && miss_horiz >= 3 &&
       (unfinished_visual <= 4 || stream_phase_over_budget) && !capture_backlog;
   const bool pressure_cruise_fast =
-      diet_cruise_cadence_final && !in.visual_holes && !pending_underfeet &&
-      miss_horiz >= 3 &&
+      rim_perf_diet && !pending_underfeet && miss_horiz >= 3 &&
       (unfinished_visual <= 4 || stream_phase_over_budget) && !capture_backlog;
   const bool cruise_scan_fast = pressure_cruise_fast || rim_cruise_fast;
   // Actual baked-dark vertices near camera (not PendingLight proxy).
@@ -1279,6 +1313,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   world.PhysicsTelemetryData.VisualHoles = in.visual_holes ? 1 : 0;
   world.PhysicsTelemetryData.RimWitnessLatched =
       (missing_near && !in.visual_holes) ? 1 : 0;
+  world.PhysicsTelemetryData.RimHolePressure = rim_hole_pressure ? 1 : 0;
+  world.PhysicsTelemetryData.RimPerfDiet = rim_perf_diet ? 1 : 0;
   world.PhysicsTelemetryData.ColumnBumpDenied = 0;
   world.PhysicsTelemetryData.ColumnFlowUpgradeN = 0;
   // SoT unfinished (held sample while cruise); not pending-proxy.
@@ -2506,6 +2542,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             world.PhysicsTelemetryData.MissStuckRunFrames,
             world.PhysicsTelemetryData.MeshDirtyScheduleOkN,
             SoftDeferCapturePinAge, moving_now);
+        const ColumnJobStage pin_stage =
+            SoftDeferCapturePinValid
+                ? GetColumnFlowExecutor().GetColumnJobStage(
+                      glm::ivec2(SoftDeferCapturePinCx, SoftDeferCapturePinCz))
+                : ColumnJobStage::Absent;
+        const bool meshing_sla_kick = ShouldKickMissWitnessOnMeshingSla(
+            pin_stage, world.PhysicsTelemetryData.MissWitnessAgeFramesReport);
         const bool capture_backlog_witness =
             world.GetMeshService().GetPendingCaptureCount() >= 8;
         const bool hold_witness_pin =
@@ -2513,7 +2556,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             (ShouldExtendWitnessPinHold(SoftDeferCapturePinAge, pinned_still,
                                         RelightWitnessPinHoldFrames,
                                         world.PhysicsTelemetryData.MissHoriz,
-                                        vb_no_ticket_rising, miss_witness_kick) ||
+                                        vb_no_ticket_rising,
+                                        miss_witness_kick || meshing_sla_kick) ||
              (capture_backlog_witness && SoftDeferCapturePinValid));
         const bool era27_would_retarget =
             ShouldRetargetSoftDeferCaptureWitness(
@@ -2529,13 +2573,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
             SoftDeferCapturePinValid, pinned_still, hold_witness_pin,
             miss_horiz_zero_no_drawable,
             world.PhysicsTelemetryData.RelightFifoDropNPrev > 0) ||
-            (SoftDeferCapturePinValid &&
-             (GetColumnFlowExecutor().GetColumnJobStage(
-                  glm::ivec2(SoftDeferCapturePinCx, SoftDeferCapturePinCz)) ==
-                  ColumnJobStage::Meshing ||
-              GetColumnFlowExecutor().GetColumnJobStage(
-                  glm::ivec2(SoftDeferCapturePinCx, SoftDeferCapturePinCz)) ==
-                  ColumnJobStage::GpuPending));
+            (SoftDeferCapturePinValid && pin_stage == ColumnJobStage::GpuPending &&
+             !pin_drawable);
         const bool block_pin_sla = ShouldBlockWitnessRetargetForPinSla(
             SoftDeferCapturePinAge, SoftDeferCapturePinHoriz, visual_holes_cap,
             moving_now);

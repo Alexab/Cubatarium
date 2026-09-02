@@ -2484,6 +2484,26 @@ int main()
            "I18-P2: stuck miss kicks pin on stand");
     Expect(!ShouldKickMissWitnessPin(200, 0, 150, true),
            "I18-P2 hotfix: no kick while moving");
+    using cutum::ShouldComputeRimHolePressure;
+    using cutum::ShouldExitRimPerfDiet;
+    using cutum::ShouldReuseUnfinishedVisualSample;
+    using cutum::ShouldKickMissWitnessOnMeshingSla;
+    using cutum::ColumnJobStage;
+    Expect(ShouldComputeRimHolePressure(3, 1, 0, 0),
+           "R3.3: rim hole pressure on unfinished hint");
+    Expect(!ShouldComputeRimHolePressure(3, 0, 0, 0),
+           "R3.3: calm rim has no hole pressure");
+    Expect(ShouldExitRimPerfDiet(true, 0, false), "R3.3: hole pressure exits diet");
+    Expect(!ShouldExitRimPerfDiet(false, 10, false),
+           "R3.3: young reuse keeps diet");
+    Expect(ShouldReuseUnfinishedVisualSample(true, false, false, false, 8),
+           "R3.3: reuse when no hole pressure");
+    Expect(!ShouldReuseUnfinishedVisualSample(true, false, true, false, 8),
+           "R3.3: no reuse under hole pressure");
+    Expect(ShouldKickMissWitnessOnMeshingSla(ColumnJobStage::Meshing, 3600),
+           "R3.4: meshing SLA kick");
+    Expect(!ShouldKickMissWitnessOnMeshingSla(ColumnJobStage::GpuPending, 3600),
+           "R3.4: gpu pending not meshing kick");
     Expect(!ShouldExtendWitnessPinHold(200, true, RelightWitnessPinHoldFrames, 3,
                                        false, true),
            "I18-P2: kick overrides pinned_still");

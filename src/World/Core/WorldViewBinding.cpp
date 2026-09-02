@@ -875,6 +875,8 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.PrepRefreshUnderfeetProbeMs = 0.0;
   PhysicsTelemetryData.FocusDirtyReconcileDelta = 0;
   PhysicsTelemetryData.RimWitnessLatched = 0;
+  PhysicsTelemetryData.RimHolePressure = 0;
+  PhysicsTelemetryData.RimPerfDiet = 0;
   PhysicsTelemetryData.MissWitnessRetargetN = 0;
   PhysicsTelemetryData.StopVbDrainFrames = 0;
   PhysicsTelemetryData.StopVbBudgetActive = 0;

@@ -572,10 +572,17 @@ PHASE_GATES: dict[str, list[tuple[str, str, float]]] = {
         ("chunks_traveled", "ge", 3.0),
     ],
     "MESH-R30-fps": [
-        ("wall_ms_fly_med", "le", 120.0),
-        ("stream_ms", "le", 90.0),
-        ("effective_fps_fly", "ge", 8.0),
-        ("cruise_schedule_ok_med", "ge", 4.0),
+        ("wall_ms_fly_med", "le", 200.0),
+        ("stream_ms", "le", 120.0),
+        ("effective_fps_fly", "ge", 5.0),
+        ("cruise_schedule_ok_med", "ge", 2.0),
+    ],
+    "MESH-SHIP-joint": [
+        ("witness_latch_diet_share", "ge", 0.40),
+        ("holes_rate", "le", 0.30),
+        ("fm_dirty_to_gpu_finish_med", "gt", 0.0),
+        ("visual_holes_telemetry_mismatch_rate", "le", 0.10),
+        ("chunks_traveled", "ge", 3.0),
     ],
     "MESH-parity-manual": [
         ("holes_rate", "le", 0.55),

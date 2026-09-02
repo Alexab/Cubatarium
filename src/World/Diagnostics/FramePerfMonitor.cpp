@@ -309,6 +309,8 @@ struct FrameNumbers
   double prep_refresh_gap_ms{0.0};
   int focus_dirty_reconcile_delta{0};
   int rim_witness_latched{0};
+  int rim_hole_pressure{0};
+  int rim_perf_diet{0};
   int miss_witness_retarget_n{0};
   int stop_vb_drain_frames{0};
   int stop_vb_budget_active{0};
@@ -810,6 +812,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.prep_refresh_gap_ms = phys.PrepRefreshGapMs;
   n.focus_dirty_reconcile_delta = phys.FocusDirtyReconcileDelta;
   n.rim_witness_latched = phys.RimWitnessLatched;
+  n.rim_hole_pressure = phys.RimHolePressure;
+  n.rim_perf_diet = phys.RimPerfDiet;
   n.miss_witness_retarget_n = phys.MissWitnessRetargetN;
   n.stop_vb_drain_frames = phys.StopVbDrainFrames;
   n.stop_vb_budget_active = phys.StopVbBudgetActive;
@@ -1332,6 +1336,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"prep_refresh_gap_ms\":" << n.prep_refresh_gap_ms
           << ",\"focus_dirty_reconcile_delta\":" << n.focus_dirty_reconcile_delta
           << ",\"rim_witness_latched\":" << n.rim_witness_latched
+          << ",\"rim_hole_pressure\":" << n.rim_hole_pressure
+          << ",\"rim_perf_diet\":" << n.rim_perf_diet
           << ",\"miss_witness_retarget_n\":" << n.miss_witness_retarget_n
           << ",\"stop_vb_drain_frames\":" << n.stop_vb_drain_frames
           << ",\"stop_vb_budget_active\":" << n.stop_vb_budget_active

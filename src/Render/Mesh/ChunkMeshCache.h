@@ -797,6 +797,9 @@ private:
       const UBlockWorld &world, glm::ivec3 coord, uint64_t source_revision);
   int RetryPendingCaptures(UBlockWorld &world, UBlockRegistry &registry,
                            int max_per_frame, int &scheduled);
+  int ComputeCaptureRetryBudget(int max_schedule_per_frame,
+                                int scheduled_ok) const;
+  bool ShouldDeferNewCaptureEnqueue(int first_mesh_cap) const;
   void DrainCaptureWorkerCommits();
   void AgePendingCaptureEntries();
   bool IsWorkerCaptureSaturated() const;

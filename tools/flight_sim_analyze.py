@@ -1234,6 +1234,8 @@ def analyze(
         if ok <= 0 or unfinished <= 0:
             return None
         dirty_fm = float(r.get("dirty_fm_n") or 0)
+        ready_n = float(r.get("mesh_pending_capture_ready_n") or 0)
+        worker_inflight = float(r.get("mesh_worker_inflight_n") or 0)
         pending_capture = float(r.get("mesh_pending_capture_n") or 0)
         watch_n = float(r.get("fm_dirty_gpu_watch_n") or 0)
         watch_age = float(r.get("fm_dirty_gpu_watch_max_age") or 0)
@@ -1244,7 +1246,14 @@ def analyze(
         mesh_apply_stale = float(r.get("mesh_apply_stale_n") or 0)
         if dirty_fm <= 0:
             return "empty_fm_queue"
-        if pending_capture > 0 and gpu_finish <= 0:
+        if ready_n > ok and gpu_finish <= 0:
+            return "capture_pending"
+        if (
+            pending_capture > 0
+            and gpu_finish <= 0
+            and ready_n <= 0
+            and worker_inflight > 0
+        ):
             return "capture_pending"
         if watch_n > 0 and gpu_finish <= 0 and watch_age >= 8:
             return "watch_timeout"

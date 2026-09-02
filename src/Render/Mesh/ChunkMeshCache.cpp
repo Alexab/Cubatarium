@@ -3243,8 +3243,22 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
     }
     if (PendingCaptureSet_.count(coord) > 0)
     {
-      // Worker cancelled/evicted or commit drained — re-enqueue instead of
-      // spinning PendingCapture forever without inflight/completed.
+      DrainCaptureWorkerCommits();
+      if (auto drained_hit = CaptureStore.TryGet(coord, source_revision))
+      {
+        ++LastMeshCaptureStoreHitN;
+        out.kind = SnapshotAcquireKind::Ready;
+        out.snapshot = std::move(*drained_hit);
+        PendingCaptureSet_.erase(coord);
+        PendingCaptureReady_.erase(coord);
+        return out;
+      }
+      if (PendingCaptureReady_.count(coord) > 0)
+      {
+        out.kind = SnapshotAcquireKind::PendingCapture;
+        return out;
+      }
+      // Worker cancelled/evicted without a ready commit — re-enqueue.
       PendingCaptureSet_.erase(coord);
       PendingCaptureReady_.erase(coord);
     }
@@ -3320,6 +3334,28 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
   }
   out.kind = SnapshotAcquireKind::Ready;
   return out;
+}
+
+int UChunkMeshCache::ComputeCaptureRetryBudget(int max_schedule_per_frame,
+                                               int scheduled_ok) const
+{
+  const int ready_n = static_cast<int>(PendingCaptureReady_.size());
+  if (ready_n <= 0)
+  {
+    return 0;
+  }
+  const int deficit = std::max(0, ready_n - std::max(0, scheduled_ok));
+  const int budget = std::max(max_schedule_per_frame, deficit);
+  return std::min(ready_n, budget);
+}
+
+bool UChunkMeshCache::ShouldDeferNewCaptureEnqueue(int first_mesh_cap) const
+{
+  if (first_mesh_cap <= 0)
+  {
+    return false;
+  }
+  return static_cast<int>(PendingCaptureReady_.size()) > first_mesh_cap;
 }
 
 int UChunkMeshCache::RetryPendingCaptures(UBlockWorld &world,
@@ -5423,6 +5459,13 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           return Dirty.RemoveAt(it);
         }
       }
+      if (Dirty.IsFirstMesh(*it) &&
+          ShouldDeferNewCaptureEnqueue(first_mesh_cap))
+      {
+        ++LastMeshDirtyScheduleSkipN;
+        ++LastMeshDirtyScheduleSkipOtherN;
+        return std::next(it);
+      }
       const uint64_t source_revision = MeshRevisions.Current(*it);
       const auto snap_t0 = std::chrono::high_resolution_clock::now();
       const SnapshotAcquireResult acquire =
@@ -5898,6 +5941,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           continue;
         }
       }
+      if (Dirty.IsFirstMesh(*it) &&
+          ShouldDeferNewCaptureEnqueue(first_mesh_cap))
+      {
+        ++it;
+        continue;
+      }
       const uint64_t source_revision = MeshRevisions.Current(*it);
       const bool count_as_remesh = HasDrawableGreedyMesh(*it);
       const auto snap_t0 = std::chrono::high_resolution_clock::now();
@@ -6037,7 +6086,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       CaptureWorker->PumpUntilIdle(std::chrono::milliseconds(2));
       DrainCaptureWorkerCommits();
       int end_retry_scheduled = 0;
-      RetryPendingCaptures(world, registry, 2, end_retry_scheduled);
+      const int end_retry_budget =
+          ComputeCaptureRetryBudget(max_schedule_per_frame, scheduled);
+      RetryPendingCaptures(world, registry, end_retry_budget, end_retry_scheduled);
       stats.Scheduled += end_retry_scheduled;
       scheduled += end_retry_scheduled;
       LastMeshDirtyScheduleOkN = scheduled;

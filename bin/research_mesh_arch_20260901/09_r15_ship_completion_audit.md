@@ -1,8 +1,9 @@
-# Mesh R1.5 → SHIP — debt closure audit (2026-09-02)
+# Mesh R1.5 → SHIP — phase 2 audit (2026-09-02)
 
-**Коммит:** `18cb5899` + R2.6–R4.1 debt closure (ColumnJobGraph SoT, completion chain, witness guard, frame budget)  
+**Коммит:** `0b40bcb5` + R3.2–R3.5 phase 2 (capture retry, hole-pressure SoT, witness SLA, FPS interim)  
 **Ветка:** `perf_opt17`  
-**Gate-of-record manual (pre-fix):** `perf_20260902-173028_25184.jsonl` → `manual_20260902-173028_analyze.json`
+**Gate-of-record (pre phase-2):** `perf_20260902-201637_23188.jsonl` → `manual_20260902-201637_analyze.json`  
+**Gate-of-record (post phase-2):** *pending manual 3 min re-run*
 
 ---
 
@@ -10,103 +11,82 @@
 
 | Уровень | Статус | Комментарий |
 | --- | --- | --- |
-| **SHIP** | **NO-GO** | holes 84%, witness diet &lt;2%, manual gate-of-record не перепрогнан |
-| **R1.5 capture loop** | **GO** | retry 83–101, schedule_ok 6–8 |
-| **R2.6 forensics** | **GO** | completion stall classifier, wall waterfall, phase gates wired |
-| **R2.7–R2.9 код** | **LANDED** | ColumnJobGraph SoT, dark-reject routing, M4 lint, store diet |
-| **R3.0 frame budget** | **INTERIM** | fz-long wall_fly 130ms (~7.7 FPS) vs manual 330ms (~3 FPS) |
-| **R3.1 witness** | **PARTIAL** | stage guard wired; diet 1–15% autofly vs цель 40% |
-| **R2.8 completion** | **INTERIM** | `fm_dirty_to_gpu_finish_med=1` на fly-heavy; 0 на fz-long |
-| **R4.1 harness** | **GO** | trio + gates прогнаны; replay teardown/travel fix landed |
+| **SHIP** | **NO-GO** | post-fix manual gate-of-record не прогнан |
+| **R3.2 capture retry** | **LANDED** | backlog-proportional retry, drain-before-re-enqueue, retry-first admission |
+| **R3.3 hole-pressure SoT** | **LANDED** | `rim_hole_pressure` / `rim_perf_diet` split; admission carve frozen under pressure |
+| **R3.4 witness SLA** | **LANDED** | GpuPending-only retarget block; Meshing SLA kick; stage sync before admission |
+| **R3.5 FPS interim** | **LANDED** | stream phase cap gated on `!rim_hole_pressure`; MESH-R30 interim wall≤200/fps≥5 |
+| **R4.2 verify** | **PENDING** | trio + joint gate wired; manual gate-of-record awaits user fly |
 
 ---
 
-## Trio autofly (post debt-closure, Release)
+## Manual `201637` (pre phase-2 baseline)
 
-| Метрика | replay-manual* | fly-heavy | fz-manual-long |
+| Метрика | `173028` | `201637` |
+| --- | ---: | ---: |
+| witness_diet | 24% | **52%** |
+| holes_rate | 70% | **93%** |
+| fm_to_gpu_finish | 0 | **0** |
+| dominant_stall | gpu_not_ready | **capture_pending** |
+| wall_fly / FPS | 330ms / 3.0 | 370ms / 2.7 |
+| miss_stuck | 166s | 162s |
+
+**Корневые причины (addressed in phase 2):**
+1. `PendingCaptureReady` backlog >> retry budget → `fm_finish=0` (R3.2)
+2. Diet и hole-blindness на одном `!visual_holes` при mh≥3 (R3.3)
+
+---
+
+## Phase 2 sprint summary
+
+### R3.2 — Capture retry throughput
+- `ComputeCaptureRetryBudget()` — backlog-proportional end-of-tick retry
+- Drain-before-re-enqueue on `PendingCaptureSet_` store miss
+- `ShouldDeferNewCaptureEnqueue()` — retry-first admission
+- Classifier: `capture_pending` по `mesh_pending_capture_ready_n > schedule_ok_n`
+- Raw: `raw/completion_chain_201637.txt`
+
+### R3.3 — Diet / Hole SoT split
+- `ShouldComputeRimHolePressure()` — mh≥3 + incremental unfinished/dirty/clnm signals
+- `ShouldExitRimPerfDiet()` — exit on hole pressure, stale reuse, rising focus debt
+- Admission: `holes` OR=`rim_hole_pressure`; carve-out disabled under pressure
+- `rim_plateau_close` skip only when `!rim_hole_pressure`
+- Telem: `rim_hole_pressure`, `rim_perf_diet` in jsonl
+
+### R3.4 — Witness SLA + stage order
+- Retarget block: `GpuPending && !drawable` only (not Meshing)
+- `ShouldKickMissWitnessOnMeshingSla()` — release pin after 3600f Meshing
+- `SyncFocusRingColumnJobStages()` before early admission
+- Hole enqueue escalation: Meshing + miss_age>240 → PromoteRelight + FirstMesh
+
+### R3.5 — FPS interim
+- `stream_phase_over_budget` only when `!rim_hole_pressure && !underfeet`
+- `MESH-R30-fps` interim gate: wall≤200, stream≤120, fps≥5
+
+### R4.2 — SHIP verify (harness)
+- `MESH-SHIP-joint` gate: diet≥40%, holes≤30%, fm_finish>0, mismatch≤10%
+- fz-cold-enter regression guard on each sprint
+- **Manual 3 min gate-of-record:** user action required
+
+---
+
+## Interim targets (R3.5) vs SHIP
+
+| Метрика | `201637` | Interim (R3.5) | **SHIP** |
 | --- | ---: | ---: | ---: |
-| `process_rc` / outcome | 1 / crash† | 0 / success | 0 / success |
-| `wall_ms_fly_med` | 558 | 929 | **130** |
-| `effective_fps_fly` | 1.8 | 1.1 | **7.7** |
-| `stream_ms` med | 360 | 537 | **53** |
-| `mesh_emerge_ms` | 143 | 198 | 77 |
-| `holes_rate` | 0% | 0% | **84%** |
-| `witness_latch_diet_share` | 15% | 9% | 1.3% |
-| `fm_dirty_to_gpu_finish_med` | 0 | **1** | 0 |
-| `cruise_schedule_ok_med` | 9 | 8 | 6 |
-| `mesh_schedule_retry_max` | 103 | 83 | 101 |
-
-\* replay-manual: pre-fix run; `chunks_traveled=2` → harness exit 1; 38 min scene hang на stop.  
-† Исправлено: fly-phase 90s, skip render on stop, `harness_fail` classifier.
-
-**Отчёты:** `bin/suite_reports/mesh_debt_trio_{replay,fly_heavy,fz_long}.json`
+| wall_fly / FPS | 370ms / 2.7 | ≤200 / ≥5 | ≤33 / ≥30 |
+| stream_ms | 246 | ≤120 | ≤90 |
+| holes_rate | 93% | ≤60% | ≤10% |
+| witness_diet | 52% | ≥40% | ≥70% |
+| fm_to_gpu_finish | 0 | >0 | >0 |
+| mismatch_rate | 52% | ≤15% | ≤5% |
+| miss_stuck | 162s | ≤60s | ≤30s |
 
 ---
 
-## Phase gates (2026-09-02)
+## Next step
 
-| Gate | Профиль | Результат |
-| --- | --- | --- |
-| MESH-R15-capture | fly-heavy | **GO** |
-| MESH-R26-completion | fly-heavy | **GO** (`fm_finish>0`) |
-| MESH-R30-fps | fz-long | **NO-GO** (wall 130&gt;120, fps 7.7&lt;8) |
-| MESH-parity-manual | fz-long vs `173028` | **NO-GO** (holes 84%&gt;55%) |
-| fz-cold-enter | enter guard | PASS (`enter_unfinished_max=1`) |
-
----
-
-## Sprint summary
-
-### R2.6 — Forensics
-- `wall_waterfall_audit.py`, `dominant_completion_stall`, `dominant_wall_stage`, `effective_fps_fly`
-- Raw: `raw/completion_chain_173028.txt`, `raw/wall_waterfall_173028.txt`
-
-### R2.7 — ColumnJobGraph SoT
-- `SyncColumnJobStageFromWorld`, `column_job_graph_stage_test` PASS
-
-### R2.8 — FM→GPU completion
-- Dark reject → `PendingLight`; fake finish telem removed; GPU budget reserve; isolated-hole refill
-
-### R3.1 — M4 + witness
-- Witness retarget blocked on `Meshing|GpuPending`; swap grace 30f; `m4_ownership_lint` PASS
-
-### R3.0 — Frame budget
-- Witness diet threshold, stream phase cap 120ms, cruise fast-path under budget pressure
-- fz-long: wall_fly **130ms** (↓60% vs manual `173028`)
-
-### R2.9 — Store diet
-- Store hit telem; M2c sync only when saturated; `capture_incremental_test` PASS
-
-### R4.1 — SHIP verify
-- Trio sequential; parity gate wired; replay teardown fix (travel + skip final render)
-
----
-
-## SHIP gates vs факт
-
-| Метрика | Manual `173028` | Interim (fz-long) | SHIP |
-| --- | ---: | ---: | ---: |
-| wall_fly / FPS | 330ms / ~3 | 130ms / ~7.7 | ≤33 / ≥30 |
-| stream_ms | 199 | 53 | ≤90 |
-| holes_rate | 70% | 84% | ≤10% |
-| witness_diet | 24% | 1.3% | ≥70% |
-| fm_to_gpu_finish | 0 | 0 (long) / 1 (heavy) | >0 |
-| mesh_emerge_ms | 78 | 77 | ≤25 |
-
----
-
-## Оставшиеся действия
-
-1. **Ручной fly 3 min** на актуальном `bin/Cubatarium.exe` — gate-of-record для SHIP.
-2. **Witness diet** — autofly 1–15% vs цель 40%; stage guard не восстанавливает diet alone.
-3. **holes_rate** на fz-long (84%) — completion + diet trade-off на длинном маршруте.
-4. **Перепрогнать replay-manual** после teardown fix (ожидается `process_rc=0`).
-
----
-
-## Unit / lint
-
-- `column_job_graph_stage_test` — PASS  
-- `mesh_schedule_retry_test` — PASS  
-- `m4_ownership_lint` — PASS  
-- `capture_incremental_test` — PASS  
+1. User: manual fly 3 min → `perf_*_analyze.json`
+2. Run phase gates: `MESH-R26-completion`, `MESH-R30-fps`, `MESH-SHIP-joint`, `MESH-parity-manual`
+3. Trio autofly regression (replay, fly-heavy, fz-long)
+4. Update this audit with GO/NO-GO verdict

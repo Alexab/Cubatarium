@@ -20,6 +20,8 @@ struct MeshWorkAdmissionInput
   size_t pending_gpu_queued{0};
   size_t pending_gpu_kicked{0};
   bool visual_holes{false};
+  /// R3.3: rim miss with incremental hole signals (mh≥3).
+  bool rim_hole_pressure{false};
   bool missing_underfeet{false};
   bool moving{false};
   int pending_light_near{0};
@@ -430,7 +432,7 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
       in.visual_holes && !in.missing_underfeet &&
       in.nearest_miss_horiz >= 5;
   const bool holes =
-      in.visual_holes || in.missing_underfeet ||
+      in.visual_holes || in.missing_underfeet || in.rim_hole_pressure ||
       (in.unfinished_visual >= 8 && !rim_only_miss);
   const size_t queued = MeshWorkQueuedApprox(in);
   const bool light_debt =
@@ -484,7 +486,8 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
       in.unfinished_visual, in.column_loaded_no_mesh_n,
       in.mesh_schedule_ok_n, in.dirty_fm_n);
   // I8-A1: carve only when FM queue empty — consumer-starved must stay HoleDrain.
-  if (holes_moving && fm_starved && schedule_starved && !suppress_carve)
+  if (holes_moving && fm_starved && schedule_starved && !suppress_carve &&
+      !in.rim_hole_pressure)
   {
     admission_carve_remain = 90;
   }
@@ -550,7 +553,8 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     hole_drain_rim_fed_frames = 0;
   }
   if (hole_drain_rim_fed_frames >= 8 &&
-      mode == MeshWorkAdmission::Mode::HoleDrain && !stop_vb_hold)
+      mode == MeshWorkAdmission::Mode::HoleDrain && !stop_vb_hold &&
+      !in.rim_hole_pressure)
   {
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     hole_drain_rim_fed_frames = 0;
@@ -595,7 +599,7 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
       !consume_mode && !in.moving && in.visible_black_focus_n > 20 &&
       in.visible_black_no_ticket_n > 0;
   if (admission_carve_remain > 0 && mode == MeshWorkAdmission::Mode::HoleDrain &&
-      !stop_vb_block_carve)
+      !stop_vb_block_carve && !in.rim_hole_pressure)
   {
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     --admission_carve_remain;
@@ -605,7 +609,7 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   else if (hole_drain_reenter_cd > 0)
   {
     --hole_drain_reenter_cd;
-    if (holes_moving && !in.missing_underfeet &&
+    if (holes_moving && !in.missing_underfeet && !in.rim_hole_pressure &&
         mode == MeshWorkAdmission::Mode::HoleDrain && !stop_vb_block_carve)
     {
       mode = MeshWorkAdmission::Mode::WarmBacklog;

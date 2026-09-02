@@ -50,13 +50,48 @@ inline int UnfinishedSampleCooldownFramesCruise(bool diet_cruise, int miss_horiz
   return UnfinishedSampleCooldownFrames(unfinished_visual);
 }
 
+/// R3.3: rim hole pressure — incremental signals without full ring walk.
+inline bool ShouldComputeRimHolePressure(int miss_horiz, int unfinished_hint,
+                                         int focus_dirty_chunks,
+                                         int column_loaded_no_mesh_n)
+{
+  if (miss_horiz < 3)
+  {
+    return false;
+  }
+  return unfinished_hint > 0 || focus_dirty_chunks > 0 ||
+         column_loaded_no_mesh_n > 0;
+}
+
+/// R3.3: exit rim perf diet when hole pressure or stale/rising focus debt.
+inline bool ShouldExitRimPerfDiet(bool rim_hole_pressure,
+                                  int unfinished_sample_age,
+                                  bool focus_pressure_rising,
+                                  int max_reuse_age = 32)
+{
+  if (rim_hole_pressure)
+  {
+    return true;
+  }
+  if (unfinished_sample_age > max_reuse_age)
+  {
+    return true;
+  }
+  if (focus_pressure_rising)
+  {
+    return true;
+  }
+  return false;
+}
+
 /// I17-P1: reuse cached unfinished between sample ticks on cruise.
 inline bool ShouldReuseUnfinishedVisualSample(bool diet_cruise, bool visual_holes,
+                                              bool rim_hole_pressure,
                                               bool pending_underfeet,
                                               int sample_cd_remaining)
 {
-  return diet_cruise && !visual_holes && !pending_underfeet &&
-         sample_cd_remaining > 0;
+  return diet_cruise && !visual_holes && !rim_hole_pressure &&
+         !pending_underfeet && sample_cd_remaining > 0;
 }
 
 /// I18-P1: stand stable rim miss — throttle full ring unfinished walks.

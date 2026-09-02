@@ -1,5 +1,6 @@
 #pragma once
 
+#include "World/Streaming/ColumnJobGraph.h"
 #include "World/Streaming/StreamIngressPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
 
@@ -1216,6 +1217,15 @@ inline bool ShouldKickMissWitnessPin(int miss_stuck_run_frames,
   }
   return miss_stuck_run_frames >= kick_frames && schedule_ok_n < 2 &&
          pin_age >= min_pin_age;
+}
+
+/// R3.4: kick witness pin when Meshing stage exceeds SLA (moving or stand).
+inline bool ShouldKickMissWitnessOnMeshingSla(ColumnJobStage stage,
+                                              int miss_witness_age_frames,
+                                              int meshing_sla_frames = 3600)
+{
+  return stage == ColumnJobStage::Meshing &&
+         miss_witness_age_frames >= meshing_sla_frames;
 }
 
 /// FP-A3: extend witness hold past RelightWitnessPinHoldFrames while pinned_still.
