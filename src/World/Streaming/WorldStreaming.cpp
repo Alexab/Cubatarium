@@ -1211,8 +1211,11 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   // disable facing/darkface skip on rim cruise (manual 204611 VB-spiral).
   // R3.6: phase-over enables scan skip even under rim_hole_pressure (telemetry
   // only; admission carve still frozen when pressure is true).
+  // R3.6 fix: stream_phase_ms is zero here because WorldStreamingPhaseMs is
+  // written *after* TickWorldStreamingPhase returns.  Use previous-frame wall
+  // (frame_ms = GetLastMovementFrameMs) which is already valid.
   const bool stream_phase_over_budget =
-      moving_for_telemetry && in.stream_phase_ms > 120.0 && !pending_underfeet;
+      moving_for_telemetry && in.frame_ms > 120.0 && !pending_underfeet;
   const bool rim_scan_ok =
       !in.visual_holes && miss_horiz >= 3 && !pending_underfeet &&
       !capture_backlog &&

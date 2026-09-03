@@ -4830,8 +4830,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           pt.FmDirtyToGpuFinishN,
           pt.VisibleBlackFocusN};
       IngressDebtLevel debt = EvaluateIngressDebt(debt_in, ingress_debt_streak);
-      // R3.6: wall-based ShedFar when stream phase overrun on calm far rim.
-      if (pt.WorldStreamingPhaseMs > 120.0 && nearest_miss_h >= 3 &&
+      // R3.6: wall-based ShedFar when previous frame overran budget on calm far rim.
+      // WorldStreamingPhaseMs is zero here (written after TickWorldStreamingPhase);
+      // use previous-frame wall (last_frame_wall_ms) instead.
+      if (last_frame_wall_ms > 120.0 && nearest_miss_h >= 3 &&
           !visual_holes && !missing_underfeet &&
           debt < IngressDebtLevel::ShedFar)
       {
@@ -4850,7 +4852,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           ++ingress_debt_streak;
         }
       }
-      pt.IngressDebtLevel = static_cast<int>(debt);
+      // Preserve higher debt from WorldViewBinding (R3.8 input-first ShedFar)
+      // so that EmergeCoordinator Ok does not overwrite the VB pre-stream latch.
+      pt.IngressDebtLevel =
+          std::max(pt.IngressDebtLevel, static_cast<int>(debt));
       pt.IngressDebtStreak = ingress_debt_streak;
       pt.FmDirtyGpuWatchN = cache.GetFmDirtyGpuWatchCount();
       pt.FmDirtyGpuWatchMaxAge = cache.GetFmDirtyGpuWatchMaxAge();

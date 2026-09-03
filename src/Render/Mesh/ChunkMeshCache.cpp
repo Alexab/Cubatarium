@@ -5865,6 +5865,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
               if (!skip_defer_lit_ring(*it))
               {
                 DeferRemeshCoord(*it);
+                ++LastMeshDirtyScheduleSkipOutsideFocusFmN;
                 it = Dirty.RemoveAt(it);
               }
               else
@@ -5891,6 +5892,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           const int horiz = std::max(dx, dz);
           if (horiz > MeshFocusRadiusChunks + 2)
           {
+            ++LastMeshDirtyScheduleSkipOrphanN;
             it = Dirty.RemoveAt(it);
             continue;
           }
@@ -5922,6 +5924,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           {
             HoldSoftDeferFirstMesh(*it);
           }
+          ++LastMeshDirtyScheduleSkipSoftDeferN;
           it = Dirty.RemoveAt(it);
           continue;
         }
@@ -5939,12 +5942,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
               !(horiz <= RelightFifoTrimProtectHoriz() &&
                 ChunkHasStaleDarkFaces(*it, world)))
           {
+            ++LastMeshDirtyScheduleSkipRemeshStarveN;
             it = Dirty.RemoveAt(it);
             continue;
           }
         }
         else
         {
+          ++LastMeshDirtyScheduleSkipRemeshStarveN;
           it = Dirty.RemoveAt(it);
           continue;
         }
