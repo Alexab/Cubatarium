@@ -14,6 +14,9 @@
 | Manual-R15 | `bin/suite_reports/manual_20260902-173028_analyze.json` | `perf_20260902-173028_25184.jsonl` | gate-of-record (pre-fix, ~3 min manual) |
 | Manual-phase2-pre | `bin/suite_reports/manual_20260902-201637_analyze.json` | `perf_20260902-201637_23188.jsonl` | gate-of-record (post-R3.0, pre phase-2) |
 | Manual-phase2-post | *pending* | *pending* | gate-of-record (post R3.2–R3.5) |
+| Phase2-trio-replay | `bin/suite_reports/mesh_phase2_trio_replay.json` | `perf_20260902-212140_*.jsonl` | trio replay-manual (rc=1 pass:false) |
+| Phase2-trio-fly-heavy | `bin/suite_reports/mesh_phase2_trio_fly_heavy.json` | — | trio fly-heavy (rc=1) |
+| Phase2-trio-fz-long | `bin/suite_reports/mesh_phase2_trio_fz_long.json` | — | trio fz-manual-long (rc=1) |
 | Debt-replay | `bin/suite_reports/mesh_debt_trio_replay.json` | `perf_20260902-181922_30324.jsonl` | trio replay-manual (pre teardown fix) |
 | Debt-fly-heavy | `bin/suite_reports/mesh_debt_trio_fly_heavy.json` | `perf_20260902-190322_36808.jsonl` | trio fly-heavy |
 | Debt-fz-long | `bin/suite_reports/mesh_debt_trio_fz_long.json` | — | trio fz-manual-long |

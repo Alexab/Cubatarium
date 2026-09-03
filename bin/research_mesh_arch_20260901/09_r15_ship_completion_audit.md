@@ -16,7 +16,26 @@
 | **R3.3 hole-pressure SoT** | **LANDED** | `rim_hole_pressure` / `rim_perf_diet` split; admission carve frozen under pressure |
 | **R3.4 witness SLA** | **LANDED** | GpuPending-only retarget block; Meshing SLA kick; stage sync before admission |
 | **R3.5 FPS interim** | **LANDED** | stream phase cap gated on `!rim_hole_pressure`; MESH-R30 interim wall≤200/fps≥5 |
-| **R4.2 verify** | **PENDING** | trio + joint gate wired; manual gate-of-record awaits user fly |
+| **R4.2 verify** | **PARTIAL** | trio reports saved; all rc=1 (pass:false); manual gate pending |
+
+---
+
+## Trio autofly post phase-2 (`4d7c4647`, ~21 min)
+
+| Метрика | replay | fly-heavy | fz-long |
+| --- | ---: | ---: | ---: |
+| `process_rc` / harness | 1 / pass:false | 1 | 1 |
+| `holes_rate` | 49% | 49% | **65%** |
+| `mismatch_rate` | 3.9% | 2.8% | **0.7%** ✅ |
+| `fm_finish` | 0 | 0 | 0 |
+| `wall_fly` / FPS | 424ms / 2.4 | 374ms / 2.7 | **208ms / 4.8** |
+| `stream_ms` | 209 | 209 | **35** |
+| `miss_stuck` | 12s | 22s | **10s** |
+| `witness_diet` | 4% | 3% | 1% |
+
+**Gates (fz-long best):** MESH-R30 interim — wall 208 (fail ≤200), fps 4.8 (fail ≥5), stream OK; MESH-SHIP-joint — mismatch OK, holes/fm/diet NO-GO.
+
+**Отчёты:** `bin/suite_reports/mesh_phase2_trio_{replay,fly_heavy,fz_long}.json`, лог `mesh_phase2_trio_run.log`
 
 ---
 
