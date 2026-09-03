@@ -5205,6 +5205,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     {
       max_schedule_per_frame = 1;
     }
+    // R3.7: post-prune live FM count — start-of-tick dirty_fm inflated schedule_starved.
+    LastDirtyFmN = static_cast<int>(Dirty.GetFirstMeshCount());
+    LastDirtyRemeshN = static_cast<int>(Dirty.GetRemeshCount());
+    LastDirtyTouchN = static_cast<int>(Dirty.GetCount());
     const int max_pipeline = std::max(
         max_schedule_per_frame, AsyncBuilder->GetMaxPipelineDepth());
     // Cap main-thread snapshot capture. Default 6ms; raise under visual holes /
@@ -5759,6 +5763,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         // CheapRemesh C0: Inflight owns the chunk — erase Dirty (same as
         // FirstMesh schedule path). Leave-in-Dirty caused dirty_revisit thrash.
         ++DirtyScheduleSkipInflightN;
+        ++LastMeshDirtyScheduleSkipN;
+        ++LastMeshDirtyScheduleSkipPipelineN;
         if (leave_in_under_pl(*it))
         {
           ++it;
@@ -5772,6 +5778,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           IsPendingGpuKickedOrDispatched(*it))
       {
         ++DirtyScheduleSkipInflightN;
+        ++LastMeshDirtyScheduleSkipN;
+        ++LastMeshDirtyScheduleSkipPipelineN;
         if (leave_in_under_pl(*it))
         {
           ++it;

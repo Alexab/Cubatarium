@@ -2493,6 +2493,10 @@ int main()
            "R3.3: rim hole pressure on unfinished hint");
     Expect(!ShouldComputeRimHolePressure(3, 0, 0, 0),
            "R3.3: calm rim has no hole pressure");
+    Expect(!ShouldComputeRimHolePressure(3, 0, 50, 0),
+           "R3.6: focus_dirty alone is not hole pressure");
+    Expect(ShouldComputeRimHolePressure(3, 0, 0, 2),
+           "R3.6: column_no_mesh triggers hole pressure");
     Expect(ShouldExitRimPerfDiet(true, 0, false), "R3.3: hole pressure exits diet");
     Expect(!ShouldExitRimPerfDiet(false, 10, false),
            "R3.3: young reuse keeps diet");

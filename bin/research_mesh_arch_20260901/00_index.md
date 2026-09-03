@@ -1,46 +1,32 @@
-# Mesh R1.5 → SHIP debt closure — research index (2026-09-02)
+# Mesh R1.5 → SHIP — research index (2026-09-03)
 
 | Field | Value |
 | --- | --- |
-| Date | 2026-09-02 |
-| HEAD | `0b40bcb5` + R3.2–R3.5 phase 2 |
+| Date | 2026-09-03 |
+| HEAD | phase 3 R3.6–R3.8 (post `0f453d79` baseline) |
 | Branch | `perf_opt17` |
-| Status | **R3.2–R3.5 LANDED · R4.2 manual pending · SHIP NO-GO** |
+| Status | **R3.6–R3.8 LANDED · R4.3 manual pending · SHIP NO-GO** |
 
 ## SoT logs
 
 | ID | Report | Perf jsonl | Role |
 | --- | --- | --- | --- |
-| Manual-R15 | `bin/suite_reports/manual_20260902-173028_analyze.json` | `perf_20260902-173028_25184.jsonl` | gate-of-record (pre-fix, ~3 min manual) |
-| Manual-phase2-pre | `bin/suite_reports/manual_20260902-201637_analyze.json` | `perf_20260902-201637_23188.jsonl` | gate-of-record (post-R3.0, pre phase-2) |
-| Manual-phase2-post | *pending* | *pending* | gate-of-record (post R3.2–R3.5) |
-| Phase2-trio-replay | `bin/suite_reports/mesh_phase2_trio_replay.json` | `perf_20260902-212140_*.jsonl` | trio replay-manual (rc=1 pass:false) |
-| Phase2-trio-fly-heavy | `bin/suite_reports/mesh_phase2_trio_fly_heavy.json` | — | trio fly-heavy (rc=1) |
-| Phase2-trio-fz-long | `bin/suite_reports/mesh_phase2_trio_fz_long.json` | — | trio fz-manual-long (rc=1) |
-| Debt-replay | `bin/suite_reports/mesh_debt_trio_replay.json` | `perf_20260902-181922_30324.jsonl` | trio replay-manual (pre teardown fix) |
-| Debt-fly-heavy | `bin/suite_reports/mesh_debt_trio_fly_heavy.json` | `perf_20260902-190322_36808.jsonl` | trio fly-heavy |
-| Debt-fz-long | `bin/suite_reports/mesh_debt_trio_fz_long.json` | — | trio fz-manual-long |
-| Enter-guard | `bin/suite_reports/mesh_debt_fz_cold_enter.json` | `perf_20260902-181413_27212.jsonl` | fz-cold-enter regression |
-
-## Forensics raw (R2.6)
-
-| File | Role |
-| --- | --- |
-| `raw/completion_chain_173028.txt` | FM completion chain manual |
-| `raw/wall_waterfall_173028.txt` | FPS/wall waterfall manual |
-| `raw/completion_chain_memo.md` | dominant stall summary |
+| Manual-085143 | `bin/suite_reports/manual_20260903-085143_analyze.json` | `perf_20260903-085143_23864.jsonl` | gate-of-record pre phase-3 |
+| Manual-phase3-post | *pending* | *pending* | gate-of-record post R3.6–R3.8 |
+| Phase2-trio-* | `bin/suite_reports/mesh_phase2_trio_*.json` | — | phase-2 trio baseline |
+| Phase3-enter | `bin/suite_reports/mesh_phase3_fz_cold_enter.json` | — | fz-cold-enter after phase-3 |
 
 ## Phase gates
 
 | Gate | Criteria | Latest |
 | --- | --- | --- |
-| MESH-R15-capture | retry>0, schedule_ok≥2 | **GO** (fly-heavy) |
-| MESH-R26-completion | fm_to_gpu_finish>0 | **pending** (post phase-2 manual) |
-| MESH-R30-fps | wall_fly≤200, stream≤120, fps≥5 (interim) | **pending** |
-| MESH-SHIP-joint | diet≥40%, holes≤30%, fm>0, mismatch≤10% | **pending** |
-| MESH-parity-manual | holes ≤ manual×1.15+5pp | **NO-GO** (`201637` holes 93%) |
-| fz-cold-enter | enter convergence | PASS (pre phase-2) |
+| MESH-R15-capture | retry>0, schedule_ok≥2 | **GO** (`085143`) |
+| MESH-R26-completion | fm_finish>0 | **NO-GO** (`085143`) |
+| MESH-R30-fps | wall≤66, stream≤90, fps≥15 | **pending** post-fix manual |
+| MESH-SHIP-joint | diet≥40%, holes≤30%, fm>0, mismatch≤10%, fps≥15 | **pending** |
+| MESH-parity-manual | holes ≤55% | **NO-GO** (`085143` 80%) |
+| fz-cold-enter | enter convergence | run after build |
 
 ## Verdict one-liner
 
-Phase 2 **LANDED** (capture retry, rim hole-pressure SoT, witness SLA, FPS interim gates). SHIP blocked until post-fix manual gate-of-record + trio regression.
+Phase 3 **LANDED** (narrow hole-pressure, schedule honesty, input-first shed, playable FPS bar ≥15). SHIP blocked until post-fix manual gate-of-record.

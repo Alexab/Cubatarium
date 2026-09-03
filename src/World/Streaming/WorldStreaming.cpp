@@ -988,9 +988,11 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     unfinished_sample_cd = 0;
     unfinished_reuse_age = 0;
   }
+  // R3.6: do not force every-frame unfinished walk on rim_hole_pressure —
+  // heal still sees pressure via admission; scan cadence is diet/telemetry.
   bool force_full_unfinished =
       !diet_cruise_cadence_final || in.visual_holes || pending_underfeet ||
-      capture_backlog || rim_hole_pressure;
+      capture_backlog;
   const bool unfinished_sample_due = --unfinished_sample_cd <= 0;
   if (force_full_unfinished)
   {
@@ -1207,15 +1209,17 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   // I9-B1 / I12-A1: cruise fast-path — skip expensive darkface/facing scans.
   // I14b-B: decouple diet fast-path from published VB — VB backlog must not
   // disable facing/darkface skip on rim cruise (manual 204611 VB-spiral).
+  // R3.6: phase-over enables scan skip even under rim_hole_pressure (telemetry
+  // only; admission carve still frozen when pressure is true).
   const bool stream_phase_over_budget =
-      moving_for_telemetry && in.stream_phase_ms > 120.0 &&
-      !rim_hole_pressure && !pending_underfeet;
-  const bool rim_cruise_fast =
-      rim_perf_diet && miss_horiz >= 3 &&
-      (unfinished_visual <= 4 || stream_phase_over_budget) && !capture_backlog;
-  const bool pressure_cruise_fast =
-      rim_perf_diet && !pending_underfeet && miss_horiz >= 3 &&
-      (unfinished_visual <= 4 || stream_phase_over_budget) && !capture_backlog;
+      moving_for_telemetry && in.stream_phase_ms > 120.0 && !pending_underfeet;
+  const bool rim_scan_ok =
+      !in.visual_holes && miss_horiz >= 3 && !pending_underfeet &&
+      !capture_backlog &&
+      (rim_perf_diet || stream_phase_over_budget) &&
+      (unfinished_visual <= 4 || stream_phase_over_budget);
+  const bool rim_cruise_fast = rim_scan_ok;
+  const bool pressure_cruise_fast = rim_scan_ok;
   const bool cruise_scan_fast = pressure_cruise_fast || rim_cruise_fast;
   // Actual baked-dark vertices near camera (not PendingLight proxy).
   // Split stale (mesh dark, field lit) vs void-edge (both 0) for ARCH_D3.

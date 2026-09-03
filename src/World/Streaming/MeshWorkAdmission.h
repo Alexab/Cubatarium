@@ -554,10 +554,27 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
   }
   if (hole_drain_rim_fed_frames >= 8 &&
       mode == MeshWorkAdmission::Mode::HoleDrain && !stop_vb_hold &&
-      !in.rim_hole_pressure)
+      (!in.rim_hole_pressure || in.unfinished_visual <= 0))
   {
     mode = MeshWorkAdmission::Mode::WarmBacklog;
     hole_drain_rim_fed_frames = 0;
+  }
+  // R3.7: exit HoleDrain when pressure latched without unfinished progress.
+  static int hole_drain_pressure_stale_frames = 0;
+  if (mode == MeshWorkAdmission::Mode::HoleDrain && in.rim_hole_pressure &&
+      in.unfinished_visual <= 0 && in.column_loaded_no_mesh_n <= 0)
+  {
+    ++hole_drain_pressure_stale_frames;
+  }
+  else
+  {
+    hole_drain_pressure_stale_frames = 0;
+  }
+  if (hole_drain_pressure_stale_frames >= 12 &&
+      mode == MeshWorkAdmission::Mode::HoleDrain && !stop_vb_hold)
+  {
+    mode = MeshWorkAdmission::Mode::WarmBacklog;
+    hole_drain_pressure_stale_frames = 0;
   }
   // I11-C1: exit HoleDrain when column_loaded_no_mesh drains (clnm falling).
   static int prev_column_loaded_no_mesh = 0;

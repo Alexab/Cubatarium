@@ -23,6 +23,8 @@
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Streaming/PhysicsStepPolicy.h"
+#include "World/Streaming/InputFirstPolicy.h"
+#include "World/Streaming/StreamIngressPolicy.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Core/RuntimeTuning.h"
 
@@ -952,6 +954,19 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.DirtyRemeshN = 0;
 
   const auto t_before_stream = std::chrono::high_resolution_clock::now();
+  // R3.8: previous-frame wall SLA → ShedFar before stream (far rim only).
+  {
+    const double prev_wall_ms = GetLastMovementFrameMs();
+    if (IsInputFirstSlaBroken(prev_wall_ms, 0.0) &&
+        PhysicsTelemetryData.MissHoriz >= 3 &&
+        PhysicsTelemetryData.VisualHoles == 0 &&
+        PhysicsTelemetryData.UnderfeetHasMesh != 0)
+    {
+      PhysicsTelemetryData.IngressDebtLevel = std::max(
+          PhysicsTelemetryData.IngressDebtLevel,
+          static_cast<int>(IngressDebtLevel::ShedFar));
+    }
+  }
   const glm::ivec3 hole_focus =
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
   GetMeshService().BeginHoleQueryFrame(hole_focus);
@@ -992,6 +1007,21 @@ void UWorld::TickWorldStreamingPhase()
        stream_elapsed_ms >= static_cast<double>(general_budget))
           ? 1
           : 0;
+  // R3.6: far-rim phase shed — keep a small emerge floor when stream overran
+  // without near holes/underfeet (avoid emerge_cap=0 starve).
+  if (PhysicsTelemetryData.PhaseBudgetOver != 0 &&
+      PhysicsTelemetryData.MissHoriz >= 3 &&
+      PhysicsTelemetryData.VisualHoles == 0 &&
+      PhysicsTelemetryData.UnderfeetHasMesh != 0)
+  {
+    const float far_floor = std::max(0.0f, tune.MissEmergeFloorMs);
+    emerge_cap = std::max(emerge_cap, static_cast<double>(far_floor));
+    // R3.8: input-first hard shed — do not grow emerge beyond floor after overrun.
+    if (IsInputFirstSlaBroken(GetLastMovementFrameMs(), 0.0))
+    {
+      emerge_cap = std::min(emerge_cap, static_cast<double>(std::max(far_floor, 8.0f)));
+    }
+  }
   PhysicsTelemetryData.PhaseMissCarveOut = miss_carve_out ? 1 : 0;
   PhysicsTelemetryData.MissReservedMs = static_cast<double>(reserved);
   PhysicsTelemetryData.EmergeBudgetCapMs = emerge_cap;

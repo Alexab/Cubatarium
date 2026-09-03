@@ -3269,7 +3269,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const double accounted = prep_missing_ms + prep_unfinished_ms +
                              prep_sticky_ms + prep_drop_dirty_ms +
                              prep_admission_ms + prep_schedule_clamp_ms +
-                             prep_softdefer_policy_ms + prep_isolated_miss_ms;
+                             prep_softdefer_policy_ms + prep_isolated_miss_ms +
+                             prep_pending_light_ms + prep_softdefer_setup_ms +
+                             prep_dirty_count_ms + prep_black_sticky_ms +
+                             prep_column_flow_drain_ms;
     pt.MeshEmergePrepOtherMs =
         std::max(0.0, pt.MeshEmergePrepMs - accounted);
     pt.PrepAdmissionMs = prep_admission_ms;
@@ -3427,6 +3430,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           mesh_service.IsGpuExtractInFlight(isolated_hole);
       if (nearest_in_pipeline)
       {
+        // R3.7: rim miss in pipeline — PreferKick even without visual_holes.
+        mesh_service.PreferKickPendingGpuQueued(isolated_hole);
         const ColumnJobStage hole_stage = exec.GetColumnJobStage(hole_col);
         if (hole_stage == ColumnJobStage::Meshing &&
             MissWitnessAgeFrames > 240 &&
@@ -4336,6 +4341,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       consume_gpu = std::max(consume_gpu, 4);
       consume_budget = std::max(consume_budget, 6.0);
     }
+    // R3.7: rim miss pending GPU — keep ConsumeGpu floor without visual_holes.
+    if (missing_visible_mesh && nearest_miss_h >= 3 &&
+        (pending_gpu_n > 0 || mesh_service.GetPendingGpuQueuedCount() > 0))
+    {
+      consume_gpu = std::max(consume_gpu, 4);
+      consume_budget = std::max(consume_budget, 6.0);
+      mesh_service.PreferKickPendingGpuQueued(
+          found_nearest_missing ? isolated_hole : focus_ground_horiz);
+    }
     gpu_consume_done = mesh_service.ConsumeGpuApplyBacklog(
         world.GetBlockWorld(), registry, consume_drain, consume_gpu,
         consume_budget);
@@ -4815,8 +4829,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           nearest_miss_h,
           pt.FmDirtyToGpuFinishN,
           pt.VisibleBlackFocusN};
-      const IngressDebtLevel debt =
-          EvaluateIngressDebt(debt_in, ingress_debt_streak);
+      IngressDebtLevel debt = EvaluateIngressDebt(debt_in, ingress_debt_streak);
+      // R3.6: wall-based ShedFar when stream phase overrun on calm far rim.
+      if (pt.WorldStreamingPhaseMs > 120.0 && nearest_miss_h >= 3 &&
+          !visual_holes && !missing_underfeet &&
+          debt < IngressDebtLevel::ShedFar)
+      {
+        debt = IngressDebtLevel::ShedFar;
+      }
       if (debt == IngressDebtLevel::Ok)
       {
         ++ingress_debt_ok_periods;

@@ -1085,7 +1085,7 @@ def analyze(
         if all_fly_spikes
         else None
     )
-    cruise_schedule_ok_med = (
+    cruise_schedule_ok_when_positive_med = (
         median(
             [
                 float(v)
@@ -1095,11 +1095,13 @@ def analyze(
         )
         if mesh_fly_spikes
         and any(float(v or 0) > 0.0 for v in col(mesh_fly_spikes, "mesh_dirty_schedule_ok_n"))
-        else (
-            median(col(mesh_fly_spikes, "mesh_dirty_schedule_ok_n"))
-            if mesh_fly_spikes
-            else None
-        )
+        else None
+    )
+    # R3.7: true median includes zeros (previous med was ok>0 only).
+    cruise_schedule_ok_med = (
+        median(col(mesh_fly_spikes, "mesh_dirty_schedule_ok_n"))
+        if mesh_fly_spikes
+        else None
     )
     cruise_capture_retarget_med = (
         median(col(fly_spikes, "softdefer_capture_retarget_n"))
@@ -1443,6 +1445,13 @@ def analyze(
     wall_prep_share = (
         (prep_refresh_pressure_ms_med or 0) / wall_med_for_share
         if prep_refresh_pressure_ms_med is not None
+        else None
+    )
+    render_total_fly_med = median(col(fly_spikes, "render_total_ms")) if fly_spikes else None
+    input_ms_fly_med = median(col(fly_spikes, "input_ms")) if fly_spikes else None
+    wall_render_share = (
+        (render_total_fly_med or 0) / wall_med_for_share
+        if render_total_fly_med is not None
         else None
     )
     dark_face_stale_near_med = median(col(cruise_src, "dark_face_stale_near_n"))
@@ -1911,6 +1920,7 @@ def analyze(
             "cruise_softdefer_empty_med": cruise_softdefer_empty_med,
             "cruise_relight_completed_med": cruise_relight_completed_med,
             "cruise_schedule_ok_med": cruise_schedule_ok_med,
+            "cruise_schedule_ok_when_positive_med": cruise_schedule_ok_when_positive_med,
             "cruise_idle_spike_share": cruise_idle_spike_share,
             "mesh_schedule_retry_max": mesh_schedule_retry_max,
             "cruise_capture_retarget_med": cruise_capture_retarget_med,
@@ -1950,6 +1960,9 @@ def analyze(
             "wall_stream_share": wall_stream_share,
             "wall_emerge_share": wall_emerge_share,
             "wall_prep_share": wall_prep_share,
+            "wall_render_share": wall_render_share,
+            "input_ms_fly_med": input_ms_fly_med,
+            "render_total_fly_med": render_total_fly_med,
             "witness_latch_diet_frames": witness_latch_diet_frames,
             "witness_latch_diet_share": witness_latch_diet_share,
             "segment_fly_cruise_periods": segment_fly_cruise_periods,

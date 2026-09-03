@@ -50,17 +50,17 @@ inline int UnfinishedSampleCooldownFramesCruise(bool diet_cruise, int miss_horiz
   return UnfinishedSampleCooldownFrames(unfinished_visual);
 }
 
-/// R3.3: rim hole pressure — incremental signals without full ring walk.
+/// R3.3/R3.6: rim hole pressure — unfinished / no-mesh only.
+/// focus_dirty alone is remesh debt, not a hole (manual 085143 latch).
 inline bool ShouldComputeRimHolePressure(int miss_horiz, int unfinished_hint,
-                                         int focus_dirty_chunks,
+                                         int /*focus_dirty_chunks*/,
                                          int column_loaded_no_mesh_n)
 {
   if (miss_horiz < 3)
   {
     return false;
   }
-  return unfinished_hint > 0 || focus_dirty_chunks > 0 ||
-         column_loaded_no_mesh_n > 0;
+  return unfinished_hint > 0 || column_loaded_no_mesh_n > 0;
 }
 
 /// R3.3: exit rim perf diet when hole pressure or stale/rising focus debt.
