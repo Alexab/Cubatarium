@@ -2179,11 +2179,16 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
     ++held_age;
     // R4.3: protect-ring witness stuck in ticket-only Held with empty Dirty FM
     // → force MarkDirty so schedule→GPU finish can progress.
+    // R4.5.2: nh≤2 force Dirty even when dirty_fm_live>0 (only this coord).
+    const bool near_force_dirty =
+        MeshFocusValid && horiz <= 2 &&
+        (StarveRemeshForHoles || miss_or_focus) && held_age >= 4 &&
+        ShouldAdmitDirtyCoord(coord);
     const bool witness_protect =
         MeshFocusValid && horiz <= 4 &&
         (StarveRemeshForHoles || miss_or_focus) && dirty_fm_live == 0 &&
         held_age >= 4 && ShouldAdmitDirtyCoord(coord);
-    if (witness_protect && still_deferred)
+    if ((witness_protect || near_force_dirty) && still_deferred)
     {
       SoftDeferHeldAge.erase(coord);
       it = SoftDeferHeld.erase(it);
@@ -3486,17 +3491,28 @@ void UChunkMeshCache::NoteFmDirtyGpuScheduled(glm::ivec3 coord)
 
 void UChunkMeshCache::AgeFmDirtyGpuWatchFrames()
 {
+  constexpr int kOrphanRequeueAge = 16;
   for (auto it = FmDirtyGpuWatchAge_.begin(); it != FmDirtyGpuWatchAge_.end();)
   {
-    if (++it->second > kFmDirtyGpuWatchMaxAgeFrames)
+    ++it->second;
+    const glm::ivec3 coord = it->first;
+    if (it->second > kFmDirtyGpuWatchMaxAgeFrames)
     {
       ++FmDirtyGpuWatchTimeoutDelta_;
       it = FmDirtyGpuWatchAge_.erase(it);
+      continue;
     }
-    else
+    // R4.5.2: orphan watch with no pipeline owner — requeue Dirty, clear stall.
+    if (it->second >= kOrphanRequeueAge && !IsPendingGpuApply(coord) &&
+        !IsPendingGpuQueued(coord) &&
+        !(AsyncBuilder && AsyncBuilder->IsInFlight(coord)) &&
+        !Dirty.Contains(coord) && !HasDrawableGreedyMesh(coord))
     {
-      ++it;
+      MarkDirtyPriority(coord);
+      it = FmDirtyGpuWatchAge_.erase(it);
+      continue;
     }
+    ++it;
   }
 }
 
@@ -4211,8 +4227,14 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
                                       UBlockRegistry &registry,
                                       MeshBuildResult &&result)
 {
+  auto abandon_fm_watch = [&]()
+  {
+    // Orphan hygiene: drop watch without counting as GPU finish match.
+    FmDirtyGpuWatchAge_.erase(result.coord);
+  };
   if (!world.GetChunkManager().HasChunk(result.coord))
   {
+    abandon_fm_watch();
     return;
   }
   const uint64_t expected_revision = MeshRevisions.Current(result.coord);
@@ -4229,6 +4251,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       GreedyBatchesDirty = true;
       CrossBatchesDirty = true;
     }
+    abandon_fm_watch();
     return;
   }
   const MeshApplyRevDecision decision = ClassifyMeshApplyRevision(
@@ -4237,6 +4260,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   {
     // Older async result — keep Active tracking for the newer in-flight rev.
     ++MeshApplySupersededCount;
+    abandon_fm_watch();
     return;
   }
   if (decision == MeshApplyRevDecision::RemeshObsoleteTracked)
@@ -4250,6 +4274,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     InstancesDirty = true;
     GreedyBatchesDirty = true;
     CrossBatchesDirty = true;
+    abandon_fm_watch();
     return;
   }
 
@@ -5560,10 +5585,40 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
 
     // Pass 1: FirstMeshQ prefix only (dual-queue: remesh never scanned here).
     seg_t0 = std::chrono::high_resolution_clock::now();
-    const bool focus_missing_for_schedule =
-        MeshFocusValid &&
-        HasMissingGreedyMeshInHorizontalRadius(world, MeshFocusGroundChunk,
-                                               MeshFocusRadiusChunks);
+    // R4.5.1: reuse MissingMemo when same xz/radius (avoid second cold ForEach).
+    bool focus_missing_for_schedule = false;
+    if (MeshFocusValid)
+    {
+      if (MissingMemo.epoch == HoleQueryEpoch &&
+          MissingMemo.center.x == MeshFocusGroundChunk.x &&
+          MissingMemo.center.z == MeshFocusGroundChunk.z)
+      {
+        if (MissingMemo.radius == MeshFocusRadiusChunks)
+        {
+          focus_missing_for_schedule = MissingMemo.result;
+        }
+        else if (!MissingMemo.result &&
+                 MissingMemo.radius >= MeshFocusRadiusChunks)
+        {
+          focus_missing_for_schedule = false;
+        }
+        else if (MissingMemo.result &&
+                 MissingMemo.radius <= MeshFocusRadiusChunks)
+        {
+          focus_missing_for_schedule = true;
+        }
+        else
+        {
+          focus_missing_for_schedule = HasMissingGreedyMeshInHorizontalRadius(
+              world, MeshFocusGroundChunk, MeshFocusRadiusChunks);
+        }
+      }
+      else
+      {
+        focus_missing_for_schedule = HasMissingGreedyMeshInHorizontalRadius(
+            world, MeshFocusGroundChunk, MeshFocusRadiusChunks);
+      }
+    }
     // FZ2.7-P10: under holes PreferKick pending GPU in protect ring before new
     // FM Capture — finish slots, don't raise first_mesh_cap.
     if ((StarveRemeshForHoles || focus_missing_for_schedule) && MeshFocusValid)

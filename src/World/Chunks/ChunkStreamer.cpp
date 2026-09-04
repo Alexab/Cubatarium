@@ -134,6 +134,13 @@ bool UChunkStreamer::IsTerrainChunkCompleteCached(glm::ivec3 groundCoord)
   {
     return cached->second;
   }
+  // R4.5.1: procedurally sealed columns skip O(256×H) NeedsFill scan.
+  if (ProcedurallyGenerated.count(groundCoord) &&
+      AreTerrainColumnSlicesLoaded(World, groundCoord, MaxHeight))
+  {
+    TerrainCompleteCache.emplace(groundCoord, true);
+    return true;
+  }
   const bool complete =
       IsTerrainChunkComplete(World, groundCoord, MaxHeight);
   TerrainCompleteCache.emplace(groundCoord, complete);

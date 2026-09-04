@@ -307,6 +307,8 @@ struct FrameNumbers
   double prep_refresh_ring_resync_ms{0.0};
   double prep_refresh_vb_raw_ms{0.0};
   double prep_refresh_gap_ms{0.0};
+  double prep_refresh_camera_complete_ms{0.0};
+  double prep_refresh_body_ms{0.0};
   int focus_dirty_reconcile_delta{0};
   int rim_witness_latched{0};
   int rim_hole_pressure{0};
@@ -466,6 +468,7 @@ struct FrameNumbers
   int softdefer_empty_owned_n{0};
   uint64_t softdefer_empty_publish_avoided{0};
   int softdefer_held_n{0};
+  int softdefer_held_age_max{0};
   double rss_mb{0.0};
   double private_mb{0.0};
   int chunk_count{0};
@@ -813,6 +816,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.prep_refresh_ring_resync_ms = phys.PrepRefreshRingResyncMs;
   n.prep_refresh_vb_raw_ms = phys.PrepRefreshVbRawMs;
   n.prep_refresh_gap_ms = phys.PrepRefreshGapMs;
+  n.prep_refresh_camera_complete_ms = phys.PrepRefreshCameraCompleteMs;
+  n.prep_refresh_body_ms = phys.PrepRefreshBodyMs;
   n.focus_dirty_reconcile_delta = phys.FocusDirtyReconcileDelta;
   n.rim_witness_latched = phys.RimWitnessLatched;
   n.rim_hole_pressure = phys.RimHolePressure;
@@ -972,6 +977,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.softdefer_empty_owned_n = phys.SoftDeferEmptyOwnedN;
   n.softdefer_empty_publish_avoided = phys.SoftDeferEmptyPublishAvoided;
   n.softdefer_held_n = phys.SoftDeferHeldN;
+  n.softdefer_held_age_max = phys.SoftDeferHeldAgeMax;
   n.pending_cols = phys.PendingFocusCols;
   ++s.FramesSinceMemSample;
   if (s.FramesSinceMemSample >= 30)
@@ -1340,6 +1346,9 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.prep_refresh_ring_resync_ms
           << ",\"prep_refresh_vb_raw_ms\":" << n.prep_refresh_vb_raw_ms
           << ",\"prep_refresh_gap_ms\":" << n.prep_refresh_gap_ms
+          << ",\"prep_refresh_camera_complete_ms\":"
+          << n.prep_refresh_camera_complete_ms
+          << ",\"prep_refresh_body_ms\":" << n.prep_refresh_body_ms
           << ",\"focus_dirty_reconcile_delta\":" << n.focus_dirty_reconcile_delta
           << ",\"rim_witness_latched\":" << n.rim_witness_latched
           << ",\"rim_hole_pressure\":" << n.rim_hole_pressure
@@ -1525,6 +1534,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"softdefer_empty_publish_avoided\":"
           << n.softdefer_empty_publish_avoided
           << ",\"softdefer_held_n\":" << n.softdefer_held_n
+          << ",\"softdefer_held_age_max\":" << n.softdefer_held_age_max
           << ",\"rss_mb\":" << n.rss_mb << ",\"private_mb\":" << n.private_mb
           << ",\"chunk_count\":" << n.chunk_count
           << ",\"greedy_vertices\":" << n.greedy_vertices

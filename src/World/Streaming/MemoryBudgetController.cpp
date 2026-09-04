@@ -84,9 +84,21 @@ UMemoryBudgetController::Evaluate(const MemoryBudgetSample &sample,
   // Hitch gate (manual 085228): seconds-scale Capture while holes=1 and
   // memory_pressure stayed 0 — tighten Capture even under byte-budget Green.
   // FZ2.7-P10 / 091745: holes+hard_cap=1 zeroed Completed refill (cap med 1).
+  // R4.5.2: under ShedRim / protect nh≤4 keep capture floor≥2 so FM can finish.
   if (d.capture_hard_cap < 0 && sample.visual_holes > 0)
   {
-    d.capture_hard_cap = completed_starve ? 3 : 1;
+    const bool protect_near =
+        sample.ingress_debt_level ==
+            static_cast<int>(IngressDebtLevel::ShedRim) ||
+        (sample.miss_horiz >= 0 && sample.miss_horiz <= 4);
+    if (protect_near)
+    {
+      d.capture_hard_cap = completed_starve ? 3 : 2;
+    }
+    else
+    {
+      d.capture_hard_cap = completed_starve ? 3 : 1;
+    }
   }
   else if (d.capture_hard_cap < 0 &&
            sample.last_wall_ms >
@@ -99,8 +111,14 @@ UMemoryBudgetController::Evaluate(const MemoryBudgetSample &sample,
   // with capture_hard_cap=2 + hitch starved completed_n=0).
   if (d.capture_hard_cap < 0 && sample.pending_light_focus > 15)
   {
+    const bool protect_near =
+        sample.ingress_debt_level ==
+            static_cast<int>(IngressDebtLevel::ShedRim) ||
+        (sample.miss_horiz >= 0 && sample.miss_horiz <= 4);
     d.capture_hard_cap =
-        completed_starve ? 3 : (sample.visual_holes > 0 ? 1 : 2);
+        completed_starve
+            ? 3
+            : (sample.visual_holes > 0 ? (protect_near ? 2 : 1) : 2);
   }
   // Ring SLA guard: block keep expand under focus debt; do not shrink RD on
   // every hole frame (RD thrash → stream reload spikes / hang).

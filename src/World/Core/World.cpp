@@ -2055,8 +2055,11 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
       }
       const bool stale_o1 =
           probe.gpu_resident
-              ? IsMeshLightStaleGpu(true, probe.gpu_has_dark_face,
-                                    probe.meshed_light_rev, field_rev)
+              ? (horiz_from_focus <= 2
+                     // R4.5.2: near SoT ignores lone GpuHasDarkFace stickiness.
+                     ? IsMeshLightStale(probe.meshed_light_rev, field_rev)
+                     : IsMeshLightStaleGpu(true, probe.gpu_has_dark_face,
+                                          probe.meshed_light_rev, field_rev))
               : (probe.has_drawable &&
                  IsMeshLightStale(probe.meshed_light_rev, field_rev));
       if (probe.has_drawable && stale_o1)

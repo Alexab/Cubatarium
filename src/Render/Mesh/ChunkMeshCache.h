@@ -270,6 +270,16 @@ public:
   int QueryGreedyGpuQuadCount(glm::ivec3 chunk_coord) const;
   /// SoftDeferHeld side-set size (outside-focus !Drawable FirstMesh).
   size_t GetSoftDeferHeldCount() const { return SoftDeferHeld.size(); }
+  /// R4.5.2: max SoftDeferHeldAge across Held.
+  int GetSoftDeferHeldAgeMax() const
+  {
+    int max_age = 0;
+    for (const auto &kv : SoftDeferHeldAge)
+    {
+      max_age = std::max(max_age, kv.second);
+    }
+    return max_age;
+  }
   /// Era24 / Era50: SoftDeferHeld membership for Hide⇒Ticket ownership.
   bool IsSoftDeferHeld(glm::ivec3 chunk_coord) const
   {

@@ -156,6 +156,10 @@ private:
   int SoftDeferCapturePinMaxAge{8};
   /// I18-D1: hold prior column drawable briefly on witness column swap.
   WitnessSwapGrace WitnessColumnGrace{};
+  /// R4.5.1: same-frame camera-column complete (UpdateStreaming → Refresh).
+  glm::ivec3 LastCameraTerrainCompleteGround{INT32_MAX, 0, INT32_MAX};
+  bool LastCameraTerrainComplete{false};
+  int LastCameraTerrainCompleteFrame{-1};
 };
 
 } // namespace cutum

@@ -1377,14 +1377,21 @@ def analyze(
     ]
     prep_untagged_gap_med = median(prep_gap_vals) if prep_gap_vals else None
     prep_gap_honest_vals = []
+    gap_explained_vals = []
     for r in fly_spikes:
         gap = float(r.get("prep_refresh_gap_ms") or 0)
+        pressure = float(r.get("prep_refresh_pressure_ms") or 0)
         ring = float(r.get("prep_refresh_ring_resync_ms") or 0)
         vb_raw = float(r.get("prep_refresh_vb_raw_ms") or 0)
         if gap > 0.0:
             prep_gap_honest_vals.append(max(0.0, gap - ring - vb_raw))
+        if pressure > 0.0:
+            gap_explained_vals.append(max(0.0, 1.0 - (gap / pressure)))
     prep_gap_honest_med = (
         median(prep_gap_honest_vals) if prep_gap_honest_vals else None
+    )
+    gap_explained_med = (
+        median(gap_explained_vals) if gap_explained_vals else None
     )
     chain_stall_sec = _max_run_sec(
         lambda r: float(r.get("visible_black_focus_n") or 0) > 0
@@ -1979,6 +1986,7 @@ def analyze(
             "prep_untagged_gap_med": prep_untagged_gap_med,
             "prep_refresh_gap_ms": prep_untagged_gap_med,
             "prep_gap_honest_med": prep_gap_honest_med,
+            "gap_explained": gap_explained_med,
             "prep_refresh_pressure_ms": prep_refresh_pressure_ms_med,
             "chain_stall_sec": chain_stall_sec,
             "relight_apply_to_markrelit_med": relight_apply_to_markrelit_med,

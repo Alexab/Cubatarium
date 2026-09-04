@@ -1,8 +1,8 @@
-# Mesh R1.5 → SHIP — phase 4 audit (2026-09-04)
+# Mesh R1.5 → SHIP — phase 4.5 audit (2026-09-04)
 
 **Ветка:** `perf_opt18`  
-**База phase-3:** `6f01bbe7` / manual `202455` (wall≈329 / FPS≈3)  
-**Gate-of-record (post phase-4):** *pending manual 3 min*
+**База phase-4:** `868715bf` / manual `113457` (wall≈291 / stream≈180 / holes≈97%)  
+**Gate-of-record (post phase-4.5):** *pending manual 3 min*
 
 ---
 
@@ -11,75 +11,71 @@
 | Уровень | Статус | Комментарий |
 | --- | --- | --- |
 | **SHIP** | **NO-GO** | playable FPS / joint / manual gate-of-record не закрыты |
-| **R4.1 O(1) stale + Sync R≤2** | **LANDED** | column SoT без voxel walk; SyncFocusRing med≈0.5 ms; emerge↓ |
-| **R4.2 dual unfinished + cadence** | **LANDED** | post-load reuse unfinished keys; cruise unfinished defer |
-| **R4.3 protect-ring FM finish** | **LANDED code** | ShedRim protect; SoftDeferHeld→Dirty; PreferKick+2nd Consume |
-| **R4.4 verify** | **HARNESS DONE** | enter GO; trio done; **manual pending**; fm_finish still 0 on autofly |
+| **R4.5.1 refresh honesty + terrain-complete** | **LANDED** | gap double-count fix; camera-complete cache/reuse; sparse miss-pin; schedule memo; Body/Camera timers |
+| **R4.5.2 near-miss FM finish** | **LANDED code** | PreferKick/2nd Consume mh≤4; orphan watch hygiene; ShedRim capture floor≥2; near SoT ignore lone dark-face; SoftDeferHeld→Dirty nh≤2 |
+| **R4.5.3 verify** | **HARNESS PARTIAL** | enter GO; fly-heavy done; **manual pending**; fm_finish still 0 on autofly |
 
 ---
 
-## Baseline `202455` → phase-4 autofly
+## Baseline → phase-4.5 autofly
 
-| Метрика | `202455` manual | fz-cold-enter | trio fz-long | R4 target |
-| --- | ---: | ---: | ---: | ---: |
-| wall_fly / FPS | 329 / 3.0 | 314 / 3.2 | **111 / 9.0** | ≤66 / ≥15 |
-| stream | 181 | 155 | **28** | ≤90 (R4.2) |
-| emerge | 103 | **42** | **5.3** | ≤40 (R4.1) |
-| prep_other (abs) | ~77 | med≈14 | — | ≤15 |
-| SyncFocusRing | ~O(R²×512) | med **0.45 ms** | — | O(1) lookups |
-| holes | 81% | 33% | 67% | ≤60% (R4.3) |
-| fm_finish | 0 | 0 | 0 | >0 |
-| miss_stuck | 132s | 28s | **28s** | ≤60 |
+| Метрика | `202455` | `113457` | fz-cold-enter 4.5 | fly-heavy 4.5 | R4.5.1 target |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| wall_fly / FPS | 329 / 3.0 | 291 / 3.4 | 398 / — | 329 / — | ≤200 |
+| stream | 181 | 180 | 211 | 215 | ≤90 |
+| emerge | 103 | 42 | — | 135 | ≤40 |
+| prep_refresh / gap_explained | 78 / ~41% | 84 / ~21% | — / ~3%* | 95 / ~2%* | ≤35 / ≥70% |
+| camera_complete_ms | (in gap) | (in gap) | **≈0** | **≈0** | ≤2 |
+| holes | 81% | **97%** | 46% | 51% | ≤85% |
+| fm_finish | 0 | 0 | 0 | 0 | >0 (R4.5.2) |
+| enter_unfinished_max | — | — | **2** | 0 | ≤10 |
+
+\*Autofly: `camera_complete` уже O(1); residual gap всё ещё ≈pressure — следующий бисект (не terrain-complete).
 
 ---
 
-## Phase 4 sprint summary
+## Phase 4.5 sprint summary
 
-### R4.1 — Kill O(R²×voxel)
-- `GetColumnRenderableState`: `IsMeshLightStaleGpu` / `IsMeshLightStale` via `FillLitApplyMeshProbe`
-- `SyncFocusRingRadiusUnderDebt`: R≤2 under ShedFar / phase_over
-- Prep early-exit on exact ShedFar + running wall>12
-- Named: `PrepSyncFocusRingMs`, `PrepRecoverMs` → FramePerf JSON
+### R4.5.1 — Refresh honesty + terrain complete
+- `RingResyncMs`: только sticky full-walk (убран `+= unfinished`)
+- Same-frame `LastCameraTerrainComplete*` + public `IsTerrainChunkCompleteCached` (+ ProcedurallyGenerated fast-path)
+- Miss pin: sparse solid step-4; `FindNearest` только при `run_miss_probe`
+- Schedule HasMissing: MissingMemo reuse (xz/radius)
+- Unfinished cadence: mh∈[1,2] && !underfeet reuse 1–2f
+- Named: `PrepRefreshCameraCompleteMs`, `PrepRefreshBodyMs`; analyze `gap_explained`
 
-### R4.2 — Dual unfinished + cadence
-- `CountPostLoadRingNotReady`: reuse unfinished_keys Chebyshev≤4 on cruise
-- Cruise unfinished defer when diet + mh≥3 + reuse_age<6
-- `PrepRefreshHasMissingMs` on UpdateStreaming HasMissing trio
-
-### R4.3 — Protect-ring FM finish
-- `IsProtectRingFocusMiss` → ShedRim (VB latch + EvaluateIngressDebt + wall bump)
-- MemoryBudget `capture_hard_cap=1` only exact ShedFar **and** mh>4
-- SoftDeferHeld age≥4 + dirty_fm==0 + horiz≤4 → MarkDirtyPriority
-- PreferKick only if hole pending/queued; SoftDeferHeld backup MarkDirty
-- Second `ConsumeGpuApplyBacklog` after Rebuild for watches noted this frame
-- PrefetchAhead allowed under ShedRim (only ShedFar sheds)
+### R4.5.2 — Near-miss FM finish
+- PreferKick + 2nd Consume: `mh ∈ [0,4]`
+- `ApplyMeshResult` early-return: abandon FM watch; age≥16 orphan → MarkDirtyPriority
+- MemoryBudget: visual_holes + ShedRim/mh≤4 → `capture_hard_cap` floor **2**
+- `GetColumnRenderableState` nh≤2: stale = revision only (ignore lone `GpuHasDarkFace`)
+- SoftDeferHeld→Dirty nh≤2 even if `dirty_fm>0`; telem `softdefer_held_age_max`
 
 ### Enter guard
-- `mesh_phase4_fz_cold_enter.json`: **enter_unfinished_max=4 ≤10 → GO**
+- `mesh_phase45_fz_cold_enter.json`: **enter_unfinished_max=2 ≤10 → GO**
 
-### Trio autofly
+### Autofly (partial trio)
 
-| Report | holes | wall_fly / FPS | stream | emerge | fm_finish | diet | mismatch | miss_stuck |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| replay | 72% | 407 / 2.5 | 253 | 68 | 0 | 6.8% | 6.8% | 44s |
-| fly-heavy | 25% | 398 / 2.5 | 263 | 69 | 0 | 2.6% | 2.6% | 22s |
-| fz-long | 67% | **111 / 9.0** | **28** | **5.3** | 0 | 0.8% | 0.8% | **28s** |
+| Report | holes | wall_fly | stream | emerge | fm_finish | schedule_ok med |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| fz-cold-enter | 46% | 398 | 211 | — | 0 | — |
+| fly-heavy | 51% | 329 | 215 | 135 | 0 | **7** |
 
 ### Phase gates
 
 | Gate | Best evidence | Result |
 | --- | --- | --- |
-| fz-cold-enter | enter_max=4 | **GO** |
+| fz-cold-enter | enter_max=2 | **GO** |
 | MESH-R26-completion | autofly fm_finish | **NO-GO** (0) |
-| MESH-R30-fps | fz-long wall 111 / fps 9 | **NO-GO** (need ≤66 / ≥15) |
-| MESH-SHIP-joint | all trio | **NO-GO** |
+| MESH-R30-fps | fly-heavy wall 329 | **NO-GO** |
+| MESH-SHIP-joint | autofly | **NO-GO** |
 
-**Чтение:** алгоритмический FPS-рычаг сработал на calm long cruise (stream 28, emerge 5, wall≈111). Short replay/fly-heavy всё ещё stream-bound (~250 ms). Protect-ring ownership в коде, но autofly `fm_finish` ещё 0 — нужен manual gate-of-record.
+**Чтение:** R4.5 убрал ложный gap double-count и сделал camera-complete бесплатным; stream wall на short autofly ещё не сдвинулся. Finish-path код для nh≤2 landed; нужен **manual 3 min** vs `113457`.
 
 ---
 
 ## Next step
 
-1. **User:** manual fly ~3 min → analyze → обновить gate-of-record
-2. Если fm_finish=0 на manual: добить SoftDeferHeld witness / empty_fm ownership
-3. Camera sub-step по-прежнему запрещён пока wall_med>66
+1. **User:** manual fly ~3 min → analyze → обновить gate-of-record vs `113457`/`202455`
+2. Если gap_explained&lt;70% на manual: бисект residual Refresh untimed (не terrain-complete)
+3. Camera sub-step по-прежнему запрещён пока wall_med&gt;66

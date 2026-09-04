@@ -163,12 +163,15 @@ public:
     return LastFrameStats;
   }
 
+  /// Cached terrain-column complete (invalidated on commit). R4.5.1 public for
+  /// Refresh / UpdateStreaming camera-complete reuse.
+  bool IsTerrainChunkCompleteCached(glm::ivec3 groundCoord);
+
 private:
   bool EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync = false,
                          bool *out_async_queued = nullptr);
   bool AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord, int max_sub_columns,
                                       bool only_empty_columns);
-  bool IsTerrainChunkCompleteCached(glm::ivec3 groundCoord);
   void InvalidateTerrainCompleteCache(glm::ivec3 groundCoord);
   void UnloadDistantChunks(glm::ivec3 centerChunk, glm::ivec3 feetBlockPos,
                            const glm::vec3 &eyePos, const PlayerCapsule &cap);

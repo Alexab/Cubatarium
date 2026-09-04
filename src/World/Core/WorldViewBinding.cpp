@@ -851,6 +851,7 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.StickyErasePrunedFarN = 0;
   PhysicsTelemetryData.StickyEraseRemeshCommitN = 0;
   PhysicsTelemetryData.StickyEraseOtherN = 0;
+  PhysicsTelemetryData.SoftDeferHeldAgeMax = 0;
   PhysicsTelemetryData.MeshEmergeMs = 0.0;
   PhysicsTelemetryData.MeshEmergePrepMs = 0.0;
   PhysicsTelemetryData.MeshEmergePrepMissingMs = 0.0;
@@ -877,6 +878,12 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.PrepRefreshDirtyMs = 0.0;
   PhysicsTelemetryData.PrepRefreshPressureEvalMs = 0.0;
   PhysicsTelemetryData.PrepRefreshUnderfeetProbeMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshRingResyncMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshVbRawMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshGapMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshHasMissingMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshCameraCompleteMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshBodyMs = 0.0;
   PhysicsTelemetryData.FocusDirtyReconcileDelta = 0;
   PhysicsTelemetryData.RimWitnessLatched = 0;
   PhysicsTelemetryData.RimHolePressure = 0;

@@ -1382,6 +1382,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
 
   phys_telem.SoftDeferHeldN =
       static_cast<int>(mesh_service.GetSoftDeferHeldCount());
+  phys_telem.SoftDeferHeldAgeMax =
+      mesh_service.GetCache().GetSoftDeferHeldAgeMax();
   // Feet-column need only — missing/pending in r=1 neighbors must not boost
   // Immediate/schedule on the player column (manual 175310 two-chunk flicker).
   const bool missing_feet_column =
@@ -4365,8 +4367,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       consume_gpu = std::max(consume_gpu, 4);
       consume_budget = std::max(consume_budget, 6.0);
     }
-    // R3.7/R4.3: PreferKick only when miss-coord already pending/queued.
-    if (missing_visible_mesh && nearest_miss_h >= 3 &&
+    // R4.5.2: PreferKick for near-miss band mh∈[0,4] (was mh≥3; nh≤2 silent).
+    const bool near_miss_finish =
+        missing_visible_mesh && nearest_miss_h >= 0 && nearest_miss_h <= 4;
+    if (near_miss_finish &&
         (pending_gpu_n > 0 || mesh_service.GetPendingGpuQueuedCount() > 0))
     {
       consume_gpu = std::max(consume_gpu, 4);
@@ -4648,8 +4652,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         /*force_sync=*/false, /*max_sync_rebuild=*/0, sync_budget_ms,
         /*skip_gpu_consume=*/true);
     tick_stats.Completed += gpu_consume_done;
-    // R4.3: same-frame second Consume for watches noted during Rebuild.
-    if (missing_visible_mesh && nearest_miss_h >= 3)
+    // R4.5.2: same-frame second Consume for watches noted during Rebuild.
+    if (missing_visible_mesh && nearest_miss_h >= 0 && nearest_miss_h <= 4)
     {
       const int watches =
           mesh_service.GetCache().GetFmDirtyGpuWatchCount();

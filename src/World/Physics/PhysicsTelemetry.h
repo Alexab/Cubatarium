@@ -137,6 +137,8 @@ struct PhysicsTelemetry
   uint64_t SoftDeferEmptyPublishAvoided{0};
   /// SoftDeferHeld side-set size (outside-focus !Drawable FirstMesh).
   int SoftDeferHeldN{0};
+  /// R4.5.2: max SoftDeferHeldAge across Held set.
+  int SoftDeferHeldAgeMax{0};
   double RelightCompletedPerSec{0.0};
   double CommitPhysicsMs{0.0};
   double CommitRelightMs{0.0};
@@ -320,7 +322,7 @@ struct PhysicsTelemetry
   double PrepRefreshDirtyMs{0.0};
   double PrepRefreshPressureEvalMs{0.0};
   double PrepRefreshUnderfeetProbeMs{0.0};
-  /// I14b-A: ring sample miss (sticky/pending/unfinished full rescan).
+  /// I14b-A: ring sample miss (sticky full-walk only; not unfinished).
   double PrepRefreshRingResyncMs{0.0};
   /// I14b-A: CountVisibleBlackFocusMeshes full scan only.
   double PrepRefreshVbRawMs{0.0};
@@ -328,6 +330,10 @@ struct PhysicsTelemetry
   double PrepRefreshGapMs{0.0};
   /// R4.2: HasMissingGreedyMesh walks in UpdateStreaming.
   double PrepRefreshHasMissingMs{0.0};
+  /// R4.5.1: camera-column IsTerrainChunkComplete (Refresh).
+  double PrepRefreshCameraCompleteMs{0.0};
+  /// R4.5.1: Refresh body between unfinished and darkface (VB / pressure latch).
+  double PrepRefreshBodyMs{0.0};
   /// I12-A7: focus dirty ring cache reconcile drift (audit).
   int FocusDirtyReconcileDelta{0};
   /// I12-A0: rim witness latched without visual holes.

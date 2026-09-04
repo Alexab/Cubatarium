@@ -600,6 +600,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   pt.PrepRefreshRingResyncMs = 0.0;
   pt.PrepRefreshVbRawMs = 0.0;
   pt.PrepRefreshGapMs = 0.0;
+  pt.PrepRefreshCameraCompleteMs = 0.0;
+  pt.PrepRefreshBodyMs = 0.0;
   // PrepRefreshHasMissingMs latched in UpdateStreaming (before Refresh).
   pt.RimWitnessLatched = 0;
   pt.FocusDirtyReconcileDelta = 0;
@@ -701,11 +703,18 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       {
         return false;
       }
-      for (const BlockId block : ch->GetData())
+      // R4.5.1: sparse solid probe (same step-4 as HasMissing) — avoid O(16³).
+      for (int z = 0; z < CHUNK_SIZE; z += 4)
       {
-        if (block != BLOCK_AIR)
+        for (int x = 0; x < CHUNK_SIZE; x += 4)
         {
-          return true;
+          for (int y = 0; y < CHUNK_SIZE; y += 4)
+          {
+            if (ch->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+            {
+              return true;
+            }
+          }
         }
       }
       return false;
@@ -715,7 +724,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       miss_coord = pinned;
       found = true;
     }
-    if (!found &&
+    // R4.5.1: when miss probe is throttled, keep pin — do not FindNearest.
+    if (!found && run_miss_probe &&
         world.GetMeshService().FindNearestMissingGreedyMesh(
             world.GetBlockWorld(), focus_ground, miss_probe_radius, miss_coord))
     {
@@ -808,9 +818,29 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   }
   pt.PrepRefreshMissMs = lap_ms(miss_t0);
   const glm::ivec3 camera_ground(focus_horiz.x, 0, focus_horiz.z);
-  const bool incomplete_camera_column =
-      !IsTerrainChunkComplete(world.GetBlockWorld(), camera_ground,
-                              world.GetProceduralSettings().MaxHeight);
+  const auto camera_complete_t0 = std::chrono::high_resolution_clock::now();
+  bool incomplete_camera_column = false;
+  if (LastCameraTerrainCompleteFrame == StreamingFrameCounter &&
+      LastCameraTerrainCompleteGround == camera_ground)
+  {
+    incomplete_camera_column = !LastCameraTerrainComplete;
+  }
+  else if (Streamer)
+  {
+    const bool complete =
+        Streamer->IsTerrainChunkCompleteCached(camera_ground);
+    LastCameraTerrainCompleteGround = camera_ground;
+    LastCameraTerrainComplete = complete;
+    LastCameraTerrainCompleteFrame = StreamingFrameCounter;
+    incomplete_camera_column = !complete;
+  }
+  else
+  {
+    incomplete_camera_column =
+        !IsTerrainChunkComplete(world.GetBlockWorld(), camera_ground,
+                                world.GetProceduralSettings().MaxHeight);
+  }
+  pt.PrepRefreshCameraCompleteMs = lap_ms(camera_complete_t0);
   const glm::ivec2 under_xz(focus_horiz.x, focus_horiz.z);
   const auto underfeet_probe_t0 = std::chrono::high_resolution_clock::now();
   int band_min_y = std::max(0, focus_block.y - CHUNK_SIZE);
@@ -991,9 +1021,14 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   }
   // R3.6: do not force every-frame unfinished walk on rim_hole_pressure —
   // heal still sees pressure via admission; scan cadence is diet/telemetry.
+  // R4.5.1: under mh∈[1,2] && !underfeet, reuse unfinished 1–2 frames (cadence
+  // only — do not starve mh==0 / underfeet / capture backlog).
+  const bool near_mh_unfinished_reuse =
+      in.visual_holes && miss_horiz >= 1 && miss_horiz <= 2 &&
+      !pending_underfeet && !missing_underfeet && unfinished_reuse_age < 2;
   bool force_full_unfinished =
-      !diet_cruise_cadence_final || in.visual_holes || pending_underfeet ||
-      capture_backlog;
+      !diet_cruise_cadence_final || pending_underfeet || capture_backlog ||
+      (in.visual_holes && !near_mh_unfinished_reuse);
   const bool unfinished_sample_due = --unfinished_sample_cd <= 0;
   // R4.2: under calm cruise rim, reuse unfinished sample for K frames before
   // another full R_stream walk (cruise_scan_fast is computed later; use diet).
@@ -1008,7 +1043,19 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     focus_pressure = unfinished_visual;
     unfinished_sample_cd = 0;
     unfinished_reuse_age = 0;
-    pt.PrepRefreshRingResyncMs += lap_ms(unfinished_t0);
+  }
+  else if (near_mh_unfinished_reuse)
+  {
+    unfinished_visual = last_unfinished_visual;
+    ++unfinished_reuse_age;
+    unfinished_sample_cd = 2;
+    focus_pressure =
+        pending_light_focus +
+        (focus_dirty_chunks > 0 ? std::min(focus_dirty_chunks, 8) : 0);
+    if (focus_pressure < unfinished_visual)
+    {
+      focus_pressure = unfinished_visual;
+    }
   }
   else if (unfinished_sample_due && cruise_unfinished_defer)
   {
@@ -1039,7 +1086,6 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
                          diet_cruise_cadence_final, miss_horiz,
                          unfinished_visual)
                    : UnfinishedSampleCooldownFrames(unfinished_visual));
-    pt.PrepRefreshRingResyncMs += lap_ms(unfinished_t0);
   }
   else if (ShouldReuseUnfinishedVisualSample(diet_cruise_cadence_final,
                                              in.visual_holes, rim_hole_pressure,
@@ -1081,6 +1127,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       !ShouldExitRimPerfDiet(rim_hole_pressure, unfinished_reuse_age,
                              focus_pressure_rising);
   pt.PrepRefreshUnfinishedMs = lap_ms(unfinished_t0);
+  const auto body_t0 = std::chrono::high_resolution_clock::now();
   world.SetLastUnfinishedVisualSample(unfinished_visual);
   last_softdefer_witness_retarget =
       world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
@@ -1243,6 +1290,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   const bool rim_cruise_fast = rim_scan_ok;
   const bool pressure_cruise_fast = rim_scan_ok;
   const bool cruise_scan_fast = pressure_cruise_fast || rim_cruise_fast;
+  pt.PrepRefreshBodyMs = lap_ms(body_t0);
   // Actual baked-dark vertices near camera (not PendingLight proxy).
   // Split stale (mesh dark, field lit) vs void-edge (both 0) for ARCH_D3.
   if (!cruise_scan_fast)
@@ -1434,18 +1482,18 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   }
   pt.PrepRefreshPressureMs = lap_ms(refresh_t0);
   {
+    // R4.5.1: RingResyncMs is sticky full-walk only (no unfinished double-count).
+    // BodyMs covers VB+latch after unfinished; do not also subtract VbRaw.
     const double sticky_excl =
         std::max(0.0, pt.PrepRefreshStickyMs - pt.PrepRefreshRingResyncMs);
-    const double vb_overhead =
-        std::max(0.0, pt.PrepRefreshVbMs - pt.PrepRefreshVbRawMs);
     pt.PrepRefreshGapMs =
         pt.PrepRefreshPressureMs -
         (pt.PrepRefreshMissMs + pt.PrepRefreshPendingMs + sticky_excl +
          pt.PrepRefreshUnfinishedMs + pt.PrepRefreshRingResyncMs +
-         pt.PrepRefreshVbRawMs + vb_overhead + pt.PrepRefreshDarkfaceMs +
-         pt.PrepRefreshFacingMs + pt.PrepRefreshUnderfeetMs +
-         pt.PrepRefreshDirtyMs + pt.PrepRefreshPressureEvalMs +
-         pt.PrepRefreshUnderfeetProbeMs);
+         pt.PrepRefreshDarkfaceMs + pt.PrepRefreshFacingMs +
+         pt.PrepRefreshUnderfeetMs + pt.PrepRefreshDirtyMs +
+         pt.PrepRefreshPressureEvalMs + pt.PrepRefreshUnderfeetProbeMs +
+         pt.PrepRefreshCameraCompleteMs + pt.PrepRefreshBodyMs);
     // PrepRefreshHasMissingMs is UpdateStreaming HasMissing (outside Refresh);
     // reported separately for stream attribution, not subtracted from gap.
     pt.PrepRefreshGapMs = std::max(0.0, pt.PrepRefreshGapMs);
@@ -1554,9 +1602,23 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     bool incomplete_camera_column = false;
     {
       // Only the camera column completeness gates underfeet commit pressure.
-      const int max_y = procedural.MaxHeight;
       const glm::ivec3 camera_ground(focus_horiz.x, 0, focus_horiz.z);
-      if (!IsTerrainChunkComplete(world.BlockWorld, camera_ground, max_y))
+      if (LastCameraTerrainCompleteFrame == StreamingFrameCounter &&
+          LastCameraTerrainCompleteGround == camera_ground)
+      {
+        incomplete_camera_column = !LastCameraTerrainComplete;
+      }
+      else if (Streamer)
+      {
+        const bool complete =
+            Streamer->IsTerrainChunkCompleteCached(camera_ground);
+        LastCameraTerrainCompleteGround = camera_ground;
+        LastCameraTerrainComplete = complete;
+        LastCameraTerrainCompleteFrame = StreamingFrameCounter;
+        incomplete_camera_column = !complete;
+      }
+      else if (!IsTerrainChunkComplete(world.BlockWorld, camera_ground,
+                                       procedural.MaxHeight))
       {
         incomplete_camera_column = true;
       }
@@ -4006,9 +4068,23 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         meshService.HasMissingGreedyMeshInHorizontalRadius(
             world.GetBlockWorld(), feet_chunk, focus_radius);
     const glm::ivec3 camera_ground(focus_horiz.x, 0, focus_horiz.z);
-    const bool incomplete_camera_column =
-        !IsTerrainChunkComplete(world.GetBlockWorld(), camera_ground,
-                                procedural.MaxHeight);
+    const bool incomplete_camera_column = [&]() -> bool
+    {
+      bool complete = false;
+      if (Streamer)
+      {
+        complete = Streamer->IsTerrainChunkCompleteCached(camera_ground);
+      }
+      else
+      {
+        complete = IsTerrainChunkComplete(world.GetBlockWorld(), camera_ground,
+                                          procedural.MaxHeight);
+      }
+      LastCameraTerrainCompleteGround = camera_ground;
+      LastCameraTerrainComplete = complete;
+      LastCameraTerrainCompleteFrame = StreamingFrameCounter;
+      return !complete;
+    }();
     // ColPipe: feet column only (r=0 mesh + feet pending). Neighbor r=1 must
     // not latch underfeet_need (manual 205129 need=1 forever on cold enter).
     const bool missing_feet_mesh =
