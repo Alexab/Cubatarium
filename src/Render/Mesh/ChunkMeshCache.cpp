@@ -3,6 +3,7 @@
 #include "Render/Camera/Frustum.h"
 #include "Render/Engine/DistanceFog.h"
 #include "Render/Mesh/AsyncMeshBuilder.h"
+#include "World/Diagnostics/Profile.h"
 #include "Render/Mesh/ChunkMeshRevisionRegistry.h"
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "Render/Mesh/CrossInstanceCollector.h"
@@ -1666,16 +1667,7 @@ int UChunkMeshCache::CountDirtyWithinHorizontalRadius(
     }
     return FocusDirtyCachedCount_;
   }
-  int count = 0;
-  for (const glm::ivec3 &coord : Dirty)
-  {
-    const int dx = std::abs(coord.x - center_chunk.x);
-    const int dz = std::abs(coord.z - center_chunk.z);
-    if (std::max(dx, dz) <= radius_chunks)
-    {
-      ++count;
-    }
-  }
+  int count = Dirty.CountWithinHorizontalRadius(center_chunk, radius_chunks);
   SeedFocusDirtyRingCache(center_chunk, radius_chunks, count);
   FocusDirtyReconcileCd_ = 32;
   return count;
@@ -1730,14 +1722,8 @@ void UChunkMeshCache::ReconcileFocusDirtyRingCache() const
   {
     return;
   }
-  int count = 0;
-  for (const glm::ivec3 &coord : Dirty)
-  {
-    if (CoordInFocusDirtyQuery(coord))
-    {
-      ++count;
-    }
-  }
+  const int count = Dirty.CountWithinHorizontalRadius(FocusDirtyQueryCenter_,
+                                                      FocusDirtyQueryRadius_);
   LastFocusDirtyReconcileDelta_ =
       std::abs(count - FocusDirtyCachedCount_);
   FocusDirtyCachedCount_ = count;
@@ -2885,7 +2871,8 @@ void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
       {
         continue;
       }
-      const GreedyBatchRef ref{entry.first, static_cast<uint16_t>(i)};
+      const GreedyBatchRef ref{entry.first, static_cast<uint16_t>(i),
+                              chunk_batch.blockId};
       if (chunk_batch.Transparent)
       {
         GreedyTransparentRefs.push_back(ref);
@@ -3017,7 +3004,8 @@ void UChunkMeshCache::RebuildFlatGreedyFromVisibilityMask(
       {
         continue;
       }
-      const GreedyBatchRef ref{entries[i].coord, static_cast<uint16_t>(bi)};
+      const GreedyBatchRef ref{entries[i].coord, static_cast<uint16_t>(bi),
+                              chunk_batch.blockId};
       if (chunk_batch.Transparent)
       {
         GreedyTransparentRefs.push_back(ref);
@@ -3040,6 +3028,7 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
                                              const glm::mat4 &viewProj,
                                              const glm::vec3 &cameraPos)
 {
+  CUBA_ZONE("UpdateVisibleInstances");
   (void)viewProj;
   const float maxCullDistance = MaxCullDistance();
   const glm::ivec3 camera_chunk =

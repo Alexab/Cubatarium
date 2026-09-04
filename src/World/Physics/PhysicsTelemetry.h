@@ -299,6 +299,8 @@ struct PhysicsTelemetry
   double MeshEmergePrepStickyMs{0.0};
   double MeshEmergePrepDropDirtyMs{0.0};
   double MeshEmergePrepOtherMs{0.0};
+  /// Perf-root P1: explicit prep self (total - accounted); OtherMs aliases this.
+  double MeshEmergePrepSelfMs{0.0};
   /// R4.1: SyncFocusRing + recover inside emerge prep.
   double PrepSyncFocusRingMs{0.0};
   double PrepRecoverMs{0.0};
@@ -327,13 +329,24 @@ struct PhysicsTelemetry
   /// I14b-A: CountVisibleBlackFocusMeshes full scan only.
   double PrepRefreshVbRawMs{0.0};
   /// I14b-A: PrepRefreshPressureMs minus sum(sub-timers).
+  /// Deprecated alias kept for JSON compat; prefer PrepRefreshSelfMs.
   double PrepRefreshGapMs{0.0};
+  /// Perf-root P1: explicit parent self-time (total - accounted children).
+  double PrepRefreshSelfMs{0.0};
   /// R4.2: HasMissingGreedyMesh walks in UpdateStreaming.
   double PrepRefreshHasMissingMs{0.0};
   /// R4.5.1: camera-column IsTerrainChunkComplete (Refresh).
   double PrepRefreshCameraCompleteMs{0.0};
   /// R4.5.1: Refresh body between unfinished and darkface (VB / pressure latch).
   double PrepRefreshBodyMs{0.0};
+  /// Scene draw sub-timers (inside scene_ms / DrawCubeGeometry).
+  double SceneFilterReadyMs{0.0};
+  double SceneOpaqueSortMs{0.0};
+  double SceneOpaqueDrawMs{0.0};
+  double SceneDepthCaptureMs{0.0};
+  double SceneTransparentMs{0.0};
+  double SceneOverlaysMs{0.0};
+  double SceneSelfMs{0.0};
   /// I12-A7: focus dirty ring cache reconcile drift (audit).
   int FocusDirtyReconcileDelta{0};
   /// I12-A0: rim witness latched without visual holes.

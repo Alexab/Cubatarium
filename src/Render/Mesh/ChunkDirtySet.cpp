@@ -161,6 +161,61 @@ void UChunkDirtySet::EnsureUnified() const
   UnifiedDirty = false;
 }
 
+void UChunkDirtySet::NoteColumnAdd(glm::ivec3 coord)
+{
+  const uint64_t key = (static_cast<uint64_t>(static_cast<uint32_t>(coord.x))
+                        << 32) |
+                       static_cast<uint32_t>(coord.z);
+  ColumnCounts[key] += 1;
+}
+
+void UChunkDirtySet::NoteColumnRemove(glm::ivec3 coord)
+{
+  const uint64_t key = (static_cast<uint64_t>(static_cast<uint32_t>(coord.x))
+                        << 32) |
+                       static_cast<uint32_t>(coord.z);
+  const auto it = ColumnCounts.find(key);
+  if (it == ColumnCounts.end())
+  {
+    return;
+  }
+  if (--it->second <= 0)
+  {
+    ColumnCounts.erase(it);
+  }
+}
+
+int UChunkDirtySet::CountWithinHorizontalRadius(glm::ivec3 center_chunk,
+                                                int radius_chunks) const
+{
+  if (radius_chunks < 0)
+  {
+    return 0;
+  }
+  int count = 0;
+  for (int dx = -radius_chunks; dx <= radius_chunks; ++dx)
+  {
+    for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
+    {
+      if (std::max(std::abs(dx), std::abs(dz)) > radius_chunks)
+      {
+        continue;
+      }
+      const int x = center_chunk.x + dx;
+      const int z = center_chunk.z + dz;
+      const uint64_t key =
+          (static_cast<uint64_t>(static_cast<uint32_t>(x)) << 32) |
+          static_cast<uint32_t>(z);
+      const auto it = ColumnCounts.find(key);
+      if (it != ColumnCounts.end())
+      {
+        count += it->second;
+      }
+    }
+  }
+  return count;
+}
+
 void UChunkDirtySet::MarkDirty(glm::ivec3 coord)
 {
   // Already FirstMesh debt — do not demote.
@@ -173,12 +228,14 @@ void UChunkDirtySet::MarkDirty(glm::ivec3 coord)
     return;
   }
   RemeshQ.push_back(coord);
+  NoteColumnAdd(coord);
   InvalidateUnified();
 }
 
 void UChunkDirtySet::MarkDirtyPriority(glm::ivec3 coord)
 {
-  if (RemeshSet.erase(coord) > 0)
+  const bool was_remesh = RemeshSet.erase(coord) > 0;
+  if (was_remesh)
   {
     RemeshQ.erase(std::remove(RemeshQ.begin(), RemeshQ.end(), coord),
                   RemeshQ.end());
@@ -191,6 +248,10 @@ void UChunkDirtySet::MarkDirtyPriority(glm::ivec3 coord)
   else
   {
     FirstMeshSet.insert(coord);
+    if (!was_remesh)
+    {
+      NoteColumnAdd(coord);
+    }
   }
   FirstMeshQ.insert(FirstMeshQ.begin(), coord);
   InvalidateUnified();
@@ -213,6 +274,7 @@ void UChunkDirtySet::Erase(glm::ivec3 coord)
   }
   if (erased)
   {
+    NoteColumnRemove(coord);
     InvalidateUnified();
   }
 }
@@ -224,6 +286,7 @@ void UChunkDirtySet::Clear()
   FirstMeshSet.clear();
   RemeshSet.clear();
   Queue.clear();
+  ColumnCounts.clear();
   UnifiedDirty = false;
 }
 
@@ -242,6 +305,7 @@ UChunkDirtySet::iterator UChunkDirtySet::RemoveAt(iterator it)
     RemeshQ.erase(std::remove(RemeshQ.begin(), RemeshQ.end(), coord),
                   RemeshQ.end());
   }
+  NoteColumnRemove(coord);
   auto next = Queue.erase(it);
   // Unified still matches except removed element — keep valid.
   return next;

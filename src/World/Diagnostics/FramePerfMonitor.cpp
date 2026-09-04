@@ -330,6 +330,14 @@ struct FrameNumbers
   double prep_refresh_ring_resync_ms{0.0};
   double prep_refresh_vb_raw_ms{0.0};
   double prep_refresh_gap_ms{0.0};
+  double prep_refresh_self_ms{0.0};
+  double mesh_emerge_prep_self_ms{0.0};
+  double scene_filter_ready_ms{0.0};
+  double scene_opaque_draw_ms{0.0};
+  double scene_depth_capture_ms{0.0};
+  double scene_transparent_ms{0.0};
+  double scene_overlays_ms{0.0};
+  double scene_self_ms{0.0};
   double prep_refresh_camera_complete_ms{0.0};
   double prep_refresh_body_ms{0.0};
   int focus_dirty_reconcile_delta{0};
@@ -840,6 +848,14 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.prep_refresh_ring_resync_ms = phys.PrepRefreshRingResyncMs;
   n.prep_refresh_vb_raw_ms = phys.PrepRefreshVbRawMs;
   n.prep_refresh_gap_ms = phys.PrepRefreshGapMs;
+  n.prep_refresh_self_ms = phys.PrepRefreshSelfMs;
+  n.mesh_emerge_prep_self_ms = phys.MeshEmergePrepSelfMs;
+  n.scene_filter_ready_ms = phys.SceneFilterReadyMs;
+  n.scene_opaque_draw_ms = phys.SceneOpaqueDrawMs;
+  n.scene_depth_capture_ms = phys.SceneDepthCaptureMs;
+  n.scene_transparent_ms = phys.SceneTransparentMs;
+  n.scene_overlays_ms = phys.SceneOverlaysMs;
+  n.scene_self_ms = phys.SceneSelfMs;
   n.prep_refresh_camera_complete_ms = phys.PrepRefreshCameraCompleteMs;
   n.prep_refresh_body_ms = phys.PrepRefreshBodyMs;
   n.focus_dirty_reconcile_delta = phys.FocusDirtyReconcileDelta;
@@ -1371,6 +1387,14 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.prep_refresh_ring_resync_ms
           << ",\"prep_refresh_vb_raw_ms\":" << n.prep_refresh_vb_raw_ms
           << ",\"prep_refresh_gap_ms\":" << n.prep_refresh_gap_ms
+          << ",\"prep_refresh_self_ms\":" << n.prep_refresh_self_ms
+          << ",\"mesh_emerge_prep_self_ms\":" << n.mesh_emerge_prep_self_ms
+          << ",\"scene_filter_ready_ms\":" << n.scene_filter_ready_ms
+          << ",\"scene_opaque_draw_ms\":" << n.scene_opaque_draw_ms
+          << ",\"scene_depth_capture_ms\":" << n.scene_depth_capture_ms
+          << ",\"scene_transparent_ms\":" << n.scene_transparent_ms
+          << ",\"scene_overlays_ms\":" << n.scene_overlays_ms
+          << ",\"scene_self_ms\":" << n.scene_self_ms
           << ",\"prep_refresh_camera_complete_ms\":"
           << n.prep_refresh_camera_complete_ms
           << ",\"prep_refresh_body_ms\":" << n.prep_refresh_body_ms

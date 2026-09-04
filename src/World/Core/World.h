@@ -1601,6 +1601,9 @@ private:
   mutable VisibleBlackFocusSample LastVisibleBlackFocusSample{};
   /// Same-frame focus-ring sample for Coordinator (Phase B).
   mutable FocusRingVisualSample LastFocusRingVisualSample{};
+  /// Perf-root P2: per-frame memo for IsChunkSliceRenderReady (draw path).
+  mutable uint64_t SliceReadyMemoEpoch{UINT64_MAX};
+  mutable std::unordered_map<glm::ivec3, bool, IVec3Hash> SliceReadyMemo;
   std::vector<AdmitFocusMarkRange> AdmitFocusMarkBuffer_;
   uint64_t StreamingFrameEpoch{0};
   uint64_t PhysicsTickCounter{0};

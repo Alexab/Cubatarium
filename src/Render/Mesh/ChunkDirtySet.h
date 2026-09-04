@@ -3,7 +3,9 @@
 
 #include "World/Chunks/ChunkManager.h"
 #include <glm/glm.hpp>
+#include <cstdint>
 #include <functional>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -112,9 +114,15 @@ public:
     return RemeshQ;
   }
 
+  /// Perf-root P2: O(R²) column-index lookup instead of O(|Dirty|) scan.
+  int CountWithinHorizontalRadius(glm::ivec3 center_chunk,
+                                  int radius_chunks) const;
+
 private:
   void InvalidateUnified() const { UnifiedDirty = true; }
   void EnsureUnified() const;
+  void NoteColumnAdd(glm::ivec3 coord);
+  void NoteColumnRemove(glm::ivec3 coord);
 
   std::vector<glm::ivec3> FirstMeshQ;
   std::vector<glm::ivec3> RemeshQ;
@@ -123,6 +131,8 @@ private:
   /// Lazy concat FirstMeshQ + RemeshQ for legacy iterators.
   mutable std::vector<glm::ivec3> Queue;
   mutable bool UnifiedDirty{true};
+  /// Packed (x,z) → dirty chunk count in that column (all cy).
+  std::unordered_map<uint64_t, int> ColumnCounts;
 };
 
 } // namespace cutum

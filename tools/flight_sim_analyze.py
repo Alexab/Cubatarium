@@ -1380,6 +1380,43 @@ def analyze(
         if float(r.get("prep_refresh_gap_ms") or 0) > 0.0
     ]
     prep_untagged_gap_med = median(prep_gap_vals) if prep_gap_vals else None
+    # Prefer explicit self_ms when present (perf-root P1); fall back to gap.
+    refresh_self_ratios = []
+    scene_self_ratios = []
+    for r in fly_spikes:
+        pressure = float(r.get("prep_refresh_pressure_ms") or 0)
+        self_ms = float(
+            r.get("prep_refresh_self_ms")
+            if r.get("prep_refresh_self_ms") is not None
+            else (r.get("prep_refresh_gap_ms") or 0)
+        )
+        if pressure > 1.0:
+            refresh_self_ratios.append(self_ms / pressure)
+        scene = float(r.get("scene_ms") or 0)
+        scene_self = float(r.get("scene_self_ms") or 0)
+        if scene > 1.0 and r.get("scene_self_ms") is not None:
+            scene_self_ratios.append(scene_self / scene)
+    attribution_refresh_self_ratio = (
+        median(refresh_self_ratios) if refresh_self_ratios else None
+    )
+    attribution_scene_self_ratio = (
+        median(scene_self_ratios) if scene_self_ratios else None
+    )
+    # Soft policy-budget check (tools/check_policy_budgets.py).
+    policy_budget_ok = True
+    try:
+        import subprocess as _sp
+        from pathlib import Path as _P
+
+        _chk = _P(__file__).resolve().parent / "check_policy_budgets.py"
+        if _chk.exists():
+            _rc = _sp.call(
+                [sys.executable, str(_chk), "--quiet"],
+                cwd=str(_chk.parent.parent),
+            )
+            policy_budget_ok = _rc == 0
+    except Exception:
+        policy_budget_ok = True
     prep_gap_honest_vals = []
     gap_explained_vals = []
     for r in fly_spikes:
@@ -1619,6 +1656,8 @@ def analyze(
     gates["prep_untagged_gap_le_35"] = (
         prep_untagged_gap_med is None or prep_untagged_gap_med <= 35.0
     )
+    # Soft policy-budget check (tools/check_policy_budgets.py).
+    gates["policy_headers_have_budget"] = policy_budget_ok
     # Light-debt holes with miss=0 (land-cruise L1–L4 nh_no_miss 0.39–0.65).
     gates["nh_no_miss_rate_le_025"] = nh_no_miss_rate <= 0.25
     gates_pass_count = sum(1 for v in gates.values() if v)
@@ -1775,6 +1814,19 @@ def analyze(
         "holes_rate_raw": holes_rate,
         "mesh_async_stuck_sec": mesh_async_stuck_sec,
         "cold_relight_holes_sec": cold_relight_holes_sec,
+        # Perf-root P4: FPS + attribution milestones (promote to hard when green).
+        "wall_ms_fly_le_33": wall_fly_med is not None and wall_fly_med <= 33.0,
+        "wall_ms_fly_le_16_6": wall_fly_med is not None and wall_fly_med <= 16.6,
+        "attribution_refresh_self_ratio": attribution_refresh_self_ratio,
+        "attribution_refresh_self_ratio_le_0_10": (
+            attribution_refresh_self_ratio is None
+            or attribution_refresh_self_ratio <= 0.10
+        ),
+        "attribution_scene_self_ratio": attribution_scene_self_ratio,
+        "attribution_scene_self_ratio_le_0_10": (
+            attribution_scene_self_ratio is None
+            or attribution_scene_self_ratio <= 0.10
+        ),
         # Era18 P0 report-only (hard floors land in P1/P2).
         "vb_without_pending_light_focus_sec": vb_without_pending_light_focus_sec,
         "relight_drain_near_zero_while_vb_sec": relight_drain_near_zero_while_vb_sec,

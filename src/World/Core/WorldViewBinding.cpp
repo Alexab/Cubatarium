@@ -881,6 +881,14 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.PrepRefreshRingResyncMs = 0.0;
   PhysicsTelemetryData.PrepRefreshVbRawMs = 0.0;
   PhysicsTelemetryData.PrepRefreshGapMs = 0.0;
+  PhysicsTelemetryData.PrepRefreshSelfMs = 0.0;
+  PhysicsTelemetryData.MeshEmergePrepSelfMs = 0.0;
+  PhysicsTelemetryData.SceneFilterReadyMs = 0.0;
+  PhysicsTelemetryData.SceneOpaqueDrawMs = 0.0;
+  PhysicsTelemetryData.SceneDepthCaptureMs = 0.0;
+  PhysicsTelemetryData.SceneTransparentMs = 0.0;
+  PhysicsTelemetryData.SceneOverlaysMs = 0.0;
+  PhysicsTelemetryData.SceneSelfMs = 0.0;
   PhysicsTelemetryData.PrepRefreshHasMissingMs = 0.0;
   PhysicsTelemetryData.PrepRefreshCameraCompleteMs = 0.0;
   PhysicsTelemetryData.PrepRefreshBodyMs = 0.0;

@@ -26,6 +26,7 @@
 #include "ThirdParty/stb_image.h"
 #include "World/Core/World.h"
 #include "World/Diagnostics/FramePerfMonitor.h"
+#include "World/Diagnostics/Profile.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "WorldGen/Core/ProceduralSettings.h"
@@ -389,6 +390,7 @@ void UWindowManager::Run()
     }
 
     // Rendering
+    CUBA_FRAME_MARK;
     const auto render_begin = std::chrono::high_resolution_clock::now();
     Render();
     if (World)

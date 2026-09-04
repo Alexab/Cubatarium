@@ -21,6 +21,7 @@ void UChunk::ResetForReuse(glm::ivec3 chunkCoord)
   LightData.fill(0);
   LightFieldRevision = 0;
   Dirty = true;
+  NonAirCount = 0;
 }
 
 int UChunk::LocalIndex(glm::ivec3 local)
@@ -45,7 +46,25 @@ void UChunk::SetBlockLocal(glm::ivec3 local, BlockId Id)
   {
     return;
   }
-  Data[static_cast<size_t>(LocalIndex(local))] = Id;
+  const size_t idx = static_cast<size_t>(LocalIndex(local));
+  const BlockId prev = Data[idx];
+  if (prev == Id)
+  {
+    return;
+  }
+  Data[idx] = Id;
+  if (prev == BLOCK_AIR && Id != BLOCK_AIR)
+  {
+    ++NonAirCount;
+  }
+  else if (prev != BLOCK_AIR && Id == BLOCK_AIR)
+  {
+    --NonAirCount;
+    if (NonAirCount < 0)
+    {
+      NonAirCount = 0;
+    }
+  }
   if (Id == BLOCK_AIR)
   {
     ClearFluidLocal(local);

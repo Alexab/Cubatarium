@@ -45,6 +45,24 @@ if(CUBATARIUM_ENABLE_TSAN)
     endif()
 endif()
 
+option(CUBATARIUM_ENABLE_TRACY "Embed Tracy profiler client (zones + FrameMark)" OFF)
+if(CUBATARIUM_ENABLE_TRACY)
+    include(FetchContent)
+    set(TRACY_ENABLE ON CACHE BOOL "" FORCE)
+    set(TRACY_ON_DEMAND ON CACHE BOOL "" FORCE)
+    set(TRACY_CALLSTACK ON CACHE BOOL "" FORCE)
+    # Avoid Tracy GUI / capture tools in the game target; client only.
+    set(TRACY_STATIC ON CACHE BOOL "" FORCE)
+    FetchContent_Declare(
+        tracy
+        GIT_REPOSITORY https://github.com/wolfpld/tracy.git
+        GIT_TAG v0.11.1
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(tracy)
+    message(STATUS "CUBATARIUM_ENABLE_TRACY=ON — TracyClient linked into Cubatarium")
+endif()
+
 include(${CMAKE_SOURCE_DIR}/cmake/GetVersionFromGit.cmake)
 cubatarium_resolve_version(CUBATARIUM_VERSION_STRING)
 set(CUBATARIUM_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
@@ -2361,6 +2379,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     nlohmann_json::nlohmann_json
     glog::glog
 )
+
+if(CUBATARIUM_ENABLE_TRACY)
+    target_link_libraries(${PROJECT_NAME} PRIVATE TracyClient)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE CUBATARIUM_ENABLE_TRACY)
+endif()
 
 if(WIN32)
     target_compile_definitions(${PROJECT_NAME} PRIVATE "WIN32" GLEW_STATIC)

@@ -11,6 +11,7 @@
 #include "WorldGen/Core/IUChunkPopulator.h"
 #include "World/Chunks/ChunkManager.h"
 #include <chrono>
+#include <climits>
 #include <deque>
 #include <glm/glm.hpp>
 #include <memory>
@@ -160,6 +161,39 @@ private:
   glm::ivec3 LastCameraTerrainCompleteGround{INT32_MAX, 0, INT32_MAX};
   bool LastCameraTerrainComplete{false};
   int LastCameraTerrainCompleteFrame{-1};
+
+  /// Perf-root P3: explicit cadence state (was function-static locals).
+  struct RefreshProbeState
+  {
+    int miss_probe_cd{0};
+    bool last_missing_near{false};
+    int miss_positive_hold{0};
+    glm::ivec2 last_sticky_focus_xz{INT_MAX, INT_MAX};
+    int last_sticky_keep_cols{-1};
+    int unfinished_reuse_age{0};
+    int prev_focus_pressure{0};
+    int focus_dirty_sample_cd{0};
+    int last_focus_dirty{0};
+    glm::ivec3 last_dirty_focus{0};
+    int last_dirty_radius{-1};
+    int unfinished_sample_cd{0};
+    int last_unfinished_visual{0};
+    glm::ivec3 last_unfinished_focus{0};
+    int last_unfinished_radius{-1};
+    int visible_black_sample_cd{0};
+    int vb_published{0};
+    int vb_pending_raw{0};
+    int vb_pending_stable{0};
+    int last_visible_black_no_ticket{0};
+    int last_visible_black_progress{0};
+    int last_visible_black_stalled{0};
+    int vb_focus_stable_frames{0};
+    int facing_sample_cd{0};
+    int last_ahead{0};
+    int last_behind{0};
+    bool uf_predicted_latched{false};
+    int uf_predicted_hold{0};
+  } RefreshProbe{};
 };
 
 } // namespace cutum

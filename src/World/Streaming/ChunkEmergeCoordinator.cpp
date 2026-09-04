@@ -1,4 +1,5 @@
 #include "World/Streaming/ChunkEmergeCoordinator.h"
+#include "World/Diagnostics/Profile.h"
 #include "World/Streaming/ColumnFlowScheduler.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/ColumnJobGraph.h"
@@ -150,6 +151,7 @@ void UChunkEmergeCoordinator::BeginFrame(const ProceduralSettings &procedural,
 void UChunkEmergeCoordinator::TickMeshEmerge(
     UWorld &world, const StreamingPressureCaps &pressure)
 {
+  CUBA_ZONE("ChunkEmerge.TickMeshEmerge");
   const auto emerge_t0 = std::chrono::high_resolution_clock::now();
   auto prep_ms_since =
       [](std::chrono::high_resolution_clock::time_point t0) -> double
@@ -3297,8 +3299,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                              prep_dirty_count_ms + prep_black_sticky_ms +
                              prep_column_flow_drain_ms +
                              prep_sync_focus_ring_ms + prep_recover_ms;
-    pt.MeshEmergePrepOtherMs =
+    pt.MeshEmergePrepSelfMs =
         std::max(0.0, pt.MeshEmergePrepMs - accounted);
+    // Compat alias for existing JSON consumers.
+    pt.MeshEmergePrepOtherMs = pt.MeshEmergePrepSelfMs;
     pt.PrepAdmissionMs = prep_admission_ms;
     pt.PrepScheduleClampMs = prep_schedule_clamp_ms;
     pt.PrepSoftdeferPolicyMs = prep_softdefer_policy_ms;

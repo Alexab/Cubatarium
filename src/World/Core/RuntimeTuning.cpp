@@ -2,6 +2,7 @@
 
 #include "World/Physics/FluidTuning.h"
 
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -447,9 +448,31 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   {
     t.Fz2LitRingSeed = j.value("fz2_lit_ring_seed", t.Fz2LitRingSeed);
   }
+  if (j.contains("stream_simple"))
+  {
+    t.StreamSimple = j.value("stream_simple", t.StreamSimple);
+  }
   last_path = path;
   last_mtime = mtime;
   have_mtime = true;
+}
+
+void URuntimeTuning::ApplyEnvOverrides()
+{
+  URuntimeTuning &t = Get();
+  if (const char *env = std::getenv("CUBA_STREAM_SIMPLE"))
+  {
+    if (env[0] == '1' || env[0] == 't' || env[0] == 'T' || env[0] == 'y' ||
+        env[0] == 'Y')
+    {
+      t.StreamSimple = true;
+    }
+    else if (env[0] == '0' || env[0] == 'f' || env[0] == 'F' ||
+             env[0] == 'n' || env[0] == 'N')
+    {
+      t.StreamSimple = false;
+    }
+  }
 }
 
 } // namespace cutum

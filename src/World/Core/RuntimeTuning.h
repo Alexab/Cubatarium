@@ -151,12 +151,18 @@ struct URuntimeTuning
   /// FZ2.2-C1a: lit-ring seed duplicate Enqueue+Note on terrain commit (false = off).
   bool Fz2LitRingSeed{false};
 
+  /// Perf-root P3: disable diet/cadence/witness-pin heuristics for A/B.
+  /// Env CUBA_STREAM_SIMPLE=1 or streaming_tune.json "stream_simple": true.
+  bool StreamSimple{false};
+
   static URuntimeTuning &Get();
   static void ResetToDefaults();
   /// Apply low|med|high preset (keeps other knobs unless tier sets them).
   static void ApplyMemoryTier(const char *tier);
   /// Overlay knobs from bin/streaming_tune.json (flight_sim_iterate).
   static void LoadStreamingTuneFile(const char *path);
+  /// Apply CUBA_STREAM_SIMPLE / related env overrides (call after LoadStreamingTuneFile).
+  static void ApplyEnvOverrides();
 };
 
 } // namespace cutum

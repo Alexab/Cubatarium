@@ -1,4 +1,5 @@
 #pragma once
+// BUDGET_MS: 0.0  // perf-root P4: measure via Tracy; kill-switch required for new heuristics
 
 #include "World/Streaming/VisualStagePolicy.h"
 

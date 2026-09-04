@@ -4,6 +4,8 @@
 #include "Render/Mesh/GpuMeshPipeline.h"
 #include "Render/Mesh/GpuMeshSlotAllocator.h"
 #include "World/Core/WorldLoadDiagnostics.h"
+#include "World/Diagnostics/Profile.h"
+#include "World/Diagnostics/ScopedPhase.h"
 #include "Blocks/BlockRegistry.h"
 #include "App/Settings/GraphicsQualityProfile.h"
 #include "Creatures/Core/Creature.h"
@@ -54,6 +56,11 @@
 #include "WorldGen/Sampling/BiomeRegistry.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <iostream>
+#include <unordered_map>
+#include <vector>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -570,7 +577,13 @@ void UGeometryEngine::Paint(int width_size, int height_size,
 
 void UGeometryEngine::DrawCubeGeometry()
 {
+  CUBA_ZONE("DrawCubeGeometry");
   auto t_begin = std::chrono::high_resolution_clock::now();
+  double filter_ms = 0.0;
+  double opaque_ms = 0.0;
+  double depth_ms = 0.0;
+  double transparent_ms = 0.0;
+  double overlays_ms = 0.0;
 
   auto camera = WorldRenderReadModel
                     ? WorldRenderReadModel->GetCurrentUserCamera()
@@ -623,9 +636,10 @@ void UGeometryEngine::DrawCubeGeometry()
 
   if (useGreedyMesh)
   {
+    // Shared ready memo across opaque+transparent (World also memos per frame).
+    std::unordered_map<int64_t, bool> ready_cache;
     auto filter_render_ready_refs = [&](const std::vector<GreedyBatchRef> &in)
     {
-      std::unordered_map<int64_t, bool> ready_cache;
       std::vector<GreedyBatchRef> out;
       out.reserve(in.size());
       for (const GreedyBatchRef &ref : in)
@@ -657,10 +671,14 @@ void UGeometryEngine::DrawCubeGeometry()
         mesh_service->PrepareGreedyDraw(WorldInstance->GetBlockWorld(),
                                         WorldInstance->GetBlockRegistry(),
                                         camera);
-    std::vector<GreedyBatchRef> filtered_opaque =
-        filter_render_ready_refs(draw.opaqueCutoutRefs);
-    std::vector<GreedyBatchRef> filtered_transparent =
-        filter_render_ready_refs(draw.transparentRefs);
+    std::vector<GreedyBatchRef> filtered_opaque;
+    std::vector<GreedyBatchRef> filtered_transparent;
+    {
+      ScopedPhase filter_phase(&filter_ms);
+      CUBA_ZONE("Scene.FilterReady");
+      filtered_opaque = filter_render_ready_refs(draw.opaqueCutoutRefs);
+      filtered_transparent = filter_render_ready_refs(draw.transparentRefs);
+    }
     {
       auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
       phys.OpaqueRefsCpuVis =
@@ -678,25 +696,39 @@ void UGeometryEngine::DrawCubeGeometry()
       BlockBatchesValid = true;
     }
     const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
-    DrawGreedyOpaqueBatches(draw.cache, opaqueCutoutRefs, vp,
-                            camera->GetPosition(), textures,
-                            draw.meshRevision, draw.cullRevision);
-    DrawCrossInstancedBatches(draw.crossBatches, vp, textures,
+    {
+      ScopedPhase opaque_phase(&opaque_ms);
+      CUBA_ZONE("Scene.OpaqueDraw");
+      DrawGreedyOpaqueBatches(draw.cache, opaqueCutoutRefs, vp,
+                              camera->GetPosition(), textures,
                               draw.meshRevision, draw.cullRevision);
-    OpaqueDepthCapture.CaptureFromDefaultFramebuffer();
+      DrawCrossInstancedBatches(draw.crossBatches, vp, textures,
+                                draw.meshRevision, draw.cullRevision);
+    }
+    // Skip full-FB depth copy when nothing transparent needs soft particles.
+    if (!filtered_transparent.empty())
+    {
+      ScopedPhase depth_phase(&depth_ms);
+      CUBA_ZONE("Scene.DepthCapture");
+      OpaqueDepthCapture.CaptureFromDefaultFramebuffer();
+    }
     GLboolean blendWasEnabled;
     glGetBooleanv(GL_BLEND, &blendWasEnabled);
     GLboolean cullWasEnabled;
     glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
-    GreedyTransparentDrawContext tctx{draw.cache,
-                                      filtered_transparent,
-                                      vp,
-                                      draw.meshRevision,
-                                      draw.cullRevision,
-                                      camera->GetPosition(),
-                                      WorldInstance->GetBlockRegistry(),
-                                      textures};
-    UGreedyTransparentPipeline::Draw(*this, tctx);
+    {
+      ScopedPhase transparent_phase(&transparent_ms);
+      CUBA_ZONE("Scene.Transparent");
+      GreedyTransparentDrawContext tctx{draw.cache,
+                                        filtered_transparent,
+                                        vp,
+                                        draw.meshRevision,
+                                        draw.cullRevision,
+                                        camera->GetPosition(),
+                                        WorldInstance->GetBlockRegistry(),
+                                        textures};
+      UGreedyTransparentPipeline::Draw(*this, tctx);
+    }
     if (cullWasEnabled)
     {
       glEnable(GL_CULL_FACE);
@@ -742,34 +774,38 @@ void UGeometryEngine::DrawCubeGeometry()
     RenderBatches(dummy_mvp);
   }
 
-  RenderSelectionOutline();
-  RenderBlockCrackOverlay();
-  if (WorldInstance)
   {
-    if (auto break_camera = WorldInstance->GetCurrentUserCamera())
+    ScopedPhase overlays_phase(&overlays_ms);
+    CUBA_ZONE("Scene.Overlays");
+    RenderSelectionOutline();
+    RenderBlockCrackOverlay();
+    if (WorldInstance)
     {
-      const glm::mat4 view = break_camera->GetViewMatrix();
-      const glm::mat4 proj = break_camera->GetProjection();
-      const glm::mat4 view_inv = glm::inverse(view);
-      const glm::vec3 camera_right = glm::normalize(glm::vec3(view_inv[0]));
-      const glm::vec3 camera_up = glm::normalize(glm::vec3(view_inv[1]));
-      const float dt = static_cast<float>(break_camera->GetDeltaTime());
-      BlockBreakFx.UpdateAndRender(*WorldInstance, dt, proj * view,
-                                   camera_right, camera_up);
+      if (auto break_camera = WorldInstance->GetCurrentUserCamera())
+      {
+        const glm::mat4 view = break_camera->GetViewMatrix();
+        const glm::mat4 proj = break_camera->GetProjection();
+        const glm::mat4 view_inv = glm::inverse(view);
+        const glm::vec3 camera_right = glm::normalize(glm::vec3(view_inv[0]));
+        const glm::vec3 camera_up = glm::normalize(glm::vec3(view_inv[1]));
+        const float dt = static_cast<float>(break_camera->GetDeltaTime());
+        BlockBreakFx.UpdateAndRender(*WorldInstance, dt, proj * view,
+                                     camera_right, camera_up);
+      }
     }
-  }
-  RenderBiomeDebugOverlay();
-  if (WorldInstance)
-  {
-    CreatureDraw_.Render(*WorldInstance, *this, Render);
-    SetInfluenceFxWorld(WorldInstance.get());
-    UInfluenceFxSystem::Get().RegisterSink();
-    if (auto camera = WorldInstance->GetCurrentUserCamera())
+    RenderBiomeDebugOverlay();
+    if (WorldInstance)
     {
-      const glm::mat4 view_proj =
-          camera->GetProjection() * camera->GetViewMatrix();
-      InfluenceFx.UpdateAndRender(view_proj,
-                                  static_cast<float>(camera->GetDeltaTime()));
+      CreatureDraw_.Render(*WorldInstance, *this, Render);
+      SetInfluenceFxWorld(WorldInstance.get());
+      UInfluenceFxSystem::Get().RegisterSink();
+      if (auto camera = WorldInstance->GetCurrentUserCamera())
+      {
+        const glm::mat4 view_proj =
+            camera->GetProjection() * camera->GetViewMatrix();
+        InfluenceFx.UpdateAndRender(view_proj,
+                                    static_cast<float>(camera->GetDeltaTime()));
+      }
     }
   }
 
@@ -778,6 +814,19 @@ void UGeometryEngine::DrawCubeGeometry()
   auto t_end = std::chrono::high_resolution_clock::now();
   DurationDrawSceneMks =
       std::chrono::duration<double, std::micro>(t_end - t_begin).count();
+  if (WorldInstance)
+  {
+    auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+    phys.SceneFilterReadyMs = filter_ms;
+    phys.SceneOpaqueDrawMs = opaque_ms;
+    phys.SceneDepthCaptureMs = depth_ms;
+    phys.SceneTransparentMs = transparent_ms;
+    phys.SceneOverlaysMs = overlays_ms;
+    const double total_ms = DurationDrawSceneMks / 1000.0;
+    const double accounted =
+        filter_ms + opaque_ms + depth_ms + transparent_ms + overlays_ms;
+    phys.SceneSelfMs = std::max(0.0, total_ms - accounted);
+  }
 }
 
 void UGeometryEngine::ShowTransientMessage(const std::string &msg,
@@ -1727,15 +1776,10 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
   // Sort by blockId so MDI can MultiDraw contiguous same-texture runs.
   // sort_revision=1 invalidates pre-sort pool layouts (was always 0).
   constexpr uint64_t kBlockIdSortRev = 1;
-  auto by_block_id = [&](const GreedyBatchRef &ra, const GreedyBatchRef &rb)
+  auto by_block_id = [](const GreedyBatchRef &ra, const GreedyBatchRef &rb)
   {
-    const GreedyMeshBatch *a = cache.TryGetGreedyBatch(ra);
-    const GreedyMeshBatch *b = cache.TryGetGreedyBatch(rb);
-    if (!a || !b)
-    {
-      return a != nullptr;
-    }
-    return a->blockId < b->blockId;
+    // Perf-root P2: blockId cached on ref — no GreedyCache.find per compare.
+    return ra.blockId < rb.blockId;
   };
 
   auto *mdi = mdi_indirect_cull

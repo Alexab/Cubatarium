@@ -1863,12 +1863,29 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
   {
     return false;
   }
+  if (SliceReadyMemoEpoch != StreamingFrameEpoch)
+  {
+    SliceReadyMemoEpoch = StreamingFrameEpoch;
+    SliceReadyMemo.clear();
+  }
+  {
+    const auto it = SliceReadyMemo.find(chunk_coord);
+    if (it != SliceReadyMemo.end())
+    {
+      return it->second;
+    }
+  }
+  auto memo = [&](bool ready) -> bool
+  {
+    SliceReadyMemo.emplace(chunk_coord, ready);
+    return ready;
+  };
   // P0 sticky: live lit GPU always draws until a lit replacement binds —
   // must win even when CPU SoftDefer/empty left Satisfying false.
   if (MeshService->GetCache().HasLiveGpuDraw(chunk_coord) &&
       !MeshService->GetCache().ChunkHasFullyDarkFace(chunk_coord))
   {
-    return true;
+    return memo(true);
   }
   // ColdFix P3 / CheapRemesh C5: LitDrawable keep live GPU opaque while
   // FullyDark — repair ticket optional (anti blink hide↔show).
@@ -1882,7 +1899,7 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
     if (ShouldKeepLiveGpuOpaqueDespiteFullyDark(true, horiz,
                                                 /*has_repair_progress=*/false))
     {
-      return true;
+      return memo(true);
     }
   }
   if (MeshService->HasMeshSatisfyingColumnReady(chunk_coord))
@@ -1900,7 +1917,7 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
          MeshService->IsPendingGpuApply(chunk_coord) ||
          MeshService->HasInflightMeshBuild(chunk_coord)))
     {
-      return true;
+      return memo(true);
     }
     // LitRing: FullyDark in LitDrawable/underfeet → hole until lit drawable.
     // Cave true-dark only via OpenSky settle.
@@ -1912,7 +1929,7 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
       if (!ShouldHideFullyDarkOverLiveGpu(
               MeshService->GetCache().HasLiveGpuDraw(chunk_coord), horiz, true))
       {
-        return true;
+        return memo(true);
       }
       if (ShouldHideFullyDarkUntilLitInRing(horiz, true, pending))
       {
@@ -1925,25 +1942,19 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
             open_sky, pending, lit_ready, stale, /*has_lit_drawable=*/false);
         if (!true_dark)
         {
-          return false;
+          return memo(false);
         }
       }
     }
-    return true;
+    return memo(true);
   }
   const UChunk *chunk = BlockWorld.GetChunkManager().GetChunk(chunk_coord);
   if (!chunk)
   {
-    return false;
+    return memo(false);
   }
-  for (const BlockId block : chunk->GetData())
-  {
-    if (block != BLOCK_AIR)
-    {
-      return false; // solid without mesh — not ready
-    }
-  }
-  return true; // air-only slice: nothing to draw
+  // Perf-root P2: O(1) air-only flag — no 4096-voxel scan on draw path.
+  return memo(chunk->IsAirOnly());
 }
 
 ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) const

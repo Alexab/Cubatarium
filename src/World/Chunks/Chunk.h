@@ -35,6 +35,10 @@ public:
     return FluidData;
   }
 
+  /// O(1) air-only query — maintained on SetBlockLocal / ResetForReuse.
+  bool IsAirOnly() const { return NonAirCount == 0; }
+  int GetNonAirCount() const { return NonAirCount; }
+
   uint8_t GetLightPackedLocal(glm::ivec3 local) const;
   int GetSkyLightLocal(glm::ivec3 local) const;
   int GetBlockLightLocal(glm::ivec3 local) const;
@@ -60,6 +64,8 @@ private:
   std::array<uint8_t, CHUNK_VOLUME> LightData{};
   uint64_t LightFieldRevision{0};
   bool Dirty{true};
+  /// Count of non-air blocks; IsAirOnly() when zero (avoids 4096-voxel scans).
+  int NonAirCount{0};
 };
 
 } // namespace cutum
