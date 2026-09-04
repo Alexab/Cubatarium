@@ -3,7 +3,7 @@
 | Field | Value |
 | --- | --- |
 | Date | 2026-09-04 |
-| HEAD | phase 4.5 R4.5.1–R4.5.2 (pending commit) |
+| HEAD | `cacb73b4` (phase 4.5 R4.5.1–R4.5.2) |
 | Branch | `perf_opt18` |
 | Status | **R4.5.1–R4.5.2 LANDED · enter GO · autofly still stream-bound · manual gate pending · SHIP NO-GO** |
 
