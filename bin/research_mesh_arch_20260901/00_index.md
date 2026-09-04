@@ -3,7 +3,7 @@
 | Field | Value |
 | --- | --- |
 | Date | 2026-09-04 |
-| HEAD | *phase-4 uncommitted → commit after docs* |
+| HEAD | `868715bf` (phase 4 R4.1–R4.3) |
 | Branch | `perf_opt18` |
 | Status | **R4.1–R4.3 LANDED · harness DONE · manual gate pending · SHIP NO-GO** |
 
