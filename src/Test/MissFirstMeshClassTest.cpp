@@ -2476,10 +2476,17 @@ int main()
     Expect(RelightWitnessPinHoldFrames >= 48, "FP1: witness hold age extended");
     using cutum::ShouldExtendWitnessPinHold;
     using cutum::ShouldKickMissWitnessPin;
-    Expect(ShouldExtendWitnessPinHold(200, true), "FP-A3: pinned_still extends hold");
+    Expect(ShouldExtendWitnessPinHold(47, true),
+           "FP-A3: pinned_still extends hold before hard expire");
+    Expect(!ShouldExtendWitnessPinHold(48, true),
+           "R4.6.2: hard expire wins over pinned_still");
     Expect(!ShouldExtendWitnessPinHold(200, false), "FP-A3: age-only release");
-    Expect(ShouldExtendWitnessPinHold(200, false, RelightWitnessPinHoldFrames, 3, true),
-           "I10-B3: vb rising extends hold");
+    Expect(ShouldExtendWitnessPinHold(20, false, RelightWitnessPinHoldFrames, 3,
+                                      true),
+           "I10-B3: vb rising extends hold before hard expire");
+    Expect(!ShouldExtendWitnessPinHold(200, false, RelightWitnessPinHoldFrames, 3,
+                                       true),
+           "R4.6.2: vb rising does not beat hard expire");
     Expect(ShouldKickMissWitnessPin(200, 0, 150, false),
            "I18-P2: stuck miss kicks pin on stand");
     Expect(!ShouldKickMissWitnessPin(200, 0, 150, true),
@@ -2497,6 +2504,10 @@ int main()
            "R3.6: focus_dirty alone is not hole pressure");
     Expect(ShouldComputeRimHolePressure(3, 0, 0, 2),
            "R3.6: column_no_mesh triggers hole pressure");
+    Expect(ShouldComputeRimHolePressure(3, 0, 0, 0, true),
+           "R4.6.2: focus_missing mh=3 is rim hole pressure");
+    Expect(!ShouldComputeRimHolePressure(5, 0, 0, 0, true),
+           "R4.6.2: focus_missing beyond mh4 needs unfinished/no_mesh");
     Expect(ShouldExitRimPerfDiet(true, 0, false), "R3.3: hole pressure exits diet");
     Expect(!ShouldExitRimPerfDiet(false, 10, false),
            "R3.3: young reuse keeps diet");
@@ -2582,6 +2593,10 @@ int main()
            "FP-D3: block witness retarget when pin+hold");
     Expect(!ShouldBlockWitnessCaptureRetarget(true, true, true, true),
            "arch: underfeet miss allows retarget");
+    Expect(!ShouldBlockWitnessCaptureRetarget(true, true, true, false, false, 48),
+           "R4.6.2: hard expire unblocks pinned_still retarget");
+    Expect(ShouldBlockWitnessCaptureRetarget(true, true, true, false, false, 47),
+           "R4.6.2: before hard expire pinned_still still blocks");
     using cutum::ShouldConsumeTicketedVbDebtHigh;
     Expect(ShouldConsumeTicketedVbDebtHigh(12, 81),
            "FP-E0: high VB debt consume when nt>=10");

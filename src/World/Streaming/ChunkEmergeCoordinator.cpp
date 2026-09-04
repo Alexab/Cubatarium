@@ -4367,9 +4367,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       consume_gpu = std::max(consume_gpu, 4);
       consume_budget = std::max(consume_budget, 6.0);
     }
-    // R4.5.2: PreferKick for near-miss band mh∈[0,4] (was mh≥3; nh≤2 silent).
+    // R4.5.2 / R4.6.2: PreferKick for near-miss band mh∈[0,4] even when
+    // VisualHoles crisis telem is 0 (rim mh=3 FocusMissing).
     const bool near_miss_finish =
-        missing_visible_mesh && nearest_miss_h >= 0 && nearest_miss_h <= 4;
+        (missing_visible_mesh ||
+         world.GetPhysicsTelemetry().FocusMissingMesh > 0) &&
+        nearest_miss_h >= 0 && nearest_miss_h <= 4;
     if (near_miss_finish &&
         (pending_gpu_n > 0 || mesh_service.GetPendingGpuQueuedCount() > 0))
     {
@@ -4652,8 +4655,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         /*force_sync=*/false, /*max_sync_rebuild=*/0, sync_budget_ms,
         /*skip_gpu_consume=*/true);
     tick_stats.Completed += gpu_consume_done;
-    // R4.5.2: same-frame second Consume for watches noted during Rebuild.
-    if (missing_visible_mesh && nearest_miss_h >= 0 && nearest_miss_h <= 4)
+    // R4.5.2 / R4.6.2: same-frame second Consume for watches noted during Rebuild.
+    if ((missing_visible_mesh ||
+         world.GetPhysicsTelemetry().FocusMissingMesh > 0) &&
+        nearest_miss_h >= 0 && nearest_miss_h <= 4)
     {
       const int watches =
           mesh_service.GetCache().GetFmDirtyGpuWatchCount();

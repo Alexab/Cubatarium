@@ -1194,6 +1194,8 @@ public:
   bool IsColumnVisualReadyForRing(glm::ivec3 ground) const;
   /// Strict visible contract: no pending light, stable mesh, render-safe column.
   bool IsColumnRenderReady(glm::ivec3 ground) const;
+  /// R4.6.1: Streamer TerrainCompleteCache on ring probes (fallback raw complete).
+  bool IsTerrainColumnCompleteFast(glm::ivec3 ground) const;
   /// P2: single cy-slice may draw when meshed/Pending even if siblings missing.
   bool IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const;
   /// Full draw-gate state including repair-ticket flag (TD-ARCH-028).

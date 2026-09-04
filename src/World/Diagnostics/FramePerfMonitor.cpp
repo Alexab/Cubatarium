@@ -62,6 +62,29 @@ struct Session
   double AccumWorldStreamingPhaseMs{0.0};
   double AccumSceneMs{0.0};
   double AccumPhysMs{0.0};
+  double AccumPrepRefreshPressureMs{0.0};
+  double AccumPrepRefreshMissMs{0.0};
+  double AccumPrepRefreshPendingMs{0.0};
+  double AccumPrepRefreshStickyMs{0.0};
+  double AccumPrepRefreshUnfinishedMs{0.0};
+  double AccumPrepRefreshVbMs{0.0};
+  double AccumPrepRefreshDarkfaceMs{0.0};
+  double AccumPrepRefreshFacingMs{0.0};
+  double AccumPrepRefreshUnderfeetMs{0.0};
+  double AccumPrepRefreshDirtyMs{0.0};
+  double AccumPrepRefreshPressureEvalMs{0.0};
+  double AccumPrepRefreshUnderfeetProbeMs{0.0};
+  double AccumPrepRefreshRingResyncMs{0.0};
+  double AccumPrepRefreshVbRawMs{0.0};
+  double AccumPrepRefreshGapMs{0.0};
+  double AccumPrepRefreshCameraCompleteMs{0.0};
+  double AccumPrepRefreshBodyMs{0.0};
+  double AccumPrepRefreshHasMissingMs{0.0};
+  double MaxPrepRefreshPressureMs{0.0};
+  double MaxPrepRefreshGapMs{0.0};
+  double MaxPrepRefreshFacingMs{0.0};
+  double MaxPrepRefreshUnfinishedMs{0.0};
+  double MaxPrepRefreshBodyMs{0.0};
   double MaxWallMs{0.0};
   double MaxStreamMs{0.0};
   double MaxMeshEmergeMs{0.0};
@@ -352,6 +375,7 @@ struct FrameNumbers
   int dirty{0};
   int stream_loads{0};
   int stream_async_queued{0};
+  int stream_ingress_ops{0};
   int stream_disk_complete_n{0};
   int stream_gen_commit_n{0};
   int frontier_pressure{0};
@@ -863,6 +887,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.dirty = md.dirtyChunksPending;
   n.stream_loads = phys.StreamLoads;
   n.stream_async_queued = phys.StreamAsyncQueued;
+  n.stream_ingress_ops = phys.StreamIngressOps;
   n.stream_disk_complete_n = phys.StreamDiskCompleteN;
   n.stream_gen_commit_n = phys.StreamGenCommitN;
   n.frontier_pressure = phys.FrontierPressure;
@@ -1400,6 +1425,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"dirty\":" << n.dirty
           << ",\"stream_loads\":" << n.stream_loads
           << ",\"stream_async_queued\":" << n.stream_async_queued
+          << ",\"stream_ingress_ops\":" << n.stream_ingress_ops
           << ",\"stream_disk_complete_n\":" << n.stream_disk_complete_n
           << ",\"stream_gen_commit_n\":" << n.stream_gen_commit_n
           << ",\"frontier_pressure\":" << n.frontier_pressure
@@ -1766,6 +1792,34 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumPhysMs += n.phys_ms;
   s.AccumPerfCollectMs += n.perf_collect_ms;
   s.AccumPerfEmitMs += n.perf_emit_ms;
+  s.AccumPrepRefreshPressureMs += n.prep_refresh_pressure_ms;
+  s.AccumPrepRefreshMissMs += n.prep_refresh_miss_ms;
+  s.AccumPrepRefreshPendingMs += n.prep_refresh_pending_ms;
+  s.AccumPrepRefreshStickyMs += n.prep_refresh_sticky_ms;
+  s.AccumPrepRefreshUnfinishedMs += n.prep_refresh_unfinished_ms;
+  s.AccumPrepRefreshVbMs += n.prep_refresh_vb_ms;
+  s.AccumPrepRefreshDarkfaceMs += n.prep_refresh_darkface_ms;
+  s.AccumPrepRefreshFacingMs += n.prep_refresh_facing_ms;
+  s.AccumPrepRefreshUnderfeetMs += n.prep_refresh_underfeet_ms;
+  s.AccumPrepRefreshDirtyMs += n.prep_refresh_dirty_ms;
+  s.AccumPrepRefreshPressureEvalMs += n.prep_refresh_pressure_eval_ms;
+  s.AccumPrepRefreshUnderfeetProbeMs += n.prep_refresh_underfeet_probe_ms;
+  s.AccumPrepRefreshRingResyncMs += n.prep_refresh_ring_resync_ms;
+  s.AccumPrepRefreshVbRawMs += n.prep_refresh_vb_raw_ms;
+  s.AccumPrepRefreshGapMs += n.prep_refresh_gap_ms;
+  s.AccumPrepRefreshCameraCompleteMs += n.prep_refresh_camera_complete_ms;
+  s.AccumPrepRefreshBodyMs += n.prep_refresh_body_ms;
+  s.AccumPrepRefreshHasMissingMs += n.prep_refresh_has_missing_ms;
+  s.MaxPrepRefreshPressureMs =
+      (std::max)(s.MaxPrepRefreshPressureMs, n.prep_refresh_pressure_ms);
+  s.MaxPrepRefreshGapMs =
+      (std::max)(s.MaxPrepRefreshGapMs, n.prep_refresh_gap_ms);
+  s.MaxPrepRefreshFacingMs =
+      (std::max)(s.MaxPrepRefreshFacingMs, n.prep_refresh_facing_ms);
+  s.MaxPrepRefreshUnfinishedMs =
+      (std::max)(s.MaxPrepRefreshUnfinishedMs, n.prep_refresh_unfinished_ms);
+  s.MaxPrepRefreshBodyMs =
+      (std::max)(s.MaxPrepRefreshBodyMs, n.prep_refresh_body_ms);
   s.MaxWallMs = (std::max)(s.MaxWallMs, n.wall_ms);
   s.MaxStreamMs = (std::max)(s.MaxStreamMs, n.stream_ms);
   s.MaxMeshEmergeMs = (std::max)(s.MaxMeshEmergeMs, n.mesh_emerge_ms);
@@ -1800,6 +1854,27 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
   avg.phys_ms = s.AccumPhysMs * inv;
   avg.perf_collect_ms = s.AccumPerfCollectMs * inv;
   avg.perf_emit_ms = s.AccumPerfEmitMs * inv;
+  // R4.6.1: period avg/max for prep_refresh_* (was last-frame only → mid pressure=0).
+  avg.prep_refresh_pressure_ms = s.AccumPrepRefreshPressureMs * inv;
+  avg.prep_refresh_miss_ms = s.AccumPrepRefreshMissMs * inv;
+  avg.prep_refresh_pending_ms = s.AccumPrepRefreshPendingMs * inv;
+  avg.prep_refresh_sticky_ms = s.AccumPrepRefreshStickyMs * inv;
+  avg.prep_refresh_unfinished_ms = s.AccumPrepRefreshUnfinishedMs * inv;
+  avg.prep_refresh_vb_ms = s.AccumPrepRefreshVbMs * inv;
+  avg.prep_refresh_darkface_ms = s.AccumPrepRefreshDarkfaceMs * inv;
+  avg.prep_refresh_facing_ms = s.AccumPrepRefreshFacingMs * inv;
+  avg.prep_refresh_underfeet_ms = s.AccumPrepRefreshUnderfeetMs * inv;
+  avg.prep_refresh_dirty_ms = s.AccumPrepRefreshDirtyMs * inv;
+  avg.prep_refresh_pressure_eval_ms = s.AccumPrepRefreshPressureEvalMs * inv;
+  avg.prep_refresh_underfeet_probe_ms =
+      s.AccumPrepRefreshUnderfeetProbeMs * inv;
+  avg.prep_refresh_ring_resync_ms = s.AccumPrepRefreshRingResyncMs * inv;
+  avg.prep_refresh_vb_raw_ms = s.AccumPrepRefreshVbRawMs * inv;
+  avg.prep_refresh_gap_ms = s.AccumPrepRefreshGapMs * inv;
+  avg.prep_refresh_camera_complete_ms =
+      s.AccumPrepRefreshCameraCompleteMs * inv;
+  avg.prep_refresh_body_ms = s.AccumPrepRefreshBodyMs * inv;
+  avg.prep_refresh_has_missing_ms = s.AccumPrepRefreshHasMissingMs * inv;
   avg.max_wall_ms = s.MaxWallMs;
   avg.max_stream_ms = s.MaxStreamMs;
   avg.max_mesh_emerge_ms = s.MaxMeshEmergeMs;
@@ -1834,6 +1909,29 @@ void ResetAccum(Session &s)
   s.AccumPhysMs = 0.0;
   s.AccumPerfCollectMs = 0.0;
   s.AccumPerfEmitMs = 0.0;
+  s.AccumPrepRefreshPressureMs = 0.0;
+  s.AccumPrepRefreshMissMs = 0.0;
+  s.AccumPrepRefreshPendingMs = 0.0;
+  s.AccumPrepRefreshStickyMs = 0.0;
+  s.AccumPrepRefreshUnfinishedMs = 0.0;
+  s.AccumPrepRefreshVbMs = 0.0;
+  s.AccumPrepRefreshDarkfaceMs = 0.0;
+  s.AccumPrepRefreshFacingMs = 0.0;
+  s.AccumPrepRefreshUnderfeetMs = 0.0;
+  s.AccumPrepRefreshDirtyMs = 0.0;
+  s.AccumPrepRefreshPressureEvalMs = 0.0;
+  s.AccumPrepRefreshUnderfeetProbeMs = 0.0;
+  s.AccumPrepRefreshRingResyncMs = 0.0;
+  s.AccumPrepRefreshVbRawMs = 0.0;
+  s.AccumPrepRefreshGapMs = 0.0;
+  s.AccumPrepRefreshCameraCompleteMs = 0.0;
+  s.AccumPrepRefreshBodyMs = 0.0;
+  s.AccumPrepRefreshHasMissingMs = 0.0;
+  s.MaxPrepRefreshPressureMs = 0.0;
+  s.MaxPrepRefreshGapMs = 0.0;
+  s.MaxPrepRefreshFacingMs = 0.0;
+  s.MaxPrepRefreshUnfinishedMs = 0.0;
+  s.MaxPrepRefreshBodyMs = 0.0;
   s.MaxWallMs = 0.0;
   s.MaxStreamMs = 0.0;
   s.MaxMeshEmergeMs = 0.0;

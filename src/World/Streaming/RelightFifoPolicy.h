@@ -1143,15 +1143,23 @@ inline bool ShouldRetargetRelightWitness(bool era27_retarget,
 
 /// FP-D3: hard-block Site B Capture retarget while witness pin is active.
 /// miss_horiz_zero_no_drawable: underfeet undrawn miss may retarget to heal.
+/// R4.6.2: pin_age >= hard expire allows retarget even if pinned_still
+/// (hard_expire must match AntiFlicker kIngressCaptureHardExpireFrames).
 inline bool ShouldBlockWitnessCaptureRetarget(bool capture_pin_valid,
                                               bool pinned_still,
                                               bool hold_witness_pin,
                                               bool miss_horiz_zero_no_drawable =
                                                   false,
                                               bool fifo_drop_last_frame =
-                                                  false)
+                                                  false,
+                                              int pin_age_frames = 0,
+                                              int hard_expire_frames = 48)
 {
   if (miss_horiz_zero_no_drawable)
+  {
+    return false;
+  }
+  if (hard_expire_frames > 0 && pin_age_frames >= hard_expire_frames)
   {
     return false;
   }
@@ -1229,14 +1237,21 @@ inline bool ShouldKickMissWitnessOnMeshingSla(ColumnJobStage stage,
 }
 
 /// FP-A3: extend witness hold past RelightWitnessPinHoldFrames while pinned_still.
+/// R4.6.2: hard expire wins over pinned_still (must match AntiFlicker
+/// kIngressCaptureHardExpireFrames = 48).
 inline bool ShouldExtendWitnessPinHold(int pin_age, bool pinned_still,
                                        int hold_frames =
                                            RelightWitnessPinHoldFrames,
                                        int miss_horiz = 99,
                                        bool vb_no_ticket_rising = false,
-                                       bool miss_witness_kick = false)
+                                       bool miss_witness_kick = false,
+                                       int hard_expire_frames = 48)
 {
   if (miss_witness_kick)
+  {
+    return false;
+  }
+  if (hard_expire_frames > 0 && pin_age >= hard_expire_frames)
   {
     return false;
   }

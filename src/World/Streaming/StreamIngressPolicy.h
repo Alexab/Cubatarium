@@ -54,11 +54,18 @@ inline int UnfinishedSampleCooldownFramesCruise(bool diet_cruise, int miss_horiz
 /// focus_dirty alone is remesh debt, not a hole (manual 085143 latch).
 inline bool ShouldComputeRimHolePressure(int miss_horiz, int unfinished_hint,
                                          int /*focus_dirty_chunks*/,
-                                         int column_loaded_no_mesh_n)
+                                         int column_loaded_no_mesh_n,
+                                         bool focus_missing = false)
 {
   if (miss_horiz < 3)
   {
     return false;
+  }
+  // R4.6.2: focus rim miss is heal pressure even when unfinished sample is 0
+  // (late 135644: mh=3 missing, unfinished=0, visual_holes=0 → false clear).
+  if (focus_missing && miss_horiz <= 4)
+  {
+    return true;
   }
   return unfinished_hint > 0 || column_loaded_no_mesh_n > 0;
 }

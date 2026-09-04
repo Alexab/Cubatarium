@@ -2202,9 +2202,7 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     return out;
   }
   if (horiz_from_focus <= 1 &&
-      !IsTerrainChunkComplete(BlockWorld,
-                              glm::ivec3(ground.x, 0, ground.z),
-                              ProceduralTemplate.MaxHeight))
+      !IsTerrainColumnCompleteFast(glm::ivec3(ground.x, 0, ground.z)))
   {
     out.reason = ColumnRenderableState::BlockReason::NotReadyState;
     return out;
@@ -2227,14 +2225,31 @@ bool ColumnUnfinishedVisualCheap(const UWorld &world, glm::ivec3 focus_ground,
                                  int dx, int dz)
 {
   const glm::ivec3 ground(focus_ground.x + dx, 0, focus_ground.z + dz);
-  if (!IsTerrainChunkComplete(world.GetBlockWorld(), ground,
-                              world.GetProceduralSettings().MaxHeight))
+  // R4.6.1: cached complete — raw IsTerrainChunkComplete is O(256×H) per column.
+  if (!world.IsTerrainColumnCompleteFast(ground))
   {
     return false;
   }
   return !world.IsColumnRenderReady(ground);
 }
 } // namespace
+
+bool UWorld::IsTerrainColumnCompleteFast(glm::ivec3 ground) const
+{
+  if (ground.y != 0)
+  {
+    ground.y = 0;
+  }
+  if (Streaming)
+  {
+    if (const UChunkStreamer *streamer = Streaming->GetStreamer())
+    {
+      return streamer->IsTerrainChunkCompleteCached(ground);
+    }
+  }
+  return IsTerrainChunkComplete(BlockWorld, ground,
+                                ProceduralTemplate.MaxHeight);
+}
 
 int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
                                       int radius_chunks) const
@@ -2454,8 +2469,8 @@ void UWorld::CountUnfinishedVisualByFacing(glm::ivec3 focus_ground_chunk,
     {
       const glm::ivec3 ground(focus_ground_chunk.x + dx, 0,
                               focus_ground_chunk.z + dz);
-      if (!IsTerrainChunkComplete(BlockWorld, ground,
-                                  ProceduralTemplate.MaxHeight))
+      // R4.6.1: TerrainCompleteCache — Facing is O(R²) and must not raw-scan.
+      if (!IsTerrainColumnCompleteFast(ground))
       {
         continue;
       }

@@ -123,7 +123,7 @@ void UChunkStreamer::NotifyChunkCommitted(glm::ivec3 chunkCoord)
   }
 }
 
-bool UChunkStreamer::IsTerrainChunkCompleteCached(glm::ivec3 groundCoord)
+bool UChunkStreamer::IsTerrainChunkCompleteCached(glm::ivec3 groundCoord) const
 {
   if (groundCoord.y != 0)
   {

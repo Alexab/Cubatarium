@@ -9,6 +9,10 @@ constexpr int kSoftDeferCaptureWitnessPinFrames = 8;
 /// I13-A2: after pin column heals (drawable), wait before hopping witness —
 /// instant retarget caused frontier flicker (manual 150840: retarget every frame).
 constexpr int kIngressCaptureRetargetCooldownFrames = 4;
+/// I14b-C: minimum capture pin age on nh<=4 cruise (except visual_holes).
+constexpr int kIngressCaptureWitnessPinMinAgeFrames = 48;
+/// R4.6.2: hard expire — SLA > sticky pinned_still (shared with SoftDefer retarget).
+constexpr int kIngressCaptureHardExpireFrames = 48;
 
 /// I13-A1: allow witness hop only toward focus (smaller horiz), not lateral/back.
 inline bool ShouldAllowFrontierWitnessAdvance(int cand_horiz, int pin_horiz)
@@ -29,12 +33,11 @@ inline bool ShouldRetargetSoftDeferCaptureWitness(
     int cand_horiz = -1, int pin_horiz = -1)
 {
   (void)new_witness_better_horiz;
-  constexpr int kHardExpireFrames = 48;
   if (!pin_valid)
   {
     return true;
   }
-  if (pin_age_frames >= kHardExpireFrames)
+  if (pin_age_frames >= kIngressCaptureHardExpireFrames)
   {
     return true;
   }
@@ -56,9 +59,6 @@ inline bool ShouldRetargetSoftDeferCaptureWitness(
   }
   return false;
 }
-
-/// I14b-C: minimum capture pin age on nh<=4 cruise (except visual_holes).
-constexpr int kIngressCaptureWitnessPinMinAgeFrames = 48;
 
 /// I14b-C: damp better_horiz retarget while drawable GPU apply in flight — not block.
 inline bool ShouldDampWitnessRetargetOnIngressDrawable(

@@ -1343,6 +1343,10 @@ def analyze(
         if float(r.get("focus_missing_mesh") or 0) > 0
         and float(r.get("visual_holes") or 0) == 0
         and float(r.get("miss_horiz") or 0) >= 3
+        # R4.6.2: crisis VisualHoles is nh≤2; rim miss uses RimHolePressure /
+        # RimWitnessLatched / FocusMissing — not a telemetry mismatch.
+        and float(r.get("rim_hole_pressure") or 0) == 0
+        and float(r.get("rim_witness_latched") or 0) == 0
     )
     mesh_waterfall_snapshot_med = median(col(fly_spikes, "mesh_snapshot_ms"))
     mesh_waterfall_schedule_med = median(col(fly_spikes, "mesh_dirty_schedule_ms"))

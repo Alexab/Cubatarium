@@ -164,8 +164,8 @@ public:
   }
 
   /// Cached terrain-column complete (invalidated on commit). R4.5.1 public for
-  /// Refresh / UpdateStreaming camera-complete reuse.
-  bool IsTerrainChunkCompleteCached(glm::ivec3 groundCoord);
+  /// Refresh / UpdateStreaming camera-complete reuse. Const: fills mutable cache.
+  bool IsTerrainChunkCompleteCached(glm::ivec3 groundCoord) const;
 
 private:
   bool EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync = false,
@@ -231,7 +231,7 @@ private:
     bool onlyEmptyColumns{false};
   };
   std::unordered_map<glm::ivec3, ColumnGenState, IVec3Hash> ColumnGenStates;
-  std::unordered_map<glm::ivec3, bool, IVec3Hash> TerrainCompleteCache;
+  mutable std::unordered_map<glm::ivec3, bool, IVec3Hash> TerrainCompleteCache;
   glm::ivec3 LoadPriorityCenter{0};
   StreamingFrameStats LastFrameStats;
 };

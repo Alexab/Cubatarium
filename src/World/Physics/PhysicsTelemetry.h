@@ -394,6 +394,8 @@ struct PhysicsTelemetry
   /// Streaming gate diagnostics (filled each UpdateStreaming).
   int StreamLoads{0};
   int StreamAsyncQueued{0};
+  /// R4.6.2: loads + async_queued (honest ingress vs sync-only StreamLoads).
+  int StreamIngressOps{0};
   /// Era25 I-F1: disk Ensure complete this frame (honest vs stream_loads).
   int StreamDiskCompleteN{0};
   /// Era25 I-F1: gen scheduler commits this frame.
