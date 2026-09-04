@@ -600,6 +600,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   pt.PrepRefreshRingResyncMs = 0.0;
   pt.PrepRefreshVbRawMs = 0.0;
   pt.PrepRefreshGapMs = 0.0;
+  // PrepRefreshHasMissingMs latched in UpdateStreaming (before Refresh).
   pt.RimWitnessLatched = 0;
   pt.FocusDirtyReconcileDelta = 0;
 
@@ -994,6 +995,11 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       !diet_cruise_cadence_final || in.visual_holes || pending_underfeet ||
       capture_backlog;
   const bool unfinished_sample_due = --unfinished_sample_cd <= 0;
+  // R4.2: under calm cruise rim, reuse unfinished sample for K frames before
+  // another full R_stream walk (cruise_scan_fast is computed later; use diet).
+  const bool cruise_unfinished_defer =
+      diet_cruise_cadence_final && miss_horiz >= 3 && !in.visual_holes &&
+      !pending_underfeet && !capture_backlog && unfinished_reuse_age < 6;
   if (force_full_unfinished)
   {
     last_unfinished_visual =
@@ -1003,6 +1009,19 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     unfinished_sample_cd = 0;
     unfinished_reuse_age = 0;
     pt.PrepRefreshRingResyncMs += lap_ms(unfinished_t0);
+  }
+  else if (unfinished_sample_due && cruise_unfinished_defer)
+  {
+    unfinished_visual = last_unfinished_visual;
+    ++unfinished_reuse_age;
+    unfinished_sample_cd = 4;
+    focus_pressure =
+        pending_light_focus +
+        (focus_dirty_chunks > 0 ? std::min(focus_dirty_chunks, 8) : 0);
+    if (focus_pressure < unfinished_visual)
+    {
+      focus_pressure = unfinished_visual;
+    }
   }
   else if (unfinished_sample_due)
   {
@@ -1427,6 +1446,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
          pt.PrepRefreshFacingMs + pt.PrepRefreshUnderfeetMs +
          pt.PrepRefreshDirtyMs + pt.PrepRefreshPressureEvalMs +
          pt.PrepRefreshUnderfeetProbeMs);
+    // PrepRefreshHasMissingMs is UpdateStreaming HasMissing (outside Refresh);
+    // reported separately for stream attribution, not subtracted from gap.
     pt.PrepRefreshGapMs = std::max(0.0, pt.PrepRefreshGapMs);
   }
 }
@@ -3435,6 +3456,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     meshService.TickWitnessSwapGrace();
   }
   URuntimeTuning::LoadStreamingTuneFile("streaming_tune.json");
+  world.PhysicsTelemetryData.PrepRefreshHasMissingMs = 0.0;
   // Explicit Completed caps from tune (stress / low-mem). slots=0 keeps
   // constructor default and allows CompletedExpandEnabled growth.
   {
@@ -3566,6 +3588,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
           static_cast<int>(world.GetRelightCompletedSize());
       sample.unfinished_visual = world.PhysicsTelemetryData.UnfinishedVisual;
       sample.ingress_debt_level = world.PhysicsTelemetryData.IngressDebtLevel;
+      sample.miss_horiz = world.PhysicsTelemetryData.MissHoriz;
       // Prefer FramePerf cached sample (every ~30 frames) — avoid per-tick
       // GetProcessMemoryInfo on the streaming hot path (P0b).
       sample.private_mb = UFramePerfMonitor::GetLastPrivateMb();
@@ -3972,6 +3995,8 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const int gen_backlog_total =
         ChunkScheduler ? ChunkScheduler->GetGenBacklogTotal() : 0;
     const int mesh_async = meshService.GetAsyncInFlightCount();
+    // R4.2: attribute HasMissing walks on the UpdateStreaming hot path.
+    const auto has_missing_t0 = std::chrono::high_resolution_clock::now();
     const bool near_mesh_backlog =
         meshService.HasDirtyWithinHorizontalRadius(focus_horiz, focus_radius) ||
         meshService.HasMissingGreedyMeshInHorizontalRadius(world.GetBlockWorld(),
@@ -3989,6 +4014,10 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const bool missing_feet_mesh =
         meshService.HasMissingGreedyMeshInHorizontalRadius(
             world.GetBlockWorld(), feet_chunk, /*radius=*/0);
+    world.PhysicsTelemetryData.PrepRefreshHasMissingMs =
+        std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - has_missing_t0)
+            .count();
     const bool pending_feet = world.IsPendingLightBeforeMesh(
         glm::ivec2(focus_horiz.x, focus_horiz.z));
     const bool underfeet_need = FeetColumnUnderfeetNeed(
@@ -4104,8 +4133,9 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
             (moving_fast || moving_any)
                 ? world.PhysicsTelemetryData.ColumnAbsentInRdN
                 : 0);
+    // R4.3: only exact ShedFar sheds prefetch; ShedRim (protect) may keep ahead.
     const bool ingress_debt_prefetch_ok =
-        world.PhysicsTelemetryData.IngressDebtLevel <
+        world.PhysicsTelemetryData.IngressDebtLevel !=
         static_cast<int>(IngressDebtLevel::ShedFar);
     if (frame_ms <= 20.0 && pressure.allow_prefetch && ingress_debt_prefetch_ok &&
         (((!visual_holes && !underfeet_need) || frontier_prefetch)))

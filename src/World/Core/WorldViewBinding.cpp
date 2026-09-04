@@ -858,6 +858,8 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.MeshEmergePrepStickyMs = 0.0;
   PhysicsTelemetryData.MeshEmergePrepDropDirtyMs = 0.0;
   PhysicsTelemetryData.MeshEmergePrepOtherMs = 0.0;
+  PhysicsTelemetryData.PrepSyncFocusRingMs = 0.0;
+  PhysicsTelemetryData.PrepRecoverMs = 0.0;
   PhysicsTelemetryData.PrepAdmissionMs = 0.0;
   PhysicsTelemetryData.PrepScheduleClampMs = 0.0;
   PhysicsTelemetryData.PrepSoftdeferPolicyMs = 0.0;
@@ -962,9 +964,14 @@ void UWorld::TickWorldStreamingPhase()
         PhysicsTelemetryData.VisualHoles == 0 &&
         PhysicsTelemetryData.UnderfeetHasMesh != 0)
     {
-      PhysicsTelemetryData.IngressDebtLevel = std::max(
-          PhysicsTelemetryData.IngressDebtLevel,
-          static_cast<int>(IngressDebtLevel::ShedFar));
+      const bool protect = IsProtectRingFocusMiss(
+          PhysicsTelemetryData.FocusMissingMesh,
+          PhysicsTelemetryData.MissHoriz,
+          /*underfeet_need=*/false);
+      const int latch = static_cast<int>(
+          protect ? IngressDebtLevel::ShedRim : IngressDebtLevel::ShedFar);
+      PhysicsTelemetryData.IngressDebtLevel =
+          std::max(PhysicsTelemetryData.IngressDebtLevel, latch);
     }
   }
   const glm::ivec3 hole_focus =

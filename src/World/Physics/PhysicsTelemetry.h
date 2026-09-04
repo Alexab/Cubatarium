@@ -297,6 +297,9 @@ struct PhysicsTelemetry
   double MeshEmergePrepStickyMs{0.0};
   double MeshEmergePrepDropDirtyMs{0.0};
   double MeshEmergePrepOtherMs{0.0};
+  /// R4.1: SyncFocusRing + recover inside emerge prep.
+  double PrepSyncFocusRingMs{0.0};
+  double PrepRecoverMs{0.0};
   /// Arch roadmap: emerge prep sub-timers (inside prep_other breakdown).
   double PrepAdmissionMs{0.0};
   double PrepScheduleClampMs{0.0};
@@ -323,6 +326,8 @@ struct PhysicsTelemetry
   double PrepRefreshVbRawMs{0.0};
   /// I14b-A: PrepRefreshPressureMs minus sum(sub-timers).
   double PrepRefreshGapMs{0.0};
+  /// R4.2: HasMissingGreedyMesh walks in UpdateStreaming.
+  double PrepRefreshHasMissingMs{0.0};
   /// I12-A7: focus dirty ring cache reconcile drift (audit).
   int FocusDirtyReconcileDelta{0};
   /// I12-A0: rim witness latched without visual holes.

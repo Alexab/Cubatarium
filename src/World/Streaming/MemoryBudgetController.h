@@ -21,6 +21,8 @@ struct MemoryBudgetSample
   int unfinished_visual{0};
   /// I18-F2: ingress debt forces far capture shed.
   int ingress_debt_level{0};
+  /// R4.3: ShedFar capture_hard_cap=1 only when miss is beyond protect ring.
+  int miss_horiz{99};
 };
 
 struct MemoryBudgetDecision

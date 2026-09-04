@@ -328,6 +328,9 @@ struct FrameNumbers
   int ingress_debt_level{0};
   int ingress_debt_streak{0};
   double prep_column_flow_drain_ms{0.0};
+  double prep_sync_focus_ring_ms{0.0};
+  double prep_recover_ms{0.0};
+  double prep_refresh_has_missing_ms{0.0};
   int markrelit_chain_progress_frames{0};
   int miss_sla_kick_n{0};
   double prep_pending_light_ms{0.0};
@@ -831,6 +834,9 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.ingress_debt_level = phys.IngressDebtLevel;
   n.ingress_debt_streak = phys.IngressDebtStreak;
   n.prep_column_flow_drain_ms = phys.PrepColumnFlowDrainMs;
+  n.prep_sync_focus_ring_ms = phys.PrepSyncFocusRingMs;
+  n.prep_recover_ms = phys.PrepRecoverMs;
+  n.prep_refresh_has_missing_ms = phys.PrepRefreshHasMissingMs;
   n.markrelit_chain_progress_frames = phys.MarkRelitChainProgressFrames;
   n.miss_sla_kick_n = phys.MissSlaKickN;
   n.prep_pending_light_ms = phys.PrepPendingLightMs;
@@ -1358,6 +1364,10 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"ingress_debt_level\":" << n.ingress_debt_level
           << ",\"ingress_debt_streak\":" << n.ingress_debt_streak
           << ",\"prep_column_flow_drain_ms\":" << n.prep_column_flow_drain_ms
+          << ",\"prep_sync_focus_ring_ms\":" << n.prep_sync_focus_ring_ms
+          << ",\"prep_recover_ms\":" << n.prep_recover_ms
+          << ",\"prep_refresh_has_missing_ms\":"
+          << n.prep_refresh_has_missing_ms
           << ",\"markrelit_chain_progress_frames\":"
           << n.markrelit_chain_progress_frames
           << ",\"miss_sla_kick_n\":" << n.miss_sla_kick_n

@@ -176,7 +176,32 @@ struct IngressDebtInput
   int miss_horiz{0};
   int fm_dirty_to_gpu_finish_n{0};
   int visible_black_focus_n{0};
+  int focus_missing_mesh{0};
+  bool underfeet_need{false};
 };
+
+/// R4.3: nh 2–4 focus miss must not enter ShedFar (protect-ring heal).
+inline bool IsProtectRingFocusMiss(int focus_missing_mesh, int miss_horiz,
+                                   bool underfeet_need)
+{
+  return focus_missing_mesh > 0 && miss_horiz >= 2 && miss_horiz <= 4 &&
+         !underfeet_need;
+}
+
+/// R4.1: SyncFocusRing under debt/overrun stays near R≤2 (far stages cadence).
+inline int SyncFocusRingRadiusUnderDebt(int streaming_r, int ingress_debt,
+                                        bool phase_budget_over, int miss_horiz,
+                                        bool underfeet, bool visual_holes_telem)
+{
+  const bool shed =
+      ingress_debt >= static_cast<int>(IngressDebtLevel::ShedFar) ||
+      phase_budget_over;
+  if (shed && miss_horiz >= 3 && !underfeet && !visual_holes_telem)
+  {
+    return std::min(std::max(1, streaming_r), 2);
+  }
+  return std::max(1, streaming_r);
+}
 
 /// I18-P4: chain stall predicate (watch + zero FM→GPU finish).
 inline bool IsIngressChainStalled(const IngressDebtInput &in)
@@ -272,13 +297,24 @@ inline IngressDebtLevel EvaluateIngressDebt(const IngressDebtInput &in,
     {
       return IngressDebtLevel::ShedRim;
     }
+    if (IsProtectRingFocusMiss(in.focus_missing_mesh, in.miss_horiz,
+                               in.underfeet_need))
+    {
+      return IngressDebtLevel::ShedRim;
+    }
     return IngressDebtLevel::ShedFar;
   }
   if (in.softdefer_witness_retarget_delta > 0)
   {
     return IngressDebtLevel::ShedRim;
   }
-  return IngressDebtLevel::ShedFar;
+  IngressDebtLevel far_debt = IngressDebtLevel::ShedFar;
+  if (IsProtectRingFocusMiss(in.focus_missing_mesh, in.miss_horiz,
+                             in.underfeet_need))
+  {
+    far_debt = IngressDebtLevel::ShedRim;
+  }
+  return far_debt;
 }
 
 /// I18-F5: rate limit better_horiz hops under ingress debt.

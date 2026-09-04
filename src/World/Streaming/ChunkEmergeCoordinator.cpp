@@ -168,6 +168,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   double prep_softdefer_policy_ms = 0.0;
   double prep_isolated_miss_ms = 0.0;
   double prep_column_flow_drain_ms = 0.0;
+  double prep_sync_focus_ring_ms = 0.0;
+  double prep_recover_ms = 0.0;
   static int s_fm_enqueue_prior = 0;
   static int s_schedule_ok_prior = 0;
   static int s_dirty_fm_prior = 0;
@@ -500,7 +502,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   prep_unfinished_ms = prep_pending_light_ms + prep_softdefer_setup_ms +
                        prep_dirty_count_ms + prep_black_sticky_ms;
   const double prep_total_ms = prep_ms_since(emerge_t0);
-  const bool prep_over_budget = moving && prep_total_ms > 14.0;
+  bool prep_over_budget = moving && prep_total_ms > 14.0;
   prep_t = std::chrono::high_resolution_clock::now();
   // Lit-but-dirty catch-up: only when focus still has *missing* mesh pressure.
   // Remesh-of-existing (fd high, nr from Dirty/Active) must not latch forever —
@@ -2109,8 +2111,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   // Early pending_gpu read — MeshWorkAdmission for producers; Finalize after
   // drain-first consume so schedule sees post-Finish pending (F0).
-  GetColumnFlowExecutor().SyncFocusRingColumnJobStages(
-      world, focus_ground_horiz, focus_radius);
+  {
+    const int sync_r = SyncFocusRingRadiusUnderDebt(
+        focus_radius, world.GetPhysicsTelemetry().IngressDebtLevel,
+        world.GetPhysicsTelemetry().PhaseBudgetOver != 0, nearest_miss_h,
+        missing_underfeet, world.GetPhysicsTelemetry().VisualHoles != 0);
+    const auto sync_t0 = std::chrono::high_resolution_clock::now();
+    GetColumnFlowExecutor().SyncFocusRingColumnJobStages(
+        world, focus_ground_horiz, sync_r);
+    prep_sync_focus_ring_ms = prep_ms_since(sync_t0);
+  }
   size_t pending_gpu_n = mesh_service.GetPendingGpuAppliesCount();
   {
     const auto admission_t0 = std::chrono::high_resolution_clock::now();
@@ -2547,7 +2557,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         ((world.GetPhysicsTelemetry().VisibleBlackNoTicketN > 0 ||
           world.GetPhysicsTelemetry().VisibleBlackFocusN > 0) &&
          recover_watchdog_frames >= (moving ? 4 : 30));
-    if (recover_now && recover_n > 0)
+    const double running_prep_ms = prep_ms_since(emerge_t0);
+    // R4.1: ShedFar-only prep skip (ShedRim protect ring must keep heal).
+    const bool shed_far_now =
+        world.GetPhysicsTelemetry().IngressDebtLevel ==
+        static_cast<int>(IngressDebtLevel::ShedFar);
+    prep_over_budget = moving && running_prep_ms > 14.0;
+    const bool prep_shed_skip =
+        shed_far_now && running_prep_ms > 12.0 && nearest_miss_h >= 3 &&
+        !missing_underfeet && !pending_underfeet;
+    const auto recover_t0 = std::chrono::high_resolution_clock::now();
+    if (!prep_shed_skip && recover_now && recover_n > 0)
     {
       auto &exec = GetColumnFlowExecutor();
       int admit_n =
@@ -2613,6 +2633,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       // Dark debt → RelightThenMesh only when not already owned (above).
       recover_watchdog_frames = 0;
     }
+    prep_recover_ms = prep_ms_since(recover_t0);
   }
 
   // Sync-rebuild missing solid slices: underfeet always; idle focus holes too.
@@ -3272,7 +3293,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                              prep_softdefer_policy_ms + prep_isolated_miss_ms +
                              prep_pending_light_ms + prep_softdefer_setup_ms +
                              prep_dirty_count_ms + prep_black_sticky_ms +
-                             prep_column_flow_drain_ms;
+                             prep_column_flow_drain_ms +
+                             prep_sync_focus_ring_ms + prep_recover_ms;
     pt.MeshEmergePrepOtherMs =
         std::max(0.0, pt.MeshEmergePrepMs - accounted);
     pt.PrepAdmissionMs = prep_admission_ms;
@@ -3280,6 +3302,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     pt.PrepSoftdeferPolicyMs = prep_softdefer_policy_ms;
     pt.PrepIsolatedMissMs = prep_isolated_miss_ms;
     pt.PrepColumnFlowDrainMs = prep_column_flow_drain_ms;
+    pt.PrepSyncFocusRingMs = prep_sync_focus_ring_ms;
+    pt.PrepRecoverMs = prep_recover_ms;
   }
   // Moving + dirty backlog: ensure minimum async feed rate so dirty queue
   // drains steadily instead of starving.
@@ -4341,14 +4365,25 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       consume_gpu = std::max(consume_gpu, 4);
       consume_budget = std::max(consume_budget, 6.0);
     }
-    // R3.7: rim miss pending GPU — keep ConsumeGpu floor without visual_holes.
+    // R3.7/R4.3: PreferKick only when miss-coord already pending/queued.
     if (missing_visible_mesh && nearest_miss_h >= 3 &&
         (pending_gpu_n > 0 || mesh_service.GetPendingGpuQueuedCount() > 0))
     {
       consume_gpu = std::max(consume_gpu, 4);
       consume_budget = std::max(consume_budget, 6.0);
-      mesh_service.PreferKickPendingGpuQueued(
-          found_nearest_missing ? isolated_hole : focus_ground_horiz);
+      const glm::ivec3 hole =
+          found_nearest_missing ? isolated_hole : focus_ground_horiz;
+      if (mesh_service.IsPendingGpuQueued(hole) ||
+          mesh_service.IsPendingGpuApply(hole) ||
+          mesh_service.IsPendingGpuKickedOrDispatched(hole))
+      {
+        mesh_service.PreferKickPendingGpuQueued(hole);
+      }
+      if (mesh_service.GetLiveDirtyFirstMeshCount() == 0 &&
+          mesh_service.IsSoftDeferHeld(hole))
+      {
+        mesh_service.MarkDirtyPriority(hole);
+      }
     }
     gpu_consume_done = mesh_service.ConsumeGpuApplyBacklog(
         world.GetBlockWorld(), registry, consume_drain, consume_gpu,
@@ -4613,6 +4648,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         /*force_sync=*/false, /*max_sync_rebuild=*/0, sync_budget_ms,
         /*skip_gpu_consume=*/true);
     tick_stats.Completed += gpu_consume_done;
+    // R4.3: same-frame second Consume for watches noted during Rebuild.
+    if (missing_visible_mesh && nearest_miss_h >= 3)
+    {
+      const int watches =
+          mesh_service.GetCache().GetFmDirtyGpuWatchCount();
+      if (watches > 0)
+      {
+        const MeshWorkAdmission &adm2 = mesh_service.GetMeshWorkAdmission();
+        const int second_drain = FinalizeDrain(mesh_drain, adm2);
+        const int second_n = std::min(4, watches);
+        tick_stats.Completed += mesh_service.ConsumeGpuApplyBacklog(
+            world.GetBlockWorld(), registry, second_drain, second_n,
+            std::max(4.0, mesh_service.GetMeshEmergeTotalBudgetMs() * 0.15));
+      }
+    }
     mesh_service.DrainAsyncMeshResults(world.GetBlockWorld(), registry,
                                        post_drain);
     if (tick_stats.Completed > 0 || tick_stats.SyncRebuilt > 0 ||
@@ -4818,26 +4868,34 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               : 0);
       s_prior_witness_retarget = pt.SoftDeferWitnessRetarget;
       const auto &cache = mesh_service.GetCache();
-      const IngressDebtInput debt_in{
-          moving,
-          pt.MarkRelitChainProgressFrames,
-          pt.MeshDirtyScheduleOkN,
-          pt.DirtyFmN,
-          cache.GetFmDirtyGpuWatchMaxAge(),
-          cache.GetFmDirtyGpuWatchCount(),
-          wit_delta,
-          nearest_miss_h,
-          pt.FmDirtyToGpuFinishN,
-          pt.VisibleBlackFocusN};
+      IngressDebtInput debt_in{};
+      debt_in.moving = moving;
+      debt_in.chain_progress_frames = pt.MarkRelitChainProgressFrames;
+      debt_in.schedule_ok_n = pt.MeshDirtyScheduleOkN;
+      debt_in.dirty_fm_n = pt.DirtyFmN;
+      debt_in.fm_dirty_gpu_watch_max_age = cache.GetFmDirtyGpuWatchMaxAge();
+      debt_in.fm_dirty_gpu_watch_n = cache.GetFmDirtyGpuWatchCount();
+      debt_in.softdefer_witness_retarget_delta = wit_delta;
+      debt_in.miss_horiz = nearest_miss_h;
+      debt_in.fm_dirty_to_gpu_finish_n = pt.FmDirtyToGpuFinishN;
+      debt_in.visible_black_focus_n = pt.VisibleBlackFocusN;
+      debt_in.focus_missing_mesh = pt.FocusMissingMesh;
+      debt_in.underfeet_need = missing_underfeet || underfeet_need;
       IngressDebtLevel debt = EvaluateIngressDebt(debt_in, ingress_debt_streak);
-      // R3.6: wall-based ShedFar when previous frame overran budget on calm far rim.
-      // WorldStreamingPhaseMs is zero here (written after TickWorldStreamingPhase);
-      // use previous-frame wall (last_frame_wall_ms) instead.
+      // R3.6/R4.3: wall overrun → ShedFar only outside protect ring nh∈[2,4].
       if (last_frame_wall_ms > 120.0 && nearest_miss_h >= 3 &&
           !visual_holes && !missing_underfeet &&
           debt < IngressDebtLevel::ShedFar)
       {
-        debt = IngressDebtLevel::ShedFar;
+        if (IsProtectRingFocusMiss(pt.FocusMissingMesh, nearest_miss_h,
+                                   missing_underfeet || underfeet_need))
+        {
+          debt = IngressDebtLevel::ShedRim;
+        }
+        else
+        {
+          debt = IngressDebtLevel::ShedFar;
+        }
       }
       if (debt == IngressDebtLevel::Ok)
       {
@@ -4863,8 +4921,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       pt.GpuFinishWatchRimN = cache.GetLastGpuFinishWatchRimN();
       mesh_service.GetCache().ResetFmDirtyGpuWatchTimeoutDelta();
     }
+    // R4.1: second sync uses same debt-shrunk radius (skip full RD walk).
+    const int sync_r_end = SyncFocusRingRadiusUnderDebt(
+        focus_radius, pt.IngressDebtLevel,
+        pt.PhaseBudgetOver != 0, nearest_miss_h, missing_underfeet,
+        pt.VisualHoles != 0);
     GetColumnFlowExecutor().SyncFocusRingColumnJobStages(
-        world, focus_ground_horiz, focus_radius);
+        world, focus_ground_horiz, sync_r_end);
   }
 }
 

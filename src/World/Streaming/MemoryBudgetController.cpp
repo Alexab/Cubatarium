@@ -24,9 +24,11 @@ UMemoryBudgetController::Evaluate(const MemoryBudgetSample &sample,
   const bool completed_starve =
       sample.relight_completed_n <= 0 && sample.relight_fifo_n >= 50;
 
-  // I18-F2: chain debt — shed far capture before rim work.
-  if (sample.ingress_debt_level >=
-      static_cast<int>(IngressDebtLevel::ShedFar))
+  // I18-F2 / R4.3: ShedFar capture shed only outside protect ring (mh>4).
+  // Protect-ring nh∈[2,4] (ShedRim) keeps normal capture so FM can finish.
+  if (sample.ingress_debt_level ==
+          static_cast<int>(IngressDebtLevel::ShedFar) &&
+      sample.miss_horiz > 4)
   {
     d.capture_hard_cap = 1;
   }

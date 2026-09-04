@@ -3360,6 +3360,29 @@ int main()
            "FP4: render ready stage");
   }
 
+  // R4.1/R4.3: protect-ring ShedFar exemption + SyncFocusRing shrink.
+  {
+    using cutum::IngressDebtLevel;
+    using cutum::IsProtectRingFocusMiss;
+    using cutum::SyncFocusRingRadiusUnderDebt;
+    Expect(IsProtectRingFocusMiss(1, 3, false), "protect nh=3 miss");
+    Expect(!IsProtectRingFocusMiss(1, 3, true), "underfeet not protect");
+    Expect(!IsProtectRingFocusMiss(1, 5, false), "mh>4 not protect");
+    Expect(!IsProtectRingFocusMiss(0, 3, false), "no focus miss");
+    Expect(SyncFocusRingRadiusUnderDebt(
+               9, static_cast<int>(IngressDebtLevel::ShedFar), false, 4,
+               false, false) == 2,
+           "ShedFar sync R<=2");
+    Expect(SyncFocusRingRadiusUnderDebt(9, 0, true, 4, false, false) == 2,
+           "phase_over sync R<=2");
+    Expect(SyncFocusRingRadiusUnderDebt(
+               9, static_cast<int>(IngressDebtLevel::ShedFar), false, 4, true,
+               false) == 9,
+           "underfeet keeps full sync R");
+    Expect(SyncFocusRingRadiusUnderDebt(9, 0, false, 4, false, false) == 9,
+           "calm keeps full sync R");
+  }
+
   if (gFails != 0)
   {
     std::cerr << gFails << " failures\n";

@@ -1994,6 +1994,10 @@ bool UChunkMeshCache::HasSoftDeferHeldInColumn(glm::ivec2 ground_xz) const
 void UChunkMeshCache::HoldSoftDeferFirstMesh(glm::ivec3 chunk_coord)
 {
   const bool inserted = SoftDeferHeld.insert(chunk_coord).second;
+  if (inserted)
+  {
+    SoftDeferHeldAge[chunk_coord] = 0;
+  }
   // Era15 TD-050 / Era22 I-S2: Held must not park FirstMesh outside ColumnFlow.
   // Re-fire on insert; Requeue refreshes Contains while Held stays empty.
   if (inserted && OnSoftDeferHeld)
@@ -2011,6 +2015,7 @@ void UChunkMeshCache::HoldSoftDeferFirstMesh(glm::ivec3 chunk_coord)
   {
     if (EnterTerminalHeld.count(*it) == 0)
     {
+      SoftDeferHeldAge.erase(*it);
       SoftDeferHeld.erase(it);
       return;
     }
@@ -2119,11 +2124,13 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
 {
   if (SoftDeferHeld.empty())
   {
+    SoftDeferHeldAge.clear();
     return;
   }
   const int kRequeueBudget = std::max(0, WorkAdmission.softdefer_requeue);
   int requeued = 0;
   int ticket_refresh = 0;
+  const int dirty_fm_live = GetLiveDirtyFirstMeshCount();
   for (auto it = SoftDeferHeld.begin(); it != SoftDeferHeld.end();)
   {
     const glm::ivec3 coord = *it;
@@ -2138,6 +2145,7 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
         HasInflightMeshBuild(coord) || Dirty.Contains(coord) ||
         HasMeshSatisfyingColumnReady(coord))
     {
+      SoftDeferHeldAge.erase(coord);
       it = SoftDeferHeld.erase(it);
       continue;
     }
@@ -2167,6 +2175,22 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
       OnSoftDeferHeld(coord);
       ++ticket_refresh;
     }
+    int &held_age = SoftDeferHeldAge[coord];
+    ++held_age;
+    // R4.3: protect-ring witness stuck in ticket-only Held with empty Dirty FM
+    // → force MarkDirty so schedule→GPU finish can progress.
+    const bool witness_protect =
+        MeshFocusValid && horiz <= 4 &&
+        (StarveRemeshForHoles || miss_or_focus) && dirty_fm_live == 0 &&
+        held_age >= 4 && ShouldAdmitDirtyCoord(coord);
+    if (witness_protect && still_deferred)
+    {
+      SoftDeferHeldAge.erase(coord);
+      it = SoftDeferHeld.erase(it);
+      MarkDirtyPriority(coord);
+      ++requeued;
+      continue;
+    }
     // ColPipe P5: while SoftDefer still holds publication, ticket-only —
     // MarkDirty every tick refeeds dirty_revisit + remesh thrash.
     if (still_deferred)
@@ -2186,9 +2210,22 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
       ++it;
       continue;
     }
+    SoftDeferHeldAge.erase(coord);
     it = SoftDeferHeld.erase(it);
     MarkDirtyPriority(coord);
     ++requeued;
+  }
+  // Drop age entries for coords no longer Held (other erase sites).
+  for (auto ait = SoftDeferHeldAge.begin(); ait != SoftDeferHeldAge.end();)
+  {
+    if (SoftDeferHeld.count(ait->first) == 0)
+    {
+      ait = SoftDeferHeldAge.erase(ait);
+    }
+    else
+    {
+      ++ait;
+    }
   }
 }
 

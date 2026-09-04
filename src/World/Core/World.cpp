@@ -71,13 +71,13 @@
 #include "World/Raycast/BlockRaycast.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
+#include "World/Streaming/MeshLightStalePolicy.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
 #include "Render/Mesh/MeshApplyPolicy.h"
 #include "World/Streaming/EnterVisualGate.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
-#include "World/Streaming/MeshLightStalePolicy.h"
 #include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/RelightInstallPlanner.h"
 #include "World/Streaming/ColumnVisualReadyPolicy.h"
@@ -2046,8 +2046,20 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
       {
         has_mesh_or_gpu = true;
       }
-      if (MeshService->HasDrawableGreedyMesh(coord) &&
-          MeshService->ChunkHasStaleDarkFaces(coord, BlockWorld))
+      UChunkMeshCache::LitApplyMeshProbe probe{};
+      MeshService->FillLitApplyMeshProbe(coord, probe);
+      uint64_t field_rev = 0;
+      if (const UChunk *ch = BlockWorld.GetChunkManager().GetChunk(coord))
+      {
+        field_rev = ch->GetLightFieldRevision();
+      }
+      const bool stale_o1 =
+          probe.gpu_resident
+              ? IsMeshLightStaleGpu(true, probe.gpu_has_dark_face,
+                                    probe.meshed_light_rev, field_rev)
+              : (probe.has_drawable &&
+                 IsMeshLightStale(probe.meshed_light_rev, field_rev));
+      if (probe.has_drawable && stale_o1)
       {
         stale_dark_with_mesh = true;
       }
@@ -2235,6 +2247,8 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   {
     ++cache.prep_hit_n;
     ++cache.prep_incremental_n;
+    LastUnfinishedVisualSample = cache.count;
+    LastUnfinishedVisualSampleValid = true;
     return cache.count;
   }
   // Incremental: recheck dirty columns ∪ rim±1 and adjust cached count/set.
@@ -2299,6 +2313,8 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
     cache.count = std::max(0, count);
     cache.dirty_cols.clear();
     ++cache.prep_incremental_n;
+    LastUnfinishedVisualSample = cache.count;
+    LastUnfinishedVisualSampleValid = true;
     return cache.count;
   }
   int unfinished = 0;
@@ -2325,6 +2341,8 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
   cache.count = unfinished;
   cache.dirty_cols.clear();
   ++cache.prep_full_n;
+  LastUnfinishedVisualSample = unfinished;
+  LastUnfinishedVisualSampleValid = true;
   return unfinished;
 }
 
@@ -5982,9 +6000,33 @@ int UWorld::CountPostLoadRingNotReady() const
 {
   const glm::ivec3 focus =
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
-  // Post-load ring SLA (TD-ARCH-021): spawn visual work radius, not render
-  // distance (~109). Gate samples idle_head after cooperative enter ends.
-  return CountUnfinishedVisualNear(focus, EnterVisualWorkRadiusChunks());
+  const int vis_r = EnterVisualWorkRadiusChunks();
+  // Enter SLA: keep a true R=4 walk. Cruise must not stomp UnfinishedVisualCache
+  // (radius 4 vs streaming R) — dual full walks were ~2× O(R²) per frame.
+  if (IsEnterLitGateActive() || IsEnterSessionActive() ||
+      GetEnterGameMeshBurstFrames() > 0)
+  {
+    return CountUnfinishedVisualNear(focus, vis_r);
+  }
+  auto &cache = UnfinishedVisualCache;
+  if (cache.valid && cache.focus.x == focus.x && cache.focus.z == focus.z &&
+      cache.radius >= vis_r)
+  {
+    int n = 0;
+    for (uint64_t key : cache.unfinished_keys)
+    {
+      const int cx = static_cast<int>(static_cast<uint32_t>(key >> 32));
+      const int cz = static_cast<int>(static_cast<uint32_t>(key));
+      const int rdx = std::abs(cx - focus.x);
+      const int rdz = std::abs(cz - focus.z);
+      if (std::max(rdx, rdz) <= vis_r)
+      {
+        ++n;
+      }
+    }
+    return n;
+  }
+  return CountUnfinishedVisualNear(focus, vis_r);
 }
 
 int UWorld::MarkSpawnRingUnfinishedDirty(int max_marks)

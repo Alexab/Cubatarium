@@ -1029,6 +1029,8 @@ private:
   /// SoftDefer dropped !Drawable FirstMesh outside focus — requeue when
   /// MayMesh / focus admits (rim plan B4; avoid forever-RemoveAt).
   std::unordered_set<glm::ivec3, IVec3Hash> SoftDeferHeld;
+  /// R4.3: frames each SoftDeferHeld coord has remained Held (ticket-only).
+  std::unordered_map<glm::ivec3, int, IVec3Hash> SoftDeferHeldAge;
   void RequeueSoftDeferHeld();
   /// GPU pool incremental upload: chunks mutated since last Consume.
   mutable std::unordered_set<glm::ivec3, IVec3Hash> GeometryDirtyChunks;

@@ -1,9 +1,8 @@
-# Mesh R1.5 → SHIP — phase 3 audit (2026-09-03)
+# Mesh R1.5 → SHIP — phase 4 audit (2026-09-04)
 
-**Коммит:** `899f7a81` — `perf(stream): Mesh SHIP phase 3 diet unlock and playable FPS bar`  
-**Ветка:** `perf_opt17`  
-**Gate-of-record (phase 2 end):** `perf_20260903-085143_23864.jsonl` → `manual_20260903-085143_analyze.json`  
-**Gate-of-record (post phase-3):** *pending manual 3 min re-run*
+**Ветка:** `perf_opt18`  
+**База phase-3:** `6f01bbe7` / manual `202455` (wall≈329 / FPS≈3)  
+**Gate-of-record (post phase-4):** *pending manual 3 min*
 
 ---
 
@@ -11,99 +10,76 @@
 
 | Уровень | Статус | Комментарий |
 | --- | --- | --- |
-| **SHIP** | **NO-GO** | playable FPS / joint не закрыты; manual gate-of-record не прогнан |
-| **R3.6 diet unlock** | **LANDED** | `focus_dirty` убран из hole-pressure; scan/phase shed decoupled; MESH-R30 ≥15 FPS |
-| **R3.7 schedule/finish** | **LANDED** | post-prune dirty_fm; Pass2 skip telem; true schedule_ok med; rim PreferKick |
-| **R3.8 playable FPS** | **LANDED** | emerge prep accounted; input-first ShedFar on prev wall>130 |
-| **R4.3 verify** | **HARNESS DONE** | enter GO; trio done; joint NO-GO; **manual pending** |
+| **SHIP** | **NO-GO** | playable FPS / joint / manual gate-of-record не закрыты |
+| **R4.1 O(1) stale + Sync R≤2** | **LANDED** | column SoT без voxel walk; SyncFocusRing med≈0.5 ms; emerge↓ |
+| **R4.2 dual unfinished + cadence** | **LANDED** | post-load reuse unfinished keys; cruise unfinished defer |
+| **R4.3 protect-ring FM finish** | **LANDED code** | ShedRim protect; SoftDeferHeld→Dirty; PreferKick+2nd Consume |
+| **R4.4 verify** | **HARNESS DONE** | enter GO; trio done; **manual pending**; fm_finish still 0 on autofly |
 
 ---
 
-## Manual `085143` (pre phase-3 baseline)
+## Baseline `202455` → phase-4 autofly
 
-| Метрика | `201637` | `085143` |
-| --- | ---: | ---: |
-| wall_fly / FPS | 370 / 2.7 | **377 / 2.65** |
-| stream / render share | — | **57% / 12%** |
-| holes | 93% | **80%** |
-| mismatch / diet | 52% / 52% | **49% / 49%** |
-| fm_finish | 0 | **0** |
-| rim_perf_diet nz | — | **0%** |
-| rim_hole_pressure nz | — | **54%** (ложный latch от focus_dirty) |
-
-**FPS note:** `effective_fps_fly = 1000/wall_fly` — корректный main-thread FPS. Render ~46 ms; stream+emerge ~85% wall. Input CPU ≈0; «тормоза управления» = 1 poll/frame при wall≈370 ms.
-
----
-
-## Phase 3 sprint summary
-
-### R3.6 — Stream diet unlock
-- `ShouldComputeRimHolePressure`: только unfinished / column_no_mesh (не focus_dirty)
-- Decouple `force_full_unfinished` / `cruise_scan_fast` / phase-over from heal pressure
-- Far-rim emerge floor + wall-based IngressDebt ShedFar
-- Analyze: `wall_render_share`, `input_ms_fly_med`
-- MESH-R30 interim: wall≤66, stream≤90, fps≥15; MESH-SHIP-joint +fps≥15
-
-### R3.7 — Schedule honesty + FM finish
-- Post-prune live `LastDirtyFmN` before schedule
-- Pass2 Inflight/PendingGpu RemoveAt → skip counters
-- True `cruise_schedule_ok_med` (zeros); `cruise_schedule_ok_when_positive_med`
-- PreferKick + ConsumeGpu floor on rim miss without visual_holes
-- HoleDrain exit when pressure stale (no unfinished/clnm)
-
-### R3.8 — Playable FPS push
-- emerge prep_other accounts pending/setup/dirty/sticky/column_flow
-- Input-first: prev wall>130 + far rim → ShedFar before stream; emerge cap floor
+| Метрика | `202455` manual | fz-cold-enter | trio fz-long | R4 target |
+| --- | ---: | ---: | ---: | ---: |
+| wall_fly / FPS | 329 / 3.0 | 314 / 3.2 | **111 / 9.0** | ≤66 / ≥15 |
+| stream | 181 | 155 | **28** | ≤90 (R4.2) |
+| emerge | 103 | **42** | **5.3** | ≤40 (R4.1) |
+| prep_other (abs) | ~77 | med≈14 | — | ≤15 |
+| SyncFocusRing | ~O(R²×512) | med **0.45 ms** | — | O(1) lookups |
+| holes | 81% | 33% | 67% | ≤60% (R4.3) |
+| fm_finish | 0 | 0 | 0 | >0 |
+| miss_stuck | 132s | 28s | **28s** | ≤60 |
 
 ---
 
-## R4.3 harness results (autofly + enter)
+## Phase 4 sprint summary
 
-### fz-cold-enter — **GO**
+### R4.1 — Kill O(R²×voxel)
+- `GetColumnRenderableState`: `IsMeshLightStaleGpu` / `IsMeshLightStale` via `FillLitApplyMeshProbe`
+- `SyncFocusRingRadiusUnderDebt`: R≤2 under ShedFar / phase_over
+- Prep early-exit on exact ShedFar + running wall>12
+- Named: `PrepSyncFocusRingMs`, `PrepRecoverMs` → FramePerf JSON
 
-| Метрика | Значение |
-| --- | ---: |
-| enter_unfinished_max | **3** (≤10) |
-| holes | 17% |
-| wall / FPS | 713 / 1.4 |
-| fm_finish | 0 |
-| diet / mismatch | 6% / 6% |
+### R4.2 — Dual unfinished + cadence
+- `CountPostLoadRingNotReady`: reuse unfinished_keys Chebyshev≤4 on cruise
+- Cruise unfinished defer when diet + mh≥3 + reuse_age<6
+- `PrepRefreshHasMissingMs` on UpdateStreaming HasMissing trio
+
+### R4.3 — Protect-ring FM finish
+- `IsProtectRingFocusMiss` → ShedRim (VB latch + EvaluateIngressDebt + wall bump)
+- MemoryBudget `capture_hard_cap=1` only exact ShedFar **and** mh>4
+- SoftDeferHeld age≥4 + dirty_fm==0 + horiz≤4 → MarkDirtyPriority
+- PreferKick only if hole pending/queued; SoftDeferHeld backup MarkDirty
+- Second `ConsumeGpuApplyBacklog` after Rebuild for watches noted this frame
+- PrefetchAhead allowed under ShedRim (only ShedFar sheds)
+
+### Enter guard
+- `mesh_phase4_fz_cold_enter.json`: **enter_unfinished_max=4 ≤10 → GO**
 
 ### Trio autofly
 
-| Report | holes | wall / FPS | stream | fm_finish | diet | mismatch | miss_stuck |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| replay | 34% | 453 / 2.2 | 268 | **1.0** | 4% | 4% | 44s |
-| fly-heavy | 62% | 459 / 2.2 | 289 | 0 | 3% | 3% | 22s |
-| fz-long | 84% | **159 / 6.3** | **57** | 0 | 0.7% | 0.7% | 30s |
+| Report | holes | wall_fly / FPS | stream | emerge | fm_finish | diet | mismatch | miss_stuck |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| replay | 72% | 407 / 2.5 | 253 | 68 | 0 | 6.8% | 6.8% | 44s |
+| fly-heavy | 25% | 398 / 2.5 | 263 | 69 | 0 | 2.6% | 2.6% | 22s |
+| fz-long | 67% | **111 / 9.0** | **28** | **5.3** | 0 | 0.8% | 0.8% | **28s** |
 
-### Phase gates on trio
+### Phase gates
 
 | Gate | Best evidence | Result |
 | --- | --- | --- |
-| MESH-R26-completion | replay (`fm_finish=1`, schedule_ok=7) | **GO** |
-| MESH-R30-fps | fz-long (stream OK; wall 159 / fps 6.3) | **NO-GO** |
-| MESH-SHIP-joint | all trio | **NO-GO** (diet≪40%, fps≪15; holes/fm vary) |
+| fz-cold-enter | enter_max=4 | **GO** |
+| MESH-R26-completion | autofly fm_finish | **NO-GO** (0) |
+| MESH-R30-fps | fz-long wall 111 / fps 9 | **NO-GO** (need ≤66 / ≥15) |
+| MESH-SHIP-joint | all trio | **NO-GO** |
 
-**Чтение:** R3.7 дал первый autofly `fm_finish>0` (replay). fz-long снизил stream до ≤90 и wall ~159 (~6 FPS), но до playable (≥15) далеко. Witness diet на autofly схлопнулся (~1–4%) вместе с mismatch — joint diet≥40% не выполняется. Dominant schedule blocker на cruise: `empty_fm_queue`.
-
----
-
-## Interim targets
-
-| Метрика | `085143` | Interim (R3.8) | Autofly best | **SHIP** |
-| --- | ---: | ---: | ---: | ---: |
-| wall_fly / FPS | 377 / 2.7 | ≤66 / ≥15 | 159 / 6.3 (fz-long) | ≤33 / ≥30 |
-| stream_ms | 208 | ≤90 | **57** (fz-long) | ≤50 |
-| holes | 80% | ≤60% | 34% (replay) | ≤10% |
-| diet | 49% | ≥40% | 4% (replay) | ≥70% |
-| mismatch | 49% | ≤10% | **4%** (replay) | ≤5% |
-| fm_finish | 0 | >0 | **1** (replay) | >0 |
+**Чтение:** алгоритмический FPS-рычаг сработал на calm long cruise (stream 28, emerge 5, wall≈111). Short replay/fly-heavy всё ещё stream-bound (~250 ms). Protect-ring ownership в коде, но autofly `fm_finish` ещё 0 — нужен manual gate-of-record.
 
 ---
 
 ## Next step
 
-1. **User:** manual fly ~3 min → `tools/flight_sim_analyze.py` на новый `perf_*.jsonl` → MESH-R26 / R30 / SHIP-joint / parity
-2. Если wall всё ещё ≫66: следующий sprint по stream/emerge budget (не camera sub-step)
-3. Разобрать почему autofly diet≪40% при низком mismatch (predicate vs latch semantics)
+1. **User:** manual fly ~3 min → analyze → обновить gate-of-record
+2. Если fm_finish=0 на manual: добить SoftDeferHeld witness / empty_fm ownership
+3. Camera sub-step по-прежнему запрещён пока wall_med>66
