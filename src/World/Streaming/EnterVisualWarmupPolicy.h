@@ -994,13 +994,16 @@ inline bool ShouldReleaseEnterAfterAbortUnderfeetCap(
   return ShouldForceEnterInGameAfterAbortDrain(elapsed_ms, force_ingame_ms);
 }
 
-/// Phase5 S4: abort-drain + force wall → soft-exit Loading even if underfeet
-/// never becomes present (stuck mesh_missing / SoftDefer orphan). Without this,
-/// land-stand hangs until process-timeout (periods=0).
+/// Phase5 S4 / Phase5.1: force wall + fov clear → soft-exit Loading even if
+/// underfeet never becomes present (stuck mesh_missing / SoftDefer orphan).
+/// AbortDrain is optional: it only arms on !ring_ready, so a ring-ready
+/// visibility/underfeet stall would hang forever without this bypass
+/// (Phase5.1 fly-heavy / fz-cold-enter: ring=0, debt=0, frozen=1 for 390s).
 inline bool ShouldForceEnterLoadSoftExit(bool abort_drain, double elapsed_ms,
                                          int force_ingame_ms, int fov_debt)
 {
-  if (!abort_drain || fov_debt > 0)
+  (void)abort_drain;
+  if (fov_debt > 0)
   {
     return false;
   }

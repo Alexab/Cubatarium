@@ -862,8 +862,8 @@ int main()
            "Phase5 S4: soft-exit at wall without underfeet");
     Expect(!ShouldForceEnterLoadSoftExit(true, 100000.0, 150000, 0),
            "Phase5 S4: soft-exit not before wall");
-    Expect(!ShouldForceEnterLoadSoftExit(false, 150000.0, 150000, 0),
-           "Phase5 S4: soft-exit requires abort_drain");
+    Expect(ShouldForceEnterLoadSoftExit(false, 150000.0, 150000, 0),
+           "Phase5.1: soft-exit without abort_drain when ring already ready");
     Expect(!ShouldForceEnterLoadSoftExit(true, 150000.0, 150000, 3),
            "Phase5 S4: soft-exit blocked while fov debt remains");
   }

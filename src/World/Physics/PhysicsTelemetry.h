@@ -674,7 +674,7 @@ struct PhysicsTelemetry
   int TransparentUploadFullN{0};
   /// S1: order-only batch reorder (no VBO rewrite) this frame.
   int TransparentCmdReorderN{0};
-  /// S1: TransparentOrderOnlyFailReason enum (0 ok … 6 leftover).
+  /// S1: TransparentOrderOnlyFailReason enum (0 ok … 8 mesh_rev_absorb).
   int TransparentOrderOnlyFailReason{0};
   /// S1: transparent GPU batch count after prepare.
   int TransparentBatchN{0};

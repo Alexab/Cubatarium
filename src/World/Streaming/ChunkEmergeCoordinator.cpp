@@ -802,9 +802,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       (have_nearest_missing && nearest_miss_h <= 2) ||
       (missing_visible_mesh && telem_miss_h_for_skip >= 0 &&
        telem_miss_h_for_skip <= 2);
+  // Phase5.1 T2: UV≤1 / nr≤1 may still skip (was forever-block at UV>0).
+  // Phase5.1: visual_holes no longer forever-blocks SoftDefer/thrash skip —
+  // hole_force later still protects FOV unfinished.
+  const int unfinished_skip_limit =
+      URuntimeTuning::Get().ScheduleShedUv1 ? 1 : 0;
   const bool prep_deadline_skip_ok =
-      !visual_holes && !missing_underfeet && !enter_warmup_active &&
-      telem_unfinished_for_skip <= 0 && focus_not_render_ready <= 0 &&
+      !missing_underfeet && !enter_warmup_active &&
+      telem_unfinished_for_skip <= unfinished_skip_limit &&
+      focus_not_render_ready <= unfinished_skip_limit &&
       !near_miss_skip_protect;
   auto note_prep_deadline_skip = [&]()
   {
@@ -1777,29 +1783,45 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   };
   // Phase5 finishing: StreamSimple / deadline / idle-CPU — skip non-critical
   // schedule_policy walks (CancelAsync, DropRemesh, full focus/FIFO scans).
-  // Never shed under visual_holes / underfeet / enter / unfinished / mh≤2.
+  // Never shed under visual_holes / underfeet / enter / unfinished_hard / mh≤2.
   const bool stream_simple_policy = URuntimeTuning::Get().StreamSimple;
+  const bool schedule_shed_uv1 = URuntimeTuning::Get().ScheduleShedUv1;
   const bool refresh_deadline_hit =
       world.GetPhysicsTelemetry().PrepRefreshDeadlineHit != 0;
   const bool emerge_prep_over = prep_deadline_overrun();
   const int stream_loads_n = world.GetPhysicsTelemetry().StreamLoads;
   const int telem_unfinished = world.GetPhysicsTelemetry().UnfinishedVisual;
   const int telem_miss_h = world.GetPhysicsTelemetry().MissHoriz;
+  // Phase5.1 T2: UV=1 is not unfinished_hard (legacy: any UV>0 blocked forever).
+  const bool unfinished_hard =
+      telem_unfinished > 1 || focus_not_render_ready > 1;
+  const bool unfinished_soft_ok =
+      telem_unfinished <= 1 && focus_not_render_ready <= 1 &&
+      !visual_holes && telem_miss_h >= 3 && !missing_underfeet;
   const bool unfinished_protect =
-      telem_unfinished > 0 || focus_not_render_ready > 0;
+      schedule_shed_uv1
+          ? unfinished_hard
+          : (telem_unfinished > 0 || focus_not_render_ready > 0);
   // MissHoriz==0 with no missing mesh means "no miss", not underfeet.
   const bool near_miss_protect =
       (have_nearest_missing && nearest_miss_h <= 2) ||
       (missing_visible_mesh && telem_miss_h >= 0 && telem_miss_h <= 2);
+  // Phase5.1: visual_holes no longer forever-blocks shed/soft-exit — hole_force
+  // / mh≤2 MarkDirty still run after schedule. Keep underfeet/enter/mh≤2.
   const bool allow_schedule_shed =
-      !visual_holes && !missing_underfeet && !enter_warmup_active &&
-      !unfinished_protect && !near_miss_protect;
+      !missing_underfeet && !enter_warmup_active && !unfinished_protect &&
+      !near_miss_protect;
+  // Mid-body deadline bailout when full schedule else is already running.
+  const bool allow_schedule_soft_exit =
+      !missing_underfeet && !enter_warmup_active && !near_miss_protect;
   const bool policy_deadline = refresh_deadline_hit || emerge_prep_over;
   // Idle-CPU invariant: stream_loads==0 must not run O(N) schedule walks.
+  // unfinished_soft_ok documents rim UV≤1 idle shed (covered by !unfinished_hard).
   const bool idle_cpu_clear = stream_loads_n == 0;
   const bool shed_schedule_policy =
       allow_schedule_shed &&
-      (stream_simple_policy || policy_deadline || idle_cpu_clear);
+      (stream_simple_policy || policy_deadline || idle_cpu_clear ||
+       (schedule_shed_uv1 && unfinished_soft_ok && idle_cpu_clear));
   const bool idle_cpu_skip_schedule =
       shed_schedule_policy && idle_cpu_clear;
   if (shed_schedule_policy)
@@ -1830,6 +1852,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
   }
   else
+  {
+  // Soft-exit via break: deadline may flip mid-else (~1ms) after emerge_prep_over
+  // was sampled false at entry — re-check before expensive walks.
+  do
   {
   // While sticky remesh drains after pending→0, suppress seam MarkDirty even
   // before sticky hits 0 — otherwise remesh thrash pins async≈42 and nr climbs
@@ -1946,6 +1972,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_service.SetMeshScheduleMaxHorizontalDist(-1);
     mesh_service.SetMeshScheduleOverflowPerFrame(0);
   }
+  if (prep_deadline_overrun() && allow_schedule_soft_exit)
+  {
+    prep_deadline_hit = 1;
+    break;
+  }
   // Holes / underfeet / light-debt idle: allow more snapshot captures.
   // Focus lit-but-dirty catch-up also needs budget — 6ms left async≈4 and
   // fd flat ~415 for the whole stop (f2_fd_golden). Cap below hole 48ms.
@@ -2014,6 +2045,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   mesh_service.SetMeshEmergeTotalBudgetMs(
       moving ? adaptive_moving_emerge : stop_emerge);
   clamp_emerge_to_phase();
+  if (prep_deadline_overrun() && allow_schedule_soft_exit)
+  {
+    prep_deadline_hit = 1;
+    break;
+  }
   // Era31 I-T2: cap emerge + defer far stale remesh under ocean heal pressure.
   {
     auto &phys_ocean = world.GetPhysicsTelemetryMutable();
@@ -2085,6 +2121,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     if (want_drop_remesh)
     {
+      if (prep_deadline_overrun() && allow_schedule_soft_exit)
+      {
+        prep_deadline_hit = 1;
+        break;
+      }
       const auto drop_t0 = std::chrono::high_resolution_clock::now();
       const glm::ivec3 drop_center =
           drop_remesh_use_preferred_cy ? focus_dirty_keep : focus_ground_horiz;
@@ -2113,6 +2154,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       mesh_drain = std::max(mesh_drain, last_frame_ms <= 16.0 ? 16 : 12);
       mesh_schedule = std::max(mesh_schedule, last_frame_ms <= 16.0 ? 12 : 8);
+    }
+    if (prep_deadline_overrun() && allow_schedule_soft_exit)
+    {
+      prep_deadline_hit = 1;
+      break;
     }
     world.ClearPendingLightAfterMeshCommitted(16);
   }
@@ -2258,6 +2304,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_drain = std::max(mesh_drain, tail_drain);
     mesh_schedule = std::max(mesh_schedule, tail_schedule);
   }
+  } while (0);
   } // else !shed_schedule_policy
   prep_schedule_policy_ms = prep_ms_since(schedule_policy_t0);
   // Phase5 S3: single DrainIdle before admission.
@@ -3497,9 +3544,62 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     pt.PrepSyncFocusRingMs = prep_sync_focus_ring_ms;
     pt.PrepRecoverMs = prep_recover_ms;
   }
+  // Phase 5.1 T3: hard abort heavy post-prep when StreamingPhaseBudget spent
+  // (StreamMs latched before emerge). Keep mh≤2/underfeet protect + nearest heal.
+  // visual_holes no longer blocks abort (else phase wall never holds on land).
+  float phase_budget_ms = URuntimeTuning::Get().StreamingPhaseBudgetMs;
+  if (enter_warmup_active || world.IsEnterLitGateActive() ||
+      world.IsEnterSessionActive())
+  {
+    phase_budget_ms = std::max(phase_budget_ms, 24.0f);
+  }
+  const double phase_elapsed_at_prep =
+      world.GetPhysicsTelemetry().StreamMs +
+      world.GetPhysicsTelemetry().MeshEmergePrepMs;
+  const bool phase_abort_heavy =
+      phase_budget_ms > 0.0f &&
+      phase_elapsed_at_prep >= static_cast<double>(phase_budget_ms) &&
+      !enter_warmup_active;
+  const double phase_remain =
+      phase_budget_ms > 0.0f
+          ? std::max(0.0, static_cast<double>(phase_budget_ms) -
+                              phase_elapsed_at_prep)
+          : std::max(0.0, world.GetPhysicsTelemetry().EmergeBudgetCapMs);
+  // Phase 5.1 T5: miss mh∈[2,4] carve — one FirstMesh/MarkDirty while remain>0.
+  // Also T3B: nearest heal when heavy post-prep aborted (mh>2 clean overrun).
+  if (have_nearest_missing &&
+      ((nearest_miss_h >= 2 && nearest_miss_h <= 4 && phase_remain > 0.0) ||
+       phase_abort_heavy))
+  {
+    if (!mesh_service.HasInflightMeshBuild(nearest_missing_hole) &&
+        !mesh_service.IsPendingGpuApply(nearest_missing_hole) &&
+        !mesh_service.HasMeshSatisfyingColumnReady(nearest_missing_hole))
+    {
+      mesh_service.MarkDirtyPriority(nearest_missing_hole);
+      GetColumnFlowExecutor().Enqueue(
+          glm::ivec2(nearest_missing_hole.x, nearest_missing_hole.z),
+          ColumnWorkKind::FirstMesh, 100);
+      note_column_flow_drain(1, 1);
+    }
+  }
+  if (phase_abort_heavy)
+  {
+    // Keep a tiny underfeet/mh≤2 feed; shed everything else.
+    if (missing_underfeet || nearest_miss_h <= 2)
+    {
+      mesh_schedule = std::min(mesh_schedule, 4);
+      mesh_drain = std::min(mesh_drain, 4);
+    }
+    else
+    {
+      mesh_schedule = std::min(mesh_schedule, 2);
+      mesh_drain = std::min(mesh_drain, 2);
+    }
+    sync_cap = 0;
+  }
   // Moving + dirty backlog: ensure minimum async feed rate so dirty queue
   // drains steadily instead of starving.
-  if (moving && pending_dirty > 100 && pending_async < 8)
+  if (!phase_abort_heavy && moving && pending_dirty > 100 && pending_async < 8)
   {
     mesh_schedule = std::max(mesh_schedule, 6);
     mesh_drain = std::max(mesh_drain, 8);
@@ -3512,7 +3612,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // schedule floors hot → mid wall≈40).
   const bool fov_unfinished =
       visual_holes || missing_underfeet || missing_visible_mesh;
-  if (last_frame_ms > 100.0)
+  if (!phase_abort_heavy && last_frame_ms > 100.0)
   {
     mesh_drain = (pending_dirty > 200) ? std::max(mesh_drain, 6) : 1;
     // Hitch: keep FirstMesh feed if FOV unfinished (manual_1940 async=0+holes).
@@ -3521,7 +3621,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                        : std::max(1, std::min(mesh_schedule, 4));
     sync_cap = 0;
   }
-  else if (last_frame_ms > 40.0)
+  else if (!phase_abort_heavy && last_frame_ms > 40.0)
   {
     mesh_drain = std::min(mesh_drain, fov_unfinished ? 4 : 2);
     mesh_schedule =
@@ -3545,12 +3645,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     sync_cap = 0;
   }
   // TD-ARCH-027 final floor AFTER wall clamps — FOV unfinished never async-starve.
-  if (fov_unfinished && pending_async < 8)
+  if (!phase_abort_heavy && fov_unfinished && pending_async < 8)
   {
     mesh_schedule = std::max(mesh_schedule, moving ? 12 : 16);
     mesh_drain = std::max(mesh_drain, moving ? 10 : 14);
   }
-  else if (pending_dirty > 100 && pending_async < 8 && last_frame_ms <= 100.0)
+  else if (!phase_abort_heavy && pending_dirty > 100 && pending_async < 8 &&
+           last_frame_ms <= 100.0)
   {
     mesh_schedule = std::max(mesh_schedule, moving ? 10 : 14);
     mesh_drain = std::max(mesh_drain, moving ? 8 : 12);
@@ -3558,7 +3659,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Lit remesh wall clamp AFTER SoT floors (ARCH_D3): dirty≫0 && no missing/UV.
   // Soft enough to keep mesh_async_med_when_dirty≥4 — schedule=2 starved async
   // (era13_01 wall≈48 / async=2). Prefer snapshot clamp + mild schedule cap.
-  if (!fov_unfinished && !missing_visible_mesh &&
+  if (!phase_abort_heavy && !fov_unfinished && !missing_visible_mesh &&
       world.GetPhysicsTelemetry().UnfinishedVisual == 0 &&
       pending_dirty > 280 && last_frame_ms > 28.0)
   {
@@ -3567,7 +3668,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_service.SetMeshSnapshotBudgetMs(moving ? 1.5 : 2.0);
   }
   // Phase C snapshot budget when healed+backlog (schedule hard-cap → Admission).
-  if (!fov_unfinished && !missing_visible_mesh &&
+  if (!phase_abort_heavy && !fov_unfinished && !missing_visible_mesh &&
       world.GetPhysicsTelemetry().UnfinishedVisual == 0 &&
       pending_gpu_n >= 12 && last_frame_ms > 24.0)
   {
@@ -3601,7 +3702,26 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool isolated_missing =
       visual_holes || missing_visible_mesh || missing_underfeet ||
       found_nearest_missing;
-  if (isolated_missing)
+  if (isolated_missing && phase_abort_heavy)
+  {
+    // Phase 5.1 T3B: skip DropRemesh / full-scan / admission flood; nearest
+    // MarkDirty+FirstMesh already carved above. PreferKick if GPU owns hole.
+    const auto isolated_miss_t0 = std::chrono::high_resolution_clock::now();
+    if (found_nearest_missing)
+    {
+      const bool nearest_in_pipeline =
+          mesh_service.IsPendingGpuApply(isolated_hole) ||
+          mesh_service.HasInflightMeshBuild(isolated_hole) ||
+          mesh_service.IsGpuExtractInFlight(isolated_hole);
+      if (nearest_in_pipeline)
+      {
+        mesh_service.PreferKickPendingGpuQueued(isolated_hole);
+      }
+      note_column_flow_drain(1, 1);
+    }
+    prep_isolated_miss_ms = prep_ms_since(isolated_miss_t0);
+  }
+  else if (isolated_missing)
   {
     const auto isolated_miss_t0 = std::chrono::high_resolution_clock::now();
     if (pending_dirty > 200)
@@ -4411,7 +4531,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     prep_isolated_miss_ms = prep_ms_since(isolated_miss_t0);
   }
-  else if (fov_unfinished)
+  else if (fov_unfinished && !phase_abort_heavy)
   {
     auto &exec = GetColumnFlowExecutor();
     ColumnWorkItem focus_scan{};
@@ -4521,6 +4641,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // from MarkRelit/tickets lands in the same frame (Sodium one-owner).
   // Single Seam MarkDirty window: DrainRemeshSeamBudget here only (mid-frame
   // sites Enqueue RemeshSeam without SyncIdle MarkDirty).
+  if (phase_abort_heavy)
+  {
+    column_flow_drain_n = std::min(column_flow_drain_n, 1);
+    column_flow_admit_batch = 1;
+  }
   {
     auto &exec = GetColumnFlowExecutor();
     const auto column_flow_t0 = std::chrono::high_resolution_clock::now();
@@ -4528,13 +4653,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                      focus_ground_horiz, focus_radius,
                      column_flow_admit_batch);
     const int seam_budget =
-        !moving
-            ? idle_seam_budget_this_frame
-            : std::clamp(2 + (black_sticky > 0 ? black_sticky : 0) +
-                             (world.GetPhysicsTelemetry().DarkFaceNearN > 200
-                                  ? 2
-                                  : 0),
-                         1, 8);
+        phase_abort_heavy
+            ? 0
+            : (!moving
+                   ? idle_seam_budget_this_frame
+                   : std::clamp(2 + (black_sticky > 0 ? black_sticky : 0) +
+                                    (world.GetPhysicsTelemetry().DarkFaceNearN >
+                                             200
+                                         ? 2
+                                         : 0),
+                                1, 8));
     if (seam_budget > 0)
     {
       exec.DrainRemeshSeamBudget(world, seam_budget);
@@ -4575,6 +4703,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     // R4.5.2 / R4.6.2: PreferKick for near-miss band mh∈[0,4] even when
     // VisualHoles crisis telem is 0 (rim mh=3 FocusMissing).
     const bool near_miss_finish =
+        !phase_abort_heavy &&
         (missing_visible_mesh ||
          world.GetPhysicsTelemetry().FocusMissingMesh > 0) &&
         nearest_miss_h >= 0 && nearest_miss_h <= 4;
@@ -4734,7 +4863,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       mesh_service.SetStarveRemeshForHoles(true);
     }
-    if (adm.promote_relight > 0)
+    if (!phase_abort_heavy && adm.promote_relight > 0)
     {
       auto &exec = GetColumnFlowExecutor();
       exec.RequestPromoteRelight(
@@ -4823,6 +4952,13 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   ApplyUnderfeetReservationFloors(mesh_drain, mesh_schedule, uf_res);
   mesh_service.SetPendingLightFocusPressure(pending_focus_count);
+  if (phase_abort_heavy)
+  {
+    mesh_schedule = std::min(mesh_schedule, 2);
+    mesh_drain = std::min(mesh_drain, 2);
+    LastBudget.MaxMeshSchedule = mesh_schedule;
+    LastBudget.MaxMeshDrain = mesh_drain;
+  }
   mesh_service.SetVisibleBlackNoTicketPressure(
       world.GetPhysicsTelemetry().VisibleBlackNoTicketN);
   mesh_service.SetVisibleBlackFocusPressure(
@@ -5136,12 +5272,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       mesh_service.GetCache().ResetFmDirtyGpuWatchTimeoutDelta();
     }
     // R4.1: second sync uses same debt-shrunk radius (skip full RD walk).
-    const int sync_r_end = SyncFocusRingRadiusUnderDebt(
-        focus_radius, pt.IngressDebtLevel,
-        pt.PhaseBudgetOver != 0, nearest_miss_h, missing_underfeet,
-        pt.VisualHoles != 0);
-    GetColumnFlowExecutor().SyncFocusRingColumnJobStages(
-        world, focus_ground_horiz, sync_r_end);
+    // Phase 5.1 T3: skip SyncFocusRing when phase budget abort (no near holes).
+    if (!phase_abort_heavy)
+    {
+      const int sync_r_end = SyncFocusRingRadiusUnderDebt(
+          focus_radius, pt.IngressDebtLevel,
+          pt.PhaseBudgetOver != 0, nearest_miss_h, missing_underfeet,
+          pt.VisualHoles != 0);
+      GetColumnFlowExecutor().SyncFocusRingColumnJobStages(
+          world, focus_ground_horiz, sync_r_end);
+    }
   }
 }
 

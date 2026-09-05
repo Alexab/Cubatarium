@@ -42,7 +42,8 @@ public:
                        const UChunkMeshCache &meshCache,
                        const std::vector<GreedyBatchRef> &refs,
                        uint64_t mesh_revision, uint64_t cull_revision,
-                       uint64_t sort_revision) override;
+                       uint64_t sort_revision,
+                       bool consume_dirty = true) override;
 
   /// CPU frustum → drawInstanceCount (fallback).
   void ApplyFrustumInstanceCull(GreedyGpuPassCache &cache,

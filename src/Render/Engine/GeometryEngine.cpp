@@ -1776,11 +1776,27 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
   }
   // Sort by blockId so MDI can MultiDraw contiguous same-texture runs.
   // sort_revision=1 invalidates pre-sort pool layouts (was always 0).
+  // Phase 5.1 T4: skip std::sort when opaque_draw fingerprint unchanged.
   constexpr uint64_t kBlockIdSortRev = 1;
   auto by_block_id = [](const GreedyBatchRef &ra, const GreedyBatchRef &rb)
   {
     // Perf-root P2: blockId cached on ref — no GreedyCache.find per compare.
     return ra.blockId < rb.blockId;
+  };
+  auto opaque_draw_fingerprint = [](const std::vector<GreedyBatchRef> &refs)
+  {
+    uint64_t h = refs.size();
+    for (const GreedyBatchRef &r : refs)
+    {
+      h ^= (static_cast<uint64_t>(static_cast<uint32_t>(r.chunkCoord.x))
+            << 42) ^
+           (static_cast<uint64_t>(static_cast<uint32_t>(r.chunkCoord.y))
+            << 21) ^
+           static_cast<uint64_t>(static_cast<uint32_t>(r.chunkCoord.z));
+      h ^= static_cast<uint64_t>(r.batchIndex) * 0x9e3779b97f4a7c15ull;
+      h ^= static_cast<uint64_t>(r.blockId) * 0xbf58476d1ce4e5b9ull;
+    }
+    return h;
   };
 
   auto *mdi = mdi_indirect_cull
@@ -1797,7 +1813,19 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     GreedyGpuOpaque.VertexPool.BeginUploadFrame();
     GreedyGpuCutout.VertexPool.BeginUploadFrame();
     GreedyGpuTransparent.VertexPool.BeginUploadFrame();
-    std::sort(opaque_draw.begin(), opaque_draw.end(), by_block_id);
+    const uint64_t draw_fp = opaque_draw_fingerprint(opaque_draw);
+    if (draw_fp == CachedOpaqueDrawFingerprint &&
+        !CachedOpaqueSortedRefs.empty() &&
+        CachedOpaqueSortedRefs.size() == opaque_draw.size())
+    {
+      opaque_draw = CachedOpaqueSortedRefs;
+    }
+    else
+    {
+      std::sort(opaque_draw.begin(), opaque_draw.end(), by_block_id);
+      CachedOpaqueSortedRefs = opaque_draw;
+      CachedOpaqueDrawFingerprint = draw_fp;
+    }
     GLboolean cullWasEnabled = GL_TRUE;
     if (!cutout.empty())
     {
@@ -1818,6 +1846,11 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     {
       glEnable(GL_CULL_FACE);
     }
+  }
+  else
+  {
+    CachedOpaqueSortedRefs.clear();
+    CachedOpaqueDrawFingerprint = 0;
   }
   if (!cutout.empty())
   {
@@ -1859,9 +1892,41 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     }
   }
 
-  const size_t packed_opaque_drawn =
-      DrawPackedGpuMeshes(cache, cache.GetGpuPackedOpaqueRefs(), vp, textures, false,
-                          GreedyShaderMode::TransparentColor, 0.0f);
+  // Phase 5.1 T4: draw packed only for chunkCoords absent from MDI greedy
+  // opaque_draw (avoid full dual-path). Skipping all packed raised holes and
+  // remesh churn → scene opaque ~19–44ms; leftovers-only keeps coverage.
+  const auto &packed_opaque_refs = cache.GetGpuPackedOpaqueRefs();
+  std::vector<GpuPackedChunkRef> packed_opaque_draw;
+  const std::vector<GpuPackedChunkRef> *packed_to_draw = &packed_opaque_refs;
+  if (mdi && store.SupportsMultiDrawIndirect() && !opaque_draw.empty() &&
+      !packed_opaque_refs.empty())
+  {
+    packed_opaque_draw.reserve(packed_opaque_refs.size());
+    for (const GpuPackedChunkRef &pref : packed_opaque_refs)
+    {
+      bool found = false;
+      for (const GreedyBatchRef &r : opaque_draw)
+      {
+        if (r.chunkCoord == pref.chunkCoord)
+        {
+          found = true;
+          break;
+        }
+      }
+      if (!found)
+      {
+        packed_opaque_draw.push_back(pref);
+      }
+    }
+    packed_to_draw = &packed_opaque_draw;
+  }
+  size_t packed_opaque_drawn = 0;
+  if (!packed_to_draw->empty())
+  {
+    packed_opaque_drawn =
+        DrawPackedGpuMeshes(cache, *packed_to_draw, vp, textures, false,
+                            GreedyShaderMode::TransparentColor, 0.0f);
+  }
   if (WorldInstance)
   {
     auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
@@ -2051,7 +2116,7 @@ void UGeometryEngine::PrepareTransparent(
   UGreedyGpuBackend::BindRefreshTelem(&refresh_telem);
   MeshStore().RefreshPassRefs(GreedyGpuTransparent, ctx.cache, filtered,
                                    ctx.meshRevision, ctx.cullRevision,
-                                   sortRevision);
+                                   sortRevision, /*consume_dirty=*/false);
   UGreedyGpuBackend::BindRefreshTelem(nullptr);
   if (WorldInstance)
   {

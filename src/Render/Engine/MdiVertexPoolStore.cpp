@@ -562,14 +562,15 @@ void UMdiVertexPoolStore::RebuildIndirectCmdTable(GreedyGpuPassCache &cache)
 void UMdiVertexPoolStore::RefreshPassRefs(
     GreedyGpuPassCache &cache, const UChunkMeshCache &meshCache,
     const std::vector<GreedyBatchRef> &refs, uint64_t mesh_revision,
-    uint64_t cull_revision, uint64_t sort_revision)
+    uint64_t cull_revision, uint64_t sort_revision, bool consume_dirty)
 {
   const bool geometry_refresh = !(cache.meshRevision == mesh_revision &&
                                   cache.sortRevision == sort_revision);
   // Single write path: parent RefreshPassRefs → GreedyVertexPool::Allocate
   // (glMapBufferRange). Do not stage a second MappedVbo copy (draw uses pool).
   UCpuStagingGpuStore::RefreshPassRefs(cache, meshCache, refs, mesh_revision,
-                                       cull_revision, sort_revision);
+                                       cull_revision, sort_revision,
+                                       consume_dirty);
   const bool cull_ssbo_stale =
       cache.usesVertexPool && !refs.empty() && !cache.GpuCompactActive;
   if ((geometry_refresh || cull_ssbo_stale) && cache.usesVertexPool &&

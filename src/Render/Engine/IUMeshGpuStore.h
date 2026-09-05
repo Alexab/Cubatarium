@@ -44,7 +44,8 @@ public:
                                const UChunkMeshCache &meshCache,
                                const std::vector<GreedyBatchRef> &refs,
                                uint64_t mesh_revision, uint64_t cull_revision,
-                               uint64_t sort_revision) = 0;
+                               uint64_t sort_revision,
+                               bool consume_dirty = true) = 0;
 
   virtual void DestroyPass(GreedyGpuPassCache &cache) = 0;
   virtual void DestroyAll(GreedyGpuPassCache &opaque, GreedyGpuPassCache &cutout,

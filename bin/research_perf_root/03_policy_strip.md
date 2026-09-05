@@ -1,9 +1,18 @@
-# Policy strip A/B (perf-root P3 / Phase5 S4)
+# Policy strip A/B (perf-root P3 / Phase5 S4 / Phase5.1)
 
 ## Flag
 
 - Runtime: `URuntimeTuning::StreamSimple` (env `CUBA_STREAM_SIMPLE=1` or `streaming_tune.json` `"stream_simple": true`)
 - Effect: disables diet/cadence throttles in `RefreshStreamingPressure`; disables SoftDefer witness retarget blocking; RefreshProbe state is explicit on `UWorldStreaming`
+
+## Phase 5.1 kill-switches
+
+| Flag | Default | Env / JSON | Effect |
+|---|---|---|---|
+| `StreamingPhaseBudgetMs` | **5.0** | `CUBA_STREAMING_PHASE_BUDGET_MS` / `streaming_phase_budget_ms` | Hard wall for TickWorldStreamingPhase SoT; enter/lit auto-floor **24** |
+| `MissReservedMs` | **2.0** | `miss_reserved_ms` | Miss carve inside phase (clamped ≤ phase at apply) |
+| `MissEmergeFloorMs` | **2.0** | `miss_emerge_floor_ms` | Floor emerge when stream overruns general |
+| `ScheduleShedUv1` | **true** | `CUBA_SCHEDULE_SHED_UV1=0` to disable | UV=1 no longer forever-blocks schedule shed |
 
 ## How to A/B
 
@@ -18,6 +27,12 @@ python tools/simple_ab_suite.py
 - **Root cause:** enter-warmup stuck `mesh_missing` without underfeet after coop abort-drain.
 - **Fix:** `ShouldForceEnterLoadSoftExit` (150s + fov_debt==0).
 - **Verify:** `hang_killed=false`, periods>0 (`phase5_landstand_verify.json`, SimpleAB suites).
+
+### Phase5.1 enter hang (ring already ready)
+
+- **Root cause:** AbortDrain only arms on `!ring_ready`; soft-exit never fired; `EndEnterLitGate` cleared quiesce → `IsCreateSpawnWarmupSettled` O(FOV) every cruise frame (~45ms `prep_warmup`).
+- **Fix:** soft-exit without AbortDrain; latch settled on gate end / post-session.
+- **Verify:** trio v4 `hang_killed=false`.
 
 ### SimpleAB 2026-09-05
 

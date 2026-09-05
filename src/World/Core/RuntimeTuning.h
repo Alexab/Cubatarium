@@ -49,10 +49,11 @@ struct URuntimeTuning
   /// center+edge Capture (drain med ≤8); do not raise this base.
   int CaptureMovingBgCap{1};
 
-  /// Era14.1 B: hard wall budget for TickWorldStreamingPhase (ms). Miss / UV
-  /// carve-out skips this — FirstMesh/emerge heal always runs. Cuts EnterGame
-  /// burst when stream already spent the budget on a clean frame.
-  float StreamingPhaseBudgetMs{24.0f};
+  /// Phase 5.1 T3: hard wall for TickWorldStreamingPhase (ms). Default 5 —
+  /// kill-switch for enter quality (raise via JSON `streaming_phase_budget_ms`).
+  /// MissReservedMs / MissEmergeFloorMs carve-out unchanged — FirstMesh/emerge
+  /// heal still runs under near miss / underfeet.
+  float StreamingPhaseBudgetMs{5.0f};
 
   /// RebuildChunkImmediate hard budget (idle only; moving sync_cap=0).
   float ImmediateBudgetHotMs{3.0f};
@@ -97,9 +98,10 @@ struct URuntimeTuning
   int DirtyAdmitCapYellow{1};
   float RelightFifoAdmitFrac{0.75f};
   /// Cruise wall P2: miss FirstMesh/GPU reserved ms inside StreamingPhaseBudget.
-  float MissReservedMs{8.0f};
+  /// Clamped to StreamingPhaseBudgetMs at apply time when larger than phase.
+  float MissReservedMs{2.0f};
   /// Under miss/holes, never starve emerge below this when stream overruns general.
-  float MissEmergeFloorMs{0.0f};
+  float MissEmergeFloorMs{2.0f};
   /// Era19 kill-switch: SoftDefer Capture floor while VisibleBlack (Era18).
   /// Default true = current Era18 behavior until miss-first budget owns it.
   bool Era18VbCaptureFloor{true};
@@ -154,6 +156,10 @@ struct URuntimeTuning
   /// Perf-root P3: disable diet/cadence/witness-pin heuristics for A/B.
   /// Env CUBA_STREAM_SIMPLE=1 or streaming_tune.json "stream_simple": true.
   bool StreamSimple{false};
+  /// Phase5.1 T2: allow schedule shed / deadline soft-exit with UV≤1 / nr≤1.
+  /// false restores legacy unfinished_protect (UV>0 || nr>0 blocks).
+  /// Env CUBA_SCHEDULE_SHED_UV1=0|1 or streaming_tune.json "schedule_shed_uv1".
+  bool ScheduleShedUv1{true};
 
   static URuntimeTuning &Get();
   static void ResetToDefaults();

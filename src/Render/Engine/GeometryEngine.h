@@ -329,6 +329,9 @@ private:
   uint64_t CachedTransparentSortRevision{0};
   uint64_t CachedTransparentMeshRevision{0};
   uint64_t CachedTransparentRefFingerprint{0};
+  /// Phase 5.1 T4: skip opaque by_block_id sort when draw set unchanged.
+  std::vector<GreedyBatchRef> CachedOpaqueSortedRefs;
+  uint64_t CachedOpaqueDrawFingerprint{0};
   glm::mat4 PreparedTransparentVp{};
   const std::map<size_t, UTextureCube> *PreparedTransparentTextures{nullptr};
   IUMeshGpuStore &MeshStore();

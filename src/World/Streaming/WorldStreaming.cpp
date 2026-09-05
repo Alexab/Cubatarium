@@ -1588,7 +1588,6 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
 {
   CUBA_ZONE("TickAsyncChunkSystems");
   const auto main_t0 = std::chrono::high_resolution_clock::now();
-  constexpr double kStreamBudgetMs = 5.0;
   auto elapsed_main_ms = [&]()
   {
     return std::chrono::duration<double, std::milli>(
@@ -1603,10 +1602,35 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   // StreamerUpdate / AsyncIo / RelightDrain accumulate for this tick; do not
   // clear RelightDrainMs here — DrainAsyncRelightResults already timed in World.
 
-  // Authoritative pressure for this frame (UpdateStreaming earlier used the
-  // previous frame's caps for Prefetch/MaxLoadOps — one-frame lag is fine).
-  // Phase5 S2: main_t0 starts before Refresh so stream deadline covers it.
-  RefreshStreamingPressure(world, main_t0, kStreamBudgetMs);
+  constexpr double kStreamBudgetDefaultMs = 5.0;
+  double stream_budget_ms = kStreamBudgetDefaultMs;
+  {
+    const float phase_budget = URuntimeTuning::Get().StreamingPhaseBudgetMs;
+    if (phase_budget > 0.0f && !world.IsEnterLitGateActive() &&
+        !world.IsEnterSessionActive())
+    {
+      // Share StreamingPhaseBudget with emerge — do not let Refresh alone
+      // spend the whole phase wall (Phase5.1 T3).
+      stream_budget_ms =
+          std::min(stream_budget_ms, static_cast<double>(phase_budget) * 0.6);
+    }
+  }
+  RefreshStreamingPressure(world, main_t0, stream_budget_ms);
+  // Phase 5.1 T3: after Refresh, if phase wall already spent and underfeet ok,
+  // skip commit/load flood (VisualHoles alone must not reopen unbounded stream).
+  {
+    const float phase_budget = URuntimeTuning::Get().StreamingPhaseBudgetMs;
+    const auto &pt = world.PhysicsTelemetryData;
+    const bool protect_near =
+        pt.FocusMissingMesh != 0 || pt.UnderfeetHasMesh == 0;
+    if (phase_budget > 0.0f &&
+        elapsed_main_ms() >= static_cast<double>(phase_budget) &&
+        !world.IsEnterLitGateActive() && !world.IsEnterSessionActive() &&
+        !protect_near)
+    {
+      return;
+    }
+  }
   const StreamingPressureCaps &pressure = LastPressureCaps;
 
   const ProceduralSettings &procedural = world.GetProceduralSettings();
@@ -1650,13 +1674,31 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     return std::max(std::abs(coord.x - focus_horiz.x),
                     std::abs(coord.z - focus_horiz.z)) <= focus_radius;
   };
-  const double near_budget_ms =
-      near_mesh_backlog ? 6.0 : kNearCompleteBudgetMs;
+  const double near_budget_ms = [&]()
+  {
+    double nb = near_mesh_backlog ? 6.0 : kNearCompleteBudgetMs;
+    const float phase_budget = URuntimeTuning::Get().StreamingPhaseBudgetMs;
+    if (phase_budget > 0.0f && !world.IsEnterLitGateActive() &&
+        !world.IsEnterSessionActive())
+    {
+      nb = std::min(nb, static_cast<double>(phase_budget));
+    }
+    return nb;
+  }();
   auto near_exhausted = [&]()
   { return elapsed_main_ms() >= near_budget_ms; };
   auto far_exhausted = [&]()
   {
     if (!keep_prewarm_surplus)
+    {
+      return true;
+    }
+    // Phase 5.1 T3: phase wall spent → always skip far on cruise (near commits
+    // still use near_budget). VisualHoles alone must not unlock unbounded far.
+    const float phase_budget = URuntimeTuning::Get().StreamingPhaseBudgetMs;
+    if (phase_budget > 0.0f &&
+        elapsed_main_ms() >= static_cast<double>(phase_budget) &&
+        !world.IsEnterLitGateActive() && !world.IsEnterSessionActive())
     {
       return true;
     }

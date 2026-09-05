@@ -7057,6 +7057,9 @@ void UWorld::EndEnterLitGate()
   EnterLitGateActive = false;
   EnterLitSnapshotCaptured = false;
   EnterLitQuiesceLatched = false;
+  // Phase5.1: latch spawn-warmup settled on gate end — quiesce flag is cleared
+  // above and must not reopen O(FOV) IsCreateSpawnWarmupSettled on cruise.
+  CreateSpawnWarmupSettledLatched = true;
   EnterLitDebtSnapshot.clear();
   EnterVisualWorkSnapshot.clear();
   EnterVisualWorkSnapshotCaptured = false;
@@ -7638,6 +7641,14 @@ bool UWorld::IsCreateSpawnWarmupSettled() const
   }
   if (GetBlockWorld().CountNonAir() == 0)
   {
+    CreateSpawnWarmupSettledLatched = true;
+    return true;
+  }
+  // Phase5.1: EndEnterLitGate clears EnterLitQuiesceLatched — without this,
+  // cruise pays CountCreateNearFovWarmupDebt every frame (~45ms prep_warmup).
+  if (!EnterLitGateActive && !IsEnterSessionActive())
+  {
+    CreateSpawnWarmupSettledLatched = true;
     return true;
   }
   // Cruise: after enter gate quiesced, spawn-warmup debt recount is redundant.

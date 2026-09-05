@@ -48,7 +48,8 @@ struct GreedyGpuRefreshTelem
   int UploadFullN{0};
   int CmdReorderN{0};
   /// 0 ok (reorder), 1 !mesh/pass_geom, 2 dirty, 3 !pool, 4 need_rebuild,
-  /// 5 key_miss, 6 leftover — set when sort-only was attempted or gated out.
+  /// 5 key_miss, 6 leftover, 7 not_attempted, 8 mesh_rev_absorb —
+  /// set when sort-only was attempted or gated out.
   int OrderOnlyFailReason{0};
 };
 
@@ -61,6 +62,8 @@ enum class TransparentOrderOnlyFailReason : int
   NeedRebuild = 4,
   KeyMiss = 5,
   Leftover = 6,
+  NotAttempted = 7,
+  MeshRevAbsorb = 8,
 };
 
 struct GreedyGpuPassCache
@@ -99,7 +102,7 @@ public:
                        const UChunkMeshCache &meshCache,
                        const std::vector<GreedyBatchRef> &refs,
                        uint64_t mesh_revision, uint64_t cull_revision,
-                       uint64_t sort_revision);
+                       uint64_t sort_revision, bool consume_dirty = true);
   void DestroyPass(GreedyGpuPassCache &cache);
   void DestroyAll(GreedyGpuPassCache &opaque, GreedyGpuPassCache &cutout,
                   GreedyGpuPassCache &transparent);

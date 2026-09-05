@@ -1029,9 +1029,21 @@ void UWorld::TickWorldStreamingPhase()
       PhysicsTelemetryData.FocusStickyRemesh > 0 ||
       PhysicsTelemetryData.UnderfeetHasMesh == 0;
   const auto &tune = URuntimeTuning::Get();
-  const float phase_budget = tune.StreamingPhaseBudgetMs;
-  const float reserved =
+  // Cruise SoT: StreamingPhaseBudgetMs (default 5). Enter/lit gate keeps a
+  // higher effective phase so FirstMesh/visibility can settle (kill-switch
+  // quality — raise still via JSON; auto floor during enter only).
+  float phase_budget = tune.StreamingPhaseBudgetMs;
+  if (IsEnterLitGateActive() || IsEnterSessionActive())
+  {
+    phase_budget = std::max(phase_budget, 24.0f);
+  }
+  float reserved =
       miss_carve_out ? std::max(0.0f, tune.MissReservedMs) : 0.0f;
+  // Reserved cannot exceed phase wall (MissReserved default 8 vs phase 5).
+  if (phase_budget > 0.0f && reserved > phase_budget)
+  {
+    reserved = phase_budget;
+  }
   const float general_budget =
       phase_budget > 0.0f ? std::max(0.0f, phase_budget - reserved) : 0.0f;
   const double remain_general =
@@ -1075,6 +1087,9 @@ void UWorld::TickWorldStreamingPhase()
     GetMeshService().SetMeshEmergeTotalBudgetMs(
         static_cast<float>(emerge_cap));
   }
+  // Phase 5.1 T3: latch StreamMs before TickMeshEmerge so emerge phase-abort
+  // sees stream spend (was written only after emerge → StreamMs==0 inside).
+  PhysicsTelemetryData.StreamMs = stream_elapsed_ms;
   // Burst when general remain > 0 or miss (reserved still feeds emerge).
   if (remain_general > 0.0 || miss_carve_out)
   {
@@ -1084,9 +1099,7 @@ void UWorld::TickWorldStreamingPhase()
   const auto t_after_mesh = std::chrono::high_resolution_clock::now();
   BlockWorldReady = true;
 
-  PhysicsTelemetryData.StreamMs =
-      std::chrono::duration<double, std::milli>(t_after_stream - t_before_stream)
-          .count();
+  PhysicsTelemetryData.StreamMs = stream_elapsed_ms;
   PhysicsTelemetryData.MeshEmergeMs =
       std::chrono::duration<double, std::milli>(t_after_mesh - t_after_stream)
           .count();

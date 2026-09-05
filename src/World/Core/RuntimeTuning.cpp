@@ -452,6 +452,10 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
   {
     t.StreamSimple = j.value("stream_simple", t.StreamSimple);
   }
+  if (j.contains("schedule_shed_uv1"))
+  {
+    t.ScheduleShedUv1 = j.value("schedule_shed_uv1", t.ScheduleShedUv1);
+  }
   last_path = path;
   last_mtime = mtime;
   have_mtime = true;
@@ -460,19 +464,24 @@ void URuntimeTuning::LoadStreamingTuneFile(const char *path)
 void URuntimeTuning::ApplyEnvOverrides()
 {
   URuntimeTuning &t = Get();
-  if (const char *env = std::getenv("CUBA_STREAM_SIMPLE"))
+  auto apply_bool_env = [](const char *name, bool &dst)
   {
-    if (env[0] == '1' || env[0] == 't' || env[0] == 'T' || env[0] == 'y' ||
-        env[0] == 'Y')
+    if (const char *env = std::getenv(name))
     {
-      t.StreamSimple = true;
+      if (env[0] == '1' || env[0] == 't' || env[0] == 'T' || env[0] == 'y' ||
+          env[0] == 'Y')
+      {
+        dst = true;
+      }
+      else if (env[0] == '0' || env[0] == 'f' || env[0] == 'F' ||
+               env[0] == 'n' || env[0] == 'N')
+      {
+        dst = false;
+      }
     }
-    else if (env[0] == '0' || env[0] == 'f' || env[0] == 'F' ||
-             env[0] == 'n' || env[0] == 'N')
-    {
-      t.StreamSimple = false;
-    }
-  }
+  };
+  apply_bool_env("CUBA_STREAM_SIMPLE", t.StreamSimple);
+  apply_bool_env("CUBA_SCHEDULE_SHED_UV1", t.ScheduleShedUv1);
 }
 
 } // namespace cutum

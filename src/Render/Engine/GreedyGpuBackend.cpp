@@ -263,7 +263,8 @@ void UGreedyGpuBackend::RefreshPass(GreedyGpuPassCache &cache,
 void UGreedyGpuBackend::RefreshPassRefs(
     GreedyGpuPassCache &cache, const UChunkMeshCache &meshCache,
     const std::vector<GreedyBatchRef> &refs,
-    uint64_t mesh_revision, uint64_t cull_revision, uint64_t sort_revision)
+    uint64_t mesh_revision, uint64_t cull_revision, uint64_t sort_revision,
+    bool consume_dirty)
 {
   // P2: CullRevision only invalidates draw instance counts, not geometry.
   // Exception: degenerate AABB (warmup upload skipped FillBatchCull) or a
@@ -326,8 +327,23 @@ void UGreedyGpuBackend::RefreshPassRefs(
     }
   }
 
+  // Opaque consume_dirty=true swaps GeometryDirtyChunks; transparent peeks the
+  // frame snapshot so opaque remesh does not silently empty dirty for this pass.
   std::unordered_set<glm::ivec3, IVec3Hash> dirty;
-  meshCache.ConsumeGeometryDirtyChunks(dirty);
+  if (consume_dirty)
+  {
+    meshCache.ConsumeGeometryDirtyChunks(dirty);
+  }
+  else
+  {
+    for (const GreedyBatchRef &ref : refs)
+    {
+      if (meshCache.GpuPassDirtyHitsChunk(ref.chunkCoord))
+      {
+        dirty.insert(ref.chunkCoord);
+      }
+    }
+  }
 
   constexpr size_t kMaxIncrementalDirty = 48;
   const bool sort_changed = sort_revision != cache.sortRevision;
@@ -335,10 +351,16 @@ void UGreedyGpuBackend::RefreshPassRefs(
   const bool pool_ok =
       cache.usesVertexPool && cache.VertexPool.IsActive();
 
-  // S1/S2: Consume dirty is pass-local after opaque may have swapped the live
-  // set; frame snapshot (BeginGpuPassDirtyFrame) still exists for diagnostics.
-  // Order-only uses dirty.empty() so opaque remesh mesh_revision flicker does
-  // not force transparent upload_full.
+  // T1.2: absorb opaque-only mesh_revision flicker with no local dirty/sort.
+  if (!sort_changed && !need_rebuild && dirty.empty() &&
+      mesh_revision != cache.meshRevision)
+  {
+    cache.meshRevision = mesh_revision;
+    cache.cullRevision = cull_revision;
+    NoteOrderOnlyFail(TransparentOrderOnlyFailReason::MeshRevAbsorb);
+    return;
+  }
+
   auto upload_full = [&]()
   {
     NoteUploadFull();
@@ -392,19 +414,21 @@ void UGreedyGpuBackend::RefreshPassRefs(
     cache.batches.resize(write_index);
   };
 
-  // S1: sortRevision-only — reorder live GPU batches to BTF refs order; no
-  // Reserve/Allocate. Orphan GPU batches (left frustum) are released; missing
-  // keys fall through to upload_full.
-  // S2 residual: when this pass's Consume dirty is empty, opaque remesh may
-  // still bump mesh_revision / GpuPassDirtyFrame — stay order-only eligible.
+  auto invoke_upload_full = [&]()
+  {
+    if (!gRefreshTelem || gRefreshTelem->OrderOnlyFailReason == 0)
+    {
+      NoteOrderOnlyFail(TransparentOrderOnlyFailReason::NotAttempted);
+    }
+    upload_full();
+  };
+
+  // T1.3: sortRevision change — reorder to BTF refs order; KeyMiss appends a
+  // fresh UploadBatch instead of failing to upload_full. Small dirty sets are
+  // folded into the same path (release dirty slots, then append+reorder).
   if (sort_changed && !cache.batches.empty())
   {
-    if (!dirty.empty())
-    {
-      NoteOrderOnlyFail(mesh_ok ? TransparentOrderOnlyFailReason::Dirty
-                                : TransparentOrderOnlyFailReason::MeshNotOk);
-    }
-    else if (!pool_ok)
+    if (!pool_ok)
     {
       NoteOrderOnlyFail(TransparentOrderOnlyFailReason::PoolNotOk);
     }
@@ -412,8 +436,33 @@ void UGreedyGpuBackend::RefreshPassRefs(
     {
       NoteOrderOnlyFail(TransparentOrderOnlyFailReason::NeedRebuild);
     }
+    else if (!dirty.empty() && dirty.size() > kMaxIncrementalDirty)
+    {
+      NoteOrderOnlyFail(mesh_ok ? TransparentOrderOnlyFailReason::Dirty
+                                : TransparentOrderOnlyFailReason::MeshNotOk);
+    }
     else
     {
+      if (!dirty.empty())
+      {
+        size_t write = 0;
+        for (size_t i = 0; i < cache.batches.size(); ++i)
+        {
+          GreedyGpuBatch &b = cache.batches[i];
+          if (dirty.count(b.chunkCoord) > 0)
+          {
+            ReleasePooledBatch(b, cache.VertexPool);
+            continue;
+          }
+          if (write != i)
+          {
+            cache.batches[write] = b;
+          }
+          ++write;
+        }
+        cache.batches.resize(write);
+      }
+
       // Prefer (coord, batchIndex). If all GPU batchIndex==0 (legacy), fall back
       // to coord-only when each chunk has ≤1 pooled transparent batch.
       std::unordered_map<glm::ivec3, int, IVec3Hash> per_chunk_n;
@@ -455,11 +504,13 @@ void UGreedyGpuBackend::RefreshPassRefs(
         }
       }
 
+      ApplyPoolBudget(cache.VertexPool);
+      const size_t cap_v_before = cache.VertexPool.VertexCapacityBytesValue();
+      const size_t cap_before = cache.VertexPool.CapacityBytes();
+
       std::vector<GreedyGpuBatch> ordered;
       ordered.reserve(refs.size());
       bool ok = true;
-      TransparentOrderOnlyFailReason fail =
-          TransparentOrderOnlyFailReason::Ok;
       for (const GreedyBatchRef &ref : refs)
       {
         const GreedyMeshBatch *batch = meshCache.TryGetGreedyBatch(ref);
@@ -468,40 +519,54 @@ void UGreedyGpuBackend::RefreshPassRefs(
           continue;
         }
         size_t src_i = static_cast<size_t>(-1);
+        bool found = false;
         if (coord_only)
         {
           const auto it = by_coord.find(ref.chunkCoord);
-          if (it == by_coord.end())
+          if (it != by_coord.end())
           {
-            ok = false;
-            fail = TransparentOrderOnlyFailReason::KeyMiss;
-            break;
+            found = true;
+            src_i = it->second;
+            by_coord.erase(it);
+            by_key.erase({ref.chunkCoord, cache.batches[src_i].batchIndex});
           }
-          src_i = it->second;
-          by_coord.erase(it);
-          by_key.erase({ref.chunkCoord, cache.batches[src_i].batchIndex});
         }
         else
         {
           const GpuBatchKey key{ref.chunkCoord, ref.batchIndex};
           const auto it = by_key.find(key);
-          if (it == by_key.end())
+          if (it != by_key.end())
+          {
+            found = true;
+            src_i = it->second;
+            by_key.erase(it);
+          }
+        }
+        if (found)
+        {
+          ordered.push_back(cache.batches[src_i]);
+          FillBatchCull(ordered.back(), ref);
+        }
+        else
+        {
+          // KeyMiss: append fresh GPU batch; stay on order-only path.
+          GreedyGpuBatch gpu;
+          UploadBatch(gpu, *batch, cache.VertexPool);
+          if (!gpu.pooled)
           {
             ok = false;
-            fail = TransparentOrderOnlyFailReason::KeyMiss;
             break;
           }
-          src_i = it->second;
-          by_key.erase(it);
+          FillBatchCull(gpu, ref);
+          ordered.push_back(gpu);
         }
-        ordered.push_back(cache.batches[src_i]);
-        FillBatchCull(ordered.back(), ref);
       }
 
-      if (ok)
+      if (ok &&
+          cache.VertexPool.VertexCapacityBytesValue() == cap_v_before &&
+          cache.VertexPool.CapacityBytes() == cap_before)
       {
-        // Orphans = GPU batches not in current refs (left frustum) — drop them
-        // instead of failing to upload_full.
+        // Orphans = GPU batches not in current refs (left frustum).
         const bool have_leftover =
             coord_only ? !by_coord.empty() : !by_key.empty();
         if (have_leftover)
@@ -531,12 +596,15 @@ void UGreedyGpuBackend::RefreshPassRefs(
         cache.batches = std::move(ordered);
         cache.sortRevision = sort_revision;
         cache.cullRevision = cull_revision;
-        // Keep meshRevision if pass geometry unchanged; bump to current so
-        // subsequent mesh_ok stays true after opaque-only global rev flicker.
         cache.meshRevision = mesh_revision;
+        cache.poolVbo = cache.VertexPool.VertexBuffer();
+        cache.poolEbo = cache.VertexPool.IndexBuffer();
         cache.IndirectCullReady = false;
         cache.GpuCompactActive = false;
         cache.CompactVisCpuSynced = false;
+        glBindBuffer(kArrayBuffer, 0);
+        glBindBuffer(kElementArrayBuffer, 0);
+        cache.VertexPool.SignalUploadComplete();
         NoteCmdReorder();
         NoteOrderOnlyFail(TransparentOrderOnlyFailReason::Ok);
 #ifndef NDEBUG
@@ -557,13 +625,16 @@ void UGreedyGpuBackend::RefreshPassRefs(
 #endif
         return;
       }
-      NoteOrderOnlyFail(fail);
+      // Capacity grow / non-pooled allocate — fall through to upload_full.
+      // Leave leftover maps; upload_full rebuilds the whole pass.
     }
   }
 
+  // Incremental only when sort is stable; sort_changed+dirty uses append+reorder
+  // above (BTF refs order, never blockId sort).
   const bool can_incremental =
       cache.usesVertexPool && cache.VertexPool.IsActive() && !sort_changed &&
-      !dirty.empty() && dirty.size() <= kMaxIncrementalDirty;
+      !need_rebuild && !dirty.empty() && dirty.size() <= kMaxIncrementalDirty;
 
   if (can_incremental)
   {
@@ -626,7 +697,7 @@ void UGreedyGpuBackend::RefreshPassRefs(
         cache.VertexPool.VertexCapacityBytesValue() != cap_v_before ||
         cache.VertexPool.CapacityBytes() != cap_before)
     {
-      upload_full();
+      invoke_upload_full();
     }
     else
     {
@@ -640,7 +711,7 @@ void UGreedyGpuBackend::RefreshPassRefs(
   }
   else
   {
-    upload_full();
+    invoke_upload_full();
   }
 
   glBindBuffer(kArrayBuffer, 0);
