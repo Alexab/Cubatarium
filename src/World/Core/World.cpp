@@ -6307,11 +6307,10 @@ bool UWorld::NeedsEnterGameMeshWarmup() const
   {
     return false;
   }
-  // Same-frame memo: Refresh / UpdateStreaming / coop may call multiple times.
-  if (EnterWarmupSampleEpoch == StreamingFrameEpoch)
-  {
-    return CachedNeedsEnterMeshWarmup;
-  }
+  // Phase 5.2.0: do NOT memo on StreamingFrameEpoch. Epoch advances only in
+  // TickWorldStreamingPhase (InGame); Loading/PrepareView freezes it so the
+  // first mesh_dirty=1 sample pinned CachedNeedsEnterMeshWarmup forever and
+  // stuck PrepareView at 100% until soft_exit 150s.
   EnterGameMeshWarmupBlockers blockers{};
   SampleEnterGameMeshWarmupBlockers(blockers);
   bool need = false;

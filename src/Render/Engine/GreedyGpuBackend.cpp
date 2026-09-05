@@ -423,16 +423,15 @@ void UGreedyGpuBackend::RefreshPassRefs(
     upload_full();
   };
 
-  // T1.3: sortRevision change — reorder to BTF refs order; KeyMiss appends a
-  // fresh UploadBatch instead of failing to upload_full. Small dirty sets are
-  // folded into the same path (release dirty slots, then append+reorder).
-  if (sort_changed && !cache.batches.empty())
+  // T1.3 / Phase 5.2.1: reorder / rebuild-from-refs without upload_full when
+  // sort changed OR need_rebuild with empty dirty (visible-set reshape only).
+  if ((sort_changed || need_rebuild) && !cache.batches.empty())
   {
     if (!pool_ok)
     {
       NoteOrderOnlyFail(TransparentOrderOnlyFailReason::PoolNotOk);
     }
-    else if (need_rebuild)
+    else if (need_rebuild && !dirty.empty())
     {
       NoteOrderOnlyFail(TransparentOrderOnlyFailReason::NeedRebuild);
     }

@@ -1,4 +1,4 @@
-# Perf ground truth — Phase 5 / 5.1
+# Perf ground truth — Phase 5 / 5.1 / 5.2
 
 ## Captures
 
@@ -13,6 +13,33 @@
 | manual 081303 | `perf_20260905-081303_18276.jsonl` | wall~73 fly~83; transp~26; unsync**64**; phase~25–38 |
 | Phase5.1 v4 fly | `perf_20260905-101909_23740.jsonl` / `phase51_v4_flyheavy.json` | hang=false; unsync**0**; transp~4.9; prep_warmup**0**; wall~40; scene~25; phase~9 |
 | **Phase5.1 v6b fly** | `phase51_v6b_flyheavy.json` | leftovers packed; hang=false; wall~39 fly~39; scene~23; phase~7.9; transp~4.3; unsync**0** |
+
+## Phase 5.2 (enter unblock + hard contract)
+
+### Landed code
+
+| Sprint | Cut | Notes |
+|---|---|---|
+| 5.2.0 | Drop `NeedsEnterGameMeshWarmup` epoch memo on Loading; `ShouldForceEnterLoadSoftCleanDebt` @12s; `settle_reason=` telem | Fix PrepareView@100% stick (epoch frozen outside InGame) |
+| 5.2.1 | Opaque split timers (refresh/cull/gpu_draw/packed/cross) + FPM JSONL; `need_rebuild`+empty dirty → order-only; packed near r≤4; opaque-only BeginUploadFrame | Attribution before cut; never skip-all packed |
+| 5.2.2 | Stream early-return / far_exhausted on `stream_budget` 0.6×phase; skip `TickMeshEmerge` when emerge_cap=0; abort schedule/drain 0 (mh≤2 → 1) | Enter floor 24 kept |
+| 5.2.3 | mh∈[2,4] carve + same-epoch thrash rate-limit | Under budget |
+
+### Verify harness (no-teleport, Tracy OFF, World_164)
+
+| report | hang | wall | fly | phase | scene | holes | unsync | pass |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| enter fz (`phase52_enter_fz_cold_enter`) | false | 45.5 | 44.5 | — | — | 0.94 | — | false |
+| enter land (`phase52_enter_landstand`) | false | 75.5 | 38.8 | 28.4 | 33.2 | 0.20 | 0 | false |
+| **fly-heavy** (`phase52_flyheavy`) | false | **39.2** | **40.4** | **7.6** | **24.8** | **0.58** | **0** | false |
+| land-stand (`phase52_landstand`) | false | 58.8 | 47.0 | 10.7 | 32.8 | 0.41 | 10 | false |
+| fz-cold-enter (`phase52_fz_cold_enter`) | false | 47.6 | 41.2 | 7.7 | 29.3 | 0.48 | 8 | false |
+
+Enter unlock: INFO `settle_reason=live_blockers elapsed_ms≈617` (≪30s) — PrepareView@100% stick fixed.
+
+Opaque split (spike sample fly): refresh≪1ms, **cull~9ms** dominant vs refresh; packed near r≤4 kept. Hard gates still red (same as 5.1 v6b class). Manual skipped (`pass≠true`).
+
+Ship status: **code + verify landed**; hard contract **not green** — next cut likely opaque cull / scene GPU (not refresh).
 
 ## Phase 5.1 ship closeout (code `54612d52` + follow-ups)
 

@@ -1616,15 +1616,13 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     }
   }
   RefreshStreamingPressure(world, main_t0, stream_budget_ms);
-  // Phase 5.1 T3: after Refresh, if phase wall already spent and underfeet ok,
-  // skip commit/load flood (VisualHoles alone must not reopen unbounded stream).
+  // Phase 5.2.2: after Refresh, stop commit/far at stream_budget (0.6×phase)
+  // so emerge keeps remain. Protect near miss / underfeet / enter.
   {
-    const float phase_budget = URuntimeTuning::Get().StreamingPhaseBudgetMs;
     const auto &pt = world.PhysicsTelemetryData;
     const bool protect_near =
         pt.FocusMissingMesh != 0 || pt.UnderfeetHasMesh == 0;
-    if (phase_budget > 0.0f &&
-        elapsed_main_ms() >= static_cast<double>(phase_budget) &&
+    if (elapsed_main_ms() >= stream_budget_ms &&
         !world.IsEnterLitGateActive() && !world.IsEnterSessionActive() &&
         !protect_near)
     {
@@ -1693,11 +1691,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     {
       return true;
     }
-    // Phase 5.1 T3: phase wall spent → always skip far on cruise (near commits
-    // still use near_budget). VisualHoles alone must not unlock unbounded far.
-    const float phase_budget = URuntimeTuning::Get().StreamingPhaseBudgetMs;
-    if (phase_budget > 0.0f &&
-        elapsed_main_ms() >= static_cast<double>(phase_budget) &&
+    // Phase 5.2.2: far shed at stream_budget (0.6×phase), not full phase wall.
+    if (elapsed_main_ms() >= stream_budget_ms &&
         !world.IsEnterLitGateActive() && !world.IsEnterSessionActive())
     {
       return true;

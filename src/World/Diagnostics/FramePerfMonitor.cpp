@@ -87,6 +87,11 @@ struct Session
   double AccumMeshEmergePrepSelfMs{0.0};
   double AccumSceneFilterReadyMs{0.0};
   double AccumSceneOpaqueDrawMs{0.0};
+  double AccumSceneOpaqueRefreshMs{0.0};
+  double AccumSceneOpaqueCullMs{0.0};
+  double AccumSceneOpaqueGpuDrawMs{0.0};
+  double AccumSceneOpaquePackedMs{0.0};
+  double AccumSceneOpaqueCrossMs{0.0};
   double AccumSceneTransparentMs{0.0};
   double AccumSceneDepthCaptureMs{0.0};
   double AccumSceneOverlaysMs{0.0};
@@ -351,6 +356,11 @@ struct FrameNumbers
   double mesh_emerge_prep_self_ms{0.0};
   double scene_filter_ready_ms{0.0};
   double scene_opaque_draw_ms{0.0};
+  double scene_opaque_refresh_ms{0.0};
+  double scene_opaque_cull_ms{0.0};
+  double scene_opaque_gpu_draw_ms{0.0};
+  double scene_opaque_packed_ms{0.0};
+  double scene_opaque_cross_ms{0.0};
   double scene_depth_capture_ms{0.0};
   double scene_transparent_ms{0.0};
   double scene_overlays_ms{0.0};
@@ -892,6 +902,11 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_emerge_prep_self_ms = phys.MeshEmergePrepSelfMs;
   n.scene_filter_ready_ms = phys.SceneFilterReadyMs;
   n.scene_opaque_draw_ms = phys.SceneOpaqueDrawMs;
+  n.scene_opaque_refresh_ms = phys.SceneOpaqueRefreshMs;
+  n.scene_opaque_cull_ms = phys.SceneOpaqueCullMs;
+  n.scene_opaque_gpu_draw_ms = phys.SceneOpaqueGpuDrawMs;
+  n.scene_opaque_packed_ms = phys.SceneOpaquePackedMs;
+  n.scene_opaque_cross_ms = phys.SceneOpaqueCrossMs;
   n.scene_depth_capture_ms = phys.SceneDepthCaptureMs;
   n.scene_transparent_ms = phys.SceneTransparentMs;
   n.scene_overlays_ms = phys.SceneOverlaysMs;
@@ -1454,6 +1469,11 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_emerge_prep_self_ms\":" << n.mesh_emerge_prep_self_ms
           << ",\"scene_filter_ready_ms\":" << n.scene_filter_ready_ms
           << ",\"scene_opaque_draw_ms\":" << n.scene_opaque_draw_ms
+          << ",\"scene_opaque_refresh_ms\":" << n.scene_opaque_refresh_ms
+          << ",\"scene_opaque_cull_ms\":" << n.scene_opaque_cull_ms
+          << ",\"scene_opaque_gpu_draw_ms\":" << n.scene_opaque_gpu_draw_ms
+          << ",\"scene_opaque_packed_ms\":" << n.scene_opaque_packed_ms
+          << ",\"scene_opaque_cross_ms\":" << n.scene_opaque_cross_ms
           << ",\"scene_depth_capture_ms\":" << n.scene_depth_capture_ms
           << ",\"scene_transparent_ms\":" << n.scene_transparent_ms
           << ",\"scene_overlays_ms\":" << n.scene_overlays_ms
@@ -1932,6 +1952,11 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumMeshEmergePrepSelfMs += n.mesh_emerge_prep_self_ms;
   s.AccumSceneFilterReadyMs += n.scene_filter_ready_ms;
   s.AccumSceneOpaqueDrawMs += n.scene_opaque_draw_ms;
+  s.AccumSceneOpaqueRefreshMs += n.scene_opaque_refresh_ms;
+  s.AccumSceneOpaqueCullMs += n.scene_opaque_cull_ms;
+  s.AccumSceneOpaqueGpuDrawMs += n.scene_opaque_gpu_draw_ms;
+  s.AccumSceneOpaquePackedMs += n.scene_opaque_packed_ms;
+  s.AccumSceneOpaqueCrossMs += n.scene_opaque_cross_ms;
   s.AccumSceneTransparentMs += n.scene_transparent_ms;
   s.AccumSceneDepthCaptureMs += n.scene_depth_capture_ms;
   s.AccumSceneOverlaysMs += n.scene_overlays_ms;
@@ -2014,6 +2039,11 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
   avg.mesh_emerge_prep_self_ms = s.AccumMeshEmergePrepSelfMs * inv;
   avg.scene_filter_ready_ms = s.AccumSceneFilterReadyMs * inv;
   avg.scene_opaque_draw_ms = s.AccumSceneOpaqueDrawMs * inv;
+  avg.scene_opaque_refresh_ms = s.AccumSceneOpaqueRefreshMs * inv;
+  avg.scene_opaque_cull_ms = s.AccumSceneOpaqueCullMs * inv;
+  avg.scene_opaque_gpu_draw_ms = s.AccumSceneOpaqueGpuDrawMs * inv;
+  avg.scene_opaque_packed_ms = s.AccumSceneOpaquePackedMs * inv;
+  avg.scene_opaque_cross_ms = s.AccumSceneOpaqueCrossMs * inv;
   avg.scene_transparent_ms = s.AccumSceneTransparentMs * inv;
   avg.scene_depth_capture_ms = s.AccumSceneDepthCaptureMs * inv;
   avg.scene_overlays_ms = s.AccumSceneOverlaysMs * inv;
@@ -2083,6 +2113,11 @@ void ResetAccum(Session &s)
   s.AccumMeshEmergePrepSelfMs = 0.0;
   s.AccumSceneFilterReadyMs = 0.0;
   s.AccumSceneOpaqueDrawMs = 0.0;
+  s.AccumSceneOpaqueRefreshMs = 0.0;
+  s.AccumSceneOpaqueCullMs = 0.0;
+  s.AccumSceneOpaqueGpuDrawMs = 0.0;
+  s.AccumSceneOpaquePackedMs = 0.0;
+  s.AccumSceneOpaqueCrossMs = 0.0;
   s.AccumSceneTransparentMs = 0.0;
   s.AccumSceneDepthCaptureMs = 0.0;
   s.AccumSceneOverlaysMs = 0.0;

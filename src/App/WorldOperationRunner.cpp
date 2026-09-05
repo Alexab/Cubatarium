@@ -400,6 +400,25 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
       CubatariumFlushLogs();
     }
   }
+  const int combined_debt = EnterWarmupCombinedDebt(lit_sample, fov_debt);
+  const bool soft_clean_cap = ShouldForceEnterLoadSoftCleanDebt(
+      EnterGameGpuWarmupElapsedMs, combined_debt, underfeet_present_cap);
+  if (soft_clean_cap && !enter_ready && min_frames_done)
+  {
+    enter_ready = true;
+    if (!EnterGameForceInGameLogged)
+    {
+      EnterGameForceInGameLogged = true;
+      LOG(INFO) << "[EnterWarmup] settle_reason=soft_clean elapsed_ms="
+                << EnterGameGpuWarmupElapsedMs
+                << " combined_debt=" << combined_debt
+                << " needs_mesh=" << (mesh_blockers_clear ? 0 : 1)
+                << " underfeet=" << (underfeet_present_cap ? 1 : 0)
+                << " ring_ready=" << (ring_ready ? 1 : 0)
+                << " visibility_debt=" << visibility_debt;
+      CubatariumFlushLogs();
+    }
+  }
   const bool soft_exit_cap = ShouldForceEnterLoadSoftExit(
       EnterGameAbortDrainMode, EnterGameGpuWarmupElapsedMs,
       tune.EnterForceInGameMs, fov_debt);
@@ -409,7 +428,7 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
     if (!EnterGameForceInGameLogged)
     {
       EnterGameForceInGameLogged = true;
-      LOG(WARNING) << "[EnterWarmup] soft_exit_cap elapsed_ms="
+      LOG(WARNING) << "[EnterWarmup] settle_reason=soft_force soft_exit_cap elapsed_ms="
                    << EnterGameGpuWarmupElapsedMs << " ring_ready="
                    << (ring_ready ? 1 : 0) << " mesh_dirty="
                    << (lit_sample.mesh_dirty ? 1 : 0) << " gpu_pending="
@@ -443,6 +462,18 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   if (!enter_ready)
   {
     return false;
+  }
+  if (!EnterGameForceInGameLogged)
+  {
+    EnterGameForceInGameLogged = true;
+    LOG(INFO) << "[EnterWarmup] settle_reason=live_blockers elapsed_ms="
+              << EnterGameGpuWarmupElapsedMs
+              << " combined_debt=" << combined_debt
+              << " needs_mesh=" << (mesh_blockers_clear ? 0 : 1)
+              << " underfeet=" << (underfeet_present ? 1 : 0)
+              << " ring_ready=" << (ring_ready ? 1 : 0)
+              << " visibility_debt=" << visibility_debt;
+    CubatariumFlushLogs();
   }
   if (World.IsEnterLitGateActive())
   {

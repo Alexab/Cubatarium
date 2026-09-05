@@ -1010,6 +1010,20 @@ inline bool ShouldForceEnterLoadSoftExit(bool abort_drain, double elapsed_ms,
   return ShouldForceEnterInGameAfterAbortDrain(elapsed_ms, force_ingame_ms);
 }
 
+/// Phase 5.2.0: load-world PrepareView soft settle when combined debt is clean
+/// and underfeet present (create-spawn already has SoftLeaveCreateSpawn).
+/// Distinct from SoftExit (150s, no underfeet) and SoftLeaveCreate (lit-ready).
+inline bool ShouldForceEnterLoadSoftCleanDebt(double elapsed_ms,
+                                             int combined_debt,
+                                             bool underfeet_present)
+{
+  if (combined_debt > 0 || !underfeet_present)
+  {
+    return false;
+  }
+  return elapsed_ms >= static_cast<double>(CreateSpawnWarmupSoftWallMs());
+}
+
 /// Era35 P1: SoftDefer empty scan cy-window for near-FOV columns (horiz<=2)
 /// covers full column (0..max_cy) so air chunks with trees/leaves above
 /// preferred_cy+2 are not permanently stuck as SoftDefer empty.

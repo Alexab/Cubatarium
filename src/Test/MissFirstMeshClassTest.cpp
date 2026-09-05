@@ -1539,6 +1539,19 @@ int main()
            "Era34 P0: near settle radius < LitDrawable ring4");
   }
 
+  // --- Phase 5.2.0 SoftCleanDebt settle ---
+  {
+    using cutum::ShouldForceEnterLoadSoftCleanDebt;
+    Expect(!ShouldForceEnterLoadSoftCleanDebt(12000.0, 1, true),
+           "Phase5.2 SoftClean: debt>0 blocks");
+    Expect(!ShouldForceEnterLoadSoftCleanDebt(12000.0, 0, false),
+           "Phase5.2 SoftClean: needs underfeet");
+    Expect(!ShouldForceEnterLoadSoftCleanDebt(5000.0, 0, true),
+           "Phase5.2 SoftClean: not before soft wall");
+    Expect(ShouldForceEnterLoadSoftCleanDebt(12000.0, 0, true),
+           "Phase5.2 SoftClean: debt=0 + underfeet + 12s");
+  }
+
   // --- Era36 B1 surface band clamp ---
   {
     using cutum::RelightSurfaceBandCy;

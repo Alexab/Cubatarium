@@ -885,6 +885,11 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.MeshEmergePrepSelfMs = 0.0;
   PhysicsTelemetryData.SceneFilterReadyMs = 0.0;
   PhysicsTelemetryData.SceneOpaqueDrawMs = 0.0;
+  PhysicsTelemetryData.SceneOpaqueRefreshMs = 0.0;
+  PhysicsTelemetryData.SceneOpaqueCullMs = 0.0;
+  PhysicsTelemetryData.SceneOpaqueGpuDrawMs = 0.0;
+  PhysicsTelemetryData.SceneOpaquePackedMs = 0.0;
+  PhysicsTelemetryData.SceneOpaqueCrossMs = 0.0;
   PhysicsTelemetryData.SceneDepthCaptureMs = 0.0;
   PhysicsTelemetryData.SceneTransparentMs = 0.0;
   PhysicsTelemetryData.TransparentSortRevChanged = 0;
@@ -1095,7 +1100,16 @@ void UWorld::TickWorldStreamingPhase()
   {
     TickEnterGameMeshBurst();
   }
-  TickMeshEmerge();
+  // Phase 5.2.2: skip empty emerge when cap exhausted and no near carve need.
+  const bool skip_empty_emerge =
+      emerge_cap <= 0.0 && !miss_carve_out &&
+      PhysicsTelemetryData.UnderfeetHasMesh != 0 &&
+      PhysicsTelemetryData.MissHoriz > 2 && !IsEnterLitGateActive() &&
+      !IsEnterSessionActive();
+  if (!skip_empty_emerge)
+  {
+    TickMeshEmerge();
+  }
   const auto t_after_mesh = std::chrono::high_resolution_clock::now();
   BlockWorldReady = true;
 

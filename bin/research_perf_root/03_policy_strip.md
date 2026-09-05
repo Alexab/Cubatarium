@@ -14,6 +14,25 @@
 | `MissEmergeFloorMs` | **2.0** | `miss_emerge_floor_ms` | Floor emerge when stream overruns general |
 | `ScheduleShedUv1` | **true** | `CUBA_SCHEDULE_SHED_UV1=0` to disable | UV=1 no longer forever-blocks schedule shed |
 
+## Phase 5.2.0 enter settle
+
+| Mechanism | Default | Effect |
+|---|---|---|
+| Drop NeedsEnterGameMeshWarmup epoch memo | always | Loading/PrepareView re-samples blockers every tick (epoch only advances InGame) |
+| `ShouldForceEnterLoadSoftCleanDebt` | 12s soft wall | `combined_debt==0 && underfeet` → settle (load-world path only) |
+| `settle_reason=` INFO | one-shot | `live_blockers\|soft_clean\|soft_force\|abort_underfeet\|lit_stall` |
+| `EnterForceInGameMs` / `EnterMeshAbortMs` | 150s / 120s | last-resort unchanged |
+
+## Phase 5.2.1 opaque attribution flags (FPM JSONL)
+
+| Key | Meaning |
+|---|---|
+| `scene_opaque_refresh_ms` | `RefreshPassRefs` opaque |
+| `scene_opaque_cull_ms` | `ApplyGpuCompactCull` |
+| `scene_opaque_gpu_draw_ms` | `DrawGreedyGpuBatches` |
+| `scene_opaque_packed_ms` | leftovers packed draw (near r≤4) |
+| `scene_opaque_cross_ms` | `DrawCrossInstancedBatches` |
+
 ## How to A/B
 
 ```powershell
@@ -33,6 +52,12 @@ python tools/simple_ab_suite.py
 - **Root cause:** AbortDrain only arms on `!ring_ready`; soft-exit never fired; `EndEnterLitGate` cleared quiesce → `IsCreateSpawnWarmupSettled` O(FOV) every cruise frame (~45ms `prep_warmup`).
 - **Fix:** soft-exit without AbortDrain; latch settled on gate end / post-session.
 - **Verify:** trio v4 `hang_killed=false`.
+
+### Phase 5.2.0 PrepareView@100% stick
+
+- **Root cause:** `NeedsEnterGameMeshWarmup` memo keyed on frozen `StreamingFrameEpoch` during Loading.
+- **Fix:** drop memo early-return; soft_clean@12s; `settle_reason=` telem.
+- **Verify:** no-teleport fz-cold-enter + land-stand (harness A).
 
 ### SimpleAB 2026-09-05
 

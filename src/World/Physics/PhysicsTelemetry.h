@@ -366,6 +366,13 @@ struct PhysicsTelemetry
   double SceneFilterReadyMs{0.0};
   double SceneOpaqueSortMs{0.0};
   double SceneOpaqueDrawMs{0.0};
+  /// Phase 5.2.1: opaque split (sum ≈ SceneOpaqueDrawMs minus Cross if Cross
+  /// timed separately at DrawCubeGeometry).
+  double SceneOpaqueRefreshMs{0.0};
+  double SceneOpaqueCullMs{0.0};
+  double SceneOpaqueGpuDrawMs{0.0};
+  double SceneOpaquePackedMs{0.0};
+  double SceneOpaqueCrossMs{0.0};
   double SceneDepthCaptureMs{0.0};
   double SceneTransparentMs{0.0};
   double SceneOverlaysMs{0.0};

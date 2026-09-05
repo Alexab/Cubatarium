@@ -2031,6 +2031,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
           StreamingWarmupAbortDrainMode = false;
           StreamingWarmupAbortLogged = false;
           StreamingWarmupAbortCapLogged = false;
+          StreamingWarmupSettleLogged = false;
           StreamingWarmupBestFovDebt = INT_MAX;
           StreamingWarmupLitProgressAt = StreamingWarmupWallStart;
           StreamingWarmupLitStallLogged = false;
@@ -2167,11 +2168,16 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
         const bool soft_exit_cap = ShouldForceEnterLoadSoftExit(
             StreamingWarmupAbortDrainMode, elapsed_ms,
             URuntimeTuning::Get().EnterForceInGameMs, fov_debt);
+        const bool soft_clean_cap = ShouldForceEnterLoadSoftCleanDebt(
+            elapsed_ms, combined_debt, underfeet_present);
         // LitRing C: stall with underfeet → settle with FOV holes OK (finite load).
         // Phase5 S4: soft_exit_cap settles without underfeet (stuck missing mesh).
+        // Phase 5.2.0: soft_clean_cap settles when debt=0 + underfeet @12s.
+        const bool live_blockers_ok =
+            ring_ready_for_exit && visibility_ready_for_exit &&
+            mesh_blockers_clear;
         const bool load_settled =
-            (ring_ready_for_exit && visibility_ready_for_exit &&
-             mesh_blockers_clear) ||
+            live_blockers_ok ||
             (StreamingWarmupAbortDrainMode && underfeet_present &&
              underfeet_gpu_pending <= 0 && fov_debt <= 0) ||
             (lit_progress_stalled && underfeet_present &&
@@ -2179,8 +2185,45 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
             (abort_underfeet_cap && underfeet_present &&
              underfeet_gpu_pending <= 0 &&
              (fov_debt <= 0 || lit_progress_stalled)) ||
-            soft_exit_cap;
-        if ((abort_underfeet_cap || lit_progress_stalled || soft_exit_cap) &&
+            soft_clean_cap || soft_exit_cap;
+        if (load_settled && !StreamingWarmupSettleLogged)
+        {
+          StreamingWarmupSettleLogged = true;
+          const char *settle_reason = "live_blockers";
+          if (!live_blockers_ok)
+          {
+            if (soft_clean_cap)
+            {
+              settle_reason = "soft_clean";
+            }
+            else if (soft_exit_cap)
+            {
+              settle_reason = "soft_force";
+            }
+            else if (abort_underfeet_cap)
+            {
+              settle_reason = "abort_underfeet";
+            }
+            else if (lit_progress_stalled)
+            {
+              settle_reason = "lit_stall";
+            }
+            else
+            {
+              settle_reason = "abort_drain";
+            }
+          }
+          LOG(INFO) << "[EnterWarmup] settle_reason=" << settle_reason
+                    << " elapsed_ms=" << elapsed_ms
+                    << " combined_debt=" << combined_debt
+                    << " needs_mesh=" << (mesh_blockers_clear ? 0 : 1)
+                    << " underfeet=" << (underfeet_present ? 1 : 0)
+                    << " ring_ready=" << (ring_ready ? 1 : 0)
+                    << " visibility_debt=" << visibility_debt;
+          CubatariumFlushLogs();
+        }
+        if ((abort_underfeet_cap || lit_progress_stalled || soft_exit_cap ||
+             soft_clean_cap) &&
             load_settled && !StreamingWarmupAbortCapLogged)
         {
           StreamingWarmupAbortCapLogged = true;
@@ -2189,6 +2232,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                        << " visibility_debt=" << visibility_debt
                        << " lit_stall=" << (lit_progress_stalled ? 1 : 0)
                        << " soft_exit=" << (soft_exit_cap ? 1 : 0)
+                       << " soft_clean=" << (soft_clean_cap ? 1 : 0)
                        << " underfeet=" << (underfeet_present ? 1 : 0);
           CubatariumFlushLogs();
         }

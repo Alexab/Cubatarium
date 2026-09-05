@@ -703,8 +703,17 @@ void UGeometryEngine::DrawCubeGeometry()
       DrawGreedyOpaqueBatches(draw.cache, opaqueCutoutRefs, vp,
                               camera->GetPosition(), textures,
                               draw.meshRevision, draw.cullRevision);
-      DrawCrossInstancedBatches(draw.crossBatches, vp, textures,
-                                draw.meshRevision, draw.cullRevision);
+      {
+        double cross_ms = 0.0;
+        ScopedPhase cross_phase(&cross_ms);
+        DrawCrossInstancedBatches(draw.crossBatches, vp, textures,
+                                  draw.meshRevision, draw.cullRevision);
+        if (WorldInstance)
+        {
+          WorldInstance->GetPhysicsTelemetryMutable().SceneOpaqueCrossMs =
+              cross_ms;
+        }
+      }
     }
     // Skip full-FB depth copy when nothing transparent needs soft particles.
     if (!filtered_transparent.empty())
@@ -1810,9 +1819,10 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
 
   if (!opaque_draw.empty())
   {
+    // Phase 5.2.1: Begin only on opaque here. Transparent Begin moves to
+    // PrepareTransparent; cutout pass is destroyed below. RefreshPassRefs
+    // MeshRevAbsorb early-out skips upload — Begin is a counter reset only.
     GreedyGpuOpaque.VertexPool.BeginUploadFrame();
-    GreedyGpuCutout.VertexPool.BeginUploadFrame();
-    GreedyGpuTransparent.VertexPool.BeginUploadFrame();
     const uint64_t draw_fp = opaque_draw_fingerprint(opaque_draw);
     if (draw_fp == CachedOpaqueDrawFingerprint &&
         !CachedOpaqueSortedRefs.empty() &&
@@ -1832,19 +1842,36 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
       glGetBooleanv(GL_CULL_FACE, &cullWasEnabled);
       glDisable(GL_CULL_FACE);
     }
-    store.RefreshPassRefs(GreedyGpuOpaque, cache, opaque_draw, meshRevision,
-                          cullRevision, kBlockIdSortRev);
+    double refresh_ms = 0.0;
+    double cull_ms = 0.0;
+    double gpu_draw_ms = 0.0;
+    {
+      ScopedPhase refresh_phase(&refresh_ms);
+      store.RefreshPassRefs(GreedyGpuOpaque, cache, opaque_draw, meshRevision,
+                            cullRevision, kBlockIdSortRev);
+    }
     if (mdi)
     {
+      ScopedPhase cull_phase(&cull_ms);
       mdi->SetCullStatsReadbackEnabled(ShowPerformance);
       mdi->ApplyGpuCompactCull(GreedyGpuOpaque, frustum, cameraPos,
                                max_cull_distance, horizontal_cull);
     }
-    DrawGreedyGpuBatches(GreedyGpuOpaque, vp, textures, true, false,
-                         GreedyShaderMode::TransparentColor, 0.0f);
+    {
+      ScopedPhase gpu_draw_phase(&gpu_draw_ms);
+      DrawGreedyGpuBatches(GreedyGpuOpaque, vp, textures, true, false,
+                           GreedyShaderMode::TransparentColor, 0.0f);
+    }
     if (!cutout.empty() && cullWasEnabled)
     {
       glEnable(GL_CULL_FACE);
+    }
+    if (WorldInstance)
+    {
+      auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+      phys.SceneOpaqueRefreshMs = refresh_ms;
+      phys.SceneOpaqueCullMs = cull_ms;
+      phys.SceneOpaqueGpuDrawMs = gpu_draw_ms;
     }
   }
   else
@@ -1892,18 +1919,31 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     }
   }
 
-  // Phase 5.1 T4: draw packed only for chunkCoords absent from MDI greedy
-  // opaque_draw (avoid full dual-path). Skipping all packed raised holes and
-  // remesh churn → scene opaque ~19–44ms; leftovers-only keeps coverage.
+  // Phase 5.1 T4 / 5.2.1: leftovers-only packed; near/underfeet radius only
+  // (full leftover dual-path still too hot on fly-heavy). Never skip-all.
   const auto &packed_opaque_refs = cache.GetGpuPackedOpaqueRefs();
   std::vector<GpuPackedChunkRef> packed_opaque_draw;
   const std::vector<GpuPackedChunkRef> *packed_to_draw = &packed_opaque_refs;
+  constexpr int kPackedNearHoriz = 4;
+  const glm::ivec3 cam_chunk = UChunkManager::WorldToChunk(
+      glm::ivec3(static_cast<int>(std::floor(cameraPos.x)),
+                 static_cast<int>(std::floor(cameraPos.y)),
+                 static_cast<int>(std::floor(cameraPos.z))));
+  auto packed_near = [&](const glm::ivec3 &coord)
+  {
+    return std::max(std::abs(coord.x - cam_chunk.x),
+                    std::abs(coord.z - cam_chunk.z)) <= kPackedNearHoriz;
+  };
   if (mdi && store.SupportsMultiDrawIndirect() && !opaque_draw.empty() &&
       !packed_opaque_refs.empty())
   {
     packed_opaque_draw.reserve(packed_opaque_refs.size());
     for (const GpuPackedChunkRef &pref : packed_opaque_refs)
     {
+      if (!packed_near(pref.chunkCoord))
+      {
+        continue;
+      }
       bool found = false;
       for (const GreedyBatchRef &r : opaque_draw)
       {
@@ -1920,16 +1960,33 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     }
     packed_to_draw = &packed_opaque_draw;
   }
-  size_t packed_opaque_drawn = 0;
-  if (!packed_to_draw->empty())
+  else if (!packed_opaque_refs.empty())
   {
-    packed_opaque_drawn =
-        DrawPackedGpuMeshes(cache, *packed_to_draw, vp, textures, false,
-                            GreedyShaderMode::TransparentColor, 0.0f);
+    packed_opaque_draw.reserve(packed_opaque_refs.size());
+    for (const GpuPackedChunkRef &pref : packed_opaque_refs)
+    {
+      if (packed_near(pref.chunkCoord))
+      {
+        packed_opaque_draw.push_back(pref);
+      }
+    }
+    packed_to_draw = &packed_opaque_draw;
+  }
+  size_t packed_opaque_drawn = 0;
+  double packed_ms = 0.0;
+  {
+    ScopedPhase packed_phase(&packed_ms);
+    if (!packed_to_draw->empty())
+    {
+      packed_opaque_drawn =
+          DrawPackedGpuMeshes(cache, *packed_to_draw, vp, textures, false,
+                              GreedyShaderMode::TransparentColor, 0.0f);
+    }
   }
   if (WorldInstance)
   {
     auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+    phys.SceneOpaquePackedMs = packed_ms;
     phys.OpaqueGpuPackedN = static_cast<uint64_t>(packed_opaque_drawn);
     phys.OpaqueDrawN = phys.OpaqueCmdOn + phys.OpaqueGpuPackedN;
   }
@@ -2114,6 +2171,8 @@ void UGeometryEngine::PrepareTransparent(
         sortRevision != GreedyGpuTransparent.sortRevision ? 1 : 0;
   }
   UGreedyGpuBackend::BindRefreshTelem(&refresh_telem);
+  // Phase 5.2.1: opaque path no longer Begins transparent pool.
+  GreedyGpuTransparent.VertexPool.BeginUploadFrame();
   MeshStore().RefreshPassRefs(GreedyGpuTransparent, ctx.cache, filtered,
                                    ctx.meshRevision, ctx.cullRevision,
                                    sortRevision, /*consume_dirty=*/false);

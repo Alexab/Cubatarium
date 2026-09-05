@@ -3565,13 +3565,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           ? std::max(0.0, static_cast<double>(phase_budget_ms) -
                               phase_elapsed_at_prep)
           : std::max(0.0, world.GetPhysicsTelemetry().EmergeBudgetCapMs);
-  // Phase 5.1 T5: miss mh∈[2,4] carve — one FirstMesh/MarkDirty while remain>0.
+  // Phase 5.1 T5 / 5.2.3: miss mh∈[2,4] carve — one FirstMesh/MarkDirty while
+  // remain>0. Rate-limit same hole to avoid thrash under abort.
   // Also T3B: nearest heal when heavy post-prep aborted (mh>2 clean overrun).
   if (have_nearest_missing &&
       ((nearest_miss_h >= 2 && nearest_miss_h <= 4 && phase_remain > 0.0) ||
        phase_abort_heavy))
   {
-    if (!mesh_service.HasInflightMeshBuild(nearest_missing_hole) &&
+    static glm::ivec3 s_last_carve_hole{0, INT_MIN, 0};
+    static uint64_t s_last_carve_epoch = 0;
+    const uint64_t epoch = world.GetStreamingFrameEpoch();
+    const bool same_hole_thrash =
+        nearest_missing_hole == s_last_carve_hole &&
+        s_last_carve_epoch != 0 && epoch == s_last_carve_epoch;
+    if (!same_hole_thrash &&
+        !mesh_service.HasInflightMeshBuild(nearest_missing_hole) &&
         !mesh_service.IsPendingGpuApply(nearest_missing_hole) &&
         !mesh_service.HasMeshSatisfyingColumnReady(nearest_missing_hole))
     {
@@ -3580,20 +3588,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           glm::ivec2(nearest_missing_hole.x, nearest_missing_hole.z),
           ColumnWorkKind::FirstMesh, 100);
       note_column_flow_drain(1, 1);
+      s_last_carve_hole = nearest_missing_hole;
+      s_last_carve_epoch = epoch;
     }
   }
   if (phase_abort_heavy)
   {
-    // Keep a tiny underfeet/mh≤2 feed; shed everything else.
+    // Phase 5.2.2: underfeet/mh≤2 keep feed=1; else schedule/drain=0.
     if (missing_underfeet || nearest_miss_h <= 2)
     {
-      mesh_schedule = std::min(mesh_schedule, 4);
-      mesh_drain = std::min(mesh_drain, 4);
+      mesh_schedule = std::min(mesh_schedule, 1);
+      mesh_drain = std::min(mesh_drain, 1);
     }
     else
     {
-      mesh_schedule = std::min(mesh_schedule, 2);
-      mesh_drain = std::min(mesh_drain, 2);
+      mesh_schedule = 0;
+      mesh_drain = 0;
     }
     sync_cap = 0;
   }
