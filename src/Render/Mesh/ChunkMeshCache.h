@@ -397,6 +397,10 @@ public:
   /// Chunks whose greedy geometry changed since last GPU pool consume.
   void ConsumeGeometryDirtyChunks(
       std::unordered_set<glm::ivec3, IVec3Hash> &out) const;
+  /// Call once per draw before opaque+transparent RefreshPassRefs so both
+  /// passes see the same dirty set (opaque consume must not blind transparent).
+  void BeginGpuPassDirtyFrame() const;
+  bool GpuPassDirtyHitsChunk(glm::ivec3 chunk_coord) const;
   bool HasMissingGreedyMeshInHorizontalRadius(const UBlockWorld &world,
                                               glm::ivec3 center_ground_chunk,
                                               int radius_chunks) const;
@@ -1044,6 +1048,8 @@ private:
   void RequeueSoftDeferHeld();
   /// GPU pool incremental upload: chunks mutated since last Consume.
   mutable std::unordered_set<glm::ivec3, IVec3Hash> GeometryDirtyChunks;
+  /// Snapshot at BeginGpuPassDirtyFrame — shared across opaque+transparent.
+  mutable std::unordered_set<glm::ivec3, IVec3Hash> GpuPassDirtyFrame;
   void NoteGeometryDirty(glm::ivec3 chunk_coord);
   /// -1 = no extra horizontal schedule cap (only focus starve applies).
   int MeshScheduleMaxHorizontalDist{-1};

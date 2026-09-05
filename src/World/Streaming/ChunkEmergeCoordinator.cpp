@@ -37,6 +37,7 @@
 #include "WorldGen/Core/ProceduralSettings.h"
 #include <algorithm>
 #include <chrono>
+#include <climits>
 #include <cmath>
 #include <iostream>
 #include <thread>
@@ -172,10 +173,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   double prep_column_flow_drain_ms = 0.0;
   double prep_sync_focus_ring_ms = 0.0;
   double prep_recover_ms = 0.0;
-  static int s_fm_enqueue_prior = 0;
-  static int s_schedule_ok_prior = 0;
-  static int s_dirty_fm_prior = 0;
-  static int s_cruise_clear_periods = 0;
+  double prep_warmup_ms = 0.0;
+  double prep_softdefer_pre_ms = 0.0;
+  double prep_dirty_thrash_ms = 0.0;
+  double prep_schedule_policy_ms = 0.0;
+  double prep_post_admit_drain_ms = 0.0;
+  double prep_hole_force_ms = 0.0;
   UBlockRegistry &registry = world.GetBlockRegistry();
   UWorldMeshService &mesh_service = world.GetMeshService();
   // Count any Immediate this tick (including early idle paths).
@@ -216,11 +219,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Cold SoftDefer hole: also allow first-mesh for the single nearest missing
   // chunk (dark preview) so visual_holes cannot plate cold_relight 4–6s while
   // Y-band Capture keeps finalize_gate=false (f2_cold_finalize).
+  // Phase5 S3 E-HasMissing: reuse Refresh FocusMissingMesh same epoch.
   // HasMissing first — FindNearest walks all loaded chunks with solid probes
   // even when there is no hole (CB mesh_emerge_prep ~5ms on no-hole fly).
+  const auto &ring_for_miss = world.GetFocusRingVisualSample();
+  const bool refresh_miss_same_epoch =
+      ring_for_miss.valid &&
+      ring_for_miss.frame_epoch == world.GetStreamingFrameEpoch();
   const bool missing_visible_mesh =
-      mesh_service.HasMissingGreedyMeshInHorizontalRadius(
-          world.GetBlockWorld(), focus_ground, focus_radius);
+      refresh_miss_same_epoch
+          ? (world.GetPhysicsTelemetry().FocusMissingMesh != 0)
+          : mesh_service.HasMissingGreedyMeshInHorizontalRadius(
+                world.GetBlockWorld(), focus_ground, focus_radius);
   // Era22 I-M8: track miss witness age (~120 frames ≈ 1 period ≈2s).
   if (missing_visible_mesh)
   {
@@ -235,6 +245,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   glm::ivec3 nearest_missing_hole{};
   bool have_nearest_missing = false;
+  int prep_find_nearest_n = 0;
   if (missing_visible_mesh && mesh_service.GetAsyncInFlightCount() < 32)
   {
     const auto &miss_telem = world.GetPhysicsTelemetry();
@@ -246,6 +257,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     else
     {
+      ++prep_find_nearest_n;
       have_nearest_missing = mesh_service.FindNearestMissingGreedyMesh(
           world.GetBlockWorld(), focus_ground, focus_radius,
           nearest_missing_hole);
@@ -279,8 +291,61 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   // Resolve enter-warmup outside SoftDefer setup timer — IsCreateSpawnWarmupSettled
   // can O(FOV) scan until latched (was ~33–55ms mislabeled as softdefer_setup).
+  const auto warmup_t0 = std::chrono::high_resolution_clock::now();
   const bool enter_warmup_active = !world.IsCreateSpawnWarmupSettled();
+  prep_warmup_ms = prep_ms_since(warmup_t0);
   prep_t = std::chrono::high_resolution_clock::now();
+  // Phase5 S3: coalesce DrainIdle / DropRemesh to one call per frame.
+  bool want_drain_idle = false;
+  int drain_idle_budget = 0;
+  bool drain_idle_allow_sync = false;
+  int prep_drain_idle_n = 0;
+  auto request_drain_idle = [&](int budget, bool allow_sync)
+  {
+    want_drain_idle = true;
+    drain_idle_budget = std::max(drain_idle_budget, budget);
+    drain_idle_allow_sync = drain_idle_allow_sync || allow_sync;
+    ++prep_drain_idle_n;
+  };
+  auto flush_drain_idle = [&]()
+  {
+    if (!want_drain_idle)
+    {
+      return;
+    }
+    GetColumnFlowExecutor().DrainIdlePendingLight(
+        world, focus_ground_horiz, focus_radius, drain_idle_budget,
+        drain_idle_allow_sync, last_frame_ms, pending_focus_count,
+        missing_visible_mesh);
+    want_drain_idle = false;
+  };
+  bool want_drop_remesh = false;
+  int drop_remesh_keep_h = INT_MAX;
+  int drop_remesh_keep_cy = -1;
+  bool drop_remesh_only = true;
+  bool drop_remesh_use_preferred_cy = false;
+  int prep_drop_remesh_n = 0;
+  auto request_drop_remesh = [&](int keep_h, int keep_cy, bool remesh_only,
+                                bool use_preferred_cy)
+  {
+    want_drop_remesh = true;
+    drop_remesh_keep_h = std::min(drop_remesh_keep_h, keep_h);
+    if (keep_cy >= 0)
+    {
+      drop_remesh_keep_cy =
+          (drop_remesh_keep_cy < 0) ? keep_cy
+                                   : std::min(drop_remesh_keep_cy, keep_cy);
+    }
+    drop_remesh_only = drop_remesh_only && remesh_only;
+    drop_remesh_use_preferred_cy =
+        drop_remesh_use_preferred_cy || use_preferred_cy;
+    ++prep_drop_remesh_n;
+  };
+  // Phase5 S3b: fixed 5ms prep budget from emerge_t0 (shared stream cut).
+  constexpr double kPrepBudgetMs = 5.0;
+  auto prep_deadline_overrun = [&]()
+  { return prep_ms_since(emerge_t0) >= kPrepBudgetMs; };
+  int prep_deadline_hit = 0;
   const int unlit_near_count = world.GetPhysicsTelemetry().FocusDarkMesh;
   // Stable SoftDefer policy: POD update each frame; Set*Fn once (not every frame).
   SoftDeferPolicy.world = &world;
@@ -603,10 +668,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         missing_visible_mesh, idle_pending_plateau_frames});
     if (visual_drain.run_drain)
     {
-      GetColumnFlowExecutor().DrainIdlePendingLight(
-          world, focus_ground_horiz, focus_radius, visual_drain.budget,
-          visual_drain.allow_sync, last_frame_ms, pending_focus_count,
-          missing_visible_mesh);
+      request_drain_idle(visual_drain.budget, visual_drain.allow_sync);
       if (visual_drain.allow_sync)
       {
         idle_pending_plateau_frames = 0;
@@ -730,18 +792,41 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       world.GetPhysicsTelemetry().UnderfeetHasMesh != 0;
   const bool cruise_clear_candidate =
       moving && underfeet_has_mesh && !near_miss_urgent && !visual_holes;
+  // Phase5 S3b: may skip SoftDefer disk / thrash / recover / hole-force when
+  // prep overrun — never under visual_holes / underfeet / enter / unfinished /
+  // MissHoriz≤2 while a miss is active (deadline over-skip stuck unfinished).
+  const int telem_unfinished_for_skip =
+      world.GetPhysicsTelemetry().UnfinishedVisual;
+  const int telem_miss_h_for_skip = world.GetPhysicsTelemetry().MissHoriz;
+  const bool near_miss_skip_protect =
+      (have_nearest_missing && nearest_miss_h <= 2) ||
+      (missing_visible_mesh && telem_miss_h_for_skip >= 0 &&
+       telem_miss_h_for_skip <= 2);
+  const bool prep_deadline_skip_ok =
+      !visual_holes && !missing_underfeet && !enter_warmup_active &&
+      telem_unfinished_for_skip <= 0 && focus_not_render_ready <= 0 &&
+      !near_miss_skip_protect;
+  auto note_prep_deadline_skip = [&]()
+  {
+    if (prep_deadline_overrun() && prep_deadline_skip_ok)
+    {
+      prep_deadline_hit = 1;
+      return true;
+    }
+    return false;
+  };
   if (cruise_clear_candidate)
   {
-    ++s_cruise_clear_periods;
+    ++CruiseClearPeriods;
   }
   else
   {
-    s_cruise_clear_periods = 0;
+    CruiseClearPeriods = 0;
   }
   constexpr int kCruiseFastPathClearPeriods = 4;
   const bool cruise_fast_path =
       cruise_clear_candidate &&
-      s_cruise_clear_periods >= kCruiseFastPathClearPeriods;
+      CruiseClearPeriods >= kCruiseFastPathClearPeriods;
   // B3: do not re-scan HasMissing(r=1) — nearest witness already covers underfeet.
   const bool pending_underfeet =
       world.HasPendingLightBeforeMeshNear(focus_ground_horiz, /*radius=*/1);
@@ -898,8 +983,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     {
       SoftDeferRimScanCd = 0;
     }
+    prep_softdefer_pre_ms = prep_ms_since(prep_t);
     const auto softdefer_scan_t0 = std::chrono::high_resolution_clock::now();
-    if (!skip_softdefer_disk_scan)
+    if (!skip_softdefer_disk_scan && !note_prep_deadline_skip())
     {
     for (int idx = 0; idx < cells; ++idx)
     {
@@ -1523,6 +1609,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Anti-pattern: cruise keep_h=0 / eye-shell all-Dirty / remesh-only keep_h=1
   // beyond focus → wall_no_holes↑ dirty↑ / F2 pending (cb_nogui).
   {
+    const auto dirty_thrash_t0 = std::chrono::high_resolution_clock::now();
     const auto &mtune = URuntimeTuning::Get();
     auto &phys = world.GetPhysicsTelemetryMutable();
     const int pressure = phys.StreamPressure;
@@ -1547,8 +1634,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           focus_ground_horiz, static_cast<size_t>(dirty_cap), 1);
       phys.DirtyDropped += static_cast<uint64_t>(std::max(0, dropped));
     }
-    if (pressure >= 1 && pending_dirty > 360 && !visual_holes &&
-        !missing_underfeet)
+    const bool skip_thrash_second = note_prep_deadline_skip();
+    if (!skip_thrash_second && pressure >= 1 && pending_dirty > 360 &&
+        !visual_holes && !missing_underfeet)
     {
       const int dropped = mesh_service.MaybeDropFarthestDirty(
           focus_ground_horiz, 360, 1);
@@ -1582,7 +1670,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           trim_telem.VisibleBlackNoTicketN, trim_telem.VisibleBlackFocusN,
           trim_telem.VisibleBlackStalledN, moving,
           trim_telem.PendingLightFocus);
-      if (ShouldCruiseRedFifoSecondTrim(
+      if (!skip_thrash_second &&
+          ShouldCruiseRedFifoSecondTrim(
               pressure, fifo_live, mtune.RelightFifoSoftCap,
               mtune.RelightFifoAdmitFrac,
               visual_holes || missing_visible_mesh || missing_underfeet,
@@ -1602,12 +1691,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           (visual_holes || missing_visible_mesh || pending_focus_count > 0))
       {
         const int boost = std::min(8, 2 + phys.RelightTrimFarN / 8);
-        GetColumnFlowExecutor().DrainIdlePendingLight(
-            world, focus_ground_horiz, focus_radius, boost,
-            /*allow_sync=*/false, last_frame_ms, pending_focus_count,
-            missing_visible_mesh);
+        request_drain_idle(boost, /*allow_sync=*/false);
       }
     }
+    prep_dirty_thrash_ms = prep_ms_since(dirty_thrash_t0);
   }
 
   // Saturated async pool: drop far in-flight work so focus missing can schedule.
@@ -1670,13 +1757,80 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         (visual_holes || missing_underfeet)
             ? std::min(focus_radius, stale_n > 200 ? 3 : 2)
             : focus_radius;
-    const auto drop_t0 = std::chrono::high_resolution_clock::now();
-    world.GetPhysicsTelemetryMutable().DirtyDropped += static_cast<uint64_t>(
-        std::max(0, mesh_service.DropRemeshDirtyBeyondRadius(
-                        focus_ground_horiz, drop_keep_h, /*keep_cy=*/-1,
-                        /*remesh_only=*/true)));
-    prep_drop_dirty_ms += prep_ms_since(drop_t0);
+    request_drop_remesh(drop_keep_h, /*keep_cy=*/-1, /*remesh_only=*/true,
+                        /*use_preferred_cy=*/false);
   }
+  const auto schedule_policy_t0 = std::chrono::high_resolution_clock::now();
+  // Hoisted: used after schedule_policy (calm cap / DropRemesh).
+  const glm::ivec3 focus_dirty_keep(focus_ground.x, preferred_cy,
+                                    focus_ground.z);
+  auto clamp_emerge_to_phase = [&]()
+  {
+    const double cap = world.GetPhysicsTelemetry().EmergeBudgetCapMs;
+    const bool protect_near = ShouldProtectNearEmergeFromPhaseClamp(
+        missing_underfeet, nearest_miss_h,
+        world.GetPhysicsTelemetry().UnderfeetHasMesh != 0);
+    mesh_service.SetMeshEmergeTotalBudgetMs(static_cast<float>(
+        ApplyPhaseEmergeClamp(
+            static_cast<double>(mesh_service.GetMeshEmergeTotalBudgetMs()), cap,
+            protect_near)));
+  };
+  // Phase5 finishing: StreamSimple / deadline / idle-CPU — skip non-critical
+  // schedule_policy walks (CancelAsync, DropRemesh, full focus/FIFO scans).
+  // Never shed under visual_holes / underfeet / enter / unfinished / mh≤2.
+  const bool stream_simple_policy = URuntimeTuning::Get().StreamSimple;
+  const bool refresh_deadline_hit =
+      world.GetPhysicsTelemetry().PrepRefreshDeadlineHit != 0;
+  const bool emerge_prep_over = prep_deadline_overrun();
+  const int stream_loads_n = world.GetPhysicsTelemetry().StreamLoads;
+  const int telem_unfinished = world.GetPhysicsTelemetry().UnfinishedVisual;
+  const int telem_miss_h = world.GetPhysicsTelemetry().MissHoriz;
+  const bool unfinished_protect =
+      telem_unfinished > 0 || focus_not_render_ready > 0;
+  // MissHoriz==0 with no missing mesh means "no miss", not underfeet.
+  const bool near_miss_protect =
+      (have_nearest_missing && nearest_miss_h <= 2) ||
+      (missing_visible_mesh && telem_miss_h >= 0 && telem_miss_h <= 2);
+  const bool allow_schedule_shed =
+      !visual_holes && !missing_underfeet && !enter_warmup_active &&
+      !unfinished_protect && !near_miss_protect;
+  const bool policy_deadline = refresh_deadline_hit || emerge_prep_over;
+  // Idle-CPU invariant: stream_loads==0 must not run O(N) schedule walks.
+  const bool idle_cpu_clear = stream_loads_n == 0;
+  const bool shed_schedule_policy =
+      allow_schedule_shed &&
+      (stream_simple_policy || policy_deadline || idle_cpu_clear);
+  const bool idle_cpu_skip_schedule =
+      shed_schedule_policy && idle_cpu_clear;
+  if (shed_schedule_policy)
+  {
+    if ((emerge_prep_over || refresh_deadline_hit) && allow_schedule_shed)
+    {
+      prep_deadline_hit = 1;
+    }
+    // Essential cheap assignments only — no CancelAsync / DropRemesh / scans.
+    mesh_service.SetSyncHoleFillRadius(1);
+    mesh_service.SetMaxOutsideFocusMeshPerFrame(0);
+    mesh_service.SetMeshScheduleOverflowPerFrame(0);
+    mesh_service.SetMeshScheduleMaxHorizontalDist(-1);
+    // Do not bank coalesced DropRemesh across idle shed frames (O(N) flood).
+    if (idle_cpu_skip_schedule)
+    {
+      want_drop_remesh = false;
+    }
+    // Keep a sane emerge/snapshot floor so admission still drains when loads>0.
+    if (!idle_cpu_skip_schedule)
+    {
+      const double adaptive_moving_emerge =
+          std::clamp(0.12 * std::max(WallEmaMs, last_frame_wall_ms), 8.0, 20.0);
+      mesh_service.SetMeshEmergeTotalBudgetMs(
+          moving ? adaptive_moving_emerge : std::min(StopIdleEmergeMs, 14.0));
+      clamp_emerge_to_phase();
+      mesh_service.SetMeshSnapshotBudgetMs(6.0);
+    }
+  }
+  else
+  {
   // While sticky remesh drains after pending→0, suppress seam MarkDirty even
   // before sticky hits 0 — otherwise remesh thrash pins async≈42 and nr climbs
   // (P0_hole_promote stop). Full idle_remesh_debt with sticky raised wall/sticky
@@ -1859,17 +2013,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   mesh_service.SetMeshEmergeTotalBudgetMs(
       moving ? adaptive_moving_emerge : stop_emerge);
-  auto clamp_emerge_to_phase = [&]()
-  {
-    const double cap = world.GetPhysicsTelemetry().EmergeBudgetCapMs;
-    const bool protect_near = ShouldProtectNearEmergeFromPhaseClamp(
-        missing_underfeet, nearest_miss_h,
-        world.GetPhysicsTelemetry().UnderfeetHasMesh != 0);
-    mesh_service.SetMeshEmergeTotalBudgetMs(static_cast<float>(
-        ApplyPhaseEmergeClamp(
-            static_cast<double>(mesh_service.GetMeshEmergeTotalBudgetMs()), cap,
-            protect_near)));
-  };
   clamp_emerge_to_phase();
   // Era31 I-T2: cap emerge + defer far stale remesh under ocean heal pressure.
   {
@@ -1887,9 +2030,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       if (phys_ocean.DarkFaceVoidNearN > 200)
       {
         mesh_service.SetStarveRemeshKeepHoriz(2);
-        mesh_service.DropRemeshDirtyBeyondRadius(focus_ground_horiz,
-                                                 /*keep_h=*/2, /*keep_cy=*/2,
-                                                 /*remesh_only=*/true);
+        request_drop_remesh(/*keep_h=*/2, /*keep_cy=*/2, /*remesh_only=*/true,
+                            /*use_preferred_cy=*/false);
       }
     }
     // Era34 P2: SoftDefer empty / holes while moving — clamp emerge + bias FM.
@@ -1922,33 +2064,36 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // Lit-but-dirty catch-up: after light gate clears, flush focus remesh hard
   // (outside flush previously ate the budget — dirty↑ while nr plateau ~40).
   // Drop Dirty outside eye shell even when wall is hot (stop wall 80–200).
-  // CheapRemesh C6: one coalesced DropRemesh pass (was keep_h=1/2/1 same tick).
-  const glm::ivec3 focus_dirty_keep(focus_ground.x, preferred_cy,
-                                    focus_ground.z);
+  // CheapRemesh C6 / Phase5 S3: one coalesced DropRemesh pass.
   {
-    int drop_keep_h = 0;
-    bool do_drop = false;
     if (idle_focus_dirty_debt)
     {
-      do_drop = true;
-      drop_keep_h = std::max(drop_keep_h, 1);
+      request_drop_remesh(/*keep_h=*/1, /*keep_cy=*/2, /*remesh_only=*/false,
+                          /*use_preferred_cy=*/true);
     }
     if (!moving && !visual_holes && !pending_near_light &&
         focus_dirty_early > 160)
     {
-      do_drop = true;
-      drop_keep_h = std::max(drop_keep_h, 2);
+      request_drop_remesh(/*keep_h=*/2, /*keep_cy=*/2, /*remesh_only=*/false,
+                          /*use_preferred_cy=*/true);
     }
     // Idle opaque stability (manual 131234): far unlit↔lit remesh churns opaque.
     if (!moving && !visual_holes && !missing_visible_mesh)
     {
-      do_drop = true;
-      drop_keep_h = std::max(drop_keep_h, 1);
+      request_drop_remesh(/*keep_h=*/1, /*keep_cy=*/2, /*remesh_only=*/false,
+                          /*use_preferred_cy=*/true);
     }
-    if (do_drop)
+    if (want_drop_remesh)
     {
-      mesh_service.DropRemeshDirtyBeyondRadius(focus_dirty_keep, drop_keep_h,
-                                              /*keep_cy=*/2);
+      const auto drop_t0 = std::chrono::high_resolution_clock::now();
+      const glm::ivec3 drop_center =
+          drop_remesh_use_preferred_cy ? focus_dirty_keep : focus_ground_horiz;
+      world.GetPhysicsTelemetryMutable().DirtyDropped += static_cast<uint64_t>(
+          std::max(0, mesh_service.DropRemeshDirtyBeyondRadius(
+                          drop_center, drop_remesh_keep_h, drop_remesh_keep_cy,
+                          drop_remesh_only)));
+      prep_drop_dirty_ms += prep_ms_since(drop_t0);
+      want_drop_remesh = false;
     }
   }
   if ((idle_remesh_debt || idle_focus_dirty_debt) && last_frame_ms <= 55.0)
@@ -2113,6 +2258,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     mesh_drain = std::max(mesh_drain, tail_drain);
     mesh_schedule = std::max(mesh_schedule, tail_schedule);
   }
+  } // else !shed_schedule_policy
+  prep_schedule_policy_ms = prep_ms_since(schedule_policy_t0);
+  // Phase5 S3: single DrainIdle before admission.
+  flush_drain_idle();
   // Early pending_gpu read — MeshWorkAdmission for producers; Finalize after
   // drain-first consume so schedule sees post-Finish pending (F0).
   {
@@ -2201,6 +2350,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     prep_admission_ms = prep_ms_since(admission_t0);
   }
+  const auto post_admit_drain_t0 = std::chrono::high_resolution_clock::now();
   if (focus_not_render_ready > 12 && pending_async_early < 10)
   {
     mesh_schedule = std::max(mesh_schedule, 14);
@@ -2247,9 +2397,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       const int budget =
           stop_window ? (pending_focus_count > 8 ? 10 : 8)
                       : (pending_focus_count > 20 ? 6 : 4);
-      GetColumnFlowExecutor().DrainIdlePendingLight(
-          world, focus_ground_horiz, focus_radius, budget, false,
-          last_frame_ms, pending_focus_count, missing_visible_mesh);
+      request_drain_idle(budget, /*allow_sync=*/false);
       const int promoted = budget;
       idle_pending_promote_cd = promoted > 0 ? (stop_window ? 1 : 2) : 6;
     }
@@ -2262,9 +2410,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         last_frame_ms <= 16.0)
     {
       // Formerly sync RelightTerrainColumn; with AsyncRelight → FIFO only.
-      GetColumnFlowExecutor().DrainIdlePendingLight(
-          world, focus_ground_horiz, focus_radius, 1, true, last_frame_ms,
-          pending_focus_count, missing_visible_mesh);
+      request_drain_idle(/*budget=*/1, /*allow_sync=*/true);
       const int synced = 1;
       idle_pending_sync_cd = synced > 0 ? 60 : 90;
     }
@@ -2289,9 +2435,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             OceanHealMovingRelightDrainFloor(ocean_heal, moving, void_n);
         if (floor > 0)
         {
-          GetColumnFlowExecutor().DrainIdlePendingLight(
-              world, focus_ground_horiz, focus_radius, floor, false,
-              last_frame_ms, pending_focus_count, missing_visible_mesh);
+          request_drain_idle(floor, /*allow_sync=*/false);
         }
         ocean_void_drain_cd = 1;
       }
@@ -2308,9 +2452,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         const int floor = LandMovingRelightDrainFloor(moving, pending_focus_count);
         if (floor > 0)
         {
-          GetColumnFlowExecutor().DrainIdlePendingLight(
-              world, focus_ground_horiz, focus_radius, floor, false,
-              last_frame_ms, pending_focus_count, missing_visible_mesh);
+          request_drain_idle(floor, /*allow_sync=*/false);
         }
         land_pending_drain_cd = 1;
       }
@@ -2570,8 +2712,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     const bool prep_shed_skip =
         shed_far_now && running_prep_ms > 12.0 && nearest_miss_h >= 3 &&
         !missing_underfeet && !pending_underfeet;
+    prep_post_admit_drain_ms = prep_ms_since(post_admit_drain_t0);
     const auto recover_t0 = std::chrono::high_resolution_clock::now();
-    if (!prep_shed_skip && recover_now && recover_n > 0)
+    if (!note_prep_deadline_skip() && !prep_shed_skip && recover_now &&
+        recover_n > 0)
     {
       auto &exec = GetColumnFlowExecutor();
       int admit_n =
@@ -2640,6 +2784,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     prep_recover_ms = prep_ms_since(recover_t0);
   }
 
+  const auto hole_force_t0 = std::chrono::high_resolution_clock::now();
   // Sync-rebuild missing solid slices: underfeet always; idle focus holes too.
   // Hitch must NOT disable focus hole sync — last_frame_ms>20 used to skip the
   // whole ring while visual_holes=1 for the entire stop.
@@ -2752,10 +2897,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         have_hole = true;
       }
     }
+    if (!have_hole && mark_r >= focus_radius && have_nearest_missing)
+    {
+      hole = nearest_missing_hole;
+      have_hole = true;
+    }
     if (!have_hole)
     {
+      ++prep_find_nearest_n;
       have_hole = mesh_service.FindNearestMissingGreedyMesh(
           world.GetBlockWorld(), focus_ground, mark_r, hole);
+      if (have_hole && !have_nearest_missing)
+      {
+        nearest_missing_hole = hole;
+        have_nearest_missing = true;
+      }
     }
     if (have_hole && !mesh_service.HasInflightMeshBuild(hole))
     {
@@ -3073,7 +3229,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // fill (mesh_emerge 0.7–3s hitch). Moving: non-underfeet always Dirty/async.
   // Era14 TD-ARCH-041: MarkDirty / promote always under miss — Imm only stays
   // behind budget/calm (DISCARD wall as Dirty enqueue gate).
-  if (missing_visible_mesh)
+  if (missing_visible_mesh && !note_prep_deadline_skip())
   {
     static int force_hole_cd = 0;
     const FocusIngressDecision ingress = EvaluateFocusIngress(FocusIngressInput{
@@ -3085,8 +3241,24 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     if (force_hole_cd <= 0)
     {
       glm::ivec3 hole{};
-      if (mesh_service.FindNearestMissingGreedyMesh(
-              world.GetBlockWorld(), focus_ground, focus_radius, hole))
+      bool have_hole = false;
+      if (have_nearest_missing)
+      {
+        hole = nearest_missing_hole;
+        have_hole = true;
+      }
+      else
+      {
+        ++prep_find_nearest_n;
+        have_hole = mesh_service.FindNearestMissingGreedyMesh(
+            world.GetBlockWorld(), focus_ground, focus_radius, hole);
+        if (have_hole)
+        {
+          nearest_missing_hole = hole;
+          have_nearest_missing = true;
+        }
+      }
+      if (have_hole)
       {
         auto &exec = GetColumnFlowExecutor();
         exec.RequestPromoteRelight(
@@ -3220,6 +3392,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   // Re-assert moving no-hole dirty clamp after later schedule boosts (CB
   // wall_ms_no_holes). snap≤1 raised spike_holes (cb_wall2); keep snap2.
+  prep_hole_force_ms = prep_ms_since(hole_force_t0);
   {
     const auto schedule_clamp_t0 = std::chrono::high_resolution_clock::now();
   if (!cruise_fast_path)
@@ -3290,15 +3463,28 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     pt.PrepBlackStickyMs = prep_black_sticky_ms;
     pt.PrepDirtyCountMs = prep_dirty_count_ms;
     pt.PrepSoftdeferSetupMs = prep_softdefer_setup_ms;
+    pt.PrepWarmupMs = prep_warmup_ms;
+    pt.PrepSoftdeferPreMs = prep_softdefer_pre_ms;
+    pt.PrepDirtyThrashMs = prep_dirty_thrash_ms;
+    pt.PrepSchedulePolicyMs = prep_schedule_policy_ms;
+    pt.PrepPostAdmitDrainMs = prep_post_admit_drain_ms;
+    pt.PrepHoleForceMs = prep_hole_force_ms;
+    pt.PrepDeadlineHit = prep_deadline_hit;
+    pt.PrepFindNearestN = prep_find_nearest_n;
+    pt.PrepDrainIdleN = prep_drain_idle_n;
+    pt.PrepDropRemeshN = prep_drop_remesh_n;
     // SoftdeferEmptyScanMs / SoftdeferEmptyOwnMs written during SoftDefer block.
+    // A1: pending/softdefer_setup/dirty_count/black_sticky already inside
+    // prep_unfinished_ms — do not double-count. IsolatedMiss / ColumnFlowDrain
+    // are measured after this latch — exclude from accounted here.
     const double accounted = prep_missing_ms + prep_unfinished_ms +
                              prep_sticky_ms + prep_drop_dirty_ms +
                              prep_admission_ms + prep_schedule_clamp_ms +
-                             prep_softdefer_policy_ms + prep_isolated_miss_ms +
-                             prep_pending_light_ms + prep_softdefer_setup_ms +
-                             prep_dirty_count_ms + prep_black_sticky_ms +
-                             prep_column_flow_drain_ms +
-                             prep_sync_focus_ring_ms + prep_recover_ms;
+                             prep_softdefer_policy_ms +
+                             prep_sync_focus_ring_ms + prep_recover_ms +
+                             prep_warmup_ms + prep_softdefer_pre_ms +
+                             prep_dirty_thrash_ms + prep_schedule_policy_ms +
+                             prep_post_admit_drain_ms + prep_hole_force_ms;
     pt.MeshEmergePrepSelfMs =
         std::max(0.0, pt.MeshEmergePrepMs - accounted);
     // Compat alias for existing JSON consumers.
@@ -3391,12 +3577,27 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // focus missing — not only held UnfinishedVisual — and prefer admit over
   // remesh when Dirty is high on the rim.
   glm::ivec3 isolated_hole{};
-  const bool found_nearest_missing =
-      world.IsEnterLitGateActive()
-          ? world.FindFirstSpawnRingMissingGreedy(isolated_hole)
-          : mesh_service.FindNearestMissingGreedyMesh(
-                world.GetBlockWorld(), focus_ground, focus_radius,
-                isolated_hole);
+  bool found_nearest_missing = false;
+  if (world.IsEnterLitGateActive())
+  {
+    found_nearest_missing = world.FindFirstSpawnRingMissingGreedy(isolated_hole);
+  }
+  else if (have_nearest_missing)
+  {
+    isolated_hole = nearest_missing_hole;
+    found_nearest_missing = true;
+  }
+  else
+  {
+    ++prep_find_nearest_n;
+    found_nearest_missing = mesh_service.FindNearestMissingGreedyMesh(
+        world.GetBlockWorld(), focus_ground, focus_radius, isolated_hole);
+    if (found_nearest_missing)
+    {
+      nearest_missing_hole = isolated_hole;
+      have_nearest_missing = true;
+    }
+  }
   const bool isolated_missing =
       visual_holes || missing_visible_mesh || missing_underfeet ||
       found_nearest_missing;
@@ -4639,9 +4840,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                                        world.IsEnterFovLitPassActive())
             ? 0
             : ComputeFmDirtyEnqueueReserve(
-                  std::max(s_fm_enqueue_prior,
-                           std::max(s_dirty_fm_prior, dirty_fm_pre_rebuild)),
-                  s_schedule_ok_prior);
+                  std::max(FmEnqueuePrior,
+                           std::max(DirtyFmPrior, dirty_fm_pre_rebuild)),
+                  ScheduleOkPrior);
     mesh_service.SetFmDirtyEnqueueReserve(fm_reserve);
     world.GetPhysicsTelemetryMutable().FmDirtyEnqueueReserveN = fm_reserve;
   }
@@ -4694,9 +4895,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                                             /*keep_cy=*/2);
   }
 
-  s_fm_enqueue_prior = world.GetPhysicsTelemetry().FmDirtyEnqueueN;
-  s_schedule_ok_prior = mesh_service.GetLastMeshDirtyScheduleOkN();
-  s_dirty_fm_prior = mesh_service.GetLastDirtyFmN();
+  FmEnqueuePrior = world.GetPhysicsTelemetry().FmDirtyEnqueueN;
+  ScheduleOkPrior = mesh_service.GetLastMeshDirtyScheduleOkN();
+  DirtyFmPrior = mesh_service.GetLastDirtyFmN();
   {
     const int unfinished = world.GetPhysicsTelemetry().UnfinishedVisual;
     const int dirty_fm = mesh_service.GetLastDirtyFmN();

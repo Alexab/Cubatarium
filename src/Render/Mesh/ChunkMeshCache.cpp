@@ -848,6 +848,16 @@ void UChunkMeshCache::NoteGeometryDirty(glm::ivec3 chunk_coord)
   GeometryDirtyChunks.insert(chunk_coord);
 }
 
+void UChunkMeshCache::BeginGpuPassDirtyFrame() const
+{
+  GpuPassDirtyFrame = GeometryDirtyChunks;
+}
+
+bool UChunkMeshCache::GpuPassDirtyHitsChunk(glm::ivec3 chunk_coord) const
+{
+  return GpuPassDirtyFrame.count(chunk_coord) > 0;
+}
+
 void UChunkMeshCache::ConsumeGeometryDirtyChunks(
     std::unordered_set<glm::ivec3, IVec3Hash> &out) const
 {

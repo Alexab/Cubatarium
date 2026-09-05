@@ -1,5 +1,5 @@
 #pragma once
-// BUDGET_MS: 0.0  // perf-root P4: measure via Tracy; kill-switch required for new heuristics
+// BUDGET_MS: 0.01  // prep_refresh_diet_flags_ms-scale (fly-heavy 233454); diet/cadence flags
 
 namespace cutum
 {

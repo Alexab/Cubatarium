@@ -400,11 +400,31 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
       CubatariumFlushLogs();
     }
   }
-  const bool force_ingame =
-      EnterGameAbortDrainMode &&
-      ShouldForceEnterInGameAfterAbortDrain(EnterGameGpuWarmupElapsedMs,
-                                            tune.EnterForceInGameMs);
-  if (force_ingame && !enter_ready && !EnterGameForceInGameLogged)
+  const bool soft_exit_cap = ShouldForceEnterLoadSoftExit(
+      EnterGameAbortDrainMode, EnterGameGpuWarmupElapsedMs,
+      tune.EnterForceInGameMs, fov_debt);
+  if (soft_exit_cap && !enter_ready && min_frames_done)
+  {
+    enter_ready = true;
+    if (!EnterGameForceInGameLogged)
+    {
+      EnterGameForceInGameLogged = true;
+      LOG(WARNING) << "[EnterWarmup] soft_exit_cap elapsed_ms="
+                   << EnterGameGpuWarmupElapsedMs << " ring_ready="
+                   << (ring_ready ? 1 : 0) << " mesh_dirty="
+                   << (lit_sample.mesh_dirty ? 1 : 0) << " gpu_pending="
+                   << lit_sample.mesh_gpu_pending_near << " ring="
+                   << lit_sample.ring_not_ready << " fifo=" << lit_sample.fifo_n
+                   << " visibility_debt=" << visibility_debt
+                   << " underfeet=" << (underfeet_present ? 1 : 0)
+                   << " (force InGame; underfeet may be missing)";
+      CubatariumFlushLogs();
+    }
+  }
+  else if (EnterGameAbortDrainMode &&
+           ShouldForceEnterInGameAfterAbortDrain(EnterGameGpuWarmupElapsedMs,
+                                                 tune.EnterForceInGameMs) &&
+           !enter_ready && !EnterGameForceInGameLogged)
   {
     EnterGameForceInGameLogged = true;
     LOG(WARNING) << "[EnterWarmup] force_ingame wall elapsed_ms="
@@ -415,11 +435,11 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
                  << lit_sample.ring_not_ready << " fifo=" << lit_sample.fifo_n
                  << " visibility_debt=" << visibility_debt
                  << " underfeet=" << (underfeet_present ? 1 : 0)
-                 << " (waiting for underfeet cap)";
+                 << " (waiting for soft_exit / underfeet cap)";
     CubatariumFlushLogs();
   }
 
-  // Era48/49: InGame when visibility ready, or abort underfeet cap (residual vis OK).
+  // Era48/49: InGame when visibility ready, abort underfeet, or soft-exit cap.
   if (!enter_ready)
   {
     return false;

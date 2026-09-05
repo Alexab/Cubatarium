@@ -1660,6 +1660,33 @@ def analyze(
     gates["policy_headers_have_budget"] = policy_budget_ok
     # Light-debt holes with miss=0 (land-cruise L1–L4 nh_no_miss 0.39–0.65).
     gates["nh_no_miss_rate_le_025"] = nh_no_miss_rate <= 0.25
+    # Phase5 S5: promote FPS + attribution milestones to hard gates.
+    scene_ms_med = median(col(cruise_src, "scene_ms"))
+    stream_phase_for_gate = (
+        world_streaming_phase_ms_med
+        if world_streaming_phase_ms_med is not None
+        else stream_ms_med
+    )
+    gates["wall_ms_fly_le_33"] = (
+        wall_fly_med is not None and wall_fly_med <= 33.0
+    )
+    gates["wall_ms_fly_le_16_6"] = (
+        wall_fly_med is not None and wall_fly_med <= 16.6
+    )
+    gates["attribution_refresh_self_ratio_le_0_10"] = (
+        attribution_refresh_self_ratio is None
+        or attribution_refresh_self_ratio <= 0.10
+    )
+    gates["attribution_scene_self_ratio_le_0_10"] = (
+        attribution_scene_self_ratio is None
+        or attribution_scene_self_ratio <= 0.10
+    )
+    gates["scene_ms_le_5"] = (
+        scene_ms_med is not None and scene_ms_med <= 5.0
+    )
+    gates["stream_phase_ms_le_5"] = (
+        stream_phase_for_gate is not None and stream_phase_for_gate <= 5.0
+    )
     gates_pass_count = sum(1 for v in gates.values() if v)
 
     # Manual 083042: pendf stuck ~40 for ~30s while wall~22–30 and holes=0.
@@ -1814,7 +1841,8 @@ def analyze(
         "holes_rate_raw": holes_rate,
         "mesh_async_stuck_sec": mesh_async_stuck_sec,
         "cold_relight_holes_sec": cold_relight_holes_sec,
-        # Perf-root P4: FPS + attribution milestones (promote to hard when green).
+        # Perf-root P4 → Phase5 S5: FPS + attribution promoted to hard `gates`.
+        # Kept here as mirrors for report readers / legacy soft consumers.
         "wall_ms_fly_le_33": wall_fly_med is not None and wall_fly_med <= 33.0,
         "wall_ms_fly_le_16_6": wall_fly_med is not None and wall_fly_med <= 16.6,
         "attribution_refresh_self_ratio": attribution_refresh_self_ratio,
@@ -1826,6 +1854,10 @@ def analyze(
         "attribution_scene_self_ratio_le_0_10": (
             attribution_scene_self_ratio is None
             or attribution_scene_self_ratio <= 0.10
+        ),
+        "scene_ms_le_5": scene_ms_med is not None and scene_ms_med <= 5.0,
+        "stream_phase_ms_le_5": (
+            stream_phase_for_gate is not None and stream_phase_for_gate <= 5.0
         ),
         # Era18 P0 report-only (hard floors land in P1/P2).
         "vb_without_pending_light_focus_sec": vb_without_pending_light_focus_sec,
@@ -2039,6 +2071,8 @@ def analyze(
             "unfinished_visual": unfinished_visual_med,
             "visible_black_focus_n": visible_black_focus_med,
             "stream_ms": stream_ms_med,
+            "scene_ms": scene_ms_med,
+            "stream_phase_ms": stream_phase_for_gate,
             "prep_untagged_gap_med": prep_untagged_gap_med,
             "prep_refresh_gap_ms": prep_untagged_gap_med,
             "prep_gap_honest_med": prep_gap_honest_med,

@@ -77,9 +77,26 @@ struct Session
   double AccumPrepRefreshRingResyncMs{0.0};
   double AccumPrepRefreshVbRawMs{0.0};
   double AccumPrepRefreshGapMs{0.0};
+  double AccumPrepRefreshSelfMs{0.0};
   double AccumPrepRefreshCameraCompleteMs{0.0};
   double AccumPrepRefreshBodyMs{0.0};
   double AccumPrepRefreshHasMissingMs{0.0};
+  double AccumPrepRefreshSetupMs{0.0};
+  double AccumPrepRefreshInputFillMs{0.0};
+  double AccumPrepRefreshDietFlagsMs{0.0};
+  double AccumMeshEmergePrepSelfMs{0.0};
+  double AccumSceneFilterReadyMs{0.0};
+  double AccumSceneOpaqueDrawMs{0.0};
+  double AccumSceneTransparentMs{0.0};
+  double AccumSceneDepthCaptureMs{0.0};
+  double AccumSceneOverlaysMs{0.0};
+  double AccumSceneSelfMs{0.0};
+  double AccumPrepWarmupMs{0.0};
+  double AccumPrepSoftdeferPreMs{0.0};
+  double AccumPrepDirtyThrashMs{0.0};
+  double AccumPrepSchedulePolicyMs{0.0};
+  double AccumPrepPostAdmitDrainMs{0.0};
+  double AccumPrepHoleForceMs{0.0};
   double MaxPrepRefreshPressureMs{0.0};
   double MaxPrepRefreshGapMs{0.0};
   double MaxPrepRefreshFacingMs{0.0};
@@ -340,6 +357,24 @@ struct FrameNumbers
   double scene_self_ms{0.0};
   double prep_refresh_camera_complete_ms{0.0};
   double prep_refresh_body_ms{0.0};
+  double prep_refresh_setup_ms{0.0};
+  double prep_refresh_setup_focus_ms{0.0};
+  double prep_refresh_setup_ring_ms{0.0};
+  double prep_refresh_setup_capture_ms{0.0};
+  double prep_refresh_setup_probe_ms{0.0};
+  double prep_refresh_input_fill_ms{0.0};
+  double prep_refresh_diet_flags_ms{0.0};
+  double prep_warmup_ms{0.0};
+  double prep_softdefer_pre_ms{0.0};
+  double prep_dirty_thrash_ms{0.0};
+  double prep_schedule_policy_ms{0.0};
+  double prep_post_admit_drain_ms{0.0};
+  double prep_hole_force_ms{0.0};
+  int prep_refresh_deadline_hit{0};
+  int prep_deadline_hit{0};
+  int prep_find_nearest_n{0};
+  int prep_drain_idle_n{0};
+  int prep_drop_remesh_n{0};
   int focus_dirty_reconcile_delta{0};
   int rim_witness_latched{0};
   int rim_hole_pressure{0};
@@ -588,6 +623,11 @@ struct FrameNumbers
   uint64_t edit_neighbor_pending_frames{0};
   uint64_t pool_unsync_uploads{0};
   double pool_fence_wait_ms{0.0};
+  int transparent_sort_rev_changed{0};
+  int transparent_upload_full_n{0};
+  int transparent_cmd_reorder_n{0};
+  int transparent_order_only_fail_reason{0};
+  int transparent_batch_n{0};
   uint64_t chunk_meshed_culled0{0};
   uint64_t chunk_meshed_unlit{0};
   uint64_t chunk_meshed_unlit_hidden{0};
@@ -858,6 +898,24 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.scene_self_ms = phys.SceneSelfMs;
   n.prep_refresh_camera_complete_ms = phys.PrepRefreshCameraCompleteMs;
   n.prep_refresh_body_ms = phys.PrepRefreshBodyMs;
+  n.prep_refresh_setup_ms = phys.PrepRefreshSetupMs;
+  n.prep_refresh_setup_focus_ms = phys.PrepRefreshSetupFocusMs;
+  n.prep_refresh_setup_ring_ms = phys.PrepRefreshSetupRingMs;
+  n.prep_refresh_setup_capture_ms = phys.PrepRefreshSetupCaptureMs;
+  n.prep_refresh_setup_probe_ms = phys.PrepRefreshSetupProbeMs;
+  n.prep_refresh_input_fill_ms = phys.PrepRefreshInputFillMs;
+  n.prep_refresh_diet_flags_ms = phys.PrepRefreshDietFlagsMs;
+  n.prep_warmup_ms = phys.PrepWarmupMs;
+  n.prep_softdefer_pre_ms = phys.PrepSoftdeferPreMs;
+  n.prep_dirty_thrash_ms = phys.PrepDirtyThrashMs;
+  n.prep_schedule_policy_ms = phys.PrepSchedulePolicyMs;
+  n.prep_post_admit_drain_ms = phys.PrepPostAdmitDrainMs;
+  n.prep_hole_force_ms = phys.PrepHoleForceMs;
+  n.prep_refresh_deadline_hit = phys.PrepRefreshDeadlineHit;
+  n.prep_deadline_hit = phys.PrepDeadlineHit;
+  n.prep_find_nearest_n = phys.PrepFindNearestN;
+  n.prep_drain_idle_n = phys.PrepDrainIdleN;
+  n.prep_drop_remesh_n = phys.PrepDropRemeshN;
   n.focus_dirty_reconcile_delta = phys.FocusDirtyReconcileDelta;
   n.rim_witness_latched = phys.RimWitnessLatched;
   n.rim_hole_pressure = phys.RimHolePressure;
@@ -1128,6 +1186,11 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.edit_neighbor_pending_frames = phys.EditNeighborPendingFrames;
   n.pool_unsync_uploads = phys.PoolUnsyncUploads;
   n.pool_fence_wait_ms = phys.PoolFenceWaitMs;
+  n.transparent_sort_rev_changed = phys.TransparentSortRevChanged;
+  n.transparent_upload_full_n = phys.TransparentUploadFullN;
+  n.transparent_cmd_reorder_n = phys.TransparentCmdReorderN;
+  n.transparent_order_only_fail_reason = phys.TransparentOrderOnlyFailReason;
+  n.transparent_batch_n = phys.TransparentBatchN;
   n.chunk_meshed_culled0 = phys.ChunkMeshedCulled0;
   n.chunk_meshed_unlit = phys.ChunkMeshedUnlit;
   n.chunk_meshed_unlit_hidden = phys.ChunkMeshedUnlitHidden;
@@ -1398,6 +1461,27 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"prep_refresh_camera_complete_ms\":"
           << n.prep_refresh_camera_complete_ms
           << ",\"prep_refresh_body_ms\":" << n.prep_refresh_body_ms
+          << ",\"prep_refresh_setup_ms\":" << n.prep_refresh_setup_ms
+          << ",\"prep_refresh_setup_focus_ms\":" << n.prep_refresh_setup_focus_ms
+          << ",\"prep_refresh_setup_ring_ms\":" << n.prep_refresh_setup_ring_ms
+          << ",\"prep_refresh_setup_capture_ms\":"
+          << n.prep_refresh_setup_capture_ms
+          << ",\"prep_refresh_setup_probe_ms\":" << n.prep_refresh_setup_probe_ms
+          << ",\"prep_refresh_input_fill_ms\":"
+          << n.prep_refresh_input_fill_ms
+          << ",\"prep_refresh_diet_flags_ms\":"
+          << n.prep_refresh_diet_flags_ms
+          << ",\"prep_warmup_ms\":" << n.prep_warmup_ms
+          << ",\"prep_softdefer_pre_ms\":" << n.prep_softdefer_pre_ms
+          << ",\"prep_dirty_thrash_ms\":" << n.prep_dirty_thrash_ms
+          << ",\"prep_schedule_policy_ms\":" << n.prep_schedule_policy_ms
+          << ",\"prep_post_admit_drain_ms\":" << n.prep_post_admit_drain_ms
+          << ",\"prep_hole_force_ms\":" << n.prep_hole_force_ms
+          << ",\"prep_refresh_deadline_hit\":" << n.prep_refresh_deadline_hit
+          << ",\"prep_deadline_hit\":" << n.prep_deadline_hit
+          << ",\"prep_find_nearest_n\":" << n.prep_find_nearest_n
+          << ",\"prep_drain_idle_n\":" << n.prep_drain_idle_n
+          << ",\"prep_drop_remesh_n\":" << n.prep_drop_remesh_n
           << ",\"focus_dirty_reconcile_delta\":" << n.focus_dirty_reconcile_delta
           << ",\"rim_witness_latched\":" << n.rim_witness_latched
           << ",\"rim_hole_pressure\":" << n.rim_hole_pressure
@@ -1686,6 +1770,13 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.edit_neighbor_pending_frames
           << ",\"pool_unsync_uploads\":" << n.pool_unsync_uploads
           << ",\"pool_fence_wait_ms\":" << n.pool_fence_wait_ms
+          << ",\"transparent_sort_rev_changed\":"
+          << n.transparent_sort_rev_changed
+          << ",\"transparent_upload_full_n\":" << n.transparent_upload_full_n
+          << ",\"transparent_cmd_reorder_n\":" << n.transparent_cmd_reorder_n
+          << ",\"transparent_order_only_fail_reason\":"
+          << n.transparent_order_only_fail_reason
+          << ",\"transparent_batch_n\":" << n.transparent_batch_n
           << ",\"chunk_meshed_culled0\":" << n.chunk_meshed_culled0
           << ",\"chunk_meshed_unlit\":" << n.chunk_meshed_unlit
           << ",\"chunk_meshed_unlit_hidden\":" << n.chunk_meshed_unlit_hidden
@@ -1831,9 +1922,26 @@ void Accumulate(Session &s, const FrameNumbers &n)
   s.AccumPrepRefreshRingResyncMs += n.prep_refresh_ring_resync_ms;
   s.AccumPrepRefreshVbRawMs += n.prep_refresh_vb_raw_ms;
   s.AccumPrepRefreshGapMs += n.prep_refresh_gap_ms;
+  s.AccumPrepRefreshSelfMs += n.prep_refresh_self_ms;
   s.AccumPrepRefreshCameraCompleteMs += n.prep_refresh_camera_complete_ms;
   s.AccumPrepRefreshBodyMs += n.prep_refresh_body_ms;
   s.AccumPrepRefreshHasMissingMs += n.prep_refresh_has_missing_ms;
+  s.AccumPrepRefreshSetupMs += n.prep_refresh_setup_ms;
+  s.AccumPrepRefreshInputFillMs += n.prep_refresh_input_fill_ms;
+  s.AccumPrepRefreshDietFlagsMs += n.prep_refresh_diet_flags_ms;
+  s.AccumMeshEmergePrepSelfMs += n.mesh_emerge_prep_self_ms;
+  s.AccumSceneFilterReadyMs += n.scene_filter_ready_ms;
+  s.AccumSceneOpaqueDrawMs += n.scene_opaque_draw_ms;
+  s.AccumSceneTransparentMs += n.scene_transparent_ms;
+  s.AccumSceneDepthCaptureMs += n.scene_depth_capture_ms;
+  s.AccumSceneOverlaysMs += n.scene_overlays_ms;
+  s.AccumSceneSelfMs += n.scene_self_ms;
+  s.AccumPrepWarmupMs += n.prep_warmup_ms;
+  s.AccumPrepSoftdeferPreMs += n.prep_softdefer_pre_ms;
+  s.AccumPrepDirtyThrashMs += n.prep_dirty_thrash_ms;
+  s.AccumPrepSchedulePolicyMs += n.prep_schedule_policy_ms;
+  s.AccumPrepPostAdmitDrainMs += n.prep_post_admit_drain_ms;
+  s.AccumPrepHoleForceMs += n.prep_hole_force_ms;
   s.MaxPrepRefreshPressureMs =
       (std::max)(s.MaxPrepRefreshPressureMs, n.prep_refresh_pressure_ms);
   s.MaxPrepRefreshGapMs =
@@ -1895,10 +2003,27 @@ FrameNumbers AverageFromSession(Session &s, const FrameNumbers &last)
   avg.prep_refresh_ring_resync_ms = s.AccumPrepRefreshRingResyncMs * inv;
   avg.prep_refresh_vb_raw_ms = s.AccumPrepRefreshVbRawMs * inv;
   avg.prep_refresh_gap_ms = s.AccumPrepRefreshGapMs * inv;
+  avg.prep_refresh_self_ms = s.AccumPrepRefreshSelfMs * inv;
   avg.prep_refresh_camera_complete_ms =
       s.AccumPrepRefreshCameraCompleteMs * inv;
   avg.prep_refresh_body_ms = s.AccumPrepRefreshBodyMs * inv;
   avg.prep_refresh_has_missing_ms = s.AccumPrepRefreshHasMissingMs * inv;
+  avg.prep_refresh_setup_ms = s.AccumPrepRefreshSetupMs * inv;
+  avg.prep_refresh_input_fill_ms = s.AccumPrepRefreshInputFillMs * inv;
+  avg.prep_refresh_diet_flags_ms = s.AccumPrepRefreshDietFlagsMs * inv;
+  avg.mesh_emerge_prep_self_ms = s.AccumMeshEmergePrepSelfMs * inv;
+  avg.scene_filter_ready_ms = s.AccumSceneFilterReadyMs * inv;
+  avg.scene_opaque_draw_ms = s.AccumSceneOpaqueDrawMs * inv;
+  avg.scene_transparent_ms = s.AccumSceneTransparentMs * inv;
+  avg.scene_depth_capture_ms = s.AccumSceneDepthCaptureMs * inv;
+  avg.scene_overlays_ms = s.AccumSceneOverlaysMs * inv;
+  avg.scene_self_ms = s.AccumSceneSelfMs * inv;
+  avg.prep_warmup_ms = s.AccumPrepWarmupMs * inv;
+  avg.prep_softdefer_pre_ms = s.AccumPrepSoftdeferPreMs * inv;
+  avg.prep_dirty_thrash_ms = s.AccumPrepDirtyThrashMs * inv;
+  avg.prep_schedule_policy_ms = s.AccumPrepSchedulePolicyMs * inv;
+  avg.prep_post_admit_drain_ms = s.AccumPrepPostAdmitDrainMs * inv;
+  avg.prep_hole_force_ms = s.AccumPrepHoleForceMs * inv;
   avg.max_wall_ms = s.MaxWallMs;
   avg.max_stream_ms = s.MaxStreamMs;
   avg.max_mesh_emerge_ms = s.MaxMeshEmergeMs;
@@ -1948,9 +2073,26 @@ void ResetAccum(Session &s)
   s.AccumPrepRefreshRingResyncMs = 0.0;
   s.AccumPrepRefreshVbRawMs = 0.0;
   s.AccumPrepRefreshGapMs = 0.0;
+  s.AccumPrepRefreshSelfMs = 0.0;
   s.AccumPrepRefreshCameraCompleteMs = 0.0;
   s.AccumPrepRefreshBodyMs = 0.0;
   s.AccumPrepRefreshHasMissingMs = 0.0;
+  s.AccumPrepRefreshSetupMs = 0.0;
+  s.AccumPrepRefreshInputFillMs = 0.0;
+  s.AccumPrepRefreshDietFlagsMs = 0.0;
+  s.AccumMeshEmergePrepSelfMs = 0.0;
+  s.AccumSceneFilterReadyMs = 0.0;
+  s.AccumSceneOpaqueDrawMs = 0.0;
+  s.AccumSceneTransparentMs = 0.0;
+  s.AccumSceneDepthCaptureMs = 0.0;
+  s.AccumSceneOverlaysMs = 0.0;
+  s.AccumSceneSelfMs = 0.0;
+  s.AccumPrepWarmupMs = 0.0;
+  s.AccumPrepSoftdeferPreMs = 0.0;
+  s.AccumPrepDirtyThrashMs = 0.0;
+  s.AccumPrepSchedulePolicyMs = 0.0;
+  s.AccumPrepPostAdmitDrainMs = 0.0;
+  s.AccumPrepHoleForceMs = 0.0;
   s.MaxPrepRefreshPressureMs = 0.0;
   s.MaxPrepRefreshGapMs = 0.0;
   s.MaxPrepRefreshFacingMs = 0.0;

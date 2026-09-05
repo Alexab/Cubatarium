@@ -3176,7 +3176,36 @@ bool UWorld::NeedsSpawnRingCatchUp() const
   {
     return false;
   }
-  return CountPostLoadRingNotReady() > 0;
+  // Enter lit / burst / StreamSimple: dense — never cadence-skip the ring walk.
+  const bool force_dense = IsEnterLitGateActive() ||
+                           GetEnterGameMeshBurstFrames() > 0 ||
+                           URuntimeTuning::Get().StreamSimple;
+  if (SpawnCatchUpSampleEpoch == StreamingFrameEpoch)
+  {
+    return CachedNeedsSpawnRingCatchUp;
+  }
+  if (!force_dense)
+  {
+    // Cruise: prior-frame telemetry already clear ⇒ skip CountPostLoadRingNotReady
+    // for several frames (Refresh used to pay this every frame via setup_probe).
+    constexpr uint64_t kCatchUpRecheckFrames = 8;
+    const bool telemetry_clear =
+        PhysicsTelemetryData.PostLoadRingNotReady <= 0 &&
+        PhysicsTelemetryData.UnfinishedVisual <= 0;
+    if (telemetry_clear && !CachedNeedsSpawnRingCatchUp &&
+        SpawnCatchUpSampleEpoch != UINT64_MAX)
+    {
+      const uint64_t age = StreamingFrameEpoch - SpawnCatchUpSampleEpoch;
+      if (age < kCatchUpRecheckFrames)
+      {
+        return false;
+      }
+    }
+  }
+  const bool need = CountPostLoadRingNotReady() > 0;
+  CachedNeedsSpawnRingCatchUp = need;
+  SpawnCatchUpSampleEpoch = StreamingFrameEpoch;
+  return need;
 }
 
 std::string UWorld::FormatPendingLightFocusColumns(
@@ -6266,22 +6295,41 @@ void UWorld::SampleEnterGameMeshWarmupBlockers(EnterGameMeshWarmupBlockers &out)
 
 bool UWorld::NeedsEnterGameMeshWarmup() const
 {
+  // Phase5 S2: post-enter cruise must not pay SampleEnterGameMeshWarmupBlockers
+  // every Refresh (~60ms setup_probe). Enter exit still samples while gate or
+  // session is active (MeshWarmupFinalize / visual warmup paths included).
+  if (!EnterLitGateActive && !IsEnterSessionActive())
+  {
+    return false;
+  }
   if (!BlockWorldReady && CachedBlockCount == 0 &&
       MeshService->GetGreedyCacheSize() == 0)
   {
     return false;
   }
+  // Same-frame memo: Refresh / UpdateStreaming / coop may call multiple times.
+  if (EnterWarmupSampleEpoch == StreamingFrameEpoch)
+  {
+    return CachedNeedsEnterMeshWarmup;
+  }
   EnterGameMeshWarmupBlockers blockers{};
   SampleEnterGameMeshWarmupBlockers(blockers);
+  bool need = false;
   if (blockers.dirty || blockers.missing_greedy)
   {
-    return true;
+    need = true;
   }
-  if (blockers.async_mesh_pending || blockers.gpu_pending_near > 0)
+  else if (blockers.async_mesh_pending || blockers.gpu_pending_near > 0)
   {
-    return true;
+    need = true;
   }
-  return blockers.visual_warmup;
+  else
+  {
+    need = blockers.visual_warmup;
+  }
+  CachedNeedsEnterMeshWarmup = need;
+  EnterWarmupSampleEpoch = StreamingFrameEpoch;
+  return need;
 }
 
 bool UWorld::NeedsEnterGameVisualWarmup() const

@@ -22,6 +22,8 @@ struct GreedyGpuBatch
 {
   BlockId blockId{BLOCK_AIR};
   glm::ivec3 chunkCoord{0};
+  /// Matches GreedyBatchRef.batchIndex for sort-order lookup without reupload.
+  uint16_t batchIndex{0};
   size_t vertexCount{0};
   size_t indexCount{0};
   GLuint vbo{0};
@@ -38,6 +40,27 @@ struct GreedyGpuBatch
   float cullAabbMin[3]{0, 0, 0};
   float cullAabbMax[3]{0, 0, 0};
   uint32_t drawInstanceCount{1};
+};
+
+/// Optional per-RefreshPassRefs counters (transparent Prepare binds these).
+struct GreedyGpuRefreshTelem
+{
+  int UploadFullN{0};
+  int CmdReorderN{0};
+  /// 0 ok (reorder), 1 !mesh/pass_geom, 2 dirty, 3 !pool, 4 need_rebuild,
+  /// 5 key_miss, 6 leftover — set when sort-only was attempted or gated out.
+  int OrderOnlyFailReason{0};
+};
+
+enum class TransparentOrderOnlyFailReason : int
+{
+  Ok = 0,
+  MeshNotOk = 1,
+  Dirty = 2,
+  PoolNotOk = 3,
+  NeedRebuild = 4,
+  KeyMiss = 5,
+  Leftover = 6,
 };
 
 struct GreedyGpuPassCache
@@ -80,6 +103,9 @@ public:
   void DestroyPass(GreedyGpuPassCache &cache);
   void DestroyAll(GreedyGpuPassCache &opaque, GreedyGpuPassCache &cutout,
                   GreedyGpuPassCache &transparent);
+
+  /// Bind/unbind telem sink for the next RefreshPassRefs calls (nullptr clears).
+  static void BindRefreshTelem(GreedyGpuRefreshTelem *telem);
 
 private:
   void UploadBatch(GreedyGpuBatch &gpu, const GreedyMeshBatch &batch,

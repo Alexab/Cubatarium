@@ -637,6 +637,7 @@ void UGeometryEngine::DrawCubeGeometry()
   if (useGreedyMesh)
   {
     // Shared ready memo across opaque+transparent (World also memos per frame).
+    mesh_service->GetCache().BeginGpuPassDirtyFrame();
     std::unordered_map<int64_t, bool> ready_cache;
     auto filter_render_ready_refs = [&](const std::vector<GreedyBatchRef> &in)
     {
@@ -2009,6 +2010,15 @@ void UGeometryEngine::PrepareTransparent(
     CachedTransparentSortRevision = 0;
     CachedTransparentMeshRevision = 0;
     CachedTransparentRefFingerprint = 0;
+    if (WorldInstance)
+    {
+      auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+      phys.TransparentSortRevChanged = 0;
+      phys.TransparentUploadFullN = 0;
+      phys.TransparentCmdReorderN = 0;
+      phys.TransparentOrderOnlyFailReason = 0;
+      phys.TransparentBatchN = 0;
+    }
     return;
   }
   const uint64_t sortRevision = GreedyTransparentSortRevision(ctx.cameraPos);
@@ -2031,9 +2041,27 @@ void UGeometryEngine::PrepareTransparent(
     CachedTransparentMeshRevision = ctx.meshRevision;
     CachedTransparentRefFingerprint = refFingerprint;
   }
+  GreedyGpuRefreshTelem refresh_telem;
+  if (WorldInstance)
+  {
+    auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+    phys.TransparentSortRevChanged =
+        sortRevision != GreedyGpuTransparent.sortRevision ? 1 : 0;
+  }
+  UGreedyGpuBackend::BindRefreshTelem(&refresh_telem);
   MeshStore().RefreshPassRefs(GreedyGpuTransparent, ctx.cache, filtered,
                                    ctx.meshRevision, ctx.cullRevision,
                                    sortRevision);
+  UGreedyGpuBackend::BindRefreshTelem(nullptr);
+  if (WorldInstance)
+  {
+    auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
+    phys.TransparentUploadFullN = refresh_telem.UploadFullN;
+    phys.TransparentCmdReorderN = refresh_telem.CmdReorderN;
+    phys.TransparentOrderOnlyFailReason = refresh_telem.OrderOnlyFailReason;
+    phys.TransparentBatchN =
+        static_cast<int>(GreedyGpuTransparent.batches.size());
+  }
   if (auto *mdi = dynamic_cast<UMdiVertexPoolStore *>(&MeshStore()))
   {
     const Frustum frustum = Frustum::FromViewProjection(ctx.viewProjection);

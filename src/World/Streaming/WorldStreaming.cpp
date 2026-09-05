@@ -579,7 +579,9 @@ bool ColumnBandHasPresentableMesh(const UWorld &world, glm::ivec2 under_xz,
 }
 } // namespace
 
-void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
+void UWorldStreaming::RefreshStreamingPressure(
+    UWorld &world, std::chrono::high_resolution_clock::time_point stream_t0,
+    double stream_budget_ms)
 {
   CUBA_ZONE("RefreshStreamingPressure");
   const auto refresh_t0 = std::chrono::high_resolution_clock::now();
@@ -607,35 +609,56 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   pt.PrepRefreshSelfMs = 0.0;
   pt.PrepRefreshCameraCompleteMs = 0.0;
   pt.PrepRefreshBodyMs = 0.0;
+  pt.PrepRefreshSetupMs = 0.0;
+  pt.PrepRefreshSetupFocusMs = 0.0;
+  pt.PrepRefreshSetupRingMs = 0.0;
+  pt.PrepRefreshSetupCaptureMs = 0.0;
+  pt.PrepRefreshSetupProbeMs = 0.0;
+  pt.PrepRefreshInputFillMs = 0.0;
+  pt.PrepRefreshDietFlagsMs = 0.0;
   // PrepRefreshHasMissingMs latched in UpdateStreaming (before Refresh).
   pt.RimWitnessLatched = 0;
   pt.FocusDirtyReconcileDelta = 0;
+  pt.PrepRefreshDeadlineHit = 0;
 
+  // Phase5: micro-time setup getters — PrepRefreshSetupMs≈64 with ~35 LOC was
+  // absurd; isolate which call (or clock/preempt) owns the wall.
+  // Cheap locals first; setup_t0 only wraps the suspicious getters.
   const bool stream_simple = URuntimeTuning::Get().StreamSimple;
   auto &rp = RefreshProbe;
 
+  const auto setup_t0 = std::chrono::high_resolution_clock::now();
+  auto setup_lap = setup_t0;
   const glm::ivec3 focus_block = world.GetPreferredLoadFocusBlock();
+  pt.PrepRefreshSetupFocusMs = lap_ms(setup_lap);
+  setup_lap = std::chrono::high_resolution_clock::now();
   const glm::ivec3 focus_ground = UChunkManager::WorldToChunk(focus_block);
   const glm::ivec3 focus_horiz(focus_ground.x, 0, focus_ground.z);
   const int focus_radius = world.GetStreamingFocusRadius();
   const UWorld::FocusRingVisualSample &ring_sample_prev =
       world.GetFocusRingVisualSample();
+  pt.PrepRefreshSetupRingMs = lap_ms(setup_lap);
+  setup_lap = std::chrono::high_resolution_clock::now();
   const int last_unfinished_hint =
       ring_sample_prev.valid ? ring_sample_prev.unfinished : 0;
   const float movement_speed = world.GetLastMovementSpeed();
   const int pending_capture_n = world.GetMeshService().GetPendingCaptureCount();
+  pt.PrepRefreshSetupCaptureMs = lap_ms(setup_lap);
+  setup_lap = std::chrono::high_resolution_clock::now();
   const bool capture_backlog = pending_capture_n >= 8;
   const bool capture_calm = pending_capture_n < 4;
   const bool moving_for_telemetry =
       movement_speed >
       world.GetProceduralSettings().MovementPrefetchThreshold;
+  // Phase5 S2: compute enter/spawn probes once — each Needs* was a full ring walk.
+  const bool enter_lit = world.IsEnterLitGateActive();
+  const bool enter_mesh_warmup = world.NeedsEnterGameMeshWarmup();
+  const bool spawn_catch_up = world.NeedsSpawnRingCatchUp();
   const bool enter_miss_probe =
-      ShouldUseEnterSpawnMissProbe(world.IsEnterLitGateActive(),
-                                   world.NeedsEnterGameMeshWarmup(),
-                                   world.NeedsSpawnRingCatchUp(), moving_for_telemetry);
+      ShouldUseEnterSpawnMissProbe(enter_lit, enter_mesh_warmup, spawn_catch_up,
+                                   moving_for_telemetry);
   const int pending_pl_radius =
-      (world.IsEnterLitGateActive() || world.NeedsEnterGameMeshWarmup() ||
-       world.NeedsSpawnRingCatchUp())
+      (enter_lit || enter_mesh_warmup || spawn_catch_up)
           ? EnterVisualWorkRadiusChunks()
           : focus_radius;
   const int miss_probe_radius =
@@ -646,6 +669,8 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   {
     rp.miss_probe_cd = 0;
   }
+  pt.PrepRefreshSetupProbeMs = lap_ms(setup_lap);
+  pt.PrepRefreshSetupMs = lap_ms(setup_t0);
   const auto miss_t0 = std::chrono::high_resolution_clock::now();
   const bool pending_underfeet_early = world.IsPendingLightBeforeMesh(
       glm::ivec2(focus_horiz.x, focus_horiz.z));
@@ -879,6 +904,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   const int pending_light_focus =
       world.CountPendingLightBeforeMeshNear(focus_horiz, effective_pl_radius);
   pt.PrepRefreshPendingMs = lap_ms(pending_t0);
+  const auto input_fill_t0 = std::chrono::high_resolution_clock::now();
   const bool pending_underfeet = world.IsPendingLightBeforeMesh(
       glm::ivec2(focus_horiz.x, focus_horiz.z));
 
@@ -896,10 +922,12 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
       incomplete_camera_column, missing_underfeet_mesh, pending_underfeet);
   in.pending_light_focus = pending_light_focus;
   LastPendingLightFocus = pending_light_focus;
+  pt.PrepRefreshInputFillMs = lap_ms(input_fill_t0);
   const auto pressure_eval_t0 = std::chrono::high_resolution_clock::now();
   LastPressureCaps = EvaluateStreamingPressure(in, PressureState);
   pt.PrepRefreshPressureEvalMs = lap_ms(pressure_eval_t0);
 
+  const auto diet_flags_t0 = std::chrono::high_resolution_clock::now();
   world.PhysicsTelemetryData.StreamPressure =
       static_cast<int>(LastPressureCaps.level);
   world.PhysicsTelemetryData.BackpressureLevel =
@@ -914,19 +942,17 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   const bool stand_stable_prep_diet =
       ShouldUseStandStablePrepDiet(moving_for_telemetry, in.visual_holes,
                                    miss_horiz, last_unfinished_hint);
+  pt.PrepRefreshDietFlagsMs += lap_ms(diet_flags_t0);
   const auto sticky_t0 = std::chrono::high_resolution_clock::now();
   const bool cruise_ring_reuse =
       diet_cruise_cadence_final && !in.visual_holes && !pending_underfeet;
   
   
-  static uint64_t last_softdefer_witness_retarget = 0;
-  
-  
   const int witness_retarget_delta = static_cast<int>(
       world.PhysicsTelemetryData.SoftDeferWitnessRetarget >=
-              last_softdefer_witness_retarget
+              rp.last_softdefer_witness_retarget
           ? world.PhysicsTelemetryData.SoftDeferWitnessRetarget -
-                last_softdefer_witness_retarget
+                rp.last_softdefer_witness_retarget
           : 0);
   const int keep_cols_now = (2 * focus_radius + 1) * (2 * focus_radius + 1);
   const bool sticky_focus_jumped =
@@ -967,6 +993,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   // samples for UnfinishedVisual / FocusNotRenderReady (ARCH gates).
   // FocusPressure = pending+dirty proxy for scheduler pressure only.
   
+  const auto diet_dirty_setup_t0 = std::chrono::high_resolution_clock::now();
   
   
   
@@ -986,6 +1013,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   if (!diet_cruise_cadence_final || in.visual_holes || rim_hole_pressure_early ||
       --rp.focus_dirty_sample_cd <= 0)
   {
+    pt.PrepRefreshDietFlagsMs += lap_ms(diet_dirty_setup_t0);
     const auto dirty_t0 = std::chrono::high_resolution_clock::now();
     focus_dirty_chunks =
         world.GetMeshService().CountDirtyWithinHorizontalRadius(focus_horiz,
@@ -999,6 +1027,10 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
          !rim_hole_pressure_early)
             ? 8
             : 0;
+  }
+  else
+  {
+    pt.PrepRefreshDietFlagsMs += lap_ms(diet_dirty_setup_t0);
   }
   
   
@@ -1140,7 +1172,7 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   pt.PrepRefreshUnfinishedMs = lap_ms(unfinished_t0);
   const auto body_t0 = std::chrono::high_resolution_clock::now();
   world.SetLastUnfinishedVisualSample(unfinished_visual);
-  last_softdefer_witness_retarget =
+  rp.last_softdefer_witness_retarget =
       world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
   {
     UWorld::FocusRingVisualSample sample{};
@@ -1306,9 +1338,22 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
   const bool pressure_cruise_fast = rim_scan_ok;
   const bool cruise_scan_fast = pressure_cruise_fast || rim_cruise_fast;
   pt.PrepRefreshBodyMs = lap_ms(body_t0);
+  // Phase5 S2 R-Deadline: after unfinished+body, skip darkface/facing/underfeet
+  // heavy walks when shared stream budget is exhausted (never under visual gates).
+  const bool stream_deadline_hit =
+      lap_ms(stream_t0) >= stream_budget_ms && !in.visual_holes &&
+      !in.underfeet_need;
+  if (stream_deadline_hit)
+  {
+    pt.PrepRefreshDeadlineHit = 1;
+  }
   // Actual baked-dark vertices near camera (not PendingLight proxy).
   // Split stale (mesh dark, field lit) vs void-edge (both 0) for ARCH_D3.
-  if (!cruise_scan_fast)
+  if (stream_deadline_hit)
+  {
+    // Reuse last DarkFace* samples already latched in telemetry.
+  }
+  else if (!cruise_scan_fast)
   {
     const auto darkface_t0 = std::chrono::high_resolution_clock::now();
     world.PhysicsTelemetryData.DarkFaceNearN = 0;
@@ -1369,7 +1414,12 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     const bool facing_rim_cadence =
         (rim_hole_pressure || rim_miss_heal_band) && !in.underfeet_need &&
         !(missing_near && miss_horiz <= 1);
-    if (!diet_cruise_cadence_final && !facing_rim_cadence)
+    if (stream_deadline_hit)
+    {
+      ahead = rp.last_ahead;
+      behind = rp.last_behind;
+    }
+    else if (!diet_cruise_cadence_final && !facing_rim_cadence)
     {
       const auto facing_t0 = std::chrono::high_resolution_clock::now();
       world.CountUnfinishedVisualByFacing(focus_horiz, focus_radius, fwd, ahead,
@@ -1405,24 +1455,33 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
     world.PhysicsTelemetryData.FocusUnfinishedBehind = behind;
   }
   world.PhysicsTelemetryData.FocusMissingMesh = missing_near ? 1 : 0;
-  world.PhysicsTelemetryData.VisualHoles = in.visual_holes ? 1 : 0;
-  world.PhysicsTelemetryData.RimWitnessLatched =
-      (missing_near && !in.visual_holes) ? 1 : 0;
-  world.PhysicsTelemetryData.RimHolePressure = rim_hole_pressure ? 1 : 0;
-  world.PhysicsTelemetryData.RimPerfDiet = rim_perf_diet ? 1 : 0;
-  world.PhysicsTelemetryData.ColumnBumpDenied = 0;
-  world.PhysicsTelemetryData.ColumnFlowUpgradeN = 0;
-  // SoT unfinished (held sample while cruise); not pending-proxy.
-  world.PhysicsTelemetryData.UnfinishedVisual = unfinished_visual;
-  world.PhysicsTelemetryData.LightDebt = pending_light_focus > 0 ? 1 : 0;
-  // NearFocusHoles telemetry = missing mesh only (same as VisualHoles).
-  // Pending-light → LightDebt; sticky/pending_dark → FocusDarkMesh /
-  // FocusStickyRemesh / FocusPendingDark. OR-ing dark_preview here was
-  // overwritten after UpdateStreaming's mesh-only write, then re-applied in
-  // TickAsync and inflated nh_no_miss_rate with miss=0 (SoftDefer remesh).
-  world.PhysicsTelemetryData.NearFocusHoles = in.visual_holes ? 1 : 0;
+  {
+    const auto diet_telem_t0 = std::chrono::high_resolution_clock::now();
+    world.PhysicsTelemetryData.VisualHoles = in.visual_holes ? 1 : 0;
+    world.PhysicsTelemetryData.RimWitnessLatched =
+        (missing_near && !in.visual_holes) ? 1 : 0;
+    world.PhysicsTelemetryData.RimHolePressure = rim_hole_pressure ? 1 : 0;
+    world.PhysicsTelemetryData.RimPerfDiet = rim_perf_diet ? 1 : 0;
+    world.PhysicsTelemetryData.ColumnBumpDenied = 0;
+    world.PhysicsTelemetryData.ColumnFlowUpgradeN = 0;
+    // SoT unfinished (held sample while cruise); not pending-proxy.
+    world.PhysicsTelemetryData.UnfinishedVisual = unfinished_visual;
+    world.PhysicsTelemetryData.LightDebt = pending_light_focus > 0 ? 1 : 0;
+    // NearFocusHoles telemetry = missing mesh only (same as VisualHoles).
+    // Pending-light → LightDebt; sticky/pending_dark → FocusDarkMesh /
+    // FocusStickyRemesh / FocusPendingDark. OR-ing dark_preview here was
+    // overwritten after UpdateStreaming's mesh-only write, then re-applied in
+    // TickAsync and inflated nh_no_miss_rate with miss=0 (SoftDefer remesh).
+    world.PhysicsTelemetryData.NearFocusHoles = in.visual_holes ? 1 : 0;
+    pt.PrepRefreshDietFlagsMs += lap_ms(diet_telem_t0);
+  }
 
   // Underfeet column: catch draw_ok-but-invisible blind spot (manual 201621).
+  if (stream_deadline_hit)
+  {
+    // Reuse last Underfeet* samples; still publish Self/Pressure below.
+  }
+  else
   {
     const auto underfeet_t0 = std::chrono::high_resolution_clock::now();
     const ColumnRenderableState uf =
@@ -1514,7 +1573,9 @@ void UWorldStreaming::RefreshStreamingPressure(UWorld &world)
          pt.PrepRefreshDarkfaceMs + pt.PrepRefreshFacingMs +
          pt.PrepRefreshUnderfeetMs + pt.PrepRefreshDirtyMs +
          pt.PrepRefreshPressureEvalMs + pt.PrepRefreshUnderfeetProbeMs +
-         pt.PrepRefreshCameraCompleteMs + pt.PrepRefreshBodyMs);
+         pt.PrepRefreshCameraCompleteMs + pt.PrepRefreshBodyMs +
+         pt.PrepRefreshSetupMs + pt.PrepRefreshInputFillMs +
+         pt.PrepRefreshDietFlagsMs);
     // PrepRefreshHasMissingMs is UpdateStreaming HasMissing (outside Refresh);
     // reported separately for stream attribution, not subtracted from self.
     pt.PrepRefreshSelfMs = std::max(0.0, pt.PrepRefreshSelfMs);
@@ -1527,6 +1588,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
 {
   CUBA_ZONE("TickAsyncChunkSystems");
   const auto main_t0 = std::chrono::high_resolution_clock::now();
+  constexpr double kStreamBudgetMs = 5.0;
   auto elapsed_main_ms = [&]()
   {
     return std::chrono::duration<double, std::milli>(
@@ -1543,7 +1605,8 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
 
   // Authoritative pressure for this frame (UpdateStreaming earlier used the
   // previous frame's caps for Prefetch/MaxLoadOps — one-frame lag is fine).
-  RefreshStreamingPressure(world);
+  // Phase5 S2: main_t0 starts before Refresh so stream deadline covers it.
+  RefreshStreamingPressure(world, main_t0, kStreamBudgetMs);
   const StreamingPressureCaps &pressure = LastPressureCaps;
 
   const ProceduralSettings &procedural = world.GetProceduralSettings();
@@ -1568,11 +1631,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           ? EnterVisualWorkRadiusChunks()
           : focus_radius;
   const size_t mesh_dirty = world.GetMeshService().GetDirtyCount();
+  // Phase5 S2 R-Dup: reuse Refresh latches — avoid second HasDirty/HasMissing.
   const bool near_mesh_backlog =
-      world.GetMeshService().HasDirtyWithinHorizontalRadius(focus_horiz,
-                                                           focus_radius) ||
-      world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
-          world.GetBlockWorld(), focus_ground, focus_radius);
+      world.PhysicsTelemetryData.FocusDirtyChunks > 0 ||
+      world.PhysicsTelemetryData.FocusMissingMesh != 0 ||
+      world.PhysicsTelemetryData.VisualHoles != 0;
   const int gen_backlog_total =
       ChunkScheduler ? ChunkScheduler->GetGenBacklogTotal() : 0;
   const int mesh_async = world.GetMeshService().GetAsyncInFlightCount();

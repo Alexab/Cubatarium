@@ -1,5 +1,5 @@
 #pragma once
-// BUDGET_MS: 0.0  // perf-root P4: measure via Tracy; kill-switch required for new heuristics
+// BUDGET_MS: 15.8  // prep_schedule_policy_ms med envelope (fly-heavy 233454); FIFO/heal schedule share
 
 #include "World/Streaming/ColumnJobGraph.h"
 #include "World/Streaming/StreamIngressPolicy.h"

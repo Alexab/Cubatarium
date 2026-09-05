@@ -1604,6 +1604,12 @@ private:
   /// Perf-root P2: per-frame memo for IsChunkSliceRenderReady (draw path).
   mutable uint64_t SliceReadyMemoEpoch{UINT64_MAX};
   mutable std::unordered_map<glm::ivec3, bool, IVec3Hash> SliceReadyMemo;
+  /// Phase5 S2: same-frame memo for NeedsEnterGameMeshWarmup (enter phase only).
+  mutable uint64_t EnterWarmupSampleEpoch{UINT64_MAX};
+  mutable bool CachedNeedsEnterMeshWarmup{false};
+  /// Phase5 S2: cadence memo for NeedsSpawnRingCatchUp (cruise ring walk).
+  mutable uint64_t SpawnCatchUpSampleEpoch{UINT64_MAX};
+  mutable bool CachedNeedsSpawnRingCatchUp{false};
   std::vector<AdmitFocusMarkRange> AdmitFocusMarkBuffer_;
   uint64_t StreamingFrameEpoch{0};
   uint64_t PhysicsTickCounter{0};

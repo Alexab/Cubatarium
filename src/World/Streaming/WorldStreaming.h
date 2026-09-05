@@ -12,6 +12,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include <chrono>
 #include <climits>
+#include <cstdint>
 #include <deque>
 #include <glm/glm.hpp>
 #include <memory>
@@ -108,7 +109,10 @@ public:
 
 private:
   void InitChunkScheduler(UWorld &world);
-  void RefreshStreamingPressure(UWorld &world);
+  void RefreshStreamingPressure(
+      UWorld &world,
+      std::chrono::high_resolution_clock::time_point stream_t0,
+      double stream_budget_ms);
 
   std::unique_ptr<UChunkStreamer> Streamer;
   std::unique_ptr<UChunkEmergeCoordinator> EmergeCoordinator;
@@ -193,6 +197,8 @@ private:
     int last_behind{0};
     bool uf_predicted_latched{false};
     int uf_predicted_hold{0};
+    /// SoftDefer witness retarget baseline (was function-static).
+    uint64_t last_softdefer_witness_retarget{0};
   } RefreshProbe{};
 };
 

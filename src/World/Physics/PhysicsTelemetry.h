@@ -339,6 +339,29 @@ struct PhysicsTelemetry
   double PrepRefreshCameraCompleteMs{0.0};
   /// R4.5.1: Refresh body between unfinished and darkface (VB / pressure latch).
   double PrepRefreshBodyMs{0.0};
+  /// Phase5 S0: untimed glue windows inside RefreshStreamingPressure.
+  double PrepRefreshSetupMs{0.0};
+  /// Phase5 setup micro-timers (sum ≈ PrepRefreshSetupMs).
+  double PrepRefreshSetupFocusMs{0.0};
+  double PrepRefreshSetupRingMs{0.0};
+  double PrepRefreshSetupCaptureMs{0.0};
+  double PrepRefreshSetupProbeMs{0.0};
+  double PrepRefreshInputFillMs{0.0};
+  double PrepRefreshDietFlagsMs{0.0};
+  /// Phase5 S0: emerge mid-body timers (inside MeshEmergePrepMs).
+  double PrepWarmupMs{0.0};
+  double PrepSoftdeferPreMs{0.0};
+  double PrepDirtyThrashMs{0.0};
+  double PrepSchedulePolicyMs{0.0};
+  double PrepPostAdmitDrainMs{0.0};
+  double PrepHoleForceMs{0.0};
+  /// Phase5 S2/S3b: stream deadline cuts (Refresh / TickMeshEmerge prep).
+  int PrepRefreshDeadlineHit{0};
+  int PrepDeadlineHit{0};
+  /// Phase5 S3: coalesce counters (FindNearest / DrainIdle / DropRemesh requests).
+  int PrepFindNearestN{0};
+  int PrepDrainIdleN{0};
+  int PrepDropRemeshN{0};
   /// Scene draw sub-timers (inside scene_ms / DrawCubeGeometry).
   double SceneFilterReadyMs{0.0};
   double SceneOpaqueSortMs{0.0};
@@ -645,6 +668,16 @@ struct PhysicsTelemetry
   uint64_t EditNeighborPendingFrames{0};
   uint64_t PoolUnsyncUploads{0};
   double PoolFenceWaitMs{0.0};
+  /// S1 transparent: 1 when sortRevision changed on PrepareTransparent refresh.
+  int TransparentSortRevChanged{0};
+  /// S1: upload_full invocations for transparent pass this frame.
+  int TransparentUploadFullN{0};
+  /// S1: order-only batch reorder (no VBO rewrite) this frame.
+  int TransparentCmdReorderN{0};
+  /// S1: TransparentOrderOnlyFailReason enum (0 ok … 6 leftover).
+  int TransparentOrderOnlyFailReason{0};
+  /// S1: transparent GPU batch count after prepare.
+  int TransparentBatchN{0};
   /// Focus column split: meshed-but-culled vs not ready / unlit preview.
   uint64_t ChunkMeshedCulled0{0};
   uint64_t ChunkMeshedUnlit{0};

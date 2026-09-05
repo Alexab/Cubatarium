@@ -1,44 +1,48 @@
-# Perf ground truth — systemic plan
+# Perf ground truth — Phase 5
 
 ## Captures
 
 | id | file | notes |
 |---|---|---|
-| baseline | `perf_20260904-175907_32988.jsonl` | pre-plan manual; wall 246 / stream 140 / scene 44 |
-| post-impl | `perf_20260904-214912_18544.jsonl` | after P0–P4 code; wall 277 / stream 132 / scene 37 |
+| baseline manual | `perf_20260904-175907_32988.jsonl` | wall 246 / stream 140 / scene 44 |
+| post P0–P4 manual | `perf_20260904-214912_18544.jsonl` | wall 277; Self~60 unexplained |
+| Phase5 S0+S1 auto | `perf_20260904-233454_21544.jsonl` | fly-heavy; setup≈64 = NeedsEnterGameMeshWarmup |
+| Phase5 pre-setup-cut | `perf_20260905-001749_18324.jsonl` | S1 partial; setup_probe≈58; emerge_prep≈0.65 w/ deadline |
+| **Phase5 S2 cut** | `perf_20260905-010702_35336.jsonl` | enter-warmup early-out; Tracy OFF; wall~42 fps~22 |
+| Phase5 final | `perf_20260905-013321_27952.jsonl` | schedule_policy idle shed; emerge_prep~1.9; wall~60 (holes still red) |
 
-Tracy client is wired (`-DCUBATARIUM_ENABLE_TRACY=ON`); headless `tracy-capture` not on PATH in this environment — priorities below come from FramePerfMonitor scene/refresh self timers.
+## S0b / Tracy
 
-## Period medians: 175907 → 214912
+- Gate flights: **`CUBATARIUM_ENABLE_TRACY=OFF`**.
+- H1 (Tracy as Self source): **rejected** — after S0, Self≈0; wall was `NeedsEnterGameMeshWarmup` ring scans mislabeled as setup_probe.
 
-| metric | 175907 | 214912 | delta |
-|---|---:|---:|---|
-| wall_ms | 246.5 | 277.0 | +30 |
-| stream_ms | 139.5 | 132.2 | -7 |
-| mesh_emerge_ms | 45.1 | 85.2 | +40 |
-| prep_refresh_pressure_ms | 65.6 | 62.5 | -3 |
-| prep_refresh_self/gap_ms | 62.4 | 59.9 | -2 |
-| mesh_emerge_prep_other/self_ms | 20.6 | 62.0 | +41 |
-| scene_ms | 44.5 | 37.4 | -7 |
-| scene_filter_ready_ms | n/a | 0.36 | — |
-| scene_opaque_draw_ms | n/a | 5.2 | — |
-| scene_transparent_ms | n/a | 28.2 | **main scene cost** |
-| scene_depth_capture_ms | n/a | 0.01 | skip works |
-| scene_self_ms | n/a | 0.86 | self/total **0.023** GO |
-| visual_holes | 1 | 1 | — |
-| unfinished_visual | 6 | 10.5 | worse |
-| stream_loads | 0 | 0 | still idle CPU |
+## Period medians (key deltas)
 
-## Top priorities (post 214912 — only source for next P2 work)
+| metric | 233454 | 001749 | **010702** |
+|---|---:|---:|---:|
+| wall_ms | 243 | 254 | **42** |
+| wall_ms_fly (report) | 306 | 289 | **46** |
+| stream_ms | 143 | 143 | **7.4** |
+| prep_refresh_pressure_ms | 67 | 74 | **0.26** |
+| prep_refresh_setup_probe_ms | — | 58 | **0.0003** |
+| mesh_emerge_prep_ms | 21 | 0.65 | 7.5 |
+| prep_schedule_policy_ms | 15.8 | 3.1 | 7.0 |
+| scene_transparent_ms | 23 | 14 | **4.2** |
+| pool_unsync_uploads | 64 | 64 | **0** |
+| effective_fps_fly | ~3.3 | ~3.5 | **~22** |
 
-1. **RefreshStreamingPressure self ~60 ms (95%)** — still unaccounted; named sub-timers tiny.
-2. **mesh_emerge_prep self/other ~62 ms** — regressed vs 21 ms; untimed schedule/immediate block.
-3. **scene_transparent_ms ~28 ms of 37** — transparent multi-pass dominates draw (opaque only ~5 ms).
-4. **stream_loads=0** while stream_ms~132 — CPU spin without ingress.
-5. Visual: holes=1, unfinished↑ — no FPS win yet; SHIP still NO-GO.
+## Root cause fixed (S2)
 
-## Attribution gates (soft)
+`NeedsEnterGameMeshWarmup()` called full `SampleEnterGameMeshWarmupBlockers` every Refresh during **cruise**. Early-out when `!EnterLitGateActive && !IsEnterSessionActive()`; cache spawn catch-up.
 
-- scene self/total ≤ 0.10: **PASS** (0.023)
-- refresh self/total ≤ 0.10: **FAIL** (0.956)
-- wall ≤ 33 / ≤ 16.6: **FAIL**
+## Remaining toward ≤16.6
+
+1. scene ~12–23 (opaque dominates after transparent ~4–7) → ≤5
+2. holes_rate / unfinished still red on fly-heavy — visual debt (soft `stable_holes`)
+3. wall fly ~46–70 vs hard ≤16.6 — Hard FPS gates (S5) FAIL honestly until scene+holes fixed
+4. Best overall FPS capture so far: **010702** (wall~42, fps~22); final shed improved emerge_prep≤2 but wall/holes not better
+
+## Attribution
+
+- refresh self/total ≤0.10: **PASS**
+- scene self/total ≤0.10: **PASS**

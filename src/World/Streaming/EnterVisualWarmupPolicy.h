@@ -994,6 +994,19 @@ inline bool ShouldReleaseEnterAfterAbortUnderfeetCap(
   return ShouldForceEnterInGameAfterAbortDrain(elapsed_ms, force_ingame_ms);
 }
 
+/// Phase5 S4: abort-drain + force wall → soft-exit Loading even if underfeet
+/// never becomes present (stuck mesh_missing / SoftDefer orphan). Without this,
+/// land-stand hangs until process-timeout (periods=0).
+inline bool ShouldForceEnterLoadSoftExit(bool abort_drain, double elapsed_ms,
+                                         int force_ingame_ms, int fov_debt)
+{
+  if (!abort_drain || fov_debt > 0)
+  {
+    return false;
+  }
+  return ShouldForceEnterInGameAfterAbortDrain(elapsed_ms, force_ingame_ms);
+}
+
 /// Era35 P1: SoftDefer empty scan cy-window for near-FOV columns (horiz<=2)
 /// covers full column (0..max_cy) so air chunks with trees/leaves above
 /// preferred_cy+2 are not permanently stuck as SoftDefer empty.

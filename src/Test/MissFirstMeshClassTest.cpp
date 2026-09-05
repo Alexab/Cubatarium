@@ -851,12 +851,21 @@ int main()
     Expect(ShouldForceEnterInGameAfterAbortDrain(150000.0, 150000),
            "Era44: force_ingame at wall");
     using cutum::ShouldReleaseEnterAfterAbortUnderfeetCap;
+    using cutum::ShouldForceEnterLoadSoftExit;
     Expect(ShouldReleaseEnterAfterAbortUnderfeetCap(true, 150000.0, 150000,
                                                     true, 0),
            "stabilize: abort underfeet cap when feet ready");
     Expect(!ShouldReleaseEnterAfterAbortUnderfeetCap(true, 150000.0, 150000,
                                                      false, 0),
            "stabilize: abort cap blocked without underfeet");
+    Expect(ShouldForceEnterLoadSoftExit(true, 150000.0, 150000, 0),
+           "Phase5 S4: soft-exit at wall without underfeet");
+    Expect(!ShouldForceEnterLoadSoftExit(true, 100000.0, 150000, 0),
+           "Phase5 S4: soft-exit not before wall");
+    Expect(!ShouldForceEnterLoadSoftExit(false, 150000.0, 150000, 0),
+           "Phase5 S4: soft-exit requires abort_drain");
+    Expect(!ShouldForceEnterLoadSoftExit(true, 150000.0, 150000, 3),
+           "Phase5 S4: soft-exit blocked while fov debt remains");
   }
 
   // --- Era51 mesh warmup progress + cruise stabilize ---

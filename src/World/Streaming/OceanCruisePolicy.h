@@ -1,5 +1,5 @@
 #pragma once
-// BUDGET_MS: 0.0  // perf-root P4: measure via Tracy; kill-switch required for new heuristics
+// BUDGET_MS: 15.8  // shares prep_schedule_policy_ms med (fly-heavy 233454); cruise heal bias
 
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"

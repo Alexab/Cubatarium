@@ -87,6 +87,11 @@ private:
   /// Stable SoftDefer policy POD; Set*Fn installed once against this.
   SoftDeferFramePolicy SoftDeferPolicy{};
   bool SoftDeferCallbacksInstalled{false};
+  /// Prior-frame FM enqueue / schedule baselines (was function-static).
+  int FmEnqueuePrior{0};
+  int ScheduleOkPrior{0};
+  int DirtyFmPrior{0};
+  int CruiseClearPeriods{0};
 };
 
 } // namespace cutum

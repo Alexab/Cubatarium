@@ -1,5 +1,5 @@
 #pragma once
-// BUDGET_MS: 0.0  // perf-root P4: measure via Tracy; kill-switch required for new heuristics
+// BUDGET_MS: 0.05  // softdefer_empty_own+prep_softdefer_pre med (fly-heavy 233454)
 
 #include "World/Streaming/VisualStagePolicy.h"
 

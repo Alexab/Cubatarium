@@ -2164,7 +2164,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
             StreamingWarmupAbortDrainMode, elapsed_ms,
             URuntimeTuning::Get().EnterForceInGameMs, underfeet_present,
             underfeet_gpu_pending);
+        const bool soft_exit_cap = ShouldForceEnterLoadSoftExit(
+            StreamingWarmupAbortDrainMode, elapsed_ms,
+            URuntimeTuning::Get().EnterForceInGameMs, fov_debt);
         // LitRing C: stall with underfeet → settle with FOV holes OK (finite load).
+        // Phase5 S4: soft_exit_cap settles without underfeet (stuck missing mesh).
         const bool load_settled =
             (ring_ready_for_exit && visibility_ready_for_exit &&
              mesh_blockers_clear) ||
@@ -2174,15 +2178,18 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
              underfeet_gpu_pending <= 0) ||
             (abort_underfeet_cap && underfeet_present &&
              underfeet_gpu_pending <= 0 &&
-             (fov_debt <= 0 || lit_progress_stalled));
-        if ((abort_underfeet_cap || lit_progress_stalled) && load_settled &&
-            !StreamingWarmupAbortCapLogged)
+             (fov_debt <= 0 || lit_progress_stalled)) ||
+            soft_exit_cap;
+        if ((abort_underfeet_cap || lit_progress_stalled || soft_exit_cap) &&
+            load_settled && !StreamingWarmupAbortCapLogged)
         {
           StreamingWarmupAbortCapLogged = true;
           LOG(WARNING) << "[EnterWarmup] coop_abort_underfeet_cap elapsed_ms="
                        << elapsed_ms << " ring_ready=" << (ring_ready ? 1 : 0)
                        << " visibility_debt=" << visibility_debt
-                       << " lit_stall=" << (lit_progress_stalled ? 1 : 0);
+                       << " lit_stall=" << (lit_progress_stalled ? 1 : 0)
+                       << " soft_exit=" << (soft_exit_cap ? 1 : 0)
+                       << " underfeet=" << (underfeet_present ? 1 : 0);
           CubatariumFlushLogs();
         }
         if (!StreamingWarmupAbortDrainMode &&
