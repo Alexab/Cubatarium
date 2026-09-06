@@ -1,4 +1,4 @@
-# Perf ground truth — Phase 5 / 5.1 / 5.2 / 5.3
+# Perf ground truth — Phase 5 / 5.1 / 5.2 / 5.3 / 5.4
 
 ## Captures
 
@@ -14,6 +14,35 @@
 | Phase5.1 v4 fly | `perf_20260905-101909_23740.jsonl` / `phase51_v4_flyheavy.json` | hang=false; unsync**0**; transp~4.9; prep_warmup**0**; wall~40; scene~25; phase~9 |
 | **Phase5.1 v6b fly** | `phase51_v6b_flyheavy.json` | leftovers packed; hang=false; wall~39 fly~39; scene~23; phase~7.9; transp~4.3; unsync**0** |
 | manual empty SoT | `perf_20260905-192151_13756.jsonl` | unfinished/colnm plateau **64–85**; stuck_horiz=5 locked; holes~0.78 |
+| **manual post-5.3** | `perf_20260906-075706_512.jsonl` + INFO `…075704.512` | empty closed; rim miss + Quiesce vis_debt settle |
+
+## Phase 5.4 (miss catch-up — after empty drip)
+
+### Attribution (manual 075706 cruise `movement_speed>2`)
+
+| Bottleneck | Evidence | Not |
+|---|---|---|
+| Rim miss / holes | `focus_missing≈1`, holes~0.70, `miss_horiz` med~2; AbortDrip fixed **2** while `phase_abort_heavy=100%` | empty-batch (plateau closed) |
+| “Lagging stream” feel | phase~36 = stream~8 + emerge~27; `IngressDebtLevel=3` ShedFar; `relight_drain` p90~20 from **WorldStreaming** | disk (`streamer_update≪1`) |
+| Underwater enter | INFO `settle_reason=live_blockers` with **`visibility_debt=81`** via Quiesce / `coop_prepared` OR-bypass; post-enter `miss_horiz` 3–4 | empty SoftDefer alone |
+| Scene | `scene_opaque_cull_ms` med~22; `pool_unsync_uploads` med~36 / max~72 | opaque refresh |
+
+### Scorecard baseline (075706 vs 192151 vs phase53)
+
+| Metric | Manual 192151 | Manual **075706** | phase53 fly |
+|---|---:|---:|---:|
+| empty_backlog / unf / colnm med | **~64** | **~5** | **~2** |
+| empty_batch_event | (unknown) | **0** | **0** |
+| softdefer_stuck_horiz locked | yes | **no** | **no** |
+| focus_missing frac | — | **~1.0** | — |
+| holes_rate | 0.78 | **~0.70** | 0.60 |
+| phase_abort_heavy frac | — | **1.0** | — |
+| world_streaming_phase_ms med | ~14 | **~36** | **7.8** |
+| wall_ms_med | ~24 | **~86** | **39** |
+| settle vis_debt on live/soft | — | **81** | — |
+| pool_unsync_uploads med | — | **~36** | **0** |
+
+Phase 5.3 algorithms: **COMPLETE** (empty UX closed). Phase 5.4 targets rim miss escalation, enter FOV presentable settle, stream relight/phase cost, cull/unsync diet. Hard gates **not demoted**.
 
 ## Phase 5.3 (empty-chunk drip + SoftDefer escape)
 

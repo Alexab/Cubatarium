@@ -33,6 +33,21 @@
 | `scene_opaque_packed_ms` | leftovers packed draw (near r≤4) |
 | `scene_opaque_cross_ms` | `DrawCrossInstancedBatches` |
 
+## Phase 5.4 process (miss catch-up)
+
+Per sprint: code → Release build → **no-teleport** auto (Tracy OFF, World_164; **not** `--land-stand`) → AnalyzePhase54Scorecard → fix if red → **auto-commit only on green** (`src/**` + GT/policy; no suite_reports/logs).
+
+| Sprint | Cut | Gate highlight |
+|---|---|---|
+| 5.4.0 | GT attribution 075706 | docs |
+| 5.4.1 | Enter FOV presentable — no Quiesce/`coop_prepared` bypass with `visibility_debt>0`; FillWater SoftDefer pin | settle live/soft ⇒ vis_debt **0** |
+| 5.4.2 | `AbortDripN` 2→3 sticky rim + `MissWitnessScheduleFloor` | holes≤0.40 or focus_missing frac≤0.5 |
+| 5.4.3 | `prep_shed_skip` protect FocusMissing; SoftDefer cy cruise; stream Relight miss-tops | phase med≤12; abort_frac≤0.5 |
+| 5.4.4 | Opaque cull distance band + enter `MaxUnsyncUploadsPerFrame=8` | unsync med≤8; cull ↓ |
+| 5.4.5 | Trio + GT ship | manual only if auto green |
+
+Kill-switch: `StreamingPhaseBudgetMs=5` **unchanged**; enter phase floor **24** kept. Do not demote hard gates.
+
 ## Phase 5.3 empty-drip FPM keys
 
 | Key | Meaning |
