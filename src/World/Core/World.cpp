@@ -3172,18 +3172,20 @@ int UWorld::RemeshColumnSeamTicket(glm::ivec2 ground_xz)
 
 bool UWorld::NeedsSpawnRingCatchUp() const
 {
-  // Phase 5.5.1 PresentableCatchUp: soft_force left InGame with debt — keep
-  // heal running until visibility debt clears (do not freeze during session).
+  // Phase 5.6.1 PresentableCatchUp: keep heal until shared clear predicate.
   if (PhysicsTelemetryData.EnterSettleSoftForceWithDebt != 0)
   {
-    if (CountEnterVisibilityDebt() > 0 ||
-        PhysicsTelemetryData.SoftDeferOwnedNoGpuN > 0 ||
-        PhysicsTelemetryData.SoftDeferEmptyStuckN > 0)
+    const int debt = CountEnterVisibilityDebt();
+    const int ring_nr = CountPostLoadRingNotReady();
+    const int focus_miss = PhysicsTelemetryData.FocusMissingMesh;
+    const bool underfeet = IsEnterUnderfeetPresentReady();
+    if (!EnterPresentableCatchUpClear(
+            PhysicsTelemetryData.SoftDeferOwnedNoGpuN,
+            PhysicsTelemetryData.SoftDeferEmptyStuckN, debt, ring_nr, focus_miss,
+            underfeet))
     {
       return true;
     }
-    // Debt drained — clear sticky latch via mutable accessor in non-const path.
-    // Const path: treat as catch-up done when debt+soft stuck are clear.
   }
   if (IsEnterSessionActive())
   {
@@ -6135,8 +6137,10 @@ int UWorld::MarkSpawnRingUnfinishedDirty(int max_marks)
     {
       return false;
     }
-    if (mesh.HasMeshSatisfyingColumnReady(coord) ||
-        mesh.IsPendingGpuApply(coord))
+    if (EnterCatchUpSkipMarkBecauseMeshOwned(
+            mesh.HasMeshSatisfyingColumnReady(coord),
+            mesh.IsPendingGpuApply(coord),
+            IsColumnVisualReady(glm::ivec2(coord.x, coord.z))))
     {
       return false;
     }

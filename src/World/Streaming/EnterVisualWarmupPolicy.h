@@ -237,6 +237,36 @@ inline bool EnterVisDebtAllowsExitBypass(int visibility_debt)
   return visibility_debt <= 0;
 }
 
+/// Phase 5.6.1: PresentableCatchUp latch clear after SoftDefer stuck clear and
+/// visibility_debt drained. Ring/miss/underfeet alone must NOT clear while
+/// lit debt remains (CountPostLoadRingNotReady can be 0 with debt=81).
+/// Drainability comes from remesh of mesh-but-!VisualReady in R=4.
+inline bool EnterPresentableCatchUpClear(int soft_owned_no_gpu, int soft_stuck,
+                                         int visibility_debt,
+                                         int /*ring_not_ready*/,
+                                         int /*focus_missing*/,
+                                         bool /*underfeet*/)
+{
+  if (soft_owned_no_gpu > 0 || soft_stuck > 0)
+  {
+    return false;
+  }
+  return visibility_debt <= 0;
+}
+
+/// Phase 5.6.1: skip MarkDirty only when PendingGpu owns OR mesh+VisualReady.
+/// Mesh present but !VisualReady must remesh to drain lit debt.
+inline bool EnterCatchUpSkipMarkBecauseMeshOwned(bool has_mesh_satisfying,
+                                                 bool pending_gpu_apply,
+                                                 bool column_visual_ready)
+{
+  if (pending_gpu_apply)
+  {
+    return true;
+  }
+  return has_mesh_satisfying && column_visual_ready;
+}
+
 inline bool EnterRingReadyForExit(bool ring_ready, bool session,
                                   bool underfeet, int gpu_pending,
                                   bool underfeet_mesh_ok, int visibility_debt)

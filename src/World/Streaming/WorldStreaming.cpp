@@ -4441,13 +4441,19 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const bool underfeet_miss_sla =
         world.PhysicsTelemetryData.FocusMissingMesh != 0 &&
         world.PhysicsTelemetryData.MissHoriz <= 1;
-    // Phase 5.5.1: clear PresentableCatchUp latch when debt+SoftDefer stuck gone.
-    if (world.PhysicsTelemetryData.EnterSettleSoftForceWithDebt != 0 &&
-        world.CountEnterVisibilityDebt() <= 0 &&
-        world.PhysicsTelemetryData.SoftDeferOwnedNoGpuN <= 0 &&
-        world.PhysicsTelemetryData.SoftDeferEmptyStuckN <= 0)
+    // Phase 5.6.1: sample vis debt + clear PresentableCatchUp on shared predicate.
     {
-      world.GetPhysicsTelemetryMutable().EnterSettleSoftForceWithDebt = 0;
+      auto &pt = world.GetPhysicsTelemetryMutable();
+      const int vis_debt = world.CountEnterVisibilityDebt();
+      pt.VisibilityDebt = vis_debt;
+      if (pt.EnterSettleSoftForceWithDebt != 0 &&
+          EnterPresentableCatchUpClear(
+              pt.SoftDeferOwnedNoGpuN, pt.SoftDeferEmptyStuckN, vis_debt,
+              world.CountPostLoadRingNotReady(), pt.FocusMissingMesh,
+              world.IsEnterUnderfeetPresentReady()))
+      {
+        pt.EnterSettleSoftForceWithDebt = 0;
+      }
     }
     if (!world.IsEnterSessionActive() &&
         (world.GetEnterGameMeshBurstFrames() > 0 || spawn_catch_up) &&

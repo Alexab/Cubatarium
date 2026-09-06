@@ -1450,6 +1450,28 @@ int main()
     Expect(EnterVisDebtAllowsExitBypass(0), "debt0 allows exit bypass");
     Expect(!EnterVisDebtAllowsExitBypass(81),
            "Phase5.4.1: debt>0 forbids Quiesce-style bypass");
+    using cutum::EnterPresentableCatchUpClear;
+    using cutum::EnterCatchUpSkipMarkBecauseMeshOwned;
+    Expect(!EnterPresentableCatchUpClear(1, 0, 0, 0, 0, true),
+           "Phase5.6.1: soft owned-no-gpu blocks latch clear");
+    Expect(!EnterPresentableCatchUpClear(0, 1, 0, 0, 0, true),
+           "Phase5.6.1: soft stuck blocks latch clear");
+    Expect(EnterPresentableCatchUpClear(0, 0, 0, 5, 1, false),
+           "Phase5.6.1: debt0 clears latch");
+    Expect(!EnterPresentableCatchUpClear(0, 0, 81, 0, 0, false),
+           "Phase5.6.1: ring ready alone does not clear while debt>0");
+    Expect(!EnterPresentableCatchUpClear(0, 0, 81, 5, 1, true),
+           "Phase5.6.1: underfeet alone does not clear with debt");
+    Expect(!EnterPresentableCatchUpClear(0, 0, 81, 5, 1, false),
+           "Phase5.6.1: debt keeps latch until remesh drains");
+    Expect(EnterCatchUpSkipMarkBecauseMeshOwned(true, false, true),
+           "Phase5.6.1: mesh+ready skips remesh");
+    Expect(!EnterCatchUpSkipMarkBecauseMeshOwned(true, false, false),
+           "Phase5.6.1: mesh+!VisualReady remeshes");
+    Expect(EnterCatchUpSkipMarkBecauseMeshOwned(true, true, false),
+           "Phase5.6.1: pending gpu skips remesh");
+    Expect(!EnterCatchUpSkipMarkBecauseMeshOwned(false, false, false),
+           "Phase5.6.1: no mesh continues mark path");
     Expect(!EnterRingReadyForExit(false, true, true, 0, true, 81),
            "ring exit blocked while vis_debt>0");
     Expect(EnterRingReadyForExit(false, true, true, 0, true, 0),

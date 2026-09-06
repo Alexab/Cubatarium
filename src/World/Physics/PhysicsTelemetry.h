@@ -143,6 +143,8 @@ struct PhysicsTelemetry
   int SoftDeferOwnedNoGpuN{0};
   /// Phase 5.5.0b: sticky latch — soft_force settle with visibility_debt>0.
   int EnterSettleSoftForceWithDebt{0};
+  /// Phase 5.6.1: sampled CountEnterVisibilityDebt for period FPM / latch timing.
+  int VisibilityDebt{0};
   /// Era24: SoftDefer empty publish avoided (Hide⇒Ticket), cumulative.
   uint64_t SoftDeferEmptyPublishAvoided{0};
   /// SoftDeferHeld side-set size (outside-focus !Drawable FirstMesh).
