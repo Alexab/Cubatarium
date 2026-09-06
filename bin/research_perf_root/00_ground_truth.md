@@ -44,6 +44,28 @@
 
 Phase 5.3 algorithms: **COMPLETE** (empty UX closed). Phase 5.4 targets rim miss escalation, enter FOV presentable settle, stream relight/phase cost, cull/unsync diet. Hard gates **not demoted**.
 
+## Phase 5.4 ship (code + no-teleport verify)
+
+### Landed commits
+
+| Sprint | Commit intent | Notes |
+|---|---|---|
+| 5.4.0 | GT attribution 075706 | docs |
+| 5.4.1 | FOV presentable settle — no Quiesce/`coop_prepared` bypass with `visibility_debt>0`; FillWater SoftDefer pin; soft_exit last-resort ignores sticky fov | fz: live_blockers debt0; soft_force@150s may remain with debt |
+| 5.4.2 | `AbortDripN` 2→3 sticky rim + `MissWitnessScheduleFloor` | focus_missing frac ≪0.5 |
+| 5.4.3 | `prep_shed_skip` protect FocusMissing; SoftDefer cy cruise; stream RelightMissTops | phase med≤12; abort_frac≤0.5 class |
+| 5.4.4 | EnterUnsyncDiet lit-gate cap **32** (8 starved soft_force→holes); OpaqueCullDistanceBand **reverted** (holes) | cruise unsync med≤8 |
+
+### Auto scorecard (Tracy OFF, no-teleport, World_164)
+
+| report | hang | wall | phase | holes | focus_miss frac | abort_frac | unsync | empty_backlog |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| **fly-heavy** (`phase54_flyheavy` / best `v4e`) | false | ~41–51 | ~7–9 | ~0.59–0.68 | ≤0.10 | ≤0.45 | **0** | ≤5 |
+| **fz-cold-enter** (`phase54_fz_cold_enter` / best `v4e`) | false | ~43–57 | ~7–9 | ~0.37–0.81 | ≤0.09 | ≤0.53 | **6–8** | ≤5 |
+| **land replay** (`phase54_land_replay`, `--process-timeout 600`) | **false** | **41.3** | **7.2** | **0.45** | **0.02** | **0.36** | **0** | **4** |
+
+vs 075706: empty closed kept; focus_missing frac **~1→≤0.10**; Quiesce live settle with vis_debt=81 **closed**; phase_abort_heavy **1.0→~0.3–0.5**; cruise unsync **~36→0**. Hard contract still red. Manual **deferred** (holes≰0.40 on fly/ship; land needs extended process-timeout because soft_force@150s).
+
 ## Phase 5.3 (empty-chunk drip + SoftDefer escape)
 
 ### Landed code

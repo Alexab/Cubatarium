@@ -46,7 +46,7 @@ Per sprint: code → Release build → **no-teleport** auto (Tracy OFF, World_16
 | 5.4.4 | Opaque cull distance band + enter `MaxUnsyncUploadsPerFrame=8` | unsync med≤8; cull ↓ |
 | 5.4.5 | Trio + GT ship | manual only if auto green |
 
-Kill-switch: `StreamingPhaseBudgetMs=5` **unchanged**; enter phase floor **24** kept. Do not demote hard gates.
+Kill-switch: `StreamingPhaseBudgetMs=5` **unchanged**; enter phase floor **24** kept. Do not demote hard gates. Land replay after soft_force@150s needs `--process-timeout 600` (default 420 kills mid-flight).
 
 ## Phase 5.3 empty-drip FPM keys
 
