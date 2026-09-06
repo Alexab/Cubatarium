@@ -44,11 +44,29 @@
 
 Phase 5.3 algorithms: **COMPLETE** (empty UX closed). Phase 5.4 targets rim miss escalation, enter FOV presentable settle, stream relight/phase cost, cull/unsync diet. Hard gates **not demoted**.
 
-## Phase 5.5 (presentable ownership — in progress)
+## Phase 5.5 (presentable ownership — ship)
 
 Manual SoT: `perf_20260906-170813_25272.jsonl` + INFO `…170811.25272` — soft_force@150s vis_debt=81; cruise abort/miss 100%; SoftDefer exit stuck.
 
-Harness: [`tools/AnalyzePhase55Scorecard.py`](../../tools/AnalyzePhase55Scorecard.py) — soft_force+debt = FAIL; `--baseline-manual` delta. Policy: [`04_presentable_ownership.md`](04_presentable_ownership.md). No-teleport + `--process-timeout 600`.
+### Landed
+
+| Sprint | Commit intent | Notes |
+|---|---|---|
+| 5.5.0 | Auto↔manual fidelity + soft_force debt FAIL scorecard | `AnalyzePhase55Scorecard`; timeout 600; no teleport for phase55 |
+| 5.5.0b | Enter HB relight vs mesh vs gpu; SoftDefer owned-no-gpu FPM | telem only |
+| 5.5.1–5.5.3 | Near-band async + PresentableCatchUp; SoftDefer invalidate; presentable abort carve | fz+fly PRODUCT_OK (latch + miss≤0.3) |
+
+### Auto scorecard (Tracy OFF, no-teleport, World_164, timeout 600)
+
+| report | hang | soft_force+debt | latch | focus_miss | abort_frac | SoftDefer age tail | product |
+|---|---|---|---|---:|---:|---:|---|
+| **fly-heavy** `phase55_v1_flyheavy` | false | yes (honest FAIL line) | **1** | **0.05** | 0.68 | **0** | **OK** |
+| **fz-cold-enter** `phase55_v1_fz` | false | yes | **1** | **0.09** | 0.72 | **0** | **OK** |
+| **land replay** `phase55_land_replay` | false | yes | **1** | **0.09** | 0.70 | **0** | **OK** |
+
+vs manual 170813: auto still greener on wall/phase (locus/resume drift); SoftDefer exit stuck closed on auto; soft_force+debt still primary enter path but **PresentableCatchUp latch** armed. Gate of record for UX ship = **manual eye**. Hard contract still red.
+
+Harness: [`tools/AnalyzePhase55Scorecard.py`](../../tools/AnalyzePhase55Scorecard.py) — soft_force+debt = FAIL (honest); `--baseline-manual` delta. Policy: [`04_presentable_ownership.md`](04_presentable_ownership.md). No-teleport + `--process-timeout 600`.
 
 ## Phase 5.4 ship (code + no-teleport verify)
 

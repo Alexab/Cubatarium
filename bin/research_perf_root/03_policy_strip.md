@@ -61,6 +61,8 @@ Per sprint: code → Release → **no-teleport** auto (Tracy OFF, World_164; **n
 | 5.5.3 | Presentable carve outside `phase_abort_heavy` | no AbortDrip / budget raise |
 | 5.5.4 | Trio + GT; manual if fidelity OK | gate of record = manual |
 
+**Status 2026-09-06:** auto trio PRODUCT_OK (latch + miss≤0.3 + SoftDefer age 0); soft_force+debt still honest FAIL line; auto wall/phase still greener than manual 170813 (locus drift). Manual UX gate **deferred** until closer auto↔manual parity or eye-confirm.
+
 If auto diverges from manual SoT on settle/abort/miss/SoftDefer/wall-phase class → **stop product sprint**, fix harness (5.5.0), re-run. See [`04_presentable_ownership.md`](04_presentable_ownership.md).
 
 ## Phase 5.3 empty-drip FPM keys
