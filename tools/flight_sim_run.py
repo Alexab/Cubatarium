@@ -1140,6 +1140,39 @@ def main() -> int:
             f"({phase_id!r}); use no-teleport replay-manual harness"
         )
 
+    # Phase 5.5: no-teleport gate; land-stand is teleport smoke only.
+    report_name = str(args.report).replace("\\", "/").lower()
+    phase55_gate = phase_id.startswith("phase55") or "/phase55_" in report_name
+    if args.land_stand:
+        print(
+            "WARN: --land-stand forces teleport_cruise=True; "
+            "not a Phase55 / mesh no-teleport gate",
+            flush=True,
+        )
+    if phase55_gate and args.teleport_cruise:
+        raise SystemExit(
+            "FAIL: teleport_cruise=true forbidden for Phase55 gate "
+            f"(phase_id={phase_id!r} report={args.report}); "
+            "use --replay-manual[-fly-heavy] or --scenario fz-cold-enter"
+        )
+    if phase55_gate and args.land_stand:
+        raise SystemExit(
+            "FAIL: --land-stand forbidden for Phase55 gate "
+            "(teleport smoke only; use no-teleport replay-manual)"
+        )
+
+    # Phase55 / soft_force@150s: bump default timeout when operator left 0.
+    phase55_need_timeout = phase55_gate or args.replay_manual or (
+        args.scenario in ("fz-cold-enter", "fz-manual-parity", "fz-manual-long")
+    )
+    if phase55_need_timeout and args.process_timeout <= 0.0:
+        args.process_timeout = 600.0
+        print(
+            "INFO: process-timeout defaulted to 600s "
+            "(soft_force@150s + fly/stop; Phase55 / replay-manual / fz-cold-enter)",
+            flush=True,
+        )
+
     if not args.skip_preflight:
         print("preflight: killing orphan Cubatarium.exe (if any)", flush=True)
         preflight_cleanup()
@@ -1356,6 +1389,17 @@ def main() -> int:
                 spec.loader.exec_module(mod)
                 info_log = mod.newest_info_log(t0)
         annotate_report_run(report_path, hang_killed, rc, perf, info_log)
+        # Phase55 fidelity: expose teleport flag for AnalyzePhase55Scorecard.
+        if report_path.is_file():
+            try:
+                _ann = json.loads(report_path.read_text(encoding="utf-8"))
+                _ann["teleport_cruise"] = bool(args.teleport_cruise)
+                _ann["process_timeout_s"] = float(process_timeout)
+                report_path.write_text(
+                    json.dumps(_ann, indent=2) + "\n", encoding="utf-8"
+                )
+            except (json.JSONDecodeError, OSError):
+                pass
 
         metrics_summary: dict = {}
         if report_path.is_file():

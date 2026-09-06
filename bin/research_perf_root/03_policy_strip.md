@@ -48,6 +48,21 @@ Per sprint: code → Release build → **no-teleport** auto (Tracy OFF, World_16
 
 Kill-switch: `StreamingPhaseBudgetMs=5` **unchanged**; enter phase floor **24** kept. Do not demote hard gates. Land replay after soft_force@150s needs `--process-timeout 600` (default 420 kills mid-flight).
 
+## Phase 5.5 process (presentable ownership + auto fidelity)
+
+Per sprint: code → Release → **no-teleport** auto (Tracy OFF, World_164; **not** `--land-stand`) with **`--process-timeout 600`** → `AnalyzePhase55Scorecard` (+ `--baseline-manual` 170813) → fix if red → **auto-commit only on green** (`src/**` + GT/policy/tools; no suite_reports/logs).
+
+| Sprint | Cut | Gate highlight |
+|---|---|---|
+| 5.5.0 | Auto↔manual fidelity; soft_force+debt = FAIL in scorecard | harness sees red; delta vs 170813 |
+| 5.5.0b | Enter HB axis honesty (relight vs mesh vs gpu) | telem only |
+| 5.5.1 | Near-band async SLA + PresentableCatchUp | settle/catch-up drains debt |
+| 5.5.2 | SoftDefer empty → GPU/drawable completion | age≪1000 when stuck_n>0 |
+| 5.5.3 | Presentable carve outside `phase_abort_heavy` | no AbortDrip / budget raise |
+| 5.5.4 | Trio + GT; manual if fidelity OK | gate of record = manual |
+
+If auto diverges from manual SoT on settle/abort/miss/SoftDefer/wall-phase class → **stop product sprint**, fix harness (5.5.0), re-run. See [`04_presentable_ownership.md`](04_presentable_ownership.md).
+
 ## Phase 5.3 empty-drip FPM keys
 
 | Key | Meaning |

@@ -44,6 +44,12 @@
 
 Phase 5.3 algorithms: **COMPLETE** (empty UX closed). Phase 5.4 targets rim miss escalation, enter FOV presentable settle, stream relight/phase cost, cull/unsync diet. Hard gates **not demoted**.
 
+## Phase 5.5 (presentable ownership — in progress)
+
+Manual SoT: `perf_20260906-170813_25272.jsonl` + INFO `…170811.25272` — soft_force@150s vis_debt=81; cruise abort/miss 100%; SoftDefer exit stuck.
+
+Harness: [`tools/AnalyzePhase55Scorecard.py`](../../tools/AnalyzePhase55Scorecard.py) — soft_force+debt = FAIL; `--baseline-manual` delta. Policy: [`04_presentable_ownership.md`](04_presentable_ownership.md). No-teleport + `--process-timeout 600`.
+
 ## Phase 5.4 ship (code + no-teleport verify)
 
 ### Landed commits
