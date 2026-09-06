@@ -1411,15 +1411,21 @@ void UWorldStreaming::RefreshStreamingPressure(
     }
     // R4.6.1: under rim miss / hole pressure, time-slice Facing (Cubyz-style
     // telemetry probes) — stand clear and underfeet/mh≤1 keep dense sample.
+    // Phase 5.6.3: stand + miss/SoftDefer stuck → dense facing (no stale ahead).
+    const bool stand_miss_dense =
+        !moving_for_telemetry &&
+        (missing_near || world.PhysicsTelemetryData.SoftDeferEmptyStuckN > 0);
     const bool facing_rim_cadence =
+        !stand_miss_dense &&
         (rim_hole_pressure || rim_miss_heal_band) && !in.underfeet_need &&
         !(missing_near && miss_horiz <= 1);
-    if (stream_deadline_hit)
+    if (stream_deadline_hit && !stand_miss_dense)
     {
       ahead = rp.last_ahead;
       behind = rp.last_behind;
     }
-    else if (!diet_cruise_cadence_final && !facing_rim_cadence)
+    else if (!diet_cruise_cadence_final &&
+             (!facing_rim_cadence || stand_miss_dense))
     {
       const auto facing_t0 = std::chrono::high_resolution_clock::now();
       world.CountUnfinishedVisualByFacing(focus_horiz, focus_radius, fwd, ahead,
@@ -1427,7 +1433,7 @@ void UWorldStreaming::RefreshStreamingPressure(
       pt.PrepRefreshFacingMs = lap_ms(facing_t0);
       rp.last_ahead = ahead;
       rp.last_behind = behind;
-      rp.facing_sample_cd = 4;
+      rp.facing_sample_cd = stand_miss_dense ? 0 : 4;
     }
     else if (cruise_scan_fast)
     {

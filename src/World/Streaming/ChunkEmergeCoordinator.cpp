@@ -4503,11 +4503,34 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                   MissWitnessAgeFrames))
           {
             mesh_drain = std::max(mesh_drain, 16);
-            if (queued_stuck || kicked_stuck)
+            if ((queued_stuck || kicked_stuck) &&
+                mesh_service.IsPendingGpuApply(isolated_hole))
             {
               mesh_service.PreferKickPendingGpuQueued(isolated_hole);
             }
             pin_isolated_miss(118);
+          }
+          // Phase 5.6.3: FocusMissing + age SLA + empty PendingGpu → Dirty/FM.
+          if (ShouldRemeshMissWitnessEmptyGpu(
+                  missing_visible_mesh,
+                  mesh_service.IsPendingGpuApply(isolated_hole),
+                  MissWitnessAgeFrames, 60) &&
+              miss_resident)
+          {
+            mesh_service.MarkDirtyPriority(isolated_hole);
+            const glm::ivec2 miss_xz(isolated_hole.x, isolated_hole.z);
+            if (!exec.Scheduler().Contains(miss_xz, ColumnWorkKind::FirstMesh))
+            {
+              ColumnWorkItem fm{};
+              fm.column = miss_xz;
+              fm.kind = ColumnWorkKind::FirstMesh;
+              fm.priority = 114;
+              fm.scan_full_focus = false;
+              fm.cy = isolated_hole.y;
+              exec.Enqueue(fm);
+              note_column_flow_drain(2, 1);
+            }
+            pin_isolated_miss(114);
           }
           // I12-C1: completion stuck + empty FM → column-owned FirstMesh.
           const int miss_completion_thresh = moving ? 30 : 15;

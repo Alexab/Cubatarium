@@ -2415,6 +2415,15 @@ int main()
     using cutum::ShouldPinIsolatedMissMarkDirty;
     Expect(MissSliceAlreadyOwned(true, false, false, false, false, false),
            "P0.2: Dirty owns");
+    using cutum::ShouldRemeshMissWitnessEmptyGpu;
+    Expect(ShouldRemeshMissWitnessEmptyGpu(true, false, 60, 60),
+           "Phase5.6.3: missing+!gpu+age remeshes");
+    Expect(!ShouldRemeshMissWitnessEmptyGpu(true, true, 60, 60),
+           "Phase5.6.3: pending gpu skips remesh");
+    Expect(!ShouldRemeshMissWitnessEmptyGpu(true, false, 30, 60),
+           "Phase5.6.3: age below SLA skips remesh");
+    Expect(!ShouldRemeshMissWitnessEmptyGpu(false, false, 60, 60),
+           "Phase5.6.3: no miss skips remesh");
     Expect(MissSliceAlreadyOwned(false, false, false, true, false, false),
            "P0.2: SoftDeferHeld owns");
     Expect(MissSliceAlreadyOwned(false, false, false, false, false, true),

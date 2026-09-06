@@ -360,6 +360,14 @@ inline bool MissSliceSoftDeferOwns(bool soft_defer_held)
   return soft_defer_held;
 }
 
+/// Phase 5.6.3: PreferKick empty PendingGpu is not progress — remesh instead.
+inline bool ShouldRemeshMissWitnessEmptyGpu(bool focus_missing, bool pending_gpu,
+                                            int miss_witness_age,
+                                            int age_sla_frames = 60)
+{
+  return focus_missing && !pending_gpu && miss_witness_age >= age_sla_frames;
+}
+
 /// SoftDeferHeld ticket-only while SoftDefer still owns publication.
 /// SoftDefer lifted → transfer to one Dirty (never Held+ticket orphan).
 inline bool ShouldTransferSoftDeferHeldToDirty(bool soft_defer_held,
