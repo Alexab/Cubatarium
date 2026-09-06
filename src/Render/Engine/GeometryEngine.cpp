@@ -1822,6 +1822,14 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     // Phase 5.2.1: Begin only on opaque here. Transparent Begin moves to
     // PrepareTransparent; cutout pass is destroyed below. RefreshPassRefs
     // MeshRevAbsorb early-out skips upload — Begin is a counter reset only.
+    // Phase 5.4.4 EnterUnsyncDiet: soft cap while lit-gate. Cap 32 (8 starved
+    // soft_force enter → holes_rate regress on fly).
+    {
+      const bool enter_diet =
+          WorldInstance && WorldInstance->IsEnterLitGateActive();
+      GreedyGpuOpaque.VertexPool.SetMaxUnsyncUploadsPerFrame(
+          enter_diet ? 32 : 64);
+    }
     GreedyGpuOpaque.VertexPool.BeginUploadFrame();
     const uint64_t draw_fp = opaque_draw_fingerprint(opaque_draw);
     const bool draw_set_stable =
@@ -2192,6 +2200,13 @@ void UGeometryEngine::PrepareTransparent(
   }
   UGreedyGpuBackend::BindRefreshTelem(&refresh_telem);
   // Phase 5.2.1: opaque path no longer Begins transparent pool.
+  // Phase 5.4.4 EnterUnsyncDiet for transparent pool (see opaque Begin).
+  {
+    const bool enter_diet =
+        WorldInstance && WorldInstance->IsEnterLitGateActive();
+    GreedyGpuTransparent.VertexPool.SetMaxUnsyncUploadsPerFrame(
+        enter_diet ? 32 : 64);
+  }
   GreedyGpuTransparent.VertexPool.BeginUploadFrame();
   MeshStore().RefreshPassRefs(GreedyGpuTransparent, ctx.cache, filtered,
                                    ctx.meshRevision, ctx.cullRevision,
