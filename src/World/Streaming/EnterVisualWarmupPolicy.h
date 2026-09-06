@@ -207,6 +207,39 @@ inline bool EnterSpawnRingIgnoresHinterlandMeshDebt(bool enter_gate_active,
   return enter_gate_active && visibility_debt <= 0 && underfeet_present;
 }
 
+/// Phase 5.4.1: Quiesce MUST NOT bypass FOV presentable settle when debt>0
+/// (manual 075706 live_blockers + visibility_debt=81).
+inline bool EnterVisDebtAllowsExitBypass(int visibility_debt)
+{
+  return visibility_debt <= 0;
+}
+
+inline bool EnterRingReadyForExit(bool ring_ready, bool session,
+                                  bool underfeet, int gpu_pending,
+                                  bool underfeet_mesh_ok, int visibility_debt)
+{
+  return ring_ready ||
+         (session && underfeet && gpu_pending <= 0 && underfeet_mesh_ok &&
+          EnterVisDebtAllowsExitBypass(visibility_debt));
+}
+
+/// Soft abort walls still force via soft_exit_cap / abort_underfeet elsewhere.
+/// Quiesce is intentionally absent from this OR.
+inline bool EnterVisibilityReadyForExit(bool visibility_ready, bool session,
+                                        bool underfeet, int fov_debt,
+                                        int gpu_pending, bool abort_drain,
+                                        double elapsed_ms, int abort_ms,
+                                        int visibility_debt)
+{
+  if (visibility_ready)
+  {
+    return true;
+  }
+  return session && underfeet && fov_debt <= 0 && gpu_pending <= 0 &&
+         EnterVisDebtAllowsExitBypass(visibility_debt) &&
+         (abort_drain || elapsed_ms >= static_cast<double>(abort_ms));
+}
+
 /// Hide FullyDark in enter ring — ColPipe P7: keep-until-replace; never blank.
 /// LitRing: enter FullyDark → hole until lit drawable or settled true-dark.
 inline bool ShouldHideEnterFullyDark(bool fully_dark, bool /*pending*/,
@@ -994,19 +1027,18 @@ inline bool ShouldReleaseEnterAfterAbortUnderfeetCap(
   return ShouldForceEnterInGameAfterAbortDrain(elapsed_ms, force_ingame_ms);
 }
 
-/// Phase5 S4 / Phase5.1: force wall + fov clear → soft-exit Loading even if
-/// underfeet never becomes present (stuck mesh_missing / SoftDefer orphan).
+/// Phase5 S4 / Phase5.1: force wall → soft-exit Loading even if underfeet never
+/// becomes present (stuck mesh_missing / SoftDefer orphan).
 /// AbortDrain is optional: it only arms on !ring_ready, so a ring-ready
 /// visibility/underfeet stall would hang forever without this bypass
 /// (Phase5.1 fly-heavy / fz-cold-enter: ring=0, debt=0, frozen=1 for 390s).
+/// Phase 5.4.1: do not require fov_debt==0 — sticky lit/visibility debt must
+/// not defeat the last-resort wall (fz hang after Quiesce vis-debt gate).
 inline bool ShouldForceEnterLoadSoftExit(bool abort_drain, double elapsed_ms,
                                          int force_ingame_ms, int fov_debt)
 {
   (void)abort_drain;
-  if (fov_debt > 0)
-  {
-    return false;
-  }
+  (void)fov_debt;
   return ShouldForceEnterInGameAfterAbortDrain(elapsed_ms, force_ingame_ms);
 }
 

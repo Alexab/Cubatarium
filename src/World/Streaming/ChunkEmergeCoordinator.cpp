@@ -1500,6 +1500,45 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       try_stuck_escape_fm(stuck, stop_tail_stuck ? 126 : 115);
     }
   }
+  // Phase 5.4.1: FillWater presentable SoftDefer-empty pin without requiring
+  // missing_visible_mesh (manual 075706 underwater enter with vis_debt).
+  if (procedural.FillWater && stuck_escape_fm_budget > 0)
+  {
+    int pin_cy0 = 0;
+    int pin_cy1 = 0;
+    const int max_cy_pin =
+        std::max(0, FloorDiv(procedural.MaxHeight, CHUNK_SIZE));
+    EnterSpawnPresentableCyRange(preferred_cy,
+                                 FloorDiv(procedural.SeaLevel, CHUNK_SIZE),
+                                 true, max_cy_pin, pin_cy0, pin_cy1);
+    for (const glm::ivec3 &coord : SoftDeferEmptyOwned)
+    {
+      if (stuck_escape_fm_budget <= 0)
+      {
+        break;
+      }
+      const int dx = std::abs(coord.x - focus_ground_horiz.x);
+      const int dz = std::abs(coord.z - focus_ground_horiz.z);
+      if (std::max(dx, dz) > 2)
+      {
+        continue;
+      }
+      if (coord.y < pin_cy0 || coord.y > pin_cy1)
+      {
+        continue;
+      }
+      if (mesh_service.HasDrawableGreedyMesh(coord))
+      {
+        continue;
+      }
+      if (!mesh_service.HasGreedyMesh(coord) &&
+          !mesh_service.IsSoftDeferHeld(coord))
+      {
+        continue;
+      }
+      try_stuck_escape_fm(coord, 120);
+    }
+  }
 
   phys_telem.SoftDeferHeldN =
       static_cast<int>(mesh_service.GetSoftDeferHeldCount());

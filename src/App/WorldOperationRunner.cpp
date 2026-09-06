@@ -253,32 +253,29 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   const bool mesh_blockers_clear =
       coop_prepared || !World.NeedsEnterGameMeshWarmup();
   const bool fov_ready = coop_prepared || fov_debt <= 0;
-  const bool visibility_ready =
-      coop_prepared || World.IsEnterVisibilityReady();
   const int visibility_debt = lit_sample.visibility_debt;
+  // Phase 5.4.1: coop_prepared alone must not ignore visibility_debt.
+  const bool visibility_ready =
+      World.IsEnterVisibilityReady() ||
+      (coop_prepared && EnterVisDebtAllowsExitBypass(visibility_debt));
   const bool underfeet_present = World.IsEnterUnderfeetPresentReady();
   const glm::ivec3 underfeet_center =
       UChunkManager::WorldToChunk(World.GetPreferredLoadFocusBlock());
   const int underfeet_gpu_pending =
       World.GetMeshService().CountPendingGpuAppliesInHorizontalRadius(
           underfeet_center, 1);
-  const bool visibility_ready_for_exit =
-      visibility_ready ||
-      (World.IsEnterSessionActive() && underfeet_present && fov_debt <= 0 &&
-       underfeet_gpu_pending <= 0 &&
-       (World.IsEnterLitQuiesceLatched() || EnterGameAbortDrainMode ||
-        EnterGameGpuWarmupElapsedMs >=
-            static_cast<double>(tune.EnterMeshAbortMs)));
   const bool underfeet_mesh_ok =
       underfeet_present ||
       !World.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
           World.GetBlockWorld(),
           glm::ivec3(underfeet_center.x, 0, underfeet_center.z), 1);
-  const bool ring_ready_for_exit =
-      ring_ready ||
-      (World.IsEnterSessionActive() && underfeet_present && fov_debt <= 0 &&
-       underfeet_gpu_pending <= 0 && underfeet_mesh_ok &&
-       (visibility_debt <= 0 || World.IsEnterLitQuiesceLatched()));
+  const bool visibility_ready_for_exit = EnterVisibilityReadyForExit(
+      visibility_ready, World.IsEnterSessionActive(), underfeet_present,
+      fov_debt, underfeet_gpu_pending, EnterGameAbortDrainMode,
+      EnterGameGpuWarmupElapsedMs, tune.EnterMeshAbortMs, visibility_debt);
+  const bool ring_ready_for_exit = EnterRingReadyForExit(
+      ring_ready, World.IsEnterSessionActive(), underfeet_present,
+      underfeet_gpu_pending, underfeet_mesh_ok, visibility_debt);
   const bool mesh_blockers_for_exit =
       mesh_blockers_clear ||
       (World.IsEnterSessionActive() && underfeet_present &&

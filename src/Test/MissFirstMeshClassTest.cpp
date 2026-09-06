@@ -864,8 +864,8 @@ int main()
            "Phase5 S4: soft-exit not before wall");
     Expect(ShouldForceEnterLoadSoftExit(false, 150000.0, 150000, 0),
            "Phase5.1: soft-exit without abort_drain when ring already ready");
-    Expect(!ShouldForceEnterLoadSoftExit(true, 150000.0, 150000, 3),
-           "Phase5 S4: soft-exit blocked while fov debt remains");
+    Expect(ShouldForceEnterLoadSoftExit(true, 150000.0, 150000, 3),
+           "Phase5.4.1: soft-exit last-resort ignores sticky fov_debt");
   }
 
   // --- Era51 mesh warmup progress + cruise stabilize ---
@@ -1428,6 +1428,27 @@ int main()
            "Done+underfeet ignores hinterland mesh debt");
     Expect(!EnterSpawnRingIgnoresHinterlandMeshDebt(true, 1, true),
            "visibility debt keeps full ring");
+    using cutum::EnterRingReadyForExit;
+    using cutum::EnterVisDebtAllowsExitBypass;
+    using cutum::EnterVisibilityReadyForExit;
+    Expect(EnterVisDebtAllowsExitBypass(0), "debt0 allows exit bypass");
+    Expect(!EnterVisDebtAllowsExitBypass(81),
+           "Phase5.4.1: debt>0 forbids Quiesce-style bypass");
+    Expect(!EnterRingReadyForExit(false, true, true, 0, true, 81),
+           "ring exit blocked while vis_debt>0");
+    Expect(EnterRingReadyForExit(false, true, true, 0, true, 0),
+           "ring exit ok when debt cleared");
+    Expect(EnterRingReadyForExit(true, true, true, 0, true, 81),
+           "true ring_ready ignores debt");
+    Expect(!EnterVisibilityReadyForExit(false, true, true, 0, 0, false, 1000.0,
+                                        500, 81),
+           "vis exit blocked with debt even past abort_ms");
+    Expect(EnterVisibilityReadyForExit(false, true, true, 0, 0, true, 100.0,
+                                       500, 0),
+           "vis exit via abort_drain when debt0");
+    Expect(EnterVisibilityReadyForExit(true, true, true, 0, 0, false, 0.0, 500,
+                                       81),
+           "true visibility_ready ignores debt");
     Expect(ShouldHideEnterFullyDark(true, false, true, false, false),
            "LitRing: enter FullyDark hidden until lit/true-dark");
     Expect(!ShouldHideEnterFullyDark(true, false, false, false, true),

@@ -2131,19 +2131,15 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
             !world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
                 world.GetBlockWorld(),
                 glm::ivec3(underfeet_center.x, 0, underfeet_center.z), 1);
-        const bool ring_ready_for_exit =
-            ring_ready ||
-            (world.IsEnterSessionActive() && underfeet_present &&
-             underfeet_gpu_pending <= 0 && underfeet_mesh_ok &&
-             (visibility_debt <= 0 || world.IsEnterLitQuiesceLatched()));
-        const bool visibility_ready_for_exit =
-            visibility_ready ||
-            (world.IsEnterSessionActive() && underfeet_present &&
-             fov_debt <= 0 && underfeet_gpu_pending <= 0 &&
-             (world.IsEnterLitQuiesceLatched() ||
-              StreamingWarmupAbortDrainMode ||
-              elapsed_ms >= static_cast<double>(
-                  URuntimeTuning::Get().EnterMeshAbortMs)));
+        // Phase 5.4.1: no Quiesce bypass while visibility_debt>0.
+        const bool ring_ready_for_exit = EnterRingReadyForExit(
+            ring_ready, world.IsEnterSessionActive(), underfeet_present,
+            underfeet_gpu_pending, underfeet_mesh_ok, visibility_debt);
+        const bool visibility_ready_for_exit = EnterVisibilityReadyForExit(
+            visibility_ready, world.IsEnterSessionActive(), underfeet_present,
+            fov_debt, underfeet_gpu_pending, StreamingWarmupAbortDrainMode,
+            elapsed_ms, URuntimeTuning::Get().EnterMeshAbortMs,
+            visibility_debt);
         const bool lit_progress_stalled = EnterLitDebtProgressStalled(
             fov_debt, StreamingWarmupBestFovDebt, underfeet_present,
             ms_since_lit_progress,
