@@ -2953,8 +2953,15 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         void_slots_active = void_slots || ocean_heal;
         bg_budget = std::max(bg_budget, void_relight_n);
         auto &exec = GetColumnFlowExecutor();
+        // Phase 5.4.3 RelightMissTops: near-focus only under sticky miss+move.
+        int drain_n = void_relight_n;
+        if (moving_now && world.PhysicsTelemetryData.FocusMissingMesh != 0)
+        {
+          drain_n = std::min(drain_n,
+                             pending_light_focus_n > 0 ? 2 : 1);
+        }
         exec.DrainIdlePendingLight(world, focus_horiz, focus_radius,
-                                   void_relight_n,
+                                   drain_n,
                                    /*allow_sync=*/false, frame_ms,
                                    pending_light_focus_n, missing_focus_mesh);
       }
@@ -3186,6 +3193,14 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     bg_budget = std::max(bg_budget, 6);
     player_budget = std::max(player_budget, 4);
+  }
+  // Phase 5.4.3 RelightMissTops: soft-cap DrainRelightQueues under sticky miss
+  // while moving (cut far/bg first; enter boost above still wins).
+  if (moving_now && world.PhysicsTelemetryData.FocusMissingMesh != 0 &&
+      !world.IsEnterLitGateActive() && !world.NeedsEnterGameMeshWarmup())
+  {
+    bg_budget = std::min(bg_budget, 1);
+    player_budget = std::min(std::max(player_budget, 1), 2);
   }
 
   {

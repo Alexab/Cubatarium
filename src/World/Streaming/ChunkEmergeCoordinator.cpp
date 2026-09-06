@@ -902,7 +902,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                   : std::max(0, preferred_cy - 1);
     const int cy1_base = std::min(max_cy, preferred_cy + 2);
     int cy1 = cy1_base;
-    if (procedural.FillWater)
+    if (procedural.FillWater &&
+        (enter_warmup_active || !moving || missing_underfeet))
     {
       const int sea = procedural.SeaLevel;
       const int sea_cy0 =
@@ -2825,7 +2826,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     prep_over_budget = moving && running_prep_ms > 14.0;
     const bool prep_shed_skip =
         shed_far_now && running_prep_ms > 12.0 && nearest_miss_h >= 3 &&
-        !missing_underfeet && !pending_underfeet;
+        !missing_underfeet && !pending_underfeet &&
+        !(missing_visible_mesh ||
+          world.GetPhysicsTelemetry().FocusMissingMesh > 0) &&
+        !visual_holes;
     prep_post_admit_drain_ms = prep_ms_since(post_admit_drain_t0);
     const auto recover_t0 = std::chrono::high_resolution_clock::now();
     if (!note_prep_deadline_skip() && !prep_shed_skip && recover_now &&
