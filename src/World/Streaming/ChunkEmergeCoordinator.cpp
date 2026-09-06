@@ -3751,13 +3751,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                      nearest_miss_h, visual_holes);
   if (phase_abort_heavy)
   {
-    // Phase 5.3.1 AbortDripCap: steady drip under backlog/holes; else starve.
+    // Phase 5.3.1 AbortDripCap + Phase 5.4.2 AbortDripN escalate on sticky rim.
     sync_cap = 0;
     if (abort_needs_drip)
     {
-      constexpr int kAbortDrip = 2;
-      mesh_schedule = std::min(mesh_schedule, kAbortDrip);
-      mesh_drain = std::min(mesh_drain, kAbortDrip);
+      const int drip =
+          AbortDripN(world.GetPhysicsTelemetry(), nearest_miss_h,
+                     MissWitnessAgeFrames, missing_underfeet);
+      mesh_schedule = std::min(mesh_schedule, drip);
+      mesh_drain = std::min(mesh_drain, drip);
       mesh_schedule = std::max(mesh_schedule, 1);
       mesh_drain = std::max(mesh_drain, 1);
     }
@@ -4813,11 +4815,16 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // sites Enqueue RemeshSeam without SyncIdle MarkDirty).
   if (phase_abort_heavy)
   {
-    // Phase 5.3.1 ColumnFlowAbortFirstMesh: drip FirstMesh only when needed.
+    // Phase 5.3.1 ColumnFlowAbortFirstMesh + Phase 5.4.2 sticky rim → drain≥2.
     if (abort_needs_drip)
     {
-      column_flow_drain_n = std::max(column_flow_drain_n, 1);
-      column_flow_admit_batch = std::max(column_flow_admit_batch, 1);
+      const bool sticky_rim =
+          world.GetPhysicsTelemetry().FocusMissingMesh > 0 &&
+          nearest_miss_h <= 4;
+      column_flow_drain_n =
+          std::max(column_flow_drain_n, sticky_rim ? 2 : 1);
+      column_flow_admit_batch =
+          std::max(column_flow_admit_batch, sticky_rim ? 2 : 1);
     }
     else
     {
@@ -5139,14 +5146,24 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
   ApplyUnderfeetReservationFloors(mesh_drain, mesh_schedule, uf_res);
   mesh_service.SetPendingLightFocusPressure(pending_focus_count);
+  // Phase 5.4.2 MissWitnessScheduleFloor: dirty_fm starved -> schedule>=1 before
+  // AbortDripN reinforce (keeps PreferKick / SoftDefer intent alive).
+  if (world.GetPhysicsTelemetry().FocusMissingMesh > 0 &&
+      mesh_service.GetLastDirtyFmN() > 0 &&
+      mesh_service.GetLastMeshDirtyScheduleOkN() == 0)
+  {
+    mesh_schedule = std::max(mesh_schedule, 1);
+  }
   if (phase_abort_heavy)
   {
-    // Reinforce AbortDripCap after late floors (calm/admission must not starve drip).
+    // Reinforce AbortDripCap after late floors (calm/alpha must not starve drip).
     if (abort_needs_drip)
     {
-      constexpr int kAbortDrip = 2;
-      mesh_schedule = std::min(std::max(mesh_schedule, 1), kAbortDrip);
-      mesh_drain = std::min(std::max(mesh_drain, 1), kAbortDrip);
+      const int drip =
+          AbortDripN(world.GetPhysicsTelemetry(), nearest_miss_h,
+                     MissWitnessAgeFrames, missing_underfeet);
+      mesh_schedule = std::min(std::max(mesh_schedule, 1), drip);
+      mesh_drain = std::min(std::max(mesh_drain, 1), drip);
     }
     else
     {

@@ -38,6 +38,20 @@ inline bool AbortNeedsDrip(const PhysicsTelemetry &pt, bool missing_underfeet,
          HasVisualHolePressure(pt, visual_holes, pt.FocusMissingMesh);
 }
 
+/// Phase 5.4.2: escalate AbortDripCap 2→3 on sticky near rim / underfeet.
+inline int AbortDripN(const PhysicsTelemetry &pt, int nearest_miss_h,
+                      int miss_witness_age, bool missing_underfeet)
+{
+  const bool sticky_rim =
+      pt.FocusMissingMesh > 0 && nearest_miss_h <= 4 && miss_witness_age >= 8;
+  const bool near_urgent = nearest_miss_h <= 2 || missing_underfeet;
+  if (sticky_rim || near_urgent)
+  {
+    return 3;
+  }
+  return 2;
+}
+
 } // namespace cutum
 
 #endif
