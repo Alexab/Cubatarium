@@ -139,6 +139,10 @@ struct PhysicsTelemetry
   int AbortDrainFinal{0};
   /// Era24: SoftDefer empty coords with ColumnFlow FirstMesh Contains.
   int SoftDeferEmptyOwnedN{0};
+  /// Phase 5.5.0b: SoftDeferEmptyOwned without PendingGpu (owned-without-progress).
+  int SoftDeferOwnedNoGpuN{0};
+  /// Phase 5.5.0b: sticky latch — soft_force settle with visibility_debt>0.
+  int EnterSettleSoftForceWithDebt{0};
   /// Era24: SoftDefer empty publish avoided (Hide⇒Ticket), cumulative.
   uint64_t SoftDeferEmptyPublishAvoided{0};
   /// SoftDeferHeld side-set size (outside-focus !Drawable FirstMesh).

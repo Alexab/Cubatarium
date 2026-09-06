@@ -16,6 +16,9 @@ struct EnterLitSample
   int pending_global{0};
   int fifo_n{0};
   int inflight{0};
+  /// Phase 5.5.0b: aliases — same as fifo_n/inflight (relight, not mesh GPU).
+  int relight_fifo_n{0};
+  int relight_inflight_n{0};
   int chunk_resident{0};
   bool streaming_frozen{false};
   bool mesh_dirty{false};

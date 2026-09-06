@@ -111,6 +111,8 @@ void WriteJsonlLine(const EnterLitSample &s, const char *kind = nullptr)
           << s.snapshot_debt << ",\"snapshot_size\":" << s.snapshot_size
           << ",\"pending_global\":" << s.pending_global << ",\"fifo_n\":"
           << s.fifo_n << ",\"inflight\":" << s.inflight
+          << ",\"relight_fifo_n\":" << s.relight_fifo_n
+          << ",\"relight_inflight_n\":" << s.relight_inflight_n
           << ",\"chunk_resident\":" << s.chunk_resident
           << ",\"streaming_frozen\":" << (s.streaming_frozen ? 1 : 0)
           << ",\"mesh_dirty\":" << (s.mesh_dirty ? 1 : 0)
@@ -180,6 +182,8 @@ void LogSampleGlog(const EnterLitSample &sample, int frame_index)
             << " snap=" << sample.snapshot_size
             << " pending_global=" << sample.pending_global
             << " fifo=" << sample.fifo_n << " inflight=" << sample.inflight
+            << " relight_fifo=" << sample.relight_fifo_n
+            << " relight_inflight=" << sample.relight_inflight_n
             << " chunks=" << sample.chunk_resident
             << " frozen=" << (sample.streaming_frozen ? 1 : 0)
             << " mesh_dirty=" << (sample.mesh_dirty ? 1 : 0)
@@ -229,6 +233,8 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
   out.pending_global = static_cast<int>(world.GetPendingLightBeforeMeshCount());
   out.fifo_n = world.GetPendingTerrainRelightFifoCount();
   out.inflight = world.GetAsyncRelightInFlightCount();
+  out.relight_fifo_n = out.fifo_n;
+  out.relight_inflight_n = out.inflight;
   out.chunk_resident =
       static_cast<int>(world.GetBlockWorld().GetChunkManager().GetResidentChunkCount());
   out.streaming_frozen = world.IsEnterLitGateActive();
@@ -374,7 +380,10 @@ void UEnterLitDiagnostics::MaybeLogHeartbeat(const EnterLitSample &sample,
   g_last_heartbeat_elapsed_ms = sample.elapsed_ms;
   LOG(INFO) << "[EnterWarmup] heartbeat elapsed_ms=" << sample.elapsed_ms
             << " fifo=" << sample.fifo_n << " inflight=" << sample.inflight
+            << " relight_fifo=" << sample.relight_fifo_n
+            << " relight_inflight=" << sample.relight_inflight_n
             << " debt=" << sample.snapshot_debt
+            << " visibility_debt=" << sample.visibility_debt
             << " mesh_dirty=" << (sample.mesh_dirty ? 1 : 0)
             << " mesh_missing=" << (sample.mesh_missing_greedy ? 1 : 0)
             << " gpu_pending=" << sample.mesh_gpu_pending_near

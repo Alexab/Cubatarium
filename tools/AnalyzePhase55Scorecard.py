@@ -112,6 +112,10 @@ def analyze_perf(path: Path):
         rows = use if rows is None else rows
         return [g(r, key) for r in rows]
 
+    def series_max(key, rows=None):
+        xs = [float(x) for x in series(key, rows) if x is not None]
+        return max(xs) if xs else None
+
     focus_key = "focus_missing_mesh"
     abort_key = "phase_abort_heavy"
     return {
@@ -154,6 +158,10 @@ def analyze_perf(path: Path):
         ),
         "softdefer_age_max_tail_p90": pct(
             series("softdefer_empty_age_max_frames", tail), 90
+        ),
+        "softdefer_owned_no_gpu_med": median(series("softdefer_owned_no_gpu_n")),
+        "enter_settle_soft_force_with_debt_max": series_max(
+            "enter_settle_soft_force_with_debt"
         ),
         "gpu_kick_med": median(series("gpu_kick_n")),
         "relight_fifo_med": median(series("relight_fifo_n")),
