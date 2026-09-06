@@ -2628,6 +2628,24 @@ int main()
            "I8-C1: dirty_fm backlog reserve");
     Expect(ComputeFmDirtyEnqueueReserve(0, 0) == 2,
            "M1-4: empty_fm_queue guard reserve");
+    using cutum::ComputeKeepRingFmDirtyEnqueueReserve;
+    using cutum::PresentableBandEmptyPressure;
+    Expect(ComputeKeepRingFmDirtyEnqueueReserve(0, true, 0, false, 0, 0) == 2,
+           "Phase5.6.2: focus miss floors FM reserve");
+    Expect(ComputeKeepRingFmDirtyEnqueueReserve(0, false, 5, false, 0, 0) == 2,
+           "Phase5.6.2: empty backlog floors FM reserve");
+    Expect(ComputeKeepRingFmDirtyEnqueueReserve(0, false, 0, true, 0, 0) == 2,
+           "Phase5.6.2: latch floors FM reserve");
+    Expect(ComputeKeepRingFmDirtyEnqueueReserve(0, false, 0, false, 1, 0) == 2,
+           "Phase5.6.2: SoftDefer stuck floors FM reserve");
+    Expect(ComputeKeepRingFmDirtyEnqueueReserve(0, false, 0, false, 0, 3) == 2,
+           "Phase5.6.2: keep-ring empty floors FM reserve");
+    Expect(ComputeKeepRingFmDirtyEnqueueReserve(0, false, 0, false, 0, 0) == 0,
+           "Phase5.6.2: no pressure keeps base reserve");
+    Expect(PresentableBandEmptyPressure(4, 2, 0, 4, 2, 1) == 4,
+           "Phase5.6.2: in-band uses max backlog");
+    Expect(PresentableBandEmptyPressure(20, 0, 0, 4, 9, 9) == 0,
+           "Phase5.6.2: far full-RD backlog ignored");
     Expect(ComputeFirstMeshScheduleEffectiveCap(7, 3, 2) >= 2,
            "arch: effective_cap after reserve");
     Expect(ComputeFirstMeshScheduleEffectiveCap(7, 3, 2, 4, true, 1) >= 2,

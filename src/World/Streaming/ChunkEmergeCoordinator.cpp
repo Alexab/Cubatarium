@@ -5261,7 +5261,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       world.IsEnterLitGateActive() && !world.IsEnterUnderfeetPresentReady());
   {
     const int dirty_fm_pre_rebuild = mesh_service.GetLastDirtyFmN();
-    const int fm_reserve =
+    int fm_reserve =
         ShouldDeferFmDirtyEnqueueReserve(world.IsEnterLitGateActive(),
                                        mesh_service.IsEnterLitQuiesce(),
                                        world.IsEnterFovLitPassActive())
@@ -5270,6 +5270,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                   std::max(FmEnqueuePrior,
                            std::max(DirtyFmPrior, dirty_fm_pre_rebuild)),
                   ScheduleOkPrior);
+    // Phase 5.6.2: keep-ring FM reserve survives abort without AbortDripN raise.
+    const auto &pt = world.GetPhysicsTelemetry();
+    const int keep_empty = PresentableBandEmptyPressure(
+        pt.UnfinishedVisual, pt.ColumnLoadedNoMeshN,
+        static_cast<int>(std::min<uint64_t>(pt.ChunkNotReady, 1000ull)),
+        EnterVisualWorkRadiusChunks(), pt.SoftDeferEmptyStuckHoriz,
+        pt.MissHoriz);
+    fm_reserve = ComputeKeepRingFmDirtyEnqueueReserve(
+        fm_reserve, pt.FocusMissingMesh > 0, EmptyBacklogN(pt),
+        pt.EnterSettleSoftForceWithDebt != 0, pt.SoftDeferEmptyStuckN,
+        keep_empty);
     mesh_service.SetFmDirtyEnqueueReserve(fm_reserve);
     world.GetPhysicsTelemetryMutable().FmDirtyEnqueueReserveN = fm_reserve;
   }

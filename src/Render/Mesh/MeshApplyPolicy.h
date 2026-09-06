@@ -194,6 +194,53 @@ inline int ComputeFmDirtyEnqueueReserve(int enqueue_prior, int schedule_ok_prior
   return reserve;
 }
 
+/// Phase 5.6.2: keep-ring FirstMesh reserve floor outside AbortDripN.
+/// Survives abort clamp so frontier empties / miss / SoftDefer / latch can enqueue.
+inline int ComputeKeepRingFmDirtyEnqueueReserve(int base_reserve,
+                                                bool focus_missing,
+                                                int empty_backlog_n, bool latch,
+                                                int soft_stuck_n,
+                                                int keep_ring_empty_n)
+{
+  int reserve = std::max(0, base_reserve);
+  if (focus_missing || empty_backlog_n > 0 || latch || soft_stuck_n > 0 ||
+      keep_ring_empty_n > 0)
+  {
+    reserve = std::max(reserve, 2);
+  }
+  return reserve;
+}
+
+/// Phase 5.6.2: presentable-band empty pressure (r<=work_r), not full RD inflate.
+inline int PresentableBandEmptyPressure(int unfinished_visual,
+                                        int column_loaded_no_mesh,
+                                        int chunk_not_ready, int work_radius,
+                                        int stuck_horiz, int miss_horiz)
+{
+  if (work_radius < 0)
+  {
+    return 0;
+  }
+  const bool in_band =
+      (miss_horiz >= 0 && miss_horiz <= work_radius) ||
+      (stuck_horiz >= 0 && stuck_horiz <= work_radius);
+  if (!in_band && unfinished_visual <= 0 && column_loaded_no_mesh <= 0)
+  {
+    return 0;
+  }
+  // Prefer near-band signals; still count backlog when miss/stuck in band.
+  const int backlog =
+      std::max(unfinished_visual,
+               std::max(column_loaded_no_mesh, std::max(0, chunk_not_ready)));
+  if (in_band)
+  {
+    return backlog;
+  }
+  // No miss/stuck pin in band: only count if backlog is small (keep-ring sized).
+  constexpr int kKeepRingBacklogCap = 9; // ~(2*r+1)^2/4 for r=4-ish
+  return backlog > 0 && backlog <= kKeepRingBacklogCap ? backlog : 0;
+}
+
 /// Effective FirstMesh schedule cap after drain-aware reserve.
 inline int ComputeFirstMeshScheduleEffectiveCap(int first_mesh_cap_base,
                                                   int fm_q, int reserve_n,
