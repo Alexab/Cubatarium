@@ -77,9 +77,9 @@ Per sprint: code → Release → **no-teleport** auto (Tracy OFF, World_164; **n
 | 5.6.1 | Drainable catch-up remesh + latch clear | latch_clear finite OR debt↓ |
 | 5.6.2 | Keep-ring FM reserve (no AbortDrip++) | holes_frac≪0.6; empty_max≪19; miss≤0.3 |
 | 5.6.3 | Witness remesh when pending_gpu=0 + dense stand ahead | miss_stuck not climb with kick=0 |
-| 5.6.4 | Trio + GT; manual if auto honest-green | gate of record = manual vs 192816 |
+| 5.6.4 | Trio + GT ship vs 192816 | **shipped**; manual deferred (latch never clear / product red) |
 
-Always run **fly-heavy + fz-cold-enter** each code sprint (5.6.3+ also land replay). See [`04_presentable_ownership.md`](04_presentable_ownership.md).
+Always run **fly-heavy + fz-cold-enter** each code sprint (5.6.3+ also land replay). Ship trio reports: `phase56_v3_flyheavy`, `phase56_v3_land`, `phase56_ship_fz`. See [`04_presentable_ownership.md`](04_presentable_ownership.md).
 
 ## Phase 5.3 empty-drip FPM keys
 

@@ -40,4 +40,4 @@
 | Miss witness progress | Dirty/FM when FocusMissing && !PendingGpu | PreferKick empty queue as progress |
 | Stand ahead honesty | Dense facing sample when !moving && miss/stuck | Stale `last_ahead` via cd=12 |
 
-Gate of record SoT: `perf_20260906-192816_24828`. Analyze: `tools/AnalyzePhase56Scorecard.py` (baseline 192816). Locus: land save + yaw 90; no teleport.
+Gate of record SoT: `perf_20260906-192816_24828`. Analyze: `tools/AnalyzePhase56Scorecard.py` (baseline 192816). Locus: land save + yaw 90; no teleport. Phase 5.6 **code ship** complete; **manual eye deferred** until auto latch clears or product-green (debt↓ post-InGame).
