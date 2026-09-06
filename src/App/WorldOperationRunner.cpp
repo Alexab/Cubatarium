@@ -434,6 +434,12 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
                    << " visibility_debt=" << visibility_debt
                    << " underfeet=" << (underfeet_present ? 1 : 0)
                    << " (force InGame; underfeet may be missing)";
+      if (visibility_debt > 0)
+      {
+        World.GetPhysicsTelemetryMutable().EnterSettleSoftForceWithDebt = 1;
+        World.BeginEnterGameMeshBurst(24);
+        World.MarkSpawnRingUnfinishedDirty(8);
+      }
       CubatariumFlushLogs();
     }
   }

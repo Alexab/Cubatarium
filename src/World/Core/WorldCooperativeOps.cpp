@@ -32,6 +32,7 @@
 #include <chrono>
 #include <climits>
 #include <cmath>
+#include <cstring>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -2216,6 +2217,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                     << " underfeet=" << (underfeet_present ? 1 : 0)
                     << " ring_ready=" << (ring_ready ? 1 : 0)
                     << " visibility_debt=" << visibility_debt;
+          if (std::strcmp(settle_reason, "soft_force") == 0 &&
+              visibility_debt > 0)
+          {
+            world.GetPhysicsTelemetryMutable().EnterSettleSoftForceWithDebt = 1;
+            world.BeginEnterGameMeshBurst(24);
+            world.MarkSpawnRingUnfinishedDirty(8);
+          }
           CubatariumFlushLogs();
         }
         if ((abort_underfeet_cap || lit_progress_stalled || soft_exit_cap ||

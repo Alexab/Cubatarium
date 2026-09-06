@@ -249,6 +249,13 @@ int main()
          "Era32: explicit sla 45 still honored");
   Expect(ShouldEscalateSoftDeferEmptyAge(44),
          "Era33: default sla 15 → age 44 escalates");
+  using cutum::SoftDeferEmptyInvalidateOwnedWithoutProgress;
+  Expect(SoftDeferEmptyInvalidateOwnedWithoutProgress(true, false, 15, false),
+         "Phase5.5.2: owned+age+!gpu ⇒ invalidate");
+  Expect(!SoftDeferEmptyInvalidateOwnedWithoutProgress(true, true, 15, false),
+         "Phase5.5.2: gpu queued keeps ownership");
+  Expect(!SoftDeferEmptyInvalidateOwnedWithoutProgress(true, false, 15, true),
+         "Phase5.5.2: drawable no invalidate");
   Expect(SoftDeferEmptyHealKindOf() == SoftDeferEmptyHealKind::FirstMesh,
          "Era24 I-E3: SoftDefer empty heal is FirstMesh only");
   Expect(ShouldPreferKickSoftDeferEmptyStuck(true, true, true),
@@ -1427,7 +1434,16 @@ int main()
     Expect(EnterSpawnRingIgnoresHinterlandMeshDebt(true, 0, true),
            "Done+underfeet ignores hinterland mesh debt");
     Expect(!EnterSpawnRingIgnoresHinterlandMeshDebt(true, 1, true),
-           "visibility debt keeps full ring");
+           "visibility debt keeps full ring without near ready");
+    Expect(EnterSpawnRingIgnoresHinterlandMeshDebt(true, 81, true, true),
+           "Phase5.5.1: near presentable ready ignores hinterland with debt");
+    Expect(!EnterSpawnRingIgnoresHinterlandMeshDebt(true, 81, true, false),
+           "Phase5.5.1: debt+!near keeps full ring");
+    using cutum::EnterMeshAsyncBlockRadiusChunks;
+    Expect(EnterMeshAsyncBlockRadiusChunks(4) == 2,
+           "Phase5.5.1: async block radius clamps to near-band");
+    Expect(EnterMeshAsyncBlockRadiusChunks(1) == 1,
+           "Phase5.5.1: async block radius respects smaller spawn r");
     using cutum::EnterRingReadyForExit;
     using cutum::EnterVisDebtAllowsExitBypass;
     using cutum::EnterVisibilityReadyForExit;

@@ -2954,8 +2954,14 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         bg_budget = std::max(bg_budget, void_relight_n);
         auto &exec = GetColumnFlowExecutor();
         // Phase 5.4.3 RelightMissTops: near-focus only under sticky miss+move.
+        // Phase 5.5.1: also when PresentableCatchUp / visibility debt after soft_force.
         int drain_n = void_relight_n;
-        if (moving_now && world.PhysicsTelemetryData.FocusMissingMesh != 0)
+        const bool presentable_catch_up =
+            world.PhysicsTelemetryData.EnterSettleSoftForceWithDebt != 0 ||
+            (world.IsEnterLitGateActive() &&
+             world.CountEnterVisibilityDebt() > 0);
+        if ((moving_now && world.PhysicsTelemetryData.FocusMissingMesh != 0) ||
+            presentable_catch_up)
         {
           drain_n = std::min(drain_n,
                              pending_light_focus_n > 0 ? 2 : 1);
@@ -3196,7 +3202,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   }
   // Phase 5.4.3 RelightMissTops: soft-cap DrainRelightQueues under sticky miss
   // while moving (cut far/bg first; enter boost above still wins).
-  if (moving_now && world.PhysicsTelemetryData.FocusMissingMesh != 0 &&
+  // Phase 5.5.1: PresentableCatchUp also caps hinterland relight for mesh priority.
+  const bool presentable_catch_up =
+      world.PhysicsTelemetryData.EnterSettleSoftForceWithDebt != 0;
+  if (((moving_now && world.PhysicsTelemetryData.FocusMissingMesh != 0) ||
+       presentable_catch_up) &&
       !world.IsEnterLitGateActive() && !world.NeedsEnterGameMeshWarmup())
   {
     bg_budget = std::min(bg_budget, 1);
@@ -4431,6 +4441,14 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const bool underfeet_miss_sla =
         world.PhysicsTelemetryData.FocusMissingMesh != 0 &&
         world.PhysicsTelemetryData.MissHoriz <= 1;
+    // Phase 5.5.1: clear PresentableCatchUp latch when debt+SoftDefer stuck gone.
+    if (world.PhysicsTelemetryData.EnterSettleSoftForceWithDebt != 0 &&
+        world.CountEnterVisibilityDebt() <= 0 &&
+        world.PhysicsTelemetryData.SoftDeferOwnedNoGpuN <= 0 &&
+        world.PhysicsTelemetryData.SoftDeferEmptyStuckN <= 0)
+    {
+      world.GetPhysicsTelemetryMutable().EnterSettleSoftForceWithDebt = 0;
+    }
     if (!world.IsEnterSessionActive() &&
         (world.GetEnterGameMeshBurstFrames() > 0 || spawn_catch_up) &&
         ShouldRunSpawnRingCatchUpHeal(spawn_catch_up, moving_fast,

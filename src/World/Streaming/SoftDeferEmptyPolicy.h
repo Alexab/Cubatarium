@@ -484,6 +484,20 @@ inline bool ShouldEscalateSoftDeferEmptyAge(int age_frames,
   return age_frames >= sla_frames;
 }
 
+/// Phase 5.5.2: Owned SoftDefer empty without PendingGpu must not silent-no-op.
+inline bool SoftDeferEmptyInvalidateOwnedWithoutProgress(bool owned,
+                                                         bool gpu_queued,
+                                                         int age_frames,
+                                                         bool has_drawable,
+                                                         int sla_frames = 15)
+{
+  if (!owned || has_drawable || gpu_queued)
+  {
+    return false;
+  }
+  return age_frames >= sla_frames;
+}
+
 /// Era24 I-E3: SoftDefer empty heal is FirstMesh-class only (not Remesh/Relight).
 enum class SoftDeferEmptyHealKind : uint8_t
 {

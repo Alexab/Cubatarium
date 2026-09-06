@@ -3172,6 +3172,19 @@ int UWorld::RemeshColumnSeamTicket(glm::ivec2 ground_xz)
 
 bool UWorld::NeedsSpawnRingCatchUp() const
 {
+  // Phase 5.5.1 PresentableCatchUp: soft_force left InGame with debt — keep
+  // heal running until visibility debt clears (do not freeze during session).
+  if (PhysicsTelemetryData.EnterSettleSoftForceWithDebt != 0)
+  {
+    if (CountEnterVisibilityDebt() > 0 ||
+        PhysicsTelemetryData.SoftDeferOwnedNoGpuN > 0 ||
+        PhysicsTelemetryData.SoftDeferEmptyStuckN > 0)
+    {
+      return true;
+    }
+    // Debt drained — clear sticky latch via mutable accessor in non-const path.
+    // Const path: treat as catch-up done when debt+soft stuck are clear.
+  }
   if (IsEnterSessionActive())
   {
     return false;
@@ -5584,11 +5597,12 @@ bool EnterMeshAsyncBlocksRing(const UWorld &world,
                               const UWorldMeshService &mesh,
                               glm::ivec3 center_ground_chunk, int radius_chunks)
 {
-  // Era53: under enter gate only near async blocks ring (global pool churn).
-  if (world.IsEnterLitGateActive())
+  // Era53 / Phase 5.5.1: under enter gate only near-band async blocks ring
+  // (full spawn radius hinterland async is PresentableCatchUp / cruise).
+  if (world.IsEnterLitGateActive() || world.IsEnterSessionActive())
   {
-    return mesh.HasAsyncInflightInHorizontalRadius(center_ground_chunk,
-                                                   radius_chunks);
+    const int near_r = EnterMeshAsyncBlockRadiusChunks(radius_chunks);
+    return mesh.HasAsyncInflightInHorizontalRadius(center_ground_chunk, near_r);
   }
   return mesh.HasPendingAsyncMeshWork();
 }
@@ -6021,9 +6035,17 @@ bool UWorld::IsSpawnMeshRingReady() const
   EnterSpawnPresentableCyRange(player_cy, sea_cy, proc.FillWater, max_cy, cy0,
                                cy1);
   const bool underfeet_present = IsEnterUnderfeetPresentReady();
+  // Near presentable: underfeet + no near async/gpu (debt may remain hinterland).
+  const int near_async_r = EnterMeshAsyncBlockRadiusChunks(radius);
+  const bool near_async =
+      MeshService->HasAsyncInflightInHorizontalRadius(center, near_async_r);
+  const int near_gpu =
+      MeshService->CountPendingGpuAppliesInHorizontalRadius(center, 1);
+  const bool near_presentable_ready =
+      underfeet_present && !near_async && near_gpu <= 0;
   const bool ignore_hinterland = EnterSpawnRingIgnoresHinterlandMeshDebt(
       EnterLitGateActive || IsEnterSessionActive(), CountEnterVisibilityDebt(),
-      underfeet_present);
+      underfeet_present, near_presentable_ready);
   if (!ignore_hinterland && CountPostLoadRingNotReady() > 0)
   {
     return false;
@@ -6035,7 +6057,7 @@ bool UWorld::IsSpawnMeshRingReady() const
     const bool async_pending =
         EnterMeshAsyncBlocksRing(*this, *MeshService, center, radius);
     const int gpu_pending =
-        MeshService->CountPendingGpuAppliesInHorizontalRadius(center, radius);
+        MeshService->CountPendingGpuAppliesInHorizontalRadius(center, 1);
     if (gpu_pending > 0 || async_pending)
     {
       return false;
@@ -6275,7 +6297,11 @@ void UWorld::SampleEnterGameMeshWarmupBlockers(EnterGameMeshWarmupBlockers &out)
   }
   if (EnterSpawnRingIgnoresHinterlandMeshDebt(
           enter_warmup_gate, CountEnterVisibilityDebt(),
-          IsEnterUnderfeetPresentReady()))
+          IsEnterUnderfeetPresentReady(),
+          /*near_presentable_ready=*/
+          IsEnterUnderfeetPresentReady() &&
+              !EnterMeshAsyncBlocksRing(*this, mesh, center, radius) &&
+              mesh.CountPendingGpuAppliesInHorizontalRadius(center, 1) <= 0))
   {
     out.dirty = HasDirtyWithinHorizontalRadiusBand(mesh, center, radius, cy0,
                                                    cy1);
@@ -6283,7 +6309,9 @@ void UWorld::SampleEnterGameMeshWarmupBlockers(EnterGameMeshWarmupBlockers &out)
     // (remaining==0 + CPU drawable used to drop the bar while gpu_finish=0).
     out.gpu_pending_near =
         mesh.CountPendingGpuAppliesInHorizontalRadius(center, 1);
-    out.async_mesh_pending = false;
+    // Near-band async only (EnterMeshAsyncBlocksRing already near-scoped).
+    out.async_mesh_pending =
+        EnterMeshAsyncBlocksRing(*this, mesh, center, radius);
     return;
   }
   out.dirty = mesh.HasDirtyWithinHorizontalRadius(center, radius);

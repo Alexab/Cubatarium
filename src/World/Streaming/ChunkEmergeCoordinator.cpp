@@ -885,6 +885,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   phys_telem.SoftDeferEmptyStuckCz = 0;
   phys_telem.SoftDeferEmptyAgeMaxFrames = 0;
   phys_telem.SoftDeferEmptyOwnedN = 0;
+  phys_telem.SoftDeferOwnedNoGpuN = 0;
   {
     if (UndrawnForceCd > 0)
     {
@@ -1445,6 +1446,17 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         std::chrono::duration<double, std::milli>(
             std::chrono::high_resolution_clock::now() - softdefer_own_t0)
             .count();
+    // Phase 5.5.0b: owned SoftDefer empty without PendingGpu = no-progress signal.
+    for (const glm::ivec3 &owned : SoftDeferEmptyOwned)
+    {
+      const bool gpu_queued =
+          mesh_service.IsPendingGpuQueued(owned) ||
+          mesh_service.IsPendingGpuKickedOrDispatched(owned);
+      if (!gpu_queued)
+      {
+        ++phys_telem.SoftDeferOwnedNoGpuN;
+      }
+    }
     prep_softdefer_policy_ms =
         phys_telem.SoftdeferEmptyScanMs + phys_telem.SoftdeferEmptyOwnMs;
   }
@@ -1464,8 +1476,44 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     const glm::ivec2 stuck_col(stuck.x, stuck.z);
     auto &exec = GetColumnFlowExecutor();
-    if (exec.Scheduler().Contains(stuck_col, ColumnWorkKind::FirstMesh) ||
-        SoftDeferEmptyOwned.count(stuck) > 0)
+    const bool ticketed =
+        exec.Scheduler().Contains(stuck_col, ColumnWorkKind::FirstMesh);
+    const bool owned = SoftDeferEmptyOwned.count(stuck) > 0;
+    const bool gpu_queued =
+        mesh_service.IsPendingGpuQueued(stuck) ||
+        mesh_service.IsPendingGpuKickedOrDispatched(stuck);
+    const int age =
+        SoftDeferEmptyAgeFrames.count(stuck) > 0 ? SoftDeferEmptyAgeFrames[stuck]
+                                                 : soft_age_max;
+    const bool drawable = mesh_service.HasDrawableGreedyMesh(stuck);
+    // Phase 5.5.2: invalidate Owned-without-GPU so escape can remesh.
+    if (SoftDeferEmptyInvalidateOwnedWithoutProgress(owned, gpu_queued, age,
+                                                     drawable))
+    {
+      SoftDeferEmptyOwned.erase(stuck);
+      SoftDeferEmptyAgeFrames.erase(stuck);
+      if (gpu_queued)
+      {
+        mesh_service.PreferKickPendingGpuQueued(stuck);
+      }
+      else
+      {
+        mesh_service.MarkDirtyPriority(stuck);
+        ColumnWorkItem pin{};
+        pin.column = stuck_col;
+        pin.kind = ColumnWorkKind::FirstMesh;
+        pin.priority = priority;
+        pin.scan_full_focus = missing_visible_mesh;
+        pin.cy = stuck.y;
+        exec.Enqueue(pin);
+        SoftDeferEmptyOwned.insert(stuck);
+        SoftDeferEmptyAgeFrames[stuck] = 0;
+      }
+      note_column_flow_drain(2, 2);
+      --stuck_escape_fm_budget;
+      return true;
+    }
+    if (ticketed || owned)
     {
       return false;
     }
@@ -3753,25 +3801,41 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   const bool abort_needs_drip =
       AbortNeedsDrip(world.GetPhysicsTelemetry(), missing_underfeet,
                      nearest_miss_h, visual_holes);
+  // Phase 5.5.3: presentable carve survives abort (FocusMissing / underfeet /
+  // SoftDefer stuck) — do not heal only via AbortDripN.
+  const bool presentable_carve =
+      world.GetPhysicsTelemetry().FocusMissingMesh > 0 || missing_underfeet ||
+      world.GetPhysicsTelemetry().SoftDeferEmptyStuckN > 0 ||
+      world.GetPhysicsTelemetry().EnterSettleSoftForceWithDebt != 0;
+  const int presentable_floor = presentable_carve ? 2 : 0;
   if (phase_abort_heavy)
   {
     // Phase 5.3.1 AbortDripCap + Phase 5.4.2 AbortDripN escalate on sticky rim.
     sync_cap = 0;
-    if (abort_needs_drip)
+    if (abort_needs_drip || presentable_carve)
     {
       const int drip =
-          AbortDripN(world.GetPhysicsTelemetry(), nearest_miss_h,
-                     MissWitnessAgeFrames, missing_underfeet);
-      mesh_schedule = std::min(mesh_schedule, drip);
-      mesh_drain = std::min(mesh_drain, drip);
-      mesh_schedule = std::max(mesh_schedule, 1);
-      mesh_drain = std::max(mesh_drain, 1);
+          abort_needs_drip
+              ? AbortDripN(world.GetPhysicsTelemetry(), nearest_miss_h,
+                           MissWitnessAgeFrames, missing_underfeet)
+              : presentable_floor;
+      const int carve = std::max(drip, presentable_floor);
+      mesh_schedule = std::min(mesh_schedule, std::max(carve, drip));
+      mesh_drain = std::min(mesh_drain, std::max(carve, drip));
+      mesh_schedule = std::max(mesh_schedule, carve);
+      mesh_drain = std::max(mesh_drain, carve);
     }
     else
     {
       mesh_schedule = 0;
       mesh_drain = 0;
     }
+  }
+  // Presentable floors even when abort floors below would be dead.
+  if (presentable_carve)
+  {
+    mesh_schedule = std::max(mesh_schedule, presentable_floor);
+    mesh_drain = std::max(mesh_drain, presentable_floor);
   }
   // Moving + dirty backlog: ensure minimum async feed rate so dirty queue
   // drains steadily instead of starving.
@@ -5161,13 +5225,22 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   if (phase_abort_heavy)
   {
     // Reinforce AbortDripCap after late floors (calm/alpha must not starve drip).
-    if (abort_needs_drip)
+    // Phase 5.5.3: presentable carve floor survives reinforce clamp.
+    const bool presentable_reinforce =
+        world.GetPhysicsTelemetry().FocusMissingMesh > 0 || missing_underfeet ||
+        world.GetPhysicsTelemetry().SoftDeferEmptyStuckN > 0 ||
+        world.GetPhysicsTelemetry().EnterSettleSoftForceWithDebt != 0;
+    const int presentable_floor = presentable_reinforce ? 2 : 0;
+    if (abort_needs_drip || presentable_reinforce)
     {
       const int drip =
-          AbortDripN(world.GetPhysicsTelemetry(), nearest_miss_h,
-                     MissWitnessAgeFrames, missing_underfeet);
-      mesh_schedule = std::min(std::max(mesh_schedule, 1), drip);
-      mesh_drain = std::min(std::max(mesh_drain, 1), drip);
+          abort_needs_drip
+              ? AbortDripN(world.GetPhysicsTelemetry(), nearest_miss_h,
+                           MissWitnessAgeFrames, missing_underfeet)
+              : presentable_floor;
+      const int carve = std::max(drip, presentable_floor);
+      mesh_schedule = std::max(std::min(mesh_schedule, carve), carve);
+      mesh_drain = std::max(std::min(mesh_drain, carve), carve);
     }
     else
     {

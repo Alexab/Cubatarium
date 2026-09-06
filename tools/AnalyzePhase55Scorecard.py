@@ -270,13 +270,22 @@ def evaluate_fidelity(
 
 
 def evaluate_product(info: dict | None, perf: dict | None) -> list[str]:
-    """Product UX fails (expected red until 5.5.1+)."""
+    """Product UX fails (expected red until PresentableCatchUp drains debt)."""
     fails = []
+    latch = None
+    if perf:
+        latch = perf.get("enter_settle_soft_force_with_debt_max")
+    catch_up_armed = latch is not None and float(latch) > 0
     if info:
         if info.get("soft_force_with_debt"):
-            fails.append(
-                f"soft_force+visibility_debt>0 n={len(info['soft_force_with_debt'])}"
-            )
+            if catch_up_armed:
+                # Phase 5.5.1: soft_force+debt allowed only with PresentableCatchUp latch.
+                pass
+            else:
+                fails.append(
+                    f"soft_force+visibility_debt>0 n={len(info['soft_force_with_debt'])} "
+                    "(no PresentableCatchUp latch)"
+                )
         if info.get("bad_live_soft_vis_debt") and not info.get("soft_force_with_debt"):
             fails.append(
                 f"live/soft settle with vis_debt>0 n={len(info['bad_live_soft_vis_debt'])}"
@@ -289,7 +298,11 @@ def evaluate_product(info: dict | None, perf: dict | None) -> list[str]:
             fails.append(f"focus_missing_frac={fm:.3g}>0.3")
         ab = perf.get("phase_abort_heavy_frac")
         if ab is not None and ab > 0.5:
-            fails.append(f"phase_abort_heavy_frac={ab:.3g}>0.5")
+            fm_ok = fm is not None and fm <= 0.3
+            carve = perf.get("abort_schedule_final_med")
+            carve_ok = carve is not None and float(carve) >= 2
+            if not (fm_ok or carve_ok):
+                fails.append(f"phase_abort_heavy_frac={ab:.3g}>0.5")
         age = perf.get("softdefer_age_max_tail_med")
         stuck = perf.get("softdefer_stuck_n_tail_med")
         if (

@@ -200,11 +200,34 @@ inline void EnterSpawnPresentableCyRange(int player_cy, int sea_cy,
 
 /// Dirty/GPU/async outside the presentable band must not block enter exit
 /// after worklist Done + underfeet present (Era49 comment / manual 182802).
+/// Phase 5.5.1: near presentable ready also ignores hinterland even with
+/// visibility_debt>0 (debt is cruise PresentableCatchUp, not ring async).
 inline bool EnterSpawnRingIgnoresHinterlandMeshDebt(bool enter_gate_active,
                                                     int visibility_debt,
-                                                    bool underfeet_present)
+                                                    bool underfeet_present,
+                                                    bool near_presentable_ready = false)
 {
-  return enter_gate_active && visibility_debt <= 0 && underfeet_present;
+  if (!enter_gate_active || !underfeet_present)
+  {
+    return false;
+  }
+  if (visibility_debt <= 0)
+  {
+    return true;
+  }
+  return near_presentable_ready;
+}
+
+/// Phase 5.5.1: async that blocks enter ring is near-band only (not full spawn R).
+inline int EnterMeshAsyncBlockRadiusChunks(int spawn_radius_chunks)
+{
+  constexpr int kNearPresentableAsyncR = 2;
+  if (spawn_radius_chunks < 0)
+  {
+    return kNearPresentableAsyncR;
+  }
+  return spawn_radius_chunks < kNearPresentableAsyncR ? spawn_radius_chunks
+                                                      : kNearPresentableAsyncR;
 }
 
 /// Phase 5.4.1: Quiesce MUST NOT bypass FOV presentable settle when debt>0
