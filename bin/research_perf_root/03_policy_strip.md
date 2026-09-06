@@ -65,6 +65,22 @@ Per sprint: code → Release → **no-teleport** auto (Tracy OFF, World_164; **n
 
 If auto diverges from manual SoT on settle/abort/miss/SoftDefer/wall-phase class → **stop product sprint**, fix harness (5.5.0), re-run. See [`04_presentable_ownership.md`](04_presentable_ownership.md).
 
+## Phase 5.6 process (ring frontier + auto control)
+
+Per sprint: code → Release → **no-teleport** auto (Tracy OFF, World_164; **not** `--land-stand`) with **`--process-timeout 600`** → `AnalyzePhase56Scorecard` (+ `--baseline-manual` **192816**) → fix if red → **auto-commit only on green** (`src/**` + GT/policy/tools; no suite_reports/logs).
+
+**Locus pin (no teleport):** resume World_164 land save (~−484); default `--yaw 90` for `--replay-manual[-fly-heavy]`. `--cruise-cx` does **nothing** without teleport — do not use teleport for `phase56_*`.
+
+| Sprint | Cut | Gate highlight |
+|---|---|---|
+| 5.6.0 | Land-corridor pin + Phase56 scorecard + 192816 GT | hang=false; teleport=false; delta keys |
+| 5.6.1 | Drainable catch-up remesh + latch clear | latch_clear finite OR debt↓ |
+| 5.6.2 | Keep-ring FM reserve (no AbortDrip++) | holes_frac≪0.6; empty_max≪19; miss≤0.3 |
+| 5.6.3 | Witness remesh when pending_gpu=0 + dense stand ahead | miss_stuck not climb with kick=0 |
+| 5.6.4 | Trio + GT; manual if auto honest-green | gate of record = manual vs 192816 |
+
+Always run **fly-heavy + fz-cold-enter** each code sprint (5.6.3+ also land replay). See [`04_presentable_ownership.md`](04_presentable_ownership.md).
+
 ## Phase 5.3 empty-drip FPM keys
 
 | Key | Meaning |

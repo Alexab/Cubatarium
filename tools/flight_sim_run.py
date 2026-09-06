@@ -730,12 +730,16 @@ def main() -> int:
         args.world = "World_164"
         args.fly_stop = True
         args.resume = True
-        # Resume save focus (manual 190126 ~-484) — do NOT teleport to (-47,5).
+        # Resume save focus (manual 190126 / 192816 ~-484) — do NOT teleport to (-47,5).
+        # --cruise-cx is ignored without teleport (AppRunner); pin requires land save.
         args.teleport_cruise = False
         args.sprint = False
         args.hold_space = True
         if args.pitch is None:
             args.pitch = 0.0
+        # Land-corridor heading (manual SoT / land-cruise); exe default 180 is west ocean.
+        if args.yaw is None:
+            args.yaw = 90.0
         if args.replay_manual_fly_heavy:
             args.idle_sec = max(args.idle_sec, 20.0)
             args.fly_phase_sec = max(args.fly_phase_sec, 120.0)
@@ -1140,36 +1144,40 @@ def main() -> int:
             f"({phase_id!r}); use no-teleport replay-manual harness"
         )
 
-    # Phase 5.5: no-teleport gate; land-stand is teleport smoke only.
+    # Phase 5.5 / 5.6: no-teleport gate; land-stand is teleport smoke only.
     report_name = str(args.report).replace("\\", "/").lower()
     phase55_gate = phase_id.startswith("phase55") or "/phase55_" in report_name
+    phase56_gate = phase_id.startswith("phase56") or "/phase56_" in report_name
+    phase_no_teleport_gate = phase55_gate or phase56_gate
     if args.land_stand:
         print(
             "WARN: --land-stand forces teleport_cruise=True; "
-            "not a Phase55 / mesh no-teleport gate",
+            "not a Phase55/56 / mesh no-teleport gate",
             flush=True,
         )
-    if phase55_gate and args.teleport_cruise:
+    if phase_no_teleport_gate and args.teleport_cruise:
+        gate_name = "Phase56" if phase56_gate else "Phase55"
         raise SystemExit(
-            "FAIL: teleport_cruise=true forbidden for Phase55 gate "
+            f"FAIL: teleport_cruise=true forbidden for {gate_name} gate "
             f"(phase_id={phase_id!r} report={args.report}); "
             "use --replay-manual[-fly-heavy] or --scenario fz-cold-enter"
         )
-    if phase55_gate and args.land_stand:
+    if phase_no_teleport_gate and args.land_stand:
+        gate_name = "Phase56" if phase56_gate else "Phase55"
         raise SystemExit(
-            "FAIL: --land-stand forbidden for Phase55 gate "
+            f"FAIL: --land-stand forbidden for {gate_name} gate "
             "(teleport smoke only; use no-teleport replay-manual)"
         )
 
-    # Phase55 / soft_force@150s: bump default timeout when operator left 0.
-    phase55_need_timeout = phase55_gate or args.replay_manual or (
+    # Phase55/56 / soft_force@150s: bump default timeout when operator left 0.
+    phase55_need_timeout = phase_no_teleport_gate or args.replay_manual or (
         args.scenario in ("fz-cold-enter", "fz-manual-parity", "fz-manual-long")
     )
     if phase55_need_timeout and args.process_timeout <= 0.0:
         args.process_timeout = 600.0
         print(
             "INFO: process-timeout defaulted to 600s "
-            "(soft_force@150s + fly/stop; Phase55 / replay-manual / fz-cold-enter)",
+            "(soft_force@150s + fly/stop; Phase55/56 / replay-manual / fz-cold-enter)",
             flush=True,
         )
 

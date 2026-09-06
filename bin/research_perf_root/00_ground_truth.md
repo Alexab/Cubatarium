@@ -68,6 +68,53 @@ vs manual 170813: auto still greener on wall/phase (locus/resume drift); SoftDef
 
 Harness: [`tools/AnalyzePhase55Scorecard.py`](../../tools/AnalyzePhase55Scorecard.py) — soft_force+debt = FAIL (honest); `--baseline-manual` delta. Policy: [`04_presentable_ownership.md`](04_presentable_ownership.md). No-teleport + `--process-timeout 600`.
 
+## Phase 5.6 (ring frontier — in progress)
+
+Manual SoT: `perf_20260906-192816_24828.jsonl` + INFO `…192814.24828` (+ `enter_lit_20260906-192829.jsonl`).
+
+| Metric (cruise / stand) | 192816 SoT | 170813 | phase55_v1 fly-heavy |
+|---|---:|---:|---:|
+| soft_force+debt | yes @150s debt=81 | yes @150s debt=81 | yes + latch=1 |
+| latch clear | **never** (all periods=1) | n/a (pre-latch) | armed, product OK |
+| visual_holes_frac | **~0.60** (15/25) | lower class | rare |
+| empty_backlog_max | **19** | — | low |
+| focus_missing_frac | **1.0** | 1.0 | **0.05** |
+| phase_abort_heavy_frac | **1.0** | 1.0 | ~0.68 |
+| wall / phase med | ~101 / ~69 | ~116 / ~70 | greener |
+| focus_unfinished_ahead (stand) | **10** | — | ~0–1 |
+| miss_stuck_run_frames (stand) | **→1469** gpu_kick=0 | — | not stuck |
+
+### Roots (do not demote hard gates; no AbortDrip / budget / soft_force wall raise)
+
+1. Latch clear waits `CountEnterVisibilityDebt()≤0` but `MarkSpawnRingUnfinishedDirty` skips mesh-but-!VisualReady → latch forever.
+2. Keep-ring FM starve under abort carve=2; empty sampled on full RD.
+3. Miss PreferKick with empty PendingGpu → miss_stuck without remesh; stand ahead stale (cd=12).
+4. Auto locus: `--cruise-cx` ignored without teleport; Phase56 pin = land save resume + `--yaw 90`.
+
+### Landed / planned
+
+| Sprint | Intent | Notes |
+|---|---|---|
+| 5.6.0 | Land-corridor auto pin + Phase56 scorecard + 192816 GT | yaw=90; no teleport; `AnalyzePhase56Scorecard` |
+
+### Auto scorecard 5.6.0 (Tracy OFF, no-teleport, World_164, timeout 600)
+
+| report | hang | soft_force+debt | latch clear | holes_frac | empty_max | focus_miss | SoftDefer age | fidelity |
+|---|---|---|---|---:|---:|---:|---:|---|
+| **fly-heavy** `phase56_v0_flyheavy` | false | yes debt=81 | never | 0.12 | 8 | 0.15 | 0 | OK |
+| **fz-cold-enter** `phase56_v0_fz` | false | (expect yes) | never | ~0.23 | 8 | 0.25 | 0 | OK |
+
+SoT locus note: 192816 focus starts **[7,3]** (not inland −484). Auto resume+yaw90; save pin to chunk mid (120,57,56) after drift. Auto still greener on wall/phase/holes vs 192816 — product sprints 5.6.1+.
+
+| Sprint | Intent | Notes |
+|---|---|---|
+| 5.6.1 | Drainable PresentableCatchUp / lit debt remesh + latch clear | mesh-but-!VisualReady remesh R=4 |
+| 5.6.2 | Keep-ring frontier FM reserve outside abort | `SetFmDirtyEnqueueReserve` ≥2; no AbortDrip++ |
+| 5.6.3 | Miss witness remesh when pending_gpu=0 + dense stand ahead | |
+| 5.6.4 | Trio + GT ship; manual gate vs 192816 | |
+
+Harness: [`tools/AnalyzePhase56Scorecard.py`](../../tools/AnalyzePhase56Scorecard.py) — baseline default `192816`; keys: `visual_holes_frac`, `empty_backlog_max`, latch clear timing, ahead/miss_stuck. Every sprint: no-teleport fly-heavy + fz + Analyze. **Not** `--land-stand`.
+
 ## Phase 5.4 ship (code + no-teleport verify)
 
 ### Landed commits

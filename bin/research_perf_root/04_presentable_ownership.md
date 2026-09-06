@@ -30,3 +30,14 @@
 - No-teleport only: `--replay-manual[-fly-heavy]`, `fz-cold-enter`. **Not** `--land-stand`.
 - Always `--process-timeout 600` (soft_force@150s + fly + stop).
 - Analyze: `tools/AnalyzePhase55Scorecard.py` with `--baseline-manual` 170813.
+
+## Phase 5.6 ownership (ring frontier)
+
+| Concern | Owner | Must not |
+|---|---|---|
+| PresentableCatchUp latch | soft_force+debt arm → remesh mesh-but-!VisualReady in R=4 → clear when debt/ring/underfeet | Latch forever while mesh exists but !VisualReady |
+| Keep-ring FirstMesh | `FmDirtyEnqueueReserve` / presentable carve (r≤4) | Heal only via AbortDrip under permanent abort |
+| Miss witness progress | Dirty/FM when FocusMissing && !PendingGpu | PreferKick empty queue as progress |
+| Stand ahead honesty | Dense facing sample when !moving && miss/stuck | Stale `last_ahead` via cd=12 |
+
+Gate of record SoT: `perf_20260906-192816_24828`. Analyze: `tools/AnalyzePhase56Scorecard.py` (baseline 192816). Locus: land save + yaw 90; no teleport.
