@@ -332,6 +332,9 @@ private:
   /// Phase 5.1 T4: skip opaque by_block_id sort when draw set unchanged.
   std::vector<GreedyBatchRef> CachedOpaqueSortedRefs;
   uint64_t CachedOpaqueDrawFingerprint{0};
+  /// Phase 5.3.4: skip ApplyGpuCompactCull when draw+cull revision stable.
+  uint64_t CachedOpaqueCullRevision{0};
+  glm::vec3 CachedOpaqueCullCameraPos{0.0f};
   glm::mat4 PreparedTransparentVp{};
   const std::map<size_t, UTextureCube> *PreparedTransparentTextures{nullptr};
   IUMeshGpuStore &MeshStore();

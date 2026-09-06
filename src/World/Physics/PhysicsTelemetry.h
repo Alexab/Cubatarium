@@ -131,6 +131,12 @@ struct PhysicsTelemetry
   int SoftDeferEmptyStuckDefer{0};
   /// Era24: max SoftDefer empty age (frames) seen this tick.
   int SoftDeferEmptyAgeMaxFrames{0};
+  /// Phase 5.3: empty-column backlog + abort/skip latches.
+  int EmptyBacklogN{0};
+  int PhaseAbortHeavy{0};
+  int SkipEmptyEmerge{0};
+  int AbortScheduleFinal{0};
+  int AbortDrainFinal{0};
   /// Era24: SoftDefer empty coords with ColumnFlow FirstMesh Contains.
   int SoftDeferEmptyOwnedN{0};
   /// Era24: SoftDefer empty publish avoided (Hide⇒Ticket), cumulative.

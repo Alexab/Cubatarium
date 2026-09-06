@@ -1824,9 +1824,11 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     // MeshRevAbsorb early-out skips upload — Begin is a counter reset only.
     GreedyGpuOpaque.VertexPool.BeginUploadFrame();
     const uint64_t draw_fp = opaque_draw_fingerprint(opaque_draw);
-    if (draw_fp == CachedOpaqueDrawFingerprint &&
+    const bool draw_set_stable =
+        draw_fp == CachedOpaqueDrawFingerprint &&
         !CachedOpaqueSortedRefs.empty() &&
-        CachedOpaqueSortedRefs.size() == opaque_draw.size())
+        CachedOpaqueSortedRefs.size() == opaque_draw.size();
+    if (draw_set_stable)
     {
       opaque_draw = CachedOpaqueSortedRefs;
     }
@@ -1835,6 +1837,7 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
       std::sort(opaque_draw.begin(), opaque_draw.end(), by_block_id);
       CachedOpaqueSortedRefs = opaque_draw;
       CachedOpaqueDrawFingerprint = draw_fp;
+      CachedOpaqueCullRevision = 0;
     }
     GLboolean cullWasEnabled = GL_TRUE;
     if (!cutout.empty())
@@ -1854,8 +1857,24 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     {
       ScopedPhase cull_phase(&cull_ms);
       mdi->SetCullStatsReadbackEnabled(ShowPerformance);
-      mdi->ApplyGpuCompactCull(GreedyGpuOpaque, frustum, cameraPos,
-                               max_cull_distance, horizontal_cull);
+      // Phase 5.3.4 OpaqueCullSkipStable: reuse last instanceCounts when stable.
+      // Camera must be unchanged — CullRevision alone does not track view motion.
+      const glm::vec3 cam_delta = cameraPos - CachedOpaqueCullCameraPos;
+      const float cam_move2 =
+          cam_delta.x * cam_delta.x + cam_delta.y * cam_delta.y +
+          cam_delta.z * cam_delta.z;
+      constexpr float kCullCamEps2 = 1.0e-4f; // ~1cm
+      const bool cull_stable =
+          draw_set_stable && cullRevision == CachedOpaqueCullRevision &&
+          cam_move2 <= kCullCamEps2 && GreedyGpuOpaque.IndirectCullReady &&
+          GreedyGpuOpaque.GpuCompactActive;
+      if (!cull_stable)
+      {
+        mdi->ApplyGpuCompactCull(GreedyGpuOpaque, frustum, cameraPos,
+                                 max_cull_distance, horizontal_cull);
+        CachedOpaqueCullRevision = cullRevision;
+        CachedOpaqueCullCameraPos = cameraPos;
+      }
     }
     {
       ScopedPhase gpu_draw_phase(&gpu_draw_ms);
@@ -1878,6 +1897,7 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
   {
     CachedOpaqueSortedRefs.clear();
     CachedOpaqueDrawFingerprint = 0;
+    CachedOpaqueCullRevision = 0;
   }
   if (!cutout.empty())
   {

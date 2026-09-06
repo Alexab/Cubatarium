@@ -546,6 +546,11 @@ struct FrameNumbers
   uint64_t softdefer_empty_publish_avoided{0};
   int softdefer_held_n{0};
   int softdefer_held_age_max{0};
+  int empty_backlog_n{0};
+  int phase_abort_heavy{0};
+  int skip_empty_emerge{0};
+  int abort_schedule_final{0};
+  int abort_drain_final{0};
   double rss_mb{0.0};
   double private_mb{0.0};
   int chunk_count{0};
@@ -1092,6 +1097,11 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.softdefer_empty_publish_avoided = phys.SoftDeferEmptyPublishAvoided;
   n.softdefer_held_n = phys.SoftDeferHeldN;
   n.softdefer_held_age_max = phys.SoftDeferHeldAgeMax;
+  n.empty_backlog_n = phys.EmptyBacklogN;
+  n.phase_abort_heavy = phys.PhaseAbortHeavy;
+  n.skip_empty_emerge = phys.SkipEmptyEmerge;
+  n.abort_schedule_final = phys.AbortScheduleFinal;
+  n.abort_drain_final = phys.AbortDrainFinal;
   n.pending_cols = phys.PendingFocusCols;
   ++s.FramesSinceMemSample;
   if (s.FramesSinceMemSample >= 30)
@@ -1689,6 +1699,11 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.softdefer_empty_publish_avoided
           << ",\"softdefer_held_n\":" << n.softdefer_held_n
           << ",\"softdefer_held_age_max\":" << n.softdefer_held_age_max
+          << ",\"empty_backlog_n\":" << n.empty_backlog_n
+          << ",\"phase_abort_heavy\":" << n.phase_abort_heavy
+          << ",\"skip_empty_emerge\":" << n.skip_empty_emerge
+          << ",\"abort_schedule_final\":" << n.abort_schedule_final
+          << ",\"abort_drain_final\":" << n.abort_drain_final
           << ",\"rss_mb\":" << n.rss_mb << ",\"private_mb\":" << n.private_mb
           << ",\"chunk_count\":" << n.chunk_count
           << ",\"greedy_vertices\":" << n.greedy_vertices

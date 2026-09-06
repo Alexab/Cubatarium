@@ -33,6 +33,16 @@
 | `scene_opaque_packed_ms` | leftovers packed draw (near r≤4) |
 | `scene_opaque_cross_ms` | `DrawCrossInstancedBatches` |
 
+## Phase 5.3 empty-drip FPM keys
+
+| Key | Meaning |
+|---|---|
+| `empty_backlog_n` | max(unfinished, colnm, chunk_not_ready) |
+| `phase_abort_heavy` | StreamingPhaseBudget overrun latch |
+| `skip_empty_emerge` | TickMeshEmerge skipped this frame |
+| `abort_schedule_final` / `abort_drain_final` | schedule/drain after AbortDripCap |
+| INFO `empty_batch_event` | rise+20 then drop−20 within 2s |
+
 ## How to A/B
 
 ```powershell
@@ -58,6 +68,12 @@ python tools/simple_ab_suite.py
 - **Root cause:** `NeedsEnterGameMeshWarmup` memo keyed on frozen `StreamingFrameEpoch` during Loading.
 - **Fix:** drop memo early-return; soft_clean@12s; `settle_reason=` telem.
 - **Verify:** no-teleport fz-cold-enter + land-stand (harness A).
+
+### Phase 5.3 empty-batch / SoftDefer plateau
+
+- **Root cause:** Phase 5.2 abort/`skip_empty_emerge` starved rim FirstMesh → unfinished/colnm 64–85 → HoleDrain burst EMPTY packs; SoftDefer stuck_horiz sticky telem.
+- **Fix:** AbortDripCap + CarveUpTo2 + forbid skip on backlog + SoftDefer escape + HoleDrain FM drip≤4 + OpaqueCullSkipStable (camera-safe).
+- **Verify:** `phase53_flyheavy` empty_backlog med~2 / stuck_horiz frac0 / empty_batch_event0 / hang=false; hard gates still red.
 
 ### SimpleAB 2026-09-05
 

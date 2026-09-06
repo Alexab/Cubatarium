@@ -5,6 +5,7 @@
 #include "World/Streaming/SoftDeferFramePolicy.h"
 #include "World/Streaming/StreamingPressure.h"
 
+#include <cstdint>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -92,6 +93,11 @@ private:
   int ScheduleOkPrior{0};
   int DirtyFmPrior{0};
   int CruiseClearPeriods{0};
+  /// Phase 5.3.0: empty_batch_event rise/drop detector (steady_clock ms).
+  int EmptyBatchPrevBacklog{0};
+  int64_t EmptyBatchRiseT0Ms{0};
+  int EmptyBatchRisePeak{0};
+  int64_t EmptyBatchDropMarkMs{0};
 };
 
 } // namespace cutum

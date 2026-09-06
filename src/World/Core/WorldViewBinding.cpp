@@ -22,6 +22,7 @@
 #include "World/Diagnostics/MovementDiagnosticsRecorder.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
+#include "World/Streaming/EmptyBacklogPolicy.h"
 #include "World/Streaming/PhysicsStepPolicy.h"
 #include "World/Streaming/InputFirstPolicy.h"
 #include "World/Streaming/StreamIngressPolicy.h"
@@ -1100,12 +1101,17 @@ void UWorld::TickWorldStreamingPhase()
   {
     TickEnterGameMeshBurst();
   }
-  // Phase 5.2.2: skip empty emerge when cap exhausted and no near carve need.
+  // Phase 5.2.2 / 5.3.2: skip empty emerge only when no hole/backlog pressure.
   const bool skip_empty_emerge =
       emerge_cap <= 0.0 && !miss_carve_out &&
       PhysicsTelemetryData.UnderfeetHasMesh != 0 &&
       PhysicsTelemetryData.MissHoriz > 2 && !IsEnterLitGateActive() &&
-      !IsEnterSessionActive();
+      !IsEnterSessionActive() &&
+      !HasVisualHolePressure(PhysicsTelemetryData,
+                             PhysicsTelemetryData.VisualHoles != 0,
+                             PhysicsTelemetryData.FocusMissingMesh);
+  PhysicsTelemetryData.SkipEmptyEmerge = skip_empty_emerge ? 1 : 0;
+  PhysicsTelemetryData.EmptyBacklogN = EmptyBacklogN(PhysicsTelemetryData);
   if (!skip_empty_emerge)
   {
     TickMeshEmerge();

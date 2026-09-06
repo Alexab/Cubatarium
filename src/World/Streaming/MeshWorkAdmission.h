@@ -55,6 +55,8 @@ struct MeshWorkAdmissionInput
   int visible_black_stalled_n{0};
   /// I11-C1: miss witness age for HoleDrain exit guard.
   int miss_witness_age_frames{0};
+  /// Phase 5.3.3: EmptyBacklogN for HoleDrain FirstMesh drip clamp.
+  int empty_backlog_n{0};
 };
 
 /// Near-focus miss that blocks view / needs urgent HoleDrain (horiz≤2 or underfeet).
@@ -887,6 +889,13 @@ ComputeMeshWorkAdmission(const MeshWorkAdmissionInput &in)
     {
       out.first_mesh_schedule = std::max(out.first_mesh_schedule, fm_floor);
     }
+  }
+  // Phase 5.3.3 FirstMeshDripCap: prefer continuous 3–4 over burst 6 after starve.
+  if ((mode == MeshWorkAdmission::Mode::HoleDrain ||
+       mode == MeshWorkAdmission::Mode::DeepBacklog) &&
+      in.empty_backlog_n > 8)
+  {
+    out.first_mesh_schedule = std::min(out.first_mesh_schedule, 4);
   }
   out.stop_vb_drain_frames_report = stop_vb_drain_frames;
   out.stop_vb_budget_active =

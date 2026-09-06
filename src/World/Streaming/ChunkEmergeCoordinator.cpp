@@ -9,8 +9,10 @@
 #include "World/Streaming/IdleRecoveryPolicy.h"
 #include "World/Streaming/InputFirstPolicy.h"
 #include "World/Streaming/MeshLitGate.h"
+#include "World/Streaming/EmptyBacklogPolicy.h"
 #include "World/Streaming/MeshWorkAdmission.h"
 #include "World/Streaming/SoftDeferEmptyPolicy.h"
+#include "glog/logging.h"
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/VisualStagePolicy.h"
 #include "World/Streaming/WorldBorderPolicy.h"
@@ -188,6 +190,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   int column_flow_drain_n = 0;
   int column_flow_admit_batch = 1;
   int idle_seam_budget_this_frame = 0;
+  // Phase 5.3.2: ≤2 SoftDefer PreferKick / stuck FirstMesh escapes per frame.
+  int stuck_escape_fm_budget = 2;
   auto note_column_flow_drain = [&](int drain_n, int admit_batch)
   {
     column_flow_drain_n = std::max(column_flow_drain_n, drain_n);
@@ -875,6 +879,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   phys_telem.SoftDeferEmptyPlaceholderN = 0;
   phys_telem.SoftDeferEmptyStuckN = 0;
   phys_telem.SoftDeferEmptyStuckDefer = 0;
+  phys_telem.SoftDeferEmptyStuckHoriz = 0;
+  phys_telem.SoftDeferEmptyStuckCx = 0;
+  phys_telem.SoftDeferEmptyStuckCy = 0;
+  phys_telem.SoftDeferEmptyStuckCz = 0;
   phys_telem.SoftDeferEmptyAgeMaxFrames = 0;
   phys_telem.SoftDeferEmptyOwnedN = 0;
   {
@@ -1442,35 +1450,54 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // B5: SoftDefer-empty stuck — ColPipe P4: FirstMesh only if not already owned
   // (no MarkDirtyPriority / full-column Dirty storm).
   // FZ2.7-P12 A6: also pin under moving cruise when unfinished storm.
+  // Phase 5.3.2: earlier escape when SoftDeferEmptyStuckHoriz∈[1,5] ages.
   const int unf_stuck = world.GetPhysicsTelemetry().UnfinishedVisual;
-  if (missing_visible_mesh && phys_telem.SoftDeferEmptyStuckN > 0 &&
-      (!moving || unf_stuck > 30))
+  const int soft_stuck_n = phys_telem.SoftDeferEmptyStuckN;
+  const int soft_stuck_h = phys_telem.SoftDeferEmptyStuckHoriz;
+  const int soft_age_max = phys_telem.SoftDeferEmptyAgeMaxFrames;
+  auto try_stuck_escape_fm = [&](const glm::ivec3 &stuck, int priority) -> bool
+  {
+    if (stuck_escape_fm_budget <= 0)
+    {
+      return false;
+    }
+    const glm::ivec2 stuck_col(stuck.x, stuck.z);
+    auto &exec = GetColumnFlowExecutor();
+    if (exec.Scheduler().Contains(stuck_col, ColumnWorkKind::FirstMesh) ||
+        SoftDeferEmptyOwned.count(stuck) > 0)
+    {
+      return false;
+    }
+    ColumnWorkItem pin{};
+    pin.column = stuck_col;
+    pin.kind = ColumnWorkKind::FirstMesh;
+    pin.priority = priority;
+    pin.scan_full_focus = false;
+    pin.cy = stuck.y;
+    exec.Enqueue(pin);
+    SoftDeferEmptyOwned.insert(stuck);
+    note_column_flow_drain(2, 2);
+    --stuck_escape_fm_budget;
+    return true;
+  };
+  if (missing_visible_mesh && soft_stuck_n > 0 &&
+      (!moving || unf_stuck > 30 ||
+       (soft_stuck_h >= 1 && soft_stuck_h <= 5 && soft_age_max >= 30)))
   {
     const bool stop_tail_stuck =
         MissWitnessAgeFrames > 240 && world.GetTimeSinceMotionSec() > 4.0 &&
         pending_focus_count <= 2;
-    const bool cruise_stuck = moving && unf_stuck > 30 &&
-                              MissWitnessAgeFrames > 15;
+    const bool cruise_stuck =
+        moving &&
+        ((unf_stuck > 30 && MissWitnessAgeFrames > 15) ||
+         (soft_stuck_n > 0 && soft_stuck_h >= 1 && soft_stuck_h <= 5 &&
+          soft_age_max >= 30));
     if (stop_tail_stuck || MissWitnessAgeFrames > 120 || cruise_stuck)
     {
       const glm::ivec3 stuck(phys_telem.SoftDeferEmptyStuckCx,
                              phys_telem.SoftDeferEmptyStuckCy,
                              phys_telem.SoftDeferEmptyStuckCz);
-      const glm::ivec2 stuck_col(stuck.x, stuck.z);
-      auto &exec = GetColumnFlowExecutor();
-      if (!exec.Scheduler().Contains(stuck_col, ColumnWorkKind::FirstMesh) &&
-          SoftDeferEmptyOwned.count(stuck) == 0)
-      {
-        ColumnWorkItem pin{};
-        pin.column = stuck_col;
-        pin.kind = ColumnWorkKind::FirstMesh;
-        pin.priority = stop_tail_stuck ? 126 : 115;
-        pin.scan_full_focus = false;
-        pin.cy = stuck.y;
-        exec.Enqueue(pin);
-        SoftDeferEmptyOwned.insert(stuck);
-        note_column_flow_drain(2, 2);
-      }
+      try_stuck_escape_fm(stuck, stop_tail_stuck ? 126 : 115);
     }
   }
 
@@ -2364,6 +2391,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.visible_black_stalled_n =
         world.GetPhysicsTelemetry().VisibleBlackStalledN;
     ain.miss_witness_age_frames = MissWitnessAgeFrames;
+    ain.empty_backlog_n = EmptyBacklogN(world.GetPhysicsTelemetry());
     if (have_nearest_missing)
     {
       ain.nearest_miss_horiz = std::max(
@@ -3565,9 +3593,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           ? std::max(0.0, static_cast<double>(phase_budget_ms) -
                               phase_elapsed_at_prep)
           : std::max(0.0, world.GetPhysicsTelemetry().EmergeBudgetCapMs);
-  // Phase 5.1 T5 / 5.2.3: miss mh∈[2,4] carve — one FirstMesh/MarkDirty while
-  // remain>0. Rate-limit same hole to avoid thrash under abort.
-  // Also T3B: nearest heal when heavy post-prep aborted (mh>2 clean overrun).
+  // Phase 5.1 T5 / 5.2.3 / 5.3.1 CarveUpTo2: miss carve while remain>0 or abort.
+  // Rate-limit same hole; allow up to 2 when empty backlog / SoftDefer stuck.
   if (have_nearest_missing &&
       ((nearest_miss_h >= 2 && nearest_miss_h <= 4 && phase_remain > 0.0) ||
        phase_abort_heavy))
@@ -3575,37 +3602,131 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     static glm::ivec3 s_last_carve_hole{0, INT_MIN, 0};
     static uint64_t s_last_carve_epoch = 0;
     const uint64_t epoch = world.GetStreamingFrameEpoch();
-    const bool same_hole_thrash =
-        nearest_missing_hole == s_last_carve_hole &&
-        s_last_carve_epoch != 0 && epoch == s_last_carve_epoch;
-    if (!same_hole_thrash &&
-        !mesh_service.HasInflightMeshBuild(nearest_missing_hole) &&
-        !mesh_service.IsPendingGpuApply(nearest_missing_hole) &&
-        !mesh_service.HasMeshSatisfyingColumnReady(nearest_missing_hole))
+    const auto &pt_carve = world.GetPhysicsTelemetry();
+    const int holes_to_carve =
+        (EmptyBacklogN(pt_carve) >= 8 || pt_carve.SoftDeferEmptyStuckN > 0) ? 2
+                                                                            : 1;
+    auto try_carve_hole = [&](const glm::ivec3 &hole) -> bool
     {
-      mesh_service.MarkDirtyPriority(nearest_missing_hole);
-      GetColumnFlowExecutor().Enqueue(
-          glm::ivec2(nearest_missing_hole.x, nearest_missing_hole.z),
-          ColumnWorkKind::FirstMesh, 100);
+      const bool same_hole_thrash =
+          hole == s_last_carve_hole && s_last_carve_epoch != 0 &&
+          epoch == s_last_carve_epoch;
+      if (same_hole_thrash || mesh_service.HasInflightMeshBuild(hole) ||
+          mesh_service.IsPendingGpuApply(hole) ||
+          mesh_service.HasMeshSatisfyingColumnReady(hole))
+      {
+        return false;
+      }
+      mesh_service.MarkDirtyPriority(hole);
+      GetColumnFlowExecutor().Enqueue(glm::ivec2(hole.x, hole.z),
+                                      ColumnWorkKind::FirstMesh, 100);
       note_column_flow_drain(1, 1);
-      s_last_carve_hole = nearest_missing_hole;
+      s_last_carve_hole = hole;
       s_last_carve_epoch = epoch;
+      return true;
+    };
+    int carved = 0;
+    if (try_carve_hole(nearest_missing_hole))
+    {
+      ++carved;
+    }
+    if (carved < holes_to_carve)
+    {
+      // Second nearest: one ring scan excluding first (NearestMemo returns same).
+      constexpr int kMissingScanMaxCy = 48;
+      const int scan_r = std::max(4, focus_radius);
+      int cy_lo = 0;
+      int cy_hi = kMissingScanMaxCy;
+      if (focus_ground_horiz.y > 0)
+      {
+        cy_lo = std::max(0, focus_ground_horiz.y - 1);
+        cy_hi = std::min(kMissingScanMaxCy, focus_ground_horiz.y + 1);
+      }
+      bool found_second = false;
+      glm::ivec3 second_hole{};
+      for (int r = 0; r <= scan_r && !found_second; ++r)
+      {
+        for (int dz = -r; dz <= r && !found_second; ++dz)
+        {
+          for (int dx = -r; dx <= r && !found_second; ++dx)
+          {
+            if (r > 0 && std::max(std::abs(dx), std::abs(dz)) != r)
+            {
+              continue;
+            }
+            for (int cy = cy_lo; cy <= cy_hi; ++cy)
+            {
+              const glm::ivec3 cand(focus_ground_horiz.x + dx, cy,
+                                    focus_ground_horiz.z + dz);
+              if (cand == nearest_missing_hole)
+              {
+                continue;
+              }
+              if (mesh_service.HasDrawableGreedyMesh(cand) ||
+                  mesh_service.HasMeshSatisfyingColumnReady(cand) ||
+                  mesh_service.HasInflightMeshBuild(cand) ||
+                  mesh_service.IsPendingGpuApply(cand))
+              {
+                continue;
+              }
+              if (!world.GetBlockWorld().GetChunkManager().GetChunk(cand))
+              {
+                continue;
+              }
+              // Cheap solid check — match nearest miss intent (any non-air).
+              const UChunk *chunk =
+                  world.GetBlockWorld().GetChunkManager().GetChunk(cand);
+              bool any_solid = false;
+              for (int z = 0; z < CHUNK_SIZE && !any_solid; z += 4)
+              {
+                for (int x = 0; x < CHUNK_SIZE && !any_solid; x += 4)
+                {
+                  for (int y = 0; y < CHUNK_SIZE && !any_solid; y += 4)
+                  {
+                    if (chunk->GetBlockLocal(glm::ivec3(x, y, z)) != BLOCK_AIR)
+                    {
+                      any_solid = true;
+                    }
+                  }
+                }
+              }
+              if (!any_solid)
+              {
+                continue;
+              }
+              found_second = true;
+              second_hole = cand;
+              break;
+            }
+          }
+        }
+      }
+      if (found_second && try_carve_hole(second_hole))
+      {
+        ++carved;
+      }
     }
   }
+  const bool abort_needs_drip =
+      AbortNeedsDrip(world.GetPhysicsTelemetry(), missing_underfeet,
+                     nearest_miss_h, visual_holes);
   if (phase_abort_heavy)
   {
-    // Phase 5.2.2: underfeet/mh≤2 keep feed=1; else schedule/drain=0.
-    if (missing_underfeet || nearest_miss_h <= 2)
+    // Phase 5.3.1 AbortDripCap: steady drip under backlog/holes; else starve.
+    sync_cap = 0;
+    if (abort_needs_drip)
     {
-      mesh_schedule = std::min(mesh_schedule, 1);
-      mesh_drain = std::min(mesh_drain, 1);
+      constexpr int kAbortDrip = 2;
+      mesh_schedule = std::min(mesh_schedule, kAbortDrip);
+      mesh_drain = std::min(mesh_drain, kAbortDrip);
+      mesh_schedule = std::max(mesh_schedule, 1);
+      mesh_drain = std::max(mesh_drain, 1);
     }
     else
     {
       mesh_schedule = 0;
       mesh_drain = 0;
     }
-    sync_cap = 0;
   }
   // Moving + dirty backlog: ensure minimum async feed rate so dirty queue
   // drains steadily instead of starving.
@@ -4653,14 +4774,26 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // sites Enqueue RemeshSeam without SyncIdle MarkDirty).
   if (phase_abort_heavy)
   {
-    column_flow_drain_n = std::min(column_flow_drain_n, 1);
-    column_flow_admit_batch = 1;
+    // Phase 5.3.1 ColumnFlowAbortFirstMesh: drip FirstMesh only when needed.
+    if (abort_needs_drip)
+    {
+      column_flow_drain_n = std::max(column_flow_drain_n, 1);
+      column_flow_admit_batch = std::max(column_flow_admit_batch, 1);
+    }
+    else
+    {
+      column_flow_drain_n = 0;
+      column_flow_admit_batch = 0;
+    }
   }
   {
     auto &exec = GetColumnFlowExecutor();
     const auto column_flow_t0 = std::chrono::high_resolution_clock::now();
-    exec.DrainBudget(world, std::max(1, column_flow_drain_n),
-                     focus_ground_horiz, focus_radius,
+    const int drain_n =
+        (phase_abort_heavy && !abort_needs_drip)
+            ? 0
+            : std::max(1, column_flow_drain_n);
+    exec.DrainBudget(world, drain_n, focus_ground_horiz, focus_radius,
                      column_flow_admit_batch);
     const int seam_budget =
         phase_abort_heavy
@@ -4710,14 +4843,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       consume_gpu = std::max(consume_gpu, 4);
       consume_budget = std::max(consume_budget, 6.0);
     }
-    // R4.5.2 / R4.6.2: PreferKick for near-miss band mh∈[0,4] even when
-    // VisualHoles crisis telem is 0 (rim mh=3 FocusMissing).
+    // R4.5.2 / R4.6.2 / Phase 5.3.2: PreferKick near-miss; allow under abort
+    // when SoftDefer stuck / empty backlog (rate-limited with stuck escapes).
+    const auto &pt_kick = world.GetPhysicsTelemetry();
     const bool near_miss_finish =
-        !phase_abort_heavy &&
-        (missing_visible_mesh ||
-         world.GetPhysicsTelemetry().FocusMissingMesh > 0) &&
-        nearest_miss_h >= 0 && nearest_miss_h <= 4;
-    if (near_miss_finish &&
+        (missing_visible_mesh || pt_kick.FocusMissingMesh > 0) &&
+        nearest_miss_h >= 0 && nearest_miss_h <= 4 &&
+        (!phase_abort_heavy || pt_kick.SoftDeferEmptyStuckN > 0 ||
+         EmptyBacklogN(pt_kick) >= 8);
+    if (near_miss_finish && stuck_escape_fm_budget > 0 &&
         (pending_gpu_n > 0 || mesh_service.GetPendingGpuQueuedCount() > 0))
     {
       consume_gpu = std::max(consume_gpu, 4);
@@ -4729,11 +4863,14 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           mesh_service.IsPendingGpuKickedOrDispatched(hole))
       {
         mesh_service.PreferKickPendingGpuQueued(hole);
+        --stuck_escape_fm_budget;
       }
-      if (mesh_service.GetLiveDirtyFirstMeshCount() == 0 &&
+      if (stuck_escape_fm_budget > 0 &&
+          mesh_service.GetLiveDirtyFirstMeshCount() == 0 &&
           mesh_service.IsSoftDeferHeld(hole))
       {
         mesh_service.MarkDirtyPriority(hole);
+        --stuck_escape_fm_budget;
       }
     }
     gpu_consume_done = mesh_service.ConsumeGpuApplyBacklog(
@@ -4792,6 +4929,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     ain.visible_black_stalled_n =
         world.GetPhysicsTelemetry().VisibleBlackStalledN;
     ain.miss_witness_age_frames = MissWitnessAgeFrames;
+    ain.empty_backlog_n = EmptyBacklogN(world.GetPhysicsTelemetry());
     MeshWorkAdmission adm = ComputeMeshWorkAdmission(ain);
     {
       const auto &tune = URuntimeTuning::Get();
@@ -4964,8 +5102,18 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   mesh_service.SetPendingLightFocusPressure(pending_focus_count);
   if (phase_abort_heavy)
   {
-    mesh_schedule = std::min(mesh_schedule, 2);
-    mesh_drain = std::min(mesh_drain, 2);
+    // Reinforce AbortDripCap after late floors (calm/admission must not starve drip).
+    if (abort_needs_drip)
+    {
+      constexpr int kAbortDrip = 2;
+      mesh_schedule = std::min(std::max(mesh_schedule, 1), kAbortDrip);
+      mesh_drain = std::min(std::max(mesh_drain, 1), kAbortDrip);
+    }
+    else
+    {
+      mesh_schedule = 0;
+      mesh_drain = 0;
+    }
     LastBudget.MaxMeshSchedule = mesh_schedule;
     LastBudget.MaxMeshDrain = mesh_drain;
   }
@@ -5292,6 +5440,61 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       GetColumnFlowExecutor().SyncFocusRingColumnJobStages(
           world, focus_ground_horiz, sync_r_end);
     }
+  }
+
+  // Phase 5.3.0: latch empty backlog / abort drip + DetectEmptyBatchEvent.
+  {
+    auto &pt = world.GetPhysicsTelemetryMutable();
+    pt.EmptyBacklogN = EmptyBacklogN(pt);
+    pt.PhaseAbortHeavy = phase_abort_heavy ? 1 : 0;
+    pt.AbortScheduleFinal = mesh_schedule;
+    pt.AbortDrainFinal = mesh_drain;
+    const int b = pt.EmptyBacklogN;
+    const int64_t now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                               std::chrono::steady_clock::now().time_since_epoch())
+                               .count();
+    if (b >= EmptyBatchPrevBacklog + 20)
+    {
+      if (EmptyBatchRiseT0Ms == 0)
+      {
+        EmptyBatchRiseT0Ms = now_ms;
+        EmptyBatchRisePeak = b;
+      }
+      else
+      {
+        EmptyBatchRisePeak = std::max(EmptyBatchRisePeak, b);
+      }
+      EmptyBatchDropMarkMs = 0;
+    }
+    if (EmptyBatchRiseT0Ms != 0 && (now_ms - EmptyBatchRiseT0Ms) <= 2000 &&
+        b <= EmptyBatchRisePeak - 20)
+    {
+      if (EmptyBatchDropMarkMs == 0)
+      {
+        EmptyBatchDropMarkMs = now_ms;
+      }
+      if ((now_ms - EmptyBatchDropMarkMs) <= 1000)
+      {
+        LOG(INFO) << "empty_batch_event rise_peak=" << EmptyBatchRisePeak
+                  << " drop_to=" << b
+                  << " dt_rise_ms=" << (now_ms - EmptyBatchRiseT0Ms)
+                  << " dt_drop_ms=" << (now_ms - EmptyBatchDropMarkMs)
+                  << " abort=" << pt.PhaseAbortHeavy
+                  << " schedule=" << pt.AbortScheduleFinal
+                  << " drain=" << pt.AbortDrainFinal
+                  << " stuck_horiz=" << pt.SoftDeferEmptyStuckHoriz;
+        EmptyBatchRiseT0Ms = 0;
+        EmptyBatchDropMarkMs = 0;
+        EmptyBatchRisePeak = 0;
+      }
+    }
+    if (EmptyBatchRiseT0Ms != 0 && (now_ms - EmptyBatchRiseT0Ms) > 2000)
+    {
+      EmptyBatchRiseT0Ms = 0;
+      EmptyBatchDropMarkMs = 0;
+      EmptyBatchRisePeak = 0;
+    }
+    EmptyBatchPrevBacklog = b;
   }
 }
 
