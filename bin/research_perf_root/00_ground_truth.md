@@ -94,7 +94,24 @@ Manual SoT: `perf_20260907-093857_26724.jsonl` + INFO `…093855.26724` (+ `ente
 
 | Sprint | Commit | Notes |
 |---|---|---|
-| 5.7.0 | (this) | Phase57 scorecard + discard epoch/job attribution vs 093857; fly+fz FIDELITY_OK |
+| 5.7.0 | scorecard + discard telem | Phase57 scorecard + discard epoch/job; fly+fz FIDELITY_OK |
+| 5.7.1 | anti-flicker discard | keep-until-replace; cruise discard delta med=0 |
+| 5.7.2 | ticketed VB + miss SLA | remesh stand 15; fly no_ticket≪91; miss_stuck not↑ |
+| 5.7.3 | latch/debt drain | Mark budget 8; debt_tail_med≤36 Pass |
+| 5.7.4 | `447a6dd8` + `3b97c687`/`bca29c2d` | opaque_cull; near-stand + half-rate; fail-open N=3 |
+| 5.7.5 | `052dc880` | Relight FIFO max-heap farthest trim |
+| 5.7.6 | `11121bca` | VB dirty-ring memo (invalidate→cadence accelerate) |
+| 5.7.7 | (ship) | trio PRODUCT_OK vs 093857; manual deferred (latch) |
+
+### Ship auto scorecard (Tracy OFF, no-teleport, World_164, timeout 600)
+
+| report | hang | discardΔ | VB med | opaque_cull | debt_tail | SoftDefer | product |
+|---|---|---|---:|---:|---:|---|---|
+| **fly-heavy** `phase57_ship4_flyheavy` | false | **0** | **9** | **19.9** | **23** | **0** | **OK** |
+| **fz-cold-enter** `phase57_ship3_fz` | false | **0** | **8.5** | **14.2** | **18** | **0** | **OK** |
+| **land replay** `phase57_ship3_land` | false | **0** | **11** | **7.0** | **26** | **0** | **OK** |
+
+vs manual 093857: discard/VB/holes class improved on auto; opaque_cull best on land (~7) / prior fly peak ~5.9 (v456c); fly ship4 cull noisy (~20, fail-open+half-rate). Latch clear still never (debt max=81 honest soft_force). **Manual eye deferred** (not product-green latch settle).
 
 Harness: [`tools/AnalyzePhase57Scorecard.py`](../../tools/AnalyzePhase57Scorecard.py) — baseline default `093857`. Locus pin `(120,57.31,56)` + yaw 90. **Not** `--land-stand`. No teleport for `phase57_*`.
 

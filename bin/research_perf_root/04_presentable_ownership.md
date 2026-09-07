@@ -40,7 +40,7 @@
 | Latch debt drain | EnterVisualWarmup clear = SoftDefer∧debt≤0; R≤4 lit bias | Clear on ring/underfeet alone; hinterland debt gates clear |
 | OpaqueCull / FIFO / VB scan | GeometryEngine skip; Relight FIFO heap; VB dirty-ring memo | Raise StreamingPhaseBudgetMs; skip under FocusMissing |
 
-Gate of record SoT: `perf_20260907-093857_26724`. Analyze: `tools/AnalyzePhase57Scorecard.py` (baseline 093857). Locus: `(120,57.31,56)` + yaw 90; no teleport for `phase57_*`. Process: auto verify + auto-commit on green; red → in-goal replan-fix ≤3.
+Gate of record SoT: `perf_20260907-093857_26724`. Analyze: `tools/AnalyzePhase57Scorecard.py` (baseline 093857). Locus: `(120,57.31,56)` + yaw 90; no teleport for `phase57_*`. Process: auto verify + auto-commit on green; red → in-goal replan-fix ≤3. Phase 5.7 **code ship** trio PRODUCT_OK (`phase57_ship4_flyheavy`, `phase57_ship3_fz`, `phase57_ship3_land`); **manual eye deferred** (latch never clear / soft_force+debt honest).
 
 ## Phase 5.6 ownership (ring frontier)
 
