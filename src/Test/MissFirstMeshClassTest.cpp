@@ -3424,6 +3424,7 @@ int main()
            "cull: some on keeps compact");
     using cutum::ShouldSkipOpaqueCullLightCruise;
     using cutum::ShouldSkipOpaqueCullStable;
+    using cutum::ShouldSkipOpaqueCullHalfRate;
     using cutum::ShouldThrottleFailOpenGpuCompact;
     Expect(ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
                                            0.4f, false, false),
@@ -3438,6 +3439,12 @@ int main()
            "5.7.4: stable skip OK");
     Expect(!ShouldSkipOpaqueCullStable(true, true, false),
            "5.7.4: stable no skip under miss");
+    Expect(ShouldSkipOpaqueCullHalfRate(true, true, true, true, false, false, 0),
+           "5.7.4b: half-rate even frame");
+    Expect(!ShouldSkipOpaqueCullHalfRate(true, true, true, true, false, false, 1),
+           "5.7.4b: half-rate odd frame");
+    Expect(!ShouldSkipOpaqueCullHalfRate(true, true, true, true, true, false, 0),
+           "5.7.4b: half-rate no miss");
     Expect(ShouldThrottleFailOpenGpuCompact(3),
            "5.7.4: fail-open after N=3");
     Expect(!ShouldThrottleFailOpenGpuCompact(2),

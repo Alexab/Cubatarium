@@ -88,6 +88,22 @@ inline bool ShouldSkipOpaqueCullStable(bool cull_stable, bool focus_missing,
   return cull_stable && !focus_missing && !vb_edge;
 }
 
+/// Phase 5.7.4b: alternate-frame skip while moving when draw set + focus healthy
+/// (cuts cruise cull wall without land light-cruise thrash).
+inline bool ShouldSkipOpaqueCullHalfRate(bool draw_set_stable, bool rev_match,
+                                         bool reverse_compact_active,
+                                         bool focus_unchanged,
+                                         bool focus_missing, bool vb_edge,
+                                         uint32_t frame_parity)
+{
+  if (focus_missing || vb_edge || !draw_set_stable || !rev_match ||
+      !reverse_compact_active || !focus_unchanged)
+  {
+    return false;
+  }
+  return (frame_parity & 1u) == 0u;
+}
+
 /// Phase 5.7.4: throttle fail-open CPU AABB — need N consecutive triggers.
 inline bool ShouldThrottleFailOpenGpuCompact(int consecutive_fail_open,
                                              int threshold = 3)

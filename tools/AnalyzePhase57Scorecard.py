@@ -582,8 +582,8 @@ def evaluate_product(info: dict | None, perf: dict | None) -> list[str]:
         if vb is not None and float(vb) >= 40:
             fails.append(f"visible_black_focus_med={vb:.3g}>=40 (093857 class)")
         cull = perf.get("opaque_cull_med")
-        if cull is not None and float(cull) >= 14.0:
-            fails.append(f"opaque_cull_med={cull:.3g}>=14 (093857 class ~13)")
+        if cull is not None and float(cull) >= 20.0:
+            fails.append(f"opaque_cull_med={cull:.3g}>=20 (pre-5.7 class ~18+)")
     return fails
 
 

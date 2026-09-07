@@ -1899,9 +1899,13 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
               cam_move2, kCullCamEps2, GreedyGpuOpaque.IndirectCullReady,
               GreedyGpuOpaque.GpuCompactActive, move_spd, focus_missing,
               vb_edge);
+      const bool half_rate_skip = ShouldSkipOpaqueCullHalfRate(
+          draw_set_stable, cullRevision == CachedOpaqueCullRevision,
+          GreedyGpuOpaque.GpuCompactActive, focus_unchanged, focus_missing,
+          vb_edge, OpaqueCullFrameParity++);
       const bool do_skip =
           ShouldSkipOpaqueCullStable(cull_stable, focus_missing, vb_edge) ||
-          light_cruise_skip;
+          light_cruise_skip || half_rate_skip;
       if (!do_skip)
       {
         const bool ok = mdi->ApplyGpuCompactCull(
