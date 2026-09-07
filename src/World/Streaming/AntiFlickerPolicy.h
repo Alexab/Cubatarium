@@ -219,4 +219,20 @@ inline bool ShouldRemeshDrawableForHiddenNeighborSeam(bool has_drawable,
   return neighbor_hidden_now != neighbor_hidden_prev;
 }
 
+/// Phase 5.7.1: late DiscardedCoords must not Dirty-storm a live drawable or
+/// SoftDeferHeld residency — keep GPU until Bind/PendingReplace (I-R1 cancel).
+inline bool ShouldSilentDropStaleMeshDiscard(bool has_drawable,
+                                             bool soft_defer_held)
+{
+  return has_drawable || soft_defer_held;
+}
+
+/// Phase 5.7.1: requeue DiscardedLate only for FirstMesh orphans (!drawable &&
+/// !SoftDeferHeld). Drawable remesh discard is silent-dropped above.
+inline bool ShouldRequeueAfterMeshDiscard(bool has_drawable,
+                                          bool soft_defer_held)
+{
+  return !ShouldSilentDropStaleMeshDiscard(has_drawable, soft_defer_held);
+}
+
 } // namespace cutum

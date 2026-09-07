@@ -512,7 +512,14 @@ void UChunkMeshCache::CancelAsyncInFlightKeepDirty(glm::ivec3 focus_ground_chunk
         continue;
       }
     }
-    Dirty.MarkDirtyPriority(entry.first);
+    // Phase 5.7.1: drawable / SoftDeferHeld keep residency until Bind — do not
+    // force Dirty after CancelPending epoch bump (DiscardedLate silent-drop).
+    const bool drawable = HasDrawableGreedyMesh(entry.first);
+    const bool soft_held = IsSoftDeferHeld(entry.first);
+    if (ShouldRequeueAfterMeshDiscard(drawable, soft_held))
+    {
+      Dirty.MarkDirtyPriority(entry.first);
+    }
   }
   AsyncBuilder->CancelPending();
   // Builder InFlight was cleared; Active/RemeshAfterApply must follow or
@@ -5183,9 +5190,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     }
     for (const glm::ivec3 &coord : AsyncBuilder->TakeDiscardedCoords())
     {
-      // Epoch / jobId DiscardedLate frees InFlight but leaves Active orphan —
-      // FirstMesh always requeues; remesh discard respects DirtyAdmit.
-      if (!HasDrawableGreedyMesh(coord) || TryConsumeDirtyAdmit())
+      // Phase 5.7.1: epoch/job DiscardedLate — FirstMesh orphan requeues;
+      // drawable / SoftDeferHeld silent-drop (keep-until-replace).
+      const bool drawable = HasDrawableGreedyMesh(coord);
+      const bool soft_held = IsSoftDeferHeld(coord);
+      if (ShouldRequeueAfterMeshDiscard(drawable, soft_held))
       {
         MarkDirtyPriority(coord);
       }
@@ -6312,7 +6321,13 @@ void UChunkMeshCache::DrainAsyncMeshResults(UBlockWorld &world,
   }
   for (const glm::ivec3 &coord : AsyncBuilder->TakeDiscardedCoords())
   {
-    MarkDirtyPriority(coord);
+    // Phase 5.7.1: same gate as emerge TakeDiscarded (no admit thrash).
+    const bool drawable = HasDrawableGreedyMesh(coord);
+    const bool soft_held = IsSoftDeferHeld(coord);
+    if (ShouldRequeueAfterMeshDiscard(drawable, soft_held))
+    {
+      MarkDirtyPriority(coord);
+    }
   }
   for (MeshBuildResult &result : AsyncBuilder->DrainCompleted(max_per_frame))
   {

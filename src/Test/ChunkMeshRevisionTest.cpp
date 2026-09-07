@@ -1,5 +1,6 @@
 #include "Render/Mesh/ChunkMeshRevisionRegistry.h"
 #include "Render/Mesh/MeshApplyPolicy.h"
+#include "World/Streaming/AntiFlickerPolicy.h"
 
 #include <glm/glm.hpp>
 #include <cstdlib>
@@ -153,6 +154,26 @@ int main()
            "P4: beyond keep ring not kept");
     Expect(!ShouldKeepPackedDrawUntilBind(false, 2, 4, false),
            "P4: no prior GPU nothing to keep");
+  }
+
+  // --- Phase 5.7.1 AntiFlicker discard → Dirty ---
+  {
+    using cutum::ShouldSilentDropStaleMeshDiscard;
+    using cutum::ShouldRequeueAfterMeshDiscard;
+    Expect(ShouldSilentDropStaleMeshDiscard(true, false),
+           "5.7.1: drawable discard silent-drop");
+    Expect(ShouldSilentDropStaleMeshDiscard(false, true),
+           "5.7.1: SoftDeferHeld discard silent-drop");
+    Expect(ShouldSilentDropStaleMeshDiscard(true, true),
+           "5.7.1: drawable+SoftDeferHeld silent-drop");
+    Expect(!ShouldSilentDropStaleMeshDiscard(false, false),
+           "5.7.1: FirstMesh orphan not silent-drop");
+    Expect(!ShouldRequeueAfterMeshDiscard(true, false),
+           "5.7.1: drawable → no Dirty");
+    Expect(!ShouldRequeueAfterMeshDiscard(false, true),
+           "5.7.1: SoftDeferHeld → no Dirty");
+    Expect(ShouldRequeueAfterMeshDiscard(false, false),
+           "5.7.1: !drawable → Dirty");
   }
 
   if (failures != 0)

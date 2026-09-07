@@ -39,8 +39,8 @@ MANUAL_093857 = {
     "miss_stuck_run_frames_tail_max": 1166.0,
     "enter_settle_soft_force_with_debt_max": 1.0,
     "latch_clear_t_ms": None,  # never cleared on SoT
-    "mesh_discarded_late_med": 12.0,
-    "mesh_discarded_late_max": 30.0,
+    "mesh_discarded_late_med": 0.0,  # cruise period-delta (093857 abs plateau ~12)
+    "mesh_discarded_late_max": 12.0,  # cruise sum growth class
     "visible_black_focus_med": 43.0,
     "visible_black_focus_max": 108.0,
     "vb_no_ticket_max": 91.0,
@@ -160,6 +160,84 @@ def analyze_perf(path: Path):
         xs = [float(x) for x in series(key, rows) if x is not None]
         return max(xs) if xs else None
 
+    def series_delta_med(key, rows=None):
+        """Median of non-negative period-to-period growth (cumulative counters)."""
+        rows = use if rows is None else rows
+        prev = None
+        deltas = []
+        for r in rows:
+            v = g(r, key)
+            if v is None:
+                continue
+            fv = float(v)
+            if prev is not None:
+                deltas.append(max(0.0, fv - prev))
+            prev = fv
+        return median(deltas) if deltas else None
+
+    def series_delta_sum(key, rows=None):
+        rows = use if rows is None else rows
+        prev = None
+        total = 0.0
+        n = 0
+        for r in rows:
+            v = g(r, key)
+            if v is None:
+                continue
+            fv = float(v)
+            if prev is not None:
+                total += max(0.0, fv - prev)
+                n += 1
+            prev = fv
+        return total if n else None
+
+    def cruise_delta_med(key):
+        """Growth only across consecutive cruise periods (skip enter stand spike)."""
+        prev = None
+        prev_cruise = False
+        deltas = []
+        for r in periods:
+            try:
+                spd = float(r.get("movement_speed") or 0)
+            except (TypeError, ValueError):
+                spd = 0.0
+            is_cruise = spd > 2.0
+            v = g(r, key)
+            if v is None:
+                prev = None
+                prev_cruise = False
+                continue
+            fv = float(v)
+            if prev is not None and is_cruise and prev_cruise:
+                deltas.append(max(0.0, fv - prev))
+            prev = fv
+            prev_cruise = is_cruise
+        return median(deltas) if deltas else None
+
+    def cruise_delta_sum(key):
+        prev = None
+        prev_cruise = False
+        total = 0.0
+        n = 0
+        for r in periods:
+            try:
+                spd = float(r.get("movement_speed") or 0)
+            except (TypeError, ValueError):
+                spd = 0.0
+            is_cruise = spd > 2.0
+            v = g(r, key)
+            if v is None:
+                prev = None
+                prev_cruise = False
+                continue
+            fv = float(v)
+            if prev is not None and is_cruise and prev_cruise:
+                total += max(0.0, fv - prev)
+                n += 1
+            prev = fv
+            prev_cruise = is_cruise
+        return total if n else None
+
     focus_key = "focus_missing_mesh"
     abort_key = "phase_abort_heavy"
     return {
@@ -225,12 +303,16 @@ def analyze_perf(path: Path):
         "gpu_kick_med": median(series("gpu_kick_n")),
         "gpu_kick_tail_med": median(series("gpu_kick_n", tail)),
         "relight_fifo_med": median(series("relight_fifo_n")),
-        "mesh_discarded_late_med": median(series("mesh_discarded_late")),
-        "mesh_discarded_late_max": series_max("mesh_discarded_late"),
-        "mesh_discarded_late_epoch_max": series_max("mesh_discarded_late_epoch"),
-        "mesh_discarded_late_job_mismatch_max": series_max(
+        # Cumulative FPM: consecutive-cruise deltas only (enter stand spike excluded).
+        "mesh_discarded_late_med": cruise_delta_med("mesh_discarded_late"),
+        "mesh_discarded_late_max": cruise_delta_sum("mesh_discarded_late"),
+        "mesh_discarded_late_epoch_max": cruise_delta_sum(
+            "mesh_discarded_late_epoch"
+        ),
+        "mesh_discarded_late_job_mismatch_max": cruise_delta_sum(
             "mesh_discarded_late_job_mismatch"
         ),
+        "mesh_discarded_late_abs_med": median(series("mesh_discarded_late")),
         "visible_black_focus_med": median(series("visible_black_focus_n")),
         "visible_black_focus_max": series_max("visible_black_focus_n"),
         "vb_no_ticket_max": series_max("visible_black_no_ticket_n"),
@@ -377,8 +459,9 @@ def print_control_checklist(perf: dict | None, info: dict | None, report: dict):
         )
         print(
             f"  mesh_discarded_late_med={fmt(perf.get('mesh_discarded_late_med'))}  "
-            f"max={fmt(perf.get('mesh_discarded_late_max'))}  "
-            f"(093857 cruise~12)"
+            f"cruise_sum={fmt(perf.get('mesh_discarded_late_max'))}  "
+            f"abs_med={fmt(perf.get('mesh_discarded_late_abs_med'))}  "
+            f"(093857 cruise~12 abs; want delta med<=2)"
         )
         print(
             f"  visible_black_focus_med={fmt(perf.get('visible_black_focus_med'))}  "
