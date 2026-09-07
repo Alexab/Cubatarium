@@ -7334,6 +7334,11 @@ bool UWorld::IsColumnVisualReady(glm::ivec2 col_chunk_xz) const
     }
     if (!MeshService->HasGreedyMesh(coord))
     {
+      // Phase 5.7.3: intentional 0-quad / satisfying empty is not missing debt.
+      if (MeshService->HasMeshSatisfyingColumnReady(coord))
+      {
+        continue;
+      }
       missing_greedy = true;
       break;
     }
@@ -7341,6 +7346,10 @@ bool UWorld::IsColumnVisualReady(glm::ivec2 col_chunk_xz) const
     if (MeshService->IsSoftDeferHeld(coord) &&
         !MeshService->HasDrawableGreedyMesh(coord))
     {
+      if (MeshService->HasMeshSatisfyingColumnReady(coord))
+      {
+        continue;
+      }
       soft_defer_empty = true;
       break;
     }

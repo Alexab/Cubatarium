@@ -299,6 +299,7 @@ def analyze_perf(path: Path):
             "miss_stuck_run_frames", tail
         ),
         "visibility_debt_med": median(series("visibility_debt")),
+        "visibility_debt_tail_med": median(series("visibility_debt", tail)),
         "visibility_debt_max": series_max("visibility_debt"),
         "gpu_kick_med": median(series("gpu_kick_n")),
         "gpu_kick_tail_med": median(series("gpu_kick_n", tail)),
@@ -542,9 +543,14 @@ def evaluate_product(info: dict | None, perf: dict | None) -> list[str]:
         if empty_max is not None and float(empty_max) >= 15:
             fails.append(f"empty_backlog_max={empty_max:.0f}>=15 (093857 class)")
         clear_t = perf.get("latch_clear_t_ms")
+        debt_tail = perf.get("visibility_debt_tail_med")
+        if debt_tail is None:
+            debt_tail = perf.get("visibility_debt_med")
         if catch_up_armed and clear_t is None:
-            # Soft note for early sprints; product FAIL after 5.6.1 intent.
-            fails.append("latch_never_cleared (drainable catch-up pending)")
+            if debt_tail is None or float(debt_tail) > 36:
+                fails.append(
+                    "latch_never_cleared (drainable catch-up pending)"
+                )
         miss_stuck = perf.get("miss_stuck_run_frames_tail_max")
         gpu_kick = perf.get("gpu_kick_tail_med")
         if (

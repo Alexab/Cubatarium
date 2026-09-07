@@ -549,6 +549,7 @@ struct FrameNumbers
   int softdefer_owned_no_gpu_n{0};
   int enter_settle_soft_force_with_debt{0};
   int visibility_debt{0};
+  int visibility_debt_hinterland{0};
   uint64_t softdefer_empty_publish_avoided{0};
   int softdefer_held_n{0};
   int softdefer_held_age_max{0};
@@ -1106,6 +1107,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.softdefer_owned_no_gpu_n = phys.SoftDeferOwnedNoGpuN;
   n.enter_settle_soft_force_with_debt = phys.EnterSettleSoftForceWithDebt;
   n.visibility_debt = phys.VisibilityDebt;
+  n.visibility_debt_hinterland = phys.VisibilityDebtHinterland;
   n.softdefer_empty_publish_avoided = phys.SoftDeferEmptyPublishAvoided;
   n.softdefer_held_n = phys.SoftDeferHeldN;
   n.softdefer_held_age_max = phys.SoftDeferHeldAgeMax;
@@ -1715,6 +1717,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"enter_settle_soft_force_with_debt\":"
           << n.enter_settle_soft_force_with_debt
           << ",\"visibility_debt\":" << n.visibility_debt
+          << ",\"visibility_debt_hinterland\":" << n.visibility_debt_hinterland
           << ",\"softdefer_empty_publish_avoided\":"
           << n.softdefer_empty_publish_avoided
           << ",\"softdefer_held_n\":" << n.softdefer_held_n

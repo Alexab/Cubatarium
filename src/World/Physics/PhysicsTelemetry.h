@@ -147,6 +147,8 @@ struct PhysicsTelemetry
   int EnterSettleSoftForceWithDebt{0};
   /// Phase 5.6.1: sampled CountEnterVisibilityDebt for period FPM / latch timing.
   int VisibilityDebt{0};
+  /// Phase 5.7.3: CountUnready outside R=4 (diagnose only; does not gate clear).
+  int VisibilityDebtHinterland{0};
   /// Era24: SoftDefer empty publish avoided (Hide⇒Ticket), cumulative.
   uint64_t SoftDeferEmptyPublishAvoided{0};
   /// SoftDeferHeld side-set size (outside-focus !Drawable FirstMesh).

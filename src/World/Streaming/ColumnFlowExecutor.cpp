@@ -467,19 +467,25 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   const bool vb_consume =
       IsTicketedVbConsumeMode(visible_black_no_ticket_n, visible_black_n,
                               vb_stalled_n, moving);
-  if (vb_consume)
+  // Phase 5.7.3: under latch+debt, bias RelightThenMesh on R≤4 before hinterland FM.
+  const bool latch_debt_bias =
+      world.GetPhysicsTelemetry().EnterSettleSoftForceWithDebt != 0 &&
+      world.GetPhysicsTelemetry().VisibilityDebt > 0;
+  if (vb_consume || latch_debt_bias)
   {
     if (!scheduler_.Contains(focus, ColumnWorkKind::RelightThenMesh))
     {
-      Enqueue(focus, ColumnWorkKind::RelightThenMesh, moving ? 92 : 95);
+      Enqueue(focus, ColumnWorkKind::RelightThenMesh,
+              latch_debt_bias ? 96 : (moving ? 92 : 95));
       world.GetPhysicsTelemetryMutable().TicketedVbConsumeN++;
     }
-    if (visible_black_no_ticket_n >= 10)
+    if (visible_black_no_ticket_n >= 10 || latch_debt_bias)
     {
       const glm::ivec3 fg = focus_ground_horiz;
       int ring_enq = 0;
       const int kRingTopK =
-          (!moving && visible_black_n >= 25) ? 6 : 3;
+          latch_debt_bias ? 8
+                          : ((!moving && visible_black_n >= 25) ? 6 : 3);
       for (int dz = -4; dz <= 4 && ring_enq < kRingTopK; ++dz)
       {
         for (int dx = -4; dx <= 4 && ring_enq < kRingTopK; ++dx)

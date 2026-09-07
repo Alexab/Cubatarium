@@ -4451,11 +4451,16 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const bool underfeet_miss_sla =
         world.PhysicsTelemetryData.FocusMissingMesh != 0 &&
         world.PhysicsTelemetryData.MissHoriz <= 1;
-    // Phase 5.6.1: sample vis debt + clear PresentableCatchUp on shared predicate.
+    // Phase 5.6.1 / 5.7.3: sample vis debt + clear PresentableCatchUp; hinterland
+    // diagnose; sustain Mark budget 8 under latch while debt>0.
     {
       auto &pt = world.GetPhysicsTelemetryMutable();
       const int vis_debt = world.CountEnterVisibilityDebt();
       pt.VisibilityDebt = vis_debt;
+      const glm::ivec3 focus_chunk =
+          UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+      const int debt_r8 = world.CountUnreadyColumns(focus_chunk, 8);
+      pt.VisibilityDebtHinterland = std::max(0, debt_r8 - vis_debt);
       if (pt.EnterSettleSoftForceWithDebt != 0 &&
           EnterPresentableCatchUpClear(
               pt.SoftDeferOwnedNoGpuN, pt.SoftDeferEmptyStuckN, vis_debt,
@@ -4465,16 +4470,23 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
         pt.EnterSettleSoftForceWithDebt = 0;
       }
     }
+    const bool latch_debt =
+        world.GetPhysicsTelemetry().EnterSettleSoftForceWithDebt != 0 &&
+        world.GetPhysicsTelemetry().VisibilityDebt > 0;
     if (!world.IsEnterSessionActive() &&
-        (world.GetEnterGameMeshBurstFrames() > 0 || spawn_catch_up) &&
-        ShouldRunSpawnRingCatchUpHeal(spawn_catch_up, moving_fast,
+        (world.GetEnterGameMeshBurstFrames() > 0 || spawn_catch_up ||
+         latch_debt) &&
+        ShouldRunSpawnRingCatchUpHeal(spawn_catch_up || latch_debt, moving_fast,
                                       underfeet_miss_sla,
                                       world.IsEnterSessionActive()))
     {
       const int dirty_n =
           static_cast<int>(world.GetMeshService().GetDirtyCount());
       const int mark_budget =
-          dirty_n > 48 ? 2 : (spawn_catch_up ? (moving_fast ? 6 : 8) : 4);
+          latch_debt
+              ? 8
+              : (dirty_n > 48 ? 2
+                              : (spawn_catch_up ? (moving_fast ? 6 : 8) : 4));
       world.MarkSpawnRingUnfinishedDirty(mark_budget);
       if (ShouldBurstHealPinnedMiss(
               world.PhysicsTelemetryData.FocusMissingMesh != 0,
