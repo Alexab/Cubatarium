@@ -386,6 +386,10 @@ struct PhysicsTelemetry
   /// timed separately at DrawCubeGeometry).
   double SceneOpaqueRefreshMs{0.0};
   double SceneOpaqueCullMs{0.0};
+  /// Phase 5.7.4: frames opaque cull reused last GPU compact (skip).
+  int OpaqueCullSkippedN{0};
+  /// Phase 5.7.4: CPU AABB fail-open after throttle.
+  int GpuCompactFailOpenN{0};
   double SceneOpaqueGpuDrawMs{0.0};
   double SceneOpaquePackedMs{0.0};
   double SceneOpaqueCrossMs{0.0};

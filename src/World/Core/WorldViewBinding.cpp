@@ -888,6 +888,8 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.SceneOpaqueDrawMs = 0.0;
   PhysicsTelemetryData.SceneOpaqueRefreshMs = 0.0;
   PhysicsTelemetryData.SceneOpaqueCullMs = 0.0;
+  PhysicsTelemetryData.OpaqueCullSkippedN = 0;
+  PhysicsTelemetryData.GpuCompactFailOpenN = 0;
   PhysicsTelemetryData.SceneOpaqueGpuDrawMs = 0.0;
   PhysicsTelemetryData.SceneOpaquePackedMs = 0.0;
   PhysicsTelemetryData.SceneOpaqueCrossMs = 0.0;

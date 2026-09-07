@@ -3422,6 +3422,26 @@ int main()
            "cull: valid far AABB after teleport does not fail-open");
     Expect(!ShouldFailOpenGpuCompactCull(12, 551, true),
            "cull: some on keeps compact");
+    using cutum::ShouldSkipOpaqueCullLightCruise;
+    using cutum::ShouldSkipOpaqueCullStable;
+    using cutum::ShouldThrottleFailOpenGpuCompact;
+    Expect(ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
+                                           2.0f, false, false),
+           "5.7.4: light cruise skip OK");
+    Expect(!ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
+                                            2.0f, true, false),
+           "5.7.4: no skip under FocusMissing");
+    Expect(!ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
+                                            3.0f, false, false),
+           "5.7.4: no skip above 2.5 speed");
+    Expect(ShouldSkipOpaqueCullStable(true, false, false),
+           "5.7.4: stable skip OK");
+    Expect(!ShouldSkipOpaqueCullStable(true, true, false),
+           "5.7.4: stable no skip under miss");
+    Expect(ShouldThrottleFailOpenGpuCompact(3),
+           "5.7.4: fail-open after N=3");
+    Expect(!ShouldThrottleFailOpenGpuCompact(2),
+           "5.7.4: fail-open waits for N");
     StreamSpeedClampInput cin{};
     cin.moving = true;
     cin.missing_underfeet = true;

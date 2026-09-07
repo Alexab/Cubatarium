@@ -656,29 +656,54 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   uint64_t aabb_on = 0;
   uint64_t eligible = 0;
   bool any_degenerate = false;
-  for (const GreedyGpuBatch &b : cache.batches)
+  // Phase 5.7.4: when GPU compact is healthy, probe AABB fail-open only every
+  // 3rd call (or while a fail-open streak is active). Cuts CPU AABB wall.
+  ++FailOpenProbeTick_;
+  const bool probe_fail_open =
+      !cache.GpuCompactActive || ConsecutiveFailOpenN_ > 0 ||
+      (FailOpenProbeTick_ % 3) == 0;
+  if (probe_fail_open)
   {
-    if (!b.pooled || b.indexCountGl <= 0)
+    for (const GreedyGpuBatch &b : cache.batches)
     {
-      continue;
+      if (!b.pooled || b.indexCountGl <= 0)
+      {
+        continue;
+      }
+      ++eligible;
+      if (BatchCullAabbDegenerate(b.cullAabbMin, b.cullAabbMax))
+      {
+        any_degenerate = true;
+      }
+      const glm::vec3 bmin(b.cullAabbMin[0], b.cullAabbMin[1],
+                           b.cullAabbMin[2]);
+      const glm::vec3 bmax(b.cullAabbMax[0], b.cullAabbMax[1],
+                           b.cullAabbMax[2]);
+      if (frustum.IntersectsChunkAABB(bmin, bmax, camera_pos, max_cull_distance,
+                                      horizontal_distance))
+      {
+        ++aabb_on;
+      }
     }
-    ++eligible;
-    if (BatchCullAabbDegenerate(b.cullAabbMin, b.cullAabbMax))
-    {
-      any_degenerate = true;
-    }
-    const glm::vec3 bmin(b.cullAabbMin[0], b.cullAabbMin[1], b.cullAabbMin[2]);
-    const glm::vec3 bmax(b.cullAabbMax[0], b.cullAabbMax[1], b.cullAabbMax[2]);
-    if (frustum.IntersectsChunkAABB(bmin, bmax, camera_pos, max_cull_distance,
-                                    horizontal_distance))
-    {
-      ++aabb_on;
-    }
+    LastCpuAabbWouldOn_ = aabb_on;
+    LastCullOpaqueTotal_ = eligible;
   }
-  LastCpuAabbWouldOn_ = aabb_on;
-  LastCullOpaqueTotal_ = eligible;
+  else
+  {
+    for (const GreedyGpuBatch &b : cache.batches)
+    {
+      if (b.pooled && b.indexCountGl > 0)
+      {
+        ++eligible;
+      }
+    }
+    LastCullOpaqueTotal_ = eligible;
+    LastCpuAabbWouldOn_ = LastGoodCullOpaqueOn_;
+    aabb_on = LastGoodCullOpaqueOn_ > 0 ? LastGoodCullOpaqueOn_ : 1;
+  }
 
-  if (ShouldFailOpenGpuCompactCull(aabb_on, eligible, any_degenerate))
+  if (probe_fail_open &&
+      ShouldFailOpenGpuCompactCull(aabb_on, eligible, any_degenerate))
   {
     bool repaired = false;
     for (GreedyGpuBatch &b : cache.batches)
@@ -722,8 +747,18 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
       cache.GpuCompactActive = false;
     }
   }
-  if (ShouldFailOpenGpuCompactCull(aabb_on, eligible, any_degenerate))
+  if (probe_fail_open &&
+      ShouldFailOpenGpuCompactCull(aabb_on, eligible, any_degenerate))
   {
+    ++ConsecutiveFailOpenN_;
+    // Reuse last GPU compact counts until N=3 consecutive fail-opens.
+    if (!ShouldThrottleFailOpenGpuCompact(ConsecutiveFailOpenN_) &&
+        LastGoodCullOpaqueOn_ > 0 && cache.GpuCompactActive)
+    {
+      LastCullOpaqueOn_ = LastGoodCullOpaqueOn_;
+      LastCullOpaqueTotal_ = eligible;
+      return true;
+    }
     ApplyFrustumInstanceCull(cache, frustum, camera_pos, max_cull_distance,
                              horizontal_distance);
     if (LastCullOpaqueOn_ == 0 && eligible > 0)
@@ -740,8 +775,10 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
       cache.IndirectCullReady = true;
       cache.GpuCompactActive = false;
     }
+    ConsecutiveFailOpenN_ = 0;
     return false;
   }
+  ConsecutiveFailOpenN_ = 0;
 
   if (ResolveGpuCullMode() == GpuCullMode::Cpu)
   {
@@ -862,6 +899,10 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   cache.IndirectCullReady = true;
   cache.GpuCompactActive = true;
   cache.CompactVisCpuSynced = false;
+  if (LastCullOpaqueOn_ > 0)
+  {
+    LastGoodCullOpaqueOn_ = LastCullOpaqueOn_;
+  }
   return true;
 #endif
 }

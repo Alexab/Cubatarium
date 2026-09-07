@@ -58,4 +58,41 @@ inline bool ShouldFailOpenGpuCompactCull(uint64_t aabb_on, uint64_t eligible,
   return eligible > 0 && aabb_on == 0 && any_degenerate;
 }
 
+/// Phase 5.7.4: skip GPU compact cull on light cruise when camera stable and
+/// no FocusMissing / VB edge (never skip under miss/holes).
+inline bool ShouldSkipOpaqueCullLightCruise(bool draw_set_stable,
+                                            bool rev_match, float cam_move2,
+                                            float cam_eps2, bool indirect_ready,
+                                            bool reverse_compact_active,
+                                            float movement_speed,
+                                            bool focus_missing,
+                                            bool vb_edge)
+{
+  if (focus_missing || vb_edge || !draw_set_stable || !rev_match ||
+      !indirect_ready || !reverse_compact_active)
+  {
+    return false;
+  }
+  if (cam_move2 > cam_eps2)
+  {
+    return false;
+  }
+  // Standing / light cruise (≤2.5); full fly keeps GPU compact every frame.
+  return movement_speed <= 2.5f;
+}
+
+/// Phase 5.7.4: standing stable skip must also refuse under miss/VB edge.
+inline bool ShouldSkipOpaqueCullStable(bool cull_stable, bool focus_missing,
+                                       bool vb_edge)
+{
+  return cull_stable && !focus_missing && !vb_edge;
+}
+
+/// Phase 5.7.4: throttle fail-open CPU AABB — need N consecutive triggers.
+inline bool ShouldThrottleFailOpenGpuCompact(int consecutive_fail_open,
+                                             int threshold = 3)
+{
+  return consecutive_fail_open >= threshold;
+}
+
 } // namespace cutum

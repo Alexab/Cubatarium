@@ -89,6 +89,9 @@ private:
   uint64_t LastCullOpaqueTotal_{0};
   uint64_t LastCullOpaqueOn_{0};
   uint64_t LastCpuAabbWouldOn_{0};
+  uint64_t LastGoodCullOpaqueOn_{0};
+  int ConsecutiveFailOpenN_{0};
+  int FailOpenProbeTick_{0};
   double LastCompactCullGpuMs_{0.0};
 
   GLuint CullProgram{0};

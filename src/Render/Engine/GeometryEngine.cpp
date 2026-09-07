@@ -1,5 +1,6 @@
 
 #include "Render/Engine/GeometryEngine.h"
+#include "Render/Camera/GpuPassRefreshPolicy.h"
 #include "Render/Effects/InfluenceFxSystem.h"
 #include "Render/Mesh/GpuMeshPipeline.h"
 #include "Render/Mesh/GpuMeshSlotAllocator.h"
@@ -1846,6 +1847,7 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
       CachedOpaqueSortedRefs = opaque_draw;
       CachedOpaqueDrawFingerprint = draw_fp;
       CachedOpaqueCullRevision = 0;
+      CachedOpaqueCullFocusValid = false;
     }
     GLboolean cullWasEnabled = GL_TRUE;
     if (!cutout.empty())
@@ -1865,23 +1867,58 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     {
       ScopedPhase cull_phase(&cull_ms);
       mdi->SetCullStatsReadbackEnabled(ShowPerformance);
-      // Phase 5.3.4 OpaqueCullSkipStable: reuse last instanceCounts when stable.
-      // Camera must be unchanged — CullRevision alone does not track view motion.
+      // Phase 5.3.4 / 5.7.4 OpaqueCullSkipStable + light-cruise coherence.
       const glm::vec3 cam_delta = cameraPos - CachedOpaqueCullCameraPos;
       const float cam_move2 =
           cam_delta.x * cam_delta.x + cam_delta.y * cam_delta.y +
           cam_delta.z * cam_delta.z;
-      constexpr float kCullCamEps2 = 1.0e-4f; // ~1cm
+      constexpr float kCullCamEps2 = 1.0e-4f; // ~1cm stand / light-cruise
+      float move_spd = 0.0f;
+      bool focus_missing = false;
+      bool vb_edge = false;
+      glm::ivec2 focus_xz(0);
+      if (WorldInstance)
+      {
+        const auto &pt = WorldInstance->GetPhysicsTelemetry();
+        move_spd = pt.MovementSpeed;
+        focus_missing = pt.FocusMissingMesh != 0;
+        vb_edge = pt.VisibleBlackFocusN > 0 &&
+                  (pt.VisibleBlackNoTicketN > 0 || pt.VisibleBlackStalledN > 0);
+        focus_xz = glm::ivec2(pt.FocusChunkX, pt.FocusChunkZ);
+      }
+      const bool focus_unchanged =
+          CachedOpaqueCullFocusValid && focus_xz == CachedOpaqueCullFocusXZ;
       const bool cull_stable =
           draw_set_stable && cullRevision == CachedOpaqueCullRevision &&
           cam_move2 <= kCullCamEps2 && GreedyGpuOpaque.IndirectCullReady &&
           GreedyGpuOpaque.GpuCompactActive;
-      if (!cull_stable)
+      const bool light_cruise_skip =
+          focus_unchanged &&
+          ShouldSkipOpaqueCullLightCruise(
+              draw_set_stable, cullRevision == CachedOpaqueCullRevision,
+              cam_move2, kCullCamEps2, GreedyGpuOpaque.IndirectCullReady,
+              GreedyGpuOpaque.GpuCompactActive, move_spd, focus_missing,
+              vb_edge);
+      const bool do_skip =
+          ShouldSkipOpaqueCullStable(cull_stable, focus_missing, vb_edge) ||
+          light_cruise_skip;
+      if (!do_skip)
       {
-        mdi->ApplyGpuCompactCull(GreedyGpuOpaque, frustum, cameraPos,
-                                 max_cull_distance, horizontal_cull);
+        const bool ok = mdi->ApplyGpuCompactCull(
+            GreedyGpuOpaque, frustum, cameraPos, max_cull_distance,
+            horizontal_cull);
+        if (!ok && WorldInstance)
+        {
+          WorldInstance->GetPhysicsTelemetryMutable().GpuCompactFailOpenN++;
+        }
         CachedOpaqueCullRevision = cullRevision;
         CachedOpaqueCullCameraPos = cameraPos;
+        CachedOpaqueCullFocusXZ = focus_xz;
+        CachedOpaqueCullFocusValid = true;
+      }
+      else if (WorldInstance)
+      {
+        WorldInstance->GetPhysicsTelemetryMutable().OpaqueCullSkippedN++;
       }
     }
     {
@@ -1906,6 +1943,7 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     CachedOpaqueSortedRefs.clear();
     CachedOpaqueDrawFingerprint = 0;
     CachedOpaqueCullRevision = 0;
+    CachedOpaqueCullFocusValid = false;
   }
   if (!cutout.empty())
   {

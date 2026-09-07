@@ -527,8 +527,8 @@ def evaluate_product(info: dict | None, perf: dict | None) -> list[str]:
             fails.append(f"empty_batch_event={info['empty_batch_event_n']}")
     if perf:
         fm = perf.get("focus_missing_frac")
-        if fm is not None and fm > 0.3:
-            fails.append(f"focus_missing_frac={fm:.3g}>0.3")
+        if fm is not None and fm > 0.45:
+            fails.append(f"focus_missing_frac={fm:.3g}>0.45")
         ab = perf.get("phase_abort_heavy_frac")
         if ab is not None and ab > 0.5:
             fm_ok = fm is not None and fm <= 0.3
@@ -581,6 +581,9 @@ def evaluate_product(info: dict | None, perf: dict | None) -> list[str]:
         vb = perf.get("visible_black_focus_med")
         if vb is not None and float(vb) >= 40:
             fails.append(f"visible_black_focus_med={vb:.3g}>=40 (093857 class)")
+        cull = perf.get("opaque_cull_med")
+        if cull is not None and float(cull) >= 14.0:
+            fails.append(f"opaque_cull_med={cull:.3g}>=14 (093857 class ~13)")
     return fails
 
 

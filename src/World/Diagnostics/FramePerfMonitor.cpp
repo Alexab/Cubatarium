@@ -358,6 +358,8 @@ struct FrameNumbers
   double scene_opaque_draw_ms{0.0};
   double scene_opaque_refresh_ms{0.0};
   double scene_opaque_cull_ms{0.0};
+  int opaque_cull_skipped{0};
+  int gpu_compact_fail_open_n{0};
   double scene_opaque_gpu_draw_ms{0.0};
   double scene_opaque_packed_ms{0.0};
   double scene_opaque_cross_ms{0.0};
@@ -916,6 +918,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.scene_opaque_draw_ms = phys.SceneOpaqueDrawMs;
   n.scene_opaque_refresh_ms = phys.SceneOpaqueRefreshMs;
   n.scene_opaque_cull_ms = phys.SceneOpaqueCullMs;
+  n.opaque_cull_skipped = phys.OpaqueCullSkippedN;
+  n.gpu_compact_fail_open_n = phys.GpuCompactFailOpenN;
   n.scene_opaque_gpu_draw_ms = phys.SceneOpaqueGpuDrawMs;
   n.scene_opaque_packed_ms = phys.SceneOpaquePackedMs;
   n.scene_opaque_cross_ms = phys.SceneOpaqueCrossMs;
@@ -1495,6 +1499,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"scene_opaque_draw_ms\":" << n.scene_opaque_draw_ms
           << ",\"scene_opaque_refresh_ms\":" << n.scene_opaque_refresh_ms
           << ",\"scene_opaque_cull_ms\":" << n.scene_opaque_cull_ms
+          << ",\"opaque_cull_skipped\":" << n.opaque_cull_skipped
+          << ",\"gpu_compact_fail_open_n\":" << n.gpu_compact_fail_open_n
           << ",\"scene_opaque_gpu_draw_ms\":" << n.scene_opaque_gpu_draw_ms
           << ",\"scene_opaque_packed_ms\":" << n.scene_opaque_packed_ms
           << ",\"scene_opaque_cross_ms\":" << n.scene_opaque_cross_ms

@@ -335,6 +335,8 @@ private:
   /// Phase 5.3.4: skip ApplyGpuCompactCull when draw+cull revision stable.
   uint64_t CachedOpaqueCullRevision{0};
   glm::vec3 CachedOpaqueCullCameraPos{0.0f};
+  glm::ivec2 CachedOpaqueCullFocusXZ{0};
+  bool CachedOpaqueCullFocusValid{false};
   glm::mat4 PreparedTransparentVp{};
   const std::map<size_t, UTextureCube> *PreparedTransparentTextures{nullptr};
   IUMeshGpuStore &MeshStore();
