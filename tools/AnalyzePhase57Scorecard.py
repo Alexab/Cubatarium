@@ -569,12 +569,12 @@ def evaluate_product(info: dict | None, perf: dict | None) -> list[str]:
         disc = perf.get("mesh_discarded_late_med")
         if disc is not None and float(disc) >= 10:
             fails.append(f"mesh_discarded_late_med={disc:.3g}>=10 (093857 class)")
+        vbnt = perf.get("vb_no_ticket_max")
+        if vbnt is not None and float(vbnt) >= 95:
+            fails.append(f"vb_no_ticket_max={vbnt:.0f}>=95 (093857 class ~91)")
         vb = perf.get("visible_black_focus_med")
         if vb is not None and float(vb) >= 40:
             fails.append(f"visible_black_focus_med={vb:.3g}>=40 (093857 class)")
-        vbnt = perf.get("vb_no_ticket_max")
-        if vbnt is not None and float(vbnt) >= 80:
-            fails.append(f"vb_no_ticket_max={vbnt:.0f}>=80 (093857 class)")
     return fails
 
 

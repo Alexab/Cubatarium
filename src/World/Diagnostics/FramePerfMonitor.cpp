@@ -395,6 +395,7 @@ struct FrameNumbers
   int stop_vb_stuck_frames{0};
   int miss_witness_age_frames{0};
   int miss_stuck_run_frames{0};
+  int miss_witness_remesh_n{0};
   int miss_completion_stuck_frames{0};
   int relight_apply_to_markrelit_n{0};
   int markrelit_to_fm_dirty_n{0};
@@ -951,6 +952,7 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.stop_vb_stuck_frames = phys.StopVbStuckFrames;
   n.miss_witness_age_frames = phys.MissWitnessAgeFramesReport;
   n.miss_stuck_run_frames = phys.MissStuckRunFrames;
+  n.miss_witness_remesh_n = phys.MissWitnessRemeshN;
   n.miss_completion_stuck_frames = phys.MissCompletionStuckFrames;
   n.relight_apply_to_markrelit_n = phys.RelightApplyToMarkRelitN;
   n.markrelit_to_fm_dirty_n = phys.MarkRelitToFmDirtyN;
@@ -1532,6 +1534,7 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"stop_vb_stuck_frames\":" << n.stop_vb_stuck_frames
           << ",\"miss_witness_age_frames\":" << n.miss_witness_age_frames
           << ",\"miss_stuck_run_frames\":" << n.miss_stuck_run_frames
+          << ",\"miss_witness_remesh_n\":" << n.miss_witness_remesh_n
           << ",\"miss_completion_stuck_frames\":"
           << n.miss_completion_stuck_frames
           << ",\"relight_apply_to_markrelit_n\":"

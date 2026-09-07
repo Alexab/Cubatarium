@@ -2416,6 +2416,8 @@ int main()
     Expect(MissSliceAlreadyOwned(true, false, false, false, false, false),
            "P0.2: Dirty owns");
     using cutum::ShouldRemeshMissWitnessEmptyGpu;
+    using cutum::MissWitnessRemeshAgeSla;
+    using cutum::ShouldPreferKickMissWitnessGpu;
     Expect(ShouldRemeshMissWitnessEmptyGpu(true, false, 60, 60),
            "Phase5.6.3: missing+!gpu+age remeshes");
     Expect(!ShouldRemeshMissWitnessEmptyGpu(true, true, 60, 60),
@@ -2424,6 +2426,20 @@ int main()
            "Phase5.6.3: age below SLA skips remesh");
     Expect(!ShouldRemeshMissWitnessEmptyGpu(false, false, 60, 60),
            "Phase5.6.3: no miss skips remesh");
+    Expect(MissWitnessRemeshAgeSla(false) == 15,
+           "Phase5.7.2: stand remesh SLA 15");
+    Expect(MissWitnessRemeshAgeSla(true) == 60,
+           "Phase5.7.2: cruise remesh SLA 60");
+    Expect(ShouldRemeshMissWitnessEmptyGpu(true, false, 15,
+                                           MissWitnessRemeshAgeSla(false)),
+           "Phase5.7.2: stand age 15 remeshes");
+    Expect(!ShouldRemeshMissWitnessEmptyGpu(true, false, 15,
+                                            MissWitnessRemeshAgeSla(true)),
+           "Phase5.7.2: cruise age 15 below SLA");
+    Expect(ShouldPreferKickMissWitnessGpu(true),
+           "Phase5.7.2: PreferKick only with pending gpu");
+    Expect(!ShouldPreferKickMissWitnessGpu(false),
+           "Phase5.7.2: no PreferKick when !pending");
     Expect(MissSliceAlreadyOwned(false, false, false, true, false, false),
            "P0.2: SoftDeferHeld owns");
     Expect(MissSliceAlreadyOwned(false, false, false, false, false, true),

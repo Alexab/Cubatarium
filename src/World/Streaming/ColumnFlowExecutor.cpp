@@ -576,8 +576,10 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     }
     const int stale_cap =
         nearest_vb_no_ticket
-            ? VisibleBlackNoTicketRepairCap(visible_black_no_ticket_n,
-                                            repair_cap, moving, enter_fov_lit)
+            ? VisibleBlackNoTicketRepairCap(
+                  visible_black_no_ticket_n,
+                  repair_cap + (missing_visible_mesh ? 4 : 0), moving,
+                  enter_fov_lit)
             : repair_cap;
     const int void_base =
         VoidRelightCollectCap(repair_cap, void_pressure);
@@ -674,7 +676,11 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     const bool second_pass_enter_peak =
         enter_fov_lit && async_ok && visible_black_no_ticket_n > 40 &&
         static_cast<int>(stale_dark_cols.size()) < stale_cap;
-    if ((second_pass_idle || second_pass_moving) &&
+    // Phase 5.7.2: FocusMissing + any no_ticket → force second-pass collect.
+    const bool second_pass_focus_miss =
+        missing_visible_mesh && async_ok && visible_black_no_ticket_n > 0 &&
+        static_cast<int>(stale_dark_cols.size()) < stale_cap;
+    if ((second_pass_idle || second_pass_moving || second_pass_focus_miss) &&
         static_cast<int>(stale_dark_cols.size()) < stale_cap)
     {
       const int remain =

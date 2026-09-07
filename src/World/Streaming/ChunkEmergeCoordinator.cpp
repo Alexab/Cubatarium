@@ -4503,21 +4503,24 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                   MissWitnessAgeFrames))
           {
             mesh_drain = std::max(mesh_drain, 16);
-            if ((queued_stuck || kicked_stuck) &&
-                mesh_service.IsPendingGpuApply(isolated_hole))
+            if (ShouldPreferKickMissWitnessGpu(
+                    mesh_service.IsPendingGpuApply(isolated_hole)) &&
+                (queued_stuck || kicked_stuck))
             {
               mesh_service.PreferKickPendingGpuQueued(isolated_hole);
             }
             pin_isolated_miss(118);
           }
-          // Phase 5.6.3: FocusMissing + age SLA + empty PendingGpu → Dirty/FM.
+          // Phase 5.7.2: stand SLA 15 / cruise 60; empty PendingGpu → Dirty/FM.
+          const int remesh_sla = MissWitnessRemeshAgeSla(moving);
           if (ShouldRemeshMissWitnessEmptyGpu(
                   missing_visible_mesh,
                   mesh_service.IsPendingGpuApply(isolated_hole),
-                  MissWitnessAgeFrames, 60) &&
+                  MissWitnessAgeFrames, remesh_sla) &&
               miss_resident)
           {
             mesh_service.MarkDirtyPriority(isolated_hole);
+            ++world.GetPhysicsTelemetryMutable().MissWitnessRemeshN;
             const glm::ivec2 miss_xz(isolated_hole.x, isolated_hole.z);
             if (!exec.Scheduler().Contains(miss_xz, ColumnWorkKind::FirstMesh))
             {
@@ -5498,6 +5501,26 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     pt.MissWitnessAgeFramesReport = MissWitnessAgeFrames;
     if (missing_visible_mesh && pt.MeshDirtyScheduleOkN == 0)
     {
+      // Phase 5.7.2: schedule_ok==0 + !PendingGpu → remesh so stuck ≠ kick=0 idle.
+      if (found_nearest_missing &&
+          !mesh_service.IsPendingGpuApply(isolated_hole))
+      {
+        mesh_service.MarkDirtyPriority(isolated_hole);
+        ++pt.MissWitnessRemeshN;
+        const glm::ivec2 miss_xz(isolated_hole.x, isolated_hole.z);
+        auto &exec_stuck = GetColumnFlowExecutor();
+        if (!exec_stuck.Scheduler().Contains(miss_xz,
+                                             ColumnWorkKind::FirstMesh))
+        {
+          ColumnWorkItem fm{};
+          fm.column = miss_xz;
+          fm.kind = ColumnWorkKind::FirstMesh;
+          fm.priority = 113;
+          fm.scan_full_focus = false;
+          fm.cy = isolated_hole.y;
+          exec_stuck.Enqueue(fm);
+        }
+      }
       ++MissStuckRunFrames;
     }
     else

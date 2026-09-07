@@ -368,6 +368,18 @@ inline bool ShouldRemeshMissWitnessEmptyGpu(bool focus_missing, bool pending_gpu
   return focus_missing && !pending_gpu && miss_witness_age >= age_sla_frames;
 }
 
+/// Phase 5.7.2: stand remesh SLA 15; cruise keeps 60 (avoid remesh storm).
+inline int MissWitnessRemeshAgeSla(bool moving)
+{
+  return moving ? 60 : 15;
+}
+
+/// Phase 5.7.2: PreferKick only when a PendingGpu apply exists.
+inline bool ShouldPreferKickMissWitnessGpu(bool pending_gpu_apply)
+{
+  return pending_gpu_apply;
+}
+
 /// SoftDeferHeld ticket-only while SoftDefer still owns publication.
 /// SoftDefer lifted → transfer to one Dirty (never Held+ticket orphan).
 inline bool ShouldTransferSoftDeferHeldToDirty(bool soft_defer_held,

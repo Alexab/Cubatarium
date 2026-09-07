@@ -408,6 +408,8 @@ struct PhysicsTelemetry
   /// I10-C1: miss witness stuck runtime telemetry.
   int MissWitnessAgeFramesReport{0};
   int MissStuckRunFrames{0};
+  /// Phase 5.7.2: Dirty/FM remesh under miss when PendingGpu empty.
+  int MissWitnessRemeshN{0};
   /// I11-A2: miss stuck with schedule_ok but no drawable witness.
   int MissCompletionStuckFrames{0};
   int MissSlaKickN{0};

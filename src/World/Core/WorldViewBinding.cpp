@@ -931,6 +931,7 @@ void UWorld::TickWorldStreamingPhase()
   PhysicsTelemetryData.StopVbStuckFrames = 0;
   PhysicsTelemetryData.MissWitnessAgeFramesReport = 0;
   PhysicsTelemetryData.MissStuckRunFrames = 0;
+  PhysicsTelemetryData.MissWitnessRemeshN = 0;
   PhysicsTelemetryData.MissCompletionStuckFrames = 0;
   PhysicsTelemetryData.MissSlaKickN = 0;
   PhysicsTelemetryData.RelightApplyToMarkRelitN = 0;
