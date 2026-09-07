@@ -3191,7 +3191,8 @@ bool UWorld::NeedsSpawnRingCatchUp() const
   // Phase 5.6.1 PresentableCatchUp: keep heal until shared clear predicate.
   if (PhysicsTelemetryData.EnterSettleSoftForceWithDebt != 0)
   {
-    const int debt = CountEnterVisibilityDebt();
+    // Phase 5.7R2: use cached VisibilityDebt (WorldStreaming samples O(R²)).
+    const int debt = PhysicsTelemetryData.VisibilityDebt;
     const int ring_nr = CountPostLoadRingNotReady();
     const int focus_miss = PhysicsTelemetryData.FocusMissingMesh;
     const bool underfeet = IsEnterUnderfeetPresentReady();
@@ -6137,7 +6138,7 @@ int UWorld::CountPostLoadRingNotReady() const
   return CountUnfinishedVisualNear(focus, vis_r);
 }
 
-int UWorld::MarkSpawnRingUnfinishedDirty(int max_marks)
+int UWorld::MarkSpawnRingUnfinishedDirty(int max_marks, int max_horiz)
 {
   if (!MeshService || !BlockRegistry || max_marks <= 0)
   {
@@ -6147,6 +6148,7 @@ int UWorld::MarkSpawnRingUnfinishedDirty(int max_marks)
   const glm::ivec3 focus =
       UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
   const int vis_r = EnterVisualWorkRadiusChunks();
+  const int ring_r = max_horiz < 0 ? vis_r : std::min(vis_r, max_horiz);
   const auto &proc = GetProceduralSettings();
   const int max_cy = std::max(0, FloorDiv(proc.MaxHeight, CHUNK_SIZE));
   const int player_cy =
@@ -6202,7 +6204,7 @@ int UWorld::MarkSpawnRingUnfinishedDirty(int max_marks)
     return true;
   };
   // Underfeet-first ring order — nh=0 before rim backlog (miss_stuck SLA).
-  for (int horiz = 0; horiz <= vis_r && marked < max_marks; ++horiz)
+  for (int horiz = 0; horiz <= ring_r && marked < max_marks; ++horiz)
   {
     for (int dx = -horiz; dx <= horiz && marked < max_marks; ++dx)
     {

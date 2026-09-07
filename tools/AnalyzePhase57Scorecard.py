@@ -464,6 +464,12 @@ def print_control_checklist(perf: dict | None, info: dict | None, report: dict):
             f"(093857~98/69/fifo~0; wall/phase <=1.25x; fifo_med<20)"
         )
         print(
+            f"  stream_med={fmt(perf.get('stream_med'))}  "
+            f"mesh_emerge_med={fmt(perf.get('mesh_emerge_med'))}  "
+            f"scene_med={fmt(perf.get('scene_med'))}  "
+            f"(203348 class ~91/62/26; want stream+scene down vs 203348)"
+        )
+        print(
             f"  mesh_discarded_late_med={fmt(perf.get('mesh_discarded_late_med'))}  "
             f"cruise_sum={fmt(perf.get('mesh_discarded_late_max'))}  "
             f"abs_med={fmt(perf.get('mesh_discarded_late_abs_med'))}  "
@@ -478,6 +484,10 @@ def print_control_checklist(perf: dict | None, info: dict | None, report: dict):
         print(
             f"  opaque_cull_med={fmt(perf.get('opaque_cull_med'))}  "
             f"(093857~13; want down)"
+        )
+        print(
+            "  DoD: ship requires MANUAL scorecard on 203348-locus "
+            "(pin 120,57.31,56 yaw90) + eye underfeet; auto alone cannot ship"
         )
 
 

@@ -246,6 +246,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     MissWitnessAgeFrames = 0;
     MissStuckSelfHealPeriod = 0;
     MissStuckForcePinPeriod = 0;
+    MissWitnessRemeshLatched = false;
   }
   glm::ivec3 nearest_missing_hole{};
   bool have_nearest_missing = false;
@@ -1447,14 +1448,50 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             std::chrono::high_resolution_clock::now() - softdefer_own_t0)
             .count();
     // Phase 5.5.0b: owned SoftDefer empty without PendingGpu = no-progress signal.
-    for (const glm::ivec3 &owned : SoftDeferEmptyOwned)
+    // Phase 5.7R2: underfeet nh≤1 fast Dirty/FM (PreferKick only if PendingGpu).
     {
-      const bool gpu_queued =
-          mesh_service.IsPendingGpuQueued(owned) ||
-          mesh_service.IsPendingGpuKickedOrDispatched(owned);
-      if (!gpu_queued)
+      auto &exec_uf = GetColumnFlowExecutor();
+      for (const glm::ivec3 &owned : SoftDeferEmptyOwned)
       {
-        ++phys_telem.SoftDeferOwnedNoGpuN;
+        const bool gpu_queued =
+            mesh_service.IsPendingGpuQueued(owned) ||
+            mesh_service.IsPendingGpuKickedOrDispatched(owned);
+        const bool pending_gpu = mesh_service.IsPendingGpuApply(owned);
+        if (!gpu_queued && !pending_gpu)
+        {
+          ++phys_telem.SoftDeferOwnedNoGpuN;
+        }
+        const int uf_horiz = std::max(std::abs(owned.x - focus_ground.x),
+                                      std::abs(owned.z - focus_ground.z));
+        if (!ShouldSoftDeferEmptyUnderfeetFastHeal(uf_horiz))
+        {
+          continue;
+        }
+        if (pending_gpu || gpu_queued)
+        {
+          if (ShouldPreferKickMissWitnessGpu(true))
+          {
+            mesh_service.PreferKickPendingGpuQueued(owned);
+          }
+          continue;
+        }
+        const glm::ivec2 uf_col(owned.x, owned.z);
+        const bool dirty = mesh_service.IsChunkMeshDirty(owned);
+        const bool fm =
+            exec_uf.Scheduler().Contains(uf_col, ColumnWorkKind::FirstMesh);
+        if (dirty || fm)
+        {
+          continue;
+        }
+        mesh_service.MarkDirtyPriority(owned);
+        ColumnWorkItem pin{};
+        pin.column = uf_col;
+        pin.kind = ColumnWorkKind::FirstMesh;
+        pin.priority = 114;
+        pin.scan_full_focus = false;
+        pin.cy = owned.y;
+        exec_uf.Enqueue(pin);
+        note_column_flow_drain(2, 1);
       }
     }
     prep_softdefer_policy_ms =
@@ -4511,20 +4548,29 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             }
             pin_isolated_miss(118);
           }
-          // Phase 5.7.2 / 5.7R: stand SLA 30 / cruise 60; empty PendingGpu → Dirty/FM.
-          // Skip if already Dirty/FM-owned (coalesce with stuck path; no pin churn).
-          const int remesh_sla = MissWitnessRemeshAgeSla(moving);
+          // Phase 5.7R2: underfeet SLA 8/15; rim 30/60; edge-trigger remesh.
+          const int remesh_sla =
+              MissWitnessRemeshAgeSla(moving, nh);
           const glm::ivec2 miss_xz_sla(isolated_hole.x, isolated_hole.z);
           const bool miss_already_owned =
               mesh_service.IsChunkMeshDirty(isolated_hole) ||
               exec.Scheduler().Contains(miss_xz_sla, ColumnWorkKind::FirstMesh);
-          if (!miss_already_owned &&
-              ShouldRemeshMissWitnessEmptyGpu(
-                  missing_visible_mesh,
-                  mesh_service.IsPendingGpuApply(isolated_hole),
-                  MissWitnessAgeFrames, remesh_sla) &&
+          const bool miss_pending_gpu =
+              mesh_service.IsPendingGpuApply(isolated_hole);
+          if (miss_pending_gpu || miss_already_owned ||
+              mesh_service.HasDrawableGreedyMesh(isolated_hole))
+          {
+            MissWitnessRemeshLatched = false;
+          }
+          if (ShouldRemeshMissWitnessEmptyGpuEdge(
+                  missing_visible_mesh, miss_pending_gpu, MissWitnessAgeFrames,
+                  remesh_sla, miss_already_owned,
+                  exec.Scheduler().Contains(miss_xz_sla,
+                                            ColumnWorkKind::FirstMesh),
+                  MissWitnessRemeshLatched) &&
               miss_resident)
           {
+            MissWitnessRemeshLatched = true;
             mesh_service.MarkDirtyPriority(isolated_hole);
             ++world.GetPhysicsTelemetryMutable().MissWitnessRemeshN;
             if (!exec.Scheduler().Contains(miss_xz_sla, ColumnWorkKind::FirstMesh))
@@ -5517,7 +5563,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 missing_visible_mesh, true,
                 mesh_service.IsPendingGpuApply(isolated_hole), already_dirty,
                 fm_ticket, MissWitnessAgeFrames,
-                MissWitnessRemeshAgeSla(moving), MissStuckRunFrames))
+                MissWitnessRemeshAgeSla(moving, world.GetPhysicsTelemetry().MissHoriz),
+                MissStuckRunFrames))
         {
           mesh_service.MarkDirtyPriority(isolated_hole);
           ++pt.MissWitnessRemeshN;

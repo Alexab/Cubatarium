@@ -471,8 +471,8 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   const bool latch_debt_bias =
       world.GetPhysicsTelemetry().EnterSettleSoftForceWithDebt != 0 &&
       world.GetPhysicsTelemetry().VisibilityDebt > 0;
-  // Phase 5.7.3 / 5.7R: latch RelightThenMesh only idle/stop (cruise = vb_consume only).
-  if (vb_consume || (latch_debt_bias && !moving))
+  // Phase 5.7R2: latch Relight while moving — underfeet Cheb≤1 TopK≤2 only.
+  if (vb_consume || latch_debt_bias)
   {
     if (!scheduler_.Contains(focus, ColumnWorkKind::RelightThenMesh))
     {
@@ -484,19 +484,20 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     {
       const glm::ivec3 fg = focus_ground_horiz;
       int ring_enq = 0;
-      // Phase 5.7R: under latch+cruise — no ring Relight flood (fifo storm);
-      // stand latch TopK=3; non-latch unchanged.
+      // Phase 5.7R2: latch+moving → TopK=2 Rscan=1; latch stand TopK=3 Rscan=4.
       const int kRingTopK =
           latch_debt_bias
-              ? (moving ? 0 : 3)
+              ? (moving ? 2 : 3)
               : (missing_visible_mesh && moving
                      ? 1
                      : ((!moving && visible_black_n >= 25) ? 6 : 3));
-      for (int dz = -4; dz <= 4 && ring_enq < kRingTopK; ++dz)
+      const int kRingScan =
+          (latch_debt_bias && moving) ? 1 : 4;
+      for (int dz = -kRingScan; dz <= kRingScan && ring_enq < kRingTopK; ++dz)
       {
-        for (int dx = -4; dx <= 4 && ring_enq < kRingTopK; ++dx)
+        for (int dx = -kRingScan; dx <= kRingScan && ring_enq < kRingTopK; ++dx)
         {
-          if (std::max(std::abs(dx), std::abs(dz)) > 4)
+          if (std::max(std::abs(dx), std::abs(dz)) > kRingScan)
           {
             continue;
           }
@@ -609,8 +610,19 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
             : OceanVoidRelightDrainCapMoving(void_pressure, void_base);
     world.CollectFullyDarkFocusColumns(focus_ground_horiz, vb_radius,
                                        void_dark_cols, void_cap);
-    world.CollectStaleDarkFocusColumns(focus_ground_horiz, vb_radius,
-                                       stale_dark_cols, stale_cap);
+    // Phase 5.7R2: skip CollectStaleDark on VB plateau (O(R²) diet).
+    static int prev_vb_pub = -1;
+    static int prev_no_ticket = -1;
+    const bool skip_stale_collect = ShouldSkipStaleCollectOnVbPlateau(
+        visible_black_n, prev_vb_pub, visible_black_no_ticket_n, prev_no_ticket,
+        vb_consume, cooldown_ok);
+    prev_vb_pub = visible_black_n;
+    prev_no_ticket = visible_black_no_ticket_n;
+    if (!skip_stale_collect)
+    {
+      world.CollectStaleDarkFocusColumns(focus_ground_horiz, vb_radius,
+                                         stale_dark_cols, stale_cap);
+    }
     // Drop columns already in PendingLight from stale Remesh set — void columns
     // must RelightThenMesh (Era30 I-O3), not skip as stale-only.
     if (!pending_cols.empty() && !stale_dark_cols.empty())

@@ -156,24 +156,28 @@ int main()
            "P4: no prior GPU nothing to keep");
   }
 
-  // --- Phase 5.7.1 AntiFlicker discard → Dirty ---
+  // --- Phase 5.7.1 / 5.7R2 AntiFlicker discard → Dirty ---
   {
     using cutum::ShouldSilentDropStaleMeshDiscard;
     using cutum::ShouldRequeueAfterMeshDiscard;
     Expect(ShouldSilentDropStaleMeshDiscard(true, false, false),
            "5.7.1/R: lit drawable discard silent-drop");
-    Expect(ShouldSilentDropStaleMeshDiscard(false, true, false),
-           "5.7.1: SoftDeferHeld discard silent-drop");
-    Expect(ShouldSilentDropStaleMeshDiscard(true, true, true),
-           "5.7.1: SoftDeferHeld even if dark silent-drop");
+    Expect(ShouldSilentDropStaleMeshDiscard(false, true, false, 0),
+           "5.7R2: SoftDeferHeld young silent-drop");
+    Expect(ShouldSilentDropStaleMeshDiscard(true, true, true, 5),
+           "5.7R2: SoftDeferHeld young even if dark silent-drop");
+    Expect(!ShouldSilentDropStaleMeshDiscard(false, true, false, 15),
+           "5.7R2: SoftDeferHeld age>=sla not silent");
     Expect(!ShouldSilentDropStaleMeshDiscard(false, false, false),
            "5.7.1: FirstMesh orphan not silent-drop");
     Expect(!ShouldSilentDropStaleMeshDiscard(true, false, true),
            "5.7R: FullyDark drawable not silent-drop");
     Expect(!ShouldRequeueAfterMeshDiscard(true, false, false),
            "5.7.1: lit drawable → no Dirty");
-    Expect(!ShouldRequeueAfterMeshDiscard(false, true, false),
-           "5.7.1: SoftDeferHeld → no Dirty");
+    Expect(!ShouldRequeueAfterMeshDiscard(false, true, false, 0),
+           "5.7R2: SoftDeferHeld young → no Dirty");
+    Expect(ShouldRequeueAfterMeshDiscard(false, true, false, 15),
+           "5.7R2: SoftDeferHeld aged → Dirty");
     Expect(ShouldRequeueAfterMeshDiscard(false, false, false),
            "5.7.1: !drawable → Dirty");
     Expect(ShouldRequeueAfterMeshDiscard(true, false, true),

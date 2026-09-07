@@ -405,7 +405,8 @@ public:
   /// SRBR-P0.2: gate path SoftDefer-empty / !ready → one Dirty (transfer Held).
   int MarkEnterMissingMeshesDirty();
   /// TD-ARCH-021: burst-mark unfinished spawn visual ring (budget per frame).
-  int MarkSpawnRingUnfinishedDirty(int max_marks);
+  /// Phase 5.7R2: max_horiz < 0 → EnterVisualWorkRadius; else clamp ring.
+  int MarkSpawnRingUnfinishedDirty(int max_marks, int max_horiz = -1);
   /// SRBR-P0.2: force Dirty/GPU kick on pinned miss slice (nh≤1 SLA).
   bool HealPinnedMissSlice(glm::ivec3 coord);
   bool NeedsEnterGameMeshWarmup() const;

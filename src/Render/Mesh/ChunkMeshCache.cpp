@@ -512,12 +512,12 @@ void UChunkMeshCache::CancelAsyncInFlightKeepDirty(glm::ivec3 focus_ground_chunk
         continue;
       }
     }
-    // Phase 5.7.1: drawable / SoftDeferHeld keep residency until Bind — do not
-    // force Dirty after CancelPending epoch bump (DiscardedLate silent-drop).
+    // Phase 5.7.1 / 5.7R2: drawable keep; SoftDeferHeld silent only while young.
     const bool drawable = HasDrawableGreedyMesh(entry.first);
     const bool soft_held = IsSoftDeferHeld(entry.first);
     const bool dark_face = ChunkHasFullyDarkFace(entry.first);
-    if (ShouldRequeueAfterMeshDiscard(drawable, soft_held, dark_face))
+    const int soft_age = soft_held ? GetSoftDeferHeldAge(entry.first) : 0;
+    if (ShouldRequeueAfterMeshDiscard(drawable, soft_held, dark_face, soft_age))
     {
       Dirty.MarkDirtyPriority(entry.first);
     }
@@ -2118,7 +2118,11 @@ void UChunkMeshCache::MaybeMarkDirtyAfterSoftDeferEmptyAvoid(glm::ivec3 coord)
   {
     frames = it->second;
   }
-  if (SoftDeferEmptyShouldMarkDirtyAfterAvoid(has_ticket, frames))
+  const bool underfeet =
+      MeshFocusValid &&
+      std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
+               std::abs(coord.z - MeshFocusGroundChunk.z)) <= 1;
+  if (SoftDeferEmptyShouldMarkDirtyAfterAvoid(has_ticket, frames, 4, underfeet))
   {
     MarkDirtyPriority(coord);
   }
@@ -5191,12 +5195,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     }
     for (const glm::ivec3 &coord : AsyncBuilder->TakeDiscardedCoords())
     {
-      // Phase 5.7.1 / 5.7R: epoch/job DiscardedLate — FirstMesh orphan + FullyDark
-      // drawable requeue; lit-stable / SoftDeferHeld silent-drop.
+      // Phase 5.7.1 / 5.7R2: orphan + FullyDark + aged SoftDeferHeld requeue.
       const bool drawable = HasDrawableGreedyMesh(coord);
       const bool soft_held = IsSoftDeferHeld(coord);
       const bool dark_face = ChunkHasFullyDarkFace(coord);
-      if (ShouldRequeueAfterMeshDiscard(drawable, soft_held, dark_face))
+      const int soft_age = soft_held ? GetSoftDeferHeldAge(coord) : 0;
+      if (ShouldRequeueAfterMeshDiscard(drawable, soft_held, dark_face, soft_age))
       {
         MarkDirtyPriority(coord);
       }
@@ -6323,11 +6327,12 @@ void UChunkMeshCache::DrainAsyncMeshResults(UBlockWorld &world,
   }
   for (const glm::ivec3 &coord : AsyncBuilder->TakeDiscardedCoords())
   {
-    // Phase 5.7.1 / 5.7R: same gate as emerge TakeDiscarded (no admit thrash).
+    // Phase 5.7.1 / 5.7R2: same gate as emerge TakeDiscarded.
     const bool drawable = HasDrawableGreedyMesh(coord);
     const bool soft_held = IsSoftDeferHeld(coord);
     const bool dark_face = ChunkHasFullyDarkFace(coord);
-    if (ShouldRequeueAfterMeshDiscard(drawable, soft_held, dark_face))
+    const int soft_age = soft_held ? GetSoftDeferHeldAge(coord) : 0;
+    if (ShouldRequeueAfterMeshDiscard(drawable, soft_held, dark_face, soft_age))
     {
       MarkDirtyPriority(coord);
     }

@@ -282,6 +282,12 @@ public:
     }
     return max_age;
   }
+  /// Phase 5.7R2: SoftDeferHeld age for DiscardedLate escape (O(1)).
+  int GetSoftDeferHeldAge(glm::ivec3 chunk_coord) const
+  {
+    const auto it = SoftDeferHeldAge.find(chunk_coord);
+    return it != SoftDeferHeldAge.end() ? it->second : 0;
+  }
   /// Era24 / Era50: SoftDeferHeld membership for Hide⇒Ticket ownership.
   bool IsSoftDeferHeld(glm::ivec3 chunk_coord) const
   {

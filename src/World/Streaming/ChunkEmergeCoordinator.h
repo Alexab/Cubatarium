@@ -73,6 +73,8 @@ private:
   int MissStuckRunFrames{0};
   /// I11-A2: consecutive frames miss stuck without drawable completion.
   int MissCompletionStuckFrames{0};
+  /// Phase 5.7R2: empty-gpu remesh edge latch (clear when miss episode ends).
+  bool MissWitnessRemeshLatched{false};
   /// Phase C: wall EMA for adaptive emerge cap on cruise.
   double WallEmaMs{0.0};
   /// Era51 F1a: adaptive stop-phase emerge budget with decay.

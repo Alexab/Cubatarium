@@ -4509,23 +4509,32 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const bool latch_debt =
         world.GetPhysicsTelemetry().EnterSettleSoftForceWithDebt != 0 &&
         world.GetPhysicsTelemetry().VisibilityDebt > 0;
-    // Phase 5.7R: do not Mark spiral every cruise frame under sticky latch.
-    const bool latch_mark_ok = latch_debt && !moving_fast;
+    // Phase 5.7R2: latch Mark underfeet while cruise; full budget on stop.
+    const bool latch_mark_stand = latch_debt && !moving_fast;
+    const bool latch_mark_underfeet =
+        latch_debt && moving_fast && underfeet_miss_sla;
     if (!world.IsEnterSessionActive() &&
         (world.GetEnterGameMeshBurstFrames() > 0 || spawn_catch_up ||
-         latch_mark_ok) &&
-        ShouldRunSpawnRingCatchUpHeal(spawn_catch_up || latch_mark_ok,
-                                      moving_fast, underfeet_miss_sla,
-                                      world.IsEnterSessionActive()))
+         latch_mark_stand || latch_mark_underfeet) &&
+        ShouldRunSpawnRingCatchUpHeal(
+            spawn_catch_up || latch_mark_stand || latch_mark_underfeet,
+            moving_fast, underfeet_miss_sla, world.IsEnterSessionActive()))
     {
       const int dirty_n =
           static_cast<int>(world.GetMeshService().GetDirtyCount());
-      const int mark_budget =
-          latch_mark_ok
-              ? 4
-              : (dirty_n > 48 ? 2
-                              : (spawn_catch_up ? (moving_fast ? 6 : 8) : 4));
-      world.MarkSpawnRingUnfinishedDirty(mark_budget);
+      if (latch_mark_underfeet)
+      {
+        world.MarkSpawnRingUnfinishedDirty(/*max_marks=*/2, /*max_horiz=*/1);
+      }
+      else
+      {
+        const int mark_budget =
+            latch_mark_stand
+                ? 4
+                : (dirty_n > 48 ? 2
+                                : (spawn_catch_up ? (moving_fast ? 6 : 8) : 4));
+        world.MarkSpawnRingUnfinishedDirty(mark_budget);
+      }
       if (ShouldBurstHealPinnedMiss(
               world.PhysicsTelemetryData.FocusMissingMesh != 0,
               world.PhysicsTelemetryData.MissHoriz,

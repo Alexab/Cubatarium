@@ -58,15 +58,17 @@ inline bool ShouldFailOpenGpuCompactCull(uint64_t aabb_on, uint64_t eligible,
   return eligible > 0 && aabb_on == 0 && any_degenerate;
 }
 
-/// Phase 5.7.4: skip GPU compact cull on light cruise when camera stable and
-/// no FocusMissing / VB edge (never skip under miss/holes).
+/// Phase 5.7.4 / 5.7R2: skip GPU compact cull on light cruise when camera
+/// stable, yaw quiet, and no FocusMissing / VB edge.
 inline bool ShouldSkipOpaqueCullLightCruise(bool draw_set_stable,
                                             bool rev_match, float cam_move2,
                                             float cam_eps2, bool indirect_ready,
                                             bool reverse_compact_active,
                                             float movement_speed,
                                             bool focus_missing,
-                                            bool vb_edge)
+                                            bool vb_edge,
+                                            float abs_yaw_delta = 0.0f,
+                                            float yaw_eps = 0.5f)
 {
   if (focus_missing || vb_edge || !draw_set_stable || !rev_match ||
       !indirect_ready || !reverse_compact_active)
@@ -77,8 +79,12 @@ inline bool ShouldSkipOpaqueCullLightCruise(bool draw_set_stable,
   {
     return false;
   }
-  // Near-stand only; land/fly keep GPU compact every moving frame.
-  return movement_speed <= 0.5f;
+  if (abs_yaw_delta > yaw_eps)
+  {
+    return false;
+  }
+  // Phase 5.7R2: widen near-stand to light cruise ≤1.5 with yaw gate.
+  return movement_speed <= 1.5f;
 }
 
 /// Phase 5.7.4: standing stable skip must also refuse under miss/VB edge.
@@ -88,8 +94,39 @@ inline bool ShouldSkipOpaqueCullStable(bool cull_stable, bool focus_missing,
   return cull_stable && !focus_missing && !vb_edge;
 }
 
-/// Phase 5.7.4b / 5.7R: half-rate cruise skip disabled (latent overdraw on
-/// healthy focus). Keep API for tests; always returns false.
+/// Phase 5.7R2: yaw/focus-gated compact reuse on alternate frames.
+/// Never skip under FocusMissing / VB edge.
+inline bool ShouldReuseOpaqueCullCompact(
+    bool draw_set_stable, bool rev_match, bool reverse_compact_active,
+    bool focus_unchanged, bool focus_missing, bool vb_edge, float abs_yaw_delta,
+    float abs_pitch_delta, float yaw_eps, float pitch_eps,
+    uint64_t opaque_cmd_on, uint64_t opaque_cmd_on_prev, uint32_t frame_parity)
+{
+  if (focus_missing || vb_edge)
+  {
+    return false;
+  }
+  if (!draw_set_stable || !rev_match || !reverse_compact_active)
+  {
+    return false;
+  }
+  if (!focus_unchanged)
+  {
+    return false;
+  }
+  if (abs_yaw_delta > yaw_eps || abs_pitch_delta > pitch_eps)
+  {
+    return false;
+  }
+  if (opaque_cmd_on != opaque_cmd_on_prev)
+  {
+    return false;
+  }
+  return (frame_parity & 1u) == 0u;
+}
+
+/// Phase 5.7.4b / 5.7R / 5.7R2: half-rate API now forwards to compact reuse
+/// when yaw/cmd args are omitted (legacy tests keep false without extras).
 inline bool ShouldSkipOpaqueCullHalfRate(bool draw_set_stable, bool rev_match,
                                          bool reverse_compact_active,
                                          bool focus_unchanged,
@@ -103,6 +140,8 @@ inline bool ShouldSkipOpaqueCullHalfRate(bool draw_set_stable, bool rev_match,
   (void)focus_missing;
   (void)vb_edge;
   (void)frame_parity;
+  // Legacy 7-arg form stays disabled; GeometryEngine calls
+  // ShouldReuseOpaqueCullCompact directly with yaw/cmd gates.
   return false;
 }
 

@@ -1848,6 +1848,8 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
       CachedOpaqueDrawFingerprint = draw_fp;
       CachedOpaqueCullRevision = 0;
       CachedOpaqueCullFocusValid = false;
+      CachedOpaqueCullOrientValid = false;
+      CachedOpaqueCmdOnValid = false;
     }
     GLboolean cullWasEnabled = GL_TRUE;
     if (!cutout.empty())
@@ -1867,16 +1869,20 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     {
       ScopedPhase cull_phase(&cull_ms);
       mdi->SetCullStatsReadbackEnabled(ShowPerformance);
-      // Phase 5.3.4 / 5.7.4 OpaqueCullSkipStable + light-cruise coherence.
+      // Phase 5.3.4 / 5.7.4 / 5.7R2 OpaqueCullSkipStable + light-cruise + reuse.
       const glm::vec3 cam_delta = cameraPos - CachedOpaqueCullCameraPos;
       const float cam_move2 =
           cam_delta.x * cam_delta.x + cam_delta.y * cam_delta.y +
           cam_delta.z * cam_delta.z;
       constexpr float kCullCamEps2 = 1.0e-4f; // ~1cm stand / light-cruise
+      constexpr float kCullYawEps = 0.5f;
+      constexpr float kCullPitchEps = 0.5f;
       float move_spd = 0.0f;
       bool focus_missing = false;
       bool vb_edge = false;
       glm::ivec2 focus_xz(0);
+      float yaw = 0.0f;
+      float pitch = 0.0f;
       if (WorldInstance)
       {
         const auto &pt = WorldInstance->GetPhysicsTelemetry();
@@ -1885,7 +1891,22 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
         vb_edge = pt.VisibleBlackFocusN > 0 &&
                   (pt.VisibleBlackNoTicketN > 0 || pt.VisibleBlackStalledN > 0);
         focus_xz = glm::ivec2(pt.FocusChunkX, pt.FocusChunkZ);
+        if (const auto cam = WorldInstance->GetCurrentUserCamera())
+        {
+          yaw = cam->GetYaw();
+          pitch = cam->GetPitch();
+        }
       }
+      const float abs_yaw_delta =
+          CachedOpaqueCullOrientValid ? std::abs(yaw - CachedOpaqueCullYaw)
+                                      : 999.0f;
+      const float abs_pitch_delta =
+          CachedOpaqueCullOrientValid ? std::abs(pitch - CachedOpaqueCullPitch)
+                                      : 999.0f;
+      const uint64_t opaque_cmd_on =
+          CachedOpaqueCmdOnValid ? CachedOpaqueCmdOn : 0;
+      const uint64_t opaque_cmd_on_prev =
+          CachedOpaqueCmdOnValid ? CachedOpaqueCmdOnPrev : 1;
       const bool focus_unchanged =
           CachedOpaqueCullFocusValid && focus_xz == CachedOpaqueCullFocusXZ;
       const bool cull_stable =
@@ -1898,14 +1919,16 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
               draw_set_stable, cullRevision == CachedOpaqueCullRevision,
               cam_move2, kCullCamEps2, GreedyGpuOpaque.IndirectCullReady,
               GreedyGpuOpaque.GpuCompactActive, move_spd, focus_missing,
-              vb_edge);
-      const bool half_rate_skip = ShouldSkipOpaqueCullHalfRate(
+              vb_edge, abs_yaw_delta, kCullYawEps);
+      const uint32_t cull_parity = OpaqueCullFrameParity++;
+      const bool compact_reuse = ShouldReuseOpaqueCullCompact(
           draw_set_stable, cullRevision == CachedOpaqueCullRevision,
           GreedyGpuOpaque.GpuCompactActive, focus_unchanged, focus_missing,
-          vb_edge, OpaqueCullFrameParity++);
+          vb_edge, abs_yaw_delta, abs_pitch_delta, kCullYawEps, kCullPitchEps,
+          opaque_cmd_on, opaque_cmd_on_prev, cull_parity);
       const bool do_skip =
           ShouldSkipOpaqueCullStable(cull_stable, focus_missing, vb_edge) ||
-          light_cruise_skip || half_rate_skip;
+          light_cruise_skip || compact_reuse;
       if (!do_skip)
       {
         const bool ok = mdi->ApplyGpuCompactCull(
@@ -1919,6 +1942,13 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
         CachedOpaqueCullCameraPos = cameraPos;
         CachedOpaqueCullFocusXZ = focus_xz;
         CachedOpaqueCullFocusValid = true;
+        CachedOpaqueCullYaw = yaw;
+        CachedOpaqueCullPitch = pitch;
+        CachedOpaqueCullOrientValid = true;
+        const uint64_t cmd_on = mdi->LastCullOpaqueOn();
+        CachedOpaqueCmdOnPrev = CachedOpaqueCmdOnValid ? CachedOpaqueCmdOn : cmd_on;
+        CachedOpaqueCmdOn = cmd_on;
+        CachedOpaqueCmdOnValid = true;
       }
       else if (WorldInstance)
       {
@@ -1948,6 +1978,8 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     CachedOpaqueDrawFingerprint = 0;
     CachedOpaqueCullRevision = 0;
     CachedOpaqueCullFocusValid = false;
+    CachedOpaqueCullOrientValid = false;
+    CachedOpaqueCmdOnValid = false;
   }
   if (!cutout.empty())
   {

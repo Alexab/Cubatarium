@@ -338,6 +338,12 @@ private:
   glm::ivec2 CachedOpaqueCullFocusXZ{0};
   bool CachedOpaqueCullFocusValid{false};
   uint32_t OpaqueCullFrameParity{0};
+  float CachedOpaqueCullYaw{0.0f};
+  float CachedOpaqueCullPitch{0.0f};
+  bool CachedOpaqueCullOrientValid{false};
+  uint64_t CachedOpaqueCmdOn{0};
+  uint64_t CachedOpaqueCmdOnPrev{0};
+  bool CachedOpaqueCmdOnValid{false};
   glm::mat4 PreparedTransparentVp{};
   const std::map<size_t, UTextureCube> *PreparedTransparentTextures{nullptr};
   IUMeshGpuStore &MeshStore();

@@ -368,10 +368,28 @@ inline bool ShouldRemeshMissWitnessEmptyGpu(bool focus_missing, bool pending_gpu
   return focus_missing && !pending_gpu && miss_witness_age >= age_sla_frames;
 }
 
-/// Phase 5.7.2 / 5.7R: stand remesh SLA 30; cruise keeps 60 (avoid remesh storm).
-inline int MissWitnessRemeshAgeSla(bool moving)
+/// Phase 5.7R2: underfeet nh≤1 remesh SLA 8/15; rim KEEP stand 30 / cruise 60.
+inline int MissWitnessRemeshAgeSla(bool moving, int miss_horiz = 99)
 {
+  if (miss_horiz >= 0 && miss_horiz <= 1)
+  {
+    return moving ? 15 : 8;
+  }
   return moving ? 60 : 30;
+}
+
+/// Phase 5.7R2: empty-gpu remesh once per miss episode (edge), not every frame.
+inline bool ShouldRemeshMissWitnessEmptyGpuEdge(
+    bool focus_missing, bool pending_gpu, int miss_witness_age,
+    int age_sla_frames, bool already_dirty, bool fm_ticket,
+    bool remeshed_latched)
+{
+  if (remeshed_latched || already_dirty || fm_ticket)
+  {
+    return false;
+  }
+  return ShouldRemeshMissWitnessEmptyGpu(focus_missing, pending_gpu,
+                                         miss_witness_age, age_sla_frames);
 }
 
 /// Phase 5.7R: stuck remesh under schedule_ok==0 — already-owned gate; first
@@ -396,6 +414,29 @@ inline bool ShouldRemeshMissWitnessStuck(bool focus_missing,
     return true;
   }
   return miss_witness_age >= age_sla_frames;
+}
+
+/// Phase 5.7R2: SoftDefer empty underfeet (Cheb≤1) — heal without age wait.
+inline bool ShouldSoftDeferEmptyUnderfeetFastHeal(int horiz)
+{
+  return horiz >= 0 && horiz <= 1;
+}
+
+/// Phase 5.7R2: skip O(R²) CollectStaleDark when VB counts plateau.
+inline bool ShouldSkipStaleCollectOnVbPlateau(int vb_pub, int vb_pub_prev,
+                                               int no_ticket, int no_ticket_prev,
+                                               bool vb_dirty_consumed,
+                                               bool cooldown_ok)
+{
+  if (vb_dirty_consumed)
+  {
+    return false;
+  }
+  if (!cooldown_ok)
+  {
+    return true;
+  }
+  return vb_pub == vb_pub_prev && no_ticket == no_ticket_prev && no_ticket < 8;
 }
 
 /// Phase 5.7.2: PreferKick only when a PendingGpu apply exists.

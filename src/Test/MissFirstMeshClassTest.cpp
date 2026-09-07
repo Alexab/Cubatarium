@@ -423,6 +423,10 @@ int main()
            "Era39: damp Dirty until min_frames");
     Expect(SoftDeferEmptyShouldMarkDirtyAfterAvoid(false, 4),
            "Era39: Dirty OK after min_frames without ticket");
+    Expect(SoftDeferEmptyShouldMarkDirtyAfterAvoid(false, 0, 4, true),
+           "Phase5.7R2: underfeet Dirty immediately after avoid");
+    Expect(!SoftDeferEmptyShouldMarkDirtyAfterAvoid(true, 0, 4, true),
+           "Phase5.7R2: underfeet still damp while FM/pending");
     Expect(SoftDeferEmptyShouldApplyOwnership(true),
            "Era39: apply ownership when Cd ready");
     Expect(!SoftDeferEmptyShouldApplyOwnership(false),
@@ -2418,6 +2422,8 @@ int main()
     using cutum::ShouldRemeshMissWitnessEmptyGpu;
     using cutum::MissWitnessRemeshAgeSla;
     using cutum::ShouldPreferKickMissWitnessGpu;
+    using cutum::ShouldRemeshMissWitnessEmptyGpuEdge;
+    using cutum::ShouldSoftDeferEmptyUnderfeetFastHeal;
     Expect(ShouldRemeshMissWitnessEmptyGpu(true, false, 60, 60),
            "Phase5.6.3: missing+!gpu+age remeshes");
     Expect(!ShouldRemeshMissWitnessEmptyGpu(true, true, 60, 60),
@@ -2427,18 +2433,53 @@ int main()
     Expect(!ShouldRemeshMissWitnessEmptyGpu(false, false, 60, 60),
            "Phase5.6.3: no miss skips remesh");
     Expect(MissWitnessRemeshAgeSla(false) == 30,
-           "Phase5.7R: stand remesh SLA 30");
+           "Phase5.7R: stand rim remesh SLA 30");
     Expect(MissWitnessRemeshAgeSla(true) == 60,
-           "Phase5.7.2: cruise remesh SLA 60");
+           "Phase5.7.2: cruise rim remesh SLA 60");
+    Expect(MissWitnessRemeshAgeSla(false, 1) == 8,
+           "Phase5.7R2: stand underfeet remesh SLA 8");
+    Expect(MissWitnessRemeshAgeSla(true, 1) == 15,
+           "Phase5.7R2: cruise underfeet remesh SLA 15");
+    Expect(MissWitnessRemeshAgeSla(true, 0) == 15,
+           "Phase5.7R2: cruise nh0 remesh SLA 15");
     Expect(ShouldRemeshMissWitnessEmptyGpu(true, false, 30,
                                            MissWitnessRemeshAgeSla(false)),
            "Phase5.7R: stand age 30 remeshes");
     Expect(!ShouldRemeshMissWitnessEmptyGpu(true, false, 15,
                                             MissWitnessRemeshAgeSla(false)),
-           "Phase5.7R: stand age 15 below SLA");
+           "Phase5.7R: stand age 15 below rim SLA");
+    Expect(ShouldRemeshMissWitnessEmptyGpu(true, false, 15,
+                                           MissWitnessRemeshAgeSla(true, 1)),
+           "Phase5.7R2: cruise underfeet age 15 remeshes");
     Expect(!ShouldRemeshMissWitnessEmptyGpu(true, false, 15,
                                             MissWitnessRemeshAgeSla(true)),
-           "Phase5.7.2: cruise age 15 below SLA");
+           "Phase5.7.2: cruise rim age 15 below SLA");
+    Expect(ShouldRemeshMissWitnessEmptyGpuEdge(true, false, 15, 15, false, false,
+                                               false),
+           "Phase5.7R2: edge remesh fires once");
+    Expect(!ShouldRemeshMissWitnessEmptyGpuEdge(true, false, 15, 15, false, false,
+                                                true),
+           "Phase5.7R2: edge remesh latched skip");
+    Expect(!ShouldRemeshMissWitnessEmptyGpuEdge(true, false, 15, 15, true, false,
+                                                false),
+           "Phase5.7R2: edge remesh Dirty-owned skip");
+    Expect(ShouldSoftDeferEmptyUnderfeetFastHeal(0),
+           "Phase5.7R2: underfeet SoftDefer fast heal nh0");
+    Expect(ShouldSoftDeferEmptyUnderfeetFastHeal(1),
+           "Phase5.7R2: underfeet SoftDefer fast heal nh1");
+    Expect(!ShouldSoftDeferEmptyUnderfeetFastHeal(2),
+           "Phase5.7R2: rim SoftDefer no fast heal");
+    using cutum::ShouldSkipStaleCollectOnVbPlateau;
+    Expect(ShouldSkipStaleCollectOnVbPlateau(10, 10, 3, 3, false, true),
+           "Phase5.7R2: VB plateau skip Collect");
+    Expect(!ShouldSkipStaleCollectOnVbPlateau(10, 10, 3, 3, true, true),
+           "Phase5.7R2: VB dirty consume forces Collect");
+    Expect(!ShouldSkipStaleCollectOnVbPlateau(10, 10, 3, 3, true, false),
+           "Phase5.7R2: VB consume overrides cooldown skip");
+    Expect(ShouldSkipStaleCollectOnVbPlateau(10, 10, 3, 3, false, false),
+           "Phase5.7R2: cooldown cools → skip Collect");
+    Expect(!ShouldSkipStaleCollectOnVbPlateau(10, 9, 3, 3, false, true),
+           "Phase5.7R2: VB change forces Collect");
     using cutum::ShouldRemeshMissWitnessStuck;
     Expect(ShouldRemeshMissWitnessStuck(true, true, false, false, false, 60, 60),
            "5.7R: stuck remesh when SLA+unowned");
@@ -3436,26 +3477,44 @@ int main()
     using cutum::ShouldSkipOpaqueCullLightCruise;
     using cutum::ShouldSkipOpaqueCullStable;
     using cutum::ShouldSkipOpaqueCullHalfRate;
+    using cutum::ShouldReuseOpaqueCullCompact;
     using cutum::ShouldThrottleFailOpenGpuCompact;
     Expect(ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
                                            0.4f, false, false),
            "5.7.4: near-stand skip OK");
+    Expect(ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
+                                           1.4f, false, false, 0.1f, 0.5f),
+           "5.7R2: light-cruise ≤1.5 + quiet yaw skip OK");
+    Expect(!ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
+                                            1.4f, false, false, 1.0f, 0.5f),
+           "5.7R2: light-cruise no skip when yaw noisy");
     Expect(!ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
                                             0.4f, true, false),
            "5.7.4: no skip under FocusMissing");
     Expect(!ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
                                             2.0f, false, false),
-           "5.7.4: no skip at light-cruise speed");
+           "5.7.4: no skip above light-cruise speed");
     Expect(ShouldSkipOpaqueCullStable(true, false, false),
            "5.7.4: stable skip OK");
     Expect(!ShouldSkipOpaqueCullStable(true, true, false),
            "5.7.4: stable no skip under miss");
     Expect(!ShouldSkipOpaqueCullHalfRate(true, true, true, true, false, false, 0),
-           "5.7R: half-rate disabled even frame");
-    Expect(!ShouldSkipOpaqueCullHalfRate(true, true, true, true, false, false, 1),
-           "5.7R: half-rate disabled odd frame");
-    Expect(!ShouldSkipOpaqueCullHalfRate(true, true, true, true, true, false, 0),
-           "5.7.4b: half-rate no miss");
+           "5.7R: legacy half-rate API stays false");
+    Expect(ShouldReuseOpaqueCullCompact(true, true, true, true, false, false,
+                                        0.0f, 0.0f, 0.5f, 0.5f, 100, 100, 0),
+           "5.7R2: compact reuse even frame");
+    Expect(!ShouldReuseOpaqueCullCompact(true, true, true, true, false, false,
+                                         0.0f, 0.0f, 0.5f, 0.5f, 100, 100, 1),
+           "5.7R2: compact reuse odd frame runs cull");
+    Expect(!ShouldReuseOpaqueCullCompact(true, true, true, true, true, false,
+                                         0.0f, 0.0f, 0.5f, 0.5f, 100, 100, 0),
+           "5.7R2: compact reuse never under miss");
+    Expect(!ShouldReuseOpaqueCullCompact(true, true, true, true, false, false,
+                                         1.0f, 0.0f, 0.5f, 0.5f, 100, 100, 0),
+           "5.7R2: compact reuse no yaw jump");
+    Expect(!ShouldReuseOpaqueCullCompact(true, true, true, true, false, false,
+                                         0.0f, 0.0f, 0.5f, 0.5f, 100, 99, 0),
+           "5.7R2: compact reuse no cmd_on change");
     Expect(ShouldThrottleFailOpenGpuCompact(3),
            "5.7.4: fail-open after N=3");
     Expect(!ShouldThrottleFailOpenGpuCompact(2),

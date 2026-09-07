@@ -188,13 +188,19 @@ inline bool SoftDeferEmptyShouldKeepOwnership(bool still_empty,
 
 /// Era39: after SoftDeferEmptyPublishAvoided, do not Dirty-storm while FM /
 /// Inflight / Pending owns the column, or until min_frames elapse.
+/// Phase 5.7R2: underfeet (nh≤1) MarkDirty immediately when unowned.
 inline bool SoftDeferEmptyShouldMarkDirtyAfterAvoid(bool has_fm_or_pending,
                                                     int frames_since_avoid,
-                                                    int min_frames = 4)
+                                                    int min_frames = 4,
+                                                    bool underfeet = false)
 {
   if (has_fm_or_pending)
   {
     return false;
+  }
+  if (underfeet)
+  {
+    return true;
   }
   return frames_since_avoid >= min_frames;
 }
@@ -219,16 +225,18 @@ inline bool ShouldRemeshDrawableForHiddenNeighborSeam(bool has_drawable,
   return neighbor_hidden_now != neighbor_hidden_prev;
 }
 
-/// Phase 5.7.1 / 5.7R: late DiscardedCoords must not Dirty-storm a lit-stable
-/// drawable or SoftDeferHeld residency — keep GPU until Bind/PendingReplace.
-/// FullyDark / GpuHasDarkFace drawable must requeue (heal path).
+/// Phase 5.7.1 / 5.7R / 5.7R2: late DiscardedCoords must not Dirty-storm a
+/// lit-stable drawable. SoftDeferHeld silent only while young (age < sla);
+/// aged Held escapes to requeue. FullyDark drawable must requeue.
 inline bool ShouldSilentDropStaleMeshDiscard(bool has_drawable,
                                              bool soft_defer_held,
-                                             bool gpu_has_dark_face = false)
+                                             bool gpu_has_dark_face = false,
+                                             int soft_held_age = 0,
+                                             int soft_held_sla = 15)
 {
   if (soft_defer_held)
   {
-    return true;
+    return soft_held_age < soft_held_sla;
   }
   if (!has_drawable)
   {
@@ -237,14 +245,17 @@ inline bool ShouldSilentDropStaleMeshDiscard(bool has_drawable,
   return !gpu_has_dark_face;
 }
 
-/// Phase 5.7.1 / 5.7R: requeue DiscardedLate for FirstMesh orphans and for
-/// drawable FullyDark/dark-face (O(1) GpuHasDarkFace). Lit drawable silent-drop.
+/// Phase 5.7.1 / 5.7R / 5.7R2: requeue DiscardedLate for FirstMesh orphans,
+/// aged SoftDeferHeld, and drawable FullyDark/dark-face. Lit drawable silent.
 inline bool ShouldRequeueAfterMeshDiscard(bool has_drawable,
                                           bool soft_defer_held,
-                                          bool gpu_has_dark_face = false)
+                                          bool gpu_has_dark_face = false,
+                                          int soft_held_age = 0,
+                                          int soft_held_sla = 15)
 {
   return !ShouldSilentDropStaleMeshDiscard(has_drawable, soft_defer_held,
-                                           gpu_has_dark_face);
+                                           gpu_has_dark_face, soft_held_age,
+                                           soft_held_sla);
 }
 
 } // namespace cutum
