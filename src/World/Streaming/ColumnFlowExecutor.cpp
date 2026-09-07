@@ -471,7 +471,8 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   const bool latch_debt_bias =
       world.GetPhysicsTelemetry().EnterSettleSoftForceWithDebt != 0 &&
       world.GetPhysicsTelemetry().VisibilityDebt > 0;
-  if (vb_consume || latch_debt_bias)
+  // Phase 5.7.3 / 5.7R: latch RelightThenMesh only idle/stop (cruise = vb_consume only).
+  if (vb_consume || (latch_debt_bias && !moving))
   {
     if (!scheduler_.Contains(focus, ColumnWorkKind::RelightThenMesh))
     {
@@ -483,9 +484,14 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     {
       const glm::ivec3 fg = focus_ground_horiz;
       int ring_enq = 0;
+      // Phase 5.7R: under latch+cruise — no ring Relight flood (fifo storm);
+      // stand latch TopK=3; non-latch unchanged.
       const int kRingTopK =
-          latch_debt_bias ? 8
-                          : ((!moving && visible_black_n >= 25) ? 6 : 3);
+          latch_debt_bias
+              ? (moving ? 0 : 3)
+              : (missing_visible_mesh && moving
+                     ? 1
+                     : ((!moving && visible_black_n >= 25) ? 6 : 3));
       for (int dz = -4; dz <= 4 && ring_enq < kRingTopK; ++dz)
       {
         for (int dx = -4; dx <= 4 && ring_enq < kRingTopK; ++dx)
@@ -500,6 +506,11 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
             continue;
           }
           if (scheduler_.Contains(col, ColumnWorkKind::RelightThenMesh))
+          {
+            continue;
+          }
+          // Prefer unfinished columns over arbitrary free slots.
+          if (world.IsColumnVisualReady(col))
           {
             continue;
           }
@@ -672,6 +683,8 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     }
     // FZ2-R6 / FZ2.2-C2a: second collect idle-only; C2c enter peak one-shot.
     // FZ2.7-P15b (ex-P14 F4): also one moving second pass under no_ticket orphan.
+    // Phase 5.7R: drop FocusMissing any-no_ticket second-pass; rescan only if
+    // pass1 returned 0 (avoid double O(R²) Collect).
     const bool second_pass_idle =
         nearest_vb_no_ticket && async_ok && !moving &&
         visible_black_no_ticket_n > 20;
@@ -682,16 +695,9 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     const bool second_pass_enter_peak =
         enter_fov_lit && async_ok && visible_black_no_ticket_n > 40 &&
         static_cast<int>(stale_dark_cols.size()) < stale_cap;
-    // Phase 5.7.2: FocusMissing + any no_ticket → force second-pass collect.
-    const bool second_pass_focus_miss =
-        missing_visible_mesh && async_ok && visible_black_no_ticket_n > 0 &&
-        static_cast<int>(stale_dark_cols.size()) < stale_cap;
-    if ((second_pass_idle || second_pass_moving || second_pass_focus_miss) &&
-        static_cast<int>(stale_dark_cols.size()) < stale_cap)
+    if ((second_pass_idle || second_pass_moving) && stale_dark_cols.empty())
     {
-      const int remain =
-          stale_cap - static_cast<int>(stale_dark_cols.size());
-      // FZ2.2-O5: narrower ring on second pass (incremental vs full rescan).
+      const int remain = stale_cap;
       const int second_radius = std::max(1, vb_radius - 1);
       std::vector<glm::ivec2> extra;
       world.CollectStaleDarkFocusColumns(focus_ground_horiz, second_radius,

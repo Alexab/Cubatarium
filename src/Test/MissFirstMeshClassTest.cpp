@@ -2426,16 +2426,27 @@ int main()
            "Phase5.6.3: age below SLA skips remesh");
     Expect(!ShouldRemeshMissWitnessEmptyGpu(false, false, 60, 60),
            "Phase5.6.3: no miss skips remesh");
-    Expect(MissWitnessRemeshAgeSla(false) == 15,
-           "Phase5.7.2: stand remesh SLA 15");
+    Expect(MissWitnessRemeshAgeSla(false) == 30,
+           "Phase5.7R: stand remesh SLA 30");
     Expect(MissWitnessRemeshAgeSla(true) == 60,
            "Phase5.7.2: cruise remesh SLA 60");
-    Expect(ShouldRemeshMissWitnessEmptyGpu(true, false, 15,
+    Expect(ShouldRemeshMissWitnessEmptyGpu(true, false, 30,
                                            MissWitnessRemeshAgeSla(false)),
-           "Phase5.7.2: stand age 15 remeshes");
+           "Phase5.7R: stand age 30 remeshes");
+    Expect(!ShouldRemeshMissWitnessEmptyGpu(true, false, 15,
+                                            MissWitnessRemeshAgeSla(false)),
+           "Phase5.7R: stand age 15 below SLA");
     Expect(!ShouldRemeshMissWitnessEmptyGpu(true, false, 15,
                                             MissWitnessRemeshAgeSla(true)),
            "Phase5.7.2: cruise age 15 below SLA");
+    using cutum::ShouldRemeshMissWitnessStuck;
+    Expect(ShouldRemeshMissWitnessStuck(true, true, false, false, false, 60, 60),
+           "5.7R: stuck remesh when SLA+unowned");
+    Expect(ShouldRemeshMissWitnessStuck(true, true, false, false, false, 0, 60, 0),
+           "5.7R: stuck first frame remeshes");
+    Expect(!ShouldRemeshMissWitnessStuck(true, true, false, false, false, 15, 60,
+                                         5),
+           "5.7R: stuck below SLA after first");
     Expect(ShouldPreferKickMissWitnessGpu(true),
            "Phase5.7.2: PreferKick only with pending gpu");
     Expect(!ShouldPreferKickMissWitnessGpu(false),
@@ -3439,10 +3450,10 @@ int main()
            "5.7.4: stable skip OK");
     Expect(!ShouldSkipOpaqueCullStable(true, true, false),
            "5.7.4: stable no skip under miss");
-    Expect(ShouldSkipOpaqueCullHalfRate(true, true, true, true, false, false, 0),
-           "5.7.4b: half-rate even frame");
+    Expect(!ShouldSkipOpaqueCullHalfRate(true, true, true, true, false, false, 0),
+           "5.7R: half-rate disabled even frame");
     Expect(!ShouldSkipOpaqueCullHalfRate(true, true, true, true, false, false, 1),
-           "5.7.4b: half-rate odd frame");
+           "5.7R: half-rate disabled odd frame");
     Expect(!ShouldSkipOpaqueCullHalfRate(true, true, true, true, true, false, 0),
            "5.7.4b: half-rate no miss");
     Expect(ShouldThrottleFailOpenGpuCompact(3),

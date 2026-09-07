@@ -4511,9 +4511,15 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             }
             pin_isolated_miss(118);
           }
-          // Phase 5.7.2: stand SLA 15 / cruise 60; empty PendingGpu → Dirty/FM.
+          // Phase 5.7.2 / 5.7R: stand SLA 30 / cruise 60; empty PendingGpu → Dirty/FM.
+          // Skip if already Dirty/FM-owned (coalesce with stuck path; no pin churn).
           const int remesh_sla = MissWitnessRemeshAgeSla(moving);
-          if (ShouldRemeshMissWitnessEmptyGpu(
+          const glm::ivec2 miss_xz_sla(isolated_hole.x, isolated_hole.z);
+          const bool miss_already_owned =
+              mesh_service.IsChunkMeshDirty(isolated_hole) ||
+              exec.Scheduler().Contains(miss_xz_sla, ColumnWorkKind::FirstMesh);
+          if (!miss_already_owned &&
+              ShouldRemeshMissWitnessEmptyGpu(
                   missing_visible_mesh,
                   mesh_service.IsPendingGpuApply(isolated_hole),
                   MissWitnessAgeFrames, remesh_sla) &&
@@ -4521,11 +4527,10 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           {
             mesh_service.MarkDirtyPriority(isolated_hole);
             ++world.GetPhysicsTelemetryMutable().MissWitnessRemeshN;
-            const glm::ivec2 miss_xz(isolated_hole.x, isolated_hole.z);
-            if (!exec.Scheduler().Contains(miss_xz, ColumnWorkKind::FirstMesh))
+            if (!exec.Scheduler().Contains(miss_xz_sla, ColumnWorkKind::FirstMesh))
             {
               ColumnWorkItem fm{};
-              fm.column = miss_xz;
+              fm.column = miss_xz_sla;
               fm.kind = ColumnWorkKind::FirstMesh;
               fm.priority = 114;
               fm.scan_full_focus = false;
@@ -4533,7 +4538,6 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               exec.Enqueue(fm);
               note_column_flow_drain(2, 1);
             }
-            pin_isolated_miss(114);
           }
           // I12-C1: completion stuck + empty FM → column-owned FirstMesh.
           const int miss_completion_thresh = moving ? 30 : 15;
@@ -5501,24 +5505,33 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     pt.MissWitnessAgeFramesReport = MissWitnessAgeFrames;
     if (missing_visible_mesh && pt.MeshDirtyScheduleOkN == 0)
     {
-      // Phase 5.7.2: schedule_ok==0 + !PendingGpu → remesh so stuck ≠ kick=0 idle.
-      if (found_nearest_missing &&
-          !mesh_service.IsPendingGpuApply(isolated_hole))
+      // Phase 5.7R: stuck remesh gated by SLA + already-Dirty/FM (no every-frame Mark).
+      if (found_nearest_missing)
       {
-        mesh_service.MarkDirtyPriority(isolated_hole);
-        ++pt.MissWitnessRemeshN;
         const glm::ivec2 miss_xz(isolated_hole.x, isolated_hole.z);
         auto &exec_stuck = GetColumnFlowExecutor();
-        if (!exec_stuck.Scheduler().Contains(miss_xz,
-                                             ColumnWorkKind::FirstMesh))
+        const bool already_dirty = mesh_service.IsChunkMeshDirty(isolated_hole);
+        const bool fm_ticket =
+            exec_stuck.Scheduler().Contains(miss_xz, ColumnWorkKind::FirstMesh);
+        if (ShouldRemeshMissWitnessStuck(
+                missing_visible_mesh, true,
+                mesh_service.IsPendingGpuApply(isolated_hole), already_dirty,
+                fm_ticket, MissWitnessAgeFrames,
+                MissWitnessRemeshAgeSla(moving), MissStuckRunFrames))
         {
-          ColumnWorkItem fm{};
-          fm.column = miss_xz;
-          fm.kind = ColumnWorkKind::FirstMesh;
-          fm.priority = 113;
-          fm.scan_full_focus = false;
-          fm.cy = isolated_hole.y;
-          exec_stuck.Enqueue(fm);
+          mesh_service.MarkDirtyPriority(isolated_hole);
+          ++pt.MissWitnessRemeshN;
+          if (!exec_stuck.Scheduler().Contains(miss_xz,
+                                               ColumnWorkKind::FirstMesh))
+          {
+            ColumnWorkItem fm{};
+            fm.column = miss_xz;
+            fm.kind = ColumnWorkKind::FirstMesh;
+            fm.priority = 113;
+            fm.scan_full_focus = false;
+            fm.cy = isolated_hole.y;
+            exec_stuck.Enqueue(fm);
+          }
         }
       }
       ++MissStuckRunFrames;

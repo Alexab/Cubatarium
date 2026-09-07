@@ -2382,7 +2382,9 @@ void UWorld::InvalidateUnfinishedVisualCache() const
   UnfinishedVisualCache.unfinished_keys.clear();
   UnfinishedVisualCache.count = 0;
   LastUnfinishedVisualSampleValid = false;
-  InvalidateVisibleBlackFocusSample();
+  // Phase 5.7R: do not InvalidateVisibleBlackFocusSample here — unfinished
+  // remesh thrash was forcing VB cd→1 every frame. VB dirty only on dark/drawable
+  // transitions (SetVisibleBlackFocusSample / explicit Invalidate).
 }
 
 void UWorld::NoteUnfinishedColumnDirty(glm::ivec2 col) const

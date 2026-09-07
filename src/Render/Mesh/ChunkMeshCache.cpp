@@ -516,7 +516,8 @@ void UChunkMeshCache::CancelAsyncInFlightKeepDirty(glm::ivec3 focus_ground_chunk
     // force Dirty after CancelPending epoch bump (DiscardedLate silent-drop).
     const bool drawable = HasDrawableGreedyMesh(entry.first);
     const bool soft_held = IsSoftDeferHeld(entry.first);
-    if (ShouldRequeueAfterMeshDiscard(drawable, soft_held))
+    const bool dark_face = ChunkHasFullyDarkFace(entry.first);
+    if (ShouldRequeueAfterMeshDiscard(drawable, soft_held, dark_face))
     {
       Dirty.MarkDirtyPriority(entry.first);
     }
@@ -5190,11 +5191,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     }
     for (const glm::ivec3 &coord : AsyncBuilder->TakeDiscardedCoords())
     {
-      // Phase 5.7.1: epoch/job DiscardedLate — FirstMesh orphan requeues;
-      // drawable / SoftDeferHeld silent-drop (keep-until-replace).
+      // Phase 5.7.1 / 5.7R: epoch/job DiscardedLate — FirstMesh orphan + FullyDark
+      // drawable requeue; lit-stable / SoftDeferHeld silent-drop.
       const bool drawable = HasDrawableGreedyMesh(coord);
       const bool soft_held = IsSoftDeferHeld(coord);
-      if (ShouldRequeueAfterMeshDiscard(drawable, soft_held))
+      const bool dark_face = ChunkHasFullyDarkFace(coord);
+      if (ShouldRequeueAfterMeshDiscard(drawable, soft_held, dark_face))
       {
         MarkDirtyPriority(coord);
       }
@@ -6321,10 +6323,11 @@ void UChunkMeshCache::DrainAsyncMeshResults(UBlockWorld &world,
   }
   for (const glm::ivec3 &coord : AsyncBuilder->TakeDiscardedCoords())
   {
-    // Phase 5.7.1: same gate as emerge TakeDiscarded (no admit thrash).
+    // Phase 5.7.1 / 5.7R: same gate as emerge TakeDiscarded (no admit thrash).
     const bool drawable = HasDrawableGreedyMesh(coord);
     const bool soft_held = IsSoftDeferHeld(coord);
-    if (ShouldRequeueAfterMeshDiscard(drawable, soft_held))
+    const bool dark_face = ChunkHasFullyDarkFace(coord);
+    if (ShouldRequeueAfterMeshDiscard(drawable, soft_held, dark_face))
     {
       MarkDirtyPriority(coord);
     }

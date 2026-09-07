@@ -46,6 +46,7 @@ MANUAL_093857 = {
     "vb_no_ticket_max": 91.0,
     "vb_stalled_max": 26.0,
     "opaque_cull_med": 13.0,
+    "relight_fifo_med": 0.0,
 }
 
 
@@ -391,6 +392,9 @@ def print_delta(auto: dict, baseline: dict, label: str):
         "vb_no_ticket_max",
         "vb_stalled_max",
         "opaque_cull_med",
+        "relight_fifo_med",
+        "stream_med",
+        "mesh_emerge_med",
     ]
     print(f"=== auto<->manual delta ({label}) ===")
     print(f"{'metric':36} {'auto':>12} {'manual':>12} {'delta':>12}")
@@ -456,13 +460,14 @@ def print_control_checklist(perf: dict | None, info: dict | None, report: dict):
         print(
             f"  wall_med={fmt(perf.get('wall_med'))}  "
             f"phase_med={fmt(perf.get('phase_med'))}  "
-            f"(093857~98/69)"
+            f"relight_fifo_med={fmt(perf.get('relight_fifo_med'))}  "
+            f"(093857~98/69/fifo~0; wall/phase <=1.25x; fifo_med<20)"
         )
         print(
             f"  mesh_discarded_late_med={fmt(perf.get('mesh_discarded_late_med'))}  "
             f"cruise_sum={fmt(perf.get('mesh_discarded_late_max'))}  "
             f"abs_med={fmt(perf.get('mesh_discarded_late_abs_med'))}  "
-            f"(093857 cruise~12 abs; want delta med<=2)"
+            f"(093857 cruise~12 abs; delta=0 alone != ship — check abs+eye)"
         )
         print(
             f"  visible_black_focus_med={fmt(perf.get('visible_black_focus_med'))}  "
@@ -503,9 +508,14 @@ def evaluate_fidelity(
     return fails
 
 
-def evaluate_product(info: dict | None, perf: dict | None) -> list[str]:
-    """Product UX fails (Phase57: holes/empty/latch/miss_stuck)."""
+def evaluate_product(
+    info: dict | None,
+    perf: dict | None,
+    baseline: dict | None = None,
+) -> list[str]:
+    """Product UX fails (Phase57: holes/empty/latch/miss_stuck + wall/phase/fifo)."""
     fails = []
+    base = baseline if baseline is not None else MANUAL_093857
     latch = None
     if perf:
         latch = perf.get("enter_settle_soft_force_with_debt_max")
@@ -584,6 +594,30 @@ def evaluate_product(info: dict | None, perf: dict | None) -> list[str]:
         cull = perf.get("opaque_cull_med")
         if cull is not None and float(cull) >= 20.0:
             fails.append(f"opaque_cull_med={cull:.3g}>=20 (pre-5.7 class ~18+)")
+        # Phase 5.7R: wall/phase regress vs SoT (manual 160710 greenwash guard).
+        base_wall = base.get("wall_med")
+        wall = perf.get("wall_med")
+        if (
+            base_wall is not None
+            and wall is not None
+            and float(wall) > 1.25 * float(base_wall)
+        ):
+            fails.append(
+                f"wall_med={wall:.3g}>1.25×baseline({float(base_wall):.3g})"
+            )
+        base_phase = base.get("phase_med")
+        phase = perf.get("phase_med")
+        if (
+            base_phase is not None
+            and phase is not None
+            and float(phase) > 1.25 * float(base_phase)
+        ):
+            fails.append(
+                f"phase_med={phase:.3g}>1.25×baseline({float(base_phase):.3g})"
+            )
+        fifo = perf.get("relight_fifo_med")
+        if fifo is not None and float(fifo) >= 20.0:
+            fails.append(f"relight_fifo_med={fifo:.3g}>=20 (enqueue storm)")
     return fails
 
 
@@ -696,7 +730,7 @@ def main():
         teleport = bool(report.get("teleport_cruise")) if "teleport_cruise" in report else None
 
     fid_fails = evaluate_fidelity(report, perf, info, teleport)
-    prod_fails = evaluate_product(info, perf)
+    prod_fails = evaluate_product(info, perf, baseline)
 
     print("=== fidelity ===")
     if fid_fails:

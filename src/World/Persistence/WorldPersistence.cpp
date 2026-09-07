@@ -35,6 +35,7 @@
 #include "World/Math/BlockTypes.h"
 #include <algorithm>
 #include <queue>
+#include <unordered_set>
 
 #include "World/Environment/EnvironmentConfig.h"
 #include "World/Math/GridMath.h"
@@ -1633,16 +1634,17 @@ int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
   {
     return 0;
   }
-  int dropped = 0;
-  // Phase 5.7.5: max-heap farthest trim — O(N + D log N) vs O(N·D).
+  const int need = total_fifo() - soft_cap;
+  // Phase 5.7.5 / 5.7R: max-heap farthest + survivor rebuild — O(N + D log N)
+  // (no per-drop std::find/erase O(N·D)).
   struct HeapEntry
   {
     int dist{0};
     glm::ivec2 key{0};
     bool operator<(const HeapEntry &o) const { return dist < o.dist; }
   };
-  auto fill_heap = [&](const std::deque<glm::ivec2> &q,
-                       std::priority_queue<HeapEntry> &heap)
+  auto push_unprotected = [&](const std::deque<glm::ivec2> &q,
+                              std::priority_queue<HeapEntry> &heap)
   {
     for (const glm::ivec2 &key : q)
     {
@@ -1660,8 +1662,13 @@ int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
       heap.push(HeapEntry{dist, key});
     }
   };
-  auto drop_from_heap =
-      [&](std::deque<glm::ivec2> &q, std::priority_queue<HeapEntry> &heap) -> bool
+  std::priority_queue<HeapEntry> far_heap;
+  std::priority_queue<HeapEntry> prio_heap;
+  push_unprotected(PendingTerrainColumnRelights, far_heap);
+  push_unprotected(PendingTerrainColumnRelightsPriority, prio_heap);
+  std::unordered_set<glm::ivec2, IVec2Hash> victims;
+  victims.reserve(static_cast<size_t>(std::max(0, need)));
+  auto take_victim = [&](std::priority_queue<HeapEntry> &heap) -> bool
   {
     while (!heap.empty())
     {
@@ -1672,7 +1679,6 @@ int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
       const int cz = FloorDiv(victim.y, CHUNK_SIZE);
       const int dist =
           std::max(std::abs(cx - focus_ground.x), std::abs(cz - focus_ground.z));
-      // Re-validate protect (stale heap entry).
       if (ShouldProtectRelightFifoTrimVictim(
               cx, cz, RelightFifoPinValid, RelightFifoPinCx, RelightFifoPinCz,
               true, focus_ground.x, focus_ground.z, protect) ||
@@ -1680,39 +1686,51 @@ int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
       {
         continue;
       }
-      auto it = std::find(q.begin(), q.end(), victim);
-      if (it == q.end())
+      if (!victims.insert(victim).second)
       {
         continue;
       }
-      q.erase(it);
-      PendingTerrainColumnRelightKeys.erase(victim);
-      PendingTerrainColumnRelightYBands.erase(victim);
-      ++dropped;
       return true;
     }
     return false;
   };
-  std::priority_queue<HeapEntry> far_heap;
-  std::priority_queue<HeapEntry> prio_heap;
-  fill_heap(PendingTerrainColumnRelights, far_heap);
-  fill_heap(PendingTerrainColumnRelightsPriority, prio_heap);
-  while (total_fifo() > soft_cap)
+  while (static_cast<int>(victims.size()) < need)
   {
-    if (!PendingTerrainColumnRelights.empty() &&
-        drop_from_heap(PendingTerrainColumnRelights, far_heap))
+    if (!PendingTerrainColumnRelights.empty() && take_victim(far_heap))
     {
       continue;
     }
-    if (!PendingTerrainColumnRelightsPriority.empty() &&
-        drop_from_heap(PendingTerrainColumnRelightsPriority, prio_heap))
+    if (!PendingTerrainColumnRelightsPriority.empty() && take_victim(prio_heap))
     {
       continue;
     }
     ++RelightFifoProtectBlockN;
     break;
   }
-  return dropped;
+  if (victims.empty())
+  {
+    return 0;
+  }
+  auto rebuild = [&](std::deque<glm::ivec2> &q)
+  {
+    std::deque<glm::ivec2> kept;
+    for (const glm::ivec2 &key : q)
+    {
+      if (victims.count(key) == 0)
+      {
+        kept.push_back(key);
+      }
+      else
+      {
+        PendingTerrainColumnRelightKeys.erase(key);
+        PendingTerrainColumnRelightYBands.erase(key);
+      }
+    }
+    q.swap(kept);
+  };
+  rebuild(PendingTerrainColumnRelights);
+  rebuild(PendingTerrainColumnRelightsPriority);
+  return static_cast<int>(victims.size());
 }
 
 void UWorldPersistence::ClearPendingRelights()

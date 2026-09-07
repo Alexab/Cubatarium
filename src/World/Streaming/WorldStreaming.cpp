@@ -1266,13 +1266,17 @@ void UWorldStreaming::RefreshStreamingPressure(
     }
     else if (diet_cruise_cadence_final)
     {
-      // Phase 5.7.6: dirty-ring memo — accelerate next full scan (cd→1) without
-      // every-frame full O(R²) recount (unfinished dirty is too hot to force 0).
+      // Phase 5.7.6 / 5.7R: dirty-ring memo — accelerate next full scan without
+      // every-frame O(R²). Under focus_missing+cruise floor cd≥2 (not 1).
       if (world.ConsumeVisibleBlackFocusSampleDirty())
       {
-        if (rp.visible_black_sample_cd > 1)
+        const bool miss_moving =
+            world.GetPhysicsTelemetry().FocusMissingMesh != 0 &&
+            moving_for_telemetry;
+        const int floor_cd = miss_moving ? 2 : 1;
+        if (rp.visible_black_sample_cd > floor_cd)
         {
-          rp.visible_black_sample_cd = 1;
+          rp.visible_black_sample_cd = floor_cd;
         }
         else
         {
@@ -4467,16 +4471,32 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const bool underfeet_miss_sla =
         world.PhysicsTelemetryData.FocusMissingMesh != 0 &&
         world.PhysicsTelemetryData.MissHoriz <= 1;
-    // Phase 5.6.1 / 5.7.3: sample vis debt + clear PresentableCatchUp; hinterland
-    // diagnose; sustain Mark budget 8 under latch while debt>0.
+    // Phase 5.6.1 / 5.7.3 / 5.7R: sample vis debt + clear PresentableCatchUp;
+    // hinterland diagnose on cadence; Mark budget 4 under latch while debt>0
+    // (skip Mark under cruise latch — catch-up on stop/idle only).
     {
       auto &pt = world.GetPhysicsTelemetryMutable();
-      const int vis_debt = world.CountEnterVisibilityDebt();
+      // Phase 5.7R: VisibilityDebt probe cadence under cruise (O(R²) CountUnready).
+      static int vis_debt_cd = 0;
+      static int cached_vis_debt = 0;
+      if (--vis_debt_cd <= 0)
+      {
+        cached_vis_debt = world.CountEnterVisibilityDebt();
+        vis_debt_cd = moving_fast ? 4 : 1;
+      }
+      const int vis_debt = cached_vis_debt;
       pt.VisibilityDebt = vis_debt;
       const glm::ivec3 focus_chunk =
           UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
-      const int debt_r8 = world.CountUnreadyColumns(focus_chunk, 8);
-      pt.VisibilityDebtHinterland = std::max(0, debt_r8 - vis_debt);
+      // Phase 5.7R: hinterland CountUnready is diagnose-only — cadence 8–16f.
+      static int hinterland_cd = 0;
+      static int hinterland_debt_r8 = 0;
+      if (--hinterland_cd <= 0)
+      {
+        hinterland_debt_r8 = world.CountUnreadyColumns(focus_chunk, 8);
+        hinterland_cd = moving_fast ? 8 : 16;
+      }
+      pt.VisibilityDebtHinterland = std::max(0, hinterland_debt_r8 - vis_debt);
       if (pt.EnterSettleSoftForceWithDebt != 0 &&
           EnterPresentableCatchUpClear(
               pt.SoftDeferOwnedNoGpuN, pt.SoftDeferEmptyStuckN, vis_debt,
@@ -4489,18 +4509,20 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
     const bool latch_debt =
         world.GetPhysicsTelemetry().EnterSettleSoftForceWithDebt != 0 &&
         world.GetPhysicsTelemetry().VisibilityDebt > 0;
+    // Phase 5.7R: do not Mark spiral every cruise frame under sticky latch.
+    const bool latch_mark_ok = latch_debt && !moving_fast;
     if (!world.IsEnterSessionActive() &&
         (world.GetEnterGameMeshBurstFrames() > 0 || spawn_catch_up ||
-         latch_debt) &&
-        ShouldRunSpawnRingCatchUpHeal(spawn_catch_up || latch_debt, moving_fast,
-                                      underfeet_miss_sla,
+         latch_mark_ok) &&
+        ShouldRunSpawnRingCatchUpHeal(spawn_catch_up || latch_mark_ok,
+                                      moving_fast, underfeet_miss_sla,
                                       world.IsEnterSessionActive()))
     {
       const int dirty_n =
           static_cast<int>(world.GetMeshService().GetDirtyCount());
       const int mark_budget =
-          latch_debt
-              ? 8
+          latch_mark_ok
+              ? 4
               : (dirty_n > 48 ? 2
                               : (spawn_catch_up ? (moving_fast ? 6 : 8) : 4));
       world.MarkSpawnRingUnfinishedDirty(mark_budget);

@@ -219,20 +219,32 @@ inline bool ShouldRemeshDrawableForHiddenNeighborSeam(bool has_drawable,
   return neighbor_hidden_now != neighbor_hidden_prev;
 }
 
-/// Phase 5.7.1: late DiscardedCoords must not Dirty-storm a live drawable or
-/// SoftDeferHeld residency — keep GPU until Bind/PendingReplace (I-R1 cancel).
+/// Phase 5.7.1 / 5.7R: late DiscardedCoords must not Dirty-storm a lit-stable
+/// drawable or SoftDeferHeld residency — keep GPU until Bind/PendingReplace.
+/// FullyDark / GpuHasDarkFace drawable must requeue (heal path).
 inline bool ShouldSilentDropStaleMeshDiscard(bool has_drawable,
-                                             bool soft_defer_held)
+                                             bool soft_defer_held,
+                                             bool gpu_has_dark_face = false)
 {
-  return has_drawable || soft_defer_held;
+  if (soft_defer_held)
+  {
+    return true;
+  }
+  if (!has_drawable)
+  {
+    return false;
+  }
+  return !gpu_has_dark_face;
 }
 
-/// Phase 5.7.1: requeue DiscardedLate only for FirstMesh orphans (!drawable &&
-/// !SoftDeferHeld). Drawable remesh discard is silent-dropped above.
+/// Phase 5.7.1 / 5.7R: requeue DiscardedLate for FirstMesh orphans and for
+/// drawable FullyDark/dark-face (O(1) GpuHasDarkFace). Lit drawable silent-drop.
 inline bool ShouldRequeueAfterMeshDiscard(bool has_drawable,
-                                          bool soft_defer_held)
+                                          bool soft_defer_held,
+                                          bool gpu_has_dark_face = false)
 {
-  return !ShouldSilentDropStaleMeshDiscard(has_drawable, soft_defer_held);
+  return !ShouldSilentDropStaleMeshDiscard(has_drawable, soft_defer_held,
+                                           gpu_has_dark_face);
 }
 
 } // namespace cutum

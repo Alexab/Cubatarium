@@ -368,10 +368,34 @@ inline bool ShouldRemeshMissWitnessEmptyGpu(bool focus_missing, bool pending_gpu
   return focus_missing && !pending_gpu && miss_witness_age >= age_sla_frames;
 }
 
-/// Phase 5.7.2: stand remesh SLA 15; cruise keeps 60 (avoid remesh storm).
+/// Phase 5.7.2 / 5.7R: stand remesh SLA 30; cruise keeps 60 (avoid remesh storm).
 inline int MissWitnessRemeshAgeSla(bool moving)
 {
-  return moving ? 60 : 15;
+  return moving ? 60 : 30;
+}
+
+/// Phase 5.7R: stuck remesh under schedule_ok==0 — already-owned gate; first
+/// stuck frame remeshes once, then same SLA as empty-gpu path (no every-frame Mark).
+inline bool ShouldRemeshMissWitnessStuck(bool focus_missing,
+                                         bool schedule_ok_zero,
+                                         bool pending_gpu, bool already_dirty,
+                                         bool fm_ticket, int miss_witness_age,
+                                         int age_sla_frames,
+                                         int miss_stuck_run_frames = 0)
+{
+  if (!focus_missing || !schedule_ok_zero || pending_gpu)
+  {
+    return false;
+  }
+  if (already_dirty || fm_ticket)
+  {
+    return false;
+  }
+  if (miss_stuck_run_frames <= 0)
+  {
+    return true;
+  }
+  return miss_witness_age >= age_sla_frames;
 }
 
 /// Phase 5.7.2: PreferKick only when a PendingGpu apply exists.

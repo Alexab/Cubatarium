@@ -88,20 +88,22 @@ inline bool ShouldSkipOpaqueCullStable(bool cull_stable, bool focus_missing,
   return cull_stable && !focus_missing && !vb_edge;
 }
 
-/// Phase 5.7.4b: alternate-frame skip while moving when draw set + focus healthy
-/// (cuts cruise cull wall without land light-cruise thrash).
+/// Phase 5.7.4b / 5.7R: half-rate cruise skip disabled (latent overdraw on
+/// healthy focus). Keep API for tests; always returns false.
 inline bool ShouldSkipOpaqueCullHalfRate(bool draw_set_stable, bool rev_match,
                                          bool reverse_compact_active,
                                          bool focus_unchanged,
                                          bool focus_missing, bool vb_edge,
                                          uint32_t frame_parity)
 {
-  if (focus_missing || vb_edge || !draw_set_stable || !rev_match ||
-      !reverse_compact_active || !focus_unchanged)
-  {
-    return false;
-  }
-  return (frame_parity & 1u) == 0u;
+  (void)draw_set_stable;
+  (void)rev_match;
+  (void)reverse_compact_active;
+  (void)focus_unchanged;
+  (void)focus_missing;
+  (void)vb_edge;
+  (void)frame_parity;
+  return false;
 }
 
 /// Phase 5.7.4: throttle fail-open CPU AABB — need N consecutive triggers.

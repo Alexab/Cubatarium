@@ -160,20 +160,24 @@ int main()
   {
     using cutum::ShouldSilentDropStaleMeshDiscard;
     using cutum::ShouldRequeueAfterMeshDiscard;
-    Expect(ShouldSilentDropStaleMeshDiscard(true, false),
-           "5.7.1: drawable discard silent-drop");
-    Expect(ShouldSilentDropStaleMeshDiscard(false, true),
+    Expect(ShouldSilentDropStaleMeshDiscard(true, false, false),
+           "5.7.1/R: lit drawable discard silent-drop");
+    Expect(ShouldSilentDropStaleMeshDiscard(false, true, false),
            "5.7.1: SoftDeferHeld discard silent-drop");
-    Expect(ShouldSilentDropStaleMeshDiscard(true, true),
-           "5.7.1: drawable+SoftDeferHeld silent-drop");
-    Expect(!ShouldSilentDropStaleMeshDiscard(false, false),
+    Expect(ShouldSilentDropStaleMeshDiscard(true, true, true),
+           "5.7.1: SoftDeferHeld even if dark silent-drop");
+    Expect(!ShouldSilentDropStaleMeshDiscard(false, false, false),
            "5.7.1: FirstMesh orphan not silent-drop");
-    Expect(!ShouldRequeueAfterMeshDiscard(true, false),
-           "5.7.1: drawable → no Dirty");
-    Expect(!ShouldRequeueAfterMeshDiscard(false, true),
+    Expect(!ShouldSilentDropStaleMeshDiscard(true, false, true),
+           "5.7R: FullyDark drawable not silent-drop");
+    Expect(!ShouldRequeueAfterMeshDiscard(true, false, false),
+           "5.7.1: lit drawable → no Dirty");
+    Expect(!ShouldRequeueAfterMeshDiscard(false, true, false),
            "5.7.1: SoftDeferHeld → no Dirty");
-    Expect(ShouldRequeueAfterMeshDiscard(false, false),
+    Expect(ShouldRequeueAfterMeshDiscard(false, false, false),
            "5.7.1: !drawable → Dirty");
+    Expect(ShouldRequeueAfterMeshDiscard(true, false, true),
+           "5.7R: FullyDark drawable → Dirty");
   }
 
   if (failures != 0)
