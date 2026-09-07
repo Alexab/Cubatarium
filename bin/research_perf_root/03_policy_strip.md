@@ -80,7 +80,7 @@ Per sprint: code → Release → **no-teleport** auto (Tracy OFF, World_164; **n
 | 5.7.4 | OpaqueCull temporal coherence | opaque_cull med ≤8 class |
 | 5.7.5 | Relight FIFO max-heap trim | stream/trim↓; SoftDefer/miss no regress |
 | 5.7.6 | VB dirty-ring scan memo | prep/VB scan↓; emerge↓ |
-| 5.7.7 | Trio ship vs 093857 | auto-commit docs; manual only if product-green |
+| 5.7.7 | Trio ship vs 093857 | **shipped** auto PRODUCT_OK; manual deferred (latch) |
 
 Scenarios: 5.7.0/5.7.6 fly+fz; 5.7.1–2 fly+land; 5.7.3 fz+fly; 5.7.4–5 fly; 5.7.7 trio. See [`04_presentable_ownership.md`](04_presentable_ownership.md).
 
