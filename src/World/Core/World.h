@@ -1062,6 +1062,8 @@ public:
   void ReconcileAsyncRelightColumnInFlight();
   uint64_t GetRelightDiscardedLateCount() const;
   uint64_t GetMeshDiscardedLateCount() const;
+  uint64_t GetMeshDiscardedLateEpochCount() const;
+  uint64_t GetMeshDiscardedLateJobMismatchCount() const;
   int GetPlayerRelightMeshBurstFrames() const
   {
     return PlayerRelightMeshBurstFrames;

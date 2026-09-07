@@ -174,6 +174,7 @@ std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
       if (result.submitEpoch != current_epoch)
       {
         DiscardedLate.fetch_add(1, std::memory_order_relaxed);
+        DiscardedLateEpoch.fetch_add(1, std::memory_order_relaxed);
         const auto it = InFlight.find(result.coord);
         if (it != InFlight.end() && it->second == result.jobId)
         {
@@ -186,6 +187,7 @@ std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
       if (it == InFlight.end() || it->second != result.jobId)
       {
         DiscardedLate.fetch_add(1, std::memory_order_relaxed);
+        DiscardedLateJobMismatch.fetch_add(1, std::memory_order_relaxed);
         discarded_now.push_back(result.coord);
         continue;
       }
@@ -287,6 +289,7 @@ void UAsyncMeshBuilder::CancelPending()
     if (result.submitEpoch != current_epoch)
     {
       DiscardedLate.fetch_add(1, std::memory_order_relaxed);
+      DiscardedLateEpoch.fetch_add(1, std::memory_order_relaxed);
     }
   }
 }

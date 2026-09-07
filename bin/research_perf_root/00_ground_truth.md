@@ -68,6 +68,36 @@ vs manual 170813: auto still greener on wall/phase (locus/resume drift); SoftDef
 
 Harness: [`tools/AnalyzePhase55Scorecard.py`](../../tools/AnalyzePhase55Scorecard.py) — soft_force+debt = FAIL (honest); `--baseline-manual` delta. Policy: [`04_presentable_ownership.md`](04_presentable_ownership.md). No-teleport + `--process-timeout 600`.
 
+## Phase 5.7 (flicker/VB drain + CPU accel)
+
+Manual SoT: `perf_20260907-093857_26724.jsonl` + INFO `…093855.26724` (+ `enter_lit_20260907-093914.jsonl`).
+
+| Metric (cruise / stand) | 093857 SoT | 192816 | phase56 ship fly-heavy |
+|---|---:|---:|---:|
+| mesh_discarded_late med/max | **12** / stand **30** | **0** | — |
+| pool_unsync max | **76** | — | — |
+| visible_black_focus_n med/max | **43** / **108** | — | — |
+| vb_no_ticket / stalled max | **91** / **26** | — | — |
+| miss_stuck_run_frames (stand) | **→1166** @ kick=0 | →1469 | ≤198 |
+| soft_force+debt | yes debt=81; clear never | yes debt=81; never | yes; never |
+| visibility_debt med | **59–72** | — | ~20 |
+| wall / phase / opaque_cull med | **~98** / **~69** / **~13** | ~101 / ~69 | ~60 / ~23 |
+
+### Roots (Phase 5.7 targets; hard gates not demoted; no AbortDrip / budget / soft_force wall raise)
+
+1. Discard thrash → Dirty requeue (flicker holes); attribute epoch vs job mismatch.
+2. VB FullyDark / no_ticket + miss_stuck @ kick=0 → black rim.
+3. Latch: soft_force debt never clears (settle honesty).
+4. CPU: opaque_cull ~13 + Relight FIFO O(Nd) + VB full scan in stream/emerge.
+
+### Landed
+
+| Sprint | Commit | Notes |
+|---|---|---|
+| 5.7.0 | (this) | Phase57 scorecard + discard epoch/job attribution vs 093857; fly+fz FIDELITY_OK |
+
+Harness: [`tools/AnalyzePhase57Scorecard.py`](../../tools/AnalyzePhase57Scorecard.py) — baseline default `093857`. Locus pin `(120,57.31,56)` + yaw 90. **Not** `--land-stand`. No teleport for `phase57_*`.
+
 ## Phase 5.6 (ring frontier — ship)
 
 Manual SoT: `perf_20260906-192816_24828.jsonl` + INFO `…192814.24828` (+ `enter_lit_20260906-192829.jsonl`).

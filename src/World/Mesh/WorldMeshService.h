@@ -203,6 +203,8 @@ public:
   uint64_t GetMeshCompletedDiscardedOverflow() const;
   void SetMeshCompletedCapacity(size_t cap);
   uint64_t GetMeshDiscardedLateCount() const;
+  uint64_t GetMeshDiscardedLateEpochCount() const;
+  uint64_t GetMeshDiscardedLateJobMismatchCount() const;
   uint64_t GetMeshApplyStaleCount() const;
   uint64_t GetMeshReplaceHoleAvoidedCount() const;
   uint64_t GetSoftDeferEmptyPublishAvoidedCount() const;

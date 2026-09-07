@@ -4715,6 +4715,16 @@ uint64_t UWorld::GetMeshDiscardedLateCount() const
   return MeshService ? MeshService->GetMeshDiscardedLateCount() : 0;
 }
 
+uint64_t UWorld::GetMeshDiscardedLateEpochCount() const
+{
+  return MeshService ? MeshService->GetMeshDiscardedLateEpochCount() : 0;
+}
+
+uint64_t UWorld::GetMeshDiscardedLateJobMismatchCount() const
+{
+  return MeshService ? MeshService->GetMeshDiscardedLateJobMismatchCount() : 0;
+}
+
 bool UWorld::HasPersistedTerrainOnDisk(const std::string &world_folder_path)
 {
   return UWorldPersistence::HasPersistedTerrainOnDisk(world_folder_path);

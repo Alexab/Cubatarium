@@ -224,6 +224,8 @@ public:
   uint64_t GetMeshCompletedDiscardedOverflow() const;
   void SetMeshCompletedCapacity(size_t cap);
   uint64_t GetMeshDiscardedLateCount() const;
+  uint64_t GetMeshDiscardedLateEpochCount() const;
+  uint64_t GetMeshDiscardedLateJobMismatchCount() const;
   uint64_t GetMeshApplyStaleCount() const { return MeshApplyStaleCount; }
   /// Older apply discarded while Active tracks a newer revision (not remesh).
   uint64_t GetMeshApplySupersededCount() const

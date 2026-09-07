@@ -1908,6 +1908,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetRelightDiscardedLateCount();
     world.PhysicsTelemetryData.MeshDiscardedLate =
         world.GetMeshDiscardedLateCount();
+    world.PhysicsTelemetryData.MeshDiscardedLateEpoch =
+        world.GetMeshDiscardedLateEpochCount();
+    world.PhysicsTelemetryData.MeshDiscardedLateJobMismatch =
+        world.GetMeshDiscardedLateJobMismatchCount();
     world.PhysicsTelemetryData.MeshApplyStale =
         world.GetMeshService().GetMeshApplyStaleCount();
     world.PhysicsTelemetryData.MeshReplaceHoleAvoided =

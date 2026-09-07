@@ -65,6 +65,25 @@ Per sprint: code → Release → **no-teleport** auto (Tracy OFF, World_164; **n
 
 If auto diverges from manual SoT on settle/abort/miss/SoftDefer/wall-phase class → **stop product sprint**, fix harness (5.5.0), re-run. See [`04_presentable_ownership.md`](04_presentable_ownership.md).
 
+## Phase 5.7 process (flicker/VB + CPU + auto control)
+
+Per sprint: code → Release → **no-teleport** auto (Tracy OFF, World_164; **not** `--land-stand`) with **`--process-timeout 600`** → `AnalyzePhase57Scorecard` (+ `--baseline-manual` **093857**; delta also vs 192816 when useful) → **red → in-goal replan-fix ≤3** → **auto-commit only on green** (`src/**` + GT/policy/tools; no suite_reports/logs).
+
+**Locus pin (no teleport):** resume World_164 land save `(120,57.31,56)`; default `--yaw 90` for `--replay-manual[-fly-heavy]`. Do **not** teleport for `phase57_*`. Forbidden: raise AbortDripN / StreamingPhaseBudgetMs / soft_force wall.
+
+| Sprint | Cut | Gate highlight |
+|---|---|---|
+| 5.7.0 | GT + Phase57 scorecard + discard attribution | hang=false; discard/VB keys in delta; `--expect-product-red` OK |
+| 5.7.1 | Anti-flicker keep-until-replace | cruise discard med ≪12 |
+| 5.7.2 | Ticketed VB + miss remesh SLA | VB focus≪43; no_ticket≪91; miss_stuck not↑ @kick=0 |
+| 5.7.3 | Latch/debt drain R≤4 | latch_clear finite OR debt_med≤36 |
+| 5.7.4 | OpaqueCull temporal coherence | opaque_cull med ≤8 class |
+| 5.7.5 | Relight FIFO max-heap trim | stream/trim↓; SoftDefer/miss no regress |
+| 5.7.6 | VB dirty-ring scan memo | prep/VB scan↓; emerge↓ |
+| 5.7.7 | Trio ship vs 093857 | auto-commit docs; manual only if product-green |
+
+Scenarios: 5.7.0/5.7.6 fly+fz; 5.7.1–2 fly+land; 5.7.3 fz+fly; 5.7.4–5 fly; 5.7.7 trio. See [`04_presentable_ownership.md`](04_presentable_ownership.md).
+
 ## Phase 5.6 process (ring frontier + auto control)
 
 Per sprint: code → Release → **no-teleport** auto (Tracy OFF, World_164; **not** `--land-stand`) with **`--process-timeout 600`** → `AnalyzePhase56Scorecard` (+ `--baseline-manual` **192816**) → fix if red → **auto-commit only on green** (`src/**` + GT/policy/tools; no suite_reports/logs).

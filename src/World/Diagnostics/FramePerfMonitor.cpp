@@ -481,6 +481,8 @@ struct FrameNumbers
   int focus_unfinished_ahead{0};
   int focus_unfinished_behind{0};
   uint64_t mesh_discarded_late{0};
+  uint64_t mesh_discarded_late_epoch{0};
+  uint64_t mesh_discarded_late_job_mismatch{0};
   uint64_t mesh_apply_stale{0};
   uint64_t mesh_apply_stale_delta{0};
   uint64_t mesh_discarded_late_delta{0};
@@ -1043,6 +1045,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.focus_unfinished_ahead = phys.FocusUnfinishedAhead;
   n.focus_unfinished_behind = phys.FocusUnfinishedBehind;
   n.mesh_discarded_late = phys.MeshDiscardedLate;
+  n.mesh_discarded_late_epoch = phys.MeshDiscardedLateEpoch;
+  n.mesh_discarded_late_job_mismatch = phys.MeshDiscardedLateJobMismatch;
   n.mesh_apply_stale = phys.MeshApplyStale;
   n.mesh_replace_hole_avoided = phys.MeshReplaceHoleAvoided;
   n.pending_gpu_applies_n = phys.PendingGpuAppliesN;
@@ -1626,6 +1630,9 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"focus_unfinished_ahead\":" << n.focus_unfinished_ahead
           << ",\"focus_unfinished_behind\":" << n.focus_unfinished_behind
           << ",\"mesh_discarded_late\":" << n.mesh_discarded_late
+          << ",\"mesh_discarded_late_epoch\":" << n.mesh_discarded_late_epoch
+          << ",\"mesh_discarded_late_job_mismatch\":"
+          << n.mesh_discarded_late_job_mismatch
           << ",\"mesh_discarded_late_delta\":" << n.mesh_discarded_late_delta
           << ",\"mesh_apply_stale\":" << n.mesh_apply_stale
           << ",\"mesh_apply_stale_delta\":" << n.mesh_apply_stale_delta

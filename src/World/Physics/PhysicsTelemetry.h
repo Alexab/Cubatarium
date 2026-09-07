@@ -38,6 +38,8 @@ struct PhysicsTelemetry
   uint64_t AsyncRelightInflight{0};
   uint64_t RelightDiscardedLate{0};
   uint64_t MeshDiscardedLate{0};
+  uint64_t MeshDiscardedLateEpoch{0};
+  uint64_t MeshDiscardedLateJobMismatch{0};
   /// ApplyMeshResult rejected as stale (revision mismatch) — remesh thrash signal.
   uint64_t MeshApplyStale{0};
   /// Era15 TD-049: CPU replace published before FreeChunk when GPU-only drawable.

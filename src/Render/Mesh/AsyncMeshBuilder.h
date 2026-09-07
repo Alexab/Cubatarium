@@ -62,6 +62,14 @@ public:
   {
     return DiscardedLate.load(std::memory_order_relaxed);
   }
+  uint64_t GetDiscardedLateEpochCount() const
+  {
+    return DiscardedLateEpoch.load(std::memory_order_relaxed);
+  }
+  uint64_t GetDiscardedLateJobMismatchCount() const
+  {
+    return DiscardedLateJobMismatch.load(std::memory_order_relaxed);
+  }
   std::size_t GetCompletedSize() const { return Completed.Size(); }
   std::size_t GetCompletedCapacity() const { return Completed.Capacity(); }
   uint64_t GetCompletedDiscardedOverflow() const
@@ -86,6 +94,8 @@ private:
   std::atomic<uint64_t> NextJobId{1};
   std::atomic<uint64_t> Epoch{1};
   std::atomic<uint64_t> DiscardedLate{0};
+  std::atomic<uint64_t> DiscardedLateEpoch{0};
+  std::atomic<uint64_t> DiscardedLateJobMismatch{0};
   mutable std::mutex OverflowMutex;
   std::vector<glm::ivec3> OverflowCoords;
   mutable std::mutex DiscardedMutex;

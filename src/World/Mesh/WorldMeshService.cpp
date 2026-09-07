@@ -877,6 +877,16 @@ uint64_t UWorldMeshService::GetMeshDiscardedLateCount() const
   return Cache.GetMeshDiscardedLateCount();
 }
 
+uint64_t UWorldMeshService::GetMeshDiscardedLateEpochCount() const
+{
+  return Cache.GetMeshDiscardedLateEpochCount();
+}
+
+uint64_t UWorldMeshService::GetMeshDiscardedLateJobMismatchCount() const
+{
+  return Cache.GetMeshDiscardedLateJobMismatchCount();
+}
+
 uint64_t UWorldMeshService::GetMeshApplyStaleCount() const
 {
   return Cache.GetMeshApplyStaleCount();

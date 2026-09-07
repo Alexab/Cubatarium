@@ -1144,26 +1144,31 @@ def main() -> int:
             f"({phase_id!r}); use no-teleport replay-manual harness"
         )
 
-    # Phase 5.5 / 5.6: no-teleport gate; land-stand is teleport smoke only.
+    # Phase 5.5 / 5.6 / 5.7: no-teleport gate; land-stand is teleport smoke only.
     report_name = str(args.report).replace("\\", "/").lower()
     phase55_gate = phase_id.startswith("phase55") or "/phase55_" in report_name
     phase56_gate = phase_id.startswith("phase56") or "/phase56_" in report_name
-    phase_no_teleport_gate = phase55_gate or phase56_gate
+    phase57_gate = phase_id.startswith("phase57") or "/phase57_" in report_name
+    phase_no_teleport_gate = phase55_gate or phase56_gate or phase57_gate
     if args.land_stand:
         print(
             "WARN: --land-stand forces teleport_cruise=True; "
-            "not a Phase55/56 / mesh no-teleport gate",
+            "not a Phase55/56/57 / mesh no-teleport gate",
             flush=True,
         )
     if phase_no_teleport_gate and args.teleport_cruise:
-        gate_name = "Phase56" if phase56_gate else "Phase55"
+        gate_name = (
+            "Phase57" if phase57_gate else ("Phase56" if phase56_gate else "Phase55")
+        )
         raise SystemExit(
             f"FAIL: teleport_cruise=true forbidden for {gate_name} gate "
             f"(phase_id={phase_id!r} report={args.report}); "
             "use --replay-manual[-fly-heavy] or --scenario fz-cold-enter"
         )
     if phase_no_teleport_gate and args.land_stand:
-        gate_name = "Phase56" if phase56_gate else "Phase55"
+        gate_name = (
+            "Phase57" if phase57_gate else ("Phase56" if phase56_gate else "Phase55")
+        )
         raise SystemExit(
             f"FAIL: --land-stand forbidden for {gate_name} gate "
             "(teleport smoke only; use no-teleport replay-manual)"
@@ -1177,7 +1182,7 @@ def main() -> int:
         args.process_timeout = 600.0
         print(
             "INFO: process-timeout defaulted to 600s "
-            "(soft_force@150s + fly/stop; Phase55/56 / replay-manual / fz-cold-enter)",
+            "(soft_force@150s + fly/stop; Phase55/56/57 / replay-manual / fz-cold-enter)",
             flush=True,
         )
 

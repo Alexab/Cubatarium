@@ -6280,6 +6280,24 @@ uint64_t UChunkMeshCache::GetMeshDiscardedLateCount() const
   return AsyncBuilder->GetDiscardedLateCount();
 }
 
+uint64_t UChunkMeshCache::GetMeshDiscardedLateEpochCount() const
+{
+  if (!AsyncBuilder)
+  {
+    return 0;
+  }
+  return AsyncBuilder->GetDiscardedLateEpochCount();
+}
+
+uint64_t UChunkMeshCache::GetMeshDiscardedLateJobMismatchCount() const
+{
+  if (!AsyncBuilder)
+  {
+    return 0;
+  }
+  return AsyncBuilder->GetDiscardedLateJobMismatchCount();
+}
+
 void UChunkMeshCache::DrainAsyncMeshResults(UBlockWorld &world,
                                             UBlockRegistry &registry,
                                             int max_per_frame)

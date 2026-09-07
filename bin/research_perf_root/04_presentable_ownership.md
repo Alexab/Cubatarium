@@ -31,6 +31,17 @@
 - Always `--process-timeout 600` (soft_force@150s + fly + stop).
 - Analyze: `tools/AnalyzePhase55Scorecard.py` with `--baseline-manual` 170813.
 
+## Phase 5.7 ownership (flicker/VB + CPU)
+
+| Concern | Owner | Must not |
+|---|---|---|
+| Mesh discard → Dirty | AntiFlickerPolicy + TakeDiscarded sites; epoch vs job telem | Raise AbortDrip / budget; thrash drawable chunks |
+| VB no_ticket / remesh SLA | ColumnFlow tickets + SoftDeferEmpty remesh age; sample cache only | Rescan VB in ColumnFlow; PreferKick empty |
+| Latch debt drain | EnterVisualWarmup clear = SoftDefer∧debt≤0; R≤4 lit bias | Clear on ring/underfeet alone; hinterland debt gates clear |
+| OpaqueCull / FIFO / VB scan | GeometryEngine skip; Relight FIFO heap; VB dirty-ring memo | Raise StreamingPhaseBudgetMs; skip under FocusMissing |
+
+Gate of record SoT: `perf_20260907-093857_26724`. Analyze: `tools/AnalyzePhase57Scorecard.py` (baseline 093857). Locus: `(120,57.31,56)` + yaw 90; no teleport for `phase57_*`. Process: auto verify + auto-commit on green; red → in-goal replan-fix ≤3.
+
 ## Phase 5.6 ownership (ring frontier)
 
 | Concern | Owner | Must not |
