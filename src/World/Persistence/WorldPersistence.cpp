@@ -33,6 +33,9 @@
 #include "World/Streaming/ColumnFlowScheduler.h"
 #include "World/Math/GridMath.h"
 #include "World/Math/BlockTypes.h"
+#include <algorithm>
+#include <queue>
+
 #include "World/Environment/EnvironmentConfig.h"
 #include "World/Math/GridMath.h"
 #include "World/View/WorldViewSettings.h"
@@ -1631,19 +1634,22 @@ int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
     return 0;
   }
   int dropped = 0;
-  // Prefer drop from far (non-priority) deque first; then farthest priority.
-  auto drop_farthest_from =
-      [&](std::deque<glm::ivec2> &q) -> bool
+  // Phase 5.7.5: max-heap farthest trim — O(N + D log N) vs O(N·D).
+  struct HeapEntry
   {
-    auto best = q.end();
-    int best_dist = -1;
-    for (auto it = q.begin(); it != q.end(); ++it)
+    int dist{0};
+    glm::ivec2 key{0};
+    bool operator<(const HeapEntry &o) const { return dist < o.dist; }
+  };
+  auto fill_heap = [&](const std::deque<glm::ivec2> &q,
+                       std::priority_queue<HeapEntry> &heap)
+  {
+    for (const glm::ivec2 &key : q)
     {
-      const int cx = FloorDiv(it->x, CHUNK_SIZE);
-      const int cz = FloorDiv(it->y, CHUNK_SIZE);
+      const int cx = FloorDiv(key.x, CHUNK_SIZE);
+      const int cz = FloorDiv(key.y, CHUNK_SIZE);
       const int dist =
           std::max(std::abs(cx - focus_ground.x), std::abs(cz - focus_ground.z));
-      // Era40 / P1: never Trim/drop LitDrawable-ring or pinned miss columns.
       if (ShouldProtectRelightFifoTrimVictim(
               cx, cz, RelightFifoPinValid, RelightFifoPinCx, RelightFifoPinCz,
               true, focus_ground.x, focus_ground.z, protect) ||
@@ -1651,32 +1657,55 @@ int UWorldPersistence::TrimFarRelightFifoFarthest(glm::ivec3 focus_ground,
       {
         continue;
       }
-      if (dist > best_dist)
-      {
-        best_dist = dist;
-        best = it;
-      }
+      heap.push(HeapEntry{dist, key});
     }
-    if (best == q.end())
-    {
-      return false;
-    }
-    const glm::ivec2 victim = *best;
-    q.erase(best);
-    PendingTerrainColumnRelightKeys.erase(victim);
-    PendingTerrainColumnRelightYBands.erase(victim);
-    ++dropped;
-    return true;
   };
+  auto drop_from_heap =
+      [&](std::deque<glm::ivec2> &q, std::priority_queue<HeapEntry> &heap) -> bool
+  {
+    while (!heap.empty())
+    {
+      const HeapEntry top = heap.top();
+      heap.pop();
+      const glm::ivec2 victim = top.key;
+      const int cx = FloorDiv(victim.x, CHUNK_SIZE);
+      const int cz = FloorDiv(victim.y, CHUNK_SIZE);
+      const int dist =
+          std::max(std::abs(cx - focus_ground.x), std::abs(cz - focus_ground.z));
+      // Re-validate protect (stale heap entry).
+      if (ShouldProtectRelightFifoTrimVictim(
+              cx, cz, RelightFifoPinValid, RelightFifoPinCx, RelightFifoPinCz,
+              true, focus_ground.x, focus_ground.z, protect) ||
+          dist <= RelightMissPinMaxHoriz())
+      {
+        continue;
+      }
+      auto it = std::find(q.begin(), q.end(), victim);
+      if (it == q.end())
+      {
+        continue;
+      }
+      q.erase(it);
+      PendingTerrainColumnRelightKeys.erase(victim);
+      PendingTerrainColumnRelightYBands.erase(victim);
+      ++dropped;
+      return true;
+    }
+    return false;
+  };
+  std::priority_queue<HeapEntry> far_heap;
+  std::priority_queue<HeapEntry> prio_heap;
+  fill_heap(PendingTerrainColumnRelights, far_heap);
+  fill_heap(PendingTerrainColumnRelightsPriority, prio_heap);
   while (total_fifo() > soft_cap)
   {
     if (!PendingTerrainColumnRelights.empty() &&
-        drop_farthest_from(PendingTerrainColumnRelights))
+        drop_from_heap(PendingTerrainColumnRelights, far_heap))
     {
       continue;
     }
     if (!PendingTerrainColumnRelightsPriority.empty() &&
-        drop_farthest_from(PendingTerrainColumnRelightsPriority))
+        drop_from_heap(PendingTerrainColumnRelightsPriority, prio_heap))
     {
       continue;
     }
