@@ -2382,6 +2382,7 @@ void UWorld::InvalidateUnfinishedVisualCache() const
   UnfinishedVisualCache.unfinished_keys.clear();
   UnfinishedVisualCache.count = 0;
   LastUnfinishedVisualSampleValid = false;
+  InvalidateVisibleBlackFocusSample();
 }
 
 void UWorld::NoteUnfinishedColumnDirty(glm::ivec2 col) const
@@ -2441,11 +2442,24 @@ void UWorld::SetVisibleBlackFocusSample(
     const VisibleBlackFocusSample &sample) const
 {
   LastVisibleBlackFocusSample = sample;
+  VisibleBlackFocusSampleDirty = false;
 }
 
 UWorld::VisibleBlackFocusSample UWorld::GetVisibleBlackFocusSample() const
 {
   return LastVisibleBlackFocusSample;
+}
+
+void UWorld::InvalidateVisibleBlackFocusSample() const
+{
+  VisibleBlackFocusSampleDirty = true;
+}
+
+bool UWorld::ConsumeVisibleBlackFocusSampleDirty() const
+{
+  const bool dirty = VisibleBlackFocusSampleDirty;
+  VisibleBlackFocusSampleDirty = false;
+  return dirty;
 }
 
 const UWorld::FocusRingVisualSample &UWorld::GetFocusRingVisualSample() const

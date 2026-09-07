@@ -1266,7 +1266,23 @@ void UWorldStreaming::RefreshStreamingPressure(
     }
     else if (diet_cruise_cadence_final)
     {
-      --rp.visible_black_sample_cd;
+      // Phase 5.7.6: dirty-ring memo — accelerate next full scan (cd→1) without
+      // every-frame full O(R²) recount (unfinished dirty is too hot to force 0).
+      if (world.ConsumeVisibleBlackFocusSampleDirty())
+      {
+        if (rp.visible_black_sample_cd > 1)
+        {
+          rp.visible_black_sample_cd = 1;
+        }
+        else
+        {
+          --rp.visible_black_sample_cd;
+        }
+      }
+      else
+      {
+        --rp.visible_black_sample_cd;
+      }
     }
     world.PhysicsTelemetryData.VisibleBlackFocusN = rp.vb_published;
     world.PhysicsTelemetryData.VisibleBlackNoTicketN =

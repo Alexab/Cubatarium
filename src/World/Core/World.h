@@ -1224,6 +1224,9 @@ public:
   };
   void SetVisibleBlackFocusSample(const VisibleBlackFocusSample &sample) const;
   VisibleBlackFocusSample GetVisibleBlackFocusSample() const;
+  /// Phase 5.7.6: dirty-ring invalidate between full VB cadences.
+  void InvalidateVisibleBlackFocusSample() const;
+  bool ConsumeVisibleBlackFocusSampleDirty() const;
   /// Closeout Phase B: same-frame focus-ring visual sample (epoch-gated).
   struct FocusRingVisualSample
   {
@@ -1601,6 +1604,7 @@ private:
   mutable int LastUnfinishedVisualSample{0};
   mutable bool LastUnfinishedVisualSampleValid{false};
   mutable VisibleBlackFocusSample LastVisibleBlackFocusSample{};
+  mutable bool VisibleBlackFocusSampleDirty{false};
   /// Same-frame focus-ring sample for Coordinator (Phase B).
   mutable FocusRingVisualSample LastFocusRingVisualSample{};
   /// Perf-root P2: per-frame memo for IsChunkSliceRenderReady (draw path).
