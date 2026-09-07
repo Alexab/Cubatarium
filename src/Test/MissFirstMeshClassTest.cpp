@@ -3426,14 +3426,14 @@ int main()
     using cutum::ShouldSkipOpaqueCullStable;
     using cutum::ShouldThrottleFailOpenGpuCompact;
     Expect(ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
-                                           2.0f, false, false),
-           "5.7.4: light cruise skip OK");
+                                           0.4f, false, false),
+           "5.7.4: near-stand skip OK");
     Expect(!ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
-                                            2.0f, true, false),
+                                            0.4f, true, false),
            "5.7.4: no skip under FocusMissing");
     Expect(!ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
-                                            3.0f, false, false),
-           "5.7.4: no skip above 2.5 speed");
+                                            2.0f, false, false),
+           "5.7.4: no skip at light-cruise speed");
     Expect(ShouldSkipOpaqueCullStable(true, false, false),
            "5.7.4: stable skip OK");
     Expect(!ShouldSkipOpaqueCullStable(true, true, false),

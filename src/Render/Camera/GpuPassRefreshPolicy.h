@@ -77,8 +77,8 @@ inline bool ShouldSkipOpaqueCullLightCruise(bool draw_set_stable,
   {
     return false;
   }
-  // Standing / light cruise (≤2.5); full fly keeps GPU compact every frame.
-  return movement_speed <= 2.5f;
+  // Near-stand only; land/fly keep GPU compact every moving frame.
+  return movement_speed <= 0.5f;
 }
 
 /// Phase 5.7.4: standing stable skip must also refuse under miss/VB edge.
