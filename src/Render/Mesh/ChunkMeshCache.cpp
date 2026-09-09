@@ -5064,10 +5064,12 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         static_cast<double>(LastDirtyRevisitSameN) >=
             0.80 * static_cast<double>(Dirty.GetCount()) &&
         (DirtySortFrameCounter_ % 3) != 0;
-    // Phase 5.7R7: when prior tick scheduled OK and no holes/quiesce, skip
-    // PartialSort on odd frames — Dirty order still good enough for FM slots.
+    // Phase 5.7R7 / R7.1: skip PartialSort only when holes are known-clear
+    // (fresh MissingMemo) and not under StarveRemesh / FocusMissing pressure.
+    const bool holes_known_clear =
+        MissingMemo.epoch == HoleQueryEpoch && !MissingMemo.result;
     const bool skip_sort_schedule_healthy =
-        LastMeshDirtyScheduleOkN > 0 && !EnterLitQuiesce && !memo_holes &&
+        LastMeshDirtyScheduleOkN > 0 && !EnterLitQuiesce && holes_known_clear &&
         !StarveRemeshForHoles && (DirtySortFrameCounter_ % 2) != 0;
     if (!skip_sort_for_budget && !skip_sort_high_revisit &&
         !skip_sort_vb_heal && !skip_sort_o4_throttle &&
@@ -5508,14 +5510,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           }
           ++LastMeshDirtyScheduleSkipN;
           ++LastMeshDirtyScheduleSkipSoftDeferN;
-          // Outer SoftDefer: SoftDeferHeld owns the column. Leave-in Dirty
-          // thrash burned dirty_tick (Phase 5.7R7) — RemoveAt when beyond
-          // NearFov; near ring still leave-in for rotate after drain.
+          // Outer SoftDefer: leave coord in Dirty (std::next) so revisit can
+          // rotate after near-ring drains — do not RemoveAt-steal FM slots.
+          // Phase 5.7R7.1: R7 RemoveAt beyond NearFov starved FM (manual
+          // 153045 SoftDefer stuck / holes_frac↑) — restore leave-in.
           if (!has_drawable && horiz > kVisualStageNearFovHoriz)
-          {
-            return Dirty.RemoveAt(it);
-          }
-          if (!has_drawable)
           {
             return std::next(it);
           }
@@ -5854,7 +5853,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     for (auto it = Dirty.begin();
          it != Dirty.end() && scheduled < max_schedule_per_frame;)
     {
-      if (++remesh_scanned > remesh_scan_cap && scheduled > 0)
+      if (++remesh_scanned > remesh_scan_cap && scheduled > 0 &&
+          !StarveRemeshForHoles && !focus_missing_for_schedule)
       {
         break;
       }

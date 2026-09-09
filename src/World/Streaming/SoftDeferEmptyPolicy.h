@@ -674,6 +674,16 @@ inline bool IsSoftDeferHiddenNeighbor(bool neighbor_chunk_loaded,
 /// with schedule_ok>0. Never sheds the whole schedule_policy under
 /// FocusMissing — only skips heavy walks on non-cadence frames.
 /// force: miss_horiz≤1, focus XZ change, Dirty surge, VB edge.
+/// Phase 5.7R7.1: broaden force — focus_missing / miss_h≤2 / schedule_ok<4.
+inline bool ShouldForceScheduleHeavyWalk(bool focus_missing, int miss_horiz,
+                                         int schedule_ok_prior,
+                                         bool focus_xz_changed,
+                                         double dirty_delta_frac)
+{
+  return focus_missing || miss_horiz <= 2 || schedule_ok_prior < 4 ||
+         focus_xz_changed || dirty_delta_frac > 0.25;
+}
+
 inline bool ShouldCadenceScheduleHeavyWalk(bool moving, int schedule_ok,
                                            uint32_t frame, int cadence = 4,
                                            bool force = false)

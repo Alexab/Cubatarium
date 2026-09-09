@@ -2076,10 +2076,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 static_cast<double>(DirtyCountPrior)
           : 1.0;
   DirtyCountPrior = static_cast<int>(pending_dirty);
-  const bool force_heavy_walk =
-      miss_h_heavy <= 1 || focus_xz_changed || dirty_delta_frac > 0.25 ||
-      (world.GetPhysicsTelemetry().VisibleBlackNoTicketN >= 8 &&
-       miss_h_heavy <= 1);
+  const bool force_heavy_walk = ShouldForceScheduleHeavyWalk(
+      missing_visible_mesh, miss_h_heavy, ScheduleOkPrior, focus_xz_changed,
+      dirty_delta_frac);
   const bool run_schedule_heavy = ShouldCadenceScheduleHeavyWalk(
       moving, ScheduleOkPrior, HeavyCadenceFrame, /*cadence=*/4,
       force_heavy_walk);

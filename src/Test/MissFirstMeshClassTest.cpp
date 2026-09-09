@@ -2573,6 +2573,19 @@ int main()
            "5.7R7: moving+ok>0 non-cadence frame skips heavy");
     Expect(ShouldCadenceScheduleHeavyWalk(true, 4, 4, 4, false),
            "5.7R7: moving+ok>0 cadence frame runs heavy");
+    using cutum::ShouldForceScheduleHeavyWalk;
+    Expect(ShouldForceScheduleHeavyWalk(true, 3, 8, false, 0.0),
+           "5.7R7.1: focus_missing forces heavy");
+    Expect(ShouldForceScheduleHeavyWalk(false, 2, 8, false, 0.0),
+           "5.7R7.1: miss_horiz<=2 forces heavy");
+    Expect(ShouldForceScheduleHeavyWalk(false, 3, 3, false, 0.0),
+           "5.7R7.1: schedule_ok<4 forces heavy");
+    Expect(!ShouldForceScheduleHeavyWalk(false, 3, 4, false, 0.0),
+           "5.7R7.1: healthy rim may cadence");
+    Expect(ShouldCadenceScheduleHeavyWalk(
+               true, 4, 1, 4,
+               ShouldForceScheduleHeavyWalk(false, 2, 8, false, 0.0)),
+           "5.7R7.1: nh=2 force overrides cadence skip");
     Expect(!ShouldRemeshMissWitnessStuck(true, true, false, false, false, 15, 60,
                                          5),
            "5.7R: stuck below SLA after first");
