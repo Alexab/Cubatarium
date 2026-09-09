@@ -2562,6 +2562,17 @@ int main()
            "5.7R: stuck remesh when SLA+unowned");
     Expect(ShouldRemeshMissWitnessStuck(true, true, false, false, false, 0, 60, 0),
            "5.7R: stuck first frame remeshes");
+    using cutum::ShouldCadenceScheduleHeavyWalk;
+    Expect(ShouldCadenceScheduleHeavyWalk(false, 4, 1, 4, false),
+           "5.7R7: stand always runs heavy walk");
+    Expect(ShouldCadenceScheduleHeavyWalk(true, 0, 1, 4, false),
+           "5.7R7: schedule_ok=0 always heavy");
+    Expect(ShouldCadenceScheduleHeavyWalk(true, 4, 1, 4, true),
+           "5.7R7: force always heavy");
+    Expect(!ShouldCadenceScheduleHeavyWalk(true, 4, 1, 4, false),
+           "5.7R7: moving+ok>0 non-cadence frame skips heavy");
+    Expect(ShouldCadenceScheduleHeavyWalk(true, 4, 4, 4, false),
+           "5.7R7: moving+ok>0 cadence frame runs heavy");
     Expect(!ShouldRemeshMissWitnessStuck(true, true, false, false, false, 15, 60,
                                          5),
            "5.7R: stuck below SLA after first");
@@ -2859,6 +2870,10 @@ int main()
     using cutum::IsFmConsumerStarved;
     Expect(IsFmConsumerStarved(3, 1), "arch: fm consumer starved");
     Expect(!IsFmConsumerStarved(0, 0), "arch: no fm no starve");
+    using cutum::DirtyRemeshScanCap;
+    Expect(DirtyRemeshScanCap(8) == 64, "5.7R7: scan cap max(48, schedule*8)");
+    Expect(DirtyRemeshScanCap(4) == 48, "5.7R7: scan cap floor 48");
+    Expect(DirtyRemeshScanCap(12) == 96, "5.7R7: scan cap scales with schedule");
     using cutum::ShouldDeferFmDirtyEnqueueReserve;
     Expect(ShouldDeferFmDirtyEnqueueReserve(true, false, false),
            "FP-G1.1: defer reserve during enter_lit_gate");
@@ -3649,6 +3664,20 @@ int main()
            "5.7R3: stable skip OK under rim miss nh=3");
     Expect(!ShouldSkipOpaqueCullHalfRate(true, true, true, true, false, false, 0),
            "5.7R: legacy half-rate API stays false");
+    Expect(!ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
+                                            5.8f, false, false),
+           "5.7R7: cruise spd~5.8 never light-cruise skips");
+    using cutum::ShouldProbeFailOpenAabb;
+    Expect(ShouldProbeFailOpenAabb(6, true, 0, 6, false),
+           "5.7R7: healthy probe on period tick");
+    Expect(!ShouldProbeFailOpenAabb(5, true, 0, 6, false),
+           "5.7R7: healthy skips AABB between period ticks");
+    Expect(ShouldProbeFailOpenAabb(5, true, 0, 6, true),
+           "5.7R7: force_probe always probes");
+    Expect(ShouldProbeFailOpenAabb(5, false, 0, 6, false),
+           "5.7R7: inactive compact always probes");
+    Expect(ShouldProbeFailOpenAabb(5, true, 1, 6, false),
+           "5.7R7: fail-open streak always probes");
     Expect(ShouldReuseOpaqueCullCompact(true, true, true, true, false, false,
                                         0.0f, 0.0f, 0.5f, 0.5f, 100, 100, 0),
            "5.7R2: compact reuse even frame");

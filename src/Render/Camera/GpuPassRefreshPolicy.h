@@ -208,4 +208,22 @@ inline bool ShouldThrottleFailOpenGpuCompact(int consecutive_fail_open,
   return consecutive_fail_open >= threshold;
 }
 
+/// Phase 5.7R7: fail-open AABB probe cadence. Always probe when compact is
+/// inactive, fail-open streak is live, or caller forces (underfeet / VB edge).
+/// Healthy cruise uses period 6 (was hard-coded 3) to cut CPU AABB wall.
+inline bool ShouldProbeFailOpenAabb(int tick, bool gpu_compact_active,
+                                    int consecutive_fail_open, int period = 6,
+                                    bool force_probe = false)
+{
+  if (force_probe || !gpu_compact_active || consecutive_fail_open > 0)
+  {
+    return true;
+  }
+  if (period <= 1)
+  {
+    return true;
+  }
+  return (tick % period) == 0;
+}
+
 } // namespace cutum

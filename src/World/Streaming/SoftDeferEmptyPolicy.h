@@ -670,4 +670,31 @@ inline bool IsSoftDeferHiddenNeighbor(bool neighbor_chunk_loaded,
   return soft_defer_empty_or_held;
 }
 
+/// Phase 5.7R7: cadence O(N) DropRemesh / far schedule walks while moving
+/// with schedule_ok>0. Never sheds the whole schedule_policy under
+/// FocusMissing — only skips heavy walks on non-cadence frames.
+/// force: miss_horiz≤1, focus XZ change, Dirty surge, VB edge.
+inline bool ShouldCadenceScheduleHeavyWalk(bool moving, int schedule_ok,
+                                           uint32_t frame, int cadence = 4,
+                                           bool force = false)
+{
+  if (!moving)
+  {
+    return true;
+  }
+  if (schedule_ok <= 0)
+  {
+    return true;
+  }
+  if (force)
+  {
+    return true;
+  }
+  if (cadence <= 1)
+  {
+    return true;
+  }
+  return (frame % static_cast<uint32_t>(cadence)) == 0u;
+}
+
 } // namespace cutum

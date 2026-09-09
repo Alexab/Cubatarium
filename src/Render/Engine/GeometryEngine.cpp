@@ -1957,9 +1957,15 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
           light_cruise_skip || compact_reuse;
       if (!do_skip)
       {
+        // Phase 5.7R7: cruise spd>1.5 → probe period 6; underfeet/VB force.
+        const bool force_aabb_probe =
+            OpaqueCullUnderfeetMissBlocks(focus_missing, miss_horiz) ||
+            vb_edge;
+        const int aabb_probe_period =
+            (move_spd > 1.5f && !force_aabb_probe) ? 6 : 3;
         const bool ok = mdi->ApplyGpuCompactCull(
             GreedyGpuOpaque, frustum, cameraPos, max_cull_distance,
-            horizontal_cull);
+            horizontal_cull, aabb_probe_period, force_aabb_probe);
         if (!ok && WorldInstance)
         {
           WorldInstance->GetPhysicsTelemetryMutable().GpuCompactFailOpenN++;
@@ -2326,9 +2332,11 @@ void UGeometryEngine::PrepareTransparent(
   if (auto *mdi = dynamic_cast<UMdiVertexPoolStore *>(&MeshStore()))
   {
     const Frustum frustum = Frustum::FromViewProjection(ctx.viewProjection);
+    // Phase 5.7R7 Cut D: inherit opaque probe diet (period 6); no cruise skip.
     mdi->ApplyGpuCompactCull(GreedyGpuTransparent, frustum, ctx.cameraPos,
                              ctx.cache.MaxCullDistance(),
-                             ctx.cache.UseHorizontalCullDistance());
+                             ctx.cache.UseHorizontalCullDistance(),
+                             /*probe_period=*/6, /*force_probe=*/false);
     if (WorldInstance)
     {
       WorldInstance->GetPhysicsTelemetryMutable().GpuCullGpuMs +=

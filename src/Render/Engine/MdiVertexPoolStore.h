@@ -53,10 +53,13 @@ public:
                                 bool horizontal_distance = false);
 
   /// P2: GPU compact writes instanceCount into 1:1 IndirectCmdsBuffer.
+  /// probe_period / force_probe: Phase 5.7R7 fail-open AABB diet (period 6
+  /// on healthy cruise; force under underfeet / VB edge).
   bool ApplyGpuCompactCull(GreedyGpuPassCache &cache, const Frustum &frustum,
                            const glm::vec3 &camera_pos,
                            float max_cull_distance,
-                           bool horizontal_distance = false);
+                           bool horizontal_distance = false,
+                           int probe_period = 6, bool force_probe = false);
 
   /// Lazy readback of compact vis for DrawElementsBaseVertex fallback.
   bool SyncCompactVisToCpu(GreedyGpuPassCache &cache);

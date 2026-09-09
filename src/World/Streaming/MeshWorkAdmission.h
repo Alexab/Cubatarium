@@ -163,6 +163,12 @@ inline bool IsFmConsumerStarved(int dirty_fm_n, int mesh_schedule_ok_n,
   return mesh_schedule_ok_n < std::min(first_mesh_floor, dirty_fm_n);
 }
 
+/// Phase 5.7R7: remesh Dirty walk scan cap (max(48, max_schedule*8)).
+inline int DirtyRemeshScanCap(int max_schedule_per_frame)
+{
+  return std::max(48, std::max(0, max_schedule_per_frame) * 8);
+}
+
 inline size_t MeshWorkQueuedApprox(const MeshWorkAdmissionInput &in)
 {
   if (in.pending_gpu_queued > 0 || in.pending_gpu_kicked > 0)

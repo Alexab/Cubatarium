@@ -5064,8 +5064,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         static_cast<double>(LastDirtyRevisitSameN) >=
             0.80 * static_cast<double>(Dirty.GetCount()) &&
         (DirtySortFrameCounter_ % 3) != 0;
+    // Phase 5.7R7: when prior tick scheduled OK and no holes/quiesce, skip
+    // PartialSort on odd frames — Dirty order still good enough for FM slots.
+    const bool skip_sort_schedule_healthy =
+        LastMeshDirtyScheduleOkN > 0 && !EnterLitQuiesce && !memo_holes &&
+        !StarveRemeshForHoles && (DirtySortFrameCounter_ % 2) != 0;
     if (!skip_sort_for_budget && !skip_sort_high_revisit &&
-        !skip_sort_vb_heal && !skip_sort_o4_throttle)
+        !skip_sort_vb_heal && !skip_sort_o4_throttle &&
+        !skip_sort_schedule_healthy)
     {
     // Precompute missing-mesh set once — SortByDistanceKey compares O(n log n)
     // times; per-compare GreedyCache.find was burning wall during flight.
@@ -5502,11 +5508,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           }
           ++LastMeshDirtyScheduleSkipN;
           ++LastMeshDirtyScheduleSkipSoftDeferN;
-          // Outer SoftDefer: leave coord in Dirty (std::next) so revisit can
-          // rotate after near-ring drains — do not RemoveAt-steal slots.
-          // FZ2.7-P9: !drawable protect ring never leave-in (already scheduled
-          // above); outer !drawable remesh coalesce via RemoveAt when drawable.
+          // Outer SoftDefer: SoftDeferHeld owns the column. Leave-in Dirty
+          // thrash burned dirty_tick (Phase 5.7R7) — RemoveAt when beyond
+          // NearFov; near ring still leave-in for rotate after drain.
           if (!has_drawable && horiz > kVisualStageNearFovHoriz)
+          {
+            return Dirty.RemoveAt(it);
+          }
+          if (!has_drawable)
           {
             return std::next(it);
           }
@@ -5837,9 +5846,18 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           VisibleBlackNoTicketPressure_, kVisualStageLitDrawableHoriz, 12,
           VisibleBlackFocusPressure_, VbFocusStableFrames_);
     };
+    // Phase 5.7R7: cap remesh candidate walk — stop after scan_cap probes so
+    // Dirty~500 cannot burn dirty_tick when schedule already progressing.
+    int remesh_scanned = 0;
+    const int remesh_scan_cap =
+        DirtyRemeshScanCap(max_schedule_per_frame);
     for (auto it = Dirty.begin();
          it != Dirty.end() && scheduled < max_schedule_per_frame;)
     {
+      if (++remesh_scanned > remesh_scan_cap && scheduled > 0)
+      {
+        break;
+      }
       if (AsyncBuilder->GetInFlightCount() >= max_pipeline)
       {
         break;

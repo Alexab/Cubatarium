@@ -6,6 +6,7 @@
 #include "World/Streaming/StreamingPressure.h"
 
 #include <cstdint>
+#include <limits>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -96,6 +97,11 @@ private:
   int FmEnqueuePrior{0};
   int ScheduleOkPrior{0};
   int DirtyFmPrior{0};
+  int DirtyCountPrior{0};
+  int HeavyCadenceFocusX{std::numeric_limits<int>::min()};
+  int HeavyCadenceFocusZ{std::numeric_limits<int>::min()};
+  bool HeavyCadenceFocusValid{false};
+  uint32_t HeavyCadenceFrame{0};
   int CruiseClearPeriods{0};
   /// Phase 5.3.0: empty_batch_event rise/drop detector (steady_clock ms).
   int EmptyBatchPrevBacklog{0};

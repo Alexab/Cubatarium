@@ -646,7 +646,9 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
                                               const Frustum &frustum,
                                               const glm::vec3 &camera_pos,
                                               float max_cull_distance,
-                                              bool horizontal_distance)
+                                              bool horizontal_distance,
+                                              int probe_period,
+                                              bool force_probe)
 {
   LastCullOpaqueTotal_ = 0;
   LastCullOpaqueOn_ = 0;
@@ -656,12 +658,13 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   uint64_t aabb_on = 0;
   uint64_t eligible = 0;
   bool any_degenerate = false;
-  // Phase 5.7.4: when GPU compact is healthy, probe AABB fail-open only every
-  // 3rd call (or while a fail-open streak is active). Cuts CPU AABB wall.
+  // Phase 5.7.4 / 5.7R7: when GPU compact is healthy, probe AABB fail-open
+  // every probe_period calls (default 6 on cruise). Always probe while
+  // inactive, fail-open streak, or force_probe (underfeet / VB edge).
   ++FailOpenProbeTick_;
-  const bool probe_fail_open =
-      !cache.GpuCompactActive || ConsecutiveFailOpenN_ > 0 ||
-      (FailOpenProbeTick_ % 3) == 0;
+  const bool probe_fail_open = ShouldProbeFailOpenAabb(
+      FailOpenProbeTick_, cache.GpuCompactActive, ConsecutiveFailOpenN_,
+      probe_period > 0 ? probe_period : 6, force_probe);
   if (probe_fail_open)
   {
     for (const GreedyGpuBatch &b : cache.batches)

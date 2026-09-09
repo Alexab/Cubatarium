@@ -2056,6 +2056,33 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   // was sampled false at entry — re-check before expensive walks.
   do
   {
+  // Phase 5.7R7: cadence O(N) DropRemesh while moving + schedule_ok>0.
+  // KEEP full schedule_policy under FocusMissing — never shed here.
+  ++HeavyCadenceFrame;
+  const int miss_h_heavy =
+      have_nearest_missing
+          ? nearest_miss_h
+          : (missing_visible_mesh ? telem_miss_h : 99);
+  const bool focus_xz_changed =
+      !HeavyCadenceFocusValid || focus_ground_horiz.x != HeavyCadenceFocusX ||
+      focus_ground_horiz.z != HeavyCadenceFocusZ;
+  HeavyCadenceFocusX = focus_ground_horiz.x;
+  HeavyCadenceFocusZ = focus_ground_horiz.z;
+  HeavyCadenceFocusValid = true;
+  const double dirty_delta_frac =
+      DirtyCountPrior > 0
+          ? std::abs(static_cast<double>(pending_dirty) -
+                     static_cast<double>(DirtyCountPrior)) /
+                static_cast<double>(DirtyCountPrior)
+          : 1.0;
+  DirtyCountPrior = static_cast<int>(pending_dirty);
+  const bool force_heavy_walk =
+      miss_h_heavy <= 1 || focus_xz_changed || dirty_delta_frac > 0.25 ||
+      (world.GetPhysicsTelemetry().VisibleBlackNoTicketN >= 8 &&
+       miss_h_heavy <= 1);
+  const bool run_schedule_heavy = ShouldCadenceScheduleHeavyWalk(
+      moving, ScheduleOkPrior, HeavyCadenceFrame, /*cadence=*/4,
+      force_heavy_walk);
   // While sticky remesh drains after pending→0, suppress seam MarkDirty even
   // before sticky hits 0 — otherwise remesh thrash pins async≈42 and nr climbs
   // (P0_hole_promote stop). Full idle_remesh_debt with sticky raised wall/sticky
@@ -2083,6 +2110,8 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       (visual_holes || missing_underfeet) ? focus_radius : 1);
   // One-shot pipeline flush when holes appear with saturated async — not every
   // frame (Cancel+reschedule thrash hung flight-sim wall time).
+  // Phase 5.7R7: KEEP rare flush always; skip only if we somehow re-enter
+  // without holes (existing latch). Cadence does not block this path.
   {
     static bool flushed_for_holes = false;
     if (!(visual_holes || missing_underfeet))
@@ -2318,7 +2347,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       request_drop_remesh(/*keep_h=*/1, /*keep_cy=*/2, /*remesh_only=*/false,
                           /*use_preferred_cy=*/true);
     }
-    if (want_drop_remesh)
+    if (want_drop_remesh && run_schedule_heavy)
     {
       if (prep_deadline_overrun() && allow_schedule_soft_exit)
       {
@@ -2333,6 +2362,11 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                           drop_center, drop_remesh_keep_h, drop_remesh_keep_cy,
                           drop_remesh_only)));
       prep_drop_dirty_ms += prep_ms_since(drop_t0);
+      want_drop_remesh = false;
+    }
+    else if (want_drop_remesh)
+    {
+      // Phase 5.7R7: banked DropRemesh skipped on non-cadence cruise frames.
       want_drop_remesh = false;
     }
   }
