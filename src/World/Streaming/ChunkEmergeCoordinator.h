@@ -83,6 +83,8 @@ private:
   std::unordered_map<glm::ivec3, int, IVec3Hash> SoftDeferEmptyAgeFrames;
   /// Era39: sticky SoftDefer empty ownership until healed.
   std::unordered_set<glm::ivec3, IVec3Hash> SoftDeferEmptyOwned;
+  /// Phase 5.7R3: last StreamingFrameEpoch SoftDefer underfeet MarkDirty.
+  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> SoftDeferUnderfeetMarkEpoch;
   /// Era39: previous-frame SoftDefer empty set (hidden-neighbor seam).
   std::unordered_set<glm::ivec3, IVec3Hash> SoftDeferEmptyPrevSeen;
   /// Era34 P1: rotate SoftDefer empty ownership when cap saturates.

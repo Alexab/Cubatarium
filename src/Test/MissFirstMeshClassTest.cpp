@@ -481,6 +481,49 @@ int main()
          "Era32: hinterland fully-dark no ring hide");
   Expect(ShouldHideFullyDarkUntilLitInRing(2, true, true),
          "Era32: fully-dark never keep-prior (hole > black plug)");
+  using cutum::RelightHideStarveActive;
+  Expect(RelightHideStarveActive(16, 1), "Phase5.7R6: fifo BP is starve");
+  Expect(!RelightHideStarveActive(0, 0),
+         "Phase5.7R6: Apply idle alone is NOT starve");
+  Expect(!RelightHideStarveActive(0, 2), "Phase5.7R6: healthy Apply not starve");
+  Expect(!ShouldHideFullyDarkUntilLitInRing(3, true, false, 4, true, true),
+         "Phase5.7R6: fifo starve+published keeps FullyDark");
+  Expect(ShouldHideFullyDarkUntilLitInRing(3, true, false, 4, false, true),
+         "Phase5.7R6: without fifo starve still hide FullyDark in ring");
+  using cutum::ShouldCarveFocusLitCompletion;
+  Expect(ShouldCarveFocusLitCompletion(0, true, 2, false),
+         "Phase5.7R6: carve focus miss when fifo drained");
+  Expect(ShouldCarveFocusLitCompletion(0, false, 2, true),
+         "Phase5.7R6: carve pending-light near when fifo drained");
+  Expect(!ShouldCarveFocusLitCompletion(16, true, 2, true),
+         "Phase5.7R6: no carve under fifo BP");
+  Expect(!ShouldCarveFocusLitCompletion(0, false, 5, false),
+         "Phase5.7R6: no carve far without miss/PL");
+  Expect(ShouldCarveFocusLitCompletion(0, true, 4, false),
+         "Phase5.7R6: carve nh<=4");
+  Expect(!ShouldCarveFocusLitCompletion(0, true, 5, false),
+         "Phase5.7R6: no carve nh>4 without PL");
+  using cutum::ShouldSoftDeferEmptyAllowParallelRelight;
+  Expect(!ShouldSoftDeferEmptyAllowParallelRelight(3, 0, true),
+         "Phase5.7R6: owned_no_gpu blocks SoftDefer parallel Relight");
+  Expect(!ShouldSoftDeferEmptyAllowParallelRelight(1, 0, false),
+         "Phase5.7R6: underfeet blocks SoftDefer parallel Relight");
+  Expect(!ShouldSoftDeferEmptyAllowParallelRelight(3, 16, false),
+         "Phase5.7R6: rim under fifo BP blocks parallel Relight");
+  Expect(ShouldSoftDeferEmptyAllowParallelRelight(3, 0, false),
+         "Phase5.7R6: rim + fifo OK + not stuck may Relight");
+  using cutum::ShouldSoftDeferFocusLitMarkCooldownOk;
+  Expect(ShouldSoftDeferFocusLitMarkCooldownOk(10, 12, true),
+         "Phase5.7R6: carve starved Mark cd 2f");
+  Expect(!ShouldSoftDeferFocusLitMarkCooldownOk(10, 11, true),
+         "Phase5.7R6: carve starved Mark cd not yet");
+  Expect(!ShouldSoftDeferFocusLitMarkCooldownOk(10, 12, false),
+         "Phase5.7R6: non-carve keeps 8f Mark cd");
+  using cutum::SoftDeferCaptureFloorWhenDepthFull;
+  Expect(SoftDeferCaptureFloorWhenDepthFull(true, 0, 0, false, 0, 0) == 0,
+         "Phase5.7R6: Apply idle + SoftDefer hole does not raise CaptureFloor");
+  Expect(SoftDeferCaptureFloorWhenDepthFull(true, 0, 1, false, 0, 2) == 1,
+         "Phase5.7R6: Apply progressing still SoftDefer floor");
   Expect(!SoftDeferEmptyShouldMarkDirty(true, true, false),
          "Era28 I-V2: FM ticket ⇒ no Dirty");
   Expect(!SoftDeferEmptyShouldMarkDirty(true, false, true),
@@ -1464,10 +1507,26 @@ int main()
            "Phase5.6.1: debt0 clears latch");
     Expect(!EnterPresentableCatchUpClear(0, 0, 81, 0, 0, false),
            "Phase5.6.1: ring ready alone does not clear while debt>0");
-    Expect(!EnterPresentableCatchUpClear(0, 0, 81, 5, 1, true),
-           "Phase5.6.1: underfeet alone does not clear with debt");
+    Expect(EnterPresentableCatchUpClear(0, 0, 81, 5, 1, true),
+           "Phase5.7R4: real underfeet clears despite FocusMissingMesh");
     Expect(!EnterPresentableCatchUpClear(0, 0, 81, 5, 1, false),
-           "Phase5.6.1: debt keeps latch until remesh drains");
+           "Phase5.6.1: debt+miss keeps latch until remesh drains");
+    Expect(EnterPresentableCatchUpClear(0, 0, 81, 5, 0, true),
+           "Phase5.7R4: honest underfeet clears despite hinterland debt");
+    Expect(!EnterPresentableCatchUpClear(0, 0, 81, 5, 0, false),
+           "Phase5.7R4: no-miss without underfeet keeps latch");
+    using cutum::ShouldCarveUnderfeetBeforeSoftForce;
+    Expect(ShouldCarveUnderfeetBeforeSoftForce(false, 142000.0, 150000),
+           "Phase5.7R4: UF carve in lead window before soft_force");
+    Expect(!ShouldCarveUnderfeetBeforeSoftForce(true, 142000.0, 150000),
+           "Phase5.7R4: no UF carve when underfeet already OK");
+    Expect(!ShouldCarveUnderfeetBeforeSoftForce(false, 100000.0, 150000),
+           "Phase5.7R4: no UF carve before lead window");
+    using cutum::ShouldAllowEnterSoftForceSettle;
+    Expect(ShouldAllowEnterSoftForceSettle(true),
+           "Phase5.7R5: soft_force settle OK with underfeet");
+    Expect(!ShouldAllowEnterSoftForceSettle(false),
+           "Phase5.7R5: soft_force settle blocked without underfeet");
     Expect(EnterCatchUpSkipMarkBecauseMeshOwned(true, false, true),
            "Phase5.6.1: mesh+ready skips remesh");
     Expect(!EnterCatchUpSkipMarkBecauseMeshOwned(true, false, false),
@@ -2469,6 +2528,20 @@ int main()
            "Phase5.7R2: underfeet SoftDefer fast heal nh1");
     Expect(!ShouldSoftDeferEmptyUnderfeetFastHeal(2),
            "Phase5.7R2: rim SoftDefer no fast heal");
+    using cutum::ShouldSoftDeferUnderfeetMarkCooldownOk;
+    Expect(ShouldSoftDeferUnderfeetMarkCooldownOk(0, 1),
+           "Phase5.7R3: first underfeet Mark always OK");
+    Expect(!ShouldSoftDeferUnderfeetMarkCooldownOk(10, 17),
+           "Phase5.7R3: underfeet Mark blocked before 8f");
+    Expect(ShouldSoftDeferUnderfeetMarkCooldownOk(10, 18),
+           "Phase5.7R3: underfeet Mark OK at 8f");
+    using cutum::ShouldSoftDeferRimRelightUnderFifoPressure;
+    Expect(ShouldSoftDeferRimRelightUnderFifoPressure(16, 2),
+           "Phase5.7R5: rim Relight blocked under fifo BP");
+    Expect(!ShouldSoftDeferRimRelightUnderFifoPressure(15, 2),
+           "Phase5.7R5: rim Relight OK below BP");
+    Expect(!ShouldSoftDeferRimRelightUnderFifoPressure(40, 1),
+           "Phase5.7R5: underfeet not rim-gated (UF FM path)");
     using cutum::ShouldSkipStaleCollectOnVbPlateau;
     Expect(ShouldSkipStaleCollectOnVbPlateau(10, 10, 3, 3, false, true),
            "Phase5.7R2: VB plateau skip Collect");
@@ -2480,6 +2553,10 @@ int main()
            "Phase5.7R2: cooldown cools → skip Collect");
     Expect(!ShouldSkipStaleCollectOnVbPlateau(10, 9, 3, 3, false, true),
            "Phase5.7R2: VB change forces Collect");
+    Expect(ShouldSkipStaleCollectOnVbPlateau(10, 10, 3, 3, true, true, 16),
+           "Phase5.7R4: fifo>=16 skips Collect even under vb_consume");
+    Expect(!ShouldSkipStaleCollectOnVbPlateau(10, 10, 3, 3, true, true, 15),
+           "Phase5.7R4: fifo<16 keeps vb_consume Collect");
     using cutum::ShouldRemeshMissWitnessStuck;
     Expect(ShouldRemeshMissWitnessStuck(true, true, false, false, false, 60, 60),
            "5.7R: stuck remesh when SLA+unowned");
@@ -2737,6 +2814,48 @@ int main()
            "FP-E0: unified consume nt=64 vb=98 stop");
     Expect(IsTicketedVbConsumeMode(20, 30, 0, false),
            "I8-D2: stop VB drain consume vb=30");
+    using cutum::ShouldAllowLatchRelightMoving;
+    using cutum::ShouldEnqueueLatchSideRelight;
+    Expect(ShouldAllowLatchRelightMoving(true, true, true, 1, 0),
+           "Phase5.7R3: latch+moving+miss nh1+fifo0 allows Relight");
+    Expect(ShouldAllowLatchRelightMoving(true, true, true, 0, 15),
+           "Phase5.7R3: fifo15 still under backpressure");
+    Expect(!ShouldAllowLatchRelightMoving(true, true, true, 1, 16),
+           "Phase5.7R3: fifo>=16 blocks latch Relight");
+    Expect(!ShouldAllowLatchRelightMoving(true, true, true, 2, 0),
+           "Phase5.7R3: rim miss nh2 blocks latch Relight");
+    Expect(!ShouldAllowLatchRelightMoving(true, true, false, 0, 0),
+           "Phase5.7R3: no focus_missing blocks latch Relight");
+    Expect(!ShouldAllowLatchRelightMoving(true, false, true, 0, 0),
+           "Phase5.7R3: stand uses separate latch path");
+    Expect(!ShouldEnqueueLatchSideRelight(true, true, false, 0, 0, false),
+           "Phase5.7R3: side Relight blocked under sticky latch without allow");
+    Expect(ShouldEnqueueLatchSideRelight(true, true, true, 1, 0, false),
+           "Phase5.7R3: side Relight allowed underfeet miss");
+    Expect(ShouldEnqueueLatchSideRelight(true, true, false, 0, 0, true),
+           "Phase5.7R4: vb_consume allows side Relight when fifo OK");
+    Expect(!ShouldEnqueueLatchSideRelight(true, true, false, 0, 16, true),
+           "Phase5.7R4: fifo>=16 blocks vb_consume side Relight");
+    Expect(!ShouldEnqueueLatchSideRelight(false, true, false, 0, 0, false),
+           "Phase5.7R4: !latch moving without underfeet miss blocked");
+    Expect(ShouldEnqueueLatchSideRelight(false, true, true, 1, 0, false),
+           "Phase5.7R4: !latch moving underfeet miss OK");
+    Expect(ShouldEnqueueLatchSideRelight(false, false, false, 0, 0, false),
+           "Phase5.7R4: !latch stand keeps side Relight open");
+    Expect(!ShouldEnqueueLatchSideRelight(false, false, false, 0, 16, false),
+           "Phase5.7R4: fifo>=16 blocks stand side Relight");
+    using cutum::RelightFifoBackpressured;
+    Expect(RelightFifoBackpressured(16), "Phase5.7R4: fifo 16 backpressured");
+    Expect(!RelightFifoBackpressured(15), "Phase5.7R4: fifo 15 not backpressured");
+    using cutum::ShouldAdmitRelightFifoEnqueue;
+    Expect(ShouldAdmitRelightFifoEnqueue(15, 5),
+           "Phase5.7R5: admit far when not backpressured");
+    Expect(!ShouldAdmitRelightFifoEnqueue(16, 5),
+           "Phase5.7R5: reject far under BP");
+    Expect(ShouldAdmitRelightFifoEnqueue(40, 1),
+           "Phase5.7R5: admit nh<=1 under BP");
+    Expect(ShouldAdmitRelightFifoEnqueue(40, 0),
+           "Phase5.7R5: admit underfeet under BP");
     using cutum::IsFmConsumerStarved;
     Expect(IsFmConsumerStarved(3, 1), "arch: fm consumer starved");
     Expect(!IsFmConsumerStarved(0, 0), "arch: no fm no starve");
@@ -3030,6 +3149,12 @@ int main()
            "ColdFix P1: SoftDefer floor keeps 1 when depth-full");
     Expect(SoftDeferCaptureFloorWhenDepthFull(false, 0) == 0,
            "ColdFix P1: no SoftDefer → bg_cap stays 0");
+    Expect(SoftDeferCaptureFloorWhenDepthFull(true, 0, 0, true, 16, 0) == 0,
+           "Phase5.7R5: BP+Apply0 does not raise CaptureFloor");
+    Expect(SoftDeferCaptureFloorWhenDepthFull(true, 0, 0, false, 15, 0) == 0,
+           "Phase5.7R6: Apply idle + SoftDefer does not raise even below BP");
+    Expect(SoftDeferCaptureFloorWhenDepthFull(true, 0, 1, false, 15, 2) == 1,
+           "Phase5.7R6: SoftDefer floor when Apply progressing");
   }
 
   // FZ2.7-C: Capture depth follows earned apply (manual 141417 fifo=55 ready=0)
@@ -3479,6 +3604,25 @@ int main()
     using cutum::ShouldSkipOpaqueCullHalfRate;
     using cutum::ShouldReuseOpaqueCullCompact;
     using cutum::ShouldThrottleFailOpenGpuCompact;
+    using cutum::OpaqueCullVbEdgeBlocks;
+    Expect(OpaqueCullVbEdgeBlocks(68, 68, 10, 10, 3, 3, true) == false,
+           "Phase5.7R4: rim VB plateau is not vb_edge");
+    Expect(OpaqueCullVbEdgeBlocks(68, 60, 10, 10, 3, 3, true),
+           "Phase5.7R4: large ΔVB_focus is vb_edge");
+    Expect(OpaqueCullVbEdgeBlocks(44, 43, 10, 10, 3, 3, true) == false,
+           "Phase5.7R5: micro ΔVB=1 without streak is not edge");
+    Expect(OpaqueCullVbEdgeBlocks(44, 43, 10, 10, 3, 3, true, 2),
+           "Phase5.7R5: micro ΔVB with streak>=2 is edge");
+    Expect(OpaqueCullVbEdgeBlocks(10, 10, 2, 0, 0, 1, true),
+           "Phase5.7R4: newly stalled underfeet is vb_edge");
+    Expect(OpaqueCullVbEdgeBlocks(10, 10, 2, 2, 0, 1, true) == false,
+           "Phase5.7R4: sustained underfeet stall plateau not edge");
+    Expect(OpaqueCullVbEdgeBlocks(10, 10, 0, 0, 8, 1, true),
+           "Phase5.7R4: nt>=8 underfeet is vb_edge");
+    Expect(OpaqueCullVbEdgeBlocks(10, 10, 0, 0, 8, 3, true) == false,
+           "Phase5.7R4: nt>=8 on rim is not vb_edge");
+    Expect(OpaqueCullVbEdgeBlocks(5, 0, 0, 0, 0, 0, false),
+           "Phase5.7R4: first sample treated as transition");
     Expect(ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
                                            0.4f, false, false),
            "5.7.4: near-stand skip OK");
@@ -3490,14 +3634,19 @@ int main()
            "5.7R2: light-cruise no skip when yaw noisy");
     Expect(!ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
                                             0.4f, true, false),
-           "5.7.4: no skip under FocusMissing");
+           "5.7.4: no skip under underfeet FocusMissing (nh default 0)");
+    Expect(ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
+                                           0.4f, true, false, 0.0f, 0.5f, 3),
+           "5.7R3: light-cruise skip OK under rim miss nh=3");
     Expect(!ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
                                             2.0f, false, false),
            "5.7.4: no skip above light-cruise speed");
     Expect(ShouldSkipOpaqueCullStable(true, false, false),
            "5.7.4: stable skip OK");
     Expect(!ShouldSkipOpaqueCullStable(true, true, false),
-           "5.7.4: stable no skip under miss");
+           "5.7.4: stable no skip under underfeet miss");
+    Expect(ShouldSkipOpaqueCullStable(true, true, false, 3),
+           "5.7R3: stable skip OK under rim miss nh=3");
     Expect(!ShouldSkipOpaqueCullHalfRate(true, true, true, true, false, false, 0),
            "5.7R: legacy half-rate API stays false");
     Expect(ShouldReuseOpaqueCullCompact(true, true, true, true, false, false,
@@ -3508,13 +3657,26 @@ int main()
            "5.7R2: compact reuse odd frame runs cull");
     Expect(!ShouldReuseOpaqueCullCompact(true, true, true, true, true, false,
                                          0.0f, 0.0f, 0.5f, 0.5f, 100, 100, 0),
-           "5.7R2: compact reuse never under miss");
+           "5.7R2: compact reuse never under underfeet miss");
+    Expect(ShouldReuseOpaqueCullCompact(true, true, true, true, true, false,
+                                        0.0f, 0.0f, 0.5f, 0.5f, 100, 100, 0, 3),
+           "5.7R3: compact reuse OK under rim miss nh=3");
+    Expect(!ShouldReuseOpaqueCullCompact(true, true, true, true, true, false,
+                                         0.0f, 0.0f, 0.5f, 0.5f, 100, 100, 0, 1),
+           "5.7R3: compact reuse blocked underfeet nh=1");
     Expect(!ShouldReuseOpaqueCullCompact(true, true, true, true, false, false,
                                          1.0f, 0.0f, 0.5f, 0.5f, 100, 100, 0),
            "5.7R2: compact reuse no yaw jump");
+    Expect(ShouldReuseOpaqueCullCompact(true, true, true, true, false, false,
+                                        0.0f, 0.0f, 0.5f, 0.5f, 100, 99, 0),
+           "5.7R3: compact reuse allows ±2% cmd_on hysteresis");
     Expect(!ShouldReuseOpaqueCullCompact(true, true, true, true, false, false,
-                                         0.0f, 0.0f, 0.5f, 0.5f, 100, 99, 0),
-           "5.7R2: compact reuse no cmd_on change");
+                                         0.0f, 0.0f, 0.5f, 0.5f, 100, 97, 0),
+           "5.7R3: compact reuse blocks >2% cmd_on change");
+    using cutum::OpaqueCullCmdOnStable;
+    Expect(OpaqueCullCmdOnStable(100, 100), "5.7R3: cmd equal stable");
+    Expect(OpaqueCullCmdOnStable(102, 100), "5.7R3: cmd +2% stable");
+    Expect(!OpaqueCullCmdOnStable(103, 100), "5.7R3: cmd +3% unstable");
     Expect(ShouldThrottleFailOpenGpuCompact(3),
            "5.7.4: fail-open after N=3");
     Expect(!ShouldThrottleFailOpenGpuCompact(2),

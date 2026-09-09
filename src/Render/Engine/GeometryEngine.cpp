@@ -1850,6 +1850,8 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
       CachedOpaqueCullFocusValid = false;
       CachedOpaqueCullOrientValid = false;
       CachedOpaqueCmdOnValid = false;
+      CachedOpaqueCullVbValid = false;
+      CachedOpaqueCullVbDeltaStreak = 0;
     }
     GLboolean cullWasEnabled = GL_TRUE;
     if (!cutout.empty())
@@ -1875,11 +1877,16 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
           cam_delta.x * cam_delta.x + cam_delta.y * cam_delta.y +
           cam_delta.z * cam_delta.z;
       constexpr float kCullCamEps2 = 1.0e-4f; // ~1cm stand / light-cruise
-      constexpr float kCullYawEps = 0.5f;
-      constexpr float kCullPitchEps = 0.5f;
+      // Phase 5.7R3: widen yaw/pitch so manual look drift still reuses cull.
+      constexpr float kCullYawEps = 2.0f;
+      constexpr float kCullPitchEps = 2.0f;
       float move_spd = 0.0f;
       bool focus_missing = false;
       bool vb_edge = false;
+      int miss_horiz = 0;
+      int vb_focus_n = 0;
+      int vb_stalled_n = 0;
+      int vb_no_ticket_n = 0;
       glm::ivec2 focus_xz(0);
       float yaw = 0.0f;
       float pitch = 0.0f;
@@ -1888,8 +1895,23 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
         const auto &pt = WorldInstance->GetPhysicsTelemetry();
         move_spd = pt.MovementSpeed;
         focus_missing = pt.FocusMissingMesh != 0;
-        vb_edge = pt.VisibleBlackFocusN > 0 &&
-                  (pt.VisibleBlackNoTicketN > 0 || pt.VisibleBlackStalledN > 0);
+        miss_horiz = pt.MissHoriz;
+        vb_focus_n = pt.VisibleBlackFocusN;
+        vb_stalled_n = pt.VisibleBlackStalledN;
+        vb_no_ticket_n = pt.VisibleBlackNoTicketN;
+        // Phase 5.7R5: ΔVB hysteresis (|Δ|≥4 or streak≥2) — not micro flicker.
+        if (CachedOpaqueCullVbValid && vb_focus_n != CachedOpaqueCullVbFocusN)
+        {
+          ++CachedOpaqueCullVbDeltaStreak;
+        }
+        else if (CachedOpaqueCullVbValid)
+        {
+          CachedOpaqueCullVbDeltaStreak = 0;
+        }
+        vb_edge = OpaqueCullVbEdgeBlocks(
+            vb_focus_n, CachedOpaqueCullVbFocusN, vb_stalled_n,
+            CachedOpaqueCullVbStalledN, vb_no_ticket_n, miss_horiz,
+            CachedOpaqueCullVbValid, CachedOpaqueCullVbDeltaStreak);
         focus_xz = glm::ivec2(pt.FocusChunkX, pt.FocusChunkZ);
         if (const auto cam = WorldInstance->GetCurrentUserCamera())
         {
@@ -1897,6 +1919,9 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
           pitch = cam->GetPitch();
         }
       }
+      CachedOpaqueCullVbFocusN = vb_focus_n;
+      CachedOpaqueCullVbStalledN = vb_stalled_n;
+      CachedOpaqueCullVbValid = WorldInstance != nullptr;
       const float abs_yaw_delta =
           CachedOpaqueCullOrientValid ? std::abs(yaw - CachedOpaqueCullYaw)
                                       : 999.0f;
@@ -1919,15 +1944,16 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
               draw_set_stable, cullRevision == CachedOpaqueCullRevision,
               cam_move2, kCullCamEps2, GreedyGpuOpaque.IndirectCullReady,
               GreedyGpuOpaque.GpuCompactActive, move_spd, focus_missing,
-              vb_edge, abs_yaw_delta, kCullYawEps);
+              vb_edge, abs_yaw_delta, kCullYawEps, miss_horiz);
       const uint32_t cull_parity = OpaqueCullFrameParity++;
       const bool compact_reuse = ShouldReuseOpaqueCullCompact(
           draw_set_stable, cullRevision == CachedOpaqueCullRevision,
           GreedyGpuOpaque.GpuCompactActive, focus_unchanged, focus_missing,
           vb_edge, abs_yaw_delta, abs_pitch_delta, kCullYawEps, kCullPitchEps,
-          opaque_cmd_on, opaque_cmd_on_prev, cull_parity);
+          opaque_cmd_on, opaque_cmd_on_prev, cull_parity, miss_horiz);
       const bool do_skip =
-          ShouldSkipOpaqueCullStable(cull_stable, focus_missing, vb_edge) ||
+          ShouldSkipOpaqueCullStable(cull_stable, focus_missing, vb_edge,
+                                     miss_horiz) ||
           light_cruise_skip || compact_reuse;
       if (!do_skip)
       {
@@ -1980,6 +2006,8 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     CachedOpaqueCullFocusValid = false;
     CachedOpaqueCullOrientValid = false;
     CachedOpaqueCmdOnValid = false;
+    CachedOpaqueCullVbValid = false;
+    CachedOpaqueCullVbDeltaStreak = 0;
   }
   if (!cutout.empty())
   {

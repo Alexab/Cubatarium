@@ -471,23 +471,42 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
   const bool latch_debt_bias =
       world.GetPhysicsTelemetry().EnterSettleSoftForceWithDebt != 0 &&
       world.GetPhysicsTelemetry().VisibilityDebt > 0;
-  // Phase 5.7R2: latch Relight while moving — underfeet Cheb≤1 TopK≤2 only.
+  // Phase 5.7R4: unified fifo owner — vb_consume may focus Relight; ring=0 under
+  // fifo>=16; latch+moving still underfeet-gated.
+  const int miss_horiz = world.GetPhysicsTelemetry().MissHoriz;
+  const int relight_fifo_n = world.GetPhysicsTelemetry().RelightFifoN;
+  const bool fifo_pressure = RelightFifoBackpressured(relight_fifo_n);
+  const bool allow_latch_relight_moving = ShouldAllowLatchRelightMoving(
+      latch_debt_bias, moving, missing_visible_mesh, miss_horiz,
+      relight_fifo_n);
   if (vb_consume || latch_debt_bias)
   {
-    if (!scheduler_.Contains(focus, ColumnWorkKind::RelightThenMesh))
-    {
-      Enqueue(focus, ColumnWorkKind::RelightThenMesh,
-              latch_debt_bias ? 96 : (moving ? 92 : 95));
-      world.GetPhysicsTelemetryMutable().TicketedVbConsumeN++;
-    }
-    if (visible_black_no_ticket_n >= 10 || latch_debt_bias)
+  // Phase 5.7R5: under fifo pressure only UF/miss nh≤1 focus Relight (central
+  // EnqueueTerrainColumnRelight also admits only nh≤1).
+  const bool enqueue_focus_relight =
+      (!fifo_pressure || (missing_visible_mesh && miss_horiz <= 1)) &&
+      (vb_consume || !moving || allow_latch_relight_moving);
+  if (enqueue_focus_relight &&
+      !scheduler_.Contains(focus, ColumnWorkKind::RelightThenMesh))
+  {
+    Enqueue(focus, ColumnWorkKind::RelightThenMesh,
+            latch_debt_bias ? 96 : (moving ? 92 : 95));
+    world.GetPhysicsTelemetryMutable().TicketedVbConsumeN++;
+  }
+    // Ring: fifo pressure OR latch+moving without allow → TopK=0.
+    const bool skip_ring =
+        fifo_pressure ||
+        (latch_debt_bias && moving && !allow_latch_relight_moving);
+    if (!skip_ring &&
+        (visible_black_no_ticket_n >= 10 || latch_debt_bias))
     {
       const glm::ivec3 fg = focus_ground_horiz;
       int ring_enq = 0;
-      // Phase 5.7R2: latch+moving → TopK=2 Rscan=1; latch stand TopK=3 Rscan=4.
+      // Phase 5.7R3/R4: latch+moving allow → TopK=1 Rscan=1; latch stand TopK=3.
+      // vb_consume without latch: keep prior caps but never under fifo_pressure.
       const int kRingTopK =
           latch_debt_bias
-              ? (moving ? 2 : 3)
+              ? (moving ? (allow_latch_relight_moving ? 1 : 0) : 3)
               : (missing_visible_mesh && moving
                      ? 1
                      : ((!moving && visible_black_n >= 25) ? 6 : 3));
@@ -520,6 +539,20 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
           ++ring_enq;
         }
       }
+    }
+  }
+  // Phase 5.7R6: fifo drained + focus miss/PL — focus RelightThenMesh even
+  // without vb_consume/latch (Cut A drained fifo; nobody re-enqueued focus).
+  {
+    const bool pending_light_near =
+        world.HasPendingLightBeforeMeshNear(focus_ground_horiz, /*R=*/4);
+    const bool carve_lit = ShouldCarveFocusLitCompletion(
+        relight_fifo_n, missing_visible_mesh, miss_horiz, pending_light_near);
+    if (carve_lit &&
+        !scheduler_.Contains(focus, ColumnWorkKind::RelightThenMesh) &&
+        !scheduler_.Contains(focus, ColumnWorkKind::FirstMesh))
+    {
+      Enqueue(focus, ColumnWorkKind::RelightThenMesh, 96);
     }
   }
   constexpr double kStaleRepairCooldownSec = 2.0;
@@ -615,7 +648,7 @@ void UColumnFlowExecutor::TickDerived(UWorld &world,
     static int prev_no_ticket = -1;
     const bool skip_stale_collect = ShouldSkipStaleCollectOnVbPlateau(
         visible_black_n, prev_vb_pub, visible_black_no_ticket_n, prev_no_ticket,
-        vb_consume, cooldown_ok);
+        vb_consume, cooldown_ok, relight_fifo_n);
     prev_vb_pub = visible_black_n;
     prev_no_ticket = visible_black_no_ticket_n;
     if (!skip_stale_collect)

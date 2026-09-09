@@ -60,21 +60,34 @@ inline bool ShouldPublishMeshToDraw(bool lit_drawable, bool keep_prior_gpu_live,
   return false;
 }
 
-/// Era32 I-L1: hide fully-dark drawable in LitDrawable ring until lit binds.
-/// Universal (land+ocean) — not gated on ocean_heal.
-/// pending_replace_lit is ignored: PendingLight/PendingGpu keep-prior was
-/// drawing Unlit black plugs for the whole Relight→Remesh window (manual
-/// 183525 eye). Hole until lit bind > black surface in FOV.
-inline bool ShouldHideFullyDarkUntilLitInRing(int horiz, bool fully_dark,
-                                             bool pending_replace_lit,
-                                             int ring = kVisualStageLitDrawableHoriz)
+/// Era32 I-L1 / Phase 5.7R5: hide fully-dark drawable in LitDrawable ring until
+/// lit binds. pending_replace_lit ignored historically (black-plug flicker).
+/// Phase 5.7R5: under Relight starve keep published/GPU until lit bind
+/// (170947: far drawable → near hole while fifo~40 Apply~0).
+inline bool ShouldHideFullyDarkUntilLitInRing(
+    int horiz, bool fully_dark, bool pending_replace_lit,
+    int ring = kVisualStageLitDrawableHoriz, bool relight_starve = false,
+    bool has_published_or_live_gpu = false)
 {
   (void)pending_replace_lit;
   if (horiz > ring || !fully_dark)
   {
     return false;
   }
+  if (relight_starve && has_published_or_live_gpu)
+  {
+    return false;
+  }
   return true;
+}
+
+/// Phase 5.7R6: Relight starve for keep-published = fifo BP only.
+/// (R5 apply<=0 kept FullyDark forever after Cut A drained fifo — black plugs.)
+inline bool RelightHideStarveActive(int relight_fifo_n, int apply_n_prev,
+                                    int fifo_backpressure = 16)
+{
+  (void)apply_n_prev;
+  return relight_fifo_n >= fifo_backpressure;
 }
 
 /// LitRing: FullyDark in LitDrawable/underfeet → hole until lit or true-dark.

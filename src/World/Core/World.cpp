@@ -1931,7 +1931,13 @@ bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
       {
         return memo(true);
       }
-      if (ShouldHideFullyDarkUntilLitInRing(horiz, true, pending))
+      const bool relight_starve = RelightHideStarveActive(
+          PhysicsTelemetryData.RelightFifoN,
+          PhysicsTelemetryData.RelightApplyNPrev);
+      // Satisfying path ⇒ published mesh; keep under Relight starve.
+      if (ShouldHideFullyDarkUntilLitInRing(
+              horiz, true, pending, kVisualStageLitDrawableHoriz, relight_starve,
+              /*has_published_or_live_gpu=*/true))
       {
         const bool stale =
             MeshService->ChunkHasStaleDarkFaces(chunk_coord, BlockWorld);
@@ -3195,6 +3201,7 @@ bool UWorld::NeedsSpawnRingCatchUp() const
     const int debt = PhysicsTelemetryData.VisibilityDebt;
     const int ring_nr = CountPostLoadRingNotReady();
     const int focus_miss = PhysicsTelemetryData.FocusMissingMesh;
+    // Phase 5.7R4: clear latch only on real underfeet presentable.
     const bool underfeet = IsEnterUnderfeetPresentReady();
     if (!EnterPresentableCatchUpClear(
             PhysicsTelemetryData.SoftDeferOwnedNoGpuN,

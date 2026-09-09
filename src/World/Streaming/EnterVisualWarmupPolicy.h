@@ -237,21 +237,50 @@ inline bool EnterVisDebtAllowsExitBypass(int visibility_debt)
   return visibility_debt <= 0;
 }
 
-/// Phase 5.6.1: PresentableCatchUp latch clear after SoftDefer stuck clear and
-/// visibility_debt drained. Ring/miss/underfeet alone must NOT clear while
-/// lit debt remains (CountPostLoadRingNotReady can be 0 with debt=81).
-/// Drainability comes from remesh of mesh-but-!VisualReady in R=4.
+/// Phase 5.6.1 / 5.7R4: PresentableCatchUp latch clear after SoftDefer stuck
+/// clear. Debt=0 still clears (hinterland drained). Phase 5.7R4: debt>0 clears
+/// only on real IsEnterUnderfeetPresentReady (no FocusMissingMesh==0 OR).
+/// Ring-ready alone still does NOT clear while debt>0 and underfeet fail.
 inline bool EnterPresentableCatchUpClear(int soft_owned_no_gpu, int soft_stuck,
                                          int visibility_debt,
                                          int /*ring_not_ready*/,
-                                         int /*focus_missing*/,
-                                         bool /*underfeet*/)
+                                         int /*focus_missing*/, bool underfeet)
 {
   if (soft_owned_no_gpu > 0 || soft_stuck > 0)
   {
     return false;
   }
-  return visibility_debt <= 0;
+  if (visibility_debt <= 0)
+  {
+    return true;
+  }
+  // Honest underfeet ownership — hinterland debt heals via cruise, not via
+  // miss=0 false-clear that killed latch gates (R3 irony).
+  return underfeet;
+}
+
+/// Phase 5.7R4: before soft_force wall, carve underfeet Dirty/FirstMesh
+/// (no AbortDrip / force-wall raise).
+inline bool ShouldCarveUnderfeetBeforeSoftForce(bool underfeet_present,
+                                                double elapsed_ms,
+                                                int force_ingame_ms,
+                                                int carve_lead_ms = 8000)
+{
+  if (underfeet_present || force_ingame_ms <= 0)
+  {
+    return false;
+  }
+  const double carve_at =
+      static_cast<double>(std::max(0, force_ingame_ms - carve_lead_ms));
+  return elapsed_ms >= carve_at;
+}
+
+/// Phase 5.7R5: soft_force settle only when underfeet presentable (no
+/// soft_force+UF=0 PRODUCT_FAIL). Wall may still force InGame without that
+/// settle_reason.
+inline bool ShouldAllowEnterSoftForceSettle(bool underfeet_present)
+{
+  return underfeet_present;
 }
 
 /// Phase 5.6.1: skip MarkDirty only when PendingGpu owns OR mesh+VisualReady.

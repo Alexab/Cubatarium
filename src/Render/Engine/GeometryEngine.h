@@ -344,6 +344,11 @@ private:
   uint64_t CachedOpaqueCmdOn{0};
   uint64_t CachedOpaqueCmdOnPrev{0};
   bool CachedOpaqueCmdOnValid{false};
+  /// Phase 5.7R4: prior-frame VB for cull vb_edge transition (not plateau).
+  int CachedOpaqueCullVbFocusN{0};
+  int CachedOpaqueCullVbStalledN{0};
+  bool CachedOpaqueCullVbValid{false};
+  int CachedOpaqueCullVbDeltaStreak{0};
   glm::mat4 PreparedTransparentVp{};
   const std::map<size_t, UTextureCube> *PreparedTransparentTextures{nullptr};
   IUMeshGpuStore &MeshStore();

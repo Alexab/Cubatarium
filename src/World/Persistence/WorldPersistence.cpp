@@ -291,6 +291,23 @@ void UWorldPersistence::EnqueueTerrainColumnRelight(int world_x, int world_z,
   // Block-space key → column xz for light_complete invalidation.
   const glm::ivec2 ground_xz(FloorDiv(world_x, CHUNK_SIZE),
                              FloorDiv(world_z, CHUNK_SIZE));
+  // Phase 5.7R5: unified FIFO admit — new enqueues outside nh≤1 blocked under BP.
+  // Already-keyed columns may still Promote (drain-owner / pin repair).
+  if (PendingTerrainColumnRelightKeys.count(key) == 0)
+  {
+    const int fifo_n =
+        static_cast<int>(PendingTerrainColumnRelightKeys.size());
+    int horiz = 0;
+    if (RelightFifoTrimFocusValid)
+    {
+      horiz = std::max(std::abs(ground_xz.x - RelightFifoTrimFocusCx),
+                       std::abs(ground_xz.y - RelightFifoTrimFocusCz));
+    }
+    if (!ShouldAdmitRelightFifoEnqueue(fifo_n, horiz))
+    {
+      return;
+    }
+  }
   ClearColumnLightComplete(ground_xz);
   if (max_y >= min_y)
   {
@@ -1148,8 +1165,9 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
           (visual_holes &&
            ShouldPreferMissFinalizeBand(
                world.GetPhysicsTelemetry().MissHoriz));
-      bg_cap = SoftDeferCaptureFloorWhenDepthFull(soft_defer_or_miss, 0,
-                                                  completed_n, fifo_starve);
+      bg_cap = SoftDeferCaptureFloorWhenDepthFull(
+          soft_defer_or_miss, 0, completed_n, fifo_starve, telem.RelightFifoN,
+          telem.RelightApplyNPrev);
     }
     if (fifo_soft_cap > 0 &&
         telem.RelightFifoN >= (fifo_soft_cap * 2) / 3 &&

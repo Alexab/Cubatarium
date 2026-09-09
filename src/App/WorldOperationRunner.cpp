@@ -376,6 +376,13 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
   const int underfeet_gpu_pending_cap =
       World.GetMeshService().CountPendingGpuAppliesInHorizontalRadius(
           underfeet_center_cap, 1);
+  // Phase 5.7R4: UF Dirty carve before soft_force wall (existing budgets).
+  if (ShouldCarveUnderfeetBeforeSoftForce(underfeet_present_cap,
+                                          EnterGameGpuWarmupElapsedMs,
+                                          tune.EnterForceInGameMs))
+  {
+    World.MarkSpawnRingUnfinishedDirty(8);
+  }
   const bool abort_underfeet_cap = ShouldReleaseEnterAfterAbortUnderfeetCap(
       EnterGameAbortDrainMode, EnterGameGpuWarmupElapsedMs,
       tune.EnterForceInGameMs, underfeet_present_cap, underfeet_gpu_pending_cap);
@@ -425,20 +432,32 @@ bool UWorldOperationRunner::AdvanceEnterGameGpuWarmup(IUProgressSink &sink,
     if (!EnterGameForceInGameLogged)
     {
       EnterGameForceInGameLogged = true;
-      LOG(WARNING) << "[EnterWarmup] settle_reason=soft_force soft_exit_cap elapsed_ms="
-                   << EnterGameGpuWarmupElapsedMs << " ring_ready="
-                   << (ring_ready ? 1 : 0) << " mesh_dirty="
-                   << (lit_sample.mesh_dirty ? 1 : 0) << " gpu_pending="
-                   << lit_sample.mesh_gpu_pending_near << " ring="
-                   << lit_sample.ring_not_ready << " fifo=" << lit_sample.fifo_n
-                   << " visibility_debt=" << visibility_debt
-                   << " underfeet=" << (underfeet_present ? 1 : 0)
-                   << " (force InGame; underfeet may be missing)";
-      if (visibility_debt > 0)
+      if (ShouldAllowEnterSoftForceSettle(underfeet_present_cap))
       {
-        World.GetPhysicsTelemetryMutable().EnterSettleSoftForceWithDebt = 1;
+        LOG(WARNING) << "[EnterWarmup] settle_reason=soft_force soft_exit_cap elapsed_ms="
+                     << EnterGameGpuWarmupElapsedMs << " ring_ready="
+                     << (ring_ready ? 1 : 0) << " mesh_dirty="
+                     << (lit_sample.mesh_dirty ? 1 : 0) << " gpu_pending="
+                     << lit_sample.mesh_gpu_pending_near << " ring="
+                     << lit_sample.ring_not_ready << " fifo=" << lit_sample.fifo_n
+                     << " visibility_debt=" << visibility_debt
+                     << " underfeet=" << (underfeet_present_cap ? 1 : 0);
+        if (visibility_debt > 0)
+        {
+          World.GetPhysicsTelemetryMutable().EnterSettleSoftForceWithDebt = 1;
+          World.BeginEnterGameMeshBurst(24);
+          World.MarkSpawnRingUnfinishedDirty(8);
+        }
+      }
+      else
+      {
+        // Phase 5.7R5: wall exit without soft_force+UF=0 product event.
+        LOG(WARNING) << "[EnterWarmup] settle_reason=force_ingame_no_uf elapsed_ms="
+                     << EnterGameGpuWarmupElapsedMs << " ring_ready="
+                     << (ring_ready ? 1 : 0) << " visibility_debt="
+                     << visibility_debt << " underfeet=0 (no soft_force settle)";
         World.BeginEnterGameMeshBurst(24);
-        World.MarkSpawnRingUnfinishedDirty(8);
+        World.MarkSpawnRingUnfinishedDirty(16);
       }
       CubatariumFlushLogs();
     }

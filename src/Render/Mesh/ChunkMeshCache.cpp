@@ -5440,7 +5440,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (IsPendingGpuApply(*it) || IsPendingGpuQueued(*it) ||
           IsPendingGpuKickedOrDispatched(*it))
       {
-        if ((EnterLitQuiesce || EnterGpuQuiesceDrain) &&
+        // Phase 5.7R6: focus miss / holes — PreferKick + leave-in Dirty
+        // (enter quiesce path); do not silent RemoveAt without kick progress.
+        if ((EnterLitQuiesce || EnterGpuQuiesceDrain || StarveRemeshForHoles) &&
             !HasDrawableGreedyMesh(*it))
         {
           PreferKickPendingGpuQueued(*it);
@@ -5480,10 +5482,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           in_focus = horiz <= MeshFocusRadiusChunks;
         }
         // Phase 1b: ring≤2 FirstMesh is non-stealable under SoftDefer.
+        // Phase 5.7R6: focus miss (StarveRemeshForHoles) always fallthrough.
         const bool near_ring_first_mesh =
             !has_drawable && horiz <= RelightFifoTrimProtectHoriz();
         const bool miss_or_focus = StarveRemeshForHoles || in_focus;
-        if (near_ring_first_mesh ||
+        if (near_ring_first_mesh || StarveRemeshForHoles ||
             (EnterUnderfeetExitBlocked_ && horiz >= 0 && horiz <= 1) ||
             ShouldScheduleFirstMeshUnderSoftDefer(has_drawable, miss_or_focus,
                                                   horiz,

@@ -2928,25 +2928,37 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
       if (!SoftDeferCaptureBlockedByRepairTicket(missing_focus_mesh, has_fm,
                                                  has_any))
       {
-        ++world.PhysicsTelemetryData.SoftDeferCaptureFloorHits;
-        if (did_retarget)
-        {
-          // FZ2.7-P15a: Site B Capture retarget (also bumps legacy total).
-          ++world.PhysicsTelemetryData.SoftDeferCaptureRetargetN;
-          ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
-          world.PhysicsTelemetryData.SoftDeferWitnessHoriz = repair_horiz;
-        }
         const ColumnWorkKind kind =
             (missing_focus_mesh || budget.capture_first_mesh_only)
                 ? ColumnWorkKind::FirstMesh
                 : ColumnWorkKind::RelightThenMesh;
-        ColumnWorkItem item{};
-        item.column = repair_xz;
-        item.kind = kind;
-        item.priority = 90;
-        item.scan_full_focus = missing_focus_mesh;
-        item.cy = repair_cy;
-        exec.Enqueue(item);
+        // Phase 5.7R5: under Relight BP + Apply idle, do not CaptureFloor Relight
+        // (FirstMesh miss carve still OK).
+        const int fifo_n = world.PhysicsTelemetryData.RelightFifoN;
+        const int apply_prev = world.PhysicsTelemetryData.RelightApplyNPrev;
+        if (kind == ColumnWorkKind::RelightThenMesh &&
+            RelightFifoBackpressured(fifo_n) && apply_prev == 0)
+        {
+          // skip Capture Relight storm
+        }
+        else
+        {
+          ++world.PhysicsTelemetryData.SoftDeferCaptureFloorHits;
+          if (did_retarget)
+          {
+            // FZ2.7-P15a: Site B Capture retarget (also bumps legacy total).
+            ++world.PhysicsTelemetryData.SoftDeferCaptureRetargetN;
+            ++world.PhysicsTelemetryData.SoftDeferWitnessRetarget;
+            world.PhysicsTelemetryData.SoftDeferWitnessHoriz = repair_horiz;
+          }
+          ColumnWorkItem item{};
+          item.column = repair_xz;
+          item.kind = kind;
+          item.priority = 90;
+          item.scan_full_focus = missing_focus_mesh;
+          item.cy = repair_cy;
+          exec.Enqueue(item);
+        }
       }
     }
     else if (!missing_focus_mesh)
@@ -4501,6 +4513,7 @@ void UWorldStreaming::UpdateStreaming(UWorld &world,
           EnterPresentableCatchUpClear(
               pt.SoftDeferOwnedNoGpuN, pt.SoftDeferEmptyStuckN, vis_debt,
               world.CountPostLoadRingNotReady(), pt.FocusMissingMesh,
+              // Phase 5.7R4: honest underfeet only (no FocusMissingMesh==0 OR).
               world.IsEnterUnderfeetPresentReady()))
       {
         pt.EnterSettleSoftForceWithDebt = 0;

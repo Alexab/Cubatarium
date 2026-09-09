@@ -802,12 +802,34 @@ inline int RelightCaptureBgFloorForFifoStarve(int bg_cap, int fifo_n,
   return bg_cap > kFloorN ? bg_cap : kFloorN;
 }
 
-/// FZ2.7-P10: depth-full SoftDefer floor — keep refill when Completed empty.
+/// Phase 5.7R4: unified Relight FIFO owner — all producers share backpressure.
+inline bool RelightFifoBackpressured(int relight_fifo_n,
+                                     int fifo_backpressure = 16)
+{
+  return relight_fifo_n >= fifo_backpressure;
+}
+
+/// FZ2.7-P10 / 5.7R5: depth-full SoftDefer floor — keep refill when Completed
+/// empty. Phase 5.7R5: do not raise Capture when Relight BP + Apply idle
+/// (170947 CaptureFloor +12/period fed fifo storm).
 inline int SoftDeferCaptureFloorWhenDepthFull(bool soft_defer_or_miss_hole,
                                               int bg_cap,
                                               int completed_n = -1,
-                                              bool fifo_starve = false)
+                                              bool fifo_starve = false,
+                                              int relight_fifo_n = -1,
+                                              int apply_n_prev = -1,
+                                              int fifo_backpressure = 16)
 {
+  if (relight_fifo_n >= 0 && apply_n_prev == 0 &&
+      RelightFifoBackpressured(relight_fifo_n, fifo_backpressure))
+  {
+    return bg_cap;
+  }
+  // Phase 5.7R6: Apply idle + SoftDefer/miss backlog — do not raise Capture.
+  if (apply_n_prev == 0 && soft_defer_or_miss_hole && completed_n <= 0)
+  {
+    return bg_cap;
+  }
   if (fifo_starve && completed_n <= 0)
   {
     return bg_cap < 3 ? 3 : bg_cap;
@@ -1211,6 +1233,82 @@ inline bool IsTicketedVbConsumeMode(int vb_no_ticket_n,
          ShouldConsumeTicketedVbStalledCruise(moving, vb_stalled_n,
                                               pending_light_focus_n,
                                               visible_black_focus_n);
+}
+
+/// Phase 5.7R3: latch Relight while moving only for underfeet miss + fifo
+/// backpressure. Hinterland sticky latch alone must not flood RelightThenMesh.
+inline bool ShouldAllowLatchRelightMoving(bool latch_debt, bool moving,
+                                          bool focus_missing, int miss_horiz,
+                                          int relight_fifo_n,
+                                          int fifo_backpressure = 16)
+{
+  return latch_debt && moving && focus_missing && miss_horiz >= 0 &&
+         miss_horiz <= 1 && relight_fifo_n < fifo_backpressure;
+}
+
+/// Phase 5.7R5: under BP, admit only underfeet/near-miss columns (nh≤1).
+/// Existing fifo keys may still Promote; this gates *new* enqueues.
+inline bool ShouldAdmitRelightFifoEnqueue(int relight_fifo_n,
+                                          int horiz_from_focus,
+                                          int fifo_backpressure = 16)
+{
+  if (!RelightFifoBackpressured(relight_fifo_n, fifo_backpressure))
+  {
+    return true;
+  }
+  return horiz_from_focus >= 0 && horiz_from_focus <= 1;
+}
+
+/// Phase 5.7R6: when fifo drained, force focus lit-completion (not rim Relight).
+inline bool ShouldCarveFocusLitCompletion(int relight_fifo_n,
+                                          bool focus_missing,
+                                          int miss_horiz,
+                                          bool pending_light_near,
+                                          int fifo_backpressure = 16)
+{
+  if (RelightFifoBackpressured(relight_fifo_n, fifo_backpressure))
+  {
+    return false; // KEEP Cut A: under BP only nh≤1 admit path
+  }
+  if (!focus_missing && !pending_light_near)
+  {
+    return false;
+  }
+  return miss_horiz < 0 || miss_horiz <= 4;
+}
+
+/// Phase 5.7R4: SoftDefer / lit-pending Relight — fifo blocks ALL; no
+/// vb_consume / !latch unconditional bypass (123314 irony).
+inline bool ShouldEnqueueLatchSideRelight(bool latch_debt, bool moving,
+                                          bool focus_missing, int miss_horiz,
+                                          int relight_fifo_n, bool vb_consume,
+                                          int fifo_backpressure = 16)
+{
+  if (RelightFifoBackpressured(relight_fifo_n, fifo_backpressure))
+  {
+    return false;
+  }
+  if (vb_consume)
+  {
+    // Focus-only path is ColumnFlow; SoftDefer may enqueue one column.
+    return true;
+  }
+  if (!latch_debt)
+  {
+    if (!moving)
+    {
+      return true;
+    }
+    // Moving without latch: underfeet miss only (not hinterland flood).
+    return focus_missing && miss_horiz >= 0 && miss_horiz <= 1;
+  }
+  if (!moving)
+  {
+    return true;
+  }
+  return ShouldAllowLatchRelightMoving(latch_debt, moving, focus_missing,
+                                       miss_horiz, relight_fifo_n,
+                                       fifo_backpressure);
 }
 
 /// I18-P2: release witness pin when miss schedule is stuck on stand only.

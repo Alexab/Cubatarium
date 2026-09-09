@@ -422,12 +422,47 @@ inline bool ShouldSoftDeferEmptyUnderfeetFastHeal(int horiz)
   return horiz >= 0 && horiz <= 1;
 }
 
-/// Phase 5.7R2: skip O(R²) CollectStaleDark when VB counts plateau.
+/// Phase 5.7R3: rate-limit SoftDefer underfeet MarkDirty storms (≥8 frames).
+inline bool ShouldSoftDeferUnderfeetMarkCooldownOk(uint64_t last_mark_frame,
+                                                   uint64_t now_frame,
+                                                   uint64_t cooldown_frames = 8)
+{
+  if (last_mark_frame == 0)
+  {
+    return true;
+  }
+  return now_frame >= last_mark_frame &&
+         (now_frame - last_mark_frame) >= cooldown_frames;
+}
+
+/// Phase 5.7R6: carve + schedule_ok=0 — allow Mark every 2f (not global cd<8f).
+inline bool ShouldSoftDeferFocusLitMarkCooldownOk(uint64_t last_mark_frame,
+                                                 uint64_t now_frame,
+                                                 bool carve_schedule_starved,
+                                                 uint64_t cooldown_frames = 8)
+{
+  if (carve_schedule_starved)
+  {
+    return ShouldSoftDeferUnderfeetMarkCooldownOk(last_mark_frame, now_frame, 2);
+  }
+  return ShouldSoftDeferUnderfeetMarkCooldownOk(last_mark_frame, now_frame,
+                                                  cooldown_frames);
+}
+
+/// Phase 5.7R2 / 5.7R4: skip O(R²) CollectStaleDark when VB counts plateau.
+/// Phase 5.7R4: fifo≥16 allows skip even under vb_dirty_consumed (VB drain =
+/// ticketed Apply/MarkRelit — not Collect+Enqueue storm).
 inline bool ShouldSkipStaleCollectOnVbPlateau(int vb_pub, int vb_pub_prev,
                                                int no_ticket, int no_ticket_prev,
                                                bool vb_dirty_consumed,
-                                               bool cooldown_ok)
+                                               bool cooldown_ok,
+                                               int relight_fifo_n = 0,
+                                               int fifo_backpressure = 16)
 {
+  if (relight_fifo_n >= fifo_backpressure)
+  {
+    return true;
+  }
   if (vb_dirty_consumed)
   {
     return false;
@@ -443,6 +478,34 @@ inline bool ShouldSkipStaleCollectOnVbPlateau(int vb_pub, int vb_pub_prev,
 inline bool ShouldPreferKickMissWitnessGpu(bool pending_gpu_apply)
 {
   return pending_gpu_apply;
+}
+
+/// Phase 5.7R5: SoftDefer rim under Relight BP → Dirty+FirstMesh only
+/// (no RelightThenMesh / void Note — 170947 SoftDefer stuck under fifo starve).
+inline bool ShouldSoftDeferRimRelightUnderFifoPressure(int relight_fifo_n,
+                                                       int horiz,
+                                                       int fifo_backpressure = 16)
+{
+  if (horiz <= 1)
+  {
+    return false; // underfeet KEEP: FM path only (existing)
+  }
+  return relight_fifo_n >= fifo_backpressure;
+}
+
+/// Phase 5.7R6: SoftDefer empty parallel Relight — never when owned_no_gpu/stuck
+/// or underfeet; rim still blocked under fifo BP (Relight owns ColumnFlow carve).
+inline bool ShouldSoftDeferEmptyAllowParallelRelight(int horiz,
+                                                     int relight_fifo_n,
+                                                     bool owned_no_gpu_or_stuck,
+                                                     int fifo_backpressure = 16)
+{
+  if (owned_no_gpu_or_stuck || ShouldSoftDeferEmptyUnderfeetFastHeal(horiz))
+  {
+    return false;
+  }
+  return !ShouldSoftDeferRimRelightUnderFifoPressure(relight_fifo_n, horiz,
+                                                     fifo_backpressure);
 }
 
 /// SoftDeferHeld ticket-only while SoftDefer still owns publication.

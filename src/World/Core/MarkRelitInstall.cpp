@@ -364,9 +364,17 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
         stand_seam_relit_frames = 0;
       }
       const bool damp_stand_seam_burst = !moving && stand_seam_relit_frames > 4;
-      in.damp_soft_empty_remesh = ShouldDampMarkRelitRemeshOnSoftDeferEmpty(
-          in.soft_defer_empty_owned, in.any_drawable,
-          damp_cruise_ingress || damp_stand_vb || damp_stand_seam_burst);
+      // Phase 5.7R6: do not damp SoftDefer-empty remesh under focus lit carve.
+      const bool carve_lit = ShouldCarveFocusLitCompletion(
+          PhysicsTelemetryData.RelightFifoN,
+          PhysicsTelemetryData.FocusMissingMesh != 0,
+          PhysicsTelemetryData.MissHoriz,
+          /*pending_light_near=*/true);
+      in.damp_soft_empty_remesh =
+          !carve_lit &&
+          ShouldDampMarkRelitRemeshOnSoftDeferEmpty(
+              in.soft_defer_empty_owned, in.any_drawable,
+              damp_cruise_ingress || damp_stand_vb || damp_stand_seam_burst);
       bool any_fully_dark = false;
       bool any_still_stale = false;
       for (const ColumnChunkSnapshot &snap : in.relit_chunks)

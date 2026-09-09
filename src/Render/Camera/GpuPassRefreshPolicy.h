@@ -58,8 +58,60 @@ inline bool ShouldFailOpenGpuCompactCull(uint64_t aabb_on, uint64_t eligible,
   return eligible > 0 && aabb_on == 0 && any_degenerate;
 }
 
-/// Phase 5.7.4 / 5.7R2: skip GPU compact cull on light cruise when camera
-/// stable, yaw quiet, and no FocusMissing / VB edge.
+/// Phase 5.7R3: cull skip blocked only for underfeet/near miss (nh≤1), not rim.
+inline bool OpaqueCullUnderfeetMissBlocks(bool focus_missing, int miss_horiz)
+{
+  return focus_missing && miss_horiz <= 1;
+}
+
+/// Phase 5.7R4 / 5.7R5: vb_edge = meaningful VB transition or underfeet
+/// no-ticket storm — not rim plateau and not micro ΔVB flicker (170947).
+inline bool OpaqueCullVbFocusDeltaIsEdge(int vb_focus_n, int vb_focus_prev,
+                                         int min_abs_delta = 4)
+{
+  const int d = vb_focus_n > vb_focus_prev ? vb_focus_n - vb_focus_prev
+                                           : vb_focus_prev - vb_focus_n;
+  return d >= min_abs_delta;
+}
+
+inline bool OpaqueCullVbEdgeBlocks(int vb_focus_n, int vb_focus_prev,
+                                   int vb_stalled_n, int vb_stalled_prev,
+                                   int vb_no_ticket_n, int miss_horiz,
+                                   bool prev_valid, int delta_streak = 0,
+                                   int streak_need = 2, int min_abs_delta = 4)
+{
+  const bool focus_changed = prev_valid && vb_focus_n != vb_focus_prev;
+  const bool vb_transition =
+      !prev_valid ||
+      OpaqueCullVbFocusDeltaIsEdge(vb_focus_n, vb_focus_prev, min_abs_delta) ||
+      (focus_changed && delta_streak >= streak_need) ||
+      (miss_horiz <= 1 && vb_stalled_n > 0 && vb_stalled_prev <= 0);
+  if (vb_transition)
+  {
+    return true;
+  }
+  return vb_no_ticket_n >= 8 && miss_horiz <= 1;
+}
+
+/// Phase 5.7R3: ±2% opaque_cmd_on hysteresis (micro-churn must not kill reuse).
+inline bool OpaqueCullCmdOnStable(uint64_t opaque_cmd_on,
+                                  uint64_t opaque_cmd_on_prev,
+                                  double frac = 0.02)
+{
+  if (opaque_cmd_on == opaque_cmd_on_prev)
+  {
+    return true;
+  }
+  const uint64_t base = opaque_cmd_on_prev > 0 ? opaque_cmd_on_prev : 1u;
+  const uint64_t diff = opaque_cmd_on > opaque_cmd_on_prev
+                            ? opaque_cmd_on - opaque_cmd_on_prev
+                            : opaque_cmd_on_prev - opaque_cmd_on;
+  return static_cast<double>(diff) / static_cast<double>(base) <= frac;
+}
+
+/// Phase 5.7.4 / 5.7R2 / 5.7R3: skip GPU compact cull on light cruise when
+/// camera stable, yaw quiet, and no underfeet miss / VB edge.
+/// miss_horiz default 0: unknown miss treated as underfeet (fail-closed).
 inline bool ShouldSkipOpaqueCullLightCruise(bool draw_set_stable,
                                             bool rev_match, float cam_move2,
                                             float cam_eps2, bool indirect_ready,
@@ -68,10 +120,12 @@ inline bool ShouldSkipOpaqueCullLightCruise(bool draw_set_stable,
                                             bool focus_missing,
                                             bool vb_edge,
                                             float abs_yaw_delta = 0.0f,
-                                            float yaw_eps = 0.5f)
+                                            float yaw_eps = 0.5f,
+                                            int miss_horiz = 0)
 {
-  if (focus_missing || vb_edge || !draw_set_stable || !rev_match ||
-      !indirect_ready || !reverse_compact_active)
+  if (OpaqueCullUnderfeetMissBlocks(focus_missing, miss_horiz) || vb_edge ||
+      !draw_set_stable || !rev_match || !indirect_ready ||
+      !reverse_compact_active)
   {
     return false;
   }
@@ -87,22 +141,24 @@ inline bool ShouldSkipOpaqueCullLightCruise(bool draw_set_stable,
   return movement_speed <= 1.5f;
 }
 
-/// Phase 5.7.4: standing stable skip must also refuse under miss/VB edge.
+/// Phase 5.7.4 / 5.7R3: standing stable skip refuses underfeet miss / VB edge.
 inline bool ShouldSkipOpaqueCullStable(bool cull_stable, bool focus_missing,
-                                       bool vb_edge)
+                                       bool vb_edge, int miss_horiz = 0)
 {
-  return cull_stable && !focus_missing && !vb_edge;
+  return cull_stable &&
+         !OpaqueCullUnderfeetMissBlocks(focus_missing, miss_horiz) && !vb_edge;
 }
 
-/// Phase 5.7R2: yaw/focus-gated compact reuse on alternate frames.
-/// Never skip under FocusMissing / VB edge.
+/// Phase 5.7R2 / 5.7R3: yaw/focus-gated compact reuse on alternate frames.
+/// Never skip under underfeet miss (nh≤1) / VB edge; rim miss (nh≥2) OK.
 inline bool ShouldReuseOpaqueCullCompact(
     bool draw_set_stable, bool rev_match, bool reverse_compact_active,
     bool focus_unchanged, bool focus_missing, bool vb_edge, float abs_yaw_delta,
     float abs_pitch_delta, float yaw_eps, float pitch_eps,
-    uint64_t opaque_cmd_on, uint64_t opaque_cmd_on_prev, uint32_t frame_parity)
+    uint64_t opaque_cmd_on, uint64_t opaque_cmd_on_prev, uint32_t frame_parity,
+    int miss_horiz = 0)
 {
-  if (focus_missing || vb_edge)
+  if (OpaqueCullUnderfeetMissBlocks(focus_missing, miss_horiz) || vb_edge)
   {
     return false;
   }
@@ -118,7 +174,7 @@ inline bool ShouldReuseOpaqueCullCompact(
   {
     return false;
   }
-  if (opaque_cmd_on != opaque_cmd_on_prev)
+  if (!OpaqueCullCmdOnStable(opaque_cmd_on, opaque_cmd_on_prev))
   {
     return false;
   }

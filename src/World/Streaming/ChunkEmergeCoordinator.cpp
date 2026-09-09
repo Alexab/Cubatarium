@@ -450,6 +450,20 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 glm::ivec3(key.x, 0, key.y), 0,
                 world_ref.GetProceduralSettings().MaxHeight);
           }
+          // Phase 5.7R3: SoftDefer lit-pending Relight — same latch underfeet+fifo gate.
+          const auto &pt = world_ref.GetPhysicsTelemetry();
+          const bool latch_debt =
+              pt.EnterSettleSoftForceWithDebt != 0 && pt.VisibilityDebt > 0;
+          const bool moving = pt.MovementSpeed > 0.5f;
+          const bool vb_consume = IsTicketedVbConsumeMode(
+              pt.VisibleBlackNoTicketN, pt.VisibleBlackFocusN,
+              pt.VisibleBlackStalledN, moving);
+          if (!ShouldEnqueueLatchSideRelight(
+                  latch_debt, moving, pt.FocusMissingMesh != 0, pt.MissHoriz,
+                  pt.RelightFifoN, vb_consume))
+          {
+            return;
+          }
           GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RelightThenMesh,
                                           /*priority=*/70);
         });
@@ -1311,7 +1325,19 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           if (SoftDeferEmptyNeedsParallelVoidRelight(cand.empty_placeholder,
                                                      fully_dark_or_void))
           {
-            if (!exec.Scheduler().Contains(col,
+            // Phase 5.7R6: SoftDefer empty → FM ownership only; Relight via
+            // ColumnFlow carve (Cut 1). Skip parallel Relight/void Note when
+            // owned_no_gpu/stuck or underfeet / rim BP.
+            const int fifo_n = phys_telem.RelightFifoN;
+            const bool gpu_here =
+                mesh_service.IsPendingGpuApply(coord) ||
+                mesh_service.IsPendingGpuQueued(coord) ||
+                mesh_service.IsPendingGpuKickedOrDispatched(coord);
+            const bool owned_no_gpu_or_stuck =
+                !gpu_here || SoftDeferEmptyAgeFrames[coord] >= 15;
+            if (ShouldSoftDeferEmptyAllowParallelRelight(
+                    horiz, fifo_n, owned_no_gpu_or_stuck) &&
+                !exec.Scheduler().Contains(col,
                                            ColumnWorkKind::RelightThenMesh))
             {
               ColumnWorkItem relight{};
@@ -1323,7 +1349,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               relight.cy = coord.y;
               exec.Enqueue(relight);
             }
-            if (phys_telem.DarkFaceVoidNearN > 200)
+            if (phys_telem.DarkFaceVoidNearN > 200 &&
+                ShouldSoftDeferEmptyAllowParallelRelight(
+                    horiz, fifo_n, owned_no_gpu_or_stuck))
             {
               world.EnqueueVoidDarkColumnRelightNote(col);
             }
@@ -1463,7 +1491,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         }
         const int uf_horiz = std::max(std::abs(owned.x - focus_ground.x),
                                       std::abs(owned.z - focus_ground.z));
-        if (!ShouldSoftDeferEmptyUnderfeetFastHeal(uf_horiz))
+        const bool pl_owned =
+            world.IsPendingLightBeforeMesh(glm::ivec2(owned.x, owned.z));
+        const bool carve = ShouldCarveFocusLitCompletion(
+            phys_telem.RelightFifoN, missing_visible_mesh, uf_horiz, pl_owned);
+        if (!ShouldSoftDeferEmptyUnderfeetFastHeal(uf_horiz) &&
+            !(carve && uf_horiz <= 4))
         {
           continue;
         }
@@ -1483,7 +1516,21 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         {
           continue;
         }
+        // Phase 5.7R3: ≥8f MarkDirty cooldown; R6 carve+schedule_ok=0 → 2f.
+        const uint64_t epoch = world.GetStreamingFrameEpoch();
+        const uint64_t last_mark = SoftDeferUnderfeetMarkEpoch.count(owned)
+                                       ? SoftDeferUnderfeetMarkEpoch[owned]
+                                       : 0ull;
+        const bool carve_starved =
+            carve && phys_telem.MeshDirtyScheduleOkN == 0 &&
+            phys_telem.RelightFifoN == 0;
+        if (!ShouldSoftDeferFocusLitMarkCooldownOk(last_mark, epoch,
+                                                  carve_starved))
+        {
+          continue;
+        }
         mesh_service.MarkDirtyPriority(owned);
+        SoftDeferUnderfeetMarkEpoch[owned] = epoch;
         ColumnWorkItem pin{};
         pin.column = uf_col;
         pin.kind = ColumnWorkKind::FirstMesh;
@@ -4540,6 +4587,33 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                   MissWitnessAgeFrames))
           {
             mesh_drain = std::max(mesh_drain, 16);
+            const glm::ivec2 miss_xz_pre(isolated_hole.x, isolated_hole.z);
+            const bool miss_already_owned_pre =
+                mesh_service.IsChunkMeshDirty(isolated_hole) ||
+                exec.Scheduler().Contains(miss_xz_pre,
+                                          ColumnWorkKind::FirstMesh);
+            const bool miss_pending_gpu_pre =
+                mesh_service.IsPendingGpuApply(isolated_hole);
+            if (ShouldCarveFocusLitCompletion(
+                    world.GetPhysicsTelemetry().RelightFifoN,
+                    missing_visible_mesh, nh,
+                    world.IsPendingLightBeforeMesh(miss_xz_pre)) &&
+                miss_resident && !miss_already_owned_pre &&
+                !miss_pending_gpu_pre)
+            {
+              mesh_service.MarkDirtyPriority(isolated_hole);
+              if (!exec.Scheduler().Contains(miss_xz_pre,
+                                             ColumnWorkKind::FirstMesh))
+              {
+                ColumnWorkItem fm{};
+                fm.column = miss_xz_pre;
+                fm.kind = ColumnWorkKind::FirstMesh;
+                fm.priority = 118;
+                fm.scan_full_focus = false;
+                fm.cy = isolated_hole.y;
+                exec.Enqueue(fm);
+              }
+            }
             if (ShouldPreferKickMissWitnessGpu(
                     mesh_service.IsPendingGpuApply(isolated_hole)) &&
                 (queued_stuck || kicked_stuck))

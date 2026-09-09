@@ -2132,6 +2132,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
             !world.GetMeshService().HasMissingGreedyMeshInHorizontalRadius(
                 world.GetBlockWorld(),
                 glm::ivec3(underfeet_center.x, 0, underfeet_center.z), 1);
+        // Phase 5.7R4: UF Dirty carve before soft_force wall (existing budgets).
+        if (ShouldCarveUnderfeetBeforeSoftForce(
+                underfeet_present, elapsed_ms,
+                URuntimeTuning::Get().EnterForceInGameMs))
+        {
+          world.MarkSpawnRingUnfinishedDirty(8);
+        }
         // Phase 5.4.1: no Quiesce bypass while visibility_debt>0.
         const bool ring_ready_for_exit = EnterRingReadyForExit(
             ring_ready, world.IsEnterSessionActive(), underfeet_present,
@@ -2195,7 +2202,10 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
             }
             else if (soft_exit_cap)
             {
-              settle_reason = "soft_force";
+              // Phase 5.7R5: soft_force settle_reason only with UF presentable.
+              settle_reason = ShouldAllowEnterSoftForceSettle(underfeet_present)
+                                  ? "soft_force"
+                                  : "force_ingame_no_uf";
             }
             else if (abort_underfeet_cap)
             {
@@ -2223,6 +2233,11 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
             world.GetPhysicsTelemetryMutable().EnterSettleSoftForceWithDebt = 1;
             world.BeginEnterGameMeshBurst(24);
             world.MarkSpawnRingUnfinishedDirty(8);
+          }
+          else if (std::strcmp(settle_reason, "force_ingame_no_uf") == 0)
+          {
+            world.BeginEnterGameMeshBurst(24);
+            world.MarkSpawnRingUnfinishedDirty(16);
           }
           CubatariumFlushLogs();
         }
