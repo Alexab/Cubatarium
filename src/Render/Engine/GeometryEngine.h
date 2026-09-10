@@ -351,6 +351,7 @@ private:
   int CachedOpaqueCullVbDeltaStreak{0};
   /// Phase 5.7R7.2: transparent compact-cull reuse caches (opaque parity).
   uint64_t CachedTransparentCullRevision{0};
+  glm::vec3 CachedTransparentCullCameraPos{0.0f};
   glm::ivec2 CachedTransparentCullFocusXZ{0};
   bool CachedTransparentCullFocusValid{false};
   uint32_t TransparentCullFrameParity{0};

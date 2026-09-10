@@ -1950,7 +1950,8 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
           draw_set_stable, cullRevision == CachedOpaqueCullRevision,
           GreedyGpuOpaque.GpuCompactActive, focus_unchanged, focus_missing,
           vb_edge, abs_yaw_delta, abs_pitch_delta, kCullYawEps, kCullPitchEps,
-          opaque_cmd_on, opaque_cmd_on_prev, cull_parity, miss_horiz);
+          opaque_cmd_on, opaque_cmd_on_prev, cull_parity, miss_horiz,
+          cam_move2 <= kCullCamEps2);
       const bool do_skip =
           ShouldSkipOpaqueCullStable(cull_stable, focus_missing, vb_edge,
                                      miss_horiz) ||
@@ -2376,6 +2377,13 @@ void UGeometryEngine::PrepareTransparent(
         CachedTransparentCmdOnValid ? CachedTransparentCmdOn : 0;
     const uint64_t transp_cmd_on_prev =
         CachedTransparentCmdOnValid ? CachedTransparentCmdOnPrev : 1;
+    const glm::vec3 transparent_cam_delta =
+        ctx.cameraPos - CachedTransparentCullCameraPos;
+    const float transparent_cam_move2 =
+        transparent_cam_delta.x * transparent_cam_delta.x +
+        transparent_cam_delta.y * transparent_cam_delta.y +
+        transparent_cam_delta.z * transparent_cam_delta.z;
+    constexpr float kCullCamEps2 = 1.0e-4f; // ~1cm; frustum bits depend on it.
     const bool focus_unchanged = CachedTransparentCullFocusValid &&
                                  focus_xz == CachedTransparentCullFocusXZ;
     const bool draw_set_stable =
@@ -2386,7 +2394,7 @@ void UGeometryEngine::PrepareTransparent(
         draw_set_stable, rev_match, GreedyGpuTransparent.GpuCompactActive,
         focus_unchanged, focus_missing, vb_edge, abs_yaw_delta, abs_pitch_delta,
         kCullYawEps, kCullPitchEps, transp_cmd_on, transp_cmd_on_prev,
-        transp_parity, miss_horiz);
+        transp_parity, miss_horiz, transparent_cam_move2 <= kCullCamEps2);
     if (!transp_reuse)
     {
       const bool force_aabb_probe =
@@ -2398,6 +2406,7 @@ void UGeometryEngine::PrepareTransparent(
                                ctx.cache.UseHorizontalCullDistance(),
                                aabb_probe_period, force_aabb_probe);
       CachedTransparentCullRevision = ctx.cullRevision;
+      CachedTransparentCullCameraPos = ctx.cameraPos;
       CachedTransparentCullFocusXZ = focus_xz;
       CachedTransparentCullFocusValid = true;
       CachedTransparentCullYaw = yaw;

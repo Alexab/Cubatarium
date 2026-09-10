@@ -3726,6 +3726,10 @@ int main()
     Expect(!ShouldReuseOpaqueCullCompact(true, true, true, true, false, false,
                                          0.0f, 0.0f, 0.5f, 0.5f, 100, 97, 0),
            "5.7R3: compact reuse blocks >2% cmd_on change");
+    Expect(!ShouldReuseOpaqueCullCompact(true, true, true, true, false, false,
+                                         0.0f, 0.0f, 0.5f, 0.5f, 100, 100, 0,
+                                         0, false),
+           "audit: compact reuse invalidates on camera translation");
     using cutum::OpaqueCullCmdOnStable;
     Expect(OpaqueCullCmdOnStable(100, 100), "5.7R3: cmd equal stable");
     Expect(OpaqueCullCmdOnStable(102, 100), "5.7R3: cmd +2% stable");

@@ -149,14 +149,17 @@ inline bool ShouldSkipOpaqueCullStable(bool cull_stable, bool focus_missing,
          !OpaqueCullUnderfeetMissBlocks(focus_missing, miss_horiz) && !vb_edge;
 }
 
-/// Phase 5.7R2 / 5.7R3: yaw/focus-gated compact reuse on alternate frames.
-/// Never skip under underfeet miss (nh≤1) / VB edge; rim miss (nh≥2) OK.
+/// Phase 5.7R2 / 5.7R3: camera/yaw/focus-gated compact reuse on alternate
+/// frames.  The compact result contains the frustum visibility bits, so a
+/// translated camera must invalidate it even while it remains in the same
+/// chunk. Never skip under underfeet miss (nh≤1) / VB edge; rim miss (nh≥2)
+/// is OK.
 inline bool ShouldReuseOpaqueCullCompact(
     bool draw_set_stable, bool rev_match, bool reverse_compact_active,
     bool focus_unchanged, bool focus_missing, bool vb_edge, float abs_yaw_delta,
     float abs_pitch_delta, float yaw_eps, float pitch_eps,
     uint64_t opaque_cmd_on, uint64_t opaque_cmd_on_prev, uint32_t frame_parity,
-    int miss_horiz = 0)
+    int miss_horiz = 0, bool camera_stable = true)
 {
   if (OpaqueCullUnderfeetMissBlocks(focus_missing, miss_horiz) || vb_edge)
   {
@@ -166,7 +169,7 @@ inline bool ShouldReuseOpaqueCullCompact(
   {
     return false;
   }
-  if (!focus_unchanged)
+  if (!focus_unchanged || !camera_stable)
   {
     return false;
   }
