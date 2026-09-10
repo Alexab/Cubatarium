@@ -1,5 +1,6 @@
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/ColumnDesiredStage.h"
+#include "World/Streaming/ColumnRecordCoordinator.h"
 #include "World/Streaming/ColumnTicketMap.h"
 #include "World/Streaming/ColumnEmergeState.h"
 
@@ -132,9 +133,22 @@ void UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
   const bool render_ready = world.IsColumnRenderReady(ground);
   const bool lit_ready =
       !pending_light && !render_ready && has_chunk && !meshing && !gpu_pending;
-  const ColumnJobStage derived = DeriveColumnJobStage(
+
+  ColumnWorldTruth truth{};
+  truth.has_chunk = has_chunk;
+  truth.pending_light = pending_light;
+  truth.lit_ready = lit_ready;
+  truth.meshing = meshing;
+  truth.gpu_pending = gpu_pending;
+  truth.render_ready = render_ready;
+
+  ColumnRecord &rec = world.GetColumnRecords().GetOrCreate(column);
+  const ColumnJobStage from_record =
+      UColumnRecordCoordinator::SyncFromWorldTruth(rec, truth);
+  const ColumnJobStage legacy = DeriveColumnJobStage(
       has_chunk, pending_light, lit_ready, meshing, gpu_pending, render_ready);
-  SetColumnJobStage(column, derived);
+  UColumnRecordCoordinator::LogShadowMismatch(column, legacy, from_record);
+  SetColumnJobStage(column, from_record);
 }
 
 void UColumnFlowExecutor::SyncFocusRingColumnJobStages(UWorld &world,
@@ -147,6 +161,41 @@ void UColumnFlowExecutor::SyncFocusRingColumnJobStages(UWorld &world,
     {
       SyncColumnJobStageFromWorld(
           world, glm::ivec2(focus_ground.x + dx, focus_ground.z + dz));
+    }
+  }
+}
+
+void UColumnFlowExecutor::CountFocusRingJobStages(
+    glm::ivec3 focus_ground, int focus_radius, int &out_pending_light,
+    int &out_meshing, int &out_gpu_pending, int &out_render_ready) const
+{
+  out_pending_light = 0;
+  out_meshing = 0;
+  out_gpu_pending = 0;
+  out_render_ready = 0;
+  for (int dz = -focus_radius; dz <= focus_radius; ++dz)
+  {
+    for (int dx = -focus_radius; dx <= focus_radius; ++dx)
+    {
+      const ColumnJobStage stage = GetColumnJobStage(
+          glm::ivec2(focus_ground.x + dx, focus_ground.z + dz));
+      switch (stage)
+      {
+      case ColumnJobStage::PendingLight:
+        ++out_pending_light;
+        break;
+      case ColumnJobStage::Meshing:
+        ++out_meshing;
+        break;
+      case ColumnJobStage::GpuPending:
+        ++out_gpu_pending;
+        break;
+      case ColumnJobStage::RenderReady:
+        ++out_render_ready;
+        break;
+      default:
+        break;
+      }
     }
   }
 }
@@ -209,9 +258,11 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
 int64_t UColumnFlowExecutor::CooldownKey(glm::ivec2 column,
                                          ColumnWorkKind kind)
 {
-  return (static_cast<int64_t>(column.x) << 32) |
-         (static_cast<int64_t>(column.y & 0xffff) << 16) |
-         static_cast<int64_t>(kind);
+  // Full-width Z (M02/A05): do not truncate to 16 bits.
+  const uint64_t ux = static_cast<uint32_t>(column.x);
+  const uint64_t uz = static_cast<uint32_t>(column.y);
+  return static_cast<int64_t>((ux << 32) | (uz << 8) |
+                              (static_cast<uint64_t>(kind) & 0xffu));
 }
 
 void UColumnFlowExecutor::RunPromoteRelightNow(UWorld &world,

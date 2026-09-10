@@ -55,6 +55,15 @@ int main()
     return 1;
   }
 
+  // Published render + pending replacement: pending stage wins.
+  const ColumnJobStage ready_and_meshing =
+      DeriveColumnJobStage(true, false, false, true, false, true);
+  if (!Expect(ready_and_meshing == ColumnJobStage::Meshing,
+              "render ready + meshing -> meshing"))
+  {
+    return 1;
+  }
+
   // Monotonic advance: meshing cannot regress to absent when chunk exists.
   const ColumnJobStage after_mesh =
       DeriveColumnJobStage(true, false, false, true, true, false);

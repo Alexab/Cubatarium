@@ -6,6 +6,7 @@
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "glog/logging.h"
 #include <atomic>
+#include <cassert>
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
@@ -202,16 +203,78 @@ UMdiVertexPoolStore::~UMdiVertexPoolStore()
     glDeleteBuffers(1, &CullFrustumUbo);
     CullFrustumUbo = 0;
   }
-  if (CullAabbMaxSsbo)
-  {
-    glDeleteBuffers(1, &CullAabbMaxSsbo);
-    CullAabbMaxSsbo = 0;
-  }
   if (CullStatsSsbo)
   {
     glDeleteBuffers(1, &CullStatsSsbo);
     CullStatsSsbo = 0;
   }
+  if (CullGpuTimeRing_.Initialized)
+  {
+    glDeleteQueries(GpuTimestampQueryRing::kSlots, CullGpuTimeRing_.Queries);
+    CullGpuTimeRing_.Initialized = false;
+  }
+}
+
+void UMdiVertexPoolStore::InitCullGpuTimingIfNeeded()
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  CullGpuTimingAvailable_ = false;
+  return;
+#else
+  if (CullGpuTimeRing_.Initialized)
+  {
+    return;
+  }
+  glGenQueries(GpuTimestampQueryRing::kSlots, CullGpuTimeRing_.Queries);
+  CullGpuTimeRing_.Initialized = true;
+  CullGpuTimingAvailable_ = true;
+#endif
+}
+
+void UMdiVertexPoolStore::BeginCullGpuTimestamp()
+{
+  InitCullGpuTimingIfNeeded();
+}
+
+void UMdiVertexPoolStore::EndCullGpuTimestamp(const uint64_t frame_id)
+{
+  (void)frame_id;
+  PollCullGpuTimestampRing();
+}
+
+void UMdiVertexPoolStore::PollCullGpuTimestampRing()
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  LastCullGpuExecMs_ = -1.0;
+  CullGpuTimingAvailable_ = false;
+  return;
+#else
+  if (!CullGpuTimeRing_.Initialized)
+  {
+    LastCullGpuExecMs_ = -1.0;
+    return;
+  }
+  const int read_idx =
+      (CullGpuTimeRing_.WriteIdx + GpuTimestampQueryRing::kSlots - 1) %
+      GpuTimestampQueryRing::kSlots;
+  GLuint available = 0;
+  glGetQueryObjectuiv(CullGpuTimeRing_.Queries[read_idx],
+                      GL_QUERY_RESULT_AVAILABLE, &available);
+  if (!available)
+  {
+    LastCullGpuExecMs_ = -1.0;
+    return;
+  }
+  GLuint64 elapsed_ns = 0;
+  glGetQueryObjectui64v(CullGpuTimeRing_.Queries[read_idx], GL_QUERY_RESULT,
+                        &elapsed_ns);
+  LastCullGpuExecMs_ = static_cast<double>(elapsed_ns) / 1.0e6;
+#endif
+}
+
+double UMdiVertexPoolStore::LastCullGpuExecMs() const
+{
+  return LastCullGpuExecMs_;
 }
 
 size_t UMdiVertexPoolStore::BuildIndirectCommandsRange(
@@ -434,6 +497,9 @@ void UMdiVertexPoolStore::RebuildIndirectCmdTable(GreedyGpuPassCache &cache)
   (void)cache;
   return;
 #else
+#ifndef NDEBUG
+  assert(cache.passId != GreedyGpuPassId::Unknown);
+#endif
   // Resolve shader mode before packing aabb vs sphere primary buffer.
   (void)EnsureCullProgram();
   const size_t n = cache.batches.size();
@@ -522,17 +588,17 @@ void UMdiVertexPoolStore::RebuildIndirectCmdTable(GreedyGpuPassCache &cache)
 
   if (!CullProgramIsSphere)
   {
-    if (CullAabbMaxSsbo == 0)
+    if (cache.CullAabbMaxSsbo == 0)
     {
-      glGenBuffers(1, &CullAabbMaxSsbo);
+      glGenBuffers(1, &cache.CullAabbMaxSsbo);
     }
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, CullAabbMaxSsbo);
-    if (sphere_bytes > CullAabbMaxCapacity)
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, cache.CullAabbMaxSsbo);
+    if (sphere_bytes > cache.CullAabbMaxCapacity)
     {
       glBufferData(GL_SHADER_STORAGE_BUFFER,
                    static_cast<GLsizeiptr>(sphere_bytes), aabb_max.data(),
                    GL_DYNAMIC_DRAW);
-      CullAabbMaxCapacity = sphere_bytes;
+      cache.CullAabbMaxCapacity = sphere_bytes;
     }
     else
     {
@@ -553,6 +619,7 @@ void UMdiVertexPoolStore::RebuildIndirectCmdTable(GreedyGpuPassCache &cache)
     cache.CullVisCapacity = vis_bytes;
   }
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  ++cache.batchTableRevision;
   cache.GpuCompactActive = true;
   cache.IndirectCullReady = false;
   cache.CompactVisCpuSynced = false;
@@ -653,7 +720,8 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   LastCullOpaqueTotal_ = 0;
   LastCullOpaqueOn_ = 0;
   LastCpuAabbWouldOn_ = 0;
-  LastCompactCullGpuMs_ = 0.0;
+  LastCullSubmitCpuMs_ = 0.0;
+  LastCullGpuExecMs_ = -1.0;
 
   uint64_t aabb_on = 0;
   uint64_t eligible = 0;
@@ -661,10 +729,11 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   // Phase 5.7.4 / 5.7R7: when GPU compact is healthy, probe AABB fail-open
   // every probe_period calls (default 6 on cruise). Always probe while
   // inactive, fail-open streak, or force_probe (underfeet / VB edge).
-  ++FailOpenProbeTick_;
+  ++cache.FailOpenProbeTick;
   const bool probe_fail_open = ShouldProbeFailOpenAabb(
-      FailOpenProbeTick_, cache.GpuCompactActive, ConsecutiveFailOpenN_,
-      probe_period > 0 ? probe_period : 6, force_probe);
+      cache.FailOpenProbeTick, cache.GpuCompactActive,
+      cache.ConsecutiveFailOpenN, probe_period > 0 ? probe_period : 6,
+      force_probe);
   if (probe_fail_open)
   {
     for (const GreedyGpuBatch &b : cache.batches)
@@ -701,8 +770,8 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
       }
     }
     LastCullOpaqueTotal_ = eligible;
-    LastCpuAabbWouldOn_ = LastGoodCullOpaqueOn_;
-    aabb_on = LastGoodCullOpaqueOn_ > 0 ? LastGoodCullOpaqueOn_ : 1;
+    LastCpuAabbWouldOn_ = cache.LastGoodCullOn;
+    aabb_on = cache.LastGoodCullOn > 0 ? cache.LastGoodCullOn : 1;
   }
 
   if (probe_fail_open &&
@@ -753,12 +822,12 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   if (probe_fail_open &&
       ShouldFailOpenGpuCompactCull(aabb_on, eligible, any_degenerate))
   {
-    ++ConsecutiveFailOpenN_;
+    ++cache.ConsecutiveFailOpenN;
     // Reuse last GPU compact counts until N=3 consecutive fail-opens.
-    if (!ShouldThrottleFailOpenGpuCompact(ConsecutiveFailOpenN_) &&
-        LastGoodCullOpaqueOn_ > 0 && cache.GpuCompactActive)
+    if (!ShouldThrottleFailOpenGpuCompact(cache.ConsecutiveFailOpenN) &&
+        cache.LastGoodCullOn > 0 && cache.GpuCompactActive)
     {
-      LastCullOpaqueOn_ = LastGoodCullOpaqueOn_;
+      LastCullOpaqueOn_ = cache.LastGoodCullOn;
       LastCullOpaqueTotal_ = eligible;
       return true;
     }
@@ -778,10 +847,10 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
       cache.IndirectCullReady = true;
       cache.GpuCompactActive = false;
     }
-    ConsecutiveFailOpenN_ = 0;
+    cache.ConsecutiveFailOpenN = 0;
     return false;
   }
-  ConsecutiveFailOpenN_ = 0;
+  cache.ConsecutiveFailOpenN = 0;
 
   if (ResolveGpuCullMode() == GpuCullMode::Cpu)
   {
@@ -809,7 +878,8 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
     return cache.GpuCompactActive;
   }
   if (!cache.GpuCompactActive || cache.IndirectCmdsBuffer == 0 ||
-      cache.BatchSphereSsbo == 0 || cache.CullVisSsbo == 0)
+      cache.BatchSphereSsbo == 0 || cache.CullVisSsbo == 0 ||
+      (!CullProgramIsSphere && cache.CullAabbMaxSsbo == 0))
   {
     RebuildIndirectCmdTable(cache);
   }
@@ -819,6 +889,16 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
                              horizontal_distance);
     return false;
   }
+
+#ifndef NDEBUG
+  assert(cache.passId != GreedyGpuPassId::Unknown);
+  assert(cache.batchTableRevision > 0);
+  if (!CullProgramIsSphere)
+  {
+    assert(cache.CullAabbMaxSsbo != 0);
+    assert(cache.BatchSphereSsbo != 0);
+  }
+#endif
 
   struct FrustumUboData
   {
@@ -859,19 +939,33 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, CullStatsSsbo);
   }
-  if (!CullProgramIsSphere && CullAabbMaxSsbo != 0)
+  if (!CullProgramIsSphere && cache.CullAabbMaxSsbo != 0)
   {
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, CullAabbMaxSsbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, cache.CullAabbMaxSsbo);
   }
   glUseProgram(CullProgram);
   const uint32_t n = ubo.batchCount;
-  const auto gpu_t0 = std::chrono::steady_clock::now();
+  InitCullGpuTimingIfNeeded();
+  const int gpu_slot = CullGpuTimeRing_.WriteIdx;
+  if (CullGpuTimingAvailable_)
+  {
+    glBeginQuery(GL_TIME_ELAPSED, CullGpuTimeRing_.Queries[gpu_slot]);
+  }
+  const auto submit_t0 = std::chrono::steady_clock::now();
   glDispatchCompute((n + 63u) / 64u, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
+  if (CullGpuTimingAvailable_)
+  {
+    glEndQuery(GL_TIME_ELAPSED);
+    CullGpuTimeRing_.FrameIds[gpu_slot] = cache.batchTableRevision;
+    CullGpuTimeRing_.WriteIdx =
+        (gpu_slot + 1) % GpuTimestampQueryRing::kSlots;
+    PollCullGpuTimestampRing();
+  }
   glUseProgram(0);
-  LastCompactCullGpuMs_ = std::chrono::duration<double, std::milli>(
-                              std::chrono::steady_clock::now() - gpu_t0)
-                              .count();
+  LastCullSubmitCpuMs_ = std::chrono::duration<double, std::milli>(
+                             std::chrono::steady_clock::now() - submit_t0)
+                             .count();
 
   // P1b: SubData only when HUD/period armed — default cruise stays sync-free.
   const bool do_stats_readback =
@@ -904,7 +998,7 @@ bool UMdiVertexPoolStore::ApplyGpuCompactCull(GreedyGpuPassCache &cache,
   cache.CompactVisCpuSynced = false;
   if (LastCullOpaqueOn_ > 0)
   {
-    LastGoodCullOpaqueOn_ = LastCullOpaqueOn_;
+    cache.LastGoodCullOn = LastCullOpaqueOn_;
   }
   return true;
 #endif

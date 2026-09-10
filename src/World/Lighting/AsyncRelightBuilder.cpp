@@ -4,6 +4,7 @@
 #include "Core/Jobs/JobThreadBudget.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/RuntimeTuning.h"
+#include "World/Streaming/DependencyStampBuilder.h"
 #include <algorithm>
 #include <mutex>
 #include <thread>
@@ -39,6 +40,11 @@ void UAsyncRelightBuilder::Enqueue(UChunkRelightSnapshot snapshot,
   const uint64_t job_id = snapshot.GetJobId() > 0
                               ? snapshot.GetJobId()
                               : NextJobId.fetch_add(1, std::memory_order_relaxed);
+  WorkToken work_token = snapshot.GetWorkToken();
+  work_token.world_epoch = submit_epoch;
+  work_token.domain = WorkDomain::Relight;
+  work_token.generation = job_id;
+  snapshot.SetSubmitContext(work_token, snapshot.GetDependencyStamp());
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
     InFlight[job_id] = job_id;
@@ -54,6 +60,9 @@ void UAsyncRelightBuilder::Enqueue(UChunkRelightSnapshot snapshot,
                  RelightComputeResult result = snapshot.Compute(*registryPtr);
                  result.job_id = job_id;
                  result.submitEpoch = submit_epoch;
+                 result.work_token = snapshot.GetWorkToken();
+                 result.work_token.world_epoch = submit_epoch;
+                 result.dependency_stamp = snapshot.GetDependencyStamp();
                  RelightComputeResult dropped;
                  if (Completed.PushDropOldest(std::move(result), &dropped))
                  {
@@ -79,6 +88,20 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
   }
   LastCaptureFullN = snapshot.GetCapturedFullChunks();
   LastCaptureNeighborLightN = snapshot.GetCapturedNeighborLightChunks();
+  WorkToken work_token;
+  work_token.world_epoch = submit_epoch;
+  work_token.domain = WorkDomain::Relight;
+  work_token.generation = job_id;
+  DependencyStamp deps;
+  if (!spec.block_positions.empty())
+  {
+    const glm::ivec3 chunk =
+        UChunkManager::WorldToChunk(spec.block_positions.front());
+    work_token.coord = chunk;
+    work_token.chunk_incarnation = ChunkIncarnationAt(world, chunk);
+    deps = BuildRelightDependencyStamp(world, chunk, registry);
+  }
+  snapshot.SetSubmitContext(work_token, deps);
 
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
@@ -95,6 +118,9 @@ void UAsyncRelightBuilder::EnqueueJob(const UBlockWorld &world,
                  RelightComputeResult result = snapshot.Compute(*registry);
                  result.job_id = job_id;
                  result.submitEpoch = submit_epoch;
+                 result.work_token = snapshot.GetWorkToken();
+                 result.work_token.world_epoch = submit_epoch;
+                 result.dependency_stamp = snapshot.GetDependencyStamp();
                  RelightComputeResult dropped;
                  if (Completed.PushDropOldest(std::move(result), &dropped))
                  {

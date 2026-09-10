@@ -14,6 +14,8 @@ endif()
 
 project(Cubatarium VERSION 0.0.1.1 LANGUAGES CXX)
 
+enable_testing()
+
 # MSVC desktop static CRT (/MT). Skip for GNU-style Clang on Windows (e.g. linux-ninja preset).
 set(CUBATARIUM_MSVC_DESKTOP FALSE)
 if(WIN32)
@@ -265,6 +267,7 @@ set(SOURCES
     src/World/Streaming/ChunkEmergeCoordinator.cpp
     src/World/Streaming/ColumnFlowScheduler.cpp
     src/World/Streaming/ColumnFlowExecutor.cpp
+    src/World/Streaming/ColumnRecordCoordinator.cpp
     src/World/Streaming/EnterVisualGate.cpp
     src/World/Physics/WorldPhysicsScheduler.cpp
     src/World/Physics/WorldMovementPhysicsService.cpp
@@ -315,6 +318,7 @@ set(SOURCES
     src/Render/Engine/RenderMeshSink.cpp
     src/Render/Engine/GreedyGpuBackend.cpp
     src/Render/Engine/GreedyVertexPool.cpp
+    src/Render/Engine/GreedyVertexPoolLifetime.cpp
     src/Render/Engine/CrossGpuBackend.cpp
     src/Render/Backend/RenderBackendFactory.cpp
     src/Render/Backend/RenderBackendSelect.cpp
@@ -432,6 +436,7 @@ set(SOURCES
     src/World/IO/ChunkStorageService.cpp
     src/Core/Jobs/JobThreadPool.cpp
     src/Core/Jobs/JobThreadBudget.cpp
+    src/Core/Jobs/PipelineAdmission.cpp
     src/Core/Progress/LatestProgressSink.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/MeshCaptureStore.cpp
@@ -995,6 +1000,7 @@ add_executable(capture_worker_integration_test
     src/Core/Jobs/JobThreadPool.cpp
     src/App/Platform/WorkerJobKind.cpp
     src/Core/Jobs/JobThreadBudget.cpp
+    src/Core/Jobs/PipelineAdmission.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/MeshCaptureWorker.cpp
     src/Test/CaptureWorkerIntegrationTest.cpp)
@@ -1010,6 +1016,19 @@ add_executable(capture_incremental_test
 target_include_directories(capture_incremental_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(capture_incremental_test glm::glm)
+
+add_executable(capture_token_validation_test
+    ${PHYSICS_BLOCKWORLD_TEST_SOURCES}
+    src/Core/Jobs/JobThreadPool.cpp
+    src/App/Platform/WorkerJobKind.cpp
+    src/Core/Jobs/JobThreadBudget.cpp
+    src/Render/Mesh/ChunkMeshSnapshot.cpp
+    src/Render/Mesh/MeshCaptureStore.cpp
+    src/Render/Mesh/MeshCaptureWorker.cpp
+    src/Test/CaptureTokenValidationTest.cpp)
+target_include_directories(capture_token_validation_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(capture_token_validation_test glm::glm)
 
 set(PHYSICS_FLUID_SIM_SOURCES
     src/World/Core/RuntimeTuning.cpp
@@ -1436,6 +1455,13 @@ target_include_directories(column_flow_scheduler_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(column_flow_scheduler_test glm::glm)
 
+add_executable(column_scheduler_audit_repro
+    tools/research/ColumnSchedulerAuditRepro.cpp
+    src/World/Streaming/ColumnFlowScheduler.cpp)
+target_include_directories(column_scheduler_audit_repro PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(column_scheduler_audit_repro glm::glm)
+
 add_executable(edit_mesh_remesh_policy_test
     src/Test/EditMeshRemeshPolicyTest.cpp
     src/World/Mesh/EditMeshRemeshPolicy.cpp
@@ -1468,6 +1494,13 @@ target_link_libraries(android_gpu_policy_test PRIVATE glog::glog)
 add_executable(mesh_gpu_store_mdi_test
     src/Test/MeshGpuStoreMdiTest.cpp)
 target_include_directories(mesh_gpu_store_mdi_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(mesh_gpu_store_mdi_test PRIVATE glm::glm)
+
+add_executable(greedy_vertex_pool_lifetime_test
+    src/Test/GreedyVertexPoolLifetimeTest.cpp
+    src/Render/Engine/GreedyVertexPoolLifetime.cpp)
+target_include_directories(greedy_vertex_pool_lifetime_test PRIVATE
     ${CMAKE_SOURCE_DIR}/src)
 
 add_executable(gpu_greedy_face_extract_test
@@ -1668,6 +1701,7 @@ add_executable(decor_mesh_integration_test
     src/Core/Jobs/JobThreadPool.cpp
     src/App/Platform/WorkerJobKind.cpp
     src/Core/Jobs/JobThreadBudget.cpp
+    src/Core/Jobs/PipelineAdmission.cpp
     src/Render/Engine/DistanceFog.cpp
     src/Render/Engine/HorizonFogColor.cpp
     src/Render/Gl/ComputeProgram.cpp
@@ -1705,6 +1739,7 @@ add_executable(mesh_schedule_retry_test
     src/Core/Jobs/JobThreadPool.cpp
     src/App/Platform/WorkerJobKind.cpp
     src/Core/Jobs/JobThreadBudget.cpp
+    src/Core/Jobs/PipelineAdmission.cpp
     src/Render/Mesh/ChunkMeshSnapshot.cpp
     src/Render/Mesh/MeshCaptureWorker.cpp
     src/Test/MeshScheduleRetryTest.cpp)
@@ -2283,6 +2318,7 @@ set(PHYSICS_UWORLD_TEST_SOURCES
     src/World/Streaming/ChunkEmergeCoordinator.cpp
     src/World/Streaming/ColumnFlowScheduler.cpp
     src/World/Streaming/ColumnFlowExecutor.cpp
+    src/World/Streaming/ColumnRecordCoordinator.cpp
     src/World/Streaming/EnterVisualGate.cpp
     src/World/Lighting/CpuLightingSeedBackend.cpp
     src/World/Lighting/GpuLightingSeedBackend.cpp
@@ -2521,3 +2557,25 @@ add_custom_target(m4_ownership_lint
     COMMAND python "${CMAKE_SOURCE_DIR}/bin/research_mesh_arch_20260901/scripts/m4_ownership_lint.py"
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     COMMENT "M4 mesh ownership lint")
+
+# CTest registry (M01 / A14): unit/streaming/policy gates must run, not only build.
+set(CUBATARIUM_CTEST_UNIT_TARGETS
+  column_flow_scheduler_test
+  column_scheduler_audit_repro
+  streaming_render_ready_invariants_test
+  miss_first_mesh_class_test
+  mesh_gpu_store_mdi_test
+  greedy_vertex_pool_lifetime_test
+  capture_token_validation_test
+  mesh_neighbor_policy_test
+  mesh_light_stale_policy_test
+  column_emerge_bump_test
+  frame_streaming_budget_test
+  idle_recovery_policy_test
+)
+foreach(_t IN LISTS CUBATARIUM_CTEST_UNIT_TARGETS)
+  if(TARGET ${_t})
+    add_test(NAME ${_t} COMMAND $<TARGET_FILE:${_t}>)
+    set_tests_properties(${_t} PROPERTIES LABELS "unit;streaming")
+  endif()
+endforeach()

@@ -13,7 +13,7 @@ int main()
   ChunkMeshSnapshot snap;
   snap.coord = coord;
   snap.sourceRevision = rev;
-  store.Commit(coord, rev, snap);
+  store.Commit(coord, rev, store.WorldEpoch(), snap);
   int budget = 0;
   cutum::UBlockWorld world;
   if (!store.TakeOrRefresh(world, coord, rev, budget))

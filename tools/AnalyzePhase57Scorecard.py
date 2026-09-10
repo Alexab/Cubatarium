@@ -315,6 +315,16 @@ def analyze_perf(path: Path):
             "mesh_discarded_late_job_mismatch"
         ),
         "mesh_discarded_late_abs_med": median(series("mesh_discarded_late")),
+        # Absolute cumulative (matches flight tables 141350/174657); delta for rate.
+        "mesh_apply_stale_med": median(series("mesh_apply_stale")),
+        "mesh_apply_stale_delta_med": median(series("mesh_apply_stale_delta"))
+        if any("mesh_apply_stale_delta" in r for r in use)
+        else cruise_delta_med("mesh_apply_stale"),
+        "mesh_apply_stale_sum": cruise_delta_sum("mesh_apply_stale"),
+        "mesh_apply_superseded_med": median(series("mesh_apply_superseded")),
+        "mesh_apply_drop_no_active_med": median(series("mesh_apply_drop_no_active")),
+        "pool_retired_pending_med": median(series("pool_retired_pending_n")),
+        "pool_fence_timeout_med": median(series("pool_fence_timeout_n")),
         "visible_black_focus_med": median(series("visible_black_focus_n")),
         "visible_black_focus_max": series_max("visible_black_focus_n"),
         "vb_no_ticket_max": series_max("visible_black_no_ticket_n"),
@@ -491,20 +501,107 @@ def print_control_checklist(perf: dict | None, info: dict | None, report: dict):
         )
 
 
+VERDICT_PASS = "PASS"
+VERDICT_INVALID = "INVALID_RUN"
+VERDICT_CORRECTNESS = "CORRECTNESS_FAIL"
+VERDICT_PERFORMANCE = "PERFORMANCE_FAIL"
+
+# Minimum cruise samples before product metrics are considered comparable.
+MIN_CRUISE_PERIODS = 3
+MIN_TOTAL_PERIODS = 1
+
+REQUIRED_MANIFEST_KEYS = (
+    "git_sha",
+    "build_type",
+    "route",
+    "config_hash",
+    "frame_count",
+)
+
+
+def validate_run_inputs(
+    report: dict,
+    perf: dict | None,
+    info: dict | None,
+    *,
+    require_info: bool = True,
+    require_perf: bool = True,
+    require_manifest: bool = False,
+) -> list[str]:
+    """Missing/unknown inputs are INVALID, never treated as zero/PASS."""
+    invalid: list[str] = []
+    if require_perf and perf is None:
+        invalid.append("perf_missing")
+    if require_info and info is None:
+        invalid.append("info_missing")
+    if perf is not None:
+        periods = perf.get("periods")
+        if periods is None:
+            invalid.append("perf.periods_missing")
+        elif int(periods) < MIN_TOTAL_PERIODS:
+            invalid.append(f"perf.periods={periods}<{MIN_TOTAL_PERIODS}")
+        cruise_n = perf.get("cruise_n")
+        if cruise_n is not None and int(cruise_n) < MIN_CRUISE_PERIODS:
+            # Insufficient cruise is invalid for product acceptance, not a green pass.
+            invalid.append(f"perf.cruise_n={cruise_n}<{MIN_CRUISE_PERIODS}")
+    # Report-only periods without analyzed perf must not greenwash fidelity.
+    if perf is None and report.get("periods") is not None:
+        invalid.append("report.periods_without_perf")
+    if require_manifest:
+        manifest = report.get("manifest") or {}
+        for key in REQUIRED_MANIFEST_KEYS:
+            if key not in manifest or manifest.get(key) in (None, ""):
+                invalid.append(f"manifest.{key}_missing")
+    return invalid
+
+
+def evaluate_hard_gates(gates: dict | None) -> tuple[list[str], list[str]]:
+    """Return (correctness_fails, performance_fails) from report.gates."""
+    correctness: list[str] = []
+    performance: list[str] = []
+    if not gates:
+        return correctness, performance
+    perf_keys = {
+        "wall_ms_fly_le_16_6",
+        "scene_ms_le_5",
+        "stream_phase_ms_le_5",
+    }
+    corr_keys = {
+        "visual_holes_rate_le_0_10",
+    }
+    for k, v in gates.items():
+        if v is True or v is None:
+            continue
+        if v is False:
+            if k in corr_keys:
+                correctness.append(f"hard_gate:{k}=false")
+            elif k in perf_keys:
+                performance.append(f"hard_gate:{k}=false")
+            else:
+                # Unknown hard gate failure is correctness until classified.
+                correctness.append(f"hard_gate:{k}=false")
+    return correctness, performance
+
+
 def evaluate_fidelity(
     report: dict,
     perf: dict | None,
     info: dict | None,
     teleport: bool | None,
+    *,
+    require_info: bool = True,
+    require_perf: bool = True,
 ) -> list[str]:
+    """Correctness/fidelity failures. Call validate_run_inputs first for INVALID."""
     fails = []
     if report.get("hang_killed"):
         fails.append("hang_killed=true")
     if teleport is True:
         fails.append("teleport_cruise=true forbidden for Phase57 gate")
-    periods = (perf or {}).get("periods") or report.get("periods") or 0
-    if int(periods) <= 0:
-        fails.append("periods<=0")
+    if perf is not None:
+        periods = perf.get("periods")
+        if periods is not None and int(periods) <= 0:
+            fails.append("periods<=0")
     if info is not None:
         if info["settle_count"] <= 0:
             fails.append("no settle_reason in INFO")
@@ -515,6 +612,11 @@ def evaluate_fidelity(
                 for b in info.get("bad_live_soft_vis_debt") or []
             ):
                 fails.append("soft_force+debt not marked BAD (scorecard bug)")
+    elif require_info:
+        # Defensive: callers should have routed this to INVALID already.
+        fails.append("info_missing")
+    if require_perf and perf is None:
+        fails.append("perf_missing")
     return fails
 
 
@@ -522,13 +624,26 @@ def evaluate_product(
     info: dict | None,
     perf: dict | None,
     baseline: dict | None = None,
+    *,
+    require_info: bool = True,
+    require_perf: bool = True,
 ) -> list[str]:
-    """Product UX fails (Phase57: holes/empty/latch/miss_stuck + wall/phase/fifo)."""
+    """Product UX fails (Phase57: holes/empty/latch/miss_stuck + wall/phase/fifo).
+
+    Missing perf/info is not a pass: callers must treat validate_run_inputs as
+    INVALID_RUN before interpreting an empty fail list.
+    """
     fails = []
+    if require_perf and perf is None:
+        fails.append("perf_missing")
+        return fails
+    if require_info and info is None:
+        fails.append("info_missing")
+        return fails
+    if perf is None:
+        return fails
     base = baseline if baseline is not None else MANUAL_093857
-    latch = None
-    if perf:
-        latch = perf.get("enter_settle_soft_force_with_debt_max")
+    latch = perf.get("enter_settle_soft_force_with_debt_max")
     catch_up_armed = latch is not None and float(latch) > 0
     if info:
         if info.get("soft_force_with_debt"):
@@ -545,90 +660,156 @@ def evaluate_product(
             )
         if info.get("empty_batch_event_n", 0) > 0:
             fails.append(f"empty_batch_event={info['empty_batch_event_n']}")
-    if perf:
-        fm = perf.get("focus_missing_frac")
-        if fm is not None and fm > 0.45:
-            fails.append(f"focus_missing_frac={fm:.3g}>0.45")
-        ab = perf.get("phase_abort_heavy_frac")
-        if ab is not None and ab > 0.5:
-            fm_ok = fm is not None and fm <= 0.3
-            carve = perf.get("abort_schedule_final_med")
-            carve_ok = carve is not None and float(carve) >= 2
-            if not (fm_ok or carve_ok):
-                fails.append(f"phase_abort_heavy_frac={ab:.3g}>0.5")
-        holes = perf.get("visual_holes_frac")
-        if holes is not None and float(holes) >= 0.50:
-            fails.append(f"visual_holes_frac={holes:.3g}>=0.50 (093857 class)")
-        empty_max = perf.get("empty_backlog_max")
-        if empty_max is not None and float(empty_max) >= 15:
-            fails.append(f"empty_backlog_max={empty_max:.0f}>=15 (093857 class)")
-        clear_t = perf.get("latch_clear_t_ms")
-        debt_tail = perf.get("visibility_debt_tail_med")
-        if debt_tail is None:
-            debt_tail = perf.get("visibility_debt_med")
-        if catch_up_armed and clear_t is None:
-            if debt_tail is None or float(debt_tail) > 36:
-                fails.append(
-                    "latch_never_cleared (drainable catch-up pending)"
-                )
-        miss_stuck = perf.get("miss_stuck_run_frames_tail_max")
-        gpu_kick = perf.get("gpu_kick_tail_med")
-        if (
-            miss_stuck is not None
-            and float(miss_stuck) >= 500
-            and (gpu_kick is None or float(gpu_kick) <= 0)
+    fm = perf.get("focus_missing_frac")
+    if fm is not None and fm > 0.45:
+        fails.append(f"focus_missing_frac={fm:.3g}>0.45")
+    ab = perf.get("phase_abort_heavy_frac")
+    if ab is not None and ab > 0.5:
+        fm_ok = fm is not None and fm <= 0.3
+        carve = perf.get("abort_schedule_final_med")
+        carve_ok = carve is not None and float(carve) >= 2
+        if not (fm_ok or carve_ok):
+            fails.append(f"phase_abort_heavy_frac={ab:.3g}>0.5")
+    holes = perf.get("visual_holes_frac")
+    if holes is not None and float(holes) >= 0.50:
+        fails.append(f"visual_holes_frac={holes:.3g}>=0.50 (093857 class)")
+    empty_max = perf.get("empty_backlog_max")
+    if empty_max is not None and float(empty_max) >= 15:
+        fails.append(f"empty_backlog_max={empty_max:.0f}>=15 (093857 class)")
+    clear_t = perf.get("latch_clear_t_ms")
+    debt_tail = perf.get("visibility_debt_tail_med")
+    if debt_tail is None:
+        debt_tail = perf.get("visibility_debt_med")
+    if catch_up_armed and clear_t is None:
+        if debt_tail is None or float(debt_tail) > 36:
+            fails.append(
+                "latch_never_cleared (drainable catch-up pending)"
+            )
+    miss_stuck = perf.get("miss_stuck_run_frames_tail_max")
+    gpu_kick = perf.get("gpu_kick_tail_med")
+    if (
+        miss_stuck is not None
+        and float(miss_stuck) >= 500
+        and (gpu_kick is None or float(gpu_kick) <= 0)
+    ):
+        fails.append(
+            f"miss_stuck_run_frames_tail_max={miss_stuck:.0f} with gpu_kick~0"
+        )
+    age = perf.get("softdefer_age_max_tail_med")
+    stuck = perf.get("softdefer_stuck_n_tail_med")
+    if (
+        age is not None
+        and stuck is not None
+        and float(stuck) > 0
+        and float(age) >= 1000
+    ):
+        fails.append(
+            f"softdefer_age_max_tail_med={age:.0f} with stuck_n={stuck}"
+        )
+    disc = perf.get("mesh_discarded_late_med")
+    if disc is not None and float(disc) >= 10:
+        fails.append(f"mesh_discarded_late_med={disc:.3g}>=10 (093857 class)")
+    # F0: stale remesh storm is a product fail — do not greenwash via wall_ms alone.
+    stale = perf.get("mesh_apply_stale_med")
+    if stale is None:
+        stale = perf.get("mesh_apply_stale_sum")
+    base_stale = base.get("mesh_apply_stale_med")
+    if stale is not None:
+        if float(stale) >= 200:
+            fails.append(f"mesh_apply_stale_med={stale:.3g}>=200 (stale storm)")
+        elif (
+            base_stale is not None
+            and float(base_stale) > 0
+            and float(stale) > 2.0 * float(base_stale)
         ):
             fails.append(
-                f"miss_stuck_run_frames_tail_max={miss_stuck:.0f} with gpu_kick~0"
+                f"mesh_apply_stale_med={stale:.3g}>2×baseline({float(base_stale):.3g})"
             )
-        age = perf.get("softdefer_age_max_tail_med")
-        stuck = perf.get("softdefer_stuck_n_tail_med")
-        if (
-            age is not None
-            and stuck is not None
-            and float(stuck) > 0
-            and float(age) >= 1000
-        ):
-            fails.append(
-                f"softdefer_age_max_tail_med={age:.0f} with stuck_n={stuck}"
-            )
-        disc = perf.get("mesh_discarded_late_med")
-        if disc is not None and float(disc) >= 10:
-            fails.append(f"mesh_discarded_late_med={disc:.3g}>=10 (093857 class)")
-        vbnt = perf.get("vb_no_ticket_max")
-        if vbnt is not None and float(vbnt) >= 95:
-            fails.append(f"vb_no_ticket_max={vbnt:.0f}>=95 (093857 class ~91)")
-        vb = perf.get("visible_black_focus_med")
-        if vb is not None and float(vb) >= 40:
-            fails.append(f"visible_black_focus_med={vb:.3g}>=40 (093857 class)")
-        cull = perf.get("opaque_cull_med")
-        if cull is not None and float(cull) >= 20.0:
-            fails.append(f"opaque_cull_med={cull:.3g}>=20 (pre-5.7 class ~18+)")
-        # Phase 5.7R: wall/phase regress vs SoT (manual 160710 greenwash guard).
-        base_wall = base.get("wall_med")
-        wall = perf.get("wall_med")
-        if (
-            base_wall is not None
-            and wall is not None
-            and float(wall) > 1.25 * float(base_wall)
-        ):
-            fails.append(
-                f"wall_med={wall:.3g}>1.25×baseline({float(base_wall):.3g})"
-            )
-        base_phase = base.get("phase_med")
-        phase = perf.get("phase_med")
-        if (
-            base_phase is not None
-            and phase is not None
-            and float(phase) > 1.25 * float(base_phase)
-        ):
-            fails.append(
-                f"phase_med={phase:.3g}>1.25×baseline({float(base_phase):.3g})"
-            )
-        fifo = perf.get("relight_fifo_med")
-        if fifo is not None and float(fifo) >= 20.0:
-            fails.append(f"relight_fifo_med={fifo:.3g}>=20 (enqueue storm)")
+    vbnt = perf.get("vb_no_ticket_max")
+    if vbnt is not None and float(vbnt) >= 95:
+        fails.append(f"vb_no_ticket_max={vbnt:.0f}>=95 (093857 class ~91)")
+    vb = perf.get("visible_black_focus_med")
+    if vb is not None and float(vb) >= 40:
+        fails.append(f"visible_black_focus_med={vb:.3g}>=40 (093857 class)")
+    cull = perf.get("opaque_cull_med")
+    if cull is not None and float(cull) >= 20.0:
+        fails.append(f"opaque_cull_med={cull:.3g}>=20 (pre-5.7 class ~18+)")
+    # Phase 5.7R: wall/phase regress vs SoT (manual 160710 greenwash guard).
+    base_wall = base.get("wall_med")
+    wall = perf.get("wall_med")
+    if (
+        base_wall is not None
+        and wall is not None
+        and float(wall) > 1.25 * float(base_wall)
+    ):
+        fails.append(
+            f"wall_med={wall:.3g}>1.25×baseline({float(base_wall):.3g})"
+        )
+    base_phase = base.get("phase_med")
+    phase = perf.get("phase_med")
+    if (
+        base_phase is not None
+        and phase is not None
+        and float(phase) > 1.25 * float(base_phase)
+    ):
+        fails.append(
+            f"phase_med={phase:.3g}>1.25×baseline({float(base_phase):.3g})"
+        )
+    fifo = perf.get("relight_fifo_med")
+    if fifo is not None and float(fifo) >= 20.0:
+        fails.append(f"relight_fifo_med={fifo:.3g}>=20 (enqueue storm)")
     return fails
+
+
+def classify_product_fails(prod_fails: list[str]) -> tuple[list[str], list[str]]:
+    """Split product fails into correctness vs performance buckets."""
+    perf_prefixes = (
+        "wall_med=",
+        "phase_med=",
+        "opaque_cull_med=",
+        "relight_fifo_med=",
+        "hard_gate:wall_",
+        "hard_gate:scene_",
+        "hard_gate:stream_",
+    )
+    correctness: list[str] = []
+    performance: list[str] = []
+    for f in prod_fails:
+        if any(f.startswith(p) for p in perf_prefixes):
+            performance.append(f)
+        else:
+            correctness.append(f)
+    return correctness, performance
+
+
+def build_verdict(
+    *,
+    invalid: list[str],
+    fidelity_fails: list[str],
+    product_fails: list[str],
+    hard_corr: list[str],
+    hard_perf: list[str],
+) -> dict:
+    """Single source-of-truth verdict object (JSON). Console only displays it."""
+    corr_prod, perf_prod = classify_product_fails(product_fails)
+    correctness = list(fidelity_fails) + hard_corr + corr_prod
+    performance = hard_perf + perf_prod
+    if invalid:
+        verdict = VERDICT_INVALID
+    elif correctness:
+        verdict = VERDICT_CORRECTNESS
+    elif performance:
+        verdict = VERDICT_PERFORMANCE
+    else:
+        verdict = VERDICT_PASS
+    return {
+        "verdict": verdict,
+        "invalid": invalid,
+        "correctness_fails": correctness,
+        "performance_fails": performance,
+        "fidelity_fails": list(fidelity_fails),
+        "product_fails": list(product_fails),
+    }
 
 
 def main():
@@ -651,7 +832,27 @@ def main():
     ap.add_argument(
         "--expect-product-red",
         action="store_true",
-        help="exit 0 if fidelity OK even when product FAIL (harness / early sprint)",
+        help="DEPRECATED for acceptance: ignored unless --allow-expect-product-red",
+    )
+    ap.add_argument(
+        "--allow-expect-product-red",
+        action="store_true",
+        help="Allow diagnostic --expect-product-red (never use in acceptance CI)",
+    )
+    ap.add_argument(
+        "--require-manifest",
+        action="store_true",
+        help="Require report.manifest fields (git_sha, build_type, route, ...)",
+    )
+    ap.add_argument(
+        "--json-out",
+        default="",
+        help="Write verdict JSON (source of truth) to this path",
+    )
+    ap.add_argument(
+        "--allow-missing-info",
+        action="store_true",
+        help="Diagnostic only: do not require INFO log (still INVALID without --allow)",
     )
     args = ap.parse_args()
 
@@ -701,20 +902,24 @@ def main():
 
     info = None
     if args.info:
-        info = analyze_info(Path(args.info))
-        print(
-            f"info: settle_n={info['settle_count']} "
-            f"empty_batch_event={info['empty_batch_event_n']} "
-            f"bad_live_soft_vis_debt={len(info['bad_live_soft_vis_debt'])} "
-            f"soft_force_with_debt={len(info['soft_force_with_debt'])}"
-        )
-        for s in info["settles"]:
-            print(f"  settle {s}")
-        for s in info["soft_force_with_debt"]:
-            print(f"  FAIL soft_force+debt {s}")
-        for s in info["bad_live_soft_vis_debt"]:
-            if s not in info["soft_force_with_debt"]:
-                print(f"  BAD {s}")
+        info_path = Path(args.info)
+        if info_path.exists():
+            info = analyze_info(info_path)
+            print(
+                f"info: settle_n={info['settle_count']} "
+                f"empty_batch_event={info['empty_batch_event_n']} "
+                f"bad_live_soft_vis_debt={len(info['bad_live_soft_vis_debt'])} "
+                f"soft_force_with_debt={len(info['soft_force_with_debt'])}"
+            )
+            for s in info["settles"]:
+                print(f"  settle {s}")
+            for s in info["soft_force_with_debt"]:
+                print(f"  FAIL soft_force+debt {s}")
+            for s in info["bad_live_soft_vis_debt"]:
+                if s not in info["soft_force_with_debt"]:
+                    print(f"  BAD {s}")
+        else:
+            print(f"info missing: {args.info}")
 
     baseline = dict(MANUAL_093857)
     baseline_label = "baked_093857"
@@ -739,26 +944,96 @@ def main():
     else:
         teleport = bool(report.get("teleport_cruise")) if "teleport_cruise" in report else None
 
-    fid_fails = evaluate_fidelity(report, perf, info, teleport)
-    prod_fails = evaluate_product(info, perf, baseline)
+    require_info = not args.allow_missing_info
+    invalid = validate_run_inputs(
+        report,
+        perf,
+        info,
+        require_info=require_info,
+        require_perf=True,
+        require_manifest=args.require_manifest,
+    )
+    hard_corr, hard_perf = evaluate_hard_gates(gates)
+
+    # When invalid, still collect fidelity/product for diagnostics, but verdict
+    # is INVALID_RUN regardless of empty fail lists.
+    fid_fails = evaluate_fidelity(
+        report, perf, info, teleport, require_info=False, require_perf=False
+    )
+    prod_fails = (
+        []
+        if invalid
+        else evaluate_product(
+            info, perf, baseline, require_info=require_info, require_perf=True
+        )
+    )
+
+    result = build_verdict(
+        invalid=invalid,
+        fidelity_fails=fid_fails,
+        product_fails=prod_fails,
+        hard_corr=hard_corr,
+        hard_perf=hard_perf,
+    )
+
+    # Diagnostic override must not greenwash acceptance CI.
+    allow_red = args.expect_product_red and args.allow_expect_product_red
+    if allow_red and result["verdict"] in (
+        VERDICT_CORRECTNESS,
+        VERDICT_PERFORMANCE,
+    ):
+        if not result["invalid"] and not result["fidelity_fails"] and not hard_corr:
+            result = dict(result)
+            result["verdict"] = VERDICT_PASS
+            result["diagnostic_expect_product_red"] = True
 
     print("=== fidelity ===")
-    if fid_fails:
-        for f in fid_fails:
+    if result["fidelity_fails"]:
+        for f in result["fidelity_fails"]:
             print(f"  FIDELITY_FAIL {f}")
+    elif result["invalid"]:
+        print("  FIDELITY_SKIPPED (run invalid)")
     else:
         print("  FIDELITY_OK (harness sees settle/soft_force; no hang/teleport)")
 
     print("=== product ===")
-    if prod_fails:
-        for f in prod_fails:
+    if result["invalid"]:
+        print("  PRODUCT_SKIPPED (run invalid)")
+    elif result["product_fails"]:
+        for f in result["product_fails"]:
             print(f"  PRODUCT_FAIL {f}")
     else:
         print("  PRODUCT_OK")
 
-    if fid_fails:
+    print("=== verdict ===")
+    print(f"  {result['verdict']}")
+    for f in result["invalid"]:
+        print(f"  INVALID {f}")
+    for f in result["correctness_fails"]:
+        print(f"  CORRECTNESS {f}")
+    for f in result["performance_fails"]:
+        print(f"  PERFORMANCE {f}")
+
+    out_obj = {
+        "tag": args.tag,
+        "report": str(report_path),
+        "manifest": report.get("manifest"),
+        "hard_gates": hard,
+        **result,
+    }
+    print("=== json ===")
+    print(json.dumps(out_obj, ensure_ascii=False, sort_keys=True))
+    if args.json_out:
+        Path(args.json_out).write_text(
+            json.dumps(out_obj, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+    if result["verdict"] == VERDICT_INVALID:
+        return 3
+    if result["verdict"] == VERDICT_CORRECTNESS:
         return 2
-    if prod_fails and not args.expect_product_red:
+    if result["verdict"] == VERDICT_PERFORMANCE:
         return 1
     return 0
 

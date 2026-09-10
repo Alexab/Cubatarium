@@ -21,6 +21,17 @@ struct EnterLitSample
   int relight_inflight_n{0};
   int chunk_resident{0};
   bool streaming_frozen{false};
+  /// Alias of streaming_frozen (= IsEnterLitGateActive). Prefer this name.
+  bool enter_lit_gate_active{false};
+  std::string settle_reason;
+  double gate_elapsed_ms{0.0};
+  int gate_end{0};
+  /// First sample: underfeet presentable ∧ spawn_mesh_ring_ready.
+  double first_presentable_ms{-1.0};
+  /// First sample: visibility_debt==0 ∧ unfinished_visual==0 ∧ underfeet ready.
+  double ttf_correct_proxy_ms{-1.0};
+  uint64_t mesh_apply_stale_delta{0};
+  uint64_t mesh_discarded_late_delta{0};
   bool mesh_dirty{false};
   bool mesh_missing_greedy{false};
   int mesh_gpu_pending_near{0};

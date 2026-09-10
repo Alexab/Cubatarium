@@ -25,7 +25,14 @@ int main()
     std::cerr << "mesh_schedule_retry_test: FAIL ReadChunkBandForCapture\n";
     return 1;
   }
-  worker.Enqueue(std::move(*band), glm::ivec3(0, 0, 0), 1);
+  cutum::WorkToken work_token;
+  work_token.world_epoch = 1;
+  work_token.coord = glm::ivec3(0, 0, 0);
+  work_token.domain = cutum::WorkDomain::MeshCapture;
+  work_token.generation = 1;
+  cutum::DependencyStamp deps;
+  deps.content_revision = 1;
+  worker.Enqueue(std::move(*band), work_token, deps);
   const auto deadline =
       std::chrono::steady_clock::now() + std::chrono::seconds(5);
   while (std::chrono::steady_clock::now() < deadline)

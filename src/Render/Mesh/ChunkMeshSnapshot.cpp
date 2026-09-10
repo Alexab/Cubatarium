@@ -87,6 +87,17 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
     for (int sign = -1; sign <= 1; sign += 2)
     {
       const int face = axis * 2 + (sign > 0 ? 1 : 0);
+      glm::ivec3 neighbor_coord = chunkCoord;
+      neighbor_coord[axis] += sign;
+      const UChunk *neighbor_chunk =
+          world.GetChunkManager().GetChunk(neighbor_coord);
+      const bool neighbor_loaded = neighbor_chunk != nullptr;
+      bool neighbor_visually_drawable = neighbor_loaded;
+      if (neighbor_loaded && neighbor_drawable)
+      {
+        neighbor_visually_drawable =
+            neighbor_drawable(neighbor_drawable_ctx, neighbor_coord);
+      }
       for (int u = 0; u < CHUNK_SIZE; ++u)
       {
         for (int v = 0; v < CHUNK_SIZE; ++v)
@@ -100,18 +111,16 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
           const glm::ivec3 worldPos = origin + local;
           const int cell = u + v * CHUNK_SIZE;
           const int flat = ShellFlatIndex(face, cell);
-          const glm::ivec3 lightChunkCoord =
-              UChunkManager::WorldToChunk(worldPos);
-          const UChunk *neighbor_chunk =
-              world.GetChunkManager().GetChunk(lightChunkCoord);
-          const bool neighbor_loaded = neighbor_chunk != nullptr;
-          bool neighbor_visually_drawable = neighbor_loaded;
-          if (neighbor_loaded && neighbor_drawable)
+          BlockId raw = BLOCK_AIR;
+          if (neighbor_chunk)
           {
-            neighbor_visually_drawable =
-                neighbor_drawable(neighbor_drawable_ctx, lightChunkCoord);
+            raw = neighbor_chunk->GetBlockLocal(
+                UChunkManager::WorldToLocal(worldPos));
           }
-          const BlockId raw = world.GetBlock(worldPos);
+          else
+          {
+            raw = world.GetBlock(worldPos);
+          }
           snapshot.shellBlocks[static_cast<size_t>(flat)] =
               ShellBlockForNeighborOcclusion(raw, neighbor_visually_drawable);
           snapshot.shellNeighborState[static_cast<size_t>(flat)] =

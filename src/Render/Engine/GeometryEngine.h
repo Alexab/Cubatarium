@@ -21,6 +21,7 @@ typedef int GLint;
 #include "Render/Engine/AnimationClock.h"
 #include "Render/Engine/CrossGpuBackend.h"
 #include "Render/Engine/FluidSurfaceMap.h"
+#include "Render/Camera/CullInputKey.h"
 #include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/Engine/IUFluidSurfaceProvider.h"
 #include "Render/Engine/IUMeshGpuStore.h"
@@ -332,15 +333,11 @@ private:
   /// Phase 5.1 T4: skip opaque by_block_id sort when draw set unchanged.
   std::vector<GreedyBatchRef> CachedOpaqueSortedRefs;
   uint64_t CachedOpaqueDrawFingerprint{0};
-  /// Phase 5.3.4: skip ApplyGpuCompactCull when draw+cull revision stable.
-  uint64_t CachedOpaqueCullRevision{0};
-  glm::vec3 CachedOpaqueCullCameraPos{0.0f};
+  /// Phase 5.3.4 / audit M06: skip ApplyGpuCompactCull when CullInputKey stable.
+  CullInputKey CachedOpaqueCullInputKey{};
   glm::ivec2 CachedOpaqueCullFocusXZ{0};
   bool CachedOpaqueCullFocusValid{false};
   uint32_t OpaqueCullFrameParity{0};
-  float CachedOpaqueCullYaw{0.0f};
-  float CachedOpaqueCullPitch{0.0f};
-  bool CachedOpaqueCullOrientValid{false};
   uint64_t CachedOpaqueCmdOn{0};
   uint64_t CachedOpaqueCmdOnPrev{0};
   bool CachedOpaqueCmdOnValid{false};
@@ -349,15 +346,11 @@ private:
   int CachedOpaqueCullVbStalledN{0};
   bool CachedOpaqueCullVbValid{false};
   int CachedOpaqueCullVbDeltaStreak{0};
-  /// Phase 5.7R7.2: transparent compact-cull reuse caches (opaque parity).
-  uint64_t CachedTransparentCullRevision{0};
-  glm::vec3 CachedTransparentCullCameraPos{0.0f};
+  /// Phase 5.7R7.2 / audit M06: transparent compact-cull reuse caches.
+  CullInputKey CachedTransparentCullInputKey{};
   glm::ivec2 CachedTransparentCullFocusXZ{0};
   bool CachedTransparentCullFocusValid{false};
   uint32_t TransparentCullFrameParity{0};
-  float CachedTransparentCullYaw{0.0f};
-  float CachedTransparentCullPitch{0.0f};
-  bool CachedTransparentCullOrientValid{false};
   uint64_t CachedTransparentCmdOn{0};
   uint64_t CachedTransparentCmdOnPrev{0};
   bool CachedTransparentCmdOnValid{false};
@@ -378,7 +371,7 @@ private:
   void SetGreedyShaderMode(const std::shared_ptr<UShaderProgram> &shader,
                            bool alphaCutout, bool transparentPass,
                            GreedyShaderMode mode, float shellAlphaThreshold);
-  void DrawGreedyGpuBatches(const GreedyGpuPassCache &cache,
+  void DrawGreedyGpuBatches(GreedyGpuPassCache &cache,
                             const glm::mat4 &vp,
                             const std::map<size_t, UTextureCube> &textures,
                             bool alphaCutout, bool transparentPass,

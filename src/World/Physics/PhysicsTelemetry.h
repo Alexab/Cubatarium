@@ -42,6 +42,10 @@ struct PhysicsTelemetry
   uint64_t MeshDiscardedLateJobMismatch{0};
   /// ApplyMeshResult rejected as stale (revision mismatch) — remesh thrash signal.
   uint64_t MeshApplyStale{0};
+  /// DiscardOlderKeepActive — older async keep Active for newer in-flight.
+  uint64_t MeshApplySuperseded{0};
+  /// DropNoActive — apply with no Active tracking.
+  uint64_t MeshApplyDropNoActive{0};
   /// Era15 TD-049: CPU replace published before FreeChunk when GPU-only drawable.
   uint64_t MeshReplaceHoleAvoided{0};
   /// Deferred GPU mesh applies waiting for ProcessPendingGpuMeshes.
@@ -481,9 +485,15 @@ struct PhysicsTelemetry
   /// ColPipe P1: ColumnFlow ExclusiveRank upgrades this frame.
   int ColumnFlowUpgradeN{0};
   /// Live ColumnEmergeState counts (Lighting / Meshing / RenderReady).
+  /// Alias docs: emerge_fsm_* — not ColumnJobGraph stages.
   int ColumnLightingN{0};
   int ColumnMeshingN{0};
   int ColumnRenderReadyN{0};
+  /// Focus-ring ColumnJobGraph census (pending light / meshing / gpu / ready).
+  int ColumnJobPendingLightN{0};
+  int ColumnJobMeshingN{0};
+  int ColumnJobGpuPendingN{0};
+  int ColumnJobRenderReadyN{0};
   int PendingLightCount{0};
   int FocusChunkX{0};
   int FocusChunkZ{0};
@@ -674,8 +684,10 @@ struct PhysicsTelemetry
   std::string BackendCull{"cpu_frustum"};
   uint64_t GpuDrawCmds{0};
   double GpuCullMs{0.0};
-  /// CPU wall around GPU compact dispatch (excludes SubData); 0 on CPU cull.
-  double GpuCullGpuMs{0.0};
+  /// CPU wall around GPU compact dispatch + barrier (not GPU execution).
+  double CullSubmitCpuMs{0.0};
+  /// Delayed GL_TIME_ELAPSED when available; <0 = unavailable sample.
+  double CullGpuExecMs{-1.0};
   double VertexPoolFill{0.0};
   /// 1 when opaque cull used GPU compact→indirect (no flat-ref rebuild).
   double GpuCullIndirect{0.0};
@@ -697,6 +709,13 @@ struct PhysicsTelemetry
   uint64_t EditNeighborPendingFrames{0};
   uint64_t PoolUnsyncUploads{0};
   double PoolFenceWaitMs{0.0};
+  /// A01 retire queue size after poll (pending+retired awaiting reclaim).
+  int PoolRetiredPendingN{0};
+  int PoolFreeSlotN{0};
+  /// Per-frame Consume* from vertex pools (reclaim/timeout/bump).
+  uint64_t PoolRetiredReclaimedN{0};
+  uint64_t PoolFenceTimeoutN{0};
+  uint64_t PoolReserveBumpN{0};
   /// S1 transparent: 1 when sortRevision changed on PrepareTransparent refresh.
   int TransparentSortRevChanged{0};
   /// S1: upload_full invocations for transparent pass this frame.

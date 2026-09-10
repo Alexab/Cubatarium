@@ -28,8 +28,8 @@ int main()
 
   UColumnFlowScheduler s;
   s.Enqueue({1, 2}, ColumnWorkKind::FirstMesh, 10);
-  s.Enqueue({1, 2}, ColumnWorkKind::FirstMesh, 99); // dedupe
-  Expect(s.Size() == 1, "dedupe same column+kind");
+  s.Enqueue({1, 2}, ColumnWorkKind::FirstMesh, 99); // refresh urgency
+  Expect(s.Size() == 1, "same column+kind refreshes to one live ticket");
   s.Enqueue({1, 2}, ColumnWorkKind::RelightThenMesh, 5);
   Expect(s.Size() == 1, "lower-rank RelightThenMesh on FirstMesh denied");
   Expect(s.ContainsColumn({1, 2}), "column occupied");
@@ -51,7 +51,7 @@ int main()
   }
   ColumnWorkItem a{};
   Expect(s.DrainOne(a), "drain first");
-  Expect(a.priority == 10, "kept first ticket");
+  Expect(a.priority == 99, "refreshed urgency kept");
   Expect(a.kind == ColumnWorkKind::FirstMesh, "kind FirstMesh");
   Expect(!s.ContainsColumn({1, 2}), "column free after drain");
   Expect(!s.DrainOne(a), "empty");
@@ -59,15 +59,25 @@ int main()
   // TD-ARCH-026: RemeshSeam is the hide=>repair ticket kind.
   s.Enqueue({3, 4}, ColumnWorkKind::RemeshSeam, 30);
   s.Enqueue({3, 4}, ColumnWorkKind::RemeshSeam, 99);
-  Expect(s.Size() == 1, "RemeshSeam ticket deduped");
+  Expect(s.Size() == 1, "RemeshSeam ticket refreshed to one live");
   Expect(s.Contains({3, 4}, ColumnWorkKind::RemeshSeam),
          "Contains RemeshSeam while queued");
   ColumnWorkItem c{};
   Expect(s.DrainOne(c), "drain RemeshSeam");
   Expect(c.kind == ColumnWorkKind::RemeshSeam, "repair ticket kind");
+  Expect(c.priority == 99, "RemeshSeam urgency refreshed");
   Expect(c.column.x == 3 && c.column.y == 4, "repair ticket column");
   Expect(!s.Contains({3, 4}, ColumnWorkKind::RemeshSeam),
          "Contains false after drain");
+
+  // Full-width coordinates must not collide (M02/A05).
+  {
+    UColumnFlowScheduler w;
+    w.Enqueue({1, 0}, ColumnWorkKind::FirstMesh, 10);
+    w.Enqueue({1, 65536}, ColumnWorkKind::FirstMesh, 20);
+    Expect(w.LiveCount() == 2, "distinct full-width columns");
+    Expect(w.ContainsColumn({1, 65536}), "far Z column retained");
+  }
 
   // Sticky without mesh + far stale ⇒ FirstMesh / RelightThenMesh (ColPipe P1).
   {
@@ -89,10 +99,13 @@ int main()
     UColumnFlowScheduler flush_s;
     flush_s.Enqueue({2, 2}, ColumnWorkKind::PromoteRelight, 95);
     flush_s.Enqueue({2, 2}, ColumnWorkKind::PromoteRelight, 40);
-    Expect(flush_s.Size() == 1, "PromoteRelight dedupe one ticket");
+    Expect(flush_s.Size() == 1, "PromoteRelight refresh one live ticket");
+    ColumnWorkItem pr{};
+    Expect(flush_s.DrainOne(pr), "drain PromoteRelight");
+    Expect(pr.priority == 95, "Promote keeps max priority on refresh");
     flush_s.Enqueue({3, 3}, ColumnWorkKind::FirstMesh, 100);
     flush_s.Enqueue({3, 3}, ColumnWorkKind::PromoteRelight, 50);
-    Expect(flush_s.Size() == 2, "Promote on FirstMesh denied (lower rank)");
+    Expect(flush_s.Size() == 1, "Promote on FirstMesh denied (lower rank)");
     Expect(flush_s.DeniedCount() >= 1, "Promote on occupied column denied");
     Expect(flush_s.Contains({3, 3}, ColumnWorkKind::FirstMesh),
            "FirstMesh remains after denied Promote");

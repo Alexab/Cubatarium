@@ -459,6 +459,12 @@ public:
   void BeginEnterLitGate();
   void EndEnterLitGate();
   bool IsEnterLitGateActive() const { return EnterLitGateActive; }
+  double GetEnterLitGateElapsedMs() const;
+  const std::string &GetLastEnterSettleReason() const
+  {
+    return LastEnterSettleReason;
+  }
+  void SetLastEnterSettleReason(const char *reason);
   /// Enter-load session (Loading screen until InGame). Freezes cruise heal producers.
   EnterSessionPhase GetEnterSessionPhase() const { return EnterSessionPhaseValue; }
   void SetEnterSessionPhase(EnterSessionPhase phase)
@@ -1457,6 +1463,9 @@ private:
   bool EnterFovLitPassActive{false};
   /// Era43: enter lit gate — snapshot columns + frozen streaming until debt==0.
   bool EnterLitGateActive{false};
+  std::chrono::steady_clock::time_point EnterLitGateBeginTp{};
+  std::string LastEnterSettleReason;
+  double LastEnterGateElapsedMs{0.0};
   EnterSessionPhase EnterSessionPhaseValue{EnterSessionPhase::None};
   bool EnterLitSnapshotCaptured{false};
   /// Era47: once snapshot debt=0 under gate, stay quiesced despite fifo blips.

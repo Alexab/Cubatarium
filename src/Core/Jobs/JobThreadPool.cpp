@@ -77,11 +77,22 @@ void UJobThreadPool::ShutdownForProcessExit(
 
 void UJobThreadPool::Enqueue(std::function<void()> job)
 {
+  (void)TryEnqueue(std::move(job));
+}
+
+bool UJobThreadPool::TryEnqueue(std::function<void()> job)
+{
   {
     std::lock_guard<std::mutex> lock(QueueMutex);
+    if (Jobs.size() >= MaxPendingJobs)
+    {
+      RejectedEnqueues.fetch_add(1, std::memory_order_relaxed);
+      return false;
+    }
     Jobs.push_back(std::move(job));
   }
   QueueCv.notify_one();
+  return true;
 }
 
 void UJobThreadPool::WaitIdle()

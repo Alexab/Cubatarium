@@ -4,6 +4,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <functional>
 #include <mutex>
@@ -13,6 +14,10 @@
 
 namespace cutum
 {
+
+/// Default cap on queued (not yet running) jobs per pool. Worker count is unified
+/// via ComputeWorkerThreadCount(JobPoolKind, override); queue depth is separate.
+constexpr std::size_t kDefaultMaxPendingJobsPerPool = 256;
 
 class UJobThreadPool
 {
@@ -25,6 +30,8 @@ public:
   UJobThreadPool &operator=(const UJobThreadPool &) = delete;
 
   void Enqueue(std::function<void()> job);
+  /// Returns false if the pending queue is at MaxPendingJobs (job not queued).
+  bool TryEnqueue(std::function<void()> job);
   void WaitIdle();
   bool WaitIdleFor(std::chrono::milliseconds timeout);
   void CancelPendingJobs();
@@ -33,6 +40,12 @@ public:
   void ShutdownForProcessExit(std::chrono::milliseconds timeout);
   std::size_t GetPendingJobCount() const;
   std::size_t GetActiveJobCount() const;
+  std::size_t GetMaxPendingJobCount() const { return MaxPendingJobs; }
+  uint64_t GetRejectedEnqueueCount() const { return RejectedEnqueues.load(); }
+  void SetMaxPendingJobCount(std::size_t cap)
+  {
+    MaxPendingJobs = cap > 0 ? cap : kDefaultMaxPendingJobsPerPool;
+  }
 
 private:
   void WorkerLoop();
@@ -42,6 +55,8 @@ private:
   std::condition_variable QueueCv;
   std::deque<std::function<void()>> Jobs;
   std::size_t ActiveJobs{0};
+  std::size_t MaxPendingJobs{kDefaultMaxPendingJobsPerPool};
+  std::atomic<uint64_t> RejectedEnqueues{0};
   bool Stop{false};
   std::string WorkerJobKind;
 };

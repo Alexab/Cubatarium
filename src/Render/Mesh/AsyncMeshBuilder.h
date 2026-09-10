@@ -87,8 +87,9 @@ private:
 
   int WorkerCount{1};
   IUChunkMesher *Mesher{nullptr};
-  UJobThreadPool Pool;
+  // Completed before Pool — pool joins first while completed queue stays valid (M08).
   UCompletedJobQueue<MeshBuildResult> Completed;
+  UJobThreadPool Pool;
   mutable std::mutex InFlightMutex;
   std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> InFlight;
   std::atomic<uint64_t> NextJobId{1};

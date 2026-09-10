@@ -84,6 +84,11 @@ struct StepAccumulator
 };
 
 StepAccumulator g_steps;
+bool g_gate_was_active{false};
+double g_first_presentable_ms{-1.0};
+double g_ttf_correct_proxy_ms{-1.0};
+uint64_t g_prev_mesh_apply_stale{0};
+uint64_t g_prev_mesh_discarded_late{0};
 
 std::string MakeSessionPath()
 {
@@ -115,6 +120,14 @@ void WriteJsonlLine(const EnterLitSample &s, const char *kind = nullptr)
           << ",\"relight_inflight_n\":" << s.relight_inflight_n
           << ",\"chunk_resident\":" << s.chunk_resident
           << ",\"streaming_frozen\":" << (s.streaming_frozen ? 1 : 0)
+          << ",\"enter_lit_gate_active\":" << (s.enter_lit_gate_active ? 1 : 0)
+          << ",\"settle_reason\":\"" << s.settle_reason << "\""
+          << ",\"gate_elapsed_ms\":" << s.gate_elapsed_ms
+          << ",\"gate_end\":" << s.gate_end
+          << ",\"first_presentable_ms\":" << s.first_presentable_ms
+          << ",\"ttf_correct_proxy_ms\":" << s.ttf_correct_proxy_ms
+          << ",\"mesh_apply_stale_delta\":" << s.mesh_apply_stale_delta
+          << ",\"mesh_discarded_late_delta\":" << s.mesh_discarded_late_delta
           << ",\"mesh_dirty\":" << (s.mesh_dirty ? 1 : 0)
           << ",\"mesh_missing_greedy\":" << (s.mesh_missing_greedy ? 1 : 0)
           << ",\"mesh_gpu_pending_near\":" << s.mesh_gpu_pending_near
@@ -206,6 +219,11 @@ void UEnterLitDiagnostics::BeginSession()
   g_last_heartbeat_elapsed_ms = -1.0;
   g_profile_logged = false;
   g_steps = {};
+  g_gate_was_active = false;
+  g_first_presentable_ms = -1.0;
+  g_ttf_correct_proxy_ms = -1.0;
+  g_prev_mesh_apply_stale = 0;
+  g_prev_mesh_discarded_late = 0;
   std::error_code ec;
   std::filesystem::create_directories(GetExecutableDirectory() / "logs", ec);
   g_jsonl.open(MakeSessionPath(), std::ios::out | std::ios::trunc);
@@ -222,6 +240,11 @@ void UEnterLitDiagnostics::EndSession()
   g_last_heartbeat_elapsed_ms = -1.0;
   g_profile_logged = false;
   g_steps = {};
+  g_gate_was_active = false;
+  g_first_presentable_ms = -1.0;
+  g_ttf_correct_proxy_ms = -1.0;
+  g_prev_mesh_apply_stale = 0;
+  g_prev_mesh_discarded_late = 0;
 }
 
 void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
@@ -238,6 +261,15 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
   out.chunk_resident =
       static_cast<int>(world.GetBlockWorld().GetChunkManager().GetResidentChunkCount());
   out.streaming_frozen = world.IsEnterLitGateActive();
+  out.enter_lit_gate_active = out.streaming_frozen;
+  out.settle_reason = world.GetLastEnterSettleReason();
+  out.gate_elapsed_ms = world.GetEnterLitGateElapsedMs();
+  out.gate_end = 0;
+  if (g_gate_was_active && !out.enter_lit_gate_active)
+  {
+    out.gate_end = 1;
+  }
+  g_gate_was_active = out.enter_lit_gate_active;
   UWorld::EnterGameMeshWarmupBlockers blockers{};
   world.SampleEnterGameMeshWarmupBlockers(blockers);
   out.mesh_dirty = blockers.dirty;
@@ -307,6 +339,32 @@ void UEnterLitDiagnostics::Sample(UWorld &world, double elapsed_ms,
       static_cast<int>(mesh.GetEnterPhantomDirtyPrunedTotal());
   out.underfeet_present_ready = world.IsEnterUnderfeetPresentReady() ? 1 : 0;
   out.spawn_mesh_ring_ready = world.IsSpawnMeshRingReady() ? 1 : 0;
+  // first_presentable: underfeet presentable ∧ focus ring ready criterion.
+  if (g_first_presentable_ms < 0.0 && out.underfeet_present_ready &&
+      out.spawn_mesh_ring_ready)
+  {
+    g_first_presentable_ms = elapsed_ms;
+  }
+  out.first_presentable_ms = g_first_presentable_ms;
+  // ttf_correct_proxy: no visibility/unfinished debt + underfeet ready.
+  if (g_ttf_correct_proxy_ms < 0.0 && out.visibility_debt == 0 &&
+      phys.UnfinishedVisual == 0 && out.underfeet_present_ready)
+  {
+    g_ttf_correct_proxy_ms = elapsed_ms;
+  }
+  out.ttf_correct_proxy_ms = g_ttf_correct_proxy_ms;
+  {
+    const uint64_t stale = mesh.GetMeshApplyStaleCount();
+    const uint64_t discarded = mesh.GetMeshDiscardedLateCount();
+    out.mesh_apply_stale_delta =
+        stale >= g_prev_mesh_apply_stale ? stale - g_prev_mesh_apply_stale : 0;
+    out.mesh_discarded_late_delta =
+        discarded >= g_prev_mesh_discarded_late
+            ? discarded - g_prev_mesh_discarded_late
+            : 0;
+    g_prev_mesh_apply_stale = stale;
+    g_prev_mesh_discarded_late = discarded;
+  }
   // Era48: sample void-dark during enter so IsEnterVisibilityReady sees telem.
   {
     UChunkMeshCache::DarkFaceHit hit{};

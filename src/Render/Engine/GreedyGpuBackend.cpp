@@ -171,6 +171,16 @@ void UGreedyGpuBackend::UploadBatch(GreedyGpuBatch &gpu,
                                     const GreedyMeshBatch &batch,
                                     UGreedyVertexPool &pool)
 {
+  GreedyGpuPoolAllocation prior{};
+  if (gpu.pooled && gpu.vertexCount > 0 && gpu.indexCount > 0)
+  {
+    prior.vertexByteOffset = gpu.vboByteOffset;
+    prior.indexByteOffset = gpu.eboByteOffset;
+    prior.vertexCount = gpu.vertexCount;
+    prior.indexCount = gpu.indexCount;
+    prior.indexCountGl = gpu.indexCountGl;
+  }
+
   gpu.blockId = batch.blockId;
   gpu.pooled = false;
   gpu.vboByteOffset = 0;
@@ -189,8 +199,24 @@ void UGreedyGpuBackend::UploadBatch(GreedyGpuBatch &gpu,
       gpu.indexCountGl = alloc.indexCountGl;
       gpu.vbo = pool.VertexBuffer();
       gpu.ebo = pool.IndexBuffer();
+      if (prior.vertexCount > 0)
+      {
+        pool.Free(prior);
+      }
       return;
     }
+  }
+  if (prior.vertexCount > 0)
+  {
+    gpu.pooled = true;
+    gpu.vboByteOffset = prior.vertexByteOffset;
+    gpu.eboByteOffset = prior.indexByteOffset;
+    gpu.vertexCount = prior.vertexCount;
+    gpu.indexCount = prior.indexCount;
+    gpu.indexCountGl = prior.indexCountGl;
+    gpu.vbo = pool.VertexBuffer();
+    gpu.ebo = pool.IndexBuffer();
+    return;
   }
   gpu.vertexCount = 0;
   gpu.indexCount = 0;
@@ -248,7 +274,7 @@ void UGreedyGpuBackend::RefreshPass(GreedyGpuPassCache &cache,
 
   for (size_t i = write_index; i < cache.batches.size(); ++i)
   {
-    DestroyBatchBuffers(cache.batches[i]);
+    ReleasePooledBatch(cache.batches[i], cache.VertexPool);
   }
   cache.batches.resize(write_index);
 
@@ -269,10 +295,10 @@ void UGreedyGpuBackend::RefreshPassRefs(
   // P2: CullRevision only invalidates draw instance counts, not geometry.
   // Exception: degenerate AABB (warmup upload skipped FillBatchCull) or a
   // disjoint visible set after teleport / first paint — rebuild or repair.
-  bool need_rebuild = false;
+  bool need_visible_sync = false;
   {
-    std::unordered_set<glm::ivec3, IVec3Hash> gpu_chunks;
-    gpu_chunks.reserve(cache.batches.size());
+    std::unordered_set<GpuBatchKey, GpuBatchKeyHash> resident_keys;
+    resident_keys.reserve(cache.batches.size());
     bool degenerate = false;
     for (const GreedyGpuBatch &b : cache.batches)
     {
@@ -280,26 +306,25 @@ void UGreedyGpuBackend::RefreshPassRefs(
       {
         continue;
       }
-      gpu_chunks.insert(b.chunkCoord);
+      resident_keys.insert({b.chunkCoord, b.batchIndex});
       if (BatchCullAabbDegenerate(b.cullAabbMin, b.cullAabbMax))
       {
         degenerate = true;
       }
     }
-    size_t visible_refs = 0;
-    size_t overlap = 0;
+    GpuPassVisibleDelta delta;
+    delta.resident_refs = resident_keys.size();
     for (const GreedyBatchRef &ref : refs)
     {
-      ++visible_refs;
-      if (gpu_chunks.count(ref.chunkCoord) > 0)
+      ++delta.visible_refs;
+      if (resident_keys.count({ref.chunkCoord, ref.batchIndex}) == 0)
       {
-        ++overlap;
+        ++delta.missing_refs;
       }
     }
-    need_rebuild = GpuPassVisibleSetNeedsRebuild(
-        overlap, visible_refs, cache.batches.size());
+    need_visible_sync = GpuPassVisibleSetNeedsSync(delta);
     if (mesh_revision == cache.meshRevision &&
-        sort_revision == cache.sortRevision && !need_rebuild)
+        sort_revision == cache.sortRevision && !need_visible_sync)
     {
       if (degenerate)
       {
@@ -352,7 +377,7 @@ void UGreedyGpuBackend::RefreshPassRefs(
       cache.usesVertexPool && cache.VertexPool.IsActive();
 
   // T1.2: absorb opaque-only mesh_revision flicker with no local dirty/sort.
-  if (!sort_changed && !need_rebuild && dirty.empty() &&
+  if (!sort_changed && !need_visible_sync && dirty.empty() &&
       mesh_revision != cache.meshRevision)
   {
     cache.meshRevision = mesh_revision;
@@ -364,6 +389,11 @@ void UGreedyGpuBackend::RefreshPassRefs(
   auto upload_full = [&]()
   {
     NoteUploadFull();
+    for (GreedyGpuBatch &batch : cache.batches)
+    {
+      ReleasePooledBatch(batch, cache.VertexPool);
+    }
+    cache.batches.clear();
     size_t total_vertex_bytes = 0;
     size_t total_index_bytes = 0;
     for (const GreedyBatchRef &ref : refs)
@@ -382,7 +412,6 @@ void UGreedyGpuBackend::RefreshPassRefs(
     cache.poolVbo = cache.VertexPool.VertexBuffer();
     cache.poolEbo = cache.VertexPool.IndexBuffer();
 
-    size_t write_index = 0;
     for (const GreedyBatchRef &ref : refs)
     {
       const GreedyMeshBatch *batch = meshCache.TryGetGreedyBatch(ref);
@@ -390,28 +419,11 @@ void UGreedyGpuBackend::RefreshPassRefs(
       {
         continue;
       }
-      GreedyGpuBatch *dst = nullptr;
-      if (write_index < cache.batches.size())
-      {
-        dst = &cache.batches[write_index];
-        UploadBatch(*dst, *batch, cache.VertexPool);
-      }
-      else
-      {
-        GreedyGpuBatch gpu;
-        UploadBatch(gpu, *batch, cache.VertexPool);
-        cache.batches.push_back(gpu);
-        dst = &cache.batches.back();
-      }
-      FillBatchCull(*dst, ref);
-      ++write_index;
+      GreedyGpuBatch gpu;
+      UploadBatch(gpu, *batch, cache.VertexPool);
+      FillBatchCull(gpu, ref);
+      cache.batches.push_back(gpu);
     }
-
-    for (size_t i = write_index; i < cache.batches.size(); ++i)
-    {
-      DestroyBatchBuffers(cache.batches[i]);
-    }
-    cache.batches.resize(write_index);
   };
 
   auto invoke_upload_full = [&]()
@@ -423,15 +435,15 @@ void UGreedyGpuBackend::RefreshPassRefs(
     upload_full();
   };
 
-  // T1.3 / Phase 5.2.1: reorder / rebuild-from-refs without upload_full when
-  // sort changed OR need_rebuild with empty dirty (visible-set reshape only).
-  if ((sort_changed || need_rebuild) && !cache.batches.empty())
+  // T1.3 / Phase 5.2.1 / audit M07: reorder or upload missing visible refs
+  // without upload_full when sort changed or resident/visible sets diverge.
+  if ((sort_changed || need_visible_sync) && !cache.batches.empty())
   {
     if (!pool_ok)
     {
       NoteOrderOnlyFail(TransparentOrderOnlyFailReason::PoolNotOk);
     }
-    else if (need_rebuild && !dirty.empty())
+    else if (need_visible_sync && !dirty.empty())
     {
       NoteOrderOnlyFail(TransparentOrderOnlyFailReason::NeedRebuild);
     }
@@ -633,7 +645,8 @@ void UGreedyGpuBackend::RefreshPassRefs(
   // above (BTF refs order, never blockId sort).
   const bool can_incremental =
       cache.usesVertexPool && cache.VertexPool.IsActive() && !sort_changed &&
-      !need_rebuild && !dirty.empty() && dirty.size() <= kMaxIncrementalDirty;
+      !need_visible_sync && !dirty.empty() &&
+      dirty.size() <= kMaxIncrementalDirty;
 
   if (can_incremental)
   {
@@ -644,14 +657,11 @@ void UGreedyGpuBackend::RefreshPassRefs(
       live_chunks.insert(ref.chunkCoord);
     }
 
-    // Free dirty / unloaded slots back into the freelist.
     size_t write = 0;
     for (size_t i = 0; i < cache.batches.size(); ++i)
     {
       GreedyGpuBatch &b = cache.batches[i];
-      const bool drop = dirty.count(b.chunkCoord) > 0 ||
-                        live_chunks.count(b.chunkCoord) == 0;
-      if (drop)
+      if (live_chunks.count(b.chunkCoord) == 0)
       {
         ReleasePooledBatch(b, cache.VertexPool);
         continue;
@@ -668,8 +678,6 @@ void UGreedyGpuBackend::RefreshPassRefs(
     const size_t cap_v_before = cache.VertexPool.VertexCapacityBytesValue();
     const size_t cap_before = cache.VertexPool.CapacityBytes();
     bool upload_ok = true;
-    std::vector<GreedyGpuBatch> added;
-    added.reserve(dirty.size() * 2);
     for (const GreedyBatchRef &ref : refs)
     {
       if (dirty.find(ref.chunkCoord) == dirty.end())
@@ -681,6 +689,37 @@ void UGreedyGpuBackend::RefreshPassRefs(
       {
         continue;
       }
+      GreedyGpuBatch *dst = nullptr;
+      for (GreedyGpuBatch &b : cache.batches)
+      {
+        if (b.chunkCoord == ref.chunkCoord && b.batchIndex == ref.batchIndex)
+        {
+          dst = &b;
+          break;
+        }
+      }
+      if (!dst)
+      {
+        for (GreedyGpuBatch &b : cache.batches)
+        {
+          if (b.chunkCoord == ref.chunkCoord)
+          {
+            dst = &b;
+            break;
+          }
+        }
+      }
+      if (dst)
+      {
+        UploadBatch(*dst, *batch, cache.VertexPool);
+        if (!dst->pooled)
+        {
+          upload_ok = false;
+          break;
+        }
+        FillBatchCull(*dst, ref);
+        continue;
+      }
       GreedyGpuBatch gpu;
       UploadBatch(gpu, *batch, cache.VertexPool);
       if (!gpu.pooled)
@@ -689,7 +728,7 @@ void UGreedyGpuBackend::RefreshPassRefs(
         break;
       }
       FillBatchCull(gpu, ref);
-      added.push_back(gpu);
+      cache.batches.push_back(gpu);
     }
     // Allocate/EnsureCapacity may orphan the GL buffer on grow — full rewrite.
     if (!upload_ok ||
@@ -700,7 +739,6 @@ void UGreedyGpuBackend::RefreshPassRefs(
     }
     else
     {
-      cache.batches.insert(cache.batches.end(), added.begin(), added.end());
       std::sort(cache.batches.begin(), cache.batches.end(),
                 [](const GreedyGpuBatch &a, const GreedyGpuBatch &b)
                 { return a.blockId < b.blockId; });
@@ -754,6 +792,16 @@ void UGreedyGpuBackend::DestroyPass(GreedyGpuPassCache &cache)
     cache.CullVisSsbo = 0;
     cache.CullVisCapacity = 0;
   }
+  if (cache.CullAabbMaxSsbo)
+  {
+    glDeleteBuffers(1, &cache.CullAabbMaxSsbo);
+    cache.CullAabbMaxSsbo = 0;
+    cache.CullAabbMaxCapacity = 0;
+  }
+  cache.batchTableRevision = 0;
+  cache.LastGoodCullOn = 0;
+  cache.ConsecutiveFailOpenN = 0;
+  cache.FailOpenProbeTick = 0;
   cache.IndirectCullReady = false;
   cache.GpuCompactActive = false;
 }

@@ -31,13 +31,22 @@ int main()
   {
     return Fail("loaded air -> Air");
   }
-  // Era39: SoftDefer-hidden / !drawable neighbor must not occlude (Air, not
-  // Loaded solid / Unknown).
+  // M09: SoftDefer-hidden solid -> Unlit (emit faces, no solid occlusion).
   if (cutum::ClassifyShellCell(true, static_cast<cutum::BlockId>(1),
+                               /*neighbor_visually_drawable=*/false) !=
+      cutum::NeighborLoadState::Unlit)
+  {
+    return Fail("loaded !drawable solid -> Unlit");
+  }
+  if (cutum::ClassifyShellCell(true, cutum::BLOCK_AIR,
                                /*neighbor_visually_drawable=*/false) !=
       cutum::NeighborLoadState::Air)
   {
-    return Fail("loaded !drawable solid -> Air (Era39)");
+    return Fail("loaded !drawable air -> Air");
+  }
+  if (cutum::ShouldSkipFaceForNeighbor(cutum::NeighborLoadState::Unlit))
+  {
+    return Fail("Unlit must not skip face");
   }
   if (cutum::ShellBlockForNeighborOcclusion(static_cast<cutum::BlockId>(1),
                                             false) != cutum::BLOCK_AIR)

@@ -46,14 +46,32 @@ UMeshCaptureStore::TryGet(glm::ivec3 coord, uint64_t source_revision) const
   return it->second.data;
 }
 
-void UMeshCaptureStore::Commit(glm::ivec3 coord, uint64_t source_revision,
-                               ChunkMeshSnapshot snapshot)
+bool UMeshCaptureStore::TryCommit(glm::ivec3 coord, uint64_t source_revision,
+                                  uint64_t world_epoch,
+                                  ChunkMeshSnapshot snapshot,
+                                  const DependencyStamp *captured_deps)
 {
+  if (world_epoch == 0 || world_epoch != WorldEpoch_)
+  {
+    return false;
+  }
   Entry entry;
-  entry.worldEpoch = WorldEpoch_;
+  entry.worldEpoch = world_epoch;
   entry.sourceRevision = source_revision;
+  if (captured_deps != nullptr)
+  {
+    entry.deps = *captured_deps;
+  }
   entry.data = std::move(snapshot);
   Store_[coord] = std::move(entry);
+  return true;
+}
+
+void UMeshCaptureStore::Commit(glm::ivec3 coord, uint64_t source_revision,
+                               uint64_t world_epoch, ChunkMeshSnapshot snapshot)
+{
+  (void)TryCommit(coord, source_revision, world_epoch, std::move(snapshot),
+                  nullptr);
 }
 
 ChunkMeshSnapshot UMeshCaptureStore::CaptureAndStore(const UBlockWorld &world,
@@ -62,7 +80,7 @@ ChunkMeshSnapshot UMeshCaptureStore::CaptureAndStore(const UBlockWorld &world,
 {
   ChunkMeshSnapshot snap = ChunkMeshSnapshot::Capture(
       world, coord, source_revision, NeighborDrawableFn_, NeighborDrawableCtx_);
-  Commit(coord, source_revision, std::move(snap));
+  Commit(coord, source_revision, WorldEpoch_, std::move(snap));
   return Store_[coord].data;
 }
 
@@ -78,7 +96,6 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::TakeOrRefresh(
   ++LastStoreMissN_;
   if (refresh_budget <= 0)
   {
-    // M1-2 hard defer: schedule must wait for budget / worker capture.
     return std::nullopt;
   }
   --refresh_budget;
@@ -106,6 +123,17 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::RefreshIncrementalShell(
     }
     const int axis = face / 2;
     const int sign = (face % 2 == 0) ? -1 : 1;
+    glm::ivec3 neighbor_coord = coord;
+    neighbor_coord[axis] += sign;
+    const UChunk *neighbor_chunk =
+        world.GetChunkManager().GetChunk(neighbor_coord);
+    const bool neighbor_loaded = neighbor_chunk != nullptr;
+    bool neighbor_visually_drawable = neighbor_loaded;
+    if (neighbor_loaded && NeighborDrawableFn_)
+    {
+      neighbor_visually_drawable =
+          NeighborDrawableFn_(NeighborDrawableCtx_, neighbor_coord);
+    }
     for (int u = 0; u < CHUNK_SIZE; ++u)
     {
       for (int v = 0; v < CHUNK_SIZE; ++v)
@@ -119,18 +147,16 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::RefreshIncrementalShell(
         const glm::ivec3 worldPos = origin + local;
         const int cell = u + v * CHUNK_SIZE;
         const int flat = face * ChunkMeshSnapshot::kShellFaceCells + cell;
-        const glm::ivec3 lightChunkCoord =
-            UChunkManager::WorldToChunk(worldPos);
-        const UChunk *neighbor_chunk =
-            world.GetChunkManager().GetChunk(lightChunkCoord);
-        const bool neighbor_loaded = neighbor_chunk != nullptr;
-        bool neighbor_visually_drawable = neighbor_loaded;
-        if (neighbor_loaded && NeighborDrawableFn_)
+        BlockId raw = BLOCK_AIR;
+        if (neighbor_chunk)
         {
-          neighbor_visually_drawable =
-              NeighborDrawableFn_(NeighborDrawableCtx_, lightChunkCoord);
+          raw = neighbor_chunk->GetBlockLocal(
+              UChunkManager::WorldToLocal(worldPos));
         }
-        const BlockId raw = world.GetBlock(worldPos);
+        else
+        {
+          raw = world.GetBlock(worldPos);
+        }
         snap.shellBlocks[static_cast<size_t>(flat)] =
             ShellBlockForNeighborOcclusion(raw, neighbor_visually_drawable);
         snap.shellNeighborState[static_cast<size_t>(flat)] =
@@ -148,7 +174,7 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::RefreshIncrementalShell(
       }
     }
   }
-  Commit(coord, source_revision, snap);
+  Commit(coord, source_revision, WorldEpoch_, snap);
   ++LastStoreHitN_;
   return snap;
 }

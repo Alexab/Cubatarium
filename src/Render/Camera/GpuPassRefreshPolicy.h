@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Render/Camera/CullInputKey.h"
 #include "Render/Camera/Frustum.h"
 
 #include <cstddef>
@@ -32,20 +33,31 @@ inline void FillChunkCullFields(glm::ivec3 chunk_coord, float *sphere,
   aabb_max[2] = bmax.z;
 }
 
-/// GPU pass holds the last uploaded visible set. Teleport / first-paint after
-/// warmup can keep mesh_revision while refs are disjoint — force rebuild.
-inline bool GpuPassVisibleSetNeedsRebuild(size_t overlap, size_t visible_refs,
-                                          size_t gpu_batches)
+/// Resident geometry table vs visible command list. Upload each visible ref that
+/// is not yet resident; overlap ratio must not suppress missing-ref uploads.
+struct GpuPassVisibleDelta
 {
-  if (visible_refs == 0)
-  {
-    return false;
-  }
-  if (gpu_batches == 0)
-  {
-    return true;
-  }
-  return overlap == 0 || overlap * 10 < visible_refs;
+  size_t visible_refs{0};
+  size_t resident_refs{0};
+  size_t missing_refs{0};
+};
+
+inline bool GpuPassHasMissingVisibleRefs(const GpuPassVisibleDelta &delta)
+{
+  return delta.missing_refs > 0;
+}
+
+/// Full rebuild only when the GPU pass has no resident geometry yet.
+inline bool GpuPassVisibleSetNeedsFullRebuild(const GpuPassVisibleDelta &delta)
+{
+  return delta.visible_refs > 0 && delta.resident_refs == 0;
+}
+
+/// Sync visible command list with resident table (missing refs and/or empty GPU).
+inline bool GpuPassVisibleSetNeedsSync(const GpuPassVisibleDelta &delta)
+{
+  return GpuPassVisibleSetNeedsFullRebuild(delta) ||
+         GpuPassHasMissingVisibleRefs(delta);
 }
 
 /// All eligible batches CPU-culled: AABB are wrong or camera jumped. Draw
@@ -110,70 +122,58 @@ inline bool OpaqueCullCmdOnStable(uint64_t opaque_cmd_on,
 }
 
 /// Phase 5.7.4 / 5.7R2 / 5.7R3: skip GPU compact cull on light cruise when
-/// camera stable, yaw quiet, and no underfeet miss / VB edge.
+/// cull inputs are unchanged and no underfeet miss / VB edge.
 /// miss_horiz default 0: unknown miss treated as underfeet (fail-closed).
-inline bool ShouldSkipOpaqueCullLightCruise(bool draw_set_stable,
-                                            bool rev_match, float cam_move2,
-                                            float cam_eps2, bool indirect_ready,
-                                            bool reverse_compact_active,
-                                            float movement_speed,
-                                            bool focus_missing,
-                                            bool vb_edge,
-                                            float abs_yaw_delta = 0.0f,
-                                            float yaw_eps = 0.5f,
-                                            int miss_horiz = 0)
+inline bool ShouldSkipOpaqueCullLightCruise(
+    bool draw_set_stable, const CullInputKey &cached,
+    const CullInputKey &current, bool indirect_ready,
+    bool reverse_compact_active, float movement_speed, bool focus_missing,
+    bool vb_edge, int miss_horiz = 0)
 {
   if (OpaqueCullUnderfeetMissBlocks(focus_missing, miss_horiz) || vb_edge ||
-      !draw_set_stable || !rev_match || !indirect_ready ||
-      !reverse_compact_active)
+      !draw_set_stable || !CullInputKeyAllowsCacheReuse(cached, current) ||
+      !indirect_ready || !reverse_compact_active)
   {
     return false;
   }
-  if (cam_move2 > cam_eps2)
-  {
-    return false;
-  }
-  if (abs_yaw_delta > yaw_eps)
-  {
-    return false;
-  }
-  // Phase 5.7R2: widen near-stand to light cruise ≤1.5 with yaw gate.
+  // Phase 5.7R2: widen near-stand to light cruise ≤1.5.
   return movement_speed <= 1.5f;
 }
 
 /// Phase 5.7.4 / 5.7R3: standing stable skip refuses underfeet miss / VB edge.
-inline bool ShouldSkipOpaqueCullStable(bool cull_stable, bool focus_missing,
-                                       bool vb_edge, int miss_horiz = 0)
+inline bool ShouldSkipOpaqueCullStable(bool draw_set_stable,
+                                       const CullInputKey &cached,
+                                       const CullInputKey &current,
+                                       bool indirect_ready,
+                                       bool reverse_compact_active,
+                                       bool focus_missing, bool vb_edge,
+                                       int miss_horiz = 0)
 {
-  return cull_stable &&
+  return draw_set_stable &&
+         CullInputKeyAllowsCacheReuse(cached, current) && indirect_ready &&
+         reverse_compact_active &&
          !OpaqueCullUnderfeetMissBlocks(focus_missing, miss_horiz) && !vb_edge;
 }
 
-/// Phase 5.7R2 / 5.7R3: camera/yaw/focus-gated compact reuse on alternate
-/// frames.  The compact result contains the frustum visibility bits, so a
-/// translated camera must invalidate it even while it remains in the same
-/// chunk. Never skip under underfeet miss (nh≤1) / VB edge; rim miss (nh≥2)
-/// is OK.
+/// Phase 5.7R2 / 5.7R3: CullInputKey-gated compact reuse on alternate frames.
+/// Never skip under underfeet miss (nh≤1) / VB edge; rim miss (nh≥2) is OK.
 inline bool ShouldReuseOpaqueCullCompact(
-    bool draw_set_stable, bool rev_match, bool reverse_compact_active,
-    bool focus_unchanged, bool focus_missing, bool vb_edge, float abs_yaw_delta,
-    float abs_pitch_delta, float yaw_eps, float pitch_eps,
+    bool draw_set_stable, const CullInputKey &cached,
+    const CullInputKey &current, bool reverse_compact_active,
+    bool focus_unchanged, bool focus_missing, bool vb_edge,
     uint64_t opaque_cmd_on, uint64_t opaque_cmd_on_prev, uint32_t frame_parity,
-    int miss_horiz = 0, bool camera_stable = true)
+    int miss_horiz = 0)
 {
   if (OpaqueCullUnderfeetMissBlocks(focus_missing, miss_horiz) || vb_edge)
   {
     return false;
   }
-  if (!draw_set_stable || !rev_match || !reverse_compact_active)
+  if (!draw_set_stable || !CullInputKeyAllowsCacheReuse(cached, current) ||
+      !reverse_compact_active)
   {
     return false;
   }
-  if (!focus_unchanged || !camera_stable)
-  {
-    return false;
-  }
-  if (abs_yaw_delta > yaw_eps || abs_pitch_delta > pitch_eps)
+  if (!focus_unchanged)
   {
     return false;
   }

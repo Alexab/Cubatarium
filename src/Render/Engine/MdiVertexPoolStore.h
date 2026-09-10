@@ -72,8 +72,11 @@ public:
   uint64_t LastCullOpaqueTotal() const { return LastCullOpaqueTotal_; }
   uint64_t LastCullOpaqueOn() const { return LastCullOpaqueOn_; }
   uint64_t LastCpuAabbWouldOn() const { return LastCpuAabbWouldOn_; }
-  /// CPU wall around compact dispatch (no SubData); 0 on CPU cull path.
-  double LastCompactCullGpuMs() const { return LastCompactCullGpuMs_; }
+  /// CPU wall around compact dispatch + barrier (not GPU execution time).
+  double LastCullSubmitCpuMs() const { return LastCullSubmitCpuMs_; }
+  /// Delayed GPU timestamp when queries available; else unavailable (<0).
+  double LastCullGpuExecMs() const;
+  bool CullGpuTimingAvailable() const { return CullGpuTimingAvailable_; }
 
   /// Enable rare CullStatsSsbo GetBufferSubData (default off — hot path free).
   void SetCullStatsReadbackEnabled(bool enabled)
@@ -92,15 +95,27 @@ private:
   uint64_t LastCullOpaqueTotal_{0};
   uint64_t LastCullOpaqueOn_{0};
   uint64_t LastCpuAabbWouldOn_{0};
-  uint64_t LastGoodCullOpaqueOn_{0};
-  int ConsecutiveFailOpenN_{0};
-  int FailOpenProbeTick_{0};
-  double LastCompactCullGpuMs_{0.0};
+  double LastCullSubmitCpuMs_{0.0};
+  bool CullGpuTimingAvailable_{false};
+
+  struct GpuTimestampQueryRing
+  {
+    static constexpr int kSlots = 8;
+    GLuint Queries[kSlots]{};
+    int WriteIdx{0};
+    uint64_t FrameIds[kSlots]{};
+    bool Initialized{false};
+  };
+  GpuTimestampQueryRing CullGpuTimeRing_{};
+  double LastCullGpuExecMs_{-1.0};
+
+  void InitCullGpuTimingIfNeeded();
+  void BeginCullGpuTimestamp();
+  void EndCullGpuTimestamp(uint64_t frame_id);
+  void PollCullGpuTimestampRing();
 
   GLuint CullProgram{0};
   GLuint CullFrustumUbo{0};
-  GLuint CullAabbMaxSsbo{0};
-  size_t CullAabbMaxCapacity{0};
   GLuint CullStatsSsbo{0};
   bool CullInitAttempted{false};
   bool CullProgramIsSphere{false};

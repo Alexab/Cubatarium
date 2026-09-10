@@ -40,6 +40,10 @@ public:
   {
     return DiscardedLate.load(std::memory_order_relaxed);
   }
+  uint64_t SubmitEpoch() const
+  {
+    return Epoch.load(std::memory_order_acquire);
+  }
   std::size_t GetCompletedSize() const { return Completed.Size(); }
   std::size_t GetCompletedCapacity() const { return Completed.Capacity(); }
   uint64_t GetCompletedDiscardedOverflow() const

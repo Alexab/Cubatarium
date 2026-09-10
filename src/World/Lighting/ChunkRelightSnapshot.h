@@ -4,6 +4,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Lighting/LightUtil.h"
 #include "World/Math/BlockTypes.h"
+#include "World/Streaming/WorkToken.h"
 #include <array>
 #include <cstdint>
 #include <cstring>
@@ -66,6 +67,8 @@ struct RelightComputeResult
 {
   uint64_t job_id{0};
   uint64_t submitEpoch{0};
+  WorkToken work_token{};
+  DependencyStamp dependency_stamp{};
   std::vector<RelightChunkLightData> chunks;
   bool frontier_unfinished{false};
   bool finalize_pending_gate{true};
@@ -83,6 +86,16 @@ public:
 
   RelightComputeResult Compute(const UBlockRegistry &registry);
   uint64_t GetJobId() const { return Spec.job_id; }
+  const WorkToken &GetWorkToken() const { return CapturedWorkToken; }
+  const DependencyStamp &GetDependencyStamp() const
+  {
+    return CapturedDepStamp;
+  }
+  void SetSubmitContext(WorkToken token, DependencyStamp deps)
+  {
+    CapturedWorkToken = token;
+    CapturedDepStamp = deps;
+  }
   int GetCapturedFullChunks() const { return CapturedFullChunks; }
   int GetCapturedNeighborLightChunks() const
   {
@@ -109,6 +122,8 @@ private:
       Light;
   std::unordered_map<glm::ivec3, BlockId, IVec3Hash> ShellBlocks;
   RelightJobSpec Spec;
+  WorkToken CapturedWorkToken{};
+  DependencyStamp CapturedDepStamp{};
   int CapturedFullChunks{0};
   int CapturedNeighborLightChunks{0};
 };

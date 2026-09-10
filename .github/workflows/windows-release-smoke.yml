@@ -2,7 +2,7 @@ name: Windows release smoke
 
 on:
   push:
-    branches: [main, master, thread_chunks]
+    branches: [main, master, thread_chunks, 'codex/**', 'perf/**', 'feature/**']
     paths:
       - "CMakeLists.txt"
       - "vcpkg.json"
@@ -108,6 +108,34 @@ jobs:
       - name: C++ unit test (world mesh service)
         shell: pwsh
         run: ./build/desktop-msvc/Release/world_mesh_service_test.exe
+
+      - name: Streaming / mesh policy CTest suite
+        shell: pwsh
+        run: |
+          $tests = @(
+            "column_flow_scheduler_test",
+            "column_scheduler_audit_repro",
+            "streaming_render_ready_invariants_test",
+            "miss_first_mesh_class_test",
+            "mesh_gpu_store_mdi_test",
+            # CPU mock lifetime only — does NOT prove A01 GPU correctness (needs GL fixture).
+            "greedy_vertex_pool_lifetime_test"
+          )
+          $missing = @()
+          foreach ($t in $tests) {
+            $exe = "./build/desktop-msvc/Release/$t.exe"
+            if (-not (Test-Path $exe)) { $missing += $t }
+          }
+          if ($missing.Count -gt 0) {
+            Write-Error "Expected streaming tests missing: $($missing -join ', ')"
+            exit 1
+          }
+          ctest --test-dir build/desktop-msvc -C Release -L streaming --output-on-failure
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Phase57 scorecard fail-closed unit test
+        shell: pwsh
+        run: python tools/test_AnalyzePhase57Scorecard.py
 
       - name: C++ unit test (physics deterministic replay)
         shell: pwsh

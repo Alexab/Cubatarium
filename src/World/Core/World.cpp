@@ -41,6 +41,7 @@
 #include "App/Settings/GraphicsQualityProfile.h"
 #include "World/Lighting/AsyncRelightBuilder.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
+#include "World/Lighting/LightChangeSet.h"
 #include "World/Lighting/GpuSkylightColumnSeed.h"
 #include "World/Lighting/ChunkLighting.h"
 #include "World/Lighting/IULightingPipeline.h"
@@ -77,6 +78,7 @@
 #include "World/Streaming/VisualStagePolicy.h"
 #include "Render/Mesh/MeshApplyPolicy.h"
 #include "World/Streaming/EnterVisualGate.h"
+#include "World/Streaming/DependencyStampBuilder.h"
 #include "World/Streaming/EnterVisualWarmupPolicy.h"
 #include "World/Streaming/RelightFifoPolicy.h"
 #include "World/Streaming/RelightInstallPlanner.h"
@@ -1753,6 +1755,21 @@ void UWorld::SampleColumnEmergeStageTelemetry()
   PhysicsTelemetryData.ColumnLightingN = lighting;
   PhysicsTelemetryData.ColumnMeshingN = meshing;
   PhysicsTelemetryData.ColumnRenderReadyN = render_ready;
+
+  // Focus-ring job graph census (distinct from emerge FSM above).
+  const glm::ivec3 focus = GetPreferredLoadFocusBlock();
+  const glm::ivec3 focus_chunk = UChunkManager::WorldToChunk(focus);
+  const glm::ivec3 focus_ground(focus_chunk.x, 0, focus_chunk.z);
+  int job_pl = 0;
+  int job_mesh = 0;
+  int job_gpu = 0;
+  int job_ready = 0;
+  GetColumnFlowExecutor().CountFocusRingJobStages(focus_ground, 4, job_pl,
+                                                  job_mesh, job_gpu, job_ready);
+  PhysicsTelemetryData.ColumnJobPendingLightN = job_pl;
+  PhysicsTelemetryData.ColumnJobMeshingN = job_mesh;
+  PhysicsTelemetryData.ColumnJobGpuPendingN = job_gpu;
+  PhysicsTelemetryData.ColumnJobRenderReadyN = job_ready;
 }
 
 ColumnEmergeState UWorld::GetColumnEmergeState(glm::ivec3 ground) const
@@ -2022,6 +2039,12 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     {
       return true;
     }
+    // F3: published lit live GPU counts as presentable during pending remesh.
+    if (MeshService->GetCache().HasLiveGpuDraw(coord) &&
+        !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+    {
+      return true;
+    }
     return MeshService->IsPendingGpuApply(coord) ||
            MeshService->IsGpuExtractInFlight(coord);
   };
@@ -2128,6 +2151,11 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
     {
       has_mesh_or_gpu = true;
     }
+    else if (MeshService->GetCache().HasLiveGpuDraw(coord) &&
+             !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
+    {
+      has_mesh_or_gpu = true;
+    }
     else if (MeshService->IsPendingGpuApply(coord) ||
              MeshService->IsGpuExtractInFlight(coord))
     {
@@ -2174,6 +2202,12 @@ ColumnRenderableState UWorld::GetColumnRenderableState(glm::ivec2 ground_xz) con
       continue;
     }
     if (MeshService->HasMeshSatisfyingColumnReady(coord))
+    {
+      saw_loaded_meshable = true;
+      continue;
+    }
+    if (MeshService->GetCache().HasLiveGpuDraw(coord) &&
+        !MeshService->GetCache().ChunkHasFullyDarkFace(coord))
     {
       saw_loaded_meshable = true;
       continue;
@@ -4440,10 +4474,35 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
       break;
     }
     RelightComputeResult &result = batch.front();
+    bool reject_stale = false;
+    if (result.work_token.world_epoch != 0 &&
+        result.work_token.world_epoch != AsyncRelight->SubmitEpoch())
+    {
+      reject_stale = true;
+    }
+    if (!reject_stale && result.work_token.coord != glm::ivec3(0) &&
+        BlockRegistry != nullptr)
+    {
+      const DependencyStamp current = BuildRelightDependencyStamp(
+          BlockWorld, result.work_token.coord, *BlockRegistry);
+      if (!CaptureDependencyStillValid(result.dependency_stamp, current))
+      {
+        reject_stale = true;
+      }
+    }
+    if (reject_stale)
+    {
+      for (const glm::ivec3 &pos : result.source_block_positions)
+      {
+        AsyncRelightColumnsInFlight.erase(
+            glm::ivec2(UChunkManager::WorldToChunk(pos).x,
+                       UChunkManager::WorldToChunk(pos).z));
+      }
+      continue;
+    }
     ++applied;
-    std::vector<glm::ivec3> relit_coords;
-    relit_coords.reserve(result.chunks.size());
-    bool any_light_changed = false;
+    LightChangeSet light_changes;
+    light_changes.changed_coords.reserve(result.chunks.size());
     for (const RelightChunkLightData &chunk_data : result.chunks)
     {
       ++PhysicsTelemetryData.RelightLightChunksN;
@@ -4466,8 +4525,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
           if (!PrimaryLightUnchanged(light_before, chunk->GetLightData()))
           {
             chunk->BumpLightFieldRevision();
-            any_light_changed = true;
-            relit_coords.push_back(chunk_data.coord);
+            light_changes.Add(chunk_data.coord);
           }
         }
         else if (!PrimaryLightUnchanged(chunk->GetLightData(),
@@ -4475,7 +4533,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
         {
           chunk->GetLightDataMutable() = chunk_data.light_packed;
           chunk->BumpLightFieldRevision();
-          relit_coords.push_back(chunk_data.coord);
+          light_changes.Add(chunk_data.coord);
         }
         else
         {
@@ -4503,7 +4561,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     const bool primary_only_apply = consume_mode || defer_side_iter;
     bool force_unchanged_relit = ShouldForceMarkRelitOnUnchangedLight(
         consume_mode, vb_focus_n, false, false, -1);
-    if (!any_light_changed && !force_unchanged_relit)
+    if (!light_changes.any_changed() && !force_unchanged_relit)
     {
       for (const glm::ivec2 &g : primary_grounds)
       {
@@ -4536,7 +4594,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     }
     // CheapRemesh C3: noop light → clear InFlight/Pending without Dirty/Prefetch
     // unless P1 repair debt (VB / ticket / FullyDark ring).
-    if (!any_light_changed && !force_unchanged_relit)
+    if (!light_changes.any_changed() && !force_unchanged_relit)
     {
       for (const glm::ivec2 &g : primary_grounds)
       {
@@ -4551,7 +4609,8 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
     }
     else
     {
-      if (!any_light_changed && relit_coords.empty())
+      std::vector<glm::ivec3> relit_coords = light_changes.changed_coords;
+      if (!light_changes.any_changed() && relit_coords.empty())
       {
         for (const RelightChunkLightData &chunk_data : result.chunks)
         {
@@ -7075,6 +7134,9 @@ void UWorld::BeginEnterLitGate()
   }
   StreamingEnabledBeforeEnterLitGate = IsStreamingEnabled();
   EnterLitGateActive = true;
+  EnterLitGateBeginTp = std::chrono::steady_clock::now();
+  LastEnterSettleReason.clear();
+  LastEnterGateElapsedMs = 0.0;
   EnterLitQuiesceLatched = false;
   CreateSpawnWarmupSettledLatched = false;
   EnterVisualGateCtrl.Reset();
@@ -7114,12 +7176,29 @@ void UWorld::BeginEnterLitGate()
   }
 }
 
+double UWorld::GetEnterLitGateElapsedMs() const
+{
+  if (!EnterLitGateActive)
+  {
+    return LastEnterGateElapsedMs;
+  }
+  return std::chrono::duration<double, std::milli>(
+             std::chrono::steady_clock::now() - EnterLitGateBeginTp)
+      .count();
+}
+
+void UWorld::SetLastEnterSettleReason(const char *reason)
+{
+  LastEnterSettleReason = reason ? reason : "";
+}
+
 void UWorld::EndEnterLitGate()
 {
   if (!EnterLitGateActive)
   {
     return;
   }
+  LastEnterGateElapsedMs = GetEnterLitGateElapsedMs();
   EnterLitGateActive = false;
   EnterLitSnapshotCaptured = false;
   EnterLitQuiesceLatched = false;

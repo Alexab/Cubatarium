@@ -8,35 +8,69 @@ UMeshCaptureWorker::UMeshCaptureWorker(std::size_t thread_count)
   Pool = std::make_unique<UJobThreadPool>(thread_count > 0 ? thread_count : 1);
 }
 
-void UMeshCaptureWorker::Enqueue(ChunkMeshSnapshot band, glm::ivec3 coord,
-                                 uint64_t source_revision)
+UMeshCaptureWorker::~UMeshCaptureWorker() { Shutdown(); }
+
+void UMeshCaptureWorker::Shutdown()
 {
-  if (!kWorkerCaptureEnabled || !Pool)
+  Accepting_.store(false, std::memory_order_release);
+  Generation_.fetch_add(1, std::memory_order_acq_rel);
+  if (Pool)
+  {
+    Pool->CancelPendingJobs();
+    Pool->WaitIdle();
+  }
+  std::lock_guard<std::mutex> lock(Mutex);
+  InFlight_.clear();
+  Completed_.clear();
+}
+
+void UMeshCaptureWorker::Enqueue(ChunkMeshSnapshot band, WorkToken token,
+                                 DependencyStamp deps)
+{
+  if (!kWorkerCaptureEnabled || !Pool ||
+      !Accepting_.load(std::memory_order_acquire))
   {
     return;
   }
   const uint64_t job_id = NextJobId_.fetch_add(1, std::memory_order_relaxed);
+  const uint64_t submit_generation =
+      Generation_.load(std::memory_order_acquire);
+  const glm::ivec3 coord = token.coord;
+  WorkToken submit_token = token;
+  submit_token.generation = submit_generation;
   {
     std::lock_guard<std::mutex> lock(Mutex);
     if (InFlight_.count(coord) > 0)
     {
       return;
     }
-    InFlight_[coord] = Inflight{source_revision, job_id};
+    Inflight inflight;
+    inflight.source_revision = deps.content_revision;
+    inflight.job_id = job_id;
+    inflight.submit_generation = submit_generation;
+    inflight.token = submit_token;
+    inflight.deps = deps;
+    InFlight_[coord] = inflight;
   }
-  Pool->Enqueue([this, band = std::move(band), coord, source_revision,
-                 job_id]() mutable
+  Pool->Enqueue([this, band = std::move(band), submit_token, deps, job_id,
+                 submit_generation]() mutable
                 {
                   CompletedCapture done;
-                  done.coord = coord;
-                  done.source_revision = source_revision;
+                  done.token = submit_token;
+                  done.deps = deps;
+                  done.source_revision = deps.content_revision;
+                  done.world_epoch = submit_token.world_epoch;
+                  done.job_id = job_id;
                   done.snapshot = std::move(band);
                   std::lock_guard<std::mutex> lock(Mutex);
-                  const auto it = InFlight_.find(coord);
-                  if (it != InFlight_.end() && it->second.job_id == job_id)
+                  const auto it = InFlight_.find(submit_token.coord);
+                  if (it == InFlight_.end() ||
+                      it->second.job_id != job_id ||
+                      it->second.submit_generation != submit_generation)
                   {
-                    InFlight_.erase(it);
+                    return;
                   }
+                  InFlight_.erase(it);
                   Completed_.push_back(std::move(done));
                 });
 }
@@ -79,6 +113,11 @@ int UMeshCaptureWorker::GetInFlightCount() const
 
 void UMeshCaptureWorker::CancelPending()
 {
+  Generation_.fetch_add(1, std::memory_order_acq_rel);
+  if (Pool)
+  {
+    Pool->CancelPendingJobs();
+  }
   std::lock_guard<std::mutex> lock(Mutex);
   InFlight_.clear();
   Completed_.clear();
@@ -86,11 +125,12 @@ void UMeshCaptureWorker::CancelPending()
 
 void UMeshCaptureWorker::CancelCoord(glm::ivec3 coord)
 {
+  Generation_.fetch_add(1, std::memory_order_acq_rel);
   std::lock_guard<std::mutex> lock(Mutex);
   InFlight_.erase(coord);
   for (auto it = Completed_.begin(); it != Completed_.end();)
   {
-    if (it->coord == coord)
+    if (it->token.coord == coord)
     {
       it = Completed_.erase(it);
     }

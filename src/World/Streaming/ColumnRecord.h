@@ -2,6 +2,7 @@
 
 #include "World/Streaming/ColumnDesiredStage.h"
 #include "World/Streaming/ColumnEmergeState.h"
+#include "World/Streaming/ColumnJobGraph.h"
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <unordered_map>
@@ -9,7 +10,33 @@
 namespace cutum
 {
 
-/// Phase 2 SoT: one runtime record per ground column (xz).
+/// Published draw residency (independent of pending replacement work).
+struct ColumnPublishedState
+{
+  uint32_t mesh_version{0};
+  /// Opaque residency token; 0 = none. Render maps to real GPU handle.
+  uint64_t gpu_handle{0};
+  uint32_t bounds_version{0};
+};
+
+/// In-flight pipeline work (may coexist with published).
+struct ColumnPendingState
+{
+  uint64_t token{0};
+  ColumnJobStage stage{ColumnJobStage::Absent};
+  uint32_t deps{0};
+  ColumnJobPriority priority{ColumnJobPriority::Background};
+};
+
+/// Repair / backlog debt marker (scheduling hints, not visual truth).
+struct ColumnDebtState
+{
+  uint8_t reason{0};
+  uint64_t created_at_ms{0};
+  uint64_t last_progress_at_ms{0};
+};
+
+/// Phase 2+ SoT: one runtime record per ground column (xz).
 /// Dual-written with legacy ColumnEmergeStates until cutover.
 struct ColumnRecord
 {
@@ -24,12 +51,27 @@ struct ColumnRecord
   bool sticky_remesh{false};
   bool light_complete_disk{false};
   bool raa_pending{false};
+  /// Column has resident voxel data (ground chunk present).
+  bool resident{false};
+  ColumnPublishedState published{};
+  ColumnPendingState pending{};
+  ColumnDebtState debt{};
 };
 
 inline uint64_t PackColumnKey(glm::ivec2 xz)
 {
   return (static_cast<uint64_t>(static_cast<uint32_t>(xz.x)) << 32) |
          static_cast<uint32_t>(xz.y);
+}
+
+inline bool ColumnHasPublishedRender(const ColumnRecord &rec)
+{
+  return rec.published.gpu_handle != 0 || rec.published.mesh_version > 0;
+}
+
+inline bool ColumnHasActivePending(const ColumnRecord &rec)
+{
+  return rec.pending.token != 0;
 }
 
 /// Thin store mirrored from SetColumnEmergeState / ticket updates.

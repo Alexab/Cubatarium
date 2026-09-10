@@ -2220,6 +2220,7 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
               settle_reason = "abort_drain";
             }
           }
+          world.SetLastEnterSettleReason(settle_reason);
           LOG(INFO) << "[EnterWarmup] settle_reason=" << settle_reason
                     << " elapsed_ms=" << elapsed_ms
                     << " combined_debt=" << combined_debt

@@ -1,6 +1,7 @@
 #ifndef CHUNKMESHCACHE_H
 #define CHUNKMESHCACHE_H
 #include "App/Settings/RenderSettings.h"
+#include "Render/Camera/CullInputKey.h"
 #include "Render/Mesh/AsyncMeshBuilder.h"
 #include "Render/Mesh/MeshCaptureWorker.h"
 #include "Render/Mesh/ChunkDirtySet.h"
@@ -18,6 +19,7 @@
 #include "World/Streaming/StreamIngressPolicy.h"
 #include <array>
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <climits>
 #include <deque>
@@ -232,6 +234,11 @@ public:
   {
     return MeshApplySupersededCount;
   }
+  /// DropNoActive: no Active revision tracking when apply arrived.
+  uint64_t GetMeshApplyDropNoActiveCount() const
+  {
+    return MeshApplyDropNoActiveCount;
+  }
   /// Era15 TD-049: times write-before-free avoided a GPU-only drawable hole.
   uint64_t GetMeshReplaceHoleAvoidedCount() const
   {
@@ -331,9 +338,11 @@ public:
   /// Era51b: drop Dirty + RemeshAfterApply for enter SoftDefer terminal (ring clear).
   void ClearDirtyAndRemeshAfterApply(glm::ivec3 chunk_coord);
   /// Prefetch immutable Capture into store (MarkRelit / commit). Main only.
-  void PrefetchMeshCapture(const UBlockWorld &world, glm::ivec3 chunk_coord);
+  void PrefetchMeshCapture(const UBlockWorld &world, glm::ivec3 chunk_coord,
+                           const UBlockRegistry *registry = nullptr);
   /// End-of-emerge pump: wait briefly for worker bands, then commit to store.
-  void PumpCaptureWorkerCommits();
+  void PumpCaptureWorkerCommits(const UBlockWorld *world = nullptr,
+                                const UBlockRegistry *registry = nullptr);
   void InvalidateMeshCapture(glm::ivec3 chunk_coord);
   UMeshCaptureStore &GetCaptureStore() { return CaptureStore; }
   const UMeshCaptureStore &GetCaptureStore() const { return CaptureStore; }
@@ -816,14 +825,25 @@ private:
     std::optional<ChunkMeshSnapshot> snapshot;
   };
   SnapshotAcquireResult TryAcquireSnapshotForSchedule(
-      const UBlockWorld &world, glm::ivec3 coord, uint64_t source_revision);
+      const UBlockWorld &world, UBlockRegistry &registry, glm::ivec3 coord,
+      uint64_t source_revision);
   int RetryPendingCaptures(UBlockWorld &world, UBlockRegistry &registry,
                            int max_per_frame, int &scheduled);
   int ComputeCaptureRetryBudget(int max_schedule_per_frame,
                                 int scheduled_ok) const;
   bool ShouldDeferNewCaptureEnqueue(int first_mesh_cap) const;
-  void DrainCaptureWorkerCommits();
-  void AgePendingCaptureEntries();
+  void DrainCaptureWorkerCommits(const UBlockWorld &world,
+                                 const UBlockRegistry *registry,
+                                 int max_per_frame = 8);
+  WorkToken MakeCaptureWorkToken(glm::ivec3 coord) const;
+  bool TryCommitCompletedCapture(const UBlockWorld &world,
+                                 const UBlockRegistry *registry,
+                                 UMeshCaptureWorker::CompletedCapture &&done);
+  bool CaptureAndCommitOnMain(const UBlockWorld &world,
+                              const UBlockRegistry *registry,
+                              glm::ivec3 coord, uint64_t source_revision);
+  void AgePendingCaptureEntries(const UBlockWorld *world = nullptr,
+                                const UBlockRegistry *registry = nullptr);
   bool IsWorkerCaptureSaturated() const;
   uint8_t ComputeNeighborShellFaceMask(glm::ivec3 coord,
                                        glm::ivec3 neighbor_coord) const;
@@ -856,16 +876,9 @@ private:
   bool CrossBatchesDirty{true};
   uint64_t MeshRevision{0};
   uint64_t CullRevision{0};
-  glm::ivec3 LastCullCameraChunk{INT32_MAX, INT32_MAX, INT32_MAX};
-  uint64_t LastCullMeshRevision{0};
+  CullInputKey LastFlatCullInputKey{};
   uint64_t LastVisibleMeshRevision{0};
   std::vector<glm::ivec3> LastVisibleChunks;
-  /// Quantized look (2° bins) for flat-rebuild skip; replaces raw plane eps.
-  int LastCullIYaw{INT32_MIN};
-  int LastCullIPitch{INT32_MIN};
-  bool HaveLastCullViewKey{false};
-  std::array<glm::vec4, 6> LastCullPlanes{};
-  bool HaveLastCullPlanes{false};
   int RenderDistanceChunks{4};
   float AltitudeAboveTerrain{0.0f};
   int AltitudeFogThresholdBlocks{32};
@@ -928,7 +941,7 @@ private:
   std::unordered_map<glm::ivec3, PendingCaptureEntry, IVec3Hash>
       PendingCaptureSet_;
   std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> PendingCaptureReady_;
-  uint64_t NextCaptureId_{1};
+  mutable std::atomic<uint64_t> NextCaptureId_{1};
   int LastMeshPendingCaptureN_{0};
   int LastMeshScheduleRetryAfterCaptureN_{0};
   int LastMeshWorkerInflightN_{0};
@@ -949,6 +962,7 @@ private:
   int LastMeshImmediateCount{0};
   uint64_t MeshApplyStaleCount{0};
   uint64_t MeshApplySupersededCount{0};
+  uint64_t MeshApplyDropNoActiveCount{0};
   uint64_t MeshReplaceHoleAvoided{0};
   /// Era46: RemeshAfterApply erase → MarkDirtyPriority (not PreferKick).
   uint64_t RaaCommitMarkDirtyN{0};

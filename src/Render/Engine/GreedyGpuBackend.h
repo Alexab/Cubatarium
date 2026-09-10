@@ -66,9 +66,20 @@ enum class TransparentOrderOnlyFailReason : int
   MeshRevAbsorb = 8,
 };
 
+enum class GreedyGpuPassId : uint8_t
+{
+  Unknown = 0,
+  Opaque = 1,
+  Cutout = 2,
+  Transparent = 3,
+};
+
 struct GreedyGpuPassCache
 {
   std::vector<GreedyGpuBatch> batches;
+  GreedyGpuPassId passId{GreedyGpuPassId::Unknown};
+  /// Bumped when RebuildIndirectCmdTable uploads cull/draw SSBO tables.
+  uint64_t batchTableRevision{0};
   uint64_t meshRevision{0};
   uint64_t cullRevision{0};
   uint64_t sortRevision{0};
@@ -79,8 +90,12 @@ struct GreedyGpuPassCache
   /// Full-pass 1:1 BatchDrawRecord table (instanceCount from GPU compact).
   GLuint IndirectCmdsBuffer{0};
   size_t IndirectCmdCapacity{0};
+  /// AABB min (AABB mode) or spheres (sphere mode).
   GLuint BatchSphereSsbo{0};
   size_t BatchSphereCapacity{0};
+  /// AABB max corners — pass-local (M04/A02); paired with BatchSphereSsbo.
+  GLuint CullAabbMaxSsbo{0};
+  size_t CullAabbMaxCapacity{0};
   GLuint CullVisSsbo{0};
   size_t CullVisCapacity{0};
   bool IndirectCullReady{false};
@@ -88,6 +103,10 @@ struct GreedyGpuPassCache
   bool GpuCompactActive{false};
   /// CPU drawInstanceCount synced from CullVisSsbo (lazy, fallback draws).
   bool CompactVisCpuSynced{false};
+  /// Per-pass GPU compact cull probe / fail-open history (M04/A02).
+  uint64_t LastGoodCullOn{0};
+  int ConsecutiveFailOpenN{0};
+  int FailOpenProbeTick{0};
 };
 
 /// Retained GPU buffers for greedy mesh draws (orphan + subData reuse).

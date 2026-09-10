@@ -1934,6 +1934,10 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         world.GetMeshDiscardedLateJobMismatchCount();
     world.PhysicsTelemetryData.MeshApplyStale =
         world.GetMeshService().GetMeshApplyStaleCount();
+    world.PhysicsTelemetryData.MeshApplySuperseded =
+        world.GetMeshService().GetMeshApplySupersededCount();
+    world.PhysicsTelemetryData.MeshApplyDropNoActive =
+        world.GetMeshService().GetMeshApplyDropNoActiveCount();
     world.PhysicsTelemetryData.MeshReplaceHoleAvoided =
         world.GetMeshService().GetMeshReplaceHoleAvoidedCount();
     world.PhysicsTelemetryData.RaaCommitMarkDirtyN =

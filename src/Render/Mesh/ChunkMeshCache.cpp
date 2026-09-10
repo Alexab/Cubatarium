@@ -24,6 +24,7 @@
 #include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Mesh/MeshCaptureToken.h"
 #include "Render/Mesh/MeshCaptureWorker.h"
+#include "World/Streaming/DependencyStampBuilder.h"
 #include "Render/GlIncludes.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/GridMath.h"
@@ -53,29 +54,6 @@ bool CacheNeighborVisuallyDrawable(void *ctx, glm::ivec3 neighbor_chunk)
   }
   // Era39: SoftDefer empty / Held / undrawn ⇒ not an occluder for shell faces.
   return cache->HasDrawableGreedyMesh(neighbor_chunk);
-}
-
-struct CullViewKeyAngles
-{
-  int iyaw{0};
-  int ipitch{0};
-};
-
-CullViewKeyAngles QuantizeCullViewKey(const Frustum &frustum)
-{
-  // Near plane normal ≈ view forward (Frustum::FromViewProjection).
-  glm::vec3 look(frustum.planes[4]);
-  const float len = glm::length(look);
-  if (len > 1e-6f)
-  {
-    look /= len;
-  }
-  constexpr float kRad2Deg = 57.29577951308232f;
-  const float yaw_deg = std::atan2(look.x, look.z) * kRad2Deg;
-  const float pitch_deg =
-      std::asin(std::clamp(look.y, -1.0f, 1.0f)) * kRad2Deg;
-  return {static_cast<int>(std::floor(yaw_deg / 2.0f)),
-          static_cast<int>(std::floor(pitch_deg / 2.0f))};
 }
 
 bool IsFullyEnclosed(const UBlockWorld &world, glm::ivec3 pos)
@@ -348,11 +326,7 @@ void UChunkMeshCache::InvalidateVisibleList()
   GreedyBatchesDirty = true;
   CrossBatchesDirty = true;
   CrossBatchesDirty = true;
-  LastCullCameraChunk = glm::ivec3(INT32_MAX, INT32_MAX, INT32_MAX);
-  LastCullMeshRevision = 0;
-  HaveLastCullViewKey = false;
-  LastCullIYaw = INT32_MIN;
-  LastCullIPitch = INT32_MIN;
+  LastFlatCullInputKey = {};
 }
 void UChunkMeshCache::SetRenderSettings(const RenderSettings &settings)
 {
@@ -1604,22 +1578,24 @@ void UChunkMeshCache::BumpChunkMeshRevision(glm::ivec3 chunk_coord)
   CaptureStore.Invalidate(chunk_coord);
 }
 
-void UChunkMeshCache::PumpCaptureWorkerCommits()
+void UChunkMeshCache::PumpCaptureWorkerCommits(const UBlockWorld *world,
+                                               const UBlockRegistry *registry)
 {
   if (!UMeshCaptureWorker::kWorkerCaptureEnabled)
   {
     return;
   }
   EnsureCaptureWorker();
-  if (CaptureWorker)
+  if (CaptureWorker && world != nullptr)
   {
     CaptureWorker->PumpUntilIdle(std::chrono::milliseconds(2));
-    DrainCaptureWorkerCommits();
+    DrainCaptureWorkerCommits(*world, registry);
   }
 }
 
 void UChunkMeshCache::PrefetchMeshCapture(const UBlockWorld &world,
-                                          glm::ivec3 chunk_coord)
+                                          glm::ivec3 chunk_coord,
+                                          const UBlockRegistry *registry)
 {
   CaptureStore.SetNeighborVisualDrawableFn(CacheNeighborVisuallyDrawable, this);
   const uint64_t rev = MeshRevisions.Current(chunk_coord);
@@ -1634,19 +1610,30 @@ void UChunkMeshCache::PrefetchMeshCapture(const UBlockWorld &world,
     {
       return;
     }
-    const MeshCaptureToken token{CaptureStore.WorldEpoch(), rev,
-                                 NextCaptureId_++};
+    WorkToken work_token = MakeCaptureWorkToken(chunk_coord);
+    const MeshCaptureToken token{work_token.world_epoch, rev,
+                                 work_token.generation};
+    DependencyStamp deps;
+    if (registry != nullptr)
+    {
+      deps = BuildMeshCaptureDependencyStamp(world, chunk_coord, rev, *registry);
+    }
+    else
+    {
+      deps.content_revision = rev;
+    }
     auto band = world.ReadChunkBandForCapture(
         chunk_coord, token, CaptureStore.GetNeighborDrawableFn(),
         CaptureStore.GetNeighborDrawableCtx());
     if (band)
     {
-      CaptureWorker->Enqueue(std::move(*band), chunk_coord, rev);
+      work_token.chunk_incarnation = ChunkIncarnationAt(world, chunk_coord);
+      CaptureWorker->Enqueue(std::move(*band), work_token, deps);
       PendingCaptureSet_[chunk_coord] = PendingCaptureEntry{rev, 0};
     }
     return;
   }
-  CaptureStore.CaptureAndStore(world, chunk_coord, rev);
+  (void)CaptureAndCommitOnMain(world, registry, chunk_coord, rev);
 }
 
 void UChunkMeshCache::InvalidateMeshCapture(glm::ivec3 chunk_coord)
@@ -2733,22 +2720,17 @@ bool UChunkMeshCache::TrySkipFlatRebuildForVisibleChunks(
   {
     return false;
   }
-  const glm::ivec3 cam_chunk = UChunkManager::WorldToChunk(
-      glm::ivec3(WorldCoordToBlockIndex(cameraPos->x),
-                 WorldCoordToBlockIndex(cameraPos->y),
-                 WorldCoordToBlockIndex(cameraPos->z)));
-  // Same camera chunk + mesh + quantized look (2°) → reuse LastVisibleChunks
-  // without rescanning GreedyCache (TD-CS-018). Raw plane eps was too tight.
-  const CullViewKeyAngles look = QuantizeCullViewKey(*frustum);
-  const bool view_same = HaveLastCullViewKey && look.iyaw == LastCullIYaw &&
-                         look.ipitch == LastCullIPitch;
-  if (cam_chunk == LastCullCameraChunk &&
-      MeshRevision == LastVisibleMeshRevision && view_same &&
-      !LastVisibleChunks.empty() && HasAnyValidatedDrawRefs())
+  const bool horizontal_cull = UseHorizontalCullDistance();
+  const CullInputKey current = MakeCullInputKey(
+      CullPassId::FlatVisible, MeshRevision, CullRevision, *cameraPos,
+      HashFrustumPlanes(frustum->planes), maxCullDistance, horizontal_cull,
+      !LastVisibleChunks.empty() && HasAnyValidatedDrawRefs());
+  if (CullInputKeyAllowsCacheReuse(LastFlatCullInputKey, current) &&
+      MeshRevision == LastVisibleMeshRevision && !LastVisibleChunks.empty() &&
+      HasAnyValidatedDrawRefs())
   {
     return true;
   }
-  const bool horizontal_cull = UseHorizontalCullDistance();
   std::vector<glm::ivec3> visible;
   visible.reserve(GreedyCache.size());
   for (const auto &entry : GreedyCache)
@@ -2781,22 +2763,14 @@ bool UChunkMeshCache::TrySkipFlatRebuildForVisibleChunks(
   if (visible == LastVisibleChunks && MeshRevision == LastVisibleMeshRevision &&
       (have_draw_refs || !visible.empty()))
   {
-    LastCullCameraChunk = cam_chunk;
-    LastCullPlanes = frustum->planes;
-    HaveLastCullPlanes = true;
-    LastCullIYaw = look.iyaw;
-    LastCullIPitch = look.ipitch;
-    HaveLastCullViewKey = true;
+    LastFlatCullInputKey = current;
+    LastFlatCullInputKey.resultValid = true;
     return true;
   }
   LastVisibleChunks = std::move(visible);
   LastVisibleMeshRevision = MeshRevision;
-  LastCullCameraChunk = cam_chunk;
-  LastCullPlanes = frustum->planes;
-  HaveLastCullPlanes = true;
-  LastCullIYaw = look.iyaw;
-  LastCullIPitch = look.ipitch;
-  HaveLastCullViewKey = true;
+  LastFlatCullInputKey = current;
+  LastFlatCullInputKey.resultValid = true;
   return false;
 }
 void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
@@ -3055,8 +3029,6 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
   CUBA_ZONE("UpdateVisibleInstances");
   (void)viewProj;
   const float maxCullDistance = MaxCullDistance();
-  const glm::ivec3 camera_chunk =
-      UChunkManager::WorldToChunk(WorldPosToBlock(cameraPos));
   const bool greedy_refs_empty =
       GreedyOpaqueCutoutRefs.empty() && GreedyTransparentRefs.empty() &&
       GpuPackedOpaqueRefs.empty() && GpuPackedTransparentRefs.empty();
@@ -3065,13 +3037,12 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
   const bool needs_cross_rebuild =
       CrossBatchesDirty ||
       (CrossBatches.empty() && TotalCrossCenterCount() > 0);
-  const CullViewKeyAngles look = QuantizeCullViewKey(frustum);
-  const bool view_same = HaveLastCullViewKey && look.iyaw == LastCullIYaw &&
-                         look.ipitch == LastCullIPitch;
-  // Skip only when camera chunk + mesh + quantized look are unchanged.
+  const CullInputKey current = MakeCullInputKey(
+      CullPassId::FlatVisible, MeshRevision, CullRevision, cameraPos,
+      HashViewProjection(viewProj), maxCullDistance,
+      UseHorizontalCullDistance(), true);
   if (!InstancesDirty && !needs_greedy_rebuild && !needs_cross_rebuild &&
-      MeshRevision == LastCullMeshRevision &&
-      camera_chunk == LastCullCameraChunk && view_same)
+      CullInputKeyAllowsCacheReuse(LastFlatCullInputKey, current))
   {
     return;
   }
@@ -3124,13 +3095,8 @@ void UChunkMeshCache::UpdateVisibleInstances(const Frustum &frustum,
       RebuildFlatInstanceList(nullptr, nullptr, 0.0f);
     }
   }
-  LastCullCameraChunk = camera_chunk;
-  LastCullMeshRevision = MeshRevision;
-  LastCullPlanes = frustum.planes;
-  HaveLastCullPlanes = true;
-  LastCullIYaw = look.iyaw;
-  LastCullIPitch = look.ipitch;
-  HaveLastCullViewKey = true;
+  LastFlatCullInputKey = current;
+  LastFlatCullInputKey.resultValid = true;
 }
 void UChunkMeshCache::EnsureAsyncBuilder()
 {
@@ -3152,22 +3118,102 @@ void UChunkMeshCache::EnsureCaptureWorker()
   }
 }
 
-void UChunkMeshCache::DrainCaptureWorkerCommits()
+WorkToken UChunkMeshCache::MakeCaptureWorkToken(glm::ivec3 coord) const
+{
+  WorkToken token;
+  token.world_epoch = CaptureStore.WorldEpoch();
+  token.coord = coord;
+  token.domain = WorkDomain::MeshCapture;
+  token.generation = NextCaptureId_.fetch_add(1, std::memory_order_relaxed);
+  return token;
+}
+
+bool UChunkMeshCache::TryCommitCompletedCapture(
+    const UBlockWorld &world, const UBlockRegistry *registry,
+    UMeshCaptureWorker::CompletedCapture &&done)
+{
+  if (done.world_epoch != CaptureStore.WorldEpoch())
+  {
+    return false;
+  }
+  if (registry != nullptr)
+  {
+    const DependencyStamp current = BuildMeshCaptureDependencyStamp(
+        world, done.token.coord, done.source_revision, *registry);
+    if (!CaptureDependencyStillValid(done.deps, current))
+    {
+      return false;
+    }
+  }
+  if (!CaptureStore.TryCommit(done.token.coord, done.source_revision,
+                              done.world_epoch, std::move(done.snapshot),
+                              &done.deps))
+  {
+    return false;
+  }
+  PendingCaptureSet_.erase(done.token.coord);
+  PendingCaptureReady_[done.token.coord] = done.source_revision;
+  ++LastMeshScheduleRetryAfterCaptureN_;
+  return true;
+}
+
+bool UChunkMeshCache::CaptureAndCommitOnMain(const UBlockWorld &world,
+                                             const UBlockRegistry *registry,
+                                             glm::ivec3 coord,
+                                             uint64_t source_revision)
+{
+  WorkToken work_token = MakeCaptureWorkToken(coord);
+  work_token.chunk_incarnation = ChunkIncarnationAt(world, coord);
+  const MeshCaptureToken token{work_token.world_epoch, source_revision,
+                               work_token.generation};
+  auto band = world.ReadChunkBandForCapture(
+      coord, token, CaptureStore.GetNeighborDrawableFn(),
+      CaptureStore.GetNeighborDrawableCtx());
+  if (!band)
+  {
+    return false;
+  }
+  DependencyStamp deps;
+  deps.content_revision = source_revision;
+  if (registry != nullptr)
+  {
+    deps = BuildMeshCaptureDependencyStamp(world, coord, source_revision,
+                                           *registry);
+    const DependencyStamp current = BuildMeshCaptureDependencyStamp(
+        world, coord, source_revision, *registry);
+    if (!CaptureDependencyStillValid(deps, current))
+    {
+      if (!HasDrawableGreedyMesh(coord) && !Dirty.Contains(coord))
+      {
+        Dirty.MarkDirtyPriority(coord);
+      }
+      return false;
+    }
+  }
+  return CaptureStore.TryCommit(coord, source_revision, work_token.world_epoch,
+                              std::move(*band), &deps);
+}
+
+void UChunkMeshCache::DrainCaptureWorkerCommits(const UBlockWorld &world,
+                                                const UBlockRegistry *registry,
+                                                int max_per_frame)
 {
   if (!CaptureWorker || !UMeshCaptureWorker::kWorkerCaptureEnabled)
   {
     return;
   }
-  for (auto done :
-       CaptureWorker->DrainCompleted(std::numeric_limits<int>::max()))
+  if (max_per_frame <= 0)
   {
-    CaptureStore.Commit(done.coord, done.source_revision,
-                        std::move(done.snapshot));
-    PendingCaptureSet_.erase(done.coord);
-    // R1.5-2: always wake retry pass after worker commit; RetryPendingCaptures
-    // uses capture revision (may differ from Current after relight bumps).
-    PendingCaptureReady_[done.coord] = done.source_revision;
-    ++LastMeshScheduleRetryAfterCaptureN_;
+    return;
+  }
+  for (auto done : CaptureWorker->DrainCompleted(max_per_frame))
+  {
+    const glm::ivec3 coord = done.token.coord;
+    if (!TryCommitCompletedCapture(world, registry, std::move(done)))
+    {
+      PendingCaptureSet_.erase(coord);
+      PendingCaptureReady_.erase(coord);
+    }
   }
   LastMeshWorkerInflightN_ = CaptureWorker->GetInFlightCount();
   LastMeshPendingCaptureReadyN_ =
@@ -3190,7 +3236,8 @@ int UChunkMeshCache::GetPendingCaptureCount() const
   return static_cast<int>(PendingCaptureSet_.size());
 }
 
-void UChunkMeshCache::AgePendingCaptureEntries()
+void UChunkMeshCache::AgePendingCaptureEntries(const UBlockWorld *world,
+                                             const UBlockRegistry *registry)
 {
   LastMeshPendingCaptureStaleN_ = 0;
   LastMeshPendingCaptureMaxAge_ = 0;
@@ -3210,7 +3257,10 @@ void UChunkMeshCache::AgePendingCaptureEntries()
     {
       if (CaptureWorker)
       {
-        DrainCaptureWorkerCommits();
+        if (world != nullptr)
+        {
+          DrainCaptureWorkerCommits(*world, registry);
+        }
         CaptureWorker->CancelCoord(it->first);
       }
       PendingCaptureReady_.erase(it->first);
@@ -3255,6 +3305,7 @@ uint8_t UChunkMeshCache::ComputeNeighborShellFaceMask(
 
 UChunkMeshCache::SnapshotAcquireResult
 UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
+                                               UBlockRegistry &registry,
                                                glm::ivec3 coord,
                                                uint64_t source_revision)
 {
@@ -3298,7 +3349,7 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
     }
     if (PendingCaptureSet_.count(coord) > 0)
     {
-      DrainCaptureWorkerCommits();
+      DrainCaptureWorkerCommits(world, &registry);
       if (auto drained_hit = CaptureStore.TryGet(coord, source_revision))
       {
         ++LastMeshCaptureStoreHitN;
@@ -3337,14 +3388,18 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
       }
       if (evict_horiz >= 0 && CaptureWorker)
       {
-        DrainCaptureWorkerCommits();
+        DrainCaptureWorkerCommits(world, &registry);
         CaptureWorker->CancelCoord(evict);
         PendingCaptureSet_.erase(evict);
         PendingCaptureReady_.erase(evict);
       }
     }
-    const MeshCaptureToken token{CaptureStore.WorldEpoch(), source_revision,
-                                 NextCaptureId_++};
+    WorkToken work_token = MakeCaptureWorkToken(coord);
+    work_token.chunk_incarnation = ChunkIncarnationAt(world, coord);
+    const MeshCaptureToken token{work_token.world_epoch, source_revision,
+                                 work_token.generation};
+    DependencyStamp deps =
+        BuildMeshCaptureDependencyStamp(world, coord, source_revision, registry);
     auto band = world.ReadChunkBandForCapture(
         coord, token, CaptureStore.GetNeighborDrawableFn(),
         CaptureStore.GetNeighborDrawableCtx());
@@ -3353,41 +3408,27 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
       out.kind = SnapshotAcquireKind::Deferred;
       return out;
     }
-    CaptureWorker->Enqueue(std::move(*band), coord, source_revision);
+    CaptureWorker->Enqueue(std::move(*band), work_token, deps);
     PendingCaptureSet_[coord] = PendingCaptureEntry{source_revision, 0};
     out.kind = SnapshotAcquireKind::PendingCapture;
     return out;
-  }
-  if (IsWorkerCaptureSaturated() && CaptureRefreshBudgetLeft > 0 &&
-      MeshSnapshotBudgetMs <= 1.0)
-  {
-    out.snapshot = CaptureStore.TakeOrRefresh(world, coord, source_revision,
-                                              CaptureRefreshBudgetLeft);
-    if (out.snapshot)
-    {
-      ++LastMeshDegradedCaptureN_;
-      out.kind = SnapshotAcquireKind::Ready;
-      return out;
-    }
   }
   if (CaptureRefreshBudgetLeft <= 0)
   {
     out.kind = SnapshotAcquireKind::Deferred;
     return out;
   }
-  if (!IsWorkerCaptureSaturated())
+  --CaptureRefreshBudgetLeft;
+  if (CaptureAndCommitOnMain(world, &registry, coord, source_revision))
   {
-    out.kind = SnapshotAcquireKind::Deferred;
-    return out;
+    if (auto hit = CaptureStore.TryGet(coord, source_revision))
+    {
+      out.kind = SnapshotAcquireKind::Ready;
+      out.snapshot = std::move(*hit);
+      return out;
+    }
   }
-  out.snapshot = CaptureStore.TakeOrRefresh(world, coord, source_revision,
-                                            CaptureRefreshBudgetLeft);
-  if (!out.snapshot)
-  {
-    out.kind = SnapshotAcquireKind::Deferred;
-    return out;
-  }
-  out.kind = SnapshotAcquireKind::Ready;
+  out.kind = SnapshotAcquireKind::Deferred;
   return out;
 }
 
@@ -3421,7 +3462,7 @@ int UChunkMeshCache::RetryPendingCaptures(UBlockWorld &world,
   {
     return 0;
   }
-  DrainCaptureWorkerCommits();
+  DrainCaptureWorkerCommits(world, &registry);
   if (PendingCaptureReady_.empty() || max_per_frame <= 0)
   {
     return 0;
@@ -3888,6 +3929,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     if (decision == MeshApplyRevDecision::DropNoActive)
     {
       fail_ticket(pending);
+      ++MeshApplyDropNoActiveCount;
       if (!HasDrawableGreedyMesh(pending.coord) &&
           !Dirty.Contains(pending.coord))
       {
@@ -3907,7 +3949,15 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     {
       fail_ticket(pending);
       ++MeshApplyStaleCount;
-      Dirty.MarkDirty(pending.coord);
+      if (!HasDrawableGreedyMesh(pending.coord) &&
+          !Dirty.Contains(pending.coord))
+      {
+        Dirty.MarkDirtyPriority(pending.coord);
+      }
+      else
+      {
+        Dirty.MarkDirty(pending.coord);
+      }
       out_drop = true;
       return false;
     }
@@ -4256,6 +4306,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   {
     // CancelOutside / Invalidate cleared Active before Drain. Silent drop of a
     // hole left miss sticky while Dirty plateaued on remesh (manual 213543).
+    ++MeshApplyDropNoActiveCount;
     if (!HasDrawableGreedyMesh(result.coord) &&
         !Dirty.Contains(result.coord))
     {
@@ -4281,9 +4332,16 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     ActiveMeshSourceRevision.erase(revisionIt);
     GpuExtractInFlight.erase(result.coord);
     // Tracked rev is obsolete vs Current — remesh WITHOUT bumping revision.
-    // Remesh class only (TD-ARCH-029); MarkDirtyPriority flooded FirstMesh.
+    // Remesh class only (TD-ARCH-029); MarkDirtyPriority for holes only.
     ++MeshApplyStaleCount;
-    Dirty.MarkDirty(result.coord);
+    if (!HasDrawableGreedyMesh(result.coord) && !Dirty.Contains(result.coord))
+    {
+      Dirty.MarkDirtyPriority(result.coord);
+    }
+    else
+    {
+      Dirty.MarkDirty(result.coord);
+    }
     InstancesDirty = true;
     GreedyBatchesDirty = true;
     CrossBatchesDirty = true;
@@ -5164,7 +5222,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     EnsureCaptureWorker();
     if (CaptureWorker && UMeshCaptureWorker::kWorkerCaptureEnabled)
     {
-      DrainCaptureWorkerCommits();
+      DrainCaptureWorkerCommits(world, &registry);
     }
     // Compact far remesh when backlog starves focus missing (Dirty~800 / async~42).
     // After stale-apply fix: also compact when remesh plateau (dirty≫0, no holes).
@@ -5562,7 +5620,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       const uint64_t source_revision = MeshRevisions.Current(*it);
       const auto snap_t0 = std::chrono::high_resolution_clock::now();
       const SnapshotAcquireResult acquire =
-          TryAcquireSnapshotForSchedule(world, *it, source_revision);
+          TryAcquireSnapshotForSchedule(world, registry, *it, source_revision);
       if (acquire.kind == SnapshotAcquireKind::PendingCapture)
       {
         ++LastMeshPendingCaptureN_;
@@ -5572,11 +5630,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         ++LastMeshDirtyScheduleSkipN;
         ++LastMeshDirtyScheduleSkipSnapshotN;
-        if (acquire.kind == SnapshotAcquireKind::Deferred &&
-            CaptureRefreshBudgetLeft <= 0)
-        {
-          return Dirty.end();
-        }
+        // F3: budget=0 skips live refresh only — keep scanning the dirty ring.
         return std::next(it);
       }
       ChunkMeshSnapshot snapshot = std::move(*acquire.snapshot);
@@ -6093,7 +6147,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       const bool count_as_remesh = HasDrawableGreedyMesh(*it);
       const auto snap_t0 = std::chrono::high_resolution_clock::now();
       const SnapshotAcquireResult acquire =
-          TryAcquireSnapshotForSchedule(world, *it, source_revision);
+          TryAcquireSnapshotForSchedule(world, registry, *it, source_revision);
       if (acquire.kind == SnapshotAcquireKind::PendingCapture)
       {
         ++LastMeshPendingCaptureN_;
@@ -6104,11 +6158,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         ++LastMeshDirtyScheduleSkipN;
         ++LastMeshDirtyScheduleSkipSnapshotN;
-        if (acquire.kind == SnapshotAcquireKind::Deferred &&
-            CaptureRefreshBudgetLeft <= 0)
-        {
-          break;
-        }
+        // F3: budget=0 skips live refresh only — keep scanning the dirty ring.
         ++it;
         continue;
       }
@@ -6226,7 +6276,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     if (CaptureWorker && UMeshCaptureWorker::kWorkerCaptureEnabled)
     {
       CaptureWorker->PumpUntilIdle(std::chrono::milliseconds(2));
-      DrainCaptureWorkerCommits();
+      DrainCaptureWorkerCommits(world, &registry);
       int end_retry_scheduled = 0;
       const int end_retry_budget =
           ComputeCaptureRetryBudget(max_schedule_per_frame, scheduled);
@@ -6234,7 +6284,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       stats.Scheduled += end_retry_scheduled;
       scheduled += end_retry_scheduled;
       LastMeshDirtyScheduleOkN = scheduled;
-      AgePendingCaptureEntries();
+      AgePendingCaptureEntries(&world, &registry);
     }
     return stats;
   }

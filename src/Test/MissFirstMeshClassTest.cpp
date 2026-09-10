@@ -3606,7 +3606,12 @@ int main()
     Expect(ApplyPhaseEmergeClamp(12.0, 0.0, false) == 12.0,
            "C: no phase cap leaves emerge");
     using cutum::BatchCullAabbDegenerate;
-    using cutum::GpuPassVisibleSetNeedsRebuild;
+    using cutum::CullInputKeyAllowsCacheReuse;
+    using cutum::GpuPassHasMissingVisibleRefs;
+    using cutum::GpuPassVisibleDelta;
+    using cutum::GpuPassVisibleSetNeedsFullRebuild;
+    using cutum::GpuPassVisibleSetNeedsSync;
+    using cutum::MakeCullInputKey;
     using cutum::ShouldFailOpenGpuCompactCull;
     const float zmin[3]{0.f, 0.f, 0.f};
     const float zmax[3]{0.f, 0.f, 0.f};
@@ -3615,12 +3620,34 @@ int main()
            "cull: zero AABB is degenerate");
     Expect(!BatchCullAabbDegenerate(zmin, okmax),
            "cull: chunk AABB is not degenerate");
-    Expect(GpuPassVisibleSetNeedsRebuild(0, 551, 0),
-           "cull: empty GPU cache needs rebuild");
-    Expect(GpuPassVisibleSetNeedsRebuild(0, 551, 551),
-           "cull: disjoint visible set needs rebuild");
-    Expect(!GpuPassVisibleSetNeedsRebuild(500, 551, 551),
-           "cull: high overlap keeps GPU pass");
+    const GpuPassVisibleDelta empty_gpu{551, 0, 551};
+    const GpuPassVisibleDelta partial_overlap{551, 551, 51};
+    const GpuPassVisibleDelta ab_to_bc{2, 2, 1};
+    const GpuPassVisibleDelta bc_stable{2, 2, 0};
+    Expect(GpuPassVisibleSetNeedsFullRebuild(empty_gpu),
+           "cull: empty GPU cache needs full rebuild");
+    Expect(!GpuPassVisibleSetNeedsFullRebuild(partial_overlap),
+           "cull: partial overlap is not full rebuild");
+    Expect(GpuPassHasMissingVisibleRefs(ab_to_bc),
+           "cull: {A,B}->{B,C} has missing ref C");
+    Expect(GpuPassVisibleSetNeedsSync(ab_to_bc),
+           "cull: {A,B}->{B,C} must sync visible set");
+    Expect(!GpuPassVisibleSetNeedsSync(bc_stable),
+           "cull: identical visible/resident needs no sync");
+    const glm::mat4 identity_vp(1.0f);
+    const cutum::CullInputKey cull_key =
+        MakeCullInputKey(cutum::CullPassId::OpaqueGpuCompact, 1, 2,
+                         glm::vec3(0.0f), identity_vp, 128.0f, false, true);
+    cutum::CullInputKey cull_key_moved = cull_key;
+    cull_key_moved.cameraPos.x = 1.0f;
+    cutum::CullInputKey cull_key_fov = cull_key;
+    cull_key_fov.viewProjHash ^= 1ull;
+    Expect(CullInputKeyAllowsCacheReuse(cull_key, cull_key),
+           "cull: identical CullInputKey reuses");
+    Expect(!CullInputKeyAllowsCacheReuse(cull_key, cull_key_moved),
+           "cull: sub-chunk camera move invalidates key");
+    Expect(!CullInputKeyAllowsCacheReuse(cull_key, cull_key_fov),
+           "cull: view-projection change invalidates key");
     Expect(ShouldFailOpenGpuCompactCull(0, 551, true),
            "cull: degenerate AABB fail-opens");
     Expect(!ShouldFailOpenGpuCompactCull(0, 551, false),
@@ -3651,34 +3678,37 @@ int main()
            "Phase5.7R4: nt>=8 on rim is not vb_edge");
     Expect(OpaqueCullVbEdgeBlocks(5, 0, 0, 0, 0, 0, false),
            "Phase5.7R4: first sample treated as transition");
-    Expect(ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
+    Expect(ShouldSkipOpaqueCullLightCruise(true, cull_key, cull_key, true, true,
                                            0.4f, false, false),
            "5.7.4: near-stand skip OK");
-    Expect(ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
-                                           1.4f, false, false, 0.1f, 0.5f),
-           "5.7R2: light-cruise ≤1.5 + quiet yaw skip OK");
-    Expect(!ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
-                                            1.4f, false, false, 1.0f, 0.5f),
-           "5.7R2: light-cruise no skip when yaw noisy");
-    Expect(!ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
-                                            0.4f, true, false),
+    Expect(ShouldSkipOpaqueCullLightCruise(true, cull_key, cull_key, true, true,
+                                           1.4f, false, false),
+           "5.7R2: light-cruise ≤1.5 skip OK");
+    Expect(!ShouldSkipOpaqueCullLightCruise(true, cull_key, cull_key_fov, true,
+                                            true, 1.4f, false, false),
+           "audit M06: light-cruise no skip when view changes");
+    Expect(!ShouldSkipOpaqueCullLightCruise(true, cull_key, cull_key, true,
+                                            true, 0.4f, true, false),
            "5.7.4: no skip under underfeet FocusMissing (nh default 0)");
-    Expect(ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
-                                           0.4f, true, false, 0.0f, 0.5f, 3),
+    Expect(ShouldSkipOpaqueCullLightCruise(true, cull_key, cull_key, true, true,
+                                           0.4f, true, false, 3),
            "5.7R3: light-cruise skip OK under rim miss nh=3");
-    Expect(!ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
-                                            2.0f, false, false),
+    Expect(!ShouldSkipOpaqueCullLightCruise(true, cull_key, cull_key, true,
+                                            true, 2.0f, false, false),
            "5.7.4: no skip above light-cruise speed");
-    Expect(ShouldSkipOpaqueCullStable(true, false, false),
+    Expect(ShouldSkipOpaqueCullStable(true, cull_key, cull_key, true, true,
+                                      false, false),
            "5.7.4: stable skip OK");
-    Expect(!ShouldSkipOpaqueCullStable(true, true, false),
+    Expect(!ShouldSkipOpaqueCullStable(true, cull_key, cull_key, true, true,
+                                       true, false),
            "5.7.4: stable no skip under underfeet miss");
-    Expect(ShouldSkipOpaqueCullStable(true, true, false, 3),
+    Expect(ShouldSkipOpaqueCullStable(true, cull_key, cull_key, true, true,
+                                      true, false, 3),
            "5.7R3: stable skip OK under rim miss nh=3");
     Expect(!ShouldSkipOpaqueCullHalfRate(true, true, true, true, false, false, 0),
            "5.7R: legacy half-rate API stays false");
-    Expect(!ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
-                                            5.8f, false, false),
+    Expect(!ShouldSkipOpaqueCullLightCruise(true, cull_key, cull_key, true,
+                                            true, 5.8f, false, false),
            "5.7R7: cruise spd~5.8 never light-cruise skips");
     using cutum::ShouldProbeFailOpenAabb;
     Expect(ShouldProbeFailOpenAabb(6, true, 0, 6, false),
@@ -3697,39 +3727,38 @@ int main()
            "5.7R7.2: healthy skips AABB between period-10 ticks");
     Expect(ShouldProbeFailOpenAabb(9, true, 0, 10, true),
            "5.7R7.2: force_probe always probes at period 10");
-    Expect(!ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
-                                            5.8f, false, false),
+    Expect(!ShouldSkipOpaqueCullLightCruise(true, cull_key, cull_key, true,
+                                            true, 5.8f, false, false),
            "5.7R7.2: cruise spd~5.8 never light-cruise skips (lock)");
     Expect(!ShouldSkipOpaqueCullHalfRate(true, true, true, true, false, false, 0),
            "5.7R7.2: half-rate stays false (lock)");
-    Expect(ShouldReuseOpaqueCullCompact(true, true, true, true, false, false,
-                                        0.0f, 0.0f, 0.5f, 0.5f, 100, 100, 0),
+    Expect(ShouldReuseOpaqueCullCompact(true, cull_key, cull_key, true, true,
+                                        false, false, 100, 100, 0),
            "5.7R2: compact reuse even frame");
-    Expect(!ShouldReuseOpaqueCullCompact(true, true, true, true, false, false,
-                                         0.0f, 0.0f, 0.5f, 0.5f, 100, 100, 1),
+    Expect(!ShouldReuseOpaqueCullCompact(true, cull_key, cull_key, true, true,
+                                         false, false, 100, 100, 1),
            "5.7R2: compact reuse odd frame runs cull");
-    Expect(!ShouldReuseOpaqueCullCompact(true, true, true, true, true, false,
-                                         0.0f, 0.0f, 0.5f, 0.5f, 100, 100, 0),
+    Expect(!ShouldReuseOpaqueCullCompact(true, cull_key, cull_key, true, true,
+                                         true, false, 100, 100, 0),
            "5.7R2: compact reuse never under underfeet miss");
-    Expect(ShouldReuseOpaqueCullCompact(true, true, true, true, true, false,
-                                        0.0f, 0.0f, 0.5f, 0.5f, 100, 100, 0, 3),
+    Expect(ShouldReuseOpaqueCullCompact(true, cull_key, cull_key, true, true,
+                                        true, false, 100, 100, 0, 3),
            "5.7R3: compact reuse OK under rim miss nh=3");
-    Expect(!ShouldReuseOpaqueCullCompact(true, true, true, true, true, false,
-                                         0.0f, 0.0f, 0.5f, 0.5f, 100, 100, 0, 1),
+    Expect(!ShouldReuseOpaqueCullCompact(true, cull_key, cull_key, true, true,
+                                         true, false, 100, 100, 0, 1),
            "5.7R3: compact reuse blocked underfeet nh=1");
-    Expect(!ShouldReuseOpaqueCullCompact(true, true, true, true, false, false,
-                                         1.0f, 0.0f, 0.5f, 0.5f, 100, 100, 0),
-           "5.7R2: compact reuse no yaw jump");
-    Expect(ShouldReuseOpaqueCullCompact(true, true, true, true, false, false,
-                                        0.0f, 0.0f, 0.5f, 0.5f, 100, 99, 0),
+    Expect(!ShouldReuseOpaqueCullCompact(true, cull_key, cull_key_fov, true,
+                                         true, false, false, 100, 100, 0),
+           "audit M06: compact reuse invalidates on view change");
+    Expect(ShouldReuseOpaqueCullCompact(true, cull_key, cull_key, true, true,
+                                        false, false, 100, 99, 0),
            "5.7R3: compact reuse allows ±2% cmd_on hysteresis");
-    Expect(!ShouldReuseOpaqueCullCompact(true, true, true, true, false, false,
-                                         0.0f, 0.0f, 0.5f, 0.5f, 100, 97, 0),
+    Expect(!ShouldReuseOpaqueCullCompact(true, cull_key, cull_key, true, true,
+                                         false, false, 100, 97, 0),
            "5.7R3: compact reuse blocks >2% cmd_on change");
-    Expect(!ShouldReuseOpaqueCullCompact(true, true, true, true, false, false,
-                                         0.0f, 0.0f, 0.5f, 0.5f, 100, 100, 0,
-                                         0, false),
-           "audit: compact reuse invalidates on camera translation");
+    Expect(!ShouldReuseOpaqueCullCompact(true, cull_key, cull_key_moved, true,
+                                         true, false, false, 100, 100, 0),
+           "audit M06: compact reuse invalidates on camera translation");
     using cutum::OpaqueCullCmdOnStable;
     Expect(OpaqueCullCmdOnStable(100, 100), "5.7R3: cmd equal stable");
     Expect(OpaqueCullCmdOnStable(102, 100), "5.7R3: cmd +2% stable");

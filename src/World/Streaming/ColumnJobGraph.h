@@ -43,6 +43,7 @@ inline const char *ColumnJobStageName(ColumnJobStage s)
 }
 
 /// Derive next stage from column truth (scheduler-driven, not event zoo).
+/// Pending pipeline stages win over published RenderReady — both may coexist.
 inline ColumnJobStage DeriveColumnJobStage(bool has_chunk, bool pending_light,
                                            bool lit_ready, bool meshing,
                                            bool gpu_pending, bool render_ready)
@@ -51,21 +52,21 @@ inline ColumnJobStage DeriveColumnJobStage(bool has_chunk, bool pending_light,
   {
     return ColumnJobStage::Absent;
   }
-  if (render_ready)
+  if (pending_light)
   {
-    return ColumnJobStage::RenderReady;
-  }
-  if (gpu_pending)
-  {
-    return ColumnJobStage::GpuPending;
+    return ColumnJobStage::PendingLight;
   }
   if (meshing)
   {
     return ColumnJobStage::Meshing;
   }
-  if (pending_light)
+  if (gpu_pending)
   {
-    return ColumnJobStage::PendingLight;
+    return ColumnJobStage::GpuPending;
+  }
+  if (render_ready)
+  {
+    return ColumnJobStage::RenderReady;
   }
   if (lit_ready)
   {

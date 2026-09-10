@@ -102,6 +102,10 @@ public:
   void SyncColumnJobStageFromWorld(UWorld &world, glm::ivec2 column);
   void SyncFocusRingColumnJobStages(UWorld &world, glm::ivec3 focus_ground,
                                     int focus_radius);
+  /// Focus-ring census for JSONL (PendingLight / Meshing / GpuPending / RenderReady).
+  void CountFocusRingJobStages(glm::ivec3 focus_ground, int focus_radius,
+                               int &out_pending_light, int &out_meshing,
+                               int &out_gpu_pending, int &out_render_ready) const;
 
 private:
   void AdvanceColumn(UWorld &world, const ColumnWorkItem &work,

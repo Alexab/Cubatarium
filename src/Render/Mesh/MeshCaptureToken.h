@@ -5,7 +5,7 @@
 namespace cutum
 {
 
-/// Immutable capture contract (M2a / §A.4).
+/// Immutable capture contract (M2a / §A.4). Maps to WorkToken on the mesh path.
 struct MeshCaptureToken
 {
   uint64_t world_epoch{0};

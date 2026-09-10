@@ -232,8 +232,23 @@ G4: продуктовая приёмка и сокращение legacy paths
 
 ## Что уже выполнено, а что ещё нет
 
+Честный статус после пролёта 174657 и remediation gap audit (2026-09-10):
+
 - Существующее исправление camera-position invalidation закоммичено: `b1badb4f`.
 - Выполнен архитектурный аудит, исследованы внешние первичные источники.
-- Добавлен audit-only scheduler repro: пять нарушений воспроизведены на исходном коде.
-- Воспроизведён fail-open функций scorecard при отсутствии логов.
-- M00–M16, GPU capture и новый performance baseline **не выполнены** в этой итерации; они составляют следующий план реализации.
+- **M00 (A13):** scorecard fail-closed — `INVALID_RUN` / `CORRECTNESS_FAIL` / `PERFORMANCE_FAIL` / `PASS`; hard gates в verdict; unit test `tools/test_AnalyzePhase57Scorecard.py`. **Дополнено (F0):** product fail на `mesh_apply_stale` storm; wall_ms alone не закрывает stale/enter fail.
+- **M01 (A14):** `enable_testing` + CTest labels `unit;streaming`; CI smoke расширен streaming-тестами; `column_scheduler_audit_repro`; CPU lifetime fixture (`greedy_vertex_pool_lifetime_test`). **Не закрыто:** полный GL scene fixture / A01 GPU proof — mock lifetime ≠ A01 correctness. Не объявлять GPU correctness без fixture.
+- **M02 (A05):** full-width `ColumnCoord`, generation tickets, urgency refresh, `LiveCount`; audit repro 5/5 PASS.
+- **M03 (A06):** CPU merge выставляет changed через `LightChangeSet`. Heuristics `force_unchanged_relit` могут ещё жить — частично.
+- **M04 (A02):** pass-local `CullAabbMaxSsbo` + per-pass cull history — в основном сделано.
+- **M05 (A01):** **было неполным** на 174657 (fence at Free-time). **F1:** retire через post-draw fence / `PendingRetire`→`SignalDrawComplete`; `Reserve` ждёт retire queues; orphan via `ReleasePooledBatch`. Приёмка — F5 manual + `pool_fence_timeout` / flicker.
+- **M06/M07 (A03/A04):** `CullInputKey` + exact missing-ref delta — в основном; edge cases остаются.
+- **M08–M10 (A07–A09):** skeleton stamps (`ChunkIncarnationAt≡0`); main capture + `CaptureDependencyStillValid` parity (F2). Полный incarnation — не закрыт.
+- **M09:** не считать закрытым без полного stamp validation на всех path.
+- **M11 (A10):** shadow coordinator есть; **не полный cutover**. Telemetry `column_meshing_n` = emerge FSM; F0 добавил `column_job_*`. Enter published∥pending semantics — F3.
+- **M12–M14 (A11/A12):** admission/bounded drain / TryEnqueue — частично; F3 clears InFlight on TryEnqueue fail.
+- **M13 / GL stress A01:** **не закрыто** в CI.
+- **M15 (A15):** include-check allowlist; CMake WorldData/RenderResidency split — отложен.
+- **M16:** оптимизации **не внедрялись**.
+
+См. также F0 JSONL поля: `mesh_apply_superseded*`, `mesh_apply_drop_no_active*`, `pool_retired_*`, `enter_lit_gate_active` / `gate_elapsed_ms` / TTF proxies, `column_job_*`.

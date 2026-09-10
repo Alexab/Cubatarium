@@ -117,7 +117,12 @@ struct Session
   int SpikesWrittenThisPeriod{0};
   int FrameCount{0};
   uint64_t MeshApplyStaleAtPeriodStart{0};
+  uint64_t MeshApplySupersededAtPeriodStart{0};
+  uint64_t MeshApplyDropNoActiveAtPeriodStart{0};
   uint64_t MeshDiscardedLateAtPeriodStart{0};
+  uint64_t PoolRetiredReclaimedAtPeriodStart{0};
+  uint64_t PoolFenceTimeoutAtPeriodStart{0};
+  uint64_t PoolReserveBumpAtPeriodStart{0};
   uint64_t MeshCompletedDiscardedAtPeriodStart{0};
   uint64_t SoftDeferCaptureFloorHitsAtPeriodStart{0};
   uint64_t SoftDeferWitnessRetargetAtPeriodStart{0};
@@ -446,6 +451,12 @@ struct FrameNumbers
   int column_lighting_n{0};
   int column_meshing_n{0};
   int column_render_ready_n{0};
+  int emerge_fsm_meshing_n{0};
+  int emerge_fsm_render_ready_n{0};
+  int column_job_pending_light_n{0};
+  int column_job_meshing_n{0};
+  int column_job_gpu_pending_n{0};
+  int column_job_render_ready_n{0};
   int pending_light{0};
   int stream_pressure{0};
   int pending_light_focus{0};
@@ -488,6 +499,10 @@ struct FrameNumbers
   uint64_t mesh_discarded_late_job_mismatch{0};
   uint64_t mesh_apply_stale{0};
   uint64_t mesh_apply_stale_delta{0};
+  uint64_t mesh_apply_superseded{0};
+  uint64_t mesh_apply_superseded_delta{0};
+  uint64_t mesh_apply_drop_no_active{0};
+  uint64_t mesh_apply_drop_no_active_delta{0};
   uint64_t mesh_discarded_late_delta{0};
   uint64_t mesh_completed_discarded_delta{0};
   uint64_t mesh_replace_hole_avoided{0};
@@ -647,6 +662,14 @@ struct FrameNumbers
   uint64_t edit_neighbor_pending_frames{0};
   uint64_t pool_unsync_uploads{0};
   double pool_fence_wait_ms{0.0};
+  int pool_retired_pending_n{0};
+  int pool_free_slot_n{0};
+  uint64_t pool_retired_reclaimed_n{0};
+  uint64_t pool_retired_reclaimed_delta{0};
+  uint64_t pool_fence_timeout_n{0};
+  uint64_t pool_fence_timeout_delta{0};
+  uint64_t pool_reserve_bump_n{0};
+  uint64_t pool_reserve_bump_delta{0};
   int transparent_sort_rev_changed{0};
   int transparent_upload_full_n{0};
   int transparent_cmd_reorder_n{0};
@@ -675,7 +698,8 @@ struct FrameNumbers
   uint64_t gpu_transparent_sort_readback{0};
   uint64_t gpu_cull_stats_readback{0};
   double gpu_cull_cpu_ms{0.0};
-  double gpu_cull_gpu_ms{0.0};
+  double gpu_cull_submit_cpu_ms{0.0};
+  double gpu_cull_exec_ms{-1.0};
   uint64_t gpu_blocklight_flood{0};
   uint64_t gpu_fluid_readback{0};
   uint64_t gpu_light_readback{0};
@@ -1008,6 +1032,12 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.column_lighting_n = phys.ColumnLightingN;
   n.column_meshing_n = phys.ColumnMeshingN;
   n.column_render_ready_n = phys.ColumnRenderReadyN;
+  n.emerge_fsm_meshing_n = phys.ColumnMeshingN;
+  n.emerge_fsm_render_ready_n = phys.ColumnRenderReadyN;
+  n.column_job_pending_light_n = phys.ColumnJobPendingLightN;
+  n.column_job_meshing_n = phys.ColumnJobMeshingN;
+  n.column_job_gpu_pending_n = phys.ColumnJobGpuPendingN;
+  n.column_job_render_ready_n = phys.ColumnJobRenderReadyN;
   n.pending_light = phys.PendingLightCount;
   n.stream_pressure = phys.StreamPressure;
   n.pending_light_focus = phys.PendingLightFocus;
@@ -1055,6 +1085,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.mesh_discarded_late_epoch = phys.MeshDiscardedLateEpoch;
   n.mesh_discarded_late_job_mismatch = phys.MeshDiscardedLateJobMismatch;
   n.mesh_apply_stale = phys.MeshApplyStale;
+  n.mesh_apply_superseded = phys.MeshApplySuperseded;
+  n.mesh_apply_drop_no_active = phys.MeshApplyDropNoActive;
   n.mesh_replace_hole_avoided = phys.MeshReplaceHoleAvoided;
   n.pending_gpu_applies_n = phys.PendingGpuAppliesN;
   n.pending_gpu_queued_n = phys.PendingGpuQueuedN;
@@ -1212,7 +1244,8 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.gpu_draw_cmds = phys.GpuDrawCmds;
   n.gpu_cull_ms = phys.GpuCullMs;
   n.gpu_cull_cpu_ms = phys.GpuCullMs;
-  n.gpu_cull_gpu_ms = phys.GpuCullGpuMs;
+  n.gpu_cull_submit_cpu_ms = phys.CullSubmitCpuMs;
+  n.gpu_cull_exec_ms = phys.CullGpuExecMs;
   n.vertex_pool_fill = phys.VertexPoolFill;
   n.gpu_cull_indirect = phys.GpuCullIndirect;
   n.opaque_cmd_total = phys.OpaqueCmdTotal;
@@ -1229,6 +1262,11 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   n.edit_neighbor_pending_frames = phys.EditNeighborPendingFrames;
   n.pool_unsync_uploads = phys.PoolUnsyncUploads;
   n.pool_fence_wait_ms = phys.PoolFenceWaitMs;
+  n.pool_retired_pending_n = phys.PoolRetiredPendingN;
+  n.pool_free_slot_n = phys.PoolFreeSlotN;
+  n.pool_retired_reclaimed_n = phys.PoolRetiredReclaimedN;
+  n.pool_fence_timeout_n = phys.PoolFenceTimeoutN;
+  n.pool_reserve_bump_n = phys.PoolReserveBumpN;
   n.transparent_sort_rev_changed = phys.TransparentSortRevChanged;
   n.transparent_upload_full_n = phys.TransparentUploadFullN;
   n.transparent_cmd_reorder_n = phys.TransparentCmdReorderN;
@@ -1599,6 +1637,12 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"column_lighting_n\":" << n.column_lighting_n
           << ",\"column_meshing_n\":" << n.column_meshing_n
           << ",\"column_render_ready_n\":" << n.column_render_ready_n
+          << ",\"emerge_fsm_meshing_n\":" << n.emerge_fsm_meshing_n
+          << ",\"emerge_fsm_render_ready_n\":" << n.emerge_fsm_render_ready_n
+          << ",\"column_job_pending_light_n\":" << n.column_job_pending_light_n
+          << ",\"column_job_meshing_n\":" << n.column_job_meshing_n
+          << ",\"column_job_gpu_pending_n\":" << n.column_job_gpu_pending_n
+          << ",\"column_job_render_ready_n\":" << n.column_job_render_ready_n
           << ",\"pending_light\":" << n.pending_light
           << ",\"stream_pressure\":" << n.stream_pressure
           << ",\"pending_light_focus\":" << n.pending_light_focus
@@ -1647,6 +1691,12 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"mesh_discarded_late_delta\":" << n.mesh_discarded_late_delta
           << ",\"mesh_apply_stale\":" << n.mesh_apply_stale
           << ",\"mesh_apply_stale_delta\":" << n.mesh_apply_stale_delta
+          << ",\"mesh_apply_superseded\":" << n.mesh_apply_superseded
+          << ",\"mesh_apply_superseded_delta\":"
+          << n.mesh_apply_superseded_delta
+          << ",\"mesh_apply_drop_no_active\":" << n.mesh_apply_drop_no_active
+          << ",\"mesh_apply_drop_no_active_delta\":"
+          << n.mesh_apply_drop_no_active_delta
           << ",\"mesh_replace_hole_avoided\":" << n.mesh_replace_hole_avoided
           << ",\"pending_gpu_applies_n\":" << n.pending_gpu_applies_n
           << ",\"pending_gpu_queued_n\":" << n.pending_gpu_queued_n
@@ -1816,7 +1866,8 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << ",\"gpu_draw_cmds\":" << n.gpu_draw_cmds
           << ",\"gpu_cull_ms\":" << n.gpu_cull_ms
           << ",\"gpu_cull_cpu_ms\":" << n.gpu_cull_cpu_ms
-          << ",\"gpu_cull_gpu_ms\":" << n.gpu_cull_gpu_ms
+          << ",\"gpu_cull_submit_cpu_ms\":" << n.gpu_cull_submit_cpu_ms
+          << ",\"gpu_cull_exec_ms\":" << n.gpu_cull_exec_ms
           << ",\"vertex_pool_fill\":" << n.vertex_pool_fill
           << ",\"gpu_cull_indirect\":" << n.gpu_cull_indirect
           << ",\"opaque_cmd_total\":" << n.opaque_cmd_total
@@ -1834,6 +1885,15 @@ void WriteJsonl(Session &s, const FrameNumbers &n, const char *kind,
           << n.edit_neighbor_pending_frames
           << ",\"pool_unsync_uploads\":" << n.pool_unsync_uploads
           << ",\"pool_fence_wait_ms\":" << n.pool_fence_wait_ms
+          << ",\"pool_retired_pending_n\":" << n.pool_retired_pending_n
+          << ",\"pool_free_slot_n\":" << n.pool_free_slot_n
+          << ",\"pool_retired_reclaimed_n\":" << n.pool_retired_reclaimed_n
+          << ",\"pool_retired_reclaimed_delta\":"
+          << n.pool_retired_reclaimed_delta
+          << ",\"pool_fence_timeout_n\":" << n.pool_fence_timeout_n
+          << ",\"pool_fence_timeout_delta\":" << n.pool_fence_timeout_delta
+          << ",\"pool_reserve_bump_n\":" << n.pool_reserve_bump_n
+          << ",\"pool_reserve_bump_delta\":" << n.pool_reserve_bump_delta
           << ",\"transparent_sort_rev_changed\":"
           << n.transparent_sort_rev_changed
           << ",\"transparent_upload_full_n\":" << n.transparent_upload_full_n
@@ -2278,6 +2338,26 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
       n.mesh_apply_stale >= s.MeshApplyStaleAtPeriodStart
           ? n.mesh_apply_stale - s.MeshApplyStaleAtPeriodStart
           : 0;
+  period.mesh_apply_superseded_delta =
+      n.mesh_apply_superseded >= s.MeshApplySupersededAtPeriodStart
+          ? n.mesh_apply_superseded - s.MeshApplySupersededAtPeriodStart
+          : 0;
+  period.mesh_apply_drop_no_active_delta =
+      n.mesh_apply_drop_no_active >= s.MeshApplyDropNoActiveAtPeriodStart
+          ? n.mesh_apply_drop_no_active - s.MeshApplyDropNoActiveAtPeriodStart
+          : 0;
+  period.pool_retired_reclaimed_delta =
+      n.pool_retired_reclaimed_n >= s.PoolRetiredReclaimedAtPeriodStart
+          ? n.pool_retired_reclaimed_n - s.PoolRetiredReclaimedAtPeriodStart
+          : 0;
+  period.pool_fence_timeout_delta =
+      n.pool_fence_timeout_n >= s.PoolFenceTimeoutAtPeriodStart
+          ? n.pool_fence_timeout_n - s.PoolFenceTimeoutAtPeriodStart
+          : 0;
+  period.pool_reserve_bump_delta =
+      n.pool_reserve_bump_n >= s.PoolReserveBumpAtPeriodStart
+          ? n.pool_reserve_bump_n - s.PoolReserveBumpAtPeriodStart
+          : 0;
   period.mesh_completed_discarded_delta =
       n.mesh_completed_discarded >= s.MeshCompletedDiscardedAtPeriodStart
           ? n.mesh_completed_discarded -
@@ -2313,6 +2393,11 @@ void UFramePerfMonitor::OnInGameFrame(UWorld &world, double swap_wait_ms,
   LogLine(period, "period", s.FrameCount, s.MaxWallMs);
   s.LastPeriodUnfinishedVisual = period_unfinished;
   s.MeshApplyStaleAtPeriodStart = n.mesh_apply_stale;
+  s.MeshApplySupersededAtPeriodStart = n.mesh_apply_superseded;
+  s.MeshApplyDropNoActiveAtPeriodStart = n.mesh_apply_drop_no_active;
+  s.PoolRetiredReclaimedAtPeriodStart = n.pool_retired_reclaimed_n;
+  s.PoolFenceTimeoutAtPeriodStart = n.pool_fence_timeout_n;
+  s.PoolReserveBumpAtPeriodStart = n.pool_reserve_bump_n;
   s.MeshDiscardedLateAtPeriodStart = n.mesh_discarded_late;
   s.MeshCompletedDiscardedAtPeriodStart = n.mesh_completed_discarded;
   s.SoftDeferCaptureFloorHitsAtPeriodStart = n.softdefer_capture_floor_hits;

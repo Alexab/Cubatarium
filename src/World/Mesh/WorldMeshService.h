@@ -206,6 +206,8 @@ public:
   uint64_t GetMeshDiscardedLateEpochCount() const;
   uint64_t GetMeshDiscardedLateJobMismatchCount() const;
   uint64_t GetMeshApplyStaleCount() const;
+  uint64_t GetMeshApplySupersededCount() const;
+  uint64_t GetMeshApplyDropNoActiveCount() const;
   uint64_t GetMeshReplaceHoleAvoidedCount() const;
   uint64_t GetSoftDeferEmptyPublishAvoidedCount() const;
   size_t GetPendingGpuAppliesCount() const;

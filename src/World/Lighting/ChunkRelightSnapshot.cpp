@@ -761,6 +761,8 @@ UChunkRelightSnapshot::Compute(const UBlockRegistry &registry)
     frontier_unfinished = (iter == frontier_iters - 1);
   }
   result.frontier_unfinished = frontier_unfinished;
+  result.work_token = CapturedWorkToken;
+  result.dependency_stamp = CapturedDepStamp;
   result.chunks.reserve(relit_set.size());
   for (const glm::ivec3 &coord : relit_set)
   {
