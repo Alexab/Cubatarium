@@ -3691,6 +3691,17 @@ int main()
            "5.7R7: inactive compact always probes");
     Expect(ShouldProbeFailOpenAabb(5, true, 1, 6, false),
            "5.7R7: fail-open streak always probes");
+    Expect(ShouldProbeFailOpenAabb(10, true, 0, 10, false),
+           "5.7R7.2: healthy probe on period-10 tick");
+    Expect(!ShouldProbeFailOpenAabb(9, true, 0, 10, false),
+           "5.7R7.2: healthy skips AABB between period-10 ticks");
+    Expect(ShouldProbeFailOpenAabb(9, true, 0, 10, true),
+           "5.7R7.2: force_probe always probes at period 10");
+    Expect(!ShouldSkipOpaqueCullLightCruise(true, true, 0.0f, 1e-4f, true, true,
+                                            5.8f, false, false),
+           "5.7R7.2: cruise spd~5.8 never light-cruise skips (lock)");
+    Expect(!ShouldSkipOpaqueCullHalfRate(true, true, true, true, false, false, 0),
+           "5.7R7.2: half-rate stays false (lock)");
     Expect(ShouldReuseOpaqueCullCompact(true, true, true, true, false, false,
                                         0.0f, 0.0f, 0.5f, 0.5f, 100, 100, 0),
            "5.7R2: compact reuse even frame");

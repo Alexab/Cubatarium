@@ -1957,12 +1957,12 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
           light_cruise_skip || compact_reuse;
       if (!do_skip)
       {
-        // Phase 5.7R7: cruise spd>1.5 → probe period 6; underfeet/VB force.
+        // Phase 5.7R7.2: cruise spd>1.5 → probe period 10; underfeet/VB force.
         const bool force_aabb_probe =
             OpaqueCullUnderfeetMissBlocks(focus_missing, miss_horiz) ||
             vb_edge;
         const int aabb_probe_period =
-            (move_spd > 1.5f && !force_aabb_probe) ? 6 : 3;
+            (move_spd > 1.5f && !force_aabb_probe) ? 10 : 3;
         const bool ok = mdi->ApplyGpuCompactCull(
             GreedyGpuOpaque, frustum, cameraPos, max_cull_distance,
             horizontal_cull, aabb_probe_period, force_aabb_probe);
@@ -2268,6 +2268,9 @@ void UGeometryEngine::PrepareTransparent(
     CachedTransparentSortRevision = 0;
     CachedTransparentMeshRevision = 0;
     CachedTransparentRefFingerprint = 0;
+    CachedTransparentCullFocusValid = false;
+    CachedTransparentCullOrientValid = false;
+    CachedTransparentCmdOnValid = false;
     if (WorldInstance)
     {
       auto &phys = WorldInstance->GetPhysicsTelemetryMutable();
@@ -2332,15 +2335,84 @@ void UGeometryEngine::PrepareTransparent(
   if (auto *mdi = dynamic_cast<UMdiVertexPoolStore *>(&MeshStore()))
   {
     const Frustum frustum = Frustum::FromViewProjection(ctx.viewProjection);
-    // Phase 5.7R7 Cut D: inherit opaque probe diet (period 6); no cruise skip.
-    mdi->ApplyGpuCompactCull(GreedyGpuTransparent, frustum, ctx.cameraPos,
-                             ctx.cache.MaxCullDistance(),
-                             ctx.cache.UseHorizontalCullDistance(),
-                             /*probe_period=*/6, /*force_probe=*/false);
+    // Phase 5.7R7.2: transparent compact reuse parity with opaque (no light-
+    // cruise spd skip). Healthy probe period 10; underfeet/VB force full cull.
+    constexpr float kCullYawEps = 2.0f;
+    constexpr float kCullPitchEps = 2.0f;
+    float move_spd = 0.0f;
+    bool focus_missing = false;
+    bool vb_edge = false;
+    int miss_horiz = 0;
+    glm::ivec2 focus_xz(0);
+    float yaw = 0.0f;
+    float pitch = 0.0f;
     if (WorldInstance)
     {
-      WorldInstance->GetPhysicsTelemetryMutable().GpuCullGpuMs +=
-          mdi->LastCompactCullGpuMs();
+      const auto &pt = WorldInstance->GetPhysicsTelemetry();
+      move_spd = pt.MovementSpeed;
+      focus_missing = pt.FocusMissingMesh != 0;
+      miss_horiz = pt.MissHoriz;
+      vb_edge = OpaqueCullVbEdgeBlocks(
+          pt.VisibleBlackFocusN, CachedOpaqueCullVbFocusN,
+          pt.VisibleBlackStalledN, CachedOpaqueCullVbStalledN,
+          pt.VisibleBlackNoTicketN, miss_horiz, CachedOpaqueCullVbValid,
+          CachedOpaqueCullVbDeltaStreak);
+      focus_xz = glm::ivec2(pt.FocusChunkX, pt.FocusChunkZ);
+      if (const auto cam = WorldInstance->GetCurrentUserCamera())
+      {
+        yaw = cam->GetYaw();
+        pitch = cam->GetPitch();
+      }
+    }
+    const float abs_yaw_delta =
+        CachedTransparentCullOrientValid
+            ? std::abs(yaw - CachedTransparentCullYaw)
+            : 999.0f;
+    const float abs_pitch_delta =
+        CachedTransparentCullOrientValid
+            ? std::abs(pitch - CachedTransparentCullPitch)
+            : 999.0f;
+    const uint64_t transp_cmd_on =
+        CachedTransparentCmdOnValid ? CachedTransparentCmdOn : 0;
+    const uint64_t transp_cmd_on_prev =
+        CachedTransparentCmdOnValid ? CachedTransparentCmdOnPrev : 1;
+    const bool focus_unchanged = CachedTransparentCullFocusValid &&
+                                 focus_xz == CachedTransparentCullFocusXZ;
+    const bool draw_set_stable =
+        sort_inputs_unchanged && !CachedTransparentSortedRefs.empty();
+    const bool rev_match = ctx.cullRevision == CachedTransparentCullRevision;
+    const uint32_t transp_parity = TransparentCullFrameParity++;
+    const bool transp_reuse = ShouldReuseOpaqueCullCompact(
+        draw_set_stable, rev_match, GreedyGpuTransparent.GpuCompactActive,
+        focus_unchanged, focus_missing, vb_edge, abs_yaw_delta, abs_pitch_delta,
+        kCullYawEps, kCullPitchEps, transp_cmd_on, transp_cmd_on_prev,
+        transp_parity, miss_horiz);
+    if (!transp_reuse)
+    {
+      const bool force_aabb_probe =
+          OpaqueCullUnderfeetMissBlocks(focus_missing, miss_horiz) || vb_edge;
+      const int aabb_probe_period =
+          (move_spd > 1.5f && !force_aabb_probe) ? 10 : 3;
+      mdi->ApplyGpuCompactCull(GreedyGpuTransparent, frustum, ctx.cameraPos,
+                               ctx.cache.MaxCullDistance(),
+                               ctx.cache.UseHorizontalCullDistance(),
+                               aabb_probe_period, force_aabb_probe);
+      CachedTransparentCullRevision = ctx.cullRevision;
+      CachedTransparentCullFocusXZ = focus_xz;
+      CachedTransparentCullFocusValid = true;
+      CachedTransparentCullYaw = yaw;
+      CachedTransparentCullPitch = pitch;
+      CachedTransparentCullOrientValid = true;
+      const uint64_t cmd_on = mdi->LastCullOpaqueOn();
+      CachedTransparentCmdOnPrev =
+          CachedTransparentCmdOnValid ? CachedTransparentCmdOn : cmd_on;
+      CachedTransparentCmdOn = cmd_on;
+      CachedTransparentCmdOnValid = true;
+      if (WorldInstance)
+      {
+        WorldInstance->GetPhysicsTelemetryMutable().GpuCullGpuMs +=
+            mdi->LastCompactCullGpuMs();
+      }
     }
   }
   PreparedTransparentVp = ctx.viewProjection;

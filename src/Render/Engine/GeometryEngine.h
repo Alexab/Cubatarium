@@ -349,6 +349,17 @@ private:
   int CachedOpaqueCullVbStalledN{0};
   bool CachedOpaqueCullVbValid{false};
   int CachedOpaqueCullVbDeltaStreak{0};
+  /// Phase 5.7R7.2: transparent compact-cull reuse caches (opaque parity).
+  uint64_t CachedTransparentCullRevision{0};
+  glm::ivec2 CachedTransparentCullFocusXZ{0};
+  bool CachedTransparentCullFocusValid{false};
+  uint32_t TransparentCullFrameParity{0};
+  float CachedTransparentCullYaw{0.0f};
+  float CachedTransparentCullPitch{0.0f};
+  bool CachedTransparentCullOrientValid{false};
+  uint64_t CachedTransparentCmdOn{0};
+  uint64_t CachedTransparentCmdOnPrev{0};
+  bool CachedTransparentCmdOnValid{false};
   glm::mat4 PreparedTransparentVp{};
   const std::map<size_t, UTextureCube> *PreparedTransparentTextures{nullptr};
   IUMeshGpuStore &MeshStore();
