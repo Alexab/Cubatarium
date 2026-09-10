@@ -1848,17 +1848,6 @@ int UChunkMeshCache::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
   {
     return 0;
   }
-  const size_t dirty_n = Dirty.GetCount();
-  // Phase 5.7R7.2: skip full O(Dirty) walk when remesh_only fingerprint still
-  // matches (SoftDefer leave-in keeps Dirty large; cadence often force-heavy).
-  if (remesh_only && LastDropRemeshOnly_ &&
-      center_chunk == LastDropRemeshCenter_ &&
-      keep_radius == LastDropRemeshKeepR_ &&
-      keep_cy == LastDropRemeshKeepCy_ &&
-      dirty_n <= LastDropRemeshDirtyCount_ && LastDropRemeshDropped_ == 0)
-  {
-    return 0;
-  }
   auto beyond_keep = [&](const glm::ivec3 &coord) {
     const int horiz = std::max(std::abs(coord.x - center_chunk.x),
                                std::abs(coord.z - center_chunk.z));
@@ -1882,21 +1871,13 @@ int UChunkMeshCache::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
     }
     // Cruise: never drop first-mesh Dirty (creates holes in the focus ring).
     // Empty SoftDefer placeholders are !Drawable — protect like !HasGreedy.
-    // Phase 5.7R7.2: cheap SoftDeferHeld / missing-cache continue before
-    // HasDrawableGreedyMesh batch scan.
-    if (remesh_only && RemeshAfterApply.find(*it) == RemeshAfterApply.end())
+    // Phase 5.7R7.2.1: Cut B fingerprint/cheap SoftDefer skip reverted after
+    // manual 093849 schedule_ok/dirty_fm starve (keep Cut A cull diet only).
+    if (remesh_only && !HasDrawableGreedyMesh(*it) &&
+        RemeshAfterApply.find(*it) == RemeshAfterApply.end())
     {
-      if (SoftDeferHeld.count(*it) > 0 ||
-          GreedyCache.find(*it) == GreedyCache.end())
-      {
-        ++it;
-        continue;
-      }
-      if (!HasDrawableGreedyMesh(*it))
-      {
-        ++it;
-        continue;
-      }
+      ++it;
+      continue;
     }
     RemeshAfterApply.erase(*it);
     it = Dirty.RemoveAt(it);
@@ -1914,12 +1895,6 @@ int UChunkMeshCache::DropRemeshDirtyBeyondRadius(glm::ivec3 center_chunk,
       ++it;
     }
   }
-  LastDropRemeshCenter_ = center_chunk;
-  LastDropRemeshKeepR_ = keep_radius;
-  LastDropRemeshKeepCy_ = keep_cy;
-  LastDropRemeshOnly_ = remesh_only;
-  LastDropRemeshDirtyCount_ = Dirty.GetCount();
-  LastDropRemeshDropped_ = dropped;
   return dropped;
 }
 

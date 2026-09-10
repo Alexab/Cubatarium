@@ -1018,13 +1018,6 @@ private:
   glm::ivec3 MeshFocusGroundChunk{0};
   int MeshFocusRadiusChunks{6};
   bool MeshFocusValid{false};
-  /// Phase 5.7R7.2: DropRemeshDirtyBeyondRadius remesh_only fingerprint.
-  glm::ivec3 LastDropRemeshCenter_{0};
-  int LastDropRemeshKeepR_{-1};
-  int LastDropRemeshKeepCy_{-1};
-  bool LastDropRemeshOnly_{false};
-  size_t LastDropRemeshDirtyCount_{0};
-  int LastDropRemeshDropped_{0};
   /// I12-A7: incremental focus-ring dirty count cache.
   mutable glm::ivec3 FocusDirtyQueryCenter_{0};
   mutable int FocusDirtyQueryRadius_{-1};
